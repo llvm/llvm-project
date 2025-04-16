@@ -450,9 +450,9 @@ bb:
 define amdgpu_ps void @test_uniform_scale_activate_f32(float %ssrc, <4 x float> %acc_in, ptr addrspace(1) %out) {
 ; GFX13-LABEL: test_uniform_scale_activate_f32:
 ; GFX13:       ; %bb.0: ; %bb
-; GFX13-NEXT:    v_dual_mov_b32 v11, v6 :: v_dual_mov_b32 v9, v4
-; GFX13-NEXT:    v_dual_mov_b32 v8, v3 :: v_dual_mov_b32 v7, v2
-; GFX13-NEXT:    v_dual_mov_b32 v6, v1 :: v_dual_mov_b32 v10, v5
+; GFX13-NEXT:    v_dual_mov_b32 v11, v6 :: v_dual_mov_b32 v8, v3
+; GFX13-NEXT:    v_dual_mov_b32 v9, v4 :: v_dual_mov_b32 v6, v1
+; GFX13-NEXT:    v_dual_mov_b32 v7, v2 :: v_dual_mov_b32 v10, v5
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX13-NEXT:    v_uniform_scale_activate_f32 v[0:3], v[6:9], s0 aux_data:2 clamp
 ; GFX13-NEXT:    global_store_b128 v[10:11], v[0:3], off
@@ -478,9 +478,9 @@ bb:
 define amdgpu_ps void @test_uniform_scale_activate_f16(half %ssrc, <8 x half> %acc_in, ptr addrspace(1) %out) {
 ; GFX13-LABEL: test_uniform_scale_activate_f16:
 ; GFX13:       ; %bb.0: ; %bb
-; GFX13-NEXT:    v_dual_mov_b32 v11, v6 :: v_dual_mov_b32 v9, v4
-; GFX13-NEXT:    v_dual_mov_b32 v8, v3 :: v_dual_mov_b32 v7, v2
-; GFX13-NEXT:    v_dual_mov_b32 v6, v1 :: v_dual_mov_b32 v10, v5
+; GFX13-NEXT:    v_dual_mov_b32 v11, v6 :: v_dual_mov_b32 v8, v3
+; GFX13-NEXT:    v_dual_mov_b32 v9, v4 :: v_dual_mov_b32 v6, v1
+; GFX13-NEXT:    v_dual_mov_b32 v7, v2 :: v_dual_mov_b32 v10, v5
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX13-NEXT:    v_uniform_scale_activate_f16 v[0:3], v[6:9], s0 aux_data:2 clamp
 ; GFX13-NEXT:    global_store_b128 v[10:11], v[0:3], off
@@ -506,9 +506,9 @@ bb:
 define amdgpu_ps void @test_uniform_scale_activate_bf16(bfloat %ssrc, <8 x bfloat> %acc_in, ptr addrspace(1) %out) {
 ; GFX13-LABEL: test_uniform_scale_activate_bf16:
 ; GFX13:       ; %bb.0: ; %bb
-; GFX13-NEXT:    v_dual_mov_b32 v11, v6 :: v_dual_mov_b32 v9, v4
-; GFX13-NEXT:    v_dual_mov_b32 v8, v3 :: v_dual_mov_b32 v7, v2
-; GFX13-NEXT:    v_dual_mov_b32 v6, v1 :: v_dual_mov_b32 v10, v5
+; GFX13-NEXT:    v_dual_mov_b32 v11, v6 :: v_dual_mov_b32 v8, v3
+; GFX13-NEXT:    v_dual_mov_b32 v9, v4 :: v_dual_mov_b32 v6, v1
+; GFX13-NEXT:    v_dual_mov_b32 v7, v2 :: v_dual_mov_b32 v10, v5
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX13-NEXT:    v_uniform_scale_activate_bf16 v[0:3], v[6:9], s0 aux_data:2 clamp
 ; GFX13-NEXT:    global_store_b128 v[10:11], v[0:3], off
@@ -542,8 +542,8 @@ bb:
 define amdgpu_ps void @test_uniform_scale_activate_scatter2_f16(half %ssrc, <4 x half> %acc_in, ptr addrspace(1) %out0, ptr addrspace(1) %out1) {
 ; GFX13-LABEL: test_uniform_scale_activate_scatter2_f16:
 ; GFX13:       ; %bb.0: ; %bb
-; GFX13-NEXT:    v_dual_mov_b32 v7, v6 :: v_dual_mov_b32 v9, v2
-; GFX13-NEXT:    v_dual_mov_b32 v8, v1 :: v_dual_mov_b32 v6, v5
+; GFX13-NEXT:    v_dual_mov_b32 v7, v6 :: v_dual_mov_b32 v8, v1
+; GFX13-NEXT:    v_dual_mov_b32 v9, v2 :: v_dual_mov_b32 v6, v5
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX13-NEXT:    v_dual_mov_b32 v5, v4 :: v_dual_mov_b32 v4, v3
 ; GFX13-NEXT:    v_uniform_scale_activate_scatter2_f16 v0, v1, v[8:9], s0 aux_data:2 clamp
@@ -578,8 +578,8 @@ bb:
 define amdgpu_ps void @test_uniform_scale_activate_scatter2_bf16(bfloat %ssrc, <4 x bfloat> %acc_in, ptr addrspace(1) %out0, ptr addrspace(1) %out1) {
 ; GFX13-LABEL: test_uniform_scale_activate_scatter2_bf16:
 ; GFX13:       ; %bb.0: ; %bb
-; GFX13-NEXT:    v_dual_mov_b32 v7, v6 :: v_dual_mov_b32 v9, v2
-; GFX13-NEXT:    v_dual_mov_b32 v8, v1 :: v_dual_mov_b32 v6, v5
+; GFX13-NEXT:    v_dual_mov_b32 v7, v6 :: v_dual_mov_b32 v8, v1
+; GFX13-NEXT:    v_dual_mov_b32 v9, v2 :: v_dual_mov_b32 v6, v5
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX13-NEXT:    v_dual_mov_b32 v5, v4 :: v_dual_mov_b32 v4, v3
 ; GFX13-NEXT:    v_uniform_scale_activate_scatter2_bf16 v0, v1, v[8:9], s0 aux_data:2 clamp

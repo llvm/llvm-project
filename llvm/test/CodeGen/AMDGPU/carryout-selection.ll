@@ -136,9 +136,8 @@ define amdgpu_kernel void @sadd64rr(ptr addrspace(1) %out, i64 %a, i64 %b) {
 ; GFX1300-NEXT:    s_load_b64 s[4:5], s[4:5], 0x34
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    s_add_nc_u64 s[2:3], s[2:3], s[4:5]
-; GFX1300-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1300-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_mov_b32 v0, s2
-; GFX1300-NEXT:    v_mov_b32_e32 v1, s3
+; GFX1300-NEXT:    v_mov_b32_e32 v2, 0
+; GFX1300-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, s3
 ; GFX1300-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
 ; GFX1300-NEXT:    s_endpgm
 entry:
@@ -256,9 +255,8 @@ define amdgpu_kernel void @sadd64ri(ptr addrspace(1) %out, i64 %a) {
 ; GFX1300-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    s_add_nc_u64 s[2:3], s[2:3], lit64(0x123456789876)
-; GFX1300-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1300-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_mov_b32 v0, s2
-; GFX1300-NEXT:    v_mov_b32_e32 v1, s3
+; GFX1300-NEXT:    v_mov_b32_e32 v2, 0
+; GFX1300-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, s3
 ; GFX1300-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
 ; GFX1300-NEXT:    s_endpgm
 entry:
@@ -910,10 +908,10 @@ define amdgpu_kernel void @suaddo64(ptr addrspace(1) %out, ptr addrspace(1) %car
 ; GFX1300-NEXT:    s_load_b256 s[0:7], s[4:5], 0x24
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    s_add_nc_u64 s[6:7], s[4:5], s[6:7]
-; GFX1300-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(VALU_DEP_2)
-; GFX1300-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_mov_b32 v0, s6
+; GFX1300-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1300-NEXT:    v_cmp_lt_u64_e64 s4, s[6:7], s[4:5]
-; GFX1300-NEXT:    v_mov_b32_e32 v1, s7
+; GFX1300-NEXT:    v_dual_mov_b32 v0, s6 :: v_dual_mov_b32 v1, s7
+; GFX1300-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX1300-NEXT:    v_cndmask_b32_e64 v3, 0, 1, s4
 ; GFX1300-NEXT:    s_clause 0x1
 ; GFX1300-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
@@ -1220,9 +1218,8 @@ define amdgpu_kernel void @ssub64rr(ptr addrspace(1) %out, i64 %a, i64 %b) {
 ; GFX1300-NEXT:    s_load_b64 s[4:5], s[4:5], 0x34
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    s_sub_nc_u64 s[2:3], s[2:3], s[4:5]
-; GFX1300-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1300-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_mov_b32 v0, s2
-; GFX1300-NEXT:    v_mov_b32_e32 v1, s3
+; GFX1300-NEXT:    v_mov_b32_e32 v2, 0
+; GFX1300-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, s3
 ; GFX1300-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
 ; GFX1300-NEXT:    s_endpgm
 entry:
@@ -1340,9 +1337,8 @@ define amdgpu_kernel void @ssub64ri(ptr addrspace(1) %out, i64 %a) {
 ; GFX1300-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    s_sub_nc_u64 s[2:3], lit64(0x123456789876), s[2:3]
-; GFX1300-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1300-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_mov_b32 v0, s2
-; GFX1300-NEXT:    v_mov_b32_e32 v1, s3
+; GFX1300-NEXT:    v_mov_b32_e32 v2, 0
+; GFX1300-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, s3
 ; GFX1300-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
 ; GFX1300-NEXT:    s_endpgm
 entry:
@@ -1995,10 +1991,10 @@ define amdgpu_kernel void @susubo64(ptr addrspace(1) %out, ptr addrspace(1) %car
 ; GFX1300-NEXT:    s_load_b256 s[0:7], s[4:5], 0x24
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    s_sub_nc_u64 s[6:7], s[4:5], s[6:7]
-; GFX1300-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(VALU_DEP_2)
-; GFX1300-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_mov_b32 v0, s6
+; GFX1300-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1300-NEXT:    v_cmp_gt_u64_e64 s4, s[6:7], s[4:5]
-; GFX1300-NEXT:    v_mov_b32_e32 v1, s7
+; GFX1300-NEXT:    v_dual_mov_b32 v0, s6 :: v_dual_mov_b32 v1, s7
+; GFX1300-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX1300-NEXT:    v_cndmask_b32_e64 v3, 0, 1, s4
 ; GFX1300-NEXT:    s_clause 0x1
 ; GFX1300-NEXT:    global_store_b64 v2, v[0:1], s[0:1]

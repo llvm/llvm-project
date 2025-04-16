@@ -354,9 +354,9 @@ define amdgpu_kernel void @vsample_CFS128B(ptr addrspace(1) %out, i32 inreg %src
 ; GFX13-NEXT:    s_load_b64 s[6:7], s[4:5], 0x44
 ; GFX13-NEXT:    s_load_b96 s[8:10], s[4:5], 0x24
 ; GFX13-NEXT:    s_load_b128 s[0:3], s[4:5], 0x34
+; GFX13-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    v_dual_mov_b32 v4, 0 :: v_dual_mov_b32 v0, s6
-; GFX13-NEXT:    v_mov_b32_e32 v1, s7
+; GFX13-NEXT:    v_dual_mov_b32 v0, s6 :: v_dual_mov_b32 v1, s7
 ; GFX13-NEXT:    image_gather4 v[0:3], [v0, v1], s10, s[0:3] dmask:0x1 dim:SQ_RSRC_IMG_2D cfs:CFS_128B
 ; GFX13-NEXT:    s_wait_samplecnt 0x0
 ; GFX13-NEXT:    global_store_b128 v4, v[0:3], s[8:9] scope:SCOPE_SYS
@@ -374,9 +374,9 @@ define amdgpu_kernel void @vsample_CFS64B(ptr addrspace(1) %out, i32 inreg %src,
 ; GFX13-NEXT:    s_load_b64 s[6:7], s[4:5], 0x44
 ; GFX13-NEXT:    s_load_b96 s[8:10], s[4:5], 0x24
 ; GFX13-NEXT:    s_load_b128 s[0:3], s[4:5], 0x34
+; GFX13-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    v_dual_mov_b32 v4, 0 :: v_dual_mov_b32 v0, s6
-; GFX13-NEXT:    v_mov_b32_e32 v1, s7
+; GFX13-NEXT:    v_dual_mov_b32 v0, s6 :: v_dual_mov_b32 v1, s7
 ; GFX13-NEXT:    image_gather4 v[0:3], [v0, v1], s10, s[0:3] dmask:0x1 dim:SQ_RSRC_IMG_2D cfs:CFS_64B
 ; GFX13-NEXT:    s_wait_samplecnt 0x0
 ; GFX13-NEXT:    global_store_b128 v4, v[0:3], s[8:9] scope:SCOPE_SYS
@@ -394,9 +394,9 @@ define amdgpu_kernel void @vsample_CFS32B(ptr addrspace(1) %out, i32 inreg %src,
 ; GFX13-NEXT:    s_load_b64 s[6:7], s[4:5], 0x44
 ; GFX13-NEXT:    s_load_b96 s[8:10], s[4:5], 0x24
 ; GFX13-NEXT:    s_load_b128 s[0:3], s[4:5], 0x34
+; GFX13-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    v_dual_mov_b32 v4, 0 :: v_dual_mov_b32 v0, s6
-; GFX13-NEXT:    v_mov_b32_e32 v1, s7
+; GFX13-NEXT:    v_dual_mov_b32 v0, s6 :: v_dual_mov_b32 v1, s7
 ; GFX13-NEXT:    image_gather4 v[0:3], [v0, v1], s10, s[0:3] dmask:0x1 dim:SQ_RSRC_IMG_2D cfs:CFS_32B
 ; GFX13-NEXT:    s_wait_samplecnt 0x0
 ; GFX13-NEXT:    global_store_b128 v4, v[0:3], s[8:9] scope:SCOPE_SYS

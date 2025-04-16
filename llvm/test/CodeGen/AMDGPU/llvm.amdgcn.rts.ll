@@ -83,11 +83,11 @@ define amdgpu_cs void @rts_trace_ray_nonblock_test(i32 %ray_init_data, <3 x i32>
 ; GFX13-GISEL-LABEL: rts_trace_ray_nonblock_test:
 ; GFX13-GISEL:       ; %bb.0:
 ; GFX13-GISEL-NEXT:    v_dual_mov_b32 v14, v1 :: v_dual_mov_b32 v15, v2
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v16, v3 :: v_dual_mov_b32 v2, v5
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v3, v6 :: v_dual_mov_b32 v4, v7
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v5, v8 :: v_dual_mov_b32 v6, v9
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v7, v10 :: v_dual_mov_b32 v8, v11
-; GFX13-GISEL-NEXT:    v_mov_b32_e32 v9, v12
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v16, v3 :: v_dual_mov_b32 v3, v6
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v2, v5 :: v_dual_mov_b32 v5, v8
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v4, v7 :: v_dual_mov_b32 v7, v10
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v6, v9 :: v_dual_mov_b32 v9, v12
+; GFX13-GISEL-NEXT:    v_mov_b32_e32 v8, v11
 ; GFX13-GISEL-NEXT:    rts_trace_ray_nonblock v0, [v0, v[14:16], v[2:5], v[6:9]], s[0:3] r128
 ; GFX13-GISEL-NEXT:    s_wait_rtscnt 0x0
 ; GFX13-GISEL-NEXT:    export prim v0, off, off, off done
@@ -112,11 +112,11 @@ define amdgpu_cs void @rts_trace_ray_test(i32 %ray_init_data, <3 x i32> %ray_ini
 ; GFX13-GISEL-LABEL: rts_trace_ray_test:
 ; GFX13-GISEL:       ; %bb.0:
 ; GFX13-GISEL-NEXT:    v_dual_mov_b32 v14, v1 :: v_dual_mov_b32 v15, v2
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v16, v3 :: v_dual_mov_b32 v2, v5
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v3, v6 :: v_dual_mov_b32 v4, v7
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v5, v8 :: v_dual_mov_b32 v6, v9
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v7, v10 :: v_dual_mov_b32 v8, v11
-; GFX13-GISEL-NEXT:    v_mov_b32_e32 v9, v12
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v16, v3 :: v_dual_mov_b32 v3, v6
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v2, v5 :: v_dual_mov_b32 v5, v8
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v4, v7 :: v_dual_mov_b32 v7, v10
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v6, v9 :: v_dual_mov_b32 v9, v12
+; GFX13-GISEL-NEXT:    v_mov_b32_e32 v8, v11
 ; GFX13-GISEL-NEXT:    rts_trace_ray [v0, v[14:16], v[2:5], v[6:9]], s[0:3] r128
 ; GFX13-GISEL-NEXT:    s_endpgm
   call void @llvm.amdgcn.rts.trace.ray(i32 %ray_init_data, <3 x i32> %ray_init_flag, float %ray_extent, <4 x float> %ray_origin, <4 x float> %ray_dir, <4 x i32> %rsrc)

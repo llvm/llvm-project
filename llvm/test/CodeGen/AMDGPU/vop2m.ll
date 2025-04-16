@@ -17,8 +17,9 @@ bb:
 define amdgpu_ps void @test_permute_pair_gensgpr_b32(i32 %src0, i64 %src1, ptr addrspace(1) %out) {
 ; GFX13-LABEL: test_permute_pair_gensgpr_b32:
 ; GFX13:       ; %bb.0: ; %bb
-; GFX13-NEXT:    v_dual_mov_b32 v5, v4 :: v_dual_mov_b32 v7, v2
-; GFX13-NEXT:    v_dual_mov_b32 v2, v1 :: v_dual_mov_b32 v4, v3
+; GFX13-NEXT:    v_mov_b32_e32 v5, v4
+; GFX13-NEXT:    v_dual_mov_b32 v7, v2 :: v_dual_mov_b32 v4, v3
+; GFX13-NEXT:    v_mov_b32_e32 v2, v1
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX13-NEXT:    v_readfirstlane_b32 s1, v7
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v2

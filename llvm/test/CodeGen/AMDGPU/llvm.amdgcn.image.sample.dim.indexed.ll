@@ -54,7 +54,8 @@ define amdgpu_ps <2 x float> @sample_1d_tfe_adjust_writemask_1(i32 inreg %rsrc, 
 ; GFX13:       ; %bb.0: ; %main_body
 ; GFX13-NEXT:    s_mov_b32 s8, exec_lo
 ; GFX13-NEXT:    s_wqm_b32 exec_lo, exec_lo
-; GFX13-NEXT:    v_dual_mov_b32 v2, v0 :: v_dual_mov_b32 v0, 0
+; GFX13-NEXT:    v_mov_b32_e32 v2, v0
+; GFX13-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX13-NEXT:    s_mov_b32 s7, s4
 ; GFX13-NEXT:    s_mov_b32 s6, s3
 ; GFX13-NEXT:    s_mov_b32 s5, s2
@@ -80,7 +81,8 @@ define amdgpu_ps <2 x float> @sample_1d_tfe_adjust_writemask_2(i32 inreg %rsrc, 
 ; GFX13:       ; %bb.0: ; %main_body
 ; GFX13-NEXT:    s_mov_b32 s8, exec_lo
 ; GFX13-NEXT:    s_wqm_b32 exec_lo, exec_lo
-; GFX13-NEXT:    v_dual_mov_b32 v2, v0 :: v_dual_mov_b32 v0, 0
+; GFX13-NEXT:    v_mov_b32_e32 v2, v0
+; GFX13-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX13-NEXT:    s_mov_b32 s7, s4
 ; GFX13-NEXT:    s_mov_b32 s6, s3
 ; GFX13-NEXT:    s_mov_b32 s5, s2
@@ -106,7 +108,8 @@ define amdgpu_ps <2 x float> @sample_1d_tfe_adjust_writemask_3(i32 inreg %rsrc, 
 ; GFX13:       ; %bb.0: ; %main_body
 ; GFX13-NEXT:    s_mov_b32 s8, exec_lo
 ; GFX13-NEXT:    s_wqm_b32 exec_lo, exec_lo
-; GFX13-NEXT:    v_dual_mov_b32 v2, v0 :: v_dual_mov_b32 v0, 0
+; GFX13-NEXT:    v_mov_b32_e32 v2, v0
+; GFX13-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX13-NEXT:    s_mov_b32 s7, s4
 ; GFX13-NEXT:    s_mov_b32 s6, s3
 ; GFX13-NEXT:    s_mov_b32 s5, s2
@@ -132,7 +135,8 @@ define amdgpu_ps <2 x float> @sample_1d_tfe_adjust_writemask_4(i32 inreg %rsrc, 
 ; GFX13:       ; %bb.0: ; %main_body
 ; GFX13-NEXT:    s_mov_b32 s8, exec_lo
 ; GFX13-NEXT:    s_wqm_b32 exec_lo, exec_lo
-; GFX13-NEXT:    v_dual_mov_b32 v2, v0 :: v_dual_mov_b32 v0, 0
+; GFX13-NEXT:    v_mov_b32_e32 v2, v0
+; GFX13-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX13-NEXT:    s_mov_b32 s7, s4
 ; GFX13-NEXT:    s_mov_b32 s6, s3
 ; GFX13-NEXT:    s_mov_b32 s5, s2
@@ -214,7 +218,8 @@ define amdgpu_ps <4 x float> @sample_1d_tfe_adjust_writemask_134(i32 inreg %rsrc
 ; GFX13:       ; %bb.0: ; %main_body
 ; GFX13-NEXT:    s_mov_b32 s8, exec_lo
 ; GFX13-NEXT:    s_wqm_b32 exec_lo, exec_lo
-; GFX13-NEXT:    v_dual_mov_b32 v4, v0 :: v_dual_mov_b32 v0, 0
+; GFX13-NEXT:    v_mov_b32_e32 v4, v0
+; GFX13-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX13-NEXT:    s_mov_b32 s7, s4
 ; GFX13-NEXT:    s_mov_b32 s6, s3
 ; GFX13-NEXT:    s_mov_b32 s5, s2

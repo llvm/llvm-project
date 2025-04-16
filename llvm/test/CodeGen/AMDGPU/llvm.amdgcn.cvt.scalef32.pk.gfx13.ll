@@ -13,24 +13,24 @@ define amdgpu_kernel void @test_cvt_scalef32_pk32_bf6_f32_v(ptr addrspace(1) %ou
 ; GFX13-SDAG-NEXT:    s_load_b512 s[8:23], s[4:5], 0xe4
 ; GFX13-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX13-SDAG-NEXT:    s_load_b32 s2, s[4:5], 0x124
+; GFX13-SDAG-NEXT:    v_mov_b32_e32 v32, 0
 ; GFX13-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v32, 0 :: v_dual_mov_b32 v0, s36
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v1, s37 :: v_dual_mov_b32 v2, s38
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v3, s39 :: v_dual_mov_b32 v4, s40
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v5, s41 :: v_dual_mov_b32 v6, s42
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v7, s43 :: v_dual_mov_b32 v8, s44
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v9, s45 :: v_dual_mov_b32 v10, s46
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v11, s47 :: v_dual_mov_b32 v12, s48
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v13, s49 :: v_dual_mov_b32 v14, s50
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v15, s51 :: v_dual_mov_b32 v16, s8
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v17, s9 :: v_dual_mov_b32 v18, s10
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v19, s11 :: v_dual_mov_b32 v20, s12
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v21, s13 :: v_dual_mov_b32 v22, s14
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v23, s15 :: v_dual_mov_b32 v24, s16
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v25, s17 :: v_dual_mov_b32 v26, s18
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v27, s19 :: v_dual_mov_b32 v28, s20
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v29, s21 :: v_dual_mov_b32 v30, s22
-; GFX13-SDAG-NEXT:    v_mov_b32_e32 v31, s23
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v0, s36 :: v_dual_mov_b32 v1, s37
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v2, s38 :: v_dual_mov_b32 v3, s39
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v4, s40 :: v_dual_mov_b32 v5, s41
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v6, s42 :: v_dual_mov_b32 v7, s43
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v8, s44 :: v_dual_mov_b32 v9, s45
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v10, s46 :: v_dual_mov_b32 v11, s47
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v12, s48 :: v_dual_mov_b32 v13, s49
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v14, s50 :: v_dual_mov_b32 v15, s51
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v16, s8 :: v_dual_mov_b32 v17, s9
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v18, s10 :: v_dual_mov_b32 v19, s11
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v20, s12 :: v_dual_mov_b32 v21, s13
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v22, s14 :: v_dual_mov_b32 v23, s15
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v24, s16 :: v_dual_mov_b32 v25, s17
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v26, s18 :: v_dual_mov_b32 v27, s19
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v28, s20 :: v_dual_mov_b32 v29, s21
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v30, s22 :: v_dual_mov_b32 v31, s23
 ; GFX13-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13-SDAG-NEXT:    v_cvt_scalef32_pk32_bf6_f32 v[0:5], v[0:31], s2
 ; GFX13-SDAG-NEXT:    s_clause 0x1
@@ -45,24 +45,24 @@ define amdgpu_kernel void @test_cvt_scalef32_pk32_bf6_f32_v(ptr addrspace(1) %ou
 ; GFX13-GISEL-NEXT:    s_load_b512 s[52:67], s[4:5], 0xe4
 ; GFX13-GISEL-NEXT:    s_load_b32 s2, s[4:5], 0x124
 ; GFX13-GISEL-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX13-GISEL-NEXT:    v_mov_b32_e32 v32, 0
 ; GFX13-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v32, 0 :: v_dual_mov_b32 v0, s36
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v1, s37 :: v_dual_mov_b32 v2, s38
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v3, s39 :: v_dual_mov_b32 v4, s40
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v5, s41 :: v_dual_mov_b32 v6, s42
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v7, s43 :: v_dual_mov_b32 v8, s44
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v9, s45 :: v_dual_mov_b32 v10, s46
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v11, s47 :: v_dual_mov_b32 v12, s48
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v13, s49 :: v_dual_mov_b32 v14, s50
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v15, s51 :: v_dual_mov_b32 v16, s52
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v17, s53 :: v_dual_mov_b32 v18, s54
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v19, s55 :: v_dual_mov_b32 v20, s56
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v21, s57 :: v_dual_mov_b32 v22, s58
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v23, s59 :: v_dual_mov_b32 v24, s60
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v25, s61 :: v_dual_mov_b32 v26, s62
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v27, s63 :: v_dual_mov_b32 v28, s64
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v29, s65 :: v_dual_mov_b32 v30, s66
-; GFX13-GISEL-NEXT:    v_mov_b32_e32 v31, s67
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v0, s36 :: v_dual_mov_b32 v1, s37
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v2, s38 :: v_dual_mov_b32 v3, s39
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v4, s40 :: v_dual_mov_b32 v5, s41
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v6, s42 :: v_dual_mov_b32 v7, s43
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v8, s44 :: v_dual_mov_b32 v9, s45
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v10, s46 :: v_dual_mov_b32 v11, s47
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v12, s48 :: v_dual_mov_b32 v13, s49
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v14, s50 :: v_dual_mov_b32 v15, s51
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v16, s52 :: v_dual_mov_b32 v17, s53
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v18, s54 :: v_dual_mov_b32 v19, s55
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v20, s56 :: v_dual_mov_b32 v21, s57
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v22, s58 :: v_dual_mov_b32 v23, s59
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v24, s60 :: v_dual_mov_b32 v25, s61
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v26, s62 :: v_dual_mov_b32 v27, s63
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v28, s64 :: v_dual_mov_b32 v29, s65
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v30, s66 :: v_dual_mov_b32 v31, s67
 ; GFX13-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13-GISEL-NEXT:    v_cvt_scalef32_pk32_bf6_f32 v[0:5], v[0:31], s2
 ; GFX13-GISEL-NEXT:    s_clause 0x1
@@ -81,24 +81,24 @@ define amdgpu_kernel void @test_cvt_scalef32_pk32_bf6_f32_s(ptr addrspace(1) %ou
 ; GFX13-SDAG-NEXT:    s_load_b512 s[36:51], s[4:5], 0xa4
 ; GFX13-SDAG-NEXT:    s_load_b512 s[8:23], s[4:5], 0xe4
 ; GFX13-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX13-SDAG-NEXT:    v_mov_b32_e32 v32, 0
 ; GFX13-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v32, 0 :: v_dual_mov_b32 v0, s36
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v1, s37 :: v_dual_mov_b32 v2, s38
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v3, s39 :: v_dual_mov_b32 v4, s40
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v5, s41 :: v_dual_mov_b32 v6, s42
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v7, s43 :: v_dual_mov_b32 v8, s44
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v9, s45 :: v_dual_mov_b32 v10, s46
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v11, s47 :: v_dual_mov_b32 v12, s48
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v13, s49 :: v_dual_mov_b32 v14, s50
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v15, s51 :: v_dual_mov_b32 v16, s8
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v17, s9 :: v_dual_mov_b32 v18, s10
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v19, s11 :: v_dual_mov_b32 v20, s12
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v21, s13 :: v_dual_mov_b32 v22, s14
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v23, s15 :: v_dual_mov_b32 v24, s16
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v25, s17 :: v_dual_mov_b32 v26, s18
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v27, s19 :: v_dual_mov_b32 v28, s20
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v29, s21 :: v_dual_mov_b32 v30, s22
-; GFX13-SDAG-NEXT:    v_mov_b32_e32 v31, s23
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v0, s36 :: v_dual_mov_b32 v1, s37
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v2, s38 :: v_dual_mov_b32 v3, s39
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v4, s40 :: v_dual_mov_b32 v5, s41
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v6, s42 :: v_dual_mov_b32 v7, s43
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v8, s44 :: v_dual_mov_b32 v9, s45
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v10, s46 :: v_dual_mov_b32 v11, s47
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v12, s48 :: v_dual_mov_b32 v13, s49
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v14, s50 :: v_dual_mov_b32 v15, s51
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v16, s8 :: v_dual_mov_b32 v17, s9
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v18, s10 :: v_dual_mov_b32 v19, s11
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v20, s12 :: v_dual_mov_b32 v21, s13
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v22, s14 :: v_dual_mov_b32 v23, s15
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v24, s16 :: v_dual_mov_b32 v25, s17
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v26, s18 :: v_dual_mov_b32 v27, s19
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v28, s20 :: v_dual_mov_b32 v29, s21
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v30, s22 :: v_dual_mov_b32 v31, s23
 ; GFX13-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13-SDAG-NEXT:    v_cvt_scalef32_pk32_bf6_f32 v[0:5], v[0:31], 0x42c80000
 ; GFX13-SDAG-NEXT:    s_clause 0x1
@@ -112,24 +112,24 @@ define amdgpu_kernel void @test_cvt_scalef32_pk32_bf6_f32_s(ptr addrspace(1) %ou
 ; GFX13-GISEL-NEXT:    s_load_b512 s[36:51], s[4:5], 0xa4
 ; GFX13-GISEL-NEXT:    s_load_b512 s[52:67], s[4:5], 0xe4
 ; GFX13-GISEL-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX13-GISEL-NEXT:    v_mov_b32_e32 v32, 0
 ; GFX13-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v32, 0 :: v_dual_mov_b32 v0, s36
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v1, s37 :: v_dual_mov_b32 v2, s38
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v3, s39 :: v_dual_mov_b32 v4, s40
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v5, s41 :: v_dual_mov_b32 v6, s42
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v7, s43 :: v_dual_mov_b32 v8, s44
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v9, s45 :: v_dual_mov_b32 v10, s46
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v11, s47 :: v_dual_mov_b32 v12, s48
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v13, s49 :: v_dual_mov_b32 v14, s50
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v15, s51 :: v_dual_mov_b32 v16, s52
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v17, s53 :: v_dual_mov_b32 v18, s54
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v19, s55 :: v_dual_mov_b32 v20, s56
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v21, s57 :: v_dual_mov_b32 v22, s58
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v23, s59 :: v_dual_mov_b32 v24, s60
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v25, s61 :: v_dual_mov_b32 v26, s62
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v27, s63 :: v_dual_mov_b32 v28, s64
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v29, s65 :: v_dual_mov_b32 v30, s66
-; GFX13-GISEL-NEXT:    v_mov_b32_e32 v31, s67
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v0, s36 :: v_dual_mov_b32 v1, s37
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v2, s38 :: v_dual_mov_b32 v3, s39
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v4, s40 :: v_dual_mov_b32 v5, s41
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v6, s42 :: v_dual_mov_b32 v7, s43
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v8, s44 :: v_dual_mov_b32 v9, s45
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v10, s46 :: v_dual_mov_b32 v11, s47
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v12, s48 :: v_dual_mov_b32 v13, s49
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v14, s50 :: v_dual_mov_b32 v15, s51
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v16, s52 :: v_dual_mov_b32 v17, s53
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v18, s54 :: v_dual_mov_b32 v19, s55
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v20, s56 :: v_dual_mov_b32 v21, s57
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v22, s58 :: v_dual_mov_b32 v23, s59
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v24, s60 :: v_dual_mov_b32 v25, s61
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v26, s62 :: v_dual_mov_b32 v27, s63
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v28, s64 :: v_dual_mov_b32 v29, s65
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v30, s66 :: v_dual_mov_b32 v31, s67
 ; GFX13-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13-GISEL-NEXT:    v_cvt_scalef32_pk32_bf6_f32 v[0:5], v[0:31], 0x42c80000
 ; GFX13-GISEL-NEXT:    s_clause 0x1
@@ -149,24 +149,24 @@ define amdgpu_kernel void @test_cvt_scalef32_pk32_bf6_f32_v_inreg_src(ptr addrsp
 ; GFX13-SDAG-NEXT:    s_load_b512 s[8:23], s[4:5], 0xe4
 ; GFX13-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX13-SDAG-NEXT:    s_load_b32 s2, s[4:5], 0x124
+; GFX13-SDAG-NEXT:    v_mov_b32_e32 v32, 0
 ; GFX13-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v32, 0 :: v_dual_mov_b32 v0, s36
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v1, s37 :: v_dual_mov_b32 v2, s38
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v3, s39 :: v_dual_mov_b32 v4, s40
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v5, s41 :: v_dual_mov_b32 v6, s42
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v7, s43 :: v_dual_mov_b32 v8, s44
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v9, s45 :: v_dual_mov_b32 v10, s46
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v11, s47 :: v_dual_mov_b32 v12, s48
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v13, s49 :: v_dual_mov_b32 v14, s50
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v15, s51 :: v_dual_mov_b32 v16, s8
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v17, s9 :: v_dual_mov_b32 v18, s10
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v19, s11 :: v_dual_mov_b32 v20, s12
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v21, s13 :: v_dual_mov_b32 v22, s14
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v23, s15 :: v_dual_mov_b32 v24, s16
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v25, s17 :: v_dual_mov_b32 v26, s18
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v27, s19 :: v_dual_mov_b32 v28, s20
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v29, s21 :: v_dual_mov_b32 v30, s22
-; GFX13-SDAG-NEXT:    v_mov_b32_e32 v31, s23
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v0, s36 :: v_dual_mov_b32 v1, s37
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v2, s38 :: v_dual_mov_b32 v3, s39
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v4, s40 :: v_dual_mov_b32 v5, s41
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v6, s42 :: v_dual_mov_b32 v7, s43
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v8, s44 :: v_dual_mov_b32 v9, s45
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v10, s46 :: v_dual_mov_b32 v11, s47
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v12, s48 :: v_dual_mov_b32 v13, s49
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v14, s50 :: v_dual_mov_b32 v15, s51
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v16, s8 :: v_dual_mov_b32 v17, s9
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v18, s10 :: v_dual_mov_b32 v19, s11
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v20, s12 :: v_dual_mov_b32 v21, s13
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v22, s14 :: v_dual_mov_b32 v23, s15
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v24, s16 :: v_dual_mov_b32 v25, s17
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v26, s18 :: v_dual_mov_b32 v27, s19
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v28, s20 :: v_dual_mov_b32 v29, s21
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v30, s22 :: v_dual_mov_b32 v31, s23
 ; GFX13-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13-SDAG-NEXT:    v_cvt_scalef32_pk32_bf6_f32 v[0:5], v[0:31], s2
 ; GFX13-SDAG-NEXT:    s_clause 0x1
@@ -181,24 +181,24 @@ define amdgpu_kernel void @test_cvt_scalef32_pk32_bf6_f32_v_inreg_src(ptr addrsp
 ; GFX13-GISEL-NEXT:    s_load_b512 s[52:67], s[4:5], 0xe4
 ; GFX13-GISEL-NEXT:    s_load_b32 s2, s[4:5], 0x124
 ; GFX13-GISEL-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX13-GISEL-NEXT:    v_mov_b32_e32 v32, 0
 ; GFX13-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v32, 0 :: v_dual_mov_b32 v0, s36
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v1, s37 :: v_dual_mov_b32 v2, s38
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v3, s39 :: v_dual_mov_b32 v4, s40
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v5, s41 :: v_dual_mov_b32 v6, s42
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v7, s43 :: v_dual_mov_b32 v8, s44
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v9, s45 :: v_dual_mov_b32 v10, s46
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v11, s47 :: v_dual_mov_b32 v12, s48
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v13, s49 :: v_dual_mov_b32 v14, s50
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v15, s51 :: v_dual_mov_b32 v16, s52
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v17, s53 :: v_dual_mov_b32 v18, s54
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v19, s55 :: v_dual_mov_b32 v20, s56
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v21, s57 :: v_dual_mov_b32 v22, s58
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v23, s59 :: v_dual_mov_b32 v24, s60
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v25, s61 :: v_dual_mov_b32 v26, s62
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v27, s63 :: v_dual_mov_b32 v28, s64
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v29, s65 :: v_dual_mov_b32 v30, s66
-; GFX13-GISEL-NEXT:    v_mov_b32_e32 v31, s67
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v0, s36 :: v_dual_mov_b32 v1, s37
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v2, s38 :: v_dual_mov_b32 v3, s39
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v4, s40 :: v_dual_mov_b32 v5, s41
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v6, s42 :: v_dual_mov_b32 v7, s43
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v8, s44 :: v_dual_mov_b32 v9, s45
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v10, s46 :: v_dual_mov_b32 v11, s47
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v12, s48 :: v_dual_mov_b32 v13, s49
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v14, s50 :: v_dual_mov_b32 v15, s51
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v16, s52 :: v_dual_mov_b32 v17, s53
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v18, s54 :: v_dual_mov_b32 v19, s55
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v20, s56 :: v_dual_mov_b32 v21, s57
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v22, s58 :: v_dual_mov_b32 v23, s59
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v24, s60 :: v_dual_mov_b32 v25, s61
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v26, s62 :: v_dual_mov_b32 v27, s63
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v28, s64 :: v_dual_mov_b32 v29, s65
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v30, s66 :: v_dual_mov_b32 v31, s67
 ; GFX13-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13-GISEL-NEXT:    v_cvt_scalef32_pk32_bf6_f32 v[0:5], v[0:31], s2
 ; GFX13-GISEL-NEXT:    s_clause 0x1
@@ -217,24 +217,24 @@ define amdgpu_kernel void @test_cvt_scalef32_pk32_bf6_f32_s_inreg_src(ptr addrsp
 ; GFX13-SDAG-NEXT:    s_load_b512 s[36:51], s[4:5], 0xa4
 ; GFX13-SDAG-NEXT:    s_load_b512 s[8:23], s[4:5], 0xe4
 ; GFX13-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX13-SDAG-NEXT:    v_mov_b32_e32 v32, 0
 ; GFX13-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v32, 0 :: v_dual_mov_b32 v0, s36
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v1, s37 :: v_dual_mov_b32 v2, s38
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v3, s39 :: v_dual_mov_b32 v4, s40
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v5, s41 :: v_dual_mov_b32 v6, s42
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v7, s43 :: v_dual_mov_b32 v8, s44
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v9, s45 :: v_dual_mov_b32 v10, s46
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v11, s47 :: v_dual_mov_b32 v12, s48
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v13, s49 :: v_dual_mov_b32 v14, s50
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v15, s51 :: v_dual_mov_b32 v16, s8
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v17, s9 :: v_dual_mov_b32 v18, s10
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v19, s11 :: v_dual_mov_b32 v20, s12
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v21, s13 :: v_dual_mov_b32 v22, s14
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v23, s15 :: v_dual_mov_b32 v24, s16
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v25, s17 :: v_dual_mov_b32 v26, s18
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v27, s19 :: v_dual_mov_b32 v28, s20
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v29, s21 :: v_dual_mov_b32 v30, s22
-; GFX13-SDAG-NEXT:    v_mov_b32_e32 v31, s23
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v0, s36 :: v_dual_mov_b32 v1, s37
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v2, s38 :: v_dual_mov_b32 v3, s39
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v4, s40 :: v_dual_mov_b32 v5, s41
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v6, s42 :: v_dual_mov_b32 v7, s43
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v8, s44 :: v_dual_mov_b32 v9, s45
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v10, s46 :: v_dual_mov_b32 v11, s47
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v12, s48 :: v_dual_mov_b32 v13, s49
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v14, s50 :: v_dual_mov_b32 v15, s51
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v16, s8 :: v_dual_mov_b32 v17, s9
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v18, s10 :: v_dual_mov_b32 v19, s11
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v20, s12 :: v_dual_mov_b32 v21, s13
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v22, s14 :: v_dual_mov_b32 v23, s15
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v24, s16 :: v_dual_mov_b32 v25, s17
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v26, s18 :: v_dual_mov_b32 v27, s19
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v28, s20 :: v_dual_mov_b32 v29, s21
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v30, s22 :: v_dual_mov_b32 v31, s23
 ; GFX13-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13-SDAG-NEXT:    v_cvt_scalef32_pk32_bf6_f32 v[0:5], v[0:31], 0x42c80000
 ; GFX13-SDAG-NEXT:    s_clause 0x1
@@ -248,24 +248,24 @@ define amdgpu_kernel void @test_cvt_scalef32_pk32_bf6_f32_s_inreg_src(ptr addrsp
 ; GFX13-GISEL-NEXT:    s_load_b512 s[36:51], s[4:5], 0xa4
 ; GFX13-GISEL-NEXT:    s_load_b512 s[52:67], s[4:5], 0xe4
 ; GFX13-GISEL-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX13-GISEL-NEXT:    v_mov_b32_e32 v32, 0
 ; GFX13-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v32, 0 :: v_dual_mov_b32 v0, s36
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v1, s37 :: v_dual_mov_b32 v2, s38
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v3, s39 :: v_dual_mov_b32 v4, s40
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v5, s41 :: v_dual_mov_b32 v6, s42
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v7, s43 :: v_dual_mov_b32 v8, s44
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v9, s45 :: v_dual_mov_b32 v10, s46
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v11, s47 :: v_dual_mov_b32 v12, s48
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v13, s49 :: v_dual_mov_b32 v14, s50
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v15, s51 :: v_dual_mov_b32 v16, s52
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v17, s53 :: v_dual_mov_b32 v18, s54
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v19, s55 :: v_dual_mov_b32 v20, s56
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v21, s57 :: v_dual_mov_b32 v22, s58
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v23, s59 :: v_dual_mov_b32 v24, s60
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v25, s61 :: v_dual_mov_b32 v26, s62
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v27, s63 :: v_dual_mov_b32 v28, s64
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v29, s65 :: v_dual_mov_b32 v30, s66
-; GFX13-GISEL-NEXT:    v_mov_b32_e32 v31, s67
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v0, s36 :: v_dual_mov_b32 v1, s37
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v2, s38 :: v_dual_mov_b32 v3, s39
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v4, s40 :: v_dual_mov_b32 v5, s41
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v6, s42 :: v_dual_mov_b32 v7, s43
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v8, s44 :: v_dual_mov_b32 v9, s45
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v10, s46 :: v_dual_mov_b32 v11, s47
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v12, s48 :: v_dual_mov_b32 v13, s49
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v14, s50 :: v_dual_mov_b32 v15, s51
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v16, s52 :: v_dual_mov_b32 v17, s53
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v18, s54 :: v_dual_mov_b32 v19, s55
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v20, s56 :: v_dual_mov_b32 v21, s57
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v22, s58 :: v_dual_mov_b32 v23, s59
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v24, s60 :: v_dual_mov_b32 v25, s61
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v26, s62 :: v_dual_mov_b32 v27, s63
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v28, s64 :: v_dual_mov_b32 v29, s65
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v30, s66 :: v_dual_mov_b32 v31, s67
 ; GFX13-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13-GISEL-NEXT:    v_cvt_scalef32_pk32_bf6_f32 v[0:5], v[0:31], 0x42c80000
 ; GFX13-GISEL-NEXT:    s_clause 0x1
@@ -285,24 +285,24 @@ define amdgpu_kernel void @test_cvt_scalef32_pk32_fp6_f32_v(ptr addrspace(1) %ou
 ; GFX13-SDAG-NEXT:    s_load_b512 s[8:23], s[4:5], 0xe4
 ; GFX13-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX13-SDAG-NEXT:    s_load_b32 s2, s[4:5], 0x124
+; GFX13-SDAG-NEXT:    v_mov_b32_e32 v32, 0
 ; GFX13-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v32, 0 :: v_dual_mov_b32 v0, s36
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v1, s37 :: v_dual_mov_b32 v2, s38
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v3, s39 :: v_dual_mov_b32 v4, s40
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v5, s41 :: v_dual_mov_b32 v6, s42
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v7, s43 :: v_dual_mov_b32 v8, s44
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v9, s45 :: v_dual_mov_b32 v10, s46
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v11, s47 :: v_dual_mov_b32 v12, s48
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v13, s49 :: v_dual_mov_b32 v14, s50
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v15, s51 :: v_dual_mov_b32 v16, s8
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v17, s9 :: v_dual_mov_b32 v18, s10
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v19, s11 :: v_dual_mov_b32 v20, s12
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v21, s13 :: v_dual_mov_b32 v22, s14
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v23, s15 :: v_dual_mov_b32 v24, s16
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v25, s17 :: v_dual_mov_b32 v26, s18
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v27, s19 :: v_dual_mov_b32 v28, s20
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v29, s21 :: v_dual_mov_b32 v30, s22
-; GFX13-SDAG-NEXT:    v_mov_b32_e32 v31, s23
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v0, s36 :: v_dual_mov_b32 v1, s37
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v2, s38 :: v_dual_mov_b32 v3, s39
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v4, s40 :: v_dual_mov_b32 v5, s41
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v6, s42 :: v_dual_mov_b32 v7, s43
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v8, s44 :: v_dual_mov_b32 v9, s45
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v10, s46 :: v_dual_mov_b32 v11, s47
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v12, s48 :: v_dual_mov_b32 v13, s49
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v14, s50 :: v_dual_mov_b32 v15, s51
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v16, s8 :: v_dual_mov_b32 v17, s9
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v18, s10 :: v_dual_mov_b32 v19, s11
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v20, s12 :: v_dual_mov_b32 v21, s13
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v22, s14 :: v_dual_mov_b32 v23, s15
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v24, s16 :: v_dual_mov_b32 v25, s17
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v26, s18 :: v_dual_mov_b32 v27, s19
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v28, s20 :: v_dual_mov_b32 v29, s21
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v30, s22 :: v_dual_mov_b32 v31, s23
 ; GFX13-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13-SDAG-NEXT:    v_cvt_scalef32_pk32_fp6_f32 v[0:5], v[0:31], s2
 ; GFX13-SDAG-NEXT:    s_clause 0x1
@@ -317,24 +317,24 @@ define amdgpu_kernel void @test_cvt_scalef32_pk32_fp6_f32_v(ptr addrspace(1) %ou
 ; GFX13-GISEL-NEXT:    s_load_b512 s[52:67], s[4:5], 0xe4
 ; GFX13-GISEL-NEXT:    s_load_b32 s2, s[4:5], 0x124
 ; GFX13-GISEL-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX13-GISEL-NEXT:    v_mov_b32_e32 v32, 0
 ; GFX13-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v32, 0 :: v_dual_mov_b32 v0, s36
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v1, s37 :: v_dual_mov_b32 v2, s38
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v3, s39 :: v_dual_mov_b32 v4, s40
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v5, s41 :: v_dual_mov_b32 v6, s42
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v7, s43 :: v_dual_mov_b32 v8, s44
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v9, s45 :: v_dual_mov_b32 v10, s46
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v11, s47 :: v_dual_mov_b32 v12, s48
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v13, s49 :: v_dual_mov_b32 v14, s50
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v15, s51 :: v_dual_mov_b32 v16, s52
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v17, s53 :: v_dual_mov_b32 v18, s54
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v19, s55 :: v_dual_mov_b32 v20, s56
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v21, s57 :: v_dual_mov_b32 v22, s58
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v23, s59 :: v_dual_mov_b32 v24, s60
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v25, s61 :: v_dual_mov_b32 v26, s62
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v27, s63 :: v_dual_mov_b32 v28, s64
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v29, s65 :: v_dual_mov_b32 v30, s66
-; GFX13-GISEL-NEXT:    v_mov_b32_e32 v31, s67
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v0, s36 :: v_dual_mov_b32 v1, s37
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v2, s38 :: v_dual_mov_b32 v3, s39
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v4, s40 :: v_dual_mov_b32 v5, s41
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v6, s42 :: v_dual_mov_b32 v7, s43
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v8, s44 :: v_dual_mov_b32 v9, s45
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v10, s46 :: v_dual_mov_b32 v11, s47
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v12, s48 :: v_dual_mov_b32 v13, s49
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v14, s50 :: v_dual_mov_b32 v15, s51
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v16, s52 :: v_dual_mov_b32 v17, s53
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v18, s54 :: v_dual_mov_b32 v19, s55
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v20, s56 :: v_dual_mov_b32 v21, s57
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v22, s58 :: v_dual_mov_b32 v23, s59
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v24, s60 :: v_dual_mov_b32 v25, s61
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v26, s62 :: v_dual_mov_b32 v27, s63
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v28, s64 :: v_dual_mov_b32 v29, s65
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v30, s66 :: v_dual_mov_b32 v31, s67
 ; GFX13-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13-GISEL-NEXT:    v_cvt_scalef32_pk32_fp6_f32 v[0:5], v[0:31], s2
 ; GFX13-GISEL-NEXT:    s_clause 0x1
@@ -353,24 +353,24 @@ define amdgpu_kernel void @test_cvt_scalef32_pk32_fp6_f32_s(ptr addrspace(1) %ou
 ; GFX13-SDAG-NEXT:    s_load_b512 s[36:51], s[4:5], 0xa4
 ; GFX13-SDAG-NEXT:    s_load_b512 s[8:23], s[4:5], 0xe4
 ; GFX13-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX13-SDAG-NEXT:    v_mov_b32_e32 v32, 0
 ; GFX13-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v32, 0 :: v_dual_mov_b32 v0, s36
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v1, s37 :: v_dual_mov_b32 v2, s38
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v3, s39 :: v_dual_mov_b32 v4, s40
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v5, s41 :: v_dual_mov_b32 v6, s42
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v7, s43 :: v_dual_mov_b32 v8, s44
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v9, s45 :: v_dual_mov_b32 v10, s46
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v11, s47 :: v_dual_mov_b32 v12, s48
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v13, s49 :: v_dual_mov_b32 v14, s50
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v15, s51 :: v_dual_mov_b32 v16, s8
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v17, s9 :: v_dual_mov_b32 v18, s10
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v19, s11 :: v_dual_mov_b32 v20, s12
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v21, s13 :: v_dual_mov_b32 v22, s14
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v23, s15 :: v_dual_mov_b32 v24, s16
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v25, s17 :: v_dual_mov_b32 v26, s18
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v27, s19 :: v_dual_mov_b32 v28, s20
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v29, s21 :: v_dual_mov_b32 v30, s22
-; GFX13-SDAG-NEXT:    v_mov_b32_e32 v31, s23
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v0, s36 :: v_dual_mov_b32 v1, s37
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v2, s38 :: v_dual_mov_b32 v3, s39
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v4, s40 :: v_dual_mov_b32 v5, s41
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v6, s42 :: v_dual_mov_b32 v7, s43
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v8, s44 :: v_dual_mov_b32 v9, s45
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v10, s46 :: v_dual_mov_b32 v11, s47
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v12, s48 :: v_dual_mov_b32 v13, s49
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v14, s50 :: v_dual_mov_b32 v15, s51
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v16, s8 :: v_dual_mov_b32 v17, s9
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v18, s10 :: v_dual_mov_b32 v19, s11
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v20, s12 :: v_dual_mov_b32 v21, s13
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v22, s14 :: v_dual_mov_b32 v23, s15
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v24, s16 :: v_dual_mov_b32 v25, s17
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v26, s18 :: v_dual_mov_b32 v27, s19
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v28, s20 :: v_dual_mov_b32 v29, s21
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v30, s22 :: v_dual_mov_b32 v31, s23
 ; GFX13-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13-SDAG-NEXT:    v_cvt_scalef32_pk32_fp6_f32 v[0:5], v[0:31], 0x42c80000
 ; GFX13-SDAG-NEXT:    s_clause 0x1
@@ -384,24 +384,24 @@ define amdgpu_kernel void @test_cvt_scalef32_pk32_fp6_f32_s(ptr addrspace(1) %ou
 ; GFX13-GISEL-NEXT:    s_load_b512 s[36:51], s[4:5], 0xa4
 ; GFX13-GISEL-NEXT:    s_load_b512 s[52:67], s[4:5], 0xe4
 ; GFX13-GISEL-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX13-GISEL-NEXT:    v_mov_b32_e32 v32, 0
 ; GFX13-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v32, 0 :: v_dual_mov_b32 v0, s36
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v1, s37 :: v_dual_mov_b32 v2, s38
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v3, s39 :: v_dual_mov_b32 v4, s40
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v5, s41 :: v_dual_mov_b32 v6, s42
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v7, s43 :: v_dual_mov_b32 v8, s44
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v9, s45 :: v_dual_mov_b32 v10, s46
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v11, s47 :: v_dual_mov_b32 v12, s48
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v13, s49 :: v_dual_mov_b32 v14, s50
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v15, s51 :: v_dual_mov_b32 v16, s52
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v17, s53 :: v_dual_mov_b32 v18, s54
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v19, s55 :: v_dual_mov_b32 v20, s56
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v21, s57 :: v_dual_mov_b32 v22, s58
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v23, s59 :: v_dual_mov_b32 v24, s60
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v25, s61 :: v_dual_mov_b32 v26, s62
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v27, s63 :: v_dual_mov_b32 v28, s64
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v29, s65 :: v_dual_mov_b32 v30, s66
-; GFX13-GISEL-NEXT:    v_mov_b32_e32 v31, s67
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v0, s36 :: v_dual_mov_b32 v1, s37
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v2, s38 :: v_dual_mov_b32 v3, s39
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v4, s40 :: v_dual_mov_b32 v5, s41
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v6, s42 :: v_dual_mov_b32 v7, s43
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v8, s44 :: v_dual_mov_b32 v9, s45
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v10, s46 :: v_dual_mov_b32 v11, s47
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v12, s48 :: v_dual_mov_b32 v13, s49
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v14, s50 :: v_dual_mov_b32 v15, s51
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v16, s52 :: v_dual_mov_b32 v17, s53
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v18, s54 :: v_dual_mov_b32 v19, s55
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v20, s56 :: v_dual_mov_b32 v21, s57
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v22, s58 :: v_dual_mov_b32 v23, s59
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v24, s60 :: v_dual_mov_b32 v25, s61
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v26, s62 :: v_dual_mov_b32 v27, s63
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v28, s64 :: v_dual_mov_b32 v29, s65
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v30, s66 :: v_dual_mov_b32 v31, s67
 ; GFX13-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13-GISEL-NEXT:    v_cvt_scalef32_pk32_fp6_f32 v[0:5], v[0:31], 0x42c80000
 ; GFX13-GISEL-NEXT:    s_clause 0x1
@@ -421,24 +421,24 @@ define amdgpu_kernel void @test_cvt_scalef32_pk32_fp6_f32_v_inreg_src(ptr addrsp
 ; GFX13-SDAG-NEXT:    s_load_b512 s[8:23], s[4:5], 0xe4
 ; GFX13-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX13-SDAG-NEXT:    s_load_b32 s2, s[4:5], 0x124
+; GFX13-SDAG-NEXT:    v_mov_b32_e32 v32, 0
 ; GFX13-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v32, 0 :: v_dual_mov_b32 v0, s36
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v1, s37 :: v_dual_mov_b32 v2, s38
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v3, s39 :: v_dual_mov_b32 v4, s40
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v5, s41 :: v_dual_mov_b32 v6, s42
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v7, s43 :: v_dual_mov_b32 v8, s44
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v9, s45 :: v_dual_mov_b32 v10, s46
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v11, s47 :: v_dual_mov_b32 v12, s48
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v13, s49 :: v_dual_mov_b32 v14, s50
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v15, s51 :: v_dual_mov_b32 v16, s8
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v17, s9 :: v_dual_mov_b32 v18, s10
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v19, s11 :: v_dual_mov_b32 v20, s12
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v21, s13 :: v_dual_mov_b32 v22, s14
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v23, s15 :: v_dual_mov_b32 v24, s16
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v25, s17 :: v_dual_mov_b32 v26, s18
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v27, s19 :: v_dual_mov_b32 v28, s20
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v29, s21 :: v_dual_mov_b32 v30, s22
-; GFX13-SDAG-NEXT:    v_mov_b32_e32 v31, s23
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v0, s36 :: v_dual_mov_b32 v1, s37
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v2, s38 :: v_dual_mov_b32 v3, s39
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v4, s40 :: v_dual_mov_b32 v5, s41
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v6, s42 :: v_dual_mov_b32 v7, s43
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v8, s44 :: v_dual_mov_b32 v9, s45
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v10, s46 :: v_dual_mov_b32 v11, s47
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v12, s48 :: v_dual_mov_b32 v13, s49
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v14, s50 :: v_dual_mov_b32 v15, s51
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v16, s8 :: v_dual_mov_b32 v17, s9
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v18, s10 :: v_dual_mov_b32 v19, s11
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v20, s12 :: v_dual_mov_b32 v21, s13
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v22, s14 :: v_dual_mov_b32 v23, s15
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v24, s16 :: v_dual_mov_b32 v25, s17
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v26, s18 :: v_dual_mov_b32 v27, s19
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v28, s20 :: v_dual_mov_b32 v29, s21
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v30, s22 :: v_dual_mov_b32 v31, s23
 ; GFX13-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13-SDAG-NEXT:    v_cvt_scalef32_pk32_fp6_f32 v[0:5], v[0:31], s2
 ; GFX13-SDAG-NEXT:    s_clause 0x1
@@ -453,24 +453,24 @@ define amdgpu_kernel void @test_cvt_scalef32_pk32_fp6_f32_v_inreg_src(ptr addrsp
 ; GFX13-GISEL-NEXT:    s_load_b512 s[52:67], s[4:5], 0xe4
 ; GFX13-GISEL-NEXT:    s_load_b32 s2, s[4:5], 0x124
 ; GFX13-GISEL-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX13-GISEL-NEXT:    v_mov_b32_e32 v32, 0
 ; GFX13-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v32, 0 :: v_dual_mov_b32 v0, s36
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v1, s37 :: v_dual_mov_b32 v2, s38
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v3, s39 :: v_dual_mov_b32 v4, s40
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v5, s41 :: v_dual_mov_b32 v6, s42
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v7, s43 :: v_dual_mov_b32 v8, s44
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v9, s45 :: v_dual_mov_b32 v10, s46
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v11, s47 :: v_dual_mov_b32 v12, s48
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v13, s49 :: v_dual_mov_b32 v14, s50
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v15, s51 :: v_dual_mov_b32 v16, s52
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v17, s53 :: v_dual_mov_b32 v18, s54
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v19, s55 :: v_dual_mov_b32 v20, s56
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v21, s57 :: v_dual_mov_b32 v22, s58
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v23, s59 :: v_dual_mov_b32 v24, s60
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v25, s61 :: v_dual_mov_b32 v26, s62
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v27, s63 :: v_dual_mov_b32 v28, s64
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v29, s65 :: v_dual_mov_b32 v30, s66
-; GFX13-GISEL-NEXT:    v_mov_b32_e32 v31, s67
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v0, s36 :: v_dual_mov_b32 v1, s37
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v2, s38 :: v_dual_mov_b32 v3, s39
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v4, s40 :: v_dual_mov_b32 v5, s41
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v6, s42 :: v_dual_mov_b32 v7, s43
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v8, s44 :: v_dual_mov_b32 v9, s45
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v10, s46 :: v_dual_mov_b32 v11, s47
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v12, s48 :: v_dual_mov_b32 v13, s49
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v14, s50 :: v_dual_mov_b32 v15, s51
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v16, s52 :: v_dual_mov_b32 v17, s53
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v18, s54 :: v_dual_mov_b32 v19, s55
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v20, s56 :: v_dual_mov_b32 v21, s57
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v22, s58 :: v_dual_mov_b32 v23, s59
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v24, s60 :: v_dual_mov_b32 v25, s61
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v26, s62 :: v_dual_mov_b32 v27, s63
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v28, s64 :: v_dual_mov_b32 v29, s65
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v30, s66 :: v_dual_mov_b32 v31, s67
 ; GFX13-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13-GISEL-NEXT:    v_cvt_scalef32_pk32_fp6_f32 v[0:5], v[0:31], s2
 ; GFX13-GISEL-NEXT:    s_clause 0x1
@@ -489,24 +489,24 @@ define amdgpu_kernel void @test_cvt_scalef32_pk32_fp6_f32_s_inreg_src(ptr addrsp
 ; GFX13-SDAG-NEXT:    s_load_b512 s[36:51], s[4:5], 0xa4
 ; GFX13-SDAG-NEXT:    s_load_b512 s[8:23], s[4:5], 0xe4
 ; GFX13-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX13-SDAG-NEXT:    v_mov_b32_e32 v32, 0
 ; GFX13-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v32, 0 :: v_dual_mov_b32 v0, s36
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v1, s37 :: v_dual_mov_b32 v2, s38
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v3, s39 :: v_dual_mov_b32 v4, s40
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v5, s41 :: v_dual_mov_b32 v6, s42
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v7, s43 :: v_dual_mov_b32 v8, s44
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v9, s45 :: v_dual_mov_b32 v10, s46
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v11, s47 :: v_dual_mov_b32 v12, s48
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v13, s49 :: v_dual_mov_b32 v14, s50
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v15, s51 :: v_dual_mov_b32 v16, s8
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v17, s9 :: v_dual_mov_b32 v18, s10
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v19, s11 :: v_dual_mov_b32 v20, s12
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v21, s13 :: v_dual_mov_b32 v22, s14
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v23, s15 :: v_dual_mov_b32 v24, s16
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v25, s17 :: v_dual_mov_b32 v26, s18
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v27, s19 :: v_dual_mov_b32 v28, s20
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v29, s21 :: v_dual_mov_b32 v30, s22
-; GFX13-SDAG-NEXT:    v_mov_b32_e32 v31, s23
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v0, s36 :: v_dual_mov_b32 v1, s37
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v2, s38 :: v_dual_mov_b32 v3, s39
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v4, s40 :: v_dual_mov_b32 v5, s41
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v6, s42 :: v_dual_mov_b32 v7, s43
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v8, s44 :: v_dual_mov_b32 v9, s45
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v10, s46 :: v_dual_mov_b32 v11, s47
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v12, s48 :: v_dual_mov_b32 v13, s49
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v14, s50 :: v_dual_mov_b32 v15, s51
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v16, s8 :: v_dual_mov_b32 v17, s9
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v18, s10 :: v_dual_mov_b32 v19, s11
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v20, s12 :: v_dual_mov_b32 v21, s13
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v22, s14 :: v_dual_mov_b32 v23, s15
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v24, s16 :: v_dual_mov_b32 v25, s17
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v26, s18 :: v_dual_mov_b32 v27, s19
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v28, s20 :: v_dual_mov_b32 v29, s21
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v30, s22 :: v_dual_mov_b32 v31, s23
 ; GFX13-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13-SDAG-NEXT:    v_cvt_scalef32_pk32_fp6_f32 v[0:5], v[0:31], 0x42c80000
 ; GFX13-SDAG-NEXT:    s_clause 0x1
@@ -520,24 +520,24 @@ define amdgpu_kernel void @test_cvt_scalef32_pk32_fp6_f32_s_inreg_src(ptr addrsp
 ; GFX13-GISEL-NEXT:    s_load_b512 s[36:51], s[4:5], 0xa4
 ; GFX13-GISEL-NEXT:    s_load_b512 s[52:67], s[4:5], 0xe4
 ; GFX13-GISEL-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX13-GISEL-NEXT:    v_mov_b32_e32 v32, 0
 ; GFX13-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v32, 0 :: v_dual_mov_b32 v0, s36
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v1, s37 :: v_dual_mov_b32 v2, s38
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v3, s39 :: v_dual_mov_b32 v4, s40
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v5, s41 :: v_dual_mov_b32 v6, s42
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v7, s43 :: v_dual_mov_b32 v8, s44
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v9, s45 :: v_dual_mov_b32 v10, s46
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v11, s47 :: v_dual_mov_b32 v12, s48
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v13, s49 :: v_dual_mov_b32 v14, s50
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v15, s51 :: v_dual_mov_b32 v16, s52
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v17, s53 :: v_dual_mov_b32 v18, s54
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v19, s55 :: v_dual_mov_b32 v20, s56
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v21, s57 :: v_dual_mov_b32 v22, s58
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v23, s59 :: v_dual_mov_b32 v24, s60
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v25, s61 :: v_dual_mov_b32 v26, s62
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v27, s63 :: v_dual_mov_b32 v28, s64
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v29, s65 :: v_dual_mov_b32 v30, s66
-; GFX13-GISEL-NEXT:    v_mov_b32_e32 v31, s67
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v0, s36 :: v_dual_mov_b32 v1, s37
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v2, s38 :: v_dual_mov_b32 v3, s39
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v4, s40 :: v_dual_mov_b32 v5, s41
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v6, s42 :: v_dual_mov_b32 v7, s43
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v8, s44 :: v_dual_mov_b32 v9, s45
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v10, s46 :: v_dual_mov_b32 v11, s47
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v12, s48 :: v_dual_mov_b32 v13, s49
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v14, s50 :: v_dual_mov_b32 v15, s51
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v16, s52 :: v_dual_mov_b32 v17, s53
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v18, s54 :: v_dual_mov_b32 v19, s55
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v20, s56 :: v_dual_mov_b32 v21, s57
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v22, s58 :: v_dual_mov_b32 v23, s59
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v24, s60 :: v_dual_mov_b32 v25, s61
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v26, s62 :: v_dual_mov_b32 v27, s63
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v28, s64 :: v_dual_mov_b32 v29, s65
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v30, s66 :: v_dual_mov_b32 v31, s67
 ; GFX13-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13-GISEL-NEXT:    v_cvt_scalef32_pk32_fp6_f32 v[0:5], v[0:31], 0x42c80000
 ; GFX13-GISEL-NEXT:    s_clause 0x1

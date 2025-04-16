@@ -165,8 +165,9 @@ define amdgpu_gs void @main(<4 x i32> %arg, i32 %arg1) {
 ; GFX13-NEXT:  ; %bb.2:
 ; GFX13-NEXT:    s_mov_b32 exec_lo, s1
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
-; GFX13-NEXT:    v_dual_lshrrev_b32 v0, 16, v6 :: v_dual_mov_b32 v2, 0
+; GFX13-NEXT:    v_lshrrev_b32_e32 v0, 16, v6
 ; GFX13-NEXT:    v_and_b32_e32 v1, 0xffff, v7
+; GFX13-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX13-NEXT:    ds_store_2addr_b32 v2, v0, v1 offset0:7 offset1:8
 bb:
   %i = call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 poison)

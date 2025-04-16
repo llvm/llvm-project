@@ -365,9 +365,10 @@ define amdgpu_ps <4 x half> @load_2darraymsaa_tfe_d16(<8 x i32> inreg %rsrc, ptr
 ;
 ; GFX13-LABEL: load_2darraymsaa_tfe_d16:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    v_dual_mov_b32 v6, v0 :: v_dual_mov_b32 v8, 0 ; encoding: [0x00,0x81,0x20,0xcf,0x80,0x00,0x00,0x00,0x06,0x00,0x00,0x08]
+; GFX13-NEXT:    v_mov_b32_e32 v8, 0 ; encoding: [0x80,0x02,0x10,0x7e]
+; GFX13-NEXT:    v_mov_b32_e32 v6, v0 ; encoding: [0x00,0x03,0x0c,0x7e]
 ; GFX13-NEXT:    v_dual_mov_b32 v4, v2 :: v_dual_mov_b32 v5, v1 ; encoding: [0x02,0x01,0x10,0xca,0x01,0x01,0x04,0x04]
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1) ; encoding: [0x92,0x00,0xae,0xbf]
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_1) ; encoding: [0x93,0x00,0xae,0xbf]
 ; GFX13-NEXT:    v_dual_mov_b32 v9, v8 :: v_dual_mov_b32 v10, v8 ; encoding: [0x08,0x01,0x10,0xca,0x08,0x01,0x0a,0x09]
 ; GFX13-NEXT:    v_dual_mov_b32 v0, v8 :: v_dual_mov_b32 v1, v9 ; encoding: [0x08,0x01,0x10,0xca,0x09,0x01,0x00,0x00]
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_2) ; encoding: [0x02,0x00,0xae,0xbf]

@@ -34,9 +34,9 @@ define amdgpu_ps <10 x float> @image_bvh8_intersect_ray(i64 %node_ptr, float %ra
 ; GFX13-SDAG-LABEL: image_bvh8_intersect_ray:
 ; GFX13-SDAG:       ; %bb.0: ; %main_body
 ; GFX13-SDAG-NEXT:    v_dual_mov_b32 v16, v8 :: v_dual_mov_b32 v15, v7
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v14, v6 :: v_dual_mov_b32 v20, v5
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v19, v4 :: v_dual_mov_b32 v18, v3
-; GFX13-SDAG-NEXT:    v_mov_b32_e32 v3, 0
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v14, v6 :: v_dual_mov_b32 v19, v4
+; GFX13-SDAG-NEXT:    v_mov_b32_e32 v20, v5
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v18, v3 :: v_dual_mov_b32 v3, 0
 ; GFX13-SDAG-NEXT:    image_bvh8_intersect_ray v[0:9], [v[0:1], v[2:3], v[18:20], v[14:16], v9], s[0:3]
 ; GFX13-SDAG-NEXT:    s_wait_rtscnt 0x0
 ; GFX13-SDAG-NEXT:    global_store_b96 v[10:11], v[18:20], off
@@ -46,9 +46,9 @@ define amdgpu_ps <10 x float> @image_bvh8_intersect_ray(i64 %node_ptr, float %ra
 ; GFX13-GISEL-LABEL: image_bvh8_intersect_ray:
 ; GFX13-GISEL:       ; %bb.0: ; %main_body
 ; GFX13-GISEL-NEXT:    v_dual_mov_b32 v18, v3 :: v_dual_mov_b32 v19, v4
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v20, v5 :: v_dual_mov_b32 v14, v6
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v15, v7 :: v_dual_mov_b32 v16, v8
-; GFX13-GISEL-NEXT:    v_mov_b32_e32 v3, 0
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v20, v5 :: v_dual_mov_b32 v15, v7
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v14, v6 :: v_dual_mov_b32 v3, 0
+; GFX13-GISEL-NEXT:    v_mov_b32_e32 v16, v8
 ; GFX13-GISEL-NEXT:    image_bvh8_intersect_ray v[0:9], [v[0:1], v[2:3], v[18:20], v[14:16], v9], s[0:3]
 ; GFX13-GISEL-NEXT:    s_wait_rtscnt 0x0
 ; GFX13-GISEL-NEXT:    global_store_b96 v[10:11], v[18:20], off
@@ -99,9 +99,9 @@ define amdgpu_ps <10 x float> @image_bvh8_intersect_ray_1(i64 %node_ptr, float %
 ; GFX13-SDAG-LABEL: image_bvh8_intersect_ray_1:
 ; GFX13-SDAG:       ; %bb.0: ; %main_body
 ; GFX13-SDAG-NEXT:    v_dual_mov_b32 v16, v8 :: v_dual_mov_b32 v15, v7
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v14, v6 :: v_dual_mov_b32 v20, v5
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v19, v4 :: v_dual_mov_b32 v18, v3
-; GFX13-SDAG-NEXT:    v_mov_b32_e32 v3, 1
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v14, v6 :: v_dual_mov_b32 v19, v4
+; GFX13-SDAG-NEXT:    v_mov_b32_e32 v20, v5
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v18, v3 :: v_dual_mov_b32 v3, 1
 ; GFX13-SDAG-NEXT:    image_bvh8_intersect_ray v[0:9], [v[0:1], v[2:3], v[18:20], v[14:16], v9], s[0:3]
 ; GFX13-SDAG-NEXT:    s_wait_rtscnt 0x0
 ; GFX13-SDAG-NEXT:    global_store_b96 v[10:11], v[18:20], off
@@ -111,9 +111,9 @@ define amdgpu_ps <10 x float> @image_bvh8_intersect_ray_1(i64 %node_ptr, float %
 ; GFX13-GISEL-LABEL: image_bvh8_intersect_ray_1:
 ; GFX13-GISEL:       ; %bb.0: ; %main_body
 ; GFX13-GISEL-NEXT:    v_dual_mov_b32 v18, v3 :: v_dual_mov_b32 v19, v4
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v20, v5 :: v_dual_mov_b32 v14, v6
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v15, v7 :: v_dual_mov_b32 v16, v8
-; GFX13-GISEL-NEXT:    v_mov_b32_e32 v3, 1
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v20, v5 :: v_dual_mov_b32 v15, v7
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v14, v6 :: v_dual_mov_b32 v3, 1
+; GFX13-GISEL-NEXT:    v_mov_b32_e32 v16, v8
 ; GFX13-GISEL-NEXT:    image_bvh8_intersect_ray v[0:9], [v[0:1], v[2:3], v[18:20], v[14:16], v9], s[0:3]
 ; GFX13-GISEL-NEXT:    s_wait_rtscnt 0x0
 ; GFX13-GISEL-NEXT:    global_store_b96 v[10:11], v[18:20], off

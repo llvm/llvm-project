@@ -745,13 +745,13 @@ define <12 x i8> @v_load_constant_v12i8_align8(ptr addrspace(4) %ptr) {
 ; GFX1250-NEXT:    global_load_b96 v[0:2], v[0:1], off
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    v_dual_lshrrev_b32 v13, 8, v0 :: v_dual_lshrrev_b32 v12, 16, v0
-; GFX1250-NEXT:    v_dual_lshrrev_b32 v3, 24, v0 :: v_dual_lshrrev_b32 v5, 8, v1
-; GFX1250-NEXT:    v_dual_lshrrev_b32 v6, 16, v1 :: v_dual_lshrrev_b32 v7, 24, v1
-; GFX1250-NEXT:    v_dual_lshrrev_b32 v9, 8, v2 :: v_dual_lshrrev_b32 v10, 16, v2
-; GFX1250-NEXT:    v_dual_mov_b32 v4, v1 :: v_dual_lshrrev_b32 v11, 24, v2
+; GFX1250-NEXT:    v_dual_lshrrev_b32 v3, 24, v0 :: v_dual_lshrrev_b32 v6, 16, v1
+; GFX1250-NEXT:    v_dual_lshrrev_b32 v5, 8, v1 :: v_dual_lshrrev_b32 v10, 16, v2
+; GFX1250-NEXT:    v_dual_mov_b32 v4, v1 :: v_dual_lshrrev_b32 v7, 24, v1
+; GFX1250-NEXT:    v_dual_mov_b32 v8, v2 :: v_dual_lshrrev_b32 v9, 8, v2
+; GFX1250-NEXT:    v_dual_mov_b32 v2, v12 :: v_dual_lshrrev_b32 v11, 24, v2
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
-; GFX1250-NEXT:    v_dual_mov_b32 v8, v2 :: v_dual_mov_b32 v1, v13
-; GFX1250-NEXT:    v_mov_b32_e32 v2, v12
+; GFX1250-NEXT:    v_mov_b32_e32 v1, v13
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX9-LABEL: v_load_constant_v12i8_align8:

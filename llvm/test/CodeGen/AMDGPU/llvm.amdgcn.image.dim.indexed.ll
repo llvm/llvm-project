@@ -450,7 +450,8 @@ main_body:
 define amdgpu_ps <4 x float> @load_1d_tfe_V4_dmask3(i32 inreg %rsrc, ptr addrspace(1) inreg %out, i32 %s) {
 ; GFX13-LABEL: load_1d_tfe_V4_dmask3:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    v_dual_mov_b32 v4, v0 :: v_dual_mov_b32 v6, 0
+; GFX13-NEXT:    v_mov_b32_e32 v6, 0
+; GFX13-NEXT:    v_mov_b32_e32 v4, v0
 ; GFX13-NEXT:    s_mov_b32 s3, s2
 ; GFX13-NEXT:    s_mov_b32 s2, s1
 ; GFX13-NEXT:    v_dual_mov_b32 v7, v6 :: v_dual_mov_b32 v8, v6
@@ -493,7 +494,8 @@ main_body:
 define amdgpu_ps <4 x float> @load_1d_tfe_V4_dmask1(i32 inreg %rsrc, ptr addrspace(1) inreg %out, i32 %s) {
 ; GFX13-LABEL: load_1d_tfe_V4_dmask1:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    v_dual_mov_b32 v2, v0 :: v_dual_mov_b32 v4, 0
+; GFX13-NEXT:    v_mov_b32_e32 v4, 0
+; GFX13-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX13-NEXT:    s_mov_b32 s3, s2
 ; GFX13-NEXT:    s_mov_b32 s2, s1
 ; GFX13-NEXT:    v_mov_b32_e32 v5, v4
@@ -513,7 +515,8 @@ main_body:
 define amdgpu_ps <2 x float> @load_1d_tfe_V2_dmask1(i32 inreg %rsrc, ptr addrspace(1) inreg %out, i32 %s) {
 ; GFX13-LABEL: load_1d_tfe_V2_dmask1:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    v_dual_mov_b32 v2, v0 :: v_dual_mov_b32 v4, 0
+; GFX13-NEXT:    v_mov_b32_e32 v4, 0
+; GFX13-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX13-NEXT:    s_mov_b32 s3, s2
 ; GFX13-NEXT:    s_mov_b32 s2, s1
 ; GFX13-NEXT:    v_mov_b32_e32 v5, v4

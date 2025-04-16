@@ -88,8 +88,9 @@ define amdgpu_ps float @test3(i32 %rsrc, i32 %data, i32 %cmp, i32 %vindex, i32 %
 ; GFX13-SDAG-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-SDAG-NEXT:    v_mov_b32_e32 v1, v5
 ; GFX13-SDAG-NEXT:    buffer_atomic_cmpswap_b32 v[0:1], v3, v2, null offen th:TH_ATOMIC_RETURN
+; GFX13-SDAG-NEXT:    v_add_nc_u32_e32 v3, 44, v3
 ; GFX13-SDAG-NEXT:    s_wait_loadcnt 0x0
-; GFX13-SDAG-NEXT:    v_dual_add_nc_u32 v3, 44, v3 :: v_dual_mov_b32 v1, v5
+; GFX13-SDAG-NEXT:    v_mov_b32_e32 v1, v5
 ; GFX13-SDAG-NEXT:    buffer_atomic_cmpswap_b32 v[0:1], v3, v2, null offen th:TH_ATOMIC_RETURN
 ; GFX13-SDAG-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-SDAG-NEXT:    v_mov_b32_e32 v1, v5
@@ -99,8 +100,8 @@ define amdgpu_ps float @test3(i32 %rsrc, i32 %data, i32 %cmp, i32 %vindex, i32 %
 ;
 ; GFX13-GISEL-LABEL: test3:
 ; GFX13-GISEL:       ; %bb.0: ; %main_body
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v4, v0 :: v_dual_mov_b32 v6, v1
-; GFX13-GISEL-NEXT:    v_mov_b32_e32 v7, v2
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v4, v0 :: v_dual_mov_b32 v7, v2
+; GFX13-GISEL-NEXT:    v_mov_b32_e32 v6, v1
 ; GFX13-GISEL-NEXT:    s_movk_i32 s0, 0x1ffc
 ; GFX13-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13-GISEL-NEXT:    v_dual_mov_b32 v0, v6 :: v_dual_mov_b32 v1, v7
@@ -132,11 +133,10 @@ define amdgpu_ps float @test5(i32 %rsrc, i64 %data, i64 %cmp, i32 %vindex, i32 %
 ; GFX13-SDAG:       ; %bb.0: ; %main_body
 ; GFX13-SDAG-NEXT:    v_dual_mov_b32 v9, v4 :: v_dual_mov_b32 v8, v3
 ; GFX13-SDAG-NEXT:    v_dual_mov_b32 v7, v2 :: v_dual_mov_b32 v6, v1
-; GFX13-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX13-SDAG-NEXT:    v_dual_add_nc_u32 v1, 44, v5 :: v_dual_mov_b32 v13, v9
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v12, v8 :: v_dual_mov_b32 v11, v7
-; GFX13-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_3)
-; GFX13-SDAG-NEXT:    v_mov_b32_e32 v10, v6
+; GFX13-SDAG-NEXT:    v_add_nc_u32_e32 v1, 44, v5
+; GFX13-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v13, v9 :: v_dual_mov_b32 v12, v8
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v11, v7 :: v_dual_mov_b32 v10, v6
 ; GFX13-SDAG-NEXT:    s_movk_i32 s0, 0x1ffc
 ; GFX13-SDAG-NEXT:    buffer_atomic_cmpswap_b64 v[10:13], off, v0, null th:TH_ATOMIC_RETURN
 ; GFX13-SDAG-NEXT:    s_wait_loadcnt 0x0
