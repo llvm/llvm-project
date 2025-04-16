@@ -8,11 +8,13 @@
 //
 /// \file
 /// Form Bundles with VALU instructions and the V_LOAD/STORE_IDX that are used
-/// to index the operands. Most bundles can be lowered to a single VALU in the
-/// AMDGPULowerVGPREncoding pass (with the exception of data movement bundles
-/// containing only loads and stores). Replace the V_LOAD/STORE_IDX data
-/// operands with staging registers.
-///
+/// to index the operands. If the V_LOAD_IDX or VALU instruction are in a
+/// different basic block, try to sink them to the their uses so that we are
+/// able to form bundles (this pre-bundling sinking phase adapts some of the
+/// methods from the generic MachineSink phase). Most bundles can be lowered to
+/// a single VALU in the AMDGPULowerVGPREncoding pass (with the exception of
+/// data movement bundles containing only loads and stores). Replace the
+/// V_LOAD/STORE_IDX data operands with staging registers.
 //
 //===----------------------------------------------------------------------===//
 
@@ -32,7 +34,6 @@ using namespace llvm;
 #define DEBUG_TYPE "bundle-indexed-load-store"
 
 constexpr unsigned NumSrcStagingRegs = 6;
-constexpr unsigned LANESHARED = 10; // Laneshared addrspace is 10.
 
 namespace {
 
