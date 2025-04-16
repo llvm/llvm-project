@@ -159,6 +159,11 @@ def bare_simm32_lsb0 : Operand<OtherVT> {
   let OperandType = "OPERAND_PCREL";
 }
 
+def AddLike: PatFrags<(ops node:$A, node:$B),
+                      [(add node:$A, node:$B), (or node:$A, node:$B)], [{
+    return CurDAG->isBaseWithConstantOffset(SDValue(N, 0));
+}]>;
+
 //===----------------------------------------------------------------------===//
 // Instruction Formats
 //===----------------------------------------------------------------------===//
@@ -1239,6 +1244,14 @@ class PatGprNoX0Simm32NoSimm26<SDPatternOperator OpNode, RVInst48 Inst>
     : Pat<(i32 (OpNode (i32 GPRNoX0:$rs1), simm32_nosimm26:$imm)),
           (Inst GPRNoX0:$rs1, simm32_nosimm26:$imm)>;
 
+class QC48LdPat<PatFrag LoadOp, RVInst48 Inst>
+    : Pat<(i32 (LoadOp (AddLike (i32 GPR:$rs1), simm26_nosimm12:$imm26))),
+          (Inst GPR:$rs1, simm26_nosimm12:$imm26)>;
+
+class QC48StPat<PatFrag StoreOp, RVInst48 Inst>
+    : Pat<(StoreOp (i32 GPR:$rs2), (AddLike (i32 GPR:$rs1), simm26_nosimm12:$imm26)),
+          (Inst GPR:$rs2, GPR:$rs1, simm26_nosimm12:$imm26)>;
+
 /// Simple arithmetic operations
 
 let Predicates = [HasVendorXqcilia, IsRV32] in {
@@ -1252,6 +1265,20 @@ def : PatGprNoX0Simm26NoSimm12<and, QC_E_ANDI>;
 def : PatGprNoX0Simm26NoSimm12<or, QC_E_ORI>;
 def : PatGprNoX0Simm26NoSimm12<xor, QC_E_XORI>;
 } // Predicates = [HasVendorXqcilia, IsRV32]
+
+let Predicates = [HasVendorXqcilo, IsRV32], AddedComplexity = 2 in {
+  def : QC48LdPat<sextloadi8, QC_E_LB>;
+  def : QC48LdPat<extloadi8, QC_E_LBU>; // Prefer unsigned due to no c.lb in Zcb.
+  def : QC48LdPat<sextloadi16, QC_E_LH>;
+  def : QC48LdPat<extloadi16, QC_E_LH>;
+  def : QC48LdPat<load, QC_E_LW>;
+  def : QC48LdPat<zextloadi8, QC_E_LBU>;
+  def : QC48LdPat<zextloadi16, QC_E_LHU>;
+
+  def : QC48StPat<truncstorei8, QC_E_SB>;
+  def : QC48StPat<truncstorei16, QC_E_SH>;
+  def : QC48StPat<store, QC_E_SW>;
+} // Predicates = [HasVendorXqcilo, IsRV32], AddedComplexity = 2
 
 let Predicates = [HasVendorXqciint, IsRV32] in
 def : Pat<(riscv_mileaveret_glue), (QC_C_MILEAVERET)>;
