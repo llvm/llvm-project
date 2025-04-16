@@ -1737,6 +1737,11 @@ SparcTargetLowering::SparcTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::SUBC, MVT::i32, Legal);
   setOperationAction(ISD::SUBE, MVT::i32, Legal);
 
+  if (Subtarget->isVIS3()) {
+    setOperationAction(ISD::ADDC, MVT::i64, Legal);
+    setOperationAction(ISD::ADDE, MVT::i64, Legal);
+  }
+
   if (Subtarget->is64Bit()) {
     setOperationAction(ISD::BITCAST, MVT::f64, Expand);
     setOperationAction(ISD::BITCAST, MVT::i64, Expand);
