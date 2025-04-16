@@ -199,7 +199,7 @@ static void appendParameterTypes(const CodeGenTypes &CGT,
                               prefix.size());
 }
 
-using SmallExtParameterInfoList =
+using ExtParameterInfoList =
     SmallVector<FunctionProtoType::ExtParameterInfo, 16>;
 
 /// Arrange the LLVM function layout for a value of the given function
@@ -208,7 +208,7 @@ static const CGFunctionInfo &
 arrangeLLVMFunctionInfo(CodeGenTypes &CGT, bool instanceMethod,
                         SmallVectorImpl<CanQualType> &prefix,
                         CanQual<FunctionProtoType> FTP) {
-  SmallExtParameterInfoList paramInfos;
+  ExtParameterInfoList paramInfos;
   RequiredArgs Required = RequiredArgs::forPrototypePlus(FTP, prefix.size());
   appendParameterTypes(CGT, prefix, paramInfos, FTP);
   CanQualType resultType = FTP->getReturnType().getUnqualifiedType();
@@ -219,13 +219,13 @@ arrangeLLVMFunctionInfo(CodeGenTypes &CGT, bool instanceMethod,
                                      FTP->getExtInfo(), paramInfos, Required);
 }
 
-using SmallCanQualTypeList = SmallVector<CanQualType, 16>;
+using CanQualTypeList = SmallVector<CanQualType, 16>;
 
 /// Arrange the argument and result information for a value of the
 /// given freestanding function type.
 const CGFunctionInfo &
 CodeGenTypes::arrangeFreeFunctionType(CanQual<FunctionProtoType> FTP) {
-  SmallCanQualTypeList argTypes;
+  CanQualTypeList argTypes;
   return ::arrangeLLVMFunctionInfo(*this, /*instanceMethod=*/false, argTypes,
                                    FTP);
 }
@@ -323,7 +323,7 @@ const CGFunctionInfo &
 CodeGenTypes::arrangeCXXMethodType(const CXXRecordDecl *RD,
                                    const FunctionProtoType *FTP,
                                    const CXXMethodDecl *MD) {
-  SmallCanQualTypeList argTypes;
+  CanQualTypeList argTypes;
 
   // Add the 'this' pointer.
   argTypes.push_back(DeriveThisType(RD, MD));
@@ -379,8 +379,8 @@ const CGFunctionInfo &
 CodeGenTypes::arrangeCXXStructorDeclaration(GlobalDecl GD) {
   auto *MD = cast<CXXMethodDecl>(GD.getDecl());
 
-  SmallCanQualTypeList argTypes;
-  SmallExtParameterInfoList paramInfos;
+  CanQualTypeList argTypes;
+  ExtParameterInfoList paramInfos;
 
   const CXXRecordDecl *ThisType = getCXXABI().getThisArgumentTypeForMethod(GD);
   argTypes.push_back(DeriveThisType(ThisType, MD));
@@ -425,26 +425,26 @@ CodeGenTypes::arrangeCXXStructorDeclaration(GlobalDecl GD) {
                                  argTypes, extInfo, paramInfos, required);
 }
 
-static SmallCanQualTypeList getArgTypesForCall(ASTContext &ctx,
-                                               const CallArgList &args) {
-  SmallCanQualTypeList argTypes;
+static CanQualTypeList getArgTypesForCall(ASTContext &ctx,
+                                          const CallArgList &args) {
+  CanQualTypeList argTypes;
   for (auto &arg : args)
     argTypes.push_back(ctx.getCanonicalParamType(arg.Ty));
   return argTypes;
 }
 
-static SmallCanQualTypeList
-getArgTypesForDeclaration(ASTContext &ctx, const FunctionArgList &args) {
-  SmallCanQualTypeList argTypes;
+static CanQualTypeList getArgTypesForDeclaration(ASTContext &ctx,
+                                                 const FunctionArgList &args) {
+  CanQualTypeList argTypes;
   for (auto &arg : args)
     argTypes.push_back(ctx.getCanonicalParamType(arg->getType()));
   return argTypes;
 }
 
-static SmallExtParameterInfoList
+static ExtParameterInfoList
 getExtParameterInfosForCall(const FunctionProtoType *proto, unsigned prefixArgs,
                             unsigned totalArgs) {
-  SmallExtParameterInfoList result;
+  ExtParameterInfoList result;
   if (proto->hasExtParameterInfos()) {
     addExtParameterInfosForCall(result, proto, prefixArgs, totalArgs);
   }
@@ -466,7 +466,7 @@ CodeGenTypes::arrangeCXXConstructorCall(const CallArgList &args,
                                         unsigned ExtraPrefixArgs,
                                         unsigned ExtraSuffixArgs,
                                         bool PassProtoArgs) {
-  SmallCanQualTypeList ArgTypes;
+  CanQualTypeList ArgTypes;
   for (const auto &Arg : args)
     ArgTypes.push_back(Context.getCanonicalParamType(Arg.Ty));
 
@@ -486,7 +486,7 @@ CodeGenTypes::arrangeCXXConstructorCall(const CallArgList &args,
                                : Context.VoidTy;
 
   FunctionType::ExtInfo Info = FPT->getExtInfo();
-  SmallExtParameterInfoList ParamInfos;
+  ExtParameterInfoList ParamInfos;
   // If the prototype args are elided, we should only have ABI-specific args,
   // which never have param info.
   if (PassProtoArgs && FPT->hasExtParameterInfos()) {
@@ -549,8 +549,8 @@ CodeGenTypes::arrangeObjCMethodDeclaration(const ObjCMethodDecl *MD) {
 const CGFunctionInfo &
 CodeGenTypes::arrangeObjCMessageSendSignature(const ObjCMethodDecl *MD,
                                               QualType receiverType) {
-  SmallCanQualTypeList argTys;
-  SmallExtParameterInfoList extParamInfos(MD->isDirectMethod() ? 1 : 2);
+  CanQualTypeList argTys;
+  ExtParameterInfoList extParamInfos(MD->isDirectMethod() ? 1 : 2);
   argTys.push_back(Context.getCanonicalParamType(receiverType));
   if (!MD->isDirectMethod())
     argTys.push_back(Context.getCanonicalParamType(Context.getObjCSelType()));
@@ -580,7 +580,7 @@ CodeGenTypes::arrangeObjCMessageSendSignature(const ObjCMethodDecl *MD,
 const CGFunctionInfo &
 CodeGenTypes::arrangeUnprototypedObjCMessageSend(QualType returnType,
                                                  const CallArgList &args) {
-  SmallCanQualTypeList argTypes = getArgTypesForCall(Context, args);
+  CanQualTypeList argTypes = getArgTypesForCall(Context, args);
   FunctionType::ExtInfo einfo;
 
   return arrangeLLVMFunctionInfo(GetReturnType(returnType), FnInfoOpts::None,
@@ -642,7 +642,7 @@ arrangeFreeFunctionLikeCall(CodeGenTypes &CGT,
                             bool chainCall) {
   assert(args.size() >= numExtraRequiredArgs);
 
-  SmallExtParameterInfoList paramInfos;
+  ExtParameterInfoList paramInfos;
 
   // In most cases, there are no optional arguments.
   RequiredArgs required = RequiredArgs::All;
@@ -667,7 +667,7 @@ arrangeFreeFunctionLikeCall(CodeGenTypes &CGT,
     required = RequiredArgs(args.size());
   }
 
-  SmallCanQualTypeList argTypes;
+  CanQualTypeList argTypes;
   for (const auto &arg : args)
     argTypes.push_back(CGT.getContext().getCanonicalParamType(arg.Ty));
   FnInfoOpts opts = chainCall ? FnInfoOpts::IsChainCall : FnInfoOpts::None;
@@ -700,9 +700,9 @@ CodeGenTypes::arrangeBlockFunctionCall(const CallArgList &args,
 const CGFunctionInfo &
 CodeGenTypes::arrangeBlockFunctionDeclaration(const FunctionProtoType *proto,
                                               const FunctionArgList &params) {
-  SmallExtParameterInfoList paramInfos =
+  ExtParameterInfoList paramInfos =
       getExtParameterInfosForCall(proto, 1, params.size());
-  SmallCanQualTypeList argTypes = getArgTypesForDeclaration(Context, params);
+  CanQualTypeList argTypes = getArgTypesForDeclaration(Context, params);
 
   return arrangeLLVMFunctionInfo(GetReturnType(proto->getReturnType()),
                                  FnInfoOpts::None, argTypes,
@@ -713,7 +713,7 @@ CodeGenTypes::arrangeBlockFunctionDeclaration(const FunctionProtoType *proto,
 const CGFunctionInfo &
 CodeGenTypes::arrangeBuiltinFunctionCall(QualType resultType,
                                          const CallArgList &args) {
-  SmallCanQualTypeList argTypes;
+  CanQualTypeList argTypes;
   for (const auto &Arg : args)
     argTypes.push_back(Context.getCanonicalParamType(Arg.Ty));
   return arrangeLLVMFunctionInfo(GetReturnType(resultType), FnInfoOpts::None,
@@ -724,7 +724,7 @@ CodeGenTypes::arrangeBuiltinFunctionCall(QualType resultType,
 const CGFunctionInfo &
 CodeGenTypes::arrangeBuiltinFunctionDeclaration(QualType resultType,
                                                 const FunctionArgList &args) {
-  SmallCanQualTypeList argTypes = getArgTypesForDeclaration(Context, args);
+  CanQualTypeList argTypes = getArgTypesForDeclaration(Context, args);
 
   return arrangeLLVMFunctionInfo(GetReturnType(resultType), FnInfoOpts::None,
                                  argTypes, FunctionType::ExtInfo(), {},
@@ -752,10 +752,10 @@ CodeGenTypes::arrangeCXXMethodCall(const CallArgList &args,
          "Emitting a call with less args than the required prefix?");
   // Add one to account for `this`. It's a bit awkward here, but we don't count
   // `this` in similar places elsewhere.
-  SmallExtParameterInfoList paramInfos =
+  ExtParameterInfoList paramInfos =
       getExtParameterInfosForCall(proto, numPrefixArgs + 1, args.size());
 
-  SmallCanQualTypeList argTypes = getArgTypesForCall(Context, args);
+  CanQualTypeList argTypes = getArgTypesForCall(Context, args);
 
   FunctionType::ExtInfo info = proto->getExtInfo();
   return arrangeLLVMFunctionInfo(GetReturnType(proto->getReturnType()),
@@ -776,14 +776,14 @@ CodeGenTypes::arrangeCall(const CGFunctionInfo &signature,
   if (signature.arg_size() == args.size())
     return signature;
 
-  SmallExtParameterInfoList paramInfos;
+  ExtParameterInfoList paramInfos;
   auto sigParamInfos = signature.getExtParameterInfos();
   if (!sigParamInfos.empty()) {
     paramInfos.append(sigParamInfos.begin(), sigParamInfos.end());
     paramInfos.resize(args.size());
   }
 
-  SmallCanQualTypeList argTypes = getArgTypesForCall(Context, args);
+  CanQualTypeList argTypes = getArgTypesForCall(Context, args);
 
   assert(signature.getRequiredArgs().allowsOptionalArgs());
   FnInfoOpts opts = FnInfoOpts::None;
