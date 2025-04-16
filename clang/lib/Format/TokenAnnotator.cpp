@@ -5688,7 +5688,7 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
         !Left.Children.empty()) {
       // Support AllowShortFunctionsOnASingleLine for JavaScript.
       return !(Left.NestingLevel == 0 && Line.Level == 0
-                   ? Style.AllowShortFunctionsOnASingleLine.Other
+                   ? Style.AllowShortFunctionsOnASingleLine.isAll()
                    : Style.AllowShortFunctionsOnASingleLine.Inline);
     }
   } else if (Style.Language == FormatStyle::LK_Java) {
