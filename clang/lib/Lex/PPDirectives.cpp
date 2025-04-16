@@ -4050,10 +4050,13 @@ void Preprocessor::HandleEmbedDirective(SourceLocation HashLoc, Token &EmbedTok,
   if (Callbacks)
     Callbacks->EmbedDirective(HashLoc, Filename, isAngled, MaybeFileRef,
                               *Params);
-  // getSpelling may return a string that is actually longer than
-  // FilenameTok.getLength(), so get the string of real length in
-  // OriginalFilename and then allocate in the preprocessor to make the memory
-  // live longer since we need filename to pretty print AST nodes later.
+  // getSpelling() may return a buffer from the token itself or it may use the
+  // SmallString buffer we provided. getSpelling() may also return a string that
+  // is actually longer than FilenameTok.getLength(), so we first pass a
+  // locally created buffer to getSpelling() to get the string of real length
+  // and then we allocate a long living buffer because the buffer we used
+  // previously will only live till the end of this function and we need
+  // filename info to live longer.
   void *Mem = BP.Allocate(OriginalFilename.size(), alignof(char *));
   memcpy(Mem, OriginalFilename.data(), OriginalFilename.size());
   StringRef FilenameToGo =
