@@ -1284,8 +1284,8 @@ void StmtPrinter::VisitSourceLocExpr(SourceLocExpr *Node) {
 }
 
 void StmtPrinter::VisitEmbedExpr(EmbedExpr *Node) {
-  // FIXME: Embed parameters are not reflected in the AST, so there is no way to print
-  // them yet.
+  // FIXME: Embed parameters are not reflected in the AST, so there is no way to
+  // print them yet.
   OS << "#embed ";
   OS << Node->getFileName();
   OS << NL;
