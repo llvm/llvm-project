@@ -576,7 +576,9 @@ def FeatureSME_MOP4: ExtensionWithMArch<"sme-mop4", "SME_MOP4", "FEAT_SME_MOP4",
 def FeatureSME_TMOP: ExtensionWithMArch<"sme-tmop", "SME_TMOP", "FEAT_SME_TMOP",
   "Enable SME Structured sparsity outer product instructions.", [FeatureSME2]>;
 
-//===----------------------------------------------------------------------===//
+def FeatureSSVE_FEXPA : ExtensionWithMArch<"ssve-fexpa", "SSVE_FEXPA", "FEAT_SSVE_FEXPA",
+  "Enable SVE FEXPA instruction in Streaming SVE mode", [FeatureSME2]>;
+
 //  Other Features
 //===----------------------------------------------------------------------===//
 
