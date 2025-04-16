@@ -1015,12 +1015,7 @@ ToolChain::path_list ToolChain::getArchSpecificLibPaths() const {
     Paths.push_back(std::string(Path));
   };
 
-  // For AIX, get the triple without the OS version.
-  if (Triple.isOSAIX()) {
-    const llvm::Triple &TripleWithoutVersion = getTripleWithoutOSVersion();
-    AddPath({TripleWithoutVersion.str()});
-  } else
-    AddPath({getTriple().str()});
+  AddPath({getTriple().str()});
   AddPath({getOSLibName(), llvm::Triple::getArchTypeName(getArch())});
   return Paths;
 }
