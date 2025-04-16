@@ -522,13 +522,17 @@ static void genPrivateLikeInitRegion(mlir::OpBuilder &builder, RecipeOp recipe,
                                      mlir::Type ty, mlir::Location loc) {
   mlir::Value retVal = recipe.getInitRegion().front().getArgument(0);
   ty = fir::unwrapRefType(ty);
-  if (fir::isa_trivial(ty)) {
+
+  auto getDeclareOpForType = [&](mlir::Type ty) -> hlfir::DeclareOp {
     auto alloca = builder.create<fir::AllocaOp>(loc, ty);
-    auto declareOp = builder.create<hlfir::DeclareOp>(
+    return builder.create<hlfir::DeclareOp>(
         loc, alloca, accPrivateInitName, /*shape=*/nullptr,
         llvm::ArrayRef<mlir::Value>{}, /*dummy_scope=*/nullptr,
         fir::FortranVariableFlagsAttr{});
-    retVal = declareOp.getBase();
+  };
+
+  if (fir::isa_trivial(ty)) {
+    retVal = getDeclareOpForType(ty).getBase();
   } else if (auto seqTy = mlir::dyn_cast_or_null<fir::SequenceType>(ty)) {
     if (fir::isa_trivial(seqTy.getEleTy())) {
       mlir::Value shape;
@@ -552,12 +556,16 @@ static void genPrivateLikeInitRegion(mlir::OpBuilder &builder, RecipeOp recipe,
     }
   } else if (auto boxTy = mlir::dyn_cast_or_null<fir::BaseBoxType>(ty)) {
     mlir::Type innerTy = fir::unwrapRefType(boxTy.getEleTy());
-    if (!fir::isa_trivial(innerTy) && !mlir::isa<fir::SequenceType>(innerTy))
+    if (fir::isa_trivial(innerTy)) {
+      retVal = getDeclareOpForType(ty).getBase();
+    } else if (mlir::isa<fir::SequenceType>(innerTy)) {
+      fir::FirOpBuilder firBuilder{builder, recipe.getOperation()};
+      hlfir::Entity source = hlfir::Entity{retVal};
+      auto [temp, cleanup] = hlfir::createTempFromMold(loc, firBuilder, source);
+      retVal = temp;
+    } else {
       TODO(loc, "Unsupported boxed type in OpenACC privatization");
-    fir::FirOpBuilder firBuilder{builder, recipe.getOperation()};
-    hlfir::Entity source = hlfir::Entity{retVal};
-    auto [temp, cleanup] = hlfir::createTempFromMold(loc, firBuilder, source);
-    retVal = temp;
+    }
   }
   builder.create<mlir::acc::YieldOp>(loc, retVal);
 }
