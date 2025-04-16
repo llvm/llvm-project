@@ -1737,6 +1737,11 @@ SparcTargetLowering::SparcTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::SUBC, MVT::i32, Legal);
   setOperationAction(ISD::SUBE, MVT::i32, Legal);
 
+  if (Subtarget->isVIS3()) {
+    setOperationAction(ISD::ADDC, MVT::i64, Legal);
+    setOperationAction(ISD::ADDE, MVT::i64, Legal);
+  }
+
   if (Subtarget->is64Bit()) {
     setOperationAction(ISD::BITCAST, MVT::f64, Expand);
     setOperationAction(ISD::BITCAST, MVT::i64, Expand);
@@ -3558,6 +3563,12 @@ bool SparcTargetLowering::useLoadStackGuardNode(const Module &M) const {
   if (!Subtarget->isTargetLinux())
     return TargetLowering::useLoadStackGuardNode(M);
   return true;
+}
+
+bool SparcTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
+                                       bool ForCodeSize) const {
+  return Subtarget->isVIS() && (VT == MVT::f32 || VT == MVT::f64) &&
+         Imm.isZero();
 }
 
 // Override to disable global variable loading on Linux.
