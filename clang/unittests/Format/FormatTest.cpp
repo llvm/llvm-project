@@ -15255,6 +15255,26 @@ TEST_F(FormatTest, CustomShortFunctionOptions) {
                "  return 42;\n"
                "}",
                CustomMixed);
+
+  FormatStyle OnlyOther = getLLVMStyle();
+  OnlyOther.AllowShortFunctionsOnASingleLine =
+      FormatStyle::ShortFunctionStyle({/*Empty=*/false,
+                                       /*Inline=*/false,
+                                       /*Other=*/true});
+  verifyFormat("void topLevelEmpty() {\n"
+               "}",
+               OnlyOther);
+
+  verifyFormat("void topLevelNonEmpty() { return; }", OnlyOther);
+
+  verifyFormat("class C {\n"
+               "  int inlineEmpty() {\n"
+               "  }\n"
+               "  int inlineNonempty() {\n"
+               "    return 42;\n"
+               "  }\n"
+               "};",
+               OnlyOther);
 }
 
 TEST_F(FormatTest, PullInlineOnlyFunctionDefinitionsIntoSingleLine) {
