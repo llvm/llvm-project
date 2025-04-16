@@ -195,10 +195,6 @@ Non-comprehensive list of changes in this release
 - Added `__builtin_elementwise_exp10`.
 - For AMDPGU targets, added `__builtin_v_cvt_off_f32_i4` that maps to the `v_cvt_off_f32_i4` instruction.
 - Added `__builtin_elementwise_minnum` and `__builtin_elementwise_maxnum`.
-- Clang itself now uses split stacks instead of threads for allocating more
-  stack space when running on Apple AArch64 based platforms. This means that
-  stack traces of Clang from debuggers, crashes, and profilers may look
-  different than before.
 
 New Compiler Flags
 ------------------
@@ -391,6 +387,14 @@ Improvements to Clang's diagnostics
 
 - An error is now emitted when a ``musttail`` call is made to a function marked with the ``not_tail_called`` attribute. (#GH133509).
 
+- ``-Whigher-precisision-for-complex-divison`` warns when:
+
+  -	The divisor is complex.
+  -	When the complex division happens in a higher precision type due to arithmetic promotion.
+  -	When using the divide and assign operator (``/=``).
+
+  Fixes #GH131127
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -420,6 +424,9 @@ Bug Fixes in This Version
 - Defining an integer literal suffix (e.g., ``LL``) before including
   ``<stdint.h>`` in a freestanding build no longer causes invalid token pasting
   when using the ``INTn_C`` macros. (#GH85995)
+- Fixed an assertion failure in the expansion of builtin macros like ``__has_embed()`` with line breaks before the
+  closing paren. (#GH133574)
+- Fixed a crash in error recovery for expressions resolving to templates. (#GH135621)
 - Clang no longer accepts invalid integer constants which are too large to fit
   into any (standard or extended) integer type when the constant is unevaluated.
   Merely forming the token is sufficient to render the program invalid. Code
@@ -475,7 +482,6 @@ Bug Fixes to C++ Support
   by template argument deduction.
 - Clang is now better at instantiating the function definition after its use inside
   of a constexpr lambda. (#GH125747)
-- Fixed a local class member function instantiation bug inside dependent lambdas. (#GH59734), (#GH132208)
 - Clang no longer crashes when trying to unify the types of arrays with
   certain differences in qualifiers (this could happen during template argument
   deduction or when building a ternary operator). (#GH97005)
@@ -567,8 +573,10 @@ Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
 - For ARM targets, cc1as now considers the FPU's features for the selected CPU or Architecture.
 - The ``+nosimd`` attribute is now fully supported for ARM. Previously, this had no effect when being used with
-  ARM targets, however this will now disable NEON instructions being generated. The ``simd`` option is 
+  ARM targets, however this will now disable NEON instructions being generated. The ``simd`` option is
   also now printed when the ``--print-supported-extensions`` option is used.
+
+-  Support for __ptrauth type qualifier has been added.
 
 Android Support
 ^^^^^^^^^^^^^^^
