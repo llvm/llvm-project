@@ -9471,6 +9471,8 @@ struct SpecialMemberDeletionInfo
 
   bool shouldDeleteForVariantObjCPtrMember(FieldDecl *FD, QualType FieldType);
 
+  bool shouldDeleteForVariantPtrAuthMember(const FieldDecl *FD);
+
   bool visitBase(CXXBaseSpecifier *Base) { return shouldDeleteForBase(Base); }
   bool visitField(FieldDecl *Field) { return shouldDeleteForField(Field); }
 
@@ -9639,6 +9641,30 @@ bool SpecialMemberDeletionInfo::shouldDeleteForVariantObjCPtrMember(
   return true;
 }
 
+bool SpecialMemberDeletionInfo::shouldDeleteForVariantPtrAuthMember(
+    const FieldDecl *FD) {
+  QualType FieldType = S.Context.getBaseElementType(FD->getType());
+  // Copy/move constructors/assignment operators are deleted if the field has an
+  // address-discriminated ptrauth qualifier.
+  PointerAuthQualifier Q = FieldType.getPointerAuth();
+
+  if (!Q || !Q.isAddressDiscriminated())
+    return false;
+
+  if (CSM == CXXSpecialMemberKind::DefaultConstructor ||
+      CSM == CXXSpecialMemberKind::Destructor)
+    return false;
+
+  if (Diagnose) {
+    auto *ParentClass = cast<CXXRecordDecl>(FD->getParent());
+    S.Diag(FD->getLocation(), diag::note_deleted_special_member_class_subobject)
+        << llvm::to_underlying(getEffectiveCSM()) << ParentClass
+        << /*IsField*/ true << FD << 4 << /*IsDtorCallInCtor*/ false << 2;
+  }
+
+  return true;
+}
+
 /// Check whether we should delete a special member function due to the class
 /// having a particular direct or virtual base class.
 bool SpecialMemberDeletionInfo::shouldDeleteForBase(CXXBaseSpecifier *Base) {
@@ -9675,6 +9701,9 @@ bool SpecialMemberDeletionInfo::shouldDeleteForField(FieldDecl *FD) {
   CXXRecordDecl *FieldRecord = FieldType->getAsCXXRecordDecl();
 
   if (inUnion() && shouldDeleteForVariantObjCPtrMember(FD, FieldType))
+    return true;
+
+  if (inUnion() && shouldDeleteForVariantPtrAuthMember(FD))
     return true;
 
   if (CSM == CXXSpecialMemberKind::DefaultConstructor) {
@@ -9738,6 +9767,9 @@ bool SpecialMemberDeletionInfo::shouldDeleteForField(FieldDecl *FD) {
         QualType UnionFieldType = S.Context.getBaseElementType(UI->getType());
 
         if (shouldDeleteForVariantObjCPtrMember(&*UI, UnionFieldType))
+          return true;
+
+        if (shouldDeleteForVariantPtrAuthMember(&*UI))
           return true;
 
         if (!UnionFieldType.isConstQualified())
@@ -10586,6 +10618,12 @@ void Sema::checkIllFormedTrivialABIStruct(CXXRecordDecl &RD) {
     QualType FT = FD->getType();
     if (FT.getObjCLifetime() == Qualifiers::OCL_Weak) {
       PrintDiagAndRemoveAttr(4);
+      return;
+    }
+
+    // Ill-formed if the field is an address-discriminated pointer.
+    if (FT.hasAddressDiscriminatedPointerAuth()) {
+      PrintDiagAndRemoveAttr(6);
       return;
     }
 
@@ -19363,13 +19401,7 @@ bool Sema::checkThisInStaticMemberFunctionAttributes(CXXMethodDecl *Method) {
       Args = llvm::ArrayRef(AA->args_begin(), AA->args_size());
     else if (const auto *AB = dyn_cast<AcquiredBeforeAttr>(A))
       Args = llvm::ArrayRef(AB->args_begin(), AB->args_size());
-    else if (const auto *ETLF = dyn_cast<ExclusiveTrylockFunctionAttr>(A)) {
-      Arg = ETLF->getSuccessValue();
-      Args = llvm::ArrayRef(ETLF->args_begin(), ETLF->args_size());
-    } else if (const auto *STLF = dyn_cast<SharedTrylockFunctionAttr>(A)) {
-      Arg = STLF->getSuccessValue();
-      Args = llvm::ArrayRef(STLF->args_begin(), STLF->args_size());
-    } else if (const auto *LR = dyn_cast<LockReturnedAttr>(A))
+    else if (const auto *LR = dyn_cast<LockReturnedAttr>(A))
       Arg = LR->getArg();
     else if (const auto *LE = dyn_cast<LocksExcludedAttr>(A))
       Args = llvm::ArrayRef(LE->args_begin(), LE->args_size());
@@ -19377,9 +19409,10 @@ bool Sema::checkThisInStaticMemberFunctionAttributes(CXXMethodDecl *Method) {
       Args = llvm::ArrayRef(RC->args_begin(), RC->args_size());
     else if (const auto *AC = dyn_cast<AcquireCapabilityAttr>(A))
       Args = llvm::ArrayRef(AC->args_begin(), AC->args_size());
-    else if (const auto *AC = dyn_cast<TryAcquireCapabilityAttr>(A))
+    else if (const auto *AC = dyn_cast<TryAcquireCapabilityAttr>(A)) {
+      Arg = AC->getSuccessValue();
       Args = llvm::ArrayRef(AC->args_begin(), AC->args_size());
-    else if (const auto *RC = dyn_cast<ReleaseCapabilityAttr>(A))
+    } else if (const auto *RC = dyn_cast<ReleaseCapabilityAttr>(A))
       Args = llvm::ArrayRef(RC->args_begin(), RC->args_size());
 
     if (Arg && !Finder.TraverseStmt(Arg))

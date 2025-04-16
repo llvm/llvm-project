@@ -79,10 +79,12 @@
 #include "llvm/CodeGen/RenameIndependentSubregs.h"
 #include "llvm/CodeGen/ReplaceWithVeclib.h"
 #include "llvm/CodeGen/SafeStack.h"
+#include "llvm/CodeGen/SanitizerBinaryMetadata.h"
 #include "llvm/CodeGen/SelectOptimize.h"
 #include "llvm/CodeGen/ShadowStackGCLowering.h"
 #include "llvm/CodeGen/SjLjEHPrepare.h"
 #include "llvm/CodeGen/StackColoring.h"
+#include "llvm/CodeGen/StackFrameLayoutAnalysisPass.h"
 #include "llvm/CodeGen/StackProtector.h"
 #include "llvm/CodeGen/StackSlotColoring.h"
 #include "llvm/CodeGen/TailDuplication.h"
@@ -1008,7 +1010,7 @@ Error CodeGenPassBuilder<Derived, TargetMachineT>::addMachinePasses(
   addPass(StackMapLivenessPass());
   addPass(LiveDebugValuesPass(
       getTM<TargetMachine>().Options.ShouldEmitDebugEntryValues()));
-  addPass(MachineSanitizerBinaryMetadata());
+  addPass(MachineSanitizerBinaryMetadataPass());
 
   if (TM.Options.EnableMachineOutliner &&
       getOptLevel() != CodeGenOptLevel::None &&
@@ -1019,6 +1021,8 @@ Error CodeGenPassBuilder<Derived, TargetMachineT>::addMachinePasses(
     if (AddOutliner)
       addPass(MachineOutlinerPass(RunOnAllFunctions));
   }
+
+  addPass(StackFrameLayoutAnalysisPass());
 
   // Add passes that directly emit MI after all other MI passes.
   derived().addPreEmitPass2(addPass);
