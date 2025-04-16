@@ -1,6 +1,3 @@
-! Fails until we update the pass to use the `fir.do_concurrent` op.
-! XFAIL: *
-
 ! Tests loop-nest detection algorithm for do-concurrent mapping.
 
 ! REQUIRES: asserts
