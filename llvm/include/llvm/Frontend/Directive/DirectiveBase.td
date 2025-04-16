@@ -83,6 +83,9 @@ class Clause<string c> {
   // Optional class holding value of the clause in flang AST.
   string flangClass = "";
 
+  // If set to true, don't emit flang Unparser.
+  bit skipFlangUnparser = false;
+
   // If set to true, value is optional. Not optional by default.
   bit isValueOptional = false;
 
