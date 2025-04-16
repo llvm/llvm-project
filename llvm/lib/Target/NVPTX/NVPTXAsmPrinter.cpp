@@ -1675,11 +1675,8 @@ void NVPTXAsmPrinter::bufferAggregateConstant(const Constant *CPV,
   const DataLayout &DL = getDataLayout();
 
   auto ExtendBuffer = [](APInt Val, AggBuffer *Buffer) {
-    for (unsigned _ : llvm::seq(Val.getBitWidth() / 8)) {
-      uint8_t Byte = Val.getLoBits(8).getZExtValue();
-      Buffer->addBytes(&Byte, 1, 1);
-      Val.lshrInPlace(8);
-    }
+    for (unsigned I : llvm::seq(Val.getBitWidth() / 8))
+      Buffer->addByte(Val.extractBitsAsZExtValue(8, I * 8));
   };
 
   // Integers of arbitrary width
@@ -1704,23 +1701,21 @@ void NVPTXAsmPrinter::bufferAggregateConstant(const Constant *CPV,
   }
 
   if (const auto *CDS = dyn_cast<ConstantDataSequential>(CPV)) {
-    if (CDS->getNumElements())
-      for (unsigned i : llvm::seq(CDS->getNumElements()))
-        bufferLEByte(cast<Constant>(CDS->getElementAsConstant(i)), 0,
-                     aggBuffer);
+    for (unsigned I : llvm::seq(CDS->getNumElements()))
+      bufferLEByte(cast<Constant>(CDS->getElementAsConstant(I)), 0, aggBuffer);
     return;
   }
 
   if (isa<ConstantStruct>(CPV)) {
     if (CPV->getNumOperands()) {
       StructType *ST = cast<StructType>(CPV->getType());
-      for (unsigned i : llvm::seq(CPV->getNumOperands())) {
-        int EndOffset = (i + 1 == CPV->getNumOperands())
+      for (unsigned I : llvm::seq(CPV->getNumOperands())) {
+        int EndOffset = (I + 1 == CPV->getNumOperands())
                             ? DL.getStructLayout(ST)->getElementOffset(0) +
                                   DL.getTypeAllocSize(ST)
-                            : DL.getStructLayout(ST)->getElementOffset(i + 1);
-        int Bytes = EndOffset - DL.getStructLayout(ST)->getElementOffset(i);
-        bufferLEByte(cast<Constant>(CPV->getOperand(i)), Bytes, aggBuffer);
+                            : DL.getStructLayout(ST)->getElementOffset(I + 1);
+        int Bytes = EndOffset - DL.getStructLayout(ST)->getElementOffset(I);
+        bufferLEByte(cast<Constant>(CPV->getOperand(I)), Bytes, aggBuffer);
       }
     }
     return;

@@ -125,6 +125,12 @@ class LLVM_LIBRARY_VISIBILITY NVPTXAsmPrinter : public AsmPrinter {
       return curpos;
     }
 
+    void addByte(uint8_t Byte) {
+      assert((curpos + 1) <= size);
+      buffer[curpos] = Byte;
+      curpos++;
+    }
+
     unsigned addZeros(int Num) {
       assert((curpos + Num) <= size);
       for (int i = 0; i < Num; ++i) {
