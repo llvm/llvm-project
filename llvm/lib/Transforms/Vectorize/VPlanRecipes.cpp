@@ -295,14 +295,9 @@ InstructionCost
 VPPartialReductionRecipe::computeCost(ElementCount VF,
                                       VPCostContext &Ctx) const {
   std::optional<unsigned> Opcode = std::nullopt;
-  VPValue *BinOp = getOperand(1);
+  VPValue *BinOp = getBinOp();
 
-  // If the partial reduction is predicated, a select will be operand 0 rather
-  // than the binary op
   using namespace llvm::VPlanPatternMatch;
-  if (match(getOperand(1), m_Select(m_VPValue(), m_VPValue(), m_VPValue())))
-    BinOp = BinOp->getDefiningRecipe()->getOperand(1);
-
   // If BinOp is a negation, use the side effect of match to assign the actual
   // binary operation to BinOp
   match(BinOp, m_Binary<Instruction::Sub>(m_SpecificInt(0), m_VPValue(BinOp)));
@@ -345,11 +340,17 @@ void VPPartialReductionRecipe::execute(VPTransformState &State) {
   assert(getOpcode() == Instruction::Add &&
          "Unhandled partial reduction opcode");
 
-  Value *BinOpVal = State.get(getOperand(1));
-  Value *PhiVal = State.get(getOperand(0));
+  Value *BinOpVal = State.get(getBinOp());
+  Value *PhiVal = State.get(getChainOp());
   assert(PhiVal && BinOpVal && "Phi and Mul must be set");
 
   Type *RetTy = PhiVal->getType();
+
+  /// Mask the bin op output.
+  if (VPValue *Cond = getCondOp()) {
+    Value *Zero = ConstantInt::get(BinOpVal->getType(), 0);
+    BinOpVal = Builder.CreateSelect(State.get(Cond), BinOpVal, Zero);
+  }
 
   CallInst *V = Builder.CreateIntrinsic(
       RetTy, Intrinsic::experimental_vector_partial_reduce_add,
@@ -2570,6 +2571,14 @@ VPExtendedReductionRecipe::computeCost(ElementCount VF,
 InstructionCost
 VPMulAccumulateReductionRecipe::computeCost(ElementCount VF,
                                             VPCostContext &Ctx) const {
+  if (getVFScaleFactor() > 0) {
+    return Ctx.TTI.getPartialReductionCost(
+        Instruction::Add, Ctx.Types.inferScalarType(getVecOp0()),
+        Ctx.Types.inferScalarType(getVecOp1()), getResultType(), VF,
+        TTI::getPartialReductionExtendKind(getExtOpcode()),
+        TTI::getPartialReductionExtendKind(getExtOpcode()), Instruction::Mul);
+  }
+
   Type *RedTy = Ctx.Types.inferScalarType(this);
   auto *SrcVecTy =
       cast<VectorType>(toVectorTy(Ctx.Types.inferScalarType(getVecOp0()), VF));
@@ -2648,6 +2657,8 @@ void VPMulAccumulateReductionRecipe::print(raw_ostream &O, const Twine &Indent,
   O << " = ";
   getChainOp()->printAsOperand(O, SlotTracker);
   O << " + ";
+  if (getVFScaleFactor() > 0)
+    O << "partial.";
   O << "reduce."
     << Instruction::getOpcodeName(
            RecurrenceDescriptor::getOpcode(getRecurrenceKind()))

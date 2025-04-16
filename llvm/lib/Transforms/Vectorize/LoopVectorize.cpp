@@ -8639,9 +8639,6 @@ VPRecipeBuilder::tryToCreatePartialReduction(Instruction *Reduction,
            "Expected an ADD or SUB operation for predicated partial "
            "reductions (because the neutral element in the mask is zero)!");
     Cond = getBlockInMask(Builder.getInsertBlock());
-    VPValue *Zero =
-        Plan.getOrAddLiveIn(ConstantInt::get(Reduction->getType(), 0));
-    BinOp = Builder.createSelect(Cond, BinOp, Zero, Reduction->getDebugLoc());
   }
   return new VPPartialReductionRecipe(ReductionOpcode, Accumulator, BinOp, Cond,
                                       ScaleFactor, Reduction);
