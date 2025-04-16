@@ -45,7 +45,8 @@ unsigned getDefaultStackSize();
 void runOnNewStack(unsigned StackSize, function_ref<void()> Fn);
 
 template <typename R, typename... Ts>
-R runOnNewStack(unsigned StackSize, function_ref<R(Ts...)> Fn, Ts &&...Args) {
+std::enable_if_t<!std::is_same_v<R, void>, R>
+runOnNewStack(unsigned StackSize, function_ref<R(Ts...)> Fn, Ts &&...Args) {
   std::optional<R> Ret;
   runOnNewStack(StackSize, [&]() { Ret = Fn(std::forward<Ts>(Args)...); });
   return std::move(*Ret);
