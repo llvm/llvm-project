@@ -414,7 +414,7 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
       set( build_flags )
       set( opt_flags -O3 )
       set( MACRO_ARCH ${ARCH} )
-    elseif( ${DARCH} STREQUAL amdgcn OR ${DARCH} STREQUAL amdgcn-amdhsa OR ${DARCH} STREQUAL r600 )
+    elseif( ${DARCH} STREQUAL amdgcn OR ${DARCH} STREQUAL amdgcn-amdhsa )
       # Refer to https://github.com/ROCm/clr/tree/develop/opencl for OpenCL version.
       set( opencl_lang_std "CL2.0" )
       set( build_flags )
