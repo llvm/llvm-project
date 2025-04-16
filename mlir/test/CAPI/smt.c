@@ -34,7 +34,8 @@ void testExportSMTLIB(MlirContext ctx) {
   MlirModule module =
       mlirModuleCreateParse(ctx, mlirStringRefCreateFromCString(testSMT));
 
-  MlirLogicalResult result = mlirExportSMTLIB(module, dumpCallback, NULL);
+  MlirLogicalResult result =
+      mlirTranslateModuleToSMTLIB(module, dumpCallback, NULL, false, false);
   (void)result;
   assert(mlirLogicalResultIsSuccess(result));
 
