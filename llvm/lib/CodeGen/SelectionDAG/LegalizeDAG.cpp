@@ -5467,8 +5467,8 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
                     DAG.getIntPtrConstant(0, dl, /*isTarget=*/true)));
     break;
 
-  case ISD::STRICT_FMINIMUM: {
-  case ISD::STRICT_FMAXIMUM:
+  case ISD::STRICT_FMINIMUM:
+  case ISD::STRICT_FMAXIMUM: {
     SDValue InChain = Node->getOperand(0);
     SDVTList VTs = DAG.getVTList(NVT, MVT::Other);
     Tmp1 = DAG.getNode(ISD::STRICT_FP_EXTEND, dl, VTs, InChain,
