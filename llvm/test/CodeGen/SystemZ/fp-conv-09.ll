@@ -2,7 +2,7 @@
 ;
 ; RUN: llc < %s -mtriple=s390x-linux-gnu | FileCheck %s
 
-; Test f316->i32.
+; Test f16->i32.
 define i32 @f0(half %f) {
 ; CHECK-LABEL: f0:
 ; CHECK: brasl %r14, __extendhfsf2@PLT
