@@ -376,6 +376,8 @@ LLVM_DUMP_METHOD void Descriptor::dump(llvm::raw_ostream &OS) const {
 
   if (isDummy())
     OS << " dummy";
+  if (IsConstexprUnknown)
+    OS << " constexpr-unknown";
 }
 
 /// Dump descriptor, including all valid offsets.

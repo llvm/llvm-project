@@ -491,7 +491,7 @@ The current vendor extensions supported are:
 ``experimental-Xqcisync``
   LLVM implements `version 0.2 of the Qualcomm uC Sync Delay extension specification <https://github.com/quic/riscv-unified-db/releases/latest>`__ by Qualcomm.  All instructions are prefixed with `qc.` as described in the specification. These instructions are only available for riscv32.
 
-``Xmipscmove``
+``Xmipscmov``
   LLVM implements conditional move for the `p8700 processor <https://mips.com/products/hardware/p8700/>` by MIPS.
 
 ``Xmipslsp``
