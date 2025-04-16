@@ -305,6 +305,10 @@ static bool isResourceRecordTypeOrArrayOf(const Type *Ty) {
   return HLSLAttributedResourceType::findHandleTypeOnResource(Ty) != nullptr;
 }
 
+static bool isResourceRecordTypeOrArrayOf(VarDecl *VD) {
+  return isResourceRecordTypeOrArrayOf(VD->getType().getTypePtr());
+}
+
 // Returns true if the type is a leaf element type that is not valid to be
 // included in HLSL Buffer, such as a resource class, empty struct, zero-sized
 // array, or a builtin intangible type. Returns false it is a valid leaf element
