@@ -829,6 +829,16 @@
 
 // CHECK-NSAN-UBSAN: "--whole-archive" "{{[^"]*}}libclang_rt.nsan.a" "--no-whole-archive"
 
+// CFI requirements.
+// RUN: not %clang -fsanitize=cfi \
+// RUN:     --target=x86_64-unknown-linux -fuse-ld=ld -rtlib=platform \
+// RUN:     -resource-dir=%S/Inputs/resource_dir \
+// RUN:     --sysroot=%S/Inputs/basic_linux_tree \
+// RUN:     -### %s 2>&1 \
+// RUN:   | %{filecheck} --check-prefix=CHECK-CFI-PREREQ-LINUX
+// CHECK-CFI-PREREQ-LINUX: '-fsanitize=cfi' only allowed with '-flto'
+// CHECK-CFI-PREREQ-LINUX: '-fsanitize=cfi' only allowed with '-fvisibility='
+
 // CFI by itself does not link runtime libraries.
 // RUN: not %clang -fsanitize=cfi \
 // RUN:     --target=x86_64-unknown-linux -fuse-ld=ld -rtlib=platform \
