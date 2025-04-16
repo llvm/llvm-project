@@ -9257,9 +9257,8 @@ LegalizerHelper::lowerISFPCLASS(MachineInstr &MI) {
     }
     appendToRes(NormalRes);
   }
-  if (isInverted) {
+  if (isInverted)
     Res = MIRBuilder.buildNot(DstTy, Res);
-  }
   MIRBuilder.buildCopy(DstReg, Res);
   MI.eraseFromParent();
   return Legalized;
