@@ -2240,6 +2240,17 @@ func.func @transpose_splat2(%arg : f32) -> vector<3x4xf32> {
 
 // -----
 
+// CHECK-LABEL: transpose_poison
+//       CHECK:  %[[POISON:.*]] = ub.poison : vector<4x6xi8>
+//       CHECK:  return %[[POISON]] : vector<4x6xi8>
+func.func @transpose_poison() -> vector<4x6xi8> {
+  %poison = ub.poison : vector<6x4xi8>
+  %transpose = vector.transpose %poison, [1, 0] : vector<6x4xi8> to vector<4x6xi8>
+  return %transpose : vector<4x6xi8>
+}
+
+// -----
+
 // CHECK-LABEL: func.func @insert_1d_constant
 //   CHECK-DAG: %[[ACST:.*]] = arith.constant dense<[9, 1, 2]> : vector<3xi32>
 //   CHECK-DAG: %[[BCST:.*]] = arith.constant dense<[0, 9, 2]> : vector<3xi32>
