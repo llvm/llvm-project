@@ -106,9 +106,8 @@ void PseudoLoweringEmitter::addOperandMapping(
               "' has a different number of sub operands than source operand '" +
               SrcOpnd.Rec->getName() + "'");
 
-    // Source operand maps to destination operand. The Data element
-    // will be filled in later, just set the Kind for now. Do it
-    // for each corresponding MachineInstr operand, not just the first.
+    // Source operand maps to destination operand. Do it for each corresponding
+    // MachineInstr operand, not just the first.
     for (unsigned I = 0, E = NumOps; I != E; ++I) {
       auto &Entry = OperandMap[MIOpNo + I];
       Entry.Kind = OpData::Operand;
@@ -191,21 +190,26 @@ void PseudoLoweringEmitter::evaluateExpansion(const Record *Rec) {
     unsigned MIOpNo = DstOp.MIOperandNo;
 
     if (const auto *SubDag = dyn_cast<DagInit>(Dag->getArg(Idx))) {
+      if (DstOp.MIOperandInfo->getNumArgs() == 0)
+        PrintFatalError(Rec, "In pseudo instruction '" + Rec->getName() +
+                                 "', operand '" + DstOp.Rec->getName() +
+                                 "' does not have suboperands");
       if (DstOp.MINumOperands != SubDag->getNumArgs()) {
-        PrintError(Rec,
-                   "In pseudo instruction '" + Rec->getName() + "', '" +
-                       SubDag->getAsString() +
-                       "' has wrong number of operands for operand type '" +
-                       DstOp.Rec->getName() + "'");
+        PrintFatalError(
+            Rec, "In pseudo instruction '" + Rec->getName() + "', '" +
+                     SubDag->getAsString() +
+                     "' has wrong number of operands for operand type '" +
+                     DstOp.Rec->getName() + "'");
       }
       for (unsigned I = 0, E = DstOp.MINumOperands; I != E; ++I) {
         auto *OpndRec = cast<DefInit>(DstOp.MIOperandInfo->getArg(I))->getDef();
         addOperandMapping(MIOpNo + I, 1, Rec, SubDag, I, OpndRec, OperandMap,
                           SourceOperands, SourceInsn);
       }
-    } else
+    } else {
       addOperandMapping(MIOpNo, DstOp.MINumOperands, Rec, Dag, Idx, DstOp.Rec,
                         OperandMap, SourceOperands, SourceInsn);
+    }
   }
 
   Expansions.emplace_back(SourceInsn, Insn, OperandMap);
