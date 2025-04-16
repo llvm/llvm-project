@@ -270,6 +270,10 @@ void DXContainerWriter::writeParts(raw_ostream &OS) {
       mcdxbc::RootSignatureDesc RS;
       RS.Flags = P.RootSignature->getEncodedFlags();
       RS.Version = P.RootSignature->Version;
+      RS.RootParameterOffset = P.RootSignature->RootParametersOffset;
+      RS.NumStaticSamplers = P.RootSignature->NumStaticSamplers;
+      RS.StaticSamplersOffset = P.RootSignature->StaticSamplersOffset;
+
       for (const auto &Param : P.RootSignature->Parameters) {
         mcdxbc::RootParameter NewParam;
         NewParam.Header = dxbc::RootParameterHeader{
