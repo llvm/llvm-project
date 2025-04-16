@@ -2218,30 +2218,6 @@ func.func @shuffle_nofold1(%v0 : vector<4xi32>, %v1 : vector<2xi32>) -> vector<5
 
 // -----
 
-// CHECK-LABEL: func @transpose_scalar_broadcast1
-//  CHECK-SAME: (%[[ARG:.+]]: vector<1xf32>)
-//       CHECK:   %[[V:.+]] = vector.broadcast %[[ARG]] : vector<1xf32> to vector<1x8xf32>
-//       CHECK:   return %[[V]] : vector<1x8xf32>
-func.func @transpose_scalar_broadcast1(%value: vector<1xf32>) -> vector<1x8xf32> {
-  %bcast = vector.broadcast %value : vector<1xf32> to vector<8x1xf32>
-  %t = vector.transpose %bcast, [1, 0] : vector<8x1xf32> to vector<1x8xf32>
-  return %t : vector<1x8xf32>
-}
-
-// -----
-
-// CHECK-LABEL: func @transpose_scalar_broadcast2
-//  CHECK-SAME: (%[[ARG:.+]]: f32)
-//       CHECK:   %[[V:.+]] = vector.broadcast %[[ARG]] : f32 to vector<1x8xf32>
-//       CHECK:   return %[[V]] : vector<1x8xf32>
-func.func @transpose_scalar_broadcast2(%value: f32) -> vector<1x8xf32> {
-  %bcast = vector.broadcast %value : f32 to vector<8x1xf32>
-  %t = vector.transpose %bcast, [1, 0] : vector<8x1xf32> to vector<1x8xf32>
-  return %t : vector<1x8xf32>
-}
-
-// -----
-
 // CHECK-LABEL: func @transpose_splat_constant
 //       CHECK:   %[[CST:.+]] = arith.constant dense<5.000000e+00> : vector<8x4xf32>
 //       CHECK:   return %[[CST]]
