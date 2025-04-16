@@ -30,6 +30,7 @@ extern "C" {
   extern wchar_t *wcschr(const wchar_t *s, wchar_t c);
   extern int wcscmp(const wchar_t *s1, const wchar_t *s2);
   extern int wcsncmp(const wchar_t *s1, const wchar_t *s2, size_t n);
+  extern wchar_t *wmemcpy(wchar_t *d, const wchar_t *s, size_t n);
 }
 
 namespace strcmp {
@@ -1590,6 +1591,67 @@ namespace WMemChr {
 
   constexpr bool c = !wcschr(L"hello", L'h'); // both-error {{constant expression}} \
                                               // both-note {{non-constexpr function 'wcschr' cannot be used in a constant expression}}
+}
+
+namespace WMemCpy {
+  template<typename T>
+  constexpr T result(T (&arr)[4]) {
+    return arr[0] * 1000 + arr[1] * 100 + arr[2] * 10 + arr[3];
+  }
+  constexpr int test_wmemcpy(int a, int b, int n) {
+    wchar_t arr[4] = {1, 2, 3, 4};
+    __builtin_wmemcpy(arr + a, arr + b, n);
+    // both-note@-1 2{{overlapping memory regions}}
+    // both-note@-2 {{source is not a contiguous array of at least 2 elements of type 'wchar_t'}}
+    // both-note@-3 {{destination is not a contiguous array of at least 3 elements of type 'wchar_t'}}
+    return result(arr);
+  }
+  static_assert(test_wmemcpy(1, 2, 1) == 1334);
+  static_assert(test_wmemcpy(2, 1, 1) == 1224);
+  static_assert(test_wmemcpy(0, 1, 2) == 2334); // both-error {{constant}} both-note {{in call}}
+  static_assert(test_wmemcpy(1, 0, 2) == 1124); // both-error {{constant}} both-note {{in call}}
+  static_assert(test_wmemcpy(1, 2, 1) == 1334);
+  static_assert(test_wmemcpy(0, 3, 1) == 4234);
+  static_assert(test_wmemcpy(0, 3, 2) == 4234); // both-error {{constant}} both-note {{in call}}
+  static_assert(test_wmemcpy(2, 0, 3) == 4234); // both-error {{constant}} both-note {{in call}}
+
+  wchar_t global;
+  constexpr wchar_t *null = 0;
+  static_assert(__builtin_wmemcpy(&global, null, sizeof(wchar_t))); // both-error {{}} \
+                                                                    // both-note {{source of 'wmemcpy' is nullptr}}
+  static_assert(__builtin_wmemcpy(null, &global, sizeof(wchar_t))); // both-error {{}} \
+                                                                    // both-note {{destination of 'wmemcpy' is nullptr}}
+}
+
+namespace WMemMove {
+  template<typename T>
+  constexpr T result(T (&arr)[4]) {
+    return arr[0] * 1000 + arr[1] * 100 + arr[2] * 10 + arr[3];
+  }
+
+  constexpr int test_wmemmove(int a, int b, int n) {
+    wchar_t arr[4] = {1, 2, 3, 4};
+    __builtin_wmemmove(arr + a, arr + b, n);
+    // both-note@-1 {{source is not a contiguous array of at least 2 elements of type 'wchar_t'}}
+    // both-note@-2 {{destination is not a contiguous array of at least 3 elements of type 'wchar_t'}}
+    return result(arr);
+  }
+
+  static_assert(test_wmemmove(1, 2, 1) == 1334);
+  static_assert(test_wmemmove(2, 1, 1) == 1224);
+  static_assert(test_wmemmove(0, 1, 2) == 2334);
+  static_assert(test_wmemmove(1, 0, 2) == 1124);
+  static_assert(test_wmemmove(1, 2, 1) == 1334);
+  static_assert(test_wmemmove(0, 3, 1) == 4234);
+  static_assert(test_wmemmove(0, 3, 2) == 4234); // both-error {{constant}} both-note {{in call}}
+  static_assert(test_wmemmove(2, 0, 3) == 4234); // both-error {{constant}} both-note {{in call}}
+
+  wchar_t global;
+  constexpr wchar_t *null = 0;
+  static_assert(__builtin_wmemmove(&global, null, sizeof(wchar_t))); // both-error {{}} \
+                                                                     // both-note {{source of 'wmemmove' is nullptr}}
+  static_assert(__builtin_wmemmove(null, &global, sizeof(wchar_t))); // both-error {{}} \
+                                                                     // both-note {{destination of 'wmemmove' is nullptr}}
 }
 
 namespace Invalid {
