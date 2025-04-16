@@ -60,7 +60,7 @@ uid_t RTNAME(GetUID)();
 void FORTRAN_PROCEDURE_NAME(getlog)(char *name, std::int64_t length);
 
 // GNU extension subroutine HOSTNM(C)
-void FORTRAN_PROCEDURE_NAME(hostnm)(char *name, std::int64_t length);
+int FORTRAN_PROCEDURE_NAME(hostnm)(char *hn, int length);
 
 std::intptr_t RTNAME(Malloc)(std::size_t size);
 
