@@ -19,7 +19,6 @@
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/raw_ostream.h"
-#include <cstdint>
 
 using namespace llvm;
 
