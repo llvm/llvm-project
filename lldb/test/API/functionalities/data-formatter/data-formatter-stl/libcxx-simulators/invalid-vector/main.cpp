@@ -31,7 +31,7 @@ int main() {
   std::__2::vector<int> v4;
 
   char carr[] = {'a'};
-  std::__3::vector<char> v5{.__begin_=carr, .__end_=carr + 1};
+  std::__3::vector<char> v5{.__begin_ = carr, .__end_ = carr + 1};
 
   return 0;
 }
