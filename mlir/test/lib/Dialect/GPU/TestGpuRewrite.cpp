@@ -94,6 +94,8 @@ struct TestGpuSubgroupReduceLoweringPass
       if (succeeded(maybeChipset)) {
         populateGpuLowerSubgroupReduceToDPPPatterns(
             patterns, /*subgroupSize=*/64, *maybeChipset, PatternBenefit(2));
+        populateGpuLowerClusteredSubgroupReduceToDPPPatterns(
+            patterns, /*subgroupSize=*/64, *maybeChipset, PatternBenefit(2));
       }
       populateGpuLowerSubgroupReduceToShufflePatterns(
           patterns, /*subgroupSize=*/32, /*shuffleBitwidth=*/32);

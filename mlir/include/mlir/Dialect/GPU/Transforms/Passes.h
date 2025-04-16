@@ -71,6 +71,10 @@ void populateGpuLowerSubgroupReduceToDPPPatterns(RewritePatternSet &patterns,
                                                  amdgpu::Chipset chipset,
                                                  PatternBenefit benefit = 1);
 
+void populateGpuLowerClusteredSubgroupReduceToDPPPatterns(
+    RewritePatternSet &patterns, unsigned subgroupSize, amdgpu::Chipset chipset,
+    PatternBenefit benefit = 1);
+
 /// Disjoint counterpart of `populateGpuLowerSubgroupReduceToShufflePatterns`
 /// that only matches `gpu.subgroup_reduce` ops with a `cluster_size`.
 void populateGpuLowerClusteredSubgroupReduceToShufflePatterns(

@@ -372,8 +372,8 @@ Value createSubgroupDPPReduction(OpBuilder &b, Location loc, Value input,
                                  amdgpu::Chipset chipset) {
   Value dppResult;
   Value result = input;
-  const int allRows = 0xf;
-  const int allBanks = 0xf;
+  constexpr int allRows = 0xf;
+  constexpr int allBanks = 0xf;
   const bool boundCtrl = true;
   Value lane31 =
       b.create<arith::ConstantOp>(loc, b.getI32Type(), b.getI32IntegerAttr(31));
@@ -504,8 +504,16 @@ void mlir::populateGpuLowerSubgroupReduceToDPPPatterns(
     RewritePatternSet &patterns, unsigned subgroupSize, amdgpu::Chipset chipset,
     PatternBenefit benefit) {
   patterns.add<ScalarSubgroupReduceToDPP>(patterns.getContext(), subgroupSize,
-                                          /*matchClustered=*/true, chipset,
+                                          /*matchClustered=*/false, chipset,
                                           benefit);
+}
+
+void mlir::populateGpuLowerClusteredSubgroupReduceToDPPPatterns(
+  RewritePatternSet &patterns, unsigned subgroupSize, amdgpu::Chipset chipset,
+  PatternBenefit benefit) {
+patterns.add<ScalarSubgroupReduceToDPP>(patterns.getContext(), subgroupSize,
+                                        /*matchClustered=*/true, chipset,
+                                        benefit);
 }
 
 void mlir::populateGpuLowerSubgroupReduceToShufflePatterns(
