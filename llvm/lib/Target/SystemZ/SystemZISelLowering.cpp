@@ -6915,6 +6915,7 @@ SDValue SystemZTargetLowering::lowerLoadF16(SDValue Op,
                                             SelectionDAG &DAG) const {
   EVT RegVT = Op.getValueType();
   assert(RegVT == MVT::f16 && "Expected to lower an f16 load.");
+  (void)RegVT;
 
   // Load as integer.
   SDLoc DL(Op);

@@ -1267,6 +1267,7 @@ MachineInstr *SystemZInstrInfo::foldMemoryOperandImpl(
   assert((Size * 8 == TRI->getRegSizeInBits(*RC) ||
           (RC == &SystemZ::FP16BitRegClass && Size == 4 && !STI.hasVector())) &&
          "Invalid size combination");
+  (void)RC;
 
   if ((Opcode == SystemZ::AHI || Opcode == SystemZ::AGHI) && OpNum == 0 &&
       isInt<8>(MI.getOperand(2).getImm())) {
