@@ -963,6 +963,10 @@ class Sema;
     LLVM_PREFERRED_TYPE(CallExpr::ADLCallKind)
     unsigned IsADLCandidate : 1;
 
+    /// Whether FinalConversion has been set.
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned HasFinalConversion : 1;
+
     /// Whether this is a rewritten candidate, and if so, of what kind?
     LLVM_PREFERRED_TYPE(OverloadCandidateRewriteKind)
     unsigned RewriteKind : 2;
@@ -1005,14 +1009,14 @@ class Sema;
 
     // An overload is a perfect match if the conversion
     // sequences for each argument are perfect.
-    bool isPerfectMatch(const ASTContext &Ctx, bool ForConversion) const {
+    bool isPerfectMatch(const ASTContext &Ctx) const {
       if (!Viable)
         return false;
       for (const auto &C : Conversions) {
         if (!C.isInitialized() || !C.isPerfect(Ctx))
           return false;
       }
-      if (ForConversion && isa_and_nonnull<CXXConversionDecl>(Function))
+      if (HasFinalConversion)
         return FinalConversion.isPerfect(Ctx);
       return true;
     }
@@ -1050,7 +1054,7 @@ class Sema;
         : IsSurrogate(false), IgnoreObjectArgument(false),
           TookAddressOfOverload(false), StrictPackMatch(false),
           IsADLCandidate(llvm::to_underlying(CallExpr::NotADL)),
-          RewriteKind(CRK_None) {}
+          HasFinalConversion(false), RewriteKind(CRK_None) {}
   };
 
   struct DeferredTemplateOverloadCandidate {
