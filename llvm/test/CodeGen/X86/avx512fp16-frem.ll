@@ -285,7 +285,7 @@ define <8 x half> @frem_vec8(<8 x half> %x, <8 x half> %y) nounwind {
 define <16 x half> @frem_vec16(<16 x half> %x, <16 x half> %y) nounwind {
 ; CHECK-LABEL: frem_vec16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    subq $184, %rsp
+; CHECK-NEXT:    subq $168, %rsp
 ; CHECK-NEXT:    vmovupd %ymm1, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; CHECK-NEXT:    vmovupd %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm0
@@ -293,30 +293,10 @@ define <16 x half> @frem_vec16(<16 x half> %x, <16 x half> %y) nounwind {
 ; CHECK-NEXT:    vpsrldq {{.*#+}} xmm0 = xmm0[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    vextractf128 $1, %ymm1, %xmm1
-; CHECK-NEXT:    vmovapd %xmm1, (%rsp) # 16-byte Spill
+; CHECK-NEXT:    vmovapd %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    vpsrldq {{.*#+}} xmm1 = xmm1[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; CHECK-NEXT:    vcvtsh2ss %xmm1, %xmm1, %xmm1
 ; CHECK-NEXT:    vzeroupper
-; CHECK-NEXT:    callq fmodf@PLT
-; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; CHECK-NEXT:    vpermilps $255, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; CHECK-NEXT:    # xmm0 = mem[3,3,3,3]
-; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vpermilps $255, (%rsp), %xmm1 # 16-byte Folded Reload
-; CHECK-NEXT:    # xmm1 = mem[3,3,3,3]
-; CHECK-NEXT:    vcvtsh2ss %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    callq fmodf@PLT
-; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vpunpcklwd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
-; CHECK-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1],xmm0[2],mem[2],xmm0[3],mem[3]
-; CHECK-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; CHECK-NEXT:    vpsrldq $14, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; CHECK-NEXT:    # xmm0 = mem[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vpsrldq $14, {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Folded Reload
-; CHECK-NEXT:    # xmm1 = mem[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; CHECK-NEXT:    vcvtsh2ss %xmm1, %xmm1, %xmm1
 ; CHECK-NEXT:    callq fmodf@PLT
 ; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
@@ -330,29 +310,49 @@ define <16 x half> @frem_vec16(<16 x half> %x, <16 x half> %y) nounwind {
 ; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    vpunpcklwd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
 ; CHECK-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1],xmm0[2],mem[2],xmm0[3],mem[3]
-; CHECK-NEXT:    vinserti128 $1, {{[-0-9]+}}(%r{{[sb]}}p), %ymm0, %ymm0 # 16-byte Folded Reload
-; CHECK-NEXT:    vmovdqu %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; CHECK-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    vpsrldq $10, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
 ; CHECK-NEXT:    # xmm0 = mem[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vpsrldq $10, (%rsp), %xmm1 # 16-byte Folded Reload
+; CHECK-NEXT:    vpsrldq $10, {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Folded Reload
 ; CHECK-NEXT:    # xmm1 = mem[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; CHECK-NEXT:    vcvtsh2ss %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    callq fmodf@PLT
 ; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; CHECK-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
 ; CHECK-NEXT:    vpermilpd $1, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
 ; CHECK-NEXT:    # xmm0 = mem[1,0]
 ; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vpermilpd $1, (%rsp), %xmm1 # 16-byte Folded Reload
+; CHECK-NEXT:    vpermilpd $1, {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Folded Reload
 ; CHECK-NEXT:    # xmm1 = mem[1,0]
 ; CHECK-NEXT:    vcvtsh2ss %xmm1, %xmm1, %xmm1
 ; CHECK-NEXT:    callq fmodf@PLT
 ; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vpunpcklwd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
+; CHECK-NEXT:    vpunpcklwd (%rsp), %xmm0, %xmm0 # 16-byte Folded Reload
 ; CHECK-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1],xmm0[2],mem[2],xmm0[3],mem[3]
+; CHECK-NEXT:    vpunpckldq {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
+; CHECK-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1]
 ; CHECK-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; CHECK-NEXT:    vpsrldq $14, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
+; CHECK-NEXT:    # xmm0 = mem[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vpsrldq $14, {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Folded Reload
+; CHECK-NEXT:    # xmm1 = mem[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vcvtsh2ss %xmm1, %xmm1, %xmm1
+; CHECK-NEXT:    callq fmodf@PLT
+; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
+; CHECK-NEXT:    vpermilps $255, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
+; CHECK-NEXT:    # xmm0 = mem[3,3,3,3]
+; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vpermilps $255, {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Folded Reload
+; CHECK-NEXT:    # xmm1 = mem[3,3,3,3]
+; CHECK-NEXT:    vcvtsh2ss %xmm1, %xmm1, %xmm1
+; CHECK-NEXT:    callq fmodf@PLT
+; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vpunpcklwd (%rsp), %xmm0, %xmm0 # 16-byte Folded Reload
+; CHECK-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1],xmm0[2],mem[2],xmm0[3],mem[3]
+; CHECK-NEXT:    vmovdqa %xmm0, (%rsp) # 16-byte Spill
 ; CHECK-NEXT:    vpsrldq $10, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
 ; CHECK-NEXT:    # xmm0 = mem[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
@@ -372,28 +372,46 @@ define <16 x half> @frem_vec16(<16 x half> %x, <16 x half> %y) nounwind {
 ; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    vpunpcklwd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
 ; CHECK-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1],xmm0[2],mem[2],xmm0[3],mem[3]
+; CHECK-NEXT:    vpunpckldq (%rsp), %xmm0, %xmm0 # 16-byte Folded Reload
+; CHECK-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1]
 ; CHECK-NEXT:    vinserti128 $1, {{[-0-9]+}}(%r{{[sb]}}p), %ymm0, %ymm0 # 16-byte Folded Reload
-; CHECK-NEXT:    vpunpckldq {{[-0-9]+}}(%r{{[sb]}}p), %ymm0, %ymm0 # 32-byte Folded Reload
-; CHECK-NEXT:    # ymm0 = ymm0[0],mem[0],ymm0[1],mem[1],ymm0[4],mem[4],ymm0[5],mem[5]
 ; CHECK-NEXT:    vmovdqu %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; CHECK-NEXT:    vpsrlq $48, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
 ; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vpsrlq $48, (%rsp), %xmm1 # 16-byte Folded Reload
+; CHECK-NEXT:    vpsrlq $48, {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Folded Reload
 ; CHECK-NEXT:    vcvtsh2ss %xmm1, %xmm1, %xmm1
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    callq fmodf@PLT
 ; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; CHECK-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
 ; CHECK-NEXT:    vmovshdup {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
 ; CHECK-NEXT:    # xmm0 = mem[1,1,3,3]
 ; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vmovshdup (%rsp), %xmm1 # 16-byte Folded Reload
+; CHECK-NEXT:    vmovshdup {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Folded Reload
 ; CHECK-NEXT:    # xmm1 = mem[1,1,3,3]
 ; CHECK-NEXT:    vcvtsh2ss %xmm1, %xmm1, %xmm1
 ; CHECK-NEXT:    callq fmodf@PLT
 ; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vpunpcklwd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
+; CHECK-NEXT:    vpunpcklwd (%rsp), %xmm0, %xmm0 # 16-byte Folded Reload
 ; CHECK-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1],xmm0[2],mem[2],xmm0[3],mem[3]
+; CHECK-NEXT:    vmovdqa %xmm0, (%rsp) # 16-byte Spill
+; CHECK-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
+; CHECK-NEXT:    vcvtsh2ss %xmm1, %xmm1, %xmm1
+; CHECK-NEXT:    callq fmodf@PLT
+; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; CHECK-NEXT:    vpsrld $16, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
+; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vpsrld $16, {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Folded Reload
+; CHECK-NEXT:    vcvtsh2ss %xmm1, %xmm1, %xmm1
+; CHECK-NEXT:    callq fmodf@PLT
+; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
+; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
+; CHECK-NEXT:    vpunpckldq (%rsp), %xmm0, %xmm0 # 16-byte Folded Reload
+; CHECK-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1]
 ; CHECK-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    vpsrlq $48, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
 ; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
@@ -412,24 +430,6 @@ define <16 x half> @frem_vec16(<16 x half> %x, <16 x half> %y) nounwind {
 ; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    vpunpcklwd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
 ; CHECK-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1],xmm0[2],mem[2],xmm0[3],mem[3]
-; CHECK-NEXT:    vinserti128 $1, {{[-0-9]+}}(%r{{[sb]}}p), %ymm0, %ymm0 # 16-byte Folded Reload
-; CHECK-NEXT:    vmovdqu %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; CHECK-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
-; CHECK-NEXT:    vcvtsh2ss %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vzeroupper
-; CHECK-NEXT:    callq fmodf@PLT
-; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; CHECK-NEXT:    vpsrld $16, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vpsrld $16, (%rsp), %xmm1 # 16-byte Folded Reload
-; CHECK-NEXT:    vcvtsh2ss %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    callq fmodf@PLT
-; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
 ; CHECK-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Reload
 ; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
@@ -447,12 +447,12 @@ define <16 x half> @frem_vec16(<16 x half> %x, <16 x half> %y) nounwind {
 ; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    vmovdqa (%rsp), %xmm1 # 16-byte Reload
 ; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
+; CHECK-NEXT:    vpunpckldq {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
+; CHECK-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1]
 ; CHECK-NEXT:    vinserti128 $1, {{[-0-9]+}}(%r{{[sb]}}p), %ymm0, %ymm0 # 16-byte Folded Reload
-; CHECK-NEXT:    vpunpckldq {{[-0-9]+}}(%r{{[sb]}}p), %ymm0, %ymm0 # 32-byte Folded Reload
-; CHECK-NEXT:    # ymm0 = ymm0[0],mem[0],ymm0[1],mem[1],ymm0[4],mem[4],ymm0[5],mem[5]
 ; CHECK-NEXT:    vpunpcklqdq {{[-0-9]+}}(%r{{[sb]}}p), %ymm0, %ymm0 # 32-byte Folded Reload
 ; CHECK-NEXT:    # ymm0 = ymm0[0],mem[0],ymm0[2],mem[2]
-; CHECK-NEXT:    addq $184, %rsp
+; CHECK-NEXT:    addq $168, %rsp
 ; CHECK-NEXT:    retq
   %r = frem <16 x half> %x, %y
   ret <16 x half> %r
@@ -461,7 +461,7 @@ define <16 x half> @frem_vec16(<16 x half> %x, <16 x half> %y) nounwind {
 define <32 x half> @frem_vec32(<32 x half> %x, <32 x half> %y) nounwind {
 ; CHECK-LABEL: frem_vec32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    subq $408, %rsp # imm = 0x198
+; CHECK-NEXT:    subq $360, %rsp # imm = 0x168
 ; CHECK-NEXT:    vmovupd %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; CHECK-NEXT:    vmovupd %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; CHECK-NEXT:    vextractf32x4 $3, %zmm0, %xmm0
@@ -475,7 +475,7 @@ define <32 x half> @frem_vec32(<32 x half> %x, <32 x half> %y) nounwind {
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    callq fmodf@PLT
 ; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; CHECK-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
 ; CHECK-NEXT:    vpermilps $255, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
 ; CHECK-NEXT:    # xmm0 = mem[3,3,3,3]
 ; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
@@ -484,12 +484,34 @@ define <32 x half> @frem_vec32(<32 x half> %x, <32 x half> %y) nounwind {
 ; CHECK-NEXT:    vcvtsh2ss %xmm1, %xmm1, %xmm1
 ; CHECK-NEXT:    callq fmodf@PLT
 ; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vpunpcklwd (%rsp), %xmm0, %xmm0 # 16-byte Folded Reload
+; CHECK-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1],xmm0[2],mem[2],xmm0[3],mem[3]
+; CHECK-NEXT:    vmovdqa %xmm0, (%rsp) # 16-byte Spill
+; CHECK-NEXT:    vpsrldq $10, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
+; CHECK-NEXT:    # xmm0 = mem[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vpsrldq $10, {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Folded Reload
+; CHECK-NEXT:    # xmm1 = mem[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vcvtsh2ss %xmm1, %xmm1, %xmm1
+; CHECK-NEXT:    callq fmodf@PLT
+; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; CHECK-NEXT:    vpermilpd $1, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
+; CHECK-NEXT:    # xmm0 = mem[1,0]
+; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vpermilpd $1, {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Folded Reload
+; CHECK-NEXT:    # xmm1 = mem[1,0]
+; CHECK-NEXT:    vcvtsh2ss %xmm1, %xmm1, %xmm1
+; CHECK-NEXT:    callq fmodf@PLT
+; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    vpunpcklwd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
 ; CHECK-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1],xmm0[2],mem[2],xmm0[3],mem[3]
+; CHECK-NEXT:    vpunpckldq (%rsp), %xmm0, %xmm0 # 16-byte Folded Reload
+; CHECK-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1]
 ; CHECK-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    vmovupd {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 # 64-byte Reload
 ; CHECK-NEXT:    vextractf32x4 $2, %zmm0, %xmm0
-; CHECK-NEXT:    vmovapd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; CHECK-NEXT:    vmovapd %xmm0, (%rsp) # 16-byte Spill
 ; CHECK-NEXT:    vpsrldq {{.*#+}} xmm0 = xmm0[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    vmovupd {{[-0-9]+}}(%r{{[sb]}}p), %zmm1 # 64-byte Reload
@@ -501,7 +523,7 @@ define <32 x half> @frem_vec32(<32 x half> %x, <32 x half> %y) nounwind {
 ; CHECK-NEXT:    callq fmodf@PLT
 ; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; CHECK-NEXT:    vpermilps $255, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
+; CHECK-NEXT:    vpermilps $255, (%rsp), %xmm0 # 16-byte Folded Reload
 ; CHECK-NEXT:    # xmm0 = mem[3,3,3,3]
 ; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    vpermilps $255, {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Folded Reload
@@ -511,6 +533,28 @@ define <32 x half> @frem_vec32(<32 x half> %x, <32 x half> %y) nounwind {
 ; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    vpunpcklwd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
 ; CHECK-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1],xmm0[2],mem[2],xmm0[3],mem[3]
+; CHECK-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; CHECK-NEXT:    vpsrldq $10, (%rsp), %xmm0 # 16-byte Folded Reload
+; CHECK-NEXT:    # xmm0 = mem[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vpsrldq $10, {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Folded Reload
+; CHECK-NEXT:    # xmm1 = mem[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vcvtsh2ss %xmm1, %xmm1, %xmm1
+; CHECK-NEXT:    callq fmodf@PLT
+; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; CHECK-NEXT:    vpermilpd $1, (%rsp), %xmm0 # 16-byte Folded Reload
+; CHECK-NEXT:    # xmm0 = mem[1,0]
+; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vpermilpd $1, {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Folded Reload
+; CHECK-NEXT:    # xmm1 = mem[1,0]
+; CHECK-NEXT:    vcvtsh2ss %xmm1, %xmm1, %xmm1
+; CHECK-NEXT:    callq fmodf@PLT
+; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vpunpcklwd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
+; CHECK-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1],xmm0[2],mem[2],xmm0[3],mem[3]
+; CHECK-NEXT:    vpunpckldq {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
+; CHECK-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1]
 ; CHECK-NEXT:    vinserti128 $1, {{[-0-9]+}}(%r{{[sb]}}p), %ymm0, %ymm0 # 16-byte Folded Reload
 ; CHECK-NEXT:    vmovdqu %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; CHECK-NEXT:    vmovupd {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 # 64-byte Reload
@@ -538,6 +582,28 @@ define <32 x half> @frem_vec32(<32 x half> %x, <32 x half> %y) nounwind {
 ; CHECK-NEXT:    vpunpcklwd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
 ; CHECK-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1],xmm0[2],mem[2],xmm0[3],mem[3]
 ; CHECK-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; CHECK-NEXT:    vpsrldq $10, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
+; CHECK-NEXT:    # xmm0 = mem[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vpsrldq $10, {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Folded Reload
+; CHECK-NEXT:    # xmm1 = mem[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vcvtsh2ss %xmm1, %xmm1, %xmm1
+; CHECK-NEXT:    callq fmodf@PLT
+; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; CHECK-NEXT:    vpermilpd $1, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
+; CHECK-NEXT:    # xmm0 = mem[1,0]
+; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vpermilpd $1, {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Folded Reload
+; CHECK-NEXT:    # xmm1 = mem[1,0]
+; CHECK-NEXT:    vcvtsh2ss %xmm1, %xmm1, %xmm1
+; CHECK-NEXT:    callq fmodf@PLT
+; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vpunpcklwd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
+; CHECK-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1],xmm0[2],mem[2],xmm0[3],mem[3]
+; CHECK-NEXT:    vpunpckldq {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
+; CHECK-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1]
+; CHECK-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    vpsrldq $14, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
 ; CHECK-NEXT:    # xmm0 = mem[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
@@ -546,7 +612,7 @@ define <32 x half> @frem_vec32(<32 x half> %x, <32 x half> %y) nounwind {
 ; CHECK-NEXT:    vcvtsh2ss %xmm1, %xmm1, %xmm1
 ; CHECK-NEXT:    callq fmodf@PLT
 ; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
+; CHECK-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    vpermilps $255, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
 ; CHECK-NEXT:    # xmm0 = mem[3,3,3,3]
 ; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
@@ -555,29 +621,6 @@ define <32 x half> @frem_vec32(<32 x half> %x, <32 x half> %y) nounwind {
 ; CHECK-NEXT:    vcvtsh2ss %xmm1, %xmm1, %xmm1
 ; CHECK-NEXT:    callq fmodf@PLT
 ; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vpunpcklwd (%rsp), %xmm0, %xmm0 # 16-byte Folded Reload
-; CHECK-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1],xmm0[2],mem[2],xmm0[3],mem[3]
-; CHECK-NEXT:    vinserti128 $1, {{[-0-9]+}}(%r{{[sb]}}p), %ymm0, %ymm0 # 16-byte Folded Reload
-; CHECK-NEXT:    vinserti64x4 $1, {{[-0-9]+}}(%r{{[sb]}}p), %zmm0, %zmm0 # 32-byte Folded Reload
-; CHECK-NEXT:    vmovdqu64 %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; CHECK-NEXT:    vpsrldq $10, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; CHECK-NEXT:    # xmm0 = mem[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vpsrldq $10, {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Folded Reload
-; CHECK-NEXT:    # xmm1 = mem[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; CHECK-NEXT:    vcvtsh2ss %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vzeroupper
-; CHECK-NEXT:    callq fmodf@PLT
-; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; CHECK-NEXT:    vpermilpd $1, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; CHECK-NEXT:    # xmm0 = mem[1,0]
-; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vpermilpd $1, {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Folded Reload
-; CHECK-NEXT:    # xmm1 = mem[1,0]
-; CHECK-NEXT:    vcvtsh2ss %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    callq fmodf@PLT
-; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    vpunpcklwd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
 ; CHECK-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1],xmm0[2],mem[2],xmm0[3],mem[3]
 ; CHECK-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
@@ -589,48 +632,6 @@ define <32 x half> @frem_vec32(<32 x half> %x, <32 x half> %y) nounwind {
 ; CHECK-NEXT:    vcvtsh2ss %xmm1, %xmm1, %xmm1
 ; CHECK-NEXT:    callq fmodf@PLT
 ; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; CHECK-NEXT:    vpermilpd $1, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; CHECK-NEXT:    # xmm0 = mem[1,0]
-; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vpermilpd $1, {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Folded Reload
-; CHECK-NEXT:    # xmm1 = mem[1,0]
-; CHECK-NEXT:    vcvtsh2ss %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    callq fmodf@PLT
-; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vpunpcklwd (%rsp), %xmm0, %xmm0 # 16-byte Folded Reload
-; CHECK-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1],xmm0[2],mem[2],xmm0[3],mem[3]
-; CHECK-NEXT:    vinserti128 $1, {{[-0-9]+}}(%r{{[sb]}}p), %ymm0, %ymm0 # 16-byte Folded Reload
-; CHECK-NEXT:    vmovdqu %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; CHECK-NEXT:    vpsrldq $10, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; CHECK-NEXT:    # xmm0 = mem[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vpsrldq $10, {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Folded Reload
-; CHECK-NEXT:    # xmm1 = mem[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; CHECK-NEXT:    vcvtsh2ss %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vzeroupper
-; CHECK-NEXT:    callq fmodf@PLT
-; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; CHECK-NEXT:    vpermilpd $1, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; CHECK-NEXT:    # xmm0 = mem[1,0]
-; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vpermilpd $1, {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Folded Reload
-; CHECK-NEXT:    # xmm1 = mem[1,0]
-; CHECK-NEXT:    vcvtsh2ss %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    callq fmodf@PLT
-; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vpunpcklwd (%rsp), %xmm0, %xmm0 # 16-byte Folded Reload
-; CHECK-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1],xmm0[2],mem[2],xmm0[3],mem[3]
-; CHECK-NEXT:    vmovdqa %xmm0, (%rsp) # 16-byte Spill
-; CHECK-NEXT:    vpsrldq $10, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; CHECK-NEXT:    # xmm0 = mem[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vpsrldq $10, {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Folded Reload
-; CHECK-NEXT:    # xmm1 = mem[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; CHECK-NEXT:    vcvtsh2ss %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    callq fmodf@PLT
-; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    vpermilpd $1, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
 ; CHECK-NEXT:    # xmm0 = mem[1,0]
@@ -642,10 +643,10 @@ define <32 x half> @frem_vec32(<32 x half> %x, <32 x half> %y) nounwind {
 ; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    vpunpcklwd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
 ; CHECK-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1],xmm0[2],mem[2],xmm0[3],mem[3]
-; CHECK-NEXT:    vinserti128 $1, (%rsp), %ymm0, %ymm0 # 16-byte Folded Reload
+; CHECK-NEXT:    vpunpckldq {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
+; CHECK-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1]
+; CHECK-NEXT:    vinserti128 $1, {{[-0-9]+}}(%r{{[sb]}}p), %ymm0, %ymm0 # 16-byte Folded Reload
 ; CHECK-NEXT:    vinserti64x4 $1, {{[-0-9]+}}(%r{{[sb]}}p), %zmm0, %zmm0 # 32-byte Folded Reload
-; CHECK-NEXT:    vpunpckldq {{[-0-9]+}}(%r{{[sb]}}p), %zmm0, %zmm0 # 64-byte Folded Reload
-; CHECK-NEXT:    # zmm0 = zmm0[0],mem[0],zmm0[1],mem[1],zmm0[4],mem[4],zmm0[5],mem[5],zmm0[8],mem[8],zmm0[9],mem[9],zmm0[12],mem[12],zmm0[13],mem[13]
 ; CHECK-NEXT:    vmovdqu64 %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; CHECK-NEXT:    vpsrlq $48, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
 ; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
@@ -666,69 +667,84 @@ define <32 x half> @frem_vec32(<32 x half> %x, <32 x half> %y) nounwind {
 ; CHECK-NEXT:    vpunpcklwd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
 ; CHECK-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1],xmm0[2],mem[2],xmm0[3],mem[3]
 ; CHECK-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; CHECK-NEXT:    vpsrlq $48, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vpsrlq $48, {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Folded Reload
-; CHECK-NEXT:    vcvtsh2ss %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    callq fmodf@PLT
-; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; CHECK-NEXT:    vmovshdup {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; CHECK-NEXT:    # xmm0 = mem[1,1,3,3]
-; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vmovshdup {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Folded Reload
-; CHECK-NEXT:    # xmm1 = mem[1,1,3,3]
-; CHECK-NEXT:    vcvtsh2ss %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    callq fmodf@PLT
-; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vpunpcklwd (%rsp), %xmm0, %xmm0 # 16-byte Folded Reload
-; CHECK-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1],xmm0[2],mem[2],xmm0[3],mem[3]
-; CHECK-NEXT:    vinserti128 $1, {{[-0-9]+}}(%r{{[sb]}}p), %ymm0, %ymm0 # 16-byte Folded Reload
-; CHECK-NEXT:    vmovdqu %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; CHECK-NEXT:    vpsrlq $48, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vpsrlq $48, {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Folded Reload
-; CHECK-NEXT:    vcvtsh2ss %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vzeroupper
-; CHECK-NEXT:    callq fmodf@PLT
-; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; CHECK-NEXT:    vmovshdup {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; CHECK-NEXT:    # xmm0 = mem[1,1,3,3]
-; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vmovshdup {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Folded Reload
-; CHECK-NEXT:    # xmm1 = mem[1,1,3,3]
-; CHECK-NEXT:    vcvtsh2ss %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    callq fmodf@PLT
-; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vpunpcklwd (%rsp), %xmm0, %xmm0 # 16-byte Folded Reload
-; CHECK-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1],xmm0[2],mem[2],xmm0[3],mem[3]
-; CHECK-NEXT:    vmovdqa %xmm0, (%rsp) # 16-byte Spill
-; CHECK-NEXT:    vpsrlq $48, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vpsrlq $48, {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Folded Reload
-; CHECK-NEXT:    vcvtsh2ss %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    callq fmodf@PLT
-; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; CHECK-NEXT:    vmovshdup {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; CHECK-NEXT:    # xmm0 = mem[1,1,3,3]
-; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vmovshdup {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Folded Reload
-; CHECK-NEXT:    # xmm1 = mem[1,1,3,3]
-; CHECK-NEXT:    vcvtsh2ss %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    callq fmodf@PLT
-; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vpunpcklwd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
-; CHECK-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1],xmm0[2],mem[2],xmm0[3],mem[3]
-; CHECK-NEXT:    vinserti128 $1, (%rsp), %ymm0, %ymm0 # 16-byte Folded Reload
-; CHECK-NEXT:    vinserti64x4 $1, {{[-0-9]+}}(%r{{[sb]}}p), %zmm0, %zmm0 # 32-byte Folded Reload
-; CHECK-NEXT:    vmovdqu64 %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; CHECK-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
 ; CHECK-NEXT:    vcvtsh2ss %xmm1, %xmm1, %xmm1
+; CHECK-NEXT:    callq fmodf@PLT
+; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; CHECK-NEXT:    vpsrld $16, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
+; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vpsrld $16, {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Folded Reload
+; CHECK-NEXT:    vcvtsh2ss %xmm1, %xmm1, %xmm1
+; CHECK-NEXT:    callq fmodf@PLT
+; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
+; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
+; CHECK-NEXT:    vpunpckldq {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
+; CHECK-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1]
+; CHECK-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; CHECK-NEXT:    vpsrlq $48, (%rsp), %xmm0 # 16-byte Folded Reload
+; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vpsrlq $48, {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Folded Reload
+; CHECK-NEXT:    vcvtsh2ss %xmm1, %xmm1, %xmm1
+; CHECK-NEXT:    callq fmodf@PLT
+; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; CHECK-NEXT:    vmovshdup (%rsp), %xmm0 # 16-byte Folded Reload
+; CHECK-NEXT:    # xmm0 = mem[1,1,3,3]
+; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vmovshdup {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Folded Reload
+; CHECK-NEXT:    # xmm1 = mem[1,1,3,3]
+; CHECK-NEXT:    vcvtsh2ss %xmm1, %xmm1, %xmm1
+; CHECK-NEXT:    callq fmodf@PLT
+; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vpunpcklwd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
+; CHECK-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1],xmm0[2],mem[2],xmm0[3],mem[3]
+; CHECK-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; CHECK-NEXT:    vmovaps (%rsp), %xmm0 # 16-byte Reload
+; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
+; CHECK-NEXT:    vcvtsh2ss %xmm1, %xmm1, %xmm1
+; CHECK-NEXT:    callq fmodf@PLT
+; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; CHECK-NEXT:    vpsrld $16, (%rsp), %xmm0 # 16-byte Folded Reload
+; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vpsrld $16, {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Folded Reload
+; CHECK-NEXT:    vcvtsh2ss %xmm1, %xmm1, %xmm1
+; CHECK-NEXT:    callq fmodf@PLT
+; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
+; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
+; CHECK-NEXT:    vpunpckldq {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
+; CHECK-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1]
+; CHECK-NEXT:    vinserti128 $1, {{[-0-9]+}}(%r{{[sb]}}p), %ymm0, %ymm0 # 16-byte Folded Reload
+; CHECK-NEXT:    vmovdqu %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; CHECK-NEXT:    vpsrlq $48, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
+; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vpsrlq $48, {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Folded Reload
+; CHECK-NEXT:    vcvtsh2ss %xmm1, %xmm1, %xmm1
 ; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    callq fmodf@PLT
+; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; CHECK-NEXT:    vmovshdup {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
+; CHECK-NEXT:    # xmm0 = mem[1,1,3,3]
+; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vmovshdup {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Folded Reload
+; CHECK-NEXT:    # xmm1 = mem[1,1,3,3]
+; CHECK-NEXT:    vcvtsh2ss %xmm1, %xmm1, %xmm1
+; CHECK-NEXT:    callq fmodf@PLT
+; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vpunpcklwd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
+; CHECK-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1],xmm0[2],mem[2],xmm0[3],mem[3]
+; CHECK-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; CHECK-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
+; CHECK-NEXT:    vcvtsh2ss %xmm1, %xmm1, %xmm1
 ; CHECK-NEXT:    callq fmodf@PLT
 ; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
@@ -740,41 +756,27 @@ define <32 x half> @frem_vec32(<32 x half> %x, <32 x half> %y) nounwind {
 ; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    vmovdqa (%rsp), %xmm1 # 16-byte Reload
 ; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
+; CHECK-NEXT:    vpunpckldq {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
+; CHECK-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1]
 ; CHECK-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; CHECK-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; CHECK-NEXT:    vpsrlq $48, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
 ; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
+; CHECK-NEXT:    vpsrlq $48, {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Folded Reload
 ; CHECK-NEXT:    vcvtsh2ss %xmm1, %xmm1, %xmm1
 ; CHECK-NEXT:    callq fmodf@PLT
 ; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; CHECK-NEXT:    vpsrld $16, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
+; CHECK-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
+; CHECK-NEXT:    vmovshdup {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
+; CHECK-NEXT:    # xmm0 = mem[1,1,3,3]
 ; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vpsrld $16, {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Folded Reload
+; CHECK-NEXT:    vmovshdup {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Folded Reload
+; CHECK-NEXT:    # xmm1 = mem[1,1,3,3]
 ; CHECK-NEXT:    vcvtsh2ss %xmm1, %xmm1, %xmm1
 ; CHECK-NEXT:    callq fmodf@PLT
 ; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
-; CHECK-NEXT:    vinserti128 $1, {{[-0-9]+}}(%r{{[sb]}}p), %ymm0, %ymm0 # 16-byte Folded Reload
-; CHECK-NEXT:    vmovdqu %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; CHECK-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; CHECK-NEXT:    vcvtsh2ss %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vzeroupper
-; CHECK-NEXT:    callq fmodf@PLT
-; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; CHECK-NEXT:    vpsrld $16, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vpsrld $16, {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Folded Reload
-; CHECK-NEXT:    vcvtsh2ss %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    callq fmodf@PLT
-; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
-; CHECK-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; CHECK-NEXT:    vpunpcklwd (%rsp), %xmm0, %xmm0 # 16-byte Folded Reload
+; CHECK-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1],xmm0[2],mem[2],xmm0[3],mem[3]
+; CHECK-NEXT:    vmovdqa %xmm0, (%rsp) # 16-byte Spill
 ; CHECK-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 # 64-byte Reload
 ; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %zmm1 # 64-byte Reload
@@ -791,13 +793,13 @@ define <32 x half> @frem_vec32(<32 x half> %x, <32 x half> %y) nounwind {
 ; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
 ; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
+; CHECK-NEXT:    vpunpckldq (%rsp), %xmm0, %xmm0 # 16-byte Folded Reload
+; CHECK-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1]
 ; CHECK-NEXT:    vinserti128 $1, {{[-0-9]+}}(%r{{[sb]}}p), %ymm0, %ymm0 # 16-byte Folded Reload
 ; CHECK-NEXT:    vinserti64x4 $1, {{[-0-9]+}}(%r{{[sb]}}p), %zmm0, %zmm0 # 32-byte Folded Reload
-; CHECK-NEXT:    vpunpckldq {{[-0-9]+}}(%r{{[sb]}}p), %zmm0, %zmm0 # 64-byte Folded Reload
-; CHECK-NEXT:    # zmm0 = zmm0[0],mem[0],zmm0[1],mem[1],zmm0[4],mem[4],zmm0[5],mem[5],zmm0[8],mem[8],zmm0[9],mem[9],zmm0[12],mem[12],zmm0[13],mem[13]
 ; CHECK-NEXT:    vpunpcklqdq {{[-0-9]+}}(%r{{[sb]}}p), %zmm0, %zmm0 # 64-byte Folded Reload
 ; CHECK-NEXT:    # zmm0 = zmm0[0],mem[0],zmm0[2],mem[2],zmm0[4],mem[4],zmm0[6],mem[6]
-; CHECK-NEXT:    addq $408, %rsp # imm = 0x198
+; CHECK-NEXT:    addq $360, %rsp # imm = 0x168
 ; CHECK-NEXT:    retq
   %r = frem <32 x half> %x, %y
   ret <32 x half> %r
@@ -981,7 +983,7 @@ define <8 x half> @frem_strict_vec8(<8 x half> %x, <8 x half> %y) nounwind #0 {
 define <16 x half> @frem_strict_vec16(<16 x half> %x, <16 x half> %y) nounwind #0 {
 ; CHECK-LABEL: frem_strict_vec16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    subq $184, %rsp
+; CHECK-NEXT:    subq $168, %rsp
 ; CHECK-NEXT:    vmovupd %ymm1, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; CHECK-NEXT:    vmovups %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; CHECK-NEXT:    vextractf128 $1, %ymm1, %xmm1
@@ -989,7 +991,7 @@ define <16 x half> @frem_strict_vec16(<16 x half> %x, <16 x half> %y) nounwind #
 ; CHECK-NEXT:    vpsrldq {{.*#+}} xmm1 = xmm1[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; CHECK-NEXT:    vcvtsh2ss %xmm1, %xmm1, %xmm1
 ; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; CHECK-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
+; CHECK-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    vpsrldq {{.*#+}} xmm0 = xmm0[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    vzeroupper
@@ -999,13 +1001,35 @@ define <16 x half> @frem_strict_vec16(<16 x half> %x, <16 x half> %y) nounwind #
 ; CHECK-NEXT:    vpermilps $255, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
 ; CHECK-NEXT:    # xmm0 = mem[3,3,3,3]
 ; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm1
-; CHECK-NEXT:    vpermilps $255, (%rsp), %xmm0 # 16-byte Folded Reload
+; CHECK-NEXT:    vpermilps $255, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
 ; CHECK-NEXT:    # xmm0 = mem[3,3,3,3]
 ; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    callq fmodf@PLT
 ; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    vpunpcklwd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
 ; CHECK-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1],xmm0[2],mem[2],xmm0[3],mem[3]
+; CHECK-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; CHECK-NEXT:    vpsrldq $10, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
+; CHECK-NEXT:    # xmm0 = mem[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm1
+; CHECK-NEXT:    vpsrldq $10, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
+; CHECK-NEXT:    # xmm0 = mem[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    callq fmodf@PLT
+; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
+; CHECK-NEXT:    vpermilpd $1, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
+; CHECK-NEXT:    # xmm0 = mem[1,0]
+; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm1
+; CHECK-NEXT:    vpermilpd $1, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
+; CHECK-NEXT:    # xmm0 = mem[1,0]
+; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    callq fmodf@PLT
+; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vpunpcklwd (%rsp), %xmm0, %xmm0 # 16-byte Folded Reload
+; CHECK-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1],xmm0[2],mem[2],xmm0[3],mem[3]
+; CHECK-NEXT:    vpunpckldq {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
+; CHECK-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1]
 ; CHECK-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    vpsrldq $14, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
 ; CHECK-NEXT:    # xmm0 = mem[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
@@ -1015,7 +1039,7 @@ define <16 x half> @frem_strict_vec16(<16 x half> %x, <16 x half> %y) nounwind #
 ; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    callq fmodf@PLT
 ; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; CHECK-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
 ; CHECK-NEXT:    vpermilps $255, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
 ; CHECK-NEXT:    # xmm0 = mem[3,3,3,3]
 ; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm1
@@ -1024,80 +1048,40 @@ define <16 x half> @frem_strict_vec16(<16 x half> %x, <16 x half> %y) nounwind #
 ; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    callq fmodf@PLT
 ; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vpunpcklwd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
+; CHECK-NEXT:    vpunpcklwd (%rsp), %xmm0, %xmm0 # 16-byte Folded Reload
 ; CHECK-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1],xmm0[2],mem[2],xmm0[3],mem[3]
-; CHECK-NEXT:    vinserti128 $1, {{[-0-9]+}}(%r{{[sb]}}p), %ymm0, %ymm0 # 16-byte Folded Reload
-; CHECK-NEXT:    vmovdqu %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; CHECK-NEXT:    vmovdqa %xmm0, (%rsp) # 16-byte Spill
 ; CHECK-NEXT:    vpsrldq $10, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
 ; CHECK-NEXT:    # xmm0 = mem[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm1
-; CHECK-NEXT:    vpsrldq $10, (%rsp), %xmm0 # 16-byte Folded Reload
+; CHECK-NEXT:    vpsrldq $10, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
 ; CHECK-NEXT:    # xmm0 = mem[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    callq fmodf@PLT
+; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; CHECK-NEXT:    vpermilpd $1, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
+; CHECK-NEXT:    # xmm0 = mem[1,0]
+; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm1
+; CHECK-NEXT:    vpermilpd $1, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
+; CHECK-NEXT:    # xmm0 = mem[1,0]
+; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    callq fmodf@PLT
+; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vpunpcklwd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
+; CHECK-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1],xmm0[2],mem[2],xmm0[3],mem[3]
+; CHECK-NEXT:    vpunpckldq (%rsp), %xmm0, %xmm0 # 16-byte Folded Reload
+; CHECK-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1]
+; CHECK-NEXT:    vinserti128 $1, {{[-0-9]+}}(%r{{[sb]}}p), %ymm0, %ymm0 # 16-byte Folded Reload
+; CHECK-NEXT:    vmovdqu %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; CHECK-NEXT:    vpsrlq $48, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
+; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm1
+; CHECK-NEXT:    vpsrlq $48, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
 ; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    callq fmodf@PLT
 ; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; CHECK-NEXT:    vpermilpd $1, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; CHECK-NEXT:    # xmm0 = mem[1,0]
-; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm1
-; CHECK-NEXT:    vpermilpd $1, (%rsp), %xmm0 # 16-byte Folded Reload
-; CHECK-NEXT:    # xmm0 = mem[1,0]
-; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    callq fmodf@PLT
-; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vpunpcklwd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
-; CHECK-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1],xmm0[2],mem[2],xmm0[3],mem[3]
-; CHECK-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; CHECK-NEXT:    vpsrldq $10, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; CHECK-NEXT:    # xmm0 = mem[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm1
-; CHECK-NEXT:    vpsrldq $10, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; CHECK-NEXT:    # xmm0 = mem[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    callq fmodf@PLT
-; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; CHECK-NEXT:    vpermilpd $1, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; CHECK-NEXT:    # xmm0 = mem[1,0]
-; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm1
-; CHECK-NEXT:    vpermilpd $1, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; CHECK-NEXT:    # xmm0 = mem[1,0]
-; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    callq fmodf@PLT
-; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vpunpcklwd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
-; CHECK-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1],xmm0[2],mem[2],xmm0[3],mem[3]
-; CHECK-NEXT:    vinserti128 $1, {{[-0-9]+}}(%r{{[sb]}}p), %ymm0, %ymm0 # 16-byte Folded Reload
-; CHECK-NEXT:    vpunpckldq {{[-0-9]+}}(%r{{[sb]}}p), %ymm0, %ymm0 # 32-byte Folded Reload
-; CHECK-NEXT:    # ymm0 = ymm0[0],mem[0],ymm0[1],mem[1],ymm0[4],mem[4],ymm0[5],mem[5]
-; CHECK-NEXT:    vmovdqu %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; CHECK-NEXT:    vpsrlq $48, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm1
-; CHECK-NEXT:    vpsrlq $48, (%rsp), %xmm0 # 16-byte Folded Reload
-; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vzeroupper
-; CHECK-NEXT:    callq fmodf@PLT
-; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; CHECK-NEXT:    vmovshdup {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; CHECK-NEXT:    # xmm0 = mem[1,1,3,3]
-; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm1
-; CHECK-NEXT:    vmovshdup (%rsp), %xmm0 # 16-byte Folded Reload
-; CHECK-NEXT:    # xmm0 = mem[1,1,3,3]
-; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    callq fmodf@PLT
-; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vpunpcklwd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
-; CHECK-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1],xmm0[2],mem[2],xmm0[3],mem[3]
-; CHECK-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; CHECK-NEXT:    vpsrlq $48, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm1
-; CHECK-NEXT:    vpsrlq $48, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    callq fmodf@PLT
-; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; CHECK-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
 ; CHECK-NEXT:    vmovshdup {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
 ; CHECK-NEXT:    # xmm0 = mem[1,1,3,3]
 ; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm1
@@ -1106,26 +1090,44 @@ define <16 x half> @frem_strict_vec16(<16 x half> %x, <16 x half> %y) nounwind #
 ; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    callq fmodf@PLT
 ; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vpunpcklwd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
+; CHECK-NEXT:    vpunpcklwd (%rsp), %xmm0, %xmm0 # 16-byte Folded Reload
 ; CHECK-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1],xmm0[2],mem[2],xmm0[3],mem[3]
-; CHECK-NEXT:    vinserti128 $1, {{[-0-9]+}}(%r{{[sb]}}p), %ymm0, %ymm0 # 16-byte Folded Reload
-; CHECK-NEXT:    vmovdqu %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; CHECK-NEXT:    vmovdqa %xmm0, (%rsp) # 16-byte Spill
 ; CHECK-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm1
-; CHECK-NEXT:    vmovaps (%rsp), %xmm0 # 16-byte Reload
+; CHECK-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    callq fmodf@PLT
 ; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    vpsrld $16, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
 ; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm1
-; CHECK-NEXT:    vpsrld $16, (%rsp), %xmm0 # 16-byte Folded Reload
+; CHECK-NEXT:    vpsrld $16, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
 ; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    callq fmodf@PLT
 ; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
 ; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
+; CHECK-NEXT:    vpunpckldq (%rsp), %xmm0, %xmm0 # 16-byte Folded Reload
+; CHECK-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1]
+; CHECK-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; CHECK-NEXT:    vpsrlq $48, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
+; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm1
+; CHECK-NEXT:    vpsrlq $48, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
+; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    callq fmodf@PLT
+; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; CHECK-NEXT:    vmovshdup {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
+; CHECK-NEXT:    # xmm0 = mem[1,1,3,3]
+; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm1
+; CHECK-NEXT:    vmovshdup {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
+; CHECK-NEXT:    # xmm0 = mem[1,1,3,3]
+; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    callq fmodf@PLT
+; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vpunpcklwd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
+; CHECK-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1],xmm0[2],mem[2],xmm0[3],mem[3]
 ; CHECK-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Reload
 ; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm1
@@ -1143,12 +1145,12 @@ define <16 x half> @frem_strict_vec16(<16 x half> %x, <16 x half> %y) nounwind #
 ; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    vmovdqa (%rsp), %xmm1 # 16-byte Reload
 ; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
+; CHECK-NEXT:    vpunpckldq {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
+; CHECK-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1]
 ; CHECK-NEXT:    vinserti128 $1, {{[-0-9]+}}(%r{{[sb]}}p), %ymm0, %ymm0 # 16-byte Folded Reload
-; CHECK-NEXT:    vpunpckldq {{[-0-9]+}}(%r{{[sb]}}p), %ymm0, %ymm0 # 32-byte Folded Reload
-; CHECK-NEXT:    # ymm0 = ymm0[0],mem[0],ymm0[1],mem[1],ymm0[4],mem[4],ymm0[5],mem[5]
 ; CHECK-NEXT:    vpunpcklqdq {{[-0-9]+}}(%r{{[sb]}}p), %ymm0, %ymm0 # 32-byte Folded Reload
 ; CHECK-NEXT:    # ymm0 = ymm0[0],mem[0],ymm0[2],mem[2]
-; CHECK-NEXT:    addq $184, %rsp
+; CHECK-NEXT:    addq $168, %rsp
 ; CHECK-NEXT:    retq
   %result = call <16 x half> @llvm.experimental.constrained.frem.v16f16(<16 x half> %x, <16 x half> %y, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
   ret <16 x half> %result
@@ -1157,7 +1159,7 @@ define <16 x half> @frem_strict_vec16(<16 x half> %x, <16 x half> %y) nounwind #
 define <32 x half> @frem_strict_vec32(<32 x half> %x, <32 x half> %y) nounwind #0 {
 ; CHECK-LABEL: frem_strict_vec32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    subq $408, %rsp # imm = 0x198
+; CHECK-NEXT:    subq $360, %rsp # imm = 0x168
 ; CHECK-NEXT:    vmovupd %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; CHECK-NEXT:    vmovups %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; CHECK-NEXT:    vextractf32x4 $3, %zmm1, %xmm1
@@ -1171,7 +1173,7 @@ define <32 x half> @frem_strict_vec32(<32 x half> %x, <32 x half> %y) nounwind #
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    callq fmodf@PLT
 ; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; CHECK-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
 ; CHECK-NEXT:    vpermilps $255, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
 ; CHECK-NEXT:    # xmm0 = mem[3,3,3,3]
 ; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm1
@@ -1180,12 +1182,34 @@ define <32 x half> @frem_strict_vec32(<32 x half> %x, <32 x half> %y) nounwind #
 ; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    callq fmodf@PLT
 ; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vpunpcklwd (%rsp), %xmm0, %xmm0 # 16-byte Folded Reload
+; CHECK-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1],xmm0[2],mem[2],xmm0[3],mem[3]
+; CHECK-NEXT:    vmovdqa %xmm0, (%rsp) # 16-byte Spill
+; CHECK-NEXT:    vpsrldq $10, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
+; CHECK-NEXT:    # xmm0 = mem[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm1
+; CHECK-NEXT:    vpsrldq $10, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
+; CHECK-NEXT:    # xmm0 = mem[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    callq fmodf@PLT
+; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; CHECK-NEXT:    vpermilpd $1, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
+; CHECK-NEXT:    # xmm0 = mem[1,0]
+; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm1
+; CHECK-NEXT:    vpermilpd $1, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
+; CHECK-NEXT:    # xmm0 = mem[1,0]
+; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    callq fmodf@PLT
+; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    vpunpcklwd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
 ; CHECK-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1],xmm0[2],mem[2],xmm0[3],mem[3]
+; CHECK-NEXT:    vpunpckldq (%rsp), %xmm0, %xmm0 # 16-byte Folded Reload
+; CHECK-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1]
 ; CHECK-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    vmovupd {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 # 64-byte Reload
 ; CHECK-NEXT:    vextractf32x4 $2, %zmm0, %xmm0
-; CHECK-NEXT:    vmovapd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; CHECK-NEXT:    vmovapd %xmm0, (%rsp) # 16-byte Spill
 ; CHECK-NEXT:    vpsrldq {{.*#+}} xmm0 = xmm0[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm1
 ; CHECK-NEXT:    vmovupd {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 # 64-byte Reload
@@ -1197,7 +1221,7 @@ define <32 x half> @frem_strict_vec32(<32 x half> %x, <32 x half> %y) nounwind #
 ; CHECK-NEXT:    callq fmodf@PLT
 ; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; CHECK-NEXT:    vpermilps $255, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
+; CHECK-NEXT:    vpermilps $255, (%rsp), %xmm0 # 16-byte Folded Reload
 ; CHECK-NEXT:    # xmm0 = mem[3,3,3,3]
 ; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm1
 ; CHECK-NEXT:    vpermilps $255, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
@@ -1207,6 +1231,28 @@ define <32 x half> @frem_strict_vec32(<32 x half> %x, <32 x half> %y) nounwind #
 ; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    vpunpcklwd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
 ; CHECK-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1],xmm0[2],mem[2],xmm0[3],mem[3]
+; CHECK-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; CHECK-NEXT:    vpsrldq $10, (%rsp), %xmm0 # 16-byte Folded Reload
+; CHECK-NEXT:    # xmm0 = mem[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm1
+; CHECK-NEXT:    vpsrldq $10, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
+; CHECK-NEXT:    # xmm0 = mem[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    callq fmodf@PLT
+; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; CHECK-NEXT:    vpermilpd $1, (%rsp), %xmm0 # 16-byte Folded Reload
+; CHECK-NEXT:    # xmm0 = mem[1,0]
+; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm1
+; CHECK-NEXT:    vpermilpd $1, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
+; CHECK-NEXT:    # xmm0 = mem[1,0]
+; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    callq fmodf@PLT
+; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vpunpcklwd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
+; CHECK-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1],xmm0[2],mem[2],xmm0[3],mem[3]
+; CHECK-NEXT:    vpunpckldq {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
+; CHECK-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1]
 ; CHECK-NEXT:    vinserti128 $1, {{[-0-9]+}}(%r{{[sb]}}p), %ymm0, %ymm0 # 16-byte Folded Reload
 ; CHECK-NEXT:    vmovdqu %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; CHECK-NEXT:    vmovupd {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 # 64-byte Reload
@@ -1234,35 +1280,12 @@ define <32 x half> @frem_strict_vec32(<32 x half> %x, <32 x half> %y) nounwind #
 ; CHECK-NEXT:    vpunpcklwd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
 ; CHECK-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1],xmm0[2],mem[2],xmm0[3],mem[3]
 ; CHECK-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; CHECK-NEXT:    vpsrldq $14, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; CHECK-NEXT:    # xmm0 = mem[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm1
-; CHECK-NEXT:    vpsrldq $14, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; CHECK-NEXT:    # xmm0 = mem[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    callq fmodf@PLT
-; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; CHECK-NEXT:    vpermilps $255, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; CHECK-NEXT:    # xmm0 = mem[3,3,3,3]
-; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm1
-; CHECK-NEXT:    vpermilps $255, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; CHECK-NEXT:    # xmm0 = mem[3,3,3,3]
-; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    callq fmodf@PLT
-; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vpunpcklwd (%rsp), %xmm0, %xmm0 # 16-byte Folded Reload
-; CHECK-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1],xmm0[2],mem[2],xmm0[3],mem[3]
-; CHECK-NEXT:    vinserti128 $1, {{[-0-9]+}}(%r{{[sb]}}p), %ymm0, %ymm0 # 16-byte Folded Reload
-; CHECK-NEXT:    vinserti64x4 $1, {{[-0-9]+}}(%r{{[sb]}}p), %zmm0, %zmm0 # 32-byte Folded Reload
-; CHECK-NEXT:    vmovdqu64 %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; CHECK-NEXT:    vpsrldq $10, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
 ; CHECK-NEXT:    # xmm0 = mem[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm1
 ; CHECK-NEXT:    vpsrldq $10, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
 ; CHECK-NEXT:    # xmm0 = mem[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    callq fmodf@PLT
 ; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
@@ -1271,6 +1294,28 @@ define <32 x half> @frem_strict_vec32(<32 x half> %x, <32 x half> %y) nounwind #
 ; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm1
 ; CHECK-NEXT:    vpermilpd $1, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
 ; CHECK-NEXT:    # xmm0 = mem[1,0]
+; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    callq fmodf@PLT
+; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vpunpcklwd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
+; CHECK-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1],xmm0[2],mem[2],xmm0[3],mem[3]
+; CHECK-NEXT:    vpunpckldq {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
+; CHECK-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1]
+; CHECK-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; CHECK-NEXT:    vpsrldq $14, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
+; CHECK-NEXT:    # xmm0 = mem[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm1
+; CHECK-NEXT:    vpsrldq $14, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
+; CHECK-NEXT:    # xmm0 = mem[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    callq fmodf@PLT
+; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; CHECK-NEXT:    vpermilps $255, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
+; CHECK-NEXT:    # xmm0 = mem[3,3,3,3]
+; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm1
+; CHECK-NEXT:    vpermilps $255, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
+; CHECK-NEXT:    # xmm0 = mem[3,3,3,3]
 ; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    callq fmodf@PLT
 ; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
@@ -1285,48 +1330,6 @@ define <32 x half> @frem_strict_vec32(<32 x half> %x, <32 x half> %y) nounwind #
 ; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    callq fmodf@PLT
 ; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; CHECK-NEXT:    vpermilpd $1, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; CHECK-NEXT:    # xmm0 = mem[1,0]
-; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm1
-; CHECK-NEXT:    vpermilpd $1, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; CHECK-NEXT:    # xmm0 = mem[1,0]
-; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    callq fmodf@PLT
-; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vpunpcklwd (%rsp), %xmm0, %xmm0 # 16-byte Folded Reload
-; CHECK-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1],xmm0[2],mem[2],xmm0[3],mem[3]
-; CHECK-NEXT:    vinserti128 $1, {{[-0-9]+}}(%r{{[sb]}}p), %ymm0, %ymm0 # 16-byte Folded Reload
-; CHECK-NEXT:    vmovdqu %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; CHECK-NEXT:    vpsrldq $10, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; CHECK-NEXT:    # xmm0 = mem[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm1
-; CHECK-NEXT:    vpsrldq $10, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; CHECK-NEXT:    # xmm0 = mem[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vzeroupper
-; CHECK-NEXT:    callq fmodf@PLT
-; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; CHECK-NEXT:    vpermilpd $1, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; CHECK-NEXT:    # xmm0 = mem[1,0]
-; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm1
-; CHECK-NEXT:    vpermilpd $1, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; CHECK-NEXT:    # xmm0 = mem[1,0]
-; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    callq fmodf@PLT
-; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vpunpcklwd (%rsp), %xmm0, %xmm0 # 16-byte Folded Reload
-; CHECK-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1],xmm0[2],mem[2],xmm0[3],mem[3]
-; CHECK-NEXT:    vmovdqa %xmm0, (%rsp) # 16-byte Spill
-; CHECK-NEXT:    vpsrldq $10, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; CHECK-NEXT:    # xmm0 = mem[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm1
-; CHECK-NEXT:    vpsrldq $10, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; CHECK-NEXT:    # xmm0 = mem[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    callq fmodf@PLT
-; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    vpermilpd $1, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
 ; CHECK-NEXT:    # xmm0 = mem[1,0]
@@ -1338,10 +1341,10 @@ define <32 x half> @frem_strict_vec32(<32 x half> %x, <32 x half> %y) nounwind #
 ; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    vpunpcklwd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
 ; CHECK-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1],xmm0[2],mem[2],xmm0[3],mem[3]
-; CHECK-NEXT:    vinserti128 $1, (%rsp), %ymm0, %ymm0 # 16-byte Folded Reload
+; CHECK-NEXT:    vpunpckldq {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
+; CHECK-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1]
+; CHECK-NEXT:    vinserti128 $1, {{[-0-9]+}}(%r{{[sb]}}p), %ymm0, %ymm0 # 16-byte Folded Reload
 ; CHECK-NEXT:    vinserti64x4 $1, {{[-0-9]+}}(%r{{[sb]}}p), %zmm0, %zmm0 # 32-byte Folded Reload
-; CHECK-NEXT:    vpunpckldq {{[-0-9]+}}(%r{{[sb]}}p), %zmm0, %zmm0 # 64-byte Folded Reload
-; CHECK-NEXT:    # zmm0 = zmm0[0],mem[0],zmm0[1],mem[1],zmm0[4],mem[4],zmm0[5],mem[5],zmm0[8],mem[8],zmm0[9],mem[9],zmm0[12],mem[12],zmm0[13],mem[13]
 ; CHECK-NEXT:    vmovdqu64 %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; CHECK-NEXT:    vpsrlq $48, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
 ; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm1
@@ -1362,14 +1365,32 @@ define <32 x half> @frem_strict_vec32(<32 x half> %x, <32 x half> %y) nounwind #
 ; CHECK-NEXT:    vpunpcklwd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
 ; CHECK-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1],xmm0[2],mem[2],xmm0[3],mem[3]
 ; CHECK-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; CHECK-NEXT:    vpsrlq $48, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
+; CHECK-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm1
+; CHECK-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    callq fmodf@PLT
+; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; CHECK-NEXT:    vpsrld $16, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
+; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm1
+; CHECK-NEXT:    vpsrld $16, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
+; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    callq fmodf@PLT
+; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
+; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
+; CHECK-NEXT:    vpunpckldq {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
+; CHECK-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1]
+; CHECK-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; CHECK-NEXT:    vpsrlq $48, (%rsp), %xmm0 # 16-byte Folded Reload
 ; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm1
 ; CHECK-NEXT:    vpsrlq $48, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
 ; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    callq fmodf@PLT
 ; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; CHECK-NEXT:    vmovshdup {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
+; CHECK-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; CHECK-NEXT:    vmovshdup (%rsp), %xmm0 # 16-byte Folded Reload
 ; CHECK-NEXT:    # xmm0 = mem[1,1,3,3]
 ; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm1
 ; CHECK-NEXT:    vmovshdup {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
@@ -1377,8 +1398,26 @@ define <32 x half> @frem_strict_vec32(<32 x half> %x, <32 x half> %y) nounwind #
 ; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    callq fmodf@PLT
 ; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vpunpcklwd (%rsp), %xmm0, %xmm0 # 16-byte Folded Reload
+; CHECK-NEXT:    vpunpcklwd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
 ; CHECK-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1],xmm0[2],mem[2],xmm0[3],mem[3]
+; CHECK-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; CHECK-NEXT:    vmovaps (%rsp), %xmm0 # 16-byte Reload
+; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm1
+; CHECK-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    callq fmodf@PLT
+; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; CHECK-NEXT:    vpsrld $16, (%rsp), %xmm0 # 16-byte Folded Reload
+; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm1
+; CHECK-NEXT:    vpsrld $16, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
+; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    callq fmodf@PLT
+; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
+; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
+; CHECK-NEXT:    vpunpckldq {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
+; CHECK-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1]
 ; CHECK-NEXT:    vinserti128 $1, {{[-0-9]+}}(%r{{[sb]}}p), %ymm0, %ymm0 # 16-byte Folded Reload
 ; CHECK-NEXT:    vmovdqu %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; CHECK-NEXT:    vpsrlq $48, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
@@ -1386,24 +1425,6 @@ define <32 x half> @frem_strict_vec32(<32 x half> %x, <32 x half> %y) nounwind #
 ; CHECK-NEXT:    vpsrlq $48, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
 ; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    vzeroupper
-; CHECK-NEXT:    callq fmodf@PLT
-; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; CHECK-NEXT:    vmovshdup {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; CHECK-NEXT:    # xmm0 = mem[1,1,3,3]
-; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm1
-; CHECK-NEXT:    vmovshdup {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; CHECK-NEXT:    # xmm0 = mem[1,1,3,3]
-; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    callq fmodf@PLT
-; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vpunpcklwd (%rsp), %xmm0, %xmm0 # 16-byte Folded Reload
-; CHECK-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1],xmm0[2],mem[2],xmm0[3],mem[3]
-; CHECK-NEXT:    vmovdqa %xmm0, (%rsp) # 16-byte Spill
-; CHECK-NEXT:    vpsrlq $48, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm1
-; CHECK-NEXT:    vpsrlq $48, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    callq fmodf@PLT
 ; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
@@ -1417,14 +1438,11 @@ define <32 x half> @frem_strict_vec32(<32 x half> %x, <32 x half> %y) nounwind #
 ; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    vpunpcklwd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
 ; CHECK-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1],xmm0[2],mem[2],xmm0[3],mem[3]
-; CHECK-NEXT:    vinserti128 $1, (%rsp), %ymm0, %ymm0 # 16-byte Folded Reload
-; CHECK-NEXT:    vinserti64x4 $1, {{[-0-9]+}}(%r{{[sb]}}p), %zmm0, %zmm0 # 32-byte Folded Reload
-; CHECK-NEXT:    vmovdqu64 %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
+; CHECK-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm1
 ; CHECK-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    callq fmodf@PLT
 ; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
@@ -1436,41 +1454,27 @@ define <32 x half> @frem_strict_vec32(<32 x half> %x, <32 x half> %y) nounwind #
 ; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    vmovdqa (%rsp), %xmm1 # 16-byte Reload
 ; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
+; CHECK-NEXT:    vpunpckldq {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
+; CHECK-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1]
 ; CHECK-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; CHECK-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; CHECK-NEXT:    vpsrlq $48, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
 ; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm1
-; CHECK-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; CHECK-NEXT:    vpsrlq $48, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
 ; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    callq fmodf@PLT
 ; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; CHECK-NEXT:    vpsrld $16, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
+; CHECK-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
+; CHECK-NEXT:    vmovshdup {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
+; CHECK-NEXT:    # xmm0 = mem[1,1,3,3]
 ; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm1
-; CHECK-NEXT:    vpsrld $16, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
+; CHECK-NEXT:    vmovshdup {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
+; CHECK-NEXT:    # xmm0 = mem[1,1,3,3]
 ; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    callq fmodf@PLT
 ; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
-; CHECK-NEXT:    vinserti128 $1, {{[-0-9]+}}(%r{{[sb]}}p), %ymm0, %ymm0 # 16-byte Folded Reload
-; CHECK-NEXT:    vmovdqu %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; CHECK-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm1
-; CHECK-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vzeroupper
-; CHECK-NEXT:    callq fmodf@PLT
-; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; CHECK-NEXT:    vpsrld $16, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm1
-; CHECK-NEXT:    vpsrld $16, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    callq fmodf@PLT
-; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
-; CHECK-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; CHECK-NEXT:    vpunpcklwd (%rsp), %xmm0, %xmm0 # 16-byte Folded Reload
+; CHECK-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1],xmm0[2],mem[2],xmm0[3],mem[3]
+; CHECK-NEXT:    vmovdqa %xmm0, (%rsp) # 16-byte Spill
 ; CHECK-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 # 64-byte Reload
 ; CHECK-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm1
 ; CHECK-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 # 64-byte Reload
@@ -1487,13 +1491,13 @@ define <32 x half> @frem_strict_vec32(<32 x half> %x, <32 x half> %y) nounwind #
 ; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
 ; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
+; CHECK-NEXT:    vpunpckldq (%rsp), %xmm0, %xmm0 # 16-byte Folded Reload
+; CHECK-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1]
 ; CHECK-NEXT:    vinserti128 $1, {{[-0-9]+}}(%r{{[sb]}}p), %ymm0, %ymm0 # 16-byte Folded Reload
 ; CHECK-NEXT:    vinserti64x4 $1, {{[-0-9]+}}(%r{{[sb]}}p), %zmm0, %zmm0 # 32-byte Folded Reload
-; CHECK-NEXT:    vpunpckldq {{[-0-9]+}}(%r{{[sb]}}p), %zmm0, %zmm0 # 64-byte Folded Reload
-; CHECK-NEXT:    # zmm0 = zmm0[0],mem[0],zmm0[1],mem[1],zmm0[4],mem[4],zmm0[5],mem[5],zmm0[8],mem[8],zmm0[9],mem[9],zmm0[12],mem[12],zmm0[13],mem[13]
 ; CHECK-NEXT:    vpunpcklqdq {{[-0-9]+}}(%r{{[sb]}}p), %zmm0, %zmm0 # 64-byte Folded Reload
 ; CHECK-NEXT:    # zmm0 = zmm0[0],mem[0],zmm0[2],mem[2],zmm0[4],mem[4],zmm0[6],mem[6]
-; CHECK-NEXT:    addq $408, %rsp # imm = 0x198
+; CHECK-NEXT:    addq $360, %rsp # imm = 0x168
 ; CHECK-NEXT:    retq
   %result = call <32 x half> @llvm.experimental.constrained.frem.v32f16(<32 x half> %x, <32 x half> %y, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
   ret <32 x half> %result

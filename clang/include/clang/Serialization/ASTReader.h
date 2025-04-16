@@ -237,6 +237,18 @@ public:
     return true;
   }
 
+  /// Overloaded member function of \c visitInputFile that should
+  /// be defined when there is a distinction between
+  /// the file name and name-as-requested. For example, when deserializing input
+  /// files from precompiled AST files.
+  ///
+  /// \returns true to continue receiving the next input file, false to stop.
+  virtual bool visitInputFile(StringRef FilenameAsRequested, StringRef Filename,
+                              bool isSystem, bool isOverridden,
+                              bool isExplicitModule) {
+    return true;
+  }
+
   /// Returns true if this \c ASTReaderListener wants to receive the
   /// imports of the AST file via \c visitImport, false otherwise.
   virtual bool needsImportVisitation() const { return false; }
@@ -2659,7 +2671,7 @@ inline bool shouldSkipCheckingODR(const Decl *D) {
 
 /// Calculate a hash value for the primary module name of the given module.
 /// \returns std::nullopt if M is not a C++ standard module.
-std::optional<unsigned> getPrimaryModuleHash(const Module *M);
+UnsignedOrNone getPrimaryModuleHash(const Module *M);
 
 } // namespace clang
 

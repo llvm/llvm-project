@@ -51,8 +51,8 @@ unsigned BPFELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
   case FK_Data_8:
     return ELF::R_BPF_64_ABS64;
   case FK_Data_4:
-    if (const MCSymbolRefExpr *A = Target.getSymA()) {
-      const MCSymbol &Sym = A->getSymbol();
+    if (const auto *A = Target.getAddSym()) {
+      const MCSymbol &Sym = *A;
 
       if (Sym.isDefined()) {
         MCSection &Section = Sym.getSection();

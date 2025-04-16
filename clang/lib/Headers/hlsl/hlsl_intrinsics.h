@@ -176,6 +176,45 @@ const inline float distance(__detail::HLSL_FIXED_VECTOR<float, N> X,
 }
 
 //===----------------------------------------------------------------------===//
+// dot2add builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn float dot2add(half2 A, half2 B, float C)
+/// \brief Dot product of 2 vector of type half and add a float scalar value.
+/// \param A The first input value to dot product.
+/// \param B The second input value to dot product.
+/// \param C The input value added to the dot product.
+
+_HLSL_AVAILABILITY(shadermodel, 6.4)
+const inline float dot2add(half2 A, half2 B, float C) {
+  return __detail::dot2add_impl(A, B, C);
+}
+
+//===----------------------------------------------------------------------===//
+// dst builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn vector<T, 4> dst(vector<T, 4>, vector<T, 4>)
+/// \brief Calculates a distance vector.
+/// \param Src0 [in] Contains the squared distance
+/// \param Src1 [in] Contains the reciprocal distance
+///
+/// Return the computed distance vector
+
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+const inline half4 dst(half4 Src0, half4 Src1) {
+  return __detail::dst_impl(Src0, Src1);
+}
+
+const inline float4 dst(float4 Src0, float4 Src1) {
+  return __detail::dst_impl(Src0, Src1);
+}
+
+const inline double4 dst(double4 Src0, double4 Src1) {
+  return __detail::dst_impl(Src0, Src1);
+}
+
+//===----------------------------------------------------------------------===//
 // fmod builtins
 //===----------------------------------------------------------------------===//
 
@@ -251,6 +290,30 @@ const inline half length(__detail::HLSL_FIXED_VECTOR<half, N> X) {
 template <int N>
 const inline float length(__detail::HLSL_FIXED_VECTOR<float, N> X) {
   return __detail::length_vec_impl(X);
+}
+
+//===----------------------------------------------------------------------===//
+// lit builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn vector<T, 4> lit(T NDotL, T NDotH, T M)
+/// \brief Returns a lighting coefficient vector.
+/// \param NDotL The dot product of the normalized surface normal and the
+/// light vector.
+/// \param NDotH The dot product of the half-angle vector and the surface
+/// normal.
+/// \param M A specular exponent.
+///
+/// This function returns a lighting coefficient vector (ambient, diffuse,
+/// specular, 1).
+
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+const inline half4 lit(half NDotL, half NDotH, half M) {
+  return __detail::lit_impl(NDotL, NDotH, M);
+}
+
+const inline float4 lit(float NDotL, float NDotH, float M) {
+  return __detail::lit_impl(NDotL, NDotH, M);
 }
 
 //===----------------------------------------------------------------------===//

@@ -113,9 +113,9 @@ define void @load_store_interleave_group_tc_2(ptr noalias %data) {
 ; VF4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; VF4-NEXT:    br i1 true, label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; VF4:       [[MIDDLE_BLOCK]]:
-; VF4-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; VF4-NEXT:    br label %[[EXIT:.*]]
 ; VF4:       [[SCALAR_PH]]:
-; VF4-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 4, %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; VF4-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; VF4-NEXT:    br label %[[LOOP:.*]]
 ; VF4:       [[LOOP]]:
 ; VF4-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
