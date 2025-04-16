@@ -1030,6 +1030,103 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats,
     handleSectionGroup<ELFT>(this->sections, entries);
 }
 
+template <typename ELFT>
+static void parseGnuPropertyNote(Ctx &ctx, ELFFileBase &f,
+                                 uint32_t featureAndType,
+                                 ArrayRef<uint8_t> &desc, const uint8_t *base,
+                                 ArrayRef<uint8_t> *data) {
+  auto err = [&](const uint8_t *place) -> ELFSyncStream {
+    auto diag = Err(ctx);
+    diag << &f << ":(" << ".note.gnu.property+0x"
+         << Twine::utohexstr(place - base) << "): ";
+    return diag;
+  };
+
+  while (!desc.empty()) {
+    const uint8_t *place = desc.data();
+    if (desc.size() < 8)
+      return void(err(place) << "program property is too short");
+    uint32_t type = read32<ELFT::Endianness>(desc.data());
+    uint32_t size = read32<ELFT::Endianness>(desc.data() + 4);
+    desc = desc.slice(8);
+    if (desc.size() < size)
+      return void(err(place) << "program property is too short");
+
+    if (type == featureAndType) {
+      // We found a FEATURE_1_AND field. There may be more than one of these
+      // in a .note.gnu.property section, for a relocatable object we
+      // accumulate the bits set.
+      if (size < 4)
+        return void(err(place) << "FEATURE_1_AND entry is too short");
+      f.andFeatures |= read32<ELFT::Endianness>(desc.data());
+    } else if (ctx.arg.emachine == EM_AARCH64 &&
+               type == GNU_PROPERTY_AARCH64_FEATURE_PAUTH) {
+      ArrayRef<uint8_t> contents = data ? *data : desc;
+      if (!f.aarch64PauthAbiCoreInfo.empty()) {
+        return void(
+            err(contents.data())
+            << "multiple GNU_PROPERTY_AARCH64_FEATURE_PAUTH entries are "
+               "not supported");
+      } else if (size != 16) {
+        return void(err(contents.data())
+                    << "GNU_PROPERTY_AARCH64_FEATURE_PAUTH entry "
+                       "is invalid: expected 16 bytes, but got "
+                    << size);
+      }
+      f.aarch64PauthAbiCoreInfo = desc;
+    }
+
+    // Padding is present in the note descriptor, if necessary.
+    desc = desc.slice(alignTo<(ELFT::Is64Bits ? 8 : 4)>(size));
+  }
+}
+
+// Read the following info from the .note.gnu.property section and write it to
+// the corresponding fields in `ObjFile`:
+// - Feature flags (32 bits) representing x86 or AArch64 features for
+//   hardware-assisted call flow control;
+// - AArch64 PAuth ABI core info (16 bytes).
+template <class ELFT>
+static gnuPropertiesInfo readGnuProperty(Ctx &ctx, const InputSection &sec,
+                                         ObjFile<ELFT> &f) {
+  using Elf_Nhdr = typename ELFT::Nhdr;
+  using Elf_Note = typename ELFT::Note;
+
+  ArrayRef<uint8_t> data = sec.content();
+  auto err = [&](const uint8_t *place) -> ELFSyncStream {
+    auto diag = Err(ctx);
+    diag << sec.file << ":(" << sec.name << "+0x"
+         << Twine::utohexstr(place - sec.content().data()) << "): ";
+    return diag;
+  };
+  while (!data.empty()) {
+    // Read one NOTE record.
+    auto *nhdr = reinterpret_cast<const Elf_Nhdr *>(data.data());
+    if (data.size() < sizeof(Elf_Nhdr) ||
+        data.size() < nhdr->getSize(sec.addralign))
+      return (err(data.data()) << "data is too short", gnuPropertiesInfo{});
+
+    Elf_Note note(*nhdr);
+    if (nhdr->n_type != NT_GNU_PROPERTY_TYPE_0 || note.getName() != "GNU") {
+      data = data.slice(nhdr->getSize(sec.addralign));
+      continue;
+    }
+
+    uint32_t featureAndType = ctx.arg.emachine == EM_AARCH64
+                                  ? GNU_PROPERTY_AARCH64_FEATURE_1_AND
+                                  : GNU_PROPERTY_X86_FEATURE_1_AND;
+
+    // Read a body of a NOTE record, which consists of type-length-value fields.
+    ArrayRef<uint8_t> desc = note.getDesc(sec.addralign);
+    const uint8_t *base = sec.content().data();
+    parseGnuPropertyNote<ELFT>(ctx, f, featureAndType, desc, base, &data);
+
+    // Go to next NOTE record to look for more FEATURE_1_AND descriptions.
+    data = data.slice(nhdr->getSize(sec.addralign));
+  }
+  return gnuPropertiesInfo{f.andFeatures, f.aarch64PauthAbiCoreInfo};
+}
+
 template <class ELFT>
 InputSectionBase *ObjFile<ELFT>::getRelocTarget(uint32_t idx, uint32_t info) {
   if (info < this->sections.size()) {
@@ -1436,103 +1533,6 @@ std::vector<uint32_t> SharedFile::parseVerneed(const ELFFile<ELFT> &obj,
     verneedBuf += vn->vn_next;
   }
   return verneeds;
-}
-
-template <typename ELFT>
-static void parseGnuPropertyNote(Ctx &ctx, ELFFileBase &f,
-                                 uint32_t featureAndType,
-                                 ArrayRef<uint8_t> &desc, const uint8_t *base,
-                                 ArrayRef<uint8_t> *data) {
-  auto err = [&](const uint8_t *place) -> ELFSyncStream {
-    auto diag = Err(ctx);
-    diag << &f << ":(" << ".note.gnu.property+0x"
-         << Twine::utohexstr(place - base) << "): ";
-    return diag;
-  };
-
-  while (!desc.empty()) {
-    const uint8_t *place = desc.data();
-    if (desc.size() < 8)
-      return void(err(place) << "program property is too short");
-    uint32_t type = read32<ELFT::Endianness>(desc.data());
-    uint32_t size = read32<ELFT::Endianness>(desc.data() + 4);
-    desc = desc.slice(8);
-    if (desc.size() < size)
-      return void(err(place) << "program property is too short");
-
-    if (type == featureAndType) {
-      // We found a FEATURE_1_AND field. There may be more than one of these
-      // in a .note.gnu.property section, for a relocatable object we
-      // accumulate the bits set.
-      if (size < 4)
-        return void(err(place) << "FEATURE_1_AND entry is too short");
-      f.andFeatures |= read32<ELFT::Endianness>(desc.data());
-    } else if (ctx.arg.emachine == EM_AARCH64 &&
-               type == GNU_PROPERTY_AARCH64_FEATURE_PAUTH) {
-      ArrayRef<uint8_t> contents = data ? *data : desc;
-      if (!f.aarch64PauthAbiCoreInfo.empty()) {
-        return void(
-            err(contents.data())
-            << "multiple GNU_PROPERTY_AARCH64_FEATURE_PAUTH entries are "
-               "not supported");
-      } else if (size != 16) {
-        return void(err(contents.data())
-                    << "GNU_PROPERTY_AARCH64_FEATURE_PAUTH entry "
-                       "is invalid: expected 16 bytes, but got "
-                    << size);
-      }
-      f.aarch64PauthAbiCoreInfo = desc;
-    }
-
-    // Padding is present in the note descriptor, if necessary.
-    desc = desc.slice(alignTo<(ELFT::Is64Bits ? 8 : 4)>(size));
-  }
-}
-
-// Read the following info from the .note.gnu.property section and write it to
-// the corresponding fields in `ObjFile`:
-// - Feature flags (32 bits) representing x86 or AArch64 features for
-//   hardware-assisted call flow control;
-// - AArch64 PAuth ABI core info (16 bytes).
-template <class ELFT>
-static gnuPropertiesInfo readGnuProperty(Ctx &ctx, const InputSection &sec,
-                                         ObjFile<ELFT> &f) {
-  using Elf_Nhdr = typename ELFT::Nhdr;
-  using Elf_Note = typename ELFT::Note;
-
-  ArrayRef<uint8_t> data = sec.content();
-  auto err = [&](const uint8_t *place) -> ELFSyncStream {
-    auto diag = Err(ctx);
-    diag << sec.file << ":(" << sec.name << "+0x"
-         << Twine::utohexstr(place - sec.content().data()) << "): ";
-    return diag;
-  };
-  while (!data.empty()) {
-    // Read one NOTE record.
-    auto *nhdr = reinterpret_cast<const Elf_Nhdr *>(data.data());
-    if (data.size() < sizeof(Elf_Nhdr) ||
-        data.size() < nhdr->getSize(sec.addralign))
-      return (err(data.data()) << "data is too short", gnuPropertiesInfo{});
-
-    Elf_Note note(*nhdr);
-    if (nhdr->n_type != NT_GNU_PROPERTY_TYPE_0 || note.getName() != "GNU") {
-      data = data.slice(nhdr->getSize(sec.addralign));
-      continue;
-    }
-
-    uint32_t featureAndType = ctx.arg.emachine == EM_AARCH64
-                                  ? GNU_PROPERTY_AARCH64_FEATURE_1_AND
-                                  : GNU_PROPERTY_X86_FEATURE_1_AND;
-
-    // Read a body of a NOTE record, which consists of type-length-value fields.
-    ArrayRef<uint8_t> desc = note.getDesc(sec.addralign);
-    const uint8_t *base = sec.content().data();
-    parseGnuPropertyNote<ELFT>(ctx, f, featureAndType, desc, base, &data);
-
-    // Go to next NOTE record to look for more FEATURE_1_AND descriptions.
-    data = data.slice(nhdr->getSize(sec.addralign));
-  }
-  return gnuPropertiesInfo{f.andFeatures, f.aarch64PauthAbiCoreInfo};
 }
 
 // Parse PT_GNU_PROPERTY segments in DSO. The process is similar to
