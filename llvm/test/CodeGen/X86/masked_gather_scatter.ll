@@ -4819,18 +4819,9 @@ define <16 x float> @test_gather_structpt_16f32_mask_index(ptr %x, ptr %arr, <16
 ; X64-KNL-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; X64-KNL-NEXT:    vpslld $31, %zmm0, %zmm0
 ; X64-KNL-NEXT:    vptestmd %zmm0, %zmm0, %k1
-; X64-KNL-NEXT:    vmovdqu64 (%rsi), %zmm0
-; X64-KNL-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm0, %zmm0
-; X64-KNL-NEXT:    vextracti64x4 $1, %zmm0, %ymm2
-; X64-KNL-NEXT:    vpmovzxdq {{.*#+}} zmm2 = ymm2[0],zero,ymm2[1],zero,ymm2[2],zero,ymm2[3],zero,ymm2[4],zero,ymm2[5],zero,ymm2[6],zero,ymm2[7],zero
-; X64-KNL-NEXT:    vpmovzxdq {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero
-; X64-KNL-NEXT:    vpsllq $4, %zmm0, %zmm0
-; X64-KNL-NEXT:    vpsllq $4, %zmm2, %zmm2
-; X64-KNL-NEXT:    vextractf64x4 $1, %zmm1, %ymm3
-; X64-KNL-NEXT:    kshiftrw $8, %k1, %k2
-; X64-KNL-NEXT:    vgatherqps (%rdi,%zmm2), %ymm3 {%k2}
-; X64-KNL-NEXT:    vgatherqps (%rdi,%zmm0), %ymm1 {%k1}
-; X64-KNL-NEXT:    vinsertf64x4 $1, %ymm3, %zmm1, %zmm0
+; X64-KNL-NEXT:    vpslld $4, (%rsi), %zmm0
+; X64-KNL-NEXT:    vgatherdps (%rdi,%zmm0), %zmm1 {%k1}
+; X64-KNL-NEXT:    vmovaps %zmm1, %zmm0
 ; X64-KNL-NEXT:    retq
 ;
 ; X86-KNL-LABEL: test_gather_structpt_16f32_mask_index:
@@ -4845,44 +4836,15 @@ define <16 x float> @test_gather_structpt_16f32_mask_index(ptr %x, ptr %arr, <16
 ; X86-KNL-NEXT:    vmovaps %zmm1, %zmm0
 ; X86-KNL-NEXT:    retl
 ;
-; X64-SKX-SMALL-LABEL: test_gather_structpt_16f32_mask_index:
-; X64-SKX-SMALL:       # %bb.0:
-; X64-SKX-SMALL-NEXT:    vpmovsxbd %xmm0, %zmm0
-; X64-SKX-SMALL-NEXT:    vpslld $31, %zmm0, %zmm0
-; X64-SKX-SMALL-NEXT:    vpmovd2m %zmm0, %k1
-; X64-SKX-SMALL-NEXT:    vmovdqu64 (%rsi), %zmm0
-; X64-SKX-SMALL-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm0, %zmm0
-; X64-SKX-SMALL-NEXT:    vextracti64x4 $1, %zmm0, %ymm2
-; X64-SKX-SMALL-NEXT:    vpmovzxdq {{.*#+}} zmm2 = ymm2[0],zero,ymm2[1],zero,ymm2[2],zero,ymm2[3],zero,ymm2[4],zero,ymm2[5],zero,ymm2[6],zero,ymm2[7],zero
-; X64-SKX-SMALL-NEXT:    vpmovzxdq {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero
-; X64-SKX-SMALL-NEXT:    vpsllq $4, %zmm0, %zmm0
-; X64-SKX-SMALL-NEXT:    vpsllq $4, %zmm2, %zmm2
-; X64-SKX-SMALL-NEXT:    vextractf64x4 $1, %zmm1, %ymm3
-; X64-SKX-SMALL-NEXT:    kshiftrw $8, %k1, %k2
-; X64-SKX-SMALL-NEXT:    vgatherqps (%rdi,%zmm2), %ymm3 {%k2}
-; X64-SKX-SMALL-NEXT:    vgatherqps (%rdi,%zmm0), %ymm1 {%k1}
-; X64-SKX-SMALL-NEXT:    vinsertf64x4 $1, %ymm3, %zmm1, %zmm0
-; X64-SKX-SMALL-NEXT:    retq
-;
-; X64-SKX-LARGE-LABEL: test_gather_structpt_16f32_mask_index:
-; X64-SKX-LARGE:       # %bb.0:
-; X64-SKX-LARGE-NEXT:    vpmovsxbd %xmm0, %zmm0
-; X64-SKX-LARGE-NEXT:    vpslld $31, %zmm0, %zmm0
-; X64-SKX-LARGE-NEXT:    vpmovd2m %zmm0, %k1
-; X64-SKX-LARGE-NEXT:    vmovdqu64 (%rsi), %zmm0
-; X64-SKX-LARGE-NEXT:    movabsq ${{\.?LCPI[0-9]+_[0-9]+}}, %rax
-; X64-SKX-LARGE-NEXT:    vpandd (%rax){1to16}, %zmm0, %zmm0
-; X64-SKX-LARGE-NEXT:    vextracti64x4 $1, %zmm0, %ymm2
-; X64-SKX-LARGE-NEXT:    vpmovzxdq {{.*#+}} zmm2 = ymm2[0],zero,ymm2[1],zero,ymm2[2],zero,ymm2[3],zero,ymm2[4],zero,ymm2[5],zero,ymm2[6],zero,ymm2[7],zero
-; X64-SKX-LARGE-NEXT:    vpmovzxdq {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero
-; X64-SKX-LARGE-NEXT:    vpsllq $4, %zmm0, %zmm0
-; X64-SKX-LARGE-NEXT:    vpsllq $4, %zmm2, %zmm2
-; X64-SKX-LARGE-NEXT:    vextractf64x4 $1, %zmm1, %ymm3
-; X64-SKX-LARGE-NEXT:    kshiftrw $8, %k1, %k2
-; X64-SKX-LARGE-NEXT:    vgatherqps (%rdi,%zmm2), %ymm3 {%k2}
-; X64-SKX-LARGE-NEXT:    vgatherqps (%rdi,%zmm0), %ymm1 {%k1}
-; X64-SKX-LARGE-NEXT:    vinsertf64x4 $1, %ymm3, %zmm1, %zmm0
-; X64-SKX-LARGE-NEXT:    retq
+; X64-SKX-LABEL: test_gather_structpt_16f32_mask_index:
+; X64-SKX:       # %bb.0:
+; X64-SKX-NEXT:    vpmovsxbd %xmm0, %zmm0
+; X64-SKX-NEXT:    vpslld $31, %zmm0, %zmm0
+; X64-SKX-NEXT:    vpmovd2m %zmm0, %k1
+; X64-SKX-NEXT:    vpslld $4, (%rsi), %zmm0
+; X64-SKX-NEXT:    vgatherdps (%rdi,%zmm0), %zmm1 {%k1}
+; X64-SKX-NEXT:    vmovaps %zmm1, %zmm0
+; X64-SKX-NEXT:    retq
 ;
 ; X86-SKX-LABEL: test_gather_structpt_16f32_mask_index:
 ; X86-SKX:       # %bb.0:
@@ -4909,18 +4871,9 @@ define <16 x float> @test_gather_structpt_16f32_mask_index_offset(ptr %x, ptr %a
 ; X64-KNL-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; X64-KNL-NEXT:    vpslld $31, %zmm0, %zmm0
 ; X64-KNL-NEXT:    vptestmd %zmm0, %zmm0, %k1
-; X64-KNL-NEXT:    vmovdqu64 (%rsi), %zmm0
-; X64-KNL-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm0, %zmm0
-; X64-KNL-NEXT:    vextracti64x4 $1, %zmm0, %ymm2
-; X64-KNL-NEXT:    vpmovzxdq {{.*#+}} zmm2 = ymm2[0],zero,ymm2[1],zero,ymm2[2],zero,ymm2[3],zero,ymm2[4],zero,ymm2[5],zero,ymm2[6],zero,ymm2[7],zero
-; X64-KNL-NEXT:    vpmovzxdq {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero
-; X64-KNL-NEXT:    vpsllq $4, %zmm0, %zmm0
-; X64-KNL-NEXT:    vpsllq $4, %zmm2, %zmm2
-; X64-KNL-NEXT:    vextractf64x4 $1, %zmm1, %ymm3
-; X64-KNL-NEXT:    kshiftrw $8, %k1, %k2
-; X64-KNL-NEXT:    vgatherqps 4(%rdi,%zmm2), %ymm3 {%k2}
-; X64-KNL-NEXT:    vgatherqps 4(%rdi,%zmm0), %ymm1 {%k1}
-; X64-KNL-NEXT:    vinsertf64x4 $1, %ymm3, %zmm1, %zmm0
+; X64-KNL-NEXT:    vpslld $4, (%rsi), %zmm0
+; X64-KNL-NEXT:    vgatherdps 4(%rdi,%zmm0), %zmm1 {%k1}
+; X64-KNL-NEXT:    vmovaps %zmm1, %zmm0
 ; X64-KNL-NEXT:    retq
 ;
 ; X86-KNL-LABEL: test_gather_structpt_16f32_mask_index_offset:
@@ -4935,44 +4888,15 @@ define <16 x float> @test_gather_structpt_16f32_mask_index_offset(ptr %x, ptr %a
 ; X86-KNL-NEXT:    vmovaps %zmm1, %zmm0
 ; X86-KNL-NEXT:    retl
 ;
-; X64-SKX-SMALL-LABEL: test_gather_structpt_16f32_mask_index_offset:
-; X64-SKX-SMALL:       # %bb.0:
-; X64-SKX-SMALL-NEXT:    vpmovsxbd %xmm0, %zmm0
-; X64-SKX-SMALL-NEXT:    vpslld $31, %zmm0, %zmm0
-; X64-SKX-SMALL-NEXT:    vpmovd2m %zmm0, %k1
-; X64-SKX-SMALL-NEXT:    vmovdqu64 (%rsi), %zmm0
-; X64-SKX-SMALL-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm0, %zmm0
-; X64-SKX-SMALL-NEXT:    vextracti64x4 $1, %zmm0, %ymm2
-; X64-SKX-SMALL-NEXT:    vpmovzxdq {{.*#+}} zmm2 = ymm2[0],zero,ymm2[1],zero,ymm2[2],zero,ymm2[3],zero,ymm2[4],zero,ymm2[5],zero,ymm2[6],zero,ymm2[7],zero
-; X64-SKX-SMALL-NEXT:    vpmovzxdq {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero
-; X64-SKX-SMALL-NEXT:    vpsllq $4, %zmm0, %zmm0
-; X64-SKX-SMALL-NEXT:    vpsllq $4, %zmm2, %zmm2
-; X64-SKX-SMALL-NEXT:    vextractf64x4 $1, %zmm1, %ymm3
-; X64-SKX-SMALL-NEXT:    kshiftrw $8, %k1, %k2
-; X64-SKX-SMALL-NEXT:    vgatherqps 4(%rdi,%zmm2), %ymm3 {%k2}
-; X64-SKX-SMALL-NEXT:    vgatherqps 4(%rdi,%zmm0), %ymm1 {%k1}
-; X64-SKX-SMALL-NEXT:    vinsertf64x4 $1, %ymm3, %zmm1, %zmm0
-; X64-SKX-SMALL-NEXT:    retq
-;
-; X64-SKX-LARGE-LABEL: test_gather_structpt_16f32_mask_index_offset:
-; X64-SKX-LARGE:       # %bb.0:
-; X64-SKX-LARGE-NEXT:    vpmovsxbd %xmm0, %zmm0
-; X64-SKX-LARGE-NEXT:    vpslld $31, %zmm0, %zmm0
-; X64-SKX-LARGE-NEXT:    vpmovd2m %zmm0, %k1
-; X64-SKX-LARGE-NEXT:    vmovdqu64 (%rsi), %zmm0
-; X64-SKX-LARGE-NEXT:    movabsq ${{\.?LCPI[0-9]+_[0-9]+}}, %rax
-; X64-SKX-LARGE-NEXT:    vpandd (%rax){1to16}, %zmm0, %zmm0
-; X64-SKX-LARGE-NEXT:    vextracti64x4 $1, %zmm0, %ymm2
-; X64-SKX-LARGE-NEXT:    vpmovzxdq {{.*#+}} zmm2 = ymm2[0],zero,ymm2[1],zero,ymm2[2],zero,ymm2[3],zero,ymm2[4],zero,ymm2[5],zero,ymm2[6],zero,ymm2[7],zero
-; X64-SKX-LARGE-NEXT:    vpmovzxdq {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero
-; X64-SKX-LARGE-NEXT:    vpsllq $4, %zmm0, %zmm0
-; X64-SKX-LARGE-NEXT:    vpsllq $4, %zmm2, %zmm2
-; X64-SKX-LARGE-NEXT:    vextractf64x4 $1, %zmm1, %ymm3
-; X64-SKX-LARGE-NEXT:    kshiftrw $8, %k1, %k2
-; X64-SKX-LARGE-NEXT:    vgatherqps 4(%rdi,%zmm2), %ymm3 {%k2}
-; X64-SKX-LARGE-NEXT:    vgatherqps 4(%rdi,%zmm0), %ymm1 {%k1}
-; X64-SKX-LARGE-NEXT:    vinsertf64x4 $1, %ymm3, %zmm1, %zmm0
-; X64-SKX-LARGE-NEXT:    retq
+; X64-SKX-LABEL: test_gather_structpt_16f32_mask_index_offset:
+; X64-SKX:       # %bb.0:
+; X64-SKX-NEXT:    vpmovsxbd %xmm0, %zmm0
+; X64-SKX-NEXT:    vpslld $31, %zmm0, %zmm0
+; X64-SKX-NEXT:    vpmovd2m %zmm0, %k1
+; X64-SKX-NEXT:    vpslld $4, (%rsi), %zmm0
+; X64-SKX-NEXT:    vgatherdps 4(%rdi,%zmm0), %zmm1 {%k1}
+; X64-SKX-NEXT:    vmovaps %zmm1, %zmm0
+; X64-SKX-NEXT:    retq
 ;
 ; X86-SKX-LABEL: test_gather_structpt_16f32_mask_index_offset:
 ; X86-SKX:       # %bb.0:
@@ -4999,25 +4923,11 @@ define {<16 x float>, <16 x float>} @test_gather_16f32_mask_index_pair(ptr %x, p
 ; X64-KNL-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; X64-KNL-NEXT:    vpslld $31, %zmm0, %zmm0
 ; X64-KNL-NEXT:    vptestmd %zmm0, %zmm0, %k1
-; X64-KNL-NEXT:    vmovdqu64 (%rsi), %zmm0
-; X64-KNL-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm0, %zmm0
-; X64-KNL-NEXT:    vextracti64x4 $1, %zmm0, %ymm2
-; X64-KNL-NEXT:    vpmovzxdq {{.*#+}} zmm2 = ymm2[0],zero,ymm2[1],zero,ymm2[2],zero,ymm2[3],zero,ymm2[4],zero,ymm2[5],zero,ymm2[6],zero,ymm2[7],zero
-; X64-KNL-NEXT:    vpmovzxdq {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero
-; X64-KNL-NEXT:    vpsllq $4, %zmm0, %zmm3
-; X64-KNL-NEXT:    vpsllq $4, %zmm2, %zmm2
-; X64-KNL-NEXT:    vextractf64x4 $1, %zmm1, %ymm4
-; X64-KNL-NEXT:    kshiftrw $8, %k1, %k2
-; X64-KNL-NEXT:    kmovw %k2, %k3
-; X64-KNL-NEXT:    vmovaps %ymm4, %ymm0
-; X64-KNL-NEXT:    vgatherqps (%rdi,%zmm2), %ymm0 {%k3}
-; X64-KNL-NEXT:    vmovaps %ymm1, %ymm5
-; X64-KNL-NEXT:    kmovw %k1, %k3
-; X64-KNL-NEXT:    vgatherqps (%rdi,%zmm3), %ymm5 {%k3}
-; X64-KNL-NEXT:    vinsertf64x4 $1, %ymm0, %zmm5, %zmm0
-; X64-KNL-NEXT:    vgatherqps 4(%rdi,%zmm2), %ymm4 {%k2}
-; X64-KNL-NEXT:    vgatherqps 4(%rdi,%zmm3), %ymm1 {%k1}
-; X64-KNL-NEXT:    vinsertf64x4 $1, %ymm4, %zmm1, %zmm1
+; X64-KNL-NEXT:    vpslld $4, (%rsi), %zmm2
+; X64-KNL-NEXT:    kmovw %k1, %k2
+; X64-KNL-NEXT:    vmovaps %zmm1, %zmm0
+; X64-KNL-NEXT:    vgatherdps (%rdi,%zmm2), %zmm0 {%k2}
+; X64-KNL-NEXT:    vgatherdps 4(%rdi,%zmm2), %zmm1 {%k1}
 ; X64-KNL-NEXT:    retq
 ;
 ; X86-KNL-LABEL: test_gather_16f32_mask_index_pair:
@@ -5034,58 +4944,17 @@ define {<16 x float>, <16 x float>} @test_gather_16f32_mask_index_pair(ptr %x, p
 ; X86-KNL-NEXT:    vgatherdps 4(%eax,%zmm2), %zmm1 {%k1}
 ; X86-KNL-NEXT:    retl
 ;
-; X64-SKX-SMALL-LABEL: test_gather_16f32_mask_index_pair:
-; X64-SKX-SMALL:       # %bb.0:
-; X64-SKX-SMALL-NEXT:    vpmovsxbd %xmm0, %zmm0
-; X64-SKX-SMALL-NEXT:    vpslld $31, %zmm0, %zmm0
-; X64-SKX-SMALL-NEXT:    vpmovd2m %zmm0, %k1
-; X64-SKX-SMALL-NEXT:    vmovdqu64 (%rsi), %zmm0
-; X64-SKX-SMALL-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm0, %zmm0
-; X64-SKX-SMALL-NEXT:    vextracti64x4 $1, %zmm0, %ymm2
-; X64-SKX-SMALL-NEXT:    vpmovzxdq {{.*#+}} zmm2 = ymm2[0],zero,ymm2[1],zero,ymm2[2],zero,ymm2[3],zero,ymm2[4],zero,ymm2[5],zero,ymm2[6],zero,ymm2[7],zero
-; X64-SKX-SMALL-NEXT:    vpmovzxdq {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero
-; X64-SKX-SMALL-NEXT:    vpsllq $4, %zmm0, %zmm3
-; X64-SKX-SMALL-NEXT:    vpsllq $4, %zmm2, %zmm2
-; X64-SKX-SMALL-NEXT:    vextractf64x4 $1, %zmm1, %ymm4
-; X64-SKX-SMALL-NEXT:    kshiftrw $8, %k1, %k2
-; X64-SKX-SMALL-NEXT:    kmovw %k2, %k3
-; X64-SKX-SMALL-NEXT:    vmovaps %ymm4, %ymm0
-; X64-SKX-SMALL-NEXT:    vgatherqps (%rdi,%zmm2), %ymm0 {%k3}
-; X64-SKX-SMALL-NEXT:    vmovaps %ymm1, %ymm5
-; X64-SKX-SMALL-NEXT:    kmovw %k1, %k3
-; X64-SKX-SMALL-NEXT:    vgatherqps (%rdi,%zmm3), %ymm5 {%k3}
-; X64-SKX-SMALL-NEXT:    vinsertf64x4 $1, %ymm0, %zmm5, %zmm0
-; X64-SKX-SMALL-NEXT:    vgatherqps 4(%rdi,%zmm2), %ymm4 {%k2}
-; X64-SKX-SMALL-NEXT:    vgatherqps 4(%rdi,%zmm3), %ymm1 {%k1}
-; X64-SKX-SMALL-NEXT:    vinsertf64x4 $1, %ymm4, %zmm1, %zmm1
-; X64-SKX-SMALL-NEXT:    retq
-;
-; X64-SKX-LARGE-LABEL: test_gather_16f32_mask_index_pair:
-; X64-SKX-LARGE:       # %bb.0:
-; X64-SKX-LARGE-NEXT:    vpmovsxbd %xmm0, %zmm0
-; X64-SKX-LARGE-NEXT:    vpslld $31, %zmm0, %zmm0
-; X64-SKX-LARGE-NEXT:    vpmovd2m %zmm0, %k1
-; X64-SKX-LARGE-NEXT:    vmovdqu64 (%rsi), %zmm0
-; X64-SKX-LARGE-NEXT:    movabsq ${{\.?LCPI[0-9]+_[0-9]+}}, %rax
-; X64-SKX-LARGE-NEXT:    vpandd (%rax){1to16}, %zmm0, %zmm0
-; X64-SKX-LARGE-NEXT:    vextracti64x4 $1, %zmm0, %ymm2
-; X64-SKX-LARGE-NEXT:    vpmovzxdq {{.*#+}} zmm2 = ymm2[0],zero,ymm2[1],zero,ymm2[2],zero,ymm2[3],zero,ymm2[4],zero,ymm2[5],zero,ymm2[6],zero,ymm2[7],zero
-; X64-SKX-LARGE-NEXT:    vpmovzxdq {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero
-; X64-SKX-LARGE-NEXT:    vpsllq $4, %zmm0, %zmm3
-; X64-SKX-LARGE-NEXT:    vpsllq $4, %zmm2, %zmm2
-; X64-SKX-LARGE-NEXT:    vextractf64x4 $1, %zmm1, %ymm4
-; X64-SKX-LARGE-NEXT:    kshiftrw $8, %k1, %k2
-; X64-SKX-LARGE-NEXT:    vmovaps %ymm4, %ymm0
-; X64-SKX-LARGE-NEXT:    kmovw %k2, %k3
-; X64-SKX-LARGE-NEXT:    vgatherqps (%rdi,%zmm2), %ymm0 {%k3}
-; X64-SKX-LARGE-NEXT:    vmovaps %ymm1, %ymm5
-; X64-SKX-LARGE-NEXT:    kmovw %k1, %k3
-; X64-SKX-LARGE-NEXT:    vgatherqps (%rdi,%zmm3), %ymm5 {%k3}
-; X64-SKX-LARGE-NEXT:    vinsertf64x4 $1, %ymm0, %zmm5, %zmm0
-; X64-SKX-LARGE-NEXT:    vgatherqps 4(%rdi,%zmm2), %ymm4 {%k2}
-; X64-SKX-LARGE-NEXT:    vgatherqps 4(%rdi,%zmm3), %ymm1 {%k1}
-; X64-SKX-LARGE-NEXT:    vinsertf64x4 $1, %ymm4, %zmm1, %zmm1
-; X64-SKX-LARGE-NEXT:    retq
+; X64-SKX-LABEL: test_gather_16f32_mask_index_pair:
+; X64-SKX:       # %bb.0:
+; X64-SKX-NEXT:    vpmovsxbd %xmm0, %zmm0
+; X64-SKX-NEXT:    vpslld $31, %zmm0, %zmm0
+; X64-SKX-NEXT:    vpmovd2m %zmm0, %k1
+; X64-SKX-NEXT:    vpslld $4, (%rsi), %zmm2
+; X64-SKX-NEXT:    kmovw %k1, %k2
+; X64-SKX-NEXT:    vmovaps %zmm1, %zmm0
+; X64-SKX-NEXT:    vgatherdps (%rdi,%zmm2), %zmm0 {%k2}
+; X64-SKX-NEXT:    vgatherdps 4(%rdi,%zmm2), %zmm1 {%k1}
+; X64-SKX-NEXT:    retq
 ;
 ; X86-SKX-LABEL: test_gather_16f32_mask_index_pair:
 ; X86-SKX:       # %bb.0:
