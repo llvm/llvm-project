@@ -309,6 +309,9 @@ HLSLToolChain::TranslateArgs(const DerivedArgList &Args, StringRef BoundArch,
 }
 
 bool HLSLToolChain::requiresValidation(DerivedArgList &Args) const {
+  if (!Args.hasArg(options::OPT_dxc_Fo))
+    return false;
+
   if (Args.getLastArg(options::OPT_dxc_disable_validation))
     return false;
 
