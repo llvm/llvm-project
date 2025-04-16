@@ -34,17 +34,17 @@
 // HIP: @managed.managed = global i32 0, align 4
 // HIP: @managed = externally_initialized global ptr null
 // HIP: @.offloading.entry_name = internal unnamed_addr constant [8 x i8] c"_Z3foov\00", section ".llvm.rodata.offloading"
-// HIP: @.offloading.entry._Z3foov = weak constant %struct.__tgt_offload_entry { i64 0, i16 1, i16 3, i32 0, ptr @_Z3foov, ptr @.offloading.entry_name, i64 0, i64 0, ptr null }, section "llvm_offload_entries"
+// HIP: @.offloading.entry._Z3foov = weak constant %struct.__tgt_offload_entry { i64 0, i16 1, i16 4, i32 0, ptr @_Z3foov, ptr @.offloading.entry_name, i64 0, i64 0, ptr null }, section "llvm_offload_entries"
 // HIP: @.offloading.entry_name.1 = internal unnamed_addr constant [11 x i8] c"_Z6kernelv\00", section ".llvm.rodata.offloading"
-// HIP: @.offloading.entry._Z6kernelv = weak constant %struct.__tgt_offload_entry { i64 0, i16 1, i16 3, i32 0, ptr @_Z6kernelv, ptr @.offloading.entry_name.1, i64 0, i64 0, ptr null }, section "llvm_offload_entries"
+// HIP: @.offloading.entry._Z6kernelv = weak constant %struct.__tgt_offload_entry { i64 0, i16 1, i16 4, i32 0, ptr @_Z6kernelv, ptr @.offloading.entry_name.1, i64 0, i64 0, ptr null }, section "llvm_offload_entries"
 // HIP: @.offloading.entry_name.2 = internal unnamed_addr constant [4 x i8] c"var\00", section ".llvm.rodata.offloading"
-// HIP: @.offloading.entry.var = weak constant %struct.__tgt_offload_entry { i64 0, i16 1, i16 3, i32 0, ptr @var, ptr @.offloading.entry_name.2, i64 4, i64 0, ptr null }, section "llvm_offload_entries"
+// HIP: @.offloading.entry.var = weak constant %struct.__tgt_offload_entry { i64 0, i16 1, i16 4, i32 0, ptr @var, ptr @.offloading.entry_name.2, i64 4, i64 0, ptr null }, section "llvm_offload_entries"
 // HIP: @.offloading.entry_name.3 = internal unnamed_addr constant [8 x i8] c"managed\00", section ".llvm.rodata.offloading"
-// HIP: @.offloading.entry.managed = weak constant %struct.__tgt_offload_entry { i64 0, i16 1, i16 3, i32 1, ptr @managed.managed, ptr @.offloading.entry_name.3, i64 4, i64 4, ptr @managed }, section "llvm_offload_entries"
+// HIP: @.offloading.entry.managed = weak constant %struct.__tgt_offload_entry { i64 0, i16 1, i16 4, i32 1, ptr @managed.managed, ptr @.offloading.entry_name.3, i64 4, i64 4, ptr @managed }, section "llvm_offload_entries"
 // HIP: @.offloading.entry_name.4 = internal unnamed_addr constant [5 x i8] c"surf\00", section ".llvm.rodata.offloading"
-// HIP: @.offloading.entry.surf = weak constant %struct.__tgt_offload_entry { i64 0, i16 1, i16 3, i32 2, ptr @surf, ptr @.offloading.entry_name.4, i64 4, i64 1, ptr null }, section "llvm_offload_entries"
+// HIP: @.offloading.entry.surf = weak constant %struct.__tgt_offload_entry { i64 0, i16 1, i16 4, i32 2, ptr @surf, ptr @.offloading.entry_name.4, i64 4, i64 1, ptr null }, section "llvm_offload_entries"
 // HIP: @.offloading.entry_name.5 = internal unnamed_addr constant [4 x i8] c"tex\00", section ".llvm.rodata.offloading"
-// HIP: @.offloading.entry.tex = weak constant %struct.__tgt_offload_entry { i64 0, i16 1, i16 3, i32 3, ptr @tex, ptr @.offloading.entry_name.5, i64 4, i64 1, ptr null }, section "llvm_offload_entries"
+// HIP: @.offloading.entry.tex = weak constant %struct.__tgt_offload_entry { i64 0, i16 1, i16 4, i32 3, ptr @tex, ptr @.offloading.entry_name.5, i64 4, i64 1, ptr null }, section "llvm_offload_entries"
 //.
 // CUDA-COFF: @managed = dso_local global i32 undef, align 4
 // CUDA-COFF: @.offloading.entry_name = internal unnamed_addr constant [8 x i8] c"_Z3foov\00", section ".llvm.rodata.offloading"
@@ -63,17 +63,17 @@
 // HIP-COFF: @managed.managed = dso_local global i32 0, align 4
 // HIP-COFF: @managed = dso_local externally_initialized global ptr null
 // HIP-COFF: @.offloading.entry_name = internal unnamed_addr constant [8 x i8] c"_Z3foov\00", section ".llvm.rodata.offloading"
-// HIP-COFF: @.offloading.entry._Z3foov = weak constant %struct.__tgt_offload_entry { i64 0, i16 1, i16 3, i32 0, ptr @_Z3foov, ptr @.offloading.entry_name, i64 0, i64 0, ptr null }, section "llvm_offload_entries$OE"
+// HIP-COFF: @.offloading.entry._Z3foov = weak constant %struct.__tgt_offload_entry { i64 0, i16 1, i16 4, i32 0, ptr @_Z3foov, ptr @.offloading.entry_name, i64 0, i64 0, ptr null }, section "llvm_offload_entries$OE"
 // HIP-COFF: @.offloading.entry_name.1 = internal unnamed_addr constant [11 x i8] c"_Z6kernelv\00", section ".llvm.rodata.offloading"
-// HIP-COFF: @.offloading.entry._Z6kernelv = weak constant %struct.__tgt_offload_entry { i64 0, i16 1, i16 3, i32 0, ptr @_Z6kernelv, ptr @.offloading.entry_name.1, i64 0, i64 0, ptr null }, section "llvm_offload_entries$OE"
+// HIP-COFF: @.offloading.entry._Z6kernelv = weak constant %struct.__tgt_offload_entry { i64 0, i16 1, i16 4, i32 0, ptr @_Z6kernelv, ptr @.offloading.entry_name.1, i64 0, i64 0, ptr null }, section "llvm_offload_entries$OE"
 // HIP-COFF: @.offloading.entry_name.2 = internal unnamed_addr constant [4 x i8] c"var\00", section ".llvm.rodata.offloading"
-// HIP-COFF: @.offloading.entry.var = weak constant %struct.__tgt_offload_entry { i64 0, i16 1, i16 3, i32 0, ptr @var, ptr @.offloading.entry_name.2, i64 4, i64 0, ptr null }, section "llvm_offload_entries$OE"
+// HIP-COFF: @.offloading.entry.var = weak constant %struct.__tgt_offload_entry { i64 0, i16 1, i16 4, i32 0, ptr @var, ptr @.offloading.entry_name.2, i64 4, i64 0, ptr null }, section "llvm_offload_entries$OE"
 // HIP-COFF: @.offloading.entry_name.3 = internal unnamed_addr constant [8 x i8] c"managed\00", section ".llvm.rodata.offloading"
-// HIP-COFF: @.offloading.entry.managed = weak constant %struct.__tgt_offload_entry { i64 0, i16 1, i16 3, i32 1, ptr @managed.managed, ptr @.offloading.entry_name.3, i64 4, i64 4, ptr @managed }, section "llvm_offload_entries$OE"
+// HIP-COFF: @.offloading.entry.managed = weak constant %struct.__tgt_offload_entry { i64 0, i16 1, i16 4, i32 1, ptr @managed.managed, ptr @.offloading.entry_name.3, i64 4, i64 4, ptr @managed }, section "llvm_offload_entries$OE"
 // HIP-COFF: @.offloading.entry_name.4 = internal unnamed_addr constant [5 x i8] c"surf\00", section ".llvm.rodata.offloading"
-// HIP-COFF: @.offloading.entry.surf = weak constant %struct.__tgt_offload_entry { i64 0, i16 1, i16 3, i32 2, ptr @surf, ptr @.offloading.entry_name.4, i64 4, i64 1, ptr null }, section "llvm_offload_entries$OE"
+// HIP-COFF: @.offloading.entry.surf = weak constant %struct.__tgt_offload_entry { i64 0, i16 1, i16 4, i32 2, ptr @surf, ptr @.offloading.entry_name.4, i64 4, i64 1, ptr null }, section "llvm_offload_entries$OE"
 // HIP-COFF: @.offloading.entry_name.5 = internal unnamed_addr constant [4 x i8] c"tex\00", section ".llvm.rodata.offloading"
-// HIP-COFF: @.offloading.entry.tex = weak constant %struct.__tgt_offload_entry { i64 0, i16 1, i16 3, i32 3, ptr @tex, ptr @.offloading.entry_name.5, i64 4, i64 1, ptr null }, section "llvm_offload_entries$OE"
+// HIP-COFF: @.offloading.entry.tex = weak constant %struct.__tgt_offload_entry { i64 0, i16 1, i16 4, i32 3, ptr @tex, ptr @.offloading.entry_name.5, i64 4, i64 1, ptr null }, section "llvm_offload_entries$OE"
 //.
 // CUDA-LABEL: @_Z18__device_stub__foov(
 // CUDA-NEXT:  entry:
