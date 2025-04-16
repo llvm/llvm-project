@@ -26,6 +26,12 @@ def SPIRVReflect : Builtin {
   let Prototype = "void(...)";
 }
 
+def SPIRVRefract : Builtin {
+  let Spellings = ["__builtin_spirv_refract"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void(...)";
+}
+
 def SPIRVSmoothStep : Builtin {
   let Spellings = ["__builtin_spirv_smoothstep"];
   let Attributes = [NoThrow, Const, CustomTypeChecking];
