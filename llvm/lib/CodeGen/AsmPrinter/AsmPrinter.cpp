@@ -2484,6 +2484,7 @@ bool AsmPrinter::doFinalization(Module &M) {
     if (!shouldTagGlobal(G)) {
       assert(G.hasSanitizerMetadata()); // because isTagged.
       removeMemtagFromGlobal(G);
+      assert(!G.isTagged());
       continue;
     }
     GlobalsToTag.push_back(&G);
