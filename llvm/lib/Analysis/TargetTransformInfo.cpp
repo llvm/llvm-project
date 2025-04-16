@@ -993,6 +993,19 @@ TargetTransformInfo::getPartialReductionExtendKind(Instruction *I) {
   return PR_None;
 }
 
+TargetTransformInfo::PartialReductionExtendKind
+TargetTransformInfo::getPartialReductionExtendKind(
+    Instruction::CastOps ExtOpcode) {
+  switch (ExtOpcode) {
+  case Instruction::CastOps::ZExt:
+    return PR_ZeroExtend;
+  case Instruction::CastOps::SExt:
+    return PR_SignExtend;
+  default:
+    return PR_None;
+  }
+}
+
 TTI::CastContextHint
 TargetTransformInfo::getCastContextHint(const Instruction *I) {
   if (!I)

@@ -2340,8 +2340,7 @@ public:
       : VPPartialReductionRecipe(ReductionInst->getOpcode(), Op0, Op1, Cond,
                                  ReductionInst) {}
   VPPartialReductionRecipe(unsigned Opcode, VPValue *Op0, VPValue *Op1,
-                           VPValue *Cond,
-                           Instruction *ReductionInst = nullptr)
+                           VPValue *Cond, Instruction *ReductionInst = nullptr)
       : VPReductionRecipe(VPDef::VPPartialReductionSC, RecurKind::Add,
                           FastMathFlags(), ReductionInst,
                           ArrayRef<VPValue *>({Op0, Op1}), Cond, false, {}),
@@ -2356,8 +2355,7 @@ public:
 
   VPPartialReductionRecipe *clone() override {
     return new VPPartialReductionRecipe(Opcode, getOperand(0), getOperand(1),
-                                        getCondOp(),
-                                        getUnderlyingInstr());
+                                        getCondOp(), getUnderlyingInstr());
   }
 
   VP_CLASSOF_IMPL(VPDef::VPPartialReductionSC)
@@ -2371,6 +2369,9 @@ public:
 
   /// Get the binary op's opcode.
   unsigned getOpcode() const { return Opcode; }
+
+  /// Get the binary op this reduction is applied to.
+  VPValue *getBinOp() const { return getOperand(1); }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
@@ -2499,6 +2500,9 @@ class VPMulAccumulateReductionRecipe : public VPReductionRecipe {
 
   Type *ResultTy;
 
+  /// If the reduction this is based on is a partial reduction.
+  bool IsPartialReduction = false;
+
   /// For cloning VPMulAccumulateReductionRecipe.
   VPMulAccumulateReductionRecipe(VPMulAccumulateReductionRecipe *MulAcc)
       : VPReductionRecipe(
@@ -2508,7 +2512,8 @@ class VPMulAccumulateReductionRecipe : public VPReductionRecipe {
             WrapFlagsTy(MulAcc->hasNoUnsignedWrap(), MulAcc->hasNoSignedWrap()),
             MulAcc->getDebugLoc()),
         ExtOp(MulAcc->getExtOpcode()), IsNonNeg(MulAcc->isNonNeg()),
-        ResultTy(MulAcc->getResultType()) {}
+        ResultTy(MulAcc->getResultType()),
+        IsPartialReduction(MulAcc->isPartialReduction()) {}
 
 public:
   VPMulAccumulateReductionRecipe(VPReductionRecipe *R, VPWidenRecipe *Mul,
@@ -2521,7 +2526,8 @@ public:
             WrapFlagsTy(Mul->hasNoUnsignedWrap(), Mul->hasNoSignedWrap()),
             R->getDebugLoc()),
         ExtOp(Ext0->getOpcode()), IsNonNeg(Ext0->isNonNeg()),
-        ResultTy(ResultTy) {
+        ResultTy(ResultTy),
+        IsPartialReduction(isa<VPPartialReductionRecipe>(R)) {
     assert(RecurrenceDescriptor::getOpcode(getRecurrenceKind()) ==
                Instruction::Add &&
            "The reduction instruction in MulAccumulateteReductionRecipe must "
@@ -2592,6 +2598,9 @@ public:
 
   /// Return the non negative flag of the ext recipe.
   bool isNonNeg() const { return IsNonNeg; }
+
+  /// Return if the underlying reduction recipe is a partial reduction.
+  bool isPartialReduction() const { return IsPartialReduction; }
 };
 
 /// VPReplicateRecipe replicates a given instruction producing multiple scalar
