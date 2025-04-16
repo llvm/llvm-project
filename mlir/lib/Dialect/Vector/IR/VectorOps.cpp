@@ -2590,6 +2590,8 @@ OpFoldResult BroadcastOp::fold(FoldAdaptor adaptor) {
   }
   if (auto attr = llvm::dyn_cast<SplatElementsAttr>(adaptor.getSource()))
     return DenseElementsAttr::get(vectorType, attr.getSplatValue<Attribute>());
+  if (llvm::dyn_cast<ub::PoisonAttr>(adaptor.getSource()))
+    return ub::PoisonAttr::get(getContext());
   return {};
 }
 
