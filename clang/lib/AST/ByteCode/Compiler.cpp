@@ -4293,7 +4293,8 @@ bool Compiler<Emitter>::emitConst(const APSInt &Value, const Expr *E) {
 
 template <class Emitter>
 unsigned Compiler<Emitter>::allocateLocalPrimitive(
-    DeclTy &&Src, PrimType Ty, bool IsConst, const ValueDecl *ExtendingDecl) {
+    DeclTy &&Src, PrimType Ty, bool IsConst, const ValueDecl *ExtendingDecl,
+    bool IsConstexprUnknown) {
   // Make sure we don't accidentally register the same decl twice.
   if (const auto *VD =
           dyn_cast_if_present<ValueDecl>(Src.dyn_cast<const Decl *>())) {
@@ -4307,6 +4308,7 @@ unsigned Compiler<Emitter>::allocateLocalPrimitive(
   //   or isa<MaterializeTemporaryExpr>().
   Descriptor *D = P.createDescriptor(Src, Ty, nullptr, Descriptor::InlineDescMD,
                                      IsConst, isa<const Expr *>(Src));
+  D->IsConstexprUnknown = IsConstexprUnknown;
   Scope::Local Local = this->createLocal(D);
   if (auto *VD = dyn_cast_if_present<ValueDecl>(Src.dyn_cast<const Decl *>()))
     Locals.insert({VD, Local});
@@ -4320,7 +4322,8 @@ unsigned Compiler<Emitter>::allocateLocalPrimitive(
 template <class Emitter>
 std::optional<unsigned>
 Compiler<Emitter>::allocateLocal(DeclTy &&Src, QualType Ty,
-                                 const ValueDecl *ExtendingDecl) {
+                                 const ValueDecl *ExtendingDecl,
+                                 bool IsConstexprUnknown) {
   // Make sure we don't accidentally register the same decl twice.
   if ([[maybe_unused]] const auto *VD =
           dyn_cast_if_present<ValueDecl>(Src.dyn_cast<const Decl *>())) {
@@ -4349,6 +4352,7 @@ Compiler<Emitter>::allocateLocal(DeclTy &&Src, QualType Ty,
       IsTemporary, /*IsMutable=*/false, Init);
   if (!D)
     return std::nullopt;
+  D->IsConstexprUnknown = IsConstexprUnknown;
 
   Scope::Local Local = this->createLocal(D);
   if (Key)
@@ -4460,9 +4464,10 @@ bool Compiler<Emitter>::visitExpr(const Expr *E, bool DestroyToplevelScope) {
 }
 
 template <class Emitter>
-VarCreationState Compiler<Emitter>::visitDecl(const VarDecl *VD) {
+VarCreationState Compiler<Emitter>::visitDecl(const VarDecl *VD,
+                                              bool IsConstexprUnknown) {
 
-  auto R = this->visitVarDecl(VD, /*Toplevel=*/true);
+  auto R = this->visitVarDecl(VD, /*Toplevel=*/true, IsConstexprUnknown);
 
   if (R.notCreated())
     return R;
@@ -4550,7 +4555,8 @@ bool Compiler<Emitter>::visitDeclAndReturn(const VarDecl *VD,
 
 template <class Emitter>
 VarCreationState Compiler<Emitter>::visitVarDecl(const VarDecl *VD,
-                                                 bool Toplevel) {
+                                                 bool Toplevel,
+                                                 bool IsConstexprUnknown) {
   // We don't know what to do with these, so just return false.
   if (VD->getType().isNull())
     return false;
@@ -4620,7 +4626,8 @@ VarCreationState Compiler<Emitter>::visitVarDecl(const VarDecl *VD,
 
     if (VarT) {
       unsigned Offset = this->allocateLocalPrimitive(
-          VD, *VarT, VD->getType().isConstQualified());
+          VD, *VarT, VD->getType().isConstQualified(), nullptr,
+          IsConstexprUnknown);
       if (Init) {
         // If this is a toplevel declaration, create a scope for the
         // initializer.
@@ -4636,7 +4643,8 @@ VarCreationState Compiler<Emitter>::visitVarDecl(const VarDecl *VD,
         }
       }
     } else {
-      if (std::optional<unsigned> Offset = this->allocateLocal(VD)) {
+      if (std::optional<unsigned> Offset = this->allocateLocal(
+              VD, VD->getType(), nullptr, IsConstexprUnknown)) {
         if (!Init)
           return true;
 
@@ -6461,7 +6469,7 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
 
   // In case we need to re-visit a declaration.
   auto revisit = [&](const VarDecl *VD) -> bool {
-    auto VarState = this->visitDecl(VD);
+    auto VarState = this->visitDecl(VD, /*IsConstexprUnknown=*/true);
 
     if (VarState.notCreated())
       return true;
