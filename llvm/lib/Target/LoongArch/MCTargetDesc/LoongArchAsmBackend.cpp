@@ -70,7 +70,7 @@ LoongArchAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
 
   // Fixup kinds from .reloc directive are like R_LARCH_NONE. They
   // do not require any extra processing.
-  if (Kind >= FirstLiteralRelocationKind)
+  if (unsigned(Kind) >= FirstRelocationKind)
     return MCAsmBackend::getFixupKindInfo(FK_NONE);
 
   if (Kind < FirstTargetFixupKind)
@@ -152,10 +152,10 @@ void LoongArchAsmBackend::applyFixup(const MCAssembler &Asm,
   if (!Value)
     return; // Doesn't change encoding.
 
-  MCFixupKind Kind = Fixup.getKind();
-  if (Kind >= FirstLiteralRelocationKind)
+  auto Kind = Fixup.getTargetKind();
+  if (Kind >= FirstRelocationKind)
     return;
-  MCFixupKindInfo Info = getFixupKindInfo(Kind);
+  MCFixupKindInfo Info = getFixupKindInfo(MCFixupKind(Kind));
   MCContext &Ctx = Asm.getContext();
 
   // Fixup leb128 separately.
@@ -236,7 +236,7 @@ bool LoongArchAsmBackend::shouldInsertFixupForCodeAlign(MCAssembler &Asm,
       MCSym = MCSymbolRefExpr::create(Sym, Ctx);
       getSecToAlignSym()[Sec] = MCSym;
     }
-    return MCValue::get(MCSym, nullptr,
+    return MCValue::get(&MCSym->getSymbol(), nullptr,
                         MaxBytesToEmit << 8 | Log2(AF.getAlignment()));
   };
 
@@ -271,29 +271,27 @@ getRelocPairForSize(unsigned Size) {
   default:
     llvm_unreachable("unsupported fixup size");
   case 6:
-    return std::make_pair(
-        MCFixupKind(FirstLiteralRelocationKind + ELF::R_LARCH_ADD6),
-        MCFixupKind(FirstLiteralRelocationKind + ELF::R_LARCH_SUB6));
+    return std::make_pair(MCFixupKind(FirstRelocationKind + ELF::R_LARCH_ADD6),
+                          MCFixupKind(FirstRelocationKind + ELF::R_LARCH_SUB6));
   case 8:
-    return std::make_pair(
-        MCFixupKind(FirstLiteralRelocationKind + ELF::R_LARCH_ADD8),
-        MCFixupKind(FirstLiteralRelocationKind + ELF::R_LARCH_SUB8));
+    return std::make_pair(MCFixupKind(FirstRelocationKind + ELF::R_LARCH_ADD8),
+                          MCFixupKind(FirstRelocationKind + ELF::R_LARCH_SUB8));
   case 16:
     return std::make_pair(
-        MCFixupKind(FirstLiteralRelocationKind + ELF::R_LARCH_ADD16),
-        MCFixupKind(FirstLiteralRelocationKind + ELF::R_LARCH_SUB16));
+        MCFixupKind(FirstRelocationKind + ELF::R_LARCH_ADD16),
+        MCFixupKind(FirstRelocationKind + ELF::R_LARCH_SUB16));
   case 32:
     return std::make_pair(
-        MCFixupKind(FirstLiteralRelocationKind + ELF::R_LARCH_ADD32),
-        MCFixupKind(FirstLiteralRelocationKind + ELF::R_LARCH_SUB32));
+        MCFixupKind(FirstRelocationKind + ELF::R_LARCH_ADD32),
+        MCFixupKind(FirstRelocationKind + ELF::R_LARCH_SUB32));
   case 64:
     return std::make_pair(
-        MCFixupKind(FirstLiteralRelocationKind + ELF::R_LARCH_ADD64),
-        MCFixupKind(FirstLiteralRelocationKind + ELF::R_LARCH_SUB64));
+        MCFixupKind(FirstRelocationKind + ELF::R_LARCH_ADD64),
+        MCFixupKind(FirstRelocationKind + ELF::R_LARCH_SUB64));
   case 128:
     return std::make_pair(
-        MCFixupKind(FirstLiteralRelocationKind + ELF::R_LARCH_ADD_ULEB128),
-        MCFixupKind(FirstLiteralRelocationKind + ELF::R_LARCH_SUB_ULEB128));
+        MCFixupKind(FirstRelocationKind + ELF::R_LARCH_ADD_ULEB128),
+        MCFixupKind(FirstRelocationKind + ELF::R_LARCH_SUB_ULEB128));
   }
 }
 
@@ -452,10 +450,12 @@ bool LoongArchAsmBackend::handleAddSubRelocations(const MCAssembler &Asm,
                                                   const MCFixup &Fixup,
                                                   const MCValue &Target,
                                                   uint64_t &FixedValue) const {
+  assert(Target.getSpecifier() == 0 &&
+         "relocatable SymA-SymB cannot have relocation specifier");
   std::pair<MCFixupKind, MCFixupKind> FK;
   uint64_t FixedValueA, FixedValueB;
-  const MCSymbol &SA = Target.getSymA()->getSymbol();
-  const MCSymbol &SB = Target.getSymB()->getSymbol();
+  const MCSymbol &SA = *Target.getAddSym();
+  const MCSymbol &SB = *Target.getSubSym();
 
   bool force = !SA.isInSection() || !SB.isInSection();
   if (!force) {
@@ -495,8 +495,8 @@ bool LoongArchAsmBackend::handleAddSubRelocations(const MCAssembler &Asm,
   default:
     llvm_unreachable("unsupported fixup size");
   }
-  MCValue A = MCValue::get(Target.getSymA(), nullptr, Target.getConstant());
-  MCValue B = MCValue::get(Target.getSymB());
+  MCValue A = MCValue::get(Target.getAddSym(), nullptr, Target.getConstant());
+  MCValue B = MCValue::get(Target.getSubSym());
   auto FA = MCFixup::create(Fixup.getOffset(), nullptr, std::get<0>(FK));
   auto FB = MCFixup::create(Fixup.getOffset(), nullptr, std::get<1>(FK));
   auto &Assembler = const_cast<MCAssembler &>(Asm);

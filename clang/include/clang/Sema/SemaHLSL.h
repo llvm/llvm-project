@@ -153,6 +153,8 @@ public:
 
   bool transformInitList(const InitializedEntity &Entity, InitListExpr *Init);
 
+  void deduceAddressSpace(VarDecl *Decl);
+
 private:
   // HLSL resource type attributes need to be processed all at once.
   // This is a list to collect them.

@@ -105,7 +105,8 @@ let Predicates = [FeatureVector] in {
 
 let Predicates = [FeatureVector] in {
   // Load.
-  defm VL : UnaryVRXAlign<"vl", 0xE706>;
+  let SimpleBDXLoad = 1 in
+      defm VL : UnaryVRXAlign<"vl", 0xE706>;
 
   // Load to block boundary.  The number of loaded bytes is only known
   // at run time.  The instruction is really polymorphic, but v128b matches
@@ -213,7 +214,8 @@ defm : ReplicatePeephole<VLREPG, v2f64, z_load, f64>;
 
 let Predicates = [FeatureVector] in {
   // Store.
-  defm VST : StoreVRXAlign<"vst", 0xE70E>;
+  let SimpleBDXStore = 1 in
+      defm VST : StoreVRXAlign<"vst", 0xE70E>;
 
   // Store with length.  The number of stored bytes is only known at run time.
   def VSTL : StoreLengthVRSb<"vstl", 0xE73F, int_s390_vstl, 0>;
@@ -1995,7 +1997,7 @@ let Predicates = [FeatureVector] in {
             (VLEG (VGBM 0), bdxaddr12only:$addr, 1)>;
 }
 
-// Zero-extensions from VR element to i128 on arch15.
+// Zero-extensions from VR element to i128 on z17.
 let Predicates = [FeatureVectorEnhancements3] in {
   def : Pat<(i128 (zext (i64 (z_vector_extract (v2i64 VR128:$src), 0)))),
             (VUPLHG VR128:$src)>;
@@ -2011,7 +2013,7 @@ let Predicates = [FeatureVectorEnhancements3] in {
             (VUPLLG (VUPLLF VR128:$src))>;
 }
 
-// In-register i128 sign-extensions on arch15.
+// In-register i128 sign-extensions on z17.
 let Predicates = [FeatureVectorEnhancements3] in {
   def : Pat<(i128 (sext_inreg VR128:$x, i8)), (VUPLG (VSEGB VR128:$x))>;
   def : Pat<(i128 (sext_inreg VR128:$x, i16)), (VUPLG (VSEGH VR128:$x))>;
@@ -2031,7 +2033,7 @@ let Predicates = [FeatureVector] in {
             (VSRAB (VREPG VR128:$x, 1), (VREPIB 64))>;
 }
 
-// Sign-extensions from GPR to i128 on arch15.
+// Sign-extensions from GPR to i128 on z17.
 let Predicates = [FeatureVectorEnhancements3] in {
   def : Pat<(i128 (sext_inreg (anyext GR32:$x), i8)),
             (VUPLG (VLVGP (LGBR (INSERT_SUBREG (i64 (IMPLICIT_DEF)), GR32:$x, subreg_l32)),
@@ -2075,7 +2077,7 @@ let Predicates = [FeatureVector] in {
             (VSRAB (VLREPG bdxaddr12only:$addr), (VREPIB 64))>;
 }
 
-// Sign-extensions from VR element to i128 on arch15.
+// Sign-extensions from VR element to i128 on z17.
 let Predicates = [FeatureVectorEnhancements3] in {
   def : Pat<(i128 (sext (i64 (z_vector_extract (v2i64 VR128:$src), 0)))),
             (VUPHG VR128:$src)>;

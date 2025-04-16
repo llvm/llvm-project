@@ -47,13 +47,10 @@
 
 using namespace llvm;
 
-namespace llvm {
-namespace SPIRV {
+namespace llvm::SPIRV {
 #define GET_BuiltinGroup_DECL
 #include "SPIRVGenTables.inc"
-} // namespace SPIRV
-void initializeSPIRVEmitIntrinsicsPass(PassRegistry &);
-} // namespace llvm
+} // namespace llvm::SPIRV
 
 namespace {
 
@@ -200,12 +197,8 @@ class SPIRVEmitIntrinsics
 
 public:
   static char ID;
-  SPIRVEmitIntrinsics() : ModulePass(ID) {
-    initializeSPIRVEmitIntrinsicsPass(*PassRegistry::getPassRegistry());
-  }
-  SPIRVEmitIntrinsics(SPIRVTargetMachine *_TM) : ModulePass(ID), TM(_TM) {
-    initializeSPIRVEmitIntrinsicsPass(*PassRegistry::getPassRegistry());
-  }
+  SPIRVEmitIntrinsics(SPIRVTargetMachine *TM = nullptr)
+      : ModulePass(ID), TM(TM) {}
   Instruction *visitInstruction(Instruction &I) { return &I; }
   Instruction *visitSwitchInst(SwitchInst &I);
   Instruction *visitGetElementPtrInst(GetElementPtrInst &I);
@@ -293,8 +286,7 @@ static void setInsertPointAfterDef(IRBuilder<> &B, Instruction *I) {
 }
 
 static bool requireAssignType(Instruction *I) {
-  IntrinsicInst *Intr = dyn_cast<IntrinsicInst>(I);
-  if (Intr) {
+  if (const auto *Intr = dyn_cast<IntrinsicInst>(I)) {
     switch (Intr->getIntrinsicID()) {
     case Intrinsic::invariant_start:
     case Intrinsic::invariant_end:
@@ -671,13 +663,22 @@ Type *SPIRVEmitIntrinsics::deduceElementTypeHelper(
 
     auto *II = dyn_cast<IntrinsicInst>(I);
     if (II && II->getIntrinsicID() == Intrinsic::spv_resource_getpointer) {
-      auto *ImageType = cast<TargetExtType>(II->getOperand(0)->getType());
-      assert(ImageType->getTargetExtName() == "spirv.Image");
-      (void)ImageType;
-      if (II->hasOneUse()) {
-        auto *U = *II->users().begin();
-        Ty = cast<Instruction>(U)->getAccessType();
-        assert(Ty && "Unable to get type for resource pointer.");
+      auto *HandleType = cast<TargetExtType>(II->getOperand(0)->getType());
+      if (HandleType->getTargetExtName() == "spirv.Image") {
+        if (II->hasOneUse()) {
+          auto *U = *II->users().begin();
+          Ty = cast<Instruction>(U)->getAccessType();
+          assert(Ty && "Unable to get type for resource pointer.");
+        }
+      } else if (HandleType->getTargetExtName() == "spirv.VulkanBuffer") {
+        // This call is supposed to index into an array
+        Ty = HandleType->getTypeParameter(0);
+        assert(Ty->isArrayTy() &&
+               "spv_resource_getpointer indexes into an array, so the type of "
+               "the buffer should be an array.");
+        Ty = Ty->getArrayElementType();
+      } else {
+        llvm_unreachable("Unknown handle type for spv_resource_getpointer.");
       }
     } else if (Function *CalledF = CI->getCalledFunction()) {
       std::string DemangledName =
@@ -725,7 +726,7 @@ Type *SPIRVEmitIntrinsics::deduceNestedTypeHelper(
   if (!Visited.insert(U).second)
     return OrigTy;
 
-  if (dyn_cast<StructType>(OrigTy)) {
+  if (isa<StructType>(OrigTy)) {
     SmallVector<Type *> Tys;
     bool Change = false;
     for (unsigned i = 0; i < U->getNumOperands(); ++i) {
@@ -1197,7 +1198,7 @@ void SPIRVEmitIntrinsics::preprocessUndefs(IRBuilder<> &B) {
         setInsertPointSkippingPhis(B, I);
         BPrepared = true;
       }
-      auto *IntrUndef = B.CreateIntrinsic(Intrinsic::spv_undef, {}, {});
+      auto *IntrUndef = B.CreateIntrinsic(Intrinsic::spv_undef, {});
       Worklist.push(IntrUndef);
       I->replaceUsesOfWith(Op, IntrUndef);
       AggrConsts[IntrUndef] = AggrUndef;
@@ -1241,8 +1242,7 @@ void SPIRVEmitIntrinsics::preprocessCompositeConstants(IRBuilder<> &B) {
           for (unsigned i = 0; i < COp->getNumElements(); ++i)
             Args.push_back(COp->getElementAsConstant(i));
         else
-          for (auto &COp : AggrConst->operands())
-            Args.push_back(COp);
+          llvm::append_range(Args, AggrConst->operands());
         if (!BPrepared) {
           IsPhi ? B.SetInsertPointPastAllocas(I->getParent()->getParent())
                 : B.SetInsertPoint(I);
@@ -1310,7 +1310,7 @@ Instruction *SPIRVEmitIntrinsics::visitCallInst(CallInst &Call) {
 
   IRBuilder<> B(Call.getParent());
   B.SetInsertPoint(&Call);
-  B.CreateIntrinsic(Intrinsic::spv_inline_asm, {}, {Args});
+  B.CreateIntrinsic(Intrinsic::spv_inline_asm, {Args});
   return &Call;
 }
 
@@ -1387,8 +1387,7 @@ Instruction *SPIRVEmitIntrinsics::visitGetElementPtrInst(GetElementPtrInst &I) {
   SmallVector<Type *, 2> Types = {I.getType(), I.getOperand(0)->getType()};
   SmallVector<Value *, 4> Args;
   Args.push_back(B.getInt1(I.isInBounds()));
-  for (auto &Op : I.operands())
-    Args.push_back(Op);
+  llvm::append_range(Args, I.operands());
   auto *NewI = B.CreateIntrinsic(Intrinsic::spv_gep, {Types}, {Args});
   replaceAllUsesWithAndErase(B, &I, NewI);
   return NewI;
@@ -1716,9 +1715,7 @@ Instruction *SPIRVEmitIntrinsics::visitExtractValueInst(ExtractValueInst &I) {
     return &I;
   IRBuilder<> B(I.getParent());
   B.SetInsertPoint(&I);
-  SmallVector<Value *> Args;
-  for (auto &Op : I.operands())
-    Args.push_back(Op);
+  SmallVector<Value *> Args(I.operands());
   for (auto &Op : I.indices())
     Args.push_back(B.getInt32(Op));
   auto *NewI =
@@ -1794,9 +1791,7 @@ Instruction *SPIRVEmitIntrinsics::visitAtomicCmpXchgInst(AtomicCmpXchgInst &I) {
   assert(I.getType()->isAggregateType() && "Aggregate result is expected");
   IRBuilder<> B(I.getParent());
   B.SetInsertPoint(&I);
-  SmallVector<Value *> Args;
-  for (auto &Op : I.operands())
-    Args.push_back(Op);
+  SmallVector<Value *> Args(I.operands());
   Args.push_back(B.getInt32(
       static_cast<uint32_t>(getMemScope(I.getContext(), I.getSyncScopeID()))));
   Args.push_back(B.getInt32(
@@ -1812,7 +1807,7 @@ Instruction *SPIRVEmitIntrinsics::visitAtomicCmpXchgInst(AtomicCmpXchgInst &I) {
 Instruction *SPIRVEmitIntrinsics::visitUnreachableInst(UnreachableInst &I) {
   IRBuilder<> B(I.getParent());
   B.SetInsertPoint(&I);
-  B.CreateIntrinsic(Intrinsic::spv_unreachable, {}, {});
+  B.CreateIntrinsic(Intrinsic::spv_unreachable, {});
   return &I;
 }
 

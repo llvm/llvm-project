@@ -91,8 +91,11 @@ LogicalResult maybeReplaceWithConstant(DataFlowSolver &solver,
   if (!constOp)
     return failure();
 
-  copyIntegerRange(solver, value, constOp->getResult(0));
-  rewriter.replaceAllUsesWith(value, constOp->getResult(0));
+  OpResult res = constOp->getResult(0);
+  if (solver.lookupState<dataflow::IntegerValueRangeLattice>(res))
+    solver.eraseState(res);
+  copyIntegerRange(solver, value, res);
+  rewriter.replaceAllUsesWith(value, res);
   return success();
 }
 } // namespace mlir::dataflow

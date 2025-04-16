@@ -1927,6 +1927,7 @@ void ASTStmtReader::VisitCXXNewExpr(CXXNewExpr *E) {
 
   E->CXXNewExprBits.IsGlobalNew = Record.readInt();
   E->CXXNewExprBits.ShouldPassAlignment = Record.readInt();
+  E->CXXNewExprBits.ShouldPassTypeIdentity = Record.readInt();
   E->CXXNewExprBits.UsualArrayDeleteWantsSize = Record.readInt();
   E->CXXNewExprBits.HasInitializer = Record.readInt();
   E->CXXNewExprBits.StoredInitializationStyle = Record.readInt();
@@ -2225,10 +2226,8 @@ void ASTStmtReader::VisitSubstNonTypeTemplateParmExpr(
   E->AssociatedDeclAndRef.setPointer(readDeclAs<Decl>());
   E->AssociatedDeclAndRef.setInt(CurrentUnpackingBits->getNextBit());
   E->Index = CurrentUnpackingBits->getNextBits(/*Width=*/12);
-  if (CurrentUnpackingBits->getNextBit())
-    E->PackIndex = Record.readInt();
-  else
-    E->PackIndex = 0;
+  E->PackIndex = Record.readUnsignedOrNone().toInternalRepresentation();
+  E->Final = CurrentUnpackingBits->getNextBit();
   E->SubstNonTypeTemplateParmExprBits.NameLoc = readSourceLocation();
   E->Replacement = Record.readSubExpr();
 }
@@ -2237,6 +2236,7 @@ void ASTStmtReader::VisitSubstNonTypeTemplateParmPackExpr(
                                           SubstNonTypeTemplateParmPackExpr *E) {
   VisitExpr(E);
   E->AssociatedDecl = readDeclAs<Decl>();
+  E->Final = CurrentUnpackingBits->getNextBit();
   E->Index = Record.readInt();
   TemplateArgument ArgPack = Record.readTemplateArgument();
   if (ArgPack.getKind() != TemplateArgument::Pack)
@@ -2271,7 +2271,7 @@ void ASTStmtReader::VisitCXXFoldExpr(CXXFoldExpr *E) {
   E->LParenLoc = readSourceLocation();
   E->EllipsisLoc = readSourceLocation();
   E->RParenLoc = readSourceLocation();
-  E->NumExpansions = Record.readInt();
+  E->NumExpansions = Record.readUnsignedOrNone();
   E->SubExprs[0] = Record.readSubExpr();
   E->SubExprs[1] = Record.readSubExpr();
   E->SubExprs[2] = Record.readSubExpr();
@@ -2940,9 +2940,7 @@ void ASTStmtReader::VisitOpenACCCacheConstruct(OpenACCCacheConstruct *S) {
 
 void ASTStmtReader::VisitOpenACCAtomicConstruct(OpenACCAtomicConstruct *S) {
   VisitStmt(S);
-  S->Kind = Record.readEnum<OpenACCDirectiveKind>();
-  S->Range = Record.readSourceRange();
-  S->DirectiveLoc = Record.readSourceLocation();
+  VisitOpenACCConstructStmt(S);
   S->AtomicKind = Record.readEnum<OpenACCAtomicKind>();
   S->setAssociatedStmt(Record.readSubStmt());
 }
@@ -4490,7 +4488,8 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
       break;
     }
     case STMT_OPENACC_ATOMIC_CONSTRUCT: {
-      S = OpenACCAtomicConstruct::CreateEmpty(Context);
+      unsigned NumClauses = Record[ASTStmtReader::NumStmtFields];
+      S = OpenACCAtomicConstruct::CreateEmpty(Context, NumClauses);
       break;
     }
     case EXPR_REQUIRES: {

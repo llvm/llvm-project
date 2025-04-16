@@ -18,8 +18,8 @@ using llvm::Init;
 using llvm::Record;
 
 EnumCase::EnumCase(const Record *record) : def(record) {
-  assert(def->isSubClassOf("EnumAttrCaseInfo") &&
-         "must be subclass of TableGen 'EnumAttrCaseInfo' class");
+  assert(def->isSubClassOf("EnumCase") &&
+         "must be subclass of TableGen 'EnumCase' class");
 }
 
 EnumCase::EnumCase(const DefInit *init) : EnumCase(init->getDef()) {}
@@ -35,8 +35,8 @@ int64_t EnumCase::getValue() const { return def->getValueAsInt("value"); }
 const Record &EnumCase::getDef() const { return *def; }
 
 EnumInfo::EnumInfo(const Record *record) : def(record) {
-  assert(isSubClassOf("EnumAttrInfo") &&
-         "must be subclass of TableGen 'EnumAttrInfo' class");
+  assert(isSubClassOf("EnumInfo") &&
+         "must be subclass of TableGen 'EnumInfo' class");
 }
 
 EnumInfo::EnumInfo(const Record &record) : EnumInfo(&record) {}
@@ -55,7 +55,7 @@ std::optional<Attribute> EnumInfo::asEnumAttr() const {
   return std::nullopt;
 }
 
-bool EnumInfo::isBitEnum() const { return isSubClassOf("BitEnumAttr"); }
+bool EnumInfo::isBitEnum() const { return isSubClassOf("BitEnumBase"); }
 
 StringRef EnumInfo::getEnumClassName() const {
   return def->getValueAsString("className");
@@ -72,6 +72,8 @@ StringRef EnumInfo::getDescription() const {
 StringRef EnumInfo::getCppNamespace() const {
   return def->getValueAsString("cppNamespace");
 }
+
+int64_t EnumInfo::getBitwidth() const { return def->getValueAsInt("bitwidth"); }
 
 StringRef EnumInfo::getUnderlyingType() const {
   return def->getValueAsString("underlyingType");
@@ -125,6 +127,10 @@ StringRef EnumInfo::getSpecializedAttrClassName() const {
 
 bool EnumInfo::printBitEnumPrimaryGroups() const {
   return def->getValueAsBit("printBitEnumPrimaryGroups");
+}
+
+bool EnumInfo::printBitEnumQuoted() const {
+  return def->getValueAsBit("printBitEnumQuoted");
 }
 
 const Record &EnumInfo::getDef() const { return *def; }

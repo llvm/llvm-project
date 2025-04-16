@@ -66,13 +66,13 @@ static Value *handleHlslClip(const CallExpr *E, CodeGenFunction *CGF) {
     CMP = CGF->Builder.CreateIntrinsic(
         CGF->Builder.getInt1Ty(), CGF->CGM.getHLSLRuntime().getAnyIntrinsic(),
         {FCompInst});
-  } else
+  } else {
     CMP = CGF->Builder.CreateFCmpOLT(Op0, FZeroConst);
+  }
 
-  if (CGF->CGM.getTarget().getTriple().isDXIL())
-    LastInstr =
-        CGF->Builder.CreateIntrinsic(CGF->VoidTy, Intrinsic::dx_discard, {CMP});
-  else if (CGF->CGM.getTarget().getTriple().isSPIRV()) {
+  if (CGF->CGM.getTarget().getTriple().isDXIL()) {
+    LastInstr = CGF->Builder.CreateIntrinsic(Intrinsic::dx_discard, {CMP});
+  } else if (CGF->CGM.getTarget().getTriple().isSPIRV()) {
     BasicBlock *LT0 = CGF->createBasicBlock("lt0", CGF->CurFn);
     BasicBlock *End = CGF->createBasicBlock("end", CGF->CurFn);
 
@@ -80,7 +80,7 @@ static Value *handleHlslClip(const CallExpr *E, CodeGenFunction *CGF) {
 
     CGF->Builder.SetInsertPoint(LT0);
 
-    CGF->Builder.CreateIntrinsic(CGF->VoidTy, Intrinsic::spv_discard, {});
+    CGF->Builder.CreateIntrinsic(Intrinsic::spv_discard, {});
 
     LastInstr = CGF->Builder.CreateBr(End);
     CGF->Builder.SetInsertPoint(End);
@@ -109,7 +109,6 @@ static Value *handleHlslSplitdouble(const CallExpr *E, CodeGenFunction *CGF) {
   Value *HighBits = nullptr;
 
   if (CGF->CGM.getTarget().getTriple().isDXIL()) {
-
     llvm::Type *RetElementTy = CGF->Int32Ty;
     if (auto *Op0VecTy = E->getArg(0)->getType()->getAs<clang::VectorType>())
       RetElementTy = llvm::VectorType::get(
@@ -121,7 +120,6 @@ static Value *handleHlslSplitdouble(const CallExpr *E, CodeGenFunction *CGF) {
 
     LowBits = CGF->Builder.CreateExtractValue(CI, 0);
     HighBits = CGF->Builder.CreateExtractValue(CI, 1);
-
   } else {
     // For Non DXIL targets we generate the instructions.
 
@@ -370,20 +368,12 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
           "Scalar dot product is only supported on ints and floats.");
     }
     // For vectors, validate types and emit the appropriate intrinsic
-
-    // A VectorSplat should have happened
-    assert(T0->isVectorTy() && T1->isVectorTy() &&
-           "Dot product of vector and scalar is not supported.");
+    assert(CGM.getContext().hasSameUnqualifiedType(E->getArg(0)->getType(),
+                                                   E->getArg(1)->getType()) &&
+           "Dot product operands must have the same type.");
 
     auto *VecTy0 = E->getArg(0)->getType()->castAs<VectorType>();
-    [[maybe_unused]] auto *VecTy1 =
-        E->getArg(1)->getType()->castAs<VectorType>();
-
-    assert(VecTy0->getElementType() == VecTy1->getElementType() &&
-           "Dot product of vectors need the same element types.");
-
-    assert(VecTy0->getNumElements() == VecTy1->getNumElements() &&
-           "Dot product requires vectors to be of the same size.");
+    assert(VecTy0 && "Dot product argument must be a vector.");
 
     return Builder.CreateIntrinsic(
         /*ReturnType=*/T0->getScalarType(),

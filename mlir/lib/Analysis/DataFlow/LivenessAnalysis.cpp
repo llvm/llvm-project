@@ -59,7 +59,9 @@ ChangeResult Liveness::meet(const AbstractSparseLattice &other) {
 ///   (1.a) is an operand of an op with memory effects OR
 ///   (1.b) is a non-forwarded branch operand and its branch op could take the
 ///   control to a block that has an op with memory effects OR
-///   (1.c) is a non-forwarded call operand.
+///   (1.c) is a non-forwarded branch operand and its branch op could result
+///   in different live result OR
+///   (1.d) is a non-forwarded call operand.
 ///
 /// A value `A` is said to be "used to compute" value `B` iff `B` cannot be
 /// computed in the absence of `A`. Thus, in this implementation, we say that
@@ -106,49 +108,86 @@ void LivenessAnalysis::visitBranchOperand(OpOperand &operand) {
   // the forwarded branch operands or the non-branch operands. Thus they need
   // to be handled separately. This is where we handle them.
 
-  // This marks values of type (1.b) liveness as "live". A non-forwarded
+  // This marks values of type (1.b/1.c) liveness as "live". A non-forwarded
   // branch operand will be live if a block where its op could take the control
-  // has an op with memory effects.
+  // has an op with memory effects or could result in different results.
   // Populating such blocks in `blocks`.
+  bool mayLive = false;
   SmallVector<Block *, 4> blocks;
   if (isa<RegionBranchOpInterface>(op)) {
-    // When the op is a `RegionBranchOpInterface`, like an `scf.for` or an
-    // `scf.index_switch` op, its branch operand controls the flow into this
-    // op's regions.
-    for (Region &region : op->getRegions()) {
-      for (Block &block : region)
-        blocks.push_back(&block);
+    if (op->getNumResults() != 0) {
+      // This mark value of type 1.c liveness as may live, because the region
+      // branch operation has a return value, and the non-forwarded operand can
+      // determine the region to jump to, it can thereby control the result of
+      // the region branch operation.
+      // Therefore, if the result value is live, we conservatively consider the
+      // non-forwarded operand of the region branch operation with result may
+      // live and record all result.
+      for (Value result : op->getResults()) {
+        if (getLatticeElement(result)->isLive) {
+          mayLive = true;
+          break;
+        }
+      }
+    } else {
+      // When the op is a `RegionBranchOpInterface`, like an `scf.for` or an
+      // `scf.index_switch` op, its branch operand controls the flow into this
+      // op's regions.
+      for (Region &region : op->getRegions()) {
+        for (Block &block : region)
+          blocks.push_back(&block);
+      }
     }
   } else if (isa<BranchOpInterface>(op)) {
-    // When the op is a `BranchOpInterface`, like a `cf.cond_br` or a
-    // `cf.switch` op, its branch operand controls the flow into this op's
-    // successors.
-    blocks = op->getSuccessors();
+    // We cannot track all successor blocks of the branch operation(More
+    // specifically, it's the successor's successor). Additionally, different
+    // blocks might also lead to the different block argument described in 1.c.
+    // Therefore, we conservatively consider the non-forwarded operand of the
+    // branch operation may live.
+    mayLive = true;
   } else {
-    // When the op is a `RegionBranchTerminatorOpInterface`, like an
-    // `scf.condition` op or return-like, like an `scf.yield` op, its branch
-    // operand controls the flow into this op's parent's (which is a
-    // `RegionBranchOpInterface`'s) regions.
     Operation *parentOp = op->getParentOp();
     assert(isa<RegionBranchOpInterface>(parentOp) &&
            "expected parent op to implement `RegionBranchOpInterface`");
-    for (Region &region : parentOp->getRegions()) {
-      for (Block &block : region)
-        blocks.push_back(&block);
+    if (parentOp->getNumResults() != 0) {
+      // This mark value of type 1.c liveness as may live, because the region
+      // branch operation has a return value, and the non-forwarded operand can
+      // determine the region to jump to, it can thereby control the result of
+      // the region branch operation.
+      // Therefore, if the result value is live, we conservatively consider the
+      // non-forwarded operand of the region branch operation with result may
+      // live and record all result.
+      for (Value result : parentOp->getResults()) {
+        if (getLatticeElement(result)->isLive) {
+          mayLive = true;
+          break;
+        }
+      }
+    } else {
+      // When the op is a `RegionBranchTerminatorOpInterface`, like an
+      // `scf.condition` op or return-like, like an `scf.yield` op, its branch
+      // operand controls the flow into this op's parent's (which is a
+      // `RegionBranchOpInterface`'s) regions.
+      for (Region &region : parentOp->getRegions()) {
+        for (Block &block : region)
+          blocks.push_back(&block);
+      }
     }
   }
-  bool foundMemoryEffectingOp = false;
   for (Block *block : blocks) {
-    if (foundMemoryEffectingOp)
+    if (mayLive)
       break;
     for (Operation &nestedOp : *block) {
       if (!isMemoryEffectFree(&nestedOp)) {
-        Liveness *operandLiveness = getLatticeElement(operand.get());
-        propagateIfChanged(operandLiveness, operandLiveness->markLive());
-        foundMemoryEffectingOp = true;
+        mayLive = true;
         break;
       }
     }
+  }
+
+  if (mayLive) {
+    Liveness *operandLiveness = getLatticeElement(operand.get());
+    propagateIfChanged(operandLiveness, operandLiveness->markLive());
   }
 
   // Now that we have checked for memory-effecting ops in the blocks of concern,
@@ -191,8 +230,12 @@ void LivenessAnalysis::visitCallOperand(OpOperand &operand) {
 }
 
 void LivenessAnalysis::setToExitState(Liveness *lattice) {
+  if (lattice->isLive) {
+    return;
+  }
   // This marks values of type (2) liveness as "live".
   (void)lattice->markLive();
+  propagateIfChanged(lattice, ChangeResult::Change);
 }
 
 //===----------------------------------------------------------------------===//

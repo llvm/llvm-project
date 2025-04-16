@@ -1146,11 +1146,11 @@ void SelectionDAG::DeallocateNode(SDNode *N) {
 
 #ifndef NDEBUG
 /// VerifySDNode - Check the given SDNode.  Aborts if it is invalid.
-static void VerifySDNode(SDNode *N, const TargetLowering *TLI) {
+void SelectionDAG::verifyNode(SDNode *N) const {
   switch (N->getOpcode()) {
   default:
-    if (N->getOpcode() > ISD::BUILTIN_OP_END)
-      TLI->verifyTargetSDNode(N);
+    if (N->isTargetOpcode())
+      getSelectionDAGInfo().verifyTargetNode(*this, N);
     break;
   case ISD::BUILD_PAIR: {
     EVT VT = N->getValueType(0);
@@ -1194,7 +1194,7 @@ void SelectionDAG::InsertNode(SDNode *N) {
   AllNodes.push_back(N);
 #ifndef NDEBUG
   N->PersistentId = NextPersistentId++;
-  VerifySDNode(N, TLI);
+  verifyNode(N);
 #endif
   for (DAGUpdateListener *DUL = UpdateListeners; DUL; DUL = DUL->Next)
     DUL->NodeInserted(N);
@@ -3002,8 +3002,13 @@ bool SelectionDAG::isSplatValue(SDValue V, const APInt &DemandedElts,
     APInt UndefLHS, UndefRHS;
     SDValue LHS = V.getOperand(0);
     SDValue RHS = V.getOperand(1);
+    // Only recognize splats with the same demanded undef elements for both
+    // operands, otherwise we might fail to handle binop-specific undef
+    // handling.
+    // e.g. (and undef, 0) -> 0 etc.
     if (isSplatValue(LHS, DemandedElts, UndefLHS, Depth + 1) &&
-        isSplatValue(RHS, DemandedElts, UndefRHS, Depth + 1)) {
+        isSplatValue(RHS, DemandedElts, UndefRHS, Depth + 1) &&
+        (DemandedElts & UndefLHS) == (DemandedElts & UndefRHS)) {
       UndefElts = UndefLHS | UndefRHS;
       return true;
     }
@@ -5386,6 +5391,9 @@ bool SelectionDAG::isGuaranteedNotToBeUndefOrPoison(SDValue Op,
   case ISD::TargetFrameIndex:
   case ISD::CopyFromReg:
     return true;
+
+  case ISD::POISON:
+    return false;
 
   case ISD::UNDEF:
     return PoisonOnly;
@@ -9175,6 +9183,12 @@ SDValue SelectionDAG::getLoad(ISD::MemIndexedMode AM, ISD::LoadExtType ExtType,
             VT.getVectorElementCount() == MemVT.getVectorElementCount()) &&
            "Cannot use an ext load to change the number of vector elements!");
   }
+
+  assert((!MMO->getRanges() ||
+          (mdconst::extract<ConstantInt>(MMO->getRanges()->getOperand(0))
+                   ->getBitWidth() == MemVT.getScalarSizeInBits() &&
+           MemVT.isInteger())) &&
+         "Range metadata and load type must match!");
 
   bool Indexed = AM != ISD::UNINDEXED;
   assert((Indexed || Offset.isUndef()) && "Unindexed load with an offset!");

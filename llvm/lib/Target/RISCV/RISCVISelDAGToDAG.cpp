@@ -2809,8 +2809,7 @@ bool RISCVDAGToDAGISel::SelectAddrRegImmLsb00000(SDValue Addr, SDValue &Base,
   // Handle ADD with large immediates.
   if (Addr.getOpcode() == ISD::ADD && isa<ConstantSDNode>(Addr.getOperand(1))) {
     int64_t CVal = cast<ConstantSDNode>(Addr.getOperand(1))->getSExtValue();
-    assert(!(isInt<12>(CVal) && isInt<12>(CVal)) &&
-           "simm12 not already handled?");
+    assert(!isInt<12>(CVal) && "simm12 not already handled?");
 
     // Handle immediates in the range [-4096,-2049] or [2017, 4065]. We can save
     // one instruction by folding adjustment (-2048 or 2016) into the address.

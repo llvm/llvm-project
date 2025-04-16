@@ -7649,11 +7649,14 @@ Sema::CreateMaterializeTemporaryExpr(QualType T, Expr *Temporary,
 }
 
 ExprResult Sema::TemporaryMaterializationConversion(Expr *E) {
-  // In C++98, we don't want to implicitly create an xvalue.
+  // In C++98, we don't want to implicitly create an xvalue. C11 added the
+  // same rule, but C99 is broken without this behavior and so we treat the
+  // change as applying to all C language modes.
   // FIXME: This means that AST consumers need to deal with "prvalues" that
   // denote materialized temporaries. Maybe we should add another ValueKind
   // for "xvalue pretending to be a prvalue" for C++98 support.
-  if (!E->isPRValue() || !getLangOpts().CPlusPlus11)
+  if (!E->isPRValue() ||
+      (!getLangOpts().CPlusPlus11 && getLangOpts().CPlusPlus))
     return E;
 
   // C++1z [conv.rval]/1: T shall be a complete type.
@@ -7736,27 +7739,11 @@ ExprResult InitializationSequence::Perform(Sema &S,
         // introduced and such).  So, we fall back to making the array
         // type a dependently-sized array type with no specified
         // bound.
-        if (isa<InitListExpr>((Expr *)Args[0])) {
-          SourceRange Brackets;
-
-          // Scavange the location of the brackets from the entity, if we can.
-          if (auto *DD = dyn_cast_or_null<DeclaratorDecl>(Entity.getDecl())) {
-            if (TypeSourceInfo *TInfo = DD->getTypeSourceInfo()) {
-              TypeLoc TL = TInfo->getTypeLoc();
-              if (IncompleteArrayTypeLoc ArrayLoc =
-                      TL.getAs<IncompleteArrayTypeLoc>())
-                Brackets = ArrayLoc.getBracketsRange();
-            }
-          }
-
-          *ResultType
-            = S.Context.getDependentSizedArrayType(ArrayT->getElementType(),
-                                                   /*NumElts=*/nullptr,
-                                                   ArrayT->getSizeModifier(),
-                                       ArrayT->getIndexTypeCVRQualifiers(),
-                                                   Brackets);
-        }
-
+        if (isa<InitListExpr>((Expr *)Args[0]))
+          *ResultType = S.Context.getDependentSizedArrayType(
+              ArrayT->getElementType(),
+              /*NumElts=*/nullptr, ArrayT->getSizeModifier(),
+              ArrayT->getIndexTypeCVRQualifiers());
       }
     }
     if (Kind.getKind() == InitializationKind::IK_Direct &&
@@ -9918,8 +9905,7 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
   if (!Template) {
     if (auto *AliasTemplate = dyn_cast_or_null<TypeAliasTemplateDecl>(
             TemplateName.getAsTemplateDecl())) {
-      Diag(Kind.getLocation(),
-           diag::warn_cxx17_compat_ctad_for_alias_templates);
+      DiagCompat(Kind.getLocation(), diag_compat::ctad_for_alias_templates);
       LookupTemplateDecl = AliasTemplate;
       auto UnderlyingType = AliasTemplate->getTemplatedDecl()
                                 ->getUnderlyingType()
@@ -10042,12 +10028,19 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
     //   When [...] the constructor [...] is a candidate by
     //    - [over.match.copy] (in all cases)
     if (TD) {
-      SmallVector<Expr *, 8> TmpInits;
-      for (Expr *E : Inits)
+
+      // As template candidates are not deduced immediately,
+      // persist the array in the overload set.
+      MutableArrayRef<Expr *> TmpInits =
+          Candidates.getPersistentArgsArray(Inits.size());
+
+      for (auto [I, E] : llvm::enumerate(Inits)) {
         if (auto *DI = dyn_cast<DesignatedInitExpr>(E))
-          TmpInits.push_back(DI->getInit());
+          TmpInits[I] = DI->getInit();
         else
-          TmpInits.push_back(E);
+          TmpInits[I] = E;
+      }
+
       AddTemplateOverloadCandidate(
           TD, FoundDecl, /*ExplicitArgs=*/nullptr, TmpInits, Candidates,
           /*SuppressUserConversions=*/false,

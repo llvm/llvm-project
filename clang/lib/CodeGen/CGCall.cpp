@@ -17,6 +17,7 @@
 #include "CGBlocks.h"
 #include "CGCXXABI.h"
 #include "CGCleanup.h"
+#include "CGDebugInfo.h"
 #include "CGRecordLayout.h"
 #include "CodeGenFunction.h"
 #include "CodeGenModule.h"
@@ -198,15 +199,17 @@ static void appendParameterTypes(const CodeGenTypes &CGT,
                               prefix.size());
 }
 
+using ExtParameterInfoList =
+    SmallVector<FunctionProtoType::ExtParameterInfo, 16>;
+
 /// Arrange the LLVM function layout for a value of the given function
 /// type, on top of any implicit parameters already stored.
 static const CGFunctionInfo &
 arrangeLLVMFunctionInfo(CodeGenTypes &CGT, bool instanceMethod,
                         SmallVectorImpl<CanQualType> &prefix,
                         CanQual<FunctionProtoType> FTP) {
-  SmallVector<FunctionProtoType::ExtParameterInfo, 16> paramInfos;
+  ExtParameterInfoList paramInfos;
   RequiredArgs Required = RequiredArgs::forPrototypePlus(FTP, prefix.size());
-  // FIXME: Kill copy.
   appendParameterTypes(CGT, prefix, paramInfos, FTP);
   CanQualType resultType = FTP->getReturnType().getUnqualifiedType();
 
@@ -216,11 +219,13 @@ arrangeLLVMFunctionInfo(CodeGenTypes &CGT, bool instanceMethod,
                                      FTP->getExtInfo(), paramInfos, Required);
 }
 
+using CanQualTypeList = SmallVector<CanQualType, 16>;
+
 /// Arrange the argument and result information for a value of the
 /// given freestanding function type.
 const CGFunctionInfo &
 CodeGenTypes::arrangeFreeFunctionType(CanQual<FunctionProtoType> FTP) {
-  SmallVector<CanQualType, 16> argTypes;
+  CanQualTypeList argTypes;
   return ::arrangeLLVMFunctionInfo(*this, /*instanceMethod=*/false, argTypes,
                                    FTP);
 }
@@ -318,7 +323,7 @@ const CGFunctionInfo &
 CodeGenTypes::arrangeCXXMethodType(const CXXRecordDecl *RD,
                                    const FunctionProtoType *FTP,
                                    const CXXMethodDecl *MD) {
-  SmallVector<CanQualType, 16> argTypes;
+  CanQualTypeList argTypes;
 
   // Add the 'this' pointer.
   argTypes.push_back(DeriveThisType(RD, MD));
@@ -374,8 +379,8 @@ const CGFunctionInfo &
 CodeGenTypes::arrangeCXXStructorDeclaration(GlobalDecl GD) {
   auto *MD = cast<CXXMethodDecl>(GD.getDecl());
 
-  SmallVector<CanQualType, 16> argTypes;
-  SmallVector<FunctionProtoType::ExtParameterInfo, 16> paramInfos;
+  CanQualTypeList argTypes;
+  ExtParameterInfoList paramInfos;
 
   const CXXRecordDecl *ThisType = getCXXABI().getThisArgumentTypeForMethod(GD);
   argTypes.push_back(DeriveThisType(ThisType, MD));
@@ -420,26 +425,26 @@ CodeGenTypes::arrangeCXXStructorDeclaration(GlobalDecl GD) {
                                  argTypes, extInfo, paramInfos, required);
 }
 
-static SmallVector<CanQualType, 16>
-getArgTypesForCall(ASTContext &ctx, const CallArgList &args) {
-  SmallVector<CanQualType, 16> argTypes;
+static CanQualTypeList getArgTypesForCall(ASTContext &ctx,
+                                          const CallArgList &args) {
+  CanQualTypeList argTypes;
   for (auto &arg : args)
     argTypes.push_back(ctx.getCanonicalParamType(arg.Ty));
   return argTypes;
 }
 
-static SmallVector<CanQualType, 16>
-getArgTypesForDeclaration(ASTContext &ctx, const FunctionArgList &args) {
-  SmallVector<CanQualType, 16> argTypes;
+static CanQualTypeList getArgTypesForDeclaration(ASTContext &ctx,
+                                                 const FunctionArgList &args) {
+  CanQualTypeList argTypes;
   for (auto &arg : args)
     argTypes.push_back(ctx.getCanonicalParamType(arg->getType()));
   return argTypes;
 }
 
-static llvm::SmallVector<FunctionProtoType::ExtParameterInfo, 16>
-getExtParameterInfosForCall(const FunctionProtoType *proto,
-                            unsigned prefixArgs, unsigned totalArgs) {
-  llvm::SmallVector<FunctionProtoType::ExtParameterInfo, 16> result;
+static ExtParameterInfoList
+getExtParameterInfosForCall(const FunctionProtoType *proto, unsigned prefixArgs,
+                            unsigned totalArgs) {
+  ExtParameterInfoList result;
   if (proto->hasExtParameterInfos()) {
     addExtParameterInfosForCall(result, proto, prefixArgs, totalArgs);
   }
@@ -461,8 +466,7 @@ CodeGenTypes::arrangeCXXConstructorCall(const CallArgList &args,
                                         unsigned ExtraPrefixArgs,
                                         unsigned ExtraSuffixArgs,
                                         bool PassProtoArgs) {
-  // FIXME: Kill copy.
-  SmallVector<CanQualType, 16> ArgTypes;
+  CanQualTypeList ArgTypes;
   for (const auto &Arg : args)
     ArgTypes.push_back(Context.getCanonicalParamType(Arg.Ty));
 
@@ -482,7 +486,7 @@ CodeGenTypes::arrangeCXXConstructorCall(const CallArgList &args,
                                : Context.VoidTy;
 
   FunctionType::ExtInfo Info = FPT->getExtInfo();
-  llvm::SmallVector<FunctionProtoType::ExtParameterInfo, 16> ParamInfos;
+  ExtParameterInfoList ParamInfos;
   // If the prototype args are elided, we should only have ABI-specific args,
   // which never have param info.
   if (PassProtoArgs && FPT->hasExtParameterInfos()) {
@@ -498,7 +502,8 @@ CodeGenTypes::arrangeCXXConstructorCall(const CallArgList &args,
 /// Arrange the argument and result information for the declaration or
 /// definition of the given function.
 const CGFunctionInfo &
-CodeGenTypes::arrangeFunctionDeclaration(const FunctionDecl *FD) {
+CodeGenTypes::arrangeFunctionDeclaration(const GlobalDecl GD) {
+  const FunctionDecl *FD = cast<FunctionDecl>(GD.getDecl());
   if (const CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(FD))
     if (MD->isImplicitObjectMemberFunction())
       return arrangeCXXMethodDeclaration(MD);
@@ -507,6 +512,13 @@ CodeGenTypes::arrangeFunctionDeclaration(const FunctionDecl *FD) {
 
   assert(isa<FunctionType>(FTy));
   setCUDAKernelCallingConvention(FTy, CGM, FD);
+
+  if (FD->hasAttr<OpenCLKernelAttr>() &&
+      GD.getKernelReferenceKind() == KernelReferenceKind::Stub) {
+    const FunctionType *FT = FTy->getAs<FunctionType>();
+    CGM.getTargetCodeGenInfo().setOCLKernelStubCallingConvention(FT);
+    FTy = FT->getCanonicalTypeUnqualified();
+  }
 
   // When declaring a function without a prototype, always use a
   // non-variadic type.
@@ -537,13 +549,11 @@ CodeGenTypes::arrangeObjCMethodDeclaration(const ObjCMethodDecl *MD) {
 const CGFunctionInfo &
 CodeGenTypes::arrangeObjCMessageSendSignature(const ObjCMethodDecl *MD,
                                               QualType receiverType) {
-  SmallVector<CanQualType, 16> argTys;
-  SmallVector<FunctionProtoType::ExtParameterInfo, 4> extParamInfos(
-      MD->isDirectMethod() ? 1 : 2);
+  CanQualTypeList argTys;
+  ExtParameterInfoList extParamInfos(MD->isDirectMethod() ? 1 : 2);
   argTys.push_back(Context.getCanonicalParamType(receiverType));
   if (!MD->isDirectMethod())
     argTys.push_back(Context.getCanonicalParamType(Context.getObjCSelType()));
-  // FIXME: Kill copy?
   for (const auto *I : MD->parameters()) {
     argTys.push_back(Context.getCanonicalParamType(I->getType()));
     auto extParamInfo = FunctionProtoType::ExtParameterInfo().withIsNoEscape(
@@ -570,7 +580,7 @@ CodeGenTypes::arrangeObjCMessageSendSignature(const ObjCMethodDecl *MD,
 const CGFunctionInfo &
 CodeGenTypes::arrangeUnprototypedObjCMessageSend(QualType returnType,
                                                  const CallArgList &args) {
-  auto argTypes = getArgTypesForCall(Context, args);
+  CanQualTypeList argTypes = getArgTypesForCall(Context, args);
   FunctionType::ExtInfo einfo;
 
   return arrangeLLVMFunctionInfo(GetReturnType(returnType), FnInfoOpts::None,
@@ -580,13 +590,11 @@ CodeGenTypes::arrangeUnprototypedObjCMessageSend(QualType returnType,
 const CGFunctionInfo &
 CodeGenTypes::arrangeGlobalDeclaration(GlobalDecl GD) {
   // FIXME: Do we need to handle ObjCMethodDecl?
-  const FunctionDecl *FD = cast<FunctionDecl>(GD.getDecl());
-
   if (isa<CXXConstructorDecl>(GD.getDecl()) ||
       isa<CXXDestructorDecl>(GD.getDecl()))
     return arrangeCXXStructorDeclaration(GD);
 
-  return arrangeFunctionDeclaration(FD);
+  return arrangeFunctionDeclaration(GD);
 }
 
 /// Arrange a thunk that takes 'this' as the first parameter followed by
@@ -634,7 +642,7 @@ arrangeFreeFunctionLikeCall(CodeGenTypes &CGT,
                             bool chainCall) {
   assert(args.size() >= numExtraRequiredArgs);
 
-  llvm::SmallVector<FunctionProtoType::ExtParameterInfo, 16> paramInfos;
+  ExtParameterInfoList paramInfos;
 
   // In most cases, there are no optional arguments.
   RequiredArgs required = RequiredArgs::All;
@@ -659,8 +667,7 @@ arrangeFreeFunctionLikeCall(CodeGenTypes &CGT,
     required = RequiredArgs(args.size());
   }
 
-  // FIXME: Kill copy.
-  SmallVector<CanQualType, 16> argTypes;
+  CanQualTypeList argTypes;
   for (const auto &arg : args)
     argTypes.push_back(CGT.getContext().getCanonicalParamType(arg.Ty));
   FnInfoOpts opts = chainCall ? FnInfoOpts::IsChainCall : FnInfoOpts::None;
@@ -693,8 +700,9 @@ CodeGenTypes::arrangeBlockFunctionCall(const CallArgList &args,
 const CGFunctionInfo &
 CodeGenTypes::arrangeBlockFunctionDeclaration(const FunctionProtoType *proto,
                                               const FunctionArgList &params) {
-  auto paramInfos = getExtParameterInfosForCall(proto, 1, params.size());
-  auto argTypes = getArgTypesForDeclaration(Context, params);
+  ExtParameterInfoList paramInfos =
+      getExtParameterInfosForCall(proto, 1, params.size());
+  CanQualTypeList argTypes = getArgTypesForDeclaration(Context, params);
 
   return arrangeLLVMFunctionInfo(GetReturnType(proto->getReturnType()),
                                  FnInfoOpts::None, argTypes,
@@ -705,8 +713,7 @@ CodeGenTypes::arrangeBlockFunctionDeclaration(const FunctionProtoType *proto,
 const CGFunctionInfo &
 CodeGenTypes::arrangeBuiltinFunctionCall(QualType resultType,
                                          const CallArgList &args) {
-  // FIXME: Kill copy.
-  SmallVector<CanQualType, 16> argTypes;
+  CanQualTypeList argTypes;
   for (const auto &Arg : args)
     argTypes.push_back(Context.getCanonicalParamType(Arg.Ty));
   return arrangeLLVMFunctionInfo(GetReturnType(resultType), FnInfoOpts::None,
@@ -717,7 +724,7 @@ CodeGenTypes::arrangeBuiltinFunctionCall(QualType resultType,
 const CGFunctionInfo &
 CodeGenTypes::arrangeBuiltinFunctionDeclaration(QualType resultType,
                                                 const FunctionArgList &args) {
-  auto argTypes = getArgTypesForDeclaration(Context, args);
+  CanQualTypeList argTypes = getArgTypesForDeclaration(Context, args);
 
   return arrangeLLVMFunctionInfo(GetReturnType(resultType), FnInfoOpts::None,
                                  argTypes, FunctionType::ExtInfo(), {},
@@ -745,11 +752,10 @@ CodeGenTypes::arrangeCXXMethodCall(const CallArgList &args,
          "Emitting a call with less args than the required prefix?");
   // Add one to account for `this`. It's a bit awkward here, but we don't count
   // `this` in similar places elsewhere.
-  auto paramInfos =
-    getExtParameterInfosForCall(proto, numPrefixArgs + 1, args.size());
+  ExtParameterInfoList paramInfos =
+      getExtParameterInfosForCall(proto, numPrefixArgs + 1, args.size());
 
-  // FIXME: Kill copy.
-  auto argTypes = getArgTypesForCall(Context, args);
+  CanQualTypeList argTypes = getArgTypesForCall(Context, args);
 
   FunctionType::ExtInfo info = proto->getExtInfo();
   return arrangeLLVMFunctionInfo(GetReturnType(proto->getReturnType()),
@@ -770,14 +776,14 @@ CodeGenTypes::arrangeCall(const CGFunctionInfo &signature,
   if (signature.arg_size() == args.size())
     return signature;
 
-  SmallVector<FunctionProtoType::ExtParameterInfo, 16> paramInfos;
+  ExtParameterInfoList paramInfos;
   auto sigParamInfos = signature.getExtParameterInfos();
   if (!sigParamInfos.empty()) {
     paramInfos.append(sigParamInfos.begin(), sigParamInfos.end());
     paramInfos.resize(args.size());
   }
 
-  auto argTypes = getArgTypesForCall(Context, args);
+  CanQualTypeList argTypes = getArgTypesForCall(Context, args);
 
   assert(signature.getRequiredArgs().allowsOptionalArgs());
   FnInfoOpts opts = FnInfoOpts::None;
@@ -2390,7 +2396,6 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
   // Collect function IR attributes from the callee prototype if we have one.
   AddAttributesFromFunctionProtoType(getContext(), FuncAttrs,
                                      CalleeInfo.getCalleeFunctionProtoType());
-
   const Decl *TargetDecl = CalleeInfo.getCalleeDecl().getDecl();
 
   // Attach assumption attributes to the declaration. If this is a call
@@ -2497,7 +2502,11 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
                                  NumElemsParam);
     }
 
-    if (TargetDecl->hasAttr<OpenCLKernelAttr>()) {
+    if (TargetDecl->hasAttr<OpenCLKernelAttr>() &&
+        CallingConv != CallingConv::CC_C &&
+        CallingConv != CallingConv::CC_SpirFunction) {
+      // Check CallingConv to avoid adding uniform-work-group-size attribute to
+      // OpenCL Kernel Stub
       if (getLangOpts().OpenCLVersion <= 120) {
         // OpenCL v1.2 Work groups are always uniform
         FuncAttrs.addAttribute("uniform-work-group-size", "true");
@@ -2606,6 +2615,15 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
     };
     if (shouldDisableTailCalls())
       FuncAttrs.addAttribute("disable-tail-calls", "true");
+
+    // These functions require the returns_twice attribute for correct codegen,
+    // but the attribute may not be added if -fno-builtin is specified. We
+    // explicitly add that attribute here.
+    static const llvm::StringSet<> ReturnsTwiceFn{
+        "_setjmpex", "setjmp",      "_setjmp", "vfork",
+        "sigsetjmp", "__sigsetjmp", "savectx", "getcontext"};
+    if (ReturnsTwiceFn.contains(Name))
+      FuncAttrs.addAttribute(llvm::Attribute::ReturnsTwice);
 
     // CPU/feature overrides.  addDefaultFunctionDefinitionAttributes
     // handles these separately to set them based on the global defaults.
@@ -3633,7 +3651,7 @@ static llvm::StoreInst *findDominatingStoreToReturnValue(CodeGenFunction &CGF) {
     // Look at directly preceding instruction, skipping bitcasts, lifetime
     // markers, and fake uses and their operands.
     const llvm::Instruction *LoadIntoFakeUse = nullptr;
-    for (llvm::Instruction &I : make_range(IP->rbegin(), IP->rend())) {
+    for (llvm::Instruction &I : llvm::reverse(*IP)) {
       // Ignore instructions that are just loads for fake uses; the load should
       // immediately precede the fake use, so we only need to remember the
       // operand for the last fake use seen.

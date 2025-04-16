@@ -490,7 +490,7 @@ typedef struct ValueProfData {
 } ValueProfData;
 
 /*
- * The closure is designed to abstact away two types of value profile data:
+ * The closure is designed to abstract away two types of value profile data:
  * - InstrProfRecord which is the primary data structure used to
  *   represent profile data in host tools (reader, writer, and profile-use)
  * - value profile runtime data structure suitable to be used by C

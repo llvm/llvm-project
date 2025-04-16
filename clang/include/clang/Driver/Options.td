@@ -624,6 +624,7 @@ defvar cpp14 = LangOpts<"CPlusPlus14">;
 defvar cpp17 = LangOpts<"CPlusPlus17">;
 defvar cpp20 = LangOpts<"CPlusPlus20">;
 defvar cpp23 = LangOpts<"CPlusPlus23">;
+defvar cpp26 = LangOpts<"CPlusPlus26">;
 defvar c99 = LangOpts<"C99">;
 defvar c23 = LangOpts<"C23">;
 defvar lang_std = LangOpts<"LangStd">;
@@ -1233,6 +1234,10 @@ def offload_compression_level_EQ : Joined<["--"], "offload-compression-level=">,
   Flags<[HelpHidden]>,
   HelpText<"Compression level for offload device binaries (HIP only)">;
 
+def offload_jobs_EQ : Joined<["--"], "offload-jobs=">,
+  HelpText<"Specify the number of threads to use for device offloading tasks"
+           " during compilation.">;
+
 defm offload_via_llvm : BoolFOption<"offload-via-llvm",
   LangOpts<"OffloadViaLLVM">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option], "Use">,
@@ -1340,8 +1345,8 @@ def hipstdpar_prim_path_EQ : Joined<["--"], "hipstdpar-prim-path=">,
   HelpText<
     "rocPrim path, required by the HIP Standard Parallel Algorithm "
     "Acceleration library, used to implicitly include the rocPrim library">;
-def rocm_device_lib_path_EQ : Joined<["--"], "rocm-device-lib-path=">, Group<hip_Group>,
-  HelpText<"ROCm device library path. Alternative to rocm-path.">;
+def rocm_device_lib_path_EQ : Joined<["--"], "rocm-device-lib-path=">, Visibility<[FlangOption]>,
+  Group<hip_Group>, HelpText<"ROCm device library path. Alternative to rocm-path.">;
 def : Joined<["--"], "hip-device-lib-path=">, Alias<rocm_device_lib_path_EQ>;
 def hip_device_lib_EQ : Joined<["--"], "hip-device-lib=">, Group<hip_Group>,
   HelpText<"HIP device library">;
@@ -3508,12 +3513,6 @@ defm application_extension : BoolFOption<"application-extension",
   PosFlag<SetTrue, [], [ClangOption, CC1Option],
           "Restrict code to those available for App Extensions">,
   NegFlag<SetFalse>>;
-defm retain_subst_template_type_parm_type_ast_nodes : BoolFOption<"retain-subst-template-type-parm-type-ast-nodes",
-  LangOpts<"RetainSubstTemplateTypeParmTypeAstNodes">, DefaultFalse,
-  PosFlag<SetTrue, [], [CC1Option], "Enable">,
-  NegFlag<SetFalse, [], [], "Disable">,
-  BothFlags<[], [], " retain SubstTemplateTypeParmType nodes in the AST's representation"
-  " of alias template specializations">>;
 defm sized_deallocation : BoolFOption<"sized-deallocation",
   LangOpts<"SizedDeallocation">, Default<cpp14.KeyPath>,
   PosFlag<SetTrue, [], [], "Enable C++14 sized global deallocation functions">,
@@ -3591,7 +3590,7 @@ def fopenmp_version_EQ : Joined<["-"], "fopenmp-version=">, Group<f_Group>,
   Flags<[NoArgumentUnused]>,
   Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
   HelpText<OpenMPVersionHelp<"Clang", "51">.str>,
-  HelpTextForVariants<[FlangOption, FC1Option], OpenMPVersionHelp<"Flang", "11">.str>;
+  HelpTextForVariants<[FlangOption, FC1Option], OpenMPVersionHelp<"Flang", "31">.str>;
 defm openmp_extensions: BoolFOption<"openmp-extensions",
   LangOpts<"OpenMPExtensions">, DefaultTrue,
   PosFlag<SetTrue, [NoArgumentUnused], [ClangOption, CC1Option],
@@ -3759,10 +3758,16 @@ defm pascal_strings : BoolFOption<"pascal-strings",
 // Note: This flag has different semantics in the driver and in -cc1. The driver accepts -fpatchable-function-entry=M,N
 // and forwards it to -cc1 as -fpatchable-function-entry=M and -fpatchable-function-entry-offset=N. In -cc1, both flags
 // are treated as a single integer.
-def fpatchable_function_entry_EQ : Joined<["-"], "fpatchable-function-entry=">, Group<f_Group>,
-  Visibility<[ClangOption, CC1Option]>,
-  MetaVarName<"<N,M>">, HelpText<"Generate M NOPs before function entry and N-M NOPs after function entry">,
-  MarshallingInfoInt<CodeGenOpts<"PatchableFunctionEntryCount">>;
+def fpatchable_function_entry_EQ
+    : Joined<["-"], "fpatchable-function-entry=">,
+      Group<f_Group>,
+      Visibility<[ClangOption, CC1Option]>,
+      MetaVarName<"<N,M,Section>">,
+      HelpText<"Generate M NOPs before function entry and N-M NOPs after "
+               "function entry. "
+               "If section is specified, use it instead of "
+               "__patchable_function_entries.">,
+      MarshallingInfoInt<CodeGenOpts<"PatchableFunctionEntryCount">>;
 def fms_hotpatch : Flag<["-"], "fms-hotpatch">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option, CLOption]>,
   HelpText<"Ensure that all functions can be hotpatched at runtime">,
@@ -4135,6 +4140,13 @@ def ftrigraphs : Flag<["-"], "ftrigraphs">, Group<f_Group>,
 def fno_trigraphs : Flag<["-"], "fno-trigraphs">, Group<f_Group>,
   HelpText<"Do not process trigraph sequences">,
   Visibility<[ClangOption, CC1Option]>;
+defm unique_source_file_names: BoolOption<"f", "unique-source-file-names",
+  CodeGenOpts<"UniqueSourceFileNames">, DefaultFalse,
+  PosFlag<SetTrue, [], [CC1Option], "Allow">,
+  NegFlag<SetFalse, [], [], "Do not allow">,
+  BothFlags<[], [ClangOption], " the compiler to assume that each translation unit has a unique "
+                               "source file name at link time">>,
+  Group<f_clang_Group>;
 def funsigned_bitfields : Flag<["-"], "funsigned-bitfields">, Group<f_Group>;
 def funsigned_char : Flag<["-"], "funsigned-char">, Group<f_Group>;
 def fno_unsigned_char : Flag<["-"], "fno-unsigned-char">;
@@ -4689,7 +4701,7 @@ def mqdsp6_compat : Flag<["-"], "mqdsp6-compat">, Group<m_Group>,
   HelpText<"Enable hexagon-qdsp6 backward compatibility">,
   MarshallingInfoFlag<LangOpts<"HexagonQdsp6Compat">>;
 def m64 : Flag<["-"], "m64">, Group<m_Group>, Flags<[NoXarchOption]>,
-  Visibility<[ClangOption, CLOption, DXCOption]>;
+  Visibility<[ClangOption, CLOption, DXCOption, FlangOption]>;
 def maix64 : Flag<["-"], "maix64">, Group<m_Group>, Flags<[NoXarchOption]>;
 def mx32 : Flag<["-"], "mx32">, Group<m_Group>, Flags<[NoXarchOption]>,
   Visibility<[ClangOption, CLOption, DXCOption]>;
@@ -6409,11 +6421,11 @@ def mavx10_1_256 : Flag<["-"], "mavx10.1-256">, Group<m_x86_AVX10_Features_Group
 def mno_avx10_1_256 : Flag<["-"], "mno-avx10.1-256">, Group<m_x86_AVX10_Features_Group>;
 def mavx10_1_512 : Flag<["-"], "mavx10.1-512">, Group<m_x86_AVX10_Features_Group>;
 def mno_avx10_1_512 : Flag<["-"], "mno-avx10.1-512">, Alias<mno_avx10_1_256>;
-def mavx10_1 : Flag<["-"], "mavx10.1">, Flags<[Unsupported]>;
-def mno_avx10_1 : Flag<["-"], "mno-avx10.1">, Flags<[Unsupported]>;
+def mavx10_1 : Flag<["-"], "mavx10.1">, Group<m_x86_AVX10_Features_Group>;
+def mno_avx10_1 : Flag<["-"], "mno-avx10.1">, Group<m_x86_AVX10_Features_Group>;
 def mavx10_2_256 : Flag<["-"], "mavx10.2-256">, Group<m_x86_AVX10_Features_Group>;
 def mavx10_2_512 : Flag<["-"], "mavx10.2-512">, Group<m_x86_AVX10_Features_Group>;
-def mavx10_2 : Flag<["-"], "mavx10.2">, Alias<mavx10_2_512>;
+def mavx10_2 : Flag<["-"], "mavx10.2">, Group<m_x86_AVX10_Features_Group>;
 def mno_avx10_2 : Flag<["-"], "mno-avx10.2">, Group<m_x86_AVX10_Features_Group>;
 def mavx2 : Flag<["-"], "mavx2">, Group<m_x86_Features_Group>;
 def mno_avx2 : Flag<["-"], "mno-avx2">, Group<m_x86_Features_Group>;
@@ -6819,7 +6831,6 @@ defm real_8_real_10 : BooleanFFlag<"real-8-real-10">, Group<gfortran_Group>;
 defm real_8_real_16 : BooleanFFlag<"real-8-real-16">, Group<gfortran_Group>;
 defm real_8_real_4 : BooleanFFlag<"real-8-real-4">, Group<gfortran_Group>;
 defm recursive : BooleanFFlag<"recursive">, Group<gfortran_Group>;
-defm repack_arrays : BooleanFFlag<"repack-arrays">, Group<gfortran_Group>;
 defm second_underscore : BooleanFFlag<"second-underscore">, Group<gfortran_Group>;
 defm sign_zero : BooleanFFlag<"sign-zero">, Group<gfortran_Group>;
 defm whole_file : BooleanFFlag<"whole-file">, Group<gfortran_Group>;
@@ -6874,6 +6885,13 @@ def sycl_link : Flag<["--"], "sycl-link">, Flags<[HelpHidden]>,
 let Flags = [TargetSpecific] in {
 defm android_pad_segment : BooleanFFlag<"android-pad-segment">, Group<f_Group>;
 } // let Flags = [TargetSpecific]
+
+def shared_libflangrt : Flag<["-"], "shared-libflangrt">,
+  HelpText<"Link the flang-rt shared library">, Group<Link_Group>,
+  Visibility<[FlangOption]>, Flags<[NoArgumentUnused]>;
+def static_libflangrt : Flag<["-"], "static-libflangrt">, 
+  HelpText<"Link the flang-rt static library">, Group<Link_Group>,
+  Visibility<[FlangOption]>, Flags<[NoArgumentUnused]>;
 
 //===----------------------------------------------------------------------===//
 // FLangOption + NoXarchOption
@@ -6961,6 +6979,52 @@ defm unsigned : OptInFC1FFlag<"unsigned", "Enables UNSIGNED type">;
 def fno_automatic : Flag<["-"], "fno-automatic">, Group<f_Group>,
   HelpText<"Implies the SAVE attribute for non-automatic local objects in subprograms unless RECURSIVE">;
 
+defm repack_arrays
+    : BoolOptionWithoutMarshalling<
+          "f", "repack-arrays", PosFlag<SetTrue, [], [], "Pack">,
+          NegFlag<SetFalse, [], [], "Do not pack">,
+          BothFlags<[], [],
+                    " non-contiguous assumed shape dummy arrays into "
+                    "contiguous memory">>,
+      DocBrief<[{Create temporary copies of non-contiguous assumed shape dummy
+arrays in subprogram prologues, and destroy them in subprogram epilogues.
+The temporary copy is initialized with values from the original array
+in the prologue, if needed. In the epilogue, the current values
+in the temporary array are copied into the original array, if needed.
+
+Accessing the contiguous temporary in the program code may result
+in faster execution comparing to accessing elements of the original array,
+when they are sparse in memory. At the same time, the overhead
+of copying values between the original and the temporary arrays
+may be significant, which may slow down some programs.
+
+Enabling array repacking may also change the behavior of certain
+programs:
+
+* The copy actions may introduce a data race in valid OpenACC/OpenMP programs.
+  For example, if different threads execute the same subprogram
+  with a non-contiguous assumed shape dummy array, and the different threads
+  access unrelated parts of the array, then the whole array copy
+  made in each thread will cause a data race.
+* OpenACC/OpenMP offload programs may behave incorrectly with regards
+  to the device data environment, due to the fact that the original
+  array and the temporary may have different presence status on the device.
+* ``IS_CONTIGUOUS`` intrinsic may return ``TRUE`` with the array repacking
+  enabled, whereas if would return ``FALSE`` with the repacking disabled.
+* The result of ``LOC`` intrinsic applied to an actual argument associated
+  with a non-contiguous assumed shape dummy array, may be different
+  from the result of ``LOC`` applied to the dummy array.}]>;
+
+def frepack_arrays_contiguity_EQ
+    : Joined<["-"], "frepack-arrays-contiguity=">,
+      Group<f_Group>,
+      Values<"whole,innermost">,
+      HelpText<
+          "When -frepack-arrays is in effect, 'whole' enables "
+          "repacking for arrays that are non-contiguous in any dimension, "
+          "'innermost' enables repacking for arrays that are non-contiguous "
+          "in the innermost dimension (the default)">;
+
 defm save_main_program : BoolOptionWithoutMarshalling<"f", "save-main-program",
   PosFlag<SetTrue, [], [],
     "Place all main program variables in static memory (otherwise scalars may be placed on the stack)">,
@@ -6974,8 +7038,28 @@ defm loop_versioning : BoolOptionWithoutMarshalling<"f", "version-loops-for-stri
   PosFlag<SetTrue, [], [ClangOption], "Create unit-strided versions of loops">,
    NegFlag<SetFalse, [], [ClangOption], "Do not create unit-strided loops (default)">>;
 
+defm stack_repack_arrays
+    : BoolOptionWithoutMarshalling<
+          "f", "stack-repack-arrays",
+          PosFlag<SetTrue, [], [],
+                  "Attempt to allocate array temporaries created under "
+                  "-frepack-arrays on the stack">,
+          NegFlag<
+              SetFalse, [], [],
+              "Allocate -frepack-arrays temporaries on the heap (default)">>,
+      DocBrief<[{Controls whether the array temporaries created under
+**-frepack-arrays** are allocated on the stack or on the heap.
+
+By default, the heap is used. Allocations of polymorphic types
+are always done on the heap, though this may change in future releases.
+  }]>;
+
 def fhermetic_module_files : Flag<["-"], "fhermetic-module-files">, Group<f_Group>,
   HelpText<"Emit hermetic module files (no nested USE association)">;
+
+def fdo_concurrent_to_openmp_EQ : Joined<["-"], "fdo-concurrent-to-openmp=">,
+  HelpText<"Try to map `do concurrent` loops to OpenMP [none|host|device]">,
+      Values<"none, host, device">;
 } // let Visibility = [FC1Option, FlangOption]
 
 def J : JoinedOrSeparate<["-"], "J">,
@@ -7589,6 +7673,11 @@ def fpatchable_function_entry_offset_EQ
     : Joined<["-"], "fpatchable-function-entry-offset=">, MetaVarName<"<M>">,
       HelpText<"Generate M NOPs before function entry">,
       MarshallingInfoInt<CodeGenOpts<"PatchableFunctionEntryOffset">>;
+def fpatchable_function_entry_section_EQ
+    : Joined<["-"], "fpatchable-function-entry-section=">,
+      MetaVarName<"<Section>">,
+      HelpText<"Use Section instead of __patchable_function_entries">,
+      MarshallingInfoString<CodeGenOpts<"PatchableFunctionEntrySection">>;
 def fprofile_instrument_EQ : Joined<["-"], "fprofile-instrument=">,
     HelpText<"Enable PGO instrumentation">, Values<"none,clang,llvm,csllvm">,
     NormalizedValuesScope<"CodeGenOptions">,
@@ -7968,6 +8057,10 @@ def print_dependency_directives_minimized_source : Flag<["-"],
   "print-dependency-directives-minimized-source">,
   HelpText<"Print the output of the dependency directives source minimizer">;
 }
+def dump_minimization_hints : Joined<["-"],
+  "dump-minimization-hints=">,
+  HelpText<"Dump ranges of deserialized declarations to use as bug minimization hints">,
+  MarshallingInfoString<FrontendOpts<"DumpMinimizationHintsPath">>;
 
 defm emit_llvm_uselists : BoolOption<"", "emit-llvm-uselists",
   CodeGenOpts<"EmitLLVMUseLists">, DefaultFalse,
@@ -9055,6 +9148,11 @@ def dxil_validator_version : Option<["/", "-"], "validator-version", KIND_SEPARA
   HelpText<"Override validator version for module. Format: <major.minor>;"
            "Default: DXIL.dll version or current internal version">,
   MarshallingInfoString<TargetOpts<"DxilValidatorVersion">, "\"1.8\"">;
+def res_may_alias : Option<["/", "-"], "res-may-alias", KIND_FLAG>,
+  Group<dxc_Group>, Flags<[HelpHidden]>,
+  Visibility<[DXCOption, ClangOption, CC1Option]>,
+  HelpText<"Assume that UAVs/SRVs may alias">,
+  MarshallingInfoFlag<CodeGenOpts<"ResMayAlias">>;
 def target_profile : DXCJoinedOrSeparate<"T">, MetaVarName<"<profile>">,
   HelpText<"Set target profile">,
   Values<"ps_6_0, ps_6_1, ps_6_2, ps_6_3, ps_6_4, ps_6_5, ps_6_6, ps_6_7,"
