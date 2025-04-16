@@ -23,6 +23,7 @@
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <cstdlib>
 #include <optional>
 
 using namespace llvm;
@@ -5334,6 +5335,100 @@ TEST_F(OpenMPIRBuilderTest, CreateReductions) {
   Value *FirstRHS;
   Value *SecondRHS;
   EXPECT_TRUE(findGEPZeroOne(ReductionFn->getArg(1), FirstRHS, SecondRHS));
+}
+
+void createScan(llvm::Value *scanVar, llvm::Type *scanType,
+                OpenMPIRBuilder &OMPBuilder, IRBuilder<> &Builder,
+                OpenMPIRBuilder::LocationDescription Loc,
+                OpenMPIRBuilder::InsertPointTy &allocaIP) {
+  using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
+  ASSERT_EXPECTED_INIT(
+      InsertPointTy, retIp,
+      OMPBuilder.createScan(Loc, allocaIP, {scanVar}, {scanType}, true));
+  Builder.restoreIP(retIp);
+}
+
+TEST_F(OpenMPIRBuilderTest, ScanReduction) {
+  using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
+  OpenMPIRBuilder OMPBuilder(*M);
+  OMPBuilder.initialize();
+  IRBuilder<> Builder(BB);
+  OpenMPIRBuilder::LocationDescription Loc({Builder.saveIP(), DL});
+  Value *TripCount = F->getArg(0);
+  Type *LCTy = TripCount->getType();
+  Value *StartVal = ConstantInt::get(LCTy, 1);
+  Value *StopVal = ConstantInt::get(LCTy, 100);
+  Value *Step = ConstantInt::get(LCTy, 1);
+  auto AllocaIP = Builder.saveIP();
+
+  llvm::Value *ScanVar = Builder.CreateAlloca(Builder.getFloatTy());
+  llvm::Value *OrigVar = Builder.CreateAlloca(Builder.getFloatTy());
+  unsigned NumBodiesGenerated = 0;
+  auto LoopBodyGenCB = [&](InsertPointTy CodeGenIP, llvm::Value *LC) {
+    NumBodiesGenerated += 1;
+    Builder.restoreIP(CodeGenIP);
+    createScan(ScanVar, Builder.getFloatTy(), OMPBuilder, Builder, Loc,
+               AllocaIP);
+    return Error::success();
+  };
+  SmallVector<CanonicalLoopInfo *> Loops;
+  ASSERT_EXPECTED_INIT(SmallVector<CanonicalLoopInfo *>, loopsVec,
+                       OMPBuilder.createCanonicalScanLoops(
+                           Loc, LoopBodyGenCB, StartVal, StopVal, Step, false,
+                           false, Builder.saveIP(), "scan"));
+  Loops = loopsVec;
+  EXPECT_EQ(Loops.size(), 2U);
+  CanonicalLoopInfo *InputLoop = Loops.front();
+  CanonicalLoopInfo *ScanLoop = Loops.back();
+  Builder.restoreIP(ScanLoop->getAfterIP());
+  InputLoop->assertOK();
+  ScanLoop->assertOK();
+
+  EXPECT_EQ(ScanLoop->getAfter(), Builder.GetInsertBlock());
+  EXPECT_EQ(NumBodiesGenerated, 2U);
+  SmallVector<OpenMPIRBuilder::ReductionInfo> ReductionInfos = {
+      {Builder.getFloatTy(), OrigVar, ScanVar,
+       /*EvaluationKind=*/OpenMPIRBuilder::EvalKind::Scalar, sumReduction,
+       /*ReductionGenClang=*/nullptr, sumAtomicReduction}};
+  OpenMPIRBuilder::LocationDescription RedLoc({InputLoop->getAfterIP(), DL});
+  llvm::BasicBlock *Cont = splitBB(Builder, false, "omp.scan.loop.cont");
+  ASSERT_EXPECTED_INIT(InsertPointTy, retIp,
+                       OMPBuilder.emitScanReduction(RedLoc, ReductionInfos));
+  Builder.restoreIP(retIp);
+  Builder.CreateBr(Cont);
+  Builder.SetInsertPoint(Cont);
+  unsigned NumMallocs = 0;
+  unsigned NumFrees = 0;
+  unsigned NumMasked = 0;
+  unsigned NumEndMasked = 0;
+  unsigned NumLog = 0;
+  unsigned NumCeil = 0;
+  for (Instruction &I : instructions(F)) {
+    if (isa<CallInst>(I)) {
+      CallInst *Call = dyn_cast<CallInst>(&I);
+      auto Name = Call->getCalledFunction()->getName();
+      if (Name.equals_insensitive("malloc")) {
+        NumMallocs += 1;
+      } else if (Name.equals_insensitive("free")) {
+        NumFrees += 1;
+      } else if (Name.equals_insensitive("__kmpc_masked")) {
+        NumMasked += 1;
+      } else if (Name.equals_insensitive("__kmpc_end_masked")) {
+        NumEndMasked += 1;
+      } else if (Name.equals_insensitive("llvm.log2.f64")) {
+        NumLog += 1;
+      } else if (Name.equals_insensitive("llvm.ceil.f64")) {
+        NumCeil += 1;
+      }
+    }
+  }
+  EXPECT_EQ(NumBodiesGenerated, 2U);
+  EXPECT_EQ(NumMasked, 3U);
+  EXPECT_EQ(NumEndMasked, 3U);
+  EXPECT_EQ(NumMallocs, 1U);
+  EXPECT_EQ(NumFrees, 1U);
+  EXPECT_EQ(NumLog, 1U);
+  EXPECT_EQ(NumCeil, 1U);
 }
 
 TEST_F(OpenMPIRBuilderTest, CreateTwoReductions) {
