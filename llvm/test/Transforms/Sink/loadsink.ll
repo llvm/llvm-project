@@ -150,3 +150,49 @@ thenB:
 mergeC:
   ret void
 }
+
+; Load can be sunk, but not all the way to the use.
+define void @load_can_sink_part_of_the_way(i1 %condA, i1 %condB, i1 %condC, ptr noalias %a, ptr %b) {
+; CHECK-LABEL: @load_can_sink_part_of_the_way(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[MERGEA:%.*]]
+; CHECK:       mergeA:
+; CHECK-NEXT:    br i1 [[CONDA:%.*]], label [[THENA:%.*]], label [[MERGEB:%.*]]
+; CHECK:       thenA:
+; CHECK-NEXT:    store i32 0, ptr [[B:%.*]], align 4
+; CHECK-NEXT:    br label [[MERGEB]]
+; CHECK:       mergeB:
+; CHECK-NEXT:    [[VALUE:%.*]] = load i32, ptr [[A:%.*]], align 4
+; CHECK-NEXT:    br i1 [[CONDB:%.*]], label [[THENB:%.*]], label [[MERGEC:%.*]]
+; CHECK:       thenB:
+; CHECK-NEXT:    call void @maywritefunc()
+; CHECK-NEXT:    br label [[MERGEC]]
+; CHECK:       mergeC:
+; CHECK-NEXT:    br i1 [[CONDC:%.*]], label [[THENC:%.*]], label [[MERGED:%.*]]
+; CHECK:       thenC:
+; CHECK-NEXT:    store i32 [[VALUE]], ptr [[B]], align 4
+; CHECK-NEXT:    br label [[MERGEC]]
+; CHECK:       mergeD:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %value = load i32, ptr %a, align 4
+  br label %mergeA
+mergeA:
+  br i1 %condA, label %thenA, label %mergeB
+thenA:
+  store i32 0, ptr %b
+  br label %mergeB
+mergeB:
+  br i1 %condB, label %thenB, label %mergeC
+thenB:
+  call void @maywritefunc()
+  br label %mergeC
+mergeC:
+  br i1 %condC, label %thenC, label %mergeD
+thenC:
+  store i32 %value, ptr %b
+  br label %mergeC
+mergeD:
+  ret void
+}
