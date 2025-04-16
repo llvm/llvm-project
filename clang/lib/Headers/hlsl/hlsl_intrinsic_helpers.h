@@ -71,6 +71,42 @@ constexpr vector<T, L> reflect_vec_impl(vector<T, L> I, vector<T, L> N) {
 #endif
 }
 
+template <typename T> constexpr T refract_impl(T I, T N, T eta) {
+  T k = 1 - eta * eta * (1 - (N * I * N *I));
+  if(k < 0)
+    return 0;
+  else
+    return (eta * I - (eta * N * I + sqrt(k)) * N);
+}
+
+template <typename T, int L>
+constexpr vector<T, L> refract_vec_impl(vector<T, L> I, vector<T, L> N, T eta) {
+#if (__has_builtin(__builtin_spirv_refract))
+  return __builtin_spirv_refract(I, N, eta);
+#else
+  vector<T, L> k = 1 - eta * eta * (1 - dot(N, I) * dot(N, I));
+  if(k < 0)
+    return 0;
+  else
+    return (eta * I - (eta * dot(N, I) + sqrt(k)) * N);
+#endif
+}
+
+/*
+template <typename T, typename U> constexpr T refract_impl(T I, T N, U eta) {
+  return I - 2 * N * I * N;
+}
+
+template <typename T, int L>
+constexpr vector<T, L> refract_vec_impl(vector<T, L> I, vector<T, L> N) {
+#if (__has_builtin(__builtin_spirv_refract))
+  return __builtin_spirv_refract(I, N);
+#else
+  return I - 2 * N * dot(I, N);
+#endif
+}
+*/
+
 template <typename T> constexpr T fmod_impl(T X, T Y) {
 #if !defined(__DIRECTX__)
   return __builtin_elementwise_fmod(X, Y);
