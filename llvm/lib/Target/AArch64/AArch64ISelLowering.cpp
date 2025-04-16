@@ -1585,44 +1585,6 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::MSTORE, VT, Custom);
     }
 
-    if (EnablePartialReduceNodes) {
-      // Mark known legal pairs as 'Legal' (these will expand to UDOT or SDOT).
-      // Other pairs will default to 'Expand'.
-      setPartialReduceMLAAction(MVT::nxv2i64, MVT::nxv8i16, Legal);
-      setPartialReduceMLAAction(MVT::nxv4i32, MVT::nxv16i8, Legal);
-
-      auto CanSplitToLegalPartialReduce = [&](MVT AccTy, MVT InTy) {
-        while (true) {
-          switch (getTypeAction(AccTy)) {
-          case TargetLoweringBase::TypeLegal:
-            return isPartialReduceMLALegalOrCustom(AccTy, InTy);
-          case TargetLoweringBase::TypeSplitVector:
-            if (!InTy.getVectorElementCount().isKnownEven())
-              return false;
-            // Currently, we only implement spillting for partial reductions,
-            // which splits the result and both operands.
-            AccTy = AccTy.getHalfNumVectorElementsVT();
-            InTy = InTy.getHalfNumVectorElementsVT();
-            break;
-          default:
-            // Assume all other type pairs are expanded.
-            return false;
-          }
-        }
-      };
-
-      for (MVT VT : MVT::integer_scalable_vector_valuetypes()) {
-        for (MVT InnerVT : MVT::integer_scalable_vector_valuetypes()) {
-          // Mark illegal type pairs that split to a legal pair as legal.
-          // This is needed as otherwise we may not apply useful combines.
-          if (!isTypeLegal(VT) || !isTypeLegal(InnerVT)) {
-            if (CanSplitToLegalPartialReduce(VT, InnerVT))
-              setPartialReduceMLAAction(VT, InnerVT, Legal);
-          }
-        }
-      }
-    }
-
     // Firstly, exclude all scalable vector extending loads/truncating stores,
     // include both integer and floating scalable vector.
     for (MVT VT : MVT::scalable_vector_valuetypes()) {
@@ -1868,6 +1830,28 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::INTRINSIC_WO_CHAIN, VT, Custom);
   }
 
+  // Handle partial reduction operations
+  if (EnablePartialReduceNodes) {
+    auto SetPartialReductionMLAActionAsAppropriate = [&](MVT AccVt,
+                                                         MVT InnerVT) -> void {
+      if (!isTypeLegal(AccVt) || !isTypeLegal(InnerVT))
+        setPartialReduceMLAAction(AccVt, InnerVT, Legal);
+    };
+
+    if (Subtarget->isSVEorStreamingSVEAvailable()) {
+      // Mark known legal pairs as 'Legal' (these will expand to UDOT or SDOT).
+      // Other pairs will default to 'Expand'.
+      setPartialReduceMLAAction(MVT::nxv2i64, MVT::nxv8i16, Legal);
+      setPartialReduceMLAAction(MVT::nxv4i32, MVT::nxv16i8, Legal);
+
+      for (MVT VT : MVT::integer_scalable_vector_valuetypes()) {
+        for (MVT InnerVT : MVT::integer_scalable_vector_valuetypes()) {
+          SetPartialReductionMLAActionAsAppropriate(VT, InnerVT);
+        }
+      }
+    }
+  }
+
   // Handle operations that are only available in non-streaming SVE mode.
   if (Subtarget->isSVEAvailable()) {
     for (auto VT : {MVT::nxv16i8,  MVT::nxv8i16, MVT::nxv4i32,  MVT::nxv2i64,
@@ -1906,7 +1890,6 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
                          Custom);
     }
   }
-
 
   if (Subtarget->hasMOPS() && Subtarget->hasMTE()) {
     // Only required for llvm.aarch64.mops.memset.tag

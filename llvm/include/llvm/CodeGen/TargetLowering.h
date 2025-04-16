@@ -1644,13 +1644,8 @@ public:
   /// larger size, needs to be expanded to some other code sequence, or the
   /// target has a custom expander for it.
   LegalizeAction getPartialReduceMLAAction(EVT AccVT, EVT InputVT) const {
-    auto AccSVT = AccVT.getSimpleVT();
-    auto InputSVT = InputVT.getSimpleVT();
-    assert(AccSVT.isValid() && InputSVT.isValid() &&
-           "getPartialReduceMLAAction types aren't valid");
-    auto AccI = AccSVT.SimpleTy;
-    auto InputI = InputSVT.SimpleTy;
-    PartialReduceActionTypes TypePair = std::make_pair(AccI, InputI);
+    PartialReduceActionTypes TypePair = {AccVT.getSimpleVT().SimpleTy,
+                                         InputVT.getSimpleVT().SimpleTy};
     auto It = PartialReduceMLAActions.find(TypePair);
     if (It != PartialReduceMLAActions.end())
       return It->second;
@@ -1660,8 +1655,8 @@ public:
   /// Return true if a PARTIAL_REDUCE_U/SMLA node with the specified types is
   /// legal or custom for this target.
   bool isPartialReduceMLALegalOrCustom(EVT AccVT, EVT InputVT) const {
-    return getPartialReduceMLAAction(AccVT, InputVT) == Legal ||
-           getPartialReduceMLAAction(AccVT, InputVT) == Custom;
+    LegalizeAction Action = getPartialReduceMLAAction(AccVT, InputVT);
+    return Action == Legal || Action == Custom;
   }
 
   /// If the action for this operation is to promote, this method returns the
@@ -2745,9 +2740,7 @@ protected:
                                  LegalizeAction Action) {
     assert(AccVT.isValid() && InputVT.isValid() &&
            "setPartialReduceMLAAction types aren't valid");
-    auto AccI = AccVT.SimpleTy;
-    auto InputI = InputVT.SimpleTy;
-    PartialReduceActionTypes TypePair = std::make_pair(AccI, InputI);
+    PartialReduceActionTypes TypePair = {AccVT.SimpleTy, InputVT.SimpleTy};
     PartialReduceMLAActions[TypePair] = Action;
   }
 
