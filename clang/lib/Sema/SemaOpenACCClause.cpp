@@ -1343,7 +1343,7 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitDeviceTypeClause(
   // the limitation, since the Dialect requires this.
   if (Clause.getDirectiveKind() == OpenACCDirectiveKind::Set &&
       Clause.getDeviceTypeArchitectures().size() > 1) {
-    SemaRef.Diag(Clause.getDeviceTypeArchitectures()[1].getLoc(),
+    SemaRef.Diag(Clause.getDeviceTypeArchitectures()[1].second,
                  diag::err_acc_device_type_multiple_archs);
     return nullptr;
   }
@@ -1369,17 +1369,16 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitDeviceTypeClause(
   bool Diagnosed = false;
   auto FilterPred = [&](const DeviceTypeArgument &Arch) {
     // The '*' case.
-    if (!Arch.getIdentifierInfo())
+    if (!Arch.first)
       return false;
     return llvm::find_if(ValidValues, [&](StringRef RHS) {
-             return Arch.getIdentifierInfo()->getName().equals_insensitive(RHS);
+             return Arch.first->getName().equals_insensitive(RHS);
            }) == ValidValues.end();
   };
 
   auto Diagnose = [&](const DeviceTypeArgument &Arch) {
-    Diagnosed = SemaRef.Diag(Arch.getLoc(), diag::err_acc_invalid_default_type)
-                << Arch.getIdentifierInfo() << Clause.getClauseKind()
-                << ValidValuesString;
+    Diagnosed = SemaRef.Diag(Arch.second, diag::err_acc_invalid_default_type)
+                << Arch.first << Clause.getClauseKind() << ValidValuesString;
   };
 
   // There aren't stable enumertor versions of 'for-each-then-erase', so do it

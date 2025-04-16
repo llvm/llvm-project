@@ -1219,9 +1219,9 @@ void GetDependenciesByModuleNameAction::ExecuteAction() {
   FileID MainFileID = SM.getMainFileID();
   PP.EnterSourceFile(MainFileID, nullptr, SourceLocation());
   SourceLocation FileStart = SM.getLocForStartOfFile(MainFileID);
-  SmallVector<IdentifierLoc, 2> Path;
+  SmallVector<std::pair<IdentifierInfo *, SourceLocation>, 2> Path;
   IdentifierInfo *ModuleID = PP.getIdentifierInfo(ModuleName);
-  Path.emplace_back(FileStart, ModuleID);
+  Path.push_back(std::make_pair(ModuleID, FileStart));
   auto ModResult = CI.loadModule(FileStart, Path, Module::Hidden, false);
   PPCallbacks *CB = PP.getPPCallbacks();
   CB->moduleImport(SourceLocation(), Path, ModResult);

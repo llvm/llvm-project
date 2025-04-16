@@ -102,8 +102,8 @@ static void diagnoseBadTypeAttribute(Sema &S, const ParsedAttr &attr,
   StringRef name = attr.getAttrName()->getName();
 
   // The GC attributes are usually written with macros;  special-case them.
-  IdentifierInfo *II =
-      attr.isArgIdent(0) ? attr.getArgAsIdent(0)->getIdentifierInfo() : nullptr;
+  IdentifierInfo *II = attr.isArgIdent(0) ? attr.getArgAsIdent(0)->Ident
+                                          : nullptr;
   if (useExpansionLoc && loc.isMacroID() && II) {
     if (II->isStr("strong")) {
       if (S.findMacroSpelling(loc, "__strong")) name = "__strong";
@@ -5817,7 +5817,8 @@ static void transferARCOwnershipToDeclaratorChunk(TypeProcessingState &state,
   }
 
   IdentifierLoc *Arg = new (S.Context) IdentifierLoc;
-  Arg->setIdentifierInfo(&S.Context.Idents.get(attrStr));
+  Arg->Ident = &S.Context.Idents.get(attrStr);
+  Arg->Loc = SourceLocation();
 
   ArgsUnion Args(Arg);
 
@@ -6735,7 +6736,7 @@ static bool handleObjCOwnershipTypeAttr(TypeProcessingState &state,
     return true;
   }
 
-  IdentifierInfo *II = attr.getArgAsIdent(0)->getIdentifierInfo();
+  IdentifierInfo *II = attr.getArgAsIdent(0)->Ident;
   Qualifiers::ObjCLifetime lifetime;
   if (II->isStr("none"))
     lifetime = Qualifiers::OCL_ExplicitNone;
@@ -6913,7 +6914,7 @@ static bool handleObjCGCTypeAttr(TypeProcessingState &state, ParsedAttr &attr,
     return true;
   }
 
-  IdentifierInfo *II = attr.getArgAsIdent(0)->getIdentifierInfo();
+  IdentifierInfo *II = attr.getArgAsIdent(0)->Ident;
   if (II->isStr("weak"))
     GCAttr = Qualifiers::Weak;
   else if (II->isStr("strong"))
@@ -7643,7 +7644,7 @@ static Attr *getCCTypeAttr(ASTContext &Ctx, ParsedAttr &Attr) {
     if (Attr.isArgExpr(0))
       Str = cast<StringLiteral>(Attr.getArgAsExpr(0))->getString();
     else
-      Str = Attr.getArgAsIdent(0)->getIdentifierInfo()->getName();
+      Str = Attr.getArgAsIdent(0)->Ident->getName();
     PcsAttr::PCSType Type;
     if (!PcsAttr::ConvertStrToPCSType(Str, Type))
       llvm_unreachable("already validated the attribute");

@@ -1182,7 +1182,7 @@ void SemaARM::handleBuiltinAliasAttr(Decl *D, const ParsedAttr &AL) {
     return;
   }
 
-  IdentifierInfo *Ident = AL.getArgAsIdent(0)->getIdentifierInfo();
+  IdentifierInfo *Ident = AL.getArgAsIdent(0)->Ident;
   unsigned BuiltinID = Ident->getBuiltinID();
   StringRef AliasName = cast<FunctionDecl>(D)->getIdentifier()->getName();
 
