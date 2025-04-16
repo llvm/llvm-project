@@ -3,8 +3,8 @@
 // RUN: ld.lld %t.o --shared -o %t.so
 // RUN: llvm-readelf -n %t.so | FileCheck %s --check-prefix=NOTE
 
-/// The Build attributes section appearing in the output of 
-/// llvm-mc should not appear in the output of lld, because 
+/// The Build attributes section appearing in the output of
+/// llvm-mc should not appear in the output of lld, because
 /// AArch64 build attributes are being transformed into .gnu.properties.
 
 // Test mc -> big endian, lld -> little endian

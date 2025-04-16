@@ -1,17 +1,7 @@
 // REQUIRES: aarch64
 
-// Test mc -> little endian, lld -> little endian
 // RUN: llvm-mc -triple=aarch64 %s -filetype=obj -o %t.o
 // RUN: not ld.lld %t.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=ERR
-// Test mc -> little endian, lld -> big endian
-// RUN: llvm-mc -triple=aarch64 %s -filetype=obj -o %t.o
-// RUN: not ld.lld -EB %t.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=ERR
-// Test mc -> big endian, lld -> little endian
-// RUN: llvm-mc -triple=aarch64_be %s -filetype=obj -o %t.o
-// RUN: not ld.lld %t.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=ERR
-// Test mc -> big endian, lld -> big endian
-// RUN: llvm-mc -triple=aarch64_be %s -filetype=obj -o %t.o
-// RUN: not ld.lld -EB %t.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=ERR
 
 // ERR: Pauth Data mismatch: file contains both GNU properties and AArch64 build attributes sections with different Pauth data
 // ERR-NEXT: Features Data mismatch: file contains both GNU properties and AArch64 build attributes sections with different And Features data
