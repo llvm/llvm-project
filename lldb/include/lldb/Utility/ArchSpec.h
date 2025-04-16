@@ -236,6 +236,12 @@ public:
 
     eCore_wasm32,
 
+    eCore_amd_gpu_r600,
+    eCore_amd_gpu_gcn,
+
+    eCore_nvidia_nvptx,
+    eCore_nvidia_nvptx64,
+
     kNumCores,
 
     kCore_invalid,
