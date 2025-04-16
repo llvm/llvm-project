@@ -917,7 +917,7 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
       TheModule->getContext(),
       (CodeGenOpts.DebugPassManager || DebugPassStructure),
       CodeGenOpts.VerifyEach, PrintPassOpts);
-  SI.registerCallbacks(PIC, &MAM);
+  SI.registerCallbacks(PIC, &MAM, &FAM);
   PassBuilder PB(TM.get(), PTO, PGOOpt, &PIC);
 
   // Handle the assignment tracking feature options.

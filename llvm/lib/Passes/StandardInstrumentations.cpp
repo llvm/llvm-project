@@ -1474,7 +1474,7 @@ void VerifyInstrumentation::registerCallbacks(PassInstrumentationCallbacks &PIC,
           if (FAM) {
             TargetVerify TV(const_cast<Module*>(F->getParent()));
             TV.run(*const_cast<Function*>(F), *FAM);
-	    if (!F->getParent()->IsValid)
+	    if (!TV.IsValid)
               report_fatal_error(formatv("Broken function found after pass "
                                          "\"{0}\", compilation aborted!",
                                          P));

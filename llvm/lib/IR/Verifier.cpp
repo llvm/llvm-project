@@ -7870,7 +7870,7 @@ VerifierAnalysis::Result VerifierAnalysis::run(Function &F,
 PreservedAnalyses VerifierPass::run(Module &M, ModuleAnalysisManager &AM) {
   auto Res = AM.getResult<VerifierAnalysis>(M);
   if (Res.IRBroken || Res.DebugInfoBroken) {
-    M.IsValid = false;
+    //M.IsValid = false;
     if (VerifyAbortOnError && FatalErrors)
       report_fatal_error("Broken module found, compilation aborted!");
   }
@@ -7881,7 +7881,7 @@ PreservedAnalyses VerifierPass::run(Module &M, ModuleAnalysisManager &AM) {
 PreservedAnalyses VerifierPass::run(Function &F, FunctionAnalysisManager &AM) {
   auto res = AM.getResult<VerifierAnalysis>(F);
   if (res.IRBroken) {
-    F.getParent()->IsValid = false;
+    //F.getParent()->IsValid = false;
     if (VerifyAbortOnError && FatalErrors)
       report_fatal_error("Broken function found, compilation aborted!");
   }

@@ -70,6 +70,8 @@ public:
   std::string Messages;
   raw_string_ostream MessagesStr;
 
+  bool IsValid = true;
+
   TargetVerify(Module *Mod)
       : Mod(Mod), TT(Triple::normalize(Mod->getTargetTriple())),
         MessagesStr(Messages) {}
