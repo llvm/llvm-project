@@ -1421,7 +1421,7 @@ void State::addInfoFor(BasicBlock &BB) {
   bool GuaranteedToExecute = true;
   // Queue conditions and assumes.
   for (Instruction &I : BB) {
-    if (auto Cmp = dyn_cast<ICmpInst>(&I)) {
+    if (auto *Cmp = dyn_cast<ICmpInst>(&I)) {
       for (Value *Op : Cmp->operands()) {
         if (!isa<ConstantExpr>(Op))
           continue;
