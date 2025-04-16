@@ -3925,7 +3925,6 @@ public:
       // Only emit declarations that aren't from a chained PCH, though.
       SmallVector<NamedDecl *, 16> Decls(IdResolver->decls(II));
       for (NamedDecl *D : llvm::reverse(Decls))
-        // TMP: corresponding `getDeclForLocalLookup` call
         LE.write<DeclID>((DeclID)Writer.getDeclID(
             getDeclForLocalLookup(PP.getLangOpts(), D)));
     }
@@ -3970,7 +3969,6 @@ void ASTWriter::WriteIdentifierTable(Preprocessor &PP,
       if (isLocalIdentifierID(ID) || II->hasChangedSinceDeserialization() ||
           (Trait.needDecls() &&
            II->hasFETokenInfoChangedSinceDeserialization()))
-        // TMP: ^ corresponding `hasFETokenInfoChangedSinceDeserialization` call
         Generator.insert(II, ID, Trait);
     }
 
@@ -6849,7 +6847,6 @@ LocalDeclID ASTWriter::GetDeclRef(const Decl *D) {
   }
 
   assert(!(reinterpret_cast<uintptr_t>(D) & 0x01) && "Invalid decl pointer");
-  // TMP: adding D to DeclIDs
   LocalDeclID &ID = DeclIDs[D];
   if (ID.isInvalid()) {
     if (DoneWritingDeclsAndTypes) {
