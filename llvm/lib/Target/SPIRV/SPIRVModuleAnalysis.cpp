@@ -185,7 +185,11 @@ void SPIRVModuleAnalysis::setBaseInfo(const Module &M) {
     // OpenCL 1.0 by default for the OpenCL environment to avoid puzzling
     // run-times with Unknown/0.0 version output. For a reference, LLVM-SPIRV
     // Translator avoids potential issues with run-times in a similar manner.
-    if (ST->isOpenCLEnv()) {
+    // FIXME: At the moment, `isOpenCLEnv()` is not precise enough. This is
+    // because the Triple is not always precise enough. For now, we'll rely
+    // instead on `isLogicalSPIRV()`, but this should be changed when
+    // `isOpenCLEnv()` is precise enough.
+    if (!ST->isLogicalSPIRV()) {
       MAI.SrcLang = SPIRV::SourceLanguage::OpenCL_CPP;
       MAI.SrcLangVersion = 100000;
     } else {
