@@ -893,25 +893,6 @@ CompilerDecl CompilerType::GetStaticFieldWithName(llvm::StringRef name) const {
   return CompilerDecl();
 }
 
-uint32_t CompilerType::GetIndexOfFieldWithName(
-    const char *name, CompilerType *field_compiler_type_ptr,
-    uint64_t *bit_offset_ptr, uint32_t *bitfield_bit_size_ptr,
-    bool *is_bitfield_ptr) const {
-  unsigned count = GetNumFields();
-  std::string field_name;
-  for (unsigned index = 0; index < count; index++) {
-    CompilerType field_compiler_type(
-        GetFieldAtIndex(index, field_name, bit_offset_ptr,
-                        bitfield_bit_size_ptr, is_bitfield_ptr));
-    if (strcmp(field_name.c_str(), name) == 0) {
-      if (field_compiler_type_ptr)
-        *field_compiler_type_ptr = field_compiler_type;
-      return index;
-    }
-  }
-  return UINT32_MAX;
-}
-
 llvm::Expected<CompilerType> CompilerType::GetChildCompilerTypeAtIndex(
     ExecutionContext *exe_ctx, size_t idx, bool transparent_pointers,
     bool omit_empty_base_classes, bool ignore_array_bounds,

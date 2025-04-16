@@ -50,27 +50,6 @@ public:
 
   typedef std::tuple<const char *, uint64_t, uint64_t> field_tuple;
 
-  void ExpectField(const CompilerType &siginfo_type, field_tuple field) {
-    const char *path;
-    uint64_t offset, size;
-    std::tie(path, offset, size) = field;
-
-    SCOPED_TRACE(path);
-    CompilerType field_type = siginfo_type;
-    uint64_t total_offset = 0;
-    for (auto field_name : llvm::split(path, '.')) {
-      uint64_t bit_offset;
-      ASSERT_NE(field_type.GetIndexOfFieldWithName(field_name.str().c_str(),
-                                                   &field_type, &bit_offset),
-                UINT32_MAX);
-      total_offset += bit_offset;
-    }
-
-    EXPECT_EQ(total_offset, offset * 8);
-    EXPECT_EQ(llvm::expectedToOptional(field_type.GetByteSize(nullptr)),
-              std::optional<uint64_t>(size));
-  }
-
   void ExpectFields(const CompilerType &container,
                     std::initializer_list<field_tuple> fields) {
     for (auto x : fields)
