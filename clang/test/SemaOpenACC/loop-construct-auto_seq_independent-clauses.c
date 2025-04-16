@@ -592,6 +592,10 @@ void uses() {
   // expected-note@+1{{previous clause is here}}
 #pragma acc loop seq gang
   for(unsigned i = 0; i < 5; ++i);
+  // expected-error@+2{{OpenACC clause 'seq' may not appear on the same construct as a 'gang' clause on a 'loop' construct}}
+  // expected-note@+1{{previous clause is here}}
+#pragma acc loop gang seq
+  for(unsigned i = 0; i < 5; ++i);
   // expected-error@+2{{OpenACC clause 'worker' may not appear on the same construct as a 'seq' clause on a 'loop' construct}}
   // expected-note@+1{{previous clause is here}}
 #pragma acc loop seq worker

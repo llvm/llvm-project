@@ -146,6 +146,31 @@ class SemaOpenACCClauseVisitor {
   ASTContext &Ctx;
   ArrayRef<const OpenACCClause *> ExistingClauses;
 
+  // OpenACC 3.3 2.9:
+  //  A 'gang', 'worker', or 'vector' clause may not appear if a 'seq' clause
+  //  appears.
+  bool
+  DiagGangWorkerVectorSeqConflict(SemaOpenACC::OpenACCParsedClause &Clause) {
+    if (Clause.getDirectiveKind() != OpenACCDirectiveKind::Loop &&
+        !isOpenACCCombinedDirectiveKind(Clause.getDirectiveKind()))
+      return false;
+    assert(Clause.getClauseKind() == OpenACCClauseKind::Gang ||
+           Clause.getClauseKind() == OpenACCClauseKind::Worker ||
+           Clause.getClauseKind() == OpenACCClauseKind::Vector);
+    const auto *Itr =
+        llvm::find_if(ExistingClauses, llvm::IsaPred<OpenACCSeqClause>);
+
+    if (Itr != ExistingClauses.end()) {
+      SemaRef.Diag(Clause.getBeginLoc(), diag::err_acc_clause_cannot_combine)
+          << Clause.getClauseKind() << (*Itr)->getClauseKind()
+          << Clause.getDirectiveKind();
+      SemaRef.Diag((*Itr)->getBeginLoc(), diag::note_acc_previous_clause_here);
+
+      return true;
+    }
+    return false;
+  }
+
   OpenACCModifierKind
   CheckModifierList(SemaOpenACC::OpenACCParsedClause &Clause,
                     OpenACCModifierKind Mods) {
@@ -1093,6 +1118,9 @@ ExprResult CheckGangRoutineExpr(SemaOpenACC &S, OpenACCDirectiveKind DK,
 
 OpenACCClause *SemaOpenACCClauseVisitor::VisitVectorClause(
     SemaOpenACC::OpenACCParsedClause &Clause) {
+  if (DiagGangWorkerVectorSeqConflict(Clause))
+    return nullptr;
+
   Expr *IntExpr =
       Clause.getNumIntExprs() != 0 ? Clause.getIntExprs()[0] : nullptr;
   if (IntExpr) {
@@ -1189,6 +1217,9 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitVectorClause(
 
 OpenACCClause *SemaOpenACCClauseVisitor::VisitWorkerClause(
     SemaOpenACC::OpenACCParsedClause &Clause) {
+  if (DiagGangWorkerVectorSeqConflict(Clause))
+    return nullptr;
+
   Expr *IntExpr =
       Clause.getNumIntExprs() != 0 ? Clause.getIntExprs()[0] : nullptr;
 
@@ -1295,6 +1326,10 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitWorkerClause(
 
 OpenACCClause *SemaOpenACCClauseVisitor::VisitGangClause(
     SemaOpenACC::OpenACCParsedClause &Clause) {
+
+  if (DiagGangWorkerVectorSeqConflict(Clause))
+    return nullptr;
+
   // OpenACC 3.3 Section 2.9.11: A reduction clause may not appear on a loop
   // directive that has a gang clause and is within a compute construct that has
   // a num_gangs clause with more than one explicit argument.
@@ -1431,6 +1466,22 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitIfPresentClause(
 
 OpenACCClause *SemaOpenACCClauseVisitor::VisitSeqClause(
     SemaOpenACC::OpenACCParsedClause &Clause) {
+  // OpenACC 3.3 2.9:
+  //  A 'gang', 'worker', or 'vector' clause may not appear if a 'seq' clause
+  //  appears.
+  if (Clause.getDirectiveKind() == OpenACCDirectiveKind::Loop ||
+      isOpenACCCombinedDirectiveKind(Clause.getDirectiveKind())) {
+    const auto *Itr = llvm::find_if(
+        ExistingClauses, llvm::IsaPred<OpenACCGangClause, OpenACCVectorClause,
+                                       OpenACCWorkerClause>);
+    if (Itr != ExistingClauses.end()) {
+      SemaRef.Diag(Clause.getBeginLoc(), diag::err_acc_clause_cannot_combine)
+          << Clause.getClauseKind() << (*Itr)->getClauseKind()
+          << Clause.getDirectiveKind();
+      SemaRef.Diag((*Itr)->getBeginLoc(), diag::note_acc_previous_clause_here);
+      return nullptr;
+    }
+  }
 
   return OpenACCSeqClause::Create(Ctx, Clause.getBeginLoc(),
                                   Clause.getEndLoc());
