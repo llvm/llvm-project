@@ -18,7 +18,7 @@
 def simm11_lsb0 : Operand<OtherVT> {
   let ParserMatchClass = SImmAsmOperand<11, "Lsb0">;
   let PrintMethod = "printBranchOperand";
-  let EncoderMethod = "getImmOpValueAsr1";
+  let EncoderMethod = "getImmOpValueAsrN<1>";
   let DecoderMethod = "decodeSImmOperandAndLsl1<11>";
   let MCOperandPredicate = [{
     int64_t Imm;
@@ -37,7 +37,7 @@ def simm18 : Operand<XLenVT> {
 
 def simm18_lsb0 : Operand<XLenVT> {
   let ParserMatchClass = SImmAsmOperand<18, "Lsb0">;
-  let EncoderMethod = "getImmOpValueAsr1";
+  let EncoderMethod = "getImmOpValueAsrN<1>";
   let DecoderMethod = "decodeSImmOperandAndLsl1<18>";
 }
 
