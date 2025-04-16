@@ -290,3 +290,8 @@ def : Pat<(f32 fpimm0), (FZEROS)>;
 def : Pat<(f64 fpnegimm0), (FNEGD (FZERO))>;
 def : Pat<(f32 fpnegimm0), (FNEGS (FZEROS))>;
 } // Predicates = [HasVIS]
+
+// VIS3 instruction patterns.
+let Predicates = [HasVIS3] in {
+def : Pat<(i64 (adde i64:$lhs, i64:$rhs)), (ADDXCCC $lhs, $rhs)>;
+} // Predicates = [HasVIS3]
