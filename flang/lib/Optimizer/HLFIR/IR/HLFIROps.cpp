@@ -96,7 +96,7 @@ static llvm::LogicalResult areMatchingTypes(Op &op, mlir::Type type1,
 }
 
 //===----------------------------------------------------------------------===//
-// DeclareOp
+// AssignOp
 //===----------------------------------------------------------------------===//
 
 /// Is this a fir.[ref/ptr/heap]<fir.[box/class]<fir.heap<T>>> type?
@@ -207,10 +207,9 @@ static bool hasExplicitLowerBounds(mlir::Value shape) {
          mlir::isa<fir::ShapeShiftType, fir::ShiftType>(shape.getType());
 }
 
-static std::pair<mlir::Type, mlir::Value>
-updateTypeWithVolatility(mlir::Type inputType, mlir::Value memref,
-                         mlir::OpBuilder &builder,
-                         fir::FortranVariableFlagsAttr fortran_attrs) {
+static std::pair<mlir::Type, mlir::Value> updateDeclareInputTypeWithVolatility(
+    mlir::Type inputType, mlir::Value memref, mlir::OpBuilder &builder,
+    fir::FortranVariableFlagsAttr fortran_attrs) {
   if (mlir::isa<fir::BoxType, fir::ReferenceType>(inputType) && fortran_attrs &&
       bitEnumContainsAny(fortran_attrs.getFlags(),
                          fir::FortranVariableFlagsEnum::fortran_volatile)) {
@@ -246,8 +245,8 @@ void hlfir::DeclareOp::build(mlir::OpBuilder &builder,
   auto nameAttr = builder.getStringAttr(uniq_name);
   mlir::Type inputType = memref.getType();
   bool hasExplicitLbs = hasExplicitLowerBounds(shape);
-  std::tie(inputType, memref) =
-      updateTypeWithVolatility(inputType, memref, builder, fortran_attrs);
+  std::tie(inputType, memref) = updateDeclareInputTypeWithVolatility(
+      inputType, memref, builder, fortran_attrs);
   mlir::Type hlfirVariableType =
       getHLFIRVariableType(inputType, hasExplicitLbs);
   build(builder, result, {hlfirVariableType, inputType}, memref, shape,
