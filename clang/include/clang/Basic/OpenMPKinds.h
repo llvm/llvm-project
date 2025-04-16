@@ -411,7 +411,7 @@ bool isOpenMPCapturingDirective(OpenMPDirectiveKind DKind);
 /// directive that can be nested within region corresponding to construct
 /// on which order clause was specified with concurrent as ordering argument.
 /// \param DKind Specified directive.
-/// \param LangOpts Used for getting the OpenMP version
+/// \param LangOpts Used for getting the OpenMP version.
 /// \return true - if the above condition is met for this directive
 /// otherwise - false.
 bool isOpenMPOrderConcurrentNestableDirective(OpenMPDirectiveKind DKind,
