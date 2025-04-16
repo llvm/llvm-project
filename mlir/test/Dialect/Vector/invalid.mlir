@@ -1145,7 +1145,7 @@ func.func @shape_cast_wrong_num_elements(%arg0 : vector<5x1x3x2xf32>) {
 
 // -----
 
-func.func @shape_cast_invalid_rank_preservating(%arg0 : vector<3x2xf32>) {
+func.func @shape_cast_invalid_rank_preserving(%arg0 : vector<3x2xf32>) {
   // expected-error@+1 {{op is invalid (does not uniformly collapse or expand)}}
   %0 = vector.shape_cast %arg0 : vector<3x2xf32> to vector<2x3xf32>
 }
