@@ -404,6 +404,15 @@ declare_mlir_dialect_python_bindings(
 )
 
 declare_mlir_dialect_python_bindings(
+  ADD_TO_PARENT MLIRPythonSources.Dialects
+  ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
+  TD_FILE dialects/SMTOps.td
+  GEN_ENUM_BINDINGS
+  SOURCES
+    dialects/smt.py
+  DIALECT_NAME smt)
+
+declare_mlir_dialect_python_bindings(
     ADD_TO_PARENT MLIRPythonSources.Dialects
     ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
     TD_FILE dialects/SPIRVOps.td
@@ -662,6 +671,21 @@ declare_mlir_python_extension(MLIRPythonExtension.LinalgPasses
     LLVMSupport
   EMBED_CAPI_LINK_LIBS
     MLIRCAPILinalg
+)
+
+declare_mlir_python_extension(MLIRPythonExtension.Dialects.SMT.Pybind
+  MODULE_NAME _mlirDialectsSMT
+  ADD_TO_PARENT MLIRPythonSources.Dialects.smt
+  ROOT_DIR "${PYTHON_SOURCE_DIR}"
+  PYTHON_BINDINGS_LIBRARY nanobind
+  SOURCES
+    DialectSMT.cpp
+  PRIVATE_LINK_LIBS
+    LLVMSupport
+  EMBED_CAPI_LINK_LIBS
+    MLIRCAPIIR
+    MLIRCAPISMT
+    MLIRCAPIExportSMTLIB
 )
 
 declare_mlir_python_extension(MLIRPythonExtension.SparseTensorDialectPasses
