@@ -41,7 +41,8 @@ bb:
   %tmp20 = extractelement <4 x float> %tmp18, i32 1
   %tmp21 = extractelement <4 x float> %tmp18, i32 2
   %tmp22 = extractelement <4 x float> %tmp18, i32 3
-  %tmp23 = bitcast float %tmp14 to i32
+  %tmp23 = fadd float %tmp14, %tmp22
+  %tmp24 = bitcast float %tmp23 to i32
   br label %bb24
 
 bb24:                                             ; preds = %bb157, %bb
@@ -218,7 +219,7 @@ bb156:                                            ; preds = %bb24
 bb157:                                            ; preds = %bb24
   %tmp158 = bitcast float %tmp107 to i32
   %tmp159 = bitcast float %tmp107 to i32
-  %tmp160 = add i32 %tmp23, %tmp159
+  %tmp160 = add i32 %tmp24, %tmp159
   %tmp161 = bitcast i32 %tmp160 to float
   %tmp162 = insertelement <128 x float> poison, float %tmp103, i32 0
   %tmp163 = insertelement <128 x float> %tmp162, float %tmp102, i32 1
