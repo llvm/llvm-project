@@ -1795,6 +1795,8 @@ bool BinaryFunction::scanExternalRefs() {
     // Create relocation for every fixup.
     for (const MCFixup &Fixup : Fixups) {
       std::optional<Relocation> Rel = BC.MIB->createRelocation(Fixup, *BC.MAB);
+      // Can be skipped in case of overlow during relocation value encoding.
+      Rel->setOptional();
       if (!Rel) {
         Success = false;
         continue;
@@ -1893,6 +1895,15 @@ void BinaryFunction::postProcessEntryPoints() {
     // end of the function, e.g. jump tables.
     if (BC.isAArch64() && Offset == getSize())
       continue;
+
+    // If we have grabbed a wrong code label which actually points to some
+    // constant island inside the function, ignore this label and remove it
+    // from the secondary entry point map.
+    if (isStartOfConstantIsland(Offset)) {
+      BC.SymbolToFunctionMap.erase(Label);
+      removeSymbolFromSecondaryEntryPointMap(Label);
+      continue;
+    }
 
     BC.errs() << "BOLT-WARNING: reference in the middle of instruction "
                  "detected in function "

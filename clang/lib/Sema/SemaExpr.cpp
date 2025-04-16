@@ -2183,7 +2183,7 @@ Sema::ActOnStringLiteral(ArrayRef<Token> StringToks, Scope *UDLScope) {
 
   case LOLR_Template: {
     TemplateArgumentListInfo ExplicitArgs;
-    TemplateArgument Arg(Lit);
+    TemplateArgument Arg(Lit, /*IsCanonical=*/false);
     TemplateArgumentLocInfo ArgInfo(Lit);
     ExplicitArgs.addArgument(TemplateArgumentLoc(Arg, ArgInfo));
     return BuildLiteralOperatorCall(R, OpNameInfo, {}, StringTokLocs.back(),
@@ -8107,6 +8107,13 @@ static QualType checkConditionalPointerCompatibility(Sema &S, ExprResult &LHS,
   lhQual.removeCVRQualifiers();
   rhQual.removeCVRQualifiers();
 
+  if (!lhQual.getPointerAuth().isEquivalent(rhQual.getPointerAuth())) {
+    S.Diag(Loc, diag::err_typecheck_cond_incompatible_ptrauth)
+        << LHSTy << RHSTy << LHS.get()->getSourceRange()
+        << RHS.get()->getSourceRange();
+    return QualType();
+  }
+
   // OpenCL v2.0 specification doesn't extend compatibility of type qualifiers
   // (C99 6.7.3) for address spaces. We assume that the check should behave in
   // the same manner as it's defined for CVR qualifiers, so for OpenCL two
@@ -9025,6 +9032,10 @@ checkPointerTypesForAssignment(Sema &S, QualType LHSType, QualType RHSType,
 
     // Treat lifetime mismatches as fatal.
     else if (lhq.getObjCLifetime() != rhq.getObjCLifetime())
+      ConvTy = Sema::IncompatiblePointerDiscardsQualifiers;
+
+    // Treat pointer-auth mismatches as fatal.
+    else if (!lhq.getPointerAuth().isEquivalent(rhq.getPointerAuth()))
       ConvTy = Sema::IncompatiblePointerDiscardsQualifiers;
 
     // For GCC/MS compatibility, other qualifier mismatches are treated
@@ -10695,10 +10706,30 @@ QualType Sema::CheckRemainderOperands(
   ExprResult &LHS, ExprResult &RHS, SourceLocation Loc, bool IsCompAssign) {
   checkArithmeticNull(*this, LHS, RHS, Loc, /*IsCompare=*/false);
 
+  // Note: This check is here to simplify the double exclusions of
+  // scalar and vector HLSL checks. No getLangOpts().HLSL
+  // is needed since all languages exlcude doubles.
+  if (LHS.get()->getType()->isDoubleType() ||
+      RHS.get()->getType()->isDoubleType() ||
+      (LHS.get()->getType()->isVectorType() && LHS.get()
+                                                   ->getType()
+                                                   ->getAs<VectorType>()
+                                                   ->getElementType()
+                                                   ->isDoubleType()) ||
+      (RHS.get()->getType()->isVectorType() && RHS.get()
+                                                   ->getType()
+                                                   ->getAs<VectorType>()
+                                                   ->getElementType()
+                                                   ->isDoubleType()))
+    return InvalidOperands(Loc, LHS, RHS);
+
   if (LHS.get()->getType()->isVectorType() ||
       RHS.get()->getType()->isVectorType()) {
-    if (LHS.get()->getType()->hasIntegerRepresentation() &&
-        RHS.get()->getType()->hasIntegerRepresentation())
+    if ((LHS.get()->getType()->hasIntegerRepresentation() &&
+         RHS.get()->getType()->hasIntegerRepresentation()) ||
+        (getLangOpts().HLSL &&
+         (LHS.get()->getType()->hasFloatingRepresentation() ||
+          RHS.get()->getType()->hasFloatingRepresentation())))
       return CheckVectorOperands(LHS, RHS, Loc, IsCompAssign,
                                  /*AllowBothBool*/ getLangOpts().AltiVec,
                                  /*AllowBoolConversions*/ false,
@@ -10722,7 +10753,9 @@ QualType Sema::CheckRemainderOperands(
   if (LHS.isInvalid() || RHS.isInvalid())
     return QualType();
 
-  if (compType.isNull() || !compType->isIntegerType())
+  if (compType.isNull() ||
+      (!compType->isIntegerType() &&
+       !(getLangOpts().HLSL && compType->isFloatingType())))
     return InvalidOperands(Loc, LHS, RHS);
   DiagnoseBadDivideOrRemainderValues(*this, LHS, RHS, Loc, false /* IsDiv */);
   return compType;
@@ -17003,6 +17036,9 @@ bool Sema::DiagnoseAssignmentResult(AssignConvertType ConvTy,
     } else if (lhq.getObjCLifetime() != rhq.getObjCLifetime()) {
       DiagKind = diag::err_typecheck_incompatible_ownership;
       break;
+    } else if (!lhq.getPointerAuth().isEquivalent(rhq.getPointerAuth())) {
+      DiagKind = diag::err_typecheck_incompatible_ptrauth;
+      break;
     }
 
     llvm_unreachable("unknown error case for discarding qualifiers!");
@@ -21086,8 +21122,22 @@ ExprResult Sema::CheckPlaceholderExpr(Expr *E) {
     Diag(Temp->getLocation(), diag::note_referenced_type_template)
         << IsTypeAliasTemplateDecl;
 
-    QualType TST =
-        Context.getTemplateSpecializationType(TN, ULE->template_arguments());
+    TemplateArgumentListInfo TAL(ULE->getLAngleLoc(), ULE->getRAngleLoc());
+    bool HasAnyDependentTA = false;
+    for (const TemplateArgumentLoc &Arg : ULE->template_arguments()) {
+      HasAnyDependentTA |= Arg.getArgument().isDependent();
+      TAL.addArgument(Arg);
+    }
+
+    QualType TST;
+    {
+      SFINAETrap Trap(*this);
+      TST = CheckTemplateIdType(TN, NameInfo.getBeginLoc(), TAL);
+    }
+    if (TST.isNull())
+      TST = Context.getTemplateSpecializationType(
+          TN, ULE->template_arguments(), /*CanonicalArgs=*/std::nullopt,
+          HasAnyDependentTA ? Context.DependentTy : Context.IntTy);
     QualType ET =
         Context.getElaboratedType(ElaboratedTypeKeyword::None, NNS, TST);
     return CreateRecoveryExpr(NameInfo.getBeginLoc(), NameInfo.getEndLoc(), {},

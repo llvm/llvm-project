@@ -1516,7 +1516,7 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
   // to remove them.
 
   SmallVector<Instruction *, 4> LifetimeMarkers;
-  SmallSet<Instruction *, 4> NoAliasInstrs;
+  SmallSet<Instruction *, 4> AAMetadataInstrs;
   bool SrcNotDom = false;
 
   // Recursively track the user and check whether modified alias exist.
@@ -1570,8 +1570,8 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
               continue;
             }
           }
-          if (UI->hasMetadata(LLVMContext::MD_noalias))
-            NoAliasInstrs.insert(UI);
+          AAMetadataInstrs.insert(UI);
+
           if (!ModRefCallback(UI))
             return false;
         }
@@ -1680,11 +1680,16 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
   }
 
   // As this transformation can cause memory accesses that didn't previously
-  // alias to begin to alias one another, we remove !noalias metadata from any
-  // uses of either alloca. This is conservative, but more precision doesn't
-  // seem worthwhile right now.
-  for (Instruction *I : NoAliasInstrs)
+  // alias to begin to alias one another, we remove !alias.scope, !noalias,
+  // !tbaa and !tbaa_struct metadata from any uses of either alloca.
+  // This is conservative, but more precision doesn't seem worthwhile
+  // right now.
+  for (Instruction *I : AAMetadataInstrs) {
+    I->setMetadata(LLVMContext::MD_alias_scope, nullptr);
     I->setMetadata(LLVMContext::MD_noalias, nullptr);
+    I->setMetadata(LLVMContext::MD_tbaa, nullptr);
+    I->setMetadata(LLVMContext::MD_tbaa_struct, nullptr);
+  }
 
   LLVM_DEBUG(dbgs() << "Stack Move: Performed staack-move optimization\n");
   NumStackMove++;

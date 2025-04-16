@@ -577,7 +577,7 @@ class Value:
         Dumps a debug representation of the object to stderr.
         """
     @overload
-    def get_name(self, use_local_scope: bool = False) -> str: ...
+    def get_name(self, use_local_scope: bool = False, use_name_loc_as_prefix: bool = True) -> str: ...
     @overload
     def get_name(self, state: AsmState) -> str:
         """
@@ -2382,7 +2382,7 @@ class Operation(_OperationBase):
           attributes: Dict of str:Attribute.
           successors: List of Block for the operation's successors.
           regions: Number of regions to create.
-          location: A Location object (defaults to resolve from context manager).
+          loc: A Location object (defaults to resolve from context manager).
           ip: An InsertionPoint (defaults to resolve from context manager or set to
             False to disable insertion, even with an insertion point set in the
             context manager).

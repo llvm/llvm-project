@@ -561,7 +561,7 @@ bool Preprocessor::HandleEndOfFile(Token &Result, bool isEndOfMacro) {
   if (creatingPCHWithThroughHeader() && !LeavingPCHThroughHeader) {
     // Reached the end of the compilation without finding the through header.
     Diag(CurLexer->getFileLoc(), diag::err_pp_through_header_not_seen)
-        << PPOpts->PCHThroughHeader << 0;
+        << PPOpts.PCHThroughHeader << 0;
   }
 
   if (!isIncrementalProcessingEnabled())

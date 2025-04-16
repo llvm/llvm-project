@@ -16,7 +16,7 @@
 namespace llvm {
 class FunctionPass;
 
-extern FunctionPass *createAllocaHoisting();
+FunctionPass *createAllocaHoisting();
 } // end namespace llvm
 
 #endif

@@ -771,6 +771,11 @@ bool IncDecHelper(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
                   bool CanOverflow) {
   assert(!Ptr.isDummy());
 
+  if (!S.inConstantContext()) {
+    if (isConstexprUnknown(Ptr))
+      return false;
+  }
+
   if constexpr (std::is_same_v<T, Boolean>) {
     if (!S.getLangOpts().CPlusPlus14)
       return Invalid(S, OpPC);
@@ -979,20 +984,6 @@ bool CmpHelperEQ(InterpState &S, CodePtr OpPC, CompareFn Fn) {
   return CmpHelper<T>(S, OpPC, Fn);
 }
 
-/// Function pointers cannot be compared in an ordered way.
-template <>
-inline bool CmpHelper<FunctionPointer>(InterpState &S, CodePtr OpPC,
-                                       CompareFn Fn) {
-  const auto &RHS = S.Stk.pop<FunctionPointer>();
-  const auto &LHS = S.Stk.pop<FunctionPointer>();
-
-  const SourceInfo &Loc = S.Current->getSource(OpPC);
-  S.FFDiag(Loc, diag::note_constexpr_pointer_comparison_unspecified)
-      << LHS.toDiagnosticString(S.getASTContext())
-      << RHS.toDiagnosticString(S.getASTContext());
-  return false;
-}
-
 template <>
 inline bool CmpHelperEQ<FunctionPointer>(InterpState &S, CodePtr OpPC,
                                          CompareFn Fn) {
@@ -1019,18 +1010,28 @@ inline bool CmpHelper<Pointer>(InterpState &S, CodePtr OpPC, CompareFn Fn) {
   const Pointer &RHS = S.Stk.pop<Pointer>();
   const Pointer &LHS = S.Stk.pop<Pointer>();
 
+  // Function pointers cannot be compared in an ordered way.
+  if (LHS.isFunctionPointer() || RHS.isFunctionPointer() ||
+      LHS.isTypeidPointer() || RHS.isTypeidPointer()) {
+    const SourceInfo &Loc = S.Current->getSource(OpPC);
+    S.FFDiag(Loc, diag::note_constexpr_pointer_comparison_unspecified)
+        << LHS.toDiagnosticString(S.getASTContext())
+        << RHS.toDiagnosticString(S.getASTContext());
+    return false;
+  }
+
   if (!Pointer::hasSameBase(LHS, RHS)) {
     const SourceInfo &Loc = S.Current->getSource(OpPC);
     S.FFDiag(Loc, diag::note_constexpr_pointer_comparison_unspecified)
         << LHS.toDiagnosticString(S.getASTContext())
         << RHS.toDiagnosticString(S.getASTContext());
     return false;
-  } else {
-    unsigned VL = LHS.getByteOffset();
-    unsigned VR = RHS.getByteOffset();
-    S.Stk.push<BoolT>(BoolT::from(Fn(Compare(VL, VR))));
-    return true;
   }
+
+  unsigned VL = LHS.getByteOffset();
+  unsigned VR = RHS.getByteOffset();
+  S.Stk.push<BoolT>(BoolT::from(Fn(Compare(VL, VR))));
+  return true;
 }
 
 static inline bool IsOpaqueConstantCall(const CallExpr *E) {
@@ -1067,6 +1068,12 @@ inline bool CmpHelperEQ<Pointer>(InterpState &S, CodePtr OpPC, CompareFn Fn) {
   if (!S.inConstantContext()) {
     if (isConstexprUnknown(LHS) || isConstexprUnknown(RHS))
       return false;
+  }
+
+  if (LHS.isFunctionPointer() && RHS.isFunctionPointer()) {
+    S.Stk.push<BoolT>(BoolT::from(Fn(Compare(LHS.getIntegerRepresentation(),
+                                             RHS.getIntegerRepresentation()))));
+    return true;
   }
 
   if (Pointer::hasSameBase(LHS, RHS)) {
@@ -2059,8 +2066,11 @@ bool OffsetHelper(InterpState &S, CodePtr OpPC, const T &Offset,
   // useful thing we can do. Any other index has been diagnosed before and
   // we don't get here.
   if (Result == 0 && Ptr.isOnePastEnd()) {
-    S.Stk.push<Pointer>(Ptr.asBlockPointer().Pointee,
-                        Ptr.asBlockPointer().Base);
+    if (Ptr.getFieldDesc()->isArray())
+      S.Stk.push<Pointer>(Ptr.atIndex(0));
+    else
+      S.Stk.push<Pointer>(Ptr.asBlockPointer().Pointee,
+                          Ptr.asBlockPointer().Base);
     return true;
   }
 
@@ -2474,13 +2484,15 @@ inline bool This(InterpState &S, CodePtr OpPC) {
   // Ensure the This pointer has been cast to the correct base.
   if (!This.isDummy()) {
     assert(isa<CXXMethodDecl>(S.Current->getFunction()->getDecl()));
-    [[maybe_unused]] const Record *R = This.getRecord();
-    if (!R)
-      R = This.narrow().getRecord();
-    assert(R);
-    assert(
-        R->getDecl() ==
-        cast<CXXMethodDecl>(S.Current->getFunction()->getDecl())->getParent());
+    if (!This.isTypeidPointer()) {
+      [[maybe_unused]] const Record *R = This.getRecord();
+      if (!R)
+        R = This.narrow().getRecord();
+      assert(R);
+      assert(R->getDecl() ==
+             cast<CXXMethodDecl>(S.Current->getFunction()->getDecl())
+                 ->getParent());
+    }
   }
 
   S.Stk.push<Pointer>(This);
@@ -2677,8 +2689,16 @@ inline bool ArrayElemPtr(InterpState &S, CodePtr OpPC) {
       return false;
   }
 
-  if (!OffsetHelper<T, ArithOp::Add>(S, OpPC, Offset, Ptr))
-    return false;
+  if (Offset.isZero()) {
+    if (Ptr.getFieldDesc()->isArray() && Ptr.getIndex() == 0) {
+      S.Stk.push<Pointer>(Ptr.atIndex(0));
+    } else {
+      S.Stk.push<Pointer>(Ptr);
+    }
+  } else {
+    if (!OffsetHelper<T, ArithOp::Add>(S, OpPC, Offset, Ptr))
+      return false;
+  }
 
   return NarrowPtr(S, OpPC);
 }
@@ -2693,8 +2713,16 @@ inline bool ArrayElemPtrPop(InterpState &S, CodePtr OpPC) {
       return false;
   }
 
-  if (!OffsetHelper<T, ArithOp::Add>(S, OpPC, Offset, Ptr))
-    return false;
+  if (Offset.isZero()) {
+    if (Ptr.getFieldDesc()->isArray() && Ptr.getIndex() == 0) {
+      S.Stk.push<Pointer>(Ptr.atIndex(0));
+    } else {
+      S.Stk.push<Pointer>(Ptr);
+    }
+  } else {
+    if (!OffsetHelper<T, ArithOp::Add>(S, OpPC, Offset, Ptr))
+      return false;
+  }
 
   return NarrowPtr(S, OpPC);
 }
@@ -2768,7 +2796,7 @@ inline bool ArrayDecay(InterpState &S, CodePtr OpPC) {
 
 inline bool GetFnPtr(InterpState &S, CodePtr OpPC, const Function *Func) {
   assert(Func);
-  S.Stk.push<FunctionPointer>(Func);
+  S.Stk.push<Pointer>(Func);
   return true;
 }
 
@@ -2803,7 +2831,7 @@ inline bool GetMemberPtrDecl(InterpState &S, CodePtr OpPC) {
   const auto *FD = cast<FunctionDecl>(MP.getDecl());
   const auto *Func = S.getContext().getOrCreateFunction(FD);
 
-  S.Stk.push<FunctionPointer>(Func);
+  S.Stk.push<Pointer>(Func);
   return true;
 }
 

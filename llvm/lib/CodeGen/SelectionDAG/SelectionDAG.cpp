@@ -1146,11 +1146,11 @@ void SelectionDAG::DeallocateNode(SDNode *N) {
 
 #ifndef NDEBUG
 /// VerifySDNode - Check the given SDNode.  Aborts if it is invalid.
-static void VerifySDNode(SDNode *N, const TargetLowering *TLI) {
+void SelectionDAG::verifyNode(SDNode *N) const {
   switch (N->getOpcode()) {
   default:
-    if (N->getOpcode() > ISD::BUILTIN_OP_END)
-      TLI->verifyTargetSDNode(N);
+    if (N->isTargetOpcode())
+      getSelectionDAGInfo().verifyTargetNode(*this, N);
     break;
   case ISD::BUILD_PAIR: {
     EVT VT = N->getValueType(0);
@@ -1194,7 +1194,7 @@ void SelectionDAG::InsertNode(SDNode *N) {
   AllNodes.push_back(N);
 #ifndef NDEBUG
   N->PersistentId = NextPersistentId++;
-  VerifySDNode(N, TLI);
+  verifyNode(N);
 #endif
   for (DAGUpdateListener *DUL = UpdateListeners; DUL; DUL = DUL->Next)
     DUL->NodeInserted(N);
@@ -3002,9 +3002,12 @@ bool SelectionDAG::isSplatValue(SDValue V, const APInt &DemandedElts,
     APInt UndefLHS, UndefRHS;
     SDValue LHS = V.getOperand(0);
     SDValue RHS = V.getOperand(1);
+    // Only propagate common undef elts for both operands, otherwise we might
+    // fail to handle binop-specific undef handling.
+    // e.g. (and undef, 0) -> 0 etc.
     if (isSplatValue(LHS, DemandedElts, UndefLHS, Depth + 1) &&
         isSplatValue(RHS, DemandedElts, UndefRHS, Depth + 1)) {
-      UndefElts = UndefLHS | UndefRHS;
+      UndefElts = UndefLHS & UndefRHS;
       return true;
     }
     return false;
@@ -5386,6 +5389,9 @@ bool SelectionDAG::isGuaranteedNotToBeUndefOrPoison(SDValue Op,
   case ISD::TargetFrameIndex:
   case ISD::CopyFromReg:
     return true;
+
+  case ISD::POISON:
+    return false;
 
   case ISD::UNDEF:
     return PoisonOnly;
