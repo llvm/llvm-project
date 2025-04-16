@@ -678,7 +678,7 @@ struct TupleExpander : SetTheory::Expander {
       // Take the cost list of the first register in the tuple.
       const ListInit *CostList = Proto->getValueAsListInit("CostPerUse");
       SmallVector<const Init *, 2> CostPerUse;
-      CostPerUse.insert(CostPerUse.end(), CostList->begin(), CostList->end());
+      llvm::append_range(CostPerUse, *CostList);
 
       const StringInit *AsmName = StringInit::get(RK, "");
       if (!RegNames.empty()) {
@@ -1186,7 +1186,7 @@ void CodeGenRegisterClass::extendSuperRegClasses(CodeGenSubRegIndex *SubIdx) {
     return;
 
   SmallVector<CodeGenRegisterClass *> MidRCs;
-  MidRCs.insert(MidRCs.end(), It->second.begin(), It->second.end());
+  llvm::append_range(MidRCs, It->second);
 
   for (CodeGenRegisterClass *MidRC : MidRCs) {
     for (auto &Pair : MidRC->SuperRegClasses) {
@@ -1244,7 +1244,7 @@ CodeGenRegBank::CodeGenRegBank(const RecordKeeper &Records,
     for (const Record *R : Records.getAllDerivedDefinitions("RegisterTuples")) {
       // Expand tuples and merge the vectors
       std::vector<const Record *> TupRegs = *Sets.expand(R);
-      Regs.insert(Regs.end(), TupRegs.begin(), TupRegs.end());
+      llvm::append_range(Regs, TupRegs);
     }
 
     llvm::sort(Regs, LessRecordRegister());

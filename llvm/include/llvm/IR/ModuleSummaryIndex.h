@@ -1319,8 +1319,10 @@ public:
 
   std::vector<StringRef> symbols() const {
     std::vector<StringRef> Symbols;
-    for (auto &[GUID, Syms] : Index)
-      Symbols.insert(Symbols.end(), Syms.begin(), Syms.end());
+    for (auto &[GUID, Syms] : Index) {
+      (void)GUID;
+      llvm::append_range(Symbols, Syms);
+    }
     return Symbols;
   }
 
