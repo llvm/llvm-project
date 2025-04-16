@@ -748,18 +748,15 @@ getStatepointBundles(std::optional<ArrayRef<T1>> TransitionArgs,
                      ArrayRef<T3> GCArgs) {
   std::vector<OperandBundleDef> Rval;
   if (DeoptArgs) {
-    SmallVector<Value*, 16> DeoptValues;
-    llvm::append_range(DeoptValues, *DeoptArgs);
+    SmallVector<Value *, 16> DeoptValues(*DeoptArgs);
     Rval.emplace_back("deopt", DeoptValues);
   }
   if (TransitionArgs) {
-    SmallVector<Value*, 16> TransitionValues;
-    llvm::append_range(TransitionValues, *TransitionArgs);
+    SmallVector<Value *, 16> TransitionValues(*TransitionArgs);
     Rval.emplace_back("gc-transition", TransitionValues);
   }
   if (GCArgs.size()) {
-    SmallVector<Value*, 16> LiveValues;
-    llvm::append_range(LiveValues, GCArgs);
+    SmallVector<Value *, 16> LiveValues(GCArgs);
     Rval.emplace_back("gc-live", LiveValues);
   }
   return Rval;
@@ -1091,9 +1088,7 @@ CallInst *IRBuilderBase::CreateConstrainedFPCall(
     Function *Callee, ArrayRef<Value *> Args, const Twine &Name,
     std::optional<RoundingMode> Rounding,
     std::optional<fp::ExceptionBehavior> Except) {
-  llvm::SmallVector<Value *, 6> UseArgs;
-
-  append_range(UseArgs, Args);
+  llvm::SmallVector<Value *, 6> UseArgs(Args);
 
   if (Intrinsic::hasConstrainedFPRoundingModeOperand(Callee->getIntrinsicID()))
     UseArgs.push_back(getConstrainedFPRounding(Rounding));
