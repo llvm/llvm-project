@@ -96,25 +96,26 @@ void ExceptionEscapeCheck::check(const MatchFinder::MatchResult &Result) {
     return;
   }
 
-  // FIXME: We should provide exact position of functions calls, not only call
-  // stack of thrown exception.
   const utils::ExceptionAnalyzer::CallStack &Stack = ThrowInfo.Stack;
-  diag(Stack.front()->getLocation(),
-       "throw stack of unhandled exception, starting from function %0",
+  diag(ThrowInfo.Loc,
+       "frame #0: unhandled exception may be thrown in function %0 here",
        DiagnosticIDs::Note)
-      << Stack.front();
+      << Stack.back().first;
 
-  size_t FrameNo = 0;
-  for (const FunctionDecl *CallNode : Stack) {
-    if (FrameNo != Stack.size() - 1) {
-      diag(CallNode->getLocation(), "frame #%0: function %1",
+  size_t FrameNo = 1;
+  for (auto CurrIt = ++Stack.rbegin(), PrevIt = Stack.rbegin();
+       CurrIt != Stack.rend(); ++CurrIt, ++PrevIt) {
+    const FunctionDecl *CurrFunction = CurrIt->first;
+    const FunctionDecl *PrevFunction = PrevIt->first;
+    const SourceLocation PrevLocation = PrevIt->second;
+    if (PrevLocation.isValid()) {
+      diag(PrevLocation, "frame #%0: function %1 calls function %2 here",
            DiagnosticIDs::Note)
-          << FrameNo << CallNode;
+          << FrameNo << CurrFunction << PrevFunction;
     } else {
-      diag(ThrowInfo.Loc,
-           "frame #%0: function %1 throws unhandled exception here",
-           DiagnosticIDs::Note)
-          << FrameNo << CallNode;
+      diag(CurrFunction->getLocation(),
+           "frame #%0: function %1 calls function %2", DiagnosticIDs::Note)
+          << FrameNo << CurrFunction << PrevFunction;
     }
     ++FrameNo;
   }

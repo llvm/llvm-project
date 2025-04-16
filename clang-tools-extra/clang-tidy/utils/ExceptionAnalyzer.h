@@ -29,11 +29,9 @@ public:
                  ///< definition.
   };
 
-  /// We use a SetVector to preserve the order of the functions in the call
+  /// We use a MapVector to preserve the order of the functions in the call
   /// stack as well as have fast lookup.
-  using CallStack = llvm::SetVector<const FunctionDecl *,
-                                    llvm::SmallVector<const FunctionDecl *, 32>,
-                                    llvm::DenseSet<const FunctionDecl *>, 32>;
+  using CallStack = llvm::MapVector<const FunctionDecl *, SourceLocation>;
 
   /// Bundle the gathered information about an entity like a function regarding
   /// it's exception behaviour. The 'NonThrowing'-state can be considered as the
@@ -144,7 +142,7 @@ public:
 private:
   ExceptionInfo throwsException(const FunctionDecl *Func,
                                 const ExceptionInfo::Throwables &Caught,
-                                CallStack &CallStack);
+                                CallStack &CallStack, SourceLocation CallLoc);
   ExceptionInfo throwsException(const Stmt *St,
                                 const ExceptionInfo::Throwables &Caught,
                                 CallStack &CallStack);
