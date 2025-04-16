@@ -13,7 +13,11 @@
 
 #include "sanitizer_common/sanitizer_platform.h"
 #if SANITIZER_FREEBSD || SANITIZER_LINUX || SANITIZER_NETBSD || \
-    SANITIZER_SOLARIS
+    SANITIZER_SOLARIS || SANITIZER_HAIKU
+
+#  if SANITIZER_HAIKU
+#    define _DEFAULT_SOURCE
+#  endif
 
 #  include <dlfcn.h>
 #  include <fcntl.h>
@@ -22,7 +26,9 @@
 #  include <stdio.h>
 #  include <sys/mman.h>
 #  include <sys/resource.h>
-#  include <sys/syscall.h>
+#  if !SANITIZER_HAIKU
+#    include <sys/syscall.h>
+#  endif
 #  include <sys/time.h>
 #  include <sys/types.h>
 #  include <unistd.h>
@@ -37,7 +43,7 @@
 #  include "sanitizer_common/sanitizer_libc.h"
 #  include "sanitizer_common/sanitizer_procmaps.h"
 
-#  if SANITIZER_FREEBSD
+#  if SANITIZER_FREEBSD || SANITIZER_HAIKU
 #    include <sys/link_elf.h>
 #  endif
 
@@ -54,6 +60,8 @@
 #  elif SANITIZER_NETBSD
 #    include <link_elf.h>
 #    include <ucontext.h>
+#  elif SANITIZER_HAIKU
+extern "C" void *_DYNAMIC;
 #  else
 #    include <link.h>
 #    include <sys/ucontext.h>
@@ -162,6 +170,12 @@ static int FindFirstDSOCallback(struct dl_phdr_info *info, size_t size,
     return 0;
   }
 
+#    if SANITIZER_HAIKU
+  if (!info->dlpi_name[0] ||
+      internal_strncmp(info->dlpi_name, "/boot/system/runtime_loader",
+                       sizeof("/boot/system/runtime_loader") - 1) == 0)
+    return 0;
+#    endif
 #    if SANITIZER_LINUX
   // Ignore vDSO. glibc versions earlier than 2.15 (and some patched
   // by distributors) return an empty name for the vDSO entry, so
@@ -274,4 +288,4 @@ bool HandleDlopenInit() {
 }  // namespace __asan
 
 #endif  // SANITIZER_FREEBSD || SANITIZER_LINUX || SANITIZER_NETBSD ||
-        // SANITIZER_SOLARIS
+        // SANITIZER_SOLARIS || SANITIZER_HAIKU

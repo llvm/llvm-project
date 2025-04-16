@@ -58,3 +58,51 @@ define void @test5(i64 %Q_as_int) {
   store i8 1, ptr %Q
   ret void
 }
+
+; Verify that extractvalue of a coerced ptr argument array are NoAlias a function local object
+define void @test_extractvalue([2 x ptr] %Q.coerce) {
+  ; CHECK-LABEL: Function: test_extractvalue:
+  ; CHECK: NoAlias:    i8* %P, i8* %Q
+  %P = alloca i8
+  %Q = extractvalue [2 x ptr] %Q.coerce, 1
+  store i8 0, ptr %P
+  store i8 1, ptr %Q
+  ret void
+}
+
+; Same as test_extractvalue with an escape of %P
+define void @test_extractvalue_escape([2 x ptr] %Q.coerce) {
+  ; CHECK-LABEL: Function: test_extractvalue_escape:
+  ; CHECK: NoAlias:    i8* %P, i8* %Q
+  %P = alloca i8
+  call void @escape(ptr %P)
+  %Q = extractvalue [2 x ptr] %Q.coerce, 1
+  store i8 0, ptr %P
+  store i8 1, ptr %Q
+  ret void
+}
+
+; Verify that extractvalue of a coerced ptr argument array are NoAlias a function local object
+define void @test_extractvalue_int([2 x i64] %Q.coerce) {
+  ; CHECK-LABEL: Function: test_extractvalue_int:
+  ; CHECK: NoAlias:    i8* %P, i8* %Q
+  %P = alloca i8
+  %Q_as_int = extractvalue [2 x i64] %Q.coerce, 1
+  %Q = inttoptr i64 %Q_as_int to ptr
+  store i8 0, ptr %P
+  store i8 1, ptr %Q
+  ret void
+}
+
+; Same as test_extractvalue_int with an escape of %P
+define void @test_extractvalue_int_escape([2 x i64] %Q.coerce) {
+  ; CHECK-LABEL: Function: test_extractvalue_int_escape:
+  ; CHECK: MayAlias:    i8* %P, i8* %Q
+  %P = alloca i8
+  call void @escape(ptr %P)
+  %Q_as_int = extractvalue [2 x i64] %Q.coerce, 1
+  %Q = inttoptr i64 %Q_as_int to ptr
+  store i8 0, ptr %P
+  store i8 1, ptr %Q
+  ret void
+}

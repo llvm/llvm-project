@@ -1269,8 +1269,10 @@ def ZPRMul2AsmOp32_Hi : ZPRAsmOperand<"VectorS_Hi", 32, "Mul2_Hi">;
 def ZPRMul2AsmOp64_Lo : ZPRAsmOperand<"VectorD_Lo", 64, "Mul2_Lo">;
 def ZPRMul2AsmOp64_Hi : ZPRAsmOperand<"VectorD_Hi", 64, "Mul2_Hi">;
 
-def ZPR_K : RegisterClass<"AArch64", [untyped], 128,
-                          (add Z20, Z21, Z22, Z23, Z28, Z29, Z30, Z31)>;
+def ZPR_K : RegisterClass<"AArch64", [nxv16i8], 128,
+                          (add Z20, Z21, Z22, Z23, Z28, Z29, Z30, Z31)>{
+                             let Size = 128;
+}
 
 def ZK : RegisterOperand<ZPR_K, "printSVERegOp<>">{
   let EncoderMethod = "EncodeZK";
