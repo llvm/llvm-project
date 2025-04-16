@@ -1840,6 +1840,10 @@ def : Pat<(vt (concat_vectors LSX128:$vd, LSX128:$vj)),
           (XVPERMI_Q (SUBREG_TO_REG (i64 0), LSX128:$vd, sub_128),
                      (SUBREG_TO_REG (i64 0), LSX128:$vj, sub_128), 2)>;
 
+// XVABSD_{B/H/W/D}[U]
+defm : PatXrXr<abds, "XVABSD">;
+defm : PatXrXrU<abdu, "XVABSD">;
+
 } // Predicates = [HasExtLASX]
 
 /// Intrinsic pattern
