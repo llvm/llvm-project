@@ -20880,9 +20880,19 @@ public:
     return Inserted ? std::nullopt : std::optional<unsigned>(It->second);
   }
 
-  StoreInst &getBaseStore() const { return *AllStores[BaseInstrIdx]; }
   using DistToInstMap = std::map<int, unsigned>;
   const DistToInstMap &getStores() const { return Instrs; }
+
+  /// If \p SI is related to this group of stores, return the distance of its
+  /// pointer operand to the one the group's BaseInstr.
+  std::optional<int> getPointerDiff(StoreInst &SI, const DataLayout &DL,
+                                    ScalarEvolution &SE) const {
+    StoreInst &BaseStore = *AllStores[BaseInstrIdx];
+    return getPointersDiff(
+        BaseStore.getValueOperand()->getType(), BaseStore.getPointerOperand(),
+        SI.getValueOperand()->getType(), SI.getPointerOperand(), DL, SE,
+        /*StrictCheck=*/true);
+  }
 
   /// Recompute the pointer distances to be based on \p NewBaseInstIdx.
   /// Stores whose index is less than \p MinSafeIdx will be dropped.
@@ -21245,16 +21255,11 @@ bool SLPVectorizerPass::vectorizeStores(
   // dependencies and no need to waste compile time to try to vectorize them.
   // - Try to vectorize the sequence {1, {1, 0}, {3, 2}}.
   auto FillStoresSet = [&](unsigned Idx, StoreInst *SI) {
-    std::optional<int> Diff;
-    auto *RelatedStores =
-        find_if(SortedStores, [&](const RelatedStoreInsts &StoreSeq) {
-          StoreInst &BaseStore = StoreSeq.getBaseStore();
-          Diff = getPointersDiff(BaseStore.getValueOperand()->getType(),
-                                 BaseStore.getPointerOperand(),
-                                 SI->getValueOperand()->getType(),
-                                 SI->getPointerOperand(), *DL, *SE,
-                                 /*StrictCheck=*/true);
-          return Diff.has_value();
+    std::optional<int> PtrDist;
+    auto *RelatedStores = find_if(
+        SortedStores, [&PtrDist, SI, this](const RelatedStoreInsts &StoreSeq) {
+          PtrDist = StoreSeq.getPointerDiff(*SI, *DL, *SE);
+          return PtrDist.has_value();
         });
 
     // We did not find a comparable store, start a new group.
@@ -21267,12 +21272,12 @@ bool SLPVectorizerPass::vectorizeStores(
     // vectorize the existing instructions before adding the current store.
     // Otherwise, insert this store and keep collecting.
     if (std::optional<unsigned> PrevInst =
-            RelatedStores->insertOrLookup(Idx, *Diff)) {
+            RelatedStores->insertOrLookup(Idx, *PtrDist)) {
       TryToVectorize(RelatedStores->getStores());
       RelatedStores->clearVectorizedStores(VectorizedStores);
       RelatedStores->rebase(/*MinSafeIdx=*/*PrevInst + 1,
                             /*NewBaseInstIdx=*/Idx,
-                            /*DistFromCurBase=*/*Diff);
+                            /*DistFromCurBase=*/*PtrDist);
     }
   };
   Type *PrevValTy = nullptr;
