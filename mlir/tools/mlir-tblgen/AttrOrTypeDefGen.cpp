@@ -679,16 +679,15 @@ void DefGen::emitStorageClass() {
   // Emit the storage class members as public, at the very end of the struct.
   storageCls->finalize();
   for (auto &param : params) {
-     if (param.getCppType().contains("APInt") &&
-         !param.hasCustomComparator()) {
-       PrintWarning(
-           def.getLoc(),
-           "Using a raw APInt parameter without a custom comparator is "
-           "discouraged because an assert in the equality operator is "
-           "triggered when the two APInts have different bit widths. This can "
-           "lead to unexpected crashes. Consider using an `APIntParameter` or "
-           "providing a custom comparator.");
-     }
+    if (param.getCppType().contains("APInt") && !param.hasCustomComparator()) {
+      PrintWarning(
+          def.getLoc(),
+          "Using a raw APInt parameter without a custom comparator is "
+          "discouraged because an assert in the equality operator is "
+          "triggered when the two APInts have different bit widths. This can "
+          "lead to unexpected crashes. Consider using an `APIntParameter` or "
+          "providing a custom comparator.");
+    }
     storageCls->declare<Field>(param.getCppType(), param.getName());
   }
 }
