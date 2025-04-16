@@ -199,9 +199,12 @@
 #define LLVM_ABI_EXPORT __declspec(dllexport)
 #elif (defined(__ELF__) || defined(__MINGW32__) || defined(_AIX) ||            \
     defined(__MVS__)) && __has_attribute(visibililty)
+// Use __attribute__((visibility(""))) syntax for visibility rather than
+// [[gnu::visibility("")]] because compilers are more permissive with its
+// placement.
 #define LLVM_ABI __attribute__((visibility("default")))
 #if defined(__GNUC__) && !defined(__clang__)
-// GCC produces warnings on visibility attributes applied to templates.
+// GCC produces warnings on visibility attributes applied to some templates.
 #define LLVM_TEMPLATE_ABI
 #else
 #define LLVM_TEMPLATE_ABI __attribute__((visibility("default")))
