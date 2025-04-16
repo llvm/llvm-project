@@ -465,7 +465,7 @@ fatbinary(ArrayRef<std::pair<StringRef, StringRef>> InputFiles,
 
 namespace generic {
 Expected<StringRef> clang(ArrayRef<StringRef> InputFiles, const ArgList &Args,
-                          bool HasSYCLOffloadKind = false) {
+                          uint16_t ActiveOffloadKindMask) {
   llvm::TimeTraceScope TimeScope("Clang");
   // Use `clang` to invoke the appropriate device tools.
   Expected<std::string> ClangPath =
@@ -559,7 +559,7 @@ Expected<StringRef> clang(ArrayRef<StringRef> InputFiles, const ArgList &Args,
   // required. Passing --sycl-link to clang results in a call to
   // clang-sycl-linker. Additional linker flags required by clang-sycl-linker
   // will be communicated via the -Xlinker option.
-  if (HasSYCLOffloadKind) {
+  if (ActiveOffloadKindMask & OFK_SYCL) {
     CmdArgs.push_back("--sycl-link");
     CmdArgs.append(
         {"-Xlinker", Args.MakeArgString("-triple=" + Triple.getTriple())});
@@ -580,7 +580,7 @@ Expected<StringRef> clang(ArrayRef<StringRef> InputFiles, const ArgList &Args,
 
 Expected<StringRef> linkDevice(ArrayRef<StringRef> InputFiles,
                                const ArgList &Args,
-                               bool HasSYCLOffloadKind = false) {
+                               uint16_t ActiveOffloadKindMask) {
   const llvm::Triple Triple(Args.getLastArgValue(OPT_triple_EQ));
   switch (Triple.getArch()) {
   case Triple::nvptx:
@@ -595,7 +595,7 @@ Expected<StringRef> linkDevice(ArrayRef<StringRef> InputFiles,
   case Triple::spirv64:
   case Triple::systemz:
   case Triple::loongarch64:
-    return generic::clang(InputFiles, Args, HasSYCLOffloadKind);
+    return generic::clang(InputFiles, Args, ActiveOffloadKindMask);
   default:
     return createStringError(Triple.getArchName() +
                              " linking is not supported");
@@ -949,9 +949,13 @@ Expected<SmallVector<StringRef>> linkAndWrapDeviceFiles(
       InputFiles.emplace_back(*FileNameOrErr);
     }
 
+    // Currently, SYCL device code linking process differs from generic device
+    // code linking.
+    // TODO: Align SYCL device code linking with generic linking.
     if (ActiveOffloadKindMask & OFK_SYCL) {
       // Link the remaining device files using the device linker.
-      auto OutputOrErr = linkDevice(InputFiles, LinkerArgs, HasSYCLOffloadKind);
+      auto OutputOrErr =
+          linkDevice(InputFiles, LinkerArgs, ActiveOffloadKindMask);
       if (!OutputOrErr)
         return OutputOrErr.takeError();
       // Output is a packaged object of device images. Unpackage the images and
@@ -978,11 +982,12 @@ Expected<SmallVector<StringRef>> linkAndWrapDeviceFiles(
     }
 
     // Exit early if no other offload kind found (other than OFK_SYCL).
-    if ((ActiveOffloadKindMask ^ OFK_SYCL) == 0) {
+    if ((ActiveOffloadKindMask ^ OFK_SYCL) == 0)
       return Error::success();
 
     // Link the remaining device files using the device linker.
-    auto OutputOrErr = linkDevice(InputFiles, LinkerArgs);
+    auto OutputOrErr =
+        linkDevice(InputFiles, LinkerArgs, ActiveOffloadKindMask);
     if (!OutputOrErr)
       return OutputOrErr.takeError();
 
