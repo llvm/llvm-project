@@ -28,7 +28,7 @@ class TestDAP_repl_mode_detection(lldbdap_testcase.DAPTestCaseBase):
 
         self.set_source_breakpoints(source, [breakpoint1_line, breakpoint2_line])
 
-        # the result of the commands should return the empty string.
+        # The result of the commands should return the empty string.
         self.assertEvaluate("`command regex user_command s/^$/platform/", r"^$")
         self.assertEvaluate("`command alias alias_command platform", r"^$")
         self.assertEvaluate(
