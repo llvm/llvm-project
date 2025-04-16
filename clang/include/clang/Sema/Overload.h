@@ -415,6 +415,8 @@ class Sema;
       // If we are not performing a reference binding, we can skip comparing
       // the types, which has a noticeable performance impact.
       if (!ReferenceBinding) {
+        // The types might differ if there is an array-to-pointer conversion
+        // or lvalue-to-rvalue conversion.
         assert(First || C.hasSameUnqualifiedType(getFromType(), getToType(2)));
         return true;
       }
