@@ -116,7 +116,6 @@ define <4 x i32> @sdiv_poison_rhs_vec(<4 x i32> %x) {
 define i32 @sdiv_poison_lhs(i32 %x) {
 ; CHECK-LABEL: sdiv_poison_lhs:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    retq
   %r = sdiv i32 poison, %x
   ret i32 %r
@@ -125,7 +124,6 @@ define i32 @sdiv_poison_lhs(i32 %x) {
 define <4 x i32> @sdiv_poison_lhs_vec(<4 x i32> %x) {
 ; CHECK-LABEL: sdiv_poison_lhs_vec:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorps %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %r = sdiv <4 x i32> poison, %x
   ret <4 x i32> %r
@@ -150,7 +148,6 @@ define <4 x i32> @udiv_poison_rhs_vec(<4 x i32> %x) {
 define i32 @udiv_poison_lhs(i32 %x) {
 ; CHECK-LABEL: udiv_poison_lhs:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    retq
   %r = udiv i32 poison, %x
   ret i32 %r
@@ -159,7 +156,6 @@ define i32 @udiv_poison_lhs(i32 %x) {
 define <4 x i32> @udiv_poison_lhs_vec(<4 x i32> %x) {
 ; CHECK-LABEL: udiv_poison_lhs_vec:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorps %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %r = udiv <4 x i32> poison, %x
   ret <4 x i32> %r
@@ -184,7 +180,6 @@ define <4 x i32> @srem_poison_rhs_vec(<4 x i32> %x) {
 define i32 @srem_poison_lhs(i32 %x) {
 ; CHECK-LABEL: srem_poison_lhs:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    retq
   %r = srem i32 poison, %x
   ret i32 %r
@@ -193,7 +188,6 @@ define i32 @srem_poison_lhs(i32 %x) {
 define <4 x i32> @srem_poison_lhs_vec(<4 x i32> %x) {
 ; CHECK-LABEL: srem_poison_lhs_vec:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorps %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %r = srem <4 x i32> poison, %x
   ret <4 x i32> %r
@@ -218,7 +212,6 @@ define <4 x i32> @urem_poison_rhs_vec(<4 x i32> %x) {
 define i32 @urem_poison_lhs(i32 %x) {
 ; CHECK-LABEL: urem_poison_lhs:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    retq
   %r = urem i32 poison, %x
   ret i32 %r
@@ -227,7 +220,6 @@ define i32 @urem_poison_lhs(i32 %x) {
 define <4 x i32> @urem_poison_lhs_vec(<4 x i32> %x) {
 ; CHECK-LABEL: urem_poison_lhs_vec:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorps %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %r = urem <4 x i32> poison, %x
   ret <4 x i32> %r
