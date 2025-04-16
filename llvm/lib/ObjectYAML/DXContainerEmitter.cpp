@@ -276,8 +276,7 @@ void DXContainerWriter::writeParts(raw_ostream &OS) {
             Param.Type, Param.Visibility, Param.Offset};
 
         switch (Param.Type) {
-
-        case static_cast<uint32_t>(dxbc::RootParameterType::Constants32Bit):
+        case llvm::to_underlying(dxbc::RootParameterType::Constants32Bit):
           NewParam.Constants.Num32BitValues = Param.Constants.Num32BitValues;
           NewParam.Constants.RegisterSpace = Param.Constants.RegisterSpace;
           NewParam.Constants.ShaderRegister = Param.Constants.ShaderRegister;

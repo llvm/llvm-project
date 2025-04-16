@@ -23,6 +23,7 @@
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/TargetParser/Triple.h"
 #include <array>
+#include <cstddef>
 #include <variant>
 
 namespace llvm {
@@ -192,9 +193,9 @@ public:
       DataSize = sizeof(dxbc::RootConstants);
       break;
     }
-    auto EndOfSectionByte = getNumStaticSamplers() == 0
-                                ? PartData.size()
-                                : getStaticSamplersOffset();
+    size_t EndOfSectionByte = getNumStaticSamplers() == 0
+                                  ? PartData.size()
+                                  : getStaticSamplersOffset();
 
     if (Header.ParameterOffset + DataSize > EndOfSectionByte)
       return parseFailed("Reading structure out of file bounds");

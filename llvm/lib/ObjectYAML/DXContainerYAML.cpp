@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ObjectYAML/DXContainerYAML.h"
+#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/Support/Error.h"
@@ -45,7 +46,7 @@ DXContainerYAML::RootSignatureYamlDesc::create(
   RootSigDesc.RootParametersOffset = Data.getRootParametersOffset();
 
   uint32_t Flags = Data.getFlags();
-  for (const auto &PH : Data.param_headers()) {
+  for (const dxbc::RootParameterHeader &PH : Data.param_headers()) {
 
     RootParameterYamlDesc NewP;
     NewP.Offset = PH.ParameterOffset;
@@ -84,7 +85,8 @@ DXContainerYAML::RootSignatureYamlDesc::create(
     RootSigDesc.Parameters.push_back(NewP);
   }
 #define ROOT_ELEMENT_FLAG(Num, Val)                                            \
-  RootSigDesc.Val = (Flags & (uint32_t)dxbc::RootElementFlag::Val) > 0;
+  RootSigDesc.Val =                                                            \
+      (Flags & llvm::to_underlying(dxbc::RootElementFlag::Val)) > 0;
 #include "llvm/BinaryFormat/DXContainerConstants.def"
   return RootSigDesc;
 }
@@ -282,7 +284,7 @@ void MappingTraits<llvm::DXContainerYAML::RootParameterYamlDesc>::mapping(
   IO.mapRequired("ShaderVisibility", P.Visibility);
 
   switch (P.Type) {
-  case static_cast<uint32_t>(dxbc::RootParameterType::Constants32Bit):
+  case llvm::to_underlying(dxbc::RootParameterType::Constants32Bit):
     IO.mapRequired("Constants", P.Constants);
     break;
   }

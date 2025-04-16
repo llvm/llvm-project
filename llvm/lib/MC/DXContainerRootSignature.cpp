@@ -32,9 +32,9 @@ size_t RootSignatureDesc::getSize() const {
   size_t Size = sizeof(dxbc::RootSignatureHeader) +
                 Parameters.size() * sizeof(dxbc::RootParameterHeader);
 
-  for (const auto &P : Parameters) {
+  for (const mcdxbc::RootParameter &P : Parameters) {
     switch (P.Header.ParameterType) {
-    case static_cast<uint32_t>(dxbc::RootParameterType::Constants32Bit):
+    case llvm::to_underlying(dxbc::RootParameterType::Constants32Bit):
       Size += sizeof(dxbc::RootConstants);
       break;
     }
@@ -60,7 +60,7 @@ void RootSignatureDesc::write(raw_ostream &OS) const {
   support::endian::write(BOS, Flags, llvm::endianness::little);
 
   SmallVector<uint32_t> ParamsOffsets;
-  for (const auto &P : Parameters) {
+  for (const mcdxbc::RootParameter &P : Parameters) {
     support::endian::write(BOS, P.Header.ParameterType,
                            llvm::endianness::little);
     support::endian::write(BOS, P.Header.ShaderVisibility,
@@ -72,10 +72,10 @@ void RootSignatureDesc::write(raw_ostream &OS) const {
   assert(NumParameters == ParamsOffsets.size());
   for (size_t I = 0; I < NumParameters; ++I) {
     rewriteOffsetToCurrentByte(BOS, ParamsOffsets[I]);
-    const auto &P = Parameters[I];
+    const mcdxbc::RootParameter &P = Parameters[I];
 
     switch (P.Header.ParameterType) {
-    case static_cast<uint32_t>(dxbc::RootParameterType::Constants32Bit):
+    case llvm::to_underlying(dxbc::RootParameterType::Constants32Bit):
       support::endian::write(BOS, P.Constants.ShaderRegister,
                              llvm::endianness::little);
       support::endian::write(BOS, P.Constants.RegisterSpace,
