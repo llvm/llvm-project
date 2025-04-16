@@ -36,6 +36,8 @@ class StringRef;
 class SPIRVTargetMachine;
 
 class SPIRVSubtarget : public SPIRVGenSubtargetInfo {
+  // Enum for the SPIR-V environment: OpenCL, Vulkan or Unkwnown.
+  enum SPIRVEnvType { OpenCL, Vulkan, Unknown };
 private:
   const unsigned PointerSize;
   VersionTuple SPIRVVersion;
@@ -49,6 +51,7 @@ private:
   SPIRVFrameLowering FrameLowering;
   SPIRVTargetLowering TLInfo;
   Triple TargetTriple;
+  SPIRVEnvType Env;
 
   // GlobalISel related APIs.
   std::unique_ptr<CallLowering> CallLoweringInfo;
@@ -78,14 +81,28 @@ public:
   unsigned getPointerSize() const { return PointerSize; }
   unsigned getBound() const { return GR->getBound(); }
   bool canDirectlyComparePointers() const;
-  // TODO: this environment is not implemented in Triple, we need to decide
-  // how to standardize its support. For now, let's assume SPIR-V with physical
-  // addressing is OpenCL, and Logical addressing is Vulkan.
-  bool isOpenCLEnv() const {
-    return TargetTriple.getArch() == Triple::spirv32 ||
-           TargetTriple.getArch() == Triple::spirv64;
+  SPIRVEnvType getEnv() const {
+    if (TargetTriple.getOS() == Triple::Vulkan)
+      return Vulkan;
+    if (TargetTriple.getEnvironment() == Triple::OpenCL)
+      return OpenCL;
+    return Unknown;
   }
-  bool isVulkanEnv() const { return TargetTriple.getArch() == Triple::spirv; }
+  // FIXME: For now, we rely only on the triple to determine the environment.
+  // However, a lot of frontends emit unknown OS or environment, which makes it
+  // difficult to determine the environment. We should consider adding other
+  // methods. For now, we will return true for both OpenCL and Unknown env.
+  bool isOpenCLEnv() const {
+    return getEnv() == OpenCL || getEnv() == Unknown;
+  }
+  // FIXME: For now, we rely only on the triple to determine the environment.
+  // However, a lot of frontends emit unknown OS or environment, which makes it
+  // difficult to determine the environment. We should consider adding other
+  // methods. For now, we will return true for both Vulkan and Unknown env.
+  bool isVulkanEnv() const {
+    return getEnv() == Vulkan || getEnv() == Unknown;
+  }
+  bool isLogicalSPIRV() const { return TargetTriple.getArch() == Triple::spirv; }
   const std::string &getTargetTripleAsStr() const { return TargetTriple.str(); }
   VersionTuple getSPIRVVersion() const { return SPIRVVersion; };
   bool isAtLeastSPIRVVer(VersionTuple VerToCompareTo) const;

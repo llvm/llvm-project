@@ -189,7 +189,12 @@ TargetPassConfig *SPIRVTargetMachine::createPassConfig(PassManagerBase &PM) {
 void SPIRVPassConfig::addIRPasses() {
   TargetPassConfig::addIRPasses();
 
-  if (TM.getSubtargetImpl()->isVulkanEnv()) {
+  // FIXME: At the moment, there's a possibility that both `isOpenCLEnv()` and
+  // `isVulkanEnv()` return true. This is because the Triple is not always
+  // precise enough. For now, we'll rely instead on `isLogicalSPIRV`, but this
+  // should be changed when `isOpenCLEnv()` and `isVulkanEnv()` cannot be true
+  // at the same time.
+  if (TM.getSubtargetImpl()->isLogicalSPIRV()) {
     // 1.  Simplify loop for subsequent transformations. After this steps, loops
     // have the following properties:
     //  - loops have a single entry edge (pre-header to loop header).
@@ -221,7 +226,7 @@ void SPIRVPassConfig::addIRPasses() {
 
 void SPIRVPassConfig::addISelPrepare() {
   addPass(createSPIRVEmitIntrinsicsPass(&getTM<SPIRVTargetMachine>()));
-  if (TM.getSubtargetImpl()->isVulkanEnv())
+  if (TM.getSubtargetImpl()->isLogicalSPIRV())
     addPass(createSPIRVLegalizePointerCastPass(&getTM<SPIRVTargetMachine>()));
   TargetPassConfig::addISelPrepare();
 }

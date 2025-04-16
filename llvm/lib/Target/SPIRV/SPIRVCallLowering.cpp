@@ -267,7 +267,12 @@ static SPIRVType *getArgSPIRVType(const Function &F, unsigned ArgIdx,
 
 static SPIRV::ExecutionModel::ExecutionModel
 getExecutionModel(const SPIRVSubtarget &STI, const Function &F) {
-  if (STI.isOpenCLEnv())
+  // FIXME: At the moment, there's a possibility that both `isOpenCLEnv()` and
+  // `isVulkanEnv()` return true. This is because the Triple is not always
+  // precise enough. For now, we'll rely instead on `isLogicalSPIRV()`, but this
+  // should be changed when `isOpenCLEnv()` and `isVulkanEnv()` cannot be true
+  // at the same time.
+  if (!STI.isLogicalSPIRV())
     return SPIRV::ExecutionModel::Kernel;
 
   auto attribute = F.getFnAttribute("hlsl.shader");

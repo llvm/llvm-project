@@ -862,7 +862,7 @@ bool SPIRVInstructionSelector::spvSelect(Register ResVReg,
                 .addUse(GV);
         return MIB.constrainAllUses(TII, TRI, RBI) &&
                BuildMI(BB, I, I.getDebugLoc(),
-                       TII.get(STI.isVulkanEnv()
+                       TII.get(STI.isLogicalSPIRV()
                                    ? SPIRV::OpInBoundsAccessChain
                                    : SPIRV::OpInBoundsPtrAccessChain))
                    .addDef(ResVReg)
@@ -1036,7 +1036,7 @@ bool SPIRVInstructionSelector::selectUnOp(Register ResVReg,
                                           const SPIRVType *ResType,
                                           MachineInstr &I,
                                           unsigned Opcode) const {
-  if (STI.isOpenCLEnv() && I.getOperand(1).isReg()) {
+  if (!STI.isLogicalSPIRV() && I.getOperand(1).isReg()) {
     Register SrcReg = I.getOperand(1).getReg();
     bool IsGV = false;
     for (MachineRegisterInfo::def_instr_iterator DefIt =
@@ -2069,7 +2069,7 @@ bool SPIRVInstructionSelector::selectDot4AddPackedExpansion(
   auto ExtractOp =
       Signed ? SPIRV::OpBitFieldSExtract : SPIRV::OpBitFieldUExtract;
 
-  bool ZeroAsNull = STI.isOpenCLEnv();
+  bool ZeroAsNull = !STI.isLogicalSPIRV();
   // Extract the i8 element, multiply and add it to the accumulator
   for (unsigned i = 0; i < 4; i++) {
     // A[i]
@@ -2209,7 +2209,7 @@ bool SPIRVInstructionSelector::selectWaveOpInst(Register ResVReg,
                  .addDef(ResVReg)
                  .addUse(GR.getSPIRVTypeID(ResType))
                  .addUse(GR.getOrCreateConstInt(SPIRV::Scope::Subgroup, I,
-                                                IntTy, TII, STI.isOpenCLEnv()));
+                                                IntTy, TII, !STI.isLogicalSPIRV()));
 
   for (unsigned J = 2; J < I.getNumOperands(); J++) {
     BMI.addUse(I.getOperand(J).getReg());
@@ -2233,7 +2233,7 @@ bool SPIRVInstructionSelector::selectWaveActiveCountBits(
                 .addDef(ResVReg)
                 .addUse(GR.getSPIRVTypeID(ResType))
                 .addUse(GR.getOrCreateConstInt(SPIRV::Scope::Subgroup, I, IntTy,
-                                               TII, STI.isOpenCLEnv()))
+                                               TII, !STI.isLogicalSPIRV()))
                 .addImm(SPIRV::GroupOperation::Reduce)
                 .addUse(BallotReg)
                 .constrainAllUses(TII, TRI, RBI);
@@ -2264,7 +2264,7 @@ bool SPIRVInstructionSelector::selectWaveReduceMax(Register ResVReg,
       .addDef(ResVReg)
       .addUse(GR.getSPIRVTypeID(ResType))
       .addUse(GR.getOrCreateConstInt(SPIRV::Scope::Subgroup, I, IntTy, TII,
-                                     STI.isOpenCLEnv()))
+                                     !STI.isLogicalSPIRV()))
       .addImm(SPIRV::GroupOperation::Reduce)
       .addUse(I.getOperand(2).getReg())
       .constrainAllUses(TII, TRI, RBI);
@@ -2291,7 +2291,7 @@ bool SPIRVInstructionSelector::selectWaveReduceSum(Register ResVReg,
       .addDef(ResVReg)
       .addUse(GR.getSPIRVTypeID(ResType))
       .addUse(GR.getOrCreateConstInt(SPIRV::Scope::Subgroup, I, IntTy, TII,
-                                     STI.isOpenCLEnv()))
+                                     !STI.isLogicalSPIRV()))
       .addImm(SPIRV::GroupOperation::Reduce)
       .addUse(I.getOperand(2).getReg());
 }
@@ -2513,7 +2513,7 @@ bool SPIRVInstructionSelector::selectFCmp(Register ResVReg,
 Register SPIRVInstructionSelector::buildZerosVal(const SPIRVType *ResType,
                                                  MachineInstr &I) const {
   // OpenCL uses nulls for Zero. In HLSL we don't use null constants.
-  bool ZeroAsNull = STI.isOpenCLEnv();
+  bool ZeroAsNull = !STI.isLogicalSPIRV();
   if (ResType->getOpcode() == SPIRV::OpTypeVector)
     return GR.getOrCreateConstVector(0UL, I, ResType, TII, ZeroAsNull);
   return GR.getOrCreateConstInt(0, I, ResType, TII, ZeroAsNull);
@@ -2522,7 +2522,7 @@ Register SPIRVInstructionSelector::buildZerosVal(const SPIRVType *ResType,
 Register SPIRVInstructionSelector::buildZerosValF(const SPIRVType *ResType,
                                                   MachineInstr &I) const {
   // OpenCL uses nulls for Zero. In HLSL we don't use null constants.
-  bool ZeroAsNull = STI.isOpenCLEnv();
+  bool ZeroAsNull = !STI.isLogicalSPIRV();
   APFloat VZero = getZeroFP(GR.getTypeForSPIRVType(ResType));
   if (ResType->getOpcode() == SPIRV::OpTypeVector)
     return GR.getOrCreateConstVector(VZero, I, ResType, TII, ZeroAsNull);
@@ -2532,7 +2532,7 @@ Register SPIRVInstructionSelector::buildZerosValF(const SPIRVType *ResType,
 Register SPIRVInstructionSelector::buildOnesValF(const SPIRVType *ResType,
                                                  MachineInstr &I) const {
   // OpenCL uses nulls for Zero. In HLSL we don't use null constants.
-  bool ZeroAsNull = STI.isOpenCLEnv();
+  bool ZeroAsNull = !STI.isLogicalSPIRV();
   APFloat VOne = getOneFP(GR.getTypeForSPIRVType(ResType));
   if (ResType->getOpcode() == SPIRV::OpTypeVector)
     return GR.getOrCreateConstVector(VOne, I, ResType, TII, ZeroAsNull);
@@ -2720,10 +2720,10 @@ bool SPIRVInstructionSelector::selectConst(Register ResVReg,
     Reg = GR.getOrCreateConstNullPtr(MIRBuilder, ResType);
   } else if (Opcode == TargetOpcode::G_FCONSTANT) {
     Reg = GR.getOrCreateConstFP(I.getOperand(1).getFPImm()->getValue(), I,
-                                ResType, TII, STI.isOpenCLEnv());
+                                ResType, TII, !STI.isLogicalSPIRV());
   } else {
     Reg = GR.getOrCreateConstInt(I.getOperand(1).getCImm()->getZExtValue(), I,
-                                 ResType, TII, STI.isOpenCLEnv());
+                                 ResType, TII, !STI.isLogicalSPIRV());
   }
   return Reg == ResVReg ? true : BuildCOPY(ResVReg, Reg, I);
 }
@@ -2803,7 +2803,7 @@ bool SPIRVInstructionSelector::selectGEP(Register ResVReg,
   // OpAccessChain could be used for OpenCL, but the SPIRV-LLVM Translator only
   // relies on PtrAccessChain, so we'll try not to deviate. For Vulkan however,
   // we have to use Op[InBounds]AccessChain.
-  const unsigned Opcode = STI.isVulkanEnv()
+  const unsigned Opcode = STI.isLogicalSPIRV()
                               ? (IsGEPInBounds ? SPIRV::OpInBoundsAccessChain
                                                : SPIRV::OpAccessChain)
                               : (IsGEPInBounds ? SPIRV::OpInBoundsPtrAccessChain
@@ -3483,7 +3483,7 @@ bool SPIRVInstructionSelector::selectFirstBitSet64Overflow(
 
   // On odd component counts we need to handle one more component
   if (CurrentComponent != ComponentCount) {
-    bool ZeroAsNull = STI.isOpenCLEnv();
+    bool ZeroAsNull = !STI.isLogicalSPIRV();
     Register FinalElemReg = MRI->createVirtualRegister(GR.getRegClass(I64Type));
     Register ConstIntLastIdx = GR.getOrCreateConstInt(
         ComponentCount - 1, I, BaseType, TII, ZeroAsNull);
@@ -3513,7 +3513,7 @@ bool SPIRVInstructionSelector::selectFirstBitSet64(
     Register SrcReg, unsigned BitSetOpcode, bool SwapPrimarySide) const {
   unsigned ComponentCount = GR.getScalarOrVectorComponentCount(ResType);
   SPIRVType *BaseType = GR.retrieveScalarOrVectorIntType(ResType);
-  bool ZeroAsNull = STI.isOpenCLEnv();
+  bool ZeroAsNull = !STI.isLogicalSPIRV();
   Register ConstIntZero =
       GR.getOrCreateConstInt(0, I, BaseType, TII, ZeroAsNull);
   Register ConstIntOne =
@@ -3715,7 +3715,10 @@ bool SPIRVInstructionSelector::selectAllocaArray(Register ResVReg,
                  .addUse(GR.getSPIRVTypeID(ResType))
                  .addUse(I.getOperand(2).getReg())
                  .constrainAllUses(TII, TRI, RBI);
-  if (!STI.isVulkanEnv()) {
+  // FIXME: Alignment requires Kernel Capabilities, so we only emit it if we are
+  // in OpenCL env. However, that is not good enough at the moment, so we use
+  // `!isLogicalSPIRV()` instead.
+  if (!STI.isLogicalSPIRV()) {
     unsigned Alignment = I.getOperand(3).getImm();
     buildOpDecorate(ResVReg, I, TII, SPIRV::Decoration::Alignment, {Alignment});
   }
@@ -3734,7 +3737,10 @@ bool SPIRVInstructionSelector::selectFrameIndex(Register ResVReg,
                  .addUse(GR.getSPIRVTypeID(ResType))
                  .addImm(static_cast<uint32_t>(SPIRV::StorageClass::Function))
                  .constrainAllUses(TII, TRI, RBI);
-  if (!STI.isVulkanEnv()) {
+  // FIXME: Alignment requires Kernel Capabilities, so we only emit it if we are
+  // in OpenCL env. However, that is not good enough at the moment, so we use
+  // `!isLogicalSPIRV()` instead.
+  if (!STI.isLogicalSPIRV()) {
     unsigned Alignment = I.getOperand(2).getImm();
     buildOpDecorate(ResVReg, *It, TII, SPIRV::Decoration::Alignment,
                     {Alignment});

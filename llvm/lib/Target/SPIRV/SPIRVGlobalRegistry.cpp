@@ -767,7 +767,10 @@ Register SPIRVGlobalRegistry::buildGlobalVariable(
   // TODO: maybe move to GenerateDecorations pass.
   const SPIRVSubtarget &ST =
       cast<SPIRVSubtarget>(MIRBuilder.getMF().getSubtarget());
-  if (IsConst && ST.isOpenCLEnv())
+  // FIXME: Constant requires Kernel Capabilities, so we only emit it if we are
+  // in OpenCL env. However, that is not good enough at the moment, so we use
+  // `!isLogicalSPIRV()` instead.
+  if (IsConst && !ST.isLogicalSPIRV())
     buildOpDecorate(Reg, MIRBuilder, SPIRV::Decoration::Constant, {});
 
   if (GVar && GVar->getAlign().valueOrOne().value() != 1) {
