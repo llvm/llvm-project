@@ -3285,7 +3285,7 @@ void SemaHLSL::processExplicitBindingsOnDecl(VarDecl *VD) {
     }
   }
 
-  if (!HasBinding && VD->getType()->isHLSLResourceRecord())
+  if (!HasBinding && isResourceRecordTypeOrArrayOf(VD))
     SemaRef.Diag(VD->getLocation(), diag::warn_hlsl_implicit_binding);
 }
 

@@ -32,3 +32,9 @@ struct CustomSRV {
 };
 // expected-warning@+1 {{resource has implicit register binding}}
 CustomSRV g;
+
+// expected-warning@+1 {{resource has implicit register binding}}
+RWBuffer<float> h[10];
+
+// No warning - explicit binding.
+RWBuffer<float> hh[100] : register(u4);
