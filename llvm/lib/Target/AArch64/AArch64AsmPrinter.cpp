@@ -45,6 +45,7 @@
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/Mangler.h"
 #include "llvm/IR/Module.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
@@ -112,7 +113,8 @@ public:
   const MCExpr *lowerBlockAddressConstant(const BlockAddress &BA) override;
 
   void emitStartOfAsmFile(Module &M) override;
-  void emitJumpTableInfo() override;
+  void emitJumpTableImpl(const MachineJumpTableInfo &MJTI,
+                         ArrayRef<unsigned> JumpTableIndices) override;
   std::tuple<const MCSymbol *, uint64_t, const MCSymbol *,
              codeview::JumpTableEntrySize>
   getCodeViewJumpTableInfo(int JTI, const MachineInstr *BranchInstr,
@@ -1289,19 +1291,26 @@ void AArch64AsmPrinter::PrintDebugValueComment(const MachineInstr *MI,
   printOperand(MI, NOps - 2, OS);
 }
 
-void AArch64AsmPrinter::emitJumpTableInfo() {
-  const MachineJumpTableInfo *MJTI = MF->getJumpTableInfo();
-  if (!MJTI) return;
-
-  const std::vector<MachineJumpTableEntry> &JT = MJTI->getJumpTables();
-  if (JT.empty()) return;
-
+void AArch64AsmPrinter::emitJumpTableImpl(const MachineJumpTableInfo &MJTI,
+                                          ArrayRef<unsigned> JumpTableIndices) {
+  // Fast return if there is nothing to emit to avoid creating empty sections.
+  if (JumpTableIndices.empty())
+    return;
   const TargetLoweringObjectFile &TLOF = getObjFileLowering();
-  MCSection *ReadOnlySec = TLOF.getSectionForJumpTable(MF->getFunction(), TM);
+  const auto &F = MF->getFunction();
+  ArrayRef<MachineJumpTableEntry> JT = MJTI.getJumpTables();
+
+  MCSection *ReadOnlySec = nullptr;
+  if (TM.Options.EnableStaticDataPartitioning) {
+    ReadOnlySec =
+        TLOF.getSectionForJumpTable(F, TM, &JT[JumpTableIndices.front()]);
+  } else {
+    ReadOnlySec = TLOF.getSectionForJumpTable(F, TM);
+  }
   OutStreamer->switchSection(ReadOnlySec);
 
   auto AFI = MF->getInfo<AArch64FunctionInfo>();
-  for (unsigned JTI = 0, e = JT.size(); JTI != e; ++JTI) {
+  for (unsigned JTI : JumpTableIndices) {
     const std::vector<MachineBasicBlock*> &JTBBs = JT[JTI].MBBs;
 
     // If this jump table was deleted, ignore it.
@@ -1387,22 +1396,21 @@ void AArch64AsmPrinter::emitFunctionEntryLabel() {
       return Sym;
     };
 
-    if (MCSymbol *UnmangledSym =
-            getSymbolFromMetadata("arm64ec_unmangled_name")) {
-      MCSymbol *ECMangledSym = getSymbolFromMetadata("arm64ec_ecmangled_name");
-
-      if (ECMangledSym) {
-        // An external function, emit the alias from the unmangled symbol to
-        // mangled symbol name and the alias from the mangled symbol to guest
-        // exit thunk.
+    SmallVector<MDNode *> UnmangledNames;
+    MF->getFunction().getMetadata("arm64ec_unmangled_name", UnmangledNames);
+    for (MDNode *Node : UnmangledNames) {
+      StringRef NameStr = cast<MDString>(Node->getOperand(0))->getString();
+      MCSymbol *UnmangledSym = MMI->getContext().getOrCreateSymbol(NameStr);
+      if (std::optional<std::string> MangledName =
+              getArm64ECMangledFunctionName(UnmangledSym->getName())) {
+        MCSymbol *ECMangledSym =
+            MMI->getContext().getOrCreateSymbol(*MangledName);
         emitFunctionAlias(UnmangledSym, ECMangledSym);
-        emitFunctionAlias(ECMangledSym, CurrentFnSym);
-      } else {
-        // A function implementation, emit the alias from the unmangled symbol
-        // to mangled symbol name.
-        emitFunctionAlias(UnmangledSym, CurrentFnSym);
       }
     }
+    if (MCSymbol *ECMangledSym =
+            getSymbolFromMetadata("arm64ec_ecmangled_name"))
+      emitFunctionAlias(ECMangledSym, CurrentFnSym);
   }
 }
 

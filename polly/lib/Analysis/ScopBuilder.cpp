@@ -1856,8 +1856,7 @@ static void joinOperandTree(EquivalenceClasses<Instruction *> &UnionFind,
         continue;
 
       // Check if OpInst is in the BB and is a modeled instruction.
-      auto OpVal = UnionFind.findValue(OpInst);
-      if (OpVal == UnionFind.end())
+      if (!UnionFind.contains(OpInst))
         continue;
 
       UnionFind.unionSets(Inst, OpInst);

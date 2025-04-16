@@ -203,6 +203,7 @@ bool CodeGenAction::beginSourceFileAction() {
   fir::support::registerLLVMTranslation(*mlirCtx);
   mlir::DialectRegistry registry;
   fir::acc::registerOpenACCExtensions(registry);
+  fir::omp::registerOpenMPExtensions(registry);
   mlirCtx->appendDialectRegistry(registry);
 
   const llvm::TargetMachine &targetMachine = ci.getTargetMachine();
@@ -287,16 +288,45 @@ bool CodeGenAction::beginSourceFileAction() {
   // Add OpenMP-related passes
   // WARNING: These passes must be run immediately after the lowering to ensure
   // that the FIR is correct with respect to OpenMP operations/attributes.
-  if (ci.getInvocation().getFrontendOpts().features.IsEnabled(
-          Fortran::common::LanguageFeature::OpenMP)) {
-    bool isDevice = false;
+  bool isOpenMPEnabled =
+      ci.getInvocation().getFrontendOpts().features.IsEnabled(
+          Fortran::common::LanguageFeature::OpenMP);
+
+  fir::OpenMPFIRPassPipelineOpts opts;
+
+  using DoConcurrentMappingKind =
+      Fortran::frontend::CodeGenOptions::DoConcurrentMappingKind;
+  opts.doConcurrentMappingKind =
+      ci.getInvocation().getCodeGenOpts().getDoConcurrentMapping();
+
+  if (opts.doConcurrentMappingKind != DoConcurrentMappingKind::DCMK_None &&
+      !isOpenMPEnabled) {
+    unsigned diagID = ci.getDiagnostics().getCustomDiagID(
+        clang::DiagnosticsEngine::Warning,
+        "OpenMP is required for lowering `do concurrent` loops to OpenMP."
+        "Enable OpenMP using `-fopenmp`."
+        "`do concurrent` loops will be serialized.");
+    ci.getDiagnostics().Report(diagID);
+    opts.doConcurrentMappingKind = DoConcurrentMappingKind::DCMK_None;
+  }
+
+  if (opts.doConcurrentMappingKind != DoConcurrentMappingKind::DCMK_None) {
+    unsigned diagID = ci.getDiagnostics().getCustomDiagID(
+        clang::DiagnosticsEngine::Warning,
+        "Mapping `do concurrent` to OpenMP is still experimental.");
+    ci.getDiagnostics().Report(diagID);
+  }
+
+  if (isOpenMPEnabled) {
+    opts.isTargetDevice = false;
     if (auto offloadMod = llvm::dyn_cast<mlir::omp::OffloadModuleInterface>(
             mlirModule->getOperation()))
-      isDevice = offloadMod.getIsTargetDevice();
+      opts.isTargetDevice = offloadMod.getIsTargetDevice();
+
     // WARNING: This pipeline must be run immediately after the lowering to
     // ensure that the FIR is correct with respect to OpenMP operations/
     // attributes.
-    fir::createOpenMPFIRPassPipeline(pm, isDevice);
+    fir::createOpenMPFIRPassPipeline(pm, opts);
   }
 
   pm.enableVerifier(/*verifyPasses=*/true);
@@ -775,6 +805,17 @@ void CodeGenAction::generateLLVMIR() {
     llvmModule->addModuleFlag(
         llvm::Module::Error, "target-abi",
         llvm::MDString::get(llvmModule->getContext(), targetOpts.abi));
+
+  if (triple.isAMDGPU() ||
+      (triple.isSPIRV() && triple.getVendor() == llvm::Triple::AMD)) {
+    // Emit amdhsa_code_object_version module flag, which is code object version
+    // times 100.
+    if (opts.CodeObjectVersion != llvm::CodeObjectVersionKind::COV_None) {
+      llvmModule->addModuleFlag(llvm::Module::Error,
+                                "amdhsa_code_object_version",
+                                opts.CodeObjectVersion);
+    }
+  }
 }
 
 static std::unique_ptr<llvm::raw_pwrite_stream>

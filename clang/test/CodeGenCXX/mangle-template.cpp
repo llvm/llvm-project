@@ -70,7 +70,7 @@ namespace test7 {
     static const unsigned value = sizeof(T);
   };
 
-  template<unsigned> struct int_c { 
+  template<unsigned> struct int_c {
     typedef float type;
   };
 
@@ -92,7 +92,7 @@ namespace test8 {
     };
   };
 
-  template<unsigned> struct int_c { 
+  template<unsigned> struct int_c {
     typedef float type;
   };
 
@@ -399,3 +399,20 @@ namespace type_qualifier {
   // CHECK: @_ZN14type_qualifier1gIPiEEvDTcmcvv_ELi1EE
   template void g<int*>(int);
 }
+
+namespace unresolved_template_specialization_type {
+  template <int> struct enable_if {};
+  struct Foo {
+    static const int value = true;
+  };
+  struct HashStateBase {
+    template <typename> using is_hashable = Foo;
+  };
+  template <class> struct raw_hash_set {
+    template <typename H>
+    static enable_if<H::template is_hashable<int>::value>
+        AbslHashValue() {}
+  };
+  template enable_if<true> raw_hash_set<int>::AbslHashValue<HashStateBase>();
+  // CHECH: @_ZN39unresolved_template_specialization_type12raw_hash_setIiE13AbslHashValueINS_13HashStateBaseEEENS_9enable_ifIXsrNT_11is_hashableIiEE5valueEEEv
+} // namespace unresolved_template_specialization_type

@@ -72,12 +72,14 @@ func.func @vec() {
   "some.op"() : () -> vector<4xi32>
   // CHECK: vector<4xf32>
   "some.op"() : () -> vector<4xf32>
-  // CHECK: !llvm.vec<? x 4 x i32>
-  "some.op"() : () -> !llvm.vec<? x 4 x i32>
-  // CHECK: !llvm.vec<? x 8 x f16>
-  "some.op"() : () -> !llvm.vec<? x 8 x f16>
-  // CHECK: !llvm.vec<4 x ptr>
-  "some.op"() : () -> !llvm.vec<4 x ptr>
+  // CHECK: vector<[4]xi32>
+  "some.op"() : () -> vector<[4] x i32>
+  // CHECK: vector<[8]xf16>
+  "some.op"() : () -> vector<[8] x f16>
+  // CHECK: vector<4x!llvm.ptr>
+  "some.op"() : () -> vector<4x!llvm.ptr>
+  // CHECK: vector<4x!llvm.ppc_fp128>
+  "some.op"() : () -> vector<4x!llvm.ppc_fp128>
   return
 }
 

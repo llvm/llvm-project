@@ -33,6 +33,7 @@
 #include "llvm/Transforms/Utils/LoopUtils.h"
 #include <numeric>
 #include <queue>
+#include <set>
 
 #define DEBUG_TYPE "vector-combine"
 #include "llvm/Transforms/Utils/InstructionWorklist.h"
@@ -2050,8 +2051,8 @@ bool VectorCombine::foldShuffleOfSelects(Instruction &I) {
        (SI0FOp->getFastMathFlags() != SI1FOp->getFastMathFlags())))
     return false;
 
-  auto *SrcVecTy = dyn_cast<FixedVectorType>(T1->getType());
-  auto *DstVecTy = dyn_cast<FixedVectorType>(I.getType());
+  auto *SrcVecTy = cast<FixedVectorType>(T1->getType());
+  auto *DstVecTy = cast<FixedVectorType>(I.getType());
   auto SK = TargetTransformInfo::SK_PermuteTwoSrc;
   auto SelOp = Instruction::Select;
   InstructionCost OldCost = TTI.getCmpSelInstrCost(

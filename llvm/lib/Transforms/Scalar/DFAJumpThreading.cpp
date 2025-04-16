@@ -399,7 +399,7 @@ struct ThreadingPath {
   void push_back(BasicBlock *BB) { Path.push_back(BB); }
   void push_front(BasicBlock *BB) { Path.push_front(BB); }
   void appendExcludingFirst(const PathType &OtherPath) {
-    Path.insert(Path.end(), OtherPath.begin() + 1, OtherPath.end());
+    llvm::append_range(Path, llvm::drop_begin(OtherPath));
   }
 
   void print(raw_ostream &OS) const {

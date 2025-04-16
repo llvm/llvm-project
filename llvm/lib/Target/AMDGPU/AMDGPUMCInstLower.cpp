@@ -17,6 +17,7 @@
 #include "AMDGPUAsmPrinter.h"
 #include "AMDGPUMachineFunction.h"
 #include "MCTargetDesc/AMDGPUInstPrinter.h"
+#include "MCTargetDesc/AMDGPUMCExpr.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineInstr.h"
@@ -43,24 +44,24 @@ AMDGPUMCInstLower::AMDGPUMCInstLower(MCContext &ctx,
                                      const AsmPrinter &ap):
   Ctx(ctx), ST(st), AP(ap) { }
 
-static MCSymbolRefExpr::VariantKind getVariantKind(unsigned MOFlags) {
+static AMDGPUMCExpr::Specifier getSpecifier(unsigned MOFlags) {
   switch (MOFlags) {
   default:
-    return MCSymbolRefExpr::VK_None;
+    return AMDGPUMCExpr::S_None;
   case SIInstrInfo::MO_GOTPCREL:
-    return MCSymbolRefExpr::VK_GOTPCREL;
+    return AMDGPUMCExpr::S_GOTPCREL;
   case SIInstrInfo::MO_GOTPCREL32_LO:
-    return MCSymbolRefExpr::VK_AMDGPU_GOTPCREL32_LO;
+    return AMDGPUMCExpr::S_GOTPCREL32_LO;
   case SIInstrInfo::MO_GOTPCREL32_HI:
-    return MCSymbolRefExpr::VK_AMDGPU_GOTPCREL32_HI;
+    return AMDGPUMCExpr::S_GOTPCREL32_HI;
   case SIInstrInfo::MO_REL32_LO:
-    return MCSymbolRefExpr::VK_AMDGPU_REL32_LO;
+    return AMDGPUMCExpr::S_REL32_LO;
   case SIInstrInfo::MO_REL32_HI:
-    return MCSymbolRefExpr::VK_AMDGPU_REL32_HI;
+    return AMDGPUMCExpr::S_REL32_HI;
   case SIInstrInfo::MO_ABS32_LO:
-    return MCSymbolRefExpr::VK_AMDGPU_ABS32_LO;
+    return AMDGPUMCExpr::S_ABS32_LO;
   case SIInstrInfo::MO_ABS32_HI:
-    return MCSymbolRefExpr::VK_AMDGPU_ABS32_HI;
+    return AMDGPUMCExpr::S_ABS32_HI;
   }
 }
 
@@ -85,7 +86,7 @@ bool AMDGPUMCInstLower::lowerOperand(const MachineOperand &MO,
     AP.getNameWithPrefix(SymbolName, GV);
     MCSymbol *Sym = Ctx.getOrCreateSymbol(SymbolName);
     const MCExpr *Expr =
-      MCSymbolRefExpr::create(Sym, getVariantKind(MO.getTargetFlags()),Ctx);
+        MCSymbolRefExpr::create(Sym, getSpecifier(MO.getTargetFlags()), Ctx);
     int64_t Offset = MO.getOffset();
     if (Offset != 0) {
       Expr = MCBinaryExpr::createAdd(Expr,

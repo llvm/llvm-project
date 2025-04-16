@@ -40,6 +40,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeLoongArchTarget() {
   initializeLoongArchPreRAExpandPseudoPass(*PR);
   initializeLoongArchExpandPseudoPass(*PR);
   initializeLoongArchDAGToDAGISelLegacyPass(*PR);
+  initializeLoongArchExpandAtomicPseudoPass(*PR);
 }
 
 static cl::opt<bool> EnableLoongArchDeadRegisterElimination(

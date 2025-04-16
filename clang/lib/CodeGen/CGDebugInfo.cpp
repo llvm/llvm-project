@@ -287,7 +287,7 @@ PrintingPolicy CGDebugInfo::getPrintingPolicy() const {
 
   PP.SuppressInlineNamespace =
       PrintingPolicy::SuppressInlineNamespaceMode::None;
-  PP.PrintCanonicalTypes = true;
+  PP.PrintAsCanonical = true;
   PP.UsePreferredNames = false;
   PP.AlwaysIncludeTypeForTemplateArgument = true;
   PP.UseEnumerators = false;
@@ -1059,8 +1059,23 @@ llvm::DIType *CGDebugInfo::CreateQualifiedType(QualType Ty,
   // additional ones.
   llvm::dwarf::Tag Tag = getNextQualifier(Qc);
   if (!Tag) {
-    assert(Qc.empty() && "Unknown type qualifier for debug info");
-    return getOrCreateType(QualType(T, 0), Unit);
+    if (Qc.getPointerAuth()) {
+      unsigned Key = Qc.getPointerAuth().getKey();
+      bool IsDiscr = Qc.getPointerAuth().isAddressDiscriminated();
+      unsigned ExtraDiscr = Qc.getPointerAuth().getExtraDiscriminator();
+      bool IsaPointer = Qc.getPointerAuth().isIsaPointer();
+      bool AuthenticatesNullValues =
+          Qc.getPointerAuth().authenticatesNullValues();
+      Qc.removePointerAuth();
+      assert(Qc.empty() && "Unknown type qualifier for debug info");
+      llvm::DIType *FromTy = getOrCreateType(QualType(T, 0), Unit);
+      return DBuilder.createPtrAuthQualifiedType(FromTy, Key, IsDiscr,
+                                                 ExtraDiscr, IsaPointer,
+                                                 AuthenticatesNullValues);
+    } else {
+      assert(Qc.empty() && "Unknown type qualifier for debug info");
+      return getOrCreateType(QualType(T, 0), Unit);
+    }
   }
 
   auto *FromTy = getOrCreateType(Qc.apply(CGM.getContext(), T), Unit);
@@ -6221,4 +6236,24 @@ CGDebugInfo::createConstantValueExpression(const clang::ValueDecl *VD,
     return DBuilder.createConstantValueExpression(ValIntOpt.value());
 
   return nullptr;
+}
+
+CodeGenFunction::LexicalScope::LexicalScope(CodeGenFunction &CGF,
+                                            SourceRange Range)
+    : RunCleanupsScope(CGF), Range(Range), ParentScope(CGF.CurLexicalScope) {
+  CGF.CurLexicalScope = this;
+  if (CGDebugInfo *DI = CGF.getDebugInfo())
+    DI->EmitLexicalBlockStart(CGF.Builder, Range.getBegin());
+}
+
+CodeGenFunction::LexicalScope::~LexicalScope() {
+  if (CGDebugInfo *DI = CGF.getDebugInfo())
+    DI->EmitLexicalBlockEnd(CGF.Builder, Range.getEnd());
+
+  // If we should perform a cleanup, force them now.  Note that
+  // this ends the cleanup scope before rescoping any labels.
+  if (PerformCleanup) {
+    ApplyDebugLocation DL(CGF, Range.getEnd());
+    ForceCleanup();
+  }
 }

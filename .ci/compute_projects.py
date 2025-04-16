@@ -52,6 +52,9 @@ DEPENDENTS_TO_TEST = {
     "clang": {"clang-tools-extra", "compiler-rt", "cross-project-tests"},
     "clang-tools-extra": {"libc"},
     "mlir": {"flang"},
+    # Test everything if ci scripts are changed.
+    # FIXME: Figure out what is missing and add here.
+    ".ci": {"llvm", "clang", "lld", "lldb"},
 }
 
 DEPENDENT_RUNTIMES_TO_TEST = {"clang": {"libcxx", "libcxxabi", "libunwind"}}
@@ -130,12 +133,11 @@ def _add_dependencies(projects: Set[str]) -> Set[str]:
 def _compute_projects_to_test(modified_projects: Set[str], platform: str) -> Set[str]:
     projects_to_test = set()
     for modified_project in modified_projects:
-        # Skip all projects where we cannot run tests.
-        if modified_project not in PROJECT_CHECK_TARGETS:
-            continue
         if modified_project in RUNTIMES:
             continue
-        projects_to_test.add(modified_project)
+        # Skip all projects where we cannot run tests.
+        if modified_project in PROJECT_CHECK_TARGETS:
+            projects_to_test.add(modified_project)
         if modified_project not in DEPENDENTS_TO_TEST:
             continue
         for dependent_project in DEPENDENTS_TO_TEST[modified_project]:
@@ -199,6 +201,11 @@ def _get_modified_projects(modified_files: list[str]) -> Set[str]:
         # targets and there is a separate workflow used for ensuring the
         # documentation builds.
         if len(path_parts) > 2 and path_parts[1] == "docs":
+            continue
+        # Exclude files for the gn build. We do not test it within premerge
+        # and changes occur often enough that they otherwise take up
+        # capacity.
+        if len(path_parts) > 3 and path_parts[:3] == ("llvm", "utils", "gn"):
             continue
         modified_projects.add(pathlib.Path(modified_file).parts[0])
     return modified_projects
