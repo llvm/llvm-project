@@ -45,10 +45,10 @@ class VISInst2<bits<9> opfval, string OpcStr, RegisterClass RC = DFPRegs>
         !strconcat(OpcStr, " $rs2, $rd")>;
 
 // For VIS Instructions with only rd operand.
-let Constraints = "$rd = $f", rs1 = 0, rs2 = 0 in
+let rs1 = 0, rs2 = 0 in
 class VISInstD<bits<9> opfval, string OpcStr, RegisterClass RC = DFPRegs>
        : VISInstFormat<opfval,
-        (outs RC:$rd), (ins RC:$f),
+        (outs RC:$rd), (ins),
         !strconcat(OpcStr, " $rd")>;
 
 // VIS 1 Instructions
@@ -277,3 +277,16 @@ def UMULXHI  : VISInst<0b000010110, "umulxhi", I64Regs>;
 def XMULX    : VISInst<0b100010101, "xmulx",   I64Regs>;
 def XMULXHI  : VISInst<0b100010110, "xmulxhi", I64Regs>;
 } // Predicates = [IsVIS3]
+
+// FP immediate patterns.
+def fpimm0 : FPImmLeaf<fAny, [{return Imm.isExactlyValue(+0.0);}]>;
+def fpnegimm0 : FPImmLeaf<fAny, [{return Imm.isExactlyValue(-0.0);}]>;
+
+// VIS instruction patterns.
+let Predicates = [HasVIS] in {
+// Zero immediate.
+def : Pat<(f64 fpimm0), (FZERO)>;
+def : Pat<(f32 fpimm0), (FZEROS)>;
+def : Pat<(f64 fpnegimm0), (FNEGD (FZERO))>;
+def : Pat<(f32 fpnegimm0), (FNEGS (FZEROS))>;
+} // Predicates = [HasVIS]

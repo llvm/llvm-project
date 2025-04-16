@@ -3560,6 +3560,12 @@ bool SparcTargetLowering::useLoadStackGuardNode(const Module &M) const {
   return true;
 }
 
+bool SparcTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
+                                       bool ForCodeSize) const {
+  return Subtarget->isVIS() && (VT == MVT::f32 || VT == MVT::f64) &&
+         Imm.isZero();
+}
+
 // Override to disable global variable loading on Linux.
 void SparcTargetLowering::insertSSPDeclarations(Module &M) const {
   if (!Subtarget->isTargetLinux())
