@@ -71,6 +71,7 @@ void DAGTypeLegalizer::ScalarizeVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::SELECT:            R = ScalarizeVecRes_SELECT(N); break;
   case ISD::SELECT_CC:         R = ScalarizeVecRes_SELECT_CC(N); break;
   case ISD::SETCC:             R = ScalarizeVecRes_SETCC(N); break;
+  case ISD::POISON:
   case ISD::UNDEF:             R = ScalarizeVecRes_UNDEF(N); break;
   case ISD::VECTOR_SHUFFLE:    R = ScalarizeVecRes_VECTOR_SHUFFLE(N); break;
   case ISD::IS_FPCLASS:        R = ScalarizeVecRes_IS_FPCLASS(N); break;
@@ -399,9 +400,7 @@ SDValue DAGTypeLegalizer::ScalarizeVecRes_MERGE_VALUES(SDNode *N,
 
 SDValue DAGTypeLegalizer::ScalarizeVecRes_BITCAST(SDNode *N) {
   SDValue Op = N->getOperand(0);
-  if (Op.getValueType().isVector()
-      && Op.getValueType().getVectorNumElements() == 1
-      && !isSimpleLegalType(Op.getValueType()))
+  if (getTypeAction(Op.getValueType()) == TargetLowering::TypeScalarizeVector)
     Op = GetScalarizedVector(Op);
   EVT NewVT = N->getValueType(0).getVectorElementType();
   return DAG.getNode(ISD::BITCAST, SDLoc(N),
@@ -1137,6 +1136,7 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::VP_MERGE:
   case ISD::VP_SELECT:    SplitRes_Select(N, Lo, Hi); break;
   case ISD::SELECT_CC:    SplitRes_SELECT_CC(N, Lo, Hi); break;
+  case ISD::POISON:
   case ISD::UNDEF:        SplitRes_UNDEF(N, Lo, Hi); break;
   case ISD::BITCAST:           SplitVecRes_BITCAST(N, Lo, Hi); break;
   case ISD::BUILD_VECTOR:      SplitVecRes_BUILD_VECTOR(N, Lo, Hi); break;
@@ -4592,6 +4592,7 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::SELECT_CC:         Res = WidenVecRes_SELECT_CC(N); break;
   case ISD::VP_SETCC:
   case ISD::SETCC:             Res = WidenVecRes_SETCC(N); break;
+  case ISD::POISON:
   case ISD::UNDEF:             Res = WidenVecRes_UNDEF(N); break;
   case ISD::VECTOR_SHUFFLE:
     Res = WidenVecRes_VECTOR_SHUFFLE(cast<ShuffleVectorSDNode>(N));

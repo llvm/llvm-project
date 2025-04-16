@@ -145,7 +145,8 @@ void SetVariableRequestHandler::operator()(
     lldb::SBError error;
     bool success = variable.SetValueFromCString(value.data(), error);
     if (success) {
-      VariableDescription desc(variable, dap.enable_auto_variable_summaries);
+      VariableDescription desc(variable,
+                               dap.configuration.enableAutoVariableSummaries);
       EmplaceSafeString(body, "value", desc.display_value);
       EmplaceSafeString(body, "type", desc.display_type_name);
 

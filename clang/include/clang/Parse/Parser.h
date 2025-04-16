@@ -3169,6 +3169,8 @@ private:
                                SourceLocation *endLoc = nullptr);
   ExprResult ParseExtIntegerArgument();
 
+  void ParsePtrauthQualifier(ParsedAttributes &Attrs);
+
   VirtSpecifiers::Specifier isCXX11VirtSpecifier(const Token &Tok) const;
   VirtSpecifiers::Specifier isCXX11VirtSpecifier() const {
     return isCXX11VirtSpecifier(Tok);
@@ -3769,6 +3771,8 @@ private:
   ExprResult ParseOpenACCIDExpression();
   /// Parses the variable list for the `cache` construct.
   OpenACCCacheParseInfo ParseOpenACCCacheVarList();
+  /// Parses the 'modifier-list' for copy, copyin, copyout, create.
+  OpenACCModifierKind tryParseModifierList(OpenACCClauseKind CK);
 
   using OpenACCVarParseResult = std::pair<ExprResult, OpenACCParseCanContinue>;
   /// Parses a single variable in a variable list for OpenACC.

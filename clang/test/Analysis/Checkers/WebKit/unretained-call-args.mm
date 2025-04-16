@@ -271,6 +271,16 @@ namespace cxx_member_operator_call {
   }
 }
 
+namespace cxx_assignment_op {
+
+  SomeObj* provide();
+  void foo() {
+    RetainPtr<SomeObj> ptr;
+    ptr = provide();
+  }
+
+}
+
 namespace call_with_ptr_on_ref {
   RetainPtr<SomeObj> provideProtected();
   RetainPtr<CFMutableArrayRef> provideProtectedCF();
@@ -405,6 +415,7 @@ void idcf(CFTypeRef obj) {
 @interface TestObject : NSObject
 - (void)doWork:(NSString *)msg, ...;
 - (void)doWorkOnSelf;
+- (SomeObj *)getSomeObj;
 @end
 
 @implementation TestObject
@@ -419,6 +430,14 @@ void idcf(CFTypeRef obj) {
   // expected-warning@-1{{Call argument is unretained and unsafe}}
   // expected-warning@-2{{Call argument is unretained and unsafe}}
   [self doWork:@"hello", RetainPtr<SomeObj> { provide() }.get(), RetainPtr<CFMutableArrayRef> { provide_cf() }.get()];
+}
+
+- (SomeObj *)getSomeObj {
+    return RetainPtr<SomeObj *>(provide()).autorelease();
+}
+
+- (void)doWorkOnSomeObj {
+    [[self getSomeObj] doWork];
 }
 
 @end
