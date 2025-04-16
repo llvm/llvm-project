@@ -435,6 +435,38 @@ writing tests easier. See `libc++-specific Lit Directives`_ for more information
        extension.)
 
 
+C++ Standard version tests
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Historically libc++ tests used to filter the tests for C++ Standard versions
+with lit directives like:
+
+.. code-block:: cpp
+
+   // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20, c++23
+
+With C++ Standards released every 3 years, this solution is not scalable.
+Instead use:
+
+.. code-block:: cpp
+
+   // UNSUPPORTED: std-at-least-c++26
+
+There is no corresponding ``std-at-most-c++23``. This could be useful when
+tests are only valid for a small set of standard versions. For example, a
+deprecation test is only valid when the feature is deprecated until it is
+removed from the Standard. These tests should be written like:
+
+.. code-block:: cpp
+
+   // REQUIRES: c++17 || c++20 || c++23
+
+.. note::
+
+   There are a lot of tests with the first style, these can remain as they are.
+   The new style is only intended to be used for new tests.
+
+
 Benchmarks
 ==========
 

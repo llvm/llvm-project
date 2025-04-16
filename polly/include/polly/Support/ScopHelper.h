@@ -83,7 +83,7 @@ using RecordedAssumptionsTy = llvm::SmallVector<Assumption, 8>;
 ///
 /// This function will add the assumption to the RecordedAssumptions. This
 /// collection will be added (@see addAssumption) to the assumed context once
-/// all paramaters are known and the context is fully built.
+/// all parameters are known and the context is fully built.
 ///
 /// @param RecordedAssumption container which keeps all recorded assumptions.
 /// @param Kind The assumption kind describing the underlying cause.
@@ -132,7 +132,7 @@ using BoxedLoopsSetTy = llvm::SetVector<const llvm::Loop *>;
 /// isNull(), isInstruction(), isLoad(), isStore(), ..., isMemTransferInst(),
 /// operator bool(), operator!()
 ///
-/// The functions isa, cast, cast_or_null, dyn_cast are modeled te resemble
+/// The functions isa, cast, cast_or_null, dyn_cast are modeled to resemble
 /// those from llvm/Support/Casting.h. Partial template function specialization
 /// is currently not supported in C++ such that those cannot be used directly.
 /// (llvm::isa could, but then llvm:cast etc. would not have the expected

@@ -16,7 +16,6 @@ static_library("Checkers") {
   sources = [
     "AnalysisOrderChecker.cpp",
     "AnalyzerStatsChecker.cpp",
-    "ArrayBoundChecker.cpp",
     "ArrayBoundCheckerV2.cpp",
     "BasicObjCFoundationChecks.cpp",
     "BitwiseShiftChecker.cpp",

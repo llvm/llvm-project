@@ -99,6 +99,10 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
       .widenScalarToNextPow2(0, /*Min=*/8)
       .clampScalar(0, s8, sMaxScalar);
 
+  getActionDefinitionsBuilder(G_LROUND).libcall();
+
+  getActionDefinitionsBuilder(G_LLROUND).libcall();
+
   // merge/unmerge
   for (unsigned Op : {G_MERGE_VALUES, G_UNMERGE_VALUES}) {
     unsigned BigTyIdx = Op == G_MERGE_VALUES ? 0 : 1;

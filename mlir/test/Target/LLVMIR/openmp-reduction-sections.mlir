@@ -50,9 +50,13 @@ llvm.func @sections_(%arg0: !llvm.ptr {fir.bindc_name = "x"}) attributes {fir.in
 // CHECK:         %[[VAL_20:.*]] = alloca float, align 4
 // CHECK:         %[[VAL_21:.*]] = alloca [1 x ptr], align 8
 // CHECK:         br label %[[VAL_22:.*]]
-// CHECK:       omp.par.region:                                   ; preds = %[[PAR_ENTRY]]
+
+// CHECK:       [[VAL_22]]:
+// CHECK:         br label %[[PAR_REG:omp.par.region]]
+
+// CHECK:       [[PAR_REG]]:                                   ; preds = %[[VAL_22]]
 // CHECK:         br label %[[VAL_25:.*]]
-// CHECK:       omp.par.region1:                                  ; preds = %[[VAL_22]]
+// CHECK:       omp.par.region1:                                  ; preds = %[[PAR_REG]]
 // CHECK:         br label %[[VAL_26:.*]]
 
 // CHECK:       [[RED_INIT:omp.reduction.init]]:

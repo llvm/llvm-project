@@ -42,6 +42,7 @@ public:
   void Analyze(const parser::AssignmentStmt &);
   void Analyze(const parser::PointerAssignmentStmt &);
   void Analyze(const parser::ConcurrentControl &);
+  int deviceConstructDepth_{0};
 
 private:
   bool CheckForPureContext(const SomeExpr &rhs, parser::CharBlock rhsSource);
@@ -89,6 +90,17 @@ void AssignmentContext::Analyze(const parser::AssignmentStmt &stmt) {
     }
     if (whereDepth_ > 0) {
       CheckShape(lhsLoc, &lhs);
+    }
+    if (context_.foldingContext().languageFeatures().IsEnabled(
+            common::LanguageFeature::CUDA)) {
+      const auto &scope{context_.FindScope(lhsLoc)};
+      const Scope &progUnit{GetProgramUnitContaining(scope)};
+      if (!IsCUDADeviceContext(&progUnit) && deviceConstructDepth_ == 0) {
+        if (Fortran::evaluate::HasCUDADeviceAttrs(lhs) &&
+            Fortran::evaluate::HasCUDAImplicitTransfer(rhs)) {
+          context_.Say(lhsLoc, "Unsupported CUDA data transfer"_err_en_US);
+        }
+      }
     }
   }
 }
@@ -216,6 +228,46 @@ void AssignmentChecker::Enter(const parser::MaskedElsewhereStmt &x) {
 }
 void AssignmentChecker::Leave(const parser::MaskedElsewhereStmt &) {
   context_.value().PopWhereContext();
+}
+void AssignmentChecker::Enter(const parser::CUFKernelDoConstruct &x) {
+  ++context_.value().deviceConstructDepth_;
+}
+void AssignmentChecker::Leave(const parser::CUFKernelDoConstruct &) {
+  --context_.value().deviceConstructDepth_;
+}
+static bool IsOpenACCComputeConstruct(const parser::OpenACCBlockConstruct &x) {
+  const auto &beginBlockDirective =
+      std::get<Fortran::parser::AccBeginBlockDirective>(x.t);
+  const auto &blockDirective =
+      std::get<Fortran::parser::AccBlockDirective>(beginBlockDirective.t);
+  if (blockDirective.v == llvm::acc::ACCD_parallel ||
+      blockDirective.v == llvm::acc::ACCD_serial ||
+      blockDirective.v == llvm::acc::ACCD_kernels) {
+    return true;
+  }
+  return false;
+}
+void AssignmentChecker::Enter(const parser::OpenACCBlockConstruct &x) {
+  if (IsOpenACCComputeConstruct(x)) {
+    ++context_.value().deviceConstructDepth_;
+  }
+}
+void AssignmentChecker::Leave(const parser::OpenACCBlockConstruct &x) {
+  if (IsOpenACCComputeConstruct(x)) {
+    --context_.value().deviceConstructDepth_;
+  }
+}
+void AssignmentChecker::Enter(const parser::OpenACCCombinedConstruct &) {
+  ++context_.value().deviceConstructDepth_;
+}
+void AssignmentChecker::Leave(const parser::OpenACCCombinedConstruct &) {
+  --context_.value().deviceConstructDepth_;
+}
+void AssignmentChecker::Enter(const parser::OpenACCLoopConstruct &) {
+  ++context_.value().deviceConstructDepth_;
+}
+void AssignmentChecker::Leave(const parser::OpenACCLoopConstruct &) {
+  --context_.value().deviceConstructDepth_;
 }
 
 } // namespace Fortran::semantics

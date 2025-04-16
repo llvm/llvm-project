@@ -694,20 +694,6 @@ def ccc_print_phases : Flag<["-"], "ccc-print-phases">,
 def ccc_print_bindings : Flag<["-"], "ccc-print-bindings">, InternalDebugOpt,
   HelpText<"Show bindings of tools to actions">;
 
-def ccc_arcmt_check : Flag<["-"], "ccc-arcmt-check">, InternalDriverOpt,
-  HelpText<"Check for ARC migration issues that need manual handling">;
-def ccc_arcmt_modify : Flag<["-"], "ccc-arcmt-modify">, InternalDriverOpt,
-  HelpText<"Apply modifications to files to conform to ARC">;
-def ccc_arcmt_migrate : Separate<["-"], "ccc-arcmt-migrate">, InternalDriverOpt,
-  HelpText<"Apply modifications and produces temporary files that conform to ARC">;
-def arcmt_migrate_report_output : Separate<["-"], "arcmt-migrate-report-output">,
-  HelpText<"Output path for the plist report">,
-  Visibility<[ClangOption, CC1Option]>,
-  MarshallingInfoString<FrontendOpts<"ARCMTMigrateReportOut">>;
-def arcmt_migrate_emit_arc_errors : Flag<["-"], "arcmt-migrate-emit-errors">,
-  HelpText<"Emit ARC errors even if the migrator can fix them">,
-  Visibility<[ClangOption, CC1Option]>,
-  MarshallingInfoFlag<FrontendOpts<"ARCMTMigrateEmitARCErrors">>;
 def gen_reproducer_eq: Joined<["-"], "gen-reproducer=">,
   Flags<[NoArgumentUnused]>, Visibility<[ClangOption, CLOption, DXCOption]>,
   HelpText<"Emit reproducer on (option: off, crash (default), error, always)">;
@@ -722,87 +708,6 @@ def round_trip_args : Flag<["-"], "round-trip-args">, Visibility<[CC1Option]>,
 def no_round_trip_args : Flag<["-"], "no-round-trip-args">,
   Visibility<[CC1Option]>,
   HelpText<"Disable command line arguments round-trip.">;
-
-def _migrate : Flag<["--"], "migrate">, Flags<[NoXarchOption]>,
-  HelpText<"Run the migrator">;
-def ccc_objcmt_migrate : Separate<["-"], "ccc-objcmt-migrate">,
-  InternalDriverOpt,
-  HelpText<"Apply modifications and produces temporary files to migrate to "
-   "modern ObjC syntax">;
-
-def objcmt_migrate_literals : Flag<["-"], "objcmt-migrate-literals">,
-  Visibility<[ClangOption, CC1Option]>,
-  HelpText<"Enable migration to modern ObjC literals">,
-  MarshallingInfoBitfieldFlag<FrontendOpts<"ObjCMTAction">, "FrontendOptions::ObjCMT_Literals">;
-def objcmt_migrate_subscripting : Flag<["-"], "objcmt-migrate-subscripting">,
-  Visibility<[ClangOption, CC1Option]>,
-  HelpText<"Enable migration to modern ObjC subscripting">,
-  MarshallingInfoBitfieldFlag<FrontendOpts<"ObjCMTAction">, "FrontendOptions::ObjCMT_Subscripting">;
-def objcmt_migrate_property : Flag<["-"], "objcmt-migrate-property">,
-  Visibility<[ClangOption, CC1Option]>,
-  HelpText<"Enable migration to modern ObjC property">,
-  MarshallingInfoBitfieldFlag<FrontendOpts<"ObjCMTAction">, "FrontendOptions::ObjCMT_Property">;
-def objcmt_migrate_all : Flag<["-"], "objcmt-migrate-all">,
-  Visibility<[ClangOption, CC1Option]>,
-  HelpText<"Enable migration to modern ObjC">,
-  MarshallingInfoBitfieldFlag<FrontendOpts<"ObjCMTAction">, "FrontendOptions::ObjCMT_MigrateDecls">;
-def objcmt_migrate_readonly_property : Flag<["-"], "objcmt-migrate-readonly-property">,
-  Visibility<[ClangOption, CC1Option]>,
-  HelpText<"Enable migration to modern ObjC readonly property">,
-  MarshallingInfoBitfieldFlag<FrontendOpts<"ObjCMTAction">, "FrontendOptions::ObjCMT_ReadonlyProperty">;
-def objcmt_migrate_readwrite_property : Flag<["-"], "objcmt-migrate-readwrite-property">,
-  Visibility<[ClangOption, CC1Option]>,
-  HelpText<"Enable migration to modern ObjC readwrite property">,
-  MarshallingInfoBitfieldFlag<FrontendOpts<"ObjCMTAction">, "FrontendOptions::ObjCMT_ReadwriteProperty">;
-def objcmt_migrate_property_dot_syntax : Flag<["-"], "objcmt-migrate-property-dot-syntax">,
-  Visibility<[ClangOption, CC1Option]>,
-  HelpText<"Enable migration of setter/getter messages to property-dot syntax">,
-  MarshallingInfoBitfieldFlag<FrontendOpts<"ObjCMTAction">, "FrontendOptions::ObjCMT_PropertyDotSyntax">;
-def objcmt_migrate_annotation : Flag<["-"], "objcmt-migrate-annotation">,
-  Visibility<[ClangOption, CC1Option]>,
-  HelpText<"Enable migration to property and method annotations">,
-  MarshallingInfoBitfieldFlag<FrontendOpts<"ObjCMTAction">, "FrontendOptions::ObjCMT_Annotation">;
-def objcmt_migrate_instancetype : Flag<["-"], "objcmt-migrate-instancetype">,
-  Visibility<[ClangOption, CC1Option]>,
-  HelpText<"Enable migration to infer instancetype for method result type">,
-  MarshallingInfoBitfieldFlag<FrontendOpts<"ObjCMTAction">, "FrontendOptions::ObjCMT_Instancetype">;
-def objcmt_migrate_nsmacros : Flag<["-"], "objcmt-migrate-ns-macros">,
-  Visibility<[ClangOption, CC1Option]>,
-  HelpText<"Enable migration to NS_ENUM/NS_OPTIONS macros">,
-  MarshallingInfoBitfieldFlag<FrontendOpts<"ObjCMTAction">, "FrontendOptions::ObjCMT_NsMacros">;
-def objcmt_migrate_protocol_conformance : Flag<["-"], "objcmt-migrate-protocol-conformance">,
-  Visibility<[ClangOption, CC1Option]>,
-  HelpText<"Enable migration to add protocol conformance on classes">,
-  MarshallingInfoBitfieldFlag<FrontendOpts<"ObjCMTAction">, "FrontendOptions::ObjCMT_ProtocolConformance">;
-def objcmt_atomic_property : Flag<["-"], "objcmt-atomic-property">,
-  Visibility<[ClangOption, CC1Option]>,
-  HelpText<"Make migration to 'atomic' properties">,
-  MarshallingInfoBitfieldFlag<FrontendOpts<"ObjCMTAction">, "FrontendOptions::ObjCMT_AtomicProperty">;
-def objcmt_returns_innerpointer_property : Flag<["-"], "objcmt-returns-innerpointer-property">,
-  Visibility<[ClangOption, CC1Option]>,
-  HelpText<"Enable migration to annotate property with NS_RETURNS_INNER_POINTER">,
-  MarshallingInfoBitfieldFlag<FrontendOpts<"ObjCMTAction">, "FrontendOptions::ObjCMT_ReturnsInnerPointerProperty">;
-def objcmt_ns_nonatomic_iosonly: Flag<["-"], "objcmt-ns-nonatomic-iosonly">,
-  Visibility<[ClangOption, CC1Option]>,
-  HelpText<"Enable migration to use NS_NONATOMIC_IOSONLY macro for setting property's 'atomic' attribute">,
-  MarshallingInfoBitfieldFlag<FrontendOpts<"ObjCMTAction">, "FrontendOptions::ObjCMT_NsAtomicIOSOnlyProperty">;
-def objcmt_migrate_designated_init : Flag<["-"], "objcmt-migrate-designated-init">,
-  Visibility<[ClangOption, CC1Option]>,
-  HelpText<"Enable migration to infer NS_DESIGNATED_INITIALIZER for initializer methods">,
-  MarshallingInfoBitfieldFlag<FrontendOpts<"ObjCMTAction">, "FrontendOptions::ObjCMT_DesignatedInitializer">;
-
-def objcmt_allowlist_dir_path: Joined<["-"], "objcmt-allowlist-dir-path=">,
-  Visibility<[ClangOption, CC1Option]>,
-  HelpText<"Only modify files with a filename contained in the provided directory path">,
-  MarshallingInfoString<FrontendOpts<"ObjCMTAllowListPath">>;
-def : Joined<["-"], "objcmt-whitelist-dir-path=">,
-  Visibility<[ClangOption, CC1Option]>,
-  HelpText<"Alias for -objcmt-allowlist-dir-path">,
-  Alias<objcmt_allowlist_dir_path>;
-// The misspelt "white-list" [sic] alias is due for removal.
-def : Joined<["-"], "objcmt-white-list-dir-path=">,
-  Visibility<[ClangOption, CC1Option]>,
-  Alias<objcmt_allowlist_dir_path>;
 
 // Make sure all other -ccc- options are rejected.
 def ccc_ : Joined<["-"], "ccc-">, Group<internal_Group>, Flags<[Unsupported]>;
@@ -933,10 +838,12 @@ def O : Joined<["-"], "O">, Group<O_Group>,
 def O_flag : Flag<["-"], "O">, Visibility<[ClangOption, CC1Option, FC1Option]>,
   Alias<O>, AliasArgs<["1"]>;
 def Ofast : Joined<["-"], "Ofast">, Group<O_Group>,
-  Visibility<[ClangOption, CC1Option, FlangOption]>,
-  HelpTextForVariants<[ClangOption, CC1Option],
-                      "Deprecated; use '-O3 -ffast-math' for the same behavior,"
-                      " or '-O3' to enable only conforming optimizations">;
+  Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
+  HelpTextForVariants<[FlangOption, FC1Option],
+    "Deprecated; use '-O3 -ffast-math -fstack-arrays' for the same behavior,"
+    " or '-O3 -fstack-arrays' to enable only conforming optimizations">,
+  HelpText<"Deprecated; use '-O3 -ffast-math' for the same behavior,"
+           " or '-O3' to enable only conforming optimizations">;
 def P : Flag<["-"], "P">,
   Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
   Group<Preprocessor_Group>,
@@ -1025,7 +932,9 @@ def W_Joined : Joined<["-"], "W">, Group<W_Group>,
 def Xanalyzer : Separate<["-"], "Xanalyzer">,
   HelpText<"Pass <arg> to the static analyzer">, MetaVarName<"<arg>">,
   Group<StaticAnalyzer_Group>;
-def Xarch__ : JoinedAndSeparate<["-"], "Xarch_">, Flags<[NoXarchOption]>;
+def Xarch__ : JoinedAndSeparate<["-"], "Xarch_">, Flags<[NoXarchOption]>,
+  HelpText<"Pass <arg> to the compiliation if the target matches <arch>">,
+  MetaVarName<"<arch> <arg>">;
 def Xarch_host : Separate<["-"], "Xarch_host">, Flags<[NoXarchOption]>,
   HelpText<"Pass <arg> to the CUDA/HIP host compilation">, MetaVarName<"<arg>">;
 def Xarch_device : Separate<["-"], "Xarch_device">, Flags<[NoXarchOption]>,
@@ -1208,8 +1117,8 @@ def fno_convergent_functions : Flag<["-"], "fno-convergent-functions">,
 
 // Common offloading options
 let Group = offload_Group in {
-def offload_arch_EQ : Joined<["--"], "offload-arch=">, Flags<[NoXarchOption]>,
-  Visibility<[ClangOption, FlangOption]>,
+def offload_arch_EQ : Joined<["--"], "offload-arch=">,
+  Visibility<[ClangOption, FlangOption]>, Flags<[NoXarchOption]>,
   HelpText<"Specify an offloading device architecture for CUDA, HIP, or OpenMP. (e.g. sm_35). "
            "If 'native' is used the compiler will detect locally installed architectures. "
            "For HIP offloading, the device architecture can be followed by target ID features "
@@ -2617,6 +2526,10 @@ defm sanitize_cfi_canonical_jump_tables : BoolOption<"f", "sanitize-cfi-canonica
           "Do not make">,
   BothFlags<[], [ClangOption], " the jump table addresses canonical in the symbol table">>,
   Group<f_clang_Group>;
+def fsanitize_kcfi_arity : Flag<["-"], "fsanitize-kcfi-arity">,
+                           Group<f_clang_Group>,
+                           HelpText<"Embed function arity information into the KCFI patchable function prefix">,
+                           MarshallingInfoFlag<CodeGenOpts<"SanitizeKcfiArity">>;
 defm sanitize_stats : BoolOption<"f", "sanitize-stats",
   CodeGenOpts<"SanitizeStats">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption], "Enable">,
@@ -3505,6 +3418,11 @@ def fno_struct_path_tbaa : Flag<["-"], "fno-struct-path-tbaa">, Group<f_Group>;
 def fno_strict_enums : Flag<["-"], "fno-strict-enums">, Group<f_Group>;
 def fno_strict_overflow : Flag<["-"], "fno-strict-overflow">, Group<f_Group>,
   Visibility<[ClangOption, FlangOption]>;
+defm init_global_zero : BoolOptionWithoutMarshalling<"f", "init-global-zero",
+  PosFlag<SetTrue, [], [FlangOption, FC1Option],
+          "Zero initialize globals without default initialization (default)">,
+  NegFlag<SetFalse, [], [FlangOption, FC1Option],
+          "Do not zero initialize globals without default initialization">>;
 def fno_pointer_tbaa : Flag<["-"], "fno-pointer-tbaa">, Group<f_Group>;
 def fno_temp_file : Flag<["-"], "fno-temp-file">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option, CLOption, DXCOption]>, HelpText<
@@ -3550,11 +3468,6 @@ defm application_extension : BoolFOption<"application-extension",
   PosFlag<SetTrue, [], [ClangOption, CC1Option],
           "Restrict code to those available for App Extensions">,
   NegFlag<SetFalse>>;
-defm relaxed_template_template_args : BoolFOption<"relaxed-template-template-args",
-  LangOpts<"RelaxedTemplateTemplateArgs">, DefaultTrue,
-  PosFlag<SetTrue, [], [], "Enable">,
-  NegFlag<SetFalse, [], [CC1Option], "Disable">,
-  BothFlags<[], [ClangOption], " C++17 relaxed template template argument matching">>;
 defm retain_subst_template_type_parm_type_ast_nodes : BoolFOption<"retain-subst-template-type-parm-type-ast-nodes",
   LangOpts<"RetainSubstTemplateTypeParmTypeAstNodes">, DefaultFalse,
   PosFlag<SetTrue, [], [CC1Option], "Enable">,
@@ -4294,6 +4207,11 @@ def fwrapv : Flag<["-"], "fwrapv">, Group<f_Group>,
   HelpText<"Treat signed integer overflow as two's complement">;
 def fno_wrapv : Flag<["-"], "fno-wrapv">, Group<f_Group>,
   Visibility<[ClangOption, CLOption, FlangOption]>;
+def fwrapv_pointer : Flag<["-"], "fwrapv-pointer">, Group<f_Group>,
+  Visibility<[ClangOption, CLOption, CC1Option, FlangOption, FC1Option]>,
+  HelpText<"Treat pointer overflow as two's complement">;
+def fno_wrapv_pointer : Flag<["-"], "fno-wrapv-pointer">, Group<f_Group>,
+  Visibility<[ClangOption, CLOption, FlangOption]>;
 def fwritable_strings : Flag<["-"], "fwritable-strings">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Store string literals as writable data">,
@@ -4337,6 +4255,18 @@ def stack_usage_file : Separate<["-"], "stack-usage-file">,
   Visibility<[CC1Option]>,
   HelpText<"Filename (or -) to write stack usage output to">,
   MarshallingInfoString<CodeGenOpts<"StackUsageOutput">>;
+def fextend_variable_liveness_EQ : Joined<["-"], "fextend-variable-liveness=">,
+  Group<f_Group>, Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Extend the liveness of user variables through optimizations to "
+           "prevent stale or optimized-out variable values when debugging.">,
+  Values<"all,this,none">,
+  NormalizedValues<["All", "This", "None"]>,
+  NormalizedValuesScope<"CodeGenOptions::ExtendVariableLivenessKind">,
+  MarshallingInfoEnum<CodeGenOpts<"ExtendVariableLiveness">, "None">;
+def fextend_variable_liveness : Flag<["-"], "fextend-variable-liveness">,
+  Visibility<[ClangOption, CC1Option]>,
+  Alias<fextend_variable_liveness_EQ>, AliasArgs<["all"]>,
+  HelpText<"Alias for -fextend-variable-liveness=all.">;
 
 defm unique_basic_block_section_names : BoolFOption<"unique-basic-block-section-names",
   CodeGenOpts<"UniqueBasicBlockSectionNames">, DefaultFalse,
@@ -5469,6 +5399,10 @@ def mdiv32 : Flag<["-"], "mdiv32">, Group<m_loongarch_Features_Group>,
   HelpText<"Use div.w[u] and mod.w[u] instructions with input not sign-extended.">;
 def mno_div32 : Flag<["-"], "mno-div32">, Group<m_loongarch_Features_Group>,
   HelpText<"Do not use div.w[u] and mod.w[u] instructions with input not sign-extended.">;
+def mscq : Flag<["-"], "mscq">, Group<m_loongarch_Features_Group>,
+  HelpText<"Enable sc.q instruction.">;
+def mno_scq : Flag<["-"], "mno-scq">, Group<m_loongarch_Features_Group>,
+  HelpText<"Disable sc.q instruction.">;
 def mannotate_tablejump : Flag<["-"], "mannotate-tablejump">, Group<m_loongarch_Features_Group>,
   HelpText<"Enable annotate table jump instruction to correlate it with the jump table.">;
 def mno_annotate_tablejump : Flag<["-"], "mno-annotate-tablejump">, Group<m_loongarch_Features_Group>,
@@ -5897,6 +5831,9 @@ def start_no_unused_arguments : Flag<["--"], "start-no-unused-arguments">,
   HelpText<"Don't emit warnings about unused arguments for the following arguments">;
 def static_libgcc : Flag<["-"], "static-libgcc">;
 def static_libstdcxx : Flag<["-"], "static-libstdc++">;
+def static_libclosure : Flag<["-"], "static-libclosure">,
+    Visibility<[ClangOption, CC1Option]>,
+    HelpText<"Generate code for statically linking libclosure (BlocksRuntime)">;
 def static : Flag<["-", "--"], "static">, Group<Link_Group>,
   Visibility<[ClangOption, FlangOption]>,
   Flags<[NoArgumentUnused]>;
@@ -6413,15 +6350,13 @@ def mno_avx : Flag<["-"], "mno-avx">, Group<m_x86_Features_Group>;
 def mavx10_1_256 : Flag<["-"], "mavx10.1-256">, Group<m_x86_AVX10_Features_Group>;
 def mno_avx10_1_256 : Flag<["-"], "mno-avx10.1-256">, Group<m_x86_AVX10_Features_Group>;
 def mavx10_1_512 : Flag<["-"], "mavx10.1-512">, Group<m_x86_AVX10_Features_Group>;
-def mno_avx10_1_512 : Flag<["-"], "mno-avx10.1-512">, Group<m_x86_AVX10_Features_Group>;
-def mavx10_1 : Flag<["-"], "mavx10.1">, Alias<mavx10_1_256>;
-def mno_avx10_1 : Flag<["-"], "mno-avx10.1">, Alias<mno_avx10_1_256>;
+def mno_avx10_1_512 : Flag<["-"], "mno-avx10.1-512">, Alias<mno_avx10_1_256>;
+def mavx10_1 : Flag<["-"], "mavx10.1">, Flags<[Unsupported]>;
+def mno_avx10_1 : Flag<["-"], "mno-avx10.1">, Flags<[Unsupported]>;
 def mavx10_2_256 : Flag<["-"], "mavx10.2-256">, Group<m_x86_AVX10_Features_Group>;
-def mno_avx10_2_256 : Flag<["-"], "mno-avx10.2-256">, Group<m_x86_AVX10_Features_Group>;
 def mavx10_2_512 : Flag<["-"], "mavx10.2-512">, Group<m_x86_AVX10_Features_Group>;
-def mno_avx10_2_512 : Flag<["-"], "mno-avx10.2-512">, Group<m_x86_AVX10_Features_Group>;
-def mavx10_2 : Flag<["-"], "mavx10.2">, Alias<mavx10_2_256>;
-def mno_avx10_2 : Flag<["-"], "mno-avx10.2">, Alias<mno_avx10_2_256>;
+def mavx10_2 : Flag<["-"], "mavx10.2">, Alias<mavx10_2_512>;
+def mno_avx10_2 : Flag<["-"], "mno-avx10.2">, Group<m_x86_AVX10_Features_Group>;
 def mavx2 : Flag<["-"], "mavx2">, Group<m_x86_Features_Group>;
 def mno_avx2 : Flag<["-"], "mno-avx2">, Group<m_x86_Features_Group>;
 def mavx512f : Flag<["-"], "mavx512f">, Group<m_x86_Features_Group>;
@@ -6670,6 +6605,7 @@ def fbinutils_version_EQ : Joined<["-"], "fbinutils-version=">,
 def fuse_ld_EQ : Joined<["-"], "fuse-ld=">, Group<f_Group>,
   Flags<[LinkOption]>, Visibility<[ClangOption, FlangOption, CLOption]>;
 def ld_path_EQ : Joined<["--"], "ld-path=">, Group<Link_Group>;
+def fuse_lipo_EQ : Joined<["-"], "fuse-lipo=">, Group<f_clang_Group>, Flags<[LinkOption]>;
 
 defm align_labels : BooleanFFlag<"align-labels">, Group<clang_ignored_gcc_optimization_f_Group>;
 def falign_labels_EQ : Joined<["-"], "falign-labels=">, Group<clang_ignored_gcc_optimization_f_Group>;
@@ -6949,6 +6885,7 @@ defm backslash : OptInFC1FFlag<"backslash", "Specify that backslash in string in
 defm xor_operator : OptInFC1FFlag<"xor-operator", "Enable .XOR. as a synonym of .NEQV.">;
 defm logical_abbreviations : OptInFC1FFlag<"logical-abbreviations", "Enable logical abbreviations">;
 defm implicit_none : OptInFC1FFlag<"implicit-none", "No implicit typing allowed unless overridden by IMPLICIT statements">;
+defm implicit_none_ext : OptInFC1FFlag<"implicit-none-ext", "No implicit externals allowed">;
 defm underscoring : OptInFC1FFlag<"underscoring", "Appends one trailing underscore to external names">;
 defm ppc_native_vec_elem_order: BoolOptionWithoutMarshalling<"f", "ppc-native-vector-element-order",
   PosFlag<SetTrue, [], [ClangOption], "Specifies PowerPC native vector element order (default)">,
@@ -6958,8 +6895,11 @@ defm unsigned : OptInFC1FFlag<"unsigned", "Enables UNSIGNED type">;
 def fno_automatic : Flag<["-"], "fno-automatic">, Group<f_Group>,
   HelpText<"Implies the SAVE attribute for non-automatic local objects in subprograms unless RECURSIVE">;
 
-def fsave_main_program : Flag<["-"], "fsave-main-program">, Group<f_Group>,
-  HelpText<"Place all variables from the main program in static memory (otherwise scalars may be placed on the stack)">;
+defm save_main_program : BoolOptionWithoutMarshalling<"f", "save-main-program",
+  PosFlag<SetTrue, [], [],
+    "Place all main program variables in static memory (otherwise scalars may be placed on the stack)">,
+  NegFlag<SetFalse, [], [],
+    "Allow placing main program variables on the stack (default)">>;
 
 defm stack_arrays : BoolOptionWithoutMarshalling<"f", "stack-arrays",
   PosFlag<SetTrue, [], [ClangOption], "Attempt to allocate array temporaries on the stack, no matter their size">,
@@ -7372,6 +7312,9 @@ let Visibility = [CC1Option, FC1Option] in {
 def mlink_builtin_bitcode : Separate<["-"], "mlink-builtin-bitcode">,
   HelpText<"Link and internalize needed symbols from the given bitcode file "
            "before performing optimizations.">;
+def mlink_bitcode_file
+    : Separate<["-"], "mlink-bitcode-file">,
+      HelpText<"Link the given bitcode file before performing optimizations.">;
 } // let Visibility = [CC1Option, FC1Option]
 
 let Visibility = [CC1Option] in {
@@ -7475,14 +7418,13 @@ def msmall_data_limit : Separate<["-"], "msmall-data-limit">,
 def funwind_tables_EQ : Joined<["-"], "funwind-tables=">,
   HelpText<"Generate unwinding tables for all functions">,
   MarshallingInfoInt<CodeGenOpts<"UnwindTables">>;
-defm constructor_aliases : BoolMOption<"constructor-aliases",
-  CodeGenOpts<"CXXCtorDtorAliases">, DefaultFalse,
-  PosFlag<SetTrue, [], [ClangOption], "Enable">,
-  NegFlag<SetFalse, [], [ClangOption], "Disable">,
-  BothFlags<[], [ClangOption, CC1Option],
-          " emitting complete constructors and destructors as aliases when possible">>;
-def mlink_bitcode_file : Separate<["-"], "mlink-bitcode-file">,
-  HelpText<"Link the given bitcode file before performing optimizations.">;
+defm constructor_aliases
+    : BoolMOption<"constructor-aliases", CodeGenOpts<"CXXCtorDtorAliases">,
+                  DefaultFalse, PosFlag<SetTrue, [], [ClangOption], "Enable">,
+                  NegFlag<SetFalse, [], [ClangOption], "Disable">,
+                  BothFlags<[], [ClangOption, CC1Option],
+                            " emitting complete constructors and destructors "
+                            "as aliases when possible">>;
 defm link_builtin_bitcode_postopt: BoolMOption<"link-builtin-bitcode-postopt",
   CodeGenOpts<"LinkBitcodePostopt">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption], "Link builtin bitcodes after the "
@@ -7656,6 +7598,11 @@ def fexperimental_assignment_tracking_EQ : Joined<["-"], "fexperimental-assignme
 
 def enable_tlsdesc : Flag<["-"], "enable-tlsdesc">,
   MarshallingInfoFlag<CodeGenOpts<"EnableTLSDESC">>;
+
+def import_call_optimization : Flag<["-"], "import-call-optimization">,
+    HelpText<"Emit Import Call sections on supported targets that can be used "
+             "by the Windows kernel to enable import call optimization">,
+    MarshallingInfoFlag<CodeGenOpts<"ImportCallOptimization">>;
 
 } // let Visibility = [CC1Option]
 
@@ -7948,8 +7895,6 @@ def rewrite_test : Flag<["-"], "rewrite-test">,
   HelpText<"Rewriter playground">;
 def rewrite_macros : Flag<["-"], "rewrite-macros">,
   HelpText<"Expand macros without full preprocessing">;
-def migrate : Flag<["-"], "migrate">,
-  HelpText<"Migrate source code">;
 def compiler_options_dump : Flag<["-"], "compiler-options-dump">,
   HelpText<"Dump the compiler configuration options">;
 def print_dependency_directives_minimized_source : Flag<["-"],
@@ -7962,17 +7907,6 @@ defm emit_llvm_uselists : BoolOption<"", "emit-llvm-uselists",
   PosFlag<SetTrue, [], [ClangOption], "Preserve">,
   NegFlag<SetFalse, [], [ClangOption], "Don't preserve">,
   BothFlags<[], [ClangOption], " order of LLVM use-lists when serializing">>;
-
-def mt_migrate_directory : Separate<["-"], "mt-migrate-directory">,
-  HelpText<"Directory for temporary files produced during ARC or ObjC migration">,
-  MarshallingInfoString<FrontendOpts<"MTMigrateDir">>;
-
-def arcmt_action_EQ : Joined<["-"], "arcmt-action=">, Visibility<[CC1Option]>,
-  HelpText<"The ARC migration action to take">,
-  Values<"check,modify,migrate">,
-  NormalizedValuesScope<"FrontendOptions">,
-  NormalizedValues<["ARCMT_Check", "ARCMT_Modify", "ARCMT_Migrate"]>,
-  MarshallingInfoEnum<FrontendOpts<"ARCMTAction">, "ARCMT_None">;
 
 def print_stats : Flag<["-"], "print-stats">,
   HelpText<"Print performance metrics and statistics">,
@@ -8239,10 +8173,6 @@ def fhlsl_strict_availability : Flag<["-"], "fhlsl-strict-availability">,
   Group<hlsl_Group>,
   MarshallingInfoFlag<LangOpts<"HLSLStrictAvailability">>;
 
-def fpreserve_vec3_type : Flag<["-"], "fpreserve-vec3-type">,
-  HelpText<"Preserve 3-component vector type">,
-  MarshallingInfoFlag<CodeGenOpts<"PreserveVec3Type">>,
-  ImpliedByAnyOf<[hlsl.KeyPath]>;
 def fwchar_type_EQ : Joined<["-"], "fwchar-type=">,
   HelpText<"Select underlying type for wchar_t">,
   Values<"char,short,int">,

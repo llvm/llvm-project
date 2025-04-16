@@ -471,10 +471,11 @@ val dibuild_create_member_pointer_type :
     a pointer to member. See LLVMDIBuilderCreateMemberPointerType *)
 
 val dibuild_create_object_pointer_type :
-  lldibuilder -> Llvm.llmetadata -> Llvm.llmetadata
+  lldibuilder -> Llvm.llmetadata -> implicit:bool -> Llvm.llmetadata
 (** [dibuild_create_object_pointer_type dib ty] Create a uniqued DIType* clone
-  with FlagObjectPointer and FlagArtificial set. [dib] is the dibuilder
-  value and [ty] the underlying type to which this pointer points. *)
+  with FlagObjectPointer. [dib] is the dibuilder
+  value and [ty] the underlying type to which this pointer points. If
+  [implicit] is true, also set FlagArtificial. *)
 
 val dibuild_create_qualified_type :
   lldibuilder -> tag:int -> Llvm.llmetadata -> Llvm.llmetadata

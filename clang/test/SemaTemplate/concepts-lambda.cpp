@@ -294,3 +294,16 @@ void foo() {
 }
 
 } // namespace GH110721
+
+namespace GH123441 {
+
+void test() {
+  auto L = [](auto... x) {
+    return [](decltype(x)... y)
+      requires true
+    {};
+  };
+  L(0, 1)(1, 2);
+}
+
+}

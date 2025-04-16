@@ -16,6 +16,7 @@
 
 #include "test/UnitTest/Test.h"
 
+using LIBC_NAMESPACE::BigInt;
 using LIBC_NAMESPACE::IntegerToString;
 using LIBC_NAMESPACE::cpp::span;
 using LIBC_NAMESPACE::cpp::string_view;
@@ -295,6 +296,107 @@ TEST(LlvmLibcIntegerToStringTest, Sign) {
   EXPECT(DEC, -1, "-1");
   EXPECT(DEC, 0, "+0");
   EXPECT(DEC, 1, "+1");
+}
+
+TEST(LlvmLibcIntegerToStringTest, BigInt_Base_10) {
+  uint64_t int256_max_w64[4] = {
+      0xFFFFFFFFFFFFFFFF,
+      0xFFFFFFFFFFFFFFFF,
+      0xFFFFFFFFFFFFFFFF,
+      0x7FFFFFFFFFFFFFFF,
+  };
+  uint64_t int256_min_w64[4] = {
+      0,
+      0,
+      0,
+      0x8000000000000000,
+  };
+  uint32_t int256_max_w32[8] = {
+      0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF,
+      0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0x7FFFFFFF,
+  };
+  uint32_t int256_min_w32[8] = {
+      0, 0, 0, 0, 0, 0, 0, 0x80000000,
+  };
+  uint16_t int256_max_w16[16] = {
+      0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF,
+      0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0x7FFF,
+  };
+  uint16_t int256_min_w16[16] = {
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x8000,
+  };
+
+  using unsigned_type_w64 = IntegerToString<BigInt<256, false, uint64_t>, Dec>;
+  EXPECT(unsigned_type_w64, 0, "0");
+  EXPECT(unsigned_type_w64, 1, "1");
+  EXPECT(unsigned_type_w64, -1,
+         "115792089237316195423570985008687907853269984665640564039457584007913"
+         "129639935");
+  EXPECT(unsigned_type_w64, int256_max_w64,
+         "578960446186580977117854925043439539266349923328202820197287920039565"
+         "64819967");
+  EXPECT(unsigned_type_w64, int256_min_w64,
+         "578960446186580977117854925043439539266349923328202820197287920039565"
+         "64819968");
+
+  using unsigned_type_w32 = IntegerToString<BigInt<256, false, uint32_t>, Dec>;
+  EXPECT(unsigned_type_w32, 0, "0");
+  EXPECT(unsigned_type_w32, 1, "1");
+  EXPECT(unsigned_type_w32, -1,
+         "115792089237316195423570985008687907853269984665640564039457584007913"
+         "129639935");
+  EXPECT(unsigned_type_w32, int256_max_w32,
+         "578960446186580977117854925043439539266349923328202820197287920039565"
+         "64819967");
+  EXPECT(unsigned_type_w32, int256_min_w32,
+         "578960446186580977117854925043439539266349923328202820197287920039565"
+         "64819968");
+
+  using unsigned_type_w16 = IntegerToString<BigInt<256, false, uint16_t>, Dec>;
+  EXPECT(unsigned_type_w16, 0, "0");
+  EXPECT(unsigned_type_w16, 1, "1");
+  EXPECT(unsigned_type_w16, -1,
+         "115792089237316195423570985008687907853269984665640564039457584007913"
+         "129639935");
+  EXPECT(unsigned_type_w16, int256_max_w16,
+         "578960446186580977117854925043439539266349923328202820197287920039565"
+         "64819967");
+  EXPECT(unsigned_type_w16, int256_min_w16,
+         "578960446186580977117854925043439539266349923328202820197287920039565"
+         "64819968");
+
+  using signed_type_w64 = IntegerToString<BigInt<256, true, uint64_t>, Dec>;
+  EXPECT(signed_type_w64, 0, "0");
+  EXPECT(signed_type_w64, 1, "1");
+  EXPECT(signed_type_w64, -1, "-1");
+  EXPECT(signed_type_w64, int256_max_w64,
+         "578960446186580977117854925043439539266349923328202820197287920039565"
+         "64819967");
+  EXPECT(signed_type_w64, int256_min_w64,
+         "-57896044618658097711785492504343953926634992332820282019728792003956"
+         "564819968");
+
+  using signed_type_w32 = IntegerToString<BigInt<256, true, uint32_t>, Dec>;
+  EXPECT(signed_type_w32, 0, "0");
+  EXPECT(signed_type_w32, 1, "1");
+  EXPECT(signed_type_w32, -1, "-1");
+  EXPECT(signed_type_w32, int256_max_w32,
+         "578960446186580977117854925043439539266349923328202820197287920039565"
+         "64819967");
+  EXPECT(signed_type_w32, int256_min_w32,
+         "-57896044618658097711785492504343953926634992332820282019728792003956"
+         "564819968");
+
+  using signed_type_w16 = IntegerToString<BigInt<256, true, uint16_t>, Dec>;
+  EXPECT(signed_type_w16, 0, "0");
+  EXPECT(signed_type_w16, 1, "1");
+  EXPECT(signed_type_w16, -1, "-1");
+  EXPECT(signed_type_w16, int256_max_w16,
+         "578960446186580977117854925043439539266349923328202820197287920039565"
+         "64819967");
+  EXPECT(signed_type_w16, int256_min_w16,
+         "-57896044618658097711785492504343953926634992332820282019728792003956"
+         "564819968");
 }
 
 TEST(LlvmLibcIntegerToStringTest, BufferOverrun) {

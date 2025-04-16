@@ -451,7 +451,10 @@ inline Tp const& DoNotOptimize(Tp const& value) {
 #  define TEST_HAS_NO_RANDOM_DEVICE
 #endif
 
-#if defined(_LIBCPP_HAS_NO_EXPERIMENTAL_TZDB)
+#ifdef _LIBCPP_USE_FROZEN_CXX03_HEADERS
+// This is a C++20 feature, so it's never available anyways
+#  define TEST_HAS_NO_EXPERIMENTAL_TZDB
+#elif defined(_LIBCPP_VERSION) && !_LIBCPP_HAS_EXPERIMENTAL_TZDB
 #  define TEST_HAS_NO_EXPERIMENTAL_TZDB
 #endif
 

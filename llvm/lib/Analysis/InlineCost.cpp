@@ -2698,8 +2698,10 @@ void CallAnalyzer::findDeadBlocks(BasicBlock *CurrBB, BasicBlock *NextBB) {
   auto IsEdgeDead = [&](BasicBlock *Pred, BasicBlock *Succ) {
     // A CFG edge is dead if the predecessor is dead or the predecessor has a
     // known successor which is not the one under exam.
-    return (DeadBlocks.count(Pred) ||
-            (KnownSuccessors[Pred] && KnownSuccessors[Pred] != Succ));
+    if (DeadBlocks.count(Pred))
+      return true;
+    BasicBlock *KnownSucc = KnownSuccessors[Pred];
+    return KnownSucc && KnownSucc != Succ;
   };
 
   auto IsNewlyDead = [&](BasicBlock *BB) {

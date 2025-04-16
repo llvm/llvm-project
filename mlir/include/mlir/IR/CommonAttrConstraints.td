@@ -334,17 +334,19 @@ class StringBasedAttr<Pred condition, string descr> : Attr<condition, descr> {
   let valueType = NoneType;
 }
 
-def StrAttr : StringBasedAttr<CPred<"::llvm::isa<::mlir::StringAttr>($_self)">,
-                              "string attribute">;
+def StrAttrPred : CPred<"::llvm::isa<::mlir::StringAttr>($_self)">;
+
+def StrAttr : StringBasedAttr<StrAttrPred, "string attribute">;
 
 // A string attribute that represents the name of a symbol.
-def SymbolNameAttr : StringBasedAttr<CPred<"::llvm::isa<::mlir::StringAttr>($_self)">,
-                                     "string attribute">;
+def SymbolNameAttr : StringBasedAttr<StrAttrPred, "string attribute">;
 
 // String attribute that has a specific value type.
 class TypedStrAttr<Type ty>
-    : StringBasedAttr<CPred<"::llvm::isa<::mlir::StringAttr>($_self)">,
-                            "string attribute"> {
+    : StringBasedAttr<And<[StrAttrPred,
+        SubstLeaves<"$_self", "::mlir::cast<StringAttr>($_self).getType()",
+                    ty.predicate>]>,
+        "string attribute of " # ty.summary> {
   let valueType = ty;
 }
 

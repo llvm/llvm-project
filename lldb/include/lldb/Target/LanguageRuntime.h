@@ -105,12 +105,16 @@ public:
         "language doesn't support getting vtable information");
   }
 
-  // this call should return true if it could set the name and/or the type
-  virtual bool GetDynamicTypeAndAddress(ValueObject &in_value,
-                                        lldb::DynamicValueType use_dynamic,
-                                        TypeAndOrName &class_type_or_name,
-                                        Address &address,
-                                        Value::ValueType &value_type) = 0;
+  /// This call should return true if it could set the name and/or the type
+  /// Sets address to the address of the dynamic type if value_type is set to
+  /// a file or load address. Sets local_buffer to a buffer containing the data
+  /// of the dynamic type if value_type is set to a host address. Callers should
+  /// copy local_buffer over into their own buffer if they want to keep the data
+  /// alive.
+  virtual bool GetDynamicTypeAndAddress(
+      ValueObject &in_value, lldb::DynamicValueType use_dynamic,
+      TypeAndOrName &class_type_or_name, Address &address,
+      Value::ValueType &value_type, llvm::ArrayRef<uint8_t> &local_buffer) = 0;
 
   // This call should return a CompilerType given a generic type name and an
   // ExecutionContextScope in which one can actually fetch any specialization

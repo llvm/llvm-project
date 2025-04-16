@@ -916,10 +916,10 @@ public:
                                    SmallVectorImpl<const SDNode *> &Worklist,
                                    unsigned int MaxSteps = 0,
                                    bool TopologicalPrune = false) {
-    SmallVector<const SDNode *, 8> DeferredNodes;
     if (Visited.count(N))
       return true;
 
+    SmallVector<const SDNode *, 8> DeferredNodes;
     // Node Id's are assigned in three places: As a topological
     // ordering (> 0), during legalization (results in values set to
     // 0), new nodes (set to -1). If N has a topolgical id then we
@@ -3261,13 +3261,16 @@ namespace ISD {
   template <typename ConstNodeType>
   bool matchUnaryPredicateImpl(SDValue Op,
                                std::function<bool(ConstNodeType *)> Match,
-                               bool AllowUndefs = false);
+                               bool AllowUndefs = false,
+                               bool AllowTruncation = false);
 
   /// Hook for matching ConstantSDNode predicate
   inline bool matchUnaryPredicate(SDValue Op,
                                   std::function<bool(ConstantSDNode *)> Match,
-                                  bool AllowUndefs = false) {
-    return matchUnaryPredicateImpl<ConstantSDNode>(Op, Match, AllowUndefs);
+                                  bool AllowUndefs = false,
+                                  bool AllowTruncation = false) {
+    return matchUnaryPredicateImpl<ConstantSDNode>(Op, Match, AllowUndefs,
+                                                   AllowTruncation);
   }
 
   /// Hook for matching ConstantFPSDNode predicate

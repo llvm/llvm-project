@@ -59,9 +59,9 @@ public:
 
     deque& operator=(const deque& c);
     deque& operator=(deque&& c)
-        noexcept(
-             allocator_type::propagate_on_container_move_assignment::value &&
-             is_nothrow_move_assignable<allocator_type>::value);
+        noexcept((__alloc_traits::propagate_on_container_move_assignment::value &&
+                  is_nothrow_move_assignable<allocator_type>::value) ||
+                 allocator_traits<allocator_type>::is_always_equal::value);
     deque& operator=(initializer_list<value_type> il);
 
     template <class InputIterator>
@@ -674,9 +674,10 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI deque(deque&& __c) noexcept(is_nothrow_move_constructible<allocator_type>::value);
   _LIBCPP_HIDE_FROM_ABI deque(deque&& __c, const __type_identity_t<allocator_type>& __a);
-  _LIBCPP_HIDE_FROM_ABI deque&
-  operator=(deque&& __c) noexcept(__alloc_traits::propagate_on_container_move_assignment::value &&
-                                  is_nothrow_move_assignable<allocator_type>::value);
+  _LIBCPP_HIDE_FROM_ABI deque& operator=(deque&& __c) noexcept(
+      (__alloc_traits::propagate_on_container_move_assignment::value &&
+       is_nothrow_move_assignable<allocator_type>::value) ||
+      allocator_traits<allocator_type>::is_always_equal::value);
 
   _LIBCPP_HIDE_FROM_ABI void assign(initializer_list<value_type> __il) { assign(__il.begin(), __il.end()); }
 #  endif // _LIBCPP_CXX03_LANG
@@ -1379,8 +1380,9 @@ inline deque<_Tp, _Allocator>::deque(deque&& __c, const __type_identity_t<alloca
 
 template <class _Tp, class _Allocator>
 inline deque<_Tp, _Allocator>& deque<_Tp, _Allocator>::operator=(deque&& __c) noexcept(
-    __alloc_traits::propagate_on_container_move_assignment::value &&
-    is_nothrow_move_assignable<allocator_type>::value) {
+    (__alloc_traits::propagate_on_container_move_assignment::value &&
+     is_nothrow_move_assignable<allocator_type>::value) ||
+    allocator_traits<allocator_type>::is_always_equal::value) {
   __move_assign(__c, integral_constant<bool, __alloc_traits::propagate_on_container_move_assignment::value>());
   return *this;
 }

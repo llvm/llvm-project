@@ -61,12 +61,12 @@ void CCState::HandleByVal(unsigned ValNo, MVT ValVT, MVT LocVT,
 /// Mark a register and all of its aliases as allocated.
 void CCState::MarkAllocated(MCPhysReg Reg) {
   for (MCRegAliasIterator AI(Reg, &TRI, true); AI.isValid(); ++AI)
-    UsedRegs[*AI / 32] |= 1 << (*AI & 31);
+    UsedRegs[(*AI).id() / 32] |= 1 << ((*AI).id() & 31);
 }
 
 void CCState::MarkUnallocated(MCPhysReg Reg) {
   for (MCRegAliasIterator AI(Reg, &TRI, true); AI.isValid(); ++AI)
-    UsedRegs[*AI / 32] &= ~(1 << (*AI & 31));
+    UsedRegs[(*AI).id() / 32] &= ~(1 << ((*AI).id() & 31));
 }
 
 bool CCState::IsShadowAllocatedReg(MCRegister Reg) const {

@@ -1,7 +1,8 @@
 header: strings.h
 header_template: strings.h.def
 macros: []
-types: []
+types:
+  - type_name: size_t
 enums: []
 objects: []
 functions:

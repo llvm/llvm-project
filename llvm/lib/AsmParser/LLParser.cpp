@@ -448,6 +448,7 @@ bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
     llvm::UpgradeDebugInfo(*M);
 
   UpgradeModuleFlags(*M);
+  UpgradeNVVMAnnotations(*M);
   UpgradeSectionAttributes(*M);
 
   if (PreserveInputDbgFormat != cl::boolOrDefault::BOU_TRUE)
@@ -2004,6 +2005,12 @@ bool LLParser::parseOptionalParamOrReturnAttrs(AttrBuilder &B, bool IsParam) {
       continue;
     }
 
+    if (Token == lltok::kw_nocapture) {
+      Lex.Lex();
+      B.addCapturesAttr(CaptureInfo::none());
+      continue;
+    }
+
     SMLoc Loc = Lex.getLoc();
     Attribute::AttrKind Attr = tokenToAttribute(Token);
     if (Attr == Attribute::None)
@@ -2975,7 +2982,7 @@ bool LLParser::parseType(Type *&Result, const Twine &Msg, bool AllowVoid) {
         return tokError("pointers to void are invalid - use i8* instead");
       if (!PointerType::isValidElementType(Result))
         return tokError("pointer to this type is invalid");
-      Result = PointerType::getUnqual(Result);
+      Result = PointerType::getUnqual(Context);
       Lex.Lex();
       break;
 
@@ -2992,7 +2999,7 @@ bool LLParser::parseType(Type *&Result, const Twine &Msg, bool AllowVoid) {
           parseToken(lltok::star, "expected '*' in address space"))
         return true;
 
-      Result = PointerType::get(Result, AddrSpace);
+      Result = PointerType::get(Context, AddrSpace);
       break;
     }
 
@@ -4697,6 +4704,12 @@ struct DwarfCCField : public MDUnsignedField {
   DwarfCCField() : MDUnsignedField(0, dwarf::DW_CC_hi_user) {}
 };
 
+struct DwarfEnumKindField : public MDUnsignedField {
+  DwarfEnumKindField()
+      : MDUnsignedField(dwarf::DW_APPLE_ENUM_KIND_invalid,
+                        dwarf::DW_APPLE_ENUM_KIND_max) {}
+};
+
 struct EmissionKindField : public MDUnsignedField {
   EmissionKindField() : MDUnsignedField(0, DICompileUnit::LastEmissionKind) {}
 };
@@ -4866,6 +4879,25 @@ bool LLParser::parseMDField(LocTy Loc, StringRef Name,
                     Lex.getStrVal() + "'");
   assert(Virtuality <= Result.Max && "Expected valid DWARF virtuality code");
   Result.assign(Virtuality);
+  Lex.Lex();
+  return false;
+}
+
+template <>
+bool LLParser::parseMDField(LocTy Loc, StringRef Name,
+                            DwarfEnumKindField &Result) {
+  if (Lex.getKind() == lltok::APSInt)
+    return parseMDField(Loc, Name, static_cast<MDUnsignedField &>(Result));
+
+  if (Lex.getKind() != lltok::DwarfEnumKind)
+    return tokError("expected DWARF enum kind code");
+
+  unsigned EnumKind = dwarf::getEnumKind(Lex.getStrVal());
+  if (EnumKind == dwarf::DW_APPLE_ENUM_KIND_invalid)
+    return tokError("invalid DWARF enum kind code" + Twine(" '") +
+                    Lex.getStrVal() + "'");
+  assert(EnumKind <= Result.Max && "Expected valid DWARF enum kind code");
+  Result.assign(EnumKind);
   Lex.Lex();
   return false;
 }
@@ -5489,6 +5521,7 @@ bool LLParser::parseDICompositeType(MDNode *&Result, bool IsDistinct) {
   OPTIONAL(flags, DIFlagField, );                                              \
   OPTIONAL(elements, MDField, );                                               \
   OPTIONAL(runtimeLang, DwarfLangField, );                                     \
+  OPTIONAL(enumKind, DwarfEnumKindField, );                                    \
   OPTIONAL(vtableHolder, MDField, );                                           \
   OPTIONAL(templateParams, MDField, );                                         \
   OPTIONAL(identifier, MDStringField, );                                       \
@@ -5510,15 +5543,19 @@ bool LLParser::parseDICompositeType(MDNode *&Result, bool IsDistinct) {
   else if (rank.isMDField())
     Rank = rank.getMDFieldValue();
 
+  std::optional<unsigned> EnumKind;
+  if (enumKind.Val != dwarf::DW_APPLE_ENUM_KIND_invalid)
+    EnumKind = enumKind.Val;
+
   // If this has an identifier try to build an ODR type.
   if (identifier.Val)
     if (auto *CT = DICompositeType::buildODRType(
             Context, *identifier.Val, tag.Val, name.Val, file.Val, line.Val,
             scope.Val, baseType.Val, size.Val, align.Val, offset.Val,
             specification.Val, num_extra_inhabitants.Val, flags.Val,
-            elements.Val, runtimeLang.Val, vtableHolder.Val, templateParams.Val,
-            discriminator.Val, dataLocation.Val, associated.Val, allocated.Val,
-            Rank, annotations.Val)) {
+            elements.Val, runtimeLang.Val, EnumKind, vtableHolder.Val,
+            templateParams.Val, discriminator.Val, dataLocation.Val,
+            associated.Val, allocated.Val, Rank, annotations.Val)) {
       Result = CT;
       return false;
     }
@@ -5529,9 +5566,10 @@ bool LLParser::parseDICompositeType(MDNode *&Result, bool IsDistinct) {
       DICompositeType,
       (Context, tag.Val, name.Val, file.Val, line.Val, scope.Val, baseType.Val,
        size.Val, align.Val, offset.Val, flags.Val, elements.Val,
-       runtimeLang.Val, vtableHolder.Val, templateParams.Val, identifier.Val,
-       discriminator.Val, dataLocation.Val, associated.Val, allocated.Val, Rank,
-       annotations.Val, specification.Val, num_extra_inhabitants.Val));
+       runtimeLang.Val, EnumKind, vtableHolder.Val, templateParams.Val,
+       identifier.Val, discriminator.Val, dataLocation.Val, associated.Val,
+       allocated.Val, Rank, annotations.Val, specification.Val,
+       num_extra_inhabitants.Val));
   return false;
 }
 
@@ -6515,7 +6553,7 @@ bool LLParser::parseFunctionHeader(Function *&Fn, bool IsDefine,
     return error(RetTypeLoc, "functions with 'sret' argument must return void");
 
   FunctionType *FT = FunctionType::get(RetType, ParamTypeList, IsVarArg);
-  PointerType *PFT = PointerType::get(FT, AddrSpace);
+  PointerType *PFT = PointerType::get(Context, AddrSpace);
 
   Fn = nullptr;
   GlobalValue *FwdFn = nullptr;
@@ -7410,7 +7448,7 @@ bool LLParser::parseInvoke(Instruction *&Inst, PerFunctionState &PFS) {
 
   // Look up the callee.
   Value *Callee;
-  if (convertValIDToValue(PointerType::get(Ty, InvokeAddrSpace), CalleeID,
+  if (convertValIDToValue(PointerType::get(Context, InvokeAddrSpace), CalleeID,
                           Callee, &PFS))
     return true;
 
@@ -7724,7 +7762,8 @@ bool LLParser::parseCallBr(Instruction *&Inst, PerFunctionState &PFS) {
 
   // Look up the callee.
   Value *Callee;
-  if (convertValIDToValue(PointerType::getUnqual(Ty), CalleeID, Callee, &PFS))
+  if (convertValIDToValue(PointerType::getUnqual(Context), CalleeID, Callee,
+                          &PFS))
     return true;
 
   // Set up the Attribute for the function.
@@ -8115,8 +8154,8 @@ bool LLParser::parseCall(Instruction *&Inst, PerFunctionState &PFS,
 
   // Look up the callee.
   Value *Callee;
-  if (convertValIDToValue(PointerType::get(Ty, CallAddrSpace), CalleeID, Callee,
-                          &PFS))
+  if (convertValIDToValue(PointerType::get(Context, CallAddrSpace), CalleeID,
+                          Callee, &PFS))
     return true;
 
   // Set up the Attribute for the function.
@@ -10702,12 +10741,15 @@ bool LLParser::parseOptionalCallsites(std::vector<CallsiteInfo> &Callsites) {
       return true;
 
     SmallVector<unsigned> StackIdIndices;
-    do {
-      uint64_t StackId = 0;
-      if (parseUInt64(StackId))
-        return true;
-      StackIdIndices.push_back(Index->addOrGetStackIdIndex(StackId));
-    } while (EatIfPresent(lltok::comma));
+    // Synthesized callsite records will not have a stack id list.
+    if (Lex.getKind() != lltok::rparen) {
+      do {
+        uint64_t StackId = 0;
+        if (parseUInt64(StackId))
+          return true;
+        StackIdIndices.push_back(Index->addOrGetStackIdIndex(StackId));
+      } while (EatIfPresent(lltok::comma));
+    }
 
     if (parseToken(lltok::rparen, "expected ')' in stackIds"))
       return true;

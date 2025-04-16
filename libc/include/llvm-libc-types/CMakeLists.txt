@@ -44,6 +44,7 @@ add_header(jmp_buf HDR jmp_buf.h)
 add_header(mbstate_t HDR mbstate_t.h)
 add_header(mode_t HDR mode_t.h)
 add_header(mtx_t HDR mtx_t.h DEPENDS .__futex_word .__mutex_type)
+add_header(nfds_t HDR nfds_t.h)
 add_header(nlink_t HDR nlink_t.h)
 add_header(off_t HDR off_t.h)
 add_header(once_flag HDR once_flag.h DEPENDS .__futex_word)
@@ -67,14 +68,15 @@ else()
 endif()
 add_header(stack_t HDR stack_t.h DEPENDS .size_t)
 add_header(suseconds_t HDR suseconds_t.h)
+add_header(struct_dirent HDR struct_dirent.h DEPENDS .ino_t .off_t)
+add_header(struct_f_owner_ex HDR struct_f_owner_ex.h DEPENDS .pid_t)
 add_header(struct_flock HDR struct_flock.h DEPENDS .off_t .pid_t)
 add_header(struct_flock64 HDR struct_flock64.h DEPENDS .off64_t .pid_t)
-add_header(struct_f_owner_ex HDR struct_f_owner_ex.h DEPENDS .pid_t)
-add_header(struct_timeval HDR struct_timeval.h DEPENDS .suseconds_t .time_t)
+add_header(struct_pollfd HDR struct_pollfd.h)
 add_header(struct_rlimit HDR struct_rlimit.h DEPENDS .rlim_t)
-add_header(struct_rusage HDR struct_rusage.h DEPENDS .struct_timeval)
-add_header(struct_dirent HDR struct_dirent.h DEPENDS .ino_t .off_t)
 add_header(struct_sched_param HDR struct_sched_param.h)
+add_header(struct_timeval HDR struct_timeval.h DEPENDS .suseconds_t .time_t)
+add_header(struct_rusage HDR struct_rusage.h DEPENDS .struct_timeval)
 add_header(union_sigval HDR union_sigval.h)
 add_header(siginfo_t HDR siginfo_t.h DEPENDS .union_sigval .pid_t .uid_t .clock_t)
 add_header(sig_atomic_t HDR sig_atomic_t.h)
@@ -102,15 +104,15 @@ add_header(__getoptargv_t HDR __getoptargv_t.h)
 add_header(wchar_t HDR wchar_t.h)
 add_header(char8_t HDR char8_t.h)
 add_header(
-    char16_t 
-  HDR 
+    char16_t
+  HDR
     char16_t.h
   DEPENDS
     libc.include.llvm-libc-macros.stdint_macros
 )
 add_header(
-    char32_t 
-  HDR 
+    char32_t
+  HDR
     char32_t.h
   DEPENDS
     libc.include.llvm-libc-macros.stdint_macros
@@ -145,8 +147,8 @@ add_header(cfloat16 HDR cfloat16.h)
 add_header(fsblkcnt_t HDR fsblkcnt_t.h)
 add_header(fsfilcnt_t HDR fsfilcnt_t.h)
 add_header(
-  struct_statvfs 
-HDR 
+  struct_statvfs
+HDR
   struct_statvfs.h
 DEPENDS
   .fsblkcnt_t

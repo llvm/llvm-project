@@ -30,5 +30,16 @@ entry:
   ret float %spv.distance
 }
 
+define noundef float @distance_instcombine_float4(<4 x float> noundef %a, <4 x float> noundef %b) {
+entry:
+  ; CHECK: %[[#]] = OpFunction %[[#float_32]] None %[[#]]
+  ; CHECK: %[[#arg0:]] = OpFunctionParameter %[[#vec4_float_32]]
+  ; CHECK: %[[#arg1:]] = OpFunctionParameter %[[#vec4_float_32]]
+  ; CHECK: %[[#]] = OpExtInst %[[#float_32]] %[[#op_ext_cl]] distance %[[#arg0]] %[[#arg1]]
+  %delta = fsub  <4 x float> %a, %b
+  %spv.length = call float @llvm.spv.length.f32(<4 x float> %delta)
+  ret float %spv.length
+}
+
 declare half @llvm.spv.distance.f16(<4 x half>, <4 x half>)
 declare float @llvm.spv.distance.f32(<4 x float>, <4 x float>)

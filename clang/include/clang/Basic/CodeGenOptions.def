@@ -277,6 +277,7 @@ CODEGENOPT(SanitizeCfiICallNormalizeIntegers, 1, 0) ///< Normalize integer types
                                                     ///< CFI icall function signatures
 CODEGENOPT(SanitizeCfiCanonicalJumpTables, 1, 0) ///< Make jump table symbols canonical
                                                  ///< instead of creating a local jump table.
+CODEGENOPT(SanitizeKcfiArity, 1, 0) ///< Embed arity in KCFI patchable function prefix
 CODEGENOPT(SanitizeCoverageType, 2, 0) ///< Type of sanitizer coverage
                                        ///< instrumentation.
 CODEGENOPT(SanitizeCoverageIndirectCalls, 1, 0) ///< Enable sanitizer coverage
@@ -393,6 +394,9 @@ CODEGENOPT(EnableTLSDESC, 1, 0)
 /// Bit size of immediate TLS offsets (0 == use the default).
 VALUE_CODEGENOPT(TLSSize, 8, 0)
 
+/// The types of variables that we will extend the live ranges of.
+ENUM_CODEGENOPT(ExtendVariableLiveness, ExtendVariableLivenessKind, 2, ExtendVariableLivenessKind::None)
+
 /// The default stack protector guard offset to use.
 VALUE_CODEGENOPT(StackProtectorGuardOffset, 32, INT_MAX)
 
@@ -412,9 +416,6 @@ CODEGENOPT(StrictReturn, 1, 1)
 
 /// Whether emit pseudo probes for sample pgo profile collection.
 CODEGENOPT(PseudoProbeForProfiling, 1, 0)
-
-/// Whether 3-component vector type is preserved.
-CODEGENOPT(PreserveVec3Type, 1, 0)
 
 CODEGENOPT(NoPLT, 1, 0)
 
@@ -464,6 +465,14 @@ ENUM_CODEGENOPT(ZeroCallUsedRegs, llvm::ZeroCallUsedRegs::ZeroCallUsedRegsKind,
 /// Modify C++ ABI to returning `this` pointer from constructors and
 /// non-deleting destructors. (No effect on Microsoft ABI.)
 CODEGENOPT(CtorDtorReturnThis, 1, 0)
+
+/// Enables emitting Import Call sections on supported targets that can be used
+/// by the Windows kernel to enable import call optimization.
+CODEGENOPT(ImportCallOptimization, 1, 0)
+
+/// Controls whether we generate code for static linking of libclosure
+/// (BlocksRuntime) on Windows.
+CODEGENOPT(StaticClosure, 1, 0)
 
 /// FIXME: Make DebugOptions its own top-level .def file.
 #include "DebugOptions.def"

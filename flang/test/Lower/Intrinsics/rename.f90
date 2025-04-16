@@ -20,7 +20,7 @@ subroutine test_rename(src, dst)
     !CHECK-NEXT: %[[src:.*]] = fir.convert %[[srcBox]] : (!fir.box<!fir.char<1,?>>) -> !fir.box<none>
     !CHECK-NEXT: %[[dst:.*]] = fir.convert %[[dstBox]] : (!fir.box<!fir.char<1,?>>) -> !fir.box<none>
     !CHECK-NEXT: %[[loc:.*]] = fir.convert %[[sourceFileConv:.*]]: (!fir.ref<!fir.char<1,[[len:.*]]>>) -> !fir.ref<i8>
-    !CHECK-NEXT: %[[result:.*]] = fir.call @_FortranARename(%[[src]], %[[dst]], %[[statusBox]], %[[loc]], %[[c10_i32]]) fastmath<contract> : (!fir.box<none>, !fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> none
+    !CHECK-NEXT: fir.call @_FortranARename(%[[src]], %[[dst]], %[[statusBox]], %[[loc]], %[[c10_i32]]) fastmath<contract> : (!fir.box<none>, !fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> ()
 end subroutine test_rename
 
 !CHECK-LABEL: func.func @_QPtest_rename_status
@@ -47,5 +47,5 @@ subroutine test_rename_status(src, dst)
     !CHECK-NEXT: %[[dst:.*]] = fir.convert %[[dstBox]] : (!fir.box<!fir.char<1,?>>) -> !fir.box<none>
     !CHECK-NEXT: %[[status:.*]] = fir.convert %[[statusBox]] : (!fir.box<i32>) -> !fir.box<none>
     !CHECK-NEXT: %[[loc:.*]] = fir.convert %[[sourceFileConv:.*]]: (!fir.ref<!fir.char<1,[[len:.*]]>>) -> !fir.ref<i8>
-    !CHECK-NEXT: %[[result:.*]] = fir.call @_FortranARename(%[[src]], %[[dst]], %[[status]], %[[loc]], %[[c10_i32]]) fastmath<contract> : (!fir.box<none>, !fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> none
+    !CHECK-NEXT: fir.call @_FortranARename(%[[src]], %[[dst]], %[[status]], %[[loc]], %[[c10_i32]]) fastmath<contract> : (!fir.box<none>, !fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> ()
 end subroutine test_rename_status

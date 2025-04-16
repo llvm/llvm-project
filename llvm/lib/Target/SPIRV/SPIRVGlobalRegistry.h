@@ -377,7 +377,7 @@ public:
                                  const MachineFunction *MF = nullptr) const;
 
   // Return the result type of the instruction defining the register.
-  SPIRVType *getResultType(Register VReg);
+  SPIRVType *getResultType(Register VReg, MachineFunction *MF = nullptr);
 
   // Whether the given VReg has a SPIR-V type mapped to it yet.
   bool hasSPIRVTypeForVReg(Register VReg) const {

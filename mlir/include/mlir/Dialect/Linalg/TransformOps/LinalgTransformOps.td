@@ -1007,7 +1007,7 @@ def PackTransposeOp : Op<Transform_Dialect, "structured.pack_transpose", [
 
     This operation may produce a silenceableFailure if the transpose spec is
     ill-formed (i.e. `outer_perm` or `inner_perm` are not permutations of the
-    proper rank) or if the tranposition of all involved operations fails for any
+    proper rank) or if the transposition of all involved operations fails for any
     reason.
 
     This operation returns 3 handles, one to the transformed LinalgOp, one to

@@ -18,6 +18,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/MemoryLocation.h"
+#include "llvm/CodeGen/LiveRegUnits.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -1350,8 +1351,46 @@ bool MachineInstr::wouldBeTriviallyDead() const {
   return isPHI() || isSafeToMove(SawStore);
 }
 
-static bool MemOperandsHaveAlias(const MachineFrameInfo &MFI, AAResults *AA,
-                                 bool UseTBAA, const MachineMemOperand *MMOa,
+bool MachineInstr::isDead(const MachineRegisterInfo &MRI,
+                          LiveRegUnits *LivePhysRegs) const {
+  // Instructions without side-effects are dead iff they only define dead regs.
+  // This function is hot and this loop returns early in the common case,
+  // so only perform additional checks before this if absolutely necessary.
+  for (const MachineOperand &MO : all_defs()) {
+    Register Reg = MO.getReg();
+    if (Reg.isPhysical()) {
+      // Don't delete live physreg defs, or any reserved register defs.
+      if (!LivePhysRegs || !LivePhysRegs->available(Reg) || MRI.isReserved(Reg))
+        return false;
+    } else {
+      if (MO.isDead())
+        continue;
+      for (const MachineInstr &Use : MRI.use_nodbg_instructions(Reg)) {
+        if (&Use != this)
+          // This def has a non-debug use. Don't delete the instruction!
+          return false;
+      }
+    }
+  }
+
+  // Technically speaking inline asm without side effects and no defs can still
+  // be deleted. But there is so much bad inline asm code out there, we should
+  // let them be.
+  if (isInlineAsm())
+    return false;
+
+  // FIXME: See issue #105950 for why LIFETIME markers are considered dead here.
+  if (isLifetimeMarker())
+    return true;
+
+  // If there are no defs with uses, then we call the instruction dead so long
+  // as we do not suspect it may have sideeffects.
+  return wouldBeTriviallyDead();
+}
+
+static bool MemOperandsHaveAlias(const MachineFrameInfo &MFI,
+                                 BatchAAResults *AA, bool UseTBAA,
+                                 const MachineMemOperand *MMOa,
                                  const MachineMemOperand *MMOb) {
   // The following interface to AA is fashioned after DAGCombiner::isAlias and
   // operates with MachineMemOperand offset with some important assumptions:
@@ -1434,7 +1473,7 @@ static bool MemOperandsHaveAlias(const MachineFrameInfo &MFI, AAResults *AA,
       MemoryLocation(ValB, LocB, UseTBAA ? MMOb->getAAInfo() : AAMDNodes()));
 }
 
-bool MachineInstr::mayAlias(AAResults *AA, const MachineInstr &Other,
+bool MachineInstr::mayAlias(BatchAAResults *AA, const MachineInstr &Other,
                             bool UseTBAA) const {
   const MachineFunction *MF = getMF();
   const TargetInstrInfo *TII = MF->getSubtarget().getInstrInfo();
@@ -1476,6 +1515,15 @@ bool MachineInstr::mayAlias(AAResults *AA, const MachineInstr &Other,
         return true;
 
   return false;
+}
+
+bool MachineInstr::mayAlias(AAResults *AA, const MachineInstr &Other,
+                            bool UseTBAA) const {
+  if (AA) {
+    BatchAAResults BAA(*AA);
+    return mayAlias(&BAA, Other, UseTBAA);
+  }
+  return mayAlias(static_cast<BatchAAResults *>(nullptr), Other, UseTBAA);
 }
 
 /// hasOrderedMemoryRef - Return true if this instruction may have an ordered

@@ -71,9 +71,9 @@ MVT &ValueTypeByHwMode::getOrCreateTypeForMode(unsigned Mode, MVT Type) {
   // make a copy of it for Mode and return it.
   auto D = Map.begin();
   if (D != Map.end() && D->first == DefaultMode)
-    return Map.insert(std::pair(Mode, D->second)).first->second;
+    return Map.try_emplace(Mode, D->second).first->second;
   // If default mode is not present either, use provided Type.
-  return Map.insert(std::pair(Mode, Type)).first->second;
+  return Map.try_emplace(Mode, Type).first->second;
 }
 
 StringRef ValueTypeByHwMode::getMVTName(MVT T) {

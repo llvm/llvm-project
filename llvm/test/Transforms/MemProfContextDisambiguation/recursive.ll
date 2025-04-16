@@ -57,15 +57,13 @@
 ; RUN:	--implicit-check-not="marked with memprof allocation attribute cold" \
 ; RUN:  --check-prefix=ALL
 
-;; Check the default behavior (disabled recursive callsites).
+;; Check the default behavior (enabled recursive callsites).
 ; RUN: opt -passes=memprof-context-disambiguation -supports-hot-cold-new \
 ; RUN:  -memprof-verify-ccg -memprof-verify-nodes \
 ; RUN:  -pass-remarks=memprof-context-disambiguation \
 ; RUN:  %s -S 2>&1 | FileCheck %s \
 ; RUN:  --implicit-check-not "memprof_recursive3.cc:12:10: call in clone _Z1Ci.memprof.1 assigned" \
-; RUN:  --implicit-check-not="created clone" \
-; RUN:	--implicit-check-not="marked with memprof allocation attribute cold" \
-; RUN:  --check-prefix=ALL
+; RUN:  --check-prefix=ALL --check-prefix=ALLOW-RECUR-CALLSITES --check-prefix=ALLOW-RECUR-CONTEXTS
 
 ;; Skipping recursive contexts should prevent spurious call to cloned version of
 ;; B from the context starting at memprof_recursive.cc:19:13, which is actually

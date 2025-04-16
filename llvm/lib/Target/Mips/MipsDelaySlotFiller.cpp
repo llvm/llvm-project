@@ -402,7 +402,7 @@ void RegDefsUses::addLiveOut(const MachineBasicBlock &MBB,
   for (const MachineBasicBlock *S : MBB.successors())
     if (S != &SuccBB)
       for (const auto &LI : S->liveins())
-        Uses.set(LI.PhysReg);
+        Uses.set(LI.PhysReg.id());
 }
 
 bool RegDefsUses::update(const MachineInstr &MI, unsigned Begin, unsigned End) {

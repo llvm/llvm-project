@@ -281,6 +281,26 @@ OmpTaskDependenceType::Value OmpDependClause::TaskDep::GetTaskDepType() const {
   }
 }
 
+std::string OmpTraitSelectorName::ToString() const {
+  return common::visit( //
+      common::visitors{
+          [&](Value v) { //
+            return std::string(EnumToString(v));
+          },
+          [&](llvm::omp::Directive d) {
+            return llvm::omp::getOpenMPDirectiveName(d).str();
+          },
+          [&](const std::string &s) { //
+            return s;
+          },
+      },
+      u);
+}
+
+std::string OmpTraitSetSelectorName::ToString() const {
+  return std::string(EnumToString(v));
+}
+
 } // namespace Fortran::parser
 
 template <typename C> static llvm::omp::Clause getClauseIdForClass(C &&) {

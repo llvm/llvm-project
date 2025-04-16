@@ -44,6 +44,7 @@
 #include "flang/Runtime/iostat-consts.h"
 #include "mlir/Dialect/Complex/IR/Complex.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "llvm/Support/CommandLine.h"
@@ -51,7 +52,6 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cfenv> // temporary -- only used in genIeeeGetOrSetModesOrStatus
-#include <mlir/IR/Value.h>
 #include <optional>
 
 #define DEBUG_TYPE "flang-lower-intrinsic"
@@ -147,6 +147,26 @@ static constexpr IntrinsicHandler handlers[]{
     {"atan2pi", &I::genAtanpi},
     {"atand", &I::genAtand},
     {"atanpi", &I::genAtanpi},
+    {"atomicaddd", &I::genAtomicAdd, {{{"a", asAddr}, {"v", asValue}}}, false},
+    {"atomicaddf", &I::genAtomicAdd, {{{"a", asAddr}, {"v", asValue}}}, false},
+    {"atomicaddi", &I::genAtomicAdd, {{{"a", asAddr}, {"v", asValue}}}, false},
+    {"atomicaddl", &I::genAtomicAdd, {{{"a", asAddr}, {"v", asValue}}}, false},
+    {"atomicandi", &I::genAtomicAnd, {{{"a", asAddr}, {"v", asValue}}}, false},
+    {"atomicdeci", &I::genAtomicDec, {{{"a", asAddr}, {"v", asValue}}}, false},
+    {"atomicinci", &I::genAtomicInc, {{{"a", asAddr}, {"v", asValue}}}, false},
+    {"atomicmaxd", &I::genAtomicMax, {{{"a", asAddr}, {"v", asValue}}}, false},
+    {"atomicmaxf", &I::genAtomicMax, {{{"a", asAddr}, {"v", asValue}}}, false},
+    {"atomicmaxi", &I::genAtomicMax, {{{"a", asAddr}, {"v", asValue}}}, false},
+    {"atomicmaxl", &I::genAtomicMax, {{{"a", asAddr}, {"v", asValue}}}, false},
+    {"atomicmind", &I::genAtomicMin, {{{"a", asAddr}, {"v", asValue}}}, false},
+    {"atomicminf", &I::genAtomicMin, {{{"a", asAddr}, {"v", asValue}}}, false},
+    {"atomicmini", &I::genAtomicMin, {{{"a", asAddr}, {"v", asValue}}}, false},
+    {"atomicminl", &I::genAtomicMin, {{{"a", asAddr}, {"v", asValue}}}, false},
+    {"atomicori", &I::genAtomicOr, {{{"a", asAddr}, {"v", asValue}}}, false},
+    {"atomicsubd", &I::genAtomicSub, {{{"a", asAddr}, {"v", asValue}}}, false},
+    {"atomicsubf", &I::genAtomicSub, {{{"a", asAddr}, {"v", asValue}}}, false},
+    {"atomicsubi", &I::genAtomicSub, {{{"a", asAddr}, {"v", asValue}}}, false},
+    {"atomicsubl", &I::genAtomicSub, {{{"a", asAddr}, {"v", asValue}}}, false},
     {"bessel_jn",
      &I::genBesselJn,
      {{{"n1", asValue}, {"n2", asValue}, {"x", asValue}}},
@@ -185,6 +205,10 @@ static constexpr IntrinsicHandler handlers[]{
     {"c_ptr_ne", &I::genCPtrCompare<mlir::arith::CmpIPredicate::ne>},
     {"ceiling", &I::genCeiling},
     {"char", &I::genChar},
+    {"chdir",
+     &I::genChdir,
+     {{{"name", asAddr}, {"status", asAddr, handleDynamicOptional}}},
+     /*isElemental=*/false},
     {"cmplx",
      &I::genCmplx,
      {{{"x", asValue}, {"y", asValue, handleDynamicOptional}}}},
@@ -1023,8 +1047,10 @@ static constexpr MathOperation mathOperations[] = {
     {"abs", "cabs", genFuncType<Ty::Real<8>, Ty::Complex<8>>,
      genComplexMathOp<mlir::complex::AbsOp>},
     {"abs", RTNAME_STRING(CAbsF128), FuncTypeReal16Complex16, genLibF128Call},
-    {"acos", "acosf", genFuncType<Ty::Real<4>, Ty::Real<4>>, genLibCall},
-    {"acos", "acos", genFuncType<Ty::Real<8>, Ty::Real<8>>, genLibCall},
+    {"acos", "acosf", genFuncType<Ty::Real<4>, Ty::Real<4>>,
+     genMathOp<mlir::math::AcosOp>},
+    {"acos", "acos", genFuncType<Ty::Real<8>, Ty::Real<8>>,
+     genMathOp<mlir::math::AcosOp>},
     {"acos", RTNAME_STRING(AcosF128), FuncTypeReal16Real16, genLibF128Call},
     {"acos", "cacosf", genFuncType<Ty::Complex<4>, Ty::Complex<4>>, genLibCall},
     {"acos", "cacos", genFuncType<Ty::Complex<8>, Ty::Complex<8>>, genLibCall},
@@ -2574,6 +2600,95 @@ mlir::Value IntrinsicLibrary::genAtanpi(mlir::Type resultType,
   return builder.create<mlir::arith::MulFOp>(loc, atan, factor);
 }
 
+static mlir::Value genAtomBinOp(fir::FirOpBuilder &builder, mlir::Location &loc,
+                                mlir::LLVM::AtomicBinOp binOp, mlir::Value arg0,
+                                mlir::Value arg1) {
+  auto llvmPointerType = mlir::LLVM::LLVMPointerType::get(builder.getContext());
+  arg0 = builder.createConvert(loc, llvmPointerType, arg0);
+  return builder.create<mlir::LLVM::AtomicRMWOp>(
+      loc, binOp, arg0, arg1, mlir::LLVM::AtomicOrdering::seq_cst);
+}
+
+mlir::Value IntrinsicLibrary::genAtomicAdd(mlir::Type resultType,
+                                           llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 2);
+
+  mlir::LLVM::AtomicBinOp binOp =
+      mlir::isa<mlir::IntegerType>(args[1].getType())
+          ? mlir::LLVM::AtomicBinOp::add
+          : mlir::LLVM::AtomicBinOp::fadd;
+  return genAtomBinOp(builder, loc, binOp, args[0], args[1]);
+}
+
+mlir::Value IntrinsicLibrary::genAtomicSub(mlir::Type resultType,
+                                           llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 2);
+
+  mlir::LLVM::AtomicBinOp binOp =
+      mlir::isa<mlir::IntegerType>(args[1].getType())
+          ? mlir::LLVM::AtomicBinOp::sub
+          : mlir::LLVM::AtomicBinOp::fsub;
+  return genAtomBinOp(builder, loc, binOp, args[0], args[1]);
+}
+
+mlir::Value IntrinsicLibrary::genAtomicAnd(mlir::Type resultType,
+                                           llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 2);
+  assert(mlir::isa<mlir::IntegerType>(args[1].getType()));
+
+  mlir::LLVM::AtomicBinOp binOp = mlir::LLVM::AtomicBinOp::_and;
+  return genAtomBinOp(builder, loc, binOp, args[0], args[1]);
+}
+
+mlir::Value IntrinsicLibrary::genAtomicOr(mlir::Type resultType,
+                                          llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 2);
+  assert(mlir::isa<mlir::IntegerType>(args[1].getType()));
+
+  mlir::LLVM::AtomicBinOp binOp = mlir::LLVM::AtomicBinOp::_or;
+  return genAtomBinOp(builder, loc, binOp, args[0], args[1]);
+}
+
+mlir::Value IntrinsicLibrary::genAtomicDec(mlir::Type resultType,
+                                           llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 2);
+  assert(mlir::isa<mlir::IntegerType>(args[1].getType()));
+
+  mlir::LLVM::AtomicBinOp binOp = mlir::LLVM::AtomicBinOp::udec_wrap;
+  return genAtomBinOp(builder, loc, binOp, args[0], args[1]);
+}
+
+mlir::Value IntrinsicLibrary::genAtomicInc(mlir::Type resultType,
+                                           llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 2);
+  assert(mlir::isa<mlir::IntegerType>(args[1].getType()));
+
+  mlir::LLVM::AtomicBinOp binOp = mlir::LLVM::AtomicBinOp::uinc_wrap;
+  return genAtomBinOp(builder, loc, binOp, args[0], args[1]);
+}
+
+mlir::Value IntrinsicLibrary::genAtomicMax(mlir::Type resultType,
+                                           llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 2);
+
+  mlir::LLVM::AtomicBinOp binOp =
+      mlir::isa<mlir::IntegerType>(args[1].getType())
+          ? mlir::LLVM::AtomicBinOp::max
+          : mlir::LLVM::AtomicBinOp::fmax;
+  return genAtomBinOp(builder, loc, binOp, args[0], args[1]);
+}
+
+mlir::Value IntrinsicLibrary::genAtomicMin(mlir::Type resultType,
+                                           llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 2);
+
+  mlir::LLVM::AtomicBinOp binOp =
+      mlir::isa<mlir::IntegerType>(args[1].getType())
+          ? mlir::LLVM::AtomicBinOp::min
+          : mlir::LLVM::AtomicBinOp::fmin;
+  return genAtomBinOp(builder, loc, binOp, args[0], args[1]);
+}
+
 // ASSOCIATED
 fir::ExtendedValue
 IntrinsicLibrary::genAssociated(mlir::Type resultType,
@@ -3073,6 +3188,35 @@ IntrinsicLibrary::genChar(mlir::Type type,
   mlir::Value len =
       builder.createIntegerConstant(loc, builder.getCharacterLengthType(), 1);
   return fir::CharBoxValue{cast, len};
+}
+
+// CHDIR
+fir::ExtendedValue
+IntrinsicLibrary::genChdir(std::optional<mlir::Type> resultType,
+                           llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert((args.size() == 1 && resultType.has_value()) ||
+         (args.size() >= 1 && !resultType.has_value()));
+  mlir::Value name = fir::getBase(args[0]);
+  mlir::Value status = fir::runtime::genChdir(builder, loc, name);
+
+  if (resultType.has_value()) {
+    return status;
+  } else {
+    // Subroutine form, store status and return none.
+    if (!isStaticallyAbsent(args[1])) {
+      mlir::Value statusAddr = fir::getBase(args[1]);
+      statusAddr.dump();
+      mlir::Value statusIsPresentAtRuntime =
+          builder.genIsNotNullAddr(loc, statusAddr);
+      builder.genIfThen(loc, statusIsPresentAtRuntime)
+          .genThen([&]() {
+            builder.createStoreWithConvert(loc, status, statusAddr);
+          })
+          .end();
+    }
+  }
+
+  return {};
 }
 
 // CMPLX
@@ -6222,10 +6366,12 @@ mlir::Value IntrinsicLibrary::genNearest(mlir::Type resultType,
   mlir::FloatType xType = mlir::dyn_cast<mlir::FloatType>(x.getType());
   const unsigned xBitWidth = xType.getWidth();
   mlir::Type i1Ty = builder.getI1Type();
-  if constexpr (proc == NearestProc::NextAfter)
+  if constexpr (proc == NearestProc::NextAfter) {
     // If isNan(Y), set X to a qNaN that will propagate to the resultIsX result.
-    x = builder.create<mlir::arith::SelectOp>(
-        loc, genIsFPClass(i1Ty, args[1], nanTest), genQNan(xType), x);
+    mlir::Value qNan = genQNan(xType);
+    mlir::Value isFPClass = genIsFPClass(i1Ty, args[1], nanTest);
+    x = builder.create<mlir::arith::SelectOp>(loc, isFPClass, qNan, x);
+  }
   mlir::Value resultIsX = genIsFPClass(i1Ty, x, nanTest);
   mlir::Type intType = builder.getIntegerType(xBitWidth);
   mlir::Value one = builder.createIntegerConstant(loc, intType, 1);
@@ -6345,12 +6491,11 @@ mlir::Value IntrinsicLibrary::genNearest(mlir::Type resultType,
   } else {
     // Kind 2, 3, 4, 8, 16. Increment or decrement X cast to integer.
     mlir::Value intX = builder.create<mlir::arith::BitcastOp>(loc, intType, x);
+    mlir::Value add = builder.create<mlir::arith::AddIOp>(loc, intX, one);
+    mlir::Value sub = builder.create<mlir::arith::SubIOp>(loc, intX, one);
     result = builder.create<mlir::arith::BitcastOp>(
         loc, resultType,
-        builder.create<mlir::arith::SelectOp>(
-            loc, magnitudeUp,
-            builder.create<mlir::arith::AddIOp>(loc, intX, one),
-            builder.create<mlir::arith::SubIOp>(loc, intX, one)));
+        builder.create<mlir::arith::SelectOp>(loc, magnitudeUp, add, sub));
     if constexpr (proc == NearestProc::Nearest ||
                   proc == NearestProc::NextAfter) {
       genRaiseExcept(_FORTRAN_RUNTIME_IEEE_OVERFLOW |

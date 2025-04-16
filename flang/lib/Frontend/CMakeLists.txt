@@ -27,7 +27,7 @@ add_flang_library(flangFrontend
   FortranParser
   FortranSemantics
   FortranEvaluate
-  FortranCommon
+  FortranSupport
   FortranLower
   FortranSupport
   FIRDialect
@@ -41,13 +41,6 @@ add_flang_library(flangFrontend
   flangPasses
   FIROpenACCSupport
   FlangOpenMPTransforms
-  MLIRTransforms
-  MLIRBuiltinToLLVMIRTranslation
-  MLIRLLVMToLLVMIRTranslation
-  MLIRSCFToControlFlow
-  MLIRTargetLLVMIRImport
-  ${dialect_libs}
-  ${extension_libs}
 
   LINK_COMPONENTS
   Passes
@@ -62,6 +55,15 @@ add_flang_library(flangFrontend
   FrontendDriver
   FrontendOpenACC
   FrontendOpenMP
+
+  MLIR_LIBS
+  MLIRTransforms
+  MLIRBuiltinToLLVMIRTranslation
+  MLIRLLVMToLLVMIRTranslation
+  MLIRSCFToControlFlow
+  MLIRTargetLLVMIRImport
+  ${dialect_libs}
+  ${extension_libs}
 
   CLANG_LIBS
   clangBasic

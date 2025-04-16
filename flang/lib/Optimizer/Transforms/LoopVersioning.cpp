@@ -40,7 +40,7 @@
 ///       could be part of the cost analysis above.
 //===----------------------------------------------------------------------===//
 
-#include "flang/ISO_Fortran_binding_wrapper.h"
+#include "flang/Common/ISO_Fortran_binding_wrapper.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Runtime/Inquiry.h"
@@ -312,8 +312,8 @@ void LoopVersioningPass::runOnOperation() {
   mlir::ModuleOp module = func->getParentOfType<mlir::ModuleOp>();
   fir::KindMapping kindMap = fir::getKindMapping(module);
   mlir::SmallVector<ArgInfo, 4> argsOfInterest;
-  std::optional<mlir::DataLayout> dl =
-      fir::support::getOrSetDataLayout(module, /*allowDefaultLayout=*/false);
+  std::optional<mlir::DataLayout> dl = fir::support::getOrSetMLIRDataLayout(
+      module, /*allowDefaultLayout=*/false);
   if (!dl)
     mlir::emitError(module.getLoc(),
                     "data layout attribute is required to perform " DEBUG_TYPE

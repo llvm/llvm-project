@@ -765,6 +765,18 @@ Expected<InstructionMatcher &> GlobalISelEmitter::createAndImportSelDAGMatcher(
     InsnMatcher.addPredicate<InstructionOpcodeMatcher>(SrcGIOrNull);
   }
 
+  // Since there are no opcodes for atomic loads and stores comparing to
+  // SelectionDAG, we add CheckMMOIsNonAtomic predicate immediately after the
+  // opcode predicate to make a logical combination of them.
+  if (SrcGIEquivOrNull &&
+      SrcGIEquivOrNull->getValueAsBit("CheckMMOIsNonAtomic"))
+    InsnMatcher.addPredicate<AtomicOrderingMMOPredicateMatcher>("NotAtomic");
+  else if (SrcGIEquivOrNull &&
+           SrcGIEquivOrNull->getValueAsBit("CheckMMOIsAtomic")) {
+    InsnMatcher.addPredicate<AtomicOrderingMMOPredicateMatcher>(
+        "Unordered", AtomicOrderingMMOPredicateMatcher::AO_OrStronger);
+  }
+
   unsigned OpIdx = 0;
   for (const TypeSetByHwMode &VTy : Src.getExtTypes()) {
     // Results don't have a name unless they are the root node. The caller will
@@ -825,15 +837,6 @@ Expected<InstructionMatcher &> GlobalISelEmitter::createAndImportSelDAGMatcher(
       return failedImport("Src pattern child has predicate (" +
                           explainPredicates(Src) + ")");
     }
-  }
-
-  if (SrcGIEquivOrNull &&
-      SrcGIEquivOrNull->getValueAsBit("CheckMMOIsNonAtomic"))
-    InsnMatcher.addPredicate<AtomicOrderingMMOPredicateMatcher>("NotAtomic");
-  else if (SrcGIEquivOrNull &&
-           SrcGIEquivOrNull->getValueAsBit("CheckMMOIsAtomic")) {
-    InsnMatcher.addPredicate<AtomicOrderingMMOPredicateMatcher>(
-        "Unordered", AtomicOrderingMMOPredicateMatcher::AO_OrStronger);
   }
 
   if (Src.isLeaf()) {
@@ -2343,6 +2346,20 @@ void GlobalISelEmitter::emitRunCustomAction(raw_ostream &OS) {
      << "}\n";
 }
 
+bool hasBFloatType(const TreePatternNode &Node) {
+  for (unsigned I = 0, E = Node.getNumTypes(); I < E; I++) {
+    auto Ty = Node.getType(I);
+    for (auto T : Ty)
+      if (T.second == MVT::bf16 ||
+          (T.second.isVector() && T.second.getScalarType() == MVT::bf16))
+        return true;
+  }
+  for (const TreePatternNode &C : Node.children())
+    if (hasBFloatType(C))
+      return true;
+  return false;
+}
+
 void GlobalISelEmitter::run(raw_ostream &OS) {
   if (!UseCoverageFile.empty()) {
     RuleCoverage = CodeGenCoverage();
@@ -2379,6 +2396,13 @@ void GlobalISelEmitter::run(raw_ostream &OS) {
 
     if (Pat.getGISelShouldIgnore())
       continue; // skip without warning
+
+    // Skip any patterns containing BF16 types, as GISel cannot currently tell
+    // the difference between fp16 and bf16. FIXME: This can be removed once
+    // BF16 is supported properly.
+    if (hasBFloatType(Pat.getSrcPattern()))
+      continue;
+
     auto MatcherOrErr = runOnPattern(Pat);
 
     // The pattern analysis can fail, indicating an unsupported pattern.

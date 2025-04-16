@@ -147,8 +147,8 @@ public:
           CGM.getTarget().parseTargetAttr(TA->getFeaturesStr());
       if (!Attr.BranchProtection.empty()) {
         StringRef Error;
-        (void)CGM.getTarget().validateBranchProtection(Attr.BranchProtection,
-                                                       Attr.CPU, BPI, Error);
+        (void)CGM.getTarget().validateBranchProtection(
+            Attr.BranchProtection, Attr.CPU, BPI, CGM.getLangOpts(), Error);
         assert(Error.empty());
       }
     }
@@ -244,6 +244,7 @@ AArch64ABIInfo::convertFixedToScalableVectorType(const VectorType *VT) const {
 
     case BuiltinType::SChar:
     case BuiltinType::UChar:
+    case BuiltinType::MFloat8:
       return llvm::ScalableVectorType::get(
           llvm::Type::getInt8Ty(getVMContext()), 16);
 
@@ -383,10 +384,6 @@ ABIArgInfo AArch64ABIInfo::classifyArgumentType(QualType Ty, bool IsVariadicFn,
         NSRN = std::min(NSRN + 1, 8u);
       else {
         switch (BT->getKind()) {
-        case BuiltinType::MFloat8x8:
-        case BuiltinType::MFloat8x16:
-          NSRN = std::min(NSRN + 1, 8u);
-          break;
         case BuiltinType::SveBool:
         case BuiltinType::SveCount:
           NPRN = std::min(NPRN + 1, 4u);
@@ -418,18 +415,21 @@ ABIArgInfo AArch64ABIInfo::classifyArgumentType(QualType Ty, bool IsVariadicFn,
                                      CGCXXABI::RAA_DirectInMemory);
   }
 
-  // Empty records are always ignored on Darwin, but actually passed in C++ mode
-  // elsewhere for GNU compatibility.
+  // Empty records:
   uint64_t Size = getContext().getTypeSize(Ty);
   bool IsEmpty = isEmptyRecord(getContext(), Ty, true);
   if (!Ty->isSVESizelessBuiltinType() && (IsEmpty || Size == 0)) {
+    // Empty records are ignored in C mode, and in C++ on Darwin.
     if (!getContext().getLangOpts().CPlusPlus || isDarwinPCS())
       return ABIArgInfo::getIgnore();
 
-    // GNU C mode. The only argument that gets ignored is an empty one with size
-    // 0.
-    if (IsEmpty && Size == 0)
+    // In C++ mode, arguments which have sizeof() == 0 (which are non-standard
+    // C++) are ignored. This isn't defined by any standard, so we copy GCC's
+    // behaviour here.
+    if (Size == 0)
       return ABIArgInfo::getIgnore();
+
+    // Otherwise, they are passed as if they have a size of 1 byte.
     return ABIArgInfo::getDirect(llvm::Type::getInt8Ty(getVMContext()));
   }
 
@@ -629,8 +629,7 @@ bool AArch64ABIInfo::isHomogeneousAggregateBaseType(QualType Ty) const {
   // but with the difference that any floating-point type is allowed,
   // including __fp16.
   if (const BuiltinType *BT = Ty->getAs<BuiltinType>()) {
-    if (BT->isFloatingPoint() || BT->getKind() == BuiltinType::MFloat8x16 ||
-        BT->getKind() == BuiltinType::MFloat8x8)
+    if (BT->isFloatingPoint())
       return true;
   } else if (const VectorType *VT = Ty->getAs<VectorType>()) {
     if (auto Kind = VT->getVectorKind();
@@ -781,8 +780,10 @@ bool AArch64ABIInfo::passAsPureScalableType(
     NPred += Info.NumVectors;
   else
     NVec += Info.NumVectors;
-  auto VTy = llvm::ScalableVectorType::get(CGT.ConvertType(Info.ElementType),
-                                           Info.EC.getKnownMinValue());
+  llvm::Type *EltTy = Info.ElementType->isMFloat8Type()
+                          ? llvm::Type::getInt8Ty(getVMContext())
+                          : CGT.ConvertType(Info.ElementType);
+  auto *VTy = llvm::ScalableVectorType::get(EltTy, Info.EC.getKnownMinValue());
 
   if (CoerceToSeq.size() + Info.NumVectors > 12)
     return false;

@@ -67,3 +67,14 @@ TEST(IsAssumedSize, Basic) {
       std::vector<int>{}, std::vector<std::int32_t>{0})};
   EXPECT_FALSE(RTNAME(IsAssumedSize)(*scalar));
 }
+
+TEST(DescriptorBytesFor, Basic) {
+  for (size_t i = 0; i < Fortran::common::TypeCategory_enumSize; ++i) {
+    auto tc{static_cast<TypeCategory>(i)};
+    if (tc == TypeCategory::Derived)
+      continue;
+
+    auto b{Descriptor::BytesFor(tc, 4)};
+    EXPECT_GT(b, 0U);
+  }
+}

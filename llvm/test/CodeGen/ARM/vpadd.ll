@@ -508,14 +508,14 @@ define <2 x i16> @fromExtendingExtractVectorElt_2i16(<8 x i16> %in) {
 ; CHECK-LABEL: fromExtendingExtractVectorElt_2i16:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vmov d16, r0, r1
-; CHECK-NEXT:    vmov.u16 r0, d16[0]
 ; CHECK-NEXT:    vmov.u16 r1, d16[1]
-; CHECK-NEXT:    vmov.u16 r3, d16[3]
+; CHECK-NEXT:    vmov.u16 r0, d16[0]
 ; CHECK-NEXT:    vmov.u16 r2, d16[2]
-; CHECK-NEXT:    vmov.32 d16[0], r0
+; CHECK-NEXT:    vmov.u16 r3, d16[3]
 ; CHECK-NEXT:    vmov.32 d17[0], r1
-; CHECK-NEXT:    vmov.32 d16[1], r2
+; CHECK-NEXT:    vmov.32 d16[0], r0
 ; CHECK-NEXT:    vmov.32 d17[1], r3
+; CHECK-NEXT:    vmov.32 d16[1], r2
 ; CHECK-NEXT:    vadd.i32 d16, d17, d16
 ; CHECK-NEXT:    vmov r0, r1, d16
 ; CHECK-NEXT:    mov pc, lr

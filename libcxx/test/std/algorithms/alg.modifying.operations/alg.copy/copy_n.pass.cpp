@@ -14,6 +14,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <vector>
 
 #include "test_macros.h"
 #include "test_iterators.h"
@@ -37,20 +38,18 @@ public:
 };
 
 template <class InIter, class OutIter>
-TEST_CONSTEXPR_CXX20 void
-test_copy_n()
-{
+TEST_CONSTEXPR_CXX20 void test_copy_n() {
   {
     const unsigned N = 1000;
-    int ia[N] = {};
+    int ia[N]        = {};
     for (unsigned i = 0; i < N; ++i)
-        ia[i] = i;
+      ia[i] = i;
     int ib[N] = {0};
 
-    OutIter r = std::copy_n(InIter(ia), UDI(N/2), OutIter(ib));
-    assert(base(r) == ib+N/2);
-    for (unsigned i = 0; i < N/2; ++i)
-        assert(ia[i] == ib[i]);
+    OutIter r = std::copy_n(InIter(ia), UDI(N / 2), OutIter(ib));
+    assert(base(r) == ib + N / 2);
+    for (unsigned i = 0; i < N / 2; ++i)
+      assert(ia[i] == ib[i]);
   }
 
   { // Make sure that padding bits aren't copied
@@ -70,53 +69,80 @@ test_copy_n()
   }
 }
 
-TEST_CONSTEXPR_CXX20 bool
-test()
-{
-    test_copy_n<cpp17_input_iterator<const int*>, cpp17_output_iterator<int*> >();
-    test_copy_n<cpp17_input_iterator<const int*>, cpp17_input_iterator<int*> >();
-    test_copy_n<cpp17_input_iterator<const int*>, forward_iterator<int*> >();
-    test_copy_n<cpp17_input_iterator<const int*>, bidirectional_iterator<int*> >();
-    test_copy_n<cpp17_input_iterator<const int*>, random_access_iterator<int*> >();
-    test_copy_n<cpp17_input_iterator<const int*>, int*>();
+TEST_CONSTEXPR_CXX20 bool test_vector_bool(std::size_t N) {
+  std::vector<bool> in(N, false);
+  for (std::size_t i = 0; i < N; i += 2)
+    in[i] = true;
 
-    test_copy_n<forward_iterator<const int*>, cpp17_output_iterator<int*> >();
-    test_copy_n<forward_iterator<const int*>, cpp17_input_iterator<int*> >();
-    test_copy_n<forward_iterator<const int*>, forward_iterator<int*> >();
-    test_copy_n<forward_iterator<const int*>, bidirectional_iterator<int*> >();
-    test_copy_n<forward_iterator<const int*>, random_access_iterator<int*> >();
-    test_copy_n<forward_iterator<const int*>, int*>();
-
-    test_copy_n<bidirectional_iterator<const int*>, cpp17_output_iterator<int*> >();
-    test_copy_n<bidirectional_iterator<const int*>, cpp17_input_iterator<int*> >();
-    test_copy_n<bidirectional_iterator<const int*>, forward_iterator<int*> >();
-    test_copy_n<bidirectional_iterator<const int*>, bidirectional_iterator<int*> >();
-    test_copy_n<bidirectional_iterator<const int*>, random_access_iterator<int*> >();
-    test_copy_n<bidirectional_iterator<const int*>, int*>();
-
-    test_copy_n<random_access_iterator<const int*>, cpp17_output_iterator<int*> >();
-    test_copy_n<random_access_iterator<const int*>, cpp17_input_iterator<int*> >();
-    test_copy_n<random_access_iterator<const int*>, forward_iterator<int*> >();
-    test_copy_n<random_access_iterator<const int*>, bidirectional_iterator<int*> >();
-    test_copy_n<random_access_iterator<const int*>, random_access_iterator<int*> >();
-    test_copy_n<random_access_iterator<const int*>, int*>();
-
-    test_copy_n<const int*, cpp17_output_iterator<int*> >();
-    test_copy_n<const int*, cpp17_input_iterator<int*> >();
-    test_copy_n<const int*, forward_iterator<int*> >();
-    test_copy_n<const int*, bidirectional_iterator<int*> >();
-    test_copy_n<const int*, random_access_iterator<int*> >();
-    test_copy_n<const int*, int*>();
+  { // Test copy with aligned bytes
+    std::vector<bool> out(N);
+    std::copy_n(in.begin(), N, out.begin());
+    assert(in == out);
+  }
+  { // Test copy with unaligned bytes
+    std::vector<bool> out(N + 8);
+    std::copy_n(in.begin(), N, out.begin() + 4);
+    for (std::size_t i = 0; i < N; ++i)
+      assert(out[i + 4] == in[i]);
+  }
 
   return true;
 }
 
-int main(int, char**)
-{
-    test();
+TEST_CONSTEXPR_CXX20 bool test() {
+  test_copy_n<cpp17_input_iterator<const int*>, cpp17_output_iterator<int*> >();
+  test_copy_n<cpp17_input_iterator<const int*>, cpp17_input_iterator<int*> >();
+  test_copy_n<cpp17_input_iterator<const int*>, forward_iterator<int*> >();
+  test_copy_n<cpp17_input_iterator<const int*>, bidirectional_iterator<int*> >();
+  test_copy_n<cpp17_input_iterator<const int*>, random_access_iterator<int*> >();
+  test_copy_n<cpp17_input_iterator<const int*>, int*>();
+
+  test_copy_n<forward_iterator<const int*>, cpp17_output_iterator<int*> >();
+  test_copy_n<forward_iterator<const int*>, cpp17_input_iterator<int*> >();
+  test_copy_n<forward_iterator<const int*>, forward_iterator<int*> >();
+  test_copy_n<forward_iterator<const int*>, bidirectional_iterator<int*> >();
+  test_copy_n<forward_iterator<const int*>, random_access_iterator<int*> >();
+  test_copy_n<forward_iterator<const int*>, int*>();
+
+  test_copy_n<bidirectional_iterator<const int*>, cpp17_output_iterator<int*> >();
+  test_copy_n<bidirectional_iterator<const int*>, cpp17_input_iterator<int*> >();
+  test_copy_n<bidirectional_iterator<const int*>, forward_iterator<int*> >();
+  test_copy_n<bidirectional_iterator<const int*>, bidirectional_iterator<int*> >();
+  test_copy_n<bidirectional_iterator<const int*>, random_access_iterator<int*> >();
+  test_copy_n<bidirectional_iterator<const int*>, int*>();
+
+  test_copy_n<random_access_iterator<const int*>, cpp17_output_iterator<int*> >();
+  test_copy_n<random_access_iterator<const int*>, cpp17_input_iterator<int*> >();
+  test_copy_n<random_access_iterator<const int*>, forward_iterator<int*> >();
+  test_copy_n<random_access_iterator<const int*>, bidirectional_iterator<int*> >();
+  test_copy_n<random_access_iterator<const int*>, random_access_iterator<int*> >();
+  test_copy_n<random_access_iterator<const int*>, int*>();
+
+  test_copy_n<const int*, cpp17_output_iterator<int*> >();
+  test_copy_n<const int*, cpp17_input_iterator<int*> >();
+  test_copy_n<const int*, forward_iterator<int*> >();
+  test_copy_n<const int*, bidirectional_iterator<int*> >();
+  test_copy_n<const int*, random_access_iterator<int*> >();
+  test_copy_n<const int*, int*>();
+
+  { // Test vector<bool>::iterator optimization
+    assert(test_vector_bool(8));
+    assert(test_vector_bool(19));
+    assert(test_vector_bool(32));
+    assert(test_vector_bool(49));
+    assert(test_vector_bool(64));
+    assert(test_vector_bool(199));
+    assert(test_vector_bool(256));
+  }
+
+  return true;
+}
+
+int main(int, char**) {
+  test();
 
 #if TEST_STD_VER > 17
-    static_assert(test());
+  static_assert(test());
 #endif
 
   return 0;

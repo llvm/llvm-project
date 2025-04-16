@@ -218,6 +218,8 @@ protected:
 public:
   Context(LLVMContext &LLVMCtx);
   ~Context();
+  /// Clears function-level state.
+  void clear();
 
   Tracker &getTracker() { return IRTracker; }
   /// Convenience function for `getTracker().save()`

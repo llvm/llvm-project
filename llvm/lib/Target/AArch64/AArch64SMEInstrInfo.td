@@ -882,7 +882,7 @@ defm LUTI4_S_2ZTZI : sme2p1_luti4_vector_vg2_index<"luti4">;
 defm LUTI4_S_4ZTZI : sme2p1_luti4_vector_vg4_index<"luti4">;
 }
 
-let Predicates = [HasSMEF16F16orSMEF8F16] in {
+let Predicates = [HasSMEF16F16_or_SMEF8F16] in {
 defm FADD_VG2_M2Z_H : sme2_multivec_accum_add_sub_vg2<"fadd", 0b0100, MatrixOp16, ZZ_h_mul_r, nxv8f16, int_aarch64_sme_add_za16_vg1x2>;
 defm FADD_VG4_M4Z_H : sme2_multivec_accum_add_sub_vg4<"fadd", 0b0100, MatrixOp16, ZZZZ_h_mul_r, nxv8f16,  int_aarch64_sme_add_za16_vg1x4>;
 defm FSUB_VG2_M2Z_H : sme2_multivec_accum_add_sub_vg2<"fsub", 0b0101, MatrixOp16, ZZ_h_mul_r, nxv8f16,  int_aarch64_sme_sub_za16_vg1x2>;

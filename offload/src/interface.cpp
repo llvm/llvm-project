@@ -39,7 +39,7 @@ using namespace llvm::omp::target::ompt;
 //
 // The return bool indicates if the offload is to the host device
 // There are three possible results:
-// - Return false if the taregt device is ready for offload
+// - Return false if the target device is ready for offload
 // - Return true without reporting a runtime error if offload is
 //   disabled, perhaps because the initial device was specified.
 // - Report a runtime error and return true.
@@ -366,8 +366,8 @@ static inline int targetKernel(ident_t *Loc, int64_t DeviceId, int32_t NumTeams,
 
   int Rc = OFFLOAD_SUCCESS;
   Rc = target(Loc, *DeviceOrErr, HostPtr, *KernelArgs, AsyncInfo);
-  { // required to show syncronization
-    TIMESCOPE_WITH_DETAILS_AND_IDENT("Runtime: syncronize", "", Loc);
+  { // required to show synchronization
+    TIMESCOPE_WITH_DETAILS_AND_IDENT("Runtime: synchronize", "", Loc);
     if (Rc == OFFLOAD_SUCCESS)
       Rc = AsyncInfo.synchronize();
 

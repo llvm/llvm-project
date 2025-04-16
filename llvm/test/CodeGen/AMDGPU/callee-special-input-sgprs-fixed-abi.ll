@@ -198,11 +198,12 @@ define hidden void @use_workgroup_id_yz() #1 {
 
 ; GCN-LABEL: {{^}}kern_indirect_use_workgroup_id_x:
 ; GCN-NOT: s6
-; GCN: s_mov_b32 s12, s6
-; GCN: s_mov_b32 s32, 0
 ; GCN: s_getpc_b64 s[4:5]
 ; GCN-NEXT: s_add_u32 s4, s4, use_workgroup_id_x@rel32@lo+4
 ; GCN-NEXT: s_addc_u32 s5, s5, use_workgroup_id_x@rel32@hi+12
+; GCN-NOT: s6
+; GCN: s_mov_b32 s12, s6
+; GCN: s_mov_b32 s32, 0
 ; GCN: s_swappc_b64
 ; GCN-NEXT: s_endpgm
 

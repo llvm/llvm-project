@@ -56,8 +56,10 @@ llvm.func @missordered_blocks_(%arg0: !llvm.ptr {fir.bindc_name = "x"}, %arg1: !
 // CHECK:         %[[VAL_20:.*]] = alloca ptr, align 8
 // CHECK:         %[[VAL_21:.*]] = alloca ptr, align 8
 // CHECK:         %[[VAL_22:.*]] = alloca [2 x ptr], align 8
+// CHECK:         br label %[[AFTER_ALLOC:omp.region.after_alloca]]
+// CHECK:       [[AFTER_ALLOC]]:                                   ; preds = %[[PAR_ENTRY]]
 // CHECK:         br label %[[VAL_23:omp.par.region]]
-// CHECK:       [[VAL_23]]:                                   ; preds = %[[PAR_ENTRY]]
+// CHECK:       [[VAL_23]]:                                   ; preds = %[[AFTER_ALLOC]]
 // CHECK:         br label %[[VAL_42:.*]]
 // CHECK:       [[RED_INIT:omp.reduction.init]]:
 // CHECK:         br label %[[VAL_25:omp.reduction.neutral]]

@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/Dialect/FIRType.h"
-#include "flang/ISO_Fortran_binding_wrapper.h"
+#include "flang/Common/ISO_Fortran_binding_wrapper.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
@@ -210,6 +210,7 @@ mlir::Type getDerivedType(mlir::Type ty) {
           return seq.getEleTy();
         return p.getEleTy();
       })
+      .Case<fir::BoxType>([](auto p) { return getDerivedType(p.getEleTy()); })
       .Default([](mlir::Type t) { return t; });
 }
 

@@ -206,6 +206,23 @@ inline RT_API_ATTRS RESULT ApplyType(
     default:
       terminator.Crash("not yet implemented: INTEGER(KIND=%d)", kind);
     }
+  case TypeCategory::Unsigned:
+    switch (kind) {
+    case 1:
+      return FUNC<TypeCategory::Unsigned, 1>{}(std::forward<A>(x)...);
+    case 2:
+      return FUNC<TypeCategory::Unsigned, 2>{}(std::forward<A>(x)...);
+    case 4:
+      return FUNC<TypeCategory::Unsigned, 4>{}(std::forward<A>(x)...);
+    case 8:
+      return FUNC<TypeCategory::Unsigned, 8>{}(std::forward<A>(x)...);
+#if defined __SIZEOF_INT128__ && !AVOID_NATIVE_UINT128_T
+    case 16:
+      return FUNC<TypeCategory::Unsigned, 16>{}(std::forward<A>(x)...);
+#endif
+    default:
+      terminator.Crash("not yet implemented: UNSIGNED(KIND=%d)", kind);
+    }
   case TypeCategory::Real:
     switch (kind) {
 #if 0 // TODO: REAL(2 & 3)

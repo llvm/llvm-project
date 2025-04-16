@@ -29,12 +29,11 @@ namespace mlir {
 /// a SmallVector/std::vector. This class should be used in places that are not
 /// suitable for a more derived type (e.g. ArrayRef) or a template range
 /// parameter.
-class TypeRange
-    : public llvm::detail::indexed_accessor_range_base<
-          TypeRange,
-          llvm::PointerUnion<const Value *, const Type *, OpOperand *,
-                             detail::OpResultImpl *, Type>,
-          Type, Type, Type> {
+class TypeRange : public llvm::detail::indexed_accessor_range_base<
+                      TypeRange,
+                      llvm::PointerUnion<const Value *, const Type *,
+                                         OpOperand *, detail::OpResultImpl *>,
+                      Type, Type, Type> {
 public:
   using RangeBaseT::RangeBaseT;
   TypeRange(ArrayRef<Type> types = std::nullopt);
@@ -45,13 +44,11 @@ public:
   TypeRange(ValueTypeRange<ValueRangeT> values)
       : TypeRange(ValueRange(ValueRangeT(values.begin().getCurrent(),
                                          values.end().getCurrent()))) {}
-
-  TypeRange(Type type) : TypeRange(type, /*count=*/1) {}
-  template <typename Arg, typename = std::enable_if_t<
-                              std::is_constructible_v<ArrayRef<Type>, Arg> &&
-                              !std::is_constructible_v<Type, Arg>>>
-  TypeRange(Arg &&arg) : TypeRange(ArrayRef<Type>(std::forward<Arg>(arg))) {}
-  TypeRange(std::initializer_list<Type> types)
+  template <typename Arg, typename = std::enable_if_t<std::is_constructible<
+                              ArrayRef<Type>, Arg>::value>>
+  TypeRange(Arg &&arg LLVM_LIFETIME_BOUND)
+      : TypeRange(ArrayRef<Type>(std::forward<Arg>(arg))) {}
+  TypeRange(std::initializer_list<Type> types LLVM_LIFETIME_BOUND)
       : TypeRange(ArrayRef<Type>(types)) {}
 
 private:
@@ -60,9 +57,8 @@ private:
   /// * A pointer to the first element of an array of types.
   /// * A pointer to the first element of an array of operands.
   /// * A pointer to the first element of an array of results.
-  /// * A single 'Type' instance.
   using OwnerT = llvm::PointerUnion<const Value *, const Type *, OpOperand *,
-                                    detail::OpResultImpl *, Type>;
+                                    detail::OpResultImpl *>;
 
   /// See `llvm::detail::indexed_accessor_range_base` for details.
   static OwnerT offset_base(OwnerT object, ptrdiff_t index);

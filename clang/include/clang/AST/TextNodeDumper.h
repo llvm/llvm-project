@@ -420,6 +420,7 @@ public:
   void VisitOpenACCSetConstruct(const OpenACCSetConstruct *S);
   void VisitOpenACCShutdownConstruct(const OpenACCShutdownConstruct *S);
   void VisitOpenACCUpdateConstruct(const OpenACCUpdateConstruct *S);
+  void VisitOpenACCAtomicConstruct(const OpenACCAtomicConstruct *S);
   void VisitOpenACCAsteriskSizeExpr(const OpenACCAsteriskSizeExpr *S);
   void VisitEmbedExpr(const EmbedExpr *S);
   void VisitAtomicExpr(const AtomicExpr *AE);

@@ -97,6 +97,7 @@ void CodeGenFunction::EmitDecl(const Decl &D) {
   case Decl::Friend:
   case Decl::FriendTemplate:
   case Decl::Block:
+  case Decl::OutlinedFunction:
   case Decl::Captured:
   case Decl::UsingShadow:
   case Decl::ConstructorUsingShadow:
@@ -163,9 +164,10 @@ void CodeGenFunction::EmitDecl(const Decl &D) {
            "Should not see file-scope variables inside a function!");
     EmitVarDecl(VD);
     if (auto *DD = dyn_cast<DecompositionDecl>(&VD))
-      for (auto *B : DD->bindings())
+      for (auto *B : DD->flat_bindings())
         if (auto *HD = B->getHoldingVar())
           EmitVarDecl(*HD);
+
     return;
   }
 
@@ -1354,6 +1356,14 @@ void CodeGenFunction::EmitLifetimeEnd(llvm::Value *Size, llvm::Value *Addr) {
   C->setDoesNotThrow();
 }
 
+void CodeGenFunction::EmitFakeUse(Address Addr) {
+  auto NL = ApplyDebugLocation::CreateEmpty(*this);
+  llvm::Value *V = Builder.CreateLoad(Addr, "fake.use");
+  llvm::CallInst *C = Builder.CreateCall(CGM.getLLVMFakeUseFn(), {V});
+  C->setDoesNotThrow();
+  C->setTailCallKind(llvm::CallInst::TCK_NoTail);
+}
+
 void CodeGenFunction::EmitAndRegisterVariableArrayDimensions(
     CGDebugInfo *DI, const VarDecl &D, bool EmitDebugInfo) {
   // For each dimension stores its QualType and corresponding
@@ -1411,6 +1421,39 @@ void CodeGenFunction::EmitAndRegisterVariableArrayDimensions(
     assert(MD && "No Size expression debug node created");
     DI->registerVLASizeExpression(VlaSize.Type, MD);
   }
+}
+
+/// Return the maximum size of an aggregate for which we generate a fake use
+/// intrinsic when -fextend-variable-liveness is in effect.
+static uint64_t maxFakeUseAggregateSize(const ASTContext &C) {
+  return 4 * C.getTypeSize(C.UnsignedIntTy);
+}
+
+// Helper function to determine whether a variable's or parameter's lifetime
+// should be extended.
+static bool shouldExtendLifetime(const ASTContext &Context,
+                                 const Decl *FuncDecl, const VarDecl &D,
+                                 ImplicitParamDecl *CXXABIThisDecl) {
+  // When we're not inside a valid function it is unlikely that any
+  // lifetime extension is useful.
+  if (!FuncDecl)
+    return false;
+  if (FuncDecl->isImplicit())
+    return false;
+  // Do not extend compiler-created variables except for the this pointer.
+  if (D.isImplicit() && &D != CXXABIThisDecl)
+    return false;
+  QualType Ty = D.getType();
+  // No need to extend volatiles, they have a memory location.
+  if (Ty.isVolatileQualified())
+    return false;
+  // Don't extend variables that exceed a certain size.
+  if (Context.getTypeSize(Ty) > maxFakeUseAggregateSize(Context))
+    return false;
+  // Do not extend variables in nodebug or optnone functions.
+  if (FuncDecl->hasAttr<NoDebugAttr>() || FuncDecl->hasAttr<OptimizeNoneAttr>())
+    return false;
+  return true;
 }
 
 /// EmitAutoVarAlloca - Emit the alloca and debug information for a
@@ -1664,6 +1707,18 @@ CodeGenFunction::EmitAutoVarAlloca(const VarDecl &D) {
     EHStack.pushCleanup<CallLifetimeEnd>(NormalEHLifetimeMarker,
                                          emission.getOriginalAllocatedAddress(),
                                          emission.getSizeForLifetimeMarkers());
+
+  // Analogous to lifetime markers, we use a 'cleanup' to emit fake.use
+  // calls for local variables. We are exempting volatile variables and
+  // non-scalars larger than 4 times the size of an unsigned int. Larger
+  // non-scalars are often allocated in memory and may create unnecessary
+  // overhead.
+  if (CGM.getCodeGenOpts().getExtendVariableLiveness() ==
+      CodeGenOptions::ExtendVariableLivenessKind::All) {
+    if (shouldExtendLifetime(getContext(), CurCodeDecl, D, CXXABIThisDecl))
+      EHStack.pushCleanup<FakeUse>(NormalFakeUse,
+                                   emission.getAllocatedAddress());
+  }
 
   return emission;
 }
@@ -2531,6 +2586,15 @@ llvm::Function *CodeGenModule::getLLVMLifetimeEndFn() {
   return LifetimeEndFn;
 }
 
+/// Lazily declare the @llvm.fake.use intrinsic.
+llvm::Function *CodeGenModule::getLLVMFakeUseFn() {
+  if (FakeUseFn)
+    return FakeUseFn;
+  FakeUseFn = llvm::Intrinsic::getOrInsertDeclaration(
+      &getModule(), llvm::Intrinsic::fake_use);
+  return FakeUseFn;
+}
+
 namespace {
   /// A cleanup to perform a release of an object at the end of a
   /// function.  This is used to balance out the incoming +1 of a
@@ -2723,6 +2787,18 @@ void CodeGenFunction::EmitParmDecl(const VarDecl &D, ParamValue Arg,
     EmitStoreOfScalar(ArgVal, lv, /* isInitialization */ true);
 
   setAddrOfLocalVar(&D, DeclPtr);
+
+  // Push a FakeUse 'cleanup' object onto the EHStack for the parameter,
+  // which may be the 'this' pointer. This causes the emission of a fake.use
+  // call with the parameter as argument at the end of the function.
+  if (CGM.getCodeGenOpts().getExtendVariableLiveness() ==
+          CodeGenOptions::ExtendVariableLivenessKind::All ||
+      (CGM.getCodeGenOpts().getExtendVariableLiveness() ==
+           CodeGenOptions::ExtendVariableLivenessKind::This &&
+       &D == CXXABIThisDecl)) {
+    if (shouldExtendLifetime(getContext(), CurCodeDecl, D, CXXABIThisDecl))
+      EHStack.pushCleanup<FakeUse>(NormalFakeUse, DeclPtr);
+  }
 
   // Emit debug info for param declarations in non-thunk functions.
   if (CGDebugInfo *DI = getDebugInfo()) {

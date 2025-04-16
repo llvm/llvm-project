@@ -185,11 +185,11 @@ MachineUniformityAnalysisPass::MachineUniformityAnalysisPass()
 }
 
 INITIALIZE_PASS_BEGIN(MachineUniformityAnalysisPass, "machine-uniformity",
-                      "Machine Uniformity Info Analysis", true, true)
+                      "Machine Uniformity Info Analysis", false, true)
 INITIALIZE_PASS_DEPENDENCY(MachineCycleInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_END(MachineUniformityAnalysisPass, "machine-uniformity",
-                    "Machine Uniformity Info Analysis", true, true)
+                    "Machine Uniformity Info Analysis", false, true)
 
 void MachineUniformityAnalysisPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();

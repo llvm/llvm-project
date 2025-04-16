@@ -32,7 +32,7 @@ target triple = "thumbv8.1m.main-none-unknown-eabi"
 
 define void @diff_checks(ptr nocapture noundef writeonly %dst, ptr nocapture noundef readonly %src, i32 noundef %m, i32 noundef %n) #0 {
 ; CHECK-LABEL: define void @diff_checks
-; CHECK-SAME: (ptr nocapture noundef writeonly [[DST:%.*]], ptr nocapture noundef readonly [[SRC:%.*]], i32 noundef [[M:%.*]], i32 noundef [[N:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: (ptr noundef writeonly captures(none) [[DST:%.*]], ptr noundef readonly captures(none) [[SRC:%.*]], i32 noundef [[M:%.*]], i32 noundef [[N:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ADD5:%.*]] = add nsw i32 [[N]], 1
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[M]], -1
@@ -72,10 +72,10 @@ define void @diff_checks(ptr nocapture noundef writeonly %dst, ptr nocapture nou
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 [[TMP11]], i32 [[N]])
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr i32, ptr [[TMP7]], i32 [[TMP11]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr i32, ptr [[TMP12]], i32 0
-; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr [[TMP13]], i32 4, <4 x i1> [[ACTIVE_LANE_MASK]], <4 x i32> poison), !alias.scope !0
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr [[TMP13]], i32 4, <4 x i1> [[ACTIVE_LANE_MASK]], <4 x i32> poison), !alias.scope [[META0:![0-9]+]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr i32, ptr [[TMP8]], i32 [[TMP11]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr i32, ptr [[TMP14]], i32 0
-; CHECK-NEXT:    call void @llvm.masked.store.v4i32.p0(<4 x i32> [[WIDE_MASKED_LOAD]], ptr [[TMP15]], i32 4, <4 x i1> [[ACTIVE_LANE_MASK]]), !alias.scope !3, !noalias !0
+; CHECK-NEXT:    call void @llvm.masked.store.v4i32.p0(<4 x i32> [[WIDE_MASKED_LOAD]], ptr [[TMP15]], i32 4, <4 x i1> [[ACTIVE_LANE_MASK]]), !alias.scope [[META3:![0-9]+]], !noalias [[META0]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP16:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP16]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]

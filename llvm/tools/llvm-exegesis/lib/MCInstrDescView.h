@@ -75,7 +75,7 @@ struct Operand {
   unsigned getIndex() const;
   unsigned getTiedToIndex() const;
   unsigned getVariableIndex() const;
-  unsigned getImplicitReg() const;
+  MCRegister getImplicitReg() const;
   const RegisterAliasingTracker &getRegisterAliasing() const;
   const MCOperandInfo &getExplicitOperandInfo() const;
 
@@ -85,7 +85,7 @@ struct Operand {
   const RegisterAliasingTracker *Tracker = nullptr; // Set for Register Op.
   const MCOperandInfo *Info = nullptr;              // Set for Explicit Op.
   std::optional<uint8_t> TiedToIndex;               // Set for Reg&Explicit Op.
-  MCPhysReg ImplicitReg = 0;                        // Non-0 for Implicit Op.
+  MCRegister ImplicitReg;                           // Non-0 for Implicit Op.
   std::optional<uint8_t> VariableIndex;             // Set for Explicit Op.
 };
 

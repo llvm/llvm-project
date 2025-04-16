@@ -678,3 +678,104 @@ let isReturn = 1, isTerminator = 1,
     let t = 0;
   }
 }
+
+//===----------------------------------------------------------------------===//
+// Windowed instructions
+//===----------------------------------------------------------------------===//
+
+def ENTRY : BRI12_Inst<0x06, 0x3, 0x0, (outs), (ins AR:$s, entry_imm12:$imm),
+                     "entry\t$s, $imm", []>, Requires<[HasWindowed]> {
+  bits<15> imm;
+
+  let imm12{11-0} = imm{14-3};
+  let Defs = [SP];
+}
+
+let isCall = 1, Defs = [A0] in {
+  foreach i = {1,2,3} in {
+    defvar I = !mul(4, i);
+
+    def CALL#I# : CALL_Inst<0x05, (outs), (ins pcrel32call:$offset),
+                           "call"#I#"\t$offset", []>, Requires<[HasWindowed]> {
+      let n = i;
+    }
+
+    def CALLX#I# : CALLX_Inst<0x00, 0x00, 0x00, (outs), (ins AR:$s),
+                             "callx"#I#"\t$s", []>, Requires<[HasWindowed]> {
+      let m = 0x3;
+      let n = i;
+      let r = 0;
+    }
+  }
+}
+
+def MOVSP : RRR_Inst<0x00, 0x00, 0x00, (outs AR:$t), (ins AR:$s),
+                    "movsp\t$t, $s", []>, Requires<[HasWindowed]> {
+  let r = 0x01;
+}
+
+let isReturn = 1, isTerminator = 1,
+    isBarrier = 1, Uses = [A0] in {
+  def RETW_N : RRRN_Inst<0x0D, (outs), (ins),
+                        "retw.n", []>, Requires<[HasWindowed, HasDensity]> {
+    let r = 0x0F;
+    let s = 0;
+    let t = 1;
+  }
+
+  def RETW : CALLX_Inst<0x00, 0x00, 0x00, (outs), (ins),
+                       "retw", []>, Requires<[HasWindowed]> {
+    let m = 0x2;
+    let n = 0x1;
+    let s = 0;
+    let r = 0;
+  }
+}
+
+def : InstAlias<"_retw", (RETW)>;
+def : InstAlias<"_retw.n", (RETW_N)>;
+
+def S32E : RRI4_Inst<0x00, 0x09, (outs), (ins AR:$t, AR:$s, imm64n_4n:$imm),
+                    "s32e\t$t, $s, $imm", []>, Requires<[HasWindowed]> {
+  bits<6> imm;
+
+  let r = imm{5-2};
+  let imm4 = 0x4;
+  let mayStore = 1;
+}
+
+def L32E : RRI4_Inst<0x00, 0x09, (outs), (ins AR:$t, AR:$s, imm64n_4n:$imm),
+                    "l32e\t$t, $s, $imm", []>, Requires<[HasWindowed]> {
+  bits<6> imm;
+
+  let r = imm{5-2};
+  let imm4 = 0x0;
+  let mayLoad = 1;
+}
+
+def RFWU : RRR_Inst<0x00, 0x00, 0x00, (outs), (ins),
+                   "rfwu", []>, Requires<[HasWindowed]> {
+  bits<4> imm;
+
+  let r = 0x3;
+  let s = 0x5;
+  let t = 0x0;
+}
+
+def RFWO : RRR_Inst<0x00, 0x00, 0x00, (outs), (ins),
+                   "rfwo", []>, Requires<[HasWindowed]> {
+  bits<4> imm;
+
+  let r = 0x3;
+  let s = 0x4;
+  let t = 0x0;
+}
+
+def ROTW : RRR_Inst<0x00, 0x00, 0x04, (outs), (ins imm8n_7:$imm),
+                   "rotw\t$imm", []>, Requires<[HasWindowed]> {
+  bits<4> imm;
+
+  let r = 0x8;
+  let s = 0x0;
+  let t = imm{3-0};
+}

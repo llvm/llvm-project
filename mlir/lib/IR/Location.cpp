@@ -177,10 +177,8 @@ unsigned FileLineColLoc::getLine() const { return getStartLine(); }
 
 unsigned FileLineColLoc::getColumn() const { return getStartColumn(); }
 
-bool FileLineColLoc::classof(Attribute attr) {
-  // This could also have been for <= 2. But given this is matching previous
-  // behavior, it is left as is.
-  if (auto range = mlir::dyn_cast<FileLineColRange>(attr))
+bool mlir::isStrictFileLineColLoc(Location loc) {
+  if (auto range = mlir::dyn_cast<FileLineColRange>(loc))
     return range.getImpl()->size() == 2;
   return false;
 }

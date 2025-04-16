@@ -22,7 +22,7 @@ class Function:
 
     def __str__(self):
         attributes_str = " ".join(self.attributes)
-        arguments_str = ", ".join(self.arguments)
+        arguments_str = ", ".join(self.arguments) if self.arguments else "void"
         if attributes_str == "":
             result = f"{self.return_type} {self.name}({arguments_str})"
         else:

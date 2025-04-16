@@ -232,11 +232,11 @@ func.func @vector_reduction(%v : vector<8xf32>) -> f32 {
 //       CHECK:   %[[add3:.*]] = arith.addf %[[add2]], %[[r3]]
 //       CHECK:   return %[[add3]]
 
-func.func @vector_tranpose(%v : vector<2x4x3x8xf32>) -> vector<2x3x8x4xf32> {
+func.func @vector_transpose(%v : vector<2x4x3x8xf32>) -> vector<2x3x8x4xf32> {
   %t = vector.transpose %v, [0, 2, 3, 1] : vector<2x4x3x8xf32> to vector<2x3x8x4xf32>
   return %t : vector<2x3x8x4xf32>
 }
-// CHECK-LABEL: func @vector_tranpose
+// CHECK-LABEL: func @vector_transpose
 //       CHECK:   %[[VI:.*]] = arith.constant dense<0.000000e+00> : vector<2x3x8x4xf32>
 //       CHECK:   %[[E0:.*]] = vector.extract_strided_slice %{{.*}} {offsets = [0, 0, 0, 0], sizes = [1, 2, 3, 4], strides = [1, 1, 1, 1]} : vector<2x4x3x8xf32> to vector<1x2x3x4xf32>
 //       CHECK:   %[[T0:.*]] = vector.transpose %[[E0]], [0, 2, 3, 1] : vector<1x2x3x4xf32> to vector<1x3x4x2xf32>

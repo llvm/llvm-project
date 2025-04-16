@@ -128,6 +128,11 @@ int llvm::TableGenMain(const char *argv0,
     return 1;
   Timer.stopTimer();
 
+  // Return early if any other errors were generated during parsing
+  // (e.g., assert failures).
+  if (ErrorsPrinted > 0)
+    return reportError(argv0, Twine(ErrorsPrinted) + " errors.\n");
+
   // Write output to memory.
   Timer.startBackendTimer("Backend overall");
   std::string OutString;

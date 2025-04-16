@@ -27,7 +27,7 @@ module attributes {omp.is_target_device = false, omp.target_triples = ["amdgcn-a
   }
 }
 
-// CHECK: @.offload_sizes{{.*}} = private unnamed_addr constant [4 x i64] [i64 0, i64 48, i64 8, i64 20]
+// CHECK: @.offload_sizes{{.*}} = private unnamed_addr constant [4 x i64] [i64 0, i64 48, i64 8, i64 0]
 // CHECK: @.offload_maptypes{{.*}} = private unnamed_addr constant [4 x i64] [i64 32, i64 281474976710659, i64 281474976710659, i64 281474976710675]
 
 // CHECK: define void @omp_nested_derived_type_alloca_map(ptr %[[ARG:.*]]) {

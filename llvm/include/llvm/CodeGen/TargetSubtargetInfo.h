@@ -324,7 +324,7 @@ public:
   /// written in the tablegen descriptions, false if it should allocate
   /// the specified physical register later if is it callee-saved.
   virtual bool ignoreCSRForAllocationOrder(const MachineFunction &MF,
-                                           unsigned PhysReg) const {
+                                           MCRegister PhysReg) const {
     return false;
   }
 

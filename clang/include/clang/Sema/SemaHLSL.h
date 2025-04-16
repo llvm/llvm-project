@@ -160,9 +160,9 @@ private:
   ResourceBindings Bindings;
 
 private:
-  void collectResourcesOnVarDecl(VarDecl *D);
-  void collectResourcesOnUserRecordDecl(const VarDecl *VD,
-                                        const RecordType *RT);
+  void collectResourceBindingsOnVarDecl(VarDecl *D);
+  void collectResourceBindingsOnUserRecordDecl(const VarDecl *VD,
+                                               const RecordType *RT);
   void processExplicitBindingsOnDecl(VarDecl *D);
 };
 

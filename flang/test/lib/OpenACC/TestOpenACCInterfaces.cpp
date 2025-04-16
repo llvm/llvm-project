@@ -28,7 +28,7 @@ struct TestFIROpenACCInterfaces
   void runOnOperation() override {
     mlir::ModuleOp mod = getOperation();
     auto datalayout =
-        fir::support::getOrSetDataLayout(mod, /*allowDefaultLayout=*/true);
+        fir::support::getOrSetMLIRDataLayout(mod, /*allowDefaultLayout=*/true);
     mlir::OpBuilder builder(mod);
     getOperation().walk([&](Operation *op) {
       if (isa<ACC_DATA_ENTRY_OPS>(op)) {

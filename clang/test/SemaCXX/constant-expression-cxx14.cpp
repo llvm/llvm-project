@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -std=c++23 -fsyntax-only -verify=expected,cxx20_23,cxx23          %s -fcxx-exceptions -triple=x86_64-linux-gnu
-// RUN: %clang_cc1 -std=c++20 -fsyntax-only -verify=expected,cxx14_20,cxx20_23,cxx20 %s -fcxx-exceptions -triple=x86_64-linux-gnu
-// RUN: %clang_cc1 -std=c++14 -fsyntax-only -verify=expected,cxx14_20,cxx14          %s -fcxx-exceptions -triple=x86_64-linux-gnu
+// RUN: %clang_cc1 -std=c++23 -Werror=return-type -fsyntax-only -verify=expected,cxx20_23,cxx23          %s -fcxx-exceptions -triple=x86_64-linux-gnu
+// RUN: %clang_cc1 -std=c++20 -Werror=return-type -fsyntax-only -verify=expected,cxx14_20,cxx20_23,cxx20 %s -fcxx-exceptions -triple=x86_64-linux-gnu
+// RUN: %clang_cc1 -std=c++14 -Werror=return-type -fsyntax-only -verify=expected,cxx14_20,cxx14          %s -fcxx-exceptions -triple=x86_64-linux-gnu
 
 struct S {
   // dummy ctor to make this a literal type
@@ -68,7 +68,7 @@ constexpr int j(int k) {
     }
   }
 } // expected-note 2{{control reached end of constexpr function}}
-  // cxx23-warning@-1 {{does not return a value in all control paths}}
+  // cxx23-error@-1 {{does not return a value in all control paths}}
 static_assert(j(0) == -3, "");
 static_assert(j(1) == 5, "");
 static_assert(j(2), ""); // expected-error {{constant expression}} expected-note {{in call to 'j(2)'}}

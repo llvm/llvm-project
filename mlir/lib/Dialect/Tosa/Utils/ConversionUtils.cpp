@@ -160,3 +160,36 @@ LogicalResult mlir::tosa::EqualizeRanks(ImplicitLocOpBuilder &builder,
 
   return success();
 }
+
+Value mlir::tosa::getTosaConstShape(PatternRewriter &rewriter, Location loc,
+                                    llvm::ArrayRef<int64_t> shape) {
+  auto attr = rewriter.getIndexTensorAttr(shape);
+  auto type = mlir::tosa::shapeType::get(rewriter.getContext(), shape.size());
+  mlir::Operation *mlir_op =
+      rewriter.create<tosa::ConstShapeOp>(loc, type, attr);
+  return mlir_op->getResult(0);
+}
+
+SmallVector<int64_t> mlir::tosa::convertFromMlirShape(ArrayRef<int64_t> shape) {
+  return to_vector(llvm::map_range(shape, [](int64_t dim) {
+    return ShapedType::isDynamic(dim) ? -1 : dim;
+  }));
+}
+
+bool mlir::tosa::getConstShapeValue(Operation *op,
+                                    llvm::SmallVector<int64_t> &result_shape) {
+  if (!op) {
+    return false;
+  }
+  if (auto constOp = mlir::dyn_cast<tosa::ConstShapeOp>(op)) {
+    Attribute constOpAttr = constOp->getAttr("value");
+    DenseElementsAttr elementsAttr = cast<DenseElementsAttr>(constOpAttr);
+    for (int i = 0; i < elementsAttr.size(); i++) {
+      int64_t val = elementsAttr.getValues<int64_t>()[i];
+      result_shape.push_back(val);
+    }
+    return true;
+  }
+  // for undefined op, return false.
+  return false;
+}

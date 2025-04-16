@@ -47,7 +47,7 @@ using namespace mlir::NVVM;
 #define __DEFAULT_CUDATOOLKIT_PATH__ ""
 #endif
 
-extern "C" const char _mlir_embedded_libdevice[];
+extern "C" const unsigned char _mlir_embedded_libdevice[];
 extern "C" const unsigned _mlir_embedded_libdevice_size;
 
 namespace {
@@ -160,7 +160,8 @@ LogicalResult SerializeGPUModuleBase::appendStandardLibs() {
   // Allocate a resource using one of the UnManagedResourceBlob method to wrap
   // the embedded data.
   auto unmanagedBlob = UnmanagedAsmResourceBlob::allocateInferAlign(
-      ArrayRef<char>{_mlir_embedded_libdevice, _mlir_embedded_libdevice_size});
+      ArrayRef<char>{(const char *)_mlir_embedded_libdevice,
+                     _mlir_embedded_libdevice_size});
   librariesToLink.push_back(DenseResourceElementsAttr::get(
       type, resourceManager.insert("_mlir_embedded_libdevice",
                                    std::move(unmanagedBlob))));

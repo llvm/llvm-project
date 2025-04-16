@@ -215,7 +215,7 @@ class AArch64LinuxMTEMemoryTagCoreFileTestCase(TestBase):
         self.expect(
             "bt",
             substrs=[
-                "* thread #1, name = 'a.out.mte', stop reason = SIGSEGV: sync tag check fault (fault address: 0xffff82c74010)"
+                "* thread #1, name = 'a.out.mte', stop reason = SIGSEGV: sync tag check fault (fault address=0xffff82c74010)"
             ],
         )
 

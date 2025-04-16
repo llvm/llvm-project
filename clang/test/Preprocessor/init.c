@@ -426,26 +426,31 @@
 // MSP430:#define __FLT_MIN_EXP__ (-125)
 // MSP430:#define __FLT_MIN__ 1.17549435e-38F
 // MSP430:#define __FLT_RADIX__ 2
+// MSP430:#define __INT16_C(c) c
 // MSP430:#define __INT16_C_SUFFIX__
 // MSP430:#define __INT16_FMTd__ "hd"
 // MSP430:#define __INT16_FMTi__ "hi"
 // MSP430:#define __INT16_MAX__ 32767
 // MSP430:#define __INT16_TYPE__ short
+// MSP430:#define __INT32_C(c) c##L
 // MSP430:#define __INT32_C_SUFFIX__ L
 // MSP430:#define __INT32_FMTd__ "ld"
 // MSP430:#define __INT32_FMTi__ "li"
 // MSP430:#define __INT32_MAX__ 2147483647L
 // MSP430:#define __INT32_TYPE__ long int
+// MSP430:#define __INT64_C(c) c##LL
 // MSP430:#define __INT64_C_SUFFIX__ LL
 // MSP430:#define __INT64_FMTd__ "lld"
 // MSP430:#define __INT64_FMTi__ "lli"
 // MSP430:#define __INT64_MAX__ 9223372036854775807LL
 // MSP430:#define __INT64_TYPE__ long long int
+// MSP430:#define __INT8_C(c) c
 // MSP430:#define __INT8_C_SUFFIX__
 // MSP430:#define __INT8_FMTd__ "hhd"
 // MSP430:#define __INT8_FMTi__ "hhi"
 // MSP430:#define __INT8_MAX__ 127
 // MSP430:#define __INT8_TYPE__ signed char
+// MSP430:#define __INTMAX_C(c) c##LL
 // MSP430:#define __INTMAX_C_SUFFIX__ LL
 // MSP430:#define __INTMAX_FMTd__ "lld"
 // MSP430:#define __INTMAX_FMTi__ "lli"
@@ -531,18 +536,23 @@
 // MSP430:#define __SIZE_TYPE__ unsigned int
 // MSP430:#define __SIZE_WIDTH__ 16
 // MSP430-CXX:#define __STDCPP_DEFAULT_NEW_ALIGNMENT__ 2U
+// MSP430:#define __UINT16_C(c) c##U
 // MSP430:#define __UINT16_C_SUFFIX__ U
 // MSP430:#define __UINT16_MAX__ 65535U
 // MSP430:#define __UINT16_TYPE__ unsigned short
+// MSP430:#define __UINT32_C(c) c##UL
 // MSP430:#define __UINT32_C_SUFFIX__ UL
 // MSP430:#define __UINT32_MAX__ 4294967295UL
 // MSP430:#define __UINT32_TYPE__ long unsigned int
+// MSP430:#define __UINT64_C(c) c##ULL
 // MSP430:#define __UINT64_C_SUFFIX__ ULL
 // MSP430:#define __UINT64_MAX__ 18446744073709551615ULL
 // MSP430:#define __UINT64_TYPE__ long long unsigned int
+// MSP430:#define __UINT8_C(c) c
 // MSP430:#define __UINT8_C_SUFFIX__
 // MSP430:#define __UINT8_MAX__ 255
 // MSP430:#define __UINT8_TYPE__ unsigned char
+// MSP430:#define __UINTMAX_C(c) c##ULL
 // MSP430:#define __UINTMAX_C_SUFFIX__ ULL
 // MSP430:#define __UINTMAX_MAX__ 18446744073709551615ULL
 // MSP430:#define __UINTMAX_TYPE__ long long unsigned int
@@ -613,26 +623,31 @@
 // NVPTX32:#define __FLT_MIN_EXP__ (-125)
 // NVPTX32:#define __FLT_MIN__ 1.17549435e-38F
 // NVPTX32:#define __FLT_RADIX__ 2
+// NVPTX32:#define __INT16_C(c) c
 // NVPTX32:#define __INT16_C_SUFFIX__
 // NVPTX32:#define __INT16_FMTd__ "hd"
 // NVPTX32:#define __INT16_FMTi__ "hi"
 // NVPTX32:#define __INT16_MAX__ 32767
 // NVPTX32:#define __INT16_TYPE__ short
+// NVPTX32:#define __INT32_C(c) c
 // NVPTX32:#define __INT32_C_SUFFIX__
 // NVPTX32:#define __INT32_FMTd__ "d"
 // NVPTX32:#define __INT32_FMTi__ "i"
 // NVPTX32:#define __INT32_MAX__ 2147483647
 // NVPTX32:#define __INT32_TYPE__ int
+// NVPTX32:#define __INT64_C(c) c##LL
 // NVPTX32:#define __INT64_C_SUFFIX__ LL
 // NVPTX32:#define __INT64_FMTd__ "lld"
 // NVPTX32:#define __INT64_FMTi__ "lli"
 // NVPTX32:#define __INT64_MAX__ 9223372036854775807LL
 // NVPTX32:#define __INT64_TYPE__ long long int
+// NVPTX32:#define __INT8_C(c) c
 // NVPTX32:#define __INT8_C_SUFFIX__
 // NVPTX32:#define __INT8_FMTd__ "hhd"
 // NVPTX32:#define __INT8_FMTi__ "hhi"
 // NVPTX32:#define __INT8_MAX__ 127
 // NVPTX32:#define __INT8_TYPE__ signed char
+// NVPTX32:#define __INTMAX_C(c) c##LL
 // NVPTX32:#define __INTMAX_C_SUFFIX__ LL
 // NVPTX32:#define __INTMAX_FMTd__ "lld"
 // NVPTX32:#define __INTMAX_FMTi__ "lli"
@@ -720,18 +735,23 @@
 // NVPTX32:#define __SIZE_TYPE__ unsigned int
 // NVPTX32:#define __SIZE_WIDTH__ 32
 // NVPTX32-CXX:#define __STDCPP_DEFAULT_NEW_ALIGNMENT__ 8U
+// NVPTX32:#define __UINT16_C(c) c
 // NVPTX32:#define __UINT16_C_SUFFIX__
 // NVPTX32:#define __UINT16_MAX__ 65535
 // NVPTX32:#define __UINT16_TYPE__ unsigned short
+// NVPTX32:#define __UINT32_C(c) c##U
 // NVPTX32:#define __UINT32_C_SUFFIX__ U
 // NVPTX32:#define __UINT32_MAX__ 4294967295U
 // NVPTX32:#define __UINT32_TYPE__ unsigned int
+// NVPTX32:#define __UINT64_C(c) c##ULL
 // NVPTX32:#define __UINT64_C_SUFFIX__ ULL
 // NVPTX32:#define __UINT64_MAX__ 18446744073709551615ULL
 // NVPTX32:#define __UINT64_TYPE__ long long unsigned int
+// NVPTX32:#define __UINT8_C(c) c
 // NVPTX32:#define __UINT8_C_SUFFIX__
 // NVPTX32:#define __UINT8_MAX__ 255
 // NVPTX32:#define __UINT8_TYPE__ unsigned char
+// NVPTX32:#define __UINTMAX_C(c) c##ULL
 // NVPTX32:#define __UINTMAX_C_SUFFIX__ ULL
 // NVPTX32:#define __UINTMAX_MAX__ 18446744073709551615ULL
 // NVPTX32:#define __UINTMAX_TYPE__ long long unsigned int
@@ -801,26 +821,31 @@
 // NVPTX64:#define __FLT_MIN_EXP__ (-125)
 // NVPTX64:#define __FLT_MIN__ 1.17549435e-38F
 // NVPTX64:#define __FLT_RADIX__ 2
+// NVPTX64:#define __INT16_C(c) c
 // NVPTX64:#define __INT16_C_SUFFIX__
 // NVPTX64:#define __INT16_FMTd__ "hd"
 // NVPTX64:#define __INT16_FMTi__ "hi"
 // NVPTX64:#define __INT16_MAX__ 32767
 // NVPTX64:#define __INT16_TYPE__ short
+// NVPTX64:#define __INT32_C(c) c
 // NVPTX64:#define __INT32_C_SUFFIX__
 // NVPTX64:#define __INT32_FMTd__ "d"
 // NVPTX64:#define __INT32_FMTi__ "i"
 // NVPTX64:#define __INT32_MAX__ 2147483647
 // NVPTX64:#define __INT32_TYPE__ int
+// NVPTX64:#define __INT64_C(c) c##LL
 // NVPTX64:#define __INT64_C_SUFFIX__ LL
 // NVPTX64:#define __INT64_FMTd__ "lld"
 // NVPTX64:#define __INT64_FMTi__ "lli"
 // NVPTX64:#define __INT64_MAX__ 9223372036854775807LL
 // NVPTX64:#define __INT64_TYPE__ long long int
+// NVPTX64:#define __INT8_C(c) c
 // NVPTX64:#define __INT8_C_SUFFIX__
 // NVPTX64:#define __INT8_FMTd__ "hhd"
 // NVPTX64:#define __INT8_FMTi__ "hhi"
 // NVPTX64:#define __INT8_MAX__ 127
 // NVPTX64:#define __INT8_TYPE__ signed char
+// NVPTX64:#define __INTMAX_C(c) c##LL
 // NVPTX64:#define __INTMAX_C_SUFFIX__ LL
 // NVPTX64:#define __INTMAX_FMTd__ "lld"
 // NVPTX64:#define __INTMAX_FMTi__ "lli"
@@ -908,18 +933,23 @@
 // NVPTX64:#define __SIZE_TYPE__ long unsigned int
 // NVPTX64:#define __SIZE_WIDTH__ 64
 // NVPTX64-CXX:#define __STDCPP_DEFAULT_NEW_ALIGNMENT__ 8UL
+// NVPTX64:#define __UINT16_C(c) c
 // NVPTX64:#define __UINT16_C_SUFFIX__
 // NVPTX64:#define __UINT16_MAX__ 65535
 // NVPTX64:#define __UINT16_TYPE__ unsigned short
+// NVPTX64:#define __UINT32_C(c) c##U
 // NVPTX64:#define __UINT32_C_SUFFIX__ U
 // NVPTX64:#define __UINT32_MAX__ 4294967295U
 // NVPTX64:#define __UINT32_TYPE__ unsigned int
+// NVPTX64:#define __UINT64_C(c) c##ULL
 // NVPTX64:#define __UINT64_C_SUFFIX__ ULL
 // NVPTX64:#define __UINT64_MAX__ 18446744073709551615ULL
 // NVPTX64:#define __UINT64_TYPE__ long long unsigned int
+// NVPTX64:#define __UINT8_C(c) c
 // NVPTX64:#define __UINT8_C_SUFFIX__
 // NVPTX64:#define __UINT8_MAX__ 255
 // NVPTX64:#define __UINT8_TYPE__ unsigned char
+// NVPTX64:#define __UINTMAX_C(c) c##ULL
 // NVPTX64:#define __UINTMAX_C_SUFFIX__ ULL
 // NVPTX64:#define __UINTMAX_MAX__ 18446744073709551615ULL
 // NVPTX64:#define __UINTMAX_TYPE__ long long unsigned int
@@ -1003,26 +1033,31 @@
 // SPARC:#define __FLT_MIN__ 1.17549435e-38F
 // SPARC:#define __FLT_RADIX__ 2
 // SPARC:#define __GCC_ATOMIC_LLONG_LOCK_FREE 1
+// SPARC:#define __INT16_C(c) c
 // SPARC:#define __INT16_C_SUFFIX__
 // SPARC:#define __INT16_FMTd__ "hd"
 // SPARC:#define __INT16_FMTi__ "hi"
 // SPARC:#define __INT16_MAX__ 32767
 // SPARC:#define __INT16_TYPE__ short
+// SPARC:#define __INT32_C(c) c
 // SPARC:#define __INT32_C_SUFFIX__
 // SPARC:#define __INT32_FMTd__ "d"
 // SPARC:#define __INT32_FMTi__ "i"
 // SPARC:#define __INT32_MAX__ 2147483647
 // SPARC:#define __INT32_TYPE__ int
+// SPARC:#define __INT64_C(c) c##LL
 // SPARC:#define __INT64_C_SUFFIX__ LL
 // SPARC:#define __INT64_FMTd__ "lld"
 // SPARC:#define __INT64_FMTi__ "lli"
 // SPARC:#define __INT64_MAX__ 9223372036854775807LL
 // SPARC:#define __INT64_TYPE__ long long int
+// SPARC:#define __INT8_C(c) c
 // SPARC:#define __INT8_C_SUFFIX__
 // SPARC:#define __INT8_FMTd__ "hhd"
 // SPARC:#define __INT8_FMTi__ "hhi"
 // SPARC:#define __INT8_MAX__ 127
 // SPARC:#define __INT8_TYPE__ signed char
+// SPARC:#define __INTMAX_C(c) c##LL
 // SPARC:#define __INTMAX_C_SUFFIX__ LL
 // SPARC:#define __INTMAX_FMTd__ "lld"
 // SPARC:#define __INTMAX_FMTi__ "lli"
@@ -1114,18 +1149,23 @@
 // SPARC-NETOPENBSD:#define __SIZE_TYPE__ long unsigned int
 // SPARC:#define __SIZE_WIDTH__ 32
 // SPARC-DEFAULT-CXX:#define __STDCPP_DEFAULT_NEW_ALIGNMENT__ 8U
+// SPARC:#define __UINT16_C(c) c
 // SPARC:#define __UINT16_C_SUFFIX__
 // SPARC:#define __UINT16_MAX__ 65535
 // SPARC:#define __UINT16_TYPE__ unsigned short
+// SPARC:#define __UINT32_C(c) c##U
 // SPARC:#define __UINT32_C_SUFFIX__ U
 // SPARC:#define __UINT32_MAX__ 4294967295U
 // SPARC:#define __UINT32_TYPE__ unsigned int
+// SPARC:#define __UINT64_C(c) c##ULL
 // SPARC:#define __UINT64_C_SUFFIX__ ULL
 // SPARC:#define __UINT64_MAX__ 18446744073709551615ULL
 // SPARC:#define __UINT64_TYPE__ long long unsigned int
+// SPARC:#define __UINT8_C(c) c
 // SPARC:#define __UINT8_C_SUFFIX__
 // SPARC:#define __UINT8_MAX__ 255
 // SPARC:#define __UINT8_TYPE__ unsigned char
+// SPARC:#define __UINTMAX_C(c) c##ULL
 // SPARC:#define __UINTMAX_C_SUFFIX__ ULL
 // SPARC:#define __UINTMAX_MAX__ 18446744073709551615ULL
 // SPARC:#define __UINTMAX_TYPE__ long long unsigned int
@@ -1201,21 +1241,25 @@
 // TCE:#define __FLT_MIN_EXP__ (-125)
 // TCE:#define __FLT_MIN__ 1.17549435e-38F
 // TCE:#define __FLT_RADIX__ 2
+// TCE:#define __INT16_C(c) c
 // TCE:#define __INT16_C_SUFFIX__
 // TCE:#define __INT16_FMTd__ "hd"
 // TCE:#define __INT16_FMTi__ "hi"
 // TCE:#define __INT16_MAX__ 32767
 // TCE:#define __INT16_TYPE__ short
+// TCE:#define __INT32_C(c) c
 // TCE:#define __INT32_C_SUFFIX__
 // TCE:#define __INT32_FMTd__ "d"
 // TCE:#define __INT32_FMTi__ "i"
 // TCE:#define __INT32_MAX__ 2147483647
 // TCE:#define __INT32_TYPE__ int
+// TCE:#define __INT8_C(c) c
 // TCE:#define __INT8_C_SUFFIX__
 // TCE:#define __INT8_FMTd__ "hhd"
 // TCE:#define __INT8_FMTi__ "hhi"
 // TCE:#define __INT8_MAX__ 127
 // TCE:#define __INT8_TYPE__ signed char
+// TCE:#define __INTMAX_C(c) c##L
 // TCE:#define __INTMAX_C_SUFFIX__ L
 // TCE:#define __INTMAX_FMTd__ "ld"
 // TCE:#define __INTMAX_FMTi__ "li"
@@ -1293,15 +1337,19 @@
 // TCE-CXX:#define __STDCPP_DEFAULT_NEW_ALIGNMENT__ 4U
 // TCE:#define __TCE_V1__ 1
 // TCE:#define __TCE__ 1
+// TCE:#define __UINT16_C(c) c
 // TCE:#define __UINT16_C_SUFFIX__
 // TCE:#define __UINT16_MAX__ 65535
 // TCE:#define __UINT16_TYPE__ unsigned short
+// TCE:#define __UINT32_C(c) c##U
 // TCE:#define __UINT32_C_SUFFIX__ U
 // TCE:#define __UINT32_MAX__ 4294967295U
 // TCE:#define __UINT32_TYPE__ unsigned int
+// TCE:#define __UINT8_C(c) c
 // TCE:#define __UINT8_C_SUFFIX__
 // TCE:#define __UINT8_MAX__ 255
 // TCE:#define __UINT8_TYPE__ unsigned char
+// TCE:#define __UINTMAX_C(c) c##UL
 // TCE:#define __UINTMAX_C_SUFFIX__ UL
 // TCE:#define __UINTMAX_MAX__ 4294967295UL
 // TCE:#define __UINTMAX_TYPE__ long unsigned int
@@ -1373,6 +1421,7 @@
 // PS4:#define __FreeBSD_cc_version 900001
 // PS4:#define __INT16_TYPE__ short
 // PS4:#define __INT32_TYPE__ int
+// PS4:#define __INT64_C(c) c##L
 // PS4:#define __INT64_C_SUFFIX__ L
 // PS4:#define __INT64_TYPE__ long int
 // PS4:#define __INT8_TYPE__ signed char
@@ -1464,6 +1513,7 @@
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=sparc64-none-none < /dev/null | FileCheck -match-full-lines -check-prefix SPARCV9 %s
 // SPARCV9:#define __BIGGEST_ALIGNMENT__ 16
 // SPARCV9:#define __INT64_TYPE__ long int
+// SPARCV9:#define __INTMAX_C(c) c##L
 // SPARCV9:#define __INTMAX_C_SUFFIX__ L
 // SPARCV9:#define __INTMAX_TYPE__ long int
 // SPARCV9:#define __INTPTR_TYPE__ long int
@@ -1475,8 +1525,10 @@
 //
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=sparc64-none-openbsd < /dev/null | FileCheck -match-full-lines -check-prefix SPARC64-OBSD %s
 // SPARC64-OBSD:#define __INT64_TYPE__ long long int
+// SPARC64-OBSD:#define __INTMAX_C(c) c##LL
 // SPARC64-OBSD:#define __INTMAX_C_SUFFIX__ LL
 // SPARC64-OBSD:#define __INTMAX_TYPE__ long long int
+// SPARC64-OBSD:#define __UINTMAX_C(c) c##ULL
 // SPARC64-OBSD:#define __UINTMAX_C_SUFFIX__ ULL
 // SPARC64-OBSD:#define __UINTMAX_TYPE__ long long unsigned int
 //
@@ -1720,26 +1772,31 @@
 // WEBASSEMBLY-NEXT:#define __GXX_ABI_VERSION 1002
 // WEBASSEMBLY32-NEXT:#define __ILP32__ 1
 // WEBASSEMBLY64-NOT:#define __ILP32__
+// WEBASSEMBLY-NEXT:#define __INT16_C(c) c
 // WEBASSEMBLY-NEXT:#define __INT16_C_SUFFIX__
 // WEBASSEMBLY-NEXT:#define __INT16_FMTd__ "hd"
 // WEBASSEMBLY-NEXT:#define __INT16_FMTi__ "hi"
 // WEBASSEMBLY-NEXT:#define __INT16_MAX__ 32767
 // WEBASSEMBLY-NEXT:#define __INT16_TYPE__ short
+// WEBASSEMBLY-NEXT:#define __INT32_C(c) c
 // WEBASSEMBLY-NEXT:#define __INT32_C_SUFFIX__
 // WEBASSEMBLY-NEXT:#define __INT32_FMTd__ "d"
 // WEBASSEMBLY-NEXT:#define __INT32_FMTi__ "i"
 // WEBASSEMBLY-NEXT:#define __INT32_MAX__ 2147483647
 // WEBASSEMBLY-NEXT:#define __INT32_TYPE__ int
+// WEBASSEMBLY-NEXT:#define __INT64_C(c) c##LL
 // WEBASSEMBLY-NEXT:#define __INT64_C_SUFFIX__ LL
 // WEBASSEMBLY-NEXT:#define __INT64_FMTd__ "lld"
 // WEBASSEMBLY-NEXT:#define __INT64_FMTi__ "lli"
 // WEBASSEMBLY-NEXT:#define __INT64_MAX__ 9223372036854775807LL
 // WEBASSEMBLY-NEXT:#define __INT64_TYPE__ long long int
+// WEBASSEMBLY-NEXT:#define __INT8_C(c) c
 // WEBASSEMBLY-NEXT:#define __INT8_C_SUFFIX__
 // WEBASSEMBLY-NEXT:#define __INT8_FMTd__ "hhd"
 // WEBASSEMBLY-NEXT:#define __INT8_FMTi__ "hhi"
 // WEBASSEMBLY-NEXT:#define __INT8_MAX__ 127
 // WEBASSEMBLY-NEXT:#define __INT8_TYPE__ signed char
+// WEBASSEMBLY-NEXT:#define __INTMAX_C(c) c##LL
 // WEBASSEMBLY-NEXT:#define __INTMAX_C_SUFFIX__ LL
 // WEBASSEMBLY-NEXT:#define __INTMAX_FMTd__ "lld"
 // WEBASSEMBLY-NEXT:#define __INTMAX_FMTi__ "lli"
@@ -1892,6 +1949,7 @@
 // WEBASSEMBLY-NEXT:#define __STDC_UTF_32__ 1
 // WEBASSEMBLY-NEXT:#define __STDC_VERSION__ 201710L
 // WEBASSEMBLY-NEXT:#define __STDC__ 1
+// WEBASSEMBLY-NEXT:#define __UINT16_C(c) c
 // WEBASSEMBLY-NEXT:#define __UINT16_C_SUFFIX__
 // WEBASSEMBLY-NEXT:#define __UINT16_FMTX__ "hX"
 // WEBASSEMBLY-NEXT:#define __UINT16_FMTo__ "ho"
@@ -1899,6 +1957,7 @@
 // WEBASSEMBLY-NEXT:#define __UINT16_FMTx__ "hx"
 // WEBASSEMBLY-NEXT:#define __UINT16_MAX__ 65535
 // WEBASSEMBLY-NEXT:#define __UINT16_TYPE__ unsigned short
+// WEBASSEMBLY-NEXT:#define __UINT32_C(c) c##U
 // WEBASSEMBLY-NEXT:#define __UINT32_C_SUFFIX__ U
 // WEBASSEMBLY-NEXT:#define __UINT32_FMTX__ "X"
 // WEBASSEMBLY-NEXT:#define __UINT32_FMTo__ "o"
@@ -1906,6 +1965,7 @@
 // WEBASSEMBLY-NEXT:#define __UINT32_FMTx__ "x"
 // WEBASSEMBLY-NEXT:#define __UINT32_MAX__ 4294967295U
 // WEBASSEMBLY-NEXT:#define __UINT32_TYPE__ unsigned int
+// WEBASSEMBLY-NEXT:#define __UINT64_C(c) c##ULL
 // WEBASSEMBLY-NEXT:#define __UINT64_C_SUFFIX__ ULL
 // WEBASSEMBLY-NEXT:#define __UINT64_FMTX__ "llX"
 // WEBASSEMBLY-NEXT:#define __UINT64_FMTo__ "llo"
@@ -1913,6 +1973,7 @@
 // WEBASSEMBLY-NEXT:#define __UINT64_FMTx__ "llx"
 // WEBASSEMBLY-NEXT:#define __UINT64_MAX__ 18446744073709551615ULL
 // WEBASSEMBLY-NEXT:#define __UINT64_TYPE__ long long unsigned int
+// WEBASSEMBLY-NEXT:#define __UINT8_C(c) c
 // WEBASSEMBLY-NEXT:#define __UINT8_C_SUFFIX__
 // WEBASSEMBLY-NEXT:#define __UINT8_FMTX__ "hhX"
 // WEBASSEMBLY-NEXT:#define __UINT8_FMTo__ "hho"
@@ -1920,6 +1981,7 @@
 // WEBASSEMBLY-NEXT:#define __UINT8_FMTx__ "hhx"
 // WEBASSEMBLY-NEXT:#define __UINT8_MAX__ 255
 // WEBASSEMBLY-NEXT:#define __UINT8_TYPE__ unsigned char
+// WEBASSEMBLY-NEXT:#define __UINTMAX_C(c) c##ULL
 // WEBASSEMBLY-NEXT:#define __UINTMAX_C_SUFFIX__ ULL
 // WEBASSEMBLY-NEXT:#define __UINTMAX_FMTX__ "llX"
 // WEBASSEMBLY-NEXT:#define __UINTMAX_FMTo__ "llo"
@@ -2092,18 +2154,23 @@
 // AVR:#define __GCC_ATOMIC_TEST_AND_SET_TRUEVAL 1
 // AVR:#define __GCC_ATOMIC_WCHAR_T_LOCK_FREE 1
 // AVR:#define __GXX_ABI_VERSION 1002
+// AVR:#define __INT16_C(c) c
 // AVR:#define __INT16_C_SUFFIX__
 // AVR:#define __INT16_MAX__ 32767
 // AVR:#define __INT16_TYPE__ int
+// AVR:#define __INT32_C(c) c##L
 // AVR:#define __INT32_C_SUFFIX__ L
 // AVR:#define __INT32_MAX__ 2147483647L
 // AVR:#define __INT32_TYPE__ long int
+// AVR:#define __INT64_C(c) c##LL
 // AVR:#define __INT64_C_SUFFIX__ LL
 // AVR:#define __INT64_MAX__ 9223372036854775807LL
 // AVR:#define __INT64_TYPE__ long long int
+// AVR:#define __INT8_C(c) c
 // AVR:#define __INT8_C_SUFFIX__
 // AVR:#define __INT8_MAX__ 127
 // AVR:#define __INT8_TYPE__ signed char
+// AVR:#define __INTMAX_C(c) c##LL
 // AVR:#define __INTMAX_C_SUFFIX__ LL
 // AVR:#define __INTMAX_MAX__ 9223372036854775807LL
 // AVR:#define __INTMAX_TYPE__ long long int
@@ -2175,15 +2242,19 @@
 // AVR:#define __STDC__ 1
 // AVR:#define __UINT16_MAX__ 65535U
 // AVR:#define __UINT16_TYPE__ unsigned int
+// AVR:#define __UINT32_C(c) c##UL
 // AVR:#define __UINT32_C_SUFFIX__ UL
 // AVR:#define __UINT32_MAX__ 4294967295UL
 // AVR:#define __UINT32_TYPE__ long unsigned int
+// AVR:#define __UINT64_C(c) c##ULL
 // AVR:#define __UINT64_C_SUFFIX__ ULL
 // AVR:#define __UINT64_MAX__ 18446744073709551615ULL
 // AVR:#define __UINT64_TYPE__ long long unsigned int
+// AVR:#define __UINT8_C(c) c
 // AVR:#define __UINT8_C_SUFFIX__
 // AVR:#define __UINT8_MAX__ 255
 // AVR:#define __UINT8_TYPE__ unsigned char
+// AVR:#define __UINTMAX_C(c) c##ULL
 // AVR:#define __UINTMAX_C_SUFFIX__ ULL
 // AVR:#define __UINTMAX_MAX__ 18446744073709551615ULL
 // AVR:#define __UINTMAX_TYPE__ long long unsigned int
@@ -2383,18 +2454,23 @@
 // RISCV32: #define __GNUC__ {{.*}}
 // RISCV32: #define __GXX_ABI_VERSION {{.*}}
 // RISCV32: #define __ILP32__ 1
+// RISCV32: #define __INT16_C(c) c
 // RISCV32: #define __INT16_C_SUFFIX__
 // RISCV32: #define __INT16_MAX__ 32767
 // RISCV32: #define __INT16_TYPE__ short
+// RISCV32: #define __INT32_C(c) c
 // RISCV32: #define __INT32_C_SUFFIX__
 // RISCV32: #define __INT32_MAX__ 2147483647
 // RISCV32: #define __INT32_TYPE__ int
+// RISCV32: #define __INT64_C(c) c##LL
 // RISCV32: #define __INT64_C_SUFFIX__ LL
 // RISCV32: #define __INT64_MAX__ 9223372036854775807LL
 // RISCV32: #define __INT64_TYPE__ long long int
+// RISCV32: #define __INT8_C(c) c
 // RISCV32: #define __INT8_C_SUFFIX__
 // RISCV32: #define __INT8_MAX__ 127
 // RISCV32: #define __INT8_TYPE__ signed char
+// RISCV32: #define __INTMAX_C(c) c##LL
 // RISCV32: #define __INTMAX_C_SUFFIX__ LL
 // RISCV32: #define __INTMAX_MAX__ 9223372036854775807LL
 // RISCV32: #define __INTMAX_TYPE__ long long int
@@ -2474,18 +2550,23 @@
 // RISCV32: #define __STDC_UTF_32__ 1
 // RISCV32: #define __STDC_VERSION__ 201710L
 // RISCV32: #define __STDC__ 1
+// RISCV32: #define __UINT16_C(c) c
 // RISCV32: #define __UINT16_C_SUFFIX__
 // RISCV32: #define __UINT16_MAX__ 65535
 // RISCV32: #define __UINT16_TYPE__ unsigned short
+// RISCV32: #define __UINT32_C(c) c##U
 // RISCV32: #define __UINT32_C_SUFFIX__ U
 // RISCV32: #define __UINT32_MAX__ 4294967295U
 // RISCV32: #define __UINT32_TYPE__ unsigned int
+// RISCV32: #define __UINT64_C(c) c##ULL
 // RISCV32: #define __UINT64_C_SUFFIX__ ULL
 // RISCV32: #define __UINT64_MAX__ 18446744073709551615ULL
 // RISCV32: #define __UINT64_TYPE__ long long unsigned int
+// RISCV32: #define __UINT8_C(c) c
 // RISCV32: #define __UINT8_C_SUFFIX__
 // RISCV32: #define __UINT8_MAX__ 255
 // RISCV32: #define __UINT8_TYPE__ unsigned char
+// RISCV32: #define __UINTMAX_C(c) c##ULL
 // RISCV32: #define __UINTMAX_C_SUFFIX__ ULL
 // RISCV32: #define __UINTMAX_MAX__ 18446744073709551615ULL
 // RISCV32: #define __UINTMAX_TYPE__ long long unsigned int
@@ -2596,18 +2677,23 @@
 // RISCV64: #define __GNUC_STDC_INLINE__ 1
 // RISCV64: #define __GNUC__ {{.*}}
 // RISCV64: #define __GXX_ABI_VERSION {{.*}}
+// RISCV64: #define __INT16_C(c) c
 // RISCV64: #define __INT16_C_SUFFIX__
 // RISCV64: #define __INT16_MAX__ 32767
 // RISCV64: #define __INT16_TYPE__ short
+// RISCV64: #define __INT32_C(c) c
 // RISCV64: #define __INT32_C_SUFFIX__
 // RISCV64: #define __INT32_MAX__ 2147483647
 // RISCV64: #define __INT32_TYPE__ int
+// RISCV64: #define __INT64_C(c) c##L
 // RISCV64: #define __INT64_C_SUFFIX__ L
 // RISCV64: #define __INT64_MAX__ 9223372036854775807L
 // RISCV64: #define __INT64_TYPE__ long int
+// RISCV64: #define __INT8_C(c) c
 // RISCV64: #define __INT8_C_SUFFIX__
 // RISCV64: #define __INT8_MAX__ 127
 // RISCV64: #define __INT8_TYPE__ signed char
+// RISCV64: #define __INTMAX_C(c) c##L
 // RISCV64: #define __INTMAX_C_SUFFIX__ L
 // RISCV64: #define __INTMAX_MAX__ 9223372036854775807L
 // RISCV64: #define __INTMAX_TYPE__ long int
@@ -2687,18 +2773,23 @@
 // RISCV64: #define __STDC_UTF_32__ 1
 // RISCV64: #define __STDC_VERSION__ 201710L
 // RISCV64: #define __STDC__ 1
+// RISCV64: #define __UINT16_C(c) c
 // RISCV64: #define __UINT16_C_SUFFIX__
 // RISCV64: #define __UINT16_MAX__ 65535
 // RISCV64: #define __UINT16_TYPE__ unsigned short
+// RISCV64: #define __UINT32_C(c) c##U
 // RISCV64: #define __UINT32_C_SUFFIX__ U
 // RISCV64: #define __UINT32_MAX__ 4294967295U
 // RISCV64: #define __UINT32_TYPE__ unsigned int
+// RISCV64: #define __UINT64_C(c) c##UL
 // RISCV64: #define __UINT64_C_SUFFIX__ UL
 // RISCV64: #define __UINT64_MAX__ 18446744073709551615UL
 // RISCV64: #define __UINT64_TYPE__ long unsigned int
+// RISCV64: #define __UINT8_C(c) c
 // RISCV64: #define __UINT8_C_SUFFIX__
 // RISCV64: #define __UINT8_MAX__ 255
 // RISCV64: #define __UINT8_TYPE__ unsigned char
+// RISCV64: #define __UINTMAX_C(c) c##UL
 // RISCV64: #define __UINTMAX_C_SUFFIX__ UL
 // RISCV64: #define __UINTMAX_MAX__ 18446744073709551615UL
 // RISCV64: #define __UINTMAX_TYPE__ long unsigned int
@@ -2837,18 +2928,23 @@
 // XTENSA: #define __GNUC__ {{.*}}
 // XTENSA: #define __GXX_ABI_VERSION {{.*}}
 // XTENSA: #define __ILP32__ 1
+// XTENSA: #define __INT16_C(c) c
 // XTENSA: #define __INT16_C_SUFFIX__ 
 // XTENSA: #define __INT16_MAX__ 32767
 // XTENSA: #define __INT16_TYPE__ short
+// XTENSA: #define __INT32_C(c) c
 // XTENSA: #define __INT32_C_SUFFIX__ 
 // XTENSA: #define __INT32_MAX__ 2147483647
 // XTENSA: #define __INT32_TYPE__ int
+// XTENSA: #define __INT64_C(c) c##LL
 // XTENSA: #define __INT64_C_SUFFIX__ LL
 // XTENSA: #define __INT64_MAX__ 9223372036854775807LL
 // XTENSA: #define __INT64_TYPE__ long long int
+// XTENSA: #define __INT8_C(c) c
 // XTENSA: #define __INT8_C_SUFFIX__ 
 // XTENSA: #define __INT8_MAX__ 127
 // XTENSA: #define __INT8_TYPE__ signed char
+// XTENSA: #define __INTMAX_C(c) c##LL
 // XTENSA: #define __INTMAX_C_SUFFIX__ LL
 // XTENSA: #define __INTMAX_MAX__ 9223372036854775807LL
 // XTENSA: #define __INTMAX_TYPE__ long long int
@@ -2945,18 +3041,23 @@
 // XTENSA: #define __STDC_UTF_32__ 1
 // XTENSA: #define __STDC_VERSION__ 201710L
 // XTENSA: #define __STDC__ 1
+// XTENSA: #define __UINT16_C(c) c
 // XTENSA: #define __UINT16_C_SUFFIX__ 
 // XTENSA: #define __UINT16_MAX__ 65535
 // XTENSA: #define __UINT16_TYPE__ unsigned short
+// XTENSA: #define __UINT32_C(c) c##U
 // XTENSA: #define __UINT32_C_SUFFIX__ U
 // XTENSA: #define __UINT32_MAX__ 4294967295U
 // XTENSA: #define __UINT32_TYPE__ unsigned int
+// XTENSA: #define __UINT64_C(c) c##ULL
 // XTENSA: #define __UINT64_C_SUFFIX__ ULL
 // XTENSA: #define __UINT64_MAX__ 18446744073709551615ULL
 // XTENSA: #define __UINT64_TYPE__ long long unsigned int
+// XTENSA: #define __UINT8_C(c) c
 // XTENSA: #define __UINT8_C_SUFFIX__ 
 // XTENSA: #define __UINT8_MAX__ 255
 // XTENSA: #define __UINT8_TYPE__ unsigned char
+// XTENSA: #define __UINTMAX_C(c) c##ULL
 // XTENSA: #define __UINTMAX_C_SUFFIX__ ULL
 // XTENSA: #define __UINTMAX_MAX__ 18446744073709551615ULL
 // XTENSA: #define __UINTMAX_TYPE__ long long unsigned int

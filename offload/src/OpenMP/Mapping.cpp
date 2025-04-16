@@ -149,7 +149,7 @@ LookupResult MappingInfoTy::lookupMapping(HDTTMapAccessorTy &HDTTMap,
     //   std::prev(upper)->HDTT.HstPtrBegin <= hp < upper->HDTT.HstPtrBegin
     if (Upper != HDTTMap->begin()) {
       LR.TPR.setEntry(std::prev(Upper)->HDTT, OwnedTPR);
-      // the left side of extended address range is satisified.
+      // the left side of extended address range is satisfied.
       // hp >= LR.TPR.getEntry()->HstPtrBegin || hp >=
       // LR.TPR.getEntry()->HstPtrBase
       LR.Flags.IsContained = HP < LR.TPR.getEntry()->HstPtrEnd ||
@@ -158,7 +158,7 @@ LookupResult MappingInfoTy::lookupMapping(HDTTMapAccessorTy &HDTTMap,
 
     if (!LR.Flags.IsContained && Upper != HDTTMap->end()) {
       LR.TPR.setEntry(Upper->HDTT, OwnedTPR);
-      // the right side of extended address range is satisified.
+      // the right side of extended address range is satisfied.
       // hp < LR.TPR.getEntry()->HstPtrEnd || hp < LR.TPR.getEntry()->HstPtrBase
       LR.Flags.IsContained = HP >= LR.TPR.getEntry()->HstPtrBase;
     }

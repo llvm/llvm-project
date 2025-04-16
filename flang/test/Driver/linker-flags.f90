@@ -5,10 +5,10 @@
 ! RUN: %flang -### --target=ppc64le-linux-gnu %S/Inputs/hello.f90 2>&1 | FileCheck %s --check-prefixes=CHECK,UNIX,UNIX-F128%f128-lib
 ! RUN: %flang -### --target=aarch64-apple-darwin %S/Inputs/hello.f90 2>&1 | FileCheck %s --check-prefixes=CHECK,DARWIN,DARWIN-F128%f128-lib
 ! RUN: %flang -### --target=sparc-sun-solaris2.11 %S/Inputs/hello.f90 2>&1 | FileCheck %s --check-prefixes=CHECK,UNIX,SOLARIS-F128%f128-lib
-! RUN: %flang -### --target=x86_64-unknown-freebsd %S/Inputs/hello.f90 2>&1 | FileCheck %s --check-prefixes=CHECK,UNIX,UNIX-F128%f128-lib
-! RUN: %flang -### --target=x86_64-unknown-netbsd %S/Inputs/hello.f90 2>&1 | FileCheck %s --check-prefixes=CHECK,UNIX,UNIX-F128%f128-lib
-! RUN: %flang -### --target=x86_64-unknown-openbsd %S/Inputs/hello.f90 2>&1 | FileCheck %s --check-prefixes=CHECK,UNIX,UNIX-F128%f128-lib
-! RUN: %flang -### --target=x86_64-unknown-dragonfly %S/Inputs/hello.f90 2>&1 | FileCheck %s --check-prefixes=CHECK,UNIX,UNIX-F128%f128-lib
+! RUN: %flang -### --target=x86_64-unknown-freebsd %S/Inputs/hello.f90 2>&1 | FileCheck %s --check-prefixes=CHECK,BSD,BSD-F128%f128-lib
+! RUN: %flang -### --target=x86_64-unknown-netbsd %S/Inputs/hello.f90 2>&1 | FileCheck %s --check-prefixes=CHECK,BSD,BSD-F128%f128-lib
+! RUN: %flang -### --target=x86_64-unknown-openbsd %S/Inputs/hello.f90 2>&1 | FileCheck %s --check-prefixes=CHECK,BSD,BSD-F128%f128-lib
+! RUN: %flang -### --target=x86_64-unknown-dragonfly %S/Inputs/hello.f90 2>&1 | FileCheck %s --check-prefixes=CHECK,BSD,BSD-F128%f128-lib
 ! RUN: %flang -### --target=x86_64-unknown-haiku %S/Inputs/hello.f90 2>&1 | FileCheck %s --check-prefixes=CHECK,HAIKU,HAIKU-F128%f128-lib
 ! RUN: %flang -### --target=x86_64-windows-gnu %S/Inputs/hello.f90 2>&1 | FileCheck %s --check-prefixes=CHECK,MINGW,MINGW-F128%f128-lib
 ! RUN: %flang -### -rtlib=compiler-rt --target=aarch64-linux-gnu %S/Inputs/hello.f90 2>&1 | FileCheck %s --check-prefixes=CHECK,UNIX,COMPILER-RT
@@ -35,6 +35,14 @@
 ! SOLARIS-F128LIBQUADMATH-SAME: "-lFortranFloat128Math" "-z" "ignore" "-lquadmath" "-z" "record"
 ! UNIX-SAME: "-lFortranRuntime" "-lFortranDecimal" "-lm"
 ! COMPILER-RT: "{{.*}}{{\\|/}}libclang_rt.builtins.a"
+
+! BSD-LABEL:  "{{.*}}ld{{(\.exe)?}}"
+! BSD-SAME: "[[object_file]]"
+! BSD-F128NONE-NOT: FortranFloat128Math
+! BSD-F128LIBQUADMATH-SAME: "-lFortranFloat128Math" "--as-needed" "-lquadmath" "--no-as-needed"
+! BSD-SAME: -lFortranRuntime
+! BSD-SAME: -lFortranDecimal
+! BSD-SAME: -lexecinfo
 
 ! DARWIN-LABEL:  "{{.*}}ld{{(\.exe)?}}"
 ! DARWIN-SAME: "[[object_file]]"

@@ -1,4 +1,5 @@
 # RUN: llc -mtriple=amdgcn-amd-amdhsa -verify-machineinstrs -run-pass=machine-scheduler -o - %s | FileCheck %s
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -passes=machine-scheduler -o - %s | FileCheck %s
 
 --- |
   %struct.widget.0 = type { float, i32, i32 }

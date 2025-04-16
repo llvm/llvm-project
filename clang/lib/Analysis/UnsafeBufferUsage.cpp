@@ -454,7 +454,9 @@ AST_MATCHER(ArraySubscriptExpr, isSafeArraySubscript) {
   }
 
   Expr::EvalResult EVResult;
-  if (Node.getIdx()->EvaluateAsInt(EVResult, Finder->getASTContext())) {
+  const Expr *IndexExpr = Node.getIdx();
+  if (!IndexExpr->isValueDependent() &&
+      IndexExpr->EvaluateAsInt(EVResult, Finder->getASTContext())) {
     llvm::APSInt ArrIdx = EVResult.Val.getInt();
     // FIXME: ArrIdx.isNegative() we could immediately emit an error as that's a
     // bug

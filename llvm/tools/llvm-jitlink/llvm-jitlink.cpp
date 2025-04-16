@@ -23,6 +23,7 @@
 #include "llvm/ExecutionEngine/Orc/Debugging/DebuggerSupportPlugin.h"
 #include "llvm/ExecutionEngine/Orc/Debugging/PerfSupportPlugin.h"
 #include "llvm/ExecutionEngine/Orc/Debugging/VTuneSupportPlugin.h"
+#include "llvm/ExecutionEngine/Orc/EHFrameRegistrationPlugin.h"
 #include "llvm/ExecutionEngine/Orc/ELFNixPlatform.h"
 #include "llvm/ExecutionEngine/Orc/EPCDebugObjectRegistrar.h"
 #include "llvm/ExecutionEngine/Orc/EPCDynamicLibrarySearchGenerator.h"

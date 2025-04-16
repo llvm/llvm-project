@@ -115,7 +115,7 @@ subroutine issue772(a, x)
   ! CHECK: fir.call @_QPibar()
   ! CHECK-NOT: fir.call @_QPibar()
   print *, a(20)%b(1:ibar():1)
-  ! CHECK return
+  ! CHECK: return
 end subroutine
 
 ! -----------------------------------------------------------------------------

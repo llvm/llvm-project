@@ -895,8 +895,7 @@ std::string PredefinedExpr::ComputeName(PredefinedIdentKind IK,
     // type deduction and lambdas. For trailing return types resolve the
     // decltype expression. Otherwise print the real type when this is
     // not a constructor or destructor.
-    if (isa<CXXMethodDecl>(FD) &&
-         cast<CXXMethodDecl>(FD)->getParent()->isLambda())
+    if (isLambdaMethod(FD))
       Proto = "auto " + Proto;
     else if (FT && FT->getReturnType()->getAs<DecltypeType>())
       FT->getReturnType()
@@ -3660,6 +3659,7 @@ bool Expr::HasSideEffects(const ASTContext &Ctx,
   case PackIndexingExprClass:
   case HLSLOutArgExprClass:
   case OpenACCAsteriskSizeExprClass:
+  case ResolvedUnexpandedPackExprClass:
     // These never have a side-effect.
     return false;
 
@@ -5077,6 +5077,8 @@ unsigned AtomicExpr::getNumSubExprs(AtomicOp Op) {
   case AO__opencl_atomic_init:
   case AO__c11_atomic_load:
   case AO__atomic_load_n:
+  case AO__atomic_test_and_set:
+  case AO__atomic_clear:
     return 2;
 
   case AO__scoped_atomic_load_n:

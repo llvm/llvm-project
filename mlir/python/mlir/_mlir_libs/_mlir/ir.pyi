@@ -46,6 +46,7 @@ import abc
 import collections
 from collections.abc import Callable, Sequence
 import io
+from pathlib import Path
 from typing import Any, ClassVar, TypeVar, overload
 
 __all__ = [
@@ -2123,7 +2124,7 @@ class Module:
         Creates an empty module
         """
     @staticmethod
-    def parse(asm: str | bytes, context: Context | None = None) -> Module:
+    def parse(asm: str | bytes | Path, context: Context | None = None) -> Module:
         """
         Parses a module's assembly format from a string.
 

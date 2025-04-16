@@ -64,6 +64,7 @@ static_library("Utils") {
     "LowerInvoke.cpp",
     "LowerMemIntrinsics.cpp",
     "LowerSwitch.cpp",
+    "LowerVectorIntrinsics.cpp",
     "MatrixUtils.cpp",
     "Mem2Reg.cpp",
     "MemoryOpRemark.cpp",

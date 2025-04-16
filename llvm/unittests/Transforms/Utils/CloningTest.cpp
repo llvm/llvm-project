@@ -173,7 +173,8 @@ TEST_F(CloneInstruction, Attributes) {
   Function *F2 = Function::Create(FT1, Function::ExternalLinkage);
 
   Argument *A = &*F1->arg_begin();
-  A->addAttr(Attribute::NoCapture);
+  A->addAttr(
+      Attribute::getWithCaptureInfo(A->getContext(), CaptureInfo::none()));
 
   SmallVector<ReturnInst*, 4> Returns;
   ValueToValueMapTy VMap;
@@ -514,7 +515,8 @@ protected:
     // cloning).
     auto *StructType = DICompositeType::getDistinct(
         C, dwarf::DW_TAG_structure_type, "some_struct", nullptr, 0, nullptr,
-        nullptr, 32, 32, 0, DINode::FlagZero, nullptr, 0, nullptr, nullptr);
+        nullptr, 32, 32, 0, DINode::FlagZero, nullptr, 0, std::nullopt, nullptr,
+        nullptr);
     auto *InlinedSP = DBuilder.createFunction(
         CU, "inlined", "inlined", File, 8, FuncType, 9, DINode::FlagZero,
         DISubprogram::SPFlagLocalToUnit | DISubprogram::SPFlagDefinition);

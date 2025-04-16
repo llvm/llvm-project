@@ -1404,6 +1404,23 @@ inline Error createFileError(const Twine &F, size_t Line, std::error_code EC) {
   return createFileError(F, Line, errorCodeToError(EC));
 }
 
+/// Create a StringError with the specified error code and prepend the file path
+/// to it.
+inline Error createFileError(const Twine &F, std::error_code EC,
+                             const Twine &S) {
+  Error E = createStringError(EC, S);
+  return createFileError(F, std::move(E));
+}
+
+/// Create a StringError with the specified error code and prepend the file path
+/// to it.
+template <typename... Ts>
+inline Error createFileError(const Twine &F, std::error_code EC,
+                             char const *Fmt, const Ts &...Vals) {
+  Error E = createStringError(EC, Fmt, Vals...);
+  return createFileError(F, std::move(E));
+}
+
 Error createFileError(const Twine &F, ErrorSuccess) = delete;
 
 /// Helper for check-and-exit error handling.

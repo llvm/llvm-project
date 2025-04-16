@@ -31,7 +31,6 @@ void populateExpandAsinhPattern(RewritePatternSet &patterns);
 void populateExpandAcoshPattern(RewritePatternSet &patterns);
 void populateExpandAtanhPattern(RewritePatternSet &patterns);
 void populateExpandFmaFPattern(RewritePatternSet &patterns);
-void populateExpandFloorFPattern(RewritePatternSet &patterns);
 void populateExpandCeilFPattern(RewritePatternSet &patterns);
 void populateExpandExp2FPattern(RewritePatternSet &patterns);
 void populateExpandPowFPattern(RewritePatternSet &patterns);

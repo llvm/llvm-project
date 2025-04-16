@@ -30,18 +30,23 @@ bool diagnoseConstructAppertainment(SemaOpenACC &S, OpenACCDirectiveKind K,
     // Nothing to do here, both invalid and unimplemented don't really need to
     // do anything.
     break;
-  case OpenACCDirectiveKind::ParallelLoop:
-  case OpenACCDirectiveKind::SerialLoop:
-  case OpenACCDirectiveKind::KernelsLoop:
   case OpenACCDirectiveKind::Parallel:
+  case OpenACCDirectiveKind::ParallelLoop:
   case OpenACCDirectiveKind::Serial:
+  case OpenACCDirectiveKind::SerialLoop:
   case OpenACCDirectiveKind::Kernels:
+  case OpenACCDirectiveKind::KernelsLoop:
   case OpenACCDirectiveKind::Loop:
   case OpenACCDirectiveKind::Data:
   case OpenACCDirectiveKind::EnterData:
   case OpenACCDirectiveKind::ExitData:
   case OpenACCDirectiveKind::HostData:
   case OpenACCDirectiveKind::Wait:
+  case OpenACCDirectiveKind::Update:
+  case OpenACCDirectiveKind::Init:
+  case OpenACCDirectiveKind::Shutdown:
+  case OpenACCDirectiveKind::Cache:
+  case OpenACCDirectiveKind::Atomic:
     if (!IsStmt)
       return S.Diag(StartLoc, diag::err_acc_construct_appertainment) << K;
     break;
@@ -73,6 +78,7 @@ bool PreserveLoopRAIIDepthInAssociatedStmtRAII(OpenACCDirectiveKind DK) {
     return false;
   case OpenACCDirectiveKind::Data:
   case OpenACCDirectiveKind::HostData:
+  case OpenACCDirectiveKind::Atomic:
     return true;
   case OpenACCDirectiveKind::EnterData:
   case OpenACCDirectiveKind::ExitData:
@@ -327,6 +333,7 @@ void SemaOpenACC::ActOnConstruct(OpenACCDirectiveKind K,
   case OpenACCDirectiveKind::Shutdown:
   case OpenACCDirectiveKind::Set:
   case OpenACCDirectiveKind::Update:
+  case OpenACCDirectiveKind::Atomic:
     // Nothing to do here, there is no real legalization that needs to happen
     // here as these constructs do not take any arguments.
     break;
@@ -1518,8 +1525,9 @@ bool SemaOpenACC::ActOnStartStmtDirective(
 StmtResult SemaOpenACC::ActOnEndStmtDirective(
     OpenACCDirectiveKind K, SourceLocation StartLoc, SourceLocation DirLoc,
     SourceLocation LParenLoc, SourceLocation MiscLoc, ArrayRef<Expr *> Exprs,
-    SourceLocation RParenLoc, SourceLocation EndLoc,
-    ArrayRef<OpenACCClause *> Clauses, StmtResult AssocStmt) {
+    OpenACCAtomicKind AtomicKind, SourceLocation RParenLoc,
+    SourceLocation EndLoc, ArrayRef<OpenACCClause *> Clauses,
+    StmtResult AssocStmt) {
   switch (K) {
   default:
     return StmtEmpty();
@@ -1583,13 +1591,20 @@ StmtResult SemaOpenACC::ActOnEndStmtDirective(
     return OpenACCUpdateConstruct::Create(getASTContext(), StartLoc, DirLoc,
                                           EndLoc, Clauses);
   }
+  case OpenACCDirectiveKind::Atomic: {
+    assert(Clauses.empty() && "Atomic doesn't allow clauses");
+    return OpenACCAtomicConstruct::Create(
+        getASTContext(), StartLoc, DirLoc, AtomicKind, EndLoc,
+        AssocStmt.isUsable() ? AssocStmt.get() : nullptr);
+  }
   }
   llvm_unreachable("Unhandled case in directive handling?");
 }
 
 StmtResult SemaOpenACC::ActOnAssociatedStmt(
     SourceLocation DirectiveLoc, OpenACCDirectiveKind K,
-    ArrayRef<const OpenACCClause *> Clauses, StmtResult AssocStmt) {
+    OpenACCAtomicKind AtKind, ArrayRef<const OpenACCClause *> Clauses,
+    StmtResult AssocStmt) {
   switch (K) {
   default:
     llvm_unreachable("Unimplemented associated statement application");
@@ -1601,6 +1616,8 @@ StmtResult SemaOpenACC::ActOnAssociatedStmt(
   case OpenACCDirectiveKind::Set:
     llvm_unreachable(
         "these don't have associated statements, so shouldn't get here");
+  case OpenACCDirectiveKind::Atomic:
+    return CheckAtomicAssociatedStmt(DirectiveLoc, AtKind, AssocStmt);
   case OpenACCDirectiveKind::Parallel:
   case OpenACCDirectiveKind::Serial:
   case OpenACCDirectiveKind::Kernels:

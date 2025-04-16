@@ -3,7 +3,7 @@
 // DEFINE: mlir-opt \
 // DEFINE:  -test-lower-to-llvm -o %t
 // DEFINE: %{entry_point} = main
-// DEFINE: %{run} = mlir-cpu-runner %t -e %{entry_point} -entry-point-result=void \
+// DEFINE: %{run} = mlir-runner %t -e %{entry_point} -entry-point-result=void \
 // DEFINE:    -shared-libs=%mlir_runner_utils,%mlir_c_runner_utils
 
 // RUN: rm -f %t && %{compile} && %{run} | FileCheck %s

@@ -164,9 +164,9 @@ static cl::opt<bool>
     OptimizeMemorySSA("dse-optimize-memoryssa", cl::init(true), cl::Hidden,
                       cl::desc("Allow DSE to optimize memory accesses."));
 
-// TODO: turn on and remove this flag.
+// TODO: remove this flag.
 static cl::opt<bool> EnableInitializesImprovement(
-    "enable-dse-initializes-attr-improvement", cl::init(false), cl::Hidden,
+    "enable-dse-initializes-attr-improvement", cl::init(true), cl::Hidden,
     cl::desc("Enable the initializes attr improvement in DSE"));
 
 //===----------------------------------------------------------------------===//
@@ -553,7 +553,7 @@ static void shortenAssignment(Instruction *Inst, Value *OriginalDest,
 
     // Fragments overlap: insert a new dbg.assign for this dead part.
     auto *NewAssign = static_cast<decltype(Assign)>(Assign->clone());
-    NewAssign->insertAfter(Assign);
+    NewAssign->insertAfter(Assign->getIterator());
     NewAssign->setAssignId(GetDeadLink());
     if (NewFragment)
       SetDeadFragExpr(NewAssign, *NewFragment);
@@ -2210,7 +2210,9 @@ struct DSEState {
 
       Instruction *UpperInst = UpperDef->getMemoryInst();
       auto IsRedundantStore = [&]() {
-        if (DefInst->isIdenticalTo(UpperInst))
+        // We don't care about differences in call attributes here.
+        if (DefInst->isIdenticalToWhenDefined(UpperInst,
+                                              /*IntersectAttrs=*/true))
           return true;
         if (auto *MemSetI = dyn_cast<MemSetInst>(UpperInst)) {
           if (auto *SI = dyn_cast<StoreInst>(DefInst)) {

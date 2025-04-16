@@ -818,6 +818,9 @@ void TargetLoweringBase::initActions() {
     setOperationAction(ISD::SDOPC, VT, Expand);
 #include "llvm/IR/VPIntrinsics.def"
 
+    // Masked vector extracts default to expand.
+    setOperationAction(ISD::VECTOR_FIND_LAST_ACTIVE, VT, Expand);
+
     // FP environment operations default to expand.
     setOperationAction(ISD::GET_FPENV, VT, Expand);
     setOperationAction(ISD::SET_FPENV, VT, Expand);
@@ -1836,6 +1839,17 @@ int TargetLoweringBase::InstructionOpcodeToISD(unsigned Opcode) const {
   }
 
   llvm_unreachable("Unknown instruction type encountered!");
+}
+
+int TargetLoweringBase::IntrinsicIDToISD(Intrinsic::ID ID) const {
+  switch (ID) {
+  case Intrinsic::exp:
+    return ISD::FEXP;
+  case Intrinsic::exp2:
+    return ISD::FEXP2;
+  default:
+    return ISD::DELETED_NODE;
+  }
 }
 
 Value *

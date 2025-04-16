@@ -17,6 +17,7 @@ import os
 import re
 import requests
 import sys
+import textwrap
 import time
 from typing import List, Optional
 
@@ -209,6 +210,14 @@ Author: {self.pr.user.name} ({self.pr.user.login})
         return None
 
 
+def get_top_values(values: dict, top: int = 3) -> list:
+    return [v for v in sorted(values.items(), key=lambda x: x[1], reverse=True)][:top]
+
+
+def get_user_values_str(values: list) -> str:
+    return ", ".join([f"@{v[0]} ({v[1]})" for v in values])
+
+
 class PRGreeter:
     COMMENT_TAG = "<!--LLVM NEW CONTRIBUTOR COMMENT-->\n"
 
@@ -239,6 +248,60 @@ If you have further questions, they may be answered by the [LLVM GitHub User Gui
 You can also ask questions in a comment on this PR, on the [LLVM Discord](https://discord.com/invite/xS7Z362) or on the [forums](https://discourse.llvm.org/)."""
         self.pr.as_issue().create_comment(comment)
         return True
+
+
+class CommitRequestGreeter:
+    def __init__(self, token: str, repo: str, issue_number: int):
+        self.repo = github.Github(token).get_repo(repo)
+        self.issue = self.repo.get_issue(issue_number)
+
+    def run(self) -> bool:
+        # Post greeter comment:
+        comment = textwrap.dedent(
+            f"""
+            @{self.issue.user.login} thank you for apply for commit access.  Please  review the project's [code review policy](https://llvm.org/docs/CodeReview.html).
+        """
+        )
+        self.issue.create_comment(comment)
+
+        # Post activity summary:
+        total_prs = 0
+        merged_prs = 0
+        merged_by = {}
+        reviewed_by = {}
+        for i in self.repo.get_issues(creator=self.issue.user.login, state="all"):
+            issue_reviewed_by = set()
+            try:
+                pr = i.as_pull_request()
+                total_prs += 1
+                for c in pr.get_review_comments():
+                    if c.user.login == self.issue.user.login:
+                        continue
+                    issue_reviewed_by.add(c.user.login)
+                for r in issue_reviewed_by:
+                    if r not in reviewed_by:
+                        reviewed_by[r] = 1
+                    else:
+                        reviewed_by[r] += 1
+                if pr.is_merged():
+                    merged_prs += 1
+                    merger = pr.merged_by.login
+                    if merger not in merged_by:
+                        merged_by[merger] = 1
+                    else:
+                        merged_by[merger] += 1
+                    continue
+
+            except github.GithubException:
+                continue
+
+        comment = f"""
+            ### Activity Summary:
+            * [{total_prs} Pull Requests](https://github.com/llvm/llvm-project/pulls/{self.issue.user.login}) ({merged_prs} merged)
+            * Top 3 Committers: {get_user_values_str(get_top_values(merged_by))}
+            * Top 3 Reviewers: {get_user_values_str(get_top_values(reviewed_by))}
+        """
+        self.issue.create_comment(textwrap.dedent(comment))
 
 
 class PRBuildbotInformation:
@@ -676,6 +739,9 @@ pr_subscriber_parser.add_argument("--issue-number", type=int, required=True)
 pr_greeter_parser = subparsers.add_parser("pr-greeter")
 pr_greeter_parser.add_argument("--issue-number", type=int, required=True)
 
+commit_request_greeter = subparsers.add_parser("commit-request-greeter")
+commit_request_greeter.add_argument("--issue-number", type=int, required=True)
+
 pr_buildbot_information_parser = subparsers.add_parser("pr-buildbot-information")
 pr_buildbot_information_parser.add_argument("--issue-number", type=int, required=True)
 pr_buildbot_information_parser.add_argument("--author", type=str, required=True)
@@ -746,6 +812,9 @@ elif args.command == "pr-subscriber":
 elif args.command == "pr-greeter":
     pr_greeter = PRGreeter(args.token, args.repo, args.issue_number)
     pr_greeter.run()
+elif args.command == "commit-request-greeter":
+    commit_greeter = CommitRequestGreeter(args.token, args.repo, args.issue_number)
+    commit_greeter.run()
 elif args.command == "pr-buildbot-information":
     pr_buildbot_information = PRBuildbotInformation(
         args.token, args.repo, args.issue_number, args.author

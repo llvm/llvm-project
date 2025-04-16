@@ -15,15 +15,6 @@
 #include <stddef.h>
 #include <stdint.h>
 
-// Tell the compiler that we do not have any "call-like" inline assembly in the
-// device rutime. That means we cannot have inline assembly which will call
-// another function but only inline assembly that performs some operation or
-// side-effect and then continues execution with something on the existing call
-// stack.
-//
-// TODO: Find a good place for this
-#pragma omp assumes ext_no_call_asm
-
 enum omp_proc_bind_t {
   omp_proc_bind_false = 0,
   omp_proc_bind_true = 1,
@@ -108,14 +99,7 @@ struct TaskDescriptorTy {
   TaskFnTy TaskFn;
 };
 
-#pragma omp begin declare variant match(device = {arch(amdgcn)})
 using LaneMaskTy = uint64_t;
-#pragma omp end declare variant
-
-#pragma omp begin declare variant match(                                       \
-        device = {arch(amdgcn)}, implementation = {extension(match_none)})
-using LaneMaskTy = uint64_t;
-#pragma omp end declare variant
 
 namespace lanes {
 enum : LaneMaskTy { All = ~(LaneMaskTy)0 };
@@ -172,8 +156,7 @@ typedef enum omp_allocator_handle_t {
 #define OMP_PRAGMA(STR) __PRAGMA(omp STR)
 
 #define SHARED(NAME)                                                           \
-  NAME [[clang::loader_uninitialized]];                                        \
-  OMP_PRAGMA(allocate(NAME) allocator(omp_pteam_mem_alloc))
+  [[clang::address_space(3)]] NAME [[clang::loader_uninitialized]];
 
 // TODO: clang should use address space 5 for omp_thread_mem_alloc, but right
 //       now that's not the case.

@@ -28,10 +28,10 @@ enum {
 
 __BEGIN_C_DECLS
 
-CONST_FUNC_A void func_a() __NOEXCEPT;
+CONST_FUNC_A void func_a(void) __NOEXCEPT;
 
 #ifdef LIBC_TYPES_HAS_FLOAT128
-float128 func_b() __NOEXCEPT;
+float128 func_b(void) __NOEXCEPT;
 #endif // LIBC_TYPES_HAS_FLOAT128
 
 #ifdef LIBC_TYPES_HAS_FLOAT16

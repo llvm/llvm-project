@@ -511,7 +511,7 @@ bool MachinePipeliner::runWindowScheduler(MachineLoop &L) {
   Context.MF = MF;
   Context.MLI = MLI;
   Context.MDT = MDT;
-  Context.PassConfig = &getAnalysis<TargetPassConfig>();
+  Context.TM = &getAnalysis<TargetPassConfig>().getTM<TargetMachine>();
   Context.AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
   Context.LIS = &getAnalysis<LiveIntervalsWrapperPass>().getLIS();
   Context.RegClassInfo->runOnMachineFunction(*MF);
@@ -1981,7 +1981,7 @@ static void computeLiveOuts(MachineFunction &MF, RegPressureTracker &RPTracker,
                             NodeSet &NS) {
   const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
   MachineRegisterInfo &MRI = MF.getRegInfo();
-  SmallVector<RegisterMaskPair, 8> LiveOutRegs;
+  SmallVector<VRegMaskOrUnit, 8> LiveOutRegs;
   SmallSet<unsigned, 4> Uses;
   for (SUnit *SU : NS) {
     const MachineInstr *MI = SU->getInstr();
@@ -2002,13 +2002,11 @@ static void computeLiveOuts(MachineFunction &MF, RegPressureTracker &RPTracker,
         Register Reg = MO.getReg();
         if (Reg.isVirtual()) {
           if (!Uses.count(Reg))
-            LiveOutRegs.push_back(RegisterMaskPair(Reg,
-                                                   LaneBitmask::getNone()));
+            LiveOutRegs.emplace_back(Reg, LaneBitmask::getNone());
         } else if (MRI.isAllocatable(Reg)) {
           for (MCRegUnit Unit : TRI->regunits(Reg.asMCReg()))
             if (!Uses.count(Unit))
-              LiveOutRegs.push_back(
-                  RegisterMaskPair(Unit, LaneBitmask::getNone()));
+              LiveOutRegs.emplace_back(Unit, LaneBitmask::getNone());
         }
       }
   RPTracker.addLiveRegs(LiveOutRegs);
@@ -2523,9 +2521,104 @@ bool SwingSchedulerDAG::schedulePipeline(SMSchedule &Schedule) {
   return scheduleFound && Schedule.getMaxStageCount() > 0;
 }
 
+static Register findUniqueOperandDefinedInLoop(const MachineInstr &MI) {
+  const MachineRegisterInfo &MRI = MI.getParent()->getParent()->getRegInfo();
+  Register Result;
+  for (const MachineOperand &Use : MI.all_uses()) {
+    Register Reg = Use.getReg();
+    if (!Reg.isVirtual())
+      return Register();
+    if (MRI.getVRegDef(Reg)->getParent() != MI.getParent())
+      continue;
+    if (Result)
+      return Register();
+    Result = Reg;
+  }
+  return Result;
+}
+
+/// When Op is a value that is incremented recursively in a loop and there is a
+/// unique instruction that increments it, returns true and sets Value.
+static bool findLoopIncrementValue(const MachineOperand &Op, int &Value) {
+  if (!Op.isReg() || !Op.getReg().isVirtual())
+    return false;
+
+  Register OrgReg = Op.getReg();
+  Register CurReg = OrgReg;
+  const MachineBasicBlock *LoopBB = Op.getParent()->getParent();
+  const MachineRegisterInfo &MRI = LoopBB->getParent()->getRegInfo();
+
+  const TargetInstrInfo *TII =
+      LoopBB->getParent()->getSubtarget().getInstrInfo();
+  const TargetRegisterInfo *TRI =
+      LoopBB->getParent()->getSubtarget().getRegisterInfo();
+
+  MachineInstr *Phi = nullptr;
+  MachineInstr *Increment = nullptr;
+
+  // Traverse definitions until it reaches Op or an instruction that does not
+  // satisfy the condition.
+  // Acceptable example:
+  //   bb.0:
+  //     %0 = PHI %3, %bb.0, ...
+  //     %2 = ADD %0, Value
+  //     ... = LOAD %2(Op)
+  //     %3 = COPY %2
+  while (true) {
+    if (!CurReg.isValid() || !CurReg.isVirtual())
+      return false;
+    MachineInstr *Def = MRI.getVRegDef(CurReg);
+    if (Def->getParent() != LoopBB)
+      return false;
+
+    if (Def->isCopy()) {
+      // Ignore copy instructions unless they contain subregisters
+      if (Def->getOperand(0).getSubReg() || Def->getOperand(1).getSubReg())
+        return false;
+      CurReg = Def->getOperand(1).getReg();
+    } else if (Def->isPHI()) {
+      // There must be just one Phi
+      if (Phi)
+        return false;
+      Phi = Def;
+      CurReg = getLoopPhiReg(*Def, LoopBB);
+    } else if (TII->getIncrementValue(*Def, Value)) {
+      // Potentially a unique increment
+      if (Increment)
+        // Multiple increments exist
+        return false;
+
+      const MachineOperand *BaseOp;
+      int64_t Offset;
+      bool OffsetIsScalable;
+      if (TII->getMemOperandWithOffset(*Def, BaseOp, Offset, OffsetIsScalable,
+                                       TRI)) {
+        // Pre/post increment instruction
+        CurReg = BaseOp->getReg();
+      } else {
+        // If only one of the operands is defined within the loop, it is assumed
+        // to be an incremented value.
+        CurReg = findUniqueOperandDefinedInLoop(*Def);
+        if (!CurReg.isValid())
+          return false;
+      }
+      Increment = Def;
+    } else {
+      return false;
+    }
+    if (CurReg == OrgReg)
+      break;
+  }
+
+  if (!Phi || !Increment)
+    return false;
+
+  return true;
+}
+
 /// Return true if we can compute the amount the instruction changes
 /// during each iteration. Set Delta to the amount of the change.
-bool SwingSchedulerDAG::computeDelta(MachineInstr &MI, unsigned &Delta) const {
+bool SwingSchedulerDAG::computeDelta(const MachineInstr &MI, int &Delta) const {
   const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
   const MachineOperand *BaseOp;
   int64_t Offset;
@@ -2540,24 +2633,7 @@ bool SwingSchedulerDAG::computeDelta(MachineInstr &MI, unsigned &Delta) const {
   if (!BaseOp->isReg())
     return false;
 
-  Register BaseReg = BaseOp->getReg();
-
-  MachineRegisterInfo &MRI = MF.getRegInfo();
-  // Check if there is a Phi. If so, get the definition in the loop.
-  MachineInstr *BaseDef = MRI.getVRegDef(BaseReg);
-  if (BaseDef && BaseDef->isPHI()) {
-    BaseReg = getLoopPhiReg(*BaseDef, MI.getParent());
-    BaseDef = MRI.getVRegDef(BaseReg);
-  }
-  if (!BaseDef)
-    return false;
-
-  int D = 0;
-  if (!TII->getIncrementValue(*BaseDef, D) && D >= 0)
-    return false;
-
-  Delta = D;
-  return true;
+  return findLoopIncrementValue(*BaseOp, Delta);
 }
 
 /// Check if we can change the instruction to use an offset value from the
@@ -2675,6 +2751,100 @@ MachineInstr *SwingSchedulerDAG::findDefInLoop(Register Reg) {
   return Def;
 }
 
+/// Return false if there is no overlap between the region accessed by BaseMI in
+/// an iteration and the region accessed by OtherMI in subsequent iterations.
+bool SwingSchedulerDAG::mayOverlapInLaterIter(
+    const MachineInstr *BaseMI, const MachineInstr *OtherMI) const {
+  int DeltaB, DeltaO, Delta;
+  if (!computeDelta(*BaseMI, DeltaB) || !computeDelta(*OtherMI, DeltaO) ||
+      DeltaB != DeltaO)
+    return true;
+  Delta = DeltaB;
+
+  const MachineOperand *BaseOpB, *BaseOpO;
+  int64_t OffsetB, OffsetO;
+  bool OffsetBIsScalable, OffsetOIsScalable;
+  const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
+  if (!TII->getMemOperandWithOffset(*BaseMI, BaseOpB, OffsetB,
+                                    OffsetBIsScalable, TRI) ||
+      !TII->getMemOperandWithOffset(*OtherMI, BaseOpO, OffsetO,
+                                    OffsetOIsScalable, TRI))
+    return true;
+
+  if (OffsetBIsScalable || OffsetOIsScalable)
+    return true;
+
+  if (!BaseOpB->isIdenticalTo(*BaseOpO)) {
+    // Pass cases with different base operands but same initial values.
+    // Typically for when pre/post increment is used.
+
+    if (!BaseOpB->isReg() || !BaseOpO->isReg())
+      return true;
+    Register RegB = BaseOpB->getReg(), RegO = BaseOpO->getReg();
+    if (!RegB.isVirtual() || !RegO.isVirtual())
+      return true;
+
+    MachineInstr *DefB = MRI.getVRegDef(BaseOpB->getReg());
+    MachineInstr *DefO = MRI.getVRegDef(BaseOpO->getReg());
+    if (!DefB || !DefO || !DefB->isPHI() || !DefO->isPHI())
+      return true;
+
+    unsigned InitValB = 0;
+    unsigned LoopValB = 0;
+    unsigned InitValO = 0;
+    unsigned LoopValO = 0;
+    getPhiRegs(*DefB, BB, InitValB, LoopValB);
+    getPhiRegs(*DefO, BB, InitValO, LoopValO);
+    MachineInstr *InitDefB = MRI.getVRegDef(InitValB);
+    MachineInstr *InitDefO = MRI.getVRegDef(InitValO);
+
+    if (!InitDefB->isIdenticalTo(*InitDefO))
+      return true;
+  }
+
+  LocationSize AccessSizeB = (*BaseMI->memoperands_begin())->getSize();
+  LocationSize AccessSizeO = (*OtherMI->memoperands_begin())->getSize();
+
+  // This is the main test, which checks the offset values and the loop
+  // increment value to determine if the accesses may be loop carried.
+  if (!AccessSizeB.hasValue() || !AccessSizeO.hasValue())
+    return true;
+
+  LLVM_DEBUG({
+    dbgs() << "Overlap check:\n";
+    dbgs() << "  BaseMI: ";
+    BaseMI->dump();
+    dbgs() << "    Base + " << OffsetB << " + I * " << Delta
+           << ", Len: " << AccessSizeB.getValue() << "\n";
+    dbgs() << "  OtherMI: ";
+    OtherMI->dump();
+    dbgs() << "    Base + " << OffsetO << " + I * " << Delta
+           << ", Len: " << AccessSizeO.getValue() << "\n";
+  });
+
+  // Excessive overlap may be detected in strided patterns.
+  // For example, the memory addresses of the store and the load in
+  //   for (i=0; i<n; i+=2) a[i+1] = a[i];
+  // are assumed to overlap.
+  if (Delta < 0) {
+    int64_t BaseMinAddr = OffsetB;
+    int64_t OhterNextIterMaxAddr = OffsetO + Delta + AccessSizeO.getValue() - 1;
+    if (BaseMinAddr > OhterNextIterMaxAddr) {
+      LLVM_DEBUG(dbgs() << "  Result: No overlap\n");
+      return false;
+    }
+  } else {
+    int64_t BaseMaxAddr = OffsetB + AccessSizeB.getValue() - 1;
+    int64_t OtherNextIterMinAddr = OffsetO + Delta;
+    if (BaseMaxAddr < OtherNextIterMinAddr) {
+      LLVM_DEBUG(dbgs() << "  Result: No overlap\n");
+      return false;
+    }
+  }
+  LLVM_DEBUG(dbgs() << "  Result: Overlap\n");
+  return true;
+}
+
 /// Return true for an order or output dependence that is loop carried
 /// potentially. A dependence is loop carried if the destination defines a value
 /// that may be used or defined by the source in a subsequent iteration.
@@ -2706,61 +2876,7 @@ bool SwingSchedulerDAG::isLoopCarriedDep(
   // The conservative assumption is that a dependence between memory operations
   // may be loop carried. The following code checks when it can be proved that
   // there is no loop carried dependence.
-  unsigned DeltaS, DeltaD;
-  if (!computeDelta(*SI, DeltaS) || !computeDelta(*DI, DeltaD))
-    return true;
-
-  const MachineOperand *BaseOpS, *BaseOpD;
-  int64_t OffsetS, OffsetD;
-  bool OffsetSIsScalable, OffsetDIsScalable;
-  const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
-  if (!TII->getMemOperandWithOffset(*SI, BaseOpS, OffsetS, OffsetSIsScalable,
-                                    TRI) ||
-      !TII->getMemOperandWithOffset(*DI, BaseOpD, OffsetD, OffsetDIsScalable,
-                                    TRI))
-    return true;
-
-  assert(!OffsetSIsScalable && !OffsetDIsScalable &&
-         "Expected offsets to be byte offsets");
-
-  MachineInstr *DefS = MRI.getVRegDef(BaseOpS->getReg());
-  MachineInstr *DefD = MRI.getVRegDef(BaseOpD->getReg());
-  if (!DefS || !DefD || !DefS->isPHI() || !DefD->isPHI())
-    return true;
-
-  unsigned InitValS = 0;
-  unsigned LoopValS = 0;
-  unsigned InitValD = 0;
-  unsigned LoopValD = 0;
-  getPhiRegs(*DefS, BB, InitValS, LoopValS);
-  getPhiRegs(*DefD, BB, InitValD, LoopValD);
-  MachineInstr *InitDefS = MRI.getVRegDef(InitValS);
-  MachineInstr *InitDefD = MRI.getVRegDef(InitValD);
-
-  if (!InitDefS->isIdenticalTo(*InitDefD))
-    return true;
-
-  // Check that the base register is incremented by a constant value for each
-  // iteration.
-  MachineInstr *LoopDefS = MRI.getVRegDef(LoopValS);
-  int D = 0;
-  if (!LoopDefS || !TII->getIncrementValue(*LoopDefS, D))
-    return true;
-
-  LocationSize AccessSizeS = (*SI->memoperands_begin())->getSize();
-  LocationSize AccessSizeD = (*DI->memoperands_begin())->getSize();
-
-  // This is the main test, which checks the offset values and the loop
-  // increment value to determine if the accesses may be loop carried.
-  if (!AccessSizeS.hasValue() || !AccessSizeD.hasValue())
-    return true;
-
-  if (DeltaS != DeltaD || DeltaS < AccessSizeS.getValue() ||
-      DeltaD < AccessSizeD.getValue())
-    return true;
-
-  return (OffsetS + (int64_t)AccessSizeS.getValue() <
-          OffsetD + (int64_t)AccessSizeD.getValue());
+  return mayOverlapInLaterIter(DI, SI);
 }
 
 void SwingSchedulerDAG::postProcessDAG() {
@@ -3204,7 +3320,7 @@ bool SMSchedule::isValidSchedule(SwingSchedulerDAG *SSD) {
     for (auto &OE : SSD->getDDG()->getOutEdges(&SU)) {
       SUnit *Dst = OE.getDst();
       if (OE.isAssignedRegDep() && !Dst->isBoundaryNode())
-        if (Register::isPhysicalRegister(OE.getReg())) {
+        if (OE.getReg().isPhysical()) {
           if (stageScheduled(Dst) != StageDef)
             return false;
           if (InstrToCycle[Dst] <= CycleDef)

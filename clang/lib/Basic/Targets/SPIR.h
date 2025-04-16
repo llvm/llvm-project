@@ -47,6 +47,7 @@ static const unsigned SPIRDefIsPrivMap[] = {
     0, // ptr32_uptr
     0, // ptr64
     0, // hlsl_groupshared
+    2, // hlsl_constant
     // Wasm address space values for this target are dummy values,
     // as it is only enabled for Wasm targets.
     20, // wasm_funcref
@@ -80,6 +81,7 @@ static const unsigned SPIRDefIsGenMap[] = {
     0, // ptr32_uptr
     0, // ptr64
     0, // hlsl_groupshared
+    0, // hlsl_constant
     // Wasm address space values for this target are dummy values,
     // as it is only enabled for Wasm targets.
     20, // wasm_funcref
@@ -159,7 +161,9 @@ public:
   // memcpy as per section 3 of the SPIR spec.
   bool useFP16ConversionIntrinsics() const override { return false; }
 
-  ArrayRef<Builtin::Info> getTargetBuiltins() const override { return {}; }
+  llvm::SmallVector<Builtin::InfosShard> getTargetBuiltins() const override {
+    return {};
+  }
 
   std::string_view getClobbers() const override { return ""; }
 
@@ -313,7 +317,9 @@ public:
     resetDataLayout("e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-"
                     "v256:256-v512:512-v1024:1024-n8:16:32:64-G1");
   }
-  ArrayRef<Builtin::Info> getTargetBuiltins() const override;
+
+  llvm::SmallVector<Builtin::InfosShard> getTargetBuiltins() const override;
+
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;
 };
@@ -408,7 +414,7 @@ public:
 
   std::string convertConstraint(const char *&Constraint) const override;
 
-  ArrayRef<Builtin::Info> getTargetBuiltins() const override;
+  llvm::SmallVector<Builtin::InfosShard> getTargetBuiltins() const override;
 
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;

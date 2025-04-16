@@ -19,6 +19,9 @@ include "llvm/TableGen/SearchableTable.td"
 
 class SysReg<string name, bits<12> op> {
   string Name = name;
+  // Custom vendor CSRs have a "<vendor>." prefix. Convert these to "<vendor>_"
+  // before passing it to the SysRegEncodings GenericEnum below.
+  string EnumName = !subst(".", "_", name);
   bits<12> Encoding = op;
   // FIXME: add these additional fields when needed.
   // Privilege Access: Read and Write = 0, 1, 2; Read-Only = 3.
@@ -50,7 +53,7 @@ def SysRegsList : GenericTable {
 
 def SysRegEncodings : GenericEnum {
   let FilterClass = "SysReg";
-  let NameField = "Name";
+  let NameField = "EnumName";
   let ValueField = "Encoding";
 }
 

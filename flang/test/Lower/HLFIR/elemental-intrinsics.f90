@@ -15,7 +15,7 @@ end subroutine
 ! CHECK:  ^bb0(%[[VAL_9:.*]]: index):
 ! CHECK:    %[[VAL_10:.*]] = hlfir.designate %[[VAL_7]]#0 (%[[VAL_9]])  : (!fir.ref<!fir.array<100xf32>>, index) -> !fir.ref<f32>
 ! CHECK:    %[[VAL_11:.*]] = fir.load %[[VAL_10]] : !fir.ref<f32>
-! CHECK:    %[[VAL_12:.*]] = fir.call @acosf(%[[VAL_11]]) fastmath<contract> : (f32) -> f32
+! CHECK:    %[[VAL_12:.*]] = math.acos %[[VAL_11]] fastmath<contract> : f32
 ! CHECK:    hlfir.yield_element %[[VAL_12]] : f32
 ! CHECK:  }
 ! CHECK: hlfir.assign

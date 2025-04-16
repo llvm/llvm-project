@@ -730,6 +730,9 @@ llvm:regalloc:
 lldb:
   - lldb/**
 
+lldb-dap:
+  - lldb/tools/lldb-dap/**
+
 backend:AMDGPU:
   - '**/*amdgpu*'
   - '**/*AMDGPU*'

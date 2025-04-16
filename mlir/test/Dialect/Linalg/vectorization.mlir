@@ -66,7 +66,7 @@ func.func @vectorize_dynamic_identity_with_constant(%arg0: tensor<?xf32>,
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    %size = transform.structured.match ops{["arith.constant"]} in %arg1 : (!transform.any_op) -> !transform.any_op 
+    %size = transform.structured.match ops{["arith.constant"]} in %arg1 : (!transform.any_op) -> !transform.any_op
     transform.structured.vectorize %0 vector_sizes [%size] : !transform.any_op, !transform.any_op
     transform.yield
   }
@@ -690,7 +690,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["tensor.pack"]} in %arg0 : (!transform.any_op) -> !transform.any_op
     transform.structured.vectorize %0 vector_sizes [4, 1, 32] : !transform.any_op
-    transform.yield 
+    transform.yield
   }
 }
 
@@ -727,7 +727,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["tensor.pack"]} in %arg0 : (!transform.any_op) -> !transform.any_op
     transform.structured.vectorize %0 vector_sizes [32, 4, 1] : !transform.any_op
-    transform.yield 
+    transform.yield
   }
 }
 
@@ -768,7 +768,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["tensor.pack"]} in %arg0 : (!transform.any_op) -> !transform.any_op
     transform.structured.vectorize %0 vector_sizes [4, 1] : !transform.any_op
-    transform.yield 
+    transform.yield
   }
 }
 
@@ -933,7 +933,7 @@ func.func @test_vectorize_unpack(%source: tensor<8x8x32x16xf32>, %dest: tensor<2
     %0 = transform.structured.match ops{["tensor.unpack"]} in %arg0 : (!transform.any_op) -> !transform.any_op
    transform.structured.vectorize %0 vector_sizes [512, 128] : !transform.any_op
     transform.yield
-  } 
+  }
 }
 
 // -----
@@ -957,7 +957,7 @@ func.func @test_vectorize_unpack_no_masks(%source: tensor<8x8x32x16xf32>, %dest:
     %0 = transform.structured.match ops{["tensor.unpack"]} in %arg0 : (!transform.any_op) -> !transform.any_op
    transform.structured.vectorize %0 vector_sizes [256, 128] : !transform.any_op
     transform.yield
-  } 
+  }
  }
 
   // -----
@@ -981,7 +981,7 @@ func.func @test_vectorize_unpack_no_masks(%source: tensor<8x8x32x16xf32>, %dest:
     %0 = transform.structured.match ops{["tensor.unpack"]} in %arg0 : (!transform.any_op) -> !transform.any_op
    transform.structured.vectorize %0 vector_sizes [256, 128] : !transform.any_op
     transform.yield
-  } 
+  }
 }
 
   // -----
@@ -1022,7 +1022,7 @@ func.func @test_vectorize_padded_pack_no_vector_sizes(%arg0: tensor<32x7x15xf32>
 //  CHECK-DAG: %[[cst:.*]] = arith.constant 0.000000e+00 : f32
 //  CHECK-DAG: %[[c0:.*]] = arith.constant 0 : index
 //      CHECK: %[[transfer_read:.*]] =  vector.transfer_read %{{.*}}[%[[c0]], %[[c0]], %[[c0]]], %[[cst]]
-// CHECK-SAME:   {in_bounds = [true, false, false]} : tensor<32x7x15xf32>, vector<32x8x16xf32> 
+// CHECK-SAME:   {in_bounds = [true, false, false]} : tensor<32x7x15xf32>, vector<32x8x16xf32>
 //      CHECK: %[[shape_cast:.*]] = vector.shape_cast %[[transfer_read]] : vector<32x8x16xf32> to vector<32x4x2x1x16xf32>
 //      CHECK: %[[transpose:.*]] = vector.transpose %[[shape_cast]], [0, 1, 3, 4, 2] : vector<32x4x2x1x16xf32> to vector<32x4x1x16x2xf32>
 //  CHECK-DAG: %[[c0_1:.*]] = arith.constant 0 : index
@@ -1059,7 +1059,7 @@ func.func @test_vectorize_unpack_no_vector_sizes(%source: tensor<8x8x32x16xf32>,
     %0 = transform.structured.match ops{["tensor.unpack"]} in %arg0 : (!transform.any_op) -> !transform.any_op
    transform.structured.vectorize %0 : !transform.any_op
     transform.yield
-  } 
+  }
  }
 
   // -----
@@ -1083,10 +1083,10 @@ func.func @test_vectorize_unpack_no_vector_sizes_slice_output(%source: tensor<8x
     %0 = transform.structured.match ops{["tensor.unpack"]} in %arg0 : (!transform.any_op) -> !transform.any_op
    transform.structured.vectorize %0 : !transform.any_op
     transform.yield
-  } 
+  }
  }
 
-  // -----
+// -----
 
 func.func @test_vectorize_unpack_no_vector_sizes_permute(%source: tensor<4x7x4xf32>, %dest: tensor<7x16xf32>) -> tensor<7x16xf32> {
    %0 = tensor.unpack %source outer_dims_perm=[1, 0] inner_dims_pos = [1] inner_tiles = [4] into %dest : tensor<4x7x4xf32> -> tensor<7x16xf32>
@@ -1106,5 +1106,81 @@ func.func @test_vectorize_unpack_no_vector_sizes_permute(%source: tensor<4x7x4xf
     %0 = transform.structured.match ops{["tensor.unpack"]} in %arg0 : (!transform.any_op) -> !transform.any_op
    transform.structured.vectorize %0 : !transform.any_op
     transform.yield
-  } 
+  }
+ }
+
+// -----
+
+///----------------------------------------------------------------------------------------
+/// tensor.insert_slice
+///----------------------------------------------------------------------------------------
+
+func.func private @insert_slice_static_sizes(%source: tensor<?x3x?x1xi32>) -> tensor<5x3xi32> {
+  %c2 = arith.constant 2 : index
+  %init = tensor.empty() : tensor<5x3xi32>
+
+  %source_slice = tensor.extract_slice %source[0, %c2, 0, 0] [1, 1, 5, 1] [1, 1, 1, 1] : tensor<?x3x?x1xi32> to tensor<5x1xi32>
+  %res = tensor.insert_slice %source_slice into %init[0, %c2] [5, 1] [1, 1] : tensor<5x1xi32> into tensor<5x3xi32>
+
+  return %res : tensor<5x3xi32>
+}
+
+// CHECK-LABEL:   func.func private @insert_slice_static_sizes(
+// CHECK-SAME:      %[[SEC:.*]]: tensor<?x3x?x1xi32>) -> tensor<5x3xi32> {
+// CHECK:           %[[C_2:.*]] = arith.constant 2 : index
+// CHECK:           %[[INIT:.*]] = tensor.empty() : tensor<5x3xi32>
+// CHECK:           %[[SRC_SLICE:.*]] = tensor.extract_slice %[[SEC]][0, %[[C_2]], 0, 0] [1, 1, 5, 1] [1, 1, 1, 1] : tensor<?x3x?x1xi32> to tensor<5x1xi32>
+// CHECK:           %[[PAD:.*]] = arith.constant 0 : i32
+// CHECK:           %[[C0:.*]] = arith.constant 0 : index
+// CHECK:           %[[C_5:.*]] = arith.constant 5 : index
+// CHECK:           %[[C_1:.*]] = arith.constant 1 : index
+// CHECK:           %[[MASK:.*]] = vector.create_mask %[[C_5]], %[[C_1]] : vector<8x1xi1>
+// CHECK:           %[[READ:.*]] = vector.mask %[[MASK]] { vector.transfer_read %[[SRC_SLICE]][%[[C0]], %[[C0]]], %[[PAD]] : tensor<5x1xi32>, vector<8x1xi32> } : vector<8x1xi1> -> vector<8x1xi32>
+// CHECK:           %[[C_0:.*]] = arith.constant 0 : index
+// CHECK:           %[[RES:.*]] = vector.transfer_write %[[READ]], %[[INIT]][%[[C_0]], %[[C_2]]] : vector<8x1xi32>, tensor<5x3xi32>
+// CHECK:           return %[[RES]] : tensor<5x3xi32>
+
+ module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["tensor.insert_slice"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+    transform.structured.vectorize %0 vector_sizes [8, 1] : !transform.any_op
+    transform.yield
+  }
+ }
+
+// -----
+
+// One of the _source_ dimensions is dynamic (but _destination_ dimensions are static).
+
+func.func private @insert_slice_dynamic_src_dim(%source: tensor<?x3x?x1xi32>, %size: index) -> tensor<5x3xi32> {
+  %c2 = arith.constant 2 : index
+  %init = tensor.empty() : tensor<5x3xi32>
+
+  %source_slice = tensor.extract_slice %source[0, %c2, 0, 0] [1, 1, %size, 1] [1, 1, 1, 1] : tensor<?x3x?x1xi32> to tensor<?x1xi32>
+  %res = tensor.insert_slice %source_slice into %init[0, %c2] [%size, 1] [1, 1] : tensor<?x1xi32> into tensor<5x3xi32>
+
+  return %res : tensor<5x3xi32>
+}
+
+// CHECK-LABEL:   func.func private @insert_slice_dynamic_src_dim(
+// CHECK-SAME:      %[[SRC:.*]]: tensor<?x3x?x1xi32>,
+// CHECK-SAME:      %[[SIZE:.*]]: index) -> tensor<5x3xi32> {
+// CHECK:           %[[C_2:.*]] = arith.constant 2 : index
+// CHECK:           %[[INIT:.*]] = tensor.empty() : tensor<5x3xi32>
+// CHECK:           %[[SRC_SLICE:.*]] = tensor.extract_slice %[[SRC]][0, %[[C_2]], 0, 0] [1, 1, %[[SIZE]], 1] [1, 1, 1, 1] : tensor<?x3x?x1xi32> to tensor<?x1xi32>
+// CHECK-DAG:       %[[PAD:.*]] = arith.constant 0 : i32
+// CHECK-DAG:       %[[C_1:.*]] = arith.constant 1 : index
+// CHECK-DAG:       %[[C_0:.*]] = arith.constant 0 : index
+// CHECK:           %[[MASK:.*]] = vector.create_mask %[[SIZE]], %[[C_1]] : vector<8x1xi1>
+// CHECK:           %[[READ:.*]] = vector.mask %[[MASK]] { vector.transfer_read %[[SRC_SLICE]][%[[C_0]], %[[C_0]]], %[[PAD]] : tensor<?x1xi32>, vector<8x1xi32> } : vector<8x1xi1> -> vector<8x1xi32>
+// CHECK:           %[[C_0_1:.*]] = arith.constant 0 : index
+// CHECK:           %[[RES:.*]] = vector.transfer_write %[[READ]], %[[INIT]][%[[C_0_1]], %[[C_2]]] : vector<8x1xi32>, tensor<5x3xi32>
+// CHECK:           return %[[RES]] : tensor<5x3xi32>
+
+ module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["tensor.insert_slice"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+    transform.structured.vectorize %0 vector_sizes [8, 1] : !transform.any_op
+    transform.yield
+  }
  }

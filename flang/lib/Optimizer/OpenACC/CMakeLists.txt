@@ -18,5 +18,7 @@ add_flang_library(FIROpenACCSupport
   FIRDialectSupport
   FIRSupport
   HLFIRDialect
+
+  MLIR_LIBS
   MLIROpenACCDialect
 )

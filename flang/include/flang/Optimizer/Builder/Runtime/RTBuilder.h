@@ -17,12 +17,12 @@
 #ifndef FORTRAN_OPTIMIZER_BUILDER_RUNTIME_RTBUILDER_H
 #define FORTRAN_OPTIMIZER_BUILDER_RUNTIME_RTBUILDER_H
 
-#include "flang/Common/Fortran.h"
 #include "flang/Common/uint128.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Runtime/reduce.h"
+#include "flang/Support/Fortran.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/MLIRContext.h"
 #include "llvm/ADT/SmallVector.h"
@@ -401,6 +401,13 @@ constexpr TypeBuilderFunc getModel<bool &>() {
   };
 }
 template <>
+constexpr TypeBuilderFunc getModel<bool *>() {
+  return [](mlir::MLIRContext *context) -> mlir::Type {
+    TypeBuilderFunc f{getModel<bool>()};
+    return fir::ReferenceType::get(f(context));
+  };
+}
+template <>
 constexpr TypeBuilderFunc getModel<unsigned short>() {
   return [](mlir::MLIRContext *context) -> mlir::Type {
     return mlir::IntegerType::get(
@@ -674,6 +681,8 @@ struct RuntimeTableKey<RT(ATs...)> {
       llvm::SmallVector<mlir::Type, sizeof...(ATs)> argTys;
       for (auto f : args)
         argTys.push_back(f(ctxt));
+      if (mlir::isa<mlir::NoneType>(retTy))
+        return mlir::FunctionType::get(ctxt, argTys, {});
       return mlir::FunctionType::get(ctxt, argTys, {retTy});
     };
   }

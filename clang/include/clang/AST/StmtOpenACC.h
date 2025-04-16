@@ -751,5 +751,50 @@ public:
   Create(const ASTContext &C, SourceLocation Start, SourceLocation DirectiveLoc,
          SourceLocation End, ArrayRef<const OpenACCClause *> Clauses);
 };
+
+// This class represents the 'atomic' construct, which has an associated
+// statement, but no clauses.
+class OpenACCAtomicConstruct final : public OpenACCAssociatedStmtConstruct {
+
+  friend class ASTStmtReader;
+  OpenACCAtomicKind AtomicKind = OpenACCAtomicKind::None;
+
+  OpenACCAtomicConstruct(EmptyShell)
+      : OpenACCAssociatedStmtConstruct(
+            OpenACCAtomicConstructClass, OpenACCDirectiveKind::Atomic,
+            SourceLocation{}, SourceLocation{}, SourceLocation{},
+            /*AssociatedStmt=*/nullptr) {}
+
+  OpenACCAtomicConstruct(SourceLocation Start, SourceLocation DirectiveLoc,
+                         OpenACCAtomicKind AtKind, SourceLocation End,
+                         Stmt *AssociatedStmt)
+      : OpenACCAssociatedStmtConstruct(OpenACCAtomicConstructClass,
+                                       OpenACCDirectiveKind::Atomic, Start,
+                                       DirectiveLoc, End, AssociatedStmt),
+        AtomicKind(AtKind) {}
+
+  void setAssociatedStmt(Stmt *S) {
+    OpenACCAssociatedStmtConstruct::setAssociatedStmt(S);
+  }
+
+public:
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == OpenACCAtomicConstructClass;
+  }
+
+  static OpenACCAtomicConstruct *CreateEmpty(const ASTContext &C);
+  static OpenACCAtomicConstruct *
+  Create(const ASTContext &C, SourceLocation Start, SourceLocation DirectiveLoc,
+         OpenACCAtomicKind AtKind, SourceLocation End, Stmt *AssociatedStmt);
+
+  OpenACCAtomicKind getAtomicKind() const { return AtomicKind; }
+  const Stmt *getAssociatedStmt() const {
+    return OpenACCAssociatedStmtConstruct::getAssociatedStmt();
+  }
+  Stmt *getAssociatedStmt() {
+    return OpenACCAssociatedStmtConstruct::getAssociatedStmt();
+  }
+};
+
 } // namespace clang
 #endif // LLVM_CLANG_AST_STMTOPENACC_H

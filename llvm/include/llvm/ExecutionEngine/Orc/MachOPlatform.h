@@ -259,6 +259,7 @@ private:
 
     std::optional<UnwindSections> findUnwindSectionInfo(jitlink::LinkGraph &G);
     Error registerObjectPlatformSections(jitlink::LinkGraph &G, JITDylib &JD,
+                                         ExecutorAddr HeaderAddr,
                                          bool InBootstrapPhase);
 
     Error createObjCRuntimeObject(jitlink::LinkGraph &G);

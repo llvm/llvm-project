@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Lower/ConvertExpr.h"
-#include "flang/Common/default-kinds.h"
 #include "flang/Common/unwrap.h"
 #include "flang/Evaluate/fold.h"
 #include "flang/Evaluate/real.h"
@@ -52,6 +51,7 @@
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/tools.h"
 #include "flang/Semantics/type.h"
+#include "flang/Support/default-kinds.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/CommandLine.h"

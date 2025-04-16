@@ -967,6 +967,10 @@ module std [system] {
       header "__chrono/system_clock.h"
       export std.chrono.time_point
     }
+    module tai_clock {
+      header "__chrono/tai_clock.h"
+      export std.chrono.time_point
+    }
     module time_point                 { header "__chrono/time_point.h" }
     module time_zone_link             { header "__chrono/time_zone_link.h" }
     module time_zone                  { header "__chrono/time_zone.h" }
@@ -979,6 +983,10 @@ module std [system] {
       header "__chrono/tzdb.h"
       export std.string // public data member of type std::string
       export std.vector // public data members of type std::vector
+    }
+    module utc_clock {
+      header "__chrono/utc_clock.h"
+      export std.chrono.time_point
     }
     module weekday                    { header "__chrono/weekday.h" }
     module year_month_day             { header "__chrono/year_month_day.h" }
@@ -1240,16 +1248,30 @@ module std [system] {
   }
 
   module flat_map {
-    module flat_map                       { header "__flat_map/flat_map.h" }
+    module flat_map                       {
+      header "__flat_map/flat_map.h"
+      export std.vector.vector
+      export std.vector.fwd
+    }
+    module flat_multimap                  {
+      header "__flat_map/flat_multimap.h"
+      export std.vector.vector
+      export std.vector.fwd
+    }
     module key_value_iterator             { header "__flat_map/key_value_iterator.h" }
+    module sorted_equivalent              { header "__flat_map/sorted_equivalent.h" }
     module sorted_unique                  { header "__flat_map/sorted_unique.h" }
+    module utils                          { header "__flat_map/utils.h" }
 
     header "flat_map"
     export *
   }
 
   module format {
-    module buffer                             { header "__format/buffer.h" }
+    module buffer                             {
+      header "__format/buffer.h"
+      export std.iterator.back_insert_iterator
+    }
     module concepts                           { header "__format/concepts.h" }
     module container_adaptor                  { header "__format/container_adaptor.h" }
     module enable_insertable                  { header "__format/enable_insertable.h" }

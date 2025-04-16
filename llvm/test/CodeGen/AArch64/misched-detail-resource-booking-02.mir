@@ -5,6 +5,13 @@
 # RUN:  -misched-dump-schedule-trace=true -misched-dump-schedule-trace-col-width=4 \
 # RUN:  2>&1 | FileCheck %s
 
+# RUN: llc -mtriple=aarch64-none-linux-gnu -mcpu=cortex-a55  \
+# RUN:  -passes=machine-scheduler -debug-only=machine-scheduler -o - %s \
+# RUN:  -misched-prera-direction=bottomup -sched-print-cycles=true \
+# RUN:  -misched-dump-reserved-cycles=true -misched-detail-resource-booking=true\
+# RUN:  -misched-dump-schedule-trace=true -misched-dump-schedule-trace-col-width=4 \
+# RUN:  2>&1 | FileCheck %s
+
 # REQUIRES: asserts, aarch64-registered-target
 ---
 name: f

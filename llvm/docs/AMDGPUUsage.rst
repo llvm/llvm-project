@@ -583,11 +583,11 @@ Generic processor code objects are versioned. See :ref:`amdgpu-generic-processor
                                                                                                   - ``v_dot2_f32_f16``
 
 
-     ``gfx9-4-generic``   ``amdgcn``     - ``gfx940``      - xnack            - Absolute flat   FP8 and BF8 instructions,
-                                         - ``gfx941``      - sramecc            scratch         FP8 and BF8 conversion instructions,
-                                         - ``gfx942``                                           as well as instructions with XF32 format support
-                                         - ``gfx950``                                           are not available.
-
+     ``gfx9-4-generic``   ``amdgcn``     - ``gfx940``      - sramecc          - Architected     FP8 and BF8 instructions,
+                                         - ``gfx941``      - tgsplit            flat scratch    FP8 and BF8 conversion
+                                         - ``gfx942``      - xnack            - Packed          instructions, as well as
+                                         - ``gfx950``      - kernarg preload    work-item       instructions with XF32 format
+                                                                                IDs             support are not available.
 
      ``gfx10-1-generic``  ``amdgcn``     - ``gfx1010``     - xnack            - Absolute flat   - The following instructions are
                                          - ``gfx1011``     - wavefrontsize64    scratch           not available on ``gfx1011``
@@ -1327,7 +1327,7 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    with the fifth i32 operand. The i1 sixth operand is used to clamp
                                                    the output. The i1s preceding the vector operands decide the signedness.
 
-  llvm.amdgcn.sched_barrier                        Controls the types of instructions that may be allowed to cross the intrinsic
+  llvm.amdgcn.sched.barrier                        Controls the types of instructions that may be allowed to cross the intrinsic
                                                    during instruction scheduling. The parameter is a mask for the instruction types
                                                    that can cross the intrinsic.
 
@@ -1345,7 +1345,7 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    - 0x0200: All DS write instructions may be scheduled across sched_barrier.
                                                    - 0x0400: All Transcendental (e.g. V_EXP) instructions may be scheduled across sched_barrier.
 
-  llvm.amdgcn.sched_group_barrier                  Creates schedule groups with specific properties to create custom scheduling
+  llvm.amdgcn.sched.group.barrier                  Creates schedule groups with specific properties to create custom scheduling
                                                    pipelines. The ordering between groups is enforced by the instruction scheduler.
                                                    The intrinsic applies to the code that preceeds the intrinsic. The intrinsic
                                                    takes three values that control the behavior of the schedule groups.
@@ -1369,7 +1369,7 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    |  ``// 5 MFMA``
                                                    |  ``__builtin_amdgcn_sched_group_barrier(8, 5, 0)``
 
-  llvm.amdgcn.iglp_opt                             An **experimental** intrinsic for instruction group level parallelism. The intrinsic
+  llvm.amdgcn.iglp.opt                             An **experimental** intrinsic for instruction group level parallelism. The intrinsic
                                                    implements predefined intruction scheduling orderings. The intrinsic applies to the
                                                    surrounding scheduling region. The intrinsic takes a value that specifies the
                                                    strategy.  The compiler implements two strategies.
@@ -1421,6 +1421,19 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    swapped with rows 0 and 1 of the second operand (one row is 16 lanes).
                                                    Returns a pair for the swapped registers. The first element of the return
                                                    corresponds to the swapped element of the first argument.
+
+  llvm.amdgcn.mov.dpp                              The llvm.amdgcn.mov.dpp.`<type>` intrinsic represents the mov.dpp operation in AMDGPU.
+                                                   This operation is being deprecated and can be replaced with llvm.amdgcn.update.dpp.
+
+  llvm.amdgcn.update.dpp                           The llvm.amdgcn.update.dpp.`<type>` intrinsic represents the update.dpp operation in AMDGPU.
+                                                   It takes an old value, a source operand, a DPP control operand, a row mask, a bank mask, and a bound control.
+                                                   Various data types are supported, including, bf16, f16, f32, f64, i16, i32, i64, p0, p3, p5, v2f16, v2f32, v2i16, v2i32, v2p0, v3i32, v4i32, v8f16.
+                                                   This operation is equivalent to a sequence of v_mov_b32 operations.
+                                                   It is preferred over llvm.amdgcn.mov.dpp.`<type>` for future use.
+                                                   `llvm.amdgcn.update.dpp.<type> <old> <src> <dpp_ctrl> <row_mask> <bank_mask> <bound_ctrl>`
+                                                   Should be equivalent to:
+                                                   - `v_mov_b32 <dest> <old>`
+                                                   - `v_mov_b32 <dest> <src> <dpp_ctrl> <row_mask> <bank_mask> <bound_ctrl>`
 
   ==============================================   ==========================================================
 
@@ -1536,167 +1549,180 @@ The AMDGPU backend supports the following LLVM IR attributes.
   .. table:: AMDGPU LLVM IR Attributes
      :name: amdgpu-llvm-ir-attributes-table
 
-     ======================================= ==========================================================
-     LLVM Attribute                          Description
-     ======================================= ==========================================================
-     "amdgpu-flat-work-group-size"="min,max" Specify the minimum and maximum flat work group sizes that
-                                             will be specified when the kernel is dispatched. Generated
-                                             by the ``amdgpu_flat_work_group_size`` CLANG attribute [CLANG-ATTR]_.
-                                             The IR implied default value is 1,1024. Clang may emit this attribute
-                                             with more restrictive bounds depending on language defaults.
-                                             If the actual block or workgroup size exceeds the limit at any point during
-                                             the execution, the behavior is undefined. For example, even if there is
-                                             only one active thread but the thread local id exceeds the limit, the
-                                             behavior is undefined.
+     ============================================ ==========================================================
+     LLVM Attribute                               Description
+     ============================================ ==========================================================
+     "amdgpu-flat-work-group-size"="min,max"      Specify the minimum and maximum flat work group sizes that
+                                                  will be specified when the kernel is dispatched. Generated
+                                                  by the ``amdgpu_flat_work_group_size`` CLANG attribute [CLANG-ATTR]_.
+                                                  The IR implied default value is 1,1024. Clang may emit this attribute
+                                                  with more restrictive bounds depending on language defaults.
+                                                  If the actual block or workgroup size exceeds the limit at any point during
+                                                  the execution, the behavior is undefined. For example, even if there is
+                                                  only one active thread but the thread local id exceeds the limit, the
+                                                  behavior is undefined.
 
-     "amdgpu-implicitarg-num-bytes"="n"      Number of kernel argument bytes to add to the kernel
-                                             argument block size for the implicit arguments. This
-                                             varies by OS and language (for OpenCL see
-                                             :ref:`opencl-kernel-implicit-arguments-appended-for-amdhsa-os-table`).
-     "amdgpu-num-sgpr"="n"                   Specifies the number of SGPRs to use. Generated by
-                                             the ``amdgpu_num_sgpr`` CLANG attribute [CLANG-ATTR]_.
-     "amdgpu-num-vgpr"="n"                   Specifies the number of VGPRs to use. Generated by the
-                                             ``amdgpu_num_vgpr`` CLANG attribute [CLANG-ATTR]_.
-     "amdgpu-waves-per-eu"="m,n"             Specify the minimum and maximum number of waves per
-                                             execution unit. Generated by the ``amdgpu_waves_per_eu``
-                                             CLANG attribute [CLANG-ATTR]_. This is an optimization hint,
-                                             and the backend may not be able to satisfy the request. If
-                                             the specified range is incompatible with the function's
-                                             "amdgpu-flat-work-group-size" value, the implied occupancy
-                                             bounds by the workgroup size takes precedence.
+     "amdgpu-implicitarg-num-bytes"="n"           Number of kernel argument bytes to add to the kernel
+                                                  argument block size for the implicit arguments. This
+                                                  varies by OS and language (for OpenCL see
+                                                  :ref:`opencl-kernel-implicit-arguments-appended-for-amdhsa-os-table`).
+     "amdgpu-num-sgpr"="n"                        Specifies the number of SGPRs to use. Generated by
+                                                  the ``amdgpu_num_sgpr`` CLANG attribute [CLANG-ATTR]_.
+     "amdgpu-num-vgpr"="n"                        Specifies the number of VGPRs to use. Generated by the
+                                                  ``amdgpu_num_vgpr`` CLANG attribute [CLANG-ATTR]_.
+     "amdgpu-waves-per-eu"="m,n"                  Specify the minimum and maximum number of waves per
+                                                  execution unit. Generated by the ``amdgpu_waves_per_eu``
+                                                  CLANG attribute [CLANG-ATTR]_. This is an optimization hint,
+                                                  and the backend may not be able to satisfy the request. If
+                                                  the specified range is incompatible with the function's
+                                                  "amdgpu-flat-work-group-size" value, the implied occupancy
+                                                  bounds by the workgroup size takes precedence.
 
-     "amdgpu-ieee" true/false.               GFX6-GFX11 Only
-                                             Specify whether the function expects the IEEE field of the
-                                             mode register to be set on entry. Overrides the default for
-                                             the calling convention.
-     "amdgpu-dx10-clamp" true/false.         GFX6-GFX11 Only
-                                             Specify whether the function expects the DX10_CLAMP field of
-                                             the mode register to be set on entry. Overrides the default
-                                             for the calling convention.
+     "amdgpu-ieee" true/false.                    GFX6-GFX11 Only
+                                                  Specify whether the function expects the IEEE field of the
+                                                  mode register to be set on entry. Overrides the default for
+                                                  the calling convention.
+     "amdgpu-dx10-clamp" true/false.              GFX6-GFX11 Only
+                                                  Specify whether the function expects the DX10_CLAMP field of
+                                                  the mode register to be set on entry. Overrides the default
+                                                  for the calling convention.
 
-     "amdgpu-no-workitem-id-x"               Indicates the function does not depend on the value of the
-                                             llvm.amdgcn.workitem.id.x intrinsic. If a function is marked with this
-                                             attribute, or reached through a call site marked with this attribute, and
-                                             that intrinsic is called, the behavior of the program is undefined. (Whole-program
-                                             undefined behavior is used here because, for example, the absence of a required workitem
-                                             ID in the preloaded register set can mean that all other preloaded registers
-                                             are earlier than the compilation assumed they would be.) The backend can
-                                             generally infer this during code generation, so typically there is no
-                                             benefit to frontends marking functions with this.
+     "amdgpu-no-workitem-id-x"                    Indicates the function does not depend on the value of the
+                                                  llvm.amdgcn.workitem.id.x intrinsic. If a function is marked with this
+                                                  attribute, or reached through a call site marked with this attribute, and
+                                                  that intrinsic is called, the behavior of the program is undefined. (Whole-program
+                                                  undefined behavior is used here because, for example, the absence of a required workitem
+                                                  ID in the preloaded register set can mean that all other preloaded registers
+                                                  are earlier than the compilation assumed they would be.) The backend can
+                                                  generally infer this during code generation, so typically there is no
+                                                  benefit to frontends marking functions with this.
 
-     "amdgpu-no-workitem-id-y"               The same as amdgpu-no-workitem-id-x, except for the
-                                             llvm.amdgcn.workitem.id.y intrinsic.
+     "amdgpu-no-workitem-id-y"                    The same as amdgpu-no-workitem-id-x, except for the
+                                                  llvm.amdgcn.workitem.id.y intrinsic.
 
-     "amdgpu-no-workitem-id-z"               The same as amdgpu-no-workitem-id-x, except for the
-                                             llvm.amdgcn.workitem.id.z intrinsic.
+     "amdgpu-no-workitem-id-z"                    The same as amdgpu-no-workitem-id-x, except for the
+                                                  llvm.amdgcn.workitem.id.z intrinsic.
 
-     "amdgpu-no-workgroup-id-x"              The same as amdgpu-no-workitem-id-x, except for the
-                                             llvm.amdgcn.workgroup.id.x intrinsic.
+     "amdgpu-no-workgroup-id-x"                   The same as amdgpu-no-workitem-id-x, except for the
+                                                  llvm.amdgcn.workgroup.id.x intrinsic.
 
-     "amdgpu-no-workgroup-id-y"              The same as amdgpu-no-workitem-id-x, except for the
-                                             llvm.amdgcn.workgroup.id.y intrinsic.
+     "amdgpu-no-workgroup-id-y"                   The same as amdgpu-no-workitem-id-x, except for the
+                                                  llvm.amdgcn.workgroup.id.y intrinsic.
 
-     "amdgpu-no-workgroup-id-z"              The same as amdgpu-no-workitem-id-x, except for the
-                                             llvm.amdgcn.workgroup.id.z intrinsic.
+     "amdgpu-no-workgroup-id-z"                   The same as amdgpu-no-workitem-id-x, except for the
+                                                  llvm.amdgcn.workgroup.id.z intrinsic.
 
-     "amdgpu-no-dispatch-ptr"                The same as amdgpu-no-workitem-id-x, except for the
-                                             llvm.amdgcn.dispatch.ptr intrinsic.
+     "amdgpu-no-dispatch-ptr"                     The same as amdgpu-no-workitem-id-x, except for the
+                                                  llvm.amdgcn.dispatch.ptr intrinsic.
 
-     "amdgpu-no-implicitarg-ptr"             The same as amdgpu-no-workitem-id-x, except for the
-                                             llvm.amdgcn.implicitarg.ptr intrinsic.
+     "amdgpu-no-implicitarg-ptr"                  The same as amdgpu-no-workitem-id-x, except for the
+                                                  llvm.amdgcn.implicitarg.ptr intrinsic.
 
-     "amdgpu-no-dispatch-id"                 The same as amdgpu-no-workitem-id-x, except for the
-                                             llvm.amdgcn.dispatch.id intrinsic.
+     "amdgpu-no-dispatch-id"                      The same as amdgpu-no-workitem-id-x, except for the
+                                                  llvm.amdgcn.dispatch.id intrinsic.
 
-     "amdgpu-no-queue-ptr"                   Similar to amdgpu-no-workitem-id-x, except for the
-                                             llvm.amdgcn.queue.ptr intrinsic. Note that unlike the other ABI hint
-                                             attributes, the queue pointer may be required in situations where the
-                                             intrinsic call does not directly appear in the program. Some subtargets
-                                             require the queue pointer for to handle some addrspacecasts, as well
-                                             as the llvm.amdgcn.is.shared, llvm.amdgcn.is.private, llvm.trap, and
-                                             llvm.debug intrinsics.
+     "amdgpu-no-queue-ptr"                        Similar to amdgpu-no-workitem-id-x, except for the
+                                                  llvm.amdgcn.queue.ptr intrinsic. Note that unlike the other ABI hint
+                                                  attributes, the queue pointer may be required in situations where the
+                                                  intrinsic call does not directly appear in the program. Some subtargets
+                                                  require the queue pointer for to handle some addrspacecasts, as well
+                                                  as the llvm.amdgcn.is.shared, llvm.amdgcn.is.private, llvm.trap, and
+                                                  llvm.debug intrinsics.
 
-     "amdgpu-no-hostcall-ptr"                Similar to amdgpu-no-implicitarg-ptr, except specific to the implicit
-                                             kernel argument that holds the pointer to the hostcall buffer. If this
-                                             attribute is absent, then the amdgpu-no-implicitarg-ptr is also removed.
+     "amdgpu-no-hostcall-ptr"                     Similar to amdgpu-no-implicitarg-ptr, except specific to the implicit
+                                                  kernel argument that holds the pointer to the hostcall buffer. If this
+                                                  attribute is absent, then the amdgpu-no-implicitarg-ptr is also removed.
 
-     "amdgpu-no-heap-ptr"                    Similar to amdgpu-no-implicitarg-ptr, except specific to the implicit
-                                             kernel argument that holds the pointer to an initialized memory buffer
-                                             that conforms to the requirements of the malloc/free device library V1
-                                             version implementation. If this attribute is absent, then the
-                                             amdgpu-no-implicitarg-ptr is also removed.
+     "amdgpu-no-heap-ptr"                         Similar to amdgpu-no-implicitarg-ptr, except specific to the implicit
+                                                  kernel argument that holds the pointer to an initialized memory buffer
+                                                  that conforms to the requirements of the malloc/free device library V1
+                                                  version implementation. If this attribute is absent, then the
+                                                  amdgpu-no-implicitarg-ptr is also removed.
 
-     "amdgpu-no-multigrid-sync-arg"          Similar to amdgpu-no-implicitarg-ptr, except specific to the implicit
-                                             kernel argument that holds the multigrid synchronization pointer. If this
-                                             attribute is absent, then the amdgpu-no-implicitarg-ptr is also removed.
+     "amdgpu-no-multigrid-sync-arg"               Similar to amdgpu-no-implicitarg-ptr, except specific to the implicit
+                                                  kernel argument that holds the multigrid synchronization pointer. If this
+                                                  attribute is absent, then the amdgpu-no-implicitarg-ptr is also removed.
 
-     "amdgpu-no-default-queue"               Similar to amdgpu-no-implicitarg-ptr, except specific to the implicit
-                                             kernel argument that holds the default queue pointer. If this
-                                             attribute is absent, then the amdgpu-no-implicitarg-ptr is also removed.
+     "amdgpu-no-default-queue"                    Similar to amdgpu-no-implicitarg-ptr, except specific to the implicit
+                                                  kernel argument that holds the default queue pointer. If this
+                                                  attribute is absent, then the amdgpu-no-implicitarg-ptr is also removed.
 
-     "amdgpu-no-completion-action"           Similar to amdgpu-no-implicitarg-ptr, except specific to the implicit
-                                             kernel argument that holds the completion action pointer. If this
-                                             attribute is absent, then the amdgpu-no-implicitarg-ptr is also removed.
+     "amdgpu-no-completion-action"                Similar to amdgpu-no-implicitarg-ptr, except specific to the implicit
+                                                  kernel argument that holds the completion action pointer. If this
+                                                  attribute is absent, then the amdgpu-no-implicitarg-ptr is also removed.
 
-     "amdgpu-lds-size"="min[,max]"           Min is the minimum number of bytes that will be allocated in the Local
-                                             Data Store at address zero. Variables are allocated within this frame
-                                             using absolute symbol metadata, primarily by the AMDGPULowerModuleLDS
-                                             pass. Optional max is the maximum number of bytes that will be allocated.
-                                             Note that min==max indicates that no further variables can be added to
-                                             the frame. This is an internal detail of how LDS variables are lowered,
-                                             language front ends should not set this attribute.
+     "amdgpu-lds-size"="min[,max]"                Min is the minimum number of bytes that will be allocated in the Local
+                                                  Data Store at address zero. Variables are allocated within this frame
+                                                  using absolute symbol metadata, primarily by the AMDGPULowerModuleLDS
+                                                  pass. Optional max is the maximum number of bytes that will be allocated.
+                                                  Note that min==max indicates that no further variables can be added to
+                                                  the frame. This is an internal detail of how LDS variables are lowered,
+                                                  language front ends should not set this attribute.
 
-     "amdgpu-gds-size"                       Bytes expected to be allocated at the start of GDS memory at entry.
+     "amdgpu-gds-size"                            Bytes expected to be allocated at the start of GDS memory at entry.
 
-     "amdgpu-git-ptr-high"                   The hard-wired high half of the address of the global information table
-                                             for AMDPAL OS type. 0xffffffff represents no hard-wired high half, since
-                                             current hardware only allows a 16 bit value.
+     "amdgpu-git-ptr-high"                        The hard-wired high half of the address of the global information table
+                                                  for AMDPAL OS type. 0xffffffff represents no hard-wired high half, since
+                                                  current hardware only allows a 16 bit value.
 
-     "amdgpu-32bit-address-high-bits"        Assumed high 32-bits for 32-bit address spaces which are really truncated
-                                             64-bit addresses (i.e., addrspace(6))
+     "amdgpu-32bit-address-high-bits"             Assumed high 32-bits for 32-bit address spaces which are really truncated
+                                                  64-bit addresses (i.e., addrspace(6))
 
-     "amdgpu-color-export"                   Indicates shader exports color information if set to 1.
-                                             Defaults to 1 for :ref:`amdgpu_ps <amdgpu-cc>`, and 0 for other calling
-                                             conventions. Determines the necessity and type of null exports when a shader
-                                             terminates early by killing lanes.
+     "amdgpu-color-export"                        Indicates shader exports color information if set to 1.
+                                                  Defaults to 1 for :ref:`amdgpu_ps <amdgpu-cc>`, and 0 for other calling
+                                                  conventions. Determines the necessity and type of null exports when a shader
+                                                  terminates early by killing lanes.
 
-     "amdgpu-depth-export"                   Indicates shader exports depth information if set to 1. Determines the
-                                             necessity and type of null exports when a shader terminates early by killing
-                                             lanes. A depth-only shader will export to depth channel when no null export
-                                             target is available (GFX11+).
+     "amdgpu-depth-export"                        Indicates shader exports depth information if set to 1. Determines the
+                                                  necessity and type of null exports when a shader terminates early by killing
+                                                  lanes. A depth-only shader will export to depth channel when no null export
+                                                  target is available (GFX11+).
 
-     "InitialPSInputAddr"                    Set the initial value of the `spi_ps_input_addr` register for
-                                             :ref:`amdgpu_ps <amdgpu-cc>` shaders. Any bits enabled by this value will
-                                             be enabled in the final register value.
+     "InitialPSInputAddr"                         Set the initial value of the `spi_ps_input_addr` register for
+                                                  :ref:`amdgpu_ps <amdgpu-cc>` shaders. Any bits enabled by this value will
+                                                  be enabled in the final register value.
 
-     "amdgpu-wave-priority-threshold"        VALU instruction count threshold for adjusting wave priority. If exceeded,
-                                             temporarily raise the wave priority at the start of the shader function
-                                             until its last VMEM instructions to allow younger waves to issue their VMEM
-                                             instructions as well.
+     "amdgpu-wave-priority-threshold"             VALU instruction count threshold for adjusting wave priority. If exceeded,
+                                                  temporarily raise the wave priority at the start of the shader function
+                                                  until its last VMEM instructions to allow younger waves to issue their VMEM
+                                                  instructions as well.
 
-     "amdgpu-memory-bound"                   Set internally by backend
+     "amdgpu-memory-bound"                        Set internally by backend
 
-     "amdgpu-wave-limiter"                   Set internally by backend
+     "amdgpu-wave-limiter"                        Set internally by backend
 
-     "amdgpu-unroll-threshold"               Set base cost threshold preference for loop unrolling within this function,
-                                             default is 300. Actual threshold may be varied by per-loop metadata or
-                                             reduced by heuristics.
+     "amdgpu-unroll-threshold"                    Set base cost threshold preference for loop unrolling within this function,
+                                                  default is 300. Actual threshold may be varied by per-loop metadata or
+                                                  reduced by heuristics.
 
-     "amdgpu-max-num-workgroups"="x,y,z"     Specify the maximum number of work groups for the kernel dispatch in the
-                                             X, Y, and Z dimensions. Each number must be >= 1. Generated by the
-                                             ``amdgpu_max_num_work_groups`` CLANG attribute [CLANG-ATTR]_. Clang only
-                                             emits this attribute when all the three numbers are >= 1.
+     "amdgpu-max-num-workgroups"="x,y,z"          Specify the maximum number of work groups for the kernel dispatch in the
+                                                  X, Y, and Z dimensions. Each number must be >= 1. Generated by the
+                                                  ``amdgpu_max_num_work_groups`` CLANG attribute [CLANG-ATTR]_. Clang only
+                                                  emits this attribute when all the three numbers are >= 1.
 
-     "amdgpu-no-agpr"                        Indicates the function will not require allocating AGPRs. This is only
-                                             relevant on subtargets with AGPRs. The behavior is undefined if a
-                                             function which requires AGPRs is reached through any function marked
-                                             with this attribute.
+     "amdgpu-no-agpr"                             Indicates the function will not require allocating AGPRs. This is only
+                                                  relevant on subtargets with AGPRs. The behavior is undefined if a
+                                                  function which requires AGPRs is reached through any function marked
+                                                  with this attribute.
 
-     "amdgpu-hidden-argument"                This attribute is used internally by the backend to mark function arguments
-                                             as hidden. Hidden arguments are managed by the compiler and are not part of
-                                             the explicit arguments supplied by the user.
+     "amdgpu-hidden-argument"                     This attribute is used internally by the backend to mark function arguments
+                                                  as hidden. Hidden arguments are managed by the compiler and are not part of
+                                                  the explicit arguments supplied by the user.
 
-     ======================================= ==========================================================
+     "amdgpu-sgpr-hazard-wait"                    Disabled SGPR hazard wait insertion if set to 0.
+                                                  Exists for testing performance impact of SGPR hazard waits only.
+
+     "amdgpu-sgpr-hazard-boundary-cull"           Enable insertion of SGPR hazard cull sequences at function call boundaries.
+                                                  Cull sequence reduces future hazard waits, but has a performance cost.
+
+     "amdgpu-sgpr-hazard-mem-wait-cull"           Enable insertion of SGPR hazard cull sequences before memory waits.
+                                                  Cull sequence reduces future hazard waits, but has a performance cost.
+                                                  Attempt to amortize cost by overlapping with memory accesses.
+
+     "amdgpu-sgpr-hazard-mem-wait-cull-threshold" Sets the number of active SGPR hazards that must be present before
+                                                  inserting a cull sequence at a memory wait.
+
+     ============================================ ==========================================================
 
 Calling Conventions
 ===================

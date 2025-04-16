@@ -191,11 +191,11 @@ end
 !     Test calls to user procedures with intrinsic interfaces
 ! -----------------------------------------------------------------------------
 
-! CHECK-NAME: func.func @_QPintrinsic_iface()
+! CHECK-LABEL: func.func @_QPintrinsic_iface()
 subroutine intrinsic_iface()
   intrinsic acos
   real :: x
   procedure(acos) :: proc
   x = proc(1.0)
 end subroutine
-! CHECK" fir.call @_QPproc(%{{.*}}) {{.*}}: (!fir.ref<f32>) -> f32
+! CHECK: fir.call @_QPproc(%{{.*}}) {{.*}}: (!fir.ref<f32>) -> f32

@@ -18,7 +18,7 @@ endmacro()
 
 function(add_flang_library name)
   set(options SHARED STATIC INSTALL_WITH_TOOLCHAIN)
-  set(multiValueArgs ADDITIONAL_HEADERS CLANG_LIBS)
+  set(multiValueArgs ADDITIONAL_HEADERS CLANG_LIBS MLIR_LIBS)
   cmake_parse_arguments(ARG
     "${options}"
     ""
@@ -66,6 +66,9 @@ function(add_flang_library name)
   llvm_add_library(${name} ${LIBTYPE} ${ARG_UNPARSED_ARGUMENTS} ${srcs})
 
   clang_target_link_libraries(${name} PRIVATE ${ARG_CLANG_LIBS})
+  if (ARG_MLIR_LIBS)
+    mlir_target_link_libraries(${name} PRIVATE ${ARG_MLIR_LIBS})
+  endif()
 
   if (TARGET ${name})
 

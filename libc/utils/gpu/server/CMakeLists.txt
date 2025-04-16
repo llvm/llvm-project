@@ -11,6 +11,7 @@ target_include_directories(llvmlibc_rpc_server PUBLIC ${CMAKE_CURRENT_SOURCE_DIR
 
 # Ignore unsupported clang attributes if we're using GCC.
 target_compile_options(llvmlibc_rpc_server PUBLIC
+                       $<$<CXX_COMPILER_ID:Clang>:-Wno-c99-extensions>
                        $<$<CXX_COMPILER_ID:GNU>:-Wno-attributes>)
 target_compile_definitions(llvmlibc_rpc_server PUBLIC
                            LIBC_COPT_USE_C_ASSERT

@@ -250,11 +250,8 @@ public:
     case llvm::Triple::arm:
       this->MCountName = "__mcount";
       break;
-    case llvm::Triple::riscv32:
-    case llvm::Triple::riscv64:
-      break;
-    case llvm::Triple::loongarch32:
     case llvm::Triple::loongarch64:
+    case llvm::Triple::riscv64:
       break;
     }
   }

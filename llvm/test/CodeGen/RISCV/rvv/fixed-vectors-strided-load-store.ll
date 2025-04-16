@@ -320,8 +320,8 @@ for.cond.cleanup:                                 ; preds = %vector.body
 define void @gather_unknown_pow2(ptr noalias nocapture %A, ptr noalias nocapture readonly %B, i64 %shift) {
 ; CHECK-LABEL: @gather_unknown_pow2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[STEP:%.*]] = shl i64 8, [[SHIFT:%.*]]
-; CHECK-NEXT:    [[STRIDE:%.*]] = shl i64 1, [[SHIFT]]
+; CHECK-NEXT:    [[STRIDE:%.*]] = shl i64 1, [[SHIFT:%.*]]
+; CHECK-NEXT:    [[STEP:%.*]] = shl i64 8, [[SHIFT]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = mul i64 [[STRIDE]], 4
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
