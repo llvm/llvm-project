@@ -921,7 +921,7 @@ llvm::Error DAP::Loop() {
     StopEventHandlers();
   });
 
-  while (!disconnecting) {
+  while (!disconnecting || !m_queue.empty()) {
     std::unique_lock<std::mutex> lock(m_queue_mutex);
     m_queue_cv.wait(lock, [&] { return disconnecting || !m_queue.empty(); });
 
