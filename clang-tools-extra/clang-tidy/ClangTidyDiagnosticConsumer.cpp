@@ -266,7 +266,7 @@ ClangTidyOptions ClangTidyContext::getOptionsForFile(StringRef File) const {
   // Merge options on top of getDefaults() as a safeguard against options with
   // unset values.
   return ClangTidyOptions::getDefaults().merge(
-      OptionsProvider->getOptions(File), 0);
+      *OptionsProvider->getOptions(File), 0);
 }
 
 void ClangTidyContext::setEnableProfiling(bool P) { Profile = P; }

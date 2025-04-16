@@ -337,8 +337,7 @@ Allow empty enabled checks. This suppresses
 the "no checks enabled" error when disabling
 all of the checks.
 )"),
-                                         cl::init(false),
-                                         cl::cat(ClangTidyCategory));
+                                   cl::init(false), cl::cat(ClangTidyCategory));
 
 namespace clang::tidy {
 
@@ -370,8 +369,8 @@ static void printStats(const ClangTidyStats &Stats) {
   }
 }
 
-static std::unique_ptr<ClangTidyOptionsProvider> createOptionsProvider(
-   llvm::IntrusiveRefCntPtr<vfs::FileSystem> FS) {
+static std::unique_ptr<ClangTidyOptionsProvider>
+createOptionsProvider(llvm::IntrusiveRefCntPtr<vfs::FileSystem> FS) {
   ClangTidyGlobalOptions GlobalOptions;
   if (std::error_code Err = parseLineFilter(LineFilter, GlobalOptions)) {
     llvm::errs() << "Invalid LineFilter: " << Err.message() << "\n\nUsage:\n";
@@ -624,21 +623,29 @@ int clangTidyMain(int argc, const char **argv) {
   }
 
   SmallString<256> FilePath = makeAbsolute(FileName);
-  ClangTidyOptions EffectiveOptions = OptionsProvider->getOptions(FilePath);
+  llvm::ErrorOr<ClangTidyOptions> EffectiveOptions =
+      OptionsProvider->getOptions(FilePath);
+
+  if (!EffectiveOptions)
+    return 1;
 
   std::vector<std::string> EnabledChecks =
-      getCheckNames(EffectiveOptions, AllowEnablingAnalyzerAlphaCheckers);
+      getCheckNames(*EffectiveOptions, AllowEnablingAnalyzerAlphaCheckers);
 
   if (ExplainConfig) {
     // FIXME: Show other ClangTidyOptions' fields, like ExtraArg.
-    std::vector<clang::tidy::ClangTidyOptionsProvider::OptionsSource>
+    llvm::ErrorOr<
+        std::vector<clang::tidy::ClangTidyOptionsProvider::OptionsSource>>
         RawOptions = OptionsProvider->getRawOptions(FilePath);
-    for (const std::string &Check : EnabledChecks) {
-      for (const auto &[Opts, Source] : llvm::reverse(RawOptions)) {
-        if (Opts.Checks && GlobList(*Opts.Checks).contains(Check)) {
-          llvm::outs() << "'" << Check << "' is enabled in the " << Source
-                       << ".\n";
-          break;
+
+    if (RawOptions) {
+      for (const std::string &Check : EnabledChecks) {
+        for (const auto &[Opts, Source] : llvm::reverse(*RawOptions)) {
+          if (Opts.Checks && GlobList(*Opts.Checks).contains(Check)) {
+            llvm::outs() << "'" << Check << "' is enabled in the " << Source
+                         << ".\n";
+            break;
+          }
         }
       }
     }
@@ -658,21 +665,23 @@ int clangTidyMain(int argc, const char **argv) {
   }
 
   if (DumpConfig) {
-    EffectiveOptions.CheckOptions =
-        getCheckOptions(EffectiveOptions, AllowEnablingAnalyzerAlphaCheckers);
+    EffectiveOptions->CheckOptions =
+        getCheckOptions(*EffectiveOptions, AllowEnablingAnalyzerAlphaCheckers);
     llvm::outs() << configurationAsText(ClangTidyOptions::getDefaults().merge(
-                        EffectiveOptions, 0))
+                        *EffectiveOptions, 0))
                  << "\n";
     return 0;
   }
 
   if (VerifyConfig) {
-    std::vector<ClangTidyOptionsProvider::OptionsSource> RawOptions =
-        OptionsProvider->getRawOptions(FileName);
+    llvm::ErrorOr<std::vector<ClangTidyOptionsProvider::OptionsSource>>
+        RawOptions = OptionsProvider->getRawOptions(FileName);
+    if (!RawOptions)
+      return 1;
     ChecksAndOptions Valid =
         getAllChecksAndOptions(AllowEnablingAnalyzerAlphaCheckers);
     bool AnyInvalid = false;
-    for (const auto &[Opts, Source] : RawOptions) {
+    for (const auto &[Opts, Source] : *RawOptions) {
       if (Opts.Checks)
         AnyInvalid |= verifyChecks(Valid.Checks, *Opts.Checks, Source);
       if (Opts.HeaderFileExtensions && Opts.ImplementationFileExtensions)
