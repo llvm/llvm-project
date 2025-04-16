@@ -406,7 +406,8 @@ bool MipsCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
     return false;
 
   if (F.isVarArg()) {
-    ArrayRef<MCPhysReg> ArgRegs = ABI.GetVarArgRegs();
+    ArrayRef<MCPhysReg> ArgRegs =
+        ABI.getVarArgRegs(MF.getSubtarget<MipsSubtarget>().isGP64bit());
     unsigned Idx = CCInfo.getFirstUnallocated(ArgRegs);
 
     int VaArgOffset;
