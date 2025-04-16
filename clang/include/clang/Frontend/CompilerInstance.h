@@ -134,23 +134,13 @@ class CompilerInstance : public ModuleLoader {
 
   std::vector<std::shared_ptr<DependencyCollector>> DependencyCollectors;
 
-  /// Records the set of modules
-  class FailedModulesSet {
-    llvm::StringSet<> Failed;
-
-  public:
-    bool hasAlreadyFailed(StringRef module) { return Failed.count(module) > 0; }
-
-    void addFailed(StringRef module) { Failed.insert(module); }
-  };
-
   /// The set of modules that failed to build.
   ///
-  /// This pointer will be shared among all of the compiler instances created
+  /// This value will be passed among all of the compiler instances created
   /// to (re)build modules, so that once a module fails to build anywhere,
   /// other instances will see that the module has failed and won't try to
   /// build it again.
-  std::shared_ptr<FailedModulesSet> FailedModules;
+  llvm::StringSet<> FailedModules;
 
   /// The set of top-level modules that has already been built on the
   /// fly as part of this overall compilation action.
@@ -637,24 +627,6 @@ public:
     return *FrontendTimer;
   }
 
-  /// @}
-  /// @name Failed modules set
-  /// @{
-
-  bool hasFailedModulesSet() const { return (bool)FailedModules; }
-
-  void createFailedModulesSet() {
-    FailedModules = std::make_shared<FailedModulesSet>();
-  }
-
-  std::shared_ptr<FailedModulesSet> getFailedModulesSetPtr() const {
-    return FailedModules;
-  }
-
-  void setFailedModulesSet(std::shared_ptr<FailedModulesSet> FMS) {
-    FailedModules = FMS;
-  }
-
   /// }
   /// @name Output Files
   /// @{
@@ -870,6 +842,13 @@ private:
                                                  SourceLocation ModuleNameLoc,
                                                  bool IsInclusionDirective);
 
+  /// Creates a \c CompilerInstance for compiling a module.
+  ///
+  /// This expects a properly initialized \c FrontendInputFile.
+  std::unique_ptr<CompilerInstance> cloneForModuleCompileImpl(
+      SourceLocation ImportLoc, StringRef ModuleName, FrontendInputFile Input,
+      StringRef OriginalModuleMapFile, StringRef ModuleFileName);
+
 public:
   /// Creates a new \c CompilerInstance for compiling a module.
   ///
@@ -878,6 +857,14 @@ public:
   std::unique_ptr<CompilerInstance>
   cloneForModuleCompile(SourceLocation ImportLoc, Module *Module,
                         StringRef ModuleFileName);
+
+  /// Compile a module file for the given module, using the options
+  /// provided by the importing compiler instance. Returns true if the module
+  /// was built without errors.
+  // FIXME: This should be private, but it's called from static non-member
+  // functions in the implementation file.
+  bool compileModule(SourceLocation ImportLoc, StringRef ModuleName,
+                     StringRef ModuleFileName, CompilerInstance &Instance);
 
   ModuleLoadResult loadModule(SourceLocation ImportLoc, ModuleIdPath Path,
                               Module::NameVisibilityKind Visibility,
