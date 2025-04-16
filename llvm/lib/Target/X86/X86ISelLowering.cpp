@@ -58911,6 +58911,28 @@ static SDValue combineCONCAT_VECTORS(SDNode *N, SelectionDAG &DAG,
       return R;
   }
 
+  // Fold concat(extract_subvector(X,0),extract_subvector(Y,0))
+  // --> shuffle(X,Y)
+  // This is a more limited version of combineConcatVectorOfExtracts for use
+  // after legalization.
+  if (Ops.size() == 2 && TLI.isTypeLegal(VT)) {
+    SDValue Lo = Ops[0], Hi = Ops[1];
+    if (Lo.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
+        Hi.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
+        Lo.getOperand(0).getValueSizeInBits() == VT.getSizeInBits() &&
+        Hi.getOperand(0).getValueSizeInBits() == VT.getSizeInBits() &&
+        isNullConstant(Lo.getOperand(1)) && isNullConstant(Hi.getOperand(1))) {
+      unsigned NumElts = VT.getVectorNumElements();
+      unsigned HalfElts = NumElts / 2;
+      SmallVector<int, 8> ConcatMask(NumElts);
+      std::iota(ConcatMask.begin(), ConcatMask.begin() + HalfElts, 0);
+      std::iota(ConcatMask.begin() + HalfElts, ConcatMask.end(), NumElts);
+      return DAG.getVectorShuffle(
+          VT, SDLoc(N), DAG.getBitcast(VT, Lo.getOperand(0)),
+          DAG.getBitcast(VT, Hi.getOperand(0)), ConcatMask);
+    }
+  }
+
   return SDValue();
 }
 
