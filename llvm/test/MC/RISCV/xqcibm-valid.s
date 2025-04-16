@@ -1,5 +1,5 @@
 # Xqcibm - Qualcomm uC Bit Manipulation Extension
-# RUN: llvm-mc %s -triple=riscv32 -mattr=+experimental-xqcibm -riscv-no-aliases -show-encoding \
+# RUN: llvm-mc %s -triple=riscv32 -mattr=+experimental-xqcibm -M no-aliases -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-ENC,CHECK-INST %s
 # RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+experimental-xqcibm < %s \
 # RUN:     | llvm-objdump --mattr=+experimental-xqcibm -M no-aliases --no-print-imm-hex -d - \

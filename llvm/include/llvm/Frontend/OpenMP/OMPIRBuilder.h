@@ -489,9 +489,10 @@ public:
   public:
     AtomicInfo(IRBuilder<> *Builder, llvm::Type *Ty, uint64_t AtomicSizeInBits,
                uint64_t ValueSizeInBits, llvm::Align AtomicAlign,
-               llvm::Align ValueAlign, bool UseLibcall, llvm::Value *AtomicVar)
+               llvm::Align ValueAlign, bool UseLibcall,
+               IRBuilderBase::InsertPoint AllocaIP, llvm::Value *AtomicVar)
         : llvm::AtomicInfo(Builder, Ty, AtomicSizeInBits, ValueSizeInBits,
-                           AtomicAlign, ValueAlign, UseLibcall),
+                           AtomicAlign, ValueAlign, UseLibcall, AllocaIP),
           AtomicVar(AtomicVar) {}
 
     llvm::Value *getAtomicPointer() const override { return AtomicVar; }
@@ -1907,8 +1908,6 @@ public:
   ///                           nowait.
   /// \param IsTeamsReduction   Optional flag set if it is a teams
   ///                           reduction.
-  /// \param HasDistribute      Optional flag set if it is a
-  ///                           distribute reduction.
   /// \param GridValue          Optional GPU grid value.
   /// \param ReductionBufNum    Optional OpenMPCUDAReductionBufNumValue to be
   /// used for teams reduction.
@@ -1917,7 +1916,6 @@ public:
       const LocationDescription &Loc, InsertPointTy AllocaIP,
       InsertPointTy CodeGenIP, ArrayRef<ReductionInfo> ReductionInfos,
       bool IsNoWait = false, bool IsTeamsReduction = false,
-      bool HasDistribute = false,
       ReductionGenCBKind ReductionGenCBKind = ReductionGenCBKind::MLIR,
       std::optional<omp::GV> GridValue = {}, unsigned ReductionBufNum = 1024,
       Value *SrcLocInfo = nullptr);
@@ -1985,11 +1983,14 @@ public:
   /// \param IsNoWait           A flag set if the reduction is marked as nowait.
   /// \param IsByRef            A flag set if the reduction is using reference
   /// or direct value.
+  /// \param IsTeamsReduction   Optional flag set if it is a teams
+  ///                           reduction.
   InsertPointOrErrorTy createReductions(const LocationDescription &Loc,
                                         InsertPointTy AllocaIP,
                                         ArrayRef<ReductionInfo> ReductionInfos,
                                         ArrayRef<bool> IsByRef,
-                                        bool IsNoWait = false);
+                                        bool IsNoWait = false,
+                                        bool IsTeamsReduction = false);
 
   ///}
 
@@ -2273,6 +2274,8 @@ public:
     int32_t MinTeams = 1;
     SmallVector<int32_t, 3> MaxThreads = {-1};
     int32_t MinThreads = 1;
+    int32_t ReductionDataSize = 0;
+    int32_t ReductionBufferLength = 0;
   };
 
   /// Container to pass LLVM IR runtime values or constants related to the
@@ -3268,11 +3271,12 @@ public:
   /// 					    value
   /// \param AO			Atomic ordering of the generated atomic
   /// 					    instructions.
-  ///
+  /// \param AllocaIP           Insert point for allocas
+  //
   /// \return Insertion point after generated atomic read IR.
   InsertPointTy createAtomicRead(const LocationDescription &Loc,
                                  AtomicOpValue &X, AtomicOpValue &V,
-                                 AtomicOrdering AO);
+                                 AtomicOrdering AO, InsertPointTy AllocaIP);
 
   /// Emit atomic write for : X = Expr --- Only Scalar data types.
   ///

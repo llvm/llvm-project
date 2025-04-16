@@ -471,6 +471,10 @@ def OneShotBufferizePass : Pass<"one-shot-bufferize", "ModuleOp"> {
     Statistic<"numTensorOutOfPlace", "num-tensor-out-of-place",
               "Number of out-of-place tensor OpOperands">,
   ];
+
+  let dependentDialects = [
+    "bufferization::BufferizationDialect", "memref::MemRefDialect"
+  ];
 }
 
 def PromoteBuffersToStackPass

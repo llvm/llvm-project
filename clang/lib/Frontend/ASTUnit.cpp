@@ -844,7 +844,7 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromASTFile(
   HeaderSearch &HeaderInfo = *AST->HeaderInfo;
 
   AST->PP = std::make_shared<Preprocessor>(
-      AST->PPOpts, AST->getDiagnostics(), *AST->LangOpts,
+      *AST->PPOpts, AST->getDiagnostics(), *AST->LangOpts,
       AST->getSourceManager(), HeaderInfo, AST->ModuleLoader,
       /*IILookup=*/nullptr,
       /*OwnsHeaderSearch=*/false);
