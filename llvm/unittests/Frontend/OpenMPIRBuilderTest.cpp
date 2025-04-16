@@ -1440,6 +1440,16 @@ TEST_F(OpenMPIRBuilderTest, CanonicalLoopSimple) {
 
   EXPECT_EQ(&Loop->getAfter()->front(), RetInst);
 }
+void createScan(llvm::Value *scanVar, llvm::Type *scanType,
+                OpenMPIRBuilder &OMPBuilder, IRBuilder<> &Builder,
+                OpenMPIRBuilder::LocationDescription Loc,
+                OpenMPIRBuilder::InsertPointTy &allocaIP) {
+  using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
+  ASSERT_EXPECTED_INIT(
+      InsertPointTy, retIp,
+      OMPBuilder.createScan(Loc, allocaIP, {scanVar}, {scanType}, true));
+  Builder.restoreIP(retIp);
+}
 
 TEST_F(OpenMPIRBuilderTest, CanonicalLoopTripCount) {
   OpenMPIRBuilder OMPBuilder(*M);
@@ -5334,6 +5344,62 @@ TEST_F(OpenMPIRBuilderTest, CreateReductions) {
   Value *FirstRHS;
   Value *SecondRHS;
   EXPECT_TRUE(findGEPZeroOne(ReductionFn->getArg(1), FirstRHS, SecondRHS));
+}
+
+TEST_F(OpenMPIRBuilderTest, ScanReduction) {
+  using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
+  OpenMPIRBuilder OMPBuilder(*M);
+  OMPBuilder.initialize();
+  IRBuilder<> Builder(BB);
+  OpenMPIRBuilder::LocationDescription Loc({Builder.saveIP(), DL});
+  Value *TripCount = F->getArg(0);
+  Type *LCTy = TripCount->getType();
+  Value *StartVal = ConstantInt::get(LCTy, 1);
+  Value *StopVal = ConstantInt::get(LCTy, 100);
+  Value *Step = ConstantInt::get(LCTy, 1);
+  auto allocaIP = Builder.saveIP();
+
+  llvm::Value *scanVar = Builder.CreateAlloca(Builder.getFloatTy());
+  llvm::Value *origVar = Builder.CreateAlloca(Builder.getFloatTy());
+  unsigned NumBodiesGenerated = 0;
+  auto LoopBodyGenCB = [&](InsertPointTy CodeGenIP, llvm::Value *LC) {
+    NumBodiesGenerated += 1;
+    Builder.restoreIP(CodeGenIP);
+    createScan(scanVar, Builder.getFloatTy(), OMPBuilder, Builder, Loc,
+               allocaIP);
+    return Error::success();
+  };
+  SmallVector<CanonicalLoopInfo *> Loops;
+  ASSERT_EXPECTED_INIT(SmallVector<CanonicalLoopInfo *>, loopsVec,
+                       OMPBuilder.createCanonicalScanLoops(
+                           Loc, LoopBodyGenCB, StartVal, StopVal, Step, false,
+                           false, Builder.saveIP(), "scan"));
+  Loops = loopsVec;
+  EXPECT_EQ(Loops.size(), 2U);
+  CanonicalLoopInfo *InputLoop = Loops.front();
+  CanonicalLoopInfo *ScanLoop = Loops.back();
+  Builder.restoreIP(ScanLoop->getAfterIP());
+  InputLoop->assertOK();
+  ScanLoop->assertOK();
+
+  EXPECT_EQ(InputLoop->getPreheader()->getSinglePredecessor(),
+            &F->getEntryBlock());
+  EXPECT_EQ(ScanLoop->getAfter(), Builder.GetInsertBlock());
+  EXPECT_EQ(NumBodiesGenerated, 2U);
+  SmallVector<OpenMPIRBuilder::ReductionInfo> reductionInfos = {
+      {Builder.getFloatTy(), origVar, scanVar,
+       /*EvaluationKind=*/OpenMPIRBuilder::EvalKind::Scalar, sumReduction,
+       /*ReductionGenClang=*/nullptr, sumAtomicReduction}};
+  OpenMPIRBuilder::LocationDescription RedLoc({InputLoop->getAfterIP(), DL});
+  llvm::BasicBlock *Cont = splitBB(Builder, false, "omp.scan.loop.cont");
+  ASSERT_EXPECTED_INIT(InsertPointTy, retIp,
+                       OMPBuilder.emitScanReduction(RedLoc, reductionInfos));
+  Builder.restoreIP(retIp);
+  Builder.CreateBr(Cont);
+  SmallVector<CallInst *> MaskedCalls;
+  findCalls(F, omp::RuntimeFunction::OMPRTL___kmpc_masked, OMPBuilder,
+            MaskedCalls);
+  ASSERT_EQ(MaskedCalls.size(), 1u);
 }
 
 TEST_F(OpenMPIRBuilderTest, CreateTwoReductions) {
