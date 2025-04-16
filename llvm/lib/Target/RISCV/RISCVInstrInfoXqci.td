@@ -118,6 +118,12 @@ def simm20_li : RISCVOp<XLenVT> {
 
 def simm26 : RISCVSImmLeafOp<26>;
 
+def simm26_nosimm12 : ImmLeaf<XLenVT, [{
+  return isInt<26>(Imm) && !isInt<12>(Imm);}]>;
+
+def simm32_nosimm26 : ImmLeaf<XLenVT, [{
+  return isInt<32>(Imm) && !isInt<26>(Imm);}]>;
+
 class BareSImmNAsmOperand<int width>
     : ImmAsmOperand<"BareS", width, ""> {
   let PredicateMethod = "isBareSimmN<" # width # ">";
@@ -1222,6 +1228,30 @@ def PseudoQC_E_SW : PseudoStore<"qc.e.sw">;
 //===----------------------------------------------------------------------===//
 // Code Gen Patterns
 //===----------------------------------------------------------------------===//
+
+/// Generic pattern classes
+
+class PatGprNoX0Simm26NoSimm12<SDPatternOperator OpNode, RVInst48 Inst>
+    : Pat<(i32 (OpNode (i32 GPRNoX0:$rs1), simm26_nosimm12:$imm)),
+          (Inst GPRNoX0:$rs1, simm26_nosimm12:$imm)>;
+
+class PatGprNoX0Simm32NoSimm26<SDPatternOperator OpNode, RVInst48 Inst>
+    : Pat<(i32 (OpNode (i32 GPRNoX0:$rs1), simm32_nosimm26:$imm)),
+          (Inst GPRNoX0:$rs1, simm32_nosimm26:$imm)>;
+
+/// Simple arithmetic operations
+
+let Predicates = [HasVendorXqcilia, IsRV32] in {
+def : PatGprNoX0Simm32NoSimm26<add, QC_E_ADDAI>;
+def : PatGprNoX0Simm32NoSimm26<and, QC_E_ANDAI>;
+def : PatGprNoX0Simm32NoSimm26<or, QC_E_ORAI>;
+def : PatGprNoX0Simm32NoSimm26<xor, QC_E_XORAI>;
+
+def : PatGprNoX0Simm26NoSimm12<add, QC_E_ADDI>;
+def : PatGprNoX0Simm26NoSimm12<and, QC_E_ANDI>;
+def : PatGprNoX0Simm26NoSimm12<or, QC_E_ORI>;
+def : PatGprNoX0Simm26NoSimm12<xor, QC_E_XORI>;
+} // Predicates = [HasVendorXqcilia, IsRV32]
 
 let Predicates = [HasVendorXqciint, IsRV32] in
 def : Pat<(riscv_mileaveret_glue), (QC_C_MILEAVERET)>;
