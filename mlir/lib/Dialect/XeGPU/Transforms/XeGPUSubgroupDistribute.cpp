@@ -107,10 +107,11 @@ using LaneData = Layout;
 /// LayoutInfo
 ///===----------------------------------------------------------------------===///
 
-/// Helper class for tracking the analysis state of a value. For SGPropagation,
-/// the analysis state is simply the lane_layout and lane_data of each value.
-/// Purpose of this analysis to propagate some unique layout for each value in
-/// the program starting from some known values (like DPAS, StoreNd, etc.).
+/// Helper class for tracking the analysis state of a value. For layout
+/// propagation, the analysis state is simply the lane_layout and lane_data of
+/// each value. Purpose of this analysis to propagate some unique layout for
+/// each value in the program starting from a set of anchor operations (like
+/// DPAS, StoreNd, etc.).
 ///
 /// Given this, LayoutInfo satisifies the following properties:
 ///  1) LayoutInfo is a lattice with two states - assigned and not assigned.
@@ -173,7 +174,7 @@ LayoutInfo LayoutInfo::meet(const LayoutInfo &lhs, const LayoutInfo &rhs) {
 
 /// Since this is a backward analysis, join method is not used.
 LayoutInfo LayoutInfo::join(const LayoutInfo &lhs, const LayoutInfo &rhs) {
-  llvm_unreachable("Join should not be triggered by SGMapPropagation.");
+  llvm_unreachable("Join should not be triggered by layout propagation.");
 }
 
 /// Get the transposed layout according to the given permutation.
@@ -564,14 +565,15 @@ void LayoutInfoPropagation::visitStoreScatterOp(
     xegpu::StoreScatterOp storeScatter, ArrayRef<LayoutInfoLattice *> operands,
     ArrayRef<const LayoutInfoLattice *> results) {
   /// Currently, for 2D StoreScatterOp we expect that the height dimension of
-  /// the tensor descriptor is evenly divisible by the subgroup size.
-  /// TODO: Add support for other 2D shapes.
+  /// the tensor descriptor is equal to the subgroup size. This is ensured by
+  /// the op verifier.
   auto tdescShape = storeScatter.getTensorDescType().getShape();
-  if (tdescShape.size() > 1 && tdescShape[0] % subgroupSize != 0) {
-    storeScatter.emitError("Height dimension of the tensor descriptor should "
-                           "be evenly divisible by the subgroup size.");
-    return;
-  }
+  if (tdescShape.size() > 1)
+    assert(
+        tdescShape[0] == subgroupSize &&
+        "Expected the first dimension of 2D tensor descriptor to be equal to "
+        "subgroup size.");
+
   auto valueLayout = getDefaultLayoutInfo(storeScatter.getValueType());
   LayoutInfo storeScatterLayout = valueLayout;
   if (storeScatter.getTranspose()) {
@@ -732,7 +734,7 @@ static LogicalResult attachLayoutAttributes(
         return WalkResult::interrupt();
       }
 
-      /// Clone the op, attach the sg_map to the result tensor descriptor, and
+      /// Clone the op, attach the layout to the result tensor descriptor, and
       /// remove the original op.
       OpBuilder builder(op);
       auto *newOp = builder.clone(*op);
@@ -976,7 +978,7 @@ struct MoveFuncBodyToWarpExecuteOnLane0
 /// Example:
 ///
 /// ```
-///   #sg_map_8 = #xegpu.sg_map<wi_layout = [1, 8], wi_data = [1, 1]>
+///   #layout_8 = #xegpu.layout<wi_layout = [1, 8], wi_data = [1, 1]>
 ///   %r = gpu.warp_execute_on_lane_0(%laneid) ->
 ///                   (!xegpu.tensor_desc<4x8xf32>) {
 ///     ...
@@ -1019,7 +1021,7 @@ struct CreateNdDescDistribution final : public gpu::WarpDistributionPattern {
     xegpu::LayoutAttr layout = descOp.getType().getLayoutAttr();
     if (!layout)
       return rewriter.notifyMatchFailure(
-          descOp, "the tensor descriptor lacks sg_map attribute");
+          descOp, "the tensor descriptor lacks layout attribute");
 
     SmallVector<size_t> newRetIndices;
     SmallVector<Value> newYieldValues;
@@ -1055,12 +1057,12 @@ struct CreateNdDescDistribution final : public gpu::WarpDistributionPattern {
 /// Sink a store_nd op at the end of enclosing `gpu.warp_execute_on_lane_0`.
 /// In case arguments for the store are passed through the warp op interface
 /// they would be propagated as returned values. Only the source vector for
-/// the store is distributed according to sg_map attribute.
+/// the store is distributed according to layout attribute.
 ///
 /// Example:
 ///
 /// ```
-///   #sg_map_8 = #xegpu.sg_map<wi_layout = [1, 8], wi_data = [1, 1]>
+///   #layout_8 = #xegpu.layout<wi_layout = [1, 8], wi_data = [1, 1]>
 ///   gpu.warp_execute_on_lane_0(%laneid) -> () {
 ///     ...
 ///     xegpu.store_nd %arg0, %arg1: vector<4x8xf32>,
@@ -1091,7 +1093,7 @@ struct StoreNdDistribution final : public gpu::WarpDistributionPattern {
     xegpu::LayoutAttr layout = tensorDescTy.getLayoutAttr();
     if (!layout)
       return rewriter.notifyMatchFailure(
-          storeOp, "the source tensor descriptor lacks sg_map attribute");
+          storeOp, "the source tensor descriptor lacks layout attribute");
 
     auto distributedTypeByWarpOpOrFailure =
         getDistVecTypeBasedOnLaneLayout(layout, storeOp.getValueType());
@@ -1146,13 +1148,13 @@ struct StoreNdDistribution final : public gpu::WarpDistributionPattern {
 /// The warp op will still contain the original op that will not be used by
 /// the yield op (and should be cleaned up later with dce). The yield op will
 /// bypass the load's arguments. Only the loaded vector is distributed
-/// according to sg_map attribute and, tensor descriptor types is not
+/// according to layout attribute and, tensor descriptor types is not
 /// distributed.
 ///
 /// Example:
 ///
 /// ```
-///   #sg_map_8 = #xegpu.sg_map<wi_layout = [1, 8], wi_data = [1, 1]>
+///   #layout_8 = #xegpu.layout<wi_layout = [1, 8], wi_data = [1, 1]>
 ///   %r = gpu.warp_execute_on_lane_0(%laneid) ->
 ///                   (vector<4x1xf32>) {
 ///     ...
@@ -1186,7 +1188,7 @@ struct LoadNdDistribution final : public gpu::WarpDistributionPattern {
     xegpu::LayoutAttr layout = tensorDescTy.getLayoutAttr();
     if (!layout)
       return rewriter.notifyMatchFailure(
-          loadOp, "the source tensor descriptor lacks sg_map attribute");
+          loadOp, "the source tensor descriptor lacks layout attribute");
 
     unsigned operandIdx = operand->getOperandNumber();
     VectorType distributedTypeByWarpOp =
