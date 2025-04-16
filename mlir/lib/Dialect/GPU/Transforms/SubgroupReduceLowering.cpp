@@ -463,7 +463,7 @@ std::optional<Value> createSubgroupDPPReduction(OpBuilder &b, Location loc,
                                       res, dppResult);
   };
 
-  for (unsigned cs = 2; cs <= ci.clusterSize; cs = cs << 1) {
+  for (unsigned cs = 2; cs <= ci.clusterSize; cs <<= 1) {
     if (auto dpp = dppReduceAcrossLanes(cs, result)) {
       result = *dpp;
       continue;
