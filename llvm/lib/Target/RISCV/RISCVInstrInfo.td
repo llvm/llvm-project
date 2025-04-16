@@ -280,7 +280,7 @@ def bare_simm13_lsb0 : Operand<OtherVT> {
   let ParserMatchClass = BareSImmNLsb0AsmOperand<13>;
   let PrintMethod = "printBranchOperand";
   let EncoderMethod = "getImmOpValueAsrN<1>";
-  let DecoderMethod = "decodeSImmOperandAndLsl1<13>";
+  let DecoderMethod = "decodeSImmOperandAndLslN<13, 1>";
   let MCOperandPredicate = [{
     int64_t Imm;
     if (MCOp.evaluateAsConstantImm(Imm))
@@ -317,7 +317,7 @@ def simm21_lsb0_jal : Operand<OtherVT> {
   let ParserMatchClass = Simm21Lsb0JALAsmOperand;
   let PrintMethod = "printBranchOperand";
   let EncoderMethod = "getImmOpValueAsrN<1>";
-  let DecoderMethod = "decodeSImmOperandAndLsl1<21>";
+  let DecoderMethod = "decodeSImmOperandAndLslN<21, 1>";
   let MCOperandPredicate = [{
     int64_t Imm;
     if (MCOp.evaluateAsConstantImm(Imm))

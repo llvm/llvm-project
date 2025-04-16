@@ -459,13 +459,6 @@ static DecodeStatus decodeSImmOperandAndLslN(MCInst &Inst, uint64_t Imm,
   return MCDisassembler::Success;
 }
 
-template <unsigned T>
-static DecodeStatus decodeSImmOperandAndLsl1(MCInst &Inst, uint32_t Imm,
-                                             int64_t Address,
-                                             const MCDisassembler *Decoder) {
-  return decodeSImmOperandAndLslN<T, 1>(Inst, Imm, Address, Decoder);
-}
-
 static DecodeStatus decodeCLUIImmOperand(MCInst &Inst, uint32_t Imm,
                                          int64_t Address,
                                          const MCDisassembler *Decoder) {
