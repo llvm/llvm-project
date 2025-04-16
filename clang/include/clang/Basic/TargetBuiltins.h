@@ -141,6 +141,17 @@ namespace clang {
   };
   }
 
+  /// DirectX builtins
+  namespace DirectX {
+  enum {
+    LastTIBuiltin = clang::Builtin::FirstTSBuiltin - 1,
+#define GET_BUILTIN_ENUMERATORS
+#include "clang/Basic/BuiltinsDirectX.inc"
+#undef GET_BUILTIN_ENUMERATORS
+    LastTSBuiltin
+  };
+  } // namespace DirectX
+
   /// SPIRV builtins
   namespace SPIRV {
   enum {

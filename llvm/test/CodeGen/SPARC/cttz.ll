@@ -3,6 +3,8 @@
 ; RUN: llc < %s -mtriple=sparcv9 -mattr=popc | FileCheck %s -check-prefix=POPC
 ; RUN: llc < %s -mtriple=sparcv9 -mattr=vis3 | FileCheck %s -check-prefix=VIS3
 
+;; FIXME the V9 versions should be a libcall.
+
 define i32 @i32_nopoison(i32 %x) nounwind {
 ; V9-LABEL: i32_nopoison:
 ; V9:       ! %bb.0:

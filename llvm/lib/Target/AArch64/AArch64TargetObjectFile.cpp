@@ -25,6 +25,9 @@ using namespace dwarf;
 void AArch64_ELFTargetObjectFile::Initialize(MCContext &Ctx,
                                              const TargetMachine &TM) {
   TargetLoweringObjectFileELF::Initialize(Ctx, TM);
+  PLTRelativeSpecifier = AArch64MCExpr::VK_PLT;
+  SupportIndirectSymViaGOTPCRel = true;
+
   // AARCH64 ELF ABI does not define static relocation type for TLS offset
   // within a module.  Do not generate AT_location for TLS variables.
   SupportDebugThreadLocalLocation = false;
@@ -58,7 +61,7 @@ const MCExpr *AArch64_ELFTargetObjectFile::getIndirectSymViaGOTPCRel(
     int64_t Offset, MachineModuleInfo *MMI, MCStreamer &Streamer) const {
   int64_t FinalOffset = Offset + MV.getConstant();
   const MCExpr *Res =
-      MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_GOTPCREL, getContext());
+      MCSymbolRefExpr::create(Sym, AArch64MCExpr::VK_GOTPCREL, getContext());
   const MCExpr *Off = MCConstantExpr::create(FinalOffset, getContext());
   return MCBinaryExpr::createAdd(Res, Off, getContext());
 }
@@ -77,7 +80,7 @@ const MCExpr *AArch64_MachoTargetObjectFile::getTTypeGlobalReference(
   if (Encoding & (DW_EH_PE_indirect | DW_EH_PE_pcrel)) {
     const MCSymbol *Sym = TM.getSymbol(GV);
     const MCExpr *Res =
-        MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_GOT, getContext());
+        MCSymbolRefExpr::create(Sym, AArch64MCExpr::M_GOT, getContext());
     MCSymbol *PCSym = getContext().createTempSymbol();
     Streamer.emitLabel(PCSym);
     const MCExpr *PC = MCSymbolRefExpr::create(PCSym, getContext());
@@ -102,7 +105,7 @@ const MCExpr *AArch64_MachoTargetObjectFile::getIndirectSymViaGOTPCRel(
   // On ARM64 Darwin, we can reference symbols with foo@GOT-., which
   // is an indirect pc-relative reference.
   const MCExpr *Res =
-      MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_GOT, getContext());
+      MCSymbolRefExpr::create(Sym, AArch64MCExpr::M_GOT, getContext());
   MCSymbol *PCSym = getContext().createTempSymbol();
   Streamer.emitLabel(PCSym);
   const MCExpr *PC = MCSymbolRefExpr::create(PCSym, getContext());
