@@ -211,21 +211,18 @@ public:
 /// are not linearizable.
 bool isLinearizableVector(VectorType type);
 
-/// Create a TransferReadOp from `source` with static shape `readShape`. If the
-/// vector type for the read is not the same as the type of `source`, then a
-/// mask is created on the read, if use of mask is specified or the bounds on a
-/// dimension are different.
+/// Creates a TransferReadOp from `source`.
 ///
-/// `useInBoundsInsteadOfMasking` if false, the inBoundsVal values are set
-/// properly, based on
-///   the rank dimensions of the source and destination tensors. And that is
-///   what determines if masking is done.
+/// The shape of the vector to read is specified via `inputVectorSizes`. If the
+/// shape of the output vector differs from the shape of the value being read,
+/// masking is used to avoid out-of-bounds accesses. Set
+/// `useInBoundsInsteadOfMasking` to `true` to use the "in_bounds" attribute
+/// instead of explicit masks.
 ///
-/// Note that the internal `vector::TransferReadOp` always read at indices zero
-/// for each dimension of the passed in tensor.
+/// Note: all read offsets are set to 0.
 Value createReadOrMaskedRead(OpBuilder &builder, Location loc, Value source,
-                             ArrayRef<int64_t> readShape, Value padValue,
-                             bool useInBoundsInsteadOfMasking);
+                             ArrayRef<int64_t> inputVectorSizes, Value padValue,
+                             bool useInBoundsInsteadOfMasking = false);
 
 /// Returns success if `inputVectorSizes` is a valid masking configuraion for
 /// given `shape`, i.e., it meets:
