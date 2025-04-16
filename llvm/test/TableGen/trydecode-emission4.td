@@ -1,4 +1,4 @@
-// RUN: llvm-tblgen -gen-disassembler --num-to-skip-size=3 -I %p/../../include %s | FileCheck %s
+// RUN: llvm-tblgen -gen-disassembler -I %p/../../include %s | FileCheck %s
 
 // Test for OPC_ExtractField/OPC_CheckField with start bit > 255.
 // These large start values may arise for architectures with long instruction
