@@ -45,6 +45,10 @@ public:
     setInsertPoint(InsertPt);
   }
 
+  CFIInstBuilder(MachineBasicBlock *MBB, MachineInstr::MIFlag MIFlag,
+                 bool IsEH = true)
+      : CFIInstBuilder(*MBB, MBB->end(), MIFlag, IsEH) {}
+
   void setInsertPoint(MachineBasicBlock::iterator IP) { InsertPt = IP; }
 
   void insertCFIInst(const MCCFIInstruction &CFIInst) const {
@@ -72,8 +76,24 @@ public:
         nullptr, TRI.getDwarfRegNum(Reg, IsEH), Offset));
   }
 
+  void buildRegister(MCRegister Reg1, MCRegister Reg2) const {
+    insertCFIInst(MCCFIInstruction::createRegister(
+        nullptr, TRI.getDwarfRegNum(Reg1, IsEH),
+        TRI.getDwarfRegNum(Reg2, IsEH)));
+  }
+
   void buildRestore(MCRegister Reg) const {
     insertCFIInst(MCCFIInstruction::createRestore(
+        nullptr, TRI.getDwarfRegNum(Reg, IsEH)));
+  }
+
+  void buildUndefined(MCRegister Reg) const {
+    insertCFIInst(MCCFIInstruction::createUndefined(
+        nullptr, TRI.getDwarfRegNum(Reg, IsEH)));
+  }
+
+  void buildSameValue(MCRegister Reg) const {
+    insertCFIInst(MCCFIInstruction::createSameValue(
         nullptr, TRI.getDwarfRegNum(Reg, IsEH)));
   }
 
