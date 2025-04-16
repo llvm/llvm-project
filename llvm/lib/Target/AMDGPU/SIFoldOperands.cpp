@@ -1092,7 +1092,8 @@ void SIFoldOperandsImpl::foldOperand(
   } else {
     if (UseMI->isCopy() && OpToFold.isReg() &&
         UseMI->getOperand(0).getReg().isVirtual() &&
-        !UseMI->getOperand(1).getSubReg()) {
+        !UseMI->getOperand(1).getSubReg() &&
+        !OpToFold.getParent()->hasRegisterImplicitUseOperand(AMDGPU::EXEC)) {
       LLVM_DEBUG(dbgs() << "Folding " << OpToFold << "\n into " << *UseMI);
       unsigned Size = TII->getOpSize(*UseMI, 1);
       Register UseReg = OpToFold.getReg();

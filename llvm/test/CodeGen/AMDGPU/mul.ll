@@ -2619,13 +2619,13 @@ define amdgpu_kernel void @s_mul_i128(ptr addrspace(1) %out, [8 x i32], i128 %a,
 ; SI-NEXT:    v_add_i32_e32 v0, vcc, s4, v0
 ; SI-NEXT:    v_add_i32_e32 v0, vcc, s5, v0
 ; SI-NEXT:    s_mul_i32 s5, s14, s9
-; SI-NEXT:    s_mul_i32 s4, s12, s10
 ; SI-NEXT:    v_add_i32_e32 v1, vcc, s5, v1
 ; SI-NEXT:    s_mul_i32 s5, s15, s8
 ; SI-NEXT:    v_add_i32_e32 v1, vcc, s5, v1
 ; SI-NEXT:    s_mul_i32 s5, s14, s8
-; SI-NEXT:    v_mov_b32_e32 v2, s4
-; SI-NEXT:    v_add_i32_e32 v2, vcc, s5, v2
+; SI-NEXT:    s_mul_i32 s4, s12, s10
+; SI-NEXT:    v_mov_b32_e32 v2, s5
+; SI-NEXT:    v_add_i32_e32 v2, vcc, s4, v2
 ; SI-NEXT:    v_addc_u32_e32 v0, vcc, v1, v0, vcc
 ; SI-NEXT:    v_mov_b32_e32 v1, s12
 ; SI-NEXT:    v_mul_hi_u32 v5, s8, v1
