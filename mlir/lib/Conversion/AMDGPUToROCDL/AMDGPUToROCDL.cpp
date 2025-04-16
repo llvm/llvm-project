@@ -1293,7 +1293,6 @@ struct AMDGPUDPPLowering : public ConvertOpToLLVMPattern<DPPOp> {
       ROW_HALF_MIRROR = 0x141,
       BCAST15 = 0x142,
       BCAST31 = 0x143,
-      ROW_SHARE0 = 0x150
     };
 
     auto kind = DppOp.getKind();
@@ -1350,11 +1349,6 @@ struct AMDGPUDPPLowering : public ConvertOpToLLVMPattern<DPPOp> {
       break;
     case DPPPerm::row_bcast_31:
       DppCtrl = DppCtrl::BCAST31;
-      break;
-    case DPPPerm::row_share:
-      if (auto intAttr = cast<IntegerAttr>(*permArgument)) {
-        DppCtrl = intAttr.getInt() + DppCtrl::ROW_SHARE0;
-      }
       break;
     }
 

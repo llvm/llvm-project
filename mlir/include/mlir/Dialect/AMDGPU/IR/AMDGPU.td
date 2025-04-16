@@ -524,8 +524,7 @@ def AMDGPU_DPPPerm : I32EnumAttr<"DPPPerm",
       I32EnumAttrCase<"row_mirror", 8>,
       I32EnumAttrCase<"row_half_mirror", 9>,
       I32EnumAttrCase<"row_bcast_15", 10>,
-      I32EnumAttrCase<"row_bcast_31", 11>,
-      I32EnumAttrCase<"row_share", 12>
+      I32EnumAttrCase<"row_bcast_31", 11>
     ]> {
   let genSpecializedAttr = 0;
   let cppNamespace = "::mlir::amdgpu";
@@ -558,7 +557,6 @@ def AMDGPU_DPPOp : AMDGPU_Op<"dpp", [SameTypeOperands, AllTypesMatch<["result", 
     - Reverse within a half-row (`row_half_mirror`)
     - Broadcast the 15th lane of each row to the next row (`row_bcast`)
     - Broadcast lane 31 to rows 2 and 3 (`row_bcast`)
-    - Broadcast a lane [0-15] within row 0 to all lanes of row 0 (`row_share`)
   }];
   let results = (outs AnyType:$result);
   let assemblyFormat = [{

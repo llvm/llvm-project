@@ -366,7 +366,7 @@ private:
   bool matchClustered = false;
 };
 
-Value createSubgroupDPPReduction(OpBuilder &b, Location loc, Value input,
+std::optional<Value> createSubgroupDPPReduction(OpBuilder &b, Location loc, Value input,
                                  gpu::AllReduceOperation mode,
                                  const ClusterInfo &ci,
                                  amdgpu::Chipset chipset) {
@@ -418,12 +418,8 @@ Value createSubgroupDPPReduction(OpBuilder &b, Location loc, Value input,
       dppResult = b.create<amdgpu::DPPOp>(
           loc, result.getType(), result, result, amdgpu::DPPPerm::row_bcast_15,
           b.getUnitAttr(), 0xa, allBanks, /*bound_ctrl*/ false);
-    } else if (chipset.majorVersion >= 10) {
-      Value uIntMaxConst = b.create<arith::ConstantOp>(loc, b.getI32Type(),
-                                                       b.getI32IntegerAttr(-1));
-      dppResult = b.create<ROCDL::PermlaneX16Op>(
-          loc, input.getType(), result, result, uIntMaxConst, uIntMaxConst,
-          true, false);
+    } else {
+      return std::nullopt;
     }
     result = vector::makeArithReduction(b, loc, gpu::convertReductionKind(mode),
                                         result, dppResult);
@@ -479,9 +475,14 @@ struct ScalarSubgroupReduceToDPP final
           op, "value type is not a compatible scalar");
 
     Location loc = op.getLoc();
-    rewriter.replaceOp(op,
-                       createSubgroupDPPReduction(rewriter, loc, op.getValue(),
-                                                  op.getOp(), *ci, chipset));
+    std::optional<Value> dpp = createSubgroupDPPReduction(
+        rewriter, loc, op.getValue(), op.getOp(), *ci, chipset);
+    if (!dpp)
+      return rewriter.notifyMatchFailure(
+          op, "Subgroup reduce lowering to DPP not currently supported for "
+              "this device.");
+
+    rewriter.replaceOp(op, *dpp);
     return success();
   }
 
