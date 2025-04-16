@@ -1035,7 +1035,7 @@ exit:
 
 ; Test case with a dead GEP between the load and store regions. Dead recipes
 ; need to be removed before merging.
-define void @merge_with_dead_gep_between_regions(i32 %n, ptr noalias %src, ptr noalias %dst) {
+define void @merge_with_dead_gep_between_regions(i32 %n, i32 %k, ptr noalias %src, ptr noalias %dst) {
 ; CHECK-LABEL: LV: Checking a loop in 'merge_with_dead_gep_between_regions'
 ; CHECK:      VPlan 'Initial VPlan for VF={2},UF>=1' {
 ; CHECK-NEXT: Live-in vp<[[VF:%.+]]> = VF
@@ -1052,17 +1052,33 @@ define void @merge_with_dead_gep_between_regions(i32 %n, ptr noalias %src, ptr n
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <x1> vector loop: {
 ; CHECK-NEXT:   vector.body:
-; CHECK-NEXT:     EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
+; CHECK-NEXT:     EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
+; CHECK-NEXT:     ir<%iv> = WIDEN-INDUCTION ir<%n>, ir<-1>, vp<[[VF]]>
 ; CHECK-NEXT:     vp<[[DERIVED_IV:%.+]]> = DERIVED-IV ir<%n> + vp<[[CAN_IV]]> * ir<-1>
-; CHECK-NEXT:     vp<[[SCALAR_STEPS:%.+]]> = SCALAR-STEPS vp<[[DERIVED_IV]]>, ir<-1>, vp<[[VF]]>
-; CHECK-NEXT:     CLONE ir<%gep.src> = getelementptr inbounds ir<%src>, vp<[[SCALAR_STEPS]]>
-; CHECK-NEXT:     vp<[[SRC_END:%.+]]> = vector-end-pointer inbounds ir<%gep.src>, vp<[[VF]]>
-; CHECK-NEXT:     WIDEN ir<%l> = load vp<[[SRC_END]]>
-; CHECK-NEXT:     CLONE ir<%gep.dst> = getelementptr inbounds ir<%dst>, vp<[[SCALAR_STEPS]]>
-; CHECK-NEXT:     vp<[[DST_END:%.+]]> = vector-end-pointer inbounds ir<%gep.dst>, vp<[[VF]]>
-; CHECK-NEXT:     WIDEN store vp<[[DST_END]]>, ir<%l>
-; CHECK-NEXT:     EMIT vp<%index.next> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
-; CHECK-NEXT:     EMIT branch-on-count vp<%index.next>, vp<[[VEC_TC]]>
+; CHECK-NEXT:     WIDEN ir<%cond> = icmp ult ir<%iv>, ir<%k>
+; CHECK-NEXT:   Successor(s): pred.store
+; CHECK-EMPTY:
+; CHECK-NEXT:   <xVFxUF> pred.store: {
+; CHECK-NEXT:     pred.store.entry:
+; CHECK-NEXT:       BRANCH-ON-MASK ir<%cond>
+; CHECK-NEXT:     Successor(s): pred.store.if, pred.store.continue
+; CHECK-EMPTY:
+; CHECK-NEXT:     pred.store.if:
+; CHECK-NEXT:       vp<[[SCALAR_STEPS:%.+]]>    = SCALAR-STEPS vp<[[DERIVED_IV]]>, ir<-1>, vp<[[VF]]>
+; CHECK-NEXT:       REPLICATE ir<%gep.src> = getelementptr inbounds ir<%src>, vp<[[SCALAR_STEPS]]>
+; CHECK-NEXT:       REPLICATE ir<%l> = load ir<%gep.src>
+; CHECK-NEXT:       REPLICATE ir<%gep.dst> = getelementptr inbounds ir<%dst>, vp<[[SCALAR_STEPS]]>
+; CHECK-NEXT:       REPLICATE store ir<%l>, ir<%gep.dst>
+; CHECK-NEXT:     Successor(s): pred.store.continue
+; CHECK-EMPTY:
+; CHECK-NEXT:     pred.store.continue:
+; CHECK-NEXT:     No successors
+; CHECK-NEXT:   }
+; CHECK-NEXT:   Successor(s): loop.then.1
+; CHECK-EMPTY:
+; CHECK-NEXT:   loop.then.1:
+; CHECK-NEXT:     EMIT vp<[[CAN_IV_NEXT:%.+]]> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
+; CHECK-NEXT:     EMIT branch-on-count  vp<[[CAN_IV_NEXT]]>, vp<[[VEC_TC]]>
 ; CHECK-NEXT:   No successors
 ; CHECK-NEXT: }
 ; CHECK-NEXT: Successor(s): middle.block
@@ -1077,14 +1093,9 @@ define void @merge_with_dead_gep_between_regions(i32 %n, ptr noalias %src, ptr n
 ; CHECK-NEXT: Successor(s): ir-bb<loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<loop>:
-; CHECK-NEXT:   IR   %iv = phi i32 [ %n, %entry ], [ %iv.next, %loop ] (extra operand: vp<%bc.resume.val> from scalar.ph)
+; CHECK-NEXT:   IR   %iv = phi i32 [ %n, %entry ], [ %iv.next, %loop.latch ] (extra operand: vp<[[RESUME]]> from scalar.ph)
 ; CHECK-NEXT:   IR   %iv.next = add nsw i32 %iv, -1
-; CHECK-NEXT:   IR   %gep.src = getelementptr inbounds i32, ptr %src, i32 %iv
-; CHECK-NEXT:   IR   %l = load i32, ptr %gep.src, align 16
-; CHECK-NEXT:   IR   %dead_gep = getelementptr inbounds i32, ptr %dst, i64 1
-; CHECK-NEXT:   IR   %gep.dst = getelementptr inbounds i32, ptr %dst, i32 %iv
-; CHECK-NEXT:   IR   store i32 %l, ptr %gep.dst, align 16
-; CHECK-NEXT:   IR   %ec = icmp eq i32 %iv.next, 0
+; CHECK-NEXT:   IR   %cond = icmp ult i32 %iv, %k
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<exit>:
@@ -1095,13 +1106,20 @@ entry:
   br label %loop
 
 loop:
-  %iv = phi i32[ %n, %entry ], [ %iv.next, %loop ]
+  %iv = phi i32[ %n, %entry ], [ %iv.next, %loop.latch ]
   %iv.next = add nsw i32 %iv, -1
+  %cond = icmp ult i32 %iv, %k
+  br i1 %cond, label %loop.then, label %loop.latch
+
+loop.then:
   %gep.src = getelementptr inbounds i32, ptr %src, i32 %iv
   %l = load i32, ptr %gep.src, align 16
   %dead_gep = getelementptr inbounds i32, ptr %dst, i64 1
   %gep.dst = getelementptr inbounds i32, ptr %dst, i32 %iv
   store i32 %l, ptr %gep.dst, align 16
+  br label %loop.latch
+
+loop.latch:
   %ec = icmp eq i32 %iv.next, 0
   br i1 %ec, label %exit, label %loop
 
