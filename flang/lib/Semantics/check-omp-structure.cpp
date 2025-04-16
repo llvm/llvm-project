@@ -683,7 +683,7 @@ void OmpStructureChecker::Leave(const parser::OpenMPDeclarativeConstruct &x) {
   ExitDirectiveNest(DeclarativeNest);
 }
 
-void OmpStructureChecker::AddEndStatementClauses(
+void OmpStructureChecker::AddEndDirectiveClauses(
     const parser::OmpClauseList &clauses) {
   for (const parser::OmpClause &clause : clauses.v) {
     GetContext().endDirectiveClauses.push_back(clause.Id());
@@ -705,7 +705,7 @@ void OmpStructureChecker::Enter(const parser::OpenMPLoopConstruct &x) {
 
     CheckMatching<parser::OmpLoopDirective>(beginDir, endDir);
 
-    AddEndStatementClauses(std::get<parser::OmpClauseList>(endLoopDir->t));
+    AddEndDirectiveClauses(std::get<parser::OmpClauseList>(endLoopDir->t));
   }
 
   if (llvm::omp::allSimdSet.test(GetContext().directive)) {
@@ -1440,7 +1440,7 @@ void OmpStructureChecker::Enter(const parser::OpenMPSectionsConstruct &x) {
   CheckMatching<parser::OmpSectionsDirective>(beginDir, endDir);
 
   PushContextAndClauseSets(beginDir.source, beginDir.v);
-  AddEndStatementClauses(std::get<parser::OmpClauseList>(endSectionsDir.t));
+  AddEndDirectiveClauses(std::get<parser::OmpClauseList>(endSectionsDir.t));
 
   const auto &sectionBlocks{std::get<parser::OmpSectionBlocks>(x.t)};
   for (const parser::OpenMPConstruct &block : sectionBlocks.v) {
