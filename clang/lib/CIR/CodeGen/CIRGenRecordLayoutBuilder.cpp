@@ -19,6 +19,7 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
+#include "clang/CIR/Dialect/IR/CIRDataLayout.h"
 #include "llvm/Support/Casting.h"
 
 #include <memory>
@@ -57,7 +58,17 @@ struct CIRRecordLowering final {
   CIRRecordLowering(CIRGenTypes &cirGenTypes, const RecordDecl *recordDecl,
                     bool isPacked);
 
+  /// Constructs a MemberInfo instance from an offset and mlir::Type.
+  MemberInfo makeStorageInfo(CharUnits offset, mlir::Type data) {
+    return MemberInfo(offset, MemberInfo::InfoKind::Field, data);
+  }
+
   void lower();
+
+  /// Determines if we need a packed llvm struct.
+  void determinePacked();
+  /// Inserts padding everywhere it's needed.
+  void insertPadding();
 
   void accumulateFields();
 
@@ -66,12 +77,33 @@ struct CIRRecordLowering final {
   }
 
   CharUnits getSize(mlir::Type Ty) {
-    assert(!cir::MissingFeatures::recordTypeLayoutInfo());
-    return CharUnits::One();
+    return CharUnits::fromQuantity(dataLayout.layout.getTypeSize(Ty));
   }
   CharUnits getAlignment(mlir::Type Ty) {
-    assert(!cir::MissingFeatures::recordTypeLayoutInfo());
-    return CharUnits::One();
+    return CharUnits::fromQuantity(dataLayout.layout.getTypeABIAlignment(Ty));
+  }
+
+  /// Wraps cir::IntType with some implicit arguments.
+  mlir::Type getUIntNType(uint64_t numBits) {
+    unsigned alignedBits = llvm::PowerOf2Ceil(numBits);
+    alignedBits = std::max(8u, alignedBits);
+    return cir::IntType::get(&cirGenTypes.getMLIRContext(), alignedBits,
+                             /*isSigned=*/false);
+  }
+
+  mlir::Type getCharType() {
+    return cir::IntType::get(&cirGenTypes.getMLIRContext(),
+                             astContext.getCharWidth(),
+                             /*isSigned=*/false);
+  }
+
+  mlir::Type getByteArrayType(CharUnits numberOfChars) {
+    assert(!numberOfChars.isZero() && "Empty byte arrays aren't allowed.");
+    mlir::Type type = getCharType();
+    return numberOfChars == CharUnits::One()
+               ? type
+               : cir::ArrayType::get(type.getContext(), type,
+                                     numberOfChars.getQuantity());
   }
 
   mlir::Type getStorageType(const FieldDecl *fieldDecl) {
@@ -100,6 +132,7 @@ struct CIRRecordLowering final {
   // Output fields, consumed by CIRGenTypes::computeRecordLayout
   llvm::SmallVector<mlir::Type, 16> fieldTypes;
   llvm::DenseMap<const FieldDecl *, unsigned> fields;
+  cir::CIRDataLayout dataLayout;
 
   LLVM_PREFERRED_TYPE(bool)
   unsigned zeroInitializable : 1;
@@ -121,6 +154,7 @@ CIRRecordLowering::CIRRecordLowering(CIRGenTypes &cirGenTypes,
       astContext(cirGenTypes.getASTContext()), recordDecl(recordDecl),
       astRecordLayout(
           cirGenTypes.getASTContext().getASTRecordLayout(recordDecl)),
+      dataLayout(cirGenTypes.getCGModule().getModule()),
       zeroInitializable(true), packed(isPacked), padded(false) {}
 
 void CIRRecordLowering::lower() {
@@ -138,17 +172,19 @@ void CIRRecordLowering::lower() {
 
   assert(!cir::MissingFeatures::cxxSupport());
 
+  CharUnits size = astRecordLayout.getSize();
+
   accumulateFields();
 
   llvm::stable_sort(members);
   // TODO: implement clipTailPadding once bitfields are implemented
   assert(!cir::MissingFeatures::bitfields());
-  // TODO: implemented packed records
-  assert(!cir::MissingFeatures::packedRecords());
-  // TODO: implement padding
-  assert(!cir::MissingFeatures::recordPadding());
-  // TODO: support zeroInit
   assert(!cir::MissingFeatures::recordZeroInit());
+
+  members.push_back(makeStorageInfo(size, getUIntNType(8)));
+  determinePacked();
+  insertPadding();
+  members.pop_back();
 
   fillOutputFields();
 }
@@ -184,6 +220,56 @@ void CIRRecordLowering::accumulateFields() {
       ++field;
     }
   }
+}
+
+void CIRRecordLowering::determinePacked() {
+  if (packed)
+    return;
+  CharUnits alignment = CharUnits::One();
+
+  // TODO(cir): handle non-virtual base types
+  assert(!cir::MissingFeatures::cxxSupport());
+
+  for (const MemberInfo &member : members) {
+    if (!member.data)
+      continue;
+    // If any member falls at an offset that it not a multiple of its alignment,
+    // then the entire record must be packed.
+    if (member.offset % getAlignment(member.data))
+      packed = true;
+    alignment = std::max(alignment, getAlignment(member.data));
+  }
+  // If the size of the record (the capstone's offset) is not a multiple of the
+  // record's alignment, it must be packed.
+  if (members.back().offset % alignment)
+    packed = true;
+  // Update the alignment of the sentinel.
+  if (!packed)
+    members.back().data = getUIntNType(astContext.toBits(alignment));
+}
+
+void CIRRecordLowering::insertPadding() {
+  std::vector<std::pair<CharUnits, CharUnits>> padding;
+  CharUnits size = CharUnits::Zero();
+  for (const MemberInfo &member : members) {
+    if (!member.data)
+      continue;
+    CharUnits offset = member.offset;
+    assert(offset >= size);
+    // Insert padding if we need to.
+    if (offset !=
+        size.alignTo(packed ? CharUnits::One() : getAlignment(member.data)))
+      padding.push_back(std::make_pair(size, offset - size));
+    size = offset + getSize(member.data);
+  }
+  if (padding.empty())
+    return;
+  padded = true;
+  // Add the padding to the Members list and sort it.
+  for (const std::pair<CharUnits, CharUnits> &paddingPair : padding)
+    members.push_back(makeStorageInfo(paddingPair.first,
+                                      getByteArrayType(paddingPair.second)));
+  llvm::stable_sort(members);
 }
 
 std::unique_ptr<CIRGenRecordLayout>

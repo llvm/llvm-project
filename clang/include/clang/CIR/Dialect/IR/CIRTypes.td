@@ -502,6 +502,15 @@ def CIR_RecordType : CIR_Type<"Record", "record",
 
     void complete(llvm::ArrayRef<mlir::Type> members, bool packed,
                   bool isPadded);
+
+  // Utilities for lazily computing and cacheing data layout info.
+  // FIXME: currently opaque because there's a cycle if CIRTypes.types include
+  // from CIRAttrs.h. The implementation operates in terms of RecordLayoutAttr
+  // instead.
+  private:
+    mutable mlir::Attribute layoutInfo;
+    void computeSizeAndAlignment(const mlir::DataLayout &dataLayout) const;
+  public:
   }];
 
   let hasCustomAssemblyFormat = 1;
