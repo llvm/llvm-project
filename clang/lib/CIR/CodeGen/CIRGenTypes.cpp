@@ -112,6 +112,18 @@ std::string CIRGenTypes::getRecordTypeName(const clang::RecordDecl *recordDecl,
   return builder.getUniqueRecordName(std::string(typeName));
 }
 
+// Return true if it is safe to convert the specified record decl to CIR and lay
+// it out, false if doing so would cause us to get into a recursive compilation
+// mess.
+static bool isSafeToConvert(const RecordDecl *RD, CIRGenTypes &CGT) {
+  // If no records are being laid out, we can certainly do this one.
+  if (CGT.noRecordsBeingLaidOut())
+    return true;
+
+  assert(!cir::MissingFeatures::recursiveRecordLayout());
+  return false;
+}
+
 /// Lay out a tagged decl type like struct or union.
 mlir::Type CIRGenTypes::convertRecordDeclType(const clang::RecordDecl *rd) {
   // TagDecl's are not necessarily unique, instead use the (clang) type
@@ -132,7 +144,40 @@ mlir::Type CIRGenTypes::convertRecordDeclType(const clang::RecordDecl *rd) {
   if (!rd || !rd->isCompleteDefinition() || entry.isComplete())
     return entry;
 
-  cgm.errorNYI(rd->getSourceRange(), "Complete record type");
+  // If converting this type would cause us to infinitely loop, don't do it!
+  if (!isSafeToConvert(rd, *this)) {
+    cgm.errorNYI(rd->getSourceRange(), "recursive record layout");
+    return entry;
+  }
+
+  // Okay, this is a definition of a type. Compile the implementation now.
+  bool insertResult = recordsBeingLaidOut.insert(key).second;
+  (void)insertResult;
+  assert(insertResult && "isSafeToCovert() should have caught this.");
+
+  // Force conversion of non-virtual base classes recursively.
+  if (const auto *cxxRecordDecl = dyn_cast<CXXRecordDecl>(rd)) {
+    cgm.errorNYI(rd->getSourceRange(), "CXXRecordDecl");
+  }
+
+  // Layout fields.
+  std::unique_ptr<CIRGenRecordLayout> layout = computeRecordLayout(rd, &entry);
+  recordDeclTypes[key] = entry;
+  cirGenRecordLayouts[key] = std::move(layout);
+
+  // We're done laying out this record.
+  bool eraseResult = recordsBeingLaidOut.erase(key);
+  (void)eraseResult;
+  assert(eraseResult && "record not in RecordsBeingLaidOut set?");
+
+  // If this record blocked a FunctionType conversion, then recompute whatever
+  // was derived from that.
+  assert(!cir::MissingFeatures::skippedLayout());
+
+  // If we're done converting the outer-most record, then convert any deferred
+  // records as well.
+  assert(!cir::MissingFeatures::recursiveRecordLayout());
+
   return entry;
 }
 
