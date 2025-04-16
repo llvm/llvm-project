@@ -31,7 +31,6 @@ template <typename T, typename Enable> struct FoldingSetTrait;
 
 namespace clang {
 
-class IdentifierInfo;
 class SourceManager;
 
 /// An opaque identifier used by SourceManager which refers to a
