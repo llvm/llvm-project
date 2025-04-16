@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "DirectXTargetMachine.h"
+#include "DXILCBufferAccess.h"
 #include "DXILDataScalarization.h"
 #include "DXILFlattenArrays.h"
 #include "DXILIntrinsicExpansion.h"
@@ -65,6 +66,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeDirectXTarget() {
   initializeRootSignatureAnalysisWrapperPass(*PR);
   initializeDXILFinalizeLinkageLegacyPass(*PR);
   initializeDXILPrettyPrinterLegacyPass(*PR);
+  initializeDXILCBufferAccessLegacyPass(*PR);
 }
 
 class DXILTargetObjectFile : public TargetLoweringObjectFile {
@@ -96,6 +98,7 @@ public:
   void addCodeGenPrepare() override {
     addPass(createDXILFinalizeLinkageLegacyPass());
     addPass(createDXILIntrinsicExpansionLegacyPass());
+    addPass(createDXILCBufferAccessLegacyPass());
     addPass(createDXILDataScalarizationLegacyPass());
     addPass(createDXILFlattenArraysLegacyPass());
     addPass(createDXILResourceAccessLegacyPass());
