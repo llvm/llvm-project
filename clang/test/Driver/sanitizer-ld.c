@@ -840,8 +840,7 @@
 // CHECK-CFI-PREREQ-LINUX: '-fsanitize=cfi' only allowed with '-fvisibility='
 
 // CFI by itself does not link runtime libraries.
-// RUN: %clang -fsanitize=cfi \
-// RUN:     -flto -fvisibility=hidden \
+// RUN: not %clang -fsanitize=cfi \
 // RUN:     --target=x86_64-unknown-linux -fuse-ld=ld -rtlib=platform \
 // RUN:     -resource-dir=%S/Inputs/resource_dir \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
@@ -850,8 +849,7 @@
 // CHECK-CFI-LINUX: "{{.*}}ld{{(.exe)?}}"
 
 // CFI with diagnostics links the UBSan runtime.
-// RUN: %clang -fsanitize=cfi -fno-sanitize-trap=cfi -fsanitize-recover=cfi \
-// RUN:     -flto -fvisibility=hidden \
+// RUN: not %clang -fsanitize=cfi -fno-sanitize-trap=cfi -fsanitize-recover=cfi \
 // RUN:     --target=x86_64-unknown-linux -fuse-ld=ld \
 // RUN:     -resource-dir=%S/Inputs/resource_dir \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
@@ -861,8 +859,7 @@
 // CHECK-CFI-DIAG-LINUX: "--whole-archive" "{{[^"]*}}libclang_rt.ubsan_standalone.a" "--no-whole-archive"
 
 // Cross-DSO CFI links the CFI runtime.
-// RUN: %clang -fsanitize=cfi -fsanitize-cfi-cross-dso \
-// RUN:     -flto -fvisibility=hidden \
+// RUN: not %clang -fsanitize=cfi -fsanitize-cfi-cross-dso \
 // RUN:     --target=x86_64-unknown-linux -fuse-ld=ld \
 // RUN:     -resource-dir=%S/Inputs/resource_dir \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
@@ -873,8 +870,7 @@
 // CHECK-CFI-CROSS-DSO-LINUX: -export-dynamic
 
 // Cross-DSO CFI with diagnostics links just the CFI runtime.
-// RUN: %clang -fsanitize=cfi -fsanitize-cfi-cross-dso \
-// RUN:     -flto -fvisibility=hidden \
+// RUN: not %clang -fsanitize=cfi -fsanitize-cfi-cross-dso \
 // RUN:     -fno-sanitize-trap=cfi -fsanitize-recover=cfi \
 // RUN:     --target=x86_64-unknown-linux -fuse-ld=ld \
 // RUN:     -resource-dir=%S/Inputs/resource_dir \
@@ -886,8 +882,7 @@
 // CHECK-CFI-CROSS-DSO-DIAG-LINUX: -export-dynamic
 
 // Cross-DSO CFI on Android does not link runtime libraries.
-// RUN: %clang -fsanitize=cfi -fsanitize-cfi-cross-dso \
-// RUN:     -flto -fvisibility=hidden \
+// RUN: not %clang -fsanitize=cfi -fsanitize-cfi-cross-dso \
 // RUN:     --target=aarch64-linux-android -fuse-ld=ld \
 // RUN:     -resource-dir=%S/Inputs/resource_dir \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree \
@@ -896,8 +891,7 @@
 // CHECK-CFI-CROSS-DSO-ANDROID: "{{.*}}ld{{(.exe)?}}"
 
 // Cross-DSO CFI with diagnostics on Android links just the UBSAN runtime.
-// RUN: %clang -fsanitize=cfi -fsanitize-cfi-cross-dso \
-// RUN:     -flto -fvisibility=hidden \
+// RUN: not %clang -fsanitize=cfi -fsanitize-cfi-cross-dso \
 // RUN:     -fno-sanitize-trap=cfi -fsanitize-recover=cfi \
 // RUN:     --target=aarch64-linux-android -fuse-ld=ld \
 // RUN:     -resource-dir=%S/Inputs/resource_dir \
