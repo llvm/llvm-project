@@ -5466,6 +5466,25 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
         DAG.getNode(ISD::FP_ROUND, dl, OVT, Tmp3,
                     DAG.getIntPtrConstant(0, dl, /*isTarget=*/true)));
     break;
+
+  case ISD::STRICT_FMINIMUM: {
+  case ISD::STRICT_FMAXIMUM:
+    SDValue InChain = Node->getOperand(0);
+    SDVTList VTs = DAG.getVTList(NVT, MVT::Other);
+    Tmp1 = DAG.getNode(ISD::STRICT_FP_EXTEND, dl, VTs, InChain,
+                       Node->getOperand(1));
+    Tmp2 = DAG.getNode(ISD::STRICT_FP_EXTEND, dl, VTs, InChain,
+                       Node->getOperand(2));
+    SmallVector<SDValue, 4> Ops = {InChain, Tmp1, Tmp2};
+    Tmp3 = DAG.getNode(Node->getOpcode(), dl, VTs, Ops, Node->getFlags());
+    Tmp4 = DAG.getNode(ISD::STRICT_FP_ROUND, dl, DAG.getVTList(OVT, MVT::Other),
+                       InChain, Tmp3,
+                       DAG.getIntPtrConstant(0, dl, /*isTarget=*/true));
+    Results.push_back(Tmp4);
+    Results.push_back(Tmp4.getValue(1));
+    break;
+  }
+
   case ISD::STRICT_FADD:
   case ISD::STRICT_FSUB:
   case ISD::STRICT_FMUL:

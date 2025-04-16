@@ -93,10 +93,23 @@ public:
                       "-v128:64-a:8:16-n32:64");
     }
     MaxAtomicPromoteWidth = MaxAtomicInlineWidth = 128;
+
+    // True if the backend supports operations on the half LLVM IR type.
+    // By setting this to false, conversions will happen for _Float16 around
+    // a statement by default, with operations done in float. However, if
+    // -ffloat16-excess-precision=none is given, no conversions will be made
+    // and instead the backend will promote each half operation to float
+    // individually.
+    HasLegalHalfType = false;
+    // Support _Float16.
+    HasFloat16 = true;
+
     HasStrictFP = true;
   }
 
   unsigned getMinGlobalAlign(uint64_t Size, bool HasNonWeakDef) const override;
+
+  bool useFP16ConversionIntrinsics() const override { return false; }
 
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;

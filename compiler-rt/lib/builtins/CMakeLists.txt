@@ -104,6 +104,7 @@ set(GENERIC_SOURCES
   divti3.c
   extendsfdf2.c
   extendhfsf2.c
+  extendhfdf2.c
   ffsdi2.c
   ffssi2.c
   ffsti2.c
@@ -767,6 +768,11 @@ set(riscv64_SOURCES
 
 set(sparc_SOURCES ${GENERIC_SOURCES} ${GENERIC_TF_SOURCES})
 set(sparcv9_SOURCES ${GENERIC_SOURCES} ${GENERIC_TF_SOURCES})
+
+set(s390x_SOURCES
+  ${GENERIC_SOURCES}
+  ${GENERIC_TF_SOURCES}
+)
 
 set(wasm32_SOURCES
   ${GENERIC_TF_SOURCES}
