@@ -325,10 +325,10 @@ let SMETargetGuard = "sme2,sme-mop4,sme-b16b16" in {
 // SME2 - FP8 FMOP4A, FMOP4S
 
 multiclass MOP4_FP8<string za, list<ImmCheck> checks> {
-  def _1x1 : Inst<"svmop4a" # "[_1x1]" # za # "[_{d}_{d}]", "vidd>", "m", MergeNone, "aarch64_sme_fp8_fmop4a" # za # "_1x1", [IsInOutZA, IsStreaming, IsOverloadNone], checks>;
-  def _1x2 : Inst<"svmop4a" # "[_1x2]" # za # "[_{d}_{d}]", "vid2>", "m", MergeNone, "aarch64_sme_fp8_fmop4a" # za # "_1x2", [IsInOutZA, IsStreaming, IsOverloadNone], checks>;
-  def _2x1 : Inst<"svmop4a" # "[_2x1]" # za # "[_{d}_{d}]", "vi2d>", "m", MergeNone, "aarch64_sme_fp8_fmop4a" # za # "_2x1", [IsInOutZA, IsStreaming, IsOverloadNone], checks>;
-  def _2x2 : Inst<"svmop4a" # "[_2x2]" # za # "[_{d}_{d}]", "vi22>", "m", MergeNone, "aarch64_sme_fp8_fmop4a" # za # "_2x2", [IsInOutZA, IsStreaming, IsOverloadNone], checks>;
+  def _1x1 : Inst<"svmop4a" # "[_1x1]" # za # "[_{d}_{d}]", "vidd>", "m", MergeNone, "aarch64_sme_fp8_fmop4a" # za # "_1x1", [IsInOutZA, IsStreaming], checks>;
+  def _1x2 : Inst<"svmop4a" # "[_1x2]" # za # "[_{d}_{d}]", "vid2>", "m", MergeNone, "aarch64_sme_fp8_fmop4a" # za # "_1x2", [IsInOutZA, IsStreaming], checks>;
+  def _2x1 : Inst<"svmop4a" # "[_2x1]" # za # "[_{d}_{d}]", "vi2d>", "m", MergeNone, "aarch64_sme_fp8_fmop4a" # za # "_2x1", [IsInOutZA, IsStreaming], checks>;
+  def _2x2 : Inst<"svmop4a" # "[_2x2]" # za # "[_{d}_{d}]", "vi22>", "m", MergeNone, "aarch64_sme_fp8_fmop4a" # za # "_2x2", [IsInOutZA, IsStreaming], checks>;
 }
 
 let SMETargetGuard = "sme2,sme-mop4,sme-f8f32" in {
