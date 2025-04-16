@@ -1387,6 +1387,7 @@ Scope *ModFileReader::Read(SourceName name, std::optional<bool> isIntrinsic,
   parser::Options options;
   options.isModuleFile = true;
   options.features.Enable(common::LanguageFeature::BackslashEscapes);
+  options.features.Enable(common::LanguageFeature::OpenACC);
   options.features.Enable(common::LanguageFeature::OpenMP);
   options.features.Enable(common::LanguageFeature::CUDA);
   if (!isIntrinsic.value_or(false) && !notAModule) {

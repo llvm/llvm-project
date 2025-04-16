@@ -1034,61 +1034,53 @@ void AccAttributeVisitor::AddRoutineInfoToSymbol(
     Symbol &symbol, const parser::OpenACCRoutineConstruct &x) {
   if (symbol.has<SubprogramDetails>()) {
     Fortran::semantics::OpenACCRoutineInfo info;
+    std::vector<OpenACCRoutineDeviceTypeInfo *> currentDevices;
+    currentDevices.push_back(&info);
     const auto &clauses = std::get<Fortran::parser::AccClauseList>(x.t);
     for (const Fortran::parser::AccClause &clause : clauses.v) {
-      if (std::get_if<Fortran::parser::AccClause::Seq>(&clause.u)) {
-        if (info.deviceTypeInfos().empty()) {
-          info.set_isSeq();
-        } else {
-          info.deviceTypeInfos().back().set_isSeq();
-        }
-      } else if (const auto *gangClause =
-                     std::get_if<Fortran::parser::AccClause::Gang>(&clause.u)) {
-        if (info.deviceTypeInfos().empty()) {
-          info.set_isGang();
-        } else {
-          info.deviceTypeInfos().back().set_isGang();
-        }
-        if (gangClause->v) {
-          const Fortran::parser::AccGangArgList &x = *gangClause->v;
-          for (const Fortran::parser::AccGangArg &gangArg : x.v) {
-            if (const auto *dim =
-                    std::get_if<Fortran::parser::AccGangArg::Dim>(&gangArg.u)) {
-              if (const auto v{EvaluateInt64(context_, dim->v)}) {
-                if (info.deviceTypeInfos().empty()) {
-                  info.set_gangDim(*v);
-                } else {
-                  info.deviceTypeInfos().back().set_gangDim(*v);
-                }
-              }
-            }
-          }
-        }
-      } else if (std::get_if<Fortran::parser::AccClause::Vector>(&clause.u)) {
-        if (info.deviceTypeInfos().empty()) {
-          info.set_isVector();
-        } else {
-          info.deviceTypeInfos().back().set_isVector();
-        }
-      } else if (std::get_if<Fortran::parser::AccClause::Worker>(&clause.u)) {
-        if (info.deviceTypeInfos().empty()) {
-          info.set_isWorker();
-        } else {
-          info.deviceTypeInfos().back().set_isWorker();
+      if (const auto *dTypeClause =
+              std::get_if<Fortran::parser::AccClause::DeviceType>(&clause.u)) {
+        currentDevices.clear();
+        for (const auto &deviceTypeExpr : dTypeClause->v.v) {
+          currentDevices.push_back(&info.add_deviceTypeInfo(deviceTypeExpr.v));
         }
       } else if (std::get_if<Fortran::parser::AccClause::Nohost>(&clause.u)) {
         info.set_isNohost();
+      } else if (std::get_if<Fortran::parser::AccClause::Seq>(&clause.u)) {
+        for (auto &device : currentDevices)
+          device->set_isSeq();
+      } else if (std::get_if<Fortran::parser::AccClause::Vector>(&clause.u)) {
+        for (auto &device : currentDevices)
+          device->set_isVector();
+      } else if (std::get_if<Fortran::parser::AccClause::Worker>(&clause.u)) {
+        for (auto &device : currentDevices)
+          device->set_isWorker();
+      } else if (const auto *gangClause =
+                     std::get_if<Fortran::parser::AccClause::Gang>(&clause.u)) {
+        for (auto &device : currentDevices)
+          device->set_isGang();
+        if (gangClause->v) {
+          const Fortran::parser::AccGangArgList &x = *gangClause->v;
+          int numArgs{0};
+          for (const Fortran::parser::AccGangArg &gangArg : x.v) {
+            CHECK(numArgs <= 1 && "expecting 0 or 1 gang dim args");
+            if (const auto *dim =
+                    std::get_if<Fortran::parser::AccGangArg::Dim>(&gangArg.u)) {
+              if (const auto v{EvaluateInt64(context_, dim->v)}) {
+                for (auto &device : currentDevices)
+                  device->set_gangDim(*v);
+              }
+            }
+            numArgs++;
+          }
+        }
       } else if (const auto *bindClause =
                      std::get_if<Fortran::parser::AccClause::Bind>(&clause.u)) {
+        std::string bindName = "";
         if (const auto *name =
                 std::get_if<Fortran::parser::Name>(&bindClause->v.u)) {
           if (Symbol *sym = ResolveFctName(*name)) {
-            if (info.deviceTypeInfos().empty()) {
-              info.set_bindName(sym->name().ToString());
-            } else {
-              info.deviceTypeInfos().back().set_bindName(
-                  sym->name().ToString());
-            }
+            bindName = sym->name().ToString();
           } else {
             context_.Say((*name).source,
                 "No function or subroutine declared for '%s'"_err_en_US,
@@ -1101,21 +1093,16 @@ void AccAttributeVisitor::AddRoutineInfoToSymbol(
               Fortran::parser::Unwrap<Fortran::parser::CharLiteralConstant>(
                   *charExpr);
           std::string str{std::get<std::string>(charConst->t)};
-          std::stringstream bindName;
-          bindName << "\"" << str << "\"";
-          if (info.deviceTypeInfos().empty()) {
-            info.set_bindName(bindName.str());
-          } else {
-            info.deviceTypeInfos().back().set_bindName(bindName.str());
+          std::stringstream bindNameStream;
+          bindNameStream << "\"" << str << "\"";
+          bindName = bindNameStream.str();
+        }
+        if (!bindName.empty()) {
+          // Fixme: do we need to ensure there there is only one device?
+          for (auto &device : currentDevices) {
+            device->set_bindName(std::string(bindName));
           }
         }
-      } else if (const auto *dType =
-                     std::get_if<Fortran::parser::AccClause::DeviceType>(
-                         &clause.u)) {
-        const parser::AccDeviceTypeExprList &deviceTypeExprList = dType->v;
-        OpenACCRoutineDeviceTypeInfo dtypeInfo;
-        dtypeInfo.set_dType(deviceTypeExprList.v.front().v);
-        info.add_deviceTypeInfo(dtypeInfo);
       }
     }
     symbol.get<SubprogramDetails>().add_openACCRoutineInfo(info);

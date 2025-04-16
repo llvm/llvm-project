@@ -443,7 +443,7 @@ public:
                     bridge.getModule(), bridge.getKindMap(), &mlirSymbolTable);
                 Fortran::lower::genOpenACCRoutineConstruct(
                     *this, bridge.getSemanticsContext(), bridge.getModule(),
-                    d.routine, accRoutineInfos);
+                    d.routine);
                 builder = nullptr;
               },
           },
@@ -4285,6 +4285,11 @@ private:
       return Fortran::lower::convertExprToMutableBox(loc, *this, expr,
                                                      localSymbols);
     return Fortran::lower::createMutableBox(loc, *this, expr, localSymbols);
+  }
+
+  Fortran::lower::AccRoutineInfoMappingList &
+  getAccDelayedRoutines() override final {
+    return accRoutineInfos;
   }
 
   // Create the [newRank] array with the lower bounds to be passed to the

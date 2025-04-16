@@ -1689,6 +1689,16 @@ public:
                           "SignatureBuilder should only be used once");
     declare();
     interfaceDetermined = true;
+    if (procDesignator && procDesignator->GetInterfaceSymbol() &&
+        procDesignator->GetInterfaceSymbol()
+            ->has<Fortran::semantics::SubprogramDetails>()) {
+      auto info = procDesignator->GetInterfaceSymbol()
+                      ->get<Fortran::semantics::SubprogramDetails>();
+      if (!info.openACCRoutineInfos().empty()) {
+        genOpenACCRoutineConstruct(converter, converter.getModuleOp(),
+                                   getFuncOp(), info.openACCRoutineInfos());
+      }
+    }
     return getFuncOp();
   }
 

@@ -22,6 +22,9 @@ class StringRef;
 } // namespace llvm
 
 namespace mlir {
+namespace func {
+class FuncOp;
+}
 class Location;
 class Type;
 class ModuleOp;
@@ -42,6 +45,7 @@ struct OpenACCRoutineConstruct;
 } // namespace parser
 
 namespace semantics {
+class OpenACCRoutineInfo;
 class SemanticsContext;
 class Symbol;
 } // namespace semantics
@@ -79,8 +83,10 @@ void genOpenACCDeclarativeConstruct(AbstractConverter &,
 void genOpenACCRoutineConstruct(AbstractConverter &,
                                 Fortran::semantics::SemanticsContext &,
                                 mlir::ModuleOp,
-                                const parser::OpenACCRoutineConstruct &,
-                                AccRoutineInfoMappingList &);
+                                const parser::OpenACCRoutineConstruct &);
+void genOpenACCRoutineConstruct(
+    AbstractConverter &, mlir::ModuleOp, mlir::func::FuncOp,
+    const std::vector<Fortran::semantics::OpenACCRoutineInfo> &);
 
 void finalizeOpenACCRoutineAttachment(mlir::ModuleOp,
                                       AccRoutineInfoMappingList &);

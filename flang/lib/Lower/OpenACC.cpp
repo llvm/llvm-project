@@ -38,6 +38,7 @@
 #include "llvm/Frontend/OpenACC/ACC.h.inc"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include <mlir/IR/MLIRContext.h>
 
 #define DEBUG_TYPE "flang-lower-openacc"
 
@@ -4139,11 +4140,152 @@ static void attachRoutineInfo(mlir::func::FuncOp func,
       mlir::acc::RoutineInfoAttr::get(func.getContext(), routines));
 }
 
+void createOpenACCRoutineConstruct(
+    Fortran::lower::AbstractConverter &converter, mlir::Location loc,
+    mlir::ModuleOp mod, mlir::func::FuncOp funcOp, std::string funcName,
+    bool hasNohost, llvm::SmallVector<mlir::Attribute> &bindNames,
+    llvm::SmallVector<mlir::Attribute> &bindNameDeviceTypes,
+    llvm::SmallVector<mlir::Attribute> &gangDeviceTypes,
+    llvm::SmallVector<mlir::Attribute> &gangDimValues,
+    llvm::SmallVector<mlir::Attribute> &gangDimDeviceTypes,
+    llvm::SmallVector<mlir::Attribute> &seqDeviceTypes,
+    llvm::SmallVector<mlir::Attribute> &workerDeviceTypes,
+    llvm::SmallVector<mlir::Attribute> &vectorDeviceTypes) {
+
+  std::stringstream routineOpName;
+  routineOpName << accRoutinePrefix.str() << routineCounter++;
+
+  for (auto routineOp : mod.getOps<mlir::acc::RoutineOp>()) {
+    if (routineOp.getFuncName().str().compare(funcName) == 0) {
+      // If the routine is already specified with the same clauses, just skip
+      // the operation creation.
+      if (compareDeviceTypeInfo(routineOp, bindNames, bindNameDeviceTypes,
+                                gangDeviceTypes, gangDimValues,
+                                gangDimDeviceTypes, seqDeviceTypes,
+                                workerDeviceTypes, vectorDeviceTypes) &&
+          routineOp.getNohost() == hasNohost)
+        return;
+      mlir::emitError(loc, "Routine already specified with different clauses");
+    }
+  }
+  std::string routineOpStr = routineOpName.str();
+  mlir::OpBuilder modBuilder(mod.getBodyRegion());
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  modBuilder.create<mlir::acc::RoutineOp>(
+      loc, routineOpStr, funcName,
+      bindNames.empty() ? nullptr : builder.getArrayAttr(bindNames),
+      bindNameDeviceTypes.empty() ? nullptr
+                                  : builder.getArrayAttr(bindNameDeviceTypes),
+      workerDeviceTypes.empty() ? nullptr
+                                : builder.getArrayAttr(workerDeviceTypes),
+      vectorDeviceTypes.empty() ? nullptr
+                                : builder.getArrayAttr(vectorDeviceTypes),
+      seqDeviceTypes.empty() ? nullptr : builder.getArrayAttr(seqDeviceTypes),
+      hasNohost, /*implicit=*/false,
+      gangDeviceTypes.empty() ? nullptr : builder.getArrayAttr(gangDeviceTypes),
+      gangDimValues.empty() ? nullptr : builder.getArrayAttr(gangDimValues),
+      gangDimDeviceTypes.empty() ? nullptr
+                                 : builder.getArrayAttr(gangDimDeviceTypes));
+
+  if (funcOp)
+    attachRoutineInfo(funcOp, builder.getSymbolRefAttr(routineOpStr));
+  else
+    // FuncOp is not lowered yet. Keep the information so the routine info
+    // can be attached later to the funcOp.
+    converter.getAccDelayedRoutines().push_back(
+        std::make_pair(funcName, builder.getSymbolRefAttr(routineOpStr)));
+}
+
+static void interpretRoutineDeviceInfo(
+    fir::FirOpBuilder &builder,
+    const Fortran::semantics::OpenACCRoutineDeviceTypeInfo &dinfo,
+    llvm::SmallVector<mlir::Attribute> &seqDeviceTypes,
+    llvm::SmallVector<mlir::Attribute> &vectorDeviceTypes,
+    llvm::SmallVector<mlir::Attribute> &workerDeviceTypes,
+    llvm::SmallVector<mlir::Attribute> &bindNameDeviceTypes,
+    llvm::SmallVector<mlir::Attribute> &bindNames,
+    llvm::SmallVector<mlir::Attribute> &gangDeviceTypes,
+    llvm::SmallVector<mlir::Attribute> &gangDimValues,
+    llvm::SmallVector<mlir::Attribute> &gangDimDeviceTypes) {
+  mlir::MLIRContext *context{builder.getContext()};
+  if (dinfo.isSeq()) {
+    seqDeviceTypes.push_back(
+        mlir::acc::DeviceTypeAttr::get(context, getDeviceType(dinfo.dType())));
+  }
+  if (dinfo.isVector()) {
+    vectorDeviceTypes.push_back(
+        mlir::acc::DeviceTypeAttr::get(context, getDeviceType(dinfo.dType())));
+  }
+  if (dinfo.isWorker()) {
+    workerDeviceTypes.push_back(
+        mlir::acc::DeviceTypeAttr::get(context, getDeviceType(dinfo.dType())));
+  }
+  if (dinfo.isGang()) {
+    unsigned gangDim = dinfo.gangDim();
+    auto deviceType =
+        mlir::acc::DeviceTypeAttr::get(context, getDeviceType(dinfo.dType()));
+    if (!gangDim) {
+      gangDeviceTypes.push_back(deviceType);
+    } else {
+      gangDimValues.push_back(
+          builder.getIntegerAttr(builder.getI64Type(), gangDim));
+      gangDimDeviceTypes.push_back(deviceType);
+    }
+  }
+  if (const std::string *bindName{dinfo.bindName()}) {
+    bindNames.push_back(builder.getStringAttr(*bindName));
+    bindNameDeviceTypes.push_back(
+        mlir::acc::DeviceTypeAttr::get(context, getDeviceType(dinfo.dType())));
+  }
+}
+
+void Fortran::lower::genOpenACCRoutineConstruct(
+    Fortran::lower::AbstractConverter &converter, mlir::ModuleOp mod,
+    mlir::func::FuncOp funcOp,
+    const std::vector<Fortran::semantics::OpenACCRoutineInfo> &routineInfos) {
+  CHECK(funcOp && "Expected a valid function operation");
+  fir::FirOpBuilder &builder{converter.getFirOpBuilder()};
+  mlir::Location loc{funcOp.getLoc()};
+  std::string funcName{funcOp.getName()};
+
+  // Collect the routine clauses
+  bool hasNohost{false};
+
+  llvm::SmallVector<mlir::Attribute> seqDeviceTypes, vectorDeviceTypes,
+      workerDeviceTypes, bindNameDeviceTypes, bindNames, gangDeviceTypes,
+      gangDimDeviceTypes, gangDimValues;
+
+  for (const Fortran::semantics::OpenACCRoutineInfo &info : routineInfos) {
+    // Device Independent Attributes
+    if (info.isNohost()) {
+      hasNohost = true;
+    }
+    // Note: Device Independent Attributes are set to the
+    // none device type in `info`.
+    interpretRoutineDeviceInfo(builder, info, seqDeviceTypes, vectorDeviceTypes,
+                               workerDeviceTypes, bindNameDeviceTypes,
+                               bindNames, gangDeviceTypes, gangDimValues,
+                               gangDimDeviceTypes);
+
+    // Device Dependent Attributes
+    for (const Fortran::semantics::OpenACCRoutineDeviceTypeInfo &dinfo :
+         info.deviceTypeInfos()) {
+      interpretRoutineDeviceInfo(
+          builder, dinfo, seqDeviceTypes, vectorDeviceTypes, workerDeviceTypes,
+          bindNameDeviceTypes, bindNames, gangDeviceTypes, gangDimValues,
+          gangDimDeviceTypes);
+    }
+  }
+  createOpenACCRoutineConstruct(
+      converter, loc, mod, funcOp, funcName, hasNohost, bindNames,
+      bindNameDeviceTypes, gangDeviceTypes, gangDimValues, gangDimDeviceTypes,
+      seqDeviceTypes, workerDeviceTypes, vectorDeviceTypes);
+}
+
 void Fortran::lower::genOpenACCRoutineConstruct(
     Fortran::lower::AbstractConverter &converter,
     Fortran::semantics::SemanticsContext &semanticsContext, mlir::ModuleOp mod,
-    const Fortran::parser::OpenACCRoutineConstruct &routineConstruct,
-    Fortran::lower::AccRoutineInfoMappingList &accRoutineInfos) {
+    const Fortran::parser::OpenACCRoutineConstruct &routineConstruct) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   mlir::Location loc = converter.genLocation(routineConstruct.source);
   std::optional<Fortran::parser::Name> name =
@@ -4174,6 +4316,7 @@ void Fortran::lower::genOpenACCRoutineConstruct(
       funcName = funcOp.getName();
     }
   }
+  // TODO: Refactor this to use the OpenACCRoutineInfo
   bool hasNohost = false;
 
   llvm::SmallVector<mlir::Attribute> seqDeviceTypes, vectorDeviceTypes,
@@ -4226,6 +4369,8 @@ void Fortran::lower::genOpenACCRoutineConstruct(
                    std::get_if<Fortran::parser::AccClause::Bind>(&clause.u)) {
       if (const auto *name =
               std::get_if<Fortran::parser::Name>(&bindClause->v.u)) {
+        // FIXME: This case mangles the name, the one below does not.
+        // which is correct?
         mlir::Attribute bindNameAttr =
             builder.getStringAttr(converter.mangleName(*name->symbol));
         for (auto crtDeviceTypeAttr : crtDeviceTypes) {
@@ -4255,47 +4400,10 @@ void Fortran::lower::genOpenACCRoutineConstruct(
     }
   }
 
-  mlir::OpBuilder modBuilder(mod.getBodyRegion());
-  std::stringstream routineOpName;
-  routineOpName << accRoutinePrefix.str() << routineCounter++;
-
-  for (auto routineOp : mod.getOps<mlir::acc::RoutineOp>()) {
-    if (routineOp.getFuncName().str().compare(funcName) == 0) {
-      // If the routine is already specified with the same clauses, just skip
-      // the operation creation.
-      if (compareDeviceTypeInfo(routineOp, bindNames, bindNameDeviceTypes,
-                                gangDeviceTypes, gangDimValues,
-                                gangDimDeviceTypes, seqDeviceTypes,
-                                workerDeviceTypes, vectorDeviceTypes) &&
-          routineOp.getNohost() == hasNohost)
-        return;
-      mlir::emitError(loc, "Routine already specified with different clauses");
-    }
-  }
-
-  modBuilder.create<mlir::acc::RoutineOp>(
-      loc, routineOpName.str(), funcName,
-      bindNames.empty() ? nullptr : builder.getArrayAttr(bindNames),
-      bindNameDeviceTypes.empty() ? nullptr
-                                  : builder.getArrayAttr(bindNameDeviceTypes),
-      workerDeviceTypes.empty() ? nullptr
-                                : builder.getArrayAttr(workerDeviceTypes),
-      vectorDeviceTypes.empty() ? nullptr
-                                : builder.getArrayAttr(vectorDeviceTypes),
-      seqDeviceTypes.empty() ? nullptr : builder.getArrayAttr(seqDeviceTypes),
-      hasNohost, /*implicit=*/false,
-      gangDeviceTypes.empty() ? nullptr : builder.getArrayAttr(gangDeviceTypes),
-      gangDimValues.empty() ? nullptr : builder.getArrayAttr(gangDimValues),
-      gangDimDeviceTypes.empty() ? nullptr
-                                 : builder.getArrayAttr(gangDimDeviceTypes));
-
-  if (funcOp)
-    attachRoutineInfo(funcOp, builder.getSymbolRefAttr(routineOpName.str()));
-  else
-    // FuncOp is not lowered yet. Keep the information so the routine info
-    // can be attached later to the funcOp.
-    accRoutineInfos.push_back(std::make_pair(
-        funcName, builder.getSymbolRefAttr(routineOpName.str())));
+  createOpenACCRoutineConstruct(
+      converter, loc, mod, funcOp, funcName, hasNohost, bindNames,
+      bindNameDeviceTypes, gangDeviceTypes, gangDimValues, gangDimDeviceTypes,
+      seqDeviceTypes, workerDeviceTypes, vectorDeviceTypes);
 }
 
 void Fortran::lower::finalizeOpenACCRoutineAttachment(
@@ -4443,8 +4551,7 @@ void Fortran::lower::genOpenACCDeclarativeConstruct(
             fir::FirOpBuilder &builder = converter.getFirOpBuilder();
             mlir::ModuleOp mod = builder.getModule();
             Fortran::lower::genOpenACCRoutineConstruct(
-                converter, semanticsContext, mod, routineConstruct,
-                accRoutineInfos);
+                converter, semanticsContext, mod, routineConstruct);
           },
       },
       accDeclConstruct.u);

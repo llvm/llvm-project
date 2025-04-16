@@ -127,6 +127,8 @@ private:
 // Device type specific OpenACC routine information
 class OpenACCRoutineDeviceTypeInfo {
 public:
+  OpenACCRoutineDeviceTypeInfo(Fortran::common::OpenACCDeviceType dType)
+      : deviceType_{dType} {}
   bool isSeq() const { return isSeq_; }
   void set_isSeq(bool value = true) { isSeq_ = value; }
   bool isVector() const { return isVector_; }
@@ -141,9 +143,7 @@ public:
     return bindName_ ? &*bindName_ : nullptr;
   }
   void set_bindName(std::string &&name) { bindName_ = std::move(name); }
-  void set_dType(Fortran::common::OpenACCDeviceType dType) {
-    deviceType_ = dType;
-  }
+
   Fortran::common::OpenACCDeviceType dType() const { return deviceType_; }
 
 private:
@@ -162,13 +162,24 @@ private:
 // in as objects in the OpenACCRoutineDeviceTypeInfo list.
 class OpenACCRoutineInfo : public OpenACCRoutineDeviceTypeInfo {
 public:
+  OpenACCRoutineInfo()
+      : OpenACCRoutineDeviceTypeInfo(Fortran::common::OpenACCDeviceType::None) {
+  }
   bool isNohost() const { return isNohost_; }
   void set_isNohost(bool value = true) { isNohost_ = value; }
-  std::list<OpenACCRoutineDeviceTypeInfo> &deviceTypeInfos() {
+  const std::list<OpenACCRoutineDeviceTypeInfo> &deviceTypeInfos() const {
     return deviceTypeInfos_;
   }
-  void add_deviceTypeInfo(OpenACCRoutineDeviceTypeInfo &info) {
-    deviceTypeInfos_.push_back(info);
+
+  OpenACCRoutineDeviceTypeInfo &add_deviceTypeInfo(
+      Fortran::common::OpenACCDeviceType type) {
+    return add_deviceTypeInfo(OpenACCRoutineDeviceTypeInfo(type));
+  }
+
+  OpenACCRoutineDeviceTypeInfo &add_deviceTypeInfo(
+      OpenACCRoutineDeviceTypeInfo &&info) {
+    deviceTypeInfos_.push_back(std::move(info));
+    return deviceTypeInfos_.back();
   }
 
 private:
