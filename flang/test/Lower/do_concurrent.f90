@@ -14,9 +14,6 @@ subroutine sub1(n)
    implicit none
    integer :: n, m, i, j, k
    integer, dimension(n) :: a
-!CHECK: %[[N_DECL:.*]]:2 = hlfir.declare %{{.*}} dummy_scope %{{.*}} {uniq_name = "_QFsub1En"}
-!CHECK: %[[A_DECL:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) {uniq_name = "_QFsub1Ea"}
-
 !CHECK: %[[LB1:.*]] = arith.constant 1 : i32
 !CHECK: %[[LB1_CVT:.*]] = fir.convert %[[LB1]] : (i32) -> index
 !CHECK: %[[UB1:.*]] = fir.load %{{.*}}#0 : !fir.ref<i32>
@@ -32,30 +29,10 @@ subroutine sub1(n)
 !CHECK: %[[UB3:.*]] = arith.constant 10 : i32
 !CHECK: %[[UB3_CVT:.*]] = fir.convert %[[UB3]] : (i32) -> index
 
-!CHECK: fir.do_concurrent
-!CHECK:   %[[I:.*]] = fir.alloca i32 {bindc_name = "i"}
-!CHECK:   %[[I_DECL:.*]]:2 = hlfir.declare %[[I]]
-!CHECK:   %[[J:.*]] = fir.alloca i32 {bindc_name = "j"}
-!CHECK:   %[[J_DECL:.*]]:2 = hlfir.declare %[[J]]
-!CHECK:   %[[K:.*]] = fir.alloca i32 {bindc_name = "k"}
-!CHECK:   %[[K_DECL:.*]]:2 = hlfir.declare %[[K]]
+!CHECK: fir.do_loop %{{.*}} = %[[LB1_CVT]] to %[[UB1_CVT]] step %{{.*}} unordered
+!CHECK: fir.do_loop %{{.*}} = %[[LB2_CVT]] to %[[UB2_CVT]] step %{{.*}} unordered
+!CHECK: fir.do_loop %{{.*}} = %[[LB3_CVT]] to %[[UB3_CVT]] step %{{.*}} unordered
 
-!CHECK:   fir.do_concurrent.loop (%[[I_IV:.*]], %[[J_IV:.*]], %[[K_IV:.*]]) =
-!CHECK-SAME:                     (%[[LB1_CVT]], %[[LB2_CVT]], %[[LB3_CVT]]) to
-!CHECK-SAME:                     (%[[UB1_CVT]], %[[UB2_CVT]], %[[UB3_CVT]]) step
-!CHECK-SAME:                     (%{{.*}}, %{{.*}}, %{{.*}}) {
-!CHECK:       %[[I_IV_CVT:.*]] = fir.convert %[[I_IV]] : (index) -> i32
-!CHECK:       fir.store %[[I_IV_CVT]] to %[[I_DECL]]#0 : !fir.ref<i32>
-!CHECK:       %[[J_IV_CVT:.*]] = fir.convert %[[J_IV]] : (index) -> i32
-!CHECK:       fir.store %[[J_IV_CVT]] to %[[J_DECL]]#0 : !fir.ref<i32>
-!CHECK:       %[[K_IV_CVT:.*]] = fir.convert %[[K_IV]] : (index) -> i32
-!CHECK:       fir.store %[[K_IV_CVT]] to %[[K_DECL]]#0 : !fir.ref<i32>
-
-!CHECK:       %[[N_VAL:.*]] = fir.load %[[N_DECL]]#0 : !fir.ref<i32>
-!CHECK:       %[[I_VAL:.*]] = fir.load %[[I_DECL]]#0 : !fir.ref<i32>
-!CHECK:       %[[I_VAL_CVT:.*]] = fir.convert %[[I_VAL]] : (i32) -> i64
-!CHECK:       %[[A_ELEM:.*]] = hlfir.designate %[[A_DECL]]#0 (%[[I_VAL_CVT]])
-!CHECK:       hlfir.assign %[[N_VAL]] to %[[A_ELEM]] : i32, !fir.ref<i32>
    do concurrent(i=1:n, j=1:bar(n*m, n/m), k=5:10)
       a(i) = n
    end do
@@ -68,23 +45,21 @@ subroutine sub2(n)
    integer, dimension(n) :: a
 !CHECK: %[[LB1:.*]] = arith.constant 1 : i32
 !CHECK: %[[LB1_CVT:.*]] = fir.convert %[[LB1]] : (i32) -> index
-!CHECK: %[[UB1:.*]] = fir.load %{{.*}}#0 : !fir.ref<i32>
+!CHECK: %[[UB1:.*]] = fir.load %5#0 : !fir.ref<i32>
 !CHECK: %[[UB1_CVT:.*]] = fir.convert %[[UB1]] : (i32) -> index
-!CHECK: fir.do_concurrent
-!CHECK:   fir.do_concurrent.loop (%{{.*}}) = (%[[LB1_CVT]]) to (%[[UB1_CVT]]) step (%{{.*}})
-
+!CHECK: fir.do_loop %{{.*}} = %[[LB1_CVT]] to %[[UB1_CVT]] step %{{.*}} unordered
 !CHECK: %[[LB2:.*]] = arith.constant 1 : i32
 !CHECK: %[[LB2_CVT:.*]] = fir.convert %[[LB2]] : (i32) -> index
 !CHECK: %[[UB2:.*]] = fir.call @_QPbar(%{{.*}}, %{{.*}}) proc_attrs<pure> fastmath<contract> : (!fir.ref<i32>, !fir.ref<i32>) -> i32
 !CHECK: %[[UB2_CVT:.*]] = fir.convert %[[UB2]] : (i32) -> index
-!CHECK: fir.do_concurrent
-!CHECK:   fir.do_concurrent.loop (%{{.*}}) = (%[[LB2_CVT]]) to (%[[UB2_CVT]]) step (%{{.*}})
+!CHECK: fir.do_loop %{{.*}} = %[[LB2_CVT]] to %[[UB2_CVT]] step %{{.*}} unordered
    do concurrent(i=1:n)
       do concurrent(j=1:bar(n*m, n/m))
          a(i) = n
       end do
    end do
 end subroutine
+
 
 !CHECK-LABEL: unstructured
 subroutine unstructured(inner_step)

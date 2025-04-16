@@ -9544,14 +9544,14 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
           Range);
   auto Plan = std::make_unique<VPlan>(OrigLoop);
   // Build hierarchical CFG.
-  // Convert to VPlan-transform and consoliate all transforms for VPlan
+  // TODO: Convert to VPlan-transform and consolidate all transforms for VPlan
   // creation.
   VPlanHCFGBuilder HCFGBuilder(OrigLoop, LI, *Plan);
-  HCFGBuilder.buildHierarchicalCFG();
+  HCFGBuilder.buildPlainCFG();
 
-  VPlanTransforms::introduceTopLevelVectorLoopRegion(
-      *Plan, Legal->getWidestInductionType(), PSE, RequiresScalarEpilogueCheck,
-      CM.foldTailByMasking(), OrigLoop);
+  VPlanTransforms::createLoopRegions(*Plan, Legal->getWidestInductionType(),
+                                     PSE, RequiresScalarEpilogueCheck,
+                                     CM.foldTailByMasking(), OrigLoop);
 
   // Don't use getDecisionAndClampRange here, because we don't know the UF
   // so this function is better to be conservative, rather than to split
@@ -9851,10 +9851,10 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VFRange &Range) {
   auto Plan = std::make_unique<VPlan>(OrigLoop);
   // Build hierarchical CFG
   VPlanHCFGBuilder HCFGBuilder(OrigLoop, LI, *Plan);
-  HCFGBuilder.buildHierarchicalCFG();
+  HCFGBuilder.buildPlainCFG();
 
-  VPlanTransforms::introduceTopLevelVectorLoopRegion(
-      *Plan, Legal->getWidestInductionType(), PSE, true, false, OrigLoop);
+  VPlanTransforms::createLoopRegions(*Plan, Legal->getWidestInductionType(),
+                                     PSE, true, false, OrigLoop);
 
   for (ElementCount VF : Range)
     Plan->addVF(VF);
