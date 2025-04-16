@@ -830,58 +830,63 @@
 // CHECK-NSAN-UBSAN: "--whole-archive" "{{[^"]*}}libclang_rt.nsan.a" "--no-whole-archive"
 
 // CFI by itself does not link runtime libraries.
-// RUN: not %clang -fsanitize=cfi -### %s 2>&1 \
+// RUN: not %clang -fsanitize=cfi \
 // RUN:     --target=x86_64-unknown-linux -fuse-ld=ld -rtlib=platform \
 // RUN:     -resource-dir=%S/Inputs/resource_dir \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
+// RUN:     -### %s 2>&1 \
 // RUN:   | %{filecheck} --check-prefix=CHECK-CFI-LINUX
 // CHECK-CFI-LINUX: "{{.*}}ld{{(.exe)?}}"
 
 // CFI with diagnostics links the UBSan runtime.
 // RUN: not %clang -fsanitize=cfi -fno-sanitize-trap=cfi -fsanitize-recover=cfi \
-// RUN:     -### %s 2>&1\
 // RUN:     --target=x86_64-unknown-linux -fuse-ld=ld \
 // RUN:     -resource-dir=%S/Inputs/resource_dir \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
+// RUN:     -### %s 2>&1 \
 // RUN:   | %{filecheck} --check-prefix=CHECK-CFI-DIAG-LINUX
 // CHECK-CFI-DIAG-LINUX: "{{.*}}ld{{(.exe)?}}"
 // CHECK-CFI-DIAG-LINUX: "--whole-archive" "{{[^"]*}}libclang_rt.ubsan_standalone.a" "--no-whole-archive"
 
 // Cross-DSO CFI links the CFI runtime.
-// RUN: not %clang -fsanitize=cfi -fsanitize-cfi-cross-dso -### %s 2>&1 \
+// RUN: not %clang -fsanitize=cfi -fsanitize-cfi-cross-dso \
 // RUN:     --target=x86_64-unknown-linux -fuse-ld=ld \
 // RUN:     -resource-dir=%S/Inputs/resource_dir \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
+// RUN:     -### %s 2>&1 \
 // RUN:   | %{filecheck} --check-prefix=CHECK-CFI-CROSS-DSO-LINUX
 // CHECK-CFI-CROSS-DSO-LINUX: "{{.*}}ld{{(.exe)?}}"
 // CHECK-CFI-CROSS-DSO-LINUX: "--whole-archive" "{{[^"]*}}libclang_rt.cfi.a" "--no-whole-archive"
 // CHECK-CFI-CROSS-DSO-LINUX: -export-dynamic
 
 // Cross-DSO CFI with diagnostics links just the CFI runtime.
-// RUN: not %clang -fsanitize=cfi -fsanitize-cfi-cross-dso -### %s 2>&1 \
+// RUN: not %clang -fsanitize=cfi -fsanitize-cfi-cross-dso \
 // RUN:     -fno-sanitize-trap=cfi -fsanitize-recover=cfi \
 // RUN:     --target=x86_64-unknown-linux -fuse-ld=ld \
 // RUN:     -resource-dir=%S/Inputs/resource_dir \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
+// RUN:     -### %s 2>&1 \
 // RUN:   | %{filecheck} --check-prefix=CHECK-CFI-CROSS-DSO-DIAG-LINUX
 // CHECK-CFI-CROSS-DSO-DIAG-LINUX: "{{.*}}ld{{(.exe)?}}"
 // CHECK-CFI-CROSS-DSO-DIAG-LINUX: "--whole-archive" "{{[^"]*}}libclang_rt.cfi_diag.a" "--no-whole-archive"
 // CHECK-CFI-CROSS-DSO-DIAG-LINUX: -export-dynamic
 
 // Cross-DSO CFI on Android does not link runtime libraries.
-// RUN: not %clang -fsanitize=cfi -fsanitize-cfi-cross-dso -### %s 2>&1 \
+// RUN: not %clang -fsanitize=cfi -fsanitize-cfi-cross-dso \
 // RUN:     --target=aarch64-linux-android -fuse-ld=ld \
 // RUN:     -resource-dir=%S/Inputs/resource_dir \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree \
+// RUN:     -### %s 2>&1 \
 // RUN:   | %{filecheck} --check-prefix=CHECK-CFI-CROSS-DSO-ANDROID
 // CHECK-CFI-CROSS-DSO-ANDROID: "{{.*}}ld{{(.exe)?}}"
 
 // Cross-DSO CFI with diagnostics on Android links just the UBSAN runtime.
-// RUN: not %clang -fsanitize=cfi -fsanitize-cfi-cross-dso -### %s 2>&1 \
+// RUN: not %clang -fsanitize=cfi -fsanitize-cfi-cross-dso \
 // RUN:     -fno-sanitize-trap=cfi -fsanitize-recover=cfi \
 // RUN:     --target=aarch64-linux-android -fuse-ld=ld \
 // RUN:     -resource-dir=%S/Inputs/resource_dir \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree \
+// RUN:     -### %s 2>&1 \
 // RUN:   | %{filecheck} --check-prefix=CHECK-CFI-CROSS-DSO-DIAG-ANDROID
 // CHECK-CFI-CROSS-DSO-DIAG-ANDROID: "{{.*}}ld{{(.exe)?}}"
 // CHECK-CFI-CROSS-DSO-DIAG-ANDROID: "{{[^"]*}}libclang_rt.ubsan_standalone.so"
