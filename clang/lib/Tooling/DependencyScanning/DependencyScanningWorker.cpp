@@ -113,7 +113,7 @@ public:
                          llvm::SmallVector<std::string> &NewModuleFiles,
                          PrebuiltModulesAttrsMap &PrebuiltModulesASTMap,
                          DiagnosticsEngine &Diags,
-                         const llvm::SmallVector<StringRef> &StableDirs)
+                         const ArrayRef<StringRef> StableDirs)
       : CI(CI), PrebuiltModuleFiles(PrebuiltModuleFiles),
         NewModuleFiles(NewModuleFiles),
         PrebuiltModulesASTMap(PrebuiltModulesASTMap), Diags(Diags),
@@ -219,7 +219,7 @@ private:
   PrebuiltModulesAttrsMap &PrebuiltModulesASTMap;
   DiagnosticsEngine &Diags;
   std::string CurrentFile;
-  const llvm::SmallVector<StringRef> &StableDirs;
+  const ArrayRef<StringRef> StableDirs;
 };
 
 /// Visit the given prebuilt module and collect all of the modules it
@@ -228,16 +228,8 @@ static bool visitPrebuiltModule(StringRef PrebuiltModuleFilename,
                                 CompilerInstance &CI,
                                 PrebuiltModuleFilesT &ModuleFiles,
                                 PrebuiltModulesAttrsMap &PrebuiltModulesASTMap,
-                                DiagnosticsEngine &Diags) {
-
-  // Gather the set of stable directories to use as transitive dependencies are
-  // discovered.
-  llvm::SmallVector<StringRef> StableDirs;
-  std::string SysrootToUse(CI.getHeaderSearchOpts().Sysroot);
-  if (!SysrootToUse.empty() &&
-      (llvm::sys::path::root_directory(SysrootToUse) != SysrootToUse))
-    StableDirs = {SysrootToUse, CI.getHeaderSearchOpts().ResourceDir};
-
+                                DiagnosticsEngine &Diags,
+                                const ArrayRef<StringRef> StableDirs) {
   // List of module files to be processed.
   llvm::SmallVector<std::string> Worklist;
   PrebuiltModuleListener Listener(CI, ModuleFiles, Worklist,
@@ -594,6 +586,15 @@ public:
     auto *FileMgr = ScanInstance.createFileManager(FS);
     ScanInstance.createSourceManager(*FileMgr);
 
+    // Create a collection of stable directories derived from the ScanInstance
+    // for determining whether module dependencies would fully resolve from
+    // those directories.
+    llvm::SmallVector<StringRef> StableDirs;
+    const StringRef Sysroot = ScanInstance.getHeaderSearchOpts().Sysroot;
+    if (!Sysroot.empty() &&
+        (llvm::sys::path::root_directory(Sysroot) != Sysroot))
+      StableDirs = {Sysroot, ScanInstance.getHeaderSearchOpts().ResourceDir};
+
     // Store a mapping of prebuilt module files and their properties like header
     // search options. This will prevent the implicit build to create duplicate
     // modules and will force reuse of the existing prebuilt module files
@@ -605,7 +606,7 @@ public:
               ScanInstance.getPreprocessorOpts().ImplicitPCHInclude,
               ScanInstance,
               ScanInstance.getHeaderSearchOpts().PrebuiltModuleFiles,
-              PrebuiltModulesASTMap, ScanInstance.getDiagnostics()))
+              PrebuiltModulesASTMap, ScanInstance.getDiagnostics(), StableDirs))
         return false;
 
     // Create the dependency collector that will collect the produced
@@ -665,7 +666,7 @@ public:
 
       MDC = std::make_shared<ModuleDepCollector>(
           Service, std::move(Opts), ScanInstance, Consumer, Controller,
-          OriginalInvocation, std::move(PrebuiltModulesASTMap));
+          OriginalInvocation, std::move(PrebuiltModulesASTMap), StableDirs);
       ScanInstance.addDependencyCollector(MDC);
       ScanInstance.setGenModuleActionWrapper(
           [&Controller = Controller](const FrontendOptions &Opts,
