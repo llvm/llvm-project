@@ -1862,7 +1862,9 @@ llvm::LogicalResult fir::EmboxOp::verify() {
   if (fir::isa_volatile_type(getMemref().getType()) !=
       fir::isa_volatile_type(getResult().getType()))
     return emitOpError("cannot convert between volatile and non-volatile "
-                       "types, use fir.volatile_cast instead");
+                       "types, use fir.volatile_cast instead") << " "
+                       << getMemref().getType() << " "
+                       << getResult().getType();
   return mlir::success();
 }
 

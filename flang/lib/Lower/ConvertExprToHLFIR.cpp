@@ -203,6 +203,7 @@ private:
         !partInfo.resultShape)
       partInfo.resultShape =
           hlfir::genShape(getLoc(), getBuilder(), *partInfo.base);
+
     // Dynamic type of polymorphic base must be kept if the designator is
     // polymorphic.
     if (isPolymorphic(designatorNode))
@@ -216,6 +217,24 @@ private:
     // When volatile is enabled, enable volatility on the designatory type.
     bool isVolatile = false;
 
+    // Check if this should be a volatile reference
+    if constexpr (std::is_same_v<std::decay_t<T>,
+                                 Fortran::evaluate::SymbolRef>) {
+      if (designatorNode.get().GetUltimate().attrs().test(
+              Fortran::semantics::Attr::VOLATILE))
+        isVolatile = true;
+    } else if constexpr (std::is_same_v<std::decay_t<T>,
+                                 Fortran::evaluate::ArrayRef>) {
+      if (designatorNode.base().GetLastSymbol().attrs().test(
+              Fortran::semantics::Attr::VOLATILE))
+        isVolatile = true;
+    } else if constexpr (std::is_same_v<std::decay_t<T>,
+                                 Fortran::evaluate::Component>) {
+      if (designatorNode.GetLastSymbol().attrs().test(
+              Fortran::semantics::Attr::VOLATILE))
+        isVolatile = true;
+    }
+
     // Arrays with non default lower bounds or dynamic length or dynamic extent
     // need a fir.box to hold the dynamic or lower bound information.
     if (fir::hasDynamicSize(resultValueType) ||
@@ -227,20 +246,12 @@ private:
         !Fortran::evaluate::IsSimplyContiguous(
             designatorNode, getConverter().getFoldingContext(),
             /*namedConstantSectionsAreAlwaysContiguous=*/false))
-      return fir::BoxType::get(resultValueType);
+      return fir::BoxType::get(resultValueType, isVolatile);
 
     // Check if the base type is volatile
     if (partInfo.base.has_value()) {
       mlir::Type baseType = partInfo.base.value().getType();
       isVolatile = fir::isa_volatile_type(baseType);
-    }
-
-    // Check if this should be a volatile reference
-    if constexpr (std::is_same_v<std::decay_t<T>,
-                                 Fortran::evaluate::SymbolRef>) {
-      if (designatorNode.get().GetUltimate().attrs().test(
-              Fortran::semantics::Attr::VOLATILE))
-        isVolatile = true;
     }
 
     // Other designators can be handled as raw addresses.
