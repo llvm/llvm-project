@@ -52,20 +52,19 @@ struct VPlanTransforms {
       verifyVPlanIsValid(Plan);
   }
 
-  /// Introduce the top-level VPRegionBlock for the main loop in \p Plan. Coming
-  /// into this function, \p Plan's top-level loop is modeled using a plain CFG.
-  /// This transform wraps the plain CFG of the top-level loop within a
-  /// VPRegionBlock and creates a VPValue expression for the original trip
-  /// count. It will also introduce a dedicated VPBasicBlock for the vector
-  /// pre-header as well a VPBasicBlock as exit block of the region
-  /// (middle.block). If a check is needed to guard executing the scalar
+  /// Replace loops in \p Plan's flat CFG with VPRegionBlocks, turing \p Plan's
+  /// flat CFG into a hierarchical CFG. It also creates a VPValue expression for
+  /// the original trip count. It will also introduce a dedicated VPBasicBlock
+  /// for the vector pre-header as well a VPBasicBlock as exit block of the
+  /// region (middle.block). If a check is needed to guard executing the scalar
   /// epilogue loop, it will be added to the middle block, together with
   /// VPBasicBlocks for the scalar preheader and exit blocks. \p InductionTy is
   /// the type of the canonical induction and used for related values, like the
   /// trip count expression.
-  static void introduceTopLevelVectorLoopRegion(
-      VPlan &Plan, Type *InductionTy, PredicatedScalarEvolution &PSE,
-      bool RequiresScalarEpilogueCheck, bool TailFolded, Loop *TheLoop);
+  static void createLoopRegions(VPlan &Plan, Type *InductionTy,
+                                PredicatedScalarEvolution &PSE,
+                                bool RequiresScalarEpilogueCheck,
+                                bool TailFolded, Loop *TheLoop);
 
   /// Replaces the VPInstructions in \p Plan with corresponding
   /// widen recipes. Returns false if any VPInstructions could not be converted
