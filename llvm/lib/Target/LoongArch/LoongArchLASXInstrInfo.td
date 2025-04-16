@@ -2179,6 +2179,8 @@ defm : VldreplPat<v32i8, XVLDREPL_B, simm12_addlike>;
 defm : VldreplPat<v16i16, XVLDREPL_H, simm11_lsl1>;
 defm : VldreplPat<v8i32, XVLDREPL_W, simm10_lsl2>;
 defm : VldreplPat<v4i64, XVLDREPL_D, simm9_lsl3>;
+defm : VldreplPat<v8f32, XVLDREPL_W, simm10_lsl2>;
+defm : VldreplPat<v4f64, XVLDREPL_D, simm9_lsl3>;
 
 // store
 def : Pat<(int_loongarch_lasx_xvst LASX256:$xd, GPR:$rj, timm:$imm),

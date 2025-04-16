@@ -2369,6 +2369,8 @@ defm : VldreplPat<v16i8, VLDREPL_B, simm12_addlike>;
 defm : VldreplPat<v8i16, VLDREPL_H, simm11_lsl1>;
 defm : VldreplPat<v4i32, VLDREPL_W, simm10_lsl2>;
 defm : VldreplPat<v2i64, VLDREPL_D, simm9_lsl3>;
+defm : VldreplPat<v4f32, VLDREPL_W, simm10_lsl2>;
+defm : VldreplPat<v2f64, VLDREPL_D, simm9_lsl3>;
 
 // store
 def : Pat<(int_loongarch_lsx_vst LSX128:$vd, GPR:$rj, timm:$imm),
