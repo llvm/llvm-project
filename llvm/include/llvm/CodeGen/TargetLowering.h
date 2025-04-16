@@ -3157,11 +3157,11 @@ public:
   /// Lower an interleaved load to target specific intrinsics. Return
   /// true on success.
   ///
-  /// \p LoadOp is a vector load or vp.load instruction.
+  /// \p LI is the vector load instruction.
   /// \p Shuffles is the shufflevector list to DE-interleave the loaded vector.
   /// \p Indices is the corresponding indices for each shufflevector.
   /// \p Factor is the interleave factor.
-  virtual bool lowerInterleavedLoad(Instruction *LoadOp,
+  virtual bool lowerInterleavedLoad(LoadInst *LI,
                                     ArrayRef<ShuffleVectorInst *> Shuffles,
                                     ArrayRef<unsigned> Indices,
                                     unsigned Factor) const {
@@ -3171,24 +3171,23 @@ public:
   /// Lower an interleaved store to target specific intrinsics. Return
   /// true on success.
   ///
-  /// \p StoreOp is a vector store or vp.store instruction.
+  /// \p SI is the vector store instruction.
   /// \p SVI is the shufflevector to RE-interleave the stored vector.
   /// \p Factor is the interleave factor.
-  virtual bool lowerInterleavedStore(Instruction *StoreOp,
-                                     ShuffleVectorInst *SVI,
+  virtual bool lowerInterleavedStore(StoreInst *SI, ShuffleVectorInst *SVI,
                                      unsigned Factor) const {
     return false;
   }
 
-  /// Lower an interleaved load to target specific intrinsics. Return
+  /// Lower a deinterleaved load to target specific intrinsics. Return
   /// true on success.
   ///
   /// \p Load is a vp.load instruction.
   /// \p Mask is a mask value
   /// \p DeinterleaveRes is a list of deinterleaved results.
   virtual bool
-  lowerDeinterleavedIntrinsicToVPLoad(VPIntrinsic *Load, Value *Mask,
-                                      ArrayRef<Value *> DeinterleaveRes) const {
+  lowerDeinterleavedVPLoad(VPIntrinsic *Load, Value *Mask,
+                           ArrayRef<Value *> DeinterleaveRes) const {
     return false;
   }
 
@@ -3198,9 +3197,8 @@ public:
   /// \p Store is the vp.store instruction.
   /// \p Mask is a mask value
   /// \p InterleaveOps is a list of values being interleaved.
-  virtual bool
-  lowerInterleavedIntrinsicToVPStore(VPIntrinsic *Store, Value *Mask,
-                                     ArrayRef<Value *> InterleaveOps) const {
+  virtual bool lowerInterleavedVPStore(VPIntrinsic *Store, Value *Mask,
+                                       ArrayRef<Value *> InterleaveOps) const {
     return false;
   }
 

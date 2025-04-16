@@ -1650,14 +1650,14 @@ namespace llvm {
 
     /// Lower interleaved load(s) into target specific
     /// instructions/intrinsics.
-    bool lowerInterleavedLoad(Instruction *LoadOp,
+    bool lowerInterleavedLoad(LoadInst *LI,
                               ArrayRef<ShuffleVectorInst *> Shuffles,
                               ArrayRef<unsigned> Indices,
                               unsigned Factor) const override;
 
     /// Lower interleaved store(s) into target specific
     /// instructions/intrinsics.
-    bool lowerInterleavedStore(Instruction *StoreOp, ShuffleVectorInst *SVI,
+    bool lowerInterleavedStore(StoreInst *SI, ShuffleVectorInst *SVI,
                                unsigned Factor) const override;
 
     SDValue expandIndirectJTBranch(const SDLoc &dl, SDValue Value, SDValue Addr,

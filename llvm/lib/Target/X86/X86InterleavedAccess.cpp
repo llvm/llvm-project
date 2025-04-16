@@ -801,17 +801,13 @@ bool X86InterleavedAccessGroup::lowerIntoOptimizedSequence() {
 // number of shuffles and ISA.
 // Currently, lowering is supported for 4x64 bits with Factor = 4 on AVX.
 bool X86TargetLowering::lowerInterleavedLoad(
-    Instruction *LoadOp, ArrayRef<ShuffleVectorInst *> Shuffles,
+    LoadInst *LI, ArrayRef<ShuffleVectorInst *> Shuffles,
     ArrayRef<unsigned> Indices, unsigned Factor) const {
   assert(Factor >= 2 && Factor <= getMaxSupportedInterleaveFactor() &&
          "Invalid interleave factor");
   assert(!Shuffles.empty() && "Empty shufflevector input");
   assert(Shuffles.size() == Indices.size() &&
          "Unmatched number of shufflevectors and indices");
-
-  auto *LI = dyn_cast<LoadInst>(LoadOp);
-  if (!LI)
-    return false;
 
   // Create an interleaved access group.
   IRBuilder<> Builder(LI);
@@ -821,7 +817,7 @@ bool X86TargetLowering::lowerInterleavedLoad(
   return Grp.isSupported() && Grp.lowerIntoOptimizedSequence();
 }
 
-bool X86TargetLowering::lowerInterleavedStore(Instruction *StoreOp,
+bool X86TargetLowering::lowerInterleavedStore(StoreInst *SI,
                                               ShuffleVectorInst *SVI,
                                               unsigned Factor) const {
   assert(Factor >= 2 && Factor <= getMaxSupportedInterleaveFactor() &&
@@ -830,10 +826,6 @@ bool X86TargetLowering::lowerInterleavedStore(Instruction *StoreOp,
   assert(cast<FixedVectorType>(SVI->getType())->getNumElements() % Factor ==
              0 &&
          "Invalid interleaved store");
-
-  auto *SI = dyn_cast<StoreInst>(StoreOp);
-  if (!SI)
-    return false;
 
   // Holds the indices of SVI that correspond to the starting index of each
   // interleaved shuffle.

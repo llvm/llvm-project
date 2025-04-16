@@ -903,12 +903,12 @@ public:
 
   bool fallBackToDAGISel(const Instruction &Inst) const override;
 
-  bool lowerInterleavedLoad(Instruction *LoadOp,
+  bool lowerInterleavedLoad(LoadInst *LI,
                             ArrayRef<ShuffleVectorInst *> Shuffles,
                             ArrayRef<unsigned> Indices,
                             unsigned Factor) const override;
 
-  bool lowerInterleavedStore(Instruction *StoreOp, ShuffleVectorInst *SVI,
+  bool lowerInterleavedStore(StoreInst *SI, ShuffleVectorInst *SVI,
                              unsigned Factor) const override;
 
   bool lowerDeinterleaveIntrinsicToLoad(
@@ -917,13 +917,12 @@ public:
   bool lowerInterleaveIntrinsicToStore(
       StoreInst *SI, ArrayRef<Value *> InterleaveValues) const override;
 
-  bool lowerDeinterleavedIntrinsicToVPLoad(
-      VPIntrinsic *Load, Value *Mask,
-      ArrayRef<Value *> DeinterleaveRes) const override;
+  bool
+  lowerDeinterleavedVPLoad(VPIntrinsic *Load, Value *Mask,
+                           ArrayRef<Value *> DeinterleaveRes) const override;
 
-  bool lowerInterleavedIntrinsicToVPStore(
-      VPIntrinsic *Store, Value *Mask,
-      ArrayRef<Value *> InterleaveOps) const override;
+  bool lowerInterleavedVPStore(VPIntrinsic *Store, Value *Mask,
+                               ArrayRef<Value *> InterleaveOps) const override;
 
   bool supportKCFIBundles() const override { return true; }
 

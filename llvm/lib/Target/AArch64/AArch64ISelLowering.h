@@ -716,11 +716,11 @@ public:
 
   unsigned getMaxSupportedInterleaveFactor() const override { return 4; }
 
-  bool lowerInterleavedLoad(Instruction *LoadOp,
+  bool lowerInterleavedLoad(LoadInst *LI,
                             ArrayRef<ShuffleVectorInst *> Shuffles,
                             ArrayRef<unsigned> Indices,
                             unsigned Factor) const override;
-  bool lowerInterleavedStore(Instruction *StoreOp, ShuffleVectorInst *SVI,
+  bool lowerInterleavedStore(StoreInst *SI, ShuffleVectorInst *SVI,
                              unsigned Factor) const override;
 
   bool lowerDeinterleaveIntrinsicToLoad(
