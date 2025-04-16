@@ -1185,7 +1185,6 @@ public:
     return Loc != X.Loc || II != X.II;
   }
 };
-
 }  // namespace clang
 
 namespace llvm {
