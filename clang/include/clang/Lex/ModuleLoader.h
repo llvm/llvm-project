@@ -14,6 +14,7 @@
 #ifndef LLVM_CLANG_LEX_MODULELOADER_H
 #define LLVM_CLANG_LEX_MODULELOADER_H
 
+#include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/Module.h"
 #include "clang/Basic/SourceLocation.h"
@@ -29,7 +30,7 @@ class IdentifierInfo;
 
 /// A sequence of identifier/location pairs used to describe a particular
 /// module or submodule, e.g., std.vector.
-using ModuleIdPath = ArrayRef<std::pair<IdentifierInfo *, SourceLocation>>;
+using ModuleIdPath = ArrayRef<IdentifierLoc>;
 
 /// Describes the result of attempting to load a module.
 class ModuleLoadResult {
