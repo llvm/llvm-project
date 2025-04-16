@@ -660,6 +660,12 @@ backend:DirectX:
   - '**/*dxil*/**'
   - '**/*DXContainer*'
   - '**/*DXContainer*/**'
+  - clang/lib/Sema/SemaDirectX.cpp
+  - clang/include/clang/Sema/SemaDirectX.h
+  - clang/include/clang/Basic/BuiltinsDirectX.td
+  - clang/lib/CodeGen/TargetBuiltins/DirectX.cpp
+  - clang/test/CodeGenDirectX/**
+  - clang/test/SemaDirectX/**
 
 backend:SPIR-V:
   - clang/lib/Driver/ToolChains/SPIRV.*

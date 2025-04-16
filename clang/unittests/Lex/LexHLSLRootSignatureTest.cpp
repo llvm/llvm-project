@@ -19,7 +19,7 @@ class LexHLSLRootSignatureTest : public ::testing::Test {
 protected:
   LexHLSLRootSignatureTest() {}
 
-  void CheckTokens(hlsl::RootSignatureLexer &Lexer,
+  void checkTokens(hlsl::RootSignatureLexer &Lexer,
                    SmallVector<hlsl::RootSignatureToken> &Computed,
                    SmallVector<TokenKind> &Expected) {
     for (unsigned I = 0, E = Expected.size(); I != E; ++I) {
@@ -27,13 +27,13 @@ protected:
       if (Expected[I] == TokenKind::invalid ||
           Expected[I] == TokenKind::end_of_stream)
         continue;
-      hlsl::RootSignatureToken Result = Lexer.ConsumeToken();
+      hlsl::RootSignatureToken Result = Lexer.consumeToken();
       ASSERT_EQ(Result.TokKind, Expected[I]);
       Computed.push_back(Result);
     }
-    hlsl::RootSignatureToken EndOfStream = Lexer.ConsumeToken();
+    hlsl::RootSignatureToken EndOfStream = Lexer.consumeToken();
     ASSERT_EQ(EndOfStream.TokKind, TokenKind::end_of_stream);
-    ASSERT_TRUE(Lexer.EndOfBuffer());
+    ASSERT_TRUE(Lexer.isEndOfBuffer());
   }
 };
 
@@ -55,7 +55,7 @@ TEST_F(LexHLSLRootSignatureTest, ValidLexNumbersTest) {
       TokenKind::pu_plus,     TokenKind::int_literal, TokenKind::pu_plus,
       TokenKind::int_literal,
   };
-  CheckTokens(Lexer, Tokens, Expected);
+  checkTokens(Lexer, Tokens, Expected);
 
   // Sample negative: int component
   hlsl::RootSignatureToken IntToken = Tokens[1];
@@ -119,7 +119,7 @@ TEST_F(LexHLSLRootSignatureTest, ValidLexAllTokensTest) {
 #include "clang/Lex/HLSLRootSignatureTokenKinds.def"
   };
 
-  CheckTokens(Lexer, Tokens, Expected);
+  checkTokens(Lexer, Tokens, Expected);
 }
 
 TEST_F(LexHLSLRootSignatureTest, ValidCaseInsensitiveKeywordsTest) {
@@ -149,7 +149,7 @@ TEST_F(LexHLSLRootSignatureTest, ValidCaseInsensitiveKeywordsTest) {
       TokenKind::kw_offset,
   };
 
-  CheckTokens(Lexer, Tokens, Expected);
+  checkTokens(Lexer, Tokens, Expected);
 }
 
 TEST_F(LexHLSLRootSignatureTest, ValidLexPeekTest) {
@@ -161,26 +161,26 @@ TEST_F(LexHLSLRootSignatureTest, ValidLexPeekTest) {
   hlsl::RootSignatureLexer Lexer(Source, TokLoc);
 
   // Test basic peek
-  hlsl::RootSignatureToken Res = Lexer.PeekNextToken();
+  hlsl::RootSignatureToken Res = Lexer.peekNextToken();
   ASSERT_EQ(Res.TokKind, TokenKind::pu_r_paren);
 
   // Ensure it doesn't peek past one element
-  Res = Lexer.PeekNextToken();
+  Res = Lexer.peekNextToken();
   ASSERT_EQ(Res.TokKind, TokenKind::pu_r_paren);
 
-  Res = Lexer.ConsumeToken();
+  Res = Lexer.consumeToken();
   ASSERT_EQ(Res.TokKind, TokenKind::pu_r_paren);
 
   // Invoke after reseting the NextToken
-  Res = Lexer.PeekNextToken();
+  Res = Lexer.peekNextToken();
   ASSERT_EQ(Res.TokKind, TokenKind::int_literal);
 
   // Ensure we can still consume the second token
-  Res = Lexer.ConsumeToken();
+  Res = Lexer.consumeToken();
   ASSERT_EQ(Res.TokKind, TokenKind::int_literal);
 
   // Ensure end of stream token
-  Res = Lexer.PeekNextToken();
+  Res = Lexer.peekNextToken();
   ASSERT_EQ(Res.TokKind, TokenKind::end_of_stream);
 }
 

@@ -1618,8 +1618,8 @@ define void @scalarize_induction_variable_04(ptr %a, ptr %p, i32 %n) {
 ; IND-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[P]], i64 [[TMP5]]
 ; IND-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[TMP6]], i64 8
 ; IND-NEXT:    [[TMP7:%.*]] = shl nuw nsw i64 [[TMP4]], 4
-; IND-NEXT:    [[TMP8:%.*]] = or disjoint i64 [[TMP7]], 4
-; IND-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 [[TMP8]]
+; IND-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 [[TMP7]]
+; IND-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[TMP8]], i64 4
 ; IND-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[SCEVGEP]], [[SCEVGEP2]]
 ; IND-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[A]], [[SCEVGEP1]]
 ; IND-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
@@ -1681,8 +1681,8 @@ define void @scalarize_induction_variable_04(ptr %a, ptr %p, i32 %n) {
 ; UNROLL-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[P]], i64 [[TMP5]]
 ; UNROLL-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[TMP6]], i64 8
 ; UNROLL-NEXT:    [[TMP7:%.*]] = shl nuw nsw i64 [[TMP4]], 4
-; UNROLL-NEXT:    [[TMP8:%.*]] = or disjoint i64 [[TMP7]], 4
-; UNROLL-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 [[TMP8]]
+; UNROLL-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 [[TMP7]]
+; UNROLL-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[TMP8]], i64 4
 ; UNROLL-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[SCEVGEP]], [[SCEVGEP2]]
 ; UNROLL-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[A]], [[SCEVGEP1]]
 ; UNROLL-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
@@ -1837,8 +1837,8 @@ define void @scalarize_induction_variable_04(ptr %a, ptr %p, i32 %n) {
 ; INTERLEAVE-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[P]], i64 [[TMP5]]
 ; INTERLEAVE-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[TMP6]], i64 8
 ; INTERLEAVE-NEXT:    [[TMP7:%.*]] = shl nuw nsw i64 [[TMP4]], 4
-; INTERLEAVE-NEXT:    [[TMP8:%.*]] = or disjoint i64 [[TMP7]], 4
-; INTERLEAVE-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 [[TMP8]]
+; INTERLEAVE-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 [[TMP7]]
+; INTERLEAVE-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[TMP8]], i64 4
 ; INTERLEAVE-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[SCEVGEP]], [[SCEVGEP2]]
 ; INTERLEAVE-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[A]], [[SCEVGEP1]]
 ; INTERLEAVE-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
