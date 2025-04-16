@@ -23,7 +23,7 @@ attributes #0 = { "hlsl.numthreads"="1,1,1" "hlsl.shader"="compute" }
 ; DXC-NEXT:    RootSignature:
 ; DXC-NEXT:      Version:         2
 ; DXC-NEXT:      NumRootParameters: 0
-; DXC-NEXT:      RootParametersOffset: 0
+; DXC-NEXT:      RootParametersOffset: 24
 ; DXC-NEXT:      NumStaticSamplers: 0
 ; DXC-NEXT:      StaticSamplersOffset: 0
 ; DXC-NEXT:      Parameters: []

@@ -76,13 +76,14 @@ static bool parseRootConstants(LLVMContext *Ctx, mcdxbc::RootSignatureDesc &RSD,
     return reportError(Ctx, "Invalid format for RootConstants Element");
 
   mcdxbc::RootParameter NewParameter;
-  NewParameter.Header.ParameterType = dxbc::RootParameterType::Constants32Bit;
+  NewParameter.Header.ParameterType =
+      llvm::to_underlying(dxbc::RootParameterType::Constants32Bit);
 
   uint32_t SV;
   if (extractMdIntValue(SV, RootConstantNode, 1))
     return reportError(Ctx, "Invalid value for ShaderVisibility");
 
-  NewParameter.Header.ShaderVisibility = (dxbc::ShaderVisibility)SV;
+  NewParameter.Header.ShaderVisibility = SV;
 
   if (extractMdIntValue(NewParameter.Constants.ShaderRegister, RootConstantNode,
                         2))
@@ -150,23 +151,23 @@ static bool verifyRootFlag(uint32_t Flags) { return (Flags & ~0xfff) == 0; }
 static bool verifyShaderVisibility(uint32_t Flags) {
   switch (Flags) {
 
-  case dxbc::ShaderVisibility::All:
-  case dxbc::ShaderVisibility::Vertex:
-  case dxbc::ShaderVisibility::Hull:
-  case dxbc::ShaderVisibility::Domain:
-  case dxbc::ShaderVisibility::Geometry:
-  case dxbc::ShaderVisibility::Pixel:
-  case dxbc::ShaderVisibility::Amplification:
-  case dxbc::ShaderVisibility::Mesh:
+  case llvm::to_underlying(dxbc::ShaderVisibility::All):
+  case llvm::to_underlying(dxbc::ShaderVisibility::Vertex):
+  case llvm::to_underlying(dxbc::ShaderVisibility::Hull):
+  case llvm::to_underlying(dxbc::ShaderVisibility::Domain):
+  case llvm::to_underlying(dxbc::ShaderVisibility::Geometry):
+  case llvm::to_underlying(dxbc::ShaderVisibility::Pixel):
+  case llvm::to_underlying(dxbc::ShaderVisibility::Amplification):
+  case llvm::to_underlying(dxbc::ShaderVisibility::Mesh):
     return true;
   }
 
   return false;
 }
 
-static bool verifyParameterType(uint32_t Flags) {
-  switch (Flags) {
-  case dxbc::RootParameterType::Constants32Bit:
+static bool verifyParameterType(uint32_t Type) {
+  switch (Type) {
+  case llvm::to_underlying(dxbc::RootParameterType::Constants32Bit):
     return true;
   }
 
@@ -320,7 +321,7 @@ PreservedAnalyses RootSignatureAnalysisPrinter::run(Module &M,
          << "Shader Visibility: " << (uint32_t)P.Header.ShaderVisibility
          << "\n";
       switch (P.Header.ParameterType) {
-      case dxbc::RootParameterType::Constants32Bit:
+      case llvm::to_underlying(dxbc::RootParameterType::Constants32Bit):
         OS << indent(Space) << "Register Space: " << P.Constants.RegisterSpace
            << "\n";
         OS << indent(Space) << "Shader Register: " << P.Constants.ShaderRegister

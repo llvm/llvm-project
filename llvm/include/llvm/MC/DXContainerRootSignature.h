@@ -25,7 +25,7 @@ struct RootSignatureDesc {
 
   uint32_t Version = 2U;
   uint32_t Flags = 0U;
-  uint32_t RootParameterOffset = 0U;
+  uint32_t RootParameterOffset = 24U;
   uint32_t StaticSamplersOffset = 0u;
   uint32_t NumStaticSamplers = 0u;
   SmallVector<mcdxbc::RootParameter> Parameters;

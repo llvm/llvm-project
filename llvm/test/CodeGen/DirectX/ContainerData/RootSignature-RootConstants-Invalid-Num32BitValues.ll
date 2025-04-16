@@ -5,12 +5,10 @@ target triple = "dxil-unknown-shadermodel6.0-compute"
 ; CHECK: error: Invalid value for Num32BitValues
 ; CHECK-NOT: Root Signature Definitions
 
-define void @main() #0 {
+define void @main() {
 entry:
   ret void
 }
-attributes #0 = { "hlsl.numthreads"="1,1,1" "hlsl.shader"="compute" }
-
 
 !dx.rootsignatures = !{!2} ; list of function/root signature pairs
 !2 = !{ ptr @main, !3 } ; function, root signature
