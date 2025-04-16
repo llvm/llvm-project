@@ -455,7 +455,7 @@ BasicBlock::const_iterator BasicBlock::getFirstNonPHIOrDbgOrAlloca() const {
   if (InsertPt == end())
     return end();
 
-  if (InsertPt->isEHPad())
+  if (InsertPt->isEHPad() && !InsertPt->isTerminator())
     ++InsertPt;
 
   if (isEntryBlock()) {
