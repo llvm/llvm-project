@@ -51,7 +51,7 @@ public:
   VecDesc() = delete;
   VecDesc(StringRef ScalarFnName, StringRef VectorFnName,
           ElementCount VectorizationFactor, bool Masked, StringRef VABIPrefix,
-          std::optional<CallingConv::ID> Conv = std::nullopt)
+          std::optional<CallingConv::ID> Conv)
       : ScalarFnName(ScalarFnName), VectorFnName(VectorFnName),
         VectorizationFactor(VectorizationFactor), Masked(Masked),
         VABIPrefix(VABIPrefix), CC(Conv) {}
