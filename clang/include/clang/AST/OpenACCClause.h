@@ -258,7 +258,7 @@ inline bool operator!=(const OpenACCBindClause &LHS,
   return !(LHS == RHS);
 }
 
-using DeviceTypeArgument = IdentifierLoc;
+using DeviceTypeArgument = std::pair<IdentifierInfo *, SourceLocation>;
 /// A 'device_type' or 'dtype' clause, takes a list of either an 'asterisk' or
 /// an identifier. The 'asterisk' means 'the rest'.
 class OpenACCDeviceTypeClause final
@@ -280,16 +280,16 @@ class OpenACCDeviceTypeClause final
         "Invalid clause kind for device-type");
 
     assert(!llvm::any_of(Archs, [](const DeviceTypeArgument &Arg) {
-      return Arg.getLoc().isInvalid();
+      return Arg.second.isInvalid();
     }) && "Invalid SourceLocation for an argument");
 
-    assert((Archs.size() == 1 ||
-            !llvm::any_of(Archs,
-                          [](const DeviceTypeArgument &Arg) {
-                            return Arg.getIdentifierInfo() == nullptr;
-                          })) &&
-           "Only a single asterisk version is permitted, and must be the "
-           "only one");
+    assert(
+        (Archs.size() == 1 || !llvm::any_of(Archs,
+                                            [](const DeviceTypeArgument &Arg) {
+                                              return Arg.first == nullptr;
+                                            })) &&
+        "Only a single asterisk version is permitted, and must be the "
+        "only one");
 
     std::uninitialized_copy(Archs.begin(), Archs.end(),
                             getTrailingObjects<DeviceTypeArgument>());
@@ -302,7 +302,7 @@ public:
   }
   bool hasAsterisk() const {
     return getArchitectures().size() > 0 &&
-           getArchitectures()[0].getIdentifierInfo() == nullptr;
+           getArchitectures()[0].first == nullptr;
   }
 
   ArrayRef<DeviceTypeArgument> getArchitectures() const {

@@ -500,10 +500,10 @@ void TextNodeDumper::Visit(const OpenACCClause *C) {
       llvm::interleaveComma(
           cast<OpenACCDeviceTypeClause>(C)->getArchitectures(), OS,
           [&](const DeviceTypeArgument &Arch) {
-            if (Arch.getIdentifierInfo() == nullptr)
+            if (Arch.first == nullptr)
               OS << "*";
             else
-              OS << Arch.getIdentifierInfo()->getName();
+              OS << Arch.first->getName();
           });
       OS << ")";
       break;

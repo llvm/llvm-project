@@ -432,8 +432,9 @@ static bool attributeParsedArgsUnevaluated(const IdentifierInfo &II,
 
 IdentifierLoc *Parser::ParseIdentifierLoc() {
   assert(Tok.is(tok::identifier) && "expected an identifier");
-  IdentifierLoc *IL = new (Actions.Context)
-      IdentifierLoc(Tok.getLocation(), Tok.getIdentifierInfo());
+  IdentifierLoc *IL = IdentifierLoc::create(Actions.Context,
+                                            Tok.getLocation(),
+                                            Tok.getIdentifierInfo());
   ConsumeToken();
   return IL;
 }
@@ -1352,21 +1353,20 @@ void Parser::ParseAvailabilityAttribute(
     return;
   }
   IdentifierLoc *Platform = ParseIdentifierLoc();
-  if (const IdentifierInfo *const Ident = Platform->getIdentifierInfo()) {
+  if (const IdentifierInfo *const Ident = Platform->Ident) {
     // Disallow xrOS for availability attributes.
     if (Ident->getName().contains("xrOS") || Ident->getName().contains("xros"))
-      Diag(Platform->getLoc(), diag::warn_availability_unknown_platform)
-          << Ident;
+      Diag(Platform->Loc, diag::warn_availability_unknown_platform) << Ident;
     // Canonicalize platform name from "macosx" to "macos".
     else if (Ident->getName() == "macosx")
-      Platform->setIdentifierInfo(PP.getIdentifierInfo("macos"));
+      Platform->Ident = PP.getIdentifierInfo("macos");
     // Canonicalize platform name from "macosx_app_extension" to
     // "macos_app_extension".
     else if (Ident->getName() == "macosx_app_extension")
-      Platform->setIdentifierInfo(PP.getIdentifierInfo("macos_app_extension"));
+      Platform->Ident = PP.getIdentifierInfo("macos_app_extension");
     else
-      Platform->setIdentifierInfo(PP.getIdentifierInfo(
-          AvailabilityAttr::canonicalizePlatformName(Ident->getName())));
+      Platform->Ident = PP.getIdentifierInfo(
+          AvailabilityAttr::canonicalizePlatformName(Ident->getName()));
   }
 
   // Parse the ',' following the platform name.
@@ -1418,8 +1418,8 @@ void Parser::ParseAvailabilityAttribute(
       continue;
     }
 
-    if (Keyword == Ident_deprecated && Platform->getIdentifierInfo() &&
-        Platform->getIdentifierInfo()->isStr("swift")) {
+    if (Keyword == Ident_deprecated && Platform->Ident &&
+        Platform->Ident->isStr("swift")) {
       // For swift, we deprecate for all versions.
       if (Changes[Deprecated].KeywordLoc.isValid()) {
         Diag(KeywordLoc, diag::err_availability_redundant)
@@ -1436,7 +1436,7 @@ void Parser::ParseAvailabilityAttribute(
     if (Keyword == Ident_environment) {
       if (EnvironmentLoc != nullptr) {
         Diag(KeywordLoc, diag::err_availability_redundant)
-            << Keyword << SourceRange(EnvironmentLoc->getLoc());
+            << Keyword << SourceRange(EnvironmentLoc->Loc);
       }
     }
 
@@ -1792,8 +1792,8 @@ void Parser::ParseSwiftNewTypeAttribute(
     return;
   }
 
-  auto *SwiftType = new (Actions.Context)
-      IdentifierLoc(Tok.getLocation(), Tok.getIdentifierInfo());
+  auto *SwiftType = IdentifierLoc::create(Actions.Context, Tok.getLocation(),
+                                          Tok.getIdentifierInfo());
   ConsumeToken();
 
   // Closing ')'
