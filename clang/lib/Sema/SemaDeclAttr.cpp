@@ -543,29 +543,6 @@ static bool checkLockFunAttrCommon(Sema &S, Decl *D, const ParsedAttr &AL,
   return true;
 }
 
-static void handleAssertSharedLockAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
-  SmallVector<Expr *, 1> Args;
-  if (!checkLockFunAttrCommon(S, D, AL, Args))
-    return;
-
-  unsigned Size = Args.size();
-  Expr **StartArg = Size == 0 ? nullptr : &Args[0];
-  D->addAttr(::new (S.Context)
-                 AssertSharedLockAttr(S.Context, AL, StartArg, Size));
-}
-
-static void handleAssertExclusiveLockAttr(Sema &S, Decl *D,
-                                          const ParsedAttr &AL) {
-  SmallVector<Expr *, 1> Args;
-  if (!checkLockFunAttrCommon(S, D, AL, Args))
-    return;
-
-  unsigned Size = Args.size();
-  Expr **StartArg = Size == 0 ? nullptr : &Args[0];
-  D->addAttr(::new (S.Context)
-                 AssertExclusiveLockAttr(S.Context, AL, StartArg, Size));
-}
-
 /// Checks to be sure that the given parameter number is in bounds, and
 /// is an integral type. Will emit appropriate diagnostics if this returns
 /// false.
@@ -643,26 +620,6 @@ static bool checkTryLockFunAttrCommon(Sema &S, Decl *D, const ParsedAttr &AL,
   checkAttrArgsAreCapabilityObjs(S, D, AL, Args, 1);
 
   return true;
-}
-
-static void handleSharedTrylockFunctionAttr(Sema &S, Decl *D,
-                                            const ParsedAttr &AL) {
-  SmallVector<Expr*, 2> Args;
-  if (!checkTryLockFunAttrCommon(S, D, AL, Args))
-    return;
-
-  D->addAttr(::new (S.Context) SharedTrylockFunctionAttr(
-      S.Context, AL, AL.getArgAsExpr(0), Args.data(), Args.size()));
-}
-
-static void handleExclusiveTrylockFunctionAttr(Sema &S, Decl *D,
-                                               const ParsedAttr &AL) {
-  SmallVector<Expr*, 2> Args;
-  if (!checkTryLockFunAttrCommon(S, D, AL, Args))
-    return;
-
-  D->addAttr(::new (S.Context) ExclusiveTrylockFunctionAttr(
-      S.Context, AL, AL.getArgAsExpr(0), Args.data(), Args.size()));
 }
 
 static void handleLockReturnedAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
@@ -8982,12 +8939,6 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     break;
 
   // Thread safety attributes:
-  case ParsedAttr::AT_AssertExclusiveLock:
-    handleAssertExclusiveLockAttr(S, D, AL);
-    break;
-  case ParsedAttr::AT_AssertSharedLock:
-    handleAssertSharedLockAttr(S, D, AL);
-    break;
   case ParsedAttr::AT_PtGuardedVar:
     handlePtGuardedVarAttr(S, D, AL);
     break;
@@ -9003,17 +8954,11 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
   case ParsedAttr::AT_PtGuardedBy:
     handlePtGuardedByAttr(S, D, AL);
     break;
-  case ParsedAttr::AT_ExclusiveTrylockFunction:
-    handleExclusiveTrylockFunctionAttr(S, D, AL);
-    break;
   case ParsedAttr::AT_LockReturned:
     handleLockReturnedAttr(S, D, AL);
     break;
   case ParsedAttr::AT_LocksExcluded:
     handleLocksExcludedAttr(S, D, AL);
-    break;
-  case ParsedAttr::AT_SharedTrylockFunction:
-    handleSharedTrylockFunctionAttr(S, D, AL);
     break;
   case ParsedAttr::AT_AcquiredBefore:
     handleAcquiredBeforeAttr(S, D, AL);
