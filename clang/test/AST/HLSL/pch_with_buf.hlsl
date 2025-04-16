@@ -6,7 +6,7 @@
 // Make sure buffer defined in PCH works.
 // CHECK:VarDecl 0x{{[0-9a-f]+}} <line:6:1, col:17> col:17 imported Buf 'RWBuffer<float>'
 // Make sure declare a RWBuffer in current file works.
-// CHECK:VarDecl 0x{{[0-9a-f]+}} <{{.*}}:10:1, col:23> col:23 Buf2 'hlsl::RWBuffer<float>'
+// CHECK:VarDecl 0x{{[0-9a-f]+}} <{{.*}}:{{[0-9]+}}:1, col:23> col:23 Buf2 'hlsl::RWBuffer<float>'
 hlsl::RWBuffer<float> Buf2;
 
 float2 bar(float2 a, float2 b) {

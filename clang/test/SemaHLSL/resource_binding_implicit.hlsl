@@ -14,6 +14,12 @@ RWBuffer<int> c;
 // No warning - explicit binding.
 RWBuffer<float> d : register(u0);
 
+// No warning - explicit binding.
+RWBuffer<float> dd : register(space1);
+
+// No warning - explicit binding.
+RWBuffer<float> ddd : register(u3, space4);
+
 struct S { int x; };
 // expected-warning@+1 {{resource has implicit register binding}}
 StructuredBuffer<S> e;
