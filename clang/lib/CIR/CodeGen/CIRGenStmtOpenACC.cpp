@@ -50,6 +50,21 @@ class OpenACCClauseCIREmitter final
     cgf.cgm.errorNYI(c.getSourceRange(), "OpenACC Clause", c.getClauseKind());
   }
 
+  // 'condition' as an OpenACC grammar production is used for 'if' and (some
+  // variants of) 'self'.  It needs to be emitted as a signless-1-bit value, so
+  // this function emits the expression, then sets the unrealized conversion
+  // cast correctly, and returns the completed value.
+  mlir::Value createCondition(const Expr *condExpr) {
+    mlir::Value condition = cgf.evaluateExprAsBool(condExpr);
+    mlir::Location exprLoc = cgf.cgm.getLoc(condExpr->getBeginLoc());
+    mlir::IntegerType targetType = mlir::IntegerType::get(
+        &cgf.getMLIRContext(), /*width=*/1,
+        mlir::IntegerType::SignednessSemantics::Signless);
+    auto conversionOp = builder.create<mlir::UnrealizedConversionCastOp>(
+        exprLoc, targetType, condition);
+    return conversionOp.getResult(0);
+  }
+
 public:
   OpenACCClauseCIREmitter(OpTy &operation, CIRGenFunction &cgf,
                           CIRGenBuilderTy &builder,
@@ -132,21 +147,24 @@ public:
         operation.setSelfAttr(true);
       } else if (clause.isConditionExprClause()) {
         assert(clause.hasConditionExpr());
-        mlir::Value condition =
-            cgf.evaluateExprAsBool(clause.getConditionExpr());
-
-        mlir::Location exprLoc =
-            cgf.cgm.getLoc(clause.getConditionExpr()->getBeginLoc());
-        mlir::IntegerType targetType = mlir::IntegerType::get(
-            &cgf.getMLIRContext(), /*width=*/1,
-            mlir::IntegerType::SignednessSemantics::Signless);
-        auto conversionOp = builder.create<mlir::UnrealizedConversionCastOp>(
-            exprLoc, targetType, condition);
-        operation.getSelfCondMutable().append(conversionOp.getResult(0));
+        operation.getSelfCondMutable().append(
+            createCondition(clause.getConditionExpr()));
       } else {
         llvm_unreachable("var-list version of self shouldn't get here");
       }
     } else {
+      return clauseNotImplemented(clause);
+    }
+  }
+
+  void VisitIfClause(const OpenACCIfClause &clause) {
+    if constexpr (isOneOfTypes<OpTy, ParallelOp, SerialOp, KernelsOp>) {
+      operation.getIfCondMutable().append(
+          createCondition(clause.getConditionExpr()));
+    } else {
+      // 'if' applies to most of the constructs, but hold off on lowering them
+      // until we can write tests/know what we're doing with codegen to make
+      // sure we get it right.
       return clauseNotImplemented(clause);
     }
   }
