@@ -4401,7 +4401,8 @@ TemplateSpecializationType::TemplateSpecializationType(
           T.getKind() == TemplateName::SubstTemplateTemplateParmPack ||
           T.getKind() == TemplateName::UsingTemplate ||
           T.getKind() == TemplateName::QualifiedTemplate ||
-          T.getKind() == TemplateName::DeducedTemplate) &&
+          T.getKind() == TemplateName::DeducedTemplate ||
+          T.getKind() == TemplateName::AssumedTemplate) &&
          "Unexpected template name for TemplateSpecializationType");
 
   auto *TemplateArgs =
