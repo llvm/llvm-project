@@ -3202,9 +3202,9 @@ struct MergeNestedParallelLoops : public OpRewritePattern<ParallelOp> {
 
 void ParallelOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                              MLIRContext *context) {
-  results
-      .add<ParallelOpSingleOrZeroIterationDimsFolder, MergeNestedParallelLoops>(
-          context);
+  results.add<ParallelOpSingleOrZeroIterationDimsFolder>(context);
+  results.addWithLabel<MergeNestedParallelLoops>({"MergeNestedParallelLoops"},
+                                                 context);
 }
 
 /// Given the region at `index`, or the parent operation if `index` is None,
