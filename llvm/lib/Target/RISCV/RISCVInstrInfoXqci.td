@@ -164,6 +164,9 @@ def AddLike: PatFrags<(ops node:$A, node:$B),
     return CurDAG->isBaseWithConstantOffset(SDValue(N, 0));
 }]>;
 
+def AddShl : PatFrag<(ops node:$Ra, node:$Rb, node:$SH3),
+                     (add node:$Ra, (shl node:$Rb, node:$SH3))>;
+
 //===----------------------------------------------------------------------===//
 // Instruction Formats
 //===----------------------------------------------------------------------===//
@@ -1252,6 +1255,14 @@ class QC48StPat<PatFrag StoreOp, RVInst48 Inst>
     : Pat<(StoreOp (i32 GPR:$rs2), (AddLike (i32 GPR:$rs1), simm26_nosimm12:$imm26)),
           (Inst GPR:$rs2, GPR:$rs1, simm26_nosimm12:$imm26)>;
 
+class QCScaledLdPat<PatFrag LoadOp, RVInst Inst>
+    : Pat<(i32 (LoadOp (AddShl (i32 GPRMem:$rs1), (i32 GPRNoX0:$rs2), uimm3:$shamt))),
+          (Inst GPRMem:$rs1, GPRNoX0:$rs2, uimm3:$shamt)>;
+
+class QCScaledStPat<PatFrag StoreOp, RVInst Inst>
+    : Pat<(StoreOp (i32 GPR:$rd), (AddShl (i32 GPRMem:$rs1), (i32 GPRNoX0:$rs2), uimm3:$shamt)),
+          (Inst GPR:$rd, GPRMem:$rs1, GPRNoX0:$rs2, uimm3:$shamt)>;
+
 /// Simple arithmetic operations
 
 let Predicates = [HasVendorXqcilia, IsRV32] in {
@@ -1266,6 +1277,8 @@ def : PatGprNoX0Simm26NoSimm12<or, QC_E_ORI>;
 def : PatGprNoX0Simm26NoSimm12<xor, QC_E_XORI>;
 } // Predicates = [HasVendorXqcilia, IsRV32]
 
+/// Load/Store operations
+
 let Predicates = [HasVendorXqcilo, IsRV32], AddedComplexity = 2 in {
   def : QC48LdPat<sextloadi8, QC_E_LB>;
   def : QC48LdPat<extloadi8, QC_E_LBU>; // Prefer unsigned due to no c.lb in Zcb.
@@ -1279,6 +1292,21 @@ let Predicates = [HasVendorXqcilo, IsRV32], AddedComplexity = 2 in {
   def : QC48StPat<truncstorei16, QC_E_SH>;
   def : QC48StPat<store, QC_E_SW>;
 } // Predicates = [HasVendorXqcilo, IsRV32], AddedComplexity = 2
+
+
+let Predicates = [HasVendorXqcisls, IsRV32], AddedComplexity = 1 in {
+  def : QCScaledLdPat<sextloadi8, QC_LRB>;
+  def : QCScaledLdPat<extloadi8, QC_LRBU>;
+  def : QCScaledLdPat<sextloadi16, QC_LRH>;
+  def : QCScaledLdPat<extloadi16, QC_LRH>;
+  def : QCScaledLdPat<load, QC_LRW>;
+  def : QCScaledLdPat<zextloadi8, QC_LRBU>;
+  def : QCScaledLdPat<zextloadi16, QC_LRHU>;
+
+  def : QCScaledStPat<truncstorei8, QC_SRB>;
+  def : QCScaledStPat<truncstorei16, QC_SRH>;
+  def : QCScaledStPat<store, QC_SRW>;
+} // Predicates = [HasVendorXqcisls, IsRV32], AddedComplexity = 1
 
 let Predicates = [HasVendorXqciint, IsRV32] in
 def : Pat<(riscv_mileaveret_glue), (QC_C_MILEAVERET)>;
