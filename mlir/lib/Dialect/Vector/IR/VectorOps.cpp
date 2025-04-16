@@ -6009,6 +6009,10 @@ OpFoldResult vector::TransposeOp::fold(FoldAdaptor adaptor) {
     if (attr.isSplat())
       return attr.reshape(getResultVectorType());
 
+  // Eliminate poison transpose ops.
+  if (llvm::dyn_cast_if_present<ub::PoisonAttr>(adaptor.getVector()))
+    return ub::PoisonAttr::get(getContext());
+
   // Eliminate identity transpose ops. This happens when the dimensions of the
   // input vector remain in their original order after the transpose operation.
   ArrayRef<int64_t> perm = getPermutation();
