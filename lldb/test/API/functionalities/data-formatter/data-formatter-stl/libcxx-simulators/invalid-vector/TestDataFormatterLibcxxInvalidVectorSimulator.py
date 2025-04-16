@@ -33,3 +33,7 @@ class LibcxxInvalidVectorDataFormatterSimulatorTestCase(TestBase):
             "frame variable v4",
             substrs=["size=error: Failed to determine start/end of vector data."],
         )
+        self.expect(
+            "frame variable v5",
+            substrs=["size=error: Size not multiple of element size."],
+        )
