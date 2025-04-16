@@ -377,7 +377,7 @@ def cuf_StreamCastOp : cuf_Op<"stream_cast", [NoMemoryEffect]> {
   let description = [{
     Cast a stream object reference as a GPU async token. This is useful to be
     able to connect the stream representation of CUDA Fortran and the async
-    mechnism of the GPU dialect.
+    mechanism of the GPU dialect.
     Later in the lowering this will becoming a no op.
   }];
 
