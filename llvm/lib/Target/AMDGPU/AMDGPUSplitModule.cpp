@@ -1491,7 +1491,7 @@ static void splitAMDGPUModule(
     for (unsigned NodeID : (*Proposal)[PID].set_bits())
       FnsInPart.insert(&SG.getNode(NodeID).getFunction());
 
-    // Don't create empty module, except for PID 0 because
+    // Don't create empty modules.
     if (FnsInPart.empty()) {
       LLVM_DEBUG(dbgs() << "[split] P" << PID
                         << " is empty, not creating module\n");
@@ -1511,7 +1511,7 @@ static void splitAMDGPUModule(
             return false;
           }
 
-          // Everything else goes in the first partition.
+          // Everything else goes in the first non-empty module we create.
           return needsConservativeImport(GV) || ImportAllGVs;
         }));
 
