@@ -347,7 +347,7 @@ ParsedType Sema::getDestructorName(const IdentifierInfo &II,
     QualType T =
         CheckTypenameType(ElaboratedTypeKeyword::None, SourceLocation(),
                           SS.getWithLocInContext(Context), II, NameLoc);
-    return ParsedType::make(T);
+    return CreateParsedType(T, Context.getTrivialTypeSourceInfo(T, NameLoc));
   }
 
   // The remaining cases are all non-standard extensions imitating the behavior
