@@ -25,6 +25,17 @@ define i64 @f2() {
   ret i64 %ret
 }
 
+; Test 16-bit FPRs.
+define half @f3_half() {
+; CHECK-LABEL: f3_half:
+; CHECK: lzer %f4
+; CHECK: blah %f4
+; CHECK: ler %f0, %f4
+; CHECK: br %r14
+  %ret = call half asm "blah $0", "={f4},0" (half 0.0)
+  ret half %ret
+}
+
 ; Test i32 FPRs.
 define float @f3() {
 ; CHECK-LABEL: f3:
