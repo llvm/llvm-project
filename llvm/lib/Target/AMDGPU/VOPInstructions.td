@@ -427,7 +427,7 @@ class VOP3be <VOPProfile P> : Enc64 {
   let Inst{63}    = !if(P.HasSrc2Mods, src2_modifiers{0}, 0);
 }
 
-class VOP3Pe <bits<7> op, VOPProfile P> : Enc64 {
+class VOP3Pe <VOPProfile P> : Enc64 {
   bits<8> vdst;
   bits<4> src0_modifiers;
   bits<9> src0;
@@ -452,8 +452,6 @@ class VOP3Pe <bits<7> op, VOPProfile P> : Enc64 {
 
   let Inst{15} = !if(P.HasClamp, clamp{0}, 0);
 
-  let Inst{22-16} = op;
-  let Inst{31-23} = 0x1a7; //encoding
   let Inst{40-32} = !if(P.HasSrc0, src0, 0);
   let Inst{49-41} = !if(P.HasSrc1, src1, 0);
   let Inst{58-50} = !if(P.HasSrc2, src2, 0);
@@ -577,11 +575,17 @@ class VOP3PXe <bits<7> op, VOPProfile MFMAPfl, bit acc_cd = 0> : Enc128, VOP3Pe_
   let Inst{127-125} = !if(MFMAPfl.HasSrc1, blgp, 0);
 }
 
-class VOP3Pe_gfx10 <bits<7> op, VOPProfile P> : VOP3Pe<op, P> {
-  let Inst{31-23} = 0x198; //encoding
+class VOP3Pe_vi <bits<7> op, VOPProfile P> : VOP3Pe<P> {
+  let Inst{22-16} = op;
+  let Inst{31-23} = 0x1a7; //encoding
 }
 
-class VOP3Pe_gfx11_gfx12<bits<7> op, VOPProfile P> : VOP3Pe_gfx10<op, P>;
+class VOP3Pe_gfx10 <bits<8> op, VOPProfile P> : VOP3Pe<P> {
+  let Inst{23-16} = op;
+  let Inst{31-24} = 0xcc; //encoding
+}
+
+class VOP3Pe_gfx11_gfx12<bits<8> op, VOPProfile P> : VOP3Pe_gfx10<op, P>;
 
 class VOP3be_gfx6_gfx7<bits<9> op, VOPProfile p> : VOP3be<p> {
   let Inst{25-17} = op;
@@ -902,7 +906,7 @@ class VOP3_DPPe_Common_t16<bits<10> op, VOPProfile P> : VOP3_DPPe_Common_Base<op
   let Inst{58-50} = !if(P.HasSrc2, src2{8-0}, 0);
 }
 
-class VOP3P_DPPe_Common_Base<bits<7> op, VOPProfile P> : Enc96 {
+class VOP3P_DPPe_Common_Base<bits<8> op, VOPProfile P> : Enc96 {
   bits<4> src0_modifiers;
   bits<4> src1_modifiers;
   bits<4> src2_modifiers;
@@ -917,8 +921,8 @@ class VOP3P_DPPe_Common_Base<bits<7> op, VOPProfile P> : Enc96 {
   let Inst{13} = !if(!and(P.HasSrc2, P.HasOpSel), src2_modifiers{2}, 0); // op_sel(2)
   let Inst{14} = !if(!and(P.HasSrc2, P.HasOpSel), src2_modifiers{3}, !if(P.IsDOT, 1, ?)); // op_sel_hi(2)
   let Inst{15} = !if(P.HasClamp, clamp{0}, 0);
-  let Inst{22-16} = op;
-  let Inst{31-23} = 0x198; // encoding
+  let Inst{23-16} = op;
+  let Inst{31-24} = 0xcc; // encoding
   let Inst{59}    = !if(!and(P.HasSrc0, P.HasOpSel), src0_modifiers{3}, !if(P.IsDOT, 1, ?)); // op_sel_hi(0)
   let Inst{60}    = !if(!and(P.HasSrc1, P.HasOpSel), src1_modifiers{3}, !if(P.IsDOT, 1, ?)); // op_sel_hi(1)
   let Inst{61}    = !if(P.HasSrc0Mods, src0_modifiers{0}, 0); // neg (lo)
@@ -926,7 +930,7 @@ class VOP3P_DPPe_Common_Base<bits<7> op, VOPProfile P> : Enc96 {
   let Inst{63}    = !if(P.HasSrc2Mods, src2_modifiers{0}, 0); // neg (lo)
 }
 
-class VOP3P_DPPe_Common<bits<7> op, VOPProfile P> : VOP3P_DPPe_Common_Base<op, P> {
+class VOP3P_DPPe_Common<bits<8> op, VOPProfile P> : VOP3P_DPPe_Common_Base<op, P> {
   bits<8> vdst;
   bits<9> src1;
   bits<9> src2;
@@ -936,7 +940,7 @@ class VOP3P_DPPe_Common<bits<7> op, VOPProfile P> : VOP3P_DPPe_Common_Base<op, P
   let Inst{58-50} = !if(P.HasSrc2, src2, 0);
 }
 
-class VOP3P_DPPe_Common_t16<bits<7> op, VOPProfile P> : VOP3P_DPPe_Common_Base<op, P> {
+class VOP3P_DPPe_Common_t16<bits<8> op, VOPProfile P> : VOP3P_DPPe_Common_Base<op, P> {
   bits<11> vdst;
   bits<11> src1;
   bits<11> src2;
@@ -1107,7 +1111,7 @@ class VOP3_DPP_t16<bits<10> op, string OpName, VOPProfile P, bit IsDPP16,
       VOP3_DPP_Enc_t16<op, P, IsDPP16> {
 }
 
-class VOP3P_DPP <bits<7> op, string OpName, VOPProfile P, bit IsDPP16,
+class VOP3P_DPP <bits<8> op, string OpName, VOPProfile P, bit IsDPP16,
                dag InsDPP = !if(IsDPP16, P.InsVOP3DPP16, P.InsVOP3DPP),
                string AsmDPP = !if(IsDPP16, P.AsmVOP3DPP16, P.AsmVOP3DPP)> :
   VOP3_DPP_Base<OpName, P, IsDPP16, InsDPP, AsmDPP>, VOP3P_DPPe_Common<op, P>,
@@ -1201,7 +1205,7 @@ class VOP3_DPP8_Enc_t16 <bits<10> op, VOPProfile P> :
 class VOP3_DPP8_t16<bits<10> op, string OpName, VOPProfile P> :
   VOP3_DPP8_Base<OpName, P>, VOP3_DPP8_Enc_t16<op, P>;
 
-class VOP3P_DPP8<bits<7> op, string OpName, VOPProfile P> :
+class VOP3P_DPP8<bits<8> op, string OpName, VOPProfile P> :
   VOP3_DPP8_Base<OpName, P>, VOP3P_DPPe_Common<op, P>,
   VOP3_DPP8e_Fields {
 
