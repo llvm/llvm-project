@@ -103,7 +103,7 @@ private:
 
   /// The current set of on-disk tables.
   table_range tables() {
-    bool DropBegin = getMergedTable();
+    unsigned DropBegin = getMergedTable() ? 1 : 0;
     return llvm::map_range(llvm::drop_begin(Tables, DropBegin),
                            AsOnDiskTable());
   }
