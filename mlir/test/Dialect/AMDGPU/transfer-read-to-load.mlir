@@ -40,8 +40,7 @@ func.func @transfer_to_maskedload_fatrawbuffer_f16(%mem : memref<8x8xf16, #amdgp
 // CHECK: %[[DELTA:.*]] = arith.subi %[[SIZE]], %[[LINEAR]]
 // CHECK: %[[COND1:.*]] = arith.cmpi ult, %[[DELTA]], %[[C4]]
 
-// CHECK: %[[DELTABYTES:.*]] = arith.muli %[[DELTA]], %[[BYTES]]
-// CHECK: %[[REM:.*]] = arith.remui %[[DELTABYTES]], %[[C4]]
+// CHECK: %[[REM:.*]] = arith.remui %[[DELTA]], %[[BYTES]]
 // CHECK: %[[COND2:.*]] = arith.cmpi ne, %[[REM]], %[[C0]]
 
 // CHECK: %[[COND:.*]] = arith.andi %[[COND1]], %[[COND2]]
