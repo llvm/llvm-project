@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "InputFiles.h"
-#include "Arch/AArch64.h"
 #include "Config.h"
 #include "DWARF.h"
 #include "Driver.h"
@@ -662,15 +661,15 @@ handleAArch64BAAndGnuProperties(const ELFT &tPointer, Ctx &ctx, bool isBE,
   if (hasBA && hasGP) {
     // Check for data mismatch
     if (!gpInfo.aarch64PauthAbiCoreInfo.empty()) {
-      auto baPauth = serializeUnsigned(baInfo.pauth.tagPlatform,
-                                       baInfo.pauth.tagSchema, isBE);
+      auto baPauth = serializeUnsigned(baInfo.Pauth.TagPlatform,
+                                       baInfo.Pauth.TagSchema, isBE);
       if (gpInfo.aarch64PauthAbiCoreInfo != ArrayRef<uint8_t>(baPauth))
         ErrAlways(ctx)
             << tPointer
             << " Pauth Data mismatch: file contains both GNU properties and "
                "AArch64 build attributes sections with different Pauth data";
     }
-    if (baInfo.andFeatures != gpInfo.andFeatures)
+    if (baInfo.AndFeatures != gpInfo.andFeatures)
       ErrAlways(ctx) << tPointer
                      << " Features Data mismatch: file contains both GNU "
                         "properties and AArch64 build attributes sections with "
@@ -682,13 +681,13 @@ handleAArch64BAAndGnuProperties(const ELFT &tPointer, Ctx &ctx, bool isBE,
     // We can only know when Pauth is missing.
     // Unlike AArch64 Build Attributes, GNU properties does not give a way to
     // distinguish between no-value given to value of '0' given.
-    if (baInfo.pauth.tagPlatform || baInfo.pauth.tagSchema) {
+    if (baInfo.Pauth.TagPlatform || baInfo.Pauth.TagSchema) {
       tPointer->aarch64PauthAbiCoreInfoStorage = serializeUnsigned(
-          baInfo.pauth.tagPlatform, baInfo.pauth.tagSchema, isBE);
+          baInfo.Pauth.TagPlatform, baInfo.Pauth.TagSchema, isBE);
       tPointer->aarch64PauthAbiCoreInfo =
           tPointer->aarch64PauthAbiCoreInfoStorage;
     }
-    tPointer->andFeatures = baInfo.andFeatures;
+    tPointer->andFeatures = baInfo.AndFeatures;
   }
 }
 
