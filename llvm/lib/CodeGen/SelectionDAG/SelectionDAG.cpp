@@ -7604,7 +7604,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     case ISD::SDIV:
     case ISD::UREM:
     case ISD::SREM:
-      // fold op(arg1, undef) -> undef, // fold op(arg1, poison) -> poison.
+      // fold op(arg1, undef) -> undef, fold op(arg1, poison) -> poison.
       return N2.getOpcode() == ISD::POISON ? getPOISON(VT) : getUNDEF(VT);
     case ISD::MUL:
     case ISD::AND:
