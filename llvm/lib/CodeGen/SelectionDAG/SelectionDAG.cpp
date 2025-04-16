@@ -7406,6 +7406,10 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
            N2.getOpcode() == ISD::TargetConstant && "Invalid FP_ROUND!");
     if (N1.getValueType() == VT) return N1;  // noop conversion.
     break;
+  case ISD::AssertNoFPClass:
+    assert(N1.getValueType().isFloatingPoint() &&
+           "AssertNoFPClass is used for a non-floating type");
+    return N1;
   case ISD::AssertSext:
   case ISD::AssertZext: {
     EVT EVT = cast<VTSDNode>(N2)->getVT();

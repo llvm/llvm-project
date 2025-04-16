@@ -67,6 +67,12 @@ enum NodeType {
   /// poisoned the assertion will not be true for that value.
   AssertAlign,
 
+  /// AssertNoFPClass - These nodes record if a register contains a float
+  /// value that is known to be not some type.
+  /// NOTE: In case of the source value (or any vector element value) is
+  /// poisoned the assertion will not be true for that value.
+  AssertNoFPClass,
+
   /// Various leaf nodes.
   BasicBlock,
   VALUETYPE,
