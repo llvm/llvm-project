@@ -1446,8 +1446,10 @@ SemaObjC::ObjCSubscriptKind SemaObjC::CheckSubscriptingKind(Expr *FromE) {
 
 void SemaObjC::AddCFAuditedAttribute(Decl *D) {
   ASTContext &Context = getASTContext();
-  auto IdLoc = SemaRef.PP.getPragmaARCCFCodeAuditedInfo();
-  if (!IdLoc.getLoc().isValid())
+  IdentifierInfo *Ident;
+  SourceLocation Loc;
+  std::tie(Ident, Loc) = SemaRef.PP.getPragmaARCCFCodeAuditedInfo();
+  if (!Loc.isValid())
     return;
 
   // Don't add a redundant or conflicting attribute.
@@ -1455,8 +1457,7 @@ void SemaObjC::AddCFAuditedAttribute(Decl *D) {
       D->hasAttr<CFUnknownTransferAttr>())
     return;
 
-  AttributeCommonInfo Info(IdLoc.getIdentifierInfo(),
-                           SourceRange(IdLoc.getLoc()),
+  AttributeCommonInfo Info(Ident, SourceRange(Loc),
                            AttributeCommonInfo::Form::Pragma());
   D->addAttr(CFAuditedTransferAttr::CreateImplicit(Context, Info));
 }
@@ -1641,10 +1642,8 @@ void SemaObjC::handleMethodFamilyAttr(Decl *D, const ParsedAttr &AL) {
 
   IdentifierLoc *IL = AL.getArgAsIdent(0);
   ObjCMethodFamilyAttr::FamilyKind F;
-  if (!ObjCMethodFamilyAttr::ConvertStrToFamilyKind(
-          IL->getIdentifierInfo()->getName(), F)) {
-    Diag(IL->getLoc(), diag::warn_attribute_type_not_supported)
-        << AL << IL->getIdentifierInfo();
+  if (!ObjCMethodFamilyAttr::ConvertStrToFamilyKind(IL->Ident->getName(), F)) {
+    Diag(IL->Loc, diag::warn_attribute_type_not_supported) << AL << IL->Ident;
     return;
   }
 
@@ -1707,7 +1706,7 @@ void SemaObjC::handleBlocksAttr(Decl *D, const ParsedAttr &AL) {
     return;
   }
 
-  IdentifierInfo *II = AL.getArgAsIdent(0)->getIdentifierInfo();
+  IdentifierInfo *II = AL.getArgAsIdent(0)->Ident;
   BlocksAttr::BlockType type;
   if (!BlocksAttr::ConvertStrToBlockType(II->getName(), type)) {
     Diag(AL.getLoc(), diag::warn_attribute_type_not_supported) << AL << II;
@@ -1999,7 +1998,7 @@ void SemaObjC::handleNSErrorDomain(Decl *D, const ParsedAttr &Attr) {
 
   IdentifierLoc *IdentLoc =
       Attr.isArgIdent(0) ? Attr.getArgAsIdent(0) : nullptr;
-  if (!IdentLoc || !IdentLoc->getIdentifierInfo()) {
+  if (!IdentLoc || !IdentLoc->Ident) {
     // Try to locate the argument directly.
     SourceLocation Loc = Attr.getLoc();
     if (Attr.isArgExpr(0) && Attr.getArgAsExpr(0))
@@ -2010,18 +2009,18 @@ void SemaObjC::handleNSErrorDomain(Decl *D, const ParsedAttr &Attr) {
   }
 
   // Verify that the identifier is a valid decl in the C decl namespace.
-  LookupResult Result(SemaRef, DeclarationName(IdentLoc->getIdentifierInfo()),
+  LookupResult Result(SemaRef, DeclarationName(IdentLoc->Ident),
                       SourceLocation(),
                       Sema::LookupNameKind::LookupOrdinaryName);
   if (!SemaRef.LookupName(Result, SemaRef.TUScope) ||
       !Result.getAsSingle<VarDecl>()) {
-    Diag(IdentLoc->getLoc(), diag::err_nserrordomain_invalid_decl)
-        << 1 << IdentLoc->getIdentifierInfo();
+    Diag(IdentLoc->Loc, diag::err_nserrordomain_invalid_decl)
+        << 1 << IdentLoc->Ident;
     return;
   }
 
-  D->addAttr(::new (getASTContext()) NSErrorDomainAttr(
-      getASTContext(), Attr, IdentLoc->getIdentifierInfo()));
+  D->addAttr(::new (getASTContext())
+                 NSErrorDomainAttr(getASTContext(), Attr, IdentLoc->Ident));
 }
 
 void SemaObjC::handleBridgeAttr(Decl *D, const ParsedAttr &AL) {
@@ -2034,7 +2033,7 @@ void SemaObjC::handleBridgeAttr(Decl *D, const ParsedAttr &AL) {
 
   // Typedefs only allow objc_bridge(id) and have some additional checking.
   if (const auto *TD = dyn_cast<TypedefNameDecl>(D)) {
-    if (!Parm->getIdentifierInfo()->isStr("id")) {
+    if (!Parm->Ident->isStr("id")) {
       Diag(AL.getLoc(), diag::err_objc_attr_typedef_not_id) << AL;
       return;
     }
@@ -2047,8 +2046,8 @@ void SemaObjC::handleBridgeAttr(Decl *D, const ParsedAttr &AL) {
     }
   }
 
-  D->addAttr(::new (getASTContext()) ObjCBridgeAttr(getASTContext(), AL,
-                                                    Parm->getIdentifierInfo()));
+  D->addAttr(::new (getASTContext())
+                 ObjCBridgeAttr(getASTContext(), AL, Parm->Ident));
 }
 
 void SemaObjC::handleBridgeMutableAttr(Decl *D, const ParsedAttr &AL) {
@@ -2059,21 +2058,21 @@ void SemaObjC::handleBridgeMutableAttr(Decl *D, const ParsedAttr &AL) {
     return;
   }
 
-  D->addAttr(::new (getASTContext()) ObjCBridgeMutableAttr(
-      getASTContext(), AL, Parm->getIdentifierInfo()));
+  D->addAttr(::new (getASTContext())
+                 ObjCBridgeMutableAttr(getASTContext(), AL, Parm->Ident));
 }
 
 void SemaObjC::handleBridgeRelatedAttr(Decl *D, const ParsedAttr &AL) {
   IdentifierInfo *RelatedClass =
-      AL.isArgIdent(0) ? AL.getArgAsIdent(0)->getIdentifierInfo() : nullptr;
+      AL.isArgIdent(0) ? AL.getArgAsIdent(0)->Ident : nullptr;
   if (!RelatedClass) {
     Diag(D->getBeginLoc(), diag::err_objc_attr_not_id) << AL << 0;
     return;
   }
   IdentifierInfo *ClassMethod =
-      AL.getArgAsIdent(1) ? AL.getArgAsIdent(1)->getIdentifierInfo() : nullptr;
+      AL.getArgAsIdent(1) ? AL.getArgAsIdent(1)->Ident : nullptr;
   IdentifierInfo *InstanceMethod =
-      AL.getArgAsIdent(2) ? AL.getArgAsIdent(2)->getIdentifierInfo() : nullptr;
+      AL.getArgAsIdent(2) ? AL.getArgAsIdent(2)->Ident : nullptr;
   D->addAttr(::new (getASTContext()) ObjCBridgeRelatedAttr(
       getASTContext(), AL, RelatedClass, ClassMethod, InstanceMethod));
 }
