@@ -662,13 +662,13 @@ RemoveNoteDetail::updateData(ArrayRef<uint8_t> OldData,
   for (const DeletedRange &RemRange : ToRemove) {
     if (CurPos < RemRange.OldFrom) {
       auto Slice = OldData.slice(CurPos, RemRange.OldFrom - CurPos);
-      NewData.insert(NewData.end(), Slice.begin(), Slice.end());
+      llvm::append_range(NewData, Slice);
     }
     CurPos = RemRange.OldTo;
   }
   if (CurPos < OldData.size()) {
     auto Slice = OldData.slice(CurPos);
-    NewData.insert(NewData.end(), Slice.begin(), Slice.end());
+    llvm::append_range(NewData, Slice);
   }
   return NewData;
 }

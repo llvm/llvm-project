@@ -1990,7 +1990,7 @@ DIExpression *DIExpression::appendOpsToArg(const DIExpression *Expr,
     }
     Op.appendToVector(NewOps);
     if (Op.getOp() == dwarf::DW_OP_LLVM_arg && Op.getArg(0) == ArgNo)
-      NewOps.insert(NewOps.end(), Ops.begin(), Ops.end());
+      llvm::append_range(NewOps, Ops);
   }
   if (StackValue)
     NewOps.push_back(dwarf::DW_OP_stack_value);

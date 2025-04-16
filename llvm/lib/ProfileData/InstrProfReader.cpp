@@ -1096,7 +1096,7 @@ public:
                                SmallVectorImpl<char> &Out) {
     Out.reserve(OrigName.size() + Replacement.size() - ExtractedName.size());
     Out.insert(Out.end(), OrigName.begin(), ExtractedName.begin());
-    Out.insert(Out.end(), Replacement.begin(), Replacement.end());
+    llvm::append_range(Out, Replacement);
     Out.insert(Out.end(), ExtractedName.end(), OrigName.end());
   }
 
