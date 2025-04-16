@@ -513,17 +513,17 @@ void AMDGPUCallLowering::lowerPreloadedParameter(
   LLT ScalarTy = LLT::scalar(DL.getTypeSizeInBits(ArgTy));
   unsigned TotalSize = 0;
   SmallVector<Register> SrcRegs(PreloadRegs.size());
-  
+
   for (auto [Idx, PhysReg] : enumerate(PreloadRegs)) {
     Register VReg = MRI.getLiveInVirtReg(PhysReg);
     TypeSize RegSize = TRI->getRegSizeInBits(VReg, MRI);
-    
+
     if (!MRI.getVRegDef(VReg)) {
       MRI.setType(VReg, LLT::scalar(RegSize));
       B.getMBB().addLiveIn(PhysReg);
       B.buildInstr(TargetOpcode::COPY).addDef(VReg).addReg(PhysReg);
     }
-    
+
     constexpr const unsigned SGPRSize = 4;
     // Arg is preloaded into the previous SGPR.
     if (DL.getTypeStoreSize(ArgTy) < SGPRSize && Alignment < SGPRSize) {
