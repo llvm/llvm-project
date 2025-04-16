@@ -98,7 +98,7 @@ ValueObjectDynamicValue::CalculateNumChildren(uint32_t max) {
     return m_parent->GetNumChildren(max);
 }
 
-std::optional<uint64_t> ValueObjectDynamicValue::GetByteSize() {
+llvm::Expected<uint64_t> ValueObjectDynamicValue::GetByteSize() {
   const bool success = UpdateValueIfNeeded(false);
   if (success && m_dynamic_type_info.HasType()) {
     ExecutionContext exe_ctx(GetExecutionContextRef());
@@ -241,14 +241,15 @@ bool ValueObjectDynamicValue::UpdateValue() {
       SetValueDidChange(true);
 
     // If we found a host address, and the dynamic type fits in the local buffer
-    // that was found, point to thar buffer. Later on this function will copy
+    // that was found, point to that buffer. Later on this function will copy
     // the buffer over.
     if (value_type == Value::ValueType::HostAddress && !local_buffer.empty()) {
       auto *exe_scope = exe_ctx.GetBestExecutionContextScope();
       // If we found a host address but it doesn't fit in the buffer, there's
       // nothing we can do.
       if (local_buffer.size() <
-          m_dynamic_type_info.GetCompilerType().GetByteSize(exe_scope)) {
+          llvm::expectedToOptional(
+              m_dynamic_type_info.GetCompilerType().GetByteSize(exe_scope))) {
         SetValueIsValid(false);
         return false;
       }

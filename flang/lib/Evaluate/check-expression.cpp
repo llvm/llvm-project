@@ -69,13 +69,14 @@ public:
   bool operator()(const Component &component) const {
     return (*this)(component.base());
   }
-  // Forbid integer division by zero in constants.
+  // Prevent integer division by known zeroes in constant expressions.
   template <int KIND>
   bool operator()(
       const Divide<Type<TypeCategory::Integer, KIND>> &division) const {
     using T = Type<TypeCategory::Integer, KIND>;
-    if (const auto divisor{GetScalarConstantValue<T>(division.right())}) {
-      return !divisor->IsZero() && (*this)(division.left());
+    if ((*this)(division.left()) && (*this)(division.right())) {
+      const auto divisor{GetScalarConstantValue<T>(division.right())};
+      return !divisor || !divisor->IsZero();
     } else {
       return false;
     }
@@ -100,9 +101,9 @@ template <bool INVARIANT>
 bool IsConstantExprHelper<INVARIANT>::IsConstantStructureConstructorComponent(
     const Symbol &component, const Expr<SomeType> &expr) const {
   if (IsAllocatable(component)) {
-    return IsNullObjectPointer(expr);
+    return IsNullObjectPointer(&expr);
   } else if (IsPointer(component)) {
-    return IsNullPointer(expr) || IsInitialDataTarget(expr) ||
+    return IsNullPointerOrAllocatable(&expr) || IsInitialDataTarget(expr) ||
         IsInitialProcedureTarget(expr);
   } else {
     return (*this)(expr);
@@ -132,13 +133,23 @@ bool IsConstantExprHelper<INVARIANT>::operator()(
       auto shape{GetShape(call.arguments()[0]->UnwrapExpr())};
       return shape && IsConstantExprShape(*shape);
     } else if (proc.IsPure()) {
+      std::size_t j{0};
       for (const auto &arg : call.arguments()) {
-        if (!arg) {
+        if (const auto *dataDummy{j < proc.dummyArguments.size()
+                    ? std::get_if<characteristics::DummyDataObject>(
+                          &proc.dummyArguments[j].u)
+                    : nullptr};
+            dataDummy &&
+            dataDummy->attrs.test(
+                characteristics::DummyDataObject::Attr::OnlyIntrinsicInquiry)) {
+          // The value of the argument doesn't matter
+        } else if (!arg) {
           return false;
         } else if (const auto *expr{arg->UnwrapExpr()};
-                   !expr || !(*this)(*expr)) {
+            !expr || !(*this)(*expr)) {
           return false;
         }
+        ++j;
       }
       return true;
     }
@@ -194,7 +205,7 @@ struct IsActuallyConstantHelper {
       const bool compIsConstant{(*this)(y)};
       // If an allocatable component is initialized by a constant,
       // the structure constructor is not a constant.
-      if ((!compIsConstant && !IsNullPointer(y)) ||
+      if ((!compIsConstant && !IsNullPointerOrAllocatable(&y)) ||
           (compIsConstant && IsAllocatable(sym))) {
         return false;
       }
@@ -311,7 +322,9 @@ public:
   bool operator()(const ProcedureRef &x) const {
     if (const SpecificIntrinsic * intrinsic{x.proc().GetSpecificIntrinsic()}) {
       return intrinsic->characteristics.value().attrs.test(
-          characteristics::Procedure::Attr::NullPointer);
+                 characteristics::Procedure::Attr::NullPointer) ||
+          intrinsic->characteristics.value().attrs.test(
+              characteristics::Procedure::Attr::NullAllocatable);
     }
     return false;
   }
@@ -388,7 +401,7 @@ bool IsInitialProcedureTarget(const Expr<SomeType> &expr) {
   if (const auto *proc{std::get_if<ProcedureDesignator>(&expr.u)}) {
     return IsInitialProcedureTarget(*proc);
   } else {
-    return IsNullProcedurePointer(expr);
+    return IsNullProcedurePointer(&expr);
   }
 }
 
@@ -532,6 +545,8 @@ public:
         !IsAllocatable(ultimate) && object &&
         (ultimate.test(Symbol::Flag::InDataStmt) ||
             object->init().has_value())};
+    bool hasHostAssociation{
+        &symbol.owner() != &scope_ || &ultimate.owner() != &scope_};
     if (const auto *assoc{
             ultimate.detailsIf<semantics::AssocEntityDetails>()}) {
       return (*this)(assoc->expr());
@@ -550,16 +565,30 @@ public:
       } else if (ultimate.attrs().test(semantics::Attr::OPTIONAL)) {
         return "reference to OPTIONAL dummy argument '"s +
             ultimate.name().ToString() + "'";
-      } else if (!inInquiry_ &&
+      } else if (!inInquiry_ && !hasHostAssociation &&
           ultimate.attrs().test(semantics::Attr::INTENT_OUT)) {
         return "reference to INTENT(OUT) dummy argument '"s +
             ultimate.name().ToString() + "'";
-      } else if (ultimate.has<semantics::ObjectEntityDetails>()) {
-        return std::nullopt;
-      } else {
+      } else if (!ultimate.has<semantics::ObjectEntityDetails>()) {
         return "dummy procedure argument";
+      } else {
+        // Sketchy case: some compilers allow an INTENT(OUT) dummy argument
+        // to be used in a specification expression if it is host-associated.
+        // The arguments raised in support this usage, however, depend on
+        // a reading of the standard that would also accept an OPTIONAL
+        // host-associated dummy argument, and that doesn't seem like a
+        // good idea.
+        if (!inInquiry_ && hasHostAssociation &&
+            ultimate.attrs().test(semantics::Attr::INTENT_OUT) &&
+            context_.languageFeatures().ShouldWarn(
+                common::UsageWarning::HostAssociatedIntentOutInSpecExpr)) {
+          context_.messages().Say(
+              "specification expression refers to host-associated INTENT(OUT) dummy argument '%s'"_port_en_US,
+              ultimate.name());
+        }
+        return std::nullopt;
       }
-    } else if (&symbol.owner() != &scope_ || &ultimate.owner() != &scope_) {
+    } else if (hasHostAssociation) {
       return std::nullopt; // host association is in play
     } else if (isInitialized &&
         context_.languageFeatures().IsEnabled(
@@ -569,7 +598,7 @@ public:
               common::LanguageFeature::SavedLocalInSpecExpr)) {
         context_.messages().Say(common::LanguageFeature::SavedLocalInSpecExpr,
             "specification expression refers to local object '%s' (initialized and saved)"_port_en_US,
-            ultimate.name().ToString());
+            ultimate.name());
       }
       return std::nullopt;
     } else if (const auto *object{
@@ -644,7 +673,6 @@ public:
   }
 
   Result operator()(const ProcedureRef &x) const {
-    bool inInquiry{false};
     if (const auto *symbol{x.proc().GetSymbol()}) {
       const Symbol &ultimate{symbol->GetUltimate()};
       if (!semantics::IsPureProcedure(ultimate)) {
@@ -676,10 +704,12 @@ public:
       }
       // References to internal functions are caught in expression semantics.
       // TODO: other checks for standard module procedures
+      auto restorer{common::ScopedSet(inInquiry_, false)};
+      return (*this)(x.arguments());
     } else { // intrinsic
       const SpecificIntrinsic &intrin{DEREF(x.proc().GetSpecificIntrinsic())};
-      inInquiry = context_.intrinsics().GetIntrinsicClass(intrin.name) ==
-          IntrinsicClass::inquiryFunction;
+      bool inInquiry{context_.intrinsics().GetIntrinsicClass(intrin.name) ==
+          IntrinsicClass::inquiryFunction};
       if (scope_.IsDerivedType()) { // C750, C754
         if ((context_.intrinsics().IsIntrinsic(intrin.name) &&
                 badIntrinsicsForComponents_.find(intrin.name) !=
@@ -706,37 +736,55 @@ public:
       if (intrin.name == "present") {
         return std::nullopt; // always ok
       }
-      // Catch CHARACTER(:), ALLOCATABLE :: X; CHARACTER(LEN(X)) :: Y
-      if (inInquiry && x.arguments().size() >= 1) {
-        if (const auto &arg{x.arguments().at(0)}) {
-          if (auto dataRef{ExtractDataRef(*arg, true, true)}) {
-            if (intrin.name == "allocated" || intrin.name == "associated" ||
-                intrin.name == "is_contiguous") { // ok
-            } else if (intrin.name == "len" &&
-                IsPermissibleInquiry(dataRef->GetFirstSymbol(),
-                    dataRef->GetLastSymbol(),
-                    DescriptorInquiry::Field::Len)) { // ok
-            } else if (intrin.name == "lbound" &&
-                IsPermissibleInquiry(dataRef->GetFirstSymbol(),
-                    dataRef->GetLastSymbol(),
-                    DescriptorInquiry::Field::LowerBound)) { // ok
-            } else if ((intrin.name == "shape" || intrin.name == "size" ||
-                           intrin.name == "sizeof" ||
-                           intrin.name == "storage_size" ||
-                           intrin.name == "ubound") &&
-                IsPermissibleInquiry(dataRef->GetFirstSymbol(),
-                    dataRef->GetLastSymbol(),
-                    DescriptorInquiry::Field::Extent)) { // ok
-            } else {
-              return "non-constant inquiry function '"s + intrin.name +
-                  "' not allowed for local object";
-            }
+      const auto &proc{intrin.characteristics.value()};
+      std::size_t j{0};
+      for (const auto &arg : x.arguments()) {
+        bool checkArg{true};
+        if (const auto *dataDummy{j < proc.dummyArguments.size()
+                    ? std::get_if<characteristics::DummyDataObject>(
+                          &proc.dummyArguments[j].u)
+                    : nullptr}) {
+          if (dataDummy->attrs.test(characteristics::DummyDataObject::Attr::
+                      OnlyIntrinsicInquiry)) {
+            checkArg = false; // value unused, e.g. IEEE_SUPPORT_FLAG(,,,. X)
           }
         }
+        if (arg && checkArg) {
+          // Catch CHARACTER(:), ALLOCATABLE :: X; CHARACTER(LEN(X)) :: Y
+          if (inInquiry) {
+            if (auto dataRef{ExtractDataRef(*arg, true, true)}) {
+              if (intrin.name == "allocated" || intrin.name == "associated" ||
+                  intrin.name == "is_contiguous") { // ok
+              } else if (intrin.name == "len" &&
+                  IsPermissibleInquiry(dataRef->GetFirstSymbol(),
+                      dataRef->GetLastSymbol(),
+                      DescriptorInquiry::Field::Len)) { // ok
+              } else if (intrin.name == "lbound" &&
+                  IsPermissibleInquiry(dataRef->GetFirstSymbol(),
+                      dataRef->GetLastSymbol(),
+                      DescriptorInquiry::Field::LowerBound)) { // ok
+              } else if ((intrin.name == "shape" || intrin.name == "size" ||
+                             intrin.name == "sizeof" ||
+                             intrin.name == "storage_size" ||
+                             intrin.name == "ubound") &&
+                  IsPermissibleInquiry(dataRef->GetFirstSymbol(),
+                      dataRef->GetLastSymbol(),
+                      DescriptorInquiry::Field::Extent)) { // ok
+              } else {
+                return "non-constant inquiry function '"s + intrin.name +
+                    "' not allowed for local object";
+              }
+            }
+          }
+          auto restorer{common::ScopedSet(inInquiry_, inInquiry)};
+          if (auto err{(*this)(*arg)}) {
+            return err;
+          }
+        }
+        ++j;
       }
+      return std::nullopt;
     }
-    auto restorer{common::ScopedSet(inInquiry_, inInquiry)};
-    return (*this)(x.arguments());
   }
 
 private:
@@ -799,9 +847,9 @@ bool CheckSpecificationExprHelper::IsPermissibleInquiry(
 template <typename A>
 void CheckSpecificationExpr(const A &x, const semantics::Scope &scope,
     FoldingContext &context, bool forElementalFunctionResult) {
-  CheckSpecificationExprHelper helper{
+  CheckSpecificationExprHelper errors{
       scope, context, forElementalFunctionResult};
-  if (auto why{helper(x)}) {
+  if (auto why{errors(x)}) {
     context.messages().Say("Invalid specification expression%s: %s"_err_en_US,
         forElementalFunctionResult ? " for elemental function result" : "",
         *why);

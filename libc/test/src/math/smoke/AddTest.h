@@ -11,7 +11,6 @@
 
 #include "hdr/errno_macros.h"
 #include "hdr/fenv_macros.h"
-#include "src/__support/FPUtil/BasicOperations.h"
 #include "src/__support/macros/properties/os.h"
 #include "test/UnitTest/FEnvSafeTest.h"
 #include "test/UnitTest/FPMatcher.h"
@@ -58,6 +57,10 @@ public:
   void test_range_errors(AddFunc func) {
 #ifndef LIBC_TARGET_OS_IS_WINDOWS
     using namespace LIBC_NAMESPACE::fputil::testing;
+
+    if (LIBC_NAMESPACE::fputil::get_fp_type<OutType>() ==
+        LIBC_NAMESPACE::fputil::get_fp_type<InType>())
+      return;
 
     if (ForceRoundingMode r(RoundingMode::Nearest); r.success) {
       EXPECT_FP_EQ_WITH_EXCEPTION(inf, func(in.max_normal, in.max_normal),
@@ -136,6 +139,16 @@ public:
     func(InType(1.0), in.min_denormal);
     EXPECT_FP_EXCEPTION(FE_INEXACT);
   }
+
+  void test_mixed_normality(AddFunc func) {
+    if (LIBC_NAMESPACE::fputil::get_fp_type<OutType>() !=
+        LIBC_NAMESPACE::fputil::get_fp_type<InType>())
+      return;
+
+    EXPECT_FP_EQ(FPBits::create_value(Sign::POS, 2U, 0b1U).get_val(),
+                 func(InFPBits::create_value(Sign::POS, 2U, 0U).get_val(),
+                      InFPBits::create_value(Sign::POS, 0U, 0b10U).get_val()));
+  }
 };
 
 #define LIST_ADD_TESTS(OutType, InType, func)                                  \
@@ -145,6 +158,23 @@ public:
     test_invalid_operations(&func);                                            \
   }                                                                            \
   TEST_F(LlvmLibcAddTest, RangeErrors) { test_range_errors(&func); }           \
-  TEST_F(LlvmLibcAddTest, InexactResults) { test_inexact_results(&func); }
+  TEST_F(LlvmLibcAddTest, InexactResults) { test_inexact_results(&func); }     \
+  TEST_F(LlvmLibcAddTest, MixedNormality) { test_mixed_normality(&func); }
+
+#define LIST_ADD_SAME_TYPE_TESTS(suffix, OutType, InType, func)                \
+  using LlvmLibcAddTest##suffix = AddTest<OutType, InType>;                    \
+  TEST_F(LlvmLibcAddTest##suffix, SpecialNumbers) {                            \
+    test_special_numbers(&func);                                               \
+  }                                                                            \
+  TEST_F(LlvmLibcAddTest##suffix, InvalidOperations) {                         \
+    test_invalid_operations(&func);                                            \
+  }                                                                            \
+  TEST_F(LlvmLibcAddTest##suffix, RangeErrors) { test_range_errors(&func); }   \
+  TEST_F(LlvmLibcAddTest##suffix, InexactResults) {                            \
+    test_inexact_results(&func);                                               \
+  }                                                                            \
+  TEST_F(LlvmLibcAddTest##suffix, MixedNormality) {                            \
+    test_mixed_normality(&func);                                               \
+  }
 
 #endif // LLVM_LIBC_TEST_SRC_MATH_SMOKE_ADDTEST_H

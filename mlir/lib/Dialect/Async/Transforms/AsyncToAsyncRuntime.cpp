@@ -235,7 +235,7 @@ static CoroMachinery setupCoroMachinery(func::FuncOp func) {
   SmallVector<Value, 4> ret;
   if (retToken)
     ret.push_back(*retToken);
-  ret.insert(ret.end(), retValues.begin(), retValues.end());
+  llvm::append_range(ret, retValues);
   builder.create<func::ReturnOp>(ret);
 
   // `async.await` op lowering will create resume blocks for async
@@ -306,8 +306,7 @@ outlineExecuteOp(SymbolTable &symbolTable, ExecuteOp execute) {
   // Collect all outlined function inputs.
   SetVector<mlir::Value> functionInputs(execute.getDependencies().begin(),
                                         execute.getDependencies().end());
-  functionInputs.insert(execute.getBodyOperands().begin(),
-                        execute.getBodyOperands().end());
+  functionInputs.insert_range(execute.getBodyOperands());
   getUsedValuesDefinedAbove(execute.getBodyRegion(), functionInputs);
 
   // Collect types for the outlined function inputs and outputs.

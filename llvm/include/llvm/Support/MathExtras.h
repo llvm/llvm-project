@@ -595,6 +595,15 @@ inline int64_t SignExtend64(uint64_t X, unsigned B) {
   return int64_t(X << (64 - B)) >> (64 - B);
 }
 
+/// Return the absolute value of a signed integer, converted to the
+/// corresponding unsigned integer type. Avoids undefined behavior in std::abs
+/// when you pass it INT_MIN or similar.
+template <typename T, typename U = std::make_unsigned_t<T>>
+constexpr U AbsoluteValue(T X) {
+  // If X is negative, cast it to the unsigned type _before_ negating it.
+  return X < 0 ? -static_cast<U>(X) : X;
+}
+
 /// Subtract two unsigned integers, X and Y, of type T and return the absolute
 /// value of the result.
 template <typename U, typename V, typename T = common_uint<U, V>>
@@ -723,7 +732,7 @@ std::enable_if_t<std::is_signed_v<T>, T> AddOverflow(T X, T Y, T &Result) {
 }
 
 /// Subtract two signed integers, computing the two's complement truncated
-/// result, returning true if an overflow ocurred.
+/// result, returning true if an overflow occurred.
 template <typename T>
 std::enable_if_t<std::is_signed_v<T>, T> SubOverflow(T X, T Y, T &Result) {
 #if __has_builtin(__builtin_sub_overflow)
@@ -749,7 +758,7 @@ std::enable_if_t<std::is_signed_v<T>, T> SubOverflow(T X, T Y, T &Result) {
 }
 
 /// Multiply two signed integers, computing the two's complement truncated
-/// result, returning true if an overflow ocurred.
+/// result, returning true if an overflow occurred.
 template <typename T>
 std::enable_if_t<std::is_signed_v<T>, T> MulOverflow(T X, T Y, T &Result) {
 #if __has_builtin(__builtin_mul_overflow)

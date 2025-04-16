@@ -32,10 +32,10 @@
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
 #include "clang/StaticAnalyzer/Core/PathDiagnosticConsumers.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/AnalysisManager.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/EntryPointStats.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExprEngine.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/ScopeExit.h"
-#include "llvm/ADT/Statistic.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
@@ -51,17 +51,18 @@ using namespace ento;
 
 #define DEBUG_TYPE "AnalysisConsumer"
 
-STATISTIC(NumFunctionTopLevel, "The # of functions at top level.");
-STATISTIC(NumFunctionsAnalyzed,
-                      "The # of functions and blocks analyzed (as top level "
-                      "with inlining turned on).");
-STATISTIC(NumBlocksInAnalyzedFunctions,
-                      "The # of basic blocks in the analyzed functions.");
-STATISTIC(NumVisitedBlocksInAnalyzedFunctions,
-          "The # of visited basic blocks in the analyzed functions.");
-STATISTIC(PercentReachableBlocks, "The % of reachable basic blocks.");
-STATISTIC(MaxCFGSize, "The maximum number of basic blocks in a function.");
-
+STAT_COUNTER(NumFunctionTopLevel, "The # of functions at top level.");
+ALWAYS_ENABLED_STATISTIC(NumFunctionsAnalyzed,
+                         "The # of functions and blocks analyzed (as top level "
+                         "with inlining turned on).");
+ALWAYS_ENABLED_STATISTIC(NumBlocksInAnalyzedFunctions,
+                         "The # of basic blocks in the analyzed functions.");
+ALWAYS_ENABLED_STATISTIC(
+    NumVisitedBlocksInAnalyzedFunctions,
+    "The # of visited basic blocks in the analyzed functions.");
+ALWAYS_ENABLED_STATISTIC(PercentReachableBlocks,
+                         "The % of reachable basic blocks.");
+STAT_MAX(MaxCFGSize, "The maximum number of basic blocks in a function.");
 //===----------------------------------------------------------------------===//
 // AnalysisConsumer declaration.
 //===----------------------------------------------------------------------===//
@@ -90,7 +91,7 @@ public:
   const std::string OutDir;
   AnalyzerOptions &Opts;
   ArrayRef<std::string> Plugins;
-  CodeInjector *Injector;
+  std::unique_ptr<CodeInjector> Injector;
   cross_tu::CrossTranslationUnitContext CTU;
 
   /// Stores the declarations from the local translation unit.
@@ -123,12 +124,14 @@ public:
 
   AnalysisConsumer(CompilerInstance &CI, const std::string &outdir,
                    AnalyzerOptions &opts, ArrayRef<std::string> plugins,
-                   CodeInjector *injector)
+                   std::unique_ptr<CodeInjector> injector)
       : RecVisitorMode(0), RecVisitorBR(nullptr), Ctx(nullptr),
-        PP(CI.getPreprocessor()), OutDir(outdir), Opts(opts),
-        Plugins(plugins), Injector(injector), CTU(CI),
+        PP(CI.getPreprocessor()), OutDir(outdir), Opts(opts), Plugins(plugins),
+        Injector(std::move(injector)), CTU(CI),
         MacroExpansions(CI.getLangOpts()) {
+    EntryPointStat::lockRegistry();
     DigestAnalyzerOptions();
+
     if (Opts.AnalyzerDisplayProgress || Opts.PrintStats ||
         Opts.ShouldSerializeStats) {
       AnalyzerTimers = std::make_unique<llvm::TimerGroup>(
@@ -222,16 +225,6 @@ public:
       llvm::errs() << ": " << Loc.getFilename() << ' '
                    << AnalysisDeclContext::getFunctionName(D);
     }
-  }
-
-  void Initialize(ASTContext &Context) override {
-    Ctx = &Context;
-    checkerMgr = std::make_unique<CheckerManager>(*Ctx, Opts, PP, Plugins,
-                                                  CheckerRegistrationFns);
-
-    Mgr = std::make_unique<AnalysisManager>(*Ctx, PP, PathConsumers,
-                                            CreateStoreMgr, CreateConstraintMgr,
-                                            checkerMgr.get(), Opts, Injector);
   }
 
   /// Store the top level decls in the set to be processed later on.
@@ -342,8 +335,9 @@ public:
     return true;
   }
 
-  void AddDiagnosticConsumer(PathDiagnosticConsumer *Consumer) override {
-    PathConsumers.push_back(Consumer);
+  void AddDiagnosticConsumer(
+      std::unique_ptr<PathDiagnosticConsumer> Consumer) override {
+    PathConsumers.push_back(std::move(Consumer));
   }
 
   void AddCheckerRegistrationFn(std::function<void(CheckerRegistry&)> Fn) override {
@@ -615,6 +609,14 @@ void AnalysisConsumer::HandleTranslationUnit(ASTContext &C) {
   if (Diags.hasErrorOccurred() || Diags.hasFatalErrorOccurred())
     return;
 
+  Ctx = &C;
+  checkerMgr = std::make_unique<CheckerManager>(*Ctx, Opts, PP, Plugins,
+                                                CheckerRegistrationFns);
+
+  Mgr = std::make_unique<AnalysisManager>(
+      *Ctx, PP, std::move(PathConsumers), CreateStoreMgr, CreateConstraintMgr,
+      checkerMgr.get(), Opts, std::move(Injector));
+
   // Explicitly destroy the PathDiagnosticConsumer.  This will flush its output.
   // FIXME: This should be replaced with something that doesn't rely on
   // side-effects in PathDiagnosticConsumer's destructor. This is required when
@@ -652,6 +654,10 @@ void AnalysisConsumer::HandleTranslationUnit(ASTContext &C) {
     PercentReachableBlocks =
         (FunctionSummaries.getTotalNumVisitedBasicBlocks() * 100) /
         NumBlocksInAnalyzedFunctions;
+
+  if (!Opts.DumpEntryPointStatsToCSV.empty()) {
+    EntryPointStat::dumpStatsAsCSV(Opts.DumpEntryPointStatsToCSV);
+  }
 }
 
 AnalysisConsumer::AnalysisMode
@@ -686,6 +692,8 @@ AnalysisConsumer::getModeForDecl(Decl *D, AnalysisMode Mode) {
 
   return Mode;
 }
+
+static UnsignedEPStat PathRunningTime("PathRunningTime");
 
 void AnalysisConsumer::HandleCode(Decl *D, AnalysisMode Mode,
                                   ExprEngine::InliningModes IMode,
@@ -731,6 +739,7 @@ void AnalysisConsumer::HandleCode(Decl *D, AnalysisMode Mode,
 
   if ((Mode & AM_Path) && checkerMgr->hasPathSensitiveCheckers()) {
     RunPathSensitiveChecks(D, IMode, VisitedCallees);
+    EntryPointStat::takeSnapshot(D);
     if (IMode != ExprEngine::Inline_Minimal)
       NumFunctionsAnalyzed++;
   }
@@ -794,5 +803,5 @@ ento::CreateAnalysisConsumer(CompilerInstance &CI) {
   return std::make_unique<AnalysisConsumer>(
       CI, CI.getFrontendOpts().OutputFile, analyzerOpts,
       CI.getFrontendOpts().Plugins,
-      hasModelPath ? new ModelInjector(CI) : nullptr);
+      hasModelPath ? std::make_unique<ModelInjector>(CI) : nullptr);
 }

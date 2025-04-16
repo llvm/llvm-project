@@ -1471,7 +1471,7 @@ Status Host::ShellExpandArguments(ProcessLaunchInfo &launch_info) {
       char *wd = getcwd(nullptr, 0);
       if (wd == nullptr) {
         error = Status::FromErrorStringWithFormat(
-            "cwd does not exist; cannot launch with shell argument expansion");
+            "cwd does not exist: Cannot launch with shell argument expansion");
         return error;
       } else {
         FileSpec working_dir(wd);

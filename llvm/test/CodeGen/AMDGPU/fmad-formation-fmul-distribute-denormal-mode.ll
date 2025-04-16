@@ -236,7 +236,7 @@ define <2 x float> @unsafe_fast_fmul_fadd_distribute_post_legalize_f32(float %ar
 ; FMADGFX10-NEXT:    v_mad_f32 v0, v0, v1, v1
 ; FMADGFX10-NEXT:    s_setpc_b64 s[30:31]
   %add = fadd fast float %arg0, 1.0
-  %splat = insertelement <2 x float> undef, float %add, i32 0
+  %splat = insertelement <2 x float> poison, float %add, i32 0
   %tmp1 = fmul fast <2 x float> %arg1, %splat
   ret <2 x float> %tmp1
 }
@@ -279,7 +279,7 @@ define <2 x float> @unsafe_fast_fmul_fsub_ditribute_post_legalize(float %arg0, <
 ; FMADGFX10-NEXT:    v_mad_f32 v0, -v0, v1, v1
 ; FMADGFX10-NEXT:    s_setpc_b64 s[30:31]
   %sub = fsub fast float 1.0, %arg0
-  %splat = insertelement <2 x float> undef, float %sub, i32 0
+  %splat = insertelement <2 x float> poison, float %sub, i32 0
   %tmp1 = fmul fast <2 x float> %arg1, %splat
   ret <2 x float> %tmp1
 }

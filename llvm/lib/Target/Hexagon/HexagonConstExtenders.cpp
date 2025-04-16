@@ -37,11 +37,6 @@ static cl::opt<unsigned>
     ReplaceLimit("hexagon-cext-limit", cl::init(0), cl::Hidden,
                  cl::desc("Maximum number of replacements"));
 
-namespace llvm {
-  void initializeHexagonConstExtendersPass(PassRegistry&);
-  FunctionPass *createHexagonConstExtenders();
-}
-
 static int32_t adjustUp(int32_t V, uint8_t A, uint8_t O) {
   assert(isPowerOf2_32(A));
   int32_t U = (V & -A) + O;
@@ -1040,7 +1035,7 @@ unsigned HCE::getDirectRegReplacement(unsigned ExtOpc) const {
 // extender. It may be possible for MI to be tweaked to work for a register
 // defined with a slightly different value. For example
 //   ... = L2_loadrub_io Rb, 1
-// can be modifed to be
+// can be modified to be
 //   ... = L2_loadrub_io Rb', 0
 // if Rb' = Rb+1.
 // The range for Rb would be [Min+1, Max+1], where [Min, Max] is a range
@@ -1470,7 +1465,7 @@ void HCE::assignInits(const ExtRoot &ER, unsigned Begin, unsigned End,
              ExtValue(ED).Offset == EV.Offset;
     };
     if (all_of(P.second, SameValue)) {
-      F->second.insert(P.second.begin(), P.second.end());
+      F->second.insert_range(P.second);
       P.second.clear();
     }
   }

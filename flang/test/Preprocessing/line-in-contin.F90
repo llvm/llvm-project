@@ -1,4 +1,4 @@
-! RUN: %flang_fc1 -fopenmp -E %s 2>&1 | FileCheck %s
+! RUN: %flang_fc1 -E %s 2>&1 | FileCheck %s
 ! CHECK: call foo(0.)
 ! CHECK: call foo(1.)
 ! CHECK: call foo(2.)

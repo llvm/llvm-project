@@ -9,6 +9,7 @@
 #ifndef FORTRAN_RUNTIME_DESCRIPTOR_CONSTS_H_
 #define FORTRAN_RUNTIME_DESCRIPTOR_CONSTS_H_
 
+#include "flang/Common/Fortran-consts.h"
 #include "flang/Common/ISO_Fortran_binding_wrapper.h"
 #include "flang/Common/api-attrs.h"
 #include <cstddef>
@@ -29,6 +30,7 @@ class DerivedType;
 namespace Fortran::runtime {
 class Descriptor;
 using SubscriptValue = ISO::CFI_index_t;
+using common::TypeCategory;
 
 /// Returns size in bytes of the descriptor (not the data)
 /// This must be at least as large as the largest descriptor of any target

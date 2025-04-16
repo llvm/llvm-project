@@ -90,17 +90,10 @@ void sleep_for(const chrono::duration<Rep, Period>& rel_time);
 
 #if !defined(_LIBCPP_HAS_NO_THREADS)
 
-#  include <__cxx03/__thread/formatter.h>
-#  include <__cxx03/__thread/jthread.h>
 #  include <__cxx03/__thread/support.h>
 #  include <__cxx03/__thread/this_thread.h>
 #  include <__cxx03/__thread/thread.h>
 #  include <__cxx03/version>
-
-// standard-mandated includes
-
-// [thread.syn]
-#  include <__cxx03/compare>
 
 #  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #    pragma GCC system_header

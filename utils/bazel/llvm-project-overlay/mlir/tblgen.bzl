@@ -397,9 +397,9 @@ def gentbl_cc_library(
       name: The name of the generated cc_library rule for use in dependencies.
       tblgen: The binary used to produce the output.
       td_file: The primary table definitions file.
-      tbl_outs: A list of tuples ([opts], out), where each 'opts' is a list of
-        options passed to tblgen, each option being a string, and 'out' is the
-        corresponding output file produced.
+      tbl_outs: Either a dict {out: [opts]} or a list of tuples ([opts], out),
+        where each 'opts' is a list of options passed to tblgen, each option
+        being a string, and 'out' is the corresponding output file produced.
       td_srcs: See gentbl_rule.td_srcs
       includes: See gentbl_rule.includes
       deps: See gentbl_rule.deps
@@ -409,6 +409,8 @@ def gentbl_cc_library(
       **kwargs: Extra keyword arguments to pass to all generated rules.
     """
 
+    if type(tbl_outs) == type({}):
+        tbl_outs = [(v, k) for k, v in tbl_outs.items()]
     filegroup_name = name + "_filegroup"
     gentbl_filegroup(
         name = filegroup_name,

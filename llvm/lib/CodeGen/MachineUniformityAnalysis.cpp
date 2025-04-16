@@ -117,12 +117,12 @@ void llvm::GenericUniformityAnalysisImpl<MachineSSAContext>::
     if (!Op.getReg().isVirtual())
       continue;
     auto Reg = Op.getReg();
-    if (isDivergent(Reg))
-      continue;
     for (MachineInstr &UserInstr : RegInfo.use_instructions(Reg)) {
       if (DefCycle.contains(UserInstr.getParent()))
         continue;
       markDivergent(UserInstr);
+
+      recordTemporalDivergence(Reg, &UserInstr, &DefCycle);
     }
   }
 }
@@ -193,7 +193,7 @@ INITIALIZE_PASS_END(MachineUniformityAnalysisPass, "machine-uniformity",
 
 void MachineUniformityAnalysisPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
-  AU.addRequired<MachineCycleInfoWrapperPass>();
+  AU.addRequiredTransitive<MachineCycleInfoWrapperPass>();
   AU.addRequired<MachineDominatorTreeWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }

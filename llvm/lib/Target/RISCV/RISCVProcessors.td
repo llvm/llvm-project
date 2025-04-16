@@ -103,6 +103,8 @@ def GENERIC_RV64 : RISCVProcessorModel<"generic-rv64",
 // Support generic for compatibility with other targets. The triple will be used
 // to change to the appropriate rv32/rv64 version.
 def GENERIC : RISCVTuneProcessorModel<"generic", NoSchedModel>, GenericTuneInfo;
+def GENERIC_OOO : RISCVTuneProcessorModel<"generic-ooo", GenericOOOModel>,
+                  GenericTuneInfo;
 
 def MIPS_P8700 : RISCVProcessorModel<"mips-p8700",
                                      MIPSP8700Model,
@@ -117,7 +119,7 @@ def MIPS_P8700 : RISCVProcessorModel<"mips-p8700",
                                       FeatureStdExtZbb,
                                       FeatureStdExtZifencei,
                                       FeatureStdExtZicsr,
-                                      FeatureVendorXMIPSCMove,
+                                      FeatureVendorXMIPSCMov,
                                       FeatureVendorXMIPSLSP],
                                      [TuneMIPSP8700]>;
 
@@ -492,6 +494,7 @@ def TENSTORRENT_ASCALON_D8 : RISCVProcessorModel<"tt-ascalon-d8",
                                                   FeatureUnalignedScalarMem,
                                                   FeatureUnalignedVectorMem]),
                                                  [TuneNoDefaultUnroll,
+                                                  TuneNLogNVRGather,
                                                   TuneOptimizedZeroStrideLoad,
                                                   TunePostRAScheduler]>;
 
