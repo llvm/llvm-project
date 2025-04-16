@@ -8174,6 +8174,7 @@ void Sema::AddConversionCandidate(
   Candidate.FinalConversion.setAsIdentityConversion();
   Candidate.FinalConversion.setFromType(ConvType);
   Candidate.FinalConversion.setAllToTypes(ToType);
+  Candidate.HasFinalConversion = true;
   Candidate.Viable = true;
   Candidate.ExplicitCallArguments = 1;
   Candidate.StrictPackMatch = StrictPackMatch;
@@ -8278,6 +8279,7 @@ void Sema::AddConversionCandidate(
   switch (ICS.getKind()) {
   case ImplicitConversionSequence::StandardConversion:
     Candidate.FinalConversion = ICS.Standard;
+    Candidate.HasFinalConversion = true;
 
     // C++ [over.ics.user]p3:
     //   If the user-defined conversion is specified by a specialization of a
@@ -11229,8 +11231,7 @@ void OverloadCandidateSet::PerfectViableFunction(
   Best = end();
   for (auto It = begin(); It != end(); ++It) {
 
-    if (!It->isPerfectMatch(S.getASTContext(),
-                            Kind == CSK_InitByUserDefinedConversion))
+    if (!It->isPerfectMatch(S.getASTContext()))
       continue;
 
     // We found a suitable conversion function
