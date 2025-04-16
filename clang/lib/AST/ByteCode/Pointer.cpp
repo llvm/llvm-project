@@ -155,10 +155,10 @@ APValue Pointer::toAPValue(const ASTContext &ASTCtx) const {
   if (isFunctionPointer()) {
     const FunctionPointer &FP = asFunctionPointer();
     if (const FunctionDecl *FD = FP.getFunction()->getDecl())
-      return APValue(FD, CharUnits::fromQuantity(FP.getOffset() + Offset), {},
+      return APValue(FD, CharUnits::fromQuantity(Offset), {},
                      /*OnePastTheEnd=*/false, /*IsNull=*/false);
-    return APValue(FP.getFunction()->getExpr(),
-                   CharUnits::fromQuantity(FP.getOffset() + Offset), {},
+    return APValue(FP.getFunction()->getExpr(), CharUnits::fromQuantity(Offset),
+                   {},
                    /*OnePastTheEnd=*/false, /*IsNull=*/false);
   }
 
@@ -167,7 +167,8 @@ APValue Pointer::toAPValue(const ASTContext &ASTCtx) const {
     return APValue(
         APValue::LValueBase::getTypeInfo(
             TypeInfo, QualType(PointeeStorage.Typeid.TypeInfoType, 0)),
-        CharUnits::Zero(), APValue::NoLValuePath{});
+        CharUnits::Zero(), {},
+        /*OnePastTheEnd=*/false, /*IsNull=*/false);
   }
 
   // Build the lvalue base from the block.
