@@ -847,13 +847,15 @@ template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
     }
   }
 
-  bool isBE = ELFT::Endianness == llvm::endianness::big;
-  // Handle AArch64 Build Attributes and GNU properties:
-  // - Err on mismatched values.
-  // - Store missing values as GNU properties.
-  handleAArch64BAAndGnuProperties(this, ctx, isBE, hasAArch64BuildAttributes,
-                                  hasGNUProperties, aarch64BAsubSections,
-                                  gnuPropertiesInformation);
+  if (hasAArch64BuildAttributes) {
+    bool isBE = ELFT::Endianness == llvm::endianness::big;
+    // Handle AArch64 Build Attributes and GNU properties:
+    // - Err on mismatched values.
+    // - Store missing values as GNU properties.
+    handleAArch64BAAndGnuProperties(this, ctx, isBE, hasAArch64BuildAttributes,
+                                    hasGNUProperties, aarch64BAsubSections,
+                                    gnuPropertiesInformation);
+  }
 
   // Read a symbol table.
   initializeSymbols(obj);
