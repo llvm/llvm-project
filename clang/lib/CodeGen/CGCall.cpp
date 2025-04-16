@@ -742,7 +742,7 @@ CodeGenTypes::arrangeBuiltinFunctionDeclaration(CanQualType resultType,
 const CGFunctionInfo &
 CodeGenTypes::arrangeSYCLKernelCallerDeclaration(QualType resultType,
                                                  const FunctionArgList &args) {
-  auto argTypes = getArgTypesForDeclaration(Context, args);
+  CanQualTypeList argTypes = getArgTypesForDeclaration(Context, args);
 
   return arrangeLLVMFunctionInfo(GetReturnType(resultType), FnInfoOpts::None,
                                  argTypes,
