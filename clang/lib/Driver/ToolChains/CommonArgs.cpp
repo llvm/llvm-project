@@ -1450,10 +1450,6 @@ bool tools::addOpenMPRuntime(const Compilation &C, ArgStringList &CmdArgs,
     CmdArgs.push_back("-lomptarget");
   }
 
-  if (IsOffloadingHost &&
-      Args.hasFlag(options::OPT_offloadlib, options::OPT_no_offloadlib, true))
-    CmdArgs.push_back("-lomptarget.devicertl");
-
   addArchSpecificRPath(TC, Args, CmdArgs);
 
   if (RTKind == Driver::OMPRT_OMP || RTKind == Driver::OMPRT_BOLT)
