@@ -1059,6 +1059,8 @@ SwiftLanguageRuntime::GetIndexOfChildMemberWithName(
       // superclass, and ends on null.
       auto *current_tr = tr;
       while (current_tr) {
+        if (llvm::isa<swift::reflection::ObjCClassTypeRef>(current_tr))
+          break;
         auto cti_or_err = reflection_ctx->GetClassInstanceTypeInfo(
             *current_tr, &tip, ts.GetDescriptorFinder());
         const TypeInfo *cti = nullptr;
