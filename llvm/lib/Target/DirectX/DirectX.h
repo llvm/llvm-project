@@ -35,6 +35,12 @@ void initializeDXILIntrinsicExpansionLegacyPass(PassRegistry &);
 /// Pass to expand intrinsic operations that lack DXIL opCodes
 ModulePass *createDXILIntrinsicExpansionLegacyPass();
 
+/// Initializer for DXIL CBuffer Access Pass
+void initializeDXILCBufferAccessLegacyPass(PassRegistry &);
+
+/// Pass to translate loads in the cbuffer address space to intrinsics
+ModulePass *createDXILCBufferAccessLegacyPass();
+
 /// Initializer for DXIL Data Scalarization Pass
 void initializeDXILDataScalarizationLegacyPass(PassRegistry &);
 
