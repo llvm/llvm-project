@@ -63,7 +63,7 @@ bool lldb_private::formatters::NSStringSummaryProvider(
   if (class_name.empty())
     return false;
 
-  // for tagged pointers, the descriptor has everything needed.
+  // For tagged pointers, the descriptor has everything needed.
   bool is_tagged = descriptor->GetTaggedPointerInfo();
   if (is_tagged) {
     if (class_name == "NSTaggedPointerString")
@@ -390,15 +390,15 @@ bool lldb_private::formatters::NSIndirectTaggedString_SummaryProvider(
   size_t size = (payload >> 47) & 0x1fff;
 
   Status status;
-  char buf[8192];
+  std::vector<char> buf(size);
   if (auto process_sp = valobj.GetProcessSP())
-    if (process_sp->ReadMemory(ptr, buf, size, status)) {
+    if (process_sp->ReadMemory(ptr, buf.data(), size, status)) {
       llvm::StringRef prefix, suffix;
       if (auto *language = Language::FindPlugin(summary_options.GetLanguage()))
         std::tie(prefix, suffix) =
             language->GetFormatterPrefixSuffix("NSString");
       stream << prefix << '"';
-      stream.PutCString({buf, size});
+      stream.PutCString({buf.data(), size});
       stream << '"' << suffix;
       return true;
     }
