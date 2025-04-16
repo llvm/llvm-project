@@ -371,6 +371,14 @@ Improvements to Clang's diagnostics
 
 - An error is now emitted when a ``musttail`` call is made to a function marked with the ``not_tail_called`` attribute. (#GH133509).
 
+- ``-Whigher-precisision-for-complex-divison`` warns when:
+
+  -	The divisor is complex.
+  -	When the complex division happens in a higher precision type due to arithmetic promotion.
+  -	When using the divide and assign operator (``/=``).
+
+  Fixes #GH131127
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -416,6 +424,8 @@ Bug Fixes in This Version
   future. See (#GH126629).
 - Fixed a clang 20 regression where diagnostics attached to some calls to member functions
   using C++23 "deducing this" did not have a diagnostic location (#GH135522)
+
+- Fixed a crash when a ``friend`` function is redefined as deleted. (#GH135506)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
