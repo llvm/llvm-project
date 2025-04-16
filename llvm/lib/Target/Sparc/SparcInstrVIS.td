@@ -294,4 +294,14 @@ def : Pat<(f32 fpnegimm0), (FNEGS (FZEROS))>;
 // VIS3 instruction patterns.
 let Predicates = [HasVIS3] in {
 def : Pat<(i64 (adde i64:$lhs, i64:$rhs)), (ADDXCCC $lhs, $rhs)>;
+
+def : Pat<(i64 (mulhu i64:$lhs, i64:$rhs)), (UMULXHI $lhs, $rhs)>;
+// Signed "MULXHI".
+// Based on the formula presented in OSA2011 §7.140, but with bitops to select
+// the values to be added.
+// TODO: This expansion should probably be moved to DAG legalization phase.
+def : Pat<(i64 (mulhs i64:$lhs, i64:$rhs)),
+      (SUBrr (UMULXHI $lhs, $rhs),
+             (ADDrr (ANDrr (SRAXri $lhs, 63), $rhs),
+                    (ANDrr (SRAXri $rhs, 63), $lhs)))>;
 } // Predicates = [HasVIS3]
