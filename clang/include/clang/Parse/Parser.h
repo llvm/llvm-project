@@ -1725,8 +1725,8 @@ private:
   ObjCTypeParamList *parseObjCTypeParamList();
   ObjCTypeParamList *parseObjCTypeParamListOrProtocolRefs(
       ObjCTypeParamListScope &Scope, SourceLocation &lAngleLoc,
-      SmallVectorImpl<IdentifierLoc> &protocolIdents, SourceLocation &rAngleLoc,
-      bool mayBeProtocolList = true);
+      SmallVectorImpl<IdentifierLocPair> &protocolIdents,
+      SourceLocation &rAngleLoc, bool mayBeProtocolList = true);
 
   void HelperActionsForIvarDeclarations(ObjCContainerDecl *interfaceDecl,
                                         SourceLocation atLoc,
@@ -3818,7 +3818,8 @@ private:
                                SourceLocation Loc,
                                llvm::SmallVectorImpl<Expr *> &IntExprs);
   /// Parses the 'device-type-list', which is a list of identifiers.
-  bool ParseOpenACCDeviceTypeList(llvm::SmallVector<IdentifierLoc> &Archs);
+  bool ParseOpenACCDeviceTypeList(
+      llvm::SmallVector<std::pair<IdentifierInfo *, SourceLocation>> &Archs);
   /// Parses the 'async-argument', which is an integral value with two
   /// 'special' values that are likely negative (but come from Macros).
   OpenACCIntExprParseResult ParseOpenACCAsyncArgument(OpenACCDirectiveKind DK,
@@ -3950,8 +3951,10 @@ private:
     return false;
   }
 
-  bool ParseModuleName(SourceLocation UseLoc,
-                       SmallVectorImpl<IdentifierLoc> &Path, bool IsImport);
+  bool ParseModuleName(
+      SourceLocation UseLoc,
+      SmallVectorImpl<std::pair<IdentifierInfo *, SourceLocation>> &Path,
+      bool IsImport);
 
   //===--------------------------------------------------------------------===//
   // C++11/G++: Type Traits [Type-Traits.html in the GCC manual]
