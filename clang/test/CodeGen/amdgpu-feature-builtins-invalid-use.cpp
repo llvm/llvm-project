@@ -32,11 +32,11 @@ void invalid_invocations(int x, const char* str) {
     // CHECK: error: the argument to __builtin_amdgcn_processor_is must be a string literal
     if (__builtin_amdgcn_processor_is(str)) return;
 
-    // CHECK: error: the argument to __builtin_amdgcn_is_invocable must be either a target agnostic builtin or an AMDGCN target specific builtin; `"__builtin_amdgcn_s_sleep_var"` is not valid
+    // CHECK: error: the argument to __builtin_amdgcn_is_invocable must be either a target agnostic builtin or an AMDGCN target specific builtin; {{.*}}__builtin_amdgcn_s_sleep_var{{.*}} is not valid
     if (__builtin_amdgcn_is_invocable("__builtin_amdgcn_s_sleep_var")) return;
-    // CHECK: error: the argument to __builtin_amdgcn_is_invocable must be either a target agnostic builtin or an AMDGCN target specific builtin; `str` is not valid
+    // CHECK: error: the argument to __builtin_amdgcn_is_invocable must be either a target agnostic builtin or an AMDGCN target specific builtin; {{.*}}str{{.*}} is not valid
     else if (__builtin_amdgcn_is_invocable(str)) return;
-    // CHECK: error: the argument to __builtin_amdgcn_is_invocable must be either a target agnostic builtin or an AMDGCN target specific builtin; `x` is not valid
+    // CHECK: error: the argument to __builtin_amdgcn_is_invocable must be either a target agnostic builtin or an AMDGCN target specific builtin; {{.*}}x{{.*}} is not valid
     else if (__builtin_amdgcn_is_invocable(x)) return;
     // CHECK: error: use of undeclared identifier '__builtin_ia32_pause'
     else if (__builtin_amdgcn_is_invocable(__builtin_ia32_pause)) return;
