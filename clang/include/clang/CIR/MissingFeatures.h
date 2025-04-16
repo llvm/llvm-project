@@ -35,6 +35,7 @@ struct MissingFeatures {
   static bool opGlobalThreadLocal() { return false; }
   static bool opGlobalConstant() { return false; }
   static bool opGlobalAlignment() { return false; }
+  static bool opGlobalWeakRef() { return false; }
 
   static bool supportIFuncAttr() { return false; }
   static bool supportVisibility() { return false; }
@@ -100,6 +101,9 @@ struct MissingFeatures {
   static bool mayHaveIntegerOverflow() { return false; }
   static bool shouldReverseUnaryCondOnBoolExpr() { return false; }
 
+  // RecordType
+  static bool recordTypeLayoutInfo() { return false; }
+
   // Misc
   static bool cxxABI() { return false; }
   static bool tryEmitAsConstant() { return false; }
@@ -136,6 +140,13 @@ struct MissingFeatures {
   static bool objCGC() { return false; }
   static bool weakRefReference() { return false; }
   static bool hip() { return false; }
+  static bool setObjCGCLValueClass() { return false; }
+  static bool mangledNames() { return false; }
+  static bool setDLLStorageClass() { return false; }
+  static bool openMP() { return false; }
+  static bool emitCheckedInBoundsGEP() { return false; }
+  static bool preservedAccessIndexRegion() { return false; }
+  static bool bitfields() { return false; }
 
   // Missing types
   static bool dataMemberType() { return false; }

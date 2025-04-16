@@ -849,6 +849,41 @@ parseGlobalOpTypeAndInitialValue(OpAsmParser &parser, TypeAttr &typeAttr,
 }
 
 //===----------------------------------------------------------------------===//
+// GetGlobalOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+cir::GetGlobalOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
+  // Verify that the result type underlying pointer type matches the type of
+  // the referenced cir.global or cir.func op.
+  mlir::Operation *op =
+      symbolTable.lookupNearestSymbolFrom(*this, getNameAttr());
+  if (op == nullptr || !(isa<GlobalOp>(op) || isa<FuncOp>(op)))
+    return emitOpError("'")
+           << getName()
+           << "' does not reference a valid cir.global or cir.func";
+
+  mlir::Type symTy;
+  if (auto g = dyn_cast<GlobalOp>(op)) {
+    symTy = g.getSymType();
+    assert(!cir::MissingFeatures::addressSpace());
+    assert(!cir::MissingFeatures::opGlobalThreadLocal());
+  } else if (auto f = dyn_cast<FuncOp>(op)) {
+    symTy = f.getFunctionType();
+  } else {
+    llvm_unreachable("Unexpected operation for GetGlobalOp");
+  }
+
+  auto resultType = dyn_cast<PointerType>(getAddr().getType());
+  if (!resultType || symTy != resultType.getPointee())
+    return emitOpError("result type pointee type '")
+           << resultType.getPointee() << "' does not match type " << symTy
+           << " of the global @" << getName();
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // FuncOp
 //===----------------------------------------------------------------------===//
 

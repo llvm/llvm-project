@@ -164,7 +164,7 @@ public:
   /// An abstract representation of regular/ObjC call/message targets.
   class AbstractCallee {
     /// The function declaration of the callee.
-    const clang::Decl *calleeDecl;
+    [[maybe_unused]] const clang::Decl *calleeDecl;
 
   public:
     AbstractCallee() : calleeDecl(nullptr) {}
@@ -434,6 +434,8 @@ public:
   /// should be returned.
   RValue emitAnyExpr(const clang::Expr *e);
 
+  LValue emitArraySubscriptExpr(const clang::ArraySubscriptExpr *e);
+
   AutoVarEmission emitAutoVarAlloca(const clang::VarDecl &d);
 
   /// Emit code and set up symbol table for a variable declaration with auto,
@@ -577,6 +579,8 @@ public:
   /// is 'Ty'.
   void emitStoreThroughLValue(RValue src, LValue dst, bool isInit = false);
 
+  mlir::Value emitStoreThroughBitfieldLValue(RValue src, LValue dstresult);
+
   /// Given a value and its clang type, returns the value casted to its memory
   /// representation.
   /// Note: CIR defers most of the special casting to the final lowering passes
@@ -591,6 +595,11 @@ public:
 
   mlir::LogicalResult emitWhileStmt(const clang::WhileStmt &s);
 
+  /// Given an assignment `*lhs = rhs`, emit a test that checks if \p rhs is
+  /// nonnull, if 1\p LHS is marked _Nonnull.
+  void emitNullabilityCheck(LValue lhs, mlir::Value rhs,
+                            clang::SourceLocation loc);
+
   /// ----------------------
   /// CIR build helpers
   /// -----------------
@@ -604,15 +613,16 @@ public:
 private:
   template <typename Op>
   mlir::LogicalResult
-  emitOpenACCOp(mlir::Location start,
+  emitOpenACCOp(mlir::Location start, OpenACCDirectiveKind dirKind,
+                SourceLocation dirLoc,
                 llvm::ArrayRef<const OpenACCClause *> clauses);
   // Function to do the basic implementation of an operation with an Associated
   // Statement.  Models AssociatedStmtConstruct.
   template <typename Op, typename TermOp>
-  mlir::LogicalResult
-  emitOpenACCOpAssociatedStmt(mlir::Location start, mlir::Location end,
-                              llvm::ArrayRef<const OpenACCClause *> clauses,
-                              const Stmt *associatedStmt);
+  mlir::LogicalResult emitOpenACCOpAssociatedStmt(
+      mlir::Location start, mlir::Location end, OpenACCDirectiveKind dirKind,
+      SourceLocation dirLoc, llvm::ArrayRef<const OpenACCClause *> clauses,
+      const Stmt *associatedStmt);
 
 public:
   mlir::LogicalResult

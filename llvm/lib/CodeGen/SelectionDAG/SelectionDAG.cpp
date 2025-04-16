@@ -3002,8 +3002,13 @@ bool SelectionDAG::isSplatValue(SDValue V, const APInt &DemandedElts,
     APInt UndefLHS, UndefRHS;
     SDValue LHS = V.getOperand(0);
     SDValue RHS = V.getOperand(1);
+    // Only recognize splats with the same demanded undef elements for both
+    // operands, otherwise we might fail to handle binop-specific undef
+    // handling.
+    // e.g. (and undef, 0) -> 0 etc.
     if (isSplatValue(LHS, DemandedElts, UndefLHS, Depth + 1) &&
-        isSplatValue(RHS, DemandedElts, UndefRHS, Depth + 1)) {
+        isSplatValue(RHS, DemandedElts, UndefRHS, Depth + 1) &&
+        (DemandedElts & UndefLHS) == (DemandedElts & UndefRHS)) {
       UndefElts = UndefLHS | UndefRHS;
       return true;
     }

@@ -128,7 +128,7 @@ QualType clang::desugarForDiagnostic(ASTContext &Context, QualType QT,
         if (DesugarArgument) {
           ShouldAKA = true;
           QT = Context.getTemplateSpecializationType(
-              TST->getTemplateName(), Args, QT);
+              TST->getTemplateName(), Args, /*CanonicalArgs=*/std::nullopt, QT);
         }
         break;
       }
@@ -142,13 +142,13 @@ QualType clang::desugarForDiagnostic(ASTContext &Context, QualType QT,
             ElementTy, CAT->getSize(), CAT->getSizeExpr(),
             CAT->getSizeModifier(), CAT->getIndexTypeCVRQualifiers());
       else if (const auto *VAT = dyn_cast<VariableArrayType>(AT))
-        QT = Context.getVariableArrayType(
-            ElementTy, VAT->getSizeExpr(), VAT->getSizeModifier(),
-            VAT->getIndexTypeCVRQualifiers(), VAT->getBracketsRange());
+        QT = Context.getVariableArrayType(ElementTy, VAT->getSizeExpr(),
+                                          VAT->getSizeModifier(),
+                                          VAT->getIndexTypeCVRQualifiers());
       else if (const auto *DSAT = dyn_cast<DependentSizedArrayType>(AT))
         QT = Context.getDependentSizedArrayType(
             ElementTy, DSAT->getSizeExpr(), DSAT->getSizeModifier(),
-            DSAT->getIndexTypeCVRQualifiers(), DSAT->getBracketsRange());
+            DSAT->getIndexTypeCVRQualifiers());
       else if (const auto *IAT = dyn_cast<IncompleteArrayType>(AT))
         QT = Context.getIncompleteArrayType(ElementTy, IAT->getSizeModifier(),
                                             IAT->getIndexTypeCVRQualifiers());
@@ -512,8 +512,6 @@ void clang::FormatASTNodeDiagnosticArgument(
       const Expr *E = reinterpret_cast<Expr *>(Val);
       assert(E && "Received null Expr!");
       E->printPretty(OS, /*Helper=*/nullptr, Context.getPrintingPolicy());
-      // FIXME: Include quotes when printing expressions.
-      NeedQuotes = false;
       break;
     }
   }
@@ -1142,9 +1140,9 @@ class TemplateDiff {
       return nullptr;
 
     Ty = Context.getTemplateSpecializationType(
-             TemplateName(CTSD->getSpecializedTemplate()),
-             CTSD->getTemplateArgs().asArray(),
-             Ty.getLocalUnqualifiedType().getCanonicalType());
+        TemplateName(CTSD->getSpecializedTemplate()),
+        CTSD->getTemplateArgs().asArray(), /*CanonicalArgs=*/std::nullopt,
+        Ty.getLocalUnqualifiedType().getCanonicalType());
 
     return Ty->getAs<TemplateSpecializationType>();
   }

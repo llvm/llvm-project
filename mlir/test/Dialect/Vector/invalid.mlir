@@ -1409,6 +1409,16 @@ func.func @maskedstore_memref_mismatch(%base: memref<?xf32>, %mask: vector<16xi1
 
 // -----
 
+func.func @gather_from_vector(%base: vector<16xf32>, %indices: vector<16xi32>,
+                                %mask: vector<16xi1>, %pass_thru: vector<16xf32>) {
+  %c0 = arith.constant 0 : index
+  // expected-error@+1 {{'vector.gather' op operand #0 must be Tensor or MemRef of any type values, but got 'vector<16xf32>'}}
+  %0 = vector.gather %base[%c0][%indices], %mask, %pass_thru
+    : vector<16xf32>, vector<16xi32>, vector<16xi1>, vector<16xf32> into vector<16xf32>
+}
+
+// -----
+
 func.func @gather_base_type_mismatch(%base: memref<?xf64>, %indices: vector<16xi32>,
                                 %mask: vector<16xi1>, %pass_thru: vector<16xf32>) {
   %c0 = arith.constant 0 : index
@@ -1468,6 +1478,17 @@ func.func @gather_pass_thru_type_mismatch(%base: memref<?xf32>, %indices: vector
 }
 
 // -----
+
+func.func @scatter_to_vector(%base: vector<16xf32>, %indices: vector<16xi32>,
+                             %mask: vector<16xi1>, %pass_thru: vector<16xf32>) {
+  %c0 = arith.constant 0 : index
+  // expected-error@+2 {{custom op 'vector.scatter' invalid kind of type specified}}
+  vector.scatter %base[%c0][%indices], %mask, %pass_thru
+    : vector<16xf32>, vector<16xi32>, vector<16xi1>, vector<16xf32> into vector<16xf32>
+}
+
+// -----
+
 
 func.func @scatter_base_type_mismatch(%base: memref<?xf64>, %indices: vector<16xi32>,
                                  %mask: vector<16xi1>, %value: vector<16xf32>) {
@@ -1743,13 +1764,11 @@ func.func @invalid_outerproduct(%src : memref<?xf32>) {
 
 // -----
 
-func.func @invalid_outerproduct1(%src : memref<?xf32>) {
+func.func @invalid_outerproduct1(%src : memref<?xf32>, %lhs : vector<[4]x[4]xf32>, %rhs : vector<[4]xf32>) {
   %idx = arith.constant 0 : index
-  %0 = vector.load %src[%idx] : memref<?xf32>, vector<[4]x[4]xf32>
-  %1 = vector.load %src[%idx] : memref<?xf32>, vector<[4]xf32>
 
   // expected-error @+1 {{'vector.outerproduct' op expected 1-d vector for operand #1}}
-  %op = vector.outerproduct %0, %1 : vector<[4]x[4]xf32>, vector<[4]xf32>
+  %op = vector.outerproduct %lhs, %rhs : vector<[4]x[4]xf32>, vector<[4]xf32>
 }
 
 // -----
@@ -1869,4 +1888,30 @@ func.func @flat_transpose_scalable(%arg0: vector<[16]xf32>) -> vector<[16]xf32> 
   %0 = vector.flat_transpose %arg0 { rows = 4: i32, columns = 4: i32 }
      : vector<[16]xf32> -> vector<[16]xf32>
   return %0 : vector<[16]xf32>
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// vector.load
+//===----------------------------------------------------------------------===//
+
+func.func @vector_load(%src : memref<?xi8>) {
+  %c0 = arith.constant 0 : index
+  // expected-error @+1 {{'vector.load' op destination memref has lower rank than the result vector}}
+  %0 = vector.load %src[%c0] : memref<?xi8>, vector<16x16xi8>
+  return
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// vector.store
+//===----------------------------------------------------------------------===//
+
+func.func @vector_store(%dest : memref<?xi8>, %vec : vector<16x16xi8>) {
+  %c0 = arith.constant 0 : index
+  // expected-error @+1 {{'vector.store' op source memref has lower rank than the vector to store}}
+  vector.store %vec, %dest[%c0] : memref<?xi8>, vector<16x16xi8>
+  return
 }

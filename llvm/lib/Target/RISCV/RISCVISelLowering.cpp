@@ -4726,6 +4726,47 @@ static SDValue getDeinterleaveShiftAndTrunc(const SDLoc &DL, MVT VT,
                      DAG.getVectorIdxConstant(0, DL));
 }
 
+/// Match a single source shuffle which is an identity except that some
+/// particular element is repeated.  This can be lowered as a masked
+/// vrgather.vi/vx.  Note that the two source form of this is handled
+/// by the recursive splitting logic and doesn't need special handling.
+static SDValue lowerVECTOR_SHUFFLEAsVRGatherVX(ShuffleVectorSDNode *SVN,
+                                               const RISCVSubtarget &Subtarget,
+                                               SelectionDAG &DAG) {
+
+  SDLoc DL(SVN);
+  MVT VT = SVN->getSimpleValueType(0);
+  SDValue V1 = SVN->getOperand(0);
+  assert(SVN->getOperand(1).isUndef());
+  ArrayRef<int> Mask = SVN->getMask();
+  const unsigned NumElts = VT.getVectorNumElements();
+  MVT XLenVT = Subtarget.getXLenVT();
+
+  std::optional<int> SplatIdx;
+  for (auto [I, M] : enumerate(Mask)) {
+    if (M == -1 || I == (unsigned)M)
+      continue;
+    if (SplatIdx && *SplatIdx != M)
+      return SDValue();
+    SplatIdx = M;
+  }
+
+  if (!SplatIdx)
+    return SDValue();
+
+  SmallVector<SDValue> MaskVals;
+  for (int MaskIndex : Mask) {
+    bool SelectMaskVal = MaskIndex == *SplatIdx;
+    MaskVals.push_back(DAG.getConstant(SelectMaskVal, DL, XLenVT));
+  }
+  assert(MaskVals.size() == NumElts && "Unexpected select-like shuffle");
+  MVT MaskVT = MVT::getVectorVT(MVT::i1, NumElts);
+  SDValue SelectMask = DAG.getBuildVector(MaskVT, DL, MaskVals);
+  SDValue Splat = DAG.getVectorShuffle(VT, DL, V1, DAG.getUNDEF(VT),
+                                       SmallVector<int>(NumElts, *SplatIdx));
+  return DAG.getNode(ISD::VSELECT, DL, VT, SelectMask, Splat, V1);
+}
+
 // Lower the following shuffle to vslidedown.
 // a)
 // t49: v8i8 = extract_subvector t13, Constant:i64<0>
@@ -5850,6 +5891,9 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
     // don't have Zvkb and have to expand, the expanded sequence of approx. 2
     // shifts and a vor will have a higher throughput than a vrgather.
     if (SDValue V = lowerVECTOR_SHUFFLEAsRotate(SVN, DAG, Subtarget))
+      return V;
+
+    if (SDValue V = lowerVECTOR_SHUFFLEAsVRGatherVX(SVN, Subtarget, DAG))
       return V;
 
     // Match a spread(4,8) which can be done via extend and shift.  Spread(2)
@@ -19665,6 +19709,24 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     if (SDValue V = combineToVCPOP(N, DAG, Subtarget))
       return V;
     break;
+  case RISCVISD::VRGATHER_VX_VL: {
+    // Drop a redundant vrgather_vx.
+    // Note this assumes that out of bounds indices produce poison
+    // and can thus be replaced without having to prove them inbounds..
+    SDValue Src = N->getOperand(0);
+    SDValue Passthru = N->getOperand(2);
+    SDValue VL = N->getOperand(4);
+    switch (Src.getOpcode()) {
+    default:
+      break;
+    case RISCVISD::VMV_V_X_VL:
+    case RISCVISD::VFMV_V_F_VL:
+      if (Passthru.isUndef() && VL == Src.getOperand(2))
+        return Src;
+      break;
+    }
+    break;
+  }
   }
 
   return SDValue();
@@ -20583,7 +20645,7 @@ static MachineBasicBlock *emitSelectPseudo(MachineInstr &MI,
 
   // Insert appropriate branch.
   if (MI.getOperand(2).isImm())
-    BuildMI(HeadMBB, DL, TII.getBrCond(CC, MI.getOperand(2).isImm()))
+    BuildMI(HeadMBB, DL, TII.getBrCond(CC))
         .addReg(LHS)
         .addImm(MI.getOperand(2).getImm())
         .addMBB(TailMBB);
@@ -20926,6 +20988,13 @@ RISCVTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
 
 void RISCVTargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
                                                         SDNode *Node) const {
+  // If instruction defines FRM operand, conservatively set it as non-dead to
+  // express data dependency with FRM users and prevent incorrect instruction
+  // reordering.
+  if (auto *FRMDef = MI.findRegisterDefOperand(RISCV::FRM, /*TRI=*/nullptr)) {
+    FRMDef->setIsDead(false);
+    return;
+  }
   // Add FRM dependency to any instructions with dynamic rounding mode.
   int Idx = RISCV::getNamedOperandIdx(MI.getOpcode(), RISCV::OpName::frm);
   if (Idx < 0) {

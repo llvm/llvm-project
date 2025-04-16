@@ -9,6 +9,9 @@ void consume_obj(SomeObj*);
 CFMutableArrayRef provide_cf();
 void consume_cf(CFMutableArrayRef);
 
+CGImageRef provideImage();
+NSString *stringForImage(CGImageRef);
+
 void some_function();
 
 namespace simple {
@@ -271,6 +274,16 @@ namespace cxx_member_operator_call {
   }
 }
 
+namespace cxx_assignment_op {
+
+  SomeObj* provide();
+  void foo() {
+    RetainPtr<SomeObj> ptr;
+    ptr = provide();
+  }
+
+}
+
 namespace call_with_ptr_on_ref {
   RetainPtr<SomeObj> provideProtected();
   RetainPtr<CFMutableArrayRef> provideProtectedCF();
@@ -430,4 +443,12 @@ void idcf(CFTypeRef obj) {
     [[self getSomeObj] doWork];
 }
 
+- (CGImageRef)createImage {
+  return provideImage();
+}
+
+- (NSString *)convertImage {
+  RetainPtr<CGImageRef> image = [self createImage];
+  return stringForImage(image.get());
+}
 @end

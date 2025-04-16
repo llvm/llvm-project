@@ -130,7 +130,6 @@ static bool retPrimValue(InterpState &S, CodePtr OpPC,
     return Ret<X>(S, OpPC);
   switch (*T) {
     RET_CASE(PT_Ptr);
-    RET_CASE(PT_FnPtr);
     RET_CASE(PT_Float);
     RET_CASE(PT_Bool);
     RET_CASE(PT_Sint8);
@@ -766,10 +765,7 @@ static bool interp__builtin_addressof(InterpState &S, CodePtr OpPC,
   assert(Call->getArg(0)->isLValue());
   PrimType PtrT = S.getContext().classify(Call->getArg(0)).value_or(PT_Ptr);
 
-  if (PtrT == PT_FnPtr) {
-    const FunctionPointer &Arg = S.Stk.peek<FunctionPointer>();
-    S.Stk.push<FunctionPointer>(Arg);
-  } else if (PtrT == PT_Ptr) {
+  if (PtrT == PT_Ptr) {
     const Pointer &Arg = S.Stk.peek<Pointer>();
     S.Stk.push<Pointer>(Arg);
   } else {
