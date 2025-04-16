@@ -37,7 +37,7 @@ M(\U123456789) // Okay-ish, two tokens (valid-per-spec-but-actually-invalid UCN 
 // GH87106.
 M(\u0024) // expected-error {{character '$' cannot be specified by a universal character name}}
 M(\U00000024) // expected-error {{character '$' cannot be specified by a universal character name}}
-M($)
+M($)      // expected-warning {{'$' in identifier; did you mean to enable '-fdollars-in-identifiers'?}}
 
 // These should always be rejected because they're not valid identifier
 // characters.

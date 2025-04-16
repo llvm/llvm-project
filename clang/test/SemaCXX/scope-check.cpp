@@ -434,7 +434,8 @@ namespace test_recovery {
     a0:;
 
     switch (c) {
-    case $: // expected-error {{}}
+    case $: // expected-error {{}} \
+               expected-warning {{'$' in identifier; did you mean to enable '-fdollars-in-identifiers'?}}
     case 0:
       int x = 56; // expected-note {{jump bypasses variable initialization}}
     case 1: // expected-error {{cannot jump}}

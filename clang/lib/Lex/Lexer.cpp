@@ -4036,8 +4036,9 @@ LexStart:
       MIOpt.ReadToken();
       return LexIdentifierContinue(Result, CurPtr);
     }
-
     Kind = tok::unknown;
+    if (!isLexingRawMode())
+      Diag(CurPtr - 1, diag::warn_dollar_in_identifier);
     break;
 
   // C99 6.4.4: Character Constants.
