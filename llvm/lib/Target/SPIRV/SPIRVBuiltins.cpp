@@ -372,18 +372,15 @@ static MachineInstr *getBlockStructInstr(Register ParamReg,
   // We expect the following sequence of instructions:
   //   %0:_(pN) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.spv.alloca)
   //   or       = G_GLOBAL_VALUE @block_literal_global
-  //   %1:_(pN) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.spv.bitcast), %0
-  //   %2:_(p4) = G_ADDRSPACE_CAST %1:_(pN)
+  //   %1:_(p4) = G_ADDRSPACE_CAST %0:_(pN)
   MachineInstr *MI = MRI->getUniqueVRegDef(ParamReg);
   assert(MI->getOpcode() == TargetOpcode::G_ADDRSPACE_CAST &&
          MI->getOperand(1).isReg());
-  Register BitcastReg = MI->getOperand(1).getReg();
-  MachineInstr *BitcastMI = MRI->getUniqueVRegDef(BitcastReg);
-  assert(isSpvIntrinsic(*BitcastMI, Intrinsic::spv_bitcast) &&
-         BitcastMI->getOperand(2).isReg());
-  Register ValueReg = BitcastMI->getOperand(2).getReg();
-  MachineInstr *ValueMI = MRI->getUniqueVRegDef(ValueReg);
-  return ValueMI;
+  Register PtrReg = MI->getOperand(1).getReg();
+  MachineInstr *PtrMI = MRI->getUniqueVRegDef(PtrReg);
+  assert(PtrMI->getOpcode() == TargetOpcode::G_GLOBAL_VALUE ||
+         isSpvIntrinsic(*PtrMI, Intrinsic::spv_alloca));
+  return PtrMI;
 }
 
 // Return an integer constant corresponding to the given register and
@@ -2509,6 +2506,59 @@ static bool buildEnqueueKernel(const SPIRV::IncomingCall *Call,
   return true;
 }
 
+static bool buildNDRangeSubGroup(const SPIRV::IncomingCall *Call,
+                                 unsigned Opcode, MachineIRBuilder &MIRBuilder,
+                                 SPIRVGlobalRegistry *GR) {
+  MachineRegisterInfo *MRI = MIRBuilder.getMRI();
+  const DataLayout &DL = MIRBuilder.getDataLayout();
+
+  auto MIB = MIRBuilder.buildInstr(Opcode)
+                 .addDef(Call->ReturnRegister)
+                 .addUse(GR->getSPIRVTypeID(Call->ReturnType))
+                 .addUse(Call->Arguments[0]);
+  unsigned int BlockFIdx = 1;
+  MachineInstr *BlockMI = getBlockStructInstr(Call->Arguments[BlockFIdx], MRI);
+  assert(BlockMI->getOpcode() == TargetOpcode::G_GLOBAL_VALUE);
+  // Invoke: Pointer to invoke function.
+  Register BlockFReg = BlockMI->getOperand(0).getReg();
+  MIB.addUse(BlockFReg);
+  MRI->setRegClass(BlockFReg, &SPIRV::pIDRegClass);
+
+  Register BlockLiteralReg = Call->Arguments[BlockFIdx + 1];
+  // Param: Pointer to block literal.
+  MIB.addUse(BlockLiteralReg);
+  BlockMI = MRI->getUniqueVRegDef(BlockLiteralReg);
+  Register BlockMIReg =
+      stripAddrspaceCast(BlockMI->getOperand(1).getReg(), *MRI);
+  BlockMI = MRI->getUniqueVRegDef(BlockMIReg);
+
+  if (BlockMI->getOpcode() == TargetOpcode::G_GLOBAL_VALUE) {
+    // Size and align are given explicitly here.
+    const GlobalValue *GV = BlockMI->getOperand(1).getGlobal();
+
+    const GlobalVariable *BlockGV = dyn_cast<GlobalVariable>(GV);
+    assert(BlockGV->hasInitializer() &&
+           "Block literal should have an initializer");
+    const Constant *Init = BlockGV->getInitializer();
+    const ConstantStruct *CS = dyn_cast<ConstantStruct>(Init);
+    // Extract fields
+    const ConstantInt *SizeConst = dyn_cast<ConstantInt>(CS->getOperand(0));
+    const ConstantInt *AlignConst = dyn_cast<ConstantInt>(CS->getOperand(1));
+    uint64_t BlockSize = SizeConst->getZExtValue();
+    uint64_t BlockAlign = AlignConst->getZExtValue();
+    MIB.addUse(buildConstantIntReg32(BlockSize, MIRBuilder, GR));
+    MIB.addUse(buildConstantIntReg32(BlockAlign, MIRBuilder, GR));
+  } else {
+    Type *PType = const_cast<Type *>(getBlockStructType(BlockLiteralReg, MRI));
+    // Fallback to default if not found
+    MIB.addUse(
+        buildConstantIntReg32(DL.getTypeStoreSize(PType), MIRBuilder, GR));
+    MIB.addUse(buildConstantIntReg32(DL.getPrefTypeAlign(PType).value(),
+                                     MIRBuilder, GR));
+  }
+  return true;
+}
+
 static bool generateEnqueueInst(const SPIRV::IncomingCall *Call,
                                 MachineIRBuilder &MIRBuilder,
                                 SPIRVGlobalRegistry *GR) {
@@ -2544,6 +2594,9 @@ static bool generateEnqueueInst(const SPIRV::IncomingCall *Call,
     return buildNDRange(Call, MIRBuilder, GR);
   case SPIRV::OpEnqueueKernel:
     return buildEnqueueKernel(Call, MIRBuilder, GR);
+  case SPIRV::OpGetKernelNDrangeSubGroupCount:
+  case SPIRV::OpGetKernelNDrangeMaxSubGroupSize:
+    return buildNDRangeSubGroup(Call, Opcode, MIRBuilder, GR);
   default:
     return false;
   }

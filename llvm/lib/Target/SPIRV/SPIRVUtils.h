@@ -257,7 +257,7 @@ bool isSpecialOpaqueType(const Type *Ty);
 
 // Check if the function is an SPIR-V entry point
 bool isEntryPoint(const Function &F);
-
+Register stripAddrspaceCast(Register Reg, const MachineRegisterInfo &MRI);
 // Parse basic scalar type name, substring TypeName, and return LLVM type.
 Type *parseBasicTypeName(StringRef &TypeName, LLVMContext &Ctx);
 

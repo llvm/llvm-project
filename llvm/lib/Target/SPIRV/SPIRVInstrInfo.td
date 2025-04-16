@@ -759,6 +759,10 @@ def OpGetDefaultQueue: Op<303, (outs ID:$res), (ins TYPE:$type),
                   "$res = OpGetDefaultQueue $type">;
 def OpBuildNDRange: Op<304, (outs ID:$res), (ins TYPE:$type, ID:$GWS, ID:$LWS, ID:$GWO),
                   "$res = OpBuildNDRange $type $GWS $LWS $GWO">;
+def OpGetKernelNDrangeSubGroupCount: Op<304, (outs ID:$res), (ins TYPE:$type, ID:$NDR, ID:$Invoke, ID:$Param, ID:$ParamSize, ID:$ParamAlign),
+                  "$res = OpGetKernelNDrangeSubGroupCount $type $NDR $Invoke $Param $ParamSize $ParamAlign">;
+def OpGetKernelNDrangeMaxSubGroupSize: Op<304, (outs ID:$res), (ins TYPE:$type, ID:$NDR, ID:$Invoke, ID:$Param, ID:$ParamSize, ID:$ParamAlign),
+                  "$res = OpGetKernelNDrangeMaxSubGroupSize $type $NDR $Invoke $Param $ParamSize $ParamAlign">;
 
 // TODO: 3.42.23. Pipe Instructions
 
