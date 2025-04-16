@@ -9460,7 +9460,6 @@ define void @v_permlane16_v2i64(ptr addrspace(1) %out, <2 x i64> %src0, i32 %src
 ; GFX12-SDAG-NEXT:    v_readfirstlane_b32 s0, v6
 ; GFX12-SDAG-NEXT:    v_readfirstlane_b32 s1, v7
 ; GFX12-SDAG-NEXT:    s_wait_alu 0xf1ff
-; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-SDAG-NEXT:    v_permlane16_b32 v5, v5, s0, s1
 ; GFX12-SDAG-NEXT:    v_permlane16_b32 v4, v4, s0, s1
 ; GFX12-SDAG-NEXT:    v_permlane16_b32 v3, v3, s0, s1
@@ -9478,7 +9477,6 @@ define void @v_permlane16_v2i64(ptr addrspace(1) %out, <2 x i64> %src0, i32 %src
 ; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s0, v6
 ; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s1, v7
 ; GFX12-GISEL-NEXT:    s_wait_alu 0xf1ff
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-GISEL-NEXT:    v_permlane16_b32 v2, v2, s0, s1
 ; GFX12-GISEL-NEXT:    v_permlane16_b32 v3, v3, s0, s1
 ; GFX12-GISEL-NEXT:    v_permlane16_b32 v4, v4, s0, s1
@@ -9565,7 +9563,6 @@ define void @v_permlane16_v3i64(ptr addrspace(1) %out, <3 x i64> %src0, i32 %src
 ; GFX12-SDAG-NEXT:    v_readfirstlane_b32 s0, v8
 ; GFX12-SDAG-NEXT:    v_readfirstlane_b32 s1, v9
 ; GFX12-SDAG-NEXT:    s_wait_alu 0xf1ff
-; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-SDAG-NEXT:    v_permlane16_b32 v7, v7, s0, s1
 ; GFX12-SDAG-NEXT:    v_permlane16_b32 v6, v6, s0, s1
 ; GFX12-SDAG-NEXT:    v_permlane16_b32 v5, v5, s0, s1
@@ -9587,7 +9584,6 @@ define void @v_permlane16_v3i64(ptr addrspace(1) %out, <3 x i64> %src0, i32 %src
 ; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s0, v8
 ; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s1, v9
 ; GFX12-GISEL-NEXT:    s_wait_alu 0xf1ff
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-GISEL-NEXT:    v_permlane16_b32 v2, v2, s0, s1
 ; GFX12-GISEL-NEXT:    v_permlane16_b32 v3, v3, s0, s1
 ; GFX12-GISEL-NEXT:    v_permlane16_b32 v4, v4, s0, s1
@@ -9686,7 +9682,6 @@ define void @v_permlane16_v4f64(ptr addrspace(1) %out, <4 x double> %src0, i32 %
 ; GFX12-SDAG-NEXT:    v_readfirstlane_b32 s0, v10
 ; GFX12-SDAG-NEXT:    v_readfirstlane_b32 s1, v11
 ; GFX12-SDAG-NEXT:    s_wait_alu 0xf1ff
-; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-SDAG-NEXT:    v_permlane16_b32 v9, v9, s0, s1
 ; GFX12-SDAG-NEXT:    v_permlane16_b32 v8, v8, s0, s1
 ; GFX12-SDAG-NEXT:    v_permlane16_b32 v7, v7, s0, s1
@@ -9710,7 +9705,6 @@ define void @v_permlane16_v4f64(ptr addrspace(1) %out, <4 x double> %src0, i32 %
 ; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s0, v10
 ; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s1, v11
 ; GFX12-GISEL-NEXT:    s_wait_alu 0xf1ff
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-GISEL-NEXT:    v_permlane16_b32 v2, v2, s0, s1
 ; GFX12-GISEL-NEXT:    v_permlane16_b32 v3, v3, s0, s1
 ; GFX12-GISEL-NEXT:    v_permlane16_b32 v4, v4, s0, s1
@@ -9851,7 +9845,6 @@ define void @v_permlane16_v8f64(ptr addrspace(1) %out, <8 x double> %src0, i32 %
 ; GFX12-SDAG-NEXT:    v_readfirstlane_b32 s0, v18
 ; GFX12-SDAG-NEXT:    v_readfirstlane_b32 s1, v19
 ; GFX12-SDAG-NEXT:    s_wait_alu 0xf1ff
-; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-SDAG-NEXT:    v_permlane16_b32 v17, v17, s0, s1
 ; GFX12-SDAG-NEXT:    v_permlane16_b32 v16, v16, s0, s1
 ; GFX12-SDAG-NEXT:    v_permlane16_b32 v15, v15, s0, s1
@@ -9885,7 +9878,6 @@ define void @v_permlane16_v8f64(ptr addrspace(1) %out, <8 x double> %src0, i32 %
 ; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s0, v18
 ; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s1, v19
 ; GFX12-GISEL-NEXT:    s_wait_alu 0xf1ff
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-GISEL-NEXT:    v_permlane16_b32 v2, v2, s0, s1
 ; GFX12-GISEL-NEXT:    v_permlane16_b32 v3, v3, s0, s1
 ; GFX12-GISEL-NEXT:    v_permlane16_b32 v4, v4, s0, s1
@@ -9974,7 +9966,6 @@ define void @v_permlanex16_v2i64(ptr addrspace(1) %out, <2 x i64> %src0, i32 %sr
 ; GFX12-SDAG-NEXT:    v_readfirstlane_b32 s0, v6
 ; GFX12-SDAG-NEXT:    v_readfirstlane_b32 s1, v7
 ; GFX12-SDAG-NEXT:    s_wait_alu 0xf1ff
-; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-SDAG-NEXT:    v_permlanex16_b32 v5, v5, s0, s1
 ; GFX12-SDAG-NEXT:    v_permlanex16_b32 v4, v4, s0, s1
 ; GFX12-SDAG-NEXT:    v_permlanex16_b32 v3, v3, s0, s1
@@ -9992,7 +9983,6 @@ define void @v_permlanex16_v2i64(ptr addrspace(1) %out, <2 x i64> %src0, i32 %sr
 ; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s0, v6
 ; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s1, v7
 ; GFX12-GISEL-NEXT:    s_wait_alu 0xf1ff
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-GISEL-NEXT:    v_permlanex16_b32 v2, v2, s0, s1
 ; GFX12-GISEL-NEXT:    v_permlanex16_b32 v3, v3, s0, s1
 ; GFX12-GISEL-NEXT:    v_permlanex16_b32 v4, v4, s0, s1
@@ -10079,7 +10069,6 @@ define void @v_permlanex16_v3i64(ptr addrspace(1) %out, <3 x i64> %src0, i32 %sr
 ; GFX12-SDAG-NEXT:    v_readfirstlane_b32 s0, v8
 ; GFX12-SDAG-NEXT:    v_readfirstlane_b32 s1, v9
 ; GFX12-SDAG-NEXT:    s_wait_alu 0xf1ff
-; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-SDAG-NEXT:    v_permlanex16_b32 v7, v7, s0, s1
 ; GFX12-SDAG-NEXT:    v_permlanex16_b32 v6, v6, s0, s1
 ; GFX12-SDAG-NEXT:    v_permlanex16_b32 v5, v5, s0, s1
@@ -10101,7 +10090,6 @@ define void @v_permlanex16_v3i64(ptr addrspace(1) %out, <3 x i64> %src0, i32 %sr
 ; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s0, v8
 ; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s1, v9
 ; GFX12-GISEL-NEXT:    s_wait_alu 0xf1ff
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-GISEL-NEXT:    v_permlanex16_b32 v2, v2, s0, s1
 ; GFX12-GISEL-NEXT:    v_permlanex16_b32 v3, v3, s0, s1
 ; GFX12-GISEL-NEXT:    v_permlanex16_b32 v4, v4, s0, s1
@@ -10200,7 +10188,6 @@ define void @v_permlanex16_v4f64(ptr addrspace(1) %out, <4 x double> %src0, i32 
 ; GFX12-SDAG-NEXT:    v_readfirstlane_b32 s0, v10
 ; GFX12-SDAG-NEXT:    v_readfirstlane_b32 s1, v11
 ; GFX12-SDAG-NEXT:    s_wait_alu 0xf1ff
-; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-SDAG-NEXT:    v_permlanex16_b32 v9, v9, s0, s1
 ; GFX12-SDAG-NEXT:    v_permlanex16_b32 v8, v8, s0, s1
 ; GFX12-SDAG-NEXT:    v_permlanex16_b32 v7, v7, s0, s1
@@ -10224,7 +10211,6 @@ define void @v_permlanex16_v4f64(ptr addrspace(1) %out, <4 x double> %src0, i32 
 ; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s0, v10
 ; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s1, v11
 ; GFX12-GISEL-NEXT:    s_wait_alu 0xf1ff
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-GISEL-NEXT:    v_permlanex16_b32 v2, v2, s0, s1
 ; GFX12-GISEL-NEXT:    v_permlanex16_b32 v3, v3, s0, s1
 ; GFX12-GISEL-NEXT:    v_permlanex16_b32 v4, v4, s0, s1
@@ -10365,7 +10351,6 @@ define void @v_permlanex16_v8f64(ptr addrspace(1) %out, <8 x double> %src0, i32 
 ; GFX12-SDAG-NEXT:    v_readfirstlane_b32 s0, v18
 ; GFX12-SDAG-NEXT:    v_readfirstlane_b32 s1, v19
 ; GFX12-SDAG-NEXT:    s_wait_alu 0xf1ff
-; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-SDAG-NEXT:    v_permlanex16_b32 v17, v17, s0, s1
 ; GFX12-SDAG-NEXT:    v_permlanex16_b32 v16, v16, s0, s1
 ; GFX12-SDAG-NEXT:    v_permlanex16_b32 v15, v15, s0, s1
@@ -10399,7 +10384,6 @@ define void @v_permlanex16_v8f64(ptr addrspace(1) %out, <8 x double> %src0, i32 
 ; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s0, v18
 ; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s1, v19
 ; GFX12-GISEL-NEXT:    s_wait_alu 0xf1ff
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-GISEL-NEXT:    v_permlanex16_b32 v2, v2, s0, s1
 ; GFX12-GISEL-NEXT:    v_permlanex16_b32 v3, v3, s0, s1
 ; GFX12-GISEL-NEXT:    v_permlanex16_b32 v4, v4, s0, s1

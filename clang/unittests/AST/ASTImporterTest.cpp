@@ -7977,42 +7977,6 @@ TEST_P(ImportAttributes, ImportAcquiredBefore) {
   checkImportVariadicArg(FromAttr->args(), ToAttr->args());
 }
 
-TEST_P(ImportAttributes, ImportAssertExclusiveLock) {
-  AssertExclusiveLockAttr *FromAttr, *ToAttr;
-  importAttr<FunctionDecl>("void test(int A1, int A2) "
-                           "__attribute__((assert_exclusive_lock(A1, A2)));",
-                           FromAttr, ToAttr);
-  checkImportVariadicArg(FromAttr->args(), ToAttr->args());
-}
-
-TEST_P(ImportAttributes, ImportAssertSharedLock) {
-  AssertSharedLockAttr *FromAttr, *ToAttr;
-  importAttr<FunctionDecl>(
-      "void test(int A1, int A2) __attribute__((assert_shared_lock(A1, A2)));",
-      FromAttr, ToAttr);
-  checkImportVariadicArg(FromAttr->args(), ToAttr->args());
-}
-
-TEST_P(ImportAttributes, ImportExclusiveTrylockFunction) {
-  ExclusiveTrylockFunctionAttr *FromAttr, *ToAttr;
-  importAttr<FunctionDecl>(
-      "void test(int A1, int A2) __attribute__((exclusive_trylock_function(1, "
-      "A1, A2)));",
-      FromAttr, ToAttr);
-  checkImported(FromAttr->getSuccessValue(), ToAttr->getSuccessValue());
-  checkImportVariadicArg(FromAttr->args(), ToAttr->args());
-}
-
-TEST_P(ImportAttributes, ImportSharedTrylockFunction) {
-  SharedTrylockFunctionAttr *FromAttr, *ToAttr;
-  importAttr<FunctionDecl>(
-      "void test(int A1, int A2) __attribute__((shared_trylock_function(1, A1, "
-      "A2)));",
-      FromAttr, ToAttr);
-  checkImported(FromAttr->getSuccessValue(), ToAttr->getSuccessValue());
-  checkImportVariadicArg(FromAttr->args(), ToAttr->args());
-}
-
 TEST_P(ImportAttributes, ImportLockReturned) {
   LockReturnedAttr *FromAttr, *ToAttr;
   importAttr<FunctionDecl>(
