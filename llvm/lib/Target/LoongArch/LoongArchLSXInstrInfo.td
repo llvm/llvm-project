@@ -2002,6 +2002,10 @@ def : Pat<(f32 f32imm_vldi:$in),
 def : Pat<(f64 f64imm_vldi:$in),
           (f64 (EXTRACT_SUBREG (VLDI (to_f64imm_vldi f64imm_vldi:$in)), sub_64))>;
 
+// VABSD_{B/H/W/D}[U]
+defm : PatVrVr<abds, "VABSD">;
+defm : PatVrVrU<abdu, "VABSD">;
+
 } // Predicates = [HasExtLSX]
 
 /// Intrinsic pattern
