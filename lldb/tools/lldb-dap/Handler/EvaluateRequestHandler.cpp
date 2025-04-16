@@ -165,7 +165,7 @@ void EvaluateRequestHandler::operator()(
     }
     auto result = RunLLDBCommandsVerbatim(dap.debugger, llvm::StringRef(),
                                           {std::string(expression)},
-                                          /*echo_commands=*/ false);
+                                          /*echo_commands=*/false);
     EmplaceSafeString(body, "result", result);
     body.try_emplace("variablesReference", (int64_t)0);
   } else {
