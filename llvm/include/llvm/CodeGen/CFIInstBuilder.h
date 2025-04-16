@@ -72,6 +72,16 @@ public:
         nullptr, TRI.getDwarfRegNum(Reg, IsEH), Offset));
   }
 
+  void buildRegister(MCRegister Reg1, MCRegister Reg2) const {
+    insertCFIInst(MCCFIInstruction::createRegister(
+        nullptr, TRI.getDwarfRegNum(Reg1, IsEH),
+        TRI.getDwarfRegNum(Reg2, IsEH)));
+  }
+
+  void buildWindowSave() const {
+    insertCFIInst(MCCFIInstruction::createWindowSave(nullptr));
+  }
+
   void buildRestore(MCRegister Reg) const {
     insertCFIInst(MCCFIInstruction::createRestore(
         nullptr, TRI.getDwarfRegNum(Reg, IsEH)));
