@@ -24747,10 +24747,8 @@ static SDValue combineConcatVectorOfShuffleAndItsOperands(
 
   // We are going to pad the shuffle operands, so any indice, that was picking
   // from the second operand, must be adjusted.
-  SmallVector<int, 16> AdjustedMask;
-  AdjustedMask.reserve(SVN->getMask().size());
+  SmallVector<int, 16> AdjustedMask(SVN->getMask());
   assert(SVN->getOperand(1).isUndef() && "Expected unary shuffle!");
-  append_range(AdjustedMask, SVN->getMask());
 
   // Identity masks for the operands of the (padded) shuffle.
   SmallVector<int, 32> IdentityMask(2 * OpVT.getVectorNumElements());
