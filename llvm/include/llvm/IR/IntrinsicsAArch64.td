@@ -3119,7 +3119,7 @@ let TargetPrefix = "aarch64" in {
           IntrInaccessibleMemOnly]>;
 
   def int_aarch64_sme_ftmopa_za16 : SME_OuterProduct_TMOP_Intrinsic;
-  def int_aarch64_sme_tmopa_za32 : SME_OuterProduct_TMOP_Intrinsic;
+  def int_aarch64_sme_ftmopa_za32 : SME_OuterProduct_TMOP_Intrinsic;
   def int_aarch64_sme_stmopa_za32 : SME_OuterProduct_TMOP_Intrinsic;
   def int_aarch64_sme_utmopa_za32 : SME_OuterProduct_TMOP_Intrinsic;
   def int_aarch64_sme_sutmopa_za32 : SME_OuterProduct_TMOP_Intrinsic;
