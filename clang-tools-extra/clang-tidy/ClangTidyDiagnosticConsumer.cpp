@@ -22,6 +22,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTDiagnostic.h"
 #include "clang/AST/Attr.h"
+#include "clang/AST/Expr.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticOptions.h"
@@ -166,8 +167,8 @@ ClangTidyContext::ClangTidyContext(
       AllowEnablingAnalyzerAlphaCheckers(AllowEnablingAnalyzerAlphaCheckers),
       EnableModuleHeadersParsing(EnableModuleHeadersParsing) {
   // Before the first translation unit we can get errors related to command-line
-  // parsing, use empty string for the file name in this case.
-  setCurrentFile("");
+  // parsing, use dummy string for the file name in this case.
+  setCurrentFile("dummy");
 }
 
 ClangTidyContext::~ClangTidyContext() = default;
@@ -528,6 +529,8 @@ void ClangTidyDiagnosticConsumer::forwardDiagnostic(const Diagnostic &Info) {
     case clang::DiagnosticsEngine::ak_addrspace:
       Builder << static_cast<LangAS>(Info.getRawArg(Index));
       break;
+    case clang::DiagnosticsEngine::ak_expr:
+      Builder << reinterpret_cast<const Expr *>(Info.getRawArg(Index));
     }
   }
 }

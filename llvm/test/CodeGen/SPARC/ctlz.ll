@@ -3,169 +3,311 @@
 ; RUN: llc < %s -mtriple=sparcv9 -mattr=popc | FileCheck %s -check-prefix=POPC
 ; RUN: llc < %s -mtriple=sparcv9 -mattr=vis3 | FileCheck %s -check-prefix=VIS3
 
-define i32 @f(i32 %x) nounwind {
-; V9-LABEL: f:
-; V9:       ! %bb.0: ! %entry
-; V9-NEXT:    srl %o0, 1, %o1
-; V9-NEXT:    or %o0, %o1, %o1
-; V9-NEXT:    srl %o1, 2, %o2
-; V9-NEXT:    or %o1, %o2, %o1
-; V9-NEXT:    srl %o1, 4, %o2
-; V9-NEXT:    or %o1, %o2, %o1
-; V9-NEXT:    srl %o1, 8, %o2
-; V9-NEXT:    or %o1, %o2, %o1
-; V9-NEXT:    srl %o1, 16, %o2
-; V9-NEXT:    or %o1, %o2, %o1
-; V9-NEXT:    xor %o1, -1, %o1
-; V9-NEXT:    srl %o1, 1, %o2
-; V9-NEXT:    sethi 1398101, %o3
-; V9-NEXT:    or %o3, 341, %o3
-; V9-NEXT:    and %o2, %o3, %o2
-; V9-NEXT:    sub %o1, %o2, %o1
-; V9-NEXT:    sethi 838860, %o2
-; V9-NEXT:    or %o2, 819, %o2
-; V9-NEXT:    and %o1, %o2, %o3
-; V9-NEXT:    srl %o1, 2, %o1
-; V9-NEXT:    and %o1, %o2, %o1
-; V9-NEXT:    add %o3, %o1, %o1
-; V9-NEXT:    srl %o1, 4, %o2
-; V9-NEXT:    add %o1, %o2, %o1
-; V9-NEXT:    sethi 246723, %o2
-; V9-NEXT:    or %o2, 783, %o2
-; V9-NEXT:    and %o1, %o2, %o1
-; V9-NEXT:    sll %o1, 8, %o2
-; V9-NEXT:    add %o1, %o2, %o1
-; V9-NEXT:    sll %o1, 16, %o2
-; V9-NEXT:    add %o1, %o2, %o1
-; V9-NEXT:    srl %o1, 24, %o1
+define i32 @i32_nopoison(i32 %x) nounwind {
+; V9-LABEL: i32_nopoison:
+; V9:       ! %bb.0:
 ; V9-NEXT:    cmp %o0, 0
-; V9-NEXT:    move %icc, 0, %o1
+; V9-NEXT:    be %icc, .LBB0_2
+; V9-NEXT:    nop
+; V9-NEXT:  ! %bb.1: ! %cond.false
+; V9-NEXT:    srl %o0, 1, %o1
+; V9-NEXT:    or %o0, %o1, %o0
+; V9-NEXT:    srl %o0, 2, %o1
+; V9-NEXT:    or %o0, %o1, %o0
+; V9-NEXT:    srl %o0, 4, %o1
+; V9-NEXT:    or %o0, %o1, %o0
+; V9-NEXT:    srl %o0, 8, %o1
+; V9-NEXT:    or %o0, %o1, %o0
+; V9-NEXT:    srl %o0, 16, %o1
+; V9-NEXT:    or %o0, %o1, %o0
+; V9-NEXT:    xor %o0, -1, %o0
+; V9-NEXT:    srl %o0, 1, %o1
+; V9-NEXT:    sethi 1398101, %o2
+; V9-NEXT:    or %o2, 341, %o2
+; V9-NEXT:    and %o1, %o2, %o1
+; V9-NEXT:    sub %o0, %o1, %o0
+; V9-NEXT:    sethi 838860, %o1
+; V9-NEXT:    or %o1, 819, %o1
+; V9-NEXT:    and %o0, %o1, %o2
+; V9-NEXT:    srl %o0, 2, %o0
+; V9-NEXT:    and %o0, %o1, %o0
+; V9-NEXT:    add %o2, %o0, %o0
+; V9-NEXT:    srl %o0, 4, %o1
+; V9-NEXT:    add %o0, %o1, %o0
+; V9-NEXT:    sethi 246723, %o1
+; V9-NEXT:    or %o1, 783, %o1
+; V9-NEXT:    and %o0, %o1, %o0
+; V9-NEXT:    sll %o0, 8, %o1
+; V9-NEXT:    add %o0, %o1, %o0
+; V9-NEXT:    sll %o0, 16, %o1
+; V9-NEXT:    add %o0, %o1, %o0
 ; V9-NEXT:    retl
-; V9-NEXT:    mov %o1, %o0
+; V9-NEXT:    srl %o0, 24, %o0
+; V9-NEXT:  .LBB0_2:
+; V9-NEXT:    retl
+; V9-NEXT:    mov 32, %o0
 ;
-; POPC-LABEL: f:
-; POPC:       ! %bb.0: ! %entry
-; POPC-NEXT:    srl %o0, 1, %o1
-; POPC-NEXT:    or %o0, %o1, %o1
-; POPC-NEXT:    srl %o1, 2, %o2
-; POPC-NEXT:    or %o1, %o2, %o1
-; POPC-NEXT:    srl %o1, 4, %o2
-; POPC-NEXT:    or %o1, %o2, %o1
-; POPC-NEXT:    srl %o1, 8, %o2
-; POPC-NEXT:    or %o1, %o2, %o1
-; POPC-NEXT:    srl %o1, 16, %o2
-; POPC-NEXT:    or %o1, %o2, %o1
-; POPC-NEXT:    xor %o1, -1, %o1
-; POPC-NEXT:    srl %o1, 0, %o1
-; POPC-NEXT:    popc %o1, %o1
+; POPC-LABEL: i32_nopoison:
+; POPC:       ! %bb.0:
 ; POPC-NEXT:    cmp %o0, 0
-; POPC-NEXT:    move %icc, 0, %o1
+; POPC-NEXT:    be %icc, .LBB0_2
+; POPC-NEXT:    nop
+; POPC-NEXT:  ! %bb.1: ! %cond.false
+; POPC-NEXT:    srl %o0, 1, %o1
+; POPC-NEXT:    or %o0, %o1, %o0
+; POPC-NEXT:    srl %o0, 2, %o1
+; POPC-NEXT:    or %o0, %o1, %o0
+; POPC-NEXT:    srl %o0, 4, %o1
+; POPC-NEXT:    or %o0, %o1, %o0
+; POPC-NEXT:    srl %o0, 8, %o1
+; POPC-NEXT:    or %o0, %o1, %o0
+; POPC-NEXT:    srl %o0, 16, %o1
+; POPC-NEXT:    or %o0, %o1, %o0
+; POPC-NEXT:    xor %o0, -1, %o0
+; POPC-NEXT:    srl %o0, 0, %o0
 ; POPC-NEXT:    retl
-; POPC-NEXT:    mov %o1, %o0
+; POPC-NEXT:    popc %o0, %o0
+; POPC-NEXT:  .LBB0_2:
+; POPC-NEXT:    retl
+; POPC-NEXT:    mov 32, %o0
 ;
-; VIS3-LABEL: f:
-; VIS3:       ! %bb.0: ! %entry
-; VIS3-NEXT:    srl %o0, 0, %o1
-; VIS3-NEXT:    lzcnt %o1, %o1
-; VIS3-NEXT:    add %o1, -32, %o1
+; VIS3-LABEL: i32_nopoison:
+; VIS3:       ! %bb.0:
 ; VIS3-NEXT:    cmp %o0, 0
-; VIS3-NEXT:    move %icc, 0, %o1
+; VIS3-NEXT:    be %icc, .LBB0_2
+; VIS3-NEXT:    nop
+; VIS3-NEXT:  ! %bb.1: ! %cond.false
+; VIS3-NEXT:    sllx %o0, 32, %o0
 ; VIS3-NEXT:    retl
-; VIS3-NEXT:    mov %o1, %o0
-entry:
-  %0 = call i32 @llvm.ctlz.i32(i32 %x, i1 true)
-  %1 = icmp eq i32 %x, 0
-  %2 = select i1 %1, i32 0, i32 %0
-  %3 = trunc i32 %2 to i8
-  %conv = zext i8 %3 to i32
-  ret i32 %conv
+; VIS3-NEXT:    lzcnt %o0, %o0
+; VIS3-NEXT:  .LBB0_2:
+; VIS3-NEXT:    retl
+; VIS3-NEXT:    mov 32, %o0
+  %ret = call i32 @llvm.ctlz.i32(i32 %x, i1 false)
+  ret i32 %ret
 }
 
-define i64 @g(i64 %x) nounwind {
-; V9-LABEL: g:
-; V9:       ! %bb.0: ! %entry
-; V9-NEXT:    srlx %o0, 1, %o1
-; V9-NEXT:    or %o0, %o1, %o1
-; V9-NEXT:    srlx %o1, 2, %o2
-; V9-NEXT:    or %o1, %o2, %o1
-; V9-NEXT:    srlx %o1, 4, %o2
-; V9-NEXT:    or %o1, %o2, %o1
-; V9-NEXT:    srlx %o1, 8, %o2
-; V9-NEXT:    or %o1, %o2, %o1
-; V9-NEXT:    srlx %o1, 16, %o2
-; V9-NEXT:    or %o1, %o2, %o1
-; V9-NEXT:    srlx %o1, 32, %o2
-; V9-NEXT:    or %o1, %o2, %o1
-; V9-NEXT:    xor %o1, -1, %o1
-; V9-NEXT:    srlx %o1, 1, %o2
-; V9-NEXT:    sethi 1398101, %o3
-; V9-NEXT:    or %o3, 341, %o3
-; V9-NEXT:    sllx %o3, 32, %o4
-; V9-NEXT:    or %o4, %o3, %o3
-; V9-NEXT:    and %o2, %o3, %o2
-; V9-NEXT:    sub %o1, %o2, %o1
-; V9-NEXT:    sethi 838860, %o2
-; V9-NEXT:    or %o2, 819, %o2
-; V9-NEXT:    sllx %o2, 32, %o3
-; V9-NEXT:    or %o3, %o2, %o2
-; V9-NEXT:    and %o1, %o2, %o3
-; V9-NEXT:    srlx %o1, 2, %o1
+define i32 @i32_poison(i32 %x) nounwind {
+; V9-LABEL: i32_poison:
+; V9:       ! %bb.0:
+; V9-NEXT:    srl %o0, 1, %o1
+; V9-NEXT:    or %o0, %o1, %o0
+; V9-NEXT:    srl %o0, 2, %o1
+; V9-NEXT:    or %o0, %o1, %o0
+; V9-NEXT:    srl %o0, 4, %o1
+; V9-NEXT:    or %o0, %o1, %o0
+; V9-NEXT:    srl %o0, 8, %o1
+; V9-NEXT:    or %o0, %o1, %o0
+; V9-NEXT:    srl %o0, 16, %o1
+; V9-NEXT:    or %o0, %o1, %o0
+; V9-NEXT:    xor %o0, -1, %o0
+; V9-NEXT:    srl %o0, 1, %o1
+; V9-NEXT:    sethi 1398101, %o2
+; V9-NEXT:    or %o2, 341, %o2
 ; V9-NEXT:    and %o1, %o2, %o1
-; V9-NEXT:    add %o3, %o1, %o1
-; V9-NEXT:    srlx %o1, 4, %o2
-; V9-NEXT:    add %o1, %o2, %o1
-; V9-NEXT:    sethi 246723, %o2
-; V9-NEXT:    or %o2, 783, %o2
-; V9-NEXT:    sllx %o2, 32, %o3
-; V9-NEXT:    or %o3, %o2, %o2
-; V9-NEXT:    and %o1, %o2, %o1
-; V9-NEXT:    sethi 16448, %o2
-; V9-NEXT:    or %o2, 257, %o2
-; V9-NEXT:    sllx %o2, 32, %o3
-; V9-NEXT:    or %o3, %o2, %o2
-; V9-NEXT:    mulx %o1, %o2, %o1
-; V9-NEXT:    srlx %o1, 56, %o1
-; V9-NEXT:    movrz %o0, 0, %o1
+; V9-NEXT:    sub %o0, %o1, %o0
+; V9-NEXT:    sethi 838860, %o1
+; V9-NEXT:    or %o1, 819, %o1
+; V9-NEXT:    and %o0, %o1, %o2
+; V9-NEXT:    srl %o0, 2, %o0
+; V9-NEXT:    and %o0, %o1, %o0
+; V9-NEXT:    add %o2, %o0, %o0
+; V9-NEXT:    srl %o0, 4, %o1
+; V9-NEXT:    add %o0, %o1, %o0
+; V9-NEXT:    sethi 246723, %o1
+; V9-NEXT:    or %o1, 783, %o1
+; V9-NEXT:    and %o0, %o1, %o0
+; V9-NEXT:    sll %o0, 8, %o1
+; V9-NEXT:    add %o0, %o1, %o0
+; V9-NEXT:    sll %o0, 16, %o1
+; V9-NEXT:    add %o0, %o1, %o0
 ; V9-NEXT:    retl
-; V9-NEXT:    mov %o1, %o0
+; V9-NEXT:    srl %o0, 24, %o0
 ;
-; POPC-LABEL: g:
-; POPC:       ! %bb.0: ! %entry
-; POPC-NEXT:    srlx %o0, 1, %o1
-; POPC-NEXT:    or %o0, %o1, %o1
-; POPC-NEXT:    srlx %o1, 2, %o2
-; POPC-NEXT:    or %o1, %o2, %o1
-; POPC-NEXT:    srlx %o1, 4, %o2
-; POPC-NEXT:    or %o1, %o2, %o1
-; POPC-NEXT:    srlx %o1, 8, %o2
-; POPC-NEXT:    or %o1, %o2, %o1
-; POPC-NEXT:    srlx %o1, 16, %o2
-; POPC-NEXT:    or %o1, %o2, %o1
-; POPC-NEXT:    srlx %o1, 32, %o2
-; POPC-NEXT:    or %o1, %o2, %o1
-; POPC-NEXT:    xor %o1, -1, %o1
-; POPC-NEXT:    popc %o1, %o1
-; POPC-NEXT:    movrz %o0, 0, %o1
+; POPC-LABEL: i32_poison:
+; POPC:       ! %bb.0:
+; POPC-NEXT:    srl %o0, 1, %o1
+; POPC-NEXT:    or %o0, %o1, %o0
+; POPC-NEXT:    srl %o0, 2, %o1
+; POPC-NEXT:    or %o0, %o1, %o0
+; POPC-NEXT:    srl %o0, 4, %o1
+; POPC-NEXT:    or %o0, %o1, %o0
+; POPC-NEXT:    srl %o0, 8, %o1
+; POPC-NEXT:    or %o0, %o1, %o0
+; POPC-NEXT:    srl %o0, 16, %o1
+; POPC-NEXT:    or %o0, %o1, %o0
+; POPC-NEXT:    xor %o0, -1, %o0
+; POPC-NEXT:    srl %o0, 0, %o0
 ; POPC-NEXT:    retl
-; POPC-NEXT:    mov %o1, %o0
+; POPC-NEXT:    popc %o0, %o0
 ;
-; VIS3-LABEL: g:
-; VIS3:       ! %bb.0: ! %entry
-; VIS3-NEXT:    lzcnt %o0, %o1
-; VIS3-NEXT:    movrz %o0, 0, %o1
+; VIS3-LABEL: i32_poison:
+; VIS3:       ! %bb.0:
+; VIS3-NEXT:    sllx %o0, 32, %o0
 ; VIS3-NEXT:    retl
-; VIS3-NEXT:    mov %o1, %o0
-entry:
-  %0 = call i64 @llvm.ctlz.i64(i64 %x, i1 true)
-  %1 = icmp eq i64 %x, 0
-  %2 = select i1 %1, i64 0, i64 %0
-  %3 = trunc i64 %2 to i32
-  %conv = zext i32 %3 to i64
-  ret i64 %conv
+; VIS3-NEXT:    lzcnt %o0, %o0
+  %ret = call i32 @llvm.ctlz.i32(i32 %x, i1 true)
+  ret i32 %ret
 }
 
-; Function Attrs: nocallback nofree nosync nounwind readnone speculatable willreturn
-declare i32 @llvm.ctlz.i32(i32, i1 immarg) #0
-declare i64 @llvm.ctlz.i64(i64, i1 immarg) #0
+define i64 @i64_nopoison(i64 %x) nounwind {
+; V9-LABEL: i64_nopoison:
+; V9:       ! %bb.0:
+; V9-NEXT:    brz %o0, .LBB2_2
+; V9-NEXT:    nop
+; V9-NEXT:  ! %bb.1: ! %cond.false
+; V9-NEXT:    srlx %o0, 1, %o1
+; V9-NEXT:    or %o0, %o1, %o0
+; V9-NEXT:    srlx %o0, 2, %o1
+; V9-NEXT:    or %o0, %o1, %o0
+; V9-NEXT:    srlx %o0, 4, %o1
+; V9-NEXT:    or %o0, %o1, %o0
+; V9-NEXT:    srlx %o0, 8, %o1
+; V9-NEXT:    or %o0, %o1, %o0
+; V9-NEXT:    srlx %o0, 16, %o1
+; V9-NEXT:    or %o0, %o1, %o0
+; V9-NEXT:    srlx %o0, 32, %o1
+; V9-NEXT:    or %o0, %o1, %o0
+; V9-NEXT:    xor %o0, -1, %o0
+; V9-NEXT:    srlx %o0, 1, %o1
+; V9-NEXT:    sethi 1398101, %o2
+; V9-NEXT:    or %o2, 341, %o2
+; V9-NEXT:    sllx %o2, 32, %o3
+; V9-NEXT:    or %o3, %o2, %o2
+; V9-NEXT:    and %o1, %o2, %o1
+; V9-NEXT:    sub %o0, %o1, %o0
+; V9-NEXT:    sethi 838860, %o1
+; V9-NEXT:    or %o1, 819, %o1
+; V9-NEXT:    sllx %o1, 32, %o2
+; V9-NEXT:    or %o2, %o1, %o1
+; V9-NEXT:    and %o0, %o1, %o2
+; V9-NEXT:    srlx %o0, 2, %o0
+; V9-NEXT:    and %o0, %o1, %o0
+; V9-NEXT:    add %o2, %o0, %o0
+; V9-NEXT:    srlx %o0, 4, %o1
+; V9-NEXT:    add %o0, %o1, %o0
+; V9-NEXT:    sethi 246723, %o1
+; V9-NEXT:    or %o1, 783, %o1
+; V9-NEXT:    sllx %o1, 32, %o2
+; V9-NEXT:    or %o2, %o1, %o1
+; V9-NEXT:    and %o0, %o1, %o0
+; V9-NEXT:    sethi 16448, %o1
+; V9-NEXT:    or %o1, 257, %o1
+; V9-NEXT:    sllx %o1, 32, %o2
+; V9-NEXT:    or %o2, %o1, %o1
+; V9-NEXT:    mulx %o0, %o1, %o0
+; V9-NEXT:    retl
+; V9-NEXT:    srlx %o0, 56, %o0
+; V9-NEXT:  .LBB2_2:
+; V9-NEXT:    retl
+; V9-NEXT:    mov 64, %o0
+;
+; POPC-LABEL: i64_nopoison:
+; POPC:       ! %bb.0:
+; POPC-NEXT:    brz %o0, .LBB2_2
+; POPC-NEXT:    nop
+; POPC-NEXT:  ! %bb.1: ! %cond.false
+; POPC-NEXT:    srlx %o0, 1, %o1
+; POPC-NEXT:    or %o0, %o1, %o0
+; POPC-NEXT:    srlx %o0, 2, %o1
+; POPC-NEXT:    or %o0, %o1, %o0
+; POPC-NEXT:    srlx %o0, 4, %o1
+; POPC-NEXT:    or %o0, %o1, %o0
+; POPC-NEXT:    srlx %o0, 8, %o1
+; POPC-NEXT:    or %o0, %o1, %o0
+; POPC-NEXT:    srlx %o0, 16, %o1
+; POPC-NEXT:    or %o0, %o1, %o0
+; POPC-NEXT:    srlx %o0, 32, %o1
+; POPC-NEXT:    or %o0, %o1, %o0
+; POPC-NEXT:    xor %o0, -1, %o0
+; POPC-NEXT:    retl
+; POPC-NEXT:    popc %o0, %o0
+; POPC-NEXT:  .LBB2_2:
+; POPC-NEXT:    retl
+; POPC-NEXT:    mov 64, %o0
+;
+; VIS3-LABEL: i64_nopoison:
+; VIS3:       ! %bb.0:
+; VIS3-NEXT:    brz %o0, .LBB2_2
+; VIS3-NEXT:    nop
+; VIS3-NEXT:  ! %bb.1: ! %cond.false
+; VIS3-NEXT:    retl
+; VIS3-NEXT:    lzcnt %o0, %o0
+; VIS3-NEXT:  .LBB2_2:
+; VIS3-NEXT:    retl
+; VIS3-NEXT:    mov 64, %o0
+  %ret = call i64 @llvm.ctlz.i64(i64 %x, i1 false)
+  ret i64 %ret
+}
 
-attributes #0 = { nocallback nofree nosync nounwind readnone speculatable willreturn }
+define i64 @i64_poison(i64 %x) nounwind {
+; V9-LABEL: i64_poison:
+; V9:       ! %bb.0:
+; V9-NEXT:    srlx %o0, 1, %o1
+; V9-NEXT:    or %o0, %o1, %o0
+; V9-NEXT:    srlx %o0, 2, %o1
+; V9-NEXT:    or %o0, %o1, %o0
+; V9-NEXT:    srlx %o0, 4, %o1
+; V9-NEXT:    or %o0, %o1, %o0
+; V9-NEXT:    srlx %o0, 8, %o1
+; V9-NEXT:    or %o0, %o1, %o0
+; V9-NEXT:    srlx %o0, 16, %o1
+; V9-NEXT:    or %o0, %o1, %o0
+; V9-NEXT:    srlx %o0, 32, %o1
+; V9-NEXT:    or %o0, %o1, %o0
+; V9-NEXT:    xor %o0, -1, %o0
+; V9-NEXT:    srlx %o0, 1, %o1
+; V9-NEXT:    sethi 1398101, %o2
+; V9-NEXT:    or %o2, 341, %o2
+; V9-NEXT:    sllx %o2, 32, %o3
+; V9-NEXT:    or %o3, %o2, %o2
+; V9-NEXT:    and %o1, %o2, %o1
+; V9-NEXT:    sub %o0, %o1, %o0
+; V9-NEXT:    sethi 838860, %o1
+; V9-NEXT:    or %o1, 819, %o1
+; V9-NEXT:    sllx %o1, 32, %o2
+; V9-NEXT:    or %o2, %o1, %o1
+; V9-NEXT:    and %o0, %o1, %o2
+; V9-NEXT:    srlx %o0, 2, %o0
+; V9-NEXT:    and %o0, %o1, %o0
+; V9-NEXT:    add %o2, %o0, %o0
+; V9-NEXT:    srlx %o0, 4, %o1
+; V9-NEXT:    add %o0, %o1, %o0
+; V9-NEXT:    sethi 246723, %o1
+; V9-NEXT:    or %o1, 783, %o1
+; V9-NEXT:    sllx %o1, 32, %o2
+; V9-NEXT:    or %o2, %o1, %o1
+; V9-NEXT:    and %o0, %o1, %o0
+; V9-NEXT:    sethi 16448, %o1
+; V9-NEXT:    or %o1, 257, %o1
+; V9-NEXT:    sllx %o1, 32, %o2
+; V9-NEXT:    or %o2, %o1, %o1
+; V9-NEXT:    mulx %o0, %o1, %o0
+; V9-NEXT:    retl
+; V9-NEXT:    srlx %o0, 56, %o0
+;
+; POPC-LABEL: i64_poison:
+; POPC:       ! %bb.0:
+; POPC-NEXT:    srlx %o0, 1, %o1
+; POPC-NEXT:    or %o0, %o1, %o0
+; POPC-NEXT:    srlx %o0, 2, %o1
+; POPC-NEXT:    or %o0, %o1, %o0
+; POPC-NEXT:    srlx %o0, 4, %o1
+; POPC-NEXT:    or %o0, %o1, %o0
+; POPC-NEXT:    srlx %o0, 8, %o1
+; POPC-NEXT:    or %o0, %o1, %o0
+; POPC-NEXT:    srlx %o0, 16, %o1
+; POPC-NEXT:    or %o0, %o1, %o0
+; POPC-NEXT:    srlx %o0, 32, %o1
+; POPC-NEXT:    or %o0, %o1, %o0
+; POPC-NEXT:    xor %o0, -1, %o0
+; POPC-NEXT:    retl
+; POPC-NEXT:    popc %o0, %o0
+;
+; VIS3-LABEL: i64_poison:
+; VIS3:       ! %bb.0:
+; VIS3-NEXT:    retl
+; VIS3-NEXT:    lzcnt %o0, %o0
+  %ret = call i64 @llvm.ctlz.i64(i64 %x, i1 true)
+  ret i64 %ret
+}

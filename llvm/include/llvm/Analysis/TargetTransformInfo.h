@@ -23,6 +23,7 @@
 
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/IR/FMF.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/PassManager.h"
@@ -1777,8 +1778,9 @@ public:
   /// vectorization, false - otherwise.
   bool preferAlternateOpcodeVectorization() const;
 
-  /// \returns True if the target prefers reductions in loop.
-  bool preferInLoopReduction(unsigned Opcode, Type *Ty) const;
+  /// \returns True if the target prefers reductions of \p Kind to be performed
+  /// in the loop.
+  bool preferInLoopReduction(RecurKind Kind, Type *Ty) const;
 
   /// \returns True if the target prefers reductions select kept in the loop
   /// when tail folding. i.e.
@@ -2330,7 +2332,7 @@ public:
                                         unsigned ChainSizeInBytes,
                                         VectorType *VecTy) const = 0;
   virtual bool preferFixedOverScalableIfEqualCost() const = 0;
-  virtual bool preferInLoopReduction(unsigned Opcode, Type *Ty) const = 0;
+  virtual bool preferInLoopReduction(RecurKind Kind, Type *Ty) const = 0;
   virtual bool preferPredicatedReductionSelect(unsigned Opcode,
                                                Type *Ty) const = 0;
   virtual bool preferAlternateOpcodeVectorization() const = 0;
@@ -3143,8 +3145,8 @@ public:
   bool preferFixedOverScalableIfEqualCost() const override {
     return Impl.preferFixedOverScalableIfEqualCost();
   }
-  bool preferInLoopReduction(unsigned Opcode, Type *Ty) const override {
-    return Impl.preferInLoopReduction(Opcode, Ty);
+  bool preferInLoopReduction(RecurKind Kind, Type *Ty) const override {
+    return Impl.preferInLoopReduction(Kind, Ty);
   }
   bool preferAlternateOpcodeVectorization() const override {
     return Impl.preferAlternateOpcodeVectorization();
