@@ -125,6 +125,11 @@ TEST(TripleTest, ParsedIDs) {
   EXPECT_EQ(Triple::Hurd, T.getOS());
   EXPECT_EQ(Triple::GNU, T.getEnvironment());
 
+  T = Triple("aarch64-amazon-linux");
+  EXPECT_EQ(Triple::aarch64, T.getArch());
+  EXPECT_EQ(Triple::Amazon, T.getVendor());
+  EXPECT_EQ(Triple::Linux, T.getOS());
+
   T = Triple("arm-unknown-linux-android16");
   EXPECT_EQ(Triple::arm, T.getArch());
   EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
@@ -1416,6 +1421,9 @@ TEST(TripleTest, Normalization) {
   EXPECT_EQ("unknown-unknown-linux", Triple::normalize("linux"));
 
   EXPECT_EQ("x86_64-unknown-linux-gnu", Triple::normalize("x86_64-gnu-linux"));
+
+  EXPECT_EQ("aarch64-amazon-linux-gnu",
+            Triple::normalize("aarch64-amazon-linux"));
 
   EXPECT_EQ("a-unknown-unknown",
             Triple::normalize("a", Triple::CanonicalForm::THREE_IDENT));

@@ -270,6 +270,8 @@ StringRef Triple::getVendorTypeName(VendorType Kind) {
   case PC: return "pc";
   case SCEI: return "scei";
   case SUSE: return "suse";
+  case Amazon:
+    return "amazon";
   }
 
   llvm_unreachable("Invalid VendorType!");
@@ -664,6 +666,7 @@ static Triple::VendorType parseVendor(StringRef VendorName) {
       .Case("suse", Triple::SUSE)
       .Case("oe", Triple::OpenEmbedded)
       .Case("intel", Triple::Intel)
+      .Case("amazon", Triple::Amazon)
       .Default(Triple::UnknownVendor);
 }
 
@@ -1293,6 +1296,13 @@ std::string Triple::normalize(StringRef Str, CanonicalForm Form) {
   // SUSE uses "gnueabi" to mean "gnueabihf"
   if (Vendor == Triple::SUSE && Environment == llvm::Triple::GNUEABI)
     Components[3] = "gnueabihf";
+
+  // Amazon Linux uses a "gnu" environment by default.
+  if (Environment == Triple::UnknownEnvironment && Vendor == Triple::Amazon &&
+      OS == Triple::Linux) {
+    Components.resize(4);
+    Components[3] = "gnu";
+  }
 
   if (OS == Triple::Win32) {
     Components.resize(4);
