@@ -8882,11 +8882,14 @@ void AArch64TargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
         MI.removeOperand(I);
 
     // The SVE vector length can change when entering/leaving streaming mode.
+    // FPMR is set to 0 when entering/leaving streaming mode.
     if (MI.getOperand(0).getImm() == AArch64SVCR::SVCRSM ||
         MI.getOperand(0).getImm() == AArch64SVCR::SVCRSMZA) {
       MI.addOperand(MachineOperand::CreateReg(AArch64::VG, /*IsDef=*/false,
                                               /*IsImplicit=*/true));
       MI.addOperand(MachineOperand::CreateReg(AArch64::VG, /*IsDef=*/true,
+                                              /*IsImplicit=*/true));
+      MI.addOperand(MachineOperand::CreateReg(AArch64::FPMR, /*IsDef=*/true,
                                               /*IsImplicit=*/true));
     }
   }
