@@ -330,6 +330,7 @@ def IIT_V10 : IIT_Vec<10, 61>;
 def IIT_ONE_THIRD_VEC_ARG : IIT_Base<62>;
 def IIT_ONE_FIFTH_VEC_ARG : IIT_Base<63>;
 def IIT_ONE_SEVENTH_VEC_ARG : IIT_Base<64>;
+def IIT_V2048 : IIT_Vec<2048, 65>;
 }
 
 defvar IIT_all_FixedTypes = !filter(iit, IIT_all,
@@ -534,6 +535,7 @@ def llvm_v128i1_ty     : LLVMType<v128i1>;   // 128 x i1
 def llvm_v256i1_ty     : LLVMType<v256i1>;   // 256 x i1
 def llvm_v512i1_ty     : LLVMType<v512i1>;   // 512 x i1
 def llvm_v1024i1_ty    : LLVMType<v1024i1>;  //1024 x i1
+def llvm_v2048i1_ty    : LLVMType<v2048i1>;  //2048 x i1
 
 def llvm_v1i8_ty       : LLVMType<v1i8>;     //  1 x i8
 def llvm_v2i8_ty       : LLVMType<v2i8>;     //  2 x i8
