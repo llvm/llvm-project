@@ -8,7 +8,6 @@
 
 #include "DXILLegalizePass.h"
 #include "DirectX.h"
-#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
@@ -28,8 +27,7 @@ static void legalizeFreeze(Instruction &I,
   if (!FI)
     return;
 
-  Value *Input = FI->getOperand(0);
-  FI->replaceAllUsesWith(Input);
+  FI->replaceAllUsesWith(FI->getOperand(0));
   ToRemove.push_back(FI);
 }
 
