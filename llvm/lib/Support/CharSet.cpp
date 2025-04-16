@@ -84,7 +84,7 @@ enum ConversionType {
 // possible because EBCDIC 1047 is a single-byte, stateless encoding; other
 // character sets are not supported.
 class CharSetConverterTable : public details::CharSetConverterImplBase {
-  ConversionType ConvType;
+  const ConversionType ConvType;
 
 public:
   CharSetConverterTable(ConversionType ConvType) : ConvType(ConvType) {}
@@ -149,8 +149,9 @@ CharSetConverterICU::convertString(StringRef Source,
 
   ucnv_setToUCallBack(&*FromConvDesc, UCNV_TO_U_CALLBACK_STOP, NULL, NULL, NULL,
                       &EC);
-  ucnv_setToUCallBack(&*ToConvDesc, UCNV_TO_U_CALLBACK_STOP, NULL, NULL, NULL,
-                      &EC);
+  ucnv_setFromUCallBack(&*ToConvDesc, UCNV_FROM_U_CALLBACK_STOP, NULL, NULL,
+                        NULL, &EC);
+  assert(U_SUCCESS(EC));
 
   do {
     EC = U_ZERO_ERROR;
