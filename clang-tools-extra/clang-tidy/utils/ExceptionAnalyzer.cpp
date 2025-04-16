@@ -464,16 +464,15 @@ void ExceptionAnalyzer::ExceptionInfo::reevaluateBehaviour() {
   else
     Behaviour = State::Throwing;
 }
-ExceptionAnalyzer::ExceptionInfo
-ExceptionAnalyzer::throwsException(const FunctionDecl *Func,
-                                   const ExceptionInfo::Throwables &Caught,
-                                   CallStack &CallStack) {
+ExceptionAnalyzer::ExceptionInfo ExceptionAnalyzer::throwsException(
+    const FunctionDecl *Func, const ExceptionInfo::Throwables &Caught,
+    CallStack &CallStack, SourceLocation CallLoc) {
   if (!Func || CallStack.contains(Func) ||
       (!CallStack.empty() && !canThrow(Func)))
     return ExceptionInfo::createNonThrowing();
 
   if (const Stmt *Body = Func->getBody()) {
-    CallStack.insert(Func);
+    CallStack.insert({Func, CallLoc});
     ExceptionInfo Result = throwsException(Body, Caught, CallStack);
 
     // For a constructor, we also have to check the initializers.
@@ -485,18 +484,18 @@ ExceptionAnalyzer::throwsException(const FunctionDecl *Func,
       }
     }
 
-    CallStack.remove(Func);
+    CallStack.erase(Func);
     return Result;
   }
 
   auto Result = ExceptionInfo::createUnknown();
   if (const auto *FPT = Func->getType()->getAs<FunctionProtoType>()) {
     for (const QualType &Ex : FPT->exceptions()) {
-      CallStack.insert(Func);
+      CallStack.insert({Func, CallLoc});
       Result.registerException(
           Ex.getTypePtr(),
           {Func->getExceptionSpecSourceRange().getBegin(), CallStack});
-      CallStack.remove(Func);
+      CallStack.erase(Func);
     }
   }
   return Result;
@@ -566,12 +565,13 @@ ExceptionAnalyzer::throwsException(const Stmt *St,
     Results.merge(Uncaught);
   } else if (const auto *Call = dyn_cast<CallExpr>(St)) {
     if (const FunctionDecl *Func = Call->getDirectCallee()) {
-      ExceptionInfo Excs = throwsException(Func, Caught, CallStack);
+      ExceptionInfo Excs =
+          throwsException(Func, Caught, CallStack, Call->getBeginLoc());
       Results.merge(Excs);
     }
   } else if (const auto *Construct = dyn_cast<CXXConstructExpr>(St)) {
-    ExceptionInfo Excs =
-        throwsException(Construct->getConstructor(), Caught, CallStack);
+    ExceptionInfo Excs = throwsException(Construct->getConstructor(), Caught,
+                                         CallStack, Construct->getBeginLoc());
     Results.merge(Excs);
   } else if (const auto *DefaultInit = dyn_cast<CXXDefaultInitExpr>(St)) {
     ExceptionInfo Excs =
@@ -590,8 +590,8 @@ ExceptionAnalyzer::throwsException(const Stmt *St,
     for (const auto &Exception : Excs.getExceptions()) {
       const Type *ExcType = Exception.getFirst();
       if (const CXXRecordDecl *ThrowableRec = ExcType->getAsCXXRecordDecl()) {
-        ExceptionInfo DestructorExcs =
-            throwsException(ThrowableRec->getDestructor(), Caught, CallStack);
+        ExceptionInfo DestructorExcs = throwsException(
+            ThrowableRec->getDestructor(), Caught, CallStack, SourceLocation{});
         Results.merge(DestructorExcs);
       }
     }
@@ -612,8 +612,8 @@ ExceptionAnalyzer::analyzeImpl(const FunctionDecl *Func) {
   const auto CacheEntry = FunctionCache.find(Func);
   if (CacheEntry == FunctionCache.end()) {
     CallStack CallStack;
-    ExceptionList =
-        throwsException(Func, ExceptionInfo::Throwables(), CallStack);
+    ExceptionList = throwsException(Func, ExceptionInfo::Throwables(),
+                                    CallStack, Func->getLocation());
 
     // Cache the result of the analysis. This is done prior to filtering
     // because it is best to keep as much information as possible.
