@@ -110,6 +110,7 @@ td_library(
     name = "TestOpTdFiles",
     srcs = glob(["lib/Dialect/Test/*.td"]),
     deps = [
+        "//mlir:BufferizationTypeInterfacesTdFiles",
         "//mlir:BuiltinDialectTdFiles",
         "//mlir:CallInterfacesTdFiles",
         "//mlir:ControlFlowInterfacesTdFiles",
@@ -240,6 +241,7 @@ gentbl_cc_library(
     test = True,
     deps = [
         ":TestOpTdFiles",
+        "//mlir:BufferizationTypeInterfacesTdFiles",
         "//mlir:BuiltinDialectTdFiles",
     ],
 )
@@ -342,6 +344,7 @@ cc_library(
         "//llvm:IRReader",
         "//llvm:Support",
         "//mlir:ArithDialect",
+        "//mlir:BufferizationInterfaces",
         "//mlir:BytecodeOpInterface",
         "//mlir:CallOpInterfaces",
         "//mlir:ControlFlowInterfaces",
@@ -404,6 +407,7 @@ cc_library(
         "//llvm:Support",
         "//mlir:Analysis",
         "//mlir:ArithDialect",
+        "//mlir:BufferizationInterfaces",
         "//mlir:BytecodeOpInterface",
         "//mlir:BytecodeReader",
         "//mlir:BytecodeWriter",
@@ -986,8 +990,11 @@ cc_library(
     srcs = glob(["lib/Dialect/Bufferization/*.cpp"]),
     includes = ["lib/Dialect/Test"],
     deps = [
+        ":TestDialect",
         "//mlir:BufferizationDialect",
+        "//mlir:BufferizationInterfaces",
         "//mlir:BufferizationTransforms",
+        "//mlir:FuncDialect",
         "//mlir:IR",
         "//mlir:Pass",
     ],
