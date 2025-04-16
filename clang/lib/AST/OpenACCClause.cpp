@@ -891,10 +891,10 @@ void OpenACCClausePrinter::VisitDeviceTypeClause(
   OS << "(";
   llvm::interleaveComma(C.getArchitectures(), OS,
                         [&](const DeviceTypeArgument &Arch) {
-                          if (Arch.getIdentifierInfo() == nullptr)
+                          if (Arch.first == nullptr)
                             OS << "*";
                           else
-                            OS << Arch.getIdentifierInfo()->getName();
+                            OS << Arch.first->getName();
                         });
   OS << ")";
 }

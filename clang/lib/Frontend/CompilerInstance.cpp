@@ -35,7 +35,6 @@
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/PreprocessorOptions.h"
 #include "clang/Sema/CodeCompleteConsumer.h"
-#include "clang/Sema/ParsedAttr.h"
 #include "clang/Sema/Sema.h"
 #include "clang/Serialization/ASTReader.h"
 #include "clang/Serialization/GlobalModuleIndex.h"
@@ -2010,8 +2009,8 @@ CompilerInstance::loadModule(SourceLocation ImportLoc,
                              Module::NameVisibilityKind Visibility,
                              bool IsInclusionDirective) {
   // Determine what file we're searching from.
-  StringRef ModuleName = Path[0].getIdentifierInfo()->getName();
-  SourceLocation ModuleNameLoc = Path[0].getLoc();
+  StringRef ModuleName = Path[0].first->getName();
+  SourceLocation ModuleNameLoc = Path[0].second;
 
   // If we've already handled this import, just return the cached result.
   // This one-element cache is important to eliminate redundant diagnostics
@@ -2027,7 +2026,7 @@ CompilerInstance::loadModule(SourceLocation ImportLoc,
   // If we don't already have information on this module, load the module now.
   Module *Module = nullptr;
   ModuleMap &MM = getPreprocessor().getHeaderSearchInfo().getModuleMap();
-  if (auto MaybeModule = MM.getCachedModuleLoad(*Path[0].getIdentifierInfo())) {
+  if (auto MaybeModule = MM.getCachedModuleLoad(*Path[0].first)) {
     // Use the cached result, which may be nullptr.
     Module = *MaybeModule;
     // Config macros are already checked before building a module, but they need
@@ -2047,7 +2046,7 @@ CompilerInstance::loadModule(SourceLocation ImportLoc,
     // * `Preprocessor::HandleHeaderIncludeOrImport` will never call this
     //   function as the `#include` or `#import` is textual.
 
-    MM.cacheModuleLoad(*Path[0].getIdentifierInfo(), Module);
+    MM.cacheModuleLoad(*Path[0].first, Module);
   } else {
     ModuleLoadResult Result = findOrCompileModuleAndReadAST(
         ModuleName, ImportLoc, ModuleNameLoc, IsInclusionDirective);
@@ -2056,7 +2055,7 @@ CompilerInstance::loadModule(SourceLocation ImportLoc,
     if (!Result)
       DisableGeneratingGlobalModuleIndex = true;
     Module = Result;
-    MM.cacheModuleLoad(*Path[0].getIdentifierInfo(), Module);
+    MM.cacheModuleLoad(*Path[0].first, Module);
   }
 
   // If we never found the module, fail.  Otherwise, verify the module and link
@@ -2068,7 +2067,7 @@ CompilerInstance::loadModule(SourceLocation ImportLoc,
   // a submodule.
   bool MapPrivateSubModToTopLevel = false;
   for (unsigned I = 1, N = Path.size(); I != N; ++I) {
-    StringRef Name = Path[I].getIdentifierInfo()->getName();
+    StringRef Name = Path[I].first->getName();
     clang::Module *Sub = Module->findSubmodule(Name);
 
     // If the user is requesting Foo.Private and it doesn't exist, try to
@@ -2079,10 +2078,10 @@ CompilerInstance::loadModule(SourceLocation ImportLoc,
       SmallString<128> PrivateModule(Module->Name);
       PrivateModule.append("_Private");
 
-      SmallVector<IdentifierLoc, 2> PrivPath;
+      SmallVector<std::pair<IdentifierInfo *, SourceLocation>, 2> PrivPath;
       auto &II = PP->getIdentifierTable().get(
           PrivateModule, PP->getIdentifierInfo(Module->Name)->getTokenID());
-      PrivPath.emplace_back(Path[0].getLoc(), &II);
+      PrivPath.push_back(std::make_pair(&II, Path[0].second));
 
       std::string FileName;
       // If there is a modulemap module or prebuilt module, load it.
@@ -2096,12 +2095,11 @@ CompilerInstance::loadModule(SourceLocation ImportLoc,
         PP->markClangModuleAsAffecting(Module);
         if (!getDiagnostics().isIgnored(
                 diag::warn_no_priv_submodule_use_toplevel, ImportLoc)) {
-          getDiagnostics().Report(Path[I].getLoc(),
+          getDiagnostics().Report(Path[I].second,
                                   diag::warn_no_priv_submodule_use_toplevel)
-              << Path[I].getIdentifierInfo() << Module->getFullModuleName()
-              << PrivateModule
-              << SourceRange(Path[0].getLoc(), Path[I].getLoc())
-              << FixItHint::CreateReplacement(SourceRange(Path[0].getLoc()),
+              << Path[I].first << Module->getFullModuleName() << PrivateModule
+              << SourceRange(Path[0].second, Path[I].second)
+              << FixItHint::CreateReplacement(SourceRange(Path[0].second),
                                               PrivateModule);
           getDiagnostics().Report(Sub->DefinitionLoc,
                                   diag::note_private_top_level_defined);
@@ -2130,11 +2128,10 @@ CompilerInstance::loadModule(SourceLocation ImportLoc,
 
       // If there was a clear winner, user it.
       if (Best.size() == 1) {
-        getDiagnostics().Report(Path[I].getLoc(),
-                                diag::err_no_submodule_suggest)
-            << Path[I].getIdentifierInfo() << Module->getFullModuleName()
-            << Best[0] << SourceRange(Path[0].getLoc(), Path[I - 1].getLoc())
-            << FixItHint::CreateReplacement(SourceRange(Path[I].getLoc()),
+        getDiagnostics().Report(Path[I].second, diag::err_no_submodule_suggest)
+            << Path[I].first << Module->getFullModuleName() << Best[0]
+            << SourceRange(Path[0].second, Path[I - 1].second)
+            << FixItHint::CreateReplacement(SourceRange(Path[I].second),
                                             Best[0]);
 
         Sub = Module->findSubmodule(Best[0]);
@@ -2144,9 +2141,9 @@ CompilerInstance::loadModule(SourceLocation ImportLoc,
     if (!Sub) {
       // No submodule by this name. Complain, and don't look for further
       // submodules.
-      getDiagnostics().Report(Path[I].getLoc(), diag::err_no_submodule)
-          << Path[I].getIdentifierInfo() << Module->getFullModuleName()
-          << SourceRange(Path[0].getLoc(), Path[I - 1].getLoc());
+      getDiagnostics().Report(Path[I].second, diag::err_no_submodule)
+          << Path[I].first << Module->getFullModuleName()
+          << SourceRange(Path[0].second, Path[I - 1].second);
       break;
     }
 
@@ -2164,8 +2161,8 @@ CompilerInstance::loadModule(SourceLocation ImportLoc,
       // FIXME: Should we detect this at module load time? It seems fairly
       // expensive (and rare).
       getDiagnostics().Report(ImportLoc, diag::warn_missing_submodule)
-          << Module->getFullModuleName()
-          << SourceRange(Path.front().getLoc(), Path.back().getLoc());
+        << Module->getFullModuleName()
+        << SourceRange(Path.front().second, Path.back().second);
 
       return ModuleLoadResult(Module, ModuleLoadResult::MissingExpected);
     }
@@ -2174,7 +2171,7 @@ CompilerInstance::loadModule(SourceLocation ImportLoc,
     if (Preprocessor::checkModuleIsAvailable(getLangOpts(), getTarget(),
                                              *Module, getDiagnostics())) {
       getDiagnostics().Report(ImportLoc, diag::note_module_import_here)
-          << SourceRange(Path.front().getLoc(), Path.back().getLoc());
+        << SourceRange(Path.front().second, Path.back().second);
       LastModuleImportLoc = ImportLoc;
       LastModuleImportResult = ModuleLoadResult();
       return ModuleLoadResult();
@@ -2299,9 +2296,9 @@ GlobalModuleIndex *CompilerInstance::loadGlobalModuleIndex(
       Module *TheModule = I->second;
       OptionalFileEntryRef Entry = TheModule->getASTFile();
       if (!Entry) {
-        SmallVector<IdentifierLoc, 2> Path;
-        Path.emplace_back(TriggerLoc,
-                          getPreprocessor().getIdentifierInfo(TheModule->Name));
+        SmallVector<std::pair<IdentifierInfo *, SourceLocation>, 2> Path;
+        Path.push_back(std::make_pair(
+            getPreprocessor().getIdentifierInfo(TheModule->Name), TriggerLoc));
         std::reverse(Path.begin(), Path.end());
         // Load a module as hidden.  This also adds it to the global index.
         loadModule(TheModule->DefinitionLoc, Path, Module::Hidden, false);

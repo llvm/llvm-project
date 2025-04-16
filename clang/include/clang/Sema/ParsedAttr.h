@@ -40,6 +40,7 @@ class LangOptions;
 class Sema;
 class Stmt;
 class TargetInfo;
+struct IdentifierLoc;
 
 /// Represents information about a change in availability for
 /// an entity, which is part of the encoding of the 'availability'
@@ -97,6 +98,15 @@ struct PropertyData {
 };
 
 } // namespace detail
+
+/// Wraps an identifier and optional source location for the identifier.
+struct IdentifierLoc {
+  SourceLocation Loc;
+  IdentifierInfo *Ident;
+
+  static IdentifierLoc *create(ASTContext &Ctx, SourceLocation Loc,
+                               IdentifierInfo *Ident);
+};
 
 /// A union of the various pointer types that can be passed to an
 /// ParsedAttr as an argument.
