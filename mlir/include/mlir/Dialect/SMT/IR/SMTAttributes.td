@@ -45,20 +45,10 @@ def BitVectorAttr : AttrDef<SMTDialect, "BitVector", [
     present).
   }];
 
-  let parameters = (ins "llvm::APInt":$value);
+  let parameters = (ins APIntParameter<"">:$value);
 
   let hasCustomAssemblyFormat = true;
   let genVerifyDecl = true;
-
-  // We need to manually define the storage class because the generated one is
-  // buggy (because the APInt asserts matching bitwidth in the `==` operator and
-  // the generated storage uses that directly.
-  // Alternatively: add a type parameter to redundantly store the bitwidth of
-  // of the attribute type, it it's in the order before the 'value' it will be
-  // checked before the APInt equality (this is the reason it works for the
-  // builtin integer attribute), but would be more fragile (and we'd store
-  // duplicate data).
-  let genStorageClass = false;
 
   let builders = [
     AttrBuilder<(ins "llvm::StringRef":$value)>,

@@ -68,7 +68,11 @@ public:
   /// If specified, get the custom allocator code for this parameter.
   std::optional<StringRef> getAllocator() const;
 
-  /// If specified, get the custom comparator code for this parameter.
+  /// Return true if user defined comparator is specified.
+  bool hasCustomComparator() const;
+
+  /// Get the custom comparator code for this parameter or fallback to the
+  /// default.
   StringRef getComparator() const;
 
   /// Get the C++ type of this parameter.
