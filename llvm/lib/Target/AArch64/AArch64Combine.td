@@ -226,7 +226,7 @@ def extmultomull : GICombineRule<
 >;
 
 def lower_mulv2s64 : GICombineRule<
-  (defs root:$root, mull_matchdata:$matchinfo),
+  (defs root:$root),
   (match (G_MUL $dst, $src1, $src2):$root,
           [{ return matchMulv2s64(*${root}, MRI); }]),
   (apply [{ applyMulv2s64(*${root}, MRI, B, Observer); }])
