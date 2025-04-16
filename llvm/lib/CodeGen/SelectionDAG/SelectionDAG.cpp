@@ -7582,7 +7582,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
       case ISD::SREM:
       case ISD::SSUBSAT:
       case ISD::USUBSAT:
-        // fold op(undef, arg2) -> 0, fold op(poison, arg2) ->poison.
+        // fold op(undef, arg2) -> 0, fold op(poison, arg2) -> poison.
         return N1.getOpcode() == ISD::POISON ? getPOISON(VT)
                                              : getConstant(0, DL, VT);
       }
