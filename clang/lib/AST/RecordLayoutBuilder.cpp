@@ -1538,6 +1538,7 @@ void ItaniumRecordLayoutBuilder::LayoutBitField(const FieldDecl *D) {
   uint64_t StorageUnitSize = FieldInfo.Width;
   unsigned FieldAlign = FieldInfo.Align;
   bool AlignIsRequired = FieldInfo.isAlignRequired();
+  unsigned char PaddingInLastUnit = 0;
 
   // UnfilledBitsInLastUnit is the difference between the end of the
   // last allocated bitfield (i.e. the first bit offset available for
@@ -1610,6 +1611,7 @@ void ItaniumRecordLayoutBuilder::LayoutBitField(const FieldDecl *D) {
       if (!LastBitfieldStorageUnitSize && !FieldSize)
         FieldAlign = 1;
 
+      PaddingInLastUnit = UnfilledBitsInLastUnit;
       UnfilledBitsInLastUnit = 0;
       LastBitfieldStorageUnitSize = 0;
     }
@@ -1706,7 +1708,7 @@ void ItaniumRecordLayoutBuilder::LayoutBitField(const FieldDecl *D) {
   // For purposes of diagnostics, we're going to simultaneously
   // compute the field offsets that we would have used if we weren't
   // adding any alignment padding or if the field weren't packed.
-  uint64_t UnpaddedFieldOffset = FieldOffset;
+  uint64_t UnpaddedFieldOffset = FieldOffset - PaddingInLastUnit;
   uint64_t UnpackedFieldOffset = FieldOffset;
 
   // Check if we need to add padding to fit the bitfield within an
