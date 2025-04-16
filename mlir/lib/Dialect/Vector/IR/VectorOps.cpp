@@ -3712,11 +3712,10 @@ foldExtractStridedOpFromInsertChain(ExtractStridedSliceOp op) {
   return failure();
 }
 
-namespace {
-
 // ExtractStridedSliceOp(non-splat ConstantOp) -> ConstantOp.
-OpFoldResult foldExtractStridedSliceNonSplatConstant(ExtractStridedSliceOp op,
-                                                     Attribute foldInput) {
+static OpFoldResult
+foldExtractStridedSliceNonSplatConstant(ExtractStridedSliceOp op,
+                                        Attribute foldInput) {
 
   auto dense = llvm::dyn_cast_if_present<DenseElementsAttr>(foldInput);
   if (!dense)
@@ -3760,7 +3759,6 @@ OpFoldResult foldExtractStridedSliceNonSplatConstant(ExtractStridedSliceOp op,
          "Invalid number of slice elements");
   return DenseElementsAttr::get(sliceVecTy, sliceValues);
 }
-} // namespace
 
 OpFoldResult ExtractStridedSliceOp::fold(FoldAdaptor adaptor) {
   if (getSourceVectorType() == getResult().getType())
