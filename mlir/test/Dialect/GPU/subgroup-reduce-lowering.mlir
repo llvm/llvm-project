@@ -32,11 +32,15 @@ gpu.module @kernels {
     // CHECK-SUB: %[[R2:.+]] = gpu.subgroup_reduce add %[[E2]] : (f16) -> f16
     // CHECK-SUB: %[[V2:.+]] = vector.insert %[[R2]], %[[V1]] [4] : f16 into vector<5xf16>
     // CHECK-SUB: "test.consume"(%[[V2]]) : (vector<5xf16>) -> ()
+    // CHECK-DPP-COUNT-6: amdgpu.dpp
+    // CHECK-DPP: rocdl.readlane
     %sum0 = gpu.subgroup_reduce add %arg0 : (vector<5xf16>) -> (vector<5xf16>)
     "test.consume"(%sum0) : (vector<5xf16>) -> ()
 
     // CHECK-SUB-COUNT-3: gpu.subgroup_reduce mul {{.+}} uniform
     // CHECK-SUB: "test.consume"
+    // CHECK-DPP-COUNT-6: amdgpu.dpp
+    // CHECK-DPP: rocdl.readlane
     %sum1 = gpu.subgroup_reduce mul %arg0 uniform : (vector<5xf16>) -> (vector<5xf16>)
     "test.consume"(%sum1) : (vector<5xf16>) -> ()
 
@@ -66,11 +70,15 @@ gpu.module @kernels {
     // CHECK-SUB: %[[R0:.+]] = gpu.subgroup_reduce add %[[E0]] : (f32) -> f32
     // CHECK-SUB: %[[V0:.+]] = vector.broadcast %[[R0]] : f32 to vector<1xf32>
     // CHECK-SUB: "test.consume"(%[[V0]]) : (vector<1xf32>) -> ()
+    // CHECK-DPP-COUNT-6: amdgpu.dpp
+    // CHECK-DPP: rocdl.readlane
     %sum0 = gpu.subgroup_reduce add %arg0 : (vector<1xf32>) -> (vector<1xf32>)
     "test.consume"(%sum0) : (vector<1xf32>) -> ()
 
     // CHECK-SUB: gpu.subgroup_reduce add {{.+}} uniform : (f32) -> f32
     // CHECK-SUB: "test.consume"
+    // CHECK-DPP-COUNT-6: amdgpu.dpp
+    // CHECK-DPP: rocdl.readlane
     %sum1 = gpu.subgroup_reduce add %arg0 uniform : (vector<1xf32>) -> (vector<1xf32>)
     "test.consume"(%sum1) : (vector<1xf32>) -> ()
 
@@ -84,6 +92,7 @@ gpu.module @kernels {
 
     // CHECK-SUB: gpu.subgroup_reduce add {{.+}} uniform cluster(size = 8, stride = 4) : (f32) -> f32
     // CHECK-SUB: "test.consume"
+    // CHECK-DPP-NOT: amdgpu.dpp
     %sum3 = gpu.subgroup_reduce add %arg0 uniform cluster(size = 8, stride = 4) : (vector<1xf32>) -> (vector<1xf32>)
     "test.consume"(%sum3) : (vector<1xf32>) -> ()
 
@@ -137,6 +146,9 @@ gpu.module @kernels {
     // CHECK-SHFL: %[[S4:.+]], %{{.+}} = gpu.shuffle xor %[[A3]], %[[C16]], %[[C32]] : i32
     // CHECK-SHFL: %[[A4:.+]] = arith.addi %[[A3]], %[[S4]] : i32
     // CHECK-SHFL: "test.consume"(%[[A4]]) : (i32) -> ()
+    
+    // CHECK-DPP-COUNT-6: amdgpu.dpp
+    // CHECK-DPP: rocdl.readlane
     %sum0 = gpu.subgroup_reduce add %arg0 : (i32) -> i32
     "test.consume"(%sum0) : (i32) -> ()
 
@@ -258,7 +270,6 @@ gpu.module @kernels {
   // CHECK-SHFL-LABEL: gpu.func @kernel5(
   // CHECK-SHFL-SAME:    %[[ARG0:.+]]: i16)
   // CHECK-DPP-LABEL: gpu.func @kernel5(
-  // CHECK-DPP-NOT: amdgpu.dpp
   gpu.func @kernel5(%arg0: i16) kernel {
     // CHECK-SHFL: %[[E0:.+]] = arith.extui %[[ARG0]] : i16 to i32
     // CHECK-SHFL: %[[S0:.+]], %{{.+}} = gpu.shuffle xor %[[E0]], {{.+}} : i32
@@ -270,6 +281,8 @@ gpu.module @kernels {
     // CHECK-SHFL: arith.trunci {{.+}} : i32 to i16
     // CHECK-SHFL: %[[AL:.+]] = arith.addi {{.+}} : i16
     // CHECK-SHFL: "test.consume"(%[[AL]]) : (i16) -> ()
+    // CHECK-DPP-COUNT-6: amdgpu.dpp
+    // CHECK-DPP: rocdl.readlane
     %sum0 = gpu.subgroup_reduce add %arg0 : (i16) -> i16
     "test.consume"(%sum0) : (i16) -> ()
 
