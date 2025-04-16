@@ -77,10 +77,9 @@ define i32 @i32_nopoison(i32 %x) nounwind {
 ; VIS3-NEXT:    be %icc, .LBB0_2
 ; VIS3-NEXT:    nop
 ; VIS3-NEXT:  ! %bb.1: ! %cond.false
-; VIS3-NEXT:    srl %o0, 0, %o0
-; VIS3-NEXT:    lzcnt %o0, %o0
+; VIS3-NEXT:    sllx %o0, 32, %o0
 ; VIS3-NEXT:    retl
-; VIS3-NEXT:    add %o0, -32, %o0
+; VIS3-NEXT:    lzcnt %o0, %o0
 ; VIS3-NEXT:  .LBB0_2:
 ; VIS3-NEXT:    retl
 ; VIS3-NEXT:    mov 32, %o0
@@ -144,10 +143,9 @@ define i32 @i32_poison(i32 %x) nounwind {
 ;
 ; VIS3-LABEL: i32_poison:
 ; VIS3:       ! %bb.0:
-; VIS3-NEXT:    srl %o0, 0, %o0
-; VIS3-NEXT:    lzcnt %o0, %o0
+; VIS3-NEXT:    sllx %o0, 32, %o0
 ; VIS3-NEXT:    retl
-; VIS3-NEXT:    add %o0, -32, %o0
+; VIS3-NEXT:    lzcnt %o0, %o0
   %ret = call i32 @llvm.ctlz.i32(i32 %x, i1 true)
   ret i32 %ret
 }

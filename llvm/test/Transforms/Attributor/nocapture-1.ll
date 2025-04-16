@@ -478,7 +478,7 @@ define ptr @test4_2(ptr %x4_2, ptr %y4_2, ptr %z4_2, i1 %c) {
 ; TUNIT-SAME: (ptr nofree readnone captures(none) [[X4_2:%.*]], ptr nofree readnone returned "no-capture-maybe-returned" [[Y4_2:%.*]], ptr nofree readnone captures(none) [[Z4_2:%.*]], i1 noundef [[C:%.*]]) #[[ATTR7]] {
 ; TUNIT-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
 ; TUNIT:       t:
-; TUNIT-NEXT:    call void @test4_1(ptr nofree noundef readnone align 4294967296 null, i1 noundef [[C]]) #[[ATTR7]]
+; TUNIT-NEXT:    call void @test4_1(ptr nofree noundef readnone null, i1 noundef [[C]]) #[[ATTR7]]
 ; TUNIT-NEXT:    store ptr null, ptr @g, align 8
 ; TUNIT-NEXT:    br label [[F]]
 ; TUNIT:       f:
@@ -489,7 +489,7 @@ define ptr @test4_2(ptr %x4_2, ptr %y4_2, ptr %z4_2, i1 %c) {
 ; CGSCC-SAME: (ptr nofree readnone captures(none) [[X4_2:%.*]], ptr nofree readnone returned "no-capture-maybe-returned" [[Y4_2:%.*]], ptr nofree readnone captures(none) [[Z4_2:%.*]], i1 noundef [[C:%.*]]) #[[ATTR10]] {
 ; CGSCC-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
 ; CGSCC:       t:
-; CGSCC-NEXT:    call void @test4_1(ptr nofree noundef readnone align 4294967296 null, i1 noundef [[C]]) #[[ATTR10]]
+; CGSCC-NEXT:    call void @test4_1(ptr nofree noundef readnone null, i1 noundef [[C]]) #[[ATTR10]]
 ; CGSCC-NEXT:    store ptr null, ptr @g, align 8
 ; CGSCC-NEXT:    br label [[F]]
 ; CGSCC:       f:
@@ -771,7 +771,7 @@ declare void @unknown(ptr)
 define void @test_callsite() {
 ; CHECK-LABEL: define {{[^@]+}}@test_callsite() {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @unknown(ptr noundef align 4294967296 null)
+; CHECK-NEXT:    call void @unknown(ptr noundef null)
 ; CHECK-NEXT:    ret void
 ;
 entry:

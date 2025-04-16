@@ -267,6 +267,15 @@ static_assert(bazz<1, 2>()(1));
 // expected-error@-1 {{is ambiguous}}
 // expected-note@#bazz 2{{candidate function [with value:auto = int]}}
 
+template <class T> concept C2 = sizeof(T) >= sizeof(int);
+template <class... Ts> static constexpr auto trailing() {
+  return Overloaded{[](auto) requires (C2<Ts> && C2<int>) { return 0; }...}; // #trailing
+}
+static_assert(trailing<int, long>()(0));
+// expected-error@-1 {{is ambiguous}}
+// expected-note@#trailing 2{{candidate function [with auto:1 = int]}}
+
+
 } // namespace GH101754
 
 namespace GH131798 {

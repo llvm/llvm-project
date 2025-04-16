@@ -515,7 +515,7 @@ bool GreedyPatternRewriteDriver::processWorklist() {
         bool materializationSucceeded = true;
         for (auto [ofr, resultType] :
              llvm::zip_equal(foldResults, op->getResultTypes())) {
-          if (auto value = ofr.dyn_cast<Value>()) {
+          if (auto value = dyn_cast<Value>(ofr)) {
             assert(value.getType() == resultType &&
                    "folder produced value of incorrect type");
             replacements.push_back(value);

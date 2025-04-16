@@ -1,6 +1,6 @@
-; RUN: llc -mtriple=riscv32 -verify-machineinstrs -riscv-no-aliases < %s \
+; RUN: llc -mtriple=riscv32 -verify-machineinstrs -M no-aliases < %s \
 ; RUN:      | FileCheck %s --check-prefixes=CHECK,RV32
-; RUN: llc -mtriple=riscv64 -verify-machineinstrs -riscv-no-aliases < %s \
+; RUN: llc -mtriple=riscv64 -verify-machineinstrs -M no-aliases < %s \
 ; RUN:      | FileCheck %s --check-prefixes=CHECK,RV64
 
 ; CHECK:       .word 12345678
