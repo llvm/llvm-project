@@ -2133,62 +2133,6 @@ public:
   }
 };
 
-/// A recipe for forming partial reductions. In the loop, an accumulator and
-/// vector operand are added together and passed to the next iteration as the
-/// next accumulator. After the loop body, the accumulator is reduced to a
-/// scalar value.
-class VPPartialReductionRecipe : public VPSingleDefRecipe {
-  unsigned Opcode;
-  /// The divisor by which the VF of this recipe's output should be divided
-  /// during execution.
-  unsigned VFScaleFactor;
-
-public:
-  VPPartialReductionRecipe(Instruction *ReductionInst, VPValue *Op0,
-                           VPValue *Op1, unsigned VFScaleFactor)
-      : VPPartialReductionRecipe(ReductionInst->getOpcode(), Op0, Op1,
-                                 VFScaleFactor, ReductionInst) {}
-  VPPartialReductionRecipe(unsigned Opcode, VPValue *Op0, VPValue *Op1,
-                           unsigned VFScaleFactor,
-                           Instruction *ReductionInst = nullptr)
-      : VPSingleDefRecipe(VPDef::VPPartialReductionSC,
-                          ArrayRef<VPValue *>({Op0, Op1}), ReductionInst),
-        Opcode(Opcode), VFScaleFactor(VFScaleFactor) {
-    [[maybe_unused]] auto *AccumulatorRecipe =
-        getOperand(1)->getDefiningRecipe();
-    assert((isa<VPReductionPHIRecipe>(AccumulatorRecipe) ||
-            isa<VPPartialReductionRecipe>(AccumulatorRecipe)) &&
-           "Unexpected operand order for partial reduction recipe");
-  }
-  ~VPPartialReductionRecipe() override = default;
-
-  VPPartialReductionRecipe *clone() override {
-    return new VPPartialReductionRecipe(Opcode, getOperand(0), getOperand(1),
-                                        VFScaleFactor, getUnderlyingInstr());
-  }
-
-  VP_CLASSOF_IMPL(VPDef::VPPartialReductionSC)
-
-  /// Generate the reduction in the loop.
-  void execute(VPTransformState &State) override;
-
-  /// Return the cost of this VPPartialReductionRecipe.
-  InstructionCost computeCost(ElementCount VF,
-                              VPCostContext &Ctx) const override;
-
-  /// Get the binary op's opcode.
-  unsigned getOpcode() const { return Opcode; }
-
-  /// Get the factor that the VF of this recipe's output should be scaled by.
-  unsigned getVFScaleFactor() const { return VFScaleFactor; }
-
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  /// Print the recipe.
-  void print(raw_ostream &O, const Twine &Indent,
-             VPSlotTracker &SlotTracker) const override;
-#endif
-};
-
 /// A recipe for vectorizing a phi-node as a sequence of mask-based select
 /// instructions.
 class VPBlendRecipe : public VPSingleDefRecipe {
@@ -2429,6 +2373,65 @@ public:
   VPValue *getCondOp() const {
     return isConditional() ? getOperand(getNumOperands() - 1) : nullptr;
   }
+};
+
+/// A recipe for forming partial reductions. In the loop, an accumulator and
+/// vector operand are added together and passed to the next iteration as the
+/// next accumulator. After the loop body, the accumulator is reduced to a
+/// scalar value.
+class VPPartialReductionRecipe : public VPReductionRecipe {
+  unsigned Opcode;
+
+  /// The divisor by which the VF of this recipe's output should be divided
+  /// during execution.
+  unsigned VFScaleFactor;
+
+public:
+  VPPartialReductionRecipe(Instruction *ReductionInst, VPValue *Op0,
+                           VPValue *Op1, VPValue *Cond, unsigned VFScaleFactor)
+      : VPPartialReductionRecipe(ReductionInst->getOpcode(), Op0, Op1, Cond,
+                                 VFScaleFactor, ReductionInst) {}
+  VPPartialReductionRecipe(unsigned Opcode, VPValue *Op0, VPValue *Op1,
+                           VPValue *Cond, unsigned ScaleFactor,
+                           Instruction *ReductionInst = nullptr)
+      : VPReductionRecipe(VPDef::VPPartialReductionSC, RecurKind::Add,
+                          FastMathFlags(), ReductionInst,
+                          ArrayRef<VPValue *>({Op0, Op1}), Cond, false, {}),
+        Opcode(Opcode), VFScaleFactor(ScaleFactor) {
+    [[maybe_unused]] auto *AccumulatorRecipe =
+        getChainOp()->getDefiningRecipe();
+    assert((isa<VPReductionPHIRecipe>(AccumulatorRecipe) ||
+            isa<VPPartialReductionRecipe>(AccumulatorRecipe)) &&
+           "Unexpected operand order for partial reduction recipe");
+  }
+  ~VPPartialReductionRecipe() override = default;
+
+  VPPartialReductionRecipe *clone() override {
+    return new VPPartialReductionRecipe(Opcode, getOperand(0), getOperand(1),
+                                        getCondOp(), VFScaleFactor,
+                                        getUnderlyingInstr());
+  }
+
+  VP_CLASSOF_IMPL(VPDef::VPPartialReductionSC)
+
+  /// Generate the reduction in the loop.
+  void execute(VPTransformState &State) override;
+
+  /// Return the cost of this VPPartialReductionRecipe.
+  InstructionCost computeCost(ElementCount VF,
+                              VPCostContext &Ctx) const override;
+
+  /// Get the binary op's opcode.
+  unsigned getOpcode() const { return Opcode; }
+
+  /// Get the factor that the VF of this recipe's output should be scaled by.
+  unsigned getVFScaleFactor() const { return VFScaleFactor; }
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the recipe.
+  void print(raw_ostream &O, const Twine &Indent,
+             VPSlotTracker &SlotTracker) const override;
+#endif
 };
 
 /// A recipe to represent inloop reduction operations with vector-predication
