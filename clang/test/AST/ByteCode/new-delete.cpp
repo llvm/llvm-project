@@ -967,6 +967,31 @@ namespace PR45350 {
   static_assert(f(6) == 543210);
 }
 
+namespace ZeroSizeSub {
+  consteval unsigned ptr_diff1() {
+    int *b = new int[0];
+    unsigned d = 0;
+    d = b - b;
+    delete[] b;
+
+    return d;
+  }
+  static_assert(ptr_diff1() == 0);
+
+
+  consteval unsigned ptr_diff2() { // both-error {{never produces a constant expression}}
+    int *a = new int[0];
+    int *b = new int[0];
+
+    unsigned d = a - b; // both-note 2{{arithmetic involving unrelated objects}}
+    delete[] b;
+    delete[] a;
+    return d;
+  }
+  static_assert(ptr_diff2() == 0); // both-error {{not an integral constant expression}} \
+                                   // both-note {{in call to}}
+}
+
 #else
 /// Make sure we reject this prior to C++20
 constexpr int a() { // both-error {{never produces a constant expression}}

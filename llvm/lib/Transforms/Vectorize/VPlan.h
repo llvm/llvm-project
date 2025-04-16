@@ -57,6 +57,7 @@ class SCEV;
 class Type;
 class VPBasicBlock;
 class VPBuilder;
+class VPDominatorTree;
 class VPRegionBlock;
 class VPlan;
 class VPLane;
@@ -302,6 +303,13 @@ public:
 
   /// Remove all the successors of this block.
   void clearSuccessors() { Successors.clear(); }
+
+  /// Swap predecessors of the block. The block must have exactly 2
+  /// predecessors.
+  void swapPredecessors() {
+    assert(Predecessors.size() == 2 && "must have 2 predecessors to swap");
+    std::swap(Predecessors[0], Predecessors[1]);
+  }
 
   /// Swap successors of the block. The block must have exactly 2 successors.
   // TODO: This should be part of introducing conditional branch recipes rather
