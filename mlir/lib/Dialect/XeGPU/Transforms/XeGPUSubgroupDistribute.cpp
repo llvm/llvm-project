@@ -804,12 +804,12 @@ LogicalResult LayoutAttrAssignment::run() {
   return resolveConflicts();
 }
 
-/// TODO: Implement the layout conflict resolution. This must check mainly two
+/// TODO: Implement the layout conflict resolution. This must ensure mainly two
 /// things:
-// 1) Can a layout be supported by the op? (need to query the target
-/// HW info)
-// 2) Do all the operands have the required layout? If not, can it
-/// be reeolved using a layout conversion?
+/// 1) Is a given layout supported by the op? (need to query the target
+///    HW info). Otherwise can we achive this layout using a layout conversion?
+/// 2) Do all the operands have the required layout? If not, can it
+///    be resolved using a layout conversion?
 LogicalResult LayoutAttrAssignment::resolveConflicts() { return success(); }
 
 namespace {
