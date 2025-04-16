@@ -226,6 +226,50 @@ bool SemaSPIRV::CheckSPIRVBuiltinFunctionCall(const TargetInfo &TI,
     TheCall->setType(RetTy);
     break;
   }
+  case SPIRV::BI__builtin_spirv_refract: {
+    if (SemaRef.checkArgCount(TheCall, 3))
+      return true;
+
+    ExprResult A = TheCall->getArg(0);
+    QualType ArgTyA = A.get()->getType();
+    auto *VTyA = ArgTyA->getAs<VectorType>();
+    if (VTyA == nullptr) {
+      SemaRef.Diag(A.get()->getBeginLoc(),
+                   diag::err_typecheck_convert_incompatible)
+          << ArgTyA
+          << SemaRef.Context.getVectorType(ArgTyA, 2, VectorKind::Generic) << 1
+          << 0 << 0;
+      return true;
+    }
+
+    ExprResult B = TheCall->getArg(1);
+    QualType ArgTyB = B.get()->getType();
+    auto *VTyB = ArgTyB->getAs<VectorType>();
+    if (VTyB == nullptr) {
+      SemaRef.Diag(B.get()->getBeginLoc(),
+                   diag::err_typecheck_convert_incompatible)
+          << ArgTyB
+          << SemaRef.Context.getVectorType(ArgTyB, 2, VectorKind::Generic) << 1
+          << 0 << 0;
+      return true;
+    }
+
+    ExprResult C = TheCall->getArg(2);
+    QualType ArgTyC = C.get()->getType();
+    if (!ArgTyC->hasFloatingRepresentation()) {
+      SemaRef.Diag(C.get()->getBeginLoc(),
+                   diag::err_builtin_invalid_arg_type)
+          << 3 << /* scalar or vector */ 5 << /* no int */ 0 << /* fp */ 1
+          << ArgTyC;
+      return true;
+    }
+
+    QualType RetTy = ArgTyA;
+    TheCall->setType(RetTy);
+    assert(RetTy == ArgTyA);
+    //assert(ArgTyB == ArgTyA);
+    break;
+  }
   case SPIRV::BI__builtin_spirv_reflect: {
     if (SemaRef.checkArgCount(TheCall, 2))
       return true;

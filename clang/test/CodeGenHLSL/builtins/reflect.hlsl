@@ -8,11 +8,29 @@
 // CHECK-LABEL: define noundef nofpclass(nan inf) half @_Z17test_reflect_halfDhDh(
 // CHECK-SAME: half noundef nofpclass(nan inf) [[I:%.*]], half noundef nofpclass(nan inf) [[N:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[MUL_I:%.*]] = fmul reassoc nnan ninf nsz arcp afn half [[I]], 0xH4000
-// CHECK-NEXT:    [[TMP0:%.*]] = fmul reassoc nnan ninf nsz arcp afn half [[N]], [[N]]
-// CHECK-NEXT:    [[MUL2_I:%.*]] = fmul reassoc nnan ninf nsz arcp afn half [[TMP0]], [[MUL_I]]
-// CHECK-NEXT:    [[SUB_I:%.*]] = fsub reassoc nnan ninf nsz arcp afn half [[I]], [[MUL2_I]]
-// CHECK-NEXT:    ret half [[SUB_I]]
+// CHECK-NEXT:    [[MUL_I:%.*]] = fmul reassoc nnan ninf nsz arcp afn half [[eta]], [[eta]]
+// CHECK-NEXT:    [[TMP0:%.*]] = fmul reassoc nnan ninf nsz arcp afn half [[N:%.*]], %I
+// CHECK_NEXT:    [[TMP1:%.*]] = fmul reassoc nnan ninf nsz arcp afn half [[TMP0:%.*]], [[TMP0:%.*]]
+// CHECK_NEXT:    [[SUB1_I:%.*]] = fsub reassoc nnan ninf nsz arcp afn half 0xH3C00, [[TMP1:%.*]]
+// CHECK_NEXT:    [[MUL4_I:%.*]] = fmul reassoc nnan ninf nsz arcp afn half %mul.i, [[SUB1_I:%.*]]
+// CHECK_NEXT:    [[SUB5_I:%.*]] = fsub reassoc nnan ninf nsz arcp afn half 0xH3C00, [[MUL4_I:%.*]]
+// CHECK_NEXT:    [[CMP_I:%.*]] = fcmp reassoc nnan ninf nsz arcp afn olt half [[SUB5_I:%.*]], 0xH0000
+// CHECK_NEXT:    br i1 [[CMP_I:%.*]], label %_ZN4hlsl8__detail12refract_implIDhEET_S2_S2_S2_.exit, label %if.else.i
+// CHECK_NEXT:  
+// CHECK_NEXT:    if.else.i:                                        ; preds = %entry
+// CHECK_NEXT:    [[MUL6_I:%.*]] = fmul reassoc nnan ninf nsz arcp afn half [[eta]], %I
+// CHECK_NEXT:    [[MUL7_I:%.*]] = fmul reassoc nnan ninf nsz arcp afn half [[N:%.*]], %I
+// CHECK_NEXT:    [[MUL8_I:%.*]] = fmul reassoc nnan ninf nsz arcp afn half [[MUL7_I:%.*]], [[eta]]
+// CHECK_NEXT:    %2 = tail call reassoc nnan ninf nsz arcp afn half @llvm.sqrt.f16(half [[SUB5_I:%.*]])
+// CHECK_NEXT:    [[ADD_I:%.*]] = fadd reassoc nnan ninf nsz arcp afn half %2, [[MUL8_I:%.*]]
+// CHECK_NEXT:    [[MUL9_I:%.*]] = fmul reassoc nnan ninf nsz arcp afn half [[ADD_I:%.*]], [[N:%.*]]
+// CHECK_NEXT:    [[SUB10_I:%.*]] = fsub reassoc nnan ninf nsz arcp afn half [[MUL6_I:%.*]], [[MUL9_I:%.*]]
+// CHECK_NEXT:    br label %_ZN4hlsl8__detail12refract_implIDhEET_S2_S2_S2_.exit
+// CHECK_NEXT:    
+// CHECK_NEXT:    _ZN4hlsl8__detail12refract_implIDhEET_S2_S2_S2_.exit: ; preds = %entry, %if.else.i
+// CHECK_NEXT:    [[RETVAL_0_I:%.*]] = phi nsz half [ [[SUB10_I:%.*]], %if.else.i ], [ 0xH0000, %entry ]
+// CHECK_NEXT:    ret half [[RETVAL_0_I:%.*]]
+  
 //
 // SPVCHECK-LABEL: define hidden spir_func noundef nofpclass(nan inf) half @_Z17test_reflect_halfDhDh(
 // SPVCHECK-SAME: half noundef nofpclass(nan inf) [[I:%.*]], half noundef nofpclass(nan inf) [[N:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
