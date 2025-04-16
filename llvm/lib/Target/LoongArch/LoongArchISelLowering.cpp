@@ -1903,6 +1903,10 @@ static SDValue lowerBUILD_VECTORAsBroadCastLoad(BuildVectorSDNode *BVOp,
     IdentitySrc = BVOp->getOperand(0);
   }
 
+  // make sure that this load is valid and only has one user.
+  if (!IdentitySrc || !BVOp->isOnlyUserOf(IdentitySrc.getNode()))
+    return SDValue();
+
   if (IsIdeneity) {
     auto *LN = cast<LoadSDNode>(IdentitySrc);
     SDVTList Tys =
