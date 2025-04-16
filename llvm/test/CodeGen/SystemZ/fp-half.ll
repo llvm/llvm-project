@@ -161,13 +161,12 @@ define half @fun2(half %Op0, half %Op1) {
 ; VECTOR-NEXT:    la %r2, 176(%r15)
 ; VECTOR-NEXT:    ldr %f8, %f2
 ; VECTOR-NEXT:    brasl %r14, __extendhftf2@PLT
-; VECTOR-NEXT:    vl %v0, 176(%r15), 3
-; VECTOR-NEXT:    vst %v0, 160(%r15), 3 # 16-byte Folded Spill
+; VECTOR-NEXT:    mvc 160(16,%r15), 176(%r15)
 ; VECTOR-NEXT:    la %r2, 192(%r15)
 ; VECTOR-NEXT:    ldr %f0, %f8
 ; VECTOR-NEXT:    brasl %r14, __extendhftf2@PLT
 ; VECTOR-NEXT:    vl %v0, 192(%r15), 3
-; VECTOR-NEXT:    vl %v1, 160(%r15), 3 # 16-byte Folded Reload
+; VECTOR-NEXT:    vl %v1, 160(%r15), 3 # 16-byte Reload
 ; VECTOR-NEXT:    wfaxb %v0, %v1, %v0
 ; VECTOR-NEXT:    la %r2, 208(%r15)
 ; VECTOR-NEXT:    vst %v0, 208(%r15), 3
