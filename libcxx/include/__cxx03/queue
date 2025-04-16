@@ -257,7 +257,6 @@ template <class T, class Container, class Compare>
 #include <__cxx03/__algorithm/make_heap.h>
 #include <__cxx03/__algorithm/pop_heap.h>
 #include <__cxx03/__algorithm/push_heap.h>
-#include <__cxx03/__algorithm/ranges_copy.h>
 #include <__cxx03/__config>
 #include <__cxx03/__functional/operations.h>
 #include <__cxx03/__fwd/deque.h>
@@ -265,20 +264,10 @@ template <class T, class Container, class Compare>
 #include <__cxx03/__iterator/back_insert_iterator.h>
 #include <__cxx03/__iterator/iterator_traits.h>
 #include <__cxx03/__memory/uses_allocator.h>
-#include <__cxx03/__ranges/access.h>
-#include <__cxx03/__ranges/concepts.h>
-#include <__cxx03/__ranges/container_compatible_range.h>
-#include <__cxx03/__ranges/from_range.h>
 #include <__cxx03/__utility/forward.h>
 #include <__cxx03/deque>
 #include <__cxx03/vector>
 #include <__cxx03/version>
-
-// standard-mandated includes
-
-// [queue.syn]
-#include <__cxx03/compare>
-#include <__cxx03/initializer_list>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -947,7 +936,6 @@ _LIBCPP_END_NAMESPACE_STD
 _LIBCPP_POP_MACROS
 
 #if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
-#  include <__cxx03/concepts>
 #  include <__cxx03/cstdlib>
 #  include <__cxx03/functional>
 #  include <__cxx03/type_traits>

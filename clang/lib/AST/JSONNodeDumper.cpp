@@ -818,7 +818,7 @@ void JSONNodeDumper::VisitObjCInterfaceType(const ObjCInterfaceType *OIT) {
 }
 
 void JSONNodeDumper::VisitPackExpansionType(const PackExpansionType *PET) {
-  if (std::optional<unsigned> N = PET->getNumExpansions())
+  if (UnsignedOrNone N = PET->getNumExpansions())
     JOS.attribute("numExpansions", *N);
 }
 
@@ -1724,6 +1724,8 @@ void JSONNodeDumper::VisitTemplateExpansionTemplateArgument(
 void JSONNodeDumper::VisitExpressionTemplateArgument(
     const TemplateArgument &TA) {
   JOS.attribute("isExpr", true);
+  if (TA.isCanonicalExpr())
+    JOS.attribute("isCanonical", true);
 }
 void JSONNodeDumper::VisitPackTemplateArgument(const TemplateArgument &TA) {
   JOS.attribute("isPack", true);

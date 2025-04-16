@@ -45,9 +45,7 @@ ImmutablePass *llvm::createNVPTXExternalAAWrapperPass() {
   return new NVPTXExternalAAWrapper();
 }
 
-NVPTXAAWrapperPass::NVPTXAAWrapperPass() : ImmutablePass(ID) {
-  initializeNVPTXAAWrapperPassPass(*PassRegistry::getPassRegistry());
-}
+NVPTXAAWrapperPass::NVPTXAAWrapperPass() : ImmutablePass(ID) {}
 
 void NVPTXAAWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();

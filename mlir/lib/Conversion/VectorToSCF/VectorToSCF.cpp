@@ -661,7 +661,7 @@ struct PrepareTransferWriteConversion
                                      buffers.dataBuffer);
     auto loadedVec = rewriter.create<memref::LoadOp>(loc, buffers.dataBuffer);
     rewriter.modifyOpInPlace(xferOp, [&]() {
-      xferOp.getVectorMutable().assign(loadedVec);
+      xferOp.getValueToStoreMutable().assign(loadedVec);
       xferOp->setAttr(kPassLabel, rewriter.getUnitAttr());
     });
 

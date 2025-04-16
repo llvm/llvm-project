@@ -35,7 +35,7 @@ define void @intrinsics1(<16 x i8> %vc1, <16 x i8> %vc2, <16 x i8> %vc3, <16 x i
 ; CHECK-NEXT:    vmr v28, v2
 ; CHECK-NEXT:    std r30, 160(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    ld r30, 272(r1)
-; CHECK-NEXT:    dmxxinstfdmr512 wacc0, vsp60, vsp62, 0
+; CHECK-NEXT:    dmxxinstdmr512 wacc0, vsp60, vsp62, 0
 ; CHECK-NEXT:    xvf16ger2pp wacc0, v2, v4
 ; CHECK-NEXT:    dmxxextfdmr512 vsp36, vsp34, wacc0, 0
 ; CHECK-NEXT:    stxvp vsp36, 64(r1)
@@ -43,7 +43,7 @@ define void @intrinsics1(<16 x i8> %vc1, <16 x i8> %vc2, <16 x i8> %vc3, <16 x i
 ; CHECK-NEXT:    bl foo@notoc
 ; CHECK-NEXT:    lxvp vsp34, 64(r1)
 ; CHECK-NEXT:    lxvp vsp36, 32(r1)
-; CHECK-NEXT:    dmxxinstfdmr512 wacc0, vsp34, vsp36, 0
+; CHECK-NEXT:    dmxxinstdmr512 wacc0, vsp34, vsp36, 0
 ; CHECK-NEXT:    xvf16ger2pp wacc0, v28, v30
 ; CHECK-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
 ; CHECK-NEXT:    stxv v4, 48(r30)
@@ -82,7 +82,7 @@ define void @intrinsics1(<16 x i8> %vc1, <16 x i8> %vc2, <16 x i8> %vc3, <16 x i
 ; CHECK-BE-NEXT:    vmr v28, v2
 ; CHECK-BE-NEXT:    std r30, 240(r1) # 8-byte Folded Spill
 ; CHECK-BE-NEXT:    ld r30, 368(r1)
-; CHECK-BE-NEXT:    dmxxinstfdmr512 wacc0, vsp60, vsp62, 0
+; CHECK-BE-NEXT:    dmxxinstdmr512 wacc0, vsp60, vsp62, 0
 ; CHECK-BE-NEXT:    xvf16ger2pp wacc0, v2, v4
 ; CHECK-BE-NEXT:    dmxxextfdmr512 vsp36, vsp34, wacc0, 0
 ; CHECK-BE-NEXT:    stxvp vsp36, 112(r1)
@@ -91,7 +91,7 @@ define void @intrinsics1(<16 x i8> %vc1, <16 x i8> %vc2, <16 x i8> %vc3, <16 x i
 ; CHECK-BE-NEXT:    nop
 ; CHECK-BE-NEXT:    lxvp vsp34, 112(r1)
 ; CHECK-BE-NEXT:    lxvp vsp36, 144(r1)
-; CHECK-BE-NEXT:    dmxxinstfdmr512 wacc0, vsp34, vsp36, 0
+; CHECK-BE-NEXT:    dmxxinstdmr512 wacc0, vsp34, vsp36, 0
 ; CHECK-BE-NEXT:    xvf16ger2pp wacc0, v28, v30
 ; CHECK-BE-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
 ; CHECK-BE-NEXT:    stxv v5, 48(r30)
