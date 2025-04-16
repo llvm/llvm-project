@@ -7616,6 +7616,8 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     case ISD::OR:
     case ISD::SADDSAT:
     case ISD::UADDSAT:
+      // fold op(arg1, undef) -> an all-ones constant, fold op(arg1, poison) ->
+      // poison.
       return N2.getOpcode() == ISD::POISON ? getPOISON(VT)
                                            : getAllOnesConstant(DL, VT);
     }
