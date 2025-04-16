@@ -1310,26 +1310,24 @@ static bool NestedProtocolHasNoDefinition(ObjCProtocolDecl *PDecl,
 /// protocol declarations in its 'Protocols' argument.
 void SemaObjC::FindProtocolDeclaration(bool WarnOnDeclarations,
                                        bool ForObjCContainer,
-                                       ArrayRef<IdentifierLoc> ProtocolId,
+                                       ArrayRef<IdentifierLocPair> ProtocolId,
                                        SmallVectorImpl<Decl *> &Protocols) {
-  for (const IdentifierLoc &Pair : ProtocolId) {
-    ObjCProtocolDecl *PDecl =
-        LookupProtocol(Pair.getIdentifierInfo(), Pair.getLoc());
+  for (const IdentifierLocPair &Pair : ProtocolId) {
+    ObjCProtocolDecl *PDecl = LookupProtocol(Pair.first, Pair.second);
     if (!PDecl) {
       DeclFilterCCC<ObjCProtocolDecl> CCC{};
-      TypoCorrection Corrected = SemaRef.CorrectTypo(
-          DeclarationNameInfo(Pair.getIdentifierInfo(), Pair.getLoc()),
-          Sema::LookupObjCProtocolName, SemaRef.TUScope, nullptr, CCC,
-          Sema::CTK_ErrorRecovery);
+      TypoCorrection Corrected =
+          SemaRef.CorrectTypo(DeclarationNameInfo(Pair.first, Pair.second),
+                              Sema::LookupObjCProtocolName, SemaRef.TUScope,
+                              nullptr, CCC, Sema::CTK_ErrorRecovery);
       if ((PDecl = Corrected.getCorrectionDeclAs<ObjCProtocolDecl>()))
         SemaRef.diagnoseTypo(Corrected,
                              PDiag(diag::err_undeclared_protocol_suggest)
-                                 << Pair.getIdentifierInfo());
+                                 << Pair.first);
     }
 
     if (!PDecl) {
-      Diag(Pair.getLoc(), diag::err_undeclared_protocol)
-          << Pair.getIdentifierInfo();
+      Diag(Pair.second, diag::err_undeclared_protocol) << Pair.first;
       continue;
     }
     // If this is a forward protocol declaration, get its definition.
@@ -1339,7 +1337,7 @@ void SemaObjC::FindProtocolDeclaration(bool WarnOnDeclarations,
     // For an objc container, delay protocol reference checking until after we
     // can set the objc decl as the availability context, otherwise check now.
     if (!ForObjCContainer) {
-      (void)SemaRef.DiagnoseUseOfDecl(PDecl, Pair.getLoc());
+      (void)SemaRef.DiagnoseUseOfDecl(PDecl, Pair.second);
     }
 
     // If this is a forward declaration and we are supposed to warn in this
@@ -1349,8 +1347,7 @@ void SemaObjC::FindProtocolDeclaration(bool WarnOnDeclarations,
 
     if (WarnOnDeclarations &&
         NestedProtocolHasNoDefinition(PDecl, UndefinedProtocol)) {
-      Diag(Pair.getLoc(), diag::warn_undef_protocolref)
-          << Pair.getIdentifierInfo();
+      Diag(Pair.second, diag::warn_undef_protocolref) << Pair.first;
       Diag(UndefinedProtocol->getLocation(), diag::note_protocol_decl_undefined)
         << UndefinedProtocol;
     }
@@ -1787,17 +1784,17 @@ void SemaObjC::DiagnoseClassExtensionDupMethods(ObjCCategoryDecl *CAT,
 
 /// ActOnForwardProtocolDeclaration - Handle \@protocol foo;
 SemaObjC::DeclGroupPtrTy SemaObjC::ActOnForwardProtocolDeclaration(
-    SourceLocation AtProtocolLoc, ArrayRef<IdentifierLoc> IdentList,
+    SourceLocation AtProtocolLoc, ArrayRef<IdentifierLocPair> IdentList,
     const ParsedAttributesView &attrList) {
   ASTContext &Context = getASTContext();
   SmallVector<Decl *, 8> DeclsInGroup;
-  for (const IdentifierLoc &IdentPair : IdentList) {
-    IdentifierInfo *Ident = IdentPair.getIdentifierInfo();
+  for (const IdentifierLocPair &IdentPair : IdentList) {
+    IdentifierInfo *Ident = IdentPair.first;
     ObjCProtocolDecl *PrevDecl = LookupProtocol(
-        Ident, IdentPair.getLoc(), SemaRef.forRedeclarationInCurContext());
+        Ident, IdentPair.second, SemaRef.forRedeclarationInCurContext());
     ObjCProtocolDecl *PDecl =
         ObjCProtocolDecl::Create(Context, SemaRef.CurContext, Ident,
-                                 IdentPair.getLoc(), AtProtocolLoc, PrevDecl);
+                                 IdentPair.second, AtProtocolLoc, PrevDecl);
 
     SemaRef.PushOnScopeChains(PDecl, SemaRef.TUScope);
     CheckObjCDeclScope(PDecl);

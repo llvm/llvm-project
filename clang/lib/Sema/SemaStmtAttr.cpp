@@ -79,10 +79,9 @@ static Attr *handleLoopHintAttr(Sema &S, Stmt *St, const ParsedAttr &A,
   Expr *ValueExpr = A.getArgAsExpr(3);
 
   StringRef PragmaName =
-      llvm::StringSwitch<StringRef>(
-          PragmaNameLoc->getIdentifierInfo()->getName())
+      llvm::StringSwitch<StringRef>(PragmaNameLoc->Ident->getName())
           .Cases("unroll", "nounroll", "unroll_and_jam", "nounroll_and_jam",
-                 PragmaNameLoc->getIdentifierInfo()->getName())
+                 PragmaNameLoc->Ident->getName())
           .Default("clang loop");
 
   // This could be handled automatically by adding a Subjects definition in
@@ -128,10 +127,10 @@ static Attr *handleLoopHintAttr(Sema &S, Stmt *St, const ParsedAttr &A,
       SetHints(LoopHintAttr::UnrollAndJam, LoopHintAttr::Enable);
   } else {
     // #pragma clang loop ...
-    assert(OptionLoc && OptionLoc->getIdentifierInfo() &&
+    assert(OptionLoc && OptionLoc->Ident &&
            "Attribute must have valid option info.");
     Option = llvm::StringSwitch<LoopHintAttr::OptionType>(
-                 OptionLoc->getIdentifierInfo()->getName())
+                 OptionLoc->Ident->getName())
                  .Case("vectorize", LoopHintAttr::Vectorize)
                  .Case("vectorize_width", LoopHintAttr::VectorizeWidth)
                  .Case("interleave", LoopHintAttr::Interleave)
@@ -145,13 +144,12 @@ static Attr *handleLoopHintAttr(Sema &S, Stmt *St, const ParsedAttr &A,
                  .Case("distribute", LoopHintAttr::Distribute)
                  .Default(LoopHintAttr::Vectorize);
     if (Option == LoopHintAttr::VectorizeWidth) {
-      assert((ValueExpr || (StateLoc && StateLoc->getIdentifierInfo())) &&
+      assert((ValueExpr || (StateLoc && StateLoc->Ident)) &&
              "Attribute must have a valid value expression or argument.");
       if (ValueExpr && S.CheckLoopHintExpr(ValueExpr, St->getBeginLoc(),
                                            /*AllowZero=*/false))
         return nullptr;
-      if (StateLoc && StateLoc->getIdentifierInfo() &&
-          StateLoc->getIdentifierInfo()->isStr("scalable"))
+      if (StateLoc && StateLoc->Ident && StateLoc->Ident->isStr("scalable"))
         State = LoopHintAttr::ScalableWidth;
       else
         State = LoopHintAttr::FixedWidth;
@@ -169,15 +167,14 @@ static Attr *handleLoopHintAttr(Sema &S, Stmt *St, const ParsedAttr &A,
                Option == LoopHintAttr::Unroll ||
                Option == LoopHintAttr::Distribute ||
                Option == LoopHintAttr::PipelineDisabled) {
-      assert(StateLoc && StateLoc->getIdentifierInfo() &&
-             "Loop hint must have an argument");
-      if (StateLoc->getIdentifierInfo()->isStr("disable"))
+      assert(StateLoc && StateLoc->Ident && "Loop hint must have an argument");
+      if (StateLoc->Ident->isStr("disable"))
         State = LoopHintAttr::Disable;
-      else if (StateLoc->getIdentifierInfo()->isStr("assume_safety"))
+      else if (StateLoc->Ident->isStr("assume_safety"))
         State = LoopHintAttr::AssumeSafety;
-      else if (StateLoc->getIdentifierInfo()->isStr("full"))
+      else if (StateLoc->Ident->isStr("full"))
         State = LoopHintAttr::Full;
-      else if (StateLoc->getIdentifierInfo()->isStr("enable"))
+      else if (StateLoc->Ident->isStr("enable"))
         State = LoopHintAttr::Enable;
       else
         llvm_unreachable("bad loop hint argument");
@@ -647,8 +644,8 @@ static Attr *handleAtomicAttr(Sema &S, Stmt *St, const ParsedAttr &AL,
     }
 
     IdentifierLoc *Ident = AL.getArgAsIdent(ArgIndex);
-    OptionString = Ident->getIdentifierInfo()->getName();
-    Loc = Ident->getLoc();
+    OptionString = Ident->Ident->getName();
+    Loc = Ident->Loc;
     if (!AtomicAttr::ConvertStrToConsumedOption(OptionString, Option)) {
       S.Diag(Loc, diag::err_attribute_invalid_atomic_argument) << OptionString;
       return nullptr;
