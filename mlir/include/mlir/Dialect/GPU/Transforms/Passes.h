@@ -63,6 +63,12 @@ void populateGpuLowerSubgroupReduceToShufflePatterns(
     RewritePatternSet &patterns, unsigned subgroupSize,
     unsigned shuffleBitwidth = 32, PatternBenefit benefit = 1);
 
+/// Disjoint counterpart of `populateGpuLowerSubgroupReduceToShufflePatterns`
+/// that only matches `gpu.subgroup_reduce` ops with a `cluster_size`.
+void populateGpuLowerClusteredSubgroupReduceToShufflePatterns(
+    RewritePatternSet &patterns, unsigned subgroupSize,
+    unsigned shuffleBitwidth = 32, PatternBenefit benefit = 1);
+
 /// Collect a set of patterns to lower `gpu.subgroup_reduce` into `amdgpu.dpp`
 /// ops over scalar types. Assumes that the subgroup has
 /// `subgroupSize` lanes. Applicable only to AMD GPUs.
@@ -71,15 +77,11 @@ void populateGpuLowerSubgroupReduceToDPPPatterns(RewritePatternSet &patterns,
                                                  amdgpu::Chipset chipset,
                                                  PatternBenefit benefit = 1);
 
+/// Disjoint counterpart of `populateGpuLowerSubgroupReduceToDPPPatterns`
+/// that only matches `gpu.subgroup_reduce` ops with a `cluster_size`.
 void populateGpuLowerClusteredSubgroupReduceToDPPPatterns(
     RewritePatternSet &patterns, unsigned subgroupSize, amdgpu::Chipset chipset,
     PatternBenefit benefit = 1);
-
-/// Disjoint counterpart of `populateGpuLowerSubgroupReduceToShufflePatterns`
-/// that only matches `gpu.subgroup_reduce` ops with a `cluster_size`.
-void populateGpuLowerClusteredSubgroupReduceToShufflePatterns(
-    RewritePatternSet &patterns, unsigned subgroupSize,
-    unsigned shuffleBitwidth = 32, PatternBenefit benefit = 1);
 
 /// Collect all patterns to rewrite ops within the GPU dialect.
 inline void populateGpuRewritePatterns(RewritePatternSet &patterns) {

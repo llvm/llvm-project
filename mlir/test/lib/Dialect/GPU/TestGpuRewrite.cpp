@@ -31,9 +31,8 @@ struct TestGpuRewritePass
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestGpuRewritePass)
 
   void getDependentDialects(DialectRegistry &registry) const override {
-    registry.insert<amdgpu::AMDGPUDialect, arith::ArithDialect,
-                    func::FuncDialect, index::IndexDialect,
-                    memref::MemRefDialect, ROCDL::ROCDLDialect>();
+    registry.insert<arith::ArithDialect, func::FuncDialect, index::IndexDialect,
+                    memref::MemRefDialect>();
   }
   StringRef getArgument() const final { return "test-gpu-rewrite"; }
   StringRef getDescription() const final {
@@ -58,8 +57,9 @@ struct TestGpuSubgroupReduceLoweringPass
       : PassWrapper(pass) {}
 
   void getDependentDialects(DialectRegistry &registry) const override {
-    registry.insert<amdgpu::AMDGPUDialect, arith::ArithDialect, LLVM::LLVMDialect,
-                    ROCDL::ROCDLDialect, vector::VectorDialect>();
+    registry
+        .insert<amdgpu::AMDGPUDialect, arith::ArithDialect, LLVM::LLVMDialect,
+                ROCDL::ROCDLDialect, vector::VectorDialect>();
   }
 
   StringRef getArgument() const final {

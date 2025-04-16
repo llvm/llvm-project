@@ -10,13 +10,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/AMDGPU/IR/AMDGPUDialect.h"
 #include "mlir/Dialect/AMDGPU/Utils/Chipset.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
-#include "mlir/Dialect/LLVMIR/ROCDLDialect.h"
-#include "mlir/Dialect/AMDGPU/IR/AMDGPUDialect.h"
 #include "mlir/Dialect/GPU/Transforms/Passes.h"
 #include "mlir/Dialect/GPU/Utils/GPUUtils.h"
+#include "mlir/Dialect/LLVMIR/ROCDLDialect.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Location.h"
@@ -366,10 +366,11 @@ private:
   bool matchClustered = false;
 };
 
-std::optional<Value> createSubgroupDPPReduction(OpBuilder &b, Location loc, Value input,
-                                 gpu::AllReduceOperation mode,
-                                 const ClusterInfo &ci,
-                                 amdgpu::Chipset chipset) {
+std::optional<Value> createSubgroupDPPReduction(OpBuilder &b, Location loc,
+                                                Value input,
+                                                gpu::AllReduceOperation mode,
+                                                const ClusterInfo &ci,
+                                                amdgpu::Chipset chipset) {
   Value dppResult;
   Value result = input;
   constexpr int allRows = 0xf;
@@ -510,11 +511,11 @@ void mlir::populateGpuLowerSubgroupReduceToDPPPatterns(
 }
 
 void mlir::populateGpuLowerClusteredSubgroupReduceToDPPPatterns(
-  RewritePatternSet &patterns, unsigned subgroupSize, amdgpu::Chipset chipset,
-  PatternBenefit benefit) {
-patterns.add<ScalarSubgroupReduceToDPP>(patterns.getContext(), subgroupSize,
-                                        /*matchClustered=*/true, chipset,
-                                        benefit);
+    RewritePatternSet &patterns, unsigned subgroupSize, amdgpu::Chipset chipset,
+    PatternBenefit benefit) {
+  patterns.add<ScalarSubgroupReduceToDPP>(patterns.getContext(), subgroupSize,
+                                          /*matchClustered=*/true, chipset,
+                                          benefit);
 }
 
 void mlir::populateGpuLowerSubgroupReduceToShufflePatterns(
