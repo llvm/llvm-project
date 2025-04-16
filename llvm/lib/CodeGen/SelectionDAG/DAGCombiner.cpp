@@ -14215,6 +14215,11 @@ static SDValue widenBuildVec(SDNode *Extend, SelectionDAG &DAG) {
   unsigned NumElts = VT.getVectorNumElements();
 
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+
+  if (TLI.getTypeAction(*DAG.getContext(), VT) !=
+      TargetLowering::TypeWidenVector)
+    return SDValue();
+
   EVT WidenVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
   unsigned WidenNumElts = WidenVT.getVectorNumElements();
 
@@ -14226,7 +14231,7 @@ static SDValue widenBuildVec(SDNode *Extend, SelectionDAG &DAG) {
   // iteration.
   unsigned step = WidenNumElts / NumElts;
   if (WidenVT.is128BitVector()) {
-    if (Extend->getValueSizeInBits(0) == WidenVT.getSizeInBits()) {
+    if (step > 1 && Extend->getValueSizeInBits(0) == WidenVT.getSizeInBits()) {
       for (int i = NumElts - 1, j = WidenNumElts - step; i > 0;
            i--, j -= step) {
         SDValue temp = NewOps[i];
