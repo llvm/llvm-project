@@ -7,74 +7,10 @@ define i32 @test_remove_freeze(i32 %x) {
 ; CHECK-LABEL: define i32 @test_remove_freeze(
 ; CHECK-SAME: i32 [[X:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    br i1 true, label %[[PATHA:.*]], label %[[PATHB:.*]]
-; CHECK:       [[PATHA]]:
-; CHECK-NEXT:    br label %[[MERGE:.*]]
-; CHECK:       [[PATHB]]:
-; CHECK-NEXT:    br label %[[MERGE]]
-; CHECK:       [[MERGE]]:
-; CHECK-NEXT:    [[FROZEN:%.*]] = phi i32 [ [[X]], %[[PATHA]] ], [ [[X]], %[[PATHB]] ]
-; CHECK-NEXT:    [[Y:%.*]] = add i32 [[FROZEN]], 1
-; CHECK-NEXT:    ret i32 [[Y]]
-;
-entry:
-  %f = freeze i32 %x
-  %y = add i32 %f, 1
-  ret i32 %y
-}
-
-define i32 @test_remove_freeze_safe(i32 %x) {
-; CHECK-LABEL: define i32 @test_remove_freeze_safe(
-; CHECK-SAME: i32 [[X:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[FROZEN:%.*]] = add i32 1, 0
-; CHECK-NEXT:    [[Y:%.*]] = add i32 [[FROZEN]], 1
-; CHECK-NEXT:    ret i32 [[Y]]
-;
-entry:
-  %safe = add i32 1, 0
-  %f = freeze i32 %safe
-  %y = add i32 %f, 1
-  ret i32 %y
-}
-
-define i32 @test_freeze_poison() {
-; CHECK-LABEL: define i32 @test_freeze_poison() {
-; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[X1:%.*]] = select i1 true, i32 42, i32 poison
-; CHECK-NEXT:    br i1 true, label %[[PATHA:.*]], label %[[PATHB:.*]]
-; CHECK:       [[PATHA]]:
-; CHECK-NEXT:    br label %[[MERGE:.*]]
-; CHECK:       [[PATHB]]:
-; CHECK-NEXT:    br label %[[MERGE]]
-; CHECK:       [[MERGE]]:
-; CHECK-NEXT:    [[X:%.*]] = phi i32 [ [[X1]], %[[PATHA]] ], [ [[X1]], %[[PATHB]] ]
 ; CHECK-NEXT:    [[Y:%.*]] = add i32 [[X]], 1
 ; CHECK-NEXT:    ret i32 [[Y]]
 ;
 entry:
-  %x = select i1 true, i32 42, i32 poison
-  %f = freeze i32 %x
-  %y = add i32 %f, 1
-  ret i32 %y
-}
-
-define i32 @test_freeze_undef() {
-; CHECK-LABEL: define i32 @test_freeze_undef() {
-; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[X:%.*]] = select i1 undef, i32 42, i32 2
-; CHECK-NEXT:    br i1 true, label %[[PATHA:.*]], label %[[PATHB:.*]]
-; CHECK:       [[PATHA]]:
-; CHECK-NEXT:    br label %[[MERGE:.*]]
-; CHECK:       [[PATHB]]:
-; CHECK-NEXT:    br label %[[MERGE]]
-; CHECK:       [[MERGE]]:
-; CHECK-NEXT:    [[FROZEN:%.*]] = phi i32 [ [[X]], %[[PATHA]] ], [ [[X]], %[[PATHB]] ]
-; CHECK-NEXT:    [[Y:%.*]] = add i32 [[FROZEN]], 1
-; CHECK-NEXT:    ret i32 [[Y]]
-;
-entry:
-  %x = select i1 undef, i32 42, i32 2
   %f = freeze i32 %x
   %y = add i32 %f, 1
   ret i32 %y

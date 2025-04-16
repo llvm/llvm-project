@@ -21,54 +21,6 @@
 
 using namespace llvm;
 
-// The goal here will be to emulate freeze by Forcing SSA materialization.
-// We will do this by making the input bound to a real SSA value,
-// not a symbolic poison or undef. The implementation creates a dummy
-// control-flow split that always takes PathA and forces the inputs
-// through a phi node. Creating a dimond CFG makes the compiler
-// commit to one value for the input.
-//             entry(%x)
-//                |
-//            +---+---+
-//            |       |
-//        pathA(%x)   pathB(%x)
-//            |       |
-//            \______/
-//               |
-//             merge
-//   %frozen = phi [ %x, %pathA ], [ %x, %pathB ]
-
-static void lowerFreeze(FreezeInst *FI) {
-  Type *Ty = FI->getType();
-  LLVMContext &Ctx = FI->getContext();
-  BasicBlock *OrigBB = FI->getParent();
-  Value *Input = FI->getOperand(0);
-  Function *F = FI->getFunction();
-
-  // Split the block to isolate the freeze instruction
-  BasicBlock *MergeBB = OrigBB->splitBasicBlock(FI->getNextNode(), "merge");
-
-  // Remove the unconditional branch inserted by splitBasicBlock
-  OrigBB->getTerminator()->eraseFromParent();
-  BasicBlock *PathA = BasicBlock::Create(Ctx, "pathA", F, MergeBB);
-  BasicBlock *PathB = BasicBlock::Create(Ctx, "pathB", F, MergeBB);
-
-  IRBuilder<> Builder(OrigBB);
-  Builder.CreateCondBr(ConstantInt::getTrue(Ctx), PathA, PathB);
-
-  IRBuilder<> BuilderA(PathA);
-  BuilderA.CreateBr(MergeBB);
-  IRBuilder<> BuilderB(PathB);
-  BuilderB.CreateBr(MergeBB);
-
-  IRBuilder<> BuilderMerge(&MergeBB->front());
-  PHINode *Phi = BuilderMerge.CreatePHI(Ty, 2, "frozen");
-  Phi->addIncoming(Input, PathA);
-  Phi->addIncoming(Input, PathB);
-
-  FI->replaceAllUsesWith(Phi);
-}
-
 static void legalizeFreeze(Instruction &I,
                            SmallVectorImpl<Instruction *> &ToRemove,
                            DenseMap<Value *, Value *>) {
@@ -77,12 +29,7 @@ static void legalizeFreeze(Instruction &I,
     return;
 
   Value *Input = FI->getOperand(0);
-
-  if (isGuaranteedNotToBeUndefOrPoison(Input))
-    FI->replaceAllUsesWith(Input);
-  else
-    lowerFreeze(FI);
-
+  FI->replaceAllUsesWith(Input);
   ToRemove.push_back(FI);
 }
 
