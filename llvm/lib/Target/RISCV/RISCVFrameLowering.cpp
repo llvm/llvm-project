@@ -467,7 +467,7 @@ void RISCVFrameLowering::allocateAndProbeStackForRVV(
       .setMIFlag(Flag);
   TII->mulImm(MF, MBB, MBBI, DL, TargetReg, NumOfVReg, Flag);
 
-  CFIInstBuilder CFIBuilder(MBB, MBBI, MachineInstr::FrameDestroy);
+  CFIInstBuilder CFIBuilder(MBB, MBBI, MachineInstr::FrameSetup);
   if (EmitCFI) {
     // Set the CFA register to TargetReg.
     CFIBuilder.buildDefCFA(TargetReg, -Amount);
