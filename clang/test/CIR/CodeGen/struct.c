@@ -11,6 +11,15 @@ struct IncompleteS *p;
 // LLVM: @p = dso_local global ptr null
 // OGCG: @p = global ptr null, align 8
 
+struct CompleteS {
+  int a;
+  char b;
+} cs;
+
+// CIR:      cir.global external @cs = #cir.zero : !cir.record<struct "CompleteS" {!s32i, !s8i}>
+// LLVM:      @cs = dso_local global %struct.CompleteS zeroinitializer
+// OGCG:      @cs = global %struct.CompleteS zeroinitializer, align 4
+
 void f(void) {
   struct IncompleteS *p;
 }
@@ -27,4 +36,22 @@ void f(void) {
 // OGCG:      define{{.*}} void @f()
 // OGCG-NEXT: entry:
 // OGCG-NEXT:   %[[P:.*]] = alloca ptr, align 8
+// OGCG-NEXT:   ret void
+
+void f2(void) {
+  struct CompleteS s;
+}
+
+// CIR:      cir.func @f2()
+// CIR-NEXT:   cir.alloca !cir.record<struct "CompleteS" {!s32i, !s8i}>,
+// CIR-SAME:       !cir.ptr<!cir.record<struct "CompleteS" {!s32i, !s8i}>>, ["s"]
+// CIR-NEXT:   cir.return
+
+// LLVM:      define void @f2()
+// LLVM-NEXT:   %[[S:.*]] = alloca %struct.CompleteS, i64 1, align 4
+// LLVM-NEXT:   ret void
+
+// OGCG:      define{{.*}} void @f2()
+// OGCG-NEXT: entry:
+// OGCG-NEXT:   %[[S:.*]] = alloca %struct.CompleteS, align 4
 // OGCG-NEXT:   ret void
