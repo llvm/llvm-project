@@ -205,7 +205,8 @@ PreservedAnalyses AMDGPUTargetVerifierPass::run(Function &F, FunctionAnalysisMan
 
   dbgs() << TV.MessagesStr.str();
   if (!TV.MessagesStr.str().empty()) {
-    F.getParent()->IsValid = false;
+    TV.IsValid = false;
+    return PreservedAnalyses::none();
   }
 
   return PreservedAnalyses::all();

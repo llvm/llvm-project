@@ -163,9 +163,9 @@ int main(int argc, char **argv) {
     FPM.addPass(TargetVerifierPass());
   MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
 
-  MPM.run(*M, MAM);
-
-  if (!M->IsValid)
+  auto PA = MPM.run(*M, MAM);
+  auto PAC = PA.getChecker<VerifierAnalysis>();
+  if (!PAC.preserved())
     return 1;
 
   return 0;

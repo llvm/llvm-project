@@ -90,6 +90,7 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Target/TargetVerify/AMDGPUTargetVerifier.h"
 #include "llvm/Transforms/HipStdPar/HipStdPar.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/IPO/AlwaysInliner.h"
@@ -1298,6 +1299,8 @@ void AMDGPUPassConfig::addIRPasses() {
       addPass(createLICMPass());
   }
 
+  //addPass(AMDGPUTargetVerifierPass());
+
   TargetPassConfig::addIRPasses();
 
   // EarlyCSE is not always strong enough to clean up what LSR produces. For
@@ -2040,6 +2043,8 @@ void AMDGPUCodeGenPassBuilder::addIRPasses(AddIRPass &addPass) const {
   // but EarlyCSE can do neither of them.
   if (isPassEnabled(EnableScalarIRPasses))
     addEarlyCSEOrGVNPass(addPass);
+
+  addPass(AMDGPUTargetVerifierPass());
 }
 
 void AMDGPUCodeGenPassBuilder::addCodeGenPrepare(AddIRPass &addPass) const {
