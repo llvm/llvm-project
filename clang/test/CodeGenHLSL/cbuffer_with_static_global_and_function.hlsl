@@ -1,5 +1,4 @@
-// RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.3-library %s \
-// RUN:   -emit-llvm -disable-llvm-passes -o - | FileCheck %s
+// RUN: %clang_cc1 -Wno-hlsl-implicit-binding -finclude-default-header -triple dxil-pc-shadermodel6.3-library %s -emit-llvm -disable-llvm-passes -o - | FileCheck %s
 
 // CHECK: %__cblayout_A = type <{ float }>
 
