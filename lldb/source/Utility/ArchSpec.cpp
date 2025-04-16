@@ -248,7 +248,15 @@ static const CoreDefinition g_core_definitions[] = {
 
     {eByteOrderLittle, 4, 1, 4, llvm::Triple::wasm32, ArchSpec::eCore_wasm32,
      "wasm32"},
-};
+    {eByteOrderLittle, 4, 4, 4, llvm::Triple::r600, 
+      ArchSpec::eCore_amd_gpu_r600,"r600"},
+    {eByteOrderLittle, 8, 4, 4, llvm::Triple::amdgcn, 
+      ArchSpec::eCore_amd_gpu_gcn, "amdgcn"},
+    {eByteOrderLittle, 4, 4, 4, llvm::Triple::nvptx, 
+      ArchSpec::eCore_nvidia_nvptx,"nvptx"},
+    {eByteOrderLittle, 8, 4, 4, llvm::Triple::nvptx64, 
+      ArchSpec::eCore_nvidia_nvptx64, "nvptx64"},
+  };
 
 // Ensure that we have an entry in the g_core_definitions for each core. If you
 // comment out an entry above, you will need to comment out the corresponding
@@ -434,6 +442,14 @@ static const ArchDefinitionEntry g_elf_arch_entries[] = {
     {ArchSpec::eCore_loongarch64, llvm::ELF::EM_LOONGARCH,
      ArchSpec::eLoongArchSubType_loongarch64, 0xFFFFFFFFu,
      0xFFFFFFFFu}, // loongarch64
+    {ArchSpec::eCore_amd_gpu_r600, llvm::ELF::EM_AMDGPU, LLDB_INVALID_CPUTYPE,
+     0xFFFFFFFFu, 0xFFFFFFFFu},
+    {ArchSpec::eCore_amd_gpu_gcn, llvm::ELF::EM_AMDGPU, LLDB_INVALID_CPUTYPE,
+     0xFFFFFFFFu, 0xFFFFFFFFu},
+    {ArchSpec::eCore_nvidia_nvptx, llvm::ELF::EM_CUDA, LLDB_INVALID_CPUTYPE,
+     0xFFFFFFFFu, 0xFFFFFFFFu},
+    {ArchSpec::eCore_nvidia_nvptx64, llvm::ELF::EM_CUDA, LLDB_INVALID_CPUTYPE,
+     0xFFFFFFFFu, 0xFFFFFFFFu},
 };
 
 static const ArchDefinition g_elf_arch_def = {
@@ -922,6 +938,9 @@ bool ArchSpec::SetArchitecture(ArchitectureType arch_type, uint32_t cpu,
           case llvm::ELF::ELFOSABI_STANDALONE:
             m_triple.setOS(llvm::Triple::OSType::UnknownOS);
             break;
+          case llvm::ELF::ELFOSABI_AMDGPU_HSA:
+            m_triple.setOS(llvm::Triple::OSType::AMDHSA);
+            break;            
           }
         } else if (arch_type == eArchTypeCOFF && os == llvm::Triple::Win32) {
           m_triple.setVendor(llvm::Triple::PC);
