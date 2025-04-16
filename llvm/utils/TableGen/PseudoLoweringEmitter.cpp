@@ -190,7 +190,7 @@ void PseudoLoweringEmitter::evaluateExpansion(const Record *Rec) {
     unsigned MIOpNo = DstOp.MIOperandNo;
 
     if (const auto *SubDag = dyn_cast<DagInit>(Dag->getArg(Idx))) {
-      if (DstOp.MIOperandInfo->getNumArgs() == 0)
+      if (!DstOp.MIOperandInfo || DstOp.MIOperandInfo->getNumArgs() == 0)
         PrintFatalError(Rec, "In pseudo instruction '" + Rec->getName() +
                                  "', operand '" + DstOp.Rec->getName() +
                                  "' does not have suboperands");
