@@ -299,14 +299,12 @@ def : Pat<(i64 (mulhu i64:$lhs, i64:$rhs)), (UMULXHI $lhs, $rhs)>;
 // Signed "MULXHI".
 // Based on the formula presented in OSA2011 §7.140, but with bitops to select
 // the values to be added.
+// TODO: This expansion should probably be moved to DAG legalization phase.
 def : Pat<(i64 (mulhs i64:$lhs, i64:$rhs)),
       (SUBrr (UMULXHI $lhs, $rhs),
              (ADDrr (ANDrr (SRAXri $lhs, 63), $rhs),
                     (ANDrr (SRAXri $rhs, 63), $lhs)))>;
 
 def : Pat<(i64 (ctlz i64:$src)), (LZCNT $src)>;
-// 32-bit LZCNT.
-// The zero extension will leave us with 32 extra leading zeros,
-// so we need to compensate for it.
-def : Pat<(i32 (ctlz i32:$src)), (ADDri (LZCNT (SRLri $src, 0)), (i32 -32))>;
+def : Pat<(i64 (ctlz_zero_undef i64:$src)), (LZCNT $src)>;
 } // Predicates = [HasVIS3]
