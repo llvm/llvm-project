@@ -27,43 +27,71 @@ using namespace llvm;
 STATISTIC(NumSunk, "Number of instructions sunk");
 STATISTIC(NumSinkIter, "Number of sinking iterations");
 
-static bool isSafeToMove(Instruction *Inst, AliasAnalysis &AA,
-                         SmallPtrSetImpl<Instruction *> &Stores) {
-
-  if (Inst->mayWriteToMemory()) {
-    Stores.insert(Inst);
-    return false;
-  }
-
+static bool hasStoreConflict(Instruction *Inst, AliasAnalysis &AA,
+                             SmallPtrSetImpl<Instruction *> &Stores) {
   if (LoadInst *L = dyn_cast<LoadInst>(Inst)) {
     MemoryLocation Loc = MemoryLocation::get(L);
     for (Instruction *S : Stores)
       if (isModSet(AA.getModRefInfo(S, Loc)))
-        return false;
+        return true;
+  } else if (auto *Call = dyn_cast<CallBase>(Inst)) {
+    for (Instruction *S : Stores)
+      if (isModSet(AA.getModRefInfo(S, Call)))
+        return true;
   }
+  return false;
+}
 
+static bool isSafeToMove(Instruction *Inst, AliasAnalysis &AA,
+                         SmallPtrSetImpl<Instruction *> &Stores) {
+  if (Inst->mayWriteToMemory()) {
+    Stores.insert(Inst);
+    return false;
+  }
   if (Inst->isTerminator() || isa<PHINode>(Inst) || Inst->isEHPad() ||
       Inst->mayThrow() || !Inst->willReturn())
     return false;
-
-  if (auto *Call = dyn_cast<CallBase>(Inst)) {
-    // Convergent operations cannot be made control-dependent on additional
-    // values.
+  // Convergent operations cannot be made control-dependent on additional
+  // values.
+  if (auto *Call = dyn_cast<CallBase>(Inst))
     if (Call->isConvergent())
       return false;
-
-    for (Instruction *S : Stores)
-      if (isModSet(AA.getModRefInfo(S, Call)))
-        return false;
-  }
-
+  if (hasStoreConflict(Inst, AA, Stores))
+    return false;
   return true;
+}
+
+typedef SmallPtrSet<BasicBlock *, 8> BlocksSet;
+static void findStores(SmallPtrSetImpl<Instruction *> &Stores,
+                       BasicBlock *LoadBB, BasicBlock *BB,
+                       BlocksSet &VisitedBlocksSet) {
+  if (BB == LoadBB || VisitedBlocksSet.contains(BB))
+    return;
+  VisitedBlocksSet.insert(BB);
+
+  for (Instruction &Inst : *BB)
+    if (Inst.mayWriteToMemory())
+      Stores.insert(&Inst);
+  for (BasicBlock *Pred : predecessors(BB))
+    findStores(Stores, LoadBB, Pred, VisitedBlocksSet);
+}
+
+static bool hasConflictingStoreBeforeSuccToSinkTo(AliasAnalysis &AA,
+                                                  Instruction *ReadMemInst,
+                                                  BasicBlock *SuccToSinkTo) {
+  BlocksSet VisitedBlocksSet;
+  SmallPtrSet<Instruction *, 8> Stores;
+  BasicBlock *LoadBB = ReadMemInst->getParent();
+  for (BasicBlock *Pred : predecessors(SuccToSinkTo))
+    findStores(Stores, LoadBB, Pred, VisitedBlocksSet);
+  return hasStoreConflict(ReadMemInst, AA, Stores);
 }
 
 /// IsAcceptableTarget - Return true if it is possible to sink the instruction
 /// in the specified basic block.
-static bool IsAcceptableTarget(Instruction *Inst, BasicBlock *SuccToSinkTo,
-                               DominatorTree &DT, LoopInfo &LI) {
+static bool IsAcceptableTarget(AliasAnalysis &AA, Instruction *Inst,
+                               BasicBlock *SuccToSinkTo, DominatorTree &DT,
+                               LoopInfo &LI) {
   assert(Inst && "Instruction to be sunk is null");
   assert(SuccToSinkTo && "Candidate sink target is null");
 
@@ -76,10 +104,10 @@ static bool IsAcceptableTarget(Instruction *Inst, BasicBlock *SuccToSinkTo,
   // just punt.
   // FIXME: Split critical edges if not backedges.
   if (SuccToSinkTo->getUniquePredecessor() != Inst->getParent()) {
-    // We cannot sink a load across a critical edge - there may be stores in
-    // other code paths.
+    // Ensure that there is no conflicting store on any path to SuccToSinkTo.
     if (Inst->mayReadFromMemory() &&
-        !Inst->hasMetadata(LLVMContext::MD_invariant_load))
+        !Inst->hasMetadata(LLVMContext::MD_invariant_load) &&
+        hasConflictingStoreBeforeSuccToSinkTo(AA, Inst, SuccToSinkTo))
       return false;
 
     // We don't want to sink across a critical edge if we don't dominate the
@@ -153,7 +181,7 @@ static bool SinkInstruction(Instruction *Inst,
     // The nearest common dominator may be in a parent loop of BB, which may not
     // be beneficial. Find an ancestor.
     while (SuccToSinkTo != BB &&
-           !IsAcceptableTarget(Inst, SuccToSinkTo, DT, LI))
+           !IsAcceptableTarget(AA, Inst, SuccToSinkTo, DT, LI))
       SuccToSinkTo = DT.getNode(SuccToSinkTo)->getIDom()->getBlock();
     if (SuccToSinkTo == BB)
       SuccToSinkTo = nullptr;
