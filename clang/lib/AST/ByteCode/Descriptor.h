@@ -168,6 +168,7 @@ public:
   const bool IsArray = false;
   /// Flag indicating if this is a dummy descriptor.
   bool IsDummy = false;
+  bool IsConstexprUnknown = false;
 
   /// Storage management methods.
   const BlockCtorFn CtorFn = nullptr;

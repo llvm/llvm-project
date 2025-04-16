@@ -63,11 +63,12 @@ void AttachRequestHandler::operator()(const llvm::json::Object &request) const {
     attach_info.SetProcessID(pid);
   const auto wait_for = GetBoolean(arguments, "waitFor").value_or(false);
   attach_info.SetWaitForLaunch(wait_for, false /*async*/);
-  dap.init_commands = GetStrings(arguments, "initCommands");
-  dap.pre_run_commands = GetStrings(arguments, "preRunCommands");
-  dap.stop_commands = GetStrings(arguments, "stopCommands");
-  dap.exit_commands = GetStrings(arguments, "exitCommands");
-  dap.terminate_commands = GetStrings(arguments, "terminateCommands");
+  dap.configuration.initCommands = GetStrings(arguments, "initCommands");
+  dap.configuration.preRunCommands = GetStrings(arguments, "preRunCommands");
+  dap.configuration.stopCommands = GetStrings(arguments, "stopCommands");
+  dap.configuration.exitCommands = GetStrings(arguments, "exitCommands");
+  dap.configuration.terminateCommands =
+      GetStrings(arguments, "terminateCommands");
   auto attachCommands = GetStrings(arguments, "attachCommands");
   llvm::StringRef core_file = GetString(arguments, "coreFile").value_or("");
   const uint64_t timeout_seconds =
@@ -75,16 +76,16 @@ void AttachRequestHandler::operator()(const llvm::json::Object &request) const {
   dap.stop_at_entry = core_file.empty()
                           ? GetBoolean(arguments, "stopOnEntry").value_or(false)
                           : true;
-  dap.post_run_commands = GetStrings(arguments, "postRunCommands");
+  dap.configuration.postRunCommands = GetStrings(arguments, "postRunCommands");
   const llvm::StringRef debuggerRoot =
       GetString(arguments, "debuggerRoot").value_or("");
-  dap.enable_auto_variable_summaries =
+  dap.configuration.enableAutoVariableSummaries =
       GetBoolean(arguments, "enableAutoVariableSummaries").value_or(false);
-  dap.enable_synthetic_child_debugging =
+  dap.configuration.enableSyntheticChildDebugging =
       GetBoolean(arguments, "enableSyntheticChildDebugging").value_or(false);
-  dap.display_extended_backtrace =
+  dap.configuration.displayExtendedBacktrace =
       GetBoolean(arguments, "displayExtendedBacktrace").value_or(false);
-  dap.command_escape_prefix =
+  dap.configuration.commandEscapePrefix =
       GetString(arguments, "commandEscapePrefix").value_or("`");
   dap.SetFrameFormat(GetString(arguments, "customFrameFormat").value_or(""));
   dap.SetThreadFormat(GetString(arguments, "customThreadFormat").value_or(""));

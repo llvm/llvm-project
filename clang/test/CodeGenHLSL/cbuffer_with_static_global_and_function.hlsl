@@ -20,6 +20,7 @@ cbuffer B {
 
 // CHECK: define {{.*}} float @_Z3foov() #0 {
 // CHECK: load float, ptr addrspace(2) @a, align 4
+// CHECK: load float, ptr @_ZL1b, align 4
 
 extern float bar() {
   return foo();

@@ -341,7 +341,7 @@ std::string OHOS::getDynamicLinker(const ArgList &Args) const {
 }
 
 std::string OHOS::getCompilerRT(const ArgList &Args, StringRef Component,
-                                FileType Type) const {
+                                FileType Type, bool IsFortran) const {
   SmallString<128> Path(getDriver().ResourceDir);
   llvm::sys::path::append(Path, "lib", getMultiarchTriple(getTriple()),
                           SelectedMultilib.gccSuffix());
