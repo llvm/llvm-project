@@ -22,6 +22,7 @@
 #include "mlir/IR/Location.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MathExtras.h"
 #include <cassert>
@@ -371,72 +372,103 @@ std::optional<Value> createSubgroupDPPReduction(OpBuilder &b, Location loc,
                                                 gpu::AllReduceOperation mode,
                                                 const ClusterInfo &ci,
                                                 amdgpu::Chipset chipset) {
-  Value dppResult;
   Value result = input;
   constexpr int allRows = 0xf;
   constexpr int allBanks = 0xf;
   const bool boundCtrl = true;
-  Value lane31 =
-      b.create<arith::ConstantOp>(loc, b.getI32Type(), b.getI32IntegerAttr(31));
-  Value lane63 =
-      b.create<arith::ConstantOp>(loc, b.getI32Type(), b.getI32IntegerAttr(63));
-  if (ci.clusterSize >= 2) {
-    auto permArg = b.getI32ArrayAttr({1, 0, 3, 2});
-    dppResult = b.create<amdgpu::DPPOp>(loc, result.getType(), result, result,
-                                        amdgpu::DPPPerm::quad_perm, permArg,
-                                        allRows, allBanks, boundCtrl);
-    result = vector::makeArithReduction(b, loc, gpu::convertReductionKind(mode),
-                                        result, dppResult);
-  }
+  Value lane0 =
+      b.create<arith::ConstantOp>(loc, b.getI32Type(), b.getI32IntegerAttr(0));
+  Value lane32 =
+      b.create<arith::ConstantOp>(loc, b.getI32Type(), b.getI32IntegerAttr(32));
 
-  if (ci.clusterSize >= 4) {
-    auto permArg = b.getI32ArrayAttr({2, 3, 0, 1});
-    dppResult = b.create<amdgpu::DPPOp>(loc, result.getType(), result, result,
-                                        amdgpu::DPPPerm::quad_perm, permArg,
-                                        allRows, allBanks, boundCtrl);
-    result = vector::makeArithReduction(b, loc, gpu::convertReductionKind(mode),
-                                        result, dppResult);
-  }
+  auto dppReduceAcrossLanes = [&](int numLanes,
+                                  Value res) -> std::optional<Value> {
+    Value dppResult, laneVal;
 
-  if (ci.clusterSize >= 8) {
-    dppResult = b.create<amdgpu::DPPOp>(
-        loc, result.getType(), result, result, amdgpu::DPPPerm::row_half_mirror,
-        b.getUnitAttr(), allRows, allBanks, boundCtrl);
-    result = vector::makeArithReduction(b, loc, gpu::convertReductionKind(mode),
-                                        result, dppResult);
-  }
-
-  if (ci.clusterSize >= 16) {
-    dppResult = b.create<amdgpu::DPPOp>(
-        loc, result.getType(), result, result, amdgpu::DPPPerm::row_mirror,
-        b.getUnitAttr(), allRows, allBanks, boundCtrl);
-    result = vector::makeArithReduction(b, loc, gpu::convertReductionKind(mode),
-                                        result, dppResult);
-  }
-
-  if (ci.clusterSize >= 32) {
-    if (chipset.majorVersion <= 9) {
+    switch (numLanes) {
+    case 2:
+      // Perform reduction between all lanes N <-> N+1.
       dppResult = b.create<amdgpu::DPPOp>(
-          loc, result.getType(), result, result, amdgpu::DPPPerm::row_bcast_15,
-          b.getUnitAttr(), 0xa, allBanks, /*bound_ctrl*/ false);
-    } else {
+          loc, res.getType(), res, res, amdgpu::DPPPerm::quad_perm,
+          b.getI32ArrayAttr({1, 0, 3, 2}), allRows, allBanks, boundCtrl);
+      break;
+    case 4:
+      // Perform reduction between all lanes N <-> N+2.
+      dppResult = b.create<amdgpu::DPPOp>(
+          loc, res.getType(), res, res, amdgpu::DPPPerm::quad_perm,
+          b.getI32ArrayAttr({2, 3, 0, 1}), allRows, allBanks, boundCtrl);
+      break;
+    case 8:
+      // Perform reduction between all lanes N <-> 7-N,
+      // e.g lane[0] <-> lane[7], lane[1] <-> lane[6]..., lane[3] <-> lane[4].
+      dppResult = b.create<amdgpu::DPPOp>(
+          loc, res.getType(), res, res, amdgpu::DPPPerm::row_half_mirror,
+          b.getUnitAttr(), allRows, allBanks, boundCtrl);
+      break;
+    case 16:
+      // Perform reduction between all lanes N <-> 15-N,
+      // e.g lane[0] <-> lane[15], lane[1] <-> lane[14]..., lane[7] <-> lane[8].
+      dppResult = b.create<amdgpu::DPPOp>(
+          loc, result.getType(), res, res, amdgpu::DPPPerm::row_mirror,
+          b.getUnitAttr(), allRows, allBanks, boundCtrl);
+      break;
+    case 32:
+      if (chipset.majorVersion <= 9) {
+        // Broadcast last value from each row to next row.
+        // Use row mask to avoid polluting rows 1 and 3.
+        dppResult = b.create<amdgpu::DPPOp>(loc, res.getType(), res, res,
+                                            amdgpu::DPPPerm::row_bcast_15,
+                                            b.getUnitAttr(), 0xa, allBanks,
+                                            /*bound_ctrl*/ false);
+      } else if (chipset.majorVersion <= 12) {
+        // Use a permute lane to cross rows (row 1 <-> row 0, row 3 <-> row 2).
+        dppResult = b.create<ROCDL::PermlaneX16Op>(loc, res.getType(), res, res,
+                                                   -1, -1, /*fi=*/true,
+                                                   /*bound_ctrl=*/false);
+        if (ci.subgroupSize == 32) {
+          dppResult =
+              b.create<ROCDL::ReadlaneOp>(loc, res.getType(), res, lane0);
+        }
+      } else {
+        return std::nullopt;
+      }
+      break;
+    case 64:
+      if (chipset.majorVersion <= 9) {
+        // Broadcast 31st lane value to rows 2 and 3.
+        // Use row mask to avoid polluting rows 0 and 1.
+        dppResult = b.create<amdgpu::DPPOp>(loc, res.getType(), res, res,
+                                            amdgpu::DPPPerm::row_bcast_31,
+                                            b.getUnitAttr(), 0xc, allBanks,
+                                            /*bound_ctrl*/ false);
+      } else if (chipset.majorVersion <= 12) {
+        // Assume reduction across 32 lanes has been done.
+        // Perform final reduction manually by summing values in lane 0 and
+        // lane 32.
+        dppResult =
+            b.create<ROCDL::ReadlaneOp>(loc, res.getType(), res, lane32);
+        laneVal = b.create<ROCDL::ReadlaneOp>(loc, res.getType(), res, lane0);
+        return vector::makeArithReduction(
+            b, loc, gpu::convertReductionKind(mode), dppResult, laneVal);
+      } else {
+        return std::nullopt;
+      }
+      break;
+    default:
+      // Should never reach here given previous validation of ClusterInfo.
+      llvm_unreachable("ERROR: Unexpected cluster size.");
       return std::nullopt;
     }
-    result = vector::makeArithReduction(b, loc, gpu::convertReductionKind(mode),
-                                        result, dppResult);
-    if (ci.subgroupSize == 32) {
-      result =
-          b.create<ROCDL::ReadlaneOp>(loc, input.getType(), result, lane31);
-    }
-  }
+    return vector::makeArithReduction(b, loc, gpu::convertReductionKind(mode),
+                                      res, dppResult);
+  };
 
-  if (ci.clusterSize == 64) {
-    dppResult = b.create<amdgpu::DPPOp>(
-        loc, result.getType(), result, result, amdgpu::DPPPerm::row_bcast_31,
-        b.getUnitAttr(), 0xc, allBanks, /*bound_ctrl*/ false);
-    result = vector::makeArithReduction(b, loc, gpu::convertReductionKind(mode),
-                                        result, dppResult);
-    result = b.create<ROCDL::ReadlaneOp>(loc, input.getType(), result, lane63);
+  for (unsigned cs = 2; cs <= ci.clusterSize; cs = cs << 1) {
+    if (auto dpp = dppReduceAcrossLanes(cs, result)) {
+      result = *dpp;
+      continue;
+    }
+    return std::nullopt;
   }
 
   assert(result.getType() == input.getType());
