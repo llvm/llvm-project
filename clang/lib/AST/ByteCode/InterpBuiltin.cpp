@@ -1788,14 +1788,18 @@ static bool interp__builtin_memcpy(InterpState &S, CodePtr OpPC,
   Pointer DestPtr = getParam<Pointer>(Frame, 0);
   const ASTContext &ASTCtx = S.getASTContext();
   const Pointer &SrcPtr = getParam<Pointer>(Frame, 1);
-  const APSInt &Size =
-      peekToAPSInt(S.Stk, *S.getContext().classify(Call->getArg(2)));
+  APSInt Size = peekToAPSInt(S.Stk, *S.getContext().classify(Call->getArg(2)));
   assert(!Size.isSigned() && "memcpy and friends take an unsigned size");
 
   if (ID == Builtin::BImemcpy || ID == Builtin::BImemmove)
     diagnoseNonConstexprBuiltin(S, OpPC, ID);
 
-  bool Move = (ID == Builtin::BI__builtin_memmove || ID == Builtin::BImemmove);
+  bool Move =
+      (ID == Builtin::BI__builtin_memmove || ID == Builtin::BImemmove ||
+       ID == Builtin::BI__builtin_wmemmove || ID == Builtin::BIwmemmove);
+  bool WChar = ID == Builtin::BIwmemcpy || ID == Builtin::BIwmemmove ||
+               ID == Builtin::BI__builtin_wmemcpy ||
+               ID == Builtin::BI__builtin_wmemmove;
 
   // If the size is zero, we treat this as always being a valid no-op.
   if (Size.isZero()) {
@@ -1806,7 +1810,7 @@ static bool interp__builtin_memcpy(InterpState &S, CodePtr OpPC,
   if (SrcPtr.isZero() || DestPtr.isZero()) {
     Pointer DiagPtr = (SrcPtr.isZero() ? SrcPtr : DestPtr);
     S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_memcpy_null)
-        << /*IsMove=*/Move << /*IsWchar=*/false << !SrcPtr.isZero()
+        << /*IsMove=*/Move << /*IsWchar=*/WChar << !SrcPtr.isZero()
         << DiagPtr.toDiagnosticString(ASTCtx);
     return false;
   }
@@ -1818,7 +1822,7 @@ static bool interp__builtin_memcpy(InterpState &S, CodePtr OpPC,
                    ? std::to_string(SrcPtr.getIntegerRepresentation())
                    : std::to_string(DestPtr.getIntegerRepresentation());
     S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_memcpy_null)
-        << Move << false << DestPtr.isIntegralPointer() << DiagVal;
+        << Move << WChar << DestPtr.isIntegralPointer() << DiagVal;
     return false;
   }
 
@@ -1837,11 +1841,17 @@ static bool interp__builtin_memcpy(InterpState &S, CodePtr OpPC,
   }
   unsigned DestElemSize = ASTCtx.getTypeSizeInChars(DestElemType).getQuantity();
 
+  if (WChar) {
+    uint64_t WCharSize =
+        ASTCtx.getTypeSizeInChars(ASTCtx.getWCharType()).getQuantity();
+    Size *= APSInt(APInt(Size.getBitWidth(), WCharSize, /*IsSigned=*/false),
+                   /*IsUnsigend=*/true);
+  }
+
   if (Size.urem(DestElemSize) != 0) {
     S.FFDiag(S.Current->getSource(OpPC),
              diag::note_constexpr_memcpy_unsupported)
-        << Move << /*IsWchar=*/false << 0 << DestElemType << Size
-        << DestElemSize;
+        << Move << WChar << 0 << DestElemType << Size << DestElemSize;
     return false;
   }
 
@@ -1869,7 +1879,7 @@ static bool interp__builtin_memcpy(InterpState &S, CodePtr OpPC,
     APInt N = Size.udiv(DestElemSize);
     S.FFDiag(S.Current->getSource(OpPC),
              diag::note_constexpr_memcpy_unsupported)
-        << Move << /*IsWChar*/ false << (Size.ugt(RemainingSrcBytes) ? 1 : 2)
+        << Move << WChar << (Size.ugt(RemainingSrcBytes) ? 1 : 2)
         << DestElemType << toString(N, 10, /*Signed=*/false);
     return false;
   }
@@ -2587,8 +2597,12 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
 
   case Builtin::BI__builtin_memcpy:
   case Builtin::BImemcpy:
+  case Builtin::BI__builtin_wmemcpy:
+  case Builtin::BIwmemcpy:
   case Builtin::BI__builtin_memmove:
   case Builtin::BImemmove:
+  case Builtin::BI__builtin_wmemmove:
+  case Builtin::BIwmemmove:
     if (!interp__builtin_memcpy(S, OpPC, Frame, F, Call))
       return false;
     break;
