@@ -225,15 +225,14 @@ struct TransferReadLowering final : OpRewritePattern<vector::TransferReadOp> {
     Value isOutofBounds = rewriter.create<arith::CmpIOp>(
         loc, arith::CmpIPredicate::ult, delta, vectorSizeOffset);
 
-    // 2) check if (detla_bytes % (32 / elementBitwidth) != 0)
+    // 2) check if (detla_bytes % bytes_per_word != 0)
     Value deltaBytes = rewriter.create<arith::MulIOp>(
         loc, delta,
         rewriter.create<arith::ConstantIndexOp>(loc, elementBitWidth / 8));
-    Value elementsPerWord = rewriter.create<arith::ConstantIndexOp>(
-        loc, llvm::divideCeil(32, elementBitWidth));
+    Value bytesPerWord = rewriter.create<arith::ConstantIndexOp>(loc, 4);
     Value isNotWordAligned = rewriter.create<arith::CmpIOp>(
         loc, arith::CmpIPredicate::ne,
-        rewriter.create<arith::RemUIOp>(loc, deltaBytes, elementsPerWord),
+        rewriter.create<arith::RemUIOp>(loc, deltaBytes, bytesPerWord),
         rewriter.create<arith::ConstantIndexOp>(loc, 0));
 
     // We take the fallback of transfer_read default lowering only it is both
