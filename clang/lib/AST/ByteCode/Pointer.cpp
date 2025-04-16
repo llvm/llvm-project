@@ -167,7 +167,8 @@ APValue Pointer::toAPValue(const ASTContext &ASTCtx) const {
     return APValue(
         APValue::LValueBase::getTypeInfo(
             TypeInfo, QualType(PointeeStorage.Typeid.TypeInfoType, 0)),
-        CharUnits::Zero(), APValue::NoLValuePath{});
+        CharUnits::Zero(), {},
+        /*OnePastTheEnd=*/false, /*IsNull=*/false);
   }
 
   // Build the lvalue base from the block.
