@@ -435,6 +435,7 @@ ExprResult Parser::createEmbedExpr() {
   ExprResult Res;
   ASTContext &Context = Actions.getASTContext();
   SourceLocation StartLoc = ConsumeAnnotationToken();
+
   if (Data->BinaryData.size() == 1) {
     Res = IntegerLiteral::Create(
         Context, llvm::APInt(CHAR_BIT, (unsigned char)Data->BinaryData.back()),
@@ -451,7 +452,7 @@ ExprResult Parser::createEmbedExpr() {
 
     StringLiteral *BinaryDataArg = CreateStringLiteralFromStringRef(
         Data->BinaryData, Context.UnsignedCharTy);
-    Res = Actions.ActOnEmbedExpr(StartLoc, BinaryDataArg);
+    Res = Actions.ActOnEmbedExpr(StartLoc, BinaryDataArg, Data->FileName);
   }
   return Res;
 }
