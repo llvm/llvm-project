@@ -2098,7 +2098,7 @@ multiclass F_ATOMIC_2_AS<RegTyInfo t, SDPatternOperator frag, string op_str, lis
   defvar frag_pat = (frag node:$a, node:$b);
   defm _G : F_ATOMIC_2<t, "", ".global", op_str, ATOMIC_GLOBAL_CHK<frag_pat>, preds>;
   defm _S : F_ATOMIC_2<t, "", ".shared", op_str, ATOMIC_SHARED_CHK<frag_pat>, preds>;
-  defm _S_C : F_ATOMIC_2<t, "", ".shared::cluster", op_str, ATOMIC_SHARED_CLUSTER_CHK<frag_pat>, !listconcat([hasSM<80>], preds)>;
+  defm _S_C : F_ATOMIC_2<t, "", ".shared::cluster", op_str, ATOMIC_SHARED_CLUSTER_CHK<frag_pat>, !listconcat([hasClusters], preds)>;
   defm _GEN : F_ATOMIC_2<t, "", "", op_str, ATOMIC_GENERIC_CHK<frag_pat>, preds>;
 }
 
@@ -2106,7 +2106,7 @@ multiclass F_ATOMIC_3_AS<RegTyInfo t, SDPatternOperator frag, string sem_str, st
   defvar frag_pat = (frag node:$a, node:$b, node:$c);
   defm _G : F_ATOMIC_3<t, sem_str, ".global", op_str, ATOMIC_GLOBAL_CHK<frag_pat>, preds>;
   defm _S : F_ATOMIC_3<t, sem_str, ".shared", op_str, ATOMIC_SHARED_CHK<frag_pat>, preds>;
-  defm _S_C : F_ATOMIC_3<t, sem_str, ".shared::cluster", op_str, ATOMIC_SHARED_CLUSTER_CHK<frag_pat>, !listconcat([hasSM<80>], preds)>;
+  defm _S_C : F_ATOMIC_3<t, sem_str, ".shared::cluster", op_str, ATOMIC_SHARED_CLUSTER_CHK<frag_pat>, !listconcat([hasClusters], preds)>;
   defm _GEN : F_ATOMIC_3<t, sem_str, "", op_str, ATOMIC_GENERIC_CHK<frag_pat>, preds>;
 }
 
@@ -2387,18 +2387,28 @@ def INT_PTX_LDG_G_v4i32_ELE : VLDG_G_ELE_V4<"u32", Int32Regs>;
 def INT_PTX_LDG_G_v4f32_ELE : VLDG_G_ELE_V4<"f32", Float32Regs>;
 
 
-multiclass NG_TO_G<string Str> {
+multiclass NG_TO_G<string Str, list<Predicate> Preds = []> {
    def "" : NVPTXInst<(outs Int32Regs:$result), (ins Int32Regs:$src),
-          "cvta." # Str # ".u32 \t$result, $src;", []>;
+          "cvta." # Str # ".u32 \t$result, $src;", []>, Requires<Preds>;
    def _64 : NVPTXInst<(outs Int64Regs:$result), (ins Int64Regs:$src),
-          "cvta." # Str # ".u64 \t$result, $src;", []>;
+          "cvta." # Str # ".u64 \t$result, $src;", []>, Requires<Preds>;
 }
 
-multiclass G_TO_NG<string Str> {
-   def "" : NVPTXInst<(outs Int32Regs:$result), (ins Int32Regs:$src),
-          "cvta.to." # Str # ".u32 \t$result, $src;", []>;
+multiclass NG_TO_G_64<string Str, list<Predicate> Preds = []> {
    def _64 : NVPTXInst<(outs Int64Regs:$result), (ins Int64Regs:$src),
-          "cvta.to." # Str # ".u64 \t$result, $src;", []>;
+          "cvta." # Str # ".u64 \t$result, $src;", []>, Requires<Preds>;
+}
+
+multiclass G_TO_NG<string Str, list<Predicate> Preds = []> {
+   def "" : NVPTXInst<(outs Int32Regs:$result), (ins Int32Regs:$src),
+          "cvta.to." # Str # ".u32 \t$result, $src;", []>, Requires<Preds>;
+   def _64 : NVPTXInst<(outs Int64Regs:$result), (ins Int64Regs:$src),
+          "cvta.to." # Str # ".u64 \t$result, $src;", []>, Requires<Preds>;
+}
+
+multiclass G_TO_NG_64<string Str, list<Predicate> Preds = []> {
+   def _64 : NVPTXInst<(outs Int64Regs:$result), (ins Int64Regs:$src),
+          "cvta.to." # Str # ".u64 \t$result, $src;", []>, Requires<Preds>;
 }
 
 foreach space = ["local", "shared", "global", "const", "param"] in {

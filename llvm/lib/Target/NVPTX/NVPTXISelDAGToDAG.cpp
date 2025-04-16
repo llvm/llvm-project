@@ -983,8 +983,10 @@ void NVPTXDAGToDAGISel::SelectAddrSpaceCast(SDNode *N) {
       Opc = TM.is64Bit() ? NVPTX::cvta_shared_64 : NVPTX::cvta_shared;
       break;
     case ADDRESS_SPACE_SHARED_CLUSTER:
-      Opc = TM.is64Bit() ? NVPTX::cvta_shared_cluster_64
-                         : NVPTX::cvta_shared_cluster;
+      if (!TM.is64Bit())
+        report_fatal_error(
+            "Shared cluster address space is only supported in 64-bit mode");
+      Opc = NVPTX::cvta_shared_cluster_64;
       break;
     case ADDRESS_SPACE_CONST:
       Opc = TM.is64Bit() ? NVPTX::cvta_const_64 : NVPTX::cvta_const;
@@ -1012,8 +1014,10 @@ void NVPTXDAGToDAGISel::SelectAddrSpaceCast(SDNode *N) {
       Opc = TM.is64Bit() ? NVPTX::cvta_to_shared_64 : NVPTX::cvta_to_shared;
       break;
     case ADDRESS_SPACE_SHARED_CLUSTER:
-      Opc = TM.is64Bit() ? NVPTX::cvta_to_shared_cluster_64
-                         : NVPTX::cvta_to_shared_cluster;
+      if (!TM.is64Bit())
+        report_fatal_error(
+            "Shared cluster address space is only supported in 64-bit mode");
+      Opc = NVPTX::cvta_to_shared_cluster_64;
       break;
     case ADDRESS_SPACE_CONST:
       Opc = TM.is64Bit() ? NVPTX::cvta_to_const_64 : NVPTX::cvta_to_const;

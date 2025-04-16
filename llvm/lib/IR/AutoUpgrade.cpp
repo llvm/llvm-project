@@ -4774,8 +4774,6 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
         Builder.CreateCall(NewFn, {CI->getArgOperand(0), CI->getArgOperand(1)});
     Value *Res = NewCall;
     Res = Builder.CreateAddrSpaceCast(
-        Res, Builder.getPtrTy(NVPTXAS::ADDRESS_SPACE_GENERIC));
-    Res = Builder.CreateAddrSpaceCast(
         Res, Builder.getPtrTy(NVPTXAS::ADDRESS_SPACE_SHARED));
     NewCall->takeName(CI);
     CI->replaceAllUsesWith(Res);
@@ -4792,10 +4790,8 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
   case Intrinsic::nvvm_cp_async_bulk_tensor_g2s_tile_3d:
   case Intrinsic::nvvm_cp_async_bulk_tensor_g2s_tile_4d:
   case Intrinsic::nvvm_cp_async_bulk_tensor_g2s_tile_5d: {
-
+    // Create a new call with the correct address space.
     SmallVector<Value *, 4> Args(CI->args());
-    Args[0] = Builder.CreateAddrSpaceCast(
-        Args[0], Builder.getPtrTy(NVPTXAS::ADDRESS_SPACE_GENERIC));
     Args[0] = Builder.CreateAddrSpaceCast(
         Args[0], Builder.getPtrTy(NVPTXAS::ADDRESS_SPACE_SHARED_CLUSTER));
 

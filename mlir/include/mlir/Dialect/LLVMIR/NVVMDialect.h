@@ -45,7 +45,7 @@ enum NVVMMemorySpace {
   /// variants from sm100 onwards.
   kTensorMemorySpace = 6,
   /// Distributed shared memory space identifier.
-  /// Distributed shared memory is available only in sm80+.
+  /// Distributed shared memory is available only in sm90+.
   kSharedClusterMemorySpace = 7,
 };
 
