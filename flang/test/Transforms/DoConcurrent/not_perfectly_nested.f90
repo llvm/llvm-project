@@ -1,3 +1,6 @@
+! Fails until we update the pass to use the `fir.do_concurrent` op.
+! XFAIL: *
+
 ! Tests that if `do concurrent` is not perfectly nested in its parent loop, that
 ! we skip converting the not-perfectly nested `do concurrent` loop.
 

@@ -71,7 +71,6 @@ unittest("SupportTests") {
     "Path.cpp",
     "PerThreadBumpPtrAllocatorTest.cpp",
     "ProcessTest.cpp",
-    "ProgramStackTest.cpp",
     "ProgramTest.cpp",
     "RISCVAttributeParserTest.cpp",
     "RecyclerTest.cpp",

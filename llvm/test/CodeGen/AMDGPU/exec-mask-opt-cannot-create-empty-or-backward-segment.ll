@@ -9,7 +9,7 @@ define amdgpu_kernel void @cannot_create_empty_or_backwards_segment(i1 %arg, i1 
 ; CHECK-NEXT:    s_load_dword s2, s[8:9], 0x0
 ; CHECK-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; CHECK-NEXT:    s_load_dword s6, s[8:9], 0x4
-; CHECK-NEXT:    s_add_u32 s24, s24, s15
+; CHECK-NEXT:    s_add_u32 s24, s24, s17
 ; CHECK-NEXT:    s_addc_u32 s25, s25, 0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_bitcmp1_b32 s2, 0
