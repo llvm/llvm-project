@@ -2152,7 +2152,8 @@ amd_comgr_populate_name_expression_map(amd_comgr_data_t Data, size_t *Count) {
 amd_comgr_status_t AMD_COMGR_API
 // NOLINTNEXTLINE(readability-identifier-naming)
 amd_comgr_map_name_expression_to_symbol_name(amd_comgr_data_t Data,
-                                             size_t *Size, char *NameExpression,
+                                             size_t *Size,
+                                             const char *NameExpression,
                                              char *SymbolName) {
   DataObject *DataP = DataObject::convert(Data);
   if (!DataP || !DataP->Data ||

@@ -2525,7 +2525,7 @@ amd_comgr_status_t AMD_COMGR_API
 amd_comgr_map_name_expression_to_symbol_name(
     amd_comgr_data_t data,
     size_t *size,
-    char *name_expression,
+    const char *name_expression,
     char *symbol_name) AMD_COMGR_VERSION_2_6;
 
 /**
