@@ -149,7 +149,9 @@ class ScopedInErrorReport {
     // 2. Subsequent error reporting avoids nested lock acquisition patterns.
     // 3. Eliminates the lock order inversion risk between libdl and ASan's
     //    thread registry.
+#if !SANITIZER_SYMBOLIZER_MARKUP
     Symbolizer::GetOrInit()->GetRefreshedListOfModules();
+#endif
 
     // Make sure the registry and sanitizer report mutexes are locked while
     // we're printing an error report.
