@@ -2367,6 +2367,87 @@ define <4 x double> @unpckh_v4f64(<4 x double> %x, <4 x double> %y) {
   ret <4 x double> %unpckh
 }
 
+define <4 x double> @blend_broadcasts_v4f64(ptr %p0, ptr %p1)  {
+; ALL-LABEL: blend_broadcasts_v4f64:
+; ALL:       # %bb.0:
+; ALL-NEXT:    vbroadcastsd (%rdi), %ymm0
+; ALL-NEXT:    vbroadcastsd (%rsi), %ymm1
+; ALL-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1],ymm1[2,3,4,5],ymm0[6,7]
+; ALL-NEXT:    retq
+  %ld0 = load <4 x double>, ptr %p0, align 32
+  %ld1 = load <4 x double>, ptr %p1, align 32
+  %bcst0 = shufflevector <4 x double> %ld0, <4 x double> undef, <4 x i32> zeroinitializer
+  %bcst1 = shufflevector <4 x double> %ld1, <4 x double> undef, <4 x i32> zeroinitializer
+  %blend = shufflevector <4 x double> %bcst0, <4 x double> %bcst1, <4 x i32> <i32 0, i32 5, i32 6, i32 3>
+  ret <4 x double> %blend
+}
+
+define <4 x double> @blend_broadcasts_v2f64(ptr %p0, ptr %p1) {
+; AVX1OR2-LABEL: blend_broadcasts_v2f64:
+; AVX1OR2:       # %bb.0:
+; AVX1OR2-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
+; AVX1OR2-NEXT:    vbroadcastf128 {{.*#+}} ymm1 = mem[0,1,0,1]
+; AVX1OR2-NEXT:    vblendps {{.*#+}} ymm2 = ymm1[0,1,2,3],ymm0[4,5,6,7]
+; AVX1OR2-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm1[4,5,6,7]
+; AVX1OR2-NEXT:    vunpcklpd {{.*#+}} ymm0 = ymm0[0],ymm2[0],ymm0[2],ymm2[2]
+; AVX1OR2-NEXT:    retq
+;
+; AVX512VL-LABEL: blend_broadcasts_v2f64:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    vbroadcastf128 {{.*#+}} ymm1 = mem[0,1,0,1]
+; AVX512VL-NEXT:    vbroadcastf128 {{.*#+}} ymm2 = mem[0,1,0,1]
+; AVX512VL-NEXT:    vpmovsxbq {{.*#+}} ymm0 = [0,4,6,2]
+; AVX512VL-NEXT:    vpermi2pd %ymm1, %ymm2, %ymm0
+; AVX512VL-NEXT:    retq
+  %ld0 = load <2 x double>, ptr %p0, align 32
+  %ld1 = load <2 x double>, ptr %p1, align 32
+  %blend = shufflevector <2 x double> %ld0, <2 x double> %ld1, <4 x i32> <i32 0, i32 2, i32 2, i32 0>
+  ret <4 x double> %blend
+}
+
+define <4 x double> @blend_broadcasts_v1f64(ptr %p0, ptr %p1) {
+; ALL-LABEL: blend_broadcasts_v1f64:
+; ALL:       # %bb.0:
+; ALL-NEXT:    vbroadcastsd (%rsi), %ymm0
+; ALL-NEXT:    vbroadcastsd (%rdi), %ymm1
+; ALL-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0,1],ymm0[2,3,4,5],ymm1[6,7]
+; ALL-NEXT:    retq
+  %ld0 = load <1 x double>, ptr %p0, align 32
+  %ld1 = load <1 x double>, ptr %p1, align 32
+  %blend = shufflevector <1 x double> %ld0, <1 x double> %ld1, <4 x i32> <i32 0, i32 1, i32 1, i32 0>
+  ret <4 x double> %blend
+}
+
+define <4 x double> @blend_broadcasts_v1f64_4x(ptr %p0, ptr %p1) {
+; ALL-LABEL: blend_broadcasts_v1f64_4x:
+; ALL:       # %bb.0:
+; ALL-NEXT:    vbroadcastsd (%rsi), %ymm0
+; ALL-NEXT:    vbroadcastsd (%rdi), %ymm1
+; ALL-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0,1],ymm0[2,3,4,5],ymm1[6,7]
+; ALL-NEXT:    retq
+  %ld0 = load <1 x double>, ptr %p0, align 32
+  %ld1 = load <1 x double>, ptr %p1, align 32
+  %bcst0 = shufflevector <1 x double> %ld0, <1 x double> undef, <4 x i32> zeroinitializer
+  %bcst1 = shufflevector <1 x double> %ld1, <1 x double> undef, <4 x i32> zeroinitializer
+  %blend = shufflevector <4 x double> %bcst0, <4 x double> %bcst1, <4 x i32> <i32 0, i32 5, i32 6, i32 3>
+  ret <4 x double> %blend
+}
+
+define <4 x double> @blend_broadcasts_v1f64_2x(ptr %p0, ptr %p1) {
+; ALL-LABEL: blend_broadcasts_v1f64_2x:
+; ALL:       # %bb.0:
+; ALL-NEXT:    vbroadcastsd (%rsi), %ymm0
+; ALL-NEXT:    vbroadcastsd (%rdi), %ymm1
+; ALL-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0,1],ymm0[2,3,4,5],ymm1[6,7]
+; ALL-NEXT:    retq
+  %ld0 = load <1 x double>, ptr %p0, align 32
+  %ld1 = load <1 x double>, ptr %p1, align 32
+  %bcst0 = shufflevector <1 x double> %ld0, <1 x double> undef, <2 x i32> zeroinitializer
+  %bcst1 = shufflevector <1 x double> %ld1, <1 x double> undef, <2 x i32> zeroinitializer
+  %blend = shufflevector <2 x double> %bcst0, <2 x double> %bcst1, <4 x i32> <i32 0, i32 2, i32 3, i32 1>
+  ret <4 x double> %blend
+}
+
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"ProfileSummary", !1}
 !1 = !{!2, !3, !4, !5, !6, !7, !8, !9}

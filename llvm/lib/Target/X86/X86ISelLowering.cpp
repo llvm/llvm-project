@@ -8783,6 +8783,33 @@ static SDValue lowerBuildVectorToBitOp(BuildVectorSDNode *Op, const SDLoc &DL,
   return LowerShift(Res, Subtarget, DAG);
 }
 
+/// Attempt to lower a BUILD_VECTOR of scalar values to a shuffle of splats
+/// representing a blend.
+static SDValue lowerBuildVectorAsBlend(BuildVectorSDNode *BVOp, SDLoc const &DL,
+                                       X86Subtarget const &Subtarget,
+                                       SelectionDAG &DAG) {
+  if (!Subtarget.hasAVX())
+    return {};
+
+  auto VT = BVOp->getSimpleValueType(0u);
+
+  if (VT == MVT::v4f64 && BVOp->getNumOperands() == 4u) {
+    SDValue Op0 = BVOp->getOperand(0u);
+    SDValue Op1 = BVOp->getOperand(1u);
+    SDValue Op2 = BVOp->getOperand(2u);
+    SDValue Op3 = BVOp->getOperand(3u);
+
+    // Match X,Y,Y,X inputs.
+    if (Op0 == Op3 && Op1 == Op2 && Op0 != Op1) {
+      auto NewOp0 = DAG.getSplatBuildVector(VT, DL, Op0);
+      auto NewOp1 = DAG.getSplatBuildVector(VT, DL, Op1);
+      return DAG.getVectorShuffle(VT, DL, NewOp0, NewOp1, {0, 5, 6, 3});
+    }
+  }
+
+  return {};
+}
+
 /// Create a vector constant without a load. SSE/AVX provide the bare minimum
 /// functionality to do this, so it's all zeros, all ones, or some derivation
 /// that is cheap to calculate.
@@ -9133,39 +9160,6 @@ X86TargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const {
   MVT OpEltVT = Op.getOperand(0).getSimpleValueType();
   unsigned NumElems = Op.getNumOperands();
 
-  // Match BUILD_VECTOR of scalars that we can lower to X86ISD::BLENDI via
-  // shuffles.
-  //
-  //   v4f64 = BUILD_VECTOR X,Y,Y,X
-  //   >>>
-  //       t1: v4f64 = BUILD_VECTOR X,u,u,u
-  //     t3: v4f64 = vector_shuffle<0,u,u,0> t1, u
-  //       t2: v4f64 = BUILD_VECTOR Y,u,u,u
-  //     t4: v4f64 = vector_shuffle<u,0,0,u> t2, u
-  //   v4f64 = vector_shuffle<0,5,6,3> t3, t4
-  //
-  if (Subtarget.hasAVX() && VT == MVT::v4f64 && Op->getNumOperands() == 4u) {
-    auto Op0 = Op->getOperand(0u);
-    auto Op1 = Op->getOperand(1u);
-    auto Op2 = Op->getOperand(2u);
-    auto Op3 = Op->getOperand(3u);
-
-    // Match X,Y,Y,X inputs.
-    if (Op0 == Op3 && Op1 == Op2 && Op0 != Op1) {
-      auto PsnVal = DAG.getUNDEF(MVT::f64);
-
-      auto NewOp0 = DAG.getBuildVector(VT, dl, {Op0, PsnVal, PsnVal, PsnVal});
-      NewOp0 = DAG.getVectorShuffle(VT, dl, NewOp0, DAG.getUNDEF(VT),
-                                    {0, -1, -1, 0});
-
-      auto NewOp1 = DAG.getBuildVector(VT, dl, {Op1, PsnVal, PsnVal, PsnVal});
-      NewOp1 = DAG.getVectorShuffle(VT, dl, NewOp1, DAG.getUNDEF(VT),
-                                    {-1, 0, 0, -1});
-
-      return DAG.getVectorShuffle(VT, dl, NewOp0, NewOp1, {0, 5, 6, 3});
-    }
-  }
-
   // Generate vectors for predicate vectors.
   if (VT.getVectorElementType() == MVT::i1 && Subtarget.hasAVX512())
     return LowerBUILD_VECTORvXi1(Op, dl, DAG, Subtarget);
@@ -9278,6 +9272,8 @@ X86TargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const {
     return Broadcast;
   if (SDValue BitOp = lowerBuildVectorToBitOp(BV, dl, Subtarget, DAG))
     return BitOp;
+  if (SDValue Blend = lowerBuildVectorAsBlend(BV, dl, Subtarget, DAG))
+    return Blend;
 
   unsigned NumZero = ZeroMask.popcount();
   unsigned NumNonZero = NonZeroMask.popcount();
