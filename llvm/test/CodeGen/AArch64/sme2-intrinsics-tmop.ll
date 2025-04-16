@@ -119,7 +119,7 @@ define void @ftmopa_za16_f16(<vscale x 8 x half> %zn1, <vscale x 8 x half> %zn2,
 ; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    ftmopa za0.h, { z0.h, z1.h }, z2.h, z28[0]
 ; CHECK-NEXT:    ret
-  call void @llvm.aarch64.sme.tmopa.za16.nxv8f16(i32 0, <vscale x 8 x half> %zn1, <vscale x 8 x half> %zn2, <vscale x 8 x half> %zm, <vscale x 16 x i8> %zk, i32 0)
+  call void @llvm.aarch64.sme.ftmopa.za16.nxv8f16(i32 0, <vscale x 8 x half> %zn1, <vscale x 8 x half> %zn2, <vscale x 8 x half> %zm, <vscale x 16 x i8> %zk, i32 0)
   ret void
 }
 
@@ -131,7 +131,7 @@ define void @bftmopa_za16_bf16(<vscale x 8 x bfloat> %zn1, <vscale x 8 x bfloat>
 ; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    bftmopa za0.h, { z0.h, z1.h }, z2.h, z28[0]
 ; CHECK-NEXT:    ret
-  call void @llvm.aarch64.sme.tmopa.za16.nxv8bf16(i32 0, <vscale x 8 x bfloat> %zn1, <vscale x 8 x bfloat> %zn2, <vscale x 8 x bfloat> %zm, <vscale x 16 x i8> %zk, i32 0)
+  call void @llvm.aarch64.sme.ftmopa.za16.nxv8bf16(i32 0, <vscale x 8 x bfloat> %zn1, <vscale x 8 x bfloat> %zn2, <vscale x 8 x bfloat> %zm, <vscale x 16 x i8> %zk, i32 0)
   ret void
 }
 
@@ -143,7 +143,7 @@ define void @ftmopa_za16_f8(<vscale x 16 x i8> %zn1, <vscale x 16 x i8> %zn2, <v
 ; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    ftmopa za0.h, { z0.b, z1.b }, z2.b, z28[0]
 ; CHECK-NEXT:    ret
-  call void @llvm.aarch64.sme.tmopa.za16.nxv16if8(i32 0, <vscale x 16 x i8> %zn1, <vscale x 16 x i8> %zn2, <vscale x 16 x i8> %zm, <vscale x 16 x i8> %zk, i32 0)
+  call void @llvm.aarch64.sme.ftmopa.za16.nxv16i8(i32 0, <vscale x 16 x i8> %zn1, <vscale x 16 x i8> %zn2, <vscale x 16 x i8> %zm, <vscale x 16 x i8> %zk, i32 0)
   ret void
 }
 
@@ -155,7 +155,7 @@ define void @ftmopa_za32_f8(<vscale x 16 x i8> %zn1, <vscale x 16 x i8> %zn2, <v
 ; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    ftmopa za0.s, { z0.b, z1.b }, z2.b, z28[0]
 ; CHECK-NEXT:    ret
-  call void @llvm.aarch64.sme.tmopa.za32.nxv16if8(i32 0, <vscale x 16 x i8> %zn1, <vscale x 16 x i8> %zn2, <vscale x 16 x i8> %zm, <vscale x 16 x i8> %zk, i32 0)
+  call void @llvm.aarch64.sme.tmopa.za32.nxv16i8(i32 0, <vscale x 16 x i8> %zn1, <vscale x 16 x i8> %zn2, <vscale x 16 x i8> %zm, <vscale x 16 x i8> %zk, i32 0)
   ret void
 }
 
