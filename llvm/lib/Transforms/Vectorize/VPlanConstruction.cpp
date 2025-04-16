@@ -24,48 +24,40 @@ using namespace llvm;
 /// Checks if \p HeaderVPB is a loop header block in the plain CFG; that is, it
 /// has exactly 2 predecessors (preheader and latch), where the block
 /// dominates the latch and the preheader dominates the block. If it is a
-/// header block, returns a pair with the corresponding preheader and latch
-/// blocks. Otherwise return std::nullopt.
-static std::optional<std::pair<VPBasicBlock *, VPBasicBlock *>>
-getPreheaderAndLatch(VPBlockBase *HeaderVPB, const VPDominatorTree &VPDT) {
+/// header block return true, making sure the preheader appears first and
+/// the latch second. Otherwise return false.
+static bool canonicalHeader(VPBlockBase *HeaderVPB,
+                            const VPDominatorTree &VPDT) {
   ArrayRef<VPBlockBase *> Preds = HeaderVPB->getPredecessors();
   if (Preds.size() != 2)
-    return std::nullopt;
+    return false;
 
-  auto *PreheaderVPBB = cast<VPBasicBlock>(Preds[0]);
-  auto *LatchVPBB = cast<VPBasicBlock>(Preds[1]);
+  auto *PreheaderVPBB = Preds[0];
+  auto *LatchVPBB = Preds[1];
   if (VPDT.dominates(PreheaderVPBB, HeaderVPB) &&
       VPDT.dominates(HeaderVPB, LatchVPBB))
-    return {std::make_pair(PreheaderVPBB, LatchVPBB)};
+    return true;
 
   std::swap(PreheaderVPBB, LatchVPBB);
-  if (VPDT.dominates(PreheaderVPBB, HeaderVPB) &&
-      VPDT.dominates(HeaderVPB, LatchVPBB))
-    return {std::make_pair(PreheaderVPBB, LatchVPBB)};
 
-  return std::nullopt;
+  if (VPDT.dominates(PreheaderVPBB, HeaderVPB) &&
+      VPDT.dominates(HeaderVPB, LatchVPBB)) {
+    // Canonicalize predecessors of header so that preheader is first and latch
+    // second.
+    HeaderVPB->swapPredecessors();
+    for (VPRecipeBase &R : cast<VPBasicBlock>(HeaderVPB)->phis())
+      R.swapOperands();
+    return true;
+  }
+
+  return false;
 }
 
-/// Try to create a new VPRegionBlock if there is a loop starting at \p
-/// HeaderVPB.
-static void tryToCreateLoopRegion(VPlan &Plan, VPBlockBase *HeaderVPB,
-                                  VPDominatorTree &VPDT) {
-  auto Res = getPreheaderAndLatch(HeaderVPB, VPDT);
-  if (!Res)
-    return;
+/// Create a new VPRegionBlock for the loop starting at \p HeaderVPB.
+static void createLoopRegion(VPlan &Plan, VPBlockBase *HeaderVPB) {
+  auto *PreheaderVPBB = HeaderVPB->getPredecessors()[0];
+  auto *LatchVPBB = HeaderVPB->getPredecessors()[1];
 
-  const auto &[PreheaderVPBB, LatchVPBB] = *Res;
-
-  // Swap the operands of header phis if needed. After creating the region, the
-  // incoming value from the preheader must be the first operand and the one
-  // from the latch must be the second operand.
-  if (HeaderVPB->getPredecessors()[0] != PreheaderVPBB) {
-    for (VPRecipeBase &R : cast<VPBasicBlock>(HeaderVPB)->phis()) {
-      VPValue *Inc0 = R.getOperand(0);
-      R.setOperand(0, R.getOperand(1));
-      R.setOperand(1, Inc0);
-    }
-  }
   VPBlockUtils::disconnectBlocks(PreheaderVPBB, HeaderVPB);
   VPBlockUtils::disconnectBlocks(LatchVPBB, HeaderVPB);
   VPBlockBase *Succ = LatchVPBB->getSingleSuccessor();
@@ -94,7 +86,8 @@ void VPlanTransforms::createLoopRegions(VPlan &Plan, Type *InductionTy,
   VPDominatorTree VPDT;
   VPDT.recalculate(Plan);
   for (VPBlockBase *HeaderVPB : vp_depth_first_shallow(Plan.getEntry()))
-    tryToCreateLoopRegion(Plan, HeaderVPB, VPDT);
+    if (canonicalHeader(HeaderVPB, VPDT))
+      createLoopRegion(Plan, HeaderVPB);
 
   VPRegionBlock *TopRegion = Plan.getVectorLoopRegion();
   auto *OrigExiting = TopRegion->getExiting();

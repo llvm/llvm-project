@@ -98,7 +98,8 @@ void PlainCFGBuilder::fixHeaderPhis() {
     auto *VPPhi = cast<VPWidenPHIRecipe>(VPVal);
     assert(VPPhi->getNumOperands() == 0 &&
            "Expected VPInstruction with no operands.");
-    assert(isHeaderBB(Phi->getParent(), LI->getLoopFor(Phi->getParent())));
+    assert(isHeaderBB(Phi->getParent(), LI->getLoopFor(Phi->getParent())) &&
+           "Expected Phi in header block.");
     assert(Phi->getNumOperands() == 2 &&
            "header phi must have exactly 2 operands");
     for (BasicBlock *Pred : predecessors(Phi->getParent()))
