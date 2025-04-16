@@ -224,20 +224,14 @@ class SemaOpenACCClauseVisitor {
     llvm_unreachable("didn't return from switch above?");
   }
 
-  // Routine has a pretty complicated set of rules for how device_type and the
-  // gang, worker, vector, and seq clauses work.  So diagnose some of it here.
-  bool CheckValidRoutineGangWorkerVectorSeqNewClause(
-      SemaOpenACC::OpenACCParsedClause &Clause) {
+  // Helper for the 'routine' checks during 'new' clause addition. Precondition
+  // is that we already know the new clause is one of the prohbiited ones.
+  template <typename Pred>
+  bool
+  CheckValidRoutineNewClauseHelper(Pred HasPredicate,
+                                   SemaOpenACC::OpenACCParsedClause &Clause) {
     if (Clause.getDirectiveKind() != OpenACCDirectiveKind::Routine)
       return false;
-
-    if (Clause.getClauseKind() != OpenACCClauseKind::Gang &&
-        Clause.getClauseKind() != OpenACCClauseKind::Vector &&
-        Clause.getClauseKind() != OpenACCClauseKind::Worker &&
-        Clause.getClauseKind() != OpenACCClauseKind::Seq)
-      return false;
-    auto ProhibitedPred = llvm::IsaPred<OpenACCGangClause, OpenACCWorkerClause,
-                                        OpenACCVectorClause, OpenACCSeqClause>;
 
     auto *FirstDeviceType =
         llvm::find_if(ExistingClauses, llvm::IsaPred<OpenACCDeviceTypeClause>);
@@ -246,7 +240,7 @@ class SemaOpenACCClauseVisitor {
       // If there isn't a device type yet, ANY duplicate is wrong.
 
       auto *ExistingProhibitedClause =
-          llvm::find_if(ExistingClauses, ProhibitedPred);
+          llvm::find_if(ExistingClauses, HasPredicate);
 
       if (ExistingProhibitedClause == ExistingClauses.end())
         return false;
@@ -265,8 +259,7 @@ class SemaOpenACCClauseVisitor {
     // between this and the previous 'device_type'.
 
     auto *BeforeDeviceType =
-        std::find_if(ExistingClauses.begin(), FirstDeviceType, ProhibitedPred);
-
+        std::find_if(ExistingClauses.begin(), FirstDeviceType, HasPredicate);
     // If there is one before the device_type (and we know we are after a
     // device_type), than this is ill-formed.
     if (BeforeDeviceType != FirstDeviceType) {
@@ -294,7 +287,7 @@ class SemaOpenACCClauseVisitor {
     auto *LastDeviceType = LastDeviceTypeItr.base() - 1;
 
     auto *ExistingProhibitedSinceLastDevice =
-        std::find_if(LastDeviceType, ExistingClauses.end(), ProhibitedPred);
+        std::find_if(LastDeviceType, ExistingClauses.end(), HasPredicate);
 
     // No prohibited ones since the last device-type.
     if (ExistingProhibitedSinceLastDevice == ExistingClauses.end())
@@ -309,6 +302,35 @@ class SemaOpenACCClauseVisitor {
     SemaRef.Diag((*LastDeviceType)->getBeginLoc(),
                  diag::note_acc_previous_clause_here);
     return true;
+  }
+
+  // Routine has a pretty complicated set of rules for how device_type and the
+  // gang, worker, vector, and seq clauses work.  So diagnose some of it here.
+  bool CheckValidRoutineGangWorkerVectorSeqNewClause(
+      SemaOpenACC::OpenACCParsedClause &Clause) {
+
+    if (Clause.getClauseKind() != OpenACCClauseKind::Gang &&
+        Clause.getClauseKind() != OpenACCClauseKind::Vector &&
+        Clause.getClauseKind() != OpenACCClauseKind::Worker &&
+        Clause.getClauseKind() != OpenACCClauseKind::Seq)
+      return false;
+    auto ProhibitedPred = llvm::IsaPred<OpenACCGangClause, OpenACCWorkerClause,
+                                        OpenACCVectorClause, OpenACCSeqClause>;
+
+    return CheckValidRoutineNewClauseHelper(ProhibitedPred, Clause);
+  }
+
+  // Bind should have similar rules on a routine as gang/worker/vector/seq,
+  // except there is no 'must have 1' rule, so we can get all the checking done
+  // here.
+  bool
+  CheckValidRoutineBindNewClause(SemaOpenACC::OpenACCParsedClause &Clause) {
+
+    if (Clause.getClauseKind() != OpenACCClauseKind::Bind)
+      return false;
+
+    auto HasBindPred = llvm::IsaPred<OpenACCBindClause>;
+    return CheckValidRoutineNewClauseHelper(HasBindPred, Clause);
   }
 
   // For 'tile' and 'collapse', only allow 1 per 'device_type'.
@@ -352,7 +374,8 @@ public:
                                          Clause.getClauseKind(),
                                          Clause.getBeginLoc(), ExistingClauses))
       return nullptr;
-    if (CheckValidRoutineGangWorkerVectorSeqNewClause(Clause))
+    if (CheckValidRoutineGangWorkerVectorSeqNewClause(Clause) ||
+        CheckValidRoutineBindNewClause(Clause))
       return nullptr;
 
     switch (Clause.getClauseKind()) {

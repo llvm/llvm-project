@@ -7,11 +7,11 @@ void Func2();
 #pragma acc routine(Func) vector nohost
 #pragma acc routine(Func) nohost seq
 #pragma acc routine(Func) gang
-// expected-error@+2{{OpenACC 'bind' clause cannot appear more than once on a 'routine' directive}}
+// expected-error@+2{{OpenACC clause 'bind' may not appear on the same construct as a 'bind' clause on a 'routine' construct}}
 // expected-note@+1{{previous clause is here}}
 #pragma acc routine(Func) gang bind(a) bind(a)
 
-// expected-error@+2{{OpenACC 'bind' clause cannot appear more than once on a 'routine' directive}}
+// expected-error@+2{{OpenACC clause 'bind' may not appear on the same construct as a 'bind' clause on a 'routine' construct}}
 // expected-note@+1{{previous clause is here}}
 #pragma acc routine gang bind(a) bind(a)
 void DupeImplName();
@@ -732,4 +732,43 @@ namespace FigureDupesAllowedAroundDeviceType {
 #pragma acc routine device_type(*) seq device_type(nvidia) seq
   void Func113();
 
+}
+
+namespace BindDupes {
+  // expected-error@+2{{OpenACC clause 'bind' may not appear on the same construct as a 'bind' clause on a 'routine' construct}}
+  // expected-note@+1{{previous clause is here}}
+#pragma acc routine seq bind(asdf) bind(asdf)
+  void Func1();
+  // expected-error@+2{{OpenACC clause 'bind' may not appear on the same construct as a 'bind' clause on a 'routine' construct}}
+  // expected-note@+1{{previous clause is here}}
+#pragma acc routine seq bind(asdf) bind(asdf) device_type(*)
+  void Func2();
+  // expected-error@+3{{OpenACC clause 'bind' after 'device_type' clause on a 'routine' conflicts with the 'bind' clause before the first 'device_type'}}
+  // expected-note@+2{{previous clause is here}}
+  // expected-note@+1{{previous clause is here}}
+#pragma acc routine seq bind(asdf) device_type(*) bind(asdf)
+  void Func3();
+  // expected-error@+3{{OpenACC clause 'bind' after 'device_type' clause on a 'routine' conflicts with the 'bind' clause before the first 'device_type'}}
+  // expected-note@+2{{previous clause is here}}
+  // expected-note@+1{{previous clause is here}}
+#pragma acc routine seq bind(asdf) device_type(*) bind(asdf) device_type(*)
+  void Func4();
+  // expected-error@+3{{OpenACC clause 'bind' on a 'routine' directive conflicts with the 'bind' clause applying to the same 'device_type'}}
+  // expected-note@+2{{previous clause is here}}
+  // expected-note@+1{{previous clause is here}}
+#pragma acc routine seq device_type(*) bind(asdf) bind(asdf)
+  void Func5();
+  // expected-error@+3{{OpenACC clause 'bind' on a 'routine' directive conflicts with the 'bind' clause applying to the same 'device_type'}}
+  // expected-note@+2{{previous clause is here}}
+  // expected-note@+1{{previous clause is here}}
+#pragma acc routine seq device_type(*) bind(asdf) bind(asdf) device_type(*)
+  void Func6();
+  // expected-error@+3{{OpenACC clause 'bind' on a 'routine' directive conflicts with the 'bind' clause applying to the same 'device_type'}}
+  // expected-note@+2{{previous clause is here}}
+  // expected-note@+1{{previous clause is here}}
+#pragma acc routine seq device_type(*) bind(asdf) device_type(*) bind(asdf) bind(asdf)
+  void Func7();
+
+#pragma acc routine seq device_type(*) bind(asdf) device_type(*) bind(asdf)
+  void Func8();
 }
