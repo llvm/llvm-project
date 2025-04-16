@@ -925,7 +925,7 @@ static Value resolveDistributedTy(Value orig, T expected,
 /// during the layout assignment process. These are not needed after going to
 /// SIMT.
 static SmallVector<NamedAttribute>
-filterTemporaryLayoutAttributes(ArrayRef<NamedAttribute> attrs) {
+removeTemporaryLayoutAttributes(ArrayRef<NamedAttribute> attrs) {
   SmallVector<NamedAttribute> newAttrs;
   for (auto attr : attrs) {
     if (attr.getName().strref().contains(operandLayoutNamePrefix) ||
@@ -1185,7 +1185,7 @@ struct StoreNdDistribution final : public gpu::WarpDistributionPattern {
 
     rewriter.create<xegpu::StoreNdOp>(
         newWarpOp.getLoc(), TypeRange{}, newStoreOperands,
-        filterTemporaryLayoutAttributes(storeOp->getAttrs()));
+        removeTemporaryLayoutAttributes(storeOp->getAttrs()));
     rewriter.eraseOp(storeOp);
     return success();
   }
@@ -1269,7 +1269,7 @@ struct LoadNdDistribution final : public gpu::WarpDistributionPattern {
         newWarpOp.getLoc(), loadNdDistValueTyOrFailure.value(),
         resolveDistributedTy(newWarpOp->getResult(newRetIndices[0]),
                              distributedTensorDescTy, rewriter),
-        filterTemporaryLayoutAttributes(loadOp->getAttrs()));
+        removeTemporaryLayoutAttributes(loadOp->getAttrs()));
     Value distributedVal = newWarpOp.getResult(operandIdx);
     /// There can be a conflict between the vector type distributed by the
     /// warp op and (xegpu-specific) distributed type supported by the load
@@ -1392,7 +1392,7 @@ struct DpasDistribution final : public gpu::WarpDistributionPattern {
     }
     Value newDpasOp = rewriter.create<xegpu::DpasOp>(
         newWarpOp->getLoc(), distributedResultTy, newDpasOperands,
-        filterTemporaryLayoutAttributes(dpasOp->getAttrs()));
+        removeTemporaryLayoutAttributes(dpasOp->getAttrs()));
     Value disributedVal = newWarpOp.getResult(operandIdx);
     /// Resolve the output type.
     newDpasOp = resolveDistributedTy(
