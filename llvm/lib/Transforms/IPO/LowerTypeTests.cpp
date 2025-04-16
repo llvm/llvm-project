@@ -361,6 +361,9 @@ struct ScopedSaveAliaseesAndUsed {
     auto *GV = collectUsedGlobalVariables(M, Vec, CompilerUsed);
     if (!GV)
       return;
+    // There's no API to only remove certain array elements from
+    // llvm.used/llvm.compiler.used, so we remove all of them and add back only
+    // the non-functions.
     GV->eraseFromParent();
     auto NonFuncBegin =
         std::stable_partition(Vec.begin(), Vec.end(), [](GlobalValue *GV) {
