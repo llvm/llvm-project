@@ -12,6 +12,7 @@
 #include "lldb/Host/StreamFile.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Symbol/SymbolContext.h"
+#include "lldb/Target/Process.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Utility/AnsiTerminal.h"
 #include "lldb/Utility/StreamString.h"
@@ -27,6 +28,7 @@
 #define ANSI_CLEAR_LINE ESCAPE "[2K"
 #define ANSI_SET_SCROLL_ROWS ESCAPE "[0;%ur"
 #define ANSI_TO_START_OF_ROW ESCAPE "[%u;0f"
+#define ANSI_REVERSE_VIDEO ESCAPE "[7m"
 #define ANSI_UP_ROWS ESCAPE "[%dA"
 
 using namespace lldb;
@@ -74,6 +76,12 @@ void Statusline::Draw(std::string str) {
   locked_stream << ANSI_SAVE_CURSOR;
   locked_stream.Printf(ANSI_TO_START_OF_ROW,
                        static_cast<unsigned>(m_terminal_height));
+
+  // Use "reverse video" to make sure the statusline has a background. Only do
+  // this when colors are disabled, and rely on the statusline format otherwise.
+  if (!m_debugger.GetUseColor())
+    locked_stream << ANSI_REVERSE_VIDEO;
+
   locked_stream << str;
   locked_stream << ANSI_NORMAL;
   locked_stream << ANSI_RESTORE_CURSOR;
@@ -119,9 +127,7 @@ void Statusline::Redraw(bool update) {
     return;
   }
 
-  StreamString stream;
-  ExecutionContext exe_ctx =
-      m_debugger.GetCommandInterpreter().GetExecutionContext();
+  ExecutionContext exe_ctx = m_debugger.GetSelectedExecutionContext();
 
   // For colors and progress events, the format entity needs access to the
   // debugger, which requires a target in the execution context.
@@ -129,9 +135,17 @@ void Statusline::Redraw(bool update) {
     exe_ctx.SetTargetPtr(&m_debugger.GetSelectedOrDummyTarget());
 
   SymbolContext symbol_ctx;
-  if (auto frame_sp = exe_ctx.GetFrameSP())
-    symbol_ctx = frame_sp->GetSymbolContext(eSymbolContextEverything);
+  if (ProcessSP process_sp = exe_ctx.GetProcessSP()) {
+    // Check if the process is stopped, and if it is, make sure it remains
+    // stopped until we've computed the symbol context.
+    Process::StopLocker stop_locker;
+    if (stop_locker.TryLock(&process_sp->GetRunLock())) {
+      if (auto frame_sp = exe_ctx.GetFrameSP())
+        symbol_ctx = frame_sp->GetSymbolContext(eSymbolContextEverything);
+    }
+  }
 
+  StreamString stream;
   if (auto *format = m_debugger.GetStatuslineFormat())
     FormatEntity::Format(*format, stream, &symbol_ctx, &exe_ctx, nullptr,
                          nullptr, false, false);

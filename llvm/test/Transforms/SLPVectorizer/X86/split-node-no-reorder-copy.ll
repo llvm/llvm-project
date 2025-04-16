@@ -15,10 +15,10 @@ define i1 @test(ptr %0, ptr %1, <2 x float> %2, <2 x float> %3, <2 x float> %4) 
 ; CHECK-NEXT:    [[TMP14:%.*]] = shufflevector <2 x float> [[TMP2]], <2 x float> [[TMP3]], <8 x i32> <i32 0, i32 0, i32 2, i32 0, i32 0, i32 0, i32 0, i32 poison>
 ; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <8 x float> [[TMP14]], float [[TMP9]], i32 7
 ; CHECK-NEXT:    [[TMP16:%.*]] = shufflevector <8 x float> [[TMP13]], <8 x float> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP17:%.*]] = call <16 x float> @llvm.vector.insert.v16f32.v8f32(<16 x float> [[TMP16]], <8 x float> [[TMP15]], i64 8)
-; CHECK-NEXT:    [[TMP18:%.*]] = shufflevector <8 x float> [[TMP14]], <8 x float> [[TMP12]], <16 x i32> <i32 8, i32 9, i32 9, i32 9, i32 9, i32 9, i32 14, i32 14, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 poison>
-; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <16 x float> [[TMP18]], float [[TMP9]], i32 15
-; CHECK-NEXT:    [[TMP20:%.*]] = fmul <16 x float> [[TMP17]], [[TMP19]]
+; CHECK-NEXT:    [[TMP18:%.*]] = call <16 x float> @llvm.vector.insert.v16f32.v8f32(<16 x float> [[TMP16]], <8 x float> [[TMP15]], i64 8)
+; CHECK-NEXT:    [[TMP19:%.*]] = shufflevector <8 x float> [[TMP14]], <8 x float> [[TMP12]], <16 x i32> <i32 8, i32 9, i32 9, i32 9, i32 9, i32 9, i32 14, i32 14, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 poison>
+; CHECK-NEXT:    [[TMP17:%.*]] = insertelement <16 x float> [[TMP19]], float [[TMP9]], i32 15
+; CHECK-NEXT:    [[TMP20:%.*]] = fmul <16 x float> [[TMP18]], [[TMP17]]
 ; CHECK-NEXT:    [[TMP21:%.*]] = call reassoc nsz float @llvm.vector.reduce.fadd.v16f32(float 0.000000e+00, <16 x float> [[TMP20]])
 ; CHECK-NEXT:    [[TMP22:%.*]] = call float @foo(float [[TMP21]])
 ; CHECK-NEXT:    ret i1 false

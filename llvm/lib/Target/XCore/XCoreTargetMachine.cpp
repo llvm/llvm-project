@@ -106,6 +106,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeXCoreTarget() {
   RegisterTargetMachine<XCoreTargetMachine> X(getTheXCoreTarget());
   PassRegistry &PR = *PassRegistry::getPassRegistry();
   initializeXCoreDAGToDAGISelLegacyPass(PR);
+  initializeXCoreLowerThreadLocalPass(PR);
 }
 
 TargetTransformInfo

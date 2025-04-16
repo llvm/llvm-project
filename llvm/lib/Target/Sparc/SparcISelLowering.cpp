@@ -1755,7 +1755,7 @@ SparcTargetLowering::SparcTargetLowering(const TargetMachine &TM,
                        Subtarget->usePopc() ? Legal : Expand);
     setOperationAction(ISD::CTTZ , MVT::i64, Expand);
     setOperationAction(ISD::CTLZ, MVT::i64,
-                       Subtarget->isVIS3() ? Legal : Expand);
+                       Subtarget->isVIS3() ? Legal : LibCall);
     setOperationAction(ISD::BSWAP, MVT::i64, Expand);
     setOperationAction(ISD::ROTL , MVT::i64, Expand);
     setOperationAction(ISD::ROTR , MVT::i64, Expand);
@@ -1817,7 +1817,8 @@ SparcTargetLowering::SparcTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::FREM , MVT::f32, Expand);
   setOperationAction(ISD::FMA  , MVT::f32, Expand);
   setOperationAction(ISD::CTTZ , MVT::i32, Expand);
-  setOperationAction(ISD::CTLZ, MVT::i32, Subtarget->isVIS3() ? Legal : Expand);
+  setOperationAction(ISD::CTLZ, MVT::i32,
+                     Subtarget->isVIS3() ? Promote : LibCall);
   setOperationAction(ISD::ROTL , MVT::i32, Expand);
   setOperationAction(ISD::ROTR , MVT::i32, Expand);
   setOperationAction(ISD::BSWAP, MVT::i32, Expand);
@@ -1856,10 +1857,8 @@ SparcTargetLowering::SparcTargetLowering(const TargetMachine &TM,
   if (Subtarget->is64Bit()) {
     setOperationAction(ISD::UMUL_LOHI, MVT::i64, Expand);
     setOperationAction(ISD::SMUL_LOHI, MVT::i64, Expand);
-    setOperationAction(ISD::MULHU, MVT::i64,
-                       Subtarget->isVIS3() ? Legal : Expand);
-    setOperationAction(ISD::MULHS, MVT::i64,
-                       Subtarget->isVIS3() ? Legal : Expand);
+    setOperationAction(ISD::MULHU,     MVT::i64, Expand);
+    setOperationAction(ISD::MULHS,     MVT::i64, Expand);
 
     setOperationAction(ISD::SHL_PARTS, MVT::i64, Expand);
     setOperationAction(ISD::SRA_PARTS, MVT::i64, Expand);
@@ -1989,6 +1988,11 @@ SparcTargetLowering::SparcTargetLowering(const TargetMachine &TM,
 
   if (Subtarget->hasLeonCycleCounter())
     setOperationAction(ISD::READCYCLECOUNTER, MVT::i64, Custom);
+
+  if (Subtarget->isVIS3()) {
+    setOperationAction(ISD::CTLZ_ZERO_UNDEF, MVT::i32, Promote);
+    setOperationAction(ISD::CTLZ_ZERO_UNDEF, MVT::i64, Legal);
+  }
 
   setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::Other, Custom);
 

@@ -264,16 +264,10 @@ cc_test(
 
 gentbl_cc_library(
     name = "EnumsIncGen",
-    tbl_outs = [
-        (
-            ["-gen-enum-decls"],
-            "TableGen/EnumsGenTest.h.inc",
-        ),
-        (
-            ["-gen-enum-defs"],
-            "TableGen/EnumsGenTest.cpp.inc",
-        ),
-    ],
+    tbl_outs = {
+        "TableGen/EnumsGenTest.h.inc": ["-gen-enum-decls"],
+        "TableGen/EnumsGenTest.cpp.inc": ["-gen-enum-defs"],
+    },
     tblgen = "//mlir:mlir-tblgen",
     td_file = "TableGen/enums.td",
     deps = [
@@ -283,12 +277,7 @@ gentbl_cc_library(
 
 gentbl_cc_library(
     name = "PassIncGen",
-    tbl_outs = [
-        (
-            ["-gen-pass-decls"],
-            "TableGen/PassGenTest.h.inc",
-        ),
-    ],
+    tbl_outs = {"TableGen/PassGenTest.h.inc": ["-gen-pass-decls"]},
     tblgen = "//mlir:mlir-tblgen",
     td_file = "TableGen/passes.td",
     deps = [

@@ -32,9 +32,7 @@ struct BPFMIPreEmitChecking : public MachineFunctionPass {
   MachineFunction *MF;
   const TargetRegisterInfo *TRI;
 
-  BPFMIPreEmitChecking() : MachineFunctionPass(ID) {
-    initializeBPFMIPreEmitCheckingPass(*PassRegistry::getPassRegistry());
-  }
+  BPFMIPreEmitChecking() : MachineFunctionPass(ID) {}
 
 private:
   // Initialize class variables.

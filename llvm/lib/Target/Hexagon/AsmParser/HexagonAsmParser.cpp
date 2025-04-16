@@ -1249,7 +1249,7 @@ bool HexagonAsmParser::parseInstruction(OperandVector &Operands) {
         MCValue Value;
         if (Expr->evaluateAsRelocatable(Value, nullptr)) {
           if (!Value.isAbsolute()) {
-            switch (HexagonMCExpr::VariantKind(Value.getAccessVariant())) {
+            switch (HexagonMCExpr::VariantKind(Value.getSpecifier())) {
             case HexagonMCExpr::VK_TPREL:
             case HexagonMCExpr::VK_DTPREL:
               // Don't lazy extend these expression variants

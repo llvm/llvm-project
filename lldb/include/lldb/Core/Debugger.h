@@ -67,10 +67,6 @@ class Stream;
 class SymbolContext;
 class Target;
 
-namespace repro {
-class DataRecorder;
-}
-
 /// \class Debugger Debugger.h "lldb/Core/Debugger.h"
 /// A class to manage flag bits.
 ///
@@ -142,8 +138,6 @@ public:
   lldb::FileSP GetErrorFileSP() {
     return m_error_stream_sp->GetUnlockedFileSP();
   }
-
-  repro::DataRecorder *GetInputRecorder();
 
   Status SetInputString(const char *data);
 
@@ -307,6 +301,7 @@ public:
   bool GetShowStatusline() const;
 
   const FormatEntity::Entry *GetStatuslineFormat() const;
+  bool SetStatuslineFormat(const FormatEntity::Entry &format);
 
   llvm::StringRef GetShowProgressAnsiPrefix() const;
 
@@ -719,9 +714,6 @@ protected:
   lldb::LockableStreamFileSP m_error_stream_sp;
   LockableStreamFile::Mutex m_output_mutex;
 
-  /// Used for shadowing the input file when capturing a reproducer.
-  repro::DataRecorder *m_input_recorder;
-
   lldb::BroadcasterManagerSP m_broadcaster_manager_sp; // The debugger acts as a
                                                        // broadcaster manager of
                                                        // last resort.
@@ -751,6 +743,8 @@ protected:
   IOHandlerStack m_io_handler_stack;
   std::recursive_mutex m_io_handler_synchronous_mutex;
 
+  /// Mutex protecting the m_statusline member.
+  std::mutex m_statusline_mutex;
   std::optional<Statusline> m_statusline;
 
   llvm::StringMap<std::weak_ptr<LogHandler>> m_stream_handlers;

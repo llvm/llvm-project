@@ -61,10 +61,10 @@ define i32 @cond_add(ptr %a, i64 %n, i32 %start) {
 ; IF-EVL-OUTLOOP-NEXT:    br i1 [[TMP23]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; IF-EVL-OUTLOOP:       middle.block:
 ; IF-EVL-OUTLOOP-NEXT:    [[TMP24:%.*]] = call i32 @llvm.vector.reduce.add.nxv4i32(<vscale x 4 x i32> [[TMP20]])
-; IF-EVL-OUTLOOP-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
+; IF-EVL-OUTLOOP-NEXT:    br label [[FOR_END:%.*]]
 ; IF-EVL-OUTLOOP:       scalar.ph:
-; IF-EVL-OUTLOOP-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
-; IF-EVL-OUTLOOP-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP24]], [[MIDDLE_BLOCK]] ], [ [[START]], [[ENTRY]] ]
+; IF-EVL-OUTLOOP-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
+; IF-EVL-OUTLOOP-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[START]], [[ENTRY]] ]
 ; IF-EVL-OUTLOOP-NEXT:    br label [[FOR_BODY:%.*]]
 ; IF-EVL-OUTLOOP:       for.body:
 ; IF-EVL-OUTLOOP-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
@@ -118,10 +118,10 @@ define i32 @cond_add(ptr %a, i64 %n, i32 %start) {
 ; IF-EVL-INLOOP-NEXT:    [[TMP24:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; IF-EVL-INLOOP-NEXT:    br i1 [[TMP24]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; IF-EVL-INLOOP:       middle.block:
-; IF-EVL-INLOOP-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
+; IF-EVL-INLOOP-NEXT:    br label [[FOR_END:%.*]]
 ; IF-EVL-INLOOP:       scalar.ph:
-; IF-EVL-INLOOP-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
-; IF-EVL-INLOOP-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP22]], [[MIDDLE_BLOCK]] ], [ [[START]], [[ENTRY]] ]
+; IF-EVL-INLOOP-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
+; IF-EVL-INLOOP-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[START]], [[ENTRY]] ]
 ; IF-EVL-INLOOP-NEXT:    br label [[FOR_BODY:%.*]]
 ; IF-EVL-INLOOP:       for.body:
 ; IF-EVL-INLOOP-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
@@ -309,10 +309,10 @@ define i32 @cond_add_pred(ptr %a, i64 %n, i32 %start) {
 ; IF-EVL-OUTLOOP-NEXT:    br i1 [[TMP24]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; IF-EVL-OUTLOOP:       middle.block:
 ; IF-EVL-OUTLOOP-NEXT:    [[TMP27:%.*]] = call i32 @llvm.vector.reduce.add.nxv4i32(<vscale x 4 x i32> [[PREDPHI]])
-; IF-EVL-OUTLOOP-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
+; IF-EVL-OUTLOOP-NEXT:    br label [[FOR_END:%.*]]
 ; IF-EVL-OUTLOOP:       scalar.ph:
-; IF-EVL-OUTLOOP-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
-; IF-EVL-OUTLOOP-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP27]], [[MIDDLE_BLOCK]] ], [ [[START]], [[ENTRY]] ]
+; IF-EVL-OUTLOOP-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
+; IF-EVL-OUTLOOP-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[START]], [[ENTRY]] ]
 ; IF-EVL-OUTLOOP-NEXT:    br label [[FOR_BODY:%.*]]
 ; IF-EVL-OUTLOOP:       for.body:
 ; IF-EVL-OUTLOOP-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_INC:%.*]] ]
@@ -369,10 +369,10 @@ define i32 @cond_add_pred(ptr %a, i64 %n, i32 %start) {
 ; IF-EVL-INLOOP-NEXT:    [[TMP24:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; IF-EVL-INLOOP-NEXT:    br i1 [[TMP24]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; IF-EVL-INLOOP:       middle.block:
-; IF-EVL-INLOOP-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
+; IF-EVL-INLOOP-NEXT:    br label [[FOR_END:%.*]]
 ; IF-EVL-INLOOP:       scalar.ph:
-; IF-EVL-INLOOP-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
-; IF-EVL-INLOOP-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP22]], [[MIDDLE_BLOCK]] ], [ [[START]], [[ENTRY]] ]
+; IF-EVL-INLOOP-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
+; IF-EVL-INLOOP-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[START]], [[ENTRY]] ]
 ; IF-EVL-INLOOP-NEXT:    br label [[FOR_BODY:%.*]]
 ; IF-EVL-INLOOP:       for.body:
 ; IF-EVL-INLOOP-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_INC:%.*]] ]
