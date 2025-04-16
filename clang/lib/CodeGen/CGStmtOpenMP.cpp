@@ -4529,21 +4529,6 @@ void CodeGenFunction::EmitOMPMasterDirective(const OMPMasterDirective &S) {
   emitMaster(*this, S);
 }
 
-static Expr *getCapturedExprFromImplicitCastExpr(Expr *Cond) {
-
-  Expr *SubExpr = Cond->IgnoreParenImpCasts();
-
-  if (auto *DeclRef = dyn_cast<DeclRefExpr>(SubExpr)) {
-    if (auto *CapturedExprDecl =
-            dyn_cast<OMPCapturedExprDecl>(DeclRef->getDecl())) {
-
-      // Retrieve the initial expression from the captured expression
-      return CapturedExprDecl->getInit();
-    }
-  }
-  return Cond;
-}
-
 static Expr *replaceWithNewTraitsOrDirectCall(Stmt *AssocExpr,
                                               CallExpr *ReplacementFunction) {
   Expr *FinalCall = ReplacementFunction;
@@ -4579,12 +4564,11 @@ static void transformCallInStmt(Stmt *StmtP) {
 
 static void emitIfElse(CodeGenFunction *CGF, Expr *Condition,
                        Stmt *AssociatedStmt) {
-  llvm::Value *CondValue = CGF->EvaluateExprAsBool(Condition);
   llvm::BasicBlock *ThenBlock = CGF->createBasicBlock("if.then");
   llvm::BasicBlock *ElseBlock = CGF->createBasicBlock("if.else");
   llvm::BasicBlock *MergeBlock = CGF->createBasicBlock("if.end");
 
-  CGF->Builder.CreateCondBr(CondValue, ThenBlock, ElseBlock);
+  CGF->EmitBranchOnBoolExpr(Condition, ThenBlock, ElseBlock, 0);
 
   // Emit the else block.
   Stmt *ElseStmt = AssociatedStmt;
@@ -4624,17 +4608,14 @@ void CodeGenFunction::EmitOMPDispatchDirective(const OMPDispatchDirective &S) {
       if (const OMPNovariantsClause *NoVariantsC =
               OMPExecutableDirective::getSingleClause<OMPNovariantsClause>(
                   Clauses)) {
-        Condition =
-            getCapturedExprFromImplicitCastExpr(NoVariantsC->getCondition());
+        Condition = NoVariantsC->getCondition();
       } else {
         const OMPNocontextClause *NoContextC =
             OMPExecutableDirective::getSingleClause<OMPNocontextClause>(
                 Clauses);
-        Condition =
-            getCapturedExprFromImplicitCastExpr(NoContextC->getCondition());
+        Condition = NoContextC->getCondition();
       }
       OMPLexicalScope Scope(*this, S, OMPD_dispatch);
-      /* OMPC_novariants or OMPC_nocontext present */
       emitIfElse(this, Condition, AssociatedStmt);
     }
   } else
