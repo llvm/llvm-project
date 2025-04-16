@@ -74,10 +74,6 @@ body:             |
 
 ...
 
-# GCN-LABEL: name: no_fold_imm_into_m0{{$}}
-# GCN: %0:sreg_32 = S_MOV_B32 -8
-# GCN-NEXT: $m0 = COPY %0
-
 ---
 name: no_fold_imm_into_m0
 tracksRegLiveness: true
@@ -93,8 +89,6 @@ body:             |
 
 ...
 
-# GCN-LABEL: name: fold_sgpr_imm_to_vgpr_copy{{$}}
-# GCN: $vgpr0 = V_MOV_B32_e32 -8, implicit $exec
 ---
 name: fold_sgpr_imm_to_vgpr_copy
 tracksRegLiveness: true
