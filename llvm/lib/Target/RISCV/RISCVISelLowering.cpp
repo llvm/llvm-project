@@ -20645,7 +20645,7 @@ static MachineBasicBlock *emitSelectPseudo(MachineInstr &MI,
 
   // Insert appropriate branch.
   if (MI.getOperand(2).isImm())
-    BuildMI(HeadMBB, DL, TII.getBrCond(CC, MI.getOperand(2).isImm()))
+    BuildMI(HeadMBB, DL, TII.getBrCond(CC))
         .addReg(LHS)
         .addImm(MI.getOperand(2).getImm())
         .addMBB(TailMBB);
