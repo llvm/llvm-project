@@ -805,6 +805,7 @@ bundleLinkedOutput(ArrayRef<OffloadingImage> Images, const ArgList &Args,
   llvm::TimeTraceScope TimeScope("Bundle linked output");
   switch (Kind) {
   case OFK_OpenMP:
+  case OFK_SYCL:
     return bundleOpenMP(Images);
   case OFK_Cuda:
     return bundleCuda(Images, Args);
@@ -940,6 +941,14 @@ Expected<SmallVector<StringRef>> linkAndWrapDeviceFiles(
     for (const auto &File : Input)
       ActiveOffloadKindMask |= File.getBinary()->getOffloadKind();
 
+    // Linking images of SYCL offload kind with images of other kind is not
+    // supported.
+    // TODO: Remove the above limitation.
+    if ((ActiveOffloadKindMask & OFK_SYCL) &&
+        ((ActiveOffloadKindMask ^ OFK_SYCL) != 0))
+      return createStringError("Linking images of SYCL offload kind with "
+                               "images of any other kind is not supported");
+
     // Write any remaining device inputs to an output file.
     SmallVector<StringRef> InputFiles;
     for (const OffloadFile &File : Input) {
@@ -948,42 +957,6 @@ Expected<SmallVector<StringRef>> linkAndWrapDeviceFiles(
         return FileNameOrErr.takeError();
       InputFiles.emplace_back(*FileNameOrErr);
     }
-
-    // Currently, SYCL device code linking process differs from generic device
-    // code linking.
-    // TODO: Align SYCL device code linking with generic linking.
-    if (ActiveOffloadKindMask & OFK_SYCL) {
-      // Link the remaining device files using the device linker.
-      auto OutputOrErr =
-          linkDevice(InputFiles, LinkerArgs, ActiveOffloadKindMask);
-      if (!OutputOrErr)
-        return OutputOrErr.takeError();
-      // Output is a packaged object of device images. Unpackage the images and
-      // copy them to Images[Kind]
-      ErrorOr<std::unique_ptr<MemoryBuffer>> BufferOrErr =
-          MemoryBuffer::getFileOrSTDIN(*OutputOrErr);
-      if (std::error_code EC = BufferOrErr.getError())
-        return createFileError(*OutputOrErr, EC);
-
-      MemoryBufferRef Buffer = **BufferOrErr;
-      SmallVector<OffloadFile> Binaries;
-      if (Error Err = extractOffloadBinaries(Buffer, Binaries))
-        return std::move(Err);
-      for (auto &OffloadFile : Binaries) {
-        auto TheBinary = OffloadFile.getBinary();
-        OffloadingImage TheImage{};
-        TheImage.TheImageKind = TheBinary->getImageKind();
-        TheImage.TheOffloadKind = TheBinary->getOffloadKind();
-        TheImage.StringData["triple"] = TheBinary->getTriple();
-        TheImage.StringData["arch"] = TheBinary->getArch();
-        TheImage.Image = MemoryBuffer::getMemBufferCopy(TheBinary->getImage());
-        Images[OFK_SYCL].emplace_back(std::move(TheImage));
-      }
-    }
-
-    // Exit early if no other offload kind found (other than OFK_SYCL).
-    if ((ActiveOffloadKindMask ^ OFK_SYCL) == 0)
-      return Error::success();
 
     // Link the remaining device files using the device linker.
     auto OutputOrErr =
@@ -994,7 +967,7 @@ Expected<SmallVector<StringRef>> linkAndWrapDeviceFiles(
     // Store the offloading image for each linked output file.
     for (OffloadKind Kind = OFK_OpenMP; Kind != OFK_LAST;
          Kind = static_cast<OffloadKind>((uint16_t)(Kind) << 1)) {
-      if (((ActiveOffloadKindMask & Kind) == 0) || (Kind == OFK_SYCL))
+      if ((ActiveOffloadKindMask & Kind) == 0)
         continue;
       llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> FileOrErr =
           llvm::MemoryBuffer::getFileOrSTDIN(*OutputOrErr);
@@ -1011,6 +984,7 @@ Expected<SmallVector<StringRef>> linkAndWrapDeviceFiles(
 
       std::scoped_lock<decltype(ImageMtx)> Guard(ImageMtx);
       OffloadingImage TheImage{};
+
       TheImage.TheImageKind =
           Args.hasArg(OPT_embed_bitcode) ? IMG_Bitcode : IMG_Object;
       TheImage.TheOffloadKind = Kind;
@@ -1038,11 +1012,6 @@ Expected<SmallVector<StringRef>> linkAndWrapDeviceFiles(
              A.StringData["arch"] > B.StringData["arch"] ||
              A.TheOffloadKind < B.TheOffloadKind;
     });
-    if (Kind == OFK_SYCL) {
-      // TODO: Update once SYCL offload wrapping logic is available.
-      reportError(
-          createStringError("SYCL offload wrapping logic is not available"));
-    }
     auto BundledImagesOrErr = bundleLinkedOutput(Input, Args, Kind);
     if (!BundledImagesOrErr)
       return BundledImagesOrErr.takeError();
