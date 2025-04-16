@@ -259,7 +259,7 @@ void NVPTXAsmPrinter::printReturnValStr(const Function *F, raw_ostream &O) {
     return;
   O << " (";
 
-  auto PrintScalarParam = [&](unsigned Size) {
+  auto PrintScalarRetVal = [&](unsigned Size) {
     O << ".param .b" << promoteScalarArgumentSize(Size) << " func_retval0";
   };
   if (shouldPassAsArray(Ty)) {
@@ -269,11 +269,11 @@ void NVPTXAsmPrinter::printReturnValStr(const Function *F, raw_ostream &O) {
     O << ".param .align " << RetAlignment.value() << " .b8 func_retval0["
       << TotalSize << "]";
   } else if (Ty->isFloatingPointTy()) {
-    PrintScalarParam(Ty->getPrimitiveSizeInBits());
+    PrintScalarRetVal(Ty->getPrimitiveSizeInBits());
   } else if (auto *ITy = dyn_cast<IntegerType>(Ty)) {
-    PrintScalarParam(ITy->getBitWidth());
+    PrintScalarRetVal(ITy->getBitWidth());
   } else if (isa<PointerType>(Ty)) {
-    PrintScalarParam(TLI->getPointerTy(DL).getSizeInBits());
+    PrintScalarRetVal(TLI->getPointerTy(DL).getSizeInBits());
   } else
     llvm_unreachable("Unknown return type");
   O << ") ";
@@ -1674,24 +1674,24 @@ void NVPTXAsmPrinter::bufferAggregateConstant(const Constant *CPV,
                                               AggBuffer *aggBuffer) {
   const DataLayout &DL = getDataLayout();
 
-  auto BufferConstant = [&](APInt Val) {
-    for (unsigned I = 0, E = DL.getTypeAllocSize(CPV->getType()); I < E; ++I) {
+  auto ExtendBuffer = [](APInt Val, AggBuffer *Buffer) {
+    for (unsigned _ : llvm::seq(Val.getBitWidth() / 8)) {
       uint8_t Byte = Val.getLoBits(8).getZExtValue();
-      aggBuffer->addBytes(&Byte, 1, 1);
+      Buffer->addBytes(&Byte, 1, 1);
       Val.lshrInPlace(8);
     }
   };
 
   // Integers of arbitrary width
   if (const ConstantInt *CI = dyn_cast<ConstantInt>(CPV)) {
-    BufferConstant(CI->getValue());
+    ExtendBuffer(CI->getValue(), aggBuffer);
     return;
   }
 
   // f128
   if (const ConstantFP *CFP = dyn_cast<ConstantFP>(CPV)) {
     if (CFP->getType()->isFP128Ty()) {
-      BufferConstant(CFP->getValueAPF().bitcastToAPInt());
+      ExtendBuffer(CFP->getValueAPF().bitcastToAPInt(), aggBuffer);
       return;
     }
   }
@@ -1705,7 +1705,7 @@ void NVPTXAsmPrinter::bufferAggregateConstant(const Constant *CPV,
 
   if (const auto *CDS = dyn_cast<ConstantDataSequential>(CPV)) {
     if (CDS->getNumElements())
-      for (unsigned i = 0; i < CDS->getNumElements(); ++i)
+      for (unsigned i : llvm::seq(CDS->getNumElements()))
         bufferLEByte(cast<Constant>(CDS->getElementAsConstant(i)), 0,
                      aggBuffer);
     return;
@@ -1714,15 +1714,12 @@ void NVPTXAsmPrinter::bufferAggregateConstant(const Constant *CPV,
   if (isa<ConstantStruct>(CPV)) {
     if (CPV->getNumOperands()) {
       StructType *ST = cast<StructType>(CPV->getType());
-      for (unsigned i = 0, e = CPV->getNumOperands(); i != e; ++i) {
-        int Bytes;
-        if (i == (e - 1))
-          Bytes = DL.getStructLayout(ST)->getElementOffset(0) +
-                  DL.getTypeAllocSize(ST) -
-                  DL.getStructLayout(ST)->getElementOffset(i);
-        else
-          Bytes = DL.getStructLayout(ST)->getElementOffset(i + 1) -
-                  DL.getStructLayout(ST)->getElementOffset(i);
+      for (unsigned i : llvm::seq(CPV->getNumOperands())) {
+        int EndOffset = (i + 1 == CPV->getNumOperands())
+                            ? DL.getStructLayout(ST)->getElementOffset(0) +
+                                  DL.getTypeAllocSize(ST)
+                            : DL.getStructLayout(ST)->getElementOffset(i + 1);
+        int Bytes = EndOffset - DL.getStructLayout(ST)->getElementOffset(i);
         bufferLEByte(cast<Constant>(CPV->getOperand(i)), Bytes, aggBuffer);
       }
     }
