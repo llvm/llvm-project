@@ -45,7 +45,6 @@
 #include <cstddef>
 #include <cstdlib>
 #include <optional>
-#include <variant>
 
 using namespace clang;
 using namespace sema;
@@ -7838,7 +7837,7 @@ static void AddMethodTemplateCandidateImmediately(
     Candidate.Function = MethodTmpl->getTemplatedDecl();
     Candidate.Viable = false;
     Candidate.RewriteKind =
-        CandidateSet.getRewriteInfo().getRewriteKind(Candidate.Function, PO);
+      CandidateSet.getRewriteInfo().getRewriteKind(Candidate.Function, PO);
     Candidate.IsSurrogate = false;
     Candidate.IgnoreObjectArgument =
         cast<CXXMethodDecl>(Candidate.Function)->isStatic() ||
@@ -7951,7 +7950,7 @@ static void AddTemplateOverloadCandidateImmediately(
     Candidate.Function = FunctionTemplate->getTemplatedDecl();
     Candidate.Viable = false;
     Candidate.RewriteKind =
-        CandidateSet.getRewriteInfo().getRewriteKind(Candidate.Function, PO);
+      CandidateSet.getRewriteInfo().getRewriteKind(Candidate.Function, PO);
     Candidate.IsSurrogate = false;
     Candidate.IsADLCandidate = llvm::to_underlying(IsADLCandidate);
     // Ignore the object argument if there is one, since we don't have an object
