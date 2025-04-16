@@ -5165,6 +5165,9 @@ FindConversionForRefInit(Sema &S, ImplicitConversionSequence &ICS,
   OverloadCandidateSet::iterator Best;
   switch (CandidateSet.BestViableFunction(S, DeclLoc, Best)) {
   case OR_Success:
+
+    assert(Best->HasFinalConversion);
+
     // C++ [over.ics.ref]p1:
     //
     //   [...] If the parameter binds directly to the result of
@@ -5178,7 +5181,6 @@ FindConversionForRefInit(Sema &S, ImplicitConversionSequence &ICS,
     if (!Best->FinalConversion.DirectBinding)
       return false;
 
-    assert(Best->HasFinalConversion);
     ICS.setUserDefined();
     ICS.UserDefined.Before = Best->Conversions[0].Standard;
     ICS.UserDefined.After = Best->FinalConversion;
