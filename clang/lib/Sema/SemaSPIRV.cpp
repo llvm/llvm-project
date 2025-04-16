@@ -16,6 +16,37 @@ namespace clang {
 
 SemaSPIRV::SemaSPIRV(Sema &S) : SemaBase(S) {}
 
+static bool CheckAllArgsHaveFloatRepresentation(Sema *S, CallExpr *TheCall) {
+  for (unsigned I = 0, N = TheCall->getNumArgs(); I < N; ++I) {
+    ExprResult Arg = TheCall->getArg(I);
+    QualType ArgTy = Arg.get()->getType();
+    if (!ArgTy->hasFloatingRepresentation()) {
+      S->Diag(Arg.get()->getBeginLoc(), diag::err_builtin_invalid_arg_type)
+          << /* ordinal */ I + 1 << /* scalar or vector */ 5 << /* no int */ 0
+          << /* fp */ 1 << ArgTy;
+      return true;
+    }
+  }
+  return false;
+}
+
+static bool CheckAllArgsHaveSameType(Sema *S, CallExpr *TheCall) {
+  assert(TheCall->getNumArgs() > 1);
+  QualType ArgTy0 = TheCall->getArg(0)->getType();
+
+  for (unsigned I = 1, N = TheCall->getNumArgs(); I < N; ++I) {
+    if (!S->getASTContext().hasSameUnqualifiedType(
+            ArgTy0, TheCall->getArg(I)->getType())) {
+      S->Diag(TheCall->getBeginLoc(), diag::err_vec_builtin_incompatible_vector)
+          << TheCall->getDirectCallee() << /*useAllTerminology*/ true
+          << SourceRange(TheCall->getArg(0)->getBeginLoc(),
+                         TheCall->getArg(N - 1)->getEndLoc());
+      return true;
+    }
+  }
+  return false;
+}
+
 bool SemaSPIRV::CheckSPIRVBuiltinFunctionCall(unsigned BuiltinID,
                                               CallExpr *TheCall) {
   switch (BuiltinID) {
@@ -105,35 +136,13 @@ bool SemaSPIRV::CheckSPIRVBuiltinFunctionCall(unsigned BuiltinID,
     if (SemaRef.checkArgCount(TheCall, 3))
       return true;
 
-    // check if the all arguments have floating representation
-    for (unsigned i = 0; i < TheCall->getNumArgs(); ++i) {
-      ExprResult Arg = TheCall->getArg(i);
-      QualType ArgTy = Arg.get()->getType();
-      if (!ArgTy->hasFloatingRepresentation()) {
-        SemaRef.Diag(Arg.get()->getBeginLoc(),
-                     diag::err_builtin_invalid_arg_type)
-            << i + 1 << /* scalar or vector */ 5 << /* no int */ 0 << /* fp */ 1
-            << ArgTy;
-        return true;
-      }
-    }
-
-    // check if all arguments are of the same type
-    ExprResult A = TheCall->getArg(0);
-    ExprResult B = TheCall->getArg(1);
-    ExprResult C = TheCall->getArg(2);
-    if (!(SemaRef.getASTContext().hasSameUnqualifiedType(A.get()->getType(),
-                                                         B.get()->getType()) &&
-          SemaRef.getASTContext().hasSameUnqualifiedType(A.get()->getType(),
-                                                         C.get()->getType()))) {
-      SemaRef.Diag(TheCall->getBeginLoc(),
-                   diag::err_vec_builtin_incompatible_vector)
-          << TheCall->getDirectCallee() << /*useAllTerminology*/ true
-          << SourceRange(A.get()->getBeginLoc(), C.get()->getEndLoc());
+    if (CheckAllArgsHaveFloatRepresentation(&SemaRef, TheCall))
       return true;
-    }
 
-    QualType RetTy = A.get()->getType();
+    if (CheckAllArgsHaveSameType(&SemaRef, TheCall))
+      return true;
+
+    QualType RetTy = TheCall->getArg(0)->getType();
     TheCall->setType(RetTy);
     break;
   }
@@ -141,35 +150,13 @@ bool SemaSPIRV::CheckSPIRVBuiltinFunctionCall(unsigned BuiltinID,
     if (SemaRef.checkArgCount(TheCall, 3))
       return true;
 
-    // check if all arguments have floating representation
-    for (unsigned i = 0; i < TheCall->getNumArgs(); ++i) {
-      ExprResult Arg = TheCall->getArg(i);
-      QualType ArgTy = Arg.get()->getType();
-      if (!ArgTy->hasFloatingRepresentation()) {
-        SemaRef.Diag(Arg.get()->getBeginLoc(),
-                     diag::err_builtin_invalid_arg_type)
-            << i + 1 << /* scalar or vector */ 5 << /* no int */ 0 << /* fp */ 1
-            << ArgTy;
-        return true;
-      }
-    }
-
-    // check if all arguments are of the same type
-    ExprResult A = TheCall->getArg(0);
-    ExprResult B = TheCall->getArg(1);
-    ExprResult C = TheCall->getArg(2);
-    if (!(SemaRef.getASTContext().hasSameUnqualifiedType(A.get()->getType(),
-                                                         B.get()->getType()) &&
-          SemaRef.getASTContext().hasSameUnqualifiedType(A.get()->getType(),
-                                                         C.get()->getType()))) {
-      SemaRef.Diag(TheCall->getBeginLoc(),
-                   diag::err_vec_builtin_incompatible_vector)
-          << TheCall->getDirectCallee() << /*useAllTerminology*/ true
-          << SourceRange(A.get()->getBeginLoc(), C.get()->getEndLoc());
+    if (CheckAllArgsHaveFloatRepresentation(&SemaRef, TheCall))
       return true;
-    }
 
-    QualType RetTy = A.get()->getType();
+    if (CheckAllArgsHaveSameType(&SemaRef, TheCall))
+      return true;
+
+    QualType RetTy = TheCall->getArg(0)->getType();
     TheCall->setType(RetTy);
     break;
   }

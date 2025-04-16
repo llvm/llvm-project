@@ -220,7 +220,7 @@ const inline double4 dst(double4 Src0, double4 Src1) {
 
 /// \fn T faceforward(T N, T I, T Ng)
 /// \brief Flips the surface-normal (if needed) to face in a direction opposite
-/// to \a I. Returns the result in \a N.
+/// to \a I. Returns the result in terms of \a N.
 /// \param N The resulting floating-point surface-normal vector.
 /// \param I A floating-point, incident vector that points from the view
 /// position to the shading position.
