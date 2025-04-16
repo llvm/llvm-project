@@ -84,3 +84,23 @@ int funclike_1;
 int funclike_2;
 #endif
 // CHECK: int funclike_2;
+
+#if __has_c_attribute(CL\
+)
+int has_clang_likely_5;
+#endif
+// CHECK: int has_clang_likely_5;
+
+#define CL_2 clang::\
+likely
+
+#if __has_c_attribute(CL_2)
+int has_clang_likely_6;
+#endif
+// CHECK: int has_clang_likely_6;
+
+#if __has_c_attribute(CL_2\
+)
+int has_clang_likely_7;
+#endif
+// CHECK: int has_clang_likely_7;
