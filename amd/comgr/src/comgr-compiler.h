@@ -11,6 +11,7 @@
 
 #include "comgr.h"
 #include "clang/Driver/Driver.h"
+#include "llvm/Support/VirtualFileSystem.h"
 
 namespace COMGR {
 
@@ -36,6 +37,10 @@ class AMDGPUCompiler {
   llvm::StringSaver Saver = Allocator;
   /// Whether we need to disable Clang's device-lib linking.
   bool NoGpuLib = true;
+  bool UseVFS = false;
+
+  llvm::IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFS;
+  llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFS;
 
   amd_comgr_status_t createTmpDirs();
   amd_comgr_status_t removeTmpDirs();

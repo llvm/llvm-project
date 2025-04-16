@@ -31,6 +31,21 @@ bool shouldSaveLLVMTemps() {
   return SaveTemps && StringRef(SaveTemps) != "0";
 }
 
+std::optional<bool> shouldUseVFS() {
+  if (shouldSaveTemps())
+    return false;
+
+  static char *UseVFS = getenv("AMD_COMGR_USE_VFS");
+  if (UseVFS) {
+    if (StringRef(UseVFS) == "0")
+      return false;
+    else if (StringRef(UseVFS) == "1")
+      return true;
+  }
+
+  return std::nullopt;
+}
+
 std::optional<StringRef> getRedirectLogs() {
   static char *RedirectLogs = getenv("AMD_COMGR_REDIRECT_LOGS");
   if (!RedirectLogs || StringRef(RedirectLogs) == "0") {
