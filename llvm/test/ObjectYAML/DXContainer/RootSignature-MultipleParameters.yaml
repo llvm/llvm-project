@@ -17,7 +17,7 @@ Parts:
       NumRootParameters: 2
       RootParametersOffset: 24
       NumStaticSamplers: 0
-      StaticSamplersOffset: 64
+      StaticSamplersOffset: 60
       Parameters:         
       - ParameterType: 1 # Constants32Bit
         ShaderVisibility: 2 # Hull
@@ -41,7 +41,7 @@ Parts:
 # CHECK-NEXT:      NumRootParameters: 2
 # CHECK-NEXT:      RootParametersOffset: 24
 # CHECK-NEXT:      NumStaticSamplers: 0
-# CHECK-NEXT:      StaticSamplersOffset: 0
+# CHECK-NEXT:      StaticSamplersOffset: 60
 # CHECK-NEXT:      Parameters:
 # CHECK-NEXT:        - ParameterType:   1
 # CHECK-NEXT:          ShaderVisibility: 2

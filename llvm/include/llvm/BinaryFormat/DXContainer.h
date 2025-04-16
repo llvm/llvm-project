@@ -159,7 +159,7 @@ enum class RootElementFlag : uint32_t {
 };
 
 #define ROOT_PARAMETER(Val, Enum) Enum = Val,
-enum RootParameterType : uint32_t {
+enum class RootParameterType : uint32_t {
 #include "DXContainerConstants.def"
 };
 
@@ -176,7 +176,7 @@ inline bool isValidParameterType(uint32_t V) {
 }
 
 #define SHADER_VISIBILITY(Val, Enum) Enum = Val,
-enum ShaderVisibility : uint32_t {
+enum class ShaderVisibility : uint32_t {
 #include "DXContainerConstants.def"
 };
 

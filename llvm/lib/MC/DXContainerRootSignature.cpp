@@ -32,9 +32,9 @@ size_t RootSignatureDesc::getSize() const {
   size_t Size = sizeof(dxbc::RootSignatureHeader) +
                 Parameters.size() * sizeof(dxbc::RootParameterHeader);
 
-  for (const auto &P : Parameters) {
+  for (const mcdxbc::RootParameter &P : Parameters) {
     switch (P.Header.ParameterType) {
-    case dxbc::RootParameterType::Constants32Bit:
+    case llvm::to_underlying(dxbc::RootParameterType::Constants32Bit):
       Size += sizeof(dxbc::RootConstants);
       break;
     }
@@ -48,19 +48,16 @@ void RootSignatureDesc::write(raw_ostream &OS) const {
   BOS.reserveExtraSpace(getSize());
 
   const uint32_t NumParameters = Parameters.size();
-  const uint32_t StaticSamplerOffset = 0u;
-  const uint32_t NumStaticSamplers = 0u;
 
   support::endian::write(BOS, Version, llvm::endianness::little);
   support::endian::write(BOS, NumParameters, llvm::endianness::little);
-  support::endian::write(BOS, (uint32_t)sizeof(dxbc::RootSignatureHeader),
-                         llvm::endianness::little);
-  support::endian::write(BOS, StaticSamplerOffset, llvm::endianness::little);
+  support::endian::write(BOS, RootParameterOffset, llvm::endianness::little);
   support::endian::write(BOS, NumStaticSamplers, llvm::endianness::little);
+  support::endian::write(BOS, StaticSamplersOffset, llvm::endianness::little);
   support::endian::write(BOS, Flags, llvm::endianness::little);
 
   SmallVector<uint32_t> ParamsOffsets;
-  for (const auto &P : Parameters) {
+  for (const mcdxbc::RootParameter &P : Parameters) {
     support::endian::write(BOS, P.Header.ParameterType,
                            llvm::endianness::little);
     support::endian::write(BOS, P.Header.ShaderVisibility,
@@ -72,10 +69,10 @@ void RootSignatureDesc::write(raw_ostream &OS) const {
   assert(NumParameters == ParamsOffsets.size());
   for (size_t I = 0; I < NumParameters; ++I) {
     rewriteOffsetToCurrentByte(BOS, ParamsOffsets[I]);
-    const auto &P = Parameters[I];
+    const mcdxbc::RootParameter &P = Parameters[I];
 
     switch (P.Header.ParameterType) {
-    case dxbc::RootParameterType::Constants32Bit:
+    case llvm::to_underlying(dxbc::RootParameterType::Constants32Bit):
       support::endian::write(BOS, P.Constants.ShaderRegister,
                              llvm::endianness::little);
       support::endian::write(BOS, P.Constants.RegisterSpace,

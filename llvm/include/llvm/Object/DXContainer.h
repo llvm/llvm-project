@@ -23,6 +23,7 @@
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/TargetParser/Triple.h"
 #include <array>
+#include <cstddef>
 #include <variant>
 
 namespace llvm {
@@ -139,7 +140,8 @@ struct RootParameterView {
 
 struct RootConstantView : RootParameterView {
   static bool classof(const RootParameterView *V) {
-    return V->Header.ParameterType == dxbc::RootParameterType::Constants32Bit;
+    return V->Header.ParameterType ==
+           (uint32_t)dxbc::RootParameterType::Constants32Bit;
   }
 
   llvm::Expected<dxbc::RootConstants> read() {
@@ -183,14 +185,17 @@ public:
   getParameter(const dxbc::RootParameterHeader &Header) const {
     size_t DataSize;
 
-    switch (Header.ParameterType) {
+    if (!dxbc::isValidParameterType(Header.ParameterType))
+      return parseFailed("invalid parameter type");
+
+    switch (static_cast<dxbc::RootParameterType>(Header.ParameterType)) {
     case dxbc::RootParameterType::Constants32Bit:
       DataSize = sizeof(dxbc::RootConstants);
       break;
     }
-    auto EndOfSectionByte = getNumStaticSamplers() == 0
-                                ? PartData.size()
-                                : getStaticSamplersOffset();
+    size_t EndOfSectionByte = getNumStaticSamplers() == 0
+                                  ? PartData.size()
+                                  : getStaticSamplersOffset();
 
     if (Header.ParameterOffset + DataSize > EndOfSectionByte)
       return parseFailed("Reading structure out of file bounds");
