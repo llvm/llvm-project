@@ -743,6 +743,7 @@ static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
     case 0x058B:  // 8B 05 XX XX XX XX : mov eax, dword ptr [XX XX XX XX]
       if (rel_offset)
         *rel_offset = 2;
+      FALLTHROUGH;
     case 0xB841:  // 41 B8 XX XX XX XX : mov r8d, XX XX XX XX
       return 6;
 

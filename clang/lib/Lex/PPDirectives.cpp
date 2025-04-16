@@ -1154,7 +1154,7 @@ Preprocessor::LookupEmbedFile(StringRef Filename, bool isAngled, bool OpenFile,
     }
   }
 
-  for (const auto &Entry : PPOpts->EmbedEntries) {
+  for (const auto &Entry : PPOpts.EmbedEntries) {
     LookupPath.clear();
     SeparateComponents(LookupPath, Entry, Filename, false);
     llvm::Expected<FileEntryRef> ShouldBeEntry = FM.getFileRef(
@@ -1916,15 +1916,15 @@ void Preprocessor::EnterAnnotationToken(SourceRange Range,
 
 /// Produce a diagnostic informing the user that a #include or similar
 /// was implicitly treated as a module import.
-static void diagnoseAutoModuleImport(
-    Preprocessor &PP, SourceLocation HashLoc, Token &IncludeTok,
-    ArrayRef<std::pair<IdentifierInfo *, SourceLocation>> Path,
-    SourceLocation PathEnd) {
+static void diagnoseAutoModuleImport(Preprocessor &PP, SourceLocation HashLoc,
+                                     Token &IncludeTok,
+                                     ArrayRef<IdentifierLoc> Path,
+                                     SourceLocation PathEnd) {
   SmallString<128> PathString;
   for (size_t I = 0, N = Path.size(); I != N; ++I) {
     if (I)
       PathString += '.';
-    PathString += Path[I].first->getName();
+    PathString += Path[I].getIdentifierInfo()->getName();
   }
 
   int IncludeKind = 0;
@@ -2073,6 +2073,15 @@ void Preprocessor::HandleIncludeDirective(SourceLocation HashLoc,
     return;
 
   if (FilenameTok.isNot(tok::header_name)) {
+    if (FilenameTok.is(tok::identifier) && PPOpts.SingleFileParseMode) {
+      // If we saw #include IDENTIFIER and lexing didn't turn in into a header
+      // name, it was undefined. In 'single-file-parse' mode, just skip the
+      // directive without emitting diagnostics - the identifier might be
+      // normally defined in previously-skipped include directive.
+      DiscardUntilEndOfDirective();
+      return;
+    }
+
     Diag(FilenameTok.getLocation(), diag::err_pp_expects_filename);
     if (FilenameTok.isNot(tok::eod))
       DiscardUntilEndOfDirective();
@@ -2264,12 +2273,12 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
   SourceLocation StartLoc = IsImportDecl ? IncludeTok.getLocation() : HashLoc;
 
   // Complain about attempts to #include files in an audit pragma.
-  if (PragmaARCCFCodeAuditedInfo.second.isValid()) {
+  if (PragmaARCCFCodeAuditedInfo.getLoc().isValid()) {
     Diag(StartLoc, diag::err_pp_include_in_arc_cf_code_audited) << IsImportDecl;
-    Diag(PragmaARCCFCodeAuditedInfo.second, diag::note_pragma_entered_here);
+    Diag(PragmaARCCFCodeAuditedInfo.getLoc(), diag::note_pragma_entered_here);
 
     // Immediately leave the pragma.
-    PragmaARCCFCodeAuditedInfo = {nullptr, SourceLocation()};
+    PragmaARCCFCodeAuditedInfo = IdentifierLoc();
   }
 
   // Complain about attempts to #include files in an assume-nonnull pragma.
@@ -2341,7 +2350,7 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
 
   enum { Enter, Import, Skip, IncludeLimitReached } Action = Enter;
 
-  if (PPOpts->SingleFileParseMode)
+  if (PPOpts.SingleFileParseMode)
     Action = IncludeLimitReached;
 
   // If we've reached the max allowed include depth, it is usually due to an
@@ -2394,10 +2403,10 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
     // Compute the module access path corresponding to this module.
     // FIXME: Should we have a second loadModule() overload to avoid this
     // extra lookup step?
-    SmallVector<std::pair<IdentifierInfo *, SourceLocation>, 2> Path;
+    SmallVector<IdentifierLoc, 2> Path;
     for (Module *Mod = ModuleToImport; Mod; Mod = Mod->Parent)
-      Path.push_back(std::make_pair(getIdentifierInfo(Mod->Name),
-                                    FilenameTok.getLocation()));
+      Path.emplace_back(FilenameTok.getLocation(),
+                        getIdentifierInfo(Mod->Name));
     std::reverse(Path.begin(), Path.end());
 
     // Warn that we're replacing the include/import with a module import.
@@ -3420,11 +3429,11 @@ void Preprocessor::HandleIfdefDirective(Token &Result,
       Callbacks->Ifdef(DirectiveTok.getLocation(), MacroNameTok, MD);
   }
 
-  bool RetainExcludedCB = PPOpts->RetainExcludedConditionalBlocks &&
+  bool RetainExcludedCB = PPOpts.RetainExcludedConditionalBlocks &&
     getSourceManager().isInMainFile(DirectiveTok.getLocation());
 
   // Should we include the stuff contained by this directive?
-  if (PPOpts->SingleFileParseMode && !MI) {
+  if (PPOpts.SingleFileParseMode && !MI) {
     // In 'single-file-parse mode' undefined identifiers trigger parsing of all
     // the directive blocks.
     CurPPLexer->pushConditionalLevel(DirectiveTok.getLocation(),
@@ -3475,11 +3484,11 @@ void Preprocessor::HandleIfDirective(Token &IfToken,
         IfToken.getLocation(), DER.ExprRange,
         (ConditionalTrue ? PPCallbacks::CVK_True : PPCallbacks::CVK_False));
 
-  bool RetainExcludedCB = PPOpts->RetainExcludedConditionalBlocks &&
+  bool RetainExcludedCB = PPOpts.RetainExcludedConditionalBlocks &&
     getSourceManager().isInMainFile(IfToken.getLocation());
 
   // Should we include the stuff contained by this directive?
-  if (PPOpts->SingleFileParseMode && DER.IncludedUndefinedIds) {
+  if (PPOpts.SingleFileParseMode && DER.IncludedUndefinedIds) {
     // In 'single-file-parse mode' undefined identifiers trigger parsing of all
     // the directive blocks.
     CurPPLexer->pushConditionalLevel(IfToken.getLocation(), /*wasskip*/false,
@@ -3546,10 +3555,10 @@ void Preprocessor::HandleElseDirective(Token &Result, const Token &HashToken) {
   if (Callbacks)
     Callbacks->Else(Result.getLocation(), CI.IfLoc);
 
-  bool RetainExcludedCB = PPOpts->RetainExcludedConditionalBlocks &&
+  bool RetainExcludedCB = PPOpts.RetainExcludedConditionalBlocks &&
     getSourceManager().isInMainFile(Result.getLocation());
 
-  if ((PPOpts->SingleFileParseMode && !CI.FoundNonSkip) || RetainExcludedCB) {
+  if ((PPOpts.SingleFileParseMode && !CI.FoundNonSkip) || RetainExcludedCB) {
     // In 'single-file-parse mode' undefined identifiers trigger parsing of all
     // the directive blocks.
     CurPPLexer->pushConditionalLevel(CI.IfLoc, /*wasskip*/false,
@@ -3626,10 +3635,10 @@ void Preprocessor::HandleElifFamilyDirective(Token &ElifToken,
     }
   }
 
-  bool RetainExcludedCB = PPOpts->RetainExcludedConditionalBlocks &&
+  bool RetainExcludedCB = PPOpts.RetainExcludedConditionalBlocks &&
     getSourceManager().isInMainFile(ElifToken.getLocation());
 
-  if ((PPOpts->SingleFileParseMode && !CI.FoundNonSkip) || RetainExcludedCB) {
+  if ((PPOpts.SingleFileParseMode && !CI.FoundNonSkip) || RetainExcludedCB) {
     // In 'single-file-parse mode' undefined identifiers trigger parsing of all
     // the directive blocks.
     CurPPLexer->pushConditionalLevel(ElifToken.getLocation(), /*wasskip*/false,
@@ -3888,7 +3897,9 @@ Preprocessor::LexEmbedParameters(Token &CurTok, bool ForHasEmbed) {
           return std::nullopt;
       }
       if (!ForHasEmbed) {
-        Diag(CurTok, diag::err_pp_unknown_parameter) << 1 << Parameter;
+        Diag(ParamStartLoc, diag::err_pp_unknown_parameter) << 1 << Parameter;
+        if (CurTok.isNot(tok::eod))
+          DiscardUntilEndOfDirective(CurTok);
         return std::nullopt;
       }
     }
@@ -4001,6 +4012,12 @@ void Preprocessor::HandleEmbedDirective(SourceLocation HashLoc, Token &EmbedTok,
     Diag(FilenameTok, diag::err_pp_file_not_found) << Filename;
     return;
   }
+
+  if (MaybeFileRef->isDeviceFile()) {
+    Diag(FilenameTok, diag::err_pp_embed_device_file) << Filename;
+    return;
+  }
+
   std::optional<llvm::MemoryBufferRef> MaybeFile =
       getSourceManager().getMemoryBufferForFileOrNone(*MaybeFileRef);
   if (!MaybeFile) {

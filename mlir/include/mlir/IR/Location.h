@@ -79,23 +79,6 @@ public:
   operator LocationAttr() const { return impl; }
   LocationAttr *operator->() const { return const_cast<LocationAttr *>(&impl); }
 
-  /// Type casting utilities on the underlying location.
-  template <typename U>
-  [[deprecated("Use mlir::isa<U>() instead")]]
-  bool isa() const {
-    return llvm::isa<U>(*this);
-  }
-  template <typename U>
-  [[deprecated("Use mlir::dyn_cast<U>() instead")]]
-  U dyn_cast() const {
-    return llvm::dyn_cast<U>(*this);
-  }
-  template <typename U>
-  [[deprecated("Use mlir::cast<U>() instead")]]
-  U cast() const {
-    return llvm::cast<U>(*this);
-  }
-
   /// Comparison operators.
   bool operator==(Location rhs) const { return impl == rhs.impl; }
   bool operator!=(Location rhs) const { return !(*this == rhs); }

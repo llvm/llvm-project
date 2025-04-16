@@ -85,7 +85,8 @@ void mlir::tosa::addTosaToLinalgPasses(
     std::optional<tosa::TosaValidationOptions> validationOptions) {
   // Optional decompositions are designed to benefit linalg.
   if (!options.disableTosaDecompositions)
-    pm.addNestedPass<func::FuncOp>(tosa::createTosaOptionalDecompositions());
+    pm.addNestedPass<func::FuncOp>(
+        tosa::createTosaOptionalDecompositionsPass());
   pm.addNestedPass<func::FuncOp>(createCanonicalizerPass());
 
   pm.addNestedPass<func::FuncOp>(tosa::createTosaInferShapesPass());
