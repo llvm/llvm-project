@@ -448,7 +448,7 @@ static DecodeStatus decodeSImmNonZeroOperand(MCInst &Inst, uint32_t Imm,
 }
 
 template <unsigned T, unsigned N>
-static DecodeStatus decodeSImmOperandAndLslN(MCInst &Inst, uint64_t Imm,
+static DecodeStatus decodeSImmOperandAndLslN(MCInst &Inst, uint32_t Imm,
                                              int64_t Address,
                                              const MCDisassembler *Decoder) {
   assert(isUInt<T - N + 1>(Imm) && "Invalid immediate");
