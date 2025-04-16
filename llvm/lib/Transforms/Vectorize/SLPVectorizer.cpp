@@ -20521,7 +20521,8 @@ void BoUpSLP::computeMinimumValueSizes() {
   }
   bool IsSignedCmp = false;
   if (UserIgnoreList && all_of(*UserIgnoreList, [](Value *V) {
-        return match(V, m_SMin(m_Value(), m_Value()));
+        return match(V, m_SMin(m_Value(), m_Value())) ||
+               match(V, m_SMax(m_Value(), m_Value()));
       }))
     IsSignedCmp = true;
   while (NodeIdx < VectorizableTree.size()) {
