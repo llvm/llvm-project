@@ -5,6 +5,8 @@
 SomeObj *provide();
 CFMutableArrayRef provide_cf();
 void someFunction();
+CGImageRef provideImage();
+NSString *stringForImage(CGImageRef);
 
 namespace raw_ptr {
 
@@ -35,5 +37,14 @@ void foo() {
 
 - (void)doWorkOnSomeObj {
     [[self getSomeObj] doWork];
+}
+
+- (CGImageRef)createImage {
+  return provideImage();
+}
+
+- (NSString *)convertImage {
+  RetainPtr<CGImageRef> image = [self createImage];
+  return stringForImage(image.get());
 }
 @end
