@@ -21111,11 +21111,15 @@ ExprResult Sema::CheckPlaceholderExpr(Expr *E) {
     const bool IsTypeAliasTemplateDecl = isa<TypeAliasTemplateDecl>(Temp);
 
     NestedNameSpecifier *NNS = ULE->getQualifierLoc().getNestedNameSpecifier();
-    TemplateName TN(dyn_cast<TemplateDecl>(Temp));
-    if (TN.isNull())
+    // FIXME: AssumedTemplate is not very appropriate for error recovery here,
+    // as it models only the unqualified-id case, where this case can clearly be
+    // qualified. Thus we can't just qualify an assumed template.
+    TemplateName TN;
+    if (auto *TD = dyn_cast<TemplateDecl>(Temp))
+      TN = Context.getQualifiedTemplateName(NNS, ULE->hasTemplateKeyword(),
+                                            TemplateName(TD));
+    else
       TN = Context.getAssumedTemplateName(NameInfo.getName());
-    TN = Context.getQualifiedTemplateName(NNS,
-                                          /*TemplateKeyword=*/true, TN);
 
     Diag(NameInfo.getLoc(), diag::err_template_kw_refers_to_type_template)
         << TN << ULE->getSourceRange() << IsTypeAliasTemplateDecl;
