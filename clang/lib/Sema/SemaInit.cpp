@@ -10029,12 +10029,19 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
     //   When [...] the constructor [...] is a candidate by
     //    - [over.match.copy] (in all cases)
     if (TD) {
-      SmallVector<Expr *, 8> TmpInits;
-      for (Expr *E : Inits)
+
+      // As template candidates are not deduced immediately,
+      // persist the array in the overload set.
+      MutableArrayRef<Expr *> TmpInits =
+          Candidates.getPersistentArgsArray(Inits.size());
+
+      for (auto [I, E] : llvm::enumerate(Inits)) {
         if (auto *DI = dyn_cast<DesignatedInitExpr>(E))
-          TmpInits.push_back(DI->getInit());
+          TmpInits[I] = DI->getInit();
         else
-          TmpInits.push_back(E);
+          TmpInits[I] = E;
+      }
+
       AddTemplateOverloadCandidate(
           TD, FoundDecl, /*ExplicitArgs=*/nullptr, TmpInits, Candidates,
           /*SuppressUserConversions=*/false,
