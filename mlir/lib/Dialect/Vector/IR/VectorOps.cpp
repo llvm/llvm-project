@@ -5532,41 +5532,34 @@ void ShapeCastOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
   setResultRanges(getResult(), argRanges.front());
 }
 
-/// Returns true if each element of 'a' is equal to the product of a contiguous
-/// sequence of the elements of 'b'. Returns false otherwise.
+/// Returns true if each element of 'a' is either 1 or equal to the product of a
+/// contiguous sequence of the elements of 'b'. Returns false otherwise.
+///
+/// This function assumes that the product of elements in a and b are the same.
 static bool isExpandingShapeCast(ArrayRef<int64_t> a, ArrayRef<int64_t> b) {
+
   unsigned rankA = a.size();
-  unsigned rankB = b.size();
-  if (rankA > rankB) {
-    return false;
-  }
-
-  auto isOne = [](int64_t v) { return v == 1; };
-
-  // Special-case for n-D to 0-d shape cast. 'b' must be all ones to be shape
-  // casted to a 0-d vector.
-  if (rankA == 0 && llvm::all_of(b, isOne))
-    return true;
-
   unsigned i = 0;
   unsigned j = 0;
-  while (i < rankA && j < rankB) {
+  while (i < rankA) {
+    if (a[i] == 1) {
+      ++i;
+      continue;
+    }
+
     int64_t dimA = a[i];
     int64_t dimB = 1;
-    while (dimB < dimA && j < rankB)
-      dimB *= b[j++];
-    if (dimA != dimB)
-      break;
-    ++i;
 
-    // Handle the case when trailing dimensions are of size 1.
-    // Include them into the contiguous sequence.
-    if (i < rankA && llvm::all_of(a.slice(i), isOne))
-      i = rankA;
-    if (j < rankB && llvm::all_of(b.slice(j), isOne))
-      j = rankB;
+    while (dimB < dimA) {
+      dimB *= b[j++];
+    }
+
+    if (dimA != dimB) {
+      return false;
+    }
+    ++i;
   }
-  return i == rankA && j == rankB;
+  return true;
 }
 
 static bool isValidShapeCast(ArrayRef<int64_t> a, ArrayRef<int64_t> b) {
@@ -5582,7 +5575,8 @@ static LogicalResult verifyVectorShapeCast(Operation *op,
   ArrayRef<int64_t> inShape = sourceVectorType.getShape();
   ArrayRef<int64_t> outShape = resultVectorType.getShape();
 
-  // Check that product of source dim sizes matches product of result dim sizes.
+  // Check that product of source dim sizes matches product of result dim
+  // sizes.
   int64_t nInElms = std::accumulate(inShape.begin(), inShape.end(), 1LL,
                                     std::multiplies<int64_t>{});
   int64_t nOutElms = std::accumulate(outShape.begin(), outShape.end(), 1LL,
@@ -5702,8 +5696,8 @@ static VectorType trimTrailingOneDims(VectorType oldType) {
 ///
 /// Looks at `vector.shape_cast` Ops that simply "drop" the trailing unit
 /// dimension. If the input vector comes from `vector.create_mask` for which
-/// the corresponding mask input value is 1 (e.g. `%c1` below), then it is safe
-/// to fold shape_cast into create_mask.
+/// the corresponding mask input value is 1 (e.g. `%c1` below), then it is
+/// safe to fold shape_cast into create_mask.
 ///
 /// BEFORE:
 ///    %1 = vector.create_mask %c1, %dim, %c1, %c1 : vector<1x[4]x1x1xi1>
@@ -5970,8 +5964,8 @@ LogicalResult TypeCastOp::verify() {
   auto resultType = getResultMemRefType();
   if (getElementTypeOrSelf(getElementTypeOrSelf(sourceType)) !=
       getElementTypeOrSelf(getElementTypeOrSelf(resultType)))
-    return emitOpError(
-               "expects result and operand with same underlying scalar type: ")
+    return emitOpError("expects result and operand with same underlying "
+                       "scalar type: ")
            << resultType;
   if (extractShape(sourceType) != extractShape(resultType))
     return emitOpError(
@@ -6009,7 +6003,8 @@ OpFoldResult vector::TransposeOp::fold(FoldAdaptor adaptor) {
       return attr.reshape(getResultVectorType());
 
   // Eliminate identity transpose ops. This happens when the dimensions of the
-  // input vector remain in their original order after the transpose operation.
+  // input vector remain in their original order after the transpose
+  // operation.
   ArrayRef<int64_t> perm = getPermutation();
 
   // Check if the permutation of the dimensions contains sequential values:
@@ -6068,7 +6063,8 @@ public:
       return result;
     };
 
-    // Return if the input of 'transposeOp' is not defined by another transpose.
+    // Return if the input of 'transposeOp' is not defined by another
+    // transpose.
     vector::TransposeOp parentTransposeOp =
         transposeOp.getVector().getDefiningOp<vector::TransposeOp>();
     if (!parentTransposeOp)
@@ -6212,8 +6208,9 @@ LogicalResult ConstantMaskOp::verify() {
       return emitOpError(
           "only supports 'none set' or 'all set' scalable dimensions");
   }
-  // Verify that if one mask dim size is zero, they all should be zero (because
-  // the mask region is a conjunction of each mask dimension interval).
+  // Verify that if one mask dim size is zero, they all should be zero
+  // (because the mask region is a conjunction of each mask dimension
+  // interval).
   bool anyZeros = llvm::is_contained(maskDimSizes, 0);
   bool allZeros = llvm::all_of(maskDimSizes, [](int64_t s) { return s == 0; });
   if (anyZeros && !allZeros)
@@ -6251,7 +6248,8 @@ void CreateMaskOp::build(OpBuilder &builder, OperationState &result,
 
 LogicalResult CreateMaskOp::verify() {
   auto vectorType = llvm::cast<VectorType>(getResult().getType());
-  // Verify that an operand was specified for each result vector each dimension.
+  // Verify that an operand was specified for each result vector each
+  // dimension.
   if (vectorType.getRank() == 0) {
     if (getNumOperands() != 1)
       return emitOpError(
@@ -6458,8 +6456,8 @@ void mlir::vector::MaskOp::print(OpAsmPrinter &p) {
 void MaskOp::ensureTerminator(Region &region, Builder &builder, Location loc) {
   OpTrait::SingleBlockImplicitTerminator<vector::YieldOp>::Impl<
       MaskOp>::ensureTerminator(region, builder, loc);
-  // Keep the default yield terminator if the number of masked operations is not
-  // the expected. This case will trigger a verification failure.
+  // Keep the default yield terminator if the number of masked operations is
+  // not the expected. This case will trigger a verification failure.
   Block &block = region.front();
   if (block.getOperations().size() != 2)
     return;
@@ -6563,9 +6561,9 @@ LogicalResult MaskOp::fold(FoldAdaptor adaptor,
   return success();
 }
 
-// Elides empty vector.mask operations with or without return values. Propagates
-// the yielded values by the vector.yield terminator, if any, or erases the op,
-// otherwise.
+// Elides empty vector.mask operations with or without return values.
+// Propagates the yielded values by the vector.yield terminator, if any, or
+// erases the op, otherwise.
 class ElideEmptyMaskOp : public OpRewritePattern<MaskOp> {
   using OpRewritePattern::OpRewritePattern;
 
@@ -6668,7 +6666,8 @@ OpFoldResult SplatOp::fold(FoldAdaptor adaptor) {
   if (!isa_and_nonnull<IntegerAttr, FloatAttr>(constOperand))
     return {};
 
-  // SplatElementsAttr::get treats single value for second arg as being a splat.
+  // SplatElementsAttr::get treats single value for second arg as being a
+  // splat.
   return SplatElementsAttr::get(getType(), {constOperand});
 }
 
@@ -6790,12 +6789,12 @@ Operation *mlir::vector::maskOperation(OpBuilder &builder,
 }
 
 /// Creates a vector select operation that picks values from `newValue` or
-/// `passthru` for each result vector lane based on `mask`. This utility is used
-/// to propagate the pass-thru value of vector.mask or for cases where only the
-/// pass-thru value propagation is needed. VP intrinsics do not support
-/// pass-thru values and every mask-out lane is set to poison. LLVM backends are
-/// usually able to match op + select patterns and fold them into a native
-/// target instructions.
+/// `passthru` for each result vector lane based on `mask`. This utility is
+/// used to propagate the pass-thru value of vector.mask or for cases where
+/// only the pass-thru value propagation is needed. VP intrinsics do not
+/// support pass-thru values and every mask-out lane is set to poison. LLVM
+/// backends are usually able to match op + select patterns and fold them into
+/// a native target instructions.
 Value mlir::vector::selectPassthru(OpBuilder &builder, Value mask,
                                    Value newValue, Value passthru) {
   if (!mask)

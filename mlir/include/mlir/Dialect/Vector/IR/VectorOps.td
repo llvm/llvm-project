@@ -2248,10 +2248,11 @@ def Vector_ShapeCastOp :
     vector. The element type remains the same, as does the number of elements
     (product of dimensions).
 
-    If reducing or preserving rank (n >= k), all result dimension sizes must be
-    products of contiguous source dimension sizes. If expanding rank (n < k),
-    source dimensions must all factor into contiguous sequences of destination
-    dimension sizes.
+    A shape_cast must be either collapsing or expanding. Collapsing means all
+    result dimension sizes are products of contiguous source dimension sizes.
+    Expanding means source dimensions all factor into contiguous sequences of
+    destination dimension sizes. Size 1 dimensions in source and destination
+    are ignored.
 
     Each source dim is expanded (or contiguous sequence of source dims combined)
     in source dimension list order (i.e. 0 <= i < n), to produce a contiguous

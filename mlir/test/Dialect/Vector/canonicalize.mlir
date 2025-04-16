@@ -950,14 +950,16 @@ func.func @insert_no_fold_scalar_to_0d(%v: vector<f32>) -> vector<f32> {
 
 // -----
 
+// The definition of shape_cast stipulates that it must be either expanding or collapsing,
+// it cannot be a mixture of both.
 // CHECK-LABEL: dont_fold_expand_collapse
-//       CHECK:   %[[A:.*]] = vector.shape_cast %{{.*}} : vector<1x1x64xf32> to vector<1x1x8x8xf32>
-//       CHECK:   %[[B:.*]] = vector.shape_cast %{{.*}} : vector<1x1x8x8xf32> to vector<8x8xf32>
-//       CHECK:   return %[[B]] : vector<8x8xf32>
-func.func @dont_fold_expand_collapse(%arg0: vector<1x1x64xf32>) -> vector<8x8xf32> {
-    %0 = vector.shape_cast %arg0 : vector<1x1x64xf32> to vector<1x1x8x8xf32>
-    %1 = vector.shape_cast %0 : vector<1x1x8x8xf32> to vector<8x8xf32>
-    return %1 : vector<8x8xf32>
+//       CHECK:   %[[A:.*]] = vector.shape_cast %{{.*}} : vector<2x2x9xf32> to vector<2x2x3x3xf32>
+//       CHECK:   %[[B:.*]] = vector.shape_cast %{{.*}} : vector<2x2x3x3xf32> to vector<4x3x3xf32>
+//       CHECK:   return %[[B]] : vector<4x3x3xf32>
+func.func @dont_fold_expand_collapse(%arg0: vector<2x2x9xf32>) -> vector<4x3x3xf32> {
+    %0 = vector.shape_cast %arg0 : vector<2x2x9xf32> to vector<2x2x3x3xf32>
+    %1 = vector.shape_cast %0 : vector<2x2x3x3xf32> to vector<4x3x3xf32>
+    return %1 : vector<4x3x3xf32>
 }
 
 // -----

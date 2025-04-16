@@ -581,7 +581,27 @@ func.func @shape_cast_rank_preserving(%arg0 : vector<1x4xf32>) -> vector<4x1xf32
 
   // CHECK: vector.shape_cast %{{.*}} : vector<1x4xf32> to vector<4x1xf32>
   %0 = vector.shape_cast %arg0 : vector<1x4xf32> to vector<4x1xf32>
+
   return %0 : vector<4x1xf32>
+}
+
+
+// CHECK-LABEL: @collapse_but_increase_rank
+func.func @collapse_but_increase_rank(%arg0 : vector<2x3x5x7xf32>) -> vector<1x6x1x35x1xf32> {
+
+  // CHECK: vector.shape_cast %{{.*}} : vector<2x3x5x7xf32> to vector<1x6x1x35x1xf32>
+  %0 = vector.shape_cast %arg0 : vector<2x3x5x7xf32> to vector<1x6x1x35x1xf32>
+
+  return %0 : vector<1x6x1x35x1xf32>
+}
+
+// CHECK-LABEL: @expand_but_decrease_rank
+func.func @expand_but_decrease_rank(%arg0 : vector<1x1x6xi8>) -> vector<2x3xi8> {
+
+  // CHECK: vector.shape_cast %{{.*}} : vector<1x1x6xi8> to vector<2x3xi8>
+  %0 = vector.shape_cast %arg0 : vector<1x1x6xi8> to vector<2x3xi8>
+
+  return %0 : vector<2x3xi8>
 }
 
 // CHECK-LABEL: @bitcast
