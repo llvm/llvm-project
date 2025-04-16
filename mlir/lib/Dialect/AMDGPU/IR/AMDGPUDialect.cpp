@@ -468,20 +468,6 @@ LogicalResult DPPOp::verify() {
     }
     break;
   }
-
-  case DPPPerm::row_share: {
-    if (!permArgument) {
-      return emitOpError("Attribute '" + Twine(stringifyDPPPerm(kind)) +
-                         "' value not specified");
-    }
-    if (auto intAttr = dyn_cast<IntegerAttr>(permArgument)) {
-      uint32_t attrValue = intAttr.getInt();
-      if (attrValue < 0 || attrValue > 15) {
-        return emitOpError(
-            "Attribute value for 'row_share' must be between 0 and 15");
-      }
-    }
-  } break;
   }
   return success();
 }

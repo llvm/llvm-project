@@ -137,11 +137,3 @@ func.func @row_bcast_update_dpp_f16(%arg0: f16, %arg1: f16) -> f16 {
   %0 = amdgpu.dpp %arg0 %arg1 row_bcast_15 { bound_ctrl = true } : f16
     return %0 : f16
 }
-
-func.func @dpp_row_share(%arg0: i32, %arg1: i32) -> i32 {  
-  // CHECK-LABEL: func @dpp_row_share  
-  // CHECK: rocdl.update.dpp %arg0, %arg1 with 351, 15, 15, false : i32  
-  // CHECK: return %0 : i32  
-  %0 = amdgpu.dpp %arg0 %arg1 row_share ( 0xf : i32 ) : i32  
-  return %0 : i32  
-}
