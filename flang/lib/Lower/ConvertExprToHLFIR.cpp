@@ -224,12 +224,12 @@ private:
               Fortran::semantics::Attr::VOLATILE))
         isVolatile = true;
     } else if constexpr (std::is_same_v<std::decay_t<T>,
-                                 Fortran::evaluate::ArrayRef>) {
+                                        Fortran::evaluate::ArrayRef>) {
       if (designatorNode.base().GetLastSymbol().attrs().test(
               Fortran::semantics::Attr::VOLATILE))
         isVolatile = true;
     } else if constexpr (std::is_same_v<std::decay_t<T>,
-                                 Fortran::evaluate::Component>) {
+                                        Fortran::evaluate::Component>) {
       if (designatorNode.GetLastSymbol().attrs().test(
               Fortran::semantics::Attr::VOLATILE))
         isVolatile = true;

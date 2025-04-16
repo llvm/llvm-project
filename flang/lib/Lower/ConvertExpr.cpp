@@ -2705,7 +2705,7 @@ public:
                     mlir::isa<fir::BoxCharType>(funcTy.getResult(0))) {
                   auto boxTy =
                       mlir::cast<fir::BoxCharType>(funcTy.getResult(0));
-                  mlir::Value ref = builder.createConvert(
+                  mlir::Value ref = builder.createConvertWithVolatileCast(
                       loc, builder.getRefType(boxTy.getEleTy()), x.getAddr());
                   auto len = builder.create<fir::UndefOp>(
                       loc, builder.getCharacterLengthType());

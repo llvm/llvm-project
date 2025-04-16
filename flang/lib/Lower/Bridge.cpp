@@ -5494,8 +5494,9 @@ private:
         // return, PassBy::AddressAndLength should be retired.
         mlir::Location loc = toLocation();
         fir::factory::CharacterExprHelper charHelp{*builder, loc};
-        mlir::Value box =
-            charHelp.createEmboxChar(arg.firArgument, arg.firLength);
+        mlir::Value casted =
+            builder->createVolatileCast(loc, false, arg.firArgument);
+        mlir::Value box = charHelp.createEmboxChar(casted, arg.firLength);
         mapBlockArgToDummyOrResult(arg.entity->get(), box, isResult);
       } else {
         if (arg.entity.has_value()) {
