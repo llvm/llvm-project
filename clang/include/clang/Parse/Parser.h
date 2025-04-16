@@ -3068,7 +3068,7 @@ private:
         Tok.is(tok::l_square)) {
       ParsedAttributes AttrsWithRange(AttrFactory);
       ParseMicrosoftAttributes(AttrsWithRange);
-      AttrsParsed = AttrsWithRange.size();
+      AttrsParsed = !AttrsWithRange.empty();
       Attrs.takeAllFrom(AttrsWithRange);
     }
     return AttrsParsed;
