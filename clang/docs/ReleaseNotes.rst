@@ -362,9 +362,9 @@ Improvements to Clang's diagnostics
 
 - ``-Whigher-precisision-for-complex-divison`` warns when:
 
-  -	The divisor is complex
-  -	When the complex division happens in a higher precision type due to arithmetic promotion
-  -	When using the divide and assign operator (``/=``)
+  -	The divisor is complex.
+  -	When the complex division happens in a higher precision type due to arithmetic promotion.
+  -	When using the divide and assign operator (``/=``).
 
   Fixes #GH131127
 
