@@ -155,10 +155,10 @@ APValue Pointer::toAPValue(const ASTContext &ASTCtx) const {
   if (isFunctionPointer()) {
     const FunctionPointer &FP = asFunctionPointer();
     if (const FunctionDecl *FD = FP.getFunction()->getDecl())
-      return APValue(FD, CharUnits::fromQuantity(FP.getOffset() + Offset), {},
+      return APValue(FD, CharUnits::fromQuantity(Offset), {},
                      /*OnePastTheEnd=*/false, /*IsNull=*/false);
-    return APValue(FP.getFunction()->getExpr(),
-                   CharUnits::fromQuantity(FP.getOffset() + Offset), {},
+    return APValue(FP.getFunction()->getExpr(), CharUnits::fromQuantity(Offset),
+                   {},
                    /*OnePastTheEnd=*/false, /*IsNull=*/false);
   }
 
