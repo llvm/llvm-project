@@ -7479,8 +7479,8 @@ void BoUpSLP::reorderBottomToTop(bool IgnoreReorder) {
         for (const auto &P : Data.first->CombinedEntriesWithIndices) {
           TreeEntry &OpTE = *VectorizableTree[P.first].get();
           OrdersType Order = OpTE.ReorderIndices;
-          if (Order.empty()) {
-            if (!OpTE.isGather())
+          if (Order.empty() || !OpTE.ReuseShuffleIndices.empty()) {
+            if (!OpTE.isGather() && OpTE.ReuseShuffleIndices.empty())
               continue;
             const auto BestOrder =
                 getReorderingData(OpTE, /*TopToBottom=*/false, IgnoreReorder);
