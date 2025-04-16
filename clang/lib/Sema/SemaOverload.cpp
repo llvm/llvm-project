@@ -11229,7 +11229,8 @@ void OverloadCandidateSet::PerfectViableFunction(
   Best = end();
   for (auto It = begin(); It != end(); ++It) {
 
-    if (!It->isPerfectMatch(S.getASTContext()))
+    if (!It->isPerfectMatch(S.getASTContext(),
+                            Kind == CSK_InitByUserDefinedConversion))
       continue;
 
     // We found a suitable conversion function

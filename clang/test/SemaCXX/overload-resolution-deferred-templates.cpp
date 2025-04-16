@@ -183,3 +183,18 @@ void h(short n) { f(n); }
 }
 
 #endif
+
+template<typename ...Ts>
+struct t1 {
+};
+struct t6 {
+  template<typename T = int>
+  operator t1<float>() {
+    return {};
+  }
+};
+
+int main() {
+  t6 v6;
+  v6.operator t1<float>();
+}

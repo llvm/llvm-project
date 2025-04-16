@@ -1005,14 +1005,14 @@ class Sema;
 
     // An overload is a perfect match if the conversion
     // sequences for each argument are perfect.
-    bool isPerfectMatch(const ASTContext &Ctx) const {
+    bool isPerfectMatch(const ASTContext &Ctx, bool ForConversion) const {
       if (!Viable)
         return false;
       for (const auto &C : Conversions) {
         if (!C.isInitialized() || !C.isPerfect(Ctx))
           return false;
       }
-      if (isa_and_nonnull<CXXConversionDecl>(Function))
+      if (ForConversion && isa_and_nonnull<CXXConversionDecl>(Function))
         return FinalConversion.isPerfect(Ctx);
       return true;
     }
