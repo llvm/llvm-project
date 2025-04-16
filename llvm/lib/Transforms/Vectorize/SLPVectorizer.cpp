@@ -7479,8 +7479,8 @@ void BoUpSLP::reorderBottomToTop(bool IgnoreReorder) {
         for (const auto &P : Data.first->CombinedEntriesWithIndices) {
           TreeEntry &OpTE = *VectorizableTree[P.first].get();
           OrdersType Order = OpTE.ReorderIndices;
-          if (Order.empty()) {
-            if (!OpTE.isGather())
+          if (Order.empty() || !OpTE.ReuseShuffleIndices.empty()) {
+            if (!OpTE.isGather() && OpTE.ReuseShuffleIndices.empty())
               continue;
             const auto BestOrder =
                 getReorderingData(OpTE, /*TopToBottom=*/false, IgnoreReorder);
@@ -7577,6 +7577,8 @@ void BoUpSLP::reorderBottomToTop(bool IgnoreReorder) {
             return Res.takeVector();
           };
           auto GetNumOperands = [](const TreeEntry *TE) {
+            if (TE->State == TreeEntry::SplitVectorize)
+              return TE->getNumOperands();
             if (auto *CI = dyn_cast<CallInst>(TE->getMainOp()); CI)
               return CI->arg_size();
             return TE->getNumOperands();
@@ -9574,6 +9576,24 @@ bool BoUpSLP::canBuildSplitNode(ArrayRef<Value *> VL,
   if (VL.size() <= SmallNodeSize || TTI->preferAlternateOpcodeVectorization() ||
       !SplitAlternateInstructions)
     return false;
+
+  // Check if this is a duplicate of another split entry.
+  LLVM_DEBUG(dbgs() << "SLP: \tChecking bundle: " << *LocalState.getMainOp()
+                    << ".\n");
+  for (TreeEntry *E : getSplitTreeEntries(LocalState.getMainOp())) {
+    if (E->isSame(VL)) {
+      LLVM_DEBUG(dbgs() << "SLP: Perfect diamond merge at "
+                        << *LocalState.getMainOp() << ".\n");
+      return false;
+    }
+    SmallPtrSet<Value *, 8> Values(llvm::from_range, E->Scalars);
+    if (all_of(VL, [&](Value *V) {
+          return isa<PoisonValue>(V) || Values.contains(V);
+        })) {
+      LLVM_DEBUG(dbgs() << "SLP: Gathering due to full overlap.\n");
+      return false;
+    }
+  }
 
   ReorderIndices.assign(VL.size(), VL.size());
   SmallBitVector Op1Indices(VL.size());
@@ -15707,13 +15727,10 @@ InstructionCost BoUpSLP::getGatherCost(ArrayRef<Value *> VL, bool ForPoisonSrc,
                                        Type *ScalarTy) const {
   const unsigned VF = VL.size();
   auto *VecTy = getWidenedType(ScalarTy, VF);
-  bool DuplicateNonConst = false;
   // Find the cost of inserting/extracting values from the vector.
   // Check if the same elements are inserted several times and count them as
   // shuffle candidates.
-  APInt ShuffledElements = APInt::getZero(VF);
   APInt DemandedElements = APInt::getZero(VF);
-  DenseMap<Value *, unsigned> UniqueElements;
   constexpr TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
   InstructionCost Cost;
   auto EstimateInsertCost = [&](unsigned I, Value *V) {
@@ -15722,32 +15739,18 @@ InstructionCost BoUpSLP::getGatherCost(ArrayRef<Value *> VL, bool ForPoisonSrc,
       Cost += TTI->getCastInstrCost(Instruction::Trunc, ScalarTy, V->getType(),
                                     TTI::CastContextHint::None, CostKind);
   };
-  SmallVector<int> ShuffleMask(VF, PoisonMaskElem);
   SmallVector<int> ConstantShuffleMask(VF, PoisonMaskElem);
   std::iota(ConstantShuffleMask.begin(), ConstantShuffleMask.end(), 0);
   for (auto [I, V] : enumerate(VL)) {
     // No need to shuffle duplicates for constants.
-    if ((ForPoisonSrc && isConstant(V)) || isa<UndefValue>(V)) {
-      ShuffledElements.setBit(I);
-      ShuffleMask[I] = isa<PoisonValue>(V) ? PoisonMaskElem : I;
+    if ((ForPoisonSrc && isConstant(V)) || isa<UndefValue>(V))
       continue;
-    }
 
     if (isConstant(V)) {
       ConstantShuffleMask[I] = I + VF;
-      ShuffleMask[I] = I;
       continue;
     }
-    auto Res = UniqueElements.try_emplace(V, I);
-    if (Res.second) {
-      EstimateInsertCost(I, V);
-      ShuffleMask[I] = I;
-      continue;
-    }
-
-    DuplicateNonConst = true;
-    ShuffledElements.setBit(I);
-    ShuffleMask[I] = Res.first->second;
+    EstimateInsertCost(I, V);
   }
   // FIXME: add a cost for constant vector materialization.
   bool IsAnyNonUndefConst =
@@ -15756,15 +15759,6 @@ InstructionCost BoUpSLP::getGatherCost(ArrayRef<Value *> VL, bool ForPoisonSrc,
   if (!ForPoisonSrc && IsAnyNonUndefConst) {
     Cost += ::getShuffleCost(*TTI, TargetTransformInfo::SK_PermuteTwoSrc, VecTy,
                              ConstantShuffleMask);
-    // Update the shuffle mask for shuffling with incoming source (all elements
-    // are used!) or with constant subvector.
-    for_each(enumerate(ShuffleMask), [&](auto P) {
-      if ((!ForPoisonSrc && P.value() == PoisonMaskElem) ||
-          ConstantShuffleMask[P.index()] != PoisonMaskElem)
-        P.value() = P.index();
-      else if (P.value() != PoisonMaskElem)
-        P.value() += VF;
-    });
   }
 
   // 2. Insert unique non-constants.
@@ -15773,10 +15767,6 @@ InstructionCost BoUpSLP::getGatherCost(ArrayRef<Value *> VL, bool ForPoisonSrc,
                                      /*Insert=*/true,
                                      /*Extract=*/false, CostKind,
                                      ForPoisonSrc && !IsAnyNonUndefConst, VL);
-  // 3. Shuffle duplicates.
-  if (DuplicateNonConst)
-    Cost += ::getShuffleCost(*TTI, TargetTransformInfo::SK_PermuteSingleSrc,
-                             VecTy, ShuffleMask, CostKind);
   return Cost;
 }
 
@@ -15990,8 +15980,12 @@ void BoUpSLP::setInsertPointAfterBundle(const TreeEntry *E) {
   BasicBlock::iterator LastInstIt = LastInst->getIterator();
   // If the instruction is PHI, set the insert point after all the PHIs.
   bool IsPHI = isa<PHINode>(LastInst);
-  if (IsPHI)
+  if (IsPHI) {
     LastInstIt = LastInst->getParent()->getFirstNonPHIIt();
+    if (LastInstIt != LastInst->getParent()->end() &&
+        LastInstIt->getParent()->isLandingPad())
+      LastInstIt = std::next(LastInstIt);
+  }
   if (IsPHI ||
       (!E->isGather() && E->State != TreeEntry::SplitVectorize &&
        doesNotNeedToSchedule(E->Scalars)) ||

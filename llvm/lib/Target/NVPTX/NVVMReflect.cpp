@@ -52,10 +52,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "nvvm-reflect"
 
-namespace llvm {
-void initializeNVVMReflectLegacyPassPass(PassRegistry &);
-} // namespace llvm
-
 namespace {
 class NVVMReflect {
   // Map from reflect function call arguments to the value to replace the call
