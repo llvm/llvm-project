@@ -8,7 +8,7 @@
 
 // COM: Compile SPIR-V source to a relocatable
 // RUN: AMD_COMGR_EMIT_VERBOSE_LOGS=1 AMD_COMGR_REDIRECT_LOGS=stdout \
-// RUN:   spirv-to-reloc %t.spv %t.o | FileCheck %s
+// RUN:   spirv-to-reloc %t.spv %t.o | FileCheck %s --dump-input-filter all
 
 // CHECK: ActionKind: AMD_COMGR_ACTION_COMPILE_SPIRV_TO_RELOCATABLE
 
