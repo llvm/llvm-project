@@ -1521,10 +1521,16 @@ bool ValueObject::DumpPrintableRepresentation(
       str = GetLocationAsCString();
       break;
 
-    case eValueObjectRepresentationStyleChildrenCount:
-      strm.Printf("%" PRIu64 "", (uint64_t)GetNumChildrenIgnoringErrors());
-      str = strm.GetString();
+    case eValueObjectRepresentationStyleChildrenCount: {
+      if (auto err = GetNumChildren()) {
+        strm.Printf("%" PRIu32, *err);
+        str = strm.GetString();
+      } else {
+        strm << "error: " << toString(err.takeError());
+        str = strm.GetString();
+      }
       break;
+    }
 
     case eValueObjectRepresentationStyleType:
       str = GetTypeName().GetStringRef();
