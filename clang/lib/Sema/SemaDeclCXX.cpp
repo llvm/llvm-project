@@ -9471,7 +9471,7 @@ struct SpecialMemberDeletionInfo
 
   bool shouldDeleteForVariantObjCPtrMember(FieldDecl *FD, QualType FieldType);
 
-  bool shouldDeleteForVariantPtrAuthMember(FieldDecl *FD, QualType FieldType);
+  bool shouldDeleteForVariantPtrAuthMember(const FieldDecl *FD);
 
   bool visitBase(CXXBaseSpecifier *Base) { return shouldDeleteForBase(Base); }
   bool visitField(FieldDecl *Field) { return shouldDeleteForField(Field); }
@@ -9642,7 +9642,8 @@ bool SpecialMemberDeletionInfo::shouldDeleteForVariantObjCPtrMember(
 }
 
 bool SpecialMemberDeletionInfo::shouldDeleteForVariantPtrAuthMember(
-    FieldDecl *FD, QualType FieldType) {
+    const FieldDecl *FD) {
+  QualType FieldType = S.Context.getBaseElementType(FD->getType());
   // Copy/move constructors/assignment operators are deleted if the field has an
   // address-discriminated ptrauth qualifier.
   PointerAuthQualifier Q = FieldType.getPointerAuth();
@@ -9650,20 +9651,19 @@ bool SpecialMemberDeletionInfo::shouldDeleteForVariantPtrAuthMember(
   if (!Q || !Q.isAddressDiscriminated())
     return false;
 
-  if (CSM == CXXSpecialMemberKind::DefaultConstructor || CSM == CXXSpecialMemberKind::Destructor)
+  if (CSM == CXXSpecialMemberKind::DefaultConstructor ||
+      CSM == CXXSpecialMemberKind::Destructor)
     return false;
 
   if (Diagnose) {
     auto *ParentClass = cast<CXXRecordDecl>(FD->getParent());
-    S.Diag(FD->getLocation(),
-           diag::note_deleted_special_member_class_subobject)
-        << llvm::to_underlying(getEffectiveCSM()) << ParentClass << /*IsField*/true
-        << FD << 4 << /*IsDtorCallInCtor*/false << 2;
+    S.Diag(FD->getLocation(), diag::note_deleted_special_member_class_subobject)
+        << llvm::to_underlying(getEffectiveCSM()) << ParentClass
+        << /*IsField*/ true << FD << 4 << /*IsDtorCallInCtor*/ false << 2;
   }
 
   return true;
 }
-
 
 /// Check whether we should delete a special member function due to the class
 /// having a particular direct or virtual base class.
@@ -9703,7 +9703,7 @@ bool SpecialMemberDeletionInfo::shouldDeleteForField(FieldDecl *FD) {
   if (inUnion() && shouldDeleteForVariantObjCPtrMember(FD, FieldType))
     return true;
 
-  if (inUnion() && shouldDeleteForVariantPtrAuthMember(FD, FieldType))
+  if (inUnion() && shouldDeleteForVariantPtrAuthMember(FD))
     return true;
 
   if (CSM == CXXSpecialMemberKind::DefaultConstructor) {
@@ -9769,7 +9769,7 @@ bool SpecialMemberDeletionInfo::shouldDeleteForField(FieldDecl *FD) {
         if (shouldDeleteForVariantObjCPtrMember(&*UI, UnionFieldType))
           return true;
 
-        if (shouldDeleteForVariantPtrAuthMember(&*UI, UnionFieldType))
+        if (shouldDeleteForVariantPtrAuthMember(&*UI))
           return true;
 
         if (!UnionFieldType.isConstQualified())

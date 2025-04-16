@@ -2690,7 +2690,7 @@ std::string PointerAuthQualifier::getAsString(const PrintingPolicy &P) const {
   SmallString<64> Buf;
   llvm::raw_svector_ostream StrOS(Buf);
   print(StrOS, P);
-  return std::string(StrOS.str());
+  return StrOS.str().str();
 }
 
 bool PointerAuthQualifier::isEmptyWhenPrinted(const PrintingPolicy &P) const {
@@ -2699,10 +2699,13 @@ bool PointerAuthQualifier::isEmptyWhenPrinted(const PrintingPolicy &P) const {
 
 void PointerAuthQualifier::print(raw_ostream &OS,
                                  const PrintingPolicy &P) const {
-  if (!isPresent()) return;
-  OS << "__ptrauth(" << getKey() << ","
-                     << unsigned(isAddressDiscriminated()) << ","
-                     << getExtraDiscriminator() << ")";
+  if (!isPresent())
+    return;
+
+  OS << "__ptrauth(";
+  OS << getKey();
+  OS << "," << unsigned(isAddressDiscriminated()) << ","
+     << getExtraDiscriminator() << ")";
 }
 
 std::string Qualifiers::getAsString() const {
@@ -2734,9 +2737,9 @@ bool Qualifiers::isEmptyWhenPrinted(const PrintingPolicy &Policy) const {
     if (!(lifetime == Qualifiers::OCL_Strong && Policy.SuppressStrongLifetime))
       return false;
 
-  if (auto pointerAuth = getPointerAuth())
-    if (!pointerAuth.isEmptyWhenPrinted(Policy))
-      return false;
+  if (PointerAuthQualifier PointerAuth = getPointerAuth();
+      PointerAuth && !PointerAuth.isEmptyWhenPrinted(Policy))
+    return false;
 
   return true;
 }
@@ -2848,12 +2851,12 @@ void Qualifiers::print(raw_ostream &OS, const PrintingPolicy& Policy,
     }
   }
 
-  if (auto pointerAuth = getPointerAuth()) {
+  if (PointerAuthQualifier PointerAuth = getPointerAuth()) {
     if (addSpace)
       OS << ' ';
     addSpace = true;
 
-    pointerAuth.print(OS, Policy);
+    PointerAuth.print(OS, Policy);
   }
 
   if (appendSpaceIfNonEmpty && addSpace)

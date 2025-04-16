@@ -4538,10 +4538,10 @@ public:
     }
 
     bool isReference() const { return ValueAndIsReference.getInt(); }
-    LValue getReferenceLValue(CodeGenFunction &CGF, Expr *refExpr) const {
+    LValue getReferenceLValue(CodeGenFunction &CGF, const Expr *RefExpr) const {
       assert(isReference());
       return CGF.MakeNaturalAlignAddrLValue(ValueAndIsReference.getPointer(),
-                                            refExpr->getType());
+                                            RefExpr->getType());
     }
 
     llvm::Constant *getValue() const {
@@ -4550,7 +4550,7 @@ public:
     }
   };
 
-  ConstantEmission tryEmitAsConstant(DeclRefExpr *refExpr);
+  ConstantEmission tryEmitAsConstant(const DeclRefExpr *RefExpr);
   ConstantEmission tryEmitAsConstant(const MemberExpr *ME);
   llvm::Value *emitScalarConstant(const ConstantEmission &Constant, Expr *E);
 
@@ -4675,27 +4675,6 @@ public:
                                                CXXDtorType Type,
                                                const CXXRecordDecl *RD);
 
-  CGPointerAuthInfo EmitPointerAuthInfo(PointerAuthQualifier qualifier,
-                                        Address storageAddress);
-  llvm::Value *EmitPointerAuthQualify(PointerAuthQualifier qualifier,
-                                      llvm::Value *pointer,
-                                      QualType valueType,
-                                      Address storageAddress,
-                                      bool isKnownNonNull);
-  llvm::Value *EmitPointerAuthQualify(PointerAuthQualifier qualifier,
-                                      const Expr *pointerExpr,
-                                      Address storageAddress);
-  llvm::Value *EmitPointerAuthUnqualify(PointerAuthQualifier qualifier,
-                                        llvm::Value *pointer,
-                                        QualType pointerType,
-                                        Address storageAddress,
-                                        bool isKnownNonNull);
-  void EmitPointerAuthCopy(PointerAuthQualifier qualifier, QualType type,
-                           Address destField, Address srcField);
-
-  std::pair<llvm::Value *, CGPointerAuthInfo>
-  EmitOrigPointerRValue(const Expr *E);
-
   bool isPointerKnownNonNull(const Expr *E);
   /// Check whether the underlying base pointer is a constant null.
   bool isUnderlyingBasePointerConstantNull(const Expr *E);
@@ -4725,6 +4704,26 @@ public:
   void EmitPointerAuthOperandBundle(
       const CGPointerAuthInfo &Info,
       SmallVectorImpl<llvm::OperandBundleDef> &Bundles);
+
+  CGPointerAuthInfo EmitPointerAuthInfo(PointerAuthQualifier Qualifier,
+                                        Address StorageAddress);
+  llvm::Value *EmitPointerAuthQualify(PointerAuthQualifier Qualifier,
+                                      llvm::Value *Pointer, QualType ValueType,
+                                      Address StorageAddress,
+                                      bool IsKnownNonNull);
+  llvm::Value *EmitPointerAuthQualify(PointerAuthQualifier Qualifier,
+                                      const Expr *PointerExpr,
+                                      Address StorageAddress);
+  llvm::Value *EmitPointerAuthUnqualify(PointerAuthQualifier Qualifier,
+                                        llvm::Value *Pointer,
+                                        QualType PointerType,
+                                        Address StorageAddress,
+                                        bool IsKnownNonNull);
+  void EmitPointerAuthCopy(PointerAuthQualifier Qualifier, QualType Type,
+                           Address DestField, Address SrcField);
+
+  std::pair<llvm::Value *, CGPointerAuthInfo>
+  EmitOrigPointerRValue(const Expr *E);
 
   llvm::Value *authPointerToPointerCast(llvm::Value *ResultPtr,
                                         QualType SourceType, QualType DestType);

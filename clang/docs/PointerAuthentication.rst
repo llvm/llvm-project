@@ -403,12 +403,12 @@ a number of different tests.
 Clang provides several other tests only for historical purposes; for current
 purposes they are all equivalent to ``ptrauth_calls``.
 
-__ptrauth qualifier
+__ptrauth Qualifier
 ^^^^^^^^^^^^^^^^^^^
 
-``__ptrauth(key, address, discriminator)`` is an extended type qualifier which
-causes so-qualified objects to hold pointers signed using the specified schema
-rather than the default schema for such types.
+``__ptrauth(key, address, discriminator)`` is an extended type
+qualifier which causes so-qualified objects to hold pointers signed using the
+specified schema rather than the default schema for such types.
 
 In the current implementation in Clang, the qualified type must be a C pointer
 type, either to a function or to an object.  It currently cannot be an

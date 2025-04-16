@@ -1064,20 +1064,24 @@ llvm::DIType *CGDebugInfo::CreateQualifiedType(QualType Ty,
   // We will create one Derived type for one qualifier and recurse to handle any
   // additional ones.
   llvm::dwarf::Tag Tag = getNextQualifier(Qc);
-  if (!Tag && Qc.getPointerAuth().isPresent()) {
-    unsigned Key = Qc.getPointerAuth().getKey();
-    bool IsDiscr = Qc.getPointerAuth().isAddressDiscriminated();
-    unsigned ExtraDiscr = Qc.getPointerAuth().getExtraDiscriminator();
-    Qc.removePointerAuth();
-    assert(Qc.empty() && "Unknown type qualifier for debug info");
-    auto *FromTy = getOrCreateType(QualType(T, 0), Unit);
-    return DBuilder.createPtrAuthQualifiedType(FromTy, Key, IsDiscr,
-                                               ExtraDiscr,
-                                               /*IsaPointer=*/ false,
-                                               /*AuthenticatesNullValues=*/ false);
-  } else if (!Tag) {
-    assert(Qc.empty() && "Unknown type qualifier for debug info");
-    return getOrCreateType(QualType(T, 0), Unit);
+  if (!Tag) {
+    if (Qc.getPointerAuth()) {
+      unsigned Key = Qc.getPointerAuth().getKey();
+      bool IsDiscr = Qc.getPointerAuth().isAddressDiscriminated();
+      unsigned ExtraDiscr = Qc.getPointerAuth().getExtraDiscriminator();
+      bool IsaPointer = Qc.getPointerAuth().isIsaPointer();
+      bool AuthenticatesNullValues =
+          Qc.getPointerAuth().authenticatesNullValues();
+      Qc.removePointerAuth();
+      assert(Qc.empty() && "Unknown type qualifier for debug info");
+      llvm::DIType *FromTy = getOrCreateType(QualType(T, 0), Unit);
+      return DBuilder.createPtrAuthQualifiedType(FromTy, Key, IsDiscr,
+                                                 ExtraDiscr, IsaPointer,
+                                                 AuthenticatesNullValues);
+    } else {
+      assert(Qc.empty() && "Unknown type qualifier for debug info");
+      return getOrCreateType(QualType(T, 0), Unit);
+    }
   }
 
   auto *FromTy = getOrCreateType(Qc.apply(CGM.getContext(), T), Unit);

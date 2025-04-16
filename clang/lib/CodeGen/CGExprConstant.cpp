@@ -2157,8 +2157,8 @@ struct ConstantLValue {
   /*implicit*/ ConstantLValue(llvm::Constant *value,
                               bool hasOffsetApplied = false,
                               bool hasDestPointerAuth = false)
-    : Value(value), HasOffsetApplied(hasOffsetApplied),
-      HasDestPointerAuth(hasDestPointerAuth) {}
+      : Value(value), HasOffsetApplied(hasOffsetApplied),
+        HasDestPointerAuth(hasDestPointerAuth) {}
 
   /*implicit*/ ConstantLValue(ConstantAddress address)
     : ConstantLValue(address.getPointer()) {}
@@ -2337,11 +2337,11 @@ llvm::Constant *ConstantLValueEmitter::tryEmit() {
   }
 
   // Apply pointer-auth signing from the destination type.
-  if (auto pointerAuth = DestType.getPointerAuth()) {
-    if (!result.HasDestPointerAuth) {
-      value = tryEmitConstantSignedPointer(value, pointerAuth);
-      if (!value) return nullptr;
-    }
+  if (PointerAuthQualifier PointerAuth = DestType.getPointerAuth();
+      PointerAuth && !result.HasDestPointerAuth) {
+    value = Emitter.tryEmitConstantSignedPointer(value, PointerAuth);
+    if (!value)
+      return nullptr;
   }
 
   // Convert to the appropriate type; this could be an lvalue for
@@ -2453,9 +2453,9 @@ ConstantLValueEmitter::tryEmitBase(const APValue::LValueBase &base) {
       return CGM.GetWeakRefReference(D).getPointer();
 
     auto PtrAuthSign = [&](llvm::Constant *C) {
-      if (auto pointerAuth = DestType.getPointerAuth()) {
+      if (PointerAuthQualifier PointerAuth = DestType.getPointerAuth()) {
         C = applyOffset(C);
-        C = tryEmitConstantSignedPointer(C, pointerAuth);
+        C = Emitter.tryEmitConstantSignedPointer(C, PointerAuth);
         return ConstantLValue(C, /*applied offset*/ true, /*signed*/ true);
       }
 
@@ -2472,7 +2472,7 @@ ConstantLValueEmitter::tryEmitBase(const APValue::LValueBase &base) {
         C = CGM.getConstantSignedPointer(
             C, AuthInfo.getKey(), nullptr,
             cast_or_null<llvm::ConstantInt>(AuthInfo.getDiscriminator()));
-        return ConstantLValue(C, /*applied offset*/ true);
+        return ConstantLValue(C, /*applied offset*/ true, /*signed*/ true);
       }
 
       return ConstantLValue(C);

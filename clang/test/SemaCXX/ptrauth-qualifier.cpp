@@ -1,10 +1,11 @@
-// RUN: %clang_cc1 -triple arm64-apple-ios -std=c++11  -fptrauth-calls -fptrauth-intrinsics -verify -fsyntax-only %s
+// RUN: %clang_cc1 -triple arm64-apple-ios -std=c++20  -fptrauth-calls -fptrauth-intrinsics -verify -fsyntax-only %s
+// RUN: %clang_cc1 -triple aarch64-linux-gnu -std=c++20  -fptrauth-calls -fptrauth-intrinsics -verify -fsyntax-only %s
 
 #define AQ __ptrauth(1,1,50)
 #define AQ2 __ptrauth(1,1,51)
 #define IQ __ptrauth(1,0,50)
 
-struct __attribute__((trivial_abi)) AddrDisc { // expected-warning {{'trivial_abi' cannot be applied to 'AddrDisc'}} expected-note {{'trivial_abi' is disallowed on 'AddrDisc' because it has an address-discriminated __ptrauth field}}
+struct __attribute__((trivial_abi)) AddrDisc { // expected-warning {{'trivial_abi' cannot be applied to 'AddrDisc'}} expected-note {{'trivial_abi' is disallowed on 'AddrDisc' because it has an address-discriminated '__ptrauth' field}}
   int * AQ m0;
 };
 
@@ -15,7 +16,7 @@ struct __attribute__((trivial_abi)) NoAddrDisc {
 namespace test_union {
 
   union U0 {
-    int * AQ f0; // expected-note 4 {{'U0' is implicitly deleted because variant field 'f0' has an address-discriminated ptrauth qualifier}}
+    int * AQ f0; // expected-note 4 {{'U0' is implicitly deleted because variant field 'f0' has an address-discriminated '__ptrauth' qualifier}}
 
     // ptrauth fields that don't have an address-discriminated qualifier don't
     // delete the special functions.
@@ -23,7 +24,7 @@ namespace test_union {
   };
 
   union U1 {
-    int * AQ f0; // expected-note 8 {{'U1' is implicitly deleted because variant field 'f0' has an address-discriminated ptrauth qualifier}}
+    int * AQ f0; // expected-note 8 {{'U1' is implicitly deleted because variant field 'f0' has an address-discriminated '__ptrauth' qualifier}}
     U1() = default;
     ~U1() = default;
     U1(const U1 &) = default; // expected-warning {{explicitly defaulted copy constructor is implicitly deleted}} expected-note 2 {{explicitly defaulted function was implicitly deleted here}} expected-note{{replace 'default'}}
@@ -48,17 +49,17 @@ namespace test_union {
   // class.
   struct S0 {
     union {
-      int * AQ f0; // expected-note 4 {{' is implicitly deleted because variant field 'f0' has an address-discriminated ptrauth qualifier}}
+      int * AQ f0; // expected-note 4 {{' is implicitly deleted because variant field 'f0' has an address-discriminated '__ptrauth' qualifier}}
       char f1;
     };
   };
 
   struct S1 {
     union {
-      union { // expected-note-re 4 {{'S1' is implicitly deleted because field 'test_union::S1::(anonymous union at {{.*}})' has a deleted}}
-        int * AQ f0;
+      union {
+        int * AQ f0; // expected-note 4 {{implicitly deleted because variant field 'f0' has an address-discriminated '__ptrauth' qualifier}}
         char f1;
-      };
+      } u; // expected-note 4 {{'S1' is implicitly deleted because field 'u' has a deleted}}
       int f2;
     };
   };
@@ -127,15 +128,86 @@ bool test_composite_type0(bool c, int * AQ * a0, int * AQ * a1) {
 
 bool test_composite_type1(bool c, int * AQ * a0, int * AQ2 * a1) {
   auto t = c ? a0 : a1; // expected-error {{incompatible operand types ('int *__ptrauth(1,1,50) *' and 'int *__ptrauth(1,1,51) *')}}
-  return a0 == a1; // expected-error {{comparison of distinct pointer types ('int *__ptrauth(1,1,50) *' and 'int *__ptrauth(1,1,51) *')}}
+  return a0 == a1;      // expected-error {{comparison of distinct pointer types ('int *__ptrauth(1,1,50) *' and 'int *__ptrauth(1,1,51) *')}}
 }
 
-void test_bad_call_diag(void *AQ* ptr); // expected-note{{candidate function not viable: 1st argument ('void *__ptrauth(1,1,51) *') has __ptrauth(1,1,51) qualifier, but parameter has __ptrauth(1,1,50) qualifier}} expected-note{{candidate function not viable: 1st argument ('void **') has no ptrauth qualifier, but parameter has __ptrauth(1,1,50) qualifier}}
-void test_bad_call_diag2(void ** ptr); // expected-note{{1st argument ('void *__ptrauth(1,1,50) *') has __ptrauth(1,1,50) qualifier, but parameter has no ptrauth qualifier}}
+void test_bad_call_diag(void *AQ *ptr); // expected-note{{candidate function not viable: 1st argument ('void *__ptrauth(1,1,51) *') has __ptrauth(1,1,51) qualifier, but parameter has __ptrauth(1,1,50) qualifier}} expected-note {{candidate function not viable: 1st argument ('void **') has no '__ptrauth' qualifier, but parameter has __ptrauth(1,1,50) qualifier}}
+void test_bad_call_diag2(void **ptr); // expected-note {{candidate function not viable: 1st argument ('void *__ptrauth(1,1,50) *') has __ptrauth(1,1,50) qualifier, but parameter has no '__ptrauth' qualifier}}
 
 int test_call_diag() {
   void *AQ ptr1, *AQ2 ptr2, *ptr3;
   test_bad_call_diag(&ptr2); // expected-error {{no matching function for call to 'test_bad_call_diag'}}
   test_bad_call_diag(&ptr3); // expected-error {{no matching function for call to 'test_bad_call_diag'}}
   test_bad_call_diag2(&ptr1); // expected-error {{no matching function for call to 'test_bad_call_diag2'}}
+}
+
+namespace test_constexpr {
+  constexpr int i = 100;
+  constexpr const int * AQ p = &i;
+  constexpr const int * const AQ *pp = &p;
+  constexpr int i1 = **((const int * const AQ *)pp);
+  constexpr int i2 = **((const int * const AQ2 *)pp);
+  // expected-error@-1 {{constexpr variable 'i2' must be initialized by a constant expression}}
+  // expected-note@-2 {{cast that performs the conversions of a reinterpret_cast is not allowed in a constant expression}}
+}
+
+namespace test_lambda {
+  void test() {
+    int * AQ v0;
+    int * AQ *v1;
+
+    [v0, v1]() {
+      static_assert(__is_same(decltype(v0), int * AQ));
+      static_assert(__is_same(decltype(v1), int * AQ *));
+    }();
+
+    [v2 = v0, v3 = v1]() {
+      static_assert(__is_same(decltype(v2), int *));
+      static_assert(__is_same(decltype(v3), int * AQ *));
+    }();
+  }
+}
+
+namespace test_concept {
+  template <typename T> struct is_qualified {
+    static constexpr bool value = false;
+  };
+
+  template <typename T> struct is_qualified<T * AQ> {
+    static constexpr bool value = true;
+  };
+
+  template <typename T>
+  concept Ptrauthable = is_qualified<T>::value;
+  // expected-note@-1 2 {{because 'is_qualified<int *>::value' evaluated to false}}
+  // expected-note@-2 2 {{because 'is_qualified<int *__ptrauth(1,1,51)>::value' evaluated to false}}
+
+  template <typename T>
+    requires(Ptrauthable<T>)
+  struct S {};
+  // expected-note@-2 {{because 'int *' does not satisfy 'Ptrauthable'}}
+  // expected-note@-3 {{because 'int *__ptrauth(1,1,51)' does not satisfy 'Ptrauthable'}}
+
+  S<int * AQ> s0;
+  S<int *> s1;
+  // expected-error@-1 {{constraints not satisfied for class template 'S' [with T = int *]}}
+  S<int * AQ2> s1;
+  // expected-error@-1 {{constraints not satisfied for class template 'S' [with T = int *__ptrauth(1,1,51)]}}
+
+  template <typename T>
+    requires(Ptrauthable<T>)
+  void func(T *);
+  // expected-note@-1 {{candidate template ignored: constraints not satisfied [with T = int *]}}
+  // expected-note@-3 {{because 'int *' does not satisfy 'Ptrauthable'}}
+  // expected-note@-3 {{candidate template ignored: constraints not satisfied [with T = int *__ptrauth(1,1,51)]}}
+  // expected-note@-5 {{because 'int *__ptrauth(1,1,51)' does not satisfy 'Ptrauthable'}}
+
+  void test() {
+    int * AQ p0;
+    int *p1;
+    int * AQ2 p2;
+    func(&p0);
+    func(&p1); // expected-error {{no matching function for call to 'func'}}
+    func(&p2); // expected-error {{no matching function for call to 'func'}}
+  }
 }

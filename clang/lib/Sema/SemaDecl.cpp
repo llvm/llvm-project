@@ -16545,7 +16545,7 @@ ParmVarDecl *Sema::CheckParameter(DeclContext *DC, SourceLocation StartLoc,
 
   // __ptrauth is forbidden on parameters.
   if (T.getPointerAuth()) {
-    Diag(NameLoc, diag::err_ptrauth_qualifier_param) << T;
+    Diag(NameLoc, diag::err_ptrauth_qualifier_invalid) << T << 1;
     New->setInvalidDecl();
   }
 
@@ -20572,12 +20572,15 @@ void Sema::ActOnFields(Scope *S, SourceLocation RecLoc, Decl *EnclosingDecl,
       if (const auto *RT = FT->getAs<RecordType>()) {
         if (RT->getDecl()->getArgPassingRestrictions() ==
             RecordArgPassingKind::CanNeverPassInRegs)
-          Record->setArgPassingRestrictions(RecordArgPassingKind::CanNeverPassInRegs);
+          Record->setArgPassingRestrictions(
+              RecordArgPassingKind::CanNeverPassInRegs);
       } else if (FT.getQualifiers().getObjCLifetime() == Qualifiers::OCL_Weak) {
-        Record->setArgPassingRestrictions(RecordArgPassingKind::CanNeverPassInRegs);
-      } else if (PointerAuthQualifier Q = FT.getPointerAuth()) {
-        if (Q.isAddressDiscriminated())
-          Record->setArgPassingRestrictions(RecordArgPassingKind::CanNeverPassInRegs);
+        Record->setArgPassingRestrictions(
+            RecordArgPassingKind::CanNeverPassInRegs);
+      } else if (PointerAuthQualifier Q = FT.getPointerAuth();
+                 Q && Q.isAddressDiscriminated()) {
+        Record->setArgPassingRestrictions(
+            RecordArgPassingKind::CanNeverPassInRegs);
       }
     }
 

@@ -1126,8 +1126,8 @@ void CXXRecordDecl::addedMember(Decl *D) {
         struct DefinitionData &Data = data();
         Data.PlainOldData = false;
         Data.HasTrivialSpecialMembers &=
-            ~(SMF_CopyConstructor | SMF_MoveConstructor |
-              SMF_CopyAssignment | SMF_MoveAssignment);
+            ~(SMF_CopyConstructor | SMF_MoveConstructor | SMF_CopyAssignment |
+              SMF_MoveAssignment);
         setArgPassingRestrictions(RecordArgPassingKind::CanNeverPassInRegs);
 
         // Copy/move constructors/assignment operators of a union are deleted by

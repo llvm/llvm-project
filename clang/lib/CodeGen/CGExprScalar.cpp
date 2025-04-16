@@ -2392,15 +2392,14 @@ static bool isDeclRefKnownNonNull(CodeGenFunction &CGF, const ValueDecl *D) {
 static bool isLValueKnownNonNull(CodeGenFunction &CGF, const Expr *E) {
   E = E->IgnoreParens();
 
-  if (auto UO = dyn_cast<UnaryOperator>(E)) {
-    if (UO->getOpcode() == UO_Deref) {
+  if (const auto *UO = dyn_cast<UnaryOperator>(E))
+    if (UO->getOpcode() == UO_Deref)
       return CGF.isPointerKnownNonNull(UO->getSubExpr());
-    }
-  }
 
-  if (auto DRE = dyn_cast<DeclRefExpr>(E)) {
+  if (const auto *DRE = dyn_cast<DeclRefExpr>(E))
     return isDeclRefKnownNonNull(CGF, DRE->getDecl());
-  } else if (auto ME = dyn_cast<MemberExpr>(E)) {
+
+  if (const auto *ME = dyn_cast<MemberExpr>(E)) {
     if (isa<FieldDecl>(ME->getMemberDecl()))
       return true;
     return isDeclRefKnownNonNull(CGF, ME->getMemberDecl());
@@ -2412,25 +2411,21 @@ static bool isLValueKnownNonNull(CodeGenFunction &CGF, const Expr *E) {
 }
 
 bool CodeGenFunction::isPointerKnownNonNull(const Expr *E) {
-  assert(E->getType()->isPointerType());
+  assert(E->getType()->isSignableType());
 
   E = E->IgnoreParens();
 
   if (isa<CXXThisExpr>(E))
     return true;
 
-  if (auto UO = dyn_cast<UnaryOperator>(E)) {
-    if (UO->getOpcode() == UO_AddrOf) {
+  if (const auto *UO = dyn_cast<UnaryOperator>(E))
+    if (UO->getOpcode() == UO_AddrOf)
       return isLValueKnownNonNull(*this, UO->getSubExpr());
-    }
-  }
 
-  if (auto CE = dyn_cast<CastExpr>(E)) {
+  if (const auto *CE = dyn_cast<CastExpr>(E))
     if (CE->getCastKind() == CK_FunctionToPointerDecay ||
-        CE->getCastKind() == CK_ArrayToPointerDecay) {
+        CE->getCastKind() == CK_ArrayToPointerDecay)
       return isLValueKnownNonNull(*this, CE->getSubExpr());
-    }
-  }
 
   // Maybe honor __nonnull?
 
@@ -5207,11 +5202,11 @@ Value *ScalarExprEmitter::VisitBinAssign(const BinaryOperator *E) {
   Value *RHS;
   LValue LHS;
 
-  if (auto ptrauth = E->getLHS()->getType().getPointerAuth()) {
+  if (PointerAuthQualifier PtrAuth = E->getLHS()->getType().getPointerAuth()) {
     LValue LV = CGF.EmitCheckedLValue(E->getLHS(), CodeGenFunction::TCK_Store);
     LV.getQuals().removePointerAuth();
-    llvm::Value *RV = CGF.EmitPointerAuthQualify(ptrauth, E->getRHS(),
-                                                 LV.getAddress());
+    llvm::Value *RV =
+        CGF.EmitPointerAuthQualify(PtrAuth, E->getRHS(), LV.getAddress());
     CGF.EmitNullabilityCheck(LV, RV, E->getExprLoc());
 
     /* TO_UPSTREAM(BoundsSafety) ON*/
@@ -5221,8 +5216,9 @@ Value *ScalarExprEmitter::VisitBinAssign(const BinaryOperator *E) {
 
     CGF.EmitStoreThroughLValue(RValue::get(RV), LV);
 
-    if (Ignore) return nullptr;
-    RV = CGF.EmitPointerAuthUnqualify(ptrauth, RV, LV.getType(),
+    if (Ignore)
+      return nullptr;
+    RV = CGF.EmitPointerAuthUnqualify(PtrAuth, RV, LV.getType(),
                                       LV.getAddress(), /*nonnull*/ false);
     return RV;
   }

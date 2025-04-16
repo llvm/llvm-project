@@ -812,17 +812,18 @@ private:
   static_assert(sizeof(PointerAuthQualifier) == sizeof(uint32_t),
                 "PointerAuthQualifier must be 32 bits");
 
+  static constexpr uint64_t PtrAuthShift = 32;
+  static constexpr uint64_t PtrAuthMask = UINT64_C(0xffffffff) << PtrAuthShift;
+
   static constexpr uint64_t UMask = 0x8;
   static constexpr uint64_t UShift = 3;
   static constexpr uint64_t GCAttrMask = 0x30;
   static constexpr uint64_t GCAttrShift = 4;
   static constexpr uint64_t LifetimeMask = 0x1C0;
   static constexpr uint64_t LifetimeShift = 6;
-  static constexpr uint64_t AddressSpaceShift = 9;
-  static constexpr uint64_t PtrAuthShift = 32;
-  static constexpr uint64_t PtrAuthMask = uint64_t(0xffffffff) << PtrAuthShift;
   static constexpr uint64_t AddressSpaceMask =
       ~(CVRMask | UMask | GCAttrMask | LifetimeMask | PtrAuthMask);
+  static constexpr uint64_t AddressSpaceShift = 9;
 };
 
 class QualifiersAndAtomic {
@@ -1459,8 +1460,8 @@ public:
   }
 
   bool hasAddressDiscriminatedPointerAuth() const {
-    if (auto ptrauth = getPointerAuth())
-      return ptrauth.isAddressDiscriminated();
+    if (PointerAuthQualifier PtrAuth = getPointerAuth())
+      return PtrAuth.isAddressDiscriminated();
     return false;
   }
 

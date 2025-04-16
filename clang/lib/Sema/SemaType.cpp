@@ -2600,7 +2600,7 @@ bool Sema::CheckFunctionReturnType(QualType T, SourceLocation Loc) {
 
   // __ptrauth is illegal on a function return type.
   if (T.getPointerAuth()) {
-    Diag(Loc, diag::err_ptrauth_qualifier_return) << T;
+    Diag(Loc, diag::err_ptrauth_qualifier_invalid) << T << 0;
     return true;
   }
 
@@ -2724,6 +2724,10 @@ QualType Sema::BuildFunctionType(QualType T,
       Invalid = true;
     } else if (ParamType->isWebAssemblyTableType()) {
       Diag(Loc, diag::err_wasm_table_as_function_parameter);
+      Invalid = true;
+    } else if (ParamType.getPointerAuth()) {
+      // __ptrauth is illegal on a function return type.
+      Diag(Loc, diag::err_ptrauth_qualifier_invalid) << T << 1;
       Invalid = true;
     }
 
@@ -5049,7 +5053,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
 
       // __ptrauth is illegal on a function return type.
       if (T.getPointerAuth()) {
-        S.Diag(DeclType.Loc, diag::err_ptrauth_qualifier_return) << T;
+        S.Diag(DeclType.Loc, diag::err_ptrauth_qualifier_invalid) << T << 0;
       }
 
       if (LangOpts.OpenCL) {
@@ -8448,96 +8452,73 @@ static void HandleNeonVectorTypeAttr(QualType &CurType, const ParsedAttr &Attr,
 }
 
 /// Handle the __ptrauth qualifier.
-static void HandlePtrAuthQualifier(QualType &type, const ParsedAttr &attr,
-                                   Sema &S) {
-  if (S.checkPointerAuthEnabled(attr.getLoc(), attr.getRange())) {
-    attr.setInvalid();
-    return;
-  }
-
-  if (attr.getNumArgs() < 1 || attr.getNumArgs() > 3) {
-    S.Diag(attr.getLoc(), diag::err_ptrauth_qualifier_bad_arg_count);
-    attr.setInvalid();
+static void HandlePtrAuthQualifier(ASTContext &Ctx, QualType &T,
+                                   const ParsedAttr &Attr, Sema &S) {
+  if (S.checkPointerAuthEnabled(Attr.getLoc(), Attr.getRange())) {
+    Attr.setInvalid();
     return;
   }
 
   /* TO_UPSTREAM(BoundsSafety) ON */
-  if (type->isIndexablePointerType() || type->isBidiIndexablePointerType()) {
-    attr.setInvalid();
-    S.Diag(attr.getLoc(), diag::err_bounds_safety_ptrauth_on_indexable_pointer);
+  if (T->isIndexablePointerType() || T->isBidiIndexablePointerType()) {
+    Attr.setInvalid();
+    S.Diag(Attr.getLoc(), diag::err_bounds_safety_ptrauth_on_indexable_pointer);
   }
   /* TO_UPSTREAM(BoundsSafety) OFF */
 
-  Expr *keyArg =
-    attr.getArgAsExpr(0);
-  Expr *isAddressDiscriminatedArg =
-    attr.getNumArgs() >= 2 ? attr.getArgAsExpr(1) : nullptr;
-  Expr *extraDiscriminatorArg =
-    attr.getNumArgs() >= 3 ? attr.getArgAsExpr(2) : nullptr;
+  assert((Attr.getNumArgs() > 0 && Attr.getNumArgs() <= 3) &&
+         "__ptrauth qualifier takes between 1 and 3 arguments");
+  Expr *KeyArg = Attr.getArgAsExpr(0);
+  Expr *IsAddressDiscriminatedArg =
+      Attr.getNumArgs() >= 2 ? Attr.getArgAsExpr(1) : nullptr;
+  Expr *ExtraDiscriminatorArg =
+      Attr.getNumArgs() >= 3 ? Attr.getArgAsExpr(2) : nullptr;
 
-  unsigned key;
-  if (S.checkConstantPointerAuthKey(keyArg, key)) {
-    attr.setInvalid();
+  unsigned Key;
+  if (S.checkConstantPointerAuthKey(KeyArg, Key)) {
+    Attr.setInvalid();
     return;
   }
-  assert(key <= PointerAuthQualifier::MaxKey && "ptrauth key is out of range");
+  assert(Key <= PointerAuthQualifier::MaxKey && "ptrauth key is out of range");
 
-  bool isInvalid = false;
-  auto checkArg = [&](Expr *arg, unsigned argIndex) -> unsigned {
-    if (!arg) return 0;
+  bool IsInvalid = false;
+  unsigned IsAddressDiscriminated, ExtraDiscriminator;
+  IsInvalid |= !S.checkPointerAuthDiscriminatorArg(IsAddressDiscriminatedArg,
+                                                   Sema::PADAK_AddrDiscPtrAuth,
+                                                   IsAddressDiscriminated);
+  IsInvalid |= !S.checkPointerAuthDiscriminatorArg(
+      ExtraDiscriminatorArg, Sema::PADAK_ExtraDiscPtrAuth, ExtraDiscriminator);
 
-    std::optional<llvm::APSInt> result = arg->getIntegerConstantExpr(S.Context);
-    if (!result) {
-      isInvalid = true;
-      S.Diag(arg->getExprLoc(), diag::err_ptrauth_qualifier_arg_not_ice);
-      return 0;
-    }
-
-    unsigned max =
-      (argIndex == 1 ? 1 : PointerAuthQualifier::MaxDiscriminator);
-    if (*result < 0 || *result > max) {
-      llvm::SmallString<32> value; {
-        llvm::raw_svector_ostream str(value);
-        str << *result;
-      }
-
-      if (argIndex == 1) {
-        S.Diag(arg->getExprLoc(),
-               diag::err_ptrauth_qualifier_address_discrimination_invalid)
-          << value;
-      } else {
-        S.Diag(arg->getExprLoc(),
-               diag::err_ptrauth_qualifier_extra_discriminator_invalid)
-          << value << max;
-      }
-      isInvalid = true;
-    }
-    return result->getZExtValue();
-  };
-  bool isAddressDiscriminated = checkArg(isAddressDiscriminatedArg, 1);
-  unsigned extraDiscriminator = checkArg(extraDiscriminatorArg, 2);
-  if (isInvalid) {
-    attr.setInvalid();
+  if (IsInvalid) {
+    Attr.setInvalid();
     return;
   }
 
-  if (!type->isPointerType()) {
-    S.Diag(attr.getLoc(), diag::err_ptrauth_qualifier_nonpointer) << type;
-    attr.setInvalid();
+  if (!T->isSignableType() && !T->isDependentType()) {
+    S.Diag(Attr.getLoc(), diag::err_ptrauth_qualifier_nonpointer) << T;
+    Attr.setInvalid();
     return;
   }
 
-  if (type.getPointerAuth()) {
-    S.Diag(attr.getLoc(), diag::err_ptrauth_qualifier_redundant) << type;
-    attr.setInvalid();
+  if (T.getPointerAuth()) {
+    S.Diag(Attr.getLoc(), diag::err_ptrauth_qualifier_redundant)
+        << T << Attr.getAttrName()->getName();
+    Attr.setInvalid();
     return;
   }
 
-  PointerAuthQualifier qual = PointerAuthQualifier::Create(
-      key, isAddressDiscriminated, extraDiscriminator,
-      /*AuthenticationMode*/ PointerAuthenticationMode::SignAndAuth,
-      /*IsIsaPointer*/ false, /*AuthenticatesNullValues*/ true);
-  type = S.Context.getPointerAuthType(type, qual);
+  if (!S.getLangOpts().PointerAuthIntrinsics) {
+    S.Diag(Attr.getLoc(), diag::err_ptrauth_disabled) << Attr.getRange();
+    Attr.setInvalid();
+    return;
+  }
+
+  assert((!IsAddressDiscriminatedArg || IsAddressDiscriminated <= 1) &&
+         "address discriminator arg should be either 0 or 1");
+  PointerAuthQualifier Qual = PointerAuthQualifier::Create(
+      Key, IsAddressDiscriminated, ExtraDiscriminator,
+      PointerAuthenticationMode::SignAndAuth, false, false);
+  T = S.Context.getPointerAuthType(T, Qual);
 }
 
 /// HandleArmSveVectorBitsTypeAttr - The "arm_sve_vector_bits" attribute is
@@ -9787,7 +9768,8 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
       attr.setUsedAsTypeAttr();
       break;
     case ParsedAttr::AT_PointerAuth:
-      HandlePtrAuthQualifier(type, attr, state.getSema());
+      HandlePtrAuthQualifier(state.getSema().Context, type, attr,
+                             state.getSema());
       attr.setUsedAsTypeAttr();
       break;
     case ParsedAttr::AT_LifetimeBound:

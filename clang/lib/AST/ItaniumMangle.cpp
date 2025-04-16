@@ -2895,40 +2895,57 @@ void CXXNameMangler::mangleQualifiers(Qualifiers Quals, const DependentAddressSp
   if (Quals.getObjCLifetime() == Qualifiers::OCL_Weak)
     mangleVendorQualifier("__weak");
 
-  // The __unsafe_unretained qualifier is *not* mangled, so that
-  // __unsafe_unretained types in ARC produce the same manglings as the
-  // equivalent (but, naturally, unqualified) types in non-ARC, providing
-  // better ABI compatibility.
-  //
-  // It's safe to do this because unqualified 'id' won't show up
-  // in any type signatures that need to be mangled.
-
   // __unaligned (from -fms-extensions)
   if (Quals.hasUnaligned())
     mangleVendorQualifier("__unaligned");
 
-  // The __strong ARC qualifier.
-  if (Quals.getObjCLifetime() == Qualifiers::OCL_Strong)
-    mangleVendorQualifier("__strong");
-
   // __ptrauth.  Note that this is parameterized.
-  if (auto ptrauth = Quals.getPointerAuth()) {
+  if (PointerAuthQualifier PtrAuth = Quals.getPointerAuth()) {
     mangleVendorQualifier("__ptrauth");
-
     // For now, since we only allow non-dependent arguments, we can just
     // inline the mangling of those arguments as literals.  We treat the
     // key and extra-discriminator arguments as 'unsigned int' and the
     // address-discriminated argument as 'bool'.
     Out << "I"
-             "Lj" << ptrauth.getKey() << "E"
-             "Lb" << unsigned(ptrauth.isAddressDiscriminated()) << "E"
-             "Lj" << ptrauth.getExtraDiscriminator() << "E"
+           "Lj"
+        << PtrAuth.getKey()
+        << "E"
+           "Lb"
+        << unsigned(PtrAuth.isAddressDiscriminated())
+        << "E"
+           "Lj"
+        << PtrAuth.getExtraDiscriminator()
+        << "E"
            "E";
   }
 
-  // The __autoreleasing ARC qualifier.
-  if (Quals.getObjCLifetime() == Qualifiers::OCL_Autoreleasing)
+  // Remaining ARC ownership qualifiers.
+  switch (Quals.getObjCLifetime()) {
+  case Qualifiers::OCL_None:
+    break;
+
+  case Qualifiers::OCL_Weak:
+    // Do nothing as we already handled this case above.
+    break;
+
+  case Qualifiers::OCL_Strong:
+    mangleVendorQualifier("__strong");
+    break;
+
+  case Qualifiers::OCL_Autoreleasing:
     mangleVendorQualifier("__autoreleasing");
+    break;
+
+  case Qualifiers::OCL_ExplicitNone:
+    // The __unsafe_unretained qualifier is *not* mangled, so that
+    // __unsafe_unretained types in ARC produce the same manglings as the
+    // equivalent (but, naturally, unqualified) types in non-ARC, providing
+    // better ABI compatibility.
+    //
+    // It's safe to do this because unqualified 'id' won't show up
+    // in any type signatures that need to be mangled.
+    break;
+  }
 
   // <CV-qualifiers> ::= [r] [V] [K]    # restrict (C99), volatile, const
   if (Quals.hasRestrict())

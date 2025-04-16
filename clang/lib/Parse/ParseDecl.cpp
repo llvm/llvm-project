@@ -3513,40 +3513,6 @@ void Parser::ParseAlignmentSpecifier(ParsedAttributes &Attrs,
   }
 }
 
-/// type-qualifier:
-///    '__ptrauth' '(' constant-expression
-///                    (',' constant-expression)[opt]
-///                    (',' constant-expression)[opt] ')'
-void Parser::ParsePtrauthQualifier(ParsedAttributes &attrs) {
-  assert(Tok.is(tok::kw___ptrauth));
-
-  IdentifierInfo *kwName = Tok.getIdentifierInfo();
-  SourceLocation kwLoc = ConsumeToken();
-
-  BalancedDelimiterTracker T(*this, tok::l_paren);
-  if (T.expectAndConsume())
-    return;
-
-  ArgsVector argExprs;
-  do {
-    ExprResult expr = ParseAssignmentExpression();
-    if (expr.isInvalid()) {
-      T.skipToEnd();
-      return;
-    }
-    argExprs.push_back(expr.get());
-  } while (TryConsumeToken(tok::comma));
-
-  T.consumeClose();
-  SourceLocation endLoc = T.getCloseLocation();
-
-  attrs.addNew(kwName, SourceRange(kwLoc, endLoc),
-               /*scope*/ nullptr, SourceLocation(), argExprs.data(),
-               argExprs.size(),
-               ParsedAttr::Form::Keyword(/*IsAlignAs=*/false,
-                                         /*IsRegularKeywordAttribute=*/false));
-}
-
 // TO_UPSTREAM(BoundsSafety): Declator &D isn't passed in upstream
 void Parser::DistributeCLateParsedAttrs(Declarator &D, Decl *Dcl,
                                         LateParsedAttrList *LateAttrs) {
@@ -3612,6 +3578,45 @@ void Parser::DistributeCLateParsedAttrs(Declarator &D, Decl *Dcl,
   }
   ParseLexedCAttributeList(ProtoLateAttrs, false);
   /* TO_UPSTREAM(BoundsSafety) OFF */
+}
+
+/// type-qualifier:
+///    ('__ptrauth') '(' constant-expression
+///                   (',' constant-expression)[opt]
+///                   (',' constant-expression)[opt] ')'
+void Parser::ParsePtrauthQualifier(ParsedAttributes &Attrs) {
+  assert(Tok.is(tok::kw___ptrauth));
+
+  IdentifierInfo *KwName = Tok.getIdentifierInfo();
+  SourceLocation KwLoc = ConsumeToken();
+
+  BalancedDelimiterTracker T(*this, tok::l_paren);
+  if (T.expectAndConsume())
+    return;
+
+  ArgsVector ArgExprs;
+  do {
+    ExprResult ER = ParseAssignmentExpression();
+    if (ER.isInvalid()) {
+      T.skipToEnd();
+      return;
+    }
+    ArgExprs.push_back(ER.get());
+  } while (TryConsumeToken(tok::comma));
+
+  T.consumeClose();
+  SourceLocation EndLoc = T.getCloseLocation();
+
+  if (ArgExprs.empty() || ArgExprs.size() > 3) {
+    Diag(KwLoc, diag::err_ptrauth_qualifier_bad_arg_count);
+    return;
+  }
+
+  Attrs.addNew(KwName, SourceRange(KwLoc, EndLoc),
+               /*scope*/ nullptr, SourceLocation(), ArgExprs.data(),
+               ArgExprs.size(),
+               ParsedAttr::Form::Keyword(/*IsAlignAs=*/false,
+                                         /*IsRegularKeywordAttribute=*/false));
 }
 
 /// Bounds attributes (e.g., counted_by):

@@ -10085,11 +10085,10 @@ static QualType checkConditionalPointerCompatibility(Sema &S, ExprResult &LHS,
   lhQual.removeCVRQualifiers();
   rhQual.removeCVRQualifiers();
 
-  if (lhQual.getPointerAuth() != rhQual.getPointerAuth()) {
+  if (!lhQual.getPointerAuth().isEquivalent(rhQual.getPointerAuth())) {
     S.Diag(Loc, diag::err_typecheck_cond_incompatible_ptrauth)
-      << LHSTy << RHSTy
-      << LHS.get()->getSourceRange()
-      << RHS.get()->getSourceRange();
+        << LHSTy << RHSTy << LHS.get()->getSourceRange()
+        << RHS.get()->getSourceRange();
     return QualType();
   }
 
@@ -11208,7 +11207,7 @@ checkPointerTypesForAssignment(Sema &S, QualType LHSType, QualType RHSType,
       ConvTy = Sema::IncompatiblePointerDiscardsQualifiers;
 
     // Treat pointer-auth mismatches as fatal.
-    else if (lhq.getPointerAuth() != rhq.getPointerAuth())
+    else if (!lhq.getPointerAuth().isEquivalent(rhq.getPointerAuth()))
       ConvTy = Sema::IncompatiblePointerDiscardsQualifiers;
 
     // For GCC/MS compatibility, other qualifier mismatches are treated
@@ -20995,6 +20994,9 @@ bool Sema::DiagnoseAssignmentResult(AssignConvertType ConvTy,
       break;
     } else if (lhq.getObjCLifetime() != rhq.getObjCLifetime()) {
       DiagKind = diag::err_typecheck_incompatible_ownership;
+      break;
+    } else if (!lhq.getPointerAuth().isEquivalent(rhq.getPointerAuth())) {
+      DiagKind = diag::err_typecheck_incompatible_ptrauth;
       break;
     }
 
