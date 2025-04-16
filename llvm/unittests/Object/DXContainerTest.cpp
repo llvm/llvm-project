@@ -823,7 +823,7 @@ TEST(DXCFile, MalformedSignature) {
   }
 }
 
-TEST(RootSignature, MalformedData) {
+TEST(RootSignature, RootParameters) {
   {
     // Root Parameters offset has changed to 36, additional padding was added,
     // as well as fixing the parameter offset.
