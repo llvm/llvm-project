@@ -602,7 +602,8 @@ template <class ELFT> void ICF<ELFT>::run() {
     fold(sym);
     auto it = symbolEquivalence.findLeader(sym);
     if (it != symbolEquivalence.member_end() && *it != sym) {
-      print() << "Redirecting " << sym->getName() << " to " << (*it)->getName();
+      print() << "redirecting '" << sym->getName() << "' in symtab to '"
+              << (*it)->getName() << "'";
       ctx.symtab->redirect(sym, *it);
     }
   }
@@ -612,8 +613,8 @@ template <class ELFT> void ICF<ELFT>::run() {
     for (Symbol *&sym : file->getMutableGlobalSymbols()) {
       auto it = symbolEquivalence.findLeader(sym);
       if (it != symbolEquivalence.member_end() && *it != sym) {
-        print() << "Redirecting " << sym->getName() << " to "
-                << (*it)->getName();
+        print() << "redirecting '" << sym->getName() << "' to '"
+                << (*it)->getName() << "'";
         sym = *it;
       }
     }
