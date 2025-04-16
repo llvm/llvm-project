@@ -197,8 +197,8 @@
 #define LLVM_EXPORT_TEMPLATE
 #endif
 #define LLVM_ABI_EXPORT __declspec(dllexport)
-#elif defined(__ELF__) || defined(__MINGW32__) || defined(_AIX) ||             \
-    defined(__MVS__)
+#elif (defined(__ELF__) || defined(__MINGW32__) || defined(_AIX) ||            \
+    defined(__MVS__)) && __has_attribute(visibililty)
 #define LLVM_ABI __attribute__((visibility("default")))
 #if defined(__GNUC__) && !defined(__clang__)
 // GCC produces warnings on visibility attributes applied to templates.
@@ -208,11 +208,17 @@
 #endif
 #define LLVM_EXPORT_TEMPLATE
 #define LLVM_ABI_EXPORT __attribute__((visibility("default")))
-#elif defined(__MACH__) || defined(__WASM__) || defined(__EMSCRIPTEN__)
+#elif (defined(__MACH__) || defined(__WASM__) || defined(__EMSCRIPTEN__)) &&   \
+    __has_attribute(visibility)
 #define LLVM_ABI __attribute__((visibility("default")))
 #define LLVM_TEMPLATE_ABI
 #define LLVM_EXPORT_TEMPLATE
 #define LLVM_ABI_EXPORT __attribute__((visibility("default")))
+#else
+#define LLVM_ABI
+#define LLVM_TEMPLATE_ABI
+#define LLVM_EXPORT_TEMPLATE
+#define LLVM_ABI_EXPORT
 #endif
 #else
 #define LLVM_ABI
