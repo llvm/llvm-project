@@ -179,10 +179,8 @@ static dxil::ElementType toDXILElementType(Type *Ty, bool IsSigned) {
 
 ResourceTypeInfo::ResourceTypeInfo(TargetExtType *HandleTy,
                                    const dxil::ResourceClass RC_,
-                                   const dxil::ResourceKind Kind_,
-                                   bool GloballyCoherent, bool HasCounter)
-    : HandleTy(HandleTy), GloballyCoherent(GloballyCoherent),
-      HasCounter(HasCounter) {
+                                   const dxil::ResourceKind Kind_)
+    : HandleTy(HandleTy) {
   // If we're provided a resource class and kind, trust them.
   if (Kind_ != dxil::ResourceKind::Invalid) {
     RC = RC_;
@@ -377,7 +375,7 @@ static bool isROV(dxil::ResourceKind Kind, TargetExtType *Ty) {
 
 ResourceTypeInfo::UAVInfo ResourceTypeInfo::getUAV() const {
   assert(isUAV() && "Not a UAV");
-  return {GloballyCoherent, HasCounter, isROV(Kind, HandleTy)};
+  return {isROV(Kind, HandleTy)};
 }
 
 uint32_t ResourceTypeInfo::getCBufferSize(const DataLayout &DL) const {
@@ -469,8 +467,7 @@ uint32_t ResourceTypeInfo::getMultiSampleCount() const {
 }
 
 bool ResourceTypeInfo::operator==(const ResourceTypeInfo &RHS) const {
-  return std::tie(HandleTy, GloballyCoherent, HasCounter) ==
-         std::tie(RHS.HandleTy, RHS.GloballyCoherent, RHS.HasCounter);
+  return HandleTy == RHS.HandleTy;
 }
 
 bool ResourceTypeInfo::operator<(const ResourceTypeInfo &RHS) const {
@@ -510,9 +507,7 @@ void ResourceTypeInfo::print(raw_ostream &OS, const DataLayout &DL) const {
   } else {
     if (isUAV()) {
       UAVInfo UAVFlags = getUAV();
-      OS << "  Globally Coherent: " << UAVFlags.GloballyCoherent << "\n"
-         << "  HasCounter: " << UAVFlags.HasCounter << "\n"
-         << "  IsROV: " << UAVFlags.IsROV << "\n";
+      OS << "  IsROV: " << UAVFlags.IsROV << "\n";
     }
     if (isMultiSample())
       OS << "  Sample Count: " << getMultiSampleCount() << "\n";
@@ -577,8 +572,8 @@ MDTuple *ResourceInfo::getAsMetadata(Module &M,
 
     if (RTI.isUAV()) {
       ResourceTypeInfo::UAVInfo UAVFlags = RTI.getUAV();
-      MDVals.push_back(getBoolMD(UAVFlags.GloballyCoherent));
-      MDVals.push_back(getBoolMD(UAVFlags.HasCounter));
+      MDVals.push_back(getBoolMD(GloballyCoherent));
+      MDVals.push_back(getBoolMD(hasCounter()));
       MDVals.push_back(getBoolMD(UAVFlags.IsROV));
     } else {
       // All SRVs include sample count in the metadata, but it's only meaningful
@@ -619,10 +614,10 @@ ResourceInfo::getAnnotateProps(Module &M, dxil::ResourceTypeInfo &RTI) const {
   ResourceTypeInfo::UAVInfo UAVFlags =
       IsUAV ? RTI.getUAV() : ResourceTypeInfo::UAVInfo{};
   bool IsROV = IsUAV && UAVFlags.IsROV;
-  bool IsGloballyCoherent = IsUAV && UAVFlags.GloballyCoherent;
+  bool IsGloballyCoherent = IsUAV && GloballyCoherent;
   uint8_t SamplerCmpOrHasCounter = 0;
   if (IsUAV)
-    SamplerCmpOrHasCounter = UAVFlags.HasCounter;
+    SamplerCmpOrHasCounter = hasCounter();
   else if (RTI.isSampler())
     SamplerCmpOrHasCounter = RTI.getSamplerType() == SamplerType::Comparison;
 
@@ -670,6 +665,24 @@ void ResourceInfo::print(raw_ostream &OS, dxil::ResourceTypeInfo &RTI,
      << "    Space: " << Binding.Space << "\n"
      << "    Lower Bound: " << Binding.LowerBound << "\n"
      << "    Size: " << Binding.Size << "\n";
+
+  OS << "  Globally Coherent: " << GloballyCoherent << "\n";
+  OS << "  Counter Direction: ";
+
+  switch (CounterDirection) {
+  case ResourceCounterDirection::Increment:
+    OS << "Increment\n";
+    break;
+  case ResourceCounterDirection::Decrement:
+    OS << "Decrement\n";
+    break;
+  case ResourceCounterDirection::Unknown:
+    OS << "Unknown\n";
+    break;
+  case ResourceCounterDirection::Invalid:
+    OS << "Invalid\n";
+    break;
+  }
 
   RTI.print(OS, DL);
 }
@@ -767,7 +780,7 @@ void DXILResourceMap::populate(Module &M, DXILResourceTypeMap &DRTM) {
 void DXILResourceMap::print(raw_ostream &OS, DXILResourceTypeMap &DRTM,
                             const DataLayout &DL) const {
   for (unsigned I = 0, E = Infos.size(); I != E; ++I) {
-    OS << "Binding " << I << ":\n";
+    OS << "Resource " << I << ":\n";
     const dxil::ResourceInfo &RI = Infos[I];
     RI.print(OS, DRTM[RI.getHandleTy()], DL);
     OS << "\n";

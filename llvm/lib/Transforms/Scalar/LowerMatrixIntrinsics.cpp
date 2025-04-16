@@ -754,9 +754,7 @@ public:
   /// Erase \p Inst from both ShapeMap (if an entry exists) and erase \p Inst
   /// itself.
   void eraseFromParentAndRemoveFromShapeMap(Instruction *Inst) {
-    auto Iter = ShapeMap.find(Inst);
-    if (Iter != ShapeMap.end())
-      ShapeMap.erase(Iter);
+    ShapeMap.erase(Inst);
     Inst->eraseFromParent();
   }
 

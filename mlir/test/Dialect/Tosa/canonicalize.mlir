@@ -1214,7 +1214,7 @@ func.func @do_not_fold_intdiv_division_by_0() -> tensor<1x24x2xi32> {
 }
 
 
-// ----
+// -----
 // CHECK-LABEL:   func.func @slice_dynamic_size_static_output_canonicalize(
 // CHECK-SAME:                     %[[ARG0:.*]]: tensor<2x60x59x?xf32>) -> tensor<2x60x58x?xf32> {
 // CHECK:           %[[START:.*]] = tosa.const_shape  {values = dense<0> : tensor<4xindex>} : () -> !tosa.shape<4>

@@ -1569,6 +1569,7 @@ cc_library(
         ":IR",
         ":MemRefDialect",
         ":Pass",
+        ":SCFDialect",
         ":SideEffectInterfaces",
         ":Support",
         ":TransformUtils",
@@ -6410,6 +6411,22 @@ cc_library(
     ],
 )
 
+cc_library(
+    name = "TargetSMTLIB",
+    srcs = ["lib/Target/SMTLIB/ExportSMTLIB.cpp"],
+    hdrs = glob(["include/mlir/Target/SMTLIB/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":ArithUtils",
+        ":FuncDialect",
+        ":IR",
+        ":SMTDialect",
+        ":Support",
+        ":TranslateLib",
+        "//llvm:Support",
+    ],
+)
+
 td_library(
     name = "SPIRVImageInterfacesTdFiles",
     srcs = ["include/mlir/Dialect/SPIRV/Interfaces/SPIRVImageInterfaces.td"],
@@ -8689,6 +8706,7 @@ cc_library(
         ":FromLLVMIRTranslationRegistration",
         ":SPIRVTranslateRegistration",
         ":TargetCpp",
+        ":TargetSMTLIB",
         ":ToLLVMIRTranslationRegistration",
     ],
 )
