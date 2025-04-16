@@ -198,7 +198,8 @@
 #endif
 #define LLVM_ABI_EXPORT __declspec(dllexport)
 #elif (defined(__ELF__) || defined(__MINGW32__) || defined(_AIX) ||            \
-    defined(__MVS__)) && __has_attribute(visibililty)
+       defined(__MVS__)) &&                                                    \
+    __has_attribute(visibililty)
 // Use __attribute__((visibility(""))) syntax for visibility rather than
 // [[gnu::visibility("")]] because compilers are more permissive with its
 // placement.
