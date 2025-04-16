@@ -200,7 +200,12 @@
 #elif defined(__ELF__) || defined(__MINGW32__) || defined(_AIX) ||             \
     defined(__MVS__)
 #define LLVM_ABI __attribute__((visibility("default")))
+#if defined(__GNUC__) && !defined(__clang__)
+// GCC produces warnings on visibility attributes applied to templates.
+#define LLVM_TEMPLATE_ABI
+#else
 #define LLVM_TEMPLATE_ABI __attribute__((visibility("default")))
+#endif
 #define LLVM_EXPORT_TEMPLATE
 #define LLVM_ABI_EXPORT __attribute__((visibility("default")))
 #elif defined(__MACH__) || defined(__WASM__) || defined(__EMSCRIPTEN__)
