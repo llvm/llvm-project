@@ -1,6 +1,7 @@
 {
   "DefaultVariant": "macos", "DisplayName": "macOS 11",
   "Version": "11.0",
+  "CanonicalName": "macosx11.0",
   "MaximumDeploymentTarget": "11.0.99",
   "PropertyConditionFallbackNames": [], "VersionMap": {
     "iOSMac_macOS": {

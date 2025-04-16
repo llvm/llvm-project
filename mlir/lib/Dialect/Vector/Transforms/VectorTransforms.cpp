@@ -748,7 +748,7 @@ struct BubbleUpBitCastForInsert : public OpRewritePattern<vector::BitCastOp> {
       return failure();
 
     // Only vector sources are supported for now.
-    auto insertSrcType = dyn_cast<VectorType>(insertOp.getSourceType());
+    auto insertSrcType = dyn_cast<VectorType>(insertOp.getValueToStoreType());
     if (!insertSrcType)
       return failure();
 
@@ -759,7 +759,7 @@ struct BubbleUpBitCastForInsert : public OpRewritePattern<vector::BitCastOp> {
     VectorType newCastSrcType =
         VectorType::get(srcDims, castDstType.getElementType());
     auto newCastSrcOp = rewriter.create<vector::BitCastOp>(
-        bitcastOp.getLoc(), newCastSrcType, insertOp.getSource());
+        bitcastOp.getLoc(), newCastSrcType, insertOp.getValueToStore());
 
     SmallVector<int64_t> dstDims(insertOp.getDestVectorType().getShape());
     dstDims.back() =
@@ -850,7 +850,7 @@ struct BubbleUpBitCastForStridedSliceInsert
         VectorType::get(srcDims, castDstType.getElementType());
 
     auto newCastSrcOp = rewriter.create<vector::BitCastOp>(
-        bitcastOp.getLoc(), newCastSrcType, insertOp.getSource());
+        bitcastOp.getLoc(), newCastSrcType, insertOp.getValueToStore());
 
     SmallVector<int64_t> dstDims =
         llvm::to_vector<4>(insertOp.getDestVectorType().getShape());
@@ -1039,6 +1039,66 @@ struct ReorderElementwiseOpsOnBroadcast final
     rewriter.replaceOpWithNewOp<vector::BroadcastOp>(
         op, vectorType, elementwiseOp->getResults());
 
+    return success();
+  }
+};
+
+/// Pattern to rewrite a ExtractOp(Elementwise) -> Elementwise(ExtractOp).
+/// This may result in cleaner code when extracting a single value
+/// from multi-element vector and also to help canonicalize 1-element vectors to
+/// scalars.
+/// ```
+///  %0 = arith.addf %arg0, %arg1 : vector<4xf32>
+///  %1 = vector.extract %0[1] : f32 from vector<4xf32>
+/// ```
+/// Gets converted to:
+/// ```
+///  %0 = vector.extract %arg0[1] : f32 from vector<4xf32>
+///  %1 = vector.extract %arg1[1] : f32 from vector<4xf32>
+///  %2 = arith.addf %0, %1 : f32
+/// ```
+class ExtractOpFromElementwise final
+    : public OpRewritePattern<vector::ExtractOp> {
+public:
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(vector::ExtractOp op,
+                                PatternRewriter &rewriter) const override {
+    Operation *eltwise = op.getVector().getDefiningOp();
+
+    // TODO: vector::FMAOp is not an ElemetwiseMappable even if it claims to be,
+    // as it doesn't support scalars.
+    if (!eltwise || !OpTrait::hasElementwiseMappableTraits(eltwise) ||
+        isa<vector::FMAOp>(eltwise))
+      return rewriter.notifyMatchFailure(op, "not an elementwise op");
+
+    if (eltwise->getNumResults() != 1)
+      return rewriter.notifyMatchFailure(op, "expected single result");
+
+    if (!eltwise->hasOneUse())
+      return rewriter.notifyMatchFailure(op, "expected single op use");
+
+    if (!llvm::all_equal(eltwise->getOperandTypes()))
+      return rewriter.notifyMatchFailure(op, "operand types are different");
+
+    Type dstType = op.getType();
+
+    OpBuilder::InsertionGuard g(rewriter);
+    rewriter.setInsertionPoint(eltwise);
+
+    IRMapping mapping;
+    Location loc = eltwise->getLoc();
+    SmallVector<OpFoldResult> pos = op.getMixedPosition();
+    for (Value arg : eltwise->getOperands()) {
+      Value newArg = rewriter.create<vector::ExtractOp>(loc, arg, pos);
+      mapping.map(arg, newArg);
+    }
+
+    Operation *newEltwise = rewriter.clone(*eltwise, mapping);
+    newEltwise->getResult(0).setType(dstType);
+
+    rewriter.replaceOp(op, newEltwise);
+    rewriter.eraseOp(eltwise);
     return success();
   }
 };
@@ -1326,10 +1386,9 @@ class DropInnerMostUnitDimsTransferRead
                                       rewriter.getIndexAttr(0));
     SmallVector<OpFoldResult> strides(srcType.getRank(),
                                       rewriter.getIndexAttr(1));
-    auto resultMemrefType =
-        cast<MemRefType>(memref::SubViewOp::inferRankReducedResultType(
-            srcType.getShape().drop_back(dimsToDrop), srcType, offsets, sizes,
-            strides));
+    MemRefType resultMemrefType = memref::SubViewOp::inferRankReducedResultType(
+        srcType.getShape().drop_back(dimsToDrop), srcType, offsets, sizes,
+        strides);
     ArrayAttr inBoundsAttr = rewriter.getArrayAttr(
         readOp.getInBoundsAttr().getValue().drop_back(dimsToDrop));
     Value rankedReducedView = rewriter.create<memref::SubViewOp>(
@@ -1417,10 +1476,9 @@ class DropInnerMostUnitDimsTransferWrite
                                       rewriter.getIndexAttr(0));
     SmallVector<OpFoldResult> strides(srcType.getRank(),
                                       rewriter.getIndexAttr(1));
-    auto resultMemrefType =
-        cast<MemRefType>(memref::SubViewOp::inferRankReducedResultType(
-            srcType.getShape().drop_back(dimsToDrop), srcType, offsets, sizes,
-            strides));
+    MemRefType resultMemrefType = memref::SubViewOp::inferRankReducedResultType(
+        srcType.getShape().drop_back(dimsToDrop), srcType, offsets, sizes,
+        strides);
     ArrayAttr inBoundsAttr = rewriter.getArrayAttr(
         writeOp.getInBoundsAttr().getValue().drop_back(dimsToDrop));
 
@@ -2113,8 +2171,8 @@ void mlir::vector::
 void mlir::vector::populateSinkVectorOpsPatterns(RewritePatternSet &patterns,
                                                  PatternBenefit benefit) {
   patterns.add<ReorderElementwiseOpsOnTranspose, ReorderCastOpsOnBroadcast,
-               ReorderElementwiseOpsOnBroadcast>(patterns.getContext(),
-                                                 benefit);
+               ReorderElementwiseOpsOnBroadcast, ExtractOpFromElementwise>(
+      patterns.getContext(), benefit);
 }
 
 void mlir::vector::populateChainedVectorReductionFoldingPatterns(

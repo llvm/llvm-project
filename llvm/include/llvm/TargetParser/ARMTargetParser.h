@@ -61,6 +61,7 @@ enum ArchExtKind : uint64_t {
   AEK_CDECP6 = 1 << 28,
   AEK_CDECP7 = 1 << 29,
   AEK_PACBTI = 1 << 30,
+  AEK_MVE = 1ULL << 31,
   // Unsupported extensions.
   AEK_OS = 1ULL << 59,
   AEK_IWMMXT = 1ULL << 60,
@@ -77,7 +78,7 @@ struct ExtName {
   StringRef NegFeature;
 };
 
-const ExtName ARCHExtNames[] = {
+constexpr ExtName ARCHExtNames[] = {
 #define ARM_ARCH_EXT_NAME(NAME, ID, FEATURE, NEGFEATURE)                       \
   {NAME, ID, FEATURE, NEGFEATURE},
 #include "ARMTargetParser.def"
@@ -85,7 +86,7 @@ const ExtName ARCHExtNames[] = {
 
 // List of HWDiv names (use getHWDivSynonym) and which architectural
 // features they correspond to (use getHWDivFeatures).
-const struct {
+constexpr struct {
   StringRef Name;
   uint64_t ID;
 } HWDivNames[] = {
@@ -112,7 +113,7 @@ struct CpuNames {
   uint64_t DefaultExtensions;
 };
 
-const CpuNames CPUNames[] = {
+constexpr CpuNames CPUNames[] = {
 #define ARM_CPU_NAME(NAME, ID, DEFAULT_FPU, IS_DEFAULT, DEFAULT_EXT)           \
   {NAME, ARM::ArchKind::ID, IS_DEFAULT, DEFAULT_EXT},
 #include "ARMTargetParser.def"
@@ -173,7 +174,7 @@ struct FPUName {
   FPURestriction Restriction;
 };
 
-static const FPUName FPUNames[] = {
+static constexpr FPUName FPUNames[] = {
 #define ARM_FPU(NAME, KIND, VERSION, NEON_SUPPORT, RESTRICTION)                \
   {NAME, KIND, VERSION, NEON_SUPPORT, RESTRICTION},
 #include "llvm/TargetParser/ARMTargetParser.def"
@@ -199,7 +200,7 @@ struct ArchNames {
   StringRef getSubArch() const { return ArchFeature.substr(1); }
 };
 
-static const ArchNames ARMArchNames[] = {
+static constexpr ArchNames ARMArchNames[] = {
 #define ARM_ARCH(NAME, ID, CPU_ATTR, ARCH_FEATURE, ARCH_ATTR, ARCH_FPU,        \
                  ARCH_BASE_EXT)                                                \
   {NAME,          CPU_ATTR,     ARCH_FEATURE, ARCH_FPU,                        \

@@ -520,7 +520,12 @@ define amdgpu_kernel void @v_permlane32_swap(ptr addrspace(1) %out, i32 %src0, i
   ret void
 }
 
-
+; CHECK: DIVERGENT:   %v = call i32 @llvm.amdgcn.dead.i32()
+define amdgpu_cs_chain void @dead(ptr addrspace(1) %out) {
+  %v = call i32 @llvm.amdgcn.dead.i32()
+  store i32 %v, ptr addrspace(1) %out
+  ret void
+}
 
 declare i32 @llvm.amdgcn.ds.swizzle(i32, i32) #1
 declare i32 @llvm.amdgcn.permlane16.i32(i32, i32, i32, i32, i1, i1) #1
@@ -557,6 +562,8 @@ declare i32 @llvm.amdgcn.global.load.tr.b64.i32(ptr addrspace(1))
 declare <4 x i16> @llvm.amdgcn.global.load.tr.b128.v4i16(ptr addrspace(1))
 declare <4 x half> @llvm.amdgcn.global.load.tr.b128.v4f16(ptr addrspace(1))
 declare <4 x bfloat> @llvm.amdgcn.global.load.tr.b128.v4bf16(ptr addrspace(1))
+
+declare i32 @llvm.amdgcn.dead.i32()
 
 attributes #0 = { nounwind convergent }
 attributes #1 = { nounwind readnone convergent }

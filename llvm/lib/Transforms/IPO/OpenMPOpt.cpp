@@ -569,7 +569,7 @@ struct OMPInformationCache : public InformationCache {
     for (RuntimeFunction Fn : Fns) {
       RuntimeFunctionInfo &RFI = RFIs[Fn];
 
-      if (RFI.Declaration && RFI.Declaration->isDeclaration())
+      if (!RFI.Declaration || RFI.Declaration->isDeclaration())
         return false;
     }
     return true;
@@ -675,7 +675,7 @@ struct BooleanStateWithSetVector : public BooleanState {
   /// "Clamp" this state with \p RHS.
   BooleanStateWithSetVector &operator^=(const BooleanStateWithSetVector &RHS) {
     BooleanState::operator^=(RHS);
-    Set.insert(RHS.Set.begin(), RHS.Set.end());
+    Set.insert_range(RHS.Set);
     return *this;
   }
 
@@ -5792,6 +5792,7 @@ PreservedAnalyses OpenMPOptPass::run(Module &M, ModuleAnalysisManager &AM) {
   CallGraphUpdater CGUpdater;
 
   bool PostLink = LTOPhase == ThinOrFullLTOPhase::FullLTOPostLink ||
+                  LTOPhase == ThinOrFullLTOPhase::ThinLTOPostLink ||
                   LTOPhase == ThinOrFullLTOPhase::ThinLTOPreLink;
   OMPInformationCache InfoCache(M, AG, Allocator, /*CGSCC*/ nullptr, PostLink);
 
@@ -5855,8 +5856,6 @@ PreservedAnalyses OpenMPOptCGSCCPass::run(LazyCallGraph::SCC &C,
   if (PrintModuleBeforeOptimizations)
     LLVM_DEBUG(dbgs() << TAG << "Module before OpenMPOpt CGSCC Pass:\n" << M);
 
-  KernelSet Kernels = getDeviceKernels(M);
-
   FunctionAnalysisManager &FAM =
       AM.getResult<FunctionAnalysisManagerCGSCCProxy>(C, CG).getManager();
 
@@ -5871,8 +5870,9 @@ PreservedAnalyses OpenMPOptCGSCCPass::run(LazyCallGraph::SCC &C,
   CGUpdater.initialize(CG, C, AM, UR);
 
   bool PostLink = LTOPhase == ThinOrFullLTOPhase::FullLTOPostLink ||
+                  LTOPhase == ThinOrFullLTOPhase::ThinLTOPostLink ||
                   LTOPhase == ThinOrFullLTOPhase::ThinLTOPreLink;
-  SetVector<Function *> Functions(SCC.begin(), SCC.end());
+  SetVector<Function *> Functions(llvm::from_range, SCC);
   OMPInformationCache InfoCache(*(Functions.back()->getParent()), AG, Allocator,
                                 /*CGSCC*/ &Functions, PostLink);
 

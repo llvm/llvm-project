@@ -30,8 +30,23 @@ namespace llvm::sandboxir {
 class PriorityCmp {
 public:
   bool operator()(const DGNode *N1, const DGNode *N2) {
-    // TODO: This should be a hierarchical comparator.
-    return N1->getInstruction()->comesBefore(N2->getInstruction());
+    // Given that the DAG does not model dependencies such that PHIs are always
+    // at the top, or terminators always at the bottom, we need to force the
+    // priority here in the comparator of the ready list container.
+    auto *I1 = N1->getInstruction();
+    auto *I2 = N2->getInstruction();
+    bool IsTerm1 = I1->isTerminator();
+    bool IsTerm2 = I2->isTerminator();
+    if (IsTerm1 != IsTerm2)
+      // Terminators have the lowest priority.
+      return IsTerm1 > IsTerm2;
+    bool IsPHI1 = isa<PHINode>(I1);
+    bool IsPHI2 = isa<PHINode>(I2);
+    if (IsPHI1 != IsPHI2)
+      // PHIs have the highest priority.
+      return IsPHI1 < IsPHI2;
+    // Otherwise rely on the instruction order.
+    return I2->comesBefore(I1);
   }
 };
 
@@ -46,7 +61,18 @@ class ReadyListContainer {
 
 public:
   ReadyListContainer() : List(Cmp) {}
-  void insert(DGNode *N) { List.push(N); }
+  void insert(DGNode *N) {
+#ifndef NDEBUG
+    assert(!N->scheduled() && "Don't insert a scheduled node!");
+    auto ListCopy = List;
+    while (!ListCopy.empty()) {
+      DGNode *Top = ListCopy.top();
+      ListCopy.pop();
+      assert(Top != N && "Node already exists in ready list!");
+    }
+#endif
+    List.push(N);
+  }
   DGNode *pop() {
     auto *Back = List.top();
     List.pop();
@@ -86,8 +112,9 @@ private:
   ContainerTy Nodes;
 
   /// Called by the DGNode destructor to avoid accessing freed memory.
-  void eraseFromBundle(DGNode *N) { Nodes.erase(find(Nodes, N)); }
-  friend DGNode::~DGNode(); // For eraseFromBundle().
+  void eraseFromBundle(DGNode *N) { llvm::erase(Nodes, N); }
+  friend void DGNode::setSchedBundle(SchedBundle &); // For eraseFromBunde().
+  friend DGNode::~DGNode();                          // For eraseFromBundle().
 
 public:
   SchedBundle() = default;
@@ -104,6 +131,10 @@ public:
       N->clearSchedBundle();
   }
   bool empty() const { return Nodes.empty(); }
+  /// Singleton bundles are created when scheduling instructions temporarily to
+  /// fill in the schedule until we schedule the vector bundle. These are
+  /// non-vector bundles containing just a single instruction.
+  bool isSingleton() const { return Nodes.size() == 1u; }
   DGNode *back() const { return Nodes.back(); }
   using iterator = ContainerTy::iterator;
   using const_iterator = ContainerTy::const_iterator;
@@ -117,6 +148,10 @@ public:
   DGNode *getBot() const;
   /// Move all bundle instructions to \p Where back-to-back.
   void cluster(BasicBlock::iterator Where);
+  /// \Returns true if all nodes in the bundle are ready.
+  bool ready() const {
+    return all_of(Nodes, [](const auto *N) { return N->ready(); });
+  }
 #ifndef NDEBUG
   void dump(raw_ostream &OS) const;
   LLVM_DUMP_METHOD void dump() const;
@@ -161,10 +196,12 @@ class Scheduler {
   /// The scheduling state of the instructions in the bundle.
   enum class BndlSchedState {
     NoneScheduled, ///> No instruction in the bundle was previously scheduled.
-    PartiallyOrDifferentlyScheduled, ///> Only some of the instrs in the bundle
-                                     /// were previously scheduled, or all of
-                                     /// them were but not in the same
-                                     /// SchedBundle.
+    AlreadyScheduled, ///> At least one instruction in the bundle belongs to a
+                      /// different non-singleton scheduling bundle.
+    TemporarilyScheduled, ///> Instructions were temporarily scheduled as
+                          /// singleton bundles or some of them were not
+                          /// scheduled at all. None of them were in a vector
+                          ///(non-singleton) bundle.
     FullyScheduled, ///> All instrs in the bundle were previously scheduled and
                     /// were in the same SchedBundle.
   };
@@ -217,6 +254,11 @@ public:
 class SchedulerInternalsAttorney {
 public:
   static DependencyGraph &getDAG(Scheduler &Sched) { return Sched.DAG; }
+  using BndlSchedState = Scheduler::BndlSchedState;
+  static BndlSchedState getBndlSchedState(const Scheduler &Sched,
+                                          ArrayRef<Instruction *> Instrs) {
+    return Sched.getBndlSchedState(Instrs);
+  }
 };
 
 } // namespace llvm::sandboxir

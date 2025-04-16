@@ -1097,31 +1097,10 @@ llvm::Type *CodeGenModule::getBlockDescriptorType() {
   if (BlockDescriptorType)
     return BlockDescriptorType;
 
-  llvm::Type *UnsignedLongTy =
-    getTypes().ConvertType(getContext().UnsignedLongTy);
-
-  // struct __block_descriptor {
-  //   unsigned long reserved;
-  //   unsigned long block_size;
-  //
-  //   // later, the following will be added
-  //
-  //   struct {
-  //     void (*copyHelper)();
-  //     void (*copyHelper)();
-  //   } helpers;                // !!! optional
-  //
-  //   const char *signature;   // the block signature
-  //   const char *layout;      // reserved
-  // };
-  BlockDescriptorType = llvm::StructType::create(
-      "struct.__block_descriptor", UnsignedLongTy, UnsignedLongTy);
-
-  // Now form a pointer to that.
   unsigned AddrSpace = 0;
   if (getLangOpts().OpenCL)
     AddrSpace = getContext().getTargetAddressSpace(LangAS::opencl_constant);
-  BlockDescriptorType = llvm::PointerType::get(BlockDescriptorType, AddrSpace);
+  BlockDescriptorType = llvm::PointerType::get(getLLVMContext(), AddrSpace);
   return BlockDescriptorType;
 }
 

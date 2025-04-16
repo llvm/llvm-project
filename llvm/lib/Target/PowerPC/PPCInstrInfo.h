@@ -241,7 +241,7 @@ class PPCInstrInfo : public PPCGenInstrInfo {
   void reassociateFMA(MachineInstr &Root, unsigned Pattern,
                       SmallVectorImpl<MachineInstr *> &InsInstrs,
                       SmallVectorImpl<MachineInstr *> &DelInstrs,
-                      DenseMap<unsigned, unsigned> &InstrIdxForVirtReg) const;
+                      DenseMap<Register, unsigned> &InstrIdxForVirtReg) const;
   Register
   generateLoadForNewConst(unsigned Idx, MachineInstr *MI, Type *Ty,
                           SmallVectorImpl<MachineInstr *> &InsInstrs) const;
@@ -370,7 +370,7 @@ public:
       MachineInstr &Root, unsigned Pattern,
       SmallVectorImpl<MachineInstr *> &InsInstrs,
       SmallVectorImpl<MachineInstr *> &DelInstrs,
-      DenseMap<unsigned, unsigned> &InstrIdxForVirtReg) const override;
+      DenseMap<Register, unsigned> &InstrIdxForVirtReg) const override;
 
   /// Return true when there is potentially a faster code sequence for a fma
   /// chain ending in \p Root. All potential patterns are output in the \p
@@ -457,7 +457,7 @@ public:
                     Register FalseReg) const override;
 
   void copyPhysReg(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
-                   const DebugLoc &DL, MCRegister DestReg, MCRegister SrcReg,
+                   const DebugLoc &DL, Register DestReg, Register SrcReg,
                    bool KillSrc, bool RenamableDest = false,
                    bool RenamableSrc = false) const override;
 

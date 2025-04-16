@@ -84,9 +84,7 @@ getAllInitListForms(const InitListExpr *InitList) {
 ExprSequence::ExprSequence(const CFG *TheCFG, const Stmt *Root,
                            ASTContext *TheContext)
     : Context(TheContext), Root(Root) {
-  for (const auto &SyntheticStmt : TheCFG->synthetic_stmts()) {
-    SyntheticStmtSourceMap[SyntheticStmt.first] = SyntheticStmt.second;
-  }
+  SyntheticStmtSourceMap.insert_range(TheCFG->synthetic_stmts());
 }
 
 bool ExprSequence::inSequence(const Stmt *Before, const Stmt *After) const {

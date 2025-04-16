@@ -79,8 +79,9 @@ unsigned PseudoLoweringEmitter::addDagOperandMapping(
       // "zero_reg" definition.
       if (DI->getDef()->isSubClassOf("Register") ||
           DI->getDef()->getName() == "zero_reg") {
-        OperandMap[BaseIdx + i].Kind = OpData::Reg;
-        OperandMap[BaseIdx + i].Data.Reg = DI->getDef();
+        auto &Entry = OperandMap[BaseIdx + i];
+        Entry.Kind = OpData::Reg;
+        Entry.Data.Reg = DI->getDef();
         ++OpsAdded;
         continue;
       }
@@ -89,15 +90,12 @@ unsigned PseudoLoweringEmitter::addDagOperandMapping(
       // problem.
       // FIXME: We probably shouldn't ever get a non-zero BaseIdx here.
       assert(BaseIdx == 0 && "Named subargument in pseudo expansion?!");
-      // FIXME: Are the message operand types backward?
-      if (DI->getDef() != Insn.Operands[BaseIdx + i].Rec) {
-        PrintError(Rec, "In pseudo instruction '" + Rec->getName() +
-                            "', operand type '" + DI->getDef()->getName() +
-                            "' does not match expansion operand type '" +
-                            Insn.Operands[BaseIdx + i].Rec->getName() + "'");
-        PrintFatalNote(DI->getDef(),
-                       "Value was assigned at the following location:");
-      }
+      if (DI->getDef() != Insn.Operands[BaseIdx + i].Rec)
+        PrintFatalError(Rec, "In pseudo instruction '" + Rec->getName() +
+                                 "', operand type '" + DI->getDef()->getName() +
+                                 "' does not match expansion operand type '" +
+                                 Insn.Operands[BaseIdx + i].Rec->getName() +
+                                 "'");
       // Source operand maps to destination operand. The Data element
       // will be filled in later, just set the Kind for now. Do it
       // for each corresponding MachineInstr operand, not just the first.
@@ -105,12 +103,14 @@ unsigned PseudoLoweringEmitter::addDagOperandMapping(
         OperandMap[BaseIdx + i + I].Kind = OpData::Operand;
       OpsAdded += Insn.Operands[i].MINumOperands;
     } else if (const IntInit *II = dyn_cast<IntInit>(Dag->getArg(i))) {
-      OperandMap[BaseIdx + i].Kind = OpData::Imm;
-      OperandMap[BaseIdx + i].Data.Imm = II->getValue();
+      auto &Entry = OperandMap[BaseIdx + i];
+      Entry.Kind = OpData::Imm;
+      Entry.Data.Imm = II->getValue();
       ++OpsAdded;
     } else if (const auto *BI = dyn_cast<BitsInit>(Dag->getArg(i))) {
-      OperandMap[BaseIdx + i].Kind = OpData::Imm;
-      OperandMap[BaseIdx + i].Data.Imm = *BI->convertInitializerToInt();
+      auto &Entry = OperandMap[BaseIdx + i];
+      Entry.Kind = OpData::Imm;
+      Entry.Data.Imm = *BI->convertInitializerToInt();
       ++OpsAdded;
     } else if (const DagInit *SubDag = dyn_cast<DagInit>(Dag->getArg(i))) {
       // Just add the operands recursively. This is almost certainly
@@ -136,38 +136,26 @@ void PseudoLoweringEmitter::evaluateExpansion(const Record *Rec) {
   LLVM_DEBUG(dbgs() << "  Result: " << *Dag << "\n");
 
   const DefInit *OpDef = dyn_cast<DefInit>(Dag->getOperator());
-  if (!OpDef) {
-    PrintError(Rec, "In pseudo instruction '" + Rec->getName() +
-                        "', result operator is not a record");
-    PrintFatalNote(Rec->getValue("ResultInst"),
-                   "Result was assigned at the following location:");
-  }
+  if (!OpDef)
+    PrintFatalError(Rec, "In pseudo instruction '" + Rec->getName() +
+                             "', result operator is not a record");
   const Record *Operator = OpDef->getDef();
-  if (!Operator->isSubClassOf("Instruction")) {
-    PrintError(Rec, "In pseudo instruction '" + Rec->getName() +
-                        "', result operator '" + Operator->getName() +
-                        "' is not an instruction");
-    PrintFatalNote(Rec->getValue("ResultInst"),
-                   "Result was assigned at the following location:");
-  }
+  if (!Operator->isSubClassOf("Instruction"))
+    PrintFatalError(Rec, "In pseudo instruction '" + Rec->getName() +
+                             "', result operator '" + Operator->getName() +
+                             "' is not an instruction");
 
   CodeGenInstruction Insn(Operator);
 
-  if (Insn.isCodeGenOnly || Insn.isPseudo) {
-    PrintError(Rec, "In pseudo instruction '" + Rec->getName() +
-                        "', result operator '" + Operator->getName() +
-                        "' cannot be a pseudo instruction");
-    PrintFatalNote(Rec->getValue("ResultInst"),
-                   "Result was assigned at the following location:");
-  }
+  if (Insn.isCodeGenOnly || Insn.isPseudo)
+    PrintFatalError(Rec, "In pseudo instruction '" + Rec->getName() +
+                             "', result operator '" + Operator->getName() +
+                             "' cannot be a pseudo instruction");
 
-  if (Insn.Operands.size() != Dag->getNumArgs()) {
-    PrintError(Rec, "In pseudo instruction '" + Rec->getName() +
-                        "', result operator '" + Operator->getName() +
-                        "' has the wrong number of operands");
-    PrintFatalNote(Rec->getValue("ResultInst"),
-                   "Result was assigned at the following location:");
-  }
+  if (Insn.Operands.size() != Dag->getNumArgs())
+    PrintFatalError(Rec, "In pseudo instruction '" + Rec->getName() +
+                             "', result operator '" + Operator->getName() +
+                             "' has the wrong number of operands");
 
   unsigned NumMIOperands = 0;
   for (const auto &Op : Insn.Operands)
@@ -200,13 +188,10 @@ void PseudoLoweringEmitter::evaluateExpansion(const Record *Rec) {
       continue;
     StringMap<unsigned>::iterator SourceOp =
         SourceOperands.find(Dag->getArgNameStr(i));
-    if (SourceOp == SourceOperands.end()) {
-      PrintError(Rec, "In pseudo instruction '" + Rec->getName() +
-                          "', output operand '" + Dag->getArgNameStr(i) +
-                          "' has no matching source operand");
-      PrintFatalNote(Rec->getValue("ResultInst"),
-                     "Value was assigned at the following location:");
-    }
+    if (SourceOp == SourceOperands.end())
+      PrintFatalError(Rec, "In pseudo instruction '" + Rec->getName() +
+                               "', output operand '" + Dag->getArgNameStr(i) +
+                               "' has no matching source operand");
     // Map the source operand to the destination operand index for each
     // MachineInstr operand.
     for (unsigned I = 0, E = Insn.Operands[i].MINumOperands; I != E; ++I)
@@ -244,9 +229,9 @@ void PseudoLoweringEmitter::emitLoweringEmitter(raw_ostream &o) {
       // FIXME: Instruction operands with defaults values (predicates and cc_out
       //        in ARM, for example shouldn't need explicit values in the
       //        expansion DAG.
-      unsigned MIOpNo = 0;
       for (const auto &DestOperand : Dest.Operands) {
         o << "    // Operand: " << DestOperand.Name << "\n";
+        unsigned MIOpNo = DestOperand.MIOperandNo;
         for (unsigned i = 0, e = DestOperand.MINumOperands; i != e; ++i) {
           switch (Expansion.OperandMap[MIOpNo + i].Kind) {
           case OpData::Operand:
@@ -274,12 +259,13 @@ void PseudoLoweringEmitter::emitLoweringEmitter(raw_ostream &o) {
           }
           }
         }
-        MIOpNo += DestOperand.MINumOperands;
       }
       if (Dest.Operands.isVariadic) {
-        MIOpNo = Source.Operands.size() + 1;
+        unsigned LastOpNo = 0;
+        for (const auto &Op : Source.Operands)
+          LastOpNo += Op.MINumOperands;
         o << "    // variable_ops\n";
-        o << "    for (unsigned i = " << MIOpNo
+        o << "    for (unsigned i = " << LastOpNo
           << ", e = MI->getNumOperands(); i != e; ++i)\n"
           << "      if (lowerOperand(MI->getOperand(i), MCOp))\n"
           << "        Inst.addOperand(MCOp);\n";

@@ -60,6 +60,9 @@ const LangASMap AMDGPUTargetInfo::AMDGPUDefIsGenMap = {
     llvm::AMDGPUAS::FLAT_ADDRESS,     // ptr64
     llvm::AMDGPUAS::FLAT_ADDRESS,     // hlsl_groupshared
     llvm::AMDGPUAS::CONSTANT_ADDRESS, // hlsl_constant
+    // FIXME(pr/122103): hlsl_private -> PRIVATE is wrong, but at least this
+    // will break loudly.
+    llvm::AMDGPUAS::PRIVATE_ADDRESS, // hlsl_private
 };
 
 const LangASMap AMDGPUTargetInfo::AMDGPUDefIsPrivMap = {
@@ -85,6 +88,7 @@ const LangASMap AMDGPUTargetInfo::AMDGPUDefIsPrivMap = {
     llvm::AMDGPUAS::FLAT_ADDRESS,     // ptr64
     llvm::AMDGPUAS::FLAT_ADDRESS,     // hlsl_groupshared
     llvm::AMDGPUAS::CONSTANT_ADDRESS, // hlsl_constant
+    llvm::AMDGPUAS::PRIVATE_ADDRESS,  // hlsl_private
 };
 } // namespace targets
 } // namespace clang
@@ -248,7 +252,6 @@ AMDGPUTargetInfo::AMDGPUTargetInfo(const llvm::Triple &Triple,
   HasLegalHalfType = true;
   HasFloat16 = true;
   WavefrontSize = (GPUFeatures & llvm::AMDGPU::FEATURE_WAVE32) ? 32 : 64;
-  AllowAMDGPUUnsafeFPAtomics = Opts.AllowAMDGPUUnsafeFPAtomics;
 
   // Set pointer width and alignment for the generic address space.
   PointerWidth = PointerAlign = getPointerWidthV(LangAS::Default);
@@ -261,7 +264,7 @@ AMDGPUTargetInfo::AMDGPUTargetInfo(const llvm::Triple &Triple,
 
   MaxAtomicPromoteWidth = MaxAtomicInlineWidth = 64;
   CUMode = !(GPUFeatures & llvm::AMDGPU::FEATURE_WGP);
-  for (auto F : {"image-insts", "gws"})
+  for (auto F : {"image-insts", "gws", "vmem-to-lds-load-insts"})
     ReadOnlyFeatures.insert(F);
   HalfArgsAndReturns = true;
 }
@@ -273,6 +276,8 @@ void AMDGPUTargetInfo::adjust(DiagnosticsEngine &Diags, LangOptions &Opts) {
   // to OpenCL can be removed from the following line.
   setAddressSpaceMap((Opts.OpenCL && !Opts.OpenCLGenericAddressSpace) ||
                      !isAMDGCN(getTriple()));
+
+  AtomicOpts = AtomicOptions(Opts);
 }
 
 llvm::SmallVector<Builtin::InfosShard>
@@ -330,7 +335,7 @@ void AMDGPUTargetInfo::getTargetDefines(const LangOptions &Opts,
     }
   }
 
-  if (AllowAMDGPUUnsafeFPAtomics)
+  if (Opts.AtomicIgnoreDenormalMode)
     Builder.defineMacro("__AMDGCN_UNSAFE_FP_ATOMICS__");
 
   // TODO: __HAS_FMAF__, __HAS_LDEXPF__, __HAS_FP64__ are deprecated and will be

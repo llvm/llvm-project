@@ -25,7 +25,6 @@
 
 using namespace lldb;
 using namespace lldb_private;
-using namespace lldb_private::repro;
 
 namespace {
 class PlatformSiginfoTest : public ::testing::Test {
@@ -68,7 +67,8 @@ public:
     }
 
     EXPECT_EQ(total_offset, offset * 8);
-    EXPECT_EQ(field_type.GetByteSize(nullptr), std::optional<uint64_t>(size));
+    EXPECT_EQ(llvm::expectedToOptional(field_type.GetByteSize(nullptr)),
+              std::optional<uint64_t>(size));
   }
 
   void ExpectFields(const CompilerType &container,

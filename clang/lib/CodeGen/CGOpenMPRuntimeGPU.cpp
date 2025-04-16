@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CGOpenMPRuntimeGPU.h"
+#include "CGDebugInfo.h"
 #include "CodeGenFunction.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/DeclOpenMP.h"
@@ -1659,7 +1660,6 @@ void CGOpenMPRuntimeGPU::emitReduction(
     return;
 
   bool ParallelReduction = isOpenMPParallelDirective(Options.ReductionKind);
-  bool DistributeReduction = isOpenMPDistributeDirective(Options.ReductionKind);
   bool TeamsReduction = isOpenMPTeamsDirective(Options.ReductionKind);
 
   ASTContext &C = CGM.getContext();
@@ -1756,7 +1756,7 @@ void CGOpenMPRuntimeGPU::emitReduction(
   llvm::OpenMPIRBuilder::InsertPointTy AfterIP =
       cantFail(OMPBuilder.createReductionsGPU(
           OmpLoc, AllocaIP, CodeGenIP, ReductionInfos, false, TeamsReduction,
-          DistributeReduction, llvm::OpenMPIRBuilder::ReductionGenCBKind::Clang,
+          llvm::OpenMPIRBuilder::ReductionGenCBKind::Clang,
           CGF.getTarget().getGridValue(),
           C.getLangOpts().OpenMPCUDAReductionBufNum, RTLoc));
   CGF.Builder.restoreIP(AfterIP);
@@ -2278,6 +2278,10 @@ void CGOpenMPRuntimeGPU::processRequiresDirective(const OMPRequiresDecl *D) {
       case OffloadArch::SM_90a:
       case OffloadArch::SM_100:
       case OffloadArch::SM_100a:
+      case OffloadArch::SM_101:
+      case OffloadArch::SM_101a:
+      case OffloadArch::SM_120:
+      case OffloadArch::SM_120a:
       case OffloadArch::GFX600:
       case OffloadArch::GFX601:
       case OffloadArch::GFX602:
@@ -2302,8 +2306,6 @@ void CGOpenMPRuntimeGPU::processRequiresDirective(const OMPRequiresDecl *D) {
       case OffloadArch::GFX90a:
       case OffloadArch::GFX90c:
       case OffloadArch::GFX9_4_GENERIC:
-      case OffloadArch::GFX940:
-      case OffloadArch::GFX941:
       case OffloadArch::GFX942:
       case OffloadArch::GFX950:
       case OffloadArch::GFX10_1_GENERIC:

@@ -25,18 +25,12 @@
 
 using namespace llvm;
 
-namespace llvm {
-void initializeSPIRVStripConvergentIntrinsicsPass(PassRegistry &);
-}
-
+namespace {
 class SPIRVStripConvergentIntrinsics : public FunctionPass {
 public:
   static char ID;
 
-  SPIRVStripConvergentIntrinsics() : FunctionPass(ID) {
-    initializeSPIRVStripConvergentIntrinsicsPass(
-        *PassRegistry::getPassRegistry());
-  };
+  SPIRVStripConvergentIntrinsics() : FunctionPass(ID) {}
 
   virtual bool runOnFunction(Function &F) override {
     DenseSet<Instruction *> ToRemove;
@@ -85,6 +79,7 @@ public:
     return ToRemove.size() != 0;
   }
 };
+} // namespace
 
 char SPIRVStripConvergentIntrinsics::ID = 0;
 INITIALIZE_PASS(SPIRVStripConvergentIntrinsics, "strip-convergent-intrinsics",

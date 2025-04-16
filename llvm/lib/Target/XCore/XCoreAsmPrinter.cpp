@@ -12,12 +12,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/XCoreInstPrinter.h"
+#include "MCTargetDesc/XCoreTargetStreamer.h"
 #include "TargetInfo/XCoreTargetInfo.h"
 #include "XCore.h"
 #include "XCoreMCInstLower.h"
 #include "XCoreSubtarget.h"
 #include "XCoreTargetMachine.h"
-#include "XCoreTargetStreamer.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/CodeGen/AsmPrinter.h"

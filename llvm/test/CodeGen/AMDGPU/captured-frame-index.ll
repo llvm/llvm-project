@@ -9,7 +9,7 @@ define amdgpu_kernel void @store_fi_lifetime(ptr addrspace(1) %out, i32 %in) #0 
 entry:
   %b = alloca i8, addrspace(5)
   call void @llvm.lifetime.start.p5(i64 1, ptr addrspace(5) %b)
-  store volatile ptr addrspace(5) %b, ptr addrspace(1) undef
+  store volatile ptr addrspace(5) %b, ptr addrspace(1) poison
   call void @llvm.lifetime.end.p5(i64 1, ptr addrspace(5) %b)
   ret void
 }
@@ -208,7 +208,7 @@ entry:
   %tmp1 = load volatile ptr addrspace(5), ptr addrspace(1) @g1, align 4
   %arrayidx = getelementptr inbounds i32, ptr addrspace(5) %tmp1, i32 %idx
   %tmp2 = load i32, ptr addrspace(5) %arrayidx, align 4
-  store volatile ptr addrspace(5) %b, ptr addrspace(1) undef
+  store volatile ptr addrspace(5) %b, ptr addrspace(1) poison
   ret void
 }
 
@@ -344,4 +344,4 @@ declare void @llvm.lifetime.end.p5(i64, ptr addrspace(5) nocapture) #1
 
 attributes #0 = { nounwind }
 attributes #1 = { argmemonly nounwind }
-attributes #2 = { "amdgpu-no-agpr" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" }
+attributes #2 = { "amdgpu-agpr-alloc"="0" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" }

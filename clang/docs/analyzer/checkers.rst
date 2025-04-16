@@ -97,6 +97,41 @@ core.DivideZero (C, C++, ObjC)
 .. literalinclude:: checkers/dividezero_example.c
     :language: c
 
+.. _core-FixedAddressDereference:
+
+core.FixedAddressDereference (C, C++, ObjC)
+"""""""""""""""""""""""""""""""""""""""""""
+Check for dereferences of fixed addresses.
+
+A pointer contains a fixed address if it was set to a hard-coded value or it
+becomes otherwise obvious that at that point it can have only a single fixed
+numerical value.
+
+.. code-block:: c
+
+ void test1() {
+   int *p = (int *)0x020;
+   int x = p[0]; // warn
+ }
+
+ void test2(int *p) {
+   if (p == (int *)-1)
+     *p = 0; // warn
+ }
+
+ void test3() {
+   int (*p_function)(char, char);
+   p_function = (int (*)(char, char))0x04080;
+   int x = (*p_function)('x', 'y'); // NO warning yet at functon pointer calls
+ }
+
+If the analyzer option ``suppress-dereferences-from-any-address-space`` is set
+to true (the default value), then this checker never reports dereference of
+pointers with a specified address space. If the option is set to false, then
+reports from the specific x86 address spaces 256, 257 and 258 are still
+suppressed, but fixed address dereferences from other address spaces are
+reported.
+
 .. _core-NonNullParamChecker:
 
 core.NonNullParamChecker (C, C++, ObjC)
@@ -117,19 +152,6 @@ Check for null pointers passed as arguments to a function whose arguments are re
 core.NullDereference (C, C++, ObjC)
 """""""""""""""""""""""""""""""""""
 Check for dereferences of null pointers.
-
-This checker specifically does
-not report null pointer dereferences for x86 and x86-64 targets when the
-address space is 256 (x86 GS Segment), 257 (x86 FS Segment), or 258 (x86 SS
-segment). See `X86/X86-64 Language Extensions
-<https://clang.llvm.org/docs/LanguageExtensions.html#memory-references-to-specified-segments>`__
-for reference.
-
-The ``SuppressAddressSpaces`` option suppresses
-warnings for null dereferences of all pointers with address spaces. You can
-disable this behavior with the option
-``-analyzer-config core.NullDereference:SuppressAddressSpaces=false``.
-*Defaults to true*.
 
 .. code-block:: objc
 
@@ -169,6 +191,19 @@ disable this behavior with the option
    MyClass *obj = 0;
    obj->x = 1; // warn
  }
+
+Null pointer dereferences of pointers with address spaces are not always defined
+as error. Specifically on x86/x86-64 target if the pointer address space is
+256 (x86 GS Segment), 257 (x86 FS Segment), or 258 (x86 SS Segment), a null
+dereference is not defined as error. See `X86/X86-64 Language Extensions
+<https://clang.llvm.org/docs/LanguageExtensions.html#memory-references-to-specified-segments>`__
+for reference.
+	
+If the analyzer option ``suppress-dereferences-from-any-address-space`` is set
+to true (the default value), then this checker never reports dereference of
+pointers with a specified address space. If the option is set to false, then
+reports from the specific x86 address spaces 256, 257 and 258 are still
+suppressed, but null dereferences from other address spaces are reported.
 
 .. _core-StackAddressEscape:
 
@@ -543,6 +578,42 @@ Do not attempt to create a std::string from a null pointer
    }
  }
 
+.. _cplusplus-PureVirtualCall:
+
+cplusplus.PureVirtualCall (C++)
+"""""""""""""""""""""""""""""""
+
+When `virtual methods are called during construction and destruction
+<https://en.cppreference.com/w/cpp/language/virtual#During_construction_and_destruction>`__
+the polymorphism is restricted to the class that's being constructed or
+destructed because the more derived contexts are either not yet initialized or
+already destructed.
+
+This checker reports situations where this restricted polymorphism causes a
+call to a pure virtual method, which is undefined behavior. (See also the
+related checker :ref:`optin-cplusplus-VirtualCall` which reports situations
+where the restricted polymorphism affects a call and the called method is not
+pure virtual – but may be still surprising for the programmer.)
+
+.. code-block:: cpp
+
+ struct A {
+   virtual int getKind() = 0;
+
+   A() {
+     // warn: This calls the pure virtual method A::getKind().
+     log << "Constructing " << getKind();
+   }
+   virtual ~A() {
+     releaseResources();
+   }
+   void releaseResources() {
+     // warn: This can call the pure virtual method A::getKind() when this is
+     // called from the destructor.
+     callSomeFunction(getKind());
+   }
+ };
+
 .. _deadcode-checkers:
 
 deadcode
@@ -833,24 +904,40 @@ This checker has several options which can be set from command line (e.g.
 
 optin.cplusplus.VirtualCall (C++)
 """""""""""""""""""""""""""""""""
-Check virtual function calls during construction or destruction.
+
+When `virtual methods are called during construction and destruction
+<https://en.cppreference.com/w/cpp/language/virtual#During_construction_and_destruction>`__
+the polymorphism is restricted to the class that's being constructed or
+destructed because the more derived contexts are either not yet initialized or
+already destructed.
+
+Although this behavior is well-defined, it can surprise the programmer and
+cause unintended behavior, so this checker reports calls that appear to be
+virtual calls but can be affected by this restricted polymorphism.
+
+Note that situations where this restricted polymorphism causes a call to a pure
+virtual method (which is definitely invalid, triggers undefined behavior) are
+**reported by another checker:** :ref:`cplusplus-PureVirtualCall` and **this
+checker does not report them**.
 
 .. code-block:: cpp
 
- class A {
- public:
-   A() {
-     f(); // warn
-   }
-   virtual void f();
- };
+ struct A {
+   virtual int getKind();
 
- class A {
- public:
-   ~A() {
-     this->f(); // warn
+   A() {
+     // warn: This calls A::getKind() even if we are constructing an instance
+     // of a different class that is derived from A.
+     log << "Constructing " << getKind();
    }
-   virtual void f();
+   virtual ~A() {
+     releaseResources();
+   }
+   void releaseResources() {
+     // warn: This can be called within ~A() and calls A::getKind() even if
+     // we are destructing a class that is derived from A.
+     callSomeFunction(getKind());
+   }
  };
 
 .. _optin-mpi-MPI-Checker:
@@ -3441,6 +3528,24 @@ Limitations:
 alpha.WebKit
 ^^^^^^^^^^^^
 
+alpha.webkit.ForwardDeclChecker
+"""""""""""""""""""""""""""""""
+Check for local variables, member variables, and function arguments that are forward declared.
+
+.. code-block:: cpp
+
+ struct Obj;
+ Obj* provide();
+
+ struct Foo {
+   Obj* ptr; // warn
+ };
+
+  void foo() {
+    Obj* obj = provide(); // warn
+    consume(obj); // warn
+  }
+
 .. _alpha-webkit-NoUncheckedPtrMemberChecker:
 
 alpha.webkit.MemoryUnsafeCastChecker
@@ -3486,6 +3591,31 @@ Raw pointers and references to an object which supports CheckedPtr or CheckedRef
  };
 
 See `WebKit Guidelines for Safer C++ Programming <https://github.com/WebKit/WebKit/wiki/Safer-CPP-Guidelines>`_ for details.
+
+alpha.webkit.NoUnretainedMemberChecker
+""""""""""""""""""""""""""""""""""""""""
+Raw pointers and references to a NS or CF object can't be used as class members or ivars. Only RetainPtr is allowed for CF types regardless of whether ARC is enabled or disabled. Only RetainPtr is allowed for NS types when ARC is disabled.
+
+.. code-block:: cpp
+
+ struct Foo {
+   NSObject *ptr; // warn
+   // ...
+ };
+
+See `WebKit Guidelines for Safer C++ Programming <https://github.com/WebKit/WebKit/wiki/Safer-CPP-Guidelines>`_ for details.
+
+alpha.webkit.UnretainedLambdaCapturesChecker
+""""""""""""""""""""""""""""""""""""""""""""
+Raw pointers and references to NS or CF types can't be captured in lambdas. Only RetainPtr is allowed for CF types regardless of whether ARC is enabled or disabled, and only RetainPtr is allowed for NS types when ARC is disabled.
+
+.. code-block:: cpp
+
+ void foo(NSObject *a, NSObject *b) {
+   [&, a](){ // warn about 'a'
+     do_something(b); // warn about 'b'
+   };
+ };
 
 .. _alpha-webkit-UncountedCallArgsChecker:
 
@@ -3582,6 +3712,12 @@ The goal of this rule is to make sure that lifetime of any dynamically allocated
 
 The rules of when to use and not to use CheckedPtr / CheckedRef are same as alpha.webkit.UncountedCallArgsChecker for ref-counted objects.
 
+alpha.webkit.UnretainedCallArgsChecker
+""""""""""""""""""""""""""""""""""""""
+The goal of this rule is to make sure that lifetime of any dynamically allocated NS or CF objects passed as a call argument keeps its memory region past the end of the call. This applies to call to any function, method, lambda, function pointer or functor. NS or CF objects aren't supposed to be allocated on stack so we check arguments for parameters of raw pointers and references to unretained types.
+
+The rules of when to use and not to use RetainPtr are same as alpha.webkit.UncountedCallArgsChecker for ref-counted objects.
+
 alpha.webkit.UncountedLocalVarsChecker
 """"""""""""""""""""""""""""""""""""""
 The goal of this rule is to make sure that any uncounted local variable is backed by a ref-counted object with lifetime that is strictly larger than the scope of the uncounted local variable. To be on the safe side we require the scope of an uncounted variable to be embedded in the scope of ref-counted object that backs it.
@@ -3667,6 +3803,71 @@ Here are some examples of situations that we warn about as they *might* be poten
       // The scope of uncounted is not EMBEDDED in the scope of counted.
       RefCountable* uncounted = counted.get(); // warn
     }
+
+alpha.webkit.UnretainedLocalVarsChecker
+"""""""""""""""""""""""""""""""""""""""
+The goal of this rule is to make sure that any NS or CF local variable is backed by a RetainPtr with lifetime that is strictly larger than the scope of the unretained local variable. To be on the safe side we require the scope of an unretained variable to be embedded in the scope of Retainptr object that backs it.
+
+The rules of when to use and not to use RetainPtr are same as alpha.webkit.UncountedCallArgsChecker for ref-counted objects.
+
+These are examples of cases that we consider safe:
+
+  .. code-block:: cpp
+
+    void foo1() {
+      RetainPtr<NSObject> retained;
+      // The scope of unretained is EMBEDDED in the scope of retained.
+      {
+        NSObject* unretained = retained.get(); // ok
+      }
+    }
+
+    void foo2(RetainPtr<NSObject> retained_param) {
+      NSObject* unretained = retained_param.get(); // ok
+    }
+
+    void FooClass::foo_method() {
+      NSObject* unretained = this; // ok
+    }
+
+Here are some examples of situations that we warn about as they *might* be potentially unsafe. The logic is that either we're able to guarantee that a local variable is safe or it's considered unsafe.
+
+  .. code-block:: cpp
+
+    void foo1() {
+      NSObject* unretained = [[NSObject alloc] init]; // warn
+    }
+
+    NSObject* global_unretained;
+    void foo2() {
+      NSObject* unretained = global_unretained; // warn
+    }
+
+    void foo3() {
+      RetainPtr<NSObject> retained;
+      // The scope of unretained is not EMBEDDED in the scope of retained.
+      NSObject* unretained = retained.get(); // warn
+    }
+
+webkit.RetainPtrCtorAdoptChecker
+""""""""""""""""""""""""""""""""
+The goal of this rule is to make sure the constructor of RetainPtr as well as adoptNS and adoptCF are used correctly.
+When creating a RetainPtr with +1 semantics, adoptNS or adoptCF should be used, and in +0 semantics, RetainPtr constructor should be used.
+Warn otherwise.
+
+These are examples of cases that we consider correct:
+
+  .. code-block:: cpp
+
+    RetainPtr ptr = adoptNS([[NSObject alloc] init]); // ok
+    RetainPtr ptr = CGImageGetColorSpace(image); // ok
+
+Here are some examples of cases that we consider incorrect use of RetainPtr constructor and adoptCF
+
+  .. code-block:: cpp
+
+    RetainPtr ptr = [[NSObject alloc] init]; // warn
+    auto ptr = adoptCF(CGImageGetColorSpace(image)); // warn
 
 Debug Checkers
 ---------------

@@ -368,7 +368,9 @@ def main():
 
         # Store only filechecked runlines.
         filecheck_run_list = [i for i in run_list if i[0]]
-        ginfo = common.make_ir_generalizer(version=ti.args.version)
+        ginfo = common.make_ir_generalizer(
+            ti.args.version, ti.args.check_globals == "none"
+        )
         builder = common.FunctionTestBuilder(
             run_list=filecheck_run_list,
             flags=ti.args,

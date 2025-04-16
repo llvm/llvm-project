@@ -28,6 +28,7 @@ class Function;
 class LLVMContext;
 class Module;
 class AttributeList;
+class AttributeSet;
 
 /// This namespace contains an enum with a value for every intrinsic/builtin
 /// function known by LLVM. The enum values are returned by
@@ -86,6 +87,9 @@ namespace Intrinsic {
 
   /// Return the attributes for an intrinsic.
   AttributeList getAttributes(LLVMContext &C, ID id);
+
+  /// Return the function attributes for an intrinsic.
+  AttributeSet getFnAttributes(LLVMContext &C, ID id);
 
   /// Look up the Function declaration of the intrinsic \p id in the Module
   /// \p M. If it does not exist, add a declaration and return it. Otherwise,

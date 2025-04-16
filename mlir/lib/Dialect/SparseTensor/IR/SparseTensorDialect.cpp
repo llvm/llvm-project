@@ -2778,22 +2778,7 @@ Operation *SparseTensorDialect::materializeConstant(OpBuilder &builder,
   return nullptr;
 }
 
-namespace {
-struct SparseTensorAsmDialectInterface : public OpAsmDialectInterface {
-  using OpAsmDialectInterface::OpAsmDialectInterface;
-
-  AliasResult getAlias(Attribute attr, raw_ostream &os) const override {
-    if (isa<SparseTensorEncodingAttr>(attr)) {
-      os << "sparse";
-      return AliasResult::OverridableAlias;
-    }
-    return AliasResult::NoAlias;
-  }
-};
-} // namespace
-
 void SparseTensorDialect::initialize() {
-  addInterface<SparseTensorAsmDialectInterface>();
   addAttributes<
 #define GET_ATTRDEF_LIST
 #include "mlir/Dialect/SparseTensor/IR/SparseTensorAttrDefs.cpp.inc"

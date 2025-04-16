@@ -16,7 +16,6 @@
 #include <__cxx03/__bit/countl.h>
 #include <__cxx03/__config>
 #include <__cxx03/__functional/hash.h>
-#include <__cxx03/__functional/invoke.h>
 #include <__cxx03/__iterator/iterator_traits.h>
 #include <__cxx03/__memory/addressof.h>
 #include <__cxx03/__memory/allocator_traits.h>
@@ -42,7 +41,6 @@
 #include <__cxx03/__utility/swap.h>
 #include <__cxx03/cmath>
 #include <__cxx03/cstring>
-#include <__cxx03/initializer_list>
 #include <__cxx03/new> // __launder
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

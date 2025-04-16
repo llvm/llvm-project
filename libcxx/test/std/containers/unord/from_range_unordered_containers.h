@@ -41,7 +41,7 @@
 //     : unordered-container(from_range, std::forward<R>(rg), n, hf, key_equal(), a) { }       // C++23
 
 template <class Container, class Range>
-concept HasFromRangeCtr = requires (Range&& range) {
+concept HasFromRangeCtr = requires(Range&& range) {
   // (from_range, range)
   Container(std::from_range, std::forward<Range>(range));
   // (from_range, range, n)
@@ -49,15 +49,25 @@ concept HasFromRangeCtr = requires (Range&& range) {
   // (from_range, range, n, hash)
   Container(std::from_range, std::forward<Range>(range), 0, std::hash<typename Container::key_type>());
   // (from_range, range, n, hash, equal)
-  Container(std::from_range, std::forward<Range>(range), 0, std::hash<typename Container::key_type>(),
+  Container(std::from_range,
+            std::forward<Range>(range),
+            0,
+            std::hash<typename Container::key_type>(),
             std::equal_to<typename Container::key_type>());
   // (from_range, range, n, hash, equal, alloc)
-  Container(std::from_range, std::forward<Range>(range), 0, std::hash<typename Container::key_type>(),
-            std::equal_to<typename Container::key_type>(), std::allocator<typename Container::value_type>());
+  Container(std::from_range,
+            std::forward<Range>(range),
+            0,
+            std::hash<typename Container::key_type>(),
+            std::equal_to<typename Container::key_type>(),
+            std::allocator<typename Container::value_type>());
   // (from_range, range, n, alloc)
   Container(std::from_range, std::forward<Range>(range), 0, std::allocator<typename Container::value_type>());
   // (from_range, range, n, hash, alloc)
-  Container(std::from_range, std::forward<Range>(range), 0, std::hash<typename Container::key_type>(),
+  Container(std::from_range,
+            std::forward<Range>(range),
+            0,
+            std::hash<typename Container::key_type>(),
             std::allocator<typename Container::value_type>());
 };
 
@@ -78,7 +88,7 @@ constexpr bool test_map_constraints() {
   return true;
 }
 
-template <template <class ...> class Container,
+template <template <class...> class Container,
           class K,
           class V,
           class Iter,
@@ -88,7 +98,7 @@ template <template <class ...> class Container,
           class Alloc,
           class ValueType = std::pair<const K, V>>
 void test_unordered_map_with_input(std::vector<ValueType>&& input) {
-  using DefaultHash = std::hash<int>;
+  using DefaultHash  = std::hash<int>;
   using DefaultEqual = std::equal_to<int>;
 
   auto validate = [](auto&& c) {
@@ -175,7 +185,7 @@ void test_unordered_map_with_input(std::vector<ValueType>&& input) {
   }
 }
 
-template <template <class ...> class Container,
+template <template <class...> class Container,
           class K,
           class V,
           class Iter,
@@ -194,7 +204,7 @@ void test_unordered_map() {
   test_with_input({{1, 2}});
 }
 
-template <template <class ...> class Container>
+template <template <class...> class Container>
 void test_unordered_map_move_only() {
   std::pair<const int, MoveOnly> input[5];
   std::ranges::subrange in(std::move_iterator{input}, std::move_iterator{input + 5});
@@ -202,17 +212,15 @@ void test_unordered_map_move_only() {
   [[maybe_unused]] Container<int, MoveOnly> c(std::from_range, in);
 }
 
-template <template <class ...> class Container>
+template <template <class...> class Container>
 void test_map_exception_safety_throwing_copy() {
 #if !defined(TEST_HAS_NO_EXCEPTIONS)
   using K = int;
   using V = ThrowingCopy<3>;
 
-  V::throwing_enabled = false;
-  std::pair<const K, V> in[5] = {
-    {1, {}}, {2, {}}, {3, {}}, {4, {}}, {5, {}}
-  };
-  V::throwing_enabled = true;
+  V::throwing_enabled         = false;
+  std::pair<const K, V> in[5] = {{1, {}}, {2, {}}, {3, {}}, {4, {}}, {5, {}}};
+  V::throwing_enabled         = true;
   V::reset();
 
   try {
@@ -226,20 +234,18 @@ void test_map_exception_safety_throwing_copy() {
 #endif
 }
 
-template <template <class ...> class Container, class K, class V>
+template <template <class...> class Container, class K, class V>
 void test_map_exception_safety_throwing_allocator() {
 #if !defined(TEST_HAS_NO_EXCEPTIONS)
   using ValueType = std::pair<const K, V>;
-  ValueType in[] = {
-    ValueType{K{1}, V{1}}
-  };
+  ValueType in[]  = {ValueType{K{1}, V{1}}};
 
   try {
     ThrowingAllocator<ValueType> alloc;
 
     globalMemCounter.reset();
-    Container<K, V, test_hash<K>, test_equal_to<K>, ThrowingAllocator<ValueType>>
-        c(std::from_range, in, /*n=*/0, alloc);
+    Container<K, V, test_hash<K>, test_equal_to<K>, ThrowingAllocator<ValueType>> c(
+        std::from_range, in, /*n=*/0, alloc);
     assert(false); // The constructor call should throw.
 
   } catch (int) {
@@ -249,7 +255,7 @@ void test_map_exception_safety_throwing_allocator() {
 }
 
 template <class Container, class Range>
-concept SetHasFromRangeCtr = requires (Range&& range) {
+concept SetHasFromRangeCtr = requires(Range&& range) {
   // (from_range, range)
   Container(std::from_range, std::forward<Range>(range));
   // (from_range, range, n)
@@ -257,15 +263,25 @@ concept SetHasFromRangeCtr = requires (Range&& range) {
   // (from_range, range, n, hash)
   Container(std::from_range, std::forward<Range>(range), 0, std::hash<typename Container::value_type>());
   // (from_range, range, n, hash, equal)
-  Container(std::from_range, std::forward<Range>(range), 0, std::hash<typename Container::value_type>(),
+  Container(std::from_range,
+            std::forward<Range>(range),
+            0,
+            std::hash<typename Container::value_type>(),
             std::equal_to<typename Container::value_type>());
   // (from_range, range, n, hash, equal, alloc)
-  Container(std::from_range, std::forward<Range>(range), 0, std::hash<typename Container::value_type>(),
-            std::equal_to<typename Container::value_type>(), std::allocator<typename Container::value_type>());
+  Container(std::from_range,
+            std::forward<Range>(range),
+            0,
+            std::hash<typename Container::value_type>(),
+            std::equal_to<typename Container::value_type>(),
+            std::allocator<typename Container::value_type>());
   // (from_range, range, n, alloc)
   Container(std::from_range, std::forward<Range>(range), 0, std::allocator<typename Container::value_type>());
   // (from_range, range, n, hash, alloc)
-  Container(std::from_range, std::forward<Range>(range), 0, std::hash<typename Container::value_type>(),
+  Container(std::from_range,
+            std::forward<Range>(range),
+            0,
+            std::hash<typename Container::value_type>(),
             std::allocator<typename Container::value_type>());
 };
 
@@ -283,15 +299,9 @@ constexpr bool test_set_constraints() {
   return true;
 }
 
-template <template <class ...> class Container,
-          class T,
-          class Iter,
-          class Sent,
-          class Hash,
-          class Equal,
-          class Alloc>
+template <template <class...> class Container, class T, class Iter, class Sent, class Hash, class Equal, class Alloc>
 void test_unordered_set_with_input(std::vector<T>&& input) {
-  using DefaultHash = std::hash<int>;
+  using DefaultHash  = std::hash<int>;
   using DefaultEqual = std::equal_to<int>;
 
   auto validate = [](auto&& c) {
@@ -378,13 +388,7 @@ void test_unordered_set_with_input(std::vector<T>&& input) {
   }
 }
 
-template <template <class ...> class Container,
-          class T,
-          class Iter,
-          class Sent,
-          class Hash,
-          class Equal,
-          class Alloc>
+template <template <class...> class Container, class T, class Iter, class Sent, class Hash, class Equal, class Alloc>
 void test_unordered_set() {
   auto test_with_input = &test_unordered_set_with_input<Container, T, Iter, Sent, Hash, Equal, Alloc>;
 
@@ -396,7 +400,7 @@ void test_unordered_set() {
   test_with_input({5});
 }
 
-template <template <class ...> class Container>
+template <template <class...> class Container>
 void test_unordered_set_move_only() {
   MoveOnly input[5];
   std::ranges::subrange in(std::move_iterator{input}, std::move_iterator{input + 5});
@@ -404,7 +408,7 @@ void test_unordered_set_move_only() {
   [[maybe_unused]] Container<MoveOnly> c(std::from_range, in);
 }
 
-template <template <class ...> class Container>
+template <template <class...> class Container>
 void test_set_exception_safety_throwing_copy() {
 #if !defined(TEST_HAS_NO_EXCEPTIONS)
   using T = ThrowingCopy<3>;
@@ -422,7 +426,7 @@ void test_set_exception_safety_throwing_copy() {
 #endif
 }
 
-template <template <class ...> class Container, class T>
+template <template <class...> class Container, class T>
 void test_set_exception_safety_throwing_allocator() {
 #if !defined(TEST_HAS_NO_EXCEPTIONS)
   T in[] = {1, 2, 3};

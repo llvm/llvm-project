@@ -320,7 +320,7 @@ makeRecordV2(std::initializer_list<CallStackId> AllocFrames,
   for (const auto &CSId : AllocFrames)
     MR.AllocSites.emplace_back(CSId, Block, Schema);
   for (const auto &CSId : CallSiteFrames)
-    MR.CallSiteIds.push_back(CSId);
+    MR.CallSites.push_back(IndexedCallSiteInfo(CSId));
   return MR;
 }
 
