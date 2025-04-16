@@ -1578,7 +1578,7 @@ void Target::SetExecutableModule(ModuleSP &executable_sp,
       info->is_start_entry = true;
     });
 
-    helper.DispatchOnExit([&](telemetry::ExecutableModuleInfo *info) {
+    helper.DispatchOnExit([&, pid](telemetry::ExecutableModuleInfo *info) {
       info->exec_mod = executable_sp;
       info->uuid = executable_sp->GetUUID();
       info->pid = pid;

@@ -1628,6 +1628,37 @@ let TargetPrefix = "nvvm" in {
       Intrinsic<[llvm_v2f16_ty], [llvm_i16_ty], [IntrNoMem, IntrNoCallback]>;
   def int_nvvm_e5m2x2_to_f16x2_rn_relu : ClangBuiltin<"__nvvm_e5m2x2_to_f16x2_rn_relu">,
       Intrinsic<[llvm_v2f16_ty], [llvm_i16_ty], [IntrNoMem, IntrNoCallback]>;
+  
+  class CVT_FF_TO_I16<string type, string suffix> : ClangBuiltin<!strconcat("__nvvm_ff_to_", type, suffix)>,
+      DefaultAttrsIntrinsic<[llvm_i16_ty], [llvm_float_ty, llvm_float_ty], [IntrNoMem, IntrNoCallback]>;
+      
+  class CVT_I16_TO_F16X2<string type, string suffix>
+    : ClangBuiltin<!strconcat("__nvvm_", type, "_to_f16x2", suffix)>,
+      DefaultAttrsIntrinsic<[llvm_v2f16_ty], [llvm_i16_ty], [IntrNoMem, IntrNoCallback]>;
+
+  class CVT_BF16X2_TO_I16<string type, string suffix> : ClangBuiltin<!strconcat("__nvvm_bf16x2_to_", type, suffix)>,
+      DefaultAttrsIntrinsic<[llvm_i16_ty], [llvm_v2bf16_ty], [IntrNoMem, IntrNoCallback]>;
+
+  // FP6 conversions.
+  foreach type = ["e2m3x2", "e3m2x2"] in {
+    foreach relu = ["", "_relu"] in {
+      defvar suffix = !strconcat("_rn", relu);
+      def int_nvvm_ff_to_ # type # suffix # _satfinite : CVT_FF_TO_I16<type, !strconcat(suffix, "_satfinite")>;
+      def int_nvvm_ # type # _to_f16x2 # suffix : CVT_I16_TO_F16X2<type, suffix>;
+    }
+  }
+  
+  // UE8M0x2 conversions.
+  foreach rmode = ["_rz", "_rp"] in {
+    foreach satmode = ["", "_satfinite"] in {
+      defvar suffix = !strconcat(rmode, satmode);
+      def int_nvvm_ff_to_ue8m0x2 # suffix : CVT_FF_TO_I16<"ue8m0x2", suffix>;
+      def int_nvvm_bf16x2_to_ue8m0x2 # suffix : CVT_BF16X2_TO_I16<"ue8m0x2", suffix>;
+    }
+  }
+      
+  def int_nvvm_ue8m0x2_to_bf16x2 : ClangBuiltin<"__nvvm_ue8m0x2_to_bf16x2">,
+      Intrinsic<[llvm_v2bf16_ty], [llvm_i16_ty], [IntrNoMem, IntrNoCallback]>;
 
 // FNS
 

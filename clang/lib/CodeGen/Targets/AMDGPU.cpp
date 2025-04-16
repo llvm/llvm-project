@@ -444,7 +444,8 @@ void AMDGPUTargetCodeGenInfo::setFunctionDeclAttributes(
     F->addFnAttr("amdgpu-cluster-dims", AttrVal.str());
   }
 
-  if (FD->getAttr<CUDANoClusterAttr>())
+  // OpenCL doesn't support cluster feature.
+  if (IsOpenCLKernel || FD->getAttr<CUDANoClusterAttr>())
     F->addFnAttr("amdgpu-cluster-dims", "0,0,0");
 }
 

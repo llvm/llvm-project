@@ -873,7 +873,8 @@ bool VPInstruction::isFPMathOp() const {
   return Opcode == Instruction::FAdd || Opcode == Instruction::FMul ||
          Opcode == Instruction::FNeg || Opcode == Instruction::FSub ||
          Opcode == Instruction::FDiv || Opcode == Instruction::FRem ||
-         Opcode == Instruction::FCmp || Opcode == Instruction::Select;
+         Opcode == Instruction::FCmp || Opcode == Instruction::Select ||
+         Opcode == VPInstruction::WideIVStep;
 }
 #endif
 
@@ -928,6 +929,7 @@ bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
   case VPInstruction::LogicalAnd:
   case VPInstruction::Not:
   case VPInstruction::PtrAdd:
+  case VPInstruction::WideIVStep:
     return false;
   default:
     return true;
@@ -1097,9 +1099,19 @@ void VPInstructionWithType::print(raw_ostream &O, const Twine &Indent,
                                   VPSlotTracker &SlotTracker) const {
   O << Indent << "EMIT ";
   printAsOperand(O, SlotTracker);
-  O << " = " << Instruction::getOpcodeName(getOpcode()) << " ";
-  printOperands(O, SlotTracker);
-  O << " to " << *ResultTy;
+  O << " = ";
+
+  switch (getOpcode()) {
+  case VPInstruction::WideIVStep:
+    O << "wide-iv-step ";
+    printOperands(O, SlotTracker);
+    break;
+  default:
+    assert(Instruction::isCast(getOpcode()) && "unhandled opcode");
+    O << Instruction::getOpcodeName(getOpcode()) << " ";
+    printOperands(O, SlotTracker);
+    O << " to " << *ResultTy;
+  }
 }
 #endif
 

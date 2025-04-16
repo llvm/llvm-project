@@ -19716,10 +19716,15 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     SDValue Src = N->getOperand(0);
     SDValue Passthru = N->getOperand(2);
     SDValue VL = N->getOperand(4);
-    // TODO: Handle fmv.v.f?
-    if (Src.getOpcode() == RISCVISD::VMV_V_X_VL && Passthru.isUndef() &&
-        VL == Src.getOperand(2))
-      return Src;
+    switch (Src.getOpcode()) {
+    default:
+      break;
+    case RISCVISD::VMV_V_X_VL:
+    case RISCVISD::VFMV_V_F_VL:
+      if (Passthru.isUndef() && VL == Src.getOperand(2))
+        return Src;
+      break;
+    }
     break;
   }
   }
@@ -20640,7 +20645,7 @@ static MachineBasicBlock *emitSelectPseudo(MachineInstr &MI,
 
   // Insert appropriate branch.
   if (MI.getOperand(2).isImm())
-    BuildMI(HeadMBB, DL, TII.getBrCond(CC, MI.getOperand(2).isImm()))
+    BuildMI(HeadMBB, DL, TII.getBrCond(CC))
         .addReg(LHS)
         .addImm(MI.getOperand(2).getImm())
         .addMBB(TailMBB);

@@ -1090,7 +1090,7 @@ void State::addInfoFor(BasicBlock &BB) {
   bool GuaranteedToExecute = true;
   // Queue conditions and assumes.
   for (Instruction &I : BB) {
-    if (auto Cmp = dyn_cast<ICmpInst>(&I)) {
+    if (auto *Cmp = dyn_cast<ICmpInst>(&I)) {
       for (Use &U : Cmp->uses()) {
         auto *UserI = getContextInstForUse(U);
         auto *DTN = DT.getNode(UserI->getParent());
