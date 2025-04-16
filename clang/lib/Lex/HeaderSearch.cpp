@@ -1932,8 +1932,7 @@ void HeaderSearch::collectAllModules(SmallVectorImpl<Module *> &Modules) {
   }
 
   // Populate the list of modules.
-  llvm::transform(ModMap.modules(), std::back_inserter(Modules),
-                  [](const auto &NameAndMod) { return NameAndMod.second; });
+  llvm::append_range(Modules, llvm::make_second_range(ModMap.modules()));
 }
 
 void HeaderSearch::loadTopLevelSystemModules() {
