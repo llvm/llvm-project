@@ -385,7 +385,9 @@ You can test this locally with the following command:
         # Each file is prefixed like:
         # diff --git a/file b/file
         for file in re.split("^diff --git ", stdout, 0, re.MULTILINE):
-            filename = re.match("a/([^ ]+)", file.splitlines()[0])[1]
+            lines = file.splitlines()
+            match = re.match("a/([^ ]+)", lines[0] if lines else "")
+            filename = match[1] if match else ""
             if filename.endswith(".ll"):
                 undef_regex = r"(?<!%)\bundef\b"
             else:
