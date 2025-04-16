@@ -8107,6 +8107,13 @@ static QualType checkConditionalPointerCompatibility(Sema &S, ExprResult &LHS,
   lhQual.removeCVRQualifiers();
   rhQual.removeCVRQualifiers();
 
+  if (!lhQual.getPointerAuth().isEquivalent(rhQual.getPointerAuth())) {
+    S.Diag(Loc, diag::err_typecheck_cond_incompatible_ptrauth)
+        << LHSTy << RHSTy << LHS.get()->getSourceRange()
+        << RHS.get()->getSourceRange();
+    return QualType();
+  }
+
   // OpenCL v2.0 specification doesn't extend compatibility of type qualifiers
   // (C99 6.7.3) for address spaces. We assume that the check should behave in
   // the same manner as it's defined for CVR qualifiers, so for OpenCL two
@@ -9025,6 +9032,10 @@ checkPointerTypesForAssignment(Sema &S, QualType LHSType, QualType RHSType,
 
     // Treat lifetime mismatches as fatal.
     else if (lhq.getObjCLifetime() != rhq.getObjCLifetime())
+      ConvTy = Sema::IncompatiblePointerDiscardsQualifiers;
+
+    // Treat pointer-auth mismatches as fatal.
+    else if (!lhq.getPointerAuth().isEquivalent(rhq.getPointerAuth()))
       ConvTy = Sema::IncompatiblePointerDiscardsQualifiers;
 
     // For GCC/MS compatibility, other qualifier mismatches are treated
@@ -17025,6 +17036,9 @@ bool Sema::DiagnoseAssignmentResult(AssignConvertType ConvTy,
     } else if (lhq.getObjCLifetime() != rhq.getObjCLifetime()) {
       DiagKind = diag::err_typecheck_incompatible_ownership;
       break;
+    } else if (!lhq.getPointerAuth().isEquivalent(rhq.getPointerAuth())) {
+      DiagKind = diag::err_typecheck_incompatible_ptrauth;
+      break;
     }
 
     llvm_unreachable("unknown error case for discarding qualifiers!");
@@ -21097,11 +21111,15 @@ ExprResult Sema::CheckPlaceholderExpr(Expr *E) {
     const bool IsTypeAliasTemplateDecl = isa<TypeAliasTemplateDecl>(Temp);
 
     NestedNameSpecifier *NNS = ULE->getQualifierLoc().getNestedNameSpecifier();
-    TemplateName TN(dyn_cast<TemplateDecl>(Temp));
-    if (TN.isNull())
+    // FIXME: AssumedTemplate is not very appropriate for error recovery here,
+    // as it models only the unqualified-id case, where this case can clearly be
+    // qualified. Thus we can't just qualify an assumed template.
+    TemplateName TN;
+    if (auto *TD = dyn_cast<TemplateDecl>(Temp))
+      TN = Context.getQualifiedTemplateName(NNS, ULE->hasTemplateKeyword(),
+                                            TemplateName(TD));
+    else
       TN = Context.getAssumedTemplateName(NameInfo.getName());
-    TN = Context.getQualifiedTemplateName(NNS,
-                                          /*TemplateKeyword=*/true, TN);
 
     Diag(NameInfo.getLoc(), diag::err_template_kw_refers_to_type_template)
         << TN << ULE->getSourceRange() << IsTypeAliasTemplateDecl;

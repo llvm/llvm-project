@@ -118,6 +118,12 @@ def simm20_li : RISCVOp<XLenVT> {
 
 def simm26 : RISCVSImmLeafOp<26>;
 
+def simm26_nosimm12 : ImmLeaf<XLenVT, [{
+  return isInt<26>(Imm) && !isInt<12>(Imm);}]>;
+
+def simm32_nosimm26 : ImmLeaf<XLenVT, [{
+  return isInt<32>(Imm) && !isInt<26>(Imm);}]>;
+
 class BareSImmNAsmOperand<int width>
     : ImmAsmOperand<"BareS", width, ""> {
   let PredicateMethod = "isBareSimmN<" # width # ">";
@@ -139,30 +145,18 @@ def bare_simm32 : RISCVOp<XLenVT> {
 }
 
 // A 32-bit signed immediate where the least significant bit is zero.
-def simm32_lsb0 : Operand<OtherVT> {
-  let ParserMatchClass = SImmAsmOperand<32, "Lsb0">;
+def bare_simm32_lsb0 : Operand<OtherVT> {
+  let ParserMatchClass = BareSImmNLsb0AsmOperand<32>;
   let PrintMethod = "printBranchOperand";
   let EncoderMethod = "getImmOpValueAsr1";
   let DecoderMethod = "decodeSImmOperandAndLsl1<32>";
   let MCOperandPredicate = [{
     int64_t Imm;
-    if (!MCOp.evaluateAsConstantImm(Imm))
-      return false;
-    return isShiftedInt<31, 1>(Imm);
+    if (MCOp.evaluateAsConstantImm(Imm))
+      return isShiftedInt<31, 1>(Imm);
+    return MCOp.isBareSymbolRef();
   }];
   let OperandType = "OPERAND_PCREL";
-}
-
-def PseudoQCJumpSymbol : AsmOperandClass {
-  let Name = "PseudoQCJumpSymbol";
-  let RenderMethod = "addImmOperands";
-  let DiagnosticType = "InvalidPseudoQCJumpSymbol";
-  let DiagnosticString = "operand must be a valid jump target";
-  let ParserMethod = "parsePseudoQCJumpSymbol";
-}
-
-def pseudo_qc_jump_symbol : Operand<XLenVT> {
-  let ParserMatchClass = PseudoQCJumpSymbol;
 }
 
 //===----------------------------------------------------------------------===//
@@ -313,7 +307,7 @@ def InsnQC_EJ : DirectiveInsnQC_EJ<(outs),
                                         uimm3:$func3,
                                         uimm2:$func2,
                                         uimm5:$func5,
-                                        simm32_lsb0:$imm31),
+                                        bare_simm32_lsb0:$imm31),
                                    "$opcode, $func3, $func2, $func5, $imm31">;
 def InsnQC_ES : DirectiveInsnQC_ES<(outs),
                                    (ins uimm7_opcode:$opcode,
@@ -365,7 +359,7 @@ def : InstAlias<".insn_qc.ej $opcode, $func3, $func2, $func5, $imm31",
                             uimm3:$func3,
                             uimm2:$func2,
                             uimm5:$func5,
-                            simm32_lsb0:$imm31)>;
+                            bare_simm32_lsb0:$imm31)>;
 def : InstAlias<".insn_qc.es $opcode, $func3, $func2, $rs2, ${imm26}(${rs1})",
                  (InsnQC_ES uimm7_opcode:$opcode,
                             uimm3:$func3,
@@ -719,7 +713,7 @@ class QCIRVInstEI<bits<3> funct3, bits<2> funct2, string opcodestr>
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class QCIRVInst48EJ<bits<2> func2, string opcodestr>
-    : RVInst48<(outs), (ins simm32_lsb0:$imm31),
+    : RVInst48<(outs), (ins bare_simm32_lsb0:$imm31),
                opcodestr, "$imm31", [], InstFormatQC_EJ> {
   bits<31> imm31;
 
@@ -1231,19 +1225,33 @@ def PseudoQC_E_SH : PseudoStore<"qc.e.sh">;
 def PseudoQC_E_SW : PseudoStore<"qc.e.sw">;
 } // Predicates = [HasVendorXqcilo, IsRV32]
 
-let isCall = 0, isBarrier = 1, isTerminator = 1,
-    isCodeGenOnly = 0, hasSideEffects = 0, mayStore = 0, mayLoad = 0 in
-def PseudoQC_E_J : Pseudo<(outs), (ins pseudo_qc_jump_symbol:$func), [],
-                          "qc.e.j", "$func">;
-
-let isCall = 1, Defs = [X1], isCodeGenOnly = 0, hasSideEffects = 0,
-    mayStore = 0, mayLoad = 0 in
-def PseudoQC_E_JAL: Pseudo<(outs), (ins pseudo_qc_jump_symbol:$func), [],
-                           "qc.e.jal", "$func">;
-
 //===----------------------------------------------------------------------===//
 // Code Gen Patterns
 //===----------------------------------------------------------------------===//
+
+/// Generic pattern classes
+
+class PatGprNoX0Simm26NoSimm12<SDPatternOperator OpNode, RVInst48 Inst>
+    : Pat<(i32 (OpNode (i32 GPRNoX0:$rs1), simm26_nosimm12:$imm)),
+          (Inst GPRNoX0:$rs1, simm26_nosimm12:$imm)>;
+
+class PatGprNoX0Simm32NoSimm26<SDPatternOperator OpNode, RVInst48 Inst>
+    : Pat<(i32 (OpNode (i32 GPRNoX0:$rs1), simm32_nosimm26:$imm)),
+          (Inst GPRNoX0:$rs1, simm32_nosimm26:$imm)>;
+
+/// Simple arithmetic operations
+
+let Predicates = [HasVendorXqcilia, IsRV32] in {
+def : PatGprNoX0Simm32NoSimm26<add, QC_E_ADDAI>;
+def : PatGprNoX0Simm32NoSimm26<and, QC_E_ANDAI>;
+def : PatGprNoX0Simm32NoSimm26<or, QC_E_ORAI>;
+def : PatGprNoX0Simm32NoSimm26<xor, QC_E_XORAI>;
+
+def : PatGprNoX0Simm26NoSimm12<add, QC_E_ADDI>;
+def : PatGprNoX0Simm26NoSimm12<and, QC_E_ANDI>;
+def : PatGprNoX0Simm26NoSimm12<or, QC_E_ORI>;
+def : PatGprNoX0Simm26NoSimm12<xor, QC_E_XORI>;
+} // Predicates = [HasVendorXqcilia, IsRV32]
 
 let Predicates = [HasVendorXqciint, IsRV32] in
 def : Pat<(riscv_mileaveret_glue), (QC_C_MILEAVERET)>;

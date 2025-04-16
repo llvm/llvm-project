@@ -207,6 +207,9 @@ namespace llvm {
       return VT != MVT::f128;
     }
 
+    bool isFPImmLegal(const APFloat &Imm, EVT VT,
+                      bool ForCodeSize) const override;
+
     bool shouldInsertFencesForAtomic(const Instruction *I) const override {
       // FIXME: We insert fences for each atomics and generate
       // sub-optimal code for PSO/TSO. (Approximately nobody uses any
