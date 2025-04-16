@@ -2763,7 +2763,7 @@ static SDValue lowerIntrinsicWOChain(SDValue Op, SelectionDAG &DAG) {
   switch (Op->getConstantOperandVal(0)) {
   default:
     return Op;
-  case Intrinsic::nvvm_internal_noop_addrspacecast:
+  case Intrinsic::nvvm_internal_addrspace_wrap:
     return Op.getOperand(1);
   }
 }

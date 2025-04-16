@@ -1920,9 +1920,10 @@ def int_nvvm_ptr_param_to_gen: DefaultAttrsIntrinsic<[llvm_anyptr_ty],
 //    This accounts for the fact that the parameter symbols will occupy this
 //    space when lowered during ISel.
 //
-def int_nvvm_internal_noop_addrspacecast :
+def int_nvvm_internal_addrspace_wrap :
   DefaultAttrsIntrinsic<[llvm_anyptr_ty], [llvm_anyptr_ty],
-                        [IntrNoMem, IntrSpeculatable, NoUndef<ArgIndex<0>>, NoUndef<RetIndex>]>;
+                        [IntrNoMem, IntrSpeculatable, NoUndef<ArgIndex<0>>,
+                         NoUndef<RetIndex>]>;
 
 // Move intrinsics, used in nvvm internally
 

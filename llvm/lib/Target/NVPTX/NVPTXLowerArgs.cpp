@@ -516,7 +516,7 @@ void copyByValParam(Function &F, Argument &Arg) {
   Arg.replaceAllUsesWith(AllocA);
 
   Value *ArgInParam =
-      IRB.CreateIntrinsic(Intrinsic::nvvm_internal_noop_addrspacecast,
+      IRB.CreateIntrinsic(Intrinsic::nvvm_internal_addrspace_wrap,
                           {IRB.getPtrTy(ADDRESS_SPACE_PARAM), Arg.getType()},
                           &Arg, {}, Arg.getName());
 
@@ -552,7 +552,7 @@ static void handleByValParam(const NVPTXTargetMachine &TM, Argument *Arg) {
 
     IRBuilder<> IRB(&*FirstInst);
     Value *ArgInParamAS = IRB.CreateIntrinsic(
-        Intrinsic::nvvm_internal_noop_addrspacecast,
+        Intrinsic::nvvm_internal_addrspace_wrap,
         {IRB.getPtrTy(ADDRESS_SPACE_PARAM), Arg->getType()}, {Arg});
 
     for (Use *U : UsesToUpdate)
@@ -584,7 +584,7 @@ static void handleByValParam(const NVPTXTargetMachine &TM, Argument *Arg) {
     // intrinsic, this had the added benefit of preventing other optimizations
     // from folding away this pair of addrspacecasts.
     auto *ParamSpaceArg =
-        IRB.CreateIntrinsic(Intrinsic::nvvm_internal_noop_addrspacecast,
+        IRB.CreateIntrinsic(Intrinsic::nvvm_internal_addrspace_wrap,
                             {IRB.getPtrTy(ADDRESS_SPACE_PARAM), Arg->getType()},
                             Arg, {}, Arg->getName() + ".param");
 
