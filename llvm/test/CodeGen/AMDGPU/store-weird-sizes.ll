@@ -50,7 +50,10 @@ define void @local_store_i56(ptr addrspace(3) %ptr, i56 %arg) #0 {
 define amdgpu_kernel void @local_store_i55(ptr addrspace(3) %ptr, i55 %arg) #0 {
 ; HAWAII-LABEL: local_store_i55:
 ; HAWAII:       ; %bb.0:
+; HAWAII-NEXT:    s_add_i32 s12, s12, s17
 ; HAWAII-NEXT:    s_or_b32 s0, s8, 14
+; HAWAII-NEXT:    s_mov_b32 flat_scratch_lo, s13
+; HAWAII-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; HAWAII-NEXT:    v_mov_b32_e32 v0, s0
 ; HAWAII-NEXT:    v_mov_b32_e32 v1, s9
 ; HAWAII-NEXT:    flat_load_ubyte v0, v[0:1]
@@ -70,7 +73,10 @@ define amdgpu_kernel void @local_store_i55(ptr addrspace(3) %ptr, i55 %arg) #0 {
 ;
 ; FIJI-LABEL: local_store_i55:
 ; FIJI:       ; %bb.0:
+; FIJI-NEXT:    s_add_i32 s12, s12, s17
 ; FIJI-NEXT:    s_or_b32 s0, s8, 14
+; FIJI-NEXT:    s_mov_b32 flat_scratch_lo, s13
+; FIJI-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; FIJI-NEXT:    v_mov_b32_e32 v0, s0
 ; FIJI-NEXT:    v_mov_b32_e32 v1, s9
 ; FIJI-NEXT:    flat_load_ubyte v0, v[0:1]
