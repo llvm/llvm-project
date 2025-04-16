@@ -202,17 +202,46 @@ class SPIRVLegalizePointerCast : public FunctionPass {
     return SI;
   }
 
+  void buildGEPIndexChain(IRBuilder<> &B, Type *Search, Type *Aggregate,
+                          SmallVectorImpl<Value *> &Indices) {
+    Indices.push_back(B.getInt32(0));
+
+    if (Search == Aggregate)
+      return;
+
+    if (auto *ST = dyn_cast<StructType>(Aggregate))
+      buildGEPIndexChain(B, Search, ST->getTypeAtIndex(0u), Indices);
+    else if (auto *AT = dyn_cast<ArrayType>(Aggregate))
+      buildGEPIndexChain(B, Search, AT->getElementType(), Indices);
+    else if (auto *VT = dyn_cast<FixedVectorType>(Aggregate))
+      buildGEPIndexChain(B, Search, VT->getElementType(), Indices);
+    else
+      llvm_unreachable("Bad access chain?");
+  }
+
   // Stores the given Src value into the first entry of the Dst aggregate.
   Value *storeToFirstValueAggregate(IRBuilder<> &B, Value *Src, Value *Dst,
-                                    Align Alignment) {
+                                    Type *DstPointeeType, Align Alignment) {
     SmallVector<Type *, 2> Types = {Dst->getType(), Dst->getType()};
-    SmallVector<Value *, 3> Args{/* isInBounds= */ B.getInt1(true), Dst,
-                                 B.getInt32(0), B.getInt32(0)};
+    SmallVector<Value *, 3> Args{/* isInBounds= */ B.getInt1(true), Dst};
+    buildGEPIndexChain(B, Src->getType(), DstPointeeType, Args);
     auto *GEP = B.CreateIntrinsic(Intrinsic::spv_gep, {Types}, {Args});
     GR->buildAssignPtr(B, Src->getType(), GEP);
     StoreInst *SI = B.CreateStore(Src, GEP);
     SI->setAlignment(Alignment);
     return SI;
+  }
+
+  bool isTypeFirstElementAggregate(Type *Search, Type *Aggregate) {
+    if (Search == Aggregate)
+      return true;
+    if (auto *ST = dyn_cast<StructType>(Aggregate))
+      return isTypeFirstElementAggregate(Search, ST->getTypeAtIndex(0u));
+    if (auto *VT = dyn_cast<FixedVectorType>(Aggregate))
+      return isTypeFirstElementAggregate(Search, VT->getElementType());
+    if (auto *AT = dyn_cast<ArrayType>(Aggregate))
+      return isTypeFirstElementAggregate(Search, AT->getElementType());
+    return false;
   }
 
   // Transforms a store instruction (or SPV intrinsic) using a ptrcast as
@@ -222,17 +251,17 @@ class SPIRVLegalizePointerCast : public FunctionPass {
     Type *ToTy = GR->findDeducedElementType(Dst);
     Type *FromTy = Src->getType();
 
-    auto *SVT = dyn_cast<FixedVectorType>(FromTy);
-    auto *DST = dyn_cast<StructType>(ToTy);
-    auto *DVT = dyn_cast<FixedVectorType>(ToTy);
+    auto *S_VT = dyn_cast<FixedVectorType>(FromTy);
+    auto *D_ST = dyn_cast<StructType>(ToTy);
+    auto *D_VT = dyn_cast<FixedVectorType>(ToTy);
 
     B.SetInsertPoint(BadStore);
-    if (DST && DST->getTypeAtIndex(0u) == FromTy)
-      storeToFirstValueAggregate(B, Src, Dst, Alignment);
-    else if (DVT && SVT)
+    if (D_ST && isTypeFirstElementAggregate(FromTy, D_ST))
+      storeToFirstValueAggregate(B, Src, Dst, D_ST, Alignment);
+    else if (D_VT && S_VT)
       storeVectorFromVector(B, Src, Dst, Alignment);
-    else if (DVT && !SVT && FromTy == DVT->getElementType())
-      storeToFirstValueAggregate(B, Src, Dst, Alignment);
+    else if (D_VT && !S_VT && FromTy == D_VT->getElementType())
+      storeToFirstValueAggregate(B, Src, Dst, D_VT, Alignment);
     else
       llvm_unreachable("Unsupported ptrcast use in store. Please fix.");
 
