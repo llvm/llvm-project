@@ -180,6 +180,7 @@ void CIRRecordLowering::accumulateFields() {
       ++field;
     } else {
       // TODO(cir): do we want to do anything special about zero size members?
+      assert(!cir::MissingFeatures::zeroSizeRecordMembers());
       ++field;
     }
   }

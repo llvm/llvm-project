@@ -110,6 +110,7 @@ struct MissingFeatures {
   static bool packedRecords() { return false; }
   static bool recordPadding() { return false; }
   static bool recordZeroInit() { return false; }
+  static bool zeroSizeRecordMembers() { return false; }
 
   // Misc
   static bool cxxABI() { return false; }
