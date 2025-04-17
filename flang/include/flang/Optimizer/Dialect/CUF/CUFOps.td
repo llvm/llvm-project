@@ -200,7 +200,7 @@ def cuf_KernelLaunchOp : cuf_Op<"kernel_launch", [CallOpInterface,
 
   let arguments = (ins SymbolRefAttr:$callee, I32:$grid_x, I32:$grid_y,
       I32:$grid_z, I32:$block_x, I32:$block_y, I32:$block_z,
-      Optional<I32>:$bytes, Optional<AnyIntegerType>:$stream,
+      Optional<I32>:$bytes, Optional<fir_ReferenceType>:$stream,
       Variadic<AnyType>:$args, OptionalAttr<DictArrayAttr>:$arg_attrs,
       OptionalAttr<DictArrayAttr>:$res_attrs);
 
@@ -237,6 +237,8 @@ def cuf_KernelLaunchOp : cuf_Op<"kernel_launch", [CallOpInterface,
           *this, getNbNoArgOperand(), getArgs().size() - 1);
     }
   }];
+
+  let hasVerifier = 1;
 }
 
 def cuf_KernelOp : cuf_Op<"kernel", [AttrSizedOperandSegments,
