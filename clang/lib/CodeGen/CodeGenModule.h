@@ -1972,6 +1972,11 @@ private:
   /// .gcda files in a way that persists in .bc files.
   void EmitCoverageFile();
 
+  /// Given a sycl_kernel_entry_point attributed function, emit the
+  /// corresponding SYCL kernel caller offload entry point function.
+  void EmitSYCLKernelCaller(const FunctionDecl *KernelEntryPointFn,
+                            ASTContext &Ctx);
+
   /// Determine whether the definition must be emitted; if this returns \c
   /// false, the definition can be emitted lazily if it's used.
   bool MustBeEmitted(const ValueDecl *D);
