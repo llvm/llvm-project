@@ -68,13 +68,6 @@ TEST(LlvmLibcSetJmpTest, SigSetAndJumpBackNoSaveSigs) {
   jmp_buf buf;
   longjmp_called = 0;
   volatile int n = 0;
-  sigset_t old;
-  sigset_t mask_all;
-  sigset_t recovered;
-  LIBC_NAMESPACE::memset(&mask_all, 0xFF, sizeof(mask_all));
-  LIBC_NAMESPACE::memset(&old, 0, sizeof(old));
-  LIBC_NAMESPACE::memset(&recovered, 0, sizeof(recovered));
-  LIBC_NAMESPACE::sigprocmask(0, nullptr, &old);
   if (LIBC_NAMESPACE::sigsetjmp(buf, 0) <= MAX_LOOP) {
     n = n + 1;
     jump_back(buf, n);
@@ -86,13 +79,6 @@ TEST(LlvmLibcSetJmpTest, SigSetAndJumpBackNoSaveSigs) {
 TEST(LlvmLibcSetJmpTest, SigSetAndJumpBackValOneNoSaveSigs) {
   jmp_buf buf;
   longjmp_called = 0;
-  sigset_t old;
-  sigset_t mask_all;
-  sigset_t recovered;
-  LIBC_NAMESPACE::memset(&mask_all, 0xFF, sizeof(mask_all));
-  LIBC_NAMESPACE::memset(&old, 0, sizeof(old));
-  LIBC_NAMESPACE::memset(&recovered, 0, sizeof(recovered));
-  LIBC_NAMESPACE::sigprocmask(0, nullptr, &old);
   int val = LIBC_NAMESPACE::sigsetjmp(buf, 0);
   if (val == 0) {
     jump_back(buf, val);
