@@ -1234,6 +1234,10 @@ def offload_compression_level_EQ : Joined<["--"], "offload-compression-level=">,
   Flags<[HelpHidden]>,
   HelpText<"Compression level for offload device binaries (HIP only)">;
 
+def offload_jobs_EQ : Joined<["--"], "offload-jobs=">,
+  HelpText<"Specify the number of threads to use for device offloading tasks"
+           " during compilation.">;
+
 defm offload_via_llvm : BoolFOption<"offload-via-llvm",
   LangOpts<"OffloadViaLLVM">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option], "Use">,
@@ -3509,12 +3513,6 @@ defm application_extension : BoolFOption<"application-extension",
   PosFlag<SetTrue, [], [ClangOption, CC1Option],
           "Restrict code to those available for App Extensions">,
   NegFlag<SetFalse>>;
-defm retain_subst_template_type_parm_type_ast_nodes : BoolFOption<"retain-subst-template-type-parm-type-ast-nodes",
-  LangOpts<"RetainSubstTemplateTypeParmTypeAstNodes">, DefaultFalse,
-  PosFlag<SetTrue, [], [CC1Option], "Enable">,
-  NegFlag<SetFalse, [], [], "Disable">,
-  BothFlags<[], [], " retain SubstTemplateTypeParmType nodes in the AST's representation"
-  " of alias template specializations">>;
 defm sized_deallocation : BoolFOption<"sized-deallocation",
   LangOpts<"SizedDeallocation">, Default<cpp14.KeyPath>,
   PosFlag<SetTrue, [], [], "Enable C++14 sized global deallocation functions">,
@@ -4142,6 +4140,13 @@ def ftrigraphs : Flag<["-"], "ftrigraphs">, Group<f_Group>,
 def fno_trigraphs : Flag<["-"], "fno-trigraphs">, Group<f_Group>,
   HelpText<"Do not process trigraph sequences">,
   Visibility<[ClangOption, CC1Option]>;
+defm unique_source_file_names: BoolOption<"f", "unique-source-file-names",
+  CodeGenOpts<"UniqueSourceFileNames">, DefaultFalse,
+  PosFlag<SetTrue, [], [CC1Option], "Allow">,
+  NegFlag<SetFalse, [], [], "Do not allow">,
+  BothFlags<[], [ClangOption], " the compiler to assume that each translation unit has a unique "
+                               "source file name at link time">>,
+  Group<f_clang_Group>;
 def funsigned_bitfields : Flag<["-"], "funsigned-bitfields">, Group<f_Group>;
 def funsigned_char : Flag<["-"], "funsigned-char">, Group<f_Group>;
 def fno_unsigned_char : Flag<["-"], "fno-unsigned-char">;
@@ -6880,6 +6885,13 @@ def sycl_link : Flag<["--"], "sycl-link">, Flags<[HelpHidden]>,
 let Flags = [TargetSpecific] in {
 defm android_pad_segment : BooleanFFlag<"android-pad-segment">, Group<f_Group>;
 } // let Flags = [TargetSpecific]
+
+def shared_libflangrt : Flag<["-"], "shared-libflangrt">,
+  HelpText<"Link the flang-rt shared library">, Group<Link_Group>,
+  Visibility<[FlangOption]>, Flags<[NoArgumentUnused]>;
+def static_libflangrt : Flag<["-"], "static-libflangrt">, 
+  HelpText<"Link the flang-rt static library">, Group<Link_Group>,
+  Visibility<[FlangOption]>, Flags<[NoArgumentUnused]>;
 
 //===----------------------------------------------------------------------===//
 // FLangOption + NoXarchOption

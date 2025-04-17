@@ -1562,17 +1562,24 @@ cc_library(
         ":AMDGPUDialect",
         ":AMDGPUPassIncGen",
         ":AMDGPUUtils",
+        ":AffineDialect",
         ":ArithDialect",
+        ":ArithUtils",
         ":ControlFlowDialect",
         ":FuncDialect",
         ":GPUDialect",
         ":IR",
+        ":LLVMSupportHeaders",
         ":MemRefDialect",
+        ":MemRefUtils",
         ":Pass",
+        ":SCFDialect",
         ":SideEffectInterfaces",
         ":Support",
         ":TransformUtils",
         ":VectorDialect",
+        ":VectorTransforms",
+        "//llvm:Support",
     ],
 )
 
@@ -6342,6 +6349,90 @@ cc_library(
 )
 
 td_library(
+    name = "SMTTdFiles",
+    srcs = [
+        "include/mlir/Dialect/SMT/IR/SMT.td",
+        "include/mlir/Dialect/SMT/IR/SMTArrayOps.td",
+        "include/mlir/Dialect/SMT/IR/SMTAttributes.td",
+        "include/mlir/Dialect/SMT/IR/SMTBitVectorOps.td",
+        "include/mlir/Dialect/SMT/IR/SMTDialect.td",
+        "include/mlir/Dialect/SMT/IR/SMTIntOps.td",
+        "include/mlir/Dialect/SMT/IR/SMTOps.td",
+        "include/mlir/Dialect/SMT/IR/SMTTypes.td",
+    ],
+    includes = ["include"],
+    deps = [
+        ":AttrTdFiles",
+        ":BuiltinDialectTdFiles",
+        ":ControlFlowInterfacesTdFiles",
+        ":InferTypeOpInterfaceTdFiles",
+        ":OpBaseTdFiles",
+        ":SideEffectInterfacesTdFiles",
+    ],
+)
+
+gentbl_cc_library(
+    name = "SMTIncGen",
+    tbl_outs = {
+        "include/mlir/Dialect/SMT/IR/SMT.h.inc": ["-gen-op-decls"],
+        "include/mlir/Dialect/SMT/IR/SMT.cpp.inc": ["-gen-op-defs"],
+        "include/mlir/Dialect/SMT/IR/SMTDialect.h.inc": [
+            "-gen-dialect-decls",
+            "-dialect=smt",
+        ],
+        "include/mlir/Dialect/SMT/IR/SMTDialect.cpp.inc": [
+            "-gen-dialect-defs",
+            "-dialect=smt",
+        ],
+        "g3doc/Dialects/SMT/SMT.md": ["-gen-op-doc"],
+        "include/mlir/Dialect/SMT/IR/SMTTypes.h.inc": ["-gen-typedef-decls"],
+        "include/mlir/Dialect/SMT/IR/SMTTypes.cpp.inc": ["-gen-typedef-defs"],
+        "include/mlir/Dialect/SMT/IR/SMTAttributes.h.inc": ["-gen-attrdef-decls"],
+        "include/mlir/Dialect/SMT/IR/SMTAttributes.cpp.inc": ["-gen-attrdef-defs"],
+        "include/mlir/Dialect/SMT/IR/SMTEnums.h.inc": ["-gen-enum-decls"],
+        "include/mlir/Dialect/SMT/IR/SMTEnums.cpp.inc": ["-gen-enum-defs"],
+    },
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/SMT/IR/SMT.td",
+    deps = [":SMTTdFiles"],
+)
+
+cc_library(
+    name = "SMTDialect",
+    srcs = glob([
+        "lib/Dialect/SMT/IR/*.cpp",
+    ]),
+    hdrs = glob([
+        "include/mlir/Dialect/SMT/IR/*.h",
+    ]),
+    includes = ["include"],
+    deps = [
+        ":ControlFlowInterfaces",
+        ":IR",
+        ":InferTypeOpInterface",
+        ":SMTIncGen",
+        ":Support",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "TargetSMTLIB",
+    srcs = ["lib/Target/SMTLIB/ExportSMTLIB.cpp"],
+    hdrs = glob(["include/mlir/Target/SMTLIB/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":ArithUtils",
+        ":FuncDialect",
+        ":IR",
+        ":SMTDialect",
+        ":Support",
+        ":TranslateLib",
+        "//llvm:Support",
+    ],
+)
+
+td_library(
     name = "SPIRVImageInterfacesTdFiles",
     srcs = ["include/mlir/Dialect/SPIRV/Interfaces/SPIRVImageInterfaces.td"],
     includes = ["include"],
@@ -7115,7 +7206,6 @@ cc_library(
         "include/mlir/Transforms/GreedyPatternRewriteDriver.h",
         "include/mlir/Transforms/Inliner.h",
         "include/mlir/Transforms/LoopInvariantCodeMotionUtils.h",
-        "include/mlir/Transforms/OneToNTypeConversion.h",
         "include/mlir/Transforms/RegionUtils.h",
         "include/mlir/Transforms/WalkPatternRewriteDriver.h",
     ],
@@ -8620,6 +8710,7 @@ cc_library(
         ":FromLLVMIRTranslationRegistration",
         ":SPIRVTranslateRegistration",
         ":TargetCpp",
+        ":TargetSMTLIB",
         ":ToLLVMIRTranslationRegistration",
     ],
 )
@@ -8760,6 +8851,7 @@ cc_library(
         ":SCFToGPU",
         ":SCFTransformOps",
         ":SCFTransforms",
+        ":SMTDialect",
         ":SPIRVDialect",
         ":SPIRVPassIncGen",
         ":SPIRVTarget",
@@ -8857,7 +8949,6 @@ cc_binary(
         "//mlir/test:TestMemRef",
         "//mlir/test:TestMesh",
         "//mlir/test:TestNVGPU",
-        "//mlir/test:TestOneToNTypeConversion",
         "//mlir/test:TestPDLL",
         "//mlir/test:TestPass",
         "//mlir/test:TestReducer",
@@ -12433,6 +12524,28 @@ gentbl_cc_library(
 )
 
 td_library(
+    name = "BufferizationTypeInterfacesTdFiles",
+    srcs = [
+        "include/mlir/Dialect/Bufferization/IR/BufferizationTypeInterfaces.td",
+    ],
+    includes = ["include"],
+    deps = [
+        ":OpBaseTdFiles",
+    ],
+)
+
+gentbl_cc_library(
+    name = "BufferizationTypeInterfacesIncGen",
+    tbl_outs = {
+        "include/mlir/Dialect/Bufferization/IR/BufferizationTypeInterfaces.h.inc": ["-gen-type-interface-decls"],
+        "include/mlir/Dialect/Bufferization/IR/BufferizationTypeInterfaces.cpp.inc": ["-gen-type-interface-defs"],
+    },
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/Bufferization/IR/BufferizationTypeInterfaces.td",
+    deps = [":BufferizationTypeInterfacesTdFiles"],
+)
+
+td_library(
     name = "BufferizationTransformOpsTdFiles",
     srcs = [
         "include/mlir/Dialect/Bufferization/TransformOps/BufferizationTransformOps.td",
@@ -12505,6 +12618,7 @@ cc_library(
         "include/mlir/Dialect/Bufferization/IR/BufferDeallocationOpInterface.h",
         "include/mlir/Dialect/Bufferization/IR/BufferViewFlowOpInterface.h",
         "include/mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h",
+        "include/mlir/Dialect/Bufferization/IR/BufferizationTypeInterfaces.h",
     ],
     includes = ["include"],
     deps = [
@@ -12512,6 +12626,7 @@ cc_library(
         ":BufferViewFlowOpInterfaceIncGen",
         ":BufferizableOpInterfaceIncGen",
         ":BufferizationEnumsIncGen",
+        ":BufferizationTypeInterfacesIncGen",
         ":FunctionInterfaces",
         ":IR",
         ":Support",

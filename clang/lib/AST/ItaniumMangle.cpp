@@ -2895,6 +2895,26 @@ void CXXNameMangler::mangleQualifiers(Qualifiers Quals, const DependentAddressSp
   if (Quals.hasUnaligned())
     mangleVendorQualifier("__unaligned");
 
+  // __ptrauth.  Note that this is parameterized.
+  if (PointerAuthQualifier PtrAuth = Quals.getPointerAuth()) {
+    mangleVendorQualifier("__ptrauth");
+    // For now, since we only allow non-dependent arguments, we can just
+    // inline the mangling of those arguments as literals.  We treat the
+    // key and extra-discriminator arguments as 'unsigned int' and the
+    // address-discriminated argument as 'bool'.
+    Out << "I"
+           "Lj"
+        << PtrAuth.getKey()
+        << "E"
+           "Lb"
+        << unsigned(PtrAuth.isAddressDiscriminated())
+        << "E"
+           "Lj"
+        << PtrAuth.getExtraDiscriminator()
+        << "E"
+           "E";
+  }
+
   // Remaining ARC ownership qualifiers.
   switch (Quals.getObjCLifetime()) {
   case Qualifiers::OCL_None:
@@ -6047,8 +6067,6 @@ void CXXNameMangler::mangleCXXDtorType(CXXDtorType T) {
   case Dtor_Comdat:
     Out << "D5";
     break;
-  case Dtor_VectorDeleting:
-    llvm_unreachable("Itanium ABI does not use vector deleting dtors");
   }
 }
 

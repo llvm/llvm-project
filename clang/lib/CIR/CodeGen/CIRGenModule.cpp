@@ -129,6 +129,34 @@ CharUnits CIRGenModule::getNaturalTypeAlignment(QualType t,
   return alignment;
 }
 
+const TargetCIRGenInfo &CIRGenModule::getTargetCIRGenInfo() {
+  if (theTargetCIRGenInfo)
+    return *theTargetCIRGenInfo;
+
+  const llvm::Triple &triple = getTarget().getTriple();
+  switch (triple.getArch()) {
+  default:
+    assert(!cir::MissingFeatures::targetCIRGenInfoArch());
+
+    // Currently we just fall through to x86_64.
+    [[fallthrough]];
+
+  case llvm::Triple::x86_64: {
+    switch (triple.getOS()) {
+    default:
+      assert(!cir::MissingFeatures::targetCIRGenInfoOS());
+
+      // Currently we just fall through to x86_64.
+      [[fallthrough]];
+
+    case llvm::Triple::Linux:
+      theTargetCIRGenInfo = createX8664TargetCIRGenInfo(genTypes);
+      return *theTargetCIRGenInfo;
+    }
+  }
+  }
+}
+
 mlir::Location CIRGenModule::getLoc(SourceLocation cLoc) {
   assert(cLoc.isValid() && "expected valid source location");
   const SourceManager &sm = astContext.getSourceManager();
@@ -262,6 +290,7 @@ CIRGenModule::getOrCreateCIRGlobal(StringRef mangledName, mlir::Type ty,
   }
 
   errorNYI(d->getSourceRange(), "reference of undeclared global");
+  return {};
 }
 
 cir::GlobalOp
@@ -587,6 +616,11 @@ void CIRGenModule::emitTopLevelDecl(Decl *decl) {
     break;
   case Decl::OpenACCDeclare:
     emitGlobalOpenACCDecl(cast<OpenACCDeclareDecl>(decl));
+    break;
+
+  case Decl::Record:
+  case Decl::CXXRecord:
+    assert(!cir::MissingFeatures::generateDebugInfo());
     break;
   }
 }

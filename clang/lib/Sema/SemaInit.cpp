@@ -7740,27 +7740,11 @@ ExprResult InitializationSequence::Perform(Sema &S,
         // introduced and such).  So, we fall back to making the array
         // type a dependently-sized array type with no specified
         // bound.
-        if (isa<InitListExpr>((Expr *)Args[0])) {
-          SourceRange Brackets;
-
-          // Scavange the location of the brackets from the entity, if we can.
-          if (auto *DD = dyn_cast_or_null<DeclaratorDecl>(Entity.getDecl())) {
-            if (TypeSourceInfo *TInfo = DD->getTypeSourceInfo()) {
-              TypeLoc TL = TInfo->getTypeLoc();
-              if (IncompleteArrayTypeLoc ArrayLoc =
-                      TL.getAs<IncompleteArrayTypeLoc>())
-                Brackets = ArrayLoc.getBracketsRange();
-            }
-          }
-
-          *ResultType
-            = S.Context.getDependentSizedArrayType(ArrayT->getElementType(),
-                                                   /*NumElts=*/nullptr,
-                                                   ArrayT->getSizeModifier(),
-                                       ArrayT->getIndexTypeCVRQualifiers(),
-                                                   Brackets);
-        }
-
+        if (isa<InitListExpr>((Expr *)Args[0]))
+          *ResultType = S.Context.getDependentSizedArrayType(
+              ArrayT->getElementType(),
+              /*NumElts=*/nullptr, ArrayT->getSizeModifier(),
+              ArrayT->getIndexTypeCVRQualifiers());
       }
     }
     if (Kind.getKind() == InitializationKind::IK_Direct &&
@@ -9913,7 +9897,7 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
 
   auto TemplateName = DeducedTST->getTemplateName();
   if (TemplateName.isDependent())
-    return SubstAutoTypeDependent(TSInfo->getType());
+    return SubstAutoTypeSourceInfoDependent(TSInfo)->getType();
 
   // We can only perform deduction for class templates or alias templates.
   auto *Template =
@@ -9958,7 +9942,7 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
     Diag(TSInfo->getTypeLoc().getBeginLoc(),
          diag::warn_cxx14_compat_class_template_argument_deduction)
         << TSInfo->getTypeLoc().getSourceRange() << 0;
-    return SubstAutoTypeDependent(TSInfo->getType());
+    return SubstAutoTypeSourceInfoDependent(TSInfo)->getType();
   }
 
   // FIXME: Perform "exact type" matching first, per CWG discussion?
@@ -10269,7 +10253,8 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
   //  The placeholder is replaced by the return type of the function selected
   //  by overload resolution for class template deduction.
   QualType DeducedType =
-      SubstAutoType(TSInfo->getType(), Best->Function->getReturnType());
+      SubstAutoTypeSourceInfo(TSInfo, Best->Function->getReturnType())
+          ->getType();
   Diag(TSInfo->getTypeLoc().getBeginLoc(),
        diag::warn_cxx14_compat_class_template_argument_deduction)
       << TSInfo->getTypeLoc().getSourceRange() << 1 << DeducedType;

@@ -10,15 +10,15 @@
 #define LLDB_SOURCE_PLUGINS_PROCESS_GDB_REMOTE_GDBREMOTECOMMUNICATION_H
 
 #include "GDBRemoteCommunicationHistory.h"
-
-#include <future>
-#include <mutex>
-#include <string>
 #include "lldb/Core/Communication.h"
+#include "lldb/Host/Config.h"
 #include "lldb/Host/HostThread.h"
 #include "lldb/Host/Socket.h"
 #include "lldb/Utility/Args.h"
 #include "lldb/Utility/StringExtractorGDBRemote.h"
+#include <future>
+#include <mutex>
+#include <string>
 
 namespace lldb_private {
 namespace process_gdb_remote {

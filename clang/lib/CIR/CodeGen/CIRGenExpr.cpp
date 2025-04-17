@@ -257,6 +257,13 @@ void CIRGenFunction::emitStoreOfScalar(mlir::Value value, Address addr,
   assert(!cir::MissingFeatures::opTBAA());
 }
 
+mlir::Value CIRGenFunction::emitStoreThroughBitfieldLValue(RValue src,
+                                                           LValue dst) {
+  assert(!cir::MissingFeatures::bitfields());
+  cgm.errorNYI("bitfields");
+  return {};
+}
+
 mlir::Value CIRGenFunction::emitToMemory(mlir::Value value, QualType ty) {
   // Bool has a different representation in memory than in registers,
   // but in ClangIR, it is simply represented as a cir.bool value.
@@ -545,7 +552,19 @@ CIRGenFunction::emitArraySubscriptExpr(const clang::ArraySubscriptExpr *e) {
   // in lexical order (this complexity is, sadly, required by C++17).
   assert((e->getIdx() == e->getLHS() || e->getIdx() == e->getRHS()) &&
          "index was neither LHS nor RHS");
-  const mlir::Value idx = emitScalarExpr(e->getIdx());
+
+  auto emitIdxAfterBase = [&]() -> mlir::Value {
+    const mlir::Value idx = emitScalarExpr(e->getIdx());
+
+    // Extend or truncate the index type to 32 or 64-bits.
+    auto ptrTy = mlir::dyn_cast<cir::PointerType>(idx.getType());
+    if (ptrTy && mlir::isa<cir::IntType>(ptrTy.getPointee()))
+      cgm.errorNYI(e->getSourceRange(),
+                   "emitArraySubscriptExpr: index type cast");
+    return idx;
+  };
+
+  const mlir::Value idx = emitIdxAfterBase();
   if (const Expr *array = getSimpleArrayDecayOperand(e->getBase())) {
     LValue arrayLV;
     if (const auto *ase = dyn_cast<ArraySubscriptExpr>(array))
@@ -559,13 +578,34 @@ CIRGenFunction::emitArraySubscriptExpr(const clang::ArraySubscriptExpr *e) {
         arrayLV.getAddress(), e->getType(), idx, cgm.getLoc(e->getExprLoc()),
         /*shouldDecay=*/true);
 
-    return LValue::makeAddr(addr, e->getType(), LValueBaseInfo());
+    const LValue lv = LValue::makeAddr(addr, e->getType(), LValueBaseInfo());
+
+    if (getLangOpts().ObjC && getLangOpts().getGC() != LangOptions::NonGC) {
+      cgm.errorNYI(e->getSourceRange(), "emitArraySubscriptExpr: ObjC with GC");
+    }
+
+    return lv;
   }
 
   // The base must be a pointer; emit it with an estimate of its alignment.
-  cgm.errorNYI(e->getSourceRange(),
-               "emitArraySubscriptExpr: The base must be a pointer");
-  return {};
+  assert(e->getBase()->getType()->isPointerType() &&
+         "The base must be a pointer");
+
+  LValueBaseInfo eltBaseInfo;
+  const Address ptrAddr = emitPointerWithAlignment(e->getBase(), &eltBaseInfo);
+  // Propagate the alignment from the array itself to the result.
+  const Address addxr = emitArraySubscriptPtr(
+      *this, cgm.getLoc(e->getBeginLoc()), cgm.getLoc(e->getEndLoc()), ptrAddr,
+      e->getType(), idx, cgm.getLoc(e->getExprLoc()),
+      /*shouldDecay=*/false);
+
+  const LValue lv = LValue::makeAddr(addxr, e->getType(), eltBaseInfo);
+
+  if (getLangOpts().ObjC && getLangOpts().getGC() != LangOptions::NonGC) {
+    cgm.errorNYI(e->getSourceRange(), "emitArraySubscriptExpr: ObjC with GC");
+  }
+
+  return lv;
 }
 
 LValue CIRGenFunction::emitBinaryOperatorLValue(const BinaryOperator *e) {
@@ -655,23 +695,36 @@ static CIRGenCallee emitDirectCallee(CIRGenModule &cgm, GlobalDecl gd) {
   return CIRGenCallee::forDirect(callee, gd);
 }
 
+RValue CIRGenFunction::getUndefRValue(QualType ty) {
+  if (ty->isVoidType())
+    return RValue::get(nullptr);
+
+  cgm.errorNYI("unsupported type for undef rvalue");
+  return RValue::get(nullptr);
+}
+
 RValue CIRGenFunction::emitCall(clang::QualType calleeTy,
                                 const CIRGenCallee &callee,
-                                const clang::CallExpr *e) {
+                                const clang::CallExpr *e,
+                                ReturnValueSlot returnValue) {
   // Get the actual function type. The callee type will always be a pointer to
   // function type or a block pointer type.
   assert(calleeTy->isFunctionPointerType() &&
          "Callee must have function pointer type!");
 
   calleeTy = getContext().getCanonicalType(calleeTy);
+  auto pointeeTy = cast<PointerType>(calleeTy)->getPointeeType();
 
   if (getLangOpts().CPlusPlus)
     assert(!cir::MissingFeatures::sanitizers());
 
+  const auto *fnType = cast<FunctionType>(pointeeTy);
+
   assert(!cir::MissingFeatures::sanitizers());
   assert(!cir::MissingFeatures::opCallArgs());
 
-  const CIRGenFunctionInfo &funcInfo = cgm.getTypes().arrangeFreeFunctionCall();
+  const CIRGenFunctionInfo &funcInfo =
+      cgm.getTypes().arrangeFreeFunctionCall(fnType);
 
   assert(!cir::MissingFeatures::opCallNoPrototypeFunc());
   assert(!cir::MissingFeatures::opCallChainCall());
@@ -680,7 +733,7 @@ RValue CIRGenFunction::emitCall(clang::QualType calleeTy,
 
   cir::CIRCallOpInterface callOp;
   RValue callResult =
-      emitCall(funcInfo, callee, &callOp, getLoc(e->getExprLoc()));
+      emitCall(funcInfo, callee, returnValue, &callOp, getLoc(e->getExprLoc()));
 
   assert(!cir::MissingFeatures::generateDebugInfo());
 
@@ -706,7 +759,8 @@ CIRGenCallee CIRGenFunction::emitCallee(const clang::Expr *e) {
   return {};
 }
 
-RValue CIRGenFunction::emitCallExpr(const clang::CallExpr *e) {
+RValue CIRGenFunction::emitCallExpr(const clang::CallExpr *e,
+                                    ReturnValueSlot returnValue) {
   assert(!cir::MissingFeatures::objCBlocks());
 
   if (isa<CXXMemberCallExpr>(e)) {
@@ -738,7 +792,7 @@ RValue CIRGenFunction::emitCallExpr(const clang::CallExpr *e) {
   }
   assert(!cir::MissingFeatures::opCallPseudoDtor());
 
-  return emitCall(e->getCallee()->getType(), callee, e);
+  return emitCall(e->getCallee()->getType(), callee, e, returnValue);
 }
 
 /// Emit code to compute the specified expression, ignoring the result.
