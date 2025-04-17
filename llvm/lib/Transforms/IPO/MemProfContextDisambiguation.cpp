@@ -91,7 +91,7 @@ STATISTIC(FoundProfiledCalleeNonUniquelyCount,
           "Number of profiled callees found via multiple tail call chains");
 STATISTIC(DeferredBackedges, "Number of backedges with deferred cloning");
 STATISTIC(NewMergedNodes, "Number of new nodes created during merging");
-STATISTIC(NonNewMergedNodes, "Number of not new nodes created during merging");
+STATISTIC(NonNewMergedNodes, "Number of non new nodes used during merging");
 STATISTIC(MissingAllocForContextId,
           "Number of missing alloc nodes for context ids");
 
@@ -4143,12 +4143,28 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::mergeNodeCalleeClones(
     OrigNodeToCloneEdges[Base].push_back(E);
   }
 
+  // Helper for callee edge sorting below. Return true if A's callee has fewer
+  // caller edges than B, or if A is a clone and B is not, or if A's first
+  // context id is smaller than B's.
+  auto CalleeCallerEdgeLessThan = [](const std::shared_ptr<ContextEdge> &A,
+                                     const std::shared_ptr<ContextEdge> &B) {
+    if (A->Callee->CallerEdges.size() != B->Callee->CallerEdges.size())
+      return A->Callee->CallerEdges.size() < B->Callee->CallerEdges.size();
+    if (A->Callee->CloneOf && !B->Callee->CloneOf)
+      return true;
+    else if (!A->Callee->CloneOf && B->Callee->CloneOf)
+      return false;
+    // Use the first context id for each edge as a
+    // tie-breaker.
+    return *A->ContextIds.begin() < *B->ContextIds.begin();
+  };
+
   // Process each set of callee clones called by Node, performing the needed
   // merging.
   for (auto Entry : OrigNodeToCloneEdges) {
     // CalleeEdges is the set of edges from Node reaching callees that are
     // mutual clones of each other.
-    auto CalleeEdges = Entry.second;
+    auto &CalleeEdges = Entry.second;
     auto NumCalleeClones = CalleeEdges.size();
     // A single edge means there is no merging needed.
     if (NumCalleeClones == 1)
@@ -4158,20 +4174,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::mergeNodeCalleeClones(
     // cases of a tie. This simplifies finding an existing node to use as the
     // merge node.
     std::stable_sort(CalleeEdges.begin(), CalleeEdges.end(),
-                     [&](const std::shared_ptr<ContextEdge> &A,
-                         const std::shared_ptr<ContextEdge> &B) {
-                       if (A->Callee->CallerEdges.size() !=
-                           B->Callee->CallerEdges.size())
-                         return A->Callee->CallerEdges.size() <
-                                B->Callee->CallerEdges.size();
-                       if (A->Callee->CloneOf && !B->Callee->CloneOf)
-                         return true;
-                       else if (!A->Callee->CloneOf && B->Callee->CloneOf)
-                         return false;
-                       // Use the first context id for each edge as a
-                       // tie-breaker.
-                       return *A->ContextIds.begin() < *B->ContextIds.begin();
-                     });
+                     CalleeCallerEdgeLessThan);
 
     // Next look for other nodes that have edges to the same set of callee
     // clones as the current Node. Those can share the eventual merge node
@@ -4197,7 +4200,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::mergeNodeCalleeClones(
     // multiple callers (recall they are sorted in ascending order above).
     if (CalleeEdges[0]->Callee->CallerEdges.size() > 1) {
       // For each callee edge:
-      // - Collect the count of other caller nodes calling the same calles.
+      // - Collect the count of other caller nodes calling the same callees.
       // - Collect the alloc nodes reached by contexts on each callee edge.
       DenseMap<ContextEdge *, DenseSet<ContextNode *>> CalleeEdgeToAllocNodes;
       for (auto CalleeEdge : CalleeEdges) {
