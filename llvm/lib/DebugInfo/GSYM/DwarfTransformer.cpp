@@ -621,9 +621,7 @@ void DwarfTransformer::parseCallSiteInfoFromDwarf(CUInfo &CUI, DWARFDie Die,
     if (!FI.CallSites)
       FI.CallSites = CallSiteInfoCollection();
     // Append parsed DWARF callsites:
-    FI.CallSites->CallSites.insert(FI.CallSites->CallSites.end(),
-                                   CSIC.CallSites.begin(),
-                                   CSIC.CallSites.end());
+    llvm::append_range(FI.CallSites->CallSites, CSIC.CallSites);
   }
 }
 

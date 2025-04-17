@@ -297,4 +297,11 @@ def : Pat<(i64 (adde i64:$lhs, i64:$rhs)), (ADDXCCC $lhs, $rhs)>;
 
 def : Pat<(i64 (ctlz i64:$src)), (LZCNT $src)>;
 def : Pat<(i64 (ctlz_zero_undef i64:$src)), (LZCNT $src)>;
+// 32-bit LZCNT.
+// The zero extension will leave us with 32 extra leading zeros,
+// so we need to compensate for it.
+// FIXME remove this when the codegen supports using 64-bit values directly
+// in V8+ mode.
+def : Pat<(i32 (ctlz i32:$src)), (ADDri (LZCNT (SRLri $src, 0)), (i32 -32))>;
+def : Pat<(i32 (ctlz_zero_undef i32:$src)), (ADDri (LZCNT (SRLri $src, 0)), (i32 -32))>;
 } // Predicates = [HasVIS3]
