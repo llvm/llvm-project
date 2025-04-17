@@ -1,23 +1,16 @@
-
-# RUN: yaml2obj %s -o %t.o
+# RUN: llvm-mc -triple=aarch64 -filetype=obj %s -o %t.o
 # RUN: ld.lld %t.o /dev/null 2>&1 | FileCheck %s
 
-# CHECK: (.ARM.attributes): invalid Extended Build Attributes subsection size at offset: 3B
+# CHECK: (.ARM.attributes): invalid Extended Build Attributes subsection size at offset: 39
 
-
---- !ELF
-FileHeader:
-  Class: ELFCLASS64
-  Data: ELFDATA2LSB
-  OSABI: ELFOSABI_NONE
-  Type: ET_REL
-  Machine: EM_AARCH64
-  Entry: 0x0
-
-Sections:
-  - Name: .ARM.attributes
-    Type: 0x70000003  # SHT_LOPROC + 3
-    AddressAlign: 1
-    Offset: 0x40
-    Size: 0x41
-    Content: "411900000061656162695f7061757468616269000000010102012000000061656162695f666561747572655f616e645f6269747300010000010101020000"
+.section .ARM.attributes,"",%0x70000003
+.byte 0x41                               // Tag 'A' (format version)
+.long 0x00000019                         // Subsection length
+.asciz "aeabi_pauthabi"                  // Subsection name
+.byte 0x00, 0x00                         // Optionality and Type
+.byte 0x01, 0x01, 0x02, 0x01             // PAuth_Platform and PAuth_Schema
+.long 0x00000023                         // Subsection length
+.asciz "aeabi_feature_and_bits"          // Subsection name
+.byte 0x01, 0x00                         // Optionality and Type
+.byte 0x00, 0x01, 0x01, 0x01, 0x02, 0x01 // BTI, PAC, GCS
+.byte 0x00, 0x00                         // This is the malformation, data is too long.
