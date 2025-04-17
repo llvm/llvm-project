@@ -15334,9 +15334,8 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
     // tree.
     Entries.push_back(FirstEntries.front());
     // Update mapping between values and corresponding tree entries.
-    for (auto &P : UsedValuesEntry) {
+    for (auto &P : UsedValuesEntry)
       P.second = 0;
-    }
     VF = FirstEntries.front()->getVectorFactor();
   } else {
     // Try to find nodes with the same vector factor.
@@ -19309,9 +19308,8 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
     ReadyInsts.remove(BundleMember);
     if (ArrayRef<ScheduleBundle *> Bundles = getScheduleBundles(V);
         !Bundles.empty()) {
-      for (ScheduleBundle *B : Bundles) {
+      for (ScheduleBundle *B : Bundles)
         ReadyInsts.remove(B);
-      }
     }
 
     if (!BundleMember->isScheduled())
@@ -20037,9 +20035,8 @@ bool BoUpSLP::collectValuesToDemote(
         if (Operands.empty()) {
           if (!IsTruncRoot)
             MaxDepthLevel = 1;
-          for (Value *V : E.Scalars) {
+          for (Value *V : E.Scalars)
             (void)IsPotentiallyTruncated(V, BitWidth);
-          }
         } else {
           // Several vectorized uses? Check if we can truncate it, otherwise -
           // exit.
@@ -21048,9 +21045,8 @@ bool SLPVectorizerPass::vectorizeStores(
       unsigned Repeat = 0;
       constexpr unsigned MaxAttempts = 4;
       OwningArrayRef<std::pair<unsigned, unsigned>> RangeSizes(Operands.size());
-      for (std::pair<unsigned, unsigned> &P : RangeSizes) {
+      for (std::pair<unsigned, unsigned> &P : RangeSizes)
         P.first = P.second = 1;
-      }
       DenseMap<Value *, std::pair<unsigned, unsigned>> NonSchedulable;
       auto IsNotVectorized = [](bool First,
                                 const std::pair<unsigned, unsigned> &P) {
@@ -21127,21 +21123,18 @@ bool SLPVectorizerPass::vectorizeStores(
                 // If we vectorized initial block, no need to try to vectorize
                 // it again.
                 for (std::pair<unsigned, unsigned> &P :
-                     RangeSizes.slice(Cnt, Size)) {
+                     RangeSizes.slice(Cnt, Size))
                   P.first = P.second = 0;
-                }
                 if (Cnt < StartIdx + MinVF) {
                   for (std::pair<unsigned, unsigned> &P :
-                       RangeSizes.slice(StartIdx, Cnt - StartIdx)) {
+                       RangeSizes.slice(StartIdx, Cnt - StartIdx))
                     P.first = P.second = 0;
-                  }
                   StartIdx = Cnt + Size;
                 }
                 if (Cnt > Sz - Size - MinVF) {
                   for (std::pair<unsigned, unsigned> &P :
-                       RangeSizes.slice(Cnt + Size, Sz - (Cnt + Size))) {
+                       RangeSizes.slice(Cnt + Size, Sz - (Cnt + Size)))
                     P.first = P.second = 0;
-                  }
                   if (Sz == End)
                     End = Cnt;
                   Sz = Cnt;
