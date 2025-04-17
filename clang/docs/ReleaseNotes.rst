@@ -371,6 +371,14 @@ Improvements to Clang's diagnostics
 
 - An error is now emitted when a ``musttail`` call is made to a function marked with the ``not_tail_called`` attribute. (#GH133509).
 
+- ``-Whigher-precisision-for-complex-divison`` warns when:
+
+  -	The divisor is complex.
+  -	When the complex division happens in a higher precision type due to arithmetic promotion.
+  -	When using the divide and assign operator (``/=``).
+
+  Fixes #GH131127
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -417,6 +425,8 @@ Bug Fixes in This Version
 - Fixed a clang 20 regression where diagnostics attached to some calls to member functions
   using C++23 "deducing this" did not have a diagnostic location (#GH135522)
 
+- Fixed a crash when a ``friend`` function is redefined as deleted. (#GH135506)
+
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -462,6 +472,7 @@ Bug Fixes to C++ Support
 - Clang no longer crashes when trying to unify the types of arrays with
   certain differences in qualifiers (this could happen during template argument
   deduction or when building a ternary operator). (#GH97005)
+- Fixed type alias CTAD issues involving default template arguments. (#GH134471)
 - The initialization kind of elements of structured bindings
   direct-list-initialized from an array is corrected to direct-initialization.
 - Clang no longer crashes when a coroutine is declared ``[[noreturn]]``. (#GH127327)
@@ -477,6 +488,10 @@ Bug Fixes to C++ Support
 - Fixes matching of nested template template parameters. (#GH130362)
 - Correctly diagnoses template template paramters which have a pack parameter
   not in the last position.
+- Disallow overloading on struct vs class on dependent types, which is IFNDR, as
+  this makes the problem diagnosable.
+- Improved preservation of the presence or abscence of typename specifier when
+  printing types in diagnostics.
 - Clang now correctly parses ``if constexpr`` expressions in immediate function context. (#GH123524)
 - Fixed an assertion failure affecting code that uses C++23 "deducing this". (#GH130272)
 - Clang now properly instantiates destructors for initialized members within non-delegating constructors. (#GH93251)
