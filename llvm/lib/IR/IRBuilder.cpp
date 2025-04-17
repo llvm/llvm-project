@@ -139,12 +139,13 @@ CallInst *IRBuilderBase::CreateCall(FunctionType *FTy, Value *Callee,
   // If the builder is in strictfp mode and has non-default options (like
   // non-dynamic rounding), add corresponding operand bundle. If such bundle is
   // already present, assume it overwrites defaults.
-  bool doesTheCallAccessFPEnv = false;
+  bool NeedUpdateMemoryEffects = false;
   if (IsFPConstrained) {
     if (const auto *Func = dyn_cast<Function>(Callee)) {
       if (Intrinsic::ID ID = Func->getIntrinsicID()) {
         if (IntrinsicInst::isFloatingPointOperation(ID)) {
-          doesTheCallAccessFPEnv = true;
+          MemoryEffects FME = Func->getMemoryEffects();
+          NeedUpdateMemoryEffects = !FME.doesAccessInaccessibleMem();
           bool NeedRound = DefaultConstrainedRounding != RoundingMode::Dynamic;
           bool NeedExcept = DefaultConstrainedExcept != fp::ebStrict;
           for (const auto &Item : OpBundles) {
@@ -166,10 +167,8 @@ CallInst *IRBuilderBase::CreateCall(FunctionType *FTy, Value *Callee,
 
   // If the call accesses FPE, update memory effects accordingly.
   CallInst *CI = CallInst::Create(FTy, Callee, Args, OpBundles);
-  if (doesTheCallAccessFPEnv) {
+  if (NeedUpdateMemoryEffects) {
     MemoryEffects ME = MemoryEffects::inaccessibleMemOnly();
-    if (CI->getAttributes().hasFnAttr(Attribute::Memory))
-      ME |= CI->getAttributes().getMemoryEffects();
     auto A = Attribute::getWithMemoryEffects(getContext(), ME);
     CI->addFnAttr(A);
   }
