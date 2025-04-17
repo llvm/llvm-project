@@ -173,14 +173,13 @@ private:
   }
 };
 
-/// CRTP class for converting reduction-like operations into
+/// Base class for converting reduction-like operations into
 /// a reduction loop[-nest] optionally wrapped into hlfir.elemental.
 /// It is used to handle operations produced for ALL, ANY, COUNT,
 /// MAXLOC, MAXVAL, MINLOC, MINVAL, SUM intrinsics.
 ///
 /// All of these operations take an input array, and optional
 /// dim, mask arguments. ALL, ANY, COUNT do not have mask argument.
-template <typename T>
 class ReductionAsElementalConverter {
 public:
   ReductionAsElementalConverter(mlir::Operation *op,
@@ -188,17 +187,13 @@ public:
       : op{op}, rewriter{rewriter}, loc{op->getLoc()}, builder{rewriter, op} {
     assert(op->getNumResults() == 1);
   }
+  virtual ~ReductionAsElementalConverter() {}
 
   /// Do the actual conversion or return mlir::failure(),
   /// if conversion is not possible.
   mlir::LogicalResult convert();
 
 private:
-  /// Return an instance of the derived class that implements
-  /// the interface.
-  T &impl() { return *static_cast<T *>(this); }
-  const T &impl() const { return *static_cast<const T *>(this); }
-
   // Return fir.shape specifying the shape of the result
   // of a reduction with DIM=dimVal. The second return value
   // is the extent of the DIM dimension.
@@ -217,47 +212,35 @@ private:
                            mlir::ValueRange indices);
 
 protected:
-  // Methods below must be implemented by the derived type.
-
   /// Return the input array.
-  mlir::Value getSource() const {
-    llvm_unreachable("derived type must provide getSource()");
-  }
+  virtual mlir::Value getSource() const = 0;
 
   /// Return DIM or nullptr, if it is not present.
-  mlir::Value getDim() const {
-    llvm_unreachable("derived type must provide getDim()");
-  }
+  virtual mlir::Value getDim() const = 0;
 
   /// Return MASK or nullptr, if it is not present.
-  mlir::Value getMask() const {
-    llvm_unreachable("derived type must provide getMask()");
-  }
+  virtual mlir::Value getMask() const { return nullptr; }
 
   /// Return FastMathFlags attached to the operation
   /// or arith::FastMathFlags::none, if the operation
   /// does not support FastMathFlags (e.g. ALL, ANY, COUNT).
-  mlir::arith::FastMathFlags getFastMath() const {
-    llvm_unreachable("derived type must provide getFastMath()");
+  virtual mlir::arith::FastMathFlags getFastMath() const {
+    return mlir::arith::FastMathFlags::none;
   }
 
   /// Generates initial values for the reduction values used
   /// by the reduction loop. In general, there is a single
   /// loop-carried reduction value (e.g. for SUM), but, for example,
   /// MAXLOC/MINLOC implementation uses multiple reductions.
-  llvm::SmallVector<mlir::Value> genReductionInitValues() {
-    llvm_unreachable("derived type must provide genReductionInitValues()");
-  }
+  virtual llvm::SmallVector<mlir::Value> genReductionInitValues() = 0;
 
   /// Perform reduction(s) update given a single input array's element
   /// identified by \p array and \p oneBasedIndices coordinates.
   /// \p currentValue specifies the current value(s) of the reduction(s)
   /// inside the reduction loop body.
-  llvm::SmallVector<mlir::Value>
+  virtual llvm::SmallVector<mlir::Value>
   reduceOneElement(const llvm::SmallVectorImpl<mlir::Value> &currentValue,
-                   hlfir::Entity array, mlir::ValueRange oneBasedIndices) {
-    llvm_unreachable("derived type must provide reduceOneElement()");
-  }
+                   hlfir::Entity array, mlir::ValueRange oneBasedIndices) = 0;
 
   /// Given reduction value(s) in \p reductionResults produced
   /// by the reduction loop, apply any required updates and return
@@ -265,18 +248,19 @@ protected:
   /// (e.g. as the result yield of the wrapping hlfir.elemental).
   /// NOTE: if the reduction loop is wrapped in hlfir.elemental,
   /// the insertion point of any generated code is inside hlfir.elemental.
-  hlfir::Entity
+  virtual hlfir::Entity
   genFinalResult(const llvm::SmallVectorImpl<mlir::Value> &reductionResults) {
-    llvm_unreachable("derived type must provide genFinalResult()");
+    assert(reductionResults.size() == 1 &&
+           "default implementation of genFinalResult expect a single reduction "
+           "value");
+    return hlfir::Entity{reductionResults[0]};
   }
-
-  // Methods below may be shadowed by the derived type.
 
   /// Return mlir::success(), if the operation can be converted.
   /// The default implementation always returns mlir::success().
-  /// The derived type may shadow the default implementation
+  /// The derived type may override the default implementation
   /// with its own definition.
-  mlir::LogicalResult isConvertible() const { return mlir::success(); }
+  virtual mlir::LogicalResult isConvertible() const { return mlir::success(); }
 
   // Default implementation of isTotalReduction() just checks
   // if the result of the operation is a scalar.
@@ -286,24 +270,21 @@ protected:
   // operation with a single reduction loop across the DIM dimension.
   //
   // MAXLOC/MINLOC must override this.
-  bool isTotalReduction() const { return getResultRank() == 0; }
+  virtual bool isTotalReduction() const { return getResultRank() == 0; }
 
   // Return true, if the reduction loop[-nest] may be unordered.
   // In general, FP reductions may only be unordered when
   // FastMathFlags::reassoc transformations are allowed.
   //
   // Some dervied types may need to override this.
-  bool isUnordered() const {
+  virtual bool isUnordered() const {
     mlir::Type elemType = getSourceElementType();
     if (mlir::isa<mlir::IntegerType, fir::LogicalType, fir::CharacterType>(
             elemType))
       return true;
-    return static_cast<bool>(impl().getFastMath() &
+    return static_cast<bool>(getFastMath() &
                              mlir::arith::FastMathFlags::reassoc);
   }
-
-  // Methods below are utilities that are not supposed to be
-  // overridden by the derived type.
 
   /// Return 0, if DIM is not present or its values does not matter
   /// (for example, a reduction of 1D array does not care about
@@ -313,11 +294,11 @@ protected:
   /// Otherwise, return DIM constant value.
   mlir::FailureOr<int64_t> getConstDim() const {
     int64_t dimVal = 0;
-    if (!impl().isTotalReduction()) {
+    if (!isTotalReduction()) {
       // In case of partial reduction we should ignore the operations
       // with invalid DIM values. They may appear in dead code
       // after constant propagation.
-      auto constDim = fir::getIntIfConstant(impl().getDim());
+      auto constDim = fir::getIntIfConstant(getDim());
       if (!constDim)
         return rewriter.notifyMatchFailure(op, "Nonconstant DIM");
       dimVal = *constDim;
@@ -345,14 +326,14 @@ protected:
   /// Return rank of the result.
   unsigned getResultRank() const { return getResultEntity().getRank(); }
 
-  /// Return the element type of the result.
+  /// Return the element type of the source.
   mlir::Type getSourceElementType() const {
-    return hlfir::getFortranElementType(impl().getSource().getType());
+    return hlfir::getFortranElementType(getSource().getType());
   }
 
   /// Return rank of the input array.
   unsigned getSourceRank() const {
-    return hlfir::Entity{impl().getSource()}.getRank();
+    return hlfir::Entity{getSource()}.getRank();
   }
 
   /// The reduction operation.
@@ -418,8 +399,7 @@ genMinMaxComparison(mlir::Location loc, fir::FirOpBuilder &builder,
 /// Implementation of ReductionAsElementalConverter interface
 /// for MAXLOC/MINLOC.
 template <typename T>
-class MinMaxlocAsElementalConverter
-    : public ReductionAsElementalConverter<MinMaxlocAsElementalConverter<T>> {
+class MinMaxlocAsElementalConverter : public ReductionAsElementalConverter {
   static_assert(std::is_same_v<T, hlfir::MaxlocOp> ||
                 std::is_same_v<T, hlfir::MinlocOp>);
   static constexpr unsigned maxRank = Fortran::common::maxRank;
@@ -432,26 +412,26 @@ class MinMaxlocAsElementalConverter
   //     the mask is true.
   static constexpr unsigned maxNumReductions = Fortran::common::maxRank + 2;
   static constexpr bool isMax = std::is_same_v<T, hlfir::MaxlocOp>;
-  using Base =
-      typename MinMaxlocAsElementalConverter<T>::ReductionAsElementalConverter;
+  using Base = ReductionAsElementalConverter;
 
 public:
   MinMaxlocAsElementalConverter(T op, mlir::PatternRewriter &rewriter)
       : Base{op.getOperation(), rewriter} {}
 
-  mlir::Value getSource() const { return getOp().getArray(); }
-  mlir::Value getDim() const { return getOp().getDim(); }
-  mlir::Value getMask() const { return getOp().getMask(); }
-  mlir::arith::FastMathFlags getFastMath() const {
+private:
+  virtual mlir::Value getSource() const final { return getOp().getArray(); }
+  virtual mlir::Value getDim() const final { return getOp().getDim(); }
+  virtual mlir::Value getMask() const final { return getOp().getMask(); }
+  virtual mlir::arith::FastMathFlags getFastMath() const final {
     return getOp().getFastmath();
   }
 
-  mlir::LogicalResult isConvertible() const {
+  virtual mlir::LogicalResult isConvertible() const final {
     if (getOp().getBack())
-      return this->rewriter.notifyMatchFailure(
+      return rewriter.notifyMatchFailure(
           getOp(), "BACK is not supported for MINLOC/MAXLOC inlining");
-    if (mlir::isa<fir::CharacterType>(this->getSourceElementType()))
-      return this->rewriter.notifyMatchFailure(
+    if (mlir::isa<fir::CharacterType>(getSourceElementType()))
+      return rewriter.notifyMatchFailure(
           getOp(),
           "CHARACTER type is not supported for MINLOC/MAXLOC inlining");
     return mlir::success();
@@ -460,22 +440,22 @@ public:
   // If the result is scalar, then DIM does not matter,
   // and this is a total reduction.
   // If DIM is not present, this is a total reduction.
-  bool isTotalReduction() const {
-    return this->getResultRank() == 0 || !getDim();
+  virtual bool isTotalReduction() const final {
+    return getResultRank() == 0 || !getDim();
   }
 
-  llvm::SmallVector<mlir::Value, maxNumReductions> genReductionInitValues();
-  llvm::SmallVector<mlir::Value, maxNumReductions>
+  virtual llvm::SmallVector<mlir::Value> genReductionInitValues() final;
+  virtual llvm::SmallVector<mlir::Value>
   reduceOneElement(const llvm::SmallVectorImpl<mlir::Value> &currentValue,
-                   hlfir::Entity array, mlir::ValueRange oneBasedIndices);
-  hlfir::Entity
-  genFinalResult(const llvm::SmallVectorImpl<mlir::Value> &reductionResults);
+                   hlfir::Entity array, mlir::ValueRange oneBasedIndices) final;
+  virtual hlfir::Entity genFinalResult(
+      const llvm::SmallVectorImpl<mlir::Value> &reductionResults) final;
 
 private:
-  T getOp() const { return mlir::cast<T>(this->op); }
+  T getOp() const { return mlir::cast<T>(op); }
 
   unsigned getNumCoors() const {
-    return isTotalReduction() ? this->getSourceRank() : 1;
+    return isTotalReduction() ? getSourceRank() : 1;
   }
 
   void
@@ -498,20 +478,17 @@ private:
 };
 
 template <typename T>
-llvm::SmallVector<mlir::Value,
-                  MinMaxlocAsElementalConverter<T>::maxNumReductions>
+llvm::SmallVector<mlir::Value>
 MinMaxlocAsElementalConverter<T>::genReductionInitValues() {
-  fir::FirOpBuilder &builder = this->builder;
-  mlir::Location loc = this->loc;
   // Initial value for the coordinate(s) is zero.
   mlir::Value zeroCoor =
-      fir::factory::createZeroValue(builder, loc, this->getResultElementType());
+      fir::factory::createZeroValue(builder, loc, getResultElementType());
   llvm::SmallVector<mlir::Value, maxNumReductions> result(getNumCoors(),
                                                           zeroCoor);
 
   // Initial value for the MIN/MAX value.
   mlir::Value minMaxInit =
-      genMinMaxInitValue<isMax>(loc, builder, this->getSourceElementType());
+      genMinMaxInitValue<isMax>(loc, builder, getSourceElementType());
   result.push_back(minMaxInit);
 
   // Initial value for isFirst predicate. It is switched to false,
@@ -524,14 +501,11 @@ MinMaxlocAsElementalConverter<T>::genReductionInitValues() {
 }
 
 template <typename T>
-llvm::SmallVector<mlir::Value,
-                  MinMaxlocAsElementalConverter<T>::maxNumReductions>
+llvm::SmallVector<mlir::Value>
 MinMaxlocAsElementalConverter<T>::reduceOneElement(
     const llvm::SmallVectorImpl<mlir::Value> &currentValue, hlfir::Entity array,
     mlir::ValueRange oneBasedIndices) {
   checkReductions(currentValue);
-  fir::FirOpBuilder &builder = this->builder;
-  mlir::Location loc = this->loc;
   hlfir::Entity elementValue =
       hlfir::loadElementAt(loc, builder, array, oneBasedIndices);
   mlir::Value cmp = genMinMaxComparison<isMax>(loc, builder, elementValue,
@@ -543,7 +517,7 @@ MinMaxlocAsElementalConverter<T>::reduceOneElement(
   llvm::SmallVector<mlir::Value, maxNumReductions> newIndices;
   int64_t dim = 1;
   if (!isTotalReduction()) {
-    auto dimVal = this->getConstDim();
+    auto dimVal = getConstDim();
     assert(mlir::succeeded(dimVal) &&
            "partial MINLOC/MAXLOC reduction with invalid DIM");
     dim = *dimVal;
@@ -583,8 +557,6 @@ hlfir::Entity MinMaxlocAsElementalConverter<T>::genFinalResult(
   //     - The result is an array of rank RANK(ARRAY)-1.
   checkReductions(reductionResults);
 
-  fir::FirOpBuilder &builder = this->builder;
-  mlir::Location loc = this->loc;
   // We need to adjust the one-based indices to real array indices.
   // The adjustment must only be done, if there was an actual update
   // of the coordinates in the reduction loop. For this check we only
@@ -609,14 +581,14 @@ hlfir::Entity MinMaxlocAsElementalConverter<T>::genFinalResult(
 
   // For partial reductions, the final result of the reduction
   // loop is just a scalar - the coordinate within DIM dimension.
-  if (this->getResultRank() == 0 || !isTotalReduction()) {
+  if (getResultRank() == 0 || !isTotalReduction()) {
     // The result is a scalar, so just return the scalar.
     assert(getNumCoors() == 1 &&
            "unpexpected number of coordinates for scalar result");
 
     int64_t dim = 1;
     if (!isTotalReduction()) {
-      auto dimVal = this->getConstDim();
+      auto dimVal = getConstDim();
       assert(mlir::succeeded(dimVal) &&
              "partial MINLOC/MAXLOC reduction with invalid DIM");
       dim = *dimVal;
@@ -627,14 +599,14 @@ hlfir::Entity MinMaxlocAsElementalConverter<T>::genFinalResult(
   }
   // This is a total reduction, and there is no wrapping hlfir.elemental.
   // We have to pack the reduced coordinates into a rank-one array.
-  unsigned rank = this->getSourceRank();
+  unsigned rank = getSourceRank();
   // TODO: in order to avoid introducing new memory effects
   // we should not use a temporary in memory.
   // We can use hlfir.elemental with a switch to pack all the coordinates
   // into an array expression, or we can have a dedicated HLFIR operation
   // for this.
   mlir::Value tempArray = builder.createTemporary(
-      loc, fir::SequenceType::get(rank, this->getResultElementType()));
+      loc, fir::SequenceType::get(rank, getResultElementType()));
   llvm::SmallVector<mlir::Value, maxRank> arrayLbounds =
       hlfir::genLBounds(loc, builder, hlfir::Entity(getSource()));
   for (unsigned i = 0; i < rank; ++i) {
@@ -650,32 +622,24 @@ hlfir::Entity MinMaxlocAsElementalConverter<T>::genFinalResult(
 }
 
 /// Base class for numeric reductions like MAXVAl, MINVAL, SUM.
-template <typename OpT, typename ConverterT>
+template <typename OpT>
 class NumericReductionAsElementalConverterBase
-    : public ReductionAsElementalConverter<ConverterT> {
-  using Base = typename NumericReductionAsElementalConverterBase<
-      OpT, ConverterT>::ReductionAsElementalConverter;
+    : public ReductionAsElementalConverter {
+  using Base = ReductionAsElementalConverter;
 
-public:
+protected:
   NumericReductionAsElementalConverterBase(OpT op,
                                            mlir::PatternRewriter &rewriter)
       : Base{op.getOperation(), rewriter} {}
 
-  mlir::Value getSource() const { return getOp().getArray(); }
-  mlir::Value getDim() const { return getOp().getDim(); }
-  mlir::Value getMask() const { return getOp().getMask(); }
-  mlir::arith::FastMathFlags getFastMath() const {
+  virtual mlir::Value getSource() const final { return getOp().getArray(); }
+  virtual mlir::Value getDim() const final { return getOp().getDim(); }
+  virtual mlir::Value getMask() const final { return getOp().getMask(); }
+  virtual mlir::arith::FastMathFlags getFastMath() const final {
     return getOp().getFastmath();
   }
 
-  hlfir::Entity
-  genFinalResult(const llvm::SmallVectorImpl<mlir::Value> &reductionResults) {
-    checkReductions(reductionResults);
-    return hlfir::Entity{reductionResults[0]};
-  }
-
-protected:
-  OpT getOp() const { return mlir::cast<OpT>(this->op); }
+  OpT getOp() const { return mlir::cast<OpT>(op); }
 
   void checkReductions(const llvm::SmallVectorImpl<mlir::Value> &reductions) {
     assert(reductions.size() == 1 && "reduction must produce single value");
@@ -685,19 +649,18 @@ protected:
 /// Reduction converter for MAXMAL/MINVAL.
 template <typename T>
 class MinMaxvalAsElementalConverter
-    : public NumericReductionAsElementalConverterBase<
-          T, MinMaxvalAsElementalConverter<T>> {
+    : public NumericReductionAsElementalConverterBase<T> {
   static_assert(std::is_same_v<T, hlfir::MaxvalOp> ||
                 std::is_same_v<T, hlfir::MinvalOp>);
   static constexpr bool isMax = std::is_same_v<T, hlfir::MaxvalOp>;
-  using Base = typename MinMaxvalAsElementalConverter<
-      T>::NumericReductionAsElementalConverterBase;
+  using Base = NumericReductionAsElementalConverterBase<T>;
 
 public:
   MinMaxvalAsElementalConverter(T op, mlir::PatternRewriter &rewriter)
       : Base{op, rewriter} {}
 
-  mlir::LogicalResult isConvertible() const {
+private:
+  virtual mlir::LogicalResult isConvertible() const final {
     if (mlir::isa<fir::CharacterType>(this->getSourceElementType()))
       return this->rewriter.notifyMatchFailure(
           this->getOp(),
@@ -705,13 +668,14 @@ public:
     return mlir::success();
   }
 
-  llvm::SmallVector<mlir::Value, 1> genReductionInitValues() {
+  virtual llvm::SmallVector<mlir::Value> genReductionInitValues() final {
     return {genMinMaxInitValue<isMax>(this->loc, this->builder,
                                       this->getResultElementType())};
   }
-  llvm::SmallVector<mlir::Value, 1>
+  virtual llvm::SmallVector<mlir::Value>
   reduceOneElement(const llvm::SmallVectorImpl<mlir::Value> &currentValue,
-                   hlfir::Entity array, mlir::ValueRange oneBasedIndices) {
+                   hlfir::Entity array,
+                   mlir::ValueRange oneBasedIndices) final {
     this->checkReductions(currentValue);
     fir::FirOpBuilder &builder = this->builder;
     mlir::Location loc = this->loc;
@@ -726,22 +690,22 @@ public:
 
 /// Reduction converter for SUM.
 class SumAsElementalConverter
-    : public NumericReductionAsElementalConverterBase<hlfir::SumOp,
-                                                      SumAsElementalConverter> {
-  using Base = typename SumAsElementalConverter::
-      NumericReductionAsElementalConverterBase;
+    : public NumericReductionAsElementalConverterBase<hlfir::SumOp> {
+  using Base = NumericReductionAsElementalConverterBase;
 
 public:
   SumAsElementalConverter(hlfir::SumOp op, mlir::PatternRewriter &rewriter)
       : Base{op, rewriter} {}
 
-  llvm::SmallVector<mlir::Value, 1> genReductionInitValues() {
+private:
+  virtual llvm::SmallVector<mlir::Value> genReductionInitValues() final {
     return {
         fir::factory::createZeroValue(builder, loc, getResultElementType())};
   }
-  llvm::SmallVector<mlir::Value, 1>
+  virtual llvm::SmallVector<mlir::Value>
   reduceOneElement(const llvm::SmallVectorImpl<mlir::Value> &currentValue,
-                   hlfir::Entity array, mlir::ValueRange oneBasedIndices) {
+                   hlfir::Entity array,
+                   mlir::ValueRange oneBasedIndices) final {
     checkReductions(currentValue);
     hlfir::Entity elementValue =
         hlfir::loadElementAt(loc, builder, array, oneBasedIndices);
@@ -751,39 +715,34 @@ public:
     return {genScalarAdd(currentValue[0], elementValue)};
   }
 
-private:
   // Generate scalar addition of the two values (of the same data type).
   mlir::Value genScalarAdd(mlir::Value value1, mlir::Value value2);
 };
 
 /// Base class for logical reductions like ALL, ANY, COUNT.
 /// They do not have MASK and FastMathFlags.
-template <typename OpT, typename ConverterT>
+template <typename OpT>
 class LogicalReductionAsElementalConverterBase
-    : public ReductionAsElementalConverter<ConverterT> {
-  using Base = typename LogicalReductionAsElementalConverterBase<
-      OpT, ConverterT>::ReductionAsElementalConverter;
+    : public ReductionAsElementalConverter {
+  using Base = ReductionAsElementalConverter;
 
 public:
   LogicalReductionAsElementalConverterBase(OpT op,
                                            mlir::PatternRewriter &rewriter)
       : Base{op.getOperation(), rewriter} {}
 
-  OpT getOp() const { return mlir::cast<OpT>(this->op); }
+protected:
+  OpT getOp() const { return mlir::cast<OpT>(op); }
 
   void checkReductions(const llvm::SmallVectorImpl<mlir::Value> &reductions) {
     assert(reductions.size() == 1 && "reduction must produce single value");
   }
 
-  mlir::Value getSource() const { return getOp().getMask(); }
-  mlir::Value getDim() const { return getOp().getDim(); }
-  mlir::Value getMask() const { return nullptr; }
-  mlir::arith::FastMathFlags getFastMath() const {
-    return mlir::arith::FastMathFlags::none;
-  }
+  virtual mlir::Value getSource() const final { return getOp().getMask(); }
+  virtual mlir::Value getDim() const final { return getOp().getDim(); }
 
-  hlfir::Entity
-  genFinalResult(const llvm::SmallVectorImpl<mlir::Value> &reductionResults) {
+  virtual hlfir::Entity genFinalResult(
+      const llvm::SmallVectorImpl<mlir::Value> &reductionResults) override {
     checkReductions(reductionResults);
     return hlfir::Entity{reductionResults[0]};
   }
@@ -792,24 +751,24 @@ public:
 /// Reduction converter for ALL/ANY.
 template <typename T>
 class AllAnyAsElementalConverter
-    : public LogicalReductionAsElementalConverterBase<
-          T, AllAnyAsElementalConverter<T>> {
+    : public LogicalReductionAsElementalConverterBase<T> {
   static_assert(std::is_same_v<T, hlfir::AllOp> ||
                 std::is_same_v<T, hlfir::AnyOp>);
   static constexpr bool isAll = std::is_same_v<T, hlfir::AllOp>;
-  using Base = typename AllAnyAsElementalConverter<
-      T>::LogicalReductionAsElementalConverterBase;
+  using Base = LogicalReductionAsElementalConverterBase<T>;
 
 public:
   AllAnyAsElementalConverter(T op, mlir::PatternRewriter &rewriter)
       : Base{op, rewriter} {}
 
-  llvm::SmallVector<mlir::Value, 1> genReductionInitValues() {
+private:
+  virtual llvm::SmallVector<mlir::Value> genReductionInitValues() final {
     return {this->builder.createBool(this->loc, isAll ? true : false)};
   }
-  llvm::SmallVector<mlir::Value, 1>
+  virtual llvm::SmallVector<mlir::Value>
   reduceOneElement(const llvm::SmallVectorImpl<mlir::Value> &currentValue,
-                   hlfir::Entity array, mlir::ValueRange oneBasedIndices) {
+                   hlfir::Entity array,
+                   mlir::ValueRange oneBasedIndices) final {
     this->checkReductions(currentValue);
     fir::FirOpBuilder &builder = this->builder;
     mlir::Location loc = this->loc;
@@ -823,8 +782,8 @@ public:
       return {builder.create<mlir::arith::OrIOp>(loc, mask, currentValue[0])};
   }
 
-  hlfir::Entity
-  genFinalResult(const llvm::SmallVectorImpl<mlir::Value> &reductionValues) {
+  virtual hlfir::Entity genFinalResult(
+      const llvm::SmallVectorImpl<mlir::Value> &reductionValues) final {
     this->checkReductions(reductionValues);
     return hlfir::Entity{this->builder.createConvert(
         this->loc, this->getResultElementType(), reductionValues[0])};
@@ -833,22 +792,22 @@ public:
 
 /// Reduction converter for COUNT.
 class CountAsElementalConverter
-    : public LogicalReductionAsElementalConverterBase<
-          hlfir::CountOp, CountAsElementalConverter> {
-  using Base = typename CountAsElementalConverter::
-      LogicalReductionAsElementalConverterBase;
+    : public LogicalReductionAsElementalConverterBase<hlfir::CountOp> {
+  using Base = LogicalReductionAsElementalConverterBase<hlfir::CountOp>;
 
 public:
   CountAsElementalConverter(hlfir::CountOp op, mlir::PatternRewriter &rewriter)
       : Base{op, rewriter} {}
 
-  llvm::SmallVector<mlir::Value, 1> genReductionInitValues() {
+private:
+  virtual llvm::SmallVector<mlir::Value> genReductionInitValues() final {
     return {
         fir::factory::createZeroValue(builder, loc, getResultElementType())};
   }
-  llvm::SmallVector<mlir::Value, 1>
+  virtual llvm::SmallVector<mlir::Value>
   reduceOneElement(const llvm::SmallVectorImpl<mlir::Value> &currentValue,
-                   hlfir::Entity array, mlir::ValueRange oneBasedIndices) {
+                   hlfir::Entity array,
+                   mlir::ValueRange oneBasedIndices) final {
     checkReductions(currentValue);
     hlfir::Entity elementValue =
         hlfir::loadElementAt(loc, builder, array, oneBasedIndices);
@@ -863,22 +822,21 @@ public:
   }
 };
 
-template <typename T>
-mlir::LogicalResult ReductionAsElementalConverter<T>::convert() {
-  mlir::LogicalResult canConvert(impl().isConvertible());
+mlir::LogicalResult ReductionAsElementalConverter::convert() {
+  mlir::LogicalResult canConvert(isConvertible());
 
   if (mlir::failed(canConvert))
     return canConvert;
 
-  hlfir::Entity array = hlfir::Entity{impl().getSource()};
-  bool isTotalReduction = impl().isTotalReduction();
-  auto dimVal = impl().getConstDim();
+  hlfir::Entity array = hlfir::Entity{getSource()};
+  bool isTotalReduce = isTotalReduction();
+  auto dimVal = getConstDim();
   if (mlir::failed(dimVal))
     return dimVal;
-  mlir::Value mask = impl().getMask();
+  mlir::Value mask = getMask();
   mlir::Value resultShape, dimExtent;
   llvm::SmallVector<mlir::Value> arrayExtents;
-  if (isTotalReduction)
+  if (isTotalReduce)
     arrayExtents = hlfir::genExtentsVector(loc, builder, array);
   else
     std::tie(resultShape, dimExtent) =
@@ -906,10 +864,10 @@ mlir::LogicalResult ReductionAsElementalConverter<T>::convert() {
 
     // Initial value for the reduction.
     llvm::SmallVector<mlir::Value, 1> reductionInitValues =
-        impl().genReductionInitValues();
+        genReductionInitValues();
 
     llvm::SmallVector<mlir::Value> extents;
-    if (isTotalReduction)
+    if (isTotalReduce)
       extents = arrayExtents;
     else
       extents.push_back(
@@ -923,7 +881,7 @@ mlir::LogicalResult ReductionAsElementalConverter<T>::convert() {
       // The initial reduction value in the innermost loop
       // is passed via reductionArgs[0].
       llvm::SmallVector<mlir::Value> indices;
-      if (isTotalReduction) {
+      if (isTotalReduce) {
         indices = oneBasedIndices;
       } else {
         indices = inputIndices;
@@ -954,8 +912,7 @@ mlir::LogicalResult ReductionAsElementalConverter<T>::convert() {
         // In the 'then' block do the actual addition.
         builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
       }
-      reductionValues =
-          impl().reduceOneElement(reductionValues, array, indices);
+      reductionValues = reduceOneElement(reductionValues, array, indices);
       if (ifOp) {
         builder.create<fir::ResultOp>(loc, reductionValues);
         builder.setInsertionPointAfter(ifOp);
@@ -968,20 +925,19 @@ mlir::LogicalResult ReductionAsElementalConverter<T>::convert() {
     llvm::SmallVector<mlir::Value, 1> reductionFinalValues =
         hlfir::genLoopNestWithReductions(
             loc, builder, extents, reductionInitValues, genBody, isUnordered());
-    return impl().genFinalResult(reductionFinalValues);
+    return genFinalResult(reductionFinalValues);
   };
 
-  if (isTotalReduction) {
+  if (isTotalReduce) {
     hlfir::Entity result = genKernel(loc, builder, mlir::ValueRange{});
     rewriter.replaceOp(op, result);
     return mlir::success();
   }
 
-  hlfir::ElementalOp elementalOp =
-      hlfir::genElementalOp(loc, builder, impl().getResultElementType(),
-                            resultShape, /*typeParams=*/{}, genKernel,
-                            /*isUnordered=*/true, /*polymorphicMold=*/nullptr,
-                            impl().getResultType());
+  hlfir::ElementalOp elementalOp = hlfir::genElementalOp(
+      loc, builder, getResultElementType(), resultShape, /*typeParams=*/{},
+      genKernel,
+      /*isUnordered=*/true, /*polymorphicMold=*/nullptr, getResultType());
 
   // it wouldn't be safe to replace block arguments with a different
   // hlfir.expr type. Types can differ due to differing amounts of shape
@@ -992,9 +948,8 @@ mlir::LogicalResult ReductionAsElementalConverter<T>::convert() {
   return mlir::success();
 }
 
-template <typename T>
 std::tuple<mlir::Value, mlir::Value>
-ReductionAsElementalConverter<T>::genResultShapeForPartialReduction(
+ReductionAsElementalConverter::genResultShapeForPartialReduction(
     hlfir::Entity array, int64_t dimVal) {
   llvm::SmallVector<mlir::Value> inExtents =
       hlfir::genExtentsVector(loc, builder, array);
@@ -1021,8 +976,7 @@ mlir::Value SumAsElementalConverter::genScalarAdd(mlir::Value value1,
   llvm_unreachable("unsupported SUM reduction type");
 }
 
-template <typename T>
-mlir::Value ReductionAsElementalConverter<T>::genMaskValue(
+mlir::Value ReductionAsElementalConverter::genMaskValue(
     mlir::Value mask, mlir::Value isPresentPred, mlir::ValueRange indices) {
   mlir::OpBuilder::InsertionGuard guard(builder);
   fir::IfOp ifOp;
