@@ -99,9 +99,9 @@ Value ConvertToLLVMPattern::getStridedElementPtr(
 // only support memrefs with identity maps.
 bool ConvertToLLVMPattern::isConvertibleAndHasIdentityMaps(
     MemRefType type) const {
-  if (!typeConverter->convertType(type.getElementType()))
+  if (!type.getLayout().isIdentity())
     return false;
-  return type.getLayout().isIdentity();
+  return static_cast<bool>(typeConverter->convertType(type));
 }
 
 Type ConvertToLLVMPattern::getElementPtrType(MemRefType type) const {

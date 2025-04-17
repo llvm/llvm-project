@@ -103,13 +103,11 @@ export namespace std {
     using std::chrono::tai_seconds;
     using std::chrono::tai_time;
 
-#    if 0
     // [time.clock.gps], class gps_clock
     using std::chrono::gps_clock;
 
     using std::chrono::gps_seconds;
     using std::chrono::gps_time;
-#    endif
 #  endif // _LIBCPP_ENABLE_EXPERIMENTAL
 #endif   //  _LIBCPP_HAS_TIME_ZONE_DATABASE && _LIBCPP_HAS_FILESYSTEM && _LIBCPP_HAS_LOCALIZATION
 

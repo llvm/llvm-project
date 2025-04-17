@@ -101,3 +101,24 @@ define void @tailcall_unrelated_frame() sspreq {
   tail call void @bar()
   ret void
 }
+
+declare void @callee()
+define void @caller() sspreq {
+; WINDOWS-LABEL: caller:
+; WINDOWS: callq   callee
+; WINDOWS: callq   callee
+; WINDOWS: cmpq    __security_cookie(%rip), %rcx
+; WINDOWS: jne
+; WINDOWS: callq   __security_check_cookie
+
+; LINUX-LABEL: caller:
+; LINUX: callq   callee@PLT
+; LINUX: callq   callee@PLT
+; LINUX: cmpq
+; LINUX: jne
+; LINUX: callq   __stack_chk_fail@PLT
+
+  tail call void @callee()
+  call void @callee()
+  ret void
+}

@@ -33,16 +33,18 @@ RISCVTargetStreamer::RISCVTargetStreamer(MCStreamer &S) : MCTargetStreamer(S) {}
 void RISCVTargetStreamer::finish() { finishAttributeSection(); }
 void RISCVTargetStreamer::reset() {}
 
-void RISCVTargetStreamer::emitDirectiveOptionPush() {}
-void RISCVTargetStreamer::emitDirectiveOptionPop() {}
-void RISCVTargetStreamer::emitDirectiveOptionPIC() {}
-void RISCVTargetStreamer::emitDirectiveOptionNoPIC() {}
-void RISCVTargetStreamer::emitDirectiveOptionRVC() {}
-void RISCVTargetStreamer::emitDirectiveOptionNoRVC() {}
-void RISCVTargetStreamer::emitDirectiveOptionRelax() {}
-void RISCVTargetStreamer::emitDirectiveOptionNoRelax() {}
 void RISCVTargetStreamer::emitDirectiveOptionArch(
     ArrayRef<RISCVOptionArchArg> Args) {}
+void RISCVTargetStreamer::emitDirectiveOptionExact() {}
+void RISCVTargetStreamer::emitDirectiveOptionNoExact() {}
+void RISCVTargetStreamer::emitDirectiveOptionPIC() {}
+void RISCVTargetStreamer::emitDirectiveOptionNoPIC() {}
+void RISCVTargetStreamer::emitDirectiveOptionPop() {}
+void RISCVTargetStreamer::emitDirectiveOptionPush() {}
+void RISCVTargetStreamer::emitDirectiveOptionRelax() {}
+void RISCVTargetStreamer::emitDirectiveOptionNoRelax() {}
+void RISCVTargetStreamer::emitDirectiveOptionRVC() {}
+void RISCVTargetStreamer::emitDirectiveOptionNoRVC() {}
 void RISCVTargetStreamer::emitDirectiveVariantCC(MCSymbol &Symbol) {}
 void RISCVTargetStreamer::emitAttribute(unsigned Attribute, unsigned Value) {}
 void RISCVTargetStreamer::finishAttributeSection() {}
@@ -85,10 +87,13 @@ void RISCVTargetStreamer::emitTargetAttributes(const MCSubtargetInfo &STI,
   }
 
   if (RiscvAbiAttr && STI.hasFeature(RISCV::FeatureStdExtA)) {
-    unsigned AtomicABITag = static_cast<unsigned>(
-        STI.hasFeature(RISCV::FeatureNoTrailingSeqCstFence)
-            ? RISCVAttrs::RISCVAtomicAbiTag::A6C
-            : RISCVAttrs::RISCVAtomicAbiTag::A6S);
+    unsigned AtomicABITag;
+    if (STI.hasFeature(RISCV::FeatureStdExtZalasr))
+      AtomicABITag = static_cast<unsigned>(RISCVAttrs::RISCVAtomicAbiTag::A7);
+    else if (STI.hasFeature(RISCV::FeatureNoTrailingSeqCstFence))
+      AtomicABITag = static_cast<unsigned>(RISCVAttrs::RISCVAtomicAbiTag::A6C);
+    else
+      AtomicABITag = static_cast<unsigned>(RISCVAttrs::RISCVAtomicAbiTag::A6S);
     emitAttribute(RISCVAttrs::ATOMIC_ABI, AtomicABITag);
   }
 }
@@ -120,6 +125,14 @@ void RISCVTargetAsmStreamer::emitDirectiveOptionRVC() {
 
 void RISCVTargetAsmStreamer::emitDirectiveOptionNoRVC() {
   OS << "\t.option\tnorvc\n";
+}
+
+void RISCVTargetAsmStreamer::emitDirectiveOptionExact() {
+  OS << "\t.option\texact\n";
+}
+
+void RISCVTargetAsmStreamer::emitDirectiveOptionNoExact() {
+  OS << "\t.option\tnoexact\n";
 }
 
 void RISCVTargetAsmStreamer::emitDirectiveOptionRelax() {

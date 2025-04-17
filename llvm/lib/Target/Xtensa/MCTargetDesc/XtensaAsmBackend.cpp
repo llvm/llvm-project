@@ -33,9 +33,6 @@ public:
       : MCAsmBackend(llvm::endianness::little), OSABI(osABI),
         IsLittleEndian(isLE) {}
 
-  unsigned getNumFixupKinds() const override {
-    return Xtensa::NumTargetFixupKinds;
-  }
   const MCFixupKindInfo &getFixupKindInfo(MCFixupKind Kind) const override;
   void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                   const MCValue &Target, MutableArrayRef<char> Data,
@@ -67,11 +64,12 @@ XtensaMCAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
            MCFixupKindInfo::FKF_IsAlignedDownTo32Bits},
       {"fixup_xtensa_l32r_16", 8, 16,
        MCFixupKindInfo::FKF_IsPCRel |
-           MCFixupKindInfo::FKF_IsAlignedDownTo32Bits}};
+           MCFixupKindInfo::FKF_IsAlignedDownTo32Bits},
+      {"fixup_xtensa_loop_8", 16, 8, MCFixupKindInfo::FKF_IsPCRel}};
 
   if (Kind < FirstTargetFixupKind)
     return MCAsmBackend::getFixupKindInfo(Kind);
-  assert(unsigned(Kind - FirstTargetFixupKind) < getNumFixupKinds() &&
+  assert(unsigned(Kind - FirstTargetFixupKind) < Xtensa::NumTargetFixupKinds &&
          "Invalid kind!");
   return Infos[Kind - FirstTargetFixupKind];
 }
@@ -119,6 +117,11 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
     if (Value & 0x3)
       Ctx.reportError(Fixup.getLoc(), "fixup value must be 4-byte aligned");
     return (Value & 0xffffc) >> 2;
+  case Xtensa::fixup_xtensa_loop_8:
+    Value -= 4;
+    if (!isUInt<8>(Value))
+      Ctx.reportError(Fixup.getLoc(), "loop fixup value out of range");
+    return (Value & 0xff);
   case Xtensa::fixup_xtensa_l32r_16:
     unsigned Offset = Fixup.getOffset();
     if (Offset & 0x3)

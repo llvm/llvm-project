@@ -180,6 +180,14 @@ void WasmWriter::writeSectionContent(raw_ostream &OS,
       writeStringRef(Needed, SubOS);
     SubSection.done();
   }
+  if (Section.RuntimePath.size()) {
+    writeUint8(OS, wasm::WASM_DYLINK_RUNTIME_PATH);
+    raw_ostream &SubOS = SubSection.getStream();
+    encodeULEB128(Section.RuntimePath.size(), SubOS);
+    for (StringRef Path : Section.RuntimePath)
+      writeStringRef(Path, SubOS);
+    SubSection.done();
+  }
 }
 
 void WasmWriter::writeSectionContent(raw_ostream &OS,

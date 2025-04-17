@@ -11,6 +11,7 @@
 #include "clang/AST/CXXInheritance.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/AST/TemplateBase.h"
 #include "clang/AST/Type.h"
 
 namespace clang {
@@ -44,6 +45,11 @@ public:
       const DependentTemplateSpecializationType *DTST);
   QualType resolveNestedNameSpecifierToType(const NestedNameSpecifier *NNS);
   QualType getPointeeType(QualType T);
+  std::vector<const NamedDecl *>
+  lookupDependentName(CXXRecordDecl *RD, DeclarationName Name,
+                      llvm::function_ref<bool(const NamedDecl *ND)> Filter);
+  TagDecl *resolveTypeToTagDecl(QualType T);
+  QualType simplifyType(QualType Type, const Expr *E, bool UnwrapPointer);
 
 private:
   ASTContext &Ctx;
@@ -69,30 +75,6 @@ private:
   QualType resolveExprToType(const Expr *E);
   std::vector<const NamedDecl *> resolveExprToDecls(const Expr *E);
 
-  // Helper function for HeuristicResolver::resolveDependentMember()
-  // which takes a possibly-dependent type `T` and heuristically
-  // resolves it to a TagDecl in which we can try name lookup.
-  TagDecl *resolveTypeToTagDecl(const Type *T);
-
-  // Helper function for simplifying a type.
-  // `Type` is the type to simplify.
-  // `E` is the expression whose type `Type` is, if known. This sometimes
-  // contains information relevant to the type that's not stored in `Type`
-  // itself.
-  // If `UnwrapPointer` is true, exactly only pointer type will be unwrapped
-  // during simplification, and the operation fails if no pointer type is found.
-  QualType simplifyType(QualType Type, const Expr *E, bool UnwrapPointer);
-
-  // This is a reimplementation of CXXRecordDecl::lookupDependentName()
-  // so that the implementation can call into other HeuristicResolver helpers.
-  // FIXME: Once HeuristicResolver is upstreamed to the clang libraries
-  // (https://github.com/clangd/clangd/discussions/1662),
-  // CXXRecordDecl::lookupDepenedentName() can be removed, and its call sites
-  // can be modified to benefit from the more comprehensive heuristics offered
-  // by HeuristicResolver instead.
-  std::vector<const NamedDecl *>
-  lookupDependentName(CXXRecordDecl *RD, DeclarationName Name,
-                      llvm::function_ref<bool(const NamedDecl *ND)> Filter);
   bool findOrdinaryMemberInDependentClasses(const CXXBaseSpecifier *Specifier,
                                             CXXBasePath &Path,
                                             DeclarationName Name);
@@ -139,8 +121,10 @@ TemplateName getReferencedTemplateName(const Type *T) {
 // Helper function for HeuristicResolver::resolveDependentMember()
 // which takes a possibly-dependent type `T` and heuristically
 // resolves it to a CXXRecordDecl in which we can try name lookup.
-TagDecl *HeuristicResolverImpl::resolveTypeToTagDecl(const Type *T) {
-  assert(T);
+TagDecl *HeuristicResolverImpl::resolveTypeToTagDecl(QualType QT) {
+  const Type *T = QT.getTypePtrOrNull();
+  if (!T)
+    return nullptr;
 
   // Unwrap type sugar such as type aliases.
   T = T->getCanonicalTypeInternal().getTypePtr();
@@ -154,7 +138,15 @@ TagDecl *HeuristicResolverImpl::resolveTypeToTagDecl(const Type *T) {
   }
 
   if (auto *TT = T->getAs<TagType>()) {
-    return TT->getDecl();
+    TagDecl *TD = TT->getDecl();
+    // Template might not be instantiated yet, fall back to primary template
+    // in such cases.
+    if (const auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(TD)) {
+      if (CTSD->getTemplateSpecializationKind() == TSK_Undeclared) {
+        return CTSD->getSpecializedTemplate()->getTemplatedDecl();
+      }
+    }
+    return TD;
   }
 
   if (const auto *ICNT = T->getAs<InjectedClassNameType>())
@@ -254,6 +246,20 @@ QualType HeuristicResolverImpl::simplifyType(QualType Type, const Expr *E,
         }
       }
     }
+    if (const auto *TTPT = dyn_cast_if_present<TemplateTypeParmType>(T.Type)) {
+      // We can't do much useful with a template parameter (e.g. we cannot look
+      // up member names inside it). However, if the template parameter has a
+      // default argument, as a heuristic we can replace T with the default
+      // argument type.
+      if (const auto *TTPD = TTPT->getDecl()) {
+        if (TTPD->hasDefaultArgument()) {
+          const auto &DefaultArg = TTPD->getDefaultArgument().getArgument();
+          if (DefaultArg.getKind() == TemplateArgument::Type) {
+            return {DefaultArg.getAsType()};
+          }
+        }
+      }
+    }
     return T;
   };
   // As an additional protection against infinite loops, bound the number of
@@ -309,9 +315,9 @@ std::vector<const NamedDecl *> HeuristicResolverImpl::resolveMemberExpr(
 
 std::vector<const NamedDecl *>
 HeuristicResolverImpl::resolveDeclRefExpr(const DependentScopeDeclRefExpr *RE) {
-  return resolveDependentMember(
-      resolveNestedNameSpecifierToType(RE->getQualifier()), RE->getDeclName(),
-      StaticFilter);
+  QualType Qualifier = resolveNestedNameSpecifierToType(RE->getQualifier());
+  Qualifier = simplifyType(Qualifier, nullptr, /*UnwrapPointer=*/false);
+  return resolveDependentMember(Qualifier, RE->getDeclName(), StaticFilter);
 }
 
 std::vector<const NamedDecl *>
@@ -322,8 +328,7 @@ HeuristicResolverImpl::resolveTypeOfCallExpr(const CallExpr *CE) {
   if (const auto *FnTypePtr = CalleeType->getAs<PointerType>())
     CalleeType = FnTypePtr->getPointeeType();
   if (const FunctionType *FnType = CalleeType->getAs<FunctionType>()) {
-    if (const auto *D =
-            resolveTypeToTagDecl(FnType->getReturnType().getTypePtr())) {
+    if (const auto *D = resolveTypeToTagDecl(FnType->getReturnType())) {
       return {D};
     }
   }
@@ -357,9 +362,10 @@ HeuristicResolverImpl::resolveDependentNameType(const DependentNameType *DNT) {
 std::vector<const NamedDecl *>
 HeuristicResolverImpl::resolveTemplateSpecializationType(
     const DependentTemplateSpecializationType *DTST) {
+  const DependentTemplateStorage &DTN = DTST->getDependentTemplateName();
   return resolveDependentMember(
-      resolveNestedNameSpecifierToType(DTST->getQualifier()),
-      DTST->getIdentifier(), TemplateFilter);
+      resolveNestedNameSpecifierToType(DTN.getQualifier()),
+      DTN.getName().getIdentifier(), TemplateFilter);
 }
 
 std::vector<const NamedDecl *>
@@ -401,7 +407,6 @@ QualType HeuristicResolverImpl::resolveNestedNameSpecifierToType(
   // the TypeSpec cases too.
   switch (NNS->getKind()) {
   case NestedNameSpecifier::TypeSpec:
-  case NestedNameSpecifier::TypeSpecWithTemplate:
     return QualType(NNS->getAsType(), 0);
   case NestedNameSpecifier::Identifier: {
     return resolveDeclsToType(
@@ -434,7 +439,7 @@ bool findOrdinaryMember(const CXXRecordDecl *RD, CXXBasePath &Path,
 bool HeuristicResolverImpl::findOrdinaryMemberInDependentClasses(
     const CXXBaseSpecifier *Specifier, CXXBasePath &Path,
     DeclarationName Name) {
-  TagDecl *TD = resolveTypeToTagDecl(Specifier->getType().getTypePtr());
+  TagDecl *TD = resolveTypeToTagDecl(Specifier->getType());
   if (const auto *RD = dyn_cast_if_present<CXXRecordDecl>(TD)) {
     return findOrdinaryMember(RD, Path, Name);
   }
@@ -477,10 +482,7 @@ std::vector<const NamedDecl *> HeuristicResolverImpl::lookupDependentName(
 std::vector<const NamedDecl *> HeuristicResolverImpl::resolveDependentMember(
     QualType QT, DeclarationName Name,
     llvm::function_ref<bool(const NamedDecl *ND)> Filter) {
-  const Type *T = QT.getTypePtrOrNull();
-  if (!T)
-    return {};
-  TagDecl *TD = resolveTypeToTagDecl(T);
+  TagDecl *TD = resolveTypeToTagDecl(QT);
   if (!TD)
     return {};
   if (auto *ED = dyn_cast<EnumDecl>(TD)) {
@@ -539,8 +541,20 @@ QualType HeuristicResolver::resolveNestedNameSpecifierToType(
     const NestedNameSpecifier *NNS) const {
   return HeuristicResolverImpl(Ctx).resolveNestedNameSpecifierToType(NNS);
 }
+std::vector<const NamedDecl *> HeuristicResolver::lookupDependentName(
+    CXXRecordDecl *RD, DeclarationName Name,
+    llvm::function_ref<bool(const NamedDecl *ND)> Filter) {
+  return HeuristicResolverImpl(Ctx).lookupDependentName(RD, Name, Filter);
+}
 const QualType HeuristicResolver::getPointeeType(QualType T) const {
   return HeuristicResolverImpl(Ctx).getPointeeType(T);
+}
+TagDecl *HeuristicResolver::resolveTypeToTagDecl(QualType T) const {
+  return HeuristicResolverImpl(Ctx).resolveTypeToTagDecl(T);
+}
+QualType HeuristicResolver::simplifyType(QualType Type, const Expr *E,
+                                         bool UnwrapPointer) {
+  return HeuristicResolverImpl(Ctx).simplifyType(Type, E, UnwrapPointer);
 }
 
 } // namespace clang

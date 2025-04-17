@@ -722,8 +722,11 @@ define <1 x float> @ucvtf_v1i64_v1f32(<1 x i64> %op1) vscale_range(2,0) #0 {
 ; CHECK-LABEL: ucvtf_v1i64_v1f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    ucvtf v0.2d, v0.2d
-; CHECK-NEXT:    fcvtn v0.2s, v0.2d
+; CHECK-NEXT:    fmov x8, d0
+; CHECK-NEXT:    movi d1, #0000000000000000
+; CHECK-NEXT:    ucvtf s0, x8
+; CHECK-NEXT:    mov v1.s[0], v0.s[0]
+; CHECK-NEXT:    fmov d0, d1
 ; CHECK-NEXT:    ret
   %res = uitofp <1 x i64> %op1 to <1 x float>
   ret <1 x float> %res
@@ -733,8 +736,12 @@ define <1 x float> @ucvtf_v1i64_v1f32(<1 x i64> %op1) vscale_range(2,0) #0 {
 define <2 x float> @ucvtf_v2i64_v2f32(<2 x i64> %op1) vscale_range(2,0) #0 {
 ; CHECK-LABEL: ucvtf_v2i64_v2f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ucvtf v0.2d, v0.2d
-; CHECK-NEXT:    fcvtn v0.2s, v0.2d
+; CHECK-NEXT:    mov x8, v0.d[1]
+; CHECK-NEXT:    fmov x9, d0
+; CHECK-NEXT:    ucvtf s0, x9
+; CHECK-NEXT:    ucvtf s1, x8
+; CHECK-NEXT:    mov v0.s[1], v1.s[0]
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
   %res = uitofp <2 x i64> %op1 to <2 x float>
   ret <2 x float> %res
@@ -1646,8 +1653,11 @@ define <1 x float> @scvtf_v1i64_v1f32(<1 x i64> %op1) vscale_range(2,0) #0 {
 ; CHECK-LABEL: scvtf_v1i64_v1f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    scvtf v0.2d, v0.2d
-; CHECK-NEXT:    fcvtn v0.2s, v0.2d
+; CHECK-NEXT:    fmov x8, d0
+; CHECK-NEXT:    movi d1, #0000000000000000
+; CHECK-NEXT:    scvtf s0, x8
+; CHECK-NEXT:    mov v1.s[0], v0.s[0]
+; CHECK-NEXT:    fmov d0, d1
 ; CHECK-NEXT:    ret
   %res = sitofp <1 x i64> %op1 to <1 x float>
   ret <1 x float> %res
@@ -1657,8 +1667,12 @@ define <1 x float> @scvtf_v1i64_v1f32(<1 x i64> %op1) vscale_range(2,0) #0 {
 define <2 x float> @scvtf_v2i64_v2f32(<2 x i64> %op1) vscale_range(2,0) #0 {
 ; CHECK-LABEL: scvtf_v2i64_v2f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    scvtf v0.2d, v0.2d
-; CHECK-NEXT:    fcvtn v0.2s, v0.2d
+; CHECK-NEXT:    mov x8, v0.d[1]
+; CHECK-NEXT:    fmov x9, d0
+; CHECK-NEXT:    scvtf s0, x9
+; CHECK-NEXT:    scvtf s1, x8
+; CHECK-NEXT:    mov v0.s[1], v1.s[0]
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
   %res = sitofp <2 x i64> %op1 to <2 x float>
   ret <2 x float> %res

@@ -49,8 +49,8 @@ public:
 
   bool evaluateTargetFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                            const MCFragment *DF, const MCValue &Target,
-                           const MCSubtargetInfo *STI, uint64_t &Value,
-                           bool &WasForced) override;
+                           const MCSubtargetInfo *STI,
+                           uint64_t &Value) override;
 
   bool handleAddSubRelocations(const MCAssembler &Asm, const MCFragment &F,
                                const MCFixup &Fixup, const MCValue &Target,
@@ -65,18 +65,12 @@ public:
   createObjectTargetWriter() const override;
 
   bool shouldForceRelocation(const MCAssembler &Asm, const MCFixup &Fixup,
-                             const MCValue &Target, const uint64_t Value,
+                             const MCValue &Target,
                              const MCSubtargetInfo *STI) override;
 
-  bool fixupNeedsRelaxationAdvanced(const MCAssembler &Asm,
-                                    const MCFixup &Fixup, bool Resolved,
-                                    uint64_t Value,
-                                    const MCRelaxableFragment *DF,
-                                    const bool WasForced) const override;
-
-  unsigned getNumFixupKinds() const override {
-    return RISCV::NumTargetFixupKinds;
-  }
+  bool fixupNeedsRelaxationAdvanced(const MCAssembler &,
+                                    const MCFixup &, const MCValue &, uint64_t,
+                                    bool) const override;
 
   std::optional<MCFixupKind> getFixupKind(StringRef Name) const override;
 
@@ -84,7 +78,6 @@ public:
 
   bool mayNeedRelaxation(const MCInst &Inst,
                          const MCSubtargetInfo &STI) const override;
-  unsigned getRelaxedOpcode(unsigned Op) const;
 
   void relaxInstruction(MCInst &Inst,
                         const MCSubtargetInfo &STI) const override;

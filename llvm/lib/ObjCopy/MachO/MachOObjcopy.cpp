@@ -360,6 +360,24 @@ static Error addSection(const NewSectionInfo &NewSection, Object &Obj) {
 static Expected<Section &> findSection(StringRef SecName, Object &O) {
   StringRef SegName;
   std::tie(SegName, SecName) = SecName.split(",");
+  // For compactness, intermediate object files (MH_OBJECT) contain
+  // only one segment in which all sections are placed.
+  // The static linker places each section in the named segment when building
+  // the final product (any file that is not of type MH_OBJECT).
+  //
+  // Source:
+  // https://math-atlas.sourceforge.net/devel/assembly/MachORuntime.pdf
+  // page 57
+  if (O.Header.FileType == MachO::HeaderFileType::MH_OBJECT) {
+    for (const auto& LC : O.LoadCommands)
+      for (const auto& Sec : LC.Sections)
+        if (Sec->Segname == SegName && Sec->Sectname == SecName)
+          return *Sec;
+
+    StringRef ErrMsg = "could not find section with name '%s' in '%s' segment";
+    return createStringError(errc::invalid_argument, ErrMsg.str().c_str(),
+                             SecName.str().c_str(), SegName.str().c_str());
+  }
   auto FoundSeg =
       llvm::find_if(O.LoadCommands, [SegName](const LoadCommand &LC) {
         return LC.getSegmentName() == SegName;

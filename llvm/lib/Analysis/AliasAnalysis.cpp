@@ -58,11 +58,10 @@ STATISTIC(NumNoAlias,   "Number of NoAlias results");
 STATISTIC(NumMayAlias,  "Number of MayAlias results");
 STATISTIC(NumMustAlias, "Number of MustAlias results");
 
-namespace llvm {
 /// Allow disabling BasicAA from the AA results. This is particularly useful
 /// when testing to isolate a single AA implementation.
-cl::opt<bool> DisableBasicAA("disable-basic-aa", cl::Hidden, cl::init(false));
-} // namespace llvm
+static cl::opt<bool> DisableBasicAA("disable-basic-aa", cl::Hidden,
+                                    cl::init(false));
 
 #ifndef NDEBUG
 /// Print a trace of alias analysis queries and their results.
@@ -220,38 +219,6 @@ ModRefInfo AAResults::getModRefInfo(const CallBase *Call,
     if (isNoModRef(Result))
       return ModRefInfo::NoModRef;
   }
-
-  // Try to refine the mod-ref info further using other API entry points to the
-  // aggregate set of AA results.
-
-  // We can completely ignore inaccessible memory here, because MemoryLocations
-  // can only reference accessible memory.
-  auto ME = getMemoryEffects(Call, AAQI)
-                .getWithoutLoc(IRMemLocation::InaccessibleMem);
-  if (ME.doesNotAccessMemory())
-    return ModRefInfo::NoModRef;
-
-  ModRefInfo ArgMR = ME.getModRef(IRMemLocation::ArgMem);
-  ModRefInfo OtherMR = ME.getWithoutLoc(IRMemLocation::ArgMem).getModRef();
-  if ((ArgMR | OtherMR) != OtherMR) {
-    // Refine the modref info for argument memory. We only bother to do this
-    // if ArgMR is not a subset of OtherMR, otherwise this won't have an impact
-    // on the final result.
-    ModRefInfo AllArgsMask = ModRefInfo::NoModRef;
-    for (const auto &I : llvm::enumerate(Call->args())) {
-      const Value *Arg = I.value();
-      if (!Arg->getType()->isPointerTy())
-        continue;
-      unsigned ArgIdx = I.index();
-      MemoryLocation ArgLoc = MemoryLocation::getForArgument(Call, ArgIdx, TLI);
-      AliasResult ArgAlias = alias(ArgLoc, Loc, AAQI, Call);
-      if (ArgAlias != AliasResult::NoAlias)
-        AllArgsMask |= getArgModRefInfo(Call, ArgIdx);
-    }
-    ArgMR &= AllArgsMask;
-  }
-
-  Result &= ArgMR | OtherMR;
 
   // Apply the ModRef mask. This ensures that if Loc is a constant memory
   // location, we take into account the fact that the call definitely could not
@@ -643,9 +610,9 @@ ModRefInfo AAResults::callCapturesBefore(const Instruction *I,
   if (!Call || Call == Object)
     return ModRefInfo::ModRef;
 
-  if (PointerMayBeCapturedBefore(Object, /* ReturnCaptures */ true,
-                                 /* StoreCaptures */ true, I, DT,
-                                 /* include Object */ true))
+  if (capturesAnything(PointerMayBeCapturedBefore(
+          Object, /* ReturnCaptures */ true, I, DT,
+          /* include Object */ true, CaptureComponents::Provenance)))
     return ModRefInfo::ModRef;
 
   unsigned ArgNo = 0;
@@ -656,7 +623,14 @@ ModRefInfo AAResults::callCapturesBefore(const Instruction *I,
     // Only look at the no-capture or byval pointer arguments.  If this
     // pointer were passed to arguments that were neither of these, then it
     // couldn't be no-capture.
-    if (!(*CI)->getType()->isPointerTy() || !Call->doesNotCapture(ArgNo))
+    if (!(*CI)->getType()->isPointerTy())
+      continue;
+
+    // Make sure we still check captures(ret: address, provenance) and
+    // captures(address) arguments, as these wouldn't be treated as a capture
+    // at the call-site.
+    CaptureInfo Captures = Call->getCaptureInfo(ArgNo);
+    if (capturesAnyProvenance(Captures.getOtherComponents()))
       continue;
 
     AliasResult AR =
@@ -855,9 +829,15 @@ bool llvm::isBaseOfObject(const Value *V) {
 }
 
 bool llvm::isEscapeSource(const Value *V) {
-  if (auto *CB = dyn_cast<CallBase>(V))
-    return !isIntrinsicReturningPointerAliasingArgumentWithoutCapturing(CB,
-                                                                        true);
+  if (auto *CB = dyn_cast<CallBase>(V)) {
+    if (isIntrinsicReturningPointerAliasingArgumentWithoutCapturing(CB, true))
+      return false;
+
+    // The return value of a function with a captures(ret: address, provenance)
+    // attribute is not necessarily an escape source. The return value may
+    // alias with a non-escaping object.
+    return !CB->hasArgumentWithAdditionalReturnCaptureComponents();
+  }
 
   // The load case works because isNonEscapingLocalObject considers all
   // stores to be escapes (it passes true for the StoreCaptures argument

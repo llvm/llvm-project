@@ -1682,12 +1682,19 @@ define <4 x i64> @shuffle_v4i64_0044_v2i64(<2 x i64> %a, <2 x i64> %b) {
 }
 
 define <4 x i64> @shuffle_v4i64_1032_v2i64(<2 x i64> %a, <2 x i64> %b) {
-; AVX1OR2-LABEL: shuffle_v4i64_1032_v2i64:
-; AVX1OR2:       # %bb.0:
-; AVX1OR2-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
-; AVX1OR2-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; AVX1OR2-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[2,3,0,1,6,7,4,5]
-; AVX1OR2-NEXT:    retq
+; AVX1-LABEL: shuffle_v4i64_1032_v2i64:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX1-NEXT:    vshufpd {{.*#+}} ymm0 = ymm0[1,0,3,2]
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: shuffle_v4i64_1032_v2i64:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; AVX2-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX2-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[2,3,0,1,6,7,4,5]
+; AVX2-NEXT:    retq
 ;
 ; AVX512VL-SLOW-LABEL: shuffle_v4i64_1032_v2i64:
 ; AVX512VL-SLOW:       # %bb.0:

@@ -2,10 +2,6 @@
 ; RUN: opt < %s -passes='sroa<preserve-cfg>' -S | FileCheck %s --check-prefixes=CHECK,CHECK-PRESERVE-CFG
 ; RUN: opt < %s -passes='sroa<modify-cfg>' -S | FileCheck %s --check-prefixes=CHECK,CHECK-MODIFY-CFG
 ; RUN: opt < %s -passes=debugify,sroa -S | FileCheck %s --check-prefix=DEBUG
-;;  Ensure that these work with non-intrinsic variable locations.
-; RUN: opt < %s -passes='sroa<preserve-cfg>' -S --try-experimental-debuginfo-iterators | FileCheck %s --check-prefixes=CHECK,CHECK-PRESERVE-CFG
-; RUN: opt < %s -passes='sroa<modify-cfg>' -S --try-experimental-debuginfo-iterators | FileCheck %s --check-prefixes=CHECK,CHECK-MODIFY-CFG
-; RUN: opt < %s -passes=debugify,sroa -S --try-experimental-debuginfo-iterators | FileCheck %s --check-prefix=DEBUG
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-n8:16:32:64"
 
 %S1 = type { i64, [42 x float] }
@@ -22,7 +18,7 @@ define i32 @test1(<4 x i32> %x, <4 x i32> %y) {
 ;
 ; DEBUG-LABEL: @test1(
 ; DEBUG-NEXT:  entry:
-; DEBUG-NEXT:      #dbg_value(ptr undef, [[META9:![0-9]+]], !DIExpression(), [[META21:![0-9]+]])
+; DEBUG-NEXT:      #dbg_value(ptr poison, [[META9:![0-9]+]], !DIExpression(), [[META21:![0-9]+]])
 ; DEBUG-NEXT:      #dbg_value(ptr undef, [[META9]], !DIExpression(), [[META21]])
 ; DEBUG-NEXT:      #dbg_value(ptr undef, [[META11:![0-9]+]], !DIExpression(), [[META22:![0-9]+]])
 ; DEBUG-NEXT:      #dbg_value(ptr undef, [[META12:![0-9]+]], !DIExpression(), [[META23:![0-9]+]])
@@ -72,7 +68,7 @@ define i32 @test2(<4 x i32> %x, <4 x i32> %y) {
 ;
 ; DEBUG-LABEL: @test2(
 ; DEBUG-NEXT:  entry:
-; DEBUG-NEXT:      #dbg_value(ptr undef, [[META34:![0-9]+]], !DIExpression(), [[META45:![0-9]+]])
+; DEBUG-NEXT:      #dbg_value(ptr poison, [[META34:![0-9]+]], !DIExpression(), [[META45:![0-9]+]])
 ; DEBUG-NEXT:      #dbg_value(ptr undef, [[META34]], !DIExpression(), [[META45]])
 ; DEBUG-NEXT:      #dbg_value(ptr undef, [[META35:![0-9]+]], !DIExpression(), [[META46:![0-9]+]])
 ; DEBUG-NEXT:      #dbg_value(ptr undef, [[META36:![0-9]+]], !DIExpression(), [[META47:![0-9]+]])
@@ -125,7 +121,7 @@ define i32 @test3(<4 x i32> %x, <4 x i32> %y) {
 ;
 ; DEBUG-LABEL: @test3(
 ; DEBUG-NEXT:  entry:
-; DEBUG-NEXT:      #dbg_value(ptr undef, [[META59:![0-9]+]], !DIExpression(), [[META69:![0-9]+]])
+; DEBUG-NEXT:      #dbg_value(ptr poison, [[META59:![0-9]+]], !DIExpression(), [[META69:![0-9]+]])
 ; DEBUG-NEXT:      #dbg_value(ptr undef, [[META59]], !DIExpression(), [[META69]])
 ; DEBUG-NEXT:      #dbg_value(ptr undef, [[META60:![0-9]+]], !DIExpression(), [[META70:![0-9]+]])
 ; DEBUG-NEXT:      #dbg_value(ptr undef, [[META61:![0-9]+]], !DIExpression(), [[META71:![0-9]+]])
@@ -182,7 +178,7 @@ define i32 @test4(<4 x i32> %x, <4 x i32> %y, ptr %z) {
 ;
 ; DEBUG-LABEL: @test4(
 ; DEBUG-NEXT:  entry:
-; DEBUG-NEXT:      #dbg_value(ptr undef, [[META83:![0-9]+]], !DIExpression(), [[META94:![0-9]+]])
+; DEBUG-NEXT:      #dbg_value(ptr poison, [[META83:![0-9]+]], !DIExpression(), [[META94:![0-9]+]])
 ; DEBUG-NEXT:      #dbg_value(ptr undef, [[META83]], !DIExpression(), [[META94]])
 ; DEBUG-NEXT:      #dbg_value(ptr undef, [[META84:![0-9]+]], !DIExpression(), [[META95:![0-9]+]])
 ; DEBUG-NEXT:    [[A_SROA_3_16_COPYLOAD:%.*]] = load <4 x i32>, ptr [[Z:%.*]], align 1, !dbg [[DBG96:![0-9]+]]
@@ -247,7 +243,7 @@ define i32 @test4_as1(<4 x i32> %x, <4 x i32> %y, ptr addrspace(1) %z) {
 ;
 ; DEBUG-LABEL: @test4_as1(
 ; DEBUG-NEXT:  entry:
-; DEBUG-NEXT:      #dbg_value(ptr undef, [[META110:![0-9]+]], !DIExpression(), [[META121:![0-9]+]])
+; DEBUG-NEXT:      #dbg_value(ptr poison, [[META110:![0-9]+]], !DIExpression(), [[META121:![0-9]+]])
 ; DEBUG-NEXT:      #dbg_value(ptr undef, [[META110]], !DIExpression(), [[META121]])
 ; DEBUG-NEXT:      #dbg_value(ptr undef, [[META111:![0-9]+]], !DIExpression(), [[META122:![0-9]+]])
 ; DEBUG-NEXT:    [[A_SROA_3_16_COPYLOAD:%.*]] = load <4 x i32>, ptr addrspace(1) [[Z:%.*]], align 1, !dbg [[DBG123:![0-9]+]]
@@ -310,7 +306,7 @@ define i32 @test5(<4 x i32> %x, <4 x i32> %y, ptr %z) {
 ;
 ; DEBUG-LABEL: @test5(
 ; DEBUG-NEXT:  entry:
-; DEBUG-NEXT:      #dbg_value(ptr undef, [[META137:![0-9]+]], !DIExpression(), [[META148:![0-9]+]])
+; DEBUG-NEXT:      #dbg_value(ptr poison, [[META137:![0-9]+]], !DIExpression(), [[META148:![0-9]+]])
 ; DEBUG-NEXT:      #dbg_value(ptr undef, [[META137]], !DIExpression(), [[META148]])
 ; DEBUG-NEXT:      #dbg_value(ptr undef, [[META138:![0-9]+]], !DIExpression(), [[META149:![0-9]+]])
 ; DEBUG-NEXT:      #dbg_value(ptr undef, [[META139:![0-9]+]], !DIExpression(), [[META150:![0-9]+]])
@@ -407,7 +403,7 @@ define <4 x i32> @test_subvec_store() {
 ;
 ; DEBUG-LABEL: @test_subvec_store(
 ; DEBUG-NEXT:  entry:
-; DEBUG-NEXT:      #dbg_value(ptr undef, [[META178:![0-9]+]], !DIExpression(), [[META184:![0-9]+]])
+; DEBUG-NEXT:      #dbg_value(ptr poison, [[META178:![0-9]+]], !DIExpression(), [[META184:![0-9]+]])
 ; DEBUG-NEXT:    [[A_0_VECBLEND:%.*]] = select <4 x i1> <i1 true, i1 true, i1 false, i1 false>, <4 x i32> <i32 0, i32 0, i32 undef, i32 undef>, <4 x i32> undef, !dbg [[DBG185:![0-9]+]]
 ; DEBUG-NEXT:      #dbg_value(ptr undef, [[META179:![0-9]+]], !DIExpression(), [[META186:![0-9]+]])
 ; DEBUG-NEXT:    [[A_4_VECBLEND:%.*]] = select <4 x i1> <i1 false, i1 true, i1 true, i1 false>, <4 x i32> <i32 undef, i32 1, i32 1, i32 undef>, <4 x i32> [[A_0_VECBLEND]], !dbg [[DBG187:![0-9]+]]
@@ -449,7 +445,7 @@ define <4 x i32> @test_subvec_load() {
 ;
 ; DEBUG-LABEL: @test_subvec_load(
 ; DEBUG-NEXT:  entry:
-; DEBUG-NEXT:      #dbg_value(ptr undef, [[META196:![0-9]+]], !DIExpression(), [[META204:![0-9]+]])
+; DEBUG-NEXT:      #dbg_value(ptr poison, [[META196:![0-9]+]], !DIExpression(), [[META204:![0-9]+]])
 ; DEBUG-NEXT:    [[A_0_VEC_EXTRACT:%.*]] = shufflevector <4 x i32> <i32 0, i32 1, i32 2, i32 3>, <4 x i32> poison, <2 x i32> <i32 0, i32 1>, !dbg [[DBG205:![0-9]+]]
 ; DEBUG-NEXT:      #dbg_value(<2 x i32> [[A_0_VEC_EXTRACT]], [[META197:![0-9]+]], !DIExpression(), [[DBG205]])
 ; DEBUG-NEXT:      #dbg_value(ptr undef, [[META198:![0-9]+]], !DIExpression(), [[META206:![0-9]+]])
@@ -494,7 +490,7 @@ define <4 x float> @test_subvec_memset() {
 ;
 ; DEBUG-LABEL: @test_subvec_memset(
 ; DEBUG-NEXT:  entry:
-; DEBUG-NEXT:      #dbg_value(ptr undef, [[META215:![0-9]+]], !DIExpression(), [[META220:![0-9]+]])
+; DEBUG-NEXT:      #dbg_value(ptr poison, [[META215:![0-9]+]], !DIExpression(), [[META220:![0-9]+]])
 ; DEBUG-NEXT:    [[A_0_VECBLEND:%.*]] = select <4 x i1> <i1 true, i1 true, i1 false, i1 false>, <4 x float> <float 0.000000e+00, float 0.000000e+00, float undef, float undef>, <4 x float> undef, !dbg [[DBG221:![0-9]+]]
 ; DEBUG-NEXT:      #dbg_value(ptr undef, [[META216:![0-9]+]], !DIExpression(), [[META222:![0-9]+]])
 ; DEBUG-NEXT:    [[A_4_VECBLEND:%.*]] = select <4 x i1> <i1 false, i1 true, i1 true, i1 false>, <4 x float> <float undef, float 0x3820202020000000, float 0x3820202020000000, float undef>, <4 x float> [[A_0_VECBLEND]], !dbg [[DBG223:![0-9]+]]
@@ -544,7 +540,7 @@ define <4 x float> @test_subvec_memcpy(ptr %x, ptr %y, ptr %z, ptr %f, ptr %out)
 ;
 ; DEBUG-LABEL: @test_subvec_memcpy(
 ; DEBUG-NEXT:  entry:
-; DEBUG-NEXT:      #dbg_value(ptr undef, [[META232:![0-9]+]], !DIExpression(), [[META237:![0-9]+]])
+; DEBUG-NEXT:      #dbg_value(ptr poison, [[META232:![0-9]+]], !DIExpression(), [[META237:![0-9]+]])
 ; DEBUG-NEXT:    [[A_0_COPYLOAD:%.*]] = load <2 x float>, ptr [[X:%.*]], align 1, !dbg [[DBG238:![0-9]+]]
 ; DEBUG-NEXT:    [[A_0_VEC_EXPAND:%.*]] = shufflevector <2 x float> [[A_0_COPYLOAD]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>, !dbg [[DBG238]]
 ; DEBUG-NEXT:    [[A_0_VECBLEND:%.*]] = select <4 x i1> <i1 true, i1 true, i1 false, i1 false>, <4 x float> [[A_0_VEC_EXPAND]], <4 x float> undef, !dbg [[DBG238]]
@@ -602,8 +598,8 @@ define i32 @PR14212(<3 x i8> %val) {
 ;
 ; DEBUG-LABEL: @PR14212(
 ; DEBUG-NEXT:  entry:
-; DEBUG-NEXT:      #dbg_value(ptr undef, [[META250:![0-9]+]], !DIExpression(DW_OP_LLVM_fragment, 24, 8), [[META252:![0-9]+]])
-; DEBUG-NEXT:      #dbg_value(ptr undef, [[META250]], !DIExpression(), [[META252]])
+; DEBUG-NEXT:      #dbg_value(ptr poison, [[META250:![0-9]+]], !DIExpression(DW_OP_LLVM_fragment, 24, 8), [[META252:![0-9]+]])
+; DEBUG-NEXT:      #dbg_value(ptr poison, [[META250]], !DIExpression(), [[META252]])
 ; DEBUG-NEXT:    [[TMP0:%.*]] = bitcast <3 x i8> [[VAL:%.*]] to i24, !dbg [[DBG253:![0-9]+]]
 ; DEBUG-NEXT:    [[RETVAL_SROA_2_0_INSERT_EXT:%.*]] = zext i8 undef to i32, !dbg [[DBG254:![0-9]+]]
 ; DEBUG-NEXT:    [[RETVAL_SROA_2_0_INSERT_SHIFT:%.*]] = shl i32 [[RETVAL_SROA_2_0_INSERT_EXT]], 24, !dbg [[DBG254]]
@@ -637,8 +633,8 @@ define <2 x i8> @PR14349.1(i32 %x) {
 ;
 ; DEBUG-LABEL: @PR14349.1(
 ; DEBUG-NEXT:  entry:
-; DEBUG-NEXT:      #dbg_value(ptr undef, [[META257:![0-9]+]], !DIExpression(DW_OP_LLVM_fragment, 0, 16), [[META260:![0-9]+]])
-; DEBUG-NEXT:      #dbg_value(ptr undef, [[META257]], !DIExpression(DW_OP_LLVM_fragment, 16, 16), [[META260]])
+; DEBUG-NEXT:      #dbg_value(ptr poison, [[META257:![0-9]+]], !DIExpression(DW_OP_LLVM_fragment, 0, 16), [[META260:![0-9]+]])
+; DEBUG-NEXT:      #dbg_value(ptr poison, [[META257]], !DIExpression(DW_OP_LLVM_fragment, 16, 16), [[META260]])
 ; DEBUG-NEXT:      #dbg_value(ptr undef, [[META257]], !DIExpression(), [[META260]])
 ; DEBUG-NEXT:    [[A_SROA_0_0_EXTRACT_TRUNC:%.*]] = trunc i32 [[X:%.*]] to i16, !dbg [[DBG261:![0-9]+]]
 ; DEBUG-NEXT:    [[TMP0:%.*]] = bitcast i16 [[A_SROA_0_0_EXTRACT_TRUNC]] to <2 x i8>, !dbg [[DBG261]]
@@ -675,8 +671,8 @@ define i32 @PR14349.2(<2 x i8> %x) {
 ;
 ; DEBUG-LABEL: @PR14349.2(
 ; DEBUG-NEXT:  entry:
-; DEBUG-NEXT:      #dbg_value(ptr undef, [[META266:![0-9]+]], !DIExpression(DW_OP_LLVM_fragment, 0, 16), [[META268:![0-9]+]])
-; DEBUG-NEXT:      #dbg_value(ptr undef, [[META266]], !DIExpression(DW_OP_LLVM_fragment, 16, 16), [[META268]])
+; DEBUG-NEXT:      #dbg_value(ptr poison, [[META266:![0-9]+]], !DIExpression(DW_OP_LLVM_fragment, 0, 16), [[META268:![0-9]+]])
+; DEBUG-NEXT:      #dbg_value(ptr poison, [[META266]], !DIExpression(DW_OP_LLVM_fragment, 16, 16), [[META268]])
 ; DEBUG-NEXT:      #dbg_value(ptr undef, [[META266]], !DIExpression(), [[META268]])
 ; DEBUG-NEXT:    [[TMP0:%.*]] = bitcast <2 x i8> [[X:%.*]] to i16, !dbg [[DBG269:![0-9]+]]
 ; DEBUG-NEXT:    [[A_SROA_2_0_INSERT_EXT:%.*]] = zext i16 undef to i32, !dbg [[DBG270:![0-9]+]]
@@ -713,7 +709,7 @@ define i32 @test7(<2 x i32> %x, <2 x i32> %y) {
 ;
 ; DEBUG-LABEL: @test7(
 ; DEBUG-NEXT:  entry:
-; DEBUG-NEXT:      #dbg_value(ptr undef, [[META273:![0-9]+]], !DIExpression(), [[META283:![0-9]+]])
+; DEBUG-NEXT:      #dbg_value(ptr poison, [[META273:![0-9]+]], !DIExpression(), [[META283:![0-9]+]])
 ; DEBUG-NEXT:      #dbg_value(ptr undef, [[META273]], !DIExpression(), [[META283]])
 ; DEBUG-NEXT:      #dbg_value(ptr undef, [[META274:![0-9]+]], !DIExpression(), [[META284:![0-9]+]])
 ; DEBUG-NEXT:      #dbg_value(ptr undef, [[META275:![0-9]+]], !DIExpression(), [[META285:![0-9]+]])
@@ -763,7 +759,7 @@ define i32 @test8(<2 x i32> %x) {
 ;
 ; DEBUG-LABEL: @test8(
 ; DEBUG-NEXT:  entry:
-; DEBUG-NEXT:      #dbg_value(ptr undef, [[META296:![0-9]+]], !DIExpression(), [[META301:![0-9]+]])
+; DEBUG-NEXT:      #dbg_value(ptr poison, [[META296:![0-9]+]], !DIExpression(), [[META301:![0-9]+]])
 ; DEBUG-NEXT:      #dbg_value(ptr undef, [[META296]], !DIExpression(), [[META301]])
 ; DEBUG-NEXT:    [[A_SROA_0_0_VEC_EXTRACT:%.*]] = extractelement <2 x i32> [[X:%.*]], i32 0, !dbg [[DBG302:![0-9]+]]
 ; DEBUG-NEXT:      #dbg_value(i32 [[A_SROA_0_0_VEC_EXTRACT]], [[META297:![0-9]+]], !DIExpression(), [[DBG302]])
@@ -799,7 +795,7 @@ define <2 x i32> @test9(i32 %x, i32 %y) {
 ;
 ; DEBUG-LABEL: @test9(
 ; DEBUG-NEXT:  entry:
-; DEBUG-NEXT:      #dbg_value(ptr undef, [[META309:![0-9]+]], !DIExpression(), [[META312:![0-9]+]])
+; DEBUG-NEXT:      #dbg_value(ptr poison, [[META309:![0-9]+]], !DIExpression(), [[META312:![0-9]+]])
 ; DEBUG-NEXT:      #dbg_value(ptr undef, [[META309]], !DIExpression(), [[META312]])
 ; DEBUG-NEXT:    [[A_SROA_0_0_VEC_INSERT:%.*]] = insertelement <2 x i32> undef, i32 [[X:%.*]], i32 0, !dbg [[DBG313:![0-9]+]]
 ; DEBUG-NEXT:      #dbg_value(ptr undef, [[META310:![0-9]+]], !DIExpression(), [[META314:![0-9]+]])
@@ -831,7 +827,7 @@ define <2 x i32> @test10(<4 x i16> %x, i32 %y) {
 ;
 ; DEBUG-LABEL: @test10(
 ; DEBUG-NEXT:  entry:
-; DEBUG-NEXT:      #dbg_value(ptr undef, [[META320:![0-9]+]], !DIExpression(), [[META323:![0-9]+]])
+; DEBUG-NEXT:      #dbg_value(ptr poison, [[META320:![0-9]+]], !DIExpression(), [[META323:![0-9]+]])
 ; DEBUG-NEXT:      #dbg_value(ptr undef, [[META320]], !DIExpression(), [[META323]])
 ; DEBUG-NEXT:    [[TMP0:%.*]] = bitcast <4 x i16> [[X:%.*]] to <2 x i32>, !dbg [[DBG324:![0-9]+]]
 ; DEBUG-NEXT:      #dbg_value(ptr undef, [[META321:![0-9]+]], !DIExpression(), [[META325:![0-9]+]])
@@ -865,7 +861,7 @@ define <2 x float> @test11(<4 x i16> %x, i32 %y) {
 ;
 ; DEBUG-LABEL: @test11(
 ; DEBUG-NEXT:  entry:
-; DEBUG-NEXT:      #dbg_value(ptr undef, [[META331:![0-9]+]], !DIExpression(), [[META334:![0-9]+]])
+; DEBUG-NEXT:      #dbg_value(ptr poison, [[META331:![0-9]+]], !DIExpression(), [[META334:![0-9]+]])
 ; DEBUG-NEXT:      #dbg_value(ptr undef, [[META331]], !DIExpression(), [[META334]])
 ; DEBUG-NEXT:    [[TMP0:%.*]] = bitcast <4 x i16> [[X:%.*]] to <2 x i32>, !dbg [[DBG335:![0-9]+]]
 ; DEBUG-NEXT:      #dbg_value(ptr undef, [[META332:![0-9]+]], !DIExpression(), [[META336:![0-9]+]])
@@ -892,7 +888,7 @@ define <4 x float> @test12(<4 x i32> %val) {
 ; CHECK-NEXT:    ret <4 x float> [[TMP1]]
 ;
 ; DEBUG-LABEL: @test12(
-; DEBUG-NEXT:      #dbg_value(ptr undef, [[META342:![0-9]+]], !DIExpression(), [[META344:![0-9]+]])
+; DEBUG-NEXT:      #dbg_value(ptr poison, [[META342:![0-9]+]], !DIExpression(), [[META344:![0-9]+]])
 ; DEBUG-NEXT:      #dbg_value(ptr undef, [[META342]], !DIExpression(), [[META344]])
 ; DEBUG-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[VAL:%.*]] to <4 x float>, !dbg [[DBG345:![0-9]+]]
 ; DEBUG-NEXT:      #dbg_value(<4 x float> [[TMP1]], [[META343:![0-9]+]], !DIExpression(), [[DBG345]])
@@ -921,7 +917,7 @@ define <2 x i64> @test13(i32 %a, i32 %b, i32 %c, i32 %d) {
 ;
 ; DEBUG-LABEL: @test13(
 ; DEBUG-NEXT:  entry:
-; DEBUG-NEXT:      #dbg_value(ptr undef, [[META349:![0-9]+]], !DIExpression(), [[META354:![0-9]+]])
+; DEBUG-NEXT:      #dbg_value(ptr poison, [[META349:![0-9]+]], !DIExpression(), [[META354:![0-9]+]])
 ; DEBUG-NEXT:      #dbg_value(ptr undef, [[META349]], !DIExpression(), [[META354]])
 ; DEBUG-NEXT:    [[X_SROA_0_0_VEC_INSERT:%.*]] = insertelement <4 x i32> undef, i32 [[A:%.*]], i32 0, !dbg [[DBG355:![0-9]+]]
 ; DEBUG-NEXT:      #dbg_value(ptr undef, [[META350:![0-9]+]], !DIExpression(), [[META356:![0-9]+]])
@@ -964,7 +960,7 @@ define i32 @test14(<2 x i64> %x) {
 ;
 ; DEBUG-LABEL: @test14(
 ; DEBUG-NEXT:  entry:
-; DEBUG-NEXT:      #dbg_value(ptr undef, [[META366:![0-9]+]], !DIExpression(), [[META378:![0-9]+]])
+; DEBUG-NEXT:      #dbg_value(ptr poison, [[META366:![0-9]+]], !DIExpression(), [[META378:![0-9]+]])
 ; DEBUG-NEXT:      #dbg_value(ptr undef, [[META366]], !DIExpression(), [[META378]])
 ; DEBUG-NEXT:    [[TMP0:%.*]] = bitcast <2 x i64> [[X:%.*]] to <4 x i32>, !dbg [[DBG379:![0-9]+]]
 ; DEBUG-NEXT:      #dbg_value(ptr undef, [[META367:![0-9]+]], !DIExpression(), [[META380:![0-9]+]])
@@ -1065,7 +1061,7 @@ define <4 x ptr> @test16(i64 %a, i64 %b, i64 %c, i64 %d) {
 ;
 ; DEBUG-LABEL: @test16(
 ; DEBUG-NEXT:  entry:
-; DEBUG-NEXT:      #dbg_value(ptr undef, [[META412:![0-9]+]], !DIExpression(), [[META417:![0-9]+]])
+; DEBUG-NEXT:      #dbg_value(ptr poison, [[META412:![0-9]+]], !DIExpression(), [[META417:![0-9]+]])
 ; DEBUG-NEXT:      #dbg_value(ptr undef, [[META412]], !DIExpression(), [[META417]])
 ; DEBUG-NEXT:    [[TMP0:%.*]] = inttoptr i64 [[A:%.*]] to ptr, !dbg [[DBG418:![0-9]+]]
 ; DEBUG-NEXT:    [[X_SROA_0_0_VEC_INSERT:%.*]] = insertelement <4 x ptr> undef, ptr [[TMP0]], i32 0, !dbg [[DBG418]]
@@ -1172,7 +1168,7 @@ define void @swap-8bytes(ptr %x, ptr %y) {
 ; CHECK-NEXT:    ret void
 ;
 ; DEBUG-LABEL: @swap-8bytes(
-; DEBUG-NEXT:      #dbg_value(ptr undef, [[META455:![0-9]+]], !DIExpression(), [[META456:![0-9]+]])
+; DEBUG-NEXT:      #dbg_value(ptr poison, [[META455:![0-9]+]], !DIExpression(), [[META456:![0-9]+]])
 ; DEBUG-NEXT:      #dbg_value(ptr undef, [[META455]], !DIExpression(), [[META456]])
 ; DEBUG-NEXT:    [[TMP_SROA_0_0_COPYLOAD:%.*]] = load i64, ptr [[X:%.*]], align 1, !dbg [[DBG457:![0-9]+]]
 ; DEBUG-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr [[X]], ptr [[Y:%.*]], i64 8, i1 false), !dbg [[DBG458:![0-9]+]]
@@ -1270,7 +1266,7 @@ define <4 x i32> @ptrLoadStoreTys(ptr %init, i32 %val2) {
 ; DEBUG-LABEL: @ptrLoadStoreTys(
 ; DEBUG-NEXT:    [[VAL0:%.*]] = load ptr, ptr [[INIT:%.*]], align 8, !dbg [[DBG492:![0-9]+]]
 ; DEBUG-NEXT:      #dbg_value(ptr [[VAL0]], [[META487:![0-9]+]], !DIExpression(), [[DBG492]])
-; DEBUG-NEXT:      #dbg_value(ptr undef, [[META488:![0-9]+]], !DIExpression(), [[META493:![0-9]+]])
+; DEBUG-NEXT:      #dbg_value(ptr poison, [[META488:![0-9]+]], !DIExpression(), [[META493:![0-9]+]])
 ; DEBUG-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[VAL0]] to i64, !dbg [[DBG494:![0-9]+]]
 ; DEBUG-NEXT:    [[TMP2:%.*]] = bitcast i64 [[TMP1]] to <2 x i32>, !dbg [[DBG494]]
 ; DEBUG-NEXT:    [[OBJ_0_VEC_EXPAND:%.*]] = shufflevector <2 x i32> [[TMP2]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>, !dbg [[DBG494]]
@@ -1350,7 +1346,7 @@ define <4 x i32> @ptrLoadStoreTysAS3(ptr %init, i32 %val2) {
 ; DEBUG-LABEL: @ptrLoadStoreTysAS3(
 ; DEBUG-NEXT:    [[VAL0:%.*]] = load ptr addrspace(3), ptr [[INIT:%.*]], align 8, !dbg [[DBG525:![0-9]+]]
 ; DEBUG-NEXT:      #dbg_value(ptr addrspace(3) [[VAL0]], [[META520:![0-9]+]], !DIExpression(), [[DBG525]])
-; DEBUG-NEXT:      #dbg_value(ptr undef, [[META521:![0-9]+]], !DIExpression(), [[META526:![0-9]+]])
+; DEBUG-NEXT:      #dbg_value(ptr poison, [[META521:![0-9]+]], !DIExpression(), [[META526:![0-9]+]])
 ; DEBUG-NEXT:    [[TMP1:%.*]] = ptrtoint ptr addrspace(3) [[VAL0]] to i64, !dbg [[DBG527:![0-9]+]]
 ; DEBUG-NEXT:    [[TMP2:%.*]] = bitcast i64 [[TMP1]] to <2 x i32>, !dbg [[DBG527]]
 ; DEBUG-NEXT:    [[OBJ_0_VEC_EXPAND:%.*]] = shufflevector <2 x i32> [[TMP2]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>, !dbg [[DBG527]]
@@ -1428,7 +1424,7 @@ define <4 x i32> @validLoadStoreTy([2 x i64] %cond.coerce) {
 ;
 ; DEBUG-LABEL: @validLoadStoreTy(
 ; DEBUG-NEXT:  entry:
-; DEBUG-NEXT:      #dbg_value(ptr undef, [[META553:![0-9]+]], !DIExpression(), [[META557:![0-9]+]])
+; DEBUG-NEXT:      #dbg_value(ptr poison, [[META553:![0-9]+]], !DIExpression(), [[META557:![0-9]+]])
 ; DEBUG-NEXT:      #dbg_value(ptr undef, [[META553]], !DIExpression(), [[META557]])
 ; DEBUG-NEXT:      #dbg_value(ptr undef, [[META554:![0-9]+]], !DIExpression(), [[META558:![0-9]+]])
 ; DEBUG-NEXT:    [[COND_COERCE_FCA_0_EXTRACT:%.*]] = extractvalue [2 x i64] [[COND_COERCE:%.*]], 0, !dbg [[DBG559:![0-9]+]]

@@ -422,6 +422,20 @@ bool SystemZTTIImpl::isLSRCostLess(const TargetTransformInfo::LSRCost &C1,
              C2.ScaleCost, C2.SetupCost);
 }
 
+bool SystemZTTIImpl::areInlineCompatible(const Function *Caller,
+                                         const Function *Callee) const {
+  const TargetMachine &TM = getTLI()->getTargetMachine();
+
+  const FeatureBitset &CallerBits =
+      TM.getSubtargetImpl(*Caller)->getFeatureBits();
+  const FeatureBitset &CalleeBits =
+      TM.getSubtargetImpl(*Callee)->getFeatureBits();
+
+  // Support only equal feature bitsets. Restriction should be relaxed in the
+  // future to allow inlining when callee's bits are subset of the caller's.
+  return CallerBits == CalleeBits;
+}
+
 unsigned SystemZTTIImpl::getNumberOfRegisters(unsigned ClassID) const {
   bool Vector = (ClassID == 1);
   if (!Vector)
@@ -887,7 +901,8 @@ InstructionCost SystemZTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
   unsigned SrcScalarBits = Src->getScalarSizeInBits();
 
   if (!Src->isVectorTy()) {
-    assert (!Dst->isVectorTy());
+    if (Dst->isVectorTy())
+      return BaseT::getCastInstrCost(Opcode, Dst, Src, CCH, CostKind, I);
 
     if (Opcode == Instruction::SIToFP || Opcode == Instruction::UIToFP) {
       if (Src->isIntegerTy(128))

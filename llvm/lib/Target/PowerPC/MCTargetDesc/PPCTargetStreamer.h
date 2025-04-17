@@ -9,6 +9,7 @@
 #ifndef LLVM_LIB_TARGET_POWERPC_PPCTARGETSTREAMER_H
 #define LLVM_LIB_TARGET_POWERPC_PPCTARGETSTREAMER_H
 
+#include "PPCMCExpr.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCStreamer.h"
@@ -24,8 +25,7 @@ public:
   PPCTargetStreamer(MCStreamer &S);
   ~PPCTargetStreamer() override;
 
-  virtual void emitTCEntry(const MCSymbol &S,
-                           MCSymbolRefExpr::VariantKind Kind){};
+  virtual void emitTCEntry(const MCSymbol &S, PPCMCExpr::Specifier Kind) {}
   virtual void emitMachine(StringRef CPU){};
   virtual void emitAbiVersion(int AbiVersion){};
   virtual void emitLocalEntry(MCSymbolELF *S, const MCExpr *LocalOffset){};

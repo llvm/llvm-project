@@ -15,11 +15,9 @@
 #define LLVM_TOOLS_LLVM_REDUCE_DELTAS_REDUCEGLOBALVARS_H
 
 #include "Delta.h"
-#include "llvm/IR/Value.h"
-#include "llvm/Transforms/Utils/Cloning.h"
 
 namespace llvm {
-void reduceGlobalsDeltaPass(TestRunner &Test);
+void reduceGlobalsDeltaPass(Oracle &O, ReducerWorkItem &WorkItem);
 } // namespace llvm
 
 #endif

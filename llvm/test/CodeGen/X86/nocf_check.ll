@@ -43,6 +43,29 @@ entry:
   ret void
 }
 
+;; NOTRACK tail call is not implemented, so nocf_check just disables tail call.
+define void @NoCfCheckTail(ptr %p) #1 {
+; CHECK-LABEL: NoCfCheckTail:
+; CHECK:       notrack callq *%rax
+  %f = load ptr, ptr %p, align 4
+  tail call void %f() #2
+  ret void
+}
+
+define void @NoCfCheckTailCond(ptr %f, i1 %x) #1 {
+; CHECK-LABEL: NoCfCheckTailCond:
+; CHECK:       notrack callq *%rdi
+; CHECK:       notrack callq *%rdi
+entry:
+  br i1 %x, label %bb1, label %bb2
+bb1:
+  tail call void %f() #2
+  ret void
+bb2:
+  tail call void %f() #2
+  ret void
+}
+
 attributes #0 = { nocf_check noinline nounwind optnone uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="all" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { noinline nounwind optnone uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="all" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #2 = { nocf_check }

@@ -7,8 +7,9 @@ endif()
 add_subdirectory(Utility)
 add_subdirectory(minidump)
 
-add_lldb_unittest(ProcessEventDataTests
+add_lldb_unittest(ProcessTests
   ProcessEventDataTest.cpp
+  ProcessTraceTest.cpp
 
   LINK_LIBS
       lldbCore
@@ -18,5 +19,6 @@ add_lldb_unittest(ProcessEventDataTests
       lldbUtility
       lldbUtilityHelpers
       lldbInterpreter
+      lldbPluginPlatformLinux
       lldbPluginPlatformMacOSX
   )
