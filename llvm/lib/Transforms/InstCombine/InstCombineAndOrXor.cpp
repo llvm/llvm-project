@@ -3593,6 +3593,72 @@ static Value *foldOrOfInversions(BinaryOperator &I,
   return nullptr;
 }
 
+struct DecomposedBitMaskMul {
+  Value *X;
+  APInt Factor;
+  APInt Mask;
+};
+
+static std::optional<DecomposedBitMaskMul> matchBitmaskMul(Value *V) {
+  Instruction *Op = dyn_cast<Instruction>(V);
+  if (!Op)
+    return std::nullopt;
+
+  Value *MulOp = nullptr;
+  const APInt *MulConst = nullptr;
+  if (match(Op, m_Mul(m_Value(MulOp), m_APInt(MulConst)))) {
+    Value *Original = nullptr;
+    const APInt *Mask = nullptr;
+    if (!MulConst->isStrictlyPositive())
+      return std::nullopt;
+
+    if (match(MulOp, m_And(m_Value(Original), m_APInt(Mask)))) {
+      if (!Mask->isStrictlyPositive())
+        return std::nullopt;
+      DecomposedBitMaskMul Ret;
+      Ret.X = Original;
+      Ret.Mask = *Mask;
+      Ret.Factor = *MulConst;
+      return Ret;
+    }
+    return std::nullopt;
+  }
+
+  Value *Cond = nullptr;
+  const APInt *EqZero = nullptr, *NeZero = nullptr;
+
+  //  (!(A & N) ? 0 : N * C) + (!(A & M) ? 0 : M * C) -> A & (N + M) * C
+  if (match(Op, m_Select(m_Value(Cond), m_APInt(EqZero), m_APInt(NeZero)))) {
+    auto ICmpDecompose =
+        decomposeBitTest(Cond, /*LookThruTrunc=*/true,
+                         /*AllowNonZeroC=*/false, /*DecomposeBitMask=*/true);
+    if (!ICmpDecompose.has_value())
+      return std::nullopt;
+
+    if (ICmpDecompose->Pred == ICmpInst::ICMP_NE)
+      std::swap(EqZero, NeZero);
+
+    if (!EqZero->isZero() || !NeZero->isStrictlyPositive())
+      return std::nullopt;
+
+    if (!ICmpInst::isEquality(ICmpDecompose->Pred) ||
+        !ICmpDecompose->C.isZero() || !ICmpDecompose->Mask.isPowerOf2() ||
+        ICmpDecompose->Mask.isNegative())
+      return std::nullopt;
+
+    if (!NeZero->urem(ICmpDecompose->Mask).isZero())
+      return std::nullopt;
+
+    DecomposedBitMaskMul Ret;
+    Ret.X = ICmpDecompose->X;
+    Ret.Mask = ICmpDecompose->Mask;
+    Ret.Factor = NeZero->udiv(ICmpDecompose->Mask);
+    return Ret;
+  }
+
+  return std::nullopt;
+}
+
 // FIXME: We use commutative matchers (m_c_*) for some, but not all, matches
 // here. We should standardize that construct where it is needed or choose some
 // other way to ensure that commutated variants of patterns are not missed.
@@ -3675,49 +3741,19 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
                                    /*NSW=*/true, /*NUW=*/true))
       return R;
 
-    Value *Cond0 = nullptr, *Cond1 = nullptr;
-    const APInt *Op0Eq = nullptr, *Op0Ne = nullptr;
-    const APInt *Op1Eq = nullptr, *Op1Ne = nullptr;
+    auto Decomp0 = matchBitmaskMul(I.getOperand(0));
+    auto Decomp1 = matchBitmaskMul(I.getOperand(1));
 
-    //  (!(A & N) ? 0 : N * C) + (!(A & M) ? 0 : M * C) -> A & (N + M) * C
-    if (match(I.getOperand(0),
-              m_Select(m_Value(Cond0), m_APInt(Op0Eq), m_APInt(Op0Ne))) &&
-        match(I.getOperand(1),
-              m_Select(m_Value(Cond1), m_APInt(Op1Eq), m_APInt(Op1Ne)))) {
+    if (Decomp0 && Decomp1) {
+      if (Decomp0->X == Decomp1->X &&
+          (Decomp0->Mask & Decomp1->Mask).isZero() &&
+          Decomp0->Factor == Decomp1->Factor) {
+        auto NewAnd = Builder.CreateAnd(
+            Decomp0->X, ConstantInt::get(Decomp0->X->getType(),
+                                         (Decomp0->Mask + Decomp1->Mask)));
 
-      auto LHSDecompose =
-          decomposeBitTest(Cond0, /*LookThruTrunc=*/true,
-                           /*AllowNonZeroC=*/false, /*DecomposeAnd=*/true);
-      auto RHSDecompose =
-          decomposeBitTest(Cond1, /*LookThruTrunc=*/true,
-                           /*AllowNonZeroC=*/false, /*DecomposeAnd=*/true);
-
-      if (LHSDecompose && RHSDecompose && LHSDecompose->X == RHSDecompose->X &&
-          RHSDecompose->Mask.isPowerOf2() && LHSDecompose->Mask.isPowerOf2() &&
-          LHSDecompose->Mask != RHSDecompose->Mask &&
-          LHSDecompose->Mask.getBitWidth() == Op0Ne->getBitWidth() &&
-          RHSDecompose->Mask.getBitWidth() == Op1Ne->getBitWidth()) {
-        assert(Op0Ne->getBitWidth() == Op1Ne->getBitWidth());
-        assert(ICmpInst::isEquality(LHSDecompose->Pred));
-        if (LHSDecompose->Pred == ICmpInst::ICMP_NE)
-          std::swap(Op0Eq, Op0Ne);
-        if (RHSDecompose->Pred == ICmpInst::ICMP_NE)
-          std::swap(Op1Eq, Op1Ne);
-
-        if (!Op0Ne->isZero() && !Op1Ne->isZero() && Op0Eq->isZero() &&
-            Op1Eq->isZero() && Op0Ne->urem(LHSDecompose->Mask).isZero() &&
-            Op1Ne->urem(RHSDecompose->Mask).isZero() &&
-            Op0Ne->udiv(LHSDecompose->Mask) ==
-                Op1Ne->udiv(RHSDecompose->Mask)) {
-          auto NewAnd = Builder.CreateAnd(
-              LHSDecompose->X,
-              ConstantInt::get(LHSDecompose->X->getType(),
-                               (LHSDecompose->Mask + RHSDecompose->Mask)));
-
-          return BinaryOperator::CreateMul(
-              NewAnd, ConstantInt::get(NewAnd->getType(),
-                                       Op0Ne->udiv(LHSDecompose->Mask)));
-        }
+        return BinaryOperator::CreateMul(
+            NewAnd, ConstantInt::get(NewAnd->getType(), Decomp1->Factor));
       }
     }
   }
