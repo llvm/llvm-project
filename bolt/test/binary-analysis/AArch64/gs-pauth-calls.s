@@ -1428,6 +1428,63 @@ printed_instrs_nocfg:
         br      x0
         .size   printed_instrs_nocfg, .-printed_instrs_nocfg
 
+// Test handling of unreachable basic blocks.
+//
+// Basic blocks without any predecessors were observed in real-world optimized
+// code. At least sometimes they were actually reachable via jump table, which
+// was not detected, but the function was processed as if its CFG was
+// reconstructed successfully.
+//
+// As a more predictable model example, let's use really unreachable code
+// for testing.
+
+        .globl  bad_unreachable_call
+        .type   bad_unreachable_call,@function
+bad_unreachable_call:
+// CHECK-LABEL: GS-PAUTH: Warning: no predecessor basic blocks detected (possibly incomplete CFG) in function bad_unreachable_call, basic block {{[^,]+}}, at address
+// CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:      blr     x0
+// CHECK-NOT:   instructions that write to the affected registers after any authentication are:
+// CHECK-LABEL: GS-PAUTH: non-protected call found in function bad_unreachable_call, basic block {{[^,]+}}, at address
+// CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:      blr     x0
+// CHECK-NEXT:  The 0 instructions that write to the affected registers after any authentication are:
+        paciasp
+        stp     x29, x30, [sp, #-16]!
+        mov     x29, sp
+
+        b       1f
+        // unreachable basic block:
+        blr     x0
+
+1:      // reachable basic block:
+        ldp     x29, x30, [sp], #16
+        autiasp
+        ret
+        .size bad_unreachable_call, .-bad_unreachable_call
+
+        .globl  good_unreachable_call
+        .type   good_unreachable_call,@function
+good_unreachable_call:
+// CHECK-NOT: non-protected call{{.*}}good_unreachable_call
+// CHECK-LABEL: GS-PAUTH: Warning: no predecessor basic blocks detected (possibly incomplete CFG) in function good_unreachable_call, basic block {{[^,]+}}, at address
+// CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:      autia   x0, x1
+// CHECK-NOT: instructions that write to the affected registers after any authentication are:
+// CHECK-NOT: non-protected call{{.*}}good_unreachable_call
+        paciasp
+        stp     x29, x30, [sp, #-16]!
+        mov     x29, sp
+
+        b       1f
+        // unreachable basic block:
+        autia   x0, x1
+        blr     x0      // <-- this call is definitely protected provided at least
+                        //     basic block boundaries are detected correctly
+
+1:      // reachable basic block:
+        ldp     x29, x30, [sp], #16
+        autiasp
+        ret
+        .size good_unreachable_call, .-good_unreachable_call
+
         .globl  main
         .type   main,@function
 main:
