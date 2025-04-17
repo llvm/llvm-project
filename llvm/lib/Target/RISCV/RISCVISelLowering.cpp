@@ -5573,6 +5573,7 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
     const int Lane = SVN->getSplatIndex();
     if (Lane >= 0) {
       MVT SVT = VT.getVectorElementType();
+
       // Turn splatted vector load into a strided load with an X0 stride.
       SDValue V = V1;
       // Peek through CONCAT_VECTORS as VectorCombine can concat a vector
