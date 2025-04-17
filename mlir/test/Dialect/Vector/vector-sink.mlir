@@ -551,9 +551,9 @@ func.func @extract_load_scalar_dyn_off(%arg0: memref<?xf32>, %arg1: index, %arg2
   return %1 : f32
 }
 
-// CHECK-LABEL: @extract_load_vec
+// CHECK-LABEL: @extract_load_vec_non_zero_off
 //  CHECK-SAME:   (%[[ARG0:.*]]: memref<?x?xf32>, %[[ARG1:.*]]: index, %[[ARG2:.*]]: index)
-func.func @extract_load_vec(%arg0: memref<?x?xf32>, %arg1: index, %arg2: index) -> vector<4xf32> {
+func.func @extract_load_vec_non_zero_off(%arg0: memref<?x?xf32>, %arg1: index, %arg2: index) -> vector<4xf32> {
 // CHECK:   %[[C1:.*]] = arith.constant 1 : index
 // CHECK:   %[[OFF:.*]] = arith.addi %[[ARG1]], %[[C1]] overflow<nsw> : index
 // CHECK:   %[[RES:.*]] = vector.load %[[ARG0]][%[[OFF]], %[[ARG2]]] : memref<?x?xf32>, vector<4xf32>
@@ -563,9 +563,9 @@ func.func @extract_load_vec(%arg0: memref<?x?xf32>, %arg1: index, %arg2: index) 
   return %1 : vector<4xf32>
 }
 
-// CHECK-LABEL: @extract_load_scalar_high_rank
+// CHECK-LABEL: @extract_load_scalar_non_zero_off_2d_src_memref
 //  CHECK-SAME:   (%[[ARG0:.*]]: memref<?x?xf32>, %[[ARG1:.*]]: index, %[[ARG2:.*]]: index)
-func.func @extract_load_scalar_high_rank(%arg0: memref<?x?xf32>, %arg1: index, %arg2: index) -> f32 {
+func.func @extract_load_scalar_non_zero_off_2d_src_memref(%arg0: memref<?x?xf32>, %arg1: index, %arg2: index) -> f32 {
 // CHECK:   %[[C1:.*]] = arith.constant 1 : index
 // CHECK:   %[[OFF:.*]] = arith.addi %[[ARG2]], %[[C1]] overflow<nsw> : index
 // CHECK:   %[[RES:.*]] = memref.load %[[ARG0]][%[[ARG1]], %[[OFF]]] : memref<?x?xf32>
@@ -587,9 +587,9 @@ func.func @extract_load_vec_high_rank(%arg0: memref<?x?x?xf32>, %arg1: index, %a
   return %1 : vector<4xf32>
 }
 
-// CHECK-LABEL: @negative_extract_load_scalar_from_vec_memref
+// CHECK-LABEL: @negative_extract_load_scalar_from_memref_of_vec
 //  CHECK-SAME:   (%[[ARG0:.*]]: memref<?xvector<4xf32>>, %[[ARG1:.*]]: index)
-func.func @negative_extract_load_scalar_from_vec_memref(%arg0: memref<?xvector<4xf32>>, %arg1: index) -> f32 {
+func.func @negative_extract_load_scalar_from_memref_of_vec(%arg0: memref<?xvector<4xf32>>, %arg1: index) -> f32 {
 // CHECK:   %[[RES:.*]] = vector.load %[[ARG0]][%[[ARG1]]] : memref<?xvector<4xf32>>, vector<4xf32>
 // CHECK:   %[[EXT:.*]] = vector.extract %[[RES]][0] : f32 from vector<4xf32>
 // CHECK:   return %[[EXT]] : f32
@@ -621,7 +621,7 @@ func.func @negative_extract_load_scalable(%arg0: memref<?xf32>, %arg1: index) ->
 }
 
 //-----------------------------------------------------------------------------
-// [Pattern: StoreFromSplat]
+// [Pattern: StoreOpFromSplatOrBroadcast]
 //-----------------------------------------------------------------------------
 
 // CHECK-LABEL: @store_splat
@@ -661,9 +661,9 @@ func.func @negative_store_scalable(%arg0: memref<?xf32>, %arg1: index, %arg2: f3
   return
 }
 
-// CHECK-LABEL: @negative_store_vec_memref
+// CHECK-LABEL: @negative_store_memref_of_vec
 //  CHECK-SAME:   (%[[ARG0:.*]]: memref<?xvector<1xf32>>, %[[ARG1:.*]]: index, %[[ARG2:.*]]: f32)
-func.func @negative_store_vec_memref(%arg0: memref<?xvector<1xf32>>, %arg1: index, %arg2: f32) {
+func.func @negative_store_memref_of_vec(%arg0: memref<?xvector<1xf32>>, %arg1: index, %arg2: f32) {
 // CHECK:   %[[RES:.*]] = vector.splat %[[ARG2]] : vector<1xf32>
 // CHECK:   vector.store %[[RES]], %[[ARG0]][%[[ARG1]]] : memref<?xvector<1xf32>>, vector<1xf32>
   %0 = vector.splat %arg2 : vector<1xf32>

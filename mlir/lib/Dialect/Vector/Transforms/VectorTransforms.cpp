@@ -1088,10 +1088,10 @@ public:
     if (rankOffset < 0)
       return rewriter.notifyMatchFailure(op, "unsupported ranks combination");
 
-    auto resVecType = dyn_cast<VectorType>(op.getResult().getType());
+    auto extractVecType = dyn_cast<VectorType>(op.getResult().getType());
     int64_t finalRank = 0;
-    if (resVecType)
-      finalRank = resVecType.getRank();
+    if (extractVecType)
+      finalRank = extractVecType.getRank();
 
     SmallVector<Value> indices = loadOp.getIndices();
     SmallVector<OpFoldResult> extractPos = op.getMixedPosition();
@@ -1113,8 +1113,8 @@ public:
     }
 
     Value base = loadOp.getBase();
-    if (resVecType) {
-      rewriter.replaceOpWithNewOp<vector::LoadOp>(op, resVecType, base,
+    if (extractVecType) {
+      rewriter.replaceOpWithNewOp<vector::LoadOp>(op, extractVecType, base,
                                                   indices);
     } else {
       rewriter.replaceOpWithNewOp<memref::LoadOp>(op, base, indices);
@@ -1136,7 +1136,7 @@ public:
 /// ```
 /// memref.store %arg2, %arg0[%arg1] : memref<?xf32>
 /// ```
-class StoreFromSplatOrBroadcast final
+class StoreOpFromSplatOrBroadcast final
     : public OpRewritePattern<vector::StoreOp> {
 public:
   using OpRewritePattern::OpRewritePattern;
@@ -2246,7 +2246,7 @@ void mlir::vector::populateSinkVectorOpsPatterns(RewritePatternSet &patterns,
 
 void mlir::vector::populateSinkVectorMemOpsPatterns(RewritePatternSet &patterns,
                                                     PatternBenefit benefit) {
-  patterns.add<ExtractOpFromLoad, StoreFromSplatOrBroadcast>(
+  patterns.add<ExtractOpFromLoad, StoreOpFromSplatOrBroadcast>(
       patterns.getContext(), benefit);
 }
 
