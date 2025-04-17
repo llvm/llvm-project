@@ -1705,8 +1705,10 @@ SparcTargetLowering::SparcTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::FP16_TO_FP, MVT::f128, Expand);
   setOperationAction(ISD::FP_TO_FP16, MVT::f128, Expand);
 
-  setOperationAction(ISD::BITCAST, MVT::f32, Expand);
-  setOperationAction(ISD::BITCAST, MVT::i32, Expand);
+  setOperationAction(ISD::BITCAST, MVT::f32,
+                     Subtarget->isVIS3() ? Legal : Expand);
+  setOperationAction(ISD::BITCAST, MVT::i32,
+                     Subtarget->isVIS3() ? Legal : Expand);
 
   // Sparc has no select or setcc: expand to SELECT_CC.
   setOperationAction(ISD::SELECT, MVT::i32, Expand);
@@ -1744,8 +1746,10 @@ SparcTargetLowering::SparcTargetLowering(const TargetMachine &TM,
   }
 
   if (Subtarget->is64Bit()) {
-    setOperationAction(ISD::BITCAST, MVT::f64, Expand);
-    setOperationAction(ISD::BITCAST, MVT::i64, Expand);
+    setOperationAction(ISD::BITCAST, MVT::f64,
+                       Subtarget->isVIS3() ? Legal : Expand);
+    setOperationAction(ISD::BITCAST, MVT::i64,
+                       Subtarget->isVIS3() ? Legal : Expand);
     setOperationAction(ISD::SELECT, MVT::i64, Expand);
     setOperationAction(ISD::SETCC, MVT::i64, Expand);
     setOperationAction(ISD::BR_CC, MVT::i64, Custom);
