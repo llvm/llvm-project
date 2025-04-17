@@ -996,6 +996,12 @@ public:
     /// Holds the maximum number of concurrent live intervals in the loop.
     /// The key is ClassID of target-provided register class.
     SmallMapVector<unsigned, unsigned, 4> MaxLocalUsers;
+
+    bool anyGreaterThanNumberOfRegisters(const TargetTransformInfo &TTI) {
+      return any_of(MaxLocalUsers, [&](auto &LU) {
+        return LU.second > TTI.getNumberOfRegisters(LU.first);
+      });
+    }
   };
 
   /// Collect values we want to ignore in the cost model.
@@ -4009,12 +4015,7 @@ ElementCount LoopVectorizationCostModel::getMaximizedVFForTarget(
         llvm::bit_floor(WidestRegister.getKnownMinValue() / SmallestType),
         ComputeScalableMaxVF);
     MaxVectorElementCountMaxBW = MinVF(MaxVectorElementCountMaxBW, MaxSafeVF);
-
-    // Set the max VF to the largest viable vectorization factor less than or
-    // equal to the max vector element count.
-    if (ElementCount::isKnownLE(MaxVectorElementCount,
-                                MaxVectorElementCountMaxBW))
-      MaxVF = MaxVectorElementCountMaxBW;
+    MaxVF = MaxVectorElementCountMaxBW;
 
     if (ElementCount MinVF =
             TTI.getMinimumVF(SmallestType, ComputeScalableMaxVF)) {
@@ -4382,10 +4383,7 @@ VectorizationFactor LoopVectorizationPlanner::selectVectorizationFactor() {
 
       /// Don't consider the VF if it exceeds the number of registers for the
       /// target.
-      const auto &MLU = RU.MaxLocalUsers;
-      if (any_of(MLU, [&](decltype(MLU.front()) &LU) {
-            return LU.second > TTI.getNumberOfRegisters(LU.first);
-          }))
+      if (RU.anyGreaterThanNumberOfRegisters(TTI))
         continue;
 
       InstructionCost C = CM.expectedCost(VF);
@@ -7444,10 +7442,7 @@ VectorizationFactor LoopVectorizationPlanner::computeBestVF() {
 
       // Make sure that the VF doesn't use more than the number of available
       // registers
-      const auto &MLU = RU.MaxLocalUsers;
-      if (any_of(MLU, [&](auto &LU) {
-            return LU.second > TTI.getNumberOfRegisters(LU.first);
-          })) {
+      if (RU.anyGreaterThanNumberOfRegisters(TTI)) {
         LLVM_DEBUG(dbgs() << "LV(REG): Ignoring VF " << VF
                           << " as it uses too many registers\n");
         continue;
