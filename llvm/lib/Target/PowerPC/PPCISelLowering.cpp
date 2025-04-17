@@ -11948,14 +11948,15 @@ SDValue PPCTargetLowering::LowerDMFVectorLoad(SDValue Op,
   SDValue DmrPValue;
   if (IsV2048i1) {
     // This corresponds to v2048i1 which represents a dmr pair.
-    SDValue Dmr1Lo(DAG.getMachineNode(PPC::DMXXINSTDMR512, dl, MVT::v512i1, Loads[4],
-                                Loads[5]), 0);
+    SDValue Dmr1Lo(DAG.getMachineNode(PPC::DMXXINSTDMR512, dl, MVT::v512i1,
+                                      Loads[4], Loads[5]),
+                   0);
     SDValue Dmr1Hi(DAG.getMachineNode(PPC::DMXXINSTDMR512_HI, dl, MVT::v512i1,
-                                Loads[6], Loads[7]), 0);
+                                      Loads[6], Loads[7]),
+                   0);
     const SDValue Dmr1Ops[] = {RC, Dmr1Lo, LoSub, Dmr1Hi, HiSub};
-    SDValue Dmr1Value =
-	    SDValue(DAG.getMachineNode(PPC::REG_SEQUENCE, dl,
-				     MVT::v1024i1, Dmr1Ops), 0);
+    SDValue Dmr1Value = SDValue(
+        DAG.getMachineNode(PPC::REG_SEQUENCE, dl, MVT::v1024i1, Dmr1Ops), 0);
 
     SDValue Dmr0Sub = DAG.getTargetConstant(PPC::sub_dmr0, dl, MVT::i32);
     SDValue Dmr1Sub = DAG.getTargetConstant(PPC::sub_dmr1, dl, MVT::i32);
@@ -11963,16 +11964,15 @@ SDValue PPCTargetLowering::LowerDMFVectorLoad(SDValue Op,
     SDValue DmrPRC = DAG.getTargetConstant(PPC::DMRpRCRegClassID, dl, MVT::i32);
     const SDValue DmrPOps[] = {DmrPRC, Value, Dmr0Sub, Dmr1Value, Dmr1Sub};
 
-    DmrPValue =
-      SDValue(DAG.getMachineNode(PPC::REG_SEQUENCE, dl, MVT::v2048i1,
-                                 DmrPOps), 0);
+    DmrPValue = SDValue(
+        DAG.getMachineNode(PPC::REG_SEQUENCE, dl, MVT::v2048i1, DmrPOps), 0);
   }
 
   SDValue RetOps[2];
   if (IsV1024i1)
     RetOps[0] = Value;
-   else
-     RetOps[0] = DmrPValue;
+  else
+    RetOps[0] = DmrPValue;
   RetOps[1] = TF;
 
   return DAG.getMergeValues(RetOps, dl);
@@ -12041,23 +12041,23 @@ SDValue PPCTargetLowering::LowerDMFVectorStore(SDValue Op,
 
   // The types v1024i1 and v2048i1 are used for Dense Math dmr registers and
   // Dense Math dmr pair registers, respectively.
-  assert((IsV1024i1 || IsV2048i1)&& "Unsupported type.");
+  assert((IsV1024i1 || IsV2048i1) && "Unsupported type.");
   assert((Subtarget.hasMMA() && Subtarget.isISAFuture()) &&
          "Dense Math support required.");
   assert(Subtarget.pairedVectorMemops() && "Vector pair support required.");
 
   EVT ReturnTypes[] = {MVT::v256i1, MVT::v256i1};
   if (IsV1024i1) {
-    SDValue Lo(
-        DAG.getMachineNode(TargetOpcode::EXTRACT_SUBREG, dl, MVT::v512i1,
-                           Op.getOperand(1),
-                           DAG.getTargetConstant(PPC::sub_wacc_lo, dl, MVT::i32)),
-        0);
-    SDValue Hi(
-        DAG.getMachineNode(TargetOpcode::EXTRACT_SUBREG, dl, MVT::v512i1,
-                           Op.getOperand(1),
-                           DAG.getTargetConstant(PPC::sub_wacc_hi, dl, MVT::i32)),
-        0);
+    SDValue Lo(DAG.getMachineNode(
+                   TargetOpcode::EXTRACT_SUBREG, dl, MVT::v512i1,
+                   Op.getOperand(1),
+                   DAG.getTargetConstant(PPC::sub_wacc_lo, dl, MVT::i32)),
+               0);
+    SDValue Hi(DAG.getMachineNode(
+                   TargetOpcode::EXTRACT_SUBREG, dl, MVT::v512i1,
+                   Op.getOperand(1),
+                   DAG.getTargetConstant(PPC::sub_wacc_hi, dl, MVT::i32)),
+               0);
     MachineSDNode *ExtNode =
         DAG.getMachineNode(PPC::DMXXEXTFDMR512, dl, ReturnTypes, Lo);
     Values.push_back(SDValue(ExtNode, 0));
@@ -12065,52 +12065,55 @@ SDValue PPCTargetLowering::LowerDMFVectorStore(SDValue Op,
     ExtNode = DAG.getMachineNode(PPC::DMXXEXTFDMR512_HI, dl, ReturnTypes, Hi);
     Values.push_back(SDValue(ExtNode, 0));
     Values.push_back(SDValue(ExtNode, 1));
-  }
-  else {
+  } else {
     // This corresponds to v2048i1 which represents a dmr pair.
     SDValue Dmr0(
-      DAG.getMachineNode(TargetOpcode::EXTRACT_SUBREG, dl, MVT::v1024i1,
-      Op.getOperand(1),
-      DAG.getTargetConstant(PPC::sub_dmr0, dl, MVT::i32)), 0);
+        DAG.getMachineNode(TargetOpcode::EXTRACT_SUBREG, dl, MVT::v1024i1,
+                           Op.getOperand(1),
+                           DAG.getTargetConstant(PPC::sub_dmr0, dl, MVT::i32)),
+        0);
 
     SDValue Dmr1(
-      DAG.getMachineNode(TargetOpcode::EXTRACT_SUBREG, dl, MVT::v1024i1,
-      Op.getOperand(1),
-      DAG.getTargetConstant(PPC::sub_dmr1, dl, MVT::i32)), 0);
+        DAG.getMachineNode(TargetOpcode::EXTRACT_SUBREG, dl, MVT::v1024i1,
+                           Op.getOperand(1),
+                           DAG.getTargetConstant(PPC::sub_dmr1, dl, MVT::i32)),
+        0);
 
-   SDValue Dmr0Lo(
-     DAG.getMachineNode(TargetOpcode::EXTRACT_SUBREG, dl, MVT::v512i1,
-     Dmr0,
-     DAG.getTargetConstant(PPC::sub_wacc_lo, dl, MVT::i32)), 0);
+    SDValue Dmr0Lo(DAG.getMachineNode(
+                       TargetOpcode::EXTRACT_SUBREG, dl, MVT::v512i1, Dmr0,
+                       DAG.getTargetConstant(PPC::sub_wacc_lo, dl, MVT::i32)),
+                   0);
 
-   SDValue Dmr0Hi(
-     DAG.getMachineNode(TargetOpcode::EXTRACT_SUBREG, dl, MVT::v512i1,
-     Dmr0,
-     DAG.getTargetConstant(PPC::sub_wacc_hi, dl, MVT::i32)), 0);
+    SDValue Dmr0Hi(DAG.getMachineNode(
+                       TargetOpcode::EXTRACT_SUBREG, dl, MVT::v512i1, Dmr0,
+                       DAG.getTargetConstant(PPC::sub_wacc_hi, dl, MVT::i32)),
+                   0);
 
-   SDValue Dmr1Lo(
-      DAG.getMachineNode(TargetOpcode::EXTRACT_SUBREG, dl, MVT::v512i1,
-      Dmr1,
-      DAG.getTargetConstant(PPC::sub_wacc_lo, dl, MVT::i32)), 0);
+    SDValue Dmr1Lo(DAG.getMachineNode(
+                       TargetOpcode::EXTRACT_SUBREG, dl, MVT::v512i1, Dmr1,
+                       DAG.getTargetConstant(PPC::sub_wacc_lo, dl, MVT::i32)),
+                   0);
 
-   SDValue Dmr1Hi(
-     DAG.getMachineNode(TargetOpcode::EXTRACT_SUBREG, dl, MVT::v512i1,
-     Dmr1,
-     DAG.getTargetConstant(PPC::sub_wacc_hi, dl, MVT::i32)), 0);
+    SDValue Dmr1Hi(DAG.getMachineNode(
+                       TargetOpcode::EXTRACT_SUBREG, dl, MVT::v512i1, Dmr1,
+                       DAG.getTargetConstant(PPC::sub_wacc_hi, dl, MVT::i32)),
+                   0);
 
-   MachineSDNode *ExtNode =
-     DAG.getMachineNode(PPC::DMXXEXTFDMR512, dl, ReturnTypes, Dmr0Lo);
-   Values.push_back(SDValue(ExtNode, 0));
-   Values.push_back(SDValue(ExtNode, 1));
-   ExtNode = DAG.getMachineNode(PPC::DMXXEXTFDMR512_HI, dl, ReturnTypes, Dmr0Hi);
-   Values.push_back(SDValue(ExtNode, 0));
-   Values.push_back(SDValue(ExtNode, 1));
-   ExtNode = DAG.getMachineNode(PPC::DMXXEXTFDMR512, dl, ReturnTypes, Dmr1Lo);
-   Values.push_back(SDValue(ExtNode, 0));
-   Values.push_back(SDValue(ExtNode, 1));
-   ExtNode = DAG.getMachineNode(PPC::DMXXEXTFDMR512_HI, dl, ReturnTypes, Dmr1Hi);
-   Values.push_back(SDValue(ExtNode, 0));
-   Values.push_back(SDValue(ExtNode, 1));
+    MachineSDNode *ExtNode =
+        DAG.getMachineNode(PPC::DMXXEXTFDMR512, dl, ReturnTypes, Dmr0Lo);
+    Values.push_back(SDValue(ExtNode, 0));
+    Values.push_back(SDValue(ExtNode, 1));
+    ExtNode =
+        DAG.getMachineNode(PPC::DMXXEXTFDMR512_HI, dl, ReturnTypes, Dmr0Hi);
+    Values.push_back(SDValue(ExtNode, 0));
+    Values.push_back(SDValue(ExtNode, 1));
+    ExtNode = DAG.getMachineNode(PPC::DMXXEXTFDMR512, dl, ReturnTypes, Dmr1Lo);
+    Values.push_back(SDValue(ExtNode, 0));
+    Values.push_back(SDValue(ExtNode, 1));
+    ExtNode =
+        DAG.getMachineNode(PPC::DMXXEXTFDMR512_HI, dl, ReturnTypes, Dmr1Hi);
+    Values.push_back(SDValue(ExtNode, 0));
+    Values.push_back(SDValue(ExtNode, 1));
   }
 
   if (Subtarget.isLittleEndian())
