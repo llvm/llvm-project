@@ -2438,8 +2438,8 @@ private:
         if (Token->isNot(TT_EnumRBrace)) {
           if (Token->is(TT_EnumLBrace))
             InEnumBraces = true;
-          else if (InEnumBraces && Line->Affected && Token->isNot(tok::comment))
-            BeforeRBrace = Token;
+          else if (InEnumBraces && Token->isNot(tok::comment))
+            BeforeRBrace = Line->Affected ? Token : nullptr;
           continue;
         }
         InEnumBraces = false;

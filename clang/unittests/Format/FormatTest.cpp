@@ -27962,7 +27962,6 @@ TEST_F(FormatTest, EnumTrailingComma) {
   verifyFormat(Code);
 
   auto Style = getLLVMStyle();
-  EXPECT_TRUE(Style.AllowShortEnumsOnASingleLine);
   Style.EnumTrailingComma = FormatStyle::ETC_Insert;
   verifyFormat("enum : int { /**/ };\n"
                "enum {\n"
@@ -27973,16 +27972,6 @@ TEST_F(FormatTest, EnumTrailingComma) {
                "enum Color { red, green, blue, /**/ };",
                Code, Style);
 
-  Style.AllowShortEnumsOnASingleLine = false;
-  verifyFormat("enum class MyEnum_E {\n"
-               "  MY_ENUM = 0U,\n"
-               "};",
-               "enum class MyEnum_E {\n"
-               "  MY_ENUM = 0U\n"
-               "};",
-               Style);
-  Style.AllowShortEnumsOnASingleLine = true;
-
   Style.EnumTrailingComma = FormatStyle::ETC_Remove;
   verifyFormat("enum : int { /**/ };\n"
                "enum {\n"
@@ -27992,6 +27981,33 @@ TEST_F(FormatTest, EnumTrailingComma) {
                "};\n"
                "enum Color { red, green, blue /**/ };",
                Code, Style);
+
+  EXPECT_TRUE(Style.AllowShortEnumsOnASingleLine);
+  Style.AllowShortEnumsOnASingleLine = false;
+
+  constexpr StringRef Input("enum {\n"
+                            "  //\n"
+                            "  a,\n"
+                            "  /**/\n"
+                            "  b,\n"
+                            "};");
+  verifyFormat(Input, Input, Style, {tooling::Range(12, 3)}); // line 3
+  verifyFormat("enum {\n"
+               "  //\n"
+               "  a,\n"
+               "  /**/\n"
+               "  b\n"
+               "};",
+               Input, Style, {tooling::Range(24, 3)}); // line 5
+
+  Style.EnumTrailingComma = FormatStyle::ETC_Insert;
+  verifyFormat("enum class MyEnum_E {\n"
+               "  MY_ENUM = 0U,\n"
+               "};",
+               "enum class MyEnum_E {\n"
+               "  MY_ENUM = 0U\n"
+               "};",
+               Style);
 }
 
 TEST_F(FormatTest, BreakAfterAttributes) {
