@@ -196,13 +196,10 @@ TEST(DependencyScanningFilesystem, DiagnoseStaleStatFailures) {
   // DepFS's eyes.
   EXPECT_EQ(Path1Exists, false);
 
-  std::string Diags;
-  llvm::raw_string_ostream DiagsStream(Diags);
-  SharedCache.diagnoseNegativeStatCachedPaths(DiagsStream, *InMemoryFS.get());
+  std::vector<std::string> InvalidPaths;
+  SharedCache.diagnoseInvalidNegativeStatCachedPaths(InvalidPaths,
+                                                     *InMemoryFS.get());
 
-  ASSERT_STREQ(
-      "The following paths did not exist when they were first searched, but "
-      "files they point to were created later:\n\t/path1\nFiles missing at the "
-      "paths above may have caused build errors.\n",
-      Diags.c_str());
+  EXPECT_EQ(InvalidPaths.size(), 1u);
+  ASSERT_STREQ("/path1", InvalidPaths[0].c_str());
 }

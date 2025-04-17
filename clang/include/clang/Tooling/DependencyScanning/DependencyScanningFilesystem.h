@@ -220,13 +220,14 @@ public:
   CacheShard &getShardForFilename(StringRef Filename) const;
   CacheShard &getShardForUID(llvm::sys::fs::UniqueID UID) const;
 
-  /// Visits all cached entries and re-stat an entry using the UnderlyingFS if
-  /// it is negatively stat cached. If the re-stat succeeds, print diagnostics
-  /// information to OS indicating that negative stat caching has been
-  /// invalidated.
-  void
-  diagnoseNegativeStatCachedPaths(llvm::raw_ostream &OS,
-                                  llvm::vfs::FileSystem &UnderlyingFS) const;
+  /// Visits all cached entries and re-stat an entry using FS if
+  /// it is negatively stat cached. If re-stat succeeds on a path,
+  /// the path is added to InvalidPaths, indicating that the cache
+  /// may have erroneously negatively cached it. The caller can then
+  /// use InvalidPaths to issue diagnostics.
+  void diagnoseInvalidNegativeStatCachedPaths(
+      std::vector<std::string> &InvalidPaths,
+      llvm::vfs::FileSystem &UnderlyingFS) const;
 
 private:
   std::unique_ptr<CacheShard[]> CacheShards;
