@@ -95,6 +95,8 @@ public:
       return getZeroAttr(arrTy);
     if (auto ptrTy = mlir::dyn_cast<cir::PointerType>(ty))
       return getConstNullPtrAttr(ptrTy);
+    if (auto recordTy = mlir::dyn_cast<cir::RecordType>(ty))
+      return getZeroAttr(recordTy);
     if (mlir::isa<cir::BoolType>(ty)) {
       return getCIRBoolAttr(false);
     }

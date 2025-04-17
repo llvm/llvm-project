@@ -2926,12 +2926,12 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
 
     if (BinaryData *BD = BC->getBinaryDataContainingAddress(SymbolAddress)) {
       // Note: this assertion is trying to check sanity of BinaryData objects
-      // but AArch64 has inferred and incomplete object locations coming from
-      // GOT/TLS or any other non-trivial relocation (that requires creation
-      // of sections and whose symbol address is not really what should be
-      // encoded in the instruction). So we essentially disabled this check
+      // but AArch64 and RISCV has inferred and incomplete object locations
+      // coming from GOT/TLS or any other non-trivial relocation (that requires
+      // creation of sections and whose symbol address is not really what should
+      // be encoded in the instruction). So we essentially disabled this check
       // for AArch64 and live with bogus names for objects.
-      assert((IsAArch64 || IsSectionRelocation ||
+      assert((IsAArch64 || BC->isRISCV() || IsSectionRelocation ||
               BD->nameStartsWith(SymbolName) ||
               BD->nameStartsWith("PG" + SymbolName) ||
               (BD->nameStartsWith("ANONYMOUS") &&

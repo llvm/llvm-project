@@ -737,11 +737,11 @@ bool SampleProfileMatcher::functionMatchesProfileHelper(
     auto FunctionName = FName.str();
     if (Demangler.partialDemangle(FunctionName.c_str()))
       return std::string();
-    constexpr size_t MaxBaseNameSize = 4096;
-    char BaseNameBuf[MaxBaseNameSize] = {};
+    constexpr size_t MaxBaseNameSize = 65536;
+    std::vector<char> BaseNameBuf(MaxBaseNameSize, 0);
     size_t BaseNameSize = MaxBaseNameSize;
     char *BaseNamePtr =
-        Demangler.getFunctionBaseName(BaseNameBuf, &BaseNameSize);
+        Demangler.getFunctionBaseName(BaseNameBuf.data(), &BaseNameSize);
     return (BaseNamePtr && BaseNameSize)
                ? std::string(BaseNamePtr, BaseNameSize)
                : std::string();

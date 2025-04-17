@@ -91,7 +91,7 @@ struct Y {};
 struct Z : W,
   X, check_derived_from<Z, X>, // #cwg2310-X
   check_derived_from<Z, Y>, Y  // #cwg2310-Y
-{  
+{
   // FIXME: It was properly rejected before, but we're crashing since Clang 11 in C++11 and C++14 modes.
   //        See https://github.com/llvm/llvm-project/issues/59920
 #if __cplusplus >= 201703L
@@ -188,7 +188,7 @@ struct InitListCtor {
 
 std::initializer_list<InitListCtor> i;
 auto j = std::initializer_list<InitListCtor>{ i };
-// since-cxx17-error@-1 {{conversion function from 'std::initializer_list<InitListCtor>' to 'const cwg2311::InitListCtor' invokes a deleted function}}
+// since-cxx17-error@-1 {{conversion function from 'std::initializer_list<InitListCtor>' to 'const InitListCtor' invokes a deleted function}}
 //   since-cxx17-note@#cwg2311-InitListCtor {{'InitListCtor' has been explicitly marked deleted here}}
 #endif
 } // namespace cwg2311

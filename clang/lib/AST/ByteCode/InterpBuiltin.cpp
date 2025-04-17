@@ -1872,7 +1872,23 @@ static bool interp__builtin_memcpy(InterpState &S, CodePtr OpPC,
     return false;
   }
 
-  // Check if we have enough elements to read from and write to/
+  if (DestElemType->isIncompleteType() ||
+      DestPtr.getType()->isIncompleteType()) {
+    QualType DiagType =
+        DestElemType->isIncompleteType() ? DestElemType : DestPtr.getType();
+    S.FFDiag(S.Current->getSource(OpPC),
+             diag::note_constexpr_memcpy_incomplete_type)
+        << Move << DiagType;
+    return false;
+  }
+
+  if (!DestElemType.isTriviallyCopyableType(ASTCtx)) {
+    S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_memcpy_nontrivial)
+        << Move << DestElemType;
+    return false;
+  }
+
+  // Check if we have enough elements to read from and write to.
   size_t RemainingDestBytes = RemainingDestElems * DestElemSize;
   size_t RemainingSrcBytes = RemainingSrcElems * SrcElemSize;
   if (Size.ugt(RemainingDestBytes) || Size.ugt(RemainingSrcBytes)) {

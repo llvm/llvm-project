@@ -424,43 +424,14 @@ private:
                  : 0;
     }
     // Try to merge a control statement block with left brace wrapped.
-    if (NextLine.First->is(tok::l_brace)) {
-      if ((TheLine->First->isOneOf(tok::kw_if, tok::kw_else, tok::kw_while,
-                                   tok::kw_for, tok::kw_switch, tok::kw_try,
-                                   tok::kw_do, TT_ForEachMacro) ||
-           (TheLine->First->is(tok::r_brace) && TheLine->First->Next &&
-            TheLine->First->Next->isOneOf(tok::kw_else, tok::kw_catch))) &&
-          Style.BraceWrapping.AfterControlStatement ==
-              FormatStyle::BWACS_MultiLine) {
-        // If possible, merge the next line's wrapped left brace with the
-        // current line. Otherwise, leave it on the next line, as this is a
-        // multi-line control statement.
-        return (Style.ColumnLimit == 0 || TheLine->Level * Style.IndentWidth +
-                                                  TheLine->Last->TotalLength <=
-                                              Style.ColumnLimit)
-                   ? 1
-                   : 0;
-      }
-      if (TheLine->First->isOneOf(tok::kw_if, tok::kw_else, tok::kw_while,
-                                  tok::kw_for, TT_ForEachMacro)) {
-        return (Style.BraceWrapping.AfterControlStatement ==
-                FormatStyle::BWACS_Always)
-                   ? tryMergeSimpleBlock(I, E, Limit)
-                   : 0;
-      }
-      if (TheLine->First->isOneOf(tok::kw_else, tok::kw_catch) &&
-          Style.BraceWrapping.AfterControlStatement ==
-              FormatStyle::BWACS_MultiLine) {
-        // This case if different from the upper BWACS_MultiLine processing
-        // in that a preceding r_brace is not on the same line as else/catch
-        // most likely because of BeforeElse/BeforeCatch set to true.
-        // If the line length doesn't fit ColumnLimit, leave l_brace on the
-        // next line to respect the BWACS_MultiLine.
-        return (Style.ColumnLimit == 0 ||
-                TheLine->Last->TotalLength <= Style.ColumnLimit)
-                   ? 1
-                   : 0;
-      }
+    if (NextLine.First->is(TT_ControlStatementLBrace)) {
+      // If possible, merge the next line's wrapped left brace with the
+      // current line. Otherwise, leave it on the next line, as this is a
+      // multi-line control statement.
+      return Style.BraceWrapping.AfterControlStatement ==
+                     FormatStyle::BWACS_Always
+                 ? tryMergeSimpleBlock(I, E, Limit)
+                 : 0;
     }
     if (PreviousLine && TheLine->First->is(tok::l_brace)) {
       switch (PreviousLine->First->Tok.getKind()) {

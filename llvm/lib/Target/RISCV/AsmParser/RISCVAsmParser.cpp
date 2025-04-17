@@ -395,8 +395,8 @@ struct RISCVOperand final : public MCParsedAsmOperand {
   };
 
   struct RegRegOp {
-    MCRegister Reg1;
-    MCRegister Reg2;
+    MCRegister BaseReg;
+    MCRegister OffsetReg;
   };
 
   SMLoc StartLoc, EndLoc;
@@ -1043,8 +1043,8 @@ public:
       OS << '>';
       break;
     case KindTy::RegReg:
-      OS << "<RegReg:  Reg1 " << RegName(RegReg.Reg1);
-      OS << " Reg2 " << RegName(RegReg.Reg2);
+      OS << "<RegReg: BaseReg " << RegName(RegReg.BaseReg) << " OffsetReg "
+         << RegName(RegReg.OffsetReg);
       break;
     }
   }
@@ -1129,11 +1129,11 @@ public:
     return Op;
   }
 
-  static std::unique_ptr<RISCVOperand> createRegReg(MCRegister Reg1,
-                                                    MCRegister Reg2, SMLoc S) {
+  static std::unique_ptr<RISCVOperand>
+  createRegReg(MCRegister BaseReg, MCRegister OffsetReg, SMLoc S) {
     auto Op = std::make_unique<RISCVOperand>(KindTy::RegReg);
-    Op->RegReg.Reg1 = Reg1;
-    Op->RegReg.Reg2 = Reg2;
+    Op->RegReg.BaseReg = BaseReg;
+    Op->RegReg.OffsetReg = OffsetReg;
     Op->StartLoc = S;
     Op->EndLoc = S;
     return Op;
@@ -1213,8 +1213,8 @@ public:
 
   void addRegRegOperands(MCInst &Inst, unsigned N) const {
     assert(N == 2 && "Invalid number of operands!");
-    Inst.addOperand(MCOperand::createReg(RegReg.Reg1));
-    Inst.addOperand(MCOperand::createReg(RegReg.Reg2));
+    Inst.addOperand(MCOperand::createReg(RegReg.BaseReg));
+    Inst.addOperand(MCOperand::createReg(RegReg.OffsetReg));
   }
 
   void addStackAdjOperands(MCInst &Inst, unsigned N) const {

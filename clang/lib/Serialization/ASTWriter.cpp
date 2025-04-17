@@ -3795,7 +3795,10 @@ bool IsInterestingIdentifier(const IdentifierInfo *II, uint64_t MacroOffset,
       II->getNotableIdentifierID() != tok::NotableIdentifierKind::not_notable ||
       II->getBuiltinID() != Builtin::ID::NotBuiltin ||
       II->getObjCKeywordID() != tok::ObjCKeywordKind::objc_not_keyword;
-  if (MacroOffset || II->isPoisoned() || (!IsModule && IsInteresting) ||
+  if (MacroOffset ||
+      (II->hasMacroDefinition() &&
+       II->hasFETokenInfoChangedSinceDeserialization()) ||
+      II->isPoisoned() || (!IsModule && IsInteresting) ||
       II->hasRevertedTokenIDToIdentifier() ||
       (NeedDecls && II->getFETokenInfo()))
     return true;
@@ -3874,7 +3877,8 @@ public:
     if (isInterestingIdentifier(II, MacroOffset)) {
       DataLen += 2; // 2 bytes for builtin ID
       DataLen += 2; // 2 bytes for flags
-      if (MacroOffset)
+      if (MacroOffset || (II->hasMacroDefinition() &&
+                          II->hasFETokenInfoChangedSinceDeserialization()))
         DataLen += 4; // MacroDirectives offset.
 
       if (NeedDecls && IdResolver)
@@ -3905,15 +3909,17 @@ public:
     assert((Bits & 0xffff) == Bits && "ObjCOrBuiltinID too big for ASTReader.");
     LE.write<uint16_t>(Bits);
     Bits = 0;
-    bool HadMacroDefinition = MacroOffset != 0;
-    Bits = (Bits << 1) | unsigned(HadMacroDefinition);
+    bool HasMacroDefinition =
+        (MacroOffset != 0) || (II->hasMacroDefinition() &&
+                               II->hasFETokenInfoChangedSinceDeserialization());
+    Bits = (Bits << 1) | unsigned(HasMacroDefinition);
     Bits = (Bits << 1) | unsigned(II->isExtensionToken());
     Bits = (Bits << 1) | unsigned(II->isPoisoned());
     Bits = (Bits << 1) | unsigned(II->hasRevertedTokenIDToIdentifier());
     Bits = (Bits << 1) | unsigned(II->isCPlusPlusOperatorKeyword());
     LE.write<uint16_t>(Bits);
 
-    if (HadMacroDefinition)
+    if (HasMacroDefinition)
       LE.write<uint32_t>(MacroOffset);
 
     if (NeedDecls && IdResolver) {

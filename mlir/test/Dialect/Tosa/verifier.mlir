@@ -124,3 +124,46 @@ func.func @test_scalar_output_transpose(%arg0: tensor<*xf32>) -> tensor<f32> {
   %1 = tosa.transpose %arg0 {perms = array<i32: 2, 0, 1>} : (tensor<*xf32>) -> tensor<f32>
   return %1 : tensor<f32>
 }
+
+// -----
+
+func.func @test_slice_invalid_output_rank() {
+  %0 = tensor.empty() : tensor<4x31x31xf32>
+  %start = tosa.const_shape {values = dense<[1, 1]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %size = tosa.const_shape {values = dense<[1, 1, 1]> : tensor<3xindex>} : () -> !tosa.shape<3>
+  // expected-error@+1 {{'tosa.slice' op expect input1 and output to have the same ranks, got 3 and 4}}
+  %3 = tosa.slice %0, %start, %size : (tensor<4x31x31xf32>, !tosa.shape<2>, !tosa.shape<3>) -> tensor<?x?x?x?xf32>
+  return
+}
+
+// -----
+
+func.func @test_slice_invalid_start() {
+  %0 = tensor.empty() : tensor<4x31x31xf32>
+  %start = tosa.const_shape {values = dense<[1, 1]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %size = tosa.const_shape {values = dense<[1, 1, 1]> : tensor<3xindex>} : () -> !tosa.shape<3>
+  // expected-error@+1 {{'tosa.slice' op length of start is not equal to rank of input shape}}
+  %3 = tosa.slice %0, %start, %size : (tensor<4x31x31xf32>, !tosa.shape<2>, !tosa.shape<3>) -> tensor<*xf32>
+  return
+}
+
+// -----
+
+func.func @test_slice_invalid_size() {
+  %0 = tensor.empty() : tensor<4x31x31xf32>
+  %start = tosa.const_shape {values = dense<[1, 1, 1]> : tensor<3xindex>} : () -> !tosa.shape<3>
+  %size = tosa.const_shape {values = dense<[1]> : tensor<1xindex>} : () -> !tosa.shape<1>
+  // expected-error@+1 {{'tosa.slice' op length of size is not equal to rank of input shape}}
+  %3 = tosa.slice %0, %start, %size : (tensor<4x31x31xf32>, !tosa.shape<3>, !tosa.shape<1>) -> tensor<*xf32>
+  return
+}
+
+// -----
+
+func.func @test_scalar_slice(%arg0: tensor<f32>) -> tensor<f32> {
+  %0 = tosa.const_shape {values = dense<[]> : tensor<0xindex>} : () -> !tosa.shape<0>
+  %1 = tosa.const_shape {values = dense<[]> : tensor<0xindex>} : () -> !tosa.shape<0>
+  // expected-error@+1 {{'tosa.slice' op operand #0 must be tosa-conformant tensor of at least rank 1, but got 'tensor<f32>'}}
+  %2 = tosa.slice %arg0, %0, %1 : (tensor<f32>, !tosa.shape<0>, !tosa.shape<0>) -> tensor<f32>
+  return %2 : tensor<f32>
+}

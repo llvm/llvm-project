@@ -4153,8 +4153,18 @@ void TokenAnnotator::calculateFormattingInformation(AnnotatedLine &Line) const {
                              ChildSize + Current->SpacesRequiredBefore;
     }
 
-    if (Current->is(TT_CtorInitializerColon))
+    if (Current->is(TT_ControlStatementLBrace)) {
+      if (Style.ColumnLimit > 0 &&
+          Style.BraceWrapping.AfterControlStatement ==
+              FormatStyle::BWACS_MultiLine &&
+          Line.Level * Style.IndentWidth + Line.Last->TotalLength >
+              Style.ColumnLimit) {
+        Current->CanBreakBefore = true;
+        Current->MustBreakBefore = true;
+      }
+    } else if (Current->is(TT_CtorInitializerColon)) {
       InFunctionDecl = false;
+    }
 
     // FIXME: Only calculate this if CanBreakBefore is true once static
     // initializers etc. are sorted out.
@@ -5586,11 +5596,12 @@ static bool isAllmanLambdaBrace(const FormatToken &Tok) {
 
 bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
                                      const FormatToken &Right) const {
-  const FormatToken &Left = *Right.Previous;
   if (Right.NewlinesBefore > 1 && Style.MaxEmptyLinesToKeep > 0 &&
       (!Style.RemoveEmptyLinesInUnwrappedLines || &Right == Line.First)) {
     return true;
   }
+
+  const FormatToken &Left = *Right.Previous;
 
   if (Style.BreakFunctionDefinitionParameters && Line.MightBeFunctionDecl &&
       Line.mightBeFunctionDefinition() && Left.MightBeFunctionDeclParen &&
