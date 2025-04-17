@@ -1302,6 +1302,9 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
       else if (Name.consume_front("atomic.load.add."))
         // nvvm.atomic.load.add.{f32.p,f64.p}
         Expand = Name.starts_with("f32.p") || Name.starts_with("f64.p");
+      else if (Name.consume_front("atomic.load.") && Name.consume_back(".32"))
+        // nvvm.atomic.load.{inc,dec}.32
+        Expand = Name == "inc" || Name == "dec";
       else if (Name.consume_front("bitcast."))
         // nvvm.bitcast.{f2i,i2f,ll2d,d2ll}
         Expand =
@@ -1516,8 +1519,13 @@ bool llvm::UpgradeIntrinsicFunction(Function *F, Function *&NewFn,
   // Upgrade intrinsic attributes.  This does not change the function.
   if (NewFn)
     F = NewFn;
-  if (Intrinsic::ID id = F->getIntrinsicID())
-    F->setAttributes(Intrinsic::getAttributes(F->getContext(), id));
+  if (Intrinsic::ID id = F->getIntrinsicID()) {
+    // Only do this if the intrinsic signature is valid.
+    SmallVector<Type *> OverloadTys;
+    if (Intrinsic::getIntrinsicSignature(id, F->getFunctionType(), OverloadTys))
+      F->setAttributes(
+          Intrinsic::getAttributes(F->getContext(), id, F->getFunctionType()));
+  }
   return Upgraded;
 }
 
@@ -2313,6 +2321,12 @@ static Value *upgradeNVVMIntrinsicCall(StringRef Name, CallBase *CI,
     Value *Ptr = CI->getArgOperand(0);
     Value *Val = CI->getArgOperand(1);
     Rep = Builder.CreateAtomicRMW(AtomicRMWInst::FAdd, Ptr, Val, MaybeAlign(),
+                                  AtomicOrdering::SequentiallyConsistent);
+  } else if (Name.consume_front("atomic.load.") && Name.consume_back(".32")) {
+    Value *Ptr = CI->getArgOperand(0);
+    Value *Val = CI->getArgOperand(1);
+    auto Op = Name == "inc" ? AtomicRMWInst::UIncWrap : AtomicRMWInst::UDecWrap;
+    Rep = Builder.CreateAtomicRMW(Op, Ptr, Val, MaybeAlign(),
                                   AtomicOrdering::SequentiallyConsistent);
   } else if (Name.consume_front("max.") &&
              (Name == "s" || Name == "i" || Name == "ll" || Name == "us" ||

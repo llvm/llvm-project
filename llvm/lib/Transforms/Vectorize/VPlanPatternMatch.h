@@ -84,13 +84,15 @@ struct deferredval_ty {
 /// whichever value m_VPValue(X) populated.
 inline deferredval_ty m_Deferred(VPValue *const &V) { return V; }
 
-/// Match a specified integer value or vector of all elements of that
-/// value. \p BitWidth optionally specifies the bitwidth the matched constant
-/// must have. If it is 0, the matched constant can have any bitwidth.
-template <unsigned BitWidth = 0> struct specific_intval {
-  APInt Val;
+/// Match an integer constant or vector of constants if Pred::isValue returns
+/// true for the APInt. \p BitWidth optionally specifies the bitwidth the
+/// matched constant must have. If it is 0, the matched constant can have any
+/// bitwidth.
+template <typename Pred, unsigned BitWidth = 0> struct int_pred_ty {
+  Pred P;
 
-  specific_intval(APInt V) : Val(std::move(V)) {}
+  int_pred_ty(Pred P) : P(std::move(P)) {}
+  int_pred_ty() : P() {}
 
   bool match(VPValue *VPV) const {
     if (!VPV->isLiveIn())
@@ -108,17 +110,45 @@ template <unsigned BitWidth = 0> struct specific_intval {
 
     if (BitWidth != 0 && CI->getBitWidth() != BitWidth)
       return false;
-    return APInt::isSameValue(CI->getValue(), Val);
+    return P.isValue(CI->getValue());
   }
 };
 
+/// Match a specified integer value or vector of all elements of that
+/// value. \p BitWidth optionally specifies the bitwidth the matched constant
+/// must have. If it is 0, the matched constant can have any bitwidth.
+struct is_specific_int {
+  APInt Val;
+
+  is_specific_int(APInt Val) : Val(std::move(Val)) {}
+
+  bool isValue(const APInt &C) const { return APInt::isSameValue(Val, C); }
+};
+
+template <unsigned Bitwidth = 0>
+using specific_intval = int_pred_ty<is_specific_int, Bitwidth>;
+
 inline specific_intval<0> m_SpecificInt(uint64_t V) {
-  return specific_intval<0>(APInt(64, V));
+  return specific_intval<0>(is_specific_int(APInt(64, V)));
 }
 
-inline specific_intval<1> m_False() { return specific_intval<1>(APInt(64, 0)); }
+inline specific_intval<1> m_False() {
+  return specific_intval<1>(is_specific_int(APInt(64, 0)));
+}
 
-inline specific_intval<1> m_True() { return specific_intval<1>(APInt(64, 1)); }
+inline specific_intval<1> m_True() {
+  return specific_intval<1>(is_specific_int(APInt(64, 1)));
+}
+
+struct is_all_ones {
+  bool isValue(const APInt &C) const { return C.isAllOnes(); }
+};
+
+/// Match an integer or vector with all bits set.
+/// For vectors, this includes constants with undefined elements.
+inline int_pred_ty<is_all_ones> m_AllOnes() {
+  return int_pred_ty<is_all_ones>();
+}
 
 /// Matching combinators
 template <typename LTy, typename RTy> struct match_combine_or {

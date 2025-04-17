@@ -136,9 +136,13 @@ struct GPUShuffleOpLowering : public ConvertOpToLLVMPattern<gpu::ShuffleOp> {
   matchAndRewrite(gpu::ShuffleOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     Location loc = op->getLoc();
+    Value initShflValue = adaptor.getValue();
+    Type shflType = initShflValue.getType();
     // TODO: Add support for non 32-bit shuffle values.
-    if (adaptor.getValue().getType().getIntOrFloatBitWidth() != 32)
-      return failure();
+    if (!shflType.isIntOrFloat() || shflType.getIntOrFloatBitWidth() != 32)
+      return rewriter.notifyMatchFailure(
+          op, "only 32-bit int/float types are supported");
+
     const unsigned indexBitwidth = getTypeConverter()->getIndexTypeBitwidth();
     Value srcLaneId = getLaneId(rewriter, loc, indexBitwidth);
 
@@ -175,16 +179,14 @@ struct GPUShuffleOpLowering : public ConvertOpToLLVMPattern<gpu::ShuffleOp> {
     Value two = rewriter.create<LLVM::ConstantOp>(loc, int32Type, 2);
     Value dwordAlignedDstLane =
         rewriter.create<LLVM::ShlOp>(loc, int32Type, selectDstLane, two);
-    Value initShflValue = adaptor.getValue();
-    if (adaptor.getValue().getType().isF32()) {
+    if (shflType.isF32()) {
       initShflValue =
           rewriter.create<LLVM::BitcastOp>(loc, int32Type, initShflValue);
     }
     Value shflValue = rewriter.create<ROCDL::DsBpermuteOp>(
         loc, int32Type, dwordAlignedDstLane, initShflValue);
-    if (adaptor.getValue().getType().isF32()) {
-      shflValue = rewriter.create<LLVM::BitcastOp>(
-          loc, adaptor.getValue().getType(), shflValue);
+    if (shflType.isF32()) {
+      shflValue = rewriter.create<LLVM::BitcastOp>(loc, shflType, shflValue);
     }
     rewriter.replaceOp(op, {shflValue, isActiveSrcLane});
     return success();

@@ -745,8 +745,7 @@ ExprResult Sema::CheckPackExpansion(Expr *Pattern, SourceLocation EllipsisLoc,
   }
 
   // Create the pack expansion expression and source-location information.
-  return new (Context)
-    PackExpansionExpr(Context.DependentTy, Pattern, EllipsisLoc, NumExpansions);
+  return new (Context) PackExpansionExpr(Pattern, EllipsisLoc, NumExpansions);
 }
 
 bool Sema::CheckParameterPacksForExpansion(
@@ -1287,7 +1286,8 @@ TemplateArgumentLoc Sema::getTemplateArgumentPackExpansionPattern(
     Expr *Pattern = Expansion->getPattern();
     Ellipsis = Expansion->getEllipsisLoc();
     NumExpansions = Expansion->getNumExpansions();
-    return TemplateArgumentLoc(Pattern, Pattern);
+    return TemplateArgumentLoc(
+        TemplateArgument(Pattern, Argument.isCanonicalExpr()), Pattern);
   }
 
   case TemplateArgument::TemplateExpansion:

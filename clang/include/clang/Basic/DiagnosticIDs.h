@@ -71,17 +71,6 @@ namespace clang {
     /// All of the diagnostics that can be emitted by the frontend.
     typedef unsigned kind;
 
-    // Get typedefs for common diagnostics.
-    enum {
-#define DIAG(ENUM, FLAGS, DEFAULT_MAPPING, DESC, GROUP, SFINAE, CATEGORY,      \
-             NOWERROR, SHOWINSYSHEADER, SHOWINSYSMACRO, DEFFERABLE)            \
-  ENUM,
-#define COMMONSTART
-#include "clang/Basic/DiagnosticCommonKinds.inc"
-      NUM_BUILTIN_COMMON_DIAGNOSTICS
-#undef DIAG
-    };
-
     /// Enum values that allow the client to map NOTEs, WARNINGs, and EXTENSIONs
     /// to either Ignore (nothing), Remark (emit a remark), Warning
     /// (emit a warning) or Error (emit as an error).  It allows clients to
@@ -103,20 +92,13 @@ namespace clang {
       Remark          ///< A diagnostic that indicates normal progress through
                       ///< compilation.
     };
-  }
+  } // end namespace diag
+} // end namespace clang
 
-  namespace diag_compat {
-#define DIAG_COMPAT_IDS_BEGIN() enum {
-#define DIAG_COMPAT_IDS_END()                                                \
-    }                                                                          \
-    ;
-#define DIAG_COMPAT_ID(IDX, NAME, ...) NAME = IDX,
-#include "clang/Basic/DiagnosticCommonCompatIDs.inc"
-#undef DIAG_COMPAT_ID
-#undef DIAG_COMPAT_IDS_BEGIN
-#undef DIAG_COMPAT_IDS_END
-  } // end namespace diag_compat
+// This has to be included *after* the DIAG_START_ enums above are defined.
+#include "clang/Basic/DiagnosticCommonInterface.inc"
 
+namespace clang {
 class DiagnosticMapping {
   LLVM_PREFERRED_TYPE(diag::Severity)
   unsigned Severity : 3;

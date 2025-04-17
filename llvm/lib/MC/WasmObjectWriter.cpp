@@ -606,15 +606,6 @@ void WasmObjectWriter::recordRelocation(MCAssembler &Asm,
     SymA->setUsedInReloc();
   }
 
-  switch (Target.getSpecifier()) {
-  case MCSymbolRefExpr::VK_GOT:
-  case MCSymbolRefExpr::VK_WASM_GOT_TLS:
-    SymA->setUsedInGOT();
-    break;
-  default:
-    break;
-  }
-
   WasmRelocationEntry Rec(FixupOffset, SymA, C, Type, &FixupSection);
   LLVM_DEBUG(dbgs() << "WasmReloc: " << Rec << "\n");
 

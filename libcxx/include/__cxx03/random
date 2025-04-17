@@ -1709,15 +1709,9 @@ class piecewise_linear_distribution
 #include <__cxx03/__random/student_t_distribution.h>
 #include <__cxx03/__random/subtract_with_carry_engine.h>
 #include <__cxx03/__random/uniform_int_distribution.h>
-#include <__cxx03/__random/uniform_random_bit_generator.h>
 #include <__cxx03/__random/uniform_real_distribution.h>
 #include <__cxx03/__random/weibull_distribution.h>
 #include <__cxx03/version>
-
-// standard-mandated includes
-
-// [rand.synopsis]
-#include <__cxx03/initializer_list>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -1727,7 +1721,6 @@ class piecewise_linear_distribution
 #  include <__cxx03/algorithm>
 #  include <__cxx03/climits>
 #  include <__cxx03/cmath>
-#  include <__cxx03/concepts>
 #  include <__cxx03/cstddef>
 #  include <__cxx03/cstdint>
 #  include <__cxx03/cstdlib>
