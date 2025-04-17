@@ -24,6 +24,11 @@ CODEGENOPT(OptimizationLevel, 2, 0) ///< The -O[0-3] option specified.
 CODEGENOPT(DebugPassManager, 1, 0) ///< Prints debug information for the new
                                    ///< pass manager.
 
+ENUM_CODEGENOPT(ProfileInstr, ProfileInstrKind, 2, ProfileNone)
+ENUM_CODEGENOPT(ProfileUse, ProfileInstrKind, 2, ProfileNone)
+/// Whether emit extra debug info for sample pgo profile collection.
+CODEGENOPT(DebugInfoForProfiling, 1, 0)
+CODEGENOPT(AtomicProfileUpdate , 1, 0) ///< Set -fprofile-update=atomic
 CODEGENOPT(IsPIE, 1, 0) ///< PIE level is the same as PIC Level.
 CODEGENOPT(PICLevel, 2, 0) ///< PIC level of the LLVM module.
 CODEGENOPT(PrepareForFullLTO , 1, 0) ///< Set when -flto is enabled on the

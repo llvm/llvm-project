@@ -882,6 +882,14 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
   // TODO: Handle interactions between -w, -pedantic, -Wall, -WOption
   Args.AddLastArg(CmdArgs, options::OPT_w);
 
+
+  if (Args.hasArg(options::OPT_fprofile_generate)){ 
+    CmdArgs.push_back("-fprofile-generate");
+  }
+  if (const Arg *A = Args.getLastArg(options::OPT_fprofile_use_EQ)) {
+    CmdArgs.push_back(Args.MakeArgString(std::string("-fprofile-use=") + A->getValue()));
+  }
+
   // Forward flags for OpenMP. We don't do this if the current action is an
   // device offloading action other than OpenMP.
   if (Args.hasFlag(options::OPT_fopenmp, options::OPT_fopenmp_EQ,
