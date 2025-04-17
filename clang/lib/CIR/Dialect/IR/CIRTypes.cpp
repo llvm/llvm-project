@@ -237,106 +237,86 @@ void RecordType::complete(ArrayRef<Type> members, bool packed, bool padded) {
 llvm::TypeSize
 RecordType::getTypeSizeInBits(const mlir::DataLayout &dataLayout,
                               mlir::DataLayoutEntryListRef params) const {
-  if (!layoutInfo)
-    computeSizeAndAlignment(dataLayout);
-  return llvm::TypeSize::getFixed(
-      mlir::cast<cir::RecordLayoutAttr>(layoutInfo).getSize() * 8);
+  if (isUnion()) {
+    // TODO(CIR): Implement union layout.
+    return llvm::TypeSize::getFixed(8);
+  }
+
+  unsigned recordSize = computeStructSize(dataLayout);
+  return llvm::TypeSize::getFixed(recordSize * 8);
 }
 
 uint64_t
 RecordType::getABIAlignment(const ::mlir::DataLayout &dataLayout,
                             ::mlir::DataLayoutEntryListRef params) const {
-  if (!layoutInfo)
-    computeSizeAndAlignment(dataLayout);
-  return mlir::cast<cir::RecordLayoutAttr>(layoutInfo).getAlignment();
+  if (isUnion()) {
+    // TODO(CIR): Implement union layout.
+    return 8;
+  }
+
+  // Packed structures always have an ABI alignment of 1.
+  if (getPacked())
+    return 1;
+  return computeStructAlignment(dataLayout);
 }
 
-void RecordType::computeSizeAndAlignment(
-    const mlir::DataLayout &dataLayout) const {
+unsigned
+RecordType::computeStructSize(const mlir::DataLayout &dataLayout) const {
   assert(isComplete() && "Cannot get layout of incomplete records");
-  // Do not recompute.
-  if (layoutInfo)
-    return;
 
   // This is a similar algorithm to LLVM's StructLayout.
   unsigned recordSize = 0;
-  llvm::Align recordAlignment{1};
-  bool isPadded = false;
-  unsigned numElements = getNumElements();
-  ArrayRef<mlir::Type> members = getMembers();
-  mlir::Type largestMember;
-  unsigned largestMemberSize = 0;
-  llvm::SmallVector<mlir::Attribute, 4> memberOffsets;
-
-  bool dontCountLastElt = isUnion() && getPadded();
-  if (dontCountLastElt)
-    numElements--;
-
-  // Loop over each of the elements, placing them in memory.
-  memberOffsets.reserve(numElements);
+  uint64_t recordAlignment = 1;
 
   // We can't use a range-based for loop here because we might be ignoring the
   // last element.
-  for (unsigned i = 0, e = numElements; i != e; ++i) {
-    mlir::Type ty = members[i];
+  for (mlir::Type ty : getMembers()) {
+    // This assumes that we're calculating size based on the ABI alignment, not
+    // the preferred alignment for each type.
+    const uint64_t tyAlign =
+        (getPacked() ? 1 : dataLayout.getTypeABIAlignment(ty));
 
-    // If we're processing a union, we need to find the largest member.
-    if (isUnion() && (!largestMember ||
-                      dataLayout.getTypeABIAlignment(ty) >
-                          dataLayout.getTypeABIAlignment(largestMember) ||
-                      (dataLayout.getTypeABIAlignment(ty) ==
-                           dataLayout.getTypeABIAlignment(largestMember) &&
-                       dataLayout.getTypeSize(ty) > largestMemberSize))) {
-      largestMember = ty;
-      largestMemberSize = dataLayout.getTypeSize(largestMember);
-    }
+    // This should be aligned because the padding is inserted when we build
+    // the record.
+    assert(llvm::isAligned(llvm::Align(tyAlign), recordSize));
 
-    // This matches LLVM since it uses the ABI instead of preferred alignment.
-    const llvm::Align tyAlign =
-        llvm::Align(getPacked() ? 1 : dataLayout.getTypeABIAlignment(ty));
-
-    // Add padding if necessary to align the data element properly.
-    if (!llvm::isAligned(tyAlign, recordSize)) {
-      isPadded = true;
-      recordSize = llvm::alignTo(recordSize, tyAlign);
-    }
-
-    // Keep track of maximum alignment constraint.
-    recordAlignment = std::max(tyAlign, recordAlignment);
-
-    // Record size up to each element is the element offset.
-    memberOffsets.push_back(mlir::IntegerAttr::get(
-        mlir::IntegerType::get(getContext(), 32), isUnion() ? 0 : recordSize));
-
-    // Consume space for this data item
+    // Add padding to the struct size to align it to the abi alignment of the
+    // element type before than adding the size of the element.
+    recordSize = llvm::alignTo(recordSize, tyAlign);
     recordSize += dataLayout.getTypeSize(ty);
+
+    // The alignment requirement of a struct is equal to the strictest alignment
+    // requirement of its elements.
+    recordAlignment = std::max(tyAlign, recordAlignment);
   }
 
-  // For unions, the size and aligment is that of the largest element.
-  if (isUnion()) {
-    recordSize = largestMemberSize;
-    if (getPadded()) {
-      memberOffsets.push_back(mlir::IntegerAttr::get(
-          mlir::IntegerType::get(getContext(), 32), recordSize));
-      mlir::Type ty = members[numElements];
-      recordSize += dataLayout.getTypeSize(ty);
-      isPadded = true;
-    } else {
-      isPadded = false;
-    }
-  } else {
-    // Add padding to the end of the record so that it could be put in an array
-    // and all array elements would be aligned correctly.
-    if (!llvm::isAligned(recordAlignment, recordSize)) {
-      isPadded = true;
-      recordSize = llvm::alignTo(recordSize, recordAlignment);
-    }
-  }
+  // Add padding to the end of the record so that it could be put in an array
+  // and all array elements would be aligned correctly.
+  assert(llvm::isAligned(llvm::Align(recordAlignment), recordSize));
+  // if (!llvm::isAligned(recordAlignment, recordSize))
+  //   recordSize = llvm::alignTo(recordSize, recordAlignment);
 
-  auto offsets = mlir::ArrayAttr::get(getContext(), memberOffsets);
-  layoutInfo = cir::RecordLayoutAttr::get(getContext(), recordSize,
-                                          recordAlignment.value(), isPadded,
-                                          largestMember, offsets);
+  // At the end, add padding to the struct to satisfy its own alignment
+  // requirement. Otherwise structs inside of arrays would be misaligned.
+  recordSize = llvm::alignTo(recordSize, recordAlignment);
+  return recordSize;
+}
+
+// We also compute the alignment as part of computeStructSize, but this is more
+// efficient. Ideally, we'd like to compute both at once and cache the result,
+// but that's implemented yet.
+// TODO(CIR): Implement a way to cache the result.
+uint64_t
+RecordType::computeStructAlignment(const mlir::DataLayout &dataLayout) const {
+  assert(isComplete() && "Cannot get layout of incomplete records");
+
+  // This is a similar algorithm to LLVM's StructLayout.
+  uint64_t recordAlignment = 1;
+  for (mlir::Type ty : getMembers())
+    recordAlignment =
+        std::max(dataLayout.getTypeABIAlignment(ty), recordAlignment);
+
+  return recordAlignment;
 }
 
 //===----------------------------------------------------------------------===//

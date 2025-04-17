@@ -229,32 +229,4 @@ def ConstPtrAttr : CIR_Attr<"ConstPtr", "ptr", [TypedAttrInterface]> {
   }];
 }
 
-//===----------------------------------------------------------------------===//
-// RecordLayoutAttr
-//===----------------------------------------------------------------------===//
-
-// Used to decouple layout information from the record type. RecordType's
-// uses this attribute to cache that information.
-
-def RecordLayoutAttr : CIR_Attr<"RecordLayout", "record_layout"> {
-  let summary = "ABI specific information about a record layout";
-  let description = [{
-    Holds layout information often queried by !cir.record users
-    during lowering passes and optimizations.
-  }];
-
-  let parameters = (ins "unsigned":$size,
-                        "unsigned":$alignment,
-                        "bool":$padded,
-                        "mlir::Type":$largest_member,
-                        "mlir::ArrayAttr":$offsets);
-
-  let genVerifyDecl = 1;
-  let assemblyFormat = [{
-    `<`
-      struct($size, $alignment, $padded, $largest_member, $offsets)
-    `>`
-  }];
-}
-
 #endif // LLVM_CLANG_CIR_DIALECT_IR_CIRATTRS_TD
