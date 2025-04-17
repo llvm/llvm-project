@@ -172,7 +172,7 @@ dropping locations applies.
 .. _NewInstLocations:
 
 Setting locations for new instructions
-------------------------------------
+--------------------------------------
 
 Whenever a new instruction is created and there is no suitable location for that
 instruction, that location should be annotated accordingly. There are a set of
