@@ -6311,8 +6311,7 @@ SemaCodeCompletion::ProduceCallSignatureHelp(Expr *Fn, ArrayRef<Expr *> Args,
   Expr *NakedFn = Fn->IgnoreParenCasts();
   // Build an overload candidate set based on the functions we find.
   SourceLocation Loc = Fn->getExprLoc();
-  OverloadCandidateSet CandidateSet(Loc,
-                                    OverloadCandidateSet::CSK_CodeCompletion);
+  OverloadCandidateSet CandidateSet(Loc, OverloadCandidateSet::CSK_Normal);
 
   if (auto ULE = dyn_cast<UnresolvedLookupExpr>(NakedFn)) {
     SemaRef.AddOverloadedCallCandidates(ULE, ArgsWithoutDependentTypes,
@@ -6515,8 +6514,7 @@ QualType SemaCodeCompletion::ProduceConstructorSignatureHelp(
   // FIXME: Provide support for variadic template constructors.
 
   if (CRD) {
-    OverloadCandidateSet CandidateSet(Loc,
-                                      OverloadCandidateSet::CSK_CodeCompletion);
+    OverloadCandidateSet CandidateSet(Loc, OverloadCandidateSet::CSK_Normal);
     for (NamedDecl *C : SemaRef.LookupConstructors(CRD)) {
       if (auto *FD = dyn_cast<FunctionDecl>(C)) {
         // FIXME: we can't yet provide correct signature help for initializer
