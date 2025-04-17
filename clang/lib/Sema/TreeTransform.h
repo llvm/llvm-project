@@ -5287,6 +5287,17 @@ QualType TreeTransform<Derived>::RebuildQualifiedType(QualType T,
     return QualType();
   }
 
+  PointerAuthQualifier LocalPointerAuth = Quals.getPointerAuth();
+  if (LocalPointerAuth.isPresent()) {
+    if (T.getPointerAuth().isPresent()) {
+      SemaRef.Diag(Loc, diag::err_ptrauth_qualifier_redundant)
+          << TL.getType() << "__ptrauth";
+      return QualType();
+    } else if (!T->isSignableType() && !T->isDependentType()) {
+      SemaRef.Diag(Loc, diag::err_ptrauth_qualifier_nonpointer) << T;
+      return QualType();
+    }
+  }
   // C++ [dcl.fct]p7:
   //   [When] adding cv-qualifications on top of the function type [...] the
   //   cv-qualifiers are ignored.
@@ -11992,13 +12003,10 @@ void OpenACCClauseTransform<Derived>::VisitDetachClause(
   llvm::SmallVector<Expr *> VarList = VisitVarList(C.getVarList());
 
   // Ensure each var is a pointer type.
-  VarList.erase(
-      std::remove_if(VarList.begin(), VarList.end(),
-                     [&](Expr *E) {
-                       return Self.getSema().OpenACC().CheckVarIsPointerType(
-                           OpenACCClauseKind::Detach, E);
-                     }),
-      VarList.end());
+  llvm::erase_if(VarList, [&](Expr *E) {
+    return Self.getSema().OpenACC().CheckVarIsPointerType(
+        OpenACCClauseKind::Detach, E);
+  });
 
   ParsedClause.setVarListDetails(VarList, OpenACCModifierKind::Invalid);
   NewClause = OpenACCDetachClause::Create(

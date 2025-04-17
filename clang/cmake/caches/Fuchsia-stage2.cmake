@@ -459,7 +459,6 @@ set(LLVM_TOOLCHAIN_TOOLS
   llvm-libtool-darwin
   llvm-lipo
   llvm-ml
-  llvm-mt
   llvm-nm
   llvm-objcopy
   llvm-objdump
@@ -480,6 +479,10 @@ set(LLVM_TOOLCHAIN_TOOLS
   sancov
   scan-build-py
   CACHE STRING "")
+
+if (LLVM_ENABLE_LIBXML2)
+  list(APPEND LLVM_TOOLCHAIN_TOOLS llvm-mt)
+endif()
 
 set(LLVM_Toolchain_DISTRIBUTION_COMPONENTS
   bolt

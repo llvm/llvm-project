@@ -85,10 +85,10 @@ def c_lui_imm : RISCVOp,
   let OperandType = "OPERAND_CLUI_IMM";
   let MCOperandPredicate = [{
     int64_t Imm;
-    if (MCOp.evaluateAsConstantImm(Imm))
-      return (Imm != 0) && (isUInt<5>(Imm) ||
-             (Imm >= 0xfffe0 && Imm <= 0xfffff));
-    return MCOp.isBareSymbolRef();
+    if (!MCOp.evaluateAsConstantImm(Imm))
+      return false;
+    return (Imm != 0) && (isUInt<5>(Imm) ||
+           (Imm >= 0xfffe0 && Imm <= 0xfffff));
   }];
 }
 

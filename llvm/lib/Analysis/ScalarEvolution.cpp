@@ -7841,7 +7841,7 @@ const SCEV *ScalarEvolution::createSCEV(Value *V) {
               unsigned GCD = std::min(MulZeros, TZ);
               APInt DivAmt = APInt::getOneBitSet(BitWidth, TZ - GCD);
               SmallVector<const SCEV*, 4> MulOps;
-              MulOps.push_back(getConstant(OpC->getAPInt().lshr(GCD)));
+              MulOps.push_back(getConstant(OpC->getAPInt().ashr(GCD)));
               append_range(MulOps, LHSMul->operands().drop_front());
               auto *NewMul = getMulExpr(MulOps, LHSMul->getNoWrapFlags());
               ShiftedLHS = getUDivExpr(NewMul, getConstant(DivAmt));
@@ -8503,10 +8503,8 @@ void ScalarEvolution::forgetLoop(const Loop *L) {
     }
 
     auto LoopUsersItr = LoopUsers.find(CurrL);
-    if (LoopUsersItr != LoopUsers.end()) {
-      ToForget.insert(ToForget.end(), LoopUsersItr->second.begin(),
-                LoopUsersItr->second.end());
-    }
+    if (LoopUsersItr != LoopUsers.end())
+      llvm::append_range(ToForget, LoopUsersItr->second);
 
     // Drop information about expressions based on loop-header PHIs.
     PushLoopPHIs(CurrL, Worklist, Visited);

@@ -668,6 +668,10 @@ TargetLoweringBase::TargetLoweringBase(const TargetMachine &tm)
   RTLIB::initCmpLibcallCCs(CmpLibcallCCs);
 }
 
+// Define the virtual destructor out-of-line to act as a key method to anchor
+// debug info (see coding standards).
+TargetLoweringBase::~TargetLoweringBase() = default;
+
 void TargetLoweringBase::initActions() {
   // All operations default to being supported.
   memset(OpActions, 0, sizeof(OpActions));

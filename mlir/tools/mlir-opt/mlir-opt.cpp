@@ -150,6 +150,7 @@ void registerTestSPIRVCPURunnerPipeline();
 void registerTestSPIRVFuncSignatureConversion();
 void registerTestSPIRVVectorUnrolling();
 void registerTestTensorCopyInsertionPass();
+void registerTestTensorLikeAndBufferLikePass();
 void registerTestTensorTransforms();
 void registerTestTopologicalSortAnalysisPass();
 void registerTestTransformDialectEraseSchedulePass();
@@ -293,6 +294,7 @@ void registerTestPasses() {
   mlir::test::registerTestSPIRVFuncSignatureConversion();
   mlir::test::registerTestSPIRVVectorUnrolling();
   mlir::test::registerTestTensorCopyInsertionPass();
+  mlir::test::registerTestTensorLikeAndBufferLikePass();
   mlir::test::registerTestTensorTransforms();
   mlir::test::registerTestTopologicalSortAnalysisPass();
   mlir::test::registerTestTransformDialectEraseSchedulePass();

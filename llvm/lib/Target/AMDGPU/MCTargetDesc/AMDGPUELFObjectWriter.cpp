@@ -68,8 +68,6 @@ unsigned AMDGPUELFObjectWriter::getRelocType(MCContext &Ctx,
   }
 
   MCFixupKind Kind = Fixup.getKind();
-  if (Kind >= FirstLiteralRelocationKind)
-    return Kind - FirstLiteralRelocationKind;
   switch (Kind) {
   default: break;
   case FK_PCRel_4:

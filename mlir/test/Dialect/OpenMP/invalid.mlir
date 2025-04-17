@@ -1711,6 +1711,14 @@ func.func @omp_task(%mem: memref<1xf32>) {
 // -----
 
 func.func @omp_cancel() {
+  // expected-error @below {{Orphaned cancel construct}}
+  omp.cancel cancellation_construct_type(parallel)
+  return
+}
+
+// -----
+
+func.func @omp_cancel() {
   omp.sections {
     // expected-error @below {{cancel parallel must appear inside a parallel region}}
     omp.cancel cancellation_construct_type(parallel)
@@ -1784,6 +1792,14 @@ func.func @omp_cancel5() -> () {
     // CHECK: omp.terminator
     omp.terminator
   }
+  return
+}
+
+// -----
+
+func.func @omp_cancellationpoint() {
+  // expected-error @below {{Orphaned cancellation point}}
+  omp.cancellation_point cancellation_construct_type(parallel)
   return
 }
 

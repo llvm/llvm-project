@@ -60,7 +60,7 @@ class LLVM_IntArithmeticOpWithOverflowFlag<string mnemonic, string instName,
                                    list<Trait> traits = []> :
     LLVM_ArithmeticOpBase<AnySignlessInteger, mnemonic, instName,
     !listconcat([DeclareOpInterfaceMethods<IntegerOverflowFlagsInterface>], traits)> {
-  dag iofArg = (ins EnumProp<"IntegerOverflowFlags", "", "IntegerOverflowFlags::none">:$overflowFlags);
+  dag iofArg = (ins LLVM_IntegerOverflowFlagsProp:$overflowFlags);
   let arguments = !con(commonArgs, iofArg);
 
   string mlirBuilder = [{
@@ -69,7 +69,7 @@ class LLVM_IntArithmeticOpWithOverflowFlag<string mnemonic, string instName,
     $res = op;
   }];
   let assemblyFormat = [{
-    $lhs `,` $rhs `` custom<OverflowFlags>($overflowFlags) attr-dict `:` type($res)
+    $lhs `,` $rhs ($overflowFlags^)? attr-dict `:` type($res)
   }];
   string llvmBuilder =
     "$res = builder.Create" # instName #
@@ -563,10 +563,10 @@ class LLVM_CastOpWithOverflowFlag<string mnemonic, string instName, Type type,
                   Type resultType, list<Trait> traits = []> :
     LLVM_Op<mnemonic, !listconcat([Pure], [DeclareOpInterfaceMethods<IntegerOverflowFlagsInterface>], traits)>,
     LLVM_Builder<"$res = builder.Create" # instName # "($arg, $_resultType, /*Name=*/\"\", op.hasNoUnsignedWrap(), op.hasNoSignedWrap());"> {
-  let arguments = (ins type:$arg, EnumProp<"IntegerOverflowFlags", "", "IntegerOverflowFlags::none">:$overflowFlags);
+  let arguments = (ins type:$arg, LLVM_IntegerOverflowFlagsProp:$overflowFlags);
   let results = (outs resultType:$res);
   let builders = [LLVM_OneResultOpBuilder];
-  let assemblyFormat = "$arg `` custom<OverflowFlags>($overflowFlags) attr-dict `:` type($arg) `to` type($res)";
+  let assemblyFormat = "$arg ($overflowFlags^)? attr-dict `:` type($arg) `to` type($res)";
   string llvmInstName = instName;
   string mlirBuilder = [{
     auto op = $_builder.create<$_qualCppClassName>(
@@ -1842,7 +1842,8 @@ def LLVM_LLVMFuncOp : LLVM_Op<"func", [
     OptionalAttr<LLVM_VecTypeHintAttr>:$vec_type_hint,
     OptionalAttr<DenseI32ArrayAttr>:$work_group_size_hint,
     OptionalAttr<DenseI32ArrayAttr>:$reqd_work_group_size,
-    OptionalAttr<I32Attr>:$intel_reqd_sub_group_size
+    OptionalAttr<I32Attr>:$intel_reqd_sub_group_size,
+    OptionalAttr<UWTableKindAttr>:$uwtable_kind
   );
 
   let regions = (region AnyRegion:$body);
