@@ -1559,7 +1559,6 @@ cc_library(
     hdrs = glob(["include/mlir/Dialect/AMDGPU/Transforms/*.h"]),
     includes = ["include"],
     deps = [
-        ":AffineDialect",
         ":AMDGPUDialect",
         ":AMDGPUPassIncGen",
         ":AMDGPUUtils",
@@ -6349,7 +6348,6 @@ cc_library(
     ],
 )
 
-
 td_library(
     name = "SMTTdFiles",
     srcs = [
@@ -6365,11 +6363,11 @@ td_library(
     includes = ["include"],
     deps = [
         ":AttrTdFiles",
-        ":OpBaseTdFiles",
-        ":SideEffectInterfacesTdFiles",
         ":BuiltinDialectTdFiles",
         ":ControlFlowInterfacesTdFiles",
         ":InferTypeOpInterfaceTdFiles",
+        ":OpBaseTdFiles",
+        ":SideEffectInterfacesTdFiles",
     ],
 )
 
@@ -6378,7 +6376,7 @@ gentbl_cc_library(
     tbl_outs = {
         "include/mlir/Dialect/SMT/IR/SMT.h.inc": ["-gen-op-decls"],
         "include/mlir/Dialect/SMT/IR/SMT.cpp.inc": ["-gen-op-defs"],
-          "include/mlir/Dialect/SMT/IR/SMTDialect.h.inc": [
+        "include/mlir/Dialect/SMT/IR/SMTDialect.h.inc": [
             "-gen-dialect-decls",
             "-dialect=smt",
         ],
@@ -8853,6 +8851,7 @@ cc_library(
         ":SCFToGPU",
         ":SCFTransformOps",
         ":SCFTransforms",
+        ":SMTDialect",
         ":SPIRVDialect",
         ":SPIRVPassIncGen",
         ":SPIRVTarget",
@@ -8862,7 +8861,6 @@ cc_library(
         ":ShapeToStandard",
         ":ShapeTransforms",
         ":ShapeTransformsPassIncGen",
-        ":SMTDialect",
         ":SparseTensorDialect",
         ":SparseTensorPipelines",
         ":SparseTensorTransformOps",
