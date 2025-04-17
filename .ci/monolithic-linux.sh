@@ -28,10 +28,14 @@ if [[ -n "${CLEAR_CACHE:-}" ]]; then
   ccache --clear
 fi
 
+mkdir -p artifacts/reproducers
+
+# Make sure any clang reproducers will end up as artifacts.
+export CLANG_CRASH_DIAGNOSTICS_DIR=`realpath artifacts/reproducers`
+
 function at-exit {
   retcode=$?
 
-  mkdir -p artifacts
   ccache --print-stats > artifacts/ccache_stats.txt
   cp "${BUILD_DIR}"/.ninja_log artifacts/.ninja_log
 
