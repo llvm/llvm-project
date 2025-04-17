@@ -464,7 +464,8 @@ fatbinary(ArrayRef<std::pair<StringRef, StringRef>> InputFiles,
 } // namespace amdgcn
 
 namespace generic {
-Expected<StringRef> clang(ArrayRef<StringRef> InputFiles, const ArgList &Args) {
+Expected<StringRef> clang(ArrayRef<StringRef> InputFiles, const ArgList &Args,
+                          uint16_t ActiveOffloadKindMask) {
   llvm::TimeTraceScope TimeScope("Clang");
   // Use `clang` to invoke the appropriate device tools.
   Expected<std::string> ClangPath =
@@ -554,6 +555,17 @@ Expected<StringRef> clang(ArrayRef<StringRef> InputFiles, const ArgList &Args) {
   if (Args.hasArg(OPT_embed_bitcode))
     CmdArgs.push_back("-Wl,--lto-emit-llvm");
 
+  // For linking device code with the SYCL offload kind, special handling is
+  // required. Passing --sycl-link to clang results in a call to
+  // clang-sycl-linker. Additional linker flags required by clang-sycl-linker
+  // will be communicated via the -Xlinker option.
+  if (ActiveOffloadKindMask & OFK_SYCL) {
+    CmdArgs.push_back("--sycl-link");
+    CmdArgs.append(
+        {"-Xlinker", Args.MakeArgString("-triple=" + Triple.getTriple())});
+    CmdArgs.append({"-Xlinker", Args.MakeArgString("-arch=" + Arch)});
+  }
+
   for (StringRef Arg : Args.getAllArgValues(OPT_linker_arg_EQ))
     CmdArgs.append({"-Xlinker", Args.MakeArgString(Arg)});
   for (StringRef Arg : Args.getAllArgValues(OPT_compiler_arg_EQ))
@@ -567,7 +579,8 @@ Expected<StringRef> clang(ArrayRef<StringRef> InputFiles, const ArgList &Args) {
 } // namespace generic
 
 Expected<StringRef> linkDevice(ArrayRef<StringRef> InputFiles,
-                               const ArgList &Args) {
+                               const ArgList &Args,
+                               uint16_t ActiveOffloadKindMask) {
   const llvm::Triple Triple(Args.getLastArgValue(OPT_triple_EQ));
   switch (Triple.getArch()) {
   case Triple::nvptx:
@@ -582,7 +595,7 @@ Expected<StringRef> linkDevice(ArrayRef<StringRef> InputFiles,
   case Triple::spirv64:
   case Triple::systemz:
   case Triple::loongarch64:
-    return generic::clang(InputFiles, Args);
+    return generic::clang(InputFiles, Args, ActiveOffloadKindMask);
   default:
     return createStringError(Triple.getArchName() +
                              " linking is not supported");
@@ -792,6 +805,7 @@ bundleLinkedOutput(ArrayRef<OffloadingImage> Images, const ArgList &Args,
   llvm::TimeTraceScope TimeScope("Bundle linked output");
   switch (Kind) {
   case OFK_OpenMP:
+  case OFK_SYCL:
     return bundleOpenMP(Images);
   case OFK_Cuda:
     return bundleCuda(Images, Args);
@@ -927,6 +941,14 @@ Expected<SmallVector<StringRef>> linkAndWrapDeviceFiles(
     for (const auto &File : Input)
       ActiveOffloadKindMask |= File.getBinary()->getOffloadKind();
 
+    // Linking images of SYCL offload kind with images of other kind is not
+    // supported.
+    // TODO: Remove the above limitation.
+    if ((ActiveOffloadKindMask & OFK_SYCL) &&
+        ((ActiveOffloadKindMask ^ OFK_SYCL) != 0))
+      return createStringError("Linking images of SYCL offload kind with "
+                               "images of any other kind is not supported");
+
     // Write any remaining device inputs to an output file.
     SmallVector<StringRef> InputFiles;
     for (const OffloadFile &File : Input) {
@@ -937,7 +959,8 @@ Expected<SmallVector<StringRef>> linkAndWrapDeviceFiles(
     }
 
     // Link the remaining device files using the device linker.
-    auto OutputOrErr = linkDevice(InputFiles, LinkerArgs);
+    auto OutputOrErr =
+        linkDevice(InputFiles, LinkerArgs, ActiveOffloadKindMask);
     if (!OutputOrErr)
       return OutputOrErr.takeError();
 
