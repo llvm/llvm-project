@@ -1562,17 +1562,23 @@ cc_library(
         ":AMDGPUDialect",
         ":AMDGPUPassIncGen",
         ":AMDGPUUtils",
+        ":AffineDialect",
         ":ArithDialect",
+        ":ArithUtils",
         ":ControlFlowDialect",
         ":FuncDialect",
         ":GPUDialect",
         ":IR",
         ":MemRefDialect",
+        ":MemRefUtils",
         ":Pass",
+        ":SCFDialect",
         ":SideEffectInterfaces",
         ":Support",
         ":TransformUtils",
         ":VectorDialect",
+        ":VectorTransforms",
+        "//llvm:Support",
     ],
 )
 
@@ -12520,6 +12526,28 @@ gentbl_cc_library(
 )
 
 td_library(
+    name = "BufferizationTypeInterfacesTdFiles",
+    srcs = [
+        "include/mlir/Dialect/Bufferization/IR/BufferizationTypeInterfaces.td",
+    ],
+    includes = ["include"],
+    deps = [
+        ":OpBaseTdFiles",
+    ],
+)
+
+gentbl_cc_library(
+    name = "BufferizationTypeInterfacesIncGen",
+    tbl_outs = {
+        "include/mlir/Dialect/Bufferization/IR/BufferizationTypeInterfaces.h.inc": ["-gen-type-interface-decls"],
+        "include/mlir/Dialect/Bufferization/IR/BufferizationTypeInterfaces.cpp.inc": ["-gen-type-interface-defs"],
+    },
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/Bufferization/IR/BufferizationTypeInterfaces.td",
+    deps = [":BufferizationTypeInterfacesTdFiles"],
+)
+
+td_library(
     name = "BufferizationTransformOpsTdFiles",
     srcs = [
         "include/mlir/Dialect/Bufferization/TransformOps/BufferizationTransformOps.td",
@@ -12592,6 +12620,7 @@ cc_library(
         "include/mlir/Dialect/Bufferization/IR/BufferDeallocationOpInterface.h",
         "include/mlir/Dialect/Bufferization/IR/BufferViewFlowOpInterface.h",
         "include/mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h",
+        "include/mlir/Dialect/Bufferization/IR/BufferizationTypeInterfaces.h",
     ],
     includes = ["include"],
     deps = [
@@ -12599,6 +12628,7 @@ cc_library(
         ":BufferViewFlowOpInterfaceIncGen",
         ":BufferizableOpInterfaceIncGen",
         ":BufferizationEnumsIncGen",
+        ":BufferizationTypeInterfacesIncGen",
         ":FunctionInterfaces",
         ":IR",
         ":Support",

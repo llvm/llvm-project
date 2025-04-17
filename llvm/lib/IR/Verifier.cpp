@@ -720,8 +720,7 @@ static void forEachUser(const Value *User,
   if (!Visited.insert(User).second)
     return;
 
-  SmallVector<const Value *> WorkList;
-  append_range(WorkList, User->materialized_users());
+  SmallVector<const Value *> WorkList(User->materialized_users());
   while (!WorkList.empty()) {
    const Value *Cur = WorkList.pop_back_val();
     if (!Visited.insert(Cur).second)

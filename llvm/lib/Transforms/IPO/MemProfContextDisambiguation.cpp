@@ -1711,7 +1711,12 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::
       // edge from the prior node.
       if (PrevNode) {
         auto *PrevEdge = CurNode->findEdgeFromCallee(PrevNode);
-        assert(PrevEdge);
+        // If the sequence contained recursion, we might have already removed
+        // some edges during the connectNewNode calls above.
+        if (!PrevEdge) {
+          PrevNode = CurNode;
+          continue;
+        }
         set_subtract(PrevEdge->getContextIds(), SavedContextIds);
         if (PrevEdge->getContextIds().empty())
           removeEdgeFromGraph(PrevEdge);

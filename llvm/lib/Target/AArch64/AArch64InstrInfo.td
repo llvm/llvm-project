@@ -294,6 +294,10 @@ def HasNonStreamingSVE2_or_SSVE_BitPerm
     : Predicate<"(Subtarget->isSVEAvailable() && Subtarget->hasSVE2()) ||"
                 "(Subtarget->isSVEorStreamingSVEAvailable() && Subtarget->hasSSVE_BitPerm())">,
                 AssemblerPredicateWithAll<(any_of FeatureSVE2, FeatureSSVE_BitPerm), "sve2 or ssve-bitperm">;
+def HasNonStreamingSVE_or_SSVE_FEXPA
+    : Predicate<"(Subtarget->isSVEAvailable() && Subtarget->hasSVE()) ||"
+                "(Subtarget->isSVEorStreamingSVEAvailable() && Subtarget->hasSSVE_FEXPA())">,
+                AssemblerPredicateWithAll<(any_of FeatureSVE, FeatureSSVE_FEXPA), "sve or ssve-fexpa">;
 
 // A subset of NEON instructions are legal in Streaming SVE execution mode,
 // so don't need the additional check for 'isNeonAvailable'.
@@ -1797,9 +1801,6 @@ def PAUTH_PROLOGUE : Pseudo<(outs), (ins), []>, Sched<[]> {
 // with a combined RETA(A|B) instruction when rewriting this Pseudo.
 def PAUTH_EPILOGUE : Pseudo<(outs), (ins), []>, Sched<[]>;
 }
-
-def PAUTH_BLEND : Pseudo<(outs GPR64:$disc),
-                         (ins GPR64:$addr_disc, i32imm:$int_disc), []>, Sched<[]>;
 
 // These pointer authentication instructions require armv8.3a
 let Predicates = [HasPAuth] in {
@@ -10130,7 +10131,7 @@ let Predicates = [HasMOPS, HasMTE], Defs = [NZCV], Size = 12, mayLoad = 0, maySt
 // v8.3 Pointer Authentication late patterns
 
 def : Pat<(int_ptrauth_blend GPR64:$Rd, imm64_0_65535:$imm),
-          (PAUTH_BLEND GPR64:$Rd, (trunc_imm imm64_0_65535:$imm))>;
+          (MOVKXi GPR64:$Rd, (trunc_imm imm64_0_65535:$imm), 48)>;
 def : Pat<(int_ptrauth_blend GPR64:$Rd, GPR64:$Rn),
           (BFMXri GPR64:$Rd, GPR64:$Rn, 16, 15)>;
 

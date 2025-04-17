@@ -178,7 +178,7 @@ bool fromJSON(json::Value const &Params, Response &R, json::Path P) {
     return false;
   }
 
-  return O.map("success", R.success) && O.mapOptional("message", R.message) &&
+  return O.map("success", R.success) && O.map("message", R.message) &&
          mapRaw(Params, "body", R.body, P);
 }
 
