@@ -604,41 +604,6 @@ define <16 x float> @test13(ptr %base, <16 x i32> %ind) {
 
 ; The base pointer is not splat, can't find unform base
 define <16 x float> @test14(ptr %base, i32 %ind, <16 x ptr> %vec) {
-; KNL_64-LABEL: test14:
-; KNL_64:       # %bb.0:
-; KNL_64-NEXT:    vmovq %xmm0, %rax
-; KNL_64-NEXT:    vpbroadcastd %esi, %zmm1
-; KNL_64-NEXT:    kxnorw %k0, %k0, %k1
-; KNL_64-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; KNL_64-NEXT:    vgatherdps (%rax,%zmm1,4), %zmm0 {%k1}
-; KNL_64-NEXT:    retq
-;
-; KNL_32-LABEL: test14:
-; KNL_32:       # %bb.0:
-; KNL_32-NEXT:    vmovd %xmm0, %eax
-; KNL_32-NEXT:    vbroadcastss {{[0-9]+}}(%esp), %zmm1
-; KNL_32-NEXT:    kxnorw %k0, %k0, %k1
-; KNL_32-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; KNL_32-NEXT:    vgatherdps (%eax,%zmm1,4), %zmm0 {%k1}
-; KNL_32-NEXT:    retl
-;
-; SKX-LABEL: test14:
-; SKX:       # %bb.0:
-; SKX-NEXT:    vmovq %xmm0, %rax
-; SKX-NEXT:    vpbroadcastd %esi, %zmm1
-; SKX-NEXT:    kxnorw %k0, %k0, %k1
-; SKX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; SKX-NEXT:    vgatherdps (%rax,%zmm1,4), %zmm0 {%k1}
-; SKX-NEXT:    retq
-;
-; SKX_32-LABEL: test14:
-; SKX_32:       # %bb.0:
-; SKX_32-NEXT:    vmovd %xmm0, %eax
-; SKX_32-NEXT:    vbroadcastss {{[0-9]+}}(%esp), %zmm1
-; SKX_32-NEXT:    kxnorw %k0, %k0, %k1
-; SKX_32-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; SKX_32-NEXT:    vgatherdps (%eax,%zmm1,4), %zmm0 {%k1}
-; SKX_32-NEXT:    retl
 ; X64-LABEL: test14:
 ; X64:       # %bb.0:
 ; X64-NEXT:    vmovq %xmm0, %rax
