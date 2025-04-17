@@ -195,7 +195,7 @@ private:
     // One iteration of the loop is factored out.  The code shared by
     // the loop and this "iteration" is denoted by UPDATE_AX.
     B.SetInsertPoint(LoopBB);
-    auto *NbIv = B.CreatePHI(Nb->getType(), 2, "nb_iv");
+    PHINode *NbIv = B.CreatePHI(Nb->getType(), 2, "nb_iv");
     NbIv->addIncoming(Nb, PreheaderBB);
 
     auto *AxPhi = B.CreatePHI(ComputeFpTy, 2, "ax_loop_phi");
