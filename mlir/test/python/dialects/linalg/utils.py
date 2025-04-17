@@ -182,16 +182,18 @@ def test_get_indexing_maps_attr():
             @func.FuncOp.from_py_func(a_type, b_type, c_type)
             def matmul_func(a, b, c):
                 zero = arith.ConstantOp(value=FloatAttr.get(f32, 0.0), result=f32)
+                assert not linalg.get_indexing_maps_attr(
+                    zero.operation
+                ), "Expected no indexing_maps on non-linalg op"
+
                 init = linalg.fill(zero, outs=[c])
                 fill_op = init.owner
-
                 fill_maps = linalg.get_indexing_maps_attr(fill_op)
                 assert fill_maps is not None
                 assert len(fill_maps) == 2
 
                 # The fill op should have maps like (d0, d1) -> () and (d0, d1).
                 fill_input_map = fill_maps[0].value
-                print(type(fill_input_map))
                 fill_output_map = fill_maps[1].value
                 assert fill_input_map == AffineMap.get(2, 0, [])
                 assert fill_output_map == AffineMap.get(2, 0, [dim_m, dim_n])

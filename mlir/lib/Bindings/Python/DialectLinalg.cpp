@@ -121,10 +121,15 @@ static void populateDialectLinalgSubmodule(nb::module_ m) {
   m.def("infer_convolution_dimensions", &InferConvolutionDimensions,
         "Infers convolution dimensions", nb::arg("op"));
 
-  m.def("get_indexing_maps_attr", &mlirLinalgGetIndexingMapsAttribute,
-        "Returns the indexing_maps or memoized_indexing_maps attribute for a "
-        "Linalg op.",
-        nb::arg("op"));
+  m.def(
+      "get_indexing_maps_attr",
+      [](MlirOperation op) -> std::optional<MlirAttribute> {
+        MlirAttribute attr = mlirLinalgGetIndexingMapsAttribute(op);
+        if (mlirAttributeIsNull(attr))
+          return std::nullopt;
+        return attr;
+      },
+      "Returns the indexing_maps attribute for a linalg op.");
 }
 
 NB_MODULE(_mlirDialectsLinalg, m) {
