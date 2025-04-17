@@ -18,8 +18,8 @@ namespace lldb_private {
 class ThreadPlanStepOut : public ThreadPlan, public ThreadPlanShouldStopHere {
 public:
   /// Creates a thread plan to step out from frame_idx, skipping parent frames
-  /// that artificial and hidden frames. Also skips frames without debug info
-  /// based on step_out_avoids_code_without_debug_info.
+  /// if they are artificial or hidden frames. Also skips frames without debug
+  /// info based on step_out_avoids_code_without_debug_info.
   ThreadPlanStepOut(Thread &thread, SymbolContext *addr_context,
                     bool first_insn, bool stop_others, Vote report_stop_vote,
                     Vote report_run_vote, uint32_t frame_idx,
