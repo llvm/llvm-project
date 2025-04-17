@@ -3830,32 +3830,46 @@ void Verifier::visitCallBase(CallBase &Call) {
       FoundAttachedCallBundle = true;
       verifyAttachedCallBundle(Call, BU);
     } else if (Tag == LLVMContext::OB_fp_control) {
-      Check(!FoundFpeControlBundle, "Multiple fp.control operand bundles",
+      Check(!FoundFpeControlBundle, "Multiple \"fp.control\" operand bundles",
             Call);
-      Check(BU.Inputs.size() == 1,
-            "Expected exactly one fp.control bundle operand", Call);
-      auto *V = dyn_cast<MetadataAsValue>(BU.Inputs.front());
-      Check(V, "Value of fp.control bundle operand must be a metadata", Call);
-      auto *MDS = dyn_cast<MDString>(V->getMetadata());
-      Check(MDS, "Value of fp.control bundle operand must be a string", Call);
-      auto RM = convertBundleToRoundingMode(MDS->getString());
-      Check(RM.has_value(),
-            "Value of fp.control bundle operand is not a correct rounding mode",
-            Call);
+      bool FoundRoundingMode = false;
+      for (auto &U : BU.Inputs) {
+        Value *V = U.get();
+        Check(isa<MetadataAsValue>(V),
+              "Value of a \"fp.control\" bundle operand must be a metadata",
+              Call);
+        Metadata *MD = cast<MetadataAsValue>(V)->getMetadata();
+        Check(isa<MDString>(MD),
+              "Value of a \"fp.control\" bundle operand must be a string",
+              Call);
+        StringRef Item = cast<MDString>(MD)->getString();
+        if (convertBundleToRoundingMode(Item)) {
+          Check(!FoundRoundingMode, "Rounding mode is specified more that once",
+                Call);
+          FoundRoundingMode = true;
+        } else {
+          CheckFailed("Unrecognized value in \"fp.control\" bundle operand",
+                      Call);
+        }
+      }
       FoundFpeControlBundle = true;
     } else if (Tag == LLVMContext::OB_fp_except) {
-      Check(!FoundFpeExceptBundle, "Multiple fp.except operand bundles", Call);
-      Check(BU.Inputs.size() == 1,
-            "Expected exactly one fp.except bundle operand", Call);
-      auto *V = dyn_cast<MetadataAsValue>(BU.Inputs.front());
-      Check(V, "Value of fp.except bundle operand must be a metadata", Call);
-      auto *MDS = dyn_cast<MDString>(V->getMetadata());
-      Check(MDS, "Value of fp.except bundle operand must be a string", Call);
-      auto EB = convertBundleToExceptionBehavior(MDS->getString());
-      Check(EB.has_value(),
-            "Value of fp.except bundle operand is not a correct exception "
-            "behavior",
+      Check(!FoundFpeExceptBundle, "Multiple \"fp.except\" operand bundles",
             Call);
+      Check(BU.Inputs.size() == 1,
+            "Expected exactly one \"fp.except\" bundle operand", Call);
+      auto *V = dyn_cast<MetadataAsValue>(BU.Inputs.front());
+      Check(V, "Value of a \"fp.except\" bundle operand must be a metadata",
+            Call);
+      auto *MDS = dyn_cast<MDString>(V->getMetadata());
+      Check(MDS, "Value of a \"fp.except\" bundle operand must be a string",
+            Call);
+      auto EB = convertBundleToExceptionBehavior(MDS->getString());
+      Check(
+          EB.has_value(),
+          "Value of a \"fp.except\" bundle operand is not a correct exception "
+          "behavior",
+          Call);
       FoundFpeExceptBundle = true;
     }
   }

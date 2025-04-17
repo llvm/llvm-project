@@ -52,7 +52,7 @@ entry:
 }
 
 ; Test multiple fp.control bundles.
-; CHECK-NEXT: Multiple fp.control operand bundles
+; CHECK-NEXT: Multiple "fp.control" operand bundles
 ; CHECK-NEXT:   %ftrunc = call double @llvm.trunc.f64(double %a) #{{[0-9]+}} [ "fp.control"(metadata !"rtz"), "fp.control"(metadata !"rtz") ]
 define double @f6(double %a) #0 {
 entry:
@@ -60,8 +60,8 @@ entry:
   ret double %ftrunc
 }
 
-; Test fp.control bundle that has more than one operands.
-; CHECK-NEXT: Expected exactly one fp.control bundle operand
+; Test fp.control bundle that has more than one rounding mode specification.
+; CHECK-NEXT: Rounding mode is specified more that once
 ; CHECK-NEXT:   %ftrunc = call double @llvm.trunc.f64(double %a) #{{[0-9]+}} [ "fp.control"(metadata !"rtz", metadata !"rte") ]
 define double @f7(double %a) #0 {
 entry:
@@ -70,7 +70,7 @@ entry:
 }
 
 ; Test fp.control bundle that has non-metadata operand.
-; CHECK-NEXT: Value of fp.control bundle operand must be a metadata
+; CHECK-NEXT: Value of a "fp.control" bundle operand must be a metadata
 ; CHECK-NEXT:   %ftrunc = call double @llvm.trunc.f64(double %a) #{{[0-9]+}} [ "fp.control"(i32 0) ]
 define double @f8(double %a) #0 {
 entry:
@@ -79,7 +79,7 @@ entry:
 }
 
 ; Test fp.control bundle that has non-string operand.
-; CHECK-NEXT: Value of fp.control bundle operand must be a string
+; CHECK-NEXT: Value of a "fp.control" bundle operand must be a string
 ; CHECK-NEXT:   %ftrunc = call double @llvm.trunc.f64(double %a) #{{[0-9]+}} [ "fp.control"(metadata i64 3) ]
 define double @f9(double %a) #0 {
 entry:
@@ -88,7 +88,7 @@ entry:
 }
 
 ; Test fp.control bundle that specifies incorrect value.
-; CHECK-NEXT: Value of fp.control bundle operand is not a correct rounding mode
+; CHECK-NEXT: Unrecognized value in "fp.control" bundle operand
 ; CHECK-NEXT:   %ftrunc = call double @llvm.trunc.f64(double %a) #{{[0-9]+}} [ "fp.control"(metadata !"qqq") ]
 define double @f10(double %a) #0 {
 entry:
@@ -97,7 +97,7 @@ entry:
 }
 
 ; Test multiple fp.except bundles.
-; CHECK-NEXT: Multiple fp.except operand bundles
+; CHECK-NEXT: Multiple "fp.except" operand bundles
 ; CHECK-NEXT:   %ftrunc = call double @llvm.trunc.f64(double %a) #{{[0-9]+}} [ "fp.except"(metadata !"strict"), "fp.except"(metadata !"strict") ]
 define double @f11(double %a) #0 {
 entry:
@@ -106,7 +106,7 @@ entry:
 }
 
 ; Test fp.except bundle that has more than one operands.
-; CHECK-NEXT: Expected exactly one fp.except bundle operand
+; CHECK-NEXT: Expected exactly one "fp.except" bundle operand
 ; CHECK-NEXT:   %ftrunc = call double @llvm.trunc.f64(double %a) #{{[0-9]+}} [ "fp.except"(metadata !"strict", metadata !"strict") ]
 define double @f12(double %a) #0 {
 entry:
@@ -115,7 +115,7 @@ entry:
 }
 
 ; Test fp.except bundle that has non-metadata operand.
-; CHECK-NEXT: Value of fp.except bundle operand must be a metadata
+; CHECK-NEXT: Value of a "fp.except" bundle operand must be a metadata
 ; CHECK-NEXT:   %ftrunc = call double @llvm.trunc.f64(double %a) #{{[0-9]+}} [ "fp.except"(i32 0) ]
 define double @f13(double %a) #0 {
 entry:
@@ -124,7 +124,7 @@ entry:
 }
 
 ; Test fp.except bundle that has non-string operand.
-; CHECK-NEXT: Value of fp.except bundle operand must be a string
+; CHECK-NEXT: Value of a "fp.except" bundle operand must be a string
 ; CHECK-NEXT:   %ftrunc = call double @llvm.trunc.f64(double %a) #{{[0-9]+}} [ "fp.except"(metadata i64 3) ]
 define double @f14(double %a) #0 {
 entry:
@@ -133,7 +133,7 @@ entry:
 }
 
 ; Test fp.except bundle that specifies incorrect value.
-; CHECK-NEXT: Value of fp.except bundle operand is not a correct exception behavior
+; CHECK-NEXT: Value of a "fp.except" bundle operand is not a correct exception behavior
 ; CHECK-NEXT:   %ftrunc = call double @llvm.trunc.f64(double %a) #{{[0-9]+}} [ "fp.except"(metadata !"qqq") ]
 define double @f15(double %a) #0 {
 entry:
