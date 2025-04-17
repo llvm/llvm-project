@@ -879,8 +879,13 @@ public:
       gpuLaunchOp.getClusterSizeYMutable().assign(clusterDimY);
       gpuLaunchOp.getClusterSizeZMutable().assign(clusterDimZ);
     }
-    if (op.getStream())
-      gpuLaunchOp.getAsyncObjectMutable().assign(op.getStream());
+    if (op.getStream()) {
+      mlir::OpBuilder::InsertionGuard guard(rewriter);
+      rewriter.setInsertionPoint(gpuLaunchOp);
+      mlir::Value stream =
+          rewriter.create<cuf::StreamCastOp>(loc, op.getStream());
+      gpuLaunchOp.getAsyncDependenciesMutable().append(stream);
+    }
     if (procAttr)
       gpuLaunchOp->setAttr(cuf::getProcAttrName(), procAttr);
     rewriter.replaceOp(op, gpuLaunchOp);
@@ -933,6 +938,7 @@ public:
                                          /*forceUnifiedTBAATree=*/false, *dl);
     target.addLegalDialect<fir::FIROpsDialect, mlir::arith::ArithDialect,
                            mlir::gpu::GPUDialect>();
+    target.addLegalOp<cuf::StreamCastOp>();
     cuf::populateCUFToFIRConversionPatterns(typeConverter, *dl, symtab,
                                             patterns);
     if (mlir::failed(mlir::applyPartialConversion(getOperation(), target,
