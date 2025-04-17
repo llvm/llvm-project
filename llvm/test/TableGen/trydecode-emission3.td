@@ -1,4 +1,4 @@
-// RUN: llvm-tblgen -gen-disassembler -I %p/../../include %s | FileCheck %s
+ // RUN: llvm-tblgen -gen-disassembler --num-to-skip-size=3 -I %p/../../include %s  | FileCheck %s
 
 include "llvm/Target/Target.td"
 
