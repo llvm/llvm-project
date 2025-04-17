@@ -818,8 +818,11 @@ def step_vector : SDNode<"ISD::STEP_VECTOR", SDTypeProfile<1, 1,
 def scalar_to_vector : SDNode<"ISD::SCALAR_TO_VECTOR", SDTypeProfile<1, 1, []>,
                               []>;
 
-// vector_extract/vector_insert are deprecated. extractelt/insertelt
-// are preferred.
+// vector_extract/vector_insert are similar to extractelt/insertelt but allow
+// types that require promotion (a 16i8 extract where i8 is not a legal type so
+// uses i32 for example). extractelt/insertelt are preferred where the element
+// type and the extracted types match due to the extra type checking they
+// perform.
 def vector_extract : SDNode<"ISD::EXTRACT_VECTOR_ELT",
     SDTypeProfile<1, 2, [SDTCisPtrTy<2>]>, []>;
 def vector_insert : SDNode<"ISD::INSERT_VECTOR_ELT",

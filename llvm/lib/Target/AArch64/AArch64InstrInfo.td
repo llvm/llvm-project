@@ -7307,6 +7307,41 @@ def : Pat<(v2i32 (vector_insert v2i32:$src, (i32 (bitconvert (f32 FPR32:$Sn))), 
 def : Pat<(v2i64 (vector_insert v2i64:$src, (i64 (bitconvert (f64 FPR64:$Sn))), (i64 imm:$Immd))),
           (INSvi64lane V128:$src, imm:$Immd, (INSERT_SUBREG (IMPLICIT_DEF), FPR64:$Sn, dsub), 0)>;
 
+// Patterns for i8/i16 -> v2i32/v4i16 lane moves via insert and extract that go via i32.
+multiclass Neon_INS_elt_ext_pattern<ValueType VT128, ValueType VT64, ValueType OutVT,
+                                    Instruction INS, SDNodeXForm VecIndexMult> {
+  // VT64->OutVT
+  def : Pat<(OutVT (vector_insert (OutVT V64:$src),
+                                  (i32 (vector_extract (VT64 V64:$Rn), (i64 imm:$Immn))),
+                                  (i64 imm:$Immd))),
+            (EXTRACT_SUBREG
+              (INS (INSERT_SUBREG (VT128 (IMPLICIT_DEF)), V64:$src, dsub), (VecIndexMult imm:$Immd),
+                   (INSERT_SUBREG (VT128 (IMPLICIT_DEF)), V64:$Rn, dsub), imm:$Immn),
+              dsub)>;
+  def : Pat<(OutVT (scalar_to_vector (i32 (vector_extract (VT64 V64:$Rn), (i64 imm:$Immn))))),
+            (EXTRACT_SUBREG
+              (INS (IMPLICIT_DEF), 0,
+                   (INSERT_SUBREG (VT128 (IMPLICIT_DEF)), V64:$Rn, dsub), imm:$Immn),
+              dsub)>;
+
+  // VT128->OutVT
+  def : Pat<(OutVT (vector_insert (OutVT V64:$src),
+                                  (i32 (vector_extract (VT128 V128:$Rn), (i64 imm:$Immn))),
+                                  (i64 imm:$Immd))),
+            (EXTRACT_SUBREG
+              (INS (SUBREG_TO_REG (i64 0), V64:$src, dsub), (VecIndexMult imm:$Immd),
+                   V128:$Rn, imm:$Immn),
+              dsub)>;
+  def : Pat<(OutVT (scalar_to_vector (i32 (vector_extract (VT128 V128:$Rn), (i64 imm:$Immn))))),
+            (EXTRACT_SUBREG
+              (INS (IMPLICIT_DEF), 0, V128:$Rn, imm:$Immn),
+              dsub)>;
+}
+
+defm : Neon_INS_elt_ext_pattern<v16i8, v8i8, v4i16, INSvi8lane, VecIndex_x2>;
+defm : Neon_INS_elt_ext_pattern<v16i8, v8i8, v2i32, INSvi8lane, VecIndex_x4>;
+defm : Neon_INS_elt_ext_pattern<v8i16, v4i16, v2i32, INSvi16lane, VecIndex_x2>;
+
 // bitcast of an extract
 // f32 bitcast(vector_extract(v4i32 src, lane)) -> EXTRACT_SUBREG(INSvi32lane(-, 0, src, lane))
 def : Pat<(f32 (bitconvert (i32 (vector_extract v4i32:$src, imm:$Immd)))),
