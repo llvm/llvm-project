@@ -2442,9 +2442,8 @@ static const DIExpression *computeExprForSpill(
 static const DIExpression *computeExprForSpill(const MachineInstr &MI,
                                                Register SpillReg) {
   assert(MI.hasDebugOperandForReg(SpillReg) && "Spill Reg is not used in MI.");
-  SmallVector<const MachineOperand *> SpillOperands;
-  for (const MachineOperand &Op : MI.getDebugOperandsForReg(SpillReg))
-    SpillOperands.push_back(&Op);
+  SmallVector<const MachineOperand *> SpillOperands(
+      llvm::make_pointer_range(MI.getDebugOperandsForReg(SpillReg)));
   return computeExprForSpill(MI, SpillOperands);
 }
 
