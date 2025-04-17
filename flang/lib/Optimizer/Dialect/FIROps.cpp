@@ -1835,6 +1835,29 @@ llvm::LogicalResult fir::TypeInfoOp::verify() {
 // EmboxOp
 //===----------------------------------------------------------------------===//
 
+// Conversions from reference types to box types must preserve volatility.
+static llvm::LogicalResult
+verifyEmboxOpVolatilityInvariants(mlir::Type memrefType,
+                                  mlir::Type resultType) {
+  mlir::Type boxElementType =
+      llvm::TypeSwitch<mlir::Type, mlir::Type>(resultType)
+          .Case<fir::BoxType, fir::ClassType>(
+              [&](auto type) { return type.getEleTy(); })
+          .Default([&](mlir::Type type) { return type; });
+
+  // If the embox is simply wrapping a non-volatile type into a volatile box,
+  // we're not losing any volatility information.
+  if (boxElementType == memrefType) {
+    return mlir::success();
+  }
+
+  // Otherwise, the volatility of the input and result must match.
+  const bool volatilityMatches =
+      fir::isa_volatile_type(memrefType) == fir::isa_volatile_type(resultType);
+
+  return mlir::success(volatilityMatches);
+}
+
 llvm::LogicalResult fir::EmboxOp::verify() {
   auto eleTy = fir::dyn_cast_ptrEleTy(getMemref().getType());
   bool isArray = false;
@@ -1864,10 +1887,10 @@ llvm::LogicalResult fir::EmboxOp::verify() {
     return emitOpError("slice must not be provided for a scalar");
   if (getSourceBox() && !mlir::isa<fir::ClassType>(getResult().getType()))
     return emitOpError("source_box must be used with fir.class result type");
-  if (fir::isa_volatile_type(getMemref().getType()) !=
-      fir::isa_volatile_type(getResult().getType()))
-    return emitOpError("cannot convert between volatile and non-volatile "
-                       "types, use fir.volatile_cast instead")
+  if (failed(verifyEmboxOpVolatilityInvariants(getMemref().getType(),
+                                               getResult().getType())))
+    return emitOpError(
+               "cannot convert between volatile and non-volatile types:")
            << " " << getMemref().getType() << " " << getResult().getType();
   return mlir::success();
 }

@@ -6,6 +6,7 @@
 program p
    integer, volatile              :: volatile_integer, volatile_array(10), &
                                      volatile_array_2d(10,10)
+   integer, volatile, pointer      :: volatile_integer_pointer
    integer                        :: nonvolatile_array(10)
    integer, volatile, target      :: volatile_integer_target, volatile_array_target(10)
    integer, target                :: nonvolatile_integer_target, nonvolatile_array_target(10)
@@ -15,8 +16,11 @@ program p
 
    volatile_array_pointer    => volatile_array_target
    volatile_array_pointer    => nonvolatile_array_target
+   volatile_array_pointer    => null(volatile_array_pointer)
    nonvolatile_array_pointer => volatile_array_target
    nonvolatile_array_pointer => nonvolatile_array_target
+   volatile_integer_pointer  => volatile_integer_target
+   volatile_integer_pointer  => null(volatile_integer_pointer)
 
    call sub_nonvolatile_array(volatile_array)
    call sub_volatile_array_assumed_shape(volatile_array)
@@ -55,67 +59,96 @@ end program
 
 ! CHECK-LABEL:   func.func @_QQmain() attributes {fir.bindc_name = "p"} {
 ! CHECK:           %[[VAL_0:.*]] = arith.constant 1 : index
-! CHECK:           %[[VAL_1:.*]] = arith.constant 10 : index
-! CHECK:           %[[VAL_2:.*]] = fir.address_of(@_QFEnonvolatile_array) : !fir.ref<!fir.array<10xi32>>
-! CHECK:           %[[VAL_3:.*]] = fir.shape %[[VAL_1]] : (index) -> !fir.shape<1>
-! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_2]](%[[VAL_3]]) {uniq_name = "_QFEnonvolatile_array"} : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
-! CHECK:           %[[VAL_5:.*]] = fir.address_of(@_QFEnonvolatile_array_pointer) : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
-! CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_5]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFEnonvolatile_array_pointer"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>)
-! CHECK:           %[[VAL_7:.*]] = fir.address_of(@_QFEnonvolatile_array_target) : !fir.ref<!fir.array<10xi32>>
-! CHECK:           %[[VAL_8:.*]]:2 = hlfir.declare %[[VAL_7]](%[[VAL_3]]) {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QFEnonvolatile_array_target"} : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
-! CHECK:           %[[VAL_9:.*]] = fir.address_of(@_QFEnonvolatile_integer_target) : !fir.ref<i32>
-! CHECK:           %[[VAL_10:.*]]:2 = hlfir.declare %[[VAL_9]] {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QFEnonvolatile_integer_target"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:           %[[VAL_11:.*]] = fir.address_of(@_QFEvolatile_array) : !fir.ref<!fir.array<10xi32>>
-! CHECK:           %[[VAL_12:.*]] = fir.volatile_cast %[[VAL_11]] : (!fir.ref<!fir.array<10xi32>>) -> !fir.ref<!fir.array<10xi32>, volatile>
-! CHECK:           %[[VAL_13:.*]]:2 = hlfir.declare %[[VAL_12]](%[[VAL_3]]) {fortran_attrs = #fir.var_attrs<volatile>, uniq_name = "_QFEvolatile_array"} : (!fir.ref<!fir.array<10xi32>, volatile>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>, volatile>, !fir.ref<!fir.array<10xi32>, volatile>)
-! CHECK:           %[[VAL_14:.*]] = fir.address_of(@_QFEvolatile_array_2d) : !fir.ref<!fir.array<10x10xi32>>
-! CHECK:           %[[VAL_15:.*]] = fir.shape %[[VAL_1]], %[[VAL_1]] : (index, index) -> !fir.shape<2>
-! CHECK:           %[[VAL_16:.*]] = fir.volatile_cast %[[VAL_14]] : (!fir.ref<!fir.array<10x10xi32>>) -> !fir.ref<!fir.array<10x10xi32>, volatile>
-! CHECK:           %[[VAL_17:.*]]:2 = hlfir.declare %[[VAL_16]](%[[VAL_15]]) {fortran_attrs = #fir.var_attrs<volatile>, uniq_name = "_QFEvolatile_array_2d"} : (!fir.ref<!fir.array<10x10xi32>, volatile>, !fir.shape<2>) -> (!fir.ref<!fir.array<10x10xi32>, volatile>, !fir.ref<!fir.array<10x10xi32>, volatile>)
-! CHECK:           %[[VAL_18:.*]] = fir.address_of(@_QFEvolatile_array_pointer) : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
-! CHECK:           %[[VAL_19:.*]] = fir.volatile_cast %[[VAL_18]] : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>, volatile>, volatile>
-! CHECK:           %[[VAL_20:.*]]:2 = hlfir.declare %[[VAL_19]] {fortran_attrs = #fir.var_attrs<pointer, volatile>, uniq_name = "_QFEvolatile_array_pointer"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>, volatile>, volatile>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>, volatile>, volatile>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>, volatile>, volatile>)
-! CHECK:           %[[VAL_21:.*]] = fir.address_of(@_QFEvolatile_array_target) : !fir.ref<!fir.array<10xi32>>
-! CHECK:           %[[VAL_22:.*]] = fir.volatile_cast %[[VAL_21]] : (!fir.ref<!fir.array<10xi32>>) -> !fir.ref<!fir.array<10xi32>, volatile>
-! CHECK:           %[[VAL_23:.*]]:2 = hlfir.declare %[[VAL_22]](%[[VAL_3]]) {fortran_attrs = #fir.var_attrs<target, volatile>, uniq_name = "_QFEvolatile_array_target"} : (!fir.ref<!fir.array<10xi32>, volatile>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>, volatile>, !fir.ref<!fir.array<10xi32>, volatile>)
-! CHECK:           %[[VAL_24:.*]] = fir.alloca i32 {bindc_name = "volatile_integer", uniq_name = "_QFEvolatile_integer"}
-! CHECK:           %[[VAL_25:.*]] = fir.volatile_cast %[[VAL_24]] : (!fir.ref<i32>) -> !fir.ref<i32, volatile>
-! CHECK:           %[[VAL_26:.*]]:2 = hlfir.declare %[[VAL_25]] {fortran_attrs = #fir.var_attrs<volatile>, uniq_name = "_QFEvolatile_integer"} : (!fir.ref<i32, volatile>) -> (!fir.ref<i32, volatile>, !fir.ref<i32, volatile>)
-! CHECK:           %[[VAL_27:.*]] = fir.address_of(@_QFEvolatile_integer_target) : !fir.ref<i32>
+! CHECK:           %[[VAL_1:.*]] = arith.constant 0 : index
+! CHECK:           %[[VAL_2:.*]] = arith.constant 10 : index
+! CHECK:           %[[VAL_3:.*]] = fir.alloca !fir.box<!fir.ptr<i32>, volatile>
+! CHECK:           %[[VAL_4:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.array<?xi32>>, volatile>
+! CHECK:           %[[VAL_5:.*]] = fir.address_of(@_QFEnonvolatile_array) : !fir.ref<!fir.array<10xi32>>
+! CHECK:           %[[VAL_6:.*]] = fir.shape %[[VAL_2]] : (index) -> !fir.shape<1>
+! CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_5]](%[[VAL_6]]) {uniq_name = "_QFEnonvolatile_array"} : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
+! CHECK:           %[[VAL_8:.*]] = fir.address_of(@_QFEnonvolatile_array_pointer) : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
+! CHECK:           %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_8]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFEnonvolatile_array_pointer"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>)
+! CHECK:           %[[VAL_10:.*]] = fir.address_of(@_QFEnonvolatile_array_target) : !fir.ref<!fir.array<10xi32>>
+! CHECK:           %[[VAL_11:.*]]:2 = hlfir.declare %[[VAL_10]](%[[VAL_6]]) {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QFEnonvolatile_array_target"} : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
+! CHECK:           %[[VAL_12:.*]] = fir.address_of(@_QFEnonvolatile_integer_target) : !fir.ref<i32>
+! CHECK:           %[[VAL_13:.*]]:2 = hlfir.declare %[[VAL_12]] {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QFEnonvolatile_integer_target"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:           %[[VAL_14:.*]] = fir.address_of(@_QFEvolatile_array) : !fir.ref<!fir.array<10xi32>>
+! CHECK:           %[[VAL_15:.*]] = fir.volatile_cast %[[VAL_14]] : (!fir.ref<!fir.array<10xi32>>) -> !fir.ref<!fir.array<10xi32>, volatile>
+! CHECK:           %[[VAL_16:.*]]:2 = hlfir.declare %[[VAL_15]](%[[VAL_6]]) {fortran_attrs = #fir.var_attrs<volatile>, uniq_name = "_QFEvolatile_array"} : (!fir.ref<!fir.array<10xi32>, volatile>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>, volatile>, !fir.ref<!fir.array<10xi32>, volatile>)
+! CHECK:           %[[VAL_17:.*]] = fir.address_of(@_QFEvolatile_array_2d) : !fir.ref<!fir.array<10x10xi32>>
+! CHECK:           %[[VAL_18:.*]] = fir.shape %[[VAL_2]], %[[VAL_2]] : (index, index) -> !fir.shape<2>
+! CHECK:           %[[VAL_19:.*]] = fir.volatile_cast %[[VAL_17]] : (!fir.ref<!fir.array<10x10xi32>>) -> !fir.ref<!fir.array<10x10xi32>, volatile>
+! CHECK:           %[[VAL_20:.*]]:2 = hlfir.declare %[[VAL_19]](%[[VAL_18]]) {fortran_attrs = #fir.var_attrs<volatile>, uniq_name = "_QFEvolatile_array_2d"} : (!fir.ref<!fir.array<10x10xi32>, volatile>, !fir.shape<2>) -> (!fir.ref<!fir.array<10x10xi32>, volatile>, !fir.ref<!fir.array<10x10xi32>, volatile>)
+! CHECK:           %[[VAL_21:.*]] = fir.address_of(@_QFEvolatile_array_pointer) : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
+! CHECK:           %[[VAL_22:.*]] = fir.volatile_cast %[[VAL_21]] : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>, volatile>, volatile>
+! CHECK:           %[[VAL_23:.*]]:2 = hlfir.declare %[[VAL_22]] {fortran_attrs = #fir.var_attrs<pointer, volatile>, uniq_name = "_QFEvolatile_array_pointer"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>, volatile>, volatile>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>, volatile>, volatile>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>, volatile>, volatile>)
+! CHECK:           %[[VAL_24:.*]] = fir.address_of(@_QFEvolatile_array_target) : !fir.ref<!fir.array<10xi32>>
+! CHECK:           %[[VAL_25:.*]] = fir.volatile_cast %[[VAL_24]] : (!fir.ref<!fir.array<10xi32>>) -> !fir.ref<!fir.array<10xi32>, volatile>
+! CHECK:           %[[VAL_26:.*]]:2 = hlfir.declare %[[VAL_25]](%[[VAL_6]]) {fortran_attrs = #fir.var_attrs<target, volatile>, uniq_name = "_QFEvolatile_array_target"} : (!fir.ref<!fir.array<10xi32>, volatile>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>, volatile>, !fir.ref<!fir.array<10xi32>, volatile>)
+! CHECK:           %[[VAL_27:.*]] = fir.alloca i32 {bindc_name = "volatile_integer", uniq_name = "_QFEvolatile_integer"}
 ! CHECK:           %[[VAL_28:.*]] = fir.volatile_cast %[[VAL_27]] : (!fir.ref<i32>) -> !fir.ref<i32, volatile>
-! CHECK:           %[[VAL_29:.*]]:2 = hlfir.declare %[[VAL_28]] {fortran_attrs = #fir.var_attrs<target, volatile>, uniq_name = "_QFEvolatile_integer_target"} : (!fir.ref<i32, volatile>) -> (!fir.ref<i32, volatile>, !fir.ref<i32, volatile>)
-! CHECK:           %[[VAL_30:.*]] = fir.embox %[[VAL_23]]#0(%[[VAL_3]]) : (!fir.ref<!fir.array<10xi32>, volatile>, !fir.shape<1>) -> !fir.box<!fir.ptr<!fir.array<?xi32>>, volatile>
-! CHECK:           fir.store %[[VAL_30]] to %[[VAL_20]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>, volatile>, volatile>
-! CHECK:           %[[VAL_31:.*]] = fir.embox %[[VAL_8]]#0(%[[VAL_3]]) : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> !fir.box<!fir.ptr<!fir.array<?xi32>>>
-! CHECK:           %[[VAL_32:.*]] = fir.volatile_cast %[[VAL_31]] : (!fir.box<!fir.ptr<!fir.array<?xi32>>>) -> !fir.box<!fir.ptr<!fir.array<?xi32>>, volatile>
-! CHECK:           fir.store %[[VAL_32]] to %[[VAL_20]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>, volatile>, volatile>
-! CHECK:           %[[VAL_33:.*]] = fir.volatile_cast %[[VAL_30]] : (!fir.box<!fir.ptr<!fir.array<?xi32>>, volatile>) -> !fir.box<!fir.ptr<!fir.array<?xi32>>>
-! CHECK:           fir.store %[[VAL_33]] to %[[VAL_6]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
-! CHECK:           fir.store %[[VAL_31]] to %[[VAL_6]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
-! CHECK:           %[[VAL_34:.*]] = fir.volatile_cast %[[VAL_13]]#0 : (!fir.ref<!fir.array<10xi32>, volatile>) -> !fir.ref<!fir.array<10xi32>>
-! CHECK:           fir.call @_QFPsub_nonvolatile_array(%[[VAL_34]]) fastmath<contract> : (!fir.ref<!fir.array<10xi32>>) -> ()
-! CHECK:           %[[VAL_35:.*]] = fir.embox %[[VAL_13]]#0(%[[VAL_3]]) : (!fir.ref<!fir.array<10xi32>, volatile>, !fir.shape<1>) -> !fir.box<!fir.array<10xi32>, volatile>
-! CHECK:           %[[VAL_36:.*]] = fir.volatile_cast %[[VAL_35]] : (!fir.box<!fir.array<10xi32>, volatile>) -> !fir.box<!fir.array<10xi32>>
-! CHECK:           %[[VAL_37:.*]] = fir.convert %[[VAL_36]] : (!fir.box<!fir.array<10xi32>>) -> !fir.box<!fir.array<?xi32>>
-! CHECK:           fir.call @_QFPsub_volatile_array_assumed_shape(%[[VAL_37]]) fastmath<contract> : (!fir.box<!fir.array<?xi32>>) -> ()
-! CHECK:           fir.call @_QFPsub_volatile_array(%[[VAL_34]]) fastmath<contract> : (!fir.ref<!fir.array<10xi32>>) -> ()
-! CHECK:           %[[VAL_38:.*]] = fir.embox %[[VAL_4]]#0(%[[VAL_3]]) : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> !fir.box<!fir.array<10xi32>>
-! CHECK:           %[[VAL_39:.*]] = fir.convert %[[VAL_38]] : (!fir.box<!fir.array<10xi32>>) -> !fir.box<!fir.array<?xi32>>
-! CHECK:           fir.call @_QFPsub_volatile_array_assumed_shape(%[[VAL_39]]) fastmath<contract> : (!fir.box<!fir.array<?xi32>>) -> ()
-! CHECK:           fir.call @_QFPsub_volatile_array(%[[VAL_4]]#0) fastmath<contract> : (!fir.ref<!fir.array<10xi32>>) -> ()
-! CHECK:           %[[VAL_40:.*]] = fir.convert %[[VAL_20]]#0 : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>, volatile>, volatile>) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>, volatile>
-! CHECK:           fir.call @_QFPsub_volatile_array_pointer(%[[VAL_40]]) fastmath<contract> : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>, volatile>) -> ()
-! CHECK:           %[[VAL_41:.*]] = fir.volatile_cast %[[VAL_6]]#0 : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>, volatile>
-! CHECK:           fir.call @_QFPsub_volatile_array_pointer(%[[VAL_41]]) fastmath<contract> : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>, volatile>) -> ()
-! CHECK:           %[[VAL_42:.*]] = hlfir.designate %[[VAL_13]]#0 (%[[VAL_0]]:%[[VAL_1]]:%[[VAL_0]])  shape %[[VAL_3]] : (!fir.ref<!fir.array<10xi32>, volatile>, index, index, index, !fir.shape<1>) -> !fir.ref<!fir.array<10xi32>, volatile>
-! CHECK:           %[[VAL_43:.*]] = fir.embox %[[VAL_42]](%[[VAL_3]]) : (!fir.ref<!fir.array<10xi32>, volatile>, !fir.shape<1>) -> !fir.box<!fir.array<10xi32>, volatile>
-! CHECK:           %[[VAL_44:.*]] = fir.volatile_cast %[[VAL_43]] : (!fir.box<!fir.array<10xi32>, volatile>) -> !fir.box<!fir.array<10xi32>>
-! CHECK:           %[[VAL_45:.*]] = fir.convert %[[VAL_44]] : (!fir.box<!fir.array<10xi32>>) -> !fir.box<!fir.array<?xi32>>
-! CHECK:           fir.call @_QFPsub_volatile_array_assumed_shape(%[[VAL_45]]) fastmath<contract> : (!fir.box<!fir.array<?xi32>>) -> ()
-! CHECK:           %[[VAL_46:.*]] = hlfir.designate %[[VAL_17]]#0 (%[[VAL_0]]:%[[VAL_1]]:%[[VAL_0]], %[[VAL_0]]:%[[VAL_1]]:%[[VAL_0]])  shape %[[VAL_15]] : (!fir.ref<!fir.array<10x10xi32>, volatile>, index, index, index, index, index, index, !fir.shape<2>) -> !fir.box<!fir.array<10x10xi32>, volatile>
-! CHECK:           %[[VAL_47:.*]] = fir.volatile_cast %[[VAL_46]] : (!fir.box<!fir.array<10x10xi32>, volatile>) -> !fir.box<!fir.array<10x10xi32>>
-! CHECK:           %[[VAL_48:.*]] = fir.convert %[[VAL_47]] : (!fir.box<!fir.array<10x10xi32>>) -> !fir.box<!fir.array<?x?xi32>>
-! CHECK:           fir.call @_QFPsub_volatile_array_assumed_shape_2d(%[[VAL_48]]) fastmath<contract> : (!fir.box<!fir.array<?x?xi32>>) -> ()
+! CHECK:           %[[VAL_29:.*]]:2 = hlfir.declare %[[VAL_28]] {fortran_attrs = #fir.var_attrs<volatile>, uniq_name = "_QFEvolatile_integer"} : (!fir.ref<i32, volatile>) -> (!fir.ref<i32, volatile>, !fir.ref<i32, volatile>)
+! CHECK:           %[[VAL_30:.*]] = fir.alloca !fir.box<!fir.ptr<i32>> {bindc_name = "volatile_integer_pointer", uniq_name = "_QFEvolatile_integer_pointer"}
+! CHECK:           %[[VAL_31:.*]] = fir.zero_bits !fir.ptr<i32>
+! CHECK:           %[[VAL_32:.*]] = fir.embox %[[VAL_31]] : (!fir.ptr<i32>) -> !fir.box<!fir.ptr<i32>>
+! CHECK:           fir.store %[[VAL_32]] to %[[VAL_30]] : !fir.ref<!fir.box<!fir.ptr<i32>>>
+! CHECK:           %[[VAL_33:.*]] = fir.volatile_cast %[[VAL_30]] : (!fir.ref<!fir.box<!fir.ptr<i32>>>) -> !fir.ref<!fir.box<!fir.ptr<i32>, volatile>, volatile>
+! CHECK:           %[[VAL_34:.*]]:2 = hlfir.declare %[[VAL_33]] {fortran_attrs = #fir.var_attrs<pointer, volatile>, uniq_name = "_QFEvolatile_integer_pointer"} : (!fir.ref<!fir.box<!fir.ptr<i32>, volatile>, volatile>) -> (!fir.ref<!fir.box<!fir.ptr<i32>, volatile>, volatile>, !fir.ref<!fir.box<!fir.ptr<i32>, volatile>, volatile>)
+! CHECK:           %[[VAL_35:.*]] = fir.address_of(@_QFEvolatile_integer_target) : !fir.ref<i32>
+! CHECK:           %[[VAL_36:.*]] = fir.volatile_cast %[[VAL_35]] : (!fir.ref<i32>) -> !fir.ref<i32, volatile>
+! CHECK:           %[[VAL_37:.*]]:2 = hlfir.declare %[[VAL_36]] {fortran_attrs = #fir.var_attrs<target, volatile>, uniq_name = "_QFEvolatile_integer_target"} : (!fir.ref<i32, volatile>) -> (!fir.ref<i32, volatile>, !fir.ref<i32, volatile>)
+! CHECK:           %[[VAL_38:.*]] = fir.embox %[[VAL_26]]#0(%[[VAL_6]]) : (!fir.ref<!fir.array<10xi32>, volatile>, !fir.shape<1>) -> !fir.box<!fir.ptr<!fir.array<?xi32>>, volatile>
+! CHECK:           fir.store %[[VAL_38]] to %[[VAL_23]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>, volatile>, volatile>
+! CHECK:           %[[VAL_39:.*]] = fir.embox %[[VAL_11]]#0(%[[VAL_6]]) : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> !fir.box<!fir.ptr<!fir.array<?xi32>>>
+! CHECK:           %[[VAL_40:.*]] = fir.volatile_cast %[[VAL_39]] : (!fir.box<!fir.ptr<!fir.array<?xi32>>>) -> !fir.box<!fir.ptr<!fir.array<?xi32>>, volatile>
+! CHECK:           fir.store %[[VAL_40]] to %[[VAL_23]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>, volatile>, volatile>
+! CHECK:           %[[VAL_41:.*]] = fir.zero_bits !fir.ptr<!fir.array<?xi32>>
+! CHECK:           %[[VAL_42:.*]] = fir.shape %[[VAL_1]] : (index) -> !fir.shape<1>
+! CHECK:           %[[VAL_43:.*]] = fir.embox %[[VAL_41]](%[[VAL_42]]) : (!fir.ptr<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.box<!fir.ptr<!fir.array<?xi32>>, volatile>
+! CHECK:           fir.store %[[VAL_43]] to %[[VAL_4]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>, volatile>>
+! CHECK:           %[[VAL_44:.*]]:2 = hlfir.declare %[[VAL_4]] {uniq_name = ".tmp.intrinsic_result"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>, volatile>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>, volatile>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>, volatile>>)
+! CHECK:           %[[VAL_45:.*]] = fir.load %[[VAL_44]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>, volatile>>
+! CHECK:           %[[VAL_46:.*]]:3 = fir.box_dims %[[VAL_45]], %[[VAL_1]] : (!fir.box<!fir.ptr<!fir.array<?xi32>>, volatile>, index) -> (index, index, index)
+! CHECK:           %[[VAL_47:.*]] = fir.shift %[[VAL_46]]#0 : (index) -> !fir.shift<1>
+! CHECK:           %[[VAL_48:.*]] = fir.rebox %[[VAL_45]](%[[VAL_47]]) : (!fir.box<!fir.ptr<!fir.array<?xi32>>, volatile>, !fir.shift<1>) -> !fir.box<!fir.ptr<!fir.array<?xi32>>, volatile>
+! CHECK:           fir.store %[[VAL_48]] to %[[VAL_23]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>, volatile>, volatile>
+! CHECK:           %[[VAL_49:.*]] = fir.volatile_cast %[[VAL_38]] : (!fir.box<!fir.ptr<!fir.array<?xi32>>, volatile>) -> !fir.box<!fir.ptr<!fir.array<?xi32>>>
+! CHECK:           fir.store %[[VAL_49]] to %[[VAL_9]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
+! CHECK:           fir.store %[[VAL_39]] to %[[VAL_9]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
+! CHECK:           %[[VAL_50:.*]] = fir.embox %[[VAL_37]]#0 : (!fir.ref<i32, volatile>) -> !fir.box<!fir.ptr<i32>, volatile>
+! CHECK:           fir.store %[[VAL_50]] to %[[VAL_34]]#0 : !fir.ref<!fir.box<!fir.ptr<i32>, volatile>, volatile>
+! CHECK:           %[[VAL_51:.*]] = fir.embox %[[VAL_31]] : (!fir.ptr<i32>) -> !fir.box<!fir.ptr<i32>, volatile>
+! CHECK:           fir.store %[[VAL_51]] to %[[VAL_3]] : !fir.ref<!fir.box<!fir.ptr<i32>, volatile>>
+! CHECK:           %[[VAL_52:.*]]:2 = hlfir.declare %[[VAL_3]] {uniq_name = ".tmp.intrinsic_result"} : (!fir.ref<!fir.box<!fir.ptr<i32>, volatile>>) -> (!fir.ref<!fir.box<!fir.ptr<i32>, volatile>>, !fir.ref<!fir.box<!fir.ptr<i32>, volatile>>)
+! CHECK:           %[[VAL_53:.*]] = fir.load %[[VAL_52]]#0 : !fir.ref<!fir.box<!fir.ptr<i32>, volatile>>
+! CHECK:           %[[VAL_54:.*]] = fir.box_addr %[[VAL_53]] : (!fir.box<!fir.ptr<i32>, volatile>) -> !fir.ptr<i32>
+! CHECK:           %[[VAL_55:.*]] = fir.embox %[[VAL_54]] : (!fir.ptr<i32>) -> !fir.box<!fir.ptr<i32>>
+! CHECK:           %[[VAL_56:.*]] = fir.volatile_cast %[[VAL_55]] : (!fir.box<!fir.ptr<i32>>) -> !fir.box<!fir.ptr<i32>, volatile>
+! CHECK:           fir.store %[[VAL_56]] to %[[VAL_34]]#0 : !fir.ref<!fir.box<!fir.ptr<i32>, volatile>, volatile>
+! CHECK:           %[[VAL_57:.*]] = fir.volatile_cast %[[VAL_16]]#0 : (!fir.ref<!fir.array<10xi32>, volatile>) -> !fir.ref<!fir.array<10xi32>>
+! CHECK:           fir.call @_QFPsub_nonvolatile_array(%[[VAL_57]]) fastmath<contract> : (!fir.ref<!fir.array<10xi32>>) -> ()
+! CHECK:           %[[VAL_58:.*]] = fir.embox %[[VAL_16]]#0(%[[VAL_6]]) : (!fir.ref<!fir.array<10xi32>, volatile>, !fir.shape<1>) -> !fir.box<!fir.array<10xi32>, volatile>
+! CHECK:           %[[VAL_59:.*]] = fir.volatile_cast %[[VAL_58]] : (!fir.box<!fir.array<10xi32>, volatile>) -> !fir.box<!fir.array<10xi32>>
+! CHECK:           %[[VAL_60:.*]] = fir.convert %[[VAL_59]] : (!fir.box<!fir.array<10xi32>>) -> !fir.box<!fir.array<?xi32>>
+! CHECK:           fir.call @_QFPsub_volatile_array_assumed_shape(%[[VAL_60]]) fastmath<contract> : (!fir.box<!fir.array<?xi32>>) -> ()
+! CHECK:           fir.call @_QFPsub_volatile_array(%[[VAL_57]]) fastmath<contract> : (!fir.ref<!fir.array<10xi32>>) -> ()
+! CHECK:           %[[VAL_61:.*]] = fir.embox %[[VAL_7]]#0(%[[VAL_6]]) : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> !fir.box<!fir.array<10xi32>>
+! CHECK:           %[[VAL_62:.*]] = fir.convert %[[VAL_61]] : (!fir.box<!fir.array<10xi32>>) -> !fir.box<!fir.array<?xi32>>
+! CHECK:           fir.call @_QFPsub_volatile_array_assumed_shape(%[[VAL_62]]) fastmath<contract> : (!fir.box<!fir.array<?xi32>>) -> ()
+! CHECK:           fir.call @_QFPsub_volatile_array(%[[VAL_7]]#0) fastmath<contract> : (!fir.ref<!fir.array<10xi32>>) -> ()
+! CHECK:           %[[VAL_63:.*]] = fir.convert %[[VAL_23]]#0 : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>, volatile>, volatile>) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>, volatile>
+! CHECK:           fir.call @_QFPsub_volatile_array_pointer(%[[VAL_63]]) fastmath<contract> : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>, volatile>) -> ()
+! CHECK:           %[[VAL_64:.*]] = fir.volatile_cast %[[VAL_9]]#0 : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>, volatile>
+! CHECK:           fir.call @_QFPsub_volatile_array_pointer(%[[VAL_64]]) fastmath<contract> : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>, volatile>) -> ()
+! CHECK:           %[[VAL_65:.*]] = hlfir.designate %[[VAL_16]]#0 (%[[VAL_0]]:%[[VAL_2]]:%[[VAL_0]])  shape %[[VAL_6]] : (!fir.ref<!fir.array<10xi32>, volatile>, index, index, index, !fir.shape<1>) -> !fir.ref<!fir.array<10xi32>, volatile>
+! CHECK:           %[[VAL_66:.*]] = fir.embox %[[VAL_65]](%[[VAL_6]]) : (!fir.ref<!fir.array<10xi32>, volatile>, !fir.shape<1>) -> !fir.box<!fir.array<10xi32>, volatile>
+! CHECK:           %[[VAL_67:.*]] = fir.volatile_cast %[[VAL_66]] : (!fir.box<!fir.array<10xi32>, volatile>) -> !fir.box<!fir.array<10xi32>>
+! CHECK:           %[[VAL_68:.*]] = fir.convert %[[VAL_67]] : (!fir.box<!fir.array<10xi32>>) -> !fir.box<!fir.array<?xi32>>
+! CHECK:           fir.call @_QFPsub_volatile_array_assumed_shape(%[[VAL_68]]) fastmath<contract> : (!fir.box<!fir.array<?xi32>>) -> ()
+! CHECK:           %[[VAL_69:.*]] = hlfir.designate %[[VAL_20]]#0 (%[[VAL_0]]:%[[VAL_2]]:%[[VAL_0]], %[[VAL_0]]:%[[VAL_2]]:%[[VAL_0]])  shape %[[VAL_18]] : (!fir.ref<!fir.array<10x10xi32>, volatile>, index, index, index, index, index, index, !fir.shape<2>) -> !fir.box<!fir.array<10x10xi32>, volatile>
+! CHECK:           %[[VAL_70:.*]] = fir.volatile_cast %[[VAL_69]] : (!fir.box<!fir.array<10x10xi32>, volatile>) -> !fir.box<!fir.array<10x10xi32>>
+! CHECK:           %[[VAL_71:.*]] = fir.convert %[[VAL_70]] : (!fir.box<!fir.array<10x10xi32>>) -> !fir.box<!fir.array<?x?xi32>>
+! CHECK:           fir.call @_QFPsub_volatile_array_assumed_shape_2d(%[[VAL_71]]) fastmath<contract> : (!fir.box<!fir.array<?x?xi32>>) -> ()
 ! CHECK:           return
 ! CHECK:         }
 

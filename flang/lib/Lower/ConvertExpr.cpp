@@ -7016,7 +7016,8 @@ private:
           components.resetExtendCoorRef();
           auto ptrEleTy = fir::PointerType::get(eleTy);
           auto ptrAddr = builder.createConvert(loc, ptrEleTy, addr);
-          auto boxTy = fir::BoxType::get(ptrEleTy);
+          auto boxTy = fir::BoxType::get(
+              ptrEleTy, fir::isa_volatile_type(addr.getType()));
           // FIXME: The typeparams to the load may be different than those of
           // the subobject.
           if (components.hasExtendCoorRef())
