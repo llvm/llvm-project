@@ -504,13 +504,12 @@ public:
   using pointer       = typename __alloc_traits::pointer;
   using const_pointer = typename __alloc_traits::const_pointer;
 
-  using __pointer_allocator _LIBCPP_NODEBUG       = __rebind_alloc<__alloc_traits, pointer>;
-  using __const_pointer_allocator _LIBCPP_NODEBUG = __rebind_alloc<__alloc_traits, const_pointer>;
-  using __map _LIBCPP_NODEBUG                     = __split_buffer<pointer, __pointer_allocator>;
-  using __map_alloc_traits _LIBCPP_NODEBUG        = allocator_traits<__pointer_allocator>;
-  using __map_pointer _LIBCPP_NODEBUG             = typename __map_alloc_traits::pointer;
-  using __map_const_pointer _LIBCPP_NODEBUG       = typename allocator_traits<__const_pointer_allocator>::const_pointer;
-  using __map_const_iterator _LIBCPP_NODEBUG      = typename __map::const_iterator;
+  using __pointer_allocator _LIBCPP_NODEBUG  = __rebind_alloc<__alloc_traits, pointer>;
+  using __map _LIBCPP_NODEBUG                = __split_buffer<pointer, __pointer_allocator>;
+  using __map_alloc_traits _LIBCPP_NODEBUG   = allocator_traits<__pointer_allocator>;
+  using __map_pointer _LIBCPP_NODEBUG        = typename __map_alloc_traits::pointer;
+  using __map_const_pointer _LIBCPP_NODEBUG  = typename allocator_traits<__pointer_allocator>::const_pointer;
+  using __map_const_iterator _LIBCPP_NODEBUG = typename __map::const_iterator;
 
   using reference       = value_type&;
   using const_reference = const value_type&;
@@ -721,7 +720,7 @@ public:
   }
 
   _LIBCPP_HIDE_FROM_ABI const_iterator begin() const _NOEXCEPT {
-    __map_const_pointer __mp = static_cast<__map_const_pointer>(__map_.begin() + __start_ / __block_size);
+    __map_const_pointer __mp = __map_.begin() + __start_ / __block_size;
     return const_iterator(__mp, __map_.empty() ? 0 : *__mp + __start_ % __block_size);
   }
 
@@ -733,7 +732,7 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI const_iterator end() const _NOEXCEPT {
     size_type __p            = size() + __start_;
-    __map_const_pointer __mp = static_cast<__map_const_pointer>(__map_.begin() + __p / __block_size);
+    __map_const_pointer __mp = __map_.begin() + __p / __block_size;
     return const_iterator(__mp, __map_.empty() ? 0 : *__mp + __p % __block_size);
   }
 

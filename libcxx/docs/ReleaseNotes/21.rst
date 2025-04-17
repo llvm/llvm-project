@@ -114,6 +114,14 @@ ABI Affecting Changes
   comparison between shared libraries, since all RTTI has the correct visibility now. There is no behaviour change on
   Clang.
 
+- The ``const_iterator`` member type of ``std::deque`` is now corrected to hold a (possibly fancy) pointer to the
+  (possibly fancy) pointer allocated in the internal map. E.g. when the allocators use fancy pointers, the internal map
+  stores ``fancy_ptr<T>`` objects, and the previous strategy accessed these objects via ``const fancy_ptr<const T>``
+  lvalues, which usually caused core language undefined behavior. Now ``const_iterator`` stores
+  ``fancy_ptr<const fancy_ptr<T>>`` instead of ``fancy_ptr<const fancy_ptr<const T>>``, and ABI break can happen when
+  such two types have incompatible layouts. This is necessary for reducing undefined behavior and ``constexpr`` support
+  for ``deque`` in C++26, so we do not provide any way to opt-out of that behavior.
+
 
 Build System Changes
 --------------------
