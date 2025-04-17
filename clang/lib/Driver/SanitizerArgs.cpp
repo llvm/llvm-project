@@ -371,8 +371,7 @@ bool SanitizerArgs::needsUbsanCXXRt() const {
 }
 
 bool SanitizerArgs::needsCfiRt() const {
-  return !(Sanitizers.Mask & SanitizerKind::CFI & ~TrapSanitizers.Mask) &&
-         CfiCrossDso && !ImplicitCfiRuntime;
+  return !needsCfiDiagRt() && CfiCrossDso && !ImplicitCfiRuntime;
 }
 
 bool SanitizerArgs::needsCfiDiagRt() const {
