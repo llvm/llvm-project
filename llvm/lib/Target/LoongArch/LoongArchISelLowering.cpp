@@ -777,8 +777,7 @@ static int matchShuffleAsByteRotate(MVT VT, SDValue &V1, SDValue &V2,
     // If we found the tail of a vector the rotation must be the missing
     // front. If we found the head of a vector, it must be how much of the
     // head.
-    // int CandidateRotation = StartIdx < 0 ? -StartIdx : NumElts - StartIdx;
-    int CandidateRotation = (NumElts - StartIdx) % NumElts;
+    int CandidateRotation = StartIdx < 0 ? -StartIdx : NumElts - StartIdx;
 
     if (Rotation == 0)
       Rotation = CandidateRotation;
