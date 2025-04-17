@@ -20,6 +20,17 @@
 
 using namespace llvm;
 
+static void legalizeFreeze(Instruction &I,
+                           SmallVectorImpl<Instruction *> &ToRemove,
+                           DenseMap<Value *, Value *>) {
+  auto *FI = dyn_cast<FreezeInst>(&I);
+  if (!FI)
+    return;
+
+  FI->replaceAllUsesWith(FI->getOperand(0));
+  ToRemove.push_back(FI);
+}
+
 static void fixI8TruncUseChain(Instruction &I,
                                SmallVectorImpl<Instruction *> &ToRemove,
                                DenseMap<Value *, Value *> &ReplacedValues) {
@@ -169,6 +180,7 @@ private:
   void initializeLegalizationPipeline() {
     LegalizationPipeline.push_back(fixI8TruncUseChain);
     LegalizationPipeline.push_back(downcastI64toI32InsertExtractElements);
+    LegalizationPipeline.push_back(legalizeFreeze);
   }
 };
 
