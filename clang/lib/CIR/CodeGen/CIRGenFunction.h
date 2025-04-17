@@ -269,6 +269,12 @@ public:
     return LValue::makeAddr(addr, ty, baseInfo);
   }
 
+  /// Get an appropriate 'undef' rvalue for the given type.
+  /// TODO: What's the equivalent for MLIR? Currently we're only using this for
+  /// void types so it just returns RValue::get(nullptr) but it'll need
+  /// addressed later.
+  RValue getUndefRValue(clang::QualType ty);
+
   cir::FuncOp generateCode(clang::GlobalDecl gd, cir::FuncOp fn,
                            cir::FuncType funcType);
 
@@ -451,11 +457,12 @@ public:
   mlir::LogicalResult emitBreakStmt(const clang::BreakStmt &s);
 
   RValue emitCall(const CIRGenFunctionInfo &funcInfo,
-                  const CIRGenCallee &callee, cir::CIRCallOpInterface *callOp,
-                  mlir::Location loc);
+                  const CIRGenCallee &callee, ReturnValueSlot returnValue,
+                  cir::CIRCallOpInterface *callOp, mlir::Location loc);
   RValue emitCall(clang::QualType calleeTy, const CIRGenCallee &callee,
-                  const clang::CallExpr *e);
-  RValue emitCallExpr(const clang::CallExpr *e);
+                  const clang::CallExpr *e, ReturnValueSlot returnValue);
+  RValue emitCallExpr(const clang::CallExpr *e,
+                      ReturnValueSlot returnValue = ReturnValueSlot());
   CIRGenCallee emitCallee(const clang::Expr *e);
 
   mlir::LogicalResult emitContinueStmt(const clang::ContinueStmt &s);

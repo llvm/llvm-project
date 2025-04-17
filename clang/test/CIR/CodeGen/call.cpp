@@ -7,3 +7,13 @@ void f2() {
 
 // CHECK-LABEL: cir.func @f2
 // CHECK:         cir.call @f1() : () -> ()
+
+int f3();
+int f4() {
+  int x = f3();
+  return x;
+}
+
+// CHECK-LABEL: cir.func @f4() -> !s32i
+// CHECK:         %[[#x:]] = cir.call @f3() : () -> !s32i
+// CHECK-NEXT:    cir.store %[[#x]], %{{.+}} : !s32i, !cir.ptr<!s32i>

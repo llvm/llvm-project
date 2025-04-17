@@ -13,6 +13,7 @@
 #ifndef LLVM_CLANG_LIB_CODEGEN_CODEGENTYPES_H
 #define LLVM_CLANG_LIB_CODEGEN_CODEGENTYPES_H
 
+#include "ABIInfo.h"
 #include "CIRGenFunctionInfo.h"
 #include "CIRGenRecordLayout.h"
 
@@ -45,6 +46,8 @@ class CIRGenTypes {
   CIRGenModule &cgm;
   clang::ASTContext &astContext;
   CIRGenBuilderTy &builder;
+
+  const ABIInfo &theABIInfo;
 
   /// Contains the CIR type for any converted RecordDecl.
   llvm::DenseMap<const clang::Type *, std::unique_ptr<CIRGenRecordLayout>>
@@ -88,6 +91,8 @@ public:
 
   bool noRecordsBeingLaidOut() const { return recordsBeingLaidOut.empty(); }
 
+  const ABIInfo &getABIInfo() const { return theABIInfo; }
+
   /// Convert a Clang type into a mlir::Type.
   mlir::Type convertType(clang::QualType type);
 
@@ -110,9 +115,9 @@ public:
   /// LLVM zeroinitializer.
   bool isZeroInitializable(clang::QualType ty);
 
-  const CIRGenFunctionInfo &arrangeFreeFunctionCall();
+  const CIRGenFunctionInfo &arrangeFreeFunctionCall(const FunctionType *fnType);
 
-  const CIRGenFunctionInfo &arrangeCIRFunctionInfo();
+  const CIRGenFunctionInfo &arrangeCIRFunctionInfo(CanQualType returnType);
 };
 
 } // namespace clang::CIRGen

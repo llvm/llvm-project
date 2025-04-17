@@ -81,6 +81,10 @@ struct CallArg {};
 
 class CallArgList : public llvm::SmallVector<CallArg, 8> {};
 
+/// Contains the address where the return value of a function can be stored, and
+/// whether the address is volatile or not.
+class ReturnValueSlot {};
+
 } // namespace clang::CIRGen
 
 #endif // CLANG_LIB_CODEGEN_CIRGENCALL_H

@@ -1408,10 +1408,14 @@ def CallOp : CIR_CallOpBase<"call", [NoRegionArguments]> {
     ```
   }];
 
+  let results = (outs Optional<CIR_AnyType>:$result);
   let arguments = commonArgs;
 
-  let builders = [OpBuilder<(ins "mlir::SymbolRefAttr":$callee), [{
+  let builders = [OpBuilder<(ins "mlir::SymbolRefAttr":$callee,
+                                 "mlir::Type":$resType), [{
       $_state.addAttribute("callee", callee);
+      if (resType && !isa<VoidType>(resType))
+        $_state.addTypes(resType);
     }]>];
 }
 
