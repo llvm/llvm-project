@@ -2752,7 +2752,7 @@ let Predicates = [HasSVE_or_SME] in {
 
   // For big endian, only BITCASTs involving same sized vector types with same
   // size vector elements can be isel'd directly.
-  let Predicates = [IsLE] in
+  let Predicates = [HasSVE_or_SME, IsLE] in
     foreach VT = [ nxv16i8, nxv8i16, nxv4i32, nxv2i64, nxv8f16, nxv4f32, nxv2f64, nxv8bf16 ] in
       foreach VT2 = [ nxv16i8, nxv8i16, nxv4i32, nxv2i64, nxv8f16, nxv4f32, nxv2f64, nxv8bf16 ] in
         if !ne(VT,VT2) then
@@ -3002,24 +3002,25 @@ let Predicates = [HasSVE_or_SME] in {
   defm : unpred_load<        load, nxv2f32,  LD1W_D,  LD1W_D_IMM, PTRUE_D, am_sve_regreg_lsl2>;
   defm : unpred_load<        load, nxv2f64,    LD1D,    LD1D_IMM, PTRUE_D, am_sve_regreg_lsl3>;
 
-  // Allow using the reg+reg form of ld1b/st1b for memory accesses with the
-  // same width as nxv16i8.  This saves an add in cases where we would
-  // otherwise compute the address separately.
-  multiclass unpred_loadstore_bitcast<ValueType Ty> {
-    let Predicates = [IsLE] in {
+  let Predicates = [HasSVE_or_SME, IsLE] in {
+    // Allow using the reg+reg form of ld1b/st1b for memory accesses with the
+    // same width as nxv16i8.  This saves an add in cases where we would
+    // otherwise compute the address separately.
+    multiclass unpred_loadstore_bitcast<ValueType Ty> {
       def : Pat<(Ty (load (am_sve_regreg_lsl0 GPR64sp:$base, GPR64:$offset))),
                 (LD1B (PTRUE_B 31), GPR64sp:$base, GPR64:$offset)>;
       def : Pat<(store Ty:$val, (am_sve_regreg_lsl0 GPR64sp:$base, GPR64:$offset)),
                 (ST1B ZPR:$val, (PTRUE_B 31), GPR64sp:$base, GPR64:$offset)>;
     }
+
+    defm : unpred_loadstore_bitcast<nxv8i16>;
+    defm : unpred_loadstore_bitcast<nxv8f16>;
+    defm : unpred_loadstore_bitcast<nxv8bf16>;
+    defm : unpred_loadstore_bitcast<nxv4f32>;
+    defm : unpred_loadstore_bitcast<nxv4i32>;
+    defm : unpred_loadstore_bitcast<nxv2i64>;
+    defm : unpred_loadstore_bitcast<nxv2f64>;
   }
-  defm : unpred_loadstore_bitcast<nxv8i16>;
-  defm : unpred_loadstore_bitcast<nxv8f16>;
-  defm : unpred_loadstore_bitcast<nxv8bf16>;
-  defm : unpred_loadstore_bitcast<nxv4f32>;
-  defm : unpred_loadstore_bitcast<nxv4i32>;
-  defm : unpred_loadstore_bitcast<nxv2i64>;
-  defm : unpred_loadstore_bitcast<nxv2f64>;
 
   // Allow using LDR/STR to avoid the predicate dependence.
   let Predicates = [HasSVE_or_SME, IsLE, AllowMisalignedMemAccesses] in
