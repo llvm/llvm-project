@@ -330,35 +330,6 @@ bb:
   ret void
 }
 
-define amdgpu_ps void @test_swmmac_i32_16x16x256_iu4(<8 x i32> %A, <16 x i32> %B, <8 x i32> %C, ptr addrspace(1) %IndexVecPtr, ptr addrspace(1) %out) {
-; GFX1250-LABEL: test_swmmac_i32_16x16x256_iu4:
-; GFX1250:       ; %bb.0: ; %bb
-; GFX1250-NEXT:    global_load_b32 v32, v[32:33], off
-; GFX1250-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-NEXT:    v_swmmac_i32_16x16x256_iu4 v[24:31], v[0:7], v[8:23], v32 index_key:1
-; GFX1250-NEXT:    s_clause 0x1
-; GFX1250-NEXT:    global_store_b128 v[34:35], v[28:31], off offset:16
-; GFX1250-NEXT:    global_store_b128 v[34:35], v[24:27], off
-; GFX1250-NEXT:    s_endpgm
-;
-; GISEL-LABEL: test_swmmac_i32_16x16x256_iu4:
-; GISEL:       ; %bb.0: ; %bb
-; GISEL-NEXT:    global_load_b32 v32, v[32:33], off
-; GISEL-NEXT:    s_wait_loadcnt 0x0
-; GISEL-NEXT:    v_swmmac_i32_16x16x256_iu4 v[24:31], v[0:7], v[8:23], v32 index_key:1
-; GISEL-NEXT:    s_clause 0x1
-; GISEL-NEXT:    global_store_b128 v[34:35], v[24:27], off
-; GISEL-NEXT:    global_store_b128 v[34:35], v[28:31], off offset:16
-; GISEL-NEXT:    s_endpgm
-bb:
-  %IndexVecPacked = load i32, ptr addrspace(1) %IndexVecPtr, align 4
-  %IndexVec = bitcast i32 %IndexVecPacked to <2 x i16>
-  %Index = extractelement <2 x i16> %IndexVec, i32 1
-  %res = call <8 x i32> @llvm.amdgcn.swmmac.i32.16x16x256.iu4.v8i32.v8i32.v16i32.i16(i1 0, <8 x i32> %A, i1 0, <16 x i32> %B, <8 x i32> %C, i16 %Index)
-  store <8 x i32> %res, ptr addrspace(1) %out
-  ret void
-}
-
 declare <8 x float> @llvm.amdgcn.swmmac.f32.16x16x64.bf16.v8f32.v16bf16.v32bf16.i16(i1, <16 x bfloat>, i1, <32 x bfloat>, <8 x float>, i16)
 declare <8 x bfloat> @llvm.amdgcn.swmmac.bf16.16x16x64.bf16.v8bf16.v16bf16.v32bf16.i16(i1, <16 x bfloat>, i1, <32 x bfloat>, <8 x bfloat>, i16)
 declare <8 x float> @llvm.amdgcn.swmmac.bf16f32.16x16x64.bf16.v8f32.v16bf16.v32bf16.i16(i1, <16 x bfloat>, i1, <32 x bfloat>, <8 x float>, i16)
@@ -371,4 +342,3 @@ declare <8 x half> @llvm.amdgcn.swmmac.f16.16x16x128.fp8.bf8.v8f16.v8i32.v16i32.
 declare <8 x half> @llvm.amdgcn.swmmac.f16.16x16x128.bf8.fp8.v8f16.v8i32.v16i32.i16(<8 x i32>, <16 x i32>, <8 x half>, i16)
 declare <8 x half> @llvm.amdgcn.swmmac.f16.16x16x128.bf8.bf8.v8f16.v8i32.v16i32.i16(<8 x i32>, <16 x i32>, <8 x half>, i16)
 declare <8 x i32> @llvm.amdgcn.swmmac.i32.16x16x128.iu8.v8i32.v8i32.v16i32.i16(i1 immarg, <8 x i32>, i1 immarg, <16 x i32>, <8 x i32>, i16 %Index)
-declare <8 x i32> @llvm.amdgcn.swmmac.i32.16x16x256.iu4.v8i32.v8i32.v16i32.i16(i1 immarg, <8 x i32>, i1 immarg, <16 x i32>, <8 x i32>, i16 %Index)

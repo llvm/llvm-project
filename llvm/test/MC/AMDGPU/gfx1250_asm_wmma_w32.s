@@ -362,26 +362,6 @@ v_wmma_i32_16x16x64_iu8 v[16:23], v[0:7], v[8:15], v[16:23] neg_lo:[0,1,0]
 // WAVESIZE-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction requires wavesize=32
 // GFX12-ERR: :[[@LINE-3]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
-v_wmma_i32_16x16x128_iu4 v[16:23], v[0:7], v[8:15], v[16:23]
-// GFX1250: v_wmma_i32_16x16x128_iu4 v[16:23], v[0:7], v[8:15], v[16:23] ; encoding: [0x10,0x40,0x7c,0xcc,0x00,0x11,0x42,0x1c]
-// WAVESIZE-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction requires wavesize=32
-// GFX12-ERR: :[[@LINE-3]]:{{[0-9]+}}: error: instruction not supported on this GPU
-
-v_wmma_i32_16x16x128_iu4 v[16:23], v[0:7], v[8:15], 1
-// GFX1250: v_wmma_i32_16x16x128_iu4 v[16:23], v[0:7], v[8:15], 1 ; encoding: [0x10,0x40,0x7c,0xcc,0x00,0x11,0x06,0x1a]
-// WAVESIZE-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction requires wavesize=32
-// GFX12-ERR: :[[@LINE-3]]:{{[0-9]+}}: error: instruction not supported on this GPU
-
-v_wmma_i32_16x16x128_iu4 v[16:23], v[0:7], v[8:15], v[16:23] neg_lo:[1,0,0]
-// GFX1250: v_wmma_i32_16x16x128_iu4 v[16:23], v[0:7], v[8:15], v[16:23] neg_lo:[1,0,0] ; encoding: [0x10,0x40,0x7c,0xcc,0x00,0x11,0x42,0x3c]
-// WAVESIZE-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction requires wavesize=32
-// GFX12-ERR: :[[@LINE-3]]:{{[0-9]+}}: error: instruction not supported on this GPU
-
-v_wmma_i32_16x16x128_iu4 v[16:23], v[0:7], v[8:15], v[16:23] neg_lo:[0,1,0]
-// GFX1250: v_wmma_i32_16x16x128_iu4 v[16:23], v[0:7], v[8:15], v[16:23] neg_lo:[0,1,0] ; encoding: [0x10,0x40,0x7c,0xcc,0x00,0x11,0x42,0x5c]
-// WAVESIZE-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction requires wavesize=32
-// GFX12-ERR: :[[@LINE-3]]:{{[0-9]+}}: error: instruction not supported on this GPU
-
 v_wmma_f32_16x16x32_f16 v[16:23], v[0:7], v[8:15], v[16:23]
 // GFX1250: v_wmma_f32_16x16x32_f16 v[16:23], v[0:7], v[8:15], v[16:23] ; encoding: [0x10,0x40,0x60,0xcc,0x00,0x11,0x42,0x1c]
 // WAVESIZE-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction requires wavesize=32
@@ -609,26 +589,6 @@ v_swmmac_i32_16x16x128_iu8 v[24:31], v[0:7], v[8:23], v32 neg_lo:[1,0,0]
 
 v_swmmac_i32_16x16x128_iu8 v[24:31], v[0:7], v[8:23], v32 neg_lo:[0,1,0]
 // GFX1250: v_swmmac_i32_16x16x128_iu8 v[24:31], v[0:7], v[8:23], v32 neg_lo:[0,1,0] ; encoding: [0x18,0x40,0x7b,0xcc,0x00,0x11,0x82,0x5c]
-// WAVESIZE-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction requires wavesize=32
-// GFX12-ERR: :[[@LINE-3]]:{{[0-9]+}}: error: instruction not supported on this GPU
-
-v_swmmac_i32_16x16x256_iu4 v[24:31], v[0:7], v[8:23], v32
-// GFX1250: v_swmmac_i32_16x16x256_iu4 v[24:31], v[0:7], v[8:23], v32 ; encoding: [0x18,0x40,0x7d,0xcc,0x00,0x11,0x82,0x1c]
-// WAVESIZE-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction requires wavesize=32
-// GFX12-ERR: :[[@LINE-3]]:{{[0-9]+}}: error: instruction not supported on this GPU
-
-v_swmmac_i32_16x16x256_iu4 v[24:31], v[0:7], v[8:23], v32 index_key:1
-// GFX1250: v_swmmac_i32_16x16x256_iu4 v[24:31], v[0:7], v[8:23], v32 index_key:1 ; encoding: [0x18,0x48,0x7d,0xcc,0x00,0x11,0x82,0x1c]
-// WAVESIZE-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction requires wavesize=32
-// GFX12-ERR: :[[@LINE-3]]:{{[0-9]+}}: error: instruction not supported on this GPU
-
-v_swmmac_i32_16x16x256_iu4 v[24:31], v[0:7], v[8:23], v32 neg_lo:[1,0,0]
-// GFX1250: v_swmmac_i32_16x16x256_iu4 v[24:31], v[0:7], v[8:23], v32 neg_lo:[1,0,0] ; encoding: [0x18,0x40,0x7d,0xcc,0x00,0x11,0x82,0x3c]
-// WAVESIZE-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction requires wavesize=32
-// GFX12-ERR: :[[@LINE-3]]:{{[0-9]+}}: error: instruction not supported on this GPU
-
-v_swmmac_i32_16x16x256_iu4 v[24:31], v[0:7], v[8:23], v32 neg_lo:[0,1,0]
-// GFX1250: v_swmmac_i32_16x16x256_iu4 v[24:31], v[0:7], v[8:23], v32 neg_lo:[0,1,0] ; encoding: [0x18,0x40,0x7d,0xcc,0x00,0x11,0x82,0x5c]
 // WAVESIZE-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction requires wavesize=32
 // GFX12-ERR: :[[@LINE-3]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
