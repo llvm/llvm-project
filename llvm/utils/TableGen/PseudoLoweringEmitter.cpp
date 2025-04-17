@@ -181,24 +181,32 @@ void PseudoLoweringEmitter::evaluateExpansion(const Record *Rec) {
     SourceOperands[SrcOp.Name] = Idx;
 
   LLVM_DEBUG(dbgs() << "  Operand mapping:\n");
-  for (unsigned i = 0, e = Insn.Operands.size(); i != e; ++i) {
+  for (const auto &[Idx, Opnd] : enumerate(Insn.Operands)) {
     // We've already handled constant values. Just map instruction operands
     // here.
-    if (OperandMap[Insn.Operands[i].MIOperandNo].Kind != OpData::Operand)
+    if (OperandMap[Opnd.MIOperandNo].Kind != OpData::Operand)
       continue;
     StringMap<unsigned>::iterator SourceOp =
-        SourceOperands.find(Dag->getArgNameStr(i));
+        SourceOperands.find(Dag->getArgNameStr(Idx));
     if (SourceOp == SourceOperands.end())
       PrintFatalError(Rec, "In pseudo instruction '" + Rec->getName() +
-                               "', output operand '" + Dag->getArgNameStr(i) +
+                               "', output operand '" + Dag->getArgNameStr(Idx) +
                                "' has no matching source operand");
+    const auto &SrcOpnd = SourceInsn.Operands[SourceOp->getValue()];
+    if (Opnd.MINumOperands != SrcOpnd.MINumOperands)
+      PrintFatalError(
+          Rec,
+          "In pseudo instruction '" + Rec->getName() + "', output operand '" +
+              Opnd.Rec->getName() +
+              "' has a different number of sub operands than source operand '" +
+              SrcOpnd.Rec->getName() + "'");
+
     // Map the source operand to the destination operand index for each
     // MachineInstr operand.
-    for (unsigned I = 0, E = Insn.Operands[i].MINumOperands; I != E; ++I)
-      OperandMap[Insn.Operands[i].MIOperandNo + I].Data.Operand =
-          SourceOp->getValue();
+    for (unsigned I = 0, E = Opnd.MINumOperands; I != E; ++I)
+      OperandMap[Opnd.MIOperandNo + I].Data.Operand = SrcOpnd.MIOperandNo + I;
 
-    LLVM_DEBUG(dbgs() << "    " << SourceOp->getValue() << " ==> " << i
+    LLVM_DEBUG(dbgs() << "    " << SourceOp->getValue() << " ==> " << Idx
                       << "\n");
   }
 
@@ -236,10 +244,7 @@ void PseudoLoweringEmitter::emitLoweringEmitter(raw_ostream &o) {
           switch (Expansion.OperandMap[MIOpNo + i].Kind) {
           case OpData::Operand:
             o << "    lowerOperand(MI->getOperand("
-              << Source.Operands[Expansion.OperandMap[MIOpNo].Data.Operand]
-                         .MIOperandNo +
-                     i
-              << "), MCOp);\n"
+              << Expansion.OperandMap[MIOpNo + i].Data.Operand << "), MCOp);\n"
               << "    Inst.addOperand(MCOp);\n";
             break;
           case OpData::Imm:
