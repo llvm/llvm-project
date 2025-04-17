@@ -25,46 +25,49 @@ MLIR_DEFINE_CAPI_DIALECT_REGISTRATION(SMT, smt, mlir::smt::SMTDialect)
 // Type API.
 //===----------------------------------------------------------------------===//
 
-bool smtTypeIsAnyNonFuncSMTValueType(MlirType type) {
+bool mlirSMTTypeIsAnyNonFuncSMTValueType(MlirType type) {
   return isAnyNonFuncSMTValueType(unwrap(type));
 }
 
-bool smtTypeIsAnySMTValueType(MlirType type) {
+bool mlirSMTTypeIsAnySMTValueType(MlirType type) {
   return isAnySMTValueType(unwrap(type));
 }
 
-bool smtTypeIsAArray(MlirType type) { return isa<ArrayType>(unwrap(type)); }
+bool mlirSMTTypeIsAArray(MlirType type) { return isa<ArrayType>(unwrap(type)); }
 
-MlirType smtTypeGetArray(MlirContext ctx, MlirType domainType,
-                         MlirType rangeType) {
+MlirType mlirSMTTypeGetArray(MlirContext ctx, MlirType domainType,
+                             MlirType rangeType) {
   return wrap(
       ArrayType::get(unwrap(ctx), unwrap(domainType), unwrap(rangeType)));
 }
 
-bool smtTypeIsABitVector(MlirType type) {
+bool mlirSMTTypeIsABitVector(MlirType type) {
   return isa<BitVectorType>(unwrap(type));
 }
 
-MlirType smtTypeGetBitVector(MlirContext ctx, int32_t width) {
+MlirType mlirSMTTypeGetBitVector(MlirContext ctx, int32_t width) {
   return wrap(BitVectorType::get(unwrap(ctx), width));
 }
 
-bool smtTypeIsABool(MlirType type) { return isa<BoolType>(unwrap(type)); }
+bool mlirSMTTypeIsABool(MlirType type) { return isa<BoolType>(unwrap(type)); }
 
-MlirType smtTypeGetBool(MlirContext ctx) {
+MlirType mlirSMTTypeGetBool(MlirContext ctx) {
   return wrap(BoolType::get(unwrap(ctx)));
 }
 
-bool smtTypeIsAInt(MlirType type) { return isa<IntType>(unwrap(type)); }
+bool mlirSMTTypeIsAInt(MlirType type) { return isa<IntType>(unwrap(type)); }
 
-MlirType smtTypeGetInt(MlirContext ctx) {
+MlirType mlirSMTTypeGetInt(MlirContext ctx) {
   return wrap(IntType::get(unwrap(ctx)));
 }
 
-bool smtTypeIsASMTFunc(MlirType type) { return isa<SMTFuncType>(unwrap(type)); }
+bool mlirSMTTypeIsASMTFunc(MlirType type) {
+  return isa<SMTFuncType>(unwrap(type));
+}
 
-MlirType smtTypeGetSMTFunc(MlirContext ctx, size_t numberOfDomainTypes,
-                           const MlirType *domainTypes, MlirType rangeType) {
+MlirType mlirSMTTypeGetSMTFunc(MlirContext ctx, size_t numberOfDomainTypes,
+                               const MlirType *domainTypes,
+                               MlirType rangeType) {
   SmallVector<Type> domainTypesVec;
   domainTypesVec.reserve(numberOfDomainTypes);
 
@@ -74,10 +77,11 @@ MlirType smtTypeGetSMTFunc(MlirContext ctx, size_t numberOfDomainTypes,
   return wrap(SMTFuncType::get(unwrap(ctx), domainTypesVec, unwrap(rangeType)));
 }
 
-bool smtTypeIsASort(MlirType type) { return isa<SortType>(unwrap(type)); }
+bool mlirSMTTypeIsASort(MlirType type) { return isa<SortType>(unwrap(type)); }
 
-MlirType smtTypeGetSort(MlirContext ctx, MlirIdentifier identifier,
-                        size_t numberOfSortParams, const MlirType *sortParams) {
+MlirType mlirSMTTypeGetSort(MlirContext ctx, MlirIdentifier identifier,
+                            size_t numberOfSortParams,
+                            const MlirType *sortParams) {
   SmallVector<Type> sortParamsVec;
   sortParamsVec.reserve(numberOfSortParams);
 
@@ -91,31 +95,31 @@ MlirType smtTypeGetSort(MlirContext ctx, MlirIdentifier identifier,
 // Attribute API.
 //===----------------------------------------------------------------------===//
 
-bool smtAttrCheckBVCmpPredicate(MlirContext ctx, MlirStringRef str) {
+bool mlirSMTAttrCheckBVCmpPredicate(MlirContext ctx, MlirStringRef str) {
   return symbolizeBVCmpPredicate(unwrap(str)).has_value();
 }
 
-bool smtAttrCheckIntPredicate(MlirContext ctx, MlirStringRef str) {
+bool mlirSMTAttrCheckIntPredicate(MlirContext ctx, MlirStringRef str) {
   return symbolizeIntPredicate(unwrap(str)).has_value();
 }
 
-bool smtAttrIsASMTAttribute(MlirAttribute attr) {
+bool mlirSMTAttrIsASMTAttribute(MlirAttribute attr) {
   return isa<BitVectorAttr, BVCmpPredicateAttr, IntPredicateAttr>(unwrap(attr));
 }
 
-MlirAttribute smtAttrGetBitVector(MlirContext ctx, uint64_t value,
-                                  unsigned width) {
+MlirAttribute mlirSMTAttrGetBitVector(MlirContext ctx, uint64_t value,
+                                      unsigned width) {
   return wrap(BitVectorAttr::get(unwrap(ctx), value, width));
 }
 
-MlirAttribute smtAttrGetBVCmpPredicate(MlirContext ctx, MlirStringRef str) {
+MlirAttribute mlirSMTAttrGetBVCmpPredicate(MlirContext ctx, MlirStringRef str) {
   auto predicate = symbolizeBVCmpPredicate(unwrap(str));
   assert(predicate.has_value() && "invalid predicate");
 
   return wrap(BVCmpPredicateAttr::get(unwrap(ctx), predicate.value()));
 }
 
-MlirAttribute smtAttrGetIntPredicate(MlirContext ctx, MlirStringRef str) {
+MlirAttribute mlirSMTAttrGetIntPredicate(MlirContext ctx, MlirStringRef str) {
   auto predicate = symbolizeIntPredicate(unwrap(str));
   assert(predicate.has_value() && "invalid predicate");
 

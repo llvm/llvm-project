@@ -301,6 +301,11 @@ mlir::Value genExtent(mlir::Location loc, fir::FirOpBuilder &builder,
 mlir::Value genLBound(mlir::Location loc, fir::FirOpBuilder &builder,
                       hlfir::Entity entity, unsigned dim);
 
+/// Compute the lower bounds of \p entity, which is an array of known rank.
+llvm::SmallVector<mlir::Value> genLBounds(mlir::Location loc,
+                                          fir::FirOpBuilder &builder,
+                                          hlfir::Entity entity);
+
 /// Generate a vector of extents with index type from a fir.shape
 /// of fir.shape_shift value.
 llvm::SmallVector<mlir::Value> getIndexExtents(mlir::Location loc,

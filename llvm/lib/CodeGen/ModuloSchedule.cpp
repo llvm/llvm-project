@@ -1855,9 +1855,9 @@ void PeelingModuloScheduleExpander::peelPrologAndEpilogs() {
 
   // Create a list of all blocks in order.
   SmallVector<MachineBasicBlock *, 8> Blocks;
-  llvm::copy(PeeledFront, std::back_inserter(Blocks));
+  llvm::append_range(Blocks, PeeledFront);
   Blocks.push_back(BB);
-  llvm::copy(PeeledBack, std::back_inserter(Blocks));
+  llvm::append_range(Blocks, PeeledBack);
 
   // Iterate in reverse order over all instructions, remapping as we go.
   for (MachineBasicBlock *B : reverse(Blocks)) {
