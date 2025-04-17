@@ -82,6 +82,10 @@ private:
       LazyBool step_out_avoids_code_without_debug_info);
 
   void SetupAvoidNoDebug(LazyBool step_out_avoids_code_without_debug_info);
+
+  void SetupReturnAddress(lldb::StackFrameSP return_frame_sp,
+                          lldb::StackFrameSP immediate_return_from_sp,
+                          uint32_t frame_idx, bool continue_to_next_branch);
   // Need an appropriate marker for the current stack so we can tell step out
   // from step in.
 
