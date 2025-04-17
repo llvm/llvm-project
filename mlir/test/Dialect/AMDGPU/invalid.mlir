@@ -150,3 +150,11 @@ func.func @fat_raw_buffer_cast_stripping_offset_affine_map(%m: memref<8xi32, aff
   %ret = amdgpu.fat_raw_buffer_cast %m resetOffset : memref<8xi32, affine_map<(d0)[s0] -> (d0 + s0)>> to memref<8xi32, #amdgpu.address_space<fat_raw_buffer>>
   func.return %ret : memref<8xi32, #amdgpu.address_space<fat_raw_buffer>>
 }
+
+// -----
+
+func.func @swizzle_invalid_type(%arg0 : si32) -> si32 {
+  // expected-error@+1 {{amdgpu.swizzle_bitmode' op operand #0 must be Integer or Float or vector of Integer or Float values of ranks 1}}
+  %0 = amdgpu.swizzle_bitmode %arg0 1 2 4 : si32
+  func.return %0 : si32
+}
