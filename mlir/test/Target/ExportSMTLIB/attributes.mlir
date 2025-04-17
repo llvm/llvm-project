@@ -1,6 +1,6 @@
+// REQUIRES: z3-prover
 // RUN: mlir-translate --export-smtlib %s | z3 -in 2>&1 | FileCheck %s
 // RUN: mlir-translate --export-smtlib --smtlibexport-inline-single-use-values %s | z3 -in 2>&1 | FileCheck %s
-// REQUIRES: z3
 
 // Quantifiers Attributes
 smt.solver () : () -> () {
