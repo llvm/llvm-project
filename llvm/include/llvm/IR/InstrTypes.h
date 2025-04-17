@@ -2165,11 +2165,11 @@ public:
     return false;
   }
 
-  /// Return rounding mode specified by operand bundles.
+  /// Return rounding mode specified for this call.
   RoundingMode getRoundingMode() const;
 
-  /// Return exception behavior specified by operand bundles.
-  std::optional<fp::ExceptionBehavior> getExceptionBehavior() const;
+  /// Return exception behavior specified for this call.
+  fp::ExceptionBehavior getExceptionBehavior() const;
 
   /// Used to keep track of an operand bundle.  See the main comment on
   /// OperandBundleUser above.

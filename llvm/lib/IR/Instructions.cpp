@@ -647,7 +647,7 @@ RoundingMode CallBase::getRoundingMode() const {
   return RoundingMode::NearestTiesToEven;
 }
 
-std::optional<fp::ExceptionBehavior> CallBase::getExceptionBehavior() const {
+fp::ExceptionBehavior CallBase::getExceptionBehavior() const {
   // Try determining exception behavior from FP bundle.
   std::optional<fp::ExceptionBehavior> EB;
   if (auto ExceptionBundle = getOperandBundle(LLVMContext::OB_fp_except)) {
