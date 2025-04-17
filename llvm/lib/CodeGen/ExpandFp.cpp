@@ -36,7 +36,6 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
-#include <cmath>
 #include <optional>
 
 #define DEBUG_TYPE "expand-fp"
