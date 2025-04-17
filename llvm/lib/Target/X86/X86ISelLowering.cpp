@@ -56529,16 +56529,13 @@ static SDValue combineGatherScatter(SDNode *N, SelectionDAG &DAG,
     if (IndexWidth > 32 && DAG.ComputeNumSignBits(Index) > (IndexWidth - 32)) {
       EVT NewVT = IndexVT.changeVectorElementType(MVT::i32);
 
-      // FIXME: We could support more than just constant vectors, but we need to
+      // FIXME: We could support more than just constant fold, but we need to
       // careful with costing. A truncate that can be optimized out would be
       // fine. Otherwise we might only want to create a truncate if it avoids a
       // split.
-      if (auto *BV = dyn_cast<BuildVectorSDNode>(Index)) {
-        if (BV->isConstant()) {
-          Index = DAG.getNode(ISD::TRUNCATE, DL, NewVT, Index);
-          return rebuildGatherScatter(GorS, Index, Base, Scale, DAG);
-        }
-      }
+      if (SDValue TruncIndex =
+              DAG.FoldConstantArithmetic(ISD::TRUNCATE, DL, NewVT, Index))
+        return rebuildGatherScatter(GorS, TruncIndex, Base, Scale, DAG);
 
       // Shrink any sign/zero extends from 32 or smaller to larger than 32 if
       // there are sufficient sign bits. Only do this before legalize types to
