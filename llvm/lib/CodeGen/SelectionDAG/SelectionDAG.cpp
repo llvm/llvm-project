@@ -5617,6 +5617,8 @@ bool SelectionDAG::isKnownNeverNaN(SDValue Op, bool SNaN,
 
 bool SelectionDAG::isKnownNeverNaN(SDValue Op, const APInt &DemandedElts,
                                    bool SNaN, unsigned Depth) const {
+  assert(!DemandedElts.isZero() && "No demanded elements");
+
   // If we're told that NaNs won't happen, assume they won't.
   if (getTarget().Options.NoNaNsFPMath || Op->getFlags().hasNoNaNs())
     return true;
@@ -5629,9 +5631,6 @@ bool SelectionDAG::isKnownNeverNaN(SDValue Op, const APInt &DemandedElts,
     return !C->getValueAPF().isNaN() ||
            (SNaN && !C->getValueAPF().isSignaling());
   }
-
-  if (!DemandedElts)
-    return false; // No demanded elts, better to assume we don't know anything.
 
   unsigned Opcode = Op.getOpcode();
   switch (Opcode) {
