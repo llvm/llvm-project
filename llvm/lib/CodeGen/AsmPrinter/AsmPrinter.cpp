@@ -2398,6 +2398,12 @@ void AsmPrinter::emitRemarksSection(remarks::RemarkStreamer &RS) {
   OutStreamer->emitBinaryData(Buf);
 }
 
+static uint64_t globalSize(const llvm::GlobalVariable &G) {
+  const Constant *Initializer = G.getInitializer();
+  return G.getParent()->getDataLayout().getTypeAllocSize(
+      Initializer->getType());
+}
+
 static bool shouldTagGlobal(const llvm::GlobalVariable &G) {
   // We used to do this in clang, but there are optimization passes that turn
   // non-constant globals into constants. So now, clang only tells us whether
@@ -2430,19 +2436,18 @@ static bool shouldTagGlobal(const llvm::GlobalVariable &G) {
   if (G.hasSection())
     return false;
 
-  return true;
+  return globalSize(G) > 0;
 }
 
 static void tagGlobalDefinition(Module &M, GlobalVariable *G) {
-  Constant *Initializer = G->getInitializer();
-  uint64_t SizeInBytes =
-      M.getDataLayout().getTypeAllocSize(Initializer->getType());
+  uint64_t SizeInBytes = globalSize(*G);
 
   uint64_t NewSize = alignTo(SizeInBytes, 16);
   if (SizeInBytes != NewSize) {
     // Pad the initializer out to the next multiple of 16 bytes.
     llvm::SmallVector<uint8_t> Init(NewSize - SizeInBytes, 0);
     Constant *Padding = ConstantDataArray::get(M.getContext(), Init);
+    Constant *Initializer = G->getInitializer();
     Initializer = ConstantStruct::getAnon({Initializer, Padding});
     auto *NewGV = new GlobalVariable(
         M, Initializer->getType(), G->isConstant(), G->getLinkage(),
