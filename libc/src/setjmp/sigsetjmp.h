@@ -18,7 +18,8 @@ namespace LIBC_NAMESPACE_DECL {
 #ifdef LIBC_COMPILER_IS_GCC
 [[gnu::nothrow]]
 #endif
-[[gnu::returns_twice]] int sigsetjmp(sigjmp_buf buf, int savesigs);
+[[gnu::returns_twice]] int
+sigsetjmp(sigjmp_buf buf, int savesigs);
 
 } // namespace LIBC_NAMESPACE_DECL
 
