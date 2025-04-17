@@ -1,4 +1,4 @@
-//===--- RecursiveASTVisitor.h - Recursive AST Visitor ----------*- C++ -*-===//
+//===--- RecursiveASTEnterExitVisitor.h - Recursive AST Visitor ----------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 //
-//  This file defines the RecursiveASTVisitor interface, which recursively
+//  This file defines the RecursiveASTEnterExitVisitor interface, which recursively
 //  traverses the entire AST.
 //
 //===----------------------------------------------------------------------===//
-#ifndef LLVM_CLANG_AST_RECURSIVEASTVISITOR_H
-#define LLVM_CLANG_AST_RECURSIVEASTVISITOR_H
+#ifndef LLVM_CLANG_AST_ENTEREXITRECURSIVEASTVISITOR_H
+#define LLVM_CLANG_AST_ENTEREXITRECURSIVEASTVISITOR_H
 
 #include "clang/AST/ASTConcept.h"
 #include "clang/AST/Attr.h"
@@ -43,6 +43,7 @@
 #include "clang/AST/TemplateName.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
+#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/OpenMPKinds.h"
 #include "clang/Basic/Specifiers.h"
@@ -57,36 +58,13 @@ namespace clang {
 
 // A helper macro to implement short-circuiting when recursing.  It
 // invokes CALL_EXPR, which must be a method call, on the derived
-// object (s.t. a user of RecursiveASTVisitor can override the method
+// object (s.t. a user of RecursiveASTEnterExitVisitor can override the method
 // in CALL_EXPR).
 #define TRY_TO(CALL_EXPR)                                                      \
   do {                                                                         \
     if (!getDerived().CALL_EXPR)                                               \
       return false;                                                            \
   } while (false)
-
-namespace detail {
-
-template <typename T, typename U>
-struct has_same_member_pointer_type : std::false_type {};
-template <typename T, typename U, typename R, typename... P>
-struct has_same_member_pointer_type<R (T::*)(P...), R (U::*)(P...)>
-    : std::true_type {};
-
-/// Returns true if and only if \p FirstMethodPtr and \p SecondMethodPtr
-/// are pointers to the same non-static member function.
-template <typename FirstMethodPtrTy, typename SecondMethodPtrTy>
-LLVM_ATTRIBUTE_ALWAYS_INLINE LLVM_ATTRIBUTE_NODEBUG auto
-isSameMethod([[maybe_unused]] FirstMethodPtrTy FirstMethodPtr,
-             [[maybe_unused]] SecondMethodPtrTy SecondMethodPtr)
-    -> bool {
-  if constexpr (has_same_member_pointer_type<FirstMethodPtrTy,
-                                             SecondMethodPtrTy>::value)
-    return FirstMethodPtr == SecondMethodPtr;
-  return false;
-}
-
-} // end namespace detail
 
 /// A class that does preorder or postorder
 /// depth-first traversal on the entire Clang AST and visits each node.
@@ -153,7 +131,7 @@ isSameMethod([[maybe_unused]] FirstMethodPtrTy FirstMethodPtr,
 /// By default, this visitor preorder traverses the AST. If postorder traversal
 /// is needed, the \c shouldTraversePostOrder method needs to be overridden
 /// to return \c true.
-template <typename Derived> class RecursiveASTVisitor {
+template <typename Derived> class RecursiveASTEnterExitVisitor {
 public:
   /// A queue used for performing data recursion over statements.
   /// Parameters involving this type are used to implement data
@@ -345,13 +323,13 @@ private:
   // arm call our function rather than the derived class version.
 #define TRAVERSE_STMT_BASE(NAME, CLASS, VAR, QUEUE)                            \
   (::clang::detail::has_same_member_pointer_type<                              \
-       decltype(&RecursiveASTVisitor::Traverse##NAME),                         \
+       decltype(&RecursiveASTEnterExitVisitor::Traverse##NAME),                         \
        decltype(&Derived::Traverse##NAME)>::value                              \
        ? static_cast<std::conditional_t<                                       \
              ::clang::detail::has_same_member_pointer_type<                    \
-                 decltype(&RecursiveASTVisitor::Traverse##NAME),               \
+                 decltype(&RecursiveASTEnterExitVisitor::Traverse##NAME),               \
                  decltype(&Derived::Traverse##NAME)>::value,                   \
-             Derived &, RecursiveASTVisitor &>>(*this)                         \
+             Derived &, RecursiveASTEnterExitVisitor &>>(*this)                         \
              .Traverse##NAME(static_cast<CLASS *>(VAR), QUEUE)                 \
        : getDerived().Traverse##NAME(static_cast<CLASS *>(VAR)))
 
@@ -373,15 +351,21 @@ public:
   // The above header #undefs ABSTRACT_STMT and STMT upon exit.
 
   // Define WalkUpFrom*() and empty Visit*() for all Stmt classes.
-  bool WalkUpFromStmt(Stmt *S) { return getDerived().VisitStmt(S); }
+  bool WalkUpFromStmt(Stmt *S) { return getDerived().VisitEnterStmt(S) && getDerived().VisitStmt(S) && getDerived().VisitExitStmt(S); }
+  bool VisitEnterStmt(Stmt *S) { return true; }
   bool VisitStmt(Stmt *S) { return true; }
+  bool VisitExitStmt(Stmt *S) { return true; }
 #define STMT(CLASS, PARENT)                                                    \
   bool WalkUpFrom##CLASS(CLASS *S) {                                           \
     TRY_TO(WalkUpFrom##PARENT(S));                                             \
+    TRY_TO(VisitEnter##CLASS(S));                                              \
     TRY_TO(Visit##CLASS(S));                                                   \
+    TRY_TO(VisitExit##CLASS(S));                                               \
     return true;                                                               \
   }                                                                            \
-  bool Visit##CLASS(CLASS *S) { return true; }
+  bool VisitEnter##CLASS(CLASS *S) { return true; }                            \
+  bool Visit##CLASS(CLASS *S) { return true; }                                 \
+  bool VisitExit##CLASS(CLASS *S) { return true; }
 #include "clang/AST/StmtNodes.inc"
 
 // ---- Methods on Types ----
@@ -394,15 +378,21 @@ public:
   // The above header #undefs ABSTRACT_TYPE and TYPE upon exit.
 
   // Define WalkUpFrom*() and empty Visit*() for all Type classes.
-  bool WalkUpFromType(Type *T) { return getDerived().VisitType(T); }
+  bool WalkUpFromType(Type *T) { return getDerived().VisitEnterType(T) && getDerived().VisitType(T) && getDerived().VisitExitType(T); }
+  bool VisitEnterType(Type *T) { return true; }
   bool VisitType(Type *T) { return true; }
+  bool VisitExitType(Type *T) { return true; }
 #define TYPE(CLASS, BASE)                                                      \
   bool WalkUpFrom##CLASS##Type(CLASS##Type *T) {                               \
     TRY_TO(WalkUpFrom##BASE(T));                                               \
+    TRY_TO(VisitEnter##CLASS##Type(T));                                        \
     TRY_TO(Visit##CLASS##Type(T));                                             \
+    TRY_TO(VisitExit##CLASS##Type(T));                                         \
     return true;                                                               \
   }                                                                            \
-  bool Visit##CLASS##Type(CLASS##Type *T) { return true; }
+  bool VisitEnter##CLASS##Type(CLASS##Type *T) { return true; }                \
+  bool Visit##CLASS##Type(CLASS##Type *T) { return true; }                     \
+  bool VisitExit##CLASS##Type(CLASS##Type *T) { return true; }
 #include "clang/AST/TypeNodes.inc"
 
 // ---- Methods on TypeLocs ----
@@ -415,28 +405,47 @@ public:
   // The above header #undefs ABSTRACT_TYPELOC and TYPELOC upon exit.
 
   // Define WalkUpFrom*() and empty Visit*() for all TypeLoc classes.
-  bool WalkUpFromTypeLoc(TypeLoc TL) { return getDerived().VisitTypeLoc(TL); }
+  bool WalkUpFromTypeLoc(TypeLoc TL) {
+     return getDerived().VisitEnterTypeLoc(TL) &&
+        getDerived().VisitTypeLoc(TL) &&
+        getDerived().VisitExitTypeLoc(TL);
+  }
+  bool VisitEnterTypeLoc(TypeLoc TL) { return true; }
   bool VisitTypeLoc(TypeLoc TL) { return true; }
+  bool VisitExitTypeLoc(TypeLoc TL) { return true; }
 
   // QualifiedTypeLoc and UnqualTypeLoc are not declared in
   // TypeNodes.inc and thus need to be handled specially.
   bool WalkUpFromQualifiedTypeLoc(QualifiedTypeLoc TL) {
-    return getDerived().VisitUnqualTypeLoc(TL.getUnqualifiedLoc());
+    return getDerived().VisitEnterUnqualTypeLoc(TL.getUnqualifiedLoc())
+       && getDerived().VisitUnqualTypeLoc(TL.getUnqualifiedLoc())
+       && getDerived().VisitExitUnqualTypeLoc(TL.getUnqualifiedLoc());
   }
+  bool VisitEnterQualifiedTypeLoc(QualifiedTypeLoc TL) { return true; }
   bool VisitQualifiedTypeLoc(QualifiedTypeLoc TL) { return true; }
+  bool VisitExitQualifiedTypeLoc(QualifiedTypeLoc TL) { return true; }
+
   bool WalkUpFromUnqualTypeLoc(UnqualTypeLoc TL) {
-    return getDerived().VisitUnqualTypeLoc(TL.getUnqualifiedLoc());
+    return getDerived().VisitEnterUnqualTypeLoc(TL.getUnqualifiedLoc())
+       && getDerived().VisitUnqualTypeLoc(TL.getUnqualifiedLoc())
+       && getDerived().VisitExitUnqualTypeLoc(TL.getUnqualifiedLoc());
   }
+  bool VisitEnterUnqualTypeLoc(UnqualTypeLoc TL) { return true; }
   bool VisitUnqualTypeLoc(UnqualTypeLoc TL) { return true; }
+  bool VisitExitUnqualTypeLoc(UnqualTypeLoc TL) { return true; }
 
 // Note that BASE includes trailing 'Type' which CLASS doesn't.
 #define TYPE(CLASS, BASE)                                                      \
   bool WalkUpFrom##CLASS##TypeLoc(CLASS##TypeLoc TL) {                         \
     TRY_TO(WalkUpFrom##BASE##Loc(TL));                                         \
+    TRY_TO(VisitEnter##CLASS##TypeLoc(TL));                                    \
     TRY_TO(Visit##CLASS##TypeLoc(TL));                                         \
+    TRY_TO(VisitExit##CLASS##TypeLoc(TL));                                     \
     return true;                                                               \
   }                                                                            \
-  bool Visit##CLASS##TypeLoc(CLASS##TypeLoc TL) { return true; }
+  bool VisitEnter##CLASS##TypeLoc(CLASS##TypeLoc TL) { return true; }          \
+  bool Visit##CLASS##TypeLoc(CLASS##TypeLoc TL) { return true; }               \
+  bool VisitExit##CLASS##TypeLoc(CLASS##TypeLoc TL) { return true; }
 #include "clang/AST/TypeNodes.inc"
 
 // ---- Methods on Decls ----
@@ -448,15 +457,26 @@ public:
   // The above header #undefs ABSTRACT_DECL and DECL upon exit.
 
   // Define WalkUpFrom*() and empty Visit*() for all Decl classes.
-  bool WalkUpFromDecl(Decl *D) { return getDerived().VisitDecl(D); }
+  // Define WalkUpFrom*() and empty Visit*() for all Decl classes.
+  bool WalkUpFromDecl(Decl *D) {
+     return getDerived().VisitEnterDecl(D) &&
+        getDerived().VisitDecl(D) &&
+        getDerived().VisitExitDecl(D);
+  }
+  bool VisitEnterDecl(Decl *D) { return true; }
   bool VisitDecl(Decl *D) { return true; }
+  bool VisitExitDecl(Decl *D) { return true; }
 #define DECL(CLASS, BASE)                                                      \
   bool WalkUpFrom##CLASS##Decl(CLASS##Decl *D) {                               \
     TRY_TO(WalkUpFrom##BASE(D));                                               \
+    TRY_TO(VisitEnter##CLASS##Decl(D));                                        \
     TRY_TO(Visit##CLASS##Decl(D));                                             \
+    TRY_TO(VisitExit##CLASS##Decl(D));                                         \
     return true;                                                               \
   }                                                                            \
-  bool Visit##CLASS##Decl(CLASS##Decl *D) { return true; }
+  bool VisitEnter##CLASS##Decl(CLASS##Decl *D) { return true; }                \
+  bool Visit##CLASS##Decl(CLASS##Decl *D) { return true; }                     \
+  bool VisitExit##CLASS##Decl(CLASS##Decl *D) { return true; }
 #include "clang/AST/DeclNodes.inc"
 
   bool canIgnoreChildDeclWhileTraversingDeclContext(const Decl *Child);
@@ -517,7 +537,7 @@ private:
 };
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::TraverseTypeConstraint(
+bool RecursiveASTEnterExitVisitor<Derived>::TraverseTypeConstraint(
     const TypeConstraint *C) {
   if (!getDerived().shouldVisitImplicitCode()) {
     TRY_TO(TraverseConceptReference(C->getConceptReference()));
@@ -536,7 +556,7 @@ bool RecursiveASTVisitor<Derived>::TraverseTypeConstraint(
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::TraverseConceptRequirement(
+bool RecursiveASTEnterExitVisitor<Derived>::TraverseConceptRequirement(
     concepts::Requirement *R) {
   switch (R->getKind()) {
   case concepts::Requirement::RK_Type:
@@ -554,7 +574,7 @@ bool RecursiveASTVisitor<Derived>::TraverseConceptRequirement(
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::dataTraverseNode(Stmt *S,
+bool RecursiveASTEnterExitVisitor<Derived>::dataTraverseNode(Stmt *S,
                                                     DataRecursionQueue *Queue) {
   // Top switch stmt: dispatch to TraverseFooStmt for each concrete FooStmt.
   switch (S->getStmtClass()) {
@@ -573,7 +593,7 @@ bool RecursiveASTVisitor<Derived>::dataTraverseNode(Stmt *S,
 #undef DISPATCH_STMT
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::TraverseConceptTypeRequirement(
+bool RecursiveASTEnterExitVisitor<Derived>::TraverseConceptTypeRequirement(
     concepts::TypeRequirement *R) {
   if (R->isSubstitutionFailure())
     return true;
@@ -581,7 +601,7 @@ bool RecursiveASTVisitor<Derived>::TraverseConceptTypeRequirement(
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::TraverseConceptExprRequirement(
+bool RecursiveASTEnterExitVisitor<Derived>::TraverseConceptExprRequirement(
     concepts::ExprRequirement *R) {
   if (!R->isExprSubstitutionFailure())
     TRY_TO(TraverseStmt(R->getExpr()));
@@ -599,7 +619,7 @@ bool RecursiveASTVisitor<Derived>::TraverseConceptExprRequirement(
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::TraverseConceptNestedRequirement(
+bool RecursiveASTEnterExitVisitor<Derived>::TraverseConceptNestedRequirement(
     concepts::NestedRequirement *R) {
   if (!R->hasInvalidConstraint())
     return getDerived().TraverseStmt(R->getConstraintExpr());
@@ -607,7 +627,7 @@ bool RecursiveASTVisitor<Derived>::TraverseConceptNestedRequirement(
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::PostVisitStmt(Stmt *S) {
+bool RecursiveASTEnterExitVisitor<Derived>::PostVisitStmt(Stmt *S) {
   // In pre-order traversal mode, each Traverse##STMT method is responsible for
   // calling WalkUpFrom. Therefore, if the user overrides Traverse##STMT and
   // does not call the default implementation, the WalkUpFrom callback is not
@@ -630,14 +650,14 @@ bool RecursiveASTVisitor<Derived>::PostVisitStmt(Stmt *S) {
 #define ABSTRACT_STMT(STMT)
 #define STMT(CLASS, PARENT)                                                    \
   case Stmt::CLASS##Class:                                                     \
-    if (::clang::detail::isSameMethod(&RecursiveASTVisitor::Traverse##CLASS,   \
+    if (::clang::detail::isSameMethod(&RecursiveASTEnterExitVisitor::Traverse##CLASS,   \
                                       &Derived::Traverse##CLASS)) {            \
       TRY_TO(WalkUpFrom##CLASS(static_cast<CLASS *>(S)));                      \
     }                                                                          \
     break;
 #define INITLISTEXPR(CLASS, PARENT)                                            \
   case Stmt::CLASS##Class:                                                     \
-    if (::clang::detail::isSameMethod(&RecursiveASTVisitor::Traverse##CLASS,   \
+    if (::clang::detail::isSameMethod(&RecursiveASTEnterExitVisitor::Traverse##CLASS,   \
                                       &Derived::Traverse##CLASS)) {            \
       auto ILE = static_cast<CLASS *>(S);                                      \
       if (auto Syn = ILE->isSemanticForm() ? ILE->getSyntacticForm() : ILE)    \
@@ -658,7 +678,7 @@ bool RecursiveASTVisitor<Derived>::PostVisitStmt(Stmt *S) {
 // without any benefit to runtime performance.
 template <typename Derived>
 LLVM_ATTRIBUTE_NOINLINE bool
-RecursiveASTVisitor<Derived>::TraverseStmt(Stmt *S, DataRecursionQueue *Queue) {
+RecursiveASTEnterExitVisitor<Derived>::TraverseStmt(Stmt *S, DataRecursionQueue *Queue) {
   if (!S)
     return true;
 
@@ -698,7 +718,7 @@ RecursiveASTVisitor<Derived>::TraverseStmt(Stmt *S, DataRecursionQueue *Queue) {
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::TraverseType(QualType T) {
+bool RecursiveASTEnterExitVisitor<Derived>::TraverseType(QualType T) {
   if (T.isNull())
     return true;
 
@@ -715,7 +735,7 @@ bool RecursiveASTVisitor<Derived>::TraverseType(QualType T) {
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::TraverseTypeLoc(TypeLoc TL) {
+bool RecursiveASTEnterExitVisitor<Derived>::TraverseTypeLoc(TypeLoc TL) {
   if (TL.isNull())
     return true;
 
@@ -731,12 +751,12 @@ bool RecursiveASTVisitor<Derived>::TraverseTypeLoc(TypeLoc TL) {
 }
 
 // Define the Traverse*Attr(Attr* A) methods
-#define VISITORCLASS RecursiveASTVisitor
+#define VISITORCLASS RecursiveASTEnterExitVisitor
 #include "clang/AST/AttrVisitor.inc"
 #undef VISITORCLASS
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::TraverseDecl(Decl *D) {
+bool RecursiveASTEnterExitVisitor<Derived>::TraverseDecl(Decl *D) {
   if (!D)
     return true;
 
@@ -778,7 +798,7 @@ bool RecursiveASTVisitor<Derived>::TraverseDecl(Decl *D) {
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::TraverseNestedNameSpecifier(
+bool RecursiveASTEnterExitVisitor<Derived>::TraverseNestedNameSpecifier(
     NestedNameSpecifier *NNS) {
   if (!NNS)
     return true;
@@ -802,7 +822,7 @@ bool RecursiveASTVisitor<Derived>::TraverseNestedNameSpecifier(
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::TraverseNestedNameSpecifierLoc(
+bool RecursiveASTEnterExitVisitor<Derived>::TraverseNestedNameSpecifierLoc(
     NestedNameSpecifierLoc NNS) {
   if (!NNS)
     return true;
@@ -827,7 +847,7 @@ bool RecursiveASTVisitor<Derived>::TraverseNestedNameSpecifierLoc(
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::TraverseDeclarationNameInfo(
+bool RecursiveASTEnterExitVisitor<Derived>::TraverseDeclarationNameInfo(
     DeclarationNameInfo NameInfo) {
   switch (NameInfo.getName().getNameKind()) {
   case DeclarationName::CXXConstructorName:
@@ -856,7 +876,7 @@ bool RecursiveASTVisitor<Derived>::TraverseDeclarationNameInfo(
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::TraverseTemplateName(TemplateName Template) {
+bool RecursiveASTEnterExitVisitor<Derived>::TraverseTemplateName(TemplateName Template) {
   if (DependentTemplateName *DTN = Template.getAsDependentTemplateName()) {
     TRY_TO(TraverseNestedNameSpecifier(DTN->getQualifier()));
   } else if (QualifiedTemplateName *QTN =
@@ -870,7 +890,7 @@ bool RecursiveASTVisitor<Derived>::TraverseTemplateName(TemplateName Template) {
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::TraverseTemplateArgument(
+bool RecursiveASTEnterExitVisitor<Derived>::TraverseTemplateArgument(
     const TemplateArgument &Arg) {
   switch (Arg.getKind()) {
   case TemplateArgument::Null:
@@ -901,7 +921,7 @@ bool RecursiveASTVisitor<Derived>::TraverseTemplateArgument(
 // FIXME: no template name location?
 // FIXME: no source locations for a template argument pack?
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::TraverseTemplateArgumentLoc(
+bool RecursiveASTEnterExitVisitor<Derived>::TraverseTemplateArgumentLoc(
     const TemplateArgumentLoc &ArgLoc) {
   const TemplateArgument &Arg = ArgLoc.getArgument();
 
@@ -940,7 +960,7 @@ bool RecursiveASTVisitor<Derived>::TraverseTemplateArgumentLoc(
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::TraverseTemplateArguments(
+bool RecursiveASTEnterExitVisitor<Derived>::TraverseTemplateArguments(
     ArrayRef<TemplateArgument> Args) {
   for (const TemplateArgument &Arg : Args)
     TRY_TO(TraverseTemplateArgument(Arg));
@@ -949,7 +969,7 @@ bool RecursiveASTVisitor<Derived>::TraverseTemplateArguments(
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::TraverseConstructorInitializer(
+bool RecursiveASTEnterExitVisitor<Derived>::TraverseConstructorInitializer(
     CXXCtorInitializer *Init) {
   if (TypeSourceInfo *TInfo = Init->getTypeSourceInfo())
     TRY_TO(TraverseTypeLoc(TInfo->getTypeLoc()));
@@ -962,7 +982,7 @@ bool RecursiveASTVisitor<Derived>::TraverseConstructorInitializer(
 
 template <typename Derived>
 bool
-RecursiveASTVisitor<Derived>::TraverseLambdaCapture(LambdaExpr *LE,
+RecursiveASTEnterExitVisitor<Derived>::TraverseLambdaCapture(LambdaExpr *LE,
                                                     const LambdaCapture *C,
                                                     Expr *Init) {
   if (LE->isInitCapture(C))
@@ -977,7 +997,7 @@ RecursiveASTVisitor<Derived>::TraverseLambdaCapture(LambdaExpr *LE,
 // This macro makes available a variable T, the passed-in type.
 #define DEF_TRAVERSE_TYPE(TYPE, CODE)                                          \
   template <typename Derived>                                                  \
-  bool RecursiveASTVisitor<Derived>::Traverse##TYPE(TYPE *T) {                 \
+  bool RecursiveASTEnterExitVisitor<Derived>::Traverse##TYPE(TYPE *T) {                 \
     if (!getDerived().shouldTraversePostOrder())                               \
       TRY_TO(WalkUpFrom##TYPE(T));                                             \
     { CODE; }                                                                  \
@@ -1213,7 +1233,7 @@ DEF_TRAVERSE_TYPE(DependentBitIntType,
 // continue to work.
 #define DEF_TRAVERSE_TYPELOC(TYPE, CODE)                                       \
   template <typename Derived>                                                  \
-  bool RecursiveASTVisitor<Derived>::Traverse##TYPE##Loc(TYPE##Loc TL) {       \
+  bool RecursiveASTEnterExitVisitor<Derived>::Traverse##TYPE##Loc(TYPE##Loc TL) {       \
     if (!getDerived().shouldTraversePostOrder()) {                             \
       TRY_TO(WalkUpFrom##TYPE##Loc(TL));                                       \
       if (getDerived().shouldWalkTypesOfTypeLocs())                            \
@@ -1230,7 +1250,7 @@ DEF_TRAVERSE_TYPE(DependentBitIntType,
 
 template <typename Derived>
 bool
-RecursiveASTVisitor<Derived>::TraverseQualifiedTypeLoc(QualifiedTypeLoc TL) {
+RecursiveASTEnterExitVisitor<Derived>::TraverseQualifiedTypeLoc(QualifiedTypeLoc TL) {
   // Move this over to the 'main' typeloc tree.  Note that this is a
   // move -- we pretend that we were really looking at the unqualified
   // typeloc all along -- rather than a recursion, so we don't follow
@@ -1288,7 +1308,7 @@ DEF_TRAVERSE_TYPELOC(DecayedType,
                      { TRY_TO(TraverseTypeLoc(TL.getOriginalLoc())); })
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::TraverseArrayTypeLocHelper(ArrayTypeLoc TL) {
+bool RecursiveASTEnterExitVisitor<Derived>::TraverseArrayTypeLocHelper(ArrayTypeLoc TL) {
   // This isn't available for ArrayType, but is for the ArrayTypeLoc.
   TRY_TO(TraverseStmt(TL.getSizeExpr()));
   return true;
@@ -1528,7 +1548,7 @@ DEF_TRAVERSE_TYPELOC(DependentBitIntType, {
 // than those.
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::canIgnoreChildDeclWhileTraversingDeclContext(
+bool RecursiveASTEnterExitVisitor<Derived>::canIgnoreChildDeclWhileTraversingDeclContext(
     const Decl *Child) {
   // BlockDecls are traversed through BlockExprs,
   // CapturedDecls are traversed through CapturedStmts.
@@ -1541,7 +1561,7 @@ bool RecursiveASTVisitor<Derived>::canIgnoreChildDeclWhileTraversingDeclContext(
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::TraverseDeclContextHelper(DeclContext *DC) {
+bool RecursiveASTEnterExitVisitor<Derived>::TraverseDeclContextHelper(DeclContext *DC) {
   if (!DC)
     return true;
 
@@ -1556,7 +1576,7 @@ bool RecursiveASTVisitor<Derived>::TraverseDeclContextHelper(DeclContext *DC) {
 // This macro makes available a variable D, the passed-in decl.
 #define DEF_TRAVERSE_DECL(DECL, CODE)                                          \
   template <typename Derived>                                                  \
-  bool RecursiveASTVisitor<Derived>::Traverse##DECL(DECL *D) {                 \
+  bool RecursiveASTEnterExitVisitor<Derived>::Traverse##DECL(DECL *D) {                 \
     bool ShouldVisitChildren = true;                                           \
     bool ReturnValue = true;                                                   \
     if (!getDerived().shouldTraversePostOrder())                               \
@@ -1837,7 +1857,7 @@ DEF_TRAVERSE_DECL(OpenACCRoutineDecl, {
 
 // A helper method for TemplateDecl's children.
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::TraverseTemplateParameterListHelper(
+bool RecursiveASTEnterExitVisitor<Derived>::TraverseTemplateParameterListHelper(
     TemplateParameterList *TPL) {
   if (TPL) {
     for (NamedDecl *D : *TPL) {
@@ -1852,7 +1872,7 @@ bool RecursiveASTVisitor<Derived>::TraverseTemplateParameterListHelper(
 
 template <typename Derived>
 template <typename T>
-bool RecursiveASTVisitor<Derived>::TraverseDeclTemplateParameterLists(T *D) {
+bool RecursiveASTEnterExitVisitor<Derived>::TraverseDeclTemplateParameterLists(T *D) {
   for (unsigned i = 0; i < D->getNumTemplateParameterLists(); i++) {
     TemplateParameterList *TPL = D->getTemplateParameterList(i);
     TraverseTemplateParameterListHelper(TPL);
@@ -1861,7 +1881,7 @@ bool RecursiveASTVisitor<Derived>::TraverseDeclTemplateParameterLists(T *D) {
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::TraverseTemplateInstantiations(
+bool RecursiveASTEnterExitVisitor<Derived>::TraverseTemplateInstantiations(
     ClassTemplateDecl *D) {
   for (auto *SD : D->specializations()) {
     for (auto *RD : SD->redecls()) {
@@ -1889,7 +1909,7 @@ bool RecursiveASTVisitor<Derived>::TraverseTemplateInstantiations(
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::TraverseTemplateInstantiations(
+bool RecursiveASTEnterExitVisitor<Derived>::TraverseTemplateInstantiations(
     VarTemplateDecl *D) {
   for (auto *SD : D->specializations()) {
     for (auto *RD : SD->redecls()) {
@@ -1914,7 +1934,7 @@ bool RecursiveASTVisitor<Derived>::TraverseTemplateInstantiations(
 // A helper method for traversing the instantiations of a
 // function while skipping its specializations.
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::TraverseTemplateInstantiations(
+bool RecursiveASTEnterExitVisitor<Derived>::TraverseTemplateInstantiations(
     FunctionTemplateDecl *D) {
   for (auto *FD : D->specializations()) {
     for (auto *RD : FD->redecls()) {
@@ -1981,7 +2001,7 @@ DEF_TRAVERSE_DECL(BuiltinTemplateDecl, {
 })
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::TraverseTemplateTypeParamDeclConstraints(
+bool RecursiveASTEnterExitVisitor<Derived>::TraverseTemplateTypeParamDeclConstraints(
     const TemplateTypeParmDecl *D) {
   if (const auto *TC = D->getTypeConstraint())
     TRY_TO(TraverseTypeConstraint(TC));
@@ -2044,7 +2064,7 @@ DEF_TRAVERSE_DECL(EnumDecl, {
 
 // Helper methods for RecordDecl and its children.
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::TraverseRecordHelper(RecordDecl *D) {
+bool RecursiveASTEnterExitVisitor<Derived>::TraverseRecordHelper(RecordDecl *D) {
   // We shouldn't traverse D->getTypeForDecl(); it's a result of
   // declaring the type, not something that was written in the source.
 
@@ -2054,14 +2074,14 @@ bool RecursiveASTVisitor<Derived>::TraverseRecordHelper(RecordDecl *D) {
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::TraverseCXXBaseSpecifier(
+bool RecursiveASTEnterExitVisitor<Derived>::TraverseCXXBaseSpecifier(
     const CXXBaseSpecifier &Base) {
   TRY_TO(TraverseTypeLoc(Base.getTypeSourceInfo()->getTypeLoc()));
   return true;
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::TraverseCXXRecordHelper(CXXRecordDecl *D) {
+bool RecursiveASTEnterExitVisitor<Derived>::TraverseCXXRecordHelper(CXXRecordDecl *D) {
   if (!TraverseRecordHelper(D))
     return false;
   if (D->isCompleteDefinition()) {
@@ -2079,7 +2099,7 @@ DEF_TRAVERSE_DECL(RecordDecl, { TRY_TO(TraverseRecordHelper(D)); })
 DEF_TRAVERSE_DECL(CXXRecordDecl, { TRY_TO(TraverseCXXRecordHelper(D)); })
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::TraverseTemplateArgumentLocsHelper(
+bool RecursiveASTEnterExitVisitor<Derived>::TraverseTemplateArgumentLocsHelper(
     const TemplateArgumentLoc *TAL, unsigned Count) {
   for (unsigned I = 0; I < Count; ++I) {
     TRY_TO(TraverseTemplateArgumentLoc(TAL[I]));
@@ -2153,7 +2173,7 @@ DEF_TRAVERSE_DECL(UnresolvedUsingValueDecl, {
 DEF_TRAVERSE_DECL(IndirectFieldDecl, {})
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::TraverseDeclaratorHelper(DeclaratorDecl *D) {
+bool RecursiveASTEnterExitVisitor<Derived>::TraverseDeclaratorHelper(DeclaratorDecl *D) {
   TRY_TO(TraverseDeclTemplateParameterLists(D));
   TRY_TO(TraverseNestedNameSpecifierLoc(D->getQualifierLoc()));
   if (D->getTypeSourceInfo())
@@ -2208,7 +2228,7 @@ DEF_TRAVERSE_DECL(ObjCIvarDecl, {
 })
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::TraverseFunctionHelper(FunctionDecl *D) {
+bool RecursiveASTEnterExitVisitor<Derived>::TraverseFunctionHelper(FunctionDecl *D) {
   TRY_TO(TraverseDeclTemplateParameterLists(D));
   TRY_TO(TraverseNestedNameSpecifierLoc(D->getQualifierLoc()));
   TRY_TO(TraverseDeclarationNameInfo(D->getNameInfo()));
@@ -2342,7 +2362,7 @@ DEF_TRAVERSE_DECL(CXXDestructorDecl, {
 })
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::TraverseVarHelper(VarDecl *D) {
+bool RecursiveASTEnterExitVisitor<Derived>::TraverseVarHelper(VarDecl *D) {
   TRY_TO(TraverseDeclaratorHelper(D));
   // Default params are taken care of when we traverse the ParmVarDecl.
   if (!isa<ParmVarDecl>(D) &&
@@ -2394,7 +2414,7 @@ DEF_TRAVERSE_DECL(ImplicitConceptSpecializationDecl, {
 // This macro makes available a variable S, the passed-in stmt.
 #define DEF_TRAVERSE_STMT(STMT, CODE)                                          \
   template <typename Derived>                                                  \
-  bool RecursiveASTVisitor<Derived>::Traverse##STMT(                           \
+  bool RecursiveASTEnterExitVisitor<Derived>::Traverse##STMT(                           \
       STMT *S, DataRecursionQueue *Queue) {                                    \
     bool ShouldVisitChildren = true;                                           \
     bool ReturnValue = true;                                                   \
@@ -2571,7 +2591,7 @@ DEF_TRAVERSE_STMT(BuiltinBitCastExpr, {
 })
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::TraverseSynOrSemInitListExpr(
+bool RecursiveASTEnterExitVisitor<Derived>::TraverseSynOrSemInitListExpr(
     InitListExpr *S, DataRecursionQueue *Queue) {
   if (S) {
     // Skip this if we traverse postorder. We will visit it later
@@ -2591,13 +2611,13 @@ bool RecursiveASTVisitor<Derived>::TraverseSynOrSemInitListExpr(
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::TraverseObjCProtocolLoc(
+bool RecursiveASTEnterExitVisitor<Derived>::TraverseObjCProtocolLoc(
     ObjCProtocolLoc ProtocolLoc) {
   return true;
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::TraverseConceptReference(
+bool RecursiveASTEnterExitVisitor<Derived>::TraverseConceptReference(
     ConceptReference *CR) {
   if (!getDerived().shouldTraversePostOrder())
     TRY_TO(VisitConceptReference(CR));
@@ -2621,7 +2641,7 @@ bool RecursiveASTVisitor<Derived>::TraverseConceptReference(
 //
 // There is no guarantee about which form \p S takes when this method is called.
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::TraverseInitListExpr(
+bool RecursiveASTEnterExitVisitor<Derived>::TraverseInitListExpr(
     InitListExpr *S, DataRecursionQueue *Queue) {
   if (S->isSemanticForm() && S->isSyntacticForm()) {
     // `S` does not have alternative forms, traverse only once.
@@ -3038,7 +3058,7 @@ DEF_TRAVERSE_STMT(AsTypeExpr, {})
 
 // OpenMP directives.
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::TraverseOMPExecutableDirective(
+bool RecursiveASTEnterExitVisitor<Derived>::TraverseOMPExecutableDirective(
     OMPExecutableDirective *S) {
   for (auto *C : S->clauses()) {
     TRY_TO(TraverseOMPClause(C));
@@ -3056,7 +3076,7 @@ DEF_TRAVERSE_STMT(OMPCanonicalLoop, {
 
 template <typename Derived>
 bool
-RecursiveASTVisitor<Derived>::TraverseOMPLoopDirective(OMPLoopDirective *S) {
+RecursiveASTEnterExitVisitor<Derived>::TraverseOMPLoopDirective(OMPLoopDirective *S) {
   return TraverseOMPExecutableDirective(S);
 }
 
@@ -3292,7 +3312,7 @@ DEF_TRAVERSE_STMT(OMPErrorDirective,
 
 // OpenMP clauses.
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::TraverseOMPClause(OMPClause *C) {
+bool RecursiveASTEnterExitVisitor<Derived>::TraverseOMPClause(OMPClause *C) {
   if (!C)
     return true;
   switch (C->getClauseKind()) {
@@ -3310,14 +3330,14 @@ bool RecursiveASTVisitor<Derived>::TraverseOMPClause(OMPClause *C) {
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::VisitOMPClauseWithPreInit(
+bool RecursiveASTEnterExitVisitor<Derived>::VisitOMPClauseWithPreInit(
     OMPClauseWithPreInit *Node) {
   TRY_TO(TraverseStmt(Node->getPreInitStmt()));
   return true;
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::VisitOMPClauseWithPostUpdate(
+bool RecursiveASTEnterExitVisitor<Derived>::VisitOMPClauseWithPostUpdate(
     OMPClauseWithPostUpdate *Node) {
   TRY_TO(VisitOMPClauseWithPreInit(Node));
   TRY_TO(TraverseStmt(Node->getPostUpdateExpr()));
@@ -3325,28 +3345,28 @@ bool RecursiveASTVisitor<Derived>::VisitOMPClauseWithPostUpdate(
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::VisitOMPAllocatorClause(
+bool RecursiveASTEnterExitVisitor<Derived>::VisitOMPAllocatorClause(
     OMPAllocatorClause *C) {
   TRY_TO(TraverseStmt(C->getAllocator()));
   return true;
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::VisitOMPAllocateClause(OMPAllocateClause *C) {
+bool RecursiveASTEnterExitVisitor<Derived>::VisitOMPAllocateClause(OMPAllocateClause *C) {
   TRY_TO(TraverseStmt(C->getAllocator()));
   TRY_TO(VisitOMPClauseList(C));
   return true;
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::VisitOMPIfClause(OMPIfClause *C) {
+bool RecursiveASTEnterExitVisitor<Derived>::VisitOMPIfClause(OMPIfClause *C) {
   TRY_TO(VisitOMPClauseWithPreInit(C));
   TRY_TO(TraverseStmt(C->getCondition()));
   return true;
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::VisitOMPFinalClause(OMPFinalClause *C) {
+bool RecursiveASTEnterExitVisitor<Derived>::VisitOMPFinalClause(OMPFinalClause *C) {
   TRY_TO(VisitOMPClauseWithPreInit(C));
   TRY_TO(TraverseStmt(C->getCondition()));
   return true;
@@ -3354,39 +3374,39 @@ bool RecursiveASTVisitor<Derived>::VisitOMPFinalClause(OMPFinalClause *C) {
 
 template <typename Derived>
 bool
-RecursiveASTVisitor<Derived>::VisitOMPNumThreadsClause(OMPNumThreadsClause *C) {
+RecursiveASTEnterExitVisitor<Derived>::VisitOMPNumThreadsClause(OMPNumThreadsClause *C) {
   TRY_TO(VisitOMPClauseWithPreInit(C));
   TRY_TO(TraverseStmt(C->getNumThreads()));
   return true;
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::VisitOMPAlignClause(OMPAlignClause *C) {
+bool RecursiveASTEnterExitVisitor<Derived>::VisitOMPAlignClause(OMPAlignClause *C) {
   TRY_TO(TraverseStmt(C->getAlignment()));
   return true;
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::VisitOMPSafelenClause(OMPSafelenClause *C) {
+bool RecursiveASTEnterExitVisitor<Derived>::VisitOMPSafelenClause(OMPSafelenClause *C) {
   TRY_TO(TraverseStmt(C->getSafelen()));
   return true;
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::VisitOMPSimdlenClause(OMPSimdlenClause *C) {
+bool RecursiveASTEnterExitVisitor<Derived>::VisitOMPSimdlenClause(OMPSimdlenClause *C) {
   TRY_TO(TraverseStmt(C->getSimdlen()));
   return true;
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::VisitOMPSizesClause(OMPSizesClause *C) {
+bool RecursiveASTEnterExitVisitor<Derived>::VisitOMPSizesClause(OMPSizesClause *C) {
   for (Expr *E : C->getSizesRefs())
     TRY_TO(TraverseStmt(E));
   return true;
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::VisitOMPPermutationClause(
+bool RecursiveASTEnterExitVisitor<Derived>::VisitOMPPermutationClause(
     OMPPermutationClause *C) {
   for (Expr *E : C->getArgsRefs())
     TRY_TO(TraverseStmt(E));
@@ -3394,247 +3414,247 @@ bool RecursiveASTVisitor<Derived>::VisitOMPPermutationClause(
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::VisitOMPFullClause(OMPFullClause *C) {
+bool RecursiveASTEnterExitVisitor<Derived>::VisitOMPFullClause(OMPFullClause *C) {
   return true;
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::VisitOMPPartialClause(OMPPartialClause *C) {
+bool RecursiveASTEnterExitVisitor<Derived>::VisitOMPPartialClause(OMPPartialClause *C) {
   TRY_TO(TraverseStmt(C->getFactor()));
   return true;
 }
 
 template <typename Derived>
 bool
-RecursiveASTVisitor<Derived>::VisitOMPCollapseClause(OMPCollapseClause *C) {
+RecursiveASTEnterExitVisitor<Derived>::VisitOMPCollapseClause(OMPCollapseClause *C) {
   TRY_TO(TraverseStmt(C->getNumForLoops()));
   return true;
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::VisitOMPDefaultClause(OMPDefaultClause *) {
+bool RecursiveASTEnterExitVisitor<Derived>::VisitOMPDefaultClause(OMPDefaultClause *) {
   return true;
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::VisitOMPProcBindClause(OMPProcBindClause *) {
+bool RecursiveASTEnterExitVisitor<Derived>::VisitOMPProcBindClause(OMPProcBindClause *) {
   return true;
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::VisitOMPUnifiedAddressClause(
+bool RecursiveASTEnterExitVisitor<Derived>::VisitOMPUnifiedAddressClause(
     OMPUnifiedAddressClause *) {
   return true;
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::VisitOMPUnifiedSharedMemoryClause(
+bool RecursiveASTEnterExitVisitor<Derived>::VisitOMPUnifiedSharedMemoryClause(
     OMPUnifiedSharedMemoryClause *) {
   return true;
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::VisitOMPReverseOffloadClause(
+bool RecursiveASTEnterExitVisitor<Derived>::VisitOMPReverseOffloadClause(
     OMPReverseOffloadClause *) {
   return true;
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::VisitOMPDynamicAllocatorsClause(
+bool RecursiveASTEnterExitVisitor<Derived>::VisitOMPDynamicAllocatorsClause(
     OMPDynamicAllocatorsClause *) {
   return true;
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::VisitOMPAtomicDefaultMemOrderClause(
+bool RecursiveASTEnterExitVisitor<Derived>::VisitOMPAtomicDefaultMemOrderClause(
     OMPAtomicDefaultMemOrderClause *) {
   return true;
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::VisitOMPSelfMapsClause(OMPSelfMapsClause *) {
+bool RecursiveASTEnterExitVisitor<Derived>::VisitOMPSelfMapsClause(OMPSelfMapsClause *) {
   return true;
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::VisitOMPAtClause(OMPAtClause *) {
+bool RecursiveASTEnterExitVisitor<Derived>::VisitOMPAtClause(OMPAtClause *) {
   return true;
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::VisitOMPSeverityClause(OMPSeverityClause *) {
+bool RecursiveASTEnterExitVisitor<Derived>::VisitOMPSeverityClause(OMPSeverityClause *) {
   return true;
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::VisitOMPMessageClause(OMPMessageClause *C) {
+bool RecursiveASTEnterExitVisitor<Derived>::VisitOMPMessageClause(OMPMessageClause *C) {
   TRY_TO(TraverseStmt(C->getMessageString()));
   return true;
 }
 
 template <typename Derived>
 bool
-RecursiveASTVisitor<Derived>::VisitOMPScheduleClause(OMPScheduleClause *C) {
+RecursiveASTEnterExitVisitor<Derived>::VisitOMPScheduleClause(OMPScheduleClause *C) {
   TRY_TO(VisitOMPClauseWithPreInit(C));
   TRY_TO(TraverseStmt(C->getChunkSize()));
   return true;
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::VisitOMPOrderedClause(OMPOrderedClause *C) {
+bool RecursiveASTEnterExitVisitor<Derived>::VisitOMPOrderedClause(OMPOrderedClause *C) {
   TRY_TO(TraverseStmt(C->getNumForLoops()));
   return true;
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::VisitOMPNowaitClause(OMPNowaitClause *) {
+bool RecursiveASTEnterExitVisitor<Derived>::VisitOMPNowaitClause(OMPNowaitClause *) {
   return true;
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::VisitOMPUntiedClause(OMPUntiedClause *) {
+bool RecursiveASTEnterExitVisitor<Derived>::VisitOMPUntiedClause(OMPUntiedClause *) {
   return true;
 }
 
 template <typename Derived>
 bool
-RecursiveASTVisitor<Derived>::VisitOMPMergeableClause(OMPMergeableClause *) {
+RecursiveASTEnterExitVisitor<Derived>::VisitOMPMergeableClause(OMPMergeableClause *) {
   return true;
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::VisitOMPReadClause(OMPReadClause *) {
+bool RecursiveASTEnterExitVisitor<Derived>::VisitOMPReadClause(OMPReadClause *) {
   return true;
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::VisitOMPWriteClause(OMPWriteClause *) {
+bool RecursiveASTEnterExitVisitor<Derived>::VisitOMPWriteClause(OMPWriteClause *) {
   return true;
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::VisitOMPUpdateClause(OMPUpdateClause *) {
+bool RecursiveASTEnterExitVisitor<Derived>::VisitOMPUpdateClause(OMPUpdateClause *) {
   return true;
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::VisitOMPCaptureClause(OMPCaptureClause *) {
+bool RecursiveASTEnterExitVisitor<Derived>::VisitOMPCaptureClause(OMPCaptureClause *) {
   return true;
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::VisitOMPCompareClause(OMPCompareClause *) {
+bool RecursiveASTEnterExitVisitor<Derived>::VisitOMPCompareClause(OMPCompareClause *) {
   return true;
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::VisitOMPFailClause(OMPFailClause *) {
+bool RecursiveASTEnterExitVisitor<Derived>::VisitOMPFailClause(OMPFailClause *) {
   return true;
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::VisitOMPSeqCstClause(OMPSeqCstClause *) {
+bool RecursiveASTEnterExitVisitor<Derived>::VisitOMPSeqCstClause(OMPSeqCstClause *) {
   return true;
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::VisitOMPAcqRelClause(OMPAcqRelClause *) {
+bool RecursiveASTEnterExitVisitor<Derived>::VisitOMPAcqRelClause(OMPAcqRelClause *) {
   return true;
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::VisitOMPAbsentClause(OMPAbsentClause *) {
+bool RecursiveASTEnterExitVisitor<Derived>::VisitOMPAbsentClause(OMPAbsentClause *) {
   return true;
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::VisitOMPHoldsClause(OMPHoldsClause *) {
+bool RecursiveASTEnterExitVisitor<Derived>::VisitOMPHoldsClause(OMPHoldsClause *) {
   return true;
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::VisitOMPContainsClause(OMPContainsClause *) {
+bool RecursiveASTEnterExitVisitor<Derived>::VisitOMPContainsClause(OMPContainsClause *) {
   return true;
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::VisitOMPNoOpenMPClause(OMPNoOpenMPClause *) {
+bool RecursiveASTEnterExitVisitor<Derived>::VisitOMPNoOpenMPClause(OMPNoOpenMPClause *) {
   return true;
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::VisitOMPNoOpenMPRoutinesClause(
+bool RecursiveASTEnterExitVisitor<Derived>::VisitOMPNoOpenMPRoutinesClause(
     OMPNoOpenMPRoutinesClause *) {
   return true;
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::VisitOMPNoOpenMPConstructsClause(
+bool RecursiveASTEnterExitVisitor<Derived>::VisitOMPNoOpenMPConstructsClause(
     OMPNoOpenMPConstructsClause *) {
   return true;
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::VisitOMPNoParallelismClause(
+bool RecursiveASTEnterExitVisitor<Derived>::VisitOMPNoParallelismClause(
     OMPNoParallelismClause *) {
   return true;
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::VisitOMPAcquireClause(OMPAcquireClause *) {
+bool RecursiveASTEnterExitVisitor<Derived>::VisitOMPAcquireClause(OMPAcquireClause *) {
   return true;
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::VisitOMPReleaseClause(OMPReleaseClause *) {
+bool RecursiveASTEnterExitVisitor<Derived>::VisitOMPReleaseClause(OMPReleaseClause *) {
   return true;
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::VisitOMPRelaxedClause(OMPRelaxedClause *) {
+bool RecursiveASTEnterExitVisitor<Derived>::VisitOMPRelaxedClause(OMPRelaxedClause *) {
   return true;
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::VisitOMPWeakClause(OMPWeakClause *) {
+bool RecursiveASTEnterExitVisitor<Derived>::VisitOMPWeakClause(OMPWeakClause *) {
   return true;
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::VisitOMPThreadsClause(OMPThreadsClause *) {
+bool RecursiveASTEnterExitVisitor<Derived>::VisitOMPThreadsClause(OMPThreadsClause *) {
   return true;
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::VisitOMPSIMDClause(OMPSIMDClause *) {
+bool RecursiveASTEnterExitVisitor<Derived>::VisitOMPSIMDClause(OMPSIMDClause *) {
   return true;
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::VisitOMPNogroupClause(OMPNogroupClause *) {
+bool RecursiveASTEnterExitVisitor<Derived>::VisitOMPNogroupClause(OMPNogroupClause *) {
   return true;
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::VisitOMPInitClause(OMPInitClause *C) {
+bool RecursiveASTEnterExitVisitor<Derived>::VisitOMPInitClause(OMPInitClause *C) {
   TRY_TO(VisitOMPClauseList(C));
   return true;
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::VisitOMPUseClause(OMPUseClause *C) {
+bool RecursiveASTEnterExitVisitor<Derived>::VisitOMPUseClause(OMPUseClause *C) {
   TRY_TO(TraverseStmt(C->getInteropVar()));
   return true;
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::VisitOMPDestroyClause(OMPDestroyClause *C) {
+bool RecursiveASTEnterExitVisitor<Derived>::VisitOMPDestroyClause(OMPDestroyClause *C) {
   TRY_TO(TraverseStmt(C->getInteropVar()));
   return true;
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::VisitOMPNovariantsClause(
+bool RecursiveASTEnterExitVisitor<Derived>::VisitOMPNovariantsClause(
     OMPNovariantsClause *C) {
   TRY_TO(VisitOMPClauseWithPreInit(C));
   TRY_TO(TraverseStmt(C->getCondition()));
@@ -3642,7 +3662,7 @@ bool RecursiveASTVisitor<Derived>::VisitOMPNovariantsClause(
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::VisitOMPNocontextClause(
+bool RecursiveASTEnterExitVisitor<Derived>::VisitOMPNocontextClause(
     OMPNocontextClause *C) {
   TRY_TO(VisitOMPClauseWithPreInit(C));
   TRY_TO(TraverseStmt(C->getCondition()));
@@ -3651,7 +3671,7 @@ bool RecursiveASTVisitor<Derived>::VisitOMPNocontextClause(
 
 template <typename Derived>
 template <typename T>
-bool RecursiveASTVisitor<Derived>::VisitOMPClauseList(T *Node) {
+bool RecursiveASTEnterExitVisitor<Derived>::VisitOMPClauseList(T *Node) {
   for (auto *E : Node->varlist()) {
     TRY_TO(TraverseStmt(E));
   }
@@ -3659,21 +3679,21 @@ bool RecursiveASTVisitor<Derived>::VisitOMPClauseList(T *Node) {
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::VisitOMPInclusiveClause(
+bool RecursiveASTEnterExitVisitor<Derived>::VisitOMPInclusiveClause(
     OMPInclusiveClause *C) {
   TRY_TO(VisitOMPClauseList(C));
   return true;
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::VisitOMPExclusiveClause(
+bool RecursiveASTEnterExitVisitor<Derived>::VisitOMPExclusiveClause(
     OMPExclusiveClause *C) {
   TRY_TO(VisitOMPClauseList(C));
   return true;
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::VisitOMPPrivateClause(OMPPrivateClause *C) {
+bool RecursiveASTEnterExitVisitor<Derived>::VisitOMPPrivateClause(OMPPrivateClause *C) {
   TRY_TO(VisitOMPClauseList(C));
   for (auto *E : C->private_copies()) {
     TRY_TO(TraverseStmt(E));
@@ -3682,7 +3702,7 @@ bool RecursiveASTVisitor<Derived>::VisitOMPPrivateClause(OMPPrivateClause *C) {
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::VisitOMPFirstprivateClause(
+bool RecursiveASTEnterExitVisitor<Derived>::VisitOMPFirstprivateClause(
     OMPFirstprivateClause *C) {
   TRY_TO(VisitOMPClauseList(C));
   TRY_TO(VisitOMPClauseWithPreInit(C));
@@ -3696,7 +3716,7 @@ bool RecursiveASTVisitor<Derived>::VisitOMPFirstprivateClause(
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::VisitOMPLastprivateClause(
+bool RecursiveASTEnterExitVisitor<Derived>::VisitOMPLastprivateClause(
     OMPLastprivateClause *C) {
   TRY_TO(VisitOMPClauseList(C));
   TRY_TO(VisitOMPClauseWithPostUpdate(C));
@@ -3716,13 +3736,13 @@ bool RecursiveASTVisitor<Derived>::VisitOMPLastprivateClause(
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::VisitOMPSharedClause(OMPSharedClause *C) {
+bool RecursiveASTEnterExitVisitor<Derived>::VisitOMPSharedClause(OMPSharedClause *C) {
   TRY_TO(VisitOMPClauseList(C));
   return true;
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::VisitOMPLinearClause(OMPLinearClause *C) {
+bool RecursiveASTEnterExitVisitor<Derived>::VisitOMPLinearClause(OMPLinearClause *C) {
   TRY_TO(TraverseStmt(C->getStep()));
   TRY_TO(TraverseStmt(C->getCalcStep()));
   TRY_TO(VisitOMPClauseList(C));
@@ -3743,14 +3763,14 @@ bool RecursiveASTVisitor<Derived>::VisitOMPLinearClause(OMPLinearClause *C) {
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::VisitOMPAlignedClause(OMPAlignedClause *C) {
+bool RecursiveASTEnterExitVisitor<Derived>::VisitOMPAlignedClause(OMPAlignedClause *C) {
   TRY_TO(TraverseStmt(C->getAlignment()));
   TRY_TO(VisitOMPClauseList(C));
   return true;
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::VisitOMPCopyinClause(OMPCopyinClause *C) {
+bool RecursiveASTEnterExitVisitor<Derived>::VisitOMPCopyinClause(OMPCopyinClause *C) {
   TRY_TO(VisitOMPClauseList(C));
   for (auto *E : C->source_exprs()) {
     TRY_TO(TraverseStmt(E));
@@ -3765,7 +3785,7 @@ bool RecursiveASTVisitor<Derived>::VisitOMPCopyinClause(OMPCopyinClause *C) {
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::VisitOMPCopyprivateClause(
+bool RecursiveASTEnterExitVisitor<Derived>::VisitOMPCopyprivateClause(
     OMPCopyprivateClause *C) {
   TRY_TO(VisitOMPClauseList(C));
   for (auto *E : C->source_exprs()) {
@@ -3782,7 +3802,7 @@ bool RecursiveASTVisitor<Derived>::VisitOMPCopyprivateClause(
 
 template <typename Derived>
 bool
-RecursiveASTVisitor<Derived>::VisitOMPReductionClause(OMPReductionClause *C) {
+RecursiveASTEnterExitVisitor<Derived>::VisitOMPReductionClause(OMPReductionClause *C) {
   TRY_TO(TraverseNestedNameSpecifierLoc(C->getQualifierLoc()));
   TRY_TO(TraverseDeclarationNameInfo(C->getNameInfo()));
   TRY_TO(VisitOMPClauseList(C));
@@ -3814,7 +3834,7 @@ RecursiveASTVisitor<Derived>::VisitOMPReductionClause(OMPReductionClause *C) {
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::VisitOMPTaskReductionClause(
+bool RecursiveASTEnterExitVisitor<Derived>::VisitOMPTaskReductionClause(
     OMPTaskReductionClause *C) {
   TRY_TO(TraverseNestedNameSpecifierLoc(C->getQualifierLoc()));
   TRY_TO(TraverseDeclarationNameInfo(C->getNameInfo()));
@@ -3836,7 +3856,7 @@ bool RecursiveASTVisitor<Derived>::VisitOMPTaskReductionClause(
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::VisitOMPInReductionClause(
+bool RecursiveASTEnterExitVisitor<Derived>::VisitOMPInReductionClause(
     OMPInReductionClause *C) {
   TRY_TO(TraverseNestedNameSpecifierLoc(C->getQualifierLoc()));
   TRY_TO(TraverseDeclarationNameInfo(C->getNameInfo()));
@@ -3860,38 +3880,38 @@ bool RecursiveASTVisitor<Derived>::VisitOMPInReductionClause(
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::VisitOMPFlushClause(OMPFlushClause *C) {
+bool RecursiveASTEnterExitVisitor<Derived>::VisitOMPFlushClause(OMPFlushClause *C) {
   TRY_TO(VisitOMPClauseList(C));
   return true;
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::VisitOMPDepobjClause(OMPDepobjClause *C) {
+bool RecursiveASTEnterExitVisitor<Derived>::VisitOMPDepobjClause(OMPDepobjClause *C) {
   TRY_TO(TraverseStmt(C->getDepobj()));
   return true;
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::VisitOMPDependClause(OMPDependClause *C) {
+bool RecursiveASTEnterExitVisitor<Derived>::VisitOMPDependClause(OMPDependClause *C) {
   TRY_TO(VisitOMPClauseList(C));
   return true;
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::VisitOMPDeviceClause(OMPDeviceClause *C) {
+bool RecursiveASTEnterExitVisitor<Derived>::VisitOMPDeviceClause(OMPDeviceClause *C) {
   TRY_TO(VisitOMPClauseWithPreInit(C));
   TRY_TO(TraverseStmt(C->getDevice()));
   return true;
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::VisitOMPMapClause(OMPMapClause *C) {
+bool RecursiveASTEnterExitVisitor<Derived>::VisitOMPMapClause(OMPMapClause *C) {
   TRY_TO(VisitOMPClauseList(C));
   return true;
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::VisitOMPNumTeamsClause(
+bool RecursiveASTEnterExitVisitor<Derived>::VisitOMPNumTeamsClause(
     OMPNumTeamsClause *C) {
   TRY_TO(VisitOMPClauseList(C));
   TRY_TO(VisitOMPClauseWithPreInit(C));
@@ -3899,7 +3919,7 @@ bool RecursiveASTVisitor<Derived>::VisitOMPNumTeamsClause(
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::VisitOMPThreadLimitClause(
+bool RecursiveASTEnterExitVisitor<Derived>::VisitOMPThreadLimitClause(
     OMPThreadLimitClause *C) {
   TRY_TO(VisitOMPClauseList(C));
   TRY_TO(VisitOMPClauseWithPreInit(C));
@@ -3907,7 +3927,7 @@ bool RecursiveASTVisitor<Derived>::VisitOMPThreadLimitClause(
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::VisitOMPPriorityClause(
+bool RecursiveASTEnterExitVisitor<Derived>::VisitOMPPriorityClause(
     OMPPriorityClause *C) {
   TRY_TO(VisitOMPClauseWithPreInit(C));
   TRY_TO(TraverseStmt(C->getPriority()));
@@ -3915,7 +3935,7 @@ bool RecursiveASTVisitor<Derived>::VisitOMPPriorityClause(
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::VisitOMPGrainsizeClause(
+bool RecursiveASTEnterExitVisitor<Derived>::VisitOMPGrainsizeClause(
     OMPGrainsizeClause *C) {
   TRY_TO(VisitOMPClauseWithPreInit(C));
   TRY_TO(TraverseStmt(C->getGrainsize()));
@@ -3923,7 +3943,7 @@ bool RecursiveASTVisitor<Derived>::VisitOMPGrainsizeClause(
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::VisitOMPNumTasksClause(
+bool RecursiveASTEnterExitVisitor<Derived>::VisitOMPNumTasksClause(
     OMPNumTasksClause *C) {
   TRY_TO(VisitOMPClauseWithPreInit(C));
   TRY_TO(TraverseStmt(C->getNumTasks()));
@@ -3931,13 +3951,13 @@ bool RecursiveASTVisitor<Derived>::VisitOMPNumTasksClause(
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::VisitOMPHintClause(OMPHintClause *C) {
+bool RecursiveASTEnterExitVisitor<Derived>::VisitOMPHintClause(OMPHintClause *C) {
   TRY_TO(TraverseStmt(C->getHint()));
   return true;
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::VisitOMPDistScheduleClause(
+bool RecursiveASTEnterExitVisitor<Derived>::VisitOMPDistScheduleClause(
     OMPDistScheduleClause *C) {
   TRY_TO(VisitOMPClauseWithPreInit(C));
   TRY_TO(TraverseStmt(C->getChunkSize()));
@@ -3946,52 +3966,52 @@ bool RecursiveASTVisitor<Derived>::VisitOMPDistScheduleClause(
 
 template <typename Derived>
 bool
-RecursiveASTVisitor<Derived>::VisitOMPDefaultmapClause(OMPDefaultmapClause *C) {
+RecursiveASTEnterExitVisitor<Derived>::VisitOMPDefaultmapClause(OMPDefaultmapClause *C) {
   return true;
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::VisitOMPToClause(OMPToClause *C) {
+bool RecursiveASTEnterExitVisitor<Derived>::VisitOMPToClause(OMPToClause *C) {
   TRY_TO(VisitOMPClauseList(C));
   return true;
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::VisitOMPFromClause(OMPFromClause *C) {
+bool RecursiveASTEnterExitVisitor<Derived>::VisitOMPFromClause(OMPFromClause *C) {
   TRY_TO(VisitOMPClauseList(C));
   return true;
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::VisitOMPUseDevicePtrClause(
+bool RecursiveASTEnterExitVisitor<Derived>::VisitOMPUseDevicePtrClause(
     OMPUseDevicePtrClause *C) {
   TRY_TO(VisitOMPClauseList(C));
   return true;
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::VisitOMPUseDeviceAddrClause(
+bool RecursiveASTEnterExitVisitor<Derived>::VisitOMPUseDeviceAddrClause(
     OMPUseDeviceAddrClause *C) {
   TRY_TO(VisitOMPClauseList(C));
   return true;
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::VisitOMPIsDevicePtrClause(
+bool RecursiveASTEnterExitVisitor<Derived>::VisitOMPIsDevicePtrClause(
     OMPIsDevicePtrClause *C) {
   TRY_TO(VisitOMPClauseList(C));
   return true;
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::VisitOMPHasDeviceAddrClause(
+bool RecursiveASTEnterExitVisitor<Derived>::VisitOMPHasDeviceAddrClause(
     OMPHasDeviceAddrClause *C) {
   TRY_TO(VisitOMPClauseList(C));
   return true;
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::VisitOMPNontemporalClause(
+bool RecursiveASTEnterExitVisitor<Derived>::VisitOMPNontemporalClause(
     OMPNontemporalClause *C) {
   TRY_TO(VisitOMPClauseList(C));
   for (auto *E : C->private_refs()) {
@@ -4001,18 +4021,18 @@ bool RecursiveASTVisitor<Derived>::VisitOMPNontemporalClause(
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::VisitOMPOrderClause(OMPOrderClause *) {
+bool RecursiveASTEnterExitVisitor<Derived>::VisitOMPOrderClause(OMPOrderClause *) {
   return true;
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::VisitOMPDetachClause(OMPDetachClause *C) {
+bool RecursiveASTEnterExitVisitor<Derived>::VisitOMPDetachClause(OMPDetachClause *C) {
   TRY_TO(TraverseStmt(C->getEventHandler()));
   return true;
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::VisitOMPUsesAllocatorsClause(
+bool RecursiveASTEnterExitVisitor<Derived>::VisitOMPUsesAllocatorsClause(
     OMPUsesAllocatorsClause *C) {
   for (unsigned I = 0, E = C->getNumberOfAllocators(); I < E; ++I) {
     const OMPUsesAllocatorsClause::Data Data = C->getAllocatorData(I);
@@ -4023,7 +4043,7 @@ bool RecursiveASTVisitor<Derived>::VisitOMPUsesAllocatorsClause(
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::VisitOMPAffinityClause(
+bool RecursiveASTEnterExitVisitor<Derived>::VisitOMPAffinityClause(
     OMPAffinityClause *C) {
   TRY_TO(TraverseStmt(C->getModifier()));
   for (Expr *E : C->varlist())
@@ -4032,19 +4052,19 @@ bool RecursiveASTVisitor<Derived>::VisitOMPAffinityClause(
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::VisitOMPFilterClause(OMPFilterClause *C) {
+bool RecursiveASTEnterExitVisitor<Derived>::VisitOMPFilterClause(OMPFilterClause *C) {
   TRY_TO(VisitOMPClauseWithPreInit(C));
   TRY_TO(TraverseStmt(C->getThreadID()));
   return true;
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::VisitOMPBindClause(OMPBindClause *C) {
+bool RecursiveASTEnterExitVisitor<Derived>::VisitOMPBindClause(OMPBindClause *C) {
   return true;
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::VisitOMPXDynCGroupMemClause(
+bool RecursiveASTEnterExitVisitor<Derived>::VisitOMPXDynCGroupMemClause(
     OMPXDynCGroupMemClause *C) {
   TRY_TO(VisitOMPClauseWithPreInit(C));
   TRY_TO(TraverseStmt(C->getSize()));
@@ -4052,32 +4072,32 @@ bool RecursiveASTVisitor<Derived>::VisitOMPXDynCGroupMemClause(
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::VisitOMPDoacrossClause(
+bool RecursiveASTEnterExitVisitor<Derived>::VisitOMPDoacrossClause(
     OMPDoacrossClause *C) {
   TRY_TO(VisitOMPClauseList(C));
   return true;
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::VisitOMPXAttributeClause(
+bool RecursiveASTEnterExitVisitor<Derived>::VisitOMPXAttributeClause(
     OMPXAttributeClause *C) {
   return true;
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::VisitOMPXBareClause(OMPXBareClause *C) {
+bool RecursiveASTEnterExitVisitor<Derived>::VisitOMPXBareClause(OMPXBareClause *C) {
   return true;
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::TraverseOpenACCConstructStmt(
+bool RecursiveASTEnterExitVisitor<Derived>::TraverseOpenACCConstructStmt(
     OpenACCConstructStmt *C) {
   TRY_TO(VisitOpenACCClauseList(C->clauses()));
   return true;
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::TraverseOpenACCAssociatedStmtConstruct(
+bool RecursiveASTEnterExitVisitor<Derived>::TraverseOpenACCAssociatedStmtConstruct(
     OpenACCAssociatedStmtConstruct *S) {
   TRY_TO(TraverseOpenACCConstructStmt(S));
   TRY_TO(TraverseStmt(S->getAssociatedStmt()));
@@ -4085,14 +4105,14 @@ bool RecursiveASTVisitor<Derived>::TraverseOpenACCAssociatedStmtConstruct(
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::VisitOpenACCClause(const OpenACCClause *C) {
+bool RecursiveASTEnterExitVisitor<Derived>::VisitOpenACCClause(const OpenACCClause *C) {
   for (const Stmt *Child : C->children())
     TRY_TO(TraverseStmt(const_cast<Stmt *>(Child)));
   return true;
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::VisitOpenACCClauseList(
+bool RecursiveASTEnterExitVisitor<Derived>::VisitOpenACCClauseList(
     ArrayRef<const OpenACCClause *> Clauses) {
 
   for (const auto *C : Clauses)

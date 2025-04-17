@@ -81,6 +81,7 @@ class OpenACCAssociatedStmtConstruct : public OpenACCConstructStmt {
   friend class ASTStmtWriter;
   friend class ASTStmtReader;
   template <typename Derived> friend class RecursiveASTVisitor;
+  template <typename Derived> friend class RecursiveASTEnterExitVisitor;
   Stmt *AssociatedStmt = nullptr;
 
 protected:

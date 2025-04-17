@@ -49,6 +49,40 @@ add_clang_unittest(ToolingTests
   RecursiveASTVisitorTestDeclVisitor.cpp
   RecursiveASTVisitorTestPostOrderVisitor.cpp
   RecursiveASTVisitorTestTypeLocVisitor.cpp
+  RecursiveASTEnterExitVisitorTests/Attr.cpp
+  RecursiveASTEnterExitVisitorTests/BitfieldInitializer.cpp
+  RecursiveASTEnterExitVisitorTests/CallbacksLeaf.cpp
+  RecursiveASTEnterExitVisitorTests/CallbacksUnaryOperator.cpp
+  RecursiveASTEnterExitVisitorTests/CallbacksBinaryOperator.cpp
+  RecursiveASTEnterExitVisitorTests/CallbacksCompoundAssignOperator.cpp
+  RecursiveASTEnterExitVisitorTests/CallbacksCallExpr.cpp
+  RecursiveASTEnterExitVisitorTests/Class.cpp
+  RecursiveASTEnterExitVisitorTests/Concept.cpp
+  RecursiveASTEnterExitVisitorTests/ConstructExpr.cpp
+  RecursiveASTEnterExitVisitorTests/CXXBoolLiteralExpr.cpp
+  RecursiveASTEnterExitVisitorTests/CXXMemberCall.cpp
+  RecursiveASTEnterExitVisitorTests/CXXMethodDecl.cpp
+  RecursiveASTEnterExitVisitorTests/CXXOperatorCallExprTraverser.cpp
+  RecursiveASTEnterExitVisitorTests/DeclRefExpr.cpp
+  RecursiveASTEnterExitVisitorTests/DeductionGuide.cpp
+  RecursiveASTEnterExitVisitorTests/ImplicitCtor.cpp
+  RecursiveASTEnterExitVisitorTests/ImplicitCtorInitializer.cpp
+  RecursiveASTEnterExitVisitorTests/InitListExprPostOrder.cpp
+  RecursiveASTEnterExitVisitorTests/InitListExprPostOrderNoQueue.cpp
+  RecursiveASTEnterExitVisitorTests/InitListExprPreOrder.cpp
+  RecursiveASTEnterExitVisitorTests/InitListExprPreOrderNoQueue.cpp
+  RecursiveASTEnterExitVisitorTests/IntegerLiteral.cpp
+  RecursiveASTEnterExitVisitorTests/LambdaDefaultCapture.cpp
+  RecursiveASTEnterExitVisitorTests/LambdaExpr.cpp
+  RecursiveASTEnterExitVisitorTests/LambdaTemplateParams.cpp
+  RecursiveASTEnterExitVisitorTests/MemberPointerTypeLoc.cpp
+  RecursiveASTEnterExitVisitorTests/NestedNameSpecifiers.cpp
+  RecursiveASTEnterExitVisitorTests/ParenExpr.cpp
+  RecursiveASTEnterExitVisitorTests/TemplateArgumentLocTraverser.cpp
+  RecursiveASTEnterExitVisitorTests/TraversalScope.cpp
+  RecursiveASTEnterExitVisitorTestDeclVisitor.cpp
+  RecursiveASTEnterExitVisitorTestPostOrderVisitor.cpp
+  RecursiveASTEnterExitVisitorTestTypeLocVisitor.cpp
   RefactoringActionRulesTest.cpp
   RefactoringCallbacksTest.cpp
   RefactoringTest.cpp
