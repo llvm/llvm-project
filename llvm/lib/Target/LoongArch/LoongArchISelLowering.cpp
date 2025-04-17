@@ -31,6 +31,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/MathExtras.h"
+#include <llvm/Analysis/VectorUtils.h>
 
 using namespace llvm;
 
@@ -1808,6 +1809,36 @@ static SDValue lower256BitShuffle(const SDLoc &DL, ArrayRef<int> Mask, MVT VT,
 
   return SDValue();
 }
+// Widen element type to get a new mask value (if possible).
+// For example:
+//  shufflevector <4 x i32> %a, <4 x i32> %b,
+//                <4 x i32> <i32 6, i32 7, i32 2, i32 3>
+// is equivalent to:
+//  shufflevector <2 x i64> %a, <2 x i64> %b, <2 x i32> <i32 3, i32 1>
+// can be lowered to:
+//  VPACKOD_D vr0, vr0, vr1
+static SDValue widenShuffleMask(const SDLoc &DL, ArrayRef<int> Mask, MVT VT,
+                                SDValue V1, SDValue V2, SelectionDAG &DAG) {
+  unsigned EltBits = VT.getScalarSizeInBits();
+
+  if (EltBits > 32 || EltBits == 1)
+    return SDValue();
+
+  SmallVector<int, 8> NewMask;
+  if (widenShuffleMaskElts(Mask, NewMask)) {
+    MVT NewEltVT = VT.isFloatingPoint() ? MVT::getFloatingPointVT(EltBits * 2)
+                                        : MVT::getIntegerVT(EltBits * 2);
+    MVT NewVT = MVT::getVectorVT(NewEltVT, VT.getVectorNumElements() / 2);
+    if (DAG.getTargetLoweringInfo().isTypeLegal(NewVT)) {
+      SDValue NewV1 = DAG.getBitcast(NewVT, V1);
+      SDValue NewV2 = DAG.getBitcast(NewVT, V2);
+      return DAG.getBitcast(
+          VT, DAG.getVectorShuffle(NewVT, DL, NewV1, NewV2, NewMask));
+    }
+  }
+
+  return SDValue();
+}
 
 SDValue LoongArchTargetLowering::lowerVECTOR_SHUFFLE(SDValue Op,
                                                      SelectionDAG &DAG) const {
@@ -1841,6 +1872,9 @@ SDValue LoongArchTargetLowering::lowerVECTOR_SHUFFLE(SDValue Op,
         M = -1;
     return DAG.getVectorShuffle(VT, DL, V1, V2, NewMask);
   }
+
+  if (SDValue NewShuffle = widenShuffleMask(DL, OrigMask, VT, V1, V2, DAG))
+    return NewShuffle;
 
   // Check for illegal shuffle mask element index values.
   int MaskUpperLimit = OrigMask.size() * (V2IsUndef ? 1 : 2);
