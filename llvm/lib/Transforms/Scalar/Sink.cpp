@@ -75,13 +75,12 @@ static bool isSafeToMove(Instruction *Inst, AliasAnalysis &AA,
   return true;
 }
 
-typedef SmallPtrSet<BasicBlock *, 8> BlocksSet;
+using BlocksSet = SmallPtrSet<BasicBlock *, 8>;
 static void findStores(SmallPtrSetImpl<Instruction *> &Stores,
                        BasicBlock *LoadBB, BasicBlock *BB,
                        BlocksSet &VisitedBlocksSet) {
-  if (BB == LoadBB || VisitedBlocksSet.contains(BB))
+  if (BB == LoadBB || !VisitedBlocksSet.insert(BB).second)
     return;
-  VisitedBlocksSet.insert(BB);
 
   for (Instruction &Inst : *BB)
     if (Inst.mayWriteToMemory())
