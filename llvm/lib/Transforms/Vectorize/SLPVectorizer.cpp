@@ -1889,6 +1889,7 @@ public:
     LoadEntriesToVectorize.clear();
     IsGraphTransformMode = false;
     GatheredLoadsEntriesFirst.reset();
+    CompressEntryToData.clear();
     ExternalUses.clear();
     ExternalUsesAsOriginalScalar.clear();
     for (auto &Iter : BlocksSchedules) {
@@ -4307,6 +4308,11 @@ private:
 
   /// The index of the first gathered load entry in the VectorizeTree.
   std::optional<unsigned> GatheredLoadsEntriesFirst;
+
+  /// Maps compress entries to their mask data for the final codegen.
+  SmallDenseMap<const TreeEntry *,
+                std::tuple<SmallVector<int>, VectorType *, unsigned, bool>>
+      CompressEntryToData;
 
   /// This POD struct describes one external user in the vectorized tree.
   struct ExternalUser {
@@ -13428,6 +13434,8 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
             *TLI, [](Value *) { return true; }, IsMasked, InterleaveFactor,
             CompressMask, LoadVecTy);
         assert(IsVectorized && "Expected to be vectorized");
+        CompressEntryToData.try_emplace(E, CompressMask, LoadVecTy,
+                                        InterleaveFactor, IsMasked);
         Align CommonAlignment;
         if (IsMasked)
           CommonAlignment = computeCommonAlignment<LoadInst>(VL);
@@ -17963,10 +17971,6 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       if (E->State == TreeEntry::Vectorize) {
         NewLI = Builder.CreateAlignedLoad(VecTy, PO, LI->getAlign());
       } else if (E->State == TreeEntry::CompressVectorize) {
-        bool IsMasked;
-        unsigned InterleaveFactor;
-        SmallVector<int> CompressMask;
-        VectorType *LoadVecTy;
         SmallVector<Value *> Scalars(E->Scalars.begin(), E->Scalars.end());
         if (!E->ReorderIndices.empty()) {
           SmallVector<int> Mask(E->ReorderIndices.begin(),
@@ -17976,11 +17980,8 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
         SmallVector<Value *> PointerOps(Scalars.size());
         for (auto [I, V] : enumerate(Scalars))
           PointerOps[I] = cast<LoadInst>(V)->getPointerOperand();
-        [[maybe_unused]] bool IsVectorized = isMaskedLoadCompress(
-            Scalars, PointerOps, E->ReorderIndices, *TTI, *DL, *SE, *AC, *DT,
-            *TLI, [](Value *) { return true; }, IsMasked, InterleaveFactor,
-            CompressMask, LoadVecTy);
-        assert(IsVectorized && "Expected to be vectorized");
+        auto [CompressMask, LoadVecTy, InterleaveFactor, IsMasked] =
+            CompressEntryToData.at(E);
         Align CommonAlignment;
         if (IsMasked)
           CommonAlignment = computeCommonAlignment<LoadInst>(E->Scalars);
