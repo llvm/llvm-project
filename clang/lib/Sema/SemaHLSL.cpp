@@ -1282,8 +1282,8 @@ bool SemaHLSL::handleResourceTypeAttr(QualType T, const ParsedAttr &AL) {
     }
 
     IdentifierLoc *Loc = AL.getArgAsIdent(0);
-    StringRef Identifier = Loc->Ident->getName();
-    SourceLocation ArgLoc = Loc->Loc;
+    StringRef Identifier = Loc->getIdentifierInfo()->getName();
+    SourceLocation ArgLoc = Loc->getLoc();
 
     // Validate resource class value
     ResourceClass RC;
@@ -1542,8 +1542,8 @@ void SemaHLSL::handleResourceBindingAttr(Decl *TheDecl, const ParsedAttr &AL) {
   }
 
   IdentifierLoc *Loc = AL.getArgAsIdent(0);
-  StringRef Str = Loc->Ident->getName();
-  SourceLocation ArgLoc = Loc->Loc;
+  StringRef Str = Loc->getIdentifierInfo()->getName();
+  SourceLocation ArgLoc = Loc->getLoc();
 
   SourceLocation SpaceArgLoc;
   bool SpecifiedSpace = false;
@@ -1557,8 +1557,8 @@ void SemaHLSL::handleResourceBindingAttr(Decl *TheDecl, const ParsedAttr &AL) {
     }
 
     IdentifierLoc *Loc = AL.getArgAsIdent(1);
-    Space = Loc->Ident->getName();
-    SpaceArgLoc = Loc->Loc;
+    Space = Loc->getIdentifierInfo()->getName();
+    SpaceArgLoc = Loc->getLoc();
   } else {
     Slot = Str;
   }
