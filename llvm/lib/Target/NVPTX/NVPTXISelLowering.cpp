@@ -85,6 +85,12 @@ static cl::opt<unsigned> FMAContractLevelOpt(
              " 1: do it  2: do it aggressively"),
     cl::init(2));
 
+static cl::opt<bool> DisableFOpTreeReduce(
+    "nvptx-disable-fop-tree-reduce", cl::Hidden,
+    cl::desc("NVPTX Specific: don't emit tree reduction for floating-point "
+             "reduction operations"),
+    cl::init(false));
+
 static cl::opt<NVPTX::DivPrecisionLevel> UsePrecDivF32(
     "nvptx-prec-divf32", cl::Hidden,
     cl::desc("NVPTX Specifies: 0 use div.approx, 1 use div.full, 2 use"
@@ -863,6 +869,15 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   if (STI.allowFP16Math() || STI.hasBF16Math())
     setTargetDAGCombine(ISD::SETCC);
 
+  // Vector reduction operations. These are transformed into a tree evaluation
+  // of nodes which may or may not be legal.
+  for (MVT VT : MVT::fixedlen_vector_valuetypes()) {
+    setOperationAction({ISD::VECREDUCE_FADD, ISD::VECREDUCE_FMUL,
+                        ISD::VECREDUCE_FMAX, ISD::VECREDUCE_FMIN,
+                        ISD::VECREDUCE_FMAXIMUM, ISD::VECREDUCE_FMINIMUM},
+                       VT, Custom);
+  }
+
   // Promote fp16 arithmetic if fp16 hardware isn't available or the
   // user passed --nvptx-no-fp16-math. The flag is useful because,
   // although sm_53+ GPUs have some sort of FP16 support in
@@ -1120,6 +1135,10 @@ const char *NVPTXTargetLowering::getTargetNodeName(unsigned Opcode) const {
     MAKE_CASE(NVPTXISD::BFI)
     MAKE_CASE(NVPTXISD::PRMT)
     MAKE_CASE(NVPTXISD::FCOPYSIGN)
+    MAKE_CASE(NVPTXISD::FMAXNUM3)
+    MAKE_CASE(NVPTXISD::FMINNUM3)
+    MAKE_CASE(NVPTXISD::FMAXIMUM3)
+    MAKE_CASE(NVPTXISD::FMINIMUM3)
     MAKE_CASE(NVPTXISD::DYNAMIC_STACKALLOC)
     MAKE_CASE(NVPTXISD::STACKRESTORE)
     MAKE_CASE(NVPTXISD::STACKSAVE)
@@ -2194,6 +2213,108 @@ NVPTXTargetLowering::LowerCONCAT_VECTORS(SDValue Op, SelectionDAG &DAG) const {
   return DAG.getBuildVector(Node->getValueType(0), dl, Ops);
 }
 
+/// A generic routine for constructing a tree reduction for a vector operand.
+/// This method differs from iterative splitting in DAGTypeLegalizer by
+/// first scalarizing the vector and then progressively grouping elements
+/// bottom-up. This allows easily building the optimal (minimum) number of nodes
+/// with different numbers of operands (eg. max3 vs max2).
+static SDValue BuildTreeReduction(
+    const SDValue &VectorOp,
+    ArrayRef<std::pair<unsigned /*NodeType*/, unsigned /*NumInputs*/>> Ops,
+    const SDLoc &DL, const SDNodeFlags Flags, SelectionDAG &DAG) {
+  EVT VectorTy = VectorOp.getValueType();
+  EVT EltTy = VectorTy.getVectorElementType();
+  const unsigned NumElts = VectorTy.getVectorNumElements();
+
+  // scalarize vector
+  SmallVector<SDValue> Elements(NumElts);
+  for (unsigned I = 0, E = NumElts; I != E; ++I) {
+    Elements[I] = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, EltTy, VectorOp,
+                              DAG.getConstant(I, DL, MVT::i64));
+  }
+
+  // now build the computation graph in place at each level
+  SmallVector<SDValue> Level = Elements;
+  for (unsigned OpIdx = 0; Level.size() > 1 && OpIdx < Ops.size();) {
+    const auto [DefaultScalarOp, DefaultGroupSize] = Ops[OpIdx];
+
+    // partially reduce all elements in level
+    SmallVector<SDValue> ReducedLevel;
+    unsigned I = 0, E = Level.size();
+    for (; I + DefaultGroupSize <= E; I += DefaultGroupSize) {
+      // Reduce elements in groups of [DefaultGroupSize], as much as possible.
+      ReducedLevel.push_back(DAG.getNode(
+          DefaultScalarOp, DL, EltTy,
+          ArrayRef<SDValue>(Level).slice(I, DefaultGroupSize), Flags));
+    }
+
+    if (I < E) {
+      if (ReducedLevel.empty()) {
+        // The current operator requires more inputs than there are operands at
+        // this level. Pick a smaller operator and retry.
+        ++OpIdx;
+        assert(OpIdx < Ops.size() && "no smaller operators for reduction");
+        continue;
+      }
+
+      // Otherwise, we just have a remainder, which we push to the next level.
+      for (; I < E; ++I)
+        ReducedLevel.push_back(Level[I]);
+    }
+    Level = ReducedLevel;
+  }
+
+  return *Level.begin();
+}
+
+/// Lower fadd/fmul vector reductions. Builds a computation graph (tree) and
+/// serializes it.
+SDValue NVPTXTargetLowering::LowerVECREDUCE(SDValue Op,
+                                            SelectionDAG &DAG) const {
+  // If we can't reorder sub-operations, let DAGTypeLegalizer lower this op.
+  if (DisableFOpTreeReduce || !Op->getFlags().hasAllowReassociation())
+    return SDValue();
+
+  EVT EltTy = Op.getOperand(0).getValueType().getVectorElementType();
+  const bool CanUseMinMax3 = EltTy == MVT::f32 && STI.getSmVersion() >= 100 &&
+                             STI.getPTXVersion() >= 88;
+  SDLoc DL(Op);
+  SmallVector<std::pair<unsigned /*Op*/, unsigned /*NumIn*/>, 2> Operators;
+  switch (Op->getOpcode()) {
+  case ISD::VECREDUCE_FADD:
+    Operators = {{ISD::FADD, 2}};
+    break;
+  case ISD::VECREDUCE_FMUL:
+    Operators = {{ISD::FMUL, 2}};
+    break;
+  case ISD::VECREDUCE_FMAX:
+    if (CanUseMinMax3)
+      Operators.push_back({NVPTXISD::FMAXNUM3, 3});
+    Operators.push_back({ISD::FMAXNUM, 2});
+    break;
+  case ISD::VECREDUCE_FMIN:
+    if (CanUseMinMax3)
+      Operators.push_back({NVPTXISD::FMINNUM3, 3});
+    Operators.push_back({ISD::FMINNUM, 2});
+    break;
+  case ISD::VECREDUCE_FMAXIMUM:
+    if (CanUseMinMax3)
+      Operators.push_back({NVPTXISD::FMAXIMUM3, 3});
+    Operators.push_back({ISD::FMAXIMUM, 2});
+    break;
+  case ISD::VECREDUCE_FMINIMUM:
+    if (CanUseMinMax3)
+      Operators.push_back({NVPTXISD::FMINIMUM3, 3});
+    Operators.push_back({ISD::FMINIMUM, 2});
+    break;
+  default:
+    llvm_unreachable("unhandled vecreduce operation");
+  }
+
+  return BuildTreeReduction(Op.getOperand(0), Operators, DL, Op->getFlags(),
+                            DAG);
+}
+
 SDValue NVPTXTargetLowering::LowerBITCAST(SDValue Op, SelectionDAG &DAG) const {
   // Handle bitcasting from v2i8 without hitting the default promotion
   // strategy which goes through stack memory.
@@ -3026,6 +3147,13 @@ NVPTXTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return LowerVECTOR_SHUFFLE(Op, DAG);
   case ISD::CONCAT_VECTORS:
     return LowerCONCAT_VECTORS(Op, DAG);
+  case ISD::VECREDUCE_FADD:
+  case ISD::VECREDUCE_FMUL:
+  case ISD::VECREDUCE_FMAX:
+  case ISD::VECREDUCE_FMIN:
+  case ISD::VECREDUCE_FMAXIMUM:
+  case ISD::VECREDUCE_FMINIMUM:
+    return LowerVECREDUCE(Op, DAG);
   case ISD::STORE:
     return LowerSTORE(Op, DAG);
   case ISD::LOAD:
