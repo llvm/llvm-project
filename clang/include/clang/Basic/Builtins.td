@@ -1304,6 +1304,18 @@ def ElementwiseMin : Builtin {
   let Prototype = "void(...)";
 }
 
+def ElementwiseMaxNum : Builtin {
+  let Spellings = ["__builtin_elementwise_maxnum"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def ElementwiseMinNum : Builtin {
+  let Spellings = ["__builtin_elementwise_minnum"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
 def ElementwiseMaximum : Builtin {
   let Spellings = ["__builtin_elementwise_maximum"];
   let Attributes = [NoThrow, Const, CustomTypeChecking];
@@ -4889,12 +4901,6 @@ def HLSLDotProduct : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_dot"];
   let Attributes = [NoThrow, Const, CustomTypeChecking];
   let Prototype = "void(...)";
-}
-
-def HLSLDot2Add : LangBuiltin<"HLSL_LANG"> {
-  let Spellings = ["__builtin_hlsl_dot2add"];
-  let Attributes = [NoThrow, Const];
-  let Prototype = "float(_ExtVector<2, _Float16>, _ExtVector<2, _Float16>, float)";
 }
 
 def HLSLDot4AddI8Packed : LangBuiltin<"HLSL_LANG"> {

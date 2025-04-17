@@ -104,6 +104,7 @@ set(GENERIC_SOURCES
   divti3.c
   extendsfdf2.c
   extendhfsf2.c
+  extendhfdf2.c
   ffsdi2.c
   ffssi2.c
   ffsti2.c
@@ -768,6 +769,11 @@ set(riscv64_SOURCES
 set(sparc_SOURCES ${GENERIC_SOURCES} ${GENERIC_TF_SOURCES})
 set(sparcv9_SOURCES ${GENERIC_SOURCES} ${GENERIC_TF_SOURCES})
 
+set(s390x_SOURCES
+  ${GENERIC_SOURCES}
+  ${GENERIC_TF_SOURCES}
+)
+
 set(wasm32_SOURCES
   ${GENERIC_TF_SOURCES}
   ${GENERIC_SOURCES}
@@ -833,6 +839,12 @@ else ()
     append_list_if(COMPILER_RT_HAS_FLTO_FLAG -flto BUILTIN_CFLAGS)
     append_list_if(COMPILER_RT_HAS_FCONVERGENT_FUNCTIONS_FLAG
                    -fconvergent-functions BUILTIN_CFLAGS)
+
+    # AMDGPU targets want to use a generic ABI.
+    if("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "amdgcn")
+      append_list_if(COMPILER_RT_HAS_CODE_OBJECT_VERSION_FLAG
+                     "SHELL:-Xclang -mcode-object-version=none" BUILTIN_CFLAGS)
+    endif()
   endif()
 
   set(BUILTIN_DEFS "")

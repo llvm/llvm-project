@@ -93,6 +93,9 @@ RISCVAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
       {"fixup_riscv_tlsdesc_add_lo12", 20, 12, 0},
       {"fixup_riscv_tlsdesc_call", 0, 0, 0},
       {"fixup_riscv_qc_e_branch", 0, 48, MCFixupKindInfo::FKF_IsPCRel},
+      {"fixup_riscv_qc_e_32", 16, 32, 0},
+      {"fixup_riscv_qc_abs20_u", 12, 20, 0},
+      {"fixup_riscv_qc_e_jump_plt", 0, 48, MCFixupKindInfo::FKF_IsPCRel},
   };
   static_assert((std::size(Infos)) == RISCV::NumTargetFixupKinds,
                 "Not all fixup kinds added to Infos array");
@@ -138,20 +141,19 @@ bool RISCVAsmBackend::shouldForceRelocation(const MCAssembler &Asm,
   return STI->hasFeature(RISCV::FeatureRelax) || ForceRelocs;
 }
 
-bool RISCVAsmBackend::fixupNeedsRelaxationAdvanced(
-    const MCAssembler &Asm, const MCFixup &Fixup, bool Resolved, uint64_t Value,
-    const MCRelaxableFragment *DF, const bool WasForced) const {
+bool RISCVAsmBackend::fixupNeedsRelaxationAdvanced(const MCAssembler &,
+                                                   const MCFixup &Fixup,
+                                                   const MCValue &,
+                                                   uint64_t Value,
+                                                   bool Resolved) const {
   if (!RelaxBranches)
     return false;
 
   int64_t Offset = int64_t(Value);
   unsigned Kind = Fixup.getTargetKind();
 
-  // Return true if the symbol is actually unresolved.
-  // Resolved could be always false when shouldForceRelocation return true.
-  // We use !WasForced to indicate that the symbol is unresolved and not forced
-  // by shouldForceRelocation.
-  if (!Resolved && !WasForced)
+  // Return true if the symbol is unresolved.
+  if (!Resolved)
     return true;
 
   switch (Kind) {
@@ -198,6 +200,30 @@ static unsigned getRelaxedOpcode(unsigned Op) {
     return RISCV::PseudoLongBLTU;
   case RISCV::BGEU:
     return RISCV::PseudoLongBGEU;
+  case RISCV::QC_BEQI:
+    return RISCV::PseudoLongQC_BEQI;
+  case RISCV::QC_BNEI:
+    return RISCV::PseudoLongQC_BNEI;
+  case RISCV::QC_BLTI:
+    return RISCV::PseudoLongQC_BLTI;
+  case RISCV::QC_BGEI:
+    return RISCV::PseudoLongQC_BGEI;
+  case RISCV::QC_BLTUI:
+    return RISCV::PseudoLongQC_BLTUI;
+  case RISCV::QC_BGEUI:
+    return RISCV::PseudoLongQC_BGEUI;
+  case RISCV::QC_E_BEQI:
+    return RISCV::PseudoLongQC_E_BEQI;
+  case RISCV::QC_E_BNEI:
+    return RISCV::PseudoLongQC_E_BNEI;
+  case RISCV::QC_E_BLTI:
+    return RISCV::PseudoLongQC_E_BLTI;
+  case RISCV::QC_E_BGEI:
+    return RISCV::PseudoLongQC_E_BGEI;
+  case RISCV::QC_E_BLTUI:
+    return RISCV::PseudoLongQC_E_BLTUI;
+  case RISCV::QC_E_BGEUI:
+    return RISCV::PseudoLongQC_E_BGEUI;
   }
 }
 
@@ -224,6 +250,18 @@ void RISCVAsmBackend::relaxInstruction(MCInst &Inst,
   case RISCV::BGE:
   case RISCV::BLTU:
   case RISCV::BGEU:
+  case RISCV::QC_BEQI:
+  case RISCV::QC_BNEI:
+  case RISCV::QC_BLTI:
+  case RISCV::QC_BGEI:
+  case RISCV::QC_BLTUI:
+  case RISCV::QC_BGEUI:
+  case RISCV::QC_E_BEQI:
+  case RISCV::QC_E_BNEI:
+  case RISCV::QC_E_BLTI:
+  case RISCV::QC_E_BGEI:
+  case RISCV::QC_E_BLTUI:
+  case RISCV::QC_E_BGEUI:
     Res.setOpcode(getRelaxedOpcode(Inst.getOpcode()));
     Res.addOperand(Inst.getOperand(0));
     Res.addOperand(Inst.getOperand(1));
@@ -523,16 +561,41 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
             (Bit5 << 2);
     return Value;
   }
-
+  case RISCV::fixup_riscv_qc_e_32: {
+    if (!isInt<32>(Value))
+      Ctx.reportError(Fixup.getLoc(), "fixup value out of range");
+    return ((Value & 0xffffffff) << 16);
+  }
+  case RISCV::fixup_riscv_qc_abs20_u: {
+    if (!isInt<20>(Value))
+      Ctx.reportError(Fixup.getLoc(), "fixup value out of range");
+    unsigned Bit19 = (Value >> 19) & 0x1;
+    unsigned Bit14_0 = Value & 0x7fff;
+    unsigned Bit18_15 = (Value >> 15) & 0xf;
+    Value = (Bit19 << 31) | (Bit14_0 << 16) | (Bit18_15 << 12);
+    return Value;
+  }
+  case RISCV::fixup_riscv_qc_e_jump_plt: {
+    if (!isInt<32>(Value))
+      Ctx.reportError(Fixup.getLoc(), "fixup value out of range");
+    if (Value & 0x1)
+      Ctx.reportError(Fixup.getLoc(), "fixup value must be 2-byte aligned");
+    uint64_t Bit31_16 = (Value >> 16) & 0xffff;
+    uint64_t Bit12 = (Value >> 12) & 0x1;
+    uint64_t Bit10_5 = (Value >> 5) & 0x3f;
+    uint64_t Bit15_13 = (Value >> 13) & 0x7;
+    uint64_t Bit4_1 = (Value >> 1) & 0xf;
+    uint64_t Bit11 = (Value >> 11) & 0x1;
+    Value = (Bit31_16 << 32ull) | (Bit12 << 31) | (Bit10_5 << 25) |
+            (Bit15_13 << 17) | (Bit4_1 << 8) | (Bit11 << 7);
+    return Value;
+  }
   }
 }
 
-bool RISCVAsmBackend::evaluateTargetFixup(const MCAssembler &Asm,
-                                          const MCFixup &Fixup,
-                                          const MCFragment *DF,
-                                          const MCValue &Target,
-                                          const MCSubtargetInfo *STI,
-                                          uint64_t &Value, bool &WasForced) {
+bool RISCVAsmBackend::evaluateTargetFixup(
+    const MCAssembler &Asm, const MCFixup &Fixup, const MCFragment *DF,
+    const MCValue &Target, const MCSubtargetInfo *STI, uint64_t &Value) {
   const MCFixup *AUIPCFixup;
   const MCFragment *AUIPCDF;
   MCValue AUIPCTarget;
@@ -563,7 +626,7 @@ bool RISCVAsmBackend::evaluateTargetFixup(const MCAssembler &Asm,
   }
   }
 
-  if (!AUIPCTarget.getSymA())
+  if (!AUIPCTarget.getAddSym())
     return false;
 
   const MCSymbolELF &SA = cast<MCSymbolELF>(*AUIPCTarget.getAddSym());
@@ -579,12 +642,7 @@ bool RISCVAsmBackend::evaluateTargetFixup(const MCAssembler &Asm,
   Value = Asm.getSymbolOffset(SA) + AUIPCTarget.getConstant();
   Value -= Asm.getFragmentOffset(*AUIPCDF) + AUIPCFixup->getOffset();
 
-  if (shouldForceRelocation(Asm, *AUIPCFixup, AUIPCTarget, STI)) {
-    WasForced = true;
-    return false;
-  }
-
-  return true;
+  return !shouldForceRelocation(Asm, *AUIPCFixup, AUIPCTarget, STI);
 }
 
 bool RISCVAsmBackend::handleAddSubRelocations(const MCAssembler &Asm,
@@ -592,7 +650,7 @@ bool RISCVAsmBackend::handleAddSubRelocations(const MCAssembler &Asm,
                                               const MCFixup &Fixup,
                                               const MCValue &Target,
                                               uint64_t &FixedValue) const {
-  assert(Target.getRefKind() == 0 &&
+  assert(Target.getSpecifier() == 0 &&
          "relocatable SymA-SymB cannot have relocation specifier");
   uint64_t FixedValueA, FixedValueB;
   unsigned TA = 0, TB = 0;
@@ -620,8 +678,8 @@ bool RISCVAsmBackend::handleAddSubRelocations(const MCAssembler &Asm,
   default:
     llvm_unreachable("unsupported fixup size");
   }
-  MCValue A = MCValue::get(Target.getSymA(), nullptr, Target.getConstant());
-  MCValue B = MCValue::get(Target.getSymB());
+  MCValue A = MCValue::get(Target.getAddSym(), nullptr, Target.getConstant());
+  MCValue B = MCValue::get(Target.getSubSym());
   auto FA = MCFixup::create(
       Fixup.getOffset(), nullptr,
       static_cast<MCFixupKind>(FirstLiteralRelocationKind + TA));

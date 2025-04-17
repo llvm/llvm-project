@@ -483,8 +483,7 @@ LogicalResult tosa::ArgMaxOp::verify() {
 
   const ArrayRef<int64_t> inputShape = inputType.getShape();
   const ArrayRef<int64_t> outputShape = resultType.getShape();
-  llvm::SmallVector<int64_t> expectedOutputShape(inputShape.begin(),
-                                                 inputShape.end());
+  llvm::SmallVector<int64_t> expectedOutputShape(inputShape);
   expectedOutputShape.erase(expectedOutputShape.begin() + axis);
   if (failed(verifyCompatibleShape(expectedOutputShape, outputShape)))
     return emitOpError("expected output shape '")
@@ -653,6 +652,13 @@ LogicalResult tosa::ClampOp::verify() {
         (intMaxValAttr.getType() != inputETy))
       return emitOpError("min/max attributes types are incompatible with "
                          "input/output element types.");
+
+    const bool isUnsigned = cast<IntegerType>(inputETy).isUnsigned();
+    const APInt minVal = intMinValAttr.getValue();
+    const APInt maxVal = intMaxValAttr.getValue();
+    if (isUnsigned ? maxVal.ult(minVal) : maxVal.slt(minVal))
+      return emitOpError("expected min_val <= max_val, got min_val=")
+             << minValAttr << ", max_val=" << maxValAttr;
   } else {
     // otherwise, input datatype is float, check that the min_val/max_val
     // attributes share the same type and that their type is the same as the
@@ -664,6 +670,16 @@ LogicalResult tosa::ClampOp::verify() {
         (floatMaxValAttr.getType() != inputETy))
       return emitOpError("min/max attributes types are incompatible with "
                          "input/output element types.");
+
+    const APFloat minVal = floatMinValAttr.getValue();
+    const APFloat maxVal = floatMaxValAttr.getValue();
+    if (minVal.isNaN() || maxVal.isNaN())
+      return emitOpError("min/max attributes should not be 'NaN', got min_val=")
+             << minValAttr << ", max_val=" << maxValAttr;
+
+    if (maxVal < minVal)
+      return emitOpError("expected min_val <= max_val, got min_val=")
+             << minValAttr << ", max_val=" << maxValAttr;
   }
 
   return success();
@@ -1066,6 +1082,10 @@ LogicalResult tosa::ConcatOp::inferReturnTypeComponents(
 
     hasRankedInput = true;
   }
+
+  if (adaptor.getInput1().empty())
+    return failure();
+
   Type inputType =
       llvm::cast<TensorType>(adaptor.getInput1().getType()[0]).getElementType();
   if (!hasRankedInput) {
@@ -1426,19 +1446,26 @@ LogicalResult tosa::SliceOp::verify() {
                              /* outType = */ getOutput().getType())
           .failed())
     return failure();
-  auto inputType = llvm::dyn_cast<RankedTensorType>(getInput1().getType());
-  if (!inputType)
-    return success();
 
-  auto startShapeRank =
-      llvm::cast<tosa::shapeType>(getStart().getType()).getRank();
-  if (inputType.getRank() != startShapeRank)
-    return emitOpError("length of start is not equal to rank of input shape");
+  const ShapeAdaptor inputShape(getInput1().getType());
+  if (inputShape.hasRank()) {
+    const auto inputRank = inputShape.getRank();
+    const ShapeAdaptor outputShape(getOutput().getType());
+    if (outputShape.hasRank() && inputRank != outputShape.getRank())
+      return emitOpError(
+                 "expect input1 and output to have the same ranks, got ")
+             << inputRank << " and " << outputShape.getRank();
 
-  auto sizeShapeRank =
-      llvm::cast<tosa::shapeType>(getSize().getType()).getRank();
-  if (inputType.getRank() != sizeShapeRank)
-    return emitOpError("length of size is not equal to rank of input shape");
+    const auto startShapeRank =
+        llvm::cast<tosa::shapeType>(getStart().getType()).getRank();
+    if (inputRank != startShapeRank)
+      return emitOpError("length of start is not equal to rank of input shape");
+
+    const auto sizeShapeRank =
+        llvm::cast<tosa::shapeType>(getSize().getType()).getRank();
+    if (inputRank != sizeShapeRank)
+      return emitOpError("length of size is not equal to rank of input shape");
+  }
 
   return success();
 }
@@ -1612,19 +1639,25 @@ LogicalResult tosa::TileOp::inferReturnTypeComponents(
     MLIRContext *context, ::std::optional<Location> location,
     TileOp::Adaptor adaptor,
     SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
-  DenseIntElementsAttr multiplesAttr;
-  if (!matchPattern(adaptor.getMultiples(), m_Constant(&multiplesAttr)))
-    return failure();
-
-  SmallVector<int64_t> multiples = llvm::to_vector(
-      llvm::map_range(multiplesAttr.getValues<APInt>(),
-                      [](const APInt &val) { return val.getSExtValue(); }));
+  Type inputType = getElementTypeOrSelf(adaptor.getInput1().getType());
+  SmallVector<int64_t> multiples;
+  if (!tosa::getConstShapeValues(adaptor.getMultiples().getDefiningOp(),
+                                 multiples)) {
+    auto rank =
+        cast<tosa::shapeType>(adaptor.getMultiples().getType()).getRank();
+    SmallVector<int64_t> fallback(rank, ShapedType::kDynamic);
+    inferredReturnShapes.push_back(ShapedTypeComponents(fallback, inputType));
+    return success();
+  } else {
+    multiples = convertToMlirShape(multiples);
+  }
 
   ShapeAdaptor inputShape(adaptor.getInput1().getType());
   SmallVector<int64_t> outputShape;
   if (!inputShape.hasRank()) {
     outputShape.resize(multiples.size(), ShapedType::kDynamic);
-    inferredReturnShapes.push_back(ShapedTypeComponents(outputShape));
+    inferredReturnShapes.push_back(
+        ShapedTypeComponents(outputShape, inputType));
     return success();
   } else if (static_cast<size_t>(inputShape.getRank()) != multiples.size())
     return failure();
@@ -1632,13 +1665,17 @@ LogicalResult tosa::TileOp::inferReturnTypeComponents(
   // Any non dynamic dimension can be multiplied to a known size.
   outputShape.reserve(multiples.size());
   for (int i = 0, s = inputShape.getRank(); i < s; i++) {
-    int64_t dim = inputShape.getDimSize(i);
-    if (dim != ShapedType::kDynamic)
-      dim *= multiples[i];
-    outputShape.push_back(dim);
+    if (multiples[i] == ShapedType::kDynamic) {
+      outputShape.push_back(ShapedType::kDynamic);
+    } else {
+      int64_t dim = inputShape.getDimSize(i);
+      if (dim != ShapedType::kDynamic)
+        dim *= multiples[i];
+      outputShape.push_back(dim);
+    }
   }
 
-  inferredReturnShapes.push_back(ShapedTypeComponents(outputShape));
+  inferredReturnShapes.push_back(ShapedTypeComponents(outputShape, inputType));
   return success();
 }
 
@@ -1950,23 +1987,28 @@ LogicalResult tosa::TransposeOp::verify() {
           .failed()) {
     return failure();
   }
-  TensorType inputType = getInput1().getType();
-  TensorType outputType = getOutput().getType();
+
+  const ShapeAdaptor inputShape(getInput1().getType());
+  const ShapeAdaptor outputShape(getOutput().getType());
+
   const llvm::ArrayRef<int32_t> constantPerms = getPerms();
 
-  if (inputType.hasRank() &&
-      constantPerms.size() != static_cast<size_t>(inputType.getRank()))
+  if (inputShape.hasRank() &&
+      constantPerms.size() != static_cast<size_t>(inputShape.getRank()))
     return emitOpError() << "expected perms attribute to have size "
-                         << inputType.getRank() << " (input rank) but got size "
+                         << inputShape.getRank()
+                         << " (input rank) but got size "
                          << constantPerms.size();
-  if (inputType.hasRank() && outputType.hasRank() &&
-      inputType.getRank() != outputType.getRank())
+
+  if (inputShape.hasRank() && outputShape.hasRank() &&
+      inputShape.getRank() != outputShape.getRank())
     return emitOpError()
            << "expected input tensor rank to equal result tensor rank";
-  if (outputType.hasRank() &&
-      constantPerms.size() != static_cast<size_t>(outputType.getRank()))
+
+  if (outputShape.hasRank() &&
+      constantPerms.size() != static_cast<size_t>(outputShape.getRank()))
     return emitOpError() << "expected perms attribute to have size "
-                         << outputType.getRank()
+                         << outputShape.getRank()
                          << " (output rank) but got size "
                          << constantPerms.size();
 
@@ -1979,22 +2021,27 @@ LogicalResult tosa::TransposeOp::verify() {
           constantPerms, [](int32_t v) -> int64_t { return v; }))))
     return emitOpError() << "expected valid permutation indices";
 
+  // ERROR_IF(tensor_size(shape1) != tensor_size(shape))
+  if (inputShape.hasStaticShape() && outputShape.hasStaticShape() &&
+      inputShape.getNumElements() != outputShape.getNumElements())
+    return emitOpError() << "expected input1 and output to have same numbers "
+                            "of elements, got "
+                         << inputShape.getNumElements() << " and "
+                         << outputShape.getNumElements();
+
   // Verify that the types of the input and output tensors are properly
   // permuted.
-  if (inputType.hasRank() && outputType.hasRank()) {
-    assert(constantPerms.size() == static_cast<size_t>(inputType.getRank()) &&
-           inputType.getRank() == outputType.getRank());
-
-    for (auto i = 0; i < outputType.getRank(); i++) {
-      if (inputType.isDynamicDim(constantPerms[i]) ||
-          outputType.isDynamicDim(i))
+  if (inputShape.hasRank() && outputShape.hasRank()) {
+    for (auto i = 0; i < outputShape.getRank(); i++) {
+      if (inputShape.isDynamicDim(constantPerms[i]) ||
+          outputShape.isDynamicDim(i))
         continue;
 
-      if (inputType.getDimSize(constantPerms[i]) != outputType.getDimSize(i))
+      if (inputShape.getDimSize(constantPerms[i]) != outputShape.getDimSize(i))
         return emitOpError()
                << "expected output tensor dim " << i << " to match "
                << "input dim " << constantPerms[i] << " with value of "
-               << inputType.getDimSize(constantPerms[i]);
+               << inputShape.getDimSize(constantPerms[i]);
     }
   }
 

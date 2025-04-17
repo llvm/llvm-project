@@ -130,7 +130,6 @@ static bool retPrimValue(InterpState &S, CodePtr OpPC,
     return Ret<X>(S, OpPC);
   switch (*T) {
     RET_CASE(PT_Ptr);
-    RET_CASE(PT_FnPtr);
     RET_CASE(PT_Float);
     RET_CASE(PT_Bool);
     RET_CASE(PT_Sint8);
@@ -766,10 +765,7 @@ static bool interp__builtin_addressof(InterpState &S, CodePtr OpPC,
   assert(Call->getArg(0)->isLValue());
   PrimType PtrT = S.getContext().classify(Call->getArg(0)).value_or(PT_Ptr);
 
-  if (PtrT == PT_FnPtr) {
-    const FunctionPointer &Arg = S.Stk.peek<FunctionPointer>();
-    S.Stk.push<FunctionPointer>(Arg);
-  } else if (PtrT == PT_Ptr) {
+  if (PtrT == PT_Ptr) {
     const Pointer &Arg = S.Stk.peek<Pointer>();
     S.Stk.push<Pointer>(Arg);
   } else {
@@ -1655,6 +1651,41 @@ static bool interp__builtin_operator_delete(InterpState &S, CodePtr OpPC,
   const Expr *Source = nullptr;
   const Block *BlockToDelete = nullptr;
 
+  if (S.checkingPotentialConstantExpression())
+    return false;
+
+  // This is permitted only within a call to std::allocator<T>::deallocate.
+  bool DeallocateFrameFound = false;
+  for (const InterpFrame *F = Frame; F; F = F->Caller) {
+    const Function *Func = F->getFunction();
+    if (!Func)
+      continue;
+    const auto *MD = dyn_cast_if_present<CXXMethodDecl>(Func->getDecl());
+    if (!MD)
+      continue;
+    const IdentifierInfo *FnII = MD->getIdentifier();
+    if (!FnII || !FnII->isStr("deallocate"))
+      continue;
+
+    const auto *CTSD =
+        dyn_cast<ClassTemplateSpecializationDecl>(MD->getParent());
+    if (!CTSD)
+      continue;
+
+    const IdentifierInfo *ClassII = CTSD->getIdentifier();
+    const TemplateArgumentList &TAL = CTSD->getTemplateArgs();
+    if (CTSD->isInStdNamespace() && ClassII && ClassII->isStr("allocator") &&
+        TAL.size() >= 1 && TAL[0].getKind() == TemplateArgument::Type) {
+      DeallocateFrameFound = true;
+      break;
+    }
+  }
+
+  if (!DeallocateFrameFound) {
+    S.FFDiag(Call);
+    return true;
+  }
+
   {
     const Pointer &Ptr = S.Stk.peek<Pointer>();
 
@@ -1792,14 +1823,18 @@ static bool interp__builtin_memcpy(InterpState &S, CodePtr OpPC,
   Pointer DestPtr = getParam<Pointer>(Frame, 0);
   const ASTContext &ASTCtx = S.getASTContext();
   const Pointer &SrcPtr = getParam<Pointer>(Frame, 1);
-  const APSInt &Size =
-      peekToAPSInt(S.Stk, *S.getContext().classify(Call->getArg(2)));
+  APSInt Size = peekToAPSInt(S.Stk, *S.getContext().classify(Call->getArg(2)));
   assert(!Size.isSigned() && "memcpy and friends take an unsigned size");
 
   if (ID == Builtin::BImemcpy || ID == Builtin::BImemmove)
     diagnoseNonConstexprBuiltin(S, OpPC, ID);
 
-  bool Move = (ID == Builtin::BI__builtin_memmove || ID == Builtin::BImemmove);
+  bool Move =
+      (ID == Builtin::BI__builtin_memmove || ID == Builtin::BImemmove ||
+       ID == Builtin::BI__builtin_wmemmove || ID == Builtin::BIwmemmove);
+  bool WChar = ID == Builtin::BIwmemcpy || ID == Builtin::BIwmemmove ||
+               ID == Builtin::BI__builtin_wmemcpy ||
+               ID == Builtin::BI__builtin_wmemmove;
 
   // If the size is zero, we treat this as always being a valid no-op.
   if (Size.isZero()) {
@@ -1810,7 +1845,7 @@ static bool interp__builtin_memcpy(InterpState &S, CodePtr OpPC,
   if (SrcPtr.isZero() || DestPtr.isZero()) {
     Pointer DiagPtr = (SrcPtr.isZero() ? SrcPtr : DestPtr);
     S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_memcpy_null)
-        << /*IsMove=*/Move << /*IsWchar=*/false << !SrcPtr.isZero()
+        << /*IsMove=*/Move << /*IsWchar=*/WChar << !SrcPtr.isZero()
         << DiagPtr.toDiagnosticString(ASTCtx);
     return false;
   }
@@ -1822,7 +1857,7 @@ static bool interp__builtin_memcpy(InterpState &S, CodePtr OpPC,
                    ? std::to_string(SrcPtr.getIntegerRepresentation())
                    : std::to_string(DestPtr.getIntegerRepresentation());
     S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_memcpy_null)
-        << Move << false << DestPtr.isIntegralPointer() << DiagVal;
+        << Move << WChar << DestPtr.isIntegralPointer() << DiagVal;
     return false;
   }
 
@@ -1841,11 +1876,17 @@ static bool interp__builtin_memcpy(InterpState &S, CodePtr OpPC,
   }
   unsigned DestElemSize = ASTCtx.getTypeSizeInChars(DestElemType).getQuantity();
 
+  if (WChar) {
+    uint64_t WCharSize =
+        ASTCtx.getTypeSizeInChars(ASTCtx.getWCharType()).getQuantity();
+    Size *= APSInt(APInt(Size.getBitWidth(), WCharSize, /*IsSigned=*/false),
+                   /*IsUnsigend=*/true);
+  }
+
   if (Size.urem(DestElemSize) != 0) {
     S.FFDiag(S.Current->getSource(OpPC),
              diag::note_constexpr_memcpy_unsupported)
-        << Move << /*IsWchar=*/false << 0 << DestElemType << Size
-        << DestElemSize;
+        << Move << WChar << 0 << DestElemType << Size << DestElemSize;
     return false;
   }
 
@@ -1866,14 +1907,30 @@ static bool interp__builtin_memcpy(InterpState &S, CodePtr OpPC,
     return false;
   }
 
-  // Check if we have enough elements to read from and write to/
+  if (DestElemType->isIncompleteType() ||
+      DestPtr.getType()->isIncompleteType()) {
+    QualType DiagType =
+        DestElemType->isIncompleteType() ? DestElemType : DestPtr.getType();
+    S.FFDiag(S.Current->getSource(OpPC),
+             diag::note_constexpr_memcpy_incomplete_type)
+        << Move << DiagType;
+    return false;
+  }
+
+  if (!DestElemType.isTriviallyCopyableType(ASTCtx)) {
+    S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_memcpy_nontrivial)
+        << Move << DestElemType;
+    return false;
+  }
+
+  // Check if we have enough elements to read from and write to.
   size_t RemainingDestBytes = RemainingDestElems * DestElemSize;
   size_t RemainingSrcBytes = RemainingSrcElems * SrcElemSize;
   if (Size.ugt(RemainingDestBytes) || Size.ugt(RemainingSrcBytes)) {
     APInt N = Size.udiv(DestElemSize);
     S.FFDiag(S.Current->getSource(OpPC),
              diag::note_constexpr_memcpy_unsupported)
-        << Move << /*IsWChar*/ false << (Size.ugt(RemainingSrcBytes) ? 1 : 2)
+        << Move << WChar << (Size.ugt(RemainingSrcBytes) ? 1 : 2)
         << DestElemType << toString(N, 10, /*Signed=*/false);
     return false;
   }
@@ -2591,8 +2648,12 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
 
   case Builtin::BI__builtin_memcpy:
   case Builtin::BImemcpy:
+  case Builtin::BI__builtin_wmemcpy:
+  case Builtin::BIwmemcpy:
   case Builtin::BI__builtin_memmove:
   case Builtin::BImemmove:
+  case Builtin::BI__builtin_wmemmove:
+  case Builtin::BIwmemmove:
     if (!interp__builtin_memcpy(S, OpPC, Frame, F, Call))
       return false;
     break;
@@ -2723,6 +2784,45 @@ bool SetThreeWayComparisonField(InterpState &S, CodePtr OpPC,
   return true;
 }
 
+static void zeroAll(Pointer &Dest) {
+  const Descriptor *Desc = Dest.getFieldDesc();
+
+  if (Desc->isPrimitive()) {
+    TYPE_SWITCH(Desc->getPrimType(), {
+      Dest.deref<T>().~T();
+      new (&Dest.deref<T>()) T();
+    });
+    return;
+  }
+
+  if (Desc->isRecord()) {
+    const Record *R = Desc->ElemRecord;
+    for (const Record::Field &F : R->fields()) {
+      Pointer FieldPtr = Dest.atField(F.Offset);
+      zeroAll(FieldPtr);
+    }
+    return;
+  }
+
+  if (Desc->isPrimitiveArray()) {
+    for (unsigned I = 0, N = Desc->getNumElems(); I != N; ++I) {
+      TYPE_SWITCH(Desc->getPrimType(), {
+        Dest.deref<T>().~T();
+        new (&Dest.deref<T>()) T();
+      });
+    }
+    return;
+  }
+
+  if (Desc->isCompositeArray()) {
+    for (unsigned I = 0, N = Desc->getNumElems(); I != N; ++I) {
+      Pointer ElemPtr = Dest.atIndex(I).narrow();
+      zeroAll(ElemPtr);
+    }
+    return;
+  }
+}
+
 static bool copyComposite(InterpState &S, CodePtr OpPC, const Pointer &Src,
                           Pointer &Dest, bool Activate);
 static bool copyRecord(InterpState &S, CodePtr OpPC, const Pointer &Src,
@@ -2751,11 +2851,14 @@ static bool copyRecord(InterpState &S, CodePtr OpPC, const Pointer &Src,
   const Record *R = DestDesc->ElemRecord;
   for (const Record::Field &F : R->fields()) {
     if (R->isUnion()) {
-      // For unions, only copy the active field.
+      // For unions, only copy the active field. Zero all others.
       const Pointer &SrcField = Src.atField(F.Offset);
       if (SrcField.isActive()) {
         if (!copyField(F, /*Activate=*/true))
           return false;
+      } else {
+        Pointer DestField = Dest.atField(F.Offset);
+        zeroAll(DestField);
       }
     } else {
       if (!copyField(F, Activate))

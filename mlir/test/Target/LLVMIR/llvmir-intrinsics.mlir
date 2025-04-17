@@ -530,16 +530,16 @@ llvm.func @masked_load_store_intrinsics(%A: !llvm.ptr, %mask: vector<7xi1>) {
 }
 
 // CHECK-LABEL: @masked_gather_scatter_intrinsics
-llvm.func @masked_gather_scatter_intrinsics(%M: !llvm.vec<7 x ptr>, %mask: vector<7xi1>) {
+llvm.func @masked_gather_scatter_intrinsics(%M: vector<7 x !llvm.ptr>, %mask: vector<7xi1>) {
   // CHECK: call <7 x float> @llvm.masked.gather.v7f32.v7p0(<7 x ptr> %{{.*}}, i32 1, <7 x i1> %{{.*}}, <7 x float> poison)
   %a = llvm.intr.masked.gather %M, %mask { alignment = 1: i32} :
-      (!llvm.vec<7 x ptr>, vector<7xi1>) -> vector<7xf32>
+      (vector<7 x !llvm.ptr>, vector<7xi1>) -> vector<7xf32>
   // CHECK: call <7 x float> @llvm.masked.gather.v7f32.v7p0(<7 x ptr> %{{.*}}, i32 1, <7 x i1> %{{.*}}, <7 x float> %{{.*}})
   %b = llvm.intr.masked.gather %M, %mask, %a { alignment = 1: i32} :
-      (!llvm.vec<7 x ptr>, vector<7xi1>, vector<7xf32>) -> vector<7xf32>
+      (vector<7 x !llvm.ptr>, vector<7xi1>, vector<7xf32>) -> vector<7xf32>
   // CHECK: call void @llvm.masked.scatter.v7f32.v7p0(<7 x float> %{{.*}}, <7 x ptr> %{{.*}}, i32 1, <7 x i1> %{{.*}})
   llvm.intr.masked.scatter %b, %M, %mask { alignment = 1: i32} :
-      vector<7xf32>, vector<7xi1> into !llvm.vec<7 x ptr>
+      vector<7xf32>, vector<7xi1> into vector<7 x !llvm.ptr>
   llvm.return
 }
 
@@ -858,7 +858,7 @@ llvm.func @stack_restore(%arg0: !llvm.ptr, %arg1: !llvm.ptr<1>) {
 llvm.func @vector_predication_intrinsics(%A: vector<8xi32>, %B: vector<8xi32>,
                                          %C: vector<8xf32>, %D: vector<8xf32>,
                                          %E: vector<8xi64>, %F: vector<8xf64>,
-                                         %G: !llvm.vec<8 x !llvm.ptr>,
+                                         %G: vector<8 x !llvm.ptr>,
                                          %i: i32, %f: f32,
                                          %iptr : !llvm.ptr,
                                          %fptr : !llvm.ptr,
@@ -1027,10 +1027,10 @@ llvm.func @vector_predication_intrinsics(%A: vector<8xi32>, %B: vector<8xi32>,
 
   // CHECK: call <8 x i64> @llvm.vp.ptrtoint.v8i64.v8p0
   "llvm.intr.vp.ptrtoint" (%G, %mask, %evl) :
-         (!llvm.vec<8 x !llvm.ptr>, vector<8xi1>, i32) -> vector<8xi64>
+         (vector<8 x !llvm.ptr>, vector<8xi1>, i32) -> vector<8xi64>
   // CHECK: call <8 x ptr> @llvm.vp.inttoptr.v8p0.v8i64
   "llvm.intr.vp.inttoptr" (%E, %mask, %evl) :
-         (vector<8xi64>, vector<8xi1>, i32) -> !llvm.vec<8 x !llvm.ptr>
+         (vector<8xi64>, vector<8xi1>, i32) -> vector<8 x !llvm.ptr>
   llvm.return
 }
 
@@ -1113,11 +1113,10 @@ llvm.func @ptrmask(%p: !llvm.ptr, %mask: i64) -> !llvm.ptr {
   llvm.return %0 : !llvm.ptr
 }
 
-// CHECK-LABEL: @vector_ptrmask
-llvm.func @vector_ptrmask(%p: !llvm.vec<8 x ptr>, %mask: vector<8 x i64>) -> !llvm.vec<8 x ptr> {
+llvm.func @vector_ptrmask(%p: vector<8 x !llvm.ptr>, %mask: vector<8 x i64>) -> vector<8 x !llvm.ptr> {
   // CHECK: call <8 x ptr> @llvm.ptrmask.v8p0.v8i64
-  %0 = llvm.intr.ptrmask %p, %mask : (!llvm.vec<8 x ptr>, vector<8 x i64>) -> !llvm.vec<8 x ptr>
-  llvm.return %0 : !llvm.vec<8 x ptr>
+  %0 = llvm.intr.ptrmask %p, %mask : (vector<8 x !llvm.ptr>, vector<8 x i64>) -> vector<8 x !llvm.ptr>
+  llvm.return %0 : vector<8 x !llvm.ptr>
 }
 
 // CHECK-LABEL: @experimental_constrained_uitofp

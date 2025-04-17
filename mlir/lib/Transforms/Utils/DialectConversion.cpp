@@ -2109,9 +2109,6 @@ OperationLegalizer::legalizeWithFold(Operation *op,
   if (replacementValues.empty())
     return legalize(op, rewriter);
 
-  // Insert a replacement for 'op' with the folded replacement values.
-  rewriter.replaceOp(op, replacementValues);
-
   // Recursively legalize any new constant operations.
   for (unsigned i = curState.numRewrites, e = rewriterImpl.rewrites.size();
        i != e; ++i) {
@@ -2127,6 +2124,9 @@ OperationLegalizer::legalizeWithFold(Operation *op,
       return failure();
     }
   }
+
+  // Insert a replacement for 'op' with the folded replacement values.
+  rewriter.replaceOp(op, replacementValues);
 
   LLVM_DEBUG(logSuccess(rewriterImpl.logger, ""));
   return success();
@@ -2929,17 +2929,6 @@ TypeConverter::convertSignatureArgs(TypeRange types,
     if (failed(convertSignatureArg(origInputOffset + i, types[i], result)))
       return failure();
   return success();
-}
-
-Value TypeConverter::materializeArgumentConversion(OpBuilder &builder,
-                                                   Location loc,
-                                                   Type resultType,
-                                                   ValueRange inputs) const {
-  for (const MaterializationCallbackFn &fn :
-       llvm::reverse(argumentMaterializations))
-    if (Value result = fn(builder, resultType, inputs, loc))
-      return result;
-  return nullptr;
 }
 
 Value TypeConverter::materializeSourceConversion(OpBuilder &builder,

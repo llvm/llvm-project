@@ -38,15 +38,15 @@ unsigned AMDGPUELFObjectWriter::getRelocType(MCContext &Ctx,
                                              const MCValue &Target,
                                              const MCFixup &Fixup,
                                              bool IsPCRel) const {
-  if (const auto *SymA = Target.getSymA()) {
+  if (const auto *SymA = Target.getAddSym()) {
     // SCRATCH_RSRC_DWORD[01] is a special global variable that represents
     // the scratch buffer.
-    if (SymA->getSymbol().getName() == "SCRATCH_RSRC_DWORD0" ||
-        SymA->getSymbol().getName() == "SCRATCH_RSRC_DWORD1")
+    if (SymA->getName() == "SCRATCH_RSRC_DWORD0" ||
+        SymA->getName() == "SCRATCH_RSRC_DWORD1")
       return ELF::R_AMDGPU_ABS32_LO;
   }
 
-  switch (AMDGPUMCExpr::Specifier(Target.getAccessVariant())) {
+  switch (AMDGPUMCExpr::Specifier(Target.getSpecifier())) {
   default:
     break;
   case AMDGPUMCExpr::S_GOTPCREL:
@@ -68,8 +68,6 @@ unsigned AMDGPUELFObjectWriter::getRelocType(MCContext &Ctx,
   }
 
   MCFixupKind Kind = Fixup.getKind();
-  if (Kind >= FirstLiteralRelocationKind)
-    return Kind - FirstLiteralRelocationKind;
   switch (Kind) {
   default: break;
   case FK_PCRel_4:
@@ -82,12 +80,12 @@ unsigned AMDGPUELFObjectWriter::getRelocType(MCContext &Ctx,
   }
 
   if (Fixup.getTargetKind() == AMDGPU::fixup_si_sopp_br) {
-    const auto *SymA = Target.getSymA();
+    const auto *SymA = Target.getAddSym();
     assert(SymA);
 
-    if (SymA->getSymbol().isUndefined()) {
-      Ctx.reportError(Fixup.getLoc(), Twine("undefined label '") +
-                                          SymA->getSymbol().getName() + "'");
+    if (SymA->isUndefined()) {
+      Ctx.reportError(Fixup.getLoc(),
+                      Twine("undefined label '") + SymA->getName() + "'");
       return ELF::R_AMDGPU_NONE;
     }
     return ELF::R_AMDGPU_REL16;

@@ -10,23 +10,22 @@
 
 .text
 
-# Check that branch to an undefined symbol is handled
-# FIXME: This should be relaxed to an inverse  branch and jump
+# Since foo is undefined, this will be relaxed to (qc.beqi + jal)
 qc.bnei x6, 10, foo
-# RELOC: R_RISCV_BRANCH foo 0x0
+# RELOC: R_RISCV_JAL foo 0x0
 # INSTR: qc.bnei t1, 10, foo
 # FIXUP: fixup A - offset: 0, value: foo, kind: fixup_riscv_branch
 
-# FIXME: This should be relaxed to an inverse  branch and jump
+# Since foo is undefined, this will be relaxed to (qc.e.bltui + jal)
 qc.e.bgeui x8, 12, foo
-# RELOC: R_RISCV_CUSTOM193 foo 0x0
+# RELOC: R_RISCV_JAL foo 0x0
 # INSTR: qc.e.bgeui s0, 12, foo
 # FIXUP: fixup A - offset: 0, value: foo, kind: fixup_riscv_qc_e_branch
 
-# Check that a label in a different section is handled similar to an undefined symbol
-# FIXME: This should be relaxed to an inverse  branch and jump
+# Check that a label in a different section is handled similar to an undefined
+# symbol and gets relaxed to (qc.e.bgeui + jal)
 qc.e.bltui x4, 9, .bar
-# RELOC: R_RISCV_CUSTOM193 .bar 0x0
+# RELOC: R_RISCV_JAL .bar 0x0
 # INSTR: qc.e.bltui tp, 9, .bar
 # FIXUP: fixup A - offset: 0, value: .bar, kind: fixup_riscv_qc_e_branch
 

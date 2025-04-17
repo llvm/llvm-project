@@ -4169,7 +4169,9 @@ add_entrypoint_object(
     atan2f_float.h
   DEPENDS
     .inv_trigf_utils
+    libc.hdr.fenv_macros
     libc.src.__support.FPUtil.double_double
+    libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.multiply_add
     libc.src.__support.FPUtil.nearest_integer
@@ -4187,6 +4189,7 @@ add_entrypoint_object(
   DEPENDS
     .atan_utils
     libc.src.__support.FPUtil.double_double
+    libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.multiply_add
     libc.src.__support.FPUtil.nearest_integer

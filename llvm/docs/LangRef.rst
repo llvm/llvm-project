@@ -1690,10 +1690,24 @@ Currently, only the following parameter attributes are defined:
 
 ``initializes((Lo1, Hi1), ...)``
     This attribute indicates that the function initializes the ranges of the
-    pointer parameter's memory, ``[%p+LoN, %p+HiN)``. Initialization of memory
-    means the first memory access is a non-volatile, non-atomic write. The
-    write must happen before the function returns. If the function unwinds,
-    the write may not happen.
+    pointer parameter's memory ``[%p+LoN, %p+HiN)``. Colloquially, this means
+    that all bytes in the specified range are written before the function
+    returns, and not read prior to the initializing write. If the function
+    unwinds, the write may not happen.
+
+    Formally, this is specified in terms of an "initialized" shadow state for
+    all bytes in the range, which is set to "not initialized" at function entry.
+    If a memory access is performed through a pointer based on the argument,
+    and an accessed byte has not been marked as "initialized" yet, then:
+
+     * If the byte is stored with a non-volatile, non-atomic write, mark it as
+       "initialized".
+     * If the byte is stored with a volatile or atomic write, the behavior is
+       undefined.
+     * If the byte is loaded, return a poison value.
+
+    Additionally, if the function returns normally, write an undef value to all
+    bytes that are part of the range and have not been marked as "initialized".
 
     This attribute only holds for the memory accessed via this pointer
     parameter. Other arbitrary accesses to the same memory via other pointers
@@ -3109,8 +3123,7 @@ as follows:
 ``S<size>``
     Specifies the natural alignment of the stack in bits. Alignment
     promotion of stack variables is limited to the natural stack
-    alignment to avoid dynamic stack realignment. The stack alignment
-    must be a multiple of 8-bits. If omitted, the natural stack
+    alignment to avoid dynamic stack realignment. If omitted, the natural stack
     alignment defaults to "unspecified", which does not prevent any
     alignment promotions.
 ``P<address space>``
@@ -3136,8 +3149,8 @@ as follows:
     Defaults to the default address space of 0.
 ``p[n]:<size>:<abi>[:<pref>][:<idx>]``
     This specifies the *size* of a pointer and its ``<abi>`` and
-    ``<pref>``\erred alignments for address space ``n``. ``<pref>`` is optional
-    and defaults to ``<abi>``. The fourth parameter ``<idx>`` is the size of the
+    ``<pref>``\erred alignments for address space ``n``.
+    The fourth parameter ``<idx>`` is the size of the
     index that used for address calculation, which must be less than or equal
     to the pointer size. If not
     specified, the default index size is equal to the pointer size. All sizes
@@ -3147,23 +3160,21 @@ as follows:
 ``i<size>:<abi>[:<pref>]``
     This specifies the alignment for an integer type of a given bit
     ``<size>``. The value of ``<size>`` must be in the range [1,2^24).
-    ``<pref>`` is optional and defaults to ``<abi>``.
     For ``i8``, the ``<abi>`` value must equal 8,
     that is, ``i8`` must be naturally aligned.
 ``v<size>:<abi>[:<pref>]``
     This specifies the alignment for a vector type of a given bit
     ``<size>``. The value of ``<size>`` must be in the range [1,2^24).
-    ``<pref>`` is optional and defaults to ``<abi>``.
 ``f<size>:<abi>[:<pref>]``
     This specifies the alignment for a floating-point type of a given bit
     ``<size>``. Only values of ``<size>`` that are supported by the target
     will work. 32 (float) and 64 (double) are supported on all targets; 80
     or 128 (different flavors of long double) are also supported on some
     targets. The value of ``<size>`` must be in the range [1,2^24).
-    ``<pref>`` is optional and defaults to ``<abi>``.
 ``a:<abi>[:<pref>]``
     This specifies the alignment for an object of aggregate type.
-    ``<pref>`` is optional and defaults to ``<abi>``.
+    In addition to the usual requirements for alignment values,
+    the value of ``<abi>`` can also be zero, which means one byte alignment.
 ``F<type><abi>``
     This specifies the alignment for function pointers.
     The options for ``<type>`` are:
@@ -3202,6 +3213,9 @@ as follows:
     as :ref:`Non-Integral Pointer Type <nointptrtype>` s.  The ``0``
     address space cannot be specified as non-integral.
 
+Unless explicitly stated otherwise, on every specification that specifies
+an alignment, the value of the alignment must be in the range [1,2^16)
+and must be a power of two times the width of a byte.
 On every specification that takes a ``<abi>:<pref>``, specifying the
 ``<pref>`` alignment is optional. If omitted, the preceding ``:``
 should be omitted too and ``<pref>`` will be equal to ``<abi>``.
@@ -5696,7 +5710,7 @@ SystemZ:
   address context evaluates as zero).
 - ``h``: A 32-bit value in the high part of a 64bit data register
   (LLVM-specific)
-- ``f``: A 32, 64, or 128-bit floating-point register.
+- ``f``: A 16, 32, 64, or 128-bit floating-point register.
 
 X86:
 
