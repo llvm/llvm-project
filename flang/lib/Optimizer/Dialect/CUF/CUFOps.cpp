@@ -140,7 +140,7 @@ llvm::LogicalResult cuf::DeallocateOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
-// KernelLaunchop
+// KernelLaunchOp
 //===----------------------------------------------------------------------===//
 
 template <typename OpTy>

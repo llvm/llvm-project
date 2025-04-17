@@ -884,9 +884,7 @@ public:
       rewriter.setInsertionPoint(gpuLaunchOp);
       mlir::Value stream =
           rewriter.create<cuf::StreamCastOp>(loc, op.getStream());
-      llvm::errs() << stream << "\n";
       gpuLaunchOp.getAsyncDependenciesMutable().append(stream);
-      llvm::errs() << gpuLaunchOp << "\n";
     }
     if (procAttr)
       gpuLaunchOp->setAttr(cuf::getProcAttrName(), procAttr);
