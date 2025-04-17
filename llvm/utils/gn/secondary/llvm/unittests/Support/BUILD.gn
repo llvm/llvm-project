@@ -65,6 +65,7 @@ unittest("SupportTests") {
     "MemoryBufferTest.cpp",
     "MemoryTest.cpp",
     "ModRefTest.cpp",
+    "MustacheTest.cpp",
     "NativeFormatTests.cpp",
     "OptimizedStructLayoutTest.cpp",
     "ParallelTest.cpp",
