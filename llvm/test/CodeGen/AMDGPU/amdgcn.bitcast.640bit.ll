@@ -1931,7 +1931,6 @@ define <20 x i32> @bitcast_v40i16_to_v20i32(<40 x i16> %a, i32 %b) {
 ; GFX9-LABEL: bitcast_v40i16_to_v20i32:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_mov_b32_e32 v32, v19
 ; GFX9-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:60 ; 4-byte Folded Spill
 ; GFX9-NEXT:    buffer_store_dword v41, off, s[0:3], s32 offset:56 ; 4-byte Folded Spill
 ; GFX9-NEXT:    buffer_store_dword v42, off, s[0:3], s32 offset:52 ; 4-byte Folded Spill
@@ -1948,6 +1947,7 @@ define <20 x i32> @bitcast_v40i16_to_v20i32(<40 x i16> %a, i32 %b) {
 ; GFX9-NEXT:    buffer_store_dword v61, off, s[0:3], s32 offset:8 ; 4-byte Folded Spill
 ; GFX9-NEXT:    buffer_store_dword v62, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; GFX9-NEXT:    buffer_store_dword v63, off, s[0:3], s32 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_mov_b32_e32 v32, v19
 ; GFX9-NEXT:    v_mov_b32_e32 v33, v18
 ; GFX9-NEXT:    v_mov_b32_e32 v43, v0
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v0, 16, v32
@@ -3584,7 +3584,6 @@ define <20 x i32> @bitcast_v40f16_to_v20i32(<40 x half> %a, i32 %b) {
 ; GFX9-LABEL: bitcast_v40f16_to_v20i32:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_mov_b32_e32 v32, v19
 ; GFX9-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:60 ; 4-byte Folded Spill
 ; GFX9-NEXT:    buffer_store_dword v41, off, s[0:3], s32 offset:56 ; 4-byte Folded Spill
 ; GFX9-NEXT:    buffer_store_dword v42, off, s[0:3], s32 offset:52 ; 4-byte Folded Spill
@@ -3601,6 +3600,7 @@ define <20 x i32> @bitcast_v40f16_to_v20i32(<40 x half> %a, i32 %b) {
 ; GFX9-NEXT:    buffer_store_dword v61, off, s[0:3], s32 offset:8 ; 4-byte Folded Spill
 ; GFX9-NEXT:    buffer_store_dword v62, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; GFX9-NEXT:    buffer_store_dword v63, off, s[0:3], s32 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_mov_b32_e32 v32, v19
 ; GFX9-NEXT:    v_mov_b32_e32 v33, v18
 ; GFX9-NEXT:    v_mov_b32_e32 v43, v0
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v0, 16, v32
@@ -5510,7 +5510,6 @@ define <20 x float> @bitcast_v40i16_to_v20f32(<40 x i16> %a, i32 %b) {
 ; GFX9-LABEL: bitcast_v40i16_to_v20f32:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_mov_b32_e32 v32, v19
 ; GFX9-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:60 ; 4-byte Folded Spill
 ; GFX9-NEXT:    buffer_store_dword v41, off, s[0:3], s32 offset:56 ; 4-byte Folded Spill
 ; GFX9-NEXT:    buffer_store_dword v42, off, s[0:3], s32 offset:52 ; 4-byte Folded Spill
@@ -5527,6 +5526,7 @@ define <20 x float> @bitcast_v40i16_to_v20f32(<40 x i16> %a, i32 %b) {
 ; GFX9-NEXT:    buffer_store_dword v61, off, s[0:3], s32 offset:8 ; 4-byte Folded Spill
 ; GFX9-NEXT:    buffer_store_dword v62, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; GFX9-NEXT:    buffer_store_dword v63, off, s[0:3], s32 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_mov_b32_e32 v32, v19
 ; GFX9-NEXT:    v_mov_b32_e32 v33, v18
 ; GFX9-NEXT:    v_mov_b32_e32 v43, v0
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v0, 16, v32
@@ -7153,7 +7153,6 @@ define <20 x float> @bitcast_v40f16_to_v20f32(<40 x half> %a, i32 %b) {
 ; GFX9-LABEL: bitcast_v40f16_to_v20f32:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_mov_b32_e32 v32, v19
 ; GFX9-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:60 ; 4-byte Folded Spill
 ; GFX9-NEXT:    buffer_store_dword v41, off, s[0:3], s32 offset:56 ; 4-byte Folded Spill
 ; GFX9-NEXT:    buffer_store_dword v42, off, s[0:3], s32 offset:52 ; 4-byte Folded Spill
@@ -7170,6 +7169,7 @@ define <20 x float> @bitcast_v40f16_to_v20f32(<40 x half> %a, i32 %b) {
 ; GFX9-NEXT:    buffer_store_dword v61, off, s[0:3], s32 offset:8 ; 4-byte Folded Spill
 ; GFX9-NEXT:    buffer_store_dword v62, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; GFX9-NEXT:    buffer_store_dword v63, off, s[0:3], s32 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_mov_b32_e32 v32, v19
 ; GFX9-NEXT:    v_mov_b32_e32 v33, v18
 ; GFX9-NEXT:    v_mov_b32_e32 v43, v0
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v0, 16, v32
@@ -8814,7 +8814,6 @@ define <10 x i64> @bitcast_v40i16_to_v10i64(<40 x i16> %a, i32 %b) {
 ; GFX9-LABEL: bitcast_v40i16_to_v10i64:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_mov_b32_e32 v32, v19
 ; GFX9-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:60 ; 4-byte Folded Spill
 ; GFX9-NEXT:    buffer_store_dword v41, off, s[0:3], s32 offset:56 ; 4-byte Folded Spill
 ; GFX9-NEXT:    buffer_store_dword v42, off, s[0:3], s32 offset:52 ; 4-byte Folded Spill
@@ -8831,6 +8830,7 @@ define <10 x i64> @bitcast_v40i16_to_v10i64(<40 x i16> %a, i32 %b) {
 ; GFX9-NEXT:    buffer_store_dword v61, off, s[0:3], s32 offset:8 ; 4-byte Folded Spill
 ; GFX9-NEXT:    buffer_store_dword v62, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; GFX9-NEXT:    buffer_store_dword v63, off, s[0:3], s32 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_mov_b32_e32 v32, v19
 ; GFX9-NEXT:    v_mov_b32_e32 v33, v18
 ; GFX9-NEXT:    v_mov_b32_e32 v43, v0
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v0, 16, v32
@@ -10472,7 +10472,6 @@ define <10 x i64> @bitcast_v40f16_to_v10i64(<40 x half> %a, i32 %b) {
 ; GFX9-LABEL: bitcast_v40f16_to_v10i64:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_mov_b32_e32 v32, v19
 ; GFX9-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:60 ; 4-byte Folded Spill
 ; GFX9-NEXT:    buffer_store_dword v41, off, s[0:3], s32 offset:56 ; 4-byte Folded Spill
 ; GFX9-NEXT:    buffer_store_dword v42, off, s[0:3], s32 offset:52 ; 4-byte Folded Spill
@@ -10489,6 +10488,7 @@ define <10 x i64> @bitcast_v40f16_to_v10i64(<40 x half> %a, i32 %b) {
 ; GFX9-NEXT:    buffer_store_dword v61, off, s[0:3], s32 offset:8 ; 4-byte Folded Spill
 ; GFX9-NEXT:    buffer_store_dword v62, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; GFX9-NEXT:    buffer_store_dword v63, off, s[0:3], s32 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_mov_b32_e32 v32, v19
 ; GFX9-NEXT:    v_mov_b32_e32 v33, v18
 ; GFX9-NEXT:    v_mov_b32_e32 v43, v0
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v0, 16, v32
@@ -11823,7 +11823,6 @@ define <10 x double> @bitcast_v40i16_to_v10f64(<40 x i16> %a, i32 %b) {
 ; GFX9-LABEL: bitcast_v40i16_to_v10f64:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_mov_b32_e32 v32, v19
 ; GFX9-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:60 ; 4-byte Folded Spill
 ; GFX9-NEXT:    buffer_store_dword v41, off, s[0:3], s32 offset:56 ; 4-byte Folded Spill
 ; GFX9-NEXT:    buffer_store_dword v42, off, s[0:3], s32 offset:52 ; 4-byte Folded Spill
@@ -11840,6 +11839,7 @@ define <10 x double> @bitcast_v40i16_to_v10f64(<40 x i16> %a, i32 %b) {
 ; GFX9-NEXT:    buffer_store_dword v61, off, s[0:3], s32 offset:8 ; 4-byte Folded Spill
 ; GFX9-NEXT:    buffer_store_dword v62, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; GFX9-NEXT:    buffer_store_dword v63, off, s[0:3], s32 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_mov_b32_e32 v32, v19
 ; GFX9-NEXT:    v_mov_b32_e32 v33, v18
 ; GFX9-NEXT:    v_mov_b32_e32 v43, v0
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v0, 16, v32
@@ -13426,7 +13426,6 @@ define <10 x double> @bitcast_v40f16_to_v10f64(<40 x half> %a, i32 %b) {
 ; GFX9-LABEL: bitcast_v40f16_to_v10f64:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_mov_b32_e32 v32, v19
 ; GFX9-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:60 ; 4-byte Folded Spill
 ; GFX9-NEXT:    buffer_store_dword v41, off, s[0:3], s32 offset:56 ; 4-byte Folded Spill
 ; GFX9-NEXT:    buffer_store_dword v42, off, s[0:3], s32 offset:52 ; 4-byte Folded Spill
@@ -13443,6 +13442,7 @@ define <10 x double> @bitcast_v40f16_to_v10f64(<40 x half> %a, i32 %b) {
 ; GFX9-NEXT:    buffer_store_dword v61, off, s[0:3], s32 offset:8 ; 4-byte Folded Spill
 ; GFX9-NEXT:    buffer_store_dword v62, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; GFX9-NEXT:    buffer_store_dword v63, off, s[0:3], s32 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_mov_b32_e32 v32, v19
 ; GFX9-NEXT:    v_mov_b32_e32 v33, v18
 ; GFX9-NEXT:    v_mov_b32_e32 v43, v0
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v0, 16, v32
