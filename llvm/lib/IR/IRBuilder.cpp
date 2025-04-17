@@ -747,18 +747,13 @@ getStatepointBundles(std::optional<ArrayRef<T1>> TransitionArgs,
                      std::optional<ArrayRef<T2>> DeoptArgs,
                      ArrayRef<T3> GCArgs) {
   std::vector<OperandBundleDef> Rval;
-  if (DeoptArgs) {
-    SmallVector<Value *, 16> DeoptValues(*DeoptArgs);
-    Rval.emplace_back("deopt", DeoptValues);
-  }
-  if (TransitionArgs) {
-    SmallVector<Value *, 16> TransitionValues(*TransitionArgs);
-    Rval.emplace_back("gc-transition", TransitionValues);
-  }
-  if (GCArgs.size()) {
-    SmallVector<Value *, 16> LiveValues(GCArgs);
-    Rval.emplace_back("gc-live", LiveValues);
-  }
+  if (DeoptArgs)
+    Rval.emplace_back("deopt", SmallVector<Value *, 16>(*DeoptArgs));
+  if (TransitionArgs)
+    Rval.emplace_back("gc-transition",
+                      SmallVector<Value *, 16>(*TransitionArgs));
+  if (GCArgs.size())
+    Rval.emplace_back("gc-live", SmallVector<Value *, 16>(GCArgs));
   return Rval;
 }
 
