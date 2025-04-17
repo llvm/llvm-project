@@ -137,6 +137,7 @@ MACHINE_FUNCTION_ANALYSIS("virtregmap", VirtRegMapAnalysis())
 #ifndef MACHINE_FUNCTION_PASS
 #define MACHINE_FUNCTION_PASS(NAME, CREATE_PASS)
 #endif
+MACHINE_FUNCTION_PASS("block-placement-stats", MachineBlockPlacementStatsPass())
 MACHINE_FUNCTION_PASS("branch-relaxation", BranchRelaxationPass())
 MACHINE_FUNCTION_PASS("dead-mi-elimination", DeadMachineInstructionElimPass())
 MACHINE_FUNCTION_PASS("detect-dead-lanes", DetectDeadLanesPass())
@@ -281,7 +282,6 @@ DUMMY_MACHINE_MODULE_PASS("mir-strip-debug", StripDebugMachineModulePass)
 #endif
 DUMMY_MACHINE_FUNCTION_PASS("bbsections-prepare", BasicBlockSectionsPass)
 DUMMY_MACHINE_FUNCTION_PASS("bbsections-profile-reader", BasicBlockSectionsProfileReaderPass)
-DUMMY_MACHINE_FUNCTION_PASS("block-placement-stats", MachineBlockPlacementStatsPass)
 DUMMY_MACHINE_FUNCTION_PASS("break-false-deps", BreakFalseDepsPass)
 DUMMY_MACHINE_FUNCTION_PASS("cfguard-longjmp", CFGuardLongjmpPass)
 DUMMY_MACHINE_FUNCTION_PASS("cfi-fixup", CFIFixupPass)
