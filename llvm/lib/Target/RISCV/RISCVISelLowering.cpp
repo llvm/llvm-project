@@ -19710,19 +19710,45 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
       return V;
     break;
   case RISCVISD::VRGATHER_VX_VL: {
-    // Drop a redundant vrgather_vx.
     // Note this assumes that out of bounds indices produce poison
     // and can thus be replaced without having to prove them inbounds..
+    EVT VT = N->getValueType(0);
     SDValue Src = N->getOperand(0);
+    SDValue Idx = N->getOperand(1);
     SDValue Passthru = N->getOperand(2);
     SDValue VL = N->getOperand(4);
+
+    // Warning: Unlike most cases we strip an insert_subvector, this one
+    // does not require the first operand to be undef.
+    if (Src.getOpcode() == ISD::INSERT_SUBVECTOR &&
+        isNullConstant(Src.getOperand(2)))
+      Src = Src.getOperand(1);
+
     switch (Src.getOpcode()) {
     default:
       break;
     case RISCVISD::VMV_V_X_VL:
     case RISCVISD::VFMV_V_F_VL:
-      if (Passthru.isUndef() && VL == Src.getOperand(2))
+      // Drop a redundant vrgather_vx.
+      // TODO: Remove the type restriction if we find a motivating
+      // test case?
+      if (Passthru.isUndef() && VL == Src.getOperand(2) &&
+          Src.getValueType() == VT)
         return Src;
+      break;
+    case RISCVISD::VMV_S_X_VL:
+    case RISCVISD::VFMV_S_F_VL:
+      // If this use only demands lane zero from the source vmv.s.x, and
+      // doesn't have a passthru, then this vrgather.vi/vx is equivalent to
+      // a vmv.v.x.  Note that there can be other uses of the original
+      // vmv.s.x and thus we can't eliminate it.  (vfmv.s.f is analogous)
+      if (isNullConstant(Idx) && Passthru.isUndef() &&
+          VL == Src.getOperand(2)) {
+        unsigned Opc =
+            VT.isFloatingPoint() ? RISCVISD::VFMV_V_F_VL : RISCVISD::VMV_V_X_VL;
+        return DAG.getNode(Opc, DL, VT, DAG.getUNDEF(VT), Src.getOperand(1),
+                           VL);
+      }
       break;
     }
     break;
