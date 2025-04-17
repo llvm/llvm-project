@@ -356,3 +356,28 @@ def NDS_LDGP  : NDSRVInstLDGP<0b011, "nds.ldgp">;
 def NDS_SDGP  : NDSRVInstSDGP<0b111, "nds.sdgp">;
 } // Predicates = [HasVendorXAndesPerf, IsRV64]
 } // DecoderNamespace = "XAndes"
+
+// Patterns
+
+let Predicates = [HasVendorXAndesPerf] in {
+class NDS_LEAPat<int shamt, RVInstR Inst>
+    : Pat<(add (XLenVT GPR:$rs1), (shl GPR:$rs2, (XLenVT shamt))),
+          (Inst GPR:$rs1, GPR:$rs2)>;
+
+def : NDS_LEAPat<1, NDS_LEA_H>;
+def : NDS_LEAPat<2, NDS_LEA_W>;
+def : NDS_LEAPat<3, NDS_LEA_D>;
+} // Predicates = [HasVendorXAndesPerf]
+
+let Predicates = [HasVendorXAndesPerf, IsRV64] in {
+def : Pat<(add (XLenVT GPR:$rs1), (zexti32 (i64 GPR:$rs2))),
+          (NDS_LEA_B_ZE GPR:$rs1, GPR:$rs2)>;
+
+class NDS_LEA_ZEPat<int shamt, RVInstR Inst>
+    : Pat<(add GPR:$rs1, (shl (zexti32 (XLenVT GPR:$rs2)), (XLenVT shamt))),
+          (Inst GPR:$rs1, GPR:$rs2)>;
+
+def : NDS_LEA_ZEPat<1, NDS_LEA_H_ZE>;
+def : NDS_LEA_ZEPat<2, NDS_LEA_W_ZE>;
+def : NDS_LEA_ZEPat<3, NDS_LEA_D_ZE>;
+} // Predicates = [HasVendorXAndesPerf, IsRV64]
