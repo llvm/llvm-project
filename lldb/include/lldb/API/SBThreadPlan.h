@@ -100,6 +100,7 @@ public:
                                              lldb::addr_t range_size,
                                              SBError &error);
 
+  // Note: first_insn is not used.
   SBThreadPlan QueueThreadPlanForStepOut(uint32_t frame_idx_to_step_to,
                                          bool first_insn = false);
   SBThreadPlan QueueThreadPlanForStepOut(uint32_t frame_idx_to_step_to,

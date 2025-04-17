@@ -1341,28 +1341,26 @@ ThreadPlanSP Thread::QueueThreadPlanForStepInRange(
 }
 
 ThreadPlanSP Thread::QueueThreadPlanForStepOut(
-    bool abort_other_plans, SymbolContext *addr_context, bool first_insn,
-    bool stop_other_threads, Vote report_stop_vote, Vote report_run_vote,
-    uint32_t frame_idx, Status &status,
+    bool abort_other_plans, bool stop_other_threads, Vote report_stop_vote,
+    Vote report_run_vote, uint32_t frame_idx, Status &status,
     LazyBool step_out_avoids_code_without_debug_info) {
   ThreadPlanSP thread_plan_sp(new ThreadPlanStepOut(
-      *this, addr_context, first_insn, stop_other_threads, report_stop_vote,
-      report_run_vote, frame_idx, step_out_avoids_code_without_debug_info));
+      *this, stop_other_threads, report_stop_vote, report_run_vote, frame_idx,
+      step_out_avoids_code_without_debug_info));
 
   status = QueueThreadPlan(thread_plan_sp, abort_other_plans);
   return thread_plan_sp;
 }
 
 ThreadPlanSP Thread::QueueThreadPlanForStepOutNoShouldStop(
-    bool abort_other_plans, SymbolContext *addr_context, bool first_insn,
-    bool stop_other_threads, Vote report_stop_vote, Vote report_run_vote,
-    uint32_t frame_idx, Status &status, bool continue_to_next_branch) {
+    bool abort_other_plans, bool stop_other_threads, Vote report_stop_vote,
+    Vote report_run_vote, uint32_t frame_idx, Status &status,
+    bool continue_to_next_branch) {
   const bool calculate_return_value =
       false; // No need to calculate the return value here.
   ThreadPlanSP thread_plan_sp(new ThreadPlanStepOut(
-      *this, addr_context, first_insn, stop_other_threads, report_stop_vote,
-      report_run_vote, frame_idx, eLazyBoolNo, continue_to_next_branch,
-      calculate_return_value));
+      *this, stop_other_threads, report_stop_vote, report_run_vote, frame_idx,
+      eLazyBoolNo, continue_to_next_branch, calculate_return_value));
 
   ThreadPlanStepOut *new_plan =
       static_cast<ThreadPlanStepOut *>(thread_plan_sp.get());
@@ -2035,13 +2033,12 @@ Status Thread::StepOut(uint32_t frame_idx) {
   Status error;
   Process *process = GetProcess().get();
   if (StateIsStoppedState(process->GetState(), true)) {
-    const bool first_instruction = false;
     const bool stop_other_threads = false;
     const bool abort_other_plans = false;
 
-    ThreadPlanSP new_plan_sp(QueueThreadPlanForStepOut(
-        abort_other_plans, nullptr, first_instruction, stop_other_threads,
-        eVoteYes, eVoteNoOpinion, frame_idx, error));
+    ThreadPlanSP new_plan_sp =
+        QueueThreadPlanForStepOut(abort_other_plans, stop_other_threads,
+                                  eVoteYes, eVoteNoOpinion, frame_idx, error);
 
     new_plan_sp->SetIsControllingPlan(true);
     new_plan_sp->SetOkayToDiscard(false);

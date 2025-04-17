@@ -659,8 +659,8 @@ void SBThread::StepOut(SBError &error) {
   const LazyBool avoid_no_debug = eLazyBoolCalculate;
   Status new_plan_status;
   ThreadPlanSP new_plan_sp(thread->QueueThreadPlanForStepOut(
-      abort_other_plans, nullptr, false, stop_other_threads, eVoteYes,
-      eVoteNoOpinion, 0, new_plan_status, avoid_no_debug));
+      abort_other_plans, stop_other_threads, eVoteYes, eVoteNoOpinion, 0,
+      new_plan_status, avoid_no_debug));
 
   if (new_plan_status.Success())
     error = ResumeNewPlan(exe_ctx, new_plan_sp.get());
@@ -703,8 +703,8 @@ void SBThread::StepOutOfFrame(SBFrame &sb_frame, SBError &error) {
 
   Status new_plan_status;
   ThreadPlanSP new_plan_sp(thread->QueueThreadPlanForStepOut(
-      abort_other_plans, nullptr, false, stop_other_threads, eVoteYes,
-      eVoteNoOpinion, frame_sp->GetFrameIndex(), new_plan_status));
+      abort_other_plans, stop_other_threads, eVoteYes, eVoteNoOpinion,
+      frame_sp->GetFrameIndex(), new_plan_status));
 
   if (new_plan_status.Success())
     error = ResumeNewPlan(exe_ctx, new_plan_sp.get());

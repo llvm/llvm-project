@@ -176,8 +176,8 @@ ThreadPlanSP ThreadPlanShouldStopHere::DefaultStepFromHereCallback(
   if (!return_plan_sp)
     return_plan_sp =
         current_plan->GetThread().QueueThreadPlanForStepOutNoShouldStop(
-            false, nullptr, true, stop_others, eVoteNo, eVoteNoOpinion,
-            frame_index, status, true);
+            false, stop_others, eVoteNo, eVoteNoOpinion, frame_index, status,
+            true);
   return return_plan_sp;
 }
 

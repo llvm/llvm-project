@@ -198,8 +198,7 @@ bool ThreadPlanStepInstruction::ShouldStop(Event *event_ptr) {
           // for now it is safer to run others.
           const bool stop_others = false;
           thread.QueueThreadPlanForStepOutNoShouldStop(
-              false, nullptr, true, stop_others, eVoteNo, eVoteNoOpinion, 0,
-              m_status);
+              false, stop_others, eVoteNo, eVoteNoOpinion, 0, m_status);
           return false;
         } else {
           if (log) {

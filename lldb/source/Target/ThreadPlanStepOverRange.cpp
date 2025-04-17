@@ -192,8 +192,7 @@ bool ThreadPlanStepOverRange::ShouldStop(Event *event_ptr) {
         if (m_next_branch_bp_sp)
           return false;
         new_plan_sp = thread.QueueThreadPlanForStepOutNoShouldStop(
-            false, nullptr, true, stop_others, eVoteNo, eVoteNoOpinion, 0,
-            m_status, true);
+            false, stop_others, eVoteNo, eVoteNoOpinion, 0, m_status, true);
         break;
       } else {
         new_plan_sp = thread.QueueThreadPlanForStepThrough(

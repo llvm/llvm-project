@@ -161,11 +161,10 @@ bool AppleThreadPlanStepThroughObjCTrampoline::ShouldStop(Event *event_ptr) {
           eSymbolContextEverything);
       Status status;
       const bool abort_other_plans = false;
-      const bool first_insn = true;
       const uint32_t frame_idx = 0;
       m_run_to_sp = GetThread().QueueThreadPlanForStepOutNoShouldStop(
-          abort_other_plans, &sc, first_insn, false, eVoteNoOpinion,
-          eVoteNoOpinion, frame_idx, status);
+          abort_other_plans, false, eVoteNoOpinion, eVoteNoOpinion, frame_idx,
+          status);
       if (m_run_to_sp && status.Success())
         m_run_to_sp->SetPrivate(true);
       return false;
@@ -242,8 +241,7 @@ AppleThreadPlanStepThroughDirectDispatch ::
     AppleThreadPlanStepThroughDirectDispatch(
         Thread &thread, AppleObjCTrampolineHandler &handler,
         llvm::StringRef dispatch_func_name)
-    : ThreadPlanStepOut(thread, nullptr, true /* first instruction */, false,
-                        eVoteNoOpinion, eVoteNoOpinion,
+    : ThreadPlanStepOut(thread, false, eVoteNoOpinion, eVoteNoOpinion,
                         0 /* Step out of zeroth frame */,
                         eLazyBoolNo /* Our parent plan will decide this
                                when we are done */

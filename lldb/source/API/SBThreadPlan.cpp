@@ -312,8 +312,8 @@ SBThreadPlan::QueueThreadPlanForStepOut(uint32_t frame_idx_to_step_to,
     Status plan_status;
     SBThreadPlan plan =
         SBThreadPlan(thread_plan_sp->GetThread().QueueThreadPlanForStepOut(
-            false, &sc, first_insn, false, eVoteYes, eVoteNoOpinion,
-            frame_idx_to_step_to, plan_status));
+            false, false, eVoteYes, eVoteNoOpinion, frame_idx_to_step_to,
+            plan_status));
 
     if (plan_status.Fail())
       error.SetErrorString(plan_status.AsCString());

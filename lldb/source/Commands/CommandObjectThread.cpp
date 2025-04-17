@@ -558,8 +558,7 @@ protected:
           true, abort_other_plans, bool_stop_other_threads, new_plan_status);
     } else if (m_step_type == eStepTypeOut) {
       new_plan_sp = thread->QueueThreadPlanForStepOut(
-          abort_other_plans, nullptr, false, bool_stop_other_threads, eVoteYes,
-          eVoteNoOpinion,
+          abort_other_plans, bool_stop_other_threads, eVoteYes, eVoteNoOpinion,
           thread->GetSelectedFrameIndex(DoNoSelectMostRelevantFrame),
           new_plan_status, m_options.m_step_out_avoid_no_debug);
     } else if (m_step_type == eStepTypeScripted) {

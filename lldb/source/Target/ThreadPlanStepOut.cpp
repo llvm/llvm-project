@@ -59,8 +59,8 @@ ComputeTargetFrame(Thread &thread, uint32_t start_frame_idx,
 
 // ThreadPlanStepOut: Step out of the current frame
 ThreadPlanStepOut::ThreadPlanStepOut(
-    Thread &thread, SymbolContext *context, bool first_insn, bool stop_others,
-    Vote report_stop_vote, Vote report_run_vote, uint32_t frame_idx,
+    Thread &thread, bool stop_others, Vote report_stop_vote,
+    Vote report_run_vote, uint32_t frame_idx,
     LazyBool step_out_avoids_code_without_debug_info,
     bool continue_to_next_branch, bool gather_return_value)
     : ThreadPlan(ThreadPlan::eKindStepOut, "Step out", thread, report_stop_vote,
@@ -101,7 +101,7 @@ void ThreadPlanStepOut::SetupReturnAddress(
       // First queue a plan that gets us to this inlined frame, and when we get
       // there we'll queue a second plan that walks us out of this frame.
       m_step_out_to_inline_plan_sp = std::make_shared<ThreadPlanStepOut>(
-          GetThread(), nullptr, false, m_stop_others, eVoteNoOpinion, eVoteNoOpinion,
+          GetThread(), m_stop_others, eVoteNoOpinion, eVoteNoOpinion,
           frame_idx - 1, eLazyBoolNo, continue_to_next_branch);
       static_cast<ThreadPlanStepOut *>(m_step_out_to_inline_plan_sp.get())
           ->SetShouldStopHereCallbacks(nullptr, nullptr);
@@ -113,7 +113,6 @@ void ThreadPlanStepOut::SetupReturnAddress(
     }
   } else {
     // Find the return address and set a breakpoint there:
-    // FIXME - can we do this more securely if we know first_insn?
 
     Address return_address(return_frame_sp->GetFrameCodeAddress());
     if (continue_to_next_branch) {

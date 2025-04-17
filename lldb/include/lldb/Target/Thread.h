@@ -843,18 +843,6 @@ public:
   ///    this one.
   ///    Otherwise this plan will go on the end of the plan stack.
   ///
-  /// \param[in] addr_context
-  ///    When dealing with stepping through inlined functions the current PC is
-  ///    not enough information to know
-  ///    what "step" means.  For instance a series of nested inline functions
-  ///    might start at the same address.
-  //     The \a addr_context provides the current symbol context the step
-  ///    is supposed to be out of.
-  //   FIXME: Currently unused.
-  ///
-  /// \param[in] first_insn
-  ///     \b true if this is the first instruction of a function.
-  ///
   /// \param[in] stop_other_threads
   ///    \b true if we will stop other threads while we single step this one.
   ///
@@ -876,9 +864,8 @@ public:
   ///     A shared pointer to the newly queued thread plan, or nullptr if the
   ///     plan could not be queued.
   virtual lldb::ThreadPlanSP QueueThreadPlanForStepOut(
-      bool abort_other_plans, SymbolContext *addr_context, bool first_insn,
-      bool stop_other_threads, Vote report_stop_vote, Vote report_run_vote,
-      uint32_t frame_idx, Status &status,
+      bool abort_other_plans, bool stop_other_threads, Vote report_stop_vote,
+      Vote report_run_vote, uint32_t frame_idx, Status &status,
       LazyBool step_out_avoids_code_without_debug_info = eLazyBoolCalculate);
 
   /// Queue the plan used to step out of the function at the current PC of
@@ -891,18 +878,6 @@ public:
   ///    \b true if we discard the currently queued plans and replace them with
   ///    this one.
   ///    Otherwise this plan will go on the end of the plan stack.
-  ///
-  /// \param[in] addr_context
-  ///    When dealing with stepping through inlined functions the current PC is
-  ///    not enough information to know
-  ///    what "step" means.  For instance a series of nested inline functions
-  ///    might start at the same address.
-  //     The \a addr_context provides the current symbol context the step
-  ///    is supposed to be out of.
-  //   FIXME: Currently unused.
-  ///
-  /// \param[in] first_insn
-  ///     \b true if this is the first instruction of a function.
   ///
   /// \param[in] stop_other_threads
   ///    \b true if we will stop other threads while we single step this one.
@@ -940,9 +915,9 @@ public:
   ///     A shared pointer to the newly queued thread plan, or nullptr if the
   ///     plan could not be queued.
   virtual lldb::ThreadPlanSP QueueThreadPlanForStepOutNoShouldStop(
-      bool abort_other_plans, SymbolContext *addr_context, bool first_insn,
-      bool stop_other_threads, Vote report_stop_vote, Vote report_run_vote,
-      uint32_t frame_idx, Status &status, bool continue_to_next_branch = false);
+      bool abort_other_plans, bool stop_other_threads, Vote report_stop_vote,
+      Vote report_run_vote, uint32_t frame_idx, Status &status,
+      bool continue_to_next_branch = false);
 
   /// Gets the plan used to step through the code that steps from a function
   /// call site at the current PC into the actual function call.
