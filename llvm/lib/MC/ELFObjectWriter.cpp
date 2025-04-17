@@ -1385,8 +1385,7 @@ void ELFObjectWriter::recordRelocation(MCAssembler &Asm,
 
   auto EMachine = TargetObjectWriter->getEMachine();
   unsigned Type;
-  if (Fixup.getKind() >= FirstLiteralRelocationKind &&
-      EMachine != ELF::EM_LOONGARCH)
+  if (Fixup.getKind() >= FirstLiteralRelocationKind)
     Type = Fixup.getKind() - FirstLiteralRelocationKind;
   else
     Type = TargetObjectWriter->getRelocType(Ctx, Target, Fixup, IsPCRel);
