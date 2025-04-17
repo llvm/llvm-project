@@ -1472,55 +1472,29 @@ exit:
   ret void
 }
 
-define void @redundant_branch_and_tail_folding(ptr %dst, i1 %c) optsize {
+define void @redundant_branch_and_tail_folding(ptr %dst, i1 %c) {
 ; DEFAULT-LABEL: define void @redundant_branch_and_tail_folding(
-; DEFAULT-SAME: ptr [[DST:%.*]], i1 [[C:%.*]]) #[[ATTR4:[0-9]+]] {
+; DEFAULT-SAME: ptr [[DST:%.*]], i1 [[C:%.*]]) {
 ; DEFAULT-NEXT:  [[ENTRY:.*]]:
 ; DEFAULT-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; DEFAULT:       [[VECTOR_PH]]:
 ; DEFAULT-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; DEFAULT:       [[VECTOR_BODY]]:
-; DEFAULT-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE6:.*]] ]
-; DEFAULT-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[PRED_STORE_CONTINUE6]] ]
-; DEFAULT-NEXT:    [[TMP0:%.*]] = icmp ule <4 x i64> [[VEC_IND]], splat (i64 20)
-; DEFAULT-NEXT:    [[TMP1:%.*]] = add nuw nsw <4 x i64> [[VEC_IND]], splat (i64 1)
-; DEFAULT-NEXT:    [[TMP2:%.*]] = trunc <4 x i64> [[TMP1]] to <4 x i32>
-; DEFAULT-NEXT:    [[TMP3:%.*]] = extractelement <4 x i1> [[TMP0]], i32 0
-; DEFAULT-NEXT:    br i1 [[TMP3]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
-; DEFAULT:       [[PRED_STORE_IF]]:
-; DEFAULT-NEXT:    [[TMP4:%.*]] = extractelement <4 x i32> [[TMP2]], i32 0
-; DEFAULT-NEXT:    store i32 [[TMP4]], ptr [[DST]], align 4
-; DEFAULT-NEXT:    br label %[[PRED_STORE_CONTINUE]]
-; DEFAULT:       [[PRED_STORE_CONTINUE]]:
-; DEFAULT-NEXT:    [[TMP5:%.*]] = extractelement <4 x i1> [[TMP0]], i32 1
-; DEFAULT-NEXT:    br i1 [[TMP5]], label %[[PRED_STORE_IF1:.*]], label %[[PRED_STORE_CONTINUE2:.*]]
-; DEFAULT:       [[PRED_STORE_IF1]]:
-; DEFAULT-NEXT:    [[TMP6:%.*]] = extractelement <4 x i32> [[TMP2]], i32 1
-; DEFAULT-NEXT:    store i32 [[TMP6]], ptr [[DST]], align 4
-; DEFAULT-NEXT:    br label %[[PRED_STORE_CONTINUE2]]
-; DEFAULT:       [[PRED_STORE_CONTINUE2]]:
-; DEFAULT-NEXT:    [[TMP7:%.*]] = extractelement <4 x i1> [[TMP0]], i32 2
-; DEFAULT-NEXT:    br i1 [[TMP7]], label %[[PRED_STORE_IF3:.*]], label %[[PRED_STORE_CONTINUE4:.*]]
-; DEFAULT:       [[PRED_STORE_IF3]]:
-; DEFAULT-NEXT:    [[TMP8:%.*]] = extractelement <4 x i32> [[TMP2]], i32 2
-; DEFAULT-NEXT:    store i32 [[TMP8]], ptr [[DST]], align 4
-; DEFAULT-NEXT:    br label %[[PRED_STORE_CONTINUE4]]
-; DEFAULT:       [[PRED_STORE_CONTINUE4]]:
-; DEFAULT-NEXT:    [[TMP9:%.*]] = extractelement <4 x i1> [[TMP0]], i32 3
-; DEFAULT-NEXT:    br i1 [[TMP9]], label %[[PRED_STORE_IF5:.*]], label %[[PRED_STORE_CONTINUE6]]
-; DEFAULT:       [[PRED_STORE_IF5]]:
-; DEFAULT-NEXT:    [[TMP10:%.*]] = extractelement <4 x i32> [[TMP2]], i32 3
-; DEFAULT-NEXT:    store i32 [[TMP10]], ptr [[DST]], align 4
-; DEFAULT-NEXT:    br label %[[PRED_STORE_CONTINUE6]]
-; DEFAULT:       [[PRED_STORE_CONTINUE6]]:
-; DEFAULT-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; DEFAULT-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
-; DEFAULT-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], 24
-; DEFAULT-NEXT:    br i1 [[TMP11]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP28:![0-9]+]]
+; DEFAULT-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; DEFAULT-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; DEFAULT-NEXT:    [[STEP_ADD:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
+; DEFAULT-NEXT:    [[TMP0:%.*]] = add nuw nsw <4 x i64> [[STEP_ADD]], splat (i64 1)
+; DEFAULT-NEXT:    [[TMP1:%.*]] = trunc <4 x i64> [[TMP0]] to <4 x i32>
+; DEFAULT-NEXT:    [[TMP2:%.*]] = extractelement <4 x i32> [[TMP1]], i32 3
+; DEFAULT-NEXT:    store i32 [[TMP2]], ptr [[DST]], align 4
+; DEFAULT-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
+; DEFAULT-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[STEP_ADD]], splat (i64 4)
+; DEFAULT-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], 16
+; DEFAULT-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP28:![0-9]+]]
 ; DEFAULT:       [[MIDDLE_BLOCK]]:
-; DEFAULT-NEXT:    br label %[[EXIT:.*]]
+; DEFAULT-NEXT:    br i1 false, label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; DEFAULT:       [[SCALAR_PH]]:
-; DEFAULT-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
+; DEFAULT-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 16, %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
 ; DEFAULT-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; DEFAULT:       [[LOOP_HEADER]]:
 ; DEFAULT-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
@@ -1537,7 +1511,7 @@ define void @redundant_branch_and_tail_folding(ptr %dst, i1 %c) optsize {
 ; DEFAULT-NEXT:    ret void
 ;
 ; PRED-LABEL: define void @redundant_branch_and_tail_folding(
-; PRED-SAME: ptr [[DST:%.*]], i1 [[C:%.*]]) #[[ATTR4:[0-9]+]] {
+; PRED-SAME: ptr [[DST:%.*]], i1 [[C:%.*]]) {
 ; PRED-NEXT:  [[ENTRY:.*]]:
 ; PRED-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; PRED:       [[VECTOR_PH]]:
