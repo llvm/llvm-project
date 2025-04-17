@@ -4037,7 +4037,9 @@ LexStart:
       return LexIdentifierContinue(Result, CurPtr);
     }
     Kind = tok::unknown;
-    if (!isLexingRawMode())
+    // We do not want to diagnose in ASM preprocessor mode because the
+    // assembler isn't necessarily trying to lex identifiers to begin with.
+    if (!isLexingRawMode() && !LangOpts.AsmPreprocessor)
       Diag(CurPtr - 1, diag::warn_dollar_in_identifier);
     break;
 
