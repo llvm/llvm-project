@@ -6,12 +6,13 @@ template<typename T1> struct if_ {
   typedef if_c< static_cast<bool>(T1::value)> almost_type_; // expected-note 7{{in instantiation}}
 };
 template <class Model, void (Model::*)()> struct wrap_constraints { };
-template <class Model>
+template <class Model> 
 inline char has_constraints_(Model* , // expected-note 3{{candidate template ignored}}
-                               wrap_constraints<Model,&Model::constraints>* = 0);
+                               wrap_constraints<Model,&Model::constraints>* = 0); // expected-note 4{{in instantiation}}
+
 template <class Model> struct not_satisfied {
   static const bool value = sizeof( has_constraints_((Model*)0)  == 1); // expected-error 3{{no matching function}} \
-  // expected-note 4{{in instantiation}}
+  // expected-note 4{{while substituting deduced template arguments into function template 'has_constraints_' [with }}
 };
 template <class ModelFn> struct requirement_;
 template <void(*)()> struct instantiate {

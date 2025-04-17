@@ -6142,9 +6142,9 @@ FunctionDecl *Sema::getMoreConstrainedFunction(FunctionDecl *FD1,
   assert(!FD1->getDescribedTemplate() && !FD2->getDescribedTemplate() &&
          "not for function templates");
   assert(!FD1->isFunctionTemplateSpecialization() ||
-         (isa<CXXConversionDecl, CXXConstructorDecl>(FD1)));
+         isa<CXXConversionDecl>(FD1));
   assert(!FD2->isFunctionTemplateSpecialization() ||
-         (isa<CXXConversionDecl, CXXConstructorDecl>(FD2)));
+         isa<CXXConversionDecl>(FD2));
 
   FunctionDecl *F1 = FD1;
   if (FunctionDecl *P = FD1->getTemplateInstantiationPattern(false))
