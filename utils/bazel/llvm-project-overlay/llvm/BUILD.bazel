@@ -2148,10 +2148,7 @@ llvm_target_lib_list = [lib for lib in [
                 "lib/Target/AArch64/AArch64GenSubtargetInfo.inc",
             ),
             (
-                [
-                    "-gen-disassembler",
-                    "--num-to-skip-size=3",
-                ],
+                ["-gen-disassembler"],
                 "lib/Target/AArch64/AArch64GenDisassemblerTables.inc",
             ),
             (

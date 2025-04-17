@@ -129,8 +129,7 @@ static void substituteOperandWithArgument(Function *OldF,
     UniqueValues.insert(Op->get());
 
   // Determine the new function's signature.
-  SmallVector<Type *> NewArgTypes;
-  llvm::append_range(NewArgTypes, OldF->getFunctionType()->params());
+  SmallVector<Type *> NewArgTypes(OldF->getFunctionType()->params());
   size_t ArgOffset = NewArgTypes.size();
   for (Value *V : UniqueValues)
     NewArgTypes.push_back(V->getType());

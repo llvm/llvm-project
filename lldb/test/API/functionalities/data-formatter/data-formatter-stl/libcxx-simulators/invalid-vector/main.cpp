@@ -2,7 +2,7 @@
 #include <libcxx-simulators-common/compressed_pair.h>
 
 namespace std {
-namespace __1 {
+inline namespace __1 {
 template <typename T> struct vector {
   T *__begin_;
   T *__end_;
@@ -10,11 +10,11 @@ template <typename T> struct vector {
 };
 } // namespace __1
 
-namespace __2 {
+inline namespace __2 {
 template <typename T> struct vector {};
 } // namespace __2
 
-namespace __3 {
+inline namespace __3 {
 template <typename T> struct vector {
   T *__begin_;
   T *__end_;
