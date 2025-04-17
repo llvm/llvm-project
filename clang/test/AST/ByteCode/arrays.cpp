@@ -107,7 +107,7 @@ static_assert(k1 == 1, "");
 static_assert((&arr[0] - &arr[1]) == -1, "");
 
 constexpr int k2 = &arr2[1] - &arr[0]; // both-error {{must be initialized by a constant expression}} \
-                                       // expected-note {{arithmetic involving unrelated objects}}
+                                       // both-note {{arithmetic involving unrelated objects}}
 
 static_assert((arr + 0) == arr, "");
 static_assert(&arr[0] == arr, "");
