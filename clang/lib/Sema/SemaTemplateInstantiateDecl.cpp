@@ -5647,6 +5647,9 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
     TypeLocBuilder TLB;
     TypeSourceInfo *PatternTSI = PatternName.getNamedTypeInfo();
     assert(PatternTSI && "Pattern is supposed to have an associated TSI");
+    // FIXME: PatternTSI is not trivial. We should copy the source location
+    // along the TypeLoc chain. However a trivial TypeLoc is sufficient for
+    // getNameInfo().getSourceRange().
     TLB.pushTrivial(Context, InstT, PatternTSI->getTypeLoc().getBeginLoc());
     return DeclarationNameLoc::makeNamedTypeLoc(
         TLB.getTypeSourceInfo(Context, InstT));
