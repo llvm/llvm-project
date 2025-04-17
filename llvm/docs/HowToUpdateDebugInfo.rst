@@ -179,21 +179,24 @@ instruction, that location should be annotated accordingly. There are a set of
 special ``DebugLoc`` values that can be used to indicate the reason that a new
 instruction does not have a valid location. These are as follows:
 
-- ``DebugLoc::getCompilerGenerated()``: This indicates that the instruction is a
-compiler-generated instruction, i.e. it is not associated with any user source
-code.
-- ``DebugLoc::getDropped()``: This indicates that the instruction has
-intentionally had its source location removed, according to the rules for
-dropping locations; this is set automatically by
-``Instruction::dropLocation()``.
-- ``DebugLoc::getUnknown()``: This indicates that the instruction does not have
-a known or currently knowable source location, e.g. the attribution is ambiguous
-in a way that can't currently be represented in LLVM, or that it is otherwise
-infeasible to determine or track the correct source location.
-- ``DebugLoc::getTemporary()``: This is used for instructions that we don't
-expect to be emitted (e.g. ``UnreachableInst``), and so should not need a valid
-location; if we ever try to emit a temporary location into an object file, this
-indicates that something has gone wrong.
+* ``DebugLoc::getCompilerGenerated()``: This indicates that the instruction is a
+  compiler-generated instruction, i.e. it is not associated with any user source
+  code.
+
+* ``DebugLoc::getDropped()``: This indicates that the instruction has
+  intentionally had its source location removed, according to the rules for
+  dropping locations; this is set automatically by
+  ``Instruction::dropLocation()``.
+
+* ``DebugLoc::getUnknown()``: This indicates that the instruction does not have
+  a known or currently knowable source location, e.g. the attribution is ambiguous
+  in a way that can't currently be represented in LLVM, or that it is otherwise
+  infeasible to determine or track the correct source location.
+
+* ``DebugLoc::getTemporary()``: This is used for instructions that we don't
+  expect to be emitted (e.g. ``UnreachableInst``), and so should not need a valid
+  location; if we ever try to emit a temporary location into an object file, this
+  indicates that something has gone wrong.
 
 Where applicable, these should be used instead of leaving an instruction without
 an assigned location or explicitly setting the location as ``DebugLoc()``.
