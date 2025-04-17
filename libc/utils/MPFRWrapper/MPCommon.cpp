@@ -78,13 +78,11 @@ MPFRNumber MPFRNumber::acospi() const {
   mpfr_acospi(result.value, value, mpfr_rounding);
   return result;
 #else
-  if (result.is_nan()) {
-    return result;
-  }
-  mpfr_acos(result.value, value, mpfr_rounding);
+  MPFRNumber value_acos(0.0, 1280);
+  mpfr_acos(value_acos.value, value, MPFR_RNDN);
   MPFRNumber value_pi(0.0, 1280);
   mpfr_const_pi(value_pi.value, MPFR_RNDN);
-  mpfr_div(result.value, value, value_pi.value, mpfr_rounding);
+  mpfr_div(result.value, value_acos.value, value_pi.value, mpfr_rounding);
   return result;
 #endif
 }
