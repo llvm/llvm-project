@@ -26,22 +26,14 @@ RootSignatureParser::RootSignatureParser(SmallVector<RootElement> &Elements,
 
 bool RootSignatureParser::parse() {
   // Iterate as many RootElements as possible
-  while (tryConsumeExpectedToken(TokenKind::kw_DescriptorTable)) {
-    // Dispatch onto parser method.
-    // We guard against the unreachable here as we just ensured that CurToken
-    // will be one of the kinds in the while condition
-    switch (CurToken.TokKind) {
-    case TokenKind::kw_DescriptorTable:
-      if (parseDescriptorTable())
+  do {
+    if (tryConsumeExpectedToken(TokenKind::kw_DescriptorTable)) {
+      auto Table = parseDescriptorTable();
+      if (!Table.has_value())
         return true;
-      break;
-    default:
-      llvm_unreachable("Switch for consumed token was not provided");
+      Elements.push_back(*Table);
     }
-
-    if (!tryConsumeExpectedToken(TokenKind::pu_comma))
-      break;
-  }
+  } while (tryConsumeExpectedToken(TokenKind::pu_comma));
 
   if (consumeExpectedToken(TokenKind::end_of_stream,
                            diag::err_hlsl_unexpected_end_of_params,
@@ -51,38 +43,38 @@ bool RootSignatureParser::parse() {
   return false;
 }
 
-bool RootSignatureParser::parseDescriptorTable() {
+std::optional<DescriptorTable> RootSignatureParser::parseDescriptorTable() {
   assert(CurToken.TokKind == TokenKind::kw_DescriptorTable &&
          "Expects to only be invoked starting at given keyword");
 
-  DescriptorTable Table;
-
   if (consumeExpectedToken(TokenKind::pu_l_paren, diag::err_expected_after,
                            CurToken.TokKind))
-    return true;
+    return std::nullopt;
+
+  DescriptorTable Table;
 
   // Iterate as many Clauses as possible
-  while (tryConsumeExpectedToken({TokenKind::kw_CBV, TokenKind::kw_SRV,
-                                  TokenKind::kw_UAV, TokenKind::kw_Sampler})) {
-    if (parseDescriptorTableClause())
-      return true;
-
-    Table.NumClauses++;
-
-    if (!tryConsumeExpectedToken(TokenKind::pu_comma))
-      break;
-  }
+  do {
+    if (tryConsumeExpectedToken({TokenKind::kw_CBV, TokenKind::kw_SRV,
+                                 TokenKind::kw_UAV, TokenKind::kw_Sampler})) {
+      auto Clause = parseDescriptorTableClause();
+      if (!Clause.has_value())
+        return std::nullopt;
+      Elements.push_back(*Clause);
+      Table.NumClauses++;
+    }
+  } while (tryConsumeExpectedToken(TokenKind::pu_comma));
 
   if (consumeExpectedToken(TokenKind::pu_r_paren,
                            diag::err_hlsl_unexpected_end_of_params,
                            /*param of=*/TokenKind::kw_DescriptorTable))
-    return true;
+    return std::nullopt;
 
-  Elements.push_back(Table);
-  return false;
+  return Table;
 }
 
-bool RootSignatureParser::parseDescriptorTableClause() {
+std::optional<DescriptorTableClause>
+RootSignatureParser::parseDescriptorTableClause() {
   assert((CurToken.TokKind == TokenKind::kw_CBV ||
           CurToken.TokKind == TokenKind::kw_SRV ||
           CurToken.TokKind == TokenKind::kw_UAV ||
@@ -93,7 +85,7 @@ bool RootSignatureParser::parseDescriptorTableClause() {
 
   if (consumeExpectedToken(TokenKind::pu_l_paren, diag::err_expected_after,
                            CurToken.TokKind))
-    return true;
+    return std::nullopt;
 
   DescriptorTableClause Clause;
   TokenKind ExpectedReg;
@@ -120,13 +112,13 @@ bool RootSignatureParser::parseDescriptorTableClause() {
 
   auto Params = parseDescriptorTableClauseParams(ExpectedReg);
   if (!Params.has_value())
-    return true;
+    return std::nullopt;
 
   // Check mandatory parameters were provided
   if (!Params->Reg.has_value()) {
     getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_missing_param)
         << ExpectedReg;
-    return true;
+    return std::nullopt;
   }
 
   Clause.Reg = Params->Reg.value();
@@ -138,10 +130,9 @@ bool RootSignatureParser::parseDescriptorTableClause() {
   if (consumeExpectedToken(TokenKind::pu_r_paren,
                            diag::err_hlsl_unexpected_end_of_params,
                            /*param of=*/ParamKind))
-    return true;
+    return std::nullopt;
 
-  Elements.push_back(Clause);
-  return false;
+  return Clause;
 }
 
 std::optional<RootSignatureParser::ParsedClauseParams>
