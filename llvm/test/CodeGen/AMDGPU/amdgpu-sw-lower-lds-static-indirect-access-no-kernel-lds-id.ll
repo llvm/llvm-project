@@ -29,8 +29,12 @@ define void @use_variables() sanitize_address {
 ; CHECK-NEXT:    [[TMP10:%.*]] = load ptr addrspace(1), ptr addrspace(1) [[TMP9]], align 8
 ; CHECK-NEXT:    [[TMP11:%.*]] = load i32, ptr addrspace(1) [[TMP10]], align 4
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i8, ptr addrspace(3) [[TMP3]], i32 [[TMP11]]
-; CHECK-NEXT:    [[X:%.*]] = addrspacecast ptr addrspace(3) [[TMP8]] to ptr
-; CHECK-NEXT:    [[TMP13:%.*]] = addrspacecast ptr addrspace(3) [[TMP8]] to ptr
+; CHECK-NEXT:    [[TMP18:%.*]] = ptrtoint ptr addrspace(3) [[TMP8]] to i32
+; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP4]], i32 [[TMP18]]
+; CHECK-NEXT:    [[TMP20:%.*]] = addrspacecast ptr addrspace(1) [[TMP19]] to ptr
+; CHECK-NEXT:    [[TMP16:%.*]] = ptrtoint ptr addrspace(3) [[TMP8]] to i32
+; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP4]], i32 [[TMP16]]
+; CHECK-NEXT:    [[TMP13:%.*]] = addrspacecast ptr addrspace(1) [[TMP17]] to ptr
 ; CHECK-NEXT:    store i8 3, ptr [[TMP13]], align 4
 ; CHECK-NEXT:    [[TMP14:%.*]] = ptrtoint ptr addrspace(3) [[TMP12]] to i32
 ; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP4]], i32 [[TMP14]]

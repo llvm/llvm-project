@@ -45,6 +45,14 @@ public:
   void Leave(const parser::EndWhereStmt &);
   void Enter(const parser::MaskedElsewhereStmt &);
   void Leave(const parser::MaskedElsewhereStmt &);
+  void Enter(const parser::CUFKernelDoConstruct &);
+  void Leave(const parser::CUFKernelDoConstruct &);
+  void Enter(const parser::OpenACCBlockConstruct &);
+  void Leave(const parser::OpenACCBlockConstruct &);
+  void Enter(const parser::OpenACCCombinedConstruct &);
+  void Leave(const parser::OpenACCCombinedConstruct &);
+  void Enter(const parser::OpenACCLoopConstruct &);
+  void Leave(const parser::OpenACCLoopConstruct &);
 
 private:
   common::Indirection<AssignmentContext> context_;

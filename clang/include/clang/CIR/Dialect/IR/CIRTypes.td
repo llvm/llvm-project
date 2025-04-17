@@ -267,37 +267,82 @@ def CIR_PointerType : CIR_Type<"Pointer", "ptr",
 }
 
 //===----------------------------------------------------------------------===//
+// BoolType
+//===----------------------------------------------------------------------===//
+
+def CIR_BoolType :
+    CIR_Type<"Bool", "bool",
+             [DeclareTypeInterfaceMethods<DataLayoutTypeInterface>]> {
+
+  let summary = "CIR bool type";
+  let description = [{
+    `cir.bool` represents C++ bool type.
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// ArrayType
+//===----------------------------------------------------------------------===//
+
+def CIR_ArrayType : CIR_Type<"Array", "array",
+    [DeclareTypeInterfaceMethods<DataLayoutTypeInterface>]> {
+
+  let summary = "CIR array type";
+  let description = [{
+    `CIR.array` represents C/C++ constant arrays.
+  }];
+
+  let parameters = (ins "mlir::Type":$eltType, "uint64_t":$size);
+
+  let assemblyFormat = [{
+    `<` $eltType `x` $size `>`
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // FuncType
 //===----------------------------------------------------------------------===//
 
 def CIR_FuncType : CIR_Type<"Func", "func"> {
   let summary = "CIR function type";
   let description = [{
-    The `!cir.func` is a function type. It consists of a single return type, a
-    list of parameter types and can optionally be variadic.
+    The `!cir.func` is a function type. It consists of an optional return type,
+    a list of parameter types and can optionally be variadic.
 
     Example:
 
     ```mlir
-    !cir.func<!bool ()>
-    !cir.func<!s32i (!s8i, !s8i)>
-    !cir.func<!s32i (!s32i, ...)>
+    !cir.func<()>
+    !cir.func<() -> bool>
+    !cir.func<(!s8i, !s8i)>
+    !cir.func<(!s8i, !s8i) -> !s32i>
+    !cir.func<(!s32i, ...) -> !s32i>
     ```
   }];
 
   let parameters = (ins ArrayRefParameter<"mlir::Type">:$inputs,
-                        "mlir::Type":$returnType, "bool":$varArg);
+                        OptionalParameter<"mlir::Type">:$optionalReturnType,
+                        "bool":$varArg);
+  // Use a custom parser to handle argument types with variadic elipsis.
   let assemblyFormat = [{
-    `<` $returnType ` ` `(` custom<FuncTypeArgs>($inputs, $varArg) `>`
+    `<` custom<FuncTypeParams>($inputs, $varArg)  (`->` $optionalReturnType^)? `>`
   }];
 
   let builders = [
+    // Create a FuncType, converting the return type from C-style to
+    // MLIR-style.  If the given return type is `cir::VoidType`, ignore it
+    // and create the FuncType with no return type, which is how MLIR
+    // represents function types.
     TypeBuilderWithInferredContext<(ins
       "llvm::ArrayRef<mlir::Type>":$inputs, "mlir::Type":$returnType,
       CArg<"bool", "false">:$isVarArg), [{
-      return $_get(returnType.getContext(), inputs, returnType, isVarArg);
+        return $_get(returnType.getContext(), inputs,
+                     mlir::isa<cir::VoidType>(returnType) ? nullptr : returnType,
+                     isVarArg);
     }]>
   ];
+
+  let genVerifyDecl = 1;
 
   let extraClassDeclaration = [{
     /// Returns whether the function is variadic.
@@ -309,12 +354,17 @@ def CIR_FuncType : CIR_Type<"Func", "func"> {
     /// Returns the number of arguments to the function.
     unsigned getNumInputs() const { return getInputs().size(); }
 
-    /// Returns the result type of the function as an ArrayRef, enabling better
-    /// integration with generic MLIR utilities.
+    /// Get the C-style return type of the function, which is !cir.void if the
+    /// function returns nothing and the actual return type otherwise.
+    mlir::Type getReturnType() const;
+
+    /// Get the MLIR-style return type of the function, which is an empty
+    /// ArrayRef if the function returns nothing and a single-element ArrayRef
+    /// with the actual return type otherwise.
     llvm::ArrayRef<mlir::Type> getReturnTypes() const;
 
-    /// Returns whether the function is returns void.
-    bool isVoid() const;
+    /// Does the function type return nothing?
+    bool hasVoidReturn() const;
 
     /// Returns a clone of this function type with the given argument
     /// and result types.
@@ -351,11 +401,124 @@ def VoidPtr : Type<
 }
 
 //===----------------------------------------------------------------------===//
+// RecordType
+//
+// The base type for all RecordDecls.
+//===----------------------------------------------------------------------===//
+
+def CIR_RecordType : CIR_Type<"Record", "record",
+    [
+      DeclareTypeInterfaceMethods<DataLayoutTypeInterface>,
+      MutableType,
+    ]> {
+  let summary = "CIR record type";
+  let description = [{
+    Each unique clang::RecordDecl is mapped to a `cir.record` and any object in
+    C/C++ that has a struct or class type will have a `cir.record` in CIR.
+
+    There are three possible formats for this type:
+
+     - Identified and complete records: unique name and a known body.
+     - Identified and incomplete records: unique name and unknown body.
+     - Anonymous records: no name and a known body.
+
+    Identified records are uniqued by their name, and anonymous records are
+    uniqued by their body. This means that two anonymous records with the same
+    body will be the same type, and two identified records with the same name
+    will be the same type. Attempting to build a record with an existing name,
+    but a different body will result in an error.
+
+    A few examples:
+
+    ```mlir
+        !complete = !cir.record<struct "complete" {!cir.int<u, 8>}>
+        !incomplete = !cir.record<struct "incomplete" incomplete>
+        !anonymous = !cir.record<struct {!cir.int<u, 8>}>
+    ```
+
+    Incomplete records are mutable, meaning they can be later completed with a
+    body automatically updating in place every type in the code that uses the
+    incomplete record. Mutability allows for recursive types to be represented,
+    meaning the record can have members that refer to itself. This is useful for
+    representing recursive records and is implemented through a special syntax.
+    In the example below, the `Node` record has a member that is a pointer to a
+    `Node` record:
+
+    ```mlir
+        !s = !cir.record<struct "Node" {!cir.ptr<!cir.record<struct "Node">>}>
+    ```
+  }];
+
+  let parameters = (ins
+    OptionalArrayRefParameter<"mlir::Type">:$members,
+    OptionalParameter<"mlir::StringAttr">:$name,
+    "bool":$incomplete,
+    "bool":$packed,
+    "bool":$padded,
+    "RecordType::RecordKind":$kind
+  );
+
+  // StorageClass is defined in C++ for mutability.
+  let storageClass = "RecordTypeStorage";
+  let genStorageClass = 0;
+
+  let skipDefaultBuilders = 1;
+  let genVerifyDecl = 1;
+
+  let builders = [
+    // Create an identified and incomplete record type.
+    TypeBuilder<(ins
+      "mlir::StringAttr":$name,
+      "RecordKind":$kind
+    ), [{
+      return $_get($_ctxt, /*members=*/llvm::ArrayRef<Type>{}, name,
+                         /*incomplete=*/true, /*packed=*/false,
+                         /*padded=*/false, kind);
+    }]>];
+
+  let extraClassDeclaration = [{
+    using Base::verifyInvariants;
+
+    enum RecordKind : uint32_t { Struct, Union };
+
+    bool isStruct() const { return getKind() == RecordKind::Struct; };
+    bool isUnion() const { return getKind() == RecordKind::Union; };
+    bool isComplete() const { return !isIncomplete(); };
+    bool isIncomplete() const;
+
+    size_t getNumElements() const { return getMembers().size(); };
+    std::string getKindAsStr() {
+      switch (getKind()) {
+      case RecordKind::Union:
+        return "union";
+      case RecordKind::Struct:
+        return "struct";
+      }
+      llvm_unreachable("Invalid value for RecordType::getKind()");
+    }
+    std::string getPrefixedName() {
+      return getKindAsStr() + "." + getName().getValue().str();
+    }
+
+    void complete(llvm::ArrayRef<mlir::Type> members, bool packed,
+                  bool isPadded);
+  }];
+
+  let hasCustomAssemblyFormat = 1;
+}
+
+// Note CIRRecordType is used instead of CIR_RecordType
+// because of tablegen conflicts.
+def CIRRecordType : Type<
+  CPred<"::mlir::isa<::cir::RecordType>($_self)">, "CIR record type">;
+
+//===----------------------------------------------------------------------===//
 // Global type constraints
 //===----------------------------------------------------------------------===//
 
 def CIR_AnyType : AnyTypeOf<[
-  CIR_VoidType, CIR_IntType, CIR_AnyFloat, CIR_PointerType, CIR_FuncType
+  CIR_VoidType, CIR_BoolType, CIR_ArrayType, CIR_IntType, CIR_AnyFloat,
+  CIR_PointerType, CIR_FuncType, CIR_RecordType
 ]>;
 
 #endif // MLIR_CIR_DIALECT_CIR_TYPES

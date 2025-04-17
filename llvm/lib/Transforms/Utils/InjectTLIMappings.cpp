@@ -55,6 +55,8 @@ static void addVariantDeclaration(CallInst &CI, const ElementCount &VF,
   Function *VecFunc =
       Function::Create(VectorFTy, Function::ExternalLinkage, VFName, M);
   VecFunc->copyAttributesFrom(CI.getCalledFunction());
+  if (auto CC = VD->getCallingConv())
+    VecFunc->setCallingConv(*CC);
   ++NumVFDeclAdded;
   LLVM_DEBUG(dbgs() << DEBUG_TYPE << ": Added to the module: `" << VFName
                     << "` of type " << *VectorFTy << "\n");
@@ -87,8 +89,7 @@ static void addMappingsFromTLI(const TargetLibraryInfo &TLI, CallInst &CI) {
   SmallVector<std::string, 8> Mappings;
   VFABI::getVectorVariantNames(CI, Mappings);
   Module *M = CI.getModule();
-  const SetVector<StringRef> OriginalSetOfMappings(Mappings.begin(),
-                                                   Mappings.end());
+  const SetVector<StringRef> OriginalSetOfMappings(llvm::from_range, Mappings);
 
   auto AddVariantDecl = [&](const ElementCount &VF, bool Predicate) {
     const VecDesc *VD = TLI.getVectorMappingInfo(ScalarName, VF, Predicate);

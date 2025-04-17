@@ -67,7 +67,8 @@ def err_drv_no_cuda_libdevice : Error<
   "libdevice">;
 
 def err_drv_no_rocm_device_lib : Error<
-  "cannot find ROCm device library%select{| for %1| for ABI version %1}0; provide its path via "
+  "cannot find ROCm device library%select{| for %1| for ABI version %1"
+  "%select{|, which requires ROCm %3 or higher}2}0; provide its path via "
   "'--rocm-path' or '--rocm-device-lib-path', or pass '-nogpulib' to build "
   "without ROCm device library">;
 def err_drv_no_hip_runtime : Error<
@@ -92,10 +93,6 @@ def err_drv_hipspv_no_hip_path : Error<
   "'--hip-path' must be specified when offloading to SPIR-V unless '-nogpuinc' "
   "is given">;
 
-// TODO: Remove when COV6 is fully supported by ROCm.
-def warn_drv_amdgpu_cov6: Warning<
-  "code object v6 is still in development and not ready for production use yet;"
-  " use at your own risk">;
 def err_drv_undetermined_gpu_arch : Error<
   "cannot determine %0 architecture: %1; consider passing it via '%2'; "
   "environment variable CLANG_TOOLCHAIN_PROGRAM_TIMEOUT specifies the tool "
@@ -209,6 +206,8 @@ def err_drv_cannot_open_randomize_layout_seed_file : Error<
   "cannot read randomize layout seed file '%0'">;
 def err_drv_invalid_version_number : Error<
   "invalid version number in '%0'">;
+def err_drv_kcfi_arity_unsupported_target : Error<
+  "target '%0' is unsupported by -fsanitize-kcfi-arity">;
 def err_drv_no_linker_llvm_support : Error<
   "'%0': unable to pass LLVM bit-code files to linker">;
 def err_drv_no_ast_support : Error<
@@ -276,6 +275,11 @@ def err_cpu_unsupported_isa
   : Error<"CPU '%0' does not support '%1' execution mode">;
 def err_arch_unsupported_isa
   : Error<"architecture '%0' does not support '%1' execution mode">;
+
+def err_zos_target_release_discontinued
+  : Error<"z/OS target level \"%0\" is discontinued">;
+def err_zos_target_unrecognized_release
+  : Error<"z/OS target level \"%0\" is invalid">;
 
 def err_drv_I_dash_not_supported : Error<
   "'%0' not supported, please use -iquote instead">;
@@ -445,9 +449,6 @@ def warn_drv_clang_unsupported : Warning<
   "the clang compiler does not support '%0'">;
 def warn_drv_deprecated_arg : Warning<
   "argument '%0' is deprecated%select{|, use '%2' instead}1">, InGroup<Deprecated>;
-def warn_drv_deprecated_arg_no_relaxed_template_template_args : Warning<
-  "argument '-fno-relaxed-template-template-args' is deprecated">,
-  InGroup<DeprecatedNoRelaxedTemplateTemplateArgs>;
 def warn_drv_deprecated_arg_ofast : Warning<
   "argument '-Ofast' is deprecated; use '-O3 -ffast-math' for the same behavior,"
   " or '-O3' to enable only conforming optimizations">,
@@ -558,6 +559,11 @@ def err_test_module_file_extension_format : Error<
 
 def err_drv_module_output_with_multiple_arch : Error<
   "option '-fmodule-output' cannot be used with multiple arch options">;
+
+def err_drv_reduced_module_output_overrided : Warning<
+  "the implicit output of reduced BMI may be overrided by the output file specified by '--precompile'. "
+  "please consider use '-fmodule-output=' to specify the output file for reduced BMI explicitly">,
+  InGroup<DiagGroup<"reduced-bmi-output-overrided">>;
 
 def warn_drv_delayed_template_parsing_after_cxx20 : Warning<
   "-fdelayed-template-parsing is deprecated after C++20">,
@@ -844,4 +850,9 @@ def warn_missing_include_dirs : Warning<
 
 def err_drv_malformed_warning_suppression_mapping : Error<
   "failed to process suppression mapping file '%0': %1">;
+
+def warn_drv_openacc_without_cir
+    : Warning<"OpenACC directives will result in no runtime behavior; use "
+              "-fclangir to enable runtime effect">,
+      InGroup<SourceUsesOpenACC>;
 }

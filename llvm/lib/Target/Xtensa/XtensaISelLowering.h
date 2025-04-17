@@ -29,16 +29,21 @@ enum {
   // is the target address.  The arguments start at operand 2.
   // There is an optional glue operand at the end.
   CALL,
+  // Call with rotation window by 8 registers
+  CALLW8,
 
   // Extract unsigned immediate. Operand 0 is value, operand 1
   // is bit position of the field [0..31], operand 2 is bit size
   // of the field [1..16]
   EXTUI,
 
+  MOVSP,
+
   // Wraps a TargetGlobalAddress that should be loaded using PC-relative
   // accesses.  Operand 0 is the address.
   PCREL_WRAPPER,
   RET,
+  RETW,
 
   // Select with condition operator - This selects between a true value and
   // a false value (ops #2 and #3) based on the boolean result of comparing

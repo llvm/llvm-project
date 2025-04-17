@@ -33,7 +33,7 @@ public:
 
   virtual ~ExpressionVariable() = default;
 
-  std::optional<uint64_t> GetByteSize() { return m_frozen_sp->GetByteSize(); }
+  llvm::Expected<uint64_t> GetByteSize() { return m_frozen_sp->GetByteSize(); }
 
   ConstString GetName() { return m_frozen_sp->GetName(); }
 
@@ -107,9 +107,18 @@ public:
 
   FlagType m_flags; // takes elements of Flags
 
-  // these should be private
+  /// These members should be private.
+  /// @{
+  /// A value object whose value's data lives in host (lldb's) memory.
   lldb::ValueObjectSP m_frozen_sp;
+  /// The ValueObject counterpart to m_frozen_sp that tracks the value in
+  /// inferior memory. This object may not always exist; its presence depends on
+  /// whether it is logical for the value to exist in the inferior memory. For
+  /// example, when evaluating a C++ expression that generates an r-value, such
+  /// as a single function call, there is no memory address in the inferior to
+  /// track.
   lldb::ValueObjectSP m_live_sp;
+  /// @}
 };
 
 /// \class ExpressionVariableList ExpressionVariable.h

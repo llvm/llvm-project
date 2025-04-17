@@ -29,7 +29,7 @@ func.func @_QPtranspose1(%arg0: !fir.ref<!fir.array<1x2xi32>> {fir.bindc_name = 
 // CHECK-DAG:     %[[RET_EMBOX:.*]] = fir.embox %[[RET_ADDR]](%[[RET_SHAPE]])
 // CHECK-DAG:     fir.store %[[RET_EMBOX]] to %[[RET_BOX]]
 
-// CHECK-DAG:     %[[M_BOX:.*]] = fir.embox %[[M_VAR]]#1(%[[M_SHAPE:.*]])
+// CHECK-DAG:     %[[M_BOX:.*]] = fir.embox %[[M_VAR]]#0(%[[M_SHAPE:.*]])
 
 // CHECK:         %[[RET_ARG:.*]] = fir.convert %[[RET_BOX]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x?xi32>>>>)
 // CHECK:         %[[M_ARG:.*]] = fir.convert %[[M_BOX]] : (!fir.box<!fir.array<1x2xi32>>) -> !fir.box<none>

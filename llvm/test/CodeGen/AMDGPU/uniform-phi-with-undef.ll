@@ -44,7 +44,7 @@ if:
 
 end:
   %v2 = phi float [ %v.if, %if ], [ %v, %entry ]
-  %c2 = phi float [ undef, %if ], [ %c, %entry ]
+  %c2 = phi float [ poison, %if ], [ %c, %entry ]
   %r = fadd float %v2, %c2
   ret float %r
 }

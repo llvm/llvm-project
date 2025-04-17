@@ -203,6 +203,15 @@ bool getShuffleDemandedElts(int SrcWidth, ArrayRef<int> Mask,
                             const APInt &DemandedElts, APInt &DemandedLHS,
                             APInt &DemandedRHS, bool AllowUndefElts = false);
 
+/// Does this shuffle mask represent either one slide shuffle or a pair of
+/// two slide shuffles, combined with a select on some constant vector mask?
+/// A slide is a shuffle mask which shifts some set of elements up or down
+/// the vector, with all other elements being undefined.  An identity shuffle
+/// will be matched a slide by 0.  The output parameter provides the source
+/// (-1 means no source), and slide direction for each slide.
+bool isMaskedSlidePair(ArrayRef<int> Mask, int NumElts,
+                       std::array<std::pair<int, int>, 2> &SrcInfo);
+
 /// Replace each shuffle mask index with the scaled sequential indices for an
 /// equivalent mask of narrowed elements. Mask elements that are less than 0
 /// (sentinel values) are repeated in the output mask.
@@ -343,6 +352,14 @@ MDNode *uniteAccessGroups(MDNode *AccGroups1, MDNode *AccGroups2);
 /// list is empty, returns nullptr.
 MDNode *intersectAccessGroups(const Instruction *Inst1,
                               const Instruction *Inst2);
+
+/// Add metadata from \p Inst to \p Metadata, if it can be preserved after
+/// vectorization. It can be preserved after vectorization if the kind is one of
+/// [MD_tbaa, MD_alias_scope, MD_noalias, MD_fpmath, MD_nontemporal,
+/// MD_access_group, MD_mmra].
+void getMetadataToPropagate(
+    Instruction *Inst,
+    SmallVectorImpl<std::pair<unsigned, MDNode *>> &Metadata);
 
 /// Specifically, let Kinds = [MD_tbaa, MD_alias_scope, MD_noalias, MD_fpmath,
 /// MD_nontemporal, MD_access_group, MD_mmra].
@@ -748,12 +765,11 @@ private:
   /// \returns the newly created interleave group.
   InterleaveGroup<Instruction> *
   createInterleaveGroup(Instruction *Instr, int Stride, Align Alignment) {
-    assert(!InterleaveGroupMap.count(Instr) &&
-           "Already in an interleaved access group");
-    InterleaveGroupMap[Instr] =
-        new InterleaveGroup<Instruction>(Instr, Stride, Alignment);
-    InterleaveGroups.insert(InterleaveGroupMap[Instr]);
-    return InterleaveGroupMap[Instr];
+    auto [It, Inserted] = InterleaveGroupMap.try_emplace(Instr);
+    assert(Inserted && "Already in an interleaved access group");
+    It->second = new InterleaveGroup<Instruction>(Instr, Stride, Alignment);
+    InterleaveGroups.insert(It->second);
+    return It->second;
   }
 
   /// Release the group and remove all the relationships.

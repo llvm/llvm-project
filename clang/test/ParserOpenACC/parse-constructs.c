@@ -109,36 +109,29 @@ void func() {
   for(int i = 0; i < 6;++i){}
 
   int i = 0, j = 0, k = 0;
-  // expected-warning@+1{{OpenACC construct 'atomic' not yet implemented, pragma ignored}}
 #pragma acc atomic
-  i = j;
-  // expected-error@+2{{invalid OpenACC clause 'garbage'}}
-  // expected-warning@+1{{OpenACC construct 'atomic' not yet implemented, pragma ignored}}
+  i = i + 1;
+  // expected-error@+1{{invalid OpenACC clause 'garbage'}}
 #pragma acc atomic garbage
-  i = j;
-  // expected-error@+2{{invalid OpenACC clause 'garbage'}}
-  // expected-warning@+1{{OpenACC construct 'atomic' not yet implemented, pragma ignored}}
+  i = i + 1;
+  // expected-error@+1{{invalid OpenACC clause 'garbage'}}
 #pragma acc atomic garbage clause list
-  i = j;
-  // expected-warning@+1{{OpenACC construct 'atomic' not yet implemented, pragma ignored}}
+  i = i + 1;
 #pragma acc atomic read
   i = j;
-  // expected-error@+2{{invalid OpenACC clause 'clause'}}
-  // expected-warning@+1{{OpenACC construct 'atomic' not yet implemented, pragma ignored}}
+  // expected-error@+1{{invalid OpenACC clause 'clause'}}
 #pragma acc atomic write clause list
   i = i + j;
-  // expected-error@+2{{invalid OpenACC clause 'clause'}}
-  // expected-warning@+1{{OpenACC construct 'atomic' not yet implemented, pragma ignored}}
+  // expected-error@+1{{invalid OpenACC clause 'clause'}}
 #pragma acc atomic update clause list
   i++;
-  // expected-error@+2{{invalid OpenACC clause 'clause'}}
-  // expected-warning@+1{{OpenACC construct 'atomic' not yet implemented, pragma ignored}}
+  // expected-error@+1{{invalid OpenACC clause 'clause'}}
 #pragma acc atomic capture clause list
   i = j++;
 
 
   // expected-error@+2{{invalid OpenACC clause 'clause'}}
-  // expected-warning@+1{{OpenACC construct 'declare' not yet implemented, pragma ignored}}
+  // expected-error@+1{{no valid clauses specified in OpenACC 'declare' directive}}
 #pragma acc declare clause list
   for(;;){}
   // expected-error@+1{{invalid OpenACC clause 'clause'}}
@@ -157,37 +150,31 @@ void func() {
   for(;;){}
 }
 
-// expected-warning@+1{{OpenACC construct 'routine' not yet implemented, pragma ignored}}
-#pragma acc routine
+#pragma acc routine seq
 void routine_func();
 // expected-error@+2{{invalid OpenACC clause 'clause'}}
-// expected-warning@+1{{OpenACC construct 'routine' not yet implemented, pragma ignored}}
+// expected-error@+1{{OpenACC 'routine' construct must have at least one 'gang', 'worker', 'vector' or 'seq' clause}}
 #pragma acc routine clause list
 void routine_func();
 
-// expected-error@+2{{use of undeclared identifier 'func_name'}}
-// expected-warning@+1{{OpenACC construct 'routine' not yet implemented, pragma ignored}}
-#pragma acc routine (func_name)
+// expected-error@+1{{use of undeclared identifier 'func_name'}}
+#pragma acc routine (func_name) seq
 // expected-error@+3{{use of undeclared identifier 'func_name'}}
 // expected-error@+2{{invalid OpenACC clause 'clause'}}
-// expected-warning@+1{{OpenACC construct 'routine' not yet implemented, pragma ignored}}
+// expected-error@+1{{OpenACC 'routine' construct must have at least one 'gang', 'worker', 'vector' or 'seq' clause}}
 #pragma acc routine (func_name) clause list
 
-// expected-warning@+1{{OpenACC construct 'routine' not yet implemented, pragma ignored}}
-#pragma acc routine (routine_func)
+#pragma acc routine (routine_func) seq
 // expected-error@+2{{invalid OpenACC clause 'clause'}}
-// expected-warning@+1{{OpenACC construct 'routine' not yet implemented, pragma ignored}}
+// expected-error@+1{{OpenACC 'routine' construct must have at least one 'gang', 'worker', 'vector' or 'seq' clause}}
 #pragma acc routine (routine_func) clause list
 
-// expected-error@+3{{expected ')'}}
-// expected-note@+2{{to match this '('}}
-// expected-warning@+1{{OpenACC construct 'routine' not yet implemented, pragma ignored}}
-#pragma acc routine (routine_func())
+// expected-error@+2{{expected ')'}}
+// expected-note@+1{{to match this '('}}
+#pragma acc routine (routine_func()) seq
 
-// expected-error@+2{{expected identifier}}
-// expected-warning@+1{{OpenACC construct 'routine' not yet implemented, pragma ignored}}
-#pragma acc routine()
+// expected-error@+1{{expected identifier}}
+#pragma acc routine() seq
 
-// expected-error@+2{{expected identifier}}
-// expected-warning@+1{{OpenACC construct 'routine' not yet implemented, pragma ignored}}
-#pragma acc routine(int)
+// expected-error@+1{{expected identifier}}
+#pragma acc routine(int) seq

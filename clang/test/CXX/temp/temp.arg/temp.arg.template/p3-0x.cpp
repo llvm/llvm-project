@@ -18,8 +18,9 @@ eval<D<int, 17>> eD; // expected-error{{implicit instantiation of undefined temp
 eval<E<int, float>> eE; // expected-error{{implicit instantiation of undefined template 'eval<E<int, float>>}}
 
 template<
-  template <int ...N> // expected-error{{deduced non-type template argument does not have the same type as the corresponding template parameter ('int' vs 'void *')}}
-  class TT // expected-note {{previous template template parameter is here}}
+  template <int ...N> // expected-error {{cannot be narrowed from type 'int' to 'short'}}
+                      // expected-error@-1 {{conversion from 'int' to 'void *' is not allowed in a converted constant expression}}
+  class TT // expected-note 2{{previous template template parameter is here}}
 > struct X0 { };
 
 template<int I, int J, int ...Rest> struct X0a;
@@ -31,12 +32,13 @@ template<int I, void *J> struct X0e; // expected-note{{template parameter is dec
 X0<X0a> inst_x0a;
 X0<X0b> inst_x0b;
 X0<X0c> inst_x0c;
-X0<X0d> inst_x0d;
+X0<X0d> inst_x0d; // expected-note {{has different template parameters}}
 X0<X0e> inst_x0e; // expected-note{{template template argument has different template parameters than its corresponding template template parameter}}
 
 template<typename T,
-         template <T ...N> // expected-error{{deduced non-type template argument does not have the same type as the corresponding template parameter ('short' vs 'void *')}}
-         class TT // expected-note {{previous template template parameter is here}}
+         template <T ...N> // expected-error {{conversion from 'short' to 'void *' is not allowed in a converted constant expression}}
+                           // expected-error@-1 {{cannot be narrowed from type 'int' to 'short'}}
+         class TT // expected-note 2{{previous template template parameter is here}}
 > struct X1 { };
 
 template<int I, int J, int ...Rest> struct X1a;
@@ -49,8 +51,8 @@ X1<int, X1a> inst_x1a;
 X1<long, X1b> inst_x1b;
 X1<short, X1c> inst_x1c;
 X1<short, X1d> inst_sx1d;
-X1<int, X1d> inst_ix1d;
-X1<short, X1e> inst_x1e; // expected-note{{template template argument has different template parameters than its corresponding template template parameter}}
+X1<int, X1d> inst_ix1d;  // expected-note {{has different template parameters}}
+X1<short, X1e> inst_x1e; // expected-note {{has different template parameters}}
 
 template <int> class X2; // expected-note{{template is declared here}} \
                          // expected-note{{template is declared here}}

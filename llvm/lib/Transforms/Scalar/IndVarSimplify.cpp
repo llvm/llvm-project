@@ -1262,14 +1262,14 @@ static std::optional<Value *>
 createReplacement(ICmpInst *ICmp, const Loop *L, BasicBlock *ExitingBB,
                   const SCEV *MaxIter, bool Inverted, bool SkipLastIter,
                   ScalarEvolution *SE, SCEVExpander &Rewriter) {
-  ICmpInst::Predicate Pred = ICmp->getPredicate();
+  CmpPredicate Pred = ICmp->getCmpPredicate();
   Value *LHS = ICmp->getOperand(0);
   Value *RHS = ICmp->getOperand(1);
 
   // 'LHS pred RHS' should now mean that we stay in loop.
   auto *BI = cast<BranchInst>(ExitingBB->getTerminator());
   if (Inverted)
-    Pred = CmpInst::getInversePredicate(Pred);
+    Pred = ICmpInst::getInverseCmpPredicate(Pred);
 
   const SCEV *LHSS = SE->getSCEVAtScope(LHS, L);
   const SCEV *RHSS = SE->getSCEVAtScope(RHS, L);
@@ -1460,7 +1460,6 @@ bool IndVarSimplify::canonicalizeExitCondition(Loop *L) {
     if (!match(LHS, m_ZExt(m_Value(LHSOp))) || !ICmp->isSigned())
       continue;
 
-    const DataLayout &DL = ExitingBB->getDataLayout();
     const unsigned InnerBitWidth = DL.getTypeSizeInBits(LHSOp->getType());
     const unsigned OuterBitWidth = DL.getTypeSizeInBits(RHS->getType());
     auto FullCR = ConstantRange::getFull(InnerBitWidth);
@@ -1536,8 +1535,6 @@ bool IndVarSimplify::canonicalizeExitCondition(Loop *L) {
         DeadInsts.push_back(LHS);
     };
 
-
-    const DataLayout &DL = ExitingBB->getDataLayout();
     const unsigned InnerBitWidth = DL.getTypeSizeInBits(LHSOp->getType());
     const unsigned OuterBitWidth = DL.getTypeSizeInBits(RHS->getType());
     auto FullCR = ConstantRange::getFull(InnerBitWidth);

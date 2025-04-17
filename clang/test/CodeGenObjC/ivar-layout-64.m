@@ -63,8 +63,8 @@ __weak B *f2;
 @end
 
 // CHECK: @OBJC_CLASS_NAME_{{.*}} = private unnamed_addr constant {{.*}} c"D\00"
-// CHECK: @OBJC_CLASS_NAME_{{.*}} = private unnamed_addr constant {{.*}} c"\11p\00"
-// CHECK: @OBJC_CLASS_NAME_{{.*}} = private unnamed_addr constant {{.*}} c"!`\00"
+// CHECK: @OBJC_CLASS_NAME_{{.*}} = private unnamed_addr constant {{.*}} c"\11\A0\00"
+// CHECK: @OBJC_CLASS_NAME_{{.*}} = private unnamed_addr constant {{.*}} c"!\90\00"
 
 @implementation D
 @synthesize p3 = _p3;

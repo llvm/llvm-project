@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/MipsFixupKinds.h"
+#include "MCTargetDesc/MipsMCExpr.h"
 #include "MCTargetDesc/MipsMCTargetDesc.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/BinaryFormat/ELF.h"
@@ -158,8 +159,21 @@ unsigned MipsELFObjectWriter::getRelocType(MCContext &Ctx,
                                            bool IsPCRel) const {
   // Determine the type of the relocation.
   unsigned Kind = Fixup.getTargetKind();
-  if (Kind >= FirstLiteralRelocationKind)
-    return Kind - FirstLiteralRelocationKind;
+  switch (Target.getSpecifier()) {
+  case MipsMCExpr::MEK_DTPREL:
+  case MipsMCExpr::MEK_DTPREL_HI:
+  case MipsMCExpr::MEK_DTPREL_LO:
+  case MipsMCExpr::MEK_TLSLDM:
+  case MipsMCExpr::MEK_TLSGD:
+  case MipsMCExpr::MEK_GOTTPREL:
+  case MipsMCExpr::MEK_TPREL_HI:
+  case MipsMCExpr::MEK_TPREL_LO:
+    if (auto *SA = Target.getAddSym())
+      cast<MCSymbolELF>(SA)->setType(ELF::STT_TLS);
+    break;
+  default:
+    break;
+  }
 
   switch (Kind) {
   case FK_NONE:
@@ -218,15 +232,15 @@ unsigned MipsELFObjectWriter::getRelocType(MCContext &Ctx,
   }
 
   switch (Kind) {
-  case FK_DTPRel_4:
+  case Mips::fixup_Mips_DTPREL32:
     return ELF::R_MIPS_TLS_DTPREL32;
-  case FK_DTPRel_8:
+  case Mips::fixup_Mips_DTPREL64:
     return ELF::R_MIPS_TLS_DTPREL64;
-  case FK_TPRel_4:
+  case Mips::fixup_Mips_TPREL32:
     return ELF::R_MIPS_TLS_TPREL32;
-  case FK_TPRel_8:
+  case Mips::fixup_Mips_TPREL64:
     return ELF::R_MIPS_TLS_TPREL64;
-  case FK_GPRel_4:
+  case Mips::fixup_Mips_GPREL32:
     return setRTypes(ELF::R_MIPS_GPREL32,
                      is64Bit() ? ELF::R_MIPS_64 : ELF::R_MIPS_NONE,
                      ELF::R_MIPS_NONE);
@@ -328,7 +342,8 @@ unsigned MipsELFObjectWriter::getRelocType(MCContext &Ctx,
     return ELF::R_MICROMIPS_JALR;
   }
 
-  llvm_unreachable("invalid fixup kind!");
+  Ctx.reportError(Fixup.getLoc(), "unsupported relocation type");
+  return ELF::R_MIPS_NONE;
 }
 
 /// Sort relocation table entries by offset except where another order is

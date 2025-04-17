@@ -41,7 +41,7 @@
 
 using namespace llvm;
 
-cl::OptionCategory ExtractCat("llvm-extract Options");
+static cl::OptionCategory ExtractCat("llvm-extract Options");
 
 // InputFilename - The filename to read from.
 static cl::opt<std::string> InputFilename(cl::Positional,
@@ -313,7 +313,7 @@ int main(int argc, char **argv) {
       Materialize(*GVs[i]);
   } else {
     // Deleting. Materialize every GV that's *not* in GVs.
-    SmallPtrSet<GlobalValue *, 8> GVSet(GVs.begin(), GVs.end());
+    SmallPtrSet<GlobalValue *, 8> GVSet(llvm::from_range, GVs);
     for (auto &F : *M) {
       if (!GVSet.count(&F))
         Materialize(F);
@@ -408,6 +408,7 @@ int main(int argc, char **argv) {
     PM.addPass(GlobalDCEPass());
   PM.addPass(StripDeadDebugInfoPass());
   PM.addPass(StripDeadPrototypesPass());
+  PM.addPass(StripDeadCGProfilePass());
 
   std::error_code EC;
   ToolOutputFile Out(OutputFilename, EC, sys::fs::OF_None);

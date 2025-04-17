@@ -15,13 +15,13 @@
 // DISASM-NEXT:   6: call{{.}} 0x5
 
 /// There is currently no error for -r. See also https://github.com/ClangBuiltLinux/linux/issues/1937
-// RUN: ld.lld -T lds -r a.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=REL-R --implicit-check-not=warning:
+// RUN: ld.lld -T lds -r a.o 2>&1 | FileCheck %s --check-prefix=REL-R --implicit-check-not=warning:
 // REL-R: warning: {{.*}}:(.nonalloc1+0xa): has non-ABS relocation R_386_PC32 against symbol ''
 
 // RUN: llvm-mc -filetype=obj -triple=x86_64 asm -o b.o
 // RUN: ld.lld -T lds b.o -o b 2>&1 | FileCheck %s --check-prefix=CHECK2 --implicit-check-not=warning:
 // RUN: llvm-objdump -D --no-show-raw-insn b | FileCheck --check-prefix=DISASM %s
-// RUN: ld.lld -T lds -r b.o -o /dev/null --fatal-warnings
+// RUN: ld.lld -T lds -r b.o --fatal-warnings
 // CHECK2:      warning: {{.*}}.o:(.nonalloc1+0x1): has non-ABS relocation R_X86_64_PC32 against symbol '_start'
 // CHECK2-NEXT: warning: {{.*}}.o:(.nonalloc1+0x6): has non-ABS relocation R_X86_64_PC32 against symbol 'ifunc'
 // CHECK2-NEXT: warning: {{.*}}.o:(.nonalloc1+0xa): has non-ABS relocation R_X86_64_PC32 against symbol ''

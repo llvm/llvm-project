@@ -164,7 +164,7 @@ bool DXILFlattenArraysVisitor::visitLoadInst(LoadInst &LI) {
     if (CE && CE->getOpcode() == Instruction::GetElementPtr) {
       GetElementPtrInst *OldGEP =
           cast<GetElementPtrInst>(CE->getAsInstruction());
-      OldGEP->insertBefore(&LI);
+      OldGEP->insertBefore(LI.getIterator());
 
       IRBuilder<> Builder(&LI);
       LoadInst *NewLoad =
@@ -187,7 +187,7 @@ bool DXILFlattenArraysVisitor::visitStoreInst(StoreInst &SI) {
     if (CE && CE->getOpcode() == Instruction::GetElementPtr) {
       GetElementPtrInst *OldGEP =
           cast<GetElementPtrInst>(CE->getAsInstruction());
-      OldGEP->insertBefore(&SI);
+      OldGEP->insertBefore(SI.getIterator());
 
       IRBuilder<> Builder(&SI);
       StoreInst *NewStore = Builder.CreateStore(SI.getValueOperand(), OldGEP);

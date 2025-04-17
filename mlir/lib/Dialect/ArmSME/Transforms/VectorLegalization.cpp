@@ -304,7 +304,7 @@ struct LegalizeTransferReadOpsByDecomposition
                                          kMatchFailureNonPermutationMap);
 
     // Note: For 2D vector types the only non-identity permutation is a simple
-    // tranpose [1, 0].
+    // transpose [1, 0].
     bool transposed = !permutationMap.isIdentity();
 
     auto loc = readOp.getLoc();
@@ -352,12 +352,12 @@ struct LegalizeTransferWriteOpsByDecomposition
                                          kMatchFailureNonPermutationMap);
 
     // Note: For 2D vector types the only non-identity permutation is a simple
-    // tranpose [1, 0].
+    // transpose [1, 0].
     bool transposed = !permutationMap.isIdentity();
 
     auto loc = writeOp.getLoc();
     auto smeTileType = getSMETileTypeForElement(vectorType.getElementType());
-    auto inputSMETiles = adaptor.getVector();
+    auto inputSMETiles = adaptor.getValueToStore();
 
     Value destTensorOrMemref = writeOp.getSource();
     for (auto [index, smeTile] : llvm::enumerate(decomposeToSMETiles(
@@ -464,7 +464,7 @@ struct LegalizeMultiTileTransferWriteAsStoreLoop
     rewriter.setInsertionPointToStart(storeLoop.getBody());
 
     // For each sub-tile of the multi-tile `vectorType`.
-    auto inputSMETiles = adaptor.getVector();
+    auto inputSMETiles = adaptor.getValueToStore();
     auto tileSliceIndex = storeLoop.getInductionVar();
     for (auto [index, smeTile] : llvm::enumerate(
              decomposeToSMETiles(rewriter, vectorType, smeTileType))) {

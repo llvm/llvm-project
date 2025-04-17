@@ -37,7 +37,7 @@ namespace ext {
 
 bool NoTemplate = std::is_const<bool>::value;
 // CHECK-MESSAGES-CXX17: :[[@LINE-1]]:19: warning: use c++17 style variable templates
-// CHECK-FIXES-CXX17: bool NoTemplate = std::is_const_v<bool>
+// CHECK-FIXES-CXX17: bool NoTemplate = std::is_const_v<bool>;
 
 template<typename T>
 constexpr bool InTemplate = std::is_const<T>::value;

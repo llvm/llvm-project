@@ -26,6 +26,7 @@
 #include "clang/Lex/MacroInfo.h"
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/Preprocessor.h"
+#include "clang/Lex/PreprocessorOptions.h"
 #include "clang/Lex/Token.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/STLExtras.h"
@@ -257,12 +258,14 @@ static bool EvaluateValue(PPValue &Result, Token &PeekTok, DefinedTracker &DT,
         // preprocessor keywords and it wasn't macro expanded, it turns
         // into a simple 0
         if (ValueLive) {
-          PP.Diag(PeekTok, diag::warn_pp_undef_identifier) << II;
+          unsigned DiagID = II->getName() == "true"
+                                ? diag::warn_pp_undef_true_identifier
+                                : diag::warn_pp_undef_identifier;
+          PP.Diag(PeekTok, DiagID) << II;
 
           const DiagnosticsEngine &DiagEngine = PP.getDiagnostics();
           // If 'Wundef' is enabled, do not emit 'undef-prefix' diagnostics.
-          if (DiagEngine.isIgnored(diag::warn_pp_undef_identifier,
-                                   PeekTok.getLocation())) {
+          if (DiagEngine.isIgnored(DiagID, PeekTok.getLocation())) {
             const std::vector<std::string> UndefPrefixes =
                 DiagEngine.getDiagnosticOptions().UndefPrefixes;
             const StringRef IdentifierName = II->getName();
@@ -343,9 +346,7 @@ static bool EvaluateValue(PPValue &Result, Token &PeekTok, DefinedTracker &DT,
     // Parse the integer literal into Result.
     if (Literal.GetIntegerValue(Result.Val)) {
       // Overflow parsing integer literal.
-      if (ValueLive)
-        PP.Diag(PeekTok, diag::err_integer_literal_too_large)
-            << /* Unsigned */ 1;
+      PP.Diag(PeekTok, diag::err_integer_literal_too_large) << /* Unsigned */ 1;
       Result.Val.setIsUnsigned(true);
     } else {
       // Set the signedness of the result to match whether there was a U suffix
@@ -592,6 +593,15 @@ static bool EvaluateDirectiveSubExpr(PPValue &LHS, unsigned MinPrec,
                                      Token &PeekTok, bool ValueLive,
                                      bool &IncludedUndefinedIds,
                                      Preprocessor &PP) {
+  if (PP.getPreprocessorOpts().SingleFileParseMode && IncludedUndefinedIds) {
+    // The single-file parse mode behavior kicks in as soon as single identifier
+    // is undefined. If we've already seen one, there's no point in continuing
+    // with the rest of the expression. Besides saving work, this also prevents
+    // calling undefined function-like macros.
+    PP.DiscardUntilEndOfDirective(PeekTok);
+    return true;
+  }
+
   unsigned PeekPrec = getPrecedence(PeekTok.getKind());
   // If this token isn't valid, report the error.
   if (PeekPrec == ~0U) {

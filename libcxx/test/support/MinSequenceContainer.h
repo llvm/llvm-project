@@ -31,7 +31,7 @@ struct MinSequenceContainer {
   const_iterator cbegin() const { return const_iterator(data_.data()); }
   iterator end() { return begin() + size(); }
   const_iterator end() const { return begin() + size(); }
-  size_type size() const { return data_.size(); }
+  size_type size() const { return static_cast<size_type>(data_.size()); }
   bool empty() const { return data_.empty(); }
 
   void clear() { data_.clear(); }

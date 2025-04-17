@@ -48,7 +48,7 @@ public:
 
   bool hasFeature(StringRef Feature) const override;
 
-  ArrayRef<Builtin::Info> getTargetBuiltins() const override {
+  llvm::SmallVector<Builtin::InfosShard> getTargetBuiltins() const override {
     // FIXME: Implement!
     return {};
   }

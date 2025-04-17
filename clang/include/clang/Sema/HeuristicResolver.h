@@ -69,10 +69,29 @@ public:
   QualType
   resolveNestedNameSpecifierToType(const NestedNameSpecifier *NNS) const;
 
+  // Perform an imprecise lookup of a dependent name in `RD`.
+  // This function does not follow strict semantic rules and should be used
+  // only when lookup rules can be relaxed, e.g. indexing.
+  std::vector<const NamedDecl *>
+  lookupDependentName(CXXRecordDecl *RD, DeclarationName Name,
+                      llvm::function_ref<bool(const NamedDecl *ND)> Filter);
+
   // Given the type T of a dependent expression that appears of the LHS of a
   // "->", heuristically find a corresponding pointee type in whose scope we
   // could look up the name appearing on the RHS.
   const QualType getPointeeType(QualType T) const;
+
+  // Heuristically resolve a possibly-dependent type `T` to a TagDecl
+  // in which a member's name can be looked up.
+  TagDecl *resolveTypeToTagDecl(QualType T) const;
+
+  // Simplify the type `Type`.
+  // `E` is the expression whose type `Type` is, if known. This sometimes
+  // contains information relevant to the type that's not stored in `Type`
+  // itself.
+  // If `UnwrapPointer` is true, exactly only pointer type will be unwrapped
+  // during simplification, and the operation fails if no pointer type is found.
+  QualType simplifyType(QualType Type, const Expr *E, bool UnwrapPointer);
 
 private:
   ASTContext &Ctx;

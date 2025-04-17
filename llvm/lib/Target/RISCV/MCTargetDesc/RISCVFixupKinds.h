@@ -77,6 +77,15 @@ enum Fixups {
   fixup_riscv_tlsdesc_load_lo12,
   fixup_riscv_tlsdesc_add_lo12,
   fixup_riscv_tlsdesc_call,
+  // 12-bit fixup for symbol references in the 48-bit Xqcibi branch immediate
+  // instructions
+  fixup_riscv_qc_e_branch,
+  // 32-bit fixup for symbol references in the 48-bit qc.e.li instruction
+  fixup_riscv_qc_e_32,
+  // 20-bit fixup for symbol references in the 32-bit qc.li instruction
+  fixup_riscv_qc_abs20_u,
+  // 32-bit fixup for symbol references in the 48-bit qc.j/qc.jal instructions
+  fixup_riscv_qc_e_jump_plt,
 
   // Used as a sentinel, must be the last
   fixup_riscv_invalid,

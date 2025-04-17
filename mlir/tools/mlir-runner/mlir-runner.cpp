@@ -32,7 +32,7 @@ using namespace mlir;
 // TODO: Consider removing this linking functionality from the SPIR-V CPU Runner
 //       flow in favour of a more proper host/device split like other runners.
 //       https://github.com/llvm/llvm-project/issues/115348
-llvm::cl::opt<bool> LinkNestedModules(
+static llvm::cl::opt<bool> LinkNestedModules(
     "link-nested-modules",
     llvm::cl::desc("Link two nested MLIR modules into a single LLVM IR module. "
                    "Useful if both the host and device code can be run on the "

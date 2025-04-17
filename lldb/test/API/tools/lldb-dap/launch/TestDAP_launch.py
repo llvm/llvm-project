@@ -27,12 +27,13 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         lines = output.splitlines()
         self.assertIn(program, lines[0], "make sure program path is in first argument")
 
+    @skipIfWindows
     def test_termination(self):
         """
         Tests the correct termination of lldb-dap upon a 'disconnect'
         request.
         """
-        self.create_debug_adaptor()
+        self.create_debug_adapter()
         # The underlying lldb-dap process must be alive
         self.assertEqual(self.dap_server.process.poll(), None)
 
@@ -92,7 +93,7 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
     def test_debuggerRoot(self):
         """
         Tests the "debuggerRoot" will change the working directory of
-        the lldb-dap debug adaptor.
+        the lldb-dap debug adapter.
         """
         program = self.getBuildArtifact("a.out")
         program_parent_dir = os.path.realpath(os.path.dirname(os.path.dirname(program)))
@@ -376,7 +377,7 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         """
         Tests the "launchCommands" with extra launching settings
         """
-        self.build_and_create_debug_adaptor()
+        self.build_and_create_debug_adapter()
         program = self.getBuildArtifact("a.out")
 
         source = "main.c"
@@ -440,7 +441,7 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         """
         Tests "launchCommands" failures prevents a launch.
         """
-        self.build_and_create_debug_adaptor()
+        self.build_and_create_debug_adapter()
         program = self.getBuildArtifact("a.out")
 
         # Run an invalid launch command, in this case a bad path.
@@ -483,7 +484,7 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         Tests that the "terminateCommands", that can be passed during
         launch, are run when the debugger is disconnected.
         """
-        self.build_and_create_debug_adaptor()
+        self.build_and_create_debug_adapter()
         program = self.getBuildArtifact("a.out")
 
         terminateCommands = ["expr 4+2"]
@@ -524,8 +525,7 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
 
         # The first line is the prompt line like "(lldb) version", so we skip it.
         version_eval_output_without_prompt_line = version_eval_output.splitlines()[1:]
-        lldb_json = self.dap_server.get_initialize_value("__lldb")
-        version_string = lldb_json["version"]
+        version_string = self.dap_server.get_initialize_value("$__lldb_version")
         self.assertEqual(
             version_eval_output_without_prompt_line,
             version_string.splitlines(),

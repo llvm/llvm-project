@@ -19,7 +19,9 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<f16 = dense<16> : vector<2xi64>,
 
 // CHECK: Visiting: %{{.*}} = acc.copyin var(%{{.*}} : !fir.box<!fir.array<10xf32>>) -> !fir.box<!fir.array<10xf32>> {name = "arr", structured = false}
 // CHECK: Mappable: !fir.box<!fir.array<10xf32>>
+// CHECK: Type category: array
 // CHECK: Size: 40
 // CHECK: Visiting: %{{.*}} = acc.copyin varPtr(%{{.*}} : !fir.ref<!fir.array<10xf32>>) -> !fir.ref<!fir.array<10xf32>> {name = "arr", structured = false}
 // CHECK: Mappable: !fir.array<10xf32>
+// CHECK: Type category: array
 // CHECK: Size: 40

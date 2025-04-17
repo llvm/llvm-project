@@ -31,7 +31,7 @@ class AnalysisUsage;
 class LostDebugLocObserver;
 class MachineBasicBlock;
 class BlockFrequencyInfo;
-class GISelKnownBits;
+class GISelValueTracking;
 class MachineFunction;
 class MachineInstr;
 class MachineIRBuilder;
@@ -331,7 +331,7 @@ ConstantFoldICmp(unsigned Pred, const Register Op1, const Register Op2,
 /// from computeKnownBits in that it doesn't necessarily determine which bit is
 /// set.
 bool isKnownToBeAPowerOfTwo(Register Val, const MachineRegisterInfo &MRI,
-                            GISelKnownBits *KnownBits = nullptr);
+                            GISelValueTracking *ValueTracking = nullptr);
 
 /// Returns true if \p Val can be assumed to never be a NaN. If \p SNaN is true,
 /// this returns if \p Val can be assumed to never be a signaling NaN.

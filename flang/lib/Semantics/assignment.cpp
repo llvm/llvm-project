@@ -42,6 +42,7 @@ public:
   void Analyze(const parser::AssignmentStmt &);
   void Analyze(const parser::PointerAssignmentStmt &);
   void Analyze(const parser::ConcurrentControl &);
+  int deviceConstructDepth_{0};
 
 private:
   bool CheckForPureContext(const SomeExpr &rhs, parser::CharBlock rhsSource);
@@ -90,6 +91,21 @@ void AssignmentContext::Analyze(const parser::AssignmentStmt &stmt) {
     if (whereDepth_ > 0) {
       CheckShape(lhsLoc, &lhs);
     }
+    if (context_.foldingContext().languageFeatures().IsEnabled(
+            common::LanguageFeature::CUDA)) {
+      const auto &scope{context_.FindScope(lhsLoc)};
+      const Scope &progUnit{GetProgramUnitContaining(scope)};
+      if (!IsCUDADeviceContext(&progUnit) && deviceConstructDepth_ == 0) {
+        if (Fortran::evaluate::HasCUDADeviceAttrs(lhs) &&
+            Fortran::evaluate::HasCUDAImplicitTransfer(rhs)) {
+          if (GetNbOfCUDAManagedOrUnifiedSymbols(lhs) == 1 &&
+              GetNbOfCUDAManagedOrUnifiedSymbols(rhs) == 1 &&
+              GetNbOfCUDADeviceSymbols(rhs) == 1)
+            return; // This is a special case handled on the host.
+          context_.Say(lhsLoc, "Unsupported CUDA data transfer"_err_en_US);
+        }
+      }
+    }
   }
 }
 
@@ -118,10 +134,16 @@ static std::optional<std::string> GetPointerComponentDesignatorName(
 // Checks C1594(5,6); false if check fails
 bool CheckCopyabilityInPureScope(parser::ContextualMessages &messages,
     const SomeExpr &expr, const Scope &scope) {
-  if (const Symbol * base{GetFirstSymbol(expr)}) {
-    if (const char *why{
-            WhyBaseObjectIsSuspicious(base->GetUltimate(), scope)}) {
-      if (auto pointer{GetPointerComponentDesignatorName(expr)}) {
+  if (auto pointer{GetPointerComponentDesignatorName(expr)}) {
+    if (const Symbol * base{GetFirstSymbol(expr)}) {
+      const char *why{WhyBaseObjectIsSuspicious(base->GetUltimate(), scope)};
+      if (!why) {
+        if (auto coarray{evaluate::ExtractCoarrayRef(expr)}) {
+          base = &coarray->GetLastSymbol();
+          why = "coindexed";
+        }
+      }
+      if (why) {
         evaluate::SayWithDeclaration(messages, *base,
             "A pure subprogram may not copy the value of '%s' because it is %s"
             " and has the POINTER potential subobject component '%s'"_err_en_US,
@@ -216,6 +238,46 @@ void AssignmentChecker::Enter(const parser::MaskedElsewhereStmt &x) {
 }
 void AssignmentChecker::Leave(const parser::MaskedElsewhereStmt &) {
   context_.value().PopWhereContext();
+}
+void AssignmentChecker::Enter(const parser::CUFKernelDoConstruct &x) {
+  ++context_.value().deviceConstructDepth_;
+}
+void AssignmentChecker::Leave(const parser::CUFKernelDoConstruct &) {
+  --context_.value().deviceConstructDepth_;
+}
+static bool IsOpenACCComputeConstruct(const parser::OpenACCBlockConstruct &x) {
+  const auto &beginBlockDirective =
+      std::get<Fortran::parser::AccBeginBlockDirective>(x.t);
+  const auto &blockDirective =
+      std::get<Fortran::parser::AccBlockDirective>(beginBlockDirective.t);
+  if (blockDirective.v == llvm::acc::ACCD_parallel ||
+      blockDirective.v == llvm::acc::ACCD_serial ||
+      blockDirective.v == llvm::acc::ACCD_kernels) {
+    return true;
+  }
+  return false;
+}
+void AssignmentChecker::Enter(const parser::OpenACCBlockConstruct &x) {
+  if (IsOpenACCComputeConstruct(x)) {
+    ++context_.value().deviceConstructDepth_;
+  }
+}
+void AssignmentChecker::Leave(const parser::OpenACCBlockConstruct &x) {
+  if (IsOpenACCComputeConstruct(x)) {
+    --context_.value().deviceConstructDepth_;
+  }
+}
+void AssignmentChecker::Enter(const parser::OpenACCCombinedConstruct &) {
+  ++context_.value().deviceConstructDepth_;
+}
+void AssignmentChecker::Leave(const parser::OpenACCCombinedConstruct &) {
+  --context_.value().deviceConstructDepth_;
+}
+void AssignmentChecker::Enter(const parser::OpenACCLoopConstruct &) {
+  ++context_.value().deviceConstructDepth_;
+}
+void AssignmentChecker::Leave(const parser::OpenACCLoopConstruct &) {
+  --context_.value().deviceConstructDepth_;
 }
 
 } // namespace Fortran::semantics

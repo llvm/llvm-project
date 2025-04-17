@@ -13,51 +13,48 @@ namespace NS {
   };
 }
 
-// expected-error@+2{{use of undeclared identifier 'foo'; did you mean 'NS::foo'?}}
-// expected-warning@+1{{OpenACC construct 'routine' not yet implemented, pragma ignored}}
-#pragma acc routine(foo)
-// expected-warning@+1{{OpenACC construct 'routine' not yet implemented, pragma ignored}}
-#pragma acc routine(NS::foo)
+// expected-error@+1{{use of undeclared identifier 'foo'; did you mean 'NS::foo'?}}
+#pragma acc routine(foo) seq
+#pragma acc routine(NS::foo) seq
 
 // expected-error@+2{{use of undeclared identifier 'templ'; did you mean 'NS::templ'?}}
-// expected-warning@+1{{OpenACC construct 'routine' not yet implemented, pragma ignored}}
-#pragma acc routine(templ)
-// expected-warning@+1{{OpenACC construct 'routine' not yet implemented, pragma ignored}}
-#pragma acc routine(NS::templ)
+// expected-error@+1{{OpenACC routine name 'NS::templ' names a set of overloads}}
+#pragma acc routine(templ) seq
+// expected-error@+1{{OpenACC routine name 'NS::templ' names a set of overloads}}
+#pragma acc routine(NS::templ) seq
 
 // expected-error@+2{{use of undeclared identifier 'templ'; did you mean 'NS::templ'?}}
-// expected-warning@+1{{OpenACC construct 'routine' not yet implemented, pragma ignored}}
-#pragma acc routine(templ<int>)
-// expected-warning@+1{{OpenACC construct 'routine' not yet implemented, pragma ignored}}
-#pragma acc routine(NS::templ<int>)
+// expected-error@+1{{OpenACC routine name 'NS::templ' names a set of overloads}}
+#pragma acc routine(templ<int>) seq
+// expected-error@+1{{OpenACC routine name 'NS::templ<int>' names a set of overloads}}
+#pragma acc routine(NS::templ<int>) seq
 
-// expected-error@+2{{use of undeclared identifier 'T'}}
-// expected-warning@+1{{OpenACC construct 'routine' not yet implemented, pragma ignored}}
-#pragma acc routine(templ<T>)
-// expected-error@+2{{use of undeclared identifier 'T'}}
-// expected-warning@+1{{OpenACC construct 'routine' not yet implemented, pragma ignored}}
-#pragma acc routine(NS::templ<T>)
+// expected-error@+1{{use of undeclared identifier 'T'}}
+#pragma acc routine(templ<T>) seq
+// expected-error@+1{{use of undeclared identifier 'T'}}
+#pragma acc routine(NS::templ<T>) seq
 
-// expected-error@+3{{expected ')'}}
-// expected-note@+2{{to match this '('}}
-// expected-warning@+1{{OpenACC construct 'routine' not yet implemented, pragma ignored}}
-#pragma acc routine (NS::foo())
+// expected-error@+2{{expected ')'}}
+// expected-note@+1{{to match this '('}}
+#pragma acc routine (NS::foo()) seq
 
-// expected-error@+2 {{expected unqualified-id}}
-// expected-warning@+1{{OpenACC construct 'routine' not yet implemented, pragma ignored}}
-#pragma acc routine()
+// expected-error@+1 {{expected unqualified-id}}
+#pragma acc routine() seq
 
-// expected-error@+2 {{expected unqualified-id}}
-// expected-warning@+1{{OpenACC construct 'routine' not yet implemented, pragma ignored}}
-#pragma acc routine(int)
+// expected-error@+1 {{expected unqualified-id}}
+#pragma acc routine(int) seq
 
-// expected-error@+3{{'C' does not refer to a value}}
+// expected-error@+2{{'C' does not refer to a value}}
 // expected-note@#CDef{{declared here}}
-// expected-warning@+1{{OpenACC construct 'routine' not yet implemented, pragma ignored}}
-#pragma acc routine (NS::C)
-// expected-error@+3{{'private_mem_func' is a private member of 'NS::C'}}
+#pragma acc routine (NS::C) seq
+// expected-error@+2{{'private_mem_func' is a private member of 'NS::C'}}
 // expected-note@#PrivateMemFunc{{implicitly declared private here}}
-// expected-warning@+1{{OpenACC construct 'routine' not yet implemented, pragma ignored}}
-#pragma acc routine (NS::C::private_mem_func)
-// expected-warning@+1{{OpenACC construct 'routine' not yet implemented, pragma ignored}}
-#pragma acc routine (NS::C::public_mem_func)
+#pragma acc routine (NS::C::private_mem_func) seq
+#pragma acc routine (NS::C::public_mem_func) seq
+
+void foo() {
+  auto x = [](){};
+#pragma acc routine seq
+  auto y = [](){};
+#pragma acc routine (x) seq
+}

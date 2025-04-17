@@ -409,13 +409,13 @@ bool Preprocessor::HandleEndOfFile(Token &Result, bool isEndOfMacro) {
   // Complain about reaching a true EOF within arc_cf_code_audited.
   // We don't want to complain about reaching the end of a macro
   // instantiation or a _Pragma.
-  if (PragmaARCCFCodeAuditedInfo.second.isValid() && !isEndOfMacro &&
+  if (PragmaARCCFCodeAuditedInfo.getLoc().isValid() && !isEndOfMacro &&
       !(CurLexer && CurLexer->Is_PragmaLexer)) {
-    Diag(PragmaARCCFCodeAuditedInfo.second,
+    Diag(PragmaARCCFCodeAuditedInfo.getLoc(),
          diag::err_pp_eof_in_arc_cf_code_audited);
 
     // Recover by leaving immediately.
-    PragmaARCCFCodeAuditedInfo = {nullptr, SourceLocation()};
+    PragmaARCCFCodeAuditedInfo = IdentifierLoc();
   }
 
   // Complain about reaching a true EOF within assume_nonnull.
@@ -561,7 +561,7 @@ bool Preprocessor::HandleEndOfFile(Token &Result, bool isEndOfMacro) {
   if (creatingPCHWithThroughHeader() && !LeavingPCHThroughHeader) {
     // Reached the end of the compilation without finding the through header.
     Diag(CurLexer->getFileLoc(), diag::err_pp_through_header_not_seen)
-        << PPOpts->PCHThroughHeader << 0;
+        << PPOpts.PCHThroughHeader << 0;
   }
 
   if (!isIncrementalProcessingEnabled())
@@ -754,9 +754,10 @@ void Preprocessor::EnterSubmodule(Module *M, SourceLocation ImportLoc,
   // Switch to this submodule as the current submodule.
   CurSubmoduleState = &State;
 
-  // This module is visible to itself.
+  // This module is visible to itself, but exports should not be made visible
+  // until they are imported.
   if (FirstTime)
-    makeModuleVisible(M, ImportLoc);
+    makeModuleVisible(M, ImportLoc, /*IncludeExports=*/false);
 }
 
 bool Preprocessor::needModuleMacros() const {

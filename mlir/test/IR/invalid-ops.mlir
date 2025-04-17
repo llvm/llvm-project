@@ -118,3 +118,30 @@ func.func @invalid_splat(%v : f32) { // expected-note {{prior use here}}
 
 // expected-error@+1 {{expected ':' after block name}}
 "g"()({^a:^b })
+
+// -----
+
+// expected-error@+1 {{number of operands and types do not match: got 0 operands and 1 types}}
+test.variadic_args_types_split "hello_world" : i32
+
+// -----
+
+// Test multiple verifier errors in the same split to ensure all are reported.
+
+func.func @verify_fail_1() {
+  // expected-error@+1 {{'arith.constant' op integer return type must be signless}}
+  %r = "arith.constant"() {value = -1 : si32} : () -> si32
+  return
+}
+
+func.func @verify_fail_2() {
+  // expected-error@+1 {{'arith.constant' op value must be an integer, float, or elements attribute}}
+  %r = "arith.constant"() {value = "hi" : i32} : () -> i32
+  return
+}
+
+func.func @verify_fail_3() {
+  // expected-error@+1 {{'arith.constant' op integer return type must be signless}}
+  %r = "arith.constant"() {value = -3 : si32} : () -> si32
+  return
+}

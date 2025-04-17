@@ -11,8 +11,8 @@ define signext i32 @test1(i32 signext %x) {
 ;
 ; RV64-LABEL: test1:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    slliw a0, a0, 1
-; RV64-NEXT:    addi a0, a0, 1
+; RV64-NEXT:    slli a0, a0, 1
+; RV64-NEXT:    addiw a0, a0, 1
 ; RV64-NEXT:    ret
   %a = shl i32 %x, 1
   %b = or i32 %a, 1
@@ -45,8 +45,8 @@ define signext i32 @test3(i32 signext %x) {
 ;
 ; RV64-LABEL: test3:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    slliw a0, a0, 3
-; RV64-NEXT:    addi a0, a0, 6
+; RV64-NEXT:    slli a0, a0, 3
+; RV64-NEXT:    addiw a0, a0, 6
 ; RV64-NEXT:    ret
   %a = shl i32 %x, 3
   %b = add i32 %a, 6
@@ -83,7 +83,7 @@ define signext i32 @test5(i32 signext %x) {
 ; RV64-LABEL: test5:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    srliw a0, a0, 24
-; RV64-NEXT:    addi a0, a0, 256
+; RV64-NEXT:    addiw a0, a0, 256
 ; RV64-NEXT:    ret
   %a = lshr i32 %x, 24
   %b = xor i32 %a, 256
@@ -101,7 +101,7 @@ define i64 @test6(i64 %x) {
 ; RV64-LABEL: test6:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    srli a0, a0, 54
-; RV64-NEXT:    addi a0, a0, 1024
+; RV64-NEXT:    addiw a0, a0, 1024
 ; RV64-NEXT:    ret
   %a = lshr i64 %x, 54
   %b = xor i64 %a, 1024
@@ -120,4 +120,106 @@ define signext i32 @test7(i32 signext %x) {
 ; RV64-NEXT:    ret
   %a = or disjoint i32 %x, 1
   ret i32 %a
+}
+
+define void @pr128468(ptr %0, i32 signext %1, i32 signext %2) {
+; RV32-LABEL: pr128468:
+; RV32:       # %bb.0:
+; RV32-NEXT:    slli a3, a1, 3
+; RV32-NEXT:    add a3, a0, a3
+; RV32-NEXT:    lw a2, 4(a3)
+; RV32-NEXT:    bgez a2, .LBB7_6
+; RV32-NEXT:  # %bb.1:
+; RV32-NEXT:    slli a2, a1, 1
+; RV32-NEXT:    addi a2, a2, 1
+; RV32-NEXT:    beq a2, a1, .LBB7_6
+; RV32-NEXT:  # %bb.2: # %.preheader
+; RV32-NEXT:    addi a3, a3, 4
+; RV32-NEXT:    j .LBB7_4
+; RV32-NEXT:  .LBB7_3: # in Loop: Header=BB7_4 Depth=1
+; RV32-NEXT:    mv a2, a1
+; RV32-NEXT:    addi a3, a3, 4
+; RV32-NEXT:    beq a1, a1, .LBB7_6
+; RV32-NEXT:  .LBB7_4: # =>This Inner Loop Header: Depth=1
+; RV32-NEXT:    slli a1, a1, 2
+; RV32-NEXT:    add a1, a0, a1
+; RV32-NEXT:    lw a4, 0(a1)
+; RV32-NEXT:    mv a1, a2
+; RV32-NEXT:    sw a4, 0(a3)
+; RV32-NEXT:    slli a3, a2, 3
+; RV32-NEXT:    add a3, a0, a3
+; RV32-NEXT:    lw a2, 4(a3)
+; RV32-NEXT:    bgez a2, .LBB7_3
+; RV32-NEXT:  # %bb.5: # in Loop: Header=BB7_4 Depth=1
+; RV32-NEXT:    slli a2, a1, 1
+; RV32-NEXT:    addi a2, a2, 1
+; RV32-NEXT:    addi a3, a3, 4
+; RV32-NEXT:    bne a2, a1, .LBB7_4
+; RV32-NEXT:  .LBB7_6:
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: pr128468:
+; RV64:       # %bb.0:
+; RV64-NEXT:    slliw a2, a1, 1
+; RV64-NEXT:    slli a3, a2, 2
+; RV64-NEXT:    add a3, a0, a3
+; RV64-NEXT:    lw a4, 4(a3)
+; RV64-NEXT:    bgez a4, .LBB7_6
+; RV64-NEXT:  # %bb.1:
+; RV64-NEXT:    addiw a2, a2, 1
+; RV64-NEXT:    beq a2, a1, .LBB7_6
+; RV64-NEXT:  # %bb.2: # %.preheader
+; RV64-NEXT:    addi a3, a3, 4
+; RV64-NEXT:    j .LBB7_4
+; RV64-NEXT:  .LBB7_3: # in Loop: Header=BB7_4 Depth=1
+; RV64-NEXT:    mv a2, a1
+; RV64-NEXT:    addi a3, a3, 4
+; RV64-NEXT:    beq a1, a1, .LBB7_6
+; RV64-NEXT:  .LBB7_4: # =>This Inner Loop Header: Depth=1
+; RV64-NEXT:    slli a1, a1, 2
+; RV64-NEXT:    add a1, a0, a1
+; RV64-NEXT:    lw a4, 0(a1)
+; RV64-NEXT:    mv a1, a2
+; RV64-NEXT:    slliw a2, a2, 1
+; RV64-NEXT:    sw a4, 0(a3)
+; RV64-NEXT:    slli a3, a2, 2
+; RV64-NEXT:    add a3, a0, a3
+; RV64-NEXT:    lw a4, 4(a3)
+; RV64-NEXT:    bgez a4, .LBB7_3
+; RV64-NEXT:  # %bb.5: # in Loop: Header=BB7_4 Depth=1
+; RV64-NEXT:    addiw a2, a2, 1
+; RV64-NEXT:    addi a3, a3, 4
+; RV64-NEXT:    bne a2, a1, .LBB7_4
+; RV64-NEXT:  .LBB7_6:
+; RV64-NEXT:    ret
+  %4 = shl nsw i32 %1, 1
+  %5 = or disjoint i32 %4, 1
+  %6 = sext i32 %5 to i64
+  %7 = getelementptr inbounds i32, ptr %0, i64 %6
+  %8 = load i32, ptr %7, align 4
+  %9 = icmp sgt i32 %8, -1
+  %10 = icmp eq i32 %5, %1
+  %11 = or i1 %9, %10
+  br i1 %11, label %27, label %12
+
+12:                                               ; preds = %3, %12
+  %13 = phi i32 [ %25, %12 ], [ %5, %3 ]
+  %14 = phi ptr [ %22, %12 ], [ %7, %3 ]
+  %15 = phi i32 [ %13, %12 ], [ %1, %3 ]
+  %16 = sext i32 %15 to i64
+  %17 = getelementptr inbounds i32, ptr %0, i64 %16
+  %18 = load i32, ptr %17, align 4
+  store i32 %18, ptr %14, align 4
+  %19 = shl nsw i32 %13, 1
+  %20 = or disjoint i32 %19, 1
+  %21 = sext i32 %20 to i64
+  %22 = getelementptr inbounds i32, ptr %0, i64 %21
+  %23 = load i32, ptr %22, align 4
+  %24 = icmp slt i32 %23, 0
+  %25 = select i1 %24, i32 %20, i32 %13
+  %26 = icmp eq i32 %25, %13
+  br i1 %26, label %27, label %12
+
+27:                                               ; preds = %12, %3
+  ret void
 }

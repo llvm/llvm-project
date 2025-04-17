@@ -409,6 +409,10 @@ constexpr int a = 0;
 constexpr int b = 1;
 constexpr int n = &b - &a; // expected-error {{must be initialized by a constant expression}} \
                            // expected-note {{arithmetic involving unrelated objects '&b' and '&a' has unspecified value}}
+constexpr static int arrk[2] = {1,2};
+constexpr static int arrk2[2] = {3,4};
+constexpr int k2 = &arrk[1] - &arrk2[0]; // expected-error {{must be initialized by a constant expression}} \
+                                         // expected-note {{arithmetic involving unrelated objects}}
 
 namespace MaterializeTemporary {
 
@@ -1462,7 +1466,7 @@ namespace InstantiateCaseStmt {
 
 namespace ConvertedConstantExpr {
   extern int &m;
-  extern int &n; // expected-note 2{{declared here}}
+  extern int &n; // pre-cxx23-note 2{{declared here}}
 
   constexpr int k = 4;
   int &m = const_cast<int&>(k);
@@ -1471,9 +1475,9 @@ namespace ConvertedConstantExpr {
   // useless note and instead just point to the non-constant subexpression.
   enum class E {
     em = m,
-    en = n, // cxx23-note {{initializer of 'n' is not a constant expression}} expected-error {{enumerator value is not a constant expression}} cxx11_20-note {{initializer of 'n' is unknown}}
+    en = n, // expected-error {{enumerator value is not a constant expression}} cxx11_20-note {{initializer of 'n' is unknown}}
     eo = (m + // expected-error {{not a constant expression}}
-          n // cxx23-note {{initializer of 'n' is not a constant expression}} cxx11_20-note {{initializer of 'n' is unknown}}
+          n // cxx11_20-note {{initializer of 'n' is unknown}}
           ),
     eq = reinterpret_cast<long>((int*)0) // expected-error {{not a constant expression}} expected-note {{reinterpret_cast}}
   };

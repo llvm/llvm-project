@@ -43,7 +43,7 @@ public:
 private:
   const std::vector<CheckedFunction> CustomFunctions;
 
-  // If true, the default set of functions are reported.
+  /// If true, the default set of functions are reported.
   const bool ReportDefaultFunctions;
   /// If true, additional functions from widely used API-s (such as POSIX) are
   /// added to the list of reported functions.

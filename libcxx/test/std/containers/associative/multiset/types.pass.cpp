@@ -34,9 +34,8 @@
 #include "test_macros.h"
 #include "min_allocator.h"
 
-int main(int, char**)
-{
-    {
+int main(int, char**) {
+  {
     typedef std::multiset<int> C;
     static_assert((std::is_same<C::key_type, int>::value), "");
     static_assert((std::is_same<C::value_type, int>::value), "");
@@ -49,9 +48,9 @@ int main(int, char**)
     static_assert((std::is_same<C::const_pointer, const int*>::value), "");
     static_assert((std::is_same<C::size_type, std::size_t>::value), "");
     static_assert((std::is_same<C::difference_type, std::ptrdiff_t>::value), "");
-    }
+  }
 #if TEST_STD_VER >= 11
-    {
+  {
     typedef std::multiset<int, std::less<int>, min_allocator<int>> C;
     static_assert((std::is_same<C::key_type, int>::value), "");
     static_assert((std::is_same<C::value_type, int>::value), "");
@@ -62,10 +61,10 @@ int main(int, char**)
     static_assert((std::is_same<C::const_reference, const int&>::value), "");
     static_assert((std::is_same<C::pointer, min_pointer<int>>::value), "");
     static_assert((std::is_same<C::const_pointer, min_pointer<const int>>::value), "");
-//  min_allocator doesn't have a size_type, so one gets synthesized
+    //  min_allocator doesn't have a size_type, so one gets synthesized
     static_assert((std::is_same<C::size_type, std::make_unsigned<C::difference_type>::type>::value), "");
     static_assert((std::is_same<C::difference_type, std::ptrdiff_t>::value), "");
-    }
+  }
 #endif
 
   return 0;

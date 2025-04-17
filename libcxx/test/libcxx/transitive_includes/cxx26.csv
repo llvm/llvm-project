@@ -301,6 +301,7 @@ experimental/type_traits type_traits
 experimental/type_traits version
 experimental/utility compare
 experimental/utility cstdint
+experimental/utility cstring
 experimental/utility initializer_list
 experimental/utility limits
 experimental/utility utility
@@ -345,6 +346,19 @@ flat_map optional
 flat_map stdexcept
 flat_map tuple
 flat_map version
+flat_set cctype
+flat_set climits
+flat_set compare
+flat_set cstdint
+flat_set cstring
+flat_set cwchar
+flat_set cwctype
+flat_set initializer_list
+flat_set limits
+flat_set optional
+flat_set stdexcept
+flat_set tuple
+flat_set version
 format array
 format cctype
 format cerrno
@@ -1114,6 +1128,7 @@ unordered_set tuple
 unordered_set version
 utility compare
 utility cstdint
+utility cstring
 utility initializer_list
 utility limits
 utility version

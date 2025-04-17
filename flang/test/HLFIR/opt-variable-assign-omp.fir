@@ -7,8 +7,8 @@
 // TODO: we can't currently optimize this assign because alias analysis doesn't
 // know that the block arguments of the copy region cannot alias.
 
-omp.private {type = firstprivate} @_QFFbEl_firstprivate_box_Uxi32 : !fir.ref<!fir.box<!fir.array<?xi32>>> alloc {
-^bb0(%arg0: !fir.ref<!fir.box<!fir.array<?xi32>>>):
+omp.private {type = firstprivate} @_QFFbEl_firstprivate_box_Uxi32 : !fir.box<!fir.array<?xi32>> init {
+^bb0(%arg0: !fir.ref<!fir.box<!fir.array<?xi32>>>, %arg1: !fir.ref<!fir.box<!fir.array<?xi32>>>):
   %0 = fir.load %arg0 : !fir.ref<!fir.box<!fir.array<?xi32>>>
   %c0 = arith.constant 0 : index
   %1:3 = fir.box_dims %0, %c0 : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
@@ -20,9 +20,8 @@ omp.private {type = firstprivate} @_QFFbEl_firstprivate_box_Uxi32 : !fir.ref<!fi
   %5:3 = fir.box_dims %0, %c0_0 : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
   %6 = fir.shape_shift %5#0, %5#1 : (index, index) -> !fir.shapeshift<1>
   %7 = fir.rebox %4#0(%6) : (!fir.box<!fir.array<?xi32>>, !fir.shapeshift<1>) -> !fir.box<!fir.array<?xi32>>
-  %8 = fir.alloca !fir.box<!fir.array<?xi32>>
-  fir.store %7 to %8 : !fir.ref<!fir.box<!fir.array<?xi32>>>
-  omp.yield(%8 : !fir.ref<!fir.box<!fir.array<?xi32>>>)
+  fir.store %7 to %arg1 : !fir.ref<!fir.box<!fir.array<?xi32>>>
+  omp.yield(%arg1 : !fir.ref<!fir.box<!fir.array<?xi32>>>)
 } copy {
 ^bb0(%arg0: !fir.ref<!fir.box<!fir.array<?xi32>>>, %arg1 : !fir.ref<!fir.box<!fir.array<?xi32>>>):
   %0 = fir.load %arg0 {test.ptr = "load_from_block_arg"} : !fir.ref<!fir.box<!fir.array<?xi32>>>

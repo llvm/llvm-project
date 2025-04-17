@@ -463,6 +463,9 @@ public:
 
   const std::string &getTriple() const { return Data; }
 
+  /// Whether the triple is empty / default constructed.
+  bool empty() const { return Data.empty(); }
+
   /// Get the architecture (first) component of the triple.
   StringRef getArchName() const;
 
@@ -497,6 +500,9 @@ public:
   unsigned getArchPointerBitWidth() const {
     return getArchPointerBitWidth(getArch());
   }
+
+  /// Returns the trampoline size in bytes for this configuration.
+  unsigned getTrampolineSize() const;
 
   /// Test whether the architecture is 64-bit
   ///
@@ -652,6 +658,9 @@ public:
   bool isOSWindows() const {
     return getOS() == Triple::Win32;
   }
+
+  /// Tests whether the OS is Windows or UEFI.
+  bool isOSWindowsOrUEFI() const { return isOSWindows() || isUEFI(); }
 
   /// Checks if the environment is MSVC.
   bool isKnownWindowsMSVCEnvironment() const {
@@ -879,9 +888,7 @@ public:
   /// Tests whether the target is AMDGCN
   bool isAMDGCN() const { return getArch() == Triple::amdgcn; }
 
-  bool isAMDGPU() const {
-    return getArch() == Triple::r600 || getArch() == Triple::amdgcn;
-  }
+  bool isAMDGPU() const { return getArch() == Triple::r600 || isAMDGCN(); }
 
   /// Tests whether the target is Thumb (little and big endian).
   bool isThumb() const {
@@ -1117,9 +1124,10 @@ public:
            isWindowsCygwinEnvironment() || isOHOSFamily();
   }
 
-  /// True if the target supports both general-dynamic and TLSDESC, and TLSDESC
-  /// is enabled by default.
-  bool hasDefaultTLSDESC() const { return isAndroid() && isRISCV64(); }
+  /// True if the target uses TLSDESC by default.
+  bool hasDefaultTLSDESC() const {
+    return isAArch64() || (isAndroid() && isRISCV64()) || isOSFuchsia();
+  }
 
   /// Tests whether the target uses -data-sections as default.
   bool hasDefaultDataSections() const {
@@ -1210,6 +1218,9 @@ public:
 
   /// Test whether target triples are compatible.
   bool isCompatibleWith(const Triple &Other) const;
+
+  /// Test whether the target triple is for a GPU.
+  bool isGPU() const { return isSPIRV() || isNVPTX() || isAMDGPU(); }
 
   /// Merge target triples.
   std::string merge(const Triple &Other) const;

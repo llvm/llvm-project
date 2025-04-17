@@ -51,7 +51,7 @@ constexpr auto wrap_input(std::vector<T>& input) {
 }
 
 struct KeyValue {
-  int key; // Only the key is considered for equality comparison.
+  int key;    // Only the key is considered for equality comparison.
   char value; // Allows distinguishing equivalent instances.
 
   bool operator<(const KeyValue& other) const { return key < other.key; }
@@ -60,17 +60,15 @@ struct KeyValue {
 
 template <>
 struct std::hash<KeyValue> {
-  std::size_t operator()(const KeyValue& kv) const {
-    return kv.key;
-  }
+  std::size_t operator()(const KeyValue& kv) const { return kv.key; }
 };
 
 #if !defined(TEST_HAS_NO_EXCEPTIONS)
 
 template <class T>
 struct ThrowingAllocator {
-  using value_type = T;
-  using char_type = T;
+  using value_type      = T;
+  using char_type       = T;
   using is_always_equal = std::false_type;
 
   ThrowingAllocator() = default;
@@ -90,14 +88,13 @@ struct ThrowingAllocator {
 
 template <class T, class Func>
 constexpr void for_all_iterators_and_allocators(Func f) {
-  using Iterators = types::type_list<
-    cpp20_input_iterator<T*>,
-    forward_iterator<T*>,
-    bidirectional_iterator<T*>,
-    random_access_iterator<T*>,
-    contiguous_iterator<T*>,
-    T*
-  >;
+  using Iterators =
+      types::type_list< cpp20_input_iterator<T*>,
+                        forward_iterator<T*>,
+                        bidirectional_iterator<T*>,
+                        random_access_iterator<T*>,
+                        contiguous_iterator<T*>,
+                        T* >;
 
   types::for_each(Iterators{}, [=]<class Iter>() {
     f.template operator()<Iter, sentinel_wrapper<Iter>, std::allocator<T>>();

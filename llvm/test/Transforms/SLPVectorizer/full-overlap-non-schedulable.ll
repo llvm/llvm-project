@@ -6,42 +6,45 @@ define void @test(ptr %p1, ptr %0, i32 %1, i1 %c1, ptr %p2) {
 ; CHECK-SAME: ptr [[P1:%.*]], ptr [[TMP0:%.*]], i32 [[TMP1:%.*]], i1 [[C1:%.*]], ptr [[P2:%.*]]) {
 ; CHECK-NEXT:  [[TOP:.*:]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[TMP0]], i64 8
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x ptr> poison, ptr [[TMP0]], i32 0
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x ptr> [[TMP3]], <4 x ptr> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, <4 x ptr> [[TMP4]], <4 x i64> <i64 8, i64 12, i64 16, i64 20>
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x ptr> [[TMP5]], i32 2
+; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[TMP0]], i64 12
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[TMP0]], i64 16
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[TMP0]], i64 20
 ; CHECK-NEXT:    br i1 [[C1]], label %[[L42:.*]], label %[[L41:.*]]
 ; CHECK:       [[L41]]:
-; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq <4 x ptr> [[TMP5]], zeroinitializer
-; CHECK-NEXT:    [[TMP8:%.*]] = load <4 x i32>, ptr [[TMP2]], align 4
-; CHECK-NEXT:    [[TMP9:%.*]] = select <4 x i1> [[TMP7]], <4 x i32> zeroinitializer, <4 x i32> [[TMP8]]
+; CHECK-NEXT:    [[DOTNOT276:%.*]] = icmp eq ptr [[TMP2]], null
+; CHECK-NEXT:    [[TMP10:%.*]] = load i32, ptr [[TMP2]], align 4
+; CHECK-NEXT:    [[TMP7:%.*]] = select i1 [[DOTNOT276]], i32 0, i32 [[TMP10]]
+; CHECK-NEXT:    [[DOTNOT277:%.*]] = icmp eq ptr [[TMP12]], null
+; CHECK-NEXT:    [[TMP8:%.*]] = load i32, ptr [[TMP12]], align 4
+; CHECK-NEXT:    [[TMP9:%.*]] = select i1 [[DOTNOT277]], i32 0, i32 [[TMP8]]
+; CHECK-NEXT:    [[DOTNOT278:%.*]] = icmp eq ptr [[TMP4]], null
+; CHECK-NEXT:    [[TMP15:%.*]] = load i32, ptr [[TMP4]], align 4
+; CHECK-NEXT:    [[TMP11:%.*]] = select i1 [[DOTNOT278]], i32 0, i32 [[TMP15]]
+; CHECK-NEXT:    [[DOTNOT279:%.*]] = icmp eq ptr [[TMP5]], null
+; CHECK-NEXT:    [[TMP20:%.*]] = load i32, ptr [[TMP5]], align 4
+; CHECK-NEXT:    [[TMP25:%.*]] = select i1 [[DOTNOT279]], i32 0, i32 [[TMP20]]
 ; CHECK-NEXT:    br label %[[L112:.*]]
 ; CHECK:       [[L42]]:
-; CHECK-NEXT:    [[TMP10:%.*]] = load i32, ptr [[TMP2]], align 4
-; CHECK-NEXT:    [[DOTNOT280:%.*]] = icmp eq i32 [[TMP10]], 0
-; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x i32> <i32 0, i32 0, i32 poison, i32 0>, i32 [[TMP1]], i32 2
+; CHECK-NEXT:    [[TMP14:%.*]] = load i32, ptr [[TMP2]], align 4
+; CHECK-NEXT:    [[DOTNOT280:%.*]] = icmp eq i32 [[TMP14]], 0
 ; CHECK-NEXT:    br i1 [[DOTNOT280]], label %[[L112]], label %[[L47:.*]]
 ; CHECK:       [[L47]]:
-; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <4 x ptr> [[TMP5]], i32 1
 ; CHECK-NEXT:    [[TMP13:%.*]] = load i32, ptr [[TMP12]], align 4
-; CHECK-NEXT:    [[TMP25:%.*]] = insertelement <2 x ptr> poison, ptr [[TMP6]], i32 0
-; CHECK-NEXT:    [[TMP26:%.*]] = shufflevector <4 x ptr> [[TMP5]], <4 x ptr> poison, <2 x i32> <i32 poison, i32 3>
-; CHECK-NEXT:    [[TMP14:%.*]] = shufflevector <2 x ptr> [[TMP25]], <2 x ptr> [[TMP26]], <2 x i32> <i32 0, i32 3>
-; CHECK-NEXT:    [[TMP15:%.*]] = icmp eq <2 x ptr> [[TMP14]], zeroinitializer
-; CHECK-NEXT:    [[TMP16:%.*]] = load <2 x i32>, ptr [[TMP6]], align 4
-; CHECK-NEXT:    [[TMP17:%.*]] = select <2 x i1> [[TMP15]], <2 x i32> zeroinitializer, <2 x i32> [[TMP16]]
-; CHECK-NEXT:    [[TMP18:%.*]] = insertelement <4 x i32> <i32 0, i32 poison, i32 poison, i32 poison>, i32 [[TMP13]], i32 1
-; CHECK-NEXT:    [[TMP19:%.*]] = call <4 x i32> @llvm.vector.insert.v4i32.v2i32(<4 x i32> [[TMP18]], <2 x i32> [[TMP17]], i64 2)
+; CHECK-NEXT:    [[DOTNOT282:%.*]] = icmp eq ptr [[TMP4]], null
+; CHECK-NEXT:    [[TMP16:%.*]] = load i32, ptr [[TMP4]], align 4
+; CHECK-NEXT:    [[TMP17:%.*]] = select i1 [[DOTNOT282]], i32 0, i32 [[TMP16]]
+; CHECK-NEXT:    [[DOTNOT283:%.*]] = icmp eq ptr [[TMP5]], null
+; CHECK-NEXT:    [[TMP18:%.*]] = load i32, ptr [[TMP5]], align 4
+; CHECK-NEXT:    [[TMP19:%.*]] = select i1 [[DOTNOT283]], i32 0, i32 [[TMP18]]
 ; CHECK-NEXT:    br label %[[L112]]
 ; CHECK:       [[L112]]:
-; CHECK-NEXT:    [[TMP20:%.*]] = phi <4 x i32> [ [[TMP19]], %[[L47]] ], [ [[TMP9]], %[[L41]] ], [ [[TMP11]], %[[L42]] ]
-; CHECK-NEXT:    [[TMP21:%.*]] = extractelement <4 x i32> [[TMP20]], i32 0
+; CHECK-NEXT:    [[TMP24:%.*]] = phi i32 [ [[TMP19]], %[[L47]] ], [ [[TMP25]], %[[L41]] ], [ 0, %[[L42]] ]
+; CHECK-NEXT:    [[TMP23:%.*]] = phi i32 [ [[TMP17]], %[[L47]] ], [ [[TMP11]], %[[L41]] ], [ [[TMP1]], %[[L42]] ]
+; CHECK-NEXT:    [[TMP22:%.*]] = phi i32 [ [[TMP13]], %[[L47]] ], [ [[TMP9]], %[[L41]] ], [ 0, %[[L42]] ]
+; CHECK-NEXT:    [[TMP21:%.*]] = phi i32 [ 0, %[[L47]] ], [ [[TMP7]], %[[L41]] ], [ 0, %[[L42]] ]
 ; CHECK-NEXT:    store i32 [[TMP21]], ptr [[P2]], align 4
-; CHECK-NEXT:    [[TMP22:%.*]] = extractelement <4 x i32> [[TMP20]], i32 1
 ; CHECK-NEXT:    store i32 [[TMP22]], ptr [[P1]], align 4
-; CHECK-NEXT:    [[TMP23:%.*]] = extractelement <4 x i32> [[TMP20]], i32 2
 ; CHECK-NEXT:    store i32 [[TMP23]], ptr [[P2]], align 4
-; CHECK-NEXT:    [[TMP24:%.*]] = extractelement <4 x i32> [[TMP20]], i32 3
 ; CHECK-NEXT:    store i32 [[TMP24]], ptr [[P1]], align 4
 ; CHECK-NEXT:    ret void
 ;

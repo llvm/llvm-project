@@ -606,7 +606,7 @@ PMTopLevelManager::setLastUser(ArrayRef<Pass*> AnalysisPasses, Pass *P) {
     auto &LastUsedByAP = InversedLastUser[AP];
     for (Pass *L : LastUsedByAP)
       LastUser[L] = P;
-    InversedLastUser[P].insert(LastUsedByAP.begin(), LastUsedByAP.end());
+    InversedLastUser[P].insert_range(LastUsedByAP);
     LastUsedByAP.clear();
   }
 }

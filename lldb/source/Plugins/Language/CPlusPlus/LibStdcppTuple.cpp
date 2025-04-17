@@ -32,8 +32,6 @@ public:
 
   lldb::ChildCacheState Update() override;
 
-  bool MightHaveChildren() override;
-
   size_t GetIndexOfChildWithName(ConstString name) override;
 
 private:
@@ -85,8 +83,6 @@ lldb::ChildCacheState LibStdcppTupleSyntheticFrontEnd::Update() {
 
   return lldb::ChildCacheState::eRefetch;
 }
-
-bool LibStdcppTupleSyntheticFrontEnd::MightHaveChildren() { return true; }
 
 lldb::ValueObjectSP
 LibStdcppTupleSyntheticFrontEnd::GetChildAtIndex(uint32_t idx) {

@@ -5,7 +5,7 @@
 
 define void @parent(ptr %p) {
 ; CHECK-LABEL: define void @parent(
-; CHECK-SAME: ptr nocapture [[P:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: ptr captures(none) [[P:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    tail call fastcc void @child(ptr [[P]])
 ; CHECK-NEXT:    ret void
 ;
@@ -19,7 +19,7 @@ define void @parent(ptr %p) {
 
 define internal void @child(ptr %p, ptr %n, ptr %c) noinline {
 ; CHECK-LABEL: define internal fastcc void @child(
-; CHECK-SAME: ptr nocapture [[P:%.*]]) unnamed_addr #[[ATTR1:[0-9]+]] {
+; CHECK-SAME: ptr captures(none) [[P:%.*]]) unnamed_addr #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[FOR_COND:.*]]
 ; CHECK:       [[FOR_COND]]:

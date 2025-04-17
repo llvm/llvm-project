@@ -37,7 +37,7 @@ define void @test_2(ptr %x) {
 define void @test_3(ptr %x) {
 ; The "deopt" operand bundle does not capture or write to %x.
 
-; CHECK-LABEL: define void @test_3(ptr nocapture readonly %x)
+; CHECK-LABEL: define void @test_3(ptr readonly captures(none) %x)
  entry:
   call void @f_readonly() [ "deopt"(ptr %x) ]
   ret void

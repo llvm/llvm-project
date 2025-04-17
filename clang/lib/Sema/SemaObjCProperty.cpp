@@ -180,6 +180,9 @@ Decl *SemaObjC::ActOnProperty(Scope *S, SourceLocation AtLoc,
                            0);
   TypeSourceInfo *TSI = SemaRef.GetTypeForDeclarator(FD.D);
   QualType T = TSI->getType();
+  if (T.getPointerAuth().isPresent()) {
+    Diag(AtLoc, diag::err_ptrauth_qualifier_invalid) << T << 2;
+  }
   if (!getOwnershipRule(Attributes)) {
     Attributes |= deducePropertyOwnershipFromType(SemaRef, T);
   }
@@ -2075,10 +2078,9 @@ void SemaObjC::DiagnoseUnimplementedProperties(Scope *S, ObjCImplDecl *IMPDecl,
   for (const auto *I : IMPDecl->property_impls())
     PropImplMap.insert(I->getPropertyDecl());
 
-  llvm::SmallPtrSet<const ObjCMethodDecl *, 8> InsMap;
   // Collect property accessors implemented in current implementation.
-  for (const auto *I : IMPDecl->methods())
-    InsMap.insert(I);
+  llvm::SmallPtrSet<const ObjCMethodDecl *, 8> InsMap(llvm::from_range,
+                                                      IMPDecl->methods());
 
   ObjCCategoryDecl *C = dyn_cast<ObjCCategoryDecl>(CDecl);
   ObjCInterfaceDecl *PrimaryClass = nullptr;
@@ -2089,8 +2091,7 @@ void SemaObjC::DiagnoseUnimplementedProperties(Scope *S, ObjCImplDecl *IMPDecl,
         // When reporting on missing setter/getters, do not report when
         // setter/getter is implemented in category's primary class
         // implementation.
-        for (const auto *I : IMP->methods())
-          InsMap.insert(I);
+        InsMap.insert_range(IMP->methods());
       }
 
   for (ObjCContainerDecl::PropertyMap::iterator

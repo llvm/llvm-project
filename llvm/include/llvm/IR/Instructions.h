@@ -1231,6 +1231,18 @@ public:
     return getSwappedCmpPredicate(getCmpPredicate());
   }
 
+  /// @returns the non-strict predicate along with samesign information: static
+  /// variant.
+  static CmpPredicate getNonStrictCmpPredicate(CmpPredicate Pred) {
+    return {getNonStrictPredicate(Pred), Pred.hasSameSign()};
+  }
+
+  /// For example, SGT -> SGE, SLT -> SLE, ULT -> ULE, UGT -> UGE.
+  /// @returns the non-strict predicate along with samesign information.
+  Predicate getNonStrictCmpPredicate() const {
+    return getNonStrictCmpPredicate(getCmpPredicate());
+  }
+
   /// For example, EQ->EQ, SLE->SLE, UGT->SGT, etc.
   /// @returns the predicate that would be the result if the operand were
   /// regarded as signed.
@@ -3354,7 +3366,7 @@ public:
 
   /// Returns true if the default branch must result in immediate undefined
   /// behavior, false otherwise.
-  bool defaultDestUndefined() const {
+  bool defaultDestUnreachable() const {
     return isa<UnreachableInst>(getDefaultDest()->getFirstNonPHIOrDbg());
   }
 
@@ -4484,6 +4496,9 @@ public:
   static bool classof(const Value *V) {
     return isa<Instruction>(V) && classof(cast<Instruction>(V));
   }
+
+  // Whether to do target lowering in SelectionDAG.
+  bool shouldLowerToTrap(bool TrapUnreachable, bool NoTrapAfterNoreturn) const;
 
 private:
   BasicBlock *getSuccessor(unsigned idx) const {

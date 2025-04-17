@@ -14,6 +14,7 @@
 
 #include "../lib/Transforms/Vectorize/VPlan.h"
 #include "../lib/Transforms/Vectorize/VPlanHCFGBuilder.h"
+#include "../lib/Transforms/Vectorize/VPlanTransforms.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
 #include "llvm/Analysis/LoopInfo.h"
@@ -62,32 +63,19 @@ protected:
     SE.reset(new ScalarEvolution(F, TLI, *AC, *DT, *LI));
   }
 
-  VPlanPtr buildHCFG(BasicBlock *LoopHeader) {
+  /// Build the VPlan for the loop starting from \p LoopHeader.
+  VPlanPtr buildVPlan(BasicBlock *LoopHeader) {
     Function &F = *LoopHeader->getParent();
     assert(!verifyFunction(F) && "input function must be valid");
     doAnalysis(F);
 
     Loop *L = LI->getLoopFor(LoopHeader);
     PredicatedScalarEvolution PSE(*SE, *L);
-    auto Plan = VPlan::createInitialVPlan(IntegerType::get(*Ctx, 64), PSE, true,
-                                          false, L);
-    VPlanHCFGBuilder HCFGBuilder(L, LI.get(), *Plan);
-    HCFGBuilder.buildHierarchicalCFG();
-    return Plan;
-  }
-
-  /// Build the VPlan plain CFG for the loop starting from \p LoopHeader.
-  VPlanPtr buildPlainCFG(BasicBlock *LoopHeader) {
-    Function &F = *LoopHeader->getParent();
-    assert(!verifyFunction(F) && "input function must be valid");
-    doAnalysis(F);
-
-    Loop *L = LI->getLoopFor(LoopHeader);
-    PredicatedScalarEvolution PSE(*SE, *L);
-    auto Plan = VPlan::createInitialVPlan(IntegerType::get(*Ctx, 64), PSE, true,
-                                          false, L);
+    auto Plan = std::make_unique<VPlan>(L);
     VPlanHCFGBuilder HCFGBuilder(L, LI.get(), *Plan);
     HCFGBuilder.buildPlainCFG();
+    VPlanTransforms::createLoopRegions(*Plan, IntegerType::get(*Ctx, 64), PSE,
+                                       true, false, L);
     return Plan;
   }
 };

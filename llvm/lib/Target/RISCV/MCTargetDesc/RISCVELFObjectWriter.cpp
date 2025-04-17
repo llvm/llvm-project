@@ -53,8 +53,27 @@ unsigned RISCVELFObjectWriter::getRelocType(MCContext &Ctx,
   const MCExpr *Expr = Fixup.getValue();
   // Determine the type of the relocation
   unsigned Kind = Fixup.getTargetKind();
-  if (Kind >= FirstLiteralRelocationKind)
-    return Kind - FirstLiteralRelocationKind;
+  auto Spec = RISCVMCExpr::Specifier(Target.getSpecifier());
+  switch (Spec) {
+  case RISCVMCExpr::VK_TPREL_HI:
+  case RISCVMCExpr::VK_TLS_GOT_HI:
+  case RISCVMCExpr::VK_TLS_GD_HI:
+  case RISCVMCExpr::VK_TLSDESC_HI:
+    if (auto *SA = Target.getAddSym())
+      cast<MCSymbolELF>(SA)->setType(ELF::STT_TLS);
+    break;
+  case RISCVMCExpr::VK_PLTPCREL:
+  case RISCVMCExpr::VK_GOTPCREL:
+    if (Kind == FK_Data_4)
+      break;
+    Ctx.reportError(Fixup.getLoc(),
+                    "%" + RISCVMCExpr::getSpecifierName(Spec) +
+                        " can only be used in a .word directive");
+    return ELF::R_RISCV_NONE;
+  default:
+    break;
+  }
+
   if (IsPCRel) {
     switch (Kind) {
     default:
@@ -62,9 +81,7 @@ unsigned RISCVELFObjectWriter::getRelocType(MCContext &Ctx,
       return ELF::R_RISCV_NONE;
     case FK_Data_4:
     case FK_PCRel_4:
-      return Target.getAccessVariant() == MCSymbolRefExpr::VK_PLT
-                 ? ELF::R_RISCV_PLT32
-                 : ELF::R_RISCV_32_PCREL;
+      return ELF::R_RISCV_32_PCREL;
     case RISCV::fixup_riscv_pcrel_hi20:
       return ELF::R_RISCV_PCREL_HI20;
     case RISCV::fixup_riscv_pcrel_lo12_i:
@@ -97,6 +114,10 @@ unsigned RISCVELFObjectWriter::getRelocType(MCContext &Ctx,
       return ELF::R_RISCV_CALL_PLT;
     case RISCV::fixup_riscv_call_plt:
       return ELF::R_RISCV_CALL_PLT;
+    case RISCV::fixup_riscv_qc_e_branch:
+      return ELF::R_RISCV_QC_E_BRANCH;
+    case RISCV::fixup_riscv_qc_e_jump_plt:
+      return ELF::R_RISCV_QC_E_JUMP_PLT;
     }
   }
 
@@ -118,11 +139,18 @@ unsigned RISCVELFObjectWriter::getRelocType(MCContext &Ctx,
     Ctx.reportError(Fixup.getLoc(), "2-byte data relocations not supported");
     return ELF::R_RISCV_NONE;
   case FK_Data_4:
-    if (Expr->getKind() == MCExpr::Target &&
-        cast<RISCVMCExpr>(Expr)->getKind() == RISCVMCExpr::VK_RISCV_32_PCREL)
-      return ELF::R_RISCV_32_PCREL;
-    if (Target.getSymA()->getKind() == MCSymbolRefExpr::VK_GOTPCREL)
-      return ELF::R_RISCV_GOT32_PCREL;
+    if (Expr->getKind() == MCExpr::Target) {
+      switch (cast<RISCVMCExpr>(Expr)->getSpecifier()) {
+      case RISCVMCExpr::VK_32_PCREL:
+        return ELF::R_RISCV_32_PCREL;
+      case RISCVMCExpr::VK_GOTPCREL:
+        return ELF::R_RISCV_GOT32_PCREL;
+      case RISCVMCExpr::VK_PLTPCREL:
+        return ELF::R_RISCV_PLT32;
+      default:
+        break;
+      }
+    }
     return ELF::R_RISCV_32;
   case FK_Data_8:
     return ELF::R_RISCV_64;
@@ -144,6 +172,10 @@ unsigned RISCVELFObjectWriter::getRelocType(MCContext &Ctx,
     return ELF::R_RISCV_RELAX;
   case RISCV::fixup_riscv_align:
     return ELF::R_RISCV_ALIGN;
+  case RISCV::fixup_riscv_qc_e_32:
+    return ELF::R_RISCV_QC_E_32;
+  case RISCV::fixup_riscv_qc_abs20_u:
+    return ELF::R_RISCV_QC_ABS20_U;
   }
 }
 

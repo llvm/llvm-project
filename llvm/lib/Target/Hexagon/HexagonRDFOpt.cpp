@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "Hexagon.h"
 #include "HexagonInstrInfo.h"
 #include "HexagonSubtarget.h"
 #include "MCTargetDesc/HexagonBaseInfo.h"
@@ -37,13 +38,6 @@
 
 using namespace llvm;
 using namespace rdf;
-
-namespace llvm {
-
-  void initializeHexagonRDFOptPass(PassRegistry&);
-  FunctionPass *createHexagonRDFOpt();
-
-} // end namespace llvm
 
 static unsigned RDFCount = 0;
 

@@ -18,10 +18,10 @@
 #include "check_assertion.h"
 
 int main(int, char**) {
-    std::list<int> c1(100);
-    std::list<int> c2;
-    TEST_LIBCPP_ASSERT_FAILURE(c1.insert(c2.cbegin(), 5, 1),
-                               "list::insert(iterator, n, x) called with an iterator not referring to this list");
+  std::list<int> c1(100);
+  std::list<int> c2;
+  TEST_LIBCPP_ASSERT_FAILURE(
+      c1.insert(c2.cbegin(), 5, 1), "list::insert(iterator, n, x) called with an iterator not referring to this list");
 
-    return 0;
+  return 0;
 }

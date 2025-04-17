@@ -353,6 +353,8 @@ struct APFloatBase {
   static bool semanticsHasSignedRepr(const fltSemantics &);
   static bool semanticsHasInf(const fltSemantics &);
   static bool semanticsHasNaN(const fltSemantics &);
+  static bool isIEEELikeFP(const fltSemantics &);
+  static bool hasSignBitInMSB(const fltSemantics &);
 
   // Returns true if any number described by \p Src can be precisely represented
   // by a normal (not subnormal) value in \p Dst.
@@ -790,6 +792,8 @@ private:
 
   /// Sign bit of the number.
   unsigned int sign : 1;
+
+  friend class IEEEFloatUnitTestHelper;
 };
 
 hash_code hash_value(const IEEEFloat &Arg);
@@ -804,7 +808,7 @@ IEEEFloat frexp(const IEEEFloat &Val, int &Exp, roundingMode RM);
 class DoubleAPFloat final {
   // Note: this must be the first data member.
   const fltSemantics *Semantics;
-  std::unique_ptr<APFloat[]> Floats;
+  APFloat *Floats;
 
   opStatus addImpl(const APFloat &a, const APFloat &aa, const APFloat &c,
                    const APFloat &cc, roundingMode RM);
@@ -820,6 +824,7 @@ public:
   DoubleAPFloat(const fltSemantics &S, APFloat &&First, APFloat &&Second);
   DoubleAPFloat(const DoubleAPFloat &RHS);
   DoubleAPFloat(DoubleAPFloat &&RHS);
+  ~DoubleAPFloat();
 
   DoubleAPFloat &operator=(const DoubleAPFloat &RHS);
   inline DoubleAPFloat &operator=(DoubleAPFloat &&RHS);
@@ -1460,7 +1465,6 @@ public:
   bool isSmallest() const { APFLOAT_DISPATCH_ON_SEMANTICS(isSmallest()); }
   bool isLargest() const { APFLOAT_DISPATCH_ON_SEMANTICS(isLargest()); }
   bool isInteger() const { APFLOAT_DISPATCH_ON_SEMANTICS(isInteger()); }
-  bool isIEEE() const { return usesLayout<IEEEFloat>(getSemantics()); }
 
   bool isSmallestNormalized() const {
     APFLOAT_DISPATCH_ON_SEMANTICS(isSmallestNormalized());
@@ -1542,11 +1546,16 @@ inline APFloat neg(APFloat X) {
   return X;
 }
 
-/// Implements IEEE-754 2019 minimumNumber semantics. Returns the smaller of the
-/// 2 arguments if both are not NaN. If either argument is a NaN, returns the
-/// other argument. -0 is treated as ordered less than +0.
+/// Implements IEEE-754 2008 minNum semantics. Returns the smaller of the
+/// 2 arguments if both are not NaN. If either argument is a qNaN, returns the
+/// other argument. If either argument is sNaN, return a qNaN.
+/// -0 is treated as ordered less than +0.
 LLVM_READONLY
 inline APFloat minnum(const APFloat &A, const APFloat &B) {
+  if (A.isSignaling())
+    return A.makeQuiet();
+  if (B.isSignaling())
+    return B.makeQuiet();
   if (A.isNaN())
     return B;
   if (B.isNaN())
@@ -1556,11 +1565,16 @@ inline APFloat minnum(const APFloat &A, const APFloat &B) {
   return B < A ? B : A;
 }
 
-/// Implements IEEE-754 2019 maximumNumber semantics. Returns the larger of the
-/// 2 arguments if both are not NaN. If either argument is a NaN, returns the
-/// other argument. +0 is treated as ordered greater than -0.
+/// Implements IEEE-754 2008 maxNum semantics. Returns the larger of the
+/// 2 arguments if both are not NaN. If either argument is a qNaN, returns the
+/// other argument. If either argument is sNaN, return a qNaN.
+/// +0 is treated as ordered greater than -0.
 LLVM_READONLY
 inline APFloat maxnum(const APFloat &A, const APFloat &B) {
+  if (A.isSignaling())
+    return A.makeQuiet();
+  if (B.isSignaling())
+    return B.makeQuiet();
   if (A.isNaN())
     return B;
   if (B.isNaN())
@@ -1647,6 +1661,8 @@ APFloat &DoubleAPFloat::getFirst() { return Floats[0]; }
 const APFloat &DoubleAPFloat::getFirst() const { return Floats[0]; }
 APFloat &DoubleAPFloat::getSecond() { return Floats[1]; }
 const APFloat &DoubleAPFloat::getSecond() const { return Floats[1]; }
+
+inline DoubleAPFloat::~DoubleAPFloat() { delete[] Floats; }
 
 } // namespace detail
 

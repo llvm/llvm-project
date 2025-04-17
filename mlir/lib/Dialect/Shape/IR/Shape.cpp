@@ -649,24 +649,29 @@ OpFoldResult BroadcastOp::fold(FoldAdaptor adaptor) {
     return getShapes().front();
   }
 
-  // TODO: Support folding with more than 2 input shapes
-  if (getShapes().size() > 2)
+  if (!adaptor.getShapes().front())
     return nullptr;
 
-  if (!adaptor.getShapes()[0] || !adaptor.getShapes()[1])
-    return nullptr;
-  auto lhsShape = llvm::to_vector<6>(
-      llvm::cast<DenseIntElementsAttr>(adaptor.getShapes()[0])
+  SmallVector<int64_t, 6> resultShape(
+      llvm::cast<DenseIntElementsAttr>(adaptor.getShapes().front())
           .getValues<int64_t>());
-  auto rhsShape = llvm::to_vector<6>(
-      llvm::cast<DenseIntElementsAttr>(adaptor.getShapes()[1])
-          .getValues<int64_t>());
-  SmallVector<int64_t, 6> resultShape;
 
-  // If the shapes are not compatible, we can't fold it.
-  // TODO: Fold to an "error".
-  if (!OpTrait::util::getBroadcastedShape(lhsShape, rhsShape, resultShape))
-    return nullptr;
+  for (auto next : adaptor.getShapes().drop_front()) {
+    if (!next)
+      return nullptr;
+    auto nextShape = llvm::to_vector<6>(
+        llvm::cast<DenseIntElementsAttr>(next).getValues<int64_t>());
+
+    SmallVector<int64_t, 6> tmpShape;
+    // If the shapes are not compatible, we can't fold it.
+    // TODO: Fold to an "error".
+    if (!OpTrait::util::getBroadcastedShape(resultShape, nextShape, tmpShape))
+      return nullptr;
+
+    resultShape.clear();
+    std::copy(tmpShape.begin(), tmpShape.end(),
+              std::back_inserter(resultShape));
+  }
 
   Builder builder(getContext());
   return builder.getIndexTensorAttr(resultShape);
@@ -1124,7 +1129,7 @@ OpFoldResult DivOp::fold(FoldAdaptor adaptor) {
   if (!lhs)
     return nullptr;
   auto rhs = llvm::dyn_cast_if_present<IntegerAttr>(adaptor.getRhs());
-  if (!rhs)
+  if (!rhs || rhs.getValue().isZero())
     return nullptr;
 
   // Division in APInt does not follow floor(lhs, rhs) when the result is
@@ -1297,7 +1302,7 @@ void FuncOp::build(OpBuilder &builder, OperationState &state, StringRef name,
   if (argAttrs.empty())
     return;
   assert(type.getNumInputs() == argAttrs.size());
-  function_interface_impl::addArgAndResultAttrs(
+  call_interface_impl::addArgAndResultAttrs(
       builder, state, argAttrs, /*resultAttrs=*/std::nullopt,
       getArgAttrsAttrName(state.name), getResAttrsAttrName(state.name));
 }
@@ -1734,10 +1739,23 @@ struct ShapeOfFromReshape : public OpRewritePattern<shape::ShapeOfOp> {
     // Operand 'shape' of 'tensor.reshape' may now be used as the result of
     // 'shape.shape_of'. While its type is guaranteed to be compatible in well-
     // formed IR, it may not be identical (dynamically vs statically shaped),
-    // in which case it needs to be cast first.
+    // in which case it needs to be cast first using 'tensor.cast'.
+    // Additionally, it may not have identical element type (i32 vs index)
+    // while it has identical shaped type (dynamic vs static), in which case it
+    // needs to be cast first using 'arith.index_cast'. Note: 'shape.shape_of'
+    // op result must be shape or extent tensor.
     Value shape = tensorReshapeOp.getShape();
-    if (op.getType() != shape.getType())
-      shape = rewriter.create<tensor::CastOp>(op.getLoc(), op.getType(), shape);
+
+    auto opTensorTy = cast<RankedTensorType>(op.getType());
+    auto shapeTensorTy = cast<RankedTensorType>(shape.getType());
+
+    if (opTensorTy != shapeTensorTy) {
+      if (opTensorTy.getElementType() == shapeTensorTy.getElementType())
+        shape = rewriter.create<tensor::CastOp>(op.getLoc(), opTensorTy, shape);
+      else if (!isExtentTensorType(shapeTensorTy))
+        shape =
+            rewriter.create<arith::IndexCastOp>(op.getLoc(), opTensorTy, shape);
+    }
 
     rewriter.replaceOp(op, shape);
     return success();

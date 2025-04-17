@@ -111,20 +111,23 @@ Value *SCEVExpander::ReuseOrCreateCast(Value *V, Type *Ty,
 
   Value *Ret = nullptr;
 
-  // Check to see if there is already a cast!
-  for (User *U : V->users()) {
-    if (U->getType() != Ty)
-      continue;
-    CastInst *CI = dyn_cast<CastInst>(U);
-    if (!CI || CI->getOpcode() != Op)
-      continue;
+  if (!isa<Constant>(V)) {
+    // Check to see if there is already a cast!
+    for (User *U : V->users()) {
+      if (U->getType() != Ty)
+        continue;
+      CastInst *CI = dyn_cast<CastInst>(U);
+      if (!CI || CI->getOpcode() != Op)
+        continue;
 
-    // Found a suitable cast that is at IP or comes before IP. Use it. Note that
-    // the cast must also properly dominate the Builder's insertion point.
-    if (IP->getParent() == CI->getParent() && &*BIP != CI &&
-        (&*IP == CI || CI->comesBefore(&*IP))) {
-      Ret = CI;
-      break;
+      // Found a suitable cast that is at IP or comes before IP. Use it. Note
+      // that the cast must also properly dominate the Builder's insertion
+      // point.
+      if (IP->getParent() == CI->getParent() && &*BIP != CI &&
+          (&*IP == CI || CI->comesBefore(&*IP))) {
+        Ret = CI;
+        break;
+      }
     }
   }
 
@@ -1451,7 +1454,7 @@ Value *SCEVExpander::expandCodeFor(const SCEV *SH, Type *Ty) {
   // Expand the code for this SCEV.
   Value *V = expand(SH);
 
-  if (Ty) {
+  if (Ty && Ty != V->getType()) {
     assert(SE.getTypeSizeInBits(Ty) == SE.getTypeSizeInBits(SH->getType()) &&
            "non-trivial casts should be done with the SCEVs directly!");
     V = InsertNoopCastOfTo(V, Ty);
@@ -2389,8 +2392,8 @@ void SCEVExpanderCleaner::cleanup() {
 
   auto InsertedInstructions = Expander.getAllInsertedInstructions();
 #ifndef NDEBUG
-  SmallPtrSet<Instruction *, 8> InsertedSet(InsertedInstructions.begin(),
-                                            InsertedInstructions.end());
+  SmallPtrSet<Instruction *, 8> InsertedSet(llvm::from_range,
+                                            InsertedInstructions);
   (void)InsertedSet;
 #endif
   // Remove sets with value handles.

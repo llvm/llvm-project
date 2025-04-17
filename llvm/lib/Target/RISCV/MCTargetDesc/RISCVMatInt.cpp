@@ -22,6 +22,10 @@ static int getInstSeqCost(RISCVMatInt::InstSeq &Res, bool HasRVC) {
     // Assume instructions that aren't listed aren't compressible.
     bool Compressed = false;
     switch (Instr.getOpcode()) {
+    case RISCV::QC_E_LI:
+      // One 48-bit instruction takes the space of 1.5 regular instructions.
+      Cost += 150;
+      continue;
     case RISCV::SLLI:
     case RISCV::SRLI:
       Compressed = true;
@@ -55,6 +59,24 @@ static void generateInstSeqImpl(int64_t Val, const MCSubtargetInfo &STI,
       (!isInt<32>(Val) || Val == 0x800)) {
     Res.emplace_back(RISCV::BSETI, Log2_64(Val));
     return;
+  }
+
+  if (!IsRV64 && STI.hasFeature(RISCV::FeatureVendorXqcili)) {
+    bool FitsOneStandardInst = ((Val & 0xFFF) == 0) || isInt<12>(Val);
+
+    // 20-bit signed immediates that don't fit into `ADDI` or `LUI` should use
+    // `QC.LI` (a single 32-bit instruction).
+    if (!FitsOneStandardInst && isInt<20>(Val)) {
+      Res.emplace_back(RISCV::QC_LI, Val);
+      return;
+    }
+
+    // 32-bit signed immediates that don't fit into `ADDI`, `LUI` or `QC.LI`
+    // should use `QC.E.LI` (a single 48-bit instruction).
+    if (!FitsOneStandardInst && isInt<32>(Val)) {
+      Res.emplace_back(RISCV::QC_E_LI, Val);
+      return;
+    }
   }
 
   if (isInt<32>(Val)) {
@@ -134,7 +156,7 @@ static void generateInstSeqImpl(int64_t Val, const MCSubtargetInfo &STI,
     }
 
     // Try to use SLLI_UW for Val when it is uint32 but not int32.
-    if (isUInt<32>((uint64_t)Val) && !isInt<32>((uint64_t)Val) &&
+    if (isUInt<32>(Val) && !isInt<32>(Val) &&
         STI.hasFeature(RISCV::FeatureStdExtZba)) {
       // Use LUI+ADDI or LUI to compose, then clear the upper 32 bits with
       // SLLI_UW.
@@ -175,7 +197,7 @@ static unsigned extractRotateInfo(int64_t Val) {
 
 static void generateInstSeqLeadingZeros(int64_t Val, const MCSubtargetInfo &STI,
                                         RISCVMatInt::InstSeq &Res) {
-  assert(Val > 0 && "Expected postive val");
+  assert(Val > 0 && "Expected positive val");
 
   unsigned LeadingZeros = llvm::countl_zero((uint64_t)Val);
   uint64_t ShiftedVal = (uint64_t)Val << LeadingZeros;
@@ -523,6 +545,8 @@ OpndKind Inst::getOpndKind() const {
   default:
     llvm_unreachable("Unexpected opcode!");
   case RISCV::LUI:
+  case RISCV::QC_LI:
+  case RISCV::QC_E_LI:
     return RISCVMatInt::Imm;
   case RISCV::ADD_UW:
     return RISCVMatInt::RegX0;

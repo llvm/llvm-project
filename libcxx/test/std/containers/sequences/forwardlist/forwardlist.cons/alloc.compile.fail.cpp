@@ -16,16 +16,15 @@
 #include "test_allocator.h"
 #include "../../../NotConstructible.h"
 
-int main(int, char**)
-{
-    {
-        typedef test_allocator<NotConstructible> A;
-        typedef A::value_type T;
-        typedef std::forward_list<T, A> C;
-        C c = A(12);
-        assert(c.get_allocator() == A(12));
-        assert(c.empty());
-    }
+int main(int, char**) {
+  {
+    typedef test_allocator<NotConstructible> A;
+    typedef A::value_type T;
+    typedef std::forward_list<T, A> C;
+    C c = A(12);
+    assert(c.get_allocator() == A(12));
+    assert(c.empty());
+  }
 
   return 0;
 }

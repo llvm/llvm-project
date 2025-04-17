@@ -874,7 +874,7 @@ bool StubsManager_prev7::visitEdge(LinkGraph &G, Block *B, Edge &E) {
   LLVM_DEBUG({
     dbgs() << "    Using " << (UseThumb ? "Thumb" : "Arm") << " entrypoint "
            << *StubEntrypoint << " in "
-           << StubEntrypoint->getBlock().getSection().getName() << "\n";
+           << StubEntrypoint->getSection().getName() << "\n";
   });
 
   E.setTarget(*StubEntrypoint);
@@ -919,8 +919,8 @@ bool StubsManager_v7::visitEdge(LinkGraph &G, Block *B, Edge &E) {
          "Instruction set states of stub and relocation site should be equal");
   LLVM_DEBUG({
     dbgs() << "    Using " << (MakeThumb ? "Thumb" : "Arm") << " entry "
-           << *StubSymbol << " in "
-           << StubSymbol->getBlock().getSection().getName() << "\n";
+           << *StubSymbol << " in " << StubSymbol->getSection().getName()
+           << "\n";
   });
 
   E.setTarget(*StubSymbol);

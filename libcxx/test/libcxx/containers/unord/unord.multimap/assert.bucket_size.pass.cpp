@@ -25,9 +25,9 @@
 #include "check_assertion.h"
 
 int main(int, char**) {
-    typedef std::unordered_multimap<int, std::string> C;
-    C c;
-    TEST_LIBCPP_ASSERT_FAILURE(c.bucket_size(3), "unordered container::bucket_size(n) called with n >= bucket_count()");
+  typedef std::unordered_multimap<int, std::string> C;
+  C c;
+  TEST_LIBCPP_ASSERT_FAILURE(c.bucket_size(3), "unordered container::bucket_size(n) called with n >= bucket_count()");
 
-    return 0;
+  return 0;
 }

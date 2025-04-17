@@ -55,6 +55,10 @@ protected:
     if (Triple.isPPC())
       GTEST_SKIP();
 
+    // RISC-V is not supported yet
+    if (Triple.isRISCV())
+      GTEST_SKIP();
+
     auto EPC = SelfExecutorProcessControl::Create();
     if (!EPC) {
       consumeError(EPC.takeError());
@@ -66,10 +70,17 @@ protected:
       consumeError(DLOrErr.takeError());
       GTEST_SKIP();
     }
+
+    auto PageSize = sys::Process::getPageSize();
+    if (!PageSize) {
+      consumeError(PageSize.takeError());
+      GTEST_SKIP();
+    }
+
     ES = std::make_unique<ExecutionSession>(std::move(*EPC));
     JD = &ES->createBareJITDylib("main");
     ObjLinkingLayer = std::make_unique<ObjectLinkingLayer>(
-        *ES, std::make_unique<InProcessMemoryManager>(16384));
+        *ES, std::make_unique<InProcessMemoryManager>(*PageSize));
     DL = std::make_unique<DataLayout>(std::move(*DLOrErr));
 
     auto TM = JTMB->createTargetMachine();
@@ -158,7 +169,7 @@ TEST_F(ReOptimizeLayerTest, BasicReOptimization) {
 
   ThreadSafeContext Ctx(std::make_unique<LLVMContext>());
   auto M = std::make_unique<Module>("<main>", *Ctx.getContext());
-  M->setTargetTriple(sys::getProcessTriple());
+  M->setTargetTriple(Triple(sys::getProcessTriple()));
 
   (void)createRetFunction(M.get(), "main", 42);
 

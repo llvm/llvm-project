@@ -7,11 +7,12 @@
 //===----------------------------------------------------------------------===//
 //
 // This file implements the library calls simplifier. It does not implement
-// any pass, but can't be used by other passes to do simplifications.
+// any pass, but can be used by other passes to do simplifications.
 //
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Utils/SimplifyLibCalls.h"
+#include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
@@ -31,6 +32,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/KnownBits.h"
+#include "llvm/Support/KnownFPClass.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Utils/BuildLibCalls.h"
@@ -1094,7 +1096,8 @@ Value *LibCallSimplifier::optimizeStrTo(CallInst *CI, IRBuilderBase &B) {
   if (isa<ConstantPointerNull>(EndPtr)) {
     // With a null EndPtr, this function won't capture the main argument.
     // It would be readonly too, except that it still may write to errno.
-    CI->addParamAttr(0, Attribute::NoCapture);
+    CI->addParamAttr(0, Attribute::getWithCaptureInfo(CI->getContext(),
+                                                      CaptureInfo::none()));
   }
 
   return nullptr;
@@ -1933,7 +1936,7 @@ static Value *optimizeDoubleFP(CallInst *CI, IRBuilderBase &B,
   bool IsIntrinsic = CalleeFn->isIntrinsic();
   if (!IsIntrinsic) {
     StringRef CallerName = CI->getFunction()->getName();
-    if (!CallerName.empty() && CallerName.back() == 'f' &&
+    if (CallerName.ends_with('f') &&
         CallerName.size() == (CalleeName.size() + 1) &&
         CallerName.starts_with(CalleeName))
       return nullptr;
@@ -2574,8 +2577,10 @@ Value *LibCallSimplifier::optimizeLog(CallInst *Log, IRBuilderBase &B) {
           KnownFPClass::OrderedLessThanZeroMask | fcSubnormal,
           /*Depth=*/0, SQ);
       Function *F = Log->getParent()->getParent();
-      IsKnownNoErrno = Known.cannotBeOrderedLessThanZero() &&
-                       Known.isKnownNeverLogicalZero(*F, Ty);
+      const fltSemantics &FltSem = Ty->getScalarType()->getFltSemantics();
+      IsKnownNoErrno =
+          Known.cannotBeOrderedLessThanZero() &&
+          Known.isKnownNeverLogicalZero(F->getDenormalMode(FltSem));
     }
     if (IsKnownNoErrno) {
       auto *NewLog = B.CreateUnaryIntrinsic(LogID, Log->getArgOperand(0), Log);
@@ -2805,7 +2810,9 @@ Value *LibCallSimplifier::optimizeFMod(CallInst *CI, IRBuilderBase &B) {
           computeKnownFPClass(CI->getOperand(1), fcZero | fcSubnormal,
                               /*Depth=*/0, SQ);
       Function *F = CI->getParent()->getParent();
-      IsNoNan = Known1.isKnownNeverLogicalZero(*F, CI->getType());
+      const fltSemantics &FltSem =
+          CI->getType()->getScalarType()->getFltSemantics();
+      IsNoNan = Known1.isKnownNeverLogicalZero(F->getDenormalMode(FltSem));
     }
   }
 
@@ -2995,6 +3002,9 @@ Value *LibCallSimplifier::optimizeSinCosPi(CallInst *CI, bool IsSin, IRBuilderBa
     return nullptr;
 
   Value *Arg = CI->getArgOperand(0);
+  if (isa<ConstantData>(Arg))
+    return nullptr;
+
   SmallVector<CallInst *, 1> SinCalls;
   SmallVector<CallInst *, 1> CosCalls;
   SmallVector<CallInst *, 1> SinCosCalls;
@@ -3205,7 +3215,8 @@ Value *LibCallSimplifier::optimizeStrToInt(CallInst *CI, IRBuilderBase &B,
   if (isa<ConstantPointerNull>(EndPtr)) {
     // With a null EndPtr, this function won't capture the main argument.
     // It would be readonly too, except that it still may write to errno.
-    CI->addParamAttr(0, Attribute::NoCapture);
+    CI->addParamAttr(0, Attribute::getWithCaptureInfo(CI->getContext(),
+                                                      CaptureInfo::none()));
     EndPtr = nullptr;
   } else if (!isKnownNonZero(EndPtr, DL))
     return nullptr;

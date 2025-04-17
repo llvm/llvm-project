@@ -23,6 +23,7 @@
 // RUN: %env_asan_opts=suppressions='"folder/only/"' not %run %t 2>&1 | \
 // RUN:   FileCheck --check-prefix=CHECK-WRONG-FILE-NAME %s
 
+// FIXME: Upload suppressions to device.
 // XFAIL: android
 // UNSUPPORTED: ios
 

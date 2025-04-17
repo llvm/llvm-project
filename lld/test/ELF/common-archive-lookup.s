@@ -69,7 +69,7 @@
 # RUN: FileCheck --check-prefix=ASM %s < out.lto.s
 
 ## COMMON overrides weak. Don't extract 3.bc which provides a weak definition.
-# RUN: ld.lld -o /dev/null main.o --start-lib 1.bc 3.bc --end-lib -y block | FileCheck --check-prefix=LTO_WEAK %s
+# RUN: ld.lld main.o --start-lib 1.bc 3.bc --end-lib -y block | FileCheck --check-prefix=LTO_WEAK %s
 
 ## Old FORTRAN that mixes use of COMMON blocks and BLOCK DATA requires that we
 ## search through archives for non-tentative definitions (from the BLOCK DATA)

@@ -925,7 +925,7 @@ public:
 #  endif
 
 template <class _HashIterator>
-class _LIBCPP_TEMPLATE_VIS __hash_map_iterator {
+class __hash_map_iterator {
   _HashIterator __i_;
 
   typedef __hash_node_types_from_iterator<_HashIterator> _NodeTypes;
@@ -964,19 +964,19 @@ public:
 #  endif
 
   template <class, class, class, class, class>
-  friend class _LIBCPP_TEMPLATE_VIS unordered_map;
+  friend class unordered_map;
   template <class, class, class, class, class>
-  friend class _LIBCPP_TEMPLATE_VIS unordered_multimap;
+  friend class unordered_multimap;
   template <class>
-  friend class _LIBCPP_TEMPLATE_VIS __hash_const_iterator;
+  friend class __hash_const_iterator;
   template <class>
-  friend class _LIBCPP_TEMPLATE_VIS __hash_const_local_iterator;
+  friend class __hash_const_local_iterator;
   template <class>
-  friend class _LIBCPP_TEMPLATE_VIS __hash_map_const_iterator;
+  friend class __hash_map_const_iterator;
 };
 
 template <class _HashIterator>
-class _LIBCPP_TEMPLATE_VIS __hash_map_const_iterator {
+class __hash_map_const_iterator {
   _HashIterator __i_;
 
   typedef __hash_node_types_from_iterator<_HashIterator> _NodeTypes;
@@ -1020,13 +1020,13 @@ public:
 #  endif
 
   template <class, class, class, class, class>
-  friend class _LIBCPP_TEMPLATE_VIS unordered_map;
+  friend class unordered_map;
   template <class, class, class, class, class>
-  friend class _LIBCPP_TEMPLATE_VIS unordered_multimap;
+  friend class unordered_multimap;
   template <class>
-  friend class _LIBCPP_TEMPLATE_VIS __hash_const_iterator;
+  friend class __hash_const_iterator;
   template <class>
-  friend class _LIBCPP_TEMPLATE_VIS __hash_const_local_iterator;
+  friend class __hash_const_local_iterator;
 };
 
 template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
@@ -1037,7 +1037,7 @@ template <class _Key,
           class _Hash  = hash<_Key>,
           class _Pred  = equal_to<_Key>,
           class _Alloc = allocator<pair<const _Key, _Tp> > >
-class _LIBCPP_TEMPLATE_VIS unordered_map {
+class unordered_map {
 public:
   // types
   typedef _Key key_type;
@@ -1093,9 +1093,9 @@ public:
 #  endif
 
   template <class _Key2, class _Tp2, class _Hash2, class _Pred2, class _Alloc2>
-  friend class _LIBCPP_TEMPLATE_VIS unordered_map;
+  friend class unordered_map;
   template <class _Key2, class _Tp2, class _Hash2, class _Pred2, class _Alloc2>
-  friend class _LIBCPP_TEMPLATE_VIS unordered_multimap;
+  friend class unordered_multimap;
 
   _LIBCPP_HIDE_FROM_ABI unordered_map() _NOEXCEPT_(is_nothrow_default_constructible<__table>::value) {}
   explicit _LIBCPP_HIDE_FROM_ABI
@@ -1784,7 +1784,7 @@ template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
 _Tp& unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::at(const key_type& __k) {
   iterator __i = find(__k);
   if (__i == end())
-    __throw_out_of_range("unordered_map::at: key not found");
+    std::__throw_out_of_range("unordered_map::at: key not found");
   return __i->second;
 }
 
@@ -1792,7 +1792,7 @@ template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
 const _Tp& unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::at(const key_type& __k) const {
   const_iterator __i = find(__k);
   if (__i == end())
-    __throw_out_of_range("unordered_map::at: key not found");
+    std::__throw_out_of_range("unordered_map::at: key not found");
   return __i->second;
 }
 
@@ -1850,7 +1850,7 @@ template <class _Key,
           class _Hash  = hash<_Key>,
           class _Pred  = equal_to<_Key>,
           class _Alloc = allocator<pair<const _Key, _Tp> > >
-class _LIBCPP_TEMPLATE_VIS unordered_multimap {
+class unordered_multimap {
 public:
   // types
   typedef _Key key_type;
@@ -1901,9 +1901,9 @@ public:
 #  endif
 
   template <class _Key2, class _Tp2, class _Hash2, class _Pred2, class _Alloc2>
-  friend class _LIBCPP_TEMPLATE_VIS unordered_map;
+  friend class unordered_map;
   template <class _Key2, class _Tp2, class _Hash2, class _Pred2, class _Alloc2>
-  friend class _LIBCPP_TEMPLATE_VIS unordered_multimap;
+  friend class unordered_multimap;
 
   _LIBCPP_HIDE_FROM_ABI unordered_multimap() _NOEXCEPT_(is_nothrow_default_constructible<__table>::value) {}
   explicit _LIBCPP_HIDE_FROM_ABI

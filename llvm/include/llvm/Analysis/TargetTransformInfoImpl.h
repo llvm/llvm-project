@@ -276,11 +276,13 @@ public:
     return TTI::AMK_None;
   }
 
-  bool isLegalMaskedStore(Type *DataType, Align Alignment) const {
+  bool isLegalMaskedStore(Type *DataType, Align Alignment,
+                          unsigned AddressSpace) const {
     return false;
   }
 
-  bool isLegalMaskedLoad(Type *DataType, Align Alignment) const {
+  bool isLegalMaskedLoad(Type *DataType, Align Alignment,
+                         unsigned AddressSpace) const {
     return false;
   }
 
@@ -364,7 +366,7 @@ public:
                               Scale, AddrSpace, /*I=*/nullptr,
                               BaseOffset.getScalable()))
       return 0;
-    return -1;
+    return InstructionCost::getInvalid();
   }
 
   bool LSRWithInstrQueries() const { return false; }
@@ -504,11 +506,13 @@ public:
   }
 
   unsigned getNumberOfRegisters(unsigned ClassID) const { return 8; }
-  bool hasConditionalLoadStoreForType(Type *Ty) const { return false; }
+  bool hasConditionalLoadStoreForType(Type *Ty, bool IsStore) const {
+    return false;
+  }
 
   unsigned getRegisterClassForType(bool Vector, Type *Ty = nullptr) const {
     return Vector ? 1 : 0;
-  };
+  }
 
   const char *getRegisterClassName(unsigned ClassID) const {
     switch (ClassID) {
@@ -745,6 +749,17 @@ public:
     return 1;
   }
 
+  InstructionCost
+  getInsertExtractValueCost(unsigned Opcode,
+                            TTI::TargetCostKind CostKind) const {
+    // Note: The `insertvalue` cost here is chosen to match the default case of
+    // getInstructionCost() -- as pior to adding this helper `insertvalue` was
+    // not handled.
+    if (Opcode == Instruction::InsertValue)
+      return CostKind == TTI::TCK_RecipThroughput ? -1 : TTI::TCC_Basic;
+    return TTI::TCC_Free;
+  }
+
   InstructionCost getMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
                                   unsigned AddressSpace,
                                   TTI::TargetCostKind CostKind,
@@ -771,6 +786,12 @@ public:
                                          Align Alignment,
                                          TTI::TargetCostKind CostKind,
                                          const Instruction *I = nullptr) const {
+    return 1;
+  }
+
+  InstructionCost getExpandCompressMemoryOpCost(
+      unsigned Opcode, Type *DataTy, bool VariableMask, Align Alignment,
+      TTI::TargetCostKind CostKind, const Instruction *I = nullptr) const {
     return 1;
   }
 
@@ -868,7 +889,7 @@ public:
 
   InstructionCost getExtendedReductionCost(unsigned Opcode, bool IsUnsigned,
                                            Type *ResTy, VectorType *Ty,
-                                           FastMathFlags FMF,
+                                           std::optional<FastMathFlags> FMF,
                                            TTI::TargetCostKind CostKind) const {
     return 1;
   }
@@ -989,13 +1010,10 @@ public:
 
   bool preferFixedOverScalableIfEqualCost() const { return false; }
 
-  bool preferInLoopReduction(unsigned Opcode, Type *Ty,
-                             TTI::ReductionFlags Flags) const {
-    return false;
-  }
+  bool preferInLoopReduction(RecurKind Kind, Type *Ty) const { return false; }
+  bool preferAlternateOpcodeVectorization() const { return true; }
 
-  bool preferPredicatedReductionSelect(unsigned Opcode, Type *Ty,
-                                       TTI::ReductionFlags Flags) const {
+  bool preferPredicatedReductionSelect(unsigned Opcode, Type *Ty) const {
     return false;
   }
 
@@ -1048,6 +1066,10 @@ public:
   unsigned getNumBytesToPadGlobalArray(unsigned Size, Type *ArrayType) const {
     return 0;
   }
+
+  void collectKernelLaunchBounds(
+      const Function &F,
+      SmallVectorImpl<std::pair<StringRef, int64_t>> &LB) const {}
 
 protected:
   // Obtain the minimum required size to hold the value (without the sign)
@@ -1296,9 +1318,11 @@ public:
     case Instruction::PHI:
     case Instruction::Switch:
       return TargetTTI->getCFInstrCost(Opcode, CostKind, I);
-    case Instruction::ExtractValue:
     case Instruction::Freeze:
       return TTI::TCC_Free;
+    case Instruction::ExtractValue:
+    case Instruction::InsertValue:
+      return TargetTTI->getInsertExtractValueCost(Opcode, CostKind);
     case Instruction::Alloca:
       if (cast<AllocaInst>(U)->isStaticAlloca())
         return TTI::TCC_Free;

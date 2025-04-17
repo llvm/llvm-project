@@ -14,6 +14,7 @@
 #include "MCTargetDesc/X86MCTargetDesc.h"
 #include "MmapUtils.h"
 #include "SubprocessMemory.h"
+#include "TestBase.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
 #include "gmock/gmock.h"
@@ -112,19 +113,9 @@ Matcher<MCInst> IsStackDeallocate(unsigned Size) {
                ElementsAre(IsReg(X86::RSP), IsReg(X86::RSP), IsImm(Size)));
 }
 
-constexpr const char kTriple[] = "x86_64-unknown-linux";
-
-class X86TargetTest : public ::testing::Test {
+class X86TargetTest : public X86TestBase {
 protected:
-  X86TargetTest(const char *Features)
-      : State(cantFail(LLVMState::Create(kTriple, "core2", Features))) {}
-
-  static void SetUpTestCase() {
-    LLVMInitializeX86TargetInfo();
-    LLVMInitializeX86Target();
-    LLVMInitializeX86TargetMC();
-    InitializeX86ExegesisTarget();
-  }
+  X86TargetTest(const char *Features) : X86TestBase("core2", Features) {}
 
   std::vector<MCInst> setRegTo(unsigned Reg, const APInt &Value) {
     return State.getExegesisTarget().setRegTo(State.getSubtargetInfo(), Reg,
@@ -134,8 +125,6 @@ protected:
   const Instruction &getInstr(unsigned OpCode) {
     return State.getIC().getInstr(OpCode);
   }
-
-  LLVMState State;
 };
 
 class X86Core2TargetTest : public X86TargetTest {

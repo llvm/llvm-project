@@ -454,7 +454,9 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   case ISD::UMULO:
   case ISD::FCANONICALIZE:
   case ISD::FFREXP:
+  case ISD::FMODF:
   case ISD::FSINCOS:
+  case ISD::FSINCOSPI:
   case ISD::SADDSAT:
   case ISD::UADDSAT:
   case ISD::SSUBSAT:
@@ -467,6 +469,8 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   case ISD::VECTOR_COMPRESS:
   case ISD::SCMP:
   case ISD::UCMP:
+  case ISD::PARTIAL_REDUCE_UMLA:
+  case ISD::PARTIAL_REDUCE_SMLA:
     Action = TLI.getOperationAction(Node->getOpcode(), Node->getValueType(0));
     break;
   case ISD::SMULFIX:
@@ -499,13 +503,19 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   case ISD::VECREDUCE_UMIN:
   case ISD::VECREDUCE_FADD:
   case ISD::VECREDUCE_FMUL:
+  case ISD::VECTOR_FIND_LAST_ACTIVE:
+    Action = TLI.getOperationAction(Node->getOpcode(),
+                                    Node->getOperand(0).getValueType());
+    break;
   case ISD::VECREDUCE_FMAX:
   case ISD::VECREDUCE_FMIN:
   case ISD::VECREDUCE_FMAXIMUM:
   case ISD::VECREDUCE_FMINIMUM:
-  case ISD::VECTOR_FIND_LAST_ACTIVE:
     Action = TLI.getOperationAction(Node->getOpcode(),
                                     Node->getOperand(0).getValueType());
+    // Defer non-vector results to LegalizeDAG.
+    if (Action == TargetLowering::Promote)
+      Action = TargetLowering::Legal;
     break;
   case ISD::VECREDUCE_SEQ_FADD:
   case ISD::VECREDUCE_SEQ_FMUL:
@@ -1195,6 +1205,10 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
   case ISD::VECREDUCE_FMINIMUM:
     Results.push_back(TLI.expandVecReduce(Node, DAG));
     return;
+  case ISD::PARTIAL_REDUCE_UMLA:
+  case ISD::PARTIAL_REDUCE_SMLA:
+    Results.push_back(TLI.expandPartialReduceMLA(Node, DAG));
+    return;
   case ISD::VECREDUCE_SEQ_FADD:
   case ISD::VECREDUCE_SEQ_FMUL:
     Results.push_back(TLI.expandVecReduceSeq(Node, DAG));
@@ -1216,10 +1230,21 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
       return;
 
     break;
-  case ISD::FSINCOS: {
-    RTLIB::Libcall LC =
-        RTLIB::getFSINCOS(Node->getValueType(0).getVectorElementType());
+  case ISD::FSINCOS:
+  case ISD::FSINCOSPI: {
+    EVT VT = Node->getValueType(0).getVectorElementType();
+    RTLIB::Libcall LC = Node->getOpcode() == ISD::FSINCOS
+                            ? RTLIB::getSINCOS(VT)
+                            : RTLIB::getSINCOSPI(VT);
     if (DAG.expandMultipleResultFPLibCall(LC, Node, Results))
+      return;
+    break;
+  }
+  case ISD::FMODF: {
+    RTLIB::Libcall LC =
+        RTLIB::getMODF(Node->getValueType(0).getVectorElementType());
+    if (DAG.expandMultipleResultFPLibCall(LC, Node, Results,
+                                          /*CallRetResNo=*/0))
       return;
     break;
   }

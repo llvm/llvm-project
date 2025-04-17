@@ -271,7 +271,7 @@ def sext_inreg_to_zext_inreg : GICombineRule<
     (G_SEXT_INREG $dst, $src, $imm):$root,
       [{
         unsigned BitWidth = MRI.getType(${src}.getReg()).getScalarSizeInBits();
-        return Helper.getKnownBits()->maskedValueIsZero(${src}.getReg(),
+        return Helper.getValueTracking()->maskedValueIsZero(${src}.getReg(),
                  APInt::getOneBitSet(BitWidth, ${imm}.getImm() - 1)); }]),
     (apply [{
       Helper.getBuilder().setInstrAndDebugLoc(*${root});
@@ -745,6 +745,17 @@ def shl_ashr_to_sext_inreg : GICombineRule<
   (match (wip_match_opcode G_ASHR): $root,
     [{ return Helper.matchAshrShlToSextInreg(*${root}, ${info}); }]),
   (apply [{ Helper.applyAshShlToSextInreg(*${root}, ${info});}])
+>;
+
+// Fold sub 0, (and x, 1) -> sext_inreg x, 1
+def neg_and_one_to_sext_inreg : GICombineRule<
+  (defs root:$dst),
+  (match (G_AND $and, $x, 1),
+         (G_SUB $dst, 0, $and),
+         [{ return MRI.hasOneNonDBGUse(${and}.getReg()) &&
+            Helper.isLegalOrBeforeLegalizer(
+              {TargetOpcode::G_SEXT_INREG, {MRI.getType(${x}.getReg())}}); }]),
+  (apply (G_SEXT_INREG $dst, $x, 1))
 >;
 
 // Fold and(and(x, C1), C2) -> C1&C2 ? and(x, C1&C2) : 0
@@ -1522,7 +1533,7 @@ def extract_vector_element_build_vector_trunc8 : GICombineRule<
 
 def sext_trunc : GICombineRule<
    (defs root:$root, build_fn_matchinfo:$matchinfo),
-   (match (G_TRUNC $src, $x, (MIFlags NoSWrap)),
+   (match (G_TRUNC $src, $x),
           (G_SEXT $root, $src),
    [{ return Helper.matchSextOfTrunc(${root}, ${matchinfo}); }]),
    (apply [{ Helper.applyBuildFnMO(${root}, ${matchinfo}); }])>;
@@ -1559,6 +1570,13 @@ def combine_shuffle_concat : GICombineRule<
   (match (wip_match_opcode G_SHUFFLE_VECTOR):$root,
         [{ return Helper.matchCombineShuffleConcat(*${root}, ${matchinfo}); }]),
   (apply [{ Helper.applyCombineShuffleConcat(*${root}, ${matchinfo}); }])>;
+
+// Combines shuffles of vector into build_vector
+def combine_shuffle_vector_to_build_vector : GICombineRule<
+  (defs root:$root),
+  (match (G_SHUFFLE_VECTOR $dst, $src1, $src2, $mask):$root,
+    [{ return Helper.matchCombineShuffleToBuildVector(*${root}); }]),
+  (apply [{ Helper.applyCombineShuffleToBuildVector(*${root}); }])>;
 
 def insert_vector_element_idx_undef : GICombineRule<
    (defs root:$root),
@@ -1849,6 +1867,13 @@ def anyext_of_anyext : ext_of_ext_opcodes<G_ANYEXT, G_ANYEXT>;
 def anyext_of_zext : ext_of_ext_opcodes<G_ANYEXT, G_ZEXT>;
 def anyext_of_sext : ext_of_ext_opcodes<G_ANYEXT, G_SEXT>;
 
+def sext_inreg_of_sext_inreg : GICombineRule<
+   (defs root:$dst, build_fn_matchinfo:$matchinfo),
+   (match (G_SEXT_INREG $x, $src, $a):$other,
+          (G_SEXT_INREG $dst, $x, $b):$root,
+          [{ return Helper.matchRedundantSextInReg(*${root}, *${other}, ${matchinfo}); }]),
+   (apply [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])>;
+
 // Push cast through build vector.
 class buildvector_of_opcode<Instruction castOpcode> : GICombineRule <
   (defs root:$root, build_fn_matchinfo:$matchinfo),
@@ -1896,7 +1921,8 @@ def cast_of_cast_combines: GICombineGroup<[
   sext_of_anyext,
   anyext_of_anyext,
   anyext_of_zext,
-  anyext_of_sext
+  anyext_of_sext,
+  sext_inreg_of_sext_inreg,
 ]>;
 
 def cast_combines: GICombineGroup<[
@@ -2013,7 +2039,7 @@ def all_combines : GICombineGroup<[integer_reassoc_combines, trivial_combines,
     undef_combines, identity_combines, phi_combines,
     simplify_add_to_sub, hoist_logic_op_with_same_opcode_hands, shifts_too_big,
     reassocs, ptr_add_immed_chain, cmp_combines,
-    shl_ashr_to_sext_inreg, sext_inreg_of_load,
+    shl_ashr_to_sext_inreg, neg_and_one_to_sext_inreg, sext_inreg_of_load,
     width_reduction_combines, select_combines,
     known_bits_simplifications, trunc_shift,
     not_cmp_fold, opt_brcond_by_inverting_cond,
