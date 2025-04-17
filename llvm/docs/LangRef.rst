@@ -9478,7 +9478,7 @@ This instruction requires several arguments:
    ``void``. The signature is computed based on the return type and argument
    types.
 #. '``fnty``': shall be the signature of the function being invoked. The
-   argument types must match the types implied by this signature. Thisa
+   argument types must match the types implied by this signature. This
    is only required if the signature specifies a varargs type.
 #. '``fnptrval``': An LLVM value containing a pointer to a function to
    be invoked. In most cases, this is a direct function invocation, but
@@ -13158,7 +13158,7 @@ return value of the function is bound to the result argument.
 If the callee refers to an intrinsic function, the signature of the call must
 match the signature of the callee.  Otherwise, if the signature of the call
 does not match the signature of the called function, the behavior is
-target-specific.  For a signficant mismatch, this likely results in undefined
+target-specific.  For a significant mismatch, this likely results in undefined
 behavior. LLVM interprocedural optimizations generally only optimize calls
 where the signature of the caller matches the signature of the callee.
 
