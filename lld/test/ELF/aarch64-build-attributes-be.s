@@ -7,7 +7,7 @@
 /// llvm-mc should not appear in the output of lld, because
 /// AArch64 build attributes are being transformed into .gnu.properties.
 
-// Test mc -> big endian, lld -> little endian
+/// Test mc -> big endian, lld -> little endian
 // RUN: llvm-mc -triple=aarch64_be %s -filetype=obj -o %t.o
 // RUN: ld.lld %t.o --shared -o %t.so
 // RUN: llvm-readelf -n %t.so | FileCheck %s --check-prefix=NOTE
@@ -16,7 +16,7 @@
 // RUN: ld.lld -r %t.o -o %t2.o
 // RUN: llvm-readelf -n %t.so | FileCheck %s --check-prefix=NOTE
 
-// Test mc -> little endian, lld -> big endian
+/// Test mc -> little endian, lld -> big endian
 // RUN: llvm-mc -triple=aarch64 %s -filetype=obj -o %t.o
 // RUN: ld.lld --EB %t.o --shared -o %t.so
 // RUN: llvm-readelf -n %t.so | FileCheck %s --check-prefix=NOTE
@@ -25,7 +25,7 @@
 // RUN: ld.lld --EB -r %t.o -o %t2.o
 // RUN: llvm-readelf -n %t.so | FileCheck %s --check-prefix=NOTE
 
-// Test mc -> big endian, lld -> big endian
+/// Test mc -> big endian, lld -> big endian
 // RUN: llvm-mc -triple=aarch64_be %s -filetype=obj -o %t.o
 // RUN: ld.lld --EB %t.o --shared -o %t.so
 // RUN: llvm-readelf -n %t.so | FileCheck %s --check-prefix=NOTE
