@@ -675,7 +675,7 @@ void RISCVDisassembler::addSPOperands(MCInst &MI) const {
 namespace {
 
 struct DecoderListEntry {
-  const uint8_t *Table;
+  DecoderTable2Bytes Table;
   FeatureBitset ContainedFeatures;
   const char *Desc;
 

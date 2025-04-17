@@ -458,8 +458,7 @@ static DecodeStatus readInstruction32(ArrayRef<uint8_t> Bytes, uint64_t Address,
   return MCDisassembler::Success;
 }
 
-static const uint8_t *getDecoderTable(uint64_t Size) {
-
+static DecoderTable2Bytes getDecoderTable(uint64_t Size) {
   switch (Size) {
   case 2:
     return DecoderTable16;

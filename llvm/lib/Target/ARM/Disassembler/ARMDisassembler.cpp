@@ -809,25 +809,20 @@ DecodeStatus ARMDisassembler::getARMInstruction(MCInst &MI, uint64_t &Size,
     return checkDecodedInstruction(MI, Size, Address, CS, Insn, Result);
   }
 
-  struct DecodeTable {
-    const uint8_t *P;
-    bool DecodePred;
-  };
-
-  const DecodeTable Tables[] = {
+  constexpr std::pair<DecoderTable2Bytes, bool> Tables[] = {
       {DecoderTableVFP32, false},      {DecoderTableVFPV832, false},
       {DecoderTableNEONData32, true},  {DecoderTableNEONLoadStore32, true},
       {DecoderTableNEONDup32, true},   {DecoderTablev8NEON32, false},
       {DecoderTablev8Crypto32, false},
   };
 
-  for (auto Table : Tables) {
-    Result = decodeInstruction(Table.P, MI, Insn, Address, this, STI);
+  for (auto [Table, DecodePred] : Tables) {
+    Result = decodeInstruction(Table, MI, Insn, Address, this, STI);
     if (Result != MCDisassembler::Fail) {
       Size = 4;
       // Add a fake predicate operand, because we share these instruction
       // definitions with Thumb2 where these instructions are predicable.
-      if (Table.DecodePred && !DecodePredicateOperand(MI, 0xE, Address, this))
+      if (DecodePred && !DecodePredicateOperand(MI, 0xE, Address, this))
         return MCDisassembler::Fail;
       return Result;
     }
@@ -1254,9 +1249,9 @@ DecodeStatus ARMDisassembler::getThumbInstruction(MCInst &MI, uint64_t &Size,
   }
 
   uint32_t Coproc = fieldFromInstruction(Insn32, 8, 4);
-  const uint8_t *DecoderTable = ARM::isCDECoproc(Coproc, STI)
-                                    ? DecoderTableThumb2CDE32
-                                    : DecoderTableThumb2CoProc32;
+  const auto DecoderTable = ARM::isCDECoproc(Coproc, STI)
+                                ? DecoderTableThumb2CDE32
+                                : DecoderTableThumb2CoProc32;
   Result =
       decodeInstruction(DecoderTable, MI, Insn32, Address, this, STI);
   if (Result != MCDisassembler::Fail) {

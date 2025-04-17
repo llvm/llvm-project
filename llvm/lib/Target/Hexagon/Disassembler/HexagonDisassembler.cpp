@@ -327,7 +327,7 @@ DecodeStatus HexagonDisassembler::getSingleInstruction(MCInst &MI, MCInst &MCB,
   if ((Instruction & HexagonII::INST_PARSE_MASK) ==
       HexagonII::INST_PARSE_DUPLEX) {
     unsigned duplexIClass;
-    uint8_t const *DecodeLow, *DecodeHigh;
+    DecoderTable2Bytes DecodeLow, DecodeHigh;
     duplexIClass = ((Instruction >> 28) & 0xe) | ((Instruction >> 13) & 0x1);
     switch (duplexIClass) {
     default:

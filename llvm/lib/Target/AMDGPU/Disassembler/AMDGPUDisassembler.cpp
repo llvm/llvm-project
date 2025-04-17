@@ -487,6 +487,47 @@ static DecodeStatus decodeVersionImm(MCInst &Inst, unsigned Imm,
 //
 //===----------------------------------------------------------------------===//
 
+template <typename InsnType>
+static DecodeStatus tryDecodeInst(DecoderTable2Bytes Table, MCInst &MI,
+                                  InsnType Inst, uint64_t Address,
+                                  raw_ostream &Comments,
+                                  const AMDGPUDisassembler *Asm) {
+  assert(MI.getOpcode() == 0);
+  assert(MI.getNumOperands() == 0);
+  MCInst TmpInst;
+  Asm->setHasLiteral(false);
+  const auto SavedBytes = Asm->getBytes();
+
+  SmallString<64> LocalComments;
+  raw_svector_ostream LocalCommentStream(LocalComments);
+  Asm->CommentStream = &LocalCommentStream;
+
+  DecodeStatus Res = decodeInstruction(Table, TmpInst, Inst, Address, Asm,
+                                       Asm->getSubtargetInfo());
+
+  Asm->CommentStream = nullptr;
+
+  if (Res != MCDisassembler::Fail) {
+    MI = TmpInst;
+    Comments << LocalComments;
+    return MCDisassembler::Success;
+  }
+  Asm->setBytes(SavedBytes);
+  return MCDisassembler::Fail;
+}
+
+template <typename InsnType>
+static DecodeStatus
+tryDecodeInst(DecoderTable2Bytes Table1, DecoderTable2Bytes Table2, MCInst &MI,
+              InsnType Inst, uint64_t Address, raw_ostream &Comments,
+              const AMDGPUDisassembler *Asm) {
+  for (DecoderTable2Bytes T : {Table1, Table2}) {
+    if (DecodeStatus Res = tryDecodeInst(T, MI, Inst, Address, Comments, Asm))
+      return Res;
+  }
+  return MCDisassembler::Fail;
+}
+
 template <typename T> static inline T eatBytes(ArrayRef<uint8_t>& Bytes) {
   assert(Bytes.size() >= sizeof(T));
   const auto Res =
@@ -539,16 +580,16 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
 
       if (isGFX11() &&
           tryDecodeInst(DecoderTableGFX1196, DecoderTableGFX11_FAKE1696, MI,
-                        DecW, Address, CS))
+                        DecW, Address, CS, this))
         break;
 
       if (isGFX12() &&
           tryDecodeInst(DecoderTableGFX1296, DecoderTableGFX12_FAKE1696, MI,
-                        DecW, Address, CS))
+                        DecW, Address, CS, this))
         break;
 
       if (isGFX12() &&
-          tryDecodeInst(DecoderTableGFX12W6496, MI, DecW, Address, CS))
+          tryDecodeInst(DecoderTableGFX12W6496, MI, DecW, Address, CS, this))
         break;
 
       // Reinitialize Bytes
@@ -557,7 +598,7 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
     } else if (Bytes.size() >= 16 &&
                STI.hasFeature(AMDGPU::FeatureGFX950Insts)) {
       DecoderUInt128 DecW = eat16Bytes(Bytes);
-      if (tryDecodeInst(DecoderTableGFX940128, MI, DecW, Address, CS))
+      if (tryDecodeInst(DecoderTableGFX940128, MI, DecW, Address, CS, this))
         break;
 
       // Reinitialize Bytes
@@ -568,58 +609,61 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
       const uint64_t QW = eatBytes<uint64_t>(Bytes);
 
       if (STI.hasFeature(AMDGPU::FeatureGFX10_BEncoding) &&
-          tryDecodeInst(DecoderTableGFX10_B64, MI, QW, Address, CS))
+          tryDecodeInst(DecoderTableGFX10_B64, MI, QW, Address, CS, this))
         break;
 
       if (STI.hasFeature(AMDGPU::FeatureUnpackedD16VMem) &&
-          tryDecodeInst(DecoderTableGFX80_UNPACKED64, MI, QW, Address, CS))
+          tryDecodeInst(DecoderTableGFX80_UNPACKED64, MI, QW, Address, CS,
+                        this))
         break;
 
       if (STI.hasFeature(AMDGPU::FeatureGFX950Insts) &&
-          tryDecodeInst(DecoderTableGFX95064, MI, QW, Address, CS))
+          tryDecodeInst(DecoderTableGFX95064, MI, QW, Address, CS, this))
         break;
 
       // Some GFX9 subtargets repurposed the v_mad_mix_f32, v_mad_mixlo_f16 and
       // v_mad_mixhi_f16 for FMA variants. Try to decode using this special
       // table first so we print the correct name.
       if (STI.hasFeature(AMDGPU::FeatureFmaMixInsts) &&
-          tryDecodeInst(DecoderTableGFX9_DL64, MI, QW, Address, CS))
+          tryDecodeInst(DecoderTableGFX9_DL64, MI, QW, Address, CS, this))
         break;
 
       if (STI.hasFeature(AMDGPU::FeatureGFX940Insts) &&
-          tryDecodeInst(DecoderTableGFX94064, MI, QW, Address, CS))
+          tryDecodeInst(DecoderTableGFX94064, MI, QW, Address, CS, this))
         break;
 
       if (STI.hasFeature(AMDGPU::FeatureGFX90AInsts) &&
-          tryDecodeInst(DecoderTableGFX90A64, MI, QW, Address, CS))
+          tryDecodeInst(DecoderTableGFX90A64, MI, QW, Address, CS, this))
         break;
 
       if ((isVI() || isGFX9()) &&
-          tryDecodeInst(DecoderTableGFX864, MI, QW, Address, CS))
+          tryDecodeInst(DecoderTableGFX864, MI, QW, Address, CS, this))
         break;
 
-      if (isGFX9() && tryDecodeInst(DecoderTableGFX964, MI, QW, Address, CS))
+      if (isGFX9() &&
+          tryDecodeInst(DecoderTableGFX964, MI, QW, Address, CS, this))
         break;
 
-      if (isGFX10() && tryDecodeInst(DecoderTableGFX1064, MI, QW, Address, CS))
+      if (isGFX10() &&
+          tryDecodeInst(DecoderTableGFX1064, MI, QW, Address, CS, this))
         break;
 
       if (isGFX12() &&
           tryDecodeInst(DecoderTableGFX1264, DecoderTableGFX12_FAKE1664, MI, QW,
-                        Address, CS))
+                        Address, CS, this))
         break;
 
       if (isGFX11() &&
           tryDecodeInst(DecoderTableGFX1164, DecoderTableGFX11_FAKE1664, MI, QW,
-                        Address, CS))
+                        Address, CS, this))
         break;
 
       if (isGFX11() &&
-          tryDecodeInst(DecoderTableGFX11W6464, MI, QW, Address, CS))
+          tryDecodeInst(DecoderTableGFX11W6464, MI, QW, Address, CS, this))
         break;
 
       if (isGFX12() &&
-          tryDecodeInst(DecoderTableGFX12W6464, MI, QW, Address, CS))
+          tryDecodeInst(DecoderTableGFX12W6464, MI, QW, Address, CS, this))
         break;
 
       // Reinitialize Bytes
@@ -631,38 +675,40 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
       const uint32_t DW = eatBytes<uint32_t>(Bytes);
 
       if ((isVI() || isGFX9()) &&
-          tryDecodeInst(DecoderTableGFX832, MI, DW, Address, CS))
+          tryDecodeInst(DecoderTableGFX832, MI, DW, Address, CS, this))
         break;
 
-      if (tryDecodeInst(DecoderTableAMDGPU32, MI, DW, Address, CS))
+      if (tryDecodeInst(DecoderTableAMDGPU32, MI, DW, Address, CS, this))
         break;
 
-      if (isGFX9() && tryDecodeInst(DecoderTableGFX932, MI, DW, Address, CS))
+      if (isGFX9() &&
+          tryDecodeInst(DecoderTableGFX932, MI, DW, Address, CS, this))
         break;
 
       if (STI.hasFeature(AMDGPU::FeatureGFX950Insts) &&
-          tryDecodeInst(DecoderTableGFX95032, MI, DW, Address, CS))
+          tryDecodeInst(DecoderTableGFX95032, MI, DW, Address, CS, this))
         break;
 
       if (STI.hasFeature(AMDGPU::FeatureGFX90AInsts) &&
-          tryDecodeInst(DecoderTableGFX90A32, MI, DW, Address, CS))
+          tryDecodeInst(DecoderTableGFX90A32, MI, DW, Address, CS, this))
         break;
 
       if (STI.hasFeature(AMDGPU::FeatureGFX10_BEncoding) &&
-          tryDecodeInst(DecoderTableGFX10_B32, MI, DW, Address, CS))
+          tryDecodeInst(DecoderTableGFX10_B32, MI, DW, Address, CS, this))
         break;
 
-      if (isGFX10() && tryDecodeInst(DecoderTableGFX1032, MI, DW, Address, CS))
+      if (isGFX10() &&
+          tryDecodeInst(DecoderTableGFX1032, MI, DW, Address, CS, this))
         break;
 
       if (isGFX11() &&
           tryDecodeInst(DecoderTableGFX1132, DecoderTableGFX11_FAKE1632, MI, DW,
-                        Address, CS))
+                        Address, CS, this))
         break;
 
       if (isGFX12() &&
           tryDecodeInst(DecoderTableGFX1232, DecoderTableGFX12_FAKE1632, MI, DW,
-                        Address, CS))
+                        Address, CS, this))
         break;
     }
 

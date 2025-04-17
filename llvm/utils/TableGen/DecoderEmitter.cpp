@@ -811,8 +811,9 @@ void DecoderEmitter::emitTable(formatted_raw_ostream &OS, DecoderTable &Table,
   for (const auto &EI : EncodingIDs)
     OpcodeToEncodingID[EI.Opcode] = EI.EncodingID;
 
-  OS << Indent << "static const uint8_t DecoderTable" << Namespace << BitWidth
-     << "[] = {\n";
+  // First emit the raw table as an array of uint8_t.
+  OS << Indent << "static constexpr uint8_t DecoderTable" << Namespace
+     << BitWidth << "RawData[] = {\n";
 
   Indent += 2;
 
@@ -985,10 +986,14 @@ void DecoderEmitter::emitTable(formatted_raw_ostream &OS, DecoderTable &Table,
     }
   }
   OS << Indent << "0\n";
-
   Indent -= 2;
+  OS << Indent << "};\n";
 
-  OS << Indent << "};\n\n";
+  // Wrap the raw table data into an appropriate DecoderTable2Bytes
+  // or DecoderTable3Bytes struct.
+  OS << Indent << "static constexpr DecoderTable" << NumToSkipSizeInBytes
+     << "Bytes DecoderTable" << Namespace << BitWidth << "{DecoderTable"
+     << Namespace << BitWidth << "RawData};\n\n";
 }
 
 void DecoderEmitter::emitInstrLenTable(formatted_raw_ostream &OS,
@@ -2170,10 +2175,8 @@ insertBits(InsnType &field, uint64_t bits, unsigned startBit, unsigned numBits) 
 // decodeInstruction().
 static void emitDecodeInstruction(formatted_raw_ostream &OS,
                                   bool IsVarLenInst) {
-  OS << formatv("\nconstexpr unsigned NumToSkipSizeInBytes = {};\n",
-                NumToSkipSizeInBytes);
-
   OS << R"(
+template<int NumToSkipSizeInBytes>
 inline unsigned decodeNumToSkip(const uint8_t *&Ptr) {
   unsigned NumToSkip = *Ptr++;
   NumToSkip |= (*Ptr++) << 8;
@@ -2183,8 +2186,11 @@ inline unsigned decodeNumToSkip(const uint8_t *&Ptr) {
 }
 
 template <typename InsnType>
-static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
-                                      InsnType insn, uint64_t Address,
+static DecodeStatus decodeInstruction()";
+  OS << formatv("DecoderTable{}Bytes DecodeTable,", NumToSkipSizeInBytes);
+  OS << R"(
+                                      MCInst &MI, InsnType insn,
+                                      uint64_t Address,
                                       const MCDisassembler *DisAsm,
                                       const MCSubtargetInfo &STI)";
   if (IsVarLenInst) {
@@ -2194,11 +2200,12 @@ static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
   OS << R"() {
   const FeatureBitset &Bits = STI.getFeatureBits();
 
-  const uint8_t *Ptr = DecodeTable;
+  const uint8_t *const Data = DecodeTable.Data.data();
+  const uint8_t *Ptr = Data;
   uint64_t CurFieldValue = 0;
   DecodeStatus S = MCDisassembler::Success;
   while (true) {
-    ptrdiff_t Loc = Ptr - DecodeTable;
+    ptrdiff_t Loc = Ptr - Data;
     switch (*Ptr) {
     default:
       errs() << Loc << ": Unexpected decode table opcode!\n";
@@ -2219,14 +2226,16 @@ static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
       // Decode the field value.
       uint64_t Val = decodeULEB128AndIncUnsafe(++Ptr);
       bool Failed = Val != CurFieldValue;
-      unsigned NumToSkip = decodeNumToSkip(Ptr);
+      unsigned NumToSkip = decodeNumToSkip<)";
+  OS << NumToSkipSizeInBytes;
+  OS << R"(>(Ptr);
 
       // Perform the filter operation.
       if (Failed)
         Ptr += NumToSkip;
       LLVM_DEBUG(dbgs() << Loc << ": OPC_FilterValue(" << Val << ", " << NumToSkip
                    << "): " << (Failed ? "FAIL:" : "PASS:")
-                   << " continuing at " << (Ptr - DecodeTable) << "\n");
+                   << " continuing at " << (Ptr - Data) << "\n");
 
       break;
     }
@@ -2243,7 +2252,9 @@ static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
       uint64_t ExpectedValue = decodeULEB128(++Ptr, &PtrLen);
       Ptr += PtrLen;
       bool Failed = ExpectedValue != FieldValue;
-      unsigned NumToSkip = decodeNumToSkip(Ptr);
+      unsigned NumToSkip = decodeNumToSkip<)";
+  OS << NumToSkipSizeInBytes;
+  OS << R"(>(Ptr);
 
       // If the actual and expected values don't match, skip.
       if (Failed)
@@ -2258,7 +2269,9 @@ static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
     case MCD::OPC_CheckPredicate: {
       // Decode the Predicate Index value.
       unsigned PIdx = decodeULEB128AndIncUnsafe(++Ptr);
-      unsigned NumToSkip = decodeNumToSkip(Ptr);
+      unsigned NumToSkip = decodeNumToSkip<)";
+  OS << NumToSkipSizeInBytes;
+  OS << R"(>(Ptr);
       // Check the predicate.
       bool Failed = !checkDecoderPredicate(PIdx, Bits);
       if (Failed)
@@ -2293,7 +2306,9 @@ static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
       // Decode the Opcode value.
       unsigned Opc = decodeULEB128AndIncUnsafe(++Ptr);
       unsigned DecodeIdx = decodeULEB128AndIncUnsafe(Ptr);
-      unsigned NumToSkip = decodeNumToSkip(Ptr);
+      unsigned NumToSkip = decodeNumToSkip<)";
+  OS << NumToSkipSizeInBytes;
+  OS << R"(>(Ptr);
 
       // Perform the decode operation.
       MCInst TmpMI;
@@ -2312,7 +2327,7 @@ static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
         assert(S == MCDisassembler::Fail);
         // If the decoding was incomplete, skip.
         Ptr += NumToSkip;
-        LLVM_DEBUG(dbgs() << "FAIL: continuing at " << (Ptr - DecodeTable) << "\n");
+        LLVM_DEBUG(dbgs() << "FAIL: continuing at " << (Ptr - Data) << "\n");
         // Reset decode status. This also drops a SoftFail status that could be
         // set before the decode attempt.
         S = MCDisassembler::Success;
@@ -2336,8 +2351,7 @@ static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
     }
   }
   llvm_unreachable("bogosity detected in disassembler state machine!");
-}
-
+} // decodeInstruction
 )";
 }
 
@@ -2351,6 +2365,22 @@ static bool Check(DecodeStatus &Out, DecodeStatus In) {
   Out = static_cast<DecodeStatus>(Out & In);
   return Out != MCDisassembler::Fail;
 }
+
+)";
+}
+
+// Helper to emit declarations of decoder table struct types.
+// These structs carry the raw decoder table data as their payload, but
+// the 2 different types helps discriminate between 2 vs 3 byte NumToSkip
+// encoding and generate an overloaded `decodeInstruction` function.
+static void emitDecoderTableStructTypes(formatted_raw_ostream &OS) {
+  OS << R"(
+struct DecoderTable2Bytes { // Decoder Table with 2 bytes NumToSkip.
+   ArrayRef<uint8_t> Data;
+};
+struct DecoderTable3Bytes { // Decoder Table with 3 bytes NumToSkip.
+   ArrayRef<uint8_t> Data;
+};
 
 )";
 }
@@ -2438,6 +2468,7 @@ namespace llvm {
   emitFieldFromInstruction(OS);
   emitInsertBits(OS);
   emitCheck(OS);
+  emitDecoderTableStructTypes(OS);
 
   Target.reverseBitsForLittleEndianEncoding();
 
@@ -2546,6 +2577,7 @@ namespace llvm {
     TableInfo.FixupStack.clear();
     TableInfo.Table.reserve(16384);
     TableInfo.FixupStack.emplace_back();
+
     FC.emitTableEntries(TableInfo);
     // Any NumToSkip fixups in the top level scope can resolve to the
     // OPC_Fail at the end of the table.

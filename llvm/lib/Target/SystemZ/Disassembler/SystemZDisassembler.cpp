@@ -331,7 +331,7 @@ DecodeStatus SystemZDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
     return MCDisassembler::Fail;
 
   // The top 2 bits of the first byte specify the size.
-  const uint8_t *Table;
+  DecoderTable2Bytes Table;
   if (Bytes[0] < 0x40) {
     Size = 2;
     Table = DecoderTable16;

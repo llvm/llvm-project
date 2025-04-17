@@ -201,7 +201,7 @@ static AddrMode DecodeDstAddrMode(unsigned Insn) {
   return Ad ? amIndexed : amRegister;
 }
 
-static const uint8_t *getDecoderTable(AddrMode SrcAM, unsigned Words) {
+static DecoderTable2Bytes getDecoderTable(AddrMode SrcAM, unsigned Words) {
   assert(0 < Words && Words < 4 && "Incorrect number of words");
   switch (SrcAM) {
   default:
@@ -308,7 +308,8 @@ DecodeStatus MSP430Disassembler::getInstructionII(MCInst &MI, uint64_t &Size,
     break;
   }
 
-  const uint8_t *DecoderTable = Words == 2 ? DecoderTable32 : DecoderTable16;
+  DecoderTable2Bytes DecoderTable =
+      Words == 2 ? DecoderTable32 : DecoderTable16;
   DecodeStatus Result = decodeInstruction(DecoderTable, MI, Insn, Address,
                                           this, STI);
   if (Result != MCDisassembler::Fail) {
