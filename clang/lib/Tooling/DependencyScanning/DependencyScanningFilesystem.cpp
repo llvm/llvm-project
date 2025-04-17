@@ -108,11 +108,11 @@ DependencyScanningFilesystemSharedCache::getShardForUID(
   return CacheShards[Hash % NumShards];
 }
 
-void DependencyScanningFilesystemSharedCache::
-    diagnoseInvalidNegativeStatCachedPaths(
-        std::vector<std::string> &InvalidPaths,
-        llvm::vfs::FileSystem &UnderlyingFS) const {
+std::vector<StringRef>
+DependencyScanningFilesystemSharedCache::getInvalidNegativeStatCachedPaths(
+    llvm::vfs::FileSystem &UnderlyingFS) const {
   // Iterate through all shards and look for cached stat errors.
+  std::vector<StringRef> InvalidPaths;
   for (unsigned i = 0; i < NumShards; i++) {
     const CacheShard &Shard = CacheShards[i];
     std::lock_guard<std::mutex> LockGuard(Shard.CacheLock);
@@ -132,6 +132,7 @@ void DependencyScanningFilesystemSharedCache::
       }
     }
   }
+  return InvalidPaths;
 }
 
 const CachedFileSystemEntry *

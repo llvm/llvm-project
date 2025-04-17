@@ -196,10 +196,9 @@ TEST(DependencyScanningFilesystem, DiagnoseStaleStatFailures) {
   // DepFS's eyes.
   EXPECT_EQ(Path1Exists, false);
 
-  std::vector<std::string> InvalidPaths;
-  SharedCache.diagnoseInvalidNegativeStatCachedPaths(InvalidPaths,
-                                                     *InMemoryFS.get());
+  std::vector<llvm::StringRef> InvalidPaths =
+      SharedCache.getInvalidNegativeStatCachedPaths(*InMemoryFS.get());
 
   EXPECT_EQ(InvalidPaths.size(), 1u);
-  ASSERT_STREQ("/path1", InvalidPaths[0].c_str());
+  ASSERT_STREQ("/path1", InvalidPaths[0].str().c_str());
 }

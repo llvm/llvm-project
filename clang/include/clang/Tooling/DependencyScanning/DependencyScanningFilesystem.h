@@ -225,9 +225,8 @@ public:
   /// the path is added to InvalidPaths, indicating that the cache
   /// may have erroneously negatively cached it. The caller can then
   /// use InvalidPaths to issue diagnostics.
-  void diagnoseInvalidNegativeStatCachedPaths(
-      std::vector<std::string> &InvalidPaths,
-      llvm::vfs::FileSystem &UnderlyingFS) const;
+  std::vector<StringRef>
+  getInvalidNegativeStatCachedPaths(llvm::vfs::FileSystem &UnderlyingFS) const;
 
 private:
   std::unique_ptr<CacheShard[]> CacheShards;
