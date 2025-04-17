@@ -433,12 +433,6 @@ public:
 
   CompilerDecl GetStaticFieldWithName(llvm::StringRef name) const;
 
-  uint32_t GetIndexOfFieldWithName(const char *name,
-                                   CompilerType *field_compiler_type = nullptr,
-                                   uint64_t *bit_offset_ptr = nullptr,
-                                   uint32_t *bitfield_bit_size_ptr = nullptr,
-                                   bool *is_bitfield_ptr = nullptr) const;
-
   llvm::Expected<CompilerType> GetChildCompilerTypeAtIndex(
       ExecutionContext *exe_ctx, size_t idx, bool transparent_pointers,
       bool omit_empty_base_classes, bool ignore_array_bounds,
