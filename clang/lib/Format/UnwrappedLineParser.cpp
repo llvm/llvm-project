@@ -135,7 +135,8 @@ public:
   CompoundStatementIndenter(UnwrappedLineParser *Parser,
                             const FormatStyle &Style, unsigned &LineLevel)
       : CompoundStatementIndenter(Parser, LineLevel,
-                                  Style.BraceWrapping.AfterControlStatement,
+                                  Style.BraceWrapping.AfterControlStatement ==
+                                      FormatStyle::BWACS_Always,
                                   Style.BraceWrapping.IndentBraces) {}
   CompoundStatementIndenter(UnwrappedLineParser *Parser, unsigned &LineLevel,
                             bool WrapBrace, bool IndentBrace)
@@ -3067,7 +3068,7 @@ void UnwrappedLineParser::parseTryCatch() {
     parseStructuralElement();
     --Line->Level;
   }
-  while (true) {
+  for (bool SeenCatch = false;;) {
     if (FormatTok->is(tok::at))
       nextToken();
     if (!(FormatTok->isOneOf(tok::kw_catch, Keywords.kw___except,
@@ -3077,6 +3078,8 @@ void UnwrappedLineParser::parseTryCatch() {
            FormatTok->is(Keywords.kw_finally)))) {
       break;
     }
+    if (FormatTok->is(tok::kw_catch))
+      SeenCatch = true;
     nextToken();
     while (FormatTok->isNot(tok::l_brace)) {
       if (FormatTok->is(tok::l_paren)) {
@@ -3089,6 +3092,10 @@ void UnwrappedLineParser::parseTryCatch() {
         return;
       }
       nextToken();
+    }
+    if (SeenCatch) {
+      FormatTok->setFinalizedType(TT_ControlStatementLBrace);
+      SeenCatch = false;
     }
     NeedsUnwrappedLine = false;
     Line->MustBeDeclaration = false;
