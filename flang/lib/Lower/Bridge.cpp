@@ -3738,8 +3738,8 @@ private:
       const bool isVolatile = fir::isa_volatile_type(selector.getType());
       mlir::Type eleType =
           fir::unwrapSequenceType(fir::unwrapRefType(baseAddr.getType()));
-      mlir::Type rank1Type =
-          fir::ReferenceType::get(builder->getVarLenSeqTy(eleType, 1), isVolatile);
+      mlir::Type rank1Type = fir::ReferenceType::get(
+          builder->getVarLenSeqTy(eleType, 1), isVolatile);
       baseAddr = builder->createConvert(loc, rank1Type, baseAddr);
       if (selector.isCharacter()) {
         mlir::Value len = hlfir::genCharLength(loc, *builder, selector);

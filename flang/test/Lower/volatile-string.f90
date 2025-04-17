@@ -3,23 +3,29 @@ program p
   character(3), volatile :: string = 'foo'
   character(3)           :: nonvolatile_string
   integer                :: i
-  call bar(string)
+  call assign_same_length(string)
+  call assign_different_length(string)
   i = index(string, 'o')
   i = len(string)
   string = adjustl(string)
   nonvolatile_string = trim(string)
   nonvolatile_string = string
 contains
-  subroutine bar(x)
-    character(3), volatile :: x
+  subroutine assign_same_length(x)
+    character(3), intent(inout), volatile :: x
     x = 'bar'
   end subroutine
+  subroutine assign_different_length(string)
+    character(3), intent(inout), volatile :: string
+    string = 'bo'
+  end subroutine
 end program
+
 ! CHECK-LABEL:   func.func @_QQmain() attributes {fir.bindc_name = "p"} {
-! CHECK:           %[[VAL_0:.*]] = arith.constant 10 : i32
+! CHECK:           %[[VAL_0:.*]] = arith.constant 11 : i32
 ! CHECK:           %[[VAL_1:.*]] = arith.constant 0 : index
 ! CHECK:           %[[VAL_2:.*]] = arith.constant true
-! CHECK:           %[[VAL_3:.*]] = arith.constant 9 : i32
+! CHECK:           %[[VAL_3:.*]] = arith.constant 10 : i32
 ! CHECK:           %[[VAL_4:.*]] = arith.constant 3 : i32
 ! CHECK:           %[[VAL_5:.*]] = arith.constant false
 ! CHECK:           %[[VAL_6:.*]] = arith.constant 1 : index
@@ -35,7 +41,8 @@ end program
 ! CHECK:           %[[VAL_16:.*]]:2 = hlfir.declare %[[VAL_15]] typeparams %[[VAL_7]] {fortran_attrs = #fir.var_attrs<volatile>, uniq_name = "_QFEstring"} : (!fir.ref<!fir.char<1,3>, volatile>, index) -> (!fir.ref<!fir.char<1,3>, volatile>, !fir.ref<!fir.char<1,3>, volatile>)
 ! CHECK:           %[[VAL_17:.*]] = fir.volatile_cast %[[VAL_16]]#0 : (!fir.ref<!fir.char<1,3>, volatile>) -> !fir.ref<!fir.char<1,3>>
 ! CHECK:           %[[VAL_18:.*]] = fir.emboxchar %[[VAL_17]], %[[VAL_7]] : (!fir.ref<!fir.char<1,3>>, index) -> !fir.boxchar<1>
-! CHECK:           fir.call @_QFPbar(%[[VAL_18]]) fastmath<contract> : (!fir.boxchar<1>) -> ()
+! CHECK:           fir.call @_QFPassign_same_length(%[[VAL_18]]) fastmath<contract> : (!fir.boxchar<1>) -> ()
+! CHECK:           fir.call @_QFPassign_different_length(%[[VAL_18]]) fastmath<contract> : (!fir.boxchar<1>) -> ()
 ! CHECK:           %[[VAL_19:.*]] = fir.address_of(@_QQclX6F) : !fir.ref<!fir.char<1>>
 ! CHECK:           %[[VAL_20:.*]]:2 = hlfir.declare %[[VAL_19]] typeparams %[[VAL_6]] {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQclX6F"} : (!fir.ref<!fir.char<1>>, index) -> (!fir.ref<!fir.char<1>>, !fir.ref<!fir.char<1>>)
 ! CHECK:           %[[VAL_21:.*]] = fir.convert %[[VAL_17]] : (!fir.ref<!fir.char<1,3>>) -> !fir.ref<i8>
@@ -79,16 +86,31 @@ end program
 ! CHECK:           return
 ! CHECK:         }
 
-! CHECK-LABEL:   func.func private @_QFPbar(
-! CHECK-SAME:                               %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.boxchar<1> {fir.bindc_name = "x"}) attributes {fir.host_symbol = @_QQmain, llvm.linkage = #llvm.linkage<internal>} {
+! CHECK-LABEL:   func.func private @_QFPassign_same_length(
+! CHECK-SAME:                                              %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.boxchar<1> {fir.bindc_name = "x"}) attributes {fir.host_symbol = @_QQmain, llvm.linkage = #llvm.linkage<internal>} {
 ! CHECK:           %[[VAL_1:.*]] = arith.constant 3 : index
 ! CHECK:           %[[VAL_2:.*]] = fir.dummy_scope : !fir.dscope
 ! CHECK:           %[[VAL_3:.*]]:2 = fir.unboxchar %[[VAL_0]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
 ! CHECK:           %[[VAL_4:.*]] = fir.convert %[[VAL_3]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.char<1,3>>
 ! CHECK:           %[[VAL_5:.*]] = fir.volatile_cast %[[VAL_4]] : (!fir.ref<!fir.char<1,3>>) -> !fir.ref<!fir.char<1,3>, volatile>
-! CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_5]] typeparams %[[VAL_1]] dummy_scope %[[VAL_2]] {fortran_attrs = #fir.var_attrs<volatile>, uniq_name = "_QFFbarEx"} : (!fir.ref<!fir.char<1,3>, volatile>, index, !fir.dscope) -> (!fir.ref<!fir.char<1,3>, volatile>, !fir.ref<!fir.char<1,3>, volatile>)
+! CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_5]] typeparams %[[VAL_1]] dummy_scope %[[VAL_2]] {fortran_attrs = #fir.var_attrs<intent_inout, volatile>, uniq_name = "_QFFassign_same_lengthEx"} : (!fir.ref<!fir.char<1,3>, volatile>, index, !fir.dscope) -> (!fir.ref<!fir.char<1,3>, volatile>, !fir.ref<!fir.char<1,3>, volatile>)
 ! CHECK:           %[[VAL_7:.*]] = fir.address_of(@_QQclX626172) : !fir.ref<!fir.char<1,3>>
 ! CHECK:           %[[VAL_8:.*]]:2 = hlfir.declare %[[VAL_7]] typeparams %[[VAL_1]] {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQclX626172"} : (!fir.ref<!fir.char<1,3>>, index) -> (!fir.ref<!fir.char<1,3>>, !fir.ref<!fir.char<1,3>>)
 ! CHECK:           hlfir.assign %[[VAL_8]]#0 to %[[VAL_6]]#0 : !fir.ref<!fir.char<1,3>>, !fir.ref<!fir.char<1,3>, volatile>
+! CHECK:           return
+! CHECK:         }
+
+! CHECK-LABEL:   func.func private @_QFPassign_different_length(
+! CHECK-SAME:                                                   %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.boxchar<1> {fir.bindc_name = "string"}) attributes {fir.host_symbol = @_QQmain, llvm.linkage = #llvm.linkage<internal>} {
+! CHECK:           %[[VAL_1:.*]] = arith.constant 2 : index
+! CHECK:           %[[VAL_2:.*]] = arith.constant 3 : index
+! CHECK:           %[[VAL_3:.*]] = fir.dummy_scope : !fir.dscope
+! CHECK:           %[[VAL_4:.*]]:2 = fir.unboxchar %[[VAL_0]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
+! CHECK:           %[[VAL_5:.*]] = fir.convert %[[VAL_4]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.char<1,3>>
+! CHECK:           %[[VAL_6:.*]] = fir.volatile_cast %[[VAL_5]] : (!fir.ref<!fir.char<1,3>>) -> !fir.ref<!fir.char<1,3>, volatile>
+! CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_6]] typeparams %[[VAL_2]] dummy_scope %[[VAL_3]] {fortran_attrs = #fir.var_attrs<intent_inout, volatile>, uniq_name = "_QFFassign_different_lengthEstring"} : (!fir.ref<!fir.char<1,3>, volatile>, index, !fir.dscope) -> (!fir.ref<!fir.char<1,3>, volatile>, !fir.ref<!fir.char<1,3>, volatile>)
+! CHECK:           %[[VAL_8:.*]] = fir.address_of(@_QQclX626F) : !fir.ref<!fir.char<1,2>>
+! CHECK:           %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_8]] typeparams %[[VAL_1]] {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQclX626F"} : (!fir.ref<!fir.char<1,2>>, index) -> (!fir.ref<!fir.char<1,2>>, !fir.ref<!fir.char<1,2>>)
+! CHECK:           hlfir.assign %[[VAL_9]]#0 to %[[VAL_7]]#0 : !fir.ref<!fir.char<1,2>>, !fir.ref<!fir.char<1,3>, volatile>
 ! CHECK:           return
 ! CHECK:         }
