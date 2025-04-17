@@ -1084,11 +1084,7 @@ TEST_F(DILocationTest, Merge) {
     auto *LBF2 = DILexicalBlockFile::get(Context, LB2, F2, 0);
     auto *A = DILocation::get(Context, 1, 6, LBF1);
     auto *B = DILocation::get(Context, 1, 6, LBF2);
-    llvm::errs() << "Check\n";
     auto *M = DILocation::getMergedLocation(A, B);
-    M->dump();
-    M->getScope()->dump();
-    LBF1->dump();
     EXPECT_EQ(1u, M->getLine());
     EXPECT_EQ(6u, M->getColumn());
     EXPECT_EQ(LBF1->getFile(), M->getScope()->getFile());
