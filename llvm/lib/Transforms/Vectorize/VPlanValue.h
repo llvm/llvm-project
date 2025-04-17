@@ -246,6 +246,12 @@ public:
     New->addUser(*this);
   }
 
+  /// Swap operands of the VPUser. It must have exactly 2 operands.
+  void swapOperands() {
+    assert(Operands.size() == 2 && "must have 2 operands to swap");
+    std::swap(Operands[0], Operands[1]);
+  }
+
   /// Replaces all uses of \p From in the VPUser with \p To.
   void replaceUsesOfWith(VPValue *From, VPValue *To);
 

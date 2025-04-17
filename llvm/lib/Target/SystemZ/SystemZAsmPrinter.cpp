@@ -136,6 +136,25 @@ static MCInst lowerSubvectorStore(const MachineInstr *MI, unsigned Opcode) {
     .addImm(0);
 }
 
+// MI extracts the first element of the source vector.
+static MCInst lowerVecEltExtraction(const MachineInstr *MI, unsigned Opcode) {
+  return MCInstBuilder(Opcode)
+      .addReg(SystemZMC::getRegAsGR64(MI->getOperand(0).getReg()))
+      .addReg(SystemZMC::getRegAsVR128(MI->getOperand(1).getReg()))
+      .addReg(0)
+      .addImm(0);
+}
+
+// MI inserts value into the first element of the destination vector.
+static MCInst lowerVecEltInsertion(const MachineInstr *MI, unsigned Opcode) {
+  return MCInstBuilder(Opcode)
+      .addReg(SystemZMC::getRegAsVR128(MI->getOperand(0).getReg()))
+      .addReg(SystemZMC::getRegAsVR128(MI->getOperand(0).getReg()))
+      .addReg(MI->getOperand(1).getReg())
+      .addReg(0)
+      .addImm(0);
+}
+
 // The XPLINK ABI requires that a no-op encoding the call type is emitted after
 // each call to a subroutine. This information can be used by the called
 // function to determine its entry point, e.g. for generating a backtrace. The
@@ -549,12 +568,20 @@ void SystemZAsmPrinter::emitInstruction(const MachineInstr *MI) {
     lowerAlignmentHint(MI, LoweredMI, SystemZ::VSTMAlign);
     break;
 
+  case SystemZ::VL16:
+    LoweredMI = lowerSubvectorLoad(MI, SystemZ::VLREPH);
+    break;
+
   case SystemZ::VL32:
     LoweredMI = lowerSubvectorLoad(MI, SystemZ::VLREPF);
     break;
 
   case SystemZ::VL64:
     LoweredMI = lowerSubvectorLoad(MI, SystemZ::VLREPG);
+    break;
+
+  case SystemZ::VST16:
+    LoweredMI = lowerSubvectorStore(MI, SystemZ::VSTEH);
     break;
 
   case SystemZ::VST32:
@@ -566,18 +593,19 @@ void SystemZAsmPrinter::emitInstruction(const MachineInstr *MI) {
     break;
 
   case SystemZ::LFER:
-    LoweredMI = MCInstBuilder(SystemZ::VLGVF)
-      .addReg(SystemZMC::getRegAsGR64(MI->getOperand(0).getReg()))
-      .addReg(SystemZMC::getRegAsVR128(MI->getOperand(1).getReg()))
-      .addReg(0).addImm(0);
+    LoweredMI = lowerVecEltExtraction(MI, SystemZ::VLGVF);
+    break;
+
+  case SystemZ::LFER_16:
+    LoweredMI = lowerVecEltExtraction(MI, SystemZ::VLGVH);
     break;
 
   case SystemZ::LEFR:
-    LoweredMI = MCInstBuilder(SystemZ::VLVGF)
-      .addReg(SystemZMC::getRegAsVR128(MI->getOperand(0).getReg()))
-      .addReg(SystemZMC::getRegAsVR128(MI->getOperand(0).getReg()))
-      .addReg(MI->getOperand(1).getReg())
-      .addReg(0).addImm(0);
+    LoweredMI = lowerVecEltInsertion(MI, SystemZ::VLVGF);
+    break;
+
+  case SystemZ::LEFR_16:
+    LoweredMI = lowerVecEltInsertion(MI, SystemZ::VLVGH);
     break;
 
 #define LOWER_LOW(NAME)                                                 \
