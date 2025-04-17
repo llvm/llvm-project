@@ -35,6 +35,11 @@ def AMDGPU_Dialect : Dialect {
   let useDefaultAttributePrinterParser = 1;
 }
 
+def AnyIntegerOrFloat : AnyTypeOf<[AnySignlessInteger, AnyFloat], "Integer or Float">;
+
+def AnyIntegerOrFloatOr1DVector :
+  AnyTypeOf<[AnyIntegerOrFloat, VectorOfRankAndType<[1], [AnyIntegerOrFloat]>]>;
+
 //===----------------------------------------------------------------------===//
 // AMDGPU general attribute definitions
 //===----------------------------------------------------------------------===//
@@ -533,14 +538,15 @@ def AMDGPU_DPPPerm : I32EnumAttr<"DPPPerm",
 def AMDGPU_DPPPermAttr : EnumAttr<AMDGPU_Dialect, AMDGPU_DPPPerm,
   "dpp_perm">;
 
-def AMDGPU_DPPOp : AMDGPU_Op<"dpp", [SameTypeOperands, AllTypesMatch<["result", "old", "src"]>]>,
+def AMDGPU_DPPOp : AMDGPU_Op<"dpp",
+    [Pure, SameTypeOperands, AllTypesMatch<["result", "old", "src"]>]>,
   Arguments<(ins AnyType:$old,
-                  AnyType:$src,
-                  AMDGPU_DPPPermAttr:$kind,
-                  OptionalAttr<AnyAttrOf<[I32Attr, ArrayAttr, UnitAttr]>>:$permArgument,
-                  DefaultValuedAttr<I32Attr, "0xf">:$row_mask,
-                  DefaultValuedAttr<I32Attr, "0xf">:$bank_mask,
-                  DefaultValuedAttr<BoolAttr, "false">:$bound_ctrl)> {
+                 AnyType:$src,
+                 AMDGPU_DPPPermAttr:$kind,
+                 OptionalAttr<AnyAttrOf<[I32Attr, ArrayAttr, UnitAttr]>>:$permArgument,
+                 DefaultValuedAttr<I32Attr, "0xf">:$row_mask,
+                 DefaultValuedAttr<I32Attr, "0xf">:$bank_mask,
+                 DefaultValuedAttr<BoolAttr, "false">:$bound_ctrl)> {
   let summary = "AMDGPU DPP operation";
   let description = [{
     This operation represents DPP functionality in a GPU program.
@@ -563,6 +569,27 @@ def AMDGPU_DPPOp : AMDGPU_Op<"dpp", [SameTypeOperands, AllTypesMatch<["result", 
     $old $src $kind (`(` $permArgument^ `)`)? attr-dict `:` type($result)
   }];
   let hasVerifier = 1;
+}
+
+def AMDGPU_SwizzleBitModeOp : AMDGPU_Op<"swizzle_bitmode",
+    [Pure, AllTypesMatch<["result", "src"]>]>,
+  Arguments<(ins AnyIntegerOrFloatOr1DVector:$src,
+                 I32Attr:$and_mask,
+                 I32Attr:$or_mask,
+                 I32Attr:$xor_mask
+             )> {
+  let summary = "AMDGPU ds_swizzle op, bitmode variant";
+  let description = [{
+    High-level wrapper on bitmode `rocdl.ds_swizzle` op, masks are represented
+    as separate fields so user won't need to do manual bitpacking.
+
+    Supports arbitrary int/float/vector types, which will be repacked to i32 and
+    one or more `rocdl.ds_swizzle` ops during lowering.
+  }];
+  let results = (outs AnyIntegerOrFloatOr1DVector:$result);
+  let assemblyFormat = [{
+    $src $and_mask $or_mask $xor_mask attr-dict `:` type($result)
+  }];
 }
 
 def AMDGPU_LDSBarrierOp : AMDGPU_Op<"lds_barrier"> {
@@ -794,7 +821,7 @@ def AMDGPU_GatherToLDSOp :
 
     The `$dst`, along with its indices, points to the memory location the subgroup of this thread
     will write to.
-  
+
     Note: only enabled for gfx942 and later.
   }];
   let assemblyFormat = [{
