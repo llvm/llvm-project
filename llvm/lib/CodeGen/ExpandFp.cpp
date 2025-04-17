@@ -243,7 +243,7 @@ private:
   void buildElseBranch(Value *Ax, Value *Ay, Value *X, PHINode *RetPhi) const {
     // Build:
     // ret = ax == ay ? copysign(0.0f, x) : x;
-    Value *ZeroWithXSign = B.CreateCopySign(ConstantFP::get(FremTy, 0.0), X);
+    Value *ZeroWithXSign = B.CreateCopySign(ConstantFP::getZero(FremTy), X);
     Value *Ret = B.CreateSelect(B.CreateFCmpOEQ(Ax, Ay), ZeroWithXSign, X);
 
     RetPhi->addIncoming(Ret, B.GetInsertBlock());
