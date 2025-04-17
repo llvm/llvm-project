@@ -65,16 +65,14 @@ DXContainerYAML::RootSignatureYamlDesc::create(
 
     llvm::Expected<object::DirectX::RootParameterView> ParamViewOrErr =
         Data.getParameter(PH);
-    if (Error E = ParamViewOrErr.takeError()) {
+    if (Error E = ParamViewOrErr.takeError())
       return std::move(E);
-    }
     object::DirectX::RootParameterView ParamView = ParamViewOrErr.get();
 
     if (auto *RCV = dyn_cast<object::DirectX::RootConstantView>(&ParamView)) {
       llvm::Expected<dxbc::RootConstants> ConstantsOrErr = RCV->read();
-      if (Error E = ConstantsOrErr.takeError()) {
+      if (Error E = ConstantsOrErr.takeError())
         return std::move(E);
-      }
 
       auto Constants = *ConstantsOrErr;
 
