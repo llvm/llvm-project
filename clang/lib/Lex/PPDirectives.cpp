@@ -4054,7 +4054,7 @@ Preprocessor::LexEmbedParameters(Token &CurTok, bool ForHasEmbed) {
 
 void Preprocessor::HandleEmbedDirectiveImpl(
     SourceLocation HashLoc, const LexEmbedParametersResult &Params,
-    StringRef BinaryContents) {
+    StringRef BinaryContents, StringRef FileName) {
   if (BinaryContents.empty()) {
     // If we have no binary contents, the only thing we need to emit are the
     // if_empty tokens, if any.
@@ -4085,6 +4085,7 @@ void Preprocessor::HandleEmbedDirectiveImpl(
 
   EmbedAnnotationData *Data = new (BP) EmbedAnnotationData;
   Data->BinaryData = BinaryContents;
+  Data->FileName = FileName;
 
   Toks[CurIdx].startToken();
   Toks[CurIdx].setKind(tok::annot_embed);
@@ -4194,5 +4195,16 @@ void Preprocessor::HandleEmbedDirective(SourceLocation HashLoc, Token &EmbedTok,
   if (Callbacks)
     Callbacks->EmbedDirective(HashLoc, Filename, isAngled, MaybeFileRef,
                               *Params);
-  HandleEmbedDirectiveImpl(HashLoc, *Params, BinaryContents);
+  // getSpelling() may return a buffer from the token itself or it may use the
+  // SmallString buffer we provided. getSpelling() may also return a string that
+  // is actually longer than FilenameTok.getLength(), so we first pass a
+  // locally created buffer to getSpelling() to get the string of real length
+  // and then we allocate a long living buffer because the buffer we used
+  // previously will only live till the end of this function and we need
+  // filename info to live longer.
+  void *Mem = BP.Allocate(OriginalFilename.size(), alignof(char *));
+  memcpy(Mem, OriginalFilename.data(), OriginalFilename.size());
+  StringRef FilenameToGo =
+      StringRef(static_cast<char *>(Mem), OriginalFilename.size());
+  HandleEmbedDirectiveImpl(HashLoc, *Params, BinaryContents, FilenameToGo);
 }
