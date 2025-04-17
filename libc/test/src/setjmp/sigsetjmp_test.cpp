@@ -9,8 +9,8 @@
 #include "src/setjmp/siglongjmp.h"
 #include "src/setjmp/sigsetjmp.h"
 #include "src/signal/sigprocmask.h"
-#include "src/string/memory_utils/inline_memcmp.h"
-#include "src/string/memory_utils/inline_memset.h"
+#include "src/string/memcmp.h"
+#include "src/string/memset.h"
 #include "test/UnitTest/Test.h"
 
 constexpr int MAX_LOOP = 123;
@@ -21,56 +21,82 @@ void jump_back(jmp_buf buf, int n) {
   LIBC_NAMESPACE::siglongjmp(buf, n); // Will return |n| out of setjmp
 }
 
-#define SMOKE_TESTS(SUFFIX, FLAG)                                              \
-  TEST(LlvmLibcSetJmpTest, SigSetAndJumpBack##SUFFIX) {                        \
-    jmp_buf buf;                                                               \
-    longjmp_called = 0;                                                        \
-    volatile int n = 0;                                                        \
-    sigset_t old;                                                              \
-    sigset_t mask_all;                                                         \
-    sigset_t recovered;                                                        \
-    LIBC_NAMESPACE::inline_memset(&mask_all, 0xFF, sizeof(mask_all));          \
-    LIBC_NAMESPACE::inline_memset(&old, 0, sizeof(old));                       \
-    LIBC_NAMESPACE::inline_memset(&recovered, 0, sizeof(recovered));           \
-    LIBC_NAMESPACE::sigprocmask(0, nullptr, &old);                             \
-    if (LIBC_NAMESPACE::sigsetjmp(buf, FLAG) <= MAX_LOOP) {                    \
-      if (FLAG) {                                                              \
-        LIBC_NAMESPACE::sigprocmask(0, nullptr, &recovered);                   \
-        ASSERT_EQ(                                                             \
-            0, LIBC_NAMESPACE::inline_memcmp(&old, &recovered, sizeof(old)));  \
-      }                                                                        \
-      n = n + 1;                                                               \
-      if (FLAG)                                                                \
-        LIBC_NAMESPACE::sigprocmask(SIG_BLOCK, &mask_all, nullptr);            \
-      jump_back(buf, n);                                                       \
-    }                                                                          \
-    ASSERT_EQ(longjmp_called, n);                                              \
-    ASSERT_EQ(n, MAX_LOOP + 1);                                                \
-  }                                                                            \
-  TEST(LlvmLibcSetJmpTest, SigSetAndJumpBackValOne##SUFFIX) {                  \
-    jmp_buf buf;                                                               \
-    longjmp_called = 0;                                                        \
-    sigset_t old;                                                              \
-    sigset_t mask_all;                                                         \
-    sigset_t recovered;                                                        \
-    LIBC_NAMESPACE::inline_memset(&mask_all, 0xFF, sizeof(mask_all));          \
-    LIBC_NAMESPACE::inline_memset(&old, 0, sizeof(old));                       \
-    LIBC_NAMESPACE::inline_memset(&recovered, 0, sizeof(recovered));           \
-    LIBC_NAMESPACE::sigprocmask(0, nullptr, &old);                             \
-    int val = LIBC_NAMESPACE::sigsetjmp(buf, FLAG);                            \
-    if (val == 0) {                                                            \
-      if (FLAG)                                                                \
-        LIBC_NAMESPACE::sigprocmask(SIG_BLOCK, &mask_all, nullptr);            \
-      jump_back(buf, val);                                                     \
-    }                                                                          \
-    if (FLAG) {                                                                \
-      LIBC_NAMESPACE::sigprocmask(0, nullptr, &recovered);                     \
-      ASSERT_EQ(0,                                                             \
-                LIBC_NAMESPACE::inline_memcmp(&old, &recovered, sizeof(old))); \
-    }                                                                          \
-    ASSERT_EQ(longjmp_called, 1);                                              \
-    ASSERT_EQ(val, 1);                                                         \
+TEST(LlvmLibcSetJmpTest, SigSetAndJumpBackSaveSigs) {
+  jmp_buf buf;
+  longjmp_called = 0;
+  volatile int n = 0;
+  sigset_t old;
+  sigset_t mask_all;
+  sigset_t recovered;
+  LIBC_NAMESPACE::memset(&mask_all, 0xFF, sizeof(mask_all));
+  LIBC_NAMESPACE::memset(&old, 0, sizeof(old));
+  LIBC_NAMESPACE::memset(&recovered, 0, sizeof(recovered));
+  LIBC_NAMESPACE::sigprocmask(0, nullptr, &old);
+  if (LIBC_NAMESPACE::sigsetjmp(buf, 1) <= MAX_LOOP) {
+    LIBC_NAMESPACE::sigprocmask(0, nullptr, &recovered);
+    ASSERT_EQ(0, LIBC_NAMESPACE::memcmp(&old, &recovered, sizeof(old)));
+    n = n + 1;
+    LIBC_NAMESPACE::sigprocmask(SIG_BLOCK, &mask_all, nullptr);
+    jump_back(buf, n);
   }
+  ASSERT_EQ(longjmp_called, n);
+  ASSERT_EQ(n, MAX_LOOP + 1);
+}
 
-SMOKE_TESTS(SaveSigs, 1)
-SMOKE_TESTS(NoSaveSigs, 0)
+TEST(LlvmLibcSetJmpTest, SigSetAndJumpBackValOneSaveSigs) {
+  jmp_buf buf;
+  longjmp_called = 0;
+  sigset_t old;
+  sigset_t mask_all;
+  sigset_t recovered;
+  LIBC_NAMESPACE::memset(&mask_all, 0xFF, sizeof(mask_all));
+  LIBC_NAMESPACE::memset(&old, 0, sizeof(old));
+  LIBC_NAMESPACE::memset(&recovered, 0, sizeof(recovered));
+  LIBC_NAMESPACE::sigprocmask(0, nullptr, &old);
+  int val = LIBC_NAMESPACE::sigsetjmp(buf, 1);
+  if (val == 0) {
+    LIBC_NAMESPACE::sigprocmask(SIG_BLOCK, &mask_all, nullptr);
+    jump_back(buf, val);
+  }
+  LIBC_NAMESPACE::sigprocmask(0, nullptr, &recovered);
+  ASSERT_EQ(0, LIBC_NAMESPACE::memcmp(&old, &recovered, sizeof(old)));
+  ASSERT_EQ(longjmp_called, 1);
+  ASSERT_EQ(val, 1);
+}
+
+TEST(LlvmLibcSetJmpTest, SigSetAndJumpBackNoSaveSigs) {
+  jmp_buf buf;
+  longjmp_called = 0;
+  volatile int n = 0;
+  sigset_t old;
+  sigset_t mask_all;
+  sigset_t recovered;
+  LIBC_NAMESPACE::memset(&mask_all, 0xFF, sizeof(mask_all));
+  LIBC_NAMESPACE::memset(&old, 0, sizeof(old));
+  LIBC_NAMESPACE::memset(&recovered, 0, sizeof(recovered));
+  LIBC_NAMESPACE::sigprocmask(0, nullptr, &old);
+  if (LIBC_NAMESPACE::sigsetjmp(buf, 0) <= MAX_LOOP) {
+    n = n + 1;
+    jump_back(buf, n);
+  }
+  ASSERT_EQ(longjmp_called, n);
+  ASSERT_EQ(n, MAX_LOOP + 1);
+}
+
+TEST(LlvmLibcSetJmpTest, SigSetAndJumpBackValOneNoSaveSigs) {
+  jmp_buf buf;
+  longjmp_called = 0;
+  sigset_t old;
+  sigset_t mask_all;
+  sigset_t recovered;
+  LIBC_NAMESPACE::memset(&mask_all, 0xFF, sizeof(mask_all));
+  LIBC_NAMESPACE::memset(&old, 0, sizeof(old));
+  LIBC_NAMESPACE::memset(&recovered, 0, sizeof(recovered));
+  LIBC_NAMESPACE::sigprocmask(0, nullptr, &old);
+  int val = LIBC_NAMESPACE::sigsetjmp(buf, 0);
+  if (val == 0) {
+    jump_back(buf, val);
+  }
+  ASSERT_EQ(longjmp_called, 1);
+  ASSERT_EQ(val, 1);
+}

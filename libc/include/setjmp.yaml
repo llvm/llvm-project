@@ -23,7 +23,7 @@ functions:
       - type: jmp_buf
   - name: sigsetjmp
     standards:
-      - stdc
+      - POSIX
     return_type: int
     attributes:
       - _Returns_twice
@@ -32,7 +32,7 @@ functions:
       - type: int
   - name: siglongjmp
     standards:
-      - stdc
+      - POSIX
     return_type: _Noreturn void
     arguments:
       - type: sigjmp_buf

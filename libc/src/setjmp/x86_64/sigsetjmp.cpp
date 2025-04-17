@@ -7,18 +7,18 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/setjmp/sigsetjmp.h"
-#include "include/llvm-libc-macros/offsetof-macro.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
 #include "src/setjmp/setjmp_impl.h"
 #include "src/setjmp/sigsetjmp_epilogue.h"
 
+#define __need_offsetof
+#include <stddef.h> // compiler resource header
+
 #if !defined(LIBC_TARGET_ARCH_IS_X86)
 #error "Invalid file include"
 #endif
-
 namespace LIBC_NAMESPACE_DECL {
-
 #ifdef __i386__
 [[gnu::naked]]
 LLVM_LIBC_FUNCTION(int, sigsetjmp, (sigjmp_buf buf)) {

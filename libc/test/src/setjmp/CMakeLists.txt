@@ -30,7 +30,7 @@ add_libc_unittest(
     libc.src.setjmp.sigsetjmp
     libc.src.setjmp.siglongjmp
     libc.src.signal.sigprocmask
-    libc.src.string.memory_utils.inline_memset
-    libc.src.string.memory_utils.inline_memcmp
+    libc.src.string.memset
+    libc.src.string.memcmp
     libc.hdr.types.sigset_t
 )
