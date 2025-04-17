@@ -114,6 +114,9 @@ struct MissingFeatures {
 
   // Misc
   static bool cxxABI() { return false; }
+  static bool cirgenABIInfo() { return false; }
+  static bool cirgenTargetInfo() { return false; }
+  static bool abiArgInfo() { return false; }
   static bool tryEmitAsConstant() { return false; }
   static bool constructABIArgDirectExtend() { return false; }
   static bool opGlobalViewAttr() { return false; }
@@ -132,6 +135,8 @@ struct MissingFeatures {
   static bool fpConstraints() { return false; }
   static bool sanitizers() { return false; }
   static bool addHeapAllocSiteMetadata() { return false; }
+  static bool targetCIRGenInfoArch() { return false; }
+  static bool targetCIRGenInfoOS() { return false; }
   static bool targetCodeGenInfoGetNullPointer() { return false; }
   static bool loopInfoStack() { return false; }
   static bool requiresCleanups() { return false; }

@@ -939,12 +939,6 @@ static bool upgradeArmOrAarch64IntrinsicFunction(bool IsArm, Function *F,
 }
 
 static Intrinsic::ID shouldUpgradeNVPTXBF16Intrinsic(StringRef Name) {
-  if (Name.consume_front("abs."))
-    return StringSwitch<Intrinsic::ID>(Name)
-        .Case("bf16", Intrinsic::nvvm_abs_bf16)
-        .Case("bf16x2", Intrinsic::nvvm_abs_bf16x2)
-        .Default(Intrinsic::not_intrinsic);
-
   if (Name.consume_front("fma.rn."))
     return StringSwitch<Intrinsic::ID>(Name)
         .Case("bf16", Intrinsic::nvvm_fma_rn_bf16)
@@ -1291,7 +1285,8 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
       bool Expand = false;
       if (Name.consume_front("abs."))
         // nvvm.abs.{i,ii}
-        Expand = Name == "i" || Name == "ll";
+        Expand =
+            Name == "i" || Name == "ll" || Name == "bf16" || Name == "bf16x2";
       else if (Name == "clz.ll" || Name == "popc.ll" || Name == "h2f" ||
                Name == "swap.lo.hi.b64")
         Expand = true;
@@ -2316,6 +2311,13 @@ static Value *upgradeNVVMIntrinsicCall(StringRef Name, CallBase *CI,
     Value *Cmp = Builder.CreateICmpSGE(
         Arg, llvm::Constant::getNullValue(Arg->getType()), "abs.cond");
     Rep = Builder.CreateSelect(Cmp, Arg, Neg, "abs");
+  } else if (Name == "abs.bf16" || Name == "abs.bf16x2") {
+    Type *Ty = (Name == "abs.bf16")
+                   ? Builder.getBFloatTy()
+                   : FixedVectorType::get(Builder.getBFloatTy(), 2);
+    Value *Arg = Builder.CreateBitCast(CI->getArgOperand(0), Ty);
+    Value *Abs = Builder.CreateUnaryIntrinsic(Intrinsic::nvvm_fabs, Arg);
+    Rep = Builder.CreateBitCast(Abs, CI->getType());
   } else if (Name.starts_with("atomic.load.add.f32.p") ||
              Name.starts_with("atomic.load.add.f64.p")) {
     Value *Ptr = CI->getArgOperand(0);
