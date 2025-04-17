@@ -19709,7 +19709,6 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
       return V;
     break;
   case RISCVISD::VRGATHER_VX_VL: {
-    using namespace llvm::SDPatternMatch;
     // Note this assumes that out of bounds indices produce poison
     // and can thus be replaced without having to prove them inbounds..
     EVT VT = N->getValueType(0);
