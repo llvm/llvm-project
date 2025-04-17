@@ -14764,9 +14764,6 @@ bool IntExprEvaluator::VisitBinaryOperator(const BinaryOperator *E) {
     // Reject differing bases from the normal codepath; we special-case
     // comparisons to null.
     if (!HasSameBase(LHSValue, RHSValue)) {
-      // Handle &&A - &&B.
-      if (!LHSValue.Offset.isZero() || !RHSValue.Offset.isZero())
-        return Error(E);
       const Expr *LHSExpr = LHSValue.Base.dyn_cast<const Expr *>();
       const Expr *RHSExpr = RHSValue.Base.dyn_cast<const Expr *>();
 
