@@ -2262,3 +2262,12 @@ func.func @cst_value_to_cst_attr_basis_linearize_index(%arg0 : index, %arg1 : in
   %0 = affine.linearize_index disjoint [%arg0, %arg1, %arg2] by  (%c2, 3, %c4) : index
   return %0 : index
 }
+
+// CHECK-LABEL: func @for_empty_body_folder_iv_yield
+func.func @for_empty_body_folder_iv_yield() -> index {
+  %c18 = arith.constant 18 : index
+  %10 = affine.for %arg3 = 0 to 114 iter_args(%arg4 = %c18) -> (index) {
+    affine.yield %arg3 : index
+  }
+  return %10 : index
+}

@@ -7086,7 +7086,7 @@ multiclass SIMD_FP8_CVTL<bits<2>sz, string asm, ValueType dty, SDPatternOperator
 class BaseSIMDCmpTwoVector<bit Q, bit U, bits<2> size, bits<2> size2,
                            bits<5> opcode, RegisterOperand regtype, string asm,
                            string kind, string zero, ValueType dty,
-                           ValueType sty, SDNode OpNode>
+                           ValueType sty, SDPatternOperator OpNode>
   : I<(outs regtype:$Rd), (ins regtype:$Rn), asm,
       "{\t$Rd" # kind # ", $Rn" # kind # ", #" # zero #
       "|" # kind # "\t$Rd, $Rn, #" # zero # "}", "",
@@ -7110,7 +7110,7 @@ class BaseSIMDCmpTwoVector<bit Q, bit U, bits<2> size, bits<2> size2,
 
 // Comparisons support all element sizes, except 1xD.
 multiclass SIMDCmpTwoVector<bit U, bits<5> opc, string asm,
-                            SDNode OpNode> {
+                            SDPatternOperator OpNode> {
   def v8i8rz  : BaseSIMDCmpTwoVector<0, U, 0b00, 0b00, opc, V64,
                                      asm, ".8b", "0",
                                      v8i8, v8i8, OpNode>;
@@ -7981,7 +7981,7 @@ multiclass SIMDCmpTwoScalarD<bit U, bits<5> opc, string asm,
                              SDPatternOperator OpNode> {
   def v1i64rz  : BaseSIMDCmpTwoScalar<U, 0b11, 0b00, opc, FPR64, asm, "0">;
 
-  def : Pat<(v1i64 (OpNode FPR64:$Rn)),
+  def : Pat<(v1i64 (OpNode v1i64:$Rn)),
             (!cast<Instruction>(NAME # v1i64rz) FPR64:$Rn)>;
 }
 
@@ -10163,15 +10163,10 @@ multiclass SIMDScalarRShiftDTied<bit U, bits<5> opc, string asm,
                                  SDPatternOperator OpNode = null_frag> {
   def d : BaseSIMDScalarShiftTied<U, opc, {1,?,?,?,?,?,?},
                               FPR64, FPR64, vecshiftR64, asm,
-  [(set (i64 FPR64:$dst), (OpNode (i64 FPR64:$Rd), (i64 FPR64:$Rn),
+  [(set (v1i64 FPR64:$dst), (OpNode (v1i64 FPR64:$Rd), (v1i64 FPR64:$Rn),
                                                    (i32 vecshiftR64:$imm)))]> {
     let Inst{21-16} = imm{5-0};
   }
-
-  def : Pat<(v1i64 (OpNode (v1i64 FPR64:$Rd), (v1i64 FPR64:$Rn),
-                           (i32 vecshiftR64:$imm))),
-            (!cast<Instruction>(NAME # "d") FPR64:$Rd, FPR64:$Rn,
-                                            vecshiftR64:$imm)>;
 }
 
 multiclass SIMDScalarLShiftD<bit U, bits<5> opc, string asm,
@@ -10188,9 +10183,12 @@ multiclass SIMDScalarLShiftD<bit U, bits<5> opc, string asm,
 }
 
 let mayStore = 0, mayLoad = 0, hasSideEffects = 0 in
-multiclass SIMDScalarLShiftDTied<bit U, bits<5> opc, string asm> {
+multiclass SIMDScalarLShiftDTied<bit U, bits<5> opc, string asm,
+                                 SDPatternOperator OpNode> {
   def d : BaseSIMDScalarShiftTied<U, opc, {1,?,?,?,?,?,?},
-                              FPR64, FPR64, vecshiftL64, asm, []> {
+                              FPR64, FPR64, vecshiftL64, asm,
+            [(set (v1i64 FPR64:$dst), (OpNode (v1i64 FPR64:$Rd), (v1i64 FPR64:$Rn),
+                                                   (i32 vecshiftR64:$imm)))]> {
     let Inst{21-16} = imm{5-0};
   }
 }
@@ -12491,6 +12489,36 @@ multiclass LDOPregister_patterns_mod<string inst, string op, string mod> {
   defm : LDOPregister_patterns_ord_mod<inst, "B", op, i8,
                         (i32 GPR32:$Rm),
                         (i32 (!cast<Instruction>(mod#Wrr) WZR, GPR32:$Rm))>;
+}
+
+let Predicates = [HasLSFE] in
+multiclass LDFPOPregister_patterns_ord_dag<string inst, string suffix, string op,
+                                         ValueType vt, dag data> {
+  def : Pat<(!cast<PatFrag>(op#"_"#vt#"_monotonic") FPR64:$Rn, data),
+            (!cast<Instruction>(inst # suffix) data, FPR64:$Rn)>;
+  def : Pat<(!cast<PatFrag>(op#"_"#vt#"_acquire") FPR64:$Rn, data),
+            (!cast<Instruction>(inst # "A" # suffix) data, FPR64:$Rn)>;
+  def : Pat<(!cast<PatFrag>(op#"_"#vt#"_release") FPR64:$Rn, data),
+            (!cast<Instruction>(inst # "L" # suffix) data, FPR64:$Rn)>;
+  def : Pat<(!cast<PatFrag>(op#"_"#vt#"_acq_rel") FPR64:$Rn, data),
+            (!cast<Instruction>(inst # "AL" # suffix) data, FPR64:$Rn)>;
+  def : Pat<(!cast<PatFrag>(op#"_"#vt#"_seq_cst") FPR64:$Rn, data),
+            (!cast<Instruction>(inst # "AL" # suffix) data, FPR64:$Rn)>;
+}
+
+multiclass LDFPOPregister_patterns_ord<string inst, string suffix, string op,
+                                     ValueType vt, dag RHS> {
+  defm : LDFPOPregister_patterns_ord_dag<inst, suffix, op, vt, RHS>;
+}
+
+multiclass LDFPOPregister_patterns<string inst, string op> {
+  defm : LDFPOPregister_patterns_ord<inst, "H", op, f16, (f16 FPR16:$Rm)>;
+  defm : LDFPOPregister_patterns_ord<inst, "S", op, f32, (f32 FPR32:$Rm)>;
+  defm : LDFPOPregister_patterns_ord<inst, "D", op, f64, (f64 FPR64:$Rm)>;
+}
+
+multiclass LDBFPOPregister_patterns<string inst, string op> {
+  defm : LDFPOPregister_patterns_ord<inst, "", op, bf16, (bf16 FPR16:$Rm)>;
 }
 
 let Predicates = [HasLSE] in

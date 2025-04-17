@@ -646,6 +646,11 @@ static LogicalResult convertRsqrtOp(math::RsqrtOp op,
 
   auto operand = op.getOperand();
   auto operandTy = operand.getType();
+  // Operand type must be shatic shaped type to create const float.
+  auto shapedOperandType = dyn_cast<ShapedType>(operandTy);
+  if (shapedOperandType && !shapedOperandType.hasStaticShape())
+    return failure();
+
   auto eTy = getElementTypeOrSelf(operandTy);
   if (!isa<FloatType>(eTy))
     return failure();

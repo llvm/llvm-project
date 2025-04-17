@@ -107,7 +107,7 @@ class TestMultipleBinaryCorefile(TestBase):
             )
         )
 
-        dwarfdump_uuid_regex = re.compile("UUID: ([-0-9a-fA-F]+) \(([^\(]+)\) .*")
+        dwarfdump_uuid_regex = re.compile(r"UUID: ([-0-9a-fA-F]+) \(([^\(]+)\) .*")
         dwarfdump_cmd_output = subprocess.check_output(
             ('/usr/bin/dwarfdump --uuid "%s"' % self.libtwo_exe), shell=True
         ).decode("utf-8")

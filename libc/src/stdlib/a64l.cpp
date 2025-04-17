@@ -40,6 +40,7 @@ constexpr static int32_t b64_char_to_int(char ch) {
 
 // This function takes a base 64 string and writes it to the low 32 bits of a
 // long.
+// TODO: use LIBC_ADD_NULL_CHECKS for checking if the input is a null pointer.
 LLVM_LIBC_FUNCTION(long, a64l, (const char *s)) {
   // the standard says to only use up to 6 characters.
   constexpr size_t MAX_LENGTH = 6;

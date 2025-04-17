@@ -119,7 +119,7 @@ def MIPS_P8700 : RISCVProcessorModel<"mips-p8700",
                                       FeatureStdExtZbb,
                                       FeatureStdExtZifencei,
                                       FeatureStdExtZicsr,
-                                      FeatureVendorXMIPSCMove,
+                                      FeatureVendorXMIPSCMov,
                                       FeatureVendorXMIPSLSP],
                                      [TuneMIPSP8700]>;
 
@@ -494,6 +494,7 @@ def TENSTORRENT_ASCALON_D8 : RISCVProcessorModel<"tt-ascalon-d8",
                                                   FeatureUnalignedScalarMem,
                                                   FeatureUnalignedVectorMem]),
                                                  [TuneNoDefaultUnroll,
+                                                  TuneNLogNVRGather,
                                                   TuneOptimizedZeroStrideLoad,
                                                   TunePostRAScheduler]>;
 

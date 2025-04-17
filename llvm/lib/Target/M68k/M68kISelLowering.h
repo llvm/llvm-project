@@ -190,6 +190,10 @@ public:
   InlineAsm::ConstraintCode
   getInlineAsmMemConstraint(StringRef ConstraintCode) const override;
 
+  // We need this for DAGCombiner to eliminate as many ISD::SELECT as possible.
+  // Otherwise we might end up with M68kISD::CMOV.
+  bool convertSelectOfConstantsToMath(EVT VT) const override { return true; }
+
 private:
   unsigned GetAlignedArgumentStackSize(unsigned StackSize,
                                        SelectionDAG &DAG) const;

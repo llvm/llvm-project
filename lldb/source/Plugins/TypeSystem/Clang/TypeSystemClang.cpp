@@ -1217,10 +1217,11 @@ TypeSystemClang::GetOrCreateClangModule(llvm::StringRef name,
 
   // Lazily initialize the module map.
   if (!m_header_search_up) {
-    auto HSOpts = std::make_shared<clang::HeaderSearchOptions>();
+    m_header_search_opts_up = std::make_unique<clang::HeaderSearchOptions>();
     m_header_search_up = std::make_unique<clang::HeaderSearch>(
-        HSOpts, *m_source_manager_up, *m_diagnostics_engine_up,
-        *m_language_options_up, m_target_info_up.get());
+        *m_header_search_opts_up, *m_source_manager_up,
+        *m_diagnostics_engine_up, *m_language_options_up,
+        m_target_info_up.get());
     m_module_map_up = std::make_unique<clang::ModuleMap>(
         *m_source_manager_up, *m_diagnostics_engine_up, *m_language_options_up,
         m_target_info_up.get(), *m_header_search_up);
@@ -2772,8 +2773,8 @@ static bool GetCompleteQualType(clang::ASTContext *ast,
     // is a member.
     if (ast->getTargetInfo().getCXXABI().isMicrosoft()) {
       auto *MPT = qual_type.getTypePtr()->castAs<clang::MemberPointerType>();
-      if (MPT->getClass()->isRecordType())
-        GetCompleteRecordType(ast, clang::QualType(MPT->getClass(), 0),
+      if (auto *RD = MPT->getMostRecentCXXRecordDecl())
+        GetCompleteRecordType(ast, QualType(RD->getTypeForDecl(), 0),
                               allow_completion);
 
       return !qual_type.getTypePtr()->isIncompleteType();
@@ -4769,7 +4770,7 @@ TypeSystemClang::GetFloatTypeSemantics(size_t byte_size) {
   return llvm::APFloatBase::Bogus();
 }
 
-std::optional<uint64_t>
+llvm::Expected<uint64_t>
 TypeSystemClang::GetObjCBitSize(QualType qual_type,
                                 ExecutionContextScope *exe_scope) {
   assert(qual_type->isObjCObjectOrInterfaceType());
@@ -4802,11 +4803,14 @@ TypeSystemClang::GetObjCBitSize(QualType qual_type,
          getASTContext().getTypeSize(getASTContext().ObjCBuiltinClassTy);
 }
 
-std::optional<uint64_t>
+llvm::Expected<uint64_t>
 TypeSystemClang::GetBitSize(lldb::opaque_compiler_type_t type,
                             ExecutionContextScope *exe_scope) {
+  const bool base_name_only = true;
   if (!GetCompleteType(type))
-    return std::nullopt;
+    return llvm::createStringError(
+        "could not complete type %s",
+        GetTypeName(type, base_name_only).AsCString(""));
 
   clang::QualType qual_type(GetCanonicalQualType(type));
   const clang::Type::TypeClass type_class = qual_type->getTypeClass();
@@ -4832,7 +4836,9 @@ TypeSystemClang::GetBitSize(lldb::opaque_compiler_type_t type,
       return bit_size;
   }
 
-  return std::nullopt;
+  return llvm::createStringError(
+      "could not get size of type %s",
+      GetTypeName(type, base_name_only).AsCString(""));
 }
 
 std::optional<size_t>
@@ -6301,12 +6307,14 @@ llvm::Expected<CompilerType> TypeSystemClang::GetChildCompilerTypeAtIndex(
             child_byte_offset = bit_offset / 8;
             CompilerType base_class_clang_type = GetType(base_class->getType());
             child_name = base_class_clang_type.GetTypeName().AsCString("");
-            std::optional<uint64_t> size =
+            auto size_or_err =
                 base_class_clang_type.GetBitSize(get_exe_scope());
-            if (!size)
-              return llvm::createStringError("no size info for base class");
+            if (!size_or_err)
+              return llvm::joinErrors(
+                  llvm::createStringError("no size info for base class"),
+                  size_or_err.takeError());
 
-            uint64_t base_class_clang_type_bit_size = *size;
+            uint64_t base_class_clang_type_bit_size = *size_or_err;
 
             // Base classes bit sizes should be a multiple of 8 bits in size
             assert(base_class_clang_type_bit_size % 8 == 0);
@@ -6334,12 +6342,13 @@ llvm::Expected<CompilerType> TypeSystemClang::GetChildCompilerTypeAtIndex(
           // alignment (field_type_info.second) from the AST context.
           CompilerType field_clang_type = GetType(field->getType());
           assert(field_idx < record_layout.getFieldCount());
-          std::optional<uint64_t> size =
-              field_clang_type.GetByteSize(get_exe_scope());
-          if (!size)
-            return llvm::createStringError("no size info for field");
+          auto size_or_err = field_clang_type.GetByteSize(get_exe_scope());
+          if (!size_or_err)
+            return llvm::joinErrors(
+                llvm::createStringError("no size info for field"),
+                size_or_err.takeError());
 
-          child_byte_size = *size;
+          child_byte_size = *size_or_err;
           const uint32_t child_bit_size = child_byte_size * 8;
 
           // Figure out the field offset within the current struct/union/class
@@ -6509,12 +6518,12 @@ llvm::Expected<CompilerType> TypeSystemClang::GetChildCompilerTypeAtIndex(
 
         // We have a pointer to an simple type
         if (idx == 0 && pointee_clang_type.GetCompleteType()) {
-          if (std::optional<uint64_t> size =
-                  pointee_clang_type.GetByteSize(get_exe_scope())) {
-            child_byte_size = *size;
-            child_byte_offset = 0;
-            return pointee_clang_type;
-          }
+          auto size_or_err = pointee_clang_type.GetByteSize(get_exe_scope());
+          if (!size_or_err)
+            return size_or_err.takeError();
+          child_byte_size = *size_or_err;
+          child_byte_offset = 0;
+          return pointee_clang_type;
         }
       }
     }
@@ -6532,12 +6541,12 @@ llvm::Expected<CompilerType> TypeSystemClang::GetChildCompilerTypeAtIndex(
           ::snprintf(element_name, sizeof(element_name), "[%" PRIu64 "]",
                      static_cast<uint64_t>(idx));
           child_name.assign(element_name);
-          if (std::optional<uint64_t> size =
-                  element_type.GetByteSize(get_exe_scope())) {
-            child_byte_size = *size;
-            child_byte_offset = (int32_t)idx * (int32_t)child_byte_size;
-            return element_type;
-          }
+          auto size_or_err = element_type.GetByteSize(get_exe_scope());
+          if (!size_or_err)
+            return size_or_err.takeError();
+          child_byte_size = *size_or_err;
+          child_byte_offset = (int32_t)idx * (int32_t)child_byte_size;
+          return element_type;
         }
       }
     }
@@ -6551,12 +6560,12 @@ llvm::Expected<CompilerType> TypeSystemClang::GetChildCompilerTypeAtIndex(
         CompilerType element_type = GetType(array->getElementType());
         if (element_type.GetCompleteType()) {
           child_name = std::string(llvm::formatv("[{0}]", idx));
-          if (std::optional<uint64_t> size =
-                  element_type.GetByteSize(get_exe_scope())) {
-            child_byte_size = *size;
-            child_byte_offset = (int32_t)idx * (int32_t)child_byte_size;
-            return element_type;
-          }
+          auto size_or_err = element_type.GetByteSize(get_exe_scope());
+          if (!size_or_err)
+            return size_or_err.takeError();
+          child_byte_size = *size_or_err;
+          child_byte_offset = (int32_t)idx * (int32_t)child_byte_size;
+          return element_type;
         }
       }
     }
@@ -6590,12 +6599,12 @@ llvm::Expected<CompilerType> TypeSystemClang::GetChildCompilerTypeAtIndex(
 
       // We have a pointer to an simple type
       if (idx == 0) {
-        if (std::optional<uint64_t> size =
-                pointee_clang_type.GetByteSize(get_exe_scope())) {
-          child_byte_size = *size;
-          child_byte_offset = 0;
-          return pointee_clang_type;
-        }
+        auto size_or_err = pointee_clang_type.GetByteSize(get_exe_scope());
+        if (!size_or_err)
+          return size_or_err.takeError();
+        child_byte_size = *size_or_err;
+        child_byte_offset = 0;
+        return pointee_clang_type;
       }
     }
     break;
@@ -6628,12 +6637,12 @@ llvm::Expected<CompilerType> TypeSystemClang::GetChildCompilerTypeAtIndex(
 
         // We have a pointer to an simple type
         if (idx == 0) {
-          if (std::optional<uint64_t> size =
-                  pointee_clang_type.GetByteSize(get_exe_scope())) {
-            child_byte_size = *size;
-            child_byte_offset = 0;
-            return pointee_clang_type;
-          }
+          auto size_or_err = pointee_clang_type.GetByteSize(get_exe_scope());
+          if (!size_or_err)
+            return size_or_err.takeError();
+          child_byte_size = *size_or_err;
+          child_byte_offset = 0;
+          return pointee_clang_type;
         }
       }
     }
@@ -8603,7 +8612,8 @@ TypeSystemClang::CreateMemberPointerType(const CompilerType &type,
       return CompilerType();
     return ast->GetType(ast->getASTContext().getMemberPointerType(
         ClangUtil::GetQualType(pointee_type),
-        ClangUtil::GetQualType(type).getTypePtr()));
+        /*Qualifier=*/nullptr,
+        ClangUtil::GetQualType(type)->getAsCXXRecordDecl()));
   }
   return CompilerType();
 }

@@ -15,7 +15,7 @@ import lldbdap_testcase
 class TestDAP_server(lldbdap_testcase.DAPTestCaseBase):
     def start_server(self, connection):
         log_file_path = self.getBuildArtifact("dap.txt")
-        (process, connection) = dap_server.DebugAdaptorServer.launch(
+        (process, connection) = dap_server.DebugAdapterServer.launch(
             executable=self.lldbDAPExec,
             connection=connection,
             log_file=log_file_path,
@@ -29,7 +29,7 @@ class TestDAP_server(lldbdap_testcase.DAPTestCaseBase):
         return (process, connection)
 
     def run_debug_session(self, connection, name):
-        self.dap_server = dap_server.DebugAdaptorServer(
+        self.dap_server = dap_server.DebugAdapterServer(
             connection=connection,
         )
         program = self.getBuildArtifact("a.out")
@@ -83,7 +83,7 @@ class TestDAP_server(lldbdap_testcase.DAPTestCaseBase):
         """
         self.build()
         (process, connection) = self.start_server(connection="tcp://localhost:0")
-        self.dap_server = dap_server.DebugAdaptorServer(
+        self.dap_server = dap_server.DebugAdapterServer(
             connection=connection,
         )
         program = self.getBuildArtifact("a.out")

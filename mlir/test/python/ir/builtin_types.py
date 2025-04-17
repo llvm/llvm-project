@@ -361,7 +361,7 @@ def testVectorType():
             VectorType.get(shape, none)
         except MLIRError as e:
             # CHECK: Invalid type:
-            # CHECK: error: unknown: failed to verify 'elementType': integer or index or floating-point
+            # CHECK: error: unknown: failed to verify 'elementType': VectorElementTypeInterface instance
             print(e)
         else:
             print("Exception not produced")

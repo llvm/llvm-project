@@ -43,8 +43,7 @@ public:
   static ShuffleMask getIdentity(unsigned Sz) {
     IndicesVecT Indices;
     Indices.reserve(Sz);
-    for (auto Idx : seq<int>(0, (int)Sz))
-      Indices.push_back(Idx);
+    llvm::append_range(Indices, seq<int>(0, (int)Sz));
     return ShuffleMask(std::move(Indices));
   }
   /// \Returns true if the mask is a perfect identity mask with consecutive
@@ -98,6 +97,7 @@ enum class ResultReason {
   CantSchedule,
   Unimplemented,
   Infeasible,
+  ForcePackForDebugging,
 };
 
 #ifndef NDEBUG
@@ -142,6 +142,8 @@ struct ToStr {
       return "Unimplemented";
     case ResultReason::Infeasible:
       return "Infeasible";
+    case ResultReason::ForcePackForDebugging:
+      return "ForcePackForDebugging";
     }
     llvm_unreachable("Unknown ResultReason enum");
   }
@@ -347,6 +349,10 @@ public:
   // TODO: Try to remove the SkipScheduling argument by refactoring the tests.
   const LegalityResult &canVectorize(ArrayRef<Value *> Bndl,
                                      bool SkipScheduling = false);
+  /// \Returns a Pack with reason 'ForcePackForDebugging'.
+  const LegalityResult &getForcedPackForDebugging() {
+    return createLegalityResult<Pack>(ResultReason::ForcePackForDebugging);
+  }
   void clear();
 };
 

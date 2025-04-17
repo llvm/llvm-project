@@ -877,9 +877,9 @@ foreach mti = AllMasks in
 // 11.1. Vector Single-Width Integer Add and Subtract
 defm : VPatBinarySDNode_VV_VX_VI<add, "PseudoVADD">;
 defm : VPatBinarySDNode_VV_VX<sub, "PseudoVSUB">;
-// Handle VRSUB specially since it's the only integer binary op with reversed
-// pattern operands
 foreach vti = AllIntegerVectors in {
+  // Handle VRSUB specially since it's the only integer binary op with reversed
+  // pattern operands
   // FIXME: The AddedComplexity here is covering up a missing matcher for
   // widening vwsub.vx which can recognize a extended folded into the
   // scalar of the splat.
@@ -895,6 +895,15 @@ foreach vti = AllIntegerVectors in {
               (!cast<Instruction>("PseudoVRSUB_VI_"# vti.LMul.MX)
                    (vti.Vector (IMPLICIT_DEF)), vti.RegClass:$rs1,
                    simm5:$rs2, vti.AVL, vti.Log2SEW, TA_MA)>;
+  }
+
+  let Predicates = GetVTypePredicates<vti>.Predicates in {
+    // Match VSUB with a small immediate to vadd.vi by negating the immediate.
+    def : Pat<(sub (vti.Vector vti.RegClass:$rs1),
+                   (vti.Vector (SplatPat_simm5_plus1_nodec simm5_plus1:$rs2))),
+              (!cast<Instruction>("PseudoVADD_VI_"#vti.LMul.MX)
+                    (vti.Vector (IMPLICIT_DEF)), vti.RegClass:$rs1,
+                    (NegImm simm5_plus1:$rs2), vti.AVL, vti.Log2SEW, TA_MA)>;
   }
 }
 

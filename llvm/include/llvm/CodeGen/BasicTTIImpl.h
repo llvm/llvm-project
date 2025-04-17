@@ -511,7 +511,7 @@ public:
     AM.ScalableOffset = BaseOffset.getScalable();
     if (getTLI()->isLegalAddressingMode(DL, AM, Ty, AddrSpace))
       return 0;
-    return -1;
+    return InstructionCost::getInvalid();
   }
 
   bool isTruncateFree(Type *Ty1, Type *Ty2) {
@@ -1986,27 +1986,6 @@ public:
       }
       return Cost;
     }
-    case Intrinsic::get_active_lane_mask: {
-      EVT ResVT = getTLI()->getValueType(DL, RetTy, true);
-      EVT ArgType = getTLI()->getValueType(DL, ICA.getArgTypes()[0], true);
-
-      // If we're not expanding the intrinsic then we assume this is cheap
-      // to implement.
-      if (!getTLI()->shouldExpandGetActiveLaneMask(ResVT, ArgType)) {
-        return getTypeLegalizationCost(RetTy).first;
-      }
-
-      // Create the expanded types that will be used to calculate the uadd_sat
-      // operation.
-      Type *ExpRetTy = VectorType::get(
-          ICA.getArgTypes()[0], cast<VectorType>(RetTy)->getElementCount());
-      IntrinsicCostAttributes Attrs(Intrinsic::uadd_sat, ExpRetTy, {}, FMF);
-      InstructionCost Cost =
-          thisT()->getTypeBasedIntrinsicInstrCost(Attrs, CostKind);
-      Cost += thisT()->getCmpSelInstrCost(BinaryOperator::ICmp, ExpRetTy, RetTy,
-                                          CmpInst::ICMP_ULT, CostKind);
-      return Cost;
-    }
     case Intrinsic::experimental_cttz_elts: {
       EVT ArgType = getTLI()->getValueType(DL, ICA.getArgTypes()[0], true);
 
@@ -2054,14 +2033,36 @@ public:
 
       return Cost;
     }
+    case Intrinsic::get_active_lane_mask:
     case Intrinsic::experimental_vector_match:
       return thisT()->getTypeBasedIntrinsicInstrCost(ICA, CostKind);
-    case Intrinsic::sincos: {
+    case Intrinsic::modf:
+    case Intrinsic::sincos:
+    case Intrinsic::sincospi: {
       Type *Ty = getContainedTypes(RetTy).front();
       EVT VT = getTLI()->getValueType(DL, Ty);
-      RTLIB::Libcall LC = RTLIB::getSINCOS(VT.getScalarType());
-      if (auto Cost =
-              getMultipleResultIntrinsicVectorLibCallCost(ICA, CostKind, LC))
+
+      RTLIB::Libcall LC = [&] {
+        switch (ICA.getID()) {
+        case Intrinsic::modf:
+          return RTLIB::getMODF;
+        case Intrinsic::sincos:
+          return RTLIB::getSINCOS;
+        case Intrinsic::sincospi:
+          return RTLIB::getSINCOSPI;
+        default:
+          llvm_unreachable("unexpected intrinsic");
+        }
+      }()(VT.getScalarType());
+
+      std::optional<unsigned> CallRetElementIndex;
+      // The first element of the modf result is returned by value in the
+      // libcall.
+      if (ICA.getID() == Intrinsic::modf)
+        CallRetElementIndex = 0;
+
+      if (auto Cost = getMultipleResultIntrinsicVectorLibCallCost(
+              ICA, CostKind, LC, CallRetElementIndex))
         return *Cost;
       // Otherwise, fallback to default scalarization cost.
       break;
@@ -2371,6 +2372,27 @@ public:
       Cost *= SearchSize;
       Cost +=
           thisT()->getArithmeticInstrCost(BinaryOperator::And, RetTy, CostKind);
+      return Cost;
+    }
+    case Intrinsic::get_active_lane_mask: {
+      Type *ArgTy = ICA.getArgTypes()[0];
+      EVT ResVT = getTLI()->getValueType(DL, RetTy, true);
+      EVT ArgVT = getTLI()->getValueType(DL, ArgTy, true);
+
+      // If we're not expanding the intrinsic then we assume this is cheap
+      // to implement.
+      if (!getTLI()->shouldExpandGetActiveLaneMask(ResVT, ArgVT))
+        return getTypeLegalizationCost(RetTy).first;
+
+      // Create the expanded types that will be used to calculate the uadd_sat
+      // operation.
+      Type *ExpRetTy =
+          VectorType::get(ArgTy, cast<VectorType>(RetTy)->getElementCount());
+      IntrinsicCostAttributes Attrs(Intrinsic::uadd_sat, ExpRetTy, {}, FMF);
+      InstructionCost Cost =
+          thisT()->getTypeBasedIntrinsicInstrCost(Attrs, CostKind);
+      Cost += thisT()->getCmpSelInstrCost(BinaryOperator::ICmp, ExpRetTy, RetTy,
+                                          CmpInst::ICMP_ULT, CostKind);
       return Cost;
     }
     case Intrinsic::abs:
@@ -2754,6 +2776,27 @@ public:
       }
       return Cost;
     }
+    case Intrinsic::maximumnum:
+    case Intrinsic::minimumnum: {
+      // On platform that support FMAXNUM_IEEE/FMINNUM_IEEE, we expand
+      // maximumnum/minimumnum to
+      //    ARG0 = fcanonicalize ARG0, ARG0  // to quiet ARG0
+      //    ARG1 = fcanonicalize ARG1, ARG1  // to quiet ARG1
+      //    RESULT = MAXNUM_IEEE ARG0, ARG1  // or MINNUM_IEEE
+      // FIXME: In LangRef, we claimed FMAXNUM has the same behaviour of
+      //        FMAXNUM_IEEE, while the backend hasn't migrated the code yet.
+      //        Finally, we will remove FMAXNUM_IEEE and FMINNUM_IEEE.
+      int IeeeISD =
+          IID == Intrinsic::maximumnum ? ISD::FMAXNUM_IEEE : ISD::FMINNUM_IEEE;
+      if (TLI->isOperationLegal(IeeeISD, LT.second)) {
+        IntrinsicCostAttributes FCanonicalizeAttrs(Intrinsic::canonicalize,
+                                                   RetTy, Tys[0]);
+        InstructionCost FCanonicalizeCost =
+            thisT()->getIntrinsicInstrCost(FCanonicalizeAttrs, CostKind);
+        return LT.first + FCanonicalizeCost * 2;
+      }
+      break;
+    }
     default:
       break;
     }
@@ -3019,7 +3062,7 @@ public:
 
   InstructionCost getExtendedReductionCost(unsigned Opcode, bool IsUnsigned,
                                            Type *ResTy, VectorType *Ty,
-                                           FastMathFlags FMF,
+                                           std::optional<FastMathFlags> FMF,
                                            TTI::TargetCostKind CostKind) {
     if (auto *FTy = dyn_cast<FixedVectorType>(Ty);
         FTy && IsUnsigned && Opcode == Instruction::Add &&
@@ -3028,7 +3071,8 @@ public:
       // ZExtOrTrunc(ctpop(bitcast <n x i1> to in)).
       auto *IntTy =
           IntegerType::get(ResTy->getContext(), FTy->getNumElements());
-      IntrinsicCostAttributes ICA(Intrinsic::ctpop, IntTy, {IntTy}, FMF);
+      IntrinsicCostAttributes ICA(Intrinsic::ctpop, IntTy, {IntTy},
+                                  FMF ? *FMF : FastMathFlags());
       return thisT()->getCastInstrCost(Instruction::BitCast, IntTy, FTy,
                                        TTI::CastContextHint::None, CostKind) +
              thisT()->getIntrinsicInstrCost(ICA, CostKind);

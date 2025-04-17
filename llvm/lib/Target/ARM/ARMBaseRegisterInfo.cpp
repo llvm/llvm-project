@@ -245,7 +245,7 @@ isAsmClobberable(const MachineFunction &MF, MCRegister PhysReg) const {
 }
 
 bool ARMBaseRegisterInfo::isInlineAsmReadOnlyReg(const MachineFunction &MF,
-                                                 unsigned PhysReg) const {
+                                                 MCRegister PhysReg) const {
   const ARMSubtarget &STI = MF.getSubtarget<ARMSubtarget>();
   const ARMFrameLowering *TFI = getFrameLowering(MF);
 
@@ -256,7 +256,7 @@ bool ARMBaseRegisterInfo::isInlineAsmReadOnlyReg(const MachineFunction &MF,
   if (hasBasePointer(MF))
     markSuperRegs(Reserved, BasePtr);
   assert(checkAllSuperRegsMarked(Reserved));
-  return Reserved.test(PhysReg);
+  return Reserved.test(PhysReg.id());
 }
 
 const TargetRegisterClass *

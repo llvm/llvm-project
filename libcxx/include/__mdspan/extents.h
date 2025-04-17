@@ -440,13 +440,13 @@ struct __make_dextents;
 
 template <class _IndexType, size_t _Rank, size_t... _ExtentsPack>
 struct __make_dextents< _IndexType, _Rank, extents<_IndexType, _ExtentsPack...>> {
-  using type =
+  using type _LIBCPP_NODEBUG =
       typename __make_dextents< _IndexType, _Rank - 1, extents<_IndexType, dynamic_extent, _ExtentsPack...>>::type;
 };
 
 template <class _IndexType, size_t... _ExtentsPack>
 struct __make_dextents< _IndexType, 0, extents<_IndexType, _ExtentsPack...>> {
-  using type = extents<_IndexType, _ExtentsPack...>;
+  using type _LIBCPP_NODEBUG = extents<_IndexType, _ExtentsPack...>;
 };
 
 } // namespace __mdspan_detail

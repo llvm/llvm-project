@@ -178,13 +178,13 @@ SmallVector<int64_t> mlir::tosa::convertFromMlirShape(ArrayRef<int64_t> shape) {
   }));
 }
 
-bool mlir::tosa::getConstShapeValue(Operation *op,
-                                    llvm::SmallVector<int64_t> &result_shape) {
+bool mlir::tosa::getConstShapeValues(Operation *op,
+                                     llvm::SmallVector<int64_t> &result_shape) {
   if (!op) {
     return false;
   }
   if (auto constOp = mlir::dyn_cast<tosa::ConstShapeOp>(op)) {
-    Attribute constOpAttr = constOp->getAttr("value");
+    Attribute constOpAttr = constOp->getAttr("values");
     DenseElementsAttr elementsAttr = cast<DenseElementsAttr>(constOpAttr);
     for (int i = 0; i < elementsAttr.size(); i++) {
       int64_t val = elementsAttr.getValues<int64_t>()[i];

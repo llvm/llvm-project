@@ -25,19 +25,13 @@
 
 using namespace llvm;
 
-namespace llvm {
-void initializeSPIRVRegularizerPass(PassRegistry &);
-}
-
 namespace {
 struct SPIRVRegularizer : public FunctionPass, InstVisitor<SPIRVRegularizer> {
   DenseMap<Function *, Function *> Old2NewFuncs;
 
 public:
   static char ID;
-  SPIRVRegularizer() : FunctionPass(ID) {
-    initializeSPIRVRegularizerPass(*PassRegistry::getPassRegistry());
-  }
+  SPIRVRegularizer() : FunctionPass(ID) {}
   bool runOnFunction(Function &F) override;
   StringRef getPassName() const override { return "SPIR-V Regularizer"; }
 
@@ -197,7 +191,8 @@ void SPIRVRegularizer::visitCallScalToVec(CallInst *CI, StringRef MangledName,
 
   auto *OldF = CI->getCalledFunction();
   Function *NewF = nullptr;
-  if (!Old2NewFuncs.count(OldF)) {
+  auto [It, Inserted] = Old2NewFuncs.try_emplace(OldF);
+  if (Inserted) {
     AttributeList Attrs = CI->getCalledFunction()->getAttributes();
     SmallVector<Type *, 2> ArgTypes = {OldF->getArg(0)->getType(), Arg0Ty};
     auto *NewFTy =
@@ -215,9 +210,9 @@ void SPIRVRegularizer::visitCallScalToVec(CallInst *CI, StringRef MangledName,
     CloneFunctionInto(NewF, OldF, VMap,
                       CloneFunctionChangeType::LocalChangesOnly, Returns);
     NewF->setAttributes(Attrs);
-    Old2NewFuncs[OldF] = NewF;
+    It->second = NewF;
   } else {
-    NewF = Old2NewFuncs[OldF];
+    NewF = It->second;
   }
   assert(NewF);
 

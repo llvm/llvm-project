@@ -52,13 +52,28 @@ struct VPlanTransforms {
       verifyVPlanIsValid(Plan);
   }
 
+  /// Replace loops in \p Plan's flat CFG with VPRegionBlocks, turing \p Plan's
+  /// flat CFG into a hierarchical CFG. It also creates a VPValue expression for
+  /// the original trip count. It will also introduce a dedicated VPBasicBlock
+  /// for the vector pre-header as well a VPBasicBlock as exit block of the
+  /// region (middle.block). If a check is needed to guard executing the scalar
+  /// epilogue loop, it will be added to the middle block, together with
+  /// VPBasicBlocks for the scalar preheader and exit blocks. \p InductionTy is
+  /// the type of the canonical induction and used for related values, like the
+  /// trip count expression.
+  static void createLoopRegions(VPlan &Plan, Type *InductionTy,
+                                PredicatedScalarEvolution &PSE,
+                                bool RequiresScalarEpilogueCheck,
+                                bool TailFolded, Loop *TheLoop);
+
   /// Replaces the VPInstructions in \p Plan with corresponding
-  /// widen recipes.
-  static void
-  VPInstructionsToVPRecipes(VPlanPtr &Plan,
-                            function_ref<const InductionDescriptor *(PHINode *)>
-                                GetIntOrFpInductionDescriptor,
-                            ScalarEvolution &SE, const TargetLibraryInfo &TLI);
+  /// widen recipes. Returns false if any VPInstructions could not be converted
+  /// to a wide recipe if needed.
+  static bool tryToConvertVPInstructionsToVPRecipes(
+      VPlanPtr &Plan,
+      function_ref<const InductionDescriptor *(PHINode *)>
+          GetIntOrFpInductionDescriptor,
+      ScalarEvolution &SE, const TargetLibraryInfo &TLI);
 
   /// Try to have all users of fixed-order recurrences appear after the recipe
   /// defining their previous value, by either sinking users or hoisting recipes
@@ -160,8 +175,9 @@ struct VPlanTransforms {
                                          BasicBlock *UncountableExitingBlock,
                                          VPRecipeBuilder &RecipeBuilder);
 
-  /// Lower abstract recipes to concrete ones, that can be codegen'd.
-  static void convertToConcreteRecipes(VPlan &Plan);
+  /// Lower abstract recipes to concrete ones, that can be codegen'd. Use \p
+  /// CanonicalIVTy as type for all un-typed live-ins in VPTypeAnalysis.
+  static void convertToConcreteRecipes(VPlan &Plan, Type &CanonicalIVTy);
 
   /// Perform instcombine-like simplifications on recipes in \p Plan. Use \p
   /// CanonicalIVTy as type for all un-typed live-ins in VPTypeAnalysis.
@@ -174,8 +190,17 @@ struct VPlanTransforms {
   optimizeInductionExitUsers(VPlan &Plan,
                              DenseMap<VPValue *, VPValue *> &EndValues);
 
-  /// Add explicit broadcasts for live-ins used as vectors.
-  static void materializeLiveInBroadcasts(VPlan &Plan);
+  /// Add explicit broadcasts for live-ins and VPValues defined in \p Plan's entry block if they are used as vectors.
+  static void materializeBroadcasts(VPlan &Plan);
+
+  /// Try to convert a plan with interleave groups with VF elements to a plan
+  /// with the interleave groups replaced by wide loads and stores processing VF
+  /// elements, if all transformed interleave groups access the full vector
+  /// width (checked via \o VectorRegWidth). This effectively is a very simple
+  /// form of loop-aware SLP, where we use interleave groups to identify
+  /// candidates.
+  static void narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
+                                     unsigned VectorRegWidth);
 };
 
 } // namespace llvm

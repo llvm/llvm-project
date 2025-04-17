@@ -620,7 +620,7 @@ void Thread::WillStop() {
   current_plan->WillStop();
 }
 
-bool Thread::SetupForResume() {
+bool Thread::SetupToStepOverBreakpointIfNeeded(RunDirection direction) {
   if (GetResumeState() != eStateSuspended) {
     // First check whether this thread is going to "actually" resume at all.
     // For instance, if we're stepping from one level to the next of an
@@ -635,10 +635,11 @@ bool Thread::SetupForResume() {
     // what the current plan is.
 
     lldb::RegisterContextSP reg_ctx_sp(GetRegisterContext());
-    if (reg_ctx_sp) {
+    ProcessSP process_sp(GetProcess());
+    if (reg_ctx_sp && process_sp && direction == eRunForward) {
       const addr_t thread_pc = reg_ctx_sp->GetPC();
       BreakpointSiteSP bp_site_sp =
-          GetProcess()->GetBreakpointSiteList().FindByAddress(thread_pc);
+          process_sp->GetBreakpointSiteList().FindByAddress(thread_pc);
       // If we're at a BreakpointSite which we have either
       //   1. already triggered/hit, or
       //   2. the Breakpoint was added while stopped, or the pc was moved
@@ -1754,6 +1755,8 @@ std::string Thread::StopReasonAsString(lldb::StopReason reason) {
     return "processor trace";
   case eStopReasonInterrupt:
     return "async interrupt";
+  case eStopReasonHistoryBoundary:
+    return "history boundary";
   }
 
   return "StopReason = " + std::to_string(reason);
@@ -2096,10 +2099,13 @@ lldb::ValueObjectSP Thread::GetSiginfoValue() {
     return ValueObjectConstResult::Create(
         &target, Status::FromErrorString("no siginfo_t for the platform"));
 
-  std::optional<uint64_t> type_size = type.GetByteSize(nullptr);
-  assert(type_size);
+  auto type_size_or_err = type.GetByteSize(nullptr);
+  if (!type_size_or_err)
+    return ValueObjectConstResult::Create(
+        &target, Status::FromError(type_size_or_err.takeError()));
+
   llvm::Expected<std::unique_ptr<llvm::MemoryBuffer>> data =
-      GetSiginfo(*type_size);
+      GetSiginfo(*type_size_or_err);
   if (!data)
     return ValueObjectConstResult::Create(&target,
                                           Status::FromError(data.takeError()));

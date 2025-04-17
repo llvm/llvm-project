@@ -33,11 +33,11 @@ define dso_local void @test_store1(ptr nocapture noundef writeonly %dst, ptr noc
 ; RV32-NEXT:    sltu a7, t1, a7
 ; RV32-NEXT:    xor t0, t1, a5
 ; RV32-NEXT:    add a6, a6, a7
-; RV32-NEXT:    vmslt.vx v10, v8, a2
-; RV32-NEXT:    vcompress.vm v12, v8, v10
-; RV32-NEXT:    vcpop.m a7, v10
+; RV32-NEXT:    vmslt.vx v12, v8, a2
+; RV32-NEXT:    vcompress.vm v10, v8, v12
+; RV32-NEXT:    vcpop.m a7, v12
 ; RV32-NEXT:    vsetvli zero, a7, e32, m2, ta, ma
-; RV32-NEXT:    vse32.v v12, (a0)
+; RV32-NEXT:    vse32.v v10, (a0)
 ; RV32-NEXT:    slli a7, a7, 2
 ; RV32-NEXT:    or t0, t0, a6
 ; RV32-NEXT:    add a0, a0, a7
@@ -95,11 +95,11 @@ define dso_local void @test_store1(ptr nocapture noundef writeonly %dst, ptr noc
 ; RV64-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; RV64-NEXT:    vle32.v v8, (a6)
 ; RV64-NEXT:    addi a6, a6, 32
-; RV64-NEXT:    vmslt.vx v10, v8, a2
-; RV64-NEXT:    vcompress.vm v12, v8, v10
-; RV64-NEXT:    vcpop.m a7, v10
+; RV64-NEXT:    vmslt.vx v12, v8, a2
+; RV64-NEXT:    vcompress.vm v10, v8, v12
+; RV64-NEXT:    vcpop.m a7, v12
 ; RV64-NEXT:    vsetvli zero, a7, e32, m2, ta, ma
-; RV64-NEXT:    vse32.v v12, (a0)
+; RV64-NEXT:    vse32.v v10, (a0)
 ; RV64-NEXT:    slli a7, a7, 2
 ; RV64-NEXT:    add a0, a0, a7
 ; RV64-NEXT:    bne a6, a5, .LBB0_4
