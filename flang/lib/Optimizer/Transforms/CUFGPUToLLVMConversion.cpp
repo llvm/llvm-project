@@ -82,6 +82,11 @@ struct GPULaunchKernelConversion
   mlir::LogicalResult
   matchAndRewrite(mlir::gpu::LaunchFuncOp op, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
+    // Only convert gpu.launch_func for CUDA Fortran.
+    if (!op.getOperation()->getAttrOfType<cuf::ProcAttributeAttr>(
+            cuf::getProcAttrName()))
+      return mlir::failure();
+
     mlir::Location loc = op.getLoc();
     auto *ctx = rewriter.getContext();
     mlir::ModuleOp mod = op->getParentOfType<mlir::ModuleOp>();
