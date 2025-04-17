@@ -248,7 +248,7 @@ def InsnDirectiveOpcode : AsmOperandClass {
 
 def uimm1 : RISCVUImmLeafOp<1>;
 def uimm2 : RISCVUImmLeafOp<2>;
-def uimm3 : RISCVUImmOp<3>;
+def uimm3 : RISCVUImmLeafOp<3>;
 def uimm4 : RISCVUImmLeafOp<4>;
 def uimm5 : RISCVUImmLeafOp<5>;
 def uimm6 : RISCVUImmLeafOp<6>;
@@ -1941,9 +1941,11 @@ class SwapSysRegImm<SysReg SR, list<Register> Regs>
 }
 
 def ReadFRM : ReadSysReg<SysRegFRM, [FRM]>;
+let hasPostISelHook = 1 in {
 def WriteFRM : WriteSysReg<SysRegFRM, [FRM]>;
 def WriteFRMImm : WriteSysRegImm<SysRegFRM, [FRM]>;
 def SwapFRMImm : SwapSysRegImm<SysRegFRM, [FRM]>;
+}
 
 def WriteVXRMImm : WriteSysRegImm<SysRegVXRM, [VXRM]>;
 

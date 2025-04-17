@@ -652,6 +652,31 @@ const MFMA_F8F6F4_Info *getMFMA_F8F6F4_WithFormatArgs(unsigned CBSZ,
   return getMFMA_F8F6F4_InstWithNumRegs(SrcANumRegs, SrcBNumRegs, F8F8Opcode);
 }
 
+#if LLPC_BUILD_NPI
+uint8_t wmmaScaleF8F6F4FormatToNumRegs(unsigned Fmt) {
+  switch (Fmt) {
+  case WMMA::MATRIX_FMT_FP8:
+  case WMMA::MATRIX_FMT_BF8:
+    return 16;
+  case WMMA::MATRIX_FMT_FP6:
+  case WMMA::MATRIX_FMT_BF6:
+    return 12;
+  case WMMA::MATRIX_FMT_FP4:
+    return 8;
+  }
+
+  llvm_unreachable("covered switch over wmma scale formats");
+}
+
+const MFMA_F8F6F4_Info *getWMMA_F8F6F4_WithFormatArgs(unsigned FmtA,
+                                                      unsigned FmtB,
+                                                      unsigned F8F8Opcode) {
+  uint8_t SrcANumRegs = wmmaScaleF8F6F4FormatToNumRegs(FmtA);
+  uint8_t SrcBNumRegs = wmmaScaleF8F6F4FormatToNumRegs(FmtB);
+  return getMFMA_F8F6F4_InstWithNumRegs(SrcANumRegs, SrcBNumRegs, F8F8Opcode);
+}
+
+#endif /* LLPC_BUILD_NPI */
 unsigned getVOPDEncodingFamily(const MCSubtargetInfo &ST) {
 #if LLPC_BUILD_NPI
   if (ST.hasFeature(AMDGPU::FeatureGFX1250Insts))
@@ -728,7 +753,9 @@ bool isMAC(unsigned Opc) {
          Opc == AMDGPU::V_FMAC_LEGACY_F32_e64_gfx10 ||
          Opc == AMDGPU::V_FMAC_DX9_ZERO_F32_e64_gfx11 ||
          Opc == AMDGPU::V_FMAC_F16_e64_gfx10 ||
+         Opc == AMDGPU::V_FMAC_F16_t16_e64_gfx11 ||
          Opc == AMDGPU::V_FMAC_F16_fake16_e64_gfx11 ||
+         Opc == AMDGPU::V_FMAC_F16_t16_e64_gfx12 ||
          Opc == AMDGPU::V_FMAC_F16_fake16_e64_gfx12 ||
 #if LLPC_BUILD_NPI
          Opc == AMDGPU::V_FMAC_F16_fake16_e64_gfx13 ||
@@ -1074,8 +1101,13 @@ std::optional<unsigned> InstInfo::getInvalidCompOperandIndex(
       // overlap.
       if (MRI.regsOverlap(OpXRegs[CompOprIdx], OpYRegs[CompOprIdx]))
         return CompOprIdx;
-      if (VOPD3) // No need to check dst parity.
-        continue;
+      // FIXME Temporary workaround because the RTL does not support the
+      // destinations with the same bank yet. See DEGFX13-11539. Revert the
+      // patch or uncomment the original code when the issue is fixed. And the
+      // tests will change. This change affects GFX1250 as well, so do not
+      // propagate it or use it for those parts
+      // if (VOPD3) // No need to check dst parity.
+        // continue;
     }
 
     if (banksOverlap(OpXRegs[CompOprIdx], OpYRegs[CompOprIdx], BanksMasks) &&

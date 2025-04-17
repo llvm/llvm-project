@@ -1781,6 +1781,11 @@ def VOP3PMadMixBF16Mods : ComplexPattern<untyped, 2, "SelectVOP3PMadMixBF16Mods"
 def VINTERPMods  : ComplexPattern<untyped, 2, "SelectVINTERPMods">;
 def VINTERPModsHi  : ComplexPattern<untyped, 2, "SelectVINTERPModsHi">;
 
+#ifdef LLPC_BUILD_NPI
+// TODO-GFX13 : Remove this when old version of rts.trace.ray instrinsic is no longer generated
+def Ignore : ComplexPattern<untyped, 0, "SelectIgnore">;
+
+#endif /* LLPC_BUILD_NPI */
 //===----------------------------------------------------------------------===//
 // SI assembler operands
 //===----------------------------------------------------------------------===//
@@ -2053,6 +2058,7 @@ class getVOP3SrcForVT<ValueType VT, bit IsTrue16 = 0> {
 #endif /* LLPC_BUILD_NPI */
         !eq(VT.Size, 512)  : VRegSrc_512,
 #ifdef LLPC_BUILD_NPI
+        !eq(VT.Size, 384)  : VRegSrc_384,
         !eq(VT.Size, 288)  : VRegSrc_288,
 #endif /* LLPC_BUILD_NPI */
         !eq(VT.Size, 256)  : VRegSrc_256,
@@ -2070,6 +2076,9 @@ class getVOP3SrcForVT<ValueType VT, bit IsTrue16 = 0> {
 class getVOP3VRegSrcForVT<ValueType VT> {
   RegisterOperand ret = !cond(!eq(VT.Size, 1024) : VRegSrc_1024,
                               !eq(VT.Size, 512)  : VRegSrc_512,
+#ifdef LLPC_BUILD_NPI
+                              !eq(VT.Size, 384)  : VRegSrc_384,
+#endif /* LLPC_BUILD_NPI */
                               !eq(VT.Size, 256)  : VRegSrc_256,
                               !eq(VT.Size, 192)  : VRegSrc_192,
                               !eq(VT.Size, 128)  : VRegSrc_128,

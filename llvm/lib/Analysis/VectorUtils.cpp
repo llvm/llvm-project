@@ -89,6 +89,8 @@ bool llvm::isTriviallyVectorizable(Intrinsic::ID ID) {
   case Intrinsic::maxnum:
   case Intrinsic::minimum:
   case Intrinsic::maximum:
+  case Intrinsic::minimumnum:
+  case Intrinsic::maximumnum:
   case Intrinsic::modf:
   case Intrinsic::copysign:
   case Intrinsic::floor:
@@ -1701,9 +1703,7 @@ void InterleaveGroup<InstT>::addMetadata(InstT *NewInst) const {
 namespace llvm {
 template <>
 void InterleaveGroup<Instruction>::addMetadata(Instruction *NewInst) const {
-  SmallVector<Value *, 4> VL;
-  std::transform(Members.begin(), Members.end(), std::back_inserter(VL),
-                 [](std::pair<int, Instruction *> p) { return p.second; });
+  SmallVector<Value *, 4> VL(make_second_range(Members));
   propagateMetadata(NewInst, VL);
 }
 } // namespace llvm

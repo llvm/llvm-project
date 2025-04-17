@@ -644,6 +644,16 @@ const MFMA_F8F6F4_Info *getMFMA_F8F6F4_WithFormatArgs(unsigned CBSZ,
                                                       unsigned BLGP,
                                                       unsigned F8F8Opcode);
 
+#if LLPC_BUILD_NPI
+LLVM_READNONE
+uint8_t wmmaScaleF8F6F4FormatToNumRegs(unsigned Fmt);
+
+LLVM_READONLY
+const MFMA_F8F6F4_Info *getWMMA_F8F6F4_WithFormatArgs(unsigned FmtA,
+                                                      unsigned FmtB,
+                                                      unsigned F8F8Opcode);
+
+#endif /* LLPC_BUILD_NPI */
 LLVM_READONLY
 const GcnBufferFormatInfo *getGcnBufferFormatInfo(uint8_t BitsPerComp,
                                                   uint8_t NumComponents,

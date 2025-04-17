@@ -344,10 +344,12 @@ ParsedType Sema::getDestructorName(const IdentifierInfo &II,
     // We didn't find our type, but that's OK: it's dependent anyway.
 
     // FIXME: What if we have no nested-name-specifier?
+    TypeSourceInfo *TSI = nullptr;
     QualType T =
         CheckTypenameType(ElaboratedTypeKeyword::None, SourceLocation(),
-                          SS.getWithLocInContext(Context), II, NameLoc);
-    return ParsedType::make(T);
+                          SS.getWithLocInContext(Context), II, NameLoc, &TSI,
+                          /*DeducedTSTContext=*/true);
+    return CreateParsedType(T, TSI);
   }
 
   // The remaining cases are all non-standard extensions imitating the behavior
@@ -1929,8 +1931,9 @@ static bool CheckDeleteOperator(Sema &S, SourceLocation StartLoc,
     }
     return true;
   }
-
-  return S.CheckAllocationAccess(StartLoc, Range, NamingClass, Decl, Diagnose);
+  Sema::AccessResult Accessible =
+      S.CheckAllocationAccess(StartLoc, Range, NamingClass, Decl, Diagnose);
+  return Accessible == Sema::AR_inaccessible;
 }
 
 /// Select the correct "usual" deallocation function to use from a selection of
@@ -3016,19 +3019,8 @@ bool Sema::FindAllocationFunctions(
       return true;
   }
 
-  // new[] will force emission of vector deleting dtor which needs delete[].
-  bool MaybeVectorDeletingDtor = false;
-  if (Context.getTargetInfo().getCXXABI().isMicrosoft()) {
-    if (AllocElemType->isRecordType() && IsArray) {
-      auto *RD =
-          cast<CXXRecordDecl>(AllocElemType->castAs<RecordType>()->getDecl());
-      CXXDestructorDecl *DD = RD->getDestructor();
-      MaybeVectorDeletingDtor = DD && DD->isVirtual() && !DD->isDeleted();
-    }
-  }
-
   // We don't need an operator delete if we're running under -fno-exceptions.
-  if (!getLangOpts().Exceptions && !MaybeVectorDeletingDtor) {
+  if (!getLangOpts().Exceptions) {
     OperatorDelete = nullptr;
     return false;
   }
@@ -3587,8 +3579,8 @@ Sema::FindUsualDeallocationFunction(SourceLocation StartLoc,
 
 FunctionDecl *Sema::FindDeallocationFunctionForDestructor(SourceLocation Loc,
                                                           CXXRecordDecl *RD,
-                                                          DeclarationName Name,
                                                           bool Diagnose) {
+  DeclarationName Name = Context.DeclarationNames.getCXXOperatorName(OO_Delete);
 
   FunctionDecl *OperatorDelete = nullptr;
   QualType DeallocType = Context.getRecordType(RD);
@@ -3602,7 +3594,8 @@ FunctionDecl *Sema::FindDeallocationFunctionForDestructor(SourceLocation Loc,
   if (OperatorDelete)
     return OperatorDelete;
 
-  // If there's no class-specific operator delete, look up the global delete.
+  // If there's no class-specific operator delete, look up the global
+  // non-array delete.
   QualType RecordType = Context.getRecordType(RD);
   IDP.PassAlignment =
       alignedAllocationModeFromBool(hasNewExtendedAlignment(*this, RecordType));
@@ -3619,11 +3612,8 @@ bool Sema::FindDeallocationFunction(SourceLocation StartLoc, CXXRecordDecl *RD,
   // Try to find operator delete/operator delete[] in class scope.
   LookupQualifiedName(Found, RD);
 
-  if (Found.isAmbiguous()) {
-    if (!Diagnose)
-      Found.suppressDiagnostics();
+  if (Found.isAmbiguous())
     return true;
-  }
 
   Found.suppressDiagnostics();
 
@@ -7779,6 +7769,11 @@ QualType Sema::FindCompositePointerType(SourceLocation Loc,
         Quals.setObjCLifetime(Q1.getObjCLifetime());
       else if (T1->isVoidPointerType() || T2->isVoidPointerType())
         assert(Steps.size() == 1);
+      else
+        return QualType();
+
+      if (Q1.getPointerAuth().isEquivalent(Q2.getPointerAuth()))
+        Quals.setPointerAuth(Q1.getPointerAuth());
       else
         return QualType();
 

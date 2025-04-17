@@ -951,6 +951,11 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
   if (MCII->get(MI.getOpcode()).TSFlags & SIInstrFlags::IsMAI)
     convertMAIInst(MI);
 
+#if LLPC_BUILD_NPI
+  if (MCII->get(MI.getOpcode()).TSFlags & SIInstrFlags::IsWMMA)
+    convertWMMAInst(MI);
+
+#endif /* LLPC_BUILD_NPI */
   int VDstIn_Idx = AMDGPU::getNamedOperandIdx(MI.getOpcode(),
                                               AMDGPU::OpName::vdst_in);
   if (VDstIn_Idx != -1) {
@@ -1068,10 +1073,29 @@ static void adjustMFMA_F8F6F4OpRegClass(const MCRegisterInfo &MRI,
     return MO.setReg(
         MRI.getSubReg(MO.getReg(), AMDGPU::sub0_sub1_sub2_sub3_sub4_sub5));
   case 8:
+#if LLPC_BUILD_NPI
+    if (MCRegister NewReg = MRI.getSubReg(
+            MO.getReg(), AMDGPU::sub0_sub1_sub2_sub3_sub4_sub5_sub6_sub7)) {
+      MO.setReg(NewReg);
+    }
+    return;
+  case 12: {
+    // There is no 384-bit subreg index defined.
+    MCRegister BaseReg = MRI.getSubReg(MO.getReg(), AMDGPU::sub0);
+    MCRegister NewReg = MRI.getMatchingSuperReg(
+        BaseReg, AMDGPU::sub0, &MRI.getRegClass(AMDGPU::VReg_384RegClassID));
+    return MO.setReg(NewReg);
+  }
+  case 16:
+#endif /* LLPC_BUILD_NPI */
     // No-op in cases where one operand is still f8/bf8.
     return;
   default:
+#if LLPC_BUILD_NPI
+    llvm_unreachable("Unexpected size for mfma/wmma f8f6f4 operand");
+#else /* LLPC_BUILD_NPI */
     llvm_unreachable("Unexpected size for mfma f8f6f4 operand");
+#endif /* LLPC_BUILD_NPI */
   }
 }
 
@@ -1109,6 +1133,37 @@ void AMDGPUDisassembler::convertMAIInst(MCInst &MI) const {
                               AdjustedRegClassOpcode->NumRegsSrcB);
 }
 
+#if LLPC_BUILD_NPI
+void AMDGPUDisassembler::convertWMMAInst(MCInst &MI) const {
+  int FmtAIdx =
+      AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::matrix_a_fmt);
+  if (FmtAIdx == -1)
+    return;
+
+  int FmtBIdx =
+      AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::matrix_b_fmt);
+
+  unsigned FmtA = MI.getOperand(FmtAIdx).getImm();
+  unsigned FmtB = MI.getOperand(FmtBIdx).getImm();
+
+  const AMDGPU::MFMA_F8F6F4_Info *AdjustedRegClassOpcode =
+      AMDGPU::getWMMA_F8F6F4_WithFormatArgs(FmtA, FmtB, MI.getOpcode());
+  if (!AdjustedRegClassOpcode ||
+      AdjustedRegClassOpcode->Opcode == MI.getOpcode())
+    return;
+
+  MI.setOpcode(AdjustedRegClassOpcode->Opcode);
+  int Src0Idx =
+      AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::src0);
+  int Src1Idx =
+      AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::src1);
+  adjustMFMA_F8F6F4OpRegClass(MRI, MI.getOperand(Src0Idx),
+                              AdjustedRegClassOpcode->NumRegsSrcA);
+  adjustMFMA_F8F6F4OpRegClass(MRI, MI.getOperand(Src1Idx),
+                              AdjustedRegClassOpcode->NumRegsSrcB);
+}
+
+#endif /* LLPC_BUILD_NPI */
 struct VOPModifiers {
   unsigned OpSel = 0;
   unsigned OpSelHi = 0;
@@ -2896,6 +2951,11 @@ Expected<bool> AMDGPUDisassembler::decodeKernelDescriptorDirective(
                       KERNEL_CODE_PROPERTY_ENABLE_SGPR_FLAT_SCRATCH_INIT);
     PRINT_DIRECTIVE(".amdhsa_user_sgpr_private_segment_size",
                     KERNEL_CODE_PROPERTY_ENABLE_SGPR_PRIVATE_SEGMENT_SIZE);
+#if LLPC_BUILD_NPI
+    if (isGFX1250Only())
+      PRINT_DIRECTIVE(".amdhsa_uses_cu_stores",
+                      KERNEL_CODE_PROPERTY_USES_CU_STORES);
+#endif /* LLPC_BUILD_NPI */
 
     if (TwoByteBuffer & KERNEL_CODE_PROPERTY_RESERVED0)
       return createReservedKDBitsError(KERNEL_CODE_PROPERTY_RESERVED0,

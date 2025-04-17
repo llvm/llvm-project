@@ -198,14 +198,10 @@ ABIArgInfo AMDGPUABIInfo::classifyKernelArgumentType(QualType Ty) const {
         /*ToAS=*/getContext().getTargetAddressSpace(LangAS::cuda_device));
   }
 
-  // FIXME: Should also use this for OpenCL, but it requires addressing the
-  // problem of kernels being called.
-  //
   // FIXME: This doesn't apply the optimization of coercing pointers in structs
   // to global address space when using byref. This would require implementing a
   // new kind of coercion of the in-memory type when for indirect arguments.
-  if (!getContext().getLangOpts().OpenCL && LTy == OrigLTy &&
-      isAggregateTypeForABI(Ty)) {
+  if (LTy == OrigLTy && isAggregateTypeForABI(Ty)) {
     return ABIArgInfo::getIndirectAliased(
         getContext().getTypeAlignInChars(Ty),
         getContext().getTargetAddressSpace(LangAS::opencl_constant),
@@ -449,7 +445,8 @@ void AMDGPUTargetCodeGenInfo::setFunctionDeclAttributes(
     F->addFnAttr("amdgpu-cluster-dims", AttrVal.str());
   }
 
-  if (FD->getAttr<CUDANoClusterAttr>())
+  // OpenCL doesn't support cluster feature.
+  if (IsOpenCLKernel || FD->getAttr<CUDANoClusterAttr>())
     F->addFnAttr("amdgpu-cluster-dims", "0,0,0");
 #endif /* LLPC_BUILD_NPI */
 }
@@ -553,6 +550,11 @@ AMDGPUTargetCodeGenInfo::getLLVMSyncScopeID(const LangOptions &LangOpts,
   case SyncScope::OpenCLAllSVMDevices:
     Name = "";
     break;
+#if LLPC_BUILD_NPI
+  case SyncScope::HIPCluster:
+  case SyncScope::ClusterScope:
+    Name = "cluster";
+#endif /* LLPC_BUILD_NPI */
   }
 
   // OpenCL assumes by default that atomic scopes are per-address space for

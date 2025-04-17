@@ -296,20 +296,32 @@ bool AMDGPUPerfHint::runOnFunction(Function &F) {
   //  - The function has a basic block with more than 8000 instructions AND
   //  - The function has more than 600 calls to @llvm.amdgcn.raw.buffer.store.v4i32 calls.
 
-  unsigned MaxInstCount = 0;
-  for (auto &B : F)
-    MaxInstCount = std::max(MaxInstCount, (unsigned)B.size());
-  if (MaxInstCount > 8000) {
-    Function *BufferStore = Intrinsic::getOrInsertDeclaration(
-        F.getParent(), Intrinsic::amdgcn_raw_buffer_store,
-        FixedVectorType::get(Type::getInt32Ty(F.getContext()), 4));
-    unsigned BufferStoreCnt =
-        llvm::count_if(BufferStore->users(), [&F](User *U) {
-          return (cast<CallInst>(U)->getParent()->getParent() == &F);
-        });
-    if (BufferStoreCnt > 600) {
-      EvictInterferenceCutoff = 1;
-      Changed = true;
+  auto Gen = TLI->getSubtarget()->getGeneration();
+  if (Gen <= AMDGPUSubtarget::GFX12) {
+    unsigned MaxInstCount = 0;
+    for (auto &B : F)
+      MaxInstCount = std::max(MaxInstCount, (unsigned)B.size());
+    if (MaxInstCount > 8000) {
+#if LLPC_BUILD_NPI
+      Type *OverloadedTypes[] = {
+          FixedVectorType::get(Type::getInt32Ty(F.getContext()), 4),
+          FixedVectorType::get(Type::getInt32Ty(F.getContext()), 4)};
+#endif /* LLPC_BUILD_NPI */
+      Function *BufferStore = Intrinsic::getOrInsertDeclaration(
+#if LLPC_BUILD_NPI
+          F.getParent(), Intrinsic::amdgcn_raw_buffer_store, OverloadedTypes);
+#else /* LLPC_BUILD_NPI */
+          F.getParent(), Intrinsic::amdgcn_raw_buffer_store,
+          FixedVectorType::get(Type::getInt32Ty(F.getContext()), 4));
+#endif /* LLPC_BUILD_NPI */
+      unsigned BufferStoreCnt =
+          llvm::count_if(BufferStore->users(), [&F](User *U) {
+            return (cast<CallInst>(U)->getParent()->getParent() == &F);
+          });
+      if (BufferStoreCnt > 600) {
+        EvictInterferenceCutoff = 1;
+        Changed = true;
+      }
     }
   }
 

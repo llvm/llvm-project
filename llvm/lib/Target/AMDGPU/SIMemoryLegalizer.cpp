@@ -2842,11 +2842,13 @@ bool SIGfx12CacheControl::expandSystemScopeStore(
   }
 
   // GFX1250 only: Require SCOPE_SE on stores that may hit the scratch address
-  // space.
-  if (TII->mayAccessScratchThroughFlat(*MI) && Scope == CPol::SCOPE_CU)
-    return setScope(MI, CPol::SCOPE_SE);
+  // space, or if the "cu-stores" target feature is disabled.
+  if (Scope != CPol::SCOPE_CU)
+    return false;
 
-  // TODO: Introduce a target feature to always enforce SCOPE_SE.
+  const Function &Fn = MI->getMF()->getFunction();
+  if (!ST.hasCUStores() || TII->mayAccessScratchThroughFlat(*MI))
+    return setScope(MI, CPol::SCOPE_SE);
 #else /* LLPC_BUILD_NPI */
   if (CPol && ((CPol->getImm() & CPol::SCOPE) == CPol::SCOPE_SYS))
     return insertWaitsBeforeSystemScopeStore(MI);

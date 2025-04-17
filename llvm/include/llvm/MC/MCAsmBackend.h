@@ -109,11 +109,10 @@ public:
     return false;
   }
 
-  virtual bool evaluateTargetFixup(const MCAssembler &Asm,
-                                   const MCFixup &Fixup, const MCFragment *DF,
-                                   const MCValue &Target,
-                                   const MCSubtargetInfo *STI, uint64_t &Value,
-                                   bool &WasForced) {
+  virtual bool evaluateTargetFixup(const MCAssembler &Asm, const MCFixup &Fixup,
+                                   const MCFragment *DF, const MCValue &Target,
+                                   const MCSubtargetInfo *STI,
+                                   uint64_t &Value) {
     llvm_unreachable("Need to implement hook if target has custom fixups");
   }
 
@@ -153,11 +152,9 @@ public:
 
   /// Target specific predicate for whether a given fixup requires the
   /// associated instruction to be relaxed.
-  virtual bool fixupNeedsRelaxationAdvanced(const MCAssembler &Asm,
-                                            const MCFixup &Fixup, bool Resolved,
-                                            uint64_t Value,
-                                            const MCRelaxableFragment *DF,
-                                            const bool WasForced) const;
+  virtual bool fixupNeedsRelaxationAdvanced(const MCAssembler &,
+                                            const MCFixup &, const MCValue &,
+                                            uint64_t, bool Resolved) const;
 
   /// Simple predicate for targets where !Resolved implies requiring relaxation
   virtual bool fixupNeedsRelaxation(const MCFixup &Fixup,
@@ -223,11 +220,6 @@ public:
   virtual uint64_t generateCompactUnwindEncoding(const MCDwarfFrameInfo *FI,
                                                  const MCContext *Ctxt) const {
     return 0;
-  }
-
-  /// Check whether a given symbol has been flagged with MICROMIPS flag.
-  virtual bool isMicroMips(const MCSymbol *Sym) const {
-    return false;
   }
 
   bool isDarwinCanonicalPersonality(const MCSymbol *Sym) const;

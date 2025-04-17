@@ -5036,6 +5036,10 @@ bool AMDGPUDAGToDAGISel::SelectBITOP3(SDValue In, SDValue &Src0, SDValue &Src1,
   Tbl = CurDAG->getTargetConstant(TTbl, SDLoc(In), MVT::i32);
   return true;
 }
+#if LLPC_BUILD_NPI
+
+bool AMDGPUDAGToDAGISel::SelectIgnore(SDValue In) const { return true; }
+#endif /* LLPC_BUILD_NPI */
 
 SDValue AMDGPUDAGToDAGISel::getHi16Elt(SDValue In) const {
   if (In.isUndef())

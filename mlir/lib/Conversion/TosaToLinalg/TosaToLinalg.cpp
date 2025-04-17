@@ -2285,8 +2285,22 @@ public:
 
           Value predicate;
           if (isa<FloatType>(inElementTy)) {
-            predicate = rewriter.create<arith::CmpFOp>(
-                nestedLoc, arith::CmpFPredicate::OGT, newValue, oldValue);
+            if (argmaxOp.getNanMode() == "IGNORE") {
+              // Only update index & max value for non NaN values. If all
+              // values are NaNs, the initial index will be return which is 0.
+              predicate = rewriter.create<arith::CmpFOp>(
+                  nestedLoc, arith::CmpFPredicate::OGT, newValue, oldValue);
+            } else {
+              // Update max value if either of the following is true:
+              // - new value is bigger
+              // - cur max is not NaN and new value is NaN
+              Value gt = rewriter.create<arith::CmpFOp>(
+                  nestedLoc, arith::CmpFPredicate::UGT, newValue, oldValue);
+              Value oldNonNaN = rewriter.create<arith::CmpFOp>(
+                  nestedLoc, arith::CmpFPredicate::ORD, oldValue, oldValue);
+              predicate = rewriter.create<arith::AndIOp>(
+                  nestedLoc, rewriter.getI1Type(), gt, oldNonNaN);
+            }
           } else if (isa<IntegerType>(inElementTy)) {
             predicate = rewriter.create<arith::CmpIOp>(
                 nestedLoc, arith::CmpIPredicate::sgt, newValue, oldValue);
@@ -2299,28 +2313,6 @@ public:
               nestedLoc, predicate, newValue, oldValue);
           auto resultIndex = rewriter.create<arith::SelectOp>(
               nestedLoc, predicate, newIndex, oldIndex);
-
-          // Check if we need to materialize compare and select for the given
-          // NaN propagation mode.
-
-          // "PROPAGATE" matches the default NaN propagation mode of the arith
-          // dialect so no compare and select is required.
-          //
-          // In the case "IGNORE" we check if the current argument is NaN and
-          // select the old index and value otherwise take the updated index and
-          // value.
-          if (const auto nanMode = argmaxOp.getNanMode();
-              isa<FloatType>(inElementTy) && nanMode == "IGNORE") {
-            // Unordered comparison of NaN against itself will always return
-            // true.
-            Value isNaN = rewriter.create<arith::CmpFOp>(
-                argmaxOp.getLoc(), arith::CmpFPredicate::UNO, newValue,
-                newValue);
-            resultMax = rewriter.create<arith::SelectOp>(nestedLoc, isNaN,
-                                                         oldValue, resultMax);
-            resultIndex = rewriter.create<arith::SelectOp>(
-                nestedLoc, isNaN, oldIndex, resultIndex);
-          }
           nestedBuilder.create<linalg::YieldOp>(
               nestedLoc, ValueRange({resultIndex, resultMax}));
         });

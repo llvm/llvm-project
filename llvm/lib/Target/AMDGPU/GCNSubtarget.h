@@ -278,6 +278,7 @@ protected:
   bool HasSafeSmemPrefetch = false;
 #if LLPC_BUILD_NPI
   bool HasSafeCUPrefetch = false;
+  bool HasCUStores = false;
 #endif /* LLPC_BUILD_NPI */
   bool HasVcmpxExecWARHazard = false;
   bool HasLdsBranchVmemWARHazard = false;
@@ -1094,6 +1095,8 @@ public:
 
 #if LLPC_BUILD_NPI
   bool hasSafeCUPrefetch() const { return HasSafeCUPrefetch; }
+
+  bool hasCUStores() const { return HasCUStores; }
 
 #endif /* LLPC_BUILD_NPI */
   // Has s_cmpk_* instructions.

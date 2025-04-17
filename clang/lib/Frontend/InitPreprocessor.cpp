@@ -32,7 +32,7 @@ using namespace clang;
 static bool MacroBodyEndsInBackslash(StringRef MacroBody) {
   while (!MacroBody.empty() && isWhitespace(MacroBody.back()))
     MacroBody = MacroBody.drop_back();
-  return !MacroBody.empty() && MacroBody.back() == '\\';
+  return MacroBody.ends_with('\\');
 }
 
 // Append a #define line to Buf for Macro.  Macro should be of the form XXX,
@@ -616,6 +616,9 @@ static void InitializeStandardPredefinedMacros(const TargetInfo &TI,
     Builder.defineMacro("__HIP_MEMORY_SCOPE_WORKGROUP", "3");
     Builder.defineMacro("__HIP_MEMORY_SCOPE_AGENT", "4");
     Builder.defineMacro("__HIP_MEMORY_SCOPE_SYSTEM", "5");
+#if LLPC_BUILD_NPI
+    Builder.defineMacro("__HIP_MEMORY_SCOPE_CLUSTER", "6");
+#endif /* LLPC_BUILD_NPI */
     if (LangOpts.HIPStdPar) {
       Builder.defineMacro("__HIPSTDPAR__");
       if (LangOpts.HIPStdParInterposeAlloc)
@@ -908,6 +911,9 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
   Builder.defineMacro("__MEMORY_SCOPE_WRKGRP", "2");
   Builder.defineMacro("__MEMORY_SCOPE_WVFRNT", "3");
   Builder.defineMacro("__MEMORY_SCOPE_SINGLE", "4");
+#if LLPC_BUILD_NPI
+  Builder.defineMacro("__MEMORY_SCOPE_CLUSTR", "5");
+#endif /* LLPC_BUILD_NPI */
 
   // Define macros for the OpenCL memory scope.
   // The values should match AtomicScopeOpenCLModel::ID enum.

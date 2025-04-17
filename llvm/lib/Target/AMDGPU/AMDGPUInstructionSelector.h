@@ -173,6 +173,11 @@ private:
                                  bool ForceVGPR = false) const;
 
   InstructionSelector::ComplexRendererFns
+#if LLPC_BUILD_NPI
+  selectIgnore(MachineOperand &Root) const;
+
+  InstructionSelector::ComplexRendererFns
+#endif /* LLPC_BUILD_NPI */
   selectVCSRC(MachineOperand &Root) const;
 
   InstructionSelector::ComplexRendererFns

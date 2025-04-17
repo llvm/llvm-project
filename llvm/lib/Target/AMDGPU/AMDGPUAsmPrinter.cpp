@@ -549,6 +549,9 @@ const MCExpr *AMDGPUAsmPrinter::getAmdhsaKernelCodeProperties(
   MCContext &Ctx = MF.getContext();
   uint16_t KernelCodeProperties = 0;
   const GCNUserSGPRUsageInfo &UserSGPRInfo = MFI.getUserSGPRInfo();
+#if LLPC_BUILD_NPI
+  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+#endif /* LLPC_BUILD_NPI */
 
   if (UserSGPRInfo.hasPrivateSegmentBuffer()) {
     KernelCodeProperties |=
@@ -578,13 +581,20 @@ const MCExpr *AMDGPUAsmPrinter::getAmdhsaKernelCodeProperties(
     KernelCodeProperties |=
         amdhsa::KERNEL_CODE_PROPERTY_ENABLE_SGPR_PRIVATE_SEGMENT_SIZE;
   }
+#if LLPC_BUILD_NPI
+  if (ST.isWave32()) {
+#else /* LLPC_BUILD_NPI */
   if (MF.getSubtarget<GCNSubtarget>().isWave32()) {
+#endif /* LLPC_BUILD_NPI */
     KernelCodeProperties |=
         amdhsa::KERNEL_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32;
   }
 #if LLPC_BUILD_NPI
   if (AMDGPU::getWavegroupEnable(MF.getFunction()))
     KernelCodeProperties |= amdhsa::KERNEL_CODE_PROPERTY_ENABLE_WAVEGROUP;
+  if (isGFX1250Only(ST) && ST.hasCUStores()) {
+    KernelCodeProperties |= amdhsa::KERNEL_CODE_PROPERTY_USES_CU_STORES;
+  }
 #endif /* LLPC_BUILD_NPI */
 
   // CurrentProgramInfo.DynamicCallStack is a MCExpr and could be

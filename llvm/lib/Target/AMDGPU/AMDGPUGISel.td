@@ -14,6 +14,13 @@ include "AMDGPU.td"
 include "AMDGPUCombine.td"
 
 def sd_vsrc0 : ComplexPattern<i32, 1, "">;
+#ifdef LLPC_BUILD_NPI
+
+def gi_ignore :
+    GIComplexOperandMatcher<s32, "selectIgnore">,
+    GIComplexPatternEquiv<Ignore>;
+
+#endif /* LLPC_BUILD_NPI */
 def gi_vsrc0 :
     GIComplexOperandMatcher<s32, "selectVSRC0">,
     GIComplexPatternEquiv<sd_vsrc0>;

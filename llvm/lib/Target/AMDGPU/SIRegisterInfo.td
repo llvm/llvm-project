@@ -1283,9 +1283,11 @@ defm VReg_288 : VRegClass<9, [v9i32, v9f32], (add VGPR_288)>;
 #endif /* LLPC_BUILD_NPI */
 defm VReg_320 : VRegClass<10, [v10i32, v10f32], (add VGPR_320)>;
 defm VReg_352 : VRegClass<11, [v11i32, v11f32], (add VGPR_352)>;
-defm VReg_384 : VRegClass<12, [v12i32, v12f32], (add VGPR_384)>;
 #ifdef LLPC_BUILD_NPI
+defm VReg_384 : VRegClass_STAGING<12, [v12i32, v12f32], (add VGPR_384)>;
 defm VReg_576 : VRegClass_STAGING<18, [v18i32, v18f32, v36i16, v36f16, v36bf16], (add VGPR_576)>;
+#else /* LLPC_BUILD_NPI */
+defm VReg_384 : VRegClass<12, [v12i32, v12f32], (add VGPR_384)>;
 #endif /* LLPC_BUILD_NPI */
 
 let GlobalPriority = true in {
@@ -1779,6 +1781,7 @@ def VRegSrc_160  : SrcReg9<VReg_160_STAGING, "OPW160">;
 def VRegSrc_192  : SrcReg9<VReg_192_STAGING, "OPW192">;
 def VRegSrc_256  : SrcReg9<VReg_256_STAGING, "OPW256">;
 def VRegSrc_288  : SrcReg9<VReg_288_STAGING, "OPW288">;
+def VRegSrc_384  : SrcReg9<VReg_384_STAGING, "OPW384">;
 def VRegSrc_512  : SrcReg9<VReg_512_STAGING, "OPW512">;
 def VRegSrc_576  : SrcReg9<VReg_576_STAGING, "OPW576">;
 def VRegSrc_1024 : SrcReg9<VReg_1024_STAGING, "OPW1024">;

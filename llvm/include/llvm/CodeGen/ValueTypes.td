@@ -577,6 +577,12 @@ def amdgpuBufferStridedPointer : ValueType<192, 251>;
 def amdgpuBufferStridedPointer : ValueType<192, 235>;
 #endif /* LLPC_BUILD_NPI */
 
+#ifdef LLPC_BUILD_NPI
+def aarch64mfp8 : ValueType<8,  252>;  // 8-bit value in FPR (AArch64)
+#else /* LLPC_BUILD_NPI */
+def aarch64mfp8 : ValueType<8,  236>;  // 8-bit value in FPR (AArch64)
+#endif /* LLPC_BUILD_NPI */
+
 let isNormalValueType = false in {
 def token      : ValueType<0, 504>;  // TokenTy
 def MetadataVT : ValueType<0, 505> { // Metadata

@@ -399,7 +399,7 @@ min.hsu@sifive.com, min@myhsu.dev (email), [mshockwave](https://github.com/mshoc
 
 Takumi Nakamura \
 geek4civic@gmail.com (email), [chapuni](https://github.com/chapuni) (GitHub) \
-Alan Philipps \
+Alan Phipps \
 a-phipps@ti.com (email), [evodius96](https://github.com/evodius96) (GitHub)
 
 #### Binary Utilities

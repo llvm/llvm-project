@@ -45,11 +45,17 @@ enum class SyncScope {
   WorkgroupScope,
   WavefrontScope,
   SingleScope,
+#if LLPC_BUILD_NPI
+  ClusterScope,
+#endif /* LLPC_BUILD_NPI */
   HIPSingleThread,
   HIPWavefront,
   HIPWorkgroup,
   HIPAgent,
   HIPSystem,
+#if LLPC_BUILD_NPI
+  HIPCluster,
+#endif /* LLPC_BUILD_NPI */
   OpenCLWorkGroup,
   OpenCLDevice,
   OpenCLAllSVMDevices,
@@ -69,6 +75,10 @@ inline llvm::StringRef getAsString(SyncScope S) {
     return "wavefront_scope";
   case SyncScope::SingleScope:
     return "single_scope";
+#if LLPC_BUILD_NPI
+  case SyncScope::ClusterScope:
+    return "cluster_scope";
+#endif /* LLPC_BUILD_NPI */
   case SyncScope::HIPSingleThread:
     return "hip_singlethread";
   case SyncScope::HIPWavefront:
@@ -79,6 +89,10 @@ inline llvm::StringRef getAsString(SyncScope S) {
     return "hip_agent";
   case SyncScope::HIPSystem:
     return "hip_system";
+#if LLPC_BUILD_NPI
+  case SyncScope::HIPCluster:
+    return "hip_cluster";
+#endif /* LLPC_BUILD_NPI */
   case SyncScope::OpenCLWorkGroup:
     return "opencl_workgroup";
   case SyncScope::OpenCLDevice:
@@ -180,7 +194,12 @@ public:
     Workgroup = 3,
     Agent = 4,
     System = 5,
+#if LLPC_BUILD_NPI
+    Cluster = 6,
+    Last = Cluster
+#else /* LLPC_BUILD_NPI */
     Last = System
+#endif /* LLPC_BUILD_NPI */
   };
 
   AtomicScopeHIPModel() {}
@@ -197,6 +216,10 @@ public:
       return SyncScope::HIPAgent;
     case System:
       return SyncScope::HIPSystem;
+#if LLPC_BUILD_NPI
+    case Cluster:
+      return SyncScope::HIPCluster;
+#endif /* LLPC_BUILD_NPI */
     }
     llvm_unreachable("Invalid language sync scope value");
   }
@@ -207,11 +230,20 @@ public:
   }
 
   ArrayRef<unsigned> getRuntimeValues() const override {
+#if LLPC_BUILD_NPI
+    static_assert(Last == Cluster, "Does not include all sync scopes");
+#else /* LLPC_BUILD_NPI */
     static_assert(Last == System, "Does not include all sync scopes");
+#endif /* LLPC_BUILD_NPI */
     static const unsigned Scopes[] = {
         static_cast<unsigned>(SingleThread), static_cast<unsigned>(Wavefront),
+#if LLPC_BUILD_NPI
+        static_cast<unsigned>(Workgroup),    static_cast<unsigned>(Agent),
+        static_cast<unsigned>(System),       static_cast<unsigned>(Cluster)};
+#else /* LLPC_BUILD_NPI */
         static_cast<unsigned>(Workgroup), static_cast<unsigned>(Agent),
         static_cast<unsigned>(System)};
+#endif /* LLPC_BUILD_NPI */
     return llvm::ArrayRef(Scopes);
   }
 
@@ -230,7 +262,12 @@ public:
     Workgroup = 2,
     Wavefront = 3,
     Single = 4,
+#if LLPC_BUILD_NPI
+    Cluster = 5,
+    Last = Cluster
+#else /* LLPC_BUILD_NPI */
     Last = Single
+#endif /* LLPC_BUILD_NPI */
   };
 
   AtomicScopeGenericModel() = default;
@@ -247,6 +284,10 @@ public:
       return SyncScope::WavefrontScope;
     case Single:
       return SyncScope::SingleScope;
+#if LLPC_BUILD_NPI
+    case Cluster:
+      return SyncScope::ClusterScope;
+#endif /* LLPC_BUILD_NPI */
     }
     llvm_unreachable("Invalid language sync scope value");
   }
@@ -256,11 +297,23 @@ public:
   }
 
   ArrayRef<unsigned> getRuntimeValues() const override {
+#if LLPC_BUILD_NPI
+    static_assert(Last == Cluster, "Does not include all sync scopes");
+#else /* LLPC_BUILD_NPI */
     static_assert(Last == Single, "Does not include all sync scopes");
+#endif /* LLPC_BUILD_NPI */
     static const unsigned Scopes[] = {
+#if LLPC_BUILD_NPI
+        static_cast<unsigned>(Device),    static_cast<unsigned>(System),
+#else /* LLPC_BUILD_NPI */
         static_cast<unsigned>(Device), static_cast<unsigned>(System),
+#endif /* LLPC_BUILD_NPI */
         static_cast<unsigned>(Workgroup), static_cast<unsigned>(Wavefront),
+#if LLPC_BUILD_NPI
+        static_cast<unsigned>(Single),    static_cast<unsigned>(Cluster)};
+#else /* LLPC_BUILD_NPI */
         static_cast<unsigned>(Single)};
+#endif /* LLPC_BUILD_NPI */
     return llvm::ArrayRef(Scopes);
   }
 
