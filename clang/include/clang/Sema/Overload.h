@@ -901,6 +901,13 @@ class Sema;
     LLVM_PREFERRED_TYPE(bool)
     unsigned Viable : 1;
 
+    /// Whether this candidate wouldn't be viable without default arguments.
+    /// This is needed to implement the special provision about ambiguous
+    /// default arguments of the best viable function described in
+    /// [over.match.best]/4.
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned ViableByDefaultArgument : 1;
+
     /// Whether this candidate is the best viable function, or tied for being
     /// the best viable function.
     ///
@@ -948,7 +955,8 @@ class Sema;
     unsigned char FailureKind;
 
     /// The number of call arguments that were explicitly provided,
-    /// to be used while performing partial ordering of function templates.
+    /// to be used while performing partial ordering of function templates
+    /// and to diagnose ambiguous default arguments ([over.best.match]/4).
     unsigned ExplicitCallArguments;
 
     union {
@@ -1176,11 +1184,38 @@ class Sema;
     /// Whether diagnostics should be deferred.
     bool shouldDeferDiags(Sema &S, ArrayRef<Expr *> Args, SourceLocation OpLoc);
 
-    /// Determine when this overload candidate will be new to the
-    /// overload set.
+    /// Determine when this overload candidate will be new to the overload set.
+    /// Typically the uniqueness is determined by canonical declaration
+    /// (i.e. semantic entity), but it's aware of a special case of default
+    /// arguments in redeclarations spanning across different lexical scopes.
+    /// See also eliminateDuplicatesWithUnusedDefaultArgs().
     bool isNewCandidate(Decl *F, OverloadCandidateParamOrder PO =
                                      OverloadCandidateParamOrder::Normal) {
       uintptr_t Key = reinterpret_cast<uintptr_t>(F->getCanonicalDecl());
+
+      // There is one special case when we can't rely on just semantic
+      // properties of the function (i.e. entity in the Standard sense),
+      // which is default arguments defined in redeclarations across
+      // different scopes, because sets of default arguments are associated
+      // with lexical scope of function declaration. Which means single
+      // function entity can have more than one set of default arguments,
+      // and which of those sets are considered depends solely on what
+      // name lookup has found for each individual call expression.
+      // See [over.match.best]/4 for more details.
+      // In such case, we use (lexical) function declaration to determine
+      // uniqueness of overload candidate, instead of (semantic) entity
+      // it represents. This would lead to duplicates, which will be
+      // eliminated by eliminateDuplicatesWithUnusedDefaultArgs()
+      // after every candidate will be considered.
+      if (const auto *FD = dyn_cast<FunctionDecl>(F);
+          FD && FD->getLexicalDeclContext() !=
+                    F->getCanonicalDecl()->getLexicalDeclContext()) {
+        auto HasDefaultArg = [](const ParmVarDecl *PDecl) {
+          return PDecl->hasDefaultArg();
+        };
+        if (llvm::any_of(FD->parameters(), HasDefaultArg))
+          Key = reinterpret_cast<uintptr_t>(FD);
+      }
       Key |= static_cast<uintptr_t>(PO);
       return Functions.insert(Key).second;
     }
@@ -1193,6 +1228,14 @@ class Sema;
 
     /// Clear out all of the candidates.
     void clear(CandidateSetKind CSK);
+
+    /// Clean up duplicates left by isNewCandidate()
+    /// (see comment in its implementation for details.)
+    /// When this function is called, we should know which of duplicated
+    /// candidates are viable because of their default arguments, and those
+    /// are the only duplicates we are interested in during subsequent
+    /// selection of the best viable function.
+    void eliminateDuplicatesWithUnusedDefaultArgs();
 
     using iterator = SmallVectorImpl<OverloadCandidate>::iterator;
 

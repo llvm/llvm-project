@@ -117,10 +117,10 @@ C++17 Feature Support
 Resolutions to C++ Defect Reports
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-- The flag `-frelaxed-template-template-args`
-  and its negation have been removed, having been deprecated since the previous
-  two releases. The improvements to template template parameter matching implemented
-  in the previous release, as described in P3310 and P3579, made this flag unnecessary.
+- Clang now diagnoses ambiguous default arguments declared in different scopes
+  when calling functions, implementing [over.match.best] p4.
+  (`CWG1: What if two using-declarations refer to the same function but the declarations introduce different default-arguments? <https://cplusplus.github.io/CWG/issues/1.html>`_,
+  `CWG418: Imperfect wording on error on multiple default arguments on a called function <https://cplusplus.github.io/CWG/issues/418.html>`_)
 
 - Implemented `CWG2918 Consideration of constraints for address of overloaded `
   `function <https://cplusplus.github.io/CWG/issues/2918.html>`_

@@ -518,8 +518,28 @@ void LookupResult::resolveKind() {
   llvm::BitVector RemovedDecls(N);
 
   for (unsigned I = 0; I < N; I++) {
-    const NamedDecl *D = Decls[I]->getUnderlyingDecl();
-    D = cast<NamedDecl>(D->getCanonicalDecl());
+    const NamedDecl *NonCanonicalD = Decls[I]->getUnderlyingDecl();
+    const NamedDecl *D = cast<NamedDecl>(NonCanonicalD->getCanonicalDecl());
+
+    // When a function has redeclarations across different lexical scopes,
+    // and at least some of them have default arguments, we end up with
+    // multiple sets of default argument. Canonical declaration can't capture
+    // that, so we use non-canonical declarations instead. Overload resolution
+    // machinery is prepared to deal with that, see
+    // OverloadCandidateSet::isNewCandidate() and
+    // OverloadCandidateSet::eliminateDuplicatesWithUnusedDefaultArgs().
+    const DeclContext *DCtx = D->getLexicalDeclContext()
+                                  ->getNonTransparentContext()
+                                  ->getPrimaryContext();
+    if (const auto *FD = dyn_cast<FunctionDecl>(NonCanonicalD);
+        FD && DCtx != FD->getLexicalDeclContext()
+                          ->getNonTransparentContext()
+                          ->getPrimaryContext()) {
+      if (llvm::any_of(FD->parameters(), [](const ParmVarDecl *PDecl) {
+            return PDecl->hasDefaultArg();
+          }))
+        D = NonCanonicalD;
+    }
 
     // Ignore an invalid declaration unless it's the only one left.
     // Also ignore HLSLBufferDecl which not have name conflict with other Decls.
@@ -551,6 +571,8 @@ void LookupResult::resolveKind() {
         continue;
     }
 
+    // If this declaration is not the first declaration of an entity,
+    // this variable holds the index of the declaration we saw.
     std::optional<unsigned> ExistingI;
 
     // Redeclarations of types via typedef can occur both within a scope

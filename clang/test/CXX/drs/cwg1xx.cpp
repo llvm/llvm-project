@@ -518,6 +518,7 @@ namespace cwg136 { // cwg136: 3.4
     friend void f(int, int = 0, int);
     // expected-error@-1 {{friend declaration specifying a default argument must be the only declaration}}
     //   expected-note@#cwg136-f {{previous declaration is here}}
+    // expected-error@-3 {{missing default argument on parameter}}
     friend void g(int, int, int = 0);
     // expected-error@-1 {{friend declaration specifying a default argument must be the only declaration}}
     //   expected-note@#cwg136-g {{previous declaration is here}}

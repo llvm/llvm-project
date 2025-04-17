@@ -5172,6 +5172,10 @@ def err_addr_ovl_not_func_ptrref : Error<
 def err_addr_ovl_no_qualifier : Error<
   "cannot form member pointer of type %0 without '&' and class name">;
 
+def err_ovl_ambiguous_default_arg
+    : Error<"function call relies on default argument that has multiple "
+            "definitions">;
+
 } // let Deferrable
 
 // C++11 Literal Operators

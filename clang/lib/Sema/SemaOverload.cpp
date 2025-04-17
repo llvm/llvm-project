@@ -1125,6 +1125,15 @@ void OverloadCandidateSet::clear(CandidateSetKind CSK) {
   Kind = CSK;
 }
 
+void OverloadCandidateSet::eliminateDuplicatesWithUnusedDefaultArgs() {
+  llvm::SmallPtrSet<Decl *, 16> UniqueEntities;
+  llvm::erase_if(Candidates, [&](const OverloadCandidate &Candidate) {
+    auto [It, New] =
+        UniqueEntities.insert(Candidate.Function->getCanonicalDecl());
+    return !(New || Candidate.ViableByDefaultArgument);
+  });
+}
+
 namespace {
   class UnbridgedCastsSet {
     struct Entry {
@@ -7040,6 +7049,7 @@ void Sema::AddOverloadCandidate(
   Candidate.FoundDecl = FoundDecl;
   Candidate.Function = Function;
   Candidate.Viable = true;
+  Candidate.ViableByDefaultArgument = false;
   Candidate.RewriteKind =
       CandidateSet.getRewriteInfo().getRewriteKind(Function, PO);
   Candidate.IsADLCandidate = llvm::to_underlying(IsADLCandidate);
@@ -7165,6 +7175,10 @@ void Sema::AddOverloadCandidate(
     Candidate.Viable = false;
     Candidate.FailureKind = ovl_fail_too_few_arguments;
     return;
+  }
+
+  if (Args.size() < Function->getNumParams()) {
+    Candidate.ViableByDefaultArgument = true;
   }
 
   // (CUDA B.1): Check for invalid calls between targets.
@@ -11026,6 +11040,10 @@ OverloadCandidateSet::BestViableFunction(Sema &S, SourceLocation Loc,
     S.diagnoseEquivalentInternalLinkageDeclarations(Loc, Best->Function,
                                                     EquivalentCands);
 
+  // [over.match.best]/4 is checked for in Sema::ConvertArgumentsForCall,
+  // because not every function call goes through our overload resolution
+  // machinery, even if the Standard says it supposed to.
+
   return OR_Success;
 }
 
@@ -13848,6 +13866,8 @@ void Sema::AddOverloadedCallCandidates(UnresolvedLookupExpr *ULE,
                                CandidateSet, PartialOverloading,
                                /*KnownValid*/ true);
 
+  CandidateSet.eliminateDuplicatesWithUnusedDefaultArgs();
+
   if (ULE->requiresADL())
     AddArgumentDependentLookupCandidates(ULE->getName(), ULE->getExprLoc(),
                                          Args, ExplicitTemplateArgs,
@@ -14301,13 +14321,54 @@ static ExprResult FinishOverloadedCallExpr(Sema &SemaRef, Scope *S, Expr *Fn,
     break;
   }
 
-  case OR_Ambiguous:
+  case OR_Ambiguous: {
+    auto handleAmbiguousDefaultArgs = [&] {
+      unsigned FirstDefaultArgIndex = Args.size();
+      llvm::SmallVector<PartialDiagnosticAt, 4> Notes;
+      for (const OverloadCandidate &Cand : *CandidateSet) {
+        if (!Cand.Best)
+          continue;
+        if (isa<CXXMethodDecl>(Cand.Function) ||
+            Cand.Function->isFunctionTemplateSpecialization()) {
+          return false;
+        }
+        if (!Cand.ViableByDefaultArgument) {
+          // We found a candidate marked best which wasn't made viable by
+          // default argument, which means this is not an "ambiguous by
+          // default argument" situation.
+          return false;
+        }
+        const ParmVarDecl *Parameter =
+            Cand.Function->getParamDecl(FirstDefaultArgIndex);
+        Notes.emplace_back(
+            Parameter->getDefaultArg()->getExprLoc(),
+            SemaRef.PDiag(diag::note_default_argument_declared_here)
+                << Parameter->getDefaultArgRange());
+      }
+      if (Notes.empty())
+        return false;
+
+      assert(Notes.size() >= 2 &&
+             "Overloaded call is considered ambiguous by default arguments,"
+             " but we found less than two candidates");
+      SemaRef.Diag(Fn->getBeginLoc(), diag::err_ovl_ambiguous_default_arg)
+          << Fn->getSourceRange();
+      llvm::sort(Notes);
+      for (const PartialDiagnosticAt &PDiag : Notes) {
+        SemaRef.Diag(PDiag.first, PDiag.second);
+      }
+      return true;
+    };
+    if (handleAmbiguousDefaultArgs())
+      break;
+
     CandidateSet->NoteCandidates(
         PartialDiagnosticAt(Fn->getBeginLoc(),
                             SemaRef.PDiag(diag::err_ovl_ambiguous_call)
                                 << ULE->getName() << Fn->getSourceRange()),
         SemaRef, OCD_AmbiguousCandidates, Args);
     break;
+  }
 
   case OR_Deleted: {
     FunctionDecl *FDecl = (*Best)->Function;

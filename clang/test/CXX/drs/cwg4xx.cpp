@@ -369,10 +369,12 @@ namespace cwg417 { // cwg417: no
   }
 } // namespace cwg417
 
-namespace cwg418 { // cwg418: no
+namespace cwg418 { // cwg418: 21
 namespace example1 {
+void f1(int, int);
 void f1(int, int = 0);
 void f1(int = 0, int);
+void f1(int, int);
 
 void g() { f1(); }
 } // namespace example1
@@ -385,7 +387,9 @@ namespace B {
 using A::f2;
 }
 namespace A {
+void f2(int);
 void f2(int = 3);
+void f2(int);
 }
 void g2() {
   using B::f2;
@@ -395,13 +399,17 @@ void g2() {
 }
 } // namespace example2
 
-// example from [over.match.best]/4
+// based on example from [over.match.best]/4
 namespace example3 {
 namespace A {
-extern "C" void f(int = 5);
+extern "C" void f(int);
+extern "C" void f(int = 5); // #cwg418-ex3-A
+extern "C" void f(int);
 }
 namespace B {
-extern "C" void f(int = 5);
+extern "C" void f(int);
+extern "C" void f(int = 5); // #cwg418-ex3-B
+extern "C" void f(int);
 }
 
 using A::f;
@@ -409,7 +417,14 @@ using B::f;
 
 void use() {
   f(3);
-  f(); // FIXME: this should fail
+  f();
+  // expected-error@-1 {{function call relies on default argument that has multiple definitions}}
+  //   expected-note@#cwg418-ex3-A {{default argument declared here}}
+  //   expected-note@#cwg418-ex3-B {{default argument declared here}}
+  example3::f();
+  // expected-error@-1 {{function call relies on default argument that has multiple definitions}}
+  //   expected-note@#cwg418-ex3-A {{default argument declared here}}
+  //   expected-note@#cwg418-ex3-B {{default argument declared here}}
 }
 } // namespace example3
 } // namespace cwg418
