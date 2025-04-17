@@ -1283,6 +1283,7 @@ def V_LOAD_IDX : VPseudoInstSI <
     let mayLoad = 1;
     let VALU = 1;
     let UseNamedOperandTable = 1;
+    let hasSideEffects = 0;
 }
 def V_STORE_IDX : VPseudoInstSI <
   (outs),
@@ -1290,6 +1291,7 @@ def V_STORE_IDX : VPseudoInstSI <
     let mayStore = 1;
     let VALU = 1;
     let UseNamedOperandTable = 1;
+    let hasSideEffects = 0;
 }
 
 //===----------------------------------------------------------------------===//

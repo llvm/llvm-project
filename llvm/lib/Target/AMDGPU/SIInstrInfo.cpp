@@ -573,6 +573,22 @@ bool SIInstrInfo::getMemOperandsWithOffsetWidth(
     return true;
   }
 
+#if LLPC_BUILD_NPI
+  if (isVLdStIdx(Opc)) {
+    BaseOp = getNamedOperand(LdSt, AMDGPU::OpName::idx);
+    OffsetOp = getNamedOperand(LdSt, AMDGPU::OpName::offset);
+
+    BaseOps.push_back(BaseOp);
+    Offset = OffsetOp->getImm() * 4; // Offset has units of dwords.
+
+    // Get appropriate operand, and compute width accordingly.
+    DataOpIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::data_op);
+    MachineMemOperand *LdStMMO = LdSt.memoperands()[DataOpIdx];
+    Width = LdStMMO->getSize();
+    return true;
+  }
+
+#endif /* LLPC_BUILD_NPI */
   return false;
 }
 
@@ -4118,6 +4134,15 @@ bool SIInstrInfo::areMemAccessesTriviallyDisjoint(const MachineInstr &MIa,
     return false;
   }
 
+#if LLPC_BUILD_NPI
+  if (isVLdStIdx(MIa.getOpcode()) || isVLdStIdx(MIb.getOpcode())) {
+    if (isVLdStIdx(MIa.getOpcode()) && isVLdStIdx(MIb.getOpcode())) {
+      return checkInstOffsetsDoNotOverlap(MIa, MIb);
+    }
+    return true;
+  }
+
+#endif /* LLPC_BUILD_NPI */
   return false;
 }
 
@@ -7661,9 +7686,14 @@ SIInstrInfo::legalizeOperands(MachineInstr &MI,
 #if LLPC_BUILD_NPI
         .add(SrcMO);
     SrcMO.ChangeToRegister(Reg, false);
+#else /* LLPC_BUILD_NPI */
+        .add(Src0);
+    Src0.ChangeToRegister(Reg, false);
+#endif /* LLPC_BUILD_NPI */
     return nullptr;
   }
 
+#if LLPC_BUILD_NPI
   if (MI.getOpcode() == AMDGPU::V_PERMUTE_PAIR_GENSGPR_B32) {
     const DebugLoc &DL = MI.getDebugLoc();
     Register Reg = MRI.createVirtualRegister(&AMDGPU::SReg_64_XEXECRegClass);
@@ -7687,14 +7717,9 @@ SIInstrInfo::legalizeOperands(MachineInstr &MI,
         .addImm(AMDGPU::sub1);
 
     Src1.ChangeToRegister(Reg, false);
-#else /* LLPC_BUILD_NPI */
-        .add(Src0);
-    Src0.ChangeToRegister(Reg, false);
-#endif /* LLPC_BUILD_NPI */
     return nullptr;
   }
 
-#if LLPC_BUILD_NPI
   // Legalize TENSOR_LOAD_TO_LDS, TENSOR_LOAD_TO_LDS_D2, TENSOR_STORE_FROM_LDS,
   // TENSOR_STORE_FROM_LDS_D2. All their operands are scalar.
   if (MI.getOpcode() == AMDGPU::TENSOR_LOAD_TO_LDS ||

@@ -717,6 +717,18 @@ public:
     }
   }
 
+#if LLPC_BUILD_NPI
+  static bool isVLdStIdx(uint16_t Opcode) {
+    switch (Opcode) {
+    case AMDGPU::V_LOAD_IDX:
+    case AMDGPU::V_STORE_IDX:
+      return true;
+    default:
+      return false;
+    }
+  }
+
+#endif /* LLPC_BUILD_NPI */
   static bool isEXP(const MachineInstr &MI) {
     return MI.getDesc().TSFlags & SIInstrFlags::EXP;
   }
