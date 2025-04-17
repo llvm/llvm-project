@@ -683,10 +683,10 @@ void DefGen::emitStorageClass() {
       PrintWarning(
           def.getLoc(),
           "Using a raw APInt parameter without a custom comparator is "
-          "discouraged because an assert in the equality operator is "
+          "not supported because an assert in the equality operator is "
           "triggered when the two APInts have different bit widths. This can "
-          "lead to unexpected crashes. Consider using an `APIntParameter` or "
-          "providing a custom comparator.");
+          "lead to unexpected crashes. Use an `APIntParameter` or "
+          "provide a custom comparator.");
     }
     storageCls->declare<Field>(param.getCppType(), param.getName());
   }
