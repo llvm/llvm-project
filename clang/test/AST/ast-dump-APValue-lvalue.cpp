@@ -27,6 +27,16 @@ namespace std {
   class type_info;
 }
 
+struct P {
+  int x;
+};
+struct Q {
+  float m;
+};
+struct MP : P, Q {
+  int i;
+};
+
 void Test(int (&arr)[10]) {
   constexpr int *pi = &i;
   // CHECK:  | `-VarDecl {{.*}} <col:{{.*}}, col:{{.*}}> col:{{.*}} pi 'int *const' constexpr cinit
@@ -53,6 +63,10 @@ void Test(int (&arr)[10]) {
   // CHECK-NEXT:  |   |-value: LValue Base=null, Null=1, Offset=0, HasPath=1, PathLength=0, Path=()
 
   constexpr const std::type_info* pti = &typeid(int);
-  // CHECK:    `-VarDecl {{.*}} <col:{{.*}}, col:{{.*}}> col:{{.*}} pti 'const std::type_info *const' constexpr cinit
-  // CHECK-NEXT:      |-value: LValue Base=TypeInfoLValue typeid(int), Null=0, Offset=0, HasPath=1, PathLength=0, Path=()
+  // CHECK:  | `-VarDecl {{.*}} <col:{{.*}}, col:{{.*}}> col:{{.*}} pti 'const std::type_info *const' constexpr cinit
+  // CHECK-NEXT:  |   |-value: LValue Base=TypeInfoLValue typeid(int), Null=0, Offset=0, HasPath=1, PathLength=0, Path=()
+
+  constexpr int(MP::*pmi) = (int MP::*)&P::x;
+  // CHECK:    `-VarDecl {{.*}} <col:{{.*}}, col:{{.*}}> col:{{.*}} pmi 'int (MP::*const)' constexpr cinit
+  // CHECK-NEXT:      |-value: MemberPointer MP::x
 }
