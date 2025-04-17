@@ -1287,6 +1287,9 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
         // nvvm.abs.{i,ii}
         Expand =
             Name == "i" || Name == "ll" || Name == "bf16" || Name == "bf16x2";
+      else if (Name == "fabs.f" || Name == "fabs.ftz.f" || Name == "fabs.d")
+        // nvvm.fabs.{f,ftz.f,d}
+        Expand = true;
       else if (Name == "clz.ll" || Name == "popc.ll" || Name == "h2f" ||
                Name == "swap.lo.hi.b64")
         Expand = true;
@@ -2318,6 +2321,10 @@ static Value *upgradeNVVMIntrinsicCall(StringRef Name, CallBase *CI,
     Value *Arg = Builder.CreateBitCast(CI->getArgOperand(0), Ty);
     Value *Abs = Builder.CreateUnaryIntrinsic(Intrinsic::nvvm_fabs, Arg);
     Rep = Builder.CreateBitCast(Abs, CI->getType());
+  } else if (Name == "fabs.f" || Name == "fabs.ftz.f" || Name == "fabs.d") {
+    Intrinsic::ID IID = (Name == "fabs.ftz.f") ? Intrinsic::nvvm_fabs_ftz
+                                               : Intrinsic::nvvm_fabs;
+    Rep = Builder.CreateUnaryIntrinsic(IID, CI->getArgOperand(0));
   } else if (Name.starts_with("atomic.load.add.f32.p") ||
              Name.starts_with("atomic.load.add.f64.p")) {
     Value *Ptr = CI->getArgOperand(0);
