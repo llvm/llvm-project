@@ -692,7 +692,7 @@ class LayoutAttrAssignment {
 public:
   LayoutAttrAssignment(Operation *top,
                        function_ref<LayoutInfo(Value)> getLayout)
-      : getAssignedLayout(getLayout), top(top) {}
+      : getAnalysisResult(getLayout), top(top) {}
 
   LogicalResult run();
 
@@ -702,7 +702,7 @@ private:
   xegpu::LayoutAttr getLayoutAttrForValue(Value v);
   LogicalResult resolveConflicts();
   function_ref<LayoutInfo(Value)>
-      getAssignedLayout; // Callable to get the layout of a value based on the
+      getAnalysisResult; // Callable to get the layout of a value based on the
                          // layout propagation analysis.
   Operation *top;
 };
@@ -723,7 +723,7 @@ void LayoutAttrAssignment::assignToUsers(Value v, xegpu::LayoutAttr layout) {
 
 /// Convert the layout assigned to a value to xegpu::LayoutAttr.
 xegpu::LayoutAttr LayoutAttrAssignment::getLayoutAttrForValue(Value v) {
-  auto layout = getAssignedLayout(v);
+  auto layout = getAnalysisResult(v);
   if (!layout.isAssigned())
     return {};
   SmallVector<int, 2> laneLayout, laneData;
