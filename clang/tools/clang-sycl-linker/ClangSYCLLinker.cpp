@@ -365,7 +365,7 @@ Error runSYCLLink(ArrayRef<std::string> Files, const ArgList &Args) {
     SPVFile.append("_" + utostr(I) + ".spv");
     auto Err = runSPIRVCodeGen(SplitModules[I], Args, SPVFile, C);
     if (Err)
-      return std::move(Err);
+      return Err;
     SplitModules[I] = SPVFile;
   }
 
