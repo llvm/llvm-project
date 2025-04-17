@@ -276,10 +276,6 @@ RecordType::computeStructSize(const mlir::DataLayout &dataLayout) const {
     const uint64_t tyAlign =
         (getPacked() ? 1 : dataLayout.getTypeABIAlignment(ty));
 
-    // This should be aligned because the padding is inserted when we build
-    // the record.
-    assert(llvm::isAligned(llvm::Align(tyAlign), recordSize));
-
     // Add padding to the struct size to align it to the abi alignment of the
     // element type before than adding the size of the element.
     recordSize = llvm::alignTo(recordSize, tyAlign);
@@ -289,12 +285,6 @@ RecordType::computeStructSize(const mlir::DataLayout &dataLayout) const {
     // requirement of its elements.
     recordAlignment = std::max(tyAlign, recordAlignment);
   }
-
-  // Add padding to the end of the record so that it could be put in an array
-  // and all array elements would be aligned correctly.
-  assert(llvm::isAligned(llvm::Align(recordAlignment), recordSize));
-  // if (!llvm::isAligned(recordAlignment, recordSize))
-  //   recordSize = llvm::alignTo(recordSize, recordAlignment);
 
   // At the end, add padding to the struct to satisfy its own alignment
   // requirement. Otherwise structs inside of arrays would be misaligned.
