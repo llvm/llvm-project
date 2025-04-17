@@ -309,6 +309,59 @@ space casted to this space), 1 is returned, otherwise 0 is returned.
 Arithmetic Intrinsics
 ---------------------
 
+'``llvm.nvvm.fabs.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+    declare float @llvm.nvvm.fabs.f32(float %a)
+    declare double @llvm.nvvm.fabs.f64(double %a)
+    declare half @llvm.nvvm.fabs.f16(half %a)
+    declare <2 x half> @llvm.nvvm.fabs.v2f16(<2 x half> %a)
+    declare bfloat @llvm.nvvm.fabs.bf16(bfloat %a)
+    declare <2 x bfloat> @llvm.nvvm.fabs.v2bf16(<2 x bfloat> %a)
+
+Overview:
+"""""""""
+
+The '``llvm.nvvm.fabs.*``' intrinsics return the absolute value of the operand.
+
+Semantics:
+""""""""""
+
+Unlike, '``llvm.fabs.*``', these intrinsics do not perfectly preserve NaN
+values. Instead, a NaN input yeilds an unspecified NaN output.
+
+
+'``llvm.nvvm.fabs.ftz.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+    declare float @llvm.nvvm.fabs.ftz.f32(float %a)
+    declare half @llvm.nvvm.fabs.ftz.f16(half %a)
+    declare <2 x half> @llvm.nvvm.fabs.ftz.v2f16(<2 x half> %a)
+
+Overview:
+"""""""""
+
+The '``llvm.nvvm.fabs.ftz.*``' intrinsics return the absolute value of the
+operand, flushing subnormals to sign preserving zero.
+
+Semantics:
+""""""""""
+
+Before the absolute value is taken, the input is flushed to sign preserving
+zero if it is a subnormal. In addtion, unlike '``llvm.fabs.*``', a NaN input
+yields an unspecified NaN output.
+
+
 '``llvm.nvvm.idp2a.[us].[us]``' Intrinsics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
