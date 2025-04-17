@@ -2398,6 +2398,41 @@ void AsmPrinter::emitRemarksSection(remarks::RemarkStreamer &RS) {
   OutStreamer->emitBinaryData(Buf);
 }
 
+static bool shouldTagGlobal(const llvm::GlobalVariable &G) {
+  // We used to do this in clang, but there are optimization passes that turn
+  // non-constant globals into constants. So now, clang only tells us whether
+  // it would *like* a global to be tagged, but we still make the decision here.
+  //
+  // For now, don't instrument constant data, as it'll be in .rodata anyway. It
+  // may be worth instrumenting these in future to stop them from being used as
+  // gadgets.
+  if (G.getName().starts_with("llvm.") || G.isThreadLocal() || G.isConstant())
+    return false;
+
+  // Globals can be placed implicitly or explicitly in sections. There's two
+  // different types of globals that meet this criteria that cause problems:
+  //  1. Function pointers that are going into various init arrays (either
+  //     explicitly through `__attribute__((section(<foo>)))` or implicitly
+  //     through `__attribute__((constructor)))`, such as ".(pre)init(_array)",
+  //     ".fini(_array)", ".ctors", and ".dtors". These function pointers end up
+  //     overaligned and overpadded, making iterating over them problematic, and
+  //     each function pointer is individually tagged (so the iteration over
+  //     them causes SIGSEGV/MTE[AS]ERR).
+  //  2. Global variables put into an explicit section, where the section's name
+  //     is a valid C-style identifier. The linker emits a `__start_<name>` and
+  //     `__stop_<name>` symbol for the section, so that you can iterate over
+  //     globals within this section. Unfortunately, again, these globals would
+  //     be tagged and so iteration causes SIGSEGV/MTE[AS]ERR.
+  //
+  // To mitigate both these cases, and because specifying a section is rare
+  // outside of these two cases, disable MTE protection for globals in any
+  // section.
+  if (G.hasSection())
+    return false;
+
+  return true;
+}
+
 static void tagGlobalDefinition(Module &M, GlobalVariable *G) {
   Constant *Initializer = G->getInitializer();
   uint64_t SizeInBytes =
@@ -2430,6 +2465,12 @@ static void tagGlobalDefinition(Module &M, GlobalVariable *G) {
   G->setUnnamedAddr(GlobalValue::UnnamedAddr::None);
 }
 
+static void removeMemtagFromGlobal(GlobalVariable &G) {
+  auto Meta = G.getSanitizerMetadata();
+  Meta.Memtag = false;
+  G.setSanitizerMetadata(Meta);
+}
+
 bool AsmPrinter::doFinalization(Module &M) {
   // Set the MachineFunction to nullptr so that we can catch attempted
   // accesses to MF specific features at the module level and so that
@@ -2440,6 +2481,12 @@ bool AsmPrinter::doFinalization(Module &M) {
   for (GlobalVariable &G : M.globals()) {
     if (G.isDeclaration() || !G.isTagged())
       continue;
+    if (!shouldTagGlobal(G)) {
+      assert(G.hasSanitizerMetadata()); // because isTagged.
+      removeMemtagFromGlobal(G);
+      assert(!G.isTagged());
+      continue;
+    }
     GlobalsToTag.push_back(&G);
   }
   for (GlobalVariable *G : GlobalsToTag)
