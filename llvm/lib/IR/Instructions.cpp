@@ -628,13 +628,17 @@ bool CallBase::hasClobberingOperandBundles() const {
 RoundingMode CallBase::getRoundingMode() const {
   // Try reading rounding mode from FP bundle.
   std::optional<RoundingMode> RM;
-  if (auto RoundingBundle = getOperandBundle(LLVMContext::OB_fp_control)) {
-    Value *V = RoundingBundle->Inputs.front();
-    Metadata *MD = cast<MetadataAsValue>(V)->getMetadata();
-    RM = convertBundleToRoundingMode(cast<MDString>(MD)->getString());
+  if (auto ControlBundle = getOperandBundle(LLVMContext::OB_fp_control)) {
+    for (auto &U : ControlBundle->Inputs) {
+      Value *V = U.get();
+      if (auto *MDV = dyn_cast<MetadataAsValue>(V)) {
+        Metadata *MD = MDV->getMetadata();
+        if (auto *MDS = dyn_cast<MDString>(MD))
+          if (auto RM = convertBundleToRoundingMode(MDS->getString()))
+            return *RM;
+      }
+    }
   }
-  if (RM)
-    return *RM;
 
   // If this is a constrained intrinsic, get rounding mode from its metadata
   // arguments.
@@ -676,6 +680,71 @@ fp::ExceptionBehavior CallBase::getExceptionBehavior() const {
 
   // Isolated call. Assume default environment.
   return fp::ebIgnore;
+}
+
+DenormalMode::DenormalModeKind CallBase::getInputDenormMode() const {
+  if (auto InDenormBundle = getOperandBundle(LLVMContext::OB_fp_control)) {
+    auto DenormOperand =
+        getBundleOperandByPrefix(*InDenormBundle, "denorm.in=");
+    if (DenormOperand) {
+      if (auto Mode = parseDenormalKindFromOperandBundle(*DenormOperand))
+        return *Mode;
+    } else {
+      return DenormalMode::IEEE;
+    }
+  }
+
+  if (!getParent())
+    return DenormalMode::IEEE;
+  const Function *F = getFunction();
+  if (!F)
+    return DenormalMode::IEEE;
+
+  Type *Ty = nullptr;
+  for (auto &A : args())
+    if (auto *T = A.get()->getType(); T->isFPOrFPVectorTy()) {
+      Ty = T;
+      break;
+    }
+  assert(Ty && "Some input argument must be of floating-point type");
+
+  Ty = Ty->getScalarType();
+  return F->getDenormalMode(Ty->getFltSemantics()).Input;
+}
+
+DenormalMode::DenormalModeKind CallBase::getOutputDenormMode() const {
+  if (auto InDenormBundle = getOperandBundle(LLVMContext::OB_fp_control)) {
+    auto DenormOperand =
+        getBundleOperandByPrefix(*InDenormBundle, "denorm.out=");
+    if (DenormOperand) {
+      if (auto Mode = parseDenormalKindFromOperandBundle(*DenormOperand))
+        return *Mode;
+    } else {
+      return DenormalMode::IEEE;
+    }
+  }
+
+  if (!getParent())
+    return DenormalMode::IEEE;
+  const Function *F = getFunction();
+  if (!F)
+    return DenormalMode::IEEE;
+
+  Type *Ty = getType();
+  assert(Ty->isFPOrFPVectorTy() && "Unexpected output type");
+
+  Ty = Ty->getScalarType();
+  return F->getDenormalMode(Ty->getFltSemantics()).Output;
+}
+
+DenormalMode CallBase::getDenormMode() const {
+  auto InputMode = getInputDenormMode();
+  auto OutputMode = getOutputDenormMode();
+  if (!InputMode)
+    InputMode = DenormalMode::IEEE;
+  if (!OutputMode)
+    OutputMode = DenormalMode::IEEE;
+  return DenormalMode(OutputMode, InputMode);
 }
 
 MemoryEffects CallBase::getFloatingPointMemoryEffects() const {
@@ -794,6 +863,69 @@ bool CallBase::hasArgumentWithAdditionalReturnCaptureComponents() const {
   return false;
 }
 
+std::optional<StringRef> llvm::getBundleOperandByPrefix(OperandBundleUse Bundle,
+                                                      StringRef Prefix) {
+  for (const auto &Item : Bundle.Inputs) {
+    Metadata *MD = cast<MetadataAsValue>(Item.get())->getMetadata();
+    if (const auto *MDS = dyn_cast<MDString>(MD)) {
+      StringRef Str = MDS->getString();
+      if (Str.consume_front(Prefix))
+        return Str;
+    }
+  }
+  return std::nullopt;
+}
+
+void llvm::addOperandToBundleTag(LLVMContext &Ctx,
+                               SmallVectorImpl<OperandBundleDef> &Bundles,
+                               StringRef Tag, size_t PrefixSize,
+                               StringRef Val) {
+  assert(PrefixSize > 0 && "Unexpected prefix size");
+  assert(PrefixSize < Val.size() && "Invalid prefix size");
+  StringRef Prefix = Val.take_front(PrefixSize);
+
+  // Find a bundle with the specified tag.
+  OperandBundleDef *Bundle = nullptr;
+  for (OperandBundleDef &OB : Bundles) {
+    if (OB.getTag() == Tag) {
+      Bundle = &OB;
+      break;
+    }
+  }
+
+  // If no such bundle are found, create new one with the single value.
+  if (!Bundle) {
+    auto *MStr = MDString::get(Ctx, Val);
+    auto *MD = MetadataAsValue::get(Ctx, MStr);
+    SmallVector<Value *, 1> BundleValues(1, MD);
+    Bundles.emplace_back(Tag.str(), BundleValues);
+    return;
+  }
+
+  // If the bundle is found, search its values for those started with the given
+  // prefix.
+  SmallVector<Value *, 4> Values(Bundle->inputs());
+  for (auto i = Values.begin(), e = Values.end(); i != e; ++i) {
+    if (auto *MV = dyn_cast<MetadataAsValue>(*i)) {
+      if (auto *MD = dyn_cast<MDString>(MV->getMetadata())) {
+        StringRef Str = MD->getString();
+        if (Str == Val)
+          // Already in the values.
+          return;
+        if (Str.starts_with(Prefix)) {
+          Values.erase(i);
+          break;
+        }
+      }
+    }
+  }
+
+  auto *ValMD = MDString::get(Ctx, Val);
+  auto *MD = MetadataAsValue::get(Ctx, ValMD);
+  Values.push_back(MD);
+  Bundles.emplace_back("fp.control", Values);
+}
+
 void llvm::addFPRoundingBundle(LLVMContext &Ctx,
                                SmallVectorImpl<OperandBundleDef> &Bundles,
                                RoundingMode Rounding) {
@@ -812,6 +944,30 @@ void llvm::addFPExceptionBundle(LLVMContext &Ctx,
   auto *ExceptMDS = MDString::get(Ctx, *ExcStr);
   auto *EB = MetadataAsValue::get(Ctx, ExceptMDS);
   Bundles.emplace_back("fp.except", EB);
+}
+
+void llvm::addFPInputDenormBundle(LLVMContext &Ctx,
+                                  SmallVectorImpl<OperandBundleDef> &Bundles,
+                                  DenormalMode::DenormalModeKind Mode) {
+  std::optional<StringRef> DenormValue = printDenormalForOperandBundle(Mode);
+  if (!DenormValue)
+    return;
+  std::string Prefix = "denorm.in=";
+  std::string DenormItem = Prefix + DenormValue->str();
+
+  addOperandToBundleTag(Ctx, Bundles, "fp.control", Prefix.size(), DenormItem);
+}
+
+void llvm::addFPOutputDenormBundle(LLVMContext &Ctx,
+                                   SmallVectorImpl<OperandBundleDef> &Bundles,
+                                   DenormalMode::DenormalModeKind Mode) {
+  std::optional<StringRef> DenormValue = printDenormalForOperandBundle(Mode);
+  if (!DenormValue)
+    return;
+  std::string Prefix = "denorm.out=";
+  std::string DenormItem = Prefix + DenormValue->str();
+
+  addOperandToBundleTag(Ctx, Bundles, "fp.control", Prefix.size(), DenormItem);
 }
 
 //===----------------------------------------------------------------------===//

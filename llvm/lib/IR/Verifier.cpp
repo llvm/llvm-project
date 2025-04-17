@@ -3833,6 +3833,8 @@ void Verifier::visitCallBase(CallBase &Call) {
       Check(!FoundFpeControlBundle, "Multiple \"fp.control\" operand bundles",
             Call);
       bool FoundRoundingMode = false;
+      bool FoundInDenormalMode = false;
+      bool FoundOutDenormalMode = false;
       for (auto &U : BU.Inputs) {
         Value *V = U.get();
         Check(isa<MetadataAsValue>(V),
@@ -3847,6 +3849,18 @@ void Verifier::visitCallBase(CallBase &Call) {
           Check(!FoundRoundingMode, "Rounding mode is specified more that once",
                 Call);
           FoundRoundingMode = true;
+        } else if (Item.consume_front("denorm.in=")) {
+          Check(!FoundInDenormalMode,
+                "Input denormal mode is specified more that once", Call);
+          FoundInDenormalMode = true;
+          Check(parseDenormalKindFromOperandBundle(Item),
+                "Invalid input denormal mode", Call);
+        } else if (Item.consume_front("denorm.out=")) {
+          Check(!FoundOutDenormalMode,
+                "Output denormal mode is specified more that once", Call);
+          FoundOutDenormalMode = true;
+          Check(parseDenormalKindFromOperandBundle(Item),
+                "Invalid output denormal mode", Call);
         } else {
           CheckFailed("Unrecognized value in \"fp.control\" bundle operand",
                       Call);

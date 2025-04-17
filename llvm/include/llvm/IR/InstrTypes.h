@@ -1092,12 +1092,24 @@ public:
 using OperandBundleDef = OperandBundleDefT<Value *>;
 using ConstOperandBundleDef = OperandBundleDefT<const Value *>;
 
+std::optional<StringRef> getBundleOperandByPrefix(OperandBundleUse Bundle,
+                                                  StringRef Prefix);
+void addOperandToBundleTag(LLVMContext &Ctx,
+                           SmallVectorImpl<OperandBundleDef> &Bundles,
+                           StringRef Tag, size_t PrefixSize, StringRef Val);
+
 void addFPRoundingBundle(LLVMContext &Ctx,
                          SmallVectorImpl<OperandBundleDef> &Bundles,
                          RoundingMode Rounding);
 void addFPExceptionBundle(LLVMContext &Ctx,
                           SmallVectorImpl<OperandBundleDef> &Bundles,
                           fp::ExceptionBehavior Except);
+void addFPInputDenormBundle(LLVMContext &Ctx,
+                            SmallVectorImpl<OperandBundleDef> &Bundles,
+                            DenormalMode::DenormalModeKind Mode);
+void addFPOutputDenormBundle(LLVMContext &Ctx,
+                             SmallVectorImpl<OperandBundleDef> &Bundles,
+                             DenormalMode::DenormalModeKind Mode);
 
 //===----------------------------------------------------------------------===//
 //                               CallBase Class
@@ -2170,6 +2182,15 @@ public:
 
   /// Return exception behavior specified for this call.
   fp::ExceptionBehavior getExceptionBehavior() const;
+
+  /// Return input denormal mode specified by operand bundles.
+  DenormalMode::DenormalModeKind getInputDenormMode() const;
+
+  /// Return output denormal mode specified by operand bundles.
+  DenormalMode::DenormalModeKind getOutputDenormMode() const;
+
+  /// Return input and output denormal modes specified by operand bundles.
+  DenormalMode getDenormMode() const;
 
   /// Used to keep track of an operand bundle.  See the main comment on
   /// OperandBundleUser above.

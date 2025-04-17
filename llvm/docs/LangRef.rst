@@ -3084,7 +3084,10 @@ floating-point control modes and the treatment of status bits respectively.
 
 An operand bundle tagged with "fp.control" contains information about the
 control modes used for the operation execution. Operands specified in this
-bundle represent particular options. Currently, only rounding mode is supported.
+bundle represent particular options. The following modes are supported:
+
+* rounding mode,
+* denormal behavior.
 
 Rounding mode is represented by a metadata string value, which specifies the
 the mode used for the operation evaluation. Possible values are:
@@ -3102,6 +3105,19 @@ Only one such value may be specified. If "fp.control" is absent, the default
 rounding rounding mode is taken from the control register (dynamic rounding).
 In the particular case of :ref:`default floating-point environment <floatenv>`,
 the operation uses rounding to nearest, ties to even.
+
+Denormal behavior defines whether denormal values are flushed to zero during
+the call's execution. This behavior is specified separately for input and
+output values. Such specification is a string, which starts with
+"denorm.in=" or "denorm.out=" respectively. The remainder of the string should
+be one of the values:
+
+::
+
+    ``"ieee"`` - preserve denormals,
+    ``"zero"`` - flush to +0.0 or -0.0 depending on value sign,
+    ``"pzero"`` - flush to +0.0,
+    ``"dyn"`` - concrete mode is read from some register.
 
 An operand bundle tagged with "fp.except" may be associated with operations
 that can read or write floating-point exception flags. It contains a single

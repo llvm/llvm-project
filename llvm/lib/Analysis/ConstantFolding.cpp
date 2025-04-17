@@ -1354,6 +1354,11 @@ static ConstantFP *flushDenormalConstantFP(ConstantFP *CFP,
   if (!APF.isDenormal())
     return CFP;
 
+  if (auto *CB = dyn_cast<CallBase>(Inst)) {
+    auto Mode = IsOutput ? CB->getOutputDenormMode() : CB->getInputDenormMode();
+    return flushDenormalConstant(CFP->getType(), APF, Mode);
+  }
+
   DenormalMode Mode = getInstrDenormalMode(Inst, CFP->getType());
   return flushDenormalConstant(CFP->getType(), APF,
                                IsOutput ? Mode.Output : Mode.Input);
@@ -2976,12 +2981,20 @@ static Constant *ConstantFoldIntrinsicCall2(Intrinsic::ID IntrinsicID, Type *Ty,
   }
 
   if (const auto *Op1 = dyn_cast<ConstantFP>(Operands[0])) {
-    const APFloat &Op1V = Op1->getValueAPF();
+    ConstantFP *Op1F =
+        flushDenormalConstantFP(const_cast<ConstantFP *>(Op1), Call, false);
+    if (!Op1F)
+      return nullptr;
+    const APFloat &Op1V = Op1F->getValueAPF();
 
     if (const auto *Op2 = dyn_cast<ConstantFP>(Operands[1])) {
       if (Op2->getType() != Op1->getType())
         return nullptr;
-      const APFloat &Op2V = Op2->getValueAPF();
+      ConstantFP *Op2F =
+          flushDenormalConstantFP(const_cast<ConstantFP *>(Op2), Call, false);
+      if (!Op2F)
+        return nullptr;
+      const APFloat &Op2V = Op2F->getValueAPF();
 
       if (const auto *ConstrIntr =
               dyn_cast_if_present<ConstrainedFPIntrinsic>(Call)) {
@@ -3011,8 +3024,11 @@ static Constant *ConstantFoldIntrinsicCall2(Intrinsic::ID IntrinsicID, Type *Ty,
           return evaluateCompare(Op1V, Op2V, ConstrIntr);
         }
         if (mayFoldConstrained(const_cast<ConstrainedFPIntrinsic *>(ConstrIntr),
-                               St))
-          return ConstantFP::get(Ty->getContext(), Res);
+                               St)) {
+          auto DenormOut = Call->getOutputDenormMode();
+          DenormalMode::DenormalModeKind Mode = DenormOut;
+          return flushDenormalConstant(Op2->getType(), Res, Mode);
+        }
         return nullptr;
       }
 

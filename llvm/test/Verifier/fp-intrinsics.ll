@@ -141,5 +141,41 @@ entry:
   ret double %ftrunc
 }
 
+; Test fp.control bundle specifies two input demormal modes.
+; CHECK-NEXT: Input denormal mode is specified more that once
+; CHECK-NEXT:   %ftrunc = call double @llvm.trunc.f64(double %a) #{{[0-9]+}} [ "fp.control"(metadata !"denorm.in=ieee", metadata !"denorm.in=ieee") ]
+define double @f16(double %a) #0 {
+entry:
+  %ftrunc = call double @llvm.trunc.f64(double %a) #0 [ "fp.control"(metadata !"denorm.in=ieee", metadata !"denorm.in=ieee") ]
+  ret double %ftrunc
+}
+
+; Test fp.control bundle specifies two output demormal modes.
+; CHECK-NEXT: Output denormal mode is specified more that once
+; CHECK-NEXT:   %ftrunc = call double @llvm.trunc.f64(double %a) #{{[0-9]+}} [ "fp.control"(metadata !"denorm.out=ieee", metadata !"denorm.out=ieee") ]
+define double @f17(double %a) #0 {
+entry:
+  %ftrunc = call double @llvm.trunc.f64(double %a) #0 [ "fp.control"(metadata !"denorm.out=ieee", metadata !"denorm.out=ieee") ]
+  ret double %ftrunc
+}
+
+; Test fp.control bundle specifies invalid input demormal modes.
+; CHECK-NEXT: Invalid input denormal mode
+; CHECK-NEXT:   %ftrunc = call double @llvm.trunc.f64(double %a) #{{[0-9]+}} [ "fp.control"(metadata !"denorm.in=qqq") ]
+define double @f18(double %a) #0 {
+entry:
+  %ftrunc = call double @llvm.trunc.f64(double %a) #0 [ "fp.control"(metadata !"denorm.in=qqq") ]
+  ret double %ftrunc
+}
+
+; Test fp.control bundle specifies invalid output demormal modes.
+; CHECK-NEXT: Invalid output denormal mode
+; CHECK-NEXT:   %ftrunc = call double @llvm.trunc.f64(double %a) #{{[0-9]+}} [ "fp.control"(metadata !"denorm.out=qqq") ]
+define double @f19(double %a) #0 {
+entry:
+  %ftrunc = call double @llvm.trunc.f64(double %a) #0 [ "fp.control"(metadata !"denorm.out=qqq") ]
+  ret double %ftrunc
+}
+
 
 attributes #0 = { strictfp }

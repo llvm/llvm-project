@@ -234,6 +234,39 @@ void DenormalMode::print(raw_ostream &OS) const {
   OS << denormalModeKindName(Output) << ',' << denormalModeKindName(Input);
 }
 
+/// If the specified string represents denormal mode as used in operand bundles,
+/// returns the corresponding mode.
+inline std::optional<DenormalMode::DenormalModeKind>
+parseDenormalKindFromOperandBundle(StringRef Str) {
+  if (Str == "ieee")
+    return DenormalMode::IEEE;
+  if (Str == "zero")
+    return DenormalMode::PreserveSign;
+  if (Str == "pzero")
+    return DenormalMode::PositiveZero;
+  if (Str == "dyn")
+    return DenormalMode::Dynamic;
+  return std::nullopt;
+}
+
+/// Converts the specified denormal mode into string suitable for use in an
+/// operand bundle.
+inline std::optional<StringRef>
+printDenormalForOperandBundle(DenormalMode::DenormalModeKind Mode) {
+  switch (Mode) {
+  case DenormalMode::IEEE:
+    return "ieee";
+  case DenormalMode::PreserveSign:
+    return "zero";
+  case DenormalMode::PositiveZero:
+    return "pzero";
+  case DenormalMode::Dynamic:
+    return "dyn";
+  default:
+    return std::nullopt;
+  }
+}
+
 /// Floating-point class tests, supported by 'is_fpclass' intrinsic. Actual
 /// test may be an OR combination of basic tests.
 enum FPClassTest : unsigned {
