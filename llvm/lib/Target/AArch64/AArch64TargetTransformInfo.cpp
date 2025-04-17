@@ -4251,7 +4251,7 @@ InstructionCost AArch64TTIImpl::getCmpSelInstrCost(
           VectorType::get(Type::getFloatTy(ValTy->getContext()), ValVTy);
 
       InstructionCost Cost = 0;
-      // Promte operands to float vectors.
+      // Promote operands to float vectors.
       Cost += 2 * getCastInstrCost(Instruction::FPExt, PromotedTy, ValTy,
                                    TTI::CastContextHint::None, CostKind);
       // Compare float vectors.
