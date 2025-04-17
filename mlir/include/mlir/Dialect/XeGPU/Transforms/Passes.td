@@ -38,4 +38,15 @@ def XeGPUSubgroupDistribute : Pass<"xegpu-subgroup-distribute"> {
   ];
 }
 
+def XeGPUUnroll: Pass<"xegpu-unroll"> {
+  let summary = "Unroll operations into smaller shapes";
+  let description = [{
+    The pass unrolls operations into smaller shapes that can be distribute
+    to an SIMD instruction.
+  }];
+  let dependentDialects = [
+    "memref::MemRefDialect", "xegpu::XeGPUDialect", "vector::VectorDialect"
+  ];
+}
+
 #endif // MLIR_DIALECT_XEGPU_TRANSFORMS_PASSES_TD
