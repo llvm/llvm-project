@@ -224,6 +224,12 @@ Modified Compiler Flags
 
 - `-Wpadded` option implemented for the `x86_64-windows-msvc` target. Fixes #61702
 
+- The ``-mexecute-only`` and ``-mpure-code`` flags are now accepted for AArch64 targets. (#GH125688)
+
+- The ``-Og`` optimization flag now sets ``-fextend-variable-liveness``,
+  reducing performance slightly while reducing the number of optimized-out
+  variables.
+
 Removed Compiler Flags
 -------------------------
 
@@ -430,6 +436,11 @@ Bug Fixes in This Version
 - Fixed a clang 20 regression where diagnostics attached to some calls to member functions
   using C++23 "deducing this" did not have a diagnostic location (#GH135522)
 
+- Fixed a crash when a ``friend`` function is redefined as deleted. (#GH135506)
+- Fixed a crash when ``#embed`` appears as a part of a failed constant
+  evaluation. The crashes were happening during diagnostics emission due to
+  unimplemented statement printer. (#GH132641)
+
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -471,9 +482,11 @@ Bug Fixes to C++ Support
   by template argument deduction.
 - Clang is now better at instantiating the function definition after its use inside
   of a constexpr lambda. (#GH125747)
+- Fixed a local class member function instantiation bug inside dependent lambdas. (#GH59734), (#GH132208)
 - Clang no longer crashes when trying to unify the types of arrays with
   certain differences in qualifiers (this could happen during template argument
   deduction or when building a ternary operator). (#GH97005)
+- Fixed type alias CTAD issues involving default template arguments. (#GH134471)
 - The initialization kind of elements of structured bindings
   direct-list-initialized from an array is corrected to direct-initialization.
 - Clang no longer crashes when a coroutine is declared ``[[noreturn]]``. (#GH127327)
@@ -489,6 +502,10 @@ Bug Fixes to C++ Support
 - Fixes matching of nested template template parameters. (#GH130362)
 - Correctly diagnoses template template paramters which have a pack parameter
   not in the last position.
+- Disallow overloading on struct vs class on dependent types, which is IFNDR, as
+  this makes the problem diagnosable.
+- Improved preservation of the presence or abscence of typename specifier when
+  printing types in diagnostics.
 - Clang now correctly parses ``if constexpr`` expressions in immediate function context. (#GH123524)
 - Fixed an assertion failure affecting code that uses C++23 "deducing this". (#GH130272)
 - Clang now properly instantiates destructors for initialized members within non-delegating constructors. (#GH93251)
@@ -562,6 +579,9 @@ Arm and AArch64 Support
   also now printed when the ``--print-supported-extensions`` option is used.
 
 -  Support for __ptrauth type qualifier has been added.
+
+- For AArch64, added support for generating executable-only code sections by using the
+  ``-mexecute-only`` or ``-mpure-code`` compiler flags. (#GH125688)
 
 Android Support
 ^^^^^^^^^^^^^^^
