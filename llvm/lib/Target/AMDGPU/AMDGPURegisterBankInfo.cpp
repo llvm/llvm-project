@@ -4808,7 +4808,6 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_wmma_f16_16x16x64_bf8_fp8:
     case Intrinsic::amdgcn_wmma_f16_16x16x64_bf8_bf8:
     case Intrinsic::amdgcn_wmma_i32_16x16x64_iu8:
-    case Intrinsic::amdgcn_wmma_i32_16x16x128_iu4:
     case Intrinsic::amdgcn_wmma_f32_16x16x128_f8f6f4:
     case Intrinsic::amdgcn_wmma_scale_f32_16x16x128_f8f6f4:
     case Intrinsic::amdgcn_wmma_scale16_f32_16x16x128_f8f6f4:
@@ -4825,7 +4824,6 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_swmmac_f16_16x16x128_fp8_bf8:
     case Intrinsic::amdgcn_swmmac_f16_16x16x128_bf8_fp8:
     case Intrinsic::amdgcn_swmmac_f16_16x16x128_bf8_bf8:
-    case Intrinsic::amdgcn_swmmac_i32_16x16x256_iu4:
     case Intrinsic::amdgcn_swmmac_i32_16x16x128_iu8:
     case Intrinsic::amdgcn_perm_pk16_b4_u4:
     case Intrinsic::amdgcn_perm_pk16_b6_u4:

@@ -1760,7 +1760,6 @@ def BF16F32_BF16_WMMA_w32     : VOP3PWMMA_Profile<[v8bf16, v16bf16, v16bf16, v8f
 def F32_FP8BF8X64_WMMA_w32    : VOP3PWMMA_Profile<[v8f32, v8i32, v8i32, v8f32], 0, 0, 0, 1, 1>;
 def F16_FP8BF8X64_WMMA_w32    : VOP3PWMMA_Profile<[v8f16, v8i32, v8i32, v8f16], 0, 0, 0, 1, 1>;
 def I32_IU8X64_WMMA_w32       : VOP3PWMMA_Profile<[v8i32, v8i32, v8i32, v8i32], 0, 0, 1, 0, 1>;
-def I32_IU4X128_WMMA_w32      : VOP3PWMMA_Profile<[v8i32, v8i32, v8i32, v8i32], 0, 0, 1, 0, 1>;
 def F32_F16X64_SWMMAC_w32     : VOP3PWMMA_Profile<[v8f32, v16f16, v32f16, v8f32], 1, 16, 0, 0, 1>;
 def F32_BF16X64_SWMMAC_w32    : VOP3PWMMA_Profile<[v8f32, v16bf16, v32bf16, v8f32], 1, 16, 0, 0, 1>;
 def F16_F16X64_SWMMAC_w32     : VOP3PWMMA_Profile<[v8f16, v16f16, v32f16, v8f16], 1, 16, 0, 0, 1>;
@@ -1768,7 +1767,6 @@ def BF16_BF16X64_SWMMAC_w32   : VOP3PWMMA_Profile<[v8bf16, v16bf16, v32bf16, v8b
 def F32_FP8BF8X128_SWMMAC_w32 : VOP3PWMMA_Profile<[v8f32, v8i32,  v16i32, v8f32], 1, 16, 0, 1, 1>;
 def F16_FP8BF8X128_SWMMAC_w32 : VOP3PWMMA_Profile<[v8f16, v8i32,  v16i32, v8f16], 1, 16, 0, 1, 1>;
 def I32_IU8X128_SWMMAC_w32    : VOP3PWMMA_Profile<[v8i32, v8i32,  v16i32, v8i32], 1, 16, 1, 0, 1>;
-def I32_IU4X256_SWMMAC_w32    : VOP3PWMMA_Profile<[v8i32, v8i32,  v16i32, v8i32], 1, 16, 1, 0, 1>;
 
 multiclass WMMA_F8F6F4_Profiles<bit HasMatrixScale, bit Scale16> {
   def _f8_f8_w32 : VOP3PWMMA_Profile<[v8f32, v16i32, v16i32, v8f32], 0, 0, 0, 1, 1, 1, HasMatrixScale, Scale16>;
@@ -1820,7 +1818,6 @@ defm V_WMMA_F16_16X16X64_FP8_BF8_w32  : WMMAInstGFX12<"v_wmma_f16_16x16x64_fp8_b
 defm V_WMMA_F16_16X16X64_BF8_FP8_w32  : WMMAInstGFX12<"v_wmma_f16_16x16x64_bf8_fp8",  F16_FP8BF8X64_WMMA_w32, "_w32">;
 defm V_WMMA_F16_16X16X64_BF8_BF8_w32  : WMMAInstGFX12<"v_wmma_f16_16x16x64_bf8_bf8",  F16_FP8BF8X64_WMMA_w32, "_w32">;
 defm V_WMMA_I32_16X16X64_IU8_w32      : WMMAInstGFX12<"v_wmma_i32_16x16x64_iu8",      I32_IU8X64_WMMA_w32, "_w32">;
-defm V_WMMA_I32_16X16X128_IU4_w32     : WMMAInstGFX12<"v_wmma_i32_16x16x128_iu4",     I32_IU4X128_WMMA_w32, "_w32">;
 defm V_WMMA_F32_16X16X32_F16_w32      : WMMAInstGFX12<"v_wmma_f32_16x16x32_f16",      F32_F16X32_WMMA_w32, "_w32">;
 defm V_WMMA_F16_16X16X32_F16_w32      : WMMAInstGFX12<"v_wmma_f16_16x16x32_f16",      F16_F16X32_WMMA_w32, "_w32">;
 
@@ -1836,7 +1833,6 @@ defm V_SWMMAC_F16_16X16X128_FP8_BF8_w32 : SWMMACInstGFX12<"v_swmmac_f16_16x16x12
 defm V_SWMMAC_F16_16X16X128_BF8_FP8_w32 : SWMMACInstGFX12<"v_swmmac_f16_16x16x128_bf8_fp8", F16_FP8BF8X128_SWMMAC_w32, "_w32">;
 defm V_SWMMAC_F16_16X16X128_BF8_BF8_w32 : SWMMACInstGFX12<"v_swmmac_f16_16x16x128_bf8_bf8", F16_FP8BF8X128_SWMMAC_w32, "_w32">;
 defm V_SWMMAC_I32_16X16X128_IU8_w32     : SWMMACInstGFX12<"v_swmmac_i32_16x16x128_iu8",     I32_IU8X128_SWMMAC_w32, "_w32">;
-defm V_SWMMAC_I32_16X16X256_IU4_w32     : SWMMACInstGFX12<"v_swmmac_i32_16x16x256_iu4",     I32_IU4X256_SWMMAC_w32, "_w32">;
 defm V_SWMMAC_F32_16X16X64_F16_w32      : SWMMACInstGFX12<"v_swmmac_f32_16x16x64_f16",  F32_F16X64_SWMMAC_w32, "_w32">;
 defm V_SWMMAC_F16_16X16X64_F16_w32      : SWMMACInstGFX12<"v_swmmac_f16_16x16x64_f16",  F16_F16X64_SWMMAC_w32, "_w32">;
 
@@ -1995,7 +1991,6 @@ let SubtargetPredicate = isGFX125xOnly in {
   defm : WMMAPat<"V_WMMA_F16_16X16X64_BF8_FP8_w32",  int_amdgcn_wmma_f16_16x16x64_bf8_fp8,  F16_FP8BF8X64_WMMA_w32>;
   defm : WMMAPat<"V_WMMA_F16_16X16X64_BF8_BF8_w32",  int_amdgcn_wmma_f16_16x16x64_bf8_bf8,  F16_FP8BF8X64_WMMA_w32>;
   defm : WMMAPat<"V_WMMA_I32_16X16X64_IU8_w32",      int_amdgcn_wmma_i32_16x16x64_iu8,      I32_IU8X64_WMMA_w32>;
-  defm : WMMAPat<"V_WMMA_I32_16X16X128_IU4_w32",     int_amdgcn_wmma_i32_16x16x128_iu4,     I32_IU4X128_WMMA_w32>;
   defm : WMMAPat<"V_WMMA_F32_16X16X32_F16_w32",      int_amdgcn_wmma_f32_16x16x32_f16,      F32_F16X32_WMMA_w32>;
   defm : WMMAPat<"V_WMMA_F16_16X16X32_F16_w32",      int_amdgcn_wmma_f16_16x16x32_f16,      F16_F16X32_WMMA_w32>;
 
@@ -2017,7 +2012,6 @@ let SubtargetPredicate = isGFX125xOnly in {
   def : SWMMACPat<V_SWMMAC_F16_16X16X128_BF8_FP8_w32_twoaddr, int_amdgcn_swmmac_f16_16x16x128_bf8_fp8, F16_FP8BF8X128_SWMMAC_w32>;
   def : SWMMACPat<V_SWMMAC_F16_16X16X128_BF8_BF8_w32_twoaddr, int_amdgcn_swmmac_f16_16x16x128_bf8_bf8, F16_FP8BF8X128_SWMMAC_w32>;
   def : SWMMACPat<V_SWMMAC_I32_16X16X128_IU8_w32_twoaddr,     int_amdgcn_swmmac_i32_16x16x128_iu8,     I32_IU8X128_SWMMAC_w32>;
-  def : SWMMACPat<V_SWMMAC_I32_16X16X256_IU4_w32_twoaddr,     int_amdgcn_swmmac_i32_16x16x256_iu4,     I32_IU4X256_SWMMAC_w32>;
   def : SWMMACPat<V_SWMMAC_F32_16X16X64_F16_w32_twoaddr,      int_amdgcn_swmmac_f32_16x16x64_f16,      F32_F16X64_SWMMAC_w32>;
   def : SWMMACPat<V_SWMMAC_F16_16X16X64_F16_w32_twoaddr,      int_amdgcn_swmmac_f16_16x16x64_f16,      F16_F16X64_SWMMAC_w32>;
 } // End SubtargetPredicate = isGFX125xOnly
@@ -2275,7 +2269,6 @@ defm V_WMMA_F16_16X16X64_FP8_BF8_w32  : VOP3P_Real_WMMA_gfx1250 <0x06f, F16_FP8B
 defm V_WMMA_F16_16X16X64_BF8_FP8_w32  : VOP3P_Real_WMMA_gfx1250 <0x070, F16_FP8BF8X64_WMMA_w32>;
 defm V_WMMA_F16_16X16X64_BF8_BF8_w32  : VOP3P_Real_WMMA_gfx1250 <0x071, F16_FP8BF8X64_WMMA_w32>;
 defm V_WMMA_I32_16X16X64_IU8_w32      : VOP3P_Real_WMMA_gfx1250 <0x072, I32_IU8X64_WMMA_w32>;
-defm V_WMMA_I32_16X16X128_IU4_w32     : VOP3P_Real_WMMA_gfx1250 <0x07c, I32_IU4X128_WMMA_w32>;
 
 defm V_WMMA_F32_16X16X128_F8F6F4         : VOP3P_Real_WMMA_gfx1250_SrcFormats<0x033, "F32_16X16X128_F8F6F4">;
 defm V_WMMA_SCALE_F32_16X16X128_F8F6F4   : VOP3PX2_Real_ScaledWMMA_SrcFormats<0x033, 0x35, "F32_16X16X128_F8F6F4_SCALE">;
@@ -2295,7 +2288,6 @@ defm V_SWMMAC_F16_16X16X128_FP8_BF8_w32 : VOP3P_Real_WMMA_gfx1250 <0x078, F16_FP
 defm V_SWMMAC_F16_16X16X128_BF8_FP8_w32 : VOP3P_Real_WMMA_gfx1250 <0x079, F16_FP8BF8X128_SWMMAC_w32>;
 defm V_SWMMAC_F16_16X16X128_BF8_BF8_w32 : VOP3P_Real_WMMA_gfx1250 <0x07a, F16_FP8BF8X128_SWMMAC_w32>;
 defm V_SWMMAC_I32_16X16X128_IU8_w32     : VOP3P_Real_WMMA_gfx1250 <0x07b, I32_IU8X128_SWMMAC_w32>;
-defm V_SWMMAC_I32_16X16X256_IU4_w32     : VOP3P_Real_WMMA_gfx1250 <0x07d, I32_IU4X256_SWMMAC_w32>;
 
 multiclass VOP3P_Real_with_name<GFXGen Gen, bits<7> op,
                           string backing_ps_name = NAME,
