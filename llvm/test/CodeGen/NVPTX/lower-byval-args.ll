@@ -98,44 +98,19 @@ entry:
   ret void
 }
 
-; Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite)
-define dso_local ptx_kernel void @read_only_gep_asc(ptr nocapture noundef writeonly %out, ptr nocapture noundef readonly byval(%struct.S) align 4 %s) local_unnamed_addr #0 {
-; LOWER-ARGS-LABEL: define dso_local ptx_kernel void @read_only_gep_asc(
-; LOWER-ARGS-SAME: ptr noundef writeonly captures(none) [[OUT:%.*]], ptr noundef readonly byval([[STRUCT_S:%.*]]) align 4 captures(none) [[S:%.*]]) local_unnamed_addr #[[ATTR0]] {
-; LOWER-ARGS-NEXT:  [[ENTRY:.*:]]
-; LOWER-ARGS-NEXT:    [[S3:%.*]] = call ptr addrspace(101) @llvm.nvvm.internal.addrspace.wrap.p101.p0(ptr [[S]])
-; LOWER-ARGS-NEXT:    [[B4:%.*]] = getelementptr inbounds i8, ptr addrspace(101) [[S3]], i64 4
-; LOWER-ARGS-NEXT:    [[I:%.*]] = load i32, ptr addrspace(101) [[B4]], align 4
-; LOWER-ARGS-NEXT:    store i32 [[I]], ptr [[OUT]], align 4
-; LOWER-ARGS-NEXT:    ret void
-;
-; COPY-LABEL: define dso_local ptx_kernel void @read_only_gep_asc(
-; COPY-SAME: ptr noundef writeonly captures(none) [[OUT:%.*]], ptr noundef readonly byval([[STRUCT_S:%.*]]) align 4 captures(none) [[S:%.*]]) local_unnamed_addr #[[ATTR0]] {
-; COPY-NEXT:  [[ENTRY:.*:]]
-; COPY-NEXT:    [[B:%.*]] = getelementptr inbounds nuw i8, ptr [[S]], i64 4
-; COPY-NEXT:    [[ASC:%.*]] = addrspacecast ptr [[B]] to ptr addrspace(101)
-; COPY-NEXT:    [[I:%.*]] = load i32, ptr addrspace(101) [[ASC]], align 4
-; COPY-NEXT:    store i32 [[I]], ptr [[OUT]], align 4
-; COPY-NEXT:    ret void
-;
-; PTX-LABEL: read_only_gep_asc(
-; PTX:       {
-; PTX-NEXT:    .reg .b32 %r<2>;
-; PTX-NEXT:    .reg .b64 %rd<3>;
-; PTX-EMPTY:
-; PTX-NEXT:  // %bb.0: // %entry
-; PTX-NEXT:    ld.param.u64 %rd1, [read_only_gep_asc_param_0];
-; PTX-NEXT:    cvta.to.global.u64 %rd2, %rd1;
-; PTX-NEXT:    ld.param.u32 %r1, [read_only_gep_asc_param_1+4];
-; PTX-NEXT:    st.global.u32 [%rd2], %r1;
-; PTX-NEXT:    ret;
-entry:
-  %b = getelementptr inbounds nuw i8, ptr %s, i64 4
-  %asc = addrspacecast ptr %b to ptr addrspace(101)
-  %i = load i32, ptr addrspace(101) %asc, align 4
-  store i32 %i, ptr %out, align 4
-  ret void
-}
+;; TODO: This test has been disabled because the addrspacecast is not legal on
+;; sm_60, and not well supported within nvptx-lower-args. We should determine
+;; in what cases it is safe to make assumptions about the address of a byval
+;; parameter and improve our handling of addrspacecast in nvptx-lower-args.
+
+; define dso_local ptx_kernel void @read_only_gep_asc(ptr nocapture noundef writeonly %out, ptr nocapture noundef readonly byval(%struct.S) align 4 %s) local_unnamed_addr #0 {
+; entry:
+;   %b = getelementptr inbounds nuw i8, ptr %s, i64 4
+;   %asc = addrspacecast ptr %b to ptr addrspace(101)
+;   %i = load i32, ptr addrspace(101) %asc, align 4
+;   store i32 %i, ptr %out, align 4
+;   ret void
+; }
 
 ; Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite)
 define dso_local ptx_kernel void @read_only_gep_asc0(ptr nocapture noundef writeonly %out, ptr nocapture noundef readonly byval(%struct.S) align 4 %s) local_unnamed_addr #0 {
