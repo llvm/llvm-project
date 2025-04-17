@@ -30,7 +30,6 @@ namespace llvm {
 
 class Loop;
 class LoopInfo;
-class VPRegionBlock;
 class VPlan;
 class VPlanTestIRBase;
 class VPBlockBase;
@@ -54,15 +53,12 @@ private:
   /// created for a input IR basic block.
   DenseMap<VPBlockBase *, BasicBlock *> VPB2IRBB;
 
-  /// Build plain CFG for TheLoop and connects it to Plan's entry.
-  void buildPlainCFG();
-
 public:
   VPlanHCFGBuilder(Loop *Lp, LoopInfo *LI, VPlan &P)
       : TheLoop(Lp), LI(LI), Plan(P) {}
 
-  /// Build H-CFG for TheLoop and update Plan accordingly.
-  void buildHierarchicalCFG();
+  /// Build plain CFG for TheLoop and connects it to Plan's entry.
+  void buildPlainCFG();
 
   /// Return the input IR BasicBlock corresponding to \p VPB. Returns nullptr if
   /// there is no such corresponding block.
