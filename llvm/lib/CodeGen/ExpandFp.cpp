@@ -134,9 +134,7 @@ private:
     Value *Clt = B.CreateFCmp(CmpInst::FCMP_OLT, AxUpdate,
                               ConstantFP::get(ComputeFpTy, 0.0), "clt");
     Value *Axp = B.CreateFAdd(AxUpdate, Ay, "axp");
-    AxUpdate = B.CreateSelect(Clt, Axp, AxUpdate, "ax");
-
-    return AxUpdate;
+    return B.CreateSelect(Clt, Axp, AxUpdate, "ax");
   }
 
   /// Build code to extract the exponent and mantissa of \p Src.
