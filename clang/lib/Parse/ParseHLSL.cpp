@@ -115,7 +115,7 @@ static void fixSeparateAttrArgAndNumber(StringRef ArgStr, SourceLocation ArgLoc,
       << FixedArg
       << FixItHint::CreateReplacement(SourceRange(ArgLoc, EndNumLoc), FixedArg);
   ArgsUnion &Slot = ArgExprs.back();
-  Slot = IdentifierLoc::create(Ctx, ArgLoc, PP.getIdentifierInfo(FixedArg));
+  Slot = new (Ctx) IdentifierLoc(ArgLoc, PP.getIdentifierInfo(FixedArg));
 }
 
 void Parser::ParseHLSLAnnotations(ParsedAttributes &Attrs,
