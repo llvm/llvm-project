@@ -2545,9 +2545,9 @@ StmtResult Parser::ParsePragmaLoopHint(StmtVector &Stmts,
 
     ArgsUnion ArgHints[] = {Hint.PragmaNameLoc, Hint.OptionLoc, Hint.StateLoc,
                             ArgsUnion(Hint.ValueExpr)};
-    TempAttrs.addNew(Hint.PragmaNameLoc->Ident, Hint.Range, nullptr,
-                     Hint.PragmaNameLoc->Loc, ArgHints, 4,
-                     ParsedAttr::Form::Pragma());
+    TempAttrs.addNew(Hint.PragmaNameLoc->getIdentifierInfo(), Hint.Range,
+                     /*scopeName=*/nullptr, Hint.PragmaNameLoc->getLoc(),
+                     ArgHints, /*numArgs=*/4, ParsedAttr::Form::Pragma());
   }
 
   // Get the next statement.
