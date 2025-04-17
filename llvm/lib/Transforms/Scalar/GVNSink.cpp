@@ -199,8 +199,8 @@ public:
               SmallSetVector<BasicBlock *, 4> &B,
               const DenseMap<const BasicBlock *, unsigned> &BlockOrder) {
     // The order of Values and Blocks are already ordered by the caller.
-    llvm::copy(V, std::back_inserter(Values));
-    llvm::copy(B, std::back_inserter(Blocks));
+    llvm::append_range(Values, V);
+    llvm::append_range(Blocks, B);
     verifyModelledPHI(BlockOrder);
   }
 
@@ -208,7 +208,7 @@ public:
   /// TODO: Figure out a way to verifyModelledPHI in this constructor.
   ModelledPHI(ArrayRef<Instruction *> Insts, unsigned OpNum,
               SmallSetVector<BasicBlock *, 4> &B) {
-    llvm::copy(B, std::back_inserter(Blocks));
+    llvm::append_range(Blocks, B);
     for (auto *I : Insts)
       Values.push_back(I->getOperand(OpNum));
   }
