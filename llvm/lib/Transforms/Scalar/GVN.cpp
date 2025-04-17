@@ -1516,26 +1516,7 @@ void GVNPass::eliminatePartiallyRedundantLoad(
         MSSAU->insertUse(cast<MemoryUse>(NewAccess), /*RenameUses=*/true);
     }
 
-    // Transfer the old load's AA tags to the new load.
-    AAMDNodes Tags = Load->getAAMetadata();
-    if (Tags)
-      NewLoad->setAAMetadata(Tags);
-
-    if (auto *MD = Load->getMetadata(LLVMContext::MD_invariant_load))
-      NewLoad->setMetadata(LLVMContext::MD_invariant_load, MD);
-    if (auto *InvGroupMD = Load->getMetadata(LLVMContext::MD_invariant_group))
-      NewLoad->setMetadata(LLVMContext::MD_invariant_group, InvGroupMD);
-    if (auto *RangeMD = Load->getMetadata(LLVMContext::MD_range))
-      NewLoad->setMetadata(LLVMContext::MD_range, RangeMD);
-    if (auto *AccessMD = Load->getMetadata(LLVMContext::MD_access_group))
-      if (LI->getLoopFor(Load->getParent()) == LI->getLoopFor(UnavailableBlock))
-        NewLoad->setMetadata(LLVMContext::MD_access_group, AccessMD);
-
-    // We do not propagate the old load's debug location, because the new
-    // load now lives in a different BB, and we want to avoid a jumpy line
-    // table.
-    // FIXME: How do we retain source locations without causing poor debugging
-    // behavior?
+    copyMetadataForLoad(*NewLoad, *Load);
 
     // Add the newly created load.
     ValuesPerBlock.push_back(

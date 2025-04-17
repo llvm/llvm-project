@@ -1407,15 +1407,7 @@ bool JumpThreadingPass::simplifyPartiallyRedundantLoad(LoadInst *LoadI) {
         LoadI->getOrdering(), LoadI->getSyncScopeID(),
         UnavailablePred->getTerminator()->getIterator());
     NewVal->setDebugLoc(LoadI->getDebugLoc());
-    if (AATags)
-      NewVal->setAAMetadata(AATags);
-
-    if (auto *MD = LoadI->getMetadata(LLVMContext::MD_invariant_load))
-      NewVal->setMetadata(LLVMContext::MD_invariant_load, MD);
-    if (auto *InvGroupMD = LoadI->getMetadata(LLVMContext::MD_invariant_group))
-      NewVal->setMetadata(LLVMContext::MD_invariant_group, InvGroupMD);
-    if (auto *RangeMD = LoadI->getMetadata(LLVMContext::MD_range))
-      NewVal->setMetadata(LLVMContext::MD_range, RangeMD);
+    copyMetadataForLoad(*NewVal, *LoadI);
 
     AvailablePreds.emplace_back(UnavailablePred, NewVal);
   }
