@@ -30,7 +30,7 @@ endif()
 # handled correctly.
 if (MSVC)
   set_source_files_properties(ConstantFolding.cpp PROPERTIES COMPILE_OPTIONS "/fp:except")
-else()
+elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
   set_source_files_properties(ConstantFolding.cpp PROPERTIES COMPILE_OPTIONS "-ffp-exception-behavior=strict")
 endif()
 
