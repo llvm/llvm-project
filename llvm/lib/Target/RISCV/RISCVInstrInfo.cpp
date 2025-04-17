@@ -974,10 +974,6 @@ static RISCVCC::CondCode getCondFromBranchOpc(unsigned Opc) {
   switch (Opc) {
   default:
     return RISCVCC::COND_INVALID;
-  case RISCV::CV_BEQIMM:
-    return RISCVCC::COND_EQ;
-  case RISCV::CV_BNEIMM:
-    return RISCVCC::COND_NE;
   case RISCV::BEQ:
     return RISCVCC::COND_EQ;
   case RISCV::BNE:
@@ -990,6 +986,10 @@ static RISCVCC::CondCode getCondFromBranchOpc(unsigned Opc) {
     return RISCVCC::COND_LTU;
   case RISCV::BGEU:
     return RISCVCC::COND_GEU;
+  case RISCV::CV_BEQIMM:
+    return RISCVCC::COND_CV_BEQIMM;
+  case RISCV::CV_BNEIMM:
+    return RISCVCC::COND_CV_BNEIMM;
   }
 }
 
@@ -1027,23 +1027,14 @@ static void parseCondBranch(MachineInstr &LastInst, MachineBasicBlock *&Target,
   Cond.push_back(LastInst.getOperand(1));
 }
 
-unsigned RISCVCC::getBrCond(const RISCVSubtarget &STI, RISCVCC::CondCode CC,
-                            bool Imm) {
+unsigned RISCVCC::getBrCond(RISCVCC::CondCode CC) {
   switch (CC) {
   default:
     llvm_unreachable("Unknown condition code!");
   case RISCVCC::COND_EQ:
-    if (!Imm)
-      return RISCV::BEQ;
-    if (STI.hasVendorXCVbi())
-      return RISCV::CV_BEQIMM;
-    llvm_unreachable("Unknown branch immediate!");
+    return RISCV::BEQ;
   case RISCVCC::COND_NE:
-    if (!Imm)
-      return RISCV::BNE;
-    if (STI.hasVendorXCVbi())
-      return RISCV::CV_BNEIMM;
-    llvm_unreachable("Unknown branch immediate!");
+    return RISCV::BNE;
   case RISCVCC::COND_LT:
     return RISCV::BLT;
   case RISCVCC::COND_GE:
@@ -1052,12 +1043,15 @@ unsigned RISCVCC::getBrCond(const RISCVSubtarget &STI, RISCVCC::CondCode CC,
     return RISCV::BLTU;
   case RISCVCC::COND_GEU:
     return RISCV::BGEU;
+  case RISCVCC::COND_CV_BEQIMM:
+    return RISCV::CV_BEQIMM;
+  case RISCVCC::COND_CV_BNEIMM:
+    return RISCV::CV_BNEIMM;
   }
 }
 
-const MCInstrDesc &RISCVInstrInfo::getBrCond(RISCVCC::CondCode CC,
-                                             bool Imm) const {
-  return get(RISCVCC::getBrCond(STI, CC, Imm));
+const MCInstrDesc &RISCVInstrInfo::getBrCond(RISCVCC::CondCode CC) const {
+  return get(RISCVCC::getBrCond(CC));
 }
 
 RISCVCC::CondCode RISCVCC::getOppositeBranchCondition(RISCVCC::CondCode CC) {
@@ -1076,6 +1070,10 @@ RISCVCC::CondCode RISCVCC::getOppositeBranchCondition(RISCVCC::CondCode CC) {
     return RISCVCC::COND_GEU;
   case RISCVCC::COND_GEU:
     return RISCVCC::COND_LTU;
+  case RISCVCC::COND_CV_BEQIMM:
+    return RISCVCC::COND_CV_BNEIMM;
+  case RISCVCC::COND_CV_BNEIMM:
+    return RISCVCC::COND_CV_BEQIMM;
   }
 }
 
@@ -1206,10 +1204,8 @@ unsigned RISCVInstrInfo::insertBranch(
 
   // Either a one or two-way conditional branch.
   auto CC = static_cast<RISCVCC::CondCode>(Cond[0].getImm());
-  MachineInstr &CondMI = *BuildMI(&MBB, DL, getBrCond(CC, Cond[2].isImm()))
-                              .add(Cond[1])
-                              .add(Cond[2])
-                              .addMBB(TBB);
+  MachineInstr &CondMI =
+      *BuildMI(&MBB, DL, getBrCond(CC)).add(Cond[1]).add(Cond[2]).addMBB(TBB);
   if (BytesAdded)
     *BytesAdded += getInstSizeInBytes(CondMI);
 

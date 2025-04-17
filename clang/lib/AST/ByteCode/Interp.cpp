@@ -299,15 +299,14 @@ void cleanupAfterFunctionCall(InterpState &S, CodePtr OpPC,
     TYPE_SWITCH(Ty, S.Stk.discard<T>());
 }
 
-// FIXME: Instead of using this fairly expensive test, we should
-// just mark constexpr-unknown values when creating them.
 bool isConstexprUnknown(const Pointer &P) {
   if (!P.isBlockPointer())
     return false;
+
   if (P.isDummy())
-    return false;
-  const VarDecl *VD = P.block()->getDescriptor()->asVarDecl();
-  return VD && VD->hasLocalStorage() && !isa<ParmVarDecl>(VD);
+    return isa_and_nonnull<ParmVarDecl>(P.getDeclDesc()->asValueDecl());
+
+  return P.getDeclDesc()->IsConstexprUnknown;
 }
 
 bool CheckBCPResult(InterpState &S, const Pointer &Ptr) {
