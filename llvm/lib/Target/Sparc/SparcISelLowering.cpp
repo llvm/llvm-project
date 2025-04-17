@@ -3588,6 +3588,8 @@ bool SparcTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
          Imm.isZero();
 }
 
+bool SparcTargetLowering::isCtlzFast() const { return Subtarget->isVIS3(); }
+
 // Override to disable global variable loading on Linux.
 void SparcTargetLowering::insertSSPDeclarations(Module &M) const {
   if (!Subtarget->isTargetLinux())
