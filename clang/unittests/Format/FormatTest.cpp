@@ -3419,6 +3419,17 @@ TEST_F(FormatTest, MultiLineControlStatements) {
                "{\n"
                "};",
                Style);
+
+  Style = getLLVMStyle();
+  Style.AllowShortBlocksOnASingleLine = FormatStyle::SBS_Always;
+  Style.AllowShortIfStatementsOnASingleLine = FormatStyle::SIS_WithoutElse;
+  Style.AllowShortLoopsOnASingleLine = true;
+  Style.BreakBeforeBraces = FormatStyle::BS_Custom;
+  Style.BraceWrapping.AfterControlStatement = FormatStyle::BWACS_MultiLine;
+  verifyFormat("if (true) { return; }", Style);
+  verifyFormat("while (true) { return; }", Style);
+  // Failing test in https://reviews.llvm.org/D114521#3151727
+  verifyFormat("for (;;) { bar(); }", Style);
 }
 
 TEST_F(FormatTest, BeforeWhile) {
