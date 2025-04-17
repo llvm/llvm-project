@@ -127,7 +127,7 @@ DependencyScanningFilesystemSharedCache::getInvalidNegativeStatCachedPaths(
           // of the file at Path first, and a a file at the path is created
           // later. The cache entry is not invalidated (as we have no good
           // way to do it now), which may lead to missing file build errors.
-          InvalidPaths.push_back(std::string(Path));
+          InvalidPaths.push_back(Path);
         }
       }
     }
