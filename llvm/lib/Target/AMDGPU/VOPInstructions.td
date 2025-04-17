@@ -570,7 +570,7 @@ class VOP3Pe <bits<7> op, VOPProfile P> : Enc64, VOP3Pe_Base {
   let Inst{12} = !if(!and(P.HasSrc1, P.HasOpSel), src1_modifiers{2}, 0); // op_sel(1)
 #ifdef LLPC_BUILD_NPI
   let Inst{13} = !if(!and(P.HasSrc2, P.HasOpSel), src2_modifiers{2},
-                     !if(P.HasMatrixScale, matrix_a_reuse, 0));    // op_sel(2)
+                     !if(P.HasMatrixReuse, matrix_a_reuse, 0));    // op_sel(2)
 #else /* LLPC_BUILD_NPI */
   let Inst{13} = !if(!and(P.HasSrc2, P.HasOpSel), src2_modifiers{2}, 0); // op_sel(2)
 #endif /* LLPC_BUILD_NPI */
@@ -578,7 +578,7 @@ class VOP3Pe <bits<7> op, VOPProfile P> : Enc64, VOP3Pe_Base {
 #ifdef LLPC_BUILD_NPI
   let Inst{14} = !cond(!and(P.HasSrc2, P.HasOpSel) : src2_modifiers{3},
                        P.IsDOT : 1,
-                       P.HasMatrixScale : matrix_b_reuse,
+                       P.HasMatrixReuse : matrix_b_reuse,
                        1: ?); // op_sel_hi(2)
 #else /* LLPC_BUILD_NPI */
   let Inst{14} = !if(!and(P.HasSrc2, P.HasOpSel), src2_modifiers{3}, !if(P.IsDOT, 1, ?)); // op_sel_hi(2)

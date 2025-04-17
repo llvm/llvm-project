@@ -83,6 +83,28 @@ ThreadPlanStepOut::ThreadPlanStepOut(
                      continue_to_next_branch);
 }
 
+ThreadPlanStepOut::ThreadPlanStepOut(Thread &thread, bool stop_others,
+                                     Vote report_stop_vote,
+                                     Vote report_run_vote, uint32_t frame_idx,
+                                     bool continue_to_next_branch,
+                                     bool gather_return_value)
+    : ThreadPlan(ThreadPlan::eKindStepOut, "Step out", thread, report_stop_vote,
+                 report_run_vote),
+      ThreadPlanShouldStopHere(this), m_return_bp_id(LLDB_INVALID_BREAK_ID),
+      m_return_addr(LLDB_INVALID_ADDRESS), m_stop_others(stop_others),
+      m_immediate_step_from_function(nullptr),
+      m_calculate_return_value(gather_return_value) {
+  SetFlagsToDefault();
+  m_step_from_insn = thread.GetRegisterContext()->GetPC(0);
+
+  StackFrameSP return_frame_sp = thread.GetStackFrameAtIndex(frame_idx + 1);
+  StackFrameSP immediate_return_from_sp =
+      thread.GetStackFrameAtIndex(frame_idx);
+
+  SetupReturnAddress(return_frame_sp, immediate_return_from_sp, frame_idx,
+                     continue_to_next_branch);
+}
+
 void ThreadPlanStepOut::SetupReturnAddress(
     StackFrameSP return_frame_sp, StackFrameSP immediate_return_from_sp,
     uint32_t frame_idx, bool continue_to_next_branch) {

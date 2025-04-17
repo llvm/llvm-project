@@ -1584,7 +1584,7 @@ class VOP3PWMMA_Profile<list<ValueType> ArgTy, bit _IsSWMMAC, int _IndexType,
 #ifdef LLPC_BUILD_NPI
                         bit _IsIU, bit _IsFP8BF8XF32, bit _Has_ImodOp = 0,
                         bit _HasMatrxFMT = 0, bit _HasMatrixScale = 0,
-                        bit _Scale16 = 0>
+                        bit _Scale16 = 0, bit _HasMatrixReuse = 0>
 #else /* LLPC_BUILD_NPI */
                         bit _IsIU, bit _IsFP8BF8>
 #endif /* LLPC_BUILD_NPI */
@@ -1601,8 +1601,9 @@ class VOP3PWMMA_Profile<list<ValueType> ArgTy, bit _IsSWMMAC, int _IndexType,
   int IndexType = _IndexType;
 #ifdef LLPC_BUILD_NPI
   bit HasMatrxFMT = _HasMatrxFMT;
-  bit HasMatrixScale = _HasMatrixScale;
+  let HasMatrixScale = _HasMatrixScale;
   bit Scale16 = _Scale16;
+  let HasMatrixReuse = _HasMatrixReuse;
 #endif /* LLPC_BUILD_NPI */
 
 #ifdef LLPC_BUILD_NPI
@@ -1763,10 +1764,10 @@ class VOP3PWMMA_Profile<list<ValueType> ArgTy, bit _IsSWMMAC, int _IndexType,
                                (ins)),
                            (ins MatrixAFMT:$matrix_a_fmt, MatrixBFMT:$matrix_b_fmt),
                            !if(HasMatrixScale, (ins MatrixAScale:$matrix_a_scale, MatrixBScale:$matrix_b_scale,
-                                                    MatrixAScaleFmt:$matrix_a_scale_fmt, MatrixBScaleFmt:$matrix_b_scale_fmt,
-                                                    MatrixAReuse:$matrix_a_reuse, MatrixBReuse:$matrix_b_reuse),
+                                                    MatrixAScaleFmt:$matrix_a_scale_fmt, MatrixBScaleFmt:$matrix_b_scale_fmt),
                                                (ins))),
                       (ins));
+  dag MatrixReuse = !if(HasMatrixReuse, (ins MatrixAReuse:$matrix_a_reuse, MatrixBReuse:$matrix_b_reuse), (ins));
   dag Clamp = !if(HasClamp, (ins Clamp0:$clamp), (ins));
 #else /* LLPC_BUILD_NPI */
   dag Clamp = !if(IsIU, (ins Clamp0:$clamp), (ins));
@@ -1779,7 +1780,7 @@ class VOP3PWMMA_Profile<list<ValueType> ArgTy, bit _IsSWMMAC, int _IndexType,
                       !cond(IsWMMA   : !con(Src2Mods, (ins Src2RC64:$src2)),
                             IsSWMMAC : !con((ins DstRC:$srcTiedDef), (ins VRegSrc_32:$src2), IndexKey)),
 #ifdef LLPC_BUILD_NPI
-                      MatrixFMT, Clamp, Neg);
+                      MatrixFMT, MatrixReuse, Clamp, Neg);
 #else /* LLPC_BUILD_NPI */
                       Clamp, Neg);
 #endif /* LLPC_BUILD_NPI */
@@ -1792,8 +1793,9 @@ class VOP3PWMMA_Profile<list<ValueType> ArgTy, bit _IsSWMMAC, int _IndexType,
 #ifdef LLPC_BUILD_NPI
   string MatrxFMTAsm = !if(HasMatrxFMT, !if(HasMatrixScale, ", $scale_src0, $scale_src1", "")#
                                         "$matrix_a_fmt$matrix_b_fmt"#
-                                        !if(HasMatrixScale, "$matrix_a_scale$matrix_b_scale$matrix_a_scale_fmt$matrix_b_scale_fmt$matrix_a_reuse$matrix_b_reuse", ""),
+                                        !if(HasMatrixScale, "$matrix_a_scale$matrix_b_scale$matrix_a_scale_fmt$matrix_b_scale_fmt", ""),
                                         "");
+  string MatrixReuseAsm = !if(HasMatrixReuse, "$matrix_a_reuse$matrix_b_reuse", "");
   string ClampAsm = !if(HasClamp, "$clamp", "");
 #else /* LLPC_BUILD_NPI */
   string ClampAsm = !if(IsIU, "$clamp", "");
@@ -1803,7 +1805,7 @@ class VOP3PWMMA_Profile<list<ValueType> ArgTy, bit _IsSWMMAC, int _IndexType,
                         !and(!not(NegLoAny), !not(NegHiAny)) : "");
 
 #ifdef LLPC_BUILD_NPI
-  let AsmVOP3P = "$vdst, $src0, $src1, $src2"#IndexKeyAsm#MatrxFMTAsm#NegAsm#ClampAsm;
+  let AsmVOP3P = "$vdst, $src0, $src1, $src2"#IndexKeyAsm#MatrxFMTAsm#MatrixReuseAsm#NegAsm#ClampAsm;
 #else /* LLPC_BUILD_NPI */
   let AsmVOP3P = "$vdst, $src0, $src1, $src2"#IndexKeyAsm#NegAsm#ClampAsm;
 #endif /* LLPC_BUILD_NPI */
@@ -1899,41 +1901,41 @@ class VOP3PWMMA_Profile<list<ValueType> ArgTy, bit _IsSWMMAC, int _IndexType,
   dag Src2InlineInPat = !con(!if(IsC_IMod1, (ins (VOP3PModsNegAbs i32:$src2_modifiers)), (ins)), (ins (Src2VT (WMMAVISrc Src2VT:$src2))));
   dag Src2InlineOutPat = !con(!if(IsIUXF32, (ins), !if(IsC_IMod1,  (ins i32:$src2_modifiers), (ins (i32 8)))), (ins Src2VT:$src2));
   dag MatrixScaleInPat = !if(HasMatrixScale, (ins timm:$matrix_a_scale, timm:$matrix_a_scale_fmt, ScaleTy:$scale_src0,
-                                                  timm:$matrix_b_scale, timm:$matrix_b_scale_fmt, ScaleTy:$scale_src1,
-                                                  timm:$matrix_a_reuse, timm:$matrix_b_reuse),
+                                                  timm:$matrix_b_scale, timm:$matrix_b_scale_fmt, ScaleTy:$scale_src1),
                                              (ins));
+  dag MatrixReuseInPat = !if(HasMatrixReuse, (ins timm:$matrix_a_reuse, timm:$matrix_b_reuse), (ins));
   dag MatrixScaleOutSrcPat = !if(HasMatrixScale, (ins ScaleTy:$scale_src0, ScaleTy:$scale_src1), (ins));
-  dag MatrixScaleOutModPat = !if(HasMatrixScale, (ins i32:$matrix_a_scale, i32:$matrix_b_scale, i32:$matrix_a_scale_fmt, i32:$matrix_b_scale_fmt,
-                                                  i1:$matrix_a_reuse, i1:$matrix_b_reuse), (ins));
+  dag MatrixScaleOutModPat = !if(HasMatrixScale, (ins i32:$matrix_a_scale, i32:$matrix_b_scale, i32:$matrix_a_scale_fmt, i32:$matrix_b_scale_fmt), (ins));
+  dag MatrixReuseOutModPat = !if(HasMatrixReuse, (ins i1:$matrix_a_reuse, i1:$matrix_b_reuse), (ins));
+
+  dag WmmaInPat  = !con(Src0InPat, Src1InPat, Src2InPatWmma, MatrixScaleInPat, MatrixReuseInPat, ClampPat);
+  dag WmmaOutPat = !con(Src0OutPat, Src1OutPat, Src2OutPatWmma, MatrixScaleOutSrcPat, MatrixFMTOutPat,
+                        MatrixScaleOutModPat, MatrixReuseOutModPat, ClampPat);
 #else /* LLPC_BUILD_NPI */
   dag Src2InlineInPat = (ins (Src2VT (WMMAVISrc Src2VT:$src2)));
   dag Src2InlineOutPat = !con(!if(IsIU, (ins), (ins (i32 8))), (ins Src2VT:$src2));
 #endif /* LLPC_BUILD_NPI */
 
 #ifdef LLPC_BUILD_NPI
-  dag WmmaInPat  = !con(Src0InPat, Src1InPat, Src2InPatWmma, MatrixScaleInPat, ClampPat);
-  dag WmmaOutPat = !con(Src0OutPat, Src1OutPat, Src2OutPatWmma, MatrixScaleOutSrcPat, MatrixFMTOutPat, MatrixScaleOutModPat, ClampPat);
+  dag SwmmacInPat  = !con(Src0InPat, Src1InPat, (ins Src2VT:$srcTiedDef), IndexInPat, MatrixReuseInPat, ClampPat);
+  dag SwmmacOutPat = !con(Src0OutPat, Src1OutPat, (ins Src2VT:$srcTiedDef), IndexOutPat, MatrixReuseOutModPat, ClampPat);
 #else /* LLPC_BUILD_NPI */
 
   dag WmmaInPat  = !con(Src0InPat, Src1InPat, Src2InPatWmma, ClampPat);
   dag WmmaOutPat = !con(Src0OutPat, Src1OutPat, Src2OutPatWmma, ClampPat);
-#endif /* LLPC_BUILD_NPI */
 
   dag SwmmacInPat  = !con(Src0InPat, Src1InPat, (ins Src2VT:$srcTiedDef), IndexInPat, ClampPat);
   dag SwmmacOutPat = !con(Src0OutPat, Src1OutPat, (ins Src2VT:$srcTiedDef), IndexOutPat, ClampPat);
+#endif /* LLPC_BUILD_NPI */
 
   // wmma pattern where src2 is inline imm uses _threeaddr pseudo,
   // can't use _twoaddr since it would violate src2 tied to vdst constraint.
 #ifdef LLPC_BUILD_NPI
-  dag WmmaInlineInPat  = !con(Src0InPat, Src1InPat, Src2InlineInPat, MatrixScaleInPat, ClampPat);
-  dag WmmaInlineOutPat = !con(Src0OutPat, Src1OutPat, Src2InlineOutPat, MatrixScaleOutSrcPat, MatrixFMTOutPat, MatrixScaleOutModPat, ClampPat);
-#else /* LLPC_BUILD_NPI */
-  dag WmmaInlineInPat  = !con(Src0InPat, Src1InPat, Src2InlineInPat,  ClampPat);
-  dag WmmaInlineOutPat = !con(Src0OutPat, Src1OutPat, Src2InlineOutPat, ClampPat);
-#endif /* LLPC_BUILD_NPI */
+  dag WmmaInlineInPat  = !con(Src0InPat, Src1InPat, Src2InlineInPat, MatrixScaleInPat, MatrixReuseInPat, ClampPat);
+  dag WmmaInlineOutPat = !con(Src0OutPat, Src1OutPat, Src2InlineOutPat, MatrixScaleOutSrcPat,
+                              MatrixFMTOutPat, MatrixScaleOutModPat, MatrixReuseOutModPat, ClampPat);
 }
 
-#ifdef LLPC_BUILD_NPI
 def WMMAInstInfoTable : GenericTable {
   let FilterClass = "WMMAInstInfo";
   let CppTypeName = "WMMAInstInfo";
@@ -1946,8 +1948,13 @@ def WMMAInstInfoTable : GenericTable {
 class WMMAInstInfo {
   Instruction Opcode = !cast<Instruction>(NAME);
   bit is_wmma_xdl = 0;
+#else /* LLPC_BUILD_NPI */
+  dag WmmaInlineInPat  = !con(Src0InPat, Src1InPat, Src2InlineInPat,  ClampPat);
+  dag WmmaInlineOutPat = !con(Src0OutPat, Src1OutPat, Src2InlineOutPat, ClampPat);
+#endif /* LLPC_BUILD_NPI */
 }
 
+#ifdef LLPC_BUILD_NPI
 multiclass WMMAInstGFX12<string Instr, VOP3PWMMA_Profile WMMAProfile, string PseudoInstrSuffix, bit DiffVdstSrc2 = 0> {
 
   defvar WMMAConstraints2Addr = !if(DiffVdstSrc2, "@earlyclobber $vdst", "@earlyclobber $vdst,$vdst = $src2");
@@ -2073,7 +2080,7 @@ def F32_BF16X32_WMMA_w32      : VOP3PWMMA_Profile<[v8f32, v16bf16, v16bf16, v8f3
 def F32_F16X32_WMMA_w32       : VOP3PWMMA_Profile<[v8f32, v16f16, v16f16, v8f32], 0, 0, 0, 0, 1>;
 def F16_F16X32_WMMA_w32       : VOP3PWMMA_Profile<[v8f16, v16f16, v16f16, v8f16], 0, 0, 0, 0, 1>;
 def BF16_BF16X32_WMMA_w32     : VOP3PWMMA_Profile<[v8bf16, v16bf16, v16bf16, v8bf16], 0, 0, 0, 0, 1>;
-def BF16F32_BF16_WMMA_w32     : VOP3PWMMA_Profile<[v8bf16, v16bf16, v16bf16, v8f32], 0, 0, 0, 0, 1>;
+def BF16F32_BF16_WMMA_w32     : VOP3PWMMA_Profile<[v8bf16, v16bf16, v16bf16, v8f32], 0, 0, 0, 0, 1, 0, 0, 0, 1>;
 def F32_FP8BF8X64_WMMA_w32    : VOP3PWMMA_Profile<[v8f32, v8i32, v8i32, v8f32], 0, 0, 0, 1, 1>;
 def F16_FP8BF8X64_WMMA_w32    : VOP3PWMMA_Profile<[v8f16, v8i32, v8i32, v8f16], 0, 0, 0, 1, 1>;
 def I32_IU8X64_WMMA_w32       : VOP3PWMMA_Profile<[v8i32, v8i32, v8i32, v8i32], 0, 0, 1, 0, 1>;
@@ -2085,24 +2092,25 @@ def F32_FP8BF8X128_SWMMAC_w32 : VOP3PWMMA_Profile<[v8f32, v8i32,  v16i32, v8f32]
 def F16_FP8BF8X128_SWMMAC_w32 : VOP3PWMMA_Profile<[v8f16, v8i32,  v16i32, v8f16], 1, 16, 0, 1, 1>;
 def I32_IU8X128_SWMMAC_w32    : VOP3PWMMA_Profile<[v8i32, v8i32,  v16i32, v8i32], 1, 16, 1, 0, 1>;
 
-multiclass WMMA_F8F6F4_Profiles<bit HasMatrixScale, bit Scale16> {
-  def _f8_f8_w32 : VOP3PWMMA_Profile<[v8f32, v16i32, v16i32, v8f32], 0, 0, 0, 1, 1, 1, HasMatrixScale, Scale16>;
-  def _f8_f6_w32 : VOP3PWMMA_Profile<[v8f32, v16i32, v12i32, v8f32], 0, 0, 0, 1, 1, 1, HasMatrixScale, Scale16>;
-  def _f8_f4_w32 : VOP3PWMMA_Profile<[v8f32, v16i32, v8i32,  v8f32], 0, 0, 0, 1, 1, 1, HasMatrixScale, Scale16>;
-  def _f6_f8_w32 : VOP3PWMMA_Profile<[v8f32, v12i32, v16i32, v8f32], 0, 0, 0, 1, 1, 1, HasMatrixScale, Scale16>;
-  def _f6_f6_w32 : VOP3PWMMA_Profile<[v8f32, v12i32, v12i32, v8f32], 0, 0, 0, 1, 1, 1, HasMatrixScale, Scale16>;
-  def _f6_f4_w32 : VOP3PWMMA_Profile<[v8f32, v12i32, v8i32,  v8f32], 0, 0, 0, 1, 1, 1, HasMatrixScale, Scale16>;
-  def _f4_f8_w32 : VOP3PWMMA_Profile<[v8f32, v8i32,  v16i32, v8f32], 0, 0, 0, 1, 1, 1, HasMatrixScale, Scale16>;
-  def _f4_f6_w32 : VOP3PWMMA_Profile<[v8f32, v8i32,  v12i32, v8f32], 0, 0, 0, 1, 1, 1, HasMatrixScale, Scale16>;
-  def _f4_f4_w32 : VOP3PWMMA_Profile<[v8f32, v8i32,  v8i32,  v8f32], 0, 0, 0, 1, 1, 1, HasMatrixScale, Scale16>;
+multiclass WMMA_F8F6F4_Profiles<bit HasMatrixScale, bit Scale16, bit HasMatrixReuse> {
+  def _f8_f8_w32 : VOP3PWMMA_Profile<[v8f32, v16i32, v16i32, v8f32], 0, 0, 0, 1, 1, 1, HasMatrixScale, Scale16, HasMatrixReuse>;
+  def _f8_f6_w32 : VOP3PWMMA_Profile<[v8f32, v16i32, v12i32, v8f32], 0, 0, 0, 1, 1, 1, HasMatrixScale, Scale16, HasMatrixReuse>;
+  def _f8_f4_w32 : VOP3PWMMA_Profile<[v8f32, v16i32, v8i32,  v8f32], 0, 0, 0, 1, 1, 1, HasMatrixScale, Scale16, HasMatrixReuse>;
+  def _f6_f8_w32 : VOP3PWMMA_Profile<[v8f32, v12i32, v16i32, v8f32], 0, 0, 0, 1, 1, 1, HasMatrixScale, Scale16, HasMatrixReuse>;
+  def _f6_f6_w32 : VOP3PWMMA_Profile<[v8f32, v12i32, v12i32, v8f32], 0, 0, 0, 1, 1, 1, HasMatrixScale, Scale16, HasMatrixReuse>;
+  def _f6_f4_w32 : VOP3PWMMA_Profile<[v8f32, v12i32, v8i32,  v8f32], 0, 0, 0, 1, 1, 1, HasMatrixScale, Scale16, HasMatrixReuse>;
+  def _f4_f8_w32 : VOP3PWMMA_Profile<[v8f32, v8i32,  v16i32, v8f32], 0, 0, 0, 1, 1, 1, HasMatrixScale, Scale16, HasMatrixReuse>;
+  def _f4_f6_w32 : VOP3PWMMA_Profile<[v8f32, v8i32,  v12i32, v8f32], 0, 0, 0, 1, 1, 1, HasMatrixScale, Scale16, HasMatrixReuse>;
+  def _f4_f4_w32 : VOP3PWMMA_Profile<[v8f32, v8i32,  v8i32,  v8f32], 0, 0, 0, 1, 1, 1, HasMatrixScale, Scale16, HasMatrixReuse>;
 }
 
-defm F32_16X16X128_F8F6F4         : WMMA_F8F6F4_Profiles<0, 0>;
-defm F32_16X16X128_F8F6F4_SCALE   : WMMA_F8F6F4_Profiles<1, 0>;
-defm F32_16X16X128_F8F6F4_SCALE16 : WMMA_F8F6F4_Profiles<1, 1>;
+defm F32_16X16X128_F8F6F4         : WMMA_F8F6F4_Profiles<0, 0, 0>;
+defm F32_16X16X128_F8F6F4_SCALE   : WMMA_F8F6F4_Profiles<1, 0, 1>;
+defm F32_16X16X128_F8F6F4_SCALE16 : WMMA_F8F6F4_Profiles<1, 1, 1>;
 
 class VOP_WMMA_LD_SCALE<ValueType vt, RegisterOperand RC> : VOP3P_Profile<VOPProfile<[untyped, vt, vt, untyped]>> {
   let HasMatrixScale = 1;
+  let HasMatrixReuse = 1;
   let HasNeg = 0;
   let Src0RC64 = RC;
   let Src1RC64 = RC;
@@ -2412,7 +2420,8 @@ class VOP3PeWmma<bits<7> op, VOPProfile P, VOP3PWMMA_Profile WMMAP>
 #ifdef LLPC_BUILD_NPI
   let Inst{12} = !if(WMMAP.HasMatrxFMT, matrix_a_fmt{1},
                      !if(!eq(WMMAP.IndexType, 8), index_key_8bit{1}, 0));
-  let Inst{13} = !if (WMMAP.HasMatrxFMT, matrix_a_fmt{2}, 0);
+  let Inst{13} = !if (WMMAP.HasMatrxFMT, matrix_a_fmt{2},
+                      !if(WMMAP.HasMatrixReuse, matrix_a_reuse, 0));
 #else /* LLPC_BUILD_NPI */
   let Inst{12} = !if(!eq(WMMAP.IndexType, 8), index_key_8bit{1}, 0);
   let Inst{13} = 0;
@@ -2421,7 +2430,8 @@ class VOP3PeWmma<bits<7> op, VOPProfile P, VOP3PWMMA_Profile WMMAP>
 #ifdef LLPC_BUILD_NPI
   let Inst{59} = !if (WMMAP.HasMatrxFMT, matrix_b_fmt{0}, 1);
   let Inst{60} = !if (WMMAP.HasMatrxFMT, matrix_b_fmt{1}, 1);
-  let Inst{14} = !if (WMMAP.HasMatrxFMT, matrix_b_fmt{2}, 1);
+  let Inst{14} = !if (WMMAP.HasMatrxFMT, matrix_b_fmt{2},
+                      !if(WMMAP.HasMatrixReuse, matrix_b_reuse, 1));
 #else /* LLPC_BUILD_NPI */
   let Inst{59} = 1;
   let Inst{60} = 1;
@@ -2718,22 +2728,22 @@ multiclass VOP3P_Real_with_name_gfx12<bits<7> op,
 #ifdef LLPC_BUILD_NPI
   VOP3P_Real_with_name<GFX12Gen, op, backing_ps_name, asmName>,
   VOP3P_Real_with_name<GFX13Gen, op, backing_ps_name, asmName>;
+
+multiclass VOP3P_Realtriple_gfx1250_gfx13<bits<7> op> :
+  VOP3P_Realtriple<GFX1250Gen, op>, VOP3P_Realtriple<GFX13Gen, op>;
 #else /* LLPC_BUILD_NPI */
   VOP3P_Real_with_name<GFX12Gen, op, backing_ps_name, asmName>;
 #endif /* LLPC_BUILD_NPI */
 
 #ifdef LLPC_BUILD_NPI
-multiclass VOP3P_Realtriple_gfx1250_gfx13<bits<7> op> :
-  VOP3P_Realtriple<GFX1250Gen, op>, VOP3P_Realtriple<GFX13Gen, op>;
+defm V_PK_MIN_NUM_F16 : VOP3P_Real_with_name_gfx12_gfx13<0x1b, "V_PK_MIN_F16", "v_pk_min_num_f16">;
+defm V_PK_MAX_NUM_F16 : VOP3P_Real_with_name_gfx12_gfx13<0x1c, "V_PK_MAX_F16", "v_pk_max_num_f16">;
 #else /* LLPC_BUILD_NPI */
 defm V_PK_MIN_NUM_F16 : VOP3P_Real_with_name_gfx12<0x1b, "V_PK_MIN_F16", "v_pk_min_num_f16">;
 defm V_PK_MAX_NUM_F16 : VOP3P_Real_with_name_gfx12<0x1c, "V_PK_MAX_F16", "v_pk_max_num_f16">;
 #endif /* LLPC_BUILD_NPI */
 
 #ifdef LLPC_BUILD_NPI
-defm V_PK_MIN_NUM_F16 : VOP3P_Real_with_name_gfx12_gfx13<0x1b, "V_PK_MIN_F16", "v_pk_min_num_f16">;
-defm V_PK_MAX_NUM_F16 : VOP3P_Real_with_name_gfx12_gfx13<0x1c, "V_PK_MAX_F16", "v_pk_max_num_f16">;
-
 defm V_PK_MINIMUM_F16 : VOP3P_Real_gfx12_gfx13<0x1d>;
 defm V_PK_MAXIMUM_F16 : VOP3P_Real_gfx12_gfx13<0x1e>;
 #else /* LLPC_BUILD_NPI */

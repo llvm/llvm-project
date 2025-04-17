@@ -463,7 +463,9 @@ void AMDGPUMCCodeEmitter::encodeInstruction(const MCInst &MI,
       // Matrix B format operand reuses op_sel_hi.
       !AMDGPU::hasNamedOperand(Opcode, AMDGPU::OpName::matrix_b_fmt) &&
       // Matrix B scale operand reuses op_sel_hi.
-      !AMDGPU::hasNamedOperand(Opcode, AMDGPU::OpName::matrix_b_scale)) {
+      !AMDGPU::hasNamedOperand(Opcode, AMDGPU::OpName::matrix_b_scale) &&
+      // Matrix B reuse operand reuses op_sel_hi.
+      !AMDGPU::hasNamedOperand(Opcode, AMDGPU::OpName::matrix_b_reuse)) {
 #else /* LLPC_BUILD_NPI */
   if ((Desc.TSFlags & SIInstrFlags::VOP3P) ||
       Opcode == AMDGPU::V_ACCVGPR_READ_B32_vi ||

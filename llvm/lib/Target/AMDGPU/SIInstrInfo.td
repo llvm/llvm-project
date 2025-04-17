@@ -3053,6 +3053,7 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
   field bit HasNeg = HasModifiers;
 #ifdef LLPC_BUILD_NPI
   field bit HasMatrixScale = 0;
+  field bit HasMatrixReuse = 0;
 #endif /* LLPC_BUILD_NPI */
 
   field bit HasSrc0Mods = HasModifiers;
