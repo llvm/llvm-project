@@ -342,6 +342,12 @@ protected:
     return S;
   }
 
+  /// Creates a state with all registers marked unsafe (not to be confused
+  /// with empty state).
+  SrcState createUnsafeState() const {
+    return SrcState(NumRegs, RegsToTrackInstsFor.getNumTrackedRegisters());
+  }
+
   BitVector getClobberedRegs(const MCInst &Point) const {
     BitVector Clobbered(NumRegs);
     // Assume a call can clobber all registers, including callee-saved
@@ -585,6 +591,13 @@ protected:
     if (BB.isEntryPoint())
       return createEntryState();
 
+    // If a basic block without any predecessors is found in an optimized code,
+    // this likely means that some CFG edges were not detected. Pessimistically
+    // assume all registers to be unsafe before this basic block and warn about
+    // this fact in FunctionAnalysis::findUnsafeUses().
+    if (BB.pred_empty())
+      return createUnsafeState();
+
     return SrcState();
   }
 
@@ -688,12 +701,6 @@ class CFGUnawareSrcSafetyAnalysis : public SrcSafetyAnalysis,
                                     public CFGUnawareAnalysis<SrcState> {
   using SrcSafetyAnalysis::BC;
   BinaryFunction &BF;
-
-  /// Creates a state with all registers marked unsafe (not to be confused
-  /// with empty state).
-  SrcState createUnsafeState() const {
-    return SrcState(NumRegs, RegsToTrackInstsFor.getNumTrackedRegisters());
-  }
 
 public:
   CFGUnawareSrcSafetyAnalysis(BinaryFunction &BF,
@@ -1375,19 +1382,30 @@ void FunctionAnalysisContext::findUnsafeUses(
     BF.dump();
   });
 
+  if (BF.hasCFG()) {
+    // Warn on basic blocks being unreachable according to BOLT, as this
+    // likely means CFG is imprecise.
+    for (BinaryBasicBlock &BB : BF) {
+      if (!BB.pred_empty() || BB.isEntryPoint())
+        continue;
+      // Arbitrarily attach the report to the first instruction of BB.
+      MCInst *InstToReport = BB.getFirstNonPseudoInstr();
+      if (!InstToReport)
+        continue; // BB has no real instructions
+
+      Reports.push_back(
+          make_generic_report(MCInstReference::get(InstToReport, BF),
+                              "Warning: no predecessor basic blocks detected "
+                              "(possibly incomplete CFG)"));
+    }
+  }
+
   iterateOverInstrs(BF, [&](MCInstReference Inst) {
     if (BC.MIB->isCFI(Inst))
       return;
 
     const SrcState &S = Analysis->getStateBefore(Inst);
-
-    // If non-empty state was never propagated from the entry basic block
-    // to Inst, assume it to be unreachable and report a warning.
-    if (S.empty()) {
-      Reports.push_back(
-          make_generic_report(Inst, "Warning: unreachable instruction found"));
-      return;
-    }
+    assert(!S.empty() && "Instruction has no associated state");
 
     if (auto Report = shouldReportReturnGadget(BC, Inst, S))
       Reports.push_back(*Report);
