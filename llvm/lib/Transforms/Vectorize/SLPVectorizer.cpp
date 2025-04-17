@@ -6714,6 +6714,8 @@ BoUpSLP::getReorderingData(const TreeEntry &TE, bool TopToBottom,
            "BinaryOperator and CastInst.");
     return TE.ReorderIndices;
   }
+  if (!TE.ReorderIndices.empty())
+    return TE.ReorderIndices;
   if (TE.State == TreeEntry::Vectorize && TE.getOpcode() == Instruction::PHI) {
     if (!TE.ReorderIndices.empty())
       return TE.ReorderIndices;
