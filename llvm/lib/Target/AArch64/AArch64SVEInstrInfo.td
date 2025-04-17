@@ -3498,6 +3498,22 @@ let Predicates = [HasSVE_or_SME] in {
             (EXTRACT_SUBREG ZPR:$Zs, dsub)>;
   }
 
+  multiclass sve_insert_extract_elt<ValueType VT, ValueType VTScalar, Instruction DUP, Operand IdxTy> {
+    // NOP pattern (needed to avoid pointless DUPs being added by the second pattern).
+    def : Pat<(VT (vector_insert undef,
+                  (VTScalar (vector_extract VT:$vec, (i64 0))), (i64 0))),
+              (VT $vec)>;
+
+    def : Pat<(VT (vector_insert undef,
+                    (VTScalar (vector_extract VT:$vec, (i64 IdxTy:$Idx))), (i64 0))),
+              (DUP ZPR:$vec, IdxTy:$Idx)>;
+  }
+
+  defm : sve_insert_extract_elt<nxv16i8, i32, DUP_ZZI_B, sve_elm_idx_extdup_b>;
+  defm : sve_insert_extract_elt<nxv8i16, i32, DUP_ZZI_H, sve_elm_idx_extdup_h>;
+  defm : sve_insert_extract_elt<nxv4i32, i32, DUP_ZZI_S, sve_elm_idx_extdup_s>;
+  defm : sve_insert_extract_elt<nxv2i64, i64, DUP_ZZI_D, sve_elm_idx_extdup_d>;
+
   multiclass sve_predicated_add<SDNode extend, int value> {
     def : Pat<(nxv16i8 (add ZPR:$op, (extend nxv16i1:$pred))),
               (ADD_ZPmZ_B PPR:$pred, ZPR:$op, (DUP_ZI_B value, 0))>;

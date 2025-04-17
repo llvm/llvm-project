@@ -400,6 +400,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   }
 
   if (Subtarget->hasFPARMv8()) {
+    addRegisterClass(MVT::aarch64mfp8, &AArch64::FPR8RegClass);
     addRegisterClass(MVT::f16, &AArch64::FPR16RegClass);
     addRegisterClass(MVT::bf16, &AArch64::FPR16RegClass);
     addRegisterClass(MVT::f32, &AArch64::FPR32RegClass);
@@ -23930,6 +23931,8 @@ static SDValue combineI8TruncStore(StoreSDNode *ST, SelectionDAG &DAG,
 static unsigned getFPSubregForVT(EVT VT) {
   assert(VT.isSimple() && "Expected simple VT");
   switch (VT.getSimpleVT().SimpleTy) {
+  case MVT::aarch64mfp8:
+    return AArch64::bsub;
   case MVT::f16:
     return AArch64::hsub;
   case MVT::f32:
@@ -24019,39 +24022,65 @@ static SDValue performSTORECombine(SDNode *N,
     SDValue ExtIdx = Value.getOperand(1);
     EVT VectorVT = Vector.getValueType();
     EVT ElemVT = VectorVT.getVectorElementType();
-    if (!ValueVT.isInteger() || ElemVT == MVT::i8 || MemVT == MVT::i8)
+
+    if (!ValueVT.isInteger())
       return SDValue();
+
+    // Propagate zero constants (applying this fold may miss optimizations).
+    if (ISD::isConstantSplatVectorAllZeros(Vector.getNode())) {
+      SDValue ZeroElt = DAG.getConstant(0, DL, ValueVT);
+      DAG.ReplaceAllUsesWith(Value, ZeroElt);
+      return SDValue();
+    }
+
     if (ValueVT != MemVT && !ST->isTruncatingStore())
       return SDValue();
 
-    // Heuristic: If there are other users of integer scalars extracted from
-    // this vector that won't fold into the store -- abandon folding. Applying
-    // this fold may extend the vector lifetime and disrupt paired stores.
-    for (const auto &Use : Vector->uses()) {
-      if (Use.getResNo() != Vector.getResNo())
-        continue;
-      const SDNode *User = Use.getUser();
-      if (User->getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
-          (!User->hasOneUse() ||
-           (*User->user_begin())->getOpcode() != ISD::STORE))
-        return SDValue();
+    // This could generate an additional extract if the index is non-zero and
+    // the extracted value has multiple uses.
+    auto *ExtCst = dyn_cast<ConstantSDNode>(ExtIdx);
+    if ((!ExtCst || !ExtCst->isZero()) && !Value.hasOneUse())
+      return SDValue();
+
+    // These can lower to st1, which is preferable if we're unlikely to fold the
+    // addressing into the store.
+    if (Subtarget->isNeonAvailable() && ElemVT == MemVT &&
+        (VectorVT.is64BitVector() || VectorVT.is128BitVector()) && ExtCst &&
+        !ExtCst->isZero() && ST->getBasePtr().getOpcode() != ISD::ADD)
+      return SDValue();
+
+    if (MemVT == MVT::i64 || MemVT == MVT::i32) {
+      // Heuristic: If there are other users of w/x integer scalars extracted
+      // from this vector that won't fold into the store -- abandon folding.
+      // Applying this fold may disrupt paired stores.
+      for (const auto &Use : Vector->uses()) {
+        if (Use.getResNo() != Vector.getResNo())
+          continue;
+        const SDNode *User = Use.getUser();
+        if (User->getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
+            (!User->hasOneUse() ||
+             (*User->user_begin())->getOpcode() != ISD::STORE))
+          return SDValue();
+      }
     }
 
-    EVT FPElemVT = EVT::getFloatingPointVT(ElemVT.getSizeInBits());
-    EVT FPVectorVT = VectorVT.changeVectorElementType(FPElemVT);
-    SDValue Cast = DAG.getNode(ISD::BITCAST, DL, FPVectorVT, Vector);
-    SDValue Ext =
-        DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, FPElemVT, Cast, ExtIdx);
-
-    EVT FPMemVT = EVT::getFloatingPointVT(MemVT.getSizeInBits());
-    if (ST->isTruncatingStore() && FPMemVT != FPElemVT) {
-      SDValue Trunc = DAG.getTargetExtractSubreg(getFPSubregForVT(FPMemVT), DL,
-                                                 FPMemVT, Ext);
-      return DAG.getStore(ST->getChain(), DL, Trunc, ST->getBasePtr(),
-                          ST->getMemOperand());
+    SDValue ExtVector = Vector;
+    if (!ExtCst || !ExtCst->isZero()) {
+      // Handle extracting from lanes != 0.
+      SDValue Ext = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL,
+                                Value.getValueType(), Vector, ExtIdx);
+      SDValue Zero = DAG.getVectorIdxConstant(0, DL);
+      ExtVector = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, VectorVT,
+                              DAG.getUNDEF(VectorVT), Ext, Zero);
     }
 
-    return DAG.getStore(ST->getChain(), DL, Ext, ST->getBasePtr(),
+    EVT FPMemVT = MemVT == MVT::i8
+                      ? MVT::aarch64mfp8
+                      : EVT::getFloatingPointVT(MemVT.getSizeInBits());
+    SDValue FPSubreg = DAG.getTargetExtractSubreg(getFPSubregForVT(FPMemVT), DL,
+                                                  FPMemVT, ExtVector);
+
+    return DAG.getStore(ST->getChain(), DL, FPSubreg, ST->getBasePtr(),
                         ST->getMemOperand());
   }
 
