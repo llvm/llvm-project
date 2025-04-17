@@ -10,7 +10,7 @@ A struct or a class is considered to be a tagged union if it has
 exactly one union data member and exactly one enum data member and
 any number of other data members that are neither unions or enums.
 The union and enum data members that are from system header files or
-the std namespace are not considered to make up the tagged union part
+the ``std`` namespace are not considered to make up the tagged union part
 of a user-defined tagged union type.
 
 Example:
@@ -32,7 +32,7 @@ Example:
   };
 
 The following example illustrates the exception for unions and enums from
-system header files and the std namespace.
+system header files and the ``std`` namespace.
 
 .. code-block:: c++
 
@@ -43,11 +43,11 @@ system header files and the std namespace.
     pthread_mutex_t Mutex;
   };
 
-The pthread_mutex_t type may be defined as a union behind a typedef,
+The ``pthread_mutex_t`` type may be defined as a union behind a typedef,
 in which case the check could mistake this type as a user-defined tagged union.
 After all it has exactly one enum data member and exactly one union data member.
 To avoid false-positive cases originating from this, unions and enums from
-system headers and the std namespace are ignored when pinpointing the
+system headers and the ``std`` namespace are ignored when pinpointing the
 union part and the enum part of a potential user-defined tagged union.
 
 How enum constants are counted
