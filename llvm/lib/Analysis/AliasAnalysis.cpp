@@ -384,7 +384,7 @@ ModRefInfo AAResults::getModRefInfo(const Instruction *I1,
   if (const auto *Call2 = dyn_cast<CallBase>(I2))
     return getModRefInfo(I1, Call2, AAQI);
 
-// FIXME: We can have a more precise result.
+  // FIXME: We can have a more precise result.
   ModRefInfo MR = getModRefInfo(I1, MemoryLocation::getOrNone(I2), AAQI);
   return isModOrRefSet(MR) ? ModRefInfo::ModRef : ModRefInfo::NoModRef;
 }
