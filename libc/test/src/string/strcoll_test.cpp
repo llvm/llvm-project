@@ -30,7 +30,7 @@ TEST(LlvmLibcStrcollTest, SimpleTest) {
   ASSERT_GT(result, 0);
 }
 
-#if defined(LIBC_TARGET_OS_IS_LINUX)
+#ifdef LIBC_TARGET_OS_IS_LINUX
 
 TEST(LlvmLibcStrcollTest, CrashOnNullPtr) {
   ASSERT_DEATH([]() { LIBC_NAMESPACE::strcoll(nullptr, nullptr); },

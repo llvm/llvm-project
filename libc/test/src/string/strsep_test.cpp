@@ -53,7 +53,7 @@ TEST(LlvmLibcStrsepTest, DelimitersShouldNotBeIncludedInToken) {
   }
 }
 
-#if defined(LIBC_TARGET_OS_IS_LINUX)
+#ifdef LIBC_TARGET_OS_IS_LINUX
 
 TEST(LlvmLibcStrsepTest, CrashOnNullPtr) {
   ASSERT_DEATH([]() { LIBC_NAMESPACE::strsep(nullptr, nullptr); },

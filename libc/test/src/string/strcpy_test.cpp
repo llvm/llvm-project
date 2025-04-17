@@ -44,7 +44,7 @@ TEST(LlvmLibcStrCpyTest, OffsetDest) {
   ASSERT_STREQ(dest, "xyzabc");
 }
 
-#if defined(LIBC_TARGET_OS_IS_LINUX)
+#ifdef LIBC_TARGET_OS_IS_LINUX
 
 TEST(LlvmLibcStrCpyTest, CrashOnNullPtr) {
   ASSERT_DEATH([]() { LIBC_NAMESPACE::strcpy(nullptr, nullptr); },
