@@ -852,7 +852,7 @@ struct TestVectorLinearize final
   }
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<vector::VectorDialect, memref::MemRefDialect,
-                    arith::ArithDialect, scf::SCFDialect>();
+                    arith::ArithDialect>();
   }
 
   Option<unsigned> targetVectorBitwidth{

@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
-#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/UB/IR/UBOps.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Transforms/VectorRewritePatterns.h"
@@ -29,9 +28,9 @@ using namespace mlir;
 
 static bool isLessThanTargetBitWidth(Operation *op, unsigned targetBitWidth) {
   // For BW-0, all operations are legal
-  if (targetBitWidth == 0) {
+  if (targetBitWidth == 0)
     return false;
-  }
+
   auto resultTypes = op->getResultTypes();
   for (auto resType : resultTypes) {
     VectorType vecType = dyn_cast<VectorType>(resType);
@@ -302,32 +301,37 @@ struct LinearizeVectorInsertStridedSlice final
         targetVectorBitWidth(targetVectBitWidth) {}
 
   LogicalResult
-  matchAndRewrite(vector::InsertStridedSliceOp op, OpAdaptor adaptor,
+  matchAndRewrite(vector::InsertStridedSliceOp insertOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    auto loc = op.getLoc();
-    auto srcTy = op.getSourceVectorType();
-    auto dstTy = op.getDestVectorType();
+    auto loc = insertOp.getLoc();
+    auto srcTy = insertOp.getSourceVectorType();
+    auto dstTy = insertOp.getDestVectorType();
 
-    if (op.hasNonUnitStrides()) {
+    if (insertOp.hasNonUnitStrides())
       return rewriter.notifyMatchFailure(
-          op, "InsertStridedSliceOp linearization only supports unit strides.");
-    }
+          insertOp,
+          "InsertStridedSliceOp linearization only supports unit strides.");
 
-    if (srcTy.getRank() != 2) {
+    if (srcTy.getRank() != 2)
       return rewriter.notifyMatchFailure(
-          op, "InsertStridedSliceOp linearization only supports 2D source.");
-    }
+          insertOp,
+          "InsertStridedSliceOp linearization only supports 2D source.");
 
-    if (!srcTy.hasStaticShape() || !dstTy.hasStaticShape()) {
+    if (!srcTy.hasStaticShape() || !dstTy.hasStaticShape())
       return rewriter.notifyMatchFailure(
-          op, "InsertStridedSliceOp linerization only supports static shapes.");
-    }
+          insertOp,
+          "InsertStridedSliceOp linerization only supports static shapes.");
+
+    if (srcTy.isScalable() || dstTy.isScalable())
+      return rewriter.notifyMatchFailure(insertOp,
+                                         "scalable vectors are not supported.");
 
     auto dstShape = dstTy.getShape();
     auto dstStrides = dstShape.drop_front().vec();
     dstStrides.push_back(1);
     int64_t linearizedOffset = 0;
-    for (auto [off, stride] : llvm::zip_equal(op.getOffsets(), dstStrides)) {
+    for (auto [off, stride] :
+         llvm::zip_equal(insertOp.getOffsets(), dstStrides)) {
       linearizedOffset += getConstantIntValue(off).value() * stride;
     }
 
@@ -344,7 +348,7 @@ struct LinearizeVectorInsertStridedSlice final
           loc, value, dstValue, dstOffset, 1);
     }
 
-    rewriter.replaceOp(op, dstValue);
+    rewriter.replaceOp(insertOp, dstValue);
     return success();
   }
 
@@ -535,12 +539,11 @@ struct LinearizeVectorInsert final
     auto srcTy = insertOp.getValueToStoreType();
     auto srcAsVec = dyn_cast<VectorType>(srcTy);
     uint64_t srcSize = 0;
-    if (srcAsVec) {
+    if (srcAsVec)
       srcSize = srcAsVec.getNumElements();
-    } else {
+    else
       return rewriter.notifyMatchFailure(insertOp,
                                          "scalars are not supported.");
-    }
 
     auto dstShape = insertOp.getDestVectorType().getShape();
     const auto dstSize = insertOp.getDestVectorType().getNumElements();
@@ -646,9 +649,9 @@ struct LinearizeVectorLoad final : public OpConversionPattern<vector::LoadOp> {
     auto vecType = loadOp.getVectorType();
     auto shape = vecType.getShape();
 
-    if (shape.size() != 2) {
+    if (shape.size() != 2)
       return rewriter.notifyMatchFailure(loc, "Can only linearize 2D vectors.");
-    }
+
     auto unrollCount = shape[0];
     auto vecSize = shape[1];
     auto newVecType = VectorType::get({vecSize}, vecType.getElementType());
@@ -711,9 +714,8 @@ struct LinearizeVectorStore final
     auto vecType = storeOp.getVectorType();
     auto shape = vecType.getShape();
 
-    if (shape.size() != 2) {
+    if (shape.size() != 2)
       return rewriter.notifyMatchFailure(loc, "Can only linearize 2D vectors.");
-    }
 
     auto unrollCount = shape[0];
     llvm::SmallVector<Value, 4> indices = adaptor.getIndices();
@@ -823,97 +825,6 @@ private:
   unsigned targetVectorBitWidth;
 };
 
-/// This pattern converts operations implementing the RegionBranchOpInterface
-/// to ensure compatibility with linearized vector types. It updates the
-/// operands, result types, and region types (block arguments and yields) to
-/// match the converted types. Additionally, it processes yields within each
-/// region to ensure that the types of yielded values are compatible with the
-/// target vector bit width. If the result types of the operation are updated,
-/// shape cast operations are inserted to maintain compatibility with the
-/// original types. This pattern ensures that operations with regions are
-/// properly linearized and remain valid after type conversion.
-struct LinearizeRegionBranchOp final
-    : public OpInterfaceConversionPattern<RegionBranchOpInterface> {
-  using OpInterfaceConversionPattern<
-      RegionBranchOpInterface>::OpInterfaceConversionPattern;
-
-  LinearizeRegionBranchOp(
-      const TypeConverter &typeConverter, MLIRContext *context,
-      unsigned targetVectBitWidth = std::numeric_limits<unsigned>::max(),
-      PatternBenefit benefit = 1)
-      : OpInterfaceConversionPattern(typeConverter, context, benefit),
-        targetVectorBitWidth(targetVectBitWidth) {}
-
-  LogicalResult
-  matchAndRewrite(RegionBranchOpInterface op, ArrayRef<Value> operands,
-                  ConversionPatternRewriter &rewriter) const override {
-    auto loc = op.getLoc();
-    auto converter = getTypeConverter();
-
-    OpBuilder::InsertionGuard guard(rewriter);
-    rewriter.startOpModification(op);
-
-    llvm::SmallVector<Type> convertedTypes;
-    for (Type ty : op->getResultTypes()) {
-      convertedTypes.push_back(converter->convertType(ty));
-    }
-
-    if (convertedTypes == op->getResultTypes() &&
-        op->getOperands() == operands) {
-      return failure();
-    }
-
-    op->setOperands(operands);
-
-    // Convert region types (block arguments and yields)
-    for (Region &region : op->getRegions()) {
-      if (failed(rewriter.convertRegionTypes(&region, *converter))) {
-        return failure();
-      }
-
-      // Process yields within each region
-      for (Block &block : region) {
-        if (auto *terminator = block.getTerminator()) {
-          for (OpOperand &yieldOperand : terminator->getOpOperands()) {
-            Value value = yieldOperand.get();
-            Type type = value.getType();
-            if (!converter->isLegal(type)) {
-              Type newTy = converter->convertType(type);
-              rewriter.setInsertionPoint(terminator);
-              Value newValue =
-                  rewriter.create<vector::ShapeCastOp>(loc, newTy, value);
-              yieldOperand.set(newValue);
-            }
-          }
-        }
-      }
-    }
-
-    // Update result types
-    rewriter.setInsertionPointAfter(op);
-    llvm::SmallVector<Value> newResults;
-    for (Value result : op->getResults()) {
-      Type oldTy = result.getType();
-      if (!converter->isLegal(oldTy)) {
-        Type newTy = converter->convertType(oldTy);
-        result.setType(newTy);
-        Operation *castOp =
-            rewriter.create<vector::ShapeCastOp>(loc, oldTy, result);
-        result.replaceAllUsesExcept(castOp->getResult(0), castOp);
-        newResults.push_back(castOp->getResult(0));
-      } else {
-        newResults.push_back(result);
-      }
-    }
-
-    rewriter.finalizeOpModification(op);
-    return success();
-  }
-
-private:
-  unsigned targetVectorBitWidth;
-};
-
 } // namespace
 
 void mlir::vector::populateVectorLinearizeTypeConversionsAndLegality(
@@ -940,25 +851,24 @@ void mlir::vector::populateVectorLinearizeTypeConversionsAndLegality(
   typeConverter.addSourceMaterialization(materializeCast);
   typeConverter.addTargetMaterialization(materializeCast);
   target.addLegalOp<mlir::vector::ShapeCastOp>();
-  target.markUnknownOpDynamicallyLegal([=](Operation *op)
-                                           -> std::optional<bool> {
-    if ((isa<vector::BitCastOp, vector::LoadOp, vector::StoreOp,
-             vector::CreateMaskOp, RegionBranchOpInterface, vector::SplatOp>(
-             op) ||
-         op->hasTrait<OpTrait::ConstantLike>() ||
-         op->hasTrait<OpTrait::Vectorizable>())) {
-      return (isLessThanTargetBitWidth(op, targetBitWidth)
-                  ? typeConverter.isLegal(op)
-                  : true);
-    }
-    return std::nullopt;
-  });
+  target.markUnknownOpDynamicallyLegal(
+      [=](Operation *op) -> std::optional<bool> {
+        if ((isa<vector::BitCastOp, vector::LoadOp, vector::StoreOp,
+                 vector::CreateMaskOp, vector::SplatOp>(op) ||
+             op->hasTrait<OpTrait::ConstantLike>() ||
+             op->hasTrait<OpTrait::Vectorizable>())) {
+          return (isLessThanTargetBitWidth(op, targetBitWidth)
+                      ? typeConverter.isLegal(op)
+                      : true);
+        }
+        return std::nullopt;
+      });
 
   patterns
       .add<LinearizeConstantLike, LinearizeVectorizable, LinearizeVectorBitCast,
            LinearizeVectorLoad, LinearizeVectorStore, LinearizeVectorSplat,
-           LinearizeVectorCreateMask, LinearizeRegionBranchOp>(
-          typeConverter, patterns.getContext(), targetBitWidth);
+           LinearizeVectorCreateMask>(typeConverter, patterns.getContext(),
+                                      targetBitWidth);
 }
 
 void mlir::vector::populateVectorLinearizeShuffleLikeOpsPatterns(
