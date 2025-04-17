@@ -195,7 +195,7 @@ mlir::Type hlfir::DeclareOp::getHLFIRVariableType(mlir::Type inputType,
   bool hasDynamicLengthParams = fir::characterWithDynamicLen(eleType) ||
                                 fir::isRecordWithTypeParameters(eleType);
   if (hasExplicitLowerBounds || hasDynamicExtents || hasDynamicLengthParams)
-    return fir::BoxType::get(type);
+    return fir::BoxType::get(type, fir::isa_volatile_type(inputType));
   return inputType;
 }
 

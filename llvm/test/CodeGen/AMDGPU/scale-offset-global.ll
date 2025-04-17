@@ -63,8 +63,8 @@ define amdgpu_ps float @global_load_b32_idxprom_wrong_stride(ptr addrspace(1) al
 ;
 ; GFX13-GISEL-LABEL: global_load_b32_idxprom_wrong_stride:
 ; GFX13-GISEL:       ; %bb.0: ; %entry
-; GFX13-GISEL-NEXT:    v_dual_ashrrev_i32 v1, 31, v0 :: v_dual_mov_b32 v3, s1
-; GFX13-GISEL-NEXT:    v_mov_b32_e32 v2, s0
+; GFX13-GISEL-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v3, s1 :: v_dual_mov_b32 v2, s0
 ; GFX13-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-GISEL-NEXT:    v_lshlrev_b64_e32 v[0:1], 3, v[0:1]
 ; GFX13-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, v2, v0

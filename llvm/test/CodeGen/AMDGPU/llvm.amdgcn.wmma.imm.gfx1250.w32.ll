@@ -27,11 +27,12 @@ bb:
 define amdgpu_ps void @test_wmma_f32_16x16x4_f32_non_splat(<2 x float> %A, <2 x float> %B, ptr addrspace(1) %out) {
 ; GFX1250-LABEL: test_wmma_f32_16x16x4_f32_non_splat:
 ; GFX1250:       ; %bb.0: ; %bb
-; GFX1250-NEXT:    v_dual_mov_b32 v6, 1.0 :: v_dual_mov_b32 v8, 2.0
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
-; GFX1250-NEXT:    v_dual_mov_b32 v7, v6 :: v_dual_mov_b32 v9, v6
-; GFX1250-NEXT:    v_dual_mov_b32 v10, v6 :: v_dual_mov_b32 v11, v6
-; GFX1250-NEXT:    v_dual_mov_b32 v12, v6 :: v_dual_mov_b32 v13, v6
+; GFX1250-NEXT:    v_mov_b32_e32 v6, 1.0
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_3) | instid1(VALU_DEP_1)
+; GFX1250-NEXT:    v_dual_mov_b32 v8, 2.0 :: v_dual_mov_b32 v7, v6
+; GFX1250-NEXT:    v_dual_mov_b32 v9, v6 :: v_dual_mov_b32 v10, v6
+; GFX1250-NEXT:    v_dual_mov_b32 v11, v6 :: v_dual_mov_b32 v12, v6
+; GFX1250-NEXT:    v_mov_b32_e32 v13, v6
 ; GFX1250-NEXT:    v_wmma_f32_16x16x4_f32 v[6:13], v[0:1], v[2:3], v[6:13]
 ; GFX1250-NEXT:    s_clause 0x1
 ; GFX1250-NEXT:    global_store_b128 v[4:5], v[10:13], off offset:16
@@ -131,11 +132,12 @@ bb:
 define amdgpu_ps void @test_wmma_f32_16x16x32_bf16_non_splat(<16 x bfloat> %A, <16 x bfloat> %B, ptr addrspace(1) %out) {
 ; GFX1250-LABEL: test_wmma_f32_16x16x32_bf16_non_splat:
 ; GFX1250:       ; %bb.0: ; %bb
-; GFX1250-NEXT:    v_dual_mov_b32 v18, 1.0 :: v_dual_mov_b32 v20, 2.0
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
-; GFX1250-NEXT:    v_dual_mov_b32 v19, v18 :: v_dual_mov_b32 v21, v18
-; GFX1250-NEXT:    v_dual_mov_b32 v22, v18 :: v_dual_mov_b32 v23, v18
-; GFX1250-NEXT:    v_dual_mov_b32 v24, v18 :: v_dual_mov_b32 v25, v18
+; GFX1250-NEXT:    v_mov_b32_e32 v18, 1.0
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_3) | instid1(VALU_DEP_1)
+; GFX1250-NEXT:    v_dual_mov_b32 v20, 2.0 :: v_dual_mov_b32 v19, v18
+; GFX1250-NEXT:    v_dual_mov_b32 v21, v18 :: v_dual_mov_b32 v22, v18
+; GFX1250-NEXT:    v_dual_mov_b32 v23, v18 :: v_dual_mov_b32 v24, v18
+; GFX1250-NEXT:    v_mov_b32_e32 v25, v18
 ; GFX1250-NEXT:    v_wmma_f32_16x16x32_bf16 v[18:25], v[0:7], v[8:15], v[18:25]
 ; GFX1250-NEXT:    s_clause 0x1
 ; GFX1250-NEXT:    global_store_b128 v[16:17], v[22:25], off offset:16
@@ -144,11 +146,12 @@ define amdgpu_ps void @test_wmma_f32_16x16x32_bf16_non_splat(<16 x bfloat> %A, <
 ;
 ; GISEL-LABEL: test_wmma_f32_16x16x32_bf16_non_splat:
 ; GISEL:       ; %bb.0: ; %bb
-; GISEL-NEXT:    v_dual_mov_b32 v18, 1.0 :: v_dual_mov_b32 v20, 2.0
-; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
-; GISEL-NEXT:    v_dual_mov_b32 v19, v18 :: v_dual_mov_b32 v21, v18
-; GISEL-NEXT:    v_dual_mov_b32 v22, v18 :: v_dual_mov_b32 v23, v18
-; GISEL-NEXT:    v_dual_mov_b32 v24, v18 :: v_dual_mov_b32 v25, v18
+; GISEL-NEXT:    v_mov_b32_e32 v18, 1.0
+; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_3) | instid1(VALU_DEP_1)
+; GISEL-NEXT:    v_dual_mov_b32 v20, 2.0 :: v_dual_mov_b32 v19, v18
+; GISEL-NEXT:    v_dual_mov_b32 v21, v18 :: v_dual_mov_b32 v22, v18
+; GISEL-NEXT:    v_dual_mov_b32 v23, v18 :: v_dual_mov_b32 v24, v18
+; GISEL-NEXT:    v_mov_b32_e32 v25, v18
 ; GISEL-NEXT:    v_wmma_f32_16x16x32_bf16 v[18:25], v[0:7], v[8:15], v[18:25]
 ; GISEL-NEXT:    s_clause 0x1
 ; GISEL-NEXT:    global_store_b128 v[16:17], v[22:25], off offset:16
@@ -283,22 +286,24 @@ bb:
 define amdgpu_ps void @test_wmma_bf16f32_16x16x32_bf16_non_splat(<16 x bfloat> %A, <16 x bfloat> %B, <8 x float> %C, ptr addrspace(1) %out) {
 ; GFX1250-LABEL: test_wmma_bf16f32_16x16x32_bf16_non_splat:
 ; GFX1250:       ; %bb.0: ; %bb
-; GFX1250-NEXT:    v_dual_mov_b32 v18, 1.0 :: v_dual_mov_b32 v20, 2.0
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
-; GFX1250-NEXT:    v_dual_mov_b32 v19, v18 :: v_dual_mov_b32 v21, v18
-; GFX1250-NEXT:    v_dual_mov_b32 v22, v18 :: v_dual_mov_b32 v23, v18
-; GFX1250-NEXT:    v_dual_mov_b32 v24, v18 :: v_dual_mov_b32 v25, v18
+; GFX1250-NEXT:    v_mov_b32_e32 v18, 1.0
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_3) | instid1(VALU_DEP_1)
+; GFX1250-NEXT:    v_dual_mov_b32 v20, 2.0 :: v_dual_mov_b32 v19, v18
+; GFX1250-NEXT:    v_dual_mov_b32 v21, v18 :: v_dual_mov_b32 v22, v18
+; GFX1250-NEXT:    v_dual_mov_b32 v23, v18 :: v_dual_mov_b32 v24, v18
+; GFX1250-NEXT:    v_mov_b32_e32 v25, v18
 ; GFX1250-NEXT:    v_wmma_bf16f32_16x16x32_bf16 v[26:29], v[0:7], v[8:15], v[18:25]
 ; GFX1250-NEXT:    global_store_b128 v[16:17], v[26:29], off
 ; GFX1250-NEXT:    s_endpgm
 ;
 ; GISEL-LABEL: test_wmma_bf16f32_16x16x32_bf16_non_splat:
 ; GISEL:       ; %bb.0: ; %bb
-; GISEL-NEXT:    v_dual_mov_b32 v18, 1.0 :: v_dual_mov_b32 v20, 2.0
-; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
-; GISEL-NEXT:    v_dual_mov_b32 v19, v18 :: v_dual_mov_b32 v21, v18
-; GISEL-NEXT:    v_dual_mov_b32 v22, v18 :: v_dual_mov_b32 v23, v18
-; GISEL-NEXT:    v_dual_mov_b32 v24, v18 :: v_dual_mov_b32 v25, v18
+; GISEL-NEXT:    v_mov_b32_e32 v18, 1.0
+; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_3) | instid1(VALU_DEP_1)
+; GISEL-NEXT:    v_dual_mov_b32 v20, 2.0 :: v_dual_mov_b32 v19, v18
+; GISEL-NEXT:    v_dual_mov_b32 v21, v18 :: v_dual_mov_b32 v22, v18
+; GISEL-NEXT:    v_dual_mov_b32 v23, v18 :: v_dual_mov_b32 v24, v18
+; GISEL-NEXT:    v_mov_b32_e32 v25, v18
 ; GISEL-NEXT:    v_wmma_bf16f32_16x16x32_bf16 v[26:29], v[0:7], v[8:15], v[18:25]
 ; GISEL-NEXT:    global_store_b128 v[16:17], v[26:29], off
 ; GISEL-NEXT:    s_endpgm
@@ -363,11 +368,12 @@ bb:
 define amdgpu_ps void @test_wmma_f32_16x16x64_fp8_fp8_non_splat(<8 x i32> %A, <8 x i32> %B, ptr addrspace(1) %out) {
 ; GFX1250-LABEL: test_wmma_f32_16x16x64_fp8_fp8_non_splat:
 ; GFX1250:       ; %bb.0: ; %bb
-; GFX1250-NEXT:    v_dual_mov_b32 v18, 1.0 :: v_dual_mov_b32 v20, 2.0
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
-; GFX1250-NEXT:    v_dual_mov_b32 v19, v18 :: v_dual_mov_b32 v21, v18
-; GFX1250-NEXT:    v_dual_mov_b32 v22, v18 :: v_dual_mov_b32 v23, v18
-; GFX1250-NEXT:    v_dual_mov_b32 v24, v18 :: v_dual_mov_b32 v25, v18
+; GFX1250-NEXT:    v_mov_b32_e32 v18, 1.0
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_3) | instid1(VALU_DEP_1)
+; GFX1250-NEXT:    v_dual_mov_b32 v20, 2.0 :: v_dual_mov_b32 v19, v18
+; GFX1250-NEXT:    v_dual_mov_b32 v21, v18 :: v_dual_mov_b32 v22, v18
+; GFX1250-NEXT:    v_dual_mov_b32 v23, v18 :: v_dual_mov_b32 v24, v18
+; GFX1250-NEXT:    v_mov_b32_e32 v25, v18
 ; GFX1250-NEXT:    v_wmma_f32_16x16x64_fp8_fp8 v[18:25], v[0:7], v[8:15], v[18:25]
 ; GFX1250-NEXT:    s_clause 0x1
 ; GFX1250-NEXT:    global_store_b128 v[16:17], v[22:25], off offset:16
@@ -467,11 +473,12 @@ bb:
 define amdgpu_ps void @test_wmma_f32_16x16x64_fp8_bf8_non_splat(<8 x i32> %A, <8 x i32> %B, ptr addrspace(1) %out) {
 ; GFX1250-LABEL: test_wmma_f32_16x16x64_fp8_bf8_non_splat:
 ; GFX1250:       ; %bb.0: ; %bb
-; GFX1250-NEXT:    v_dual_mov_b32 v18, 1.0 :: v_dual_mov_b32 v20, 2.0
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
-; GFX1250-NEXT:    v_dual_mov_b32 v19, v18 :: v_dual_mov_b32 v21, v18
-; GFX1250-NEXT:    v_dual_mov_b32 v22, v18 :: v_dual_mov_b32 v23, v18
-; GFX1250-NEXT:    v_dual_mov_b32 v24, v18 :: v_dual_mov_b32 v25, v18
+; GFX1250-NEXT:    v_mov_b32_e32 v18, 1.0
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_3) | instid1(VALU_DEP_1)
+; GFX1250-NEXT:    v_dual_mov_b32 v20, 2.0 :: v_dual_mov_b32 v19, v18
+; GFX1250-NEXT:    v_dual_mov_b32 v21, v18 :: v_dual_mov_b32 v22, v18
+; GFX1250-NEXT:    v_dual_mov_b32 v23, v18 :: v_dual_mov_b32 v24, v18
+; GFX1250-NEXT:    v_mov_b32_e32 v25, v18
 ; GFX1250-NEXT:    v_wmma_f32_16x16x64_fp8_bf8 v[18:25], v[0:7], v[8:15], v[18:25]
 ; GFX1250-NEXT:    s_clause 0x1
 ; GFX1250-NEXT:    global_store_b128 v[16:17], v[22:25], off offset:16
@@ -571,11 +578,12 @@ bb:
 define amdgpu_ps void @test_wmma_f32_16x16x64_bf8_fp8_non_splat(<8 x i32> %A, <8 x i32> %B, ptr addrspace(1) %out) {
 ; GFX1250-LABEL: test_wmma_f32_16x16x64_bf8_fp8_non_splat:
 ; GFX1250:       ; %bb.0: ; %bb
-; GFX1250-NEXT:    v_dual_mov_b32 v18, 1.0 :: v_dual_mov_b32 v20, 2.0
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
-; GFX1250-NEXT:    v_dual_mov_b32 v19, v18 :: v_dual_mov_b32 v21, v18
-; GFX1250-NEXT:    v_dual_mov_b32 v22, v18 :: v_dual_mov_b32 v23, v18
-; GFX1250-NEXT:    v_dual_mov_b32 v24, v18 :: v_dual_mov_b32 v25, v18
+; GFX1250-NEXT:    v_mov_b32_e32 v18, 1.0
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_3) | instid1(VALU_DEP_1)
+; GFX1250-NEXT:    v_dual_mov_b32 v20, 2.0 :: v_dual_mov_b32 v19, v18
+; GFX1250-NEXT:    v_dual_mov_b32 v21, v18 :: v_dual_mov_b32 v22, v18
+; GFX1250-NEXT:    v_dual_mov_b32 v23, v18 :: v_dual_mov_b32 v24, v18
+; GFX1250-NEXT:    v_mov_b32_e32 v25, v18
 ; GFX1250-NEXT:    v_wmma_f32_16x16x64_bf8_fp8 v[18:25], v[0:7], v[8:15], v[18:25]
 ; GFX1250-NEXT:    s_clause 0x1
 ; GFX1250-NEXT:    global_store_b128 v[16:17], v[22:25], off offset:16
@@ -675,11 +683,12 @@ bb:
 define amdgpu_ps void @test_wmma_f32_16x16x64_bf8_bf8_non_splat(<8 x i32> %A, <8 x i32> %B, ptr addrspace(1) %out) {
 ; GFX1250-LABEL: test_wmma_f32_16x16x64_bf8_bf8_non_splat:
 ; GFX1250:       ; %bb.0: ; %bb
-; GFX1250-NEXT:    v_dual_mov_b32 v18, 1.0 :: v_dual_mov_b32 v20, 2.0
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
-; GFX1250-NEXT:    v_dual_mov_b32 v19, v18 :: v_dual_mov_b32 v21, v18
-; GFX1250-NEXT:    v_dual_mov_b32 v22, v18 :: v_dual_mov_b32 v23, v18
-; GFX1250-NEXT:    v_dual_mov_b32 v24, v18 :: v_dual_mov_b32 v25, v18
+; GFX1250-NEXT:    v_mov_b32_e32 v18, 1.0
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_3) | instid1(VALU_DEP_1)
+; GFX1250-NEXT:    v_dual_mov_b32 v20, 2.0 :: v_dual_mov_b32 v19, v18
+; GFX1250-NEXT:    v_dual_mov_b32 v21, v18 :: v_dual_mov_b32 v22, v18
+; GFX1250-NEXT:    v_dual_mov_b32 v23, v18 :: v_dual_mov_b32 v24, v18
+; GFX1250-NEXT:    v_mov_b32_e32 v25, v18
 ; GFX1250-NEXT:    v_wmma_f32_16x16x64_bf8_bf8 v[18:25], v[0:7], v[8:15], v[18:25]
 ; GFX1250-NEXT:    s_clause 0x1
 ; GFX1250-NEXT:    global_store_b128 v[16:17], v[22:25], off offset:16
@@ -1083,11 +1092,12 @@ bb:
 define amdgpu_ps void @test_wmma_i32_16x16x64_iu8_non_splat(<8 x i32> %A, <8 x i32> %B, ptr addrspace(1) %out) {
 ; GFX1250-LABEL: test_wmma_i32_16x16x64_iu8_non_splat:
 ; GFX1250:       ; %bb.0: ; %bb
-; GFX1250-NEXT:    v_dual_mov_b32 v18, 1 :: v_dual_mov_b32 v20, 2
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
-; GFX1250-NEXT:    v_dual_mov_b32 v19, v18 :: v_dual_mov_b32 v21, v18
-; GFX1250-NEXT:    v_dual_mov_b32 v22, v18 :: v_dual_mov_b32 v23, v18
-; GFX1250-NEXT:    v_dual_mov_b32 v24, v18 :: v_dual_mov_b32 v25, v18
+; GFX1250-NEXT:    v_mov_b32_e32 v18, 1
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_3) | instid1(VALU_DEP_1)
+; GFX1250-NEXT:    v_dual_mov_b32 v20, 2 :: v_dual_mov_b32 v19, v18
+; GFX1250-NEXT:    v_dual_mov_b32 v21, v18 :: v_dual_mov_b32 v22, v18
+; GFX1250-NEXT:    v_dual_mov_b32 v23, v18 :: v_dual_mov_b32 v24, v18
+; GFX1250-NEXT:    v_mov_b32_e32 v25, v18
 ; GFX1250-NEXT:    v_wmma_i32_16x16x64_iu8 v[18:25], v[0:7], v[8:15], v[18:25]
 ; GFX1250-NEXT:    s_clause 0x1
 ; GFX1250-NEXT:    global_store_b128 v[16:17], v[22:25], off offset:16
@@ -1187,11 +1197,12 @@ bb:
 define amdgpu_ps void @test_wmma_i32_16x16x128_iu4_non_splat(<8 x i32> %A, <8 x i32> %B, ptr addrspace(1) %out) {
 ; GFX1250-LABEL: test_wmma_i32_16x16x128_iu4_non_splat:
 ; GFX1250:       ; %bb.0: ; %bb
-; GFX1250-NEXT:    v_dual_mov_b32 v18, 1 :: v_dual_mov_b32 v20, 2
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
-; GFX1250-NEXT:    v_dual_mov_b32 v19, v18 :: v_dual_mov_b32 v21, v18
-; GFX1250-NEXT:    v_dual_mov_b32 v22, v18 :: v_dual_mov_b32 v23, v18
-; GFX1250-NEXT:    v_dual_mov_b32 v24, v18 :: v_dual_mov_b32 v25, v18
+; GFX1250-NEXT:    v_mov_b32_e32 v18, 1
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_3) | instid1(VALU_DEP_1)
+; GFX1250-NEXT:    v_dual_mov_b32 v20, 2 :: v_dual_mov_b32 v19, v18
+; GFX1250-NEXT:    v_dual_mov_b32 v21, v18 :: v_dual_mov_b32 v22, v18
+; GFX1250-NEXT:    v_dual_mov_b32 v23, v18 :: v_dual_mov_b32 v24, v18
+; GFX1250-NEXT:    v_mov_b32_e32 v25, v18
 ; GFX1250-NEXT:    v_wmma_i32_16x16x128_iu4 v[18:25], v[0:7], v[8:15], v[18:25]
 ; GFX1250-NEXT:    s_clause 0x1
 ; GFX1250-NEXT:    global_store_b128 v[16:17], v[22:25], off offset:16
@@ -1291,11 +1302,12 @@ bb:
 define amdgpu_ps void @test_wmma_f32_16x16x32_f16_non_splat(<16 x half> %A, <16 x half> %B, ptr addrspace(1) %out) {
 ; GFX1250-LABEL: test_wmma_f32_16x16x32_f16_non_splat:
 ; GFX1250:       ; %bb.0: ; %bb
-; GFX1250-NEXT:    v_dual_mov_b32 v18, 1.0 :: v_dual_mov_b32 v20, 2.0
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
-; GFX1250-NEXT:    v_dual_mov_b32 v19, v18 :: v_dual_mov_b32 v21, v18
-; GFX1250-NEXT:    v_dual_mov_b32 v22, v18 :: v_dual_mov_b32 v23, v18
-; GFX1250-NEXT:    v_dual_mov_b32 v24, v18 :: v_dual_mov_b32 v25, v18
+; GFX1250-NEXT:    v_mov_b32_e32 v18, 1.0
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_3) | instid1(VALU_DEP_1)
+; GFX1250-NEXT:    v_dual_mov_b32 v20, 2.0 :: v_dual_mov_b32 v19, v18
+; GFX1250-NEXT:    v_dual_mov_b32 v21, v18 :: v_dual_mov_b32 v22, v18
+; GFX1250-NEXT:    v_dual_mov_b32 v23, v18 :: v_dual_mov_b32 v24, v18
+; GFX1250-NEXT:    v_mov_b32_e32 v25, v18
 ; GFX1250-NEXT:    v_wmma_f32_16x16x32_f16 v[18:25], v[0:7], v[8:15], v[18:25]
 ; GFX1250-NEXT:    s_clause 0x1
 ; GFX1250-NEXT:    global_store_b128 v[16:17], v[22:25], off offset:16
@@ -1463,7 +1475,7 @@ define amdgpu_ps void @test_wmma_f32_16x16x128_f8f6f4(<16 x i32> %A, <16 x i32> 
 ; GISEL-NEXT:    global_store_b128 v[32:33], v[38:41], off offset:16
 ; GISEL-NEXT:    s_endpgm
 bb:
-  %res = call <8 x float> @llvm.amdgcn.wmma.f32.16x16x128.f8f6f4.v8f32.v16i32(i32 0, <16 x i32> %A, i32 0, <16 x i32> %B, i16 0, <8 x float> <float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0>)
+  %res = call <8 x float> @llvm.amdgcn.wmma.f32.16x16x128.f8f6f4.v8f32.v16i32.v16i32(i32 0, <16 x i32> %A, i32 0, <16 x i32> %B, i16 0, <8 x float> <float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0>)
   store <8 x float> %res, ptr addrspace(1) %out
   ret void
 }
@@ -1503,7 +1515,7 @@ define amdgpu_ps void @test_wmma_f32_16x16x128_f8f6f4_non_splat(<16 x i32> %A, <
 ; GISEL-NEXT:    global_store_b128 v[32:33], v[38:41], off offset:16
 ; GISEL-NEXT:    s_endpgm
 bb:
-  %res = call <8 x float> @llvm.amdgcn.wmma.f32.16x16x128.f8f6f4.v8f32.v16i32(i32 0, <16 x i32> %A, i32 0, <16 x i32> %B, i16 0, <8 x float> <float 1.0, float 2.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0>)
+  %res = call <8 x float> @llvm.amdgcn.wmma.f32.16x16x128.f8f6f4.v8f32.v16i32.v16i32(i32 0, <16 x i32> %A, i32 0, <16 x i32> %B, i16 0, <8 x float> <float 1.0, float 2.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0>)
   store <8 x float> %res, ptr addrspace(1) %out
   ret void
 }
@@ -1545,7 +1557,7 @@ define amdgpu_ps void @test_wmma_f32_16x16x128_f8f6f4_non_inlineable(<16 x i32> 
 ; GISEL-NEXT:    global_store_b128 v[32:33], v[38:41], off offset:16
 ; GISEL-NEXT:    s_endpgm
 bb:
-  %res = call <8 x float> @llvm.amdgcn.wmma.f32.16x16x128.f8f6f4.v8f32.v16i32(i32 0, <16 x i32> %A, i32 0, <16 x i32> %B, i16 0, <8 x float> <float 3.0, float 3.0, float 3.0, float 3.0, float 3.0, float 3.0, float 3.0, float 3.0>)
+  %res = call <8 x float> @llvm.amdgcn.wmma.f32.16x16x128.f8f6f4.v8f32.v16i32.v16i32(i32 0, <16 x i32> %A, i32 0, <16 x i32> %B, i16 0, <8 x float> <float 3.0, float 3.0, float 3.0, float 3.0, float 3.0, float 3.0, float 3.0, float 3.0>)
   store <8 x float> %res, ptr addrspace(1) %out
   ret void
 }
@@ -1567,7 +1579,7 @@ define amdgpu_ps void @test_wmma_scale_f32_16x16x128_f8f6f4(<16 x i32> %A, <16 x
 ; GISEL-NEXT:    global_store_b128 v[32:33], v[38:41], off offset:16
 ; GISEL-NEXT:    s_endpgm
 bb:
-  %res = call <8 x float> @llvm.amdgcn.wmma.scale.f32.16x16x128.f8f6f4.v8f32.v16i32(i32 0, <16 x i32> %A, i32 0, <16 x i32> %B, i16 0, <8 x float> <float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0>, i32 1, i32 0, i32 %scale_src0, i32 1, i32 0, i32 %scale_src1, i1 true, i1 false)
+  %res = call <8 x float> @llvm.amdgcn.wmma.scale.f32.16x16x128.f8f6f4.v8f32.v16i32.v16i32(i32 0, <16 x i32> %A, i32 0, <16 x i32> %B, i16 0, <8 x float> <float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0>, i32 1, i32 0, i32 %scale_src0, i32 1, i32 0, i32 %scale_src1, i1 true, i1 false)
   store <8 x float> %res, ptr addrspace(1) %out
   ret void
 }
@@ -1607,7 +1619,7 @@ define amdgpu_ps void @test_wmma_scale_f32_16x16x128_f8f6f4_non_splat(<16 x i32>
 ; GISEL-NEXT:    global_store_b128 v[32:33], v[38:41], off offset:16
 ; GISEL-NEXT:    s_endpgm
 bb:
-  %res = call <8 x float> @llvm.amdgcn.wmma.scale.f32.16x16x128.f8f6f4.v8f32.v16i32(i32 0, <16 x i32> %A, i32 0, <16 x i32> %B, i16 0, <8 x float> <float 1.0, float 2.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0>, i32 1, i32 0, i32 1, i32 1, i32 0, i32 2, i1 false, i1 false)
+  %res = call <8 x float> @llvm.amdgcn.wmma.scale.f32.16x16x128.f8f6f4.v8f32.v16i32.v16i32(i32 0, <16 x i32> %A, i32 0, <16 x i32> %B, i16 0, <8 x float> <float 1.0, float 2.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0>, i32 1, i32 0, i32 1, i32 1, i32 0, i32 2, i1 false, i1 false)
   store <8 x float> %res, ptr addrspace(1) %out
   ret void
 }
@@ -1651,7 +1663,7 @@ define amdgpu_ps void @test_wmma_scale_f32_16x16x128_f8f6f4_non_inlineable(<16 x
 ; GISEL-NEXT:    global_store_b128 v[32:33], v[38:41], off offset:16
 ; GISEL-NEXT:    s_endpgm
 bb:
-  %res = call <8 x float> @llvm.amdgcn.wmma.scale.f32.16x16x128.f8f6f4.v8f32.v16i32(i32 0, <16 x i32> %A, i32 0, <16 x i32> %B, i16 0, <8 x float> <float 3.0, float 3.0, float 3.0, float 3.0, float 3.0, float 3.0, float 3.0, float 3.0>, i32 1, i32 0, i32 100, i32 1, i32 0, i32 101, i1 true, i1 false)
+  %res = call <8 x float> @llvm.amdgcn.wmma.scale.f32.16x16x128.f8f6f4.v8f32.v16i32.v16i32(i32 0, <16 x i32> %A, i32 0, <16 x i32> %B, i16 0, <8 x float> <float 3.0, float 3.0, float 3.0, float 3.0, float 3.0, float 3.0, float 3.0, float 3.0>, i32 1, i32 0, i32 100, i32 1, i32 0, i32 101, i1 true, i1 false)
   store <8 x float> %res, ptr addrspace(1) %out
   ret void
 }
@@ -1673,7 +1685,7 @@ define amdgpu_ps void @test_wmma_scale16_f32_16x16x128_f8f6f4(<16 x i32> %A, <16
 ; GISEL-NEXT:    global_store_b128 v[32:33], v[38:41], off offset:16
 ; GISEL-NEXT:    s_endpgm
 bb:
-  %res = call <8 x float> @llvm.amdgcn.wmma.scale16.f32.16x16x128.f8f6f4.v8f32.v16i32(i32 0, <16 x i32> %A, i32 0, <16 x i32> %B, i16 0, <8 x float> <float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0>, i32 1, i32 0, i64 %scale_src0, i32 1, i32 0, i64 %scale_src1, i1 true, i1 false)
+  %res = call <8 x float> @llvm.amdgcn.wmma.scale16.f32.16x16x128.f8f6f4.v8f32.v16i32.v16i32(i32 0, <16 x i32> %A, i32 0, <16 x i32> %B, i16 0, <8 x float> <float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0>, i32 1, i32 0, i64 %scale_src0, i32 1, i32 0, i64 %scale_src1, i1 true, i1 false)
   store <8 x float> %res, ptr addrspace(1) %out
   ret void
 }
@@ -1713,7 +1725,7 @@ define amdgpu_ps void @test_wmma_scale16_f32_16x16x128_f8f6f4_non_splat(<16 x i3
 ; GISEL-NEXT:    global_store_b128 v[32:33], v[38:41], off offset:16
 ; GISEL-NEXT:    s_endpgm
 bb:
-  %res = call <8 x float> @llvm.amdgcn.wmma.scale16.f32.16x16x128.f8f6f4.v8f32.v16i32(i32 0, <16 x i32> %A, i32 0, <16 x i32> %B, i16 0, <8 x float> <float 1.0, float 2.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0>, i32 1, i32 0, i64 1, i32 1, i32 0, i64 2, i1 false, i1 false)
+  %res = call <8 x float> @llvm.amdgcn.wmma.scale16.f32.16x16x128.f8f6f4.v8f32.v16i32.v16i32(i32 0, <16 x i32> %A, i32 0, <16 x i32> %B, i16 0, <8 x float> <float 1.0, float 2.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0>, i32 1, i32 0, i64 1, i32 1, i32 0, i64 2, i1 false, i1 false)
   store <8 x float> %res, ptr addrspace(1) %out
   ret void
 }
@@ -1758,7 +1770,7 @@ define amdgpu_ps void @test_wmma_scale16_f32_16x16x128_f8f6f4_non_inlineable(<16
 ; GISEL-NEXT:    global_store_b128 v[32:33], v[38:41], off offset:16
 ; GISEL-NEXT:    s_endpgm
 bb:
-  %res = call <8 x float> @llvm.amdgcn.wmma.scale16.f32.16x16x128.f8f6f4.v8f32.v16i32(i32 0, <16 x i32> %A, i32 0, <16 x i32> %B, i16 0, <8 x float> <float 3.0, float 3.0, float 3.0, float 3.0, float 3.0, float 3.0, float 3.0, float 3.0>, i32 1, i32 0, i64 100, i32 1, i32 0, i64 101, i1 true, i1 false)
+  %res = call <8 x float> @llvm.amdgcn.wmma.scale16.f32.16x16x128.f8f6f4.v8f32.v16i32.v16i32(i32 0, <16 x i32> %A, i32 0, <16 x i32> %B, i16 0, <8 x float> <float 3.0, float 3.0, float 3.0, float 3.0, float 3.0, float 3.0, float 3.0, float 3.0>, i32 1, i32 0, i64 100, i32 1, i32 0, i64 101, i1 true, i1 false)
   store <8 x float> %res, ptr addrspace(1) %out
   ret void
 }
@@ -1779,6 +1791,6 @@ declare <8 x i32> @llvm.amdgcn.wmma.i32.16x16x64.iu8.v8i32.v8i32(i1 immarg, <8 x
 declare <8 x i32> @llvm.amdgcn.wmma.i32.16x16x128.iu4.v8i32.v8i32(i1 immarg, <8 x i32>, i1 immarg, <8 x i32>, <8 x i32>)
 declare <8 x float> @llvm.amdgcn.wmma.f32.16x16x32.f16.v8f32.v16f16(i1, <16 x half>, i1, <16 x half>, i16, <8 x float>)
 declare <8 x half> @llvm.amdgcn.wmma.f16.16x16x32.f16.v8f16.v16f16(i1, <16 x half>, i1, <16 x half>, i16, <8 x half>)
-declare <8 x float> @llvm.amdgcn.wmma.f32.16x16x128.f8f6f4.v8f32.v16i32(i32, <16 x i32>, i32, <16 x i32>, i16, <8 x float>)
-declare <8 x float> @llvm.amdgcn.wmma.scale.f32.16x16x128.f8f6f4.v8f32.v16i32(i32, <16 x i32>, i32, <16 x i32>, i16, <8 x float>, i32, i32, i32, i32, i32, i32, i1, i1)
-declare <8 x float> @llvm.amdgcn.wmma.scale16.f32.16x16x128.f8f6f4.v8f32.v16i32(i32, <16 x i32>, i32, <16 x i32>, i16, <8 x float>, i32, i32, i64, i32, i32, i64, i1, i1)
+declare <8 x float> @llvm.amdgcn.wmma.f32.16x16x128.f8f6f4.v8f32.v16i32.v16i32(i32, <16 x i32>, i32, <16 x i32>, i16, <8 x float>)
+declare <8 x float> @llvm.amdgcn.wmma.scale.f32.16x16x128.f8f6f4.v8f32.v16i32.v16i32(i32, <16 x i32>, i32, <16 x i32>, i16, <8 x float>, i32, i32, i32, i32, i32, i32, i1, i1)
+declare <8 x float> @llvm.amdgcn.wmma.scale16.f32.16x16x128.f8f6f4.v8f32.v16i32.v16i32(i32, <16 x i32>, i32, <16 x i32>, i16, <8 x float>, i32, i32, i64, i32, i32, i64, i1, i1)

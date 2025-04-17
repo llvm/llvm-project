@@ -58,7 +58,7 @@ define amdgpu_kernel void @global_load_store_cfs_128B(ptr addrspace(1) %in, ptr 
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-NEXT:    global_load_b32 v0, v0, s[0:1] scale_offset cfs:CFS_128B
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
-; GFX13-NEXT:    global_store_b32 v1, v0, s[2:3] cfs:CFS_128B
+; GFX13-NEXT:    global_store_b32 v1, v0, s[2:3] scope:SCOPE_SE cfs:CFS_128B
 ; GFX13-NEXT:    s_endpgm
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -77,7 +77,7 @@ define amdgpu_kernel void @global_load_store_cfs_64B(ptr addrspace(1) %in, ptr a
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-NEXT:    global_load_b32 v0, v0, s[0:1] scale_offset cfs:CFS_64B
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
-; GFX13-NEXT:    global_store_b32 v1, v0, s[2:3] cfs:CFS_64B
+; GFX13-NEXT:    global_store_b32 v1, v0, s[2:3] scope:SCOPE_SE cfs:CFS_64B
 ; GFX13-NEXT:    s_endpgm
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -96,7 +96,7 @@ define amdgpu_kernel void @global_load_store_cfs_32B(ptr addrspace(1) %in, ptr a
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-NEXT:    global_load_b32 v0, v0, s[0:1] scale_offset cfs:CFS_32B
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
-; GFX13-NEXT:    global_store_b32 v1, v0, s[2:3] cfs:CFS_32B
+; GFX13-NEXT:    global_store_b32 v1, v0, s[2:3] scope:SCOPE_SE cfs:CFS_32B
 ; GFX13-NEXT:    s_endpgm
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -184,7 +184,7 @@ define amdgpu_kernel void @buffer_load_store_cfs_128B(ptr addrspace(7) %in, ptr 
 ; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX13-NEXT:    s_or_b64 s[4:5], s[2:3], s[12:13]
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
-; GFX13-NEXT:    buffer_store_b32 v0, v1, s[4:7], null offen cfs:CFS_128B
+; GFX13-NEXT:    buffer_store_b32 v0, v1, s[4:7], null offen scope:SCOPE_SE cfs:CFS_128B
 ; GFX13-NEXT:    s_endpgm
 entry:
   %val = load i32, ptr addrspace(7) %in, !amdgpu.cfs !{i32 1}
@@ -225,7 +225,7 @@ define amdgpu_kernel void @buffer_load_store_cfs_64B(ptr addrspace(7) %in, ptr a
 ; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX13-NEXT:    s_or_b64 s[4:5], s[2:3], s[12:13]
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
-; GFX13-NEXT:    buffer_store_b32 v0, v1, s[4:7], null offen cfs:CFS_64B
+; GFX13-NEXT:    buffer_store_b32 v0, v1, s[4:7], null offen scope:SCOPE_SE cfs:CFS_64B
 ; GFX13-NEXT:    s_endpgm
 entry:
   %val = load i32, ptr addrspace(7) %in, !amdgpu.cfs !{i32 2}
@@ -266,7 +266,7 @@ define amdgpu_kernel void @buffer_load_store_cfs_32B(ptr addrspace(7) %in, ptr a
 ; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX13-NEXT:    s_or_b64 s[4:5], s[2:3], s[12:13]
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
-; GFX13-NEXT:    buffer_store_b32 v0, v1, s[4:7], null offen cfs:CFS_32B
+; GFX13-NEXT:    buffer_store_b32 v0, v1, s[4:7], null offen scope:SCOPE_SE cfs:CFS_32B
 ; GFX13-NEXT:    s_endpgm
 entry:
   %val = load i32, ptr addrspace(7) %in, !amdgpu.cfs !{i32 3}
@@ -284,7 +284,7 @@ define amdgpu_kernel void @image_load_store_cfs_128B(ptr addrspace(1) %out, <8 x
 ; GFX13-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, s8
 ; GFX13-NEXT:    image_load v0, v0, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D cfs:CFS_128B
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
-; GFX13-NEXT:    image_store v0, v1, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D cfs:CFS_128B
+; GFX13-NEXT:    image_store v0, v1, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D scope:SCOPE_SE cfs:CFS_128B
 ; GFX13-NEXT:    s_endpgm
 entry:
   %val = call float @llvm.amdgcn.image.load.1d.f32.i32(i32 1, i32 %s, <8 x i32> %src, i32 0, i32 0), !amdgpu.cfs !{i32 1}
@@ -302,7 +302,7 @@ define amdgpu_kernel void @image_load_store_cfs_64B(ptr addrspace(1) %out, <8 x 
 ; GFX13-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, s8
 ; GFX13-NEXT:    image_load v0, v0, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D cfs:CFS_64B
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
-; GFX13-NEXT:    image_store v0, v1, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D cfs:CFS_64B
+; GFX13-NEXT:    image_store v0, v1, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D scope:SCOPE_SE cfs:CFS_64B
 ; GFX13-NEXT:    s_endpgm
 entry:
   %val = call float @llvm.amdgcn.image.load.1d.f32.i32(i32 1, i32 %s, <8 x i32> %src, i32 0, i32 0), !amdgpu.cfs !{i32 2}
@@ -320,7 +320,7 @@ define amdgpu_kernel void @image_load_store_cfs_32B(ptr addrspace(1) %out, <8 x 
 ; GFX13-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, s8
 ; GFX13-NEXT:    image_load v0, v0, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D cfs:CFS_32B
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
-; GFX13-NEXT:    image_store v0, v1, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D cfs:CFS_32B
+; GFX13-NEXT:    image_store v0, v1, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D scope:SCOPE_SE cfs:CFS_32B
 ; GFX13-NEXT:    s_endpgm
 entry:
   %val = call float @llvm.amdgcn.image.load.1d.f32.i32(i32 1, i32 %s, <8 x i32> %src, i32 0, i32 0), !amdgpu.cfs !{i32 3}

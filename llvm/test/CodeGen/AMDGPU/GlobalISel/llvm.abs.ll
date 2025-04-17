@@ -319,8 +319,6 @@ define amdgpu_cs <2 x i8> @abs_sgpr_v2i8(<2 x i8> inreg %arg) {
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_sext_i32_i8 s0, s0
 ; GFX10-NEXT:    s_sext_i32_i8 s1, s1
-; GFX10-NEXT:    s_sext_i32_i16 s0, s0
-; GFX10-NEXT:    s_sext_i32_i16 s1, s1
 ; GFX10-NEXT:    s_abs_i32 s0, s0
 ; GFX10-NEXT:    s_abs_i32 s1, s1
 ; GFX10-NEXT:    ; return to shader part epilog
@@ -329,8 +327,6 @@ define amdgpu_cs <2 x i8> @abs_sgpr_v2i8(<2 x i8> inreg %arg) {
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_sext_i32_i8 s0, s0
 ; GFX1250-NEXT:    s_sext_i32_i8 s1, s1
-; GFX1250-NEXT:    s_sext_i32_i16 s0, s0
-; GFX1250-NEXT:    s_sext_i32_i16 s1, s1
 ; GFX1250-NEXT:    s_abs_i32 s0, s0
 ; GFX1250-NEXT:    s_abs_i32 s1, s1
 ; GFX1250-NEXT:    ; return to shader part epilog
@@ -429,9 +425,6 @@ define amdgpu_cs <3 x i8> @abs_sgpr_v3i8(<3 x i8> inreg %arg) {
 ; GFX10-NEXT:    s_sext_i32_i8 s0, s0
 ; GFX10-NEXT:    s_sext_i32_i8 s1, s1
 ; GFX10-NEXT:    s_sext_i32_i8 s2, s2
-; GFX10-NEXT:    s_sext_i32_i16 s0, s0
-; GFX10-NEXT:    s_sext_i32_i16 s1, s1
-; GFX10-NEXT:    s_sext_i32_i16 s2, s2
 ; GFX10-NEXT:    s_abs_i32 s0, s0
 ; GFX10-NEXT:    s_abs_i32 s1, s1
 ; GFX10-NEXT:    s_abs_i32 s2, s2
@@ -442,9 +435,6 @@ define amdgpu_cs <3 x i8> @abs_sgpr_v3i8(<3 x i8> inreg %arg) {
 ; GFX1250-NEXT:    s_sext_i32_i8 s0, s0
 ; GFX1250-NEXT:    s_sext_i32_i8 s1, s1
 ; GFX1250-NEXT:    s_sext_i32_i8 s2, s2
-; GFX1250-NEXT:    s_sext_i32_i16 s0, s0
-; GFX1250-NEXT:    s_sext_i32_i16 s1, s1
-; GFX1250-NEXT:    s_sext_i32_i16 s2, s2
 ; GFX1250-NEXT:    s_abs_i32 s0, s0
 ; GFX1250-NEXT:    s_abs_i32 s1, s1
 ; GFX1250-NEXT:    s_abs_i32 s2, s2

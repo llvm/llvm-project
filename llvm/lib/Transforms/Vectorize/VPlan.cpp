@@ -64,11 +64,10 @@ static cl::opt<bool> PrintVPlansInDotFormat(
 #define DEBUG_TYPE "loop-vectorize"
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-raw_ostream &llvm::operator<<(raw_ostream &OS, const VPValue &V) {
-  const VPInstruction *Instr = dyn_cast<VPInstruction>(&V);
-  VPSlotTracker SlotTracker(
-      (Instr && Instr->getParent()) ? Instr->getParent()->getPlan() : nullptr);
-  V.print(OS, SlotTracker);
+raw_ostream &llvm::operator<<(raw_ostream &OS, const VPRecipeBase &R) {
+  const VPBasicBlock *Parent = R.getParent();
+  VPSlotTracker SlotTracker(Parent ? Parent->getPlan() : nullptr);
+  R.print(OS, "", SlotTracker);
   return OS;
 }
 #endif

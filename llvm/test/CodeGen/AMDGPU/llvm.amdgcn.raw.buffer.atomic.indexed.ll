@@ -122,20 +122,19 @@ define amdgpu_ps float @test5(i32 inreg %rsrc, i64 %data, i64 %cmp, i32 %vindex,
 ; GFX13-NEXT:    v_dual_mov_b32 v9, v3 :: v_dual_mov_b32 v8, v2
 ; GFX13-NEXT:    buffer_atomic_cmpswap_b64 v[6:9], off, s0, s1 offset:4 th:TH_ATOMIC_RETURN
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
+; GFX13-NEXT:    v_xor_b32_e32 v0, v6, v7
 ; GFX13-NEXT:    v_cls_i32_e32 v1, v7
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX13-NEXT:    v_dual_add_nc_u32 v1, -1, v1 :: v_dual_bitop2_b32 v0, v6, v7 bitop3:0x14
-; GFX13-NEXT:    v_ashrrev_i32_e32 v0, 31, v0
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX13-NEXT:    v_dual_ashrrev_i32 v0, 31, v0 :: v_dual_add_nc_u32 v1, -1, v1
 ; GFX13-NEXT:    v_add_nc_u32_e32 v0, 32, v0
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_min_u32_e32 v2, v1, v0
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_lshlrev_b64_e32 v[0:1], v2, v[6:7]
-; GFX13-NEXT:    v_min_u32_e32 v0, 1, v0
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX13-NEXT:    v_min_u32_e32 v0, 1, v0
 ; GFX13-NEXT:    v_dual_sub_nc_u32 v1, 32, v2 :: v_dual_bitop2_b32 v0, v1, v0 bitop3:0x54
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_cvt_f32_i32_e32 v0, v0
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13-NEXT:    v_ldexp_f32 v0, v0, v1
 ; GFX13-NEXT:    ; return to shader part epilog
 main_body:

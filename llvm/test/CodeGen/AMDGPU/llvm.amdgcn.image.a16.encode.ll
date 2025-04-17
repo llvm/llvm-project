@@ -560,7 +560,7 @@ define amdgpu_ps void @store_1d(<8 x i32> inreg %rsrc, <4 x float> %vdata, <2 x 
 ;
 ; GFX13-LABEL: store_1d:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    image_store v[0:3], v4, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D a16 ; encoding: [0x40,0x00,0xc2,0xd3,0x00,0x00,0x00,0x00,0x04,0x00,0x00,0x00]
+; GFX13-NEXT:    image_store v[0:3], v4, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D scope:SCOPE_SE a16 ; encoding: [0x40,0x00,0xc2,0xd3,0x00,0x00,0x04,0x00,0x04,0x00,0x00,0x00]
 ; GFX13-NEXT:    s_endpgm ; encoding: [0x00,0x00,0x81,0xbf]
 main_body:
   %s = extractelement <2 x i16> %coords, i32 0
@@ -591,7 +591,7 @@ define amdgpu_ps void @store_2d(<8 x i32> inreg %rsrc, <4 x float> %vdata, <2 x 
 ;
 ; GFX13-LABEL: store_2d:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    image_store v[0:3], v4, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_2D a16 ; encoding: [0x41,0x00,0xc2,0xd3,0x00,0x00,0x00,0x00,0x04,0x00,0x00,0x00]
+; GFX13-NEXT:    image_store v[0:3], v4, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_2D scope:SCOPE_SE a16 ; encoding: [0x41,0x00,0xc2,0xd3,0x00,0x00,0x04,0x00,0x04,0x00,0x00,0x00]
 ; GFX13-NEXT:    s_endpgm ; encoding: [0x00,0x00,0x81,0xbf]
 main_body:
   %s = extractelement <2 x i16> %coords, i32 0
@@ -623,7 +623,7 @@ define amdgpu_ps void @store_3d(<8 x i32> inreg %rsrc, <4 x float> %vdata, <2 x 
 ;
 ; GFX13-LABEL: store_3d:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    image_store v[0:3], [v4, v5], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_3D a16 ; encoding: [0x42,0x00,0xc2,0xd3,0x00,0x00,0x00,0x00,0x04,0x05,0x00,0x00]
+; GFX13-NEXT:    image_store v[0:3], [v4, v5], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_3D scope:SCOPE_SE a16 ; encoding: [0x42,0x00,0xc2,0xd3,0x00,0x00,0x04,0x00,0x04,0x05,0x00,0x00]
 ; GFX13-NEXT:    s_endpgm ; encoding: [0x00,0x00,0x81,0xbf]
 main_body:
   %s = extractelement <2 x i16> %coords_lo, i32 0
@@ -656,7 +656,7 @@ define amdgpu_ps void @store_cube(<8 x i32> inreg %rsrc, <4 x float> %vdata, <2 
 ;
 ; GFX13-LABEL: store_cube:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    image_store v[0:3], [v4, v5], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_CUBE a16 ; encoding: [0x43,0x00,0xc2,0xd3,0x00,0x00,0x00,0x00,0x04,0x05,0x00,0x00]
+; GFX13-NEXT:    image_store v[0:3], [v4, v5], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_CUBE scope:SCOPE_SE a16 ; encoding: [0x43,0x00,0xc2,0xd3,0x00,0x00,0x04,0x00,0x04,0x05,0x00,0x00]
 ; GFX13-NEXT:    s_endpgm ; encoding: [0x00,0x00,0x81,0xbf]
 main_body:
   %s = extractelement <2 x i16> %coords_lo, i32 0
@@ -689,7 +689,7 @@ define amdgpu_ps void @store_1darray(<8 x i32> inreg %rsrc, <4 x float> %vdata, 
 ;
 ; GFX13-LABEL: store_1darray:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    image_store v[0:3], v4, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D_ARRAY a16 ; encoding: [0x44,0x00,0xc2,0xd3,0x00,0x00,0x00,0x00,0x04,0x00,0x00,0x00]
+; GFX13-NEXT:    image_store v[0:3], v4, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D_ARRAY scope:SCOPE_SE a16 ; encoding: [0x44,0x00,0xc2,0xd3,0x00,0x00,0x04,0x00,0x04,0x00,0x00,0x00]
 ; GFX13-NEXT:    s_endpgm ; encoding: [0x00,0x00,0x81,0xbf]
 main_body:
   %s = extractelement <2 x i16> %coords, i32 0
@@ -721,7 +721,7 @@ define amdgpu_ps void @store_2darray(<8 x i32> inreg %rsrc, <4 x float> %vdata, 
 ;
 ; GFX13-LABEL: store_2darray:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    image_store v[0:3], [v4, v5], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_2D_ARRAY a16 ; encoding: [0x45,0x00,0xc2,0xd3,0x00,0x00,0x00,0x00,0x04,0x05,0x00,0x00]
+; GFX13-NEXT:    image_store v[0:3], [v4, v5], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_2D_ARRAY scope:SCOPE_SE a16 ; encoding: [0x45,0x00,0xc2,0xd3,0x00,0x00,0x04,0x00,0x04,0x05,0x00,0x00]
 ; GFX13-NEXT:    s_endpgm ; encoding: [0x00,0x00,0x81,0xbf]
 main_body:
   %s = extractelement <2 x i16> %coords_lo, i32 0
@@ -754,7 +754,7 @@ define amdgpu_ps void @store_2dmsaa(<8 x i32> inreg %rsrc, <4 x float> %vdata, <
 ;
 ; GFX13-LABEL: store_2dmsaa:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    image_store v[0:3], [v4, v5], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_2D_MSAA a16 ; encoding: [0x46,0x00,0xc2,0xd3,0x00,0x00,0x00,0x00,0x04,0x05,0x00,0x00]
+; GFX13-NEXT:    image_store v[0:3], [v4, v5], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_2D_MSAA scope:SCOPE_SE a16 ; encoding: [0x46,0x00,0xc2,0xd3,0x00,0x00,0x04,0x00,0x04,0x05,0x00,0x00]
 ; GFX13-NEXT:    s_endpgm ; encoding: [0x00,0x00,0x81,0xbf]
 main_body:
   %s = extractelement <2 x i16> %coords_lo, i32 0
@@ -787,7 +787,7 @@ define amdgpu_ps void @store_2darraymsaa(<8 x i32> inreg %rsrc, <4 x float> %vda
 ;
 ; GFX13-LABEL: store_2darraymsaa:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    image_store v[0:3], [v4, v5], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_2D_MSAA_ARRAY a16 ; encoding: [0x47,0x00,0xc2,0xd3,0x00,0x00,0x00,0x00,0x04,0x05,0x00,0x00]
+; GFX13-NEXT:    image_store v[0:3], [v4, v5], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_2D_MSAA_ARRAY scope:SCOPE_SE a16 ; encoding: [0x47,0x00,0xc2,0xd3,0x00,0x00,0x04,0x00,0x04,0x05,0x00,0x00]
 ; GFX13-NEXT:    s_endpgm ; encoding: [0x00,0x00,0x81,0xbf]
 main_body:
   %s = extractelement <2 x i16> %coords_lo, i32 0
@@ -821,7 +821,7 @@ define amdgpu_ps void @store_mip_1d(<8 x i32> inreg %rsrc, <4 x float> %vdata, <
 ;
 ; GFX13-LABEL: store_mip_1d:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    image_store_mip v[0:3], v4, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D a16 ; encoding: [0x40,0x40,0xc2,0xd3,0x00,0x00,0x00,0x00,0x04,0x00,0x00,0x00]
+; GFX13-NEXT:    image_store_mip v[0:3], v4, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D scope:SCOPE_SE a16 ; encoding: [0x40,0x40,0xc2,0xd3,0x00,0x00,0x04,0x00,0x04,0x00,0x00,0x00]
 ; GFX13-NEXT:    s_endpgm ; encoding: [0x00,0x00,0x81,0xbf]
 main_body:
   %s = extractelement <2 x i16> %coords, i32 0
@@ -853,7 +853,7 @@ define amdgpu_ps void @store_mip_2d(<8 x i32> inreg %rsrc, <4 x float> %vdata, <
 ;
 ; GFX13-LABEL: store_mip_2d:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    image_store_mip v[0:3], [v4, v5], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_2D a16 ; encoding: [0x41,0x40,0xc2,0xd3,0x00,0x00,0x00,0x00,0x04,0x05,0x00,0x00]
+; GFX13-NEXT:    image_store_mip v[0:3], [v4, v5], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_2D scope:SCOPE_SE a16 ; encoding: [0x41,0x40,0xc2,0xd3,0x00,0x00,0x04,0x00,0x04,0x05,0x00,0x00]
 ; GFX13-NEXT:    s_endpgm ; encoding: [0x00,0x00,0x81,0xbf]
 main_body:
   %s = extractelement <2 x i16> %coords_lo, i32 0
@@ -886,7 +886,7 @@ define amdgpu_ps void @store_mip_3d(<8 x i32> inreg %rsrc, <4 x float> %vdata, <
 ;
 ; GFX13-LABEL: store_mip_3d:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    image_store_mip v[0:3], [v4, v5], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_3D a16 ; encoding: [0x42,0x40,0xc2,0xd3,0x00,0x00,0x00,0x00,0x04,0x05,0x00,0x00]
+; GFX13-NEXT:    image_store_mip v[0:3], [v4, v5], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_3D scope:SCOPE_SE a16 ; encoding: [0x42,0x40,0xc2,0xd3,0x00,0x00,0x04,0x00,0x04,0x05,0x00,0x00]
 ; GFX13-NEXT:    s_endpgm ; encoding: [0x00,0x00,0x81,0xbf]
 main_body:
   %s = extractelement <2 x i16> %coords_lo, i32 0
@@ -920,7 +920,7 @@ define amdgpu_ps void @store_mip_cube(<8 x i32> inreg %rsrc, <4 x float> %vdata,
 ;
 ; GFX13-LABEL: store_mip_cube:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    image_store_mip v[0:3], [v4, v5], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_CUBE a16 ; encoding: [0x43,0x40,0xc2,0xd3,0x00,0x00,0x00,0x00,0x04,0x05,0x00,0x00]
+; GFX13-NEXT:    image_store_mip v[0:3], [v4, v5], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_CUBE scope:SCOPE_SE a16 ; encoding: [0x43,0x40,0xc2,0xd3,0x00,0x00,0x04,0x00,0x04,0x05,0x00,0x00]
 ; GFX13-NEXT:    s_endpgm ; encoding: [0x00,0x00,0x81,0xbf]
 main_body:
   %s = extractelement <2 x i16> %coords_lo, i32 0
@@ -954,7 +954,7 @@ define amdgpu_ps void @store_mip_1darray(<8 x i32> inreg %rsrc, <4 x float> %vda
 ;
 ; GFX13-LABEL: store_mip_1darray:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    image_store_mip v[0:3], [v4, v5], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D_ARRAY a16 ; encoding: [0x44,0x40,0xc2,0xd3,0x00,0x00,0x00,0x00,0x04,0x05,0x00,0x00]
+; GFX13-NEXT:    image_store_mip v[0:3], [v4, v5], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D_ARRAY scope:SCOPE_SE a16 ; encoding: [0x44,0x40,0xc2,0xd3,0x00,0x00,0x04,0x00,0x04,0x05,0x00,0x00]
 ; GFX13-NEXT:    s_endpgm ; encoding: [0x00,0x00,0x81,0xbf]
 main_body:
   %s = extractelement <2 x i16> %coords_lo, i32 0
@@ -987,7 +987,7 @@ define amdgpu_ps void @store_mip_2darray(<8 x i32> inreg %rsrc, <4 x float> %vda
 ;
 ; GFX13-LABEL: store_mip_2darray:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    image_store_mip v[0:3], [v4, v5], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_2D_ARRAY a16 ; encoding: [0x45,0x40,0xc2,0xd3,0x00,0x00,0x00,0x00,0x04,0x05,0x00,0x00]
+; GFX13-NEXT:    image_store_mip v[0:3], [v4, v5], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_2D_ARRAY scope:SCOPE_SE a16 ; encoding: [0x45,0x40,0xc2,0xd3,0x00,0x00,0x04,0x00,0x04,0x05,0x00,0x00]
 ; GFX13-NEXT:    s_endpgm ; encoding: [0x00,0x00,0x81,0xbf]
 main_body:
   %s = extractelement <2 x i16> %coords_lo, i32 0
@@ -1381,7 +1381,7 @@ define amdgpu_ps void @store_1d_V1(<8 x i32> inreg %rsrc, float %vdata, <2 x i16
 ;
 ; GFX13-LABEL: store_1d_V1:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    image_store v0, v1, s[0:7] dmask:0x2 dim:SQ_RSRC_IMG_1D a16 ; encoding: [0x40,0x00,0x82,0xd0,0x00,0x00,0x00,0x00,0x01,0x00,0x00,0x00]
+; GFX13-NEXT:    image_store v0, v1, s[0:7] dmask:0x2 dim:SQ_RSRC_IMG_1D scope:SCOPE_SE a16 ; encoding: [0x40,0x00,0x82,0xd0,0x00,0x00,0x04,0x00,0x01,0x00,0x00,0x00]
 ; GFX13-NEXT:    s_endpgm ; encoding: [0x00,0x00,0x81,0xbf]
 main_body:
   %s = extractelement <2 x i16> %coords, i32 0
@@ -1412,7 +1412,7 @@ define amdgpu_ps void @store_1d_V2(<8 x i32> inreg %rsrc, <2 x float> %vdata, <2
 ;
 ; GFX13-LABEL: store_1d_V2:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    image_store v[0:1], v2, s[0:7] dmask:0xc dim:SQ_RSRC_IMG_1D a16 ; encoding: [0x40,0x00,0x02,0xd3,0x00,0x00,0x00,0x00,0x02,0x00,0x00,0x00]
+; GFX13-NEXT:    image_store v[0:1], v2, s[0:7] dmask:0xc dim:SQ_RSRC_IMG_1D scope:SCOPE_SE a16 ; encoding: [0x40,0x00,0x02,0xd3,0x00,0x00,0x04,0x00,0x02,0x00,0x00,0x00]
 ; GFX13-NEXT:    s_endpgm ; encoding: [0x00,0x00,0x81,0xbf]
 main_body:
   %s = extractelement <2 x i16> %coords, i32 0
@@ -1551,7 +1551,7 @@ define amdgpu_ps void @store_1d_glc(<8 x i32> inreg %rsrc, <4 x float> %vdata, <
 ;
 ; GFX13-LABEL: store_1d_glc:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    image_store v[0:3], v4, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D th:TH_STORE_NT a16 ; encoding: [0x40,0x00,0xc2,0xd3,0x00,0x00,0x10,0x00,0x04,0x00,0x00,0x00]
+; GFX13-NEXT:    image_store v[0:3], v4, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D th:TH_STORE_NT scope:SCOPE_SE a16 ; encoding: [0x40,0x00,0xc2,0xd3,0x00,0x00,0x14,0x00,0x04,0x00,0x00,0x00]
 ; GFX13-NEXT:    s_endpgm ; encoding: [0x00,0x00,0x81,0xbf]
 main_body:
   %s = extractelement <2 x i16> %coords, i32 0
@@ -1582,7 +1582,7 @@ define amdgpu_ps void @store_1d_slc(<8 x i32> inreg %rsrc, <4 x float> %vdata, <
 ;
 ; GFX13-LABEL: store_1d_slc:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    image_store v[0:3], v4, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D th:TH_STORE_HT a16 ; encoding: [0x40,0x00,0xc2,0xd3,0x00,0x00,0x20,0x00,0x04,0x00,0x00,0x00]
+; GFX13-NEXT:    image_store v[0:3], v4, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D th:TH_STORE_HT scope:SCOPE_SE a16 ; encoding: [0x40,0x00,0xc2,0xd3,0x00,0x00,0x24,0x00,0x04,0x00,0x00,0x00]
 ; GFX13-NEXT:    s_endpgm ; encoding: [0x00,0x00,0x81,0xbf]
 main_body:
   %s = extractelement <2 x i16> %coords, i32 0
@@ -1613,7 +1613,7 @@ define amdgpu_ps void @store_1d_glc_slc(<8 x i32> inreg %rsrc, <4 x float> %vdat
 ;
 ; GFX13-LABEL: store_1d_glc_slc:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    image_store v[0:3], v4, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D th:TH_STORE_WB a16 ; encoding: [0x40,0x00,0xc2,0xd3,0x00,0x00,0x30,0x00,0x04,0x00,0x00,0x00]
+; GFX13-NEXT:    image_store v[0:3], v4, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D th:TH_STORE_WB scope:SCOPE_SE a16 ; encoding: [0x40,0x00,0xc2,0xd3,0x00,0x00,0x34,0x00,0x04,0x00,0x00,0x00]
 ; GFX13-NEXT:    s_endpgm ; encoding: [0x00,0x00,0x81,0xbf]
 main_body:
   %s = extractelement <2 x i16> %coords, i32 0

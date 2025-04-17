@@ -2571,7 +2571,16 @@ Status ProcessGDBRemote::DoDestroy() {
 
   StopAsyncThread();
   KillDebugserverProcess();
+  RemoveNewThreadBreakpoints();
   return Status();
+}
+
+void ProcessGDBRemote::RemoveNewThreadBreakpoints() {
+  if (m_thread_create_bp_sp) {
+    if (TargetSP target_sp = m_target_wp.lock())
+      target_sp->RemoveBreakpointByID(m_thread_create_bp_sp->GetID());
+    m_thread_create_bp_sp.reset();
+  }
 }
 
 void ProcessGDBRemote::SetLastStopPacket(

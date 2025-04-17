@@ -91,7 +91,8 @@ main_body:
 define amdgpu_ps void @struct_buffer_discard_offen(i32 %arg, i32 %arg1) {
 ; GFX13-LABEL: struct_buffer_discard_offen:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    v_dual_mov_b32 v2, v0 :: v_dual_mov_b32 v0, 0
+; GFX13-NEXT:    v_mov_b32_e32 v2, v0
+; GFX13-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX13-NEXT:    buffer_discard_b32 v[0:1], v2, null idxen offen th:TH_STORE_NT_RT
 ; GFX13-NEXT:    buffer_discard_b128 v[0:1], v2, null idxen offen th:TH_STORE_RT_NT
 ; GFX13-NEXT:    buffer_discard_b1024 v[0:1], v2, null idxen offen th:TH_STORE_NT_HT

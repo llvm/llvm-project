@@ -169,6 +169,9 @@ private:
                                  bool ForceVGPR = false) const;
 
   InstructionSelector::ComplexRendererFns
+  selectIgnore(MachineOperand &Root) const;
+
+  InstructionSelector::ComplexRendererFns
   selectVCSRC(MachineOperand &Root) const;
 
   InstructionSelector::ComplexRendererFns

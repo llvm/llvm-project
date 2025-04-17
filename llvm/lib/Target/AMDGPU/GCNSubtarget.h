@@ -255,6 +255,7 @@ protected:
   bool HasVmemPrefInsts = false;
   bool HasSafeSmemPrefetch = false;
   bool HasSafeCUPrefetch = false;
+  bool HasCUStores = false;
   bool HasVcmpxExecWARHazard = false;
   bool HasLdsBranchVmemWARHazard = false;
   bool HasNSAtoVMEMBug = false;
@@ -1029,6 +1030,8 @@ public:
   bool hasSafeSmemPrefetch() const { return HasSafeSmemPrefetch; }
 
   bool hasSafeCUPrefetch() const { return HasSafeCUPrefetch; }
+
+  bool hasCUStores() const { return HasCUStores; }
 
   // Has s_cmpk_* instructions.
   bool hasSCmpK() const { return getGeneration() < GFX12; }

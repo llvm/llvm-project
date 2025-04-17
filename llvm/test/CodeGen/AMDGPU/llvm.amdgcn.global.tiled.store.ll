@@ -37,9 +37,9 @@ define amdgpu_kernel void @global_tiled_store_b64(ptr addrspace(1) %addr, ptr ad
 ; GFX13-SDAG-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX13-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-SDAG-NEXT:    s_load_b64 s[2:3], s[2:3], 0x0
+; GFX13-SDAG-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX13-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_mov_b32 v0, s2
-; GFX13-SDAG-NEXT:    v_mov_b32_e32 v1, s3
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, s3
 ; GFX13-SDAG-NEXT:    global_tiled_store_b64 v2, v[0:1], s[0:1] offset:32
 ; GFX13-SDAG-NEXT:    s_endpgm
 ;
@@ -127,9 +127,9 @@ define amdgpu_kernel void @global_tiled_store_half_b128(ptr addrspace(1) %addr, 
 ; GFX13-SDAG-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX13-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-SDAG-NEXT:    s_load_b64 s[2:3], s[2:3], 0x0
+; GFX13-SDAG-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX13-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_mov_b32 v0, s2
-; GFX13-SDAG-NEXT:    v_mov_b32_e32 v1, s3
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, s3
 ; GFX13-SDAG-NEXT:    global_tiled_store_half_b128 v2, v[0:1], s[0:1] offset:32
 ; GFX13-SDAG-NEXT:    s_endpgm
 ;
@@ -188,10 +188,10 @@ define amdgpu_kernel void @global_tiled_store_b128(ptr addrspace(1) %addr, ptr a
 ; GFX13-SDAG-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX13-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-SDAG-NEXT:    s_load_b128 s[4:7], s[2:3], 0x0
+; GFX13-SDAG-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX13-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v4, 0 :: v_dual_mov_b32 v0, s4
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v0, s4 :: v_dual_mov_b32 v3, s7
 ; GFX13-SDAG-NEXT:    v_dual_mov_b32 v1, s5 :: v_dual_mov_b32 v2, s6
-; GFX13-SDAG-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX13-SDAG-NEXT:    global_tiled_store_b128 v4, v[0:3], s[0:1] offset:32
 ; GFX13-SDAG-NEXT:    s_endpgm
 ;

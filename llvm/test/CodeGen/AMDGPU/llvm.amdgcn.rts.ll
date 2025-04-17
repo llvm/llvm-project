@@ -66,23 +66,82 @@ define amdgpu_cs void @test_rts_update_ray(i64 %arg){
   ret void
 }
 
-define amdgpu_cs void @rts_trace_ray_nonblock_test(i32 %ray_init_data, <3 x i32> %ray_init_flag, float %ray_extent, <3 x float> %ray_origin, <3 x float> %ray_dir,  <4 x i32> inreg %rsrc){
+define amdgpu_cs void @rts_trace_ray_nonblock_test(i32 %ray_init_data, <3 x i32> %ray_init_flag, float %ray_extent, <4 x float> %ray_origin, <4 x float> %ray_dir, <4 x i32> inreg %rsrc){
 ; GFX13-SDAG-LABEL: rts_trace_ray_nonblock_test:
 ; GFX13-SDAG:       ; %bb.0:
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v14, v7 :: v_dual_mov_b32 v13, v6
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v12, v5 :: v_dual_mov_b32 v18, v3
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v17, v2 :: v_dual_mov_b32 v16, v1
-; GFX13-SDAG-NEXT:    rts_trace_ray_nonblock v0, [v0, v[16:18], v4, v[12:14], v[8:10]], s[0:3] r128
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v13, v12 :: v_dual_mov_b32 v12, v11
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v11, v10 :: v_dual_mov_b32 v10, v9
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v9, v8 :: v_dual_mov_b32 v8, v7
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v7, v6 :: v_dual_mov_b32 v6, v5
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v4, v3 :: v_dual_mov_b32 v3, v2
+; GFX13-SDAG-NEXT:    v_mov_b32_e32 v2, v1
+; GFX13-SDAG-NEXT:    rts_trace_ray_nonblock v0, [v0, v[2:4], v[6:9], v[10:13]], s[0:3] r128
 ; GFX13-SDAG-NEXT:    s_wait_rtscnt 0x0
 ; GFX13-SDAG-NEXT:    export prim v0, off, off, off done
 ; GFX13-SDAG-NEXT:    s_endpgm
 ;
 ; GFX13-GISEL-LABEL: rts_trace_ray_nonblock_test:
 ; GFX13-GISEL:       ; %bb.0:
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v14, v1 :: v_dual_mov_b32 v15, v2
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v16, v3 :: v_dual_mov_b32 v3, v6
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v2, v5 :: v_dual_mov_b32 v5, v8
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v4, v7 :: v_dual_mov_b32 v7, v10
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v6, v9 :: v_dual_mov_b32 v9, v12
+; GFX13-GISEL-NEXT:    v_mov_b32_e32 v8, v11
+; GFX13-GISEL-NEXT:    rts_trace_ray_nonblock v0, [v0, v[14:16], v[2:5], v[6:9]], s[0:3] r128
+; GFX13-GISEL-NEXT:    s_wait_rtscnt 0x0
+; GFX13-GISEL-NEXT:    export prim v0, off, off, off done
+; GFX13-GISEL-NEXT:    s_endpgm
+  %ret = call i32 @llvm.amdgcn.rts.trace.ray.nonblock(i32 %ray_init_data, <3 x i32> %ray_init_flag, float %ray_extent, <4 x float> %ray_origin, <4 x float> %ray_dir, <4 x i32> %rsrc)
+  call void @llvm.amdgcn.exp.i32(i32 20, i32 1, i32 %ret, i32 undef, i32 undef, i32 undef, i1 true, i1 false)
+  ret void
+}
+
+define amdgpu_cs void @rts_trace_ray_test(i32 %ray_init_data, <3 x i32> %ray_init_flag, float %ray_extent, <4 x float> %ray_origin, <4 x float> %ray_dir, <4 x i32> inreg %rsrc){
+; GFX13-SDAG-LABEL: rts_trace_ray_test:
+; GFX13-SDAG:       ; %bb.0:
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v13, v12 :: v_dual_mov_b32 v12, v11
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v11, v10 :: v_dual_mov_b32 v10, v9
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v9, v8 :: v_dual_mov_b32 v8, v7
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v7, v6 :: v_dual_mov_b32 v6, v5
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v4, v3 :: v_dual_mov_b32 v3, v2
+; GFX13-SDAG-NEXT:    v_mov_b32_e32 v2, v1
+; GFX13-SDAG-NEXT:    rts_trace_ray [v0, v[2:4], v[6:9], v[10:13]], s[0:3] r128
+; GFX13-SDAG-NEXT:    s_endpgm
+;
+; GFX13-GISEL-LABEL: rts_trace_ray_test:
+; GFX13-GISEL:       ; %bb.0:
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v14, v1 :: v_dual_mov_b32 v15, v2
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v16, v3 :: v_dual_mov_b32 v3, v6
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v2, v5 :: v_dual_mov_b32 v5, v8
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v4, v7 :: v_dual_mov_b32 v7, v10
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v6, v9 :: v_dual_mov_b32 v9, v12
+; GFX13-GISEL-NEXT:    v_mov_b32_e32 v8, v11
+; GFX13-GISEL-NEXT:    rts_trace_ray [v0, v[14:16], v[2:5], v[6:9]], s[0:3] r128
+; GFX13-GISEL-NEXT:    s_endpgm
+  call void @llvm.amdgcn.rts.trace.ray(i32 %ray_init_data, <3 x i32> %ray_init_flag, float %ray_extent, <4 x float> %ray_origin, <4 x float> %ray_dir, <4 x i32> %rsrc)
+  ret void
+}
+
+define amdgpu_cs void @rts_trace_ray_notmin_nonblock_test(i32 %ray_init_data, <3 x i32> %ray_init_flag, float %ray_extent, <3 x float> %ray_origin, <3 x float> %ray_dir,  <4 x i32> inreg %rsrc){
+; GFX13-SDAG-LABEL: rts_trace_ray_notmin_nonblock_test:
+; GFX13-SDAG:       ; %bb.0:
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v14, v7 :: v_dual_mov_b32 v13, v6
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v12, v5 :: v_dual_mov_b32 v11, v4
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v4, v3 :: v_dual_mov_b32 v3, v2
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v2, v1 :: v_dual_mov_b32 v15, 0
+; GFX13-SDAG-NEXT:    rts_trace_ray_nonblock v0, [v0, v[2:4], v[12:15], v[8:11]], s[0:3] r128
+; GFX13-SDAG-NEXT:    s_wait_rtscnt 0x0
+; GFX13-SDAG-NEXT:    export prim v0, off, off, off done
+; GFX13-SDAG-NEXT:    s_endpgm
+;
+; GFX13-GISEL-LABEL: rts_trace_ray_notmin_nonblock_test:
+; GFX13-GISEL:       ; %bb.0:
 ; GFX13-GISEL-NEXT:    v_dual_mov_b32 v12, v1 :: v_dual_mov_b32 v13, v2
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v14, v3 :: v_dual_mov_b32 v16, v5
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v17, v6 :: v_dual_mov_b32 v18, v7
-; GFX13-GISEL-NEXT:    rts_trace_ray_nonblock v0, [v0, v[12:14], v4, v[16:18], v[8:10]], s[0:3] r128
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v14, v3 :: v_dual_mov_b32 v11, v4
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v2, v5 :: v_dual_mov_b32 v3, v6
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v4, v7 :: v_dual_mov_b32 v5, 0
+; GFX13-GISEL-NEXT:    rts_trace_ray_nonblock v0, [v0, v[12:14], v[2:5], v[8:11]], s[0:3] r128
 ; GFX13-GISEL-NEXT:    s_wait_rtscnt 0x0
 ; GFX13-GISEL-NEXT:    export prim v0, off, off, off done
 ; GFX13-GISEL-NEXT:    s_endpgm
@@ -91,21 +150,23 @@ define amdgpu_cs void @rts_trace_ray_nonblock_test(i32 %ray_init_data, <3 x i32>
   ret void
 }
 
-define amdgpu_cs void @rts_trace_ray_test(i32 %ray_init_data, <3 x i32> %ray_init_flag, float %ray_extent, <3 x float> %ray_origin, <3 x float> %ray_dir,  <4 x i32> inreg %rsrc){
-; GFX13-SDAG-LABEL: rts_trace_ray_test:
+define amdgpu_cs void @rts_trace_ray_notmin_test(i32 %ray_init_data, <3 x i32> %ray_init_flag, float %ray_extent, <3 x float> %ray_origin, <3 x float> %ray_dir, <4 x i32> inreg %rsrc){
+; GFX13-SDAG-LABEL: rts_trace_ray_notmin_test:
 ; GFX13-SDAG:       ; %bb.0:
 ; GFX13-SDAG-NEXT:    v_dual_mov_b32 v14, v7 :: v_dual_mov_b32 v13, v6
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v12, v5 :: v_dual_mov_b32 v18, v3
-; GFX13-SDAG-NEXT:    v_dual_mov_b32 v17, v2 :: v_dual_mov_b32 v16, v1
-; GFX13-SDAG-NEXT:    rts_trace_ray [v0, v[16:18], v4, v[12:14], v[8:10]], s[0:3] r128
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v12, v5 :: v_dual_mov_b32 v11, v4
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v4, v3 :: v_dual_mov_b32 v3, v2
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v2, v1 :: v_dual_mov_b32 v15, 0
+; GFX13-SDAG-NEXT:    rts_trace_ray [v0, v[2:4], v[12:15], v[8:11]], s[0:3] r128
 ; GFX13-SDAG-NEXT:    s_endpgm
 ;
-; GFX13-GISEL-LABEL: rts_trace_ray_test:
+; GFX13-GISEL-LABEL: rts_trace_ray_notmin_test:
 ; GFX13-GISEL:       ; %bb.0:
 ; GFX13-GISEL-NEXT:    v_dual_mov_b32 v12, v1 :: v_dual_mov_b32 v13, v2
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v14, v3 :: v_dual_mov_b32 v16, v5
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v17, v6 :: v_dual_mov_b32 v18, v7
-; GFX13-GISEL-NEXT:    rts_trace_ray [v0, v[12:14], v4, v[16:18], v[8:10]], s[0:3] r128
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v14, v3 :: v_dual_mov_b32 v11, v4
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v2, v5 :: v_dual_mov_b32 v3, v6
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v4, v7 :: v_dual_mov_b32 v5, 0
+; GFX13-GISEL-NEXT:    rts_trace_ray [v0, v[12:14], v[2:5], v[8:11]], s[0:3] r128
 ; GFX13-GISEL-NEXT:    s_endpgm
   call void @llvm.amdgcn.rts.trace.ray(i32 %ray_init_data, <3 x i32> %ray_init_flag, float %ray_extent, <3 x float> %ray_origin, <3 x float> %ray_dir, <4 x i32> %rsrc)
   ret void

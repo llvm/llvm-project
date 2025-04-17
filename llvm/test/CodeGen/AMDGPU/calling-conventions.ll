@@ -918,10 +918,9 @@ define amdgpu_ps void @ps_mesa_inreg_v5i32(<5 x i32> inreg %arg0) {
 ; GFX1250-NEXT:    s_add_co_i32 s1, s1, 2
 ; GFX1250-NEXT:    s_add_co_i32 s4, s4, 5
 ; GFX1250-NEXT:    s_add_co_i32 s0, s0, 1
-; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1250-NEXT:    v_dual_mov_b32 v4, s4 :: v_dual_mov_b32 v0, s0
-; GFX1250-NEXT:    v_dual_mov_b32 v1, s1 :: v_dual_mov_b32 v2, s2
-; GFX1250-NEXT:    v_mov_b32_e32 v3, s3
+; GFX1250-NEXT:    v_dual_mov_b32 v4, s4 :: v_dual_mov_b32 v1, s1
+; GFX1250-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v3, s3
+; GFX1250-NEXT:    v_mov_b32_e32 v2, s2
 ; GFX1250-NEXT:    s_clause 0x1
 ; GFX1250-NEXT:    global_store_b32 v[0:1], v4, off
 ; GFX1250-NEXT:    global_store_b128 v[0:1], v[0:3], off
@@ -975,10 +974,10 @@ define amdgpu_ps void @ps_mesa_inreg_v5f32(<5 x float> inreg %arg0) {
 ; GFX1250-NEXT:    s_add_f32 s0, s0, 1.0
 ; GFX1250-NEXT:    s_add_f32 s1, s1, 2.0
 ; GFX1250-NEXT:    s_add_f32 s2, s2, 4.0
-; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_2)
-; GFX1250-NEXT:    v_dual_mov_b32 v4, s4 :: v_dual_mov_b32 v0, s0
+; GFX1250-NEXT:    v_mov_b32_e32 v4, s4
+; GFX1250-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v3, s3
+; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-NEXT:    v_dual_mov_b32 v1, s1 :: v_dual_mov_b32 v2, s2
-; GFX1250-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX1250-NEXT:    s_clause 0x1
 ; GFX1250-NEXT:    global_store_b32 v[0:1], v4, off
 ; GFX1250-NEXT:    global_store_b128 v[0:1], v[0:3], off

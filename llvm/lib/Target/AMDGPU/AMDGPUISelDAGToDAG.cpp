@@ -4747,6 +4747,8 @@ bool AMDGPUDAGToDAGISel::SelectBITOP3(SDValue In, SDValue &Src0, SDValue &Src1,
   return true;
 }
 
+bool AMDGPUDAGToDAGISel::SelectIgnore(SDValue In) const { return true; }
+
 SDValue AMDGPUDAGToDAGISel::getHi16Elt(SDValue In) const {
   if (In.isUndef())
     return CurDAG->getUNDEF(MVT::i32);

@@ -691,8 +691,9 @@ main_body:
 define amdgpu_ps float @sample_c_d_o_2darray_V1_tfe(i32 %rsrc, <4 x i32> inreg %samp, i32 %offset, float %zcompare, float %dsdh, float %dtdh, float %dsdv, float %dtdv, float %s, float %t, float %slice, ptr addrspace(1) inreg %out) {
 ; GFX13-LABEL: sample_c_d_o_2darray_V1_tfe:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    v_dual_mov_b32 v12, 0 :: v_dual_mov_b32 v10, v1
-; GFX13-NEXT:    v_dual_mov_b32 v11, v0 :: v_dual_mov_b32 v13, v12
+; GFX13-NEXT:    v_mov_b32_e32 v12, 0
+; GFX13-NEXT:    v_dual_mov_b32 v10, v1 :: v_dual_mov_b32 v11, v0
+; GFX13-NEXT:    v_mov_b32_e32 v13, v12
 ; GFX13-NEXT:    v_dual_mov_b32 v0, v12 :: v_dual_mov_b32 v1, v13
 ; GFX13-NEXT:    image_sample_c_d_o v[0:1], [v10, v2, v3, v[4:9]], v11, s[0:3] dmask:0x4 dim:SQ_RSRC_IMG_2D_ARRAY tfe
 ; GFX13-NEXT:    s_wait_samplecnt 0x0
@@ -720,7 +721,8 @@ main_body:
 define amdgpu_ps <4 x float> @sample_c_d_o_2darray_V2_tfe(i32 %rsrc, <4 x i32> inreg %samp, i32 %offset, float %zcompare, float %dsdh, float %dtdh, float %dsdv, float %dtdv, float %s, float %t, float %slice) {
 ; GFX13-LABEL: sample_c_d_o_2darray_V2_tfe:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    v_dual_mov_b32 v12, v0 :: v_dual_mov_b32 v0, 0
+; GFX13-NEXT:    v_mov_b32_e32 v12, v0
+; GFX13-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX13-NEXT:    v_dual_mov_b32 v10, v2 :: v_dual_mov_b32 v11, v1
 ; GFX13-NEXT:    v_dual_mov_b32 v1, v0 :: v_dual_mov_b32 v2, v0
 ; GFX13-NEXT:    image_sample_c_d_o v[0:2], [v11, v10, v3, v[4:9]], v12, s[0:3] dmask:0x6 dim:SQ_RSRC_IMG_2D_ARRAY tfe

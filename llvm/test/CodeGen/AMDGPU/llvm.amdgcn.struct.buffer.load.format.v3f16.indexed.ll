@@ -7,8 +7,9 @@ define amdgpu_gs void @main(i32 %arg, i32 %arg1) {
 ; GFX13-LABEL: main:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    buffer_load_d16_format_xyz v[0:1], v1, v0, null idxen
+; GFX13-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
-; GFX13-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_lshrrev_b32 v0, 16, v0
+; GFX13-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GFX13-NEXT:    v_and_b32_e32 v1, 0xffff, v1
 ; GFX13-NEXT:    ds_store_2addr_b32 v2, v0, v1 offset0:7 offset1:8
 bb:

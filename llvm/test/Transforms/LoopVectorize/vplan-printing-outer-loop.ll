@@ -6,35 +6,32 @@
 @arr = external global [8 x [8 x i64]], align 16
 
 define void @foo(i64 %n) {
-; CHECK:      VPlan 'HCFGBuilder: Plain CFG
+; CHECK:      VPlan 'Plain CFG
 ; CHECK-NEXT: {
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<entry>:
-; CHECK-NEXT: Successor(s): vector.body
+; CHECK-NEXT: Successor(s): outer.header
 ; CHECK-EMPTY:
-; CHECK-NEXT: vector.body:
-; CHECK-NEXT:   WIDEN-PHI ir<%outer.iv> = phi ir<0>, ir<%outer.iv.next>
+; CHECK-NEXT: outer.header:
+; CHECK-NEXT:   WIDEN-PHI ir<%outer.iv> = phi ir<%outer.iv.next>, ir<0>
 ; CHECK-NEXT:   EMIT ir<%gep.1> = getelementptr ir<@arr2>, ir<0>, ir<%outer.iv>
 ; CHECK-NEXT:   EMIT store ir<%outer.iv>, ir<%gep.1>
 ; CHECK-NEXT:   EMIT ir<%add> = add ir<%outer.iv>, ir<%n>
 ; CHECK-NEXT: Successor(s): inner
 ; CHECK-EMPTY:
-; CHECK-NEXT: <x1> inner: {
-; CHECK-NEXT:   inner:
-; CHECK-NEXT:     WIDEN-PHI ir<%inner.iv> = phi ir<0>, ir<%inner.iv.next>
-; CHECK-NEXT:     EMIT ir<%gep.2> = getelementptr ir<@arr>, ir<0>, ir<%inner.iv>, ir<%outer.iv>
-; CHECK-NEXT:     EMIT store ir<%add>, ir<%gep.2>
-; CHECK-NEXT:     EMIT ir<%inner.iv.next> = add ir<%inner.iv>, ir<1>
-; CHECK-NEXT:     EMIT ir<%inner.ec> = icmp ir<%inner.iv.next>, ir<8>
-; CHECK-NEXT:     EMIT branch-on-cond ir<%inner.ec>
-; CHECK-NEXT:   No successors
-; CHECK-NEXT: }
-; CHECK-NEXT: Successor(s): outer.latch
+; CHECK-NEXT: inner:
+; CHECK-NEXT:   WIDEN-PHI ir<%inner.iv> = phi ir<%inner.iv.next>, ir<0>
+; CHECK-NEXT:   EMIT ir<%gep.2> = getelementptr ir<@arr>, ir<0>, ir<%inner.iv>, ir<%outer.iv>
+; CHECK-NEXT:   EMIT store ir<%add>, ir<%gep.2>
+; CHECK-NEXT:   EMIT ir<%inner.iv.next> = add ir<%inner.iv>, ir<1>
+; CHECK-NEXT:   EMIT ir<%inner.ec> = icmp ir<%inner.iv.next>, ir<8>
+; CHECK-NEXT:   EMIT branch-on-cond ir<%inner.ec>
+; CHECK-NEXT: Successor(s): outer.latch, inner
 ; CHECK-EMPTY:
 ; CHECK-NEXT: outer.latch:
 ; CHECK-NEXT:   EMIT ir<%outer.iv.next> = add ir<%outer.iv>, ir<1>
 ; CHECK-NEXT:   EMIT ir<%outer.ec> = icmp ir<%outer.iv.next>, ir<8>
-; CHECK-NEXT: Successor(s): vector.body
+; CHECK-NEXT: Successor(s): outer.header
 ; CHECK-NEXT: }
 entry:
   br label %outer.header

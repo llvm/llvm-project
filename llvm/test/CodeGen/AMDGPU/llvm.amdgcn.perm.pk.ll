@@ -25,9 +25,10 @@ define void @test_perm_pk16_b6_u4(i32 %a, i64 %b, <2 x i32> %c, ptr %out) {
 ; GFX1250-SDAG:       ; %bb.0:
 ; GFX1250-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v7, v6 :: v_dual_mov_b32 v9, v4
-; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v8, v3 :: v_dual_mov_b32 v3, v2
-; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v2, v1 :: v_dual_mov_b32 v6, v5
+; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v7, v6 :: v_dual_mov_b32 v8, v3
+; GFX1250-SDAG-NEXT:    v_mov_b32_e32 v9, v4
+; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v6, v5
+; GFX1250-SDAG-NEXT:    v_mov_b32_e32 v2, v1
 ; GFX1250-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-SDAG-NEXT:    v_perm_pk16_b6_u4 v[0:2], v0, v[2:3], v[8:9]
 ; GFX1250-SDAG-NEXT:    flat_store_b96 v[6:7], v[0:2] scope:SCOPE_SE

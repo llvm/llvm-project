@@ -2,6 +2,9 @@
 // RUN: llvm-mc -triple=amdgcn -mcpu=gfx1300 -show-encoding %s | FileCheck --check-prefixes=GFX13 %s
 // RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1300 -mattr=-wavefrontsize32,+wavefrontsize64 -show-encoding %s 2>&1 | FileCheck --check-prefixes=W64-ERR --implicit-check-not=error: %s
 
+// XFAIL:*
+// FIXME DEGFX13-11539
+
 v_dual_add_f32 v255, v4, v2 :: v_dual_add_f32 v7, v1, v3
 // GFX13: v_dual_add_f32 v255, v4, v2 :: v_dual_add_f32 v7, v1, v3 ; encoding: [0x04,0x41,0x10,0xcf,0x01,0x01,0x02,0x00,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error

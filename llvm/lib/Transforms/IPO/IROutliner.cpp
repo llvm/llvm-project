@@ -1126,7 +1126,8 @@ static void analyzeExitPHIsForOutputUses(
     // outside of the single PHINode we should not skip over it.
     for (unsigned Idx : IncomingVals) {
       Value *V = PN.getIncomingValue(Idx);
-      if (outputHasNonPHI(V, Idx, PN, PotentialExitsFromRegion, RegionBlocks)) {
+      if (!isa<Constant>(V) &&
+          outputHasNonPHI(V, Idx, PN, PotentialExitsFromRegion, RegionBlocks)) {
         OutputsWithNonPhiUses.insert(V);
         OutputsReplacedByPHINode.erase(V);
         continue;

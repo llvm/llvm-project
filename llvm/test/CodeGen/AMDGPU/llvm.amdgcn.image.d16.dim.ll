@@ -3,8 +3,8 @@
 ; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx900 -verify-machineinstrs | FileCheck -check-prefixes=GCN,PACKED,GFX89 %s
 ; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1010 -verify-machineinstrs | FileCheck -check-prefixes=GCN,GFX10 %s
 ; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs | FileCheck -check-prefixes=GCN,GFX10 %s
-; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1200 -verify-machineinstrs | FileCheck -check-prefixes=GCN,GFX12PLUS %s
-; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1300 -verify-machineinstrs | FileCheck -check-prefixes=GCN,GFX12PLUS %s
+; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1200 -verify-machineinstrs | FileCheck -check-prefixes=GCN,GFX12,GFX12PLUS %s
+; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1300 -verify-machineinstrs | FileCheck -check-prefixes=GCN,GFX13,GFX12PLUS %s
 
 ; GCN-LABEL: {{^}}image_load_f16:
 ; GFX89: image_load v0, v[0:1], s[0:7] dmask:0x1 unorm d16{{$}}
@@ -99,7 +99,8 @@ main_body:
 ; GCN-LABEL: {{^}}image_store_f16
 ; GFX89: image_store v2, v[0:1], s[0:7] dmask:0x1 unorm d16{{$}}
 ; GFX10: image_store v2, v[0:1], s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_2D unorm d16{{$}}
-; GFX12PLUS: image_store v2, [v0, v1], s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_2D d16
+; GFX12: image_store v2, [v0, v1], s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_2D d16
+; GFX13: image_store v2, [v0, v1], s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_2D scope:SCOPE_SE d16
 define amdgpu_ps void @image_store_f16(<8 x i32> inreg %rsrc, i32 %s, i32 %t, half %data) {
 main_body:
   call void @llvm.amdgcn.image.store.2d.f16.i32(half %data, i32 1, i32 %s, i32 %t, <8 x i32> %rsrc, i32 0, i32 0)
@@ -113,7 +114,8 @@ main_body:
 ; PACKED: image_store v2, v[0:1], s[0:7] dmask:0x3 unorm d16{{$}}
 ; GFX81: image_store v[2:3], v[0:1], s[0:7] dmask:0x3 unorm d16{{$}}
 ; GFX10: image_store v2, v[0:1], s[0:7] dmask:0x3 dim:SQ_RSRC_IMG_2D unorm d16{{$}}
-; GFX12PLUS: image_store v2, [v0, v1], s[0:7] dmask:0x3 dim:SQ_RSRC_IMG_2D d16
+; GFX12: image_store v2, [v0, v1], s[0:7] dmask:0x3 dim:SQ_RSRC_IMG_2D d16
+; GFX13: image_store v2, [v0, v1], s[0:7] dmask:0x3 dim:SQ_RSRC_IMG_2D scope:SCOPE_SE d16
 define amdgpu_ps void @image_store_v2f16(<8 x i32> inreg %rsrc, i32 %s, i32 %t, float %in) {
 main_body:
   %data = bitcast float %in to <2 x half>
@@ -126,7 +128,8 @@ main_body:
 ; PACKED: image_store v[2:3], v[0:1], s[0:7] dmask:0x7 unorm d16
 ; GFX81: image_store v[2:4], v[0:1], s[0:7] dmask:0x7 unorm d16
 ; GFX10: image_store v[2:3], v[0:1], s[0:7] dmask:0x7 dim:SQ_RSRC_IMG_2D unorm d16{{$}}
-; GFX12PLUS: image_store v[2:3], [v0, v1], s[0:7] dmask:0x7 dim:SQ_RSRC_IMG_2D d16
+; GFX12: image_store v[2:3], [v0, v1], s[0:7] dmask:0x7 dim:SQ_RSRC_IMG_2D d16
+; GFX13: image_store v[2:3], [v0, v1], s[0:7] dmask:0x7 dim:SQ_RSRC_IMG_2D scope:SCOPE_SE d16
 define amdgpu_ps void @image_store_v3f16(<8 x i32> inreg %rsrc, i32 %s, i32 %t, <2 x float> %in) {
 main_body:
   %r = bitcast <2 x float> %in to <4 x half>
@@ -144,7 +147,8 @@ main_body:
 ; PACKED: image_store v[2:3], v[0:1], s[0:7] dmask:0xf unorm d16{{$}}
 ; GFX81: image_store v[2:5], v[0:1], s[0:7] dmask:0xf unorm d16{{$}}
 ; GFX10: image_store v[2:3], v[0:1], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_2D unorm d16{{$}}
-; GFX12PLUS: image_store v[2:3], [v0, v1], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_2D d16
+; GFX12: image_store v[2:3], [v0, v1], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_2D d16
+; GFX13: image_store v[2:3], [v0, v1], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_2D scope:SCOPE_SE d16
 define amdgpu_ps void @image_store_v4f16(<8 x i32> inreg %rsrc, i32 %s, i32 %t, <2 x float> %in) {
 main_body:
   %data = bitcast <2 x float> %in to <4 x half>
@@ -161,7 +165,8 @@ main_body:
 ; PACKED: image_store_mip v[2:3], v[0:1], s[0:7] dmask:0xf unorm d16{{$}}
 ; GFX81: image_store_mip v[2:5], v[0:1], s[0:7] dmask:0xf unorm d16{{$}}
 ; GFX10: image_store_mip v[2:3], v[0:1], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D unorm d16{{$}}
-; GFX12PLUS: image_store_mip v[2:3], [v0, v1], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D d16
+; GFX12: image_store_mip v[2:3], [v0, v1], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D d16
+; GFX13: image_store_mip v[2:3], [v0, v1], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D scope:SCOPE_SE d16
 define amdgpu_ps void @image_store_mip_1d_v4f16(<8 x i32> inreg %rsrc, i32 %s, i32 %mip, <2 x float> %in) {
 main_body:
   %data = bitcast <2 x float> %in to <4 x half>

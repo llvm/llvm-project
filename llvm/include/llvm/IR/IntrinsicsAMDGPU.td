@@ -4025,12 +4025,12 @@ def int_amdgcn_rts_ray_restore: Intrinsic<
 
 // llvm.amdgcn.rts.trace.ray <ray_init_data> <ray_init_flag> <ray_extent> <ray_origin> <ray_dir> <texture_descr>
 def int_amdgcn_rts_trace_ray : Intrinsic<[],
-    [llvm_i32_ty , llvm_v3i32_ty, llvm_float_ty, llvm_v3f32_ty, llvm_v3f32_ty, llvm_v4i32_ty],
+    [llvm_i32_ty, llvm_v3i32_ty, llvm_float_ty, llvm_anyfloat_ty, llvm_anyfloat_ty, llvm_v4i32_ty],
     [IntrHasSideEffects, IntrNoCallback, IntrWillReturn, IntrNoFree], "", [SDNPMemOperand]>, AMDGPURsrcIntrinsic<5>;
 
 // <vdata> llvm.amdgcn.rts.trace.ray <ray_init_data> <ray_init_flag> <ray_extent> <ray_origin> <ray_dir> <texture_descr>
 def int_amdgcn_rts_trace_ray_nonblock : Intrinsic<[llvm_i32_ty],
-    [llvm_i32_ty , llvm_v3i32_ty, llvm_float_ty, llvm_v3f32_ty, llvm_v3f32_ty, llvm_v4i32_ty],
+    [llvm_i32_ty, llvm_v3i32_ty, llvm_float_ty, llvm_anyfloat_ty, llvm_anyfloat_ty, llvm_v4i32_ty],
     [IntrHasSideEffects, IntrNoCallback, IntrWillReturn, IntrNoFree], "", [SDNPMemOperand]>, AMDGPURsrcIntrinsic<5>;
 
 // <vdata> llvm.amdgcn_rts_read_vertex <vaddr0> <vaddr1> <vaddr2>
@@ -4848,28 +4848,28 @@ class AMDGPUWmmaIntrinsicModsAllDiff<LLVMType DstTy, LLVMType AB, LLVMType C> :
     [IntrNoMem, IntrConvergent, ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<4>>, IntrWillReturn, IntrNoCallback, IntrNoFree]
 >;
 
-class AMDGPUWmmaIntrinsicModsC_MatrixFMT<LLVMType AB, LLVMType CD> :
+class AMDGPUWmmaIntrinsicModsC_MatrixFMT :
   Intrinsic<
-    [CD], // %D
+    [llvm_anyfloat_ty], // %D
     [
       llvm_i32_ty,      // matrix_a_fmt
-      AB,               // %A
+      llvm_anyint_ty,   // %A
       llvm_i32_ty,      // matrix_b_fmt
-      LLVMMatchType<1>, // %B
+      llvm_anyint_ty,   // %B
       llvm_i16_ty,      // %C_mod: 0 - none, 1 - neg, 2 - abs, 3 - neg(abs)
       LLVMMatchType<0>, // %C
     ],
     [IntrNoMem, IntrConvergent, ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<4>>, IntrWillReturn, IntrNoCallback, IntrNoFree]
 >;
 
-class AMDGPUWmmaScaleIntrinsicModsC<LLVMType AB, LLVMType CD, LLVMType scale_ty> :
+class AMDGPUWmmaScaleIntrinsicModsC<LLVMType scale_ty> :
   Intrinsic<
-    [CD], // %D
+    [llvm_anyfloat_ty], // %D
     [
       llvm_i32_ty,      // matrix_a_fmt
-      AB,               // %A
+      llvm_anyint_ty,   // %A
       llvm_i32_ty,      // matrix_b_fmt
-      LLVMMatchType<1>, // %B
+      llvm_anyint_ty,   // %B
       llvm_i16_ty,      // %C_mod: 0 - none, 1 - neg, 2 - abs, 3 - neg(abs)
       LLVMMatchType<0>, // %C
       llvm_i32_ty,      // matrix_a_scale
@@ -4905,9 +4905,9 @@ def int_amdgcn_wmma_f16_16x16x64_bf8_fp8  : AMDGPUWmmaIntrinsicModsC<llvm_anyint
 def int_amdgcn_wmma_f16_16x16x64_bf8_bf8  : AMDGPUWmmaIntrinsicModsC<llvm_anyint_ty, llvm_anyfloat_ty>;
 def int_amdgcn_wmma_i32_16x16x64_iu8      : AMDGPUWmmaIntrinsicModsAB<llvm_anyint_ty, llvm_anyint_ty>;
 def int_amdgcn_wmma_i32_16x16x128_iu4     : AMDGPUWmmaIntrinsicModsAB<llvm_anyint_ty, llvm_anyint_ty>;
-def int_amdgcn_wmma_f32_16x16x128_f8f6f4  : AMDGPUWmmaIntrinsicModsC_MatrixFMT<llvm_anyint_ty, llvm_anyfloat_ty>;
-def int_amdgcn_wmma_scale_f32_16x16x128_f8f6f4   : AMDGPUWmmaScaleIntrinsicModsC<llvm_anyint_ty, llvm_anyfloat_ty, llvm_i32_ty>;
-def int_amdgcn_wmma_scale16_f32_16x16x128_f8f6f4 : AMDGPUWmmaScaleIntrinsicModsC<llvm_anyint_ty, llvm_anyfloat_ty, llvm_i64_ty>;
+def int_amdgcn_wmma_f32_16x16x128_f8f6f4  : AMDGPUWmmaIntrinsicModsC_MatrixFMT;
+def int_amdgcn_wmma_scale_f32_16x16x128_f8f6f4   : AMDGPUWmmaScaleIntrinsicModsC<llvm_i32_ty>;
+def int_amdgcn_wmma_scale16_f32_16x16x128_f8f6f4 : AMDGPUWmmaScaleIntrinsicModsC<llvm_i64_ty>;
 }
 
 class AMDGPUSWmmacIntrinsicABIdx<LLVMType A, LLVMType B, LLVMType CD, LLVMType Index> :

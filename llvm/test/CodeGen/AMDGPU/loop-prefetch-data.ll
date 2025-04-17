@@ -470,7 +470,8 @@ define amdgpu_kernel void @copy_local(ptr addrspace(3) nocapture %d, ptr addrspa
 ; GFX1250-NEXT:    s_cbranch_scc1 .LBB3_2
 ; GFX1250-NEXT:  .LBB3_1: ; %for.body
 ; GFX1250-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX1250-NEXT:    v_dual_mov_b32 v2, s1 :: v_dual_mov_b32 v4, s0
+; GFX1250-NEXT:    v_mov_b32_e32 v2, s1
+; GFX1250-NEXT:    v_mov_b32_e32 v4, s0
 ; GFX1250-NEXT:    s_add_co_i32 s2, s2, -1
 ; GFX1250-NEXT:    s_add_co_i32 s0, s0, 16
 ; GFX1250-NEXT:    s_add_co_i32 s1, s1, 16

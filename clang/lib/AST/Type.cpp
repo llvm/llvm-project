@@ -279,10 +279,8 @@ QualType ArrayParameterType::getConstantArrayType(const ASTContext &Ctx) const {
 
 DependentSizedArrayType::DependentSizedArrayType(QualType et, QualType can,
                                                  Expr *e, ArraySizeModifier sm,
-                                                 unsigned tq,
-                                                 SourceRange brackets)
-    : ArrayType(DependentSizedArray, et, can, sm, tq, e), SizeExpr((Stmt *)e),
-      Brackets(brackets) {}
+                                                 unsigned tq)
+    : ArrayType(DependentSizedArray, et, can, sm, tq, e), SizeExpr((Stmt *)e) {}
 
 void DependentSizedArrayType::Profile(llvm::FoldingSetNodeID &ID,
                                       const ASTContext &Context,
@@ -1099,8 +1097,7 @@ public:
 
     return Ctx.getVariableArrayType(elementType, T->getSizeExpr(),
                                     T->getSizeModifier(),
-                                    T->getIndexTypeCVRQualifiers(),
-                                    T->getBracketsRange());
+                                    T->getIndexTypeCVRQualifiers());
   }
 
   QualType VisitIncompleteArrayType(const IncompleteArrayType *T) {
@@ -1939,6 +1936,14 @@ TagDecl *Type::getAsTagDecl() const {
     return Injected->getDecl();
 
   return nullptr;
+}
+
+const TemplateSpecializationType *
+Type::getAsNonAliasTemplateSpecializationType() const {
+  const auto *TST = getAs<TemplateSpecializationType>();
+  while (TST && TST->isTypeAlias())
+    TST = TST->desugar()->getAs<TemplateSpecializationType>();
+  return TST;
 }
 
 bool Type::hasAttr(attr::Kind AK) const {
@@ -4055,8 +4060,8 @@ QualType DecltypeType::desugar() const {
   return QualType(this, 0);
 }
 
-DependentDecltypeType::DependentDecltypeType(Expr *E, QualType UnderlyingType)
-    : DecltypeType(E, UnderlyingType) {}
+DependentDecltypeType::DependentDecltypeType(Expr *E)
+    : DecltypeType(E, QualType()) {}
 
 void DependentDecltypeType::Profile(llvm::FoldingSetNodeID &ID,
                                     const ASTContext &Context, Expr *E) {
@@ -4126,11 +4131,6 @@ UnaryTransformType::UnaryTransformType(QualType BaseType,
                                        QualType CanonicalType)
     : Type(UnaryTransform, CanonicalType, BaseType->getDependence()),
       BaseType(BaseType), UnderlyingType(UnderlyingType), UKind(UKind) {}
-
-DependentUnaryTransformType::DependentUnaryTransformType(const ASTContext &C,
-                                                         QualType BaseType,
-                                                         UTTKind UKind)
-     : UnaryTransformType(BaseType, C.DependentTy, UKind, QualType()) {}
 
 TagType::TagType(TypeClass TC, const TagDecl *D, QualType can)
     : Type(TC, can,
@@ -4409,7 +4409,8 @@ TemplateSpecializationType::TemplateSpecializationType(
           T.getKind() == TemplateName::SubstTemplateTemplateParmPack ||
           T.getKind() == TemplateName::UsingTemplate ||
           T.getKind() == TemplateName::QualifiedTemplate ||
-          T.getKind() == TemplateName::DeducedTemplate) &&
+          T.getKind() == TemplateName::DeducedTemplate ||
+          T.getKind() == TemplateName::AssumedTemplate) &&
          "Unexpected template name for TemplateSpecializationType");
 
   auto *TemplateArgs =

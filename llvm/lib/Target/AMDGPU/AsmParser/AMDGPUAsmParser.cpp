@@ -1979,6 +1979,7 @@ private:
   bool validateSetVgprMSB(const MCInst &Inst, const OperandVector &Operands);
   std::optional<StringRef> validateLdsDirect(const MCInst &Inst);
   bool validateRegOperands(const MCInst &Inst, const OperandVector &Operands);
+  bool validateWMMA(const MCInst &Inst, const OperandVector &Operands);
   unsigned getConstantBusLimit(unsigned Opcode) const;
   bool usesConstantBus(const MCInst &Inst, unsigned OpIdx);
   bool isInlineConstant(const MCInst &Inst, unsigned OpIdx) const;
@@ -5805,6 +5806,37 @@ bool AMDGPUAsmParser::validateVOPM(const MCInst &Inst,
   return true;
 }
 
+bool AMDGPUAsmParser::validateWMMA(const MCInst &Inst,
+                                   const OperandVector &Operands) {
+  unsigned Opc = Inst.getOpcode();
+  const MCRegisterInfo *TRI = getContext().getRegisterInfo();
+  const MCInstrDesc &Desc = MII.get(Opc);
+
+  auto validateFmt = [&](AMDGPU::OpName FmtOp, AMDGPU::OpName SrcOp) -> bool {
+    int FmtIdx = AMDGPU::getNamedOperandIdx(Opc, FmtOp);
+    if (FmtIdx == -1)
+      return true;
+    unsigned Fmt = Inst.getOperand(FmtIdx).getImm();
+    int SrcIdx = AMDGPU::getNamedOperandIdx(Opc, SrcOp);
+    unsigned RegSize =
+        TRI->getRegClass(Desc.operands()[SrcIdx].RegClass).getSizeInBits();
+
+    if (RegSize == AMDGPU::wmmaScaleF8F6F4FormatToNumRegs(Fmt) * 32)
+      return true;
+
+    static const char *FmtNames[] = {"MATRIX_FMT_FP8", "MATRIX_FMT_BF8",
+                                     "MATRIX_FMT_FP6", "MATRIX_FMT_BF6",
+                                     "MATRIX_FMT_FP4"};
+
+    Error(getRegLoc(mc2PseudoReg(Inst.getOperand(SrcIdx).getReg()), Operands),
+          "wrong register tuple size for " + Twine(FmtNames[Fmt]));
+    return false;
+  };
+
+  return validateFmt(AMDGPU::OpName::matrix_a_fmt, AMDGPU::OpName::src0) &&
+         validateFmt(AMDGPU::OpName::matrix_b_fmt, AMDGPU::OpName::src1);
+}
+
 bool AMDGPUAsmParser::validateInstruction(const MCInst &Inst,
                                           const SMLoc &IDLoc,
                                           const OperandVector &Operands) {
@@ -5948,6 +5980,9 @@ bool AMDGPUAsmParser::validateInstruction(const MCInst &Inst,
     return false;
   }
   if (!validateSetVgprMSB(Inst, Operands)) {
+    return false;
+  }
+  if (!validateWMMA(Inst, Operands)) {
     return false;
   }
   if (!validateVOPM(Inst, Operands)) {
@@ -6388,6 +6423,12 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
                        ExprVal, ValRange);
       if (Val)
         ImpliedUserSGPRCount += 1;
+    } else if (ID == ".amdhsa_uses_cu_stores") {
+      if (!isGFX1250Only())
+        return Error(IDRange.Start, "directive requires gfx12.5", IDRange);
+
+      PARSE_BITS_ENTRY(KD.kernel_code_properties,
+                       KERNEL_CODE_PROPERTY_USES_CU_STORES, ExprVal, ValRange);
     } else if (ID == ".amdhsa_wavefront_size32") {
       EXPR_RESOLVE_OR_ERROR(EvaluatableExpr);
       if (IVersion.Major < 10)

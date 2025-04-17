@@ -77,9 +77,9 @@ main_body:
 define amdgpu_ps void @buffer_store_both_reversed(i32, <4 x float>, i32, i32) {
 ; GFX13-LABEL: buffer_store_both_reversed:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    v_dual_mov_b32 v7, v5 :: v_dual_mov_b32 v5, v4
-; GFX13-NEXT:    v_dual_mov_b32 v4, v3 :: v_dual_mov_b32 v3, v2
-; GFX13-NEXT:    v_mov_b32_e32 v2, v1
+; GFX13-NEXT:    v_mov_b32_e32 v7, v5
+; GFX13-NEXT:    v_dual_mov_b32 v5, v4 :: v_dual_mov_b32 v4, v3
+; GFX13-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
 ; GFX13-NEXT:    buffer_store_b128 v[2:5], v[6:7], v0, null idxen offen
 ; GFX13-NEXT:    s_endpgm
 main_body:

@@ -11,25 +11,28 @@ define <4 x half> @test_1(i1 %arg) {
 ; GFX13-NEXT:    s_wait_samplecnt 0x0
 ; GFX13-NEXT:    s_wait_rtscnt 0x0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    v_dual_mov_b32 v22, 0 :: v_dual_bitop2_b32 v0, 1, v0 bitop3:0x40
+; GFX13-NEXT:    v_mov_b32_e32 v22, 0
+; GFX13-NEXT:    v_and_b32_e32 v0, 1, v0
 ; GFX13-NEXT:    s_mov_b32 s0, 0
-; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX13-NEXT:    s_mov_b32 s2, s0
+; GFX13-NEXT:    v_mov_b32_e32 v23, v22
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX13-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v0
 ; GFX13-NEXT:    s_mov_b32 s1, s0
-; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_dual_mov_b32 v20, s2 :: v_dual_mov_b32 v19, s1
 ; GFX13-NEXT:    v_mov_b32_e32 v18, s0
 ; GFX13-NEXT:    v_cndmask_b32_e64 v0, 0, 0x3c003c00, vcc_lo
-; GFX13-NEXT:    v_dual_mov_b32 v23, v22 :: v_dual_mov_b32 v1, v0
-; GFX13-NEXT:    v_dual_mov_b32 v2, v0 :: v_dual_mov_b32 v3, v0
-; GFX13-NEXT:    v_dual_mov_b32 v4, v0 :: v_dual_mov_b32 v5, v0
-; GFX13-NEXT:    v_dual_mov_b32 v6, v0 :: v_dual_mov_b32 v7, v0
-; GFX13-NEXT:    v_dual_mov_b32 v8, v0 :: v_dual_mov_b32 v9, v0
-; GFX13-NEXT:    v_dual_mov_b32 v10, v0 :: v_dual_mov_b32 v11, v0
-; GFX13-NEXT:    v_dual_mov_b32 v12, v0 :: v_dual_mov_b32 v13, v0
-; GFX13-NEXT:    v_dual_mov_b32 v14, v0 :: v_dual_mov_b32 v15, v0
-; GFX13-NEXT:    v_dual_mov_b32 v16, v0 :: v_dual_mov_b32 v17, v0
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX13-NEXT:    v_dual_mov_b32 v1, v0 :: v_dual_mov_b32 v2, v0
+; GFX13-NEXT:    v_dual_mov_b32 v3, v0 :: v_dual_mov_b32 v4, v0
+; GFX13-NEXT:    v_dual_mov_b32 v5, v0 :: v_dual_mov_b32 v6, v0
+; GFX13-NEXT:    v_dual_mov_b32 v7, v0 :: v_dual_mov_b32 v8, v0
+; GFX13-NEXT:    v_dual_mov_b32 v9, v0 :: v_dual_mov_b32 v10, v0
+; GFX13-NEXT:    v_dual_mov_b32 v11, v0 :: v_dual_mov_b32 v12, v0
+; GFX13-NEXT:    v_dual_mov_b32 v13, v0 :: v_dual_mov_b32 v14, v0
+; GFX13-NEXT:    v_dual_mov_b32 v15, v0 :: v_dual_mov_b32 v16, v0
+; GFX13-NEXT:    v_mov_b32_e32 v17, v0
 ; GFX13-NEXT:    v_convolve_f16_f16 v[0:1], v[22:23], v[0:17], v[18:20], v[18:20], v[18:20]
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
 bb:

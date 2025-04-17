@@ -20,10 +20,23 @@ namespace clang::CIRGen {
 
 class CIRGenBuilderTy : public cir::CIRBaseBuilderTy {
   const CIRGenTypeCache &typeCache;
+  llvm::StringMap<unsigned> recordNames;
 
 public:
   CIRGenBuilderTy(mlir::MLIRContext &mlirContext, const CIRGenTypeCache &tc)
       : CIRBaseBuilderTy(mlirContext), typeCache(tc) {}
+
+  std::string getUniqueAnonRecordName() { return getUniqueRecordName("anon"); }
+
+  std::string getUniqueRecordName(const std::string &baseName) {
+    auto it = recordNames.find(baseName);
+    if (it == recordNames.end()) {
+      recordNames[baseName] = 0;
+      return baseName;
+    }
+
+    return baseName + "." + std::to_string(recordNames[baseName]++);
+  }
 
   cir::LongDoubleType getLongDoubleTy(const llvm::fltSemantics &format) const {
     if (&format == &llvm::APFloat::IEEEdouble())
@@ -35,6 +48,33 @@ public:
     if (&format == &llvm::APFloat::PPCDoubleDouble())
       llvm_unreachable("NYI: PPC double-double format for long double");
     llvm_unreachable("Unsupported format for long double");
+  }
+
+  /// Get a CIR record kind from a AST declaration tag.
+  cir::RecordType::RecordKind getRecordKind(const clang::TagTypeKind kind) {
+    switch (kind) {
+    case clang::TagTypeKind::Class:
+    case clang::TagTypeKind::Struct:
+      return cir::RecordType::Struct;
+    case clang::TagTypeKind::Union:
+      return cir::RecordType::Union;
+    case clang::TagTypeKind::Interface:
+      llvm_unreachable("interface records are NYI");
+    case clang::TagTypeKind::Enum:
+      llvm_unreachable("enums are not records");
+    }
+  }
+
+  /// Get an incomplete CIR struct type. If we have a complete record
+  /// declaration, we may create an incomplete type and then add the
+  /// members, so \p rd here may be complete.
+  cir::RecordType getIncompleteRecordTy(llvm::StringRef name,
+                                        const clang::RecordDecl *rd) {
+    const mlir::StringAttr nameAttr = getStringAttr(name);
+    cir::RecordType::RecordKind kind = cir::RecordType::RecordKind::Struct;
+    if (rd)
+      kind = getRecordKind(rd->getTagKind());
+    return getType<cir::RecordType>(nameAttr, kind);
   }
 
   bool isSized(mlir::Type ty) {

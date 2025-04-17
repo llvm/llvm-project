@@ -580,8 +580,8 @@ def VOP_MAC_F16_t16 : VOP_MAC <f16> {
   let Src1VOP3DPP = getVOP3DPPSrcForVT<Src1VT, 0/*IsFake16*/>.ret;
   let Src2VOP3DPP = getVOP3DPPSrcForVT<Src2VT, 0/*IsFake16*/>.ret;
   let Src0ModVOP3DPP = getSrc0ModVOP3DPP<Src0VT, DstVT, 0/*IsFake16*/>.ret;
-  let Src1ModVOP3DPP = getSrcModVOP3VC<Src1VT, 1/*IsFake16*/>.ret;
-  let Src2ModVOP3DPP = getSrcModVOP3VC<Src2VT, 1/*IsFake16*/>.ret;
+  let Src1ModVOP3DPP = getSrcModVOP3VC<Src1VT, 0/*IsFake16*/>.ret;
+  let Src2ModVOP3DPP = getSrcModVOP3VC<Src2VT, 0/*IsFake16*/>.ret;
   let Src0Mod = getSrc0Mod<Src0VT, DstVT, 1/*IsTrue16*/, 0/*IsFake16*/>.ret;
   let Src1Mod = getSrcMod<Src1VT, 1/*IsTrue16*/, 0/*IsFake16*/>.ret;
   let Src2Mod = getSrcMod<Src2VT, 1/*IsTrue16*/, 0/*IsFake16*/>.ret;

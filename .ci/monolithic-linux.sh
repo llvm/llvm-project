@@ -33,6 +33,7 @@ function at-exit {
 
   mkdir -p artifacts
   ccache --print-stats > artifacts/ccache_stats.txt
+  cp "${BUILD_DIR}"/.ninja_log artifacts/.ninja_log
 
   # If building fails there will be no results files.
   shopt -s nullglob

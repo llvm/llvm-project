@@ -89,7 +89,7 @@ ArrayRef<FormatToken *> FormatTokenLexer::lex() {
       tryParseJSRegexLiteral();
       handleTemplateStrings();
     }
-    if (Style.Language == FormatStyle::LK_TextProto)
+    if (Style.isTextProto())
       tryParsePythonComment();
     tryMergePreviousTokens();
     if (Style.isCSharp()) {
@@ -207,7 +207,7 @@ void FormatTokenLexer::tryMergePreviousTokens() {
       return;
   }
 
-  if (Style.Language == FormatStyle::LK_Java) {
+  if (Style.isJava()) {
     static const tok::TokenKind JavaRightLogicalShiftAssign[] = {
         tok::greater, tok::greater, tok::greaterequal};
     if (tryMergeTokens(JavaRightLogicalShiftAssign, TT_BinaryOperator))
@@ -1239,8 +1239,8 @@ FormatToken *FormatTokenLexer::getNextToken() {
   // finds comments that contain a backslash followed by a line break, truncates
   // the comment token at the backslash, and resets the lexer to restart behind
   // the backslash.
-  if ((Style.isJavaScript() || Style.Language == FormatStyle::LK_Java) &&
-      FormatTok->is(tok::comment) && FormatTok->TokenText.starts_with("//")) {
+  if ((Style.isJavaScript() || Style.isJava()) && FormatTok->is(tok::comment) &&
+      FormatTok->TokenText.starts_with("//")) {
     size_t BackslashPos = FormatTok->TokenText.find('\\');
     while (BackslashPos != StringRef::npos) {
       if (BackslashPos + 1 < FormatTok->TokenText.size() &&
@@ -1302,7 +1302,7 @@ FormatToken *FormatTokenLexer::getNextToken() {
     IdentifierInfo &Info = IdentTable.get(FormatTok->TokenText);
     FormatTok->Tok.setIdentifierInfo(&Info);
     FormatTok->Tok.setKind(Info.getTokenID());
-    if (Style.Language == FormatStyle::LK_Java &&
+    if (Style.isJava() &&
         FormatTok->isOneOf(tok::kw_struct, tok::kw_union, tok::kw_delete,
                            tok::kw_operator)) {
       FormatTok->Tok.setKind(tok::identifier);
