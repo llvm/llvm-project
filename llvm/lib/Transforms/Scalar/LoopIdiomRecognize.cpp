@@ -329,9 +329,9 @@ bool LoopIdiomRecognize::runOnLoop(Loop *L) {
   HasMemset = TLI->has(LibFunc_memset);
   // TODO: Unconditionally enable use of the memset pattern intrinsic (or at
   // least, opt-in via target hook) once we are confident it will never result
-  // in worse codegen than without. For now, use it only when we would have
-  // previously emitted a libcall to memset_pattern16 (or unless this is
-  // overridden by command line option).
+  // in worse codegen than without. For now, use it only when the target
+  // supports memset_pattern16 libcall (or unless this is overridden by
+  // command line option).
   HasMemsetPattern = TLI->has(LibFunc_memset_pattern16);
   HasMemcpy = TLI->has(LibFunc_memcpy);
 
