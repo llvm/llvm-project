@@ -101,6 +101,48 @@ static bool isEvenDistributed(llvm::ArrayRef<int64_t> shape,
   return true;
 }
 
+static LogicalResult isValidGatherScatterParams(Type maskTy, VectorType valueTy, TensorDescType tdescTy, UnitAttr transposeAttr, function_ref<InFlightDiagnostic()> emitError) {
+
+  if (!tdescTy.isScattered())
+    return emitError() << "Expects a scattered TensorDesc.";
+
+  if (!valueTy)
+    return emitError() << "Expecting a vector type result.";
+
+  auto maskShape = getShapeOf(maskTy);
+  auto valueShape = getShapeOf(valueTy);
+  auto tdescShape = getShapeOf(tdescTy);
+  auto chunkSize = tdescTy.getChunkSize();
+
+  if (valueTy.getElementType() != tdescTy.getElementType())
+    return emitError() << "Value should have the same element type as TensorDesc.";
+
+  if (tdescShape[0] != maskShape[0])
+    return emitError() << "dim-0 of the Mask and TensorDesc should be the same.";
+
+  // a valid shape for SIMT case
+  if (valueTy.getRank() == 1 && valueTy.getNumElements() == chunkSize) {
+    if (tdescTy.getLayoutAttr())
+      return emitError() << "TensorDesc doesn't need LayoutAttr for SIMT code";
+    if (transposeAttr)
+      return emitError() << "doesn't need TransposeAttr for SIMT code";
+    return success();
+  }
+
+  if (tdescTy.getRank() == 2 && valueTy.getRank() == 2) {
+    if (!transposeAttr)
+      return emitError() << "rank-2 tensor has to be transposed.";
+    transpose({1, 0}, tdescShape);
+  }
+
+  if (tdescShape != valueShape)
+    return emitError() << "Value shape " << makeString(valueShape)
+                       << " is neither a valid distribution for SIMT nor "
+                          "consistent with the tensor descriptor for SIMD "
+                       << tdescTy;
+  return success();
+}
+
 //===----------------------------------------------------------------------===//
 // XeGPU_CreateNdDescOp
 //===----------------------------------------------------------------------===//
@@ -517,12 +559,6 @@ LogicalResult LoadGatherOp::verify() {
   auto maskTy = getMaskType();
   auto valueTy = getValueType();
 
-  if (!valueTy)
-    return emitOpError("Expecting a vector type result.\n");
-
-  if (!tdescTy.isScattered())
-    return emitOpError("Expects a scattered TensorDesc.\n");
-
   if (!isReadHintOrNone(getL1HintAttr()))
     return emitOpError("invalid l1_hint: ") << getL1HintAttr();
 
@@ -532,43 +568,8 @@ LogicalResult LoadGatherOp::verify() {
   if (!isReadHintOrNone(getL3HintAttr()))
     return emitOpError("invalid l3_hint: ") << getL3HintAttr();
 
-  auto tdescElemTy = tdescTy.getElementType();
-  auto valueElemTy = getElementType();
-  if (tdescElemTy != valueElemTy)
-    return emitOpError(
-        "Value should have the same element type as TensorDesc.");
-
-  auto maskShape = getShapeOf(maskTy);
-  auto valueShape = getShapeOf(valueTy);
-  auto tdescShape = getShapeOf(tdescTy);
-
-  if (tdescShape[0] != maskShape[0])
-    return emitOpError("dim-0 of the Mask and TensorDesc should be the same.");
-
-  auto chunkSize = tdescTy.getChunkSize();
-
-  // a valid shape for SIMT case
-  if (valueTy.getRank() == 1 && valueTy.getNumElements() == chunkSize) {
-    if (tdescTy.getLayoutAttr())
-      return emitOpError()
-             << "TensorDesc doesn't need LayoutAttr for SIMT code";
-    if (getTransposeAttr())
-      return emitOpError() << "doesn't need TransposeAttr for SIMT code";
-    return success();
-  }
-
-  if (tdescTy.getRank() == 2 && valueTy.getRank() == 2) {
-    if (!getTransposeAttr())
-      return emitOpError("load of rank-2 tensor has to be transposed.");
-    transpose({1, 0}, tdescShape);
-  }
-
-  if (tdescShape != valueShape)
-    return emitOpError() << "Result shape " << makeString(valueShape)
-                         << " is neither a valid distribution for SIMT nor "
-                            "consistent with the tensor descriptor for SIMD "
-                         << tdescTy;
-  return success();
+  return isValidGatherScatterParams(maskTy, valueTy, tdescTy, getTransposeAttr(),
+                         [&]() { return emitOpError(); });
 }
 
 //===----------------------------------------------------------------------===//
@@ -576,8 +577,8 @@ LogicalResult LoadGatherOp::verify() {
 //===----------------------------------------------------------------------===//
 LogicalResult StoreScatterOp::verify() {
   auto tdescTy = getTensorDescType();
-  if (!tdescTy.isScattered())
-    return emitOpError("Expects a scattered TensorDesc.\n");
+  auto maskTy = getMaskType();
+  auto valueTy = getValueType();
 
   if (!isWriteHintOrNone(getL1HintAttr()))
     return emitOpError("invalid l1_hint: ") << getL1HintAttr();
@@ -588,43 +589,8 @@ LogicalResult StoreScatterOp::verify() {
   if (!isWriteHintOrNone(getL3HintAttr()))
     return emitOpError("invalid l3_hint: ") << getL3HintAttr();
 
-  auto maskTy = getMaskType();
-  auto valueTy = getValueType();
-
-  if (!valueTy)
-    return emitOpError("Expecting a vector type for the value.\n");
-
-  auto maskShape = getShapeOf(maskTy);
-  auto tdescShape = getShapeOf(tdescTy);
-  auto valueShape = getShapeOf(valueTy);
-  if (tdescShape[0] != maskShape[0])
-    return emitOpError("dim-0 of the Mask and TensorDesc should be the same.");
-
-  auto chunkSize = tdescTy.getChunkSize();
-
-  // a valid shape for SIMT case
-  if (valueTy.getRank() == 1 && valueTy.getNumElements() == chunkSize) {
-    if (tdescTy.getLayoutAttr())
-      return emitOpError()
-             << "TensorDesc doesn't need LayoutAttr for SIMT code";
-    if (getTransposeAttr())
-      return emitOpError() << "doesn't need TransposeAttr for SIMT code";
-    return success();
-  }
-
-  if (tdescTy.getRank() == 2 && valueTy.getRank() == 2) {
-    if (!getTransposeAttr())
-      return emitOpError("Store of a rank-2 tensor has to be transposed.");
-    transpose({1, 0}, tdescShape);
-  }
-
-  if (tdescShape != valueShape)
-    return emitOpError() << "Value shape " << makeString(valueShape)
-                         << " is neither a valid distribution for SIMT nor "
-                            "consistent with the tensor descriptor for SIMD "
-                         << tdescTy;
-
-  return success();
+  return isValidGatherScatterParams(maskTy, valueTy, tdescTy, getTransposeAttr(),
+                         [&]() { return emitOpError(); });
 }
 
 //===----------------------------------------------------------------------===//
@@ -660,14 +626,18 @@ LogicalResult DpasOp::verify() {
   auto rhsShape = getRhsType().getShape();
   auto resShape = getResultType().getShape();
 
-  if (getAcc()) {
-    if (getAcc().getType() != getResultType())
-      return emitOpError("Expecting the acc type to be the same as result.");
-  }
+  if (getAcc() && getAcc().getType() != getResultType())
+    return emitOpError("Expecting the acc type to be the same as result.");
 
-  // SIMT code: skip the check since lack of semantic info at this level.
+  // SIMT code: the size of the B operand has to be a multiple of 32 bits.
+  // It skips the semantic check since lack of architecture information.
   // Users need to ensure the correctness.
   if (lhsRank == 1 && rhsRank == 1 && resRank == 1) {
+    auto numElems = getRhsType().getNumElements();
+    auto elemTy = getRhsType().getElementType();
+    auto factor = 32 / elemTy.getIntOrFloatBitWidth();
+    if (numElems % factor != 0)
+      return emitOpError("Expecting B operand to be a multiple of 32 bits.");
     return success();
   } else { // SIMD code
     if (lhsRank != 2 || (rhsRank != 2 && rhsRank != 3) || resRank != 2)
