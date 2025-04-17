@@ -435,7 +435,6 @@ ExprResult Parser::createEmbedExpr() {
   ExprResult Res;
   ASTContext &Context = Actions.getASTContext();
   SourceLocation StartLoc = ConsumeAnnotationToken();
-
   if (Data->BinaryData.size() == 1) {
     Res = IntegerLiteral::Create(
         Context, llvm::APInt(CHAR_BIT, (unsigned char)Data->BinaryData.back()),
