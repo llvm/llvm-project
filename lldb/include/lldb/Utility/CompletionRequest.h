@@ -167,12 +167,12 @@ public:
   /// Returns true if the maximum number of completions has not been reached
   /// yet, hence we should keep adding completions.
   bool ShouldAddCompletions() const {
-    return m_result.GetNumberOfResults() < m_max_return_elements;
+    return GetMaxNumberOfCompletionsToAdd() > 0;
   }
 
   /// Returns the maximum number of completions that need to be added
   /// until reaching the maximum
-  size_t GetMaxNumberOfResultsToAdd() const {
+  size_t GetMaxNumberOfCompletionsToAdd() const {
     const size_t number_of_results = m_result.GetNumberOfResults();
     if (number_of_results >= m_max_return_elements)
       return 0;

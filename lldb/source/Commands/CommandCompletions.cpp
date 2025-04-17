@@ -167,7 +167,7 @@ public:
         m_matching_files.AppendIfUnique(context.comp_unit->GetPrimaryFile());
       }
     }
-    return m_matching_files.GetSize() >= m_request.GetMaxNumberOfResultsToAdd()
+    return m_matching_files.GetSize() >= m_request.GetMaxNumberOfCompletionsToAdd()
                ? Searcher::eCallbackReturnStop
                : Searcher::eCallbackReturnContinue;
   }
@@ -232,7 +232,7 @@ public:
 
       // Now add the functions & symbols to the list - only add if unique:
       for (const SymbolContext &sc : sc_list) {
-        if (m_match_set.size() >= m_request.GetMaxNumberOfResultsToAdd())
+        if (m_match_set.size() >= m_request.GetMaxNumberOfCompletionsToAdd())
           break;
 
         ConstString func_name = sc.GetFunctionName(Mangled::ePreferDemangled);
@@ -244,7 +244,7 @@ public:
           m_match_set.insert(func_name);
       }
     }
-    return m_match_set.size() >= m_request.GetMaxNumberOfResultsToAdd()
+    return m_match_set.size() >= m_request.GetMaxNumberOfCompletionsToAdd()
                ? Searcher::eCallbackReturnStop
                : Searcher::eCallbackReturnContinue;
   }
