@@ -163,6 +163,11 @@ class alignas(IdentifierInfoAlignment) IdentifierInfo {
   LLVM_PREFERRED_TYPE(bool)
   unsigned ChangedAfterLoad : 1;
 
+  // True if the identifier's frontend information has changed from the
+  // definition loaded from an AST file.
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned FEChangedAfterLoad : 1;
+
   // True if revertTokenIDToIdentifier was called.
   LLVM_PREFERRED_TYPE(bool)
   unsigned RevertedTokenID : 1;
@@ -206,8 +211,8 @@ class alignas(IdentifierInfoAlignment) IdentifierInfo {
         HasMacro(false), HadMacro(false), IsExtension(false),
         IsFutureCompatKeyword(false), IsPoisoned(false),
         IsCPPOperatorKeyword(false), NeedsHandleIdentifier(false),
-        IsFromAST(false), ChangedAfterLoad(false), RevertedTokenID(false),
-        OutOfDate(false), IsModulesImport(false),
+        IsFromAST(false), ChangedAfterLoad(false), FEChangedAfterLoad(false),
+        RevertedTokenID(false), OutOfDate(false), IsModulesImport(false),
         IsMangledOpenMPVariantName(false), IsDeprecatedMacro(false),
         IsRestrictExpansion(false), IsFinal(false) {}
 
@@ -476,6 +481,18 @@ public:
   /// an AST file.
   void setChangedSinceDeserialization() {
     ChangedAfterLoad = true;
+  }
+
+  /// Determine whether the frontend token information for this
+  /// identifier has changed since it was loaded from an AST file.
+  bool hasFETokenInfoChangedSinceDeserialization() const {
+    return FEChangedAfterLoad;
+  }
+
+  /// Note that the frontend token information for this identifier has
+  /// changed since it was loaded from an AST file.
+  void setFETokenInfoChangedSinceDeserialization() {
+    FEChangedAfterLoad = true;
   }
 
   /// Determine whether the information for this identifier is out of
