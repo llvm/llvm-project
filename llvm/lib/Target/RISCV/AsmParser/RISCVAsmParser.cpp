@@ -2581,28 +2581,31 @@ ParseStatus RISCVAsmParser::parseRegReg(OperandVector &Operands) {
   if (getLexer().getKind() != AsmToken::Identifier)
     return ParseStatus::NoMatch;
 
+  SMLoc S = getLoc();
   StringRef OffsetRegName = getLexer().getTok().getIdentifier();
   MCRegister OffsetReg = matchRegisterNameHelper(OffsetRegName);
-  if (!OffsetReg)
-    return Error(getLoc(), "invalid register");
+  if (!OffsetReg ||
+      !RISCVMCRegisterClasses[RISCV::GPRRegClassID].contains(OffsetReg))
+    return Error(getLoc(), "expected GPR register");
   getLexer().Lex();
 
   if (parseToken(AsmToken::LParen, "expected '(' or invalid operand"))
     return ParseStatus::Failure;
 
   if (getLexer().getKind() != AsmToken::Identifier)
-    return Error(getLoc(), "expected register");
+    return Error(getLoc(), "expected GPR register");
 
   StringRef BaseRegName = getLexer().getTok().getIdentifier();
   MCRegister BaseReg = matchRegisterNameHelper(BaseRegName);
-  if (!BaseReg)
-    return Error(getLoc(), "invalid register");
+  if (!BaseReg ||
+      !RISCVMCRegisterClasses[RISCV::GPRRegClassID].contains(BaseReg))
+    return Error(getLoc(), "expected GPR register");
   getLexer().Lex();
 
   if (parseToken(AsmToken::RParen, "expected ')'"))
     return ParseStatus::Failure;
 
-  Operands.push_back(RISCVOperand::createRegReg(BaseReg, OffsetReg, getLoc()));
+  Operands.push_back(RISCVOperand::createRegReg(BaseReg, OffsetReg, S));
 
   return ParseStatus::Success;
 }
