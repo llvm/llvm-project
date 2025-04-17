@@ -1163,9 +1163,6 @@ bool LoopIdiomRecognize::processLoopStridedStore(
     IntegerType *PatternArgTy =
         Builder.getIntNTy(DL->getTypeSizeInBits(PatternValue->getType()));
 
-    // If the pattern value can be casted directly to an integer argument, use
-    // that. Otherwise (e.g. if the value is a global pointer), create a
-    // GlobalVariable and load from it.
     if (isa<ConstantInt>(PatternValue))
       PatternArg = PatternValue;
     else if (isa<ConstantFP>(PatternValue))
