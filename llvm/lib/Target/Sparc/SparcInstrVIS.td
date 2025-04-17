@@ -259,14 +259,14 @@ def LZCNT     : VISInstFormat<0b000010111, (outs I64Regs:$rd),
                    (ins I64Regs:$rs2), "lzcnt $rs2, $rd">;
 
 let rs1 = 0 in {
-def MOVSTOSW : VISInstFormat<0b100010011, (outs I64Regs:$rd),
-                   (ins DFPRegs:$rs2), "movstosw $rs2, $rd">;
-def MOVSTOUW : VISInstFormat<0b100010001, (outs I64Regs:$rd),
-                   (ins DFPRegs:$rs2), "movstouw $rs2, $rd">;
+def MOVSTOSW : VISInstFormat<0b100010011, (outs IntRegs:$rd),
+                   (ins FPRegs:$rs2), "movstosw $rs2, $rd">;
+def MOVSTOUW : VISInstFormat<0b100010001, (outs IntRegs:$rd),
+                   (ins FPRegs:$rs2), "movstouw $rs2, $rd">;
 def MOVDTOX  : VISInstFormat<0b100010000, (outs I64Regs:$rd),
                    (ins DFPRegs:$rs2), "movdtox $rs2, $rd">;
-def MOVWTOS  :  VISInstFormat<0b100011001, (outs DFPRegs:$rd),
-                   (ins I64Regs:$rs2), "movwtos $rs2, $rd">;
+def MOVWTOS  :  VISInstFormat<0b100011001, (outs FPRegs:$rd),
+                   (ins IntRegs:$rs2), "movwtos $rs2, $rd">;
 def MOVXTOD  :  VISInstFormat<0b100011000, (outs DFPRegs:$rd),
                    (ins I64Regs:$rs2), "movxtod $rs2, $rd">;
 }
@@ -304,4 +304,11 @@ def : Pat<(i64 (ctlz_zero_undef i64:$src)), (LZCNT $src)>;
 // in V8+ mode.
 def : Pat<(i32 (ctlz i32:$src)), (ADDri (LZCNT (SRLri $src, 0)), (i32 -32))>;
 def : Pat<(i32 (ctlz_zero_undef i32:$src)), (ADDri (LZCNT (SRLri $src, 0)), (i32 -32))>;
+
+def : Pat<(i32 (bitconvert f32:$src)), (MOVSTOUW $src)>;
+def : Pat<(i64 (zanyext (i32 (bitconvert f32:$src)))), (MOVSTOUW $src)>;
+def : Pat<(i64 (sext (i32 (bitconvert f32:$src)))), (MOVSTOSW $src)>;
+def : Pat<(f32 (bitconvert i32:$src)), (MOVWTOS $src)>;
+def : Pat<(i64 (bitconvert f64:$src)), (MOVDTOX $src)>;
+def : Pat<(f64 (bitconvert i64:$src)), (MOVXTOD $src)>;
 } // Predicates = [HasVIS3]
