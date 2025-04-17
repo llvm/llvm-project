@@ -3661,9 +3661,6 @@ static void emitCheckHandlerCall(CodeGenFunction &CGF,
         ME |= llvm::MemoryEffects::readOnly();
       B.addMemoryAttr(ME);
     }
-    // If the handler does not return, it must interact with the environment in
-    // an observable way.
-    B.addAttribute(llvm::Attribute::MustProgress);
   }
 
   llvm::FunctionCallee Fn = CGF.CGM.CreateRuntimeFunction(

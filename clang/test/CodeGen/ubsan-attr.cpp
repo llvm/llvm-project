@@ -67,7 +67,7 @@ int test_unreachable() {
 
 //.
 // RECOVER: attributes #[[ATTR0]] = { mustprogress nounwind memory(read, argmem: readwrite, inaccessiblemem: readwrite) "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+cx8,+mmx,+sse,+sse2,+x87" }
-// RECOVER: attributes #[[ATTR1:[0-9]+]] = { mustprogress memory(argmem: read, inaccessiblemem: readwrite) uwtable }
+// RECOVER: attributes #[[ATTR1:[0-9]+]] = { memory(argmem: read, inaccessiblemem: readwrite) uwtable }
 // RECOVER: attributes #[[ATTR2]] = { mustprogress noreturn nounwind memory(read, argmem: none, inaccessiblemem: readwrite) "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+cx8,+mmx,+sse,+sse2,+x87" }
 // RECOVER: attributes #[[ATTR3]] = { nomerge nounwind }
 //.
