@@ -318,6 +318,8 @@ private:
 
   void CheckAlignValue(const parser::OmpClause &);
 
+  void AddEndDirectiveClauses(const parser::OmpClauseList &clauses);
+
   void EnterDirectiveNest(const int index) { directiveNest_[index]++; }
   void ExitDirectiveNest(const int index) { directiveNest_[index]--; }
   int GetDirectiveNest(const int index) { return directiveNest_[index]; }
