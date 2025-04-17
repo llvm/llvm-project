@@ -45,7 +45,7 @@ struct __is_block<_Rp (^)(_Args...)> : true_type {};
 // clang-format off
 template <class _Tp>
 struct is_scalar
-    : public integral_constant<
+    : integral_constant<
           bool, is_arithmetic<_Tp>::value ||
                 is_member_pointer<_Tp>::value ||
                 is_pointer<_Tp>::value ||
@@ -55,7 +55,7 @@ struct is_scalar
 // clang-format on
 
 template <>
-struct is_scalar<nullptr_t> : public true_type {};
+struct is_scalar<nullptr_t> : true_type {};
 
 #  if _LIBCPP_STD_VER >= 17
 template <class _Tp>

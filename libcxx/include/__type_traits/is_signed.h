@@ -33,19 +33,19 @@ _LIBCPP_NO_SPECIALIZATIONS inline constexpr bool is_signed_v = __is_signed(_Tp);
 #else // __has_builtin(__is_signed)
 
 template <class _Tp, bool = is_integral<_Tp>::value>
-struct __libcpp_is_signed_impl : public _BoolConstant<(_Tp(-1) < _Tp(0))> {};
+struct __libcpp_is_signed_impl : _BoolConstant<(_Tp(-1) < _Tp(0))> {};
 
 template <class _Tp>
-struct __libcpp_is_signed_impl<_Tp, false> : public true_type {}; // floating point
+struct __libcpp_is_signed_impl<_Tp, false> : true_type {}; // floating point
 
 template <class _Tp, bool = is_arithmetic<_Tp>::value>
-struct __libcpp_is_signed : public __libcpp_is_signed_impl<_Tp> {};
+struct __libcpp_is_signed : __libcpp_is_signed_impl<_Tp> {};
 
 template <class _Tp>
-struct __libcpp_is_signed<_Tp, false> : public false_type {};
+struct __libcpp_is_signed<_Tp, false> : false_type {};
 
 template <class _Tp>
-struct is_signed : public __libcpp_is_signed<_Tp> {};
+struct is_signed : __libcpp_is_signed<_Tp> {};
 
 #  if _LIBCPP_STD_VER >= 17
 template <class _Tp>

@@ -291,7 +291,8 @@ public:
 /// parameter. This avoids updating the type on hot paths in the parser.
 class PreferredTypeBuilder {
 public:
-  PreferredTypeBuilder(bool Enabled) : Enabled(Enabled) {}
+  PreferredTypeBuilder(ASTContext *Ctx, bool Enabled)
+      : Ctx(Ctx), Enabled(Enabled) {}
 
   void enterCondition(Sema &S, SourceLocation Tok);
   void enterReturn(Sema &S, SourceLocation Tok);
@@ -337,6 +338,7 @@ public:
   }
 
 private:
+  ASTContext *Ctx;
   bool Enabled;
   /// Start position of a token for which we store expected type.
   SourceLocation ExpectedLoc;
@@ -3544,6 +3546,17 @@ public:
   bool checkPointerAuthEnabled(SourceLocation Loc, SourceRange Range);
 
   bool checkConstantPointerAuthKey(Expr *keyExpr, unsigned &key);
+
+  enum PointerAuthDiscArgKind {
+    // Address discrimination argument of __ptrauth.
+    PADAK_AddrDiscPtrAuth,
+
+    // Extra discriminator argument of __ptrauth.
+    PADAK_ExtraDiscPtrAuth,
+  };
+
+  bool checkPointerAuthDiscriminatorArg(Expr *Arg, PointerAuthDiscArgKind Kind,
+                                        unsigned &IntVal);
 
   /// Diagnose function specifiers on a declaration of an identifier that
   /// does not identify a function.
@@ -8364,7 +8377,6 @@ public:
                                               DeclarationName Name);
   FunctionDecl *FindDeallocationFunctionForDestructor(SourceLocation StartLoc,
                                                       CXXRecordDecl *RD,
-                                                      DeclarationName Name,
                                                       bool Diagnose = true);
 
   /// ActOnCXXDelete - Parsed a C++ 'delete' expression (C++ 5.3.5), as in:

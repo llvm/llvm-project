@@ -10,10 +10,12 @@ add_flang_library(FIRDialect
   FirAliasTagOpInterface.cpp
   FortranVariableInterface.cpp
   Inliner.cpp
+  SafeTempArrayCopyAttrInterface.cpp
 
   DEPENDS
   CanonicalizationPatternsIncGen
   FIROpsIncGen
+  FIRSafeTempArrayCopyAttrInterfaceIncGen
   CUFAttrsIncGen
   intrinsics_gen
 

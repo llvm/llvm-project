@@ -1095,8 +1095,8 @@ def LLVM_TBAATagArrayAttr
 //===----------------------------------------------------------------------===//
 def LLVM_ConstantRangeAttr : LLVM_Attr<"ConstantRange", "constant_range"> {
   let parameters = (ins
-    "::llvm::APInt":$lower,
-    "::llvm::APInt":$upper
+    APIntParameter<"">:$lower,
+    APIntParameter<"">:$upper
   );
   let summary = "A range of two integers, corresponding to LLVM's ConstantRange";
   let description = [{

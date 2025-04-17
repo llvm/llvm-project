@@ -1372,7 +1372,7 @@ def MemRef_ReinterpretCastOp
                        DenseI64ArrayAttr:$static_offsets,
                        DenseI64ArrayAttr:$static_sizes,
                        DenseI64ArrayAttr:$static_strides);
-  let results = (outs AnyMemRef:$result);
+  let results = (outs AnyStridedMemRef:$result);
 
   let assemblyFormat = [{
     $source `to` `offset` `` `:`

@@ -60,7 +60,7 @@ class LLVM_IntArithmeticOpWithOverflowFlag<string mnemonic, string instName,
                                    list<Trait> traits = []> :
     LLVM_ArithmeticOpBase<AnySignlessInteger, mnemonic, instName,
     !listconcat([DeclareOpInterfaceMethods<IntegerOverflowFlagsInterface>], traits)> {
-  dag iofArg = (ins EnumProp<"IntegerOverflowFlags", "", "IntegerOverflowFlags::none">:$overflowFlags);
+  dag iofArg = (ins LLVM_IntegerOverflowFlagsProp:$overflowFlags);
   let arguments = !con(commonArgs, iofArg);
 
   string mlirBuilder = [{
@@ -69,7 +69,7 @@ class LLVM_IntArithmeticOpWithOverflowFlag<string mnemonic, string instName,
     $res = op;
   }];
   let assemblyFormat = [{
-    $lhs `,` $rhs `` custom<OverflowFlags>($overflowFlags) attr-dict `:` type($res)
+    $lhs `,` $rhs ($overflowFlags^)? attr-dict `:` type($res)
   }];
   string llvmBuilder =
     "$res = builder.Create" # instName #
@@ -563,10 +563,10 @@ class LLVM_CastOpWithOverflowFlag<string mnemonic, string instName, Type type,
                   Type resultType, list<Trait> traits = []> :
     LLVM_Op<mnemonic, !listconcat([Pure], [DeclareOpInterfaceMethods<IntegerOverflowFlagsInterface>], traits)>,
     LLVM_Builder<"$res = builder.Create" # instName # "($arg, $_resultType, /*Name=*/\"\", op.hasNoUnsignedWrap(), op.hasNoSignedWrap());"> {
-  let arguments = (ins type:$arg, EnumProp<"IntegerOverflowFlags", "", "IntegerOverflowFlags::none">:$overflowFlags);
+  let arguments = (ins type:$arg, LLVM_IntegerOverflowFlagsProp:$overflowFlags);
   let results = (outs resultType:$res);
   let builders = [LLVM_OneResultOpBuilder];
-  let assemblyFormat = "$arg `` custom<OverflowFlags>($overflowFlags) attr-dict `:` type($arg) `to` type($res)";
+  let assemblyFormat = "$arg ($overflowFlags^)? attr-dict `:` type($arg) `to` type($res)";
   string llvmInstName = instName;
   string mlirBuilder = [{
     auto op = $_builder.create<$_qualCppClassName>(
@@ -749,6 +749,11 @@ def LLVM_CallOp : LLVM_MemAccessOpBase<"call",
     the LLVM function type that uses an explicit void type to model functions
     that do not return a value.
 
+    If this operatin has the `no_inline` attribute, then this specific function call 
+    will never be inlined. The opposite behavior will occur if the call has `always_inline` 
+    attribute. The `inline_hint` attribute indicates that it is desirable to inline 
+    this function call.
+
     Examples:
 
     ```mlir
@@ -778,16 +783,17 @@ def LLVM_CallOp : LLVM_MemAccessOpBase<"call",
       DefaultValuedAttr<CConv, "CConv::C">:$CConv,
       DefaultValuedAttr<TailCallKind, "TailCallKind::None">:$TailCallKind,
       OptionalAttr<LLVM_MemoryEffectsAttr>:$memory_effects,
-      OptionalAttr<UnitAttr>:$convergent,
-      OptionalAttr<UnitAttr>:$no_unwind,
-      OptionalAttr<UnitAttr>:$will_return,
+      UnitAttr:$convergent,
+      UnitAttr:$no_unwind,
+      UnitAttr:$will_return,
       VariadicOfVariadic<LLVM_Type, "op_bundle_sizes">:$op_bundle_operands,
       DenseI32ArrayAttr:$op_bundle_sizes,
       OptionalAttr<ArrayAttr>:$op_bundle_tags,
       OptionalAttr<DictArrayAttr>:$arg_attrs,
       OptionalAttr<DictArrayAttr>:$res_attrs,
-      OptionalAttr<UnitAttr>:$no_inline,
-      OptionalAttr<UnitAttr>:$always_inline);
+      UnitAttr:$no_inline,
+      UnitAttr:$always_inline,
+      UnitAttr:$inline_hint);
   // Append the aliasing related attributes defined in LLVM_MemAccessOpBase.
   let arguments = !con(args, aliasAttrs);
   let results = (outs Optional<LLVM_Type>:$result);

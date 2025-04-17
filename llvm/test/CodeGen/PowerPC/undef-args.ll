@@ -1,6 +1,8 @@
 ;; Tests that extending poison results in undef.
 ;; Also tests that there are redundant instructions loading 0 into argument registers for unused arguments.
 
+; REQUIRES: asserts
+
 ; RUN: llc -verify-machineinstrs -mtriple powerpc-ibm-aix-xcoff -debug-only=isel \
 ; RUN:   %s -o - 2>&1 | FileCheck --check-prefix=CHECKISEL32 %s
 

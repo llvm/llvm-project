@@ -4055,8 +4055,7 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
   }
 
   if (IsChainCallConv)
-    Ops.insert(Ops.end(), ChainCallSpecialArgs.begin(),
-               ChainCallSpecialArgs.end());
+    llvm::append_range(Ops, ChainCallSpecialArgs);
 
   // Add argument registers to the end of the list so that they are known live
   // into the call.
@@ -15526,9 +15525,9 @@ SDNode *SITargetLowering::adjustWritemask(MachineSDNode *&Node,
 
   // Adjust the writemask in the node
   SmallVector<SDValue, 12> Ops;
-  Ops.insert(Ops.end(), Node->op_begin(), Node->op_begin() + DmaskIdx);
+  llvm::append_range(Ops, Node->ops().take_front(DmaskIdx));
   Ops.push_back(DAG.getTargetConstant(NewDmask, SDLoc(Node), MVT::i32));
-  Ops.insert(Ops.end(), Node->op_begin() + DmaskIdx + 1, Node->op_end());
+  llvm::append_range(Ops, Node->ops().drop_front(DmaskIdx + 1));
 
   MVT SVT = Node->getValueType(0).getVectorElementType().getSimpleVT();
 
