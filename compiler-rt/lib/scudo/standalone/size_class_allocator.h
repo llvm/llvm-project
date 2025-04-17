@@ -1,4 +1,4 @@
-//===-- local_cache.h -------------------------------------------*- C++ -*-===//
+//===-- size_class_allocator.h ----------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef SCUDO_LOCAL_CACHE_H_
-#define SCUDO_LOCAL_CACHE_H_
+#ifndef SCUDO_SIZE_CLASS_ALLOCATOR_H_
+#define SCUDO_SIZE_CLASS_ALLOCATOR_H_
 
 #include "internal_defs.h"
 #include "list.h"
@@ -28,7 +28,7 @@ template <class SizeClassAllocator> struct SizeClassAllocatorLocalCache {
     if (LIKELY(S))
       S->link(&Stats);
     Allocator = A;
-    initCache();
+    initAllocator();
   }
 
   void destroy(GlobalStats *S) {
@@ -112,7 +112,7 @@ template <class SizeClassAllocator> struct SizeClassAllocatorLocalCache {
 
       EmptyCache = false;
       // The size of BatchClass is set to 0 intentionally. See the comment in
-      // initCache() for more details.
+      // initAllocator() for more details.
       const uptr ClassSize = I == BatchClassId
                                  ? SizeClassAllocator::getSizeByClassId(I)
                                  : PerClassArray[I].ClassSize;
@@ -146,7 +146,7 @@ private:
   LocalStats Stats;
   SizeClassAllocator *Allocator = nullptr;
 
-  NOINLINE void initCache() {
+  NOINLINE void initAllocator() {
     for (uptr I = 0; I < NumClasses; I++) {
       PerClass *P = &PerClassArray[I];
       const uptr Size = SizeClassAllocator::getSizeByClassId(I);
@@ -159,11 +159,6 @@ private:
         P->ClassSize = 0;
       }
     }
-  }
-
-  void destroyBatch(uptr ClassId, void *B) {
-    if (ClassId != BatchClassId)
-      deallocate(BatchClassId, B);
   }
 
   NOINLINE bool refill(PerClass *C, uptr ClassId, u16 MaxRefill) {
@@ -184,6 +179,148 @@ private:
   }
 };
 
+template <class SizeClassAllocator> struct SizeClassAllocatorNoCache {
+  typedef typename SizeClassAllocator::SizeClassMap SizeClassMap;
+  typedef typename SizeClassAllocator::CompactPtrT CompactPtrT;
+
+  void init(GlobalStats *S, SizeClassAllocator *A) {
+    Stats.init();
+    if (LIKELY(S))
+      S->link(&Stats);
+    Allocator = A;
+    initAllocator();
+  }
+
+  void destroy(GlobalStats *S) {
+    if (LIKELY(S))
+      S->unlink(&Stats);
+  }
+
+  void *allocate(uptr ClassId) {
+    CompactPtrT CompactPtr;
+    uptr NumBlocksPopped = Allocator->popBlocks(this, ClassId, &CompactPtr, 1U);
+    if (NumBlocksPopped == 0)
+      return nullptr;
+    DCHECK_EQ(NumBlocksPopped, 1U);
+    const PerClass *C = &PerClassArray[ClassId];
+    Stats.add(StatAllocated, C->ClassSize);
+    Stats.sub(StatFree, C->ClassSize);
+    return Allocator->decompactPtr(ClassId, CompactPtr);
+  }
+
+  bool deallocate(uptr ClassId, void *P) {
+    CHECK_LT(ClassId, NumClasses);
+
+    if (ClassId == BatchClassId)
+      return deallocateBatchClassBlock(P);
+
+    CompactPtrT CompactPtr =
+        Allocator->compactPtr(ClassId, reinterpret_cast<uptr>(P));
+    Allocator->pushBlocks(this, ClassId, &CompactPtr, 1U);
+    PerClass *C = &PerClassArray[ClassId];
+    Stats.sub(StatAllocated, C->ClassSize);
+    Stats.add(StatFree, C->ClassSize);
+
+    // The following adopts the same strategy of allocator draining as used
+    // in SizeClassAllocatorLocalCache so that use the same hint when doing
+    // a page release.
+    ++C->Count;
+    const bool SuggestDraining = C->Count >= C->MaxCount;
+    if (SuggestDraining)
+      C->Count = 0;
+    return SuggestDraining;
+  }
+
+  void *getBatchClassBlock() {
+    PerClass *C = &PerClassArray[BatchClassId];
+    if (C->Count == 0) {
+      const u16 NumBlocksRefilled = Allocator->popBlocks(
+          this, BatchClassId, BatchClassStorage, C->MaxCount);
+      if (NumBlocksRefilled == 0)
+        reportOutOfMemory(SizeClassAllocator::getSizeByClassId(BatchClassId));
+      DCHECK_LE(NumBlocksRefilled, SizeClassMap::MaxNumCachedHint);
+      C->Count = NumBlocksRefilled;
+    }
+
+    const uptr ClassSize = C->ClassSize;
+    CompactPtrT CompactP = BatchClassStorage[--C->Count];
+    Stats.add(StatAllocated, ClassSize);
+    Stats.sub(StatFree, ClassSize);
+
+    return Allocator->decompactPtr(BatchClassId, CompactP);
+  }
+
+  LocalStats &getStats() { return Stats; }
+
+  void getStats(ScopedString *Str) { Str->append("    No block is cached.\n"); }
+
+  bool isEmpty() const {
+    const PerClass *C = &PerClassArray[BatchClassId];
+    return C->Count == 0;
+  }
+  void drain() {
+    PerClass *C = &PerClassArray[BatchClassId];
+    if (C->Count > 0) {
+      Allocator->pushBlocks(this, BatchClassId, BatchClassStorage, C->Count);
+      C->Count = 0;
+    }
+  }
+
+  static u16 getMaxCached(uptr Size) {
+    return Min(SizeClassMap::MaxNumCachedHint,
+               SizeClassMap::getMaxCachedHint(Size));
+  }
+
+private:
+  static const uptr NumClasses = SizeClassMap::NumClasses;
+  static const uptr BatchClassId = SizeClassMap::BatchClassId;
+  struct alignas(SCUDO_CACHE_LINE_SIZE) PerClass {
+    u16 Count = 0;
+    u16 MaxCount;
+    // Note: ClassSize is zero for the transfer batch.
+    uptr ClassSize;
+  };
+  PerClass PerClassArray[NumClasses] = {};
+  // Popping BatchClass blocks requires taking a certain amount of blocks at
+  // once. This restriction comes from how we manage the storing of BatchClass
+  // in the primary allocator. See more details in `popBlocksImpl` in the
+  // primary allocator.
+  CompactPtrT BatchClassStorage[SizeClassMap::MaxNumCachedHint] = {};
+  LocalStats Stats;
+  SizeClassAllocator *Allocator = nullptr;
+
+  bool deallocateBatchClassBlock(void *P) {
+    PerClass *C = &PerClassArray[BatchClassId];
+    // Drain all the blocks.
+    if (C->Count >= C->MaxCount) {
+      Allocator->pushBlocks(this, BatchClassId, BatchClassStorage, C->Count);
+      C->Count = 0;
+    }
+    BatchClassStorage[C->Count++] =
+        Allocator->compactPtr(BatchClassId, reinterpret_cast<uptr>(P));
+
+    // Currently, BatchClass doesn't support page releasing, so we always return
+    // false.
+    return false;
+  }
+
+  NOINLINE void initAllocator() {
+    for (uptr I = 0; I < NumClasses; I++) {
+      PerClass *P = &PerClassArray[I];
+      const uptr Size = SizeClassAllocator::getSizeByClassId(I);
+      if (I != BatchClassId) {
+        P->ClassSize = Size;
+        P->MaxCount = static_cast<u16>(2 * getMaxCached(Size));
+      } else {
+        // ClassSize in this struct is only used for malloc/free stats, which
+        // should only track user allocations, not internal movements.
+        P->ClassSize = 0;
+        P->MaxCount = SizeClassMap::MaxNumCachedHint;
+      }
+    }
+  }
+};
+
 } // namespace scudo
 
-#endif // SCUDO_LOCAL_CACHE_H_
+#endif // SCUDO_SIZE_CLASS_ALLOCATOR_H_
