@@ -1338,6 +1338,16 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitDeviceTypeClause(
       checkAlreadyHasClauseOfKind(SemaRef, ExistingClauses, Clause))
     return nullptr;
 
+  // Based on discussions, having more than 1 'architecture' on a 'set' is
+  // nonsensical, so we're going to fix the standard to reflect this.  Implement
+  // the limitation, since the Dialect requires this.
+  if (Clause.getDirectiveKind() == OpenACCDirectiveKind::Set &&
+      Clause.getDeviceTypeArchitectures().size() > 1) {
+    SemaRef.Diag(Clause.getDeviceTypeArchitectures()[1].getLoc(),
+                 diag::err_acc_device_type_multiple_archs);
+    return nullptr;
+  }
+
   // The list of valid device_type values. Flang also has these hardcoded in
   // openacc_parsers.cpp, as there does not seem to be a reliable backend
   // source. The list below is sourced from Flang, though NVC++ supports only
@@ -1359,16 +1369,17 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitDeviceTypeClause(
   bool Diagnosed = false;
   auto FilterPred = [&](const DeviceTypeArgument &Arch) {
     // The '*' case.
-    if (!Arch.first)
+    if (!Arch.getIdentifierInfo())
       return false;
     return llvm::find_if(ValidValues, [&](StringRef RHS) {
-             return Arch.first->getName().equals_insensitive(RHS);
+             return Arch.getIdentifierInfo()->getName().equals_insensitive(RHS);
            }) == ValidValues.end();
   };
 
   auto Diagnose = [&](const DeviceTypeArgument &Arch) {
-    Diagnosed = SemaRef.Diag(Arch.second, diag::err_acc_invalid_default_type)
-                << Arch.first << Clause.getClauseKind() << ValidValuesString;
+    Diagnosed = SemaRef.Diag(Arch.getLoc(), diag::err_acc_invalid_default_type)
+                << Arch.getIdentifierInfo() << Clause.getClauseKind()
+                << ValidValuesString;
   };
 
   // There aren't stable enumertor versions of 'for-each-then-erase', so do it

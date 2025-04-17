@@ -463,6 +463,23 @@ TEST(HeuristicResolver, DeclRefExpr_StaticMethod) {
       cxxMethodDecl(hasName("bar")).bind("output"));
 }
 
+TEST(HeuristicResolver, DeclRefExpr_DefaultTemplateArgument) {
+  std::string Code = R"cpp(
+    struct Default {
+      static void foo();
+    };
+    template <typename T = Default>
+    void bar() {
+      T::foo();
+    }
+  )cpp";
+  // Test resolution of "foo" in "T::foo()".
+  expectResolution(
+      Code, &HeuristicResolver::resolveDeclRefExpr,
+      dependentScopeDeclRefExpr(hasDependentName("foo")).bind("input"),
+      cxxMethodDecl(hasName("foo")).bind("output"));
+}
+
 TEST(HeuristicResolver, DeclRefExpr_StaticOverloads) {
   std::string Code = R"cpp(
     template <typename T>

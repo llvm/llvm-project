@@ -129,12 +129,17 @@ public:
       return false;
     if (isIntegralPointer())
       return P.asIntPointer().Value == asIntPointer().Value &&
-             Offset == P.Offset;
+             P.asIntPointer().Desc == asIntPointer().Desc && P.Offset == Offset;
+
+    if (isFunctionPointer())
+      return P.asFunctionPointer().getFunction() ==
+                 asFunctionPointer().getFunction() &&
+             P.Offset == Offset;
 
     assert(isBlockPointer());
     return P.asBlockPointer().Pointee == asBlockPointer().Pointee &&
            P.asBlockPointer().Base == asBlockPointer().Base &&
-           Offset == P.Offset;
+           P.Offset == Offset;
   }
 
   bool operator!=(const Pointer &P) const { return !(P == *this); }
@@ -469,6 +474,10 @@ public:
     assert(isFunctionPointer());
     return PointeeStorage.Fn;
   }
+  [[nodiscard]] const TypeidPointer &asTypeidPointer() const {
+    assert(isTypeidPointer());
+    return PointeeStorage.Typeid;
+  }
 
   bool isBlockPointer() const { return StorageKind == Storage::Block; }
   bool isIntegralPointer() const { return StorageKind == Storage::Int; }
@@ -525,6 +534,8 @@ public:
   }
 
   bool isWeak() const {
+    if (isFunctionPointer())
+      return asFunctionPointer().isWeak();
     if (!isBlockPointer())
       return false;
 
@@ -575,6 +586,8 @@ public:
   uint64_t getByteOffset() const {
     if (isIntegralPointer())
       return asIntPointer().Value + Offset;
+    if (isTypeidPointer())
+      return reinterpret_cast<uintptr_t>(asTypeidPointer().TypePtr) + Offset;
     if (isOnePastEnd())
       return PastEndMark;
     return Offset;

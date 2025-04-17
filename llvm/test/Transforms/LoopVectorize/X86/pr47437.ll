@@ -212,16 +212,16 @@ define void @test_muladd(ptr noalias nocapture %d1, ptr noalias nocapture readon
 ; AVX1-NEXT:    [[TMP43:%.*]] = sext <4 x i16> [[STRIDED_VEC22]] to <4 x i32>
 ; AVX1-NEXT:    [[TMP46:%.*]] = mul nsw <4 x i32> [[TMP42]], [[TMP38]]
 ; AVX1-NEXT:    [[TMP47:%.*]] = mul nsw <4 x i32> [[TMP43]], [[TMP39]]
-; AVX1-NEXT:    [[TMP48:%.*]] = add nsw <4 x i32> [[TMP46]], [[TMP44]]
-; AVX1-NEXT:    [[TMP49:%.*]] = add nsw <4 x i32> [[TMP47]], [[TMP45]]
-; AVX1-NEXT:    [[TMP52:%.*]] = getelementptr inbounds i32, ptr [[D1:%.*]], i64 [[INDEX]]
-; AVX1-NEXT:    [[TMP56:%.*]] = getelementptr inbounds i32, ptr [[TMP52]], i32 0
-; AVX1-NEXT:    [[TMP57:%.*]] = getelementptr inbounds i32, ptr [[TMP52]], i32 4
-; AVX1-NEXT:    store <4 x i32> [[TMP48]], ptr [[TMP56]], align 4
-; AVX1-NEXT:    store <4 x i32> [[TMP49]], ptr [[TMP57]], align 4
+; AVX1-NEXT:    [[TMP19:%.*]] = add nsw <4 x i32> [[TMP46]], [[TMP44]]
+; AVX1-NEXT:    [[TMP20:%.*]] = add nsw <4 x i32> [[TMP47]], [[TMP45]]
+; AVX1-NEXT:    [[TMP21:%.*]] = getelementptr inbounds i32, ptr [[D1:%.*]], i64 [[INDEX]]
+; AVX1-NEXT:    [[TMP25:%.*]] = getelementptr inbounds i32, ptr [[TMP21]], i32 0
+; AVX1-NEXT:    [[TMP26:%.*]] = getelementptr inbounds i32, ptr [[TMP21]], i32 4
+; AVX1-NEXT:    store <4 x i32> [[TMP19]], ptr [[TMP25]], align 4
+; AVX1-NEXT:    store <4 x i32> [[TMP20]], ptr [[TMP26]], align 4
 ; AVX1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
-; AVX1-NEXT:    [[TMP60:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; AVX1-NEXT:    br i1 [[TMP60]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; AVX1-NEXT:    [[TMP24:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; AVX1-NEXT:    br i1 [[TMP24]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; AVX1:       middle.block:
 ; AVX1-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[WIDE_TRIP_COUNT]], [[N_VEC]]
 ; AVX1-NEXT:    br i1 [[CMP_N]], label [[FOR_END_LOOPEXIT:%.*]], label [[SCALAR_PH]]

@@ -212,7 +212,7 @@ static LogicalResult checkConstantTypes(mlir::Operation *op, mlir::Type opType,
   }
 
   if (isa<cir::ZeroAttr>(attrType)) {
-    if (::mlir::isa<cir::ArrayType>(opType))
+    if (isa<cir::RecordType, cir::ArrayType>(opType))
       return success();
     return op->emitOpError("zero expects struct or array type");
   }
@@ -440,6 +440,117 @@ OpFoldResult cir::CastOp::fold(FoldAdaptor adaptor) {
     }
   }
   return tryFoldCastChain(*this);
+}
+
+//===----------------------------------------------------------------------===//
+// CallOp
+//===----------------------------------------------------------------------===//
+
+static mlir::ParseResult parseCallCommon(mlir::OpAsmParser &parser,
+                                         mlir::OperationState &result) {
+  mlir::FlatSymbolRefAttr calleeAttr;
+  llvm::ArrayRef<mlir::Type> allResultTypes;
+
+  if (!parser.parseOptionalAttribute(calleeAttr, "callee", result.attributes)
+           .has_value())
+    return mlir::failure();
+
+  if (parser.parseLParen())
+    return mlir::failure();
+
+  // TODO(cir): parse argument list here
+  assert(!cir::MissingFeatures::opCallArgs());
+
+  if (parser.parseRParen())
+    return mlir::failure();
+
+  if (parser.parseOptionalAttrDict(result.attributes))
+    return ::mlir::failure();
+
+  if (parser.parseColon())
+    return ::mlir::failure();
+
+  mlir::FunctionType opsFnTy;
+  if (parser.parseType(opsFnTy))
+    return mlir::failure();
+
+  allResultTypes = opsFnTy.getResults();
+  result.addTypes(allResultTypes);
+
+  return mlir::success();
+}
+
+static void printCallCommon(mlir::Operation *op,
+                            mlir::FlatSymbolRefAttr calleeSym,
+                            mlir::OpAsmPrinter &printer) {
+  printer << ' ';
+
+  printer.printAttributeWithoutType(calleeSym);
+  printer << "(";
+  // TODO(cir): print call args here
+  assert(!cir::MissingFeatures::opCallArgs());
+  printer << ")";
+
+  printer.printOptionalAttrDict(op->getAttrs(), {"callee"});
+
+  printer << " : ";
+  printer.printFunctionalType(op->getOperands().getTypes(),
+                              op->getResultTypes());
+}
+
+mlir::ParseResult cir::CallOp::parse(mlir::OpAsmParser &parser,
+                                     mlir::OperationState &result) {
+  return parseCallCommon(parser, result);
+}
+
+void cir::CallOp::print(mlir::OpAsmPrinter &p) {
+  printCallCommon(*this, getCalleeAttr(), p);
+}
+
+static LogicalResult
+verifyCallCommInSymbolUses(mlir::Operation *op,
+                           SymbolTableCollection &symbolTable) {
+  auto fnAttr = op->getAttrOfType<FlatSymbolRefAttr>("callee");
+  if (!fnAttr)
+    return mlir::failure();
+
+  auto fn = symbolTable.lookupNearestSymbolFrom<cir::FuncOp>(op, fnAttr);
+  if (!fn)
+    return op->emitOpError() << "'" << fnAttr.getValue()
+                             << "' does not reference a valid function";
+
+  auto callIf = dyn_cast<cir::CIRCallOpInterface>(op);
+  assert(callIf && "expected CIR call interface to be always available");
+
+  // Verify that the operand and result types match the callee. Note that
+  // argument-checking is disabled for functions without a prototype.
+  auto fnType = fn.getFunctionType();
+
+  // TODO(cir): verify function arguments
+  assert(!cir::MissingFeatures::opCallArgs());
+
+  // Void function must not return any results.
+  if (fnType.hasVoidReturn() && op->getNumResults() != 0)
+    return op->emitOpError("callee returns void but call has results");
+
+  // Non-void function calls must return exactly one result.
+  if (!fnType.hasVoidReturn() && op->getNumResults() != 1)
+    return op->emitOpError("incorrect number of results for callee");
+
+  // Parent function and return value types must match.
+  if (!fnType.hasVoidReturn() &&
+      op->getResultTypes().front() != fnType.getReturnType()) {
+    return op->emitOpError("result type mismatch: expected ")
+           << fnType.getReturnType() << ", but provided "
+           << op->getResult(0).getType();
+  }
+
+  return mlir::success();
+}
+
+LogicalResult
+cir::CallOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
+  return verifyCallCommInSymbolUses(*this, symbolTable);
 }
 
 //===----------------------------------------------------------------------===//
@@ -761,6 +872,41 @@ parseGlobalOpTypeAndInitialValue(OpAsmParser &parser, TypeAttr &typeAttr,
   }
 
   typeAttr = TypeAttr::get(opTy);
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// GetGlobalOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+cir::GetGlobalOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
+  // Verify that the result type underlying pointer type matches the type of
+  // the referenced cir.global or cir.func op.
+  mlir::Operation *op =
+      symbolTable.lookupNearestSymbolFrom(*this, getNameAttr());
+  if (op == nullptr || !(isa<GlobalOp>(op) || isa<FuncOp>(op)))
+    return emitOpError("'")
+           << getName()
+           << "' does not reference a valid cir.global or cir.func";
+
+  mlir::Type symTy;
+  if (auto g = dyn_cast<GlobalOp>(op)) {
+    symTy = g.getSymType();
+    assert(!cir::MissingFeatures::addressSpace());
+    assert(!cir::MissingFeatures::opGlobalThreadLocal());
+  } else if (auto f = dyn_cast<FuncOp>(op)) {
+    symTy = f.getFunctionType();
+  } else {
+    llvm_unreachable("Unexpected operation for GetGlobalOp");
+  }
+
+  auto resultType = dyn_cast<PointerType>(getAddr().getType());
+  if (!resultType || symTy != resultType.getPointee())
+    return emitOpError("result type pointee type '")
+           << resultType.getPointee() << "' does not match type " << symTy
+           << " of the global @" << getName();
+
   return success();
 }
 

@@ -1280,6 +1280,37 @@ def GlobalOp : CIR_Op<"global"> {
 }
 
 //===----------------------------------------------------------------------===//
+// GetGlobalOp
+//===----------------------------------------------------------------------===//
+
+def GetGlobalOp : CIR_Op<"get_global",
+    [Pure, DeclareOpInterfaceMethods<SymbolUserOpInterface>]> {
+  let summary = "Get the address of a global variable";
+  let description = [{
+    The `cir.get_global` operation retrieves the address pointing to a
+    named global variable. If the global variable is marked constant, writing
+    to the resulting address (such as through a `cir.store` operation) is
+    undefined. The resulting type must always be a `!cir.ptr<...>` type with the
+    same address space as the global variable.
+
+    Example:
+    ```mlir
+    %x = cir.get_global @gv : !cir.ptr<i32>
+    ```
+  }];
+
+  let arguments = (ins FlatSymbolRefAttr:$name);
+  let results = (outs Res<CIR_PointerType, "", []>:$addr);
+
+  let assemblyFormat = [{
+    $name `:` qualified(type($addr)) attr-dict
+  }];
+
+  // `GetGlobalOp` is fully verified by its traits.
+  let hasVerifier = 0;
+}
+
+//===----------------------------------------------------------------------===//
 // FuncOp
 //===----------------------------------------------------------------------===//
 
@@ -1340,6 +1371,52 @@ def FuncOp : CIR_Op<"func", [
 
   let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// CallOp
+//===----------------------------------------------------------------------===//
+
+class CIR_CallOpBase<string mnemonic, list<Trait> extra_traits = []>
+    : Op<CIR_Dialect, mnemonic,
+         !listconcat(extra_traits,
+                     [DeclareOpInterfaceMethods<CIRCallOpInterface>,
+                      DeclareOpInterfaceMethods<SymbolUserOpInterface>])> {
+  let hasCustomAssemblyFormat = 1;
+  let skipDefaultBuilders = 1;
+  let hasVerifier = 0;
+
+  // TODO(cir): for now cir.call is just a tiny shell of what it will become.
+  // More attributes, arguments, and properties will be added in the future as
+  // the upstreaming process moves on. The verifiers is also missing for now,
+  // will add in the future.
+
+  dag commonArgs = (ins FlatSymbolRefAttr:$callee);
+}
+
+def CallOp : CIR_CallOpBase<"call", [NoRegionArguments]> {
+  let summary = "call a function";
+  let description = [{
+    The `cir.call` operation represents a direct call to a function that is
+    within the same symbol scope as the call. The callee is encoded as a symbol
+    reference attribute named `callee`.
+
+    Example:
+
+    ```mlir
+    %0 = cir.call @foo()
+    ```
+  }];
+
+  let results = (outs Optional<CIR_AnyType>:$result);
+  let arguments = commonArgs;
+
+  let builders = [OpBuilder<(ins "mlir::SymbolRefAttr":$callee,
+                                 "mlir::Type":$resType), [{
+      $_state.addAttribute("callee", callee);
+      if (resType && !isa<VoidType>(resType))
+        $_state.addTypes(resType);
+    }]>];
 }
 
 //===----------------------------------------------------------------------===//
