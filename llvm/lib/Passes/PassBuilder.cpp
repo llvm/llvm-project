@@ -488,7 +488,8 @@ static cl::opt<bool> DoFunctionSpecialize("function-specialize",
 // AOCC end
 
 static const Regex DefaultAliasRegex(
-    "^(default|thinlto-pre-link|thinlto|lto-pre-link|lto)<(O[0123sz])>$");
+    "^(default|default-post-link|thinlto-pre-link|thinlto|lto-pre-link|lto)"
+    "<(O[0123sz])>$");
 
 namespace llvm {
 cl::opt<bool> PrintPipelinePasses(
@@ -1920,6 +1921,9 @@ Error PassBuilder::parseModulePass(ModulePassManager &MPM,
 
     if (Matches[1] == "default") {
       MPM.addPass(buildPerModuleDefaultPipeline(L));
+    } else if (Matches[1] == "default-post-link") {
+      MPM.addPass(buildPerModuleDefaultPipeline(
+          L, ThinOrFullLTOPhase::CustomLTOPostLink));
     } else if (Matches[1] == "thinlto-pre-link") {
       MPM.addPass(buildThinLTOPreLinkDefaultPipeline(L));
     } else if (Matches[1] == "thinlto") {

@@ -9464,6 +9464,28 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
           A->render(Args, LinkerArgs);
       }
 
+      if (isAMDGPU && !C.getDriver().IsFlangMode()) {
+        StringRef OOpt;
+        if (const Arg *A = Args.getLastArg(options::OPT_O_Group)) {
+          if (A->getOption().matches(options::OPT_O4) ||
+              A->getOption().matches(options::OPT_Ofast))
+            OOpt = "3";
+          else if (A->getOption().matches(options::OPT_O)) {
+            OOpt = A->getValue();
+            if (OOpt == "g")
+              OOpt = "1";
+            else if (OOpt == "s" || OOpt == "z")
+              OOpt = "2";
+          } else if (A->getOption().matches(options::OPT_O0))
+            OOpt = "0";
+        }
+
+        if (!OOpt.empty() && OOpt != "0") {
+          LinkerArgs.push_back(Args.MakeArgString(
+              "--lto-newpm-passes=default-post-link<O" + OOpt + ">"));
+        }
+      }
+
       // Forward all of these to the appropriate toolchain.
       for (StringRef Arg : CompilerArgs)
         CmdArgs.push_back(Args.MakeArgString(

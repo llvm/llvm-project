@@ -414,7 +414,8 @@ static bool isLTOPreLink(ThinOrFullLTOPhase Phase) {
 // Helper to check if the current compilation phase is LTO backend
 static bool isLTOPostLink(ThinOrFullLTOPhase Phase) {
   return Phase == ThinOrFullLTOPhase::ThinLTOPostLink ||
-         Phase == ThinOrFullLTOPhase::FullLTOPostLink;
+         Phase == ThinOrFullLTOPhase::FullLTOPostLink ||
+         Phase == ThinOrFullLTOPhase::CustomLTOPostLink;
 }
 
 // Helper to wrap conditionally Coro passes.
