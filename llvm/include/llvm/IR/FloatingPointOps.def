@@ -18,6 +18,7 @@
 // - intrinsic function name,
 // - DAG node corresponding to the intrinsic.
 
+FUNCTION(experimental_constrained_fadd,      FADD)
 FUNCTION(nearbyint,                          FNEARBYINT)
 FUNCTION(trunc,                              FTRUNC)
 

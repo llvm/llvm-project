@@ -636,6 +636,11 @@ RoundingMode CallBase::getRoundingMode() const {
   if (RM)
     return *RM;
 
+  // If this is a constrained intrinsic, get rounding mode from its metadata
+  // arguments.
+  if (auto *CI = dyn_cast<ConstrainedFPIntrinsic>(this))
+    return CI->getRoundingMode().value_or(RoundingMode::Dynamic);
+
   // No FP bundle, try to guess from the current mode.
   if (getParent())
     if (auto *F = getFunction(); F)
@@ -657,6 +662,11 @@ fp::ExceptionBehavior CallBase::getExceptionBehavior() const {
   }
   if (EB)
     return *EB;
+
+  // If this is a constrained intrinsic, get exception behavior from its
+  // metadata arguments.
+  if (auto *CI = dyn_cast<ConstrainedFPIntrinsic>(this))
+    return CI->getExceptionBehavior().value_or(fp::ebStrict);
 
   // No FP bundle, try to guess from the current mode.
   if (getParent())
