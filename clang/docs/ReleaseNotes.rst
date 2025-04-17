@@ -69,6 +69,13 @@ Potentially Breaking Changes
   call the member ``operator delete`` instead of the expected global
   delete operator. The old behavior is retained under ``-fclang-abi-compat=21``
   flag.
+- Clang now supports MSVC vector deleting destructors when targeting Windows.
+  This means that vtables of classes with virtual destructors will contain a
+  pointer to vector deleting destructor (instead of scalar deleting destructor)
+  which in fact is a different symbol with different name and linkage. This
+  may cause runtime failures if two binaries using the same class defining a
+  virtual destructor are compiled with different versions of clang.
+
 
 C/C++ Language Potentially Breaking Changes
 -------------------------------------------
@@ -548,6 +555,8 @@ Android Support
 
 Windows Support
 ^^^^^^^^^^^^^^^
+
+- Clang now supports MSVC vector deleting destructors (GH19772).
 
 LoongArch Support
 ^^^^^^^^^^^^^^^^^

@@ -57,7 +57,7 @@ struct A : virtual V1 {
   // CHECK-LABEL: VFTable for 'V1' in 'simple::A' (2 entries).
   // CHECK-NEXT: 0 | void simple::A::f()
   // CHECK-NEXT:     [this adjustment: vtordisp at -4, 0 non-virtual]
-  // CHECK-NEXT: 1 | simple::A::~A() [scalar deleting]
+  // CHECK-NEXT: 1 | simple::A::~A() [vector deleting]
   // CHECK-NEXT:     [this adjustment: vtordisp at -4, 0 non-virtual]
 
   // CHECK-LABEL: Thunks for 'simple::A::~A()' (1 entry).
@@ -79,7 +79,7 @@ void use(A *obj) { obj->f(); }
 struct B : virtual V3 {
   // CHECK-LABEL: VFTable for 'Z' in 'V3' in 'simple::B' (2 entries).
   // CHECK-NEXT: 0 | void Z::g()
-  // CHECK-NEXT: 1 | simple::B::~B() [scalar deleting]
+  // CHECK-NEXT: 1 | simple::B::~B() [vector deleting]
   // CHECK-NEXT:     [this adjustment: vtordisp at -4, 0 non-virtual]
 
   // CHECK-LABEL: Thunks for 'simple::B::~B()' (1 entry).
@@ -88,7 +88,7 @@ struct B : virtual V3 {
   // CHECK-LABEL: VFTable for 'V2' in 'V3' in 'simple::B' (2 entries).
   // CHECK-NEXT: 0 | void simple::B::f()
   // CHECK-NEXT:     [this adjustment: vtordisp at -12, 0 non-virtual]
-  // CHECK-NEXT: 1 | simple::B::~B() [scalar deleting]
+  // CHECK-NEXT: 1 | simple::B::~B() [vector deleting]
   // CHECK-NEXT:     [this adjustment: vtordisp at -12, -8 non-virtual]
 
   // CHECK-LABEL: Thunks for 'simple::B::~B()' (1 entry).
@@ -115,7 +115,7 @@ void use(B *obj) { obj->f(); }
 struct C : virtual V4 {
   // CHECK-LABEL: VFTable for 'Z' in 'V4' in 'simple::C' (2 entries).
   // CHECK-NEXT: 0 | void Z::g()
-  // CHECK-NEXT: 1 | simple::C::~C() [scalar deleting]
+  // CHECK-NEXT: 1 | simple::C::~C() [vector deleting]
   // CHECK-NEXT:     [this adjustment: vtordisp at -4, 0 non-virtual]
 
   // CHECK-LABEL: Thunks for 'simple::C::~C()' (1 entry).
@@ -124,7 +124,7 @@ struct C : virtual V4 {
   // CHECK-LABEL: VFTable for 'V1' in 'V4' in 'simple::C' (2 entries).
   // CHECK-NEXT: 0 | void simple::C::f()
   // CHECK-NEXT:     [this adjustment: vtordisp at -12, 0 non-virtual]
-  // CHECK-NEXT: 1 | simple::C::~C() [scalar deleting]
+  // CHECK-NEXT: 1 | simple::C::~C() [vector deleting]
   // CHECK-NEXT:     [this adjustment: vtordisp at -12, -8 non-virtual]
 
   // CHECK-LABEL: Thunks for 'simple::C::~C()' (1 entry).
@@ -136,7 +136,7 @@ struct C : virtual V4 {
   // CHECK-LABEL: VFTable for 'V2' in 'V4' in 'simple::C' (2 entries).
   // CHECK-NEXT: 0 | void simple::C::f()
   // CHECK-NEXT:     [this adjustment: vtordisp at -16, -4 non-virtual]
-  // CHECK-NEXT: 1 | simple::C::~C() [scalar deleting]
+  // CHECK-NEXT: 1 | simple::C::~C() [vector deleting]
   // CHECK-NEXT:     [this adjustment: vtordisp at -16, -12 non-virtual]
 
   // CHECK-LABEL: Thunks for 'simple::C::~C()' (1 entry).
@@ -162,7 +162,7 @@ class D : B {
   // CHECK-LABEL: VFTable for 'V2' in 'V3' in 'simple::B' in 'simple::D' (2 entries).
   // CHECK-NEXT: 0 | void simple::B::f()
   // CHECK-NEXT:     [this adjustment: vtordisp at -12, -4 non-virtual]
-  // CHECK-NEXT: 1 | simple::D::~D() [scalar deleting]
+  // CHECK-NEXT: 1 | simple::D::~D() [vector deleting]
   // CHECK-NEXT:     [this adjustment: vtordisp at -12, -8 non-virtual]
   D();
   int z;
@@ -180,12 +180,12 @@ struct F : virtual E {
   // CHECK-LABEL: VFTable for 'Z' in 'V3' in 'simple::E' in 'simple::F' (2 entries).
   // CHECK-NEXT:   0 | void simple::F::g()
   // CHECK-NEXT:       [this adjustment: vtordisp at -4, 0 non-virtual]
-  // CHECK-NEXT:   1 | simple::F::~F() [scalar deleting]
+  // CHECK-NEXT:   1 | simple::F::~F() [vector deleting]
   // CHECK-NEXT:       [this adjustment: vtordisp at -4, 0 non-virtual]
 
   // CHECK-LABEL: VFTable for 'V2' in 'V3' in 'simple::E' in 'simple::F' (2 entries).
   // CHECK-NEXT:   0 | void simple::E::f()
-  // CHECK-NEXT:   1 | simple::F::~F() [scalar deleting]
+  // CHECK-NEXT:   1 | simple::F::~F() [vector deleting]
   // CHECK-NEXT:       [this adjustment: vtordisp at -12, -8 non-virtual]
 
   F();
@@ -202,12 +202,12 @@ struct G : F {
   // CHECK-LABEL: VFTable for 'Z' in 'V3' in 'simple::E' in 'simple::F' in 'simple::G' (2 entries).
   // CHECK-NEXT:   0 | void simple::F::g()
   // CHECK-NEXT:       [this adjustment: vtordisp at -4, -4 non-virtual]
-  // CHECK-NEXT:   1 | simple::G::~G() [scalar deleting]
+  // CHECK-NEXT:   1 | simple::G::~G() [vector deleting]
   // CHECK-NEXT:       [this adjustment: vtordisp at -4, 0 non-virtual]
 
   // CHECK-LABEL: VFTable for 'V2' in 'V3' in 'simple::E' in 'simple::F' in 'simple::G' (2 entries).
   // CHECK-NEXT:   0 | void simple::E::f()
-  // CHECK-NEXT:   1 | simple::G::~G() [scalar deleting]
+  // CHECK-NEXT:   1 | simple::G::~G() [vector deleting]
   // CHECK-NEXT:       [this adjustment: vtordisp at -12, -8 non-virtual]
 
   G();
@@ -240,7 +240,7 @@ struct A : virtual simple::A {
   // CHECK-NEXT: 0 | void simple::A::f()
   // CHECK-NEXT:     [this adjustment: vtordisp at -4, vbptr at 8 to the left,
   // CHECK-NEXT:      vboffset at 8 in the vbtable, 8 non-virtual]
-  // CHECK-NEXT: 1 | extended::A::~A() [scalar deleting]
+  // CHECK-NEXT: 1 | extended::A::~A() [vector deleting]
   // CHECK-NEXT:     [this adjustment: vtordisp at -4, 0 non-virtual]
 
   // CHECK-LABEL: Thunks for 'void simple::A::f()' (1 entry).
@@ -265,7 +265,7 @@ struct B : virtual simple::A {
 
   // CHECK-LABEL: VFTable for 'V1' in 'simple::A' in 'extended::B' (2 entries).
   //  ...
-  // CHECK: 1 | extended::B::~B() [scalar deleting]
+  // CHECK: 1 | extended::B::~B() [vector deleting]
   // CHECK-NEXT: [this adjustment: vtordisp at -4, 0 non-virtual]
 
   // CHECK-LABEL: Thunks for 'void simple::A::f()' (1 entry).
@@ -353,7 +353,7 @@ struct G : virtual simple::A {
   // CHECK-NEXT: 0 | void simple::A::f()
   // CHECK-NEXT:     [this adjustment: vtordisp at -4, vbptr at 8 to the left,
   // CHECK-NEXT:      vboffset at 8 in the vbtable, 8 non-virtual]
-  // CHECK-NEXT: 1 | extended::G::~G() [scalar deleting]
+  // CHECK-NEXT: 1 | extended::G::~G() [vector deleting]
   // CHECK-NEXT:     [this adjustment: vtordisp at -4, 0 non-virtual]
 
   // CHECK-LABEL: Thunks for 'void simple::A::f()' (1 entry).
@@ -374,7 +374,7 @@ void use(G *obj) { obj->g(); }
 struct H : Z, A {
   // CHECK-LABEL: VFTable for 'Z' in 'extended::H' (2 entries).
   // CHECK-NEXT: 0 | void Z::g()
-  // CHECK-NEXT: 1 | extended::H::~H() [scalar deleting]
+  // CHECK-NEXT: 1 | extended::H::~H() [vector deleting]
 
   // CHECK-LABEL: VFTable for 'V1' in 'simple::A' in 'extended::A' in 'extended::H' (2 entries).
   // CHECK-NEXT: 0 | void simple::A::f()

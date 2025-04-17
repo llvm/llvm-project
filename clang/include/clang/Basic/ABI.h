@@ -37,6 +37,7 @@ enum CXXDtorType {
   Dtor_Base,     ///< Base object dtor
   Dtor_Comdat,   ///< The COMDAT used for dtors
   Dtor_Unified,  ///< GCC-style unified dtor
+  Dtor_VectorDeleting, ///< Vector deleting dtor
 };
 
 } // end namespace clang

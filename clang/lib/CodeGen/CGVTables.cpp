@@ -770,7 +770,9 @@ void CodeGenVTables::addVTableComponent(ConstantArrayBuilder &builder,
   case VTableComponent::CK_FunctionPointer:
   case VTableComponent::CK_CompleteDtorPointer:
   case VTableComponent::CK_DeletingDtorPointer: {
-    GlobalDecl GD = component.getGlobalDecl();
+    GlobalDecl GD = component.getGlobalDecl(
+        CGM.getContext().getTargetInfo().emitVectorDeletingDtors(
+            CGM.getContext().getLangOpts()));
 
     const bool IsThunk =
         nextVTableThunkIndex < layout.vtable_thunks().size() &&
