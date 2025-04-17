@@ -559,6 +559,20 @@ bool SIInstrInfo::getMemOperandsWithOffsetWidth(
     return true;
   }
 
+  if (isVLdStIdx(Opc)) {
+    BaseOp = getNamedOperand(LdSt, AMDGPU::OpName::idx);
+    OffsetOp = getNamedOperand(LdSt, AMDGPU::OpName::offset);
+
+    BaseOps.push_back(BaseOp);
+    Offset = OffsetOp->getImm() * 4; // Offset has units of dwords.
+
+    // Get appropriate operand, and compute width accordingly.
+    DataOpIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::data_op);
+    MachineMemOperand *LdStMMO = LdSt.memoperands()[DataOpIdx];
+    Width = LdStMMO->getSize();
+    return true;
+  }
+
   return false;
 }
 
@@ -4015,6 +4029,13 @@ bool SIInstrInfo::areMemAccessesTriviallyDisjoint(const MachineInstr &MIa,
     }
 
     return false;
+  }
+
+  if (isVLdStIdx(MIa.getOpcode()) || isVLdStIdx(MIb.getOpcode())) {
+    if (isVLdStIdx(MIa.getOpcode()) && isVLdStIdx(MIb.getOpcode())) {
+      return checkInstOffsetsDoNotOverlap(MIa, MIb);
+    }
+    return true;
   }
 
   return false;
