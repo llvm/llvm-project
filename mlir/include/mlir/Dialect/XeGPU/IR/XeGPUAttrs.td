@@ -183,53 +183,54 @@ def XeGPU_LayoutAttr : XeGPUAttr<"Layout", "layout"> {
       1-dimensional layout. The first dimension in the order list is the fastest-changing dimension. If it
       is not present, the default value is [1, 0].
 
-    ### Examples:
-      1. Subgroup level layout:
-      ```mlir
-      #xegpu.layout<lane_layout = [2, 8], lane_data = [1, 1]>
-      ```
-      In this example, there are 16 work-items per subgroup, and is organized as
-      [[0, 1, 2, .., 7],[8, 9, .., 15]]. The distribution unit is 1x1.
+    Examples:
 
-      2. Subgroup level layout with order:
-      ```mlir
-      #xegpu.layout<lane_layout = [2, 8], lane_data = [1, 1], order = [0, 1]>
-      ```
-      In this example, there are 16 work-items per subgroup, and is organized as
-      [[0, 2, 4, ..., 14], [1, 3, 5, ..., 15]]. The distribution unit is 1x1.
+    1. Subgroup level layout:
+    ```mlir
+    #xegpu.layout<lane_layout = [2, 8], lane_data = [1, 1]>
+    ```
+    In this example, there are 16 work-items per subgroup, and is organized as
+    [[0, 1, 2, .., 7],[8, 9, .., 15]]. The distribution unit is 1x1.
 
-      3. Subgroup level layout with inst_data
-      ```mlir
-      #xegpu.layout<inst_data = [8, 16], lane_layout = [2, 8], lane_data = [2, 2]>
-      ```
-      In this example, the original problem size is partitioned into smaller subproblems of dimensions [8, 16],
-      which are then distributed among 16 work-items arranged as [[0, 1, 2, ..., 7], [8, 9, ..., 15]]. Each
-      work-item is assigned four 2x2 blocks in a round-robin manner.
+    2. Subgroup level layout with order:
+    ```mlir
+    #xegpu.layout<lane_layout = [2, 8], lane_data = [1, 1], order = [0, 1]>
+    ```
+    In this example, there are 16 work-items per subgroup, and is organized as
+    [[0, 2, 4, ..., 14], [1, 3, 5, ..., 15]]. The distribution unit is 1x1.
 
-      4. Workgroup level layout:
-      ```mlir
-      #xegpu.layout<sg_layout = [2, 4], sg_data = [16, 16], lane_layout = [2, 8], lane_data = [1, 1]>
-      ```
-      In this example, the layout represents a workgroup distribution. A workgroup consists of 8 subgroups
-      arranged as [[0, 1, 2, 3], [4, 5, 6, 7]]. Each subgroup accesses a 16x16 block per instruction, which
-      is further distributed to 16 work items which is organized as [[0, 1, 2, .., 7],[8, 9, .., 15]].
+    3. Subgroup level layout with inst_data
+    ```mlir
+    #xegpu.layout<inst_data = [8, 16], lane_layout = [2, 8], lane_data = [2, 2]>
+    ```
+    In this example, the original problem size is partitioned into smaller subproblems of dimensions [8, 16],
+    which are then distributed among 16 work-items arranged as [[0, 1, 2, ..., 7], [8, 9, ..., 15]]. Each
+    work-item is assigned four 2x2 blocks in a round-robin manner.
 
-      5. Workgroup level layout with order:
-      ```mlir
-      #xegpu.layout<sg_layout = [2, 4], sg_data = [16, 16], lane_layout = [2, 8], lane_data = [1, 1], order = [0, 1]>
-      ```
-      In this example, the layout represents a workgroup distribution. A workgroup consists of 8 subgroups
-      arranged as [[0, 2, 4, 6], [1, 3, 5, 7]]. Each subgroup accesses a 16x16 block per instruction, which
-      is further distributed to 16 work items which is organized as [[0, 2, 4, ..., 14], [1, 3, 5, ..., 15]].
+    4. Workgroup level layout:
+    ```mlir
+    #xegpu.layout<sg_layout = [2, 4], sg_data = [16, 16], lane_layout = [2, 8], lane_data = [1, 1]>
+    ```
+    In this example, the layout represents a workgroup distribution. A workgroup consists of 8 subgroups
+    arranged as [[0, 1, 2, 3], [4, 5, 6, 7]]. Each subgroup accesses a 16x16 block per instruction, which
+    is further distributed to 16 work items which is organized as [[0, 1, 2, .., 7],[8, 9, .., 15]].
 
-      6. Workgroup level layout with inst_data:
-      ```mlir
-      #xegpu.layout<sg_layout = [2, 4], sg_data = [16, 16], inst_data = [8, 16], lane_layout = [2, 8], lane_data = [1, 1]>
-      ```
-      This example is similar to the previous ones, but the `inst_data` parameter divides `sg_data` into two instructions,
-      each processing an 8x16 block. These blocks are further distributed across 16 work-items with a distribution unit of 1x1.
-      Unlike the 2x2 distribution unit in example 3, which results in accessing contiguous 2x2 blocks, the 1x1 distribution
-      unit may result in non-contiguous access.
+    5. Workgroup level layout with order:
+    ```mlir
+    #xegpu.layout<sg_layout = [2, 4], sg_data = [16, 16], lane_layout = [2, 8], lane_data = [1, 1], order = [0, 1]>
+    ```
+    In this example, the layout represents a workgroup distribution. A workgroup consists of 8 subgroups
+    arranged as [[0, 2, 4, 6], [1, 3, 5, 7]]. Each subgroup accesses a 16x16 block per instruction, which
+    is further distributed to 16 work items which is organized as [[0, 2, 4, ..., 14], [1, 3, 5, ..., 15]].
+
+    6. Workgroup level layout with inst_data:
+    ```mlir
+    #xegpu.layout<sg_layout = [2, 4], sg_data = [16, 16], inst_data = [8, 16], lane_layout = [2, 8], lane_data = [1, 1]>
+    ```
+    This example is similar to the previous ones, but the `inst_data` parameter divides `sg_data` into two instructions,
+    each processing an 8x16 block. These blocks are further distributed across 16 work-items with a distribution unit of 1x1.
+    Unlike the 2x2 distribution unit in example 3, which results in accessing contiguous 2x2 blocks, the 1x1 distribution
+    unit may result in non-contiguous access.
   }];
 
   let parameters = (ins
