@@ -541,10 +541,20 @@ MinMaxlocAsElementalConverter<T>::reduceOneElement(
   cmp = builder.create<mlir::arith::OrIOp>(loc, cmp, getIsFirst(currentValue));
 
   llvm::SmallVector<mlir::Value, maxNumReductions> newIndices;
+  int64_t dim = 1;
+  if (!isTotalReduction()) {
+    auto dimVal = this->getConstDim();
+    assert(mlir::succeeded(dimVal) &&
+           "partial MINLOC/MAXLOC reduction with invalid DIM");
+    dim = *dimVal;
+    assert(getNumCoors() == 1 &&
+           "partial MAXLOC/MINLOC reduction must compute one coordinate");
+  }
+
   for (unsigned coorIdx = 0; coorIdx < getNumCoors(); ++coorIdx) {
     mlir::Value currentCoor = currentValue[coorIdx];
-    mlir::Value newCoor = builder.createConvert(loc, currentCoor.getType(),
-                                                oneBasedIndices[coorIdx]);
+    mlir::Value newCoor = builder.createConvert(
+        loc, currentCoor.getType(), oneBasedIndices[coorIdx + dim - 1]);
     mlir::Value update =
         builder.create<mlir::arith::SelectOp>(loc, cmp, newCoor, currentCoor);
     newIndices.push_back(update);

@@ -304,7 +304,7 @@ func.func @test_partial_var(%input: !fir.box<!fir.array<?x?x?xf32>>, %mask: !fir
 // CHECK:                 %[[VAL_51:.*]] = arith.andi %[[VAL_49]], %[[VAL_50]] : i1
 // CHECK:                 %[[VAL_52:.*]] = arith.ori %[[VAL_48]], %[[VAL_51]] : i1
 // CHECK:                 %[[VAL_53:.*]] = arith.ori %[[VAL_52]], %[[VAL_21]] : i1
-// CHECK:                 %[[VAL_54:.*]] = fir.convert %[[VAL_15]] : (index) -> i32
+// CHECK:                 %[[VAL_54:.*]] = fir.convert %[[VAL_18]] : (index) -> i32
 // CHECK:                 %[[VAL_55:.*]] = arith.select %[[VAL_53]], %[[VAL_54]], %[[VAL_19]] : i32
 // CHECK:                 %[[VAL_56:.*]] = arith.select %[[VAL_53]], %[[VAL_47]], %[[VAL_20]] : f32
 // CHECK:                 fir.result %[[VAL_55]], %[[VAL_56]], %[[VAL_2]] : i32, f32, i1
