@@ -562,30 +562,50 @@ public:
     return {};
   }
 
-  virtual ErrorOr<MCPhysReg> getAuthenticatedReg(const MCInst &Inst) const {
+  /// Returns the register where an authenticated pointer is written to by Inst,
+  /// or std::nullopt if not authenticating any register.
+  ///
+  /// Sets IsChecked if the instruction always checks authenticated pointer,
+  /// i.e. it either returns a successfully authenticated pointer or terminates
+  /// the program abnormally (such as "ldra x0, [x1]!" on AArch64, which crashes
+  /// on authentication failure even if FEAT_FPAC is not implemented).
+  virtual std::optional<MCPhysReg>
+  getWrittenAuthenticatedReg(const MCInst &Inst, bool &IsChecked) const {
     llvm_unreachable("not implemented");
-    return getNoRegister();
+    return std::nullopt;
   }
 
-  virtual bool isAuthenticationOfReg(const MCInst &Inst,
-                                     MCPhysReg AuthenticatedReg) const {
+  /// Returns the register signed by Inst, or std::nullopt if not signing any
+  /// register.
+  ///
+  /// The returned register is assumed to be both input and output operand,
+  /// as it is done on AArch64.
+  virtual std::optional<MCPhysReg> getSignedReg(const MCInst &Inst) const {
     llvm_unreachable("not implemented");
-    return false;
+    return std::nullopt;
   }
 
-  virtual MCPhysReg getSignedReg(const MCInst &Inst) const {
+  /// Returns the register used as a return address. Returns std::nullopt if
+  /// not applicable, such as reading the return address from a system register
+  /// or from the stack.
+  ///
+  /// Sets IsAuthenticatedInternally if the instruction accepts a signed
+  /// pointer as its operand and authenticates it internally.
+  ///
+  /// Should only be called when isReturn(Inst) is true.
+  virtual std::optional<MCPhysReg>
+  getRegUsedAsRetDest(const MCInst &Inst,
+                      bool &IsAuthenticatedInternally) const {
     llvm_unreachable("not implemented");
-    return getNoRegister();
-  }
-
-  virtual ErrorOr<MCPhysReg> getRegUsedAsRetDest(const MCInst &Inst) const {
-    llvm_unreachable("not implemented");
-    return getNoRegister();
+    return std::nullopt;
   }
 
   /// Returns the register used as the destination of an indirect branch or call
   /// instruction. Sets IsAuthenticatedInternally if the instruction accepts
   /// a signed pointer as its operand and authenticates it internally.
+  ///
+  /// Should only be called if isIndirectCall(Inst) or isIndirectBranch(Inst)
+  /// returns true.
   virtual MCPhysReg
   getRegUsedAsIndirectBranchDest(const MCInst &Inst,
                                  bool &IsAuthenticatedInternally) const {
@@ -602,14 +622,14 @@ public:
   ///    controlled, under the Pointer Authentication threat model.
   ///
   /// If the instruction does not write to any register satisfying the above
-  /// two conditions, NoRegister is returned.
+  /// two conditions, std::nullopt is returned.
   ///
   /// The Pointer Authentication threat model assumes an attacker is able to
   /// modify any writable memory, but not executable code (due to W^X).
-  virtual MCPhysReg
+  virtual std::optional<MCPhysReg>
   getMaterializedAddressRegForPtrAuth(const MCInst &Inst) const {
     llvm_unreachable("not implemented");
-    return getNoRegister();
+    return std::nullopt;
   }
 
   /// Analyzes if this instruction can safely perform address arithmetics
@@ -622,10 +642,13 @@ public:
   /// controlled, provided InReg and executable code are not. Please note that
   /// registers other than InReg as well as the contents of memory which is
   /// writable by the process should be considered attacker-controlled.
+  ///
+  /// The instruction should not write any values derived from InReg anywhere,
+  /// except for OutReg.
   virtual std::optional<std::pair<MCPhysReg, MCPhysReg>>
   analyzeAddressArithmeticsForPtrAuth(const MCInst &Inst) const {
     llvm_unreachable("not implemented");
-    return std::make_pair(getNoRegister(), getNoRegister());
+    return std::nullopt;
   }
 
   /// Analyzes if a pointer is checked to be authenticated successfully
@@ -670,10 +693,10 @@ public:
   ///
   /// Use this function for simple, single-instruction patterns instead of
   /// its getAuthCheckedReg(BB) counterpart.
-  virtual MCPhysReg getAuthCheckedReg(const MCInst &Inst,
-                                      bool MayOverwrite) const {
+  virtual std::optional<MCPhysReg> getAuthCheckedReg(const MCInst &Inst,
+                                                     bool MayOverwrite) const {
     llvm_unreachable("not implemented");
-    return getNoRegister();
+    return std::nullopt;
   }
 
   virtual bool isTerminator(const MCInst &Inst) const;

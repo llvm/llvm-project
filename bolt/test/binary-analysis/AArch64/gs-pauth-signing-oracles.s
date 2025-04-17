@@ -985,6 +985,26 @@ inst_pacnbibsppc:
         ret
         .size inst_pacnbibsppc, .-inst_pacnbibsppc
 
+// Test that write-back forms of LDRA(A|B) instructions are handled properly.
+
+        .globl  inst_ldraa_wb
+        .type   inst_ldraa_wb,@function
+inst_ldraa_wb:
+// CHECK-NOT: inst_ldraa_wb
+        ldraa   x2, [x0]!
+        pacda   x0, x1
+        ret
+        .size inst_ldraa_wb, .-inst_ldraa_wb
+
+        .globl  inst_ldrab_wb
+        .type   inst_ldrab_wb,@function
+inst_ldrab_wb:
+// CHECK-NOT: inst_ldrab_wb
+        ldraa   x2, [x0]!
+        pacda   x0, x1
+        ret
+        .size inst_ldrab_wb, .-inst_ldrab_wb
+
         .globl  main
         .type   main,@function
 main:
