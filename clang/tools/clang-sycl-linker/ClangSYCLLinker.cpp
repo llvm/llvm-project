@@ -70,6 +70,8 @@ static StringRef OutputFile;
 /// Directory to dump SPIR-V IR if requested by user.
 static SmallString<128> SPIRVDumpDir;
 
+using OffloadingImage = OffloadBinary::OffloadingImage;
+
 static void printVersion(raw_ostream &OS) {
   OS << clang::getClangToolFullVersion("clang-sycl-linker") << '\n';
 }
@@ -278,8 +280,8 @@ Expected<StringRef> linkDeviceCode(ArrayRef<std::string> InputFiles,
 /// Converts 'File' from LLVM bitcode to SPIR-V format using SPIR-V backend.
 /// 'Args' encompasses all arguments required for linking device code and will
 /// be parsed to generate options required to be passed into the backend.
-static Expected<StringRef> runSPIRVCodeGen(StringRef File, const ArgList &Args,
-                                           LLVMContext &C) {
+static Error runSPIRVCodeGen(StringRef File, const ArgList &Args,
+                             StringRef OutputFile, LLVMContext &C) {
   llvm::TimeTraceScope TimeScope("SPIR-V code generation");
 
   // Parse input module.
@@ -289,7 +291,7 @@ static Expected<StringRef> runSPIRVCodeGen(StringRef File, const ArgList &Args,
     return createStringError(Err.getMessage());
 
   if (Error Err = M->materializeAll())
-    return std::move(Err);
+    return Err;
 
   Triple TargetTriple(Args.getLastArgValue(OPT_triple_EQ));
   M->setTargetTriple(TargetTriple);
@@ -333,7 +335,7 @@ static Expected<StringRef> runSPIRVCodeGen(StringRef File, const ArgList &Args,
     errs() << formatv("SPIR-V Backend: input: {0}, output: {1}\n", File,
                       OutputFile);
 
-  return OutputFile;
+  return Error::success();
 }
 
 /// Performs the following steps:
@@ -349,10 +351,54 @@ Error runSYCLLink(ArrayRef<std::string> Files, const ArgList &Args) {
   if (!LinkedFile)
     reportError(LinkedFile.takeError());
 
+  // TODO: SYCL post link functionality involves device code splitting and will
+  // result in multiple bitcode codes.
+  // The following lines are placeholders to represent multiple files and will
+  // be refactored once SYCL post link support is available.
+  SmallVector<std::string> SplitModules;
+  SplitModules.emplace_back(*LinkedFile);
+
   // SPIR-V code generation step.
-  auto SPVFile = runSPIRVCodeGen(*LinkedFile, Args, C);
-  if (!SPVFile)
-    return SPVFile.takeError();
+  for (size_t I = 0, E = SplitModules.size(); I != E; ++I) {
+    auto Stem = OutputFile.rsplit('.').first;
+    std::string SPVFile(Stem);
+    SPVFile.append("_" + utostr(I) + ".spv");
+    auto Err = runSPIRVCodeGen(SplitModules[I], Args, SPVFile, C);
+    if (Err)
+      return std::move(Err);
+    SplitModules[I] = SPVFile;
+  }
+
+  // Write the final output into file.
+  int FD = -1;
+  if (std::error_code EC = sys::fs::openFileForWrite(OutputFile, FD))
+    return errorCodeToError(EC);
+  llvm::raw_fd_ostream FS(FD, /*shouldClose=*/true);
+
+  for (size_t I = 0, E = SplitModules.size(); I != E; ++I) {
+    auto File = SplitModules[I];
+    llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> FileOrErr =
+        llvm::MemoryBuffer::getFileOrSTDIN(File);
+    if (std::error_code EC = FileOrErr.getError()) {
+      if (DryRun)
+        FileOrErr = MemoryBuffer::getMemBuffer("");
+      else
+        return createFileError(File, EC);
+    }
+    OffloadingImage TheImage{};
+    TheImage.TheImageKind = IMG_Object;
+    TheImage.TheOffloadKind = OFK_SYCL;
+    TheImage.StringData["triple"] =
+        Args.MakeArgString(Args.getLastArgValue(OPT_triple_EQ));
+    TheImage.StringData["arch"] =
+        Args.MakeArgString(Args.getLastArgValue(OPT_arch_EQ));
+    TheImage.Image = std::move(*FileOrErr);
+
+    llvm::SmallString<0> Buffer = OffloadBinary::write(TheImage);
+    if (Buffer.size() % OffloadBinary::getAlignment() != 0)
+      return createStringError("Offload binary has invalid size alignment");
+    FS << Buffer;
+  }
   return Error::success();
 }
 
@@ -394,7 +440,7 @@ int main(int argc, char **argv) {
   DryRun = Args.hasArg(OPT_dry_run);
   SaveTemps = Args.hasArg(OPT_save_temps);
 
-  OutputFile = "a.spv";
+  OutputFile = "a.out";
   if (Args.hasArg(OPT_o))
     OutputFile = Args.getLastArgValue(OPT_o);
 
