@@ -319,6 +319,17 @@ void cuf::SharedMemoryOp::build(
   result.addAttributes(attributes);
 }
 
+//===----------------------------------------------------------------------===//
+// StreamCastOp
+//===----------------------------------------------------------------------===//
+
+llvm::LogicalResult cuf::StreamCastOp::verify() {
+  auto refTy = mlir::dyn_cast<fir::ReferenceType>(getStream().getType());
+  if (!refTy.getEleTy().isInteger(64))
+    return emitOpError("stream is expected to be a i64 reference");
+  return mlir::success();
+}
+
 // Tablegen operators
 
 #define GET_OP_CLASSES
