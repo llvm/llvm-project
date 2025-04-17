@@ -449,6 +449,7 @@ OpFoldResult cir::CastOp::fold(FoldAdaptor adaptor) {
 static mlir::ParseResult parseCallCommon(mlir::OpAsmParser &parser,
                                          mlir::OperationState &result) {
   mlir::FlatSymbolRefAttr calleeAttr;
+  llvm::ArrayRef<mlir::Type> allResultTypes;
 
   if (!parser.parseOptionalAttribute(calleeAttr, "callee", result.attributes)
            .has_value())
@@ -472,6 +473,9 @@ static mlir::ParseResult parseCallCommon(mlir::OpAsmParser &parser,
   mlir::FunctionType opsFnTy;
   if (parser.parseType(opsFnTy))
     return mlir::failure();
+
+  allResultTypes = opsFnTy.getResults();
+  result.addTypes(allResultTypes);
 
   return mlir::success();
 }
@@ -515,8 +519,31 @@ verifyCallCommInSymbolUses(mlir::Operation *op,
     return op->emitOpError() << "'" << fnAttr.getValue()
                              << "' does not reference a valid function";
 
-  // TODO(cir): verify function arguments and return type
+  auto callIf = dyn_cast<cir::CIRCallOpInterface>(op);
+  assert(callIf && "expected CIR call interface to be always available");
+
+  // Verify that the operand and result types match the callee. Note that
+  // argument-checking is disabled for functions without a prototype.
+  auto fnType = fn.getFunctionType();
+
+  // TODO(cir): verify function arguments
   assert(!cir::MissingFeatures::opCallArgs());
+
+  // Void function must not return any results.
+  if (fnType.hasVoidReturn() && op->getNumResults() != 0)
+    return op->emitOpError("callee returns void but call has results");
+
+  // Non-void function calls must return exactly one result.
+  if (!fnType.hasVoidReturn() && op->getNumResults() != 1)
+    return op->emitOpError("incorrect number of results for callee");
+
+  // Parent function and return value types must match.
+  if (!fnType.hasVoidReturn() &&
+      op->getResultTypes().front() != fnType.getReturnType()) {
+    return op->emitOpError("result type mismatch: expected ")
+           << fnType.getReturnType() << ", but provided "
+           << op->getResult(0).getType();
+  }
 
   return mlir::success();
 }
