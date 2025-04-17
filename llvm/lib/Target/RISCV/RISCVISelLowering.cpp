@@ -19721,7 +19721,7 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     // Warning: Unlike most cases we strip an insert_subvector, this one
     // does not require the first operand to be undef.
     if (Src.getOpcode() == ISD::INSERT_SUBVECTOR &&
-        sd_match(Src.getOperand(2), m_Zero()))
+        isNullConstant(Src.getOperand(2)))
       Src = Src.getOperand(1);
 
     switch (Src.getOpcode()) {
@@ -19742,7 +19742,7 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
       // doesn't have a passthru, then this vrgather.vi/vx is equivalent to
       // a vmv.v.x.  Note that there can be other uses of the original
       // vmv.s.x and thus we can't eliminate it.  (vfmv.s.f is analogous)
-      if (sd_match(Idx, m_Zero()) && Passthru.isUndef() &&
+      if (isNullConstant(Idx) && Passthru.isUndef() &&
           VL == Src.getOperand(2)) {
         unsigned Opc =
             VT.isFloatingPoint() ? RISCVISD::VFMV_V_F_VL : RISCVISD::VMV_V_X_VL;
