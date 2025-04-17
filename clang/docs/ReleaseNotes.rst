@@ -96,12 +96,6 @@ C++ Language Changes
       asm((std::string_view("nop")) ::: (std::string_view("memory")));
     }
 
-- Clang now implements the changes to overload resolution proposed by section 1 and 2 of
-  `P3606 <https://wg21.link/P3606R0>`_. If a non-template candidate exists in an overload set that is
-  a perfect match (all conversion sequences are identity conversions) template candiates are not instantiated.
-  Diagnostics that would have resulted from the instantiation of these template candidates are no longer
-  produced. This aligns Clang closer to the behavior of GCC, and fixes (#GH62096), (#GH74581), and (#GH74581).
-
 C++2c Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
