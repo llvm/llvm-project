@@ -4,10 +4,11 @@ add_entrypoint_object(
     setjmp.cpp
   HDRS
     ../setjmp_impl.h
-  DEPENDS
-    libc.hdr.types.jmp_buf
   COMPILE_OPTIONS
     ${libc_opt_high_flag}
+    -fomit-frame-pointer
+  DEPENDS
+    libc.hdr.types.jmp_buf
 )
 
 add_entrypoint_object(
@@ -16,13 +17,13 @@ add_entrypoint_object(
     sigsetjmp.cpp
   HDRS
     ../sigsetjmp.h
+  COMPILE_OPTIONS
+    ${libc_opt_high_flag}
   DEPENDS
     libc.hdr.types.jmp_buf
     libc.hdr.types.sigset_t
     libc.src.setjmp.sigsetjmp_epilogue
     libc.src.setjmp.setjmp
-  COMPILE_OPTIONS
-    ${libc_opt_high_flag}
 )
 
 add_entrypoint_object(
@@ -31,9 +32,9 @@ add_entrypoint_object(
     longjmp.cpp
   HDRS
     ../longjmp.h
-  DEPENDS
-    libc.hdr.types.jmp_buf
   COMPILE_OPTIONS
     ${libc_opt_high_flag}
     -fomit-frame-pointer
+  DEPENDS
+    libc.hdr.types.jmp_buf
 )

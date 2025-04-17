@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_TYPES_JMP_BUF_H
 #define LLVM_LIBC_TYPES_JMP_BUF_H
 
-#include "llvm-libc-types/sigset_t.h"
+#include "sigset_t.h"
 
 typedef struct {
 #ifdef __x86_64__
