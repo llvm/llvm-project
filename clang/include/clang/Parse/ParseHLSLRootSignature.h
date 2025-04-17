@@ -69,59 +69,13 @@ private:
   bool parseDescriptorTable();
   bool parseDescriptorTableClause();
 
-  /// Parameter arguments (eg. `bReg`, `space`, ...) can be specified in any
-  /// order and only exactly once. `ParsedParamState` provides a common
-  /// stateful structure to facilitate a common abstraction over collecting
-  /// parameters. By having a common return type we can follow clang's pattern
-  /// of first parsing out the values and then validating when we construct
-  /// the corresponding in-memory RootElements.
-  struct ParsedParamState {
-    // Parameter state to hold the parsed values. The value is only guarentted
-    // to be correct if one of its keyword bits is set in `Seen`.
-    // Eg) if any of the seen bits for `bReg, tReg, uReg, sReg` are set, then
-    // Register will have an initialized value
-    llvm::hlsl::rootsig::Register Register;
-    uint32_t Space;
-
-    // Seen retains whether or not the corresponding keyword has been
-    // seen
-    uint32_t Seen = 0u;
-
-    // Valid keywords for the different parameter types and its corresponding
-    // parsed value
-    ArrayRef<RootSignatureToken::Kind> Keywords;
-
-    // Context of which RootElement is retained to dispatch on the correct
-    // parse method.
-    // Eg) If we encounter kw_flags, it will depend on Context
-    // we are parsing to determine which `parse*Flags` method to call
-    RootSignatureToken::Kind Context;
-
-    // Retain start of params for reporting diagnostics
-    SourceLocation StartLoc;
-
-    // Must provide the starting context of the parameters
-    ParsedParamState(ArrayRef<RootSignatureToken::Kind> Keywords,
-                     RootSignatureToken::Kind Context, SourceLocation StartLoc)
-        : Keywords(Keywords), Context(Context), StartLoc(StartLoc) {}
-
-    // Helper functions to interact with Seen
-    size_t getKeywordIdx(RootSignatureToken::Kind Keyword);
-    bool checkAndSetSeen(RootSignatureToken::Kind Keyword);
-    bool checkAndClearSeen(RootSignatureToken::Kind Keyword);
+  struct ParsedParams {
+    std::optional<llvm::hlsl::rootsig::Register> Register;
+    std::optional<uint32_t> Space;
   };
-
-  /// Root signature parameters follow the form of `keyword` `=` `value`, or,
-  /// are a register. Given a keyword and the context of which `RootElement`
-  /// type we are parsing, we can dispatch onto the correct parseMethod to
-  /// parse a value into the `ParsedParamState`.
-  ///
-  /// This function implements the dispatch onto the correct parse method.
-  bool parseParam(ParsedParamState &Params);
-
-  /// Parses out a `ParsedParamState` for the caller to use for construction
+  /// Parses out a `ParsedParams` for the caller to use for construction
   /// of the in-memory representation of a Root Element.
-  bool parseParams(ParsedParamState &Params);
+  bool parseDescriptorTableClauseParams(ParsedParams &Params, RootSignatureToken::Kind RegType);
 
   /// Parameter parse methods corresponding to a ParamType
   bool parseUIntParam(uint32_t &X);

@@ -117,26 +117,21 @@ bool RootSignatureParser::parseDescriptorTableClause() {
                            ParamKind))
     return true;
 
-  TokenKind Keywords[2] = {
-      ExpectedRegister,
-      TokenKind::kw_space,
-  };
-  ParsedParamState Params(Keywords, ParamKind, CurToken.TokLoc);
-  if (parseParams(Params))
+  ParsedParams Result;
+  if (parseDescriptorTableClauseParams(Result, ExpectedRegister))
     return true;
 
-  // Mandatory parameters:
-  if (!Params.checkAndClearSeen(ExpectedRegister)) {
+  // Check mandatory parameters were provided
+  if (!Result.Register.has_value()) {
     getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_missing_param)
         << ExpectedRegister;
     return true;
   }
 
-  Clause.Register = Params.Register;
+  Clause.Register = *Result.Register;
 
-  // Optional parameters:
-  if (Params.checkAndClearSeen(TokenKind::kw_space))
-    Clause.Space = Params.Space;
+  if (Result.Space)
+    Clause.Space = *Result.Space;
 
   if (consumeExpectedToken(TokenKind::pu_r_paren,
                            diag::err_hlsl_unexpected_end_of_params,
@@ -147,66 +142,36 @@ bool RootSignatureParser::parseDescriptorTableClause() {
   return false;
 }
 
-size_t RootSignatureParser::ParsedParamState::getKeywordIdx(
-    RootSignatureToken::Kind Keyword) {
-  ArrayRef KeywordRef = Keywords;
-  auto It = llvm::find(KeywordRef, Keyword);
-  assert(It != KeywordRef.end() && "Did not provide a valid param keyword");
-  return std::distance(KeywordRef.begin(), It);
-}
-
-bool RootSignatureParser::ParsedParamState::checkAndSetSeen(
-    RootSignatureToken::Kind Keyword) {
-  size_t Idx = getKeywordIdx(Keyword);
-  bool WasSeen = Seen & (1 << Idx);
-  Seen |= 1u << Idx;
-  return WasSeen;
-}
-
-bool RootSignatureParser::ParsedParamState::checkAndClearSeen(
-    RootSignatureToken::Kind Keyword) {
-  size_t Idx = getKeywordIdx(Keyword);
-  bool WasSeen = Seen & (1 << Idx);
-  Seen &= ~(1u << Idx);
-  return WasSeen;
-}
-
-bool RootSignatureParser::parseParam(ParsedParamState &Params) {
-  TokenKind Keyword = CurToken.TokKind;
-  if (Keyword == TokenKind::bReg || Keyword == TokenKind::tReg ||
-      Keyword == TokenKind::uReg || Keyword == TokenKind::sReg) {
-    return parseRegister(Params.Register);
-  }
-
-  if (consumeExpectedToken(TokenKind::pu_equal, diag::err_expected_after,
-                           Keyword))
-    return true;
-
-  switch (Keyword) {
-  case RootSignatureToken::Kind::kw_space:
-    return parseUIntParam(Params.Space);
-  default:
-    llvm_unreachable("Switch for consumed keyword was not provided");
-  }
-}
-
-bool RootSignatureParser::parseParams(ParsedParamState &Params) {
+bool RootSignatureParser::parseDescriptorTableClauseParams(ParsedParams &Params, TokenKind RegType) {
   assert(CurToken.TokKind == TokenKind::pu_l_paren &&
          "Expects to only be invoked starting at given token");
 
-  while (tryConsumeExpectedToken(Params.Keywords)) {
-    if (Params.checkAndSetSeen(CurToken.TokKind)) {
-      getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_repeat_param)
+  do {
+    if (tryConsumeExpectedToken(RegType)) {
+      if (Params.Register.has_value()) {
+        getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_repeat_param)
           << CurToken.TokKind;
-      return true;
+        return true;
+      }
+      Register Reg;
+      if (parseRegister(Reg))
+        return true;
+      Params.Register = Reg;
     }
-
-    if (parseParam(Params))
-      return true;
-
-    if (!tryConsumeExpectedToken(TokenKind::pu_comma))
-      break;
-  }
+    if (tryConsumeExpectedToken(TokenKind::kw_space)) {
+      if (Params.Space.has_value()) {
+        getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_repeat_param)
+          << CurToken.TokKind;
+        return true;
+      }
+      if (consumeExpectedToken(TokenKind::pu_equal))
+        return true;
+      uint32_t Space;
+      if (parseUIntParam(Space))
+        return true;
+      Params.Space = Space;
+    }
+  } while (tryConsumeExpectedToken(TokenKind::pu_comma));
 
   return false;
 }
