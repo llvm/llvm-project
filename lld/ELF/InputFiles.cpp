@@ -576,16 +576,16 @@ handleAArch64BAAndGnuProperties(const ELFT &tPointer, Ctx &ctx, bool isBE,
       auto baPauth = serializeUnsigned(baInfo.Pauth.TagPlatform,
                                        baInfo.Pauth.TagSchema, isBE);
       if (gpInfo.aarch64PauthAbiCoreInfo != ArrayRef<uint8_t>(baPauth))
-        ErrAlways(ctx)
+        Err(ctx)
             << tPointer
             << " Pauth Data mismatch: file contains both GNU properties and "
                "AArch64 build attributes sections with different Pauth data";
     }
     if (baInfo.AndFeatures != gpInfo.andFeatures)
-      ErrAlways(ctx) << tPointer
-                     << " Features Data mismatch: file contains both GNU "
-                        "properties and AArch64 build attributes sections with "
-                        "different And Features data";
+      Err(ctx) << tPointer
+               << " Features Data mismatch: file contains both GNU "
+                  "properties and AArch64 build attributes sections with "
+                  "different And Features data";
   }
 
   if (hasBA && !hasGP) {
