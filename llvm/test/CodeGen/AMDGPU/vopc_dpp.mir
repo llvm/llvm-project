@@ -63,6 +63,7 @@ body:             |
     %4:vgpr_32 = V_MOV_B32_dpp %3, %1, 1, 15, 15, 1, implicit $exec
     V_CMP_LT_F32_e32 %4, %0, implicit-def $vcc, implicit $mode, implicit $exec
 
+    ; unsafe to combine cmpx
     %5:vgpr_32 = V_MOV_B32_dpp %3, %1, 1, 15, 15, 1, implicit $exec
     V_CMPX_EQ_I16_fake16_nosdst_e64 %5, %0, implicit-def $exec, implicit-def $vcc, implicit $mode, implicit $exec
 
@@ -72,22 +73,27 @@ body:             |
     %8:vgpr_32 = V_MOV_B32_dpp %3, %1, 1, 15, 15, 1, implicit $exec
     %9:sgpr_32 = V_CMP_GE_F16_fake16_e64 1, %8, 0, %0, 1, implicit $mode, implicit $exec
 
+    ; unsafe to combine cmpx
     %10:vgpr_32 = V_MOV_B32_dpp %3, %1, 1, 15, 15, 1, implicit $exec
     V_CMPX_GT_U32_nosdst_e64 %10, %0, implicit-def $exec, implicit $mode, implicit $exec
 
     %11:vgpr_32 = V_MOV_B32_dpp %3, %1, 1, 15, 15, 1, implicit $exec
     %12:sgpr_32 = V_CMP_CLASS_F32_e64 2, %11, %0, implicit $mode, implicit $exec
 
+    ; shrink
     %13:vgpr_32 = V_MOV_B32_dpp %3, %1, 1, 15, 15, 1, implicit $exec
     %14:sgpr_32 = V_CMP_NGE_F32_e64 0, %13, 0, %0, 0, implicit $mode, implicit $exec
 
+    ; do not shrink True16 instructions
     %15:vgpr_32 = V_MOV_B32_dpp %3, %1, 1, 15, 15, 1, implicit $exec
     %16:sgpr_32 = V_CMP_NGE_F16_fake16_e64 0, %16, 0, %0, 0, implicit $mode, implicit $exec
 
+    ; do not shrink, sdst used
     %17:vgpr_32 = V_MOV_B32_dpp %3, %1, 1, 15, 15, 1, implicit $exec
     %18:sgpr_32 = V_CMP_NGE_F32_e64 0, %17, 0, %0, 0, implicit $mode, implicit $exec
     %19:sgpr_32 = S_AND_B32 %18, 10101, implicit-def $scc
 
+    ; commute
     %20:vgpr_32 = V_MOV_B32_dpp %3, %1, 1, 15, 15, 1, implicit $exec
     V_CMP_LT_I32_e32 %0, %20, implicit-def $vcc, implicit $exec
 
@@ -116,6 +122,8 @@ body:             |
     %2:vgpr_32 = IMPLICIT_DEF
     %3:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
 
+    ; Do not combine VOPC when row_mask or bank_mask is not 0xf
+    ; All cases are covered by generic rules for creating DPP instructions
     %4:vgpr_32 = V_MOV_B32_dpp %2, %1, 1, 15, 14, 1, implicit $exec
     %99:sgpr_32 = V_CMP_CLASS_F16_fake16_e64 0, %4, 0, %0, implicit-def $vcc, implicit $mode, implicit $exec
 

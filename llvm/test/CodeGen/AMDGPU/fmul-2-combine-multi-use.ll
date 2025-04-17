@@ -3,10 +3,10 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=tonga -denormal-fp-math=preserve-sign -denormal-fp-math-f32=preserve-sign  -verify-machineinstrs < %s | FileCheck -check-prefixes=VI,VI-FLUSH %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 -denormal-fp-math-f32=preserve-sign  -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX10,GFX10-DENORM %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 -denormal-fp-math=preserve-sign -denormal-fp-math-f32=preserve-sign  -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX10,GFX10-FLUSH %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -mattr=+real-true16 -denormal-fp-math-f32=preserve-sign  -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX11,GFX11-DENORM,GFX11-DENORM-TRUE16 %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -mattr=-real-true16 -denormal-fp-math-f32=preserve-sign  -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX11,GFX11-DENORM,GFX11-DENORM-FAKE16 %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -mattr=+real-true16 -denormal-fp-math=preserve-sign -denormal-fp-math-f32=preserve-sign  -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX11,GFX11-FLUSH,GFX11-FLUSH-TRUE16 %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -mattr=-real-true16 -denormal-fp-math=preserve-sign -denormal-fp-math-f32=preserve-sign  -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX11,GFX11-FLUSH,GFX11-FLUSH-FAKE16 %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -mattr=+real-true16 -denormal-fp-math-f32=preserve-sign  -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX11,GFX11-TRUE16,GFX11-DENORM,GFX11-DENORM-TRUE16 %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -mattr=-real-true16 -denormal-fp-math-f32=preserve-sign  -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX11,GFX11-FAKE16,GFX11-DENORM,GFX11-DENORM-FAKE16 %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -mattr=+real-true16 -denormal-fp-math=preserve-sign -denormal-fp-math-f32=preserve-sign  -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX11,GFX11-TRUE16,GFX11-FLUSH,GFX11-FLUSH-TRUE16 %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -mattr=-real-true16 -denormal-fp-math=preserve-sign -denormal-fp-math-f32=preserve-sign  -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX11,GFX11-FAKE16,GFX11-FLUSH,GFX11-FLUSH-FAKE16 %s
 
 ; Make sure (fmul (fadd x, x), c) -> (fmul x, (fmul 2.0, c)) doesn't
 ; make add an instruction if the fadd has more than one use.
@@ -1061,61 +1061,33 @@ define amdgpu_kernel void @fmul_x2_xn2_f16(ptr addrspace(1) %out, i16 zeroext %x
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_endpgm
 ;
-; GFX11-DENORM-TRUE16-LABEL: fmul_x2_xn2_f16:
-; GFX11-DENORM-TRUE16:       ; %bb.0:
-; GFX11-DENORM-TRUE16-NEXT:    s_clause 0x1
-; GFX11-DENORM-TRUE16-NEXT:    s_load_b32 s2, s[4:5], 0x8
-; GFX11-DENORM-TRUE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
-; GFX11-DENORM-TRUE16-NEXT:    v_mov_b32_e32 v1, 0
-; GFX11-DENORM-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-DENORM-TRUE16-NEXT:    v_mul_f16_e64 v0.l, s2, -4.0
-; GFX11-DENORM-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-DENORM-TRUE16-NEXT:    v_mul_f16_e32 v0.l, s2, v0.l
-; GFX11-DENORM-TRUE16-NEXT:    global_store_b16 v1, v0, s[0:1] dlc
-; GFX11-DENORM-TRUE16-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-DENORM-TRUE16-NEXT:    s_endpgm
+; GFX11-TRUE16-LABEL: fmul_x2_xn2_f16:
+; GFX11-TRUE16:       ; %bb.0:
+; GFX11-TRUE16-NEXT:    s_clause 0x1
+; GFX11-TRUE16-NEXT:    s_load_b32 s2, s[4:5], 0x8
+; GFX11-TRUE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
+; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v1, 0
+; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    v_mul_f16_e64 v0.l, s2, -4.0
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-TRUE16-NEXT:    v_mul_f16_e32 v0.l, s2, v0.l
+; GFX11-TRUE16-NEXT:    global_store_b16 v1, v0, s[0:1] dlc
+; GFX11-TRUE16-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-TRUE16-NEXT:    s_endpgm
 ;
-; GFX11-DENORM-FAKE16-LABEL: fmul_x2_xn2_f16:
-; GFX11-DENORM-FAKE16:       ; %bb.0:
-; GFX11-DENORM-FAKE16-NEXT:    s_clause 0x1
-; GFX11-DENORM-FAKE16-NEXT:    s_load_b32 s2, s[4:5], 0x8
-; GFX11-DENORM-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
-; GFX11-DENORM-FAKE16-NEXT:    v_mov_b32_e32 v1, 0
-; GFX11-DENORM-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-DENORM-FAKE16-NEXT:    v_mul_f16_e64 v0, s2, -4.0
-; GFX11-DENORM-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-DENORM-FAKE16-NEXT:    v_mul_f16_e32 v0, s2, v0
-; GFX11-DENORM-FAKE16-NEXT:    global_store_b16 v1, v0, s[0:1] dlc
-; GFX11-DENORM-FAKE16-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-DENORM-FAKE16-NEXT:    s_endpgm
-;
-; GFX11-FLUSH-TRUE16-LABEL: fmul_x2_xn2_f16:
-; GFX11-FLUSH-TRUE16:       ; %bb.0:
-; GFX11-FLUSH-TRUE16-NEXT:    s_clause 0x1
-; GFX11-FLUSH-TRUE16-NEXT:    s_load_b32 s2, s[4:5], 0x8
-; GFX11-FLUSH-TRUE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
-; GFX11-FLUSH-TRUE16-NEXT:    v_mov_b32_e32 v1, 0
-; GFX11-FLUSH-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-FLUSH-TRUE16-NEXT:    v_mul_f16_e64 v0.l, s2, -4.0
-; GFX11-FLUSH-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-FLUSH-TRUE16-NEXT:    v_mul_f16_e32 v0.l, s2, v0.l
-; GFX11-FLUSH-TRUE16-NEXT:    global_store_b16 v1, v0, s[0:1] dlc
-; GFX11-FLUSH-TRUE16-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-FLUSH-TRUE16-NEXT:    s_endpgm
-;
-; GFX11-FLUSH-FAKE16-LABEL: fmul_x2_xn2_f16:
-; GFX11-FLUSH-FAKE16:       ; %bb.0:
-; GFX11-FLUSH-FAKE16-NEXT:    s_clause 0x1
-; GFX11-FLUSH-FAKE16-NEXT:    s_load_b32 s2, s[4:5], 0x8
-; GFX11-FLUSH-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
-; GFX11-FLUSH-FAKE16-NEXT:    v_mov_b32_e32 v1, 0
-; GFX11-FLUSH-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-FLUSH-FAKE16-NEXT:    v_mul_f16_e64 v0, s2, -4.0
-; GFX11-FLUSH-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-FLUSH-FAKE16-NEXT:    v_mul_f16_e32 v0, s2, v0
-; GFX11-FLUSH-FAKE16-NEXT:    global_store_b16 v1, v0, s[0:1] dlc
-; GFX11-FLUSH-FAKE16-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-FLUSH-FAKE16-NEXT:    s_endpgm
+; GFX11-FAKE16-LABEL: fmul_x2_xn2_f16:
+; GFX11-FAKE16:       ; %bb.0:
+; GFX11-FAKE16-NEXT:    s_clause 0x1
+; GFX11-FAKE16-NEXT:    s_load_b32 s2, s[4:5], 0x8
+; GFX11-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
+; GFX11-FAKE16-NEXT:    v_mov_b32_e32 v1, 0
+; GFX11-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    v_mul_f16_e64 v0, s2, -4.0
+; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-FAKE16-NEXT:    v_mul_f16_e32 v0, s2, v0
+; GFX11-FAKE16-NEXT:    global_store_b16 v1, v0, s[0:1] dlc
+; GFX11-FAKE16-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-FAKE16-NEXT:    s_endpgm
   %x = bitcast i16 %x.arg to half
   %y = bitcast i16 %y.arg to half
   %out.gep.1 = getelementptr half, ptr addrspace(1) %out, i32 1
@@ -1157,61 +1129,33 @@ define amdgpu_kernel void @fmul_x2_xn3_f16(ptr addrspace(1) %out, i16 zeroext %x
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_endpgm
 ;
-; GFX11-DENORM-TRUE16-LABEL: fmul_x2_xn3_f16:
-; GFX11-DENORM-TRUE16:       ; %bb.0:
-; GFX11-DENORM-TRUE16-NEXT:    s_clause 0x1
-; GFX11-DENORM-TRUE16-NEXT:    s_load_b32 s2, s[4:5], 0x8
-; GFX11-DENORM-TRUE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
-; GFX11-DENORM-TRUE16-NEXT:    v_mov_b32_e32 v1, 0
-; GFX11-DENORM-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-DENORM-TRUE16-NEXT:    v_mul_f16_e64 v0.l, 0xc600, s2
-; GFX11-DENORM-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-DENORM-TRUE16-NEXT:    v_mul_f16_e32 v0.l, s2, v0.l
-; GFX11-DENORM-TRUE16-NEXT:    global_store_b16 v1, v0, s[0:1] dlc
-; GFX11-DENORM-TRUE16-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-DENORM-TRUE16-NEXT:    s_endpgm
+; GFX11-TRUE16-LABEL: fmul_x2_xn3_f16:
+; GFX11-TRUE16:       ; %bb.0:
+; GFX11-TRUE16-NEXT:    s_clause 0x1
+; GFX11-TRUE16-NEXT:    s_load_b32 s2, s[4:5], 0x8
+; GFX11-TRUE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
+; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v1, 0
+; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    v_mul_f16_e64 v0.l, 0xc600, s2
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-TRUE16-NEXT:    v_mul_f16_e32 v0.l, s2, v0.l
+; GFX11-TRUE16-NEXT:    global_store_b16 v1, v0, s[0:1] dlc
+; GFX11-TRUE16-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-TRUE16-NEXT:    s_endpgm
 ;
-; GFX11-DENORM-FAKE16-LABEL: fmul_x2_xn3_f16:
-; GFX11-DENORM-FAKE16:       ; %bb.0:
-; GFX11-DENORM-FAKE16-NEXT:    s_clause 0x1
-; GFX11-DENORM-FAKE16-NEXT:    s_load_b32 s2, s[4:5], 0x8
-; GFX11-DENORM-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
-; GFX11-DENORM-FAKE16-NEXT:    v_mov_b32_e32 v1, 0
-; GFX11-DENORM-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-DENORM-FAKE16-NEXT:    v_mul_f16_e64 v0, 0xc600, s2
-; GFX11-DENORM-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-DENORM-FAKE16-NEXT:    v_mul_f16_e32 v0, s2, v0
-; GFX11-DENORM-FAKE16-NEXT:    global_store_b16 v1, v0, s[0:1] dlc
-; GFX11-DENORM-FAKE16-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-DENORM-FAKE16-NEXT:    s_endpgm
-;
-; GFX11-FLUSH-TRUE16-LABEL: fmul_x2_xn3_f16:
-; GFX11-FLUSH-TRUE16:       ; %bb.0:
-; GFX11-FLUSH-TRUE16-NEXT:    s_clause 0x1
-; GFX11-FLUSH-TRUE16-NEXT:    s_load_b32 s2, s[4:5], 0x8
-; GFX11-FLUSH-TRUE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
-; GFX11-FLUSH-TRUE16-NEXT:    v_mov_b32_e32 v1, 0
-; GFX11-FLUSH-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-FLUSH-TRUE16-NEXT:    v_mul_f16_e64 v0.l, 0xc600, s2
-; GFX11-FLUSH-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-FLUSH-TRUE16-NEXT:    v_mul_f16_e32 v0.l, s2, v0.l
-; GFX11-FLUSH-TRUE16-NEXT:    global_store_b16 v1, v0, s[0:1] dlc
-; GFX11-FLUSH-TRUE16-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-FLUSH-TRUE16-NEXT:    s_endpgm
-;
-; GFX11-FLUSH-FAKE16-LABEL: fmul_x2_xn3_f16:
-; GFX11-FLUSH-FAKE16:       ; %bb.0:
-; GFX11-FLUSH-FAKE16-NEXT:    s_clause 0x1
-; GFX11-FLUSH-FAKE16-NEXT:    s_load_b32 s2, s[4:5], 0x8
-; GFX11-FLUSH-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
-; GFX11-FLUSH-FAKE16-NEXT:    v_mov_b32_e32 v1, 0
-; GFX11-FLUSH-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-FLUSH-FAKE16-NEXT:    v_mul_f16_e64 v0, 0xc600, s2
-; GFX11-FLUSH-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-FLUSH-FAKE16-NEXT:    v_mul_f16_e32 v0, s2, v0
-; GFX11-FLUSH-FAKE16-NEXT:    global_store_b16 v1, v0, s[0:1] dlc
-; GFX11-FLUSH-FAKE16-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-FLUSH-FAKE16-NEXT:    s_endpgm
+; GFX11-FAKE16-LABEL: fmul_x2_xn3_f16:
+; GFX11-FAKE16:       ; %bb.0:
+; GFX11-FAKE16-NEXT:    s_clause 0x1
+; GFX11-FAKE16-NEXT:    s_load_b32 s2, s[4:5], 0x8
+; GFX11-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
+; GFX11-FAKE16-NEXT:    v_mov_b32_e32 v1, 0
+; GFX11-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    v_mul_f16_e64 v0, 0xc600, s2
+; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-FAKE16-NEXT:    v_mul_f16_e32 v0, s2, v0
+; GFX11-FAKE16-NEXT:    global_store_b16 v1, v0, s[0:1] dlc
+; GFX11-FAKE16-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-FAKE16-NEXT:    s_endpgm
   %x = bitcast i16 %x.arg to half
   %y = bitcast i16 %y.arg to half
   %out.gep.1 = getelementptr half, ptr addrspace(1) %out, i32 1
