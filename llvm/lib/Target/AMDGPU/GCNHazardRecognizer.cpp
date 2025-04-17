@@ -280,22 +280,30 @@ void GCNHazardRecognizer::processBundle() {
   CurrCycleInstr = nullptr;
 }
 
-void GCNHazardRecognizer::reverseProcessBundle() {
+void GCNHazardRecognizer::processBundleBottomUp() {
+  // Step through each instruction in the bundle in bottom-up order.
   MachineBasicBlock::instr_iterator MI =
       std::next(CurrCycleInstr->getIterator());
   MachineBasicBlock::instr_iterator E =
       CurrCycleInstr->getParent()->instr_end();
 
+  // Evict stale entries to maintain a fixed lookahead window.
+  // TODO: Hazard detection is not yet implemented. This scheduling
+  // is intended for GFX11 and newer.
   for (; MI != E && MI->isInsideBundle(); ++MI) {
     CurrCycleInstr = &*MI;
-    for (unsigned I = 0, E = MaxLookAhead - 1; I < E; ++I) {
-      if (!EmittedInstrs.empty())
-        EmittedInstrs.pop_back();
-    }
+
+    // Remove up to (MaxLookAhead - 1) oldest entries.
+    for (unsigned I = 0, E = MaxLookAhead - 1; I < E && !EmittedInstrs.empty();
+         ++I)
+      EmittedInstrs.pop_back();
 
     EmittedInstrs.push_back(CurrCycleInstr);
+
+    // Keep only the most recent MaxLookAhead entries
     EmittedInstrs.resize(MaxLookAhead);
   }
+
   CurrCycleInstr = nullptr;
 }
 
@@ -436,14 +444,16 @@ void GCNHazardRecognizer::AdvanceCycle() {
 }
 
 void GCNHazardRecognizer::RecedeCycle() {
+  // If no instruction was issued this cycle, pop the oldest placeholder.
   if (!CurrCycleInstr) {
     if (!EmittedInstrs.empty())
       EmittedInstrs.pop_back();
     return;
   }
 
+  // If this is a bundle header, handle the entire bundle here.
   if (CurrCycleInstr->isBundle()) {
-    reverseProcessBundle();
+    processBundleBottomUp();
     return;
   }
 
@@ -453,14 +463,21 @@ void GCNHazardRecognizer::RecedeCycle() {
     return;
   }
 
+  // Add current instruction to the emitted list.
   EmittedInstrs.push_back(CurrCycleInstr);
-  for (unsigned i = 1, e = std::min(NumWaitStates, getMaxLookAhead()); i < e;
-       ++i) {
+
+  // Model remaining wait states by removing older placeholders.
+  for (unsigned I = 1, E = std::min(NumWaitStates, getMaxLookAhead()); I < E;
+       ++I) {
     if (!EmittedInstrs.empty())
       EmittedInstrs.pop_back();
   }
 
+  // getMaxLookahead() is the largest number of wait states we will ever need
+  // to insert, so there is no point in keeping track of more than that many
+  // wait states.
   EmittedInstrs.resize(getMaxLookAhead());
+
   CurrCycleInstr = nullptr;
 }
 

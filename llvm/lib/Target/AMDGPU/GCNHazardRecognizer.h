@@ -69,7 +69,10 @@ private:
   // Advance over a MachineInstr bundle. Look for hazards in the bundled
   // instructions.
   void processBundle();
-  void reverseProcessBundle();
+  // Recede over a MachineInstr bundle. Adds bundled instructions to the
+  // EmittedInstrs queue in bottom-up scheduling mode.
+  // TODO: Hazard detection is not yet implemented.
+  void processBundleBottomUp();
 
   // Run on an individual instruction in hazard recognizer mode. This can be
   // used on a newly inserted instruction before returning from PreEmitNoops.
