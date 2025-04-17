@@ -385,6 +385,8 @@ Improvements to Clang's diagnostics
 
   Fixes #GH131127
 
+- The ``-Wloop-analysis`` warning now handles variable modifications inside lambda expressions (#GH132038).
+
 Improvements to Clang's time-trace
 ----------------------------------
 

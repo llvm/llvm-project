@@ -2002,9 +2002,24 @@ namespace {
     }
 
     void VisitDeclRefExpr(DeclRefExpr *E) {
-      if (VarDecl *VD = dyn_cast<VarDecl>(E->getDecl()))
+      if (VarDecl *VD = dyn_cast<VarDecl>(E->getDecl())) {
         if (Decls.count(VD))
           FoundDecl = true;
+      } else if (CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(E->getDecl());
+                 MD && isLambdaCallOperator(MD)) {
+        for (const auto &Capture : MD->getParent()->captures()) {
+          if (!Capture.capturesVariable())
+            continue;
+
+          LambdaCaptureKind CK = Capture.getCaptureKind();
+          if (CK != LCK_ByRef)
+            continue;
+
+          VarDecl *VD = dyn_cast<VarDecl>(Capture.getCapturedVar());
+          if (VD && Decls.count(VD))
+            FoundDecl = true;
+        }
+      }
     }
 
     void VisitPseudoObjectExpr(PseudoObjectExpr *POE) {
@@ -2021,7 +2036,7 @@ namespace {
 
     bool FoundDeclInUse() { return FoundDecl; }
 
-  };  // end class DeclMatcher
+  }; // end class DeclMatcher
 
   void CheckForLoopConditionalStatement(Sema &S, Expr *Second,
                                         Expr *Third, Stmt *Body) {
