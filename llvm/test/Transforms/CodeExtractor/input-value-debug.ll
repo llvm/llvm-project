@@ -10,7 +10,8 @@ entry:
    store i32 %a, ptr %1, align 4
    #dbg_declare(ptr %1, !8, !DIExpression(), !1)
    #dbg_value(i32 %b, !9, !DIExpression(), !1)
-  br i1 undef, label %if.then, label %if.end
+   %tobool = icmp eq i32 %a, 0
+   br i1 %tobool, label %if.then, label %if.end
 if.then:                                          ; preds = %entry
   ret void
 
