@@ -590,14 +590,14 @@ semantics.  For example:
 
 This third form works with any type that can be assigned to from ``T&&``. This
 can be useful if the ``Expected<T>`` value needs to be stored an already-declared
-``Optional<T>``. For example:
+``std::optional<T>``. For example:
 
 .. code-block:: c++
 
   Expected<StringRef> extractClassName(StringRef Definition);
   struct ClassData {
     StringRef Definition;
-    Optional<StringRef> LazyName;
+    std::optional<StringRef> LazyName;
     ...
     Error initialize() {
       if (auto Err = extractClassName(Path).moveInto(LazyName))
