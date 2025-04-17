@@ -733,7 +733,7 @@ static llvm::Triple computeTargetTriple(const Driver &D,
         Target.setEnvironment(llvm::Triple::GNUX32);
     } else if (A->getOption().matches(options::OPT_m32) ||
                A->getOption().matches(options::OPT_maix32)) {
-      if (D.IsFlangMode() && !Target.isOSAIX() )
+      if (D.IsFlangMode() && !Target.isOSAIX())
         D.Diag(diag::err_drv_unsupported_opt_for_target)
            << A->getAsString(Args) << Target.str();
       else {
