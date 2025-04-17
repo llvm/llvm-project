@@ -417,8 +417,8 @@ class Sema;
       if (!ReferenceBinding) {
 #ifndef NDEBUG
         auto Decay = [&](QualType T) {
-          return (T->isArrayType() || T->isFunctionType())
-              ? C.getDecayedType(T) : T;
+          return (T->isArrayType() || T->isFunctionType()) ? C.getDecayedType(T)
+                                                           : T;
         };
         // The types might differ if there is an array-to-pointer conversion
         // an function-to-pointer conversion, or lvalue-to-rvalue conversion.
