@@ -11,6 +11,21 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  sigsetjmp
+  SRCS
+    sigsetjmp.cpp
+  HDRS
+    ../sigsetjmp.h
+  DEPENDS
+    libc.hdr.types.jmp_buf
+    libc.hdr.types.sigset_t
+    libc.src.setjmp.sigsetjmp_epilogue
+    libc.src.setjmp.setjmp
+  COMPILE_OPTIONS
+    ${libc_opt_high_flag}
+)
+
+add_entrypoint_object(
   longjmp
   SRCS
     longjmp.cpp

@@ -1,0 +1,15 @@
+add_object_library(
+  sigsetjmp_epilogue
+  HDRS
+    ../sigsetjmp_epilogue.h
+  SRCS
+    sigsetjmp_epilogue.cpp
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.OSUtil.osutil
+    libc.hdr.types.jmp_buf
+    libc.hdr.types.sigset_t
+  COMPILE_OPTIONS
+    ${libc_opt_high_flag}
+    -fomit-frame-pointer
+)

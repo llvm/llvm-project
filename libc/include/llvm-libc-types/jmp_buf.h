@@ -9,6 +9,8 @@
 #ifndef LLVM_LIBC_TYPES_JMP_BUF_H
 #define LLVM_LIBC_TYPES_JMP_BUF_H
 
+#include "llvm-libc-types/sigset_t.h"
+
 typedef struct {
 #ifdef __x86_64__
   __UINT64_TYPE__ rbx;
@@ -50,8 +52,15 @@ typedef struct {
 #else
 #error "__jmp_buf not available for your target architecture."
 #endif
+  // return address
+  void *sig_retaddr;
+  // extra register buffer to avoid indefinite stack growth in sigsetjmp
+  void *sig_extra;
+  // signal masks
+  sigset_t sigmask;
 } __jmp_buf;
 
 typedef __jmp_buf jmp_buf[1];
+typedef __jmp_buf sigjmp_buf[1];
 
 #endif // LLVM_LIBC_TYPES_JMP_BUF_H
