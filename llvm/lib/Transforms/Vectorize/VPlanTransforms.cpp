@@ -2439,9 +2439,11 @@ void VPlanTransforms::handleUncountableEarlyExit(
     }
 
     auto IsVector = [](ElementCount VF) { return VF.isVector(); };
-    // Add the incoming value from the early exit.
+    // When the VFs are vectors, need to add `extract` to get the incoming value
+    // from early exit. When the range contains scalar VF, limit the range to
+    // scalar VF to prevent mis-compilation for the range containing both scalar
+    // and vector VFs.
     if (!IncomingFromEarlyExit->isLiveIn() &&
-        // Limit range to scalar VF only, if the range contains the scalar VF.
         LoopVectorizationPlanner::getDecisionAndClampRange(IsVector, Range)) {
       VPValue *FirstActiveLane = EarlyExitB.createNaryOp(
           VPInstruction::FirstActiveLane, {EarlyExitTakenCond}, nullptr,
