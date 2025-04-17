@@ -646,19 +646,21 @@ LogicalResult DpasOp::verify() {
     if (numElems % factor != 0)
       return emitOpError("Expecting B operand to be a multiple of 32 bits.");
     return success();
-  } else { // SIMD code
-    if (lhsRank != 2 || (rhsRank != 2 && rhsRank != 3) || resRank != 2)
-      return emitOpError(
-          "expecting lhs and result to be a 2D vector, and rhs to be either "
-          "2D or 3D (packed) vector.");
-    auto bK = rhsRank == 3 ? rhsShape[0] * rhsShape[2] : rhsShape[0];
-    if (bK != lhsShape[1])
-      return emitOpError("K-dimension mismatch.");
-    if (lhsShape[0] != resShape[0])
-      return emitOpError("M-dimension mismatch.");
-    if (rhsShape[1] != resShape[1])
-      return emitOpError("N-dimension mismatch.");
   }
+
+  // SIMD code
+  if (lhsRank != 2 || (rhsRank != 2 && rhsRank != 3) || resRank != 2)
+    return emitOpError(
+        "expecting lhs and result to be a 2D vector, and rhs to be either "
+        "2D or 3D (packed) vector.");
+  auto bK = rhsRank == 3 ? rhsShape[0] * rhsShape[2] : rhsShape[0];
+  if (bK != lhsShape[1])
+    return emitOpError("K-dimension mismatch.");
+  if (lhsShape[0] != resShape[0])
+    return emitOpError("M-dimension mismatch.");
+  if (rhsShape[1] != resShape[1])
+    return emitOpError("N-dimension mismatch.");
+
   return success();
 }
 
