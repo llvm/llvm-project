@@ -374,7 +374,7 @@ bool BinaryEmitter::emitFunction(BinaryFunction &Function,
   }
 
   // Emit CFI start
-  if (Function.hasCFI()) {
+  if (Function.hasCFI() && !Function.isPatch()) {
     Streamer.emitCFIStartProc(/*IsSimple=*/false);
     if (Function.getPersonalityFunction() != nullptr)
       Streamer.emitCFIPersonality(Function.getPersonalityFunction(),
@@ -421,7 +421,7 @@ bool BinaryEmitter::emitFunction(BinaryFunction &Function,
     Streamer.emitBytes(BC.MIB->getTrapFillValue());
 
   // Emit CFI end
-  if (Function.hasCFI())
+  if (Function.hasCFI() && !Function.isPatch())
     Streamer.emitCFIEndProc();
 
   MCSymbol *EndSymbol = Function.getFunctionEndLabel(FF.getFragmentNum());
