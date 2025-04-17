@@ -79,8 +79,8 @@ ThreadPlanStepOut::ThreadPlanStepOut(
       ComputeTargetFrame(thread, frame_idx, m_stepped_past_frames);
   StackFrameSP immediate_return_from_sp(thread.GetStackFrameAtIndex(frame_idx));
 
-  SetupReturnAddress(return_frame_sp, immediate_return_from_sp,
-                     frame_idx, continue_to_next_branch);
+  SetupReturnAddress(return_frame_sp, immediate_return_from_sp, frame_idx,
+                     continue_to_next_branch);
 }
 
 void ThreadPlanStepOut::SetupReturnAddress(
@@ -101,8 +101,8 @@ void ThreadPlanStepOut::SetupReturnAddress(
       // First queue a plan that gets us to this inlined frame, and when we get
       // there we'll queue a second plan that walks us out of this frame.
       m_step_out_to_inline_plan_sp = std::make_shared<ThreadPlanStepOut>(
-          GetThread(), nullptr, false, m_stop_others, eVoteNoOpinion, eVoteNoOpinion,
-          frame_idx - 1, eLazyBoolNo, continue_to_next_branch);
+          GetThread(), nullptr, false, m_stop_others, eVoteNoOpinion,
+          eVoteNoOpinion, frame_idx - 1, eLazyBoolNo, continue_to_next_branch);
       static_cast<ThreadPlanStepOut *>(m_step_out_to_inline_plan_sp.get())
           ->SetShouldStopHereCallbacks(nullptr, nullptr);
       m_step_out_to_inline_plan_sp->SetPrivate(true);
