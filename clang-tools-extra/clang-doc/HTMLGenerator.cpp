@@ -716,7 +716,6 @@ genHTML(const EnumInfo &I, const ClangDocContext &CDCtx) {
 
   maybeWriteSourceFileRef(Out, CDCtx, I.DefLoc);
 
-  std::string Description;
   if (!I.Description.empty())
     Out.emplace_back(genHTML(I.Description));
 
@@ -759,7 +758,6 @@ genHTML(const FunctionInfo &I, const ClangDocContext &CDCtx,
 
   maybeWriteSourceFileRef(Out, CDCtx, I.DefLoc);
 
-  std::string Description;
   if (!I.Description.empty())
     Out.emplace_back(genHTML(I.Description));
 
@@ -777,7 +775,6 @@ genHTML(const NamespaceInfo &I, Index &InfoIndex, const ClangDocContext &CDCtx,
 
   Out.emplace_back(std::make_unique<TagNode>(HTMLTag::TAG_H1, InfoTitle));
 
-  std::string Description;
   if (!I.Description.empty())
     Out.emplace_back(genHTML(I.Description));
 
@@ -820,7 +817,6 @@ genHTML(const RecordInfo &I, Index &InfoIndex, const ClangDocContext &CDCtx,
 
   maybeWriteSourceFileRef(Out, CDCtx, I.DefLoc);
 
-  std::string Description;
   if (!I.Description.empty())
     Out.emplace_back(genHTML(I.Description));
 
