@@ -1753,9 +1753,7 @@ SparcTargetLowering::SparcTargetLowering(const TargetMachine &TM,
 
     setOperationAction(ISD::CTPOP, MVT::i64,
                        Subtarget->usePopc() ? Legal : Expand);
-    setOperationAction(ISD::CTTZ , MVT::i64, Expand);
-    setOperationAction(ISD::CTLZ, MVT::i64,
-                       Subtarget->isVIS3() ? Legal : Expand);
+    setOperationAction(ISD::CTTZ, MVT::i64, Expand);
     setOperationAction(ISD::BSWAP, MVT::i64, Expand);
     setOperationAction(ISD::ROTL , MVT::i64, Expand);
     setOperationAction(ISD::ROTR , MVT::i64, Expand);
@@ -1816,9 +1814,7 @@ SparcTargetLowering::SparcTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::FSINCOS, MVT::f32, Expand);
   setOperationAction(ISD::FREM , MVT::f32, Expand);
   setOperationAction(ISD::FMA  , MVT::f32, Expand);
-  setOperationAction(ISD::CTTZ , MVT::i32, Expand);
-  setOperationAction(ISD::CTLZ, MVT::i32,
-                     Subtarget->isVIS3() ? Promote : Expand);
+  setOperationAction(ISD::CTTZ, MVT::i32, Expand);
   setOperationAction(ISD::ROTL , MVT::i32, Expand);
   setOperationAction(ISD::ROTR , MVT::i32, Expand);
   setOperationAction(ISD::BSWAP, MVT::i32, Expand);
@@ -1990,12 +1986,18 @@ SparcTargetLowering::SparcTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::READCYCLECOUNTER, MVT::i64, Custom);
 
   if (Subtarget->isVIS3()) {
-    setOperationAction(ISD::CTLZ_ZERO_UNDEF, MVT::i32, Promote);
+    setOperationAction(ISD::CTLZ, MVT::i32, Legal);
+    setOperationAction(ISD::CTLZ, MVT::i64, Legal);
+    setOperationAction(ISD::CTLZ_ZERO_UNDEF, MVT::i32, Legal);
     setOperationAction(ISD::CTLZ_ZERO_UNDEF, MVT::i64, Legal);
   } else if (Subtarget->usePopc()) {
+    setOperationAction(ISD::CTLZ, MVT::i32, Expand);
+    setOperationAction(ISD::CTLZ, MVT::i64, Expand);
     setOperationAction(ISD::CTLZ_ZERO_UNDEF, MVT::i32, Expand);
     setOperationAction(ISD::CTLZ_ZERO_UNDEF, MVT::i64, Expand);
   } else {
+    setOperationAction(ISD::CTLZ, MVT::i32, Expand);
+    setOperationAction(ISD::CTLZ, MVT::i64, Expand);
     setOperationAction(ISD::CTLZ_ZERO_UNDEF, MVT::i32,
                        Subtarget->is64Bit() ? Promote : LibCall);
     setOperationAction(ISD::CTLZ_ZERO_UNDEF, MVT::i64, LibCall);
