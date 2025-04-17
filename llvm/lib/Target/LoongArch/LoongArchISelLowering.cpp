@@ -714,6 +714,139 @@ static void computeZeroableShuffleElements(ArrayRef<int> Mask, SDValue V1,
   }
 }
 
+/// Test whether a shuffle mask is equivalent within each sub-lane.
+///
+/// The specific repeated shuffle mask is populated in \p RepeatedMask, as it is
+/// non-trivial to compute in the face of undef lanes. The representation is
+/// suitable for use with existing 128-bit shuffles as entries from the second
+/// vector have been remapped to [LaneSize, 2*LaneSize).
+static bool isRepeatedShuffleMask(unsigned LaneSizeInBits, MVT VT,
+                                  ArrayRef<int> Mask,
+                                  SmallVectorImpl<int> &RepeatedMask) {
+  auto LaneSize = LaneSizeInBits / VT.getScalarSizeInBits();
+  RepeatedMask.assign(LaneSize, -1);
+  int Size = Mask.size();
+  for (int i = 0; i < Size; ++i) {
+    assert(Mask[i] == -1 || Mask[i] >= 0);
+    if (Mask[i] < 0)
+      continue;
+    if ((Mask[i] % Size) / LaneSize != i / LaneSize)
+      // This entry crosses lanes, so there is no way to model this shuffle.
+      return false;
+
+    // Ok, handle the in-lane shuffles by detecting if and when they repeat.
+    // Adjust second vector indices to start at LaneSize instead of Size.
+    int LocalM =
+        Mask[i] < Size ? Mask[i] % LaneSize : Mask[i] % LaneSize + LaneSize;
+    if (RepeatedMask[i % LaneSize] < 0)
+      // This is the first non-undef entry in this slot of a 128-bit lane.
+      RepeatedMask[i % LaneSize] = LocalM;
+    else if (RepeatedMask[i % LaneSize] != LocalM)
+      // Found a mismatch with the repeated mask.
+      return false;
+  }
+  return true;
+}
+
+/// Attempts to match vector shuffle as byte rotation.
+static int matchShuffleAsByteRotate(MVT VT, SDValue &V1, SDValue &V2,
+                                    ArrayRef<int> Mask) {
+
+  SDValue Lo, Hi;
+  SmallVector<int, 16> RepeatedMask;
+
+  if (!isRepeatedShuffleMask(128, VT, Mask, RepeatedMask))
+    return -1;
+
+  int NumElts = RepeatedMask.size();
+  int Rotation = 0;
+  int Scale = 16 / NumElts;
+
+  for (int i = 0; i < NumElts; ++i) {
+    int M = RepeatedMask[i];
+    assert((M == -1 || (0 <= M && M < (2 * NumElts))) &&
+           "Unexpected mask index.");
+    if (M < 0)
+      continue;
+
+    // Determine where a rotated vector would have started.
+    int StartIdx = i - (M % NumElts);
+    if (StartIdx == 0)
+      return -1;
+
+    // If we found the tail of a vector the rotation must be the missing
+    // front. If we found the head of a vector, it must be how much of the
+    // head.
+    int CandidateRotation = StartIdx < 0 ? -StartIdx : NumElts - StartIdx;
+
+    if (Rotation == 0)
+      Rotation = CandidateRotation;
+    else if (Rotation != CandidateRotation)
+      return -1;
+
+    // Compute which value this mask is pointing at.
+    SDValue MaskV = M < NumElts ? V1 : V2;
+
+    // Compute which of the two target values this index should be assigned
+    // to. This reflects whether the high elements are remaining or the low
+    // elements are remaining.
+    SDValue &TargetV = StartIdx < 0 ? Hi : Lo;
+
+    // Either set up this value if we've not encountered it before, or check
+    // that it remains consistent.
+    if (!TargetV)
+      TargetV = MaskV;
+    else if (TargetV != MaskV)
+      return -1;
+  }
+
+  // Check that we successfully analyzed the mask, and normalize the results.
+  assert(Rotation != 0 && "Failed to locate a viable rotation!");
+  assert((Lo || Hi) && "Failed to find a rotated input vector!");
+  if (!Lo)
+    Lo = Hi;
+  else if (!Hi)
+    Hi = Lo;
+
+  V1 = Lo;
+  V2 = Hi;
+
+  return Rotation * Scale;
+}
+
+/// Lower VECTOR_SHUFFLE as byte rotate (if possible).
+///
+/// For example:
+///   %shuffle = shufflevector <2 x i64> %a, <2 x i64> %b,
+///                            <2 x i32> <i32 3, i32 0>
+/// is lowered to:
+///      (VBSRL_V $v1, $v1, 8)
+///      (VBSLL_V $v0, $v0, 8)
+///      (VOR_V $v0, $V0, $v1)
+static SDValue lowerVECTOR_SHUFFLEAsByteRotate(const SDLoc &DL,
+                                               ArrayRef<int> Mask, MVT VT,
+                                               SDValue V1, SDValue V2,
+                                               SelectionDAG &DAG) {
+
+  SDValue Lo = V1, Hi = V2;
+  int ByteRotation = matchShuffleAsByteRotate(VT, Lo, Hi, Mask);
+  if (ByteRotation <= 0)
+    return SDValue();
+
+  MVT ByteVT = MVT::getVectorVT(MVT::i8, VT.getSizeInBits() / 8);
+  Lo = DAG.getBitcast(ByteVT, Lo);
+  Hi = DAG.getBitcast(ByteVT, Hi);
+
+  int LoByteShift = 16 - ByteRotation;
+  int HiByteShift = ByteRotation;
+
+  SDValue LoShift = DAG.getNode(LoongArchISD::VBSLL, DL, ByteVT, Lo,
+                                DAG.getConstant(LoByteShift, DL, MVT::i64));
+  SDValue HiShift = DAG.getNode(LoongArchISD::VBSRL, DL, ByteVT, Hi,
+                                DAG.getConstant(HiByteShift, DL, MVT::i64));
+  return DAG.getBitcast(VT, DAG.getNode(ISD::OR, DL, ByteVT, LoShift, HiShift));
+}
+
 /// Lower VECTOR_SHUFFLE as ZERO_EXTEND Or ANY_EXTEND (if possible).
 ///
 /// For example:
@@ -1230,6 +1363,8 @@ static SDValue lower128BitShuffle(const SDLoc &DL, ArrayRef<int> Mask, MVT VT,
   if ((Result =
            lowerVECTOR_SHUFFLEAsShift(DL, Mask, VT, V1, V2, DAG, Zeroable)))
     return Result;
+  if ((Result = lowerVECTOR_SHUFFLEAsByteRotate(DL, Mask, VT, V1, V2, DAG)))
+    return Result;
   if ((Result = lowerVECTOR_SHUFFLE_VSHUF(DL, Mask, VT, V1, V2, DAG)))
     return Result;
   return SDValue();
@@ -1665,6 +1800,8 @@ static SDValue lower256BitShuffle(const SDLoc &DL, ArrayRef<int> Mask, MVT VT,
     return Result;
   if ((Result =
            lowerVECTOR_SHUFFLEAsShift(DL, NewMask, VT, V1, V2, DAG, Zeroable)))
+    return Result;
+  if ((Result = lowerVECTOR_SHUFFLEAsByteRotate(DL, NewMask, VT, V1, V2, DAG)))
     return Result;
   if ((Result = lowerVECTOR_SHUFFLE_XVSHUF(DL, NewMask, VT, V1, V2, DAG)))
     return Result;
