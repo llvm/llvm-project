@@ -1738,9 +1738,7 @@ bool CallAnalyzer::simplifyCmpInst(Function *F, CmpInst &Cmp) {
     SQ.DT = &DT;
     Value *SimplifiedInstruction = llvm::simplifyInstructionWithOperands(
         cast<CmpInst>(&Cmp), {CallArg, Cmp.getOperand(1)}, SQ);
-    if (!SimplifiedInstruction)
-      continue;
-    if (auto *ConstVal = dyn_cast<llvm::ConstantInt>(SimplifiedInstruction)) {
+    if (auto *ConstVal = dyn_cast_or_null<ConstantInt>(SimplifiedInstruction)) {
       bool IsTrueSuccessor = CallBB == Br->getSuccessor(0);
       SimplifiedValues[&Cmp] = ConstVal;
       if (ConstVal->isOne())
