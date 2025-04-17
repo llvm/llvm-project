@@ -14593,13 +14593,13 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals,
       };
       if (!ValueToExtUses) {
         ValueToExtUses.emplace();
-        for_each(enumerate(ExternalUses), [&](const auto &P) {
+        for (const auto &P : enumerate(ExternalUses)) {
           // Ignore phis in loops.
           if (IsPhiInLoop(P.value()))
-            return;
+            continue;
 
           ValueToExtUses->try_emplace(P.value().Scalar, P.index());
-        });
+        }
       }
       // Can use original instruction, if no operands vectorized or they are
       // marked as externally used already.
@@ -14677,13 +14677,13 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals,
         }
         if (KeepScalar) {
           ExternalUsesAsOriginalScalar.insert(EU.Scalar);
-          for_each(Inst->operands(), [&](Value *V) {
+          for (Value *V : Inst->operands()) {
             auto It = ValueToExtUses->find(V);
             if (It != ValueToExtUses->end()) {
               // Replace all uses to avoid compiler crash.
               ExternalUses[It->second].User = nullptr;
             }
-          });
+          }
           ExtraCost = ScalarCost;
           if (!IsPhiInLoop(EU))
             ExtractsCount[Entry].insert(Inst);
@@ -14692,13 +14692,13 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals,
             // Update the users of the operands of the cast operand to avoid
             // compiler crash.
             if (auto *IOp = dyn_cast<Instruction>(Inst->getOperand(0))) {
-              for_each(IOp->operands(), [&](Value *V) {
+              for (Value *V : IOp->operands()) {
                 auto It = ValueToExtUses->find(V);
                 if (It != ValueToExtUses->end()) {
                   // Replace all uses to avoid compiler crash.
                   ExternalUses[It->second].User = nullptr;
                 }
-              });
+              }
             }
           }
         }
@@ -15334,7 +15334,8 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
     // tree.
     Entries.push_back(FirstEntries.front());
     // Update mapping between values and corresponding tree entries.
-    for_each(UsedValuesEntry, [&](auto &P) { P.second = 0; });
+    for (auto &P : UsedValuesEntry)
+      P.second = 0;
     VF = FirstEntries.front()->getVectorFactor();
   } else {
     // Try to find nodes with the same vector factor.
@@ -15384,13 +15385,13 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
       ValuesToEntries.emplace_back().insert(E->Scalars.begin(),
                                             E->Scalars.end());
     // Update mapping between values and corresponding tree entries.
-    for_each(UsedValuesEntry, [&](auto &P) {
+    for (auto &P : UsedValuesEntry) {
       for (unsigned Idx : seq<unsigned>(ValuesToEntries.size()))
         if (ValuesToEntries[Idx].contains(P.first)) {
           P.second = Idx;
           break;
         }
-    });
+    }
   }
 
   bool IsSplatOrUndefs = isSplat(VL) || all_of(VL, IsaPred<UndefValue>);
@@ -15536,12 +15537,12 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
                                                  (MaxElement % VF) -
                                                      (MinElement % VF) + 1));
     if (NewVF < VF) {
-      for_each(SubMask, [&](int &Idx) {
+      for (int &Idx : SubMask) {
         if (Idx == PoisonMaskElem)
-          return;
+          continue;
         Idx = ((Idx % VF) - (((MinElement % VF) / NewVF) * NewVF)) % NewVF +
               (Idx >= static_cast<int>(VF) ? NewVF : 0);
-      });
+      }
     } else {
       NewVF = VF;
     }
@@ -19306,8 +19307,10 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
     // whole bundle might not be ready.
     ReadyInsts.remove(BundleMember);
     if (ArrayRef<ScheduleBundle *> Bundles = getScheduleBundles(V);
-        !Bundles.empty())
-      for_each(Bundles, [&](ScheduleBundle *B) { ReadyInsts.remove(B); });
+        !Bundles.empty()) {
+      for (ScheduleBundle *B : Bundles)
+        ReadyInsts.remove(B);
+    }
 
     if (!BundleMember->isScheduled())
       continue;
@@ -19632,23 +19635,23 @@ void BoUpSLP::BlockScheduling::calculateDependencies(ScheduleBundle &Bundle,
       }
       continue;
     }
-    for_each(Bundles, [&](ScheduleBundle *Bundle) {
+    for (ScheduleBundle *Bundle : Bundles) {
       if (!Visited.insert(Bundle).second || Bundle->hasValidDependencies())
-        return;
+        continue;
       assert(isInSchedulingRegion(*Bundle) &&
              "ScheduleData not in scheduling region");
       for_each(Bundle->getBundle(), ProcessNode);
-    });
+    }
     if (InsertInReadyList && SD->isReady()) {
-      for_each(Bundles, [&](ScheduleBundle *Bundle) {
+      for (ScheduleBundle *Bundle : Bundles) {
         assert(isInSchedulingRegion(*Bundle) &&
                "ScheduleData not in scheduling region");
         if (!Bundle->isReady())
-          return;
+          continue;
         ReadyInsts.insert(Bundle);
         LLVM_DEBUG(dbgs() << "SLP:     gets ready on update: " << *Bundle
                           << "\n");
-      });
+      }
     }
   }
 }
@@ -20032,8 +20035,8 @@ bool BoUpSLP::collectValuesToDemote(
         if (Operands.empty()) {
           if (!IsTruncRoot)
             MaxDepthLevel = 1;
-          (void)for_each(E.Scalars, std::bind(IsPotentiallyTruncated, _1,
-                                              std::ref(BitWidth)));
+          for (Value *V : E.Scalars)
+            (void)IsPotentiallyTruncated(V, BitWidth);
         } else {
           // Several vectorized uses? Check if we can truncate it, otherwise -
           // exit.
@@ -21034,17 +21037,16 @@ bool SLPVectorizerPass::vectorizeStores(
       unsigned Sz = 1 + Log2_32(MaxVF) - Log2_32(MinVF);
       SmallVector<unsigned> CandidateVFs(Sz + (NonPowerOf2VF > 0 ? 1 : 0));
       unsigned Size = MinVF;
-      for_each(reverse(CandidateVFs), [&](unsigned &VF) {
+      for (unsigned &VF : reverse(CandidateVFs)) {
         VF = Size > MaxVF ? NonPowerOf2VF : Size;
         Size *= 2;
-      });
+      }
       unsigned End = Operands.size();
       unsigned Repeat = 0;
       constexpr unsigned MaxAttempts = 4;
       OwningArrayRef<std::pair<unsigned, unsigned>> RangeSizes(Operands.size());
-      for_each(RangeSizes, [](std::pair<unsigned, unsigned> &P) {
+      for (std::pair<unsigned, unsigned> &P : RangeSizes)
         P.first = P.second = 1;
-      });
       DenseMap<Value *, std::pair<unsigned, unsigned>> NonSchedulable;
       auto IsNotVectorized = [](bool First,
                                 const std::pair<unsigned, unsigned> &P) {
@@ -21120,22 +21122,19 @@ bool SLPVectorizerPass::vectorizeStores(
                 AnyProfitableGraph = RepeatChanged = Changed = true;
                 // If we vectorized initial block, no need to try to vectorize
                 // it again.
-                for_each(RangeSizes.slice(Cnt, Size),
-                         [](std::pair<unsigned, unsigned> &P) {
-                           P.first = P.second = 0;
-                         });
+                for (std::pair<unsigned, unsigned> &P :
+                     RangeSizes.slice(Cnt, Size))
+                  P.first = P.second = 0;
                 if (Cnt < StartIdx + MinVF) {
-                  for_each(RangeSizes.slice(StartIdx, Cnt - StartIdx),
-                           [](std::pair<unsigned, unsigned> &P) {
-                             P.first = P.second = 0;
-                           });
+                  for (std::pair<unsigned, unsigned> &P :
+                       RangeSizes.slice(StartIdx, Cnt - StartIdx))
+                    P.first = P.second = 0;
                   StartIdx = Cnt + Size;
                 }
                 if (Cnt > Sz - Size - MinVF) {
-                  for_each(RangeSizes.slice(Cnt + Size, Sz - (Cnt + Size)),
-                           [](std::pair<unsigned, unsigned> &P) {
-                             P.first = P.second = 0;
-                           });
+                  for (std::pair<unsigned, unsigned> &P :
+                       RangeSizes.slice(Cnt + Size, Sz - (Cnt + Size)))
+                    P.first = P.second = 0;
                   if (Sz == End)
                     End = Cnt;
                   Sz = Cnt;
@@ -21161,13 +21160,13 @@ bool SLPVectorizerPass::vectorizeStores(
                 continue;
               }
               if (TreeSize > 1)
-                for_each(RangeSizes.slice(Cnt, Size),
-                         [&](std::pair<unsigned, unsigned> &P) {
-                           if (Size >= MaxRegVF)
-                             P.second = std::max(P.second, TreeSize);
-                           else
-                             P.first = std::max(P.first, TreeSize);
-                         });
+                for (std::pair<unsigned, unsigned> &P :
+                     RangeSizes.slice(Cnt, Size)) {
+                  if (Size >= MaxRegVF)
+                    P.second = std::max(P.second, TreeSize);
+                  else
+                    P.first = std::max(P.first, TreeSize);
+                }
               ++Cnt;
               AnyProfitableGraph = true;
             }
@@ -21209,10 +21208,10 @@ bool SLPVectorizerPass::vectorizeStores(
           CandidateVFs.push_back(Limit);
         if (VF > MaxTotalNum || VF >= StoresLimit)
           break;
-        for_each(RangeSizes, [&](std::pair<unsigned, unsigned> &P) {
+        for (std::pair<unsigned, unsigned> &P : RangeSizes) {
           if (P.first != 0)
             P.first = std::max(P.second, P.first);
-        });
+        }
         // Last attempt to vectorize max number of elements, if all previous
         // attempts were unsuccessful because of the cost issues.
         CandidateVFs.push_back(VF);
