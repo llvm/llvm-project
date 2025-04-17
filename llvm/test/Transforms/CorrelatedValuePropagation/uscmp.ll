@@ -256,3 +256,105 @@ define i8 @ucmp_6(i32 %x, i32 %y) {
   %1 = call i8 @llvm.ucmp(i32 %x, i32 %y)
   ret i8 %1
 }
+
+define i8 @ucmp_switch(i32 %x, i32 %y) {
+; CHECK-LABEL: @ucmp_switch(
+; CHECK-NEXT:    [[CMP:%.*]] = call i8 @llvm.ucmp.i8.i32(i32 [[X:%.*]], i32 [[Y:%.*]])
+; CHECK-NEXT:    switch i8 [[CMP]], label [[DEFAULT_UNREACHABLE:%.*]] [
+; CHECK-NEXT:      i8 -2, label [[BB_NEG2:%.*]]
+; CHECK-NEXT:      i8 -1, label [[BB_NEG1:%.*]]
+; CHECK-NEXT:      i8 0, label [[BB_0:%.*]]
+; CHECK-NEXT:      i8 1, label [[BB_1:%.*]]
+; CHECK-NEXT:      i8 2, label [[BB_2:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       bb.neg2:
+; CHECK-NEXT:    ret i8 -2
+; CHECK:       bb.neg1:
+; CHECK-NEXT:    ret i8 -1
+; CHECK:       bb.0:
+; CHECK-NEXT:    ret i8 0
+; CHECK:       bb.1:
+; CHECK-NEXT:    ret i8 1
+; CHECK:       bb.2:
+; CHECK-NEXT:    ret i8 2
+; CHECK:       default:
+; CHECK-NEXT:    ret i8 123
+;
+  %cmp = call i8 @llvm.ucmp(i32 %x, i32 %y)
+  switch i8 %cmp, label %default [
+  i8 -2, label %bb.neg2
+  i8 -1, label %bb.neg1
+  i8 0, label %bb.0
+  i8 1, label %bb.1
+  i8 2, label %bb.2
+  ]
+
+bb.neg2:
+  ret i8 -2
+
+bb.neg1:
+  ret i8 -1
+
+bb.0:
+  ret i8 0
+
+bb.1:
+  ret i8 1
+
+bb.2:
+  ret i8 2
+
+default:
+  ret i8 123
+}
+
+define i8 @scmp_switch(i32 %x, i32 %y) {
+; CHECK-LABEL: @scmp_switch(
+; CHECK-NEXT:    [[CMP:%.*]] = call i8 @llvm.scmp.i8.i32(i32 [[X:%.*]], i32 [[Y:%.*]])
+; CHECK-NEXT:    switch i8 [[CMP]], label [[DEFAULT_UNREACHABLE:%.*]] [
+; CHECK-NEXT:      i8 -2, label [[BB_NEG2:%.*]]
+; CHECK-NEXT:      i8 -1, label [[BB_NEG1:%.*]]
+; CHECK-NEXT:      i8 0, label [[BB_0:%.*]]
+; CHECK-NEXT:      i8 1, label [[BB_1:%.*]]
+; CHECK-NEXT:      i8 2, label [[BB_2:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       bb.neg2:
+; CHECK-NEXT:    ret i8 -2
+; CHECK:       bb.neg1:
+; CHECK-NEXT:    ret i8 -1
+; CHECK:       bb.0:
+; CHECK-NEXT:    ret i8 0
+; CHECK:       bb.1:
+; CHECK-NEXT:    ret i8 1
+; CHECK:       bb.2:
+; CHECK-NEXT:    ret i8 2
+; CHECK:       default:
+; CHECK-NEXT:    ret i8 123
+;
+  %cmp = call i8 @llvm.scmp(i32 %x, i32 %y)
+  switch i8 %cmp, label %default [
+  i8 -2, label %bb.neg2
+  i8 -1, label %bb.neg1
+  i8 0, label %bb.0
+  i8 1, label %bb.1
+  i8 2, label %bb.2
+  ]
+
+bb.neg2:
+  ret i8 -2
+
+bb.neg1:
+  ret i8 -1
+
+bb.0:
+  ret i8 0
+
+bb.1:
+  ret i8 1
+
+bb.2:
+  ret i8 2
+
+default:
+  ret i8 123
+}

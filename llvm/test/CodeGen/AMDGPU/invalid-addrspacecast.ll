@@ -7,6 +7,9 @@
 define amdgpu_kernel void @use_group_to_global_addrspacecast(ptr addrspace(3) %ptr) {
 ; CHECK-LABEL: use_group_to_global_addrspacecast:
 ; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_mov_b32 flat_scratch_lo, s13
+; CHECK-NEXT:    s_add_i32 s12, s12, s17
+; CHECK-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; CHECK-NEXT:    flat_store_dword v[0:1], v0
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)

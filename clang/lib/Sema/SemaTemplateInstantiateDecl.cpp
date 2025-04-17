@@ -1280,12 +1280,10 @@ void OpenACCDeclClauseInstantiator::VisitDevicePtrClause(
     const OpenACCDevicePtrClause &C) {
   llvm::SmallVector<Expr *> VarList = VisitVarList(C.getVarList());
   // Ensure each var is a pointer type.
-  VarList.erase(std::remove_if(VarList.begin(), VarList.end(),
-                               [&](Expr *E) {
-                                 return SemaRef.OpenACC().CheckVarIsPointerType(
-                                     OpenACCClauseKind::DevicePtr, E);
-                               }),
-                VarList.end());
+  llvm::erase_if(VarList, [&](Expr *E) {
+    return SemaRef.OpenACC().CheckVarIsPointerType(OpenACCClauseKind::DevicePtr,
+                                                   E);
+  });
   ParsedClause.setVarListDetails(VarList, OpenACCModifierKind::Invalid);
   if (SemaRef.OpenACC().CheckDeclareClause(ParsedClause,
                                            OpenACCModifierKind::Invalid))

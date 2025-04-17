@@ -41,11 +41,13 @@ enum CondCode {
   COND_GE,
   COND_LTU,
   COND_GEU,
+  COND_CV_BEQIMM,
+  COND_CV_BNEIMM,
   COND_INVALID
 };
 
 CondCode getOppositeBranchCondition(CondCode);
-unsigned getBrCond(const RISCVSubtarget &STI, CondCode CC, bool Imm = false);
+unsigned getBrCond(CondCode CC);
 
 } // end of namespace RISCVCC
 
@@ -65,7 +67,7 @@ public:
   explicit RISCVInstrInfo(RISCVSubtarget &STI);
 
   MCInst getNop() const override;
-  const MCInstrDesc &getBrCond(RISCVCC::CondCode CC, bool Imm = false) const;
+  const MCInstrDesc &getBrCond(RISCVCC::CondCode CC) const;
 
   Register isLoadFromStackSlot(const MachineInstr &MI,
                                int &FrameIndex) const override;

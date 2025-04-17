@@ -14,7 +14,7 @@
 #include "sanitizer_platform.h"
 
 #if SANITIZER_FREEBSD || SANITIZER_LINUX || SANITIZER_NETBSD || \
-    SANITIZER_SOLARIS
+    SANITIZER_SOLARIS || SANITIZER_HAIKU
 
 #  include "sanitizer_allocator_internal.h"
 #  include "sanitizer_atomic.h"
@@ -27,6 +27,10 @@
 #  include "sanitizer_placement_new.h"
 #  include "sanitizer_procmaps.h"
 #  include "sanitizer_solaris.h"
+
+#  if SANITIZER_HAIKU
+#    define _DEFAULT_SOURCE
+#  endif
 
 #  if SANITIZER_NETBSD
 #    // for __lwp_gettcb_fast() / __lwp_getprivate_fast()
@@ -78,6 +82,11 @@ extern "C" int __sys_sigaction(int signum, const struct sigaction *act,
 #    include <stddef.h>
 #    include <stdlib.h>
 #    include <thread.h>
+#  endif
+
+#  if SANITIZER_HAIKU
+#    include <kernel/OS.h>
+#    include <sys/link_elf.h>
 #  endif
 
 #  if !SANITIZER_ANDROID
@@ -643,6 +652,7 @@ static void GetTls(uptr *addr, uptr *size) {
       *addr = (uptr)tcb->tcb_dtv[1];
     }
   }
+#    elif SANITIZER_HAIKU
 #    else
 #      error "Unknown OS"
 #    endif
@@ -713,8 +723,13 @@ static int AddModuleSegments(const char *module_name, dl_phdr_info *info,
     if (phdr->p_type == PT_LOAD) {
       uptr cur_beg = info->dlpi_addr + phdr->p_vaddr;
       uptr cur_end = cur_beg + phdr->p_memsz;
+#  if SANITIZER_HAIKU
+      bool executable = phdr->p_flags & PF_EXECUTE;
+      bool writable = phdr->p_flags & PF_WRITE;
+#  else
       bool executable = phdr->p_flags & PF_X;
       bool writable = phdr->p_flags & PF_W;
+#  endif
       cur_module.addAddressRange(cur_beg, cur_end, executable, writable);
     } else if (phdr->p_type == PT_NOTE) {
 #  ifdef NT_GNU_BUILD_ID
@@ -854,6 +869,10 @@ u32 GetNumberOfCPUs() {
 #    endif
   CHECK_EQ(internal_sysctl(req, 2, &ncpu, &len, NULL, 0), 0);
   return ncpu;
+#  elif SANITIZER_HAIKU
+  system_info info;
+  get_system_info(&info);
+  return info.cpu_count;
 #  elif SANITIZER_SOLARIS
   return sysconf(_SC_NPROCESSORS_ONLN);
 #  else

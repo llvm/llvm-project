@@ -1123,7 +1123,7 @@ define bfloat @test_uitofp_i1(i1 %a) {
 ; SM70-NEXT:  // %bb.0:
 ; SM70-NEXT:    ld.param.u8 %rs1, [test_uitofp_i1_param_0];
 ; SM70-NEXT:    and.b16 %rs2, %rs1, 1;
-; SM70-NEXT:    setp.eq.b16 %p1, %rs2, 1;
+; SM70-NEXT:    setp.ne.b16 %p1, %rs2, 0;
 ; SM70-NEXT:    selp.b32 %r1, 1, 0, %p1;
 ; SM70-NEXT:    cvt.rn.f32.u32 %f1, %r1;
 ; SM70-NEXT:    mov.b32 %r2, %f1;
@@ -1147,7 +1147,7 @@ define bfloat @test_uitofp_i1(i1 %a) {
 ; SM80-NEXT:  // %bb.0:
 ; SM80-NEXT:    ld.param.u8 %rs1, [test_uitofp_i1_param_0];
 ; SM80-NEXT:    and.b16 %rs2, %rs1, 1;
-; SM80-NEXT:    setp.eq.b16 %p1, %rs2, 1;
+; SM80-NEXT:    setp.ne.b16 %p1, %rs2, 0;
 ; SM80-NEXT:    selp.b32 %r1, 1, 0, %p1;
 ; SM80-NEXT:    cvt.rn.f32.u32 %f1, %r1;
 ; SM80-NEXT:    cvt.rn.bf16.f32 %rs3, %f1;
@@ -1164,7 +1164,7 @@ define bfloat @test_uitofp_i1(i1 %a) {
 ; SM80-FTZ-NEXT:  // %bb.0:
 ; SM80-FTZ-NEXT:    ld.param.u8 %rs1, [test_uitofp_i1_param_0];
 ; SM80-FTZ-NEXT:    and.b16 %rs2, %rs1, 1;
-; SM80-FTZ-NEXT:    setp.eq.b16 %p1, %rs2, 1;
+; SM80-FTZ-NEXT:    setp.ne.b16 %p1, %rs2, 0;
 ; SM80-FTZ-NEXT:    selp.b32 %r1, 1, 0, %p1;
 ; SM80-FTZ-NEXT:    cvt.rn.f32.u32 %f1, %r1;
 ; SM80-FTZ-NEXT:    cvt.rn.bf16.f32 %rs3, %f1;
@@ -1180,7 +1180,7 @@ define bfloat @test_uitofp_i1(i1 %a) {
 ; SM90-NEXT:  // %bb.0:
 ; SM90-NEXT:    ld.param.u8 %rs1, [test_uitofp_i1_param_0];
 ; SM90-NEXT:    and.b16 %rs2, %rs1, 1;
-; SM90-NEXT:    setp.eq.b16 %p1, %rs2, 1;
+; SM90-NEXT:    setp.ne.b16 %p1, %rs2, 0;
 ; SM90-NEXT:    selp.b32 %r1, 1, 0, %p1;
 ; SM90-NEXT:    cvt.rn.bf16.u32 %rs3, %r1;
 ; SM90-NEXT:    st.param.b16 [func_retval0], %rs3;

@@ -36,6 +36,7 @@
 
 //===---------------------------------------------------------------------===//
 
+#include "Hexagon.h"
 #include "HexagonInstrInfo.h"
 #include "HexagonRegisterInfo.h"
 #include "HexagonSubtarget.h"
@@ -71,15 +72,6 @@ using namespace llvm;
 static cl::opt<unsigned> MaxMBBSizeForLoadStoreWidening(
     "max-bb-size-for-load-store-widening", cl::Hidden, cl::init(1000),
     cl::desc("Limit block size to analyze in load/store widening pass"));
-
-namespace llvm {
-
-FunctionPass *createHexagonStoreWidening();
-FunctionPass *createHexagonLoadWidening();
-void initializeHexagonStoreWideningPass(PassRegistry &);
-void initializeHexagonLoadWideningPass(PassRegistry &);
-
-} // end namespace llvm
 
 namespace {
 
@@ -135,9 +127,7 @@ private:
 struct HexagonStoreWidening : public MachineFunctionPass {
   static char ID;
 
-  HexagonStoreWidening() : MachineFunctionPass(ID) {
-    initializeHexagonStoreWideningPass(*PassRegistry::getPassRegistry());
-  }
+  HexagonStoreWidening() : MachineFunctionPass(ID) {}
 
   StringRef getPassName() const override { return "Hexagon Store Widening"; }
 
@@ -164,9 +154,7 @@ struct HexagonStoreWidening : public MachineFunctionPass {
 struct HexagonLoadWidening : public MachineFunctionPass {
   static char ID;
 
-  HexagonLoadWidening() : MachineFunctionPass(ID) {
-    initializeHexagonLoadWideningPass(*PassRegistry::getPassRegistry());
-  }
+  HexagonLoadWidening() : MachineFunctionPass(ID) {}
 
   StringRef getPassName() const override { return "Hexagon Load Widening"; }
 

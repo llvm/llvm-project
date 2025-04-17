@@ -201,6 +201,8 @@ template <class charT> class messages_byname;
 #    include <__algorithm/reverse.h>
 #    include <__algorithm/unwrap_iter.h>
 #    include <__assert>
+#    include <__charconv/to_chars_integral.h>
+#    include <__charconv/traits.h>
 #    include <__iterator/access.h>
 #    include <__iterator/back_insert_iterator.h>
 #    include <__iterator/istreambuf_iterator.h>
@@ -210,6 +212,7 @@ template <class charT> class messages_byname;
 #    include <__memory/addressof.h>
 #    include <__memory/unique_ptr.h>
 #    include <__new/exceptions.h>
+#    include <__system_error/errc.h>
 #    include <__type_traits/make_unsigned.h>
 #    include <cerrno>
 #    include <cstdio>
@@ -1200,7 +1203,7 @@ protected:
 
   template <class _Integral>
   _LIBCPP_HIDE_FROM_ABI inline _OutputIterator
-  __do_put_integral(iter_type __s, ios_base& __iob, char_type __fl, _Integral __v, char const* __len) const;
+  __do_put_integral(iter_type __s, ios_base& __iob, char_type __fl, _Integral __v) const;
 
   template <class _Float>
   _LIBCPP_HIDE_FROM_ABI inline _OutputIterator
@@ -1226,30 +1229,68 @@ num_put<_CharT, _OutputIterator>::do_put(iter_type __s, ios_base& __iob, char_ty
 template <class _CharT, class _OutputIterator>
 template <class _Integral>
 _LIBCPP_HIDE_FROM_ABI inline _OutputIterator num_put<_CharT, _OutputIterator>::__do_put_integral(
-    iter_type __s, ios_base& __iob, char_type __fl, _Integral __v, char const* __len) const {
+    iter_type __s, ios_base& __iob, char_type __fl, _Integral __v) const {
   // Stage 1 - Get number in narrow char
-  char __fmt[8] = {'%', 0};
-  this->__format_int(__fmt + 1, __len, is_signed<_Integral>::value, __iob.flags());
+
   // Worst case is octal, with showbase enabled. Note that octal is always
   // printed as an unsigned value.
   using _Unsigned = typename make_unsigned<_Integral>::type;
-  _LIBCPP_CONSTEXPR const unsigned __nbuf =
+  _LIBCPP_CONSTEXPR const unsigned __buffer_size =
       (numeric_limits<_Unsigned>::digits / 3)          // 1 char per 3 bits
       + ((numeric_limits<_Unsigned>::digits % 3) != 0) // round up
       + 2;                                             // base prefix + terminating null character
-  char __nar[__nbuf];
-  _LIBCPP_DIAGNOSTIC_PUSH
-  _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wformat-nonliteral")
-  _LIBCPP_GCC_DIAGNOSTIC_IGNORED("-Wformat-nonliteral")
-  int __nc = __locale::__snprintf(__nar, sizeof(__nar), _LIBCPP_GET_C_LOCALE, __fmt, __v);
-  _LIBCPP_DIAGNOSTIC_POP
-  char* __ne = __nar + __nc;
-  char* __np = this->__identify_padding(__nar, __ne, __iob);
+
+  char __char_buffer[__buffer_size];
+  char* __buffer_ptr = __char_buffer;
+
+  auto __flags = __iob.flags();
+
+  auto __basefield = (__flags & ios_base::basefield);
+
+  // Extract base
+  int __base = 10;
+  if (__basefield == ios_base::oct)
+    __base = 8;
+  else if (__basefield == ios_base::hex)
+    __base = 16;
+
+  // Print '-' and make the argument unsigned
+  auto __uval = std::__to_unsigned_like(__v);
+  if (__basefield != ios_base::oct && __basefield != ios_base::hex && __v < 0) {
+    *__buffer_ptr++ = '-';
+    __uval          = std::__complement(__uval);
+  }
+
+  // Maybe add '+' prefix
+  if (std::is_signed<_Integral>::value && (__flags & ios_base::showpos) && __basefield != ios_base::oct &&
+      __basefield != ios_base::hex && __v >= 0)
+    *__buffer_ptr++ = '+';
+
+  // Add base prefix
+  if (__v != 0 && __flags & ios_base::showbase) {
+    if (__basefield == ios_base::oct) {
+      *__buffer_ptr++ = '0';
+    } else if (__basefield == ios_base::hex) {
+      *__buffer_ptr++ = '0';
+      *__buffer_ptr++ = (__flags & ios_base::uppercase ? 'X' : 'x');
+    }
+  }
+
+  auto __res = std::__to_chars_integral(__buffer_ptr, __char_buffer + __buffer_size, __uval, __base);
+  _LIBCPP_ASSERT_INTERNAL(__res.__ec == std::errc(), "to_chars: invalid maximum buffer size computed?");
+
+  // Make letters uppercase
+  if (__flags & ios_base::hex && __flags & ios_base::uppercase) {
+    for (; __buffer_ptr != __res.__ptr; ++__buffer_ptr)
+      *__buffer_ptr = std::__hex_to_upper(*__buffer_ptr);
+  }
+
+  char* __np = this->__identify_padding(__char_buffer, __res.__ptr, __iob);
   // Stage 2 - Widen __nar while adding thousands separators
-  char_type __o[2 * (__nbuf - 1) - 1];
+  char_type __o[2 * (__buffer_size - 1) - 1];
   char_type* __op; // pad here
   char_type* __oe; // end of output
-  this->__widen_and_group_int(__nar, __np, __ne, __o, __op, __oe, __iob.getloc());
+  this->__widen_and_group_int(__char_buffer, __np, __res.__ptr, __o, __op, __oe, __iob.getloc());
   // [__o, __oe) contains thousands_sep'd wide number
   // Stage 3 & 4
   return std::__pad_and_output(__s, __o, __op, __oe, __iob, __fl);
@@ -1258,25 +1299,25 @@ _LIBCPP_HIDE_FROM_ABI inline _OutputIterator num_put<_CharT, _OutputIterator>::_
 template <class _CharT, class _OutputIterator>
 _OutputIterator
 num_put<_CharT, _OutputIterator>::do_put(iter_type __s, ios_base& __iob, char_type __fl, long __v) const {
-  return this->__do_put_integral(__s, __iob, __fl, __v, "l");
+  return this->__do_put_integral(__s, __iob, __fl, __v);
 }
 
 template <class _CharT, class _OutputIterator>
 _OutputIterator
 num_put<_CharT, _OutputIterator>::do_put(iter_type __s, ios_base& __iob, char_type __fl, long long __v) const {
-  return this->__do_put_integral(__s, __iob, __fl, __v, "ll");
+  return this->__do_put_integral(__s, __iob, __fl, __v);
 }
 
 template <class _CharT, class _OutputIterator>
 _OutputIterator
 num_put<_CharT, _OutputIterator>::do_put(iter_type __s, ios_base& __iob, char_type __fl, unsigned long __v) const {
-  return this->__do_put_integral(__s, __iob, __fl, __v, "l");
+  return this->__do_put_integral(__s, __iob, __fl, __v);
 }
 
 template <class _CharT, class _OutputIterator>
 _OutputIterator
 num_put<_CharT, _OutputIterator>::do_put(iter_type __s, ios_base& __iob, char_type __fl, unsigned long long __v) const {
-  return this->__do_put_integral(__s, __iob, __fl, __v, "ll");
+  return this->__do_put_integral(__s, __iob, __fl, __v);
 }
 
 template <class _CharT, class _OutputIterator>
@@ -1344,26 +1385,11 @@ num_put<_CharT, _OutputIterator>::do_put(iter_type __s, ios_base& __iob, char_ty
 template <class _CharT, class _OutputIterator>
 _OutputIterator
 num_put<_CharT, _OutputIterator>::do_put(iter_type __s, ios_base& __iob, char_type __fl, const void* __v) const {
-  // Stage 1 - Get pointer in narrow char
-  const unsigned __nbuf = 20;
-  char __nar[__nbuf];
-  int __nc   = __locale::__snprintf(__nar, sizeof(__nar), _LIBCPP_GET_C_LOCALE, "%p", __v);
-  char* __ne = __nar + __nc;
-  char* __np = this->__identify_padding(__nar, __ne, __iob);
-  // Stage 2 - Widen __nar
-  char_type __o[2 * (__nbuf - 1) - 1];
-  char_type* __op; // pad here
-  char_type* __oe; // end of output
-  const ctype<char_type>& __ct = std::use_facet<ctype<char_type> >(__iob.getloc());
-  __ct.widen(__nar, __ne, __o);
-  __oe = __o + (__ne - __nar);
-  if (__np == __ne)
-    __op = __oe;
-  else
-    __op = __o + (__np - __nar);
-  // [__o, __oe) contains wide number
-  // Stage 3 & 4
-  return std::__pad_and_output(__s, __o, __op, __oe, __iob, __fl);
+  auto __flags = __iob.flags();
+  __iob.flags((__flags & ~ios_base::basefield & ~ios_base::uppercase) | ios_base::hex | ios_base::showbase);
+  auto __res = __do_put_integral(__s, __iob, __fl, reinterpret_cast<uintptr_t>(__v));
+  __iob.flags(__flags);
+  return __res;
 }
 
 extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS num_put<char>;
