@@ -693,7 +693,7 @@ public:
             Orig.RemarkName, Orig.getFunction(), Orig.getLocation()),
         CodeRegion(Orig.getCodeRegion()) {
     *this << Prepend;
-    std::copy(Orig.Args.begin(), Orig.Args.end(), std::back_inserter(Args));
+    llvm::append_range(Args, Orig.Args);
   }
 
   /// Legacy interface.
