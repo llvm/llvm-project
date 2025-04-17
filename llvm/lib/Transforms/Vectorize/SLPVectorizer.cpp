@@ -7479,8 +7479,8 @@ void BoUpSLP::reorderBottomToTop(bool IgnoreReorder) {
         for (const auto &P : Data.first->CombinedEntriesWithIndices) {
           TreeEntry &OpTE = *VectorizableTree[P.first].get();
           OrdersType Order = OpTE.ReorderIndices;
-          if (Order.empty()) {
-            if (!OpTE.isGather())
+          if (Order.empty() || !OpTE.ReuseShuffleIndices.empty()) {
+            if (!OpTE.isGather() && OpTE.ReuseShuffleIndices.empty())
               continue;
             const auto BestOrder =
                 getReorderingData(OpTE, /*TopToBottom=*/false, IgnoreReorder);
@@ -8402,11 +8402,7 @@ void BoUpSLP::tryToVectorizeGatheredLoads(
             continue;
           }
           SmallVector<std::pair<LoadInst *, int>> LocalLoadsDists(LoadsDists);
-          SmallVector<LoadInst *> OriginalLoads(LocalLoadsDists.size());
-          transform(LoadsDists, OriginalLoads.begin(),
-                    [](const std::pair<LoadInst *, int> &L) -> LoadInst * {
-                      return L.first;
-                    });
+          SmallVector<LoadInst *> OriginalLoads(make_first_range(LoadsDists));
           stable_sort(LocalLoadsDists, LoadSorter);
           SmallVector<LoadInst *> Loads;
           unsigned MaxConsecutiveDistance = 0;
@@ -15727,13 +15723,10 @@ InstructionCost BoUpSLP::getGatherCost(ArrayRef<Value *> VL, bool ForPoisonSrc,
                                        Type *ScalarTy) const {
   const unsigned VF = VL.size();
   auto *VecTy = getWidenedType(ScalarTy, VF);
-  bool DuplicateNonConst = false;
   // Find the cost of inserting/extracting values from the vector.
   // Check if the same elements are inserted several times and count them as
   // shuffle candidates.
-  APInt ShuffledElements = APInt::getZero(VF);
   APInt DemandedElements = APInt::getZero(VF);
-  DenseMap<Value *, unsigned> UniqueElements;
   constexpr TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
   InstructionCost Cost;
   auto EstimateInsertCost = [&](unsigned I, Value *V) {
@@ -15742,32 +15735,18 @@ InstructionCost BoUpSLP::getGatherCost(ArrayRef<Value *> VL, bool ForPoisonSrc,
       Cost += TTI->getCastInstrCost(Instruction::Trunc, ScalarTy, V->getType(),
                                     TTI::CastContextHint::None, CostKind);
   };
-  SmallVector<int> ShuffleMask(VF, PoisonMaskElem);
   SmallVector<int> ConstantShuffleMask(VF, PoisonMaskElem);
   std::iota(ConstantShuffleMask.begin(), ConstantShuffleMask.end(), 0);
   for (auto [I, V] : enumerate(VL)) {
     // No need to shuffle duplicates for constants.
-    if ((ForPoisonSrc && isConstant(V)) || isa<UndefValue>(V)) {
-      ShuffledElements.setBit(I);
-      ShuffleMask[I] = isa<PoisonValue>(V) ? PoisonMaskElem : I;
+    if ((ForPoisonSrc && isConstant(V)) || isa<UndefValue>(V))
       continue;
-    }
 
     if (isConstant(V)) {
       ConstantShuffleMask[I] = I + VF;
-      ShuffleMask[I] = I;
       continue;
     }
-    auto Res = UniqueElements.try_emplace(V, I);
-    if (Res.second) {
-      EstimateInsertCost(I, V);
-      ShuffleMask[I] = I;
-      continue;
-    }
-
-    DuplicateNonConst = true;
-    ShuffledElements.setBit(I);
-    ShuffleMask[I] = Res.first->second;
+    EstimateInsertCost(I, V);
   }
   // FIXME: add a cost for constant vector materialization.
   bool IsAnyNonUndefConst =
@@ -15776,15 +15755,6 @@ InstructionCost BoUpSLP::getGatherCost(ArrayRef<Value *> VL, bool ForPoisonSrc,
   if (!ForPoisonSrc && IsAnyNonUndefConst) {
     Cost += ::getShuffleCost(*TTI, TargetTransformInfo::SK_PermuteTwoSrc, VecTy,
                              ConstantShuffleMask);
-    // Update the shuffle mask for shuffling with incoming source (all elements
-    // are used!) or with constant subvector.
-    for_each(enumerate(ShuffleMask), [&](auto P) {
-      if ((!ForPoisonSrc && P.value() == PoisonMaskElem) ||
-          ConstantShuffleMask[P.index()] != PoisonMaskElem)
-        P.value() = P.index();
-      else if (P.value() != PoisonMaskElem)
-        P.value() += VF;
-    });
   }
 
   // 2. Insert unique non-constants.
@@ -15793,10 +15763,6 @@ InstructionCost BoUpSLP::getGatherCost(ArrayRef<Value *> VL, bool ForPoisonSrc,
                                      /*Insert=*/true,
                                      /*Extract=*/false, CostKind,
                                      ForPoisonSrc && !IsAnyNonUndefConst, VL);
-  // 3. Shuffle duplicates.
-  if (DuplicateNonConst)
-    Cost += ::getShuffleCost(*TTI, TargetTransformInfo::SK_PermuteSingleSrc,
-                             VecTy, ShuffleMask, CostKind);
   return Cost;
 }
 
@@ -18448,8 +18414,14 @@ Value *BoUpSLP::vectorizeTree(
   // need to rebuild it.
   EntryToLastInstruction.clear();
   // All blocks must be scheduled before any instructions are inserted.
-  for (auto &BSIter : BlocksSchedules) {
+  for (auto &BSIter : BlocksSchedules)
     scheduleBlock(BSIter.second.get());
+  // Cache last instructions for the nodes to avoid side effects, which may
+  // appear during vectorization, like extra uses, etc.
+  for (const std::unique_ptr<TreeEntry> &TE : VectorizableTree) {
+    if (TE->isGather())
+      continue;
+    (void)getLastInstructionInBundle(TE.get());
   }
 
   if (ReductionRoot)
@@ -20555,7 +20527,8 @@ void BoUpSLP::computeMinimumValueSizes() {
   }
   bool IsSignedCmp = false;
   if (UserIgnoreList && all_of(*UserIgnoreList, [](Value *V) {
-        return match(V, m_SMin(m_Value(), m_Value()));
+        return match(V, m_SMin(m_Value(), m_Value())) ||
+               match(V, m_SMax(m_Value(), m_Value()));
       }))
     IsSignedCmp = true;
   while (NodeIdx < VectorizableTree.size()) {
@@ -21042,14 +21015,13 @@ bool SLPVectorizerPass::vectorizeStores(
           AnyProfitableGraph = false;
           unsigned StartIdx = std::distance(
               RangeSizes.begin(),
-              find_if(RangeSizes, std::bind(IsNotVectorized, Size >= MaxRegVF,
-                                            std::placeholders::_1)));
+              find_if(RangeSizes,
+                      std::bind(IsNotVectorized, Size >= MaxRegVF, _1)));
           while (StartIdx < End) {
-            unsigned EndIdx =
-                std::distance(RangeSizes.begin(),
-                              find_if(RangeSizes.drop_front(StartIdx),
-                                      std::bind(IsVectorized, Size >= MaxRegVF,
-                                                std::placeholders::_1)));
+            unsigned EndIdx = std::distance(
+                RangeSizes.begin(),
+                find_if(RangeSizes.drop_front(StartIdx),
+                        std::bind(IsVectorized, Size >= MaxRegVF, _1)));
             unsigned Sz = EndIdx >= End ? End : EndIdx;
             for (unsigned Cnt = StartIdx; Cnt + Size <= Sz;) {
               if (!checkTreeSizes(RangeSizes.slice(Cnt, Size),
@@ -21119,7 +21091,7 @@ bool SLPVectorizerPass::vectorizeStores(
               if (Size > 2 && Res &&
                   !all_of(RangeSizes.slice(Cnt, Size),
                           std::bind(VFIsProfitable, Size >= MaxRegVF, TreeSize,
-                                    std::placeholders::_1))) {
+                                    _1))) {
                 Cnt += Size;
                 continue;
               }
@@ -21127,8 +21099,7 @@ bool SLPVectorizerPass::vectorizeStores(
               // trees, just with larger number of elements.
               if (Size > MaxRegVF && TreeSize > 1 &&
                   all_of(RangeSizes.slice(Cnt, Size),
-                         std::bind(FirstSizeSame, TreeSize,
-                                   std::placeholders::_1))) {
+                         std::bind(FirstSizeSame, TreeSize, _1))) {
                 Cnt += Size;
                 while (Cnt != Sz && RangeSizes[Cnt].first == TreeSize)
                   ++Cnt;
@@ -21152,8 +21123,7 @@ bool SLPVectorizerPass::vectorizeStores(
             StartIdx = std::distance(
                 RangeSizes.begin(),
                 find_if(RangeSizes.drop_front(Sz),
-                        std::bind(IsNotVectorized, Size >= MaxRegVF,
-                                  std::placeholders::_1)));
+                        std::bind(IsNotVectorized, Size >= MaxRegVF, _1)));
           }
           if (!AnyProfitableGraph && Size >= MaxRegVF && has_single_bit(Size))
             break;
@@ -21174,8 +21144,7 @@ bool SLPVectorizerPass::vectorizeStores(
                 End -
                 std::distance(
                     RangeSizes.begin(),
-                    find_if(RangeSizes, std::bind(IsNotVectorized, true,
-                                                  std::placeholders::_1))) +
+                    find_if(RangeSizes, std::bind(IsNotVectorized, true, _1))) +
                 1));
         unsigned VF = bit_ceil(CandidateVFs.front()) * 2;
         unsigned Limit =

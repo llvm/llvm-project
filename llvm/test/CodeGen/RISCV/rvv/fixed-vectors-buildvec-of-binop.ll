@@ -452,7 +452,8 @@ define void @buggy(i32 %0) #0 {
 ; RV64-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; RV64-NEXT:    vmv.v.x v8, a0
 ; RV64-NEXT:    vor.vi v8, v8, 1
-; RV64-NEXT:    vse32.v v8, (zero)
+; RV64-NEXT:    vrgather.vi v9, v8, 0
+; RV64-NEXT:    vse32.v v9, (zero)
 ; RV64-NEXT:    ret
 entry:
   %mul.us.us.i.3 = shl i32 %0, 1

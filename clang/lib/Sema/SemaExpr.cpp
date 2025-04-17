@@ -10602,6 +10602,45 @@ static void checkArithmeticNull(Sema &S, ExprResult &LHS, ExprResult &RHS,
       << LHS.get()->getSourceRange() << RHS.get()->getSourceRange();
 }
 
+static void DetectPrecisionLossInComplexDivision(Sema &S, QualType DivisorTy,
+                                                 SourceLocation OpLoc) {
+  // If the divisor is real, then this is real/real or complex/real division.
+  // Either way there can be no precision loss.
+  auto *CT = DivisorTy->getAs<ComplexType>();
+  if (!CT)
+    return;
+
+  QualType ElementType = CT->getElementType();
+  bool IsComplexRangePromoted = S.getLangOpts().getComplexRange() ==
+                                LangOptions::ComplexRangeKind::CX_Promoted;
+  if (!ElementType->isFloatingType() || !IsComplexRangePromoted)
+    return;
+
+  ASTContext &Ctx = S.getASTContext();
+  QualType HigherElementType = Ctx.GetHigherPrecisionFPType(ElementType);
+  const llvm::fltSemantics &ElementTypeSemantics =
+      Ctx.getFloatTypeSemantics(ElementType);
+  const llvm::fltSemantics &HigherElementTypeSemantics =
+      Ctx.getFloatTypeSemantics(HigherElementType);
+
+  if ((llvm::APFloat::semanticsMaxExponent(ElementTypeSemantics) * 2 + 1 >
+       llvm::APFloat::semanticsMaxExponent(HigherElementTypeSemantics)) ||
+      (HigherElementType == Ctx.LongDoubleTy &&
+       !Ctx.getTargetInfo().hasLongDoubleType())) {
+    // Retain the location of the first use of higher precision type.
+    if (!S.LocationOfExcessPrecisionNotSatisfied.isValid())
+      S.LocationOfExcessPrecisionNotSatisfied = OpLoc;
+    for (auto &[Type, Num] : S.ExcessPrecisionNotSatisfied) {
+      if (Type == HigherElementType) {
+        Num++;
+        return;
+      }
+    }
+    S.ExcessPrecisionNotSatisfied.push_back(std::make_pair(
+        HigherElementType, S.ExcessPrecisionNotSatisfied.size()));
+  }
+}
+
 static void DiagnoseDivisionSizeofPointerOrArray(Sema &S, Expr *LHS, Expr *RHS,
                                           SourceLocation Loc) {
   const auto *LUE = dyn_cast<UnaryExprOrTypeTraitExpr>(LHS);
@@ -10696,6 +10735,7 @@ QualType Sema::CheckMultiplyDivideOperands(ExprResult &LHS, ExprResult &RHS,
   if (compType.isNull() || !compType->isArithmeticType())
     return InvalidOperands(Loc, LHS, RHS);
   if (IsDiv) {
+    DetectPrecisionLossInComplexDivision(*this, RHS.get()->getType(), Loc);
     DiagnoseBadDivideOrRemainderValues(*this, LHS, RHS, Loc, IsDiv);
     DiagnoseDivisionSizeofPointerOrArray(*this, LHS.get(), RHS.get(), Loc);
   }
@@ -15347,39 +15387,6 @@ static void DiagnoseBinOpPrecedence(Sema &Self, BinaryOperatorKind Opc,
     DiagnoseShiftCompare(Self, OpLoc, LHSExpr, RHSExpr);
 }
 
-static void DetectPrecisionLossInComplexDivision(Sema &S, SourceLocation OpLoc,
-                                                 Expr *Operand) {
-  if (auto *CT = Operand->getType()->getAs<ComplexType>()) {
-    QualType ElementType = CT->getElementType();
-    bool IsComplexRangePromoted = S.getLangOpts().getComplexRange() ==
-                                  LangOptions::ComplexRangeKind::CX_Promoted;
-    if (ElementType->isFloatingType() && IsComplexRangePromoted) {
-      ASTContext &Ctx = S.getASTContext();
-      QualType HigherElementType = Ctx.GetHigherPrecisionFPType(ElementType);
-      const llvm::fltSemantics &ElementTypeSemantics =
-          Ctx.getFloatTypeSemantics(ElementType);
-      const llvm::fltSemantics &HigherElementTypeSemantics =
-          Ctx.getFloatTypeSemantics(HigherElementType);
-      if ((llvm::APFloat::semanticsMaxExponent(ElementTypeSemantics) * 2 + 1 >
-           llvm::APFloat::semanticsMaxExponent(HigherElementTypeSemantics)) ||
-          (HigherElementType == Ctx.LongDoubleTy &&
-           !Ctx.getTargetInfo().hasLongDoubleType())) {
-        // Retain the location of the first use of higher precision type.
-        if (!S.LocationOfExcessPrecisionNotSatisfied.isValid())
-          S.LocationOfExcessPrecisionNotSatisfied = OpLoc;
-        for (auto &[Type, Num] : S.ExcessPrecisionNotSatisfied) {
-          if (Type == HigherElementType) {
-            Num++;
-            return;
-          }
-        }
-        S.ExcessPrecisionNotSatisfied.push_back(std::make_pair(
-            HigherElementType, S.ExcessPrecisionNotSatisfied.size()));
-      }
-    }
-  }
-}
-
 ExprResult Sema::ActOnBinOp(Scope *S, SourceLocation TokLoc,
                             tok::TokenKind Kind,
                             Expr *LHSExpr, Expr *RHSExpr) {
@@ -15389,11 +15396,6 @@ ExprResult Sema::ActOnBinOp(Scope *S, SourceLocation TokLoc,
 
   // Emit warnings for tricky precedence issues, e.g. "bitfield & 0x4 == 0"
   DiagnoseBinOpPrecedence(*this, Opc, TokLoc, LHSExpr, RHSExpr);
-
-  // Emit warnings if the requested higher precision type equal to the current
-  // type precision.
-  if (Kind == tok::TokenKind::slash)
-    DetectPrecisionLossInComplexDivision(*this, TokLoc, LHSExpr);
 
   BuiltinCountedByRefKind K =
       BinaryOperator::isAssignmentOp(Opc) ? AssignmentKind : BinaryExprKind;

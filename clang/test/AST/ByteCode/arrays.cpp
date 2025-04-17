@@ -106,7 +106,8 @@ constexpr int k1 = &arr[1] - &arr[0];
 static_assert(k1 == 1, "");
 static_assert((&arr[0] - &arr[1]) == -1, "");
 
-constexpr int k2 = &arr2[1] - &arr[0]; // both-error {{must be initialized by a constant expression}}
+constexpr int k2 = &arr2[1] - &arr[0]; // both-error {{must be initialized by a constant expression}} \
+                                       // expected-note {{arithmetic involving unrelated objects}}
 
 static_assert((arr + 0) == arr, "");
 static_assert(&arr[0] == arr, "");
@@ -735,6 +736,9 @@ namespace ZeroSizeTypes {
     return &arr[3] - &arr[0]; // both-note {{subtraction of pointers to type 'int[0]' of zero size}} \
                               // both-warning {{subtraction of pointers to type 'int[0]' of zero size has undefined behavior}}
   }
+
+  constexpr int z[0]{};
+  static_assert((z - z) == 0);
 }
 
 namespace InvalidIndex {
