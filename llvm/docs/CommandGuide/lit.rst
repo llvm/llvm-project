@@ -384,8 +384,10 @@ ADDITIONAL OPTIONS
 EXIT STATUS
 -----------
 
-:program:`lit` will exit with an exit code of 1 if there are any FAIL or XPASS
-results.  Otherwise, it will exit with the status 0.  Other exit codes are used
+:program:`lit` will exit with an exit code of 1 if there are any failures (i.e.
+unresolved, timed out, failed or unexpectedly passed tests, see also
+:option:`--report-failures-only`) and :option:`--ignore-fail` has not been
+passed.  Otherwise, it will exit with the status 0.  Other exit codes are used
 for non-test related failures (for example a user error or an internal program
 error).
 
