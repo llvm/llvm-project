@@ -863,8 +863,12 @@ bool Compiler<Emitter>::VisitBinaryOperator(const BinaryOperator *BO) {
       return this->VisitPointerArithBinOp(BO);
   }
 
-  // Assignmentes require us to evalute the RHS first.
+  // Assignments require us to evalute the RHS first.
   if (BO->getOpcode() == BO_Assign) {
+    // We don't support assignments in C.
+    if (!Ctx.getLangOpts().CPlusPlus)
+      return this->emitInvalid(BO);
+
     if (!visit(RHS) || !visit(LHS))
       return false;
     if (!this->emitFlip(*LT, *RT, BO))
