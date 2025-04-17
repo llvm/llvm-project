@@ -148,8 +148,8 @@ void SemaSwift::handleError(Decl *D, const ParsedAttr &AL) {
       return true;
 
     S.Diag(AL.getLoc(), diag::err_attr_swift_error_return_type)
-        << AL << AL.getArgAsIdent(0)->getIdentifierInfo()->getName()
-        << isa<ObjCMethodDecl>(D) << /*pointer*/ 1;
+        << AL << AL.getArgAsIdent(0)->Ident->getName() << isa<ObjCMethodDecl>(D)
+        << /*pointer*/ 1;
     return false;
   };
 
@@ -159,8 +159,8 @@ void SemaSwift::handleError(Decl *D, const ParsedAttr &AL) {
       return true;
 
     S.Diag(AL.getLoc(), diag::err_attr_swift_error_return_type)
-        << AL << AL.getArgAsIdent(0)->getIdentifierInfo()->getName()
-        << isa<ObjCMethodDecl>(D) << /*integral*/ 0;
+        << AL << AL.getArgAsIdent(0)->Ident->getName() << isa<ObjCMethodDecl>(D)
+        << /*integral*/ 0;
     return false;
   };
 
@@ -169,10 +169,10 @@ void SemaSwift::handleError(Decl *D, const ParsedAttr &AL) {
 
   IdentifierLoc *Loc = AL.getArgAsIdent(0);
   SwiftErrorAttr::ConventionKind Convention;
-  if (!SwiftErrorAttr::ConvertStrToConventionKind(
-          Loc->getIdentifierInfo()->getName(), Convention)) {
+  if (!SwiftErrorAttr::ConvertStrToConventionKind(Loc->Ident->getName(),
+                                                  Convention)) {
     Diag(AL.getLoc(), diag::warn_attribute_type_not_supported)
-        << AL << Loc->getIdentifierInfo();
+        << AL << Loc->Ident;
     return;
   }
 
@@ -287,10 +287,10 @@ static void checkSwiftAsyncErrorBlock(Sema &S, Decl *D,
 void SemaSwift::handleAsyncError(Decl *D, const ParsedAttr &AL) {
   IdentifierLoc *IDLoc = AL.getArgAsIdent(0);
   SwiftAsyncErrorAttr::ConventionKind ConvKind;
-  if (!SwiftAsyncErrorAttr::ConvertStrToConventionKind(
-          IDLoc->getIdentifierInfo()->getName(), ConvKind)) {
+  if (!SwiftAsyncErrorAttr::ConvertStrToConventionKind(IDLoc->Ident->getName(),
+                                                       ConvKind)) {
     Diag(AL.getLoc(), diag::warn_attribute_type_not_supported)
-        << AL << IDLoc->getIdentifierInfo();
+        << AL << IDLoc->Ident;
     return;
   }
 
@@ -643,7 +643,7 @@ void SemaSwift::handleNewType(Decl *D, const ParsedAttr &AL) {
   }
 
   SwiftNewTypeAttr::NewtypeKind Kind;
-  IdentifierInfo *II = AL.getArgAsIdent(0)->getIdentifierInfo();
+  IdentifierInfo *II = AL.getArgAsIdent(0)->Ident;
   if (!SwiftNewTypeAttr::ConvertStrToNewtypeKind(II->getName(), Kind)) {
     Diag(AL.getLoc(), diag::warn_attribute_type_not_supported) << AL << II;
     return;
@@ -667,7 +667,7 @@ void SemaSwift::handleAsyncAttr(Decl *D, const ParsedAttr &AL) {
   }
 
   SwiftAsyncAttr::Kind Kind;
-  IdentifierInfo *II = AL.getArgAsIdent(0)->getIdentifierInfo();
+  IdentifierInfo *II = AL.getArgAsIdent(0)->Ident;
   if (!SwiftAsyncAttr::ConvertStrToKind(II->getName(), Kind)) {
     Diag(AL.getLoc(), diag::err_swift_async_no_access) << AL << II;
     return;

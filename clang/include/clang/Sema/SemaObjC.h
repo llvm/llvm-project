@@ -307,11 +307,11 @@ public:
 
   DeclGroupPtrTy
   ActOnForwardProtocolDeclaration(SourceLocation AtProtoclLoc,
-                                  ArrayRef<IdentifierLoc> IdentList,
+                                  ArrayRef<IdentifierLocPair> IdentList,
                                   const ParsedAttributesView &attrList);
 
   void FindProtocolDeclaration(bool WarnOnDeclarations, bool ForObjCContainer,
-                               ArrayRef<IdentifierLoc> ProtocolId,
+                               ArrayRef<IdentifierLocPair> ProtocolId,
                                SmallVectorImpl<Decl *> &Protocols);
 
   void DiagnoseTypeArgsAndProtocols(IdentifierInfo *ProtocolId,

@@ -305,6 +305,10 @@ static bool isResourceRecordTypeOrArrayOf(const Type *Ty) {
   return HLSLAttributedResourceType::findHandleTypeOnResource(Ty) != nullptr;
 }
 
+static bool isResourceRecordTypeOrArrayOf(VarDecl *VD) {
+  return isResourceRecordTypeOrArrayOf(VD->getType().getTypePtr());
+}
+
 // Returns true if the type is a leaf element type that is not valid to be
 // included in HLSL Buffer, such as a resource class, empty struct, zero-sized
 // array, or a builtin intangible type. Returns false it is a valid leaf element
@@ -540,6 +544,10 @@ void SemaHLSL::ActOnFinishBuffer(Decl *Dcl, SourceLocation RBrace) {
 
   // create buffer layout struct
   createHostLayoutStructForBuffer(SemaRef, BufDecl);
+
+  if (std::none_of(Dcl->attr_begin(), Dcl->attr_end(),
+                   [](Attr *A) { return isa<HLSLResourceBindingAttr>(A); }))
+    SemaRef.Diag(Dcl->getLocation(), diag::warn_hlsl_implicit_binding);
 
   SemaRef.PopDeclContext();
 }
@@ -1274,8 +1282,8 @@ bool SemaHLSL::handleResourceTypeAttr(QualType T, const ParsedAttr &AL) {
     }
 
     IdentifierLoc *Loc = AL.getArgAsIdent(0);
-    StringRef Identifier = Loc->getIdentifierInfo()->getName();
-    SourceLocation ArgLoc = Loc->getLoc();
+    StringRef Identifier = Loc->Ident->getName();
+    SourceLocation ArgLoc = Loc->Loc;
 
     // Validate resource class value
     ResourceClass RC;
@@ -1534,8 +1542,8 @@ void SemaHLSL::handleResourceBindingAttr(Decl *TheDecl, const ParsedAttr &AL) {
   }
 
   IdentifierLoc *Loc = AL.getArgAsIdent(0);
-  StringRef Str = Loc->getIdentifierInfo()->getName();
-  SourceLocation ArgLoc = Loc->getLoc();
+  StringRef Str = Loc->Ident->getName();
+  SourceLocation ArgLoc = Loc->Loc;
 
   SourceLocation SpaceArgLoc;
   bool SpecifiedSpace = false;
@@ -1549,8 +1557,8 @@ void SemaHLSL::handleResourceBindingAttr(Decl *TheDecl, const ParsedAttr &AL) {
     }
 
     IdentifierLoc *Loc = AL.getArgAsIdent(1);
-    Space = Loc->getIdentifierInfo()->getName();
-    SpaceArgLoc = Loc->getLoc();
+    Space = Loc->Ident->getName();
+    SpaceArgLoc = Loc->Loc;
   } else {
     Slot = Str;
   }
@@ -3248,10 +3256,12 @@ void SemaHLSL::collectResourceBindingsOnVarDecl(VarDecl *VD) {
 void SemaHLSL::processExplicitBindingsOnDecl(VarDecl *VD) {
   assert(VD->hasGlobalStorage() && "expected global variable");
 
+  bool HasBinding = false;
   for (Attr *A : VD->attrs()) {
     HLSLResourceBindingAttr *RBA = dyn_cast<HLSLResourceBindingAttr>(A);
     if (!RBA)
       continue;
+    HasBinding = true;
 
     RegisterType RT = RBA->getRegisterType();
     assert(RT != RegisterType::I && "invalid or obsolete register type should "
@@ -3278,6 +3288,9 @@ void SemaHLSL::processExplicitBindingsOnDecl(VarDecl *VD) {
           << static_cast<int>(RT);
     }
   }
+
+  if (!HasBinding && isResourceRecordTypeOrArrayOf(VD))
+    SemaRef.Diag(VD->getLocation(), diag::warn_hlsl_implicit_binding);
 }
 
 static bool CastInitializer(Sema &S, ASTContext &Ctx, Expr *E,
