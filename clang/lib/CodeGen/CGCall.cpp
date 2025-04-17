@@ -739,6 +739,17 @@ CodeGenTypes::arrangeBuiltinFunctionDeclaration(CanQualType resultType,
                                  RequiredArgs::All);
 }
 
+const CGFunctionInfo &
+CodeGenTypes::arrangeSYCLKernelCallerDeclaration(QualType resultType,
+                                                 const FunctionArgList &args) {
+  CanQualTypeList argTypes = getArgTypesForDeclaration(Context, args);
+
+  return arrangeLLVMFunctionInfo(GetReturnType(resultType), FnInfoOpts::None,
+                                 argTypes,
+                                 FunctionType::ExtInfo(CC_OpenCLKernel),
+                                 /*paramInfos=*/{}, RequiredArgs::All);
+}
+
 /// Arrange a call to a C++ method, passing the given arguments.
 ///
 /// numPrefixArgs is the number of ABI-specific prefix arguments we have. It
