@@ -212,7 +212,7 @@ public:
   } LoopWithoutSeqInfo;
 
   // Redeclaration of the version in OpenACCClause.h.
-  using DeviceTypeArgument = IdentifierLoc;
+  using DeviceTypeArgument = std::pair<IdentifierInfo *, SourceLocation>;
 
   /// A type to represent all the data for an OpenACC Clause that has been
   /// parsed, but not yet created/semantically analyzed. This is effectively a
