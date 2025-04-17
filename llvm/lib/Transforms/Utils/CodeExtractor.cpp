@@ -1305,8 +1305,7 @@ static void fixupDebugInfoPostExtraction(
                                 isa<DbgDeclareInst>(DVI));
     }
     for (auto *DVR : DPUsers)
-      UpdateOrInsertDebugRecord(DVR, Input, NewVal, Expr,
-                                DVR->isDbgDeclare());
+      UpdateOrInsertDebugRecord(DVR, Input, NewVal, Expr, DVR->isDbgDeclare());
   }
 
   auto IsInvalidLocation = [&NewFunc](Value *Location) {
