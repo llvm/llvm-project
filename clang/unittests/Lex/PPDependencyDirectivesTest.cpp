@@ -124,9 +124,7 @@ TEST_F(PPDependencyDirectivesTest, MacroGuard) {
                   /*OwnsHeaderSearch =*/false);
   PP.Initialize(*Target);
 
-  PP.setDependencyDirectivesGetter([&](FileManager &FM, FileEntryRef File) {
-    return GetDependencyDirectives(FM, File);
-  });
+  PP.setDependencyDirectivesGetter(GetDependencyDirectives);
 
   SmallVector<StringRef> IncludedFiles;
   PP.addPPCallbacks(std::make_unique<IncludeCollector>(PP, IncludedFiles));
