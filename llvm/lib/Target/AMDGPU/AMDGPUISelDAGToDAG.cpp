@@ -3663,7 +3663,7 @@ bool AMDGPUDAGToDAGISel::SelectVOP3PMadMixModsImpl(SDValue In, SDValue &Src,
 
     // Prevent unnecessary subreg COPY to VGPR_16
     if (Src.getOpcode() == ISD::TRUNCATE &&
-        Src.getOperand(0).getValueType().getSizeInBits() == 32) {
+        Src.getOperand(0).getValueType() == MVT::i32) {
       Src = Src.getOperand(0);
     }
     return true;

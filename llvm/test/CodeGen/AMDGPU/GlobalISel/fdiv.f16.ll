@@ -9,13 +9,11 @@
 ; RUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx900 -denormal-fp-math=ieee -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX89,GFX9,GFX9-IEEE %s
 ; RUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx900 -denormal-fp-math=preserve-sign -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX89,GFX9,GFX9-FLUSH %s
 
-; RUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx1010 -denormal-fp-math=ieee -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX10,GFX10-IEEE %s
-; RUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx1010 -denormal-fp-math=preserve-sign -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX10,GFX10-FLUSH %s
+; RUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx1010 -denormal-fp-math=ieee -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX10PLUS,GFX10,GFX10-IEEE %s
+; RUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx1010 -denormal-fp-math=preserve-sign -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX10PLUS,GFX10,GFX10-FLUSH %s
 
-; RUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 -mattr=+real-true16 -denormal-fp-math=ieee -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX11-IEEE,GFX11-IEEE-TRUE16 %s
-; RUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 -mattr=-real-true16 -denormal-fp-math=ieee -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX11-IEEE,GFX11-IEEE-FAKE16 %s
-; RUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 -mattr=+real-true16 -denormal-fp-math=preserve-sign -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX11-FLUSH,GFX11-FLUSH-TRUE16 %s
-; RUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 -mattr=-real-true16 -denormal-fp-math=preserve-sign -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX11-FLUSH,GFX11-FLUSH-FAKE16 %s
+; RUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 -denormal-fp-math=ieee -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX10PLUS,GFX11,GFX11-IEEE %s
+; RUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 -denormal-fp-math=preserve-sign -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX10PLUS,GFX11,GFX11-FLUSH %s
 
 define half @v_fdiv_f16(half %a, half %b) {
 ; GFX6-IEEE-LABEL: v_fdiv_f16:
@@ -170,77 +168,6 @@ define half @v_fdiv_f16(half %a, half %b) {
 ; GFX10-FLUSH-NEXT:    v_div_fixup_f16 v0, v2, v1, v0
 ; GFX10-FLUSH-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-IEEE-TRUE16-LABEL: v_fdiv_f16:
-; GFX11-IEEE-TRUE16:       ; %bb.0:
-; GFX11-IEEE-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-IEEE-TRUE16-NEXT:    v_cvt_f32_f16_e32 v2, v1.l
-; GFX11-IEEE-TRUE16-NEXT:    v_cvt_f32_f16_e32 v3, v0.l
-; GFX11-IEEE-TRUE16-NEXT:    v_rcp_f32_e32 v2, v2
-; GFX11-IEEE-TRUE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-IEEE-TRUE16-NEXT:    v_mul_f32_e32 v3, v3, v2
-; GFX11-IEEE-TRUE16-NEXT:    v_fma_mix_f32 v4, -v1, v3, v0 op_sel_hi:[1,0,1]
-; GFX11-IEEE-TRUE16-NEXT:    v_fmac_f32_e32 v3, v4, v2
-; GFX11-IEEE-TRUE16-NEXT:    v_fma_mix_f32 v4, -v1, v3, v0 op_sel_hi:[1,0,1]
-; GFX11-IEEE-TRUE16-NEXT:    v_mul_f32_e32 v2, v4, v2
-; GFX11-IEEE-TRUE16-NEXT:    v_and_b32_e32 v2, 0xff800000, v2
-; GFX11-IEEE-TRUE16-NEXT:    v_add_f32_e32 v2, v2, v3
-; GFX11-IEEE-TRUE16-NEXT:    v_cvt_f16_f32_e32 v0.h, v2
-; GFX11-IEEE-TRUE16-NEXT:    v_div_fixup_f16 v0.l, v0.h, v1.l, v0.l
-; GFX11-IEEE-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-IEEE-FAKE16-LABEL: v_fdiv_f16:
-; GFX11-IEEE-FAKE16:       ; %bb.0:
-; GFX11-IEEE-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-IEEE-FAKE16-NEXT:    v_cvt_f32_f16_e32 v2, v1
-; GFX11-IEEE-FAKE16-NEXT:    v_cvt_f32_f16_e32 v3, v0
-; GFX11-IEEE-FAKE16-NEXT:    v_rcp_f32_e32 v2, v2
-; GFX11-IEEE-FAKE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-IEEE-FAKE16-NEXT:    v_mul_f32_e32 v3, v3, v2
-; GFX11-IEEE-FAKE16-NEXT:    v_fma_mix_f32 v4, -v1, v3, v0 op_sel_hi:[1,0,1]
-; GFX11-IEEE-FAKE16-NEXT:    v_fmac_f32_e32 v3, v4, v2
-; GFX11-IEEE-FAKE16-NEXT:    v_fma_mix_f32 v4, -v1, v3, v0 op_sel_hi:[1,0,1]
-; GFX11-IEEE-FAKE16-NEXT:    v_mul_f32_e32 v2, v4, v2
-; GFX11-IEEE-FAKE16-NEXT:    v_and_b32_e32 v2, 0xff800000, v2
-; GFX11-IEEE-FAKE16-NEXT:    v_add_f32_e32 v2, v2, v3
-; GFX11-IEEE-FAKE16-NEXT:    v_cvt_f16_f32_e32 v2, v2
-; GFX11-IEEE-FAKE16-NEXT:    v_div_fixup_f16 v0, v2, v1, v0
-; GFX11-IEEE-FAKE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-FLUSH-TRUE16-LABEL: v_fdiv_f16:
-; GFX11-FLUSH-TRUE16:       ; %bb.0:
-; GFX11-FLUSH-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FLUSH-TRUE16-NEXT:    v_cvt_f32_f16_e32 v2, v1.l
-; GFX11-FLUSH-TRUE16-NEXT:    v_cvt_f32_f16_e32 v3, v0.l
-; GFX11-FLUSH-TRUE16-NEXT:    v_rcp_f32_e32 v2, v2
-; GFX11-FLUSH-TRUE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-FLUSH-TRUE16-NEXT:    v_mul_f32_e32 v3, v3, v2
-; GFX11-FLUSH-TRUE16-NEXT:    v_fma_mix_f32 v4, -v1, v3, v0 op_sel_hi:[1,0,1]
-; GFX11-FLUSH-TRUE16-NEXT:    v_fmac_f32_e32 v3, v4, v2
-; GFX11-FLUSH-TRUE16-NEXT:    v_fma_mix_f32 v4, -v1, v3, v0 op_sel_hi:[1,0,1]
-; GFX11-FLUSH-TRUE16-NEXT:    v_mul_f32_e32 v2, v4, v2
-; GFX11-FLUSH-TRUE16-NEXT:    v_and_b32_e32 v2, 0xff800000, v2
-; GFX11-FLUSH-TRUE16-NEXT:    v_add_f32_e32 v2, v2, v3
-; GFX11-FLUSH-TRUE16-NEXT:    v_cvt_f16_f32_e32 v0.h, v2
-; GFX11-FLUSH-TRUE16-NEXT:    v_div_fixup_f16 v0.l, v0.h, v1.l, v0.l
-; GFX11-FLUSH-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-FLUSH-FAKE16-LABEL: v_fdiv_f16:
-; GFX11-FLUSH-FAKE16:       ; %bb.0:
-; GFX11-FLUSH-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FLUSH-FAKE16-NEXT:    v_cvt_f32_f16_e32 v2, v1
-; GFX11-FLUSH-FAKE16-NEXT:    v_cvt_f32_f16_e32 v3, v0
-; GFX11-FLUSH-FAKE16-NEXT:    v_rcp_f32_e32 v2, v2
-; GFX11-FLUSH-FAKE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-FLUSH-FAKE16-NEXT:    v_mul_f32_e32 v3, v3, v2
-; GFX11-FLUSH-FAKE16-NEXT:    v_fma_mix_f32 v4, -v1, v3, v0 op_sel_hi:[1,0,1]
-; GFX11-FLUSH-FAKE16-NEXT:    v_fmac_f32_e32 v3, v4, v2
-; GFX11-FLUSH-FAKE16-NEXT:    v_fma_mix_f32 v4, -v1, v3, v0 op_sel_hi:[1,0,1]
-; GFX11-FLUSH-FAKE16-NEXT:    v_mul_f32_e32 v2, v4, v2
-; GFX11-FLUSH-FAKE16-NEXT:    v_and_b32_e32 v2, 0xff800000, v2
-; GFX11-FLUSH-FAKE16-NEXT:    v_add_f32_e32 v2, v2, v3
-; GFX11-FLUSH-FAKE16-NEXT:    v_cvt_f16_f32_e32 v2, v2
-; GFX11-FLUSH-FAKE16-NEXT:    v_div_fixup_f16 v0, v2, v1, v0
-; GFX11-FLUSH-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ; GFX11-LABEL: v_fdiv_f16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -287,37 +214,6 @@ define half @v_fdiv_f16_afn(half %a, half %b) {
 ; GFX10-NEXT:    v_mul_f16_e32 v0, v0, v1
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-IEEE-TRUE16-LABEL: v_fdiv_f16_afn:
-; GFX11-IEEE-TRUE16:       ; %bb.0:
-; GFX11-IEEE-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-IEEE-TRUE16-NEXT:    v_rcp_f16_e32 v0.h, v1.l
-; GFX11-IEEE-TRUE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-IEEE-TRUE16-NEXT:    v_mul_f16_e32 v0.l, v0.l, v0.h
-; GFX11-IEEE-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-IEEE-FAKE16-LABEL: v_fdiv_f16_afn:
-; GFX11-IEEE-FAKE16:       ; %bb.0:
-; GFX11-IEEE-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-IEEE-FAKE16-NEXT:    v_rcp_f16_e32 v1, v1
-; GFX11-IEEE-FAKE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-IEEE-FAKE16-NEXT:    v_mul_f16_e32 v0, v0, v1
-; GFX11-IEEE-FAKE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-FLUSH-TRUE16-LABEL: v_fdiv_f16_afn:
-; GFX11-FLUSH-TRUE16:       ; %bb.0:
-; GFX11-FLUSH-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FLUSH-TRUE16-NEXT:    v_rcp_f16_e32 v0.h, v1.l
-; GFX11-FLUSH-TRUE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-FLUSH-TRUE16-NEXT:    v_mul_f16_e32 v0.l, v0.l, v0.h
-; GFX11-FLUSH-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-FLUSH-FAKE16-LABEL: v_fdiv_f16_afn:
-; GFX11-FLUSH-FAKE16:       ; %bb.0:
-; GFX11-FLUSH-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FLUSH-FAKE16-NEXT:    v_rcp_f16_e32 v1, v1
-; GFX11-FLUSH-FAKE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-FLUSH-FAKE16-NEXT:    v_mul_f16_e32 v0, v0, v1
-; GFX11-FLUSH-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ; GFX11-LABEL: v_fdiv_f16_afn:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -482,77 +378,6 @@ define half @v_fdiv_f16_ulp25(half %a, half %b) {
 ; GFX10-FLUSH-NEXT:    v_div_fixup_f16 v0, v2, v1, v0
 ; GFX10-FLUSH-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-IEEE-TRUE16-LABEL: v_fdiv_f16_ulp25:
-; GFX11-IEEE-TRUE16:       ; %bb.0:
-; GFX11-IEEE-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-IEEE-TRUE16-NEXT:    v_cvt_f32_f16_e32 v2, v1.l
-; GFX11-IEEE-TRUE16-NEXT:    v_cvt_f32_f16_e32 v3, v0.l
-; GFX11-IEEE-TRUE16-NEXT:    v_rcp_f32_e32 v2, v2
-; GFX11-IEEE-TRUE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-IEEE-TRUE16-NEXT:    v_mul_f32_e32 v3, v3, v2
-; GFX11-IEEE-TRUE16-NEXT:    v_fma_mix_f32 v4, -v1, v3, v0 op_sel_hi:[1,0,1]
-; GFX11-IEEE-TRUE16-NEXT:    v_fmac_f32_e32 v3, v4, v2
-; GFX11-IEEE-TRUE16-NEXT:    v_fma_mix_f32 v4, -v1, v3, v0 op_sel_hi:[1,0,1]
-; GFX11-IEEE-TRUE16-NEXT:    v_mul_f32_e32 v2, v4, v2
-; GFX11-IEEE-TRUE16-NEXT:    v_and_b32_e32 v2, 0xff800000, v2
-; GFX11-IEEE-TRUE16-NEXT:    v_add_f32_e32 v2, v2, v3
-; GFX11-IEEE-TRUE16-NEXT:    v_cvt_f16_f32_e32 v0.h, v2
-; GFX11-IEEE-TRUE16-NEXT:    v_div_fixup_f16 v0.l, v0.h, v1.l, v0.l
-; GFX11-IEEE-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-IEEE-FAKE16-LABEL: v_fdiv_f16_ulp25:
-; GFX11-IEEE-FAKE16:       ; %bb.0:
-; GFX11-IEEE-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-IEEE-FAKE16-NEXT:    v_cvt_f32_f16_e32 v2, v1
-; GFX11-IEEE-FAKE16-NEXT:    v_cvt_f32_f16_e32 v3, v0
-; GFX11-IEEE-FAKE16-NEXT:    v_rcp_f32_e32 v2, v2
-; GFX11-IEEE-FAKE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-IEEE-FAKE16-NEXT:    v_mul_f32_e32 v3, v3, v2
-; GFX11-IEEE-FAKE16-NEXT:    v_fma_mix_f32 v4, -v1, v3, v0 op_sel_hi:[1,0,1]
-; GFX11-IEEE-FAKE16-NEXT:    v_fmac_f32_e32 v3, v4, v2
-; GFX11-IEEE-FAKE16-NEXT:    v_fma_mix_f32 v4, -v1, v3, v0 op_sel_hi:[1,0,1]
-; GFX11-IEEE-FAKE16-NEXT:    v_mul_f32_e32 v2, v4, v2
-; GFX11-IEEE-FAKE16-NEXT:    v_and_b32_e32 v2, 0xff800000, v2
-; GFX11-IEEE-FAKE16-NEXT:    v_add_f32_e32 v2, v2, v3
-; GFX11-IEEE-FAKE16-NEXT:    v_cvt_f16_f32_e32 v2, v2
-; GFX11-IEEE-FAKE16-NEXT:    v_div_fixup_f16 v0, v2, v1, v0
-; GFX11-IEEE-FAKE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-FLUSH-TRUE16-LABEL: v_fdiv_f16_ulp25:
-; GFX11-FLUSH-TRUE16:       ; %bb.0:
-; GFX11-FLUSH-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FLUSH-TRUE16-NEXT:    v_cvt_f32_f16_e32 v2, v1.l
-; GFX11-FLUSH-TRUE16-NEXT:    v_cvt_f32_f16_e32 v3, v0.l
-; GFX11-FLUSH-TRUE16-NEXT:    v_rcp_f32_e32 v2, v2
-; GFX11-FLUSH-TRUE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-FLUSH-TRUE16-NEXT:    v_mul_f32_e32 v3, v3, v2
-; GFX11-FLUSH-TRUE16-NEXT:    v_fma_mix_f32 v4, -v1, v3, v0 op_sel_hi:[1,0,1]
-; GFX11-FLUSH-TRUE16-NEXT:    v_fmac_f32_e32 v3, v4, v2
-; GFX11-FLUSH-TRUE16-NEXT:    v_fma_mix_f32 v4, -v1, v3, v0 op_sel_hi:[1,0,1]
-; GFX11-FLUSH-TRUE16-NEXT:    v_mul_f32_e32 v2, v4, v2
-; GFX11-FLUSH-TRUE16-NEXT:    v_and_b32_e32 v2, 0xff800000, v2
-; GFX11-FLUSH-TRUE16-NEXT:    v_add_f32_e32 v2, v2, v3
-; GFX11-FLUSH-TRUE16-NEXT:    v_cvt_f16_f32_e32 v0.h, v2
-; GFX11-FLUSH-TRUE16-NEXT:    v_div_fixup_f16 v0.l, v0.h, v1.l, v0.l
-; GFX11-FLUSH-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-FLUSH-FAKE16-LABEL: v_fdiv_f16_ulp25:
-; GFX11-FLUSH-FAKE16:       ; %bb.0:
-; GFX11-FLUSH-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FLUSH-FAKE16-NEXT:    v_cvt_f32_f16_e32 v2, v1
-; GFX11-FLUSH-FAKE16-NEXT:    v_cvt_f32_f16_e32 v3, v0
-; GFX11-FLUSH-FAKE16-NEXT:    v_rcp_f32_e32 v2, v2
-; GFX11-FLUSH-FAKE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-FLUSH-FAKE16-NEXT:    v_mul_f32_e32 v3, v3, v2
-; GFX11-FLUSH-FAKE16-NEXT:    v_fma_mix_f32 v4, -v1, v3, v0 op_sel_hi:[1,0,1]
-; GFX11-FLUSH-FAKE16-NEXT:    v_fmac_f32_e32 v3, v4, v2
-; GFX11-FLUSH-FAKE16-NEXT:    v_fma_mix_f32 v4, -v1, v3, v0 op_sel_hi:[1,0,1]
-; GFX11-FLUSH-FAKE16-NEXT:    v_mul_f32_e32 v2, v4, v2
-; GFX11-FLUSH-FAKE16-NEXT:    v_and_b32_e32 v2, 0xff800000, v2
-; GFX11-FLUSH-FAKE16-NEXT:    v_add_f32_e32 v2, v2, v3
-; GFX11-FLUSH-FAKE16-NEXT:    v_cvt_f16_f32_e32 v2, v2
-; GFX11-FLUSH-FAKE16-NEXT:    v_div_fixup_f16 v0, v2, v1, v0
-; GFX11-FLUSH-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ; GFX11-LABEL: v_fdiv_f16_ulp25:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -622,35 +447,11 @@ define half @v_neg_rcp_f16(half %x) {
 ; GFX89-NEXT:    v_rcp_f16_e64 v0, -v0
 ; GFX89-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX10-LABEL: v_neg_rcp_f16:
-; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    v_rcp_f16_e64 v0, -v0
-; GFX10-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-IEEE-TRUE16-LABEL: v_neg_rcp_f16:
-; GFX11-IEEE-TRUE16:       ; %bb.0:
-; GFX11-IEEE-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-IEEE-TRUE16-NEXT:    v_rcp_f16_e64 v0.l, -v0.l
-; GFX11-IEEE-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-IEEE-FAKE16-LABEL: v_neg_rcp_f16:
-; GFX11-IEEE-FAKE16:       ; %bb.0:
-; GFX11-IEEE-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-IEEE-FAKE16-NEXT:    v_rcp_f16_e64 v0, -v0
-; GFX11-IEEE-FAKE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-FLUSH-TRUE16-LABEL: v_neg_rcp_f16:
-; GFX11-FLUSH-TRUE16:       ; %bb.0:
-; GFX11-FLUSH-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FLUSH-TRUE16-NEXT:    v_rcp_f16_e64 v0.l, -v0.l
-; GFX11-FLUSH-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-FLUSH-FAKE16-LABEL: v_neg_rcp_f16:
-; GFX11-FLUSH-FAKE16:       ; %bb.0:
-; GFX11-FLUSH-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FLUSH-FAKE16-NEXT:    v_rcp_f16_e64 v0, -v0
-; GFX11-FLUSH-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+; GFX10PLUS-LABEL: v_neg_rcp_f16:
+; GFX10PLUS:       ; %bb.0:
+; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10PLUS-NEXT:    v_rcp_f16_e64 v0, -v0
+; GFX10PLUS-NEXT:    s_setpc_b64 s[30:31]
   %fdiv = fdiv half -1.0, %x
   ret half %fdiv
 }
@@ -703,35 +504,11 @@ define half @v_rcp_f16(half %x) {
 ; GFX89-NEXT:    v_rcp_f16_e32 v0, v0
 ; GFX89-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX10-LABEL: v_rcp_f16:
-; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    v_rcp_f16_e32 v0, v0
-; GFX10-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-IEEE-TRUE16-LABEL: v_rcp_f16:
-; GFX11-IEEE-TRUE16:       ; %bb.0:
-; GFX11-IEEE-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-IEEE-TRUE16-NEXT:    v_rcp_f16_e32 v0.l, v0.l
-; GFX11-IEEE-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-IEEE-FAKE16-LABEL: v_rcp_f16:
-; GFX11-IEEE-FAKE16:       ; %bb.0:
-; GFX11-IEEE-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-IEEE-FAKE16-NEXT:    v_rcp_f16_e32 v0, v0
-; GFX11-IEEE-FAKE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-FLUSH-TRUE16-LABEL: v_rcp_f16:
-; GFX11-FLUSH-TRUE16:       ; %bb.0:
-; GFX11-FLUSH-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FLUSH-TRUE16-NEXT:    v_rcp_f16_e32 v0.l, v0.l
-; GFX11-FLUSH-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-FLUSH-FAKE16-LABEL: v_rcp_f16:
-; GFX11-FLUSH-FAKE16:       ; %bb.0:
-; GFX11-FLUSH-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FLUSH-FAKE16-NEXT:    v_rcp_f16_e32 v0, v0
-; GFX11-FLUSH-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+; GFX10PLUS-LABEL: v_rcp_f16:
+; GFX10PLUS:       ; %bb.0:
+; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10PLUS-NEXT:    v_rcp_f16_e32 v0, v0
+; GFX10PLUS-NEXT:    s_setpc_b64 s[30:31]
   %fdiv = fdiv half 1.0, %x
   ret half %fdiv
 }
@@ -784,35 +561,11 @@ define half @v_rcp_f16_arcp(half %x) {
 ; GFX89-NEXT:    v_rcp_f16_e32 v0, v0
 ; GFX89-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX10-LABEL: v_rcp_f16_arcp:
-; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    v_rcp_f16_e32 v0, v0
-; GFX10-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-IEEE-TRUE16-LABEL: v_rcp_f16_arcp:
-; GFX11-IEEE-TRUE16:       ; %bb.0:
-; GFX11-IEEE-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-IEEE-TRUE16-NEXT:    v_rcp_f16_e32 v0.l, v0.l
-; GFX11-IEEE-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-IEEE-FAKE16-LABEL: v_rcp_f16_arcp:
-; GFX11-IEEE-FAKE16:       ; %bb.0:
-; GFX11-IEEE-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-IEEE-FAKE16-NEXT:    v_rcp_f16_e32 v0, v0
-; GFX11-IEEE-FAKE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-FLUSH-TRUE16-LABEL: v_rcp_f16_arcp:
-; GFX11-FLUSH-TRUE16:       ; %bb.0:
-; GFX11-FLUSH-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FLUSH-TRUE16-NEXT:    v_rcp_f16_e32 v0.l, v0.l
-; GFX11-FLUSH-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-FLUSH-FAKE16-LABEL: v_rcp_f16_arcp:
-; GFX11-FLUSH-FAKE16:       ; %bb.0:
-; GFX11-FLUSH-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FLUSH-FAKE16-NEXT:    v_rcp_f16_e32 v0, v0
-; GFX11-FLUSH-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+; GFX10PLUS-LABEL: v_rcp_f16_arcp:
+; GFX10PLUS:       ; %bb.0:
+; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10PLUS-NEXT:    v_rcp_f16_e32 v0, v0
+; GFX10PLUS-NEXT:    s_setpc_b64 s[30:31]
   %fdiv = fdiv arcp half 1.0, %x
   ret half %fdiv
 }
@@ -834,35 +587,11 @@ define half @v_rcp_f16_arcp_afn(half %x) {
 ; GFX89-NEXT:    v_rcp_f16_e32 v0, v0
 ; GFX89-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX10-LABEL: v_rcp_f16_arcp_afn:
-; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    v_rcp_f16_e32 v0, v0
-; GFX10-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-IEEE-TRUE16-LABEL: v_rcp_f16_arcp_afn:
-; GFX11-IEEE-TRUE16:       ; %bb.0:
-; GFX11-IEEE-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-IEEE-TRUE16-NEXT:    v_rcp_f16_e32 v0.l, v0.l
-; GFX11-IEEE-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-IEEE-FAKE16-LABEL: v_rcp_f16_arcp_afn:
-; GFX11-IEEE-FAKE16:       ; %bb.0:
-; GFX11-IEEE-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-IEEE-FAKE16-NEXT:    v_rcp_f16_e32 v0, v0
-; GFX11-IEEE-FAKE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-FLUSH-TRUE16-LABEL: v_rcp_f16_arcp_afn:
-; GFX11-FLUSH-TRUE16:       ; %bb.0:
-; GFX11-FLUSH-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FLUSH-TRUE16-NEXT:    v_rcp_f16_e32 v0.l, v0.l
-; GFX11-FLUSH-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-FLUSH-FAKE16-LABEL: v_rcp_f16_arcp_afn:
-; GFX11-FLUSH-FAKE16:       ; %bb.0:
-; GFX11-FLUSH-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FLUSH-FAKE16-NEXT:    v_rcp_f16_e32 v0, v0
-; GFX11-FLUSH-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+; GFX10PLUS-LABEL: v_rcp_f16_arcp_afn:
+; GFX10PLUS:       ; %bb.0:
+; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10PLUS-NEXT:    v_rcp_f16_e32 v0, v0
+; GFX10PLUS-NEXT:    s_setpc_b64 s[30:31]
   %fdiv = fdiv arcp afn half 1.0, %x
   ret half %fdiv
 }
@@ -915,35 +644,11 @@ define half @v_rcp_f16_ulp25(half %x) {
 ; GFX89-NEXT:    v_rcp_f16_e32 v0, v0
 ; GFX89-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX10-LABEL: v_rcp_f16_ulp25:
-; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    v_rcp_f16_e32 v0, v0
-; GFX10-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-IEEE-TRUE16-LABEL: v_rcp_f16_ulp25:
-; GFX11-IEEE-TRUE16:       ; %bb.0:
-; GFX11-IEEE-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-IEEE-TRUE16-NEXT:    v_rcp_f16_e32 v0.l, v0.l
-; GFX11-IEEE-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-IEEE-FAKE16-LABEL: v_rcp_f16_ulp25:
-; GFX11-IEEE-FAKE16:       ; %bb.0:
-; GFX11-IEEE-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-IEEE-FAKE16-NEXT:    v_rcp_f16_e32 v0, v0
-; GFX11-IEEE-FAKE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-FLUSH-TRUE16-LABEL: v_rcp_f16_ulp25:
-; GFX11-FLUSH-TRUE16:       ; %bb.0:
-; GFX11-FLUSH-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FLUSH-TRUE16-NEXT:    v_rcp_f16_e32 v0.l, v0.l
-; GFX11-FLUSH-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-FLUSH-FAKE16-LABEL: v_rcp_f16_ulp25:
-; GFX11-FLUSH-FAKE16:       ; %bb.0:
-; GFX11-FLUSH-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FLUSH-FAKE16-NEXT:    v_rcp_f16_e32 v0, v0
-; GFX11-FLUSH-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+; GFX10PLUS-LABEL: v_rcp_f16_ulp25:
+; GFX10PLUS:       ; %bb.0:
+; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10PLUS-NEXT:    v_rcp_f16_e32 v0, v0
+; GFX10PLUS-NEXT:    s_setpc_b64 s[30:31]
   %fdiv = fdiv half 1.0, %x
   ret half %fdiv
 }
@@ -973,37 +678,6 @@ define half @v_fdiv_f16_afn_ulp25(half %a, half %b) {
 ; GFX10-NEXT:    v_mul_f16_e32 v0, v0, v1
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-IEEE-TRUE16-LABEL: v_fdiv_f16_afn_ulp25:
-; GFX11-IEEE-TRUE16:       ; %bb.0:
-; GFX11-IEEE-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-IEEE-TRUE16-NEXT:    v_rcp_f16_e32 v0.h, v1.l
-; GFX11-IEEE-TRUE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-IEEE-TRUE16-NEXT:    v_mul_f16_e32 v0.l, v0.l, v0.h
-; GFX11-IEEE-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-IEEE-FAKE16-LABEL: v_fdiv_f16_afn_ulp25:
-; GFX11-IEEE-FAKE16:       ; %bb.0:
-; GFX11-IEEE-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-IEEE-FAKE16-NEXT:    v_rcp_f16_e32 v1, v1
-; GFX11-IEEE-FAKE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-IEEE-FAKE16-NEXT:    v_mul_f16_e32 v0, v0, v1
-; GFX11-IEEE-FAKE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-FLUSH-TRUE16-LABEL: v_fdiv_f16_afn_ulp25:
-; GFX11-FLUSH-TRUE16:       ; %bb.0:
-; GFX11-FLUSH-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FLUSH-TRUE16-NEXT:    v_rcp_f16_e32 v0.h, v1.l
-; GFX11-FLUSH-TRUE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-FLUSH-TRUE16-NEXT:    v_mul_f16_e32 v0.l, v0.l, v0.h
-; GFX11-FLUSH-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-FLUSH-FAKE16-LABEL: v_fdiv_f16_afn_ulp25:
-; GFX11-FLUSH-FAKE16:       ; %bb.0:
-; GFX11-FLUSH-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FLUSH-FAKE16-NEXT:    v_rcp_f16_e32 v1, v1
-; GFX11-FLUSH-FAKE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-FLUSH-FAKE16-NEXT:    v_mul_f16_e32 v0, v0, v1
-; GFX11-FLUSH-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ; GFX11-LABEL: v_fdiv_f16_afn_ulp25:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1071,37 +745,6 @@ define half @v_fdiv_f16_arcp_ulp25(half %a, half %b) {
 ; GFX10-NEXT:    v_mul_f16_e32 v0, v0, v1
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-IEEE-TRUE16-LABEL: v_fdiv_f16_arcp_ulp25:
-; GFX11-IEEE-TRUE16:       ; %bb.0:
-; GFX11-IEEE-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-IEEE-TRUE16-NEXT:    v_rcp_f16_e32 v0.h, v1.l
-; GFX11-IEEE-TRUE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-IEEE-TRUE16-NEXT:    v_mul_f16_e32 v0.l, v0.l, v0.h
-; GFX11-IEEE-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-IEEE-FAKE16-LABEL: v_fdiv_f16_arcp_ulp25:
-; GFX11-IEEE-FAKE16:       ; %bb.0:
-; GFX11-IEEE-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-IEEE-FAKE16-NEXT:    v_rcp_f16_e32 v1, v1
-; GFX11-IEEE-FAKE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-IEEE-FAKE16-NEXT:    v_mul_f16_e32 v0, v0, v1
-; GFX11-IEEE-FAKE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-FLUSH-TRUE16-LABEL: v_fdiv_f16_arcp_ulp25:
-; GFX11-FLUSH-TRUE16:       ; %bb.0:
-; GFX11-FLUSH-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FLUSH-TRUE16-NEXT:    v_rcp_f16_e32 v0.h, v1.l
-; GFX11-FLUSH-TRUE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-FLUSH-TRUE16-NEXT:    v_mul_f16_e32 v0.l, v0.l, v0.h
-; GFX11-FLUSH-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-FLUSH-FAKE16-LABEL: v_fdiv_f16_arcp_ulp25:
-; GFX11-FLUSH-FAKE16:       ; %bb.0:
-; GFX11-FLUSH-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FLUSH-FAKE16-NEXT:    v_rcp_f16_e32 v1, v1
-; GFX11-FLUSH-FAKE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-FLUSH-FAKE16-NEXT:    v_mul_f16_e32 v0, v0, v1
-; GFX11-FLUSH-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ; GFX11-LABEL: v_fdiv_f16_arcp_ulp25:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1397,129 +1040,6 @@ define <2 x half> @v_fdiv_v2f16(<2 x half> %a, <2 x half> %b) {
 ; GFX10-FLUSH-NEXT:    v_pack_b32_f16 v0, v0, v1
 ; GFX10-FLUSH-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-IEEE-TRUE16-LABEL: v_fdiv_v2f16:
-; GFX11-IEEE-TRUE16:       ; %bb.0:
-; GFX11-IEEE-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-IEEE-TRUE16-NEXT:    v_cvt_f32_f16_e32 v2, v1.l
-; GFX11-IEEE-TRUE16-NEXT:    v_cvt_f32_f16_e32 v3, v1.h
-; GFX11-IEEE-TRUE16-NEXT:    v_cvt_f32_f16_e32 v4, v0.l
-; GFX11-IEEE-TRUE16-NEXT:    v_cvt_f32_f16_e32 v6, v0.h
-; GFX11-IEEE-TRUE16-NEXT:    v_mov_b16_e32 v5.l, v1.l
-; GFX11-IEEE-TRUE16-NEXT:    v_rcp_f32_e32 v2, v2
-; GFX11-IEEE-TRUE16-NEXT:    v_rcp_f32_e32 v3, v3
-; GFX11-IEEE-TRUE16-NEXT:    v_mov_b16_e32 v7.l, v0.l
-; GFX11-IEEE-TRUE16-NEXT:    v_mov_b16_e32 v8.l, v1.h
-; GFX11-IEEE-TRUE16-NEXT:    v_mov_b16_e32 v9.l, v0.h
-; GFX11-IEEE-TRUE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-IEEE-TRUE16-NEXT:    v_mul_f32_e32 v4, v4, v2
-; GFX11-IEEE-TRUE16-NEXT:    v_mul_f32_e32 v6, v6, v3
-; GFX11-IEEE-TRUE16-NEXT:    v_fma_mix_f32 v10, -v5, v4, v7 op_sel_hi:[1,0,1]
-; GFX11-IEEE-TRUE16-NEXT:    v_fma_mix_f32 v11, -v8, v6, v9 op_sel_hi:[1,0,1]
-; GFX11-IEEE-TRUE16-NEXT:    v_fmac_f32_e32 v4, v10, v2
-; GFX11-IEEE-TRUE16-NEXT:    v_fmac_f32_e32 v6, v11, v3
-; GFX11-IEEE-TRUE16-NEXT:    v_fma_mix_f32 v5, -v5, v4, v7 op_sel_hi:[1,0,1]
-; GFX11-IEEE-TRUE16-NEXT:    v_fma_mix_f32 v7, -v8, v6, v9 op_sel_hi:[1,0,1]
-; GFX11-IEEE-TRUE16-NEXT:    v_dual_mul_f32 v2, v5, v2 :: v_dual_mul_f32 v3, v7, v3
-; GFX11-IEEE-TRUE16-NEXT:    v_and_b32_e32 v2, 0xff800000, v2
-; GFX11-IEEE-TRUE16-NEXT:    v_dual_add_f32 v2, v2, v4 :: v_dual_and_b32 v3, 0xff800000, v3
-; GFX11-IEEE-TRUE16-NEXT:    v_add_f32_e32 v3, v3, v6
-; GFX11-IEEE-TRUE16-NEXT:    v_cvt_f16_f32_e32 v2.l, v2
-; GFX11-IEEE-TRUE16-NEXT:    v_cvt_f16_f32_e32 v2.h, v3
-; GFX11-IEEE-TRUE16-NEXT:    v_div_fixup_f16 v0.l, v2.l, v1.l, v0.l
-; GFX11-IEEE-TRUE16-NEXT:    v_div_fixup_f16 v0.h, v2.h, v1.h, v0.h
-; GFX11-IEEE-TRUE16-NEXT:    v_pack_b32_f16 v0, v0.l, v0.h
-; GFX11-IEEE-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-IEEE-FAKE16-LABEL: v_fdiv_v2f16:
-; GFX11-IEEE-FAKE16:       ; %bb.0:
-; GFX11-IEEE-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-IEEE-FAKE16-NEXT:    v_lshrrev_b32_e32 v2, 16, v1
-; GFX11-IEEE-FAKE16-NEXT:    v_cvt_f32_f16_e32 v3, v1
-; GFX11-IEEE-FAKE16-NEXT:    v_lshrrev_b32_e32 v5, 16, v0
-; GFX11-IEEE-FAKE16-NEXT:    v_cvt_f32_f16_e32 v6, v0
-; GFX11-IEEE-FAKE16-NEXT:    v_cvt_f32_f16_e32 v4, v2
-; GFX11-IEEE-FAKE16-NEXT:    v_rcp_f32_e32 v3, v3
-; GFX11-IEEE-FAKE16-NEXT:    v_cvt_f32_f16_e32 v7, v5
-; GFX11-IEEE-FAKE16-NEXT:    v_rcp_f32_e32 v4, v4
-; GFX11-IEEE-FAKE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-IEEE-FAKE16-NEXT:    v_dual_mul_f32 v6, v6, v3 :: v_dual_mul_f32 v7, v7, v4
-; GFX11-IEEE-FAKE16-NEXT:    v_fma_mix_f32 v8, -v1, v6, v0 op_sel_hi:[1,0,1]
-; GFX11-IEEE-FAKE16-NEXT:    v_fma_mix_f32 v9, -v1, v7, v0 op_sel:[1,0,1] op_sel_hi:[1,0,1]
-; GFX11-IEEE-FAKE16-NEXT:    v_dual_fmac_f32 v6, v8, v3 :: v_dual_fmac_f32 v7, v9, v4
-; GFX11-IEEE-FAKE16-NEXT:    v_fma_mix_f32 v8, -v1, v6, v0 op_sel_hi:[1,0,1]
-; GFX11-IEEE-FAKE16-NEXT:    v_fma_mix_f32 v9, -v1, v7, v0 op_sel:[1,0,1] op_sel_hi:[1,0,1]
-; GFX11-IEEE-FAKE16-NEXT:    v_dual_mul_f32 v3, v8, v3 :: v_dual_mul_f32 v4, v9, v4
-; GFX11-IEEE-FAKE16-NEXT:    v_and_b32_e32 v3, 0xff800000, v3
-; GFX11-IEEE-FAKE16-NEXT:    v_dual_add_f32 v3, v3, v6 :: v_dual_and_b32 v4, 0xff800000, v4
-; GFX11-IEEE-FAKE16-NEXT:    v_add_f32_e32 v4, v4, v7
-; GFX11-IEEE-FAKE16-NEXT:    v_cvt_f16_f32_e32 v3, v3
-; GFX11-IEEE-FAKE16-NEXT:    v_cvt_f16_f32_e32 v4, v4
-; GFX11-IEEE-FAKE16-NEXT:    v_div_fixup_f16 v0, v3, v1, v0
-; GFX11-IEEE-FAKE16-NEXT:    v_div_fixup_f16 v1, v4, v2, v5
-; GFX11-IEEE-FAKE16-NEXT:    v_pack_b32_f16 v0, v0, v1
-; GFX11-IEEE-FAKE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-FLUSH-TRUE16-LABEL: v_fdiv_v2f16:
-; GFX11-FLUSH-TRUE16:       ; %bb.0:
-; GFX11-FLUSH-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FLUSH-TRUE16-NEXT:    v_cvt_f32_f16_e32 v2, v1.l
-; GFX11-FLUSH-TRUE16-NEXT:    v_cvt_f32_f16_e32 v3, v1.h
-; GFX11-FLUSH-TRUE16-NEXT:    v_cvt_f32_f16_e32 v4, v0.l
-; GFX11-FLUSH-TRUE16-NEXT:    v_cvt_f32_f16_e32 v6, v0.h
-; GFX11-FLUSH-TRUE16-NEXT:    v_mov_b16_e32 v5.l, v1.l
-; GFX11-FLUSH-TRUE16-NEXT:    v_rcp_f32_e32 v2, v2
-; GFX11-FLUSH-TRUE16-NEXT:    v_rcp_f32_e32 v3, v3
-; GFX11-FLUSH-TRUE16-NEXT:    v_mov_b16_e32 v7.l, v0.l
-; GFX11-FLUSH-TRUE16-NEXT:    v_mov_b16_e32 v8.l, v1.h
-; GFX11-FLUSH-TRUE16-NEXT:    v_mov_b16_e32 v9.l, v0.h
-; GFX11-FLUSH-TRUE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-FLUSH-TRUE16-NEXT:    v_mul_f32_e32 v4, v4, v2
-; GFX11-FLUSH-TRUE16-NEXT:    v_mul_f32_e32 v6, v6, v3
-; GFX11-FLUSH-TRUE16-NEXT:    v_fma_mix_f32 v10, -v5, v4, v7 op_sel_hi:[1,0,1]
-; GFX11-FLUSH-TRUE16-NEXT:    v_fma_mix_f32 v11, -v8, v6, v9 op_sel_hi:[1,0,1]
-; GFX11-FLUSH-TRUE16-NEXT:    v_fmac_f32_e32 v4, v10, v2
-; GFX11-FLUSH-TRUE16-NEXT:    v_fmac_f32_e32 v6, v11, v3
-; GFX11-FLUSH-TRUE16-NEXT:    v_fma_mix_f32 v5, -v5, v4, v7 op_sel_hi:[1,0,1]
-; GFX11-FLUSH-TRUE16-NEXT:    v_fma_mix_f32 v7, -v8, v6, v9 op_sel_hi:[1,0,1]
-; GFX11-FLUSH-TRUE16-NEXT:    v_dual_mul_f32 v2, v5, v2 :: v_dual_mul_f32 v3, v7, v3
-; GFX11-FLUSH-TRUE16-NEXT:    v_and_b32_e32 v2, 0xff800000, v2
-; GFX11-FLUSH-TRUE16-NEXT:    v_dual_add_f32 v2, v2, v4 :: v_dual_and_b32 v3, 0xff800000, v3
-; GFX11-FLUSH-TRUE16-NEXT:    v_add_f32_e32 v3, v3, v6
-; GFX11-FLUSH-TRUE16-NEXT:    v_cvt_f16_f32_e32 v2.l, v2
-; GFX11-FLUSH-TRUE16-NEXT:    v_cvt_f16_f32_e32 v2.h, v3
-; GFX11-FLUSH-TRUE16-NEXT:    v_div_fixup_f16 v0.l, v2.l, v1.l, v0.l
-; GFX11-FLUSH-TRUE16-NEXT:    v_div_fixup_f16 v0.h, v2.h, v1.h, v0.h
-; GFX11-FLUSH-TRUE16-NEXT:    v_pack_b32_f16 v0, v0.l, v0.h
-; GFX11-FLUSH-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-FLUSH-FAKE16-LABEL: v_fdiv_v2f16:
-; GFX11-FLUSH-FAKE16:       ; %bb.0:
-; GFX11-FLUSH-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FLUSH-FAKE16-NEXT:    v_lshrrev_b32_e32 v2, 16, v1
-; GFX11-FLUSH-FAKE16-NEXT:    v_cvt_f32_f16_e32 v3, v1
-; GFX11-FLUSH-FAKE16-NEXT:    v_lshrrev_b32_e32 v5, 16, v0
-; GFX11-FLUSH-FAKE16-NEXT:    v_cvt_f32_f16_e32 v6, v0
-; GFX11-FLUSH-FAKE16-NEXT:    v_cvt_f32_f16_e32 v4, v2
-; GFX11-FLUSH-FAKE16-NEXT:    v_rcp_f32_e32 v3, v3
-; GFX11-FLUSH-FAKE16-NEXT:    v_cvt_f32_f16_e32 v7, v5
-; GFX11-FLUSH-FAKE16-NEXT:    v_rcp_f32_e32 v4, v4
-; GFX11-FLUSH-FAKE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-FLUSH-FAKE16-NEXT:    v_dual_mul_f32 v6, v6, v3 :: v_dual_mul_f32 v7, v7, v4
-; GFX11-FLUSH-FAKE16-NEXT:    v_fma_mix_f32 v8, -v1, v6, v0 op_sel_hi:[1,0,1]
-; GFX11-FLUSH-FAKE16-NEXT:    v_fma_mix_f32 v9, -v1, v7, v0 op_sel:[1,0,1] op_sel_hi:[1,0,1]
-; GFX11-FLUSH-FAKE16-NEXT:    v_dual_fmac_f32 v6, v8, v3 :: v_dual_fmac_f32 v7, v9, v4
-; GFX11-FLUSH-FAKE16-NEXT:    v_fma_mix_f32 v8, -v1, v6, v0 op_sel_hi:[1,0,1]
-; GFX11-FLUSH-FAKE16-NEXT:    v_fma_mix_f32 v9, -v1, v7, v0 op_sel:[1,0,1] op_sel_hi:[1,0,1]
-; GFX11-FLUSH-FAKE16-NEXT:    v_dual_mul_f32 v3, v8, v3 :: v_dual_mul_f32 v4, v9, v4
-; GFX11-FLUSH-FAKE16-NEXT:    v_and_b32_e32 v3, 0xff800000, v3
-; GFX11-FLUSH-FAKE16-NEXT:    v_dual_add_f32 v3, v3, v6 :: v_dual_and_b32 v4, 0xff800000, v4
-; GFX11-FLUSH-FAKE16-NEXT:    v_add_f32_e32 v4, v4, v7
-; GFX11-FLUSH-FAKE16-NEXT:    v_cvt_f16_f32_e32 v3, v3
-; GFX11-FLUSH-FAKE16-NEXT:    v_cvt_f16_f32_e32 v4, v4
-; GFX11-FLUSH-FAKE16-NEXT:    v_div_fixup_f16 v0, v3, v1, v0
-; GFX11-FLUSH-FAKE16-NEXT:    v_div_fixup_f16 v1, v4, v2, v5
-; GFX11-FLUSH-FAKE16-NEXT:    v_pack_b32_f16 v0, v0, v1
-; GFX11-FLUSH-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ; GFX11-LABEL: v_fdiv_v2f16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1598,53 +1118,6 @@ define <2 x half> @v_fdiv_v2f16_afn(<2 x half> %a, <2 x half> %b) {
 ; GFX10-NEXT:    v_pack_b32_f16 v0, v2, v0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-IEEE-TRUE16-LABEL: v_fdiv_v2f16_afn:
-; GFX11-IEEE-TRUE16:       ; %bb.0:
-; GFX11-IEEE-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-IEEE-TRUE16-NEXT:    v_rcp_f16_e32 v1.l, v1.l
-; GFX11-IEEE-TRUE16-NEXT:    v_rcp_f16_e32 v1.h, v1.h
-; GFX11-IEEE-TRUE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-IEEE-TRUE16-NEXT:    v_mul_f16_e32 v0.l, v0.l, v1.l
-; GFX11-IEEE-TRUE16-NEXT:    v_mul_f16_e32 v0.h, v0.h, v1.h
-; GFX11-IEEE-TRUE16-NEXT:    v_pack_b32_f16 v0, v0.l, v0.h
-; GFX11-IEEE-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-IEEE-FAKE16-LABEL: v_fdiv_v2f16_afn:
-; GFX11-IEEE-FAKE16:       ; %bb.0:
-; GFX11-IEEE-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-IEEE-FAKE16-NEXT:    v_lshrrev_b32_e32 v2, 16, v1
-; GFX11-IEEE-FAKE16-NEXT:    v_rcp_f16_e32 v1, v1
-; GFX11-IEEE-FAKE16-NEXT:    v_lshrrev_b32_e32 v3, 16, v0
-; GFX11-IEEE-FAKE16-NEXT:    v_rcp_f16_e32 v2, v2
-; GFX11-IEEE-FAKE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-IEEE-FAKE16-NEXT:    v_mul_f16_e32 v0, v0, v1
-; GFX11-IEEE-FAKE16-NEXT:    v_mul_f16_e32 v1, v3, v2
-; GFX11-IEEE-FAKE16-NEXT:    v_pack_b32_f16 v0, v0, v1
-; GFX11-IEEE-FAKE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-FLUSH-TRUE16-LABEL: v_fdiv_v2f16_afn:
-; GFX11-FLUSH-TRUE16:       ; %bb.0:
-; GFX11-FLUSH-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FLUSH-TRUE16-NEXT:    v_rcp_f16_e32 v1.l, v1.l
-; GFX11-FLUSH-TRUE16-NEXT:    v_rcp_f16_e32 v1.h, v1.h
-; GFX11-FLUSH-TRUE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-FLUSH-TRUE16-NEXT:    v_mul_f16_e32 v0.l, v0.l, v1.l
-; GFX11-FLUSH-TRUE16-NEXT:    v_mul_f16_e32 v0.h, v0.h, v1.h
-; GFX11-FLUSH-TRUE16-NEXT:    v_pack_b32_f16 v0, v0.l, v0.h
-; GFX11-FLUSH-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-FLUSH-FAKE16-LABEL: v_fdiv_v2f16_afn:
-; GFX11-FLUSH-FAKE16:       ; %bb.0:
-; GFX11-FLUSH-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FLUSH-FAKE16-NEXT:    v_lshrrev_b32_e32 v2, 16, v1
-; GFX11-FLUSH-FAKE16-NEXT:    v_rcp_f16_e32 v1, v1
-; GFX11-FLUSH-FAKE16-NEXT:    v_lshrrev_b32_e32 v3, 16, v0
-; GFX11-FLUSH-FAKE16-NEXT:    v_rcp_f16_e32 v2, v2
-; GFX11-FLUSH-FAKE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-FLUSH-FAKE16-NEXT:    v_mul_f16_e32 v0, v0, v1
-; GFX11-FLUSH-FAKE16-NEXT:    v_mul_f16_e32 v1, v3, v2
-; GFX11-FLUSH-FAKE16-NEXT:    v_pack_b32_f16 v0, v0, v1
-; GFX11-FLUSH-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ; GFX11-LABEL: v_fdiv_v2f16_afn:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1945,129 +1418,6 @@ define <2 x half> @v_fdiv_v2f16_ulp25(<2 x half> %a, <2 x half> %b) {
 ; GFX10-FLUSH-NEXT:    v_pack_b32_f16 v0, v0, v1
 ; GFX10-FLUSH-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-IEEE-TRUE16-LABEL: v_fdiv_v2f16_ulp25:
-; GFX11-IEEE-TRUE16:       ; %bb.0:
-; GFX11-IEEE-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-IEEE-TRUE16-NEXT:    v_cvt_f32_f16_e32 v2, v1.l
-; GFX11-IEEE-TRUE16-NEXT:    v_cvt_f32_f16_e32 v3, v1.h
-; GFX11-IEEE-TRUE16-NEXT:    v_cvt_f32_f16_e32 v4, v0.l
-; GFX11-IEEE-TRUE16-NEXT:    v_cvt_f32_f16_e32 v6, v0.h
-; GFX11-IEEE-TRUE16-NEXT:    v_mov_b16_e32 v5.l, v1.l
-; GFX11-IEEE-TRUE16-NEXT:    v_rcp_f32_e32 v2, v2
-; GFX11-IEEE-TRUE16-NEXT:    v_rcp_f32_e32 v3, v3
-; GFX11-IEEE-TRUE16-NEXT:    v_mov_b16_e32 v7.l, v0.l
-; GFX11-IEEE-TRUE16-NEXT:    v_mov_b16_e32 v8.l, v1.h
-; GFX11-IEEE-TRUE16-NEXT:    v_mov_b16_e32 v9.l, v0.h
-; GFX11-IEEE-TRUE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-IEEE-TRUE16-NEXT:    v_mul_f32_e32 v4, v4, v2
-; GFX11-IEEE-TRUE16-NEXT:    v_mul_f32_e32 v6, v6, v3
-; GFX11-IEEE-TRUE16-NEXT:    v_fma_mix_f32 v10, -v5, v4, v7 op_sel_hi:[1,0,1]
-; GFX11-IEEE-TRUE16-NEXT:    v_fma_mix_f32 v11, -v8, v6, v9 op_sel_hi:[1,0,1]
-; GFX11-IEEE-TRUE16-NEXT:    v_fmac_f32_e32 v4, v10, v2
-; GFX11-IEEE-TRUE16-NEXT:    v_fmac_f32_e32 v6, v11, v3
-; GFX11-IEEE-TRUE16-NEXT:    v_fma_mix_f32 v5, -v5, v4, v7 op_sel_hi:[1,0,1]
-; GFX11-IEEE-TRUE16-NEXT:    v_fma_mix_f32 v7, -v8, v6, v9 op_sel_hi:[1,0,1]
-; GFX11-IEEE-TRUE16-NEXT:    v_dual_mul_f32 v2, v5, v2 :: v_dual_mul_f32 v3, v7, v3
-; GFX11-IEEE-TRUE16-NEXT:    v_and_b32_e32 v2, 0xff800000, v2
-; GFX11-IEEE-TRUE16-NEXT:    v_dual_add_f32 v2, v2, v4 :: v_dual_and_b32 v3, 0xff800000, v3
-; GFX11-IEEE-TRUE16-NEXT:    v_add_f32_e32 v3, v3, v6
-; GFX11-IEEE-TRUE16-NEXT:    v_cvt_f16_f32_e32 v2.l, v2
-; GFX11-IEEE-TRUE16-NEXT:    v_cvt_f16_f32_e32 v2.h, v3
-; GFX11-IEEE-TRUE16-NEXT:    v_div_fixup_f16 v0.l, v2.l, v1.l, v0.l
-; GFX11-IEEE-TRUE16-NEXT:    v_div_fixup_f16 v0.h, v2.h, v1.h, v0.h
-; GFX11-IEEE-TRUE16-NEXT:    v_pack_b32_f16 v0, v0.l, v0.h
-; GFX11-IEEE-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-IEEE-FAKE16-LABEL: v_fdiv_v2f16_ulp25:
-; GFX11-IEEE-FAKE16:       ; %bb.0:
-; GFX11-IEEE-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-IEEE-FAKE16-NEXT:    v_lshrrev_b32_e32 v2, 16, v1
-; GFX11-IEEE-FAKE16-NEXT:    v_cvt_f32_f16_e32 v3, v1
-; GFX11-IEEE-FAKE16-NEXT:    v_lshrrev_b32_e32 v5, 16, v0
-; GFX11-IEEE-FAKE16-NEXT:    v_cvt_f32_f16_e32 v6, v0
-; GFX11-IEEE-FAKE16-NEXT:    v_cvt_f32_f16_e32 v4, v2
-; GFX11-IEEE-FAKE16-NEXT:    v_rcp_f32_e32 v3, v3
-; GFX11-IEEE-FAKE16-NEXT:    v_cvt_f32_f16_e32 v7, v5
-; GFX11-IEEE-FAKE16-NEXT:    v_rcp_f32_e32 v4, v4
-; GFX11-IEEE-FAKE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-IEEE-FAKE16-NEXT:    v_dual_mul_f32 v6, v6, v3 :: v_dual_mul_f32 v7, v7, v4
-; GFX11-IEEE-FAKE16-NEXT:    v_fma_mix_f32 v8, -v1, v6, v0 op_sel_hi:[1,0,1]
-; GFX11-IEEE-FAKE16-NEXT:    v_fma_mix_f32 v9, -v1, v7, v0 op_sel:[1,0,1] op_sel_hi:[1,0,1]
-; GFX11-IEEE-FAKE16-NEXT:    v_dual_fmac_f32 v6, v8, v3 :: v_dual_fmac_f32 v7, v9, v4
-; GFX11-IEEE-FAKE16-NEXT:    v_fma_mix_f32 v8, -v1, v6, v0 op_sel_hi:[1,0,1]
-; GFX11-IEEE-FAKE16-NEXT:    v_fma_mix_f32 v9, -v1, v7, v0 op_sel:[1,0,1] op_sel_hi:[1,0,1]
-; GFX11-IEEE-FAKE16-NEXT:    v_dual_mul_f32 v3, v8, v3 :: v_dual_mul_f32 v4, v9, v4
-; GFX11-IEEE-FAKE16-NEXT:    v_and_b32_e32 v3, 0xff800000, v3
-; GFX11-IEEE-FAKE16-NEXT:    v_dual_add_f32 v3, v3, v6 :: v_dual_and_b32 v4, 0xff800000, v4
-; GFX11-IEEE-FAKE16-NEXT:    v_add_f32_e32 v4, v4, v7
-; GFX11-IEEE-FAKE16-NEXT:    v_cvt_f16_f32_e32 v3, v3
-; GFX11-IEEE-FAKE16-NEXT:    v_cvt_f16_f32_e32 v4, v4
-; GFX11-IEEE-FAKE16-NEXT:    v_div_fixup_f16 v0, v3, v1, v0
-; GFX11-IEEE-FAKE16-NEXT:    v_div_fixup_f16 v1, v4, v2, v5
-; GFX11-IEEE-FAKE16-NEXT:    v_pack_b32_f16 v0, v0, v1
-; GFX11-IEEE-FAKE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-FLUSH-TRUE16-LABEL: v_fdiv_v2f16_ulp25:
-; GFX11-FLUSH-TRUE16:       ; %bb.0:
-; GFX11-FLUSH-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FLUSH-TRUE16-NEXT:    v_cvt_f32_f16_e32 v2, v1.l
-; GFX11-FLUSH-TRUE16-NEXT:    v_cvt_f32_f16_e32 v3, v1.h
-; GFX11-FLUSH-TRUE16-NEXT:    v_cvt_f32_f16_e32 v4, v0.l
-; GFX11-FLUSH-TRUE16-NEXT:    v_cvt_f32_f16_e32 v6, v0.h
-; GFX11-FLUSH-TRUE16-NEXT:    v_mov_b16_e32 v5.l, v1.l
-; GFX11-FLUSH-TRUE16-NEXT:    v_rcp_f32_e32 v2, v2
-; GFX11-FLUSH-TRUE16-NEXT:    v_rcp_f32_e32 v3, v3
-; GFX11-FLUSH-TRUE16-NEXT:    v_mov_b16_e32 v7.l, v0.l
-; GFX11-FLUSH-TRUE16-NEXT:    v_mov_b16_e32 v8.l, v1.h
-; GFX11-FLUSH-TRUE16-NEXT:    v_mov_b16_e32 v9.l, v0.h
-; GFX11-FLUSH-TRUE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-FLUSH-TRUE16-NEXT:    v_mul_f32_e32 v4, v4, v2
-; GFX11-FLUSH-TRUE16-NEXT:    v_mul_f32_e32 v6, v6, v3
-; GFX11-FLUSH-TRUE16-NEXT:    v_fma_mix_f32 v10, -v5, v4, v7 op_sel_hi:[1,0,1]
-; GFX11-FLUSH-TRUE16-NEXT:    v_fma_mix_f32 v11, -v8, v6, v9 op_sel_hi:[1,0,1]
-; GFX11-FLUSH-TRUE16-NEXT:    v_fmac_f32_e32 v4, v10, v2
-; GFX11-FLUSH-TRUE16-NEXT:    v_fmac_f32_e32 v6, v11, v3
-; GFX11-FLUSH-TRUE16-NEXT:    v_fma_mix_f32 v5, -v5, v4, v7 op_sel_hi:[1,0,1]
-; GFX11-FLUSH-TRUE16-NEXT:    v_fma_mix_f32 v7, -v8, v6, v9 op_sel_hi:[1,0,1]
-; GFX11-FLUSH-TRUE16-NEXT:    v_dual_mul_f32 v2, v5, v2 :: v_dual_mul_f32 v3, v7, v3
-; GFX11-FLUSH-TRUE16-NEXT:    v_and_b32_e32 v2, 0xff800000, v2
-; GFX11-FLUSH-TRUE16-NEXT:    v_dual_add_f32 v2, v2, v4 :: v_dual_and_b32 v3, 0xff800000, v3
-; GFX11-FLUSH-TRUE16-NEXT:    v_add_f32_e32 v3, v3, v6
-; GFX11-FLUSH-TRUE16-NEXT:    v_cvt_f16_f32_e32 v2.l, v2
-; GFX11-FLUSH-TRUE16-NEXT:    v_cvt_f16_f32_e32 v2.h, v3
-; GFX11-FLUSH-TRUE16-NEXT:    v_div_fixup_f16 v0.l, v2.l, v1.l, v0.l
-; GFX11-FLUSH-TRUE16-NEXT:    v_div_fixup_f16 v0.h, v2.h, v1.h, v0.h
-; GFX11-FLUSH-TRUE16-NEXT:    v_pack_b32_f16 v0, v0.l, v0.h
-; GFX11-FLUSH-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-FLUSH-FAKE16-LABEL: v_fdiv_v2f16_ulp25:
-; GFX11-FLUSH-FAKE16:       ; %bb.0:
-; GFX11-FLUSH-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FLUSH-FAKE16-NEXT:    v_lshrrev_b32_e32 v2, 16, v1
-; GFX11-FLUSH-FAKE16-NEXT:    v_cvt_f32_f16_e32 v3, v1
-; GFX11-FLUSH-FAKE16-NEXT:    v_lshrrev_b32_e32 v5, 16, v0
-; GFX11-FLUSH-FAKE16-NEXT:    v_cvt_f32_f16_e32 v6, v0
-; GFX11-FLUSH-FAKE16-NEXT:    v_cvt_f32_f16_e32 v4, v2
-; GFX11-FLUSH-FAKE16-NEXT:    v_rcp_f32_e32 v3, v3
-; GFX11-FLUSH-FAKE16-NEXT:    v_cvt_f32_f16_e32 v7, v5
-; GFX11-FLUSH-FAKE16-NEXT:    v_rcp_f32_e32 v4, v4
-; GFX11-FLUSH-FAKE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-FLUSH-FAKE16-NEXT:    v_dual_mul_f32 v6, v6, v3 :: v_dual_mul_f32 v7, v7, v4
-; GFX11-FLUSH-FAKE16-NEXT:    v_fma_mix_f32 v8, -v1, v6, v0 op_sel_hi:[1,0,1]
-; GFX11-FLUSH-FAKE16-NEXT:    v_fma_mix_f32 v9, -v1, v7, v0 op_sel:[1,0,1] op_sel_hi:[1,0,1]
-; GFX11-FLUSH-FAKE16-NEXT:    v_dual_fmac_f32 v6, v8, v3 :: v_dual_fmac_f32 v7, v9, v4
-; GFX11-FLUSH-FAKE16-NEXT:    v_fma_mix_f32 v8, -v1, v6, v0 op_sel_hi:[1,0,1]
-; GFX11-FLUSH-FAKE16-NEXT:    v_fma_mix_f32 v9, -v1, v7, v0 op_sel:[1,0,1] op_sel_hi:[1,0,1]
-; GFX11-FLUSH-FAKE16-NEXT:    v_dual_mul_f32 v3, v8, v3 :: v_dual_mul_f32 v4, v9, v4
-; GFX11-FLUSH-FAKE16-NEXT:    v_and_b32_e32 v3, 0xff800000, v3
-; GFX11-FLUSH-FAKE16-NEXT:    v_dual_add_f32 v3, v3, v6 :: v_dual_and_b32 v4, 0xff800000, v4
-; GFX11-FLUSH-FAKE16-NEXT:    v_add_f32_e32 v4, v4, v7
-; GFX11-FLUSH-FAKE16-NEXT:    v_cvt_f16_f32_e32 v3, v3
-; GFX11-FLUSH-FAKE16-NEXT:    v_cvt_f16_f32_e32 v4, v4
-; GFX11-FLUSH-FAKE16-NEXT:    v_div_fixup_f16 v0, v3, v1, v0
-; GFX11-FLUSH-FAKE16-NEXT:    v_div_fixup_f16 v1, v4, v2, v5
-; GFX11-FLUSH-FAKE16-NEXT:    v_pack_b32_f16 v0, v0, v1
-; GFX11-FLUSH-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ; GFX11-LABEL: v_fdiv_v2f16_ulp25:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2371,123 +1721,6 @@ define <2 x half> @v_rcp_v2f16(<2 x half> %x) {
 ; GFX10-FLUSH-NEXT:    v_pack_b32_f16 v0, v0, v1
 ; GFX10-FLUSH-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-IEEE-TRUE16-LABEL: v_rcp_v2f16:
-; GFX11-IEEE-TRUE16:       ; %bb.0:
-; GFX11-IEEE-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-IEEE-TRUE16-NEXT:    v_cvt_f32_f16_e32 v1, v0.l
-; GFX11-IEEE-TRUE16-NEXT:    v_cvt_f32_f16_e32 v2, v0.h
-; GFX11-IEEE-TRUE16-NEXT:    v_cvt_f32_f16_e32 v3, 1.0
-; GFX11-IEEE-TRUE16-NEXT:    v_mov_b16_e32 v5.l, v0.h
-; GFX11-IEEE-TRUE16-NEXT:    v_mov_b16_e32 v4.l, v0.l
-; GFX11-IEEE-TRUE16-NEXT:    v_rcp_f32_e32 v1, v1
-; GFX11-IEEE-TRUE16-NEXT:    v_rcp_f32_e32 v2, v2
-; GFX11-IEEE-TRUE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-IEEE-TRUE16-NEXT:    v_mul_f32_e32 v6, v3, v1
-; GFX11-IEEE-TRUE16-NEXT:    v_mul_f32_e32 v3, v3, v2
-; GFX11-IEEE-TRUE16-NEXT:    v_fma_mix_f32 v8, -v5, v3, 1.0 op_sel_hi:[1,0,1]
-; GFX11-IEEE-TRUE16-NEXT:    v_fmac_f32_e32 v3, v8, v2
-; GFX11-IEEE-TRUE16-NEXT:    v_fma_mix_f32 v7, -v4, v6, 1.0 op_sel_hi:[1,0,1]
-; GFX11-IEEE-TRUE16-NEXT:    v_fma_mix_f32 v5, -v5, v3, 1.0 op_sel_hi:[1,0,1]
-; GFX11-IEEE-TRUE16-NEXT:    v_fmac_f32_e32 v6, v7, v1
-; GFX11-IEEE-TRUE16-NEXT:    v_mul_f32_e32 v2, v5, v2
-; GFX11-IEEE-TRUE16-NEXT:    v_fma_mix_f32 v4, -v4, v6, 1.0 op_sel_hi:[1,0,1]
-; GFX11-IEEE-TRUE16-NEXT:    v_dual_mul_f32 v1, v4, v1 :: v_dual_and_b32 v2, 0xff800000, v2
-; GFX11-IEEE-TRUE16-NEXT:    v_dual_add_f32 v2, v2, v3 :: v_dual_and_b32 v1, 0xff800000, v1
-; GFX11-IEEE-TRUE16-NEXT:    v_add_f32_e32 v1, v1, v6
-; GFX11-IEEE-TRUE16-NEXT:    v_cvt_f16_f32_e32 v1.l, v1
-; GFX11-IEEE-TRUE16-NEXT:    v_cvt_f16_f32_e32 v1.h, v2
-; GFX11-IEEE-TRUE16-NEXT:    v_div_fixup_f16 v0.l, v1.l, v0.l, 1.0
-; GFX11-IEEE-TRUE16-NEXT:    v_div_fixup_f16 v0.h, v1.h, v0.h, 1.0
-; GFX11-IEEE-TRUE16-NEXT:    v_pack_b32_f16 v0, v0.l, v0.h
-; GFX11-IEEE-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-IEEE-FAKE16-LABEL: v_rcp_v2f16:
-; GFX11-IEEE-FAKE16:       ; %bb.0:
-; GFX11-IEEE-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-IEEE-FAKE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; GFX11-IEEE-FAKE16-NEXT:    v_cvt_f32_f16_e32 v2, v0
-; GFX11-IEEE-FAKE16-NEXT:    v_cvt_f32_f16_e32 v4, 1.0
-; GFX11-IEEE-FAKE16-NEXT:    v_cvt_f32_f16_e32 v3, v1
-; GFX11-IEEE-FAKE16-NEXT:    v_rcp_f32_e32 v2, v2
-; GFX11-IEEE-FAKE16-NEXT:    v_rcp_f32_e32 v3, v3
-; GFX11-IEEE-FAKE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-IEEE-FAKE16-NEXT:    v_mul_f32_e32 v5, v4, v2
-; GFX11-IEEE-FAKE16-NEXT:    v_mul_f32_e32 v4, v4, v3
-; GFX11-IEEE-FAKE16-NEXT:    v_fma_mix_f32 v7, -v0, v4, 1.0 op_sel:[1,0,0] op_sel_hi:[1,0,1]
-; GFX11-IEEE-FAKE16-NEXT:    v_fmac_f32_e32 v4, v7, v3
-; GFX11-IEEE-FAKE16-NEXT:    v_fma_mix_f32 v6, -v0, v5, 1.0 op_sel_hi:[1,0,1]
-; GFX11-IEEE-FAKE16-NEXT:    v_fma_mix_f32 v7, -v0, v4, 1.0 op_sel:[1,0,0] op_sel_hi:[1,0,1]
-; GFX11-IEEE-FAKE16-NEXT:    v_fmac_f32_e32 v5, v6, v2
-; GFX11-IEEE-FAKE16-NEXT:    v_mul_f32_e32 v3, v7, v3
-; GFX11-IEEE-FAKE16-NEXT:    v_fma_mix_f32 v6, -v0, v5, 1.0 op_sel_hi:[1,0,1]
-; GFX11-IEEE-FAKE16-NEXT:    v_dual_mul_f32 v2, v6, v2 :: v_dual_and_b32 v3, 0xff800000, v3
-; GFX11-IEEE-FAKE16-NEXT:    v_dual_add_f32 v3, v3, v4 :: v_dual_and_b32 v2, 0xff800000, v2
-; GFX11-IEEE-FAKE16-NEXT:    v_cvt_f16_f32_e32 v3, v3
-; GFX11-IEEE-FAKE16-NEXT:    v_add_f32_e32 v2, v2, v5
-; GFX11-IEEE-FAKE16-NEXT:    v_div_fixup_f16 v1, v3, v1, 1.0
-; GFX11-IEEE-FAKE16-NEXT:    v_cvt_f16_f32_e32 v2, v2
-; GFX11-IEEE-FAKE16-NEXT:    v_div_fixup_f16 v0, v2, v0, 1.0
-; GFX11-IEEE-FAKE16-NEXT:    v_pack_b32_f16 v0, v0, v1
-; GFX11-IEEE-FAKE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-FLUSH-TRUE16-LABEL: v_rcp_v2f16:
-; GFX11-FLUSH-TRUE16:       ; %bb.0:
-; GFX11-FLUSH-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FLUSH-TRUE16-NEXT:    v_cvt_f32_f16_e32 v1, v0.l
-; GFX11-FLUSH-TRUE16-NEXT:    v_cvt_f32_f16_e32 v2, v0.h
-; GFX11-FLUSH-TRUE16-NEXT:    v_cvt_f32_f16_e32 v3, 1.0
-; GFX11-FLUSH-TRUE16-NEXT:    v_mov_b16_e32 v5.l, v0.h
-; GFX11-FLUSH-TRUE16-NEXT:    v_mov_b16_e32 v4.l, v0.l
-; GFX11-FLUSH-TRUE16-NEXT:    v_rcp_f32_e32 v1, v1
-; GFX11-FLUSH-TRUE16-NEXT:    v_rcp_f32_e32 v2, v2
-; GFX11-FLUSH-TRUE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-FLUSH-TRUE16-NEXT:    v_mul_f32_e32 v6, v3, v1
-; GFX11-FLUSH-TRUE16-NEXT:    v_mul_f32_e32 v3, v3, v2
-; GFX11-FLUSH-TRUE16-NEXT:    v_fma_mix_f32 v8, -v5, v3, 1.0 op_sel_hi:[1,0,1]
-; GFX11-FLUSH-TRUE16-NEXT:    v_fmac_f32_e32 v3, v8, v2
-; GFX11-FLUSH-TRUE16-NEXT:    v_fma_mix_f32 v7, -v4, v6, 1.0 op_sel_hi:[1,0,1]
-; GFX11-FLUSH-TRUE16-NEXT:    v_fma_mix_f32 v5, -v5, v3, 1.0 op_sel_hi:[1,0,1]
-; GFX11-FLUSH-TRUE16-NEXT:    v_fmac_f32_e32 v6, v7, v1
-; GFX11-FLUSH-TRUE16-NEXT:    v_mul_f32_e32 v2, v5, v2
-; GFX11-FLUSH-TRUE16-NEXT:    v_fma_mix_f32 v4, -v4, v6, 1.0 op_sel_hi:[1,0,1]
-; GFX11-FLUSH-TRUE16-NEXT:    v_dual_mul_f32 v1, v4, v1 :: v_dual_and_b32 v2, 0xff800000, v2
-; GFX11-FLUSH-TRUE16-NEXT:    v_dual_add_f32 v2, v2, v3 :: v_dual_and_b32 v1, 0xff800000, v1
-; GFX11-FLUSH-TRUE16-NEXT:    v_add_f32_e32 v1, v1, v6
-; GFX11-FLUSH-TRUE16-NEXT:    v_cvt_f16_f32_e32 v1.l, v1
-; GFX11-FLUSH-TRUE16-NEXT:    v_cvt_f16_f32_e32 v1.h, v2
-; GFX11-FLUSH-TRUE16-NEXT:    v_div_fixup_f16 v0.l, v1.l, v0.l, 1.0
-; GFX11-FLUSH-TRUE16-NEXT:    v_div_fixup_f16 v0.h, v1.h, v0.h, 1.0
-; GFX11-FLUSH-TRUE16-NEXT:    v_pack_b32_f16 v0, v0.l, v0.h
-; GFX11-FLUSH-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-FLUSH-FAKE16-LABEL: v_rcp_v2f16:
-; GFX11-FLUSH-FAKE16:       ; %bb.0:
-; GFX11-FLUSH-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FLUSH-FAKE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; GFX11-FLUSH-FAKE16-NEXT:    v_cvt_f32_f16_e32 v2, v0
-; GFX11-FLUSH-FAKE16-NEXT:    v_cvt_f32_f16_e32 v4, 1.0
-; GFX11-FLUSH-FAKE16-NEXT:    v_cvt_f32_f16_e32 v3, v1
-; GFX11-FLUSH-FAKE16-NEXT:    v_rcp_f32_e32 v2, v2
-; GFX11-FLUSH-FAKE16-NEXT:    v_rcp_f32_e32 v3, v3
-; GFX11-FLUSH-FAKE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-FLUSH-FAKE16-NEXT:    v_mul_f32_e32 v5, v4, v2
-; GFX11-FLUSH-FAKE16-NEXT:    v_mul_f32_e32 v4, v4, v3
-; GFX11-FLUSH-FAKE16-NEXT:    v_fma_mix_f32 v7, -v0, v4, 1.0 op_sel:[1,0,0] op_sel_hi:[1,0,1]
-; GFX11-FLUSH-FAKE16-NEXT:    v_fmac_f32_e32 v4, v7, v3
-; GFX11-FLUSH-FAKE16-NEXT:    v_fma_mix_f32 v6, -v0, v5, 1.0 op_sel_hi:[1,0,1]
-; GFX11-FLUSH-FAKE16-NEXT:    v_fma_mix_f32 v7, -v0, v4, 1.0 op_sel:[1,0,0] op_sel_hi:[1,0,1]
-; GFX11-FLUSH-FAKE16-NEXT:    v_fmac_f32_e32 v5, v6, v2
-; GFX11-FLUSH-FAKE16-NEXT:    v_mul_f32_e32 v3, v7, v3
-; GFX11-FLUSH-FAKE16-NEXT:    v_fma_mix_f32 v6, -v0, v5, 1.0 op_sel_hi:[1,0,1]
-; GFX11-FLUSH-FAKE16-NEXT:    v_dual_mul_f32 v2, v6, v2 :: v_dual_and_b32 v3, 0xff800000, v3
-; GFX11-FLUSH-FAKE16-NEXT:    v_dual_add_f32 v3, v3, v4 :: v_dual_and_b32 v2, 0xff800000, v2
-; GFX11-FLUSH-FAKE16-NEXT:    v_cvt_f16_f32_e32 v3, v3
-; GFX11-FLUSH-FAKE16-NEXT:    v_add_f32_e32 v2, v2, v5
-; GFX11-FLUSH-FAKE16-NEXT:    v_div_fixup_f16 v1, v3, v1, 1.0
-; GFX11-FLUSH-FAKE16-NEXT:    v_cvt_f16_f32_e32 v2, v2
-; GFX11-FLUSH-FAKE16-NEXT:    v_div_fixup_f16 v0, v2, v0, 1.0
-; GFX11-FLUSH-FAKE16-NEXT:    v_pack_b32_f16 v0, v0, v1
-; GFX11-FLUSH-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ; GFX11-LABEL: v_rcp_v2f16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2791,123 +2024,6 @@ define <2 x half> @v_neg_rcp_v2f16(<2 x half> %x) {
 ; GFX10-FLUSH-NEXT:    v_pack_b32_f16 v0, v0, v1
 ; GFX10-FLUSH-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-IEEE-TRUE16-LABEL: v_neg_rcp_v2f16:
-; GFX11-IEEE-TRUE16:       ; %bb.0:
-; GFX11-IEEE-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-IEEE-TRUE16-NEXT:    v_cvt_f32_f16_e32 v1, v0.l
-; GFX11-IEEE-TRUE16-NEXT:    v_cvt_f32_f16_e32 v2, v0.h
-; GFX11-IEEE-TRUE16-NEXT:    v_cvt_f32_f16_e32 v3, -1.0
-; GFX11-IEEE-TRUE16-NEXT:    v_mov_b16_e32 v5.l, v0.h
-; GFX11-IEEE-TRUE16-NEXT:    v_mov_b16_e32 v4.l, v0.l
-; GFX11-IEEE-TRUE16-NEXT:    v_rcp_f32_e32 v1, v1
-; GFX11-IEEE-TRUE16-NEXT:    v_rcp_f32_e32 v2, v2
-; GFX11-IEEE-TRUE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-IEEE-TRUE16-NEXT:    v_mul_f32_e32 v6, v3, v1
-; GFX11-IEEE-TRUE16-NEXT:    v_mul_f32_e32 v3, v3, v2
-; GFX11-IEEE-TRUE16-NEXT:    v_fma_mix_f32 v8, -v5, v3, -1.0 op_sel_hi:[1,0,1]
-; GFX11-IEEE-TRUE16-NEXT:    v_fmac_f32_e32 v3, v8, v2
-; GFX11-IEEE-TRUE16-NEXT:    v_fma_mix_f32 v7, -v4, v6, -1.0 op_sel_hi:[1,0,1]
-; GFX11-IEEE-TRUE16-NEXT:    v_fma_mix_f32 v5, -v5, v3, -1.0 op_sel_hi:[1,0,1]
-; GFX11-IEEE-TRUE16-NEXT:    v_fmac_f32_e32 v6, v7, v1
-; GFX11-IEEE-TRUE16-NEXT:    v_mul_f32_e32 v2, v5, v2
-; GFX11-IEEE-TRUE16-NEXT:    v_fma_mix_f32 v4, -v4, v6, -1.0 op_sel_hi:[1,0,1]
-; GFX11-IEEE-TRUE16-NEXT:    v_dual_mul_f32 v1, v4, v1 :: v_dual_and_b32 v2, 0xff800000, v2
-; GFX11-IEEE-TRUE16-NEXT:    v_dual_add_f32 v2, v2, v3 :: v_dual_and_b32 v1, 0xff800000, v1
-; GFX11-IEEE-TRUE16-NEXT:    v_add_f32_e32 v1, v1, v6
-; GFX11-IEEE-TRUE16-NEXT:    v_cvt_f16_f32_e32 v1.l, v1
-; GFX11-IEEE-TRUE16-NEXT:    v_cvt_f16_f32_e32 v1.h, v2
-; GFX11-IEEE-TRUE16-NEXT:    v_div_fixup_f16 v0.l, v1.l, v0.l, -1.0
-; GFX11-IEEE-TRUE16-NEXT:    v_div_fixup_f16 v0.h, v1.h, v0.h, -1.0
-; GFX11-IEEE-TRUE16-NEXT:    v_pack_b32_f16 v0, v0.l, v0.h
-; GFX11-IEEE-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-IEEE-FAKE16-LABEL: v_neg_rcp_v2f16:
-; GFX11-IEEE-FAKE16:       ; %bb.0:
-; GFX11-IEEE-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-IEEE-FAKE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; GFX11-IEEE-FAKE16-NEXT:    v_cvt_f32_f16_e32 v2, v0
-; GFX11-IEEE-FAKE16-NEXT:    v_cvt_f32_f16_e32 v4, -1.0
-; GFX11-IEEE-FAKE16-NEXT:    v_cvt_f32_f16_e32 v3, v1
-; GFX11-IEEE-FAKE16-NEXT:    v_rcp_f32_e32 v2, v2
-; GFX11-IEEE-FAKE16-NEXT:    v_rcp_f32_e32 v3, v3
-; GFX11-IEEE-FAKE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-IEEE-FAKE16-NEXT:    v_mul_f32_e32 v5, v4, v2
-; GFX11-IEEE-FAKE16-NEXT:    v_mul_f32_e32 v4, v4, v3
-; GFX11-IEEE-FAKE16-NEXT:    v_fma_mix_f32 v7, -v0, v4, -1.0 op_sel:[1,0,0] op_sel_hi:[1,0,1]
-; GFX11-IEEE-FAKE16-NEXT:    v_fmac_f32_e32 v4, v7, v3
-; GFX11-IEEE-FAKE16-NEXT:    v_fma_mix_f32 v6, -v0, v5, -1.0 op_sel_hi:[1,0,1]
-; GFX11-IEEE-FAKE16-NEXT:    v_fma_mix_f32 v7, -v0, v4, -1.0 op_sel:[1,0,0] op_sel_hi:[1,0,1]
-; GFX11-IEEE-FAKE16-NEXT:    v_fmac_f32_e32 v5, v6, v2
-; GFX11-IEEE-FAKE16-NEXT:    v_mul_f32_e32 v3, v7, v3
-; GFX11-IEEE-FAKE16-NEXT:    v_fma_mix_f32 v6, -v0, v5, -1.0 op_sel_hi:[1,0,1]
-; GFX11-IEEE-FAKE16-NEXT:    v_dual_mul_f32 v2, v6, v2 :: v_dual_and_b32 v3, 0xff800000, v3
-; GFX11-IEEE-FAKE16-NEXT:    v_dual_add_f32 v3, v3, v4 :: v_dual_and_b32 v2, 0xff800000, v2
-; GFX11-IEEE-FAKE16-NEXT:    v_cvt_f16_f32_e32 v3, v3
-; GFX11-IEEE-FAKE16-NEXT:    v_add_f32_e32 v2, v2, v5
-; GFX11-IEEE-FAKE16-NEXT:    v_div_fixup_f16 v1, v3, v1, -1.0
-; GFX11-IEEE-FAKE16-NEXT:    v_cvt_f16_f32_e32 v2, v2
-; GFX11-IEEE-FAKE16-NEXT:    v_div_fixup_f16 v0, v2, v0, -1.0
-; GFX11-IEEE-FAKE16-NEXT:    v_pack_b32_f16 v0, v0, v1
-; GFX11-IEEE-FAKE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-FLUSH-TRUE16-LABEL: v_neg_rcp_v2f16:
-; GFX11-FLUSH-TRUE16:       ; %bb.0:
-; GFX11-FLUSH-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FLUSH-TRUE16-NEXT:    v_cvt_f32_f16_e32 v1, v0.l
-; GFX11-FLUSH-TRUE16-NEXT:    v_cvt_f32_f16_e32 v2, v0.h
-; GFX11-FLUSH-TRUE16-NEXT:    v_cvt_f32_f16_e32 v3, -1.0
-; GFX11-FLUSH-TRUE16-NEXT:    v_mov_b16_e32 v5.l, v0.h
-; GFX11-FLUSH-TRUE16-NEXT:    v_mov_b16_e32 v4.l, v0.l
-; GFX11-FLUSH-TRUE16-NEXT:    v_rcp_f32_e32 v1, v1
-; GFX11-FLUSH-TRUE16-NEXT:    v_rcp_f32_e32 v2, v2
-; GFX11-FLUSH-TRUE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-FLUSH-TRUE16-NEXT:    v_mul_f32_e32 v6, v3, v1
-; GFX11-FLUSH-TRUE16-NEXT:    v_mul_f32_e32 v3, v3, v2
-; GFX11-FLUSH-TRUE16-NEXT:    v_fma_mix_f32 v8, -v5, v3, -1.0 op_sel_hi:[1,0,1]
-; GFX11-FLUSH-TRUE16-NEXT:    v_fmac_f32_e32 v3, v8, v2
-; GFX11-FLUSH-TRUE16-NEXT:    v_fma_mix_f32 v7, -v4, v6, -1.0 op_sel_hi:[1,0,1]
-; GFX11-FLUSH-TRUE16-NEXT:    v_fma_mix_f32 v5, -v5, v3, -1.0 op_sel_hi:[1,0,1]
-; GFX11-FLUSH-TRUE16-NEXT:    v_fmac_f32_e32 v6, v7, v1
-; GFX11-FLUSH-TRUE16-NEXT:    v_mul_f32_e32 v2, v5, v2
-; GFX11-FLUSH-TRUE16-NEXT:    v_fma_mix_f32 v4, -v4, v6, -1.0 op_sel_hi:[1,0,1]
-; GFX11-FLUSH-TRUE16-NEXT:    v_dual_mul_f32 v1, v4, v1 :: v_dual_and_b32 v2, 0xff800000, v2
-; GFX11-FLUSH-TRUE16-NEXT:    v_dual_add_f32 v2, v2, v3 :: v_dual_and_b32 v1, 0xff800000, v1
-; GFX11-FLUSH-TRUE16-NEXT:    v_add_f32_e32 v1, v1, v6
-; GFX11-FLUSH-TRUE16-NEXT:    v_cvt_f16_f32_e32 v1.l, v1
-; GFX11-FLUSH-TRUE16-NEXT:    v_cvt_f16_f32_e32 v1.h, v2
-; GFX11-FLUSH-TRUE16-NEXT:    v_div_fixup_f16 v0.l, v1.l, v0.l, -1.0
-; GFX11-FLUSH-TRUE16-NEXT:    v_div_fixup_f16 v0.h, v1.h, v0.h, -1.0
-; GFX11-FLUSH-TRUE16-NEXT:    v_pack_b32_f16 v0, v0.l, v0.h
-; GFX11-FLUSH-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-FLUSH-FAKE16-LABEL: v_neg_rcp_v2f16:
-; GFX11-FLUSH-FAKE16:       ; %bb.0:
-; GFX11-FLUSH-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FLUSH-FAKE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; GFX11-FLUSH-FAKE16-NEXT:    v_cvt_f32_f16_e32 v2, v0
-; GFX11-FLUSH-FAKE16-NEXT:    v_cvt_f32_f16_e32 v4, -1.0
-; GFX11-FLUSH-FAKE16-NEXT:    v_cvt_f32_f16_e32 v3, v1
-; GFX11-FLUSH-FAKE16-NEXT:    v_rcp_f32_e32 v2, v2
-; GFX11-FLUSH-FAKE16-NEXT:    v_rcp_f32_e32 v3, v3
-; GFX11-FLUSH-FAKE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-FLUSH-FAKE16-NEXT:    v_mul_f32_e32 v5, v4, v2
-; GFX11-FLUSH-FAKE16-NEXT:    v_mul_f32_e32 v4, v4, v3
-; GFX11-FLUSH-FAKE16-NEXT:    v_fma_mix_f32 v7, -v0, v4, -1.0 op_sel:[1,0,0] op_sel_hi:[1,0,1]
-; GFX11-FLUSH-FAKE16-NEXT:    v_fmac_f32_e32 v4, v7, v3
-; GFX11-FLUSH-FAKE16-NEXT:    v_fma_mix_f32 v6, -v0, v5, -1.0 op_sel_hi:[1,0,1]
-; GFX11-FLUSH-FAKE16-NEXT:    v_fma_mix_f32 v7, -v0, v4, -1.0 op_sel:[1,0,0] op_sel_hi:[1,0,1]
-; GFX11-FLUSH-FAKE16-NEXT:    v_fmac_f32_e32 v5, v6, v2
-; GFX11-FLUSH-FAKE16-NEXT:    v_mul_f32_e32 v3, v7, v3
-; GFX11-FLUSH-FAKE16-NEXT:    v_fma_mix_f32 v6, -v0, v5, -1.0 op_sel_hi:[1,0,1]
-; GFX11-FLUSH-FAKE16-NEXT:    v_dual_mul_f32 v2, v6, v2 :: v_dual_and_b32 v3, 0xff800000, v3
-; GFX11-FLUSH-FAKE16-NEXT:    v_dual_add_f32 v3, v3, v4 :: v_dual_and_b32 v2, 0xff800000, v2
-; GFX11-FLUSH-FAKE16-NEXT:    v_cvt_f16_f32_e32 v3, v3
-; GFX11-FLUSH-FAKE16-NEXT:    v_add_f32_e32 v2, v2, v5
-; GFX11-FLUSH-FAKE16-NEXT:    v_div_fixup_f16 v1, v3, v1, -1.0
-; GFX11-FLUSH-FAKE16-NEXT:    v_cvt_f16_f32_e32 v2, v2
-; GFX11-FLUSH-FAKE16-NEXT:    v_div_fixup_f16 v0, v2, v0, -1.0
-; GFX11-FLUSH-FAKE16-NEXT:    v_pack_b32_f16 v0, v0, v1
-; GFX11-FLUSH-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ; GFX11-LABEL: v_neg_rcp_v2f16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -3227,133 +2343,6 @@ define <2 x half> @v_rcp_v2f16_fabs(<2 x half> %x) {
 ; GFX10-FLUSH-NEXT:    v_pack_b32_f16 v0, v0, v1
 ; GFX10-FLUSH-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-IEEE-TRUE16-LABEL: v_rcp_v2f16_fabs:
-; GFX11-IEEE-TRUE16:       ; %bb.0:
-; GFX11-IEEE-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-IEEE-TRUE16-NEXT:    v_and_b32_e32 v1, 0x7fff7fff, v0
-; GFX11-IEEE-TRUE16-NEXT:    v_cvt_f32_f16_e32 v3, 1.0
-; GFX11-IEEE-TRUE16-NEXT:    v_cvt_f32_f16_e32 v0, v1.l
-; GFX11-IEEE-TRUE16-NEXT:    v_cvt_f32_f16_e32 v2, v1.h
-; GFX11-IEEE-TRUE16-NEXT:    v_mov_b16_e32 v5.l, v1.h
-; GFX11-IEEE-TRUE16-NEXT:    v_rcp_f32_e32 v0, v0
-; GFX11-IEEE-TRUE16-NEXT:    v_rcp_f32_e32 v2, v2
-; GFX11-IEEE-TRUE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-IEEE-TRUE16-NEXT:    v_mul_f32_e32 v6, v3, v0
-; GFX11-IEEE-TRUE16-NEXT:    v_mul_f32_e32 v3, v3, v2
-; GFX11-IEEE-TRUE16-NEXT:    v_fma_mix_f32 v8, -v5, v3, 1.0 op_sel_hi:[1,0,1]
-; GFX11-IEEE-TRUE16-NEXT:    v_fmac_f32_e32 v3, v8, v2
-; GFX11-IEEE-TRUE16-NEXT:    v_fma_mix_f32 v5, -v5, v3, 1.0 op_sel_hi:[1,0,1]
-; GFX11-IEEE-TRUE16-NEXT:    v_mul_f32_e32 v2, v5, v2
-; GFX11-IEEE-TRUE16-NEXT:    v_mov_b16_e32 v4.l, v1.l
-; GFX11-IEEE-TRUE16-NEXT:    v_and_b32_e32 v2, 0xff800000, v2
-; GFX11-IEEE-TRUE16-NEXT:    v_fma_mix_f32 v7, -v4, v6, 1.0 op_sel_hi:[1,0,1]
-; GFX11-IEEE-TRUE16-NEXT:    v_add_f32_e32 v2, v2, v3
-; GFX11-IEEE-TRUE16-NEXT:    v_fmac_f32_e32 v6, v7, v0
-; GFX11-IEEE-TRUE16-NEXT:    v_fma_mix_f32 v4, -v4, v6, 1.0 op_sel_hi:[1,0,1]
-; GFX11-IEEE-TRUE16-NEXT:    v_mul_f32_e32 v0, v4, v0
-; GFX11-IEEE-TRUE16-NEXT:    v_and_b32_e32 v0, 0xff800000, v0
-; GFX11-IEEE-TRUE16-NEXT:    v_add_f32_e32 v0, v0, v6
-; GFX11-IEEE-TRUE16-NEXT:    v_cvt_f16_f32_e32 v0.l, v0
-; GFX11-IEEE-TRUE16-NEXT:    v_cvt_f16_f32_e32 v0.h, v2
-; GFX11-IEEE-TRUE16-NEXT:    v_div_fixup_f16 v0.l, v0.l, v1.l, 1.0
-; GFX11-IEEE-TRUE16-NEXT:    v_div_fixup_f16 v0.h, v0.h, v1.h, 1.0
-; GFX11-IEEE-TRUE16-NEXT:    v_pack_b32_f16 v0, v0.l, v0.h
-; GFX11-IEEE-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-IEEE-FAKE16-LABEL: v_rcp_v2f16_fabs:
-; GFX11-IEEE-FAKE16:       ; %bb.0:
-; GFX11-IEEE-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-IEEE-FAKE16-NEXT:    v_cvt_f32_f16_e32 v5, 1.0
-; GFX11-IEEE-FAKE16-NEXT:    v_and_b32_e32 v1, 0x7fff7fff, v0
-; GFX11-IEEE-FAKE16-NEXT:    v_cvt_f32_f16_e32 v3, v1
-; GFX11-IEEE-FAKE16-NEXT:    v_rcp_f32_e32 v3, v3
-; GFX11-IEEE-FAKE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-IEEE-FAKE16-NEXT:    v_mul_f32_e32 v6, v5, v3
-; GFX11-IEEE-FAKE16-NEXT:    v_lshrrev_b32_e32 v2, 16, v1
-; GFX11-IEEE-FAKE16-NEXT:    v_fma_mix_f32 v7, -v1, v6, 1.0 op_sel_hi:[1,0,1]
-; GFX11-IEEE-FAKE16-NEXT:    v_cvt_f32_f16_e32 v4, v2
-; GFX11-IEEE-FAKE16-NEXT:    v_fmac_f32_e32 v6, v7, v3
-; GFX11-IEEE-FAKE16-NEXT:    v_rcp_f32_e32 v4, v4
-; GFX11-IEEE-FAKE16-NEXT:    v_fma_mix_f32 v7, -v1, v6, 1.0 op_sel_hi:[1,0,1]
-; GFX11-IEEE-FAKE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-IEEE-FAKE16-NEXT:    v_mul_f32_e32 v5, v5, v4
-; GFX11-IEEE-FAKE16-NEXT:    v_fma_mix_f32 v8, -|v0|, v5, 1.0 op_sel:[1,0,0] op_sel_hi:[1,0,1]
-; GFX11-IEEE-FAKE16-NEXT:    v_fmac_f32_e32 v5, v8, v4
-; GFX11-IEEE-FAKE16-NEXT:    v_fma_mix_f32 v0, -|v0|, v5, 1.0 op_sel:[1,0,0] op_sel_hi:[1,0,1]
-; GFX11-IEEE-FAKE16-NEXT:    v_dual_mul_f32 v3, v7, v3 :: v_dual_mul_f32 v0, v0, v4
-; GFX11-IEEE-FAKE16-NEXT:    v_and_b32_e32 v0, 0xff800000, v0
-; GFX11-IEEE-FAKE16-NEXT:    v_dual_add_f32 v0, v0, v5 :: v_dual_and_b32 v3, 0xff800000, v3
-; GFX11-IEEE-FAKE16-NEXT:    v_add_f32_e32 v3, v3, v6
-; GFX11-IEEE-FAKE16-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX11-IEEE-FAKE16-NEXT:    v_cvt_f16_f32_e32 v3, v3
-; GFX11-IEEE-FAKE16-NEXT:    v_div_fixup_f16 v0, v0, v2, 1.0
-; GFX11-IEEE-FAKE16-NEXT:    v_div_fixup_f16 v1, v3, v1, 1.0
-; GFX11-IEEE-FAKE16-NEXT:    v_pack_b32_f16 v0, v1, v0
-; GFX11-IEEE-FAKE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-FLUSH-TRUE16-LABEL: v_rcp_v2f16_fabs:
-; GFX11-FLUSH-TRUE16:       ; %bb.0:
-; GFX11-FLUSH-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FLUSH-TRUE16-NEXT:    v_and_b32_e32 v1, 0x7fff7fff, v0
-; GFX11-FLUSH-TRUE16-NEXT:    v_cvt_f32_f16_e32 v3, 1.0
-; GFX11-FLUSH-TRUE16-NEXT:    v_cvt_f32_f16_e32 v0, v1.l
-; GFX11-FLUSH-TRUE16-NEXT:    v_cvt_f32_f16_e32 v2, v1.h
-; GFX11-FLUSH-TRUE16-NEXT:    v_mov_b16_e32 v5.l, v1.h
-; GFX11-FLUSH-TRUE16-NEXT:    v_rcp_f32_e32 v0, v0
-; GFX11-FLUSH-TRUE16-NEXT:    v_rcp_f32_e32 v2, v2
-; GFX11-FLUSH-TRUE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-FLUSH-TRUE16-NEXT:    v_mul_f32_e32 v6, v3, v0
-; GFX11-FLUSH-TRUE16-NEXT:    v_mul_f32_e32 v3, v3, v2
-; GFX11-FLUSH-TRUE16-NEXT:    v_fma_mix_f32 v8, -v5, v3, 1.0 op_sel_hi:[1,0,1]
-; GFX11-FLUSH-TRUE16-NEXT:    v_fmac_f32_e32 v3, v8, v2
-; GFX11-FLUSH-TRUE16-NEXT:    v_fma_mix_f32 v5, -v5, v3, 1.0 op_sel_hi:[1,0,1]
-; GFX11-FLUSH-TRUE16-NEXT:    v_mul_f32_e32 v2, v5, v2
-; GFX11-FLUSH-TRUE16-NEXT:    v_mov_b16_e32 v4.l, v1.l
-; GFX11-FLUSH-TRUE16-NEXT:    v_and_b32_e32 v2, 0xff800000, v2
-; GFX11-FLUSH-TRUE16-NEXT:    v_fma_mix_f32 v7, -v4, v6, 1.0 op_sel_hi:[1,0,1]
-; GFX11-FLUSH-TRUE16-NEXT:    v_add_f32_e32 v2, v2, v3
-; GFX11-FLUSH-TRUE16-NEXT:    v_fmac_f32_e32 v6, v7, v0
-; GFX11-FLUSH-TRUE16-NEXT:    v_fma_mix_f32 v4, -v4, v6, 1.0 op_sel_hi:[1,0,1]
-; GFX11-FLUSH-TRUE16-NEXT:    v_mul_f32_e32 v0, v4, v0
-; GFX11-FLUSH-TRUE16-NEXT:    v_and_b32_e32 v0, 0xff800000, v0
-; GFX11-FLUSH-TRUE16-NEXT:    v_add_f32_e32 v0, v0, v6
-; GFX11-FLUSH-TRUE16-NEXT:    v_cvt_f16_f32_e32 v0.l, v0
-; GFX11-FLUSH-TRUE16-NEXT:    v_cvt_f16_f32_e32 v0.h, v2
-; GFX11-FLUSH-TRUE16-NEXT:    v_div_fixup_f16 v0.l, v0.l, v1.l, 1.0
-; GFX11-FLUSH-TRUE16-NEXT:    v_div_fixup_f16 v0.h, v0.h, v1.h, 1.0
-; GFX11-FLUSH-TRUE16-NEXT:    v_pack_b32_f16 v0, v0.l, v0.h
-; GFX11-FLUSH-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-FLUSH-FAKE16-LABEL: v_rcp_v2f16_fabs:
-; GFX11-FLUSH-FAKE16:       ; %bb.0:
-; GFX11-FLUSH-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FLUSH-FAKE16-NEXT:    v_cvt_f32_f16_e32 v5, 1.0
-; GFX11-FLUSH-FAKE16-NEXT:    v_and_b32_e32 v1, 0x7fff7fff, v0
-; GFX11-FLUSH-FAKE16-NEXT:    v_cvt_f32_f16_e32 v3, v1
-; GFX11-FLUSH-FAKE16-NEXT:    v_rcp_f32_e32 v3, v3
-; GFX11-FLUSH-FAKE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-FLUSH-FAKE16-NEXT:    v_mul_f32_e32 v6, v5, v3
-; GFX11-FLUSH-FAKE16-NEXT:    v_lshrrev_b32_e32 v2, 16, v1
-; GFX11-FLUSH-FAKE16-NEXT:    v_fma_mix_f32 v7, -v1, v6, 1.0 op_sel_hi:[1,0,1]
-; GFX11-FLUSH-FAKE16-NEXT:    v_cvt_f32_f16_e32 v4, v2
-; GFX11-FLUSH-FAKE16-NEXT:    v_fmac_f32_e32 v6, v7, v3
-; GFX11-FLUSH-FAKE16-NEXT:    v_rcp_f32_e32 v4, v4
-; GFX11-FLUSH-FAKE16-NEXT:    v_fma_mix_f32 v7, -v1, v6, 1.0 op_sel_hi:[1,0,1]
-; GFX11-FLUSH-FAKE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-FLUSH-FAKE16-NEXT:    v_mul_f32_e32 v5, v5, v4
-; GFX11-FLUSH-FAKE16-NEXT:    v_fma_mix_f32 v8, -|v0|, v5, 1.0 op_sel:[1,0,0] op_sel_hi:[1,0,1]
-; GFX11-FLUSH-FAKE16-NEXT:    v_fmac_f32_e32 v5, v8, v4
-; GFX11-FLUSH-FAKE16-NEXT:    v_fma_mix_f32 v0, -|v0|, v5, 1.0 op_sel:[1,0,0] op_sel_hi:[1,0,1]
-; GFX11-FLUSH-FAKE16-NEXT:    v_dual_mul_f32 v3, v7, v3 :: v_dual_mul_f32 v0, v0, v4
-; GFX11-FLUSH-FAKE16-NEXT:    v_and_b32_e32 v0, 0xff800000, v0
-; GFX11-FLUSH-FAKE16-NEXT:    v_dual_add_f32 v0, v0, v5 :: v_dual_and_b32 v3, 0xff800000, v3
-; GFX11-FLUSH-FAKE16-NEXT:    v_add_f32_e32 v3, v3, v6
-; GFX11-FLUSH-FAKE16-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX11-FLUSH-FAKE16-NEXT:    v_cvt_f16_f32_e32 v3, v3
-; GFX11-FLUSH-FAKE16-NEXT:    v_div_fixup_f16 v0, v0, v2, 1.0
-; GFX11-FLUSH-FAKE16-NEXT:    v_div_fixup_f16 v1, v3, v1, 1.0
-; GFX11-FLUSH-FAKE16-NEXT:    v_pack_b32_f16 v0, v1, v0
-; GFX11-FLUSH-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ; GFX11-LABEL: v_rcp_v2f16_fabs:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -3676,133 +2665,6 @@ define <2 x half> @v_neg_rcp_v2f16_fabs(<2 x half> %x) {
 ; GFX10-FLUSH-NEXT:    v_pack_b32_f16 v0, v0, v1
 ; GFX10-FLUSH-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-IEEE-TRUE16-LABEL: v_neg_rcp_v2f16_fabs:
-; GFX11-IEEE-TRUE16:       ; %bb.0:
-; GFX11-IEEE-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-IEEE-TRUE16-NEXT:    v_and_b32_e32 v1, 0x7fff7fff, v0
-; GFX11-IEEE-TRUE16-NEXT:    v_cvt_f32_f16_e32 v3, -1.0
-; GFX11-IEEE-TRUE16-NEXT:    v_cvt_f32_f16_e32 v0, v1.l
-; GFX11-IEEE-TRUE16-NEXT:    v_cvt_f32_f16_e32 v2, v1.h
-; GFX11-IEEE-TRUE16-NEXT:    v_mov_b16_e32 v5.l, v1.h
-; GFX11-IEEE-TRUE16-NEXT:    v_rcp_f32_e32 v0, v0
-; GFX11-IEEE-TRUE16-NEXT:    v_rcp_f32_e32 v2, v2
-; GFX11-IEEE-TRUE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-IEEE-TRUE16-NEXT:    v_mul_f32_e32 v6, v3, v0
-; GFX11-IEEE-TRUE16-NEXT:    v_mul_f32_e32 v3, v3, v2
-; GFX11-IEEE-TRUE16-NEXT:    v_fma_mix_f32 v8, -v5, v3, -1.0 op_sel_hi:[1,0,1]
-; GFX11-IEEE-TRUE16-NEXT:    v_fmac_f32_e32 v3, v8, v2
-; GFX11-IEEE-TRUE16-NEXT:    v_fma_mix_f32 v5, -v5, v3, -1.0 op_sel_hi:[1,0,1]
-; GFX11-IEEE-TRUE16-NEXT:    v_mul_f32_e32 v2, v5, v2
-; GFX11-IEEE-TRUE16-NEXT:    v_mov_b16_e32 v4.l, v1.l
-; GFX11-IEEE-TRUE16-NEXT:    v_and_b32_e32 v2, 0xff800000, v2
-; GFX11-IEEE-TRUE16-NEXT:    v_fma_mix_f32 v7, -v4, v6, -1.0 op_sel_hi:[1,0,1]
-; GFX11-IEEE-TRUE16-NEXT:    v_add_f32_e32 v2, v2, v3
-; GFX11-IEEE-TRUE16-NEXT:    v_fmac_f32_e32 v6, v7, v0
-; GFX11-IEEE-TRUE16-NEXT:    v_fma_mix_f32 v4, -v4, v6, -1.0 op_sel_hi:[1,0,1]
-; GFX11-IEEE-TRUE16-NEXT:    v_mul_f32_e32 v0, v4, v0
-; GFX11-IEEE-TRUE16-NEXT:    v_and_b32_e32 v0, 0xff800000, v0
-; GFX11-IEEE-TRUE16-NEXT:    v_add_f32_e32 v0, v0, v6
-; GFX11-IEEE-TRUE16-NEXT:    v_cvt_f16_f32_e32 v0.l, v0
-; GFX11-IEEE-TRUE16-NEXT:    v_cvt_f16_f32_e32 v0.h, v2
-; GFX11-IEEE-TRUE16-NEXT:    v_div_fixup_f16 v0.l, v0.l, v1.l, -1.0
-; GFX11-IEEE-TRUE16-NEXT:    v_div_fixup_f16 v0.h, v0.h, v1.h, -1.0
-; GFX11-IEEE-TRUE16-NEXT:    v_pack_b32_f16 v0, v0.l, v0.h
-; GFX11-IEEE-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-IEEE-FAKE16-LABEL: v_neg_rcp_v2f16_fabs:
-; GFX11-IEEE-FAKE16:       ; %bb.0:
-; GFX11-IEEE-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-IEEE-FAKE16-NEXT:    v_cvt_f32_f16_e32 v5, -1.0
-; GFX11-IEEE-FAKE16-NEXT:    v_and_b32_e32 v1, 0x7fff7fff, v0
-; GFX11-IEEE-FAKE16-NEXT:    v_cvt_f32_f16_e32 v3, v1
-; GFX11-IEEE-FAKE16-NEXT:    v_rcp_f32_e32 v3, v3
-; GFX11-IEEE-FAKE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-IEEE-FAKE16-NEXT:    v_mul_f32_e32 v6, v5, v3
-; GFX11-IEEE-FAKE16-NEXT:    v_lshrrev_b32_e32 v2, 16, v1
-; GFX11-IEEE-FAKE16-NEXT:    v_fma_mix_f32 v7, -v1, v6, -1.0 op_sel_hi:[1,0,1]
-; GFX11-IEEE-FAKE16-NEXT:    v_cvt_f32_f16_e32 v4, v2
-; GFX11-IEEE-FAKE16-NEXT:    v_fmac_f32_e32 v6, v7, v3
-; GFX11-IEEE-FAKE16-NEXT:    v_rcp_f32_e32 v4, v4
-; GFX11-IEEE-FAKE16-NEXT:    v_fma_mix_f32 v7, -v1, v6, -1.0 op_sel_hi:[1,0,1]
-; GFX11-IEEE-FAKE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-IEEE-FAKE16-NEXT:    v_mul_f32_e32 v5, v5, v4
-; GFX11-IEEE-FAKE16-NEXT:    v_fma_mix_f32 v8, -|v0|, v5, -1.0 op_sel:[1,0,0] op_sel_hi:[1,0,1]
-; GFX11-IEEE-FAKE16-NEXT:    v_fmac_f32_e32 v5, v8, v4
-; GFX11-IEEE-FAKE16-NEXT:    v_fma_mix_f32 v0, -|v0|, v5, -1.0 op_sel:[1,0,0] op_sel_hi:[1,0,1]
-; GFX11-IEEE-FAKE16-NEXT:    v_dual_mul_f32 v3, v7, v3 :: v_dual_mul_f32 v0, v0, v4
-; GFX11-IEEE-FAKE16-NEXT:    v_and_b32_e32 v0, 0xff800000, v0
-; GFX11-IEEE-FAKE16-NEXT:    v_dual_add_f32 v0, v0, v5 :: v_dual_and_b32 v3, 0xff800000, v3
-; GFX11-IEEE-FAKE16-NEXT:    v_add_f32_e32 v3, v3, v6
-; GFX11-IEEE-FAKE16-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX11-IEEE-FAKE16-NEXT:    v_cvt_f16_f32_e32 v3, v3
-; GFX11-IEEE-FAKE16-NEXT:    v_div_fixup_f16 v0, v0, v2, -1.0
-; GFX11-IEEE-FAKE16-NEXT:    v_div_fixup_f16 v1, v3, v1, -1.0
-; GFX11-IEEE-FAKE16-NEXT:    v_pack_b32_f16 v0, v1, v0
-; GFX11-IEEE-FAKE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-FLUSH-TRUE16-LABEL: v_neg_rcp_v2f16_fabs:
-; GFX11-FLUSH-TRUE16:       ; %bb.0:
-; GFX11-FLUSH-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FLUSH-TRUE16-NEXT:    v_and_b32_e32 v1, 0x7fff7fff, v0
-; GFX11-FLUSH-TRUE16-NEXT:    v_cvt_f32_f16_e32 v3, -1.0
-; GFX11-FLUSH-TRUE16-NEXT:    v_cvt_f32_f16_e32 v0, v1.l
-; GFX11-FLUSH-TRUE16-NEXT:    v_cvt_f32_f16_e32 v2, v1.h
-; GFX11-FLUSH-TRUE16-NEXT:    v_mov_b16_e32 v5.l, v1.h
-; GFX11-FLUSH-TRUE16-NEXT:    v_rcp_f32_e32 v0, v0
-; GFX11-FLUSH-TRUE16-NEXT:    v_rcp_f32_e32 v2, v2
-; GFX11-FLUSH-TRUE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-FLUSH-TRUE16-NEXT:    v_mul_f32_e32 v6, v3, v0
-; GFX11-FLUSH-TRUE16-NEXT:    v_mul_f32_e32 v3, v3, v2
-; GFX11-FLUSH-TRUE16-NEXT:    v_fma_mix_f32 v8, -v5, v3, -1.0 op_sel_hi:[1,0,1]
-; GFX11-FLUSH-TRUE16-NEXT:    v_fmac_f32_e32 v3, v8, v2
-; GFX11-FLUSH-TRUE16-NEXT:    v_fma_mix_f32 v5, -v5, v3, -1.0 op_sel_hi:[1,0,1]
-; GFX11-FLUSH-TRUE16-NEXT:    v_mul_f32_e32 v2, v5, v2
-; GFX11-FLUSH-TRUE16-NEXT:    v_mov_b16_e32 v4.l, v1.l
-; GFX11-FLUSH-TRUE16-NEXT:    v_and_b32_e32 v2, 0xff800000, v2
-; GFX11-FLUSH-TRUE16-NEXT:    v_fma_mix_f32 v7, -v4, v6, -1.0 op_sel_hi:[1,0,1]
-; GFX11-FLUSH-TRUE16-NEXT:    v_add_f32_e32 v2, v2, v3
-; GFX11-FLUSH-TRUE16-NEXT:    v_fmac_f32_e32 v6, v7, v0
-; GFX11-FLUSH-TRUE16-NEXT:    v_fma_mix_f32 v4, -v4, v6, -1.0 op_sel_hi:[1,0,1]
-; GFX11-FLUSH-TRUE16-NEXT:    v_mul_f32_e32 v0, v4, v0
-; GFX11-FLUSH-TRUE16-NEXT:    v_and_b32_e32 v0, 0xff800000, v0
-; GFX11-FLUSH-TRUE16-NEXT:    v_add_f32_e32 v0, v0, v6
-; GFX11-FLUSH-TRUE16-NEXT:    v_cvt_f16_f32_e32 v0.l, v0
-; GFX11-FLUSH-TRUE16-NEXT:    v_cvt_f16_f32_e32 v0.h, v2
-; GFX11-FLUSH-TRUE16-NEXT:    v_div_fixup_f16 v0.l, v0.l, v1.l, -1.0
-; GFX11-FLUSH-TRUE16-NEXT:    v_div_fixup_f16 v0.h, v0.h, v1.h, -1.0
-; GFX11-FLUSH-TRUE16-NEXT:    v_pack_b32_f16 v0, v0.l, v0.h
-; GFX11-FLUSH-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-FLUSH-FAKE16-LABEL: v_neg_rcp_v2f16_fabs:
-; GFX11-FLUSH-FAKE16:       ; %bb.0:
-; GFX11-FLUSH-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FLUSH-FAKE16-NEXT:    v_cvt_f32_f16_e32 v5, -1.0
-; GFX11-FLUSH-FAKE16-NEXT:    v_and_b32_e32 v1, 0x7fff7fff, v0
-; GFX11-FLUSH-FAKE16-NEXT:    v_cvt_f32_f16_e32 v3, v1
-; GFX11-FLUSH-FAKE16-NEXT:    v_rcp_f32_e32 v3, v3
-; GFX11-FLUSH-FAKE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-FLUSH-FAKE16-NEXT:    v_mul_f32_e32 v6, v5, v3
-; GFX11-FLUSH-FAKE16-NEXT:    v_lshrrev_b32_e32 v2, 16, v1
-; GFX11-FLUSH-FAKE16-NEXT:    v_fma_mix_f32 v7, -v1, v6, -1.0 op_sel_hi:[1,0,1]
-; GFX11-FLUSH-FAKE16-NEXT:    v_cvt_f32_f16_e32 v4, v2
-; GFX11-FLUSH-FAKE16-NEXT:    v_fmac_f32_e32 v6, v7, v3
-; GFX11-FLUSH-FAKE16-NEXT:    v_rcp_f32_e32 v4, v4
-; GFX11-FLUSH-FAKE16-NEXT:    v_fma_mix_f32 v7, -v1, v6, -1.0 op_sel_hi:[1,0,1]
-; GFX11-FLUSH-FAKE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-FLUSH-FAKE16-NEXT:    v_mul_f32_e32 v5, v5, v4
-; GFX11-FLUSH-FAKE16-NEXT:    v_fma_mix_f32 v8, -|v0|, v5, -1.0 op_sel:[1,0,0] op_sel_hi:[1,0,1]
-; GFX11-FLUSH-FAKE16-NEXT:    v_fmac_f32_e32 v5, v8, v4
-; GFX11-FLUSH-FAKE16-NEXT:    v_fma_mix_f32 v0, -|v0|, v5, -1.0 op_sel:[1,0,0] op_sel_hi:[1,0,1]
-; GFX11-FLUSH-FAKE16-NEXT:    v_dual_mul_f32 v3, v7, v3 :: v_dual_mul_f32 v0, v0, v4
-; GFX11-FLUSH-FAKE16-NEXT:    v_and_b32_e32 v0, 0xff800000, v0
-; GFX11-FLUSH-FAKE16-NEXT:    v_dual_add_f32 v0, v0, v5 :: v_dual_and_b32 v3, 0xff800000, v3
-; GFX11-FLUSH-FAKE16-NEXT:    v_add_f32_e32 v3, v3, v6
-; GFX11-FLUSH-FAKE16-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX11-FLUSH-FAKE16-NEXT:    v_cvt_f16_f32_e32 v3, v3
-; GFX11-FLUSH-FAKE16-NEXT:    v_div_fixup_f16 v0, v0, v2, -1.0
-; GFX11-FLUSH-FAKE16-NEXT:    v_div_fixup_f16 v1, v3, v1, -1.0
-; GFX11-FLUSH-FAKE16-NEXT:    v_pack_b32_f16 v0, v1, v0
-; GFX11-FLUSH-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ; GFX11-LABEL: v_neg_rcp_v2f16_fabs:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -3933,43 +2795,6 @@ define <2 x half> @v_rcp_v2f16_arcp(<2 x half> %x) {
 ; GFX10-NEXT:    v_pack_b32_f16 v0, v1, v0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-IEEE-TRUE16-LABEL: v_rcp_v2f16_arcp:
-; GFX11-IEEE-TRUE16:       ; %bb.0:
-; GFX11-IEEE-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-IEEE-TRUE16-NEXT:    v_rcp_f16_e32 v0.l, v0.l
-; GFX11-IEEE-TRUE16-NEXT:    v_rcp_f16_e32 v0.h, v0.h
-; GFX11-IEEE-TRUE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-IEEE-TRUE16-NEXT:    v_pack_b32_f16 v0, v0.l, v0.h
-; GFX11-IEEE-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-IEEE-FAKE16-LABEL: v_rcp_v2f16_arcp:
-; GFX11-IEEE-FAKE16:       ; %bb.0:
-; GFX11-IEEE-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-IEEE-FAKE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; GFX11-IEEE-FAKE16-NEXT:    v_rcp_f16_e32 v0, v0
-; GFX11-IEEE-FAKE16-NEXT:    v_rcp_f16_e32 v1, v1
-; GFX11-IEEE-FAKE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-IEEE-FAKE16-NEXT:    v_pack_b32_f16 v0, v0, v1
-; GFX11-IEEE-FAKE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-FLUSH-TRUE16-LABEL: v_rcp_v2f16_arcp:
-; GFX11-FLUSH-TRUE16:       ; %bb.0:
-; GFX11-FLUSH-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FLUSH-TRUE16-NEXT:    v_rcp_f16_e32 v0.l, v0.l
-; GFX11-FLUSH-TRUE16-NEXT:    v_rcp_f16_e32 v0.h, v0.h
-; GFX11-FLUSH-TRUE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-FLUSH-TRUE16-NEXT:    v_pack_b32_f16 v0, v0.l, v0.h
-; GFX11-FLUSH-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-FLUSH-FAKE16-LABEL: v_rcp_v2f16_arcp:
-; GFX11-FLUSH-FAKE16:       ; %bb.0:
-; GFX11-FLUSH-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FLUSH-FAKE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; GFX11-FLUSH-FAKE16-NEXT:    v_rcp_f16_e32 v0, v0
-; GFX11-FLUSH-FAKE16-NEXT:    v_rcp_f16_e32 v1, v1
-; GFX11-FLUSH-FAKE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-FLUSH-FAKE16-NEXT:    v_pack_b32_f16 v0, v0, v1
-; GFX11-FLUSH-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ; GFX11-LABEL: v_rcp_v2f16_arcp:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -4022,43 +2847,6 @@ define <2 x half> @v_rcp_v2f16_arcp_afn(<2 x half> %x) {
 ; GFX10-NEXT:    v_pack_b32_f16 v0, v1, v0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-IEEE-TRUE16-LABEL: v_rcp_v2f16_arcp_afn:
-; GFX11-IEEE-TRUE16:       ; %bb.0:
-; GFX11-IEEE-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-IEEE-TRUE16-NEXT:    v_rcp_f16_e32 v0.l, v0.l
-; GFX11-IEEE-TRUE16-NEXT:    v_rcp_f16_e32 v0.h, v0.h
-; GFX11-IEEE-TRUE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-IEEE-TRUE16-NEXT:    v_pack_b32_f16 v0, v0.l, v0.h
-; GFX11-IEEE-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-IEEE-FAKE16-LABEL: v_rcp_v2f16_arcp_afn:
-; GFX11-IEEE-FAKE16:       ; %bb.0:
-; GFX11-IEEE-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-IEEE-FAKE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; GFX11-IEEE-FAKE16-NEXT:    v_rcp_f16_e32 v0, v0
-; GFX11-IEEE-FAKE16-NEXT:    v_rcp_f16_e32 v1, v1
-; GFX11-IEEE-FAKE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-IEEE-FAKE16-NEXT:    v_pack_b32_f16 v0, v0, v1
-; GFX11-IEEE-FAKE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-FLUSH-TRUE16-LABEL: v_rcp_v2f16_arcp_afn:
-; GFX11-FLUSH-TRUE16:       ; %bb.0:
-; GFX11-FLUSH-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FLUSH-TRUE16-NEXT:    v_rcp_f16_e32 v0.l, v0.l
-; GFX11-FLUSH-TRUE16-NEXT:    v_rcp_f16_e32 v0.h, v0.h
-; GFX11-FLUSH-TRUE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-FLUSH-TRUE16-NEXT:    v_pack_b32_f16 v0, v0.l, v0.h
-; GFX11-FLUSH-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-FLUSH-FAKE16-LABEL: v_rcp_v2f16_arcp_afn:
-; GFX11-FLUSH-FAKE16:       ; %bb.0:
-; GFX11-FLUSH-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FLUSH-FAKE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; GFX11-FLUSH-FAKE16-NEXT:    v_rcp_f16_e32 v0, v0
-; GFX11-FLUSH-FAKE16-NEXT:    v_rcp_f16_e32 v1, v1
-; GFX11-FLUSH-FAKE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-FLUSH-FAKE16-NEXT:    v_pack_b32_f16 v0, v0, v1
-; GFX11-FLUSH-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ; GFX11-LABEL: v_rcp_v2f16_arcp_afn:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -4343,123 +3131,6 @@ define <2 x half> @v_rcp_v2f16_ulp25(<2 x half> %x) {
 ; GFX10-FLUSH-NEXT:    v_pack_b32_f16 v0, v0, v1
 ; GFX10-FLUSH-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-IEEE-TRUE16-LABEL: v_rcp_v2f16_ulp25:
-; GFX11-IEEE-TRUE16:       ; %bb.0:
-; GFX11-IEEE-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-IEEE-TRUE16-NEXT:    v_cvt_f32_f16_e32 v1, v0.l
-; GFX11-IEEE-TRUE16-NEXT:    v_cvt_f32_f16_e32 v2, v0.h
-; GFX11-IEEE-TRUE16-NEXT:    v_cvt_f32_f16_e32 v3, 1.0
-; GFX11-IEEE-TRUE16-NEXT:    v_mov_b16_e32 v5.l, v0.h
-; GFX11-IEEE-TRUE16-NEXT:    v_mov_b16_e32 v4.l, v0.l
-; GFX11-IEEE-TRUE16-NEXT:    v_rcp_f32_e32 v1, v1
-; GFX11-IEEE-TRUE16-NEXT:    v_rcp_f32_e32 v2, v2
-; GFX11-IEEE-TRUE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-IEEE-TRUE16-NEXT:    v_mul_f32_e32 v6, v3, v1
-; GFX11-IEEE-TRUE16-NEXT:    v_mul_f32_e32 v3, v3, v2
-; GFX11-IEEE-TRUE16-NEXT:    v_fma_mix_f32 v8, -v5, v3, 1.0 op_sel_hi:[1,0,1]
-; GFX11-IEEE-TRUE16-NEXT:    v_fmac_f32_e32 v3, v8, v2
-; GFX11-IEEE-TRUE16-NEXT:    v_fma_mix_f32 v7, -v4, v6, 1.0 op_sel_hi:[1,0,1]
-; GFX11-IEEE-TRUE16-NEXT:    v_fma_mix_f32 v5, -v5, v3, 1.0 op_sel_hi:[1,0,1]
-; GFX11-IEEE-TRUE16-NEXT:    v_fmac_f32_e32 v6, v7, v1
-; GFX11-IEEE-TRUE16-NEXT:    v_mul_f32_e32 v2, v5, v2
-; GFX11-IEEE-TRUE16-NEXT:    v_fma_mix_f32 v4, -v4, v6, 1.0 op_sel_hi:[1,0,1]
-; GFX11-IEEE-TRUE16-NEXT:    v_dual_mul_f32 v1, v4, v1 :: v_dual_and_b32 v2, 0xff800000, v2
-; GFX11-IEEE-TRUE16-NEXT:    v_dual_add_f32 v2, v2, v3 :: v_dual_and_b32 v1, 0xff800000, v1
-; GFX11-IEEE-TRUE16-NEXT:    v_add_f32_e32 v1, v1, v6
-; GFX11-IEEE-TRUE16-NEXT:    v_cvt_f16_f32_e32 v1.l, v1
-; GFX11-IEEE-TRUE16-NEXT:    v_cvt_f16_f32_e32 v1.h, v2
-; GFX11-IEEE-TRUE16-NEXT:    v_div_fixup_f16 v0.l, v1.l, v0.l, 1.0
-; GFX11-IEEE-TRUE16-NEXT:    v_div_fixup_f16 v0.h, v1.h, v0.h, 1.0
-; GFX11-IEEE-TRUE16-NEXT:    v_pack_b32_f16 v0, v0.l, v0.h
-; GFX11-IEEE-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-IEEE-FAKE16-LABEL: v_rcp_v2f16_ulp25:
-; GFX11-IEEE-FAKE16:       ; %bb.0:
-; GFX11-IEEE-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-IEEE-FAKE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; GFX11-IEEE-FAKE16-NEXT:    v_cvt_f32_f16_e32 v2, v0
-; GFX11-IEEE-FAKE16-NEXT:    v_cvt_f32_f16_e32 v4, 1.0
-; GFX11-IEEE-FAKE16-NEXT:    v_cvt_f32_f16_e32 v3, v1
-; GFX11-IEEE-FAKE16-NEXT:    v_rcp_f32_e32 v2, v2
-; GFX11-IEEE-FAKE16-NEXT:    v_rcp_f32_e32 v3, v3
-; GFX11-IEEE-FAKE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-IEEE-FAKE16-NEXT:    v_mul_f32_e32 v5, v4, v2
-; GFX11-IEEE-FAKE16-NEXT:    v_mul_f32_e32 v4, v4, v3
-; GFX11-IEEE-FAKE16-NEXT:    v_fma_mix_f32 v7, -v0, v4, 1.0 op_sel:[1,0,0] op_sel_hi:[1,0,1]
-; GFX11-IEEE-FAKE16-NEXT:    v_fmac_f32_e32 v4, v7, v3
-; GFX11-IEEE-FAKE16-NEXT:    v_fma_mix_f32 v6, -v0, v5, 1.0 op_sel_hi:[1,0,1]
-; GFX11-IEEE-FAKE16-NEXT:    v_fma_mix_f32 v7, -v0, v4, 1.0 op_sel:[1,0,0] op_sel_hi:[1,0,1]
-; GFX11-IEEE-FAKE16-NEXT:    v_fmac_f32_e32 v5, v6, v2
-; GFX11-IEEE-FAKE16-NEXT:    v_mul_f32_e32 v3, v7, v3
-; GFX11-IEEE-FAKE16-NEXT:    v_fma_mix_f32 v6, -v0, v5, 1.0 op_sel_hi:[1,0,1]
-; GFX11-IEEE-FAKE16-NEXT:    v_dual_mul_f32 v2, v6, v2 :: v_dual_and_b32 v3, 0xff800000, v3
-; GFX11-IEEE-FAKE16-NEXT:    v_dual_add_f32 v3, v3, v4 :: v_dual_and_b32 v2, 0xff800000, v2
-; GFX11-IEEE-FAKE16-NEXT:    v_cvt_f16_f32_e32 v3, v3
-; GFX11-IEEE-FAKE16-NEXT:    v_add_f32_e32 v2, v2, v5
-; GFX11-IEEE-FAKE16-NEXT:    v_div_fixup_f16 v1, v3, v1, 1.0
-; GFX11-IEEE-FAKE16-NEXT:    v_cvt_f16_f32_e32 v2, v2
-; GFX11-IEEE-FAKE16-NEXT:    v_div_fixup_f16 v0, v2, v0, 1.0
-; GFX11-IEEE-FAKE16-NEXT:    v_pack_b32_f16 v0, v0, v1
-; GFX11-IEEE-FAKE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-FLUSH-TRUE16-LABEL: v_rcp_v2f16_ulp25:
-; GFX11-FLUSH-TRUE16:       ; %bb.0:
-; GFX11-FLUSH-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FLUSH-TRUE16-NEXT:    v_cvt_f32_f16_e32 v1, v0.l
-; GFX11-FLUSH-TRUE16-NEXT:    v_cvt_f32_f16_e32 v2, v0.h
-; GFX11-FLUSH-TRUE16-NEXT:    v_cvt_f32_f16_e32 v3, 1.0
-; GFX11-FLUSH-TRUE16-NEXT:    v_mov_b16_e32 v5.l, v0.h
-; GFX11-FLUSH-TRUE16-NEXT:    v_mov_b16_e32 v4.l, v0.l
-; GFX11-FLUSH-TRUE16-NEXT:    v_rcp_f32_e32 v1, v1
-; GFX11-FLUSH-TRUE16-NEXT:    v_rcp_f32_e32 v2, v2
-; GFX11-FLUSH-TRUE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-FLUSH-TRUE16-NEXT:    v_mul_f32_e32 v6, v3, v1
-; GFX11-FLUSH-TRUE16-NEXT:    v_mul_f32_e32 v3, v3, v2
-; GFX11-FLUSH-TRUE16-NEXT:    v_fma_mix_f32 v8, -v5, v3, 1.0 op_sel_hi:[1,0,1]
-; GFX11-FLUSH-TRUE16-NEXT:    v_fmac_f32_e32 v3, v8, v2
-; GFX11-FLUSH-TRUE16-NEXT:    v_fma_mix_f32 v7, -v4, v6, 1.0 op_sel_hi:[1,0,1]
-; GFX11-FLUSH-TRUE16-NEXT:    v_fma_mix_f32 v5, -v5, v3, 1.0 op_sel_hi:[1,0,1]
-; GFX11-FLUSH-TRUE16-NEXT:    v_fmac_f32_e32 v6, v7, v1
-; GFX11-FLUSH-TRUE16-NEXT:    v_mul_f32_e32 v2, v5, v2
-; GFX11-FLUSH-TRUE16-NEXT:    v_fma_mix_f32 v4, -v4, v6, 1.0 op_sel_hi:[1,0,1]
-; GFX11-FLUSH-TRUE16-NEXT:    v_dual_mul_f32 v1, v4, v1 :: v_dual_and_b32 v2, 0xff800000, v2
-; GFX11-FLUSH-TRUE16-NEXT:    v_dual_add_f32 v2, v2, v3 :: v_dual_and_b32 v1, 0xff800000, v1
-; GFX11-FLUSH-TRUE16-NEXT:    v_add_f32_e32 v1, v1, v6
-; GFX11-FLUSH-TRUE16-NEXT:    v_cvt_f16_f32_e32 v1.l, v1
-; GFX11-FLUSH-TRUE16-NEXT:    v_cvt_f16_f32_e32 v1.h, v2
-; GFX11-FLUSH-TRUE16-NEXT:    v_div_fixup_f16 v0.l, v1.l, v0.l, 1.0
-; GFX11-FLUSH-TRUE16-NEXT:    v_div_fixup_f16 v0.h, v1.h, v0.h, 1.0
-; GFX11-FLUSH-TRUE16-NEXT:    v_pack_b32_f16 v0, v0.l, v0.h
-; GFX11-FLUSH-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-FLUSH-FAKE16-LABEL: v_rcp_v2f16_ulp25:
-; GFX11-FLUSH-FAKE16:       ; %bb.0:
-; GFX11-FLUSH-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FLUSH-FAKE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; GFX11-FLUSH-FAKE16-NEXT:    v_cvt_f32_f16_e32 v2, v0
-; GFX11-FLUSH-FAKE16-NEXT:    v_cvt_f32_f16_e32 v4, 1.0
-; GFX11-FLUSH-FAKE16-NEXT:    v_cvt_f32_f16_e32 v3, v1
-; GFX11-FLUSH-FAKE16-NEXT:    v_rcp_f32_e32 v2, v2
-; GFX11-FLUSH-FAKE16-NEXT:    v_rcp_f32_e32 v3, v3
-; GFX11-FLUSH-FAKE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-FLUSH-FAKE16-NEXT:    v_mul_f32_e32 v5, v4, v2
-; GFX11-FLUSH-FAKE16-NEXT:    v_mul_f32_e32 v4, v4, v3
-; GFX11-FLUSH-FAKE16-NEXT:    v_fma_mix_f32 v7, -v0, v4, 1.0 op_sel:[1,0,0] op_sel_hi:[1,0,1]
-; GFX11-FLUSH-FAKE16-NEXT:    v_fmac_f32_e32 v4, v7, v3
-; GFX11-FLUSH-FAKE16-NEXT:    v_fma_mix_f32 v6, -v0, v5, 1.0 op_sel_hi:[1,0,1]
-; GFX11-FLUSH-FAKE16-NEXT:    v_fma_mix_f32 v7, -v0, v4, 1.0 op_sel:[1,0,0] op_sel_hi:[1,0,1]
-; GFX11-FLUSH-FAKE16-NEXT:    v_fmac_f32_e32 v5, v6, v2
-; GFX11-FLUSH-FAKE16-NEXT:    v_mul_f32_e32 v3, v7, v3
-; GFX11-FLUSH-FAKE16-NEXT:    v_fma_mix_f32 v6, -v0, v5, 1.0 op_sel_hi:[1,0,1]
-; GFX11-FLUSH-FAKE16-NEXT:    v_dual_mul_f32 v2, v6, v2 :: v_dual_and_b32 v3, 0xff800000, v3
-; GFX11-FLUSH-FAKE16-NEXT:    v_dual_add_f32 v3, v3, v4 :: v_dual_and_b32 v2, 0xff800000, v2
-; GFX11-FLUSH-FAKE16-NEXT:    v_cvt_f16_f32_e32 v3, v3
-; GFX11-FLUSH-FAKE16-NEXT:    v_add_f32_e32 v2, v2, v5
-; GFX11-FLUSH-FAKE16-NEXT:    v_div_fixup_f16 v1, v3, v1, 1.0
-; GFX11-FLUSH-FAKE16-NEXT:    v_cvt_f16_f32_e32 v2, v2
-; GFX11-FLUSH-FAKE16-NEXT:    v_div_fixup_f16 v0, v2, v0, 1.0
-; GFX11-FLUSH-FAKE16-NEXT:    v_pack_b32_f16 v0, v0, v1
-; GFX11-FLUSH-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ; GFX11-LABEL: v_rcp_v2f16_ulp25:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -4538,53 +3209,6 @@ define <2 x half> @v_fdiv_v2f16_afn_ulp25(<2 x half> %a, <2 x half> %b) {
 ; GFX10-NEXT:    v_pack_b32_f16 v0, v2, v0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-IEEE-TRUE16-LABEL: v_fdiv_v2f16_afn_ulp25:
-; GFX11-IEEE-TRUE16:       ; %bb.0:
-; GFX11-IEEE-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-IEEE-TRUE16-NEXT:    v_rcp_f16_e32 v1.l, v1.l
-; GFX11-IEEE-TRUE16-NEXT:    v_rcp_f16_e32 v1.h, v1.h
-; GFX11-IEEE-TRUE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-IEEE-TRUE16-NEXT:    v_mul_f16_e32 v0.l, v0.l, v1.l
-; GFX11-IEEE-TRUE16-NEXT:    v_mul_f16_e32 v0.h, v0.h, v1.h
-; GFX11-IEEE-TRUE16-NEXT:    v_pack_b32_f16 v0, v0.l, v0.h
-; GFX11-IEEE-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-IEEE-FAKE16-LABEL: v_fdiv_v2f16_afn_ulp25:
-; GFX11-IEEE-FAKE16:       ; %bb.0:
-; GFX11-IEEE-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-IEEE-FAKE16-NEXT:    v_lshrrev_b32_e32 v2, 16, v1
-; GFX11-IEEE-FAKE16-NEXT:    v_rcp_f16_e32 v1, v1
-; GFX11-IEEE-FAKE16-NEXT:    v_lshrrev_b32_e32 v3, 16, v0
-; GFX11-IEEE-FAKE16-NEXT:    v_rcp_f16_e32 v2, v2
-; GFX11-IEEE-FAKE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-IEEE-FAKE16-NEXT:    v_mul_f16_e32 v0, v0, v1
-; GFX11-IEEE-FAKE16-NEXT:    v_mul_f16_e32 v1, v3, v2
-; GFX11-IEEE-FAKE16-NEXT:    v_pack_b32_f16 v0, v0, v1
-; GFX11-IEEE-FAKE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-FLUSH-TRUE16-LABEL: v_fdiv_v2f16_afn_ulp25:
-; GFX11-FLUSH-TRUE16:       ; %bb.0:
-; GFX11-FLUSH-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FLUSH-TRUE16-NEXT:    v_rcp_f16_e32 v1.l, v1.l
-; GFX11-FLUSH-TRUE16-NEXT:    v_rcp_f16_e32 v1.h, v1.h
-; GFX11-FLUSH-TRUE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-FLUSH-TRUE16-NEXT:    v_mul_f16_e32 v0.l, v0.l, v1.l
-; GFX11-FLUSH-TRUE16-NEXT:    v_mul_f16_e32 v0.h, v0.h, v1.h
-; GFX11-FLUSH-TRUE16-NEXT:    v_pack_b32_f16 v0, v0.l, v0.h
-; GFX11-FLUSH-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-FLUSH-FAKE16-LABEL: v_fdiv_v2f16_afn_ulp25:
-; GFX11-FLUSH-FAKE16:       ; %bb.0:
-; GFX11-FLUSH-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FLUSH-FAKE16-NEXT:    v_lshrrev_b32_e32 v2, 16, v1
-; GFX11-FLUSH-FAKE16-NEXT:    v_rcp_f16_e32 v1, v1
-; GFX11-FLUSH-FAKE16-NEXT:    v_lshrrev_b32_e32 v3, 16, v0
-; GFX11-FLUSH-FAKE16-NEXT:    v_rcp_f16_e32 v2, v2
-; GFX11-FLUSH-FAKE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-FLUSH-FAKE16-NEXT:    v_mul_f16_e32 v0, v0, v1
-; GFX11-FLUSH-FAKE16-NEXT:    v_mul_f16_e32 v1, v3, v2
-; GFX11-FLUSH-FAKE16-NEXT:    v_pack_b32_f16 v0, v0, v1
-; GFX11-FLUSH-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ; GFX11-LABEL: v_fdiv_v2f16_afn_ulp25:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -4703,53 +3327,6 @@ define <2 x half> @v_fdiv_v2f16_arcp_ulp25(<2 x half> %a, <2 x half> %b) {
 ; GFX10-NEXT:    v_pack_b32_f16 v0, v2, v0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-IEEE-TRUE16-LABEL: v_fdiv_v2f16_arcp_ulp25:
-; GFX11-IEEE-TRUE16:       ; %bb.0:
-; GFX11-IEEE-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-IEEE-TRUE16-NEXT:    v_rcp_f16_e32 v1.l, v1.l
-; GFX11-IEEE-TRUE16-NEXT:    v_rcp_f16_e32 v1.h, v1.h
-; GFX11-IEEE-TRUE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-IEEE-TRUE16-NEXT:    v_mul_f16_e32 v0.l, v0.l, v1.l
-; GFX11-IEEE-TRUE16-NEXT:    v_mul_f16_e32 v0.h, v0.h, v1.h
-; GFX11-IEEE-TRUE16-NEXT:    v_pack_b32_f16 v0, v0.l, v0.h
-; GFX11-IEEE-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-IEEE-FAKE16-LABEL: v_fdiv_v2f16_arcp_ulp25:
-; GFX11-IEEE-FAKE16:       ; %bb.0:
-; GFX11-IEEE-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-IEEE-FAKE16-NEXT:    v_lshrrev_b32_e32 v2, 16, v1
-; GFX11-IEEE-FAKE16-NEXT:    v_rcp_f16_e32 v1, v1
-; GFX11-IEEE-FAKE16-NEXT:    v_lshrrev_b32_e32 v3, 16, v0
-; GFX11-IEEE-FAKE16-NEXT:    v_rcp_f16_e32 v2, v2
-; GFX11-IEEE-FAKE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-IEEE-FAKE16-NEXT:    v_mul_f16_e32 v0, v0, v1
-; GFX11-IEEE-FAKE16-NEXT:    v_mul_f16_e32 v1, v3, v2
-; GFX11-IEEE-FAKE16-NEXT:    v_pack_b32_f16 v0, v0, v1
-; GFX11-IEEE-FAKE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-FLUSH-TRUE16-LABEL: v_fdiv_v2f16_arcp_ulp25:
-; GFX11-FLUSH-TRUE16:       ; %bb.0:
-; GFX11-FLUSH-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FLUSH-TRUE16-NEXT:    v_rcp_f16_e32 v1.l, v1.l
-; GFX11-FLUSH-TRUE16-NEXT:    v_rcp_f16_e32 v1.h, v1.h
-; GFX11-FLUSH-TRUE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-FLUSH-TRUE16-NEXT:    v_mul_f16_e32 v0.l, v0.l, v1.l
-; GFX11-FLUSH-TRUE16-NEXT:    v_mul_f16_e32 v0.h, v0.h, v1.h
-; GFX11-FLUSH-TRUE16-NEXT:    v_pack_b32_f16 v0, v0.l, v0.h
-; GFX11-FLUSH-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-FLUSH-FAKE16-LABEL: v_fdiv_v2f16_arcp_ulp25:
-; GFX11-FLUSH-FAKE16:       ; %bb.0:
-; GFX11-FLUSH-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FLUSH-FAKE16-NEXT:    v_lshrrev_b32_e32 v2, 16, v1
-; GFX11-FLUSH-FAKE16-NEXT:    v_rcp_f16_e32 v1, v1
-; GFX11-FLUSH-FAKE16-NEXT:    v_lshrrev_b32_e32 v3, 16, v0
-; GFX11-FLUSH-FAKE16-NEXT:    v_rcp_f16_e32 v2, v2
-; GFX11-FLUSH-FAKE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-FLUSH-FAKE16-NEXT:    v_mul_f16_e32 v0, v0, v1
-; GFX11-FLUSH-FAKE16-NEXT:    v_mul_f16_e32 v1, v3, v2
-; GFX11-FLUSH-FAKE16-NEXT:    v_pack_b32_f16 v0, v0, v1
-; GFX11-FLUSH-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ; GFX11-LABEL: v_fdiv_v2f16_arcp_ulp25:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -4812,53 +3389,6 @@ define <2 x half> @v_fdiv_v2f16_arcp_afn_ulp25(<2 x half> %a, <2 x half> %b) {
 ; GFX10-NEXT:    v_pack_b32_f16 v0, v2, v0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-IEEE-TRUE16-LABEL: v_fdiv_v2f16_arcp_afn_ulp25:
-; GFX11-IEEE-TRUE16:       ; %bb.0:
-; GFX11-IEEE-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-IEEE-TRUE16-NEXT:    v_rcp_f16_e32 v1.l, v1.l
-; GFX11-IEEE-TRUE16-NEXT:    v_rcp_f16_e32 v1.h, v1.h
-; GFX11-IEEE-TRUE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-IEEE-TRUE16-NEXT:    v_mul_f16_e32 v0.l, v0.l, v1.l
-; GFX11-IEEE-TRUE16-NEXT:    v_mul_f16_e32 v0.h, v0.h, v1.h
-; GFX11-IEEE-TRUE16-NEXT:    v_pack_b32_f16 v0, v0.l, v0.h
-; GFX11-IEEE-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-IEEE-FAKE16-LABEL: v_fdiv_v2f16_arcp_afn_ulp25:
-; GFX11-IEEE-FAKE16:       ; %bb.0:
-; GFX11-IEEE-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-IEEE-FAKE16-NEXT:    v_lshrrev_b32_e32 v2, 16, v1
-; GFX11-IEEE-FAKE16-NEXT:    v_rcp_f16_e32 v1, v1
-; GFX11-IEEE-FAKE16-NEXT:    v_lshrrev_b32_e32 v3, 16, v0
-; GFX11-IEEE-FAKE16-NEXT:    v_rcp_f16_e32 v2, v2
-; GFX11-IEEE-FAKE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-IEEE-FAKE16-NEXT:    v_mul_f16_e32 v0, v0, v1
-; GFX11-IEEE-FAKE16-NEXT:    v_mul_f16_e32 v1, v3, v2
-; GFX11-IEEE-FAKE16-NEXT:    v_pack_b32_f16 v0, v0, v1
-; GFX11-IEEE-FAKE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-FLUSH-TRUE16-LABEL: v_fdiv_v2f16_arcp_afn_ulp25:
-; GFX11-FLUSH-TRUE16:       ; %bb.0:
-; GFX11-FLUSH-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FLUSH-TRUE16-NEXT:    v_rcp_f16_e32 v1.l, v1.l
-; GFX11-FLUSH-TRUE16-NEXT:    v_rcp_f16_e32 v1.h, v1.h
-; GFX11-FLUSH-TRUE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-FLUSH-TRUE16-NEXT:    v_mul_f16_e32 v0.l, v0.l, v1.l
-; GFX11-FLUSH-TRUE16-NEXT:    v_mul_f16_e32 v0.h, v0.h, v1.h
-; GFX11-FLUSH-TRUE16-NEXT:    v_pack_b32_f16 v0, v0.l, v0.h
-; GFX11-FLUSH-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-FLUSH-FAKE16-LABEL: v_fdiv_v2f16_arcp_afn_ulp25:
-; GFX11-FLUSH-FAKE16:       ; %bb.0:
-; GFX11-FLUSH-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FLUSH-FAKE16-NEXT:    v_lshrrev_b32_e32 v2, 16, v1
-; GFX11-FLUSH-FAKE16-NEXT:    v_rcp_f16_e32 v1, v1
-; GFX11-FLUSH-FAKE16-NEXT:    v_lshrrev_b32_e32 v3, 16, v0
-; GFX11-FLUSH-FAKE16-NEXT:    v_rcp_f16_e32 v2, v2
-; GFX11-FLUSH-FAKE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-FLUSH-FAKE16-NEXT:    v_mul_f16_e32 v0, v0, v1
-; GFX11-FLUSH-FAKE16-NEXT:    v_mul_f16_e32 v1, v3, v2
-; GFX11-FLUSH-FAKE16-NEXT:    v_pack_b32_f16 v0, v0, v1
-; GFX11-FLUSH-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ; GFX11-LABEL: v_fdiv_v2f16_arcp_afn_ulp25:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -5032,77 +3562,6 @@ define amdgpu_ps i16 @s_fdiv_f16(i16 inreg %a.arg, i16 inreg %b.arg) {
 ; GFX10-FLUSH-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX10-FLUSH-NEXT:    ; return to shader part epilog
 ;
-; GFX11-IEEE-TRUE16-LABEL: s_fdiv_f16:
-; GFX11-IEEE-TRUE16:       ; %bb.0:
-; GFX11-IEEE-TRUE16-NEXT:    v_cvt_f32_f16_e32 v0, s1
-; GFX11-IEEE-TRUE16-NEXT:    v_cvt_f32_f16_e32 v1, s0
-; GFX11-IEEE-TRUE16-NEXT:    v_rcp_f32_e32 v0, v0
-; GFX11-IEEE-TRUE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-IEEE-TRUE16-NEXT:    v_mul_f32_e32 v1, v1, v0
-; GFX11-IEEE-TRUE16-NEXT:    v_fma_mix_f32 v2, -s1, v1, s0 op_sel_hi:[1,0,1]
-; GFX11-IEEE-TRUE16-NEXT:    v_fmac_f32_e32 v1, v2, v0
-; GFX11-IEEE-TRUE16-NEXT:    v_fma_mix_f32 v2, -s1, v1, s0 op_sel_hi:[1,0,1]
-; GFX11-IEEE-TRUE16-NEXT:    v_mul_f32_e32 v0, v2, v0
-; GFX11-IEEE-TRUE16-NEXT:    v_and_b32_e32 v0, 0xff800000, v0
-; GFX11-IEEE-TRUE16-NEXT:    v_add_f32_e32 v0, v0, v1
-; GFX11-IEEE-TRUE16-NEXT:    v_cvt_f16_f32_e32 v0.l, v0
-; GFX11-IEEE-TRUE16-NEXT:    v_div_fixup_f16 v0.l, v0.l, s1, s0
-; GFX11-IEEE-TRUE16-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX11-IEEE-TRUE16-NEXT:    ; return to shader part epilog
-;
-; GFX11-IEEE-FAKE16-LABEL: s_fdiv_f16:
-; GFX11-IEEE-FAKE16:       ; %bb.0:
-; GFX11-IEEE-FAKE16-NEXT:    v_cvt_f32_f16_e32 v0, s1
-; GFX11-IEEE-FAKE16-NEXT:    v_cvt_f32_f16_e32 v1, s0
-; GFX11-IEEE-FAKE16-NEXT:    v_rcp_f32_e32 v0, v0
-; GFX11-IEEE-FAKE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-IEEE-FAKE16-NEXT:    v_mul_f32_e32 v1, v1, v0
-; GFX11-IEEE-FAKE16-NEXT:    v_fma_mix_f32 v2, -s1, v1, s0 op_sel_hi:[1,0,1]
-; GFX11-IEEE-FAKE16-NEXT:    v_fmac_f32_e32 v1, v2, v0
-; GFX11-IEEE-FAKE16-NEXT:    v_fma_mix_f32 v2, -s1, v1, s0 op_sel_hi:[1,0,1]
-; GFX11-IEEE-FAKE16-NEXT:    v_mul_f32_e32 v0, v2, v0
-; GFX11-IEEE-FAKE16-NEXT:    v_and_b32_e32 v0, 0xff800000, v0
-; GFX11-IEEE-FAKE16-NEXT:    v_add_f32_e32 v0, v0, v1
-; GFX11-IEEE-FAKE16-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX11-IEEE-FAKE16-NEXT:    v_div_fixup_f16 v0, v0, s1, s0
-; GFX11-IEEE-FAKE16-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX11-IEEE-FAKE16-NEXT:    ; return to shader part epilog
-;
-; GFX11-FLUSH-TRUE16-LABEL: s_fdiv_f16:
-; GFX11-FLUSH-TRUE16:       ; %bb.0:
-; GFX11-FLUSH-TRUE16-NEXT:    v_cvt_f32_f16_e32 v0, s1
-; GFX11-FLUSH-TRUE16-NEXT:    v_cvt_f32_f16_e32 v1, s0
-; GFX11-FLUSH-TRUE16-NEXT:    v_rcp_f32_e32 v0, v0
-; GFX11-FLUSH-TRUE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-FLUSH-TRUE16-NEXT:    v_mul_f32_e32 v1, v1, v0
-; GFX11-FLUSH-TRUE16-NEXT:    v_fma_mix_f32 v2, -s1, v1, s0 op_sel_hi:[1,0,1]
-; GFX11-FLUSH-TRUE16-NEXT:    v_fmac_f32_e32 v1, v2, v0
-; GFX11-FLUSH-TRUE16-NEXT:    v_fma_mix_f32 v2, -s1, v1, s0 op_sel_hi:[1,0,1]
-; GFX11-FLUSH-TRUE16-NEXT:    v_mul_f32_e32 v0, v2, v0
-; GFX11-FLUSH-TRUE16-NEXT:    v_and_b32_e32 v0, 0xff800000, v0
-; GFX11-FLUSH-TRUE16-NEXT:    v_add_f32_e32 v0, v0, v1
-; GFX11-FLUSH-TRUE16-NEXT:    v_cvt_f16_f32_e32 v0.l, v0
-; GFX11-FLUSH-TRUE16-NEXT:    v_div_fixup_f16 v0.l, v0.l, s1, s0
-; GFX11-FLUSH-TRUE16-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX11-FLUSH-TRUE16-NEXT:    ; return to shader part epilog
-;
-; GFX11-FLUSH-FAKE16-LABEL: s_fdiv_f16:
-; GFX11-FLUSH-FAKE16:       ; %bb.0:
-; GFX11-FLUSH-FAKE16-NEXT:    v_cvt_f32_f16_e32 v0, s1
-; GFX11-FLUSH-FAKE16-NEXT:    v_cvt_f32_f16_e32 v1, s0
-; GFX11-FLUSH-FAKE16-NEXT:    v_rcp_f32_e32 v0, v0
-; GFX11-FLUSH-FAKE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-FLUSH-FAKE16-NEXT:    v_mul_f32_e32 v1, v1, v0
-; GFX11-FLUSH-FAKE16-NEXT:    v_fma_mix_f32 v2, -s1, v1, s0 op_sel_hi:[1,0,1]
-; GFX11-FLUSH-FAKE16-NEXT:    v_fmac_f32_e32 v1, v2, v0
-; GFX11-FLUSH-FAKE16-NEXT:    v_fma_mix_f32 v2, -s1, v1, s0 op_sel_hi:[1,0,1]
-; GFX11-FLUSH-FAKE16-NEXT:    v_mul_f32_e32 v0, v2, v0
-; GFX11-FLUSH-FAKE16-NEXT:    v_and_b32_e32 v0, 0xff800000, v0
-; GFX11-FLUSH-FAKE16-NEXT:    v_add_f32_e32 v0, v0, v1
-; GFX11-FLUSH-FAKE16-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX11-FLUSH-FAKE16-NEXT:    v_div_fixup_f16 v0, v0, s1, s0
-; GFX11-FLUSH-FAKE16-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX11-FLUSH-FAKE16-NEXT:    ; return to shader part epilog
 ; GFX11-LABEL: s_fdiv_f16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    v_cvt_f32_f16_e32 v0, s1
@@ -5183,37 +3642,6 @@ define amdgpu_ps i16 @s_fdiv_f16_arcp(i16 inreg %a.arg, i16 inreg %b.arg) {
 ; GFX10-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
-; GFX11-IEEE-TRUE16-LABEL: s_fdiv_f16_arcp:
-; GFX11-IEEE-TRUE16:       ; %bb.0:
-; GFX11-IEEE-TRUE16-NEXT:    v_rcp_f16_e32 v0.l, s1
-; GFX11-IEEE-TRUE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-IEEE-TRUE16-NEXT:    v_mul_f16_e32 v0.l, s0, v0.l
-; GFX11-IEEE-TRUE16-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX11-IEEE-TRUE16-NEXT:    ; return to shader part epilog
-;
-; GFX11-IEEE-FAKE16-LABEL: s_fdiv_f16_arcp:
-; GFX11-IEEE-FAKE16:       ; %bb.0:
-; GFX11-IEEE-FAKE16-NEXT:    v_rcp_f16_e32 v0, s1
-; GFX11-IEEE-FAKE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-IEEE-FAKE16-NEXT:    v_mul_f16_e32 v0, s0, v0
-; GFX11-IEEE-FAKE16-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX11-IEEE-FAKE16-NEXT:    ; return to shader part epilog
-;
-; GFX11-FLUSH-TRUE16-LABEL: s_fdiv_f16_arcp:
-; GFX11-FLUSH-TRUE16:       ; %bb.0:
-; GFX11-FLUSH-TRUE16-NEXT:    v_rcp_f16_e32 v0.l, s1
-; GFX11-FLUSH-TRUE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-FLUSH-TRUE16-NEXT:    v_mul_f16_e32 v0.l, s0, v0.l
-; GFX11-FLUSH-TRUE16-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX11-FLUSH-TRUE16-NEXT:    ; return to shader part epilog
-;
-; GFX11-FLUSH-FAKE16-LABEL: s_fdiv_f16_arcp:
-; GFX11-FLUSH-FAKE16:       ; %bb.0:
-; GFX11-FLUSH-FAKE16-NEXT:    v_rcp_f16_e32 v0, s1
-; GFX11-FLUSH-FAKE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-FLUSH-FAKE16-NEXT:    v_mul_f16_e32 v0, s0, v0
-; GFX11-FLUSH-FAKE16-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX11-FLUSH-FAKE16-NEXT:    ; return to shader part epilog
 ; GFX11-LABEL: s_fdiv_f16_arcp:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    v_rcp_f16_e32 v0, s1
@@ -5253,37 +3681,6 @@ define amdgpu_ps i16 @s_fdiv_f16_afn(i16 inreg %a.arg, i16 inreg %b.arg) {
 ; GFX10-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
-; GFX11-IEEE-TRUE16-LABEL: s_fdiv_f16_afn:
-; GFX11-IEEE-TRUE16:       ; %bb.0:
-; GFX11-IEEE-TRUE16-NEXT:    v_rcp_f16_e32 v0.l, s1
-; GFX11-IEEE-TRUE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-IEEE-TRUE16-NEXT:    v_mul_f16_e32 v0.l, s0, v0.l
-; GFX11-IEEE-TRUE16-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX11-IEEE-TRUE16-NEXT:    ; return to shader part epilog
-;
-; GFX11-IEEE-FAKE16-LABEL: s_fdiv_f16_afn:
-; GFX11-IEEE-FAKE16:       ; %bb.0:
-; GFX11-IEEE-FAKE16-NEXT:    v_rcp_f16_e32 v0, s1
-; GFX11-IEEE-FAKE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-IEEE-FAKE16-NEXT:    v_mul_f16_e32 v0, s0, v0
-; GFX11-IEEE-FAKE16-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX11-IEEE-FAKE16-NEXT:    ; return to shader part epilog
-;
-; GFX11-FLUSH-TRUE16-LABEL: s_fdiv_f16_afn:
-; GFX11-FLUSH-TRUE16:       ; %bb.0:
-; GFX11-FLUSH-TRUE16-NEXT:    v_rcp_f16_e32 v0.l, s1
-; GFX11-FLUSH-TRUE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-FLUSH-TRUE16-NEXT:    v_mul_f16_e32 v0.l, s0, v0.l
-; GFX11-FLUSH-TRUE16-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX11-FLUSH-TRUE16-NEXT:    ; return to shader part epilog
-;
-; GFX11-FLUSH-FAKE16-LABEL: s_fdiv_f16_afn:
-; GFX11-FLUSH-FAKE16:       ; %bb.0:
-; GFX11-FLUSH-FAKE16-NEXT:    v_rcp_f16_e32 v0, s1
-; GFX11-FLUSH-FAKE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-FLUSH-FAKE16-NEXT:    v_mul_f16_e32 v0, s0, v0
-; GFX11-FLUSH-FAKE16-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX11-FLUSH-FAKE16-NEXT:    ; return to shader part epilog
 ; GFX11-LABEL: s_fdiv_f16_afn:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    v_rcp_f16_e32 v0, s1
@@ -5598,101 +3995,6 @@ define amdgpu_ps i32 @s_fdiv_v2f16(i32 inreg %a.arg, i32 inreg %b.arg) {
 ; GFX10-FLUSH-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX10-FLUSH-NEXT:    ; return to shader part epilog
 ;
-; GFX11-IEEE-TRUE16-LABEL: s_fdiv_v2f16:
-; GFX11-IEEE-TRUE16:       ; %bb.0:
-; GFX11-IEEE-TRUE16-NEXT:    v_cvt_f32_f16_e32 v0, s1
-; GFX11-IEEE-TRUE16-NEXT:    v_cvt_f32_f16_e32 v1, s0
-; GFX11-IEEE-TRUE16-NEXT:    v_rcp_f32_e32 v0, v0
-; GFX11-IEEE-TRUE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-IEEE-TRUE16-NEXT:    v_mul_f32_e32 v1, v1, v0
-; GFX11-IEEE-TRUE16-NEXT:    v_fma_mix_f32 v2, -s1, v1, s0 op_sel_hi:[1,0,1]
-; GFX11-IEEE-TRUE16-NEXT:    v_fmac_f32_e32 v1, v2, v0
-; GFX11-IEEE-TRUE16-NEXT:    v_fma_mix_f32 v2, -s1, v1, s0 op_sel_hi:[1,0,1]
-; GFX11-IEEE-TRUE16-NEXT:    v_mul_f32_e32 v0, v2, v0
-; GFX11-IEEE-TRUE16-NEXT:    v_and_b32_e32 v0, 0xff800000, v0
-; GFX11-IEEE-TRUE16-NEXT:    v_add_f32_e32 v0, v0, v1
-; GFX11-IEEE-TRUE16-NEXT:    v_cvt_f16_f32_e32 v0.l, v0
-; GFX11-IEEE-TRUE16-NEXT:    v_div_fixup_f16 v0.l, v0.l, s1, s0
-; GFX11-IEEE-TRUE16-NEXT:    v_pack_b32_f16 v0, v0.l, v0.l
-; GFX11-IEEE-TRUE16-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX11-IEEE-TRUE16-NEXT:    ; return to shader part epilog
-;
-; GFX11-IEEE-FAKE16-LABEL: s_fdiv_v2f16:
-; GFX11-IEEE-FAKE16:       ; %bb.0:
-; GFX11-IEEE-FAKE16-NEXT:    s_lshr_b32 s2, s1, 16
-; GFX11-IEEE-FAKE16-NEXT:    v_cvt_f32_f16_e32 v0, s1
-; GFX11-IEEE-FAKE16-NEXT:    v_cvt_f32_f16_e32 v1, s2
-; GFX11-IEEE-FAKE16-NEXT:    s_lshr_b32 s3, s0, 16
-; GFX11-IEEE-FAKE16-NEXT:    v_cvt_f32_f16_e32 v2, s0
-; GFX11-IEEE-FAKE16-NEXT:    v_cvt_f32_f16_e32 v3, s3
-; GFX11-IEEE-FAKE16-NEXT:    v_rcp_f32_e32 v0, v0
-; GFX11-IEEE-FAKE16-NEXT:    v_rcp_f32_e32 v1, v1
-; GFX11-IEEE-FAKE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-IEEE-FAKE16-NEXT:    v_dual_mul_f32 v2, v2, v0 :: v_dual_mul_f32 v3, v3, v1
-; GFX11-IEEE-FAKE16-NEXT:    v_fma_mix_f32 v4, -s1, v2, s0 op_sel_hi:[1,0,1]
-; GFX11-IEEE-FAKE16-NEXT:    v_fma_mix_f32 v5, -s2, v3, s3 op_sel_hi:[1,0,1]
-; GFX11-IEEE-FAKE16-NEXT:    v_dual_fmac_f32 v2, v4, v0 :: v_dual_fmac_f32 v3, v5, v1
-; GFX11-IEEE-FAKE16-NEXT:    v_fma_mix_f32 v4, -s1, v2, s0 op_sel_hi:[1,0,1]
-; GFX11-IEEE-FAKE16-NEXT:    v_fma_mix_f32 v5, -s2, v3, s3 op_sel_hi:[1,0,1]
-; GFX11-IEEE-FAKE16-NEXT:    v_dual_mul_f32 v0, v4, v0 :: v_dual_mul_f32 v1, v5, v1
-; GFX11-IEEE-FAKE16-NEXT:    v_and_b32_e32 v1, 0xff800000, v1
-; GFX11-IEEE-FAKE16-NEXT:    v_dual_add_f32 v1, v1, v3 :: v_dual_and_b32 v0, 0xff800000, v0
-; GFX11-IEEE-FAKE16-NEXT:    v_add_f32_e32 v0, v0, v2
-; GFX11-IEEE-FAKE16-NEXT:    v_cvt_f16_f32_e32 v1, v1
-; GFX11-IEEE-FAKE16-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX11-IEEE-FAKE16-NEXT:    v_div_fixup_f16 v1, v1, s2, s3
-; GFX11-IEEE-FAKE16-NEXT:    v_div_fixup_f16 v0, v0, s1, s0
-; GFX11-IEEE-FAKE16-NEXT:    v_pack_b32_f16 v0, v0, v1
-; GFX11-IEEE-FAKE16-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX11-IEEE-FAKE16-NEXT:    ; return to shader part epilog
-;
-; GFX11-FLUSH-TRUE16-LABEL: s_fdiv_v2f16:
-; GFX11-FLUSH-TRUE16:       ; %bb.0:
-; GFX11-FLUSH-TRUE16-NEXT:    v_cvt_f32_f16_e32 v0, s1
-; GFX11-FLUSH-TRUE16-NEXT:    v_cvt_f32_f16_e32 v1, s0
-; GFX11-FLUSH-TRUE16-NEXT:    v_rcp_f32_e32 v0, v0
-; GFX11-FLUSH-TRUE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-FLUSH-TRUE16-NEXT:    v_mul_f32_e32 v1, v1, v0
-; GFX11-FLUSH-TRUE16-NEXT:    v_fma_mix_f32 v2, -s1, v1, s0 op_sel_hi:[1,0,1]
-; GFX11-FLUSH-TRUE16-NEXT:    v_fmac_f32_e32 v1, v2, v0
-; GFX11-FLUSH-TRUE16-NEXT:    v_fma_mix_f32 v2, -s1, v1, s0 op_sel_hi:[1,0,1]
-; GFX11-FLUSH-TRUE16-NEXT:    v_mul_f32_e32 v0, v2, v0
-; GFX11-FLUSH-TRUE16-NEXT:    v_and_b32_e32 v0, 0xff800000, v0
-; GFX11-FLUSH-TRUE16-NEXT:    v_add_f32_e32 v0, v0, v1
-; GFX11-FLUSH-TRUE16-NEXT:    v_cvt_f16_f32_e32 v0.l, v0
-; GFX11-FLUSH-TRUE16-NEXT:    v_div_fixup_f16 v0.l, v0.l, s1, s0
-; GFX11-FLUSH-TRUE16-NEXT:    v_pack_b32_f16 v0, v0.l, v0.l
-; GFX11-FLUSH-TRUE16-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX11-FLUSH-TRUE16-NEXT:    ; return to shader part epilog
-;
-; GFX11-FLUSH-FAKE16-LABEL: s_fdiv_v2f16:
-; GFX11-FLUSH-FAKE16:       ; %bb.0:
-; GFX11-FLUSH-FAKE16-NEXT:    s_lshr_b32 s2, s1, 16
-; GFX11-FLUSH-FAKE16-NEXT:    v_cvt_f32_f16_e32 v0, s1
-; GFX11-FLUSH-FAKE16-NEXT:    v_cvt_f32_f16_e32 v1, s2
-; GFX11-FLUSH-FAKE16-NEXT:    s_lshr_b32 s3, s0, 16
-; GFX11-FLUSH-FAKE16-NEXT:    v_cvt_f32_f16_e32 v2, s0
-; GFX11-FLUSH-FAKE16-NEXT:    v_cvt_f32_f16_e32 v3, s3
-; GFX11-FLUSH-FAKE16-NEXT:    v_rcp_f32_e32 v0, v0
-; GFX11-FLUSH-FAKE16-NEXT:    v_rcp_f32_e32 v1, v1
-; GFX11-FLUSH-FAKE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-FLUSH-FAKE16-NEXT:    v_dual_mul_f32 v2, v2, v0 :: v_dual_mul_f32 v3, v3, v1
-; GFX11-FLUSH-FAKE16-NEXT:    v_fma_mix_f32 v4, -s1, v2, s0 op_sel_hi:[1,0,1]
-; GFX11-FLUSH-FAKE16-NEXT:    v_fma_mix_f32 v5, -s2, v3, s3 op_sel_hi:[1,0,1]
-; GFX11-FLUSH-FAKE16-NEXT:    v_dual_fmac_f32 v2, v4, v0 :: v_dual_fmac_f32 v3, v5, v1
-; GFX11-FLUSH-FAKE16-NEXT:    v_fma_mix_f32 v4, -s1, v2, s0 op_sel_hi:[1,0,1]
-; GFX11-FLUSH-FAKE16-NEXT:    v_fma_mix_f32 v5, -s2, v3, s3 op_sel_hi:[1,0,1]
-; GFX11-FLUSH-FAKE16-NEXT:    v_dual_mul_f32 v0, v4, v0 :: v_dual_mul_f32 v1, v5, v1
-; GFX11-FLUSH-FAKE16-NEXT:    v_and_b32_e32 v1, 0xff800000, v1
-; GFX11-FLUSH-FAKE16-NEXT:    v_dual_add_f32 v1, v1, v3 :: v_dual_and_b32 v0, 0xff800000, v0
-; GFX11-FLUSH-FAKE16-NEXT:    v_add_f32_e32 v0, v0, v2
-; GFX11-FLUSH-FAKE16-NEXT:    v_cvt_f16_f32_e32 v1, v1
-; GFX11-FLUSH-FAKE16-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX11-FLUSH-FAKE16-NEXT:    v_div_fixup_f16 v1, v1, s2, s3
-; GFX11-FLUSH-FAKE16-NEXT:    v_div_fixup_f16 v0, v0, s1, s0
-; GFX11-FLUSH-FAKE16-NEXT:    v_pack_b32_f16 v0, v0, v1
-; GFX11-FLUSH-FAKE16-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX11-FLUSH-FAKE16-NEXT:    ; return to shader part epilog
 ; GFX11-LABEL: s_fdiv_v2f16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_lshr_b32 s2, s1, 16
@@ -5782,33 +4084,6 @@ define amdgpu_ps i16 @s_rcp_f16(i16 inreg %a.arg) {
 ; GFX10-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
-; GFX11-IEEE-TRUE16-LABEL: s_rcp_f16:
-; GFX11-IEEE-TRUE16:       ; %bb.0:
-; GFX11-IEEE-TRUE16-NEXT:    v_rcp_f16_e32 v0.l, s0
-; GFX11-IEEE-TRUE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-IEEE-TRUE16-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX11-IEEE-TRUE16-NEXT:    ; return to shader part epilog
-;
-; GFX11-IEEE-FAKE16-LABEL: s_rcp_f16:
-; GFX11-IEEE-FAKE16:       ; %bb.0:
-; GFX11-IEEE-FAKE16-NEXT:    v_rcp_f16_e32 v0, s0
-; GFX11-IEEE-FAKE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-IEEE-FAKE16-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX11-IEEE-FAKE16-NEXT:    ; return to shader part epilog
-;
-; GFX11-FLUSH-TRUE16-LABEL: s_rcp_f16:
-; GFX11-FLUSH-TRUE16:       ; %bb.0:
-; GFX11-FLUSH-TRUE16-NEXT:    v_rcp_f16_e32 v0.l, s0
-; GFX11-FLUSH-TRUE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-FLUSH-TRUE16-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX11-FLUSH-TRUE16-NEXT:    ; return to shader part epilog
-;
-; GFX11-FLUSH-FAKE16-LABEL: s_rcp_f16:
-; GFX11-FLUSH-FAKE16:       ; %bb.0:
-; GFX11-FLUSH-FAKE16-NEXT:    v_rcp_f16_e32 v0, s0
-; GFX11-FLUSH-FAKE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-FLUSH-FAKE16-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX11-FLUSH-FAKE16-NEXT:    ; return to shader part epilog
 ; GFX11-LABEL: s_rcp_f16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    v_rcp_f16_e32 v0, s0
@@ -5875,33 +4150,6 @@ define amdgpu_ps i16 @s_neg_rcp_f16(i16 inreg %a.arg) {
 ; GFX10-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
-; GFX11-IEEE-TRUE16-LABEL: s_neg_rcp_f16:
-; GFX11-IEEE-TRUE16:       ; %bb.0:
-; GFX11-IEEE-TRUE16-NEXT:    v_rcp_f16_e64 v0.l, -s0
-; GFX11-IEEE-TRUE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-IEEE-TRUE16-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX11-IEEE-TRUE16-NEXT:    ; return to shader part epilog
-;
-; GFX11-IEEE-FAKE16-LABEL: s_neg_rcp_f16:
-; GFX11-IEEE-FAKE16:       ; %bb.0:
-; GFX11-IEEE-FAKE16-NEXT:    v_rcp_f16_e64 v0, -s0
-; GFX11-IEEE-FAKE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-IEEE-FAKE16-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX11-IEEE-FAKE16-NEXT:    ; return to shader part epilog
-;
-; GFX11-FLUSH-TRUE16-LABEL: s_neg_rcp_f16:
-; GFX11-FLUSH-TRUE16:       ; %bb.0:
-; GFX11-FLUSH-TRUE16-NEXT:    v_rcp_f16_e64 v0.l, -s0
-; GFX11-FLUSH-TRUE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-FLUSH-TRUE16-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX11-FLUSH-TRUE16-NEXT:    ; return to shader part epilog
-;
-; GFX11-FLUSH-FAKE16-LABEL: s_neg_rcp_f16:
-; GFX11-FLUSH-FAKE16:       ; %bb.0:
-; GFX11-FLUSH-FAKE16-NEXT:    v_rcp_f16_e64 v0, -s0
-; GFX11-FLUSH-FAKE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-FLUSH-FAKE16-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX11-FLUSH-FAKE16-NEXT:    ; return to shader part epilog
 ; GFX11-LABEL: s_neg_rcp_f16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    v_rcp_f16_e64 v0, -s0
@@ -5974,33 +4222,6 @@ define amdgpu_ps i16 @s_rsq_f16(i16 inreg %a.arg) {
 ; GFX10-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
-; GFX11-IEEE-TRUE16-LABEL: s_rsq_f16:
-; GFX11-IEEE-TRUE16:       ; %bb.0:
-; GFX11-IEEE-TRUE16-NEXT:    v_rsq_f16_e32 v0.l, s0
-; GFX11-IEEE-TRUE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-IEEE-TRUE16-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX11-IEEE-TRUE16-NEXT:    ; return to shader part epilog
-;
-; GFX11-IEEE-FAKE16-LABEL: s_rsq_f16:
-; GFX11-IEEE-FAKE16:       ; %bb.0:
-; GFX11-IEEE-FAKE16-NEXT:    v_rsq_f16_e32 v0, s0
-; GFX11-IEEE-FAKE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-IEEE-FAKE16-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX11-IEEE-FAKE16-NEXT:    ; return to shader part epilog
-;
-; GFX11-FLUSH-TRUE16-LABEL: s_rsq_f16:
-; GFX11-FLUSH-TRUE16:       ; %bb.0:
-; GFX11-FLUSH-TRUE16-NEXT:    v_rsq_f16_e32 v0.l, s0
-; GFX11-FLUSH-TRUE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-FLUSH-TRUE16-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX11-FLUSH-TRUE16-NEXT:    ; return to shader part epilog
-;
-; GFX11-FLUSH-FAKE16-LABEL: s_rsq_f16:
-; GFX11-FLUSH-FAKE16:       ; %bb.0:
-; GFX11-FLUSH-FAKE16-NEXT:    v_rsq_f16_e32 v0, s0
-; GFX11-FLUSH-FAKE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-FLUSH-FAKE16-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX11-FLUSH-FAKE16-NEXT:    ; return to shader part epilog
 ; GFX11-LABEL: s_rsq_f16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    v_rsq_f16_e32 v0, s0
@@ -6304,131 +4525,6 @@ define amdgpu_ps i32 @s_rsq_v2f16(i32 inreg %a.arg) {
 ; GFX10-FLUSH-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX10-FLUSH-NEXT:    ; return to shader part epilog
 ;
-; GFX11-IEEE-TRUE16-LABEL: s_rsq_v2f16:
-; GFX11-IEEE-TRUE16:       ; %bb.0:
-; GFX11-IEEE-TRUE16-NEXT:    v_sqrt_f16_e32 v0.l, s0
-; GFX11-IEEE-TRUE16-NEXT:    v_cvt_f32_f16_e32 v2, -1.0
-; GFX11-IEEE-TRUE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-IEEE-TRUE16-NEXT:    v_cvt_f32_f16_e32 v1, v0.l
-; GFX11-IEEE-TRUE16-NEXT:    v_mov_b16_e32 v3.l, v0.l
-; GFX11-IEEE-TRUE16-NEXT:    v_mov_b16_e32 v4.l, v0.l
-; GFX11-IEEE-TRUE16-NEXT:    v_rcp_f32_e32 v1, v1
-; GFX11-IEEE-TRUE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-IEEE-TRUE16-NEXT:    v_mul_f32_e32 v2, v2, v1
-; GFX11-IEEE-TRUE16-NEXT:    v_fma_mix_f32 v5, -v3, v2, -1.0 op_sel_hi:[1,0,1]
-; GFX11-IEEE-TRUE16-NEXT:    v_fma_f32 v5, v5, v1, v2
-; GFX11-IEEE-TRUE16-NEXT:    v_fma_mix_f32 v3, -v3, v5, -1.0 op_sel_hi:[1,0,1]
-; GFX11-IEEE-TRUE16-NEXT:    v_mul_f32_e32 v3, v3, v1
-; GFX11-IEEE-TRUE16-NEXT:    v_and_b32_e32 v3, 0xff800000, v3
-; GFX11-IEEE-TRUE16-NEXT:    v_fma_mix_f32 v6, -v4, v2, -1.0 op_sel_hi:[1,0,1]
-; GFX11-IEEE-TRUE16-NEXT:    v_add_f32_e32 v3, v3, v5
-; GFX11-IEEE-TRUE16-NEXT:    v_fmac_f32_e32 v2, v6, v1
-; GFX11-IEEE-TRUE16-NEXT:    v_cvt_f16_f32_e32 v0.h, v3
-; GFX11-IEEE-TRUE16-NEXT:    v_fma_mix_f32 v4, -v4, v2, -1.0 op_sel_hi:[1,0,1]
-; GFX11-IEEE-TRUE16-NEXT:    v_div_fixup_f16 v0.h, v0.h, v0.l, -1.0
-; GFX11-IEEE-TRUE16-NEXT:    v_mul_f32_e32 v1, v4, v1
-; GFX11-IEEE-TRUE16-NEXT:    v_and_b32_e32 v1, 0xff800000, v1
-; GFX11-IEEE-TRUE16-NEXT:    v_add_f32_e32 v1, v1, v2
-; GFX11-IEEE-TRUE16-NEXT:    v_cvt_f16_f32_e32 v1.l, v1
-; GFX11-IEEE-TRUE16-NEXT:    v_div_fixup_f16 v0.l, v1.l, v0.l, -1.0
-; GFX11-IEEE-TRUE16-NEXT:    v_pack_b32_f16 v0, v0.h, v0.l
-; GFX11-IEEE-TRUE16-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX11-IEEE-TRUE16-NEXT:    ; return to shader part epilog
-;
-; GFX11-IEEE-FAKE16-LABEL: s_rsq_v2f16:
-; GFX11-IEEE-FAKE16:       ; %bb.0:
-; GFX11-IEEE-FAKE16-NEXT:    s_lshr_b32 s1, s0, 16
-; GFX11-IEEE-FAKE16-NEXT:    v_sqrt_f16_e32 v0, s0
-; GFX11-IEEE-FAKE16-NEXT:    v_sqrt_f16_e32 v1, s1
-; GFX11-IEEE-FAKE16-NEXT:    v_cvt_f32_f16_e32 v4, -1.0
-; GFX11-IEEE-FAKE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-IEEE-FAKE16-NEXT:    v_cvt_f32_f16_e32 v2, v0
-; GFX11-IEEE-FAKE16-NEXT:    v_cvt_f32_f16_e32 v3, v1
-; GFX11-IEEE-FAKE16-NEXT:    v_rcp_f32_e32 v2, v2
-; GFX11-IEEE-FAKE16-NEXT:    v_rcp_f32_e32 v3, v3
-; GFX11-IEEE-FAKE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-IEEE-FAKE16-NEXT:    v_mul_f32_e32 v5, v4, v2
-; GFX11-IEEE-FAKE16-NEXT:    v_mul_f32_e32 v4, v4, v3
-; GFX11-IEEE-FAKE16-NEXT:    v_fma_mix_f32 v7, -v1, v4, -1.0 op_sel_hi:[1,0,1]
-; GFX11-IEEE-FAKE16-NEXT:    v_fmac_f32_e32 v4, v7, v3
-; GFX11-IEEE-FAKE16-NEXT:    v_fma_mix_f32 v6, -v0, v5, -1.0 op_sel_hi:[1,0,1]
-; GFX11-IEEE-FAKE16-NEXT:    v_fma_mix_f32 v7, -v1, v4, -1.0 op_sel_hi:[1,0,1]
-; GFX11-IEEE-FAKE16-NEXT:    v_fmac_f32_e32 v5, v6, v2
-; GFX11-IEEE-FAKE16-NEXT:    v_mul_f32_e32 v3, v7, v3
-; GFX11-IEEE-FAKE16-NEXT:    v_fma_mix_f32 v6, -v0, v5, -1.0 op_sel_hi:[1,0,1]
-; GFX11-IEEE-FAKE16-NEXT:    v_dual_mul_f32 v2, v6, v2 :: v_dual_and_b32 v3, 0xff800000, v3
-; GFX11-IEEE-FAKE16-NEXT:    v_dual_add_f32 v3, v3, v4 :: v_dual_and_b32 v2, 0xff800000, v2
-; GFX11-IEEE-FAKE16-NEXT:    v_cvt_f16_f32_e32 v3, v3
-; GFX11-IEEE-FAKE16-NEXT:    v_add_f32_e32 v2, v2, v5
-; GFX11-IEEE-FAKE16-NEXT:    v_div_fixup_f16 v1, v3, v1, -1.0
-; GFX11-IEEE-FAKE16-NEXT:    v_cvt_f16_f32_e32 v2, v2
-; GFX11-IEEE-FAKE16-NEXT:    v_div_fixup_f16 v0, v2, v0, -1.0
-; GFX11-IEEE-FAKE16-NEXT:    v_pack_b32_f16 v0, v0, v1
-; GFX11-IEEE-FAKE16-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX11-IEEE-FAKE16-NEXT:    ; return to shader part epilog
-;
-; GFX11-FLUSH-TRUE16-LABEL: s_rsq_v2f16:
-; GFX11-FLUSH-TRUE16:       ; %bb.0:
-; GFX11-FLUSH-TRUE16-NEXT:    v_sqrt_f16_e32 v0.l, s0
-; GFX11-FLUSH-TRUE16-NEXT:    v_cvt_f32_f16_e32 v2, -1.0
-; GFX11-FLUSH-TRUE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-FLUSH-TRUE16-NEXT:    v_cvt_f32_f16_e32 v1, v0.l
-; GFX11-FLUSH-TRUE16-NEXT:    v_mov_b16_e32 v3.l, v0.l
-; GFX11-FLUSH-TRUE16-NEXT:    v_mov_b16_e32 v4.l, v0.l
-; GFX11-FLUSH-TRUE16-NEXT:    v_rcp_f32_e32 v1, v1
-; GFX11-FLUSH-TRUE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-FLUSH-TRUE16-NEXT:    v_mul_f32_e32 v2, v2, v1
-; GFX11-FLUSH-TRUE16-NEXT:    v_fma_mix_f32 v5, -v3, v2, -1.0 op_sel_hi:[1,0,1]
-; GFX11-FLUSH-TRUE16-NEXT:    v_fma_f32 v5, v5, v1, v2
-; GFX11-FLUSH-TRUE16-NEXT:    v_fma_mix_f32 v3, -v3, v5, -1.0 op_sel_hi:[1,0,1]
-; GFX11-FLUSH-TRUE16-NEXT:    v_mul_f32_e32 v3, v3, v1
-; GFX11-FLUSH-TRUE16-NEXT:    v_and_b32_e32 v3, 0xff800000, v3
-; GFX11-FLUSH-TRUE16-NEXT:    v_fma_mix_f32 v6, -v4, v2, -1.0 op_sel_hi:[1,0,1]
-; GFX11-FLUSH-TRUE16-NEXT:    v_add_f32_e32 v3, v3, v5
-; GFX11-FLUSH-TRUE16-NEXT:    v_fmac_f32_e32 v2, v6, v1
-; GFX11-FLUSH-TRUE16-NEXT:    v_cvt_f16_f32_e32 v0.h, v3
-; GFX11-FLUSH-TRUE16-NEXT:    v_fma_mix_f32 v4, -v4, v2, -1.0 op_sel_hi:[1,0,1]
-; GFX11-FLUSH-TRUE16-NEXT:    v_div_fixup_f16 v0.h, v0.h, v0.l, -1.0
-; GFX11-FLUSH-TRUE16-NEXT:    v_mul_f32_e32 v1, v4, v1
-; GFX11-FLUSH-TRUE16-NEXT:    v_and_b32_e32 v1, 0xff800000, v1
-; GFX11-FLUSH-TRUE16-NEXT:    v_add_f32_e32 v1, v1, v2
-; GFX11-FLUSH-TRUE16-NEXT:    v_cvt_f16_f32_e32 v1.l, v1
-; GFX11-FLUSH-TRUE16-NEXT:    v_div_fixup_f16 v0.l, v1.l, v0.l, -1.0
-; GFX11-FLUSH-TRUE16-NEXT:    v_pack_b32_f16 v0, v0.h, v0.l
-; GFX11-FLUSH-TRUE16-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX11-FLUSH-TRUE16-NEXT:    ; return to shader part epilog
-;
-; GFX11-FLUSH-FAKE16-LABEL: s_rsq_v2f16:
-; GFX11-FLUSH-FAKE16:       ; %bb.0:
-; GFX11-FLUSH-FAKE16-NEXT:    s_lshr_b32 s1, s0, 16
-; GFX11-FLUSH-FAKE16-NEXT:    v_sqrt_f16_e32 v0, s0
-; GFX11-FLUSH-FAKE16-NEXT:    v_sqrt_f16_e32 v1, s1
-; GFX11-FLUSH-FAKE16-NEXT:    v_cvt_f32_f16_e32 v4, -1.0
-; GFX11-FLUSH-FAKE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-FLUSH-FAKE16-NEXT:    v_cvt_f32_f16_e32 v2, v0
-; GFX11-FLUSH-FAKE16-NEXT:    v_cvt_f32_f16_e32 v3, v1
-; GFX11-FLUSH-FAKE16-NEXT:    v_rcp_f32_e32 v2, v2
-; GFX11-FLUSH-FAKE16-NEXT:    v_rcp_f32_e32 v3, v3
-; GFX11-FLUSH-FAKE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-FLUSH-FAKE16-NEXT:    v_mul_f32_e32 v5, v4, v2
-; GFX11-FLUSH-FAKE16-NEXT:    v_mul_f32_e32 v4, v4, v3
-; GFX11-FLUSH-FAKE16-NEXT:    v_fma_mix_f32 v7, -v1, v4, -1.0 op_sel_hi:[1,0,1]
-; GFX11-FLUSH-FAKE16-NEXT:    v_fmac_f32_e32 v4, v7, v3
-; GFX11-FLUSH-FAKE16-NEXT:    v_fma_mix_f32 v6, -v0, v5, -1.0 op_sel_hi:[1,0,1]
-; GFX11-FLUSH-FAKE16-NEXT:    v_fma_mix_f32 v7, -v1, v4, -1.0 op_sel_hi:[1,0,1]
-; GFX11-FLUSH-FAKE16-NEXT:    v_fmac_f32_e32 v5, v6, v2
-; GFX11-FLUSH-FAKE16-NEXT:    v_mul_f32_e32 v3, v7, v3
-; GFX11-FLUSH-FAKE16-NEXT:    v_fma_mix_f32 v6, -v0, v5, -1.0 op_sel_hi:[1,0,1]
-; GFX11-FLUSH-FAKE16-NEXT:    v_dual_mul_f32 v2, v6, v2 :: v_dual_and_b32 v3, 0xff800000, v3
-; GFX11-FLUSH-FAKE16-NEXT:    v_dual_add_f32 v3, v3, v4 :: v_dual_and_b32 v2, 0xff800000, v2
-; GFX11-FLUSH-FAKE16-NEXT:    v_cvt_f16_f32_e32 v3, v3
-; GFX11-FLUSH-FAKE16-NEXT:    v_add_f32_e32 v2, v2, v5
-; GFX11-FLUSH-FAKE16-NEXT:    v_div_fixup_f16 v1, v3, v1, -1.0
-; GFX11-FLUSH-FAKE16-NEXT:    v_cvt_f16_f32_e32 v2, v2
-; GFX11-FLUSH-FAKE16-NEXT:    v_div_fixup_f16 v0, v2, v0, -1.0
-; GFX11-FLUSH-FAKE16-NEXT:    v_pack_b32_f16 v0, v0, v1
-; GFX11-FLUSH-FAKE16-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX11-FLUSH-FAKE16-NEXT:    ; return to shader part epilog
 ; GFX11-LABEL: s_rsq_v2f16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_lshr_b32 s1, s0, 16
@@ -6521,35 +4617,11 @@ define half @v_rsq_f16(half %a) {
 ; GFX89-NEXT:    v_rsq_f16_e32 v0, v0
 ; GFX89-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX10-LABEL: v_rsq_f16:
-; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    v_rsq_f16_e32 v0, v0
-; GFX10-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-IEEE-TRUE16-LABEL: v_rsq_f16:
-; GFX11-IEEE-TRUE16:       ; %bb.0:
-; GFX11-IEEE-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-IEEE-TRUE16-NEXT:    v_rsq_f16_e32 v0.l, v0.l
-; GFX11-IEEE-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-IEEE-FAKE16-LABEL: v_rsq_f16:
-; GFX11-IEEE-FAKE16:       ; %bb.0:
-; GFX11-IEEE-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-IEEE-FAKE16-NEXT:    v_rsq_f16_e32 v0, v0
-; GFX11-IEEE-FAKE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-FLUSH-TRUE16-LABEL: v_rsq_f16:
-; GFX11-FLUSH-TRUE16:       ; %bb.0:
-; GFX11-FLUSH-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FLUSH-TRUE16-NEXT:    v_rsq_f16_e32 v0.l, v0.l
-; GFX11-FLUSH-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-FLUSH-FAKE16-LABEL: v_rsq_f16:
-; GFX11-FLUSH-FAKE16:       ; %bb.0:
-; GFX11-FLUSH-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FLUSH-FAKE16-NEXT:    v_rsq_f16_e32 v0, v0
-; GFX11-FLUSH-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+; GFX10PLUS-LABEL: v_rsq_f16:
+; GFX10PLUS:       ; %bb.0:
+; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10PLUS-NEXT:    v_rsq_f16_e32 v0, v0
+; GFX10PLUS-NEXT:    s_setpc_b64 s[30:31]
   %sqrt = call contract half @llvm.sqrt.f16(half %a)
   %fdiv = fdiv contract half 1.0, %sqrt
   ret half %fdiv
@@ -6617,37 +4689,6 @@ define half @v_neg_rsq_f16(half %a) {
 ; GFX10-NEXT:    v_rcp_f16_e64 v0, -v0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-IEEE-TRUE16-LABEL: v_neg_rsq_f16:
-; GFX11-IEEE-TRUE16:       ; %bb.0:
-; GFX11-IEEE-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-IEEE-TRUE16-NEXT:    v_sqrt_f16_e32 v0.l, v0.l
-; GFX11-IEEE-TRUE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-IEEE-TRUE16-NEXT:    v_rcp_f16_e64 v0.l, -v0.l
-; GFX11-IEEE-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-IEEE-FAKE16-LABEL: v_neg_rsq_f16:
-; GFX11-IEEE-FAKE16:       ; %bb.0:
-; GFX11-IEEE-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-IEEE-FAKE16-NEXT:    v_sqrt_f16_e32 v0, v0
-; GFX11-IEEE-FAKE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-IEEE-FAKE16-NEXT:    v_rcp_f16_e64 v0, -v0
-; GFX11-IEEE-FAKE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-FLUSH-TRUE16-LABEL: v_neg_rsq_f16:
-; GFX11-FLUSH-TRUE16:       ; %bb.0:
-; GFX11-FLUSH-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FLUSH-TRUE16-NEXT:    v_sqrt_f16_e32 v0.l, v0.l
-; GFX11-FLUSH-TRUE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-FLUSH-TRUE16-NEXT:    v_rcp_f16_e64 v0.l, -v0.l
-; GFX11-FLUSH-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-FLUSH-FAKE16-LABEL: v_neg_rsq_f16:
-; GFX11-FLUSH-FAKE16:       ; %bb.0:
-; GFX11-FLUSH-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FLUSH-FAKE16-NEXT:    v_sqrt_f16_e32 v0, v0
-; GFX11-FLUSH-FAKE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-FLUSH-FAKE16-NEXT:    v_rcp_f16_e64 v0, -v0
-; GFX11-FLUSH-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ; GFX11-LABEL: v_neg_rsq_f16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -6724,41 +4765,6 @@ define { half, half } @v_rsq_f16_multi_use(half %a) {
 ; GFX10-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-IEEE-TRUE16-LABEL: v_rsq_f16_multi_use:
-; GFX11-IEEE-TRUE16:       ; %bb.0:
-; GFX11-IEEE-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-IEEE-TRUE16-NEXT:    v_sqrt_f16_e32 v2.l, v0.l
-; GFX11-IEEE-TRUE16-NEXT:    v_rsq_f16_e32 v1.l, v0.l
-; GFX11-IEEE-TRUE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-IEEE-TRUE16-NEXT:    v_mov_b32_e32 v0, v2
-; GFX11-IEEE-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-IEEE-FAKE16-LABEL: v_rsq_f16_multi_use:
-; GFX11-IEEE-FAKE16:       ; %bb.0:
-; GFX11-IEEE-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-IEEE-FAKE16-NEXT:    v_sqrt_f16_e32 v2, v0
-; GFX11-IEEE-FAKE16-NEXT:    v_rsq_f16_e32 v1, v0
-; GFX11-IEEE-FAKE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-IEEE-FAKE16-NEXT:    v_mov_b32_e32 v0, v2
-; GFX11-IEEE-FAKE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-FLUSH-TRUE16-LABEL: v_rsq_f16_multi_use:
-; GFX11-FLUSH-TRUE16:       ; %bb.0:
-; GFX11-FLUSH-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FLUSH-TRUE16-NEXT:    v_sqrt_f16_e32 v2.l, v0.l
-; GFX11-FLUSH-TRUE16-NEXT:    v_rsq_f16_e32 v1.l, v0.l
-; GFX11-FLUSH-TRUE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-FLUSH-TRUE16-NEXT:    v_mov_b32_e32 v0, v2
-; GFX11-FLUSH-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-FLUSH-FAKE16-LABEL: v_rsq_f16_multi_use:
-; GFX11-FLUSH-FAKE16:       ; %bb.0:
-; GFX11-FLUSH-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FLUSH-FAKE16-NEXT:    v_sqrt_f16_e32 v2, v0
-; GFX11-FLUSH-FAKE16-NEXT:    v_rsq_f16_e32 v1, v0
-; GFX11-FLUSH-FAKE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-FLUSH-FAKE16-NEXT:    v_mov_b32_e32 v0, v2
-; GFX11-FLUSH-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ; GFX11-LABEL: v_rsq_f16_multi_use:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -6836,37 +4842,6 @@ define half @v_rsq_f16_missing_contract0(half %a) {
 ; GFX10-NEXT:    v_rcp_f16_e32 v0, v0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-IEEE-TRUE16-LABEL: v_rsq_f16_missing_contract0:
-; GFX11-IEEE-TRUE16:       ; %bb.0:
-; GFX11-IEEE-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-IEEE-TRUE16-NEXT:    v_sqrt_f16_e32 v0.l, v0.l
-; GFX11-IEEE-TRUE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-IEEE-TRUE16-NEXT:    v_rcp_f16_e32 v0.l, v0.l
-; GFX11-IEEE-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-IEEE-FAKE16-LABEL: v_rsq_f16_missing_contract0:
-; GFX11-IEEE-FAKE16:       ; %bb.0:
-; GFX11-IEEE-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-IEEE-FAKE16-NEXT:    v_sqrt_f16_e32 v0, v0
-; GFX11-IEEE-FAKE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-IEEE-FAKE16-NEXT:    v_rcp_f16_e32 v0, v0
-; GFX11-IEEE-FAKE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-FLUSH-TRUE16-LABEL: v_rsq_f16_missing_contract0:
-; GFX11-FLUSH-TRUE16:       ; %bb.0:
-; GFX11-FLUSH-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FLUSH-TRUE16-NEXT:    v_sqrt_f16_e32 v0.l, v0.l
-; GFX11-FLUSH-TRUE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-FLUSH-TRUE16-NEXT:    v_rcp_f16_e32 v0.l, v0.l
-; GFX11-FLUSH-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-FLUSH-FAKE16-LABEL: v_rsq_f16_missing_contract0:
-; GFX11-FLUSH-FAKE16:       ; %bb.0:
-; GFX11-FLUSH-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FLUSH-FAKE16-NEXT:    v_sqrt_f16_e32 v0, v0
-; GFX11-FLUSH-FAKE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-FLUSH-FAKE16-NEXT:    v_rcp_f16_e32 v0, v0
-; GFX11-FLUSH-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ; GFX11-LABEL: v_rsq_f16_missing_contract0:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -6941,37 +4916,6 @@ define half @v_rsq_f16_missing_contract1(half %a) {
 ; GFX10-NEXT:    v_rcp_f16_e32 v0, v0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-IEEE-TRUE16-LABEL: v_rsq_f16_missing_contract1:
-; GFX11-IEEE-TRUE16:       ; %bb.0:
-; GFX11-IEEE-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-IEEE-TRUE16-NEXT:    v_sqrt_f16_e32 v0.l, v0.l
-; GFX11-IEEE-TRUE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-IEEE-TRUE16-NEXT:    v_rcp_f16_e32 v0.l, v0.l
-; GFX11-IEEE-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-IEEE-FAKE16-LABEL: v_rsq_f16_missing_contract1:
-; GFX11-IEEE-FAKE16:       ; %bb.0:
-; GFX11-IEEE-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-IEEE-FAKE16-NEXT:    v_sqrt_f16_e32 v0, v0
-; GFX11-IEEE-FAKE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-IEEE-FAKE16-NEXT:    v_rcp_f16_e32 v0, v0
-; GFX11-IEEE-FAKE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-FLUSH-TRUE16-LABEL: v_rsq_f16_missing_contract1:
-; GFX11-FLUSH-TRUE16:       ; %bb.0:
-; GFX11-FLUSH-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FLUSH-TRUE16-NEXT:    v_sqrt_f16_e32 v0.l, v0.l
-; GFX11-FLUSH-TRUE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-FLUSH-TRUE16-NEXT:    v_rcp_f16_e32 v0.l, v0.l
-; GFX11-FLUSH-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-FLUSH-FAKE16-LABEL: v_rsq_f16_missing_contract1:
-; GFX11-FLUSH-FAKE16:       ; %bb.0:
-; GFX11-FLUSH-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FLUSH-FAKE16-NEXT:    v_sqrt_f16_e32 v0, v0
-; GFX11-FLUSH-FAKE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-FLUSH-FAKE16-NEXT:    v_rcp_f16_e32 v0, v0
-; GFX11-FLUSH-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ; GFX11-LABEL: v_rsq_f16_missing_contract1:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -7046,37 +4990,6 @@ define half @v_neg_rsq_f16_missing_contract0(half %a) {
 ; GFX10-NEXT:    v_rcp_f16_e64 v0, -v0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-IEEE-TRUE16-LABEL: v_neg_rsq_f16_missing_contract0:
-; GFX11-IEEE-TRUE16:       ; %bb.0:
-; GFX11-IEEE-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-IEEE-TRUE16-NEXT:    v_sqrt_f16_e32 v0.l, v0.l
-; GFX11-IEEE-TRUE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-IEEE-TRUE16-NEXT:    v_rcp_f16_e64 v0.l, -v0.l
-; GFX11-IEEE-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-IEEE-FAKE16-LABEL: v_neg_rsq_f16_missing_contract0:
-; GFX11-IEEE-FAKE16:       ; %bb.0:
-; GFX11-IEEE-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-IEEE-FAKE16-NEXT:    v_sqrt_f16_e32 v0, v0
-; GFX11-IEEE-FAKE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-IEEE-FAKE16-NEXT:    v_rcp_f16_e64 v0, -v0
-; GFX11-IEEE-FAKE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-FLUSH-TRUE16-LABEL: v_neg_rsq_f16_missing_contract0:
-; GFX11-FLUSH-TRUE16:       ; %bb.0:
-; GFX11-FLUSH-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FLUSH-TRUE16-NEXT:    v_sqrt_f16_e32 v0.l, v0.l
-; GFX11-FLUSH-TRUE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-FLUSH-TRUE16-NEXT:    v_rcp_f16_e64 v0.l, -v0.l
-; GFX11-FLUSH-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-FLUSH-FAKE16-LABEL: v_neg_rsq_f16_missing_contract0:
-; GFX11-FLUSH-FAKE16:       ; %bb.0:
-; GFX11-FLUSH-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FLUSH-FAKE16-NEXT:    v_sqrt_f16_e32 v0, v0
-; GFX11-FLUSH-FAKE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-FLUSH-FAKE16-NEXT:    v_rcp_f16_e64 v0, -v0
-; GFX11-FLUSH-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ; GFX11-LABEL: v_neg_rsq_f16_missing_contract0:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -7151,37 +5064,6 @@ define half @v_neg_rsq_f16_missing_contract1(half %a) {
 ; GFX10-NEXT:    v_rcp_f16_e64 v0, -v0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-IEEE-TRUE16-LABEL: v_neg_rsq_f16_missing_contract1:
-; GFX11-IEEE-TRUE16:       ; %bb.0:
-; GFX11-IEEE-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-IEEE-TRUE16-NEXT:    v_sqrt_f16_e32 v0.l, v0.l
-; GFX11-IEEE-TRUE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-IEEE-TRUE16-NEXT:    v_rcp_f16_e64 v0.l, -v0.l
-; GFX11-IEEE-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-IEEE-FAKE16-LABEL: v_neg_rsq_f16_missing_contract1:
-; GFX11-IEEE-FAKE16:       ; %bb.0:
-; GFX11-IEEE-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-IEEE-FAKE16-NEXT:    v_sqrt_f16_e32 v0, v0
-; GFX11-IEEE-FAKE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-IEEE-FAKE16-NEXT:    v_rcp_f16_e64 v0, -v0
-; GFX11-IEEE-FAKE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-FLUSH-TRUE16-LABEL: v_neg_rsq_f16_missing_contract1:
-; GFX11-FLUSH-TRUE16:       ; %bb.0:
-; GFX11-FLUSH-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FLUSH-TRUE16-NEXT:    v_sqrt_f16_e32 v0.l, v0.l
-; GFX11-FLUSH-TRUE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-FLUSH-TRUE16-NEXT:    v_rcp_f16_e64 v0.l, -v0.l
-; GFX11-FLUSH-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-FLUSH-FAKE16-LABEL: v_neg_rsq_f16_missing_contract1:
-; GFX11-FLUSH-FAKE16:       ; %bb.0:
-; GFX11-FLUSH-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FLUSH-FAKE16-NEXT:    v_sqrt_f16_e32 v0, v0
-; GFX11-FLUSH-FAKE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-FLUSH-FAKE16-NEXT:    v_rcp_f16_e64 v0, -v0
-; GFX11-FLUSH-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ; GFX11-LABEL: v_neg_rsq_f16_missing_contract1:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -7256,37 +5138,6 @@ define half @v_neg_rsq_f16_fabs(half %a) {
 ; GFX10-NEXT:    v_rcp_f16_e64 v0, -v0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-IEEE-TRUE16-LABEL: v_neg_rsq_f16_fabs:
-; GFX11-IEEE-TRUE16:       ; %bb.0:
-; GFX11-IEEE-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-IEEE-TRUE16-NEXT:    v_sqrt_f16_e64 v0.l, |v0.l|
-; GFX11-IEEE-TRUE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-IEEE-TRUE16-NEXT:    v_rcp_f16_e64 v0.l, -v0.l
-; GFX11-IEEE-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-IEEE-FAKE16-LABEL: v_neg_rsq_f16_fabs:
-; GFX11-IEEE-FAKE16:       ; %bb.0:
-; GFX11-IEEE-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-IEEE-FAKE16-NEXT:    v_sqrt_f16_e64 v0, |v0|
-; GFX11-IEEE-FAKE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-IEEE-FAKE16-NEXT:    v_rcp_f16_e64 v0, -v0
-; GFX11-IEEE-FAKE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-FLUSH-TRUE16-LABEL: v_neg_rsq_f16_fabs:
-; GFX11-FLUSH-TRUE16:       ; %bb.0:
-; GFX11-FLUSH-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FLUSH-TRUE16-NEXT:    v_sqrt_f16_e64 v0.l, |v0.l|
-; GFX11-FLUSH-TRUE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-FLUSH-TRUE16-NEXT:    v_rcp_f16_e64 v0.l, -v0.l
-; GFX11-FLUSH-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-FLUSH-FAKE16-LABEL: v_neg_rsq_f16_fabs:
-; GFX11-FLUSH-FAKE16:       ; %bb.0:
-; GFX11-FLUSH-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FLUSH-FAKE16-NEXT:    v_sqrt_f16_e64 v0, |v0|
-; GFX11-FLUSH-FAKE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-FLUSH-FAKE16-NEXT:    v_rcp_f16_e64 v0, -v0
-; GFX11-FLUSH-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ; GFX11-LABEL: v_neg_rsq_f16_fabs:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -7354,35 +5205,11 @@ define half @v_rsq_f16_arcp(half %a) {
 ; GFX89-NEXT:    v_rsq_f16_e32 v0, v0
 ; GFX89-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX10-LABEL: v_rsq_f16_arcp:
-; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    v_rsq_f16_e32 v0, v0
-; GFX10-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-IEEE-TRUE16-LABEL: v_rsq_f16_arcp:
-; GFX11-IEEE-TRUE16:       ; %bb.0:
-; GFX11-IEEE-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-IEEE-TRUE16-NEXT:    v_rsq_f16_e32 v0.l, v0.l
-; GFX11-IEEE-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-IEEE-FAKE16-LABEL: v_rsq_f16_arcp:
-; GFX11-IEEE-FAKE16:       ; %bb.0:
-; GFX11-IEEE-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-IEEE-FAKE16-NEXT:    v_rsq_f16_e32 v0, v0
-; GFX11-IEEE-FAKE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-FLUSH-TRUE16-LABEL: v_rsq_f16_arcp:
-; GFX11-FLUSH-TRUE16:       ; %bb.0:
-; GFX11-FLUSH-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FLUSH-TRUE16-NEXT:    v_rsq_f16_e32 v0.l, v0.l
-; GFX11-FLUSH-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-FLUSH-FAKE16-LABEL: v_rsq_f16_arcp:
-; GFX11-FLUSH-FAKE16:       ; %bb.0:
-; GFX11-FLUSH-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FLUSH-FAKE16-NEXT:    v_rsq_f16_e32 v0, v0
-; GFX11-FLUSH-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+; GFX10PLUS-LABEL: v_rsq_f16_arcp:
+; GFX10PLUS:       ; %bb.0:
+; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10PLUS-NEXT:    v_rsq_f16_e32 v0, v0
+; GFX10PLUS-NEXT:    s_setpc_b64 s[30:31]
   %sqrt = call contract half @llvm.sqrt.f16(half %a)
   %fdiv = fdiv contract arcp half 1.0, %sqrt
   ret half %fdiv
@@ -7450,37 +5277,6 @@ define half @v_neg_rsq_f16_arcp(half %a) {
 ; GFX10-NEXT:    v_rcp_f16_e64 v0, -v0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-IEEE-TRUE16-LABEL: v_neg_rsq_f16_arcp:
-; GFX11-IEEE-TRUE16:       ; %bb.0:
-; GFX11-IEEE-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-IEEE-TRUE16-NEXT:    v_sqrt_f16_e32 v0.l, v0.l
-; GFX11-IEEE-TRUE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-IEEE-TRUE16-NEXT:    v_rcp_f16_e64 v0.l, -v0.l
-; GFX11-IEEE-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-IEEE-FAKE16-LABEL: v_neg_rsq_f16_arcp:
-; GFX11-IEEE-FAKE16:       ; %bb.0:
-; GFX11-IEEE-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-IEEE-FAKE16-NEXT:    v_sqrt_f16_e32 v0, v0
-; GFX11-IEEE-FAKE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-IEEE-FAKE16-NEXT:    v_rcp_f16_e64 v0, -v0
-; GFX11-IEEE-FAKE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-FLUSH-TRUE16-LABEL: v_neg_rsq_f16_arcp:
-; GFX11-FLUSH-TRUE16:       ; %bb.0:
-; GFX11-FLUSH-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FLUSH-TRUE16-NEXT:    v_sqrt_f16_e32 v0.l, v0.l
-; GFX11-FLUSH-TRUE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-FLUSH-TRUE16-NEXT:    v_rcp_f16_e64 v0.l, -v0.l
-; GFX11-FLUSH-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-FLUSH-FAKE16-LABEL: v_neg_rsq_f16_arcp:
-; GFX11-FLUSH-FAKE16:       ; %bb.0:
-; GFX11-FLUSH-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FLUSH-FAKE16-NEXT:    v_sqrt_f16_e32 v0, v0
-; GFX11-FLUSH-FAKE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-FLUSH-FAKE16-NEXT:    v_rcp_f16_e64 v0, -v0
-; GFX11-FLUSH-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ; GFX11-LABEL: v_neg_rsq_f16_arcp:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -7513,35 +5309,11 @@ define half @v_rsq_f16_afn(half %a) {
 ; GFX89-NEXT:    v_rsq_f16_e32 v0, v0
 ; GFX89-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX10-LABEL: v_rsq_f16_afn:
-; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    v_rsq_f16_e32 v0, v0
-; GFX10-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-IEEE-TRUE16-LABEL: v_rsq_f16_afn:
-; GFX11-IEEE-TRUE16:       ; %bb.0:
-; GFX11-IEEE-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-IEEE-TRUE16-NEXT:    v_rsq_f16_e32 v0.l, v0.l
-; GFX11-IEEE-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-IEEE-FAKE16-LABEL: v_rsq_f16_afn:
-; GFX11-IEEE-FAKE16:       ; %bb.0:
-; GFX11-IEEE-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-IEEE-FAKE16-NEXT:    v_rsq_f16_e32 v0, v0
-; GFX11-IEEE-FAKE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-FLUSH-TRUE16-LABEL: v_rsq_f16_afn:
-; GFX11-FLUSH-TRUE16:       ; %bb.0:
-; GFX11-FLUSH-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FLUSH-TRUE16-NEXT:    v_rsq_f16_e32 v0.l, v0.l
-; GFX11-FLUSH-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-FLUSH-FAKE16-LABEL: v_rsq_f16_afn:
-; GFX11-FLUSH-FAKE16:       ; %bb.0:
-; GFX11-FLUSH-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FLUSH-FAKE16-NEXT:    v_rsq_f16_e32 v0, v0
-; GFX11-FLUSH-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+; GFX10PLUS-LABEL: v_rsq_f16_afn:
+; GFX10PLUS:       ; %bb.0:
+; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10PLUS-NEXT:    v_rsq_f16_e32 v0, v0
+; GFX10PLUS-NEXT:    s_setpc_b64 s[30:31]
   %sqrt = call contract half @llvm.sqrt.f16(half %a)
   %fdiv = fdiv afn contract half 1.0, %sqrt
   ret half %fdiv
@@ -7575,37 +5347,6 @@ define half @v_rsq_f16_afn_nocontract(half %a) {
 ; GFX10-NEXT:    v_rcp_f16_e32 v0, v0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-IEEE-TRUE16-LABEL: v_rsq_f16_afn_nocontract:
-; GFX11-IEEE-TRUE16:       ; %bb.0:
-; GFX11-IEEE-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-IEEE-TRUE16-NEXT:    v_sqrt_f16_e32 v0.l, v0.l
-; GFX11-IEEE-TRUE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-IEEE-TRUE16-NEXT:    v_rcp_f16_e32 v0.l, v0.l
-; GFX11-IEEE-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-IEEE-FAKE16-LABEL: v_rsq_f16_afn_nocontract:
-; GFX11-IEEE-FAKE16:       ; %bb.0:
-; GFX11-IEEE-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-IEEE-FAKE16-NEXT:    v_sqrt_f16_e32 v0, v0
-; GFX11-IEEE-FAKE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-IEEE-FAKE16-NEXT:    v_rcp_f16_e32 v0, v0
-; GFX11-IEEE-FAKE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-FLUSH-TRUE16-LABEL: v_rsq_f16_afn_nocontract:
-; GFX11-FLUSH-TRUE16:       ; %bb.0:
-; GFX11-FLUSH-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FLUSH-TRUE16-NEXT:    v_sqrt_f16_e32 v0.l, v0.l
-; GFX11-FLUSH-TRUE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-FLUSH-TRUE16-NEXT:    v_rcp_f16_e32 v0.l, v0.l
-; GFX11-FLUSH-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-FLUSH-FAKE16-LABEL: v_rsq_f16_afn_nocontract:
-; GFX11-FLUSH-FAKE16:       ; %bb.0:
-; GFX11-FLUSH-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FLUSH-FAKE16-NEXT:    v_sqrt_f16_e32 v0, v0
-; GFX11-FLUSH-FAKE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-FLUSH-FAKE16-NEXT:    v_rcp_f16_e32 v0, v0
-; GFX11-FLUSH-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ; GFX11-LABEL: v_rsq_f16_afn_nocontract:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -7896,135 +5637,6 @@ define <2 x half> @v_rsq_v2f16(<2 x half> %a) {
 ; GFX10-FLUSH-NEXT:    v_pack_b32_f16 v0, v1, v0
 ; GFX10-FLUSH-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-IEEE-TRUE16-LABEL: v_rsq_v2f16:
-; GFX11-IEEE-TRUE16:       ; %bb.0:
-; GFX11-IEEE-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-IEEE-TRUE16-NEXT:    v_sqrt_f16_e32 v0.l, v0.l
-; GFX11-IEEE-TRUE16-NEXT:    v_sqrt_f16_e32 v0.h, v0.h
-; GFX11-IEEE-TRUE16-NEXT:    v_cvt_f32_f16_e32 v3, 1.0
-; GFX11-IEEE-TRUE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-IEEE-TRUE16-NEXT:    v_cvt_f32_f16_e32 v1, v0.l
-; GFX11-IEEE-TRUE16-NEXT:    v_cvt_f32_f16_e32 v2, v0.h
-; GFX11-IEEE-TRUE16-NEXT:    v_mov_b16_e32 v5.l, v0.h
-; GFX11-IEEE-TRUE16-NEXT:    v_mov_b16_e32 v4.l, v0.l
-; GFX11-IEEE-TRUE16-NEXT:    v_rcp_f32_e32 v1, v1
-; GFX11-IEEE-TRUE16-NEXT:    v_rcp_f32_e32 v2, v2
-; GFX11-IEEE-TRUE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-IEEE-TRUE16-NEXT:    v_mul_f32_e32 v6, v3, v1
-; GFX11-IEEE-TRUE16-NEXT:    v_mul_f32_e32 v3, v3, v2
-; GFX11-IEEE-TRUE16-NEXT:    v_fma_mix_f32 v8, -v5, v3, 1.0 op_sel_hi:[1,0,1]
-; GFX11-IEEE-TRUE16-NEXT:    v_fmac_f32_e32 v3, v8, v2
-; GFX11-IEEE-TRUE16-NEXT:    v_fma_mix_f32 v7, -v4, v6, 1.0 op_sel_hi:[1,0,1]
-; GFX11-IEEE-TRUE16-NEXT:    v_fma_mix_f32 v5, -v5, v3, 1.0 op_sel_hi:[1,0,1]
-; GFX11-IEEE-TRUE16-NEXT:    v_fmac_f32_e32 v6, v7, v1
-; GFX11-IEEE-TRUE16-NEXT:    v_mul_f32_e32 v2, v5, v2
-; GFX11-IEEE-TRUE16-NEXT:    v_fma_mix_f32 v4, -v4, v6, 1.0 op_sel_hi:[1,0,1]
-; GFX11-IEEE-TRUE16-NEXT:    v_dual_mul_f32 v1, v4, v1 :: v_dual_and_b32 v2, 0xff800000, v2
-; GFX11-IEEE-TRUE16-NEXT:    v_dual_add_f32 v2, v2, v3 :: v_dual_and_b32 v1, 0xff800000, v1
-; GFX11-IEEE-TRUE16-NEXT:    v_add_f32_e32 v1, v1, v6
-; GFX11-IEEE-TRUE16-NEXT:    v_cvt_f16_f32_e32 v1.l, v1
-; GFX11-IEEE-TRUE16-NEXT:    v_cvt_f16_f32_e32 v1.h, v2
-; GFX11-IEEE-TRUE16-NEXT:    v_div_fixup_f16 v0.l, v1.l, v0.l, 1.0
-; GFX11-IEEE-TRUE16-NEXT:    v_div_fixup_f16 v0.h, v1.h, v0.h, 1.0
-; GFX11-IEEE-TRUE16-NEXT:    v_pack_b32_f16 v0, v0.l, v0.h
-; GFX11-IEEE-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-IEEE-FAKE16-LABEL: v_rsq_v2f16:
-; GFX11-IEEE-FAKE16:       ; %bb.0:
-; GFX11-IEEE-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-IEEE-FAKE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; GFX11-IEEE-FAKE16-NEXT:    v_sqrt_f16_e32 v0, v0
-; GFX11-IEEE-FAKE16-NEXT:    v_cvt_f32_f16_e32 v4, 1.0
-; GFX11-IEEE-FAKE16-NEXT:    v_sqrt_f16_e32 v1, v1
-; GFX11-IEEE-FAKE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-IEEE-FAKE16-NEXT:    v_cvt_f32_f16_e32 v2, v0
-; GFX11-IEEE-FAKE16-NEXT:    v_cvt_f32_f16_e32 v3, v1
-; GFX11-IEEE-FAKE16-NEXT:    v_rcp_f32_e32 v2, v2
-; GFX11-IEEE-FAKE16-NEXT:    v_rcp_f32_e32 v3, v3
-; GFX11-IEEE-FAKE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-IEEE-FAKE16-NEXT:    v_mul_f32_e32 v5, v4, v2
-; GFX11-IEEE-FAKE16-NEXT:    v_mul_f32_e32 v4, v4, v3
-; GFX11-IEEE-FAKE16-NEXT:    v_fma_mix_f32 v7, -v1, v4, 1.0 op_sel_hi:[1,0,1]
-; GFX11-IEEE-FAKE16-NEXT:    v_fmac_f32_e32 v4, v7, v3
-; GFX11-IEEE-FAKE16-NEXT:    v_fma_mix_f32 v6, -v0, v5, 1.0 op_sel_hi:[1,0,1]
-; GFX11-IEEE-FAKE16-NEXT:    v_fma_mix_f32 v7, -v1, v4, 1.0 op_sel_hi:[1,0,1]
-; GFX11-IEEE-FAKE16-NEXT:    v_fmac_f32_e32 v5, v6, v2
-; GFX11-IEEE-FAKE16-NEXT:    v_mul_f32_e32 v3, v7, v3
-; GFX11-IEEE-FAKE16-NEXT:    v_fma_mix_f32 v6, -v0, v5, 1.0 op_sel_hi:[1,0,1]
-; GFX11-IEEE-FAKE16-NEXT:    v_dual_mul_f32 v2, v6, v2 :: v_dual_and_b32 v3, 0xff800000, v3
-; GFX11-IEEE-FAKE16-NEXT:    v_dual_add_f32 v3, v3, v4 :: v_dual_and_b32 v2, 0xff800000, v2
-; GFX11-IEEE-FAKE16-NEXT:    v_cvt_f16_f32_e32 v3, v3
-; GFX11-IEEE-FAKE16-NEXT:    v_add_f32_e32 v2, v2, v5
-; GFX11-IEEE-FAKE16-NEXT:    v_div_fixup_f16 v1, v3, v1, 1.0
-; GFX11-IEEE-FAKE16-NEXT:    v_cvt_f16_f32_e32 v2, v2
-; GFX11-IEEE-FAKE16-NEXT:    v_div_fixup_f16 v0, v2, v0, 1.0
-; GFX11-IEEE-FAKE16-NEXT:    v_pack_b32_f16 v0, v0, v1
-; GFX11-IEEE-FAKE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-FLUSH-TRUE16-LABEL: v_rsq_v2f16:
-; GFX11-FLUSH-TRUE16:       ; %bb.0:
-; GFX11-FLUSH-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FLUSH-TRUE16-NEXT:    v_sqrt_f16_e32 v0.l, v0.l
-; GFX11-FLUSH-TRUE16-NEXT:    v_sqrt_f16_e32 v0.h, v0.h
-; GFX11-FLUSH-TRUE16-NEXT:    v_cvt_f32_f16_e32 v3, 1.0
-; GFX11-FLUSH-TRUE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-FLUSH-TRUE16-NEXT:    v_cvt_f32_f16_e32 v1, v0.l
-; GFX11-FLUSH-TRUE16-NEXT:    v_cvt_f32_f16_e32 v2, v0.h
-; GFX11-FLUSH-TRUE16-NEXT:    v_mov_b16_e32 v5.l, v0.h
-; GFX11-FLUSH-TRUE16-NEXT:    v_mov_b16_e32 v4.l, v0.l
-; GFX11-FLUSH-TRUE16-NEXT:    v_rcp_f32_e32 v1, v1
-; GFX11-FLUSH-TRUE16-NEXT:    v_rcp_f32_e32 v2, v2
-; GFX11-FLUSH-TRUE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-FLUSH-TRUE16-NEXT:    v_mul_f32_e32 v6, v3, v1
-; GFX11-FLUSH-TRUE16-NEXT:    v_mul_f32_e32 v3, v3, v2
-; GFX11-FLUSH-TRUE16-NEXT:    v_fma_mix_f32 v8, -v5, v3, 1.0 op_sel_hi:[1,0,1]
-; GFX11-FLUSH-TRUE16-NEXT:    v_fmac_f32_e32 v3, v8, v2
-; GFX11-FLUSH-TRUE16-NEXT:    v_fma_mix_f32 v7, -v4, v6, 1.0 op_sel_hi:[1,0,1]
-; GFX11-FLUSH-TRUE16-NEXT:    v_fma_mix_f32 v5, -v5, v3, 1.0 op_sel_hi:[1,0,1]
-; GFX11-FLUSH-TRUE16-NEXT:    v_fmac_f32_e32 v6, v7, v1
-; GFX11-FLUSH-TRUE16-NEXT:    v_mul_f32_e32 v2, v5, v2
-; GFX11-FLUSH-TRUE16-NEXT:    v_fma_mix_f32 v4, -v4, v6, 1.0 op_sel_hi:[1,0,1]
-; GFX11-FLUSH-TRUE16-NEXT:    v_dual_mul_f32 v1, v4, v1 :: v_dual_and_b32 v2, 0xff800000, v2
-; GFX11-FLUSH-TRUE16-NEXT:    v_dual_add_f32 v2, v2, v3 :: v_dual_and_b32 v1, 0xff800000, v1
-; GFX11-FLUSH-TRUE16-NEXT:    v_add_f32_e32 v1, v1, v6
-; GFX11-FLUSH-TRUE16-NEXT:    v_cvt_f16_f32_e32 v1.l, v1
-; GFX11-FLUSH-TRUE16-NEXT:    v_cvt_f16_f32_e32 v1.h, v2
-; GFX11-FLUSH-TRUE16-NEXT:    v_div_fixup_f16 v0.l, v1.l, v0.l, 1.0
-; GFX11-FLUSH-TRUE16-NEXT:    v_div_fixup_f16 v0.h, v1.h, v0.h, 1.0
-; GFX11-FLUSH-TRUE16-NEXT:    v_pack_b32_f16 v0, v0.l, v0.h
-; GFX11-FLUSH-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-FLUSH-FAKE16-LABEL: v_rsq_v2f16:
-; GFX11-FLUSH-FAKE16:       ; %bb.0:
-; GFX11-FLUSH-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FLUSH-FAKE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; GFX11-FLUSH-FAKE16-NEXT:    v_sqrt_f16_e32 v0, v0
-; GFX11-FLUSH-FAKE16-NEXT:    v_cvt_f32_f16_e32 v4, 1.0
-; GFX11-FLUSH-FAKE16-NEXT:    v_sqrt_f16_e32 v1, v1
-; GFX11-FLUSH-FAKE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-FLUSH-FAKE16-NEXT:    v_cvt_f32_f16_e32 v2, v0
-; GFX11-FLUSH-FAKE16-NEXT:    v_cvt_f32_f16_e32 v3, v1
-; GFX11-FLUSH-FAKE16-NEXT:    v_rcp_f32_e32 v2, v2
-; GFX11-FLUSH-FAKE16-NEXT:    v_rcp_f32_e32 v3, v3
-; GFX11-FLUSH-FAKE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-FLUSH-FAKE16-NEXT:    v_mul_f32_e32 v5, v4, v2
-; GFX11-FLUSH-FAKE16-NEXT:    v_mul_f32_e32 v4, v4, v3
-; GFX11-FLUSH-FAKE16-NEXT:    v_fma_mix_f32 v7, -v1, v4, 1.0 op_sel_hi:[1,0,1]
-; GFX11-FLUSH-FAKE16-NEXT:    v_fmac_f32_e32 v4, v7, v3
-; GFX11-FLUSH-FAKE16-NEXT:    v_fma_mix_f32 v6, -v0, v5, 1.0 op_sel_hi:[1,0,1]
-; GFX11-FLUSH-FAKE16-NEXT:    v_fma_mix_f32 v7, -v1, v4, 1.0 op_sel_hi:[1,0,1]
-; GFX11-FLUSH-FAKE16-NEXT:    v_fmac_f32_e32 v5, v6, v2
-; GFX11-FLUSH-FAKE16-NEXT:    v_mul_f32_e32 v3, v7, v3
-; GFX11-FLUSH-FAKE16-NEXT:    v_fma_mix_f32 v6, -v0, v5, 1.0 op_sel_hi:[1,0,1]
-; GFX11-FLUSH-FAKE16-NEXT:    v_dual_mul_f32 v2, v6, v2 :: v_dual_and_b32 v3, 0xff800000, v3
-; GFX11-FLUSH-FAKE16-NEXT:    v_dual_add_f32 v3, v3, v4 :: v_dual_and_b32 v2, 0xff800000, v2
-; GFX11-FLUSH-FAKE16-NEXT:    v_cvt_f16_f32_e32 v3, v3
-; GFX11-FLUSH-FAKE16-NEXT:    v_add_f32_e32 v2, v2, v5
-; GFX11-FLUSH-FAKE16-NEXT:    v_div_fixup_f16 v1, v3, v1, 1.0
-; GFX11-FLUSH-FAKE16-NEXT:    v_cvt_f16_f32_e32 v2, v2
-; GFX11-FLUSH-FAKE16-NEXT:    v_div_fixup_f16 v0, v2, v0, 1.0
-; GFX11-FLUSH-FAKE16-NEXT:    v_pack_b32_f16 v0, v0, v1
-; GFX11-FLUSH-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ; GFX11-LABEL: v_rsq_v2f16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -8339,135 +5951,6 @@ define <2 x half> @v_neg_rsq_v2f16(<2 x half> %a) {
 ; GFX10-FLUSH-NEXT:    v_pack_b32_f16 v0, v1, v0
 ; GFX10-FLUSH-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-IEEE-TRUE16-LABEL: v_neg_rsq_v2f16:
-; GFX11-IEEE-TRUE16:       ; %bb.0:
-; GFX11-IEEE-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-IEEE-TRUE16-NEXT:    v_sqrt_f16_e32 v0.l, v0.l
-; GFX11-IEEE-TRUE16-NEXT:    v_sqrt_f16_e32 v0.h, v0.h
-; GFX11-IEEE-TRUE16-NEXT:    v_cvt_f32_f16_e32 v3, -1.0
-; GFX11-IEEE-TRUE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-IEEE-TRUE16-NEXT:    v_cvt_f32_f16_e32 v1, v0.l
-; GFX11-IEEE-TRUE16-NEXT:    v_cvt_f32_f16_e32 v2, v0.h
-; GFX11-IEEE-TRUE16-NEXT:    v_mov_b16_e32 v5.l, v0.h
-; GFX11-IEEE-TRUE16-NEXT:    v_mov_b16_e32 v4.l, v0.l
-; GFX11-IEEE-TRUE16-NEXT:    v_rcp_f32_e32 v1, v1
-; GFX11-IEEE-TRUE16-NEXT:    v_rcp_f32_e32 v2, v2
-; GFX11-IEEE-TRUE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-IEEE-TRUE16-NEXT:    v_mul_f32_e32 v6, v3, v1
-; GFX11-IEEE-TRUE16-NEXT:    v_mul_f32_e32 v3, v3, v2
-; GFX11-IEEE-TRUE16-NEXT:    v_fma_mix_f32 v8, -v5, v3, -1.0 op_sel_hi:[1,0,1]
-; GFX11-IEEE-TRUE16-NEXT:    v_fmac_f32_e32 v3, v8, v2
-; GFX11-IEEE-TRUE16-NEXT:    v_fma_mix_f32 v7, -v4, v6, -1.0 op_sel_hi:[1,0,1]
-; GFX11-IEEE-TRUE16-NEXT:    v_fma_mix_f32 v5, -v5, v3, -1.0 op_sel_hi:[1,0,1]
-; GFX11-IEEE-TRUE16-NEXT:    v_fmac_f32_e32 v6, v7, v1
-; GFX11-IEEE-TRUE16-NEXT:    v_mul_f32_e32 v2, v5, v2
-; GFX11-IEEE-TRUE16-NEXT:    v_fma_mix_f32 v4, -v4, v6, -1.0 op_sel_hi:[1,0,1]
-; GFX11-IEEE-TRUE16-NEXT:    v_dual_mul_f32 v1, v4, v1 :: v_dual_and_b32 v2, 0xff800000, v2
-; GFX11-IEEE-TRUE16-NEXT:    v_dual_add_f32 v2, v2, v3 :: v_dual_and_b32 v1, 0xff800000, v1
-; GFX11-IEEE-TRUE16-NEXT:    v_add_f32_e32 v1, v1, v6
-; GFX11-IEEE-TRUE16-NEXT:    v_cvt_f16_f32_e32 v1.l, v1
-; GFX11-IEEE-TRUE16-NEXT:    v_cvt_f16_f32_e32 v1.h, v2
-; GFX11-IEEE-TRUE16-NEXT:    v_div_fixup_f16 v0.l, v1.l, v0.l, -1.0
-; GFX11-IEEE-TRUE16-NEXT:    v_div_fixup_f16 v0.h, v1.h, v0.h, -1.0
-; GFX11-IEEE-TRUE16-NEXT:    v_pack_b32_f16 v0, v0.l, v0.h
-; GFX11-IEEE-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-IEEE-FAKE16-LABEL: v_neg_rsq_v2f16:
-; GFX11-IEEE-FAKE16:       ; %bb.0:
-; GFX11-IEEE-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-IEEE-FAKE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; GFX11-IEEE-FAKE16-NEXT:    v_sqrt_f16_e32 v0, v0
-; GFX11-IEEE-FAKE16-NEXT:    v_cvt_f32_f16_e32 v4, -1.0
-; GFX11-IEEE-FAKE16-NEXT:    v_sqrt_f16_e32 v1, v1
-; GFX11-IEEE-FAKE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-IEEE-FAKE16-NEXT:    v_cvt_f32_f16_e32 v2, v0
-; GFX11-IEEE-FAKE16-NEXT:    v_cvt_f32_f16_e32 v3, v1
-; GFX11-IEEE-FAKE16-NEXT:    v_rcp_f32_e32 v2, v2
-; GFX11-IEEE-FAKE16-NEXT:    v_rcp_f32_e32 v3, v3
-; GFX11-IEEE-FAKE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-IEEE-FAKE16-NEXT:    v_mul_f32_e32 v5, v4, v2
-; GFX11-IEEE-FAKE16-NEXT:    v_mul_f32_e32 v4, v4, v3
-; GFX11-IEEE-FAKE16-NEXT:    v_fma_mix_f32 v7, -v1, v4, -1.0 op_sel_hi:[1,0,1]
-; GFX11-IEEE-FAKE16-NEXT:    v_fmac_f32_e32 v4, v7, v3
-; GFX11-IEEE-FAKE16-NEXT:    v_fma_mix_f32 v6, -v0, v5, -1.0 op_sel_hi:[1,0,1]
-; GFX11-IEEE-FAKE16-NEXT:    v_fma_mix_f32 v7, -v1, v4, -1.0 op_sel_hi:[1,0,1]
-; GFX11-IEEE-FAKE16-NEXT:    v_fmac_f32_e32 v5, v6, v2
-; GFX11-IEEE-FAKE16-NEXT:    v_mul_f32_e32 v3, v7, v3
-; GFX11-IEEE-FAKE16-NEXT:    v_fma_mix_f32 v6, -v0, v5, -1.0 op_sel_hi:[1,0,1]
-; GFX11-IEEE-FAKE16-NEXT:    v_dual_mul_f32 v2, v6, v2 :: v_dual_and_b32 v3, 0xff800000, v3
-; GFX11-IEEE-FAKE16-NEXT:    v_dual_add_f32 v3, v3, v4 :: v_dual_and_b32 v2, 0xff800000, v2
-; GFX11-IEEE-FAKE16-NEXT:    v_cvt_f16_f32_e32 v3, v3
-; GFX11-IEEE-FAKE16-NEXT:    v_add_f32_e32 v2, v2, v5
-; GFX11-IEEE-FAKE16-NEXT:    v_div_fixup_f16 v1, v3, v1, -1.0
-; GFX11-IEEE-FAKE16-NEXT:    v_cvt_f16_f32_e32 v2, v2
-; GFX11-IEEE-FAKE16-NEXT:    v_div_fixup_f16 v0, v2, v0, -1.0
-; GFX11-IEEE-FAKE16-NEXT:    v_pack_b32_f16 v0, v0, v1
-; GFX11-IEEE-FAKE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-FLUSH-TRUE16-LABEL: v_neg_rsq_v2f16:
-; GFX11-FLUSH-TRUE16:       ; %bb.0:
-; GFX11-FLUSH-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FLUSH-TRUE16-NEXT:    v_sqrt_f16_e32 v0.l, v0.l
-; GFX11-FLUSH-TRUE16-NEXT:    v_sqrt_f16_e32 v0.h, v0.h
-; GFX11-FLUSH-TRUE16-NEXT:    v_cvt_f32_f16_e32 v3, -1.0
-; GFX11-FLUSH-TRUE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-FLUSH-TRUE16-NEXT:    v_cvt_f32_f16_e32 v1, v0.l
-; GFX11-FLUSH-TRUE16-NEXT:    v_cvt_f32_f16_e32 v2, v0.h
-; GFX11-FLUSH-TRUE16-NEXT:    v_mov_b16_e32 v5.l, v0.h
-; GFX11-FLUSH-TRUE16-NEXT:    v_mov_b16_e32 v4.l, v0.l
-; GFX11-FLUSH-TRUE16-NEXT:    v_rcp_f32_e32 v1, v1
-; GFX11-FLUSH-TRUE16-NEXT:    v_rcp_f32_e32 v2, v2
-; GFX11-FLUSH-TRUE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-FLUSH-TRUE16-NEXT:    v_mul_f32_e32 v6, v3, v1
-; GFX11-FLUSH-TRUE16-NEXT:    v_mul_f32_e32 v3, v3, v2
-; GFX11-FLUSH-TRUE16-NEXT:    v_fma_mix_f32 v8, -v5, v3, -1.0 op_sel_hi:[1,0,1]
-; GFX11-FLUSH-TRUE16-NEXT:    v_fmac_f32_e32 v3, v8, v2
-; GFX11-FLUSH-TRUE16-NEXT:    v_fma_mix_f32 v7, -v4, v6, -1.0 op_sel_hi:[1,0,1]
-; GFX11-FLUSH-TRUE16-NEXT:    v_fma_mix_f32 v5, -v5, v3, -1.0 op_sel_hi:[1,0,1]
-; GFX11-FLUSH-TRUE16-NEXT:    v_fmac_f32_e32 v6, v7, v1
-; GFX11-FLUSH-TRUE16-NEXT:    v_mul_f32_e32 v2, v5, v2
-; GFX11-FLUSH-TRUE16-NEXT:    v_fma_mix_f32 v4, -v4, v6, -1.0 op_sel_hi:[1,0,1]
-; GFX11-FLUSH-TRUE16-NEXT:    v_dual_mul_f32 v1, v4, v1 :: v_dual_and_b32 v2, 0xff800000, v2
-; GFX11-FLUSH-TRUE16-NEXT:    v_dual_add_f32 v2, v2, v3 :: v_dual_and_b32 v1, 0xff800000, v1
-; GFX11-FLUSH-TRUE16-NEXT:    v_add_f32_e32 v1, v1, v6
-; GFX11-FLUSH-TRUE16-NEXT:    v_cvt_f16_f32_e32 v1.l, v1
-; GFX11-FLUSH-TRUE16-NEXT:    v_cvt_f16_f32_e32 v1.h, v2
-; GFX11-FLUSH-TRUE16-NEXT:    v_div_fixup_f16 v0.l, v1.l, v0.l, -1.0
-; GFX11-FLUSH-TRUE16-NEXT:    v_div_fixup_f16 v0.h, v1.h, v0.h, -1.0
-; GFX11-FLUSH-TRUE16-NEXT:    v_pack_b32_f16 v0, v0.l, v0.h
-; GFX11-FLUSH-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-FLUSH-FAKE16-LABEL: v_neg_rsq_v2f16:
-; GFX11-FLUSH-FAKE16:       ; %bb.0:
-; GFX11-FLUSH-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FLUSH-FAKE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; GFX11-FLUSH-FAKE16-NEXT:    v_sqrt_f16_e32 v0, v0
-; GFX11-FLUSH-FAKE16-NEXT:    v_cvt_f32_f16_e32 v4, -1.0
-; GFX11-FLUSH-FAKE16-NEXT:    v_sqrt_f16_e32 v1, v1
-; GFX11-FLUSH-FAKE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-FLUSH-FAKE16-NEXT:    v_cvt_f32_f16_e32 v2, v0
-; GFX11-FLUSH-FAKE16-NEXT:    v_cvt_f32_f16_e32 v3, v1
-; GFX11-FLUSH-FAKE16-NEXT:    v_rcp_f32_e32 v2, v2
-; GFX11-FLUSH-FAKE16-NEXT:    v_rcp_f32_e32 v3, v3
-; GFX11-FLUSH-FAKE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-FLUSH-FAKE16-NEXT:    v_mul_f32_e32 v5, v4, v2
-; GFX11-FLUSH-FAKE16-NEXT:    v_mul_f32_e32 v4, v4, v3
-; GFX11-FLUSH-FAKE16-NEXT:    v_fma_mix_f32 v7, -v1, v4, -1.0 op_sel_hi:[1,0,1]
-; GFX11-FLUSH-FAKE16-NEXT:    v_fmac_f32_e32 v4, v7, v3
-; GFX11-FLUSH-FAKE16-NEXT:    v_fma_mix_f32 v6, -v0, v5, -1.0 op_sel_hi:[1,0,1]
-; GFX11-FLUSH-FAKE16-NEXT:    v_fma_mix_f32 v7, -v1, v4, -1.0 op_sel_hi:[1,0,1]
-; GFX11-FLUSH-FAKE16-NEXT:    v_fmac_f32_e32 v5, v6, v2
-; GFX11-FLUSH-FAKE16-NEXT:    v_mul_f32_e32 v3, v7, v3
-; GFX11-FLUSH-FAKE16-NEXT:    v_fma_mix_f32 v6, -v0, v5, -1.0 op_sel_hi:[1,0,1]
-; GFX11-FLUSH-FAKE16-NEXT:    v_dual_mul_f32 v2, v6, v2 :: v_dual_and_b32 v3, 0xff800000, v3
-; GFX11-FLUSH-FAKE16-NEXT:    v_dual_add_f32 v3, v3, v4 :: v_dual_and_b32 v2, 0xff800000, v2
-; GFX11-FLUSH-FAKE16-NEXT:    v_cvt_f16_f32_e32 v3, v3
-; GFX11-FLUSH-FAKE16-NEXT:    v_add_f32_e32 v2, v2, v5
-; GFX11-FLUSH-FAKE16-NEXT:    v_div_fixup_f16 v1, v3, v1, -1.0
-; GFX11-FLUSH-FAKE16-NEXT:    v_cvt_f16_f32_e32 v2, v2
-; GFX11-FLUSH-FAKE16-NEXT:    v_div_fixup_f16 v0, v2, v0, -1.0
-; GFX11-FLUSH-FAKE16-NEXT:    v_pack_b32_f16 v0, v0, v1
-; GFX11-FLUSH-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ; GFX11-LABEL: v_neg_rsq_v2f16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
