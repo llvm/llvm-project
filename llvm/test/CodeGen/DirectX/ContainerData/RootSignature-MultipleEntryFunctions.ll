@@ -27,14 +27,14 @@ attributes #0 = { "hlsl.numthreads"="1,1,1" "hlsl.shader"="compute" }
 ; CHECK-NEXT:   Flags: 0x000001
 ; CHECK-NEXT:   Version: 2
 ; CHECK-NEXT:   NumParameters: 0
-; CHECK-NEXT:   RootParametersOffset: 0
+; CHECK-NEXT:   RootParametersOffset: 24
 ; CHECK-NEXT:   NumStaticSamplers: 0
-; CHECK-NEXT:   StaticSamplersOffset: 0
+; CHECK-NEXT:   StaticSamplersOffset: 24
 
 ; CHECK-LABEL: Definition for 'anotherMain':
 ; CHECK-NEXT:   Flags: 0x000002
 ; CHECK-NEXT:   Version: 2
 ; CHECK-NEXT:   NumParameters: 0
-; CHECK-NEXT:   RootParametersOffset: 0
+; CHECK-NEXT:   RootParametersOffset: 24
 ; CHECK-NEXT:   NumStaticSamplers: 0
-; CHECK-NEXT:   StaticSamplersOffset: 0
+; CHECK-NEXT:   StaticSamplersOffset: 24
