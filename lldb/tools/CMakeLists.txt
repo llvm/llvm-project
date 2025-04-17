@@ -7,6 +7,8 @@ add_subdirectory(intel-features)
 # example is `check-lldb`. So, we pass EXCLUDE_FROM_ALL here.
 add_subdirectory(lldb-test EXCLUDE_FROM_ALL)
 add_subdirectory(lldb-fuzzer EXCLUDE_FROM_ALL)
+add_subdirectory(lldb-rpc EXCLUDE_FROM_ALL)
+
 
 add_lldb_tool_subdirectory(lldb-instr)
 add_lldb_tool_subdirectory(lldb-dap)

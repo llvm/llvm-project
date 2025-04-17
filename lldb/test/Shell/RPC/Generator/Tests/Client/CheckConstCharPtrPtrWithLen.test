@@ -1,0 +1,12 @@
+// Skipping temporarily due to rdar://149500008
+# XFAIL: system-darwin
+# RUN: mkdir -p %t/server
+# RUN: mkdir -p %t/lib
+# RUN: %lldb-rpc-gen --output-dir=%t %S/../../Inputs/CheckConstCharPtrPtrWithLen.h
+
+# RUN: cat %t/lib/CheckConstCharPtrPtrWithLen.cpp | FileCheck %s
+
+// const char ** followed by len must use a StringList
+// when being encoded.
+# CHECK: lldb_rpc::SBRPC_CHECKCONSTCHARPTRPTRWITHLEN::CheckConstCharPtrPtrWithLen
+# CHECK: StringList arg1_list
