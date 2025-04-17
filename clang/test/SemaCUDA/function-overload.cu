@@ -1,3 +1,6 @@
+// REQUIRES: x86-registered-target
+// REQUIRES: nvptx-registered-target
+
 // RUN: %clang_cc1 -std=c++14 -triple x86_64-unknown-linux-gnu -fsyntax-only \
 // RUN:   -verify=host,hostdefer,devdefer,expected %s
 // RUN: %clang_cc1 -std=c++14 -triple nvptx64-nvidia-cuda -fsyntax-only \

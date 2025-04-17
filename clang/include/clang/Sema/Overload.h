@@ -407,26 +407,6 @@ class Sema;
              Third == ICK_Identity;
     }
 
-    /// A conversion sequence is perfect if it is an identity conversion and
-    /// the type of the source is the same as the type of the target.
-    bool isPerfect(const ASTContext &C) const {
-      if (!isIdentityConversion())
-        return false;
-      // If we are not performing a reference binding, we can skip comparing
-      // the types, which has a noticeable performance impact.
-      if (!ReferenceBinding) {
-        // The types might differ if there is an array-to-pointer conversion
-        // or lvalue-to-rvalue conversion.
-        assert(First || C.hasSameUnqualifiedType(getFromType(), getToType(2)));
-        return true;
-      }
-      if (!C.hasSameType(getFromType(), getToType(2)))
-        return false;
-      if (BindsToRvalue && IsLvalueReference)
-        return false;
-      return true;
-    }
-
     ImplicitConversionRank getRank() const;
     NarrowingKind
     getNarrowingKind(ASTContext &Context, const Expr *Converted,
@@ -763,12 +743,6 @@ class Sema;
       Standard.setAllToTypes(T);
     }
 
-    /// A conversion sequence is perfect if it is an identity conversion and
-    /// the type of the source is the same as the type of the target.
-    bool isPerfect(const ASTContext &C) const {
-      return isStandard() && Standard.isPerfect(C);
-    }
-
     // True iff this is a conversion sequence from an initializer list to an
     // array or std::initializer.
     bool hasInitializerListContainerType() const {
@@ -965,10 +939,6 @@ class Sema;
     LLVM_PREFERRED_TYPE(CallExpr::ADLCallKind)
     unsigned IsADLCandidate : 1;
 
-    /// Whether FinalConversion has been set.
-    LLVM_PREFERRED_TYPE(bool)
-    unsigned HasFinalConversion : 1;
-
     /// Whether this is a rewritten candidate, and if so, of what kind?
     LLVM_PREFERRED_TYPE(OverloadCandidateRewriteKind)
     unsigned RewriteKind : 2;
@@ -1009,20 +979,6 @@ class Sema;
       return false;
     }
 
-    // An overload is a perfect match if the conversion
-    // sequences for each argument are perfect.
-    bool isPerfectMatch(const ASTContext &Ctx) const {
-      if (!Viable)
-        return false;
-      for (const auto &C : Conversions) {
-        if (!C.isInitialized() || !C.isPerfect(Ctx))
-          return false;
-      }
-      if (HasFinalConversion)
-        return FinalConversion.isPerfect(Ctx);
-      return true;
-    }
-
     bool TryToFixBadConversion(unsigned Idx, Sema &S) {
       bool CanFix = Fix.tryToFixConversion(
                       Conversions[Idx].Bad.FromExpr,
@@ -1056,67 +1012,8 @@ class Sema;
         : IsSurrogate(false), IgnoreObjectArgument(false),
           TookAddressOfOverload(false), StrictPackMatch(false),
           IsADLCandidate(llvm::to_underlying(CallExpr::NotADL)),
-          HasFinalConversion(false), RewriteKind(CRK_None) {}
+          RewriteKind(CRK_None) {}
   };
-
-  struct DeferredTemplateOverloadCandidate {
-
-    // intrusive linked list support for allocateDeferredCandidate
-    DeferredTemplateOverloadCandidate *Next = nullptr;
-
-    enum Kind { Function, Method, Conversion };
-
-    LLVM_PREFERRED_TYPE(Kind)
-    unsigned Kind : 2;
-    LLVM_PREFERRED_TYPE(bool)
-    unsigned AllowObjCConversionOnExplicit : 1;
-    LLVM_PREFERRED_TYPE(bool)
-    unsigned AllowResultConversion : 1;
-    LLVM_PREFERRED_TYPE(bool)
-    unsigned AllowExplicit : 1;
-    LLVM_PREFERRED_TYPE(bool)
-    unsigned SuppressUserConversions : 1;
-    LLVM_PREFERRED_TYPE(bool)
-    unsigned PartialOverloading : 1;
-    LLVM_PREFERRED_TYPE(bool)
-    unsigned AggregateCandidateDeduction : 1;
-  };
-
-  struct DeferredFunctionTemplateOverloadCandidate
-      : public DeferredTemplateOverloadCandidate {
-    FunctionTemplateDecl *FunctionTemplate;
-    DeclAccessPair FoundDecl;
-    ArrayRef<Expr *> Args;
-    CallExpr::ADLCallKind IsADLCandidate;
-    OverloadCandidateParamOrder PO;
-  };
-  static_assert(std::is_trivially_destructible_v<
-                DeferredFunctionTemplateOverloadCandidate>);
-
-  struct DeferredMethodTemplateOverloadCandidate
-      : public DeferredTemplateOverloadCandidate {
-    FunctionTemplateDecl *FunctionTemplate;
-    DeclAccessPair FoundDecl;
-    ArrayRef<Expr *> Args;
-    CXXRecordDecl *ActingContext;
-    Expr::Classification ObjectClassification;
-    QualType ObjectType;
-    OverloadCandidateParamOrder PO;
-  };
-  static_assert(std::is_trivially_destructible_v<
-                DeferredMethodTemplateOverloadCandidate>);
-
-  struct DeferredConversionTemplateOverloadCandidate
-      : public DeferredTemplateOverloadCandidate {
-    FunctionTemplateDecl *FunctionTemplate;
-    DeclAccessPair FoundDecl;
-    CXXRecordDecl *ActingContext;
-    Expr *From;
-    QualType ToType;
-  };
-
-  static_assert(std::is_trivially_destructible_v<
-                DeferredConversionTemplateOverloadCandidate>);
 
   /// OverloadCandidateSet - A set of overload candidates, used in C++
   /// overload resolution (C++ 13.3).
@@ -1146,11 +1043,6 @@ class Sema;
       /// C++ [over.match.call.general]
       /// Resolve a call through the address of an overload set.
       CSK_AddressOfOverloadSet,
-
-      /// When doing overload resolution during code completion,
-      /// we want to show all viable candidates, including otherwise
-      /// deferred template candidates.
-      CSK_CodeCompletion,
     };
 
     /// Information about operator rewrites to consider when adding operator
@@ -1225,15 +1117,7 @@ class Sema;
     SmallVector<OverloadCandidate, 16> Candidates;
     llvm::SmallPtrSet<uintptr_t, 16> Functions;
 
-    DeferredTemplateOverloadCandidate *FirstDeferredCandidate = nullptr;
-    unsigned DeferredCandidatesCount : 8 * sizeof(unsigned) - 2;
-    LLVM_PREFERRED_TYPE(bool)
-    unsigned HasDeferredTemplateConstructors : 1;
-    LLVM_PREFERRED_TYPE(bool)
-    unsigned ResolutionByPerfectCandidateIsDisabled : 1;
-
-    // Allocator for ConversionSequenceLists and deferred candidate args.
-    // We store the first few of these
+    // Allocator for ConversionSequenceLists. We store the first few of these
     // inline to avoid allocation for small sets.
     llvm::BumpPtrAllocator SlabAllocator;
 
@@ -1241,11 +1125,8 @@ class Sema;
     CandidateSetKind Kind;
     OperatorRewriteInfo RewriteInfo;
 
-    /// Small storage size for ImplicitConversionSequences
-    /// and the persisted arguments of deferred candidates.
     constexpr static unsigned NumInlineBytes =
-        32 * sizeof(ImplicitConversionSequence);
-
+        24 * sizeof(ImplicitConversionSequence);
     unsigned NumInlineBytesUsed = 0;
     alignas(void *) char InlineSpace[NumInlineBytes];
 
@@ -1256,13 +1137,15 @@ class Sema;
     /// from the slab allocator.
     /// FIXME: It would probably be nice to have a SmallBumpPtrAllocator
     /// instead.
+    /// FIXME: Now that this only allocates ImplicitConversionSequences, do we
+    /// want to un-generalize this?
     template <typename T>
     T *slabAllocate(unsigned N) {
       // It's simpler if this doesn't need to consider alignment.
       static_assert(alignof(T) == alignof(void *),
                     "Only works for pointer-aligned types.");
-      static_assert(std::is_trivially_destructible_v<T> ||
-                        (std::is_same_v<ImplicitConversionSequence, T>),
+      static_assert(std::is_trivial<T>::value ||
+                        std::is_same<ImplicitConversionSequence, T>::value,
                     "Add destruction logic to OverloadCandidateSet::clear().");
 
       unsigned NBytes = sizeof(T) * N;
@@ -1276,34 +1159,12 @@ class Sema;
       return reinterpret_cast<T *>(FreeSpaceStart);
     }
 
-    // Because the size of OverloadCandidateSet has a noticeable impact on
-    // performance, we store each deferred template candidate in the slab
-    // allocator such that deferred candidates are ultimately a singly-linked
-    // intrusive linked list. This ends up being much more efficient than a
-    // SmallVector that is empty in the common case.
-    template <typename T> T *allocateDeferredCandidate() {
-      T *C = slabAllocate<T>(1);
-      if (!FirstDeferredCandidate)
-        FirstDeferredCandidate = C;
-      else {
-        auto *F = FirstDeferredCandidate;
-        while (F->Next)
-          F = F->Next;
-        F->Next = C;
-      }
-      DeferredCandidatesCount++;
-      return C;
-    }
-
     void destroyCandidates();
 
   public:
     OverloadCandidateSet(SourceLocation Loc, CandidateSetKind CSK,
                          OperatorRewriteInfo RewriteInfo = {})
-        : FirstDeferredCandidate(nullptr), DeferredCandidatesCount(0),
-          HasDeferredTemplateConstructors(false),
-          ResolutionByPerfectCandidateIsDisabled(false), Loc(Loc), Kind(CSK),
-          RewriteInfo(RewriteInfo) {}
+        : Loc(Loc), Kind(CSK), RewriteInfo(RewriteInfo) {}
     OverloadCandidateSet(const OverloadCandidateSet &) = delete;
     OverloadCandidateSet &operator=(const OverloadCandidateSet &) = delete;
     ~OverloadCandidateSet() { destroyCandidates(); }
@@ -1314,9 +1175,6 @@ class Sema;
 
     /// Whether diagnostics should be deferred.
     bool shouldDeferDiags(Sema &S, ArrayRef<Expr *> Args, SourceLocation OpLoc);
-
-    // Whether the resolution of template candidates should be deferred
-    bool shouldDeferTemplateArgumentDeduction(const LangOptions &Opts) const;
 
     /// Determine when this overload candidate will be new to the
     /// overload set.
@@ -1341,10 +1199,8 @@ class Sema;
     iterator begin() { return Candidates.begin(); }
     iterator end() { return Candidates.end(); }
 
-    size_t size() const { return Candidates.size() + DeferredCandidatesCount; }
-    bool empty() const {
-      return Candidates.empty() && DeferredCandidatesCount == 0;
-    }
+    size_t size() const { return Candidates.size(); }
+    bool empty() const { return Candidates.empty(); }
 
     /// Allocate storage for conversion sequences for NumConversions
     /// conversions.
@@ -1360,24 +1216,6 @@ class Sema;
       return ConversionSequenceList(Conversions, NumConversions);
     }
 
-    /// Provide storage for any Expr* arg that must be preserved
-    /// until deferred template candidates are deduced.
-    /// Typically this should be used for reversed operator arguments
-    /// and any time the argument array is transformed while adding
-    /// a template candidate.
-    llvm::MutableArrayRef<Expr *> getPersistentArgsArray(unsigned N) {
-      Expr **Exprs = slabAllocate<Expr *>(N);
-      return llvm::MutableArrayRef<Expr *>(Exprs, N);
-    }
-
-    template <typename... T>
-    llvm::MutableArrayRef<Expr *> getPersistentArgsArray(T *...Exprs) {
-      llvm::MutableArrayRef<Expr *> Arr =
-          getPersistentArgsArray(sizeof...(Exprs));
-      llvm::copy(std::initializer_list<Expr *>{Exprs...}, Arr.data());
-      return Arr;
-    }
-
     /// Add a new candidate with NumConversions conversion sequence slots
     /// to the overload set.
     OverloadCandidate &addCandidate(unsigned NumConversions = 0,
@@ -1391,32 +1229,6 @@ class Sema;
                           ? allocateConversionSequences(NumConversions)
                           : Conversions;
       return C;
-    }
-
-    void AddDeferredTemplateCandidate(
-        FunctionTemplateDecl *FunctionTemplate, DeclAccessPair FoundDecl,
-        ArrayRef<Expr *> Args, bool SuppressUserConversions,
-        bool PartialOverloading, bool AllowExplicit,
-        CallExpr::ADLCallKind IsADLCandidate, OverloadCandidateParamOrder PO,
-        bool AggregateCandidateDeduction);
-
-    void AddDeferredMethodTemplateCandidate(
-        FunctionTemplateDecl *MethodTmpl, DeclAccessPair FoundDecl,
-        CXXRecordDecl *ActingContext, QualType ObjectType,
-        Expr::Classification ObjectClassification, ArrayRef<Expr *> Args,
-        bool SuppressUserConversions, bool PartialOverloading,
-        OverloadCandidateParamOrder PO);
-
-    void AddDeferredConversionTemplateCandidate(
-        FunctionTemplateDecl *FunctionTemplate, DeclAccessPair FoundDecl,
-        CXXRecordDecl *ActingContext, Expr *From, QualType ToType,
-        bool AllowObjCConversionOnExplicit, bool AllowExplicit,
-        bool AllowResultConversion);
-
-    void InjectNonDeducedTemplateCandidates(Sema &S);
-
-    void DisableResolutionByPerfectCandidate() {
-      ResolutionByPerfectCandidateIsDisabled = true;
     }
 
     /// Find the best viable function on this overload set, if it exists.
@@ -1451,15 +1263,6 @@ class Sema;
       DestAS = AS;
     }
 
-  private:
-    OverloadingResult ResultForBestCandidate(const iterator &Best);
-    void CudaExcludeWrongSideCandidates(
-        Sema &S, SmallVectorImpl<OverloadCandidate *> &Candidates);
-    OverloadingResult
-    BestViableFunctionImpl(Sema &S, SourceLocation Loc,
-                           OverloadCandidateSet::iterator &Best);
-    void PerfectViableFunction(Sema &S, SourceLocation Loc,
-                               OverloadCandidateSet::iterator &Best);
   };
 
   bool isBetterOverloadCandidate(Sema &S, const OverloadCandidate &Cand1,
@@ -1507,21 +1310,6 @@ class Sema;
   // good candidate as we can get, despite the fact that it takes one less
   // parameter.
   bool shouldEnforceArgLimit(bool PartialOverloading, FunctionDecl *Function);
-
-  inline bool OverloadCandidateSet::shouldDeferTemplateArgumentDeduction(
-      const LangOptions &Opts) const {
-    return
-        // For user defined conversion we need to check against different
-        // combination of CV qualifiers and look at any explicit specifier, so
-        // always deduce template candidates.
-        Kind != CSK_InitByUserDefinedConversion
-        // When doing code completion, we want to see all the
-        // viable candidates.
-        && Kind != CSK_CodeCompletion
-        // CUDA may prefer template candidates even when a non-candidate
-        // is a perfect match
-        && !Opts.CUDA;
-  }
 
 } // namespace clang
 

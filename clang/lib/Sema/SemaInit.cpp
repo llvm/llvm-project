@@ -5231,7 +5231,7 @@ static OverloadingResult TryRefInitWithConversionFunction(
 
   // Add the final conversion sequence, if necessary.
   if (NewRefRelationship == Sema::Ref_Incompatible) {
-    assert(Best->HasFinalConversion && !isa<CXXConstructorDecl>(Function) &&
+    assert(!isa<CXXConstructorDecl>(Function) &&
            "should not have conversion after constructor");
 
     ImplicitConversionSequence ICS;
@@ -6200,7 +6200,6 @@ static void TryUserDefinedConversion(Sema &S,
 
   // If the conversion following the call to the conversion function
   // is interesting, add it as a separate step.
-  assert(Best->HasFinalConversion);
   if (Best->FinalConversion.First || Best->FinalConversion.Second ||
       Best->FinalConversion.Third) {
     ImplicitConversionSequence ICS;
@@ -10030,19 +10029,12 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
     //   When [...] the constructor [...] is a candidate by
     //    - [over.match.copy] (in all cases)
     if (TD) {
-
-      // As template candidates are not deduced immediately,
-      // persist the array in the overload set.
-      MutableArrayRef<Expr *> TmpInits =
-          Candidates.getPersistentArgsArray(Inits.size());
-
-      for (auto [I, E] : llvm::enumerate(Inits)) {
+      SmallVector<Expr *, 8> TmpInits;
+      for (Expr *E : Inits)
         if (auto *DI = dyn_cast<DesignatedInitExpr>(E))
-          TmpInits[I] = DI->getInit();
+          TmpInits.push_back(DI->getInit());
         else
-          TmpInits[I] = E;
-      }
-
+          TmpInits.push_back(E);
       AddTemplateOverloadCandidate(
           TD, FoundDecl, /*ExplicitArgs=*/nullptr, TmpInits, Candidates,
           /*SuppressUserConversions=*/false,
