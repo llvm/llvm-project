@@ -1559,6 +1559,7 @@ cc_library(
     hdrs = glob(["include/mlir/Dialect/AMDGPU/Transforms/*.h"]),
     includes = ["include"],
     deps = [
+        ":AffineDialect",
         ":AMDGPUDialect",
         ":AMDGPUPassIncGen",
         ":AMDGPUUtils",
@@ -1569,6 +1570,7 @@ cc_library(
         ":FuncDialect",
         ":GPUDialect",
         ":IR",
+        ":LLVMSupportHeaders",
         ":MemRefDialect",
         ":MemRefUtils",
         ":Pass",
