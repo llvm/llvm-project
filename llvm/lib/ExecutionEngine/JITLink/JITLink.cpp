@@ -313,7 +313,7 @@ void LinkGraph::dump(raw_ostream &OS) {
     OS << "section " << Sec->getName() << ":\n\n";
 
     std::vector<Block *> SortedBlocks;
-    llvm::copy(Sec->blocks(), std::back_inserter(SortedBlocks));
+    llvm::append_range(SortedBlocks, Sec->blocks());
     llvm::sort(SortedBlocks, [](const Block *LHS, const Block *RHS) {
       return LHS->getAddress() < RHS->getAddress();
     });
@@ -339,7 +339,7 @@ void LinkGraph::dump(raw_ostream &OS) {
       if (!B->edges_empty()) {
         OS << "    edges:\n";
         std::vector<Edge> SortedEdges;
-        llvm::copy(B->edges(), std::back_inserter(SortedEdges));
+        llvm::append_range(SortedEdges, B->edges());
         llvm::sort(SortedEdges, [](const Edge &LHS, const Edge &RHS) {
           return LHS.getOffset() < RHS.getOffset();
         });
