@@ -3714,12 +3714,67 @@ foldExtractStridedOpFromInsertChain(ExtractStridedSliceOp op) {
   return failure();
 }
 
+// ExtractStridedSliceOp(non-splat ConstantOp) -> ConstantOp.
+static OpFoldResult
+foldExtractStridedSliceNonSplatConstant(ExtractStridedSliceOp op,
+                                        Attribute foldInput) {
+
+  auto dense = llvm::dyn_cast_if_present<DenseElementsAttr>(foldInput);
+  if (!dense)
+    return {};
+
+  // TODO: Handle non-unit strides when they become available.
+  if (op.hasNonUnitStrides())
+    return {};
+
+  VectorType sourceVecTy = op.getSourceVectorType();
+  ArrayRef<int64_t> sourceShape = sourceVecTy.getShape();
+  SmallVector<int64_t, 4> sourceStrides = computeStrides(sourceShape);
+
+  VectorType sliceVecTy = op.getType();
+  ArrayRef<int64_t> sliceShape = sliceVecTy.getShape();
+  int64_t rank = sliceVecTy.getRank();
+
+  // Expand offsets and sizes to match the vector rank.
+  SmallVector<int64_t, 4> offsets(rank, 0);
+  copy(getI64SubArray(op.getOffsets()), offsets.begin());
+
+  SmallVector<int64_t, 4> sizes(sourceShape);
+  copy(getI64SubArray(op.getSizes()), sizes.begin());
+
+  // Calculate the slice elements by enumerating all slice positions and
+  // linearizing them. The enumeration order is lexicographic which yields a
+  // sequence of monotonically increasing linearized position indices.
+  const auto denseValuesBegin = dense.value_begin<Attribute>();
+  SmallVector<Attribute> sliceValues;
+  sliceValues.reserve(sliceVecTy.getNumElements());
+  SmallVector<int64_t> currSlicePosition(offsets.begin(), offsets.end());
+  do {
+    int64_t linearizedPosition = linearize(currSlicePosition, sourceStrides);
+    assert(linearizedPosition < sourceVecTy.getNumElements() &&
+           "Invalid index");
+    sliceValues.push_back(*(denseValuesBegin + linearizedPosition));
+  } while (succeeded(incSlicePosition(currSlicePosition, sliceShape, offsets)));
+
+  assert(static_cast<int64_t>(sliceValues.size()) ==
+             sliceVecTy.getNumElements() &&
+         "Invalid number of slice elements");
+  return DenseElementsAttr::get(sliceVecTy, sliceValues);
+}
+
 OpFoldResult ExtractStridedSliceOp::fold(FoldAdaptor adaptor) {
   if (getSourceVectorType() == getResult().getType())
     return getVector();
   if (succeeded(foldExtractStridedOpFromInsertChain(*this)))
     return getResult();
-  return {};
+
+  // ExtractStridedSliceOp(splat ConstantOp) -> ConstantOp.
+  if (auto splat =
+          llvm::dyn_cast_if_present<SplatElementsAttr>(adaptor.getVector()))
+    DenseElementsAttr::get(getType(), splat.getSplatValue<Attribute>());
+
+  // ExtractStridedSliceOp(non-splat ConstantOp) -> ConstantOp.
+  return foldExtractStridedSliceNonSplatConstant(*this, adaptor.getVector());
 }
 
 void ExtractStridedSliceOp::getOffsets(SmallVectorImpl<int64_t> &results) {
@@ -3779,98 +3834,6 @@ public:
     rewriter.replaceOpWithNewOp<ConstantMaskOp>(
         extractStridedSliceOp, extractStridedSliceOp.getResult().getType(),
         sliceMaskDimSizes);
-    return success();
-  }
-};
-
-// Pattern to rewrite a ExtractStridedSliceOp(splat ConstantOp) -> ConstantOp.
-class StridedSliceSplatConstantFolder final
-    : public OpRewritePattern<ExtractStridedSliceOp> {
-public:
-  using OpRewritePattern::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(ExtractStridedSliceOp extractStridedSliceOp,
-                                PatternRewriter &rewriter) const override {
-    // Return if 'ExtractStridedSliceOp' operand is not defined by a splat
-    // ConstantOp.
-    Value sourceVector = extractStridedSliceOp.getVector();
-    Attribute vectorCst;
-    if (!matchPattern(sourceVector, m_Constant(&vectorCst)))
-      return failure();
-
-    auto splat = llvm::dyn_cast<SplatElementsAttr>(vectorCst);
-    if (!splat)
-      return failure();
-
-    auto newAttr = SplatElementsAttr::get(extractStridedSliceOp.getType(),
-                                          splat.getSplatValue<Attribute>());
-    rewriter.replaceOpWithNewOp<arith::ConstantOp>(extractStridedSliceOp,
-                                                   newAttr);
-    return success();
-  }
-};
-
-// Pattern to rewrite a ExtractStridedSliceOp(non-splat ConstantOp) ->
-// ConstantOp.
-class StridedSliceNonSplatConstantFolder final
-    : public OpRewritePattern<ExtractStridedSliceOp> {
-public:
-  using OpRewritePattern::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(ExtractStridedSliceOp extractStridedSliceOp,
-                                PatternRewriter &rewriter) const override {
-    // Return if 'ExtractStridedSliceOp' operand is not defined by a non-splat
-    // ConstantOp.
-    Value sourceVector = extractStridedSliceOp.getVector();
-    Attribute vectorCst;
-    if (!matchPattern(sourceVector, m_Constant(&vectorCst)))
-      return failure();
-
-    // The splat case is handled by `StridedSliceSplatConstantFolder`.
-    auto dense = llvm::dyn_cast<DenseElementsAttr>(vectorCst);
-    if (!dense || dense.isSplat())
-      return failure();
-
-    // TODO: Handle non-unit strides when they become available.
-    if (extractStridedSliceOp.hasNonUnitStrides())
-      return failure();
-
-    auto sourceVecTy = llvm::cast<VectorType>(sourceVector.getType());
-    ArrayRef<int64_t> sourceShape = sourceVecTy.getShape();
-    SmallVector<int64_t, 4> sourceStrides = computeStrides(sourceShape);
-
-    VectorType sliceVecTy = extractStridedSliceOp.getType();
-    ArrayRef<int64_t> sliceShape = sliceVecTy.getShape();
-    int64_t sliceRank = sliceVecTy.getRank();
-
-    // Expand offsets and sizes to match the vector rank.
-    SmallVector<int64_t, 4> offsets(sliceRank, 0);
-    copy(getI64SubArray(extractStridedSliceOp.getOffsets()), offsets.begin());
-
-    SmallVector<int64_t, 4> sizes(sourceShape);
-    copy(getI64SubArray(extractStridedSliceOp.getSizes()), sizes.begin());
-
-    // Calculate the slice elements by enumerating all slice positions and
-    // linearizing them. The enumeration order is lexicographic which yields a
-    // sequence of monotonically increasing linearized position indices.
-    auto denseValuesBegin = dense.value_begin<Attribute>();
-    SmallVector<Attribute> sliceValues;
-    sliceValues.reserve(sliceVecTy.getNumElements());
-    SmallVector<int64_t> currSlicePosition(offsets.begin(), offsets.end());
-    do {
-      int64_t linearizedPosition = linearize(currSlicePosition, sourceStrides);
-      assert(linearizedPosition < sourceVecTy.getNumElements() &&
-             "Invalid index");
-      sliceValues.push_back(*(denseValuesBegin + linearizedPosition));
-    } while (
-        succeeded(incSlicePosition(currSlicePosition, sliceShape, offsets)));
-
-    assert(static_cast<int64_t>(sliceValues.size()) ==
-               sliceVecTy.getNumElements() &&
-           "Invalid number of slice elements");
-    auto newAttr = DenseElementsAttr::get(sliceVecTy, sliceValues);
-    rewriter.replaceOpWithNewOp<arith::ConstantOp>(extractStridedSliceOp,
-                                                   newAttr);
     return success();
   }
 };
@@ -4018,8 +3981,7 @@ void ExtractStridedSliceOp::getCanonicalizationPatterns(
     RewritePatternSet &results, MLIRContext *context) {
   // Pattern to rewrite a ExtractStridedSliceOp(ConstantMaskOp) ->
   // ConstantMaskOp and ExtractStridedSliceOp(ConstantOp) -> ConstantOp.
-  results.add<StridedSliceConstantMaskFolder, StridedSliceSplatConstantFolder,
-              StridedSliceNonSplatConstantFolder, StridedSliceBroadcast,
+  results.add<StridedSliceConstantMaskFolder, StridedSliceBroadcast,
               StridedSliceSplat, ContiguousExtractStridedSliceToExtract>(
       context);
 }
@@ -5659,10 +5621,8 @@ OpFoldResult ShapeCastOp::fold(FoldAdaptor adaptor) {
 
   // shape_cast(constant) -> constant
   if (auto splatAttr =
-          llvm::dyn_cast_if_present<SplatElementsAttr>(adaptor.getSource())) {
-    return DenseElementsAttr::get(resultType,
-                                  splatAttr.getSplatValue<Attribute>());
-  }
+          llvm::dyn_cast_if_present<SplatElementsAttr>(adaptor.getSource()))
+    return splatAttr.reshape(getType());
 
   // shape_cast(poison) -> poison
   if (llvm::dyn_cast_if_present<ub::PoisonAttr>(adaptor.getSource())) {
@@ -6006,10 +5966,9 @@ void vector::TransposeOp::build(OpBuilder &builder, OperationState &result,
 
 OpFoldResult vector::TransposeOp::fold(FoldAdaptor adaptor) {
   // Eliminate splat constant transpose ops.
-  if (auto attr =
-          llvm::dyn_cast_if_present<DenseElementsAttr>(adaptor.getVector()))
-    if (attr.isSplat())
-      return attr.reshape(getResultVectorType());
+  if (auto splat =
+          llvm::dyn_cast_if_present<SplatElementsAttr>(adaptor.getVector()))
+    return splat.reshape(getResultVectorType());
 
   // Eliminate poison transpose ops.
   if (llvm::dyn_cast_if_present<ub::PoisonAttr>(adaptor.getVector()))

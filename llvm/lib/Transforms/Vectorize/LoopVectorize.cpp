@@ -6464,10 +6464,15 @@ void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
                  getMemoryInstructionCost(Member, ElementCount::getFixed(1))));
         }
       }
-    } else
+    } else {
+      // Cannot scalarize fixed-order recurrence phis at the moment.
+      if (isa<PHINode>(I) && Legal->isFixedOrderRecurrence(cast<PHINode>(I)))
+        continue;
+
       // Make sure I gets scalarized and a cost estimate without
       // scalarization overhead.
       ForcedScalars[VF].insert(I);
+    }
   }
 }
 
