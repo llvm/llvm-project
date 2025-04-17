@@ -680,6 +680,8 @@ declare_mlir_python_extension(MLIRPythonExtension.Dialects.SMT.Pybind
   PYTHON_BINDINGS_LIBRARY nanobind
   SOURCES
     DialectSMT.cpp
+    # Headers must be included explicitly so they are installed.
+    NanobindUtils.h
   PRIVATE_LINK_LIBS
     LLVMSupport
   EMBED_CAPI_LINK_LIBS
