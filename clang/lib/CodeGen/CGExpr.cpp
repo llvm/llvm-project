@@ -4550,7 +4550,7 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
         if (const auto *ME = dyn_cast<MemberExpr>(CE->getSubExpr());
             ME && ME->getMemberDecl()->getType()->isCountAttributedType()) {
           LValue LV = EmitCheckedLValue(Base, TCK_MemberAccess);
-          EmitCountedByBoundsChecking(E->getBase(), Idx, LV.getAddress(),
+          EmitCountedByBoundsChecking(CE->getSubExpr(), Idx, LV.getAddress(),
                                       E->getIdx()->getType(), ptrType, Accessed,
                                       /*FlexibleArray=*/false);
         }
