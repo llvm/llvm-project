@@ -258,7 +258,7 @@ private:
     //   ret = (y == 0.0f || isnan(y)) ? QNAN : ret;
     //   ret = isfinite(x) ? ret : QNAN;
     Value *Nan = ConstantFP::getQNaN(FremTy);
-    Ret = B.CreateSelect(B.CreateFCmpUEQ(Y, ConstantFP::get(FremTy, 0.0)), Nan,
+    Ret = B.CreateSelect(B.CreateFCmpUEQ(Y, ConstantFP::getZero(FremTy)), Nan,
                          Ret);
     Value *XFinite =
         NoInfs || (SQ && isKnownNeverInfinity(X, 0, *SQ))
