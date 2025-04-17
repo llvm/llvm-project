@@ -1,5 +1,5 @@
 # Xqcisim - Simulation Hint Instructions
-# RUN: llvm-mc %s -triple=riscv32 -mattr=+experimental-xqcisim -riscv-no-aliases -show-encoding \
+# RUN: llvm-mc %s -triple=riscv32 -mattr=+experimental-xqcisim -M no-aliases -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-ENC,CHECK-INST %s
 # RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+experimental-xqcisim < %s \
 # RUN:     | llvm-objdump --mattr=+experimental-xqcisim -M no-aliases --no-print-imm-hex -d - \

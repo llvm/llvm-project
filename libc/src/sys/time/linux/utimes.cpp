@@ -30,11 +30,11 @@ LLVM_LIBC_FUNCTION(int, utimes,
 #elif defined(SYS_utimensat)
   // the utimensat syscall requires a timespec struct, not timeval.
   struct timespec ts[2];
-  struct timespec *ts_ptr = nullptr; // default value if times is NULL
+  struct timespec *ts_ptr = nullptr; // default value if times is nullptr
 
   // convert the microsec values in timeval struct times
   // to nanosecond values in timespec struct ts
-  if (times != NULL) {
+  if (times != nullptr) {
 
     // ensure consistent values
     if ((times[0].tv_usec < 0 || times[1].tv_usec < 0) ||
@@ -54,7 +54,7 @@ LLVM_LIBC_FUNCTION(int, utimes,
     ts_ptr = ts;
   }
 
-  // If times was NULL, ts_ptr remains NULL, which utimensat interprets
+  // If times was nullptr, ts_ptr remains nullptr, which utimensat interprets
   // as setting times to the current time.
 
   // utimensat syscall.

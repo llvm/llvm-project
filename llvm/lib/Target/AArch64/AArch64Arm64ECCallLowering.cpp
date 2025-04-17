@@ -63,9 +63,7 @@ struct ThunkArgInfo {
 class AArch64Arm64ECCallLowering : public ModulePass {
 public:
   static char ID;
-  AArch64Arm64ECCallLowering() : ModulePass(ID) {
-    initializeAArch64Arm64ECCallLoweringPass(*PassRegistry::getPassRegistry());
-  }
+  AArch64Arm64ECCallLowering() : ModulePass(ID) {}
 
   Function *buildExitThunk(FunctionType *FnTy, AttributeList Attrs);
   Function *buildEntryThunk(Function *F);

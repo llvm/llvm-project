@@ -8,12 +8,16 @@
 //
 
 #include "llvm/Transforms/Instrumentation/PGOCtxProfLowering.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/CtxProfAnalysis.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/IR/Analysis.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
@@ -54,7 +58,7 @@ class CtxInstrumentationLowerer final {
   Module &M;
   ModuleAnalysisManager &MAM;
   Type *ContextNodeTy = nullptr;
-  Type *FunctionDataTy = nullptr;
+  StructType *FunctionDataTy = nullptr;
 
   DenseSet<const Function *> ContextRootSet;
   Function *StartCtx = nullptr;
@@ -62,6 +66,7 @@ class CtxInstrumentationLowerer final {
   Function *ReleaseCtx = nullptr;
   GlobalVariable *ExpectedCalleeTLS = nullptr;
   GlobalVariable *CallsiteInfoTLS = nullptr;
+  Constant *CannotBeRootInitializer = nullptr;
 
 public:
   CtxInstrumentationLowerer(Module &M, ModuleAnalysisManager &MAM);
@@ -101,6 +106,12 @@ std::pair<uint32_t, uint32_t> getNumCountersAndCallsites(const Function &F) {
   }
   return {NumCounters, NumCallsites};
 }
+
+void emitUnsupportedRootError(const Function &F, StringRef Reason) {
+  F.getContext().emitError("[ctxprof] The function " + F.getName() +
+                           " was indicated as context root but " + Reason +
+                           ", which is not supported.");
+}
 } // namespace
 
 // set up tie-in with compiler-rt.
@@ -116,12 +127,29 @@ CtxInstrumentationLowerer::CtxInstrumentationLowerer(Module &M,
 
 #define _PTRDECL(_, __) PointerTy,
 #define _VOLATILE_PTRDECL(_, __) PointerTy,
+#define _CONTEXT_ROOT PointerTy,
 #define _MUTEXDECL(_) SanitizerMutexType,
 
   FunctionDataTy = StructType::get(
-      M.getContext(),
-      {CTXPROF_FUNCTION_DATA(_PTRDECL, _VOLATILE_PTRDECL, _MUTEXDECL)});
+      M.getContext(), {CTXPROF_FUNCTION_DATA(_PTRDECL, _CONTEXT_ROOT,
+                                             _VOLATILE_PTRDECL, _MUTEXDECL)});
 #undef _PTRDECL
+#undef _CONTEXT_ROOT
+#undef _VOLATILE_PTRDECL
+#undef _MUTEXDECL
+
+#define _PTRDECL(_, __) Constant::getNullValue(PointerTy),
+#define _VOLATILE_PTRDECL(_, __) _PTRDECL(_, __)
+#define _MUTEXDECL(_) Constant::getNullValue(SanitizerMutexType),
+#define _CONTEXT_ROOT                                                          \
+  Constant::getIntegerValue(                                                   \
+      PointerTy,                                                               \
+      APInt(M.getDataLayout().getPointerTypeSizeInBits(PointerTy), 1U)),
+  CannotBeRootInitializer = ConstantStruct::get(
+      FunctionDataTy, {CTXPROF_FUNCTION_DATA(_PTRDECL, _CONTEXT_ROOT,
+                                             _VOLATILE_PTRDECL, _MUTEXDECL)});
+#undef _PTRDECL
+#undef _CONTEXT_ROOT
 #undef _VOLATILE_PTRDECL
 #undef _MUTEXDECL
 
@@ -133,8 +161,8 @@ CtxInstrumentationLowerer::CtxInstrumentationLowerer(Module &M,
                                                       I32Ty, /*NumCallsites*/
                                                   });
 
-  // Define a global for each entrypoint. We'll reuse the entrypoint's name as
-  // prefix. We assume the entrypoint names to be unique.
+  // Define a global for each entrypoint. We'll reuse the entrypoint's name
+  // as prefix. We assume the entrypoint names to be unique.
   for (const auto &Fname : ContextRoots) {
     if (const auto *F = M.getFunction(Fname)) {
       if (F->isDeclaration())
@@ -143,12 +171,8 @@ CtxInstrumentationLowerer::CtxInstrumentationLowerer(Module &M,
       for (const auto &BB : *F)
         for (const auto &I : BB)
           if (const auto *CB = dyn_cast<CallBase>(&I))
-            if (CB->isMustTailCall()) {
-              M.getContext().emitError(
-                  "The function " + Fname +
-                  " was indicated as a context root, but it features musttail "
-                  "calls, which is not supported.");
-            }
+            if (CB->isMustTailCall())
+              emitUnsupportedRootError(*F, "it features musttail calls");
     }
   }
 
@@ -206,6 +230,19 @@ PreservedAnalyses PGOCtxProfLoweringPass::run(Module &M,
 bool CtxInstrumentationLowerer::lowerFunction(Function &F) {
   if (F.isDeclaration())
     return false;
+
+  // Probably pointless to try to do anything here, unlikely to be
+  // performance-affecting.
+  if (!llvm::canReturn(F)) {
+    for (auto &BB : F)
+      for (auto &I : make_early_inc_range(BB))
+        if (isa<InstrProfCntrInstBase>(&I))
+          I.eraseFromParent();
+    if (ContextRootSet.contains(&F))
+      emitUnsupportedRootError(F, "it does not return");
+    return true;
+  }
+
   auto &FAM = MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
   auto &ORE = FAM.getResult<OptimizationRemarkEmitterAnalysis>(F);
 
@@ -219,7 +256,23 @@ bool CtxInstrumentationLowerer::lowerFunction(Function &F) {
   Value *TheRootFuctionData = nullptr;
   Value *ExpectedCalleeTLSAddr = nullptr;
   Value *CallsiteInfoTLSAddr = nullptr;
+  const bool HasMusttail = [&F]() {
+    for (auto &BB : F)
+      for (auto &I : BB)
+        if (auto *CB = dyn_cast<CallBase>(&I))
+          if (CB->isMustTailCall())
+            return true;
+    return false;
+  }();
 
+  if (HasMusttail && ContextRootSet.contains(&F)) {
+    F.getContext().emitError(
+        "[ctx_prof] A function with musttail calls was explicitly requested as "
+        "root. That is not supported because we cannot instrument a return "
+        "instruction to release the context: " +
+        F.getName());
+    return false;
+  }
   auto &Head = F.getEntryBlock();
   for (auto &I : Head) {
     // Find the increment intrinsic in the entry basic block.
@@ -243,19 +296,23 @@ bool CtxInstrumentationLowerer::lowerFunction(Function &F) {
       // regular function)
       // Don't set a name, they end up taking a lot of space and we don't need
       // them.
-      auto *FData = new GlobalVariable(M, FunctionDataTy, false,
-                                       GlobalVariable::InternalLinkage,
-                                       Constant::getNullValue(FunctionDataTy));
+
+      // Zero-initialize the FunctionData, except for functions that have
+      // musttail calls. There, we set the CtxRoot field to 1, which will be
+      // treated as a "can't be set as root".
+      TheRootFuctionData = new GlobalVariable(
+          M, FunctionDataTy, false, GlobalVariable::InternalLinkage,
+          HasMusttail ? CannotBeRootInitializer
+                      : Constant::getNullValue(FunctionDataTy));
 
       if (ContextRootSet.contains(&F)) {
         Context = Builder.CreateCall(
-            StartCtx, {FData, Guid, Builder.getInt32(NumCounters),
+            StartCtx, {TheRootFuctionData, Guid, Builder.getInt32(NumCounters),
                        Builder.getInt32(NumCallsites)});
-        TheRootFuctionData = FData;
         ORE.emit(
             [&] { return OptimizationRemark(DEBUG_TYPE, "Entrypoint", &F); });
       } else {
-        Context = Builder.CreateCall(GetCtx, {FData, &F, Guid,
+        Context = Builder.CreateCall(GetCtx, {TheRootFuctionData, &F, Guid,
                                               Builder.getInt32(NumCounters),
                                               Builder.getInt32(NumCallsites)});
         ORE.emit([&] {
@@ -339,7 +396,7 @@ bool CtxInstrumentationLowerer::lowerFunction(Function &F) {
           break;
         }
         I.eraseFromParent();
-      } else if (TheRootFuctionData && isa<ReturnInst>(I)) {
+      } else if (!HasMusttail && isa<ReturnInst>(I)) {
         // Remember to release the context if we are an entrypoint.
         IRBuilder<> Builder(&I);
         Builder.CreateCall(ReleaseCtx, {TheRootFuctionData});
@@ -347,13 +404,10 @@ bool CtxInstrumentationLowerer::lowerFunction(Function &F) {
       }
     }
   }
-  // FIXME: This would happen if the entrypoint tailcalls. A way to fix would be
-  // to disallow this, (so this then stays as an error), another is to detect
-  // that and then do a wrapper or disallow the tail call. This only affects
-  // instrumentation, when we want to detect the call graph.
-  if (TheRootFuctionData && !ContextWasReleased)
+  if (!HasMusttail && !ContextWasReleased)
     F.getContext().emitError(
-        "[ctx_prof] An entrypoint was instrumented but it has no `ret` "
+        "[ctx_prof] A function that doesn't have musttail calls was "
+        "instrumented but it has no `ret` "
         "instructions above which to release the context: " +
         F.getName());
   return true;

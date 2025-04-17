@@ -967,9 +967,9 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
     // L1$pb:
     MCSymbol *PICBase = MF->getPICBaseSymbol();
 
-    // Emit the 'bl'.
+    // Emit 'bcl 20,31,.+4' so the link stack is not corrupted.
     EmitToStreamer(*OutStreamer,
-                   MCInstBuilder(PPC::BL)
+                   MCInstBuilder(PPC::BCLalways)
                        // FIXME: We would like an efficient form for this, so we
                        // don't have to do a lot of extra uniquing.
                        .addExpr(MCSymbolRefExpr::create(PICBase, OutContext)));

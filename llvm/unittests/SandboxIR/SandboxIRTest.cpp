@@ -607,6 +607,107 @@ define void @foo(ptr %ptr, {i32, i8} %v1, <2 x i8> %v2) {
   EXPECT_EQ(NewVectorCAZ->getElementCount(), ElementCount::getFixed(4));
 }
 
+// Tests ConstantDataSequential, ConstantDataArray and ConstantDataVector.
+TEST_F(SandboxIRTest, ConstantDataSequential) {
+  parseIR(C, R"IR(
+define void @foo() {
+  %array = extractvalue [2 x i8] [i8 0, i8 1], 0
+  %vector = extractelement <2 x i8> <i8 0, i8 1>, i32 0
+  %farray = extractvalue [2 x float] [float 0.0, float 1.0], 0
+  %fvector = extractelement <2 x double> <double 0.0, double 1.0>, i32 0
+  %string = extractvalue [6 x i8] [i8 72, i8 69, i8 76, i8 76, i8 79, i8 0], 0
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto &BB = *F.begin();
+  auto It = BB.begin();
+  auto *I0 = &*It++;
+  auto *I1 = &*It++;
+  auto *I2 = &*It++;
+  auto *I3 = &*It++;
+  auto *I4 = &*It++;
+  auto *Array = cast<sandboxir::ConstantDataArray>(I0->getOperand(0));
+  EXPECT_TRUE(isa<sandboxir::ConstantDataSequential>(Array));
+  auto *Vector = cast<sandboxir::ConstantDataVector>(I1->getOperand(0));
+  EXPECT_TRUE(isa<sandboxir::ConstantDataVector>(Vector));
+  auto *FArray = cast<sandboxir::ConstantDataArray>(I2->getOperand(0));
+  EXPECT_TRUE(isa<sandboxir::ConstantDataSequential>(FArray));
+  auto *FVector = cast<sandboxir::ConstantDataArray>(I3->getOperand(0));
+  EXPECT_TRUE(isa<sandboxir::ConstantDataVector>(FVector));
+  auto *String = cast<sandboxir::ConstantDataArray>(I4->getOperand(0));
+  EXPECT_TRUE(isa<sandboxir::ConstantDataArray>(String));
+
+  auto *Zero8 = sandboxir::ConstantInt::get(sandboxir::Type::getInt8Ty(Ctx), 0);
+  auto *One8 = sandboxir::ConstantInt::get(sandboxir::Type::getInt8Ty(Ctx), 1);
+
+  // Check isElementTypeCompatible().
+  for (llvm::Type *LLVMTy :
+       {llvm::Type::getIntNTy(C, 42), llvm::Type::getInt8Ty(C)})
+    EXPECT_EQ(llvm::ConstantDataSequential::isElementTypeCompatible(LLVMTy),
+              sandboxir::ConstantDataSequential::isElementTypeCompatible(
+                  Ctx.getType(LLVMTy)));
+  // Check getElementAsInteger().
+  EXPECT_EQ(Array->getElementAsInteger(0), 0u);
+  EXPECT_EQ(Array->getElementAsInteger(1), 1u);
+  EXPECT_EQ(Vector->getElementAsInteger(0), 0u);
+  EXPECT_EQ(Vector->getElementAsInteger(1), 1u);
+  // Check getElementAsAPInt().
+  EXPECT_EQ(Array->getElementAsAPInt(0), 0u);
+  EXPECT_EQ(Array->getElementAsAPInt(1), 1u);
+  EXPECT_EQ(Vector->getElementAsAPInt(0), 0u);
+  EXPECT_EQ(Vector->getElementAsAPInt(1), 1u);
+  // Check geteElementAsFloat().
+  EXPECT_EQ(FArray->getElementAsFloat(0), 0.0);
+  EXPECT_EQ(FArray->getElementAsFloat(1), 1.0);
+  // Check getElementAsDouble().
+  EXPECT_EQ(FVector->getElementAsDouble(0), 0.0);
+  EXPECT_EQ(FVector->getElementAsDouble(1), 1.0);
+  // Check getElementAsConstant().
+  EXPECT_EQ(Array->getElementAsConstant(0), Zero8);
+  EXPECT_EQ(Array->getElementAsConstant(1), One8);
+  EXPECT_EQ(Vector->getElementAsConstant(0), Zero8);
+  EXPECT_EQ(Vector->getElementAsConstant(1), One8);
+  // Check getElementType().
+  EXPECT_EQ(Array->getElementType(), sandboxir::Type::getInt8Ty(Ctx));
+  EXPECT_EQ(Vector->getElementType(), sandboxir::Type::getInt8Ty(Ctx));
+  EXPECT_EQ(FArray->getElementType(), sandboxir::Type::getFloatTy(Ctx));
+  EXPECT_EQ(FVector->getElementType(), sandboxir::Type::getDoubleTy(Ctx));
+  // Check getNumElements(),
+  EXPECT_EQ(Array->getNumElements(), 2u);
+  EXPECT_EQ(Vector->getNumElements(), 2u);
+  EXPECT_EQ(FArray->getNumElements(), 2u);
+  EXPECT_EQ(FVector->getNumElements(), 2u);
+  // Check getElementByteSize().
+  EXPECT_EQ(Array->getElementByteSize(), 1u);
+  EXPECT_EQ(Vector->getElementByteSize(), 1u);
+  EXPECT_EQ(FArray->getElementByteSize(), 4u);
+  EXPECT_EQ(FVector->getElementByteSize(), 8u);
+  // Check isString().
+  EXPECT_EQ(Array->isString(), true);
+  EXPECT_EQ(Vector->isString(), false);
+  EXPECT_EQ(FArray->isString(), false);
+  EXPECT_EQ(FVector->isString(), false);
+  EXPECT_EQ(String->isString(), true);
+  // Check isCString().
+  EXPECT_EQ(Array->isCString(), false);
+  EXPECT_EQ(Vector->isCString(), false);
+  EXPECT_EQ(FArray->isCString(), false);
+  EXPECT_EQ(FVector->isCString(), false);
+  EXPECT_EQ(String->isCString(), true);
+  // Check getAsString().
+  char Data[] = {'H', 'E', 'L', 'L', 'O', '\0'};
+  StringRef HelloWithNull(Data, 6);
+  EXPECT_EQ(String->getAsString(), HelloWithNull);
+  // Check getAsCString().
+  EXPECT_EQ(String->getAsCString(), "HELLO");
+  // Check getRawDataValues().
+  EXPECT_EQ(String->getRawDataValues(), HelloWithNull);
+}
+
 TEST_F(SandboxIRTest, ConstantPointerNull) {
   parseIR(C, R"IR(
 define ptr @foo() {

@@ -671,8 +671,11 @@ ClassTemplateDecl::getInjectedClassNameSpecialization() {
   ASTContext &Context = getASTContext();
   TemplateName Name = Context.getQualifiedTemplateName(
       /*NNS=*/nullptr, /*TemplateKeyword=*/false, TemplateName(this));
-  CommonPtr->InjectedClassNameType = Context.getTemplateSpecializationType(
-      Name, getTemplateParameters()->getInjectedTemplateArgs(Context));
+  auto TemplateArgs = getTemplateParameters()->getInjectedTemplateArgs(Context);
+  CommonPtr->InjectedClassNameType =
+      Context.getTemplateSpecializationType(Name,
+                                            /*SpecifiedArgs=*/TemplateArgs,
+                                            /*CanonicalArgs=*/std::nullopt);
   return CommonPtr->InjectedClassNameType;
 }
 

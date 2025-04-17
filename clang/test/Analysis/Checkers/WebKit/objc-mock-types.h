@@ -1,6 +1,8 @@
 @class NSString;
 @class NSArray;
 @class NSMutableArray;
+@class NSDictionary;
+@class NSMutableDictionary;
 #define nil ((id)0)
 #define CF_BRIDGED_TYPE(T) __attribute__((objc_bridge(T)))
 #define CF_BRIDGED_MUTABLE_TYPE(T) __attribute__((objc_bridge_mutable(T)))
@@ -15,6 +17,7 @@ typedef const struct CF_BRIDGED_TYPE(NSString) __CFString * CFStringRef;
 typedef const struct CF_BRIDGED_TYPE(NSArray) __CFArray * CFArrayRef;
 typedef struct CF_BRIDGED_MUTABLE_TYPE(NSMutableArray) __CFArray * CFMutableArrayRef;
 typedef struct CF_BRIDGED_MUTABLE_TYPE(CFRunLoopRef) __CFRunLoop * CFRunLoopRef;
+typedef struct CF_BRIDGED_TYPE(id) CGImage *CGImageRef;
 
 #define NS_RETURNS_RETAINED __attribute__((ns_returns_retained))
 #define CF_CONSUMED __attribute__((cf_consumed))
@@ -22,6 +25,9 @@ typedef struct CF_BRIDGED_MUTABLE_TYPE(CFRunLoopRef) __CFRunLoop * CFRunLoopRef;
 
 extern const CFAllocatorRef kCFAllocatorDefault;
 typedef struct _NSZone NSZone;
+
+CFTypeID CFGetTypeID(CFTypeRef cf);
+
 CFTypeID CFGetTypeID(CFTypeRef cf);
 CFTypeID CFArrayGetTypeID();
 CFMutableArrayRef CFArrayCreateMutable(CFAllocatorRef allocator, CFIndex capacity);
@@ -95,12 +101,14 @@ __attribute__((objc_root_class))
 - (NSEnumerator *)keyEnumerator;
 + (id)dictionary;
 + (id)dictionaryWithObject:(id)object forKey:(id <NSCopying>)key;
+- (NSMutableDictionary *)mutableCopy;
 + (instancetype)dictionaryWithObjects:(const id [])objects forKeys:(const id <NSCopying> [])keys count:(NSUInteger)cnt;
 @end
 
 @interface NSArray : NSObject <NSCopying, NSFastEnumeration>
 - (NSUInteger)count;
 - (NSEnumerator *)objectEnumerator;
+- (NSMutableArray *)mutableCopy;
 + (NSArray *)arrayWithObjects:(const id [])objects count:(NSUInteger)count;
 @end
 
@@ -109,6 +117,7 @@ __attribute__((objc_root_class))
 - (NSString *)stringByAppendingString:(NSString *)aString;
 - ( const char *)UTF8String;
 - (id)initWithUTF8String:(const char *)nullTerminatedCString;
+- (NSString *)copy;
 + (id)stringWithUTF8String:(const char *)nullTerminatedCString;
 @end
 
@@ -141,6 +150,10 @@ __attribute__((objc_root_class))
 namespace WTF {
 
 void WTFCrash(void);
+
+#if __has_feature(objc_arc)
+#define RetainPtr RetainPtrArc
+#endif
 
 template<typename T> class RetainPtr;
 template<typename T> RetainPtr<T> adoptNS(T*);
@@ -208,11 +221,7 @@ template <typename T> struct RetainPtr {
   PtrType get() const { return t; }
   PtrType operator->() const { return t; }
   T &operator*() const { return *t; }
-  RetainPtr &operator=(PtrType t) {
-    RetainPtr o(t);
-    swap(o);
-    return *this;
-  }
+  RetainPtr &operator=(PtrType t);
   PtrType leakRef()
   {
     PtrType s = t;
@@ -276,12 +285,12 @@ template<typename T> inline RetainPtr<T> retainPtr(T* ptr)
 
 inline NSObject *bridge_cast(CFTypeRef object)
 {
-    return (__bridge NSObject *)object;
+  return (__bridge NSObject *)object;
 }
 
 inline CFTypeRef bridge_cast(NSObject *object)
 {
-    return (__bridge CFTypeRef)object;
+  return (__bridge CFTypeRef)object;
 }
 
 inline id bridge_id_cast(CFTypeRef object)
@@ -381,35 +390,35 @@ template <typename> struct CFTypeTrait;
 
 template<typename T> T dynamic_cf_cast(CFTypeRef object)
 {
-    if (!object)
-        return nullptr;
+  if (!object)
+    return nullptr;
 
-    if (CFGetTypeID(object) != CFTypeTrait<T>::typeID())
-        return nullptr;
+  if (CFGetTypeID(object) != CFTypeTrait<T>::typeID())
+    return nullptr;
 
-    return static_cast<T>(const_cast<CF_BRIDGED_TYPE(id) void*>(object));
+  return static_cast<T>(const_cast<CF_BRIDGED_TYPE(id) void*>(object));
 }
 
 template<typename T> T checked_cf_cast(CFTypeRef object)
 {
-    if (!object)
-        return nullptr;
+  if (!object)
+    return nullptr;
 
-    if (CFGetTypeID(object) != CFTypeTrait<T>::typeID())
-      WTFCrash();
+  if (CFGetTypeID(object) != CFTypeTrait<T>::typeID())
+    WTFCrash();
 
-    return static_cast<T>(const_cast<CF_BRIDGED_TYPE(id) void*>(object));
+  return static_cast<T>(const_cast<CF_BRIDGED_TYPE(id) void*>(object));
 }
 
 template<typename T, typename U> RetainPtr<T> dynamic_cf_cast(RetainPtr<U>&& object)
 {
-    if (!object)
-        return nullptr;
+  if (!object)
+    return nullptr;
 
-    if (CFGetTypeID(object.get()) != CFTypeTrait<T>::typeID())
-        return nullptr;
+  if (CFGetTypeID(object.get()) != CFTypeTrait<T>::typeID())
+    return nullptr;
 
-    return adoptCF(static_cast<T>(const_cast<CF_BRIDGED_TYPE(id) void*>(object.leakRef())));
+  return adoptCF(static_cast<T>(const_cast<CF_BRIDGED_TYPE(id) void*>(object.leakRef())));
 }
 
 } // namespace WTF

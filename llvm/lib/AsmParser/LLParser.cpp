@@ -64,7 +64,6 @@ static cl::opt<bool> AllowIncompleteIR(
         "metadata will be dropped)"));
 
 extern llvm::cl::opt<bool> UseNewDbgInfoFormat;
-extern cl::opt<cl::boolOrDefault> PreserveInputDbgFormat;
 
 static std::string getTypeString(Type *T) {
   std::string Result;
@@ -209,10 +208,6 @@ bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
   // records in this IR.
   assert(!(SeenNewDbgInfoFormat && SeenOldDbgInfoFormat) &&
          "Mixed debug intrinsics/records seen without a parsing error?");
-  if (PreserveInputDbgFormat == cl::boolOrDefault::BOU_TRUE) {
-    UseNewDbgInfoFormat = SeenNewDbgInfoFormat;
-    M->setNewDbgInfoFormatFlag(SeenNewDbgInfoFormat);
-  }
 
   // Handle any function attribute group forward references.
   for (const auto &RAG : ForwardRefAttrGroups) {
@@ -447,8 +442,7 @@ bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
   UpgradeNVVMAnnotations(*M);
   UpgradeSectionAttributes(*M);
 
-  if (PreserveInputDbgFormat != cl::boolOrDefault::BOU_TRUE)
-    M->setIsNewDbgInfoFormat(UseNewDbgInfoFormat);
+  M->setIsNewDbgInfoFormat(UseNewDbgInfoFormat);
 
   if (!Slots)
     return false;

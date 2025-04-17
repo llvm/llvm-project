@@ -50,7 +50,7 @@ unsigned LoongArchELFObjectWriter::getRelocType(MCContext &Ctx,
                                                 const MCValue &Target,
                                                 const MCFixup &Fixup,
                                                 bool IsPCRel) const {
-  switch (Target.getRefKind()) {
+  switch (Target.getSpecifier()) {
   case LoongArchMCExpr::VK_TLS_LE_HI20:
   case LoongArchMCExpr::VK_TLS_IE_PC_HI20:
   case LoongArchMCExpr::VK_TLS_IE_HI20:
@@ -64,19 +64,16 @@ unsigned LoongArchELFObjectWriter::getRelocType(MCContext &Ctx,
   case LoongArchMCExpr::VK_TLS_LD_PCREL20_S2:
   case LoongArchMCExpr::VK_TLS_GD_PCREL20_S2:
   case LoongArchMCExpr::VK_TLS_DESC_PCREL20_S2:
-    if (auto *S = Target.getSymA())
-      cast<MCSymbolELF>(S->getSymbol()).setType(ELF::STT_TLS);
+    if (auto *SA = Target.getAddSym())
+      cast<MCSymbolELF>(SA)->setType(ELF::STT_TLS);
     break;
   default:
     break;
   }
 
-  // Determine the type of the relocation
   unsigned Kind = Fixup.getTargetKind();
-
-  if (Kind >= FirstLiteralRelocationKind)
-    return Kind - FirstLiteralRelocationKind;
-
+  if (Kind >= FirstRelocationKind)
+    return Kind - FirstRelocationKind;
   switch (Kind) {
   default:
     Ctx.reportError(Fixup.getLoc(), "Unsupported relocation type");

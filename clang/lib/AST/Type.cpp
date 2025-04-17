@@ -94,6 +94,10 @@ bool Qualifiers::isTargetAddressSpaceSupersetOf(LangAS A, LangAS B,
          (A == LangAS::Default &&
           (B == LangAS::cuda_constant || B == LangAS::cuda_device ||
            B == LangAS::cuda_shared)) ||
+         // `this` overloading depending on address space is not ready,
+         // so this is a hack to allow generating addrspacecasts.
+         // IR legalization will be required when this address space is used.
+         (A == LangAS::Default && B == LangAS::hlsl_private) ||
          // Conversions from target specific address spaces may be legal
          // depending on the target information.
          Ctx.getTargetInfo().isAddressSpaceSupersetOf(A, B);
@@ -275,10 +279,8 @@ QualType ArrayParameterType::getConstantArrayType(const ASTContext &Ctx) const {
 
 DependentSizedArrayType::DependentSizedArrayType(QualType et, QualType can,
                                                  Expr *e, ArraySizeModifier sm,
-                                                 unsigned tq,
-                                                 SourceRange brackets)
-    : ArrayType(DependentSizedArray, et, can, sm, tq, e), SizeExpr((Stmt *)e),
-      Brackets(brackets) {}
+                                                 unsigned tq)
+    : ArrayType(DependentSizedArray, et, can, sm, tq, e), SizeExpr((Stmt *)e) {}
 
 void DependentSizedArrayType::Profile(llvm::FoldingSetNodeID &ID,
                                       const ASTContext &Context,
@@ -1095,8 +1097,7 @@ public:
 
     return Ctx.getVariableArrayType(elementType, T->getSizeExpr(),
                                     T->getSizeModifier(),
-                                    T->getIndexTypeCVRQualifiers(),
-                                    T->getBracketsRange());
+                                    T->getIndexTypeCVRQualifiers());
   }
 
   QualType VisitIncompleteArrayType(const IncompleteArrayType *T) {
@@ -1935,6 +1936,14 @@ TagDecl *Type::getAsTagDecl() const {
     return Injected->getDecl();
 
   return nullptr;
+}
+
+const TemplateSpecializationType *
+Type::getAsNonAliasTemplateSpecializationType() const {
+  const auto *TST = getAs<TemplateSpecializationType>();
+  while (TST && TST->isTypeAlias())
+    TST = TST->desugar()->getAs<TemplateSpecializationType>();
+  return TST;
 }
 
 bool Type::hasAttr(attr::Kind AK) const {
@@ -4051,8 +4060,8 @@ QualType DecltypeType::desugar() const {
   return QualType(this, 0);
 }
 
-DependentDecltypeType::DependentDecltypeType(Expr *E, QualType UnderlyingType)
-    : DecltypeType(E, UnderlyingType) {}
+DependentDecltypeType::DependentDecltypeType(Expr *E)
+    : DecltypeType(E, QualType()) {}
 
 void DependentDecltypeType::Profile(llvm::FoldingSetNodeID &ID,
                                     const ASTContext &Context, Expr *E) {
@@ -4122,11 +4131,6 @@ UnaryTransformType::UnaryTransformType(QualType BaseType,
                                        QualType CanonicalType)
     : Type(UnaryTransform, CanonicalType, BaseType->getDependence()),
       BaseType(BaseType), UnderlyingType(UnderlyingType), UKind(UKind) {}
-
-DependentUnaryTransformType::DependentUnaryTransformType(const ASTContext &C,
-                                                         QualType BaseType,
-                                                         UTTKind UKind)
-     : UnaryTransformType(BaseType, C.DependentTy, UKind, QualType()) {}
 
 TagType::TagType(TypeClass TC, const TagDecl *D, QualType can)
     : Type(TC, can,
@@ -4384,17 +4388,19 @@ bool TemplateSpecializationType::anyInstantiationDependentTemplateArguments(
 }
 
 TemplateSpecializationType::TemplateSpecializationType(
-    TemplateName T, ArrayRef<TemplateArgument> Args, QualType Canon,
-    QualType AliasedType)
-    : Type(TemplateSpecialization, Canon.isNull() ? QualType(this, 0) : Canon,
-           (Canon.isNull()
+    TemplateName T, bool IsAlias, ArrayRef<TemplateArgument> Args,
+    QualType Underlying)
+    : Type(TemplateSpecialization,
+           Underlying.isNull() ? QualType(this, 0)
+                               : Underlying.getCanonicalType(),
+           (Underlying.isNull()
                 ? TypeDependence::DependentInstantiation
-                : toSemanticDependence(Canon->getDependence())) |
+                : toSemanticDependence(Underlying->getDependence())) |
                (toTypeDependence(T.getDependence()) &
                 TypeDependence::UnexpandedPack)),
       Template(T) {
   TemplateSpecializationTypeBits.NumArgs = Args.size();
-  TemplateSpecializationTypeBits.TypeAlias = !AliasedType.isNull();
+  TemplateSpecializationTypeBits.TypeAlias = IsAlias;
 
   assert(!T.getAsDependentTemplateName() &&
          "Use DependentTemplateSpecializationType for dependent template-name");
@@ -4403,10 +4409,12 @@ TemplateSpecializationType::TemplateSpecializationType(
           T.getKind() == TemplateName::SubstTemplateTemplateParmPack ||
           T.getKind() == TemplateName::UsingTemplate ||
           T.getKind() == TemplateName::QualifiedTemplate ||
-          T.getKind() == TemplateName::DeducedTemplate) &&
+          T.getKind() == TemplateName::DeducedTemplate ||
+          T.getKind() == TemplateName::AssumedTemplate) &&
          "Unexpected template name for TemplateSpecializationType");
 
-  auto *TemplateArgs = reinterpret_cast<TemplateArgument *>(this + 1);
+  auto *TemplateArgs =
+      const_cast<TemplateArgument *>(template_arguments().data());
   for (const TemplateArgument &Arg : Args) {
     // Update instantiation-dependent, variably-modified, and error bits.
     // If the canonical type exists and is non-dependent, the template
@@ -4424,11 +4432,10 @@ TemplateSpecializationType::TemplateSpecializationType(
     new (TemplateArgs++) TemplateArgument(Arg);
   }
 
-  // Store the aliased type if this is a type alias template specialization.
-  if (isTypeAlias()) {
-    auto *Begin = reinterpret_cast<TemplateArgument *>(this + 1);
-    *reinterpret_cast<QualType *>(Begin + Args.size()) = AliasedType;
-  }
+  // Store the aliased type after the template arguments, if this is a type
+  // alias template specialization.
+  if (IsAlias)
+    *reinterpret_cast<QualType *>(TemplateArgs) = Underlying;
 }
 
 QualType TemplateSpecializationType::getAliasedType() const {
@@ -4438,17 +4445,19 @@ QualType TemplateSpecializationType::getAliasedType() const {
 
 void TemplateSpecializationType::Profile(llvm::FoldingSetNodeID &ID,
                                          const ASTContext &Ctx) {
-  Profile(ID, Template, template_arguments(), Ctx);
-  if (isTypeAlias())
-    getAliasedType().Profile(ID);
+  Profile(ID, Template, template_arguments(),
+          isSugared() ? desugar() : QualType(), Ctx);
 }
 
-void
-TemplateSpecializationType::Profile(llvm::FoldingSetNodeID &ID,
-                                    TemplateName T,
-                                    ArrayRef<TemplateArgument> Args,
-                                    const ASTContext &Context) {
+void TemplateSpecializationType::Profile(llvm::FoldingSetNodeID &ID,
+                                         TemplateName T,
+                                         ArrayRef<TemplateArgument> Args,
+                                         QualType Underlying,
+                                         const ASTContext &Context) {
   T.Profile(ID);
+  Underlying.Profile(ID);
+
+  ID.AddInteger(Args.size());
   for (const TemplateArgument &Arg : Args)
     Arg.Profile(ID, Context);
 }
@@ -5260,9 +5269,9 @@ AutoType::AutoType(QualType DeducedAsType, AutoTypeKeyword Keyword,
 }
 
 void AutoType::Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context,
-                      QualType Deduced, AutoTypeKeyword Keyword,
-                      bool IsDependent, ConceptDecl *CD,
-                      ArrayRef<TemplateArgument> Arguments) {
+                       QualType Deduced, AutoTypeKeyword Keyword,
+                       bool IsDependent, ConceptDecl *CD,
+                       ArrayRef<TemplateArgument> Arguments) {
   ID.AddPointer(Deduced.getAsOpaquePtr());
   ID.AddInteger((unsigned)Keyword);
   ID.AddBoolean(IsDependent);

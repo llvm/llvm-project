@@ -14,9 +14,13 @@ using namespace clang::CIRGen;
 
 CIRGenTypes::CIRGenTypes(CIRGenModule &genModule)
     : cgm(genModule), astContext(genModule.getASTContext()),
-      builder(cgm.getBuilder()) {}
+      builder(cgm.getBuilder()),
+      theABIInfo(cgm.getTargetCIRGenInfo().getABIInfo()) {}
 
-CIRGenTypes::~CIRGenTypes() {}
+CIRGenTypes::~CIRGenTypes() {
+  for (auto i = functionInfos.begin(), e = functionInfos.end(); i != e;)
+    delete &*i++;
+}
 
 mlir::MLIRContext &CIRGenTypes::getMLIRContext() const {
   return *builder.getContext();
@@ -86,9 +90,108 @@ mlir::Type CIRGenTypes::convertFunctionTypeInternal(QualType qft) {
   return cir::FuncType::get(SmallVector<mlir::Type, 1>{}, cgm.VoidTy);
 }
 
+// This is CIR's version of CodeGenTypes::addRecordTypeName. It isn't shareable
+// because CIR has different uniquing requirements.
+std::string CIRGenTypes::getRecordTypeName(const clang::RecordDecl *recordDecl,
+                                           StringRef suffix) {
+  llvm::SmallString<256> typeName;
+  llvm::raw_svector_ostream outStream(typeName);
+
+  PrintingPolicy policy = recordDecl->getASTContext().getPrintingPolicy();
+  policy.SuppressInlineNamespace = false;
+  policy.AlwaysIncludeTypeForTemplateArgument = true;
+  policy.PrintAsCanonical = true;
+  policy.SuppressTagKeyword = true;
+
+  if (recordDecl->getIdentifier())
+    astContext.getRecordType(recordDecl).print(outStream, policy);
+  else if (auto *typedefNameDecl = recordDecl->getTypedefNameForAnonDecl())
+    typedefNameDecl->printQualifiedName(outStream, policy);
+  else
+    outStream << builder.getUniqueAnonRecordName();
+
+  if (!suffix.empty())
+    outStream << suffix;
+
+  return builder.getUniqueRecordName(std::string(typeName));
+}
+
+// Return true if it is safe to convert the specified record decl to CIR and lay
+// it out, false if doing so would cause us to get into a recursive compilation
+// mess.
+static bool isSafeToConvert(const RecordDecl *RD, CIRGenTypes &CGT) {
+  // If no records are being laid out, we can certainly do this one.
+  if (CGT.noRecordsBeingLaidOut())
+    return true;
+
+  assert(!cir::MissingFeatures::recursiveRecordLayout());
+  return false;
+}
+
+/// Lay out a tagged decl type like struct or union.
+mlir::Type CIRGenTypes::convertRecordDeclType(const clang::RecordDecl *rd) {
+  // TagDecl's are not necessarily unique, instead use the (clang) type
+  // connected to the decl.
+  const Type *key = astContext.getTagDeclType(rd).getTypePtr();
+  cir::RecordType entry = recordDeclTypes[key];
+
+  // If we don't have an entry for this record yet, create one.
+  // We create an incomplete type initially. If `rd` is complete, we will
+  // add the members below.
+  if (!entry) {
+    auto name = getRecordTypeName(rd, "");
+    entry = builder.getIncompleteRecordTy(name, rd);
+    recordDeclTypes[key] = entry;
+  }
+
+  rd = rd->getDefinition();
+  if (!rd || !rd->isCompleteDefinition() || entry.isComplete())
+    return entry;
+
+  // If converting this type would cause us to infinitely loop, don't do it!
+  if (!isSafeToConvert(rd, *this)) {
+    cgm.errorNYI(rd->getSourceRange(), "recursive record layout");
+    return entry;
+  }
+
+  // Okay, this is a definition of a type. Compile the implementation now.
+  bool insertResult = recordsBeingLaidOut.insert(key).second;
+  (void)insertResult;
+  assert(insertResult && "isSafeToCovert() should have caught this.");
+
+  // Force conversion of non-virtual base classes recursively.
+  if (const auto *cxxRecordDecl = dyn_cast<CXXRecordDecl>(rd)) {
+    cgm.errorNYI(rd->getSourceRange(), "CXXRecordDecl");
+  }
+
+  // Layout fields.
+  std::unique_ptr<CIRGenRecordLayout> layout = computeRecordLayout(rd, &entry);
+  recordDeclTypes[key] = entry;
+  cirGenRecordLayouts[key] = std::move(layout);
+
+  // We're done laying out this record.
+  bool eraseResult = recordsBeingLaidOut.erase(key);
+  (void)eraseResult;
+  assert(eraseResult && "record not in RecordsBeingLaidOut set?");
+
+  // If this record blocked a FunctionType conversion, then recompute whatever
+  // was derived from that.
+  assert(!cir::MissingFeatures::skippedLayout());
+
+  // If we're done converting the outer-most record, then convert any deferred
+  // records as well.
+  assert(!cir::MissingFeatures::recursiveRecordLayout());
+
+  return entry;
+}
+
 mlir::Type CIRGenTypes::convertType(QualType type) {
   type = astContext.getCanonicalType(type);
   const Type *ty = type.getTypePtr();
+
+  // Process record types before the type cache lookup.
+  if (const auto *recordType = dyn_cast<RecordType>(type))
+    return convertRecordDeclType(recordType->getDecl());
 
   // Has the type already been processed?
   TypeCacheTy::iterator tci = typeCache.find(ty);
@@ -100,9 +203,11 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
 
   mlir::Type resultType = nullptr;
   switch (ty->getTypeClass()) {
+  case Type::Record:
+    llvm_unreachable("Should have been handled above");
+
   case Type::Builtin: {
     switch (cast<BuiltinType>(ty)->getKind()) {
-
     // void
     case BuiltinType::Void:
       resultType = cgm.VoidTy;
@@ -183,6 +288,14 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
       resultType = cgm.SInt32Ty;
       break;
 
+    case BuiltinType::NullPtr:
+      // Add proper CIR type for it? this looks mostly useful for sema related
+      // things (like for overloads accepting void), for now, given that
+      // `sizeof(std::nullptr_t)` is equal to `sizeof(void *)`, model
+      // std::nullptr_t as !cir.ptr<!void>
+      resultType = builder.getVoidPtrTy();
+      break;
+
     default:
       cgm.errorNYI(SourceLocation(), "processing of built-in type", type);
       resultType = cgm.SInt32Ty;
@@ -228,7 +341,8 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
   }
 
   default:
-    cgm.errorNYI(SourceLocation(), "processing of type", type);
+    cgm.errorNYI(SourceLocation(), "processing of type",
+                 type->getTypeClassName());
     resultType = cgm.SInt32Ty;
     break;
   }
@@ -280,4 +394,44 @@ bool CIRGenTypes::isZeroInitializable(clang::QualType t) {
   }
 
   return true;
+}
+
+const CIRGenFunctionInfo &
+CIRGenTypes::arrangeCIRFunctionInfo(CanQualType returnType) {
+  // Lookup or create unique function info.
+  llvm::FoldingSetNodeID id;
+  CIRGenFunctionInfo::Profile(id, returnType);
+
+  void *insertPos = nullptr;
+  CIRGenFunctionInfo *fi = functionInfos.FindNodeOrInsertPos(id, insertPos);
+  if (fi)
+    return *fi;
+
+  assert(!cir::MissingFeatures::opCallCallConv());
+
+  // Construction the function info. We co-allocate the ArgInfos.
+  fi = CIRGenFunctionInfo::create(returnType);
+  functionInfos.InsertNode(fi, insertPos);
+
+  bool inserted = functionsBeingProcessed.insert(fi).second;
+  (void)inserted;
+  assert(inserted && "Are functions being processed recursively?");
+
+  assert(!cir::MissingFeatures::opCallCallConv());
+  getABIInfo().computeInfo(*fi);
+
+  // Loop over all of the computed argument and return value info. If any of
+  // them are direct or extend without a specified coerce type, specify the
+  // default now.
+  cir::ABIArgInfo &retInfo = fi->getReturnInfo();
+  if (retInfo.canHaveCoerceToType() && retInfo.getCoerceToType() == nullptr)
+    retInfo.setCoerceToType(convertType(fi->getReturnType()));
+
+  assert(!cir::MissingFeatures::opCallArgs());
+
+  bool erased = functionsBeingProcessed.erase(fi);
+  (void)erased;
+  assert(erased && "Not in set?");
+
+  return *fi;
 }

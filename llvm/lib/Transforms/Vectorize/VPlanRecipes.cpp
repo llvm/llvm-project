@@ -142,7 +142,6 @@ bool VPRecipeBase::mayHaveSideEffects() const {
   switch (getVPDefID()) {
   case VPDerivedIVSC:
   case VPPredInstPHISC:
-  case VPScalarCastSC:
   case VPVectorEndPointerSC:
     return false;
   case VPInstructionSC:
@@ -278,6 +277,11 @@ bool VPRecipeBase::isPhi() const {
           cast<VPInstruction>(this)->getOpcode() == Instruction::PHI);
 }
 
+bool VPRecipeBase::isScalarCast() const {
+  auto *VPI = dyn_cast<VPInstruction>(this);
+  return VPI && Instruction::isCast(VPI->getOpcode());
+}
+
 InstructionCost
 VPPartialReductionRecipe::computeCost(ElementCount VF,
                                       VPCostContext &Ctx) const {
@@ -327,7 +331,6 @@ VPPartialReductionRecipe::computeCost(ElementCount VF,
 }
 
 void VPPartialReductionRecipe::execute(VPTransformState &State) {
-  State.setDebugLocFrom(getDebugLoc());
   auto &Builder = State.Builder;
 
   assert(getOpcode() == Instruction::Add &&
@@ -418,7 +421,7 @@ bool VPInstruction::doesGeneratePerAllLanes() const {
 }
 
 bool VPInstruction::canGenerateScalarForFirstLane() const {
-  if (Instruction::isBinaryOp(getOpcode()))
+  if (Instruction::isBinaryOp(getOpcode()) || Instruction::isCast(getOpcode()))
     return true;
   if (isSingleScalar() || isVectorToScalar())
     return true;
@@ -870,7 +873,8 @@ bool VPInstruction::isFPMathOp() const {
   return Opcode == Instruction::FAdd || Opcode == Instruction::FMul ||
          Opcode == Instruction::FNeg || Opcode == Instruction::FSub ||
          Opcode == Instruction::FDiv || Opcode == Instruction::FRem ||
-         Opcode == Instruction::FCmp || Opcode == Instruction::Select;
+         Opcode == Instruction::FCmp || Opcode == Instruction::Select ||
+         Opcode == VPInstruction::WideIVStep;
 }
 #endif
 
@@ -882,7 +886,6 @@ void VPInstruction::execute(VPTransformState &State) {
          "Recipe not a FPMathOp but has fast-math flags?");
   if (hasFastMathFlags())
     State.Builder.setFastMathFlags(getFastMathFlags());
-  State.setDebugLocFrom(getDebugLoc());
   bool GeneratesPerFirstLaneOnly = canGenerateScalarForFirstLane() &&
                                    (vputils::onlyFirstLaneUsed(this) ||
                                     isVectorToScalar() || isSingleScalar());
@@ -910,7 +913,7 @@ void VPInstruction::execute(VPTransformState &State) {
 }
 
 bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
-  if (Instruction::isBinaryOp(getOpcode()))
+  if (Instruction::isBinaryOp(getOpcode()) || Instruction::isCast(getOpcode()))
     return false;
   switch (getOpcode()) {
   case Instruction::ExtractElement:
@@ -926,6 +929,7 @@ bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
   case VPInstruction::LogicalAnd:
   case VPInstruction::Not:
   case VPInstruction::PtrAdd:
+  case VPInstruction::WideIVStep:
     return false;
   default:
     return true;
@@ -934,7 +938,7 @@ bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
 
 bool VPInstruction::onlyFirstLaneUsed(const VPValue *Op) const {
   assert(is_contained(operands(), Op) && "Op must be an operand of the recipe");
-  if (Instruction::isBinaryOp(getOpcode()))
+  if (Instruction::isBinaryOp(getOpcode()) || Instruction::isCast(getOpcode()))
     return vputils::onlyFirstLaneUsed(this);
 
   switch (getOpcode()) {
@@ -1072,6 +1076,45 @@ void VPInstruction::print(raw_ostream &O, const Twine &Indent,
 }
 #endif
 
+void VPInstructionWithType::execute(VPTransformState &State) {
+  State.setDebugLocFrom(getDebugLoc());
+  assert(vputils::onlyFirstLaneUsed(this) &&
+         "Codegen only implemented for first lane.");
+  switch (getOpcode()) {
+  case Instruction::ZExt:
+  case Instruction::Trunc: {
+    Value *Op = State.get(getOperand(0), VPLane(0));
+    Value *Cast = State.Builder.CreateCast(Instruction::CastOps(getOpcode()),
+                                           Op, ResultTy);
+    State.set(this, Cast, VPLane(0));
+    break;
+  }
+  default:
+    llvm_unreachable("opcode not implemented yet");
+  }
+}
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+void VPInstructionWithType::print(raw_ostream &O, const Twine &Indent,
+                                  VPSlotTracker &SlotTracker) const {
+  O << Indent << "EMIT ";
+  printAsOperand(O, SlotTracker);
+  O << " = ";
+
+  switch (getOpcode()) {
+  case VPInstruction::WideIVStep:
+    O << "wide-iv-step ";
+    printOperands(O, SlotTracker);
+    break;
+  default:
+    assert(Instruction::isCast(getOpcode()) && "unhandled opcode");
+    O << Instruction::getOpcodeName(getOpcode()) << " ";
+    printOperands(O, SlotTracker);
+    O << " to " << *ResultTy;
+  }
+}
+#endif
+
 VPIRInstruction *VPIRInstruction ::create(Instruction &I) {
   if (auto *Phi = dyn_cast<PHINode>(&I))
     return new VPIRPhi(*Phi);
@@ -1163,7 +1206,6 @@ void VPIRPhi::print(raw_ostream &O, const Twine &Indent,
 
 void VPWidenCallRecipe::execute(VPTransformState &State) {
   assert(State.VF.isVector() && "not widening");
-  State.setDebugLocFrom(getDebugLoc());
 
   FunctionType *VFTy = Variant->getFunctionType();
   // Add return type if intrinsic is overloaded on it.
@@ -1232,7 +1274,6 @@ void VPWidenCallRecipe::print(raw_ostream &O, const Twine &Indent,
 
 void VPWidenIntrinsicRecipe::execute(VPTransformState &State) {
   assert(State.VF.isVector() && "not widening");
-  State.setDebugLocFrom(getDebugLoc());
 
   SmallVector<Type *, 2> TysForDecl;
   // Add return type if intrinsic is overloaded on it.
@@ -1355,7 +1396,6 @@ void VPWidenIntrinsicRecipe::print(raw_ostream &O, const Twine &Indent,
 #endif
 
 void VPHistogramRecipe::execute(VPTransformState &State) {
-  State.setDebugLocFrom(getDebugLoc());
   IRBuilderBase &Builder = State.Builder;
 
   Value *Address = State.get(getOperand(0));
@@ -1456,8 +1496,6 @@ void VPWidenSelectRecipe::print(raw_ostream &O, const Twine &Indent,
 #endif
 
 void VPWidenSelectRecipe::execute(VPTransformState &State) {
-  State.setDebugLocFrom(getDebugLoc());
-
   // The condition can be loop invariant but still defined inside the
   // loop. This means that we can't just use the original 'cond' value.
   // We have to take the 'vectorized' value and pick the first lane.
@@ -1569,7 +1607,6 @@ void VPRecipeWithIRFlags::printFlags(raw_ostream &O) const {
 #endif
 
 void VPWidenRecipe::execute(VPTransformState &State) {
-  State.setDebugLocFrom(getDebugLoc());
   auto &Builder = State.Builder;
   switch (Opcode) {
   case Instruction::Call:
@@ -1750,7 +1787,6 @@ void VPWidenRecipe::print(raw_ostream &O, const Twine &Indent,
 #endif
 
 void VPWidenCastRecipe::execute(VPTransformState &State) {
-  State.setDebugLocFrom(getDebugLoc());
   auto &Builder = State.Builder;
   /// Vectorize casts.
   assert(State.VF.isVector() && "Not vectorizing?");
@@ -1975,8 +2011,6 @@ void VPWidenIntOrFpInductionRecipe::execute(VPTransformState &State) {
 
   Instruction *LastInduction = cast<Instruction>(
       Builder.CreateBinOp(AddOp, VecInd, SplatVF, "vec.ind.next"));
-  if (isa<TruncInst>(EntryVal))
-    State.addMetadata(LastInduction, EntryVal);
   LastInduction->setDebugLoc(getDebugLoc());
 
   VecInd->addIncoming(SteppedStart, VectorPH);
@@ -2029,7 +2063,6 @@ void VPDerivedIVRecipe::print(raw_ostream &O, const Twine &Indent,
 #endif
 
 void VPScalarIVStepsRecipe::execute(VPTransformState &State) {
-  State.setDebugLocFrom(getDebugLoc());
   // Fast-math-flags propagate from the original induction instruction.
   IRBuilder<>::FastMathFlagGuard FMFG(State.Builder);
   if (hasFastMathFlags())
@@ -2164,7 +2197,6 @@ void VPWidenGEPRecipe::execute(VPTransformState &State) {
                                            getGEPNoWrapFlags());
     Value *Splat = State.Builder.CreateVectorSplat(State.VF, NewGEP);
     State.set(this, Splat);
-    State.addMetadata(Splat, GEP);
   } else {
     // If the GEP has at least one loop-varying operand, we are sure to
     // produce a vector of pointers unless VF is scalar.
@@ -2191,7 +2223,6 @@ void VPWidenGEPRecipe::execute(VPTransformState &State) {
     assert((State.VF.isScalar() || NewGEP->getType()->isVectorTy()) &&
            "NewGEP is not a pointer vector");
     State.set(this, NewGEP);
-    State.addMetadata(NewGEP, GEP);
   }
 }
 
@@ -2223,7 +2254,6 @@ static Type *getGEPIndexTy(bool IsScalable, bool IsReverse,
 
 void VPVectorEndPointerRecipe::execute(VPTransformState &State) {
   auto &Builder = State.Builder;
-  State.setDebugLocFrom(getDebugLoc());
   unsigned CurrentPart = getUnrollPart(*this);
   Type *IndexTy = getGEPIndexTy(State.VF.isScalable(), /*IsReverse*/ true,
                                 CurrentPart, Builder);
@@ -2259,7 +2289,6 @@ void VPVectorEndPointerRecipe::print(raw_ostream &O, const Twine &Indent,
 
 void VPVectorPointerRecipe::execute(VPTransformState &State) {
   auto &Builder = State.Builder;
-  State.setDebugLocFrom(getDebugLoc());
   unsigned CurrentPart = getUnrollPart(*this);
   Type *IndexTy = getGEPIndexTy(State.VF.isScalable(), /*IsReverse*/ false,
                                 CurrentPart, Builder);
@@ -2285,7 +2314,6 @@ void VPVectorPointerRecipe::print(raw_ostream &O, const Twine &Indent,
 
 void VPBlendRecipe::execute(VPTransformState &State) {
   assert(isNormalized() && "Expected blend to be normalized!");
-  State.setDebugLocFrom(getDebugLoc());
   // We know that all PHIs in non-header blocks are converted into
   // selects, so we don't have to worry about the insertion order and we
   // can just use the builder.
@@ -2367,7 +2395,6 @@ void VPReductionRecipe::execute(VPTransformState &State) {
   // Propagate the fast-math flags carried by the underlying instruction.
   IRBuilderBase::FastMathFlagGuard FMFGuard(State.Builder);
   State.Builder.setFastMathFlags(getFastMathFlags());
-  State.setDebugLocFrom(getDebugLoc());
   Value *NewVecOp = State.get(getVecOp());
   if (VPValue *Cond = getCondOp()) {
     Value *NewCond = State.get(Cond, State.VF.isScalar());
@@ -2569,40 +2596,7 @@ void VPReplicateRecipe::print(raw_ostream &O, const Twine &Indent,
 }
 #endif
 
-Value *VPScalarCastRecipe ::generate(VPTransformState &State) {
-  State.setDebugLocFrom(getDebugLoc());
-  assert(vputils::onlyFirstLaneUsed(this) &&
-         "Codegen only implemented for first lane.");
-  switch (Opcode) {
-  case Instruction::SExt:
-  case Instruction::ZExt:
-  case Instruction::Trunc: {
-    // Note: SExt/ZExt not used yet.
-    Value *Op = State.get(getOperand(0), VPLane(0));
-    return State.Builder.CreateCast(Instruction::CastOps(Opcode), Op, ResultTy);
-  }
-  default:
-    llvm_unreachable("opcode not implemented yet");
-  }
-}
-
-void VPScalarCastRecipe ::execute(VPTransformState &State) {
-  State.set(this, generate(State), VPLane(0));
-}
-
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-void VPScalarCastRecipe ::print(raw_ostream &O, const Twine &Indent,
-                                VPSlotTracker &SlotTracker) const {
-  O << Indent << "SCALAR-CAST ";
-  printAsOperand(O, SlotTracker);
-  O << " = " << Instruction::getOpcodeName(Opcode) << " ";
-  printOperands(O, SlotTracker);
-  O << " to " << *ResultTy;
-}
-#endif
-
 void VPBranchOnMaskRecipe::execute(VPTransformState &State) {
-  State.setDebugLocFrom(getDebugLoc());
   assert(State.Lane && "Branch on Mask works only on single instance.");
 
   VPValue *BlockInMask = getOperand(0);
@@ -2628,7 +2622,6 @@ InstructionCost VPBranchOnMaskRecipe::computeCost(ElementCount VF,
 }
 
 void VPPredInstPHIRecipe::execute(VPTransformState &State) {
-  State.setDebugLocFrom(getDebugLoc());
   assert(State.Lane && "Predicated instruction PHI works per instance.");
   Instruction *ScalarPredInst =
       cast<Instruction>(State.get(getOperand(0), *State.Lane));
@@ -2661,7 +2654,7 @@ void VPPredInstPHIRecipe::execute(VPTransformState &State) {
     if (vputils::onlyFirstLaneUsed(this) && !State.Lane->isFirstLane())
       return;
 
-    Type *PredInstType = getOperand(0)->getUnderlyingValue()->getType();
+    Type *PredInstType = State.TypeAnalysis.inferScalarType(getOperand(0));
     PHINode *Phi = State.Builder.CreatePHI(PredInstType, 2);
     Phi->addIncoming(PoisonValue::get(ScalarPredInst->getType()),
                      PredicatingBB);
@@ -2734,7 +2727,6 @@ void VPWidenLoadRecipe::execute(VPTransformState &State) {
   bool CreateGather = !isConsecutive();
 
   auto &Builder = State.Builder;
-  State.setDebugLocFrom(getDebugLoc());
   Value *Mask = nullptr;
   if (auto *VPMask = getMask()) {
     // Mask reversal is only needed for non-all-one (null) masks, as reverse
@@ -2793,7 +2785,6 @@ void VPWidenLoadEVLRecipe::execute(VPTransformState &State) {
   bool CreateGather = !isConsecutive();
 
   auto &Builder = State.Builder;
-  State.setDebugLocFrom(getDebugLoc());
   CallInst *NewLI;
   Value *EVL = State.get(getEVL(), VPLane(0));
   Value *Addr = State.get(getAddr(), !CreateGather);
@@ -2868,7 +2859,6 @@ void VPWidenStoreRecipe::execute(VPTransformState &State) {
   const Align Alignment = getLoadStoreAlignment(&Ingredient);
 
   auto &Builder = State.Builder;
-  State.setDebugLocFrom(getDebugLoc());
 
   Value *Mask = nullptr;
   if (auto *VPMask = getMask()) {
@@ -2914,7 +2904,6 @@ void VPWidenStoreEVLRecipe::execute(VPTransformState &State) {
   const Align Alignment = getLoadStoreAlignment(&Ingredient);
 
   auto &Builder = State.Builder;
-  State.setDebugLocFrom(getDebugLoc());
 
   CallInst *NewSI = nullptr;
   Value *StoredVal = State.get(StoredValue);
@@ -3402,7 +3391,7 @@ void VPWidenPointerInductionRecipe::execute(VPTransformState &State) {
   assert(getInductionDescriptor().getKind() ==
              InductionDescriptor::IK_PtrInduction &&
          "Not a pointer induction according to InductionDescriptor!");
-  assert(cast<PHINode>(getUnderlyingInstr())->getType()->isPointerTy() &&
+  assert(State.TypeAnalysis.inferScalarType(this)->isPointerTy() &&
          "Unexpected type.");
   assert(!onlyScalarsGenerated(State.VF.isScalable()) &&
          "Recipe should have been replaced");
@@ -3717,7 +3706,6 @@ void VPWidenPHIRecipe::execute(VPTransformState &State) {
   assert(EnableVPlanNativePath &&
          "Non-native vplans are not expected to have VPWidenPHIRecipes.");
 
-  State.setDebugLocFrom(getDebugLoc());
   Value *Op0 = State.get(getOperand(0));
   Type *VecTy = Op0->getType();
   Value *VecPhi = State.Builder.CreatePHI(VecTy, 2, Name);
@@ -3743,7 +3731,6 @@ void VPActiveLaneMaskPHIRecipe::execute(VPTransformState &State) {
   PHINode *Phi =
       State.Builder.CreatePHI(StartMask->getType(), 2, "active.lane.mask");
   Phi->addIncoming(StartMask, VectorPH);
-  Phi->setDebugLoc(getDebugLoc());
   State.set(this, Phi);
 }
 

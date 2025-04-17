@@ -47,6 +47,7 @@ static const unsigned X86AddrSpaceMap[] = {
     272, // ptr64
     0,   // hlsl_groupshared
     0,   // hlsl_constant
+    0,   // hlsl_private
     // Wasm address space values for this target are dummy values,
     // as it is only enabled for Wasm targets.
     20, // wasm_funcref

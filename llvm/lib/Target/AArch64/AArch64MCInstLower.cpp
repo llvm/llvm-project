@@ -151,31 +151,32 @@ MCOperand AArch64MCInstLower::lowerSymbolOperandMachO(const MachineOperand &MO,
                                                       MCSymbol *Sym) const {
   // FIXME: We would like an efficient form for this, so we don't have to do a
   // lot of extra uniquing.
-  MCSymbolRefExpr::VariantKind RefKind = MCSymbolRefExpr::VK_None;
+  auto Spec = AArch64MCExpr::None;
   if ((MO.getTargetFlags() & AArch64II::MO_GOT) != 0) {
     if ((MO.getTargetFlags() & AArch64II::MO_FRAGMENT) == AArch64II::MO_PAGE)
-      RefKind = MCSymbolRefExpr::VK_GOTPAGE;
+      Spec = AArch64MCExpr::M_GOTPAGE;
     else if ((MO.getTargetFlags() & AArch64II::MO_FRAGMENT) ==
              AArch64II::MO_PAGEOFF)
-      RefKind = MCSymbolRefExpr::VK_GOTPAGEOFF;
+      Spec = AArch64MCExpr::M_GOTPAGEOFF;
     else
       llvm_unreachable("Unexpected target flags with MO_GOT on GV operand");
   } else if ((MO.getTargetFlags() & AArch64II::MO_TLS) != 0) {
     if ((MO.getTargetFlags() & AArch64II::MO_FRAGMENT) == AArch64II::MO_PAGE)
-      RefKind = MCSymbolRefExpr::VK_TLVPPAGE;
+      Spec = AArch64MCExpr::M_TLVPPAGE;
     else if ((MO.getTargetFlags() & AArch64II::MO_FRAGMENT) ==
              AArch64II::MO_PAGEOFF)
-      RefKind = MCSymbolRefExpr::VK_TLVPPAGEOFF;
+      Spec = AArch64MCExpr::M_TLVPPAGEOFF;
     else
       llvm_unreachable("Unexpected target flags with MO_TLS on GV operand");
   } else {
     if ((MO.getTargetFlags() & AArch64II::MO_FRAGMENT) == AArch64II::MO_PAGE)
-      RefKind = MCSymbolRefExpr::VK_PAGE;
+      Spec = AArch64MCExpr::M_PAGE;
     else if ((MO.getTargetFlags() & AArch64II::MO_FRAGMENT) ==
              AArch64II::MO_PAGEOFF)
-      RefKind = MCSymbolRefExpr::VK_PAGEOFF;
+      Spec = AArch64MCExpr::M_PAGEOFF;
   }
-  const MCExpr *Expr = MCSymbolRefExpr::create(Sym, RefKind, Ctx);
+  // TODO: Migrate to AArch64MCExpr::create like ELF.
+  const MCExpr *Expr = MCSymbolRefExpr::create(Sym, Spec, Ctx);
   if (!MO.isJTI() && MO.getOffset())
     Expr = MCBinaryExpr::createAdd(
         Expr, MCConstantExpr::create(MO.getOffset(), Ctx), Ctx);
