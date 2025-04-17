@@ -4961,6 +4961,9 @@ private:
 /// Stores data related to a single #embed directive.
 struct EmbedDataStorage {
   StringLiteral *BinaryData;
+  // FileName string already includes braces, i.e. it is <files/my_file> for a
+  // directive #embed <files/my_file>.
+  StringRef FileName;
   size_t getDataElementCount() const { return BinaryData->getByteLength(); }
 };
 
@@ -5007,6 +5010,7 @@ public:
   SourceLocation getEndLoc() const { return EmbedKeywordLoc; }
 
   StringLiteral *getDataStringLiteral() const { return Data->BinaryData; }
+  StringRef getFileName() const { return Data->FileName; }
   EmbedDataStorage *getData() const { return Data; }
 
   unsigned getStartingElementPos() const { return Begin; }
