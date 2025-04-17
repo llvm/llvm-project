@@ -1999,7 +1999,7 @@ static Value extractInsertFoldConstantOp(OpType op, AdaptorType adaptor,
   ArrayRef<int64_t> vectorShape;
   if constexpr (std::is_same_v<OpType, ExtractOp>) {
     vectorShape = op.getSourceVectorType().getShape();
-  } else if constexpr (std::is_same_v<OpType, InsertOp>) {
+  } else {
     vectorShape = op.getDestVectorType().getShape();
   }
 
