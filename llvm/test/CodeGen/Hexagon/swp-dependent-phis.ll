@@ -17,7 +17,7 @@
 @global.4 = common dso_local local_unnamed_addr global i32 0, align 4
 
 ; Function Attrs: nofree norecurse nosync nounwind
-define dso_local i32 @wombat(i8 zeroext %arg) local_unnamed_addr #0 {
+define dso_local i32 @wombat(i8 zeroext %arg, i16 %dummy) local_unnamed_addr #0 {
 bb:
   %load = load ptr, ptr @global, align 4
   %load1 = load i32, ptr @global.1, align 4
@@ -29,9 +29,9 @@ bb:
 bb3:                                              ; preds = %bb3, %bb
   %phi = phi i32 [ %add30, %bb3 ], [ %add2, %bb ]
   %phi4 = phi i8 [ %phi8, %bb3 ], [ %arg, %bb ]
-  %phi5 = phi i16 [ %select23, %bb3 ], [ undef, %bb ]
-  %phi6 = phi i16 [ %select26, %bb3 ], [ undef, %bb ]
-  %phi7 = phi i16 [ %select, %bb3 ], [ undef, %bb ]
+  %phi5 = phi i16 [ %select23, %bb3 ], [ %dummy, %bb ]
+  %phi6 = phi i16 [ %select26, %bb3 ], [ %dummy, %bb ]
+  %phi7 = phi i16 [ %select, %bb3 ], [ %dummy, %bb ]
   %phi8 = phi i8 [ %select29, %bb3 ], [ %arg, %bb ]
   %zext = zext i8 %phi4 to i32
   %getelementptr = getelementptr inbounds i32, ptr %load, i32 %zext
@@ -92,5 +92,5 @@ bb42:                                             ; preds = %bb36
   br label %bb43
 
 bb43:                                             ; preds = %bb42, %bb36
-  ret i32 undef
+  ret i32 %dummy
 }
