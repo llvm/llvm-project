@@ -2759,6 +2759,7 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
                                HasOMod);
   field bit HasNeg = HasModifiers;
   field bit HasMatrixScale = 0;
+  field bit HasMatrixReuse = 0;
 
   field bit HasSrc0Mods = HasModifiers;
   field bit HasSrc1Mods = !if(HasModifiers, !or(HasSrc1FloatMods, HasSrc1IntMods), 0);
