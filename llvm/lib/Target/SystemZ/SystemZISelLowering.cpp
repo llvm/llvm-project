@@ -554,6 +554,8 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::BITCAST, MVT::i16, Custom);
     setOperationAction(ISD::IS_FPCLASS, MVT::f16, Custom);
     setOperationAction(ISD::FCOPYSIGN, MVT::f16, Legal);
+    for (auto Op : {ISD::FNEG, ISD::FABS})
+      setOperationAction(Op, MVT::f16, Legal);
   }
 
   for (unsigned I = MVT::FIRST_FP_VALUETYPE;
