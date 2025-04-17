@@ -27,8 +27,10 @@
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSectionMachO.h"
 #include "llvm/MC/MCStreamer.h"
+#include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbolXCOFF.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Object/ELF.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Format.h"
@@ -2399,12 +2401,16 @@ void MCAsmStreamer::AddEncodingComment(const MCInst &Inst,
 
   for (unsigned i = 0, e = Fixups.size(); i != e; ++i) {
     MCFixup &F = Fixups[i];
-    const MCFixupKindInfo &Info =
-        getAssembler().getBackend().getFixupKindInfo(F.getKind());
     OS << "  fixup " << char('A' + i) << " - "
        << "offset: " << F.getOffset() << ", value: ";
     F.getValue()->print(OS, MAI);
-    OS << ", kind: " << Info.Name << "\n";
+    OS << ", kind: ";
+    auto Kind = F.getKind();
+    if (FirstRelocationKind <= Kind)
+      OS << "relocation";
+    else
+      OS << getAssembler().getBackend().getFixupKindInfo(Kind).Name;
+    OS << '\n';
   }
 }
 

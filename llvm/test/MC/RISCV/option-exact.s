@@ -30,7 +30,7 @@ c.lw a0, 0(a0)
 # CHECK-ASM: call undefined
 # CHECK-ASM-SAME: # encoding: [0x97'A',A,A,A,0xe7'A',0x80'A',A,A]
 # CHECK-ASM-NEXT: fixup A - offset: 0, value: undefined, kind: fixup_riscv_call_plt
-# CHECK-ASM-NEXT: fixup B - offset: 0, value: 0, kind: fixup_riscv_relax
+# CHECK-ASM-NEXT: fixup B - offset: 0, value: 0, kind: relocation
 # CHECK-OBJDUMP: auipc ra, 0
 # CHECK-OBJDUMP-NEXT: R_RISCV_CALL_PLT undefined
 # CHECK-OBJDUMP-NEXT: R_RISCV_RELAX *ABS*
@@ -68,7 +68,7 @@ c.lw a0, 0(a0)
 # CHECK-ASM: call undefined
 # CHECK-ASM-SAME: # encoding: [0x97'A',A,A,A,0xe7'A',0x80'A',A,A]
 # CHECK-ASM-NEXT: fixup A - offset: 0, value: undefined, kind: fixup_riscv_call_plt
-# CHECK-ASM-NOT: fixup_riscv_relax
+# CHECK-ASM-NOT: relocation
 # CHECK-OBJDUMP: auipc ra, 0
 # CHECK-OBJDUMP-NEXT: R_RISCV_CALL_PLT undefined
 # CHECK-OBJDUMP-NOT: R_RISCV_RELAX
@@ -105,7 +105,7 @@ c.lw a0, 0(a0)
 # CHECK-ASM: call undefined
 # CHECK-ASM-SAME: # encoding: [0x97'A',A,A,A,0xe7'A',0x80'A',A,A]
 # CHECK-ASM-NEXT: fixup A - offset: 0, value: undefined, kind: fixup_riscv_call_plt
-# CHECK-ASM-NEXT: fixup B - offset: 0, value: 0, kind: fixup_riscv_relax
+# CHECK-ASM-NEXT: fixup B - offset: 0, value: 0, kind: relocation
 # CHECK-OBJDUMP: auipc ra, 0
 # CHECK-OBJDUMP-NEXT: R_RISCV_CALL_PLT undefined
 # CHECK-OBJDUMP-NEXT: R_RISCV_RELAX *ABS*
