@@ -825,81 +825,38 @@ static bool isGlobalMemoryObject(MachineInstr &MI) {
 /// Return the underlying objects for the memory references of an instruction.
 /// This function calls the code in ValueTracking, but first checks that the
 /// instruction has a memory operand.
-static void getUnderlyingObjectsForInstr(const MachineInstr *MI,
-                                         SmallVectorImpl<const Value *> &Objs) {
+static bool getUnderlyingObjectsForInstr(const MachineInstr *MI,
+                                         SmallVectorImpl<const Value *> &Objs,
+                                         AAMDNodes *AA) {
+  *AA = AAMDNodes();
   if (!MI->hasOneMemOperand())
-    return;
+    return false;
   MachineMemOperand *MM = *MI->memoperands_begin();
   if (!MM->getValue())
-    return;
+    return false;
   getUnderlyingObjects(MM->getValue(), Objs);
-  for (const Value *V : Objs) {
-    if (!isIdentifiedObject(V)) {
-      Objs.clear();
-      return;
-    }
-  }
+  *AA = MM->getAAInfo();
+  return true;
 }
 
-static std::optional<MemoryLocation>
-getMemoryLocationForAA(const MachineInstr *MI) {
-  const MachineMemOperand *MMO = *MI->memoperands_begin();
-  const Value *Val = MMO->getValue();
-  if (!Val)
-    return std::nullopt;
-  auto MemLoc = MemoryLocation::getBeforeOrAfter(Val, MMO->getAAInfo());
-
-  // Peel off noalias information from `AATags` because it might be valid only
-  // in single iteration.
-  // FIXME: This is too conservative. Checking
-  // `llvm.experimental.noalias.scope.decl` instrinsics in the original LLVM IR
-  // can perform more accuurately.
-  // MemLoc.AATags.NoAlias = nullptr;
-  return MemLoc;
-}
-
-/// Return true for an memory dependence that is loop carried
-/// potentially. A dependence is loop carried if the destination defines a value
-/// that may be used or defined by the source in a subsequent iteration.
-bool SwingSchedulerDAG::hasLoopCarriedMemDep(const MachineInstr *Src,
-                                             const MachineInstr *Dst,
-                                             BatchAAResults *BAA) const {
-  if (!SwpPruneLoopCarried)
-    return true;
-
-  // First, check the dependence by comparing base register, offset, and
-  // step value of the loop.
-  switch (mayOverlapInLaterIter(Src, Dst)) {
-  case AliasResult::Kind::MustAlias:
-    return true;
-  case AliasResult::Kind::NoAlias:
-    return false;
-  case AliasResult::Kind::MayAlias:
-    break;
-  default:
-    llvm_unreachable("Unexpected alias");
-  }
-
-  // If we cannot determine the dependence by previouse check, then
-  // check by using alias analysis.
-  if (!BAA)
-    return true;
-
-  const auto MemLoc1 = getMemoryLocationForAA(Src);
-  const auto MemLoc2 = getMemoryLocationForAA(Dst);
-  if (!MemLoc1.has_value() || !MemLoc2.has_value())
-    return true;
-  switch (BAA->alias(*MemLoc1, *MemLoc2)) {
-  case AliasResult::Kind::MayAlias:
-  case AliasResult::Kind::MustAlias:
-  case AliasResult::Kind::PartialAlias:
-    return true;
-  case AliasResult::Kind::NoAlias:
-    return false;
-  default:
-    llvm_unreachable("Unexpected alias");
-  }
-}
+// static std::optional<MemoryLocation>
+// getMemoryLocationForAA(const MachineInstr *MI, const Value *Val) {
+//   const MachineMemOperand *MMO = *MI->memoperands_begin();
+//   const Value *Val = MMO->getValue();
+//   if (!Val)
+//     return std::nullopt;
+//   auto MemLoc = MemoryLocation::getBeforeOrAfter(Val, MMO->getAAInfo());
+//
+//   // Peel off noalias information from `AATags` because it might be valid
+//   only
+//   // in single iteration.
+//   // FIXME: This is too conservative. Checking
+//   // `llvm.experimental.noalias.scope.decl` instrinsics in the original LLVM
+//   IR
+//   // can perform more accuurately.
+//   // MemLoc.AATags.NoAlias = nullptr;
+//   return MemLoc;
+// }
 
 /// Update the phi dependences to the DAG because ScheduleDAGInstrs no longer
 /// processes dependences for PHIs. This function adds true dependences
@@ -1523,6 +1480,38 @@ public:
   }
 };
 
+struct SUnitWithMemInfo {
+  SUnit *SU;
+  SmallVector<const Value *, 2> Objs;
+  AAMDNodes AATags;
+  bool IsAllIdentified = false;
+  bool IsUnknown = true;
+
+  SUnitWithMemInfo(SUnit *SU) : SU(SU) { init(); }
+
+  bool isTriviallyDisjoint(const SUnitWithMemInfo &Other) const {
+    if (!IsAllIdentified || !Other.IsAllIdentified)
+      return false;
+    for (const Value *Obj : Objs)
+      if (llvm::is_contained(Other.Objs, Obj))
+        return false;
+    return true;
+  }
+
+private:
+  void init() {
+    if (!getUnderlyingObjectsForInstr(SU->getInstr(), Objs, &AATags))
+      return;
+
+    IsUnknown = false;
+    for (const Value *Obj : Objs)
+      if (!isIdentifiedObject(Obj)) {
+        IsAllIdentified = false;
+        break;
+      }
+  }
+};
+
 /// Add loop-carried chain dependencies. This class handles the same type of
 /// dependencies added by `ScheduleDAGInstrs::buildSchedGraph`, but takes into
 /// account dependencies across iterations.
@@ -1555,13 +1544,12 @@ class LoopCarriedOrderDepsTracker {
 
   // Retains loads and stores classified by the underlying objects.
   struct LoadStoreChunk {
-    Value2SUs Loads, Stores;
-    SUsType UnknownLoads, UnknownStores;
+    SmallVector<SUnitWithMemInfo, 4> Loads;
+    SmallVector<SUnitWithMemInfo, 4> Stores;
   };
 
   SwingSchedulerDAG *DAG;
   std::unique_ptr<BatchAAResults> BAA;
-  const Value *UnknownValue;
   std::vector<SUnit> &SUnits;
 
   // The size of SUnits, for convenience.
@@ -1589,8 +1577,6 @@ public:
   LoopCarriedOrderDepsTracker(SwingSchedulerDAG *SSD, AAResults *AA)
       : DAG(SSD), BAA(nullptr), SUnits(DAG->SUnits), N(SUnits.size()),
         AdjMatrix(N, BitVector(N)), LoopCarried(N, BitVector(N)) {
-    UnknownValue =
-        UndefValue::get(Type::getVoidTy(DAG->MF.getFunction().getContext()));
     if (AA) {
       BAA = std::make_unique<BatchAAResults>(*AA);
       BAA->enableCrossIterationMode();
@@ -1666,69 +1652,74 @@ private:
     return std::nullopt;
   }
 
-  void addDependencesBetweenSUs(const SUsType &From, const SUsType &To) {
-    for (SUnit *SUa : From)
-      for (SUnit *SUb : To)
-        if (DAG->hasLoopCarriedMemDep(SUa->getInstr(), SUb->getInstr(),
-                                      BAA.get()))
-          LoopCarried[SUa->NodeNum].set(SUb->NodeNum);
+  bool hasLoopCarriedMemDep(const SUnitWithMemInfo &Src,
+                            const SUnitWithMemInfo &Dst) const {
+    if (!SwpPruneLoopCarried)
+      return true;
+
+    if (Src.isTriviallyDisjoint(Dst))
+      return false;
+
+    // First, check the dependence by comparing base register, offset, and
+    // step value of the loop.
+    switch (
+        DAG->mayOverlapInLaterIter(Src.SU->getInstr(), Dst.SU->getInstr())) {
+    case AliasResult::Kind::MustAlias:
+      return true;
+    case AliasResult::Kind::NoAlias:
+      return false;
+    case AliasResult::Kind::MayAlias:
+      break;
+    default:
+      llvm_unreachable("Unexpected alias");
+    }
+
+    // If we cannot determine the dependence by previouse check, then
+    // check by using alias analysis.
+    if (!BAA || Src.IsUnknown || Dst.IsUnknown)
+      return true;
+
+    for (const Value *SrcObj : Src.Objs)
+      for (const Value *DstObj : Dst.Objs) {
+        const auto SrcLoc =
+            MemoryLocation::getBeforeOrAfter(SrcObj, Src.AATags);
+        const auto DstLoc =
+            MemoryLocation::getBeforeOrAfter(DstObj, Dst.AATags);
+        if (!BAA->isNoAlias(SrcLoc, DstLoc))
+          return true;
+      }
+
+    return false;
   }
 
-  void addDependenciesOfObj(const SUsType &From, const Value *Obj,
-                            const Value2SUs &To) {
-    auto *Ite = To.find(Obj);
-    if (Ite != To.end())
-      addDependencesBetweenSUs(From, Ite->second);
+  void addDependencesBetweenSUs(const SUnitWithMemInfo &From,
+                                const SUnitWithMemInfo &To) {
+    if (From.SU == To.SU)
+      return;
+    if (hasLoopCarriedMemDep(From, To))
+      LoopCarried[From.SU->NodeNum].set(To.SU->NodeNum);
   }
 
   void addDependencesBetweenChunks(const LoadStoreChunk &From,
                                    const LoadStoreChunk &To) {
-    // Add dependencies from store with known object
-    for (auto &[Obj, Stores] : From.Stores) {
-      addDependenciesOfObj(Stores, Obj, To.Stores);
-      addDependenciesOfObj(Stores, Obj, To.Loads);
-      addDependencesBetweenSUs(Stores, To.UnknownStores);
-      addDependencesBetweenSUs(Stores, To.UnknownLoads);
-    }
+    for (const SUnitWithMemInfo &Src : From.Stores)
+      for (const SUnitWithMemInfo &Dst : To.Stores)
+        addDependencesBetweenSUs(Src, Dst);
 
-    // Add dependencies from load with known object
-    for (auto &[Obj, Loads] : From.Loads) {
-      addDependenciesOfObj(Loads, Obj, To.Stores);
-      addDependencesBetweenSUs(Loads, To.UnknownStores);
-    }
+    for (const SUnitWithMemInfo &Src : From.Stores)
+      for (const SUnitWithMemInfo &Dst : To.Loads)
+        addDependencesBetweenSUs(Src, Dst);
 
-    // Add dependencies from load/store with unknown object
-    for ([[maybe_unused]] auto &[Obj, Stores] : To.Stores) {
-      addDependencesBetweenSUs(From.UnknownStores, Stores);
-      addDependencesBetweenSUs(From.UnknownLoads, Stores);
-    }
-    for ([[maybe_unused]] auto &[Obj, Loads] : To.Loads)
-      addDependencesBetweenSUs(From.UnknownStores, Loads);
-    addDependencesBetweenSUs(From.UnknownStores, To.UnknownStores);
-    addDependencesBetweenSUs(From.UnknownStores, To.UnknownLoads);
-    addDependencesBetweenSUs(From.UnknownLoads, To.UnknownStores);
+    for (const SUnitWithMemInfo &Src : From.Loads)
+      for (const SUnitWithMemInfo &Dst : To.Stores)
+        addDependencesBetweenSUs(Src, Dst);
   }
 
   void updateLoadStoreChunk(SUnit *SU, LoadStoreChunk &Chunk) {
     const MachineInstr *MI = SU->getInstr();
     if (!MI->mayLoadOrStore())
       return;
-    SmallVector<const Value *, 4> Objs;
-    getUnderlyingObjectsForInstr(MI, Objs);
-    for (auto &Obj : Objs) {
-      if (Obj == UnknownValue) {
-        Objs.clear();
-        break;
-      }
-    }
-
-    if (Objs.empty()) {
-      (MI->mayStore() ? Chunk.UnknownStores : Chunk.UnknownLoads).push_back(SU);
-    } else {
-      auto &Map = (MI->mayStore() ? Chunk.Stores : Chunk.Loads);
-      for (const auto *Obj : Objs)
-        Map[Obj].push_back(SU);
-    }
+    (MI->mayStore() ? Chunk.Stores : Chunk.Loads).emplace_back(SU);
   }
 
   void addLoopCarriedDependencies() {

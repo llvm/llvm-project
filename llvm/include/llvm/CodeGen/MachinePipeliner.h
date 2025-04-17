@@ -442,9 +442,6 @@ public:
     return ScheduleInfo[Node->NodeNum].ZeroLatencyHeight;
   }
 
-  bool hasLoopCarriedMemDep(const MachineInstr *Src, const MachineInstr *Dst,
-                            BatchAAResults *BAA) const;
-
   void applyInstrChange(MachineInstr *MI, SMSchedule &Schedule);
 
   void fixupRegisterOverlaps(std::deque<SUnit *> &Instrs);

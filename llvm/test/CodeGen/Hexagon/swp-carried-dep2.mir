@@ -7,12 +7,6 @@
 # CHECK:      Overlap check:
 # CHECK-NEXT:   BaseMI:   S2_storeri_io %2:intregs, 0, %7:intregs :: (store (s32) into %ir.lsr.iv1)
 # CHECK-NEXT:     Base + 0 + I * -4, Len: 4
-# CHECK-NEXT:   OtherMI:   S2_storeri_io %2:intregs, 0, %7:intregs :: (store (s32) into %ir.lsr.iv1)
-# CHECK-NEXT:     Base + 0 + I * -4, Len: 4
-# CHECK-NEXT:   Result: No overlap
-# CHECK-NEXT: Overlap check:
-# CHECK-NEXT:   BaseMI:   S2_storeri_io %2:intregs, 0, %7:intregs :: (store (s32) into %ir.lsr.iv1)
-# CHECK-NEXT:     Base + 0 + I * -4, Len: 4
 # CHECK-NEXT:   OtherMI:   %5:intregs = L2_loadri_io %2:intregs, -8 :: (load (s32) from %ir.cgep)
 # CHECK-NEXT:     Base + -8 + I * -4, Len: 4
 # CHECK-NEXT:   Result: No overlap
