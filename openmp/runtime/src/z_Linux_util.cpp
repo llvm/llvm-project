@@ -2522,10 +2522,6 @@ int __kmp_get_load_balance(int max) {
   return running_threads;
 }
 
-#elif KMP_OS_HAIKU
-
-int __kmp_get_load_balance(int max) { return -1; }
-
 #else // Linux* OS
 
 // The function returns number of running (not sleeping) threads, or -1 in case
