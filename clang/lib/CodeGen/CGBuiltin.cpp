@@ -1072,6 +1072,21 @@ llvm::Value *CodeGenFunction::emitCountedBySize(const Expr *E,
   return nullptr;
 }
 
+static llvm::Value *EmitPositiveResultOrZero(CodeGenFunction &CGF,
+                                             llvm::Value *Res,
+                                             llvm::Value *Index,
+                                             llvm::IntegerType *ResType,
+                                             bool IsSigned) {
+  //  cmp = (array_size >= 0)
+  Value *Cmp = CGF.Builder.CreateIsNotNeg(Res);
+  if (Index)
+    //  cmp = (cmp && index >= 0)
+    Cmp = CGF.Builder.CreateAnd(CGF.Builder.CreateIsNotNeg(Index), Cmp);
+
+  //  return cmp ? result : 0
+  return CGF.Builder.CreateSelect(Cmp, Res, ConstantInt::get(ResType, 0, IsSigned));
+}
+
 llvm::Value *CodeGenFunction::emitCountedByPointerSize(
     const ImplicitCastExpr *E, const Expr *Idx, llvm::Value *EmittedE,
     unsigned Type, llvm::IntegerType *ResType) {
@@ -1185,14 +1200,7 @@ llvm::Value *CodeGenFunction::emitCountedByPointerSize(
     Res = Builder.CreateSub(Res, IndexSize, "result", !IsSigned, IsSigned);
   }
 
-  //  cmp = (array_size >= 0)
-  Value *Cmp = Builder.CreateIsNotNeg(Res);
-  if (Idx)
-    //  cmp = (cmp && index >= 0)
-    Cmp = Builder.CreateAnd(Builder.CreateIsNotNeg(Index), Cmp);
-
-  //  return cmp ? result : 0
-  return Builder.CreateSelect(Cmp, Res, ConstantInt::get(ResType, 0, IsSigned));
+  return EmitPositiveResultOrZero(*this, Res, Index, ResType, IsSigned);
 }
 
 llvm::Value *
@@ -1247,7 +1255,6 @@ CodeGenFunction::emitCountedByMemberSize(const MemberExpr *ME, const Expr *Idx,
   //    result = flexible_array_member_size;
   //
   //    cmp = (result >= 0)
-  //
   //    return cmp ? result : 0;
   //
   // 2) '&ptr->array[idx]':
@@ -1266,7 +1273,6 @@ CodeGenFunction::emitCountedByMemberSize(const MemberExpr *ME, const Expr *Idx,
   //    cmp = (result >= 0)
   //    if (index != 0)
   //        cmp = (cmp && index >= 0)
-  //
   //    return cmp ? result : 0;
   //
   // 3) '&ptr->field':
@@ -1284,7 +1290,6 @@ CodeGenFunction::emitCountedByMemberSize(const MemberExpr *ME, const Expr *Idx,
   //    result = offset_diff + flexible_array_member_size;
   //
   //    cmp = (result >= 0)
-  //
   //    return cmp ? result : 0;
   //
   // 4) '&ptr->field_array[idx]':
@@ -1308,7 +1313,6 @@ CodeGenFunction::emitCountedByMemberSize(const MemberExpr *ME, const Expr *Idx,
   //    cmp = (result >= 0)
   //    if (index != 0)
   //        cmp = (cmp && index >= 0)
-  //
   //    return cmp ? result : 0;
 
   bool IsSigned = CountFD->getType()->isSignedIntegerType();
@@ -1400,14 +1404,7 @@ CodeGenFunction::emitCountedByMemberSize(const MemberExpr *ME, const Expr *Idx,
     Res = Builder.CreateAdd(FlexibleArrayMemberSize, OffsetDiff, "result");
   }
 
-  //  cmp = (array_size >= 0)
-  Value *Cmp = Builder.CreateIsNotNeg(Res);
-  if (Idx)
-    //  cmp = (cmp && index >= 0)
-    Cmp = Builder.CreateAnd(Builder.CreateIsNotNeg(Index), Cmp);
-
-  //  return cmp ? result : 0
-  return Builder.CreateSelect(Cmp, Res, ConstantInt::get(ResType, 0, IsSigned));
+  return EmitPositiveResultOrZero(*this, Res, Index, ResType, IsSigned);
 }
 
 /// Returns a Value corresponding to the size of the given expression.
