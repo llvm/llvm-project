@@ -3309,6 +3309,27 @@ void CodeGenModule::EmitDeferred() {
   CurDeclsToEmit.swap(DeferredDeclsToEmit);
 
   for (GlobalDecl &D : CurDeclsToEmit) {
+    // Functions declared with the sycl_kernel_entry_point attribute are
+    // emitted normally during host compilation. During device compilation,
+    // a SYCL kernel caller offload entry point function is generated and
+    // emitted in place of each of these functions.
+    if (const auto *FD = D.getDecl()->getAsFunction()) {
+      if (LangOpts.SYCLIsDevice && FD->hasAttr<SYCLKernelEntryPointAttr>() &&
+          FD->isDefined()) {
+        // Functions with an invalid sycl_kernel_entry_point attribute are
+        // ignored during device compilation.
+        if (!FD->getAttr<SYCLKernelEntryPointAttr>()->isInvalidAttr()) {
+          // Generate and emit the SYCL kernel caller function.
+          EmitSYCLKernelCaller(FD, getContext());
+          // Recurse to emit any symbols directly or indirectly referenced
+          // by the SYCL kernel caller function.
+          EmitDeferred();
+        }
+        // Do not emit the sycl_kernel_entry_point attributed function.
+        continue;
+      }
+    }
+
     // We should call GetAddrOfGlobal with IsForDefinition set to true in order
     // to get GlobalValue with exactly the type we need, not something that
     // might had been created for another decl with the same mangled name but
@@ -3643,6 +3664,10 @@ bool CodeGenModule::MayBeEmittedEagerly(const ValueDecl *Global) {
       return false;
     // Defer until all versions have been semantically checked.
     if (FD->hasAttr<TargetVersionAttr>() && !FD->isMultiVersion())
+      return false;
+    // Defer emission of SYCL kernel entry point functions during device
+    // compilation.
+    if (LangOpts.SYCLIsDevice && FD->hasAttr<SYCLKernelEntryPointAttr>())
       return false;
   }
   if (const auto *VD = dyn_cast<VarDecl>(Global)) {
