@@ -65,11 +65,14 @@ public:
     SignatureConversion(unsigned numOrigInputs)
         : remappedInputs(numOrigInputs) {}
 
-    /// This struct represents a range of new types or a single value that
+    /// This struct represents a range of new types or a range of values that
     /// remaps an existing signature input.
     struct InputMapping {
       size_t inputNo, size;
-      Value replacementValue;
+      SmallVector<Value, 1> replacementValues;
+
+      /// Return "true" if this input was replaces with one or multiple values.
+      bool replacedWithValues() const { return !replacementValues.empty(); }
     };
 
     /// Return the argument types for the new signature.
@@ -92,9 +95,9 @@ public:
     /// used if the new types are not intended to remap an existing input.
     void addInputs(ArrayRef<Type> types);
 
-    /// Remap an input of the original signature to another `replacement`
-    /// value. This drops the original argument.
-    void remapInput(unsigned origInputNo, Value replacement);
+    /// Remap an input of the original signature to `replacements`
+    /// values. This drops the original argument.
+    void remapInput(unsigned origInputNo, ArrayRef<Value> replacements);
 
   private:
     /// Remap an input of the original signature with a range of types in the
@@ -528,78 +531,13 @@ private:
 // Conversion Patterns
 //===----------------------------------------------------------------------===//
 
-namespace detail {
-/// Helper class that derives from a ConversionRewritePattern class and
-/// provides separate `match` and `rewrite` entry points instead of a combined
-/// `matchAndRewrite`.
-template <typename PatternT>
-class ConversionSplitMatchAndRewriteImpl : public PatternT {
-  using PatternT::PatternT;
-
-  /// Attempt to match against IR rooted at the specified operation, which is
-  /// the same operation kind as getRootKind().
-  ///
-  /// Note: This function must not modify the IR.
-  virtual LogicalResult match(typename PatternT::OperationT op) const = 0;
-
-  /// Rewrite the IR rooted at the specified operation with the result of
-  /// this pattern, generating any new operations with the specified
-  /// rewriter.
-  virtual void rewrite(typename PatternT::OperationT op,
-                       typename PatternT::OpAdaptor adaptor,
-                       ConversionPatternRewriter &rewriter) const {
-    // One of the two `rewrite` functions must be implemented.
-    llvm_unreachable("rewrite is not implemented");
-  }
-
-  virtual void rewrite(typename PatternT::OperationT op,
-                       typename PatternT::OneToNOpAdaptor adaptor,
-                       ConversionPatternRewriter &rewriter) const {
-    if constexpr (std::is_same<typename PatternT::OpAdaptor,
-                               ArrayRef<Value>>::value) {
-      rewrite(op, PatternT::getOneToOneAdaptorOperands(adaptor), rewriter);
-    } else {
-      SmallVector<Value> oneToOneOperands =
-          PatternT::getOneToOneAdaptorOperands(adaptor.getOperands());
-      rewrite(op, typename PatternT::OpAdaptor(oneToOneOperands, adaptor),
-              rewriter);
-    }
-  }
-
-  LogicalResult
-  matchAndRewrite(typename PatternT::OperationT op,
-                  typename PatternT::OneToNOpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const final {
-    if (succeeded(match(op))) {
-      rewrite(op, adaptor, rewriter);
-      return success();
-    }
-    return failure();
-  }
-
-  LogicalResult
-  matchAndRewrite(typename PatternT::OperationT op,
-                  typename PatternT::OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const final {
-    // Users would normally override this function in conversion patterns to
-    // implement a 1:1 pattern. Patterns that are derived from this class have
-    // separate `match` and `rewrite` functions, so this `matchAndRewrite`
-    // overload is obsolete.
-    llvm_unreachable("this function is unreachable");
-  }
-};
-} // namespace detail
-
 /// Base class for the conversion patterns. This pattern class enables type
 /// conversions, and other uses specific to the conversion framework. As such,
 /// patterns of this type can only be used with the 'apply*' methods below.
 class ConversionPattern : public RewritePattern {
 public:
-  using OperationT = Operation *;
   using OpAdaptor = ArrayRef<Value>;
   using OneToNOpAdaptor = ArrayRef<ValueRange>;
-  using SplitMatchAndRewrite =
-      detail::ConversionSplitMatchAndRewriteImpl<ConversionPattern>;
 
   /// Hook for derived classes to implement combined matching and rewriting.
   /// This overload supports only 1:1 replacements. The 1:N overload is called
@@ -665,12 +603,9 @@ protected:
 template <typename SourceOp>
 class OpConversionPattern : public ConversionPattern {
 public:
-  using OperationT = SourceOp;
   using OpAdaptor = typename SourceOp::Adaptor;
   using OneToNOpAdaptor =
       typename SourceOp::template GenericAdaptor<ArrayRef<ValueRange>>;
-  using SplitMatchAndRewrite =
-      detail::ConversionSplitMatchAndRewriteImpl<OpConversionPattern<SourceOp>>;
 
   OpConversionPattern(MLIRContext *context, PatternBenefit benefit = 1)
       : ConversionPattern(SourceOp::getOperationName(), benefit, context) {}
@@ -888,7 +823,18 @@ public:
 
   /// Replace the given operation with the new value ranges. The number of op
   /// results and value ranges must match. The given  operation is erased.
-  void replaceOpWithMultiple(Operation *op, ArrayRef<ValueRange> newValues);
+  void replaceOpWithMultiple(Operation *op,
+                             SmallVector<SmallVector<Value>> &&newValues);
+  template <typename RangeT = ValueRange>
+  void replaceOpWithMultiple(Operation *op, ArrayRef<RangeT> newValues) {
+    replaceOpWithMultiple(op,
+                          llvm::to_vector_of<SmallVector<Value>>(newValues));
+  }
+  template <typename RangeT>
+  void replaceOpWithMultiple(Operation *op, RangeT &&newValues) {
+    replaceOpWithMultiple(op,
+                          ArrayRef(llvm::to_vector_of<ValueRange>(newValues)));
+  }
 
   /// PatternRewriter hook for erasing a dead operation. The uses of this
   /// operation *must* be made dead by the end of the conversion process,

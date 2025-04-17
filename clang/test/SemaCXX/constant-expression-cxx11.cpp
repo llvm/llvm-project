@@ -1472,8 +1472,8 @@ namespace ConvertedConstantExpr {
   enum class E {
     em = m,
     en = n, // expected-error {{enumerator value is not a constant expression}} cxx11_20-note {{initializer of 'n' is unknown}}
-    eo = (m + // pre-cxx23-error {{not a constant expression}}
-          n // cxx11_20-note {{initializer of 'n' is unknown}} cxx23-error {{not a constant expression}}
+    eo = (m + // expected-error {{not a constant expression}}
+          n // cxx11_20-note {{initializer of 'n' is unknown}}
           ),
     eq = reinterpret_cast<long>((int*)0) // expected-error {{not a constant expression}} expected-note {{reinterpret_cast}}
   };

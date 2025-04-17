@@ -495,6 +495,10 @@ Expected<StringRef> clang(ArrayRef<StringRef> InputFiles, const ArgList &Args) {
     Triple.isAMDGPU() ? CmdArgs.push_back(Args.MakeArgString("-mcpu=" + Arch))
                       : CmdArgs.push_back(Args.MakeArgString("-march=" + Arch));
 
+  // AMDGPU is always in LTO mode currently.
+  if (Triple.isAMDGPU())
+    CmdArgs.push_back("-flto");
+
   // Forward all of the `--offload-opt` and similar options to the device.
   for (auto &Arg : Args.filtered(OPT_offload_opt_eq_minus, OPT_mllvm))
     CmdArgs.append(
@@ -508,7 +512,7 @@ Expected<StringRef> clang(ArrayRef<StringRef> InputFiles, const ArgList &Args) {
     CmdArgs.push_back(InputFile);
 
   // If this is CPU offloading we copy the input libraries.
-  if (!Triple.isAMDGPU() && !Triple.isNVPTX() && !Triple.isSPIRV()) {
+  if (!Triple.isGPU()) {
     CmdArgs.push_back("-Wl,-Bsymbolic");
     CmdArgs.push_back("-shared");
     ArgStringList LinkerArgs;
@@ -599,9 +603,11 @@ Expected<StringRef> writeOffloadFile(const OffloadFile &File) {
 
   StringRef Prefix =
       sys::path::stem(Binary.getMemoryBufferRef().getBufferIdentifier());
-
-  auto TempFileOrErr = createOutputFile(
-      Prefix + "-" + Binary.getTriple() + "-" + Binary.getArch(), "o");
+  SmallString<128> Filename;
+  (Prefix + "-" + Binary.getTriple() + "-" + Binary.getArch())
+      .toVector(Filename);
+  llvm::replace(Filename, ':', '-');
+  auto TempFileOrErr = createOutputFile(Filename, "o");
   if (!TempFileOrErr)
     return TempFileOrErr.takeError();
 
@@ -631,7 +637,7 @@ Expected<StringRef> compileModule(Module &M, OffloadKind Kind) {
   StringRef CPU = "";
   StringRef Features = "";
   std::unique_ptr<TargetMachine> TM(
-      T->createTargetMachine(M.getTargetTriple().str(), CPU, Features, Options,
+      T->createTargetMachine(M.getTargetTriple(), CPU, Features, Options,
                              Reloc::PIC_, M.getCodeModel()));
 
   if (M.getDataLayout().isDefault())
@@ -917,10 +923,9 @@ Expected<SmallVector<StringRef>> linkAndWrapDeviceFiles(
         });
     auto LinkerArgs = getLinkerArgs(Input, BaseArgs);
 
-    DenseSet<OffloadKind> ActiveOffloadKinds;
+    uint16_t ActiveOffloadKindMask = 0u;
     for (const auto &File : Input)
-      if (File.getBinary()->getOffloadKind() != OFK_None)
-        ActiveOffloadKinds.insert(File.getBinary()->getOffloadKind());
+      ActiveOffloadKindMask |= File.getBinary()->getOffloadKind();
 
     // Write any remaining device inputs to an output file.
     SmallVector<StringRef> InputFiles;
@@ -937,7 +942,10 @@ Expected<SmallVector<StringRef>> linkAndWrapDeviceFiles(
       return OutputOrErr.takeError();
 
     // Store the offloading image for each linked output file.
-    for (OffloadKind Kind : ActiveOffloadKinds) {
+    for (OffloadKind Kind = OFK_OpenMP; Kind != OFK_LAST;
+         Kind = static_cast<OffloadKind>((uint16_t)(Kind) << 1)) {
+      if ((ActiveOffloadKindMask & Kind) == 0)
+        continue;
       llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> FileOrErr =
           llvm::MemoryBuffer::getFileOrSTDIN(*OutputOrErr);
       if (std::error_code EC = FileOrErr.getError()) {
@@ -1093,7 +1101,7 @@ Expected<bool> getSymbolsFromBitcode(MemoryBufferRef Buffer, OffloadKind Kind,
 
   // If the file gets extracted we update the table with the new symbols.
   if (ShouldExtract)
-    Syms.insert(std::begin(TmpSyms), std::end(TmpSyms));
+    Syms.insert_range(TmpSyms);
 
   return ShouldExtract;
 }
@@ -1148,7 +1156,7 @@ Expected<bool> getSymbolsFromObject(const ObjectFile &Obj, OffloadKind Kind,
 
   // If the file gets extracted we update the table with the new symbols.
   if (ShouldExtract)
-    Syms.insert(std::begin(TmpSyms), std::end(TmpSyms));
+    Syms.insert_range(TmpSyms);
 
   return ShouldExtract;
 }

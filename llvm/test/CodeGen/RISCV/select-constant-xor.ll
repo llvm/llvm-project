@@ -239,3 +239,77 @@ define i32 @oneusecmp(i32 %a, i32 %b, i32 %d) {
   %x = add i32 %s, %s2
   ret i32 %x
 }
+
+define i32 @xor_branch_imm_ret(i32 %x) nounwind {
+; RV32-LABEL: xor_branch_imm_ret:
+; RV32:       # %bb.0: # %entry
+; RV32-NEXT:    xori a0, a0, -1365
+; RV32-NEXT:    beqz a0, .LBB11_2
+; RV32-NEXT:  # %bb.1: # %if.then
+; RV32-NEXT:    ret
+; RV32-NEXT:  .LBB11_2: # %if.end
+; RV32-NEXT:    addi sp, sp, -16
+; RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32-NEXT:    call abort
+;
+; RV64-LABEL: xor_branch_imm_ret:
+; RV64:       # %bb.0: # %entry
+; RV64-NEXT:    xori a0, a0, -1365
+; RV64-NEXT:    sext.w a1, a0
+; RV64-NEXT:    beqz a1, .LBB11_2
+; RV64-NEXT:  # %bb.1: # %if.then
+; RV64-NEXT:    ret
+; RV64-NEXT:  .LBB11_2: # %if.end
+; RV64-NEXT:    addi sp, sp, -16
+; RV64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64-NEXT:    call abort
+entry:
+  %cmp.not = icmp eq i32 %x, -1365
+  br i1 %cmp.not, label %if.end, label %if.then
+if.then:
+  %xor = xor i32 %x, -1365
+  ret i32 %xor
+if.end:
+    tail call void @abort() #2
+  unreachable
+}
+
+define i32 @xor_branch_ret(i32 %x) nounwind {
+; RV32-LABEL: xor_branch_ret:
+; RV32:       # %bb.0: # %entry
+; RV32-NEXT:    li a1, 1
+; RV32-NEXT:    slli a1, a1, 11
+; RV32-NEXT:    beq a0, a1, .LBB12_2
+; RV32-NEXT:  # %bb.1: # %if.then
+; RV32-NEXT:    xor a0, a0, a1
+; RV32-NEXT:    ret
+; RV32-NEXT:  .LBB12_2: # %if.end
+; RV32-NEXT:    addi sp, sp, -16
+; RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32-NEXT:    call abort
+;
+; RV64-LABEL: xor_branch_ret:
+; RV64:       # %bb.0: # %entry
+; RV64-NEXT:    li a1, 1
+; RV64-NEXT:    slli a1, a1, 11
+; RV64-NEXT:    sext.w a2, a0
+; RV64-NEXT:    beq a2, a1, .LBB12_2
+; RV64-NEXT:  # %bb.1: # %if.then
+; RV64-NEXT:    xor a0, a0, a1
+; RV64-NEXT:    ret
+; RV64-NEXT:  .LBB12_2: # %if.end
+; RV64-NEXT:    addi sp, sp, -16
+; RV64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64-NEXT:    call abort
+entry:
+  %cmp.not = icmp eq i32 %x, 2048
+  br i1 %cmp.not, label %if.end, label %if.then
+if.then:
+  %xor = xor i32 %x, 2048
+  ret i32 %xor
+if.end:
+    tail call void @abort() #2
+  unreachable
+}
+
+declare void @abort()

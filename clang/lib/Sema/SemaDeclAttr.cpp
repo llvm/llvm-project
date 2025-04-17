@@ -86,7 +86,9 @@ static unsigned getNumAttributeArgs(const ParsedAttr &AL) {
   return AL.getNumArgs() + AL.hasParsedType();
 }
 
-SourceLocation Sema::getAttrLoc(const ParsedAttr &AL) { return AL.getLoc(); }
+SourceLocation Sema::getAttrLoc(const AttributeCommonInfo &CI) {
+  return CI.getLoc();
+}
 
 /// Wrapper around checkUInt32Argument, with an extra check to be sure
 /// that the result will fit into a regular (signed) int. All args have the same
@@ -536,29 +538,6 @@ static bool checkLockFunAttrCommon(Sema &S, Decl *D, const ParsedAttr &AL,
   return true;
 }
 
-static void handleAssertSharedLockAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
-  SmallVector<Expr *, 1> Args;
-  if (!checkLockFunAttrCommon(S, D, AL, Args))
-    return;
-
-  unsigned Size = Args.size();
-  Expr **StartArg = Size == 0 ? nullptr : &Args[0];
-  D->addAttr(::new (S.Context)
-                 AssertSharedLockAttr(S.Context, AL, StartArg, Size));
-}
-
-static void handleAssertExclusiveLockAttr(Sema &S, Decl *D,
-                                          const ParsedAttr &AL) {
-  SmallVector<Expr *, 1> Args;
-  if (!checkLockFunAttrCommon(S, D, AL, Args))
-    return;
-
-  unsigned Size = Args.size();
-  Expr **StartArg = Size == 0 ? nullptr : &Args[0];
-  D->addAttr(::new (S.Context)
-                 AssertExclusiveLockAttr(S.Context, AL, StartArg, Size));
-}
-
 /// Checks to be sure that the given parameter number is in bounds, and
 /// is an integral type. Will emit appropriate diagnostics if this returns
 /// false.
@@ -636,26 +615,6 @@ static bool checkTryLockFunAttrCommon(Sema &S, Decl *D, const ParsedAttr &AL,
   checkAttrArgsAreCapabilityObjs(S, D, AL, Args, 1);
 
   return true;
-}
-
-static void handleSharedTrylockFunctionAttr(Sema &S, Decl *D,
-                                            const ParsedAttr &AL) {
-  SmallVector<Expr*, 2> Args;
-  if (!checkTryLockFunAttrCommon(S, D, AL, Args))
-    return;
-
-  D->addAttr(::new (S.Context) SharedTrylockFunctionAttr(
-      S.Context, AL, AL.getArgAsExpr(0), Args.data(), Args.size()));
-}
-
-static void handleExclusiveTrylockFunctionAttr(Sema &S, Decl *D,
-                                               const ParsedAttr &AL) {
-  SmallVector<Expr*, 2> Args;
-  if (!checkTryLockFunAttrCommon(S, D, AL, Args))
-    return;
-
-  D->addAttr(::new (S.Context) ExclusiveTrylockFunctionAttr(
-      S.Context, AL, AL.getArgAsExpr(0), Args.data(), Args.size()));
 }
 
 static void handleLockReturnedAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
@@ -1191,7 +1150,8 @@ static void handleTestTypestateAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 
 static void handleExtVectorTypeAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   // Remember this typedef decl, we will need it later for diagnostics.
-  S.ExtVectorDecls.push_back(cast<TypedefNameDecl>(D));
+  if (isa<TypedefNameDecl>(D))
+    S.ExtVectorDecls.push_back(cast<TypedefNameDecl>(D));
 }
 
 static void handlePackedAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
@@ -1314,7 +1274,10 @@ static void handleNonNullAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   for (unsigned I = 0; I < AL.getNumArgs(); ++I) {
     Expr *Ex = AL.getArgAsExpr(I);
     ParamIdx Idx;
-    if (!S.checkFunctionOrMethodParameterIndex(D, AL, I + 1, Ex, Idx))
+    if (!S.checkFunctionOrMethodParameterIndex(
+            D, AL, I + 1, Ex, Idx,
+            /*CanIndexImplicitThis=*/false,
+            /*CanIndexVariadicArguments=*/true))
       return;
 
     // Is the function argument a pointer type?
@@ -1411,13 +1374,11 @@ void Sema::AddAssumeAlignedAttr(Decl *D, const AttributeCommonInfo &CI, Expr *E,
                                 Expr *OE) {
   QualType ResultType = getFunctionOrMethodResultType(D);
   SourceRange SR = getFunctionOrMethodResultSourceRange(D);
-
-  AssumeAlignedAttr TmpAttr(Context, CI, E, OE);
-  SourceLocation AttrLoc = TmpAttr.getLocation();
+  SourceLocation AttrLoc = CI.getLoc();
 
   if (!isValidPointerAttrType(ResultType, /* RefOkay */ true)) {
     Diag(AttrLoc, diag::warn_attribute_return_pointers_refs_only)
-        << &TmpAttr << TmpAttr.getRange() << SR;
+        << CI << CI.getRange() << SR;
     return;
   }
 
@@ -1426,12 +1387,10 @@ void Sema::AddAssumeAlignedAttr(Decl *D, const AttributeCommonInfo &CI, Expr *E,
     if (!(I = E->getIntegerConstantExpr(Context))) {
       if (OE)
         Diag(AttrLoc, diag::err_attribute_argument_n_type)
-          << &TmpAttr << 1 << AANT_ArgumentIntegerConstant
-          << E->getSourceRange();
+            << CI << 1 << AANT_ArgumentIntegerConstant << E->getSourceRange();
       else
         Diag(AttrLoc, diag::err_attribute_argument_type)
-          << &TmpAttr << AANT_ArgumentIntegerConstant
-          << E->getSourceRange();
+            << CI << AANT_ArgumentIntegerConstant << E->getSourceRange();
       return;
     }
 
@@ -1448,8 +1407,7 @@ void Sema::AddAssumeAlignedAttr(Decl *D, const AttributeCommonInfo &CI, Expr *E,
 
   if (OE && !OE->isValueDependent() && !OE->isIntegerConstantExpr(Context)) {
     Diag(AttrLoc, diag::err_attribute_argument_n_type)
-        << &TmpAttr << 2 << AANT_ArgumentIntegerConstant
-        << OE->getSourceRange();
+        << CI << 2 << AANT_ArgumentIntegerConstant << OE->getSourceRange();
     return;
   }
 
@@ -1459,19 +1417,17 @@ void Sema::AddAssumeAlignedAttr(Decl *D, const AttributeCommonInfo &CI, Expr *E,
 void Sema::AddAllocAlignAttr(Decl *D, const AttributeCommonInfo &CI,
                              Expr *ParamExpr) {
   QualType ResultType = getFunctionOrMethodResultType(D);
-
-  AllocAlignAttr TmpAttr(Context, CI, ParamIdx());
   SourceLocation AttrLoc = CI.getLoc();
 
   if (!isValidPointerAttrType(ResultType, /* RefOkay */ true)) {
     Diag(AttrLoc, diag::warn_attribute_return_pointers_refs_only)
-        << &TmpAttr << CI.getRange() << getFunctionOrMethodResultSourceRange(D);
+        << CI << CI.getRange() << getFunctionOrMethodResultSourceRange(D);
     return;
   }
 
   ParamIdx Idx;
   const auto *FuncDecl = cast<FunctionDecl>(D);
-  if (!checkFunctionOrMethodParameterIndex(FuncDecl, TmpAttr,
+  if (!checkFunctionOrMethodParameterIndex(FuncDecl, CI,
                                            /*AttrArgNum=*/1, ParamExpr, Idx))
     return;
 
@@ -1479,8 +1435,7 @@ void Sema::AddAllocAlignAttr(Decl *D, const AttributeCommonInfo &CI,
   if (!Ty->isDependentType() && !Ty->isIntegralType(Context) &&
       !Ty->isAlignValT()) {
     Diag(ParamExpr->getBeginLoc(), diag::err_attribute_integers_only)
-        << &TmpAttr
-        << FuncDecl->getParamDecl(Idx.getASTIndex())->getSourceRange();
+        << CI << FuncDecl->getParamDecl(Idx.getASTIndex())->getSourceRange();
     return;
   }
 
@@ -2138,6 +2093,8 @@ static void handleConstructorAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   if (AL.getNumArgs() &&
       !S.checkUInt32Argument(AL, AL.getArgAsExpr(0), priority))
     return;
+  S.Diag(D->getLocation(), diag::warn_global_constructor)
+      << D->getSourceRange();
 
   D->addAttr(::new (S.Context) ConstructorAttr(S.Context, AL, priority));
 }
@@ -2147,6 +2104,7 @@ static void handleDestructorAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   if (AL.getNumArgs() &&
       !S.checkUInt32Argument(AL, AL.getArgAsExpr(0), priority))
     return;
+  S.Diag(D->getLocation(), diag::warn_global_destructor) << D->getSourceRange();
 
   D->addAttr(::new (S.Context) DestructorAttr(S.Context, AL, priority));
 }
@@ -2910,26 +2868,93 @@ static void handleWeakImportAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   D->addAttr(::new (S.Context) WeakImportAttr(S.Context, AL));
 }
 
+// Checks whether an argument of launch_bounds-like attribute is
+// acceptable, performs implicit conversion to Rvalue, and returns
+// non-nullptr Expr result on success. Otherwise, it returns nullptr
+// and may output an error.
+template <class Attribute>
+static Expr *makeAttributeArgExpr(Sema &S, Expr *E, const Attribute &Attr,
+                                  const unsigned Idx) {
+  if (S.DiagnoseUnexpandedParameterPack(E))
+    return nullptr;
+
+  // Accept template arguments for now as they depend on something else.
+  // We'll get to check them when they eventually get instantiated.
+  if (E->isValueDependent())
+    return E;
+
+  std::optional<llvm::APSInt> I = llvm::APSInt(64);
+  if (!(I = E->getIntegerConstantExpr(S.Context))) {
+    S.Diag(E->getExprLoc(), diag::err_attribute_argument_n_type)
+        << &Attr << Idx << AANT_ArgumentIntegerConstant << E->getSourceRange();
+    return nullptr;
+  }
+  // Make sure we can fit it in 32 bits.
+  if (!I->isIntN(32)) {
+    S.Diag(E->getExprLoc(), diag::err_ice_too_large)
+        << toString(*I, 10, false) << 32 << /* Unsigned */ 1;
+    return nullptr;
+  }
+  if (*I < 0)
+    S.Diag(E->getExprLoc(), diag::err_attribute_requires_positive_integer)
+        << &Attr << /*non-negative*/ 1 << E->getSourceRange();
+
+  // We may need to perform implicit conversion of the argument.
+  InitializedEntity Entity = InitializedEntity::InitializeParameter(
+      S.Context, S.Context.getConstType(S.Context.IntTy), /*consume*/ false);
+  ExprResult ValArg = S.PerformCopyInitialization(Entity, SourceLocation(), E);
+  assert(!ValArg.isInvalid() &&
+         "Unexpected PerformCopyInitialization() failure.");
+
+  return ValArg.getAs<Expr>();
+}
+
 // Handles reqd_work_group_size and work_group_size_hint.
 template <typename WorkGroupAttr>
 static void handleWorkGroupSize(Sema &S, Decl *D, const ParsedAttr &AL) {
-  uint32_t WGSize[3];
+  Expr *WGSize[3];
   for (unsigned i = 0; i < 3; ++i) {
-    const Expr *E = AL.getArgAsExpr(i);
-    if (!S.checkUInt32Argument(AL, E, WGSize[i], i,
-                               /*StrictlyUnsigned=*/true))
+    if (Expr *E = makeAttributeArgExpr(S, AL.getArgAsExpr(i), AL, i))
+      WGSize[i] = E;
+    else
       return;
-    if (WGSize[i] == 0) {
-      S.Diag(AL.getLoc(), diag::err_attribute_argument_is_zero)
-          << AL << E->getSourceRange();
-      return;
+  }
+
+  auto IsZero = [&](Expr *E) {
+    if (E->isValueDependent())
+      return false;
+    std::optional<llvm::APSInt> I = E->getIntegerConstantExpr(S.Context);
+    assert(I && "Non-integer constant expr");
+    return I->isZero();
+  };
+
+  if (!llvm::all_of(WGSize, IsZero)) {
+    for (unsigned i = 0; i < 3; ++i) {
+      const Expr *E = AL.getArgAsExpr(i);
+      if (IsZero(WGSize[i])) {
+        S.Diag(AL.getLoc(), diag::err_attribute_argument_is_zero)
+            << AL << E->getSourceRange();
+        return;
+      }
     }
   }
 
+  auto Equal = [&](Expr *LHS, Expr *RHS) {
+    if (LHS->isValueDependent() || RHS->isValueDependent())
+      return true;
+    std::optional<llvm::APSInt> L = LHS->getIntegerConstantExpr(S.Context);
+    assert(L && "Non-integer constant expr");
+    std::optional<llvm::APSInt> R = RHS->getIntegerConstantExpr(S.Context);
+    assert(L && "Non-integer constant expr");
+    return L == R;
+  };
+
   WorkGroupAttr *Existing = D->getAttr<WorkGroupAttr>();
-  if (Existing && !(Existing->getXDim() == WGSize[0] &&
-                    Existing->getYDim() == WGSize[1] &&
-                    Existing->getZDim() == WGSize[2]))
+  if (Existing &&
+      !llvm::equal(std::initializer_list<Expr *>{Existing->getXDim(),
+                                                 Existing->getYDim(),
+                                                 Existing->getZDim()},
+                   WGSize, Equal))
     S.Diag(AL.getLoc(), diag::warn_duplicate_attribute) << AL;
 
   D->addAttr(::new (S.Context)
@@ -4071,15 +4096,10 @@ static void handleCallbackAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     return;
   }
 
-  if (CalleeFnProtoType->getNumParams() > EncodingIndices.size() - 1) {
-    S.Diag(AL.getLoc(), diag::err_attribute_wrong_number_arguments)
-        << AL << (unsigned)(EncodingIndices.size() - 1);
-    return;
-  }
-
-  if (CalleeFnProtoType->getNumParams() < EncodingIndices.size() - 1) {
-    S.Diag(AL.getLoc(), diag::err_attribute_wrong_number_arguments)
-        << AL << (unsigned)(EncodingIndices.size() - 1);
+  if (CalleeFnProtoType->getNumParams() != EncodingIndices.size() - 1) {
+    S.Diag(AL.getLoc(), diag::err_callback_attribute_wrong_arg_count)
+        << QualType{CalleeFnProtoType, 0} << CalleeFnProtoType->getNumParams()
+        << (unsigned)(EncodingIndices.size() - 1);
     return;
   }
 
@@ -4314,7 +4334,6 @@ static void handleAlignValueAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 }
 
 void Sema::AddAlignValueAttr(Decl *D, const AttributeCommonInfo &CI, Expr *E) {
-  AlignValueAttr TmpAttr(Context, CI, E);
   SourceLocation AttrLoc = CI.getLoc();
 
   QualType T;
@@ -4328,7 +4347,7 @@ void Sema::AddAlignValueAttr(Decl *D, const AttributeCommonInfo &CI, Expr *E) {
   if (!T->isDependentType() && !T->isAnyPointerType() &&
       !T->isReferenceType() && !T->isMemberPointerType()) {
     Diag(AttrLoc, diag::warn_attribute_pointer_or_reference_only)
-      << &TmpAttr << T << D->getSourceRange();
+        << CI << T << D->getSourceRange();
     return;
   }
 
@@ -4843,7 +4862,8 @@ void Sema::AddModeAttr(Decl *D, const AttributeCommonInfo &CI,
 
   if (NewElemTy.isNull()) {
     // Only emit diagnostic on host for 128-bit mode attribute
-    if (!(DestWidth == 128 && getLangOpts().CUDAIsDevice))
+    if (!(DestWidth == 128 &&
+          (getLangOpts().CUDAIsDevice || getLangOpts().SYCLIsDevice)))
       Diag(AttrLoc, diag::err_machine_mode) << 1 /*Unsupported*/ << Name;
     return;
   }
@@ -5684,13 +5704,17 @@ static void handleArgumentWithTypeTagAttr(Sema &S, Decl *D,
   }
 
   ParamIdx ArgumentIdx;
-  if (!S.checkFunctionOrMethodParameterIndex(D, AL, 2, AL.getArgAsExpr(1),
-                                             ArgumentIdx))
+  if (!S.checkFunctionOrMethodParameterIndex(
+          D, AL, 2, AL.getArgAsExpr(1), ArgumentIdx,
+          /*CanIndexImplicitThis=*/false,
+          /*CanIndexVariadicArguments=*/true))
     return;
 
   ParamIdx TypeTagIdx;
-  if (!S.checkFunctionOrMethodParameterIndex(D, AL, 3, AL.getArgAsExpr(2),
-                                             TypeTagIdx))
+  if (!S.checkFunctionOrMethodParameterIndex(
+          D, AL, 3, AL.getArgAsExpr(2), TypeTagIdx,
+          /*CanIndexImplicitThis=*/false,
+          /*CanIndexVariadicArguments=*/true))
     return;
 
   bool IsPointer = AL.getAttrName()->getName() == "pointer_with_type_tag";
@@ -5754,9 +5778,10 @@ static void handlePatchableFunctionEntryAttr(Sema &S, Decl *D,
     return;
   }
   uint32_t Count = 0, Offset = 0;
+  StringRef Section;
   if (!S.checkUInt32Argument(AL, AL.getArgAsExpr(0), Count, 0, true))
     return;
-  if (AL.getNumArgs() == 2) {
+  if (AL.getNumArgs() >= 2) {
     Expr *Arg = AL.getArgAsExpr(1);
     if (!S.checkUInt32Argument(AL, Arg, Offset, 1, true))
       return;
@@ -5766,8 +5791,25 @@ static void handlePatchableFunctionEntryAttr(Sema &S, Decl *D,
       return;
     }
   }
-  D->addAttr(::new (S.Context)
-                 PatchableFunctionEntryAttr(S.Context, AL, Count, Offset));
+  if (AL.getNumArgs() == 3) {
+    SourceLocation LiteralLoc;
+    if (!S.checkStringLiteralArgumentAttr(AL, 2, Section, &LiteralLoc))
+      return;
+    if (llvm::Error E = S.isValidSectionSpecifier(Section)) {
+      S.Diag(LiteralLoc,
+             diag::err_attribute_patchable_function_entry_invalid_section)
+          << toString(std::move(E));
+      return;
+    }
+    if (Section.empty()) {
+      S.Diag(LiteralLoc,
+             diag::err_attribute_patchable_function_entry_invalid_section)
+          << "section must not be empty";
+      return;
+    }
+  }
+  D->addAttr(::new (S.Context) PatchableFunctionEntryAttr(S.Context, AL, Count,
+                                                          Offset, Section));
 }
 
 static void handleBuiltinAliasAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
@@ -7443,12 +7485,6 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     break;
 
   // Thread safety attributes:
-  case ParsedAttr::AT_AssertExclusiveLock:
-    handleAssertExclusiveLockAttr(S, D, AL);
-    break;
-  case ParsedAttr::AT_AssertSharedLock:
-    handleAssertSharedLockAttr(S, D, AL);
-    break;
   case ParsedAttr::AT_PtGuardedVar:
     handlePtGuardedVarAttr(S, D, AL);
     break;
@@ -7464,17 +7500,11 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
   case ParsedAttr::AT_PtGuardedBy:
     handlePtGuardedByAttr(S, D, AL);
     break;
-  case ParsedAttr::AT_ExclusiveTrylockFunction:
-    handleExclusiveTrylockFunctionAttr(S, D, AL);
-    break;
   case ParsedAttr::AT_LockReturned:
     handleLockReturnedAttr(S, D, AL);
     break;
   case ParsedAttr::AT_LocksExcluded:
     handleLocksExcludedAttr(S, D, AL);
-    break;
-  case ParsedAttr::AT_SharedTrylockFunction:
-    handleSharedTrylockFunctionAttr(S, D, AL);
     break;
   case ParsedAttr::AT_AcquiredBefore:
     handleAcquiredBeforeAttr(S, D, AL);

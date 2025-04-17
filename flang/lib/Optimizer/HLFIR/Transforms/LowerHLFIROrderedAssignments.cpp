@@ -1277,11 +1277,13 @@ void OrderedAssignmentRewriter::saveNonVectorSubscriptedAddress(
         [&] { temp = insertSavedEntity(region, fir::factory::SSARegister{}); });
   else
     doBeforeLoopNest([&] {
-      if (var.isMutableBox())
-        temp =
-            insertSavedEntity(region, fir::factory::AnyDescriptorAddressStack{
-                                          loc, builder, var.getType()});
+      if (var.isMutableBox() || var.isProcedure() || var.isProcedurePointer())
+        // Store single C pointer to entity.
+        temp = insertSavedEntity(
+            region, fir::factory::AnyAddressStack{loc, builder, var.getType()});
       else
+        // Store the base address and dynamic shape/length/type information
+        // as descriptor.
         temp = insertSavedEntity(region, fir::factory::AnyVariableStack{
                                              loc, builder, var.getType()});
     });

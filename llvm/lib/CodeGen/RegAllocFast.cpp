@@ -391,6 +391,8 @@ private:
   bool mayLiveOut(Register VirtReg);
   bool mayLiveIn(Register VirtReg);
 
+  bool mayBeSpillFromInlineAsmBr(const MachineInstr &MI) const;
+
   void dumpState() const;
 };
 
@@ -489,6 +491,21 @@ static bool dominates(InstrPosIndexes &PosIndexes, const MachineInstr &A,
   if (LLVM_UNLIKELY(PosIndexes.getIndex(B, IndexB)))
     PosIndexes.getIndex(A, IndexA);
   return IndexA < IndexB;
+}
+
+/// Returns true if \p MI is a spill of a live-in physical register in a block
+/// targeted by an INLINEASM_BR. Such spills must precede reloads of live-in
+/// virtual registers, so that we do not reload from an uninitialized stack
+/// slot.
+bool RegAllocFastImpl::mayBeSpillFromInlineAsmBr(const MachineInstr &MI) const {
+  int FI;
+  auto *MBB = MI.getParent();
+  if (MBB->isInlineAsmBrIndirectTarget() && TII->isStoreToStackSlot(MI, FI) &&
+      MFI->isSpillSlotObjectIndex(FI))
+    for (const auto &Op : MI.operands())
+      if (Op.isReg() && MBB->isLiveIn(Op.getReg()))
+        return true;
+  return false;
 }
 
 /// Returns false if \p VirtReg is known to not live out of the current block.
@@ -648,8 +665,8 @@ MachineBasicBlock::iterator RegAllocFastImpl::getMBBBeginInsertionPoint(
       continue;
     }
 
-    // Most reloads should be inserted after prolog instructions.
-    if (!TII->isBasicBlockPrologue(*I))
+    // Skip prologues and inlineasm_br spills to place reloads afterwards.
+    if (!TII->isBasicBlockPrologue(*I) && !mayBeSpillFromInlineAsmBr(*I))
       break;
 
     // However if a prolog instruction reads a register that needs to be
@@ -736,6 +753,8 @@ bool RegAllocFastImpl::displacePhysReg(MachineInstr &MI, MCRegister PhysReg) {
       assert(LRI != LiveVirtRegs.end() && "datastructures in sync");
       MachineBasicBlock::iterator ReloadBefore =
           std::next((MachineBasicBlock::iterator)MI.getIterator());
+      while (mayBeSpillFromInlineAsmBr(*ReloadBefore))
+        ++ReloadBefore;
       reload(ReloadBefore, VirtReg, LRI->PhysReg);
 
       setPhysRegState(LRI->PhysReg, regFree);

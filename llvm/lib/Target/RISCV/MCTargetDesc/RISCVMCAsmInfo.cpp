@@ -18,11 +18,6 @@
 #include "llvm/TargetParser/Triple.h"
 using namespace llvm;
 
-const MCAsmInfo::VariantKindDesc variantKindDescs[] = {
-    {MCSymbolRefExpr::VK_GOTPCREL, "GOTPCREL"},
-    {MCSymbolRefExpr::VK_PLT, "PLT"},
-};
-
 void RISCVMCAsmInfo::anchor() {}
 
 RISCVMCAsmInfo::RISCVMCAsmInfo(const Triple &TT) {
@@ -31,10 +26,9 @@ RISCVMCAsmInfo::RISCVMCAsmInfo(const Triple &TT) {
   AlignmentIsInBytes = false;
   SupportsDebugInformation = true;
   ExceptionsType = ExceptionHandling::DwarfCFI;
+  UseAtForSpecifier = false;
   Data16bitsDirective = "\t.half\t";
   Data32bitsDirective = "\t.word\t";
-
-  initializeVariantKinds(variantKindDescs);
 }
 
 const MCExpr *RISCVMCAsmInfo::getExprForFDESymbol(const MCSymbol *Sym,
@@ -50,5 +44,5 @@ const MCExpr *RISCVMCAsmInfo::getExprForFDESymbol(const MCSymbol *Sym,
   MCContext &Ctx = Streamer.getContext();
   const MCExpr *ME = MCSymbolRefExpr::create(Sym, Ctx);
   assert(Encoding & dwarf::DW_EH_PE_sdata4 && "Unexpected encoding");
-  return RISCVMCExpr::create(ME, RISCVMCExpr::VK_RISCV_32_PCREL, Ctx);
+  return RISCVMCExpr::create(ME, RISCVMCExpr::VK_32_PCREL, Ctx);
 }

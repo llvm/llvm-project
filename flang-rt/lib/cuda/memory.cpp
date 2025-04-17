@@ -8,6 +8,8 @@
 
 #include "flang/Runtime/CUDA/memory.h"
 #include "flang-rt/runtime/assign-impl.h"
+#include "flang-rt/runtime/descriptor.h"
+#include "flang-rt/runtime/environment.h"
 #include "flang-rt/runtime/terminator.h"
 #include "flang/Runtime/CUDA/common.h"
 #include "flang/Runtime/CUDA/descriptor.h"
@@ -25,7 +27,12 @@ void *RTDEF(CUFMemAlloc)(
   void *ptr = nullptr;
   if (bytes != 0) {
     if (type == kMemTypeDevice) {
-      CUDA_REPORT_IF_ERROR(cudaMalloc((void **)&ptr, bytes));
+      if (Fortran::runtime::executionEnvironment.cudaDeviceIsManaged) {
+        CUDA_REPORT_IF_ERROR(
+            cudaMallocManaged((void **)&ptr, bytes, cudaMemAttachGlobal));
+      } else {
+        CUDA_REPORT_IF_ERROR(cudaMalloc((void **)&ptr, bytes));
+      }
     } else if (type == kMemTypeManaged || type == kMemTypeUnified) {
       CUDA_REPORT_IF_ERROR(
           cudaMallocManaged((void **)&ptr, bytes, cudaMemAttachGlobal));
@@ -98,8 +105,21 @@ void RTDECL(CUFDataTransferDescDesc)(Descriptor *dstDesc, Descriptor *srcDesc,
   } else {
     terminator.Crash("host to host copy not supported");
   }
-  Fortran::runtime::Assign(
-      *dstDesc, *srcDesc, terminator, MaybeReallocate, memmoveFct);
+  if ((srcDesc->rank() > 0) && (dstDesc->Elements() < srcDesc->Elements())) {
+    // Special case when rhs is bigger than lhs and both are contiguous arrays.
+    // In this case we do a simple ptr to ptr transfer with the size of lhs.
+    // This is be allowed in the reference compiler and it avoids error
+    // triggered in the Assign runtime function used for the main case below.
+    if (!srcDesc->IsContiguous() || !dstDesc->IsContiguous())
+      terminator.Crash("Unsupported data transfer: mismatching element counts "
+                       "with non-contiguous arrays");
+    RTNAME(CUFDataTransferPtrPtr)(dstDesc->raw().base_addr,
+        srcDesc->raw().base_addr, dstDesc->Elements() * dstDesc->ElementBytes(),
+        mode, sourceFile, sourceLine);
+  } else {
+    Fortran::runtime::Assign(
+        *dstDesc, *srcDesc, terminator, MaybeReallocate, memmoveFct);
+  }
 }
 
 void RTDECL(CUFDataTransferCstDesc)(Descriptor *dstDesc, Descriptor *srcDesc,

@@ -392,15 +392,13 @@ def AArch64splice : SDNode<"AArch64ISD::SPLICE", SDT_AArch64Arith>;
 
 def reinterpret_cast : SDNode<"AArch64ISD::REINTERPRET_CAST", SDTUnaryOp>;
 
+let HasOneUse = 1 in
 def AArch64mul_p_oneuse : PatFrag<(ops node:$pred, node:$src1, node:$src2),
-                                  (AArch64mul_p node:$pred, node:$src1, node:$src2), [{
-  return N->hasOneUse();
-}]>;
+                                  (AArch64mul_p node:$pred, node:$src1, node:$src2)>;
 
+let HasOneUse = 1 in
 def AArch64fmul_p_oneuse : PatFrag<(ops node:$pred, node:$src1, node:$src2),
-                                   (AArch64fmul_p node:$pred, node:$src1, node:$src2), [{
-  return N->hasOneUse();
-}]>;
+                                   (AArch64fmul_p node:$pred, node:$src1, node:$src2)>;
 
 
 def AArch64fabd_p : PatFrags<(ops node:$pg, node:$op1, node:$op2),
@@ -982,7 +980,7 @@ let Predicates = [HasSVE_or_SME] in {
   def MOVPRFX_ZZ : sve_int_bin_cons_misc_0_c<0b00000001, "movprfx", ZPRAny>;
 } // End HasSVE_or_SME
 
-let Predicates = [HasNonStreamingSVE_or_SME2p2] in {
+let Predicates = [HasNonStreamingSVE_or_SSVE_FEXPA] in {
   defm FEXPA_ZZ : sve_int_bin_cons_misc_0_c_fexpa<"fexpa", int_aarch64_sve_fexpa_x>;
 } // End HasSVE
 
@@ -2679,6 +2677,29 @@ let Predicates = [HasSVE_or_SME] in {
               (DECD_ZPiI ZPR:$op, 31, $imm)>;
   }
 
+  // Some INCB/DECB forms have better latency and throughput than ADDVL, so we
+  // prefer using them here.
+  // We could extend this to other INC/DEC (scalar) instructions.
+  let Predicates = [HasSVE_or_SME, UseScalarIncVL, HasFastIncVL], AddedComplexity = 6 in {
+    foreach imm = [ 1, 2, 4 ] in {
+      def : Pat<(add GPR64:$op, (vscale !mul(imm, 16))),
+                (INCB_XPiI GPR64:$op, 31, imm)>;
+
+      def : Pat<(add GPR32:$op, (i32 (trunc (vscale !mul(imm, 16))))),
+                (EXTRACT_SUBREG (INCB_XPiI (INSERT_SUBREG (IMPLICIT_DEF),
+                                            GPR32:$op, sub_32), 31, imm),
+                                 sub_32)>;
+
+      def : Pat<(add GPR64:$op, (vscale !mul(imm, -16))),
+                (DECB_XPiI GPR64:$op, 31, imm)>;
+
+      def : Pat<(add GPR32:$op, (i32 (trunc (vscale !mul(imm, -16))))),
+                (EXTRACT_SUBREG (DECB_XPiI (INSERT_SUBREG (IMPLICIT_DEF),
+                                            GPR32:$op, sub_32), 31, imm),
+                                 sub_32)>;
+      }
+  }
+
   let Predicates = [HasSVE_or_SME, UseScalarIncVL], AddedComplexity = 5 in {
     def : Pat<(add GPR64:$op, (vscale (sve_rdvl_imm i32:$imm))),
               (ADDVL_XXI GPR64:$op, $imm)>;
@@ -3476,6 +3497,22 @@ let Predicates = [HasSVE_or_SME] in {
   def : Pat<(f64 (vector_extract nxv2f64:$Zs, (i64 0))),
             (EXTRACT_SUBREG ZPR:$Zs, dsub)>;
   }
+
+  multiclass sve_insert_extract_elt<ValueType VT, ValueType VTScalar, Instruction DUP, Operand IdxTy> {
+    // NOP pattern (needed to avoid pointless DUPs being added by the second pattern).
+    def : Pat<(VT (vector_insert undef,
+                  (VTScalar (vector_extract VT:$vec, (i64 0))), (i64 0))),
+              (VT $vec)>;
+
+    def : Pat<(VT (vector_insert undef,
+                    (VTScalar (vector_extract VT:$vec, (i64 IdxTy:$Idx))), (i64 0))),
+              (DUP ZPR:$vec, IdxTy:$Idx)>;
+  }
+
+  defm : sve_insert_extract_elt<nxv16i8, i32, DUP_ZZI_B, sve_elm_idx_extdup_b>;
+  defm : sve_insert_extract_elt<nxv8i16, i32, DUP_ZZI_H, sve_elm_idx_extdup_h>;
+  defm : sve_insert_extract_elt<nxv4i32, i32, DUP_ZZI_S, sve_elm_idx_extdup_s>;
+  defm : sve_insert_extract_elt<nxv2i64, i64, DUP_ZZI_D, sve_elm_idx_extdup_d>;
 
   multiclass sve_predicated_add<SDNode extend, int value> {
     def : Pat<(nxv16i8 (add ZPR:$op, (extend nxv16i1:$pred))),

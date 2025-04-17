@@ -16,6 +16,7 @@
 #define LLVM_SUPPORT_ERROROR_H
 
 #include <cassert>
+#include <functional> // for std::reference_wrapper
 #include <system_error>
 #include <type_traits>
 #include <utility>

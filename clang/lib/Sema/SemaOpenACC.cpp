@@ -16,6 +16,8 @@
 #include "clang/AST/StmtOpenACC.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/OpenACCKinds.h"
+#include "clang/Basic/SourceManager.h"
+#include "clang/Sema/Scope.h"
 #include "clang/Sema/Sema.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Casting.h"
@@ -283,7 +285,8 @@ void SemaOpenACC::AssociatedStmtRAII::SetTileInfoBeforeAssociatedStmt(
   OpenACCTileClause *TileClause = cast<OpenACCTileClause>(*TileClauseItr);
   SemaRef.TileInfo.ActiveTile = TileClause;
   SemaRef.TileInfo.TileDepthSatisfied = false;
-  SemaRef.TileInfo.CurTileCount = TileClause->getSizeExprs().size();
+  SemaRef.TileInfo.CurTileCount =
+      static_cast<unsigned>(TileClause->getSizeExprs().size());
   SemaRef.TileInfo.DirectiveKind = DirKind;
 }
 
@@ -909,7 +912,7 @@ void SemaOpenACC::ForStmtBeginHelper(SourceLocation ForLoc,
            diag::note_acc_active_clause_here)
           << OpenACCClauseKind::Tile;
     } else {
-      --(*TileInfo.CurTileCount);
+      TileInfo.CurTileCount = *TileInfo.CurTileCount - 1;
       // Once we've hit zero here, we know we have deep enough 'for' loops to
       // get to the bottom.
       if (*TileInfo.CurTileCount == 0)
@@ -1454,9 +1457,11 @@ FunctionDecl *getFunctionFromRoutineName(Expr *RoutineName) {
     return nullptr;
   RoutineName = RoutineName->IgnoreParenImpCasts();
   if (isa<RecoveryExpr>(RoutineName)) {
+    // There is nothing we can do here, this isn't a function we can count on.
     return nullptr;
   } else if (isa<DependentScopeDeclRefExpr, CXXDependentScopeMemberExpr>(
                  RoutineName)) {
+    // The lookup is dependent, so we'll have to figure this out later.
     return nullptr;
   } else if (auto *DRE = dyn_cast<DeclRefExpr>(RoutineName)) {
     ValueDecl *VD = DRE->getDecl();
@@ -1466,20 +1471,25 @@ FunctionDecl *getFunctionFromRoutineName(Expr *RoutineName) {
 
     // Allow lambdas.
     if (auto *VarD = dyn_cast<VarDecl>(VD)) {
-      if (auto *RD = VarD->getType()->getAsCXXRecordDecl()) {
-        if (RD->isGenericLambda())
+      QualType VarDTy = VarD->getType();
+      if (!VarDTy.isNull()) {
+        if (auto *RD = VarDTy->getAsCXXRecordDecl()) {
+          if (RD->isGenericLambda())
+            return nullptr;
+          if (RD->isLambda())
+            return RD->getLambdaCallOperator();
+        } else if (VarDTy->isDependentType()) {
+          // We don't really know what this is going to be.
           return nullptr;
-        if (RD->isLambda())
-          return RD->getLambdaCallOperator();
+        }
       }
+      return nullptr;
+    } else if (isa<OverloadExpr>(RoutineName)) {
+      return nullptr;
     }
-    return nullptr;
-  } else if (isa<OverloadExpr>(RoutineName)) {
-    return nullptr;
   }
   return nullptr;
 }
-
 } // namespace
 
 ExprResult SemaOpenACC::ActOnRoutineName(Expr *RoutineName) {
@@ -1502,18 +1512,21 @@ ExprResult SemaOpenACC::ActOnRoutineName(Expr *RoutineName) {
 
     // Allow lambdas.
     if (const auto *VarD = dyn_cast<VarDecl>(VD)) {
-      if (const auto *RD = VarD->getType()->getAsCXXRecordDecl()) {
-        if (RD->isGenericLambda()) {
-          Diag(RoutineName->getBeginLoc(), diag::err_acc_routine_overload_set)
-              << RoutineName;
-          return ExprError();
-        }
-        if (RD->isLambda())
+      QualType VarDTy = VarD->getType();
+      if (!VarDTy.isNull()) {
+        if (const auto *RD = VarDTy->getAsCXXRecordDecl()) {
+          if (RD->isGenericLambda()) {
+            Diag(RoutineName->getBeginLoc(), diag::err_acc_routine_overload_set)
+                << RoutineName;
+            return ExprError();
+          }
+          if (RD->isLambda())
+            return RoutineName;
+        } else if (VarDTy->isDependentType()) {
+          // If this is a dependent variable, it might be a lambda. So we just
+          // accept this and catch it next time.
           return RoutineName;
-      } else if (VarD->getType()->isDependentType()) {
-        // If this is a dependent variable, it might be a lambda. So we just
-        // accept this and catch it next time.
-        return RoutineName;
+        }
       }
     }
 
@@ -1535,17 +1548,103 @@ ExprResult SemaOpenACC::ActOnRoutineName(Expr *RoutineName) {
   return ExprError();
 }
 void SemaOpenACC::ActOnVariableDeclarator(VarDecl *VD) {
-  if (!VD->isStaticLocal())
+  if (!VD->isStaticLocal() || !getLangOpts().OpenACC)
     return;
 
-  if (const auto *FD = dyn_cast<FunctionDecl>(getCurContext())) {
-    if (const auto *A = FD->getAttr<OpenACCRoutineAnnotAttr>()) {
+  // This cast should be safe, since a static-local can only happen in a
+  // function declaration.
+  auto *ContextDecl = cast<FunctionDecl>(getCurContext());
+
+  // OpenACC 3.3 2.15:
+  // In C and C++, function static variables are not supported in functions to
+  // which a routine directive applies.
+  for (const auto *A : ContextDecl->attrs()) {
+    if (isa<OpenACCRoutineDeclAttr, OpenACCRoutineAnnotAttr>(A)) {
       Diag(VD->getBeginLoc(), diag::err_acc_magic_static_in_routine);
       Diag(A->getLocation(), diag::note_acc_construct_here)
           << OpenACCDirectiveKind::Routine;
+      return;
     }
-    MagicStaticLocs.insert({FD, VD->getBeginLoc()});
   }
+
+  MagicStaticLocs.insert({ContextDecl->getCanonicalDecl(), VD->getBeginLoc()});
+}
+void SemaOpenACC::CheckLastRoutineDeclNameConflict(const NamedDecl *ND) {
+  // OpenACC 3.3 A.3.4
+  // When a procedure with that name is in scope and it is not the same
+  // procedure as the immediately following procedure declaration or
+  // definition, the resolution of the name can be confusing.  Implementations
+  // should then issue a compile-time warning diagnostic even though the
+  // application is conforming.
+
+  // If we haven't created one, also can't diagnose.
+  if (!LastRoutineDecl)
+    return;
+
+  // If the currently created function doesn't have a name, we can't diagnose on
+  // a match.
+  if (!ND->getDeclName().isIdentifier())
+    return;
+
+  // If the two are in different decl contexts, it doesn't make sense to
+  // diagnose.
+  if (LastRoutineDecl->getDeclContext() != ND->getLexicalDeclContext())
+    return;
+
+  // If we don't have a referenced thing yet, we can't diagnose.
+  FunctionDecl *RoutineTarget =
+      getFunctionFromRoutineName(LastRoutineDecl->getFunctionReference());
+  if (!RoutineTarget)
+    return;
+
+  // If the Routine target doesn't have a name, we can't diagnose.
+  if (!RoutineTarget->getDeclName().isIdentifier())
+    return;
+
+  // Of course don't diagnose if the names don't match.
+  if (ND->getName() != RoutineTarget->getName())
+    return;
+
+  long NDLine = SemaRef.SourceMgr.getSpellingLineNumber(ND->getBeginLoc());
+  long LastLine =
+      SemaRef.SourceMgr.getSpellingLineNumber(LastRoutineDecl->getBeginLoc());
+
+  // Do some line-number math to make sure they are within a line of eachother.
+  // Comments or newlines can be inserted to clarify intent.
+  if (NDLine - LastLine > 1)
+    return;
+
+  // Don't warn if it actually DOES apply to this function via redecls.
+  if (ND->getCanonicalDecl() == RoutineTarget->getCanonicalDecl())
+    return;
+
+  Diag(LastRoutineDecl->getFunctionReference()->getBeginLoc(),
+       diag::warn_acc_confusing_routine_name);
+  Diag(RoutineTarget->getBeginLoc(), diag::note_previous_decl) << ND;
+}
+
+void SemaOpenACC::ActOnVariableInit(VarDecl *VD, QualType InitType) {
+  if (!VD || !getLangOpts().OpenACC || InitType.isNull())
+    return;
+
+  // To avoid double-diagnostic, just diagnose this during instantiation.  We'll
+  // get 1 warning per instantiation, but this permits us to be more sensible
+  // for cases where the lookup is confusing.
+  if (VD->getLexicalDeclContext()->isDependentContext())
+    return;
+
+  const auto *RD = InitType->getAsCXXRecordDecl();
+  // If this isn't a lambda, no sense in diagnosing.
+  if (!RD || !RD->isLambda())
+    return;
+
+  CheckLastRoutineDeclNameConflict(VD);
+}
+
+void SemaOpenACC::ActOnFunctionDeclarator(FunctionDecl *FD) {
+  if (!FD || !getLangOpts().OpenACC)
+    return;
+  CheckLastRoutineDeclNameConflict(FD);
 }
 
 bool SemaOpenACC::ActOnStartStmtDirective(
@@ -1555,7 +1654,7 @@ bool SemaOpenACC::ActOnStartStmtDirective(
   // Declaration directives an appear in a statement location, so call into that
   // function here.
   if (K == OpenACCDirectiveKind::Declare || K == OpenACCDirectiveKind::Routine)
-    return ActOnStartDeclDirective(K, StartLoc);
+    return ActOnStartDeclDirective(K, StartLoc, Clauses);
 
   SemaRef.DiscardCleanupsInEvaluationContext();
   SemaRef.PopExpressionEvaluationContext();
@@ -1734,9 +1833,8 @@ StmtResult SemaOpenACC::ActOnEndStmtDirective(
                                           EndLoc, Clauses);
   }
   case OpenACCDirectiveKind::Atomic: {
-    assert(Clauses.empty() && "Atomic doesn't allow clauses");
     return OpenACCAtomicConstruct::Create(
-        getASTContext(), StartLoc, DirLoc, AtomicKind, EndLoc,
+        getASTContext(), StartLoc, DirLoc, AtomicKind, EndLoc, Clauses,
         AssocStmt.isUsable() ? AssocStmt.get() : nullptr);
   }
   case OpenACCDirectiveKind::Cache: {
@@ -1746,12 +1844,12 @@ StmtResult SemaOpenACC::ActOnEndStmtDirective(
                                          EndLoc);
   }
   case OpenACCDirectiveKind::Routine:
+    llvm_unreachable("routine shouldn't handled here");
   case OpenACCDirectiveKind::Declare: {
     // Declare and routine arei declaration directives, but can be used here as
     // long as we wrap it in a DeclStmt.  So make sure we do that here.
-    DeclGroupRef DR = ActOnEndDeclDirective(
-        K, StartLoc, DirLoc, LParenLoc,
-        (Exprs.empty() ? nullptr : Exprs.front()), RParenLoc, EndLoc, Clauses);
+    DeclGroupRef DR = ActOnEndDeclDirective(K, StartLoc, DirLoc, LParenLoc,
+                                            RParenLoc, EndLoc, Clauses);
 
     return SemaRef.ActOnDeclStmt(DeclGroupPtrTy::make(DR), StartLoc, EndLoc);
   }
@@ -1832,21 +1930,36 @@ StmtResult SemaOpenACC::ActOnAssociatedStmt(
   llvm_unreachable("Invalid associated statement application");
 }
 
-bool SemaOpenACC::ActOnStartDeclDirective(OpenACCDirectiveKind K,
-                                          SourceLocation StartLoc) {
+bool SemaOpenACC::ActOnStartDeclDirective(
+    OpenACCDirectiveKind K, SourceLocation StartLoc,
+    ArrayRef<const OpenACCClause *> Clauses) {
   // OpenCC3.3 2.1 (line 889)
   // A program must not depend on the order of evaluation of expressions in
   // clause arguments or on any side effects of the evaluations.
   SemaRef.DiscardCleanupsInEvaluationContext();
   SemaRef.PopExpressionEvaluationContext();
 
+  if (K == OpenACCDirectiveKind::Routine &&
+      llvm::find_if(Clauses,
+                    llvm::IsaPred<OpenACCGangClause, OpenACCWorkerClause,
+                                  OpenACCVectorClause, OpenACCSeqClause>) ==
+          Clauses.end())
+    return Diag(StartLoc, diag::err_acc_construct_one_clause_of)
+           << K
+           << GetListOfClauses({
+                  OpenACCClauseKind::Gang,
+                  OpenACCClauseKind::Worker,
+                  OpenACCClauseKind::Vector,
+                  OpenACCClauseKind::Seq,
+              });
+
   return diagnoseConstructAppertainment(*this, K, StartLoc, /*IsStmt=*/false);
 }
 
 DeclGroupRef SemaOpenACC::ActOnEndDeclDirective(
     OpenACCDirectiveKind K, SourceLocation StartLoc, SourceLocation DirLoc,
-    SourceLocation LParenLoc, Expr *FuncRef, SourceLocation RParenLoc,
-    SourceLocation EndLoc, ArrayRef<OpenACCClause *> Clauses) {
+    SourceLocation LParenLoc, SourceLocation RParenLoc, SourceLocation EndLoc,
+    ArrayRef<OpenACCClause *> Clauses) {
   switch (K) {
   default:
   case OpenACCDirectiveKind::Invalid:
@@ -1867,37 +1980,257 @@ DeclGroupRef SemaOpenACC::ActOnEndDeclDirective(
     getCurContext()->addDecl(DeclareDecl);
     return DeclGroupRef{DeclareDecl};
   }
-  case OpenACCDirectiveKind::Routine: {
-    // For now, diagnose that we don't support argument-less routine yet.
-    if (LParenLoc.isInvalid()) {
-      Diag(DirLoc, diag::warn_acc_routine_unimplemented);
-      return DeclGroupRef{};
-    }
-
-    auto *RoutineDecl = OpenACCRoutineDecl::Create(
-        getASTContext(), getCurContext(), StartLoc, DirLoc, LParenLoc, FuncRef,
-        RParenLoc, EndLoc, Clauses);
-    RoutineDecl->setAccess(AS_public);
-    getCurContext()->addDecl(RoutineDecl);
-
-    // OpenACC 3.3 2.15:
-    // In C and C++, function static variables are not supported in functions to
-    // which a routine directive applies.
-    if (auto *FD = getFunctionFromRoutineName(FuncRef)) {
-      if (auto Itr = MagicStaticLocs.find(FD); Itr != MagicStaticLocs.end()) {
-        Diag(Itr->second, diag::err_acc_magic_static_in_routine);
-        Diag(DirLoc, diag::note_acc_construct_here)
-            << OpenACCDirectiveKind::Routine;
-      }
-      FD->addAttr(OpenACCRoutineAnnotAttr::Create(getASTContext(), DirLoc));
-    }
-
-    return DeclGroupRef{RoutineDecl};
-  }
+  case OpenACCDirectiveKind::Routine:
+    llvm_unreachable("routine shouldn't be handled here");
   }
   llvm_unreachable("unhandled case in directive handling?");
 }
 
+namespace {
+// Given the decl on the next line, figure out if it is one that is acceptable
+// to `routine`, or looks like the sort of decl we should be diagnosing against.
+FunctionDecl *LegalizeNextParsedDecl(Decl *D) {
+  if (!D)
+    return nullptr;
+
+  // Functions are per-fact acceptable as-is.
+  if (auto *FD = dyn_cast<FunctionDecl>(D))
+    return FD;
+
+  // Function templates are functions, so attach to the templated decl.
+  if (auto *FTD = dyn_cast<FunctionTemplateDecl>(D))
+    return FTD->getTemplatedDecl();
+
+  if (auto *FD = dyn_cast<FieldDecl>(D)) {
+    auto *RD =
+        FD->getType().isNull() ? nullptr : FD->getType()->getAsCXXRecordDecl();
+
+    if (RD && RD->isGenericLambda())
+      return RD->getDependentLambdaCallOperator()->getTemplatedDecl();
+    if (RD && RD->isLambda())
+      return RD->getLambdaCallOperator();
+  }
+  // VarDecl we can look at the init instead of the type of the variable, this
+  // makes us more tolerant of the 'auto' deduced type.
+  if (auto *VD = dyn_cast<VarDecl>(D)) {
+    Expr *Init = VD->getInit();
+    if (!Init || Init->getType().isNull())
+      return nullptr;
+
+    const auto *RD = Init->getType()->getAsCXXRecordDecl();
+    if (RD && RD->isGenericLambda())
+      return RD->getDependentLambdaCallOperator()->getTemplatedDecl();
+    if (RD && RD->isLambda())
+      return RD->getLambdaCallOperator();
+
+    // FIXME: We could try harder in the case where this is a dependent thing
+    // that ends up being a lambda (that is, the init is an unresolved lookup
+    // expr), but we can't attach to the call/lookup expr. If we instead try to
+    // attach to the VarDecl, when we go to instantiate it, attributes are
+    // instantiated before the init, so we can't actually see the type at any
+    // point where it would be relevant/able to be checked. We could perhaps do
+    // some sort of 'after-init' instantiation/checking here, but that doesn't
+    // seem valuable for a situation that other compilers don't handle.
+  }
+  return nullptr;
+}
+
+void CreateRoutineDeclAttr(SemaOpenACC &SemaRef, SourceLocation DirLoc,
+                           ArrayRef<const OpenACCClause *> Clauses,
+                           ValueDecl *AddTo) {
+  OpenACCRoutineDeclAttr *A =
+      OpenACCRoutineDeclAttr::Create(SemaRef.getASTContext(), DirLoc);
+  A->Clauses.assign(Clauses.begin(), Clauses.end());
+  AddTo->addAttr(A);
+}
+} // namespace
+
+// Variant that adds attributes, because this is the unnamed case.
+void SemaOpenACC::CheckRoutineDecl(SourceLocation DirLoc,
+                                   ArrayRef<const OpenACCClause *> Clauses,
+                                   Decl *NextParsedDecl) {
+
+  FunctionDecl *NextParsedFDecl = LegalizeNextParsedDecl(NextParsedDecl);
+
+  if (!NextParsedFDecl) {
+    // If we don't have a valid 'next thing', just diagnose.
+    SemaRef.Diag(DirLoc, diag::err_acc_decl_for_routine);
+    return;
+  }
+
+  // OpenACC 3.3 2.15:
+  // In C and C++, function static variables are not supported in functions to
+  // which a routine directive applies.
+  if (auto Itr = MagicStaticLocs.find(NextParsedFDecl->getCanonicalDecl());
+      Itr != MagicStaticLocs.end()) {
+    Diag(Itr->second, diag::err_acc_magic_static_in_routine);
+    Diag(DirLoc, diag::note_acc_construct_here)
+        << OpenACCDirectiveKind::Routine;
+
+    return;
+  }
+
+  auto BindItr = llvm::find_if(Clauses, llvm::IsaPred<OpenACCBindClause>);
+  for (auto *A : NextParsedFDecl->attrs()) {
+    // OpenACC 3.3 2.15:
+    // If a procedure has a bind clause on both the declaration and definition
+    // than they both must bind to the same name.
+    if (auto *RA = dyn_cast<OpenACCRoutineDeclAttr>(A)) {
+      auto OtherBindItr =
+          llvm::find_if(RA->Clauses, llvm::IsaPred<OpenACCBindClause>);
+      if (OtherBindItr != RA->Clauses.end() &&
+          (*cast<OpenACCBindClause>(*BindItr)) !=
+              (*cast<OpenACCBindClause>(*OtherBindItr))) {
+        Diag((*BindItr)->getBeginLoc(), diag::err_acc_duplicate_unnamed_bind);
+        Diag((*OtherBindItr)->getEndLoc(), diag::note_acc_previous_clause_here);
+        return;
+      }
+    }
+
+    // OpenACC 3.3 2.15:
+    // A bind clause may not bind to a routine name that has a visible bind
+    // clause.
+    // We take the combo of these two 2.15 restrictions to mean that the
+    // 'declaration'/'definition' quote is an exception to this. So we're going
+    // to disallow mixing of the two types entirely.
+    if (auto *RA = dyn_cast<OpenACCRoutineAnnotAttr>(A);
+        RA && RA->getRange().getEnd().isValid()) {
+      Diag((*BindItr)->getBeginLoc(), diag::err_acc_duplicate_bind);
+      Diag(RA->getRange().getEnd(), diag::note_acc_previous_clause_here);
+      return;
+    }
+  }
+
+  CreateRoutineDeclAttr(*this, DirLoc, Clauses, NextParsedFDecl);
+}
+
+// Variant that adds a decl, because this is the named case.
+OpenACCRoutineDecl *SemaOpenACC::CheckRoutineDecl(
+    SourceLocation StartLoc, SourceLocation DirLoc, SourceLocation LParenLoc,
+    Expr *FuncRef, SourceLocation RParenLoc,
+    ArrayRef<const OpenACCClause *> Clauses, SourceLocation EndLoc) {
+  assert(LParenLoc.isValid());
+
+  if (FunctionDecl *FD = getFunctionFromRoutineName(FuncRef)) {
+    // OpenACC 3.3 2.15:
+    // In C and C++, function static variables are not supported in functions to
+    // which a routine directive applies.
+    if (auto Itr = MagicStaticLocs.find(FD->getCanonicalDecl());
+        Itr != MagicStaticLocs.end()) {
+      Diag(Itr->second, diag::err_acc_magic_static_in_routine);
+      Diag(DirLoc, diag::note_acc_construct_here)
+          << OpenACCDirectiveKind::Routine;
+
+      return nullptr;
+    }
+
+    // OpenACC 3.3 2.15:
+    // A bind clause may not bind to a routine name that has a visible bind
+    // clause.
+    auto BindItr = llvm::find_if(Clauses, llvm::IsaPred<OpenACCBindClause>);
+    SourceLocation BindLoc;
+    if (BindItr != Clauses.end()) {
+      BindLoc = (*BindItr)->getBeginLoc();
+      // Since this is adding a 'named' routine, we aren't allowed to combine
+      // with ANY other visible bind clause. Error if we see either.
+
+      for (auto *A : FD->attrs()) {
+        if (auto *RA = dyn_cast<OpenACCRoutineDeclAttr>(A)) {
+          auto OtherBindItr =
+              llvm::find_if(RA->Clauses, llvm::IsaPred<OpenACCBindClause>);
+          if (OtherBindItr != RA->Clauses.end()) {
+            Diag((*BindItr)->getBeginLoc(), diag::err_acc_duplicate_bind);
+            Diag((*OtherBindItr)->getEndLoc(),
+                 diag::note_acc_previous_clause_here);
+            return nullptr;
+          }
+        }
+
+        if (auto *RA = dyn_cast<OpenACCRoutineAnnotAttr>(A);
+            RA && RA->getRange().getEnd().isValid()) {
+          Diag((*BindItr)->getBeginLoc(), diag::err_acc_duplicate_bind);
+          Diag(RA->getRange().getEnd(), diag::note_acc_previous_clause_here);
+          return nullptr;
+        }
+      }
+    }
+
+    // Set the end-range to the 'bind' clause here, so we can look it up
+    // later.
+    auto *RAA = OpenACCRoutineAnnotAttr::CreateImplicit(getASTContext(),
+                                                        {DirLoc, BindLoc});
+    FD->addAttr(RAA);
+    // In case we are referencing not the 'latest' version, make sure we add
+    // the attribute to all declarations.
+    while (FD != FD->getMostRecentDecl()) {
+      FD = FD->getMostRecentDecl();
+      FD->addAttr(RAA);
+    }
+  }
+
+  LastRoutineDecl = OpenACCRoutineDecl::Create(
+      getASTContext(), getCurContext(), StartLoc, DirLoc, LParenLoc, FuncRef,
+      RParenLoc, EndLoc, Clauses);
+  LastRoutineDecl->setAccess(AS_public);
+  getCurContext()->addDecl(LastRoutineDecl);
+
+  return LastRoutineDecl;
+}
+
+DeclGroupRef SemaOpenACC::ActOnEndRoutineDeclDirective(
+    SourceLocation StartLoc, SourceLocation DirLoc, SourceLocation LParenLoc,
+    Expr *ReferencedFunc, SourceLocation RParenLoc,
+    ArrayRef<const OpenACCClause *> Clauses, SourceLocation EndLoc,
+    DeclGroupPtrTy NextDecl) {
+  assert((!ReferencedFunc || !NextDecl) &&
+         "Only one of these should be filled");
+
+  if (LParenLoc.isInvalid()) {
+    Decl *NextLineDecl = nullptr;
+    if (NextDecl && NextDecl.get().isSingleDecl())
+      NextLineDecl = NextDecl.get().getSingleDecl();
+
+    CheckRoutineDecl(DirLoc, Clauses, NextLineDecl);
+
+    return NextDecl.get();
+  }
+
+  return DeclGroupRef{CheckRoutineDecl(
+      StartLoc, DirLoc, LParenLoc, ReferencedFunc, RParenLoc, Clauses, EndLoc)};
+}
+
+StmtResult SemaOpenACC::ActOnEndRoutineStmtDirective(
+    SourceLocation StartLoc, SourceLocation DirLoc, SourceLocation LParenLoc,
+    Expr *ReferencedFunc, SourceLocation RParenLoc,
+    ArrayRef<const OpenACCClause *> Clauses, SourceLocation EndLoc,
+    Stmt *NextStmt) {
+  assert((!ReferencedFunc || !NextStmt) &&
+         "Only one of these should be filled");
+
+  if (LParenLoc.isInvalid()) {
+    Decl *NextLineDecl = nullptr;
+    if (NextStmt)
+      if (DeclStmt *DS = dyn_cast<DeclStmt>(NextStmt); DS && DS->isSingleDecl())
+        NextLineDecl = DS->getSingleDecl();
+
+    CheckRoutineDecl(DirLoc, Clauses, NextLineDecl);
+    return NextStmt;
+  }
+
+  DeclGroupRef DR{CheckRoutineDecl(StartLoc, DirLoc, LParenLoc, ReferencedFunc,
+                                   RParenLoc, Clauses, EndLoc)};
+  return SemaRef.ActOnDeclStmt(DeclGroupPtrTy::make(DR), StartLoc, EndLoc);
+}
+
+OpenACCRoutineDeclAttr *
+SemaOpenACC::mergeRoutineDeclAttr(const OpenACCRoutineDeclAttr &Old) {
+  OpenACCRoutineDeclAttr *New =
+      OpenACCRoutineDeclAttr::Create(getASTContext(), Old.getLocation());
+  // We should jsut be able to copy these, there isn't really any
+  // merging/inheriting we have to do, so no worry about doing a deep copy.
+  New->Clauses = Old.Clauses;
+  return New;
+}
 ExprResult
 SemaOpenACC::BuildOpenACCAsteriskSizeExpr(SourceLocation AsteriskLoc) {
   return OpenACCAsteriskSizeExpr::Create(getASTContext(), AsteriskLoc);

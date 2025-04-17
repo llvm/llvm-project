@@ -68,8 +68,8 @@ ModuleToObject::getOrCreateTargetMachine() {
   }
 
   // Create the target machine using the target.
-  targetMachine.reset(
-      target->createTargetMachine(triple, chip, features, {}, {}));
+  targetMachine.reset(target->createTargetMachine(llvm::Triple(triple), chip,
+                                                  features, {}, {}));
   if (!targetMachine)
     return std::nullopt;
   return targetMachine.get();

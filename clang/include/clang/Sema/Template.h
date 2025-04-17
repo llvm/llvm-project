@@ -569,7 +569,7 @@ enum class TemplateSubstitutionKind : char {
     : public DeclVisitor<TemplateDeclInstantiator, Decl *>
   {
     Sema &SemaRef;
-    Sema::ArgumentPackSubstitutionIndexRAII SubstIndex;
+    Sema::ArgPackSubstIndexRAII SubstIndex;
     DeclContext *Owner;
     const MultiLevelTemplateArgumentList &TemplateArgs;
     Sema::LateInstantiatedAttrVec* LateAttrs = nullptr;
@@ -595,8 +595,7 @@ enum class TemplateSubstitutionKind : char {
   public:
     TemplateDeclInstantiator(Sema &SemaRef, DeclContext *Owner,
                              const MultiLevelTemplateArgumentList &TemplateArgs)
-        : SemaRef(SemaRef),
-          SubstIndex(SemaRef, SemaRef.ArgumentPackSubstitutionIndex),
+        : SemaRef(SemaRef), SubstIndex(SemaRef, SemaRef.ArgPackSubstIndex),
           Owner(Owner), TemplateArgs(TemplateArgs) {}
 
     void setEvaluateConstraints(bool B) {

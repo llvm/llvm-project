@@ -9,6 +9,7 @@
 # RUN: link_fdata %s %t %t.pa3 PREAGG3
 # RUN: link_fdata %s %t %t.pat PREAGGT1
 # RUN: link_fdata %s %t %t.pat2 PREAGGT2
+# RUN: link_fdata %s %t %t.patplt PREAGGPLT
 
 ## Check normal case: fallthrough is not LP or secondary entry.
 # RUN: llvm-strip --strip-unneeded %t -o %t.strip
@@ -42,6 +43,12 @@
 # RUN: llvm-bolt %t.strip --pa -p %t.pat2 -o %t.out \
 # RUN:   --print-cfg --print-only=main | FileCheck %s --check-prefix=CHECK3
 
+## Check pre-aggregated traces don't report zero-sized PLT fall-through as
+## invalid trace
+# RUN: llvm-bolt %t.strip --pa -p %t.patplt -o %t.out | FileCheck %s \
+# RUN:   --check-prefix=CHECK-PLT
+# CHECK-PLT: traces mismatching disassembled function contents: 0
+
   .globl foo
   .type foo, %function
 foo:
@@ -65,7 +72,10 @@ main:
 	movl	$0x0, -0x4(%rbp)
 	movl	%edi, -0x8(%rbp)
 	movq	%rsi, -0x10(%rbp)
+Ltmp0_br:
 	callq	puts@PLT
+## Check PLT traces are accepted
+# PREAGGPLT: T #Ltmp0_br# #puts@plt# #puts@plt# 3
 ## Target is an external-origin call continuation
 # PREAGG1: B X:0 #Ltmp1# 2 0
 # PREAGGT1: T X:0 #Ltmp1# #Ltmp4_br# 2

@@ -297,4 +297,31 @@ TEST(QualTypeNameTest, ConstUsing) {
                         using ::A::S;
                         void foo(const S& param1, const S param2);)");
 }
+
+TEST(QualTypeNameTest, NullableAttributesWithGlobalNs) {
+  TypeNameVisitor Visitor;
+  Visitor.WithGlobalNsPrefix = true;
+  Visitor.ExpectedQualTypeNames["param1"] = "::std::unique_ptr<int> _Nullable";
+  Visitor.ExpectedQualTypeNames["param2"] = "::std::unique_ptr<int> _Nonnull";
+  Visitor.ExpectedQualTypeNames["param3"] =
+      "::std::unique_ptr< ::std::unique_ptr<int> _Nullable> _Nonnull";
+  Visitor.ExpectedQualTypeNames["param4"] =
+      "::std::unique_ptr<int>  _Nullable const *";
+  Visitor.ExpectedQualTypeNames["param5"] =
+      "::std::unique_ptr<int>  _Nullable const *";
+  Visitor.ExpectedQualTypeNames["param6"] =
+      "::std::unique_ptr<int>  _Nullable const *";
+  Visitor.runOver(R"(namespace std {
+                        template<class T> class unique_ptr {};
+                     }
+                     void foo(
+                      std::unique_ptr<int> _Nullable param1,
+                      _Nonnull std::unique_ptr<int> param2,
+                      std::unique_ptr<std::unique_ptr<int> _Nullable> _Nonnull param3,
+                      const std::unique_ptr<int> _Nullable *param4,
+                      _Nullable std::unique_ptr<int> const *param5,
+                      std::unique_ptr<int> _Nullable const *param6
+                      );
+                     )");
+}
 }  // end anonymous namespace

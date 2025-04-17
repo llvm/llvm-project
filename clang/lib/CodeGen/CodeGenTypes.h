@@ -207,7 +207,7 @@ public:
 
   /// Free functions are functions that are compatible with an ordinary
   /// C function pointer type.
-  const CGFunctionInfo &arrangeFunctionDeclaration(const FunctionDecl *FD);
+  const CGFunctionInfo &arrangeFunctionDeclaration(const GlobalDecl GD);
   const CGFunctionInfo &arrangeFreeFunctionCall(const CallArgList &Args,
                                                 const FunctionType *Ty,
                                                 bool ChainCall);

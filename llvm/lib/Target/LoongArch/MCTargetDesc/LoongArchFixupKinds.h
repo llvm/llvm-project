@@ -52,11 +52,10 @@ enum Fixups {
   fixup_loongarch_invalid,
   NumTargetFixupKinds = fixup_loongarch_invalid - FirstTargetFixupKind,
 
-  // Define fixups for force relocation as FirstLiteralRelocationKind+V
+  // Define fixups for force relocation as FirstRelocationKind+V
   // represents the relocation type with number V.
   // 20-bit fixup corresponding to %pc_hi20(foo) for instruction pcalau12i.
-  fixup_loongarch_pcala_hi20 =
-      FirstLiteralRelocationKind + ELF::R_LARCH_PCALA_HI20,
+  fixup_loongarch_pcala_hi20 = FirstRelocationKind + ELF::R_LARCH_PCALA_HI20,
   // 12-bit fixup corresponding to %pc_lo12(foo) for instructions like addi.w/d.
   fixup_loongarch_pcala_lo12,
   // 20-bit fixup corresponding to %pc64_lo20(foo) for instruction lu32i.d.
@@ -83,7 +82,7 @@ enum Fixups {
   // Skip R_LARCH_TLS_LE_*.
   // 20-bit fixup corresponding to %ie_pc_hi20(foo) for instruction pcalau12i.
   fixup_loongarch_tls_ie_pc_hi20 =
-      FirstLiteralRelocationKind + ELF::R_LARCH_TLS_IE_PC_HI20,
+      FirstRelocationKind + ELF::R_LARCH_TLS_IE_PC_HI20,
   // 12-bit fixup corresponding to %ie_pc_lo12(foo) for instructions
   // ld.w/ld.d/add.d.
   fixup_loongarch_tls_ie_pc_lo12,
@@ -108,17 +107,17 @@ enum Fixups {
   // 20-bit fixup corresponding to %gd_hi20(foo) for instruction lu12i.w.
   fixup_loongarch_tls_gd_hi20,
   // Generate an R_LARCH_RELAX which indicates the linker may relax here.
-  fixup_loongarch_relax = FirstLiteralRelocationKind + ELF::R_LARCH_RELAX,
+  fixup_loongarch_relax = FirstRelocationKind + ELF::R_LARCH_RELAX,
   // Generate an R_LARCH_ALIGN which indicates the linker may fixup align here.
-  fixup_loongarch_align = FirstLiteralRelocationKind + ELF::R_LARCH_ALIGN,
+  fixup_loongarch_align = FirstRelocationKind + ELF::R_LARCH_ALIGN,
   // 20-bit fixup corresponding to %pcrel_20(foo) for instruction pcaddi.
   fixup_loongarch_pcrel20_s2,
   // 36-bit fixup corresponding to %call36(foo) for a pair instructions:
   // pcaddu18i+jirl.
-  fixup_loongarch_call36 = FirstLiteralRelocationKind + ELF::R_LARCH_CALL36,
+  fixup_loongarch_call36 = FirstRelocationKind + ELF::R_LARCH_CALL36,
   // 20-bit fixup corresponding to %desc_pc_hi20(foo) for instruction pcalau12i.
   fixup_loongarch_tls_desc_pc_hi20 =
-      FirstLiteralRelocationKind + ELF::R_LARCH_TLS_DESC_PC_HI20,
+      FirstRelocationKind + ELF::R_LARCH_TLS_DESC_PC_HI20,
   // 12-bit fixup corresponding to %desc_pc_lo12(foo) for instructions like
   // addi.w/d.
   fixup_loongarch_tls_desc_pc_lo12,

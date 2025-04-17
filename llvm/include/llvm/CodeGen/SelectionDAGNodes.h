@@ -421,6 +421,8 @@ public:
 
     PoisonGeneratingFlags = NoUnsignedWrap | NoSignedWrap | Exact | Disjoint |
                             NonNeg | NoNaNs | NoInfs | SameSign,
+    FastMathFlags = NoNaNs | NoInfs | NoSignedZeros | AllowReciprocal |
+                    AllowContract | ApproximateFuncs | AllowReassociation,
   };
 
   /// Default constructor turns off all optimization flags.
@@ -690,8 +692,10 @@ public:
   /// \<target\>ISD namespace).
   bool isTargetOpcode() const { return NodeType >= ISD::BUILTIN_OP_END; }
 
-  /// Return true if the type of the node type undefined.
-  bool isUndef() const { return NodeType == ISD::UNDEF; }
+  /// Returns true if the node type is UNDEF or POISON.
+  bool isUndef() const {
+    return NodeType == ISD::UNDEF || NodeType == ISD::POISON;
+  }
 
   /// Test if this node is a memory intrinsic (with valid pointer information).
   bool isMemIntrinsic() const { return SDNodeBits.IsMemIntrinsic; }

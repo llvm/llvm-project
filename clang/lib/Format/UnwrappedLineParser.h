@@ -167,7 +167,7 @@ private:
   void parseAccessSpecifier();
   bool parseEnum();
   bool parseStructLike();
-  bool parseRequires();
+  bool parseRequires(bool SeenEqual);
   void parseRequiresClause(FormatToken *RequiresToken);
   void parseRequiresExpression(FormatToken *RequiresToken);
   void parseConstraintExpression();

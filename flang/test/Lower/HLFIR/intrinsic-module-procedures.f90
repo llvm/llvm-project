@@ -14,7 +14,7 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPfoo(
 ! CHECK:         %[[VAL_3:.*]]:2 = hlfir.declare {{.*}}Ecptr"
 ! CHECK:         %[[VAL_3:.*]]:2 = hlfir.declare {{.*}}Ex"
-! CHECK:         %[[VAL_4:.*]] = fir.embox %[[VAL_3]]#1 : (!fir.ref<i32>) -> !fir.box<i32>
+! CHECK:         %[[VAL_4:.*]] = fir.embox %[[VAL_3]]#0 : (!fir.ref<i32>) -> !fir.box<i32>
 ! CHECK:         %[[VAL_5:.*]] = fir.alloca !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>
 ! CHECK:         %[[VAL_7:.*]] = fir.coordinate_of %[[VAL_5]], __address : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>) -> !fir.ref<i64>
 ! CHECK:         %[[VAL_8:.*]] = fir.box_addr %[[VAL_4]] : (!fir.box<i32>) -> !fir.ref<i32>

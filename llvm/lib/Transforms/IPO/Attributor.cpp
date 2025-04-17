@@ -199,7 +199,7 @@ ChangeStatus &llvm::operator&=(ChangeStatus &L, ChangeStatus R) {
 
 bool AA::isGPU(const Module &M) {
   Triple T(M.getTargetTriple());
-  return T.isAMDGPU() || T.isNVPTX();
+  return T.isGPU();
 }
 
 bool AA::isNoSyncInst(Attributor &A, const Instruction &I,
@@ -583,9 +583,9 @@ static bool getPotentialCopiesOfMemoryValue(
       UsedAssumedInformation = true;
     A.recordDependence(*PI, QueryingAA, DepClassTy::OPTIONAL);
   }
-  PotentialCopies.insert(NewCopies.begin(), NewCopies.end());
+  PotentialCopies.insert_range(NewCopies);
   if (PotentialValueOrigins)
-    PotentialValueOrigins->insert(NewCopyOrigins.begin(), NewCopyOrigins.end());
+    PotentialValueOrigins->insert_range(NewCopyOrigins);
 
   return true;
 }
@@ -1769,6 +1769,9 @@ bool Attributor::checkForAllUses(
     if (!CB(*this, &QueryingAA))
       return false;
 
+  if (isa<ConstantData>(V))
+    return false;
+
   // Check the trivial case first as it catches void values.
   if (V.use_empty())
     return true;
@@ -2123,7 +2126,7 @@ void Attributor::runTillFixpoint() {
 
   SmallVector<AbstractAttribute *, 32> ChangedAAs;
   SetVector<AbstractAttribute *> Worklist, InvalidAAs;
-  Worklist.insert(DG.SyntheticRoot.begin(), DG.SyntheticRoot.end());
+  Worklist.insert_range(DG.SyntheticRoot);
 
   do {
     // Remember the size to determine new attributes.
@@ -2200,9 +2203,8 @@ void Attributor::runTillFixpoint() {
     // Reset the work list and repopulate with the changed abstract attributes.
     // Note that dependent ones are added above.
     Worklist.clear();
-    Worklist.insert(ChangedAAs.begin(), ChangedAAs.end());
-    Worklist.insert(QueryAAsAwaitingUpdate.begin(),
-                    QueryAAsAwaitingUpdate.end());
+    Worklist.insert_range(ChangedAAs);
+    Worklist.insert_range(QueryAAsAwaitingUpdate);
     QueryAAsAwaitingUpdate.clear();
 
   } while (!Worklist.empty() && (IterationCounter++ < MaxIterations));
@@ -3301,7 +3303,7 @@ InformationCache::getIndirectlyCallableFunctions(Attributor &A) const {
 }
 
 std::optional<unsigned> InformationCache::getFlatAddressSpace() const {
-  if (TargetTriple.isAMDGPU() || TargetTriple.isNVPTX())
+  if (TargetTriple.isGPU())
     return 0;
   return std::nullopt;
 }

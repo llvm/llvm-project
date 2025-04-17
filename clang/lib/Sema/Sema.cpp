@@ -47,6 +47,7 @@
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaCodeCompletion.h"
 #include "clang/Sema/SemaConsumer.h"
+#include "clang/Sema/SemaDirectX.h"
 #include "clang/Sema/SemaHLSL.h"
 #include "clang/Sema/SemaHexagon.h"
 #include "clang/Sema/SemaLoongArch.h"
@@ -226,6 +227,7 @@ Sema::Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
       CodeCompletionPtr(
           std::make_unique<SemaCodeCompletion>(*this, CodeCompleter)),
       CUDAPtr(std::make_unique<SemaCUDA>(*this)),
+      DirectXPtr(std::make_unique<SemaDirectX>(*this)),
       HLSLPtr(std::make_unique<SemaHLSL>(*this)),
       HexagonPtr(std::make_unique<SemaHexagon>(*this)),
       LoongArchPtr(std::make_unique<SemaLoongArch>(*this)),
@@ -256,6 +258,7 @@ Sema::Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
       VisContext(nullptr), PragmaAttributeCurrentTargetDecl(nullptr),
       StdCoroutineTraitsCache(nullptr), IdResolver(pp),
       OriginalLexicalContext(nullptr), StdInitializerList(nullptr),
+      StdTypeIdentity(nullptr),
       FullyCheckedComparisonCategories(
           static_cast<unsigned>(ComparisonCategoryType::Last) + 1),
       StdSourceLocationImplDecl(nullptr), CXXTypeInfoDecl(nullptr),
@@ -263,7 +266,7 @@ Sema::Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
       TyposCorrected(0), IsBuildingRecoveryCallExpr(false), NumSFINAEErrors(0),
       AccessCheckingSFINAE(false), CurrentInstantiationScope(nullptr),
       InNonInstantiationSFINAEContext(false), NonInstantiationEntries(0),
-      ArgumentPackSubstitutionIndex(-1), SatisfactionCache(Context) {
+      ArgPackSubstIndex(std::nullopt), SatisfactionCache(Context) {
   assert(pp.TUKind == TUKind);
   TUScope = nullptr;
 
@@ -1105,9 +1108,13 @@ void Sema::ActOnStartOfTranslationUnit() {
 }
 
 void Sema::ActOnEndOfTranslationUnitFragment(TUFragmentKind Kind) {
-  // No explicit actions are required at the end of the global module fragment.
-  if (Kind == TUFragmentKind::Global)
+  if (Kind == TUFragmentKind::Global) {
+    // Perform Pending Instantiations at the end of global module fragment so
+    // that the module ownership of TU-level decls won't get messed.
+    llvm::TimeTraceScope TimeScope("PerformPendingInstantiations");
+    PerformPendingInstantiations();
     return;
+  }
 
   // Transfer late parsed template instantiations over to the pending template
   // instantiation list. During normal compilation, the late template parser

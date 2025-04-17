@@ -20,7 +20,8 @@ using namespace clang;
 bool OpenACCClauseWithParams::classof(const OpenACCClause *C) {
   return OpenACCDeviceTypeClause::classof(C) ||
          OpenACCClauseWithCondition::classof(C) ||
-         OpenACCClauseWithExprs::classof(C) || OpenACCSelfClause::classof(C);
+         OpenACCBindClause::classof(C) || OpenACCClauseWithExprs::classof(C) ||
+         OpenACCSelfClause::classof(C);
 }
 bool OpenACCClauseWithExprs::classof(const OpenACCClause *C) {
   return OpenACCWaitClause::classof(C) || OpenACCNumGangsClause::classof(C) ||
@@ -433,11 +434,12 @@ OpenACCDeviceClause *OpenACCDeviceClause::Create(const ASTContext &C,
 OpenACCCopyClause *
 OpenACCCopyClause::Create(const ASTContext &C, OpenACCClauseKind Spelling,
                           SourceLocation BeginLoc, SourceLocation LParenLoc,
-                          ArrayRef<Expr *> VarList, SourceLocation EndLoc) {
+                          OpenACCModifierKind Mods, ArrayRef<Expr *> VarList,
+                          SourceLocation EndLoc) {
   void *Mem =
       C.Allocate(OpenACCCopyClause::totalSizeToAlloc<Expr *>(VarList.size()));
   return new (Mem)
-      OpenACCCopyClause(Spelling, BeginLoc, LParenLoc, VarList, EndLoc);
+      OpenACCCopyClause(Spelling, BeginLoc, LParenLoc, Mods, VarList, EndLoc);
 }
 
 OpenACCLinkClause *OpenACCLinkClause::Create(const ASTContext &C,
@@ -462,34 +464,34 @@ OpenACCDeviceResidentClause *OpenACCDeviceResidentClause::Create(
 OpenACCCopyInClause *
 OpenACCCopyInClause::Create(const ASTContext &C, OpenACCClauseKind Spelling,
                             SourceLocation BeginLoc, SourceLocation LParenLoc,
-                            bool IsReadOnly, ArrayRef<Expr *> VarList,
+                            OpenACCModifierKind Mods, ArrayRef<Expr *> VarList,
                             SourceLocation EndLoc) {
   void *Mem =
       C.Allocate(OpenACCCopyInClause::totalSizeToAlloc<Expr *>(VarList.size()));
-  return new (Mem) OpenACCCopyInClause(Spelling, BeginLoc, LParenLoc,
-                                       IsReadOnly, VarList, EndLoc);
+  return new (Mem)
+      OpenACCCopyInClause(Spelling, BeginLoc, LParenLoc, Mods, VarList, EndLoc);
 }
 
 OpenACCCopyOutClause *
 OpenACCCopyOutClause::Create(const ASTContext &C, OpenACCClauseKind Spelling,
                              SourceLocation BeginLoc, SourceLocation LParenLoc,
-                             bool IsZero, ArrayRef<Expr *> VarList,
+                             OpenACCModifierKind Mods, ArrayRef<Expr *> VarList,
                              SourceLocation EndLoc) {
   void *Mem = C.Allocate(
       OpenACCCopyOutClause::totalSizeToAlloc<Expr *>(VarList.size()));
-  return new (Mem) OpenACCCopyOutClause(Spelling, BeginLoc, LParenLoc, IsZero,
+  return new (Mem) OpenACCCopyOutClause(Spelling, BeginLoc, LParenLoc, Mods,
                                         VarList, EndLoc);
 }
 
 OpenACCCreateClause *
 OpenACCCreateClause::Create(const ASTContext &C, OpenACCClauseKind Spelling,
                             SourceLocation BeginLoc, SourceLocation LParenLoc,
-                            bool IsZero, ArrayRef<Expr *> VarList,
+                            OpenACCModifierKind Mods, ArrayRef<Expr *> VarList,
                             SourceLocation EndLoc) {
   void *Mem =
       C.Allocate(OpenACCCreateClause::totalSizeToAlloc<Expr *>(VarList.size()));
-  return new (Mem) OpenACCCreateClause(Spelling, BeginLoc, LParenLoc, IsZero,
-                                       VarList, EndLoc);
+  return new (Mem)
+      OpenACCCreateClause(Spelling, BeginLoc, LParenLoc, Mods, VarList, EndLoc);
 }
 
 OpenACCDeviceTypeClause *OpenACCDeviceTypeClause::Create(
@@ -532,6 +534,13 @@ OpenACCSeqClause *OpenACCSeqClause::Create(const ASTContext &C,
                                            SourceLocation EndLoc) {
   void *Mem = C.Allocate(sizeof(OpenACCSeqClause));
   return new (Mem) OpenACCSeqClause(BeginLoc, EndLoc);
+}
+
+OpenACCNoHostClause *OpenACCNoHostClause::Create(const ASTContext &C,
+                                                 SourceLocation BeginLoc,
+                                                 SourceLocation EndLoc) {
+  void *Mem = C.Allocate(sizeof(OpenACCNoHostClause));
+  return new (Mem) OpenACCNoHostClause(BeginLoc, EndLoc);
 }
 
 OpenACCGangClause *
@@ -600,6 +609,36 @@ OpenACCIfPresentClause *OpenACCIfPresentClause::Create(const ASTContext &C,
   void *Mem = C.Allocate(sizeof(OpenACCIfPresentClause),
                          alignof(OpenACCIfPresentClause));
   return new (Mem) OpenACCIfPresentClause(BeginLoc, EndLoc);
+}
+
+OpenACCBindClause *OpenACCBindClause::Create(const ASTContext &C,
+                                             SourceLocation BeginLoc,
+                                             SourceLocation LParenLoc,
+                                             const StringLiteral *SL,
+                                             SourceLocation EndLoc) {
+  void *Mem = C.Allocate(sizeof(OpenACCBindClause), alignof(OpenACCBindClause));
+  return new (Mem) OpenACCBindClause(BeginLoc, LParenLoc, SL, EndLoc);
+}
+
+OpenACCBindClause *OpenACCBindClause::Create(const ASTContext &C,
+                                             SourceLocation BeginLoc,
+                                             SourceLocation LParenLoc,
+                                             const IdentifierInfo *ID,
+                                             SourceLocation EndLoc) {
+  void *Mem = C.Allocate(sizeof(OpenACCBindClause), alignof(OpenACCBindClause));
+  return new (Mem) OpenACCBindClause(BeginLoc, LParenLoc, ID, EndLoc);
+}
+
+bool clang::operator==(const OpenACCBindClause &LHS,
+                       const OpenACCBindClause &RHS) {
+  if (LHS.isStringArgument() != RHS.isStringArgument())
+    return false;
+
+  if (LHS.isStringArgument())
+    return LHS.getStringArgument()->getString() ==
+           RHS.getStringArgument()->getString();
+  return LHS.getIdentifierArgument()->getName() ==
+         RHS.getIdentifierArgument()->getName();
 }
 
 //===----------------------------------------------------------------------===//
@@ -770,6 +809,8 @@ void OpenACCClausePrinter::VisitDeviceClause(const OpenACCDeviceClause &C) {
 
 void OpenACCClausePrinter::VisitCopyClause(const OpenACCCopyClause &C) {
   OS << C.getClauseKind() << '(';
+  if (C.getModifierList() != OpenACCModifierKind::Invalid)
+    OS << C.getModifierList() << ": ";
   llvm::interleaveComma(C.getVarList(), OS,
                         [&](const Expr *E) { printExpr(E); });
   OS << ")";
@@ -792,8 +833,8 @@ void OpenACCClausePrinter::VisitDeviceResidentClause(
 
 void OpenACCClausePrinter::VisitCopyInClause(const OpenACCCopyInClause &C) {
   OS << C.getClauseKind() << '(';
-  if (C.isReadOnly())
-    OS << "readonly: ";
+  if (C.getModifierList() != OpenACCModifierKind::Invalid)
+    OS << C.getModifierList() << ": ";
   llvm::interleaveComma(C.getVarList(), OS,
                         [&](const Expr *E) { printExpr(E); });
   OS << ")";
@@ -801,8 +842,8 @@ void OpenACCClausePrinter::VisitCopyInClause(const OpenACCCopyInClause &C) {
 
 void OpenACCClausePrinter::VisitCopyOutClause(const OpenACCCopyOutClause &C) {
   OS << C.getClauseKind() << '(';
-  if (C.isZero())
-    OS << "zero: ";
+  if (C.getModifierList() != OpenACCModifierKind::Invalid)
+    OS << C.getModifierList() << ": ";
   llvm::interleaveComma(C.getVarList(), OS,
                         [&](const Expr *E) { printExpr(E); });
   OS << ")";
@@ -810,8 +851,8 @@ void OpenACCClausePrinter::VisitCopyOutClause(const OpenACCCopyOutClause &C) {
 
 void OpenACCClausePrinter::VisitCreateClause(const OpenACCCreateClause &C) {
   OS << C.getClauseKind() << '(';
-  if (C.isZero())
-    OS << "zero: ";
+  if (C.getModifierList() != OpenACCModifierKind::Invalid)
+    OS << C.getModifierList() << ": ";
   llvm::interleaveComma(C.getVarList(), OS,
                         [&](const Expr *E) { printExpr(E); });
   OS << ")";
@@ -871,6 +912,10 @@ void OpenACCClausePrinter::VisitSeqClause(const OpenACCSeqClause &C) {
   OS << "seq";
 }
 
+void OpenACCClausePrinter::VisitNoHostClause(const OpenACCNoHostClause &C) {
+  OS << "nohost";
+}
+
 void OpenACCClausePrinter::VisitCollapseClause(const OpenACCCollapseClause &C) {
   OS << "collapse(";
   if (C.hasForce())
@@ -924,4 +969,13 @@ void OpenACCClausePrinter::VisitFinalizeClause(const OpenACCFinalizeClause &C) {
 void OpenACCClausePrinter::VisitIfPresentClause(
     const OpenACCIfPresentClause &C) {
   OS << "if_present";
+}
+
+void OpenACCClausePrinter::VisitBindClause(const OpenACCBindClause &C) {
+  OS << "bind(";
+  if (C.isStringArgument())
+    OS << '"' << C.getStringArgument()->getString() << '"';
+  else
+    OS << C.getIdentifierArgument()->getName();
+  OS << ")";
 }

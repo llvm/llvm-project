@@ -375,11 +375,6 @@ FieldInitializer &FieldInitializer::operator=(FieldInitializer &&Initializer) {
 // It's a peer of AsmParser, not of COFFAsmParser, WasmAsmParser, etc.
 class MasmParser : public MCAsmParser {
 private:
-  AsmLexer Lexer;
-  MCContext &Ctx;
-  MCStreamer &Out;
-  const MCAsmInfo &MAI;
-  SourceMgr &SrcMgr;
   SourceMgr::DiagHandlerTy SavedDiagHandler;
   void *SavedDiagContext;
   std::unique_ptr<MCAsmParserExtension> PlatformParser;
@@ -450,9 +445,6 @@ private:
   /// Defaults to 1U, meaning Intel.
   unsigned AssemblerDialect = 1U;
 
-  /// is Darwin compatibility enabled?
-  bool IsDarwin = false;
-
   /// Are we parsing ms-style inline assembly?
   bool ParsingMSInlineAsm = false;
 
@@ -483,11 +475,6 @@ public:
 
   /// @name MCAsmParser Interface
   /// {
-
-  SourceMgr &getSourceManager() override { return SrcMgr; }
-  MCAsmLexer &getLexer() override { return Lexer; }
-  MCContext &getContext() override { return Ctx; }
-  MCStreamer &getStreamer() override { return Out; }
 
   unsigned getAssemblerDialect() override {
     if (AssemblerDialect == ~0U)
@@ -976,8 +963,8 @@ enum { DEFAULT_ADDRSPACE = 0 };
 
 MasmParser::MasmParser(SourceMgr &SM, MCContext &Ctx, MCStreamer &Out,
                        const MCAsmInfo &MAI, struct tm TM, unsigned CB)
-    : Lexer(MAI), Ctx(Ctx), Out(Out), MAI(MAI), SrcMgr(SM),
-      CurBuffer(CB ? CB : SM.getMainFileID()), TM(TM) {
+    : MCAsmParser(Ctx, Out, SM, MAI), CurBuffer(CB ? CB : SM.getMainFileID()),
+      TM(TM) {
   HadError = false;
   // Save the old handler.
   SavedDiagHandler = SrcMgr.getDiagHandler();
@@ -1113,6 +1100,7 @@ bool MasmParser::expandMacros() {
 const AsmToken &MasmParser::Lex(ExpandKind ExpandNextToken) {
   if (Lexer.getTok().is(AsmToken::Error))
     Error(Lexer.getErrLoc(), Lexer.getErr());
+  bool StartOfStatement = false;
 
   // if it's a end of statement with a comment in it
   if (getTok().is(AsmToken::EndOfStatement)) {
@@ -1120,10 +1108,10 @@ const AsmToken &MasmParser::Lex(ExpandKind ExpandNextToken) {
     if (!getTok().getString().empty() && getTok().getString().front() != '\n' &&
         getTok().getString().front() != '\r' && MAI.preserveAsmComments())
       Out.addExplicitComment(Twine(getTok().getString()));
+    StartOfStatement = true;
   }
 
   const AsmToken *tok = &Lexer.Lex();
-  bool StartOfStatement = Lexer.isAtStartOfStatement();
 
   while (ExpandNextToken == ExpandMacros && tok->is(AsmToken::Identifier)) {
     if (StartOfStatement) {
@@ -1216,20 +1204,19 @@ bool MasmParser::Run(bool NoInitialTextSection, bool NoFinalize) {
       Lex();
 
     ParseStatementInfo Info(&AsmStrRewrites);
-    bool Parsed = parseStatement(Info, nullptr);
+    bool HasError = parseStatement(Info, nullptr);
 
     // If we have a Lexer Error we are on an Error Token. Load in Lexer Error
     // for printing ErrMsg via Lex() only if no (presumably better) parser error
     // exists.
-    if (Parsed && !hasPendingError() && Lexer.getTok().is(AsmToken::Error)) {
+    if (HasError && !hasPendingError() && Lexer.getTok().is(AsmToken::Error))
       Lex();
-    }
 
     // parseStatement returned true so may need to emit an error.
     printPendingErrors();
 
     // Skipping to the next line if needed.
-    if (Parsed && !getLexer().isAtStartOfStatement())
+    if (HasError && !getLexer().justConsumedEOL())
       eatToEndOfStatement();
   }
 
@@ -1985,7 +1972,10 @@ bool MasmParser::parseStatement(ParseStatementInfo &Info,
 
   // If macros are enabled, check to see if this is a macro instantiation.
   if (const MCAsmMacro *M = getContext().lookupMacro(IDVal.lower())) {
-    return handleMacroEntry(M, IDLoc);
+    AsmToken::TokenKind ArgumentEndTok = parseOptionalToken(AsmToken::LParen)
+                                             ? AsmToken::RParen
+                                             : AsmToken::EndOfStatement;
+    return handleMacroEntry(M, IDLoc, ArgumentEndTok);
   }
 
   // Otherwise, we have a normal instruction or directive.
@@ -2556,54 +2546,6 @@ bool MasmParser::expandMacro(raw_svector_ostream &OS, StringRef Body,
   return false;
 }
 
-static bool isOperator(AsmToken::TokenKind kind) {
-  switch (kind) {
-  default:
-    return false;
-  case AsmToken::Plus:
-  case AsmToken::Minus:
-  case AsmToken::Tilde:
-  case AsmToken::Slash:
-  case AsmToken::Star:
-  case AsmToken::Dot:
-  case AsmToken::Equal:
-  case AsmToken::EqualEqual:
-  case AsmToken::Pipe:
-  case AsmToken::PipePipe:
-  case AsmToken::Caret:
-  case AsmToken::Amp:
-  case AsmToken::AmpAmp:
-  case AsmToken::Exclaim:
-  case AsmToken::ExclaimEqual:
-  case AsmToken::Less:
-  case AsmToken::LessEqual:
-  case AsmToken::LessLess:
-  case AsmToken::LessGreater:
-  case AsmToken::Greater:
-  case AsmToken::GreaterEqual:
-  case AsmToken::GreaterGreater:
-    return true;
-  }
-}
-
-namespace {
-
-class AsmLexerSkipSpaceRAII {
-public:
-  AsmLexerSkipSpaceRAII(AsmLexer &Lexer, bool SkipSpace) : Lexer(Lexer) {
-    Lexer.setSkipSpace(SkipSpace);
-  }
-
-  ~AsmLexerSkipSpaceRAII() {
-    Lexer.setSkipSpace(true);
-  }
-
-private:
-  AsmLexer &Lexer;
-};
-
-} // end anonymous namespace
-
 bool MasmParser::parseMacroArgument(const MCAsmMacroParameter *MP,
                                     MCAsmMacroArgument &MA,
                                     AsmToken::TokenKind EndTok) {
@@ -2630,43 +2572,12 @@ bool MasmParser::parseMacroArgument(const MCAsmMacroParameter *MP,
 
   unsigned ParenLevel = 0;
 
-  // Darwin doesn't use spaces to delmit arguments.
-  AsmLexerSkipSpaceRAII ScopedSkipSpace(Lexer, IsDarwin);
-
-  bool SpaceEaten;
-
   while (true) {
-    SpaceEaten = false;
     if (Lexer.is(AsmToken::Eof) || Lexer.is(AsmToken::Equal))
       return TokError("unexpected token");
 
-    if (ParenLevel == 0) {
-      if (Lexer.is(AsmToken::Comma))
-        break;
-
-      if (Lexer.is(AsmToken::Space)) {
-        SpaceEaten = true;
-        Lex(); // Eat spaces.
-      }
-
-      // Spaces can delimit parameters, but could also be part an expression.
-      // If the token after a space is an operator, add the token and the next
-      // one into this argument
-      if (!IsDarwin) {
-        if (isOperator(Lexer.getKind()) && Lexer.isNot(EndTok)) {
-          MA.push_back(getTok());
-          Lex();
-
-          // Whitespace after an operator can be ignored.
-          if (Lexer.is(AsmToken::Space))
-            Lex();
-
-          continue;
-        }
-      }
-      if (SpaceEaten)
-        break;
-    }
+    if (ParenLevel == 0 && Lexer.is(AsmToken::Comma))
+      break;
 
     // handleMacroEntry relies on not advancing the lexer here
     // to be able to fill in the remaining default parameter values
@@ -2829,7 +2740,7 @@ bool MasmParser::handleMacroEntry(const MCAsmMacro *M, SMLoc NameLoc,
   }
 
   MCAsmMacroArguments A;
-  if (parseMacroArguments(M, A, ArgumentEndTok))
+  if (parseMacroArguments(M, A, ArgumentEndTok) || parseToken(ArgumentEndTok))
     return true;
 
   // Macro instantiation is lexical, unfortunately. We construct a new buffer
@@ -2891,9 +2802,9 @@ bool MasmParser::handleMacroInvocation(const MCAsmMacro *M, SMLoc NameLoc) {
   SmallVector<AsmRewrite, 4> AsmStrRewrites;
   while (Lexer.isNot(AsmToken::Eof)) {
     ParseStatementInfo Info(&AsmStrRewrites);
-    bool Parsed = parseStatement(Info, nullptr);
+    bool HasError = parseStatement(Info, nullptr);
 
-    if (!Parsed && Info.ExitValue) {
+    if (!HasError && Info.ExitValue) {
       ExitValue = std::move(*Info.ExitValue);
       break;
     }
@@ -2901,21 +2812,16 @@ bool MasmParser::handleMacroInvocation(const MCAsmMacro *M, SMLoc NameLoc) {
     // If we have a Lexer Error we are on an Error Token. Load in Lexer Error
     // for printing ErrMsg via Lex() only if no (presumably better) parser error
     // exists.
-    if (Parsed && !hasPendingError() && Lexer.getTok().is(AsmToken::Error)) {
+    if (HasError && !hasPendingError() && Lexer.getTok().is(AsmToken::Error))
       Lex();
-    }
 
     // parseStatement returned true so may need to emit an error.
     printPendingErrors();
 
     // Skipping to the next line if needed.
-    if (Parsed && !getLexer().isAtStartOfStatement())
+    if (HasError && !getLexer().justConsumedEOL())
       eatToEndOfStatement();
   }
-
-  // Consume the right-parenthesis on the other side of the arguments.
-  if (parseRParen())
-    return true;
 
   // Exit values may require lexing, unfortunately. We construct a new buffer to
   // hold the exit value.
@@ -3741,9 +3647,8 @@ bool MasmParser::parseFieldInitializer(const FieldInfo &Field,
                           std::to_string(Initializers.size()));
   }
   // Default-initialize all remaining values.
-  Initializers.insert(Initializers.end(),
-                      Contents.Initializers.begin() + Initializers.size(),
-                      Contents.Initializers.end());
+  llvm::append_range(Initializers, llvm::drop_begin(Contents.Initializers,
+                                                    Initializers.size()));
 
   Initializer = FieldInitializer(std::move(Initializers), Contents.Structure);
   return false;
@@ -4855,7 +4760,7 @@ bool MasmParser::parseDirectiveIfdef(SMLoc DirectiveLoc, bool expect_defined) {
         is_defined = true;
       } else {
         MCSymbol *Sym = getContext().lookupSymbol(Name.lower());
-        is_defined = (Sym && !Sym->isUndefined(false));
+        is_defined = (Sym && !Sym->isUndefined());
       }
     }
 
@@ -4976,7 +4881,7 @@ bool MasmParser::parseDirectiveElseIfdef(SMLoc DirectiveLoc,
         is_defined = true;
       } else {
         MCSymbol *Sym = getContext().lookupSymbol(Name);
-        is_defined = (Sym && !Sym->isUndefined(false));
+        is_defined = (Sym && !Sym->isUndefined());
       }
     }
 
@@ -5146,7 +5051,7 @@ bool MasmParser::parseDirectiveErrorIfdef(SMLoc DirectiveLoc,
       IsDefined = true;
     } else {
       MCSymbol *Sym = getContext().lookupSymbol(Name);
-      IsDefined = (Sym && !Sym->isUndefined(false));
+      IsDefined = (Sym && !Sym->isUndefined());
     }
   }
 

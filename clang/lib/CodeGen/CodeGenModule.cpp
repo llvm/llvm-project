@@ -843,7 +843,7 @@ static void setVisibilityFromDLLStorageClass(const clang::LangOptions &LO,
 static bool isStackProtectorOn(const LangOptions &LangOpts,
                                const llvm::Triple &Triple,
                                clang::LangOptions::StackProtectorMode Mode) {
-  if (Triple.isAMDGPU() || Triple.isNVPTX())
+  if (Triple.isGPU())
     return false;
   return LangOpts.getStackProtector() == Mode;
 }
@@ -853,8 +853,7 @@ void CodeGenModule::Release() {
   if (CXX20ModuleInits && Primary && !Primary->isHeaderLikeModule())
     EmitModuleInitializers(Primary);
   EmitDeferred();
-  DeferredDecls.insert(EmittedDeferredDecls.begin(),
-                       EmittedDeferredDecls.end());
+  DeferredDecls.insert_range(EmittedDeferredDecls);
   EmittedDeferredDecls.clear();
   EmitVTablesOpportunistically();
   applyGlobalValReplacements();
@@ -1143,6 +1142,10 @@ void CodeGenModule::Release() {
   if (CodeGenOpts.SanitizeCfiICallNormalizeIntegers) {
     getModule().addModuleFlag(llvm::Module::Override, "cfi-normalize-integers",
                               1);
+  }
+
+  if (CodeGenOpts.UniqueSourceFileNames) {
+    getModule().addModuleFlag(llvm::Module::Max, "Unique Source File Names", 1);
   }
 
   if (LangOpts.Sanitize.has(SanitizerKind::KCFI)) {
@@ -1904,6 +1907,9 @@ static std::string getMangledNameImpl(CodeGenModule &CGM, GlobalDecl GD,
     } else if (FD && FD->hasAttr<CUDAGlobalAttr>() &&
                GD.getKernelReferenceKind() == KernelReferenceKind::Stub) {
       Out << "__device_stub__" << II->getName();
+    } else if (FD && FD->hasAttr<OpenCLKernelAttr>() &&
+               GD.getKernelReferenceKind() == KernelReferenceKind::Stub) {
+      Out << "__clang_ocl_kern_imp_" << II->getName();
     } else {
       Out << II->getName();
     }
@@ -2068,9 +2074,10 @@ StringRef CodeGenModule::getMangledName(GlobalDecl GD) {
   // Prior work:
   // https://discourse.llvm.org/t/rfc-clang-diagnostic-for-demangling-failures/82835/8
   // https://github.com/llvm/llvm-project/issues/111345
-  // assert((MangledName.startswith("_Z") || MangledName.startswith("?")) &&
-  //        !GD->hasAttr<AsmLabelAttr>() &&
-  //        llvm::demangle(MangledName) != MangledName &&
+  // assert(!((StringRef(MangledName).starts_with("_Z") ||
+  //           StringRef(MangledName).starts_with("?")) &&
+  //          !GD.getDecl()->hasAttr<AsmLabelAttr>() &&
+  //          llvm::demangle(MangledName) == MangledName) &&
   //        "LLVM demangler must demangle clang-generated names");
 
   auto Result = Manglings.insert(std::make_pair(MangledName, GD));
@@ -2666,7 +2673,7 @@ void CodeGenModule::SetLLVMFunctionAttributesForDefinition(const Decl *D,
     for (const CXXRecordDecl *Base : getMostBaseClasses(MD->getParent())) {
       llvm::Metadata *Id =
           CreateMetadataIdentifierForType(Context.getMemberPointerType(
-              MD->getType(), Context.getRecordType(Base).getTypePtr()));
+              MD->getType(), /*Qualifier=*/nullptr, Base));
       F->addTypeMetadata(0, Id);
     }
   }
@@ -2934,10 +2941,9 @@ void CodeGenModule::SetFunctionAttributes(GlobalDecl GD, llvm::Function *F,
                                           bool IsIncompleteFunction,
                                           bool IsThunk) {
 
-  if (llvm::Intrinsic::ID IID = F->getIntrinsicID()) {
-    // If this is an intrinsic function, set the function's attributes
-    // to the intrinsic's attributes.
-    F->setAttributes(llvm::Intrinsic::getAttributes(getLLVMContext(), IID));
+  if (F->getIntrinsicID() != llvm::Intrinsic::not_intrinsic) {
+    // If this is an intrinsic function, the attributes will have been set
+    // when the function was created.
     return;
   }
 
@@ -3891,6 +3897,9 @@ void CodeGenModule::EmitGlobal(GlobalDecl GD) {
 
   // Ignore declarations, they will be emitted on their first use.
   if (const auto *FD = dyn_cast<FunctionDecl>(Global)) {
+    if (FD->hasAttr<OpenCLKernelAttr>() && FD->doesThisDeclarationHaveABody())
+      addDeferredDeclToEmit(GlobalDecl(FD, KernelReferenceKind::Stub));
+
     // Update deferred annotations with the latest declaration if the function
     // function was already used or defined.
     if (FD->hasAttr<AnnotateAttr>()) {
@@ -4858,6 +4867,11 @@ CodeGenModule::GetAddrOfFunction(GlobalDecl GD, llvm::Type *Ty, bool ForVTable,
   if (!Ty) {
     const auto *FD = cast<FunctionDecl>(GD.getDecl());
     Ty = getTypes().ConvertType(FD->getType());
+    if (FD->hasAttr<OpenCLKernelAttr>() &&
+        GD.getKernelReferenceKind() == KernelReferenceKind::Stub) {
+      const CGFunctionInfo &FI = getTypes().arrangeGlobalDeclaration(GD);
+      Ty = getTypes().GetFunctionType(FI);
+    }
   }
 
   // Devirtualized destructor calls may come through here instead of via
@@ -7300,6 +7314,13 @@ void CodeGenModule::EmitTopLevelDecl(Decl *D) {
     getHLSLRuntime().addBuffer(cast<HLSLBufferDecl>(D));
     break;
 
+  case Decl::OpenACCDeclare:
+    EmitOpenACCDeclare(cast<OpenACCDeclareDecl>(D));
+    break;
+  case Decl::OpenACCRoutine:
+    EmitOpenACCRoutine(cast<OpenACCRoutineDecl>(D));
+    break;
+
   default:
     // Make sure we handled everything we should, every other kind is a
     // non-top-level decl.  FIXME: Would be nice to have an isTopLevelDeclKind
@@ -7930,50 +7951,4 @@ void CodeGenModule::moveLazyEmissionStates(CodeGenModule *NewBuilder) {
   NewBuilder->WeakRefReferences = std::move(WeakRefReferences);
 
   NewBuilder->ABI->MangleCtx = std::move(ABI->MangleCtx);
-}
-
-bool CodeGenModule::classNeedsVectorDestructor(const CXXRecordDecl *RD) {
-  CXXDestructorDecl *Dtor = RD->getDestructor();
-  // The compiler can't know if new[]/delete[] will be used outside of the DLL,
-  // so just force vector deleting destructor emission if dllexport is present.
-  // This matches MSVC behavior.
-  if (Dtor && Dtor->isVirtual() && Dtor->isDefined() &&
-      Dtor->hasAttr<DLLExportAttr>())
-    return true;
-
-  assert(getCXXABI().hasVectorDeletingDtors());
-  return RequireVectorDeletingDtor.count(RD);
-}
-
-void CodeGenModule::requireVectorDestructorDefinition(const CXXRecordDecl *RD) {
-  assert(getCXXABI().hasVectorDeletingDtors());
-  RequireVectorDeletingDtor.insert(RD);
-
-  // To reduce code size in general case we lazily emit scalar deleting
-  // destructor definition and an alias from vector deleting destructor to
-  // scalar deleting destructor. It may happen that we first emitted the scalar
-  // deleting destructor definition and the alias and then discovered that the
-  // definition of the vector deleting destructor is required. Then we need to
-  // remove the alias and the scalar deleting destructor and queue vector
-  // deleting destructor body for emission. Check if that is the case.
-  CXXDestructorDecl *DtorD = RD->getDestructor();
-  GlobalDecl ScalarDtorGD(DtorD, Dtor_Deleting);
-  StringRef MangledName = getMangledName(ScalarDtorGD);
-  llvm::GlobalValue *Entry = GetGlobalValue(MangledName);
-  if (Entry && !Entry->isDeclaration()) {
-    GlobalDecl VectorDtorGD(DtorD, Dtor_VectorDeleting);
-    StringRef VDName = getMangledName(VectorDtorGD);
-    llvm::GlobalValue *VDEntry = GetGlobalValue(VDName);
-    // It exists and it should be an alias.
-    assert(VDEntry && isa<llvm::GlobalAlias>(VDEntry));
-    auto *NewFn = llvm::Function::Create(
-        cast<llvm::FunctionType>(VDEntry->getValueType()),
-        llvm::Function::ExternalLinkage, VDName, &getModule());
-    NewFn->takeName(VDEntry);
-    VDEntry->replaceAllUsesWith(NewFn);
-    VDEntry->eraseFromParent();
-    Entry->replaceAllUsesWith(NewFn);
-    Entry->eraseFromParent();
-    addDeferredDeclToEmit(VectorDtorGD);
-  }
 }

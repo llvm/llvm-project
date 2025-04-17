@@ -1477,6 +1477,8 @@ define amdgpu_kernel void @multiple_uses_fneg_select_f64(double %x, double %y, i
 ; GFX7-NEXT:    s_load_dword s6, s[8:9], 0x4
 ; GFX7-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; GFX7-NEXT:    s_load_dwordx2 s[4:5], s[8:9], 0x6
+; GFX7-NEXT:    s_add_i32 s12, s12, s17
+; GFX7-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX7-NEXT:    s_bitcmp1_b32 s6, 0
 ; GFX7-NEXT:    s_cselect_b64 vcc, -1, 0
@@ -1488,6 +1490,7 @@ define amdgpu_kernel void @multiple_uses_fneg_select_f64(double %x, double %y, i
 ; GFX7-NEXT:    s_cselect_b32 s0, s0, s2
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX7-NEXT:    v_mov_b32_e32 v2, s4
+; GFX7-NEXT:    s_mov_b32 flat_scratch_lo, s13
 ; GFX7-NEXT:    v_cndmask_b32_e64 v1, v1, -v0, vcc
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX7-NEXT:    v_mov_b32_e32 v3, s5
@@ -1585,7 +1588,7 @@ define amdgpu_kernel void @fnge_select_f32_multi_use_regression(float %.i2369) {
 
 bb:                                               ; preds = %.entry
   %i2 = call <2 x i32> @llvm.amdgcn.s.buffer.load.v2i32(<4 x i32> zeroinitializer, i32 1, i32 0)
-  %i3 = shufflevector <2 x i32> %i2, <2 x i32> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+  %i3 = shufflevector <2 x i32> %i2, <2 x i32> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
   %i4 = bitcast <4 x i32> %i3 to <4 x float>
   %.i0753 = extractelement <4 x float> %i4, i64 0
   br label %bb5

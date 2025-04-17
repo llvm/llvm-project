@@ -311,69 +311,6 @@ bool IsBindCProcedure(const Scope &scope) {
   }
 }
 
-static const Symbol *FindPointerComponent(
-    const Scope &scope, std::set<const Scope *> &visited) {
-  if (!scope.IsDerivedType()) {
-    return nullptr;
-  }
-  if (!visited.insert(&scope).second) {
-    return nullptr;
-  }
-  // If there's a top-level pointer component, return it for clearer error
-  // messaging.
-  for (const auto &pair : scope) {
-    const Symbol &symbol{*pair.second};
-    if (IsPointer(symbol)) {
-      return &symbol;
-    }
-  }
-  for (const auto &pair : scope) {
-    const Symbol &symbol{*pair.second};
-    if (const auto *details{symbol.detailsIf<ObjectEntityDetails>()}) {
-      if (const DeclTypeSpec * type{details->type()}) {
-        if (const DerivedTypeSpec * derived{type->AsDerived()}) {
-          if (const Scope * nested{derived->scope()}) {
-            if (const Symbol *
-                pointer{FindPointerComponent(*nested, visited)}) {
-              return pointer;
-            }
-          }
-        }
-      }
-    }
-  }
-  return nullptr;
-}
-
-const Symbol *FindPointerComponent(const Scope &scope) {
-  std::set<const Scope *> visited;
-  return FindPointerComponent(scope, visited);
-}
-
-const Symbol *FindPointerComponent(const DerivedTypeSpec &derived) {
-  if (const Scope * scope{derived.scope()}) {
-    return FindPointerComponent(*scope);
-  } else {
-    return nullptr;
-  }
-}
-
-const Symbol *FindPointerComponent(const DeclTypeSpec &type) {
-  if (const DerivedTypeSpec * derived{type.AsDerived()}) {
-    return FindPointerComponent(*derived);
-  } else {
-    return nullptr;
-  }
-}
-
-const Symbol *FindPointerComponent(const DeclTypeSpec *type) {
-  return type ? FindPointerComponent(*type) : nullptr;
-}
-
-const Symbol *FindPointerComponent(const Symbol &symbol) {
-  return IsPointer(symbol) ? &symbol : FindPointerComponent(symbol.GetType());
-}
-
 // C1594 specifies several ways by which an object might be globally visible.
 const Symbol *FindExternallyVisibleObject(
     const Symbol &object, const Scope &scope, bool isPointerDefinition) {
@@ -1393,6 +1330,12 @@ PotentialComponentIterator::const_iterator FindCoarrayPotentialComponent(
       [](const Symbol &symbol) { return evaluate::IsCoarray(symbol); });
 }
 
+PotentialAndPointerComponentIterator::const_iterator
+FindPointerPotentialComponent(const DerivedTypeSpec &derived) {
+  PotentialAndPointerComponentIterator potentials{derived};
+  return std::find_if(potentials.begin(), potentials.end(), IsPointer);
+}
+
 UltimateComponentIterator::const_iterator FindCoarrayUltimateComponent(
     const DerivedTypeSpec &derived) {
   UltimateComponentIterator ultimates{derived};
@@ -1790,16 +1733,20 @@ bool HadUseError(
         at, "Reference to '%s' is ambiguous"_err_en_US, symbol->name())};
     for (const auto &[location, sym] : details->occurrences()) {
       const Symbol &ultimate{sym->GetUltimate()};
-      auto &attachment{
-          msg.Attach(location, "'%s' was use-associated from module '%s'"_en_US,
-              at, sym->owner().GetName().value())};
-      if (&*sym != &ultimate) {
-        // For incompatible definitions where one comes from a hermetic
-        // module file's incorporated dependences and the other from another
-        // module of the same name.
-        attachment.Attach(ultimate.name(),
-            "ultimately from '%s' in module '%s'"_en_US, ultimate.name(),
-            ultimate.owner().GetName().value());
+      if (sym->owner().IsModule()) {
+        auto &attachment{msg.Attach(location,
+            "'%s' was use-associated from module '%s'"_en_US, at,
+            sym->owner().GetName().value())};
+        if (&*sym != &ultimate) {
+          // For incompatible definitions where one comes from a hermetic
+          // module file's incorporated dependences and the other from another
+          // module of the same name.
+          attachment.Attach(ultimate.name(),
+              "ultimately from '%s' in module '%s'"_en_US, ultimate.name(),
+              ultimate.owner().GetName().value());
+        }
+      } else {
+        msg.Attach(sym->name(), "declared here"_en_US);
       }
     }
     context.SetError(*symbol);

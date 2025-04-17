@@ -16,6 +16,7 @@
 #define LLVM_TRANSFORMS_VECTORIZE_VPLANHELPERS_H
 
 #include "VPlanAnalysis.h"
+#include "VPlanDominatorTree.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -201,7 +202,7 @@ public:
 /// VPTransformState holds information passed down when "executing" a VPlan,
 /// needed for generating the output IR.
 struct VPTransformState {
-  VPTransformState(const TargetTransformInfo *TTI, ElementCount VF, unsigned UF,
+  VPTransformState(const TargetTransformInfo *TTI, ElementCount VF,
                    LoopInfo *LI, DominatorTree *DT, IRBuilderBase &Builder,
                    InnerLoopVectorizer *ILV, VPlan *Plan,
                    Loop *CurrentParentLoop, Type *CanonicalIVTy);
@@ -354,12 +355,11 @@ struct VPTransformState {
   /// memchecks.  The actually versioning is performed manually.
   LoopVersioning *LVer = nullptr;
 
-  /// Map SCEVs to their expanded values. Populated when executing
-  /// VPExpandSCEVRecipes.
-  DenseMap<const SCEV *, Value *> ExpandedSCEVs;
-
   /// VPlan-based type analysis.
   VPTypeAnalysis TypeAnalysis;
+
+  /// VPlan-based dominator tree.
+  VPDominatorTree VPDT;
 };
 
 /// Struct to hold various analysis needed for cost computations.

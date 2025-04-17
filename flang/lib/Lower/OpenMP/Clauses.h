@@ -17,6 +17,7 @@
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Frontend/OpenMP/ClauseT.h"
+#include "llvm/Frontend/OpenMP/OMP.h.inc"
 
 #include <optional>
 #include <type_traits>
@@ -142,6 +143,9 @@ inline ObjectList makeObjects(const parser::OmpObjectList &objects,
                               semantics::SemanticsContext &semaCtx) {
   return makeList(objects.v, makeObjectFn(semaCtx));
 }
+
+ObjectList makeObjects(const parser::OmpArgumentList &objects,
+                       semantics::SemanticsContext &semaCtx);
 
 template <typename FuncTy, //
           typename ArgTy,  //
@@ -286,6 +290,7 @@ using To = tomp::clause::ToT<TypeTy, IdTy, ExprTy>;
 using UnifiedAddress = tomp::clause::UnifiedAddressT<TypeTy, IdTy, ExprTy>;
 using UnifiedSharedMemory =
     tomp::clause::UnifiedSharedMemoryT<TypeTy, IdTy, ExprTy>;
+using SelfMaps = tomp::clause::SelfMapsT<TypeTy, IdTy, ExprTy>;
 using Uniform = tomp::clause::UniformT<TypeTy, IdTy, ExprTy>;
 using Unknown = tomp::clause::UnknownT<TypeTy, IdTy, ExprTy>;
 using Untied = tomp::clause::UntiedT<TypeTy, IdTy, ExprTy>;
@@ -302,7 +307,8 @@ using Write = tomp::clause::WriteT<TypeTy, IdTy, ExprTy>;
 using tomp::type::operator==;
 
 struct CancellationConstructType {
-  using EmptyTrait = std::true_type;
+  using WrapperTrait = std::true_type;
+  llvm::omp::CancellationConstructType v;
 };
 struct Depobj {
   using EmptyTrait = std::true_type;

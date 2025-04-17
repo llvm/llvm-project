@@ -119,7 +119,7 @@ def MIPS_P8700 : RISCVProcessorModel<"mips-p8700",
                                       FeatureStdExtZbb,
                                       FeatureStdExtZifencei,
                                       FeatureStdExtZicsr,
-                                      FeatureVendorXMIPSCMove,
+                                      FeatureVendorXMIPSCMov,
                                       FeatureVendorXMIPSLSP],
                                      [TuneMIPSP8700]>;
 

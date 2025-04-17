@@ -186,9 +186,14 @@ static mlir::Value genRuntimeAllocate(fir::FirOpBuilder &builder,
           ? fir::runtime::getRuntimeFunc<mkRTKey(PointerAllocate)>(loc, builder)
           : fir::runtime::getRuntimeFunc<mkRTKey(AllocatableAllocate)>(loc,
                                                                        builder);
-  llvm::SmallVector<mlir::Value> args{
-      box.getAddr(), errorManager.hasStat, errorManager.errMsgAddr,
-      errorManager.sourceFile, errorManager.sourceLine};
+  llvm::SmallVector<mlir::Value> args{box.getAddr()};
+  if (!box.isPointer())
+    args.push_back(
+        builder.createIntegerConstant(loc, builder.getI64Type(), -1));
+  args.push_back(errorManager.hasStat);
+  args.push_back(errorManager.errMsgAddr);
+  args.push_back(errorManager.sourceFile);
+  args.push_back(errorManager.sourceLine);
   llvm::SmallVector<mlir::Value> operands;
   for (auto [fst, snd] : llvm::zip(args, callee.getFunctionType().getInputs()))
     operands.emplace_back(builder.createConvert(loc, snd, fst));
@@ -470,7 +475,7 @@ private:
   void genSimpleAllocation(const Allocation &alloc,
                            const fir::MutableBoxValue &box) {
     bool isCudaSymbol = Fortran::semantics::HasCUDAAttr(alloc.getSymbol());
-    bool isCudaDeviceContext = Fortran::lower::isCudaDeviceContext(builder);
+    bool isCudaDeviceContext = cuf::isCUDADeviceContext(builder.getRegion());
     bool inlineAllocation = !box.isDerived() && !errorManager.hasStatSpec() &&
                             !alloc.type.IsPolymorphic() &&
                             !alloc.hasCoarraySpec() && !useAllocateRuntime &&
@@ -862,7 +867,7 @@ genDeallocate(fir::FirOpBuilder &builder,
               mlir::Value declaredTypeDesc = {},
               const Fortran::semantics::Symbol *symbol = nullptr) {
   bool isCudaSymbol = symbol && Fortran::semantics::HasCUDAAttr(*symbol);
-  bool isCudaDeviceContext = Fortran::lower::isCudaDeviceContext(builder);
+  bool isCudaDeviceContext = cuf::isCUDADeviceContext(builder.getRegion());
   bool inlineDeallocation =
       !box.isDerived() && !box.isPolymorphic() && !box.hasAssumedRank() &&
       !box.isUnlimitedPolymorphic() && !errorManager.hasStatSpec() &&

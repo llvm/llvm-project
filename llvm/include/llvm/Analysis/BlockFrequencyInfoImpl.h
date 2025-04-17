@@ -1159,8 +1159,7 @@ void BlockFrequencyInfoImpl<BT>::setBlockFreq(const BlockT *BB,
 
 template <class BT> void BlockFrequencyInfoImpl<BT>::initializeRPOT() {
   const BlockT *Entry = &F->front();
-  RPOT.reserve(F->size());
-  std::copy(po_begin(Entry), po_end(Entry), std::back_inserter(RPOT));
+  llvm::append_range(RPOT, post_order(Entry));
   std::reverse(RPOT.begin(), RPOT.end());
 
   assert(RPOT.size() - 1 <= BlockNode::getMaxIndex() &&
@@ -1571,7 +1570,8 @@ void BlockFrequencyInfoImpl<BT>::initTransitionProbabilities(
     SmallPtrSet<const BlockT *, 2> UniqueSuccs;
     for (const auto SI : children<const BlockT *>(BB)) {
       // Ignore cold blocks
-      if (!BlockIndex.contains(SI))
+      auto BlockIndexIt = BlockIndex.find(SI);
+      if (BlockIndexIt == BlockIndex.end())
         continue;
       // Ignore parallel edges between BB and SI blocks
       if (!UniqueSuccs.insert(SI).second)
@@ -1583,7 +1583,7 @@ void BlockFrequencyInfoImpl<BT>::initTransitionProbabilities(
 
       auto EdgeProb =
           Scaled64::getFraction(EP.getNumerator(), EP.getDenominator());
-      size_t Dst = BlockIndex.find(SI)->second;
+      size_t Dst = BlockIndexIt->second;
       Succs[Src].push_back(std::make_pair(Dst, EdgeProb));
       SumProb[Src] += EdgeProb;
     }

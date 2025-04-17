@@ -68,6 +68,7 @@ define void @entrypoint() {
 ;--- profile.yaml
 Contexts:
   - Guid: 10507721908651011566
+    TotalRootEntryCount: 10
     Counters: [1]
     Callsites:  -
                   - Guid:  2072045998141807037
@@ -92,6 +93,7 @@ Current Profile:
 
 Contexts:
   - Guid:            10507721908651011566
+    TotalRootEntryCount: 10
     Counters:        [ 1 ]
     Callsites:
       - - Guid:            2072045998141807037
