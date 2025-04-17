@@ -1081,10 +1081,14 @@ public:
   ExpandFpLegacyPass() : ExpandFpLegacyPass(CodeGenOptLevel::None) {};
 
   bool runOnFunction(Function &F) override {
+    if (skipFunction(F))
+      return false;
+
     auto *TM = &getAnalysis<TargetPassConfig>().getTM<TargetMachine>();
     auto *TLI = TM->getSubtargetImpl(F)->getTargetLowering();
     AssumptionCache *AC = nullptr;
-    if (OptLevel != CodeGenOptLevel::None)
+
+    if (OptLevel != CodeGenOptLevel::None || F.hasOptNone())
       AC = &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
     return runImpl(F, *TLI, AC);
   }
