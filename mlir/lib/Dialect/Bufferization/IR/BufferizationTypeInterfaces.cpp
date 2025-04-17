@@ -1,4 +1,4 @@
-//===- BufferizationTypeInterfaces.h - Type Interfaces ----------*- C++ -*-===//
+//===- BufferizationTypeInterfaces.cpp - Type Interfaces --------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,16 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_BUFFERIZATION_IR_BUFFERIZATIONTYPEINTERFACES_H_
-#define MLIR_DIALECT_BUFFERIZATION_IR_BUFFERIZATIONTYPEINTERFACES_H_
+#include "mlir/Dialect/Bufferization/IR/BufferizationTypeInterfaces.h"
 
 //===----------------------------------------------------------------------===//
 // Bufferization Type Interfaces
 //===----------------------------------------------------------------------===//
 
-#include "mlir/IR/Attributes.h" // mlir::Attribute
-#include "mlir/IR/Types.h"
+namespace mlir {
+namespace bufferization {
 
-#include "mlir/Dialect/Bufferization/IR/BufferizationTypeInterfaces.h.inc"
+#include "mlir/Dialect/Bufferization/IR/BufferizationTypeInterfaces.cpp.inc"
 
-#endif // MLIR_DIALECT_BUFFERIZATION_IR_BUFFERIZATIONTYPEINTERFACES_H_
+} // namespace bufferization
+} // namespace mlir

@@ -220,8 +220,8 @@ mlir::getBufferizationOptionsForSparsification(bool analysisOnly) {
   options.setFunctionBoundaryTypeConversion(LayoutMapOption::IdentityLayoutMap);
   options.unknownTypeConverterFn = [](Value value, Attribute memorySpace,
                                       const BufferizationOptions &options) {
-    return getMemRefTypeWithStaticIdentityLayout(
-        cast<TensorType>(value.getType()), memorySpace);
+    return llvm::cast<BufferLikeType>(getMemRefTypeWithStaticIdentityLayout(
+        cast<TensorType>(value.getType()), memorySpace));
   };
   if (analysisOnly) {
     options.testAnalysisOnly = true;

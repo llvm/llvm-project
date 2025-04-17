@@ -26,7 +26,7 @@ struct ConstantOpInterface
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
                           const BufferizationOptions &options) const {
     auto constantOp = cast<arith::ConstantOp>(op);
-    auto type = dyn_cast<RankedTensorType>(constantOp.getType());
+    auto type = dyn_cast<TensorLikeType>(constantOp.getType());
 
     // Only ranked tensors are supported.
     if (!type)
@@ -176,7 +176,7 @@ struct SelectOpInterface
     return success();
   }
 
-  FailureOr<BaseMemRefType>
+  FailureOr<bufferization::BufferLikeType>
   getBufferType(Operation *op, Value value, const BufferizationOptions &options,
                 SmallVector<Value> &invocationStack) const {
     auto selectOp = cast<arith::SelectOp>(op);
@@ -195,10 +195,11 @@ struct SelectOpInterface
     // If the buffers have different types, they differ only in their layout
     // map.
     auto memrefType = llvm::cast<MemRefType>(*trueType);
-    return getMemRefTypeWithFullyDynamicLayout(
-        RankedTensorType::get(memrefType.getShape(),
-                              memrefType.getElementType()),
-        memrefType.getMemorySpace());
+    return mlir::cast<bufferization::BufferLikeType>(
+        getMemRefTypeWithFullyDynamicLayout(
+            RankedTensorType::get(memrefType.getShape(),
+                                  memrefType.getElementType()),
+            memrefType.getMemorySpace()));
   }
 };
 

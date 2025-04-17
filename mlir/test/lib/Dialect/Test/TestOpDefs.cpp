@@ -8,6 +8,7 @@
 
 #include "TestDialect.h"
 #include "TestOps.h"
+#include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/Verifier.h"
 #include "mlir/Interfaces/FunctionImplementation.h"
@@ -1385,4 +1386,27 @@ std::optional<DestructurableAllocationOpInterface>
 TestMultiSlotAlloca::handleDestructuringComplete(
     const DestructurableMemorySlot &slot, OpBuilder &builder) {
   return createNewMultiAllocaWithoutSlot(slot, builder, *this);
+}
+
+::mlir::LogicalResult test::TestDummyTensorOp::bufferize(
+    ::mlir::RewriterBase &rewriter,
+    const ::mlir::bufferization::BufferizationOptions &options) {
+  const auto inType = getInput().getType();
+  const auto bufferizedInType = test::TestMemrefType::get(
+      getContext(), inType.getShape(), inType.getElementType(), nullptr);
+  const auto outType = getOutput().getType();
+  const auto bufferizedOutType = test::TestMemrefType::get(
+      getContext(), outType.getShape(), outType.getElementType(), nullptr);
+
+  // replace op with memref analogy, preserve correct types at the boundaries
+  auto toMemref = rewriter.create<::mlir::bufferization::ToMemrefOp>(
+      getLoc(), bufferizedInType, getInput());
+  auto dummyMemrefOp = rewriter.create<test::TestDummyMemrefOp>(
+      getLoc(), bufferizedOutType, toMemref.getResult());
+  auto toTensor = rewriter.create<::mlir::bufferization::ToTensorOp>(
+      getLoc(), outType, dummyMemrefOp.getOutput());
+
+  rewriter.replaceOp(*this, toTensor);
+
+  return mlir::success();
 }

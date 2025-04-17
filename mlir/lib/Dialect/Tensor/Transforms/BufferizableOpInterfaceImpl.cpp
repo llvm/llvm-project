@@ -487,8 +487,7 @@ struct FromElementsOpInterface
         /*copy=*/false);
     if (failed(tensorAlloc))
       return failure();
-    FailureOr<BaseMemRefType> memrefType =
-        bufferization::getBufferType(*tensorAlloc, options);
+    auto memrefType = bufferization::getBufferType(*tensorAlloc, options);
     if (failed(memrefType))
       return failure();
     Value buffer = rewriter.create<bufferization::ToMemrefOp>(
@@ -592,7 +591,8 @@ struct GenerateOpInterface
     auto type = generateOp.getResult().getType();
 
     // TODO: Implement memory space for this op.
-    if (options.defaultMemorySpaceFn(type) != Attribute())
+    if (options.defaultMemorySpaceFn(llvm::cast<TensorLikeType>(type)) !=
+        Attribute())
       return op->emitError("memory space not implemented yet");
 
     // Allocate memory.
@@ -1031,7 +1031,8 @@ struct SplatOpInterface
     auto tensorType = cast<RankedTensorType>(tensorAlloc->getType());
 
     // TODO: Implement memory space for this op.
-    if (options.defaultMemorySpaceFn(tensorType) != Attribute())
+    if (options.defaultMemorySpaceFn(llvm::cast<TensorLikeType>(tensorType)) !=
+        Attribute())
       return op->emitError("memory space not implemented yet");
 
     auto linalgOp =

@@ -446,6 +446,9 @@ def TestMemrefType : Test_Type<"TestMemref",
       return test::TestMemrefType::get(
         getContext(), shape.value_or(getShape()), elementType, getMemSpace());
     }
+
+    // BufferLikeTypeInterface:
+    ::mlir::Attribute getMemorySpace() const { return getMemSpace(); }
   }];
 }
 

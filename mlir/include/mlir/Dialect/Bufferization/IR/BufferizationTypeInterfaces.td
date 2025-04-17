@@ -33,10 +33,17 @@ def Bufferization_BufferLikeTypeInterface
   let description = [{
     Indicates that this type is a buffer type (similarly to a MLIR builtin
     memref) for bufferization purposes.
-
-    The interface currently has no methods as it is used by types to opt into
-    being supported by the bufferization procedures.
   }];
+
+  let methods = [
+    InterfaceMethod<
+      /*desc=*/[{
+        Returns the memory space in which data referred to by this buffer resides.
+      }],
+      /*retType=*/"::mlir::Attribute",
+      /*methodName=*/"getMemorySpace"
+    >,
+  ];
 }
 
 #endif // BUFFERIZATION_TYPE_INTERFACES

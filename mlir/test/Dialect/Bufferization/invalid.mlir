@@ -58,14 +58,14 @@ func.func @invalid_materialize_in_destination(%arg0: tensor<5x5xf32>, %arg1: ten
 // -----
 
 func.func @invalid_materialize_in_destination_dest_type(%arg0: tensor<5xf32>, %arg1: vector<5xf32>) {
-  // expected-error @below{{'dest' must be a tensor or a memref}}
+  // expected-error @below{{'dest' must be a tensor or a buffer}}
   bufferization.materialize_in_destination %arg0 in %arg1 : (tensor<5xf32>, vector<5xf32>) -> ()
 }
 
 // -----
 
 func.func @invalid_materialize_in_destination_result(%arg0: tensor<?xf32>, %arg1: memref<?xf32>) {
-  // expected-error @below{{memref 'dest' implies zero results}}
+  // expected-error @below{{buffer 'dest' implies zero results}}
   bufferization.materialize_in_destination %arg0 in restrict %arg1 : (tensor<?xf32>, memref<?xf32>) -> (tensor<?xf32>)
 }
 
@@ -79,14 +79,14 @@ func.func @invalid_materialize_in_destination_result_missing(%arg0: tensor<?xf32
 // -----
 
 func.func @invalid_materialize_in_destination_restrict(%arg0: tensor<?xf32>, %arg1: tensor<?xf32>) {
-  // expected-error @below{{'restrict' is valid only for memref destinations}}
+  // expected-error @below{{'restrict' is valid only for buffer destinations}}
   bufferization.materialize_in_destination %arg0 in restrict %arg1 : (tensor<?xf32>, tensor<?xf32>) -> (tensor<?xf32>)
 }
 
 // -----
 
 func.func @invalid_materialize_in_destination_restrict(%arg0: tensor<?xf32>, %arg1: tensor<?xf32>) {
-  // expected-error @below{{'writable' must be specified if and only if the destination is of memref type}}
+  // expected-error @below{{'writable' must be specified if and only if the destination is of buffer type}}
   bufferization.materialize_in_destination %arg0 in writable %arg1 : (tensor<?xf32>, tensor<?xf32>) -> (tensor<?xf32>)
 }
 

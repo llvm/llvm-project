@@ -80,14 +80,14 @@ struct OneShotBufferizePass
 
       if (mustInferMemorySpace) {
         opt.defaultMemorySpaceFn =
-            [](TensorType t) -> std::optional<Attribute> {
+            [](TensorLikeType t) -> std::optional<Attribute> {
           return std::nullopt;
         };
       }
 
       if (useEncodingForMemorySpace) {
         opt.defaultMemorySpaceFn =
-            [](TensorType t) -> std::optional<Attribute> {
+            [](TensorLikeType t) -> std::optional<Attribute> {
           if (auto rtt = dyn_cast<RankedTensorType>(t))
             return rtt.getEncoding();
           return std::nullopt;
@@ -113,13 +113,15 @@ struct OneShotBufferizePass
                                        const BufferizationOptions &options) {
         auto tensorType = cast<TensorType>(value.getType());
         if (unknownTypeConversionOption == LayoutMapOption::IdentityLayoutMap)
-          return bufferization::getMemRefTypeWithStaticIdentityLayout(
-              tensorType, memorySpace);
+          return mlir::cast<BufferLikeType>(
+              bufferization::getMemRefTypeWithStaticIdentityLayout(
+                  tensorType, memorySpace));
         assert(unknownTypeConversionOption ==
                    LayoutMapOption::FullyDynamicLayoutMap &&
                "invalid layout map option");
-        return bufferization::getMemRefTypeWithFullyDynamicLayout(tensorType,
-                                                                  memorySpace);
+        return mlir::cast<BufferLikeType>(
+            bufferization::getMemRefTypeWithFullyDynamicLayout(tensorType,
+                                                               memorySpace));
       };
 
       // Configure op filter.
@@ -407,7 +409,7 @@ bufferization::bufferizeBlockSignature(Block *block, RewriterBase &rewriter,
       continue;
     }
 
-    FailureOr<BaseMemRefType> memrefType =
+    FailureOr<BufferLikeType> memrefType =
         bufferization::getBufferType(bbArg, options);
     if (failed(memrefType))
       return failure();
@@ -458,7 +460,7 @@ bufferization::bufferizeBlockSignature(Block *block, RewriterBase &rewriter,
         newOperands.push_back(operand);
         continue;
       }
-      FailureOr<BaseMemRefType> operandBufferType =
+      FailureOr<BufferLikeType> operandBufferType =
           bufferization::getBufferType(operand, options);
       if (failed(operandBufferType))
         return failure();

@@ -53,14 +53,14 @@ void FuncAnalysisState::startFunctionAnalysis(FuncOp funcOp) {
 /// Return the index-th bufferized function argument type. This assumes that the
 /// specified argument is a tensor. If the tensor is ranked, a layout map may be
 /// specified by the user (as per `options.functionArgTypeConverterFn`).
-static BaseMemRefType
+static BufferLikeType
 getBufferizedFunctionArgType(FuncOp funcOp, int64_t index,
                              const BufferizationOptions &options) {
   auto tensorType =
-      dyn_cast<TensorType>(funcOp.getFunctionType().getInput(index));
-  assert(tensorType && "expected TensorType");
+      dyn_cast<TensorLikeType>(funcOp.getFunctionType().getInput(index));
+  assert(tensorType && "expected TensorLikeType");
 
-  BaseMemRefType memrefType = options.functionArgTypeConverterFn(
+  BufferLikeType memrefType = options.functionArgTypeConverterFn(
       tensorType, *options.defaultMemorySpaceFn(tensorType), funcOp, options);
 
   auto layoutAttr = funcOp.getArgAttrOfType<AffineMapAttr>(
@@ -70,9 +70,9 @@ getBufferizedFunctionArgType(FuncOp funcOp, int64_t index,
 
   auto rankedMemrefType = dyn_cast<MemRefType>(memrefType);
   assert(rankedMemrefType && "buffer layout not supported on unranked tensors");
-  return MemRefType::get(
+  return mlir::cast<BufferLikeType>(MemRefType::get(
       rankedMemrefType.getShape(), rankedMemrefType.getElementType(),
-      layoutAttr.getValue(), rankedMemrefType.getMemorySpace());
+      layoutAttr.getValue(), rankedMemrefType.getMemorySpace()));
 }
 
 /// Return the FuncOp called by `callOp`.
@@ -195,7 +195,7 @@ struct CallOpInterface
     return result;
   }
 
-  FailureOr<BaseMemRefType>
+  FailureOr<BufferLikeType>
   getBufferType(Operation *op, Value value, const BufferizationOptions &options,
                 SmallVector<Value> &invocationStack) const {
     auto callOp = cast<func::CallOp>(op);
@@ -207,11 +207,11 @@ struct CallOpInterface
     FunctionType funcType = funcOp.getFunctionType();
     Type resultType =
         funcType.getResult(cast<OpResult>(value).getResultNumber());
-    if (auto bufferizedType = dyn_cast<BaseMemRefType>(resultType))
+    if (auto bufferizedType = dyn_cast<BufferLikeType>(resultType))
       return bufferizedType;
 
     // Otherwise, call the type converter to compute the bufferized type.
-    auto tensorType = cast<TensorType>(resultType);
+    auto tensorType = cast<TensorLikeType>(resultType);
     return options.functionArgTypeConverterFn(
         tensorType, *options.defaultMemorySpaceFn(tensorType), funcOp, options);
   }
@@ -233,7 +233,7 @@ struct CallOpInterface
       }
 
       // Returning a memref.
-      FailureOr<BaseMemRefType> resultType =
+      FailureOr<BufferLikeType> resultType =
           bufferization::getBufferType(result, options);
       if (failed(resultType))
         return failure();
@@ -263,11 +263,11 @@ struct CallOpInterface
 
       // Caller / callee type mismatch is handled with castOrReallocMemRefValue.
       auto memRefType = funcType.getInput(opOperand.getOperandNumber());
-      if (!isa<BaseMemRefType>(memRefType)) {
+      if (!isa<BufferLikeType>(memRefType)) {
         // The called function was not bufferized yet. This can happen when
         // there cycles in the function call graph. Compute the bufferized
         // result type.
-        FailureOr<BaseMemRefType> maybeMemRefType =
+        FailureOr<BufferLikeType> maybeMemRefType =
             bufferization::getBufferType(
                 funcOp.getArgument(opOperand.getOperandNumber()), options);
         if (failed(maybeMemRefType))
@@ -371,7 +371,7 @@ struct FuncOpInterface
     return getAliasingBranchOpOperands(op, cast<BlockArgument>(value), state);
   }
 
-  FailureOr<BaseMemRefType>
+  FailureOr<BufferLikeType>
   getBufferType(Operation *op, Value value, const BufferizationOptions &options,
                 SmallVector<Value> &invocationStack) const {
     auto funcOp = cast<FuncOp>(op);
@@ -413,8 +413,8 @@ struct FuncOpInterface
     // Compute the result types.
     SmallVector<Type> retTypes;
     for (Type resultType : funcType.getResults()) {
-      if (auto tensorType = dyn_cast<TensorType>(resultType)) {
-        BaseMemRefType resultType = options.functionArgTypeConverterFn(
+      if (auto tensorType = dyn_cast<TensorLikeType>(resultType)) {
+        BufferLikeType resultType = options.functionArgTypeConverterFn(
             tensorType, *options.defaultMemorySpaceFn(tensorType), funcOp,
             options);
         retTypes.push_back(resultType);
