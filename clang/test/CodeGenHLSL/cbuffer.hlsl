@@ -1,5 +1,4 @@
-// RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.3-compute \
-// RUN:   -fnative-half-type -emit-llvm -disable-llvm-passes -o - %s | FileCheck %s
+// RUN: %clang_cc1 -Wno-hlsl-implicit-binding -finclude-default-header -triple dxil-pc-shadermodel6.3-compute -fnative-half-type -emit-llvm -disable-llvm-passes -o - %s | FileCheck %s
 
 // CHECK: %__cblayout_CBScalars = type <{ float, double, half, i64, i32, i16, i32, i64 }>
 // CHECK: %__cblayout_CBVectors = type <{ <3 x float>, <3 x double>, <2 x half>, <3 x i64>, <4 x i32>, <3 x i16>, <3 x i64> }>
@@ -12,6 +11,12 @@
 // CHECK: %B = type <{ <2 x float>, <3 x i16> }>
 // CHECK: %C = type <{ i32, target("dx.Layout", %A, 8, 0) }>
 // CHECK: %__cblayout_D = type <{ [2 x [3 x target("dx.Layout", %B, 14, 0, 8)]] }>
+
+// CHECK: %__cblayout_CBClasses = type <{ target("dx.Layout", %K, 4, 0), target("dx.Layout", %L, 8, 0, 4),
+// CHECK-SAME: target("dx.Layout", %M, 68, 0), [10 x target("dx.Layout", %K, 4, 0)] }>
+// CHECK: %K = type <{ float }>
+// CHECK: %L = type <{ float, float }>
+// CHECK: %M = type <{ [5 x target("dx.Layout", %K, 4, 0)] }>
 
 // CHECK: %__cblayout_CBMix = type <{ [2 x target("dx.Layout", %Test, 8, 0, 4)], float, [3 x [2 x <2 x float>]], float,
 // CHECK-SAME: target("dx.Layout", %anon, 4, 0), double, target("dx.Layout", %anon.0, 8, 0), float, <1 x double>, i16 }>
@@ -93,6 +98,19 @@ cbuffer CBArrays : register(b2) {
 // CHECK: @c7 = external addrspace(2) global [2 x i64], align 8
 // CHECK: @c8 = external addrspace(2) global [4 x i32], align 4
 
+typedef uint32_t4 uint32_t8[2];
+typedef uint4 T1;
+typedef T1 T2[2]; // check a double typedef
+
+cbuffer CBTypedefArray {
+  uint32_t8 t1[2];
+  T2 t2[2];
+}
+
+// CHECK: @CBTypedefArray.cb = global target("dx.CBuffer", target("dx.Layout", %__cblayout_CBTypedefArray,
+// CHECK-SAME: 128, 0, 64))
+// CHECK: @t1 = external addrspace(2) global [2 x [2 x <4 x i32>]], align 16
+// CHECK: @t2 = external addrspace(2) global [2 x [2 x <4 x i32>]], align 16
 struct Empty {};
 
 struct A {
@@ -132,6 +150,33 @@ cbuffer CBStructs {
   half e;
   uint16_t3 f;
 };
+
+
+class K {
+  float i;
+};
+
+class L : K {
+  float j;
+};
+
+class M {
+  K array[5];
+};
+
+cbuffer CBClasses {
+  K k;
+  L l;
+  M m;
+  K ka[10];
+};
+
+// CHECK: @CBClasses.cb = global target("dx.CBuffer", target("dx.Layout", %__cblayout_CBClasses,
+// CHECK-SAME: 260, 0, 16, 32, 112))
+// CHECK: @k = external addrspace(2) global target("dx.Layout", %K, 4, 0), align 4
+// CHECK: @l = external addrspace(2) global target("dx.Layout", %L, 8, 0, 4), align 4
+// CHECK: @m = external addrspace(2) global target("dx.Layout", %M, 68, 0), align 4
+// CHECK: @ka = external addrspace(2) global [10 x target("dx.Layout", %K, 4, 0)], align 4
 
 struct Test {
     float a, b;
@@ -237,7 +282,7 @@ RWBuffer<float> Buf;
 
 [numthreads(4,1,1)]
 void main() {
-  Buf[0] = a1 + b1.z + c1[2] + a.f1.y + f1 + B1[0].x + B10.z + D1.B2;
+  Buf[0] = a1 + b1.z + c1[2] + a.f1.y + f1 + B1[0].x + ka[2].i + B10.z + D1.B2;
 }
 
 // CHECK: define internal void @_GLOBAL__sub_I_cbuffer.hlsl()
@@ -245,8 +290,8 @@ void main() {
 // CHECK-NEXT: call void @_init_resource_CBScalars.cb()
 // CHECK-NEXT: call void @_init_resource_CBArrays.cb()
 
-// CHECK: !hlsl.cbs = !{![[CBSCALARS:[0-9]+]], ![[CBVECTORS:[0-9]+]], ![[CBARRAYS:[0-9]+]], ![[CBSTRUCTS:[0-9]+]], ![[CBMIX:[0-9]+]],
-// CHECK-SAME: ![[CB_A:[0-9]+]], ![[CB_B:[0-9]+]], ![[CB_C:[0-9]+]]}
+// CHECK: !hlsl.cbs = !{![[CBSCALARS:[0-9]+]], ![[CBVECTORS:[0-9]+]], ![[CBARRAYS:[0-9]+]], ![[CBTYPEDEFARRAY:[0-9]+]], ![[CBSTRUCTS:[0-9]+]], ![[CBCLASSES:[0-9]+]],
+// CHECK-SAME: ![[CBMIX:[0-9]+]], ![[CB_A:[0-9]+]], ![[CB_B:[0-9]+]], ![[CB_C:[0-9]+]]}
 
 // CHECK: ![[CBSCALARS]] = !{ptr @CBScalars.cb, ptr addrspace(2) @a1, ptr addrspace(2) @a2, ptr addrspace(2) @a3, ptr addrspace(2) @a4,
 // CHECK-SAME: ptr addrspace(2) @a5, ptr addrspace(2) @a6, ptr addrspace(2) @a7, ptr addrspace(2) @a8}
@@ -257,8 +302,12 @@ void main() {
 // CHECK: ![[CBARRAYS]] = !{ptr @CBArrays.cb, ptr addrspace(2) @c1, ptr addrspace(2) @c2, ptr addrspace(2) @c3, ptr addrspace(2) @c4,
 // CHECK-SAME: ptr addrspace(2) @c5, ptr addrspace(2) @c6, ptr addrspace(2) @c7, ptr addrspace(2) @c8}
 
+// CHECK: ![[CBTYPEDEFARRAY]] = !{ptr @CBTypedefArray.cb, ptr addrspace(2) @t1, ptr addrspace(2) @t2}
+
 // CHECK: ![[CBSTRUCTS]] = !{ptr @CBStructs.cb, ptr addrspace(2) @a, ptr addrspace(2) @b, ptr addrspace(2) @c, ptr addrspace(2) @array_of_A,
 // CHECK-SAME: ptr addrspace(2) @d, ptr addrspace(2) @e, ptr addrspace(2) @f}
+
+// CHECK: ![[CBCLASSES]] = !{ptr @CBClasses.cb, ptr addrspace(2) @k, ptr addrspace(2) @l, ptr addrspace(2) @m, ptr addrspace(2) @ka}
 
 // CHECK: ![[CBMIX]] = !{ptr @CBMix.cb, ptr addrspace(2) @test, ptr addrspace(2) @f1, ptr addrspace(2) @f2, ptr addrspace(2) @f3,
 // CHECK-SAME: ptr addrspace(2) @f4, ptr addrspace(2) @f5, ptr addrspace(2) @f6, ptr addrspace(2) @f7, ptr addrspace(2) @f8, ptr addrspace(2) @f9}

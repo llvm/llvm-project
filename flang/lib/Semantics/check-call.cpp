@@ -1016,9 +1016,12 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
       }
     }
     std::optional<std::string> warning;
+    bool isHostDeviceProc = procedure.cudaSubprogramAttrs &&
+        *procedure.cudaSubprogramAttrs ==
+            common::CUDASubprogramAttrs::HostDevice;
     if (!common::AreCompatibleCUDADataAttrs(dummyDataAttr, actualDataAttr,
-            dummy.ignoreTKR, &warning,
-            /*allowUnifiedMatchingRule=*/true, &context.languageFeatures())) {
+            dummy.ignoreTKR, &warning, /*allowUnifiedMatchingRule=*/true,
+            isHostDeviceProc, &context.languageFeatures())) {
       auto toStr{[](std::optional<common::CUDADataAttr> x) {
         return x ? "ATTRIBUTES("s +
                 parser::ToUpperCaseLetters(common::EnumToString(*x)) + ")"s

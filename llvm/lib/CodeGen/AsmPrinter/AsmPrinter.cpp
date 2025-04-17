@@ -1586,7 +1586,7 @@ void AsmPrinter::emitStackSizeSection(const MachineFunction &MF) {
     return;
 
   MCSection *StackSizeSection =
-      getObjFileLowering().getStackSizesSection(*getCurrentSection());
+      getObjFileLowering().getStackSizesSection(*MF.getSection());
   if (!StackSizeSection)
     return;
 
@@ -2769,6 +2769,13 @@ namespace {
 
 } // end anonymous namespace
 
+StringRef AsmPrinter::getConstantSectionSuffix(const Constant *C) const {
+  if (TM.Options.EnableStaticDataPartitioning && C && SDPI && PSI)
+    return SDPI->getConstantSectionPrefix(C, PSI);
+
+  return "";
+}
+
 /// EmitConstantPool - Print to the current output stream assembly
 /// representations of the constants in the constant pool MCP. This is
 /// used to print out constants which have been "spilled to memory" by
@@ -2792,7 +2799,7 @@ void AsmPrinter::emitConstantPool() {
       C = CPE.Val.ConstVal;
 
     MCSection *S = getObjFileLowering().getSectionForConstant(
-        getDataLayout(), Kind, C, Alignment);
+        getDataLayout(), Kind, C, Alignment, getConstantSectionSuffix(C));
 
     // The number of sections are small, just do a linear search from the
     // last section to the first.
@@ -2853,22 +2860,12 @@ void AsmPrinter::emitConstantPool() {
 void AsmPrinter::emitJumpTableInfo() {
   const MachineJumpTableInfo *MJTI = MF->getJumpTableInfo();
   if (!MJTI) return;
-  if (MJTI->getEntryKind() == MachineJumpTableInfo::EK_Inline) return;
+
   const std::vector<MachineJumpTableEntry> &JT = MJTI->getJumpTables();
   if (JT.empty()) return;
 
-  // Pick the directive to use to print the jump table entries, and switch to
-  // the appropriate section.
-  const Function &F = MF->getFunction();
-  const TargetLoweringObjectFile &TLOF = getObjFileLowering();
-  bool JTInDiffSection = !TLOF.shouldPutJumpTableInFunctionSection(
-      MJTI->getEntryKind() == MachineJumpTableInfo::EK_LabelDifference32 ||
-          MJTI->getEntryKind() == MachineJumpTableInfo::EK_LabelDifference64,
-      F);
-
   if (!TM.Options.EnableStaticDataPartitioning) {
-    emitJumpTableImpl(*MJTI, llvm::to_vector(llvm::seq<unsigned>(JT.size())),
-                      JTInDiffSection);
+    emitJumpTableImpl(*MJTI, llvm::to_vector(llvm::seq<unsigned>(JT.size())));
     return;
   }
 
@@ -2884,33 +2881,40 @@ void AsmPrinter::emitJumpTableInfo() {
     }
   }
 
-  emitJumpTableImpl(*MJTI, HotJumpTableIndices, JTInDiffSection);
-  emitJumpTableImpl(*MJTI, ColdJumpTableIndices, JTInDiffSection);
+  emitJumpTableImpl(*MJTI, HotJumpTableIndices);
+  emitJumpTableImpl(*MJTI, ColdJumpTableIndices);
 }
 
 void AsmPrinter::emitJumpTableImpl(const MachineJumpTableInfo &MJTI,
-                                   ArrayRef<unsigned> JumpTableIndices,
-                                   bool JTInDiffSection) {
-  if (JumpTableIndices.empty())
+                                   ArrayRef<unsigned> JumpTableIndices) {
+  if (MJTI.getEntryKind() == MachineJumpTableInfo::EK_Inline ||
+      JumpTableIndices.empty())
     return;
 
   const TargetLoweringObjectFile &TLOF = getObjFileLowering();
   const Function &F = MF->getFunction();
   const std::vector<MachineJumpTableEntry> &JT = MJTI.getJumpTables();
   MCSection *JumpTableSection = nullptr;
-  if (TM.Options.EnableStaticDataPartitioning) {
-    JumpTableSection =
-        TLOF.getSectionForJumpTable(F, TM, &JT[JumpTableIndices.front()]);
-  } else {
-    JumpTableSection = TLOF.getSectionForJumpTable(F, TM);
-  }
 
-  const DataLayout &DL = MF->getDataLayout();
+  const bool UseLabelDifference =
+      MJTI.getEntryKind() == MachineJumpTableInfo::EK_LabelDifference32 ||
+      MJTI.getEntryKind() == MachineJumpTableInfo::EK_LabelDifference64;
+  // Pick the directive to use to print the jump table entries, and switch to
+  // the appropriate section.
+  const bool JTInDiffSection =
+      !TLOF.shouldPutJumpTableInFunctionSection(UseLabelDifference, F);
   if (JTInDiffSection) {
+    if (TM.Options.EnableStaticDataPartitioning) {
+      JumpTableSection =
+          TLOF.getSectionForJumpTable(F, TM, &JT[JumpTableIndices.front()]);
+    } else {
+      JumpTableSection = TLOF.getSectionForJumpTable(F, TM);
+    }
     OutStreamer->switchSection(JumpTableSection);
   }
 
-  emitAlignment(Align(MJTI.getEntryAlignment(MF->getDataLayout())));
+  const DataLayout &DL = MF->getDataLayout();
+  emitAlignment(Align(MJTI.getEntryAlignment(DL)));
 
   // Jump tables in code sections are marked with a data_region directive
   // where that's supported.
@@ -3363,7 +3367,9 @@ void AsmPrinter::emitAlignment(Align Alignment, const GlobalObject *GV,
 // Constant emission.
 //===----------------------------------------------------------------------===//
 
-const MCExpr *AsmPrinter::lowerConstant(const Constant *CV) {
+const MCExpr *AsmPrinter::lowerConstant(const Constant *CV,
+                                        const Constant *BaseCV,
+                                        uint64_t Offset) {
   MCContext &Ctx = OutContext;
 
   if (CV->isNullValue() || isa<UndefValue>(CV))
@@ -3382,7 +3388,8 @@ const MCExpr *AsmPrinter::lowerConstant(const Constant *CV) {
     return lowerBlockAddressConstant(*BA);
 
   if (const auto *Equiv = dyn_cast<DSOLocalEquivalent>(CV))
-    return getObjFileLowering().lowerDSOLocalEquivalent(Equiv, TM);
+    return getObjFileLowering().lowerDSOLocalEquivalent(
+        getSymbol(Equiv->getGlobalValue()), nullptr, 0, std::nullopt, TM);
 
   if (const NoCFIValue *NC = dyn_cast<NoCFIValue>(CV))
     return MCSymbolRefExpr::create(getSymbol(NC->getGlobalValue()), Ctx);
@@ -3428,7 +3435,7 @@ const MCExpr *AsmPrinter::lowerConstant(const Constant *CV) {
     // is reasonable to treat their delta as a 32-bit value.
     [[fallthrough]];
   case Instruction::BitCast:
-    return lowerConstant(CE->getOperand(0));
+    return lowerConstant(CE->getOperand(0), BaseCV, Offset);
 
   case Instruction::IntToPtr: {
     const DataLayout &DL = getDataLayout();
@@ -3467,33 +3474,44 @@ const MCExpr *AsmPrinter::lowerConstant(const Constant *CV) {
   }
 
   case Instruction::Sub: {
-    GlobalValue *LHSGV;
-    APInt LHSOffset;
+    GlobalValue *LHSGV, *RHSGV;
+    APInt LHSOffset, RHSOffset;
     DSOLocalEquivalent *DSOEquiv;
     if (IsConstantOffsetFromGlobal(CE->getOperand(0), LHSGV, LHSOffset,
-                                   getDataLayout(), &DSOEquiv)) {
-      GlobalValue *RHSGV;
-      APInt RHSOffset;
-      if (IsConstantOffsetFromGlobal(CE->getOperand(1), RHSGV, RHSOffset,
-                                     getDataLayout())) {
-        const MCExpr *RelocExpr =
-            getObjFileLowering().lowerRelativeReference(LHSGV, RHSGV, TM);
-        if (!RelocExpr) {
-          const MCExpr *LHSExpr =
-              MCSymbolRefExpr::create(getSymbol(LHSGV), Ctx);
-          if (DSOEquiv &&
-              getObjFileLowering().supportDSOLocalEquivalentLowering())
-            LHSExpr =
-                getObjFileLowering().lowerDSOLocalEquivalent(DSOEquiv, TM);
-          RelocExpr = MCBinaryExpr::createSub(
-              LHSExpr, MCSymbolRefExpr::create(getSymbol(RHSGV), Ctx), Ctx);
-        }
-        int64_t Addend = (LHSOffset - RHSOffset).getSExtValue();
+                                   getDataLayout(), &DSOEquiv) &&
+        IsConstantOffsetFromGlobal(CE->getOperand(1), RHSGV, RHSOffset,
+                                   getDataLayout())) {
+      auto *LHSSym = getSymbol(LHSGV);
+      auto *RHSSym = getSymbol(RHSGV);
+      int64_t Addend = (LHSOffset - RHSOffset).getSExtValue();
+      std::optional<int64_t> PCRelativeOffset;
+      if (getObjFileLowering().hasPLTPCRelative() && RHSGV == BaseCV)
+        PCRelativeOffset = Offset;
+
+      // Try the generic symbol difference first.
+      const MCExpr *Res = getObjFileLowering().lowerRelativeReference(
+          LHSGV, RHSGV, Addend, PCRelativeOffset, TM);
+
+      // (ELF-specific) If the generic symbol difference does not apply, and
+      // LHS is a dso_local_equivalent of a function, reference the PLT entry
+      // instead. Note: A default visibility symbol is by default preemptible
+      // during linking, and should not be referenced with PC-relative
+      // relocations. Therefore, use a PLT relocation even if the function is
+      // dso_local.
+      if (DSOEquiv && TM.getTargetTriple().isOSBinFormatELF())
+        Res = getObjFileLowering().lowerDSOLocalEquivalent(
+            LHSSym, RHSSym, Addend, PCRelativeOffset, TM);
+
+      // Otherwise, return LHS-RHS+Addend.
+      if (!Res) {
+        Res =
+            MCBinaryExpr::createSub(MCSymbolRefExpr::create(LHSSym, Ctx),
+                                    MCSymbolRefExpr::create(RHSSym, Ctx), Ctx);
         if (Addend != 0)
-          RelocExpr = MCBinaryExpr::createAdd(
-              RelocExpr, MCConstantExpr::create(Addend, Ctx), Ctx);
-        return RelocExpr;
+          Res = MCBinaryExpr::createAdd(
+              Res, MCConstantExpr::create(Addend, Ctx), Ctx);
       }
+      return Res;
     }
 
     const MCExpr *LHS = lowerConstant(CE->getOperand(0));
@@ -3864,12 +3882,11 @@ static void handleIndirectSymViaGOTPCRel(AsmPrinter &AP, const MCExpr **ME,
   MCValue MV;
   if (!(*ME)->evaluateAsRelocatable(MV, nullptr) || MV.isAbsolute())
     return;
-  const MCSymbolRefExpr *SymA = MV.getSymA();
-  if (!SymA)
+  const MCSymbol *GOTEquivSym = MV.getAddSym();
+  if (!GOTEquivSym)
     return;
 
   // Check that GOT equivalent symbol is cached.
-  const MCSymbol *GOTEquivSym = &SymA->getSymbol();
   if (!AP.GlobalGOTEquivs.count(GOTEquivSym))
     return;
 
@@ -4023,7 +4040,7 @@ static void emitGlobalConstantImpl(const DataLayout &DL, const Constant *CV,
 
   // Otherwise, it must be a ConstantExpr.  Lower it to an MCExpr, then emit it
   // thread the streamer with EmitValue.
-  const MCExpr *ME = AP.lowerConstant(CV);
+  const MCExpr *ME = AP.lowerConstant(CV, BaseCV, Offset);
 
   // Since lowerConstant already folded and got rid of all IR pointer and
   // integer casts, detect GOT equivalent accesses by looking into the MCExpr
@@ -4096,7 +4113,8 @@ const MCExpr *AsmPrinter::lowerBlockAddressConstant(const BlockAddress &BA) {
 
 /// GetCPISymbol - Return the symbol for the specified constant pool entry.
 MCSymbol *AsmPrinter::GetCPISymbol(unsigned CPID) const {
-  if (getSubtargetInfo().getTargetTriple().isWindowsMSVCEnvironment()) {
+  if (getSubtargetInfo().getTargetTriple().isWindowsMSVCEnvironment() ||
+      getSubtargetInfo().getTargetTriple().isUEFI()) {
     const MachineConstantPoolEntry &CPE =
         MF->getConstantPool()->getConstants()[CPID];
     if (!CPE.isMachineConstantPoolEntry()) {
@@ -4583,7 +4601,13 @@ void AsmPrinter::emitPatchableFunctionEntries() {
   if (TM.getTargetTriple().isOSBinFormatELF()) {
     auto Flags = ELF::SHF_WRITE | ELF::SHF_ALLOC;
     const MCSymbolELF *LinkedToSym = nullptr;
-    StringRef GroupName;
+    StringRef GroupName, SectionName;
+
+    if (F.hasFnAttribute("patchable-function-entry-section"))
+      SectionName = F.getFnAttribute("patchable-function-entry-section")
+                        .getValueAsString();
+    if (SectionName.empty())
+      SectionName = "__patchable_function_entries";
 
     // GNU as < 2.35 did not support section flag 'o'. GNU ld < 2.36 did not
     // support mixed SHF_LINK_ORDER and non-SHF_LINK_ORDER sections.
@@ -4596,8 +4620,8 @@ void AsmPrinter::emitPatchableFunctionEntries() {
       LinkedToSym = cast<MCSymbolELF>(CurrentFnSym);
     }
     OutStreamer->switchSection(OutContext.getELFSection(
-        "__patchable_function_entries", ELF::SHT_PROGBITS, Flags, 0, GroupName,
-        F.hasComdat(), MCSection::NonUniqueID, LinkedToSym));
+        SectionName, ELF::SHT_PROGBITS, Flags, 0, GroupName, F.hasComdat(),
+        MCSection::NonUniqueID, LinkedToSym));
     emitAlignment(Align(PointerSize));
     OutStreamer->emitSymbolValue(CurrentPatchableFunctionEntrySym, PointerSize);
   }

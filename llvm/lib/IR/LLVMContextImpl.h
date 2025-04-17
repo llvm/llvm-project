@@ -494,6 +494,43 @@ template <> struct MDNodeKeyImpl<DIBasicType> {
   }
 };
 
+template <> struct MDNodeKeyImpl<DIFixedPointType> {
+  unsigned Tag;
+  MDString *Name;
+  uint64_t SizeInBits;
+  uint32_t AlignInBits;
+  unsigned Encoding;
+  unsigned Flags;
+  unsigned Kind;
+  int Factor;
+  APInt Numerator;
+  APInt Denominator;
+
+  MDNodeKeyImpl(unsigned Tag, MDString *Name, uint64_t SizeInBits,
+                uint32_t AlignInBits, unsigned Encoding, unsigned Flags,
+                unsigned Kind, int Factor, APInt Numerator, APInt Denominator)
+      : Tag(Tag), Name(Name), SizeInBits(SizeInBits), AlignInBits(AlignInBits),
+        Encoding(Encoding), Flags(Flags), Kind(Kind), Factor(Factor),
+        Numerator(Numerator), Denominator(Denominator) {}
+  MDNodeKeyImpl(const DIFixedPointType *N)
+      : Tag(N->getTag()), Name(N->getRawName()), SizeInBits(N->getSizeInBits()),
+        AlignInBits(N->getAlignInBits()), Encoding(N->getEncoding()),
+        Flags(N->getFlags()), Kind(N->getKind()), Factor(N->getFactorRaw()),
+        Numerator(N->getNumeratorRaw()), Denominator(N->getDenominatorRaw()) {}
+
+  bool isKeyOf(const DIFixedPointType *RHS) const {
+    return Name == RHS->getRawName() && SizeInBits == RHS->getSizeInBits() &&
+           AlignInBits == RHS->getAlignInBits() && Kind == RHS->getKind() &&
+           (RHS->isRational() ? (Numerator == RHS->getNumerator() &&
+                                 Denominator == RHS->getDenominator())
+                              : Factor == RHS->getFactor());
+  }
+
+  unsigned getHashValue() const {
+    return hash_combine(Name, Flags, Kind, Factor, Numerator, Denominator);
+  }
+};
+
 template <> struct MDNodeKeyImpl<DIStringType> {
   unsigned Tag;
   MDString *Name;

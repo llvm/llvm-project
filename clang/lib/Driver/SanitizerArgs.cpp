@@ -54,7 +54,8 @@ static const SanitizerMask SupportsCoverage =
     SanitizerKind::FuzzerNoLink | SanitizerKind::FloatDivideByZero |
     SanitizerKind::SafeStack | SanitizerKind::ShadowCallStack |
     SanitizerKind::Thread | SanitizerKind::ObjCCast | SanitizerKind::KCFI |
-    SanitizerKind::NumericalStability | SanitizerKind::Vptr;
+    SanitizerKind::NumericalStability | SanitizerKind::Vptr |
+    SanitizerKind::CFI;
 static const SanitizerMask RecoverableByDefault =
     SanitizerKind::Undefined | SanitizerKind::Integer |
     SanitizerKind::ImplicitConversion | SanitizerKind::Nullability |
@@ -353,8 +354,8 @@ bool SanitizerArgs::needsFuzzerInterceptors() const {
 bool SanitizerArgs::needsUbsanRt() const {
   // All of these include ubsan.
   if (needsAsanRt() || needsMsanRt() || needsNsanRt() || needsHwasanRt() ||
-      needsTsanRt() || needsDfsanRt() || needsLsanRt() || needsCfiDiagRt() ||
-      (needsScudoRt() && !requiresMinimalRuntime()))
+      needsTsanRt() || needsDfsanRt() || needsLsanRt() ||
+      needsCfiCrossDsoDiagRt() || (needsScudoRt() && !requiresMinimalRuntime()))
     return false;
 
   return (Sanitizers.Mask & NeedsUbsanRt & ~TrapSanitizers.Mask) ||
@@ -369,12 +370,13 @@ bool SanitizerArgs::needsUbsanCXXRt() const {
                            ~TrapSanitizers.Mask);
 }
 
-bool SanitizerArgs::needsCfiRt() const {
-  return !(Sanitizers.Mask & SanitizerKind::CFI & ~TrapSanitizers.Mask) &&
-         CfiCrossDso && !ImplicitCfiRuntime;
+bool SanitizerArgs::needsCfiCrossDsoRt() const {
+  // Diag runtime includes cross dso runtime.
+  return !needsCfiCrossDsoDiagRt() && CfiCrossDso && !ImplicitCfiRuntime;
 }
 
-bool SanitizerArgs::needsCfiDiagRt() const {
+bool SanitizerArgs::needsCfiCrossDsoDiagRt() const {
+  // UBSsan handles CFI diagnostics without cross-DSO suppport.
   return (Sanitizers.Mask & SanitizerKind::CFI & ~TrapSanitizers.Mask) &&
          CfiCrossDso && !ImplicitCfiRuntime;
 }

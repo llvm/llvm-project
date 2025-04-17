@@ -33,6 +33,7 @@ function at-exit {
 
   mkdir -p artifacts
   ccache --print-stats > artifacts/ccache_stats.txt
+  cp "${BUILD_DIR}"/.ninja_log artifacts/.ninja_log
 
   # If building fails there will be no results files.
   shopt -s nullglob
@@ -40,6 +41,9 @@ function at-exit {
   then
     python3 "${MONOREPO_ROOT}"/.ci/generate_test_report_buildkite.py ":linux: Linux x64 Test Results" \
       "linux-x64-test-results" $retcode "${BUILD_DIR}"/test-results.*.xml
+  else
+    python3 "${MONOREPO_ROOT}"/.ci/generate_test_report_github.py ":linux: Linux x64 Test Results" \
+      $retcode "${BUILD_DIR}"/test-results.*.xml >> $GITHUB_STEP_SUMMARY
   fi
 }
 trap at-exit EXIT
@@ -50,6 +54,7 @@ targets="${2}"
 lit_args="-v --xunit-xml-output ${BUILD_DIR}/test-results.xml --use-unique-output-file-name --timeout=1200 --time-tests"
 
 echo "--- cmake"
+export PIP_BREAK_SYSTEM_PACKAGES=1
 pip install -q -r "${MONOREPO_ROOT}"/mlir/python/requirements.txt
 pip install -q -r "${MONOREPO_ROOT}"/lldb/test/requirements.txt
 pip install -q -r "${MONOREPO_ROOT}"/.ci/requirements.txt

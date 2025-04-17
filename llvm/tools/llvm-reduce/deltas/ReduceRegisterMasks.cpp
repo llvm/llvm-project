@@ -60,13 +60,10 @@ static void reduceMasksInFunction(Oracle &O, MachineFunction &MF) {
   }
 }
 
-static void reduceMasksInModule(Oracle &O, ReducerWorkItem &WorkItem) {
+void llvm::reduceRegisterMasksMIRDeltaPass(Oracle &O,
+                                           ReducerWorkItem &WorkItem) {
   for (const Function &F : WorkItem.getModule()) {
     if (auto *MF = WorkItem.MMI->getMachineFunction(F))
       reduceMasksInFunction(O, *MF);
   }
-}
-
-void llvm::reduceRegisterMasksMIRDeltaPass(TestRunner &Test) {
-  runDeltaPass(Test, reduceMasksInModule, "Reducing register masks");
 }

@@ -34,9 +34,7 @@ namespace {
 class SPIRVPostLegalizer : public MachineFunctionPass {
 public:
   static char ID;
-  SPIRVPostLegalizer() : MachineFunctionPass(ID) {
-    initializeSPIRVPostLegalizerPass(*PassRegistry::getPassRegistry());
-  }
+  SPIRVPostLegalizer() : MachineFunctionPass(ID) {}
   bool runOnMachineFunction(MachineFunction &MF) override;
 };
 } // namespace

@@ -590,10 +590,10 @@ let Predicates = [HasVendorXCVsimd, IsRV32] in {
 let Predicates = [HasVendorXCVbi, IsRV32] in {
   // Immediate branching operations
   def CV_BEQIMM : CVInstImmBranch<0b110, (outs),
-        (ins GPR:$rs1, simm5:$imm5, simm13_lsb0:$imm12),
+        (ins GPR:$rs1, simm5:$imm5, bare_simm13_lsb0:$imm12),
         "cv.beqimm", "$rs1, $imm5, $imm12">, Sched<[]>;
   def CV_BNEIMM : CVInstImmBranch<0b111, (outs),
-        (ins GPR:$rs1, simm5:$imm5, simm13_lsb0:$imm12),
+        (ins GPR:$rs1, simm5:$imm5, bare_simm13_lsb0:$imm12),
         "cv.bneimm", "$rs1, $imm5, $imm12">, Sched<[]>;
 }
 
@@ -791,11 +791,18 @@ let Predicates = [HasVendorXCValu, IsRV32], AddedComplexity = 1 in {
 // Patterns for immediate branching operations
 //===----------------------------------------------------------------------===//
 
+def IntCCtoRISCVCCCV : SDNodeXForm<riscv_selectcc, [{
+  ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(2))->get();
+  assert(CC == ISD::SETEQ || CC == ISD::SETNE);
+  RISCVCC::CondCode BrCC = CC == ISD::SETEQ ? RISCVCC::COND_CV_BEQIMM : RISCVCC::COND_CV_BNEIMM;
+  return CurDAG->getTargetConstant(BrCC, SDLoc(N), Subtarget->getXLenVT());
+}]>;
+
 let Predicates = [HasVendorXCVbi, IsRV32], AddedComplexity = 2 in {
   def : Pat<(riscv_brcc GPR:$rs1, simm5:$imm5, SETEQ, bb:$imm12),
-            (CV_BEQIMM GPR:$rs1, simm5:$imm5, simm13_lsb0:$imm12)>;
+            (CV_BEQIMM GPR:$rs1, simm5:$imm5, bare_simm13_lsb0:$imm12)>;
   def : Pat<(riscv_brcc GPR:$rs1, simm5:$imm5, SETNE, bb:$imm12),
-            (CV_BNEIMM GPR:$rs1, simm5:$imm5, simm13_lsb0:$imm12)>;
+            (CV_BNEIMM GPR:$rs1, simm5:$imm5, bare_simm13_lsb0:$imm12)>;
 
   let usesCustomInserter = 1 in
   def Select_GPR_Using_CC_Imm : Pseudo<(outs GPR:$dst),
@@ -807,7 +814,7 @@ let Predicates = [HasVendorXCVbi, IsRV32], AddedComplexity = 2 in {
       : Pat<(riscv_selectcc_frag:$cc (i32 GPR:$lhs), simm5:$Constant, Cond,
                                      (i32 GPR:$truev), GPR:$falsev),
             (Select_GPR_Using_CC_Imm GPR:$lhs, simm5:$Constant,
-             (IntCCtoRISCVCC $cc), GPR:$truev, GPR:$falsev)>;
+             (IntCCtoRISCVCCCV $cc), GPR:$truev, GPR:$falsev)>;
 
   def : Selectbi<SETEQ>;
   def : Selectbi<SETNE>;

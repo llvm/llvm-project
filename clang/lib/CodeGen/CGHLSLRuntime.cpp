@@ -282,10 +282,21 @@ void CGHLSLRuntime::addHLSLBufferLayoutType(const RecordType *StructType,
 
 void CGHLSLRuntime::finishCodeGen() {
   auto &TargetOpts = CGM.getTarget().getTargetOpts();
+  auto &CodeGenOpts = CGM.getCodeGenOpts();
+  auto &LangOpts = CGM.getLangOpts();
   llvm::Module &M = CGM.getModule();
   Triple T(M.getTargetTriple());
   if (T.getArch() == Triple::ArchType::dxil)
     addDxilValVersion(TargetOpts.DxilValidatorVersion, M);
+  if (CodeGenOpts.ResMayAlias)
+    M.setModuleFlag(llvm::Module::ModFlagBehavior::Error, "dx.resmayalias", 1);
+
+  // NativeHalfType corresponds to the -fnative-half-type clang option which is
+  // aliased by clang-dxc's -enable-16bit-types option. This option is used to
+  // set the UseNativeLowPrecision DXIL module flag in the DirectX backend
+  if (LangOpts.NativeHalfType)
+    M.setModuleFlag(llvm::Module::ModFlagBehavior::Error, "dx.nativelowprec",
+                    1);
 
   generateGlobalCtorDtorCalls();
 }
@@ -385,8 +396,8 @@ void CGHLSLRuntime::emitEntryFunction(const FunctionDecl *FD,
   SmallVector<OperandBundleDef, 1> OB;
   if (CGM.shouldEmitConvergenceTokens()) {
     assert(EntryFn->isConvergent());
-    llvm::Value *I = B.CreateIntrinsic(
-        llvm::Intrinsic::experimental_convergence_entry, {}, {});
+    llvm::Value *I =
+        B.CreateIntrinsic(llvm::Intrinsic::experimental_convergence_entry, {});
     llvm::Value *bundleArgs[] = {I};
     OB.emplace_back("convergencectrl", bundleArgs);
   }

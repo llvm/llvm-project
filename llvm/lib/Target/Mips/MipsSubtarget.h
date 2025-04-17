@@ -43,7 +43,7 @@ class MipsSubtarget : public MipsGenSubtargetInfo {
     Mips3, Mips4, Mips5, Mips64, Mips64r2, Mips64r3, Mips64r5, Mips64r6
   };
 
-  enum class CPU { P5600, I6400 };
+  enum class CPU { P5600, I6400, I6500 };
 
   // Used to avoid printing dsp warnings multiple times.
   static bool DspWarningPrinted;

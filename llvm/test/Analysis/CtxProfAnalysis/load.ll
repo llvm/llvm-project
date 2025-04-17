@@ -46,6 +46,9 @@ Function Info:
 Current Profile:
 
 Contexts:
+  - Guid:            12341
+    TotalRootEntryCount: 90
+    Counters:        [ 9 ]
   - Guid:            11872291593386833696
     TotalRootEntryCount: 4
     Counters:        [ 1 ]
@@ -57,6 +60,7 @@ Contexts:
     Counters:        [ 5 ]
 
 Flat Profile:
+12341 : 9 
 728453322856651412 : 6 7 
 11872291593386833696 : 1 
 12074870348631550642 : 5 

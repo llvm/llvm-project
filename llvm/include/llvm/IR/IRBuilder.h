@@ -1004,6 +1004,14 @@ public:
                             ArrayRef<Value *> Args, FMFSource FMFSource = {},
                             const Twine &Name = "");
 
+  /// Create a call to non-overloaded intrinsic \p ID with \p Args. If
+  /// \p FMFSource is provided, copy fast-math-flags from that instruction to
+  /// the intrinsic.
+  CallInst *CreateIntrinsic(Intrinsic::ID ID, ArrayRef<Value *> Args,
+                            FMFSource FMFSource = {}, const Twine &Name = "") {
+    return CreateIntrinsic(ID, /*Types=*/{}, Args, FMFSource, Name);
+  }
+
   /// Create call to the minnum intrinsic.
   Value *CreateMinNum(Value *LHS, Value *RHS, FMFSource FMFSource = {},
                       const Twine &Name = "") {
@@ -2290,6 +2298,13 @@ public:
   // compile time error, instead of converting the string to bool for the
   // isSigned parameter.
   Value *CreateIntCast(Value *, Type *, const char *) = delete;
+
+  /// Cast between aggregate types that must have identical structure but may
+  /// differ in their leaf types. The leaf values are recursively extracted,
+  /// casted, and then reinserted into a value of type DestTy. The leaf types
+  /// must be castable using a bitcast or ptrcast, because signedness is
+  /// not specified.
+  Value *CreateAggregateCast(Value *V, Type *DestTy);
 
   //===--------------------------------------------------------------------===//
   // Instruction creation methods: Compare Instructions

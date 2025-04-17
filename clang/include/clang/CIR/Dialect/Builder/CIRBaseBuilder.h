@@ -67,6 +67,42 @@ public:
     return create<cir::ConstantOp>(loc, attr.getType(), attr);
   }
 
+  cir::ConstantOp getConstantInt(mlir::Location loc, mlir::Type ty,
+                                 int64_t value) {
+    return getConstant(loc, cir::IntAttr::get(ty, value));
+  }
+
+  // Creates constant null value for integral type ty.
+  cir::ConstantOp getNullValue(mlir::Type ty, mlir::Location loc) {
+    return getConstant(loc, getZeroInitAttr(ty));
+  }
+
+  mlir::TypedAttr getConstNullPtrAttr(mlir::Type t) {
+    assert(mlir::isa<cir::PointerType>(t) && "expected cir.ptr");
+    return getConstPtrAttr(t, 0);
+  }
+
+  mlir::TypedAttr getZeroAttr(mlir::Type t) {
+    return cir::ZeroAttr::get(getContext(), t);
+  }
+
+  mlir::TypedAttr getZeroInitAttr(mlir::Type ty) {
+    if (mlir::isa<cir::IntType>(ty))
+      return cir::IntAttr::get(ty, 0);
+    if (cir::isAnyFloatingPointType(ty))
+      return cir::FPAttr::getZero(ty);
+    if (auto arrTy = mlir::dyn_cast<cir::ArrayType>(ty))
+      return getZeroAttr(arrTy);
+    if (auto ptrTy = mlir::dyn_cast<cir::PointerType>(ty))
+      return getConstNullPtrAttr(ptrTy);
+    if (auto recordTy = mlir::dyn_cast<cir::RecordType>(ty))
+      return getZeroAttr(recordTy);
+    if (mlir::isa<cir::BoolType>(ty)) {
+      return getCIRBoolAttr(false);
+    }
+    llvm_unreachable("Zero initializer for given type is NYI");
+  }
+
   cir::ConstantOp getBool(bool state, mlir::Location loc) {
     return create<cir::ConstantOp>(loc, getBoolTy(), getCIRBoolAttr(state));
   }
@@ -87,6 +123,27 @@ public:
     return cir::BoolAttr::get(getContext(), getBoolTy(), state);
   }
 
+  mlir::Value createNot(mlir::Value value) {
+    return create<cir::UnaryOp>(value.getLoc(), value.getType(),
+                                cir::UnaryOpKind::Not, value);
+  }
+
+  /// Create a do-while operation.
+  cir::DoWhileOp createDoWhile(
+      mlir::Location loc,
+      llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)> condBuilder,
+      llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)> bodyBuilder) {
+    return create<cir::DoWhileOp>(loc, condBuilder, bodyBuilder);
+  }
+
+  /// Create a while operation.
+  cir::WhileOp createWhile(
+      mlir::Location loc,
+      llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)> condBuilder,
+      llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)> bodyBuilder) {
+    return create<cir::WhileOp>(loc, condBuilder, bodyBuilder);
+  }
+
   /// Create a for operation.
   cir::ForOp createFor(
       mlir::Location loc,
@@ -94,6 +151,16 @@ public:
       llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)> bodyBuilder,
       llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)> stepBuilder) {
     return create<cir::ForOp>(loc, condBuilder, bodyBuilder, stepBuilder);
+  }
+
+  /// Create a break operation.
+  cir::BreakOp createBreak(mlir::Location loc) {
+    return create<cir::BreakOp>(loc);
+  }
+
+  /// Create a continue operation.
+  cir::ContinueOp createContinue(mlir::Location loc) {
+    return create<cir::ContinueOp>(loc);
   }
 
   mlir::TypedAttr getConstPtrAttr(mlir::Type type, int64_t value) {
@@ -129,6 +196,24 @@ public:
     auto addr = createAlloca(loc, getPointerTo(type), type, {},
                              getSizeFromCharUnits(getContext(), alignment));
     return createLoad(loc, addr);
+  }
+
+  cir::PtrStrideOp createPtrStride(mlir::Location loc, mlir::Value base,
+                                   mlir::Value stride) {
+    return create<cir::PtrStrideOp>(loc, base.getType(), base, stride);
+  }
+
+  //===--------------------------------------------------------------------===//
+  // Call operators
+  //===--------------------------------------------------------------------===//
+
+  cir::CallOp createCallOp(mlir::Location loc, mlir::SymbolRefAttr callee) {
+    auto op = create<cir::CallOp>(loc, callee);
+    return op;
+  }
+
+  cir::CallOp createCallOp(mlir::Location loc, cir::FuncOp callee) {
+    return createCallOp(loc, mlir::SymbolRefAttr::get(callee));
   }
 
   //===--------------------------------------------------------------------===//
@@ -263,6 +348,11 @@ public:
   mlir::Value createNUWAdd(mlir::Location loc, mlir::Value lhs,
                            mlir::Value rhs) {
     return createAdd(loc, lhs, rhs, OverflowBehavior::NoUnsignedWrap);
+  }
+
+  cir::CmpOp createCompare(mlir::Location loc, cir::CmpOpKind kind,
+                           mlir::Value lhs, mlir::Value rhs) {
+    return create<cir::CmpOp>(loc, getBoolTy(), kind, lhs, rhs);
   }
 
   //

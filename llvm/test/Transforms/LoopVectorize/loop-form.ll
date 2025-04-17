@@ -80,9 +80,9 @@ define void @bottom_tested(ptr %p, i32 %n) {
 ; TAILFOLD-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; TAILFOLD-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; TAILFOLD:       middle.block:
-; TAILFOLD-NEXT:    br i1 true, label [[IF_END:%.*]], label [[SCALAR_PH]]
+; TAILFOLD-NEXT:    br label [[IF_END:%.*]]
 ; TAILFOLD:       scalar.ph:
-; TAILFOLD-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
+; TAILFOLD-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ]
 ; TAILFOLD-NEXT:    br label [[FOR_COND:%.*]]
 ; TAILFOLD:       for.cond:
 ; TAILFOLD-NEXT:    [[I:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INC:%.*]], [[FOR_COND]] ]

@@ -1,8 +1,3 @@
-set(LLVM_LINK_COMPONENTS
-  Support
-  TargetParser
-  )
-
 add_clang_unittest(FrontendTests
   ASTUnitTest.cpp
   CompilerInvocationTest.cpp
@@ -17,9 +12,7 @@ add_clang_unittest(FrontendTests
   OutputStreamTest.cpp
   TextDiagnosticTest.cpp
   UtilsTest.cpp
-  )
-clang_target_link_libraries(FrontendTests
-  PRIVATE
+  CLANG_LIBS
   clangAST
   clangBasic
   clangFrontend
@@ -29,4 +22,7 @@ clang_target_link_libraries(FrontendTests
   clangFrontendTool
   clangSerialization
   clangTooling
+  LLVM_COMPONENTS
+  Support
+  TargetParser
   )

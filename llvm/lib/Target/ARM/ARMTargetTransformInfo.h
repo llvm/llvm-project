@@ -184,10 +184,11 @@ public:
 
   bool isProfitableLSRChainElement(Instruction *I);
 
-  bool isLegalMaskedLoad(Type *DataTy, Align Alignment);
+  bool isLegalMaskedLoad(Type *DataTy, Align Alignment, unsigned AddressSpace);
 
-  bool isLegalMaskedStore(Type *DataTy, Align Alignment) {
-    return isLegalMaskedLoad(DataTy, Alignment);
+  bool isLegalMaskedStore(Type *DataTy, Align Alignment,
+                          unsigned AddressSpace) {
+    return isLegalMaskedLoad(DataTy, Alignment, AddressSpace);
   }
 
   bool forceScalarizeMaskedGather(VectorType *VTy, Align Alignment) {
@@ -223,7 +224,7 @@ public:
                                  ArrayRef<const Value *> Args = {},
                                  const Instruction *CxtI = nullptr);
 
-  bool preferInLoopReduction(unsigned Opcode, Type *Ty) const;
+  bool preferInLoopReduction(RecurKind Kind, Type *Ty) const;
 
   bool preferPredicatedReductionSelect(unsigned Opcode, Type *Ty) const;
 

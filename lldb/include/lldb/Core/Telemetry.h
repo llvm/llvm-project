@@ -272,7 +272,8 @@ template <typename Info> struct ScopedDispatcher {
     // And then we dispatch.
     if (llvm::Error er = manager->dispatch(&info)) {
       LLDB_LOG_ERROR(GetLog(LLDBLog::Object), std::move(er),
-                     "Failed to dispatch entry of type: {0}", info.getKind());
+                     "Failed to dispatch entry of type {1}: {0}",
+                     info.getKind());
     }
   }
 

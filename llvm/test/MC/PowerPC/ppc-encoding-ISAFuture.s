@@ -21,21 +21,21 @@
 # CHECK-LE: dmxxextfdmr256 8, 3, 3        # encoding: [0x90,0x4f,0x81,0xf1]
             dmxxextfdmr256 8, 3, 3
 
-# CHECK-BE: dmxxinstfdmr512 1, 2, 34, 0   # encoding: [0xf0,0x82,0x17,0x52]
-# CHECK-LE: dmxxinstfdmr512 1, 2, 34, 0   # encoding: [0x52,0x17,0x82,0xf0]
-            dmxxinstfdmr512 1, 2, 34, 0
+# CHECK-BE: dmxxinstdmr512 1, 2, 34, 0   # encoding: [0xf0,0x82,0x17,0x52]
+# CHECK-LE: dmxxinstdmr512 1, 2, 34, 0   # encoding: [0x52,0x17,0x82,0xf0]
+            dmxxinstdmr512 1, 2, 34, 0
 
-# CHECK-BE: dmxxinstfdmr512 1, 2, 34, 1   # encoding: [0xf0,0x83,0x17,0x52]
-# CHECK-LE: dmxxinstfdmr512 1, 2, 34, 1   # encoding: [0x52,0x17,0x83,0xf0]
-            dmxxinstfdmr512 1, 2, 34, 1
+# CHECK-BE: dmxxinstdmr512 1, 2, 34, 1   # encoding: [0xf0,0x83,0x17,0x52]
+# CHECK-LE: dmxxinstdmr512 1, 2, 34, 1   # encoding: [0x52,0x17,0x83,0xf0]
+            dmxxinstdmr512 1, 2, 34, 1
 
-# CHECK-BE: dmxxinstfdmr256 3, 8, 0       # encoding: [0xf1,0x80,0x47,0x94]
-# CHECK-LE: dmxxinstfdmr256 3, 8, 0       # encoding: [0x94,0x47,0x80,0xf1]
-            dmxxinstfdmr256 3, 8, 0
+# CHECK-BE: dmxxinstdmr256 3, 8, 0       # encoding: [0xf1,0x80,0x47,0x94]
+# CHECK-LE: dmxxinstdmr256 3, 8, 0       # encoding: [0x94,0x47,0x80,0xf1]
+            dmxxinstdmr256 3, 8, 0
 
-# CHECK-BE: dmxxinstfdmr256 3, 8, 3       # encoding: [0xf1,0x81,0x4f,0x94]
-# CHECK-LE: dmxxinstfdmr256 3, 8, 3       # encoding: [0x94,0x4f,0x81,0xf1]
-            dmxxinstfdmr256 3, 8, 3
+# CHECK-BE: dmxxinstdmr256 3, 8, 3       # encoding: [0xf1,0x81,0x4f,0x94]
+# CHECK-LE: dmxxinstdmr256 3, 8, 3       # encoding: [0x94,0x4f,0x81,0xf1]
+            dmxxinstdmr256 3, 8, 3
 
 # CHECK-BE: dmsetdmrz 3                   # encoding: [0x7d,0x82,0x01,0x62]
 # CHECK-LE: dmsetdmrz 3                   # encoding: [0x62,0x01,0x82,0x7d]

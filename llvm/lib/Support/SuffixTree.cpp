@@ -348,8 +348,7 @@ void SuffixTree::RepeatedSubstringIterator::advance() {
     // Yes. Update the state to reflect this, and then bail out.
     N = Curr;
     RS.Length = Length;
-    for (unsigned StartIdx : RepeatedSubstringStarts)
-      RS.StartIndices.push_back(StartIdx);
+    llvm::append_range(RS.StartIndices, RepeatedSubstringStarts);
     break;
   }
   // At this point, either NewRS is an empty RepeatedSubstring, or it was
