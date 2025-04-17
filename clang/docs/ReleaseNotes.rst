@@ -219,6 +219,8 @@ Modified Compiler Flags
 
 - `-Wpadded` option implemented for the `x86_64-windows-msvc` target. Fixes #61702
 
+- The ``-mexecute-only`` and ``-mpure-code`` flags are now accepted for AArch64 targets. (#GH125688)
+
 Removed Compiler Flags
 -------------------------
 
@@ -568,6 +570,9 @@ Arm and AArch64 Support
   also now printed when the ``--print-supported-extensions`` option is used.
 
 -  Support for __ptrauth type qualifier has been added.
+
+- For AArch64, added support for generating executable-only code sections by using the
+  ``-mexecute-only`` or ``-mpure-code`` compiler flags. (#GH125688)
 
 Android Support
 ^^^^^^^^^^^^^^^
