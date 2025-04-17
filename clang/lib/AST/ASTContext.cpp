@@ -14849,7 +14849,7 @@ static SYCLKernelInfo BuildSYCLKernelInfo(ASTContext &Context,
   // override is used to ensure consistent discriminator allocation across
   // host and device compilation.
   auto DeviceDiscriminatorOverrider =
-      [](ASTContext &Ctx, const NamedDecl *ND) -> std::optional<unsigned> {
+      [](ASTContext &Ctx, const NamedDecl *ND) -> UnsignedOrNone {
     if (const auto *RD = dyn_cast<CXXRecordDecl>(ND))
       if (RD->isLambda())
         return RD->getDeviceLambdaManglingNumber();
