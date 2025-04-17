@@ -383,8 +383,6 @@ typedef __char32_t char32_t;
 #    endif
 
 #    define _LIBCPP_HIDDEN
-#    define _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS
-#    define _LIBCPP_TEMPLATE_VIS
 #    define _LIBCPP_TEMPLATE_DATA_VIS
 #    define _LIBCPP_NAMESPACE_VISIBILITY
 
@@ -406,17 +404,6 @@ typedef __char32_t char32_t;
 #    ifndef _LIBCPP_OVERRIDABLE_FUNC_VIS
 #      define _LIBCPP_OVERRIDABLE_FUNC_VIS _LIBCPP_VISIBILITY("default")
 #    endif
-
-#    if !defined(_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS)
-// The inline should be removed once PR32114 is resolved
-#      define _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS inline _LIBCPP_HIDDEN
-#    else
-#      define _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS
-#    endif
-
-// This is kept to avoid a huge library-wide diff in the first step.
-// TODO: Remove this in a follow-up patch
-#    define _LIBCPP_TEMPLATE_VIS
 
 #    if !defined(_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS) && __has_attribute(__type_visibility__)
 #      define _LIBCPP_NAMESPACE_VISIBILITY __attribute__((__type_visibility__("default")))
@@ -750,8 +737,10 @@ typedef __char32_t char32_t;
 
 #  if _LIBCPP_STD_VER >= 26
 #    define _LIBCPP_DEPRECATED_IN_CXX26 _LIBCPP_DEPRECATED
+#    define _LIBCPP_DEPRECATED_IN_CXX26_(m) _LIBCPP_DEPRECATED_(m)
 #  else
 #    define _LIBCPP_DEPRECATED_IN_CXX26
+#    define _LIBCPP_DEPRECATED_IN_CXX26_(m)
 #  endif
 
 #  if _LIBCPP_HAS_CHAR8_T
@@ -1134,9 +1123,6 @@ typedef __char32_t char32_t;
 #  define _LIBCPP_ATTRIBUTE_FORMAT(archetype, format_string_index, first_format_arg_index)                             \
     __attribute__((__format__(archetype, format_string_index, first_format_arg_index)))
 #  define _LIBCPP_PACKED __attribute__((__packed__))
-
-// Use a function like macro to imply that it must be followed by a semicolon
-#  define _LIBCPP_FALLTHROUGH() [[fallthrough]]
 
 #  if __has_attribute(__no_sanitize__) && !defined(_LIBCPP_COMPILER_GCC)
 #    define _LIBCPP_NO_CFI __attribute__((__no_sanitize__("cfi")))

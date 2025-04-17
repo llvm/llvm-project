@@ -186,7 +186,17 @@ class ClangFormatHelper(FormatHelper):
         filtered_files = []
         for path in changed_files:
             _, ext = os.path.splitext(path)
-            if ext in (".cpp", ".c", ".h", ".hpp", ".hxx", ".cxx", ".inc", ".cppm"):
+            if ext in (
+                ".cpp",
+                ".c",
+                ".h",
+                ".hpp",
+                ".hxx",
+                ".cxx",
+                ".inc",
+                ".cppm",
+                ".cl",
+            ):
                 filtered_files.append(path)
             elif ext == "" and self.should_include_extensionless_file(path):
                 filtered_files.append(path)
@@ -385,15 +395,15 @@ You can test this locally with the following command:
         # Each file is prefixed like:
         # diff --git a/file b/file
         for file in re.split("^diff --git ", stdout, 0, re.MULTILINE):
-            filename = re.match("a/([^ ]+)", file.splitlines()[0])[1]
+            lines = file.splitlines()
+            match = re.match("a/([^ ]+)", lines[0] if lines else "")
+            filename = match[1] if match else ""
             if filename.endswith(".ll"):
-                undef_regex = r"\bundef\b"
+                undef_regex = r"(?<!%)\bundef\b"
             else:
                 undef_regex = r"UndefValue::get"
             # search for additions of undef
-            if re.search(
-                r"^[+](?!\s*#\s*).*(" + undef_regex + r")", file, re.MULTILINE
-            ):
+            if re.search(r"^[+].*" + undef_regex, file, re.MULTILINE):
                 files.append(filename)
 
         if not files:

@@ -661,7 +661,7 @@ func.func @test_simple_i32(%arg0: tensor<1xi32>, %unsigned: tensor<1xui32>, %uns
 
   // CHECK: linalg.generic
   // CHECK: arith.divsi
-  %40 = tosa.int_div %arg0, %arg0 : (tensor<1xi32>, tensor<1xi32>) -> tensor<1xi32>
+  %4 = tosa.intdiv %arg0, %arg0 : (tensor<1xi32>, tensor<1xi32>) -> tensor<1xi32>
 
   // CHECK: linalg.generic
   // CHECK: ^bb0(%[[ARG1:.*]]: i32, %[[ARG2:.*]]: i32):
@@ -1525,7 +1525,9 @@ func.func @argmax(%arg0 : tensor<3x2xi32>, %arg1 : tensor<6xf32>) -> () {
   // CHECK: arith.constant -3.40282347E+38 : f32
   // CHECK: linalg.index
   // CHECK: arith.index_cast
-  // CHECK: arith.cmpf ogt
+  // CHECK: arith.cmpf ugt
+  // CHECK: arith.cmpf ord
+  // CHECK: andi
   // CHECK: select
   // CHECK: select
   // CHECK: linalg.yield
@@ -2230,12 +2232,12 @@ func.func @maximum_nan_ignore(%arg0: tensor<5x4xf32>, %arg1: tensor<5x4xf32>) ->
 // CHECK-LABEL: @argmax_nan_propagate
 func.func @argmax_nan_propagate(%arg0: tensor<5x4xf32>, %arg1: tensor<5x4xf32>) -> () {
   // CHECK: linalg.generic
-  // CHECK: arith.cmpf ogt
+  // CHECK: arith.cmpf ugt
+  // CHECK: arith.cmpf ord
+  // CHECK: andi
   // CHECK: arith.select
   // CHECK: arith.select
   // CHECK-NOT: arith.cmpf uno
-  // CHECK-NOT: arith.cmpf uno
-  // CHECK-NOT: arith.select
   // CHECK-NOT: arith.select
   // CHECK: linalg.yield
   %11 = tosa.argmax %arg0 {axis = 0 : i32, nan_mode = "PROPAGATE"} : (tensor<5x4xf32>)  -> tensor<4xi32>
@@ -2265,9 +2267,6 @@ func.func @argmax_nan_ignore_int(%arg0: tensor<5x4xi8>, %arg1: tensor<5x4xi8>) -
 func.func @argmax_nan_ignore(%arg0: tensor<5x4xf32>, %arg1: tensor<5x4xf32>) -> () {
   // CHECK: linalg.generic
   // CHECK: arith.cmpf ogt
-  // CHECK: arith.select
-  // CHECK: arith.select
-  // CHECK: arith.cmpf uno
   // CHECK: arith.select
   // CHECK: arith.select
   // CHECK: linalg.yield

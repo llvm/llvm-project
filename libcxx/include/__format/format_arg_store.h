@@ -247,7 +247,7 @@ struct __unpacked_format_arg_store {
 } // namespace __format
 
 template <class _Context, class... _Args>
-struct _LIBCPP_TEMPLATE_VIS __format_arg_store {
+struct __format_arg_store {
   _LIBCPP_HIDE_FROM_ABI __format_arg_store(_Args&... __args) noexcept {
     if constexpr (sizeof...(_Args) != 0) {
       if constexpr (__format::__use_packed_format_arg_store(sizeof...(_Args)))

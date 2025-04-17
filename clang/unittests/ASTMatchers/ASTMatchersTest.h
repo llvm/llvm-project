@@ -290,6 +290,20 @@ testing::AssertionResult notMatchesWithOpenMP51(const Twine &Code,
 }
 
 template <typename T>
+testing::AssertionResult matchesWithFixedpoint(const std::string &Code,
+                                               const T &AMatcher) {
+  return matchesConditionally(Code, AMatcher, true, {"-ffixed-point"},
+                              FileContentMappings(), "input.c");
+}
+
+template <typename T>
+testing::AssertionResult notMatchesWithFixedpoint(const std::string &Code,
+                                                  const T &AMatcher) {
+  return matchesConditionally(Code, AMatcher, false, {"-ffixed-point"},
+                              FileContentMappings(), "input.c");
+}
+
+template <typename T>
 testing::AssertionResult matchAndVerifyResultConditionally(
     const Twine &Code, const T &AMatcher,
     std::unique_ptr<BoundNodesCallback> FindResultVerifier, bool ExpectResult,

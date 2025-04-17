@@ -17,6 +17,7 @@
 #include "clang/AST/Attr.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
+#include "clang/AST/DeclOpenACC.h"
 #include "clang/AST/DeclOpenMP.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/Basic/ABI.h"
@@ -86,6 +87,8 @@ public:
   GlobalDecl(const ObjCMethodDecl *D) { Init(D); }
   GlobalDecl(const OMPDeclareReductionDecl *D) { Init(D); }
   GlobalDecl(const OMPDeclareMapperDecl *D) { Init(D); }
+  GlobalDecl(const OpenACCRoutineDecl *D) { Init(D); }
+  GlobalDecl(const OpenACCDeclareDecl *D) { Init(D); }
   GlobalDecl(const CXXConstructorDecl *D, CXXCtorType Type) : Value(D, Type) {}
   GlobalDecl(const CXXDestructorDecl *D, CXXDtorType Type) : Value(D, Type) {}
   GlobalDecl(const VarDecl *D, DynamicInitKind StubKind)

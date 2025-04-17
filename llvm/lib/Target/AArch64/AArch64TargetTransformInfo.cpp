@@ -1492,9 +1492,8 @@ static bool isAllActivePredicate(Value *Pred) {
     if (cast<ScalableVectorType>(Pred->getType())->getMinNumElements() <=
         cast<ScalableVectorType>(UncastedPred->getType())->getMinNumElements())
       Pred = UncastedPred;
-
-  return match(Pred, m_Intrinsic<Intrinsic::aarch64_sve_ptrue>(
-                         m_ConstantInt<AArch64SVEPredPattern::all>()));
+  auto *C = dyn_cast<Constant>(Pred);
+  return (C && C->isAllOnesValue());
 }
 
 // Use SVE intrinsic info to eliminate redundant operands and/or canonicalise
@@ -1701,14 +1700,7 @@ static std::optional<Instruction *> instCombineSVECmpNE(InstCombiner &IC,
                                                         IntrinsicInst &II) {
   LLVMContext &Ctx = II.getContext();
 
-  // Check that the predicate is all active
-  auto *Pg = dyn_cast<IntrinsicInst>(II.getArgOperand(0));
-  if (!Pg || Pg->getIntrinsicID() != Intrinsic::aarch64_sve_ptrue)
-    return std::nullopt;
-
-  const auto PTruePattern =
-      cast<ConstantInt>(Pg->getOperand(0))->getZExtValue();
-  if (PTruePattern != AArch64SVEPredPattern::all)
+  if (!isAllActivePredicate(II.getArgOperand(0)))
     return std::nullopt;
 
   // Check that we have a compare of zero..
@@ -2118,8 +2110,7 @@ instCombineSVEVectorBinOp(InstCombiner &IC, IntrinsicInst &II) {
   auto *OpPredicate = II.getOperand(0);
   auto BinOpCode = intrinsicIDToBinOpCode(II.getIntrinsicID());
   if (BinOpCode == Instruction::BinaryOpsEnd ||
-      !match(OpPredicate, m_Intrinsic<Intrinsic::aarch64_sve_ptrue>(
-                              m_ConstantInt<AArch64SVEPredPattern::all>())))
+      !isAllActivePredicate(OpPredicate))
     return std::nullopt;
   auto BinOp = IC.Builder.CreateBinOpFMF(
       BinOpCode, II.getOperand(1), II.getOperand(2), II.getFastMathFlags());
@@ -2641,6 +2632,13 @@ static std::optional<Instruction *> instCombineDMB(InstCombiner &IC,
   return std::nullopt;
 }
 
+static std::optional<Instruction *> instCombinePTrue(InstCombiner &IC,
+                                                     IntrinsicInst &II) {
+  if (match(II.getOperand(0), m_ConstantInt<AArch64SVEPredPattern::all>()))
+    return IC.replaceInstUsesWith(II, Constant::getAllOnesValue(II.getType()));
+  return std::nullopt;
+}
+
 std::optional<Instruction *>
 AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
                                      IntrinsicInst &II) const {
@@ -2744,6 +2742,8 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
     return instCombineSVEDupqLane(IC, II);
   case Intrinsic::aarch64_sve_insr:
     return instCombineSVEInsr(IC, II);
+  case Intrinsic::aarch64_sve_ptrue:
+    return instCombinePTrue(IC, II);
   }
 
   return std::nullopt;
@@ -3832,8 +3832,9 @@ InstructionCost AArch64TTIImpl::getScalarizationOverhead(
   if (Ty->getElementType()->isFloatingPointTy())
     return BaseT::getScalarizationOverhead(Ty, DemandedElts, Insert, Extract,
                                            CostKind);
-  return DemandedElts.popcount() * (Insert + Extract) *
-         ST->getVectorInsertExtractBaseCost();
+  unsigned VecInstCost =
+      CostKind == TTI::TCK_CodeSize ? 1 : ST->getVectorInsertExtractBaseCost();
+  return DemandedElts.popcount() * (Insert + Extract) * VecInstCost;
 }
 
 InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
@@ -4568,6 +4569,71 @@ getFalkorUnrollingPreferences(Loop *L, ScalarEvolution &SE,
   }
 }
 
+// This function returns true if the loop:
+//  1. Has a valid cost, and
+//  2. Has a cost within the supplied budget.
+// Otherwise it returns false.
+static bool isLoopSizeWithinBudget(Loop *L, AArch64TTIImpl &TTI,
+                                   InstructionCost Budget,
+                                   unsigned *FinalSize) {
+  // Estimate the size of the loop.
+  InstructionCost LoopCost = 0;
+
+  for (auto *BB : L->getBlocks()) {
+    for (auto &I : *BB) {
+      SmallVector<const Value *, 4> Operands(I.operand_values());
+      InstructionCost Cost =
+          TTI.getInstructionCost(&I, Operands, TTI::TCK_CodeSize);
+      // This can happen with intrinsics that don't currently have a cost model
+      // or for some operations that require SVE.
+      if (!Cost.isValid())
+        return false;
+
+      LoopCost += Cost;
+      if (LoopCost > Budget)
+        return false;
+    }
+  }
+
+  if (FinalSize)
+    *FinalSize = *LoopCost.getValue();
+  return true;
+}
+
+static bool shouldUnrollMultiExitLoop(Loop *L, ScalarEvolution &SE,
+                                      AArch64TTIImpl &TTI) {
+  // Only consider loops with unknown trip counts for which we can determine
+  // a symbolic expression. Multi-exit loops with small known trip counts will
+  // likely be unrolled anyway.
+  const SCEV *BTC = SE.getSymbolicMaxBackedgeTakenCount(L);
+  if (isa<SCEVConstant>(BTC) || isa<SCEVCouldNotCompute>(BTC))
+    return false;
+
+  // It might not be worth unrolling loops with low max trip counts. Restrict
+  // this to max trip counts > 32 for now.
+  unsigned MaxTC = SE.getSmallConstantMaxTripCount(L);
+  if (MaxTC > 0 && MaxTC <= 32)
+    return false;
+
+  // Make sure the loop size is <= 5.
+  if (!isLoopSizeWithinBudget(L, TTI, 5, nullptr))
+    return false;
+
+  // Small search loops with multiple exits can be highly beneficial to unroll.
+  // We only care about loops with exactly two exiting blocks, although each
+  // block could jump to the same exit block.
+  ArrayRef<BasicBlock *> Blocks = L->getBlocks();
+  if (Blocks.size() != 2)
+    return false;
+
+  if (any_of(Blocks, [](BasicBlock *BB) {
+        return !isa<BranchInst>(BB->getTerminator());
+      }))
+    return false;
+
+  return true;
+}
+
 /// For Apple CPUs, we want to runtime-unroll loops to make better use if the
 /// OOO engine's wide instruction window and various predictors.
 static void
@@ -4582,43 +4648,18 @@ getAppleRuntimeUnrollPreferences(Loop *L, ScalarEvolution &SE,
   if (!L->isInnermost() || L->getNumBlocks() > 8)
     return;
 
+  // Loops with multiple exits are handled by common code.
+  if (!L->getExitBlock())
+    return;
+
   const SCEV *BTC = SE.getSymbolicMaxBackedgeTakenCount(L);
   if (isa<SCEVConstant>(BTC) || isa<SCEVCouldNotCompute>(BTC) ||
       (SE.getSmallConstantMaxTripCount(L) > 0 &&
        SE.getSmallConstantMaxTripCount(L) <= 32))
     return;
+
   if (findStringMetadataForLoop(L, "llvm.loop.isvectorized"))
     return;
-
-  int64_t Size = 0;
-  for (auto *BB : L->getBlocks()) {
-    for (auto &I : *BB) {
-      if (!isa<IntrinsicInst>(&I) && isa<CallBase>(&I))
-        return;
-      SmallVector<const Value *, 4> Operands(I.operand_values());
-      Size +=
-          *TTI.getInstructionCost(&I, Operands, TTI::TCK_CodeSize).getValue();
-    }
-  }
-
-  // Small search loops with multiple exits can be highly beneficial to unroll.
-  if (!L->getExitBlock()) {
-    if (L->getNumBlocks() == 2 && Size < 6 &&
-        all_of(
-            L->getBlocks(),
-            [](BasicBlock *BB) {
-              return isa<BranchInst>(BB->getTerminator());
-            })) {
-      UP.RuntimeUnrollMultiExit = true;
-      UP.Runtime = true;
-      // Limit unroll count.
-      UP.DefaultUnrollRuntimeCount = 4;
-      // Allow slightly more costly trip-count expansion to catch search loops
-      // with pointer inductions.
-      UP.SCEVExpansionBudget = 5;
-    }
-    return;
-  }
 
   if (SE.getSymbolicMaxBackedgeTakenCount(L) != SE.getBackedgeTakenCount(L))
     return;
@@ -4630,7 +4671,9 @@ getAppleRuntimeUnrollPreferences(Loop *L, ScalarEvolution &SE,
   // dependencies, to expose more parallel memory access streams.
   BasicBlock *Header = L->getHeader();
   if (Header == L->getLoopLatch()) {
-    if (Size > 8)
+    // Estimate the size of the loop.
+    unsigned Size;
+    if (!isLoopSizeWithinBudget(L, TTI, 8, &Size))
       return;
 
     SmallPtrSet<Value *, 8> LoadedValues;
@@ -4727,6 +4770,25 @@ void AArch64TTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
   // Disable partial & runtime unrolling on -Os.
   UP.PartialOptSizeThreshold = 0;
 
+  // Scan the loop: don't unroll loops with calls as this could prevent
+  // inlining. Don't unroll vector loops either, as they don't benefit much from
+  // unrolling.
+  for (auto *BB : L->getBlocks()) {
+    for (auto &I : *BB) {
+      // Don't unroll vectorised loop.
+      if (I.getType()->isVectorTy())
+        return;
+
+      if (isa<CallBase>(I)) {
+        if (isa<CallInst>(I) || isa<InvokeInst>(I))
+          if (const Function *F = cast<CallBase>(I).getCalledFunction())
+            if (!isLoweredToCall(F))
+              continue;
+        return;
+      }
+    }
+  }
+
   // Apply subtarget-specific unrolling preferences.
   switch (ST->getProcFamily()) {
   case AArch64Subtarget::AppleA14:
@@ -4743,23 +4805,17 @@ void AArch64TTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
     break;
   }
 
-  // Scan the loop: don't unroll loops with calls as this could prevent
-  // inlining. Don't unroll vector loops either, as they don't benefit much from
-  // unrolling.
-  for (auto *BB : L->getBlocks()) {
-    for (auto &I : *BB) {
-      // Don't unroll vectorised loop.
-      if (I.getType()->isVectorTy())
-        return;
-
-      if (isa<CallInst>(I) || isa<InvokeInst>(I)) {
-        if (const Function *F = cast<CallBase>(I).getCalledFunction()) {
-          if (!isLoweredToCall(F))
-            continue;
-        }
-        return;
-      }
-    }
+  // If this is a small, multi-exit loop similar to something like std::find,
+  // then there is typically a performance improvement achieved by unrolling.
+  if (!L->getExitBlock() && shouldUnrollMultiExitLoop(L, SE, *this)) {
+    UP.RuntimeUnrollMultiExit = true;
+    UP.Runtime = true;
+    // Limit unroll count.
+    UP.DefaultUnrollRuntimeCount = 4;
+    // Allow slightly more costly trip-count expansion to catch search loops
+    // with pointer inductions.
+    UP.SCEVExpansionBudget = 5;
+    return;
   }
 
   // Enable runtime unrolling for in-order models

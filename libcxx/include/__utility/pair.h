@@ -57,7 +57,7 @@ struct __non_trivially_copyable_base {
 };
 
 template <class _T1, class _T2>
-struct _LIBCPP_TEMPLATE_VIS pair
+struct pair
 #if defined(_LIBCPP_DEPRECATED_ABI_DISABLE_PAIR_TRIVIAL_COPY_CTOR)
     : private __non_trivially_copyable_base<_T1, _T2>
 #endif
@@ -536,20 +536,20 @@ make_pair(_T1&& __t1, _T2&& __t2) {
 }
 
 template <class _T1, class _T2>
-struct _LIBCPP_TEMPLATE_VIS tuple_size<pair<_T1, _T2> > : public integral_constant<size_t, 2> {};
+struct tuple_size<pair<_T1, _T2> > : public integral_constant<size_t, 2> {};
 
 template <size_t _Ip, class _T1, class _T2>
-struct _LIBCPP_TEMPLATE_VIS tuple_element<_Ip, pair<_T1, _T2> > {
+struct tuple_element<_Ip, pair<_T1, _T2> > {
   static_assert(_Ip < 2, "Index out of bounds in std::tuple_element<std::pair<T1, T2>>");
 };
 
 template <class _T1, class _T2>
-struct _LIBCPP_TEMPLATE_VIS tuple_element<0, pair<_T1, _T2> > {
+struct tuple_element<0, pair<_T1, _T2> > {
   using type _LIBCPP_NODEBUG = _T1;
 };
 
 template <class _T1, class _T2>
-struct _LIBCPP_TEMPLATE_VIS tuple_element<1, pair<_T1, _T2> > {
+struct tuple_element<1, pair<_T1, _T2> > {
   using type _LIBCPP_NODEBUG = _T2;
 };
 

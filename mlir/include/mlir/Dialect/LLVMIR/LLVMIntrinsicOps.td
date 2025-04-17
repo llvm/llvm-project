@@ -874,7 +874,7 @@ def LLVM_MatrixColumnMajorLoadOp : LLVM_OneResultIntrOp<"matrix.column.major.loa
     const llvm::DataLayout &dl =
       builder.GetInsertBlock()->getModule()->getDataLayout();
     llvm::Type *ElemTy = moduleTranslation.convertType(
-        getVectorElementType(op.getType()));
+        op.getType().getElementType());
     llvm::Align align = dl.getABITypeAlign(ElemTy);
     $res = mb.CreateColumnMajorLoad(
       ElemTy, $data, align, $stride, $isVolatile, $rows,
@@ -907,7 +907,7 @@ def LLVM_MatrixColumnMajorStoreOp : LLVM_ZeroResultIntrOp<"matrix.column.major.s
     llvm::MatrixBuilder mb(builder);
     const llvm::DataLayout &dl =
       builder.GetInsertBlock()->getModule()->getDataLayout();
-    Type elementType = getVectorElementType(op.getMatrix().getType());
+    Type elementType = op.getMatrix().getType().getElementType();
     llvm::Align align = dl.getABITypeAlign(
       moduleTranslation.convertType(elementType));
     mb.CreateColumnMajorStore(
@@ -1164,7 +1164,8 @@ def LLVM_vector_insert
   let extraClassDeclaration = [{
     uint64_t getVectorBitWidth(Type vector) {
       return getVectorNumElements(vector).getKnownMinValue() *
-             getVectorElementType(vector).getIntOrFloatBitWidth();
+             ::llvm::cast<VectorType>(vector).getElementType()
+                .getIntOrFloatBitWidth();
     }
     uint64_t getSrcVectorBitWidth() {
       return getVectorBitWidth(getSrcvec().getType());
@@ -1196,7 +1197,8 @@ def LLVM_vector_extract
   let extraClassDeclaration = [{
     uint64_t getVectorBitWidth(Type vector) {
       return getVectorNumElements(vector).getKnownMinValue() *
-             getVectorElementType(vector).getIntOrFloatBitWidth();
+             ::llvm::cast<VectorType>(vector).getElementType()
+                .getIntOrFloatBitWidth();
     }
     uint64_t getSrcVectorBitWidth() {
       return getVectorBitWidth(getSrcvec().getType());
@@ -1216,8 +1218,8 @@ def LLVM_vector_interleave2
             "result has twice as many elements as 'vec1'",
             And<[CPred<"getVectorNumElements($res.getType()) == "
                        "getVectorNumElements($vec1.getType()) * 2">,
-                 CPred<"getVectorElementType($vec1.getType()) == "
-                       "getVectorElementType($res.getType())">]>>,
+                 CPred<"::llvm::cast<VectorType>($vec1.getType()).getElementType() == "
+                       "::llvm::cast<VectorType>($res.getType()).getElementType()">]>>,
         ]>,
         Arguments<(ins LLVM_AnyVector:$vec1, LLVM_AnyVector:$vec2)>;
 

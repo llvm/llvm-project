@@ -95,6 +95,8 @@ public:
       return getZeroAttr(arrTy);
     if (auto ptrTy = mlir::dyn_cast<cir::PointerType>(ty))
       return getConstNullPtrAttr(ptrTy);
+    if (auto recordTy = mlir::dyn_cast<cir::RecordType>(ty))
+      return getZeroAttr(recordTy);
     if (mlir::isa<cir::BoolType>(ty)) {
       return getCIRBoolAttr(false);
     }
@@ -199,6 +201,19 @@ public:
   cir::PtrStrideOp createPtrStride(mlir::Location loc, mlir::Value base,
                                    mlir::Value stride) {
     return create<cir::PtrStrideOp>(loc, base.getType(), base, stride);
+  }
+
+  //===--------------------------------------------------------------------===//
+  // Call operators
+  //===--------------------------------------------------------------------===//
+
+  cir::CallOp createCallOp(mlir::Location loc, mlir::SymbolRefAttr callee) {
+    auto op = create<cir::CallOp>(loc, callee);
+    return op;
+  }
+
+  cir::CallOp createCallOp(mlir::Location loc, cir::FuncOp callee) {
+    return createCallOp(loc, mlir::SymbolRefAttr::get(callee));
   }
 
   //===--------------------------------------------------------------------===//
@@ -333,6 +348,11 @@ public:
   mlir::Value createNUWAdd(mlir::Location loc, mlir::Value lhs,
                            mlir::Value rhs) {
     return createAdd(loc, lhs, rhs, OverflowBehavior::NoUnsignedWrap);
+  }
+
+  cir::CmpOp createCompare(mlir::Location loc, cir::CmpOpKind kind,
+                           mlir::Value lhs, mlir::Value rhs) {
+    return create<cir::CmpOp>(loc, getBoolTy(), kind, lhs, rhs);
   }
 
   //

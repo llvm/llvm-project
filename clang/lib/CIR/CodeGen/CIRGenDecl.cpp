@@ -15,6 +15,7 @@
 #include "mlir/IR/Location.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
+#include "clang/AST/DeclOpenACC.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/CIR/MissingFeatures.h"
@@ -145,7 +146,7 @@ void CIRGenFunction::emitAutoVarInit(
   // its removal/optimization to the CIR lowering.
   if (!constant || isa<CXXTemporaryObjectExpr>(init)) {
     initializeWhatIsTechnicallyUninitialized(addr);
-    LValue lv = LValue::makeAddr(addr, type);
+    LValue lv = makeAddrLValue(addr, type, AlignmentSource::Decl);
     emitExprAsInit(init, &d, lv);
     // In case lv has uses it means we indeed initialized something
     // out of it while trying to build the expression, mark it as such.
@@ -164,7 +165,7 @@ void CIRGenFunction::emitAutoVarInit(
   assert(typedConstant && "expected typed attribute");
   if (!emission.IsConstantAggregate) {
     // For simple scalar/complex initialization, store the value directly.
-    LValue lv = LValue::makeAddr(addr, type);
+    LValue lv = makeAddrLValue(addr, type);
     assert(init && "expected initializer");
     mlir::Location initLoc = getLoc(init->getSourceRange());
     // lv.setNonGC(true);
@@ -259,6 +260,9 @@ void CIRGenFunction::emitExprAsInit(const Expr *init, const ValueDecl *d,
 
 void CIRGenFunction::emitDecl(const Decl &d) {
   switch (d.getKind()) {
+  case Decl::Record: // struct/union/class X;
+    assert(!cir::MissingFeatures::generateDebugInfo());
+    return;
   case Decl::Var: {
     const VarDecl &vd = cast<VarDecl>(d);
     assert(vd.isLocalVarDecl() &&
@@ -266,7 +270,23 @@ void CIRGenFunction::emitDecl(const Decl &d) {
     emitVarDecl(vd);
     return;
   }
+  case Decl::OpenACCDeclare:
+    emitOpenACCDeclare(cast<OpenACCDeclareDecl>(d));
+    return;
+  case Decl::OpenACCRoutine:
+    emitOpenACCRoutine(cast<OpenACCRoutineDecl>(d));
+    return;
   default:
-    cgm.errorNYI(d.getSourceRange(), "emitDecl: unhandled decl type");
+    cgm.errorNYI(d.getSourceRange(),
+                 std::string("emitDecl: unhandled decl type: ") +
+                     d.getDeclKindName());
   }
+}
+
+void CIRGenFunction::emitNullabilityCheck(LValue lhs, mlir::Value rhs,
+                                          SourceLocation loc) {
+  if (!sanOpts.has(SanitizerKind::NullabilityAssign))
+    return;
+
+  assert(!cir::MissingFeatures::sanitizers());
 }

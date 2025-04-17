@@ -197,24 +197,16 @@ def cuf_KernelLaunchOp : cuf_Op<"kernel_launch", [CallOpInterface,
     ```
   }];
 
-  let arguments = (ins
-    SymbolRefAttr:$callee,
-    I32:$grid_x,
-    I32:$grid_y,
-    I32:$grid_z,
-    I32:$block_x,
-    I32:$block_y,
-    I32:$block_z,
-    Optional<I32>:$bytes,
-    Optional<I32>:$stream,
-    Variadic<AnyType>:$args,
-    OptionalAttr<DictArrayAttr>:$arg_attrs,
-    OptionalAttr<DictArrayAttr>:$res_attrs
-  );
+  let arguments = (ins SymbolRefAttr:$callee, I32:$grid_x, I32:$grid_y,
+      I32:$grid_z, I32:$block_x, I32:$block_y, I32:$block_z,
+      Optional<I32>:$bytes, Optional<AnyIntegerType>:$stream,
+      Variadic<AnyType>:$args, OptionalAttr<DictArrayAttr>:$arg_attrs,
+      OptionalAttr<DictArrayAttr>:$res_attrs);
 
   let assemblyFormat = [{
     $callee `<` `<` `<` $grid_x `,` $grid_y `,` $grid_z `,`$block_x `,`
-        $block_y `,` $block_z ( `,` $bytes^ ( `,` $stream^ )? )? `>` `>` `>`
+        $block_y `,` $block_z
+        ( `,` $bytes^ ( `,` $stream^ `:` type($stream) )? )? `>` `>` `>`
         `` `(` $args `)` ( `:` `(` type($args)^ `)` )? attr-dict
   }];
 

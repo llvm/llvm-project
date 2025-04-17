@@ -879,6 +879,8 @@ public:
       gpuLaunchOp.getClusterSizeYMutable().assign(clusterDimY);
       gpuLaunchOp.getClusterSizeZMutable().assign(clusterDimZ);
     }
+    if (op.getStream())
+      gpuLaunchOp.getAsyncObjectMutable().assign(op.getStream());
     if (procAttr)
       gpuLaunchOp->setAttr(cuf::getProcAttrName(), procAttr);
     rewriter.replaceOp(op, gpuLaunchOp);

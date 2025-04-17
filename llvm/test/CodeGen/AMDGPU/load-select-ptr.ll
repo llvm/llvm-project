@@ -13,7 +13,8 @@
 ; GCN: s_cselect_b32
 
 ; GCN-NOT: load_dword
-; GCN: flat_load_dwordx2
+; GCN: flat_load_dword
+; GCN: flat_load_dword
 ; GCN-NOT: load_dword
 
 ; GCN: flat_store_dwordx2
