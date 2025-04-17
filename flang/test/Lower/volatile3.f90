@@ -34,6 +34,9 @@ program p
 
    call sub_volatile_array_assumed_shape(volatile_array(1:10:1))
    call sub_volatile_array_assumed_shape_2d(volatile_array_2d(1:10:1,:))
+
+   call sub_select_rank(volatile_array)
+   call sub_select_rank(volatile_array_2d)
 contains
    subroutine sub_nonvolatile_array(arr)
       integer :: arr(10)
@@ -55,7 +58,17 @@ contains
       integer, volatile, dimension(:), pointer :: arr
       arr(1) = 5
    end subroutine
+   subroutine sub_select_rank(arr)
+      integer, volatile :: arr(..)
+      select rank(arr)
+      rank(1)
+         arr(1) = 5
+      rank(4)
+         arr(1,1,1,1) = 5
+      end select
+   end subroutine
 end program
+
 
 ! CHECK-LABEL:   func.func @_QQmain() attributes {fir.bindc_name = "p"} {
 ! CHECK:           %[[VAL_0:.*]] = arith.constant 1 : index
@@ -149,6 +162,12 @@ end program
 ! CHECK:           %[[VAL_70:.*]] = fir.volatile_cast %[[VAL_69]] : (!fir.box<!fir.array<10x10xi32>, volatile>) -> !fir.box<!fir.array<10x10xi32>>
 ! CHECK:           %[[VAL_71:.*]] = fir.convert %[[VAL_70]] : (!fir.box<!fir.array<10x10xi32>>) -> !fir.box<!fir.array<?x?xi32>>
 ! CHECK:           fir.call @_QFPsub_volatile_array_assumed_shape_2d(%[[VAL_71]]) fastmath<contract> : (!fir.box<!fir.array<?x?xi32>>) -> ()
+! CHECK:           %[[VAL_72:.*]] = fir.convert %[[VAL_59]] : (!fir.box<!fir.array<10xi32>>) -> !fir.box<!fir.array<*:i32>>
+! CHECK:           fir.call @_QFPsub_select_rank(%[[VAL_72]]) fastmath<contract> : (!fir.box<!fir.array<*:i32>>) -> ()
+! CHECK:           %[[VAL_73:.*]] = fir.embox %[[VAL_20]]#0(%[[VAL_18]]) : (!fir.ref<!fir.array<10x10xi32>, volatile>, !fir.shape<2>) -> !fir.box<!fir.array<10x10xi32>, volatile>
+! CHECK:           %[[VAL_74:.*]] = fir.volatile_cast %[[VAL_73]] : (!fir.box<!fir.array<10x10xi32>, volatile>) -> !fir.box<!fir.array<10x10xi32>>
+! CHECK:           %[[VAL_75:.*]] = fir.convert %[[VAL_74]] : (!fir.box<!fir.array<10x10xi32>>) -> !fir.box<!fir.array<*:i32>>
+! CHECK:           fir.call @_QFPsub_select_rank(%[[VAL_75]]) fastmath<contract> : (!fir.box<!fir.array<*:i32>>) -> ()
 ! CHECK:           return
 ! CHECK:         }
 
@@ -213,5 +232,37 @@ end program
 ! CHECK:           %[[VAL_6:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>, volatile>, volatile>
 ! CHECK:           %[[VAL_7:.*]] = hlfir.designate %[[VAL_6]] (%[[VAL_1]])  : (!fir.box<!fir.ptr<!fir.array<?xi32>>, volatile>, index) -> !fir.ref<i32, volatile>
 ! CHECK:           hlfir.assign %[[VAL_2]] to %[[VAL_7]] : i32, !fir.ref<i32, volatile>
+! CHECK:           return
+! CHECK:         }
+
+! CHECK-LABEL:   func.func private @_QFPsub_select_rank(
+! CHECK-SAME:                                           %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.box<!fir.array<*:i32>> {fir.bindc_name = "arr"}) attributes {fir.host_symbol = @_QQmain, llvm.linkage = #llvm.linkage<internal>} {
+! CHECK:           %[[VAL_1:.*]] = arith.constant 1 : index
+! CHECK:           %[[VAL_2:.*]] = arith.constant 5 : i32
+! CHECK:           %[[VAL_3:.*]] = arith.constant 4 : i8
+! CHECK:           %[[VAL_4:.*]] = arith.constant 1 : i8
+! CHECK:           %[[VAL_5:.*]] = fir.dummy_scope : !fir.dscope
+! CHECK:           %[[VAL_6:.*]] = fir.volatile_cast %[[VAL_0]] : (!fir.box<!fir.array<*:i32>>) -> !fir.box<!fir.array<*:i32>, volatile>
+! CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_6]] dummy_scope %[[VAL_5]] {fortran_attrs = #fir.var_attrs<volatile>, uniq_name = "_QFFsub_select_rankEarr"} : (!fir.box<!fir.array<*:i32>, volatile>, !fir.dscope) -> (!fir.box<!fir.array<*:i32>, volatile>, !fir.box<!fir.array<*:i32>, volatile>)
+! CHECK:           %[[VAL_8:.*]] = fir.volatile_cast %[[VAL_7]]#0 : (!fir.box<!fir.array<*:i32>, volatile>) -> !fir.box<!fir.array<*:i32>>
+! CHECK:           %[[VAL_9:.*]] = fir.convert %[[VAL_8]] : (!fir.box<!fir.array<*:i32>>) -> !fir.box<none>
+! CHECK:           %[[VAL_10:.*]] = fir.call @_FortranAIsAssumedSize(%[[VAL_9]]) : (!fir.box<none>) -> i1
+! CHECK:           cf.cond_br %[[VAL_10]], ^bb4, ^bb1
+! CHECK:         ^bb1:
+! CHECK:           %[[VAL_11:.*]] = fir.box_rank %[[VAL_7]]#0 : (!fir.box<!fir.array<*:i32>, volatile>) -> i8
+! CHECK:           fir.select_case %[[VAL_11]] : i8 [#fir.point, %[[VAL_4]], ^bb2, #fir.point, %[[VAL_3]], ^bb3, unit, ^bb4]
+! CHECK:         ^bb2:
+! CHECK:           %[[VAL_12:.*]] = fir.convert %[[VAL_7]]#0 : (!fir.box<!fir.array<*:i32>, volatile>) -> !fir.box<!fir.array<?xi32>, volatile>
+! CHECK:           %[[VAL_13:.*]]:2 = hlfir.declare %[[VAL_12]] {fortran_attrs = #fir.var_attrs<volatile>, uniq_name = "_QFFsub_select_rankEarr"} : (!fir.box<!fir.array<?xi32>, volatile>) -> (!fir.box<!fir.array<?xi32>, volatile>, !fir.box<!fir.array<?xi32>, volatile>)
+! CHECK:           %[[VAL_14:.*]] = hlfir.designate %[[VAL_13]]#0 (%[[VAL_1]])  : (!fir.box<!fir.array<?xi32>, volatile>, index) -> !fir.ref<i32, volatile>
+! CHECK:           hlfir.assign %[[VAL_2]] to %[[VAL_14]] : i32, !fir.ref<i32, volatile>
+! CHECK:           cf.br ^bb4
+! CHECK:         ^bb3:
+! CHECK:           %[[VAL_15:.*]] = fir.convert %[[VAL_7]]#0 : (!fir.box<!fir.array<*:i32>, volatile>) -> !fir.box<!fir.array<?x?x?x?xi32>, volatile>
+! CHECK:           %[[VAL_16:.*]]:2 = hlfir.declare %[[VAL_15]] {fortran_attrs = #fir.var_attrs<volatile>, uniq_name = "_QFFsub_select_rankEarr"} : (!fir.box<!fir.array<?x?x?x?xi32>, volatile>) -> (!fir.box<!fir.array<?x?x?x?xi32>, volatile>, !fir.box<!fir.array<?x?x?x?xi32>, volatile>)
+! CHECK:           %[[VAL_17:.*]] = hlfir.designate %[[VAL_16]]#0 (%[[VAL_1]], %[[VAL_1]], %[[VAL_1]], %[[VAL_1]])  : (!fir.box<!fir.array<?x?x?x?xi32>, volatile>, index, index, index, index) -> !fir.ref<i32, volatile>
+! CHECK:           hlfir.assign %[[VAL_2]] to %[[VAL_17]] : i32, !fir.ref<i32, volatile>
+! CHECK:           cf.br ^bb4
+! CHECK:         ^bb4:
 ! CHECK:           return
 ! CHECK:         }

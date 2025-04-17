@@ -3735,10 +3735,11 @@ private:
           builder->createMinusOneInteger(loc, builder->getIndexType())};
       mlir::Value baseAddr =
           hlfir::genVariableRawAddress(loc, *builder, selector);
+      const bool isVolatile = fir::isa_volatile_type(selector.getType());
       mlir::Type eleType =
           fir::unwrapSequenceType(fir::unwrapRefType(baseAddr.getType()));
       mlir::Type rank1Type =
-          fir::ReferenceType::get(builder->getVarLenSeqTy(eleType, 1));
+          fir::ReferenceType::get(builder->getVarLenSeqTy(eleType, 1), isVolatile);
       baseAddr = builder->createConvert(loc, rank1Type, baseAddr);
       if (selector.isCharacter()) {
         mlir::Value len = hlfir::genCharLength(loc, *builder, selector);
@@ -3758,7 +3759,8 @@ private:
           mlir::cast<fir::BaseBoxType>(fir::unwrapRefType(selector.getType()));
       mlir::Type newBoxType = boxTy.getBoxTypeWithNewShape(rank);
       if (fir::isa_ref_type(selector.getType()))
-        newBoxType = fir::ReferenceType::get(newBoxType);
+        newBoxType = fir::ReferenceType::get(
+            newBoxType, fir::isa_volatile_type(selector.getType()));
       // Give rank info to value via cast, and get rid of the box if not needed
       // (simple scalars, contiguous arrays... This is done by
       // translateVariableToExtendedValue).
