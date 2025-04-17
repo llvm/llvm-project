@@ -445,7 +445,7 @@ Code Generation Options
 
     :option:`-Og` Similar to :option:`-O1`, but with slightly reduced
     optimization and better variable visibility. The same optimizations are run
-    as at :option:`-O1`, but the :option:`-fextend-variable-liveness` flag is
+    as at :option:`-O1`, but the ``-fextend-variable-liveness`` flag is
     also set, which tries to prevent optimizations from reducing the liveness of
     user variables, improving their availability when debugging.
 
