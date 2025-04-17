@@ -90,6 +90,10 @@ public:
         TRI.getDwarfRegNum(Reg2, IsEH)));
   }
 
+  void buildWindowSave() const {
+    insertCFIInst(MCCFIInstruction::createWindowSave(nullptr));
+  }
+
   void buildRestore(MCRegister Reg) const {
     insertCFIInst(MCCFIInstruction::createRestore(
         nullptr, TRI.getDwarfRegNum(Reg, IsEH)));
