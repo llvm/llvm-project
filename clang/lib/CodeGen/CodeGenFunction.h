@@ -5244,7 +5244,9 @@ public:
 
   /// Convert a value into a format suitable for passing to a runtime
   /// sanitizer handler.
-  llvm::Value *EmitCheckValue(llvm::Value *V);
+  /// If the check value is a pointer or passed by reference, set \p
+  /// MayReadFromPtrToInt to true.
+  llvm::Value *EmitCheckValue(llvm::Value *V, bool &MayReadFromPtrToInt);
 
   /// Emit a description of a source location in a format suitable for
   /// passing to a runtime sanitizer handler.
