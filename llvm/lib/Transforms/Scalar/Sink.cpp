@@ -44,20 +44,34 @@ static bool hasStoreConflict(Instruction *Inst, AliasAnalysis &AA,
 
 static bool isSafeToMove(Instruction *Inst, AliasAnalysis &AA,
                          SmallPtrSetImpl<Instruction *> &Stores) {
+
   if (Inst->mayWriteToMemory()) {
     Stores.insert(Inst);
     return false;
   }
+
+  if (LoadInst *L = dyn_cast<LoadInst>(Inst)) {
+    MemoryLocation Loc = MemoryLocation::get(L);
+    for (Instruction *S : Stores)
+      if (isModSet(AA.getModRefInfo(S, Loc)))
+        return false;
+  }
+
   if (Inst->isTerminator() || isa<PHINode>(Inst) || Inst->isEHPad() ||
       Inst->mayThrow() || !Inst->willReturn())
     return false;
-  // Convergent operations cannot be made control-dependent on additional
-  // values.
-  if (auto *Call = dyn_cast<CallBase>(Inst))
+
+  if (auto *Call = dyn_cast<CallBase>(Inst)) {
+    // Convergent operations cannot be made control-dependent on additional
+    // values.
     if (Call->isConvergent())
       return false;
-  if (hasStoreConflict(Inst, AA, Stores))
-    return false;
+
+    for (Instruction *S : Stores)
+      if (isModSet(AA.getModRefInfo(S, Call)))
+        return false;
+  }
+
   return true;
 }
 

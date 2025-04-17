@@ -1,0 +1,4043 @@
+commit 36eeb25bcd0d8a4b85489413bc1b1757d89e988d
+Author: John Lu <John.Lu@amd.com>
+Date:   Wed Apr 16 06:39:59 2025 -0500
+
+    Extend Sink pass to allow loads to be sunk to non-immediate successor blocks
+    
+    Signed-off-by: John Lu <John.Lu@amd.com>
+
+diff --git a/llvm/lib/Transforms/Scalar/Sink.cpp b/llvm/lib/Transforms/Scalar/Sink.cpp
+index 1a48a59c4189..57ce0c8990f4 100644
+--- a/llvm/lib/Transforms/Scalar/Sink.cpp
++++ b/llvm/lib/Transforms/Scalar/Sink.cpp
+@@ -27,43 +27,71 @@ using namespace llvm;
+ STATISTIC(NumSunk, "Number of instructions sunk");
+ STATISTIC(NumSinkIter, "Number of sinking iterations");
+ 
+-static bool isSafeToMove(Instruction *Inst, AliasAnalysis &AA,
+-                         SmallPtrSetImpl<Instruction *> &Stores) {
+-
+-  if (Inst->mayWriteToMemory()) {
+-    Stores.insert(Inst);
+-    return false;
+-  }
+-
++static bool hasStoreConflict(Instruction *Inst, AliasAnalysis &AA,
++                             SmallPtrSetImpl<Instruction *> &Stores) {
+   if (LoadInst *L = dyn_cast<LoadInst>(Inst)) {
+     MemoryLocation Loc = MemoryLocation::get(L);
+     for (Instruction *S : Stores)
+       if (isModSet(AA.getModRefInfo(S, Loc)))
+-        return false;
++        return true;
++  } else if (auto *Call = dyn_cast<CallBase>(Inst)) {
++    for (Instruction *S : Stores)
++      if (isModSet(AA.getModRefInfo(S, Call)))
++        return true;
+   }
++  return false;
++}
+ 
++static bool isSafeToMove(Instruction *Inst, AliasAnalysis &AA,
++                         SmallPtrSetImpl<Instruction *> &Stores) {
++  if (Inst->mayWriteToMemory()) {
++    Stores.insert(Inst);
++    return false;
++  }
+   if (Inst->isTerminator() || isa<PHINode>(Inst) || Inst->isEHPad() ||
+       Inst->mayThrow() || !Inst->willReturn())
+     return false;
+-
+-  if (auto *Call = dyn_cast<CallBase>(Inst)) {
+-    // Convergent operations cannot be made control-dependent on additional
+-    // values.
++  // Convergent operations cannot be made control-dependent on additional
++  // values.
++  if (auto *Call = dyn_cast<CallBase>(Inst))
+     if (Call->isConvergent())
+       return false;
++  if (hasStoreConflict(Inst, AA, Stores))
++    return false;
++  return true;
++}
+ 
+-    for (Instruction *S : Stores)
+-      if (isModSet(AA.getModRefInfo(S, Call)))
+-        return false;
+-  }
++typedef SmallPtrSet<BasicBlock *, 8> BlocksSet;
++static void findStores(SmallPtrSetImpl<Instruction *> &Stores,
++                       BasicBlock *LoadBB, BasicBlock *BB,
++                       BlocksSet &VisitedBlocksSet) {
++  if (BB == LoadBB || VisitedBlocksSet.contains(BB))
++    return;
++  VisitedBlocksSet.insert(BB);
++
++  for (Instruction &Inst : *BB)
++    if (Inst.mayWriteToMemory())
++      Stores.insert(&Inst);
++  for (BasicBlock *Pred : predecessors(BB))
++    findStores(Stores, LoadBB, Pred, VisitedBlocksSet);
++}
+ 
+-  return true;
++static bool hasConflictingStoreBeforeSuccToSinkTo(AliasAnalysis &AA,
++                                                  Instruction *ReadMemInst,
++                                                  BasicBlock *SuccToSinkTo) {
++  BlocksSet VisitedBlocksSet;
++  SmallPtrSet<Instruction *, 8> Stores;
++  BasicBlock *LoadBB = ReadMemInst->getParent();
++  for (BasicBlock *Pred : predecessors(SuccToSinkTo))
++    findStores(Stores, LoadBB, Pred, VisitedBlocksSet);
++  return hasStoreConflict(ReadMemInst, AA, Stores);
+ }
+ 
+ /// IsAcceptableTarget - Return true if it is possible to sink the instruction
+ /// in the specified basic block.
+-static bool IsAcceptableTarget(Instruction *Inst, BasicBlock *SuccToSinkTo,
+-                               DominatorTree &DT, LoopInfo &LI) {
++static bool IsAcceptableTarget(AliasAnalysis &AA, Instruction *Inst,
++                               BasicBlock *SuccToSinkTo, DominatorTree &DT,
++                               LoopInfo &LI) {
+   assert(Inst && "Instruction to be sunk is null");
+   assert(SuccToSinkTo && "Candidate sink target is null");
+ 
+@@ -76,10 +104,10 @@ static bool IsAcceptableTarget(Instruction *Inst, BasicBlock *SuccToSinkTo,
+   // just punt.
+   // FIXME: Split critical edges if not backedges.
+   if (SuccToSinkTo->getUniquePredecessor() != Inst->getParent()) {
+-    // We cannot sink a load across a critical edge - there may be stores in
+-    // other code paths.
++    // Ensure that there is no conflicting store on any path to SuccToSinkTo.
+     if (Inst->mayReadFromMemory() &&
+-        !Inst->hasMetadata(LLVMContext::MD_invariant_load))
++        !Inst->hasMetadata(LLVMContext::MD_invariant_load) &&
++        hasConflictingStoreBeforeSuccToSinkTo(AA, Inst, SuccToSinkTo))
+       return false;
+ 
+     // We don't want to sink across a critical edge if we don't dominate the
+@@ -153,7 +181,7 @@ static bool SinkInstruction(Instruction *Inst,
+     // The nearest common dominator may be in a parent loop of BB, which may not
+     // be beneficial. Find an ancestor.
+     while (SuccToSinkTo != BB &&
+-           !IsAcceptableTarget(Inst, SuccToSinkTo, DT, LI))
++           !IsAcceptableTarget(AA, Inst, SuccToSinkTo, DT, LI))
+       SuccToSinkTo = DT.getNode(SuccToSinkTo)->getIDom()->getBlock();
+     if (SuccToSinkTo == BB)
+       SuccToSinkTo = nullptr;
+
+commit 8e702735090388a3231a863e343f880d0f96fecb
+Author: Jeremy Morse <jeremy.morse@sony.com>
+Date:   Fri Jan 24 10:53:11 2025 +0000
+
+    [NFC][DebugInfo] Use iterator moveBefore at many call-sites (#123583)
+    
+    As part of the "RemoveDIs" project, BasicBlock::iterator now carries a
+    debug-info bit that's needed when getFirstNonPHI and similar feed into
+    instruction insertion positions. Call-sites where that's necessary were
+    updated a year ago; but to ensure some type safety however, we'd like to
+    have all calls to moveBefore use iterators.
+    
+    This patch adds a (guaranteed dereferenceable) iterator-taking
+    moveBefore, and changes a bunch of call-sites where it's obviously safe
+    to change to use it by just calling getIterator() on an instruction
+    pointer. A follow-up patch will contain less-obviously-safe changes.
+    
+    We'll eventually deprecate and remove the instruction-pointer
+    insertBefore, but not before adding concise documentation of what
+    considerations are needed (very few).
+
+diff --git a/llvm/lib/Transforms/Scalar/Sink.cpp b/llvm/lib/Transforms/Scalar/Sink.cpp
+index 46bcfd6b41ce..1a48a59c4189 100644
+--- a/llvm/lib/Transforms/Scalar/Sink.cpp
++++ b/llvm/lib/Transforms/Scalar/Sink.cpp
+@@ -168,7 +168,7 @@ static bool SinkInstruction(Instruction *Inst,
+              SuccToSinkTo->printAsOperand(dbgs(), false); dbgs() << ")\n");
+ 
+   // Move the instruction.
+-  Inst->moveBefore(&*SuccToSinkTo->getFirstInsertionPt());
++  Inst->moveBefore(SuccToSinkTo->getFirstInsertionPt());
+   return true;
+ }
+ 
+
+commit 2a2b426f13dfd33c7495da1c54ab9d1a8e625d87
+Author: XChy <xxs_chy@outlook.com>
+Date:   Mon Oct 9 22:34:44 2023 +0800
+
+    [Sink] Fix bugs of sinking unreachable BB from phi (#68576)
+    
+    Resolve #68529.
+    Sink pass doesn't consider whether Basicblock from phi is unreachable.
+    This patch moves unreachability check after checking phi.
+
+diff --git a/llvm/lib/Transforms/Scalar/Sink.cpp b/llvm/lib/Transforms/Scalar/Sink.cpp
+index ed768deacd06..46bcfd6b41ce 100644
+--- a/llvm/lib/Transforms/Scalar/Sink.cpp
++++ b/llvm/lib/Transforms/Scalar/Sink.cpp
+@@ -130,15 +130,16 @@ static bool SinkInstruction(Instruction *Inst,
+   for (Use &U : Inst->uses()) {
+     Instruction *UseInst = cast<Instruction>(U.getUser());
+     BasicBlock *UseBlock = UseInst->getParent();
+-    // Don't worry about dead users.
+-    if (!DT.isReachableFromEntry(UseBlock))
+-      continue;
+     if (PHINode *PN = dyn_cast<PHINode>(UseInst)) {
+       // PHI nodes use the operand in the predecessor block, not the block with
+       // the PHI.
+       unsigned Num = PHINode::getIncomingValueNumForOperand(U.getOperandNo());
+       UseBlock = PN->getIncomingBlock(Num);
+     }
++    // Don't worry about dead users.
++    if (!DT.isReachableFromEntry(UseBlock))
++      continue;
++
+     if (SuccToSinkTo)
+       SuccToSinkTo = DT.findNearestCommonDominator(SuccToSinkTo, UseBlock);
+     else
+
+commit 4eafc9b6ff4ae2bce82e9fdf0123b336825d931c
+Author: Nikita Popov <npopov@redhat.com>
+Date:   Wed Aug 23 15:04:45 2023 +0200
+
+    [IR] Treat callbr as special terminator (PR64215)
+    
+    isLegalToHoistInto() currently return true for callbr instructions.
+    That means that a callbr with one successor will be considered a
+    proper loop preheader, which may result in instructions that use
+    the callbr return value being hoisted past it.
+    
+    Fix this by adding callbr to isExceptionTerminator (with a rename
+    to isSpecialTerminator), which also fixes similar assumptions in
+    other places.
+    
+    Fixes https://github.com/llvm/llvm-project/issues/64215.
+    
+    Differential Revision: https://reviews.llvm.org/D158609
+
+diff --git a/llvm/lib/Transforms/Scalar/Sink.cpp b/llvm/lib/Transforms/Scalar/Sink.cpp
+index 8b99f73b850b..ed768deacd06 100644
+--- a/llvm/lib/Transforms/Scalar/Sink.cpp
++++ b/llvm/lib/Transforms/Scalar/Sink.cpp
+@@ -67,9 +67,8 @@ static bool IsAcceptableTarget(Instruction *Inst, BasicBlock *SuccToSinkTo,
+   assert(Inst && "Instruction to be sunk is null");
+   assert(SuccToSinkTo && "Candidate sink target is null");
+ 
+-  // It's never legal to sink an instruction into a block which terminates in an
+-  // EH-pad.
+-  if (SuccToSinkTo->getTerminator()->isExceptionalTerminator())
++  // It's never legal to sink an instruction into an EH-pad block.
++  if (SuccToSinkTo->isEHPad())
+     return false;
+ 
+   // If the block has multiple predecessors, this would introduce computation
+
+commit 6b852ffa9973015fb5deb6d859d980692387dcc7
+Author: Fangrui Song <i@maskray.me>
+Date:   Fri Nov 18 01:23:12 2022 +0000
+
+    [Sink] Process basic blocks with a single successor
+    
+    This condition seems unnecessary.
+    
+    Reviewed By: arsenm
+    
+    Differential Revision: https://reviews.llvm.org/D93511
+
+diff --git a/llvm/lib/Transforms/Scalar/Sink.cpp b/llvm/lib/Transforms/Scalar/Sink.cpp
+index dad45c47e0c2..8b99f73b850b 100644
+--- a/llvm/lib/Transforms/Scalar/Sink.cpp
++++ b/llvm/lib/Transforms/Scalar/Sink.cpp
+@@ -174,9 +174,6 @@ static bool SinkInstruction(Instruction *Inst,
+ 
+ static bool ProcessBlock(BasicBlock &BB, DominatorTree &DT, LoopInfo &LI,
+                          AAResults &AA) {
+-  // Can't sink anything out of a block that has less than two successors.
+-  if (BB.getTerminator()->getNumSuccessors() <= 1) return false;
+-
+   // Don't bother sinking code out of unreachable blocks. In addition to being
+   // unprofitable, it can also lead to infinite looping, because in an
+   // unreachable loop there may be nowhere to stop.
+
+commit c316332e1789221ec26875d1dc335382b6e68d83
+Author: Carl Ritson <carl.ritson@amd.com>
+Date:   Thu Oct 6 09:06:32 2022 +0900
+
+    [Sink] Allow sinking of invariant loads across critical edges
+    
+    Invariant loads can always be sunk.
+    
+    Reviewed By: foad, arsenm
+    
+    Differential Revision: https://reviews.llvm.org/D135133
+
+diff --git a/llvm/lib/Transforms/Scalar/Sink.cpp b/llvm/lib/Transforms/Scalar/Sink.cpp
+index e8fde53005f0..dad45c47e0c2 100644
+--- a/llvm/lib/Transforms/Scalar/Sink.cpp
++++ b/llvm/lib/Transforms/Scalar/Sink.cpp
+@@ -79,7 +79,8 @@ static bool IsAcceptableTarget(Instruction *Inst, BasicBlock *SuccToSinkTo,
+   if (SuccToSinkTo->getUniquePredecessor() != Inst->getParent()) {
+     // We cannot sink a load across a critical edge - there may be stores in
+     // other code paths.
+-    if (Inst->mayReadFromMemory())
++    if (Inst->mayReadFromMemory() &&
++        !Inst->hasMetadata(LLVMContext::MD_invariant_load))
+       return false;
+ 
+     // We don't want to sink across a critical edge if we don't dominate the
+
+commit e22af03a794d633915d0b51c15e05bb9cb9b4ec9
+Author: Nikita Popov <npopov@redhat.com>
+Date:   Thu Apr 7 16:23:56 2022 +0200
+
+    [Sink] Don't sink non-willreturn calls (PR51188)
+    
+    Fixes https://github.com/llvm/llvm-project/issues/51188.
+
+diff --git a/llvm/lib/Transforms/Scalar/Sink.cpp b/llvm/lib/Transforms/Scalar/Sink.cpp
+index ac6f34aab415..e8fde53005f0 100644
+--- a/llvm/lib/Transforms/Scalar/Sink.cpp
++++ b/llvm/lib/Transforms/Scalar/Sink.cpp
+@@ -43,7 +43,7 @@ static bool isSafeToMove(Instruction *Inst, AliasAnalysis &AA,
+   }
+ 
+   if (Inst->isTerminator() || isa<PHINode>(Inst) || Inst->isEHPad() ||
+-      Inst->mayThrow())
++      Inst->mayThrow() || !Inst->willReturn())
+     return false;
+ 
+   if (auto *Call = dyn_cast<CallBase>(Inst)) {
+
+commit 59630917d6cc7c4a273f617f92bf6190ee2992e1
+Author: serge-sans-paille <sguelton@redhat.com>
+Date:   Wed Mar 2 16:38:19 2022 +0100
+
+    Cleanup includes: Transform/Scalar
+    
+    Estimated impact on preprocessor output line:
+    before: 1062981579
+    after:  1062494547
+    
+    Discourse thread: https://discourse.llvm.org/t/include-what-you-use-include-cleanup
+    Differential Revision: https://reviews.llvm.org/D120817
+
+diff --git a/llvm/lib/Transforms/Scalar/Sink.cpp b/llvm/lib/Transforms/Scalar/Sink.cpp
+index 8600aacdb056..ac6f34aab415 100644
+--- a/llvm/lib/Transforms/Scalar/Sink.cpp
++++ b/llvm/lib/Transforms/Scalar/Sink.cpp
+@@ -15,12 +15,7 @@
+ #include "llvm/ADT/Statistic.h"
+ #include "llvm/Analysis/AliasAnalysis.h"
+ #include "llvm/Analysis/LoopInfo.h"
+-#include "llvm/Analysis/ValueTracking.h"
+-#include "llvm/IR/CFG.h"
+-#include "llvm/IR/DataLayout.h"
+ #include "llvm/IR/Dominators.h"
+-#include "llvm/IR/IntrinsicInst.h"
+-#include "llvm/IR/Module.h"
+ #include "llvm/InitializePasses.h"
+ #include "llvm/Support/Debug.h"
+ #include "llvm/Support/raw_ostream.h"
+
+commit 30bb5be38908b0006ed94124515e43774ee37915
+Author: Hongtao Yu <hoy@fb.com>
+Date:   Mon Apr 26 09:12:29 2021 -0700
+
+    [CSSPGO] Unblock optimizations with pseudo probe instrumentation part 2.
+    
+    As a follow-up to D95982, this patch continues unblocking optimizations that are blocked by pseudu probe instrumention.
+    
+    The optimizations unblocked are:
+                    - In-block load propagation.
+                    - In-block dead store elimination
+                    - Memory copy optimization that turns stores to consecutive memories into a memset.
+    
+    These optimizations are local to a block, so they shouldn't affect the profile quality.
+    
+    Reviewed By: wmi
+    
+    Differential Revision: https://reviews.llvm.org/D100075
+
+diff --git a/llvm/lib/Transforms/Scalar/Sink.cpp b/llvm/lib/Transforms/Scalar/Sink.cpp
+index 89cfbe384be4..8600aacdb056 100644
+--- a/llvm/lib/Transforms/Scalar/Sink.cpp
++++ b/llvm/lib/Transforms/Scalar/Sink.cpp
+@@ -202,7 +202,7 @@ static bool ProcessBlock(BasicBlock &BB, DominatorTree &DT, LoopInfo &LI,
+     if (!ProcessedBegin)
+       --I;
+ 
+-    if (isa<DbgInfoIntrinsic>(Inst))
++    if (Inst->isDebugOrPseudoInst())
+       continue;
+ 
+     if (SinkInstruction(Inst, Stores, DT, LI, AA)) {
+
+commit f192a27ed3bacdf727f27857adeb6d3762383295
+Author: Changpeng Fang <Changpeng.Fang@amd.com>
+Date:   Fri Oct 9 16:20:26 2020 -0700
+
+    Sink: Handle instruction sink when a user is dead
+    
+    Summary:
+      The current instruction sink pass uses findNearestCommonDominator of all users to find block to sink the instruction to.
+    However, a user may be in a dead block, which will result in unexpected behavior.
+    
+    This patch handles such cases by skipping dead blocks. This patch fixes:
+    https://bugs.llvm.org/show_bug.cgi?id=47415
+    
+    Reviewers:
+      MaskRay, arsenm
+    
+    Differential Revision:
+      https://reviews.llvm.org/D89166
+
+diff --git a/llvm/lib/Transforms/Scalar/Sink.cpp b/llvm/lib/Transforms/Scalar/Sink.cpp
+index c430724ab1ac..89cfbe384be4 100644
+--- a/llvm/lib/Transforms/Scalar/Sink.cpp
++++ b/llvm/lib/Transforms/Scalar/Sink.cpp
+@@ -135,6 +135,9 @@ static bool SinkInstruction(Instruction *Inst,
+   for (Use &U : Inst->uses()) {
+     Instruction *UseInst = cast<Instruction>(U.getUser());
+     BasicBlock *UseBlock = UseInst->getParent();
++    // Don't worry about dead users.
++    if (!DT.isReachableFromEntry(UseBlock))
++      continue;
+     if (PHINode *PN = dyn_cast<PHINode>(UseInst)) {
+       // PHI nodes use the operand in the predecessor block, not the block with
+       // the PHI.
+
+commit f2284e3405d87143b2478f28b8045bef84953c91
+Author: Fangrui Song <i@maskray.me>
+Date:   Sun Aug 30 22:51:00 2020 -0700
+
+    [Sink] Optimize/simplify sink candidate finding with nearest common dominator
+    
+    For an instruction in the basic block BB, SinkingPass enumerates basic blocks
+    dominated by BB and BB's successors. For each enumerated basic block,
+    SinkingPass uses `AllUsesDominatedByBlock` to check whether the basic
+    block dominates all of the instruction's users. This is inefficient.
+    
+    Use the nearest common dominator of all users to avoid enumerating the
+    candidate. The nearest common dominator may be in a parent loop which is
+    not beneficial. In that case, find the ancestors in the dominator tree.
+    
+    In the case that the instruction has no user, with this change we will
+    not perform unnecessary move. This causes some amdgpu test changes.
+    
+    A stage-2 x86-64 clang is a byte identical with this change.
+
+diff --git a/llvm/lib/Transforms/Scalar/Sink.cpp b/llvm/lib/Transforms/Scalar/Sink.cpp
+index 48f289c8f17d..c430724ab1ac 100644
+--- a/llvm/lib/Transforms/Scalar/Sink.cpp
++++ b/llvm/lib/Transforms/Scalar/Sink.cpp
+@@ -32,31 +32,6 @@ using namespace llvm;
+ STATISTIC(NumSunk, "Number of instructions sunk");
+ STATISTIC(NumSinkIter, "Number of sinking iterations");
+ 
+-/// AllUsesDominatedByBlock - Return true if all uses of the specified value
+-/// occur in blocks dominated by the specified block.
+-static bool AllUsesDominatedByBlock(Instruction *Inst, BasicBlock *BB,
+-                                    DominatorTree &DT) {
+-  // Ignoring debug uses is necessary so debug info doesn't affect the code.
+-  // This may leave a referencing dbg_value in the original block, before
+-  // the definition of the vreg.  Dwarf generator handles this although the
+-  // user might not get the right info at runtime.
+-  for (Use &U : Inst->uses()) {
+-    // Determine the block of the use.
+-    Instruction *UseInst = cast<Instruction>(U.getUser());
+-    BasicBlock *UseBlock = UseInst->getParent();
+-    if (PHINode *PN = dyn_cast<PHINode>(UseInst)) {
+-      // PHI nodes use the operand in the predecessor block, not the block with
+-      // the PHI.
+-      unsigned Num = PHINode::getIncomingValueNumForOperand(U.getOperandNo());
+-      UseBlock = PN->getIncomingBlock(Num);
+-    }
+-    // Check that it dominates.
+-    if (!DT.dominates(BB, UseBlock))
+-      return false;
+-  }
+-  return true;
+-}
+-
+ static bool isSafeToMove(Instruction *Inst, AliasAnalysis &AA,
+                          SmallPtrSetImpl<Instruction *> &Stores) {
+ 
+@@ -97,11 +72,6 @@ static bool IsAcceptableTarget(Instruction *Inst, BasicBlock *SuccToSinkTo,
+   assert(Inst && "Instruction to be sunk is null");
+   assert(SuccToSinkTo && "Candidate sink target is null");
+ 
+-  // It is not possible to sink an instruction into its own block.  This can
+-  // happen with loops.
+-  if (Inst->getParent() == SuccToSinkTo)
+-    return false;
+-
+   // It's never legal to sink an instruction into a block which terminates in an
+   // EH-pad.
+   if (SuccToSinkTo->getTerminator()->isExceptionalTerminator())
+@@ -129,9 +99,7 @@ static bool IsAcceptableTarget(Instruction *Inst, BasicBlock *SuccToSinkTo,
+       return false;
+   }
+ 
+-  // Finally, check that all the uses of the instruction are actually
+-  // dominated by the candidate
+-  return AllUsesDominatedByBlock(Inst, SuccToSinkTo, DT);
++  return true;
+ }
+ 
+ /// SinkInstruction - Determine whether it is safe to sink the specified machine
+@@ -162,25 +130,34 @@ static bool SinkInstruction(Instruction *Inst,
+   // decide.
+   BasicBlock *SuccToSinkTo = nullptr;
+ 
+-  // Instructions can only be sunk if all their uses are in blocks
+-  // dominated by one of the successors.
+-  // Look at all the dominated blocks and see if we can sink it in one.
+-  DomTreeNode *DTN = DT.getNode(Inst->getParent());
+-  for (auto I = DTN->begin(), E = DTN->end(); I != E && SuccToSinkTo == nullptr;
+-       ++I) {
+-    BasicBlock *Candidate = (*I)->getBlock();
+-    // A node always immediate-dominates its children on the dominator
+-    // tree.
+-    if (IsAcceptableTarget(Inst, Candidate, DT, LI))
+-      SuccToSinkTo = Candidate;
++  // Find the nearest common dominator of all users as the candidate.
++  BasicBlock *BB = Inst->getParent();
++  for (Use &U : Inst->uses()) {
++    Instruction *UseInst = cast<Instruction>(U.getUser());
++    BasicBlock *UseBlock = UseInst->getParent();
++    if (PHINode *PN = dyn_cast<PHINode>(UseInst)) {
++      // PHI nodes use the operand in the predecessor block, not the block with
++      // the PHI.
++      unsigned Num = PHINode::getIncomingValueNumForOperand(U.getOperandNo());
++      UseBlock = PN->getIncomingBlock(Num);
++    }
++    if (SuccToSinkTo)
++      SuccToSinkTo = DT.findNearestCommonDominator(SuccToSinkTo, UseBlock);
++    else
++      SuccToSinkTo = UseBlock;
++    // The current basic block needs to dominate the candidate.
++    if (!DT.dominates(BB, SuccToSinkTo))
++      return false;
+   }
+ 
+-  // If no suitable postdominator was found, look at all the successors and
+-  // decide which one we should sink to, if any.
+-  for (succ_iterator I = succ_begin(Inst->getParent()),
+-      E = succ_end(Inst->getParent()); I != E && !SuccToSinkTo; ++I) {
+-    if (IsAcceptableTarget(Inst, *I, DT, LI))
+-      SuccToSinkTo = *I;
++  if (SuccToSinkTo) {
++    // The nearest common dominator may be in a parent loop of BB, which may not
++    // be beneficial. Find an ancestor.
++    while (SuccToSinkTo != BB &&
++           !IsAcceptableTarget(Inst, SuccToSinkTo, DT, LI))
++      SuccToSinkTo = DT.getNode(SuccToSinkTo)->getIDom()->getBlock();
++    if (SuccToSinkTo == BB)
++      SuccToSinkTo = nullptr;
+   }
+ 
+   // If we couldn't find a block to sink to, ignore this instruction.
+
+commit 3fa989d4fd6b854209ba4e950d96b91d6d5797b4
+Author: Nicolai Hähnle <nicolai.haehnle@amd.com>
+Date:   Thu Jul 2 20:36:30 2020 +0200
+
+    DomTree: remove explicit use of DomTreeNodeBase::iterator
+    
+    Summary:
+    Almost all uses of these iterators, including implicit ones, really
+    only need the const variant (as it should be). The only exception is
+    in NewGVN, which changes the order of dominator tree child nodes.
+    
+    Change-Id: I4b5bd71e32d71b0c67b03d4927d93fe9413726d4
+    
+    Reviewers: arsenm, RKSimon, mehdi_amini, courbet, rriddle, aartbik
+    
+    Subscribers: wdng, Prazek, hiraditya, kuhar, rogfer01, rriddle, jpienaar, shauheen, antiagainst, nicolasvasilache, arpith-jacob, mgester, lucyrfox, aartbik, liufengdb, stephenneuendorffer, Joonsoo, grosul1, vkmr, Kayjukh, jurahul, msifontes, cfe-commits, llvm-commits
+    
+    Tags: #clang, #mlir, #llvm
+    
+    Differential Revision: https://reviews.llvm.org/D83087
+
+diff --git a/llvm/lib/Transforms/Scalar/Sink.cpp b/llvm/lib/Transforms/Scalar/Sink.cpp
+index 677d86f8c7b4..48f289c8f17d 100644
+--- a/llvm/lib/Transforms/Scalar/Sink.cpp
++++ b/llvm/lib/Transforms/Scalar/Sink.cpp
+@@ -166,8 +166,8 @@ static bool SinkInstruction(Instruction *Inst,
+   // dominated by one of the successors.
+   // Look at all the dominated blocks and see if we can sink it in one.
+   DomTreeNode *DTN = DT.getNode(Inst->getParent());
+-  for (DomTreeNode::iterator I = DTN->begin(), E = DTN->end();
+-      I != E && SuccToSinkTo == nullptr; ++I) {
++  for (auto I = DTN->begin(), E = DTN->end(); I != E && SuccToSinkTo == nullptr;
++       ++I) {
+     BasicBlock *Candidate = (*I)->getBlock();
+     // A node always immediate-dominates its children on the dominator
+     // tree.
+
+commit 05da2fe52162c80dfa18aedf70cf73cb11201811
+Author: Reid Kleckner <rnk@google.com>
+Date:   Wed Nov 13 13:15:01 2019 -0800
+
+    Sink all InitializePasses.h includes
+    
+    This file lists every pass in LLVM, and is included by Pass.h, which is
+    very popular. Every time we add, remove, or rename a pass in LLVM, it
+    caused lots of recompilation.
+    
+    I found this fact by looking at this table, which is sorted by the
+    number of times a file was changed over the last 100,000 git commits
+    multiplied by the number of object files that depend on it in the
+    current checkout:
+      recompiles    touches affected_files  header
+      342380        95      3604    llvm/include/llvm/ADT/STLExtras.h
+      314730        234     1345    llvm/include/llvm/InitializePasses.h
+      307036        118     2602    llvm/include/llvm/ADT/APInt.h
+      213049        59      3611    llvm/include/llvm/Support/MathExtras.h
+      170422        47      3626    llvm/include/llvm/Support/Compiler.h
+      162225        45      3605    llvm/include/llvm/ADT/Optional.h
+      158319        63      2513    llvm/include/llvm/ADT/Triple.h
+      140322        39      3598    llvm/include/llvm/ADT/StringRef.h
+      137647        59      2333    llvm/include/llvm/Support/Error.h
+      131619        73      1803    llvm/include/llvm/Support/FileSystem.h
+    
+    Before this change, touching InitializePasses.h would cause 1345 files
+    to recompile. After this change, touching it only causes 550 compiles in
+    an incremental rebuild.
+    
+    Reviewers: bkramer, asbirlea, bollu, jdoerfert
+    
+    Differential Revision: https://reviews.llvm.org/D70211
+
+diff --git a/llvm/lib/Transforms/Scalar/Sink.cpp b/llvm/lib/Transforms/Scalar/Sink.cpp
+index 72b586c85fe1..677d86f8c7b4 100644
+--- a/llvm/lib/Transforms/Scalar/Sink.cpp
++++ b/llvm/lib/Transforms/Scalar/Sink.cpp
+@@ -21,6 +21,7 @@
+ #include "llvm/IR/Dominators.h"
+ #include "llvm/IR/IntrinsicInst.h"
+ #include "llvm/IR/Module.h"
++#include "llvm/InitializePasses.h"
+ #include "llvm/Support/Debug.h"
+ #include "llvm/Support/raw_ostream.h"
+ #include "llvm/Transforms/Scalar.h"
+
+commit 9b0b626d2c19802bf3d56272cbc3a13d3c9ee5dd
+Author: Matt Arsenault <Matthew.Arsenault@amd.com>
+Date:   Sun Oct 27 19:37:45 2019 -0700
+
+    Use isConvergent helper instead of directly checking attribute
+
+diff --git a/llvm/lib/Transforms/Scalar/Sink.cpp b/llvm/lib/Transforms/Scalar/Sink.cpp
+index 90f3a2aa46e1..72b586c85fe1 100644
+--- a/llvm/lib/Transforms/Scalar/Sink.cpp
++++ b/llvm/lib/Transforms/Scalar/Sink.cpp
+@@ -78,7 +78,7 @@ static bool isSafeToMove(Instruction *Inst, AliasAnalysis &AA,
+   if (auto *Call = dyn_cast<CallBase>(Inst)) {
+     // Convergent operations cannot be made control-dependent on additional
+     // values.
+-    if (Call->hasFnAttr(Attribute::Convergent))
++    if (Call->isConvergent())
+       return false;
+ 
+     for (Instruction *S : Stores)
+
+commit 2946cd701067404b99c39fb29dc9c74bd7193eb3
+Author: Chandler Carruth <chandlerc@gmail.com>
+Date:   Sat Jan 19 08:50:56 2019 +0000
+
+    Update the file headers across all of the LLVM projects in the monorepo
+    to reflect the new license.
+    
+    We understand that people may be surprised that we're moving the header
+    entirely to discuss the new license. We checked this carefully with the
+    Foundation's lawyer and we believe this is the correct approach.
+    
+    Essentially, all code in the project is now made available by the LLVM
+    project under our new license, so you will see that the license headers
+    include that license only. Some of our contributors have contributed
+    code under our old license, and accordingly, we have retained a copy of
+    our old license notice in the top-level files in each project and
+    repository.
+    
+    llvm-svn: 351636
+
+diff --git a/llvm/lib/Transforms/Scalar/Sink.cpp b/llvm/lib/Transforms/Scalar/Sink.cpp
+index c99da8f0737a..90f3a2aa46e1 100644
+--- a/llvm/lib/Transforms/Scalar/Sink.cpp
++++ b/llvm/lib/Transforms/Scalar/Sink.cpp
+@@ -1,9 +1,8 @@
+ //===-- Sink.cpp - Code Sinking -------------------------------------------===//
+ //
+-//                     The LLVM Compiler Infrastructure
+-//
+-// This file is distributed under the University of Illinois Open Source
+-// License. See LICENSE.TXT for details.
++// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
++// See https://llvm.org/LICENSE.txt for license information.
++// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+ //
+ //===----------------------------------------------------------------------===//
+ //
+
+commit 363ac6837427ffc6adcc68c44788bb4d92d52873
+Author: Chandler Carruth <chandlerc@gmail.com>
+Date:   Mon Jan 7 05:42:51 2019 +0000
+
+    [CallSite removal] Migrate all Alias Analysis APIs to use the newly
+    minted `CallBase` class instead of the `CallSite` wrapper.
+    
+    This moves the largest interwoven collection of APIs that traffic in
+    `CallSite`s. While a handful of these could have been migrated with
+    a minorly more shallow migration by converting from a `CallSite` to
+    a `CallBase`, it hardly seemed worth it. Most of the APIs needed to
+    migrate together because of the complex interplay of AA APIs and the
+    fact that converting from a `CallBase` to a `CallSite` isn't free in its
+    current implementation.
+    
+    Out of tree users of these APIs can fairly reliably migrate with some
+    combination of `.getInstruction()` on the `CallSite` instance and
+    casting the resulting pointer. The most generic form will look like `CS`
+    -> `cast_or_null<CallBase>(CS.getInstruction())` but in most cases there
+    is a more elegant migration. Hopefully, this migrates enough APIs for
+    users to fully move from `CallSite` to the base class. All of the
+    in-tree users were easily migrated in that fashion.
+    
+    Thanks for the review from Saleem!
+    
+    Differential Revision: https://reviews.llvm.org/D55641
+    
+    llvm-svn: 350503
+
+diff --git a/llvm/lib/Transforms/Scalar/Sink.cpp b/llvm/lib/Transforms/Scalar/Sink.cpp
+index d1cdfabb0cc4..c99da8f0737a 100644
+--- a/llvm/lib/Transforms/Scalar/Sink.cpp
++++ b/llvm/lib/Transforms/Scalar/Sink.cpp
+@@ -76,14 +76,14 @@ static bool isSafeToMove(Instruction *Inst, AliasAnalysis &AA,
+       Inst->mayThrow())
+     return false;
+ 
+-  if (auto CS = CallSite(Inst)) {
++  if (auto *Call = dyn_cast<CallBase>(Inst)) {
+     // Convergent operations cannot be made control-dependent on additional
+     // values.
+-    if (CS.hasFnAttr(Attribute::Convergent))
++    if (Call->hasFnAttr(Attribute::Convergent))
+       return false;
+ 
+     for (Instruction *S : Stores)
+-      if (isModSet(AA.getModRefInfo(S, CS)))
++      if (isModSet(AA.getModRefInfo(S, Call)))
+         return false;
+   }
+ 
+
+commit 9ae926b973e42633f7bc7db39b33241dbb9f2158
+Author: Chandler Carruth <chandlerc@gmail.com>
+Date:   Sun Aug 26 09:51:22 2018 +0000
+
+    [IR] Replace `isa<TerminatorInst>` with `isTerminator()`.
+    
+    This is a bit awkward in a handful of places where we didn't even have
+    an instruction and now we have to see if we can build one. But on the
+    whole, this seems like a win and at worst a reasonable cost for removing
+    `TerminatorInst`.
+    
+    All of this is part of the removal of `TerminatorInst` from the
+    `Instruction` type hierarchy.
+    
+    llvm-svn: 340701
+
+diff --git a/llvm/lib/Transforms/Scalar/Sink.cpp b/llvm/lib/Transforms/Scalar/Sink.cpp
+index b59d52f2ecff..d1cdfabb0cc4 100644
+--- a/llvm/lib/Transforms/Scalar/Sink.cpp
++++ b/llvm/lib/Transforms/Scalar/Sink.cpp
+@@ -72,7 +72,7 @@ static bool isSafeToMove(Instruction *Inst, AliasAnalysis &AA,
+         return false;
+   }
+ 
+-  if (isa<TerminatorInst>(Inst) || isa<PHINode>(Inst) || Inst->isEHPad() ||
++  if (Inst->isTerminator() || isa<PHINode>(Inst) || Inst->isEHPad() ||
+       Inst->mayThrow())
+     return false;
+ 
+
+commit 698fbe7b59a77888f108fbfe37e17a1db0cace8c
+Author: Chandler Carruth <chandlerc@gmail.com>
+Date:   Sun Aug 26 08:56:42 2018 +0000
+
+    [IR] Sink `isExceptional` predicate to `Instruction`, rename it to
+    `isExceptionalTermiantor` and implement it for opcodes as well following
+    the common pattern in `Instruction`.
+    
+    Part of removing `TerminatorInst` from the `Instruction` type hierarchy
+    to make it easier to share logic and interfaces between instructions
+    that are both terminators and not terminators.
+    
+    llvm-svn: 340699
+
+diff --git a/llvm/lib/Transforms/Scalar/Sink.cpp b/llvm/lib/Transforms/Scalar/Sink.cpp
+index ca6b93e0b4a9..b59d52f2ecff 100644
+--- a/llvm/lib/Transforms/Scalar/Sink.cpp
++++ b/llvm/lib/Transforms/Scalar/Sink.cpp
+@@ -104,7 +104,7 @@ static bool IsAcceptableTarget(Instruction *Inst, BasicBlock *SuccToSinkTo,
+ 
+   // It's never legal to sink an instruction into a block which terminates in an
+   // EH-pad.
+-  if (SuccToSinkTo->getTerminator()->isExceptional())
++  if (SuccToSinkTo->getTerminator()->isExceptionalTerminator())
+     return false;
+ 
+   // If the block has multiple predecessors, this would introduce computation
+
+commit d34e60ca8532511acb8c93ef26297e349fbec86a
+Author: Nicola Zaghen <nicola.zaghen@imgtec.com>
+Date:   Mon May 14 12:53:11 2018 +0000
+
+    Rename DEBUG macro to LLVM_DEBUG.
+    
+    The DEBUG() macro is very generic so it might clash with other projects.
+    The renaming was done as follows:
+    - git grep -l 'DEBUG' | xargs sed -i 's/\bDEBUG\s\?(/LLVM_DEBUG(/g'
+    - git diff -U0 master | ../clang/tools/clang-format/clang-format-diff.py -i -p1 -style LLVM
+    - Manual change to APInt
+    - Manually chage DOCS as regex doesn't match it.
+    
+    In the transition period the DEBUG() macro is still present and aliased
+    to the LLVM_DEBUG() one.
+    
+    Differential Revision: https://reviews.llvm.org/D43624
+    
+    llvm-svn: 332240
+
+diff --git a/llvm/lib/Transforms/Scalar/Sink.cpp b/llvm/lib/Transforms/Scalar/Sink.cpp
+index 811762880493..ca6b93e0b4a9 100644
+--- a/llvm/lib/Transforms/Scalar/Sink.cpp
++++ b/llvm/lib/Transforms/Scalar/Sink.cpp
+@@ -187,11 +187,9 @@ static bool SinkInstruction(Instruction *Inst,
+   if (!SuccToSinkTo)
+     return false;
+ 
+-  DEBUG(dbgs() << "Sink" << *Inst << " (";
+-        Inst->getParent()->printAsOperand(dbgs(), false);
+-        dbgs() << " -> ";
+-        SuccToSinkTo->printAsOperand(dbgs(), false);
+-        dbgs() << ")\n");
++  LLVM_DEBUG(dbgs() << "Sink" << *Inst << " (";
++             Inst->getParent()->printAsOperand(dbgs(), false); dbgs() << " -> ";
++             SuccToSinkTo->printAsOperand(dbgs(), false); dbgs() << ")\n");
+ 
+   // Move the instruction.
+   Inst->moveBefore(&*SuccToSinkTo->getFirstInsertionPt());
+@@ -244,7 +242,7 @@ static bool iterativelySinkInstructions(Function &F, DominatorTree &DT,
+ 
+   do {
+     MadeChange = false;
+-    DEBUG(dbgs() << "Sinking iteration " << NumSinkIter << "\n");
++    LLVM_DEBUG(dbgs() << "Sinking iteration " << NumSinkIter << "\n");
+     // Process all basic blocks.
+     for (BasicBlock &I : F)
+       MadeChange |= ProcessBlock(I, DT, LI, AA);
+
+commit efe6a84e5b5015326ee0825e275bc929f8afee5f
+Author: Fiona Glaser <escha@apple.com>
+Date:   Thu Jan 11 21:28:57 2018 +0000
+
+    [Sink] Really really fix predicate in legality check
+    
+    LoadInst isn't enough; we need to include intrinsics that perform loads too.
+    
+    All side-effecting intrinsics and such are already covered by the isSafe
+    check, so we just need to care about things that read from memory.
+    
+    D41960, originally from D33179.
+    
+    llvm-svn: 322311
+
+diff --git a/llvm/lib/Transforms/Scalar/Sink.cpp b/llvm/lib/Transforms/Scalar/Sink.cpp
+index cfb8a062299f..811762880493 100644
+--- a/llvm/lib/Transforms/Scalar/Sink.cpp
++++ b/llvm/lib/Transforms/Scalar/Sink.cpp
+@@ -114,7 +114,7 @@ static bool IsAcceptableTarget(Instruction *Inst, BasicBlock *SuccToSinkTo,
+   if (SuccToSinkTo->getUniquePredecessor() != Inst->getParent()) {
+     // We cannot sink a load across a critical edge - there may be stores in
+     // other code paths.
+-    if (isa<LoadInst>(Inst))
++    if (Inst->mayReadFromMemory())
+       return false;
+ 
+     // We don't want to sink across a critical edge if we don't dominate the
+
+commit 63d2250a42b7b1e35e747ab07e181d2d8ec86dbc
+Author: Alina Sbirlea <asbirlea@google.com>
+Date:   Tue Dec 5 20:12:23 2017 +0000
+
+    Modify ModRefInfo values using static inline method abstractions [NFC].
+    
+    Summary:
+    The aim is to make ModRefInfo checks and changes more intuitive
+    and less error prone using inline methods that abstract the bit operations.
+    
+    Ideally ModRefInfo would become an enum class, but that change will require
+    a wider set of changes into FunctionModRefBehavior.
+    
+    Reviewers: sanjoy, george.burgess.iv, dberlin, hfinkel
+    
+    Subscribers: nlopes, llvm-commits
+    
+    Differential Revision: https://reviews.llvm.org/D40749
+    
+    llvm-svn: 319821
+
+diff --git a/llvm/lib/Transforms/Scalar/Sink.cpp b/llvm/lib/Transforms/Scalar/Sink.cpp
+index 5210f165b874..cfb8a062299f 100644
+--- a/llvm/lib/Transforms/Scalar/Sink.cpp
++++ b/llvm/lib/Transforms/Scalar/Sink.cpp
+@@ -68,7 +68,7 @@ static bool isSafeToMove(Instruction *Inst, AliasAnalysis &AA,
+   if (LoadInst *L = dyn_cast<LoadInst>(Inst)) {
+     MemoryLocation Loc = MemoryLocation::get(L);
+     for (Instruction *S : Stores)
+-      if (AA.getModRefInfo(S, Loc) & MRI_Mod)
++      if (isModSet(AA.getModRefInfo(S, Loc)))
+         return false;
+   }
+ 
+@@ -83,7 +83,7 @@ static bool isSafeToMove(Instruction *Inst, AliasAnalysis &AA,
+       return false;
+ 
+     for (Instruction *S : Stores)
+-      if (AA.getModRefInfo(S, CS) & MRI_Mod)
++      if (isModSet(AA.getModRefInfo(S, CS)))
+         return false;
+   }
+ 
+
+commit 5329174cb1b32bb34b90f1fdd5525ed84716ecec
+Author: Keno Fischer <keno@alumni.harvard.edu>
+Date:   Fri Jun 9 19:31:10 2017 +0000
+
+    [Sink] Fix predicate in legality check
+    
+    Summary:
+    isSafeToSpeculativelyExecute is the wrong predicate to use here.
+    All that checks for is whether it is safe to hoist a value due to
+    unaligned/un-dereferencable accesses. However, not only are we doing
+    sinking rather than hoisting, our concern is that the location
+    we're loading from may have been modified. Instead forbid sinking
+    any load across a critical edge.
+    
+    Reviewers: majnemer
+    
+    Subscribers: davide, llvm-commits
+    
+    Differential Revision: https://reviews.llvm.org/D33179
+    
+    llvm-svn: 305102
+
+diff --git a/llvm/lib/Transforms/Scalar/Sink.cpp b/llvm/lib/Transforms/Scalar/Sink.cpp
+index 102e9eaeab77..5210f165b874 100644
+--- a/llvm/lib/Transforms/Scalar/Sink.cpp
++++ b/llvm/lib/Transforms/Scalar/Sink.cpp
+@@ -114,7 +114,7 @@ static bool IsAcceptableTarget(Instruction *Inst, BasicBlock *SuccToSinkTo,
+   if (SuccToSinkTo->getUniquePredecessor() != Inst->getParent()) {
+     // We cannot sink a load across a critical edge - there may be stores in
+     // other code paths.
+-    if (!isSafeToSpeculativelyExecute(Inst))
++    if (isa<LoadInst>(Inst))
+       return false;
+ 
+     // We don't want to sink across a critical edge if we don't dominate the
+
+commit cbf04d95e6295cc35d85490fb03f7c83e9180dc5
+Author: Xin Tong <trent.xin.tong@gmail.com>
+Date:   Mon Mar 20 00:30:19 2017 +0000
+
+    Remove unnecessary IDom check
+    
+    Summary: This Idom check seems unnecessary. The immediate children of a node on the Dominator Tree should always be the IDom of its immediate children in this case.
+    
+    Reviewers: hfinkel, majnemer, dberlin
+    
+    Reviewed By: dberlin
+    
+    Subscribers: dberlin, davide, llvm-commits
+    
+    Differential Revision: https://reviews.llvm.org/D26954
+    
+    llvm-svn: 298232
+
+diff --git a/llvm/lib/Transforms/Scalar/Sink.cpp b/llvm/lib/Transforms/Scalar/Sink.cpp
+index 504a22a229c8..102e9eaeab77 100644
+--- a/llvm/lib/Transforms/Scalar/Sink.cpp
++++ b/llvm/lib/Transforms/Scalar/Sink.cpp
+@@ -164,13 +164,14 @@ static bool SinkInstruction(Instruction *Inst,
+ 
+   // Instructions can only be sunk if all their uses are in blocks
+   // dominated by one of the successors.
+-  // Look at all the postdominators and see if we can sink it in one.
++  // Look at all the dominated blocks and see if we can sink it in one.
+   DomTreeNode *DTN = DT.getNode(Inst->getParent());
+   for (DomTreeNode::iterator I = DTN->begin(), E = DTN->end();
+       I != E && SuccToSinkTo == nullptr; ++I) {
+     BasicBlock *Candidate = (*I)->getBlock();
+-    if ((*I)->getIDom()->getBlock() == Inst->getParent() &&
+-        IsAcceptableTarget(Inst, Candidate, DT, LI))
++    // A node always immediate-dominates its children on the dominator
++    // tree.
++    if (IsAcceptableTarget(Inst, Candidate, DT, LI))
+       SuccToSinkTo = Candidate;
+   }
+ 
+
+commit ca68a3ec47416185252b84d2bf60710c88be155f
+Author: Chandler Carruth <chandlerc@gmail.com>
+Date:   Sun Jan 15 06:32:49 2017 +0000
+
+    [PM] Introduce an analysis set used to preserve all analyses over
+    a function's CFG when that CFG is unchanged.
+    
+    This allows transformation passes to simply claim they preserve the CFG
+    and analysis passes to check for the CFG being preserved to remove the
+    fanout of all analyses being listed in all passes.
+    
+    I've gone through and removed or cleaned up as many of the comments
+    reminding us to do this as I could.
+    
+    Differential Revision: https://reviews.llvm.org/D28627
+    
+    llvm-svn: 292054
+
+diff --git a/llvm/lib/Transforms/Scalar/Sink.cpp b/llvm/lib/Transforms/Scalar/Sink.cpp
+index c3f14a0f4b1e..504a22a229c8 100644
+--- a/llvm/lib/Transforms/Scalar/Sink.cpp
++++ b/llvm/lib/Transforms/Scalar/Sink.cpp
+@@ -262,9 +262,8 @@ PreservedAnalyses SinkingPass::run(Function &F, FunctionAnalysisManager &AM) {
+   if (!iterativelySinkInstructions(F, DT, LI, AA))
+     return PreservedAnalyses::all();
+ 
+-  auto PA = PreservedAnalyses();
+-  PA.preserve<DominatorTreeAnalysis>();
+-  PA.preserve<LoopAnalysis>();
++  PreservedAnalyses PA;
++  PA.preserveSet<CFGAnalyses>();
+   return PA;
+ }
+ 
+
+commit 36e0d01e13b32bf318139fd8c43849af7a0e13cc
+Author: Sean Silva <chisophugis@gmail.com>
+Date:   Tue Aug 9 00:28:15 2016 +0000
+
+    Consistently use FunctionAnalysisManager
+    
+    Besides a general consistently benefit, the extra layer of indirection
+    allows the mechanical part of https://reviews.llvm.org/D23256 that
+    requires touching every transformation and analysis to be factored out
+    cleanly.
+    
+    Thanks to David for the suggestion.
+    
+    llvm-svn: 278077
+
+diff --git a/llvm/lib/Transforms/Scalar/Sink.cpp b/llvm/lib/Transforms/Scalar/Sink.cpp
+index d9a296c63122..c3f14a0f4b1e 100644
+--- a/llvm/lib/Transforms/Scalar/Sink.cpp
++++ b/llvm/lib/Transforms/Scalar/Sink.cpp
+@@ -254,7 +254,7 @@ static bool iterativelySinkInstructions(Function &F, DominatorTree &DT,
+   return EverMadeChange;
+ }
+ 
+-PreservedAnalyses SinkingPass::run(Function &F, AnalysisManager<Function> &AM) {
++PreservedAnalyses SinkingPass::run(Function &F, FunctionAnalysisManager &AM) {
+   auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
+   auto &LI = AM.getResult<LoopAnalysis>(F);
+   auto &AA = AM.getResult<AAManager>(F);
+
+commit 889a20cf40c8e61a62e32bef38a0abea6194d6f1
+Author: Nicolai Haehnle <nhaehnle@gmail.com>
+Date:   Mon Jul 11 14:11:51 2016 +0000
+
+    [Sink] Don't move calls to readonly functions across stores
+    
+    Summary:
+    
+    Reviewers: hfinkel, majnemer, tstellarAMD, sunfish
+    
+    Subscribers: llvm-commits
+    
+    Differential Revision: http://reviews.llvm.org/D17279
+    
+    llvm-svn: 275066
+
+diff --git a/llvm/lib/Transforms/Scalar/Sink.cpp b/llvm/lib/Transforms/Scalar/Sink.cpp
+index 5fa43bda9d09..d9a296c63122 100644
+--- a/llvm/lib/Transforms/Scalar/Sink.cpp
++++ b/llvm/lib/Transforms/Scalar/Sink.cpp
+@@ -76,11 +76,15 @@ static bool isSafeToMove(Instruction *Inst, AliasAnalysis &AA,
+       Inst->mayThrow())
+     return false;
+ 
+-  // Convergent operations cannot be made control-dependent on additional
+-  // values.
+   if (auto CS = CallSite(Inst)) {
++    // Convergent operations cannot be made control-dependent on additional
++    // values.
+     if (CS.hasFnAttr(Attribute::Convergent))
+       return false;
++
++    for (Instruction *S : Stores)
++      if (AA.getModRefInfo(S, CS) & MRI_Mod)
++        return false;
+   }
+ 
+   return true;
+
+commit 135f735af149e305635ba3886065b493d5c2bf8c
+Author: Benjamin Kramer <benny.kra@googlemail.com>
+Date:   Sun Jun 26 12:28:59 2016 +0000
+
+    Apply clang-tidy's modernize-loop-convert to most of lib/Transforms.
+    
+    Only minor manual fixes. No functionality change intended.
+    
+    llvm-svn: 273808
+
+diff --git a/llvm/lib/Transforms/Scalar/Sink.cpp b/llvm/lib/Transforms/Scalar/Sink.cpp
+index c5f29fa99dc8..5fa43bda9d09 100644
+--- a/llvm/lib/Transforms/Scalar/Sink.cpp
++++ b/llvm/lib/Transforms/Scalar/Sink.cpp
+@@ -241,9 +241,8 @@ static bool iterativelySinkInstructions(Function &F, DominatorTree &DT,
+     MadeChange = false;
+     DEBUG(dbgs() << "Sinking iteration " << NumSinkIter << "\n");
+     // Process all basic blocks.
+-    for (Function::iterator I = F.begin(), E = F.end();
+-         I != E; ++I)
+-      MadeChange |= ProcessBlock(*I, DT, LI, AA);
++    for (BasicBlock &I : F)
++      MadeChange |= ProcessBlock(I, DT, LI, AA);
+     EverMadeChange |= MadeChange;
+     NumSinkIter++;
+   } while (MadeChange);
+
+commit b93949089e8cd8e192c0293811f9cbd801af27b6
+Author: Justin Bogner <mail@justinbogner.com>
+Date:   Fri Apr 22 19:54:10 2016 +0000
+
+    PM: Port SinkingPass to the new pass manager
+    
+    llvm-svn: 267199
+
+diff --git a/llvm/lib/Transforms/Scalar/Sink.cpp b/llvm/lib/Transforms/Scalar/Sink.cpp
+index e5860328d04f..c5f29fa99dc8 100644
+--- a/llvm/lib/Transforms/Scalar/Sink.cpp
++++ b/llvm/lib/Transforms/Scalar/Sink.cpp
+@@ -12,7 +12,7 @@
+ //
+ //===----------------------------------------------------------------------===//
+ 
+-#include "llvm/Transforms/Scalar.h"
++#include "llvm/Transforms/Scalar/Sink.h"
+ #include "llvm/ADT/Statistic.h"
+ #include "llvm/Analysis/AliasAnalysis.h"
+ #include "llvm/Analysis/LoopInfo.h"
+@@ -24,6 +24,7 @@
+ #include "llvm/IR/Module.h"
+ #include "llvm/Support/Debug.h"
+ #include "llvm/Support/raw_ostream.h"
++#include "llvm/Transforms/Scalar.h"
+ using namespace llvm;
+ 
+ #define DEBUG_TYPE "sink"
+@@ -31,50 +32,10 @@ using namespace llvm;
+ STATISTIC(NumSunk, "Number of instructions sunk");
+ STATISTIC(NumSinkIter, "Number of sinking iterations");
+ 
+-namespace {
+-  class Sinking : public FunctionPass {
+-    DominatorTree *DT;
+-    LoopInfo *LI;
+-    AliasAnalysis *AA;
+-
+-  public:
+-    static char ID; // Pass identification
+-    Sinking() : FunctionPass(ID) {
+-      initializeSinkingPass(*PassRegistry::getPassRegistry());
+-    }
+-
+-    bool runOnFunction(Function &F) override;
+-
+-    void getAnalysisUsage(AnalysisUsage &AU) const override {
+-      AU.setPreservesCFG();
+-      FunctionPass::getAnalysisUsage(AU);
+-      AU.addRequired<AAResultsWrapperPass>();
+-      AU.addRequired<DominatorTreeWrapperPass>();
+-      AU.addRequired<LoopInfoWrapperPass>();
+-      AU.addPreserved<DominatorTreeWrapperPass>();
+-      AU.addPreserved<LoopInfoWrapperPass>();
+-    }
+-  private:
+-    bool ProcessBlock(BasicBlock &BB);
+-    bool SinkInstruction(Instruction *I, SmallPtrSetImpl<Instruction*> &Stores);
+-    bool AllUsesDominatedByBlock(Instruction *Inst, BasicBlock *BB) const;
+-    bool IsAcceptableTarget(Instruction *Inst, BasicBlock *SuccToSinkTo) const;
+-  };
+-} // end anonymous namespace
+-
+-char Sinking::ID = 0;
+-INITIALIZE_PASS_BEGIN(Sinking, "sink", "Code sinking", false, false)
+-INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
+-INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
+-INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
+-INITIALIZE_PASS_END(Sinking, "sink", "Code sinking", false, false)
+-
+-FunctionPass *llvm::createSinkingPass() { return new Sinking(); }
+-
+ /// AllUsesDominatedByBlock - Return true if all uses of the specified value
+ /// occur in blocks dominated by the specified block.
+-bool Sinking::AllUsesDominatedByBlock(Instruction *Inst,
+-                                      BasicBlock *BB) const {
++static bool AllUsesDominatedByBlock(Instruction *Inst, BasicBlock *BB,
++                                    DominatorTree &DT) {
+   // Ignoring debug uses is necessary so debug info doesn't affect the code.
+   // This may leave a referencing dbg_value in the original block, before
+   // the definition of the vreg.  Dwarf generator handles this although the
+@@ -90,13 +51,13 @@ bool Sinking::AllUsesDominatedByBlock(Instruction *Inst,
+       UseBlock = PN->getIncomingBlock(Num);
+     }
+     // Check that it dominates.
+-    if (!DT->dominates(BB, UseBlock))
++    if (!DT.dominates(BB, UseBlock))
+       return false;
+   }
+   return true;
+ }
+ 
+-static bool isSafeToMove(Instruction *Inst, AliasAnalysis *AA,
++static bool isSafeToMove(Instruction *Inst, AliasAnalysis &AA,
+                          SmallPtrSetImpl<Instruction *> &Stores) {
+ 
+   if (Inst->mayWriteToMemory()) {
+@@ -107,7 +68,7 @@ static bool isSafeToMove(Instruction *Inst, AliasAnalysis *AA,
+   if (LoadInst *L = dyn_cast<LoadInst>(Inst)) {
+     MemoryLocation Loc = MemoryLocation::get(L);
+     for (Instruction *S : Stores)
+-      if (AA->getModRefInfo(S, Loc) & MRI_Mod)
++      if (AA.getModRefInfo(S, Loc) & MRI_Mod)
+         return false;
+   }
+ 
+@@ -127,8 +88,8 @@ static bool isSafeToMove(Instruction *Inst, AliasAnalysis *AA,
+ 
+ /// IsAcceptableTarget - Return true if it is possible to sink the instruction
+ /// in the specified basic block.
+-bool Sinking::IsAcceptableTarget(Instruction *Inst,
+-                                 BasicBlock *SuccToSinkTo) const {
++static bool IsAcceptableTarget(Instruction *Inst, BasicBlock *SuccToSinkTo,
++                               DominatorTree &DT, LoopInfo &LI) {
+   assert(Inst && "Instruction to be sunk is null");
+   assert(SuccToSinkTo && "Candidate sink target is null");
+ 
+@@ -154,25 +115,26 @@ bool Sinking::IsAcceptableTarget(Instruction *Inst,
+ 
+     // We don't want to sink across a critical edge if we don't dominate the
+     // successor. We could be introducing calculations to new code paths.
+-    if (!DT->dominates(Inst->getParent(), SuccToSinkTo))
++    if (!DT.dominates(Inst->getParent(), SuccToSinkTo))
+       return false;
+ 
+     // Don't sink instructions into a loop.
+-    Loop *succ = LI->getLoopFor(SuccToSinkTo);
+-    Loop *cur = LI->getLoopFor(Inst->getParent());
++    Loop *succ = LI.getLoopFor(SuccToSinkTo);
++    Loop *cur = LI.getLoopFor(Inst->getParent());
+     if (succ != nullptr && succ != cur)
+       return false;
+   }
+ 
+   // Finally, check that all the uses of the instruction are actually
+   // dominated by the candidate
+-  return AllUsesDominatedByBlock(Inst, SuccToSinkTo);
++  return AllUsesDominatedByBlock(Inst, SuccToSinkTo, DT);
+ }
+ 
+ /// SinkInstruction - Determine whether it is safe to sink the specified machine
+ /// instruction out of its current block into a successor.
+-bool Sinking::SinkInstruction(Instruction *Inst,
+-                              SmallPtrSetImpl<Instruction *> &Stores) {
++static bool SinkInstruction(Instruction *Inst,
++                            SmallPtrSetImpl<Instruction *> &Stores,
++                            DominatorTree &DT, LoopInfo &LI, AAResults &AA) {
+ 
+   // Don't sink static alloca instructions.  CodeGen assumes allocas outside the
+   // entry block are dynamically sized stack objects.
+@@ -199,12 +161,12 @@ bool Sinking::SinkInstruction(Instruction *Inst,
+   // Instructions can only be sunk if all their uses are in blocks
+   // dominated by one of the successors.
+   // Look at all the postdominators and see if we can sink it in one.
+-  DomTreeNode *DTN = DT->getNode(Inst->getParent());
++  DomTreeNode *DTN = DT.getNode(Inst->getParent());
+   for (DomTreeNode::iterator I = DTN->begin(), E = DTN->end();
+       I != E && SuccToSinkTo == nullptr; ++I) {
+     BasicBlock *Candidate = (*I)->getBlock();
+     if ((*I)->getIDom()->getBlock() == Inst->getParent() &&
+-        IsAcceptableTarget(Inst, Candidate))
++        IsAcceptableTarget(Inst, Candidate, DT, LI))
+       SuccToSinkTo = Candidate;
+   }
+ 
+@@ -212,7 +174,7 @@ bool Sinking::SinkInstruction(Instruction *Inst,
+   // decide which one we should sink to, if any.
+   for (succ_iterator I = succ_begin(Inst->getParent()),
+       E = succ_end(Inst->getParent()); I != E && !SuccToSinkTo; ++I) {
+-    if (IsAcceptableTarget(Inst, *I))
++    if (IsAcceptableTarget(Inst, *I, DT, LI))
+       SuccToSinkTo = *I;
+   }
+ 
+@@ -231,14 +193,15 @@ bool Sinking::SinkInstruction(Instruction *Inst,
+   return true;
+ }
+ 
+-bool Sinking::ProcessBlock(BasicBlock &BB) {
++static bool ProcessBlock(BasicBlock &BB, DominatorTree &DT, LoopInfo &LI,
++                         AAResults &AA) {
+   // Can't sink anything out of a block that has less than two successors.
+   if (BB.getTerminator()->getNumSuccessors() <= 1) return false;
+ 
+   // Don't bother sinking code out of unreachable blocks. In addition to being
+   // unprofitable, it can also lead to infinite looping, because in an
+   // unreachable loop there may be nowhere to stop.
+-  if (!DT->isReachableFromEntry(&BB)) return false;
++  if (!DT.isReachableFromEntry(&BB)) return false;
+ 
+   bool MadeChange = false;
+ 
+@@ -259,7 +222,7 @@ bool Sinking::ProcessBlock(BasicBlock &BB) {
+     if (isa<DbgInfoIntrinsic>(Inst))
+       continue;
+ 
+-    if (SinkInstruction(Inst, Stores)) {
++    if (SinkInstruction(Inst, Stores, DT, LI, AA)) {
+       ++NumSunk;
+       MadeChange = true;
+     }
+@@ -270,11 +233,8 @@ bool Sinking::ProcessBlock(BasicBlock &BB) {
+   return MadeChange;
+ }
+ 
+-bool Sinking::runOnFunction(Function &F) {
+-  DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
+-  LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
+-  AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
+-
++static bool iterativelySinkInstructions(Function &F, DominatorTree &DT,
++                                        LoopInfo &LI, AAResults &AA) {
+   bool MadeChange, EverMadeChange = false;
+ 
+   do {
+@@ -283,10 +243,61 @@ bool Sinking::runOnFunction(Function &F) {
+     // Process all basic blocks.
+     for (Function::iterator I = F.begin(), E = F.end();
+          I != E; ++I)
+-      MadeChange |= ProcessBlock(*I);
++      MadeChange |= ProcessBlock(*I, DT, LI, AA);
+     EverMadeChange |= MadeChange;
+     NumSinkIter++;
+   } while (MadeChange);
+ 
+   return EverMadeChange;
+ }
++
++PreservedAnalyses SinkingPass::run(Function &F, AnalysisManager<Function> &AM) {
++  auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
++  auto &LI = AM.getResult<LoopAnalysis>(F);
++  auto &AA = AM.getResult<AAManager>(F);
++
++  if (!iterativelySinkInstructions(F, DT, LI, AA))
++    return PreservedAnalyses::all();
++
++  auto PA = PreservedAnalyses();
++  PA.preserve<DominatorTreeAnalysis>();
++  PA.preserve<LoopAnalysis>();
++  return PA;
++}
++
++namespace {
++  class SinkingLegacyPass : public FunctionPass {
++  public:
++    static char ID; // Pass identification
++    SinkingLegacyPass() : FunctionPass(ID) {
++      initializeSinkingLegacyPassPass(*PassRegistry::getPassRegistry());
++    }
++
++    bool runOnFunction(Function &F) override {
++      auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
++      auto &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
++      auto &AA = getAnalysis<AAResultsWrapperPass>().getAAResults();
++
++      return iterativelySinkInstructions(F, DT, LI, AA);
++    }
++
++    void getAnalysisUsage(AnalysisUsage &AU) const override {
++      AU.setPreservesCFG();
++      FunctionPass::getAnalysisUsage(AU);
++      AU.addRequired<AAResultsWrapperPass>();
++      AU.addRequired<DominatorTreeWrapperPass>();
++      AU.addRequired<LoopInfoWrapperPass>();
++      AU.addPreserved<DominatorTreeWrapperPass>();
++      AU.addPreserved<LoopInfoWrapperPass>();
++    }
++  };
++} // end anonymous namespace
++
++char SinkingLegacyPass::ID = 0;
++INITIALIZE_PASS_BEGIN(SinkingLegacyPass, "sink", "Code sinking", false, false)
++INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
++INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
++INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
++INITIALIZE_PASS_END(SinkingLegacyPass, "sink", "Code sinking", false, false)
++
++FunctionPass *llvm::createSinkingPass() { return new SinkingLegacyPass(); }
+
+commit 82077c4ab0b05980492f14b9cf31f6a4af35da34
+Author: Justin Bogner <mail@justinbogner.com>
+Date:   Fri Apr 22 19:54:04 2016 +0000
+
+    PM: Reorder the functions used for SinkingPass. NFC
+    
+    This will make the port to the new PM easier to follow.
+    
+    llvm-svn: 267198
+
+diff --git a/llvm/lib/Transforms/Scalar/Sink.cpp b/llvm/lib/Transforms/Scalar/Sink.cpp
+index eb09f584dc68..e5860328d04f 100644
+--- a/llvm/lib/Transforms/Scalar/Sink.cpp
++++ b/llvm/lib/Transforms/Scalar/Sink.cpp
+@@ -96,66 +96,6 @@ bool Sinking::AllUsesDominatedByBlock(Instruction *Inst,
+   return true;
+ }
+ 
+-bool Sinking::runOnFunction(Function &F) {
+-  DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
+-  LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
+-  AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
+-
+-  bool MadeChange, EverMadeChange = false;
+-
+-  do {
+-    MadeChange = false;
+-    DEBUG(dbgs() << "Sinking iteration " << NumSinkIter << "\n");
+-    // Process all basic blocks.
+-    for (Function::iterator I = F.begin(), E = F.end();
+-         I != E; ++I)
+-      MadeChange |= ProcessBlock(*I);
+-    EverMadeChange |= MadeChange;
+-    NumSinkIter++;
+-  } while (MadeChange);
+-
+-  return EverMadeChange;
+-}
+-
+-bool Sinking::ProcessBlock(BasicBlock &BB) {
+-  // Can't sink anything out of a block that has less than two successors.
+-  if (BB.getTerminator()->getNumSuccessors() <= 1) return false;
+-
+-  // Don't bother sinking code out of unreachable blocks. In addition to being
+-  // unprofitable, it can also lead to infinite looping, because in an
+-  // unreachable loop there may be nowhere to stop.
+-  if (!DT->isReachableFromEntry(&BB)) return false;
+-
+-  bool MadeChange = false;
+-
+-  // Walk the basic block bottom-up.  Remember if we saw a store.
+-  BasicBlock::iterator I = BB.end();
+-  --I;
+-  bool ProcessedBegin = false;
+-  SmallPtrSet<Instruction *, 8> Stores;
+-  do {
+-    Instruction *Inst = &*I; // The instruction to sink.
+-
+-    // Predecrement I (if it's not begin) so that it isn't invalidated by
+-    // sinking.
+-    ProcessedBegin = I == BB.begin();
+-    if (!ProcessedBegin)
+-      --I;
+-
+-    if (isa<DbgInfoIntrinsic>(Inst))
+-      continue;
+-
+-    if (SinkInstruction(Inst, Stores)) {
+-      ++NumSunk;
+-      MadeChange = true;
+-    }
+-
+-    // If we just processed the first instruction in the block, we're done.
+-  } while (!ProcessedBegin);
+-
+-  return MadeChange;
+-}
+-
+ static bool isSafeToMove(Instruction *Inst, AliasAnalysis *AA,
+                          SmallPtrSetImpl<Instruction *> &Stores) {
+ 
+@@ -290,3 +230,63 @@ bool Sinking::SinkInstruction(Instruction *Inst,
+   Inst->moveBefore(&*SuccToSinkTo->getFirstInsertionPt());
+   return true;
+ }
++
++bool Sinking::ProcessBlock(BasicBlock &BB) {
++  // Can't sink anything out of a block that has less than two successors.
++  if (BB.getTerminator()->getNumSuccessors() <= 1) return false;
++
++  // Don't bother sinking code out of unreachable blocks. In addition to being
++  // unprofitable, it can also lead to infinite looping, because in an
++  // unreachable loop there may be nowhere to stop.
++  if (!DT->isReachableFromEntry(&BB)) return false;
++
++  bool MadeChange = false;
++
++  // Walk the basic block bottom-up.  Remember if we saw a store.
++  BasicBlock::iterator I = BB.end();
++  --I;
++  bool ProcessedBegin = false;
++  SmallPtrSet<Instruction *, 8> Stores;
++  do {
++    Instruction *Inst = &*I; // The instruction to sink.
++
++    // Predecrement I (if it's not begin) so that it isn't invalidated by
++    // sinking.
++    ProcessedBegin = I == BB.begin();
++    if (!ProcessedBegin)
++      --I;
++
++    if (isa<DbgInfoIntrinsic>(Inst))
++      continue;
++
++    if (SinkInstruction(Inst, Stores)) {
++      ++NumSunk;
++      MadeChange = true;
++    }
++
++    // If we just processed the first instruction in the block, we're done.
++  } while (!ProcessedBegin);
++
++  return MadeChange;
++}
++
++bool Sinking::runOnFunction(Function &F) {
++  DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
++  LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
++  AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
++
++  bool MadeChange, EverMadeChange = false;
++
++  do {
++    MadeChange = false;
++    DEBUG(dbgs() << "Sinking iteration " << NumSinkIter << "\n");
++    // Process all basic blocks.
++    for (Function::iterator I = F.begin(), E = F.end();
++         I != E; ++I)
++      MadeChange |= ProcessBlock(*I);
++    EverMadeChange |= MadeChange;
++    NumSinkIter++;
++  } while (MadeChange);
++
++  return EverMadeChange;
++}
+
+commit 7a08381403b54cd8998f3c922f18b65867e3c07c
+Author: Richard Trieu <rtrieu@google.com>
+Date:   Thu Feb 18 22:09:30 2016 +0000
+
+    Remove uses of builtin comma operator.
+    
+    Cleanup for upcoming Clang warning -Wcomma.  No functionality change intended.
+    
+    llvm-svn: 261270
+
+diff --git a/llvm/lib/Transforms/Scalar/Sink.cpp b/llvm/lib/Transforms/Scalar/Sink.cpp
+index 64109b2df117..eb09f584dc68 100644
+--- a/llvm/lib/Transforms/Scalar/Sink.cpp
++++ b/llvm/lib/Transforms/Scalar/Sink.cpp
+@@ -145,8 +145,10 @@ bool Sinking::ProcessBlock(BasicBlock &BB) {
+     if (isa<DbgInfoIntrinsic>(Inst))
+       continue;
+ 
+-    if (SinkInstruction(Inst, Stores))
+-      ++NumSunk, MadeChange = true;
++    if (SinkInstruction(Inst, Stores)) {
++      ++NumSunk;
++      MadeChange = true;
++    }
+ 
+     // If we just processed the first instruction in the block, we're done.
+   } while (!ProcessedBegin);
+
+commit 8a1c45d6e86d54c40835fa8638d1fd900071783c
+Author: David Majnemer <david.majnemer@gmail.com>
+Date:   Sat Dec 12 05:38:55 2015 +0000
+
+    [IR] Reformulate LLVM's EH funclet IR
+    
+    While we have successfully implemented a funclet-oriented EH scheme on
+    top of LLVM IR, our scheme has some notable deficiencies:
+    - catchendpad and cleanupendpad are necessary in the current design
+      but they are difficult to explain to others, even to seasoned LLVM
+      experts.
+    - catchendpad and cleanupendpad are optimization barriers.  They cannot
+      be split and force all potentially throwing call-sites to be invokes.
+      This has a noticable effect on the quality of our code generation.
+    - catchpad, while similar in some aspects to invoke, is fairly awkward.
+      It is unsplittable, starts a funclet, and has control flow to other
+      funclets.
+    - The nesting relationship between funclets is currently a property of
+      control flow edges.  Because of this, we are forced to carefully
+      analyze the flow graph to see if there might potentially exist illegal
+      nesting among funclets.  While we have logic to clone funclets when
+      they are illegally nested, it would be nicer if we had a
+      representation which forbade them upfront.
+    
+    Let's clean this up a bit by doing the following:
+    - Instead, make catchpad more like cleanuppad and landingpad: no control
+      flow, just a bunch of simple operands;  catchpad would be splittable.
+    - Introduce catchswitch, a control flow instruction designed to model
+      the constraints of funclet oriented EH.
+    - Make funclet scoping explicit by having funclet instructions consume
+      the token produced by the funclet which contains them.
+    - Remove catchendpad and cleanupendpad.  Their presence can be inferred
+      implicitly using coloring information.
+    
+    N.B.  The state numbering code for the CLR has been updated but the
+    veracity of it's output cannot be spoken for.  An expert should take a
+    look to make sure the results are reasonable.
+    
+    Reviewers: rnk, JosephTremoulet, andrew.w.kaylor
+    
+    Differential Revision: http://reviews.llvm.org/D15139
+    
+    llvm-svn: 255422
+
+diff --git a/llvm/lib/Transforms/Scalar/Sink.cpp b/llvm/lib/Transforms/Scalar/Sink.cpp
+index 7c0ac7aa6fae..64109b2df117 100644
+--- a/llvm/lib/Transforms/Scalar/Sink.cpp
++++ b/llvm/lib/Transforms/Scalar/Sink.cpp
+@@ -169,7 +169,8 @@ static bool isSafeToMove(Instruction *Inst, AliasAnalysis *AA,
+         return false;
+   }
+ 
+-  if (isa<TerminatorInst>(Inst) || isa<PHINode>(Inst) || Inst->isEHPad())
++  if (isa<TerminatorInst>(Inst) || isa<PHINode>(Inst) || Inst->isEHPad() ||
++      Inst->mayThrow())
+     return false;
+ 
+   // Convergent operations cannot be made control-dependent on additional
+@@ -194,6 +195,11 @@ bool Sinking::IsAcceptableTarget(Instruction *Inst,
+   if (Inst->getParent() == SuccToSinkTo)
+     return false;
+ 
++  // It's never legal to sink an instruction into a block which terminates in an
++  // EH-pad.
++  if (SuccToSinkTo->getTerminator()->isExceptional())
++    return false;
++
+   // If the block has multiple predecessors, this would introduce computation
+   // on different code paths.  We could split the critical edge, but for now we
+   // just punt.
+
+commit 86c95b5642807d2aba091f437d11691b3a285439
+Author: Keno Fischer <kfischer@college.harvard.edu>
+Date:   Mon Nov 16 04:47:58 2015 +0000
+
+    [Sink] Don't move landingpads
+    
+    Summary: Moving landingpads into successor basic blocks makes the
+    verifier sad. Teach Sink that much like PHI nodes and terminator
+    instructions, landingpads (and cleanuppads, etc.) may not be moved
+    between basic blocks.
+    
+    Reviewers: majnemer
+    
+    Subscribers: llvm-commits
+    
+    Differential Revision: http://reviews.llvm.org/D14475
+    
+    llvm-svn: 253182
+
+diff --git a/llvm/lib/Transforms/Scalar/Sink.cpp b/llvm/lib/Transforms/Scalar/Sink.cpp
+index f6ccd999ea00..7c0ac7aa6fae 100644
+--- a/llvm/lib/Transforms/Scalar/Sink.cpp
++++ b/llvm/lib/Transforms/Scalar/Sink.cpp
+@@ -169,7 +169,7 @@ static bool isSafeToMove(Instruction *Inst, AliasAnalysis *AA,
+         return false;
+   }
+ 
+-  if (isa<TerminatorInst>(Inst) || isa<PHINode>(Inst))
++  if (isa<TerminatorInst>(Inst) || isa<PHINode>(Inst) || Inst->isEHPad())
+     return false;
+ 
+   // Convergent operations cannot be made control-dependent on additional
+
+commit e0675fb8fbc78bd1e60bab0c1fac711eab96ab6e
+Author: David Majnemer <david.majnemer@gmail.com>
+Date:   Thu Oct 22 20:29:08 2015 +0000
+
+    [Sink] Don't check BB.empty()
+    
+    As an invariant, BasicBlocks cannot be empty when passed to a transform.
+    This is not the case for MachineBasicBlocks and the Sink pass was ported
+    from the MachineSink pass which would explain the check's existence.
+    
+    llvm-svn: 251057
+
+diff --git a/llvm/lib/Transforms/Scalar/Sink.cpp b/llvm/lib/Transforms/Scalar/Sink.cpp
+index 8b916347999c..f6ccd999ea00 100644
+--- a/llvm/lib/Transforms/Scalar/Sink.cpp
++++ b/llvm/lib/Transforms/Scalar/Sink.cpp
+@@ -119,7 +119,7 @@ bool Sinking::runOnFunction(Function &F) {
+ 
+ bool Sinking::ProcessBlock(BasicBlock &BB) {
+   // Can't sink anything out of a block that has less than two successors.
+-  if (BB.getTerminator()->getNumSuccessors() <= 1 || BB.empty()) return false;
++  if (BB.getTerminator()->getNumSuccessors() <= 1) return false;
+ 
+   // Don't bother sinking code out of unreachable blocks. In addition to being
+   // unprofitable, it can also lead to infinite looping, because in an
+
+commit be4d8cba1ccf6f0611db50e8c7ba366ce3a3137d
+Author: Duncan P. N. Exon Smith <dexonsmith@apple.com>
+Date:   Tue Oct 13 19:26:58 2015 +0000
+
+    Scalar: Remove remaining ilist iterator implicit conversions
+    
+    Remove remaining `ilist_iterator` implicit conversions from
+    LLVMScalarOpts.
+    
+    This change exposed some scary behaviour in
+    lib/Transforms/Scalar/SCCP.cpp around line 1770.  This patch changes a
+    call from `Function::begin()` to `&Function::front()`, since the return
+    was immediately being passed into another function that takes a
+    `Function*`.  `Function::front()` started to assert, since the function
+    was empty.  Note that `Function::end()` does not point at a legal
+    `Function*` -- it points at an `ilist_half_node` -- so the other
+    function was getting garbage before.  (I added the missing check for
+    `Function::isDeclaration()`.)
+    
+    Otherwise, no functionality change intended.
+    
+    llvm-svn: 250211
+
+diff --git a/llvm/lib/Transforms/Scalar/Sink.cpp b/llvm/lib/Transforms/Scalar/Sink.cpp
+index 17a6858a0c00..8b916347999c 100644
+--- a/llvm/lib/Transforms/Scalar/Sink.cpp
++++ b/llvm/lib/Transforms/Scalar/Sink.cpp
+@@ -134,7 +134,7 @@ bool Sinking::ProcessBlock(BasicBlock &BB) {
+   bool ProcessedBegin = false;
+   SmallPtrSet<Instruction *, 8> Stores;
+   do {
+-    Instruction *Inst = I;  // The instruction to sink.
++    Instruction *Inst = &*I; // The instruction to sink.
+ 
+     // Predecrement I (if it's not begin) so that it isn't invalidated by
+     // sinking.
+@@ -279,6 +279,6 @@ bool Sinking::SinkInstruction(Instruction *Inst,
+         dbgs() << ")\n");
+ 
+   // Move the instruction.
+-  Inst->moveBefore(SuccToSinkTo->getFirstInsertionPt());
++  Inst->moveBefore(&*SuccToSinkTo->getFirstInsertionPt());
+   return true;
+ }
+
+commit d95b08a0a72ef47268b94738360c9319dcdc4772
+Author: Owen Anderson <resistor@mac.com>
+Date:   Fri Oct 9 18:06:13 2015 +0000
+
+    Refine the definition of convergent to only disallow the addition of new control dependencies.
+    
+    This covers the common case of operations that cannot be sunk.
+    Operations that cannot be hoisted should already be handled properly via
+    the safe-to-speculate rules and mechanisms.
+    
+    llvm-svn: 249865
+
+diff --git a/llvm/lib/Transforms/Scalar/Sink.cpp b/llvm/lib/Transforms/Scalar/Sink.cpp
+index adc53b17bdf9..17a6858a0c00 100644
+--- a/llvm/lib/Transforms/Scalar/Sink.cpp
++++ b/llvm/lib/Transforms/Scalar/Sink.cpp
+@@ -172,7 +172,8 @@ static bool isSafeToMove(Instruction *Inst, AliasAnalysis *AA,
+   if (isa<TerminatorInst>(Inst) || isa<PHINode>(Inst))
+     return false;
+ 
+-  // Convergent operations can only be moved to control equivalent blocks.
++  // Convergent operations cannot be made control-dependent on additional
++  // values.
+   if (auto CS = CallSite(Inst)) {
+     if (CS.hasFnAttr(Attribute::Convergent))
+       return false;
+
+commit 7b560d40bddfb60f162a7541288aeba3776f79f8
+Author: Chandler Carruth <chandlerc@gmail.com>
+Date:   Wed Sep 9 17:55:00 2015 +0000
+
+    [PM/AA] Rebuild LLVM's alias analysis infrastructure in a way compatible
+    with the new pass manager, and no longer relying on analysis groups.
+    
+    This builds essentially a ground-up new AA infrastructure stack for
+    LLVM. The core ideas are the same that are used throughout the new pass
+    manager: type erased polymorphism and direct composition. The design is
+    as follows:
+    
+    - FunctionAAResults is a type-erasing alias analysis results aggregation
+      interface to walk a single query across a range of results from
+      different alias analyses. Currently this is function-specific as we
+      always assume that aliasing queries are *within* a function.
+    
+    - AAResultBase is a CRTP utility providing stub implementations of
+      various parts of the alias analysis result concept, notably in several
+      cases in terms of other more general parts of the interface. This can
+      be used to implement only a narrow part of the interface rather than
+      the entire interface. This isn't really ideal, this logic should be
+      hoisted into FunctionAAResults as currently it will cause
+      a significant amount of redundant work, but it faithfully models the
+      behavior of the prior infrastructure.
+    
+    - All the alias analysis passes are ported to be wrapper passes for the
+      legacy PM and new-style analysis passes for the new PM with a shared
+      result object. In some cases (most notably CFL), this is an extremely
+      naive approach that we should revisit when we can specialize for the
+      new pass manager.
+    
+    - BasicAA has been restructured to reflect that it is much more
+      fundamentally a function analysis because it uses dominator trees and
+      loop info that need to be constructed for each function.
+    
+    All of the references to getting alias analysis results have been
+    updated to use the new aggregation interface. All the preservation and
+    other pass management code has been updated accordingly.
+    
+    The way the FunctionAAResultsWrapperPass works is to detect the
+    available alias analyses when run, and add them to the results object.
+    This means that we should be able to continue to respect when various
+    passes are added to the pipeline, for example adding CFL or adding TBAA
+    passes should just cause their results to be available and to get folded
+    into this. The exception to this rule is BasicAA which really needs to
+    be a function pass due to using dominator trees and loop info. As
+    a consequence, the FunctionAAResultsWrapperPass directly depends on
+    BasicAA and always includes it in the aggregation.
+    
+    This has significant implications for preserving analyses. Generally,
+    most passes shouldn't bother preserving FunctionAAResultsWrapperPass
+    because rebuilding the results just updates the set of known AA passes.
+    The exception to this rule are LoopPass instances which need to preserve
+    all the function analyses that the loop pass manager will end up
+    needing. This means preserving both BasicAAWrapperPass and the
+    aggregating FunctionAAResultsWrapperPass.
+    
+    Now, when preserving an alias analysis, you do so by directly preserving
+    that analysis. This is only necessary for non-immutable-pass-provided
+    alias analyses though, and there are only three of interest: BasicAA,
+    GlobalsAA (formerly GlobalsModRef), and SCEVAA. Usually BasicAA is
+    preserved when needed because it (like DominatorTree and LoopInfo) is
+    marked as a CFG-only pass. I've expanded GlobalsAA into the preserved
+    set everywhere we previously were preserving all of AliasAnalysis, and
+    I've added SCEVAA in the intersection of that with where we preserve
+    SCEV itself.
+    
+    One significant challenge to all of this is that the CGSCC passes were
+    actually using the alias analysis implementations by taking advantage of
+    a pretty amazing set of loop holes in the old pass manager's analysis
+    management code which allowed analysis groups to slide through in many
+    cases. Moving away from analysis groups makes this problem much more
+    obvious. To fix it, I've leveraged the flexibility the design of the new
+    PM components provides to just directly construct the relevant alias
+    analyses for the relevant functions in the IPO passes that need them.
+    This is a bit hacky, but should go away with the new pass manager, and
+    is already in many ways cleaner than the prior state.
+    
+    Another significant challenge is that various facilities of the old
+    alias analysis infrastructure just don't fit any more. The most
+    significant of these is the alias analysis 'counter' pass. That pass
+    relied on the ability to snoop on AA queries at different points in the
+    analysis group chain. Instead, I'm planning to build printing
+    functionality directly into the aggregation layer. I've not included
+    that in this patch merely to keep it smaller.
+    
+    Note that all of this needs a nearly complete rewrite of the AA
+    documentation. I'm planning to do that, but I'd like to make sure the
+    new design settles, and to flesh out a bit more of what it looks like in
+    the new pass manager first.
+    
+    Differential Revision: http://reviews.llvm.org/D12080
+    
+    llvm-svn: 247167
+
+diff --git a/llvm/lib/Transforms/Scalar/Sink.cpp b/llvm/lib/Transforms/Scalar/Sink.cpp
+index 17684c04dc4d..adc53b17bdf9 100644
+--- a/llvm/lib/Transforms/Scalar/Sink.cpp
++++ b/llvm/lib/Transforms/Scalar/Sink.cpp
+@@ -48,7 +48,7 @@ namespace {
+     void getAnalysisUsage(AnalysisUsage &AU) const override {
+       AU.setPreservesCFG();
+       FunctionPass::getAnalysisUsage(AU);
+-      AU.addRequired<AliasAnalysis>();
++      AU.addRequired<AAResultsWrapperPass>();
+       AU.addRequired<DominatorTreeWrapperPass>();
+       AU.addRequired<LoopInfoWrapperPass>();
+       AU.addPreserved<DominatorTreeWrapperPass>();
+@@ -66,7 +66,7 @@ char Sinking::ID = 0;
+ INITIALIZE_PASS_BEGIN(Sinking, "sink", "Code sinking", false, false)
+ INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
+ INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
+-INITIALIZE_AG_DEPENDENCY(AliasAnalysis)
++INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
+ INITIALIZE_PASS_END(Sinking, "sink", "Code sinking", false, false)
+ 
+ FunctionPass *llvm::createSinkingPass() { return new Sinking(); }
+@@ -99,7 +99,7 @@ bool Sinking::AllUsesDominatedByBlock(Instruction *Inst,
+ bool Sinking::runOnFunction(Function &F) {
+   DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
+   LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
+-  AA = &getAnalysis<AliasAnalysis>();
++  AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
+ 
+   bool MadeChange, EverMadeChange = false;
+ 
+
+commit 194f59ca5d2f48f1e0b7fa95971ae9f88e95ba95
+Author: Chandler Carruth <chandlerc@gmail.com>
+Date:   Wed Jul 22 23:15:57 2015 +0000
+
+    [PM/AA] Extract the ModRef enums from the AliasAnalysis class in
+    preparation for de-coupling the AA implementations.
+    
+    In order to do this, they had to become fake-scoped using the
+    traditional LLVM pattern of a leading initialism. These can't be actual
+    scoped enumerations because they're bitfields and thus inherently we use
+    them as integers.
+    
+    I've also renamed the behavior enums that are specific to reasoning
+    about the mod/ref behavior of functions when called. This makes it more
+    clear that they have a very narrow domain of applicability.
+    
+    I think there is a significantly cleaner API for all of this, but
+    I don't want to try to do really substantive changes for now, I just
+    want to refactor the things away from analysis groups so I'm preserving
+    the exact original design and just cleaning up the names, style, and
+    lifting out of the class.
+    
+    Differential Revision: http://reviews.llvm.org/D10564
+    
+    llvm-svn: 242963
+
+diff --git a/llvm/lib/Transforms/Scalar/Sink.cpp b/llvm/lib/Transforms/Scalar/Sink.cpp
+index f49f4eaaedcb..17684c04dc4d 100644
+--- a/llvm/lib/Transforms/Scalar/Sink.cpp
++++ b/llvm/lib/Transforms/Scalar/Sink.cpp
+@@ -165,7 +165,7 @@ static bool isSafeToMove(Instruction *Inst, AliasAnalysis *AA,
+   if (LoadInst *L = dyn_cast<LoadInst>(Inst)) {
+     MemoryLocation Loc = MemoryLocation::get(L);
+     for (Instruction *S : Stores)
+-      if (AA->getModRefInfo(S, Loc) & AliasAnalysis::Mod)
++      if (AA->getModRefInfo(S, Loc) & MRI_Mod)
+         return false;
+   }
+ 
+
+commit ac80dc753228af5f1b415bc9fa9834aeba19122b
+Author: Chandler Carruth <chandlerc@gmail.com>
+Date:   Wed Jun 17 07:18:54 2015 +0000
+
+    [PM/AA] Remove the Location typedef from the AliasAnalysis class now
+    that it is its own entity in the form of MemoryLocation, and update all
+    the callers.
+    
+    This is an entirely mechanical change. References to "Location" within
+    AA subclases become "MemoryLocation", and elsewhere
+    "AliasAnalysis::Location" becomes "MemoryLocation". Hope that helps
+    out-of-tree folks update.
+    
+    llvm-svn: 239885
+
+diff --git a/llvm/lib/Transforms/Scalar/Sink.cpp b/llvm/lib/Transforms/Scalar/Sink.cpp
+index 078c6a921a08..f49f4eaaedcb 100644
+--- a/llvm/lib/Transforms/Scalar/Sink.cpp
++++ b/llvm/lib/Transforms/Scalar/Sink.cpp
+@@ -163,7 +163,7 @@ static bool isSafeToMove(Instruction *Inst, AliasAnalysis *AA,
+   }
+ 
+   if (LoadInst *L = dyn_cast<LoadInst>(Inst)) {
+-    AliasAnalysis::Location Loc = MemoryLocation::get(L);
++    MemoryLocation Loc = MemoryLocation::get(L);
+     for (Instruction *S : Stores)
+       if (AA->getModRefInfo(S, Loc) & AliasAnalysis::Mod)
+         return false;
+
+commit 70c61c1a8adad268f1058986aa501afb142ecb4c
+Author: Chandler Carruth <chandlerc@gmail.com>
+Date:   Thu Jun 4 02:03:15 2015 +0000
+
+    [PM/AA] Start refactoring AliasAnalysis to remove the analysis group and
+    port it to the new pass manager.
+    
+    All this does is extract the inner "location" class used by AA into its
+    own full fledged type. This seems *much* cleaner as MemoryDependence and
+    soon MemorySSA also use this heavily, and it doesn't make much sense
+    being inside the AA infrastructure.
+    
+    This will also make it much easier to break apart the AA infrastructure
+    into something that stands on its own rather than using the analysis
+    group design.
+    
+    There are a few places where this makes APIs not make sense -- they were
+    taking an AliasAnalysis pointer just to build locations. I'll try to
+    clean those up in follow-up commits.
+    
+    Differential Revision: http://reviews.llvm.org/D10228
+    
+    llvm-svn: 239003
+
+diff --git a/llvm/lib/Transforms/Scalar/Sink.cpp b/llvm/lib/Transforms/Scalar/Sink.cpp
+index ec3a0186641e..078c6a921a08 100644
+--- a/llvm/lib/Transforms/Scalar/Sink.cpp
++++ b/llvm/lib/Transforms/Scalar/Sink.cpp
+@@ -163,7 +163,7 @@ static bool isSafeToMove(Instruction *Inst, AliasAnalysis *AA,
+   }
+ 
+   if (LoadInst *L = dyn_cast<LoadInst>(Inst)) {
+-    AliasAnalysis::Location Loc = AA->getLocation(L);
++    AliasAnalysis::Location Loc = MemoryLocation::get(L);
+     for (Instruction *S : Stores)
+       if (AA->getModRefInfo(S, Loc) & AliasAnalysis::Mod)
+         return false;
+
+commit 15d180550448a7561e5d3c7e1ffa22602f2b3ed7
+Author: Owen Anderson <resistor@mac.com>
+Date:   Mon Jun 1 17:20:31 2015 +0000
+
+    Teach the IR Sink pass to (conservatively) respect convergent annotations.
+    
+    llvm-svn: 238762
+
+diff --git a/llvm/lib/Transforms/Scalar/Sink.cpp b/llvm/lib/Transforms/Scalar/Sink.cpp
+index b169d5612f00..ec3a0186641e 100644
+--- a/llvm/lib/Transforms/Scalar/Sink.cpp
++++ b/llvm/lib/Transforms/Scalar/Sink.cpp
+@@ -172,6 +172,12 @@ static bool isSafeToMove(Instruction *Inst, AliasAnalysis *AA,
+   if (isa<TerminatorInst>(Inst) || isa<PHINode>(Inst))
+     return false;
+ 
++  // Convergent operations can only be moved to control equivalent blocks.
++  if (auto CS = CallSite(Inst)) {
++    if (CS.hasFnAttr(Attribute::Convergent))
++      return false;
++  }
++
+   return true;
+ }
+ 
+
+commit a28d91d81b5daa4d8b92452ea8203a57023b576f
+Author: Mehdi Amini <mehdi.amini@apple.com>
+Date:   Tue Mar 10 02:37:25 2015 +0000
+
+    DataLayout is mandatory, update the API to reflect it with references.
+    
+    Summary:
+    Now that the DataLayout is a mandatory part of the module, let's start
+    cleaning the codebase. This patch is a first attempt at doing that.
+    
+    This patch is not exactly NFC as for instance some places were passing
+    a nullptr instead of the DataLayout, possibly just because there was a
+    default value on the DataLayout argument to many functions in the API.
+    Even though it is not purely NFC, there is no change in the
+    validation.
+    
+    I turned as many pointer to DataLayout to references, this helped
+    figuring out all the places where a nullptr could come up.
+    
+    I had initially a local version of this patch broken into over 30
+    independant, commits but some later commit were cleaning the API and
+    touching part of the code modified in the previous commits, so it
+    seemed cleaner without the intermediate state.
+    
+    Test Plan:
+    
+    Reviewers: echristo
+    
+    Subscribers: llvm-commits
+    
+    From: Mehdi Amini <mehdi.amini@apple.com>
+    llvm-svn: 231740
+
+diff --git a/llvm/lib/Transforms/Scalar/Sink.cpp b/llvm/lib/Transforms/Scalar/Sink.cpp
+index 4ba3f1949db6..b169d5612f00 100644
+--- a/llvm/lib/Transforms/Scalar/Sink.cpp
++++ b/llvm/lib/Transforms/Scalar/Sink.cpp
+@@ -36,7 +36,6 @@ namespace {
+     DominatorTree *DT;
+     LoopInfo *LI;
+     AliasAnalysis *AA;
+-    const DataLayout *DL;
+ 
+   public:
+     static char ID; // Pass identification
+@@ -101,7 +100,6 @@ bool Sinking::runOnFunction(Function &F) {
+   DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
+   LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
+   AA = &getAnalysis<AliasAnalysis>();
+-  DL = &F.getParent()->getDataLayout();
+ 
+   bool MadeChange, EverMadeChange = false;
+ 
+@@ -196,7 +194,7 @@ bool Sinking::IsAcceptableTarget(Instruction *Inst,
+   if (SuccToSinkTo->getUniquePredecessor() != Inst->getParent()) {
+     // We cannot sink a load across a critical edge - there may be stores in
+     // other code paths.
+-    if (!isSafeToSpeculativelyExecute(Inst, DL))
++    if (!isSafeToSpeculativelyExecute(Inst))
+       return false;
+ 
+     // We don't want to sink across a critical edge if we don't dominate the
+
+commit 46a43556db23edb514f190cc03b0ce7f68d40534
+Author: Mehdi Amini <mehdi.amini@apple.com>
+Date:   Wed Mar 4 18:43:29 2015 +0000
+
+    Make DataLayout Non-Optional in the Module
+    
+    Summary:
+    DataLayout keeps the string used for its creation.
+    
+    As a side effect it is no longer needed in the Module.
+    This is "almost" NFC, the string is no longer
+    canonicalized, you can't rely on two "equals" DataLayout
+    having the same string returned by getStringRepresentation().
+    
+    Get rid of DataLayoutPass: the DataLayout is in the Module
+    
+    The DataLayout is "per-module", let's enforce this by not
+    duplicating it more than necessary.
+    One more step toward non-optionality of the DataLayout in the
+    module.
+    
+    Make DataLayout Non-Optional in the Module
+    
+    Module->getDataLayout() will never returns nullptr anymore.
+    
+    Reviewers: echristo
+    
+    Subscribers: resistor, llvm-commits, jholewinski
+    
+    Differential Revision: http://reviews.llvm.org/D7992
+    
+    From: Mehdi Amini <mehdi.amini@apple.com>
+    llvm-svn: 231270
+
+diff --git a/llvm/lib/Transforms/Scalar/Sink.cpp b/llvm/lib/Transforms/Scalar/Sink.cpp
+index d0ee0a679b38..4ba3f1949db6 100644
+--- a/llvm/lib/Transforms/Scalar/Sink.cpp
++++ b/llvm/lib/Transforms/Scalar/Sink.cpp
+@@ -21,6 +21,7 @@
+ #include "llvm/IR/DataLayout.h"
+ #include "llvm/IR/Dominators.h"
+ #include "llvm/IR/IntrinsicInst.h"
++#include "llvm/IR/Module.h"
+ #include "llvm/Support/Debug.h"
+ #include "llvm/Support/raw_ostream.h"
+ using namespace llvm;
+@@ -100,8 +101,7 @@ bool Sinking::runOnFunction(Function &F) {
+   DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
+   LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
+   AA = &getAnalysis<AliasAnalysis>();
+-  DataLayoutPass *DLP = getAnalysisIfAvailable<DataLayoutPass>();
+-  DL = DLP ? &DLP->getDataLayout() : nullptr;
++  DL = &F.getParent()->getDataLayout();
+ 
+   bool MadeChange, EverMadeChange = false;
+ 
+
+commit 4f8f307c77fa5b4de2eec8868b8734b2ab93dd22
+Author: Chandler Carruth <chandlerc@gmail.com>
+Date:   Sat Jan 17 14:16:18 2015 +0000
+
+    [PM] Split the LoopInfo object apart from the legacy pass, creating
+    a LoopInfoWrapperPass to wire the object up to the legacy pass manager.
+    
+    This switches all the clients of LoopInfo over and paves the way to port
+    LoopInfo to the new pass manager. No functionality change is intended
+    with this iteration.
+    
+    llvm-svn: 226373
+
+diff --git a/llvm/lib/Transforms/Scalar/Sink.cpp b/llvm/lib/Transforms/Scalar/Sink.cpp
+index 903b675fdd56..d0ee0a679b38 100644
+--- a/llvm/lib/Transforms/Scalar/Sink.cpp
++++ b/llvm/lib/Transforms/Scalar/Sink.cpp
+@@ -50,9 +50,9 @@ namespace {
+       FunctionPass::getAnalysisUsage(AU);
+       AU.addRequired<AliasAnalysis>();
+       AU.addRequired<DominatorTreeWrapperPass>();
+-      AU.addRequired<LoopInfo>();
++      AU.addRequired<LoopInfoWrapperPass>();
+       AU.addPreserved<DominatorTreeWrapperPass>();
+-      AU.addPreserved<LoopInfo>();
++      AU.addPreserved<LoopInfoWrapperPass>();
+     }
+   private:
+     bool ProcessBlock(BasicBlock &BB);
+@@ -64,7 +64,7 @@ namespace {
+ 
+ char Sinking::ID = 0;
+ INITIALIZE_PASS_BEGIN(Sinking, "sink", "Code sinking", false, false)
+-INITIALIZE_PASS_DEPENDENCY(LoopInfo)
++INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
+ INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
+ INITIALIZE_AG_DEPENDENCY(AliasAnalysis)
+ INITIALIZE_PASS_END(Sinking, "sink", "Code sinking", false, false)
+@@ -98,7 +98,7 @@ bool Sinking::AllUsesDominatedByBlock(Instruction *Inst,
+ 
+ bool Sinking::runOnFunction(Function &F) {
+   DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
+-  LI = &getAnalysis<LoopInfo>();
++  LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
+   AA = &getAnalysis<AliasAnalysis>();
+   DataLayoutPass *DLP = getAnalysisIfAvailable<DataLayoutPass>();
+   DL = DLP ? &DLP->getDataLayout() : nullptr;
+
+commit 4627679cece264a966faa82a7c5bb79f273d5b6e
+Author: Craig Topper <craig.topper@gmail.com>
+Date:   Sun Aug 24 23:23:06 2014 +0000
+
+    Use range based for loops to avoid needing to re-mention SmallPtrSet size.
+    
+    llvm-svn: 216351
+
+diff --git a/llvm/lib/Transforms/Scalar/Sink.cpp b/llvm/lib/Transforms/Scalar/Sink.cpp
+index 2f4e23a7488b..903b675fdd56 100644
+--- a/llvm/lib/Transforms/Scalar/Sink.cpp
++++ b/llvm/lib/Transforms/Scalar/Sink.cpp
+@@ -166,9 +166,8 @@ static bool isSafeToMove(Instruction *Inst, AliasAnalysis *AA,
+ 
+   if (LoadInst *L = dyn_cast<LoadInst>(Inst)) {
+     AliasAnalysis::Location Loc = AA->getLocation(L);
+-    for (SmallPtrSet<Instruction *, 8>::iterator I = Stores.begin(),
+-         E = Stores.end(); I != E; ++I)
+-      if (AA->getModRefInfo(*I, Loc) & AliasAnalysis::Mod)
++    for (Instruction *S : Stores)
++      if (AA->getModRefInfo(S, Loc) & AliasAnalysis::Mod)
+         return false;
+   }
+ 
+
+commit 71b7b68b741a29c473479c64dbaca00b94e316ab
+Author: Craig Topper <craig.topper@gmail.com>
+Date:   Thu Aug 21 05:55:13 2014 +0000
+
+    Repace SmallPtrSet with SmallPtrSetImpl in function arguments to avoid needing to mention the size.
+    
+    llvm-svn: 216158
+
+diff --git a/llvm/lib/Transforms/Scalar/Sink.cpp b/llvm/lib/Transforms/Scalar/Sink.cpp
+index 7348c45c5d37..2f4e23a7488b 100644
+--- a/llvm/lib/Transforms/Scalar/Sink.cpp
++++ b/llvm/lib/Transforms/Scalar/Sink.cpp
+@@ -56,7 +56,7 @@ namespace {
+     }
+   private:
+     bool ProcessBlock(BasicBlock &BB);
+-    bool SinkInstruction(Instruction *I, SmallPtrSet<Instruction *, 8> &Stores);
++    bool SinkInstruction(Instruction *I, SmallPtrSetImpl<Instruction*> &Stores);
+     bool AllUsesDominatedByBlock(Instruction *Inst, BasicBlock *BB) const;
+     bool IsAcceptableTarget(Instruction *Inst, BasicBlock *SuccToSinkTo) const;
+   };
+@@ -157,7 +157,7 @@ bool Sinking::ProcessBlock(BasicBlock &BB) {
+ }
+ 
+ static bool isSafeToMove(Instruction *Inst, AliasAnalysis *AA,
+-                         SmallPtrSet<Instruction *, 8> &Stores) {
++                         SmallPtrSetImpl<Instruction *> &Stores) {
+ 
+   if (Inst->mayWriteToMemory()) {
+     Stores.insert(Inst);
+@@ -220,7 +220,7 @@ bool Sinking::IsAcceptableTarget(Instruction *Inst,
+ /// SinkInstruction - Determine whether it is safe to sink the specified machine
+ /// instruction out of its current block into a successor.
+ bool Sinking::SinkInstruction(Instruction *Inst,
+-                              SmallPtrSet<Instruction *, 8> &Stores) {
++                              SmallPtrSetImpl<Instruction *> &Stores) {
+ 
+   // Don't sink static alloca instructions.  CodeGen assumes allocas outside the
+   // entry block are dynamically sized stack objects.
+
+commit 6230691c9186e95cd19dff07074a54fb70719957
+Author: Craig Topper <craig.topper@gmail.com>
+Date:   Mon Aug 18 00:24:38 2014 +0000
+
+    Revert "Repace SmallPtrSet with SmallPtrSetImpl in function arguments to avoid needing to mention the size."
+    
+    Getting a weird buildbot failure that I need to investigate.
+    
+    llvm-svn: 215870
+
+diff --git a/llvm/lib/Transforms/Scalar/Sink.cpp b/llvm/lib/Transforms/Scalar/Sink.cpp
+index 2f4e23a7488b..7348c45c5d37 100644
+--- a/llvm/lib/Transforms/Scalar/Sink.cpp
++++ b/llvm/lib/Transforms/Scalar/Sink.cpp
+@@ -56,7 +56,7 @@ namespace {
+     }
+   private:
+     bool ProcessBlock(BasicBlock &BB);
+-    bool SinkInstruction(Instruction *I, SmallPtrSetImpl<Instruction*> &Stores);
++    bool SinkInstruction(Instruction *I, SmallPtrSet<Instruction *, 8> &Stores);
+     bool AllUsesDominatedByBlock(Instruction *Inst, BasicBlock *BB) const;
+     bool IsAcceptableTarget(Instruction *Inst, BasicBlock *SuccToSinkTo) const;
+   };
+@@ -157,7 +157,7 @@ bool Sinking::ProcessBlock(BasicBlock &BB) {
+ }
+ 
+ static bool isSafeToMove(Instruction *Inst, AliasAnalysis *AA,
+-                         SmallPtrSetImpl<Instruction *> &Stores) {
++                         SmallPtrSet<Instruction *, 8> &Stores) {
+ 
+   if (Inst->mayWriteToMemory()) {
+     Stores.insert(Inst);
+@@ -220,7 +220,7 @@ bool Sinking::IsAcceptableTarget(Instruction *Inst,
+ /// SinkInstruction - Determine whether it is safe to sink the specified machine
+ /// instruction out of its current block into a successor.
+ bool Sinking::SinkInstruction(Instruction *Inst,
+-                              SmallPtrSetImpl<Instruction *> &Stores) {
++                              SmallPtrSet<Instruction *, 8> &Stores) {
+ 
+   // Don't sink static alloca instructions.  CodeGen assumes allocas outside the
+   // entry block are dynamically sized stack objects.
+
+commit 5229cfd1638705a7dbf668a840c6015f6b3ecbc6
+Author: Craig Topper <craig.topper@gmail.com>
+Date:   Sun Aug 17 23:47:00 2014 +0000
+
+    Repace SmallPtrSet with SmallPtrSetImpl in function arguments to avoid needing to mention the size.
+    
+    llvm-svn: 215868
+
+diff --git a/llvm/lib/Transforms/Scalar/Sink.cpp b/llvm/lib/Transforms/Scalar/Sink.cpp
+index 7348c45c5d37..2f4e23a7488b 100644
+--- a/llvm/lib/Transforms/Scalar/Sink.cpp
++++ b/llvm/lib/Transforms/Scalar/Sink.cpp
+@@ -56,7 +56,7 @@ namespace {
+     }
+   private:
+     bool ProcessBlock(BasicBlock &BB);
+-    bool SinkInstruction(Instruction *I, SmallPtrSet<Instruction *, 8> &Stores);
++    bool SinkInstruction(Instruction *I, SmallPtrSetImpl<Instruction*> &Stores);
+     bool AllUsesDominatedByBlock(Instruction *Inst, BasicBlock *BB) const;
+     bool IsAcceptableTarget(Instruction *Inst, BasicBlock *SuccToSinkTo) const;
+   };
+@@ -157,7 +157,7 @@ bool Sinking::ProcessBlock(BasicBlock &BB) {
+ }
+ 
+ static bool isSafeToMove(Instruction *Inst, AliasAnalysis *AA,
+-                         SmallPtrSet<Instruction *, 8> &Stores) {
++                         SmallPtrSetImpl<Instruction *> &Stores) {
+ 
+   if (Inst->mayWriteToMemory()) {
+     Stores.insert(Inst);
+@@ -220,7 +220,7 @@ bool Sinking::IsAcceptableTarget(Instruction *Inst,
+ /// SinkInstruction - Determine whether it is safe to sink the specified machine
+ /// instruction out of its current block into a successor.
+ bool Sinking::SinkInstruction(Instruction *Inst,
+-                              SmallPtrSet<Instruction *, 8> &Stores) {
++                              SmallPtrSetImpl<Instruction *> &Stores) {
+ 
+   // Don't sink static alloca instructions.  CodeGen assumes allocas outside the
+   // entry block are dynamically sized stack objects.
+
+commit 6c99015fe2c1814f793530adc96f48050081612e
+Author: Duncan P. N. Exon Smith <dexonsmith@apple.com>
+Date:   Mon Jul 21 17:06:51 2014 +0000
+
+    Revert "[C++11] Add predecessors(BasicBlock *) / successors(BasicBlock *) iterator ranges."
+    
+    This reverts commit r213474 (and r213475), which causes a miscompile on
+    a stage2 LTO build.  I'll reply on the list in a moment.
+    
+    llvm-svn: 213562
+
+diff --git a/llvm/lib/Transforms/Scalar/Sink.cpp b/llvm/lib/Transforms/Scalar/Sink.cpp
+index 2f7a9f9a65cf..7348c45c5d37 100644
+--- a/llvm/lib/Transforms/Scalar/Sink.cpp
++++ b/llvm/lib/Transforms/Scalar/Sink.cpp
+@@ -258,11 +258,10 @@ bool Sinking::SinkInstruction(Instruction *Inst,
+ 
+   // If no suitable postdominator was found, look at all the successors and
+   // decide which one we should sink to, if any.
+-  for (BasicBlock *Succ : successors(Inst->getParent())) {
+-    if (SuccToSinkTo)
+-      break;
+-    if (IsAcceptableTarget(Inst, Succ))
+-      SuccToSinkTo = Succ;
++  for (succ_iterator I = succ_begin(Inst->getParent()),
++      E = succ_end(Inst->getParent()); I != E && !SuccToSinkTo; ++I) {
++    if (IsAcceptableTarget(Inst, *I))
++      SuccToSinkTo = *I;
+   }
+ 
+   // If we couldn't find a block to sink to, ignore this instruction.
+
+commit d11beffef4f1117aceb9f2f5532b4a317c30c05a
+Author: Manuel Jacob <me@manueljacob.de>
+Date:   Sun Jul 20 09:10:11 2014 +0000
+
+    [C++11] Add predecessors(BasicBlock *) / successors(BasicBlock *) iterator ranges.
+    
+    Summary: This patch introduces two new iterator ranges and updates existing code to use it.  No functional change intended.
+    
+    Test Plan: All tests (make check-all) still pass.
+    
+    Reviewers: dblaikie
+    
+    Reviewed By: dblaikie
+    
+    Subscribers: llvm-commits
+    
+    Differential Revision: http://reviews.llvm.org/D4481
+    
+    llvm-svn: 213474
+
+diff --git a/llvm/lib/Transforms/Scalar/Sink.cpp b/llvm/lib/Transforms/Scalar/Sink.cpp
+index 7348c45c5d37..2f7a9f9a65cf 100644
+--- a/llvm/lib/Transforms/Scalar/Sink.cpp
++++ b/llvm/lib/Transforms/Scalar/Sink.cpp
+@@ -258,10 +258,11 @@ bool Sinking::SinkInstruction(Instruction *Inst,
+ 
+   // If no suitable postdominator was found, look at all the successors and
+   // decide which one we should sink to, if any.
+-  for (succ_iterator I = succ_begin(Inst->getParent()),
+-      E = succ_end(Inst->getParent()); I != E && !SuccToSinkTo; ++I) {
+-    if (IsAcceptableTarget(Inst, *I))
+-      SuccToSinkTo = *I;
++  for (BasicBlock *Succ : successors(Inst->getParent())) {
++    if (SuccToSinkTo)
++      break;
++    if (IsAcceptableTarget(Inst, Succ))
++      SuccToSinkTo = Succ;
+   }
+ 
+   // If we couldn't find a block to sink to, ignore this instruction.
+
+commit 511fea7acdc360bc77978370cfbe0218738ea24c
+Author: Hal Finkel <hfinkel@anl.gov>
+Date:   Thu Jul 10 16:07:11 2014 +0000
+
+    Feeding isSafeToSpeculativelyExecute its DataLayout pointer (in Sink)
+    
+    This is the one remaining place I see where passing
+    isSafeToSpeculativelyExecute a DataLayout pointer might matter (at least for
+    loads) -- I think I got the others in r212720. Most of the other remaining
+    callers of isSafeToSpeculativelyExecute only use it for call sites (or
+    otherwise exclude loads).
+    
+    llvm-svn: 212730
+
+diff --git a/llvm/lib/Transforms/Scalar/Sink.cpp b/llvm/lib/Transforms/Scalar/Sink.cpp
+index 482c33aa6e0b..7348c45c5d37 100644
+--- a/llvm/lib/Transforms/Scalar/Sink.cpp
++++ b/llvm/lib/Transforms/Scalar/Sink.cpp
+@@ -18,6 +18,7 @@
+ #include "llvm/Analysis/LoopInfo.h"
+ #include "llvm/Analysis/ValueTracking.h"
+ #include "llvm/IR/CFG.h"
++#include "llvm/IR/DataLayout.h"
+ #include "llvm/IR/Dominators.h"
+ #include "llvm/IR/IntrinsicInst.h"
+ #include "llvm/Support/Debug.h"
+@@ -34,6 +35,7 @@ namespace {
+     DominatorTree *DT;
+     LoopInfo *LI;
+     AliasAnalysis *AA;
++    const DataLayout *DL;
+ 
+   public:
+     static char ID; // Pass identification
+@@ -98,6 +100,8 @@ bool Sinking::runOnFunction(Function &F) {
+   DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
+   LI = &getAnalysis<LoopInfo>();
+   AA = &getAnalysis<AliasAnalysis>();
++  DataLayoutPass *DLP = getAnalysisIfAvailable<DataLayoutPass>();
++  DL = DLP ? &DLP->getDataLayout() : nullptr;
+ 
+   bool MadeChange, EverMadeChange = false;
+ 
+@@ -193,7 +197,7 @@ bool Sinking::IsAcceptableTarget(Instruction *Inst,
+   if (SuccToSinkTo->getUniquePredecessor() != Inst->getParent()) {
+     // We cannot sink a load across a critical edge - there may be stores in
+     // other code paths.
+-    if (!isSafeToSpeculativelyExecute(Inst))
++    if (!isSafeToSpeculativelyExecute(Inst, DL))
+       return false;
+ 
+     // We don't want to sink across a critical edge if we don't dominate the
+
+commit f40110f4d80436071213ed7fcbe367d64aa52c71
+Author: Craig Topper <craig.topper@gmail.com>
+Date:   Fri Apr 25 05:29:35 2014 +0000
+
+    [C++] Use 'nullptr'. Transforms edition.
+    
+    llvm-svn: 207196
+
+diff --git a/llvm/lib/Transforms/Scalar/Sink.cpp b/llvm/lib/Transforms/Scalar/Sink.cpp
+index 121ee0923b39..482c33aa6e0b 100644
+--- a/llvm/lib/Transforms/Scalar/Sink.cpp
++++ b/llvm/lib/Transforms/Scalar/Sink.cpp
+@@ -204,7 +204,7 @@ bool Sinking::IsAcceptableTarget(Instruction *Inst,
+     // Don't sink instructions into a loop.
+     Loop *succ = LI->getLoopFor(SuccToSinkTo);
+     Loop *cur = LI->getLoopFor(Inst->getParent());
+-    if (succ != 0 && succ != cur)
++    if (succ != nullptr && succ != cur)
+       return false;
+   }
+ 
+@@ -238,14 +238,14 @@ bool Sinking::SinkInstruction(Instruction *Inst,
+ 
+   // SuccToSinkTo - This is the successor to sink this instruction to, once we
+   // decide.
+-  BasicBlock *SuccToSinkTo = 0;
++  BasicBlock *SuccToSinkTo = nullptr;
+ 
+   // Instructions can only be sunk if all their uses are in blocks
+   // dominated by one of the successors.
+   // Look at all the postdominators and see if we can sink it in one.
+   DomTreeNode *DTN = DT->getNode(Inst->getParent());
+   for (DomTreeNode::iterator I = DTN->begin(), E = DTN->end();
+-      I != E && SuccToSinkTo == 0; ++I) {
++      I != E && SuccToSinkTo == nullptr; ++I) {
+     BasicBlock *Candidate = (*I)->getBlock();
+     if ((*I)->getIDom()->getBlock() == Inst->getParent() &&
+         IsAcceptableTarget(Inst, Candidate))
+@@ -255,13 +255,13 @@ bool Sinking::SinkInstruction(Instruction *Inst,
+   // If no suitable postdominator was found, look at all the successors and
+   // decide which one we should sink to, if any.
+   for (succ_iterator I = succ_begin(Inst->getParent()),
+-      E = succ_end(Inst->getParent()); I != E && SuccToSinkTo == 0; ++I) {
++      E = succ_end(Inst->getParent()); I != E && !SuccToSinkTo; ++I) {
+     if (IsAcceptableTarget(Inst, *I))
+       SuccToSinkTo = *I;
+   }
+ 
+   // If we couldn't find a block to sink to, ignore this instruction.
+-  if (SuccToSinkTo == 0)
++  if (!SuccToSinkTo)
+     return false;
+ 
+   DEBUG(dbgs() << "Sink" << *Inst << " (";
+
+commit 964daaaf192f76eccb4eb9fed849133c91b96bc5
+Author: Chandler Carruth <chandlerc@gmail.com>
+Date:   Tue Apr 22 02:55:47 2014 +0000
+
+    [Modules] Fix potential ODR violations by sinking the DEBUG_TYPE
+    definition below all of the header #include lines, lib/Transforms/...
+    edition.
+    
+    This one is tricky for two reasons. We again have a couple of passes
+    that define something else before the includes as well. I've sunk their
+    name macros with the DEBUG_TYPE.
+    
+    Also, InstCombine contains headers that need DEBUG_TYPE, so now those
+    headers #define and #undef DEBUG_TYPE around their code, leaving them
+    well formed modular headers. Fixing these headers was a large motivation
+    for all of these changes, as "leaky" macros of this form are hard on the
+    modules implementation.
+    
+    llvm-svn: 206844
+
+diff --git a/llvm/lib/Transforms/Scalar/Sink.cpp b/llvm/lib/Transforms/Scalar/Sink.cpp
+index 41073749abc7..121ee0923b39 100644
+--- a/llvm/lib/Transforms/Scalar/Sink.cpp
++++ b/llvm/lib/Transforms/Scalar/Sink.cpp
+@@ -12,7 +12,6 @@
+ //
+ //===----------------------------------------------------------------------===//
+ 
+-#define DEBUG_TYPE "sink"
+ #include "llvm/Transforms/Scalar.h"
+ #include "llvm/ADT/Statistic.h"
+ #include "llvm/Analysis/AliasAnalysis.h"
+@@ -25,6 +24,8 @@
+ #include "llvm/Support/raw_ostream.h"
+ using namespace llvm;
+ 
++#define DEBUG_TYPE "sink"
++
+ STATISTIC(NumSunk, "Number of instructions sunk");
+ STATISTIC(NumSinkIter, "Number of sinking iterations");
+ 
+
+commit edfd81d9656217cc9d14d7854b401bb3d5d559f7
+Author: Tom Stellard <thomas.stellard@amd.com>
+Date:   Fri Mar 21 15:51:51 2014 +0000
+
+    Sink: Don't sink static allocas from the entry block
+    
+    CodeGen treats allocas outside the entry block as dynamically sized
+    stack objects.
+    
+    llvm-svn: 204473
+
+diff --git a/llvm/lib/Transforms/Scalar/Sink.cpp b/llvm/lib/Transforms/Scalar/Sink.cpp
+index 5e1e4564bba9..41073749abc7 100644
+--- a/llvm/lib/Transforms/Scalar/Sink.cpp
++++ b/llvm/lib/Transforms/Scalar/Sink.cpp
+@@ -216,6 +216,13 @@ bool Sinking::IsAcceptableTarget(Instruction *Inst,
+ /// instruction out of its current block into a successor.
+ bool Sinking::SinkInstruction(Instruction *Inst,
+                               SmallPtrSet<Instruction *, 8> &Stores) {
++
++  // Don't sink static alloca instructions.  CodeGen assumes allocas outside the
++  // entry block are dynamically sized stack objects.
++  if (AllocaInst *AI = dyn_cast<AllocaInst>(Inst))
++    if (AI->isStaticAlloca())
++      return false;
++
+   // Check if it's safe to move the instruction.
+   if (!isSafeToMove(Inst, AA, Stores))
+     return false;
+
+commit cdf4788401afff02e12279fc1fded94d6180639c
+Author: Chandler Carruth <chandlerc@gmail.com>
+Date:   Sun Mar 9 03:16:01 2014 +0000
+
+    [C++11] Add range based accessors for the Use-Def chain of a Value.
+    
+    This requires a number of steps.
+    1) Move value_use_iterator into the Value class as an implementation
+       detail
+    2) Change it to actually be a *Use* iterator rather than a *User*
+       iterator.
+    3) Add an adaptor which is a User iterator that always looks through the
+       Use to the User.
+    4) Wrap these in Value::use_iterator and Value::user_iterator typedefs.
+    5) Add the range adaptors as Value::uses() and Value::users().
+    6) Update *all* of the callers to correctly distinguish between whether
+       they wanted a use_iterator (and to explicitly dig out the User when
+       needed), or a user_iterator which makes the Use itself totally
+       opaque.
+    
+    Because #6 requires churning essentially everything that walked the
+    Use-Def chains, I went ahead and added all of the range adaptors and
+    switched them to range-based loops where appropriate. Also because the
+    renaming requires at least churning every line of code, it didn't make
+    any sense to split these up into multiple commits -- all of which would
+    touch all of the same lies of code.
+    
+    The result is still not quite optimal. The Value::use_iterator is a nice
+    regular iterator, but Value::user_iterator is an iterator over User*s
+    rather than over the User objects themselves. As a consequence, it fits
+    a bit awkwardly into the range-based world and it has the weird
+    extra-dereferencing 'operator->' that so many of our iterators have.
+    I think this could be fixed by providing something which transforms
+    a range of T&s into a range of T*s, but that *can* be separated into
+    another patch, and it isn't yet 100% clear whether this is the right
+    move.
+    
+    However, this change gets us most of the benefit and cleans up
+    a substantial amount of code around Use and User. =]
+    
+    llvm-svn: 203364
+
+diff --git a/llvm/lib/Transforms/Scalar/Sink.cpp b/llvm/lib/Transforms/Scalar/Sink.cpp
+index 643a5957cf91..5e1e4564bba9 100644
+--- a/llvm/lib/Transforms/Scalar/Sink.cpp
++++ b/llvm/lib/Transforms/Scalar/Sink.cpp
+@@ -76,15 +76,14 @@ bool Sinking::AllUsesDominatedByBlock(Instruction *Inst,
+   // This may leave a referencing dbg_value in the original block, before
+   // the definition of the vreg.  Dwarf generator handles this although the
+   // user might not get the right info at runtime.
+-  for (Value::use_iterator I = Inst->use_begin(),
+-       E = Inst->use_end(); I != E; ++I) {
++  for (Use &U : Inst->uses()) {
+     // Determine the block of the use.
+-    Instruction *UseInst = cast<Instruction>(*I);
++    Instruction *UseInst = cast<Instruction>(U.getUser());
+     BasicBlock *UseBlock = UseInst->getParent();
+     if (PHINode *PN = dyn_cast<PHINode>(UseInst)) {
+       // PHI nodes use the operand in the predecessor block, not the block with
+       // the PHI.
+-      unsigned Num = PHINode::getIncomingValueNumForOperand(I.getOperandNo());
++      unsigned Num = PHINode::getIncomingValueNumForOperand(U.getOperandNo());
+       UseBlock = PN->getIncomingBlock(Num);
+     }
+     // Check that it dominates.
+
+commit 3e4c697ca1314da24ac34e42293cc28d88fdc134
+Author: Craig Topper <craig.topper@gmail.com>
+Date:   Wed Mar 5 09:10:37 2014 +0000
+
+    [C++11] Add 'override' keyword to virtual methods that override their base class.
+    
+    llvm-svn: 202953
+
+diff --git a/llvm/lib/Transforms/Scalar/Sink.cpp b/llvm/lib/Transforms/Scalar/Sink.cpp
+index 287bd5b7d617..643a5957cf91 100644
+--- a/llvm/lib/Transforms/Scalar/Sink.cpp
++++ b/llvm/lib/Transforms/Scalar/Sink.cpp
+@@ -40,9 +40,9 @@ namespace {
+       initializeSinkingPass(*PassRegistry::getPassRegistry());
+     }
+ 
+-    virtual bool runOnFunction(Function &F);
++    bool runOnFunction(Function &F) override;
+ 
+-    virtual void getAnalysisUsage(AnalysisUsage &AU) const {
++    void getAnalysisUsage(AnalysisUsage &AU) const override {
+       AU.setPreservesCFG();
+       FunctionPass::getAnalysisUsage(AU);
+       AU.addRequired<AliasAnalysis>();
+
+commit 1305dc3351d93e2377b538feff62ccf9518b0291
+Author: Chandler Carruth <chandlerc@gmail.com>
+Date:   Tue Mar 4 11:45:46 2014 +0000
+
+    [Modules] Move CFG.h to the IR library as it defines graph traits over
+    IR types.
+    
+    llvm-svn: 202827
+
+diff --git a/llvm/lib/Transforms/Scalar/Sink.cpp b/llvm/lib/Transforms/Scalar/Sink.cpp
+index e500c3b24e71..287bd5b7d617 100644
+--- a/llvm/lib/Transforms/Scalar/Sink.cpp
++++ b/llvm/lib/Transforms/Scalar/Sink.cpp
+@@ -18,9 +18,9 @@
+ #include "llvm/Analysis/AliasAnalysis.h"
+ #include "llvm/Analysis/LoopInfo.h"
+ #include "llvm/Analysis/ValueTracking.h"
++#include "llvm/IR/CFG.h"
+ #include "llvm/IR/Dominators.h"
+ #include "llvm/IR/IntrinsicInst.h"
+-#include "llvm/Support/CFG.h"
+ #include "llvm/Support/Debug.h"
+ #include "llvm/Support/raw_ostream.h"
+ using namespace llvm;
+
+commit 73523021d0a97c150a76a5cf4a91e99cd03b9efb
+Author: Chandler Carruth <chandlerc@gmail.com>
+Date:   Mon Jan 13 13:07:17 2014 +0000
+
+    [PM] Split DominatorTree into a concrete analysis result object which
+    can be used by both the new pass manager and the old.
+    
+    This removes it from any of the virtual mess of the pass interfaces and
+    lets it derive cleanly from the DominatorTreeBase<> template. In turn,
+    tons of boilerplate interface can be nuked and it turns into a very
+    straightforward extension of the base DominatorTree interface.
+    
+    The old analysis pass is now a simple wrapper. The names and style of
+    this split should match the split between CallGraph and
+    CallGraphWrapperPass. All of the users of DominatorTree have been
+    updated to match using many of the same tricks as with CallGraph. The
+    goal is that the common type remains the resulting DominatorTree rather
+    than the pass. This will make subsequent work toward the new pass
+    manager significantly easier.
+    
+    Also in numerous places things became cleaner because I switched from
+    re-running the pass (!!! mid way through some other passes run!!!) to
+    directly recomputing the domtree.
+    
+    llvm-svn: 199104
+
+diff --git a/llvm/lib/Transforms/Scalar/Sink.cpp b/llvm/lib/Transforms/Scalar/Sink.cpp
+index d4c5c73c0332..e500c3b24e71 100644
+--- a/llvm/lib/Transforms/Scalar/Sink.cpp
++++ b/llvm/lib/Transforms/Scalar/Sink.cpp
+@@ -46,9 +46,9 @@ namespace {
+       AU.setPreservesCFG();
+       FunctionPass::getAnalysisUsage(AU);
+       AU.addRequired<AliasAnalysis>();
+-      AU.addRequired<DominatorTree>();
++      AU.addRequired<DominatorTreeWrapperPass>();
+       AU.addRequired<LoopInfo>();
+-      AU.addPreserved<DominatorTree>();
++      AU.addPreserved<DominatorTreeWrapperPass>();
+       AU.addPreserved<LoopInfo>();
+     }
+   private:
+@@ -62,7 +62,7 @@ namespace {
+ char Sinking::ID = 0;
+ INITIALIZE_PASS_BEGIN(Sinking, "sink", "Code sinking", false, false)
+ INITIALIZE_PASS_DEPENDENCY(LoopInfo)
+-INITIALIZE_PASS_DEPENDENCY(DominatorTree)
++INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
+ INITIALIZE_AG_DEPENDENCY(AliasAnalysis)
+ INITIALIZE_PASS_END(Sinking, "sink", "Code sinking", false, false)
+ 
+@@ -95,7 +95,7 @@ bool Sinking::AllUsesDominatedByBlock(Instruction *Inst,
+ }
+ 
+ bool Sinking::runOnFunction(Function &F) {
+-  DT = &getAnalysis<DominatorTree>();
++  DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
+   LI = &getAnalysis<LoopInfo>();
+   AA = &getAnalysis<AliasAnalysis>();
+ 
+
+commit 5ad5f15cffe022de72d0e710714f852ad8a1c6fe
+Author: Chandler Carruth <chandlerc@gmail.com>
+Date:   Mon Jan 13 09:26:24 2014 +0000
+
+    [cleanup] Move the Dominators.h and Verifier.h headers into the IR
+    directory. These passes are already defined in the IR library, and it
+    doesn't make any sense to have the headers in Analysis.
+    
+    Long term, I think there is going to be a much better way to divide
+    these matters. The dominators code should be fully separated into the
+    abstract graph algorithm and have that put in Support where it becomes
+    obvious that evn Clang's CFGBlock's can use it. Then the verifier can
+    manually construct dominance information from the Support-driven
+    interface while the Analysis library can provide a pass which both
+    caches, reconstructs, and supports a nice update API.
+    
+    But those are very long term, and so I don't want to leave the really
+    confusing structure until that day arrives.
+    
+    llvm-svn: 199082
+
+diff --git a/llvm/lib/Transforms/Scalar/Sink.cpp b/llvm/lib/Transforms/Scalar/Sink.cpp
+index a5096da46a08..d4c5c73c0332 100644
+--- a/llvm/lib/Transforms/Scalar/Sink.cpp
++++ b/llvm/lib/Transforms/Scalar/Sink.cpp
+@@ -16,9 +16,9 @@
+ #include "llvm/Transforms/Scalar.h"
+ #include "llvm/ADT/Statistic.h"
+ #include "llvm/Analysis/AliasAnalysis.h"
+-#include "llvm/Analysis/Dominators.h"
+ #include "llvm/Analysis/LoopInfo.h"
+ #include "llvm/Analysis/ValueTracking.h"
++#include "llvm/IR/Dominators.h"
+ #include "llvm/IR/IntrinsicInst.h"
+ #include "llvm/Support/CFG.h"
+ #include "llvm/Support/Debug.h"
+
+commit d48cdbf0c3ee31bcac2d8304da2ee5dc16c35056
+Author: Chandler Carruth <chandlerc@gmail.com>
+Date:   Thu Jan 9 02:29:41 2014 +0000
+
+    Put the functionality for printing a value to a raw_ostream as an
+    operand into the Value interface just like the core print method is.
+    That gives a more conistent organization to the IR printing interfaces
+    -- they are all attached to the IR objects themselves. Also, update all
+    the users.
+    
+    This removes the 'Writer.h' header which contained only a single function
+    declaration.
+    
+    llvm-svn: 198836
+
+diff --git a/llvm/lib/Transforms/Scalar/Sink.cpp b/llvm/lib/Transforms/Scalar/Sink.cpp
+index cf8e5b75ab4d..a5096da46a08 100644
+--- a/llvm/lib/Transforms/Scalar/Sink.cpp
++++ b/llvm/lib/Transforms/Scalar/Sink.cpp
+@@ -20,7 +20,6 @@
+ #include "llvm/Analysis/LoopInfo.h"
+ #include "llvm/Analysis/ValueTracking.h"
+ #include "llvm/IR/IntrinsicInst.h"
+-#include "llvm/IR/Writer.h"
+ #include "llvm/Support/CFG.h"
+ #include "llvm/Support/Debug.h"
+ #include "llvm/Support/raw_ostream.h"
+@@ -259,9 +258,9 @@ bool Sinking::SinkInstruction(Instruction *Inst,
+     return false;
+ 
+   DEBUG(dbgs() << "Sink" << *Inst << " (";
+-        WriteAsOperand(dbgs(), Inst->getParent(), false);
++        Inst->getParent()->printAsOperand(dbgs(), false);
+         dbgs() << " -> ";
+-        WriteAsOperand(dbgs(), SuccToSinkTo, false);
++        SuccToSinkTo->printAsOperand(dbgs(), false);
+         dbgs() << ")\n");
+ 
+   // Move the instruction.
+
+commit 9aca918df941788c12f9bef50e5ca0d6f57d2429
+Author: Chandler Carruth <chandlerc@gmail.com>
+Date:   Tue Jan 7 12:34:26 2014 +0000
+
+    Move the LLVM IR asm writer header files into the IR directory, as they
+    are part of the core IR library in order to support dumping and other
+    basic functionality.
+    
+    Rename the 'Assembly' include directory to 'AsmParser' to match the
+    library name and the only functionality left their -- printing has been
+    in the core IR library for quite some time.
+    
+    Update all of the #includes to match.
+    
+    All of this started because I wanted to have the layering in good shape
+    before I started adding support for printing LLVM IR using the new pass
+    infrastructure, and commandline support for the new pass infrastructure.
+    
+    llvm-svn: 198688
+
+diff --git a/llvm/lib/Transforms/Scalar/Sink.cpp b/llvm/lib/Transforms/Scalar/Sink.cpp
+index d4595bb373e6..cf8e5b75ab4d 100644
+--- a/llvm/lib/Transforms/Scalar/Sink.cpp
++++ b/llvm/lib/Transforms/Scalar/Sink.cpp
+@@ -19,8 +19,8 @@
+ #include "llvm/Analysis/Dominators.h"
+ #include "llvm/Analysis/LoopInfo.h"
+ #include "llvm/Analysis/ValueTracking.h"
+-#include "llvm/Assembly/Writer.h"
+ #include "llvm/IR/IntrinsicInst.h"
++#include "llvm/IR/Writer.h"
+ #include "llvm/Support/CFG.h"
+ #include "llvm/Support/Debug.h"
+ #include "llvm/Support/raw_ostream.h"
+
+commit 9fb823bbd484eebe4f8756338b14ed3725261997
+Author: Chandler Carruth <chandlerc@gmail.com>
+Date:   Wed Jan 2 11:36:10 2013 +0000
+
+    Move all of the header files which are involved in modelling the LLVM IR
+    into their new header subdirectory: include/llvm/IR. This matches the
+    directory structure of lib, and begins to correct a long standing point
+    of file layout clutter in LLVM.
+    
+    There are still more header files to move here, but I wanted to handle
+    them in separate commits to make tracking what files make sense at each
+    layer easier.
+    
+    The only really questionable files here are the target intrinsic
+    tablegen files. But that's a battle I'd rather not fight today.
+    
+    I've updated both CMake and Makefile build systems (I think, and my
+    tests think, but I may have missed something).
+    
+    I've also re-sorted the includes throughout the project. I'll be
+    committing updates to Clang, DragonEgg, and Polly momentarily.
+    
+    llvm-svn: 171366
+
+diff --git a/llvm/lib/Transforms/Scalar/Sink.cpp b/llvm/lib/Transforms/Scalar/Sink.cpp
+index cde9c178ad8c..d4595bb373e6 100644
+--- a/llvm/lib/Transforms/Scalar/Sink.cpp
++++ b/llvm/lib/Transforms/Scalar/Sink.cpp
+@@ -20,7 +20,7 @@
+ #include "llvm/Analysis/LoopInfo.h"
+ #include "llvm/Analysis/ValueTracking.h"
+ #include "llvm/Assembly/Writer.h"
+-#include "llvm/IntrinsicInst.h"
++#include "llvm/IR/IntrinsicInst.h"
+ #include "llvm/Support/CFG.h"
+ #include "llvm/Support/Debug.h"
+ #include "llvm/Support/raw_ostream.h"
+
+commit ed0881b2a67c530079dfd4141dbd9a899e6c1a7c
+Author: Chandler Carruth <chandlerc@gmail.com>
+Date:   Mon Dec 3 16:50:05 2012 +0000
+
+    Use the new script to sort the includes of every file under lib.
+    
+    Sooooo many of these had incorrect or strange main module includes.
+    I have manually inspected all of these, and fixed the main module
+    include to be the nearest plausible thing I could find. If you own or
+    care about any of these source files, I encourage you to take some time
+    and check that these edits were sensible. I can't have broken anything
+    (I strictly added headers, and reordered them, never removed), but they
+    may not be the headers you'd really like to identify as containing the
+    API being implemented.
+    
+    Many forward declarations and missing includes were added to a header
+    files to allow them to parse cleanly when included first. The main
+    module rule does in fact have its merits. =]
+    
+    llvm-svn: 169131
+
+diff --git a/llvm/lib/Transforms/Scalar/Sink.cpp b/llvm/lib/Transforms/Scalar/Sink.cpp
+index 34f1d6c6221a..cde9c178ad8c 100644
+--- a/llvm/lib/Transforms/Scalar/Sink.cpp
++++ b/llvm/lib/Transforms/Scalar/Sink.cpp
+@@ -14,13 +14,13 @@
+ 
+ #define DEBUG_TYPE "sink"
+ #include "llvm/Transforms/Scalar.h"
+-#include "llvm/IntrinsicInst.h"
++#include "llvm/ADT/Statistic.h"
++#include "llvm/Analysis/AliasAnalysis.h"
+ #include "llvm/Analysis/Dominators.h"
+ #include "llvm/Analysis/LoopInfo.h"
+-#include "llvm/Analysis/AliasAnalysis.h"
+ #include "llvm/Analysis/ValueTracking.h"
+ #include "llvm/Assembly/Writer.h"
+-#include "llvm/ADT/Statistic.h"
++#include "llvm/IntrinsicInst.h"
+ #include "llvm/Support/CFG.h"
+ #include "llvm/Support/Debug.h"
+ #include "llvm/Support/raw_ostream.h"
+
+commit 465834c85f97666559d7acae8c028cb4ee3012f6
+Author: Nadav Rotem <nadav.rotem@intel.com>
+Date:   Tue Jul 24 10:51:42 2012 +0000
+
+    Clean whitespaces.
+    
+    llvm-svn: 160668
+
+diff --git a/llvm/lib/Transforms/Scalar/Sink.cpp b/llvm/lib/Transforms/Scalar/Sink.cpp
+index d6ec65169dee..34f1d6c6221a 100644
+--- a/llvm/lib/Transforms/Scalar/Sink.cpp
++++ b/llvm/lib/Transforms/Scalar/Sink.cpp
+@@ -40,9 +40,9 @@ namespace {
+     Sinking() : FunctionPass(ID) {
+       initializeSinkingPass(*PassRegistry::getPassRegistry());
+     }
+-    
++
+     virtual bool runOnFunction(Function &F);
+-    
++
+     virtual void getAnalysisUsage(AnalysisUsage &AU) const {
+       AU.setPreservesCFG();
+       FunctionPass::getAnalysisUsage(AU);
+@@ -59,7 +59,7 @@ namespace {
+     bool IsAcceptableTarget(Instruction *Inst, BasicBlock *SuccToSinkTo) const;
+   };
+ } // end anonymous namespace
+-  
++
+ char Sinking::ID = 0;
+ INITIALIZE_PASS_BEGIN(Sinking, "sink", "Code sinking", false, false)
+ INITIALIZE_PASS_DEPENDENCY(LoopInfo)
+@@ -71,7 +71,7 @@ FunctionPass *llvm::createSinkingPass() { return new Sinking(); }
+ 
+ /// AllUsesDominatedByBlock - Return true if all uses of the specified value
+ /// occur in blocks dominated by the specified block.
+-bool Sinking::AllUsesDominatedByBlock(Instruction *Inst, 
++bool Sinking::AllUsesDominatedByBlock(Instruction *Inst,
+                                       BasicBlock *BB) const {
+   // Ignoring debug uses is necessary so debug info doesn't affect the code.
+   // This may leave a referencing dbg_value in the original block, before
+@@ -101,18 +101,18 @@ bool Sinking::runOnFunction(Function &F) {
+   AA = &getAnalysis<AliasAnalysis>();
+ 
+   bool MadeChange, EverMadeChange = false;
+-  
++
+   do {
+     MadeChange = false;
+     DEBUG(dbgs() << "Sinking iteration " << NumSinkIter << "\n");
+     // Process all basic blocks.
+-    for (Function::iterator I = F.begin(), E = F.end(); 
++    for (Function::iterator I = F.begin(), E = F.end();
+          I != E; ++I)
+       MadeChange |= ProcessBlock(*I);
+     EverMadeChange |= MadeChange;
+     NumSinkIter++;
+   } while (MadeChange);
+-  
++
+   return EverMadeChange;
+ }
+ 
+@@ -121,8 +121,8 @@ bool Sinking::ProcessBlock(BasicBlock &BB) {
+   if (BB.getTerminator()->getNumSuccessors() <= 1 || BB.empty()) return false;
+ 
+   // Don't bother sinking code out of unreachable blocks. In addition to being
+-  // unprofitable, it can also lead to infinite looping, because in an unreachable
+-  // loop there may be nowhere to stop.
++  // unprofitable, it can also lead to infinite looping, because in an
++  // unreachable loop there may be nowhere to stop.
+   if (!DT->isReachableFromEntry(&BB)) return false;
+ 
+   bool MadeChange = false;
+@@ -134,7 +134,7 @@ bool Sinking::ProcessBlock(BasicBlock &BB) {
+   SmallPtrSet<Instruction *, 8> Stores;
+   do {
+     Instruction *Inst = I;  // The instruction to sink.
+-    
++
+     // Predecrement I (if it's not begin) so that it isn't invalidated by
+     // sinking.
+     ProcessedBegin = I == BB.begin();
+@@ -146,10 +146,10 @@ bool Sinking::ProcessBlock(BasicBlock &BB) {
+ 
+     if (SinkInstruction(Inst, Stores))
+       ++NumSunk, MadeChange = true;
+-    
++
+     // If we just processed the first instruction in the block, we're done.
+   } while (!ProcessedBegin);
+-  
++
+   return MadeChange;
+ }
+ 
+@@ -177,16 +177,17 @@ static bool isSafeToMove(Instruction *Inst, AliasAnalysis *AA,
+ 
+ /// IsAcceptableTarget - Return true if it is possible to sink the instruction
+ /// in the specified basic block.
+-bool Sinking::IsAcceptableTarget(Instruction *Inst, BasicBlock *SuccToSinkTo) const {
++bool Sinking::IsAcceptableTarget(Instruction *Inst,
++                                 BasicBlock *SuccToSinkTo) const {
+   assert(Inst && "Instruction to be sunk is null");
+   assert(SuccToSinkTo && "Candidate sink target is null");
+-  
++
+   // It is not possible to sink an instruction into its own block.  This can
+   // happen with loops.
+   if (Inst->getParent() == SuccToSinkTo)
+     return false;
+-    
+-  // If the block has multiple predecessors, this would introduce computation 
++
++  // If the block has multiple predecessors, this would introduce computation
+   // on different code paths.  We could split the critical edge, but for now we
+   // just punt.
+   // FIXME: Split critical edges if not backedges.
+@@ -195,18 +196,19 @@ bool Sinking::IsAcceptableTarget(Instruction *Inst, BasicBlock *SuccToSinkTo) co
+     // other code paths.
+     if (!isSafeToSpeculativelyExecute(Inst))
+       return false;
+-    
++
+     // We don't want to sink across a critical edge if we don't dominate the
+     // successor. We could be introducing calculations to new code paths.
+     if (!DT->dominates(Inst->getParent(), SuccToSinkTo))
+       return false;
+-    
++
+     // Don't sink instructions into a loop.
+-    Loop *succ = LI->getLoopFor(SuccToSinkTo), *cur = LI->getLoopFor(Inst->getParent());
++    Loop *succ = LI->getLoopFor(SuccToSinkTo);
++    Loop *cur = LI->getLoopFor(Inst->getParent());
+     if (succ != 0 && succ != cur)
+       return false;
+   }
+-  
++
+   // Finally, check that all the uses of the instruction are actually
+   // dominated by the candidate
+   return AllUsesDominatedByBlock(Inst, SuccToSinkTo);
+@@ -219,7 +221,7 @@ bool Sinking::SinkInstruction(Instruction *Inst,
+   // Check if it's safe to move the instruction.
+   if (!isSafeToMove(Inst, AA, Stores))
+     return false;
+-  
++
+   // FIXME: This should include support for sinking instructions within the
+   // block they are currently in to shorten the live ranges.  We often get
+   // instructions sunk into the top of a large block, but it would be better to
+@@ -227,41 +229,41 @@ bool Sinking::SinkInstruction(Instruction *Inst,
+   // be careful not to *increase* register pressure though, e.g. sinking
+   // "x = y + z" down if it kills y and z would increase the live ranges of y
+   // and z and only shrink the live range of x.
+-  
++
+   // SuccToSinkTo - This is the successor to sink this instruction to, once we
+   // decide.
+   BasicBlock *SuccToSinkTo = 0;
+-  
++
+   // Instructions can only be sunk if all their uses are in blocks
+   // dominated by one of the successors.
+   // Look at all the postdominators and see if we can sink it in one.
+   DomTreeNode *DTN = DT->getNode(Inst->getParent());
+-  for (DomTreeNode::iterator I = DTN->begin(), E = DTN->end(); 
++  for (DomTreeNode::iterator I = DTN->begin(), E = DTN->end();
+       I != E && SuccToSinkTo == 0; ++I) {
+     BasicBlock *Candidate = (*I)->getBlock();
+-    if ((*I)->getIDom()->getBlock() == Inst->getParent() && 
++    if ((*I)->getIDom()->getBlock() == Inst->getParent() &&
+         IsAcceptableTarget(Inst, Candidate))
+       SuccToSinkTo = Candidate;
+   }
+ 
+-  // If no suitable postdominator was found, look at all the successors and 
++  // If no suitable postdominator was found, look at all the successors and
+   // decide which one we should sink to, if any.
+-  for (succ_iterator I = succ_begin(Inst->getParent()), 
++  for (succ_iterator I = succ_begin(Inst->getParent()),
+       E = succ_end(Inst->getParent()); I != E && SuccToSinkTo == 0; ++I) {
+     if (IsAcceptableTarget(Inst, *I))
+       SuccToSinkTo = *I;
+   }
+-      
++
+   // If we couldn't find a block to sink to, ignore this instruction.
+   if (SuccToSinkTo == 0)
+     return false;
+-  
++
+   DEBUG(dbgs() << "Sink" << *Inst << " (";
+-        WriteAsOperand(dbgs(), Inst->getParent(), false); 
++        WriteAsOperand(dbgs(), Inst->getParent(), false);
+         dbgs() << " -> ";
+-        WriteAsOperand(dbgs(), SuccToSinkTo, false); 
++        WriteAsOperand(dbgs(), SuccToSinkTo, false);
+         dbgs() << ")\n");
+-  
++
+   // Move the instruction.
+   Inst->moveBefore(SuccToSinkTo->getFirstInsertionPt());
+   return true;
+
+commit 339bb61e32593aa393ceda3c7168c24814a27161
+Author: Duncan Sands <baldrick@free.fr>
+Date:   Thu May 31 08:09:49 2012 +0000
+
+    Enhance the sinking code to handle diamond patterns.  Patch by
+    Carlo Alberto Ferraris.
+    
+    llvm-svn: 157736
+
+diff --git a/llvm/lib/Transforms/Scalar/Sink.cpp b/llvm/lib/Transforms/Scalar/Sink.cpp
+index ef65c0a3a907..d6ec65169dee 100644
+--- a/llvm/lib/Transforms/Scalar/Sink.cpp
++++ b/llvm/lib/Transforms/Scalar/Sink.cpp
+@@ -27,6 +27,7 @@
+ using namespace llvm;
+ 
+ STATISTIC(NumSunk, "Number of instructions sunk");
++STATISTIC(NumSinkIter, "Number of sinking iterations");
+ 
+ namespace {
+   class Sinking : public FunctionPass {
+@@ -55,6 +56,7 @@ namespace {
+     bool ProcessBlock(BasicBlock &BB);
+     bool SinkInstruction(Instruction *I, SmallPtrSet<Instruction *, 8> &Stores);
+     bool AllUsesDominatedByBlock(Instruction *Inst, BasicBlock *BB) const;
++    bool IsAcceptableTarget(Instruction *Inst, BasicBlock *SuccToSinkTo) const;
+   };
+ } // end anonymous namespace
+   
+@@ -98,20 +100,19 @@ bool Sinking::runOnFunction(Function &F) {
+   LI = &getAnalysis<LoopInfo>();
+   AA = &getAnalysis<AliasAnalysis>();
+ 
+-  bool EverMadeChange = false;
++  bool MadeChange, EverMadeChange = false;
+   
+-  while (1) {
+-    bool MadeChange = false;
+-
++  do {
++    MadeChange = false;
++    DEBUG(dbgs() << "Sinking iteration " << NumSinkIter << "\n");
+     // Process all basic blocks.
+     for (Function::iterator I = F.begin(), E = F.end(); 
+          I != E; ++I)
+       MadeChange |= ProcessBlock(*I);
+-    
+-    // If this iteration over the code changed anything, keep iterating.
+-    if (!MadeChange) break;
+-    EverMadeChange = true;
+-  } 
++    EverMadeChange |= MadeChange;
++    NumSinkIter++;
++  } while (MadeChange);
++  
+   return EverMadeChange;
+ }
+ 
+@@ -174,6 +175,43 @@ static bool isSafeToMove(Instruction *Inst, AliasAnalysis *AA,
+   return true;
+ }
+ 
++/// IsAcceptableTarget - Return true if it is possible to sink the instruction
++/// in the specified basic block.
++bool Sinking::IsAcceptableTarget(Instruction *Inst, BasicBlock *SuccToSinkTo) const {
++  assert(Inst && "Instruction to be sunk is null");
++  assert(SuccToSinkTo && "Candidate sink target is null");
++  
++  // It is not possible to sink an instruction into its own block.  This can
++  // happen with loops.
++  if (Inst->getParent() == SuccToSinkTo)
++    return false;
++    
++  // If the block has multiple predecessors, this would introduce computation 
++  // on different code paths.  We could split the critical edge, but for now we
++  // just punt.
++  // FIXME: Split critical edges if not backedges.
++  if (SuccToSinkTo->getUniquePredecessor() != Inst->getParent()) {
++    // We cannot sink a load across a critical edge - there may be stores in
++    // other code paths.
++    if (!isSafeToSpeculativelyExecute(Inst))
++      return false;
++    
++    // We don't want to sink across a critical edge if we don't dominate the
++    // successor. We could be introducing calculations to new code paths.
++    if (!DT->dominates(Inst->getParent(), SuccToSinkTo))
++      return false;
++    
++    // Don't sink instructions into a loop.
++    Loop *succ = LI->getLoopFor(SuccToSinkTo), *cur = LI->getLoopFor(Inst->getParent());
++    if (succ != 0 && succ != cur)
++      return false;
++  }
++  
++  // Finally, check that all the uses of the instruction are actually
++  // dominated by the candidate
++  return AllUsesDominatedByBlock(Inst, SuccToSinkTo);
++}
++
+ /// SinkInstruction - Determine whether it is safe to sink the specified machine
+ /// instruction out of its current block into a successor.
+ bool Sinking::SinkInstruction(Instruction *Inst,
+@@ -190,85 +228,41 @@ bool Sinking::SinkInstruction(Instruction *Inst,
+   // "x = y + z" down if it kills y and z would increase the live ranges of y
+   // and z and only shrink the live range of x.
+   
+-  // Loop over all the operands of the specified instruction.  If there is
+-  // anything we can't handle, bail out.
+-  BasicBlock *ParentBlock = Inst->getParent();
+-  
+   // SuccToSinkTo - This is the successor to sink this instruction to, once we
+   // decide.
+   BasicBlock *SuccToSinkTo = 0;
+   
+-  // FIXME: This picks a successor to sink into based on having one
+-  // successor that dominates all the uses.  However, there are cases where
+-  // sinking can happen but where the sink point isn't a successor.  For
+-  // example:
+-  //   x = computation
+-  //   if () {} else {}
+-  //   use x
+-  // the instruction could be sunk over the whole diamond for the 
+-  // if/then/else (or loop, etc), allowing it to be sunk into other blocks
+-  // after that.
+-  
+   // Instructions can only be sunk if all their uses are in blocks
+   // dominated by one of the successors.
+-  // Look at all the successors and decide which one
+-  // we should sink to.
+-  for (succ_iterator SI = succ_begin(ParentBlock),
+-       E = succ_end(ParentBlock); SI != E; ++SI) {
+-    if (AllUsesDominatedByBlock(Inst, *SI)) {
+-      SuccToSinkTo = *SI;
+-      break;
+-    }
++  // Look at all the postdominators and see if we can sink it in one.
++  DomTreeNode *DTN = DT->getNode(Inst->getParent());
++  for (DomTreeNode::iterator I = DTN->begin(), E = DTN->end(); 
++      I != E && SuccToSinkTo == 0; ++I) {
++    BasicBlock *Candidate = (*I)->getBlock();
++    if ((*I)->getIDom()->getBlock() == Inst->getParent() && 
++        IsAcceptableTarget(Inst, Candidate))
++      SuccToSinkTo = Candidate;
++  }
++
++  // If no suitable postdominator was found, look at all the successors and 
++  // decide which one we should sink to, if any.
++  for (succ_iterator I = succ_begin(Inst->getParent()), 
++      E = succ_end(Inst->getParent()); I != E && SuccToSinkTo == 0; ++I) {
++    if (IsAcceptableTarget(Inst, *I))
++      SuccToSinkTo = *I;
+   }
+       
+   // If we couldn't find a block to sink to, ignore this instruction.
+   if (SuccToSinkTo == 0)
+     return false;
+   
+-  // It is not possible to sink an instruction into its own block.  This can
+-  // happen with loops.
+-  if (Inst->getParent() == SuccToSinkTo)
+-    return false;
+-  
+-  DEBUG(dbgs() << "Sink instr " << *Inst);
+-  DEBUG(dbgs() << "to block ";
+-        WriteAsOperand(dbgs(), SuccToSinkTo, false));
+-  
+-  // If the block has multiple predecessors, this would introduce computation on
+-  // a path that it doesn't already exist.  We could split the critical edge,
+-  // but for now we just punt.
+-  // FIXME: Split critical edges if not backedges.
+-  if (SuccToSinkTo->getUniquePredecessor() != ParentBlock) {
+-    // We cannot sink a load across a critical edge - there may be stores in
+-    // other code paths.
+-    if (!isSafeToSpeculativelyExecute(Inst)) {
+-      DEBUG(dbgs() << " *** PUNTING: Wont sink load along critical edge.\n");
+-      return false;
+-    }
+-
+-    // We don't want to sink across a critical edge if we don't dominate the
+-    // successor. We could be introducing calculations to new code paths.
+-    if (!DT->dominates(ParentBlock, SuccToSinkTo)) {
+-      DEBUG(dbgs() << " *** PUNTING: Critical edge found\n");
+-      return false;
+-    }
+-
+-    // Don't sink instructions into a loop.
+-    if (LI->isLoopHeader(SuccToSinkTo)) {
+-      DEBUG(dbgs() << " *** PUNTING: Loop header found\n");
+-      return false;
+-    }
+-
+-    // Otherwise we are OK with sinking along a critical edge.
+-    DEBUG(dbgs() << "Sinking along critical edge.\n");
+-  }
+-  
+-  // Determine where to insert into.  Skip phi nodes.
+-  BasicBlock::iterator InsertPos = SuccToSinkTo->begin();
+-  while (InsertPos != SuccToSinkTo->end() && isa<PHINode>(InsertPos))
+-    ++InsertPos;
++  DEBUG(dbgs() << "Sink" << *Inst << " (";
++        WriteAsOperand(dbgs(), Inst->getParent(), false); 
++        dbgs() << " -> ";
++        WriteAsOperand(dbgs(), SuccToSinkTo, false); 
++        dbgs() << ")\n");
+   
+   // Move the instruction.
+-  Inst->moveBefore(InsertPos);
++  Inst->moveBefore(SuccToSinkTo->getFirstInsertionPt());
+   return true;
+ }
+
+commit 75d7d5e988539819d596f345d99c26a7aa3bd09b
+Author: Dan Gohman <gohman@apple.com>
+Date:   Wed Dec 14 23:49:11 2011 +0000
+
+    Move Instruction::isSafeToSpeculativelyExecute out of VMCore and
+    into Analysis as a standalone function, since there's no need for
+    it to be in VMCore. Also, update it to use isKnownNonZero and
+    other goodies available in Analysis, making it more precise,
+    enabling more aggressive optimization.
+    
+    llvm-svn: 146610
+
+diff --git a/llvm/lib/Transforms/Scalar/Sink.cpp b/llvm/lib/Transforms/Scalar/Sink.cpp
+index c83f56c4d2d7..ef65c0a3a907 100644
+--- a/llvm/lib/Transforms/Scalar/Sink.cpp
++++ b/llvm/lib/Transforms/Scalar/Sink.cpp
+@@ -18,6 +18,7 @@
+ #include "llvm/Analysis/Dominators.h"
+ #include "llvm/Analysis/LoopInfo.h"
+ #include "llvm/Analysis/AliasAnalysis.h"
++#include "llvm/Analysis/ValueTracking.h"
+ #include "llvm/Assembly/Writer.h"
+ #include "llvm/ADT/Statistic.h"
+ #include "llvm/Support/CFG.h"
+@@ -240,7 +241,7 @@ bool Sinking::SinkInstruction(Instruction *Inst,
+   if (SuccToSinkTo->getUniquePredecessor() != ParentBlock) {
+     // We cannot sink a load across a critical edge - there may be stores in
+     // other code paths.
+-    if (!Inst->isSafeToSpeculativelyExecute()) {
++    if (!isSafeToSpeculativelyExecute(Inst)) {
+       DEBUG(dbgs() << " *** PUNTING: Wont sink load along critical edge.\n");
+       return false;
+     }
+
+commit 71f5c2f1585e4bec0cc676e0476738af999dba70
+Author: Eli Friedman <eli.friedman@gmail.com>
+Date:   Thu Sep 1 21:21:24 2011 +0000
+
+    Fix an issue with the IR sink pass found by inspection.  (I'm not sure anyone is actually using this, but might as well fix it since I found the issue.)
+    
+    llvm-svn: 138965
+
+diff --git a/llvm/lib/Transforms/Scalar/Sink.cpp b/llvm/lib/Transforms/Scalar/Sink.cpp
+index 705f44204900..c83f56c4d2d7 100644
+--- a/llvm/lib/Transforms/Scalar/Sink.cpp
++++ b/llvm/lib/Transforms/Scalar/Sink.cpp
+@@ -153,9 +153,13 @@ bool Sinking::ProcessBlock(BasicBlock &BB) {
+ 
+ static bool isSafeToMove(Instruction *Inst, AliasAnalysis *AA,
+                          SmallPtrSet<Instruction *, 8> &Stores) {
+-  if (LoadInst *L = dyn_cast<LoadInst>(Inst)) {
+-    if (L->isVolatile()) return false;
+ 
++  if (Inst->mayWriteToMemory()) {
++    Stores.insert(Inst);
++    return false;
++  }
++
++  if (LoadInst *L = dyn_cast<LoadInst>(Inst)) {
+     AliasAnalysis::Location Loc = AA->getLocation(L);
+     for (SmallPtrSet<Instruction *, 8>::iterator I = Stores.begin(),
+          E = Stores.end(); I != E; ++I)
+@@ -163,11 +167,6 @@ static bool isSafeToMove(Instruction *Inst, AliasAnalysis *AA,
+         return false;
+   }
+ 
+-  if (Inst->mayWriteToMemory()) {
+-    Stores.insert(Inst);
+-    return false;
+-  }
+-
+   if (isa<TerminatorInst>(Inst) || isa<PHINode>(Inst))
+     return false;
+ 
+
+commit 65316d674914067bd0b6da080f8a7cf7c1aa0e78
+Author: Dan Gohman <gohman@apple.com>
+Date:   Thu Nov 11 21:50:19 2010 +0000
+
+    Add helper functions for computing the Location of load, store,
+    and vaarg instructions.
+    
+    llvm-svn: 118845
+
+diff --git a/llvm/lib/Transforms/Scalar/Sink.cpp b/llvm/lib/Transforms/Scalar/Sink.cpp
+index a54ba8e0ae54..705f44204900 100644
+--- a/llvm/lib/Transforms/Scalar/Sink.cpp
++++ b/llvm/lib/Transforms/Scalar/Sink.cpp
+@@ -15,7 +15,6 @@
+ #define DEBUG_TYPE "sink"
+ #include "llvm/Transforms/Scalar.h"
+ #include "llvm/IntrinsicInst.h"
+-#include "llvm/LLVMContext.h"
+ #include "llvm/Analysis/Dominators.h"
+ #include "llvm/Analysis/LoopInfo.h"
+ #include "llvm/Analysis/AliasAnalysis.h"
+@@ -157,10 +156,7 @@ static bool isSafeToMove(Instruction *Inst, AliasAnalysis *AA,
+   if (LoadInst *L = dyn_cast<LoadInst>(Inst)) {
+     if (L->isVolatile()) return false;
+ 
+-    Value *Ptr = L->getPointerOperand();
+-    uint64_t Size = AA->getTypeStoreSize(L->getType());
+-    const MDNode *TBAAInfo = L->getMetadata(LLVMContext::MD_tbaa);
+-    AliasAnalysis::Location Loc(Ptr, Size, TBAAInfo);
++    AliasAnalysis::Location Loc = AA->getLocation(L);
+     for (SmallPtrSet<Instruction *, 8>::iterator I = Stores.begin(),
+          E = Stores.end(); I != E; ++I)
+       if (AA->getModRefInfo(*I, Loc) & AliasAnalysis::Mod)
+
+commit 0cc4c7516e2e5b1feaa9850de03615b6329ef919
+Author: Dan Gohman <gohman@apple.com>
+Date:   Thu Nov 11 16:21:47 2010 +0000
+
+    Make Sink tbaa-aware.
+    
+    llvm-svn: 118788
+
+diff --git a/llvm/lib/Transforms/Scalar/Sink.cpp b/llvm/lib/Transforms/Scalar/Sink.cpp
+index d6f1e93a812d..a54ba8e0ae54 100644
+--- a/llvm/lib/Transforms/Scalar/Sink.cpp
++++ b/llvm/lib/Transforms/Scalar/Sink.cpp
+@@ -15,6 +15,7 @@
+ #define DEBUG_TYPE "sink"
+ #include "llvm/Transforms/Scalar.h"
+ #include "llvm/IntrinsicInst.h"
++#include "llvm/LLVMContext.h"
+ #include "llvm/Analysis/Dominators.h"
+ #include "llvm/Analysis/LoopInfo.h"
+ #include "llvm/Analysis/AliasAnalysis.h"
+@@ -158,9 +159,11 @@ static bool isSafeToMove(Instruction *Inst, AliasAnalysis *AA,
+ 
+     Value *Ptr = L->getPointerOperand();
+     uint64_t Size = AA->getTypeStoreSize(L->getType());
++    const MDNode *TBAAInfo = L->getMetadata(LLVMContext::MD_tbaa);
++    AliasAnalysis::Location Loc(Ptr, Size, TBAAInfo);
+     for (SmallPtrSet<Instruction *, 8>::iterator I = Stores.begin(),
+          E = Stores.end(); I != E; ++I)
+-      if (AA->getModRefInfo(*I, Ptr, Size) & AliasAnalysis::Mod)
++      if (AA->getModRefInfo(*I, Loc) & AliasAnalysis::Mod)
+         return false;
+   }
+ 
+
+commit c3b4ea7b7d7e1c6f2e29ef3c85f798d94741111a
+Author: Dan Gohman <gohman@apple.com>
+Date:   Thu Nov 11 16:20:28 2010 +0000
+
+    It's safe to sink some instructions which are not safe to speculatively
+    execute. Make Sink's predicate more precise.
+    
+    llvm-svn: 118787
+
+diff --git a/llvm/lib/Transforms/Scalar/Sink.cpp b/llvm/lib/Transforms/Scalar/Sink.cpp
+index 1aca908267b4..d6f1e93a812d 100644
+--- a/llvm/lib/Transforms/Scalar/Sink.cpp
++++ b/llvm/lib/Transforms/Scalar/Sink.cpp
+@@ -169,7 +169,10 @@ static bool isSafeToMove(Instruction *Inst, AliasAnalysis *AA,
+     return false;
+   }
+ 
+-  return Inst->isSafeToSpeculativelyExecute();
++  if (isa<TerminatorInst>(Inst) || isa<PHINode>(Inst))
++    return false;
++
++  return true;
+ }
+ 
+ /// SinkInstruction - Determine whether it is safe to sink the specified machine
+
+commit f372cf869b7795d72843fb3a097af9d03b5c2b42
+Author: Dan Gohman <gohman@apple.com>
+Date:   Tue Oct 19 22:54:46 2010 +0000
+
+    Reapply r116831 and r116839, converting AliasAnalysis to use
+    uint64_t, plus fixes for places I missed before.
+    
+    llvm-svn: 116875
+
+diff --git a/llvm/lib/Transforms/Scalar/Sink.cpp b/llvm/lib/Transforms/Scalar/Sink.cpp
+index 7306ee5e2e45..1aca908267b4 100644
+--- a/llvm/lib/Transforms/Scalar/Sink.cpp
++++ b/llvm/lib/Transforms/Scalar/Sink.cpp
+@@ -157,7 +157,7 @@ static bool isSafeToMove(Instruction *Inst, AliasAnalysis *AA,
+     if (L->isVolatile()) return false;
+ 
+     Value *Ptr = L->getPointerOperand();
+-    unsigned Size = AA->getTypeStoreSize(L->getType());
++    uint64_t Size = AA->getTypeStoreSize(L->getType());
+     for (SmallPtrSet<Instruction *, 8>::iterator I = Stores.begin(),
+          E = Stores.end(); I != E; ++I)
+       if (AA->getModRefInfo(*I, Ptr, Size) & AliasAnalysis::Mod)
+
+commit 6c18d1aac08df0143d9a9810261421faeac81d4a
+Author: Owen Anderson <resistor@mac.com>
+Date:   Tue Oct 19 17:21:58 2010 +0000
+
+    Get rid of static constructors for pass registration.  Instead, every pass exposes an initializeMyPassFunction(), which
+    must be called in the pass's constructor.  This function uses static dependency declarations to recursively initialize
+    the pass's dependencies.
+    
+    Clients that only create passes through the createFooPass() APIs will require no changes.  Clients that want to use the
+    CommandLine options for passes will need to manually call the appropriate initialization functions in PassInitialization.h
+    before parsing commandline arguments.
+    
+    I have tested this with all standard configurations of clang and llvm-gcc on Darwin.  It is possible that there are problems
+    with the static dependencies that will only be visible with non-standard options.  If you encounter any crash in pass
+    registration/creation, please send the testcase to me directly.
+    
+    llvm-svn: 116820
+
+diff --git a/llvm/lib/Transforms/Scalar/Sink.cpp b/llvm/lib/Transforms/Scalar/Sink.cpp
+index 0071428354e6..7306ee5e2e45 100644
+--- a/llvm/lib/Transforms/Scalar/Sink.cpp
++++ b/llvm/lib/Transforms/Scalar/Sink.cpp
+@@ -35,7 +35,9 @@ namespace {
+ 
+   public:
+     static char ID; // Pass identification
+-    Sinking() : FunctionPass(ID) {}
++    Sinking() : FunctionPass(ID) {
++      initializeSinkingPass(*PassRegistry::getPassRegistry());
++    }
+     
+     virtual bool runOnFunction(Function &F);
+     
+
+commit 8ac477ffb509943c940ce37f45b8429388dfdf58
+Author: Owen Anderson <resistor@mac.com>
+Date:   Tue Oct 12 19:48:12 2010 +0000
+
+    Begin adding static dependence information to passes, which will allow us to
+    perform initialization without static constructors AND without explicit initialization
+    by the client.  For the moment, passes are required to initialize both their
+    (potential) dependencies and any passes they preserve.  I hope to be able to relax
+    the latter requirement in the future.
+    
+    llvm-svn: 116334
+
+diff --git a/llvm/lib/Transforms/Scalar/Sink.cpp b/llvm/lib/Transforms/Scalar/Sink.cpp
+index 6dc52a6f8e71..0071428354e6 100644
+--- a/llvm/lib/Transforms/Scalar/Sink.cpp
++++ b/llvm/lib/Transforms/Scalar/Sink.cpp
+@@ -56,7 +56,11 @@ namespace {
+ } // end anonymous namespace
+   
+ char Sinking::ID = 0;
+-INITIALIZE_PASS(Sinking, "sink", "Code sinking", false, false)
++INITIALIZE_PASS_BEGIN(Sinking, "sink", "Code sinking", false, false)
++INITIALIZE_PASS_DEPENDENCY(LoopInfo)
++INITIALIZE_PASS_DEPENDENCY(DominatorTree)
++INITIALIZE_AG_DEPENDENCY(AliasAnalysis)
++INITIALIZE_PASS_END(Sinking, "sink", "Code sinking", false, false)
+ 
+ FunctionPass *llvm::createSinkingPass() { return new Sinking(); }
+ 
+
+commit df7a4f2515ce59b487c24e8bb8ea98c10b3edabf
+Author: Owen Anderson <resistor@mac.com>
+Date:   Thu Oct 7 22:25:06 2010 +0000
+
+    Now with fewer extraneous semicolons!
+    
+    llvm-svn: 115996
+
+diff --git a/llvm/lib/Transforms/Scalar/Sink.cpp b/llvm/lib/Transforms/Scalar/Sink.cpp
+index 95d3dedfb62d..6dc52a6f8e71 100644
+--- a/llvm/lib/Transforms/Scalar/Sink.cpp
++++ b/llvm/lib/Transforms/Scalar/Sink.cpp
+@@ -56,7 +56,7 @@ namespace {
+ } // end anonymous namespace
+   
+ char Sinking::ID = 0;
+-INITIALIZE_PASS(Sinking, "sink", "Code sinking", false, false);
++INITIALIZE_PASS(Sinking, "sink", "Code sinking", false, false)
+ 
+ FunctionPass *llvm::createSinkingPass() { return new Sinking(); }
+ 
+
+commit a7aed18624f7783b7c31b06069c43bec89f1813f
+Author: Owen Anderson <resistor@mac.com>
+Date:   Fri Aug 6 18:33:48 2010 +0000
+
+    Reapply r110396, with fixes to appease the Linux buildbot gods.
+    
+    llvm-svn: 110460
+
+diff --git a/llvm/lib/Transforms/Scalar/Sink.cpp b/llvm/lib/Transforms/Scalar/Sink.cpp
+index 2448312673ba..95d3dedfb62d 100644
+--- a/llvm/lib/Transforms/Scalar/Sink.cpp
++++ b/llvm/lib/Transforms/Scalar/Sink.cpp
+@@ -35,7 +35,7 @@ namespace {
+ 
+   public:
+     static char ID; // Pass identification
+-    Sinking() : FunctionPass(&ID) {}
++    Sinking() : FunctionPass(ID) {}
+     
+     virtual bool runOnFunction(Function &F);
+     
+
+commit bda59bd247b1153e4bc19f85dee4cb594b9c2b32
+Author: Owen Anderson <resistor@mac.com>
+Date:   Fri Aug 6 00:23:35 2010 +0000
+
+    Revert r110396 to fix buildbots.
+    
+    llvm-svn: 110410
+
+diff --git a/llvm/lib/Transforms/Scalar/Sink.cpp b/llvm/lib/Transforms/Scalar/Sink.cpp
+index 95d3dedfb62d..2448312673ba 100644
+--- a/llvm/lib/Transforms/Scalar/Sink.cpp
++++ b/llvm/lib/Transforms/Scalar/Sink.cpp
+@@ -35,7 +35,7 @@ namespace {
+ 
+   public:
+     static char ID; // Pass identification
+-    Sinking() : FunctionPass(ID) {}
++    Sinking() : FunctionPass(&ID) {}
+     
+     virtual bool runOnFunction(Function &F);
+     
+
+commit 755aceb5d0df842b5132052d474c361b5605aedb
+Author: Owen Anderson <resistor@mac.com>
+Date:   Thu Aug 5 23:42:04 2010 +0000
+
+    Don't use PassInfo* as a type identifier for passes.  Instead, use the address of the static
+    ID member as the sole unique type identifier.  Clean up APIs related to this change.
+    
+    llvm-svn: 110396
+
+diff --git a/llvm/lib/Transforms/Scalar/Sink.cpp b/llvm/lib/Transforms/Scalar/Sink.cpp
+index 2448312673ba..95d3dedfb62d 100644
+--- a/llvm/lib/Transforms/Scalar/Sink.cpp
++++ b/llvm/lib/Transforms/Scalar/Sink.cpp
+@@ -35,7 +35,7 @@ namespace {
+ 
+   public:
+     static char ID; // Pass identification
+-    Sinking() : FunctionPass(&ID) {}
++    Sinking() : FunctionPass(ID) {}
+     
+     virtual bool runOnFunction(Function &F);
+     
+
+commit a57b97e7e7d4bd44ebc90c743e6db318fa5348d6
+Author: Owen Anderson <resistor@mac.com>
+Date:   Wed Jul 21 22:09:45 2010 +0000
+
+    Fix batch of converting RegisterPass<> to INTIALIZE_PASS().
+    
+    llvm-svn: 109045
+
+diff --git a/llvm/lib/Transforms/Scalar/Sink.cpp b/llvm/lib/Transforms/Scalar/Sink.cpp
+index b88ba4850509..2448312673ba 100644
+--- a/llvm/lib/Transforms/Scalar/Sink.cpp
++++ b/llvm/lib/Transforms/Scalar/Sink.cpp
+@@ -56,8 +56,7 @@ namespace {
+ } // end anonymous namespace
+   
+ char Sinking::ID = 0;
+-static RegisterPass<Sinking>
+-X("sink", "Code sinking");
++INITIALIZE_PASS(Sinking, "sink", "Code sinking", false, false);
+ 
+ FunctionPass *llvm::createSinkingPass() { return new Sinking(); }
+ 
+
+commit 5d5b8b1b8c8719d0ac362b8bc12957fc79de4595
+Author: Dan Gohman <gohman@apple.com>
+Date:   Fri May 7 15:40:13 2010 +0000
+
+    Add an LLVM IR version of code sinking. This uses the same simple algorithm
+    as MachineSink, but it isn't constrained by MachineInstr-level details.
+    
+    llvm-svn: 103257
+
+diff --git a/llvm/lib/Transforms/Scalar/Sink.cpp b/llvm/lib/Transforms/Scalar/Sink.cpp
+new file mode 100644
+index 000000000000..b88ba4850509
+--- /dev/null
++++ b/llvm/lib/Transforms/Scalar/Sink.cpp
+@@ -0,0 +1,267 @@
++//===-- Sink.cpp - Code Sinking -------------------------------------------===//
++//
++//                     The LLVM Compiler Infrastructure
++//
++// This file is distributed under the University of Illinois Open Source
++// License. See LICENSE.TXT for details.
++//
++//===----------------------------------------------------------------------===//
++//
++// This pass moves instructions into successor blocks, when possible, so that
++// they aren't executed on paths where their results aren't needed.
++//
++//===----------------------------------------------------------------------===//
++
++#define DEBUG_TYPE "sink"
++#include "llvm/Transforms/Scalar.h"
++#include "llvm/IntrinsicInst.h"
++#include "llvm/Analysis/Dominators.h"
++#include "llvm/Analysis/LoopInfo.h"
++#include "llvm/Analysis/AliasAnalysis.h"
++#include "llvm/Assembly/Writer.h"
++#include "llvm/ADT/Statistic.h"
++#include "llvm/Support/CFG.h"
++#include "llvm/Support/Debug.h"
++#include "llvm/Support/raw_ostream.h"
++using namespace llvm;
++
++STATISTIC(NumSunk, "Number of instructions sunk");
++
++namespace {
++  class Sinking : public FunctionPass {
++    DominatorTree *DT;
++    LoopInfo *LI;
++    AliasAnalysis *AA;
++
++  public:
++    static char ID; // Pass identification
++    Sinking() : FunctionPass(&ID) {}
++    
++    virtual bool runOnFunction(Function &F);
++    
++    virtual void getAnalysisUsage(AnalysisUsage &AU) const {
++      AU.setPreservesCFG();
++      FunctionPass::getAnalysisUsage(AU);
++      AU.addRequired<AliasAnalysis>();
++      AU.addRequired<DominatorTree>();
++      AU.addRequired<LoopInfo>();
++      AU.addPreserved<DominatorTree>();
++      AU.addPreserved<LoopInfo>();
++    }
++  private:
++    bool ProcessBlock(BasicBlock &BB);
++    bool SinkInstruction(Instruction *I, SmallPtrSet<Instruction *, 8> &Stores);
++    bool AllUsesDominatedByBlock(Instruction *Inst, BasicBlock *BB) const;
++  };
++} // end anonymous namespace
++  
++char Sinking::ID = 0;
++static RegisterPass<Sinking>
++X("sink", "Code sinking");
++
++FunctionPass *llvm::createSinkingPass() { return new Sinking(); }
++
++/// AllUsesDominatedByBlock - Return true if all uses of the specified value
++/// occur in blocks dominated by the specified block.
++bool Sinking::AllUsesDominatedByBlock(Instruction *Inst, 
++                                      BasicBlock *BB) const {
++  // Ignoring debug uses is necessary so debug info doesn't affect the code.
++  // This may leave a referencing dbg_value in the original block, before
++  // the definition of the vreg.  Dwarf generator handles this although the
++  // user might not get the right info at runtime.
++  for (Value::use_iterator I = Inst->use_begin(),
++       E = Inst->use_end(); I != E; ++I) {
++    // Determine the block of the use.
++    Instruction *UseInst = cast<Instruction>(*I);
++    BasicBlock *UseBlock = UseInst->getParent();
++    if (PHINode *PN = dyn_cast<PHINode>(UseInst)) {
++      // PHI nodes use the operand in the predecessor block, not the block with
++      // the PHI.
++      unsigned Num = PHINode::getIncomingValueNumForOperand(I.getOperandNo());
++      UseBlock = PN->getIncomingBlock(Num);
++    }
++    // Check that it dominates.
++    if (!DT->dominates(BB, UseBlock))
++      return false;
++  }
++  return true;
++}
++
++bool Sinking::runOnFunction(Function &F) {
++  DT = &getAnalysis<DominatorTree>();
++  LI = &getAnalysis<LoopInfo>();
++  AA = &getAnalysis<AliasAnalysis>();
++
++  bool EverMadeChange = false;
++  
++  while (1) {
++    bool MadeChange = false;
++
++    // Process all basic blocks.
++    for (Function::iterator I = F.begin(), E = F.end(); 
++         I != E; ++I)
++      MadeChange |= ProcessBlock(*I);
++    
++    // If this iteration over the code changed anything, keep iterating.
++    if (!MadeChange) break;
++    EverMadeChange = true;
++  } 
++  return EverMadeChange;
++}
++
++bool Sinking::ProcessBlock(BasicBlock &BB) {
++  // Can't sink anything out of a block that has less than two successors.
++  if (BB.getTerminator()->getNumSuccessors() <= 1 || BB.empty()) return false;
++
++  // Don't bother sinking code out of unreachable blocks. In addition to being
++  // unprofitable, it can also lead to infinite looping, because in an unreachable
++  // loop there may be nowhere to stop.
++  if (!DT->isReachableFromEntry(&BB)) return false;
++
++  bool MadeChange = false;
++
++  // Walk the basic block bottom-up.  Remember if we saw a store.
++  BasicBlock::iterator I = BB.end();
++  --I;
++  bool ProcessedBegin = false;
++  SmallPtrSet<Instruction *, 8> Stores;
++  do {
++    Instruction *Inst = I;  // The instruction to sink.
++    
++    // Predecrement I (if it's not begin) so that it isn't invalidated by
++    // sinking.
++    ProcessedBegin = I == BB.begin();
++    if (!ProcessedBegin)
++      --I;
++
++    if (isa<DbgInfoIntrinsic>(Inst))
++      continue;
++
++    if (SinkInstruction(Inst, Stores))
++      ++NumSunk, MadeChange = true;
++    
++    // If we just processed the first instruction in the block, we're done.
++  } while (!ProcessedBegin);
++  
++  return MadeChange;
++}
++
++static bool isSafeToMove(Instruction *Inst, AliasAnalysis *AA,
++                         SmallPtrSet<Instruction *, 8> &Stores) {
++  if (LoadInst *L = dyn_cast<LoadInst>(Inst)) {
++    if (L->isVolatile()) return false;
++
++    Value *Ptr = L->getPointerOperand();
++    unsigned Size = AA->getTypeStoreSize(L->getType());
++    for (SmallPtrSet<Instruction *, 8>::iterator I = Stores.begin(),
++         E = Stores.end(); I != E; ++I)
++      if (AA->getModRefInfo(*I, Ptr, Size) & AliasAnalysis::Mod)
++        return false;
++  }
++
++  if (Inst->mayWriteToMemory()) {
++    Stores.insert(Inst);
++    return false;
++  }
++
++  return Inst->isSafeToSpeculativelyExecute();
++}
++
++/// SinkInstruction - Determine whether it is safe to sink the specified machine
++/// instruction out of its current block into a successor.
++bool Sinking::SinkInstruction(Instruction *Inst,
++                              SmallPtrSet<Instruction *, 8> &Stores) {
++  // Check if it's safe to move the instruction.
++  if (!isSafeToMove(Inst, AA, Stores))
++    return false;
++  
++  // FIXME: This should include support for sinking instructions within the
++  // block they are currently in to shorten the live ranges.  We often get
++  // instructions sunk into the top of a large block, but it would be better to
++  // also sink them down before their first use in the block.  This xform has to
++  // be careful not to *increase* register pressure though, e.g. sinking
++  // "x = y + z" down if it kills y and z would increase the live ranges of y
++  // and z and only shrink the live range of x.
++  
++  // Loop over all the operands of the specified instruction.  If there is
++  // anything we can't handle, bail out.
++  BasicBlock *ParentBlock = Inst->getParent();
++  
++  // SuccToSinkTo - This is the successor to sink this instruction to, once we
++  // decide.
++  BasicBlock *SuccToSinkTo = 0;
++  
++  // FIXME: This picks a successor to sink into based on having one
++  // successor that dominates all the uses.  However, there are cases where
++  // sinking can happen but where the sink point isn't a successor.  For
++  // example:
++  //   x = computation
++  //   if () {} else {}
++  //   use x
++  // the instruction could be sunk over the whole diamond for the 
++  // if/then/else (or loop, etc), allowing it to be sunk into other blocks
++  // after that.
++  
++  // Instructions can only be sunk if all their uses are in blocks
++  // dominated by one of the successors.
++  // Look at all the successors and decide which one
++  // we should sink to.
++  for (succ_iterator SI = succ_begin(ParentBlock),
++       E = succ_end(ParentBlock); SI != E; ++SI) {
++    if (AllUsesDominatedByBlock(Inst, *SI)) {
++      SuccToSinkTo = *SI;
++      break;
++    }
++  }
++      
++  // If we couldn't find a block to sink to, ignore this instruction.
++  if (SuccToSinkTo == 0)
++    return false;
++  
++  // It is not possible to sink an instruction into its own block.  This can
++  // happen with loops.
++  if (Inst->getParent() == SuccToSinkTo)
++    return false;
++  
++  DEBUG(dbgs() << "Sink instr " << *Inst);
++  DEBUG(dbgs() << "to block ";
++        WriteAsOperand(dbgs(), SuccToSinkTo, false));
++  
++  // If the block has multiple predecessors, this would introduce computation on
++  // a path that it doesn't already exist.  We could split the critical edge,
++  // but for now we just punt.
++  // FIXME: Split critical edges if not backedges.
++  if (SuccToSinkTo->getUniquePredecessor() != ParentBlock) {
++    // We cannot sink a load across a critical edge - there may be stores in
++    // other code paths.
++    if (!Inst->isSafeToSpeculativelyExecute()) {
++      DEBUG(dbgs() << " *** PUNTING: Wont sink load along critical edge.\n");
++      return false;
++    }
++
++    // We don't want to sink across a critical edge if we don't dominate the
++    // successor. We could be introducing calculations to new code paths.
++    if (!DT->dominates(ParentBlock, SuccToSinkTo)) {
++      DEBUG(dbgs() << " *** PUNTING: Critical edge found\n");
++      return false;
++    }
++
++    // Don't sink instructions into a loop.
++    if (LI->isLoopHeader(SuccToSinkTo)) {
++      DEBUG(dbgs() << " *** PUNTING: Loop header found\n");
++      return false;
++    }
++
++    // Otherwise we are OK with sinking along a critical edge.
++    DEBUG(dbgs() << "Sinking along critical edge.\n");
++  }
++  
++  // Determine where to insert into.  Skip phi nodes.
++  BasicBlock::iterator InsertPos = SuccToSinkTo->begin();
++  while (InsertPos != SuccToSinkTo->end() && isa<PHINode>(InsertPos))
++    ++InsertPos;
++  
++  // Move the instruction.
++  Inst->moveBefore(InsertPos);
++  return true;
++}
