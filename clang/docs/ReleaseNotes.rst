@@ -1472,6 +1472,9 @@ Crash and bug fixes
 - The ``unix.BlockInCriticalSection`` now recognizes the ``lock()`` member function
   as expected, even if it's inherited from a base class. Fixes (#GH104241).
 
+- Fixed a crash when C++20 parenthesized initializer lists are used. This issue
+  was causing a crash in clang-tidy. (#GH136041)
+
 Improvements
 ^^^^^^^^^^^^
 
