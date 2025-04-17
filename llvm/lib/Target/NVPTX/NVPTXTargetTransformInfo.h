@@ -83,6 +83,8 @@ public:
   }
   unsigned getMinVectorRegisterBitWidth() const { return 32; }
 
+  bool shouldExpandReduction(const IntrinsicInst *II) const { return false; }
+
   // We don't want to prevent inlining because of target-cpu and -features
   // attributes that were added to newer versions of LLVM/Clang: There are
   // no incompatible functions in PTX, ptxas will throw errors in such cases.
