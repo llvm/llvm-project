@@ -143,7 +143,7 @@ enum class LangAS : unsigned int;
 class LocalInstantiationScope;
 class LookupResult;
 class MangleNumberingContext;
-typedef ArrayRef<std::pair<IdentifierInfo *, SourceLocation>> ModuleIdPath;
+typedef ArrayRef<IdentifierLoc> ModuleIdPath;
 class ModuleLoader;
 class MultiLevelTemplateArgumentList;
 struct NormalizedConstraint;
@@ -3546,6 +3546,17 @@ public:
   bool checkPointerAuthEnabled(SourceLocation Loc, SourceRange Range);
 
   bool checkConstantPointerAuthKey(Expr *keyExpr, unsigned &key);
+
+  enum PointerAuthDiscArgKind {
+    // Address discrimination argument of __ptrauth.
+    PADAK_AddrDiscPtrAuth,
+
+    // Extra discriminator argument of __ptrauth.
+    PADAK_ExtraDiscPtrAuth,
+  };
+
+  bool checkPointerAuthDiscriminatorArg(Expr *Arg, PointerAuthDiscArgKind Kind,
+                                        unsigned &IntVal);
 
   /// Diagnose function specifiers on a declaration of an identifier that
   /// does not identify a function.
@@ -7245,7 +7256,7 @@ public:
 
   // #embed
   ExprResult ActOnEmbedExpr(SourceLocation EmbedKeywordLoc,
-                            StringLiteral *BinaryData);
+                            StringLiteral *BinaryData, StringRef FileName);
 
   // Build a potentially resolved SourceLocExpr.
   ExprResult BuildSourceLocExpr(SourceLocIdentKind Kind, QualType ResultTy,

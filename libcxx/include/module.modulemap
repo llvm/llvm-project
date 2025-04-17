@@ -1593,6 +1593,7 @@ module std [system] {
   }
 
   module mdspan {
+    module aligned_accessor   { header "__mdspan/aligned_accessor.h" }
     module default_accessor   { header "__mdspan/default_accessor.h" }
     module extents            { header "__mdspan/extents.h" }
     module fwd                { header "__fwd/mdspan.h" }
@@ -1631,6 +1632,7 @@ module std [system] {
     module destruct_n                         { header "__memory/destruct_n.h" }
     module fwd                                { header "__fwd/memory.h" }
     module inout_ptr                          { header "__memory/inout_ptr.h" }
+    module is_sufficiently_aligned            { header "__memory/is_sufficiently_aligned.h" }
     module noexcept_move_assign_container     { header "__memory/noexcept_move_assign_container.h" }
     module out_ptr                            { header "__memory/out_ptr.h" }
     module pointer_traits                     { header "__memory/pointer_traits.h" }

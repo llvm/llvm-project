@@ -264,7 +264,7 @@ public:
         auto *callee = MemberOp->getDirectCallee();
         if (auto *calleeDecl = dyn_cast<CXXMethodDecl>(callee)) {
           if (const CXXRecordDecl *classDecl = calleeDecl->getParent()) {
-            if (isRefCounted(classDecl))
+            if (isSafePtr(classDecl))
               return true;
           }
         }
