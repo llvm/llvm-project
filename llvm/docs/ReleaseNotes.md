@@ -126,7 +126,6 @@ Changes to the PowerPC Backend
 Changes to the RISC-V Backend
 -----------------------------
 
-
 * Adds experimental assembler support for the Qualcomm uC 'Xqcilb` (Long Branch)
   extension.
 * Adds experimental assembler support for the Qualcomm uC 'Xqcili` (Load Large Immediate)
