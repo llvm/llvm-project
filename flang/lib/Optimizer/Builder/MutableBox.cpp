@@ -76,7 +76,9 @@ createNewFirBox(fir::FirOpBuilder &builder, mlir::Location loc,
     cleanedLengths = lengths;
   }
   mlir::Value emptySlice;
-  return builder.create<fir::EmboxOp>(loc, box.getBoxTy(), cleanedAddr, shape,
+  auto boxType = fir::updateTypeWithVolatility(
+      box.getBoxTy(), fir::isa_volatile_type(cleanedAddr.getType()));
+  return builder.create<fir::EmboxOp>(loc, boxType, cleanedAddr, shape,
                                       emptySlice, cleanedLengths, tdesc);
 }
 
@@ -281,6 +283,9 @@ private:
                    unsigned allocator = kDefaultAllocator) {
     mlir::Value irBox = createNewFirBox(builder, loc, box, addr, lbounds,
                                         extents, lengths, tdesc);
+    const bool valueTypeIsVolatile =
+        fir::isa_volatile_type(fir::unwrapRefType(box.getAddr().getType()));
+    irBox = builder.createVolatileCast(loc, valueTypeIsVolatile, irBox);
     builder.create<fir::StoreOp>(loc, irBox, box.getAddr());
   }
 
@@ -346,7 +351,8 @@ mlir::Value fir::factory::createUnallocatedBox(
     baseBoxType = baseBoxType.getBoxTypeWithNewShape(/*rank=*/0);
   auto baseAddrType = baseBoxType.getEleTy();
   if (!fir::isa_ref_type(baseAddrType))
-    baseAddrType = builder.getRefType(baseAddrType);
+    baseAddrType =
+        builder.getRefType(baseAddrType, fir::isa_volatile_type(baseBoxType));
   auto type = fir::unwrapRefType(baseAddrType);
   auto eleTy = fir::unwrapSequenceType(type);
   if (auto recTy = mlir::dyn_cast<fir::RecordType>(eleTy))
@@ -516,7 +522,7 @@ void fir::factory::associateMutableBox(fir::FirOpBuilder &builder,
   source.match(
       [&](const fir::PolymorphicValue &p) {
         mlir::Value sourceBox;
-        if (auto polyBox = source.getBoxOf<fir::PolymorphicValue>())
+        if (auto *polyBox = source.getBoxOf<fir::PolymorphicValue>())
           sourceBox = polyBox->getSourceBox();
         writer.updateMutableBox(p.getAddr(), /*lbounds=*/std::nullopt,
                                 /*extents=*/std::nullopt,

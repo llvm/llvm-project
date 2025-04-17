@@ -112,7 +112,7 @@ define i32 @test_multi_block(ptr byval([10 x i32]) %a, i1 %p) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.u8 %rs1, [test_multi_block_param_1];
 ; CHECK-NEXT:    and.b16 %rs2, %rs1, 1;
-; CHECK-NEXT:    setp.eq.b16 %p1, %rs2, 1;
+; CHECK-NEXT:    setp.ne.b16 %p1, %rs2, 0;
 ; CHECK-NEXT:    not.pred %p2, %p1;
 ; CHECK-NEXT:    @%p2 bra $L__BB5_2;
 ; CHECK-NEXT:  // %bb.1: // %if

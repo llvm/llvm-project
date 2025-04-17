@@ -1390,11 +1390,12 @@ bool x86AssemblyInspectionEngine::AugmentUnwindPlanFromCallSite(
 
     // If we already have one row for this instruction, we can continue.
     while (row_id < unwind_plan.GetRowCount() &&
-           unwind_plan.GetRowAtIndex(row_id)->GetOffset() <= offset) {
+           unwind_plan.GetRowAtIndex(row_id)->GetOffset() <=
+               static_cast<int64_t>(offset)) {
       row_id++;
     }
     const UnwindPlan::Row *original_row = unwind_plan.GetRowAtIndex(row_id - 1);
-    if (original_row->GetOffset() == offset) {
+    if (original_row->GetOffset() == static_cast<int64_t>(offset)) {
       row = *original_row;
       continue;
     }

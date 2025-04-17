@@ -19,7 +19,7 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _T1, class _T2>
-struct _LIBCPP_NO_SPECIALIZATIONS is_convertible : public integral_constant<bool, __is_convertible(_T1, _T2)> {};
+struct _LIBCPP_NO_SPECIALIZATIONS is_convertible : integral_constant<bool, __is_convertible(_T1, _T2)> {};
 
 #if _LIBCPP_STD_VER >= 17
 template <class _From, class _To>

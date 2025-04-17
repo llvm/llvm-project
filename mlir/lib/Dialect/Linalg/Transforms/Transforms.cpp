@@ -927,8 +927,12 @@ Value DecomposePadOpPattern::createFillOrGenerateOp(
     RewriterBase &rewriter, tensor::PadOp padOp, Value dest,
     const SmallVector<Value> &dynSizes) const {
   auto padValue = padOp.getConstantPaddingValue();
-  if (padValue)
+  if (padValue) {
+    // Move the padding value defined inside the PadOp block to outside.
+    if (padValue.getParentBlock() == &padOp.getRegion().front())
+      rewriter.moveOpBefore(padValue.getDefiningOp(), padOp);
     return rewriter.create<FillOp>(padOp.getLoc(), padValue, dest).result();
+  }
 
   // Fill could not be optimized: Lower to tensor::GenerateOp with region.
   auto generateOp = rewriter.create<tensor::GenerateOp>(

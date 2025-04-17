@@ -52,7 +52,7 @@ define i128 @srem_i128(i128 %lhs, i128 %rhs) {
 ; CHECK-NEXT:    selp.b32 %r6, -1, 0, %p10;
 ; CHECK-NEXT:    selp.b32 %r7, %r6, %r5, %p8;
 ; CHECK-NEXT:    and.b32 %r8, %r7, 1;
-; CHECK-NEXT:    setp.eq.b32 %p11, %r8, 1;
+; CHECK-NEXT:    setp.ne.b32 %p11, %r8, 0;
 ; CHECK-NEXT:    or.pred %p12, %p5, %p11;
 ; CHECK-NEXT:    xor.b64 %rd68, %rd66, 127;
 ; CHECK-NEXT:    or.b64 %rd69, %rd68, %rd67;
@@ -185,7 +185,7 @@ define i128 @urem_i128(i128 %lhs, i128 %rhs) {
 ; CHECK-NEXT:    selp.b32 %r6, -1, 0, %p8;
 ; CHECK-NEXT:    selp.b32 %r7, %r6, %r5, %p6;
 ; CHECK-NEXT:    and.b32 %r8, %r7, 1;
-; CHECK-NEXT:    setp.eq.b32 %p9, %r8, 1;
+; CHECK-NEXT:    setp.ne.b32 %p9, %r8, 0;
 ; CHECK-NEXT:    or.pred %p10, %p3, %p9;
 ; CHECK-NEXT:    xor.b64 %rd58, %rd56, 127;
 ; CHECK-NEXT:    or.b64 %rd59, %rd58, %rd57;
@@ -361,7 +361,7 @@ define i128 @sdiv_i128(i128 %lhs, i128 %rhs) {
 ; CHECK-NEXT:    selp.b32 %r6, -1, 0, %p10;
 ; CHECK-NEXT:    selp.b32 %r7, %r6, %r5, %p8;
 ; CHECK-NEXT:    and.b32 %r8, %r7, 1;
-; CHECK-NEXT:    setp.eq.b32 %p11, %r8, 1;
+; CHECK-NEXT:    setp.ne.b32 %p11, %r8, 0;
 ; CHECK-NEXT:    or.pred %p12, %p5, %p11;
 ; CHECK-NEXT:    xor.b64 %rd69, %rd67, 127;
 ; CHECK-NEXT:    or.b64 %rd70, %rd69, %rd68;
@@ -488,7 +488,7 @@ define i128 @udiv_i128(i128 %lhs, i128 %rhs) {
 ; CHECK-NEXT:    selp.b32 %r6, -1, 0, %p8;
 ; CHECK-NEXT:    selp.b32 %r7, %r6, %r5, %p6;
 ; CHECK-NEXT:    and.b32 %r8, %r7, 1;
-; CHECK-NEXT:    setp.eq.b32 %p9, %r8, 1;
+; CHECK-NEXT:    setp.ne.b32 %p9, %r8, 0;
 ; CHECK-NEXT:    or.pred %p10, %p3, %p9;
 ; CHECK-NEXT:    xor.b64 %rd58, %rd56, 127;
 ; CHECK-NEXT:    or.b64 %rd59, %rd58, %rd57;

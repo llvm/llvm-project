@@ -30,6 +30,26 @@
 
 namespace lldb_dap::protocol {
 
+/// Arguments for `cancel` request.
+struct CancelArguments {
+  /// The ID (attribute `seq`) of the request to cancel. If missing no request
+  /// is cancelled.
+  ///
+  /// Both a `requestId` and a `progressId` can be specified in one request.
+  std::optional<int64_t> requestId;
+
+  /// The ID (attribute `progressId`) of the progress to cancel. If missing no
+  /// progress is cancelled.
+  ///
+  /// Both a `requestId` and a `progressId` can be specified in one request.
+  std::optional<int64_t> progressId;
+};
+bool fromJSON(const llvm::json::Value &, CancelArguments &, llvm::json::Path);
+
+/// Response to `cancel` request. This is just an acknowledgement, so no body
+/// field is required.
+using CancelResponseBody = VoidResponse;
+
 /// Arguments for `disconnect` request.
 struct DisconnectArguments {
   /// A value of true indicates that this `disconnect` request is part of a
@@ -80,7 +100,7 @@ enum PathFormat : unsigned { ePatFormatPath, ePathFormatURI };
 /// Arguments for `initialize` request.
 struct InitializeRequestArguments {
   /// The ID of the debug adapter.
-  std::string adatperID;
+  std::string adapterID;
 
   /// The ID of the client using this adapter.
   std::optional<std::string> clientID;
@@ -93,7 +113,7 @@ struct InitializeRequestArguments {
 
   /// Determines in what format paths are specified. The default is `path`,
   /// which is the native format.
-  std::optional<PathFormat> pathFormat = ePatFormatPath;
+  PathFormat pathFormat = ePatFormatPath;
 
   /// If true all line numbers are 1-based (default).
   std::optional<bool> linesStartAt1;

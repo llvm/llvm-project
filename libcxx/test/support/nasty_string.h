@@ -23,21 +23,7 @@
 // library uses the provided `CharTraits` instead of using operations on
 // the value_type directly.
 
-
-// When using the code during constant evaluation it relies on
-//   P2647R1 Permitting static constexpr variables in constexpr functions
-// This is a C++23 feature, which is not supported by all compilers yet.
-// * GCC >= 13
-// * Clang >= 16
-// * MSVC no support yet
-//
-// TODO After there is proper compiler support use TEST_STD_VER >= 23 instead
-// of this macro in the tests.
-#if TEST_STD_VER < 23 || __cpp_constexpr < 202211L
-#  define TEST_HAS_NO_NASTY_STRING
-#endif
-
-#ifndef TEST_HAS_NO_NASTY_STRING
+#if TEST_STD_VER >= 20
 // Make sure the char-like operations in strings do not depend on the char-like type.
 struct nasty_char {
   template <typename T>
@@ -165,10 +151,8 @@ struct ToNastyChar {
 template <std::size_t N>
 ToNastyChar(const char (&)[N]) -> ToNastyChar<N>;
 
-template <ToNastyChar t>
-constexpr auto to_nasty_char() {
-  return t;
-}
+template <ToNastyChar Str>
+inline constexpr auto static_nasty_text = Str;
 
 // A macro like MAKE_CSTRING
 //
@@ -178,13 +162,12 @@ constexpr auto to_nasty_char() {
 #  define CONVERT_TO_CSTRING(CHAR, STR)                                                                                \
     []<class CharT> {                                                                                                  \
       if constexpr (std::is_same_v<CharT, nasty_char>) {                                                               \
-        static constexpr auto result = to_nasty_char<STR>();                                                           \
-        return result.text;                                                                                            \
+        return static_nasty_text<STR>.text;                                                                            \
       } else                                                                                                           \
         return MAKE_CSTRING(CharT, STR);                                                                               \
     }.template operator()<CHAR>() /* */
-#else                             // TEST_HAS_NO_NASTY_STRING
+#else                             // TEST_STD_VER >= 20
 #  define CONVERT_TO_CSTRING(CharT, STR) MAKE_CSTRING(CharT, STR)
-#endif                            // TEST_HAS_NO_NASTY_STRING
+#endif // TEST_STD_VER >= 20
 
-#endif                            // TEST_SUPPORT_NASTY_STRING_H
+#endif // TEST_SUPPORT_NASTY_STRING_H

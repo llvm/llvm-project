@@ -32,6 +32,7 @@ void registerOpenACCExtensions(mlir::DialectRegistry &registry) {
     fir::LLVMPointerType::attachInterface<
         OpenACCPointerLikeModel<fir::LLVMPointerType>>(*ctx);
   });
+  registerAttrsExtensions(registry);
 }
 
 } // namespace fir::acc

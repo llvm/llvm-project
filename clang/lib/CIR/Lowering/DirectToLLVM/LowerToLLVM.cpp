@@ -828,6 +828,26 @@ mlir::LogicalResult CIRToLLVMFuncOpLowering::matchAndRewrite(
   return mlir::LogicalResult::success();
 }
 
+mlir::LogicalResult CIRToLLVMGetGlobalOpLowering::matchAndRewrite(
+    cir::GetGlobalOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  // FIXME(cir): Premature DCE to avoid lowering stuff we're not using.
+  // CIRGen should mitigate this and not emit the get_global.
+  if (op->getUses().empty()) {
+    rewriter.eraseOp(op);
+    return mlir::success();
+  }
+
+  mlir::Type type = getTypeConverter()->convertType(op.getType());
+  mlir::Operation *newop =
+      rewriter.create<mlir::LLVM::AddressOfOp>(op.getLoc(), type, op.getName());
+
+  assert(!cir::MissingFeatures::opGlobalThreadLocal());
+
+  rewriter.replaceOp(op, newop);
+  return mlir::success();
+}
+
 /// Replace CIR global with a region initialized LLVM global and update
 /// insertion point to the end of the initializer block.
 void CIRToLLVMGlobalOpLowering::setupRegionInitializedLLVMGlobalOp(
@@ -1317,6 +1337,35 @@ static void prepareTypeConverter(mlir::LLVMTypeConverter &converter,
   converter.addConversion([&](cir::BF16Type type) -> mlir::Type {
     return mlir::BFloat16Type::get(type.getContext());
   });
+  converter.addConversion([&](cir::RecordType type) -> mlir::Type {
+    // Convert struct members.
+    llvm::SmallVector<mlir::Type> llvmMembers;
+    switch (type.getKind()) {
+    case cir::RecordType::Struct:
+      for (mlir::Type ty : type.getMembers())
+        llvmMembers.push_back(convertTypeForMemory(converter, dataLayout, ty));
+      break;
+    // Unions are lowered as only the largest member.
+    case cir::RecordType::Union:
+      llvm_unreachable("Lowering of unions is NYI");
+      break;
+    }
+
+    // Record has a name: lower as an identified record.
+    mlir::LLVM::LLVMStructType llvmStruct;
+    if (type.getName()) {
+      llvmStruct = mlir::LLVM::LLVMStructType::getIdentified(
+          type.getContext(), type.getPrefixedName());
+      assert(!cir::MissingFeatures::packedRecords());
+      if (llvmStruct.setBody(llvmMembers, /*isPacked=*/true).failed())
+        llvm_unreachable("Failed to set body of record");
+    } else { // Record has no name: lower as literal record.
+      llvmStruct = mlir::LLVM::LLVMStructType::getLiteral(
+          type.getContext(), llvmMembers, /*isPacked=*/true);
+    }
+
+    return llvmStruct;
+  });
 }
 
 // The applyPartialConversion function traverses blocks in the dominance order,
@@ -1418,6 +1467,7 @@ void ConvertCIRToLLVMPass::runOnOperation() {
                CIRToLLVMCmpOpLowering,
                CIRToLLVMConstantOpLowering,
                CIRToLLVMFuncOpLowering,
+               CIRToLLVMGetGlobalOpLowering,
                CIRToLLVMTrapOpLowering,
                CIRToLLVMUnaryOpLowering
       // clang-format on

@@ -1346,10 +1346,9 @@ define <4 x i16> @vmerge_2(<4 x i16> %x) {
 define <4 x i16> @vmerge_3(<4 x i16> %x) {
 ; CHECK-LABEL: vmerge_3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; CHECK-NEXT:    vmv.v.i v0, 6
-; CHECK-NEXT:    vmv.v.i v9, 5
-; CHECK-NEXT:    vrgather.vi v8, v9, 1, v0.t
+; CHECK-NEXT:    vmerge.vim v8, v8, 5, v0
 ; CHECK-NEXT:    ret
    %s = shufflevector <4 x i16> %x, <4 x i16> <i16 poison, i16 5, i16 poison, i16 poison>, <4 x i32> <i32 0, i32 5, i32 5, i32 3>
    ret <4 x i16> %s
@@ -1415,3 +1414,80 @@ define <8 x i32> @shuffle_v8i32_locally_repeating_neg(<8 x i32> %a) {
   %res = shufflevector <8 x i32> %a, <8 x i32> poison, <8 x i32> <i32 1, i32 0, i32 poison, i32 poison, i32 5, i32 4, i32 6, i32 6>
   ret <8 x i32> %res
 }
+
+define <8 x i8> @identity_splat0(<8 x i8> %v) {
+; CHECK-LABEL: identity_splat0:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a0, 25
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
+; CHECK-NEXT:    vmv.s.x v0, a0
+; CHECK-NEXT:    vmv1r.v v9, v8
+; CHECK-NEXT:    vrgather.vi v9, v8, 0, v0.t
+; CHECK-NEXT:    vmv1r.v v8, v9
+; CHECK-NEXT:    ret
+  %shuf = shufflevector <8 x i8> %v, <8 x i8> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 0, i32 0, i32 5, i32 6, i32 7>
+  ret <8 x i8> %shuf
+}
+
+define <8 x i8> @identity_splat2(<8 x i8> %v) {
+; CHECK-LABEL: identity_splat2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a0, 28
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
+; CHECK-NEXT:    vmv.s.x v0, a0
+; CHECK-NEXT:    vmv1r.v v9, v8
+; CHECK-NEXT:    vrgather.vi v9, v8, 2, v0.t
+; CHECK-NEXT:    vmv1r.v v8, v9
+; CHECK-NEXT:    ret
+  %shuf = shufflevector <8 x i8> %v, <8 x i8> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 2, i32 2, i32 5, i32 6, i32 7>
+  ret <8 x i8> %shuf
+}
+
+
+define <8 x i8> @vmerge_vxm(<8 x i8> %v, i8 %s) {
+; CHECK-LABEL: vmerge_vxm:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a1, 25
+; CHECK-NEXT:    vsetivli zero, 8, e8, m1, tu, ma
+; CHECK-NEXT:    vmv.s.x v8, a0
+; CHECK-NEXT:    vmv.s.x v0, a1
+; CHECK-NEXT:    vmv1r.v v9, v8
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
+; CHECK-NEXT:    vrgather.vi v9, v8, 0, v0.t
+; CHECK-NEXT:    vmv1r.v v8, v9
+; CHECK-NEXT:    ret
+  %ins = insertelement <8 x i8> %v, i8 %s, i32 0
+  %shuf = shufflevector <8 x i8> %ins, <8 x i8> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 0, i32 0, i32 5, i32 6, i32 7>
+  ret <8 x i8> %shuf
+}
+
+define <8 x i8> @vmerge_vxm2(<8 x i8> %v, i8 %s) {
+; CHECK-LABEL: vmerge_vxm2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a1, 25
+; CHECK-NEXT:    vsetivli zero, 1, e8, m1, tu, ma
+; CHECK-NEXT:    vmv.s.x v0, a1
+; CHECK-NEXT:    vmv1r.v v9, v8
+; CHECK-NEXT:    vmv.s.x v9, a0
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
+; CHECK-NEXT:    vrgather.vi v8, v9, 0, v0.t
+; CHECK-NEXT:    ret
+  %ins = insertelement <8 x i8> %v, i8 %s, i32 0
+  %shuf = shufflevector <8 x i8> %v, <8 x i8> %ins, <8 x i32> <i32 8, i32 1, i32 2, i32 8, i32 8, i32 5, i32 6, i32 7>
+  ret <8 x i8> %shuf
+}
+
+define <8 x i8> @vmerge_vxm3(<8 x i8> %v, i8 %s) {
+; CHECK-LABEL: vmerge_vxm3:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a1, 25
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; CHECK-NEXT:    vmv.s.x v0, a1
+; CHECK-NEXT:    vmerge.vxm v8, v8, a0, v0
+; CHECK-NEXT:    ret
+  %ins = insertelement <8 x i8> %v, i8 %s, i32 0
+  %splat = shufflevector <8 x i8> %ins, <8 x i8> poison, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
+  %shuf = shufflevector <8 x i8> %v, <8 x i8> %splat, <8 x i32> <i32 8, i32 1, i32 2, i32 8, i32 8, i32 5, i32 6, i32 7>
+  ret <8 x i8> %shuf
+}
+
