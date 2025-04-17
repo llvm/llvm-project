@@ -429,7 +429,7 @@ void ProcessMachCore::LoadBinariesViaExhaustiveSearch() {
   // To do an exhaustive search, we'll need to create data extractors
   // to get correctly sized/endianness fields.  If we had a main binary
   // already, we would have set the Target to that - so here we'll use
-  // the corefile's cputype/cpusubtype as the best guess. 
+  // the corefile's cputype/cpusubtype as the best guess.
   if (!GetTarget().GetArchitecture().IsValid()) {
     // The corefile's architecture is our best starting point.
     ArchSpec arch(m_core_module_sp->GetArchitecture());
