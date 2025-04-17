@@ -425,7 +425,7 @@ createSubgroupDPPReduction(PatternRewriter &rewriter, gpu::SubgroupReduceOp &op,
     } else if (chipset.majorVersion <= 12) {
       // Use a permute lane to cross rows (row 1 <-> row 0, row 3 <-> row 2).
       Value uint32Max = rewriter.create<arith::ConstantOp>(
-        loc, rewriter.getI32Type(), rewriter.getI32IntegerAttr(-1));
+          loc, rewriter.getI32Type(), rewriter.getI32IntegerAttr(-1));
       dpp = rewriter.create<ROCDL::PermlaneX16Op>(loc, res.getType(), res, res,
                                                   uint32Max, uint32Max,
                                                   /*fi=*/true,
@@ -440,8 +440,8 @@ createSubgroupDPPReduction(PatternRewriter &rewriter, gpu::SubgroupReduceOp &op,
       }
     } else {
       return rewriter.notifyMatchFailure(
-        op, "Subgroup reduce lowering to DPP not currently supported for "
-            "this device.");
+          op, "Subgroup reduce lowering to DPP not currently supported for "
+              "this device.");
     }
   }
   if (ci.clusterSize >= 64) {
@@ -465,8 +465,8 @@ createSubgroupDPPReduction(PatternRewriter &rewriter, gpu::SubgroupReduceOp &op,
       res = rewriter.create<ROCDL::ReadlaneOp>(loc, res.getType(), res, lane0);
     } else {
       return rewriter.notifyMatchFailure(
-        op, "Subgroup reduce lowering to DPP not currently supported for "
-            "this device.");
+          op, "Subgroup reduce lowering to DPP not currently supported for "
+              "this device.");
     }
     res = vector::makeArithReduction(rewriter, loc,
                                      gpu::convertReductionKind(mode), res, dpp);
