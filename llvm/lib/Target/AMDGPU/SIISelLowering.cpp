@@ -1060,10 +1060,6 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     setOperationAction({ISD::FEXP2, ISD::FLOG2, ISD::FSQRT}, MVT::bf16, Legal);
   }
 
-  if (Subtarget->hasCvtPkF16F32Inst()) {
-    setOperationAction(ISD::FP_ROUND, MVT::v2f16, Legal);
-  }
-
   setTargetDAGCombine({ISD::ADD,
                        ISD::UADDO_CARRY,
                        ISD::SUB,
@@ -10304,7 +10300,6 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::amdgcn_swmmac_f32_16x16x64_bf16:
   case Intrinsic::amdgcn_swmmac_bf16f32_16x16x64_bf16:
   case Intrinsic::amdgcn_swmmac_f32_16x16x64_f16:
-  case Intrinsic::amdgcn_swmmac_i32_16x16x256_iu4:
   case Intrinsic::amdgcn_swmmac_i32_16x16x128_iu8: {
     if (Op.getOperand(6).getValueType() == MVT::i32)
       return SDValue();

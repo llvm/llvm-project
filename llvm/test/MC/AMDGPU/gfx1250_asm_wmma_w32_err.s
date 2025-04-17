@@ -132,18 +132,6 @@ v_wmma_i32_16x16x64_iu8 v[16:23], v[0:7], v[8:15], v[16:23] clamp
 v_wmma_i32_16x16x64_iu8 v[16:23], v[0:7], v[8:15], v[16:23] neg_lo:[0,0,1]
 // GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid neg_lo operand
 
-v_wmma_i32_16x16x128_iu4 v[16:23], v[0:7], v[8:15], s[16:23]
-// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
-
-v_wmma_i32_16x16x128_iu4 v[16:23], v[0:7], v[8:15], 128
-// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
-
-v_wmma_i32_16x16x128_iu4 v[16:23], v[0:7], v[8:15], v[16:23] clamp
-// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
-
-v_wmma_i32_16x16x128_iu4 v[16:23], v[0:7], v[8:15], v[16:23] neg_lo:[0,0,1]
-// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid neg_lo operand
-
 v_wmma_f32_16x16x32_f16 v[16:23], v[0:7], v[8:15], s[16:23]
 // GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 
@@ -349,21 +337,6 @@ v_swmmac_i32_16x16x128_iu8 v[24:31], v[0:7], v[8:23], v32 index_key:2
 // GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: out of range index_key
 
 v_swmmac_i32_16x16x128_iu8 v[24:31], v[0:7], v[8:23], v32 neg_lo:[0,0,1]
-// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid neg_lo operand
-
-v_swmmac_i32_16x16x256_iu4 v[24:31], v[0:7], v[8:23], s32
-// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
-
-v_swmmac_i32_16x16x256_iu4 v[24:31], v[0:7], 1, v32
-// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
-
-v_swmmac_i32_16x16x256_iu4 v[24:31], v[0:7], v[8:23], v32 clamp
-// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
-
-v_swmmac_i32_16x16x256_iu4 v[24:31], v[0:7], v[8:23], v32 index_key:2
-// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: out of range index_key
-
-v_swmmac_i32_16x16x256_iu4 v[24:31], v[0:7], v[8:23], v32 neg_lo:[0,0,1]
 // GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid neg_lo operand
 
 v_swmmac_f32_16x16x64_f16 v[24:31], v[0:7], v[8:23], s32

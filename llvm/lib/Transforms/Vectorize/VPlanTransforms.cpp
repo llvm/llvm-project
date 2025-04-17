@@ -1026,6 +1026,18 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
     if (TypeInfo.inferScalarType(X) != WideStepTy)
       X = VPBuilder(&R).createWidenCast(Instruction::Trunc, X, WideStepTy);
     R.getVPSingleValue()->replaceAllUsesWith(X);
+    return;
+  }
+
+  // For i1 vp.merges produced by AnyOf reductions:
+  // vp.merge true, (or x, y), x, evl -> vp.merge y, true, x, evl
+  if (match(&R, m_Intrinsic<Intrinsic::vp_merge>(m_True(), m_VPValue(A),
+                                                 m_VPValue(X), m_VPValue())) &&
+      match(A, m_c_BinaryOr(m_Specific(X), m_VPValue(Y))) &&
+      TypeInfo.inferScalarType(R.getVPSingleValue())->isIntegerTy(1)) {
+    R.setOperand(1, R.getOperand(0));
+    R.setOperand(0, Y);
+    return;
   }
 }
 
