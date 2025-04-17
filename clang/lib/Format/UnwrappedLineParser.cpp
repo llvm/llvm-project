@@ -2371,7 +2371,8 @@ bool UnwrappedLineParser::tryToParseLambdaIntroducer() {
   if ((Previous && ((Previous->Tok.getIdentifierInfo() &&
                      !Previous->isOneOf(tok::kw_return, tok::kw_co_await,
                                         tok::kw_co_yield, tok::kw_co_return)) ||
-                    Previous->closesScope())) ||
+                    (Previous->closesScope() &&
+                     !Previous->endsSequence(tok::r_paren, tok::greater)))) ||
       LeftSquare->isCppStructuredBinding(IsCpp)) {
     return false;
   }
