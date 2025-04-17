@@ -395,8 +395,8 @@ struct RISCVOperand final : public MCParsedAsmOperand {
   };
 
   struct RegRegOp {
-    MCRegister Reg1;
-    MCRegister Reg2;
+    MCRegister BaseReg;
+    MCRegister OffsetReg;
   };
 
   SMLoc StartLoc, EndLoc;
@@ -585,17 +585,6 @@ public:
     RISCVMCExpr::Specifier VK = RISCVMCExpr::VK_None;
     return RISCVAsmParser::classifySymbolRef(getImm(), VK) &&
            (VK == RISCVMCExpr::VK_CALL || VK == RISCVMCExpr::VK_CALL_PLT);
-  }
-
-  bool isPseudoQCJumpSymbol() const {
-    int64_t Imm;
-    // Must be of 'immediate' type but not a constant.
-    if (!isImm() || evaluateConstantImm(getImm(), Imm))
-      return false;
-
-    RISCVMCExpr::Specifier VK = RISCVMCExpr::VK_None;
-    return RISCVAsmParser::classifySymbolRef(getImm(), VK) &&
-           VK == RISCVMCExpr::VK_QC_E_JUMP_PLT;
   }
 
   bool isPseudoJumpSymbol() const {
@@ -1054,8 +1043,8 @@ public:
       OS << '>';
       break;
     case KindTy::RegReg:
-      OS << "<RegReg:  Reg1 " << RegName(RegReg.Reg1);
-      OS << " Reg2 " << RegName(RegReg.Reg2);
+      OS << "<RegReg: BaseReg " << RegName(RegReg.BaseReg) << " OffsetReg "
+         << RegName(RegReg.OffsetReg);
       break;
     }
   }
@@ -1140,11 +1129,11 @@ public:
     return Op;
   }
 
-  static std::unique_ptr<RISCVOperand> createRegReg(MCRegister Reg1,
-                                                    MCRegister Reg2, SMLoc S) {
+  static std::unique_ptr<RISCVOperand>
+  createRegReg(MCRegister BaseReg, MCRegister OffsetReg, SMLoc S) {
     auto Op = std::make_unique<RISCVOperand>(KindTy::RegReg);
-    Op->RegReg.Reg1 = Reg1;
-    Op->RegReg.Reg2 = Reg2;
+    Op->RegReg.BaseReg = BaseReg;
+    Op->RegReg.OffsetReg = OffsetReg;
     Op->StartLoc = S;
     Op->EndLoc = S;
     return Op;
@@ -1224,8 +1213,8 @@ public:
 
   void addRegRegOperands(MCInst &Inst, unsigned N) const {
     assert(N == 2 && "Invalid number of operands!");
-    Inst.addOperand(MCOperand::createReg(RegReg.Reg1));
-    Inst.addOperand(MCOperand::createReg(RegReg.Reg2));
+    Inst.addOperand(MCOperand::createReg(RegReg.BaseReg));
+    Inst.addOperand(MCOperand::createReg(RegReg.OffsetReg));
   }
 
   void addStackAdjOperands(MCInst &Inst, unsigned N) const {
@@ -1598,11 +1587,11 @@ bool RISCVAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     return generateImmOutOfRangeError(Operands, ErrorInfo,
                                       std::numeric_limits<int32_t>::min(),
                                       std::numeric_limits<uint32_t>::max());
-  case Match_InvalidSImm32Lsb0:
+  case Match_InvalidBareSImm32Lsb0:
     return generateImmOutOfRangeError(
         Operands, ErrorInfo, std::numeric_limits<int32_t>::min(),
         std::numeric_limits<int32_t>::max() - 1,
-        "operand must be a multiple of 2 bytes in the range ");
+        "operand must be a multiple of 2 bytes in the range");
   case Match_InvalidRnumArg: {
     return generateImmOutOfRangeError(Operands, ErrorInfo, 0, 10);
   }
@@ -2151,25 +2140,10 @@ ParseStatus RISCVAsmParser::parsePseudoQCJumpSymbol(OperandVector &Operands) {
 
   std::string Identifier(getTok().getIdentifier());
   SMLoc E = getTok().getEndLoc();
-
-  if (getLexer().peekTok().is(AsmToken::At)) {
-    Lex();
-    Lex();
-    SMLoc PLTLoc = getLoc();
-    StringRef PLT;
-    E = getTok().getEndLoc();
-    if (getParser().parseIdentifier(PLT) || PLT != "plt")
-      return Error(PLTLoc,
-                   "'@plt' is the only valid operand for this instruction");
-  } else {
-    Lex();
-  }
-
-  RISCVMCExpr::Specifier Kind = RISCVMCExpr::VK_QC_E_JUMP_PLT;
+  Lex();
 
   MCSymbol *Sym = getContext().getOrCreateSymbol(Identifier);
   Res = MCSymbolRefExpr::create(Sym, getContext());
-  Res = RISCVMCExpr::create(Res, Kind, getContext());
   Operands.push_back(RISCVOperand::createImm(Res, S, E, isRV64()));
   return ParseStatus::Success;
 }

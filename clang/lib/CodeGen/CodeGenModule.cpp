@@ -1144,6 +1144,10 @@ void CodeGenModule::Release() {
                               1);
   }
 
+  if (CodeGenOpts.UniqueSourceFileNames) {
+    getModule().addModuleFlag(llvm::Module::Max, "Unique Source File Names", 1);
+  }
+
   if (LangOpts.Sanitize.has(SanitizerKind::KCFI)) {
     getModule().addModuleFlag(llvm::Module::Override, "kcfi", 1);
     // KCFI assumes patchable-function-prefix is the same for all indirectly

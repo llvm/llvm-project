@@ -1064,7 +1064,8 @@ public:
       const APInt &CIValue = CI->getValue();
       switch (Opcode) {
       case Instruction::Shl:
-        InterchangeableMask = CIValue.isZero() ? CanBeAll : MulBIT | ShlBIT;
+        if (CIValue.ult(CIValue.getBitWidth()))
+          InterchangeableMask = CIValue.isZero() ? CanBeAll : MulBIT | ShlBIT;
         break;
       case Instruction::Mul:
         if (CIValue.isOne()) {
@@ -7478,8 +7479,8 @@ void BoUpSLP::reorderBottomToTop(bool IgnoreReorder) {
         for (const auto &P : Data.first->CombinedEntriesWithIndices) {
           TreeEntry &OpTE = *VectorizableTree[P.first].get();
           OrdersType Order = OpTE.ReorderIndices;
-          if (Order.empty()) {
-            if (!OpTE.isGather())
+          if (Order.empty() || !OpTE.ReuseShuffleIndices.empty()) {
+            if (!OpTE.isGather() && OpTE.ReuseShuffleIndices.empty())
               continue;
             const auto BestOrder =
                 getReorderingData(OpTE, /*TopToBottom=*/false, IgnoreReorder);
@@ -7576,6 +7577,8 @@ void BoUpSLP::reorderBottomToTop(bool IgnoreReorder) {
             return Res.takeVector();
           };
           auto GetNumOperands = [](const TreeEntry *TE) {
+            if (TE->State == TreeEntry::SplitVectorize)
+              return TE->getNumOperands();
             if (auto *CI = dyn_cast<CallInst>(TE->getMainOp()); CI)
               return CI->arg_size();
             return TE->getNumOperands();
@@ -8399,11 +8402,7 @@ void BoUpSLP::tryToVectorizeGatheredLoads(
             continue;
           }
           SmallVector<std::pair<LoadInst *, int>> LocalLoadsDists(LoadsDists);
-          SmallVector<LoadInst *> OriginalLoads(LocalLoadsDists.size());
-          transform(LoadsDists, OriginalLoads.begin(),
-                    [](const std::pair<LoadInst *, int> &L) -> LoadInst * {
-                      return L.first;
-                    });
+          SmallVector<LoadInst *> OriginalLoads(make_first_range(LoadsDists));
           stable_sort(LocalLoadsDists, LoadSorter);
           SmallVector<LoadInst *> Loads;
           unsigned MaxConsecutiveDistance = 0;
@@ -9573,6 +9572,24 @@ bool BoUpSLP::canBuildSplitNode(ArrayRef<Value *> VL,
   if (VL.size() <= SmallNodeSize || TTI->preferAlternateOpcodeVectorization() ||
       !SplitAlternateInstructions)
     return false;
+
+  // Check if this is a duplicate of another split entry.
+  LLVM_DEBUG(dbgs() << "SLP: \tChecking bundle: " << *LocalState.getMainOp()
+                    << ".\n");
+  for (TreeEntry *E : getSplitTreeEntries(LocalState.getMainOp())) {
+    if (E->isSame(VL)) {
+      LLVM_DEBUG(dbgs() << "SLP: Perfect diamond merge at "
+                        << *LocalState.getMainOp() << ".\n");
+      return false;
+    }
+    SmallPtrSet<Value *, 8> Values(llvm::from_range, E->Scalars);
+    if (all_of(VL, [&](Value *V) {
+          return isa<PoisonValue>(V) || Values.contains(V);
+        })) {
+      LLVM_DEBUG(dbgs() << "SLP: Gathering due to full overlap.\n");
+      return false;
+    }
+  }
 
   ReorderIndices.assign(VL.size(), VL.size());
   SmallBitVector Op1Indices(VL.size());
@@ -15706,13 +15723,10 @@ InstructionCost BoUpSLP::getGatherCost(ArrayRef<Value *> VL, bool ForPoisonSrc,
                                        Type *ScalarTy) const {
   const unsigned VF = VL.size();
   auto *VecTy = getWidenedType(ScalarTy, VF);
-  bool DuplicateNonConst = false;
   // Find the cost of inserting/extracting values from the vector.
   // Check if the same elements are inserted several times and count them as
   // shuffle candidates.
-  APInt ShuffledElements = APInt::getZero(VF);
   APInt DemandedElements = APInt::getZero(VF);
-  DenseMap<Value *, unsigned> UniqueElements;
   constexpr TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
   InstructionCost Cost;
   auto EstimateInsertCost = [&](unsigned I, Value *V) {
@@ -15721,32 +15735,18 @@ InstructionCost BoUpSLP::getGatherCost(ArrayRef<Value *> VL, bool ForPoisonSrc,
       Cost += TTI->getCastInstrCost(Instruction::Trunc, ScalarTy, V->getType(),
                                     TTI::CastContextHint::None, CostKind);
   };
-  SmallVector<int> ShuffleMask(VF, PoisonMaskElem);
   SmallVector<int> ConstantShuffleMask(VF, PoisonMaskElem);
   std::iota(ConstantShuffleMask.begin(), ConstantShuffleMask.end(), 0);
   for (auto [I, V] : enumerate(VL)) {
     // No need to shuffle duplicates for constants.
-    if ((ForPoisonSrc && isConstant(V)) || isa<UndefValue>(V)) {
-      ShuffledElements.setBit(I);
-      ShuffleMask[I] = isa<PoisonValue>(V) ? PoisonMaskElem : I;
+    if ((ForPoisonSrc && isConstant(V)) || isa<UndefValue>(V))
       continue;
-    }
 
     if (isConstant(V)) {
       ConstantShuffleMask[I] = I + VF;
-      ShuffleMask[I] = I;
       continue;
     }
-    auto Res = UniqueElements.try_emplace(V, I);
-    if (Res.second) {
-      EstimateInsertCost(I, V);
-      ShuffleMask[I] = I;
-      continue;
-    }
-
-    DuplicateNonConst = true;
-    ShuffledElements.setBit(I);
-    ShuffleMask[I] = Res.first->second;
+    EstimateInsertCost(I, V);
   }
   // FIXME: add a cost for constant vector materialization.
   bool IsAnyNonUndefConst =
@@ -15755,15 +15755,6 @@ InstructionCost BoUpSLP::getGatherCost(ArrayRef<Value *> VL, bool ForPoisonSrc,
   if (!ForPoisonSrc && IsAnyNonUndefConst) {
     Cost += ::getShuffleCost(*TTI, TargetTransformInfo::SK_PermuteTwoSrc, VecTy,
                              ConstantShuffleMask);
-    // Update the shuffle mask for shuffling with incoming source (all elements
-    // are used!) or with constant subvector.
-    for_each(enumerate(ShuffleMask), [&](auto P) {
-      if ((!ForPoisonSrc && P.value() == PoisonMaskElem) ||
-          ConstantShuffleMask[P.index()] != PoisonMaskElem)
-        P.value() = P.index();
-      else if (P.value() != PoisonMaskElem)
-        P.value() += VF;
-    });
   }
 
   // 2. Insert unique non-constants.
@@ -15772,10 +15763,6 @@ InstructionCost BoUpSLP::getGatherCost(ArrayRef<Value *> VL, bool ForPoisonSrc,
                                      /*Insert=*/true,
                                      /*Extract=*/false, CostKind,
                                      ForPoisonSrc && !IsAnyNonUndefConst, VL);
-  // 3. Shuffle duplicates.
-  if (DuplicateNonConst)
-    Cost += ::getShuffleCost(*TTI, TargetTransformInfo::SK_PermuteSingleSrc,
-                             VecTy, ShuffleMask, CostKind);
   return Cost;
 }
 
@@ -15989,8 +15976,12 @@ void BoUpSLP::setInsertPointAfterBundle(const TreeEntry *E) {
   BasicBlock::iterator LastInstIt = LastInst->getIterator();
   // If the instruction is PHI, set the insert point after all the PHIs.
   bool IsPHI = isa<PHINode>(LastInst);
-  if (IsPHI)
+  if (IsPHI) {
     LastInstIt = LastInst->getParent()->getFirstNonPHIIt();
+    if (LastInstIt != LastInst->getParent()->end() &&
+        LastInstIt->getParent()->isLandingPad())
+      LastInstIt = std::next(LastInstIt);
+  }
   if (IsPHI ||
       (!E->isGather() && E->State != TreeEntry::SplitVectorize &&
        doesNotNeedToSchedule(E->Scalars)) ||
@@ -18423,8 +18414,14 @@ Value *BoUpSLP::vectorizeTree(
   // need to rebuild it.
   EntryToLastInstruction.clear();
   // All blocks must be scheduled before any instructions are inserted.
-  for (auto &BSIter : BlocksSchedules) {
+  for (auto &BSIter : BlocksSchedules)
     scheduleBlock(BSIter.second.get());
+  // Cache last instructions for the nodes to avoid side effects, which may
+  // appear during vectorization, like extra uses, etc.
+  for (const std::unique_ptr<TreeEntry> &TE : VectorizableTree) {
+    if (TE->isGather())
+      continue;
+    (void)getLastInstructionInBundle(TE.get());
   }
 
   if (ReductionRoot)
@@ -20529,6 +20526,11 @@ void BoUpSLP::computeMinimumValueSizes() {
     IsTruncRoot = true;
   }
   bool IsSignedCmp = false;
+  if (UserIgnoreList && all_of(*UserIgnoreList, [](Value *V) {
+        return match(V, m_SMin(m_Value(), m_Value())) ||
+               match(V, m_SMax(m_Value(), m_Value()));
+      }))
+    IsSignedCmp = true;
   while (NodeIdx < VectorizableTree.size()) {
     ArrayRef<Value *> TreeRoot = VectorizableTree[NodeIdx]->Scalars;
     unsigned Limit = 2;
@@ -21013,14 +21015,13 @@ bool SLPVectorizerPass::vectorizeStores(
           AnyProfitableGraph = false;
           unsigned StartIdx = std::distance(
               RangeSizes.begin(),
-              find_if(RangeSizes, std::bind(IsNotVectorized, Size >= MaxRegVF,
-                                            std::placeholders::_1)));
+              find_if(RangeSizes,
+                      std::bind(IsNotVectorized, Size >= MaxRegVF, _1)));
           while (StartIdx < End) {
-            unsigned EndIdx =
-                std::distance(RangeSizes.begin(),
-                              find_if(RangeSizes.drop_front(StartIdx),
-                                      std::bind(IsVectorized, Size >= MaxRegVF,
-                                                std::placeholders::_1)));
+            unsigned EndIdx = std::distance(
+                RangeSizes.begin(),
+                find_if(RangeSizes.drop_front(StartIdx),
+                        std::bind(IsVectorized, Size >= MaxRegVF, _1)));
             unsigned Sz = EndIdx >= End ? End : EndIdx;
             for (unsigned Cnt = StartIdx; Cnt + Size <= Sz;) {
               if (!checkTreeSizes(RangeSizes.slice(Cnt, Size),
@@ -21090,7 +21091,7 @@ bool SLPVectorizerPass::vectorizeStores(
               if (Size > 2 && Res &&
                   !all_of(RangeSizes.slice(Cnt, Size),
                           std::bind(VFIsProfitable, Size >= MaxRegVF, TreeSize,
-                                    std::placeholders::_1))) {
+                                    _1))) {
                 Cnt += Size;
                 continue;
               }
@@ -21098,8 +21099,7 @@ bool SLPVectorizerPass::vectorizeStores(
               // trees, just with larger number of elements.
               if (Size > MaxRegVF && TreeSize > 1 &&
                   all_of(RangeSizes.slice(Cnt, Size),
-                         std::bind(FirstSizeSame, TreeSize,
-                                   std::placeholders::_1))) {
+                         std::bind(FirstSizeSame, TreeSize, _1))) {
                 Cnt += Size;
                 while (Cnt != Sz && RangeSizes[Cnt].first == TreeSize)
                   ++Cnt;
@@ -21123,8 +21123,7 @@ bool SLPVectorizerPass::vectorizeStores(
             StartIdx = std::distance(
                 RangeSizes.begin(),
                 find_if(RangeSizes.drop_front(Sz),
-                        std::bind(IsNotVectorized, Size >= MaxRegVF,
-                                  std::placeholders::_1)));
+                        std::bind(IsNotVectorized, Size >= MaxRegVF, _1)));
           }
           if (!AnyProfitableGraph && Size >= MaxRegVF && has_single_bit(Size))
             break;
@@ -21145,8 +21144,7 @@ bool SLPVectorizerPass::vectorizeStores(
                 End -
                 std::distance(
                     RangeSizes.begin(),
-                    find_if(RangeSizes, std::bind(IsNotVectorized, true,
-                                                  std::placeholders::_1))) +
+                    find_if(RangeSizes, std::bind(IsNotVectorized, true, _1))) +
                 1));
         unsigned VF = bit_ceil(CandidateVFs.front()) * 2;
         unsigned Limit =
@@ -22499,53 +22497,16 @@ public:
         }
 
         Type *ScalarTy = VL.front()->getType();
-        if (isa<FixedVectorType>(ScalarTy)) {
-          assert(SLPReVec && "FixedVectorType is not expected.");
-          unsigned ScalarTyNumElements = getNumElements(ScalarTy);
-          Value *ReducedSubTree = PoisonValue::get(
-              getWidenedType(ScalarTy->getScalarType(), ScalarTyNumElements));
-          for (unsigned I : seq<unsigned>(ScalarTyNumElements)) {
-            // Do reduction for each lane.
-            // e.g., do reduce add for
-            // VL[0] = <4 x Ty> <a, b, c, d>
-            // VL[1] = <4 x Ty> <e, f, g, h>
-            // Lane[0] = <2 x Ty> <a, e>
-            // Lane[1] = <2 x Ty> <b, f>
-            // Lane[2] = <2 x Ty> <c, g>
-            // Lane[3] = <2 x Ty> <d, h>
-            // result[0] = reduce add Lane[0]
-            // result[1] = reduce add Lane[1]
-            // result[2] = reduce add Lane[2]
-            // result[3] = reduce add Lane[3]
-            SmallVector<int, 16> Mask =
-                createStrideMask(I, ScalarTyNumElements, VL.size());
-            Value *Lane = Builder.CreateShuffleVector(VectorizedRoot, Mask);
-            Value *Val =
-                createSingleOp(Builder, *TTI, Lane,
-                               OptReusedScalars && SameScaleFactor
-                                   ? SameValuesCounter.front().second
-                                   : 1,
-                               Lane->getType()->getScalarType() !=
-                                       VL.front()->getType()->getScalarType()
-                                   ? V.isSignedMinBitwidthRootNode()
-                                   : true,
-                               RdxRootInst->getType());
-            ReducedSubTree =
-                Builder.CreateInsertElement(ReducedSubTree, Val, I);
-          }
-          VectorizedTree = GetNewVectorizedTree(VectorizedTree, ReducedSubTree);
-        } else {
-          Type *VecTy = VectorizedRoot->getType();
-          Type *RedScalarTy = VecTy->getScalarType();
-          VectorValuesAndScales.emplace_back(
-              VectorizedRoot,
-              OptReusedScalars && SameScaleFactor
-                  ? SameValuesCounter.front().second
-                  : 1,
-              RedScalarTy != ScalarTy->getScalarType()
-                  ? V.isSignedMinBitwidthRootNode()
-                  : true);
-        }
+        Type *VecTy = VectorizedRoot->getType();
+        Type *RedScalarTy = VecTy->getScalarType();
+        VectorValuesAndScales.emplace_back(
+            VectorizedRoot,
+            OptReusedScalars && SameScaleFactor
+                ? SameValuesCounter.front().second
+                : 1,
+            RedScalarTy != ScalarTy->getScalarType()
+                ? V.isSignedMinBitwidthRootNode()
+                : true);
 
         // Count vectorized reduced values to exclude them from final reduction.
         for (Value *RdxVal : VL) {
@@ -22718,9 +22679,35 @@ private:
   Value *createSingleOp(IRBuilderBase &Builder, const TargetTransformInfo &TTI,
                         Value *Vec, unsigned Scale, bool IsSigned,
                         Type *DestTy) {
-    Value *Rdx = emitReduction(Vec, Builder, &TTI, DestTy);
-    if (Rdx->getType() != DestTy->getScalarType())
-      Rdx = Builder.CreateIntCast(Rdx, DestTy->getScalarType(), IsSigned);
+    Value *Rdx;
+    if (auto *VecTy = dyn_cast<FixedVectorType>(DestTy)) {
+      unsigned DestTyNumElements = getNumElements(VecTy);
+      unsigned VF = getNumElements(Vec->getType()) / DestTyNumElements;
+      Rdx = PoisonValue::get(
+          getWidenedType(Vec->getType()->getScalarType(), DestTyNumElements));
+      for (unsigned I : seq<unsigned>(DestTyNumElements)) {
+        // Do reduction for each lane.
+        // e.g., do reduce add for
+        // VL[0] = <4 x Ty> <a, b, c, d>
+        // VL[1] = <4 x Ty> <e, f, g, h>
+        // Lane[0] = <2 x Ty> <a, e>
+        // Lane[1] = <2 x Ty> <b, f>
+        // Lane[2] = <2 x Ty> <c, g>
+        // Lane[3] = <2 x Ty> <d, h>
+        // result[0] = reduce add Lane[0]
+        // result[1] = reduce add Lane[1]
+        // result[2] = reduce add Lane[2]
+        // result[3] = reduce add Lane[3]
+        SmallVector<int, 16> Mask = createStrideMask(I, DestTyNumElements, VF);
+        Value *Lane = Builder.CreateShuffleVector(Vec, Mask);
+        Rdx = Builder.CreateInsertElement(
+            Rdx, emitReduction(Lane, Builder, &TTI, DestTy), I);
+      }
+    } else {
+      Rdx = emitReduction(Vec, Builder, &TTI, DestTy);
+    }
+    if (Rdx->getType() != DestTy)
+      Rdx = Builder.CreateIntCast(Rdx, DestTy, IsSigned);
     // Improved analysis for add/fadd/xor reductions with same scale
     // factor for all operands of reductions. We can emit scalar ops for
     // them instead.
@@ -22787,30 +22774,32 @@ private:
     case RecurKind::FMul: {
       unsigned RdxOpcode = RecurrenceDescriptor::getOpcode(RdxKind);
       if (!AllConsts) {
-        if (auto *VecTy = dyn_cast<FixedVectorType>(ScalarTy)) {
-          assert(SLPReVec && "FixedVectorType is not expected.");
-          unsigned ScalarTyNumElements = VecTy->getNumElements();
-          for (unsigned I : seq<unsigned>(ReducedVals.size())) {
-            VectorCost += TTI->getShuffleCost(
-                TTI::SK_PermuteSingleSrc, VectorTy,
-                createStrideMask(I, ScalarTyNumElements, ReducedVals.size()));
-            VectorCost += TTI->getArithmeticReductionCost(RdxOpcode, VecTy, FMF,
-                                                          CostKind);
-          }
-          VectorCost += TTI->getScalarizationOverhead(
-              VecTy, APInt::getAllOnes(ScalarTyNumElements), /*Insert*/ true,
-              /*Extract*/ false, TTI::TCK_RecipThroughput);
-        } else if (DoesRequireReductionOp) {
-          Type *RedTy = VectorTy->getElementType();
-          auto [RType, IsSigned] = R.getRootNodeTypeWithNoCast().value_or(
-              std::make_pair(RedTy, true));
-          if (RType == RedTy) {
-            VectorCost = TTI->getArithmeticReductionCost(RdxOpcode, VectorTy,
-                                                         FMF, CostKind);
+        if (DoesRequireReductionOp) {
+          if (auto *VecTy = dyn_cast<FixedVectorType>(ScalarTy)) {
+            assert(SLPReVec && "FixedVectorType is not expected.");
+            unsigned ScalarTyNumElements = VecTy->getNumElements();
+            for (unsigned I : seq<unsigned>(ReducedVals.size())) {
+              VectorCost += TTI->getShuffleCost(
+                  TTI::SK_PermuteSingleSrc, VectorTy,
+                  createStrideMask(I, ScalarTyNumElements, ReducedVals.size()));
+              VectorCost += TTI->getArithmeticReductionCost(RdxOpcode, VecTy,
+                                                            FMF, CostKind);
+            }
+            VectorCost += TTI->getScalarizationOverhead(
+                VecTy, APInt::getAllOnes(ScalarTyNumElements), /*Insert*/ true,
+                /*Extract*/ false, TTI::TCK_RecipThroughput);
           } else {
-            VectorCost = TTI->getExtendedReductionCost(
-                RdxOpcode, !IsSigned, RedTy, getWidenedType(RType, ReduxWidth),
-                FMF, CostKind);
+            Type *RedTy = VectorTy->getElementType();
+            auto [RType, IsSigned] = R.getRootNodeTypeWithNoCast().value_or(
+                std::make_pair(RedTy, true));
+            if (RType == RedTy) {
+              VectorCost = TTI->getArithmeticReductionCost(RdxOpcode, VectorTy,
+                                                           FMF, CostKind);
+            } else {
+              VectorCost = TTI->getExtendedReductionCost(
+                  RdxOpcode, !IsSigned, RedTy,
+                  getWidenedType(RType, ReduxWidth), FMF, CostKind);
+            }
           }
         } else {
           Type *RedTy = VectorTy->getElementType();

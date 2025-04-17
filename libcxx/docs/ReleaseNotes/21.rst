@@ -64,6 +64,9 @@ Improvements and New Features
 
 - The ``num_put::do_put`` integral overloads have been optimized, resulting in a performance improvement of up to 2.4x.
 
+- The ``std::stable_sort`` algorithm uses radix sort for floating-point types now, which can improve the performance
+  up to 10x, depending on type of sorted elements and the initial state of the sorted array.
+
 Deprecations and Removals
 -------------------------
 

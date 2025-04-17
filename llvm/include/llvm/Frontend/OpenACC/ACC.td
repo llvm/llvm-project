@@ -270,6 +270,7 @@ def ACCC_Unknown : Clause<"unknown"> {
 
 // 2.12
 def ACC_Atomic : Directive<"atomic"> {
+  let allowedOnceClauses = [VersionedClause<ACCC_If, 34>];
   let association = AS_Block;
   let category = CA_Executable;
 }

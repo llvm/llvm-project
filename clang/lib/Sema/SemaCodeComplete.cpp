@@ -5726,7 +5726,10 @@ private:
 QualType getApproximateType(const Expr *E, HeuristicResolver &Resolver) {
   if (E->getType().isNull())
     return QualType();
-  E = E->IgnoreParenImpCasts();
+  // Don't drop implicit cast if it's an array decay.
+  if (auto *ICE = dyn_cast<ImplicitCastExpr>(E);
+      !ICE || ICE->getCastKind() != CK_ArrayToPointerDecay)
+    E = E->IgnoreParenImpCasts();
   QualType Unresolved = E->getType();
   // Resolve DependentNameType
   if (const auto *DNT = Unresolved->getAs<DependentNameType>()) {
@@ -6351,7 +6354,8 @@ SemaCodeCompletion::ProduceCallSignatureHelp(Expr *Fn, ArrayRef<Expr *> Args,
   Expr *NakedFn = Fn->IgnoreParenCasts();
   // Build an overload candidate set based on the functions we find.
   SourceLocation Loc = Fn->getExprLoc();
-  OverloadCandidateSet CandidateSet(Loc, OverloadCandidateSet::CSK_Normal);
+  OverloadCandidateSet CandidateSet(Loc,
+                                    OverloadCandidateSet::CSK_CodeCompletion);
 
   if (auto ULE = dyn_cast<UnresolvedLookupExpr>(NakedFn)) {
     SemaRef.AddOverloadedCallCandidates(ULE, ArgsWithoutDependentTypes,
@@ -6554,7 +6558,8 @@ QualType SemaCodeCompletion::ProduceConstructorSignatureHelp(
   // FIXME: Provide support for variadic template constructors.
 
   if (CRD) {
-    OverloadCandidateSet CandidateSet(Loc, OverloadCandidateSet::CSK_Normal);
+    OverloadCandidateSet CandidateSet(Loc,
+                                      OverloadCandidateSet::CSK_CodeCompletion);
     for (NamedDecl *C : SemaRef.LookupConstructors(CRD)) {
       if (auto *FD = dyn_cast<FunctionDecl>(C)) {
         // FIXME: we can't yet provide correct signature help for initializer

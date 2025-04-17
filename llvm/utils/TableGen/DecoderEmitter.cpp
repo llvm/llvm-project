@@ -714,30 +714,39 @@ void Filter::emitTableEntry(DecoderTableInfo &TableInfo) const {
   TableInfo.Table.insertULEB128(StartBit);
   TableInfo.Table.push_back(NumBits);
 
-  // A new filter entry begins a new scope for fixup resolution.
-  TableInfo.FixupStack.emplace_back();
+  // If the NO_FIXED_SEGMENTS_SENTINEL is present, we need to add a new scope
+  // for this filter. Otherwise, we can skip adding a new scope and any
+  // patching added will automatically be added to the enclosing scope.
+
+  // If NO_FIXED_SEGMENTS_SENTINEL is present, it will be last entry in
+  // FilterChooserMap.
+
+  const uint64_t LastFilter = FilterChooserMap.rbegin()->first;
+  bool HasFallthrough = LastFilter == NO_FIXED_SEGMENTS_SENTINEL;
+  if (HasFallthrough)
+    TableInfo.FixupStack.emplace_back();
 
   DecoderTable &Table = TableInfo.Table;
 
   size_t PrevFilter = 0;
-  bool HasFallthrough = false;
-  for (const auto &Filter : FilterChooserMap) {
-    // Field value -1 implies a non-empty set of variable instructions.
-    // See also recurse().
-    if (Filter.first == NO_FIXED_SEGMENTS_SENTINEL) {
-      HasFallthrough = true;
-
+  for (const auto &[FilterVal, Delegate] : FilterChooserMap) {
+    // Field value NO_FIXED_SEGMENTS_SENTINEL implies a non-empty set of
+    // variable instructions. See also recurse().
+    if (FilterVal == NO_FIXED_SEGMENTS_SENTINEL) {
       // Each scope should always have at least one filter value to check
       // for.
       assert(PrevFilter != 0 && "empty filter set!");
       FixupList &CurScope = TableInfo.FixupStack.back();
       // Resolve any NumToSkip fixups in the current scope.
       resolveTableFixups(Table, CurScope, Table.size());
-      CurScope.clear();
+
+      // Delete the scope we have added here.
+      TableInfo.FixupStack.pop_back();
+
       PrevFilter = 0; // Don't re-process the filter's fallthrough.
     } else {
       Table.push_back(MCD::OPC_FilterValue);
-      Table.insertULEB128(Filter.first);
+      Table.insertULEB128(FilterVal);
       // Reserve space for the NumToSkip entry. We'll backpatch the value
       // later.
       PrevFilter = Table.insertNumToSkip();
@@ -747,11 +756,11 @@ void Filter::emitTableEntry(DecoderTableInfo &TableInfo) const {
     // Now delegate to the sub filter chooser for further decodings.
     // The case may fallthrough, which happens if the remaining well-known
     // encoding bits do not match exactly.
-    Filter.second->emitTableEntries(TableInfo);
+    Delegate->emitTableEntries(TableInfo);
 
     // Now that we've emitted the body of the handler, update the NumToSkip
     // of the filter itself to be able to skip forward when false. Subtract
-    // two as to account for the width of the NumToSkip field itself.
+    // three as to account for the width of the NumToSkip field itself.
     if (PrevFilter) {
       uint32_t NumToSkip = Table.size() - PrevFilter - 3;
       assert(isUInt<24>(NumToSkip) && "disassembler decoding table too large!");
@@ -760,13 +769,6 @@ void Filter::emitTableEntry(DecoderTableInfo &TableInfo) const {
       Table[PrevFilter + 2] = (uint8_t)(NumToSkip >> 16);
     }
   }
-
-  // Any remaining unresolved fixups bubble up to the parent fixup scope.
-  assert(TableInfo.FixupStack.size() > 1 && "fixup stack underflow!");
-  FixupScopeList::iterator Source = TableInfo.FixupStack.end() - 1;
-  FixupScopeList::iterator Dest = Source - 1;
-  llvm::append_range(*Dest, *Source);
-  TableInfo.FixupStack.pop_back();
 
   // If there is no fallthrough, then the final filter should get fixed
   // up according to the enclosing scope rather than the current position.
