@@ -111,63 +111,16 @@ entry:
 ;   store i32 %i, ptr %out, align 4
 ;   ret void
 ; }
-
-; Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite)
-define dso_local ptx_kernel void @read_only_gep_asc0(ptr nocapture noundef writeonly %out, ptr nocapture noundef readonly byval(%struct.S) align 4 %s) local_unnamed_addr #0 {
-; SM_60-LABEL: define dso_local ptx_kernel void @read_only_gep_asc0(
-; SM_60-SAME: ptr noundef writeonly captures(none) [[OUT:%.*]], ptr noundef readonly byval([[STRUCT_S:%.*]]) align 4 captures(none) [[S:%.*]]) local_unnamed_addr #[[ATTR0]] {
-; SM_60-NEXT:  [[ENTRY:.*:]]
-; SM_60-NEXT:    [[S1:%.*]] = alloca [[STRUCT_S]], align 4
-; SM_60-NEXT:    [[S2:%.*]] = call ptr addrspace(101) @llvm.nvvm.internal.addrspace.wrap.p101.p0(ptr [[S]])
-; SM_60-NEXT:    call void @llvm.memcpy.p0.p101.i64(ptr align 4 [[S1]], ptr addrspace(101) align 4 [[S2]], i64 8, i1 false)
-; SM_60-NEXT:    [[B:%.*]] = getelementptr inbounds nuw i8, ptr [[S1]], i64 4
-; SM_60-NEXT:    [[ASC:%.*]] = addrspacecast ptr [[B]] to ptr addrspace(101)
-; SM_60-NEXT:    [[ASC0:%.*]] = addrspacecast ptr addrspace(101) [[ASC]] to ptr
-; SM_60-NEXT:    [[I:%.*]] = load i32, ptr [[ASC0]], align 4
-; SM_60-NEXT:    store i32 [[I]], ptr [[OUT]], align 4
-; SM_60-NEXT:    ret void
 ;
-; SM_70-LABEL: define dso_local ptx_kernel void @read_only_gep_asc0(
-; SM_70-SAME: ptr noundef writeonly captures(none) [[OUT:%.*]], ptr noundef readonly byval([[STRUCT_S:%.*]]) align 4 captures(none) [[S:%.*]]) local_unnamed_addr #[[ATTR0]] {
-; SM_70-NEXT:  [[ENTRY:.*:]]
-; SM_70-NEXT:    [[S_PARAM:%.*]] = call ptr addrspace(101) @llvm.nvvm.internal.addrspace.wrap.p101.p0(ptr [[S]])
-; SM_70-NEXT:    [[S_GEN:%.*]] = addrspacecast ptr addrspace(101) [[S_PARAM]] to ptr
-; SM_70-NEXT:    [[B:%.*]] = getelementptr inbounds nuw i8, ptr [[S_GEN]], i64 4
-; SM_70-NEXT:    [[ASC:%.*]] = addrspacecast ptr [[B]] to ptr addrspace(101)
-; SM_70-NEXT:    [[ASC0:%.*]] = addrspacecast ptr addrspace(101) [[ASC]] to ptr
-; SM_70-NEXT:    [[I:%.*]] = load i32, ptr [[ASC0]], align 4
-; SM_70-NEXT:    store i32 [[I]], ptr [[OUT]], align 4
-; SM_70-NEXT:    ret void
-;
-; COPY-LABEL: define dso_local ptx_kernel void @read_only_gep_asc0(
-; COPY-SAME: ptr noundef writeonly captures(none) [[OUT:%.*]], ptr noundef readonly byval([[STRUCT_S:%.*]]) align 4 captures(none) [[S:%.*]]) local_unnamed_addr #[[ATTR0]] {
-; COPY-NEXT:  [[ENTRY:.*:]]
-; COPY-NEXT:    [[B:%.*]] = getelementptr inbounds nuw i8, ptr [[S]], i64 4
-; COPY-NEXT:    [[ASC:%.*]] = addrspacecast ptr [[B]] to ptr addrspace(101)
-; COPY-NEXT:    [[ASC0:%.*]] = addrspacecast ptr addrspace(101) [[ASC]] to ptr
-; COPY-NEXT:    [[I:%.*]] = load i32, ptr [[ASC0]], align 4
-; COPY-NEXT:    store i32 [[I]], ptr [[OUT]], align 4
-; COPY-NEXT:    ret void
-;
-; PTX-LABEL: read_only_gep_asc0(
-; PTX:       {
-; PTX-NEXT:    .reg .b32 %r<2>;
-; PTX-NEXT:    .reg .b64 %rd<3>;
-; PTX-EMPTY:
-; PTX-NEXT:  // %bb.0: // %entry
-; PTX-NEXT:    ld.param.u64 %rd1, [read_only_gep_asc0_param_0];
-; PTX-NEXT:    cvta.to.global.u64 %rd2, %rd1;
-; PTX-NEXT:    ld.param.u32 %r1, [read_only_gep_asc0_param_1+4];
-; PTX-NEXT:    st.global.u32 [%rd2], %r1;
-; PTX-NEXT:    ret;
-entry:
-  %b = getelementptr inbounds nuw i8, ptr %s, i64 4
-  %asc = addrspacecast ptr %b to ptr addrspace(101)
-  %asc0 = addrspacecast ptr addrspace(101) %asc to ptr
-  %i = load i32, ptr %asc0, align 4
-  store i32 %i, ptr %out, align 4
-  ret void
-}
+; define dso_local ptx_kernel void @read_only_gep_asc0(ptr nocapture noundef writeonly %out, ptr nocapture noundef readonly byval(%struct.S) align 4 %s) local_unnamed_addr #0 {
+; entry:
+;   %b = getelementptr inbounds nuw i8, ptr %s, i64 4
+;   %asc = addrspacecast ptr %b to ptr addrspace(101)
+;   %asc0 = addrspacecast ptr addrspace(101) %asc to ptr
+;   %i = load i32, ptr %asc0, align 4
+;   store i32 %i, ptr %out, align 4
+;   ret void
+; }
 
 ; Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite)
 define dso_local ptx_kernel void @escape_ptr(ptr nocapture noundef readnone %out, ptr noundef byval(%struct.S) align 4 %s) local_unnamed_addr #0 {
@@ -182,14 +135,14 @@ define dso_local ptx_kernel void @escape_ptr(ptr nocapture noundef readnone %out
 ;
 ; PTX-LABEL: escape_ptr(
 ; PTX:       {
-; PTX-NEXT:    .local .align 4 .b8 __local_depot4[8];
+; PTX-NEXT:    .local .align 4 .b8 __local_depot2[8];
 ; PTX-NEXT:    .reg .b64 %SP;
 ; PTX-NEXT:    .reg .b64 %SPL;
 ; PTX-NEXT:    .reg .b32 %r<3>;
 ; PTX-NEXT:    .reg .b64 %rd<3>;
 ; PTX-EMPTY:
 ; PTX-NEXT:  // %bb.0: // %entry
-; PTX-NEXT:    mov.b64 %SPL, __local_depot4;
+; PTX-NEXT:    mov.b64 %SPL, __local_depot2;
 ; PTX-NEXT:    cvta.local.u64 %SP, %SPL;
 ; PTX-NEXT:    add.u64 %rd1, %SP, 0;
 ; PTX-NEXT:    add.u64 %rd2, %SPL, 0;
@@ -226,14 +179,14 @@ define dso_local ptx_kernel void @escape_ptr_gep(ptr nocapture noundef readnone 
 ;
 ; PTX-LABEL: escape_ptr_gep(
 ; PTX:       {
-; PTX-NEXT:    .local .align 4 .b8 __local_depot5[8];
+; PTX-NEXT:    .local .align 4 .b8 __local_depot3[8];
 ; PTX-NEXT:    .reg .b64 %SP;
 ; PTX-NEXT:    .reg .b64 %SPL;
 ; PTX-NEXT:    .reg .b32 %r<3>;
 ; PTX-NEXT:    .reg .b64 %rd<4>;
 ; PTX-EMPTY:
 ; PTX-NEXT:  // %bb.0: // %entry
-; PTX-NEXT:    mov.b64 %SPL, __local_depot5;
+; PTX-NEXT:    mov.b64 %SPL, __local_depot3;
 ; PTX-NEXT:    cvta.local.u64 %SP, %SPL;
 ; PTX-NEXT:    add.u64 %rd1, %SP, 0;
 ; PTX-NEXT:    add.u64 %rd2, %SPL, 0;
@@ -271,14 +224,14 @@ define dso_local ptx_kernel void @escape_ptr_store(ptr nocapture noundef writeon
 ;
 ; PTX-LABEL: escape_ptr_store(
 ; PTX:       {
-; PTX-NEXT:    .local .align 4 .b8 __local_depot6[8];
+; PTX-NEXT:    .local .align 4 .b8 __local_depot4[8];
 ; PTX-NEXT:    .reg .b64 %SP;
 ; PTX-NEXT:    .reg .b64 %SPL;
 ; PTX-NEXT:    .reg .b32 %r<3>;
 ; PTX-NEXT:    .reg .b64 %rd<5>;
 ; PTX-EMPTY:
 ; PTX-NEXT:  // %bb.0: // %entry
-; PTX-NEXT:    mov.b64 %SPL, __local_depot6;
+; PTX-NEXT:    mov.b64 %SPL, __local_depot4;
 ; PTX-NEXT:    cvta.local.u64 %SP, %SPL;
 ; PTX-NEXT:    ld.param.u64 %rd1, [escape_ptr_store_param_0];
 ; PTX-NEXT:    cvta.to.global.u64 %rd2, %rd1;
@@ -309,14 +262,14 @@ define dso_local ptx_kernel void @escape_ptr_gep_store(ptr nocapture noundef wri
 ;
 ; PTX-LABEL: escape_ptr_gep_store(
 ; PTX:       {
-; PTX-NEXT:    .local .align 4 .b8 __local_depot7[8];
+; PTX-NEXT:    .local .align 4 .b8 __local_depot5[8];
 ; PTX-NEXT:    .reg .b64 %SP;
 ; PTX-NEXT:    .reg .b64 %SPL;
 ; PTX-NEXT:    .reg .b32 %r<3>;
 ; PTX-NEXT:    .reg .b64 %rd<6>;
 ; PTX-EMPTY:
 ; PTX-NEXT:  // %bb.0: // %entry
-; PTX-NEXT:    mov.b64 %SPL, __local_depot7;
+; PTX-NEXT:    mov.b64 %SPL, __local_depot5;
 ; PTX-NEXT:    cvta.local.u64 %SP, %SPL;
 ; PTX-NEXT:    ld.param.u64 %rd1, [escape_ptr_gep_store_param_0];
 ; PTX-NEXT:    cvta.to.global.u64 %rd2, %rd1;
@@ -349,14 +302,14 @@ define dso_local ptx_kernel void @escape_ptrtoint(ptr nocapture noundef writeonl
 ;
 ; PTX-LABEL: escape_ptrtoint(
 ; PTX:       {
-; PTX-NEXT:    .local .align 4 .b8 __local_depot8[8];
+; PTX-NEXT:    .local .align 4 .b8 __local_depot6[8];
 ; PTX-NEXT:    .reg .b64 %SP;
 ; PTX-NEXT:    .reg .b64 %SPL;
 ; PTX-NEXT:    .reg .b32 %r<3>;
 ; PTX-NEXT:    .reg .b64 %rd<5>;
 ; PTX-EMPTY:
 ; PTX-NEXT:  // %bb.0: // %entry
-; PTX-NEXT:    mov.b64 %SPL, __local_depot8;
+; PTX-NEXT:    mov.b64 %SPL, __local_depot6;
 ; PTX-NEXT:    cvta.local.u64 %SP, %SPL;
 ; PTX-NEXT:    ld.param.u64 %rd1, [escape_ptrtoint_param_0];
 ; PTX-NEXT:    cvta.to.global.u64 %rd2, %rd1;
@@ -507,14 +460,14 @@ define dso_local ptx_kernel void @memcpy_to_param(ptr nocapture noundef readonly
 ;
 ; PTX-LABEL: memcpy_to_param(
 ; PTX:       {
-; PTX-NEXT:    .local .align 8 .b8 __local_depot11[8];
+; PTX-NEXT:    .local .align 8 .b8 __local_depot9[8];
 ; PTX-NEXT:    .reg .b64 %SP;
 ; PTX-NEXT:    .reg .b64 %SPL;
 ; PTX-NEXT:    .reg .b32 %r<3>;
 ; PTX-NEXT:    .reg .b64 %rd<48>;
 ; PTX-EMPTY:
 ; PTX-NEXT:  // %bb.0: // %entry
-; PTX-NEXT:    mov.b64 %SPL, __local_depot11;
+; PTX-NEXT:    mov.b64 %SPL, __local_depot9;
 ; PTX-NEXT:    cvta.local.u64 %SP, %SPL;
 ; PTX-NEXT:    ld.param.u64 %rd1, [memcpy_to_param_param_0];
 ; PTX-NEXT:    add.u64 %rd3, %SPL, 0;
@@ -700,7 +653,7 @@ define ptx_kernel void @test_select_write(ptr byval(i32) align 4 %input1, ptr by
 ;
 ; PTX-LABEL: test_select_write(
 ; PTX:       {
-; PTX-NEXT:    .local .align 4 .b8 __local_depot14[8];
+; PTX-NEXT:    .local .align 4 .b8 __local_depot12[8];
 ; PTX-NEXT:    .reg .b64 %SP;
 ; PTX-NEXT:    .reg .b64 %SPL;
 ; PTX-NEXT:    .reg .pred %p<2>;
@@ -709,7 +662,7 @@ define ptx_kernel void @test_select_write(ptr byval(i32) align 4 %input1, ptr by
 ; PTX-NEXT:    .reg .b64 %rd<6>;
 ; PTX-EMPTY:
 ; PTX-NEXT:  // %bb.0: // %bb
-; PTX-NEXT:    mov.b64 %SPL, __local_depot14;
+; PTX-NEXT:    mov.b64 %SPL, __local_depot12;
 ; PTX-NEXT:    cvta.local.u64 %SP, %SPL;
 ; PTX-NEXT:    ld.param.u8 %rs1, [test_select_write_param_3];
 ; PTX-NEXT:    and.b16 %rs2, %rs1, 1;
@@ -809,10 +762,10 @@ define ptx_kernel void @test_phi(ptr byval(%struct.S) align 4 %input1, ptr byval
 ; PTX_60-NEXT:    ld.param.u64 %rd2, [test_phi_param_2];
 ; PTX_60-NEXT:    cvta.to.global.u64 %rd1, %rd2;
 ; PTX_60-NEXT:    ld.param.u32 %r4, [test_phi_param_0];
-; PTX_60-NEXT:    @%p1 bra $L__BB15_2;
+; PTX_60-NEXT:    @%p1 bra $L__BB13_2;
 ; PTX_60-NEXT:  // %bb.1: // %second
 ; PTX_60-NEXT:    ld.param.u32 %r4, [test_phi_param_1+4];
-; PTX_60-NEXT:  $L__BB15_2: // %merge
+; PTX_60-NEXT:  $L__BB13_2: // %merge
 ; PTX_60-NEXT:    st.global.u32 [%rd1], %r4;
 ; PTX_60-NEXT:    ret;
 ;
@@ -830,11 +783,11 @@ define ptx_kernel void @test_phi(ptr byval(%struct.S) align 4 %input1, ptr byval
 ; PTX_70-NEXT:    mov.b64 %rd7, test_phi_param_0;
 ; PTX_70-NEXT:    ld.param.u64 %rd6, [test_phi_param_2];
 ; PTX_70-NEXT:    cvta.to.global.u64 %rd1, %rd6;
-; PTX_70-NEXT:    @%p1 bra $L__BB15_2;
+; PTX_70-NEXT:    @%p1 bra $L__BB13_2;
 ; PTX_70-NEXT:  // %bb.1: // %second
 ; PTX_70-NEXT:    mov.b64 %rd2, test_phi_param_1;
 ; PTX_70-NEXT:    add.s64 %rd7, %rd2, 4;
-; PTX_70-NEXT:  $L__BB15_2: // %merge
+; PTX_70-NEXT:  $L__BB13_2: // %merge
 ; PTX_70-NEXT:    ld.param.u32 %r1, [%rd7];
 ; PTX_70-NEXT:    st.global.u32 [%rd1], %r1;
 ; PTX_70-NEXT:    ret;
@@ -880,7 +833,7 @@ define ptx_kernel void @test_phi_write(ptr byval(%struct.S) align 4 %input1, ptr
 ;
 ; PTX-LABEL: test_phi_write(
 ; PTX:       {
-; PTX-NEXT:    .local .align 4 .b8 __local_depot16[8];
+; PTX-NEXT:    .local .align 4 .b8 __local_depot14[8];
 ; PTX-NEXT:    .reg .b64 %SP;
 ; PTX-NEXT:    .reg .b64 %SPL;
 ; PTX-NEXT:    .reg .pred %p<2>;
@@ -889,7 +842,7 @@ define ptx_kernel void @test_phi_write(ptr byval(%struct.S) align 4 %input1, ptr
 ; PTX-NEXT:    .reg .b64 %rd<7>;
 ; PTX-EMPTY:
 ; PTX-NEXT:  // %bb.0: // %bb
-; PTX-NEXT:    mov.b64 %SPL, __local_depot16;
+; PTX-NEXT:    mov.b64 %SPL, __local_depot14;
 ; PTX-NEXT:    cvta.local.u64 %SP, %SPL;
 ; PTX-NEXT:    ld.param.u8 %rs1, [test_phi_write_param_2];
 ; PTX-NEXT:    and.b16 %rs2, %rs1, 1;
@@ -900,10 +853,10 @@ define ptx_kernel void @test_phi_write(ptr byval(%struct.S) align 4 %input1, ptr
 ; PTX-NEXT:    add.u64 %rd6, %SPL, 4;
 ; PTX-NEXT:    ld.param.u32 %r2, [test_phi_write_param_0];
 ; PTX-NEXT:    st.u32 [%SP+4], %r2;
-; PTX-NEXT:    @%p1 bra $L__BB16_2;
+; PTX-NEXT:    @%p1 bra $L__BB14_2;
 ; PTX-NEXT:  // %bb.1: // %second
 ; PTX-NEXT:    mov.b64 %rd6, %rd1;
-; PTX-NEXT:  $L__BB16_2: // %merge
+; PTX-NEXT:  $L__BB14_2: // %merge
 ; PTX-NEXT:    mov.b32 %r3, 1;
 ; PTX-NEXT:    st.local.u32 [%rd6], %r3;
 ; PTX-NEXT:    ret;
@@ -935,14 +888,14 @@ define ptx_kernel void @test_forward_byval_arg(ptr byval(i32) align 4 %input) {
 ;
 ; PTX-LABEL: test_forward_byval_arg(
 ; PTX:       {
-; PTX-NEXT:    .local .align 4 .b8 __local_depot17[4];
+; PTX-NEXT:    .local .align 4 .b8 __local_depot15[4];
 ; PTX-NEXT:    .reg .b64 %SP;
 ; PTX-NEXT:    .reg .b64 %SPL;
 ; PTX-NEXT:    .reg .b32 %r<2>;
 ; PTX-NEXT:    .reg .b64 %rd<3>;
 ; PTX-EMPTY:
 ; PTX-NEXT:  // %bb.0:
-; PTX-NEXT:    mov.b64 %SPL, __local_depot17;
+; PTX-NEXT:    mov.b64 %SPL, __local_depot15;
 ; PTX-NEXT:    add.u64 %rd2, %SPL, 0;
 ; PTX-NEXT:    ld.param.u32 %r1, [test_forward_byval_arg_param_0];
 ; PTX-NEXT:    st.local.u32 [%rd2], %r1;
