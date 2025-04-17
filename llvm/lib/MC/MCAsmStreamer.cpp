@@ -2407,7 +2407,7 @@ void MCAsmStreamer::AddEncodingComment(const MCInst &Inst,
     OS << ", kind: ";
     auto Kind = F.getKind();
     if (FirstRelocationKind <= Kind)
-      OS << "relocation";
+      OS << "relocation type " << (Kind - FirstRelocationKind);
     else
       OS << getAssembler().getBackend().getFixupKindInfo(Kind).Name;
     OS << '\n';

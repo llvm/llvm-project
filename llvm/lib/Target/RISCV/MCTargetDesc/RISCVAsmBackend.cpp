@@ -659,10 +659,10 @@ bool RISCVAsmBackend::handleAddSubRelocations(const MCAssembler &Asm,
   }
   MCValue A = MCValue::get(Target.getAddSym(), nullptr, Target.getConstant());
   MCValue B = MCValue::get(Target.getSubSym());
-  auto FA = MCFixup::create(Fixup.getOffset(), nullptr,
-                            static_cast<MCFixupKind>(FirstRelocationKind + TA));
-  auto FB = MCFixup::create(Fixup.getOffset(), nullptr,
-                            static_cast<MCFixupKind>(FirstRelocationKind + TB));
+  auto FA =
+      MCFixup::create(Fixup.getOffset(), nullptr, FirstRelocationKind + TA);
+  auto FB =
+      MCFixup::create(Fixup.getOffset(), nullptr, FirstRelocationKind + TB);
   auto &Assembler = const_cast<MCAssembler &>(Asm);
   Asm.getWriter().recordRelocation(Assembler, &F, FA, A, FixedValueA);
   Asm.getWriter().recordRelocation(Assembler, &F, FB, B, FixedValueB);
