@@ -528,6 +528,16 @@ func.func @extract_load_scalar(%arg0: memref<?xf32>, %arg1: index) -> f32 {
   return %1 : f32
 }
 
+// CHECK-LABEL: @extract_load_index
+//  CHECK-SAME:   (%[[ARG0:.*]]: memref<?xindex>, %[[ARG1:.*]]: index)
+func.func @extract_load_index(%arg0: memref<?xindex>, %arg1: index) -> index {
+// CHECK:   %[[RES:.*]] = memref.load %[[ARG0]][%[[ARG1]]] : memref<?xindex>
+// CHECK:   return %[[RES]] : index
+  %0 = vector.load %arg0[%arg1] : memref<?xindex>, vector<4xindex>
+  %1 = vector.extract %0[0] : index from vector<4xindex>
+  return %1 : index
+}
+
 // CHECK-LABEL: @extract_load_scalar_non_zero_off
 //  CHECK-SAME:   (%[[ARG0:.*]]: memref<?xf32>, %[[ARG1:.*]]: index)
 func.func @extract_load_scalar_non_zero_off(%arg0: memref<?xf32>, %arg1: index) -> f32 {
@@ -596,6 +606,18 @@ func.func @negative_extract_load_scalar_from_memref_of_vec(%arg0: memref<?xvecto
   %0 = vector.load %arg0[%arg1] : memref<?xvector<4xf32>>, vector<4xf32>
   %1 = vector.extract %0[0] : f32 from vector<4xf32>
   return %1 : f32
+}
+
+// CHECK-LABEL: @negative_extract_load_scalar_from_memref_of_i1
+//  CHECK-SAME:   (%[[ARG0:.*]]: memref<?xi1>, %[[ARG1:.*]]: index)
+func.func @negative_extract_load_scalar_from_memref_of_i1(%arg0: memref<?xi1>, %arg1: index) -> i1 {
+// Subbyte types are tricky, ignore them for now.
+// CHECK:   %[[RES:.*]] = vector.load %[[ARG0]][%[[ARG1]]] : memref<?xi1>, vector<8xi1>
+// CHECK:   %[[EXT:.*]] = vector.extract %[[RES]][0] : i1 from vector<8xi1>
+// CHECK:   return %[[EXT]] : i1
+  %0 = vector.load %arg0[%arg1] : memref<?xi1>, vector<8xi1>
+  %1 = vector.extract %0[0] : i1 from vector<8xi1>
+  return %1 : i1
 }
 
 // CHECK-LABEL: @negative_extract_load_no_single_use

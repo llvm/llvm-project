@@ -1047,6 +1047,14 @@ public:
   }
 };
 
+static bool isSupportedMemSinkElementType(Type type) {
+  if (isa<IndexType>(type))
+    return true;
+
+  // Non-byte-aligned types are tricky, skip them.
+  return type.isIntOrFloat() && type.getIntOrFloatBitWidth() % 8 == 0;
+}
+
 /// Pattern to rewrite vector.extract(vector.load) -> vector/memref.load.
 ///
 /// Example:
@@ -1080,9 +1088,8 @@ public:
                                          "scalable vectors are not supported");
 
     MemRefType memType = loadOp.getMemRefType();
-    if (isa<VectorType>(memType.getElementType()))
-      return rewriter.notifyMatchFailure(
-          op, "memrefs of vectors are not supported");
+    if (!isSupportedMemSinkElementType(memType.getElementType()))
+      return rewriter.notifyMatchFailure(op, "unsupported memref element type");
 
     int64_t rankOffset = memType.getRank() - loadVecType.getRank();
     if (rankOffset < 0)
