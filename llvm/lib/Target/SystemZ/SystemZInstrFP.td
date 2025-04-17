@@ -109,10 +109,10 @@ let isCodeGenOnly = 1 in {
 
 // The sign of an FP128 is in the high register.
 let Predicates = [FeatureNoVectorEnhancements1] in
-  def : Pat<(fcopysign FP32:$src1, (f32 (fpround (f128 FP128:$src2)))),
+  def : Pat<(fcopysign FP32:$src1, (f128 FP128:$src2)),
             (CPSDRsd FP32:$src1, (EXTRACT_SUBREG FP128:$src2, subreg_h64))>;
 let Predicates = [FeatureVectorEnhancements1] in
-  def : Pat<(fcopysign FP32:$src1, (f32 (fpround (f128 VR128:$src2)))),
+  def : Pat<(fcopysign FP32:$src1, (f128 VR128:$src2)),
             (CPSDRsd FP32:$src1, (EXTRACT_SUBREG VR128:$src2, subreg_h64))>;
 
 // fcopysign with an FP64 result.
@@ -124,10 +124,10 @@ def CPSDRdd : BinaryRRFb<"cpsdr", 0xB372, fcopysign, FP64, FP64, FP64>;
 
 // The sign of an FP128 is in the high register.
 let Predicates = [FeatureNoVectorEnhancements1] in
-  def : Pat<(fcopysign FP64:$src1, (f64 (fpround (f128 FP128:$src2)))),
+  def : Pat<(fcopysign FP64:$src1, (f128 FP128:$src2)),
             (CPSDRdd FP64:$src1, (EXTRACT_SUBREG FP128:$src2, subreg_h64))>;
 let Predicates = [FeatureVectorEnhancements1] in
-  def : Pat<(fcopysign FP64:$src1, (f64 (fpround (f128 VR128:$src2)))),
+  def : Pat<(fcopysign FP64:$src1, (f128 VR128:$src2)),
             (CPSDRdd FP64:$src1, (EXTRACT_SUBREG VR128:$src2, subreg_h64))>;
 
 // fcopysign with an FP128 result.  Use "upper" as the high half and leave

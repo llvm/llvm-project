@@ -791,6 +791,7 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
                        ISD::SINT_TO_FP,
                        ISD::UINT_TO_FP,
                        ISD::STRICT_FP_EXTEND,
+                       ISD::FCOPYSIGN,
                        ISD::BSWAP,
                        ISD::SETCC,
                        ISD::SRL,
@@ -8548,6 +8549,22 @@ SDValue SystemZTargetLowering::combineINT_TO_FP(
   return SDValue();
 }
 
+SDValue SystemZTargetLowering::combineFCOPYSIGN(
+    SDNode *N, DAGCombinerInfo &DCI) const {
+  SelectionDAG &DAG = DCI.DAG;
+  EVT VT = N->getValueType(0);
+  SDValue ValOp = N->getOperand(0);
+  SDValue SignOp = N->getOperand(1);
+
+  // Remove the rounding which is not needed.
+  if (SignOp.getOpcode() == ISD::FP_ROUND) {
+    SDValue WideOp = SignOp.getOperand(0);
+    return DAG.getNode(ISD::FCOPYSIGN, SDLoc(N), VT, ValOp, WideOp);
+  }
+
+  return SDValue();
+}
+
 SDValue SystemZTargetLowering::combineBSWAP(
     SDNode *N, DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
@@ -9137,6 +9154,7 @@ SDValue SystemZTargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::FP_EXTEND:          return combineFP_EXTEND(N, DCI);
   case ISD::SINT_TO_FP:
   case ISD::UINT_TO_FP:         return combineINT_TO_FP(N, DCI);
+  case ISD::FCOPYSIGN:          return combineFCOPYSIGN(N, DCI);
   case ISD::BSWAP:              return combineBSWAP(N, DCI);
   case ISD::SETCC:              return combineSETCC(N, DCI);
   case SystemZISD::BR_CCMASK:   return combineBR_CCMASK(N, DCI);
