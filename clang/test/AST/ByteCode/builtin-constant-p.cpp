@@ -121,3 +121,11 @@ constexpr int mutate6(bool mutate) {
 static_assert(mutate6(false) == 11);
 static_assert(mutate6(true) == 21); // ref-error {{static assertion failed}} \
                                     // ref-note {{evaluates to '10 == 21'}}
+
+#define fold(x) (__builtin_constant_p(x) ? (x) : (x))
+void g() {
+  /// f will be revisited when evaluating the static_assert, since it's
+  /// a local variable. But it should be visited in a non-constant context.
+  const float f = __builtin_is_constant_evaluated();
+  static_assert(fold(f == 0.0f));
+}
