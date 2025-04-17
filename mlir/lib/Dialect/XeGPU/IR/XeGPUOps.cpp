@@ -101,7 +101,10 @@ static bool isEvenDistributed(llvm::ArrayRef<int64_t> shape,
   return true;
 }
 
-static LogicalResult isValidGatherScatterParams(Type maskTy, VectorType valueTy, TensorDescType tdescTy, UnitAttr transposeAttr, function_ref<InFlightDiagnostic()> emitError) {
+static LogicalResult
+isValidGatherScatterParams(Type maskTy, VectorType valueTy,
+                           TensorDescType tdescTy, UnitAttr transposeAttr,
+                           function_ref<InFlightDiagnostic()> emitError) {
 
   if (!tdescTy.isScattered())
     return emitError() << "Expects a scattered TensorDesc.";
@@ -115,10 +118,12 @@ static LogicalResult isValidGatherScatterParams(Type maskTy, VectorType valueTy,
   auto chunkSize = tdescTy.getChunkSize();
 
   if (valueTy.getElementType() != tdescTy.getElementType())
-    return emitError() << "Value should have the same element type as TensorDesc.";
+    return emitError()
+           << "Value should have the same element type as TensorDesc.";
 
   if (tdescShape[0] != maskShape[0])
-    return emitError() << "dim-0 of the Mask and TensorDesc should be the same.";
+    return emitError()
+           << "dim-0 of the Mask and TensorDesc should be the same.";
 
   // a valid shape for SIMT case
   if (valueTy.getRank() == 1 && valueTy.getNumElements() == chunkSize) {
@@ -568,8 +573,9 @@ LogicalResult LoadGatherOp::verify() {
   if (!isReadHintOrNone(getL3HintAttr()))
     return emitOpError("invalid l3_hint: ") << getL3HintAttr();
 
-  return isValidGatherScatterParams(maskTy, valueTy, tdescTy, getTransposeAttr(),
-                         [&]() { return emitOpError(); });
+  return isValidGatherScatterParams(maskTy, valueTy, tdescTy,
+                                    getTransposeAttr(),
+                                    [&]() { return emitOpError(); });
 }
 
 //===----------------------------------------------------------------------===//
@@ -589,8 +595,9 @@ LogicalResult StoreScatterOp::verify() {
   if (!isWriteHintOrNone(getL3HintAttr()))
     return emitOpError("invalid l3_hint: ") << getL3HintAttr();
 
-  return isValidGatherScatterParams(maskTy, valueTy, tdescTy, getTransposeAttr(),
-                         [&]() { return emitOpError(); });
+  return isValidGatherScatterParams(maskTy, valueTy, tdescTy,
+                                    getTransposeAttr(),
+                                    [&]() { return emitOpError(); });
 }
 
 //===----------------------------------------------------------------------===//
