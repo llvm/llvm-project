@@ -11,18 +11,15 @@ set(LLDB_LIBEDIT_LIBS)
 
 if (LLDB_ENABLE_CURSES)
   list(APPEND LLDB_CURSES_LIBS ${PANEL_LIBRARIES} ${CURSES_LIBRARIES})
-  if(LLVM_ENABLE_TERMINFO)
-    list(APPEND LLDB_CURSES_LIBS ${Terminfo_LIBRARIES})
-  endif()
   if (LLVM_BUILD_STATIC)
     list(APPEND LLDB_CURSES_LIBS gpm)
   endif()
 endif()
 
-# TODO: Add property `NO_PLUGIN_DEPENDENCIES` to lldbCore
-add_lldb_library(lldbCore
+add_lldb_library(lldbCore NO_PLUGIN_DEPENDENCIES
   Address.cpp
   AddressRange.cpp
+  AddressRangeListImpl.cpp
   AddressResolver.cpp
   AddressResolverFileLine.cpp
   Communication.cpp
@@ -48,31 +45,17 @@ add_lldb_library(lldbCore
   Opcode.cpp
   PluginManager.cpp
   Progress.cpp
+  Statusline.cpp
   RichManglingContext.cpp
   SearchFilter.cpp
   Section.cpp
   SourceLocationSpec.cpp
   SourceManager.cpp
   StreamAsynchronousIO.cpp
+  Telemetry.cpp
   ThreadedCommunication.cpp
   UserSettingsController.cpp
   Value.cpp
-  ValueObject.cpp
-  ValueObjectCast.cpp
-  ValueObjectChild.cpp
-  ValueObjectConstResult.cpp
-  ValueObjectConstResultCast.cpp
-  ValueObjectConstResultChild.cpp
-  ValueObjectConstResultImpl.cpp
-  ValueObjectDynamicValue.cpp
-  ValueObjectList.cpp
-  ValueObjectMemory.cpp
-  ValueObjectRegister.cpp
-  ValueObjectSyntheticFilter.cpp
-  ValueObjectUpdater.cpp
-  ValueObjectVariable.cpp
-  ValueObjectVTable.cpp
-
   DEPENDS
     clang-tablegen-targets
 
@@ -85,8 +68,8 @@ add_lldb_library(lldbCore
     lldbSymbol
     lldbTarget
     lldbUtility
-    lldbPluginCPlusPlusLanguage
-    lldbPluginObjCLanguage
+    lldbValueObject
+    lldbVersion
     ${LLDB_CURSES_LIBS}
 
   CLANG_LIBS
@@ -96,6 +79,7 @@ add_lldb_library(lldbCore
     Support
     Demangle
     TargetParser
+    Telemetry
   )
 
 add_dependencies(lldbCore

@@ -11,10 +11,12 @@
 
 #include <memory>
 #include <mutex>
+#include <optional>
 
 #include "lldb/Breakpoint/BreakpointOptions.h"
 #include "lldb/Breakpoint/StoppointHitCounter.h"
 #include "lldb/Core/Address.h"
+#include "lldb/Symbol/LineEntry.h"
 #include "lldb/Utility/UserID.h"
 #include "lldb/lldb-private.h"
 
@@ -282,6 +284,25 @@ public:
   /// Returns the breakpoint location ID.
   lldb::break_id_t GetID() const { return m_loc_id; }
 
+  /// Set the line entry that should be shown to users for this location.
+  /// It is up to the caller to verify that this is a valid entry to show.
+  /// The current use of this is to distinguish among line entries from a
+  /// virtual inlined call stack that all share the same address.
+  /// The line entry must have the same start address as the address for this
+  /// location.
+  bool SetPreferredLineEntry(const LineEntry &line_entry) {
+    if (m_address == line_entry.range.GetBaseAddress()) {
+      m_preferred_line_entry = line_entry;
+      return true;
+    }
+    assert(0 && "Tried to set a preferred line entry with a different address");
+    return false;
+  }
+
+  const std::optional<LineEntry> GetPreferredLineEntry() {
+    return m_preferred_line_entry;
+  }
+
 protected:
   friend class BreakpointSite;
   friend class BreakpointLocationList;
@@ -306,12 +327,33 @@ protected:
   /// If it returns false we should continue, otherwise stop.
   bool IgnoreCountShouldStop();
 
+  /// If this location knows that the virtual stack frame it represents is
+  /// not frame 0, return the suggested stack frame instead.  This will happen
+  /// when the location's address contains a "virtual inlined call stack" and
+  /// the breakpoint was set on a file & line that are not at the bottom of that
+  /// stack.  For now we key off the "preferred line entry" - looking for that
+  /// in the blocks that start with the stop PC.
+  /// This version of the API doesn't take an "inlined" parameter because it
+  /// only changes frames in the inline stack.
+  std::optional<uint32_t> GetSuggestedStackFrameIndex();
+
 private:
   void SwapLocation(lldb::BreakpointLocationSP swap_from);
 
   void BumpHitCount();
 
   void UndoBumpHitCount();
+
+  /// Updates the thread ID internally.
+  ///
+  /// This method was created to handle actually mutating the thread ID
+  /// internally because SetThreadID broadcasts an event in addition to mutating
+  /// state. The constructor calls this instead of SetThreadID to avoid the
+  /// broadcast.
+  ///
+  /// \param[in] thread_id
+  ///   The new thread ID.
+  void SetThreadIDInternal(lldb::tid_t thread_id);
 
   // Constructors and Destructors
   //
@@ -337,7 +379,6 @@ private:
                      bool check_for_resolver = true);
 
   // Data members:
-  bool m_being_created;
   bool m_should_resolve_indirect_functions;
   bool m_is_reexported;
   bool m_is_indirect;
@@ -359,6 +400,11 @@ private:
   lldb::break_id_t m_loc_id; ///< Breakpoint location ID.
   StoppointHitCounter m_hit_counter; ///< Number of times this breakpoint
                                      /// location has been hit.
+  /// If this exists, use it to print the stop description rather than the
+  /// LineEntry m_address resolves to directly.  Use this for instance when the
+  /// location was given somewhere in the virtual inlined call stack since the
+  /// Address always resolves to the lowest entry in the stack.
+  std::optional<LineEntry> m_preferred_line_entry;
 
   void SetShouldResolveIndirectFunctions(bool do_resolve) {
     m_should_resolve_indirect_functions = do_resolve;

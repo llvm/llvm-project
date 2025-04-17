@@ -95,6 +95,16 @@ void lambda_value_capture_copy(T&& t) {
   [&,t]() { T other = std::forward<T>(t); };
 }
 
+template <typename X>
+void use(const X &x) {}
+
+template <typename X, typename Y>
+void foo(X &&x, Y &&y) {
+  // CHECK-MESSAGES: :[[@LINE-1]]:21: warning: forwarding reference parameter 'y' is never forwarded inside the function body [cppcoreguidelines-missing-std-forward]
+    use(std::forward<X>(x));
+    use(y);
+}
+
 } // namespace positive_cases
 
 namespace negative_cases {
@@ -173,3 +183,31 @@ void lambda_value_reference_auxiliary_var(T&& t) {
 }
 
 } // namespace negative_cases
+
+namespace deleted_functions {
+
+template <typename T>
+void f(T &&t) = delete;
+
+struct S {
+    template <typename T>
+    S(T &&t) = delete;
+
+    template <typename T>
+    void operator&(T &&t) = delete;
+};
+
+} // namespace deleted_functions
+
+namespace unused_arguments {
+
+template<typename F>
+void unused_argument1(F&&) {}
+
+template<typename F>
+void unused_argument2([[maybe_unused]] F&& f) {}
+
+template<typename F>
+void unused_argument3(F&& _) {}
+
+} // namespace unused_arguments

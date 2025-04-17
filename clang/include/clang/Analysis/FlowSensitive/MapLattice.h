@@ -49,7 +49,7 @@ public:
 
   MapLattice() = default;
 
-  explicit MapLattice(Container C) { C = std::move(C); }
+  explicit MapLattice(Container C) : C{std::move(C)} {};
 
   // The `bottom` element is the empty map.
   static MapLattice bottom() { return MapLattice(); }

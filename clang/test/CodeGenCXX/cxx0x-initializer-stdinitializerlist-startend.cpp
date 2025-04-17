@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++11 -S -triple x86_64-none-linux-gnu -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -std=c++11 -triple x86_64 -emit-llvm -o - %s | FileCheck %s
 
 namespace std {
   typedef decltype(sizeof(int)) size_t;
@@ -40,8 +40,7 @@ void fn1(int i) {
   // CHECK-LABEL: define{{.*}} void @_Z3fn1i
   // temporary array
   // CHECK: [[array:%[^ ]+]] = alloca [3 x i32]
-  // CHECK: getelementptr inbounds [3 x i32], ptr [[array]], i{{32|64}} 0
-  // CHECK-NEXT: store i32 1, ptr
+  // CHECK:      store i32 1, ptr
   // CHECK-NEXT: getelementptr
   // CHECK-NEXT: store
   // CHECK-NEXT: getelementptr
@@ -49,7 +48,6 @@ void fn1(int i) {
   // CHECK-NEXT: store
   // init the list
   // CHECK-NEXT: getelementptr
-  // CHECK-NEXT: getelementptr inbounds [3 x i32], ptr
   // CHECK-NEXT: store ptr
   // CHECK-NEXT: getelementptr
   // CHECK-NEXT: getelementptr inbounds [3 x i32], ptr [[array]], i{{32|64}} 0, i{{32|64}} 3

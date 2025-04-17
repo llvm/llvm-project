@@ -1,10 +1,11 @@
 // RUN: %clang_cc1 -verify -Wno-vla -fopenmp -ast-print %s | FileCheck %s
 // RUN: %clang_cc1 -fopenmp -x c++ -std=c++11 -emit-pch -o %t %s
-// RUN: %clang_cc1 -fopenmp -std=c++11 -include-pch %t -fsyntax-only -verify -Wno-vla %s -ast-print | FileCheck %s
+// RUN: %clang_cc1 -fopenmp -std=c++11 -include-pch %t -verify -Wno-vla %s -ast-print | FileCheck %s
 
 // RUN: %clang_cc1 -verify -Wno-vla -fopenmp-simd -ast-print %s | FileCheck %s
 // RUN: %clang_cc1 -fopenmp-simd -x c++ -std=c++11 -emit-pch -o %t %s
-// RUN: %clang_cc1 -fopenmp-simd -std=c++11 -include-pch %t -fsyntax-only -verify -Wno-vla %s -ast-print | FileCheck %s
+// RUN: %clang_cc1 -fopenmp-simd -std=c++11 -include-pch %t -verify -Wno-vla %s -ast-print | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -fopenmp -ast-dump  %s | FileCheck %s --check-prefix=DUMP
 // expected-no-diagnostics
 
 #ifndef HEADER
@@ -85,10 +86,6 @@ struct S {
 // CHECK:      template<> struct S<int> {
 // CHECK:        static int TS;
 // CHECK-NEXT:   #pragma omp threadprivate(S<int>::TS)
-// CHECK-NEXT: }
-// CHECK:      template<> struct S<long> {
-// CHECK:        static long TS;
-// CHECK-NEXT:   #pragma omp threadprivate(S<long>::TS)
 // CHECK-NEXT: }
 
 template <typename T, int C>
@@ -207,5 +204,45 @@ int main(int argc, char **argv) {
 
 extern template int S<int>::TS;
 extern template long S<long>::TS;
+
+// DUMP-LABEL:  FunctionDecl {{.*}} implicit_firstprivate
+void
+implicit_firstprivate() {
+
+#pragma omp parallel num_threads(1)
+  {
+    int i = 0;
+    // DUMP: OMPTaskDirective 
+    // DUMP-NEXT: OMPFirstprivateClause
+    // DUMP-NOT: DeclRefExpr {{.+}} 'i' {{.+}} non_odr_use_unevaluated
+    // DUMP: DeclRefExpr {{.+}} 'i' 'int' refers_to_enclosing_variable_or_capture
+    // DUMP: CapturedStmt
+    // DUMP: BinaryOperator {{.+}} 'int' lvalue '='
+    // DUMP-NEXT: DeclRefExpr {{.+}} 'j' 'int'
+    // DUMP: DeclRefExpr {{.+}} 'i' {{.+}} non_odr_use_unevaluated
+    #pragma omp task
+    {
+	int j = sizeof(i);
+	j = i;
+    }
+  }
+}
+
+// DUMP-LABEL:  FunctionDecl {{.*}} no_implicit_firstprivate
+void
+no_implicit_firstprivate() {
+
+#pragma omp parallel num_threads(1)
+  {
+    int i = 0;
+    // DUMP: OMPTaskDirective
+    // DUMP-NEXT: CapturedStmt
+    // DUMP: DeclRefExpr {{.+}} 'i' {{.+}} non_odr_use_unevaluated refers_to_enclosing_variable_or_capture
+    #pragma omp task
+    {
+	int j = sizeof(i);
+    }
+  }
+}
 
 #endif

@@ -46,8 +46,10 @@
 // RUN:   FileCheck %s --check-prefix=VER3
 // RUN: %clang -target powerpc-ibm-aix-xcoff -gdwarf-4 -S -emit-llvm -o - %s | \
 // RUN:   FileCheck %s --check-prefix=VER4
-// RUN: %clang -target powerpc-ibm-aix-xcoff -gdwarf-5 -S -emit-llvm -o - %s | \
-// RUN:   FileCheck %s --check-prefix=VER5
+// RUN: not %clang -target powerpc-ibm-aix-xcoff -gdwarf-5 -S -emit-llvm -o - %s 2>&1 | \
+// RUN:   FileCheck %s --check-prefix=UNSUPPORTED-VER5
+// RUN: not %clang -target powerpc64-ibm-aix-xcoff -gdwarf-5 -S -emit-llvm -o - %s 2>&1| \
+// RUN:   FileCheck %s --check-prefix=UNSUPPORTED-VER5
 
 int main (void) {
   return 0;
@@ -59,6 +61,7 @@ int main (void) {
 // VER3: !{i32 7, !"Dwarf Version", i32 3}
 // VER4: !{i32 7, !"Dwarf Version", i32 4}
 // VER5: !{i32 7, !"Dwarf Version", i32 5}
+// UNSUPPORTED-VER5: error: unsupported option '-gdwarf-5'
 
 // NODWARF-NOT: !"Dwarf Version"
 // CODEVIEW: !{i32 2, !"CodeView", i32 1}

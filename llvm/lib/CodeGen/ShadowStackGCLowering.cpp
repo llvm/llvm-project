@@ -42,7 +42,6 @@
 #include "llvm/Transforms/Utils/EscapeEnumerator.h"
 #include <cassert>
 #include <optional>
-#include <string>
 #include <utility>
 #include <vector>
 
@@ -234,7 +233,7 @@ bool ShadowStackGCLoweringImpl::doInitialization(Module &M) {
   // Specifies length of variable length array.
   EltTys.push_back(Type::getInt32Ty(M.getContext()));
   FrameMapTy = StructType::create(EltTys, "gc_map");
-  PointerType *FrameMapPtrTy = PointerType::getUnqual(FrameMapTy);
+  PointerType *FrameMapPtrTy = PointerType::getUnqual(M.getContext());
 
   // struct StackEntry {
   //   ShadowStackEntry *Next; // Caller's stack entry.
@@ -242,13 +241,12 @@ bool ShadowStackGCLoweringImpl::doInitialization(Module &M) {
   //   void *Roots[];          // Stack roots (in-place array, so we pretend).
   // };
 
-  StackEntryTy = StructType::create(M.getContext(), "gc_stackentry");
+  PointerType *StackEntryPtrTy = PointerType::getUnqual(M.getContext());
 
   EltTys.clear();
-  EltTys.push_back(PointerType::getUnqual(StackEntryTy));
+  EltTys.push_back(StackEntryPtrTy);
   EltTys.push_back(FrameMapPtrTy);
-  StackEntryTy->setBody(EltTys);
-  PointerType *StackEntryPtrTy = PointerType::getUnqual(StackEntryTy);
+  StackEntryTy = StructType::create(EltTys, "gc_stackentry");
 
   // Get the root chain if it already exists.
   Head = M.getGlobalVariable("llvm_gc_root_chain");

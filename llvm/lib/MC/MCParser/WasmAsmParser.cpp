@@ -115,6 +115,9 @@ public:
       case 'S':
         flags |= wasm::WASM_SEG_FLAG_STRINGS;
         break;
+      case 'R':
+        flags |= wasm::WASM_SEG_FLAG_RETAIN;
+        break;
       default:
         return -1U;
       }
@@ -190,7 +193,7 @@ public:
 
     // TODO: Parse UniqueID
     MCSectionWasm *WS = getContext().getWasmSection(
-        Name, *Kind, Flags, GroupName, MCContext::GenericSectionID);
+        Name, *Kind, Flags, GroupName, MCSection::NonUniqueID);
 
     if (WS->getSegmentFlags() != Flags)
       Parser->Error(loc, "changed section flags for " + Name +
@@ -249,7 +252,7 @@ public:
     if (TypeName == "function") {
       WasmSym->setType(wasm::WASM_SYMBOL_TYPE_FUNCTION);
       auto *Current =
-          cast<MCSectionWasm>(getStreamer().getCurrentSection().first);
+          cast<MCSectionWasm>(getStreamer().getCurrentSectionOnly());
       if (Current->getGroup())
         WasmSym->setComdat(true);
     } else if (TypeName == "global")

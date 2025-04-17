@@ -1,5 +1,5 @@
 # RUN: llvm-mc -triple=amdgcn -mcpu=gfx1100 -disassemble -show-encoding < %s | FileCheck -check-prefix=GFX11 %s
-# RUN: llvm-mc -triple=amdgcn -mcpu=gfx1100 -mattr=-WavefrontSize32,+WavefrontSize64 -disassemble -show-encoding < %s | FileCheck -check-prefix=GFX11 %s
+# RUN: llvm-mc -triple=amdgcn -mcpu=gfx1100 -mattr=+wavefrontsize64 -disassemble -show-encoding < %s | FileCheck -check-prefix=GFX11 %s
 
 # GFX11: v_dot2_f32_bf16 v5, v1, v2, v3          ; encoding: [0x05,0x40,0x1a,0xcc,0x01,0x05,0x0e,0x1c]
 0x05,0x40,0x1a,0xcc,0x01,0x05,0x0e,0x1c

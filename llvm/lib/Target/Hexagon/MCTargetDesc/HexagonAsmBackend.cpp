@@ -14,7 +14,6 @@
 #include "MCTargetDesc/HexagonMCShuffler.h"
 #include "MCTargetDesc/HexagonMCTargetDesc.h"
 #include "llvm/MC/MCAsmBackend.h"
-#include "llvm/MC/MCAsmLayout.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCELFObjectWriter.h"
@@ -42,6 +41,7 @@ class HexagonAsmBackend : public MCAsmBackend {
   uint8_t OSABI;
   StringRef CPU;
   mutable uint64_t relaxedCnt;
+  mutable const MCInst *RelaxedMCB = nullptr;
   std::unique_ptr <MCInstrInfo> MCII;
   std::unique_ptr <MCInst *> RelaxTarget;
   MCInst * Extender;
@@ -55,7 +55,7 @@ class HexagonAsmBackend : public MCAsmBackend {
 
     // Update the fragment.
     RF.setInst(HMB);
-    RF.getContents() = Code;
+    RF.setContents(Code);
     RF.getFixups() = Fixups;
   }
 
@@ -83,9 +83,6 @@ public:
     return Result;
   }
 
-  unsigned getNumFixupKinds() const override {
-    return Hexagon::NumTargetFixupKinds;
-  }
 
   const MCFixupKindInfo &getFixupKindInfo(MCFixupKind Kind) const override {
     const static MCFixupKindInfo Infos[Hexagon::NumTargetFixupKinds] = {
@@ -196,7 +193,8 @@ public:
     if (Kind < FirstTargetFixupKind)
       return MCAsmBackend::getFixupKindInfo(Kind);
 
-    assert(unsigned(Kind - FirstTargetFixupKind) < getNumFixupKinds() &&
+    assert(unsigned(Kind - FirstTargetFixupKind) <
+               Hexagon::NumTargetFixupKinds &&
            "Invalid kind!");
     return Infos[Kind - FirstTargetFixupKind];
   }
@@ -563,17 +561,17 @@ public:
   /// \param Inst - The instruction to test.
   bool mayNeedRelaxation(MCInst const &Inst,
                          const MCSubtargetInfo &STI) const override {
+    RelaxedMCB = &Inst;
     return true;
   }
 
   /// fixupNeedsRelaxation - Target specific predicate for whether a given
   /// fixup requires the associated instruction to be relaxed.
-  bool fixupNeedsRelaxationAdvanced(const MCFixup &Fixup, bool Resolved,
+  bool fixupNeedsRelaxationAdvanced(const MCAssembler &Asm,
+                                    const MCFixup &Fixup, const MCValue &,
                                     uint64_t Value,
-                                    const MCRelaxableFragment *DF,
-                                    const MCAsmLayout &Layout,
-                                    const bool WasForced) const override {
-    MCInst const &MCB = DF->getInst();
+                                    bool Resolved) const override {
+    MCInst const &MCB = *RelaxedMCB;
     assert(HexagonMCInstrInfo::isBundle(MCB));
 
     *RelaxTarget = nullptr;
@@ -598,7 +596,7 @@ public:
         if (HexagonMCInstrInfo::bundleSize(MCB) < HEXAGON_PACKET_SIZE) {
           ++relaxedCnt;
           *RelaxTarget = &MCI;
-          setExtender(Layout.getAssembler().getContext());
+          setExtender(Asm.getContext());
           return true;
         } else {
           return false;
@@ -636,19 +634,12 @@ public:
       if (HexagonMCInstrInfo::bundleSize(MCB) < HEXAGON_PACKET_SIZE) {
         ++relaxedCnt;
         *RelaxTarget = &MCI;
-        setExtender(Layout.getAssembler().getContext());
+        setExtender(Asm.getContext());
         return true;
       }
     }
 
     return false;
-  }
-
-  /// Simple predicate for targets where !Resolved implies requiring relaxation
-  bool fixupNeedsRelaxation(const MCFixup &Fixup, uint64_t Value,
-                            const MCRelaxableFragment *DF,
-                            const MCAsmLayout &Layout) const override {
-    llvm_unreachable("Handled by fixupNeedsRelaxationAdvanced");
   }
 
   void relaxInstruction(MCInst &Inst,
@@ -710,20 +701,21 @@ public:
     return true;
   }
 
-  void finishLayout(MCAssembler const &Asm,
-                    MCAsmLayout &Layout) const override {
-    for (auto *I : Layout.getSectionOrder()) {
-      auto &Fragments = I->getFragmentList();
-      for (auto &J : Fragments) {
-        switch (J.getKind()) {
+  void finishLayout(MCAssembler const &Asm) const override {
+    SmallVector<MCFragment *> Frags;
+    for (MCSection &Sec : Asm) {
+      Frags.clear();
+      for (MCFragment &F : Sec)
+        Frags.push_back(&F);
+      for (size_t J = 0, E = Frags.size(); J != E; ++J) {
+        switch (Frags[J]->getKind()) {
         default:
           break;
         case MCFragment::FT_Align: {
-          auto Size = Asm.computeFragmentSize(Layout, J);
-          for (auto K = J.getIterator();
-               K != Fragments.begin() && Size >= HEXAGON_PACKET_SIZE;) {
+          auto Size = Asm.computeFragmentSize(*Frags[J]);
+          for (auto K = J; K != 0 && Size >= HEXAGON_PACKET_SIZE;) {
             --K;
-            switch (K->getKind()) {
+            switch (Frags[K]->getKind()) {
             default:
               break;
             case MCFragment::FT_Align: {
@@ -733,8 +725,26 @@ public:
             }
             case MCFragment::FT_Relaxable: {
               MCContext &Context = Asm.getContext();
-              auto &RF = cast<MCRelaxableFragment>(*K);
+              auto &RF = cast<MCRelaxableFragment>(*Frags[K]);
               auto &Inst = const_cast<MCInst &>(RF.getInst());
+
+              const bool WouldTraverseLabel = llvm::any_of(
+                  Asm.symbols(), [&Asm, &RF, &Inst](MCSymbol const &sym) {
+                    uint64_t Offset = 0;
+                    const bool HasOffset = Asm.getSymbolOffset(sym, Offset);
+                    const unsigned PacketSizeBytes =
+                        HexagonMCInstrInfo::bundleSize(Inst) *
+                        HEXAGON_INSTR_SIZE;
+                    const bool OffsetPastSym =
+                        Offset <= (Asm.getFragmentOffset(RF) + PacketSizeBytes);
+                    return !sym.isVariable() && Offset != 0 && HasOffset &&
+                           OffsetPastSym;
+                  });
+              if (WouldTraverseLabel) {
+                Size = 0;
+                break;
+              }
+
               while (Size > 0 &&
                      HexagonMCInstrInfo::bundleSize(Inst) < MaxPacketSize) {
                 MCInst *Nop = Context.createMCInst();
@@ -754,7 +764,7 @@ public:
               //assert(!Error);
               (void)Error;
               ReplaceInstruction(Asm.getEmitter(), RF, Inst);
-              Layout.invalidateFragmentsFrom(&RF);
+              Sec.setHasLayout(false);
               Size = 0; // Only look back one instruction
               break;
             }

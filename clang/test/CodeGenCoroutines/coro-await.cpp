@@ -71,16 +71,13 @@ extern "C" void f0() {
   // CHECK: [[SUSPEND_BB]]:
   // CHECK: %[[SUSPEND_ID:.+]] = call token @llvm.coro.save(
   // ---------------------------
-  // Build the coroutine handle and pass it to await_suspend
+  // Call coro.await.suspend
   // ---------------------------
-  // CHECK: call ptr @_ZNSt16coroutine_handleINSt16coroutine_traitsIJvEE12promise_typeEE12from_addressEPv(ptr %[[FRAME]])
-  //   ... many lines of code to coerce coroutine_handle into an ptr scalar
-  // CHECK: %[[CH:.+]] = load ptr, ptr %{{.+}}
-  // CHECK: call void @_ZN14suspend_always13await_suspendESt16coroutine_handleIvE(ptr {{[^,]*}} %[[AWAITABLE]], ptr %[[CH]])
+  // CHECK-NEXT: call void @llvm.coro.await.suspend.void(ptr %[[AWAITABLE]], ptr %[[FRAME]], ptr @f0.__await_suspend_wrapper__await)
   // -------------------------
   // Generate a suspend point:
   // -------------------------
-  // CHECK: %[[OUTCOME:.+]] = call i8 @llvm.coro.suspend(token %[[SUSPEND_ID]], i1 false)
+  // CHECK-NEXT: %[[OUTCOME:.+]] = call i8 @llvm.coro.suspend(token %[[SUSPEND_ID]], i1 false)
   // CHECK: switch i8 %[[OUTCOME]], label %[[RET_BB:.+]] [
   // CHECK:   i8 0, label %[[READY_BB]]
   // CHECK:   i8 1, label %[[CLEANUP_BB:.+]]
@@ -101,6 +98,17 @@ extern "C" void f0() {
   // CHECK-NEXT: call zeroext i1 @_ZN10final_susp11await_readyEv(ptr
   // CHECK: %[[FINALSP_ID:.+]] = call token @llvm.coro.save(
   // CHECK: call i8 @llvm.coro.suspend(token %[[FINALSP_ID]], i1 true)
+
+  // Await suspend wrapper
+  // CHECK: define{{.*}} @f0.__await_suspend_wrapper__await(ptr {{[^,]*}} %[[AWAITABLE_ARG:.+]], ptr {{[^,]*}} %[[FRAME_ARG:.+]])
+  // CHECK: store ptr %[[AWAITABLE_ARG]], ptr %[[AWAITABLE_TMP:.+]],
+  // CHECK: store ptr %[[FRAME_ARG]], ptr %[[FRAME_TMP:.+]],
+  // CHECK: %[[AWAITABLE:.+]] = load ptr, ptr %[[AWAITABLE_TMP]]
+  // CHECK: %[[FRAME:.+]] = load ptr, ptr %[[FRAME_TMP]]
+  // CHECK: call ptr @_ZNSt16coroutine_handleINSt16coroutine_traitsIJvEE12promise_typeEE12from_addressEPv(ptr %[[FRAME]])
+  //   ... many lines of code to coerce coroutine_handle into an ptr scalar
+  // CHECK: %[[CH:.+]] = load ptr, ptr %{{.+}}
+  // CHECK: call void @_ZN14suspend_always13await_suspendESt16coroutine_handleIvE(ptr {{[^,]*}} %[[AWAITABLE]], ptr %[[CH]])
 }
 
 struct suspend_maybe {
@@ -131,7 +139,7 @@ extern "C" void f1(int) {
 
   // See if we need to suspend:
   // --------------------------
-  // CHECK: %[[READY:.+]] = call zeroext i1 @_ZN13suspend_maybe11await_readyEv(ptr {{[^,]*}} %[[AWAITABLE]])
+  // CHECK: %[[READY:.+]] = call zeroext i1 @_ZN13suspend_maybe11await_readyEv(ptr {{[^,]*}} %[[AWAITABLE:.+]])
   // CHECK: br i1 %[[READY]], label %[[READY_BB:.+]], label %[[SUSPEND_BB:.+]]
 
   // If we are suspending:
@@ -139,12 +147,9 @@ extern "C" void f1(int) {
   // CHECK: [[SUSPEND_BB]]:
   // CHECK: %[[SUSPEND_ID:.+]] = call token @llvm.coro.save(
   // ---------------------------
-  // Build the coroutine handle and pass it to await_suspend
+  // Call coro.await.suspend
   // ---------------------------
-  // CHECK: call ptr @_ZNSt16coroutine_handleINSt16coroutine_traitsIJviEE12promise_typeEE12from_addressEPv(ptr %[[FRAME]])
-  //   ... many lines of code to coerce coroutine_handle into an ptr scalar
-  // CHECK: %[[CH:.+]] = load ptr, ptr %{{.+}}
-  // CHECK: %[[YES:.+]] = call zeroext i1 @_ZN13suspend_maybe13await_suspendESt16coroutine_handleIvE(ptr {{[^,]*}} %[[AWAITABLE]], ptr %[[CH]])
+  // CHECK-NEXT: %[[YES:.+]] = call i1 @llvm.coro.await.suspend.bool(ptr %[[AWAITABLE]], ptr %[[FRAME]], ptr @f1.__await_suspend_wrapper__yield)
   // -------------------------------------------
   // See if await_suspend decided not to suspend
   // -------------------------------------------
@@ -155,6 +160,18 @@ extern "C" void f1(int) {
 
   // CHECK: [[READY_BB]]:
   // CHECK:     call void @_ZN13suspend_maybe12await_resumeEv(ptr {{[^,]*}} %[[AWAITABLE]])
+
+  // Await suspend wrapper
+  // CHECK: define {{.*}} i1 @f1.__await_suspend_wrapper__yield(ptr {{[^,]*}} %[[AWAITABLE_ARG:.+]], ptr {{[^,]*}} %[[FRAME_ARG:.+]])
+  // CHECK: store ptr %[[AWAITABLE_ARG]], ptr %[[AWAITABLE_TMP:.+]],
+  // CHECK: store ptr %[[FRAME_ARG]], ptr %[[FRAME_TMP:.+]],
+  // CHECK: %[[AWAITABLE:.+]] = load ptr, ptr %[[AWAITABLE_TMP]]
+  // CHECK: %[[FRAME:.+]] = load ptr, ptr %[[FRAME_TMP]]
+  // CHECK: call ptr @_ZNSt16coroutine_handleINSt16coroutine_traitsIJviEE12promise_typeEE12from_addressEPv(ptr %[[FRAME]])
+  //   ... many lines of code to coerce coroutine_handle into an ptr scalar
+  // CHECK: %[[CH:.+]] = load ptr, ptr %{{.+}}
+  // CHECK: %[[YES:.+]] = call zeroext i1 @_ZN13suspend_maybe13await_suspendESt16coroutine_handleIvE(ptr {{[^,]*}} %[[AWAITABLE]], ptr %[[CH]]) 
+  // CHECK-NEXT: ret i1 %[[YES]]
 }
 
 struct ComplexAwaiter {
@@ -340,11 +357,39 @@ struct TailCallAwait {
 
 // CHECK-LABEL: @TestTailcall(
 extern "C" void TestTailcall() {
+  // CHECK: %[[PROMISE:.+]] = alloca %"struct.std::coroutine_traits<void>::promise_type"
+  // CHECK: %[[FRAME:.+]] = call ptr @llvm.coro.begin(
   co_await TailCallAwait{};
+  // CHECK: %[[READY:.+]] = call zeroext i1 @_ZN13TailCallAwait11await_readyEv(ptr {{[^,]*}} %[[AWAITABLE:.+]])
+  // CHECK: br i1 %[[READY]], label %[[READY_BB:.+]], label %[[SUSPEND_BB:.+]]
 
-  // CHECK: %[[RESULT:.+]] = call ptr @_ZN13TailCallAwait13await_suspendESt16coroutine_handleIvE(ptr
-  // CHECK: %[[COERCE:.+]] = getelementptr inbounds %"struct.std::coroutine_handle", ptr %[[TMP:.+]], i32 0, i32 0
-  // CHECK: store ptr %[[RESULT]], ptr %[[COERCE]]
-  // CHECK: %[[ADDR:.+]] = call ptr @_ZNSt16coroutine_handleIvE7addressEv(ptr {{[^,]*}} %[[TMP]])
-  // CHECK: call void @llvm.coro.resume(ptr %[[ADDR]])
+  // If we are suspending:
+  // ---------------------
+  // CHECK: [[SUSPEND_BB]]:
+  // CHECK: %[[SUSPEND_ID:.+]] = call token @llvm.coro.save(
+  // ---------------------------
+  // Call coro.await.suspend
+  // ---------------------------
+  // Note: The call must not be nounwind since the resumed function could throw.
+  // CHECK-NEXT: call void @llvm.coro.await.suspend.handle(ptr %[[AWAITABLE]], ptr %[[FRAME]], ptr @TestTailcall.__await_suspend_wrapper__await){{$}}
+  // CHECK-NEXT: %[[OUTCOME:.+]] = call i8 @llvm.coro.suspend(token %[[SUSPEND_ID]], i1 false)
+  // CHECK-NEXT: switch i8 %[[OUTCOME]], label %[[RET_BB:.+]] [
+  // CHECK-NEXT:   i8 0, label %[[READY_BB]]
+  // CHECK-NEXT:   i8 1, label %{{.+}}
+  // CHECK-NEXT: ]
+
+  // Await suspend wrapper
+  // CHECK: define {{.*}} ptr @TestTailcall.__await_suspend_wrapper__await(ptr {{[^,]*}} %[[AWAITABLE_ARG:.+]], ptr {{[^,]*}} %[[FRAME_ARG:.+]])
+  // CHECK: store ptr %[[AWAITABLE_ARG]], ptr %[[AWAITABLE_TMP:.+]],
+  // CHECK: store ptr %[[FRAME_ARG]], ptr %[[FRAME_TMP:.+]],
+  // CHECK: %[[AWAITABLE:.+]] = load ptr, ptr %[[AWAITABLE_TMP]]
+  // CHECK: %[[FRAME:.+]] = load ptr, ptr %[[FRAME_TMP]]
+  // CHECK: call ptr  @_ZNSt16coroutine_handleINSt16coroutine_traitsIJvEE12promise_typeEE12from_addressEPv(ptr %[[FRAME]])
+  //   ... many lines of code to coerce coroutine_handle into an ptr scalar
+  // CHECK: %[[CH:.+]] = load ptr, ptr %{{.+}}
+  // CHECK-NEXT: %[[RESULT:.+]] = call ptr @_ZN13TailCallAwait13await_suspendESt16coroutine_handleIvE(ptr {{[^,]*}} %[[AWAITABLE]], ptr %[[CH]]) 
+  // CHECK-NEXT: %[[COERCE:.+]] = getelementptr inbounds nuw %"struct.std::coroutine_handle", ptr %[[TMP:.+]], i32 0, i32 0
+  // CHECK-NEXT: store ptr %[[RESULT]], ptr %[[COERCE]]
+  // CHECK-NEXT: %[[ADDR:.+]] = call ptr @_ZNSt16coroutine_handleIvE7addressEv(ptr {{[^,]*}} %[[TMP]])
+  // CHECK-NEXT: ret ptr %[[ADDR]]
 }

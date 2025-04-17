@@ -17,7 +17,7 @@ class TestTargetSourceMap(TestBase):
 
         source_map_setting_path = "target.source-map"
         initial_source_map = self.dbg.GetSetting(source_map_setting_path)
-        self.assertEquals(
+        self.assertEqual(
             initial_source_map.GetSize(), 0, "Initial source map should be empty"
         )
 
@@ -25,7 +25,7 @@ class TestTargetSourceMap(TestBase):
         self.runCmd('settings set %s . "%s"' % (source_map_setting_path, src_dir))
 
         source_map = self.dbg.GetSetting(source_map_setting_path)
-        self.assertEquals(
+        self.assertEqual(
             source_map.GetSize(), 1, "source map should be have one appended entry"
         )
 
@@ -33,15 +33,15 @@ class TestTargetSourceMap(TestBase):
         source_map.GetAsJSON(stream)
         serialized_source_map = json.loads(stream.GetData())
 
-        self.assertEquals(
+        self.assertEqual(
             len(serialized_source_map[0]), 2, "source map entry should have two parts"
         )
-        self.assertEquals(
+        self.assertEqual(
             serialized_source_map[0][0],
             ".",
             "source map entry's first part does not match",
         )
-        self.assertEquals(
+        self.assertEqual(
             serialized_source_map[0][1],
             src_dir,
             "source map entry's second part does not match",
@@ -54,7 +54,7 @@ class TestTargetSourceMap(TestBase):
         def assertBreakpointWithSourceMap(src_path):
             # Set a breakpoint after we remap source and verify that it succeeds
             bp = target.BreakpointCreateByLocation(src_path, 2)
-            self.assertEquals(
+            self.assertEqual(
                 bp.GetNumLocations(), 1, "make sure breakpoint was resolved with map"
             )
 
@@ -85,7 +85,7 @@ class TestTargetSourceMap(TestBase):
 
         # Set a breakpoint before we remap source and verify that it fails
         bp = target.BreakpointCreateByLocation(src_path, 2)
-        self.assertEquals(
+        self.assertEqual(
             bp.GetNumLocations(),
             0,
             "make sure no breakpoints were resolved without map",

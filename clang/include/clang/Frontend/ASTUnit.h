@@ -70,7 +70,7 @@ class FileManager;
 class FrontendAction;
 class HeaderSearch;
 class InputKind;
-class InMemoryModuleCache;
+class ModuleCache;
 class PCHContainerOperations;
 class PCHContainerReader;
 class Preprocessor;
@@ -110,7 +110,7 @@ private:
   IntrusiveRefCntPtr<DiagnosticsEngine>   Diagnostics;
   IntrusiveRefCntPtr<FileManager>         FileMgr;
   IntrusiveRefCntPtr<SourceManager>       SourceMgr;
-  IntrusiveRefCntPtr<InMemoryModuleCache> ModuleCache;
+  IntrusiveRefCntPtr<ModuleCache> ModCache;
   std::unique_ptr<HeaderSearch>           HeaderInfo;
   IntrusiveRefCntPtr<TargetInfo>          Target;
   std::shared_ptr<Preprocessor>           PP;
@@ -139,6 +139,9 @@ private:
   /// Optional owned invocation, just used to make the invocation used in
   /// LoadFromCommandLine available.
   std::shared_ptr<CompilerInvocation> Invocation;
+  /// Optional owned invocation, just used to make the invocation used in
+  /// Parse available.
+  std::shared_ptr<CompilerInvocation> CCInvocation;
 
   /// Fake module loader: the AST unit doesn't need to load any modules.
   TrivialModuleLoader ModuleLoader;
@@ -241,7 +244,7 @@ private:
 
   /// A list of the serialization ID numbers for each of the top-level
   /// declarations parsed within the precompiled preamble.
-  std::vector<serialization::DeclID> TopLevelDeclsInPreamble;
+  std::vector<LocalDeclID> TopLevelDeclsInPreamble;
 
   /// Whether we should be caching code-completion results.
   bool ShouldCacheCodeCompletionResults : 1;
@@ -691,16 +694,19 @@ public:
   /// lifetime is expected to extend past that of the returned ASTUnit.
   ///
   /// \returns - The initialized ASTUnit or null if the AST failed to load.
-  static std::unique_ptr<ASTUnit> LoadFromASTFile(
-      const std::string &Filename, const PCHContainerReader &PCHContainerRdr,
-      WhatToLoad ToLoad, IntrusiveRefCntPtr<DiagnosticsEngine> Diags,
-      const FileSystemOptions &FileSystemOpts,
-      std::shared_ptr<HeaderSearchOptions> HSOpts, bool OnlyLocalDecls = false,
-      CaptureDiagsKind CaptureDiagnostics = CaptureDiagsKind::None,
-      bool AllowASTWithCompilerErrors = false,
-      bool UserFilesAreVolatile = false,
-      IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS =
-          llvm::vfs::getRealFileSystem());
+  static std::unique_ptr<ASTUnit>
+  LoadFromASTFile(StringRef Filename, const PCHContainerReader &PCHContainerRdr,
+                  WhatToLoad ToLoad,
+                  IntrusiveRefCntPtr<DiagnosticsEngine> Diags,
+                  const FileSystemOptions &FileSystemOpts,
+                  std::shared_ptr<HeaderSearchOptions> HSOpts,
+                  std::shared_ptr<LangOptions> LangOpts = nullptr,
+                  bool OnlyLocalDecls = false,
+                  CaptureDiagsKind CaptureDiagnostics = CaptureDiagsKind::None,
+                  bool AllowASTWithCompilerErrors = false,
+                  bool UserFilesAreVolatile = false,
+                  IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS =
+                      llvm::vfs::getRealFileSystem());
 
 private:
   /// Helper function for \c LoadFromCompilerInvocation() and
@@ -833,7 +839,7 @@ public:
       bool StorePreamblesInMemory = false,
       StringRef PreambleStoragePath = StringRef(), bool OnlyLocalDecls = false,
       CaptureDiagsKind CaptureDiagnostics = CaptureDiagsKind::None,
-      ArrayRef<RemappedFile> RemappedFiles = std::nullopt,
+      ArrayRef<RemappedFile> RemappedFiles = {},
       bool RemappedFilesKeepOriginalName = true,
       unsigned PrecompilePreambleAfterNParses = 0,
       TranslationUnitKind TUKind = TU_Complete,
@@ -861,7 +867,7 @@ public:
   /// \returns True if a failure occurred that causes the ASTUnit not to
   /// contain any translation-unit information, false otherwise.
   bool Reparse(std::shared_ptr<PCHContainerOperations> PCHContainerOps,
-               ArrayRef<RemappedFile> RemappedFiles = std::nullopt,
+               ArrayRef<RemappedFile> RemappedFiles = {},
                IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS = nullptr);
 
   /// Free data that will be re-generated on the next parse.

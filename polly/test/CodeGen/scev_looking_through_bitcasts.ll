@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-codegen -S < %s | FileCheck %s
+; RUN: opt %loadNPMPolly -passes=polly-codegen -S < %s | FileCheck %s
 ;
 ; Scalar write of bitcasted value. Instead of writing %b of type
 ; %structty, the SCEV expression looks through the bitcast such that

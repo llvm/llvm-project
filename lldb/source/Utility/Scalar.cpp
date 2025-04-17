@@ -134,9 +134,9 @@ size_t Scalar::GetByteSize() const {
   case e_void:
     break;
   case e_int:
-    return (m_integer.getBitWidth() / 8);
+    return (m_integer.getBitWidth() + 7) / 8;
   case e_float:
-    return m_float.bitcastToAPInt().getBitWidth() / 8;
+    return (m_float.bitcastToAPInt().getBitWidth() + 7) / 8;
   }
   return 0;
 }
@@ -632,12 +632,11 @@ Status Scalar::SetValueFromCString(const char *value_str, Encoding encoding,
                                    size_t byte_size) {
   Status error;
   if (value_str == nullptr || value_str[0] == '\0') {
-    error.SetErrorString("Invalid c-string value string.");
-    return error;
+    return Status::FromErrorString("Invalid c-string value string.");
   }
   switch (encoding) {
   case eEncodingInvalid:
-    error.SetErrorString("Invalid encoding.");
+    return Status::FromErrorString("Invalid encoding.");
     break;
 
   case eEncodingSint:
@@ -647,7 +646,7 @@ Status Scalar::SetValueFromCString(const char *value_str, Encoding encoding,
     bool is_negative = is_signed && str.consume_front("-");
     APInt integer;
     if (str.getAsInteger(0, integer)) {
-      error.SetErrorStringWithFormatv(
+      error = Status::FromErrorStringWithFormatv(
           "'{0}' is not a valid integer string value", value_str);
       break;
     }
@@ -660,7 +659,7 @@ Status Scalar::SetValueFromCString(const char *value_str, Encoding encoding,
     } else
       fits = integer.isIntN(byte_size * 8);
     if (!fits) {
-      error.SetErrorStringWithFormatv(
+      error = Status::FromErrorStringWithFormatv(
           "value {0} is too large to fit in a {1} byte integer value",
           value_str, byte_size);
       break;
@@ -685,12 +684,12 @@ Status Scalar::SetValueFromCString(const char *value_str, Encoding encoding,
       m_type = e_float;
       m_float = std::move(f);
     } else
-      error = op.takeError();
+      error = Status::FromError(op.takeError());
     break;
   }
 
   case eEncodingVector:
-    error.SetErrorString("vector encoding unsupported.");
+    return Status::FromErrorString("vector encoding unsupported.");
     break;
   }
   if (error.Fail())
@@ -704,15 +703,15 @@ Status Scalar::SetValueFromData(const DataExtractor &data,
   Status error;
   switch (encoding) {
   case lldb::eEncodingInvalid:
-    error.SetErrorString("invalid encoding");
+    return Status::FromErrorString("invalid encoding");
     break;
   case lldb::eEncodingVector:
-    error.SetErrorString("vector encoding unsupported");
+    return Status::FromErrorString("vector encoding unsupported");
     break;
   case lldb::eEncodingUint:
   case lldb::eEncodingSint: {
     if (data.GetByteSize() < byte_size)
-      return Status("insufficient data");
+      return Status::FromErrorString("insufficient data");
     m_type = e_int;
     m_integer =
         APSInt(APInt::getZero(8 * byte_size), encoding == eEncodingUint);
@@ -735,8 +734,8 @@ Status Scalar::SetValueFromData(const DataExtractor &data,
     else if (byte_size == sizeof(long double))
       operator=(data.GetLongDouble(&offset));
     else
-      error.SetErrorStringWithFormat("unsupported float byte size: %" PRIu64 "",
-                                     static_cast<uint64_t>(byte_size));
+      return Status::FromErrorStringWithFormatv(
+          "unsupported float byte size: {0}", static_cast<uint64_t>(byte_size));
   } break;
   }
 
@@ -753,9 +752,7 @@ bool Scalar::SignExtend(uint32_t sign_bit_pos) {
       return false;
 
     case Scalar::e_int:
-      if (max_bit_pos == sign_bit_pos)
-        return true;
-      else if (sign_bit_pos < (max_bit_pos - 1)) {
+      if (sign_bit_pos < (max_bit_pos - 1)) {
         llvm::APInt sign_bit = llvm::APInt::getSignMask(sign_bit_pos + 1);
         llvm::APInt bitwize_and = m_integer & sign_bit;
         if (bitwize_and.getBoolValue()) {
@@ -777,7 +774,7 @@ size_t Scalar::GetAsMemoryData(void *dst, size_t dst_len,
   // Get a data extractor that points to the native scalar data
   DataExtractor data;
   if (!GetData(data)) {
-    error.SetErrorString("invalid scalar value");
+    error = Status::FromErrorString("invalid scalar value");
     return 0;
   }
 
@@ -791,7 +788,7 @@ size_t Scalar::GetAsMemoryData(void *dst, size_t dst_len,
                                dst_len,         // dst length
                                dst_byte_order); // dst byte order
   if (bytes_copied == 0)
-    error.SetErrorString("failed to copy data");
+    error = Status::FromErrorString("failed to copy data");
 
   return bytes_copied;
 }
@@ -813,57 +810,92 @@ bool Scalar::ExtractBitfield(uint32_t bit_size, uint32_t bit_offset) {
   return false;
 }
 
-bool lldb_private::operator==(Scalar lhs, Scalar rhs) {
+llvm::APFloat Scalar::CreateAPFloatFromAPSInt(lldb::BasicType basic_type) {
+  switch (basic_type) {
+  case lldb::eBasicTypeFloat:
+    return llvm::APFloat(
+        m_integer.isSigned()
+            ? llvm::APIntOps::RoundSignedAPIntToFloat(m_integer)
+            : llvm::APIntOps::RoundAPIntToFloat(m_integer));
+  case lldb::eBasicTypeDouble:
+    // No way to get more precision at the moment.
+  case lldb::eBasicTypeLongDouble:
+    return llvm::APFloat(
+        m_integer.isSigned()
+            ? llvm::APIntOps::RoundSignedAPIntToDouble(m_integer)
+            : llvm::APIntOps::RoundAPIntToDouble(m_integer));
+  default:
+    const llvm::fltSemantics &sem = APFloat::IEEEsingle();
+    return llvm::APFloat::getNaN(sem);
+  }
+}
+
+llvm::APFloat Scalar::CreateAPFloatFromAPFloat(lldb::BasicType basic_type) {
+  switch (basic_type) {
+  case lldb::eBasicTypeFloat: {
+    bool loses_info;
+    m_float.convert(llvm::APFloat::IEEEsingle(),
+                    llvm::APFloat::rmNearestTiesToEven, &loses_info);
+    return m_float;
+  }
+  case lldb::eBasicTypeDouble:
+    // No way to get more precision at the moment.
+  case lldb::eBasicTypeLongDouble: {
+    bool loses_info;
+    m_float.convert(llvm::APFloat::IEEEdouble(),
+                    llvm::APFloat::rmNearestTiesToEven, &loses_info);
+    return m_float;
+  }
+  default:
+    const llvm::fltSemantics &sem = APFloat::IEEEsingle();
+    return llvm::APFloat::getNaN(sem);
+  }
+}
+
+APFloat::cmpResult lldb_private::compare(Scalar lhs, Scalar rhs) {
   // If either entry is void then we can just compare the types
   if (lhs.m_type == Scalar::e_void || rhs.m_type == Scalar::e_void)
-    return lhs.m_type == rhs.m_type;
+    return lhs.m_type == rhs.m_type ? APFloat::cmpEqual : APFloat::cmpUnordered;
 
-  llvm::APFloat::cmpResult result;
   switch (Scalar::PromoteToMaxType(lhs, rhs)) {
   case Scalar::e_void:
     break;
   case Scalar::e_int:
-    return lhs.m_integer == rhs.m_integer;
+    if (lhs.m_integer < rhs.m_integer)
+      return APFloat::cmpLessThan;
+    if (lhs.m_integer > rhs.m_integer)
+      return APFloat::cmpGreaterThan;
+    return APFloat::cmpEqual;
   case Scalar::e_float:
-    result = lhs.m_float.compare(rhs.m_float);
-    if (result == llvm::APFloat::cmpEqual)
-      return true;
+    return lhs.m_float.compare(rhs.m_float);
   }
-  return false;
+  return APFloat::cmpUnordered;
+}
+
+bool lldb_private::operator==(const Scalar &lhs, const Scalar &rhs) {
+  return compare(lhs, rhs) == APFloat::cmpEqual;
 }
 
 bool lldb_private::operator!=(const Scalar &lhs, const Scalar &rhs) {
-  return !(lhs == rhs);
+  return compare(lhs, rhs) != APFloat::cmpEqual;
 }
 
-bool lldb_private::operator<(Scalar lhs, Scalar rhs) {
-  if (lhs.m_type == Scalar::e_void || rhs.m_type == Scalar::e_void)
-    return false;
-
-  llvm::APFloat::cmpResult result;
-  switch (Scalar::PromoteToMaxType(lhs, rhs)) {
-  case Scalar::e_void:
-    break;
-  case Scalar::e_int:
-    return lhs.m_integer < rhs.m_integer;
-  case Scalar::e_float:
-    result = lhs.m_float.compare(rhs.m_float);
-    if (result == llvm::APFloat::cmpLessThan)
-      return true;
-  }
-  return false;
+bool lldb_private::operator<(const Scalar &lhs, const Scalar &rhs) {
+  return compare(lhs, rhs) == APFloat::cmpLessThan;
 }
 
 bool lldb_private::operator<=(const Scalar &lhs, const Scalar &rhs) {
-  return !(rhs < lhs);
+  APFloat::cmpResult Res = compare(lhs, rhs);
+  return Res == APFloat::cmpLessThan || Res == APFloat::cmpEqual;
 }
 
 bool lldb_private::operator>(const Scalar &lhs, const Scalar &rhs) {
-  return rhs < lhs;
+  return compare(lhs, rhs) == APFloat::cmpGreaterThan;
 }
 
 bool lldb_private::operator>=(const Scalar &lhs, const Scalar &rhs) {
-  return !(lhs < rhs);
+  APFloat::cmpResult Res = compare(lhs, rhs);
+  return Res == APFloat::cmpGreaterThan || Res == APFloat::cmpEqual;
 }
 
 bool Scalar::ClearBit(uint32_t bit) {

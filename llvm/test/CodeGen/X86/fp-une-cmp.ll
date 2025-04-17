@@ -109,7 +109,7 @@ define void @pr27750(ptr %b, float %x, i1 %y) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xorps %xmm1, %xmm1
 ; CHECK-NEXT:    jmp .LBB3_1
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB3_3: # %for.end
 ; CHECK-NEXT:    # in Loop: Header=BB3_1 Depth=1
 ; CHECK-NEXT:    ucomiss %xmm1, %xmm0

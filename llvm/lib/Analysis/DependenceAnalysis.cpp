@@ -187,7 +187,7 @@ static void dumpExampleDependence(raw_ostream &OS, DependenceInfo *DA,
         if (DstI->mayReadOrWriteMemory()) {
           OS << "Src:" << *SrcI << " --> Dst:" << *DstI << "\n";
           OS << "  da analyze - ";
-          if (auto D = DA->depends(&*SrcI, &*DstI, true)) {
+          if (auto D = DA->depends(&*SrcI, &*DstI)) {
             // Normalize negative direction vectors if required by clients.
             if (NormalizeResults && D->normalize(&SE))
                 OS << "normalized - ";
@@ -216,7 +216,8 @@ void DependenceAnalysisWrapperPass::print(raw_ostream &OS,
 
 PreservedAnalyses
 DependenceAnalysisPrinterPass::run(Function &F, FunctionAnalysisManager &FAM) {
-  OS << "'Dependence Analysis' for function '" << F.getName() << "':\n";
+  OS << "Printing analysis 'Dependence Analysis' for function '" << F.getName()
+     << "':\n";
   dumpExampleDependence(OS, &FAM.getResult<DependenceAnalysis>(F),
                         FAM.getResult<ScalarEvolutionAnalysis>(F),
                         NormalizeResults);
@@ -722,7 +723,10 @@ static AliasResult underlyingObjectsAlias(AAResults *AA,
       MemoryLocation::getBeforeOrAfter(LocA.Ptr, LocA.AATags);
   MemoryLocation LocBS =
       MemoryLocation::getBeforeOrAfter(LocB.Ptr, LocB.AATags);
-  if (AA->isNoAlias(LocAS, LocBS))
+  BatchAAResults BAA(*AA);
+  BAA.enableCrossIterationMode();
+
+  if (BAA.isNoAlias(LocAS, LocBS))
     return AliasResult::NoAlias;
 
   // Check the underlying objects are the same
@@ -742,7 +746,6 @@ static AliasResult underlyingObjectsAlias(AAResults *AA,
   // must not alias.
   return AliasResult::NoAlias;
 }
-
 
 // Returns true if the load or store can be analyzed. Atomic and volatile
 // operations have properties which this analysis does not understand.
@@ -978,14 +981,6 @@ bool DependenceInfo::checkSubscript(const SCEV *Expr, const Loop *LoopNest,
 
   const SCEV *Start = AddRec->getStart();
   const SCEV *Step = AddRec->getStepRecurrence(*SE);
-  const SCEV *UB = SE->getBackedgeTakenCount(AddRec->getLoop());
-  if (!isa<SCEVCouldNotCompute>(UB)) {
-    if (SE->getTypeSizeInBits(Start->getType()) <
-        SE->getTypeSizeInBits(UB->getType())) {
-      if (!AddRec->getNoWrapFlags())
-        return false;
-    }
-  }
   if (!isLoopInvariant(Step, LoopNest))
     return false;
   if (IsSrc)
@@ -2450,8 +2445,7 @@ bool DependenceInfo::gcdMIVtest(const SCEV *Src, const SCEV *Dst,
   const SCEVConstant *Constant = dyn_cast<SCEVConstant>(Delta);
   if (const SCEVAddExpr *Sum = dyn_cast<SCEVAddExpr>(Delta)) {
     // If Delta is a sum of products, we may be able to make further progress.
-    for (unsigned Op = 0, Ops = Sum->getNumOperands(); Op < Ops; Op++) {
-      const SCEV *Operand = Sum->getOperand(Op);
+    for (const SCEV *Operand : Sum->operands()) {
       if (isa<SCEVConstant>(Operand)) {
         assert(!Constant && "Surprised to find multiple constants");
         Constant = cast<SCEVConstant>(Operand);
@@ -3444,9 +3438,9 @@ bool DependenceInfo::tryDelinearizeFixedSize(
   // iff the subscripts are positive and are less than the range of the
   // dimension.
   if (!DisableDelinearizationChecks) {
-    auto AllIndiciesInRange = [&](SmallVector<int, 4> &DimensionSizes,
-                                  SmallVectorImpl<const SCEV *> &Subscripts,
-                                  Value *Ptr) {
+    auto AllIndicesInRange = [&](SmallVector<int, 4> &DimensionSizes,
+                                 SmallVectorImpl<const SCEV *> &Subscripts,
+                                 Value *Ptr) {
       size_t SSize = Subscripts.size();
       for (size_t I = 1; I < SSize; ++I) {
         const SCEV *S = Subscripts[I];
@@ -3462,8 +3456,8 @@ bool DependenceInfo::tryDelinearizeFixedSize(
       return true;
     };
 
-    if (!AllIndiciesInRange(SrcSizes, SrcSubscripts, SrcPtr) ||
-        !AllIndiciesInRange(DstSizes, DstSubscripts, DstPtr)) {
+    if (!AllIndicesInRange(SrcSizes, SrcSubscripts, SrcPtr) ||
+        !AllIndicesInRange(DstSizes, DstSubscripts, DstPtr)) {
       SrcSubscripts.clear();
       DstSubscripts.clear();
       return false;
@@ -3587,8 +3581,8 @@ bool DependenceInfo::invalidate(Function &F, const PreservedAnalyses &PA,
 // Care is required to keep the routine below, getSplitIteration(),
 // up to date with respect to this routine.
 std::unique_ptr<Dependence>
-DependenceInfo::depends(Instruction *Src, Instruction *Dst,
-                        bool PossiblyLoopIndependent) {
+DependenceInfo::depends(Instruction *Src, Instruction *Dst) {
+  bool PossiblyLoopIndependent = true;
   if (Src == Dst)
     PossiblyLoopIndependent = false;
 
@@ -3607,7 +3601,7 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
   Value *SrcPtr = getLoadStorePointerOperand(Src);
   Value *DstPtr = getLoadStorePointerOperand(Dst);
 
-  switch (underlyingObjectsAlias(AA, F->getParent()->getDataLayout(),
+  switch (underlyingObjectsAlias(AA, F->getDataLayout(),
                                  MemoryLocation::get(Dst),
                                  MemoryLocation::get(Src))) {
   case AliasResult::MayAlias:
@@ -4034,7 +4028,7 @@ const SCEV *DependenceInfo::getSplitIteration(const Dependence &Dep,
   Value *SrcPtr = getLoadStorePointerOperand(Src);
   Value *DstPtr = getLoadStorePointerOperand(Dst);
   assert(underlyingObjectsAlias(
-             AA, F->getParent()->getDataLayout(), MemoryLocation::get(Dst),
+             AA, F->getDataLayout(), MemoryLocation::get(Dst),
              MemoryLocation::get(Src)) == AliasResult::MustAlias);
 
   // establish loop nesting levels

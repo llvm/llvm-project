@@ -1,4 +1,4 @@
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1200 %s 2>&1 | FileCheck --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1200 %s 2>&1 | FileCheck --implicit-check-not=error: %s
 
 //===----------------------------------------------------------------------===//
 // Unsupported instructions.
@@ -104,6 +104,9 @@ s_cmpk_le_u32 s0, 0
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 s_inst_prefetch 1
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+s_barrier
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 buffer_atomic_cmpswap_f32 v[5:6], off, s[96:99], s3
@@ -229,7 +232,13 @@ buffer_gl0_inv
 buffer_gl1_inv
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
+buffer_store_lds_dword s[4:7], -1 offset:4095 lds
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
 buffer_wbinvl1
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+buffer_wbinvl1_vol
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 flat_atomic_csub v1, v[0:1], v2 offset:64 th:TH_ATOMIC_RETURN
@@ -237,21 +246,3 @@ flat_atomic_csub v1, v[0:1], v2 offset:64 th:TH_ATOMIC_RETURN
 
 ds_add_f32 v255, v255 offset:4 gds
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: gds modifier is not supported on this GPU
-
-buffer_load_lds_b32 off, s[8:11], s3
-// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
-
-buffer_load_lds_format_x off, s[8:11], s3
-// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
-
-buffer_load_lds_i8 off, s[8:11], s3
-// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
-
-buffer_load_lds_i16 off, s[8:11], s3
-// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
-
-buffer_load_lds_u8 off, s[8:11], s3
-// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
-
-buffer_load_lds_u16 off, s[8:11], s3
-// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU

@@ -10,7 +10,6 @@
 #include "llvm/ADT/GenericUniformityImpl.h"
 #include "llvm/Analysis/CycleAnalysis.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
-#include "llvm/IR/Constants.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
@@ -80,13 +79,12 @@ template <>
 void llvm::GenericUniformityAnalysisImpl<
     SSAContext>::propagateTemporalDivergence(const Instruction &I,
                                              const Cycle &DefCycle) {
-  if (isDivergent(I))
-    return;
   for (auto *User : I.users()) {
     auto *UserInstr = cast<Instruction>(User);
     if (DefCycle.contains(UserInstr->getParent()))
       continue;
     markDivergent(*UserInstr);
+    recordTemporalDivergence(&I, UserInstr, &DefCycle);
   }
 }
 

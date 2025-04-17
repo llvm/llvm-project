@@ -15,15 +15,17 @@
 
 TEST(LlvmLibcGetRandomTest, InvalidFlag) {
   LIBC_NAMESPACE::cpp::array<char, 10> buffer;
-  libc_errno = 0;
-  ASSERT_THAT(LIBC_NAMESPACE::getrandom(buffer.data(), buffer.size(), -1),
-              LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails(EINVAL));
+  LIBC_NAMESPACE::libc_errno = 0;
+  ASSERT_THAT(
+      LIBC_NAMESPACE::getrandom(buffer.data(), buffer.size(), -1),
+      LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails<ssize_t>(EINVAL));
 }
 
 TEST(LlvmLibcGetRandomTest, InvalidBuffer) {
-  libc_errno = 0;
-  ASSERT_THAT(LIBC_NAMESPACE::getrandom(nullptr, 65536, 0),
-              LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails(EFAULT));
+  LIBC_NAMESPACE::libc_errno = 0;
+  ASSERT_THAT(
+      LIBC_NAMESPACE::getrandom(nullptr, 65536, 0),
+      LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails<ssize_t>(EFAULT));
 }
 
 TEST(LlvmLibcGetRandomTest, ReturnsSize) {

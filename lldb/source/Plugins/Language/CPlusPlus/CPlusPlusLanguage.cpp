@@ -23,7 +23,6 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/UniqueCStringMap.h"
-#include "lldb/Core/ValueObjectVariable.h"
 #include "lldb/DataFormatters/CXXFunctionPointer.h"
 #include "lldb/DataFormatters/DataVisualization.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
@@ -34,6 +33,7 @@
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegularExpression.h"
+#include "lldb/ValueObject/ValueObjectVariable.h"
 
 #include "BlockPointer.h"
 #include "CPlusPlusNameParser.h"
@@ -62,9 +62,47 @@ void CPlusPlusLanguage::Terminate() {
   PluginManager::UnregisterPlugin(CreateInstance);
 }
 
+std::unique_ptr<Language::MethodName>
+CPlusPlusLanguage::GetMethodName(ConstString full_name) const {
+  std::unique_ptr<CxxMethodName> cpp_method =
+      std::make_unique<CxxMethodName>(full_name);
+  cpp_method->IsValid();
+  return cpp_method;
+}
+
+std::pair<FunctionNameType, std::optional<ConstString>>
+CPlusPlusLanguage::GetFunctionNameInfo(ConstString name) const {
+  if (Mangled::IsMangledName(name.GetCString()))
+    return {eFunctionNameTypeFull, std::nullopt};
+
+  FunctionNameType func_name_type = eFunctionNameTypeNone;
+  CxxMethodName method(name);
+  llvm::StringRef basename = method.GetBasename();
+  if (basename.empty()) {
+    llvm::StringRef context;
+    func_name_type |=
+        (ExtractContextAndIdentifier(name.GetCString(), context, basename)
+             ? (eFunctionNameTypeMethod | eFunctionNameTypeBase)
+             : eFunctionNameTypeFull);
+  } else {
+    func_name_type |= (eFunctionNameTypeMethod | eFunctionNameTypeBase);
+  }
+
+  if (!method.GetQualifiers().empty()) {
+    // There is a 'const' or other qualifier following the end of the function
+    // parens, this can't be a eFunctionNameTypeBase.
+    func_name_type &= ~(eFunctionNameTypeBase);
+  }
+
+  if (basename.empty())
+    return {func_name_type, std::nullopt};
+  else
+    return {func_name_type, ConstString(basename)};
+}
+
 bool CPlusPlusLanguage::SymbolNameFitsToLanguage(Mangled mangled) const {
   const char *mangled_name = mangled.GetMangledName().GetCString();
-  return mangled_name && CPlusPlusLanguage::IsCPPMangledName(mangled_name);
+  return mangled_name && Mangled::IsMangledName(mangled_name);
 }
 
 ConstString CPlusPlusLanguage::GetDemangledFunctionNameWithoutArguments(
@@ -81,7 +119,7 @@ ConstString CPlusPlusLanguage::GetDemangledFunctionNameWithoutArguments(
                                         // eventually handle eSymbolTypeData,
                                         // we will want this back)
     {
-      CPlusPlusLanguage::MethodName cxx_method(demangled_name);
+      CxxMethodName cxx_method(demangled_name);
       if (!cxx_method.GetBasename().empty()) {
         std::string shortname;
         if (!cxx_method.GetContext().empty())
@@ -104,17 +142,6 @@ Language *CPlusPlusLanguage::CreateInstance(lldb::LanguageType language) {
       language != eLanguageTypeObjC_plus_plus)
     return new CPlusPlusLanguage();
   return nullptr;
-}
-
-void CPlusPlusLanguage::MethodName::Clear() {
-  m_full.Clear();
-  m_basename = llvm::StringRef();
-  m_context = llvm::StringRef();
-  m_arguments = llvm::StringRef();
-  m_qualifiers = llvm::StringRef();
-  m_return_type = llvm::StringRef();
-  m_parsed = false;
-  m_parse_error = false;
 }
 
 static bool ReverseFindMatchingChars(const llvm::StringRef &s,
@@ -152,7 +179,7 @@ static bool IsTrivialBasename(const llvm::StringRef &basename) {
   // because it is significantly more efficient then using the general purpose
   // regular expression library.
   size_t idx = 0;
-  if (basename.size() > 0 && basename[0] == '~')
+  if (basename.starts_with('~'))
     idx = 1;
 
   if (basename.size() <= idx)
@@ -181,7 +208,7 @@ static bool PrettyPrintFunctionNameWithArgs(Stream &out_stream,
                                             char const *full_name,
                                             ExecutionContextScope *exe_scope,
                                             VariableList const &args) {
-  CPlusPlusLanguage::MethodName cpp_method{ConstString(full_name)};
+  CPlusPlusLanguage::CxxMethodName cpp_method{ConstString(full_name)};
 
   if (!cpp_method.IsValid())
     return false;
@@ -208,7 +235,7 @@ static bool PrettyPrintFunctionNameWithArgs(Stream &out_stream,
   return true;
 }
 
-bool CPlusPlusLanguage::MethodName::TrySimplifiedParse() {
+bool CPlusPlusLanguage::CxxMethodName::TrySimplifiedParse() {
   // This method tries to parse simple method definitions which are presumably
   // most comman in user programs. Definitions that can be parsed by this
   // function don't have return types and templates in the name.
@@ -251,7 +278,7 @@ bool CPlusPlusLanguage::MethodName::TrySimplifiedParse() {
   return false;
 }
 
-void CPlusPlusLanguage::MethodName::Parse() {
+void CPlusPlusLanguage::CxxMethodName::Parse() {
   if (!m_parsed && m_full) {
     if (TrySimplifiedParse()) {
       m_parse_error = false;
@@ -268,55 +295,19 @@ void CPlusPlusLanguage::MethodName::Parse() {
         m_parse_error = true;
       }
     }
+    if (m_context.empty()) {
+      m_scope_qualified = std::string(m_basename);
+    } else {
+      m_scope_qualified = m_context;
+      m_scope_qualified += "::";
+      m_scope_qualified += m_basename;
+    }
     m_parsed = true;
   }
 }
 
-llvm::StringRef CPlusPlusLanguage::MethodName::GetBasename() {
-  if (!m_parsed)
-    Parse();
-  return m_basename;
-}
-
-llvm::StringRef CPlusPlusLanguage::MethodName::GetContext() {
-  if (!m_parsed)
-    Parse();
-  return m_context;
-}
-
-llvm::StringRef CPlusPlusLanguage::MethodName::GetArguments() {
-  if (!m_parsed)
-    Parse();
-  return m_arguments;
-}
-
-llvm::StringRef CPlusPlusLanguage::MethodName::GetQualifiers() {
-  if (!m_parsed)
-    Parse();
-  return m_qualifiers;
-}
-
-llvm::StringRef CPlusPlusLanguage::MethodName::GetReturnType() {
-  if (!m_parsed)
-    Parse();
-  return m_return_type;
-}
-
-std::string CPlusPlusLanguage::MethodName::GetScopeQualifiedName() {
-  if (!m_parsed)
-    Parse();
-  if (m_context.empty())
-    return std::string(m_basename);
-
-  std::string res;
-  res += m_context;
-  res += "::";
-  res += m_basename;
-  return res;
-}
-
 llvm::StringRef
-CPlusPlusLanguage::MethodName::GetBasenameNoTemplateParameters() {
+CPlusPlusLanguage::CxxMethodName::GetBasenameNoTemplateParameters() {
   llvm::StringRef basename = GetBasename();
   size_t arg_start, arg_end;
   llvm::StringRef parens("<>", 2);
@@ -326,7 +317,7 @@ CPlusPlusLanguage::MethodName::GetBasenameNoTemplateParameters() {
   return basename;
 }
 
-bool CPlusPlusLanguage::MethodName::ContainsPath(llvm::StringRef path) {
+bool CPlusPlusLanguage::CxxMethodName::ContainsPath(llvm::StringRef path) {
   if (!m_parsed)
     Parse();
 
@@ -375,21 +366,9 @@ bool CPlusPlusLanguage::MethodName::ContainsPath(llvm::StringRef path) {
   return false;
 }
 
-bool CPlusPlusLanguage::IsCPPMangledName(llvm::StringRef name) {
-  // FIXME!! we should really run through all the known C++ Language plugins
-  // and ask each one if this is a C++ mangled name
-
-  Mangled::ManglingScheme scheme = Mangled::GetManglingScheme(name);
-
-  if (scheme == Mangled::eManglingSchemeNone)
-    return false;
-
-  return true;
-}
-
 bool CPlusPlusLanguage::DemangledNameContainsPath(llvm::StringRef path,
                                                   ConstString demangled) const {
-  MethodName demangled_name(demangled);
+  CxxMethodName demangled_name(demangled);
   return demangled_name.ContainsPath(path);
 }
 
@@ -588,7 +567,7 @@ ConstString CPlusPlusLanguage::FindBestAlternateFunctionMangledName(
   if (!demangled)
     return ConstString();
 
-  CPlusPlusLanguage::MethodName cpp_name(demangled);
+  CxxMethodName cpp_name(demangled);
   std::string scope_qualified_name = cpp_name.GetScopeQualifiedName();
 
   if (!scope_qualified_name.size())
@@ -611,7 +590,7 @@ ConstString CPlusPlusLanguage::FindBestAlternateFunctionMangledName(
     Mangled mangled(alternate_mangled_name);
     ConstString demangled = mangled.GetDemangledName();
 
-    CPlusPlusLanguage::MethodName alternate_cpp_name(demangled);
+    CxxMethodName alternate_cpp_name(demangled);
     if (!cpp_name.IsValid())
       continue;
 
@@ -641,7 +620,7 @@ static void LoadLibCxxFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
       .SetSkipPointers(false)
       .SetSkipReferences(false)
       .SetDontShowChildren(true)
-      .SetDontShowValue(true)
+      .SetDontShowValue(false)
       .SetShowMembersOneLiner(false)
       .SetHideItemNames(false);
 
@@ -752,6 +731,22 @@ static void LoadLibCxxFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
       "^std::__[[:alnum:]]+::vector<.+>$", stl_deref_flags, true);
   AddCXXSynthetic(
       cpp_category_sp,
+      lldb_private::formatters::LibcxxStdValarraySyntheticFrontEndCreator,
+      "libc++ std::valarray synthetic children",
+      "^std::__[[:alnum:]]+::valarray<.+>$", stl_deref_flags, true);
+  AddCXXSynthetic(
+      cpp_category_sp,
+      lldb_private::formatters::LibcxxStdSliceArraySyntheticFrontEndCreator,
+      "libc++ std::slice_array synthetic children",
+      "^std::__[[:alnum:]]+::slice_array<.+>$", stl_deref_flags, true);
+  AddCXXSynthetic(
+      cpp_category_sp,
+      lldb_private::formatters::LibcxxStdProxyArraySyntheticFrontEndCreator,
+      "libc++ synthetic children for the valarray proxy arrays",
+      "^std::__[[:alnum:]]+::(gslice|mask|indirect)_array<.+>$",
+      stl_deref_flags, true);
+  AddCXXSynthetic(
+      cpp_category_sp,
       lldb_private::formatters::LibcxxStdForwardListSyntheticFrontEndCreator,
       "libc++ std::forward_list synthetic children",
       "^std::__[[:alnum:]]+::forward_list<.+>$", stl_synth_flags, true);
@@ -788,7 +783,7 @@ static void LoadLibCxxFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
       cpp_category_sp,
       lldb_private::formatters::LibcxxStdUnorderedMapSyntheticFrontEndCreator,
       "libc++ std::unordered containers synthetic children",
-      "^(std::__[[:alnum:]]+::)unordered_(multi)?(map|set)<.+> >$",
+      "^std::__[[:alnum:]]+::unordered_(multi)?(map|set)<.+> >$",
       stl_synth_flags, true);
   AddCXXSynthetic(
       cpp_category_sp,
@@ -824,7 +819,7 @@ static void LoadLibCxxFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
       "^std::__[[:alnum:]]+::ranges::ref_view<.+>$", stl_deref_flags, true);
 
   cpp_category_sp->AddTypeSynthetic(
-      "^(std::__[[:alnum:]]+::)deque<.+>$", eFormatterMatchRegex,
+      "^std::__[[:alnum:]]+::deque<.+>$", eFormatterMatchRegex,
       SyntheticChildrenSP(new ScriptedSyntheticChildren(
           stl_synth_flags,
           "lldb.formatters.cpp.libcxx.stddeque_SynthProvider")));
@@ -832,8 +827,8 @@ static void LoadLibCxxFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
   AddCXXSynthetic(
       cpp_category_sp,
       lldb_private::formatters::LibcxxSharedPtrSyntheticFrontEndCreator,
-      "shared_ptr synthetic children",
-      "^(std::__[[:alnum:]]+::)shared_ptr<.+>$", stl_synth_flags, true);
+      "shared_ptr synthetic children", "^std::__[[:alnum:]]+::shared_ptr<.+>$",
+      stl_synth_flags, true);
 
   static constexpr const char *const libcxx_std_unique_ptr_regex =
       "^std::__[[:alnum:]]+::unique_ptr<.+>$";
@@ -846,7 +841,7 @@ static void LoadLibCxxFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
   AddCXXSynthetic(
       cpp_category_sp,
       lldb_private::formatters::LibcxxSharedPtrSyntheticFrontEndCreator,
-      "weak_ptr synthetic children", "^(std::__[[:alnum:]]+::)weak_ptr<.+>$",
+      "weak_ptr synthetic children", "^std::__[[:alnum:]]+::weak_ptr<.+>$",
       stl_synth_flags, true);
   AddCXXSummary(cpp_category_sp,
                 lldb_private::formatters::LibcxxFunctionSummaryProvider,
@@ -871,6 +866,20 @@ static void LoadLibCxxFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
                 lldb_private::formatters::LibcxxContainerSummaryProvider,
                 "libc++ std::vector summary provider",
                 "^std::__[[:alnum:]]+::vector<.+>$", stl_summary_flags, true);
+  AddCXXSummary(cpp_category_sp,
+                lldb_private::formatters::LibcxxContainerSummaryProvider,
+                "libc++ std::valarray summary provider",
+                "^std::__[[:alnum:]]+::valarray<.+>$", stl_summary_flags, true);
+  AddCXXSummary(cpp_category_sp,
+                lldb_private::formatters::LibcxxStdSliceArraySummaryProvider,
+                "libc++ std::slice_array summary provider",
+                "^std::__[[:alnum:]]+::slice_array<.+>$", stl_summary_flags,
+                true);
+  AddCXXSummary(cpp_category_sp,
+                lldb_private::formatters::LibcxxContainerSummaryProvider,
+                "libc++ summary provider for the valarray proxy arrays",
+                "^std::__[[:alnum:]]+::(gslice|mask|indirect)_array<.+>$",
+                stl_summary_flags, true);
   AddCXXSummary(
       cpp_category_sp, lldb_private::formatters::LibcxxContainerSummaryProvider,
       "libc++ std::list summary provider",
@@ -910,7 +919,7 @@ static void LoadLibCxxFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
   AddCXXSummary(cpp_category_sp,
                 lldb_private::formatters::LibcxxContainerSummaryProvider,
                 "libc++ std::unordered containers summary provider",
-                "^(std::__[[:alnum:]]+::)unordered_(multi)?(map|set)<.+> >$",
+                "^std::__[[:alnum:]]+::unordered_(multi)?(map|set)<.+> >$",
                 stl_summary_flags, true);
   AddCXXSummary(cpp_category_sp, LibcxxContainerSummaryProvider,
                 "libc++ std::tuple summary provider",
@@ -1031,7 +1040,7 @@ static void LoadLibCxxFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
                 "libc++ std::chrono::sys_seconds summary provider",
                 "^std::__[[:alnum:]]+::chrono::time_point<"
                 "std::__[[:alnum:]]+::chrono::system_clock, "
-                "std::__[[:alnum:]]+::chrono::duration<long long, "
+                "std::__[[:alnum:]]+::chrono::duration<.*, "
                 "std::__[[:alnum:]]+::ratio<1, 1> "
                 "> >$",
                 eTypeOptionHideChildren | eTypeOptionHideValue |
@@ -1042,6 +1051,29 @@ static void LoadLibCxxFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
                 "libc++ std::chrono::sys_seconds summary provider",
                 "^std::__[[:alnum:]]+::chrono::time_point<"
                 "std::__[[:alnum:]]+::chrono::system_clock, "
+                "std::__[[:alnum:]]+::chrono::duration<int, "
+                "std::__[[:alnum:]]+::ratio<86400, 1> "
+                "> >$",
+                eTypeOptionHideChildren | eTypeOptionHideValue |
+                    eTypeOptionCascade,
+                true);
+
+  AddCXXSummary(
+      cpp_category_sp,
+      lldb_private::formatters::LibcxxChronoLocalSecondsSummaryProvider,
+      "libc++ std::chrono::local_seconds summary provider",
+      "^std::__[[:alnum:]]+::chrono::time_point<"
+      "std::__[[:alnum:]]+::chrono::local_t, "
+      "std::__[[:alnum:]]+::chrono::duration<.*, "
+      "std::__[[:alnum:]]+::ratio<1, 1> "
+      "> >$",
+      eTypeOptionHideChildren | eTypeOptionHideValue | eTypeOptionCascade,
+      true);
+  AddCXXSummary(cpp_category_sp,
+                lldb_private::formatters::LibcxxChronoLocalDaysSummaryProvider,
+                "libc++ std::chrono::local_seconds summary provider",
+                "^std::__[[:alnum:]]+::chrono::time_point<"
+                "std::__[[:alnum:]]+::chrono::local_t, "
                 "std::__[[:alnum:]]+::chrono::duration<int, "
                 "std::__[[:alnum:]]+::ratio<86400, 1> "
                 "> >$",
@@ -1151,7 +1183,7 @@ static void LoadLibStdcppFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
       .SetSkipPointers(false)
       .SetSkipReferences(false)
       .SetDontShowChildren(true)
-      .SetDontShowValue(true)
+      .SetDontShowValue(false)
       .SetShowMembersOneLiner(false)
       .SetHideItemNames(false);
 
@@ -1644,65 +1676,66 @@ bool CPlusPlusLanguage::IsSourceFile(llvm::StringRef file_path) const {
   return file_path.contains("/usr/include/c++/");
 }
 
+static VariableListSP GetFunctionVariableList(const SymbolContext &sc) {
+  assert(sc.function);
+
+  if (sc.block)
+    if (Block *inline_block = sc.block->GetContainingInlinedBlock())
+      return inline_block->GetBlockVariableList(true);
+
+  return sc.function->GetBlock(true).GetBlockVariableList(true);
+}
+
+static bool PrintFunctionNameWithArgs(Stream &s,
+                                      const ExecutionContext *exe_ctx,
+                                      const SymbolContext &sc) {
+  assert(sc.function);
+
+  ExecutionContextScope *exe_scope =
+      exe_ctx ? exe_ctx->GetBestExecutionContextScope() : nullptr;
+
+  const char *cstr = sc.GetPossiblyInlinedFunctionName(
+      Mangled::NamePreference::ePreferDemangled);
+  if (!cstr)
+    return false;
+
+  VariableList args;
+  if (auto variable_list_sp = GetFunctionVariableList(sc))
+    variable_list_sp->AppendVariablesWithScope(eValueTypeVariableArgument,
+                                               args);
+
+  if (args.GetSize() > 0)
+    return PrettyPrintFunctionNameWithArgs(s, cstr, exe_scope, args);
+
+  // FIXME: can we just unconditionally call PrettyPrintFunctionNameWithArgs?
+  // It should be able to handle the "no arguments" case.
+  s.PutCString(cstr);
+
+  return true;
+}
+
 bool CPlusPlusLanguage::GetFunctionDisplayName(
-    const SymbolContext *sc, const ExecutionContext *exe_ctx,
+    const SymbolContext &sc, const ExecutionContext *exe_ctx,
     FunctionNameRepresentation representation, Stream &s) {
   switch (representation) {
   case FunctionNameRepresentation::eNameWithArgs: {
     // Print the function name with arguments in it
-    if (sc->function) {
-      ExecutionContextScope *exe_scope =
-          exe_ctx ? exe_ctx->GetBestExecutionContextScope() : nullptr;
-      const char *cstr = sc->function->GetName().AsCString(nullptr);
-      if (cstr) {
-        const InlineFunctionInfo *inline_info = nullptr;
-        VariableListSP variable_list_sp;
-        bool get_function_vars = true;
-        if (sc->block) {
-          Block *inline_block = sc->block->GetContainingInlinedBlock();
+    if (sc.function)
+      return PrintFunctionNameWithArgs(s, exe_ctx, sc);
 
-          if (inline_block) {
-            get_function_vars = false;
-            inline_info = inline_block->GetInlinedFunctionInfo();
-            if (inline_info)
-              variable_list_sp = inline_block->GetBlockVariableList(true);
-          }
-        }
+    if (!sc.symbol)
+      return false;
 
-        if (get_function_vars) {
-          variable_list_sp =
-              sc->function->GetBlock(true).GetBlockVariableList(true);
-        }
+    const char *cstr = sc.symbol->GetName().AsCString(nullptr);
+    if (!cstr)
+      return false;
 
-        if (inline_info) {
-          s.PutCString(cstr);
-          s.PutCString(" [inlined] ");
-          cstr = inline_info->GetName().GetCString();
-        }
+    s.PutCString(cstr);
 
-        VariableList args;
-        if (variable_list_sp)
-          variable_list_sp->AppendVariablesWithScope(eValueTypeVariableArgument,
-                                                     args);
-        if (args.GetSize() > 0) {
-          if (!PrettyPrintFunctionNameWithArgs(s, cstr, exe_scope, args))
-            return false;
-        } else {
-          s.PutCString(cstr);
-        }
-        return true;
-      }
-    } else if (sc->symbol) {
-      const char *cstr = sc->symbol->GetName().AsCString(nullptr);
-      if (cstr) {
-        s.PutCString(cstr);
-        return true;
-      }
-    }
-  } break;
-  default:
+    return true;
+  }
+  case FunctionNameRepresentation::eNameWithNoArgs:
+  case FunctionNameRepresentation::eName:
     return false;
   }
-
-  return false;
 }

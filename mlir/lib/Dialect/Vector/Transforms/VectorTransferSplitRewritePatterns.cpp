@@ -145,8 +145,8 @@ static MemRefType getCastCompatibleMemRefType(MemRefType aT, MemRefType bT) {
     return MemRefType();
   int64_t aOffset, bOffset;
   SmallVector<int64_t, 4> aStrides, bStrides;
-  if (failed(getStridesAndOffset(aT, aStrides, aOffset)) ||
-      failed(getStridesAndOffset(bT, bStrides, bOffset)) ||
+  if (failed(aT.getStridesAndOffset(aStrides, aOffset)) ||
+      failed(bT.getStridesAndOffset(bStrides, bOffset)) ||
       aStrides.size() != bStrides.size())
     return MemRefType();
 
@@ -171,7 +171,7 @@ static MemRefType getCastCompatibleMemRefType(MemRefType aT, MemRefType bT) {
 /// is first inserted, followed by a `memref.cast`.
 static Value castToCompatibleMemRefType(OpBuilder &b, Value memref,
                                         MemRefType compatibleMemRefType) {
-  MemRefType sourceType = memref.getType().cast<MemRefType>();
+  MemRefType sourceType = cast<MemRefType>(memref.getType());
   Value res = memref;
   if (sourceType.getMemorySpace() != compatibleMemRefType.getMemorySpace()) {
     sourceType = MemRefType::get(
@@ -209,7 +209,7 @@ createSubViewIntersection(RewriterBase &b, VectorTransferOpInterface xferOp,
     AffineExpr i, j, k;
     bindDims(xferOp.getContext(), i, j, k);
     SmallVector<AffineMap, 4> maps =
-        AffineMap::inferFromExprList(MapList{{i - j, k}});
+        AffineMap::inferFromExprList(MapList{{i - j, k}}, b.getContext());
     // affine_min(%dimMemRef - %index, %dimAlloc)
     Value affineMin = b.create<affine::AffineMinOp>(
         loc, index.getType(), maps[0], ValueRange{dimMemRef, index, dimAlloc});
@@ -258,8 +258,7 @@ createFullPartialLinalgCopy(RewriterBase &b, vector::TransferReadOp xferOp,
       [&](OpBuilder &b, Location loc) {
         Value res = castToCompatibleMemRefType(b, memref, compatibleMemRefType);
         scf::ValueVector viewAndIndices{res};
-        viewAndIndices.insert(viewAndIndices.end(), xferOp.getIndices().begin(),
-                              xferOp.getIndices().end());
+        llvm::append_range(viewAndIndices, xferOp.getIndices());
         b.create<scf::YieldOp>(loc, viewAndIndices);
       },
       [&](OpBuilder &b, Location loc) {
@@ -312,8 +311,7 @@ static scf::IfOp createFullPartialVectorTransferRead(
       [&](OpBuilder &b, Location loc) {
         Value res = castToCompatibleMemRefType(b, memref, compatibleMemRefType);
         scf::ValueVector viewAndIndices{res};
-        viewAndIndices.insert(viewAndIndices.end(), xferOp.getIndices().begin(),
-                              xferOp.getIndices().end());
+        llvm::append_range(viewAndIndices, xferOp.getIndices());
         b.create<scf::YieldOp>(loc, viewAndIndices);
       },
       [&](OpBuilder &b, Location loc) {
@@ -362,9 +360,7 @@ getLocationToWriteFullVec(RewriterBase &b, vector::TransferWriteOp xferOp,
             Value res =
                 castToCompatibleMemRefType(b, memref, compatibleMemRefType);
             scf::ValueVector viewAndIndices{res};
-            viewAndIndices.insert(viewAndIndices.end(),
-                                  xferOp.getIndices().begin(),
-                                  xferOp.getIndices().end());
+            llvm::append_range(viewAndIndices, xferOp.getIndices());
             b.create<scf::YieldOp>(loc, viewAndIndices);
           },
           [&](OpBuilder &b, Location loc) {

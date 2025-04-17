@@ -196,7 +196,7 @@ define i1 @trueblock_cmp_is_false(i32 %x, i32 %y) {
 ; CHECK:       t:
 ; CHECK-NEXT:    ret i1 false
 ; CHECK:       f:
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ;
 entry:
   %cmp = icmp sgt i32 %x, %y
@@ -216,7 +216,7 @@ define i1 @trueblock_cmp_is_false_commute(i32 %x, i32 %y) {
 ; CHECK:       t:
 ; CHECK-NEXT:    ret i1 false
 ; CHECK:       f:
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ;
 entry:
   %cmp = icmp eq i32 %x, %y
@@ -236,7 +236,7 @@ define i1 @trueblock_cmp_is_true(i32 %x, i32 %y) {
 ; CHECK:       t:
 ; CHECK-NEXT:    ret i1 true
 ; CHECK:       f:
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ;
 entry:
   %cmp = icmp ult i32 %x, %y
@@ -256,7 +256,7 @@ define i1 @trueblock_cmp_is_true_commute(i32 %x, i32 %y) {
 ; CHECK:       t:
 ; CHECK-NEXT:    ret i1 true
 ; CHECK:       f:
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ;
 entry:
   %cmp = icmp ugt i32 %x, %y
@@ -271,10 +271,10 @@ f:
 define i1 @falseblock_cmp_is_false(i32 %x, i32 %y) {
 ; CHECK-LABEL: @falseblock_cmp_is_false(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sle i32 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    br i1 [[CMP]], label [[T:%.*]], label [[F:%.*]]
+; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp sgt i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    br i1 [[CMP_NOT]], label [[F:%.*]], label [[T:%.*]]
 ; CHECK:       t:
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       f:
 ; CHECK-NEXT:    ret i1 false
 ;
@@ -294,7 +294,7 @@ define i1 @falseblock_cmp_is_false_commute(i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[T:%.*]], label [[F:%.*]]
 ; CHECK:       t:
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       f:
 ; CHECK-NEXT:    ret i1 false
 ;
@@ -314,7 +314,7 @@ define i1 @falseblock_cmp_is_true(i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[T:%.*]], label [[F:%.*]]
 ; CHECK:       t:
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       f:
 ; CHECK-NEXT:    ret i1 true
 ;
@@ -334,7 +334,7 @@ define i1 @falseblock_cmp_is_true_commute(i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[T:%.*]], label [[F:%.*]]
 ; CHECK:       t:
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       f:
 ; CHECK-NEXT:    ret i1 true
 ;
@@ -403,3 +403,334 @@ truelabel:
 falselabel:
   ret i8 0
 }
+
+define i1 @and_mask1_eq(i32 %conv) {
+; CHECK-LABEL: @and_mask1_eq(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[CONV:%.*]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND]], 0
+; CHECK-NEXT:    br i1 [[CMP]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    ret i1 false
+; CHECK:       else:
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  %and = and i32 %conv, 1
+  %cmp = icmp eq i32 %and, 0
+  br i1 %cmp, label %then, label %else
+
+then:
+  ret i1 0
+
+else:
+  %and1 = and i32 %conv, 3
+  %cmp1 = icmp eq i32 %and1, 0
+  ret i1 %cmp1
+}
+
+define i1 @and_mask1_ne(i32 %conv) {
+; CHECK-LABEL: @and_mask1_ne(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[CONV:%.*]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND]], 0
+; CHECK-NEXT:    br i1 [[CMP]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    ret i1 false
+; CHECK:       else:
+; CHECK-NEXT:    ret i1 true
+;
+entry:
+  %and = and i32 %conv, 1
+  %cmp = icmp eq i32 %and, 0
+  br i1 %cmp, label %then, label %else
+
+then:
+  ret i1 0
+
+else:
+  %and1 = and i32 %conv, 3
+  %cmp1 = icmp ne i32 %and1, 0
+  ret i1 %cmp1
+}
+
+define i1 @and_mask2(i32 %conv) {
+; CHECK-LABEL: @and_mask2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[CONV:%.*]], 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND]], 0
+; CHECK-NEXT:    br i1 [[CMP]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    ret i1 false
+; CHECK:       else:
+; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[CONV]], 3
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[AND1]], 0
+; CHECK-NEXT:    ret i1 [[CMP1]]
+;
+entry:
+  %and = and i32 %conv, 4
+  %cmp = icmp eq i32 %and, 0
+  br i1 %cmp, label %then, label %else
+
+then:
+  ret i1 0
+
+else:
+  %and1 = and i32 %conv, 3
+  %cmp1 = icmp eq i32 %and1, 0
+  ret i1 %cmp1
+}
+
+; TODO: %cmp1 can be folded into false.
+
+define i1 @and_mask3(i32 %conv) {
+; CHECK-LABEL: @and_mask3(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[CONV:%.*]], 3
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND]], 0
+; CHECK-NEXT:    br i1 [[CMP]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    ret i1 false
+; CHECK:       else:
+; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[CONV]], 7
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[AND1]], 0
+; CHECK-NEXT:    ret i1 [[CMP1]]
+;
+entry:
+  %and = and i32 %conv, 3
+  %cmp = icmp eq i32 %and, 0
+  br i1 %cmp, label %then, label %else
+
+then:
+  ret i1 0
+
+else:
+  %and1 = and i32 %conv, 7
+  %cmp1 = icmp eq i32 %and1, 0
+  ret i1 %cmp1
+}
+
+define i1 @and_mask4(i32 %conv) {
+; CHECK-LABEL: @and_mask4(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[CONV:%.*]], 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND]], 0
+; CHECK-NEXT:    br i1 [[CMP]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    ret i1 false
+; CHECK:       else:
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  %and = and i32 %conv, 4
+  %cmp = icmp eq i32 %and, 0
+  br i1 %cmp, label %then, label %else
+
+then:
+  ret i1 0
+
+else:
+  %and1 = and i32 %conv, 7
+  %cmp1 = icmp eq i32 %and1, 0
+  ret i1 %cmp1
+}
+
+; TODO: X != Y implies X | Y != 0
+define i1 @or_nonzero_from_nonequal(i8 %x, i8 %y) {
+; CHECK-LABEL: @or_nonzero_from_nonequal(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    br i1 [[COND]], label [[IF_ELSE:%.*]], label [[IF_THEN:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[OR:%.*]] = or i8 [[X]], [[Y]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[OR]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK:       if.else:
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  %cond = icmp eq i8 %x, %y
+  br i1 %cond, label %if.else, label %if.then
+
+if.then:
+  %or = or i8 %x, %y
+  %cmp = icmp eq i8 %or, 0
+  ret i1 %cmp
+
+if.else:
+  ret i1 false
+}
+
+define i1 @test_nonequal_domcond1(i64 %x, i64 %y, i64 %z, i64 %w) {
+; CHECK-LABEL: @test_nonequal_domcond1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[COND1:%.*]] = icmp eq i64 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[COND2:%.*]] = icmp eq i64 [[W:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[COND1]], i1 true, i1 [[COND2]]
+; CHECK-NEXT:    br i1 [[OR_COND]], label [[IF_END:%.*]], label [[IF_THEN:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    ret i1 false
+; CHECK:       if.end:
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  %cond1 = icmp eq i64 %y, %x
+  %cond2 = icmp eq i64 %w, %z
+  %or.cond = select i1 %cond1, i1 true, i1 %cond2
+  br i1 %or.cond, label %if.end, label %if.then
+
+if.then:
+  %sub1 = sub i64 %w, %z
+  %sub2 = sub i64 %y, %x
+  %umin = call i64 @llvm.umin.i64(i64 %sub1, i64 %sub2)
+  %cmp = icmp eq i64 %umin, 0
+  ret i1 %cmp
+
+if.end:
+  ret i1 false
+}
+
+define i1 @test_nonequal_domcond2(i64 %x, i64 %y, i64 %z, i64 %w) {
+; CHECK-LABEL: @test_nonequal_domcond2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[COND1:%.*]] = icmp ne i64 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[COND2:%.*]] = icmp ne i64 [[W:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[COND1]], i1 [[COND2]], i1 false
+; CHECK-NEXT:    br i1 [[OR_COND]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    ret i1 false
+; CHECK:       if.end:
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  %cond1 = icmp ne i64 %y, %x
+  %cond2 = icmp ne i64 %w, %z
+  %or.cond = select i1 %cond1, i1 %cond2, i1 false
+  br i1 %or.cond, label %if.then, label %if.end
+
+if.then:
+  %sub1 = sub i64 %w, %z
+  %sub2 = sub i64 %y, %x
+  %umin = call i64 @llvm.umin.i64(i64 %sub1, i64 %sub2)
+  %cmp = icmp eq i64 %umin, 0
+  ret i1 %cmp
+
+if.end:
+  ret i1 false
+}
+
+define i1 @test_nonequal_assume(i64 %x, i64 %y, i64 %z, i64 %w) {
+; CHECK-LABEL: @test_nonequal_assume(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[COND1:%.*]] = icmp ne i64 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[COND1]])
+; CHECK-NEXT:    [[COND2:%.*]] = icmp ne i64 [[W:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[COND2]])
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  %cond1 = icmp ne i64 %y, %x
+  call void @llvm.assume(i1 %cond1)
+  %cond2 = icmp ne i64 %w, %z
+  call void @llvm.assume(i1 %cond2)
+
+  %sub1 = sub i64 %w, %z
+  %sub2 = sub i64 %y, %x
+  %umin = call i64 @llvm.umin.i64(i64 %sub1, i64 %sub2)
+  %cmp = icmp eq i64 %umin, 0
+  ret i1 %cmp
+}
+
+; Negative tests
+
+define i1 @test_nonequal_invalid_domcond1(i64 %x, i64 %y, i64 %z, i64 %w) {
+; CHECK-LABEL: @test_nonequal_invalid_domcond1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[COND1:%.*]] = icmp ne i64 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[COND2:%.*]] = icmp eq i64 [[W:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[COND1]], i1 true, i1 [[COND2]]
+; CHECK-NEXT:    br i1 [[OR_COND]], label [[IF_END:%.*]], label [[IF_THEN:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    ret i1 true
+; CHECK:       if.end:
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  %cond1 = icmp ne i64 %y, %x
+  %cond2 = icmp eq i64 %w, %z
+  %or.cond = select i1 %cond1, i1 true, i1 %cond2
+  br i1 %or.cond, label %if.end, label %if.then
+
+if.then:
+  %sub1 = sub i64 %w, %z
+  %sub2 = sub i64 %y, %x
+  %umin = call i64 @llvm.umin.i64(i64 %sub1, i64 %sub2)
+  %cmp = icmp eq i64 %umin, 0
+  ret i1 %cmp
+
+if.end:
+  ret i1 false
+}
+
+define i1 @test_nonequal_invalid_domcond2(i64 %x, i64 %y, i64 %z, i64 %w) {
+; CHECK-LABEL: @test_nonequal_invalid_domcond2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[COND1:%.*]] = icmp eq i64 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[COND2:%.*]] = icmp eq i64 [[W:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[COND1]], i1 true, i1 [[COND2]]
+; CHECK-NEXT:    br i1 [[OR_COND]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    br label [[IF_END]]
+; CHECK:       if.end:
+; CHECK-NEXT:    [[SUB1:%.*]] = sub i64 [[W]], [[Z]]
+; CHECK-NEXT:    [[SUB2:%.*]] = sub i64 [[Y]], [[X]]
+; CHECK-NEXT:    [[UMIN:%.*]] = call i64 @llvm.umin.i64(i64 [[SUB1]], i64 [[SUB2]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[UMIN]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  %cond1 = icmp eq i64 %y, %x
+  %cond2 = icmp eq i64 %w, %z
+  %or.cond = select i1 %cond1, i1 true, i1 %cond2
+  br i1 %or.cond, label %if.then, label %if.end
+
+if.then:
+  br label %if.end
+
+if.end:
+  %sub1 = sub i64 %w, %z
+  %sub2 = sub i64 %y, %x
+  %umin = call i64 @llvm.umin.i64(i64 %sub1, i64 %sub2)
+  %cmp = icmp eq i64 %umin, 0
+  ret i1 %cmp
+}
+
+define i1 @test_nonequal_invalid_assume(i64 %x, i64 %y, i64 %z, i64 %w) {
+; CHECK-LABEL: @test_nonequal_invalid_assume(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SUB1:%.*]] = sub i64 [[W:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    [[SUB2:%.*]] = sub i64 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[UMIN:%.*]] = call i64 @llvm.umin.i64(i64 [[SUB1]], i64 [[SUB2]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[UMIN]], 0
+; CHECK-NEXT:    call void @side_effect()
+; CHECK-NEXT:    [[COND1:%.*]] = icmp ne i64 [[Y]], [[X]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[COND1]])
+; CHECK-NEXT:    [[COND2:%.*]] = icmp ne i64 [[W]], [[Z]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[COND2]])
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  %sub1 = sub i64 %w, %z
+  %sub2 = sub i64 %y, %x
+  %umin = call i64 @llvm.umin.i64(i64 %sub1, i64 %sub2)
+  %cmp = icmp eq i64 %umin, 0
+
+  call void @side_effect()
+  %cond1 = icmp ne i64 %y, %x
+  call void @llvm.assume(i1 %cond1)
+  %cond2 = icmp ne i64 %w, %z
+  call void @llvm.assume(i1 %cond2)
+  ret i1 %cmp
+}
+
+declare void @side_effect()

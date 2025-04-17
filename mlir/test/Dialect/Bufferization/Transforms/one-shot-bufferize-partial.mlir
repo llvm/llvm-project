@@ -4,9 +4,9 @@
 // RUN: mlir-opt %s -allow-unregistered-dialect -one-shot-bufferize="allow-unknown-ops unknown-type-conversion=identity-layout-map" -split-input-file | FileCheck %s --check-prefix=CHECK-NO-LAYOUT-MAP
 
 // Run fuzzer with different seeds.
-// RUN: mlir-opt %s -allow-unregistered-dialect -one-shot-bufferize="test-analysis-only analysis-fuzzer-seed=23" -split-input-file -o /dev/null
-// RUN: mlir-opt %s -allow-unregistered-dialect -one-shot-bufferize="test-analysis-only analysis-fuzzer-seed=59" -split-input-file -o /dev/null
-// RUN: mlir-opt %s -allow-unregistered-dialect -one-shot-bufferize="test-analysis-only analysis-fuzzer-seed=91" -split-input-file -o /dev/null
+// RUN: mlir-opt %s -allow-unregistered-dialect -one-shot-bufferize="test-analysis-only analysis-heuristic=fuzzer analysis-fuzzer-seed=23" -split-input-file -o /dev/null
+// RUN: mlir-opt %s -allow-unregistered-dialect -one-shot-bufferize="test-analysis-only analysis-heuristic=fuzzer analysis-fuzzer-seed=59" -split-input-file -o /dev/null
+// RUN: mlir-opt %s -allow-unregistered-dialect -one-shot-bufferize="test-analysis-only analysis-heuristic=fuzzer analysis-fuzzer-seed=91" -split-input-file -o /dev/null
 
 // RUN: mlir-opt %s -allow-unregistered-dialect -one-shot-bufferize="dialect-filter=tensor,bufferization allow-unknown-ops" -canonicalize -split-input-file | FileCheck %s --check-prefix=CHECK-TENSOR
 // RUN: mlir-opt %s -allow-unregistered-dialect -one-shot-bufferize="dialect-filter=scf,bufferization allow-unknown-ops" -canonicalize -split-input-file | FileCheck %s --check-prefix=CHECK-SCF
@@ -25,9 +25,9 @@ func.func @use_of_unknown_op_1(%t1: tensor<?xf32>)
 
   %idx = arith.constant 0 : index
   %cst = arith.constant 0.0 : f32
-  // CHECK: %[[dummy_memref:.*]] = bufferization.to_memref %[[dummy]] : memref<?xf32, strided<[?], offset: ?>>
+  // CHECK: %[[dummy_memref:.*]] = bufferization.to_memref %[[dummy]] : tensor<?xf32> to memref<?xf32, strided<[?], offset: ?>>
   // CHECK: vector.transfer_read %[[dummy_memref]][%{{.*}}], %{{.*}} : memref<?xf32, strided<[?], offset: ?>>
-  // CHECK-NO-LAYOUT-MAP: %[[dummy_memref:.*]] = bufferization.to_memref %[[dummy]] : memref<?xf32>
+  // CHECK-NO-LAYOUT-MAP: %[[dummy_memref:.*]] = bufferization.to_memref %[[dummy]] : tensor<?xf32> to memref<?xf32>
   // CHECK-NO-LAYOUT-MAP: vector.transfer_read %[[dummy_memref]][%{{.*}}], %{{.*}} : memref<?xf32>
   %1 = vector.transfer_read %0[%idx], %cst : tensor<?xf32>, vector<5xf32>
   return %1 : vector<5xf32>
@@ -61,7 +61,7 @@ func.func @use_of_unknown_op_3(%t1: tensor<?xf32>)
 
   // CHECK: %[[dummy:.*]] = "test.dummy_op"(%[[t1]])
   %0 = "test.dummy_op"(%t1) : (tensor<?xf32>) -> tensor<?xf32>
-  // CHECK: %[[dummy_memref:.*]] = bufferization.to_memref %[[dummy]] : memref<?xf32, strided<[?], offset: ?>>
+  // CHECK: %[[dummy_memref:.*]] = bufferization.to_memref %[[dummy]] : tensor<?xf32> to memref<?xf32, strided<[?], offset: ?>>
   // CHECK: %[[v2:.*]] = vector.transfer_read %[[dummy_memref]]
   %2 = vector.transfer_read %0[%idx], %cst : tensor<?xf32>, vector<5xf32>
 

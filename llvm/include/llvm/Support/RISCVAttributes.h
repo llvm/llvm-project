@@ -32,9 +32,18 @@ enum AttrType : unsigned {
   PRIV_SPEC = 8,
   PRIV_SPEC_MINOR = 10,
   PRIV_SPEC_REVISION = 12,
+  ATOMIC_ABI = 14,
 };
 
-enum StackAlign { ALIGN_4 = 4, ALIGN_8 = 8, ALIGN_16 = 16 };
+enum class RISCVAtomicAbiTag : unsigned {
+  // Values for Tag_RISCV_atomic_abi
+  // Defined at
+  // https://github.com/riscv-non-isa/riscv-elf-psabi-doc/blob/master/riscv-elf.adoc#tag_riscv_atomic_abi-14-uleb128version
+  UNKNOWN = 0,
+  A6C = 1,
+  A6S = 2,
+  A7 = 3,
+};
 
 enum { NOT_ALLOWED = 0, ALLOWED = 1 };
 

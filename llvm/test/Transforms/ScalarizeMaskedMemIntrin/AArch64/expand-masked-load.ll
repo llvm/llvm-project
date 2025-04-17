@@ -66,7 +66,7 @@ define <2 x i64> @scalarize_v2i64_ones_mask(ptr %p, <2 x i64> %passthru) {
 ; CHECK-LE-NEXT:    ret <2 x i64> [[TMP1]]
 ;
 ; CHECK-LE-SVE-LABEL: @scalarize_v2i64_ones_mask(
-; CHECK-LE-SVE-NEXT:    [[RET:%.*]] = call <2 x i64> @llvm.masked.load.v2i64.p0(ptr [[P:%.*]], i32 8, <2 x i1> <i1 true, i1 true>, <2 x i64> [[PASSTHRU:%.*]])
+; CHECK-LE-SVE-NEXT:    [[RET:%.*]] = call <2 x i64> @llvm.masked.load.v2i64.p0(ptr [[P:%.*]], i32 8, <2 x i1> splat (i1 true), <2 x i64> [[PASSTHRU:%.*]])
 ; CHECK-LE-SVE-NEXT:    ret <2 x i64> [[RET]]
 ;
 ; CHECK-BE-LABEL: @scalarize_v2i64_ones_mask(

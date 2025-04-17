@@ -138,9 +138,8 @@ static bool ReadAddress(ExecutionContextScope *exe_scope,
     // If we have any sections that are loaded, try and resolve using the
     // section load list
     Target *target = exe_ctx.GetTargetPtr();
-    if (target && !target->GetSectionLoadList().IsEmpty()) {
-      if (target->GetSectionLoadList().ResolveLoadAddress(deref_addr,
-                                                          deref_so_addr))
+    if (target && target->HasLoadedSections()) {
+      if (target->ResolveLoadAddress(deref_addr, deref_so_addr))
         return true;
     } else {
       // If we were not running, yet able to read an integer, we must have a
@@ -398,7 +397,7 @@ bool Address::GetDescription(Stream &s, Target &target,
          "Non-brief descriptions not implemented");
   LineEntry line_entry;
   if (CalculateSymbolContextLineEntry(line_entry)) {
-    s.Printf(" (%s:%u:%u)", line_entry.file.GetFilename().GetCString(),
+    s.Printf(" (%s:%u:%u)", line_entry.GetFile().GetFilename().GetCString(),
              line_entry.line, line_entry.column);
     return true;
   }
@@ -645,7 +644,8 @@ bool Address::Dump(Stream *s, ExecutionContextScope *exe_scope, DumpStyle style,
                     pointer_sc.symbol != nullptr) {
                   s->PutCString(": ");
                   pointer_sc.DumpStopContext(s, exe_scope, so_addr, true, false,
-                                             false, true, true, settings);
+                                             false, true, true, false,
+                                             settings);
                 }
               }
             }
@@ -685,7 +685,7 @@ bool Address::Dump(Stream *s, ExecutionContextScope *exe_scope, DumpStyle style,
               sc.DumpStopContext(s, exe_scope, *this, show_fullpaths,
                                  show_module, show_inlined_frames,
                                  show_function_arguments, show_function_name,
-                                 settings);
+                                 false, settings);
             } else {
               // We found a symbol but it was in a different section so it
               // isn't the symbol we should be showing, just show the section
@@ -1045,8 +1045,9 @@ AddressClass Address::GetAddressClass() const {
 
 bool Address::SetLoadAddress(lldb::addr_t load_addr, Target *target,
                              bool allow_section_end) {
-  if (target && target->GetSectionLoadList().ResolveLoadAddress(
-                    load_addr, *this, allow_section_end))
+  if (target && target->ResolveLoadAddress(load_addr, *this,
+                                           SectionLoadHistory::eStopIDNow,
+                                           allow_section_end))
     return true;
   m_section_wp.reset();
   m_offset = load_addr;

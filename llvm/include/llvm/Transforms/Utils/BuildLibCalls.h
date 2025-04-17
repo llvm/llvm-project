@@ -62,6 +62,13 @@ namespace llvm {
                      LibFunc TheLibFunc, AttributeList AttributeList,
                      FunctionType *Invalid, ArgsTy... Args) = delete;
 
+  // Handle -mregparm for the given function.
+  // Note that this function is a rough approximation that only works for simple
+  // function signatures; it does not apply other relevant attributes for
+  // function signatures, including sign/zero-extension for arguments and return
+  // values.
+  void markRegisterParameterAttributes(Function *F);
+
   /// Check whether the library function is available on target and also that
   /// it in the current Module is a Function with the right type.
   bool isLibFuncEmittable(const Module *M, const TargetLibraryInfo *TLI,
@@ -84,6 +91,12 @@ namespace llvm {
   /// pointer. Ptr is required to be some pointer type, and the return value has
   /// 'size_t' type.
   Value *emitStrLen(Value *Ptr, IRBuilderBase &B, const DataLayout &DL,
+                    const TargetLibraryInfo *TLI);
+
+  /// Emit a call to the wcslen function to the builder, for the specified
+  /// pointer. Ptr is required to be some pointer type, and the return value has
+  /// 'size_t' type.
+  Value *emitWcsLen(Value *Ptr, IRBuilderBase &B, const DataLayout &DL,
                     const TargetLibraryInfo *TLI);
 
   /// Emit a call to the strdup function to the builder, for the specified
@@ -244,7 +257,7 @@ namespace llvm {
 
   /// Emit a call to the calloc function.
   Value *emitCalloc(Value *Num, Value *Size, IRBuilderBase &B,
-                    const TargetLibraryInfo &TLI);
+                    const TargetLibraryInfo &TLI, unsigned AddrSpace);
 
   /// Emit a call to the hot/cold operator new function.
   Value *emitHotColdNew(Value *Num, IRBuilderBase &B,
@@ -260,6 +273,13 @@ namespace llvm {
                                       IRBuilderBase &B,
                                       const TargetLibraryInfo *TLI,
                                       LibFunc NewFunc, uint8_t HotCold);
+  Value *emitHotColdSizeReturningNew(Value *Num, IRBuilderBase &B,
+                                     const TargetLibraryInfo *TLI,
+                                     LibFunc NewFunc, uint8_t HotCold);
+  Value *emitHotColdSizeReturningNewAligned(Value *Num, Value *Align,
+                                            IRBuilderBase &B,
+                                            const TargetLibraryInfo *TLI,
+                                            LibFunc NewFunc, uint8_t HotCold);
 }
 
 #endif

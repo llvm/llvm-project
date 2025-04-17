@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/SCF/TransformOps/SCFTransformOps.h"
+
+#include "mlir/Conversion/SCFToControlFlow/SCFToControlFlow.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/LoopUtils.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
@@ -17,8 +19,8 @@
 #include "mlir/Dialect/SCF/Transforms/Transforms.h"
 #include "mlir/Dialect/SCF/Utils/Utils.h"
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
-#include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
 #include "mlir/Dialect/Transform/IR/TransformOps.h"
+#include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/BuiltinAttributes.h"
@@ -49,6 +51,11 @@ void transform::ApplySCFStructuralConversionPatternsOp::
                                                  conversionTarget);
 }
 
+void transform::ApplySCFToControlFlowPatternsOp::populatePatterns(
+    TypeConverter &typeConverter, RewritePatternSet &patterns) {
+  populateSCFToControlFlowConversionPatterns(patterns);
+}
+
 //===----------------------------------------------------------------------===//
 // ForallToForOp
 //===----------------------------------------------------------------------===//
@@ -69,16 +76,12 @@ transform::ForallToForOp::apply(transform::TransformRewriter &rewriter,
     return diag;
   }
 
-  rewriter.setInsertionPoint(target);
-
   if (!target.getOutputs().empty()) {
     return emitSilenceableError()
            << "unsupported shared outputs (didn't bufferize?)";
   }
 
   SmallVector<OpFoldResult> lbs = target.getMixedLowerBound();
-  SmallVector<OpFoldResult> ubs = target.getMixedUpperBound();
-  SmallVector<OpFoldResult> steps = target.getMixedStep();
 
   if (getNumResults() != lbs.size()) {
     DiagnosedSilenceableFailure diag =
@@ -89,29 +92,60 @@ transform::ForallToForOp::apply(transform::TransformRewriter &rewriter,
     return diag;
   }
 
-  auto loc = target.getLoc();
-  SmallVector<Value> ivs;
-  for (auto &&[lb, ub, step] : llvm::zip(lbs, ubs, steps)) {
-    Value lbValue = getValueOrCreateConstantIndexOp(rewriter, loc, lb);
-    Value ubValue = getValueOrCreateConstantIndexOp(rewriter, loc, ub);
-    Value stepValue = getValueOrCreateConstantIndexOp(rewriter, loc, step);
-    auto loop = rewriter.create<scf::ForOp>(
-        loc, lbValue, ubValue, stepValue, ValueRange(),
-        [](OpBuilder &, Location, Value, ValueRange) {});
-    ivs.push_back(loop.getInductionVar());
-    rewriter.setInsertionPointToStart(loop.getBody());
-    rewriter.create<scf::YieldOp>(loc);
-    rewriter.setInsertionPointToStart(loop.getBody());
+  SmallVector<Operation *> opResults;
+  if (failed(scf::forallToForLoop(rewriter, target, &opResults))) {
+    DiagnosedSilenceableFailure diag = emitSilenceableError()
+                                       << "failed to convert forall into for";
+    return diag;
   }
-  rewriter.eraseOp(target.getBody()->getTerminator());
-  rewriter.inlineBlockBefore(target.getBody(), &*rewriter.getInsertionPoint(),
-                             ivs);
-  rewriter.eraseOp(target);
 
-  for (auto &&[i, iv] : llvm::enumerate(ivs)) {
-    results.set(cast<OpResult>(getTransformed()[i]),
-                {iv.getParentBlock()->getParentOp()});
+  for (auto &&[i, res] : llvm::enumerate(opResults)) {
+    results.set(cast<OpResult>(getTransformed()[i]), {res});
   }
+  return DiagnosedSilenceableFailure::success();
+}
+
+//===----------------------------------------------------------------------===//
+// ForallToForOp
+//===----------------------------------------------------------------------===//
+
+DiagnosedSilenceableFailure
+transform::ForallToParallelOp::apply(transform::TransformRewriter &rewriter,
+                                     transform::TransformResults &results,
+                                     transform::TransformState &state) {
+  auto payload = state.getPayloadOps(getTarget());
+  if (!llvm::hasSingleElement(payload))
+    return emitSilenceableError() << "expected a single payload op";
+
+  auto target = dyn_cast<scf::ForallOp>(*payload.begin());
+  if (!target) {
+    DiagnosedSilenceableFailure diag =
+        emitSilenceableError() << "expected the payload to be scf.forall";
+    diag.attachNote((*payload.begin())->getLoc()) << "payload op";
+    return diag;
+  }
+
+  if (!target.getOutputs().empty()) {
+    return emitSilenceableError()
+           << "unsupported shared outputs (didn't bufferize?)";
+  }
+
+  if (getNumResults() != 1) {
+    DiagnosedSilenceableFailure diag = emitSilenceableError()
+                                       << "op expects one result, given "
+                                       << getNumResults();
+    diag.attachNote(target.getLoc()) << "payload op";
+    return diag;
+  }
+
+  scf::ParallelOp opResult;
+  if (failed(scf::forallToParallelLoop(rewriter, target, &opResult))) {
+    DiagnosedSilenceableFailure diag =
+        emitSilenceableError() << "failed to convert forall into parallel";
+    return diag;
+  }
+
+  results.set(cast<OpResult>(getTransformed()[0]), {opResult});
   return DiagnosedSilenceableFailure::success();
 }
 
@@ -234,6 +268,10 @@ loopScheduling(scf::ForOp forOp,
     return 1;
   };
 
+  std::optional<int64_t> ubConstant =
+      getConstantIntValue(forOp.getUpperBound());
+  std::optional<int64_t> lbConstant =
+      getConstantIntValue(forOp.getLowerBound());
   DenseMap<Operation *, unsigned> opCycles;
   std::map<unsigned, std::vector<Operation *>> wrappedSchedule;
   for (Operation &op : forOp.getBody()->getOperations()) {
@@ -244,7 +282,14 @@ loopScheduling(scf::ForOp forOp,
       Operation *def = operand.getDefiningOp();
       if (!def)
         continue;
-      earlyCycle = std::max(earlyCycle, opCycles[def] + getLatency(def));
+      if (ubConstant && lbConstant) {
+        unsigned ubInt = ubConstant.value();
+        unsigned lbInt = lbConstant.value();
+        auto minLatency = std::min(ubInt - lbInt - 1, getLatency(def));
+        earlyCycle = std::max(earlyCycle, opCycles[def] + minLatency);
+      } else {
+        earlyCycle = std::max(earlyCycle, opCycles[def] + getLatency(def));
+      }
     }
     opCycles[&op] = earlyCycle;
     wrappedSchedule[earlyCycle % iterationInterval].push_back(&op);
@@ -294,7 +339,7 @@ DiagnosedSilenceableFailure transform::LoopPromoteIfOneIterationOp::applyToOne(
 
 void transform::LoopPromoteIfOneIterationOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  consumesHandle(getTarget(), effects);
+  consumesHandle(getTargetMutable(), effects);
   modifiesPayload(effects);
 }
 
@@ -312,12 +357,36 @@ transform::LoopUnrollOp::applyToOne(transform::TransformRewriter &rewriter,
     result = loopUnrollByFactor(scfFor, getFactor());
   else if (AffineForOp affineFor = dyn_cast<AffineForOp>(op))
     result = loopUnrollByFactor(affineFor, getFactor());
+  else
+    return emitSilenceableError()
+           << "failed to unroll, incorrect type of payload";
 
-  if (failed(result)) {
-    DiagnosedSilenceableFailure diag = emitSilenceableError()
-                                       << "failed to unroll";
-    return diag;
-  }
+  if (failed(result))
+    return emitSilenceableError() << "failed to unroll";
+
+  return DiagnosedSilenceableFailure::success();
+}
+
+//===----------------------------------------------------------------------===//
+// LoopUnrollAndJamOp
+//===----------------------------------------------------------------------===//
+
+DiagnosedSilenceableFailure transform::LoopUnrollAndJamOp::applyToOne(
+    transform::TransformRewriter &rewriter, Operation *op,
+    transform::ApplyToEachResultList &results,
+    transform::TransformState &state) {
+  LogicalResult result(failure());
+  if (scf::ForOp scfFor = dyn_cast<scf::ForOp>(op))
+    result = loopUnrollJamByFactor(scfFor, getFactor());
+  else if (AffineForOp affineFor = dyn_cast<AffineForOp>(op))
+    result = loopUnrollJamByFactor(affineFor, getFactor());
+  else
+    return emitSilenceableError()
+           << "failed to unroll and jam, incorrect type of payload";
+
+  if (failed(result))
+    return emitSilenceableError() << "failed to unroll and jam";
+
   return DiagnosedSilenceableFailure::success();
 }
 
@@ -332,9 +401,9 @@ transform::LoopCoalesceOp::applyToOne(transform::TransformRewriter &rewriter,
                                       transform::TransformState &state) {
   LogicalResult result(failure());
   if (scf::ForOp scfForOp = dyn_cast<scf::ForOp>(op))
-    result = coalescePerfectlyNestedLoops(scfForOp);
+    result = coalescePerfectlyNestedSCFForLoops(scfForOp);
   else if (AffineForOp affineForOp = dyn_cast<AffineForOp>(op))
-    result = coalescePerfectlyNestedLoops(affineForOp);
+    result = coalescePerfectlyNestedAffineLoops(affineForOp);
 
   results.push_back(op);
   if (failed(result)) {
@@ -379,12 +448,12 @@ DiagnosedSilenceableFailure transform::TakeAssumedBranchOp::applyToOne(
 
 void transform::TakeAssumedBranchOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  onlyReadsHandle(getTarget(), effects);
+  onlyReadsHandle(getTargetMutable(), effects);
   modifiesPayload(effects);
 }
 
 //===----------------------------------------------------------------------===//
-// LoopFuseSibling
+// LoopFuseSiblingOp
 //===----------------------------------------------------------------------===//
 
 /// Check if `target` and `source` are siblings, in the context that `target`
@@ -408,7 +477,7 @@ static DiagnosedSilenceableFailure isOpSibling(Operation *target,
   // Check if fusion will violate dominance.
   DominanceInfo domInfo(source);
   if (target->isBeforeInBlock(source)) {
-    // Since, `target` is before `source`, all users of results of `target`
+    // Since `target` is before `source`, all users of results of `target`
     // need to be dominated by `source`.
     for (Operation *user : target->getUsers()) {
       if (!domInfo.properlyDominates(source, user, /*enclosingOpOk=*/false)) {
@@ -424,9 +493,8 @@ static DiagnosedSilenceableFailure isOpSibling(Operation *target,
     // Check if operands of `target` are dominated by `source`.
     for (Value operand : target->getOperands()) {
       Operation *operandOp = operand.getDefiningOp();
-      // If operand does not have a defining operation, it is a block arguement,
-      // which will always dominate `source`, since `target` and `source` are in
-      // the same block and the operand dominated `source` before.
+      // Operands without defining operations are block arguments. When `target`
+      // and `source` occur in the same block, these operands dominate `source`.
       if (!operandOp)
         continue;
 
@@ -441,8 +509,11 @@ static DiagnosedSilenceableFailure isOpSibling(Operation *target,
     bool failed = false;
     OpOperand *failedValue = nullptr;
     visitUsedValuesDefinedAbove(target->getRegions(), [&](OpOperand *operand) {
-      if (!domInfo.properlyDominates(operand->getOwner(), source,
-                                     /*enclosingOpOk=*/false)) {
+      Operation *operandOp = operand->get().getDefiningOp();
+      if (operandOp && !domInfo.properlyDominates(operandOp, source,
+                                                  /*enclosingOpOk=*/false)) {
+        // `operand` is not an argument of an enclosing block and the defining
+        // op of `operand` is outside `target` but does not dominate `source`.
         failed = true;
         failedValue = operand;
       }
@@ -457,12 +528,11 @@ static DiagnosedSilenceableFailure isOpSibling(Operation *target,
   return DiagnosedSilenceableFailure::success();
 }
 
-/// Check if `target` can be fused into `source`.
+/// Check if `target` scf.forall can be fused into `source` scf.forall.
 ///
-/// This is a simple check that just checks if both loops have same
-/// bounds, steps and mapping. This check does not ensure that the side effects
-/// of `target` are independent of `source` or vice-versa. It is the
-/// responsibility of the caller to ensure that.
+/// This simply checks if both loops have the same bounds, steps and mapping.
+/// No attempt is made at checking that the side effects of `target` and
+/// `source` are independent of each other.
 static bool isForallWithIdenticalConfiguration(Operation *target,
                                                Operation *source) {
   auto targetOp = dyn_cast<scf::ForallOp>(target);
@@ -476,21 +546,27 @@ static bool isForallWithIdenticalConfiguration(Operation *target,
          targetOp.getMapping() == sourceOp.getMapping();
 }
 
-/// Fuse `target` into `source` assuming they are siblings and indepndent.
-/// TODO: Add fusion for more operations. Currently, we handle only scf.forall.
-static Operation *fuseSiblings(Operation *target, Operation *source,
-                               RewriterBase &rewriter) {
-  auto targetOp = dyn_cast<scf::ForallOp>(target);
-  auto sourceOp = dyn_cast<scf::ForallOp>(source);
+/// Check if `target` scf.for can be fused into `source` scf.for.
+///
+/// This simply checks if both loops have the same bounds and steps. No attempt
+/// is made at checking that the side effects of `target` and `source` are
+/// independent of each other.
+static bool isForWithIdenticalConfiguration(Operation *target,
+                                            Operation *source) {
+  auto targetOp = dyn_cast<scf::ForOp>(target);
+  auto sourceOp = dyn_cast<scf::ForOp>(source);
   if (!targetOp || !sourceOp)
-    return nullptr;
-  return fuseIndependentSiblingForallLoops(targetOp, sourceOp, rewriter);
+    return false;
+
+  return targetOp.getLowerBound() == sourceOp.getLowerBound() &&
+         targetOp.getUpperBound() == sourceOp.getUpperBound() &&
+         targetOp.getStep() == sourceOp.getStep();
 }
 
 DiagnosedSilenceableFailure
-transform::LoopFuseSibling::apply(transform::TransformRewriter &rewriter,
-                                  transform::TransformResults &results,
-                                  transform::TransformState &state) {
+transform::LoopFuseSiblingOp::apply(transform::TransformRewriter &rewriter,
+                                    transform::TransformResults &results,
+                                    transform::TransformState &state) {
   auto targetOps = state.getPayloadOps(getTarget());
   auto sourceOps = state.getPayloadOps(getSource());
 
@@ -510,13 +586,18 @@ transform::LoopFuseSibling::apply(transform::TransformRewriter &rewriter,
   if (!diag.succeeded())
     return diag;
 
-  // Check if the target can be fused into source.
-  if (!isForallWithIdenticalConfiguration(target, source)) {
+  Operation *fusedLoop;
+  /// TODO: Support fusion for loop-like ops besides scf.for and scf.forall.
+  if (isForWithIdenticalConfiguration(target, source)) {
+    fusedLoop = fuseIndependentSiblingForLoops(
+        cast<scf::ForOp>(target), cast<scf::ForOp>(source), rewriter);
+  } else if (isForallWithIdenticalConfiguration(target, source)) {
+    fusedLoop = fuseIndependentSiblingForallLoops(
+        cast<scf::ForallOp>(target), cast<scf::ForallOp>(source), rewriter);
+  } else
     return emitSilenceableFailure(target->getLoc())
            << "operations cannot be fused";
-  }
 
-  Operation *fusedLoop = fuseSiblings(target, source, rewriter);
   assert(fusedLoop && "failed to fuse operations");
 
   results.set(cast<OpResult>(getFusedLoop()), {fusedLoop});
@@ -532,6 +613,8 @@ class SCFTransformDialectExtension
     : public transform::TransformDialectExtension<
           SCFTransformDialectExtension> {
 public:
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(SCFTransformDialectExtension)
+
   using Base::Base;
 
   void init() {

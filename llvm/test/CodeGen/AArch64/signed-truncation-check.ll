@@ -287,9 +287,8 @@ define i1 @add_ultcmp_bad_i16_i8_add(i16 %x, i16 %y) nounwind {
 ; CHECK-LABEL: add_ultcmp_bad_i16_i8_add:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    add w8, w0, w1
-; CHECK-NEXT:    and w8, w8, #0xffff
-; CHECK-NEXT:    cmp w8, #256
-; CHECK-NEXT:    cset w0, lo
+; CHECK-NEXT:    tst w8, #0xff00
+; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
   %tmp0 = add i16 %x, %y
   %tmp1 = icmp ult i16 %tmp0, 256 ; 1U << 8
@@ -328,9 +327,8 @@ define i1 @add_ultcmp_bad_i16_i8_c0notpoweroftwo(i16 %x) nounwind {
 ; CHECK-LABEL: add_ultcmp_bad_i16_i8_c0notpoweroftwo:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    add w8, w0, #192
-; CHECK-NEXT:    and w8, w8, #0xffff
-; CHECK-NEXT:    cmp w8, #256
-; CHECK-NEXT:    cset w0, lo
+; CHECK-NEXT:    tst w8, #0xff00
+; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
   %tmp0 = add i16 %x, 192 ; (1U << (8-1)) + (1U << (8-1-1))
   %tmp1 = icmp ult i16 %tmp0, 256 ; 1U << 8
@@ -356,9 +354,8 @@ define i1 @add_ultcmp_bad_i16_i8_magic(i16 %x) nounwind {
 ; CHECK-LABEL: add_ultcmp_bad_i16_i8_magic:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    add w8, w0, #64
-; CHECK-NEXT:    and w8, w8, #0xffff
-; CHECK-NEXT:    cmp w8, #256
-; CHECK-NEXT:    cset w0, lo
+; CHECK-NEXT:    tst w8, #0xff00
+; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
   %tmp0 = add i16 %x, 64 ; 1U << (8-1-1)
   %tmp1 = icmp ult i16 %tmp0, 256 ; 1U << 8
@@ -370,9 +367,8 @@ define i1 @add_ultcmp_bad_i16_i4(i16 %x) nounwind {
 ; CHECK-LABEL: add_ultcmp_bad_i16_i4:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    add w8, w0, #8
-; CHECK-NEXT:    and w8, w8, #0xffff
-; CHECK-NEXT:    cmp w8, #16
-; CHECK-NEXT:    cset w0, lo
+; CHECK-NEXT:    tst w8, #0xfff0
+; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
   %tmp0 = add i16 %x, 8 ; 1U << (4-1)
   %tmp1 = icmp ult i16 %tmp0, 16 ; 1U << 4
@@ -384,9 +380,8 @@ define i1 @add_ultcmp_bad_i24_i8(i24 %x) nounwind {
 ; CHECK-LABEL: add_ultcmp_bad_i24_i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    add w8, w0, #128
-; CHECK-NEXT:    and w8, w8, #0xffffff
-; CHECK-NEXT:    cmp w8, #256
-; CHECK-NEXT:    cset w0, lo
+; CHECK-NEXT:    tst w8, #0xffff00
+; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
   %tmp0 = add i24 %x, 128 ; 1U << (8-1)
   %tmp1 = icmp ult i24 %tmp0, 256 ; 1U << 8
@@ -396,7 +391,7 @@ define i1 @add_ultcmp_bad_i24_i8(i24 %x) nounwind {
 define i1 @add_ulecmp_bad_i16_i8(i16 %x) nounwind {
 ; CHECK-LABEL: add_ulecmp_bad_i16_i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w0, #1
+; CHECK-NEXT:    mov w0, #1 // =0x1
 ; CHECK-NEXT:    ret
   %tmp0 = add i16 %x, 128 ; 1U << (8-1)
   %tmp1 = icmp ule i16 %tmp0, -1 ; when we +1 it, it will wrap to 0

@@ -20,8 +20,8 @@ define i16 @test1(i16 %a) {
 
 define <2 x i16> @test1_vec(<2 x i16> %a) {
 ; CHECK-LABEL: @test1_vec(
-; CHECK-NEXT:    [[C:%.*]] = lshr <2 x i16> [[A:%.*]], <i16 8, i16 8>
-; CHECK-NEXT:    [[D:%.*]] = mul <2 x i16> [[A]], <i16 5, i16 5>
+; CHECK-NEXT:    [[C:%.*]] = lshr <2 x i16> [[A:%.*]], splat (i16 8)
+; CHECK-NEXT:    [[D:%.*]] = mul <2 x i16> [[A]], splat (i16 5)
 ; CHECK-NEXT:    [[E:%.*]] = or <2 x i16> [[C]], [[D]]
 ; CHECK-NEXT:    ret <2 x i16> [[E]]
 ;

@@ -9,8 +9,8 @@ by giving the compiler the freedom of how to parallelize for specific
 architectures. OpenACC also provides the ability to optimize the
 parallelism through increasingly more prescriptive clauses.
 
-This dialect models the constructs from the [OpenACC 3.3 specification]
-(https://www.openacc.org/sites/default/files/inline-images/Specification/OpenACC-3.3-final.pdf)
+This dialect models the constructs from the 
+[OpenACC 3.3 specification](https://www.openacc.org/sites/default/files/inline-images/Specification/OpenACC-3.3-final.pdf)
 
 This document describes the design of the OpenACC dialect in MLIR. It
 lists and explains design goals and design choices along with their
@@ -274,28 +274,96 @@ reference counters are zero, a delete action is performed.
 
 ### Types
 
-There are a few acc dialect type categories to describe:
-* type of acc data clause operation input `varPtr`
-	- The type of `varPtr` must be pointer-like. This is done by
-	attaching the `PointerLikeType` interface to the appropriate MLIR
-	type. Although memory/storage concept is a lower level abstraction,
-	it is useful because the OpenACC model distinguishes between host
-	and device memory explicitly - and the mapping between the two is
-	done through pointers. Thus, by explicitly requiring it in the
-	dialect, the appropriate language frontend must create storage or
-	use type that satisfies the mapping constraint.
+Since the `acc dialect` is meant to be used alongside other dialects which
+represent the source language, appropriate use of types and type interfaces is
+key to ensuring compatibility. This section describes those considerations.
+
+#### Data Clause Operation Types
+
+Data clause operations (eg. `acc.copyin`) rely on the following type
+considerations:
+* type of acc data clause operation input `var`
+	- The type of `var` must be one with `PointerLikeType` or `MappableType`
+	interfaces attached. The first, `PointerLikeType`, is useful because
+	the OpenACC memory model distinguishes between host and device memory
+	explicitly - and the mapping between the two is	done through pointers. Thus,
+	by explicitly requiring it in the dialect, the appropriate language
+	frontend must create storage or	use type that satisfies the mapping
+	constraint. The second possibility, `MappableType` was added because
+	memory/storage concept is a lower level abstraction and not all dialects
+	choose to use a pointer abstraction especially in the case where semantics
+	are more complex (such as `fir.box` which represents Fortran descriptors
+	and is defined in the `fir` dialect used from `flang`).
 * type of result of acc data clause operations
 	- The type of the acc data clause operation is exactly the same as
-	`varPtr`. This was done intentionally instead of introducing an
-	`acc.ref/ptr` type so that IR compatibility and the dialect's
+	`var`. This was done intentionally instead of introducing specific `acc`
+	output types so that so that IR compatibility and the dialect's
 	existing strong type checking can be maintained. This is needed
 	since the `acc` dialect must live within another dialect whose type
-	system is unknown to it. The only constraint is that the appropriate
-	dialect type must use the `PointerLikeType` interface.
+	system is unknown to it.
+* variable type captured in `varType`
+	- When `var`'s type is `PointerLikeType`, the actual type of the target
+	may be lost. More specifically, dialects like `llvm` which use opaque
+	pointers, do not record the target variable's type. The use of this field
+	bridges this gap.
 * type of decomposed clauses
 	- Decomposed clauses, such as `acc.bounds` and `acc.declare_enter`
 	produce types to allow their results to be used only in specific
-	operations.
+	operations. These are synthetic types solely used for proper IR
+	construction.
+
+#### Pointer-Like Requirement
+
+The need to have pointer-type requirement in the acc dialect stems from
+a few different aspects:
+- Existing dialects like `hlfir`, `fir`, `cir`, `llvm` use a pointer
+representation for variables.
+- Reference counters (for data clauses) are described in terms of
+memory. In OpenACC spec 3.3 in section 2.6.7. It says: "A structured reference
+counter is incremented when entering each data or compute region that contain an
+explicit data clause or implicitly-determined data attributes for that section
+of memory". This implies addressability of memory.
+- Attach semantics (2.6.8 attachment counter) are specified using
+"address" terminology: "The attachment counter for a pointer is set to
+one whenever the pointer is attached to new target address, and
+incremented whenever an attach action for that pointer is performed for
+the same target address.
+
+#### Type Interfaces
+
+The `acc` dialect describes two different type interfaces which must be
+implemented and attached to the source dialect's types in order to allow use
+of data clause operations (eg. `acc.copyin`). They are as follows:
+* `PointerLikeType`
+  - The idea behind this interface is that variables end up being represented
+  as pointers in many dialects. More specifically, `fir`, `cir`, `llvm`
+  represent user declared local variables with some dialect specific form of
+  `alloca` operation which produce pointers. Globals, similarly, are referred by
+  their address through some form of `address_of` operation. Additionally, an
+  implementation for OpenACC runtime needs to distinguish between device and
+  host memory - also typically done by talking about pointers. So this type
+  interface requirement fits in naturally with OpenACC specification. Data
+  mapping operation semantics can often be simply described by a pointer and
+  size of the data it points to.
+* `MappableType`
+   - This interface was introduced because the `PointerLikeType` requirement
+  cannot represent cases when the source dialect does not use pointers. Also,
+  some cases, such as Fortran descriptor-backed arrays and Fortran optional
+  arguments, require decomposition into multiple steps. For example, in the
+  descriptor case, mapping of descriptor is needed, mapping of the data, and
+  implicit attach into device descriptor. In order to allow capturing all of
+  this complexity with a single data clause operation, the `MappableType`
+  interface was introduced. This is consistent with the dialect's goals
+  including being "able to regenerate the semantic equivalent of the user
+  pragmas".
+
+The intent is that a dialect's type system implements one of these two
+interfaces. And to be precise, a type should only implement one or the other
+(and not both) - since keeping them separate avoids ambiguity on what actually
+needs mapped. When `var` is `PointerLikeType`, the assumption is that the data
+pointed-to will be mapped. If the pointer-like type also implemented
+`MappableType` interface, it becomes ambiguous whether the data pointed to or
+the pointer itself is being mapped.
 
 ### Recipes
 
@@ -451,3 +519,4 @@ dominates another.
 ## Operations TOC
 
 [include "Dialects/OpenACCDialectOps.md"]
+

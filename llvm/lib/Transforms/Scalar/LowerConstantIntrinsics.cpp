@@ -27,7 +27,6 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/PatternMatch.h"
-#include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Transforms/Scalar.h"
@@ -85,8 +84,11 @@ static bool replaceConditionalBranchesOnConstant(Instruction *II,
     if (Target && Target != Other) {
       BasicBlock *Source = BI->getParent();
       Other->removePredecessor(Source);
+
+      Instruction *NewBI = BranchInst::Create(Target, Source);
+      NewBI->setDebugLoc(BI->getDebugLoc());
       BI->eraseFromParent();
-      BranchInst::Create(Target, Source);
+
       if (DTU)
         DTU->applyUpdates({{DominatorTree::Delete, Source, Other}});
       if (pred_empty(Other))
@@ -96,14 +98,14 @@ static bool replaceConditionalBranchesOnConstant(Instruction *II,
   return HasDeadBlocks;
 }
 
-static bool lowerConstantIntrinsics(Function &F, const TargetLibraryInfo &TLI,
-                                    DominatorTree *DT) {
+bool llvm::lowerConstantIntrinsics(Function &F, const TargetLibraryInfo &TLI,
+                                   DominatorTree *DT) {
   std::optional<DomTreeUpdater> DTU;
   if (DT)
     DTU.emplace(DT, DomTreeUpdater::UpdateStrategy::Lazy);
 
   bool HasDeadBlocks = false;
-  const auto &DL = F.getParent()->getDataLayout();
+  const auto &DL = F.getDataLayout();
   SmallVector<WeakTrackingVH, 8> Worklist;
 
   ReversePostOrderTraversal<Function *> RPOT(&F);
@@ -164,46 +166,4 @@ LowerConstantIntrinsicsPass::run(Function &F, FunctionAnalysisManager &AM) {
   }
 
   return PreservedAnalyses::all();
-}
-
-namespace {
-/// Legacy pass for lowering is.constant intrinsics out of the IR.
-///
-/// When this pass is run over a function it converts is.constant intrinsics
-/// into 'true' or 'false'. This complements the normal constant folding
-/// to 'true' as part of Instruction Simplify passes.
-class LowerConstantIntrinsics : public FunctionPass {
-public:
-  static char ID;
-  LowerConstantIntrinsics() : FunctionPass(ID) {
-    initializeLowerConstantIntrinsicsPass(*PassRegistry::getPassRegistry());
-  }
-
-  bool runOnFunction(Function &F) override {
-    const TargetLibraryInfo &TLI =
-        getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
-    DominatorTree *DT = nullptr;
-    if (auto *DTWP = getAnalysisIfAvailable<DominatorTreeWrapperPass>())
-      DT = &DTWP->getDomTree();
-    return lowerConstantIntrinsics(F, TLI, DT);
-  }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<TargetLibraryInfoWrapperPass>();
-    AU.addPreserved<GlobalsAAWrapperPass>();
-    AU.addPreserved<DominatorTreeWrapperPass>();
-  }
-};
-} // namespace
-
-char LowerConstantIntrinsics::ID = 0;
-INITIALIZE_PASS_BEGIN(LowerConstantIntrinsics, "lower-constant-intrinsics",
-                      "Lower constant intrinsics", false, false)
-INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
-INITIALIZE_PASS_END(LowerConstantIntrinsics, "lower-constant-intrinsics",
-                    "Lower constant intrinsics", false, false)
-
-FunctionPass *llvm::createLowerConstantIntrinsicsPass() {
-  return new LowerConstantIntrinsics();
 }

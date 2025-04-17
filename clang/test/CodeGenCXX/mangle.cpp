@@ -645,7 +645,7 @@ namespace test24 {
     foo();
   }
 
-  static char bar() {}
+  static char bar() { return 0; }
   void test1() {
     // CHECK: call noundef signext i8 @_ZN6test24L3barEv()
     bar();
@@ -839,7 +839,7 @@ namespace test36 {
   template<unsigned> struct A { };
 
   template<typename ...Types>
-  auto f1(Types... values) -> A<sizeof...(values)> { }
+  auto f1(Types... values) -> A<sizeof...(values)> { return {}; }
 
   // CHECK: define weak_odr {{.*}} @_ZN6test362f1IJifEEENS_1AIXsZfp_EEEDpT_
   template A<2> f1(int, float);
@@ -1032,10 +1032,6 @@ namespace test51 {
   template <typename T>
   decltype(S1<T>().~S1<T>(), S1<T>().~S1<T>()) fun4() {};
   template <typename T>
-  decltype(S1<int>().~S1<T>()) fun5(){};
-  template <template <typename T> class U>
-  decltype(S1<int>().~U<int>()) fun6(){};
-  template <typename T>
   decltype(E().E::~T()) fun7() {}
   template <template <typename> class U>
   decltype(X<int>::Y().U<int>::Y::~Y()) fun8() {}
@@ -1047,10 +1043,6 @@ namespace test51 {
   // CHECK-LABEL: @_ZN6test514fun3I2S1IiEiEEDTcldtcvS1_IT0_E_EdnT_EEv
   template void fun4<int>();
   // CHECK-LABEL: @_ZN6test514fun4IiEEDTcmcldtcv2S1IT_E_Edn2S1IS2_EEcldtcvS3__Edn2S1IS2_EEEv
-  template void fun5<int>();
-  // CHECK-LABEL: @_ZN6test514fun5IiEEDTcldtcv2S1IiE_Edn2S1IT_EEEv
-  template void fun6<S1>();
-  // CHECK-LABEL: @_ZN6test514fun6I2S1EEDTcldtcvS1_IiE_EdnT_IiEEEv
   template void fun7<E>();
   // CHECK-LABEL: @_ZN6test514fun7INS_1EEEEDTcldtcvS1__Esr1EEdnT_EEv
   template void fun8<X>();
@@ -1166,6 +1158,12 @@ template void f16<int>(int, __remove_volatile(int));
 template <typename T> void f17(T, __remove_restrict(T)) {}
 template void f17<int>(int, __remove_restrict(int));
 // CHECK-LABEL: @_ZN6test553f17IiEEvT_u17__remove_restrictIS1_E
+
+struct S{};
+template <class T> void f18(decltype(__builtin_structured_binding_size(T))) {}
+template void f18<S>(__SIZE_TYPE__);
+// CHECK: void @_ZN6test553f18INS_1SEEEvDTu33__builtin_structured_binding_sizeT_EE
+
 } // namespace test55
 
 namespace test56 {
@@ -1222,3 +1220,30 @@ namespace test61 {
   // CHECK-LABEL: @_ZN6test611fINS_1XEEEvNT_1Y1aENS3_1bE
   template void f<X>(int, int);
 }
+
+namespace test62 {
+  template <class> struct integral_constant {
+    static const int value = true;
+  };
+  template <int> struct _OrImpl {};
+  template <class _Args> using _Or = _OrImpl<_Args::value>;
+  template <class _Up>
+  void f(_Or<integral_constant<_Up>>) {}
+  // CHECK-LABEL: @_ZN6test621fIiEEvNS_7_OrImplIXsr17integral_constantIT_EE5valueEEE
+  template void f<int>(_OrImpl<1>);
+} // namespace test62
+
+namespace test63 {
+  namespace {
+    template <class, class> struct integral_constant {
+      static const int value = true;
+    };
+    template <class, class> struct _And {};
+    template <int> struct _OrImpl {};
+    template <class _First> using _Or = _OrImpl<_First::value>;
+    template <class _Up>
+    void f(_And<integral_constant<int, void>, _Or<integral_constant<_Up, int>>>);
+  } // namespace
+  // CHECK-LABEL: @_ZN6test6312_GLOBAL__N_11fIiEEvNS0_4_AndINS0_17integral_constantIivEENS0_7_OrImplIXsr17integral_constantIT_iEE5valueEEEEE
+  void g() { f<int>({}); }
+} // namespace test63

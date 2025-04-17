@@ -14,11 +14,14 @@ define <1 x i8> @test_bitf_v1i8(<1 x i8> %A, <1 x i8> %B, <1 x i8> %C) {
 ;
 ; CHECK-GI-LABEL: test_bitf_v1i8:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    fmov x8, d0
-; CHECK-GI-NEXT:    fmov x9, d1
-; CHECK-GI-NEXT:    fmov x10, d2
-; CHECK-GI-NEXT:    bic w9, w9, w10
-; CHECK-GI-NEXT:    and w8, w10, w8
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 def $q2
+; CHECK-GI-NEXT:    umov w8, v2.b[0]
+; CHECK-GI-NEXT:    umov w9, v1.b[0]
+; CHECK-GI-NEXT:    umov w10, v0.b[0]
+; CHECK-GI-NEXT:    bic w9, w9, w8
+; CHECK-GI-NEXT:    and w8, w8, w10
 ; CHECK-GI-NEXT:    orr w8, w9, w8
 ; CHECK-GI-NEXT:    fmov s0, w8
 ; CHECK-GI-NEXT:    ret
@@ -39,11 +42,14 @@ define <1 x i16> @test_bitf_v1i16(<1 x i16> %A, <1 x i16> %B, <1 x i16> %C) {
 ;
 ; CHECK-GI-LABEL: test_bitf_v1i16:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    fmov x8, d0
-; CHECK-GI-NEXT:    fmov x9, d1
-; CHECK-GI-NEXT:    fmov x10, d2
-; CHECK-GI-NEXT:    bic w9, w9, w10
-; CHECK-GI-NEXT:    and w8, w10, w8
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 def $q2
+; CHECK-GI-NEXT:    umov w8, v2.h[0]
+; CHECK-GI-NEXT:    umov w9, v1.h[0]
+; CHECK-GI-NEXT:    umov w10, v0.h[0]
+; CHECK-GI-NEXT:    bic w9, w9, w8
+; CHECK-GI-NEXT:    and w8, w8, w10
 ; CHECK-GI-NEXT:    orr w8, w9, w8
 ; CHECK-GI-NEXT:    fmov s0, w8
 ; CHECK-GI-NEXT:    ret
@@ -64,14 +70,13 @@ define <1 x i32> @test_bitf_v1i32(<1 x i32> %A, <1 x i32> %B, <1 x i32> %C) {
 ;
 ; CHECK-GI-LABEL: test_bitf_v1i32:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    fmov x8, d0
-; CHECK-GI-NEXT:    fmov x9, d1
-; CHECK-GI-NEXT:    fmov x10, d2
-; CHECK-GI-NEXT:    bic w9, w9, w10
-; CHECK-GI-NEXT:    and w8, w10, w8
+; CHECK-GI-NEXT:    fmov w8, s2
+; CHECK-GI-NEXT:    fmov w9, s1
+; CHECK-GI-NEXT:    fmov w10, s0
+; CHECK-GI-NEXT:    bic w9, w9, w8
+; CHECK-GI-NEXT:    and w8, w8, w10
 ; CHECK-GI-NEXT:    orr w8, w9, w8
-; CHECK-GI-NEXT:    fmov s0, w8
-; CHECK-GI-NEXT:    mov v0.s[1], w8
+; CHECK-GI-NEXT:    mov v0.s[0], w8
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
   %neg = xor <1 x i32> %C, <i32 -1>

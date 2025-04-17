@@ -15,7 +15,6 @@
 #include "clang/Basic/Builtins.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Instruction.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Transforms/Utils/AMDGPUEmitPrintf.h"
 
 using namespace clang;
@@ -40,28 +39,6 @@ llvm::Function *GetVprintfDeclaration(llvm::Module &M) {
   // module.
   return llvm::Function::Create(
       VprintfFuncType, llvm::GlobalVariable::ExternalLinkage, "vprintf", &M);
-}
-
-llvm::Function *GetOpenMPVprintfDeclaration(CodeGenModule &CGM) {
-  const char *Name = "__llvm_omp_vprintf";
-  llvm::Module &M = CGM.getModule();
-  llvm::Type *ArgTypes[] = {llvm::PointerType::getUnqual(M.getContext()),
-                            llvm::PointerType::getUnqual(M.getContext()),
-                            llvm::Type::getInt32Ty(M.getContext())};
-  llvm::FunctionType *VprintfFuncType = llvm::FunctionType::get(
-      llvm::Type::getInt32Ty(M.getContext()), ArgTypes, false);
-
-  if (auto *F = M.getFunction(Name)) {
-    if (F->getFunctionType() != VprintfFuncType) {
-      CGM.Error(SourceLocation(),
-                "Invalid type declaration for __llvm_omp_vprintf");
-      return nullptr;
-    }
-    return F;
-  }
-
-  return llvm::Function::Create(
-      VprintfFuncType, llvm::GlobalVariable::ExternalLinkage, Name, &M);
 }
 
 // Transforms a call to printf into a call to the NVPTX vprintf syscall (which
@@ -136,7 +113,8 @@ RValue EmitDevicePrintfCallExpr(const CallExpr *E, CodeGenFunction *CGF,
                                 llvm::Function *Decl, bool WithSizeArg) {
   CodeGenModule &CGM = CGF->CGM;
   CGBuilderTy &Builder = CGF->Builder;
-  assert(E->getBuiltinCallee() == Builtin::BIprintf);
+  assert(E->getBuiltinCallee() == Builtin::BIprintf ||
+         E->getBuiltinCallee() == Builtin::BI__builtin_printf);
   assert(E->getNumArgs() >= 1); // printf always has at least one arg.
 
   // Uses the same format as nvptx for the argument packing, but also passes
@@ -178,7 +156,9 @@ RValue CodeGenFunction::EmitNVPTXDevicePrintfCallExpr(const CallExpr *E) {
 }
 
 RValue CodeGenFunction::EmitAMDGPUDevicePrintfCallExpr(const CallExpr *E) {
-  assert(getTarget().getTriple().getArch() == llvm::Triple::amdgcn);
+  assert(getTarget().getTriple().isAMDGCN() ||
+         (getTarget().getTriple().isSPIRV() &&
+          getTarget().getTriple().getVendor() == llvm::Triple::AMD));
   assert(E->getBuiltinCallee() == Builtin::BIprintf ||
          E->getBuiltinCallee() == Builtin::BI__builtin_printf);
   assert(E->getNumArgs() >= 1); // printf always has at least one arg.
@@ -209,11 +189,4 @@ RValue CodeGenFunction::EmitAMDGPUDevicePrintfCallExpr(const CallExpr *E) {
   auto Printf = llvm::emitAMDGPUPrintfCall(IRB, Args, isBuffered);
   Builder.SetInsertPoint(IRB.GetInsertBlock(), IRB.GetInsertPoint());
   return RValue::get(Printf);
-}
-
-RValue CodeGenFunction::EmitOpenMPDevicePrintfCallExpr(const CallExpr *E) {
-  assert(getTarget().getTriple().isNVPTX() ||
-         getTarget().getTriple().isAMDGCN());
-  return EmitDevicePrintfCallExpr(E, this, GetOpenMPVprintfDeclaration(CGM),
-                                  true);
 }

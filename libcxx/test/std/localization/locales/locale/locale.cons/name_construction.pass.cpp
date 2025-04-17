@@ -16,9 +16,9 @@
 // locale(const locale& other, const string& std_name, category cat);
 // locale(const locale& other, const locale& one, category cats);
 
-// This test exercises the fix for locale name construction (D119441), which
-// isn't in the dylib for some systems.
-// XFAIL: stdlib=apple-libc++ && target={{.+}}-apple-macosx{{10.9|10.10|10.11|10.12|10.13|10.14|10.15|11.0|12.0}}
+// This test exercises the fix for locale name construction (http://llvm.org/D119441 aka 643b7bcdb404),
+// which isn't in the dylib for some systems.
+// XFAIL: using-built-library-before-llvm-17
 
 #include <locale>
 #include <cassert>

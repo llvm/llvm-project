@@ -1,0 +1,18 @@
+macros:
+  - macro_name: MACRO_B
+    macro_value: 2
+types:
+  - type_name: type_b
+enums:
+  - name: enum_b
+    value: value_2
+objects:
+  - object_name: object_2
+    object_type: obj
+functions:
+  - name: func_b
+    return_type: float128
+    arguments: []
+    standards:
+      - stdc
+    guard: LIBC_TYPES_HAS_FLOAT128

@@ -20,25 +20,18 @@
 
 #define DEBUG_TYPE "llvm-mca-riscv-custombehaviour"
 
-// This brings in a table with primary key of
-// base instruction opcode and lmul and maps
-// to the opcode of the pseudo instruction.
-namespace RISCVVInversePseudosTable {
-using namespace llvm;
-using namespace llvm::RISCV;
-
-struct PseudoInfo {
-  uint16_t Pseudo;
-  uint16_t BaseInstr;
-  uint8_t VLMul;
-  uint8_t SEW;
+namespace llvm::RISCV {
+struct VXMemOpInfo {
+  unsigned Log2IdxEEW : 3;
+  unsigned IsOrdered : 1;
+  unsigned IsStore : 1;
+  unsigned NF : 4;
+  unsigned BaseInstr;
 };
 
-#define GET_RISCVVInversePseudosTable_IMPL
-#define GET_RISCVVInversePseudosTable_DECL
+#define GET_RISCVBaseVXMemOpTable_IMPL
 #include "RISCVGenSearchableTables.inc"
-
-} // end namespace RISCVVInversePseudosTable
+} // namespace llvm::RISCV
 
 namespace llvm {
 namespace mca {
@@ -127,32 +120,32 @@ RISCVInstrumentManager::createInstruments(const MCInst &Inst) {
     LLVM_DEBUG(dbgs() << "RVCB: Found VSETVLI and creating instrument for it: "
                       << Inst << "\n");
     unsigned VTypeI = Inst.getOperand(2).getImm();
-    RISCVII::VLMUL VLMUL = RISCVVType::getVLMUL(VTypeI);
+    RISCVVType::VLMUL VLMUL = RISCVVType::getVLMUL(VTypeI);
 
     StringRef LMUL;
     switch (VLMUL) {
-    case RISCVII::LMUL_1:
+    case RISCVVType::LMUL_1:
       LMUL = "M1";
       break;
-    case RISCVII::LMUL_2:
+    case RISCVVType::LMUL_2:
       LMUL = "M2";
       break;
-    case RISCVII::LMUL_4:
+    case RISCVVType::LMUL_4:
       LMUL = "M4";
       break;
-    case RISCVII::LMUL_8:
+    case RISCVVType::LMUL_8:
       LMUL = "M8";
       break;
-    case RISCVII::LMUL_F2:
+    case RISCVVType::LMUL_F2:
       LMUL = "MF2";
       break;
-    case RISCVII::LMUL_F4:
+    case RISCVVType::LMUL_F4:
       LMUL = "MF4";
       break;
-    case RISCVII::LMUL_F8:
+    case RISCVVType::LMUL_F8:
       LMUL = "MF8";
       break;
-    case RISCVII::LMUL_RESERVED:
+    case RISCVVType::LMUL_RESERVED:
       llvm_unreachable("Cannot create instrument for LMUL_RESERVED");
     }
     SmallVector<UniqueInstrument> Instruments;
@@ -186,7 +179,7 @@ RISCVInstrumentManager::createInstruments(const MCInst &Inst) {
 }
 
 static std::pair<uint8_t, uint8_t>
-getEEWAndEMUL(unsigned Opcode, RISCVII::VLMUL LMUL, uint8_t SEW) {
+getEEWAndEMUL(unsigned Opcode, RISCVVType::VLMUL LMUL, uint8_t SEW) {
   uint8_t EEW;
   switch (Opcode) {
   case RISCV::VLM_V:
@@ -225,7 +218,7 @@ getEEWAndEMUL(unsigned Opcode, RISCVII::VLMUL LMUL, uint8_t SEW) {
   return std::make_pair(EEW, *EMUL);
 }
 
-bool opcodeHasEEWAndEMULInfo(unsigned short Opcode) {
+static bool opcodeHasEEWAndEMULInfo(unsigned short Opcode) {
   return Opcode == RISCV::VLM_V || Opcode == RISCV::VSM_V ||
          Opcode == RISCV::VLE8_V || Opcode == RISCV::VSE8_V ||
          Opcode == RISCV::VLE16_V || Opcode == RISCV::VSE16_V ||
@@ -267,21 +260,58 @@ unsigned RISCVInstrumentManager::getSchedClassID(
   // and SEW, or (Opcode, LMUL, 0) if does not depend on SEW.
   uint8_t SEW = SI ? SI->getSEW() : 0;
 
-  const RISCVVInversePseudosTable::PseudoInfo *RVV = nullptr;
-  if (opcodeHasEEWAndEMULInfo(Opcode)) {
-    RISCVII::VLMUL VLMUL = static_cast<RISCVII::VLMUL>(LMUL);
+  std::optional<unsigned> VPOpcode;
+  if (const auto *VXMO = RISCV::getVXMemOpInfo(Opcode)) {
+    // Calculate the expected index EMUL. For indexed operations,
+    // the DataEEW and DataEMUL are equal to SEW and LMUL, respectively.
+    unsigned IndexEMUL = ((1 << VXMO->Log2IdxEEW) * LMUL) / SEW;
+
+    if (!VXMO->NF) {
+      // Indexed Load / Store.
+      if (VXMO->IsStore) {
+        if (const auto *VXP = RISCV::getVSXPseudo(
+                /*Masked=*/0, VXMO->IsOrdered, VXMO->Log2IdxEEW, LMUL,
+                IndexEMUL))
+          VPOpcode = VXP->Pseudo;
+      } else {
+        if (const auto *VXP = RISCV::getVLXPseudo(
+                /*Masked=*/0, VXMO->IsOrdered, VXMO->Log2IdxEEW, LMUL,
+                IndexEMUL))
+          VPOpcode = VXP->Pseudo;
+      }
+    } else {
+      // Segmented Indexed Load / Store.
+      if (VXMO->IsStore) {
+        if (const auto *VXP =
+                RISCV::getVSXSEGPseudo(VXMO->NF, /*Masked=*/0, VXMO->IsOrdered,
+                                       VXMO->Log2IdxEEW, LMUL, IndexEMUL))
+          VPOpcode = VXP->Pseudo;
+      } else {
+        if (const auto *VXP =
+                RISCV::getVLXSEGPseudo(VXMO->NF, /*Masked=*/0, VXMO->IsOrdered,
+                                       VXMO->Log2IdxEEW, LMUL, IndexEMUL))
+          VPOpcode = VXP->Pseudo;
+      }
+    }
+  } else if (opcodeHasEEWAndEMULInfo(Opcode)) {
+    RISCVVType::VLMUL VLMUL = static_cast<RISCVVType::VLMUL>(LMUL);
     auto [EEW, EMUL] = getEEWAndEMUL(Opcode, VLMUL, SEW);
-    RVV = RISCVVInversePseudosTable::getBaseInfo(Opcode, EMUL, EEW);
+    if (const auto *RVV =
+            RISCVVInversePseudosTable::getBaseInfo(Opcode, EMUL, EEW))
+      VPOpcode = RVV->Pseudo;
   } else {
     // Check if it depends on LMUL and SEW
-    RVV = RISCVVInversePseudosTable::getBaseInfo(Opcode, LMUL, SEW);
+    const auto *RVV = RISCVVInversePseudosTable::getBaseInfo(Opcode, LMUL, SEW);
     // Check if it depends only on LMUL
     if (!RVV)
       RVV = RISCVVInversePseudosTable::getBaseInfo(Opcode, LMUL, 0);
+
+    if (RVV)
+      VPOpcode = RVV->Pseudo;
   }
 
   // Not a RVV instr
-  if (!RVV) {
+  if (!VPOpcode) {
     LLVM_DEBUG(
         dbgs() << "RVCB: Could not find PseudoInstruction for Opcode "
                << MCII.getName(Opcode)
@@ -297,8 +327,8 @@ unsigned RISCVInstrumentManager::getSchedClassID(
                     << MCII.getName(Opcode) << ", LMUL=" << LI->getData()
                     << ", SEW=" << (SI ? SI->getData() : "Unspecified")
                     << ". Overriding original SchedClassID=" << SchedClassID
-                    << " with " << MCII.getName(RVV->Pseudo) << '\n');
-  return MCII.get(RVV->Pseudo).getSchedClass();
+                    << " with " << MCII.getName(*VPOpcode) << '\n');
+  return MCII.get(*VPOpcode).getSchedClass();
 }
 
 } // namespace mca

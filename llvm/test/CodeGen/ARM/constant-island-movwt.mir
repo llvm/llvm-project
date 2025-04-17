@@ -6,7 +6,7 @@
   target datalayout = "e-m:w-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64"
   target triple = "thumbv7-unknown-windows-gnu"
 
-  %struct.A = type { [201 x i8*] }
+  %struct.A = type { [201 x ptr] }
 
   @.str.17 = private unnamed_addr constant [10 x i8] c"__ashlhi3\00", align 1
   @.str.18 = private unnamed_addr constant [10 x i8] c"__ashlsi3\00", align 1
@@ -147,166 +147,166 @@
   @.str.153 = private unnamed_addr constant [9 x i8] c"copysign\00", align 1
 
   ; Function Attrs: nounwind
-  define arm_aapcs_vfpcc void @func(%struct.A* %obj) #0 {
+  define arm_aapcs_vfpcc void @func(ptr %obj) #0 {
   entry:
-    %arrayidx.i1 = bitcast %struct.A* %obj to i8**
-    %0 = bitcast i8** %arrayidx.i1 to <4 x i8*>*
-    store <4 x i8*> <i8* null, i8* getelementptr inbounds ([10 x i8], [10 x i8]* @.str.18, i32 0, i32 0), i8* getelementptr inbounds ([10 x i8], [10 x i8]* @.str.19, i32 0, i32 0), i8* getelementptr inbounds ([10 x i8], [10 x i8]* @.str.20, i32 0, i32 0)>, <4 x i8*>* %0
-    %arrayidx.i62 = getelementptr inbounds %struct.A, %struct.A* %obj, i32 0, i32 0, i32 4
-    %1 = bitcast i8** %arrayidx.i62 to <4 x i8*>*
-    store <4 x i8*> <i8* getelementptr inbounds ([10 x i8], [10 x i8]* @.str.21, i32 0, i32 0), i8* getelementptr inbounds ([10 x i8], [10 x i8]* @.str.22, i32 0, i32 0), i8* getelementptr inbounds ([10 x i8], [10 x i8]* @.str.23, i32 0, i32 0), i8* getelementptr inbounds ([10 x i8], [10 x i8]* @.str.24, i32 0, i32 0)>, <4 x i8*>* %1
-    %arrayidx.i523 = getelementptr inbounds %struct.A, %struct.A* %obj, i32 0, i32 0, i32 8
-    %2 = bitcast i8** %arrayidx.i523 to <4 x i8*>*
-    store <4 x i8*> <i8* getelementptr inbounds ([10 x i8], [10 x i8]* @.str.25, i32 0, i32 0), i8* getelementptr inbounds ([10 x i8], [10 x i8]* @.str.26, i32 0, i32 0), i8* getelementptr inbounds ([10 x i8], [10 x i8]* @.str.27, i32 0, i32 0), i8* getelementptr inbounds ([10 x i8], [10 x i8]* @.str.28, i32 0, i32 0)>, <4 x i8*>* %2
-    %arrayidx.i519 = getelementptr inbounds %struct.A, %struct.A* %obj, i32 0, i32 0, i32 12
-    %3 = bitcast i8** %arrayidx.i519 to <4 x i8*>*
-    store <4 x i8*> <i8* getelementptr inbounds ([9 x i8], [9 x i8]* @.str.29, i32 0, i32 0), i8* getelementptr inbounds ([9 x i8], [9 x i8]* @.str.30, i32 0, i32 0), i8* getelementptr inbounds ([9 x i8], [9 x i8]* @.str.31, i32 0, i32 0), i8* getelementptr inbounds ([9 x i8], [9 x i8]* @.str.32, i32 0, i32 0)>, <4 x i8*>* %3
-    %arrayidx.i515 = getelementptr inbounds %struct.A, %struct.A* %obj, i32 0, i32 0, i32 16
-    %4 = bitcast i8** %arrayidx.i515 to i8*
-    call void @llvm.memset.p0i8.i64(i8* align 4 %4, i8 0, i64 40, i1 false)
-    %arrayidx.i511 = getelementptr inbounds %struct.A, %struct.A* %obj, i32 0, i32 0, i32 20
-    %5 = bitcast i8** %arrayidx.i511 to <4 x i8*>*
-    store <4 x i8*> <i8* getelementptr inbounds ([9 x i8], [9 x i8]* @.str.37, i32 0, i32 0), i8* getelementptr inbounds ([9 x i8], [9 x i8]* @.str.38, i32 0, i32 0), i8* getelementptr inbounds ([9 x i8], [9 x i8]* @.str.39, i32 0, i32 0), i8* getelementptr inbounds ([9 x i8], [9 x i8]* @.str.40, i32 0, i32 0)>, <4 x i8*>* %5
-    %arrayidx.i507 = getelementptr inbounds %struct.A, %struct.A* %obj, i32 0, i32 0, i32 24
-    %6 = bitcast i8** %arrayidx.i507 to <4 x i8*>*
-    store <4 x i8*> <i8* getelementptr inbounds ([9 x i8], [9 x i8]* @.str.41, i32 0, i32 0), i8* getelementptr inbounds ([10 x i8], [10 x i8]* @.str.42, i32 0, i32 0), i8* getelementptr inbounds ([10 x i8], [10 x i8]* @.str.43, i32 0, i32 0), i8* getelementptr inbounds ([10 x i8], [10 x i8]* @.str.44, i32 0, i32 0)>, <4 x i8*>* %6
-    %arrayidx.i503 = getelementptr inbounds %struct.A, %struct.A* %obj, i32 0, i32 0, i32 28
-    %7 = bitcast i8** %arrayidx.i503 to <4 x i8*>*
-    store <4 x i8*> <i8* getelementptr inbounds ([10 x i8], [10 x i8]* @.str.45, i32 0, i32 0), i8* getelementptr inbounds ([10 x i8], [10 x i8]* @.str.46, i32 0, i32 0), i8* getelementptr inbounds ([9 x i8], [9 x i8]* @.str.47, i32 0, i32 0), i8* getelementptr inbounds ([9 x i8], [9 x i8]* @.str.48, i32 0, i32 0)>, <4 x i8*>* %7
-    %arrayidx.i499 = getelementptr inbounds %struct.A, %struct.A* %obj, i32 0, i32 0, i32 32
-    %8 = bitcast i8** %arrayidx.i499 to <4 x i8*>*
-    store <4 x i8*> <i8* getelementptr inbounds ([9 x i8], [9 x i8]* @.str.49, i32 0, i32 0), i8* getelementptr inbounds ([9 x i8], [9 x i8]* @.str.50, i32 0, i32 0), i8* getelementptr inbounds ([9 x i8], [9 x i8]* @.str.51, i32 0, i32 0), i8* getelementptr inbounds ([10 x i8], [10 x i8]* @.str.52, i32 0, i32 0)>, <4 x i8*>* %8
-    %arrayidx.i495 = getelementptr inbounds %struct.A, %struct.A* %obj, i32 0, i32 0, i32 36
-    %9 = bitcast i8** %arrayidx.i495 to <4 x i8*>*
-    store <4 x i8*> <i8* getelementptr inbounds ([10 x i8], [10 x i8]* @.str.53, i32 0, i32 0), i8* getelementptr inbounds ([10 x i8], [10 x i8]* @.str.54, i32 0, i32 0), i8* getelementptr inbounds ([10 x i8], [10 x i8]* @.str.55, i32 0, i32 0), i8* getelementptr inbounds ([10 x i8], [10 x i8]* @.str.56, i32 0, i32 0)>, <4 x i8*>* %9
-    %arrayidx.i491 = getelementptr inbounds %struct.A, %struct.A* %obj, i32 0, i32 0, i32 40
-    %arrayidx.i481 = getelementptr inbounds %struct.A, %struct.A* %obj, i32 0, i32 0, i32 50
-    %10 = bitcast i8** %arrayidx.i491 to i8*
-    call void @llvm.memset.p0i8.i64(i8* align 4 %10, i8 0, i64 40, i1 false)
-    %11 = bitcast i8** %arrayidx.i481 to <4 x i8*>*
-    store <4 x i8*> <i8* getelementptr inbounds ([9 x i8], [9 x i8]* @.str.57, i32 0, i32 0), i8* getelementptr inbounds ([9 x i8], [9 x i8]* @.str.58, i32 0, i32 0), i8* getelementptr inbounds ([9 x i8], [9 x i8]* @.str.59, i32 0, i32 0), i8* getelementptr inbounds ([9 x i8], [9 x i8]* @.str.60, i32 0, i32 0)>, <4 x i8*>* %11
-    %arrayidx.i477 = getelementptr inbounds %struct.A, %struct.A* %obj, i32 0, i32 0, i32 54
-    %12 = bitcast i8** %arrayidx.i477 to <4 x i8*>*
-    store <4 x i8*> <i8* getelementptr inbounds ([9 x i8], [9 x i8]* @.str.61, i32 0, i32 0), i8* getelementptr inbounds ([9 x i8], [9 x i8]* @.str.62, i32 0, i32 0), i8* getelementptr inbounds ([11 x i8], [11 x i8]* @.str.63, i32 0, i32 0), i8* getelementptr inbounds ([9 x i8], [9 x i8]* @.str.64, i32 0, i32 0)>, <4 x i8*>* %12
-    %arrayidx.i473 = getelementptr inbounds %struct.A, %struct.A* %obj, i32 0, i32 0, i32 58
-    %13 = bitcast i8** %arrayidx.i473 to <4 x i8*>*
-    store <4 x i8*> <i8* getelementptr inbounds ([9 x i8], [9 x i8]* @.str.65, i32 0, i32 0), i8* getelementptr inbounds ([9 x i8], [9 x i8]* @.str.66, i32 0, i32 0), i8* getelementptr inbounds ([9 x i8], [9 x i8]* @.str.67, i32 0, i32 0), i8* getelementptr inbounds ([11 x i8], [11 x i8]* @.str.68, i32 0, i32 0)>, <4 x i8*>* %13
-    %arrayidx.i469 = getelementptr inbounds %struct.A, %struct.A* %obj, i32 0, i32 0, i32 62
-    %14 = bitcast i8** %arrayidx.i469 to <4 x i8*>*
-    store <4 x i8*> <i8* getelementptr inbounds ([9 x i8], [9 x i8]* @.str.69, i32 0, i32 0), i8* getelementptr inbounds ([9 x i8], [9 x i8]* @.str.70, i32 0, i32 0), i8* getelementptr inbounds ([9 x i8], [9 x i8]* @.str.71, i32 0, i32 0), i8* getelementptr inbounds ([9 x i8], [9 x i8]* @.str.72, i32 0, i32 0)>, <4 x i8*>* %14
-    %arrayidx.i465 = getelementptr inbounds %struct.A, %struct.A* %obj, i32 0, i32 0, i32 66
-    %15 = bitcast i8** %arrayidx.i465 to <4 x i8*>*
-    store <4 x i8*> <i8* getelementptr inbounds ([11 x i8], [11 x i8]* @.str.73, i32 0, i32 0), i8* getelementptr inbounds ([9 x i8], [9 x i8]* @.str.74, i32 0, i32 0), i8* getelementptr inbounds ([9 x i8], [9 x i8]* @.str.75, i32 0, i32 0), i8* getelementptr inbounds ([9 x i8], [9 x i8]* @.str.76, i32 0, i32 0)>, <4 x i8*>* %15
-    %arrayidx.i461 = getelementptr inbounds %struct.A, %struct.A* %obj, i32 0, i32 0, i32 70
-    %16 = bitcast i8** %arrayidx.i461 to i8*
-    call void @llvm.memset.p0i8.i64(i8* align 4 %16, i8 0, i64 40, i1 false)
-    %arrayidx.i457 = getelementptr inbounds %struct.A, %struct.A* %obj, i32 0, i32 0, i32 74
-    %17 = bitcast i8** %arrayidx.i457 to <4 x i8*>*
-    store <4 x i8*> <i8* getelementptr inbounds ([6 x i8], [6 x i8]* @.str.81, i32 0, i32 0), i8* getelementptr inbounds ([6 x i8], [6 x i8]* @.str.81, i32 0, i32 0), i8* getelementptr inbounds ([6 x i8], [6 x i8]* @.str.81, i32 0, i32 0), i8* getelementptr inbounds ([5 x i8], [5 x i8]* @.str.82, i32 0, i32 0)>, <4 x i8*>* %17
-    %arrayidx.i453 = getelementptr inbounds %struct.A, %struct.A* %obj, i32 0, i32 0, i32 78
-    %18 = bitcast i8** %arrayidx.i453 to <4 x i8*>*
-    store <4 x i8*> <i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str.83, i32 0, i32 0), i8* getelementptr inbounds ([5 x i8], [5 x i8]* @.str.84, i32 0, i32 0), i8* getelementptr inbounds ([5 x i8], [5 x i8]* @.str.84, i32 0, i32 0), i8* getelementptr inbounds ([5 x i8], [5 x i8]* @.str.84, i32 0, i32 0)>, <4 x i8*>* %18
-    %arrayidx.i449 = getelementptr inbounds %struct.A, %struct.A* %obj, i32 0, i32 0, i32 82
-    %arrayidx.i445 = getelementptr inbounds %struct.A, %struct.A* %obj, i32 0, i32 0, i32 86
-    %19 = bitcast i8** %arrayidx.i445 to <4 x i8*>*
-    store <4 x i8*> <i8* getelementptr inbounds ([10 x i8], [10 x i8]* @.str.88, i32 0, i32 0), i8* getelementptr inbounds ([6 x i8], [6 x i8]* @.str.89, i32 0, i32 0), i8* getelementptr inbounds ([5 x i8], [5 x i8]* @.str.90, i32 0, i32 0), i8* getelementptr inbounds ([6 x i8], [6 x i8]* @.str.91, i32 0, i32 0)>, <4 x i8*>* %19
-    %arrayidx.i441 = getelementptr inbounds %struct.A, %struct.A* %obj, i32 0, i32 0, i32 90
-    %20 = bitcast i8** %arrayidx.i441 to <4 x i8*>*
-    store <4 x i8*> <i8* getelementptr inbounds ([6 x i8], [6 x i8]* @.str.91, i32 0, i32 0), i8* getelementptr inbounds ([6 x i8], [6 x i8]* @.str.91, i32 0, i32 0), i8* getelementptr inbounds ([5 x i8], [5 x i8]* @.str.92, i32 0, i32 0), i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str.93, i32 0, i32 0)>, <4 x i8*>* %20
-    %arrayidx.i437 = getelementptr inbounds %struct.A, %struct.A* %obj, i32 0, i32 0, i32 94
-    %21 = bitcast i8** %arrayidx.i437 to i8*
-    call void @llvm.memset.p0i8.i64(i8* align 4 %21, i8 0, i64 28, i1 false)
-    %arrayidx.i433 = getelementptr inbounds %struct.A, %struct.A* %obj, i32 0, i32 0, i32 98
-    %22 = bitcast i8** %arrayidx.i433 to <4 x i8*>*
-    store <4 x i8*> <i8* getelementptr inbounds ([13 x i8], [13 x i8]* @.str.96, i32 0, i32 0), i8* getelementptr inbounds ([14 x i8], [14 x i8]* @.str.97, i32 0, i32 0), i8* getelementptr inbounds ([14 x i8], [14 x i8]* @.str.97, i32 0, i32 0), i8* getelementptr inbounds ([14 x i8], [14 x i8]* @.str.97, i32 0, i32 0)>, <4 x i8*>* %22
-    %arrayidx.i429 = getelementptr inbounds %struct.A, %struct.A* %obj, i32 0, i32 0, i32 102
-    %23 = bitcast i8** %arrayidx.i429 to <4 x i8*>*
-    store <4 x i8*> <i8* getelementptr inbounds ([6 x i8], [6 x i8]* @.str.98, i32 0, i32 0), i8* getelementptr inbounds ([5 x i8], [5 x i8]* @.str.99, i32 0, i32 0), i8* getelementptr inbounds ([6 x i8], [6 x i8]* @.str.100, i32 0, i32 0), i8* getelementptr inbounds ([6 x i8], [6 x i8]* @.str.100, i32 0, i32 0)>, <4 x i8*>* %23
-    %arrayidx.i425 = getelementptr inbounds %struct.A, %struct.A* %obj, i32 0, i32 0, i32 106
-    %24 = bitcast i8** %arrayidx.i425 to i8*
-    call void @llvm.memset.p0i8.i64(i8* align 4 %24, i8 0, i64 28, i1 false)
-    %arrayidx.i421 = getelementptr inbounds %struct.A, %struct.A* %obj, i32 0, i32 0, i32 110
-    %25 = bitcast i8** %arrayidx.i421 to <4 x i8*>*
-    store <4 x i8*> <i8* getelementptr inbounds ([15 x i8], [15 x i8]* @.str.103, i32 0, i32 0), i8* getelementptr inbounds ([15 x i8], [15 x i8]* @.str.103, i32 0, i32 0), i8* getelementptr inbounds ([7 x i8], [7 x i8]* @.str.104, i32 0, i32 0), i8* getelementptr inbounds ([6 x i8], [6 x i8]* @.str.105, i32 0, i32 0)>, <4 x i8*>* %25
-    %arrayidx.i417 = getelementptr inbounds %struct.A, %struct.A* %obj, i32 0, i32 0, i32 114
-    %26 = bitcast i8** %arrayidx.i417 to <4 x i8*>*
-    store <4 x i8*> <i8* getelementptr inbounds ([7 x i8], [7 x i8]* @.str.106, i32 0, i32 0), i8* getelementptr inbounds ([7 x i8], [7 x i8]* @.str.106, i32 0, i32 0), i8* getelementptr inbounds ([7 x i8], [7 x i8]* @.str.106, i32 0, i32 0), i8* getelementptr inbounds ([16 x i8], [16 x i8]* @.str.107, i32 0, i32 0)>, <4 x i8*>* %26
-    %arrayidx.i413 = getelementptr inbounds %struct.A, %struct.A* %obj, i32 0, i32 0, i32 118
-    %27 = bitcast i8** %arrayidx.i413 to <4 x i8*>*
-    store <4 x i8*> <i8* getelementptr inbounds ([15 x i8], [15 x i8]* @.str.108, i32 0, i32 0), i8* getelementptr inbounds ([16 x i8], [16 x i8]* @.str.109, i32 0, i32 0), i8* getelementptr inbounds ([16 x i8], [16 x i8]* @.str.109, i32 0, i32 0), i8* getelementptr inbounds ([16 x i8], [16 x i8]* @.str.109, i32 0, i32 0)>, <4 x i8*>* %27
-    %arrayidx.i409 = getelementptr inbounds %struct.A, %struct.A* %obj, i32 0, i32 0, i32 122
-    %28 = bitcast i8** %arrayidx.i409 to <4 x i8*>*
-    store <4 x i8*> <i8* getelementptr inbounds ([5 x i8], [5 x i8]* @.str.110, i32 0, i32 0), i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str.111, i32 0, i32 0), i8* getelementptr inbounds ([5 x i8], [5 x i8]* @.str.112, i32 0, i32 0), i8* getelementptr inbounds ([5 x i8], [5 x i8]* @.str.112, i32 0, i32 0)>, <4 x i8*>* %28
-    %arrayidx.i405 = getelementptr inbounds %struct.A, %struct.A* %obj, i32 0, i32 0, i32 126
-    %29 = bitcast i8** %arrayidx.i405 to <4 x i8*>*
-    store <4 x i8*> <i8* getelementptr inbounds ([5 x i8], [5 x i8]* @.str.112, i32 0, i32 0), i8* getelementptr inbounds ([14 x i8], [14 x i8]* @.str.113, i32 0, i32 0), i8* getelementptr inbounds ([13 x i8], [13 x i8]* @.str.114, i32 0, i32 0), i8* getelementptr inbounds ([14 x i8], [14 x i8]* @.str.115, i32 0, i32 0)>, <4 x i8*>* %29
-    %arrayidx.i401 = getelementptr inbounds %struct.A, %struct.A* %obj, i32 0, i32 0, i32 130
-    %30 = bitcast i8** %arrayidx.i401 to <4 x i8*>*
-    store <4 x i8*> <i8* getelementptr inbounds ([14 x i8], [14 x i8]* @.str.115, i32 0, i32 0), i8* getelementptr inbounds ([14 x i8], [14 x i8]* @.str.115, i32 0, i32 0), i8* getelementptr inbounds ([6 x i8], [6 x i8]* @.str.116, i32 0, i32 0), i8* getelementptr inbounds ([5 x i8], [5 x i8]* @.str.117, i32 0, i32 0)>, <4 x i8*>* %30
-    %arrayidx.i397 = getelementptr inbounds %struct.A, %struct.A* %obj, i32 0, i32 0, i32 134
-    %31 = bitcast i8** %arrayidx.i397 to <4 x i8*>*
-    store <4 x i8*> <i8* getelementptr inbounds ([6 x i8], [6 x i8]* @.str.118, i32 0, i32 0), i8* getelementptr inbounds ([6 x i8], [6 x i8]* @.str.118, i32 0, i32 0), i8* getelementptr inbounds ([6 x i8], [6 x i8]* @.str.118, i32 0, i32 0), i8* getelementptr inbounds ([15 x i8], [15 x i8]* @.str.119, i32 0, i32 0)>, <4 x i8*>* %31
-    %arrayidx.i393 = getelementptr inbounds %struct.A, %struct.A* %obj, i32 0, i32 0, i32 138
-    %32 = bitcast i8** %arrayidx.i393 to <4 x i8*>*
-    store <4 x i8*> <i8* getelementptr inbounds ([14 x i8], [14 x i8]* @.str.120, i32 0, i32 0), i8* getelementptr inbounds ([15 x i8], [15 x i8]* @.str.121, i32 0, i32 0), i8* getelementptr inbounds ([15 x i8], [15 x i8]* @.str.121, i32 0, i32 0), i8* getelementptr inbounds ([15 x i8], [15 x i8]* @.str.121, i32 0, i32 0)>, <4 x i8*>* %32
-    %arrayidx.i389 = getelementptr inbounds %struct.A, %struct.A* %obj, i32 0, i32 0, i32 142
-    %33 = bitcast i8** %arrayidx.i389 to <4 x i8*>*
-    store <4 x i8*> <i8* getelementptr inbounds ([5 x i8], [5 x i8]* @.str.122, i32 0, i32 0), i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str.123, i32 0, i32 0), i8* getelementptr inbounds ([5 x i8], [5 x i8]* @.str.124, i32 0, i32 0), i8* getelementptr inbounds ([5 x i8], [5 x i8]* @.str.124, i32 0, i32 0)>, <4 x i8*>* %33
-    %arrayidx.i385 = getelementptr inbounds %struct.A, %struct.A* %obj, i32 0, i32 0, i32 146
-    %34 = bitcast i8** %arrayidx.i385 to <4 x i8*>*
-    store <4 x i8*> <i8* getelementptr inbounds ([5 x i8], [5 x i8]* @.str.124, i32 0, i32 0), i8* getelementptr inbounds ([5 x i8], [5 x i8]* @.str.125, i32 0, i32 0), i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str.126, i32 0, i32 0), i8* getelementptr inbounds ([5 x i8], [5 x i8]* @.str.127, i32 0, i32 0)>, <4 x i8*>* %34
-    %arrayidx.i381 = getelementptr inbounds %struct.A, %struct.A* %obj, i32 0, i32 0, i32 150
-    store i8* getelementptr inbounds ([5 x i8], [5 x i8]* @.str.127, i32 0, i32 0), i8** %arrayidx.i381
-    %arrayidx.i380 = getelementptr inbounds %struct.A, %struct.A* %obj, i32 0, i32 0, i32 151
-    store i8* getelementptr inbounds ([5 x i8], [5 x i8]* @.str.127, i32 0, i32 0), i8** %arrayidx.i380
-    %arrayidx.i379 = getelementptr inbounds %struct.A, %struct.A* %obj, i32 0, i32 0, i32 152
-    %arrayidx.i375 = getelementptr inbounds %struct.A, %struct.A* %obj, i32 0, i32 0, i32 156
-    %arrayidx.i374 = getelementptr inbounds %struct.A, %struct.A* %obj, i32 0, i32 0, i32 157
-    %arrayidx.i373 = getelementptr inbounds %struct.A, %struct.A* %obj, i32 0, i32 0, i32 158
-    %arrayidx.i372 = getelementptr inbounds %struct.A, %struct.A* %obj, i32 0, i32 0, i32 159
-    %35 = bitcast i8** %arrayidx.i379 to i8*
-    call void @llvm.memset.p0i8.i64(i8* align 4 %35, i8 0, i64 28, i1 false)
-    store i8* getelementptr inbounds ([5 x i8], [5 x i8]* @.str.128, i32 0, i32 0), i8** %arrayidx.i372
-    %arrayidx.i371 = getelementptr inbounds %struct.A, %struct.A* %obj, i32 0, i32 0, i32 160
-    store i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str.129, i32 0, i32 0), i8** %arrayidx.i371
-    %arrayidx.i370 = getelementptr inbounds %struct.A, %struct.A* %obj, i32 0, i32 0, i32 161
-    %36 = bitcast i8** %arrayidx.i370 to <4 x i8*>*
-    store <4 x i8*> <i8* getelementptr inbounds ([5 x i8], [5 x i8]* @.str.130, i32 0, i32 0), i8* getelementptr inbounds ([5 x i8], [5 x i8]* @.str.130, i32 0, i32 0), i8* getelementptr inbounds ([5 x i8], [5 x i8]* @.str.130, i32 0, i32 0), i8* getelementptr inbounds ([14 x i8], [14 x i8]* @.str.131, i32 0, i32 0)>, <4 x i8*>* %36
-    %arrayidx.i366 = getelementptr inbounds %struct.A, %struct.A* %obj, i32 0, i32 0, i32 165
-    %37 = bitcast i8** %arrayidx.i366 to <4 x i8*>*
-    store <4 x i8*> <i8* getelementptr inbounds ([13 x i8], [13 x i8]* @.str.132, i32 0, i32 0), i8* getelementptr inbounds ([14 x i8], [14 x i8]* @.str.133, i32 0, i32 0), i8* getelementptr inbounds ([14 x i8], [14 x i8]* @.str.133, i32 0, i32 0), i8* getelementptr inbounds ([14 x i8], [14 x i8]* @.str.133, i32 0, i32 0)>, <4 x i8*>* %37
-    %arrayidx.i362 = getelementptr inbounds %struct.A, %struct.A* %obj, i32 0, i32 0, i32 169
-    %38 = bitcast i8** %arrayidx.i362 to <4 x i8*>*
-    store <4 x i8*> <i8* getelementptr inbounds ([6 x i8], [6 x i8]* @.str.134, i32 0, i32 0), i8* getelementptr inbounds ([5 x i8], [5 x i8]* @.str.135, i32 0, i32 0), i8* getelementptr inbounds ([6 x i8], [6 x i8]* @.str.136, i32 0, i32 0), i8* getelementptr inbounds ([6 x i8], [6 x i8]* @.str.136, i32 0, i32 0)>, <4 x i8*>* %38
-    %arrayidx.i358 = getelementptr inbounds %struct.A, %struct.A* %obj, i32 0, i32 0, i32 173
-    %39 = bitcast i8** %arrayidx.i358 to <4 x i8*>*
-    store <4 x i8*> <i8* getelementptr inbounds ([6 x i8], [6 x i8]* @.str.136, i32 0, i32 0), i8* getelementptr inbounds ([7 x i8], [7 x i8]* @.str.137, i32 0, i32 0), i8* getelementptr inbounds ([6 x i8], [6 x i8]* @.str.138, i32 0, i32 0), i8* getelementptr inbounds ([7 x i8], [7 x i8]* @.str.139, i32 0, i32 0)>, <4 x i8*>* %39
-    %arrayidx.i354 = getelementptr inbounds %struct.A, %struct.A* %obj, i32 0, i32 0, i32 177
-    %40 = bitcast i8** %arrayidx.i354 to <4 x i8*>*
-    store <4 x i8*> <i8* getelementptr inbounds ([7 x i8], [7 x i8]* @.str.139, i32 0, i32 0), i8* getelementptr inbounds ([7 x i8], [7 x i8]* @.str.139, i32 0, i32 0), i8* getelementptr inbounds ([6 x i8], [6 x i8]* @.str.140, i32 0, i32 0), i8* getelementptr inbounds ([5 x i8], [5 x i8]* @.str.141, i32 0, i32 0)>, <4 x i8*>* %40
-    %arrayidx.i350 = getelementptr inbounds %struct.A, %struct.A* %obj, i32 0, i32 0, i32 181
-    %41 = bitcast i8** %arrayidx.i350 to <4 x i8*>*
-    store <4 x i8*> <i8* getelementptr inbounds ([6 x i8], [6 x i8]* @.str.142, i32 0, i32 0), i8* getelementptr inbounds ([6 x i8], [6 x i8]* @.str.142, i32 0, i32 0), i8* getelementptr inbounds ([6 x i8], [6 x i8]* @.str.142, i32 0, i32 0), i8* getelementptr inbounds ([11 x i8], [11 x i8]* @.str.143, i32 0, i32 0)>, <4 x i8*>* %41
-    %arrayidx.i346 = getelementptr inbounds %struct.A, %struct.A* %obj, i32 0, i32 0, i32 185
-    %42 = bitcast i8** %arrayidx.i346 to <4 x i8*>*
-    store <4 x i8*> <i8* getelementptr inbounds ([10 x i8], [10 x i8]* @.str.144, i32 0, i32 0), i8* getelementptr inbounds ([11 x i8], [11 x i8]* @.str.145, i32 0, i32 0), i8* getelementptr inbounds ([11 x i8], [11 x i8]* @.str.145, i32 0, i32 0), i8* getelementptr inbounds ([11 x i8], [11 x i8]* @.str.145, i32 0, i32 0)>, <4 x i8*>* %42
-    %arrayidx.i342 = getelementptr inbounds %struct.A, %struct.A* %obj, i32 0, i32 0, i32 189
-    %43 = bitcast i8** %arrayidx.i342 to <4 x i8*>*
-    store <4 x i8*> <i8* getelementptr inbounds ([7 x i8], [7 x i8]* @.str.146, i32 0, i32 0), i8* getelementptr inbounds ([6 x i8], [6 x i8]* @.str.147, i32 0, i32 0), i8* getelementptr inbounds ([7 x i8], [7 x i8]* @.str.148, i32 0, i32 0), i8* getelementptr inbounds ([7 x i8], [7 x i8]* @.str.148, i32 0, i32 0)>, <4 x i8*>* %43
-    %arrayidx.i338 = getelementptr inbounds %struct.A, %struct.A* %obj, i32 0, i32 0, i32 193
-    %44 = bitcast i8** %arrayidx.i338 to <4 x i8*>*
-    store <4 x i8*> <i8* getelementptr inbounds ([7 x i8], [7 x i8]* @.str.148, i32 0, i32 0), i8* getelementptr inbounds ([7 x i8], [7 x i8]* @.str.149, i32 0, i32 0), i8* getelementptr inbounds ([6 x i8], [6 x i8]* @.str.150, i32 0, i32 0), i8* getelementptr inbounds ([7 x i8], [7 x i8]* @.str.151, i32 0, i32 0)>, <4 x i8*>* %44
-    %arrayidx.i334 = getelementptr inbounds %struct.A, %struct.A* %obj, i32 0, i32 0, i32 197
-    %45 = bitcast i8** %arrayidx.i334 to <4 x i8*>*
-    store <4 x i8*> <i8* getelementptr inbounds ([7 x i8], [7 x i8]* @.str.151, i32 0, i32 0), i8* getelementptr inbounds ([7 x i8], [7 x i8]* @.str.151, i32 0, i32 0), i8* getelementptr inbounds ([10 x i8], [10 x i8]* @.str.152, i32 0, i32 0), i8* getelementptr inbounds ([9 x i8], [9 x i8]* @.str.153, i32 0, i32 0)>, <4 x i8*>* %45
+    %arrayidx.i1 = bitcast ptr %obj to ptr
+    %0 = bitcast ptr %arrayidx.i1 to ptr
+    store <4 x ptr> <ptr null, ptr @.str.18, ptr @.str.19, ptr @.str.20>, ptr %0
+    %arrayidx.i62 = getelementptr inbounds %struct.A, ptr %obj, i32 0, i32 0, i32 4
+    %1 = bitcast ptr %arrayidx.i62 to ptr
+    store <4 x ptr> <ptr @.str.21, ptr @.str.22, ptr @.str.23, ptr @.str.24>, ptr %1
+    %arrayidx.i523 = getelementptr inbounds %struct.A, ptr %obj, i32 0, i32 0, i32 8
+    %2 = bitcast ptr %arrayidx.i523 to ptr
+    store <4 x ptr> <ptr @.str.25, ptr @.str.26, ptr @.str.27, ptr @.str.28>, ptr %2
+    %arrayidx.i519 = getelementptr inbounds %struct.A, ptr %obj, i32 0, i32 0, i32 12
+    %3 = bitcast ptr %arrayidx.i519 to ptr
+    store <4 x ptr> <ptr @.str.29, ptr @.str.30, ptr @.str.31, ptr @.str.32>, ptr %3
+    %arrayidx.i515 = getelementptr inbounds %struct.A, ptr %obj, i32 0, i32 0, i32 16
+    %4 = bitcast ptr %arrayidx.i515 to ptr
+    call void @llvm.memset.p0.i64(ptr align 4 %4, i8 0, i64 40, i1 false)
+    %arrayidx.i511 = getelementptr inbounds %struct.A, ptr %obj, i32 0, i32 0, i32 20
+    %5 = bitcast ptr %arrayidx.i511 to ptr
+    store <4 x ptr> <ptr @.str.37, ptr @.str.38, ptr @.str.39, ptr @.str.40>, ptr %5
+    %arrayidx.i507 = getelementptr inbounds %struct.A, ptr %obj, i32 0, i32 0, i32 24
+    %6 = bitcast ptr %arrayidx.i507 to ptr
+    store <4 x ptr> <ptr @.str.41, ptr @.str.42, ptr @.str.43, ptr @.str.44>, ptr %6
+    %arrayidx.i503 = getelementptr inbounds %struct.A, ptr %obj, i32 0, i32 0, i32 28
+    %7 = bitcast ptr %arrayidx.i503 to ptr
+    store <4 x ptr> <ptr @.str.45, ptr @.str.46, ptr @.str.47, ptr @.str.48>, ptr %7
+    %arrayidx.i499 = getelementptr inbounds %struct.A, ptr %obj, i32 0, i32 0, i32 32
+    %8 = bitcast ptr %arrayidx.i499 to ptr
+    store <4 x ptr> <ptr @.str.49, ptr @.str.50, ptr @.str.51, ptr @.str.52>, ptr %8
+    %arrayidx.i495 = getelementptr inbounds %struct.A, ptr %obj, i32 0, i32 0, i32 36
+    %9 = bitcast ptr %arrayidx.i495 to ptr
+    store <4 x ptr> <ptr @.str.53, ptr @.str.54, ptr @.str.55, ptr @.str.56>, ptr %9
+    %arrayidx.i491 = getelementptr inbounds %struct.A, ptr %obj, i32 0, i32 0, i32 40
+    %arrayidx.i481 = getelementptr inbounds %struct.A, ptr %obj, i32 0, i32 0, i32 50
+    %10 = bitcast ptr %arrayidx.i491 to ptr
+    call void @llvm.memset.p0.i64(ptr align 4 %10, i8 0, i64 40, i1 false)
+    %11 = bitcast ptr %arrayidx.i481 to ptr
+    store <4 x ptr> <ptr @.str.57, ptr @.str.58, ptr @.str.59, ptr @.str.60>, ptr %11
+    %arrayidx.i477 = getelementptr inbounds %struct.A, ptr %obj, i32 0, i32 0, i32 54
+    %12 = bitcast ptr %arrayidx.i477 to ptr
+    store <4 x ptr> <ptr @.str.61, ptr @.str.62, ptr @.str.63, ptr @.str.64>, ptr %12
+    %arrayidx.i473 = getelementptr inbounds %struct.A, ptr %obj, i32 0, i32 0, i32 58
+    %13 = bitcast ptr %arrayidx.i473 to ptr
+    store <4 x ptr> <ptr @.str.65, ptr @.str.66, ptr @.str.67, ptr @.str.68>, ptr %13
+    %arrayidx.i469 = getelementptr inbounds %struct.A, ptr %obj, i32 0, i32 0, i32 62
+    %14 = bitcast ptr %arrayidx.i469 to ptr
+    store <4 x ptr> <ptr @.str.69, ptr @.str.70, ptr @.str.71, ptr @.str.72>, ptr %14
+    %arrayidx.i465 = getelementptr inbounds %struct.A, ptr %obj, i32 0, i32 0, i32 66
+    %15 = bitcast ptr %arrayidx.i465 to ptr
+    store <4 x ptr> <ptr @.str.73, ptr @.str.74, ptr @.str.75, ptr @.str.76>, ptr %15
+    %arrayidx.i461 = getelementptr inbounds %struct.A, ptr %obj, i32 0, i32 0, i32 70
+    %16 = bitcast ptr %arrayidx.i461 to ptr
+    call void @llvm.memset.p0.i64(ptr align 4 %16, i8 0, i64 40, i1 false)
+    %arrayidx.i457 = getelementptr inbounds %struct.A, ptr %obj, i32 0, i32 0, i32 74
+    %17 = bitcast ptr %arrayidx.i457 to ptr
+    store <4 x ptr> <ptr @.str.81, ptr @.str.81, ptr @.str.81, ptr @.str.82>, ptr %17
+    %arrayidx.i453 = getelementptr inbounds %struct.A, ptr %obj, i32 0, i32 0, i32 78
+    %18 = bitcast ptr %arrayidx.i453 to ptr
+    store <4 x ptr> <ptr @.str.83, ptr @.str.84, ptr @.str.84, ptr @.str.84>, ptr %18
+    %arrayidx.i449 = getelementptr inbounds %struct.A, ptr %obj, i32 0, i32 0, i32 82
+    %arrayidx.i445 = getelementptr inbounds %struct.A, ptr %obj, i32 0, i32 0, i32 86
+    %19 = bitcast ptr %arrayidx.i445 to ptr
+    store <4 x ptr> <ptr @.str.88, ptr @.str.89, ptr @.str.90, ptr @.str.91>, ptr %19
+    %arrayidx.i441 = getelementptr inbounds %struct.A, ptr %obj, i32 0, i32 0, i32 90
+    %20 = bitcast ptr %arrayidx.i441 to ptr
+    store <4 x ptr> <ptr @.str.91, ptr @.str.91, ptr @.str.92, ptr @.str.93>, ptr %20
+    %arrayidx.i437 = getelementptr inbounds %struct.A, ptr %obj, i32 0, i32 0, i32 94
+    %21 = bitcast ptr %arrayidx.i437 to ptr
+    call void @llvm.memset.p0.i64(ptr align 4 %21, i8 0, i64 28, i1 false)
+    %arrayidx.i433 = getelementptr inbounds %struct.A, ptr %obj, i32 0, i32 0, i32 98
+    %22 = bitcast ptr %arrayidx.i433 to ptr
+    store <4 x ptr> <ptr @.str.96, ptr @.str.97, ptr @.str.97, ptr @.str.97>, ptr %22
+    %arrayidx.i429 = getelementptr inbounds %struct.A, ptr %obj, i32 0, i32 0, i32 102
+    %23 = bitcast ptr %arrayidx.i429 to ptr
+    store <4 x ptr> <ptr @.str.98, ptr @.str.99, ptr @.str.100, ptr @.str.100>, ptr %23
+    %arrayidx.i425 = getelementptr inbounds %struct.A, ptr %obj, i32 0, i32 0, i32 106
+    %24 = bitcast ptr %arrayidx.i425 to ptr
+    call void @llvm.memset.p0.i64(ptr align 4 %24, i8 0, i64 28, i1 false)
+    %arrayidx.i421 = getelementptr inbounds %struct.A, ptr %obj, i32 0, i32 0, i32 110
+    %25 = bitcast ptr %arrayidx.i421 to ptr
+    store <4 x ptr> <ptr @.str.103, ptr @.str.103, ptr @.str.104, ptr @.str.105>, ptr %25
+    %arrayidx.i417 = getelementptr inbounds %struct.A, ptr %obj, i32 0, i32 0, i32 114
+    %26 = bitcast ptr %arrayidx.i417 to ptr
+    store <4 x ptr> <ptr @.str.106, ptr @.str.106, ptr @.str.106, ptr @.str.107>, ptr %26
+    %arrayidx.i413 = getelementptr inbounds %struct.A, ptr %obj, i32 0, i32 0, i32 118
+    %27 = bitcast ptr %arrayidx.i413 to ptr
+    store <4 x ptr> <ptr @.str.108, ptr @.str.109, ptr @.str.109, ptr @.str.109>, ptr %27
+    %arrayidx.i409 = getelementptr inbounds %struct.A, ptr %obj, i32 0, i32 0, i32 122
+    %28 = bitcast ptr %arrayidx.i409 to ptr
+    store <4 x ptr> <ptr @.str.110, ptr @.str.111, ptr @.str.112, ptr @.str.112>, ptr %28
+    %arrayidx.i405 = getelementptr inbounds %struct.A, ptr %obj, i32 0, i32 0, i32 126
+    %29 = bitcast ptr %arrayidx.i405 to ptr
+    store <4 x ptr> <ptr @.str.112, ptr @.str.113, ptr @.str.114, ptr @.str.115>, ptr %29
+    %arrayidx.i401 = getelementptr inbounds %struct.A, ptr %obj, i32 0, i32 0, i32 130
+    %30 = bitcast ptr %arrayidx.i401 to ptr
+    store <4 x ptr> <ptr @.str.115, ptr @.str.115, ptr @.str.116, ptr @.str.117>, ptr %30
+    %arrayidx.i397 = getelementptr inbounds %struct.A, ptr %obj, i32 0, i32 0, i32 134
+    %31 = bitcast ptr %arrayidx.i397 to ptr
+    store <4 x ptr> <ptr @.str.118, ptr @.str.118, ptr @.str.118, ptr @.str.119>, ptr %31
+    %arrayidx.i393 = getelementptr inbounds %struct.A, ptr %obj, i32 0, i32 0, i32 138
+    %32 = bitcast ptr %arrayidx.i393 to ptr
+    store <4 x ptr> <ptr @.str.120, ptr @.str.121, ptr @.str.121, ptr @.str.121>, ptr %32
+    %arrayidx.i389 = getelementptr inbounds %struct.A, ptr %obj, i32 0, i32 0, i32 142
+    %33 = bitcast ptr %arrayidx.i389 to ptr
+    store <4 x ptr> <ptr @.str.122, ptr @.str.123, ptr @.str.124, ptr @.str.124>, ptr %33
+    %arrayidx.i385 = getelementptr inbounds %struct.A, ptr %obj, i32 0, i32 0, i32 146
+    %34 = bitcast ptr %arrayidx.i385 to ptr
+    store <4 x ptr> <ptr @.str.124, ptr @.str.125, ptr @.str.126, ptr @.str.127>, ptr %34
+    %arrayidx.i381 = getelementptr inbounds %struct.A, ptr %obj, i32 0, i32 0, i32 150
+    store ptr @.str.127, ptr %arrayidx.i381
+    %arrayidx.i380 = getelementptr inbounds %struct.A, ptr %obj, i32 0, i32 0, i32 151
+    store ptr @.str.127, ptr %arrayidx.i380
+    %arrayidx.i379 = getelementptr inbounds %struct.A, ptr %obj, i32 0, i32 0, i32 152
+    %arrayidx.i375 = getelementptr inbounds %struct.A, ptr %obj, i32 0, i32 0, i32 156
+    %arrayidx.i374 = getelementptr inbounds %struct.A, ptr %obj, i32 0, i32 0, i32 157
+    %arrayidx.i373 = getelementptr inbounds %struct.A, ptr %obj, i32 0, i32 0, i32 158
+    %arrayidx.i372 = getelementptr inbounds %struct.A, ptr %obj, i32 0, i32 0, i32 159
+    %35 = bitcast ptr %arrayidx.i379 to ptr
+    call void @llvm.memset.p0.i64(ptr align 4 %35, i8 0, i64 28, i1 false)
+    store ptr @.str.128, ptr %arrayidx.i372
+    %arrayidx.i371 = getelementptr inbounds %struct.A, ptr %obj, i32 0, i32 0, i32 160
+    store ptr @.str.129, ptr %arrayidx.i371
+    %arrayidx.i370 = getelementptr inbounds %struct.A, ptr %obj, i32 0, i32 0, i32 161
+    %36 = bitcast ptr %arrayidx.i370 to ptr
+    store <4 x ptr> <ptr @.str.130, ptr @.str.130, ptr @.str.130, ptr @.str.131>, ptr %36
+    %arrayidx.i366 = getelementptr inbounds %struct.A, ptr %obj, i32 0, i32 0, i32 165
+    %37 = bitcast ptr %arrayidx.i366 to ptr
+    store <4 x ptr> <ptr @.str.132, ptr @.str.133, ptr @.str.133, ptr @.str.133>, ptr %37
+    %arrayidx.i362 = getelementptr inbounds %struct.A, ptr %obj, i32 0, i32 0, i32 169
+    %38 = bitcast ptr %arrayidx.i362 to ptr
+    store <4 x ptr> <ptr @.str.134, ptr @.str.135, ptr @.str.136, ptr @.str.136>, ptr %38
+    %arrayidx.i358 = getelementptr inbounds %struct.A, ptr %obj, i32 0, i32 0, i32 173
+    %39 = bitcast ptr %arrayidx.i358 to ptr
+    store <4 x ptr> <ptr @.str.136, ptr @.str.137, ptr @.str.138, ptr @.str.139>, ptr %39
+    %arrayidx.i354 = getelementptr inbounds %struct.A, ptr %obj, i32 0, i32 0, i32 177
+    %40 = bitcast ptr %arrayidx.i354 to ptr
+    store <4 x ptr> <ptr @.str.139, ptr @.str.139, ptr @.str.140, ptr @.str.141>, ptr %40
+    %arrayidx.i350 = getelementptr inbounds %struct.A, ptr %obj, i32 0, i32 0, i32 181
+    %41 = bitcast ptr %arrayidx.i350 to ptr
+    store <4 x ptr> <ptr @.str.142, ptr @.str.142, ptr @.str.142, ptr @.str.143>, ptr %41
+    %arrayidx.i346 = getelementptr inbounds %struct.A, ptr %obj, i32 0, i32 0, i32 185
+    %42 = bitcast ptr %arrayidx.i346 to ptr
+    store <4 x ptr> <ptr @.str.144, ptr @.str.145, ptr @.str.145, ptr @.str.145>, ptr %42
+    %arrayidx.i342 = getelementptr inbounds %struct.A, ptr %obj, i32 0, i32 0, i32 189
+    %43 = bitcast ptr %arrayidx.i342 to ptr
+    store <4 x ptr> <ptr @.str.146, ptr @.str.147, ptr @.str.148, ptr @.str.148>, ptr %43
+    %arrayidx.i338 = getelementptr inbounds %struct.A, ptr %obj, i32 0, i32 0, i32 193
+    %44 = bitcast ptr %arrayidx.i338 to ptr
+    store <4 x ptr> <ptr @.str.148, ptr @.str.149, ptr @.str.150, ptr @.str.151>, ptr %44
+    %arrayidx.i334 = getelementptr inbounds %struct.A, ptr %obj, i32 0, i32 0, i32 197
+    %45 = bitcast ptr %arrayidx.i334 to ptr
+    store <4 x ptr> <ptr @.str.151, ptr @.str.151, ptr @.str.152, ptr @.str.153>, ptr %45
     ret void
   }
 
   ; Function Attrs: argmemonly nounwind
-  declare void @llvm.memset.p0i8.i64(i8* nocapture writeonly, i8, i64, i1) #1
+  declare void @llvm.memset.p0.i64(ptr nocapture writeonly, i8, i64, i1) #1
 
   ; Function Attrs: nounwind
-  declare void @llvm.stackprotector(i8*, i8**) #2
+  declare void @llvm.stackprotector(ptr, ptr) #2
 
   attributes #0 = { nounwind "target-cpu"="cortex-a9" "target-features"="+dsp,+fp16,+neon,+strict-align,+thumb-mode,+vfp3" }
   attributes #1 = { argmemonly nounwind }
@@ -893,18 +893,19 @@ body:             |
 # CHECK-NEXT:     t2B %bb.2, 14 /* CC::al */, $noreg
 # CHECK-NEXT: {{^  $}}
 # CHECK-NEXT:   bb.1 (align 4):
-# CHECK-NEXT:     successors:{{ }}
+# CHECK-NEXT:     successors:
 # CHECK-NEXT: {{^  $}}
 # CHECK-NEXT:    CONSTPOOL_ENTRY 1, %const.0, 4
 # CHECK-NEXT: {{^  $}}
 # CHECK-NEXT:   bb.2.entry (align 2):
-# CHECK-NEXT:   liveins: $d13, $s27, $r10, $r9, $r8, $s26, $d12, $s25, $s24,
-# CHECK-SAME:            $d15, $s30, $s31, $d14, $s28, $s29, $lr, $r0, $d21,
-# CHECK-SAME:            $r3, $q10, $d20, $d17, $r2, $d25, $q11, $d22, $d23,
-# CHECK-SAME:            $r1, $q8, $d16, $s3, $q14, $d28, $d29, $d19, $s17,
-# CHECK-SAME:            $d8, $s16, $r6, $r7, $r4, $q12, $q9, $d18, $s0, $q15,
-# CHECK-SAME:            $d30, $d31, $r12, $s1, $d0, $d24, $s2, $d1, $q0, $s6,
-# CHECK-SAME:            $d3, $d2, $s4, $q1, $s7, $s5, $d9, $s18, $s19, $q4
+# CHECK-NEXT:   liveins: $s26, $s27, $r10, $r9, $r8, $d13, $s24, $s25,
+# CHECK-SAME:            $d12, $d15, $s30, $s31, $d14, $s28, $s29, $lr,
+# CHECK-SAME:            $d21, $q10, $r7, $r0, $d20, $d17, $r2, $q12,
+# CHECK-SAME:            $q11, $d22, $d23, $r1, $q8, $d16, $d30, $q14,
+# CHECK-SAME:            $d28, $d29, $d19, $s17, $r4, $d8, $r6, $r3,
+# CHECK-SAME:            $s16, $d25, $q9, $d18, $s0, $d31, $s3, $q15,
+# CHECK-SAME:            $r12, $d0, $s1, $d24, $d1, $s2, $q0, $s5, $d2,
+# CHECK-SAME:            $q1, $s4, $s7, $d3, $s6, $d9, $s18, $s19, $q4
 # CHECK-NEXT: {{^  $}}
 # CHECK-NEXT:     $r5 = t2MOVi16 target-flags(arm-lo16) @.str.84, 14 /* CC::al */, $noreg
 # CHECK-NEXT:     $r5 = t2MOVTi16 $r5, target-flags(arm-hi16) @.str.84, 14 /* CC::al */, $noreg

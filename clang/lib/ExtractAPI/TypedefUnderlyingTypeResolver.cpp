@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/ExtractAPI/TypedefUnderlyingTypeResolver.h"
+#include "clang/Basic/Module.h"
 #include "clang/Index/USRGeneration.h"
 
 using namespace clang;
@@ -50,17 +51,20 @@ TypedefUnderlyingTypeResolver::getSymbolReferenceForType(QualType Type,
   SmallString<128> TypeUSR;
   const NamedDecl *TypeDecl = getUnderlyingTypeDecl(Type);
   const TypedefType *TypedefTy = Type->getAs<TypedefType>();
+  StringRef OwningModuleName;
 
   if (TypeDecl) {
     if (!TypedefTy)
       TypeName = TypeDecl->getName().str();
 
     clang::index::generateUSRForDecl(TypeDecl, TypeUSR);
+    if (auto *OwningModule = TypeDecl->getImportedOwningModule())
+      OwningModuleName = OwningModule->Name;
   } else {
     clang::index::generateUSRForType(Type, Context, TypeUSR);
   }
 
-  return {API.copyString(TypeName), API.copyString(TypeUSR)};
+  return API.createSymbolReference(TypeName, TypeUSR, OwningModuleName);
 }
 
 std::string TypedefUnderlyingTypeResolver::getUSRForType(QualType Type) const {

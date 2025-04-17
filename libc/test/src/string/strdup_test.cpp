@@ -10,12 +10,10 @@
 #include "src/string/strdup.h"
 #include "test/UnitTest/Test.h"
 
-#include <stdlib.h>
-
 TEST(LlvmLibcStrDupTest, EmptyString) {
   const char *empty = "";
 
-  libc_errno = 0;
+  LIBC_NAMESPACE::libc_errno = 0;
   char *result = LIBC_NAMESPACE::strdup(empty);
   ASSERT_ERRNO_SUCCESS();
 
@@ -28,7 +26,7 @@ TEST(LlvmLibcStrDupTest, EmptyString) {
 TEST(LlvmLibcStrDupTest, AnyString) {
   const char *abc = "abc";
 
-  libc_errno = 0;
+  LIBC_NAMESPACE::libc_errno = 0;
   char *result = LIBC_NAMESPACE::strdup(abc);
   ASSERT_ERRNO_SUCCESS();
 
@@ -39,7 +37,7 @@ TEST(LlvmLibcStrDupTest, AnyString) {
 }
 
 TEST(LlvmLibcStrDupTest, NullPtr) {
-  libc_errno = 0;
+  LIBC_NAMESPACE::libc_errno = 0;
   char *result = LIBC_NAMESPACE::strdup(nullptr);
   ASSERT_ERRNO_SUCCESS();
 

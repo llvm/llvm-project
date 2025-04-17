@@ -18,6 +18,7 @@
 #include "clang/Lex/ModuleMap.h"
 #include "clang/Serialization/GlobalModuleIndex.h"
 #include "clang/Serialization/InMemoryModuleCache.h"
+#include "clang/Serialization/ModuleCache.h"
 #include "clang/Serialization/ModuleFile.h"
 #include "clang/Serialization/PCHContainerOperations.h"
 #include "llvm/ADT/STLExtras.h"
@@ -42,8 +43,8 @@ using namespace clang;
 using namespace serialization;
 
 ModuleFile *ModuleManager::lookupByFileName(StringRef Name) const {
-  auto Entry = FileMgr.getFile(Name, /*OpenFile=*/false,
-                               /*CacheFailure=*/false);
+  auto Entry = FileMgr.getOptionalFileRef(Name, /*OpenFile=*/false,
+                                          /*CacheFailure=*/false);
   if (Entry)
     return lookup(*Entry);
 
@@ -64,8 +65,8 @@ ModuleFile *ModuleManager::lookup(const FileEntry *File) const {
 
 std::unique_ptr<llvm::MemoryBuffer>
 ModuleManager::lookupBuffer(StringRef Name) {
-  auto Entry = FileMgr.getFile(Name, /*OpenFile=*/false,
-                               /*CacheFailure=*/false);
+  auto Entry = FileMgr.getOptionalFileRef(Name, /*OpenFile=*/false,
+                                          /*CacheFailure=*/false);
   if (!Entry)
     return nullptr;
   return std::move(InMemoryBuffers[*Entry]);
@@ -119,7 +120,7 @@ ModuleManager::addModule(StringRef FileName, ModuleKind Type,
   // Note: ExpectedSize and ExpectedModTime will be 0 for MK_ImplicitModule
   // when using an ASTFileSignature.
   if (lookupModuleFile(FileName, ExpectedSize, ExpectedModTime, Entry)) {
-    ErrorStr = "module file out of date";
+    ErrorStr = "module file has a different size or mtime than expected";
     return OutOfDate;
   }
 
@@ -170,7 +171,8 @@ ModuleManager::addModule(StringRef FileName, ModuleKind Type,
   NewModule->InputFilesValidationTimestamp = 0;
 
   if (NewModule->Kind == MK_ImplicitModule) {
-    std::string TimestampFilename = NewModule->getTimestampFilename();
+    std::string TimestampFilename =
+        ModuleFile::getTimestampFilename(NewModule->FileName);
     llvm::vfs::Status Status;
     // A cached stat value would be fine as well.
     if (!FileMgr.getNoncachedStatValue(TimestampFilename, Status))
@@ -181,17 +183,20 @@ ModuleManager::addModule(StringRef FileName, ModuleKind Type,
   // Load the contents of the module
   if (std::unique_ptr<llvm::MemoryBuffer> Buffer = lookupBuffer(FileName)) {
     // The buffer was already provided for us.
-    NewModule->Buffer = &ModuleCache->addBuiltPCM(FileName, std::move(Buffer));
+    NewModule->Buffer = &getModuleCache().getInMemoryModuleCache().addBuiltPCM(
+        FileName, std::move(Buffer));
     // Since the cached buffer is reused, it is safe to close the file
     // descriptor that was opened while stat()ing the PCM in
     // lookupModuleFile() above, it won't be needed any longer.
     Entry->closeFile();
   } else if (llvm::MemoryBuffer *Buffer =
-                 getModuleCache().lookupPCM(FileName)) {
+                 getModuleCache().getInMemoryModuleCache().lookupPCM(
+                     FileName)) {
     NewModule->Buffer = Buffer;
     // As above, the file descriptor is no longer needed.
     Entry->closeFile();
-  } else if (getModuleCache().shouldBuildPCM(FileName)) {
+  } else if (getModuleCache().getInMemoryModuleCache().shouldBuildPCM(
+                 FileName)) {
     // Report that the module is out of date, since we tried (and failed) to
     // import it earlier.
     Entry->closeFile();
@@ -212,7 +217,8 @@ ModuleManager::addModule(StringRef FileName, ModuleKind Type,
       return Missing;
     }
 
-    NewModule->Buffer = &getModuleCache().addPCM(FileName, std::move(*Buf));
+    NewModule->Buffer = &getModuleCache().getInMemoryModuleCache().addPCM(
+        FileName, std::move(*Buf));
   }
 
   // Initialize the stream.
@@ -279,8 +285,8 @@ void ModuleManager::removeModules(ModuleIterator First) {
 void
 ModuleManager::addInMemoryBuffer(StringRef FileName,
                                  std::unique_ptr<llvm::MemoryBuffer> Buffer) {
-  const FileEntry *Entry =
-      FileMgr.getVirtualFile(FileName, Buffer->getBufferSize(), 0);
+  FileEntryRef Entry =
+      FileMgr.getVirtualFileRef(FileName, Buffer->getBufferSize(), 0);
   InMemoryBuffers[Entry] = std::move(Buffer);
 }
 
@@ -323,12 +329,11 @@ void ModuleManager::moduleFileAccepted(ModuleFile *MF) {
   ModulesInCommonWithGlobalIndex.push_back(MF);
 }
 
-ModuleManager::ModuleManager(FileManager &FileMgr,
-                             InMemoryModuleCache &ModuleCache,
+ModuleManager::ModuleManager(FileManager &FileMgr, ModuleCache &ModCache,
                              const PCHContainerReader &PCHContainerRdr,
                              const HeaderSearch &HeaderSearchInfo)
-    : FileMgr(FileMgr), ModuleCache(&ModuleCache),
-      PCHContainerRdr(PCHContainerRdr), HeaderSearchInfo(HeaderSearchInfo) {}
+    : FileMgr(FileMgr), ModCache(&ModCache), PCHContainerRdr(PCHContainerRdr),
+      HeaderSearchInfo(HeaderSearchInfo) {}
 
 void ModuleManager::visit(llvm::function_ref<bool(ModuleFile &M)> Visitor,
                           llvm::SmallPtrSetImpl<ModuleFile *> *ModuleFilesHit) {

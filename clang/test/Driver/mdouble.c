@@ -1,4 +1,4 @@
-// RUN: %clang -target avr -c -### %s -mdouble=64 2>&1 | FileCheck %s
+// RUN: %clang --target=avr -c -### %s -mdouble=64 2>&1 | FileCheck %s
 
 // CHECK: "-mdouble=64"
 

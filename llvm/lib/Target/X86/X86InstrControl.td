@@ -94,14 +94,14 @@ let isBranch = 1, isTerminator = 1, hasSideEffects = 0, SchedRW = [WriteJump] in
   // 32-bit mode, the address size prefix is jcxz and the unprefixed version is
   // jecxz.
   let Uses = [CX] in
-    def JCXZ : Ii8PCRel<0xE3, RawFrm, (outs), (ins brtarget8:$dst),
+    def JCXZ : Ii8PCRel<0xE3, RawFrm, (outs), (ins i8imm_brtarget:$dst),
                         "jcxz\t$dst", []>, AdSize16, Requires<[Not64BitMode]>;
   let Uses = [ECX] in
-    def JECXZ : Ii8PCRel<0xE3, RawFrm, (outs), (ins brtarget8:$dst),
+    def JECXZ : Ii8PCRel<0xE3, RawFrm, (outs), (ins i8imm_brtarget:$dst),
                         "jecxz\t$dst", []>, AdSize32;
 
   let Uses = [RCX] in
-    def JRCXZ : Ii8PCRel<0xE3, RawFrm, (outs), (ins brtarget8:$dst),
+    def JRCXZ : Ii8PCRel<0xE3, RawFrm, (outs), (ins i8imm_brtarget:$dst),
                          "jrcxz\t$dst", []>, AdSize64, Requires<[In64BitMode]>;
 }
 
@@ -167,24 +167,24 @@ let isBranch = 1, isTerminator = 1, isBarrier = 1, isIndirectBranch = 1 in {
   }
 
   let Predicates = [Not64BitMode], AsmVariantName = "att" in {
-    def FARJMP16i  : Iseg16<0xEA, RawFrmImm16, (outs),
-                            (ins i16imm:$off, i16imm:$seg),
-                            "ljmp{w}\t$seg, $off", []>,
-                            OpSize16, Sched<[WriteJump]>;
     def FARJMP32i  : Iseg32<0xEA, RawFrmImm16, (outs),
                             (ins i32imm:$off, i16imm:$seg),
                             "ljmp{l}\t$seg, $off", []>,
                             OpSize32, Sched<[WriteJump]>;
+    def FARJMP16i  : Iseg16<0xEA, RawFrmImm16, (outs),
+                            (ins i16imm:$off, i16imm:$seg),
+                            "ljmp{w}\t$seg, $off", []>,
+                            OpSize16, Sched<[WriteJump]>;
   }
   let mayLoad = 1 in {
     def FARJMP64m  : RI<0xFF, MRM5m, (outs), (ins opaquemem:$dst),
                         "ljmp{q}\t{*}$dst", []>, Sched<[WriteJump]>, Requires<[In64BitMode]>;
 
+    def FARJMP32m  : I<0xFF, MRM5m, (outs), (ins opaquemem:$dst),
+                       "{l}jmp{l}\t{*}$dst", []>, OpSize32, Sched<[WriteJumpLd]>;
     let AsmVariantName = "att" in
     def FARJMP16m  : I<0xFF, MRM5m, (outs), (ins opaquemem:$dst),
                        "ljmp{w}\t{*}$dst", []>, OpSize16, Sched<[WriteJumpLd]>;
-    def FARJMP32m  : I<0xFF, MRM5m, (outs), (ins opaquemem:$dst),
-                       "{l}jmp{l}\t{*}$dst", []>, OpSize32, Sched<[WriteJumpLd]>;
   }
 }
 
@@ -193,9 +193,12 @@ def JMPABS64i : Ii64<0xA1, RawFrm, (outs), (ins i64imm:$dst), "jmpabs\t$dst", []
 
 // Loop instructions
 let isBranch = 1, isTerminator = 1, SchedRW = [WriteJump] in {
-def LOOP   : Ii8PCRel<0xE2, RawFrm, (outs), (ins brtarget8:$dst), "loop\t$dst", []>;
-def LOOPE  : Ii8PCRel<0xE1, RawFrm, (outs), (ins brtarget8:$dst), "loope\t$dst", []>;
-def LOOPNE : Ii8PCRel<0xE0, RawFrm, (outs), (ins brtarget8:$dst), "loopne\t$dst", []>;
+  def LOOP   : Ii8PCRel<0xE2, RawFrm, (outs), (ins i8imm_brtarget:$dst),
+                        "loop\t$dst", []>;
+  def LOOPE  : Ii8PCRel<0xE1, RawFrm, (outs), (ins i8imm_brtarget:$dst),
+                        "loope\t$dst", []>;
+  def LOOPNE : Ii8PCRel<0xE0, RawFrm, (outs), (ins i8imm_brtarget:$dst),
+                        "loopne\t$dst", []>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -253,21 +256,21 @@ let isCall = 1 in
     }
 
     let Predicates = [Not64BitMode], AsmVariantName = "att" in {
-      def FARCALL16i  : Iseg16<0x9A, RawFrmImm16, (outs),
-                               (ins i16imm:$off, i16imm:$seg),
-                               "lcall{w}\t$seg, $off", []>,
-                               OpSize16, Sched<[WriteJump]>;
       def FARCALL32i  : Iseg32<0x9A, RawFrmImm16, (outs),
                                (ins i32imm:$off, i16imm:$seg),
                                "lcall{l}\t$seg, $off", []>,
                                OpSize32, Sched<[WriteJump]>;
+      def FARCALL16i  : Iseg16<0x9A, RawFrmImm16, (outs),
+                               (ins i16imm:$off, i16imm:$seg),
+                               "lcall{w}\t$seg, $off", []>,
+                               OpSize16, Sched<[WriteJump]>;
     }
 
     let mayLoad = 1 in {
-      def FARCALL16m  : I<0xFF, MRM3m, (outs), (ins opaquemem:$dst),
-                          "lcall{w}\t{*}$dst", []>, OpSize16, Sched<[WriteJumpLd]>;
       def FARCALL32m  : I<0xFF, MRM3m, (outs), (ins opaquemem:$dst),
                           "{l}call{l}\t{*}$dst", []>, OpSize32, Sched<[WriteJumpLd]>;
+      def FARCALL16m  : I<0xFF, MRM3m, (outs), (ins opaquemem:$dst),
+                          "lcall{w}\t{*}$dst", []>, OpSize16, Sched<[WriteJumpLd]>;
     }
   }
 

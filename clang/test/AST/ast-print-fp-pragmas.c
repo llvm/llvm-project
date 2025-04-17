@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -triple x86_64-pc-linux -ast-print %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-pc-linux -ast-print %s -o - | FileCheck %s
 
 float func_1(float x, float y) {
 #pragma STDC FENV_ACCESS ON

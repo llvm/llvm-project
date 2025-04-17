@@ -14,7 +14,7 @@
 
 #include "config.h"
 
-#ifdef __USING_WASM_EXCEPTIONS__
+#ifdef __WASM_EXCEPTIONS__
 
 #include "unwind.h"
 #include <threads.h>
@@ -102,8 +102,7 @@ _LIBUNWIND_EXPORT uintptr_t _Unwind_GetIP(struct _Unwind_Context *context) {
 }
 
 /// Not used in Wasm.
-_LIBUNWIND_EXPORT void _Unwind_SetIP(struct _Unwind_Context *context,
-                                     uintptr_t value) {}
+_LIBUNWIND_EXPORT void _Unwind_SetIP(struct _Unwind_Context *, uintptr_t) {}
 
 /// Called by personality handler to get LSDA for current frame.
 _LIBUNWIND_EXPORT uintptr_t
@@ -115,9 +114,8 @@ _Unwind_GetLanguageSpecificData(struct _Unwind_Context *context) {
 }
 
 /// Not used in Wasm.
-_LIBUNWIND_EXPORT uintptr_t
-_Unwind_GetRegionStart(struct _Unwind_Context *context) {
+_LIBUNWIND_EXPORT uintptr_t _Unwind_GetRegionStart(struct _Unwind_Context *) {
   return 0;
 }
 
-#endif // defined(__USING_WASM_EXCEPTIONS__)
+#endif // defined(__WASM_EXCEPTIONS__)

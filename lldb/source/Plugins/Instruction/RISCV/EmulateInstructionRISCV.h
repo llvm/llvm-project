@@ -60,6 +60,7 @@ public:
 
   bool SetTargetTriple(const ArchSpec &arch) override;
   bool ReadInstruction() override;
+  std::optional<uint32_t> GetLastInstrSize() override { return m_last_size; }
   bool EvaluateInstruction(uint32_t options) override;
   bool TestEmulation(Stream &out_stream, ArchSpec &arch,
                      OptionValueDictionary *test_data) override;
@@ -99,6 +100,8 @@ public:
 private:
   /// Last decoded instruction from m_opcode
   DecodeResult m_decoded;
+  /// Last decoded instruction size estimate.
+  std::optional<uint32_t> m_last_size;
 };
 
 } // namespace lldb_private

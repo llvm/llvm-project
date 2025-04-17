@@ -1,0 +1,187 @@
+[
+  {
+    "name": "__cpp_lib_any",
+    "values": {
+      "c++17": {
+        "201606": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": [
+      "any"
+    ]
+  },
+  {
+    "name": "__cpp_lib_barrier",
+    "values": {
+      "c++20": {
+        "201907": [
+          {
+            "implemented": true
+          }
+        ]
+      },
+      "c++26": {
+        "299900": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": [
+      "barrier"
+    ],
+    "test_suite_guard": "!defined(_LIBCPP_VERSION) || (_LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_SYNC)",
+    "libcxx_guard": "_LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_SYNC"
+  },
+  {
+    "name": "__cpp_lib_format",
+    "values": {
+      "c++20": {
+        "201907": [
+          {
+            "number": "P0645R10",
+            "title": "Text Formatting",
+            "implemented": true
+          },
+          {
+            "number": "P1361R2",
+            "title": "Integration of chrono with text formatting",
+            "implemented": false
+          }
+        ],
+        "202106": [
+          {
+            "number": "P2216R3",
+            "title": "std::format improvements",
+            "implemented": true
+          }
+        ],
+        "202110": [
+          {
+            "number": "P2372R3",
+            "title": "Fixing locale handling in chrono formatters",
+            "implemented": false
+          },
+          {
+            "number": "P2418R2",
+            "title": "FAdd support for std::generator-like types to std::format",
+            "implemented": true
+          }
+        ]
+      },
+      "c++23": {
+        "202207": [
+          {
+            "number": "P2419R2",
+            "title": "Clarify handling of encodings in localized formatting of chrono types",
+            "implemented": false
+          }
+        ]
+      },
+      "c++26": {
+        "202306": [
+          {
+            "number": "P2637R3",
+            "title": "Member Visit",
+            "implemented": true
+          }
+        ],
+        "202311": [
+          {
+            "number": "P2918R2",
+            "title": "Runtime format strings II",
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": [
+      "format"
+    ]
+  },
+  {
+    "name": "__cpp_lib_parallel_algorithm",
+    "values": {
+      "c++17": {
+        "201603": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": [
+      "algorithm",
+      "numeric"
+    ]
+  },
+  {
+    "name": "__cpp_lib_variant",
+    "values": {
+      "c++17": {
+        "202102": [
+          {
+            "title": "``std::visit`` for classes derived from ``std::variant``",
+            "implemented": true
+          }
+        ]
+      },
+      "c++20": {
+        "202106": [
+          {
+            "number": "",
+            "title": "Fully constexpr ``std::variant``",
+            "implemented": false
+          }
+        ]
+      },
+      "c++26": {
+        "202306": [
+          {
+            "number": "",
+            "title": "Member visit",
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": [
+      "variant"
+    ]
+  },
+  {
+    "name": "__cpp_lib_missing_FTM_in_older_standard",
+    "values": {
+      "c++17": {
+        "2017": [
+          {
+            "title": "Some FTM missing a paper in an older Standard mode, which should result in the FTM never being defined.",
+            "implemented": false
+          }
+        ]
+      },
+      "c++20": {
+        "2020": [
+          {
+            "title": "",
+            "implemented": true
+          }
+        ]
+      },
+      "c++26": {
+        "2026": [
+          {
+            "title": "",
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": []
+  }
+]

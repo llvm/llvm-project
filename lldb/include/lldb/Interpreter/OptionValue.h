@@ -72,7 +72,7 @@ public:
   virtual ~OptionValue() = default;
 
   OptionValue(const OptionValue &other);
-  
+
   OptionValue& operator=(const OptionValue &other);
 
   // Subclasses should override these functions
@@ -119,7 +119,8 @@ public:
   virtual lldb::OptionValueSP GetSubValue(const ExecutionContext *exe_ctx,
                                           llvm::StringRef name,
                                           Status &error) const {
-    error.SetErrorStringWithFormatv("'{0}' is not a valid subvalue", name);
+    error = Status::FromErrorStringWithFormatv("'{0}' is not a valid subvalue",
+                                               name);
     return lldb::OptionValueSP();
   }
 
@@ -329,6 +330,10 @@ public:
 
   bool SetValueAs(ArchSpec v) { return SetArchSpecValue(v); }
 
+  bool SetValueAs(const FormatEntity::Entry &v) {
+    return SetFormatEntityValue(v);
+  }
+
   template <typename T, std::enable_if_t<std::is_enum_v<T>, bool> = true>
   bool SetValueAs(T t) {
     return SetEnumerationValue(t);
@@ -386,8 +391,10 @@ private:
   bool SetUUIDValue(const UUID &uuid);
 
   const FormatEntity::Entry *GetFormatEntity() const;
+  bool SetFormatEntityValue(const FormatEntity::Entry &entry);
+
   const RegularExpression *GetRegexValue() const;
-  
+
   mutable std::mutex m_mutex;
 };
 

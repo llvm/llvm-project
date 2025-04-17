@@ -1,16 +1,35 @@
 // Use of NAN macro will trigger a warning "infinity defined in macro" because
 // on Windows the NAN macro is defined using INFINITY. See below.
 
-// RUN: %clang_cc1 -x c++ -verify=no-inf-no-nan -triple powerpc64le-unknown-unknown %s \
-// RUN: -menable-no-infs -menable-no-nans
+// RUN: %clang_cc1 -x c++ -verify=no-inf-no-nan \
+// RUN: -triple powerpc64le-unknown-unknown %s -menable-no-infs \
+// RUN: -menable-no-nans -std=c++23
 
-// RUN: %clang_cc1 -x c++ -verify=no-fast -triple powerpc64le-unknown-unknown %s
+// RUN: %clang_cc1 -x c++ -verify=no-inf-no-nan \
+// RUN: -triple powerpc64le-unknown-unknown %s \
+// RUN: -menable-no-infs -menable-no-nans -funsafe-math-optimizations \
+// RUN: -std=c++23
+
+// RUN: %clang_cc1 -x c++ -verify=no-fast -triple powerpc64le-unknown-unknown \
+// RUN: %s -std=c++23
 
 // RUN: %clang_cc1 -x c++ -verify=no-inf -triple powerpc64le-unknown-unknown %s \
-// RUN: -menable-no-infs
+// RUN: -menable-no-infs -std=c++23
+
+// RUN: %clang_cc1 -x c++ -verify=no-inf -triple powerpc64le-unknown-unknown %s \
+// RUN: -menable-no-infs -funsafe-math-optimizations -std=c++23
 
 // RUN: %clang_cc1 -x c++ -verify=no-nan -triple powerpc64le-unknown-unknown %s \
-// RUN: -menable-no-nans
+// RUN: -menable-no-nans -std=c++23
+
+// RUN: %clang_cc1 -x c++ -verify=no-nan -triple powerpc64le-unknown-unknown %s \
+// RUN: -funsafe-math-optimizations -menable-no-nans -std=c++23
+
+// RUN: %clang_cc1 -x c++ -verify=no-fast -triple powerpc64le-unknown-unknown \
+// RUN: %s -Wno-nan-infinity-disabled -menable-no-infs -std=c++23
+
+// RUN: %clang_cc1 -x c++ -verify=no-fast -triple powerpc64le-unknown-unknown \
+// RUN: %s -Wno-nan-infinity-disabled -menable-no-nans -std=c++23
 
 // no-fast-no-diagnostics
 
@@ -29,23 +48,48 @@ namespace std __attribute__((__visibility__("default"))) {
   isnan(double __x);
   bool
   isnan(long double __x);
-bool
+  bool
   isfinite(float __x);
   bool
   isfinite(double __x);
   bool
   isfinte(long double __x);
- bool
+  bool
   isunordered(float __x, float __y);
   bool
   isunordered(double __x, double __y);
   bool
   isunordered(long double __x, long double __y);
+
+template <class _Ty>
+class numeric_limits {
+public:
+    [[nodiscard]] static constexpr _Ty infinity() noexcept {
+        return _Ty();
+    }
+};
+
 } // namespace )
 }
 
 #define INFINITY ((float)(1e+300 * 1e+300))
 #define NAN      (-(float)(INFINITY * 0.0F))
+
+template <>
+class std::numeric_limits<float>  {
+public:
+    [[nodiscard]] static constexpr float infinity() noexcept {
+        return __builtin_huge_val();
+    }
+};
+
+template <>
+class std::numeric_limits<double>  {
+public:
+    [[nodiscard]] static constexpr double infinity() noexcept {
+        return __builtin_huge_val();
+    }
+};
 
 template <class _Ty>
 class numeric_limits {
@@ -62,6 +106,7 @@ public:
         return __builtin_huge_val();
     }
 };
+
 template <>
 class numeric_limits<double>  {
 public:
@@ -69,6 +114,8 @@ public:
         return __builtin_huge_val();
     }
 };
+
+double infinity() { return 0; }
 
 int compareit(float a, float b) {
   volatile int i, j, k, l, m, n, o, p;
@@ -136,12 +183,40 @@ int compareit(float a, float b) {
 // no-inf-warning@+1 {{use of infinity is undefined behavior due to the currently enabled floating-point options}}
   p = __builtin_isfinite(a);
 
-  // These should NOT warn, since they are not using NaN or infinity.
+// These should NOT warn, since they are not using NaN or infinity.
   j = a > 1.1;
   j = b < 1.1;
   j = a >= 1.1;
   j = b <= 1.1;
   j = isunorderedf(a, b);
+
+#ifndef INFINITY
+  j = a;
+#endif
+#ifndef NAN
+  j = b;
+#endif
+#ifdef INFINITY
+  j = a;
+#endif
+#ifdef NAN
+  j = b;
+#endif
+#if defined(INFINITY)
+  j = a;
+#elifndef(INFINITY)
+  j = b;
+#endif
+#if defined(INFINITY)
+  j = a;
+#elifndef(NAN)
+  j = b;
+#endif
+#if defined(NAN)
+  j = a;
+#elifndef(INFINITY)
+  j = b;
+#endif
 
 // no-inf-no-nan-warning@+4 {{use of infinity via a macro is undefined behavior due to the currently enabled floating-point option}}
 // no-inf-no-nan-warning@+3 {{use of NaN via a macro is undefined behavior due to the currently enabled floating-point options}}
@@ -169,11 +244,18 @@ int compareit(float a, float b) {
 
 // no-inf-no-nan-warning@+2 {{use of infinity is undefined behavior due to the currently enabled floating-point options}}
 // no-inf-warning@+1 {{use of infinity is undefined behavior due to the currently enabled floating-point options}}
-  double y = i * numeric_limits<double>::infinity();
+  double y = i * std::numeric_limits<double>::infinity();
+
+  y = i * numeric_limits<double>::infinity(); // expected-no-diagnostics
 
 // no-inf-no-nan-warning@+2 {{use of infinity is undefined behavior due to the currently enabled floating-point options}}
 // no-inf-warning@+1 {{use of infinity is undefined behavior due to the currently enabled floating-point options}}
-  j = numeric_limits<float>::infinity();
+  j = std::numeric_limits<float>::infinity();
+
+  j = numeric_limits<float>::infinity(); // expected-no-diagnostics
+
+  y = infinity(); // expected-no-diagnostics
+
   return 0;
 
-}  
+}

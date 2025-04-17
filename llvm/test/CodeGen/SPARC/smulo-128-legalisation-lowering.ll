@@ -2,162 +2,134 @@
 ; RUN: llc < %s -mtriple=sparc-unknown-linux-gnu | FileCheck %s --check-prefixes=SPARC
 ; RUN: llc < %s -mtriple=sparc64-unknown-linux-gnu | FileCheck %s --check-prefixes=SPARC64
 
-define { i128, i8 } @muloti_test(i128 %l, i128 %r) unnamed_addr #0 {
+define { i128, i8 } @muloti_test(i128 %l, i128 %r) nounwind {
 ; SPARC-LABEL: muloti_test:
-; SPARC:         .cfi_startproc
-; SPARC-NEXT:  ! %bb.0: ! %start
+; SPARC:       ! %bb.0: ! %start
 ; SPARC-NEXT:    save %sp, -96, %sp
-; SPARC-NEXT:    .cfi_def_cfa_register %fp
-; SPARC-NEXT:    .cfi_window_save
-; SPARC-NEXT:    .cfi_register %o7, %i7
-; SPARC-NEXT:    ld [%fp+96], %l1
-; SPARC-NEXT:    mov %i3, %g4
-; SPARC-NEXT:    mov %i2, %g2
-; SPARC-NEXT:    umul %i3, %l1, %i3
+; SPARC-NEXT:    ld [%fp+96], %l2
+; SPARC-NEXT:    mov %i3, %g2
+; SPARC-NEXT:    mov %i2, %g3
+; SPARC-NEXT:    umul %i1, %l2, %l0
 ; SPARC-NEXT:    rd %y, %i2
-; SPARC-NEXT:    ld [%fp+92], %l2
-; SPARC-NEXT:    umul %g2, %l1, %g3
-; SPARC-NEXT:    rd %y, %l0
-; SPARC-NEXT:    addcc %g3, %i2, %i2
-; SPARC-NEXT:    addxcc %l0, 0, %g3
-; SPARC-NEXT:    umul %g4, %l2, %l0
+; SPARC-NEXT:    ld [%fp+92], %l1
+; SPARC-NEXT:    umul %i0, %l2, %i3
+; SPARC-NEXT:    rd %y, %g4
+; SPARC-NEXT:    addcc %i3, %i2, %i2
+; SPARC-NEXT:    addxcc %g4, 0, %i3
+; SPARC-NEXT:    umul %i1, %l1, %g4
 ; SPARC-NEXT:    rd %y, %l3
-; SPARC-NEXT:    addcc %l0, %i2, %i2
-; SPARC-NEXT:    addxcc %l3, 0, %l0
-; SPARC-NEXT:    addcc %g3, %l0, %g3
-; SPARC-NEXT:    addxcc %g0, 0, %l0
-; SPARC-NEXT:    umul %g2, %l2, %l3
-; SPARC-NEXT:    rd %y, %l4
-; SPARC-NEXT:    addcc %l3, %g3, %g3
-; SPARC-NEXT:    umul %i1, %l1, %l3
-; SPARC-NEXT:    rd %y, %l5
-; SPARC-NEXT:    addxcc %l4, %l0, %l0
-; SPARC-NEXT:    umul %i0, %l1, %l4
-; SPARC-NEXT:    rd %y, %l6
-; SPARC-NEXT:    addcc %l4, %l5, %l4
-; SPARC-NEXT:    addxcc %l6, 0, %l5
-; SPARC-NEXT:    umul %i1, %l2, %l6
+; SPARC-NEXT:    addcc %g4, %i2, %l4
+; SPARC-NEXT:    addxcc %l3, 0, %i2
+; SPARC-NEXT:    addcc %i3, %i2, %i2
+; SPARC-NEXT:    addxcc %g0, 0, %i3
+; SPARC-NEXT:    umul %i0, %l1, %g4
+; SPARC-NEXT:    rd %y, %l3
+; SPARC-NEXT:    addcc %g4, %i2, %i2
+; SPARC-NEXT:    sra %i0, 31, %g4
+; SPARC-NEXT:    smul %l1, %g4, %l5
+; SPARC-NEXT:    umul %l2, %g4, %l6
 ; SPARC-NEXT:    rd %y, %l7
-; SPARC-NEXT:    addcc %l6, %l4, %l4
-; SPARC-NEXT:    addxcc %l7, 0, %l6
-; SPARC-NEXT:    addcc %l5, %l6, %l5
-; SPARC-NEXT:    addxcc %g0, 0, %l6
-; SPARC-NEXT:    umul %i0, %l2, %l7
-; SPARC-NEXT:    rd %y, %o0
-; SPARC-NEXT:    addcc %l7, %l5, %l5
-; SPARC-NEXT:    addxcc %o0, %l6, %l6
-; SPARC-NEXT:    addcc %l3, %g3, %g3
-; SPARC-NEXT:    addxcc %l4, %l0, %l0
-; SPARC-NEXT:    addxcc %l5, 0, %l3
-; SPARC-NEXT:    umul %g4, %i5, %l4
+; SPARC-NEXT:    addxcc %l3, %i3, %l3
+; SPARC-NEXT:    add %l7, %l6, %i3
+; SPARC-NEXT:    add %i3, %l5, %l5
+; SPARC-NEXT:    addcc %i2, %l6, %l6
+; SPARC-NEXT:    umul %g2, %l2, %i3
+; SPARC-NEXT:    rd %y, %i2
+; SPARC-NEXT:    addxcc %l3, %l5, %l3
+; SPARC-NEXT:    umul %g3, %l2, %l2
 ; SPARC-NEXT:    rd %y, %l5
-; SPARC-NEXT:    addxcc %l6, 0, %l6
-; SPARC-NEXT:    umul %g2, %i5, %l7
+; SPARC-NEXT:    addcc %l2, %i2, %i2
+; SPARC-NEXT:    addxcc %l5, 0, %l2
+; SPARC-NEXT:    umul %g2, %l1, %l5
+; SPARC-NEXT:    rd %y, %l7
+; SPARC-NEXT:    addcc %l5, %i2, %i2
+; SPARC-NEXT:    addxcc %l7, 0, %l5
+; SPARC-NEXT:    addcc %l2, %l5, %l2
+; SPARC-NEXT:    addxcc %g0, 0, %l5
+; SPARC-NEXT:    umul %g3, %l1, %l1
+; SPARC-NEXT:    rd %y, %l7
+; SPARC-NEXT:    addcc %l1, %l2, %l1
+; SPARC-NEXT:    addxcc %l7, %l5, %l2
+; SPARC-NEXT:    addcc %l0, %l1, %l0
+; SPARC-NEXT:    addxcc %l4, %l2, %l1
+; SPARC-NEXT:    addxcc %l6, 0, %l2
+; SPARC-NEXT:    addxcc %l3, 0, %l3
+; SPARC-NEXT:    umul %g2, %i5, %l4
+; SPARC-NEXT:    rd %y, %l5
+; SPARC-NEXT:    sra %l3, 31, %l6
+; SPARC-NEXT:    umul %g3, %i5, %l7
 ; SPARC-NEXT:    rd %y, %o0
 ; SPARC-NEXT:    addcc %l7, %l5, %l5
 ; SPARC-NEXT:    addxcc %o0, 0, %l7
-; SPARC-NEXT:    umul %g4, %i4, %o0
+; SPARC-NEXT:    umul %g2, %i4, %o0
 ; SPARC-NEXT:    rd %y, %o1
 ; SPARC-NEXT:    addcc %o0, %l5, %l5
 ; SPARC-NEXT:    addxcc %o1, 0, %o0
 ; SPARC-NEXT:    addcc %l7, %o0, %l7
 ; SPARC-NEXT:    addxcc %g0, 0, %o0
-; SPARC-NEXT:    umul %g2, %i4, %o1
+; SPARC-NEXT:    umul %g3, %i4, %o1
 ; SPARC-NEXT:    rd %y, %o2
 ; SPARC-NEXT:    addcc %o1, %l7, %l7
+; SPARC-NEXT:    sra %i4, 31, %o1
+; SPARC-NEXT:    smul %o1, %g3, %g3
+; SPARC-NEXT:    umul %o1, %g2, %g2
+; SPARC-NEXT:    rd %y, %o3
 ; SPARC-NEXT:    addxcc %o2, %o0, %o0
-; SPARC-NEXT:    addcc %l4, %g3, %g3
-; SPARC-NEXT:    addxcc %l5, %l0, %l0
-; SPARC-NEXT:    addxcc %l7, 0, %l4
-; SPARC-NEXT:    addxcc %o0, 0, %l5
-; SPARC-NEXT:    addcc %l3, %l4, %l3
-; SPARC-NEXT:    addxcc %l6, %l5, %l4
-; SPARC-NEXT:    addxcc %g0, 0, %l5
+; SPARC-NEXT:    add %o3, %g3, %g3
+; SPARC-NEXT:    add %g3, %g2, %g3
+; SPARC-NEXT:    addcc %l7, %g2, %l7
+; SPARC-NEXT:    addxcc %o0, %g3, %o0
+; SPARC-NEXT:    addcc %l4, %l0, %g2
+; SPARC-NEXT:    addxcc %l5, %l1, %g3
+; SPARC-NEXT:    addxcc %l7, 0, %l0
+; SPARC-NEXT:    addxcc %o0, 0, %l1
+; SPARC-NEXT:    sra %l1, 31, %l4
+; SPARC-NEXT:    addcc %l2, %l0, %l0
+; SPARC-NEXT:    addxcc %l3, %l1, %l1
+; SPARC-NEXT:    addxcc %l6, %l4, %l2
+; SPARC-NEXT:    smul %i4, %g4, %l3
+; SPARC-NEXT:    umul %i5, %g4, %g4
+; SPARC-NEXT:    rd %y, %l5
+; SPARC-NEXT:    addxcc %l6, %l4, %l4
+; SPARC-NEXT:    add %l5, %g4, %l5
+; SPARC-NEXT:    smul %o1, %i0, %l6
+; SPARC-NEXT:    umul %o1, %i1, %l7
+; SPARC-NEXT:    rd %y, %o0
+; SPARC-NEXT:    add %l5, %l3, %l3
+; SPARC-NEXT:    add %o0, %l6, %l5
+; SPARC-NEXT:    add %l5, %l7, %l5
+; SPARC-NEXT:    addcc %l7, %g4, %g4
 ; SPARC-NEXT:    umul %i1, %i5, %l6
 ; SPARC-NEXT:    rd %y, %l7
-; SPARC-NEXT:    addxcc %g0, 0, %o0
-; SPARC-NEXT:    umul %i0, %i5, %o1
-; SPARC-NEXT:    rd %y, %o2
-; SPARC-NEXT:    addcc %o1, %l7, %l7
-; SPARC-NEXT:    addxcc %o2, 0, %o1
-; SPARC-NEXT:    umul %i1, %i4, %o2
-; SPARC-NEXT:    rd %y, %o3
-; SPARC-NEXT:    addcc %o2, %l7, %l7
-; SPARC-NEXT:    addxcc %o3, 0, %o2
-; SPARC-NEXT:    addcc %o1, %o2, %o1
-; SPARC-NEXT:    addxcc %g0, 0, %o2
-; SPARC-NEXT:    umul %i0, %i4, %o3
-; SPARC-NEXT:    rd %y, %o4
-; SPARC-NEXT:    addcc %o3, %o1, %o1
-; SPARC-NEXT:    addxcc %o4, %o2, %o2
-; SPARC-NEXT:    addcc %l6, %l3, %l3
-; SPARC-NEXT:    addxcc %l7, %l4, %l4
-; SPARC-NEXT:    addxcc %o1, %l5, %l5
-; SPARC-NEXT:    sra %i0, 31, %l6
-; SPARC-NEXT:    smul %l6, %i4, %l7
-; SPARC-NEXT:    umul %l6, %i5, %o1
-; SPARC-NEXT:    rd %y, %o3
-; SPARC-NEXT:    addxcc %o2, %o0, %i5
-; SPARC-NEXT:    umul %l2, %l6, %l2
-; SPARC-NEXT:    rd %y, %o0
-; SPARC-NEXT:    add %o3, %l7, %l7
-; SPARC-NEXT:    umul %l1, %l6, %l1
-; SPARC-NEXT:    rd %y, %l6
-; SPARC-NEXT:    add %l7, %o1, %l7
-; SPARC-NEXT:    add %l6, %l2, %o2
-; SPARC-NEXT:    add %o2, %l1, %o2
-; SPARC-NEXT:    addcc %l1, %o1, %o1
-; SPARC-NEXT:    addxcc %o2, %l7, %l7
-; SPARC-NEXT:    addcc %l2, %l6, %o2
-; SPARC-NEXT:    addxcc %o0, 0, %o3
-; SPARC-NEXT:    addcc %l1, %o2, %o2
-; SPARC-NEXT:    addxcc %l6, 0, %l6
-; SPARC-NEXT:    addcc %o3, %l6, %l6
-; SPARC-NEXT:    addxcc %g0, 0, %o3
-; SPARC-NEXT:    addcc %l2, %l6, %l2
-; SPARC-NEXT:    addxcc %o0, %o3, %l6
-; SPARC-NEXT:    addcc %l2, %o1, %l2
-; SPARC-NEXT:    sra %i4, 31, %i4
-; SPARC-NEXT:    umul %g4, %i4, %g4
-; SPARC-NEXT:    rd %y, %o0
-; SPARC-NEXT:    addxcc %l6, %l7, %l6
-; SPARC-NEXT:    umul %i4, %g2, %g2
-; SPARC-NEXT:    rd %y, %l7
-; SPARC-NEXT:    add %o0, %g4, %o1
-; SPARC-NEXT:    smul %i0, %i4, %i0
+; SPARC-NEXT:    addxcc %l5, %l3, %l3
+; SPARC-NEXT:    umul %i0, %i5, %i5
+; SPARC-NEXT:    rd %y, %l5
+; SPARC-NEXT:    addcc %i5, %l7, %i5
+; SPARC-NEXT:    addxcc %l5, 0, %l5
 ; SPARC-NEXT:    umul %i1, %i4, %i1
+; SPARC-NEXT:    rd %y, %l7
+; SPARC-NEXT:    addcc %i1, %i5, %i1
+; SPARC-NEXT:    addxcc %l7, 0, %i5
+; SPARC-NEXT:    addcc %l5, %i5, %i5
+; SPARC-NEXT:    addxcc %g0, 0, %l5
+; SPARC-NEXT:    umul %i0, %i4, %i0
 ; SPARC-NEXT:    rd %y, %i4
-; SPARC-NEXT:    add %o1, %g2, %o1
-; SPARC-NEXT:    add %i4, %i1, %i4
-; SPARC-NEXT:    add %i4, %i0, %i0
-; SPARC-NEXT:    addcc %i1, %g4, %i1
-; SPARC-NEXT:    addxcc %i0, %o1, %i0
-; SPARC-NEXT:    addcc %g4, %o0, %i4
-; SPARC-NEXT:    addxcc %o0, 0, %o0
-; SPARC-NEXT:    addcc %g2, %i4, %i4
-; SPARC-NEXT:    addxcc %l7, 0, %o1
-; SPARC-NEXT:    addcc %o0, %o1, %o0
-; SPARC-NEXT:    addxcc %g0, 0, %o1
-; SPARC-NEXT:    addcc %g2, %o0, %g2
-; SPARC-NEXT:    addxcc %l7, %o1, %l7
-; SPARC-NEXT:    addcc %g2, %i1, %i1
-; SPARC-NEXT:    addxcc %l7, %i0, %i0
-; SPARC-NEXT:    addcc %g4, %l1, %g2
-; SPARC-NEXT:    addxcc %i4, %o2, %i4
-; SPARC-NEXT:    addxcc %i1, %l2, %i1
-; SPARC-NEXT:    addxcc %i0, %l6, %i0
-; SPARC-NEXT:    addcc %l3, %g2, %g2
-; SPARC-NEXT:    addxcc %l4, %i4, %i4
-; SPARC-NEXT:    addxcc %l5, %i1, %i1
-; SPARC-NEXT:    addxcc %i5, %i0, %i0
-; SPARC-NEXT:    sra %l0, 31, %i5
-; SPARC-NEXT:    xor %i0, %i5, %i0
-; SPARC-NEXT:    xor %i4, %i5, %i4
+; SPARC-NEXT:    addcc %i0, %i5, %i0
+; SPARC-NEXT:    addxcc %i4, %l5, %i4
+; SPARC-NEXT:    addcc %i0, %g4, %i0
+; SPARC-NEXT:    addxcc %i4, %l3, %i4
+; SPARC-NEXT:    addcc %l6, %l0, %i5
+; SPARC-NEXT:    addxcc %i1, %l1, %i1
+; SPARC-NEXT:    addxcc %i0, %l2, %i0
+; SPARC-NEXT:    addxcc %i4, %l4, %i4
+; SPARC-NEXT:    sra %g3, 31, %g4
+; SPARC-NEXT:    xor %i4, %g4, %i4
+; SPARC-NEXT:    xor %i1, %g4, %i1
+; SPARC-NEXT:    or %i1, %i4, %i1
+; SPARC-NEXT:    xor %i0, %g4, %i0
+; SPARC-NEXT:    xor %i5, %g4, %i4
 ; SPARC-NEXT:    or %i4, %i0, %i0
-; SPARC-NEXT:    xor %i1, %i5, %i1
-; SPARC-NEXT:    xor %g2, %i5, %i4
-; SPARC-NEXT:    or %i4, %i1, %i1
-; SPARC-NEXT:    or %i1, %i0, %i0
+; SPARC-NEXT:    or %i0, %i1, %i0
 ; SPARC-NEXT:    cmp %i0, 0
 ; SPARC-NEXT:    bne .LBB0_2
 ; SPARC-NEXT:    nop
@@ -167,110 +139,82 @@ define { i128, i8 } @muloti_test(i128 %l, i128 %r) unnamed_addr #0 {
 ; SPARC-NEXT:  .LBB0_2:
 ; SPARC-NEXT:    mov 1, %i4
 ; SPARC-NEXT:  .LBB0_3: ! %start
-; SPARC-NEXT:    mov %l0, %i0
+; SPARC-NEXT:    mov %g3, %i0
 ; SPARC-NEXT:    ret
-; SPARC-NEXT:    restore %g0, %g3, %o1
+; SPARC-NEXT:    restore %g0, %g2, %o1
 ;
 ; SPARC64-LABEL: muloti_test:
-; SPARC64:         .cfi_startproc
-; SPARC64-NEXT:    .register %g2, #scratch
+; SPARC64:         .register %g2, #scratch
 ; SPARC64-NEXT:    .register %g3, #scratch
 ; SPARC64-NEXT:  ! %bb.0: ! %start
 ; SPARC64-NEXT:    save %sp, -176, %sp
-; SPARC64-NEXT:    .cfi_def_cfa_register %fp
-; SPARC64-NEXT:    .cfi_window_save
-; SPARC64-NEXT:    .cfi_register %o7, %i7
 ; SPARC64-NEXT:    mov %i3, %i4
-; SPARC64-NEXT:    mov %i1, %i3
-; SPARC64-NEXT:    srax %i0, 63, %o2
-; SPARC64-NEXT:    mov %i2, %o0
-; SPARC64-NEXT:    mov %i4, %o1
-; SPARC64-NEXT:    call __multi3
-; SPARC64-NEXT:    mov %o2, %o3
-; SPARC64-NEXT:    mov %o0, %i1
-; SPARC64-NEXT:    mov %o1, %i5
-; SPARC64-NEXT:    srax %i2, 63, %o0
-; SPARC64-NEXT:    mov %o0, %o1
-; SPARC64-NEXT:    mov %i0, %o2
-; SPARC64-NEXT:    call __multi3
-; SPARC64-NEXT:    mov %i3, %o3
-; SPARC64-NEXT:    srlx %i5, 32, %g2
-; SPARC64-NEXT:    srlx %o1, 32, %g3
-; SPARC64-NEXT:    srlx %i1, 32, %g4
-; SPARC64-NEXT:    srlx %o0, 32, %g5
-; SPARC64-NEXT:    addcc %o1, %i5, %l0
-; SPARC64-NEXT:    addxcc %g3, %g2, %l1
-; SPARC64-NEXT:    addxcc %o0, %i1, %l2
-; SPARC64-NEXT:    addxcc %g5, %g4, %l3
-; SPARC64-NEXT:    mov %g0, %o0
-; SPARC64-NEXT:    mov %i3, %o1
-; SPARC64-NEXT:    mov %g0, %o2
-; SPARC64-NEXT:    call __multi3
-; SPARC64-NEXT:    mov %i4, %o3
-; SPARC64-NEXT:    mov %o0, %i5
-; SPARC64-NEXT:    mov %o1, %i1
-; SPARC64-NEXT:    mov %g0, %o0
+; SPARC64-NEXT:    mov %i1, %i5
+; SPARC64-NEXT:    mov %i0, %l2
+; SPARC64-NEXT:    srax %i0, 63, %i3
+; SPARC64-NEXT:    mov %i3, %o0
 ; SPARC64-NEXT:    mov %i0, %o1
 ; SPARC64-NEXT:    mov %g0, %o2
 ; SPARC64-NEXT:    call __multi3
 ; SPARC64-NEXT:    mov %i4, %o3
-; SPARC64-NEXT:    srlx %i5, 32, %i4
-; SPARC64-NEXT:    srlx %o1, 32, %g2
-; SPARC64-NEXT:    srlx %o0, 32, %g3
-; SPARC64-NEXT:    addcc %o1, %i5, %i5
-; SPARC64-NEXT:    addxcc %g2, %i4, %i4
-; SPARC64-NEXT:    addxcc %o0, 0, %l4
-; SPARC64-NEXT:    addxcc %g3, 0, %l5
+; SPARC64-NEXT:    mov %o0, %l0
+; SPARC64-NEXT:    mov %o1, %l1
 ; SPARC64-NEXT:    mov %g0, %o0
-; SPARC64-NEXT:    mov %i3, %o1
+; SPARC64-NEXT:    mov %i1, %o1
 ; SPARC64-NEXT:    mov %g0, %o2
+; SPARC64-NEXT:    call __multi3
+; SPARC64-NEXT:    mov %i4, %o3
+; SPARC64-NEXT:    mov %o1, %i1
+; SPARC64-NEXT:    mov %g0, %i0
+; SPARC64-NEXT:    add %l1, %o0, %l3
+; SPARC64-NEXT:    cmp %l3, %l1
+; SPARC64-NEXT:    movcs %xcc, 1, %i0
+; SPARC64-NEXT:    srl %i0, 0, %i0
+; SPARC64-NEXT:    add %l0, %i0, %l0
+; SPARC64-NEXT:    srax %l0, 63, %l1
+; SPARC64-NEXT:    srax %i2, 63, %i4
+; SPARC64-NEXT:    mov %g0, %o0
+; SPARC64-NEXT:    mov %i5, %o1
+; SPARC64-NEXT:    mov %i4, %o2
 ; SPARC64-NEXT:    call __multi3
 ; SPARC64-NEXT:    mov %i2, %o3
-; SPARC64-NEXT:    srlx %o1, 32, %g2
-; SPARC64-NEXT:    srlx %o0, 32, %g3
-; SPARC64-NEXT:    addcc %o1, %i5, %i3
-; SPARC64-NEXT:    addxcc %g2, %i4, %i4
-; SPARC64-NEXT:    addxcc %o0, 0, %i5
-; SPARC64-NEXT:    addxcc %g3, 0, %g2
-; SPARC64-NEXT:    addcc %l4, %i5, %i5
-; SPARC64-NEXT:    addxcc %l5, %g2, %l4
-; SPARC64-NEXT:    addxcc %g0, 0, %l5
-; SPARC64-NEXT:    addxcc %g0, 0, %l6
-; SPARC64-NEXT:    mov %g0, %o0
-; SPARC64-NEXT:    mov %i0, %o1
-; SPARC64-NEXT:    mov %g0, %o2
+; SPARC64-NEXT:    mov %g0, %i5
+; SPARC64-NEXT:    mov %g0, %g2
+; SPARC64-NEXT:    add %o1, %l3, %i0
+; SPARC64-NEXT:    cmp %i0, %o1
+; SPARC64-NEXT:    movcs %xcc, 1, %i5
+; SPARC64-NEXT:    srl %i5, 0, %i5
+; SPARC64-NEXT:    add %o0, %i5, %i5
+; SPARC64-NEXT:    srax %i5, 63, %g3
+; SPARC64-NEXT:    add %l1, %g3, %g3
+; SPARC64-NEXT:    add %l0, %i5, %i5
+; SPARC64-NEXT:    cmp %i5, %l0
+; SPARC64-NEXT:    movcs %xcc, 1, %g2
+; SPARC64-NEXT:    srl %g2, 0, %g2
+; SPARC64-NEXT:    add %g3, %g2, %l0
+; SPARC64-NEXT:    mov %i3, %o0
+; SPARC64-NEXT:    mov %l2, %o1
+; SPARC64-NEXT:    mov %i4, %o2
 ; SPARC64-NEXT:    call __multi3
 ; SPARC64-NEXT:    mov %i2, %o3
 ; SPARC64-NEXT:    mov %g0, %i2
-; SPARC64-NEXT:    srlx %o1, 32, %i0
-; SPARC64-NEXT:    addcc %o1, %i5, %i5
-; SPARC64-NEXT:    srlx %o0, 32, %g2
-; SPARC64-NEXT:    addxcc %i0, %l4, %i0
-; SPARC64-NEXT:    addxcc %o0, %l5, %g3
-; SPARC64-NEXT:    addxcc %g2, %l6, %g2
-; SPARC64-NEXT:    addcc %i5, %l0, %i5
-; SPARC64-NEXT:    addxcc %i0, %l1, %i0
-; SPARC64-NEXT:    addxcc %g3, %l2, %g3
-; SPARC64-NEXT:    addxcc %g2, %l3, %g2
-; SPARC64-NEXT:    srl %g3, 0, %g3
-; SPARC64-NEXT:    sllx %g2, 32, %g2
-; SPARC64-NEXT:    or %g2, %g3, %g2
-; SPARC64-NEXT:    sllx %i4, 32, %i4
-; SPARC64-NEXT:    srax %i4, 63, %g3
-; SPARC64-NEXT:    xor %g2, %g3, %g2
-; SPARC64-NEXT:    srl %i5, 0, %i5
-; SPARC64-NEXT:    sllx %i0, 32, %i0
-; SPARC64-NEXT:    or %i0, %i5, %i0
-; SPARC64-NEXT:    xor %i0, %g3, %i0
-; SPARC64-NEXT:    or %i0, %g2, %i0
-; SPARC64-NEXT:    movrnz %i0, 1, %i2
-; SPARC64-NEXT:    srl %i3, 0, %i0
-; SPARC64-NEXT:    or %i4, %i0, %i0
+; SPARC64-NEXT:    mov %g0, %i3
+; SPARC64-NEXT:    add %o0, %l0, %i4
+; SPARC64-NEXT:    add %o1, %i5, %i5
+; SPARC64-NEXT:    cmp %i5, %o1
+; SPARC64-NEXT:    movcs %xcc, 1, %i2
 ; SPARC64-NEXT:    srl %i2, 0, %i2
+; SPARC64-NEXT:    add %i4, %i2, %i2
+; SPARC64-NEXT:    srax %i0, 63, %i4
+; SPARC64-NEXT:    xor %i2, %i4, %i2
+; SPARC64-NEXT:    xor %i5, %i4, %i4
+; SPARC64-NEXT:    or %i4, %i2, %i2
+; SPARC64-NEXT:    movrnz %i2, 1, %i3
+; SPARC64-NEXT:    srl %i3, 0, %i2
 ; SPARC64-NEXT:    ret
 ; SPARC64-NEXT:    restore
 start:
-  %0 = tail call { i128, i1 } @llvm.smul.with.overflow.i128(i128 %l, i128 %r) #2
+  %0 = tail call { i128, i1 } @llvm.smul.with.overflow.i128(i128 %l, i128 %r)
   %1 = extractvalue { i128, i1 } %0, 0
   %2 = extractvalue { i128, i1 } %0, 1
   %3 = zext i1 %2 to i8
@@ -279,9 +223,4 @@ start:
   ret { i128, i8 } %5
 }
 
-; Function Attrs: nounwind readnone speculatable
-declare { i128, i1 } @llvm.smul.with.overflow.i128(i128, i128) #1
-
-attributes #0 = { nounwind readnone uwtable }
-attributes #1 = { nounwind readnone speculatable }
-attributes #2 = { nounwind }
+declare { i128, i1 } @llvm.smul.with.overflow.i128(i128, i128)

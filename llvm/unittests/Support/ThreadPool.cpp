@@ -7,10 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/ThreadPool.h"
-
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Config/llvm-config.h" // for LLVM_ENABLE_THREADS
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/TargetSelect.h"
@@ -27,11 +27,25 @@
 
 #include "gtest/gtest.h"
 
+namespace testing {
+namespace internal {
+// Specialize gtest construct to provide friendlier name in the output.
+#if LLVM_ENABLE_THREADS
+template <> std::string GetTypeName<llvm::StdThreadPool>() {
+  return "llvm::StdThreadPool";
+}
+#endif
+template <> std::string GetTypeName<llvm::SingleThreadExecutor>() {
+  return "llvm::SingleThreadExecutor";
+}
+} // namespace internal
+} // namespace testing
+
 using namespace llvm;
 
 // Fixture for the unittests, allowing to *temporarily* disable the unittests
 // on a particular platform
-class ThreadPoolTest : public testing::Test {
+template <typename ThreadPoolImpl> class ThreadPoolTest : public testing::Test {
   Triple Host;
   SmallVector<Triple::ArchType, 4> UnsupportedArchs;
   SmallVector<Triple::OSType, 4> UnsupportedOSs;
@@ -106,39 +120,47 @@ protected:
   int CurrentPhase; // -1 = error, 0 = setup, 1 = ready, 2+ = custom
 };
 
+using ThreadPoolImpls = ::testing::Types<
+#if LLVM_ENABLE_THREADS
+    StdThreadPool,
+#endif
+    SingleThreadExecutor>;
+
+TYPED_TEST_SUITE(ThreadPoolTest, ThreadPoolImpls, );
+
 #define CHECK_UNSUPPORTED()                                                    \
   do {                                                                         \
-    if (isUnsupportedOSOrEnvironment())                                        \
+    if (this->isUnsupportedOSOrEnvironment())                                  \
       GTEST_SKIP();                                                            \
   } while (0);
 
-TEST_F(ThreadPoolTest, AsyncBarrier) {
+TYPED_TEST(ThreadPoolTest, AsyncBarrier) {
   CHECK_UNSUPPORTED();
   // test that async & barrier work together properly.
 
   std::atomic_int checked_in{0};
 
-  ThreadPool Pool;
+  DefaultThreadPool Pool;
   for (size_t i = 0; i < 5; ++i) {
     Pool.async([this, &checked_in] {
-      waitForMainThread();
+      this->waitForMainThread();
       ++checked_in;
     });
   }
   ASSERT_EQ(0, checked_in);
-  setMainThreadReady();
+  this->setMainThreadReady();
   Pool.wait();
   ASSERT_EQ(5, checked_in);
 }
 
 static void TestFunc(std::atomic_int &checked_in, int i) { checked_in += i; }
 
-TEST_F(ThreadPoolTest, AsyncBarrierArgs) {
+TYPED_TEST(ThreadPoolTest, AsyncBarrierArgs) {
   CHECK_UNSUPPORTED();
   // Test that async works with a function requiring multiple parameters.
   std::atomic_int checked_in{0};
 
-  ThreadPool Pool;
+  DefaultThreadPool Pool;
   for (size_t i = 0; i < 5; ++i) {
     Pool.async(TestFunc, std::ref(checked_in), i);
   }
@@ -146,90 +168,90 @@ TEST_F(ThreadPoolTest, AsyncBarrierArgs) {
   ASSERT_EQ(10, checked_in);
 }
 
-TEST_F(ThreadPoolTest, Async) {
+TYPED_TEST(ThreadPoolTest, Async) {
   CHECK_UNSUPPORTED();
-  ThreadPool Pool;
+  DefaultThreadPool Pool;
   std::atomic_int i{0};
   Pool.async([this, &i] {
-    waitForMainThread();
+    this->waitForMainThread();
     ++i;
   });
   Pool.async([&i] { ++i; });
   ASSERT_NE(2, i.load());
-  setMainThreadReady();
+  this->setMainThreadReady();
   Pool.wait();
   ASSERT_EQ(2, i.load());
 }
 
-TEST_F(ThreadPoolTest, GetFuture) {
+TYPED_TEST(ThreadPoolTest, GetFuture) {
   CHECK_UNSUPPORTED();
-  ThreadPool Pool(hardware_concurrency(2));
+  DefaultThreadPool Pool(hardware_concurrency(2));
   std::atomic_int i{0};
   Pool.async([this, &i] {
-    waitForMainThread();
+    this->waitForMainThread();
     ++i;
   });
   // Force the future using get()
   Pool.async([&i] { ++i; }).get();
   ASSERT_NE(2, i.load());
-  setMainThreadReady();
+  this->setMainThreadReady();
   Pool.wait();
   ASSERT_EQ(2, i.load());
 }
 
-TEST_F(ThreadPoolTest, GetFutureWithResult) {
+TYPED_TEST(ThreadPoolTest, GetFutureWithResult) {
   CHECK_UNSUPPORTED();
-  ThreadPool Pool(hardware_concurrency(2));
+  DefaultThreadPool Pool(hardware_concurrency(2));
   auto F1 = Pool.async([] { return 1; });
   auto F2 = Pool.async([] { return 2; });
 
-  setMainThreadReady();
+  this->setMainThreadReady();
   Pool.wait();
   ASSERT_EQ(1, F1.get());
   ASSERT_EQ(2, F2.get());
 }
 
-TEST_F(ThreadPoolTest, GetFutureWithResultAndArgs) {
+TYPED_TEST(ThreadPoolTest, GetFutureWithResultAndArgs) {
   CHECK_UNSUPPORTED();
-  ThreadPool Pool(hardware_concurrency(2));
+  DefaultThreadPool Pool(hardware_concurrency(2));
   auto Fn = [](int x) { return x; };
   auto F1 = Pool.async(Fn, 1);
   auto F2 = Pool.async(Fn, 2);
 
-  setMainThreadReady();
+  this->setMainThreadReady();
   Pool.wait();
   ASSERT_EQ(1, F1.get());
   ASSERT_EQ(2, F2.get());
 }
 
-TEST_F(ThreadPoolTest, PoolDestruction) {
+TYPED_TEST(ThreadPoolTest, PoolDestruction) {
   CHECK_UNSUPPORTED();
   // Test that we are waiting on destruction
   std::atomic_int checked_in{0};
   {
-    ThreadPool Pool;
+    DefaultThreadPool Pool;
     for (size_t i = 0; i < 5; ++i) {
       Pool.async([this, &checked_in] {
-        waitForMainThread();
+        this->waitForMainThread();
         ++checked_in;
       });
     }
     ASSERT_EQ(0, checked_in);
-    setMainThreadReady();
+    this->setMainThreadReady();
   }
   ASSERT_EQ(5, checked_in);
 }
 
 // Check running tasks in different groups.
-TEST_F(ThreadPoolTest, Groups) {
+TYPED_TEST(ThreadPoolTest, Groups) {
   CHECK_UNSUPPORTED();
   // Need at least two threads, as the task in group2
   // might block a thread until all tasks in group1 finish.
   ThreadPoolStrategy S = hardware_concurrency(2);
   if (S.compute_thread_count() < 2)
     GTEST_SKIP();
-  ThreadPool Pool(S);
-  PhaseResetHelper Helper(this);
+  DefaultThreadPool Pool(S);
+  typename TestFixture::PhaseResetHelper Helper(this);
   ThreadPoolTaskGroup Group1(Pool);
   ThreadPoolTaskGroup Group2(Pool);
 
@@ -241,39 +263,39 @@ TEST_F(ThreadPoolTest, Groups) {
 
   for (size_t i = 0; i < 5; ++i) {
     Group1.async([this, &checked_in1] {
-      waitForMainThread();
+      this->waitForMainThread();
       ++checked_in1;
     });
   }
   Group2.async([this, &checked_in2] {
-    waitForPhase(2);
+    this->waitForPhase(2);
     ++checked_in2;
   });
   ASSERT_EQ(0, checked_in1);
   ASSERT_EQ(0, checked_in2);
   // Start first group and wait for it.
-  setMainThreadReady();
+  this->setMainThreadReady();
   Group1.wait();
   ASSERT_EQ(5, checked_in1);
   // Second group has not yet finished, start it and wait for it.
   ASSERT_EQ(0, checked_in2);
-  setPhase(2);
+  this->setPhase(2);
   Group2.wait();
   ASSERT_EQ(5, checked_in1);
   ASSERT_EQ(1, checked_in2);
 }
 
 // Check recursive tasks.
-TEST_F(ThreadPoolTest, RecursiveGroups) {
+TYPED_TEST(ThreadPoolTest, RecursiveGroups) {
   CHECK_UNSUPPORTED();
-  ThreadPool Pool;
+  DefaultThreadPool Pool;
   ThreadPoolTaskGroup Group(Pool);
 
   std::atomic_int checked_in1{0};
 
   for (size_t i = 0; i < 5; ++i) {
     Group.async([this, &Pool, &checked_in1] {
-      waitForMainThread();
+      this->waitForMainThread();
 
       ThreadPoolTaskGroup LocalGroup(Pool);
 
@@ -291,18 +313,18 @@ TEST_F(ThreadPoolTest, RecursiveGroups) {
     });
   }
   ASSERT_EQ(0, checked_in1);
-  setMainThreadReady();
+  this->setMainThreadReady();
   Group.wait();
   ASSERT_EQ(5, checked_in1);
 }
 
-TEST_F(ThreadPoolTest, RecursiveWaitDeadlock) {
+TYPED_TEST(ThreadPoolTest, RecursiveWaitDeadlock) {
   CHECK_UNSUPPORTED();
   ThreadPoolStrategy S = hardware_concurrency(2);
   if (S.compute_thread_count() < 2)
     GTEST_SKIP();
-  ThreadPool Pool(S);
-  PhaseResetHelper Helper(this);
+  DefaultThreadPool Pool(S);
+  typename TestFixture::PhaseResetHelper Helper(this);
   ThreadPoolTaskGroup Group(Pool);
 
   // Test that a thread calling wait() for a group and is waiting for more tasks
@@ -312,17 +334,17 @@ TEST_F(ThreadPoolTest, RecursiveWaitDeadlock) {
   // Task A runs in the first thread. It finishes and leaves
   // the background thread waiting for more tasks.
   Group.async([this] {
-    waitForMainThread();
-    setPhase(2);
+    this->waitForMainThread();
+    this->setPhase(2);
   });
   // Task B is run in a second thread, it launches yet another
   // task C in a different group, which will be handled by the waiting
   // thread started above.
   Group.async([this, &Pool] {
-    waitForPhase(2);
+    this->waitForPhase(2);
     ThreadPoolTaskGroup LocalGroup(Pool);
     LocalGroup.async([this] {
-      waitForPhase(3);
+      this->waitForPhase(3);
       // Give the other thread enough time to check that there's no task
       // to process and suspend waiting for a notification. This is indeed racy,
       // but probably the best that can be done.
@@ -332,10 +354,10 @@ TEST_F(ThreadPoolTest, RecursiveWaitDeadlock) {
     // to finish. This test checks that it does not deadlock. If the
     // `NotifyGroup` handling in ThreadPool::processTasks() didn't take place,
     // this task B would be stuck waiting for tasks to arrive.
-    setPhase(3);
+    this->setPhase(3);
     LocalGroup.wait();
   });
-  setMainThreadReady();
+  this->setMainThreadReady();
   Group.wait();
 }
 
@@ -346,8 +368,9 @@ TEST_F(ThreadPoolTest, RecursiveWaitDeadlock) {
 // isn't implemented for Unix (need AffinityMask in Support/Unix/Program.inc).
 #ifdef _WIN32
 
+template <typename ThreadPoolImpl>
 SmallVector<llvm::BitVector, 0>
-ThreadPoolTest::RunOnAllSockets(ThreadPoolStrategy S) {
+ThreadPoolTest<ThreadPoolImpl>::RunOnAllSockets(ThreadPoolStrategy S) {
   llvm::SetVector<llvm::BitVector> ThreadsUsed;
   std::mutex Lock;
   {
@@ -355,7 +378,7 @@ ThreadPoolTest::RunOnAllSockets(ThreadPoolStrategy S) {
     std::mutex AllThreadsLock;
     unsigned Active = 0;
 
-    ThreadPool Pool(S);
+    DefaultThreadPool Pool(S);
     for (size_t I = 0; I < S.compute_thread_count(); ++I) {
       Pool.async([&] {
         {
@@ -363,7 +386,7 @@ ThreadPoolTest::RunOnAllSockets(ThreadPoolStrategy S) {
           ++Active;
           AllThreads.notify_one();
         }
-        waitForMainThread();
+        this->waitForMainThread();
         std::lock_guard<std::mutex> Guard(Lock);
         auto Mask = llvm::get_thread_affinity_mask();
         ThreadsUsed.insert(Mask);
@@ -375,30 +398,31 @@ ThreadPoolTest::RunOnAllSockets(ThreadPoolStrategy S) {
       AllThreads.wait(Guard,
                       [&]() { return Active == S.compute_thread_count(); });
     }
-    setMainThreadReady();
+    this->setMainThreadReady();
   }
   return ThreadsUsed.takeVector();
 }
 
-TEST_F(ThreadPoolTest, AllThreads_UseAllRessources) {
+TYPED_TEST(ThreadPoolTest, AllThreads_UseAllRessources) {
   CHECK_UNSUPPORTED();
   // After Windows 11, the OS is free to deploy the threads on any CPU socket.
   // We cannot relibly ensure that all thread affinity mask are covered,
   // therefore this test should not run.
   if (llvm::RunningWindows11OrGreater())
     GTEST_SKIP();
-  auto ThreadsUsed = RunOnAllSockets({});
+  auto ThreadsUsed = this->RunOnAllSockets({});
   ASSERT_EQ(llvm::get_cpus(), ThreadsUsed.size());
 }
 
-TEST_F(ThreadPoolTest, AllThreads_OneThreadPerCore) {
+TYPED_TEST(ThreadPoolTest, AllThreads_OneThreadPerCore) {
   CHECK_UNSUPPORTED();
   // After Windows 11, the OS is free to deploy the threads on any CPU socket.
   // We cannot relibly ensure that all thread affinity mask are covered,
   // therefore this test should not run.
   if (llvm::RunningWindows11OrGreater())
     GTEST_SKIP();
-  auto ThreadsUsed = RunOnAllSockets(llvm::heavyweight_hardware_concurrency());
+  auto ThreadsUsed =
+      this->RunOnAllSockets(llvm::heavyweight_hardware_concurrency());
   ASSERT_EQ(llvm::get_cpus(), ThreadsUsed.size());
 }
 
@@ -412,7 +436,7 @@ static cl::opt<std::string> ThreadPoolTestStringArg1("thread-pool-string-arg1");
 #define setenv(name, var, ignore) _putenv_s(name, var)
 #endif
 
-TEST_F(ThreadPoolTest, AffinityMask) {
+TYPED_TEST(ThreadPoolTest, AffinityMask) {
   CHECK_UNSUPPORTED();
 
   // Skip this test if less than 4 threads are available.
@@ -421,7 +445,7 @@ TEST_F(ThreadPoolTest, AffinityMask) {
 
   using namespace llvm::sys;
   if (getenv("LLVM_THREADPOOL_AFFINITYMASK")) {
-    auto ThreadsUsed = RunOnAllSockets({});
+    auto ThreadsUsed = this->RunOnAllSockets({});
     // Ensure the threads only ran on CPUs 0-3.
     // NOTE: Don't use ASSERT* here because this runs in a subprocess,
     // and will show up as un-executed in the parent.

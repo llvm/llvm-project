@@ -1,7 +1,7 @@
-; RUN: opt %loadPolly -polly-print-scops -disable-output \
-; RUN:                < %s | FileCheck %s --check-prefix=FOUND
-; RUN: opt %loadPolly -polly-print-scops -disable-output \
-; RUN:                -polly-rtc-max-arrays-per-group=3 < %s | FileCheck %s \
+; RUN: opt %loadNPMPolly '-passes=print<polly-detect>,print<polly-function-scops>' -disable-output \
+; RUN:                < %s 2>&1 | FileCheck %s --check-prefix=FOUND
+; RUN: opt %loadNPMPolly '-passes=print<polly-detect>,print<polly-function-scops>' -disable-output \
+; RUN:                -polly-rtc-max-arrays-per-group=3 < %s 2>&1 | FileCheck %s \
 ; RUN:                --check-prefix=IGNORED
 ;
 ; FOUND: Function: foo

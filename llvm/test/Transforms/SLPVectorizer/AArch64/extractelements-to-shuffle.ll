@@ -33,8 +33,8 @@ define void @dist_vec(ptr nocapture noundef readonly %pA, ptr nocapture noundef 
 ; CHECK-NEXT:    [[ADD_PTR]] = getelementptr inbounds i32, ptr [[PA_ADDR_0271]], i64 4
 ; CHECK-NEXT:    [[ADD_PTR8]] = getelementptr inbounds i32, ptr [[PB_ADDR_0270]], i64 4
 ; CHECK-NEXT:    [[AND_I:%.*]] = and <4 x i32> [[TMP5]], [[TMP4]]
-; CHECK-NEXT:    [[NOT_I:%.*]] = xor <4 x i32> [[TMP4]], <i32 -1, i32 -1, i32 -1, i32 -1>
-; CHECK-NEXT:    [[NOT_I242:%.*]] = xor <4 x i32> [[TMP5]], <i32 -1, i32 -1, i32 -1, i32 -1>
+; CHECK-NEXT:    [[NOT_I:%.*]] = xor <4 x i32> [[TMP4]], splat (i32 -1)
+; CHECK-NEXT:    [[NOT_I242:%.*]] = xor <4 x i32> [[TMP5]], splat (i32 -1)
 ; CHECK-NEXT:    [[AND_I243:%.*]] = and <4 x i32> [[NOT_I242]], [[NOT_I]]
 ; CHECK-NEXT:    [[AND_I245:%.*]] = and <4 x i32> [[TMP4]], [[NOT_I242]]
 ; CHECK-NEXT:    [[AND_I247:%.*]] = and <4 x i32> [[TMP5]], [[NOT_I]]
@@ -75,47 +75,64 @@ define void @dist_vec(ptr nocapture noundef readonly %pA, ptr nocapture noundef 
 ; CHECK-NEXT:    [[TMP4TT_0_LCSSA:%.*]] = phi <2 x i64> [ zeroinitializer, [[ENTRY]] ], [ [[ADD_I]], [[WHILE_END_LOOPEXIT]] ]
 ; CHECK-NEXT:    [[PB_ADDR_0_LCSSA:%.*]] = phi ptr [ [[PB]], [[ENTRY]] ], [ [[SCEVGEP311]], [[WHILE_END_LOOPEXIT]] ]
 ; CHECK-NEXT:    [[PA_ADDR_0_LCSSA:%.*]] = phi ptr [ [[PA]], [[ENTRY]] ], [ [[SCEVGEP]], [[WHILE_END_LOOPEXIT]] ]
-; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <2 x i64> [[TMP4FT_0_LCSSA]], <2 x i64> [[TMP4TF_0_LCSSA]], <2 x i32> <i32 0, i32 2>
-; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <2 x i64> [[TMP4TT_0_LCSSA]], <2 x i64> [[TMP4FF_0_LCSSA]], <2 x i32> <i32 0, i32 2>
-; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <2 x i64> [[TMP10]], <2 x i64> [[TMP11]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <2 x i64> [[TMP4FT_0_LCSSA]], <2 x i64> [[TMP4TF_0_LCSSA]], <2 x i32> <i32 1, i32 3>
-; CHECK-NEXT:    [[TMP14:%.*]] = shufflevector <2 x i64> [[TMP4TT_0_LCSSA]], <2 x i64> [[TMP4FF_0_LCSSA]], <2 x i32> <i32 1, i32 3>
-; CHECK-NEXT:    [[TMP15:%.*]] = shufflevector <2 x i64> [[TMP13]], <2 x i64> [[TMP14]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[TMP16:%.*]] = add <4 x i64> [[TMP12]], [[TMP15]]
-; CHECK-NEXT:    [[TMP17:%.*]] = trunc <4 x i64> [[TMP16]] to <4 x i32>
+; CHECK-NEXT:    [[VGETQ_LANE:%.*]] = extractelement <2 x i64> [[TMP4TT_0_LCSSA]], i64 0
+; CHECK-NEXT:    [[VGETQ_LANE45:%.*]] = extractelement <2 x i64> [[TMP4TT_0_LCSSA]], i64 1
+; CHECK-NEXT:    [[ADD:%.*]] = add i64 [[VGETQ_LANE]], [[VGETQ_LANE45]]
+; CHECK-NEXT:    [[CONV48:%.*]] = trunc i64 [[ADD]] to i32
+; CHECK-NEXT:    [[VGETQ_LANE51:%.*]] = extractelement <2 x i64> [[TMP4FF_0_LCSSA]], i64 0
+; CHECK-NEXT:    [[VGETQ_LANE55:%.*]] = extractelement <2 x i64> [[TMP4FF_0_LCSSA]], i64 1
+; CHECK-NEXT:    [[ADD57:%.*]] = add i64 [[VGETQ_LANE51]], [[VGETQ_LANE55]]
+; CHECK-NEXT:    [[CONV60:%.*]] = trunc i64 [[ADD57]] to i32
+; CHECK-NEXT:    [[VGETQ_LANE63:%.*]] = extractelement <2 x i64> [[TMP4TF_0_LCSSA]], i64 0
+; CHECK-NEXT:    [[VGETQ_LANE67:%.*]] = extractelement <2 x i64> [[TMP4TF_0_LCSSA]], i64 1
+; CHECK-NEXT:    [[ADD69:%.*]] = add i64 [[VGETQ_LANE63]], [[VGETQ_LANE67]]
+; CHECK-NEXT:    [[CONV72:%.*]] = trunc i64 [[ADD69]] to i32
+; CHECK-NEXT:    [[VGETQ_LANE75:%.*]] = extractelement <2 x i64> [[TMP4FT_0_LCSSA]], i64 0
+; CHECK-NEXT:    [[VGETQ_LANE79:%.*]] = extractelement <2 x i64> [[TMP4FT_0_LCSSA]], i64 1
+; CHECK-NEXT:    [[ADD81:%.*]] = add i64 [[VGETQ_LANE75]], [[VGETQ_LANE79]]
+; CHECK-NEXT:    [[CONV84:%.*]] = trunc i64 [[ADD81]] to i32
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[NUMBEROFBOOLS]], 127
 ; CHECK-NEXT:    [[CMP86284:%.*]] = icmp ugt i32 [[AND]], 31
 ; CHECK-NEXT:    br i1 [[CMP86284]], label [[WHILE_BODY88:%.*]], label [[WHILE_END122:%.*]]
 ; CHECK:       while.body88:
 ; CHECK-NEXT:    [[PA_ADDR_1291:%.*]] = phi ptr [ [[INCDEC_PTR:%.*]], [[WHILE_END121:%.*]] ], [ [[PA_ADDR_0_LCSSA]], [[WHILE_END]] ]
 ; CHECK-NEXT:    [[PB_ADDR_1290:%.*]] = phi ptr [ [[INCDEC_PTR89:%.*]], [[WHILE_END121]] ], [ [[PB_ADDR_0_LCSSA]], [[WHILE_END]] ]
+; CHECK-NEXT:    [[_CTT_0289:%.*]] = phi i32 [ [[ADD99:%.*]], [[WHILE_END121]] ], [ [[CONV48]], [[WHILE_END]] ]
+; CHECK-NEXT:    [[_CFF_0288:%.*]] = phi i32 [ [[ADD106:%.*]], [[WHILE_END121]] ], [ [[CONV60]], [[WHILE_END]] ]
+; CHECK-NEXT:    [[_CTF_0287:%.*]] = phi i32 [ [[ADD113:%.*]], [[WHILE_END121]] ], [ [[CONV72]], [[WHILE_END]] ]
+; CHECK-NEXT:    [[_CFT_0286:%.*]] = phi i32 [ [[ADD120:%.*]], [[WHILE_END121]] ], [ [[CONV84]], [[WHILE_END]] ]
 ; CHECK-NEXT:    [[NBBOOLBLOCK_1285:%.*]] = phi i32 [ [[SUB:%.*]], [[WHILE_END121]] ], [ [[AND]], [[WHILE_END]] ]
-; CHECK-NEXT:    [[TMP18:%.*]] = phi <4 x i32> [ [[TMP34:%.*]], [[WHILE_END121]] ], [ [[TMP17]], [[WHILE_END]] ]
-; CHECK-NEXT:    [[TMP19:%.*]] = load i32, ptr [[PA_ADDR_1291]], align 4
-; CHECK-NEXT:    [[TMP20:%.*]] = load i32, ptr [[PB_ADDR_1290]], align 4
+; CHECK-NEXT:    [[TMP10:%.*]] = load i32, ptr [[PA_ADDR_1291]], align 4
+; CHECK-NEXT:    [[TMP11:%.*]] = load i32, ptr [[PB_ADDR_1290]], align 4
 ; CHECK-NEXT:    br label [[WHILE_BODY93:%.*]]
 ; CHECK:       while.body93:
-; CHECK-NEXT:    [[A_0279:%.*]] = phi i32 [ [[TMP19]], [[WHILE_BODY88]] ], [ [[SHR96:%.*]], [[WHILE_BODY93]] ]
-; CHECK-NEXT:    [[B_0278:%.*]] = phi i32 [ [[TMP20]], [[WHILE_BODY88]] ], [ [[SHR97:%.*]], [[WHILE_BODY93]] ]
+; CHECK-NEXT:    [[_CTT_1283:%.*]] = phi i32 [ [[_CTT_0289]], [[WHILE_BODY88]] ], [ [[ADD99]], [[WHILE_BODY93]] ]
+; CHECK-NEXT:    [[_CFF_1282:%.*]] = phi i32 [ [[_CFF_0288]], [[WHILE_BODY88]] ], [ [[ADD106]], [[WHILE_BODY93]] ]
+; CHECK-NEXT:    [[_CTF_1281:%.*]] = phi i32 [ [[_CTF_0287]], [[WHILE_BODY88]] ], [ [[ADD113]], [[WHILE_BODY93]] ]
+; CHECK-NEXT:    [[_CFT_1280:%.*]] = phi i32 [ [[_CFT_0286]], [[WHILE_BODY88]] ], [ [[ADD120]], [[WHILE_BODY93]] ]
+; CHECK-NEXT:    [[A_0279:%.*]] = phi i32 [ [[TMP10]], [[WHILE_BODY88]] ], [ [[SHR96:%.*]], [[WHILE_BODY93]] ]
+; CHECK-NEXT:    [[B_0278:%.*]] = phi i32 [ [[TMP11]], [[WHILE_BODY88]] ], [ [[SHR97:%.*]], [[WHILE_BODY93]] ]
 ; CHECK-NEXT:    [[SHIFT_0277:%.*]] = phi i32 [ 0, [[WHILE_BODY88]] ], [ [[INC:%.*]], [[WHILE_BODY93]] ]
-; CHECK-NEXT:    [[TMP21:%.*]] = phi <4 x i32> [ [[TMP18]], [[WHILE_BODY88]] ], [ [[TMP34]], [[WHILE_BODY93]] ]
 ; CHECK-NEXT:    [[AND94:%.*]] = and i32 [[A_0279]], 1
 ; CHECK-NEXT:    [[AND95:%.*]] = and i32 [[B_0278]], 1
 ; CHECK-NEXT:    [[SHR96]] = lshr i32 [[A_0279]], 1
 ; CHECK-NEXT:    [[SHR97]] = lshr i32 [[B_0278]], 1
-; CHECK-NEXT:    [[TMP22:%.*]] = insertelement <2 x i32> poison, i32 [[AND94]], i32 0
-; CHECK-NEXT:    [[TMP23:%.*]] = shufflevector <2 x i32> [[TMP22]], <2 x i32> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP24:%.*]] = icmp eq <2 x i32> [[TMP23]], zeroinitializer
-; CHECK-NEXT:    [[TMP25:%.*]] = icmp ne <2 x i32> [[TMP23]], zeroinitializer
-; CHECK-NEXT:    [[TMP26:%.*]] = shufflevector <2 x i1> [[TMP24]], <2 x i1> [[TMP25]], <4 x i32> <i32 0, i32 3, i32 3, i32 0>
-; CHECK-NEXT:    [[TMP27:%.*]] = insertelement <2 x i32> poison, i32 [[AND95]], i32 0
-; CHECK-NEXT:    [[TMP28:%.*]] = shufflevector <2 x i32> [[TMP27]], <2 x i32> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP29:%.*]] = icmp ne <2 x i32> [[TMP28]], zeroinitializer
-; CHECK-NEXT:    [[TMP30:%.*]] = icmp eq <2 x i32> [[TMP28]], zeroinitializer
-; CHECK-NEXT:    [[TMP31:%.*]] = shufflevector <2 x i1> [[TMP29]], <2 x i1> [[TMP30]], <4 x i32> <i32 0, i32 3, i32 0, i32 3>
-; CHECK-NEXT:    [[TMP32:%.*]] = select <4 x i1> [[TMP26]], <4 x i1> [[TMP31]], <4 x i1> zeroinitializer
-; CHECK-NEXT:    [[TMP33:%.*]] = zext <4 x i1> [[TMP32]] to <4 x i32>
-; CHECK-NEXT:    [[TMP34]] = add <4 x i32> [[TMP21]], [[TMP33]]
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[AND94]], 0
+; CHECK-NEXT:    [[TOBOOL98:%.*]] = icmp ne i32 [[AND95]], 0
+; CHECK-NEXT:    [[TMP12:%.*]] = select i1 [[TOBOOL]], i1 [[TOBOOL98]], i1 false
+; CHECK-NEXT:    [[LAND_EXT:%.*]] = zext i1 [[TMP12]] to i32
+; CHECK-NEXT:    [[ADD99]] = add i32 [[_CTT_1283]], [[LAND_EXT]]
+; CHECK-NEXT:    [[TOBOOL100:%.*]] = icmp eq i32 [[AND94]], 0
+; CHECK-NEXT:    [[TOBOOL103:%.*]] = icmp eq i32 [[AND95]], 0
+; CHECK-NEXT:    [[TMP13:%.*]] = select i1 [[TOBOOL100]], i1 [[TOBOOL103]], i1 false
+; CHECK-NEXT:    [[LAND_EXT105:%.*]] = zext i1 [[TMP13]] to i32
+; CHECK-NEXT:    [[ADD106]] = add i32 [[_CFF_1282]], [[LAND_EXT105]]
+; CHECK-NEXT:    [[TMP14:%.*]] = select i1 [[TOBOOL]], i1 [[TOBOOL103]], i1 false
+; CHECK-NEXT:    [[LAND_EXT112:%.*]] = zext i1 [[TMP14]] to i32
+; CHECK-NEXT:    [[ADD113]] = add i32 [[_CTF_1281]], [[LAND_EXT112]]
+; CHECK-NEXT:    [[TMP15:%.*]] = select i1 [[TOBOOL100]], i1 [[TOBOOL98]], i1 false
+; CHECK-NEXT:    [[LAND_EXT119:%.*]] = zext i1 [[TMP15]] to i32
+; CHECK-NEXT:    [[ADD120]] = add i32 [[_CFT_1280]], [[LAND_EXT119]]
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[SHIFT_0277]], 1
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i32 [[INC]], 32
 ; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[WHILE_END121]], label [[WHILE_BODY93]]
@@ -127,53 +144,61 @@ define void @dist_vec(ptr nocapture noundef readonly %pA, ptr nocapture noundef 
 ; CHECK-NEXT:    br i1 [[CMP86]], label [[WHILE_BODY88]], label [[WHILE_END122]]
 ; CHECK:       while.end122:
 ; CHECK-NEXT:    [[NBBOOLBLOCK_1_LCSSA:%.*]] = phi i32 [ [[AND]], [[WHILE_END]] ], [ [[SUB]], [[WHILE_END121]] ]
+; CHECK-NEXT:    [[_CFT_0_LCSSA:%.*]] = phi i32 [ [[CONV84]], [[WHILE_END]] ], [ [[ADD120]], [[WHILE_END121]] ]
+; CHECK-NEXT:    [[_CTF_0_LCSSA:%.*]] = phi i32 [ [[CONV72]], [[WHILE_END]] ], [ [[ADD113]], [[WHILE_END121]] ]
+; CHECK-NEXT:    [[_CFF_0_LCSSA:%.*]] = phi i32 [ [[CONV60]], [[WHILE_END]] ], [ [[ADD106]], [[WHILE_END121]] ]
+; CHECK-NEXT:    [[_CTT_0_LCSSA:%.*]] = phi i32 [ [[CONV48]], [[WHILE_END]] ], [ [[ADD99]], [[WHILE_END121]] ]
 ; CHECK-NEXT:    [[PB_ADDR_1_LCSSA:%.*]] = phi ptr [ [[PB_ADDR_0_LCSSA]], [[WHILE_END]] ], [ [[INCDEC_PTR89]], [[WHILE_END121]] ]
 ; CHECK-NEXT:    [[PA_ADDR_1_LCSSA:%.*]] = phi ptr [ [[PA_ADDR_0_LCSSA]], [[WHILE_END]] ], [ [[INCDEC_PTR]], [[WHILE_END121]] ]
-; CHECK-NEXT:    [[TMP35:%.*]] = phi <4 x i32> [ [[TMP17]], [[WHILE_END]] ], [ [[TMP34]], [[WHILE_END121]] ]
 ; CHECK-NEXT:    [[CMP130_NOT299:%.*]] = icmp eq i32 [[NBBOOLBLOCK_1_LCSSA]], 0
 ; CHECK-NEXT:    br i1 [[CMP130_NOT299]], label [[WHILE_END166:%.*]], label [[WHILE_BODY132_PREHEADER:%.*]]
 ; CHECK:       while.body132.preheader:
-; CHECK-NEXT:    [[TMP36:%.*]] = load i32, ptr [[PB_ADDR_1_LCSSA]], align 4
+; CHECK-NEXT:    [[TMP16:%.*]] = load i32, ptr [[PB_ADDR_1_LCSSA]], align 4
 ; CHECK-NEXT:    [[SUB125:%.*]] = sub nuw nsw i32 32, [[NBBOOLBLOCK_1_LCSSA]]
-; CHECK-NEXT:    [[SHR128:%.*]] = lshr i32 [[TMP36]], [[SUB125]]
-; CHECK-NEXT:    [[TMP37:%.*]] = load i32, ptr [[PA_ADDR_1_LCSSA]], align 4
-; CHECK-NEXT:    [[SHR126:%.*]] = lshr i32 [[TMP37]], [[SUB125]]
+; CHECK-NEXT:    [[SHR128:%.*]] = lshr i32 [[TMP16]], [[SUB125]]
+; CHECK-NEXT:    [[TMP17:%.*]] = load i32, ptr [[PA_ADDR_1_LCSSA]], align 4
+; CHECK-NEXT:    [[SHR126:%.*]] = lshr i32 [[TMP17]], [[SUB125]]
 ; CHECK-NEXT:    br label [[WHILE_BODY132:%.*]]
 ; CHECK:       while.body132:
+; CHECK-NEXT:    [[_CTT_2306:%.*]] = phi i32 [ [[ADD142:%.*]], [[WHILE_BODY132]] ], [ [[_CTT_0_LCSSA]], [[WHILE_BODY132_PREHEADER]] ]
+; CHECK-NEXT:    [[_CFF_2305:%.*]] = phi i32 [ [[ADD150:%.*]], [[WHILE_BODY132]] ], [ [[_CFF_0_LCSSA]], [[WHILE_BODY132_PREHEADER]] ]
+; CHECK-NEXT:    [[_CTF_2304:%.*]] = phi i32 [ [[ADD157:%.*]], [[WHILE_BODY132]] ], [ [[_CTF_0_LCSSA]], [[WHILE_BODY132_PREHEADER]] ]
+; CHECK-NEXT:    [[_CFT_2303:%.*]] = phi i32 [ [[ADD164:%.*]], [[WHILE_BODY132]] ], [ [[_CFT_0_LCSSA]], [[WHILE_BODY132_PREHEADER]] ]
 ; CHECK-NEXT:    [[NBBOOLBLOCK_2302:%.*]] = phi i32 [ [[DEC165:%.*]], [[WHILE_BODY132]] ], [ [[NBBOOLBLOCK_1_LCSSA]], [[WHILE_BODY132_PREHEADER]] ]
 ; CHECK-NEXT:    [[A_1301:%.*]] = phi i32 [ [[SHR135:%.*]], [[WHILE_BODY132]] ], [ [[SHR126]], [[WHILE_BODY132_PREHEADER]] ]
 ; CHECK-NEXT:    [[B_1300:%.*]] = phi i32 [ [[SHR136:%.*]], [[WHILE_BODY132]] ], [ [[SHR128]], [[WHILE_BODY132_PREHEADER]] ]
-; CHECK-NEXT:    [[TMP38:%.*]] = phi <4 x i32> [ [[TMP51:%.*]], [[WHILE_BODY132]] ], [ [[TMP35]], [[WHILE_BODY132_PREHEADER]] ]
 ; CHECK-NEXT:    [[AND133:%.*]] = and i32 [[A_1301]], 1
 ; CHECK-NEXT:    [[AND134:%.*]] = and i32 [[B_1300]], 1
 ; CHECK-NEXT:    [[SHR135]] = lshr i32 [[A_1301]], 1
 ; CHECK-NEXT:    [[SHR136]] = lshr i32 [[B_1300]], 1
-; CHECK-NEXT:    [[TMP39:%.*]] = insertelement <2 x i32> poison, i32 [[AND133]], i32 0
-; CHECK-NEXT:    [[TMP40:%.*]] = shufflevector <2 x i32> [[TMP39]], <2 x i32> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP41:%.*]] = icmp eq <2 x i32> [[TMP40]], zeroinitializer
-; CHECK-NEXT:    [[TMP42:%.*]] = icmp ne <2 x i32> [[TMP40]], zeroinitializer
-; CHECK-NEXT:    [[TMP43:%.*]] = shufflevector <2 x i1> [[TMP41]], <2 x i1> [[TMP42]], <4 x i32> <i32 0, i32 3, i32 3, i32 0>
-; CHECK-NEXT:    [[TMP44:%.*]] = insertelement <2 x i32> poison, i32 [[AND134]], i32 0
-; CHECK-NEXT:    [[TMP45:%.*]] = shufflevector <2 x i32> [[TMP44]], <2 x i32> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP46:%.*]] = icmp ne <2 x i32> [[TMP45]], zeroinitializer
-; CHECK-NEXT:    [[TMP47:%.*]] = icmp eq <2 x i32> [[TMP45]], zeroinitializer
-; CHECK-NEXT:    [[TMP48:%.*]] = shufflevector <2 x i1> [[TMP46]], <2 x i1> [[TMP47]], <4 x i32> <i32 0, i32 3, i32 0, i32 3>
-; CHECK-NEXT:    [[TMP49:%.*]] = select <4 x i1> [[TMP43]], <4 x i1> [[TMP48]], <4 x i1> zeroinitializer
-; CHECK-NEXT:    [[TMP50:%.*]] = zext <4 x i1> [[TMP49]] to <4 x i32>
-; CHECK-NEXT:    [[TMP51]] = add <4 x i32> [[TMP38]], [[TMP50]]
+; CHECK-NEXT:    [[TOBOOL137:%.*]] = icmp ne i32 [[AND133]], 0
+; CHECK-NEXT:    [[TOBOOL139:%.*]] = icmp ne i32 [[AND134]], 0
+; CHECK-NEXT:    [[TMP18:%.*]] = select i1 [[TOBOOL137]], i1 [[TOBOOL139]], i1 false
+; CHECK-NEXT:    [[LAND_EXT141:%.*]] = zext i1 [[TMP18]] to i32
+; CHECK-NEXT:    [[ADD142]] = add i32 [[_CTT_2306]], [[LAND_EXT141]]
+; CHECK-NEXT:    [[TOBOOL144:%.*]] = icmp eq i32 [[AND133]], 0
+; CHECK-NEXT:    [[TOBOOL147:%.*]] = icmp eq i32 [[AND134]], 0
+; CHECK-NEXT:    [[TMP19:%.*]] = select i1 [[TOBOOL144]], i1 [[TOBOOL147]], i1 false
+; CHECK-NEXT:    [[LAND_EXT149:%.*]] = zext i1 [[TMP19]] to i32
+; CHECK-NEXT:    [[ADD150]] = add i32 [[_CFF_2305]], [[LAND_EXT149]]
+; CHECK-NEXT:    [[TMP20:%.*]] = select i1 [[TOBOOL137]], i1 [[TOBOOL147]], i1 false
+; CHECK-NEXT:    [[LAND_EXT156:%.*]] = zext i1 [[TMP20]] to i32
+; CHECK-NEXT:    [[ADD157]] = add i32 [[_CTF_2304]], [[LAND_EXT156]]
+; CHECK-NEXT:    [[TMP21:%.*]] = select i1 [[TOBOOL144]], i1 [[TOBOOL139]], i1 false
+; CHECK-NEXT:    [[LAND_EXT163:%.*]] = zext i1 [[TMP21]] to i32
+; CHECK-NEXT:    [[ADD164]] = add i32 [[_CFT_2303]], [[LAND_EXT163]]
 ; CHECK-NEXT:    [[DEC165]] = add nsw i32 [[NBBOOLBLOCK_2302]], -1
 ; CHECK-NEXT:    [[CMP130_NOT:%.*]] = icmp eq i32 [[DEC165]], 0
 ; CHECK-NEXT:    br i1 [[CMP130_NOT]], label [[WHILE_END166]], label [[WHILE_BODY132]]
 ; CHECK:       while.end166:
-; CHECK-NEXT:    [[TMP52:%.*]] = phi <4 x i32> [ [[TMP35]], [[WHILE_END122]] ], [ [[TMP51]], [[WHILE_BODY132]] ]
-; CHECK-NEXT:    [[TMP53:%.*]] = extractelement <4 x i32> [[TMP52]], i32 2
-; CHECK-NEXT:    store i32 [[TMP53]], ptr [[CTT:%.*]], align 4
-; CHECK-NEXT:    [[TMP54:%.*]] = extractelement <4 x i32> [[TMP52]], i32 3
-; CHECK-NEXT:    store i32 [[TMP54]], ptr [[CFF:%.*]], align 4
-; CHECK-NEXT:    [[TMP55:%.*]] = extractelement <4 x i32> [[TMP52]], i32 1
-; CHECK-NEXT:    store i32 [[TMP55]], ptr [[CTF:%.*]], align 4
-; CHECK-NEXT:    [[TMP56:%.*]] = extractelement <4 x i32> [[TMP52]], i32 0
-; CHECK-NEXT:    store i32 [[TMP56]], ptr [[CFT:%.*]], align 4
+; CHECK-NEXT:    [[_CFT_2_LCSSA:%.*]] = phi i32 [ [[_CFT_0_LCSSA]], [[WHILE_END122]] ], [ [[ADD164]], [[WHILE_BODY132]] ]
+; CHECK-NEXT:    [[_CTF_2_LCSSA:%.*]] = phi i32 [ [[_CTF_0_LCSSA]], [[WHILE_END122]] ], [ [[ADD157]], [[WHILE_BODY132]] ]
+; CHECK-NEXT:    [[_CFF_2_LCSSA:%.*]] = phi i32 [ [[_CFF_0_LCSSA]], [[WHILE_END122]] ], [ [[ADD150]], [[WHILE_BODY132]] ]
+; CHECK-NEXT:    [[_CTT_2_LCSSA:%.*]] = phi i32 [ [[_CTT_0_LCSSA]], [[WHILE_END122]] ], [ [[ADD142]], [[WHILE_BODY132]] ]
+; CHECK-NEXT:    store i32 [[_CTT_2_LCSSA]], ptr [[CTT:%.*]], align 4
+; CHECK-NEXT:    store i32 [[_CFF_2_LCSSA]], ptr [[CFF:%.*]], align 4
+; CHECK-NEXT:    store i32 [[_CTF_2_LCSSA]], ptr [[CTF:%.*]], align 4
+; CHECK-NEXT:    store i32 [[_CFT_2_LCSSA]], ptr [[CFT:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:

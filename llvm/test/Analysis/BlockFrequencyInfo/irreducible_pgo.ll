@@ -72,13 +72,13 @@ for.end:                                          ; preds = %for.cond2
 ; CHECK-NEXT: - if.end9: {{.*}} count = 1000, irr_loop_header_weight = 1000
 ; CHECK-NEXT: - for.end: {{.*}} count = 100
 
-@targets = local_unnamed_addr global [256 x i8*] zeroinitializer, align 16
+@targets = local_unnamed_addr global [256 x ptr] zeroinitializer, align 16
 @tracing = local_unnamed_addr global i32 0, align 4
 
 ; Function Attrs: noinline norecurse nounwind uwtable
-define i32 @_Z11irreduciblePh(i8* nocapture readonly %p) !prof !27 {
+define i32 @_Z11irreduciblePh(ptr nocapture readonly %p) !prof !27 {
 entry:
-  %0 = load i32, i32* @tracing, align 4
+  %0 = load i32, ptr @tracing, align 4
   %1 = trunc i32 %0 to i8
   %tobool = icmp eq i32 %0, 0
   br label %for.cond1
@@ -128,9 +128,9 @@ exit:                                             ; preds = %sw.bb15, %sw.bb
 
 indirectgoto:                                     ; preds = %if.then18, %if.then
   %idxprom21 = zext i32 %0 to i64
-  %arrayidx22 = getelementptr inbounds [256 x i8*], [256 x i8*]* @targets, i64 0, i64 %idxprom21
-  %target = load i8*, i8** %arrayidx22, align 8
-  indirectbr i8* %target, [label %unknown_op, label %sw.bb, label %TARGET_1, label %TARGET_2], !prof !41, !irr_loop !42
+  %arrayidx22 = getelementptr inbounds [256 x ptr], ptr @targets, i64 0, i64 %idxprom21
+  %target = load ptr, ptr %arrayidx22, align 8
+  indirectbr ptr %target, [label %unknown_op, label %sw.bb, label %TARGET_1, label %TARGET_2], !prof !41, !irr_loop !42
 }
 
 !36 = !{!"branch_weights", i32 0, i32 0, i32 201, i32 1}
@@ -161,9 +161,9 @@ indirectgoto:                                     ; preds = %if.then18, %if.then
 
 ; Missing some irr loop annotations.
 ; Function Attrs: noinline norecurse nounwind uwtable
-define i32 @_Z11irreduciblePh2(i8* nocapture readonly %p) !prof !27 {
+define i32 @_Z11irreduciblePh2(ptr nocapture readonly %p) !prof !27 {
 entry:
-  %0 = load i32, i32* @tracing, align 4
+  %0 = load i32, ptr @tracing, align 4
   %1 = trunc i32 %0 to i8
   %tobool = icmp eq i32 %0, 0
   br label %for.cond1
@@ -213,9 +213,9 @@ exit:                                             ; preds = %sw.bb15, %sw.bb
 
 indirectgoto:                                     ; preds = %if.then18, %if.then
   %idxprom21 = zext i32 %0 to i64
-  %arrayidx22 = getelementptr inbounds [256 x i8*], [256 x i8*]* @targets, i64 0, i64 %idxprom21
-  %target = load i8*, i8** %arrayidx22, align 8
-  indirectbr i8* %target, [label %unknown_op, label %sw.bb, label %TARGET_1, label %TARGET_2], !prof !41, !irr_loop !42
+  %arrayidx22 = getelementptr inbounds [256 x ptr], ptr @targets, i64 0, i64 %idxprom21
+  %target = load ptr, ptr %arrayidx22, align 8
+  indirectbr ptr %target, [label %unknown_op, label %sw.bb, label %TARGET_1, label %TARGET_2], !prof !41, !irr_loop !42
 }
 
 ; CHECK-LABEL: Printing analysis {{.*}} for function '_Z11irreduciblePh2':

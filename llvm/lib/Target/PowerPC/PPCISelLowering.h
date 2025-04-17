@@ -36,14 +36,11 @@ namespace llvm {
 
   namespace PPCISD {
 
-    // When adding a NEW PPCISD node please add it to the correct position in
-    // the enum. The order of elements in this enum matters!
-    // Values that are added after this entry:
-    //     STBRX = ISD::FIRST_TARGET_MEMORY_OPCODE
-    // are considered memory opcodes and are treated differently than entries
-    // that come before it. For example, ADD or MUL should be placed before
-    // the ISD::FIRST_TARGET_MEMORY_OPCODE while a LOAD or STORE should come
-    // after it.
+  // When adding a NEW PPCISD node please add it to the correct position in
+  // the enum. The order of elements in this enum matters!
+  // Values that are added between FIRST_MEMORY_OPCODE and LAST_MEMORY_OPCODE
+  // are considered memory opcodes and are treated differently than other
+  // entries.
   enum NodeType : unsigned {
     // Start the numbering where the builtin ops and target ops leave off.
     FIRST_NUMBER = ISD::BUILTIN_OP_END,
@@ -163,6 +160,12 @@ namespace llvm {
     SRL,
     SRA,
     SHL,
+
+    /// These nodes represent PPC arithmetic operations with carry.
+    ADDC,
+    ADDE,
+    SUBC,
+    SUBE,
 
     /// FNMSUB - Negated multiply-subtract instruction.
     FNMSUB,
@@ -370,10 +373,21 @@ namespace llvm {
     /// G8RC = TLSGD_AIX, TOC_ENTRY, TOC_ENTRY
     /// Op that combines two register copies of TOC entries
     /// (region handle into R3 and variable offset into R4) followed by a
-    /// GET_TLS_ADDR node which will be expanded to a call to __get_tls_addr.
+    /// GET_TLS_ADDR node which will be expanded to a call to .__tls_get_addr.
     /// This node is used in 64-bit mode as well (in which case the result is
     /// G8RC and inputs are X3/X4).
     TLSGD_AIX,
+
+    /// %x3 = GET_TLS_MOD_AIX _$TLSML - For the AIX local-dynamic TLS model,
+    /// produces a call to .__tls_get_mod(_$TLSML\@ml).
+    GET_TLS_MOD_AIX,
+
+    /// [GP|G8]RC = TLSLD_AIX, TOC_ENTRY(module handle)
+    /// Op that requires a single input of the module handle TOC entry in R3,
+    /// and generates a GET_TLS_MOD_AIX node which will be expanded into a call
+    /// to .__tls_get_mod. This node is used in both 32-bit and 64-bit modes.
+    /// The only difference is the register class.
+    TLSLD_AIX,
 
     /// G8RC = ADDIS_TLSLD_HA %x2, Symbol - For the local-dynamic TLS
     /// model, produces an ADDIS8 instruction that adds the GOT base
@@ -476,7 +490,8 @@ namespace llvm {
     XXMFACC,
 
     // Constrained conversion from floating point to int
-    STRICT_FCTIDZ = ISD::FIRST_TARGET_STRICTFP_OPCODE,
+    FIRST_STRICTFP_OPCODE,
+    STRICT_FCTIDZ = FIRST_STRICTFP_OPCODE,
     STRICT_FCTIWZ,
     STRICT_FCTIDUZ,
     STRICT_FCTIWUZ,
@@ -489,6 +504,13 @@ namespace llvm {
 
     /// Constrained floating point add in round-to-zero mode.
     STRICT_FADDRTZ,
+    LAST_STRICTFP_OPCODE = STRICT_FADDRTZ,
+
+    /// SETBC - The ISA 3.1 (P10) SETBC instruction.
+    SETBC,
+
+    /// SETBCR - The ISA 3.1 (P10) SETBCR instruction.
+    SETBCR,
 
     // NOTE: The nodes below may require PC-Rel specific patterns if the
     // address could be PC-Relative. When adding new nodes below, consider
@@ -499,7 +521,8 @@ namespace llvm {
     /// byte-swapping store instruction.  It byte-swaps the low "Type" bits of
     /// the GPRC input, then stores it through Ptr.  Type can be either i16 or
     /// i32.
-    STBRX = ISD::FIRST_TARGET_MEMORY_OPCODE,
+    FIRST_MEMORY_OPCODE,
+    STBRX = FIRST_MEMORY_OPCODE,
 
     /// GPRC, CHAIN = LBRX CHAIN, Ptr, Type - This is a
     /// byte-swapping load instruction.  It loads "Type" bits, byte swaps it,
@@ -590,7 +613,8 @@ namespace llvm {
     /// GPRC = TOC_ENTRY GA, TOC
     /// Loads the entry for GA from the TOC, where the TOC base is given by
     /// the last operand.
-    TOC_ENTRY
+    TOC_ENTRY,
+    LAST_MEMORY_OPCODE = TOC_ENTRY,
   };
 
   } // end namespace PPCISD
@@ -968,10 +992,8 @@ namespace llvm {
                                  StringRef Constraint, MVT VT) const override;
 
     /// getByValTypeAlignment - Return the desired alignment for ByVal aggregate
-    /// function arguments in the caller parameter area.  This is the actual
-    /// alignment, not its logarithm.
-    uint64_t getByValTypeAlignment(Type *Ty,
-                                   const DataLayout &DL) const override;
+    /// function arguments in the caller parameter area.
+    Align getByValTypeAlignment(Type *Ty, const DataLayout &DL) const override;
 
     /// LowerAsmOperandForConstraint - Lower the specified operand into the Ops
     /// vector.  If it is invalid, don't add anything to Ops.
@@ -1126,7 +1148,7 @@ namespace llvm {
     getExceptionSelectorRegister(const Constant *PersonalityFn) const override;
 
     /// Override to support customized stack guard loading.
-    bool useLoadStackGuardNode() const override;
+    bool useLoadStackGuardNode(const Module &M) const override;
     void insertSSPDeclarations(Module &M) const override;
     Value *getSDagStackGuard(const Module &M) const override;
 
@@ -1210,8 +1232,6 @@ namespace llvm {
     bool canReuseLoadAddress(SDValue Op, EVT MemVT, ReuseLoadInfo &RLI,
                              SelectionDAG &DAG,
                              ISD::LoadExtType ET = ISD::NON_EXTLOAD) const;
-    void spliceIntoChain(SDValue ResChain, SDValue NewResChain,
-                         SelectionDAG &DAG) const;
 
     void LowerFP_TO_INTForReuse(SDValue Op, ReuseLoadInfo &RLI,
                                 SelectionDAG &DAG, const SDLoc &dl) const;
@@ -1267,6 +1287,7 @@ namespace llvm {
     SDValue LowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerJumpTable(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerSETCC(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerSSUBO(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerINIT_TRAMPOLINE(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerADJUST_TRAMPOLINE(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerINLINEASM(SDValue Op, SelectionDAG &DAG) const;
@@ -1285,6 +1306,7 @@ namespace llvm {
                            const SDLoc &dl) const;
     SDValue LowerINT_TO_FP(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerGET_ROUNDING(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerSET_ROUNDING(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerSHL_PARTS(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerSRL_PARTS(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerSRA_PARTS(SDValue Op, SelectionDAG &DAG) const;
@@ -1299,6 +1321,8 @@ namespace llvm {
     SDValue LowerBSWAP(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerATOMIC_CMP_SWAP(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerIS_FPCLASS(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerADDSUBO_CARRY(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerADDSUBO(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerToLibCall(const char *LibCallName, SDValue Op,
                            SelectionDAG &DAG) const;
     SDValue lowerLibCallBasedOnType(const char *LibCallFloatName,
@@ -1327,6 +1351,8 @@ namespace llvm {
 
     SDValue LowerVectorLoad(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerVectorStore(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerDMFVectorLoad(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerDMFVectorStore(SDValue Op, SelectionDAG &DAG) const;
 
     SDValue LowerCallResult(SDValue Chain, SDValue InGlue,
                             CallingConv::ID CallConv, bool isVarArg,
@@ -1354,7 +1380,7 @@ namespace llvm {
     bool CanLowerReturn(CallingConv::ID CallConv, MachineFunction &MF,
                         bool isVarArg,
                         const SmallVectorImpl<ISD::OutputArg> &Outs,
-                        LLVMContext &Context) const override;
+                        LLVMContext &Context, const Type *RetTy) const override;
 
     SDValue LowerReturn(SDValue Chain, CallingConv::ID CallConv, bool isVarArg,
                         const SmallVectorImpl<ISD::OutputArg> &Outs,

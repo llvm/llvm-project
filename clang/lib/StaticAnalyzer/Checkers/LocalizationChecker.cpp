@@ -17,7 +17,7 @@
 #include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclObjC.h"
-#include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Lex/Lexer.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
@@ -131,9 +131,7 @@ public:
 
 #define NEW_RECEIVER(receiver)                                                 \
   llvm::DenseMap<Selector, uint8_t> &receiver##M =                             \
-      UIMethods.insert({&Ctx.Idents.get(#receiver),                            \
-                        llvm::DenseMap<Selector, uint8_t>()})                  \
-          .first->second;
+      UIMethods[&Ctx.Idents.get(#receiver)];
 #define ADD_NULLARY_METHOD(receiver, method, argument)                         \
   receiver##M.insert(                                                          \
       {Ctx.Selectors.getNullarySelector(&Ctx.Idents.get(#method)), argument});
@@ -154,11 +152,11 @@ void NonLocalizedStringChecker::initUIMethods(ASTContext &Ctx) const {
   ADD_UNARY_METHOD(UISearchDisplayController, setSearchResultsTitle, 0)
 
   NEW_RECEIVER(UITabBarItem)
-  IdentifierInfo *initWithTitleUITabBarItemTag[] = {
+  const IdentifierInfo *initWithTitleUITabBarItemTag[] = {
       &Ctx.Idents.get("initWithTitle"), &Ctx.Idents.get("image"),
       &Ctx.Idents.get("tag")};
   ADD_METHOD(UITabBarItem, initWithTitleUITabBarItemTag, 3, 0)
-  IdentifierInfo *initWithTitleUITabBarItemImage[] = {
+  const IdentifierInfo *initWithTitleUITabBarItemImage[] = {
       &Ctx.Idents.get("initWithTitle"), &Ctx.Idents.get("image"),
       &Ctx.Idents.get("selectedImage")};
   ADD_METHOD(UITabBarItem, initWithTitleUITabBarItemImage, 3, 0)
@@ -171,7 +169,7 @@ void NonLocalizedStringChecker::initUIMethods(ASTContext &Ctx) const {
   ADD_UNARY_METHOD(NSStatusItem, setToolTip, 0)
 
   NEW_RECEIVER(UITableViewRowAction)
-  IdentifierInfo *rowActionWithStyleUITableViewRowAction[] = {
+  const IdentifierInfo *rowActionWithStyleUITableViewRowAction[] = {
       &Ctx.Idents.get("rowActionWithStyle"), &Ctx.Idents.get("title"),
       &Ctx.Idents.get("handler")};
   ADD_METHOD(UITableViewRowAction, rowActionWithStyleUITableViewRowAction, 3, 1)
@@ -183,19 +181,19 @@ void NonLocalizedStringChecker::initUIMethods(ASTContext &Ctx) const {
   NEW_RECEIVER(NSButton)
   ADD_UNARY_METHOD(NSButton, setTitle, 0)
   ADD_UNARY_METHOD(NSButton, setAlternateTitle, 0)
-  IdentifierInfo *radioButtonWithTitleNSButton[] = {
+  const IdentifierInfo *radioButtonWithTitleNSButton[] = {
       &Ctx.Idents.get("radioButtonWithTitle"), &Ctx.Idents.get("target"),
       &Ctx.Idents.get("action")};
   ADD_METHOD(NSButton, radioButtonWithTitleNSButton, 3, 0)
-  IdentifierInfo *buttonWithTitleNSButtonImage[] = {
+  const IdentifierInfo *buttonWithTitleNSButtonImage[] = {
       &Ctx.Idents.get("buttonWithTitle"), &Ctx.Idents.get("image"),
       &Ctx.Idents.get("target"), &Ctx.Idents.get("action")};
   ADD_METHOD(NSButton, buttonWithTitleNSButtonImage, 4, 0)
-  IdentifierInfo *checkboxWithTitleNSButton[] = {
+  const IdentifierInfo *checkboxWithTitleNSButton[] = {
       &Ctx.Idents.get("checkboxWithTitle"), &Ctx.Idents.get("target"),
       &Ctx.Idents.get("action")};
   ADD_METHOD(NSButton, checkboxWithTitleNSButton, 3, 0)
-  IdentifierInfo *buttonWithTitleNSButtonTarget[] = {
+  const IdentifierInfo *buttonWithTitleNSButtonTarget[] = {
       &Ctx.Idents.get("buttonWithTitle"), &Ctx.Idents.get("target"),
       &Ctx.Idents.get("action")};
   ADD_METHOD(NSButton, buttonWithTitleNSButtonTarget, 3, 0)
@@ -215,8 +213,8 @@ void NonLocalizedStringChecker::initUIMethods(ASTContext &Ctx) const {
   ADD_UNARY_METHOD(NSTabViewItem, setToolTip, 0)
 
   NEW_RECEIVER(NSBrowser)
-  IdentifierInfo *setTitleNSBrowser[] = {&Ctx.Idents.get("setTitle"),
-                                         &Ctx.Idents.get("ofColumn")};
+  const IdentifierInfo *setTitleNSBrowser[] = {&Ctx.Idents.get("setTitle"),
+                                               &Ctx.Idents.get("ofColumn")};
   ADD_METHOD(NSBrowser, setTitleNSBrowser, 2, 0)
 
   NEW_RECEIVER(UIAccessibilityElement)
@@ -225,14 +223,14 @@ void NonLocalizedStringChecker::initUIMethods(ASTContext &Ctx) const {
   ADD_UNARY_METHOD(UIAccessibilityElement, setAccessibilityValue, 0)
 
   NEW_RECEIVER(UIAlertAction)
-  IdentifierInfo *actionWithTitleUIAlertAction[] = {
+  const IdentifierInfo *actionWithTitleUIAlertAction[] = {
       &Ctx.Idents.get("actionWithTitle"), &Ctx.Idents.get("style"),
       &Ctx.Idents.get("handler")};
   ADD_METHOD(UIAlertAction, actionWithTitleUIAlertAction, 3, 0)
 
   NEW_RECEIVER(NSPopUpButton)
   ADD_UNARY_METHOD(NSPopUpButton, addItemWithTitle, 0)
-  IdentifierInfo *insertItemWithTitleNSPopUpButton[] = {
+  const IdentifierInfo *insertItemWithTitleNSPopUpButton[] = {
       &Ctx.Idents.get("insertItemWithTitle"), &Ctx.Idents.get("atIndex")};
   ADD_METHOD(NSPopUpButton, insertItemWithTitleNSPopUpButton, 2, 0)
   ADD_UNARY_METHOD(NSPopUpButton, removeItemWithTitle, 0)
@@ -240,7 +238,7 @@ void NonLocalizedStringChecker::initUIMethods(ASTContext &Ctx) const {
   ADD_UNARY_METHOD(NSPopUpButton, setTitle, 0)
 
   NEW_RECEIVER(NSTableViewRowAction)
-  IdentifierInfo *rowActionWithStyleNSTableViewRowAction[] = {
+  const IdentifierInfo *rowActionWithStyleNSTableViewRowAction[] = {
       &Ctx.Idents.get("rowActionWithStyle"), &Ctx.Idents.get("title"),
       &Ctx.Idents.get("handler")};
   ADD_METHOD(NSTableViewRowAction, rowActionWithStyleNSTableViewRowAction, 3, 1)
@@ -273,10 +271,10 @@ void NonLocalizedStringChecker::initUIMethods(ASTContext &Ctx) const {
   ADD_UNARY_METHOD(NSTableColumn, setHeaderToolTip, 0)
 
   NEW_RECEIVER(NSSegmentedControl)
-  IdentifierInfo *setLabelNSSegmentedControl[] = {
+  const IdentifierInfo *setLabelNSSegmentedControl[] = {
       &Ctx.Idents.get("setLabel"), &Ctx.Idents.get("forSegment")};
   ADD_METHOD(NSSegmentedControl, setLabelNSSegmentedControl, 2, 0)
-  IdentifierInfo *setToolTipNSSegmentedControl[] = {
+  const IdentifierInfo *setToolTipNSSegmentedControl[] = {
       &Ctx.Idents.get("setToolTip"), &Ctx.Idents.get("forSegment")};
   ADD_METHOD(NSSegmentedControl, setToolTipNSSegmentedControl, 2, 0)
 
@@ -301,8 +299,8 @@ void NonLocalizedStringChecker::initUIMethods(ASTContext &Ctx) const {
   ADD_UNARY_METHOD(NSAccessibility, setAccessibilityHelp, 0)
 
   NEW_RECEIVER(NSMatrix)
-  IdentifierInfo *setToolTipNSMatrix[] = {&Ctx.Idents.get("setToolTip"),
-                                          &Ctx.Idents.get("forCell")};
+  const IdentifierInfo *setToolTipNSMatrix[] = {&Ctx.Idents.get("setToolTip"),
+                                                &Ctx.Idents.get("forCell")};
   ADD_METHOD(NSMatrix, setToolTipNSMatrix, 2, 0)
 
   NEW_RECEIVER(NSPrintPanel)
@@ -317,13 +315,13 @@ void NonLocalizedStringChecker::initUIMethods(ASTContext &Ctx) const {
   ADD_UNARY_METHOD(NSSlider, setTitle, 0)
 
   NEW_RECEIVER(UIMenuItem)
-  IdentifierInfo *initWithTitleUIMenuItem[] = {&Ctx.Idents.get("initWithTitle"),
-                                               &Ctx.Idents.get("action")};
+  const IdentifierInfo *initWithTitleUIMenuItem[] = {
+      &Ctx.Idents.get("initWithTitle"), &Ctx.Idents.get("action")};
   ADD_METHOD(UIMenuItem, initWithTitleUIMenuItem, 2, 0)
   ADD_UNARY_METHOD(UIMenuItem, setTitle, 0)
 
   NEW_RECEIVER(UIAlertController)
-  IdentifierInfo *alertControllerWithTitleUIAlertController[] = {
+  const IdentifierInfo *alertControllerWithTitleUIAlertController[] = {
       &Ctx.Idents.get("alertControllerWithTitle"), &Ctx.Idents.get("message"),
       &Ctx.Idents.get("preferredStyle")};
   ADD_METHOD(UIAlertController, alertControllerWithTitleUIAlertController, 3, 1)
@@ -331,19 +329,19 @@ void NonLocalizedStringChecker::initUIMethods(ASTContext &Ctx) const {
   ADD_UNARY_METHOD(UIAlertController, setMessage, 0)
 
   NEW_RECEIVER(UIApplicationShortcutItem)
-  IdentifierInfo *initWithTypeUIApplicationShortcutItemIcon[] = {
+  const IdentifierInfo *initWithTypeUIApplicationShortcutItemIcon[] = {
       &Ctx.Idents.get("initWithType"), &Ctx.Idents.get("localizedTitle"),
       &Ctx.Idents.get("localizedSubtitle"), &Ctx.Idents.get("icon"),
       &Ctx.Idents.get("userInfo")};
   ADD_METHOD(UIApplicationShortcutItem,
              initWithTypeUIApplicationShortcutItemIcon, 5, 1)
-  IdentifierInfo *initWithTypeUIApplicationShortcutItem[] = {
+  const IdentifierInfo *initWithTypeUIApplicationShortcutItem[] = {
       &Ctx.Idents.get("initWithType"), &Ctx.Idents.get("localizedTitle")};
   ADD_METHOD(UIApplicationShortcutItem, initWithTypeUIApplicationShortcutItem,
              2, 1)
 
   NEW_RECEIVER(UIActionSheet)
-  IdentifierInfo *initWithTitleUIActionSheet[] = {
+  const IdentifierInfo *initWithTitleUIActionSheet[] = {
       &Ctx.Idents.get("initWithTitle"), &Ctx.Idents.get("delegate"),
       &Ctx.Idents.get("cancelButtonTitle"),
       &Ctx.Idents.get("destructiveButtonTitle"),
@@ -353,7 +351,7 @@ void NonLocalizedStringChecker::initUIMethods(ASTContext &Ctx) const {
   ADD_UNARY_METHOD(UIActionSheet, setTitle, 0)
 
   NEW_RECEIVER(UIAccessibilityCustomAction)
-  IdentifierInfo *initWithNameUIAccessibilityCustomAction[] = {
+  const IdentifierInfo *initWithNameUIAccessibilityCustomAction[] = {
       &Ctx.Idents.get("initWithName"), &Ctx.Idents.get("target"),
       &Ctx.Idents.get("selector")};
   ADD_METHOD(UIAccessibilityCustomAction,
@@ -382,7 +380,7 @@ void NonLocalizedStringChecker::initUIMethods(ASTContext &Ctx) const {
 
   NEW_RECEIVER(NSAttributedString)
   ADD_UNARY_METHOD(NSAttributedString, initWithString, 0)
-  IdentifierInfo *initWithStringNSAttributedString[] = {
+  const IdentifierInfo *initWithStringNSAttributedString[] = {
       &Ctx.Idents.get("initWithString"), &Ctx.Idents.get("attributes")};
   ADD_METHOD(NSAttributedString, initWithStringNSAttributedString, 2, 0)
 
@@ -390,7 +388,7 @@ void NonLocalizedStringChecker::initUIMethods(ASTContext &Ctx) const {
   ADD_UNARY_METHOD(NSText, setString, 0)
 
   NEW_RECEIVER(UIKeyCommand)
-  IdentifierInfo *keyCommandWithInputUIKeyCommand[] = {
+  const IdentifierInfo *keyCommandWithInputUIKeyCommand[] = {
       &Ctx.Idents.get("keyCommandWithInput"), &Ctx.Idents.get("modifierFlags"),
       &Ctx.Idents.get("action"), &Ctx.Idents.get("discoverabilityTitle")};
   ADD_METHOD(UIKeyCommand, keyCommandWithInputUIKeyCommand, 4, 3)
@@ -400,7 +398,7 @@ void NonLocalizedStringChecker::initUIMethods(ASTContext &Ctx) const {
   ADD_UNARY_METHOD(UILabel, setText, 0)
 
   NEW_RECEIVER(NSAlert)
-  IdentifierInfo *alertWithMessageTextNSAlert[] = {
+  const IdentifierInfo *alertWithMessageTextNSAlert[] = {
       &Ctx.Idents.get("alertWithMessageText"), &Ctx.Idents.get("defaultButton"),
       &Ctx.Idents.get("alternateButton"), &Ctx.Idents.get("otherButton"),
       &Ctx.Idents.get("informativeTextWithFormat")};
@@ -415,13 +413,13 @@ void NonLocalizedStringChecker::initUIMethods(ASTContext &Ctx) const {
   ADD_UNARY_METHOD(UIMutableApplicationShortcutItem, setLocalizedSubtitle, 0)
 
   NEW_RECEIVER(UIButton)
-  IdentifierInfo *setTitleUIButton[] = {&Ctx.Idents.get("setTitle"),
-                                        &Ctx.Idents.get("forState")};
+  const IdentifierInfo *setTitleUIButton[] = {&Ctx.Idents.get("setTitle"),
+                                              &Ctx.Idents.get("forState")};
   ADD_METHOD(UIButton, setTitleUIButton, 2, 0)
 
   NEW_RECEIVER(NSWindow)
   ADD_UNARY_METHOD(NSWindow, setTitle, 0)
-  IdentifierInfo *minFrameWidthWithTitleNSWindow[] = {
+  const IdentifierInfo *minFrameWidthWithTitleNSWindow[] = {
       &Ctx.Idents.get("minFrameWidthWithTitle"), &Ctx.Idents.get("styleMask")};
   ADD_METHOD(NSWindow, minFrameWidthWithTitleNSWindow, 2, 0)
   ADD_UNARY_METHOD(NSWindow, setMiniwindowTitle, 0)
@@ -430,7 +428,7 @@ void NonLocalizedStringChecker::initUIMethods(ASTContext &Ctx) const {
   ADD_UNARY_METHOD(NSPathCell, setPlaceholderString, 0)
 
   NEW_RECEIVER(UIDocumentMenuViewController)
-  IdentifierInfo *addOptionWithTitleUIDocumentMenuViewController[] = {
+  const IdentifierInfo *addOptionWithTitleUIDocumentMenuViewController[] = {
       &Ctx.Idents.get("addOptionWithTitle"), &Ctx.Idents.get("image"),
       &Ctx.Idents.get("order"), &Ctx.Idents.get("handler")};
   ADD_METHOD(UIDocumentMenuViewController,
@@ -442,7 +440,7 @@ void NonLocalizedStringChecker::initUIMethods(ASTContext &Ctx) const {
   ADD_UNARY_METHOD(UINavigationItem, setPrompt, 0)
 
   NEW_RECEIVER(UIAlertView)
-  IdentifierInfo *initWithTitleUIAlertView[] = {
+  const IdentifierInfo *initWithTitleUIAlertView[] = {
       &Ctx.Idents.get("initWithTitle"), &Ctx.Idents.get("message"),
       &Ctx.Idents.get("delegate"), &Ctx.Idents.get("cancelButtonTitle"),
       &Ctx.Idents.get("otherButtonTitles")};
@@ -474,11 +472,11 @@ void NonLocalizedStringChecker::initUIMethods(ASTContext &Ctx) const {
   ADD_UNARY_METHOD(NSProgress, setLocalizedAdditionalDescription, 0)
 
   NEW_RECEIVER(NSSegmentedCell)
-  IdentifierInfo *setLabelNSSegmentedCell[] = {&Ctx.Idents.get("setLabel"),
-                                               &Ctx.Idents.get("forSegment")};
+  const IdentifierInfo *setLabelNSSegmentedCell[] = {
+      &Ctx.Idents.get("setLabel"), &Ctx.Idents.get("forSegment")};
   ADD_METHOD(NSSegmentedCell, setLabelNSSegmentedCell, 2, 0)
-  IdentifierInfo *setToolTipNSSegmentedCell[] = {&Ctx.Idents.get("setToolTip"),
-                                                 &Ctx.Idents.get("forSegment")};
+  const IdentifierInfo *setToolTipNSSegmentedCell[] = {
+      &Ctx.Idents.get("setToolTip"), &Ctx.Idents.get("forSegment")};
   ADD_METHOD(NSSegmentedCell, setToolTipNSSegmentedCell, 2, 0)
 
   NEW_RECEIVER(NSUndoManager)
@@ -487,7 +485,7 @@ void NonLocalizedStringChecker::initUIMethods(ASTContext &Ctx) const {
   ADD_UNARY_METHOD(NSUndoManager, redoMenuTitleForUndoActionName, 0)
 
   NEW_RECEIVER(NSMenuItem)
-  IdentifierInfo *initWithTitleNSMenuItem[] = {
+  const IdentifierInfo *initWithTitleNSMenuItem[] = {
       &Ctx.Idents.get("initWithTitle"), &Ctx.Idents.get("action"),
       &Ctx.Idents.get("keyEquivalent")};
   ADD_METHOD(NSMenuItem, initWithTitleNSMenuItem, 3, 0)
@@ -495,11 +493,11 @@ void NonLocalizedStringChecker::initUIMethods(ASTContext &Ctx) const {
   ADD_UNARY_METHOD(NSMenuItem, setToolTip, 0)
 
   NEW_RECEIVER(NSPopUpButtonCell)
-  IdentifierInfo *initTextCellNSPopUpButtonCell[] = {
+  const IdentifierInfo *initTextCellNSPopUpButtonCell[] = {
       &Ctx.Idents.get("initTextCell"), &Ctx.Idents.get("pullsDown")};
   ADD_METHOD(NSPopUpButtonCell, initTextCellNSPopUpButtonCell, 2, 0)
   ADD_UNARY_METHOD(NSPopUpButtonCell, addItemWithTitle, 0)
-  IdentifierInfo *insertItemWithTitleNSPopUpButtonCell[] = {
+  const IdentifierInfo *insertItemWithTitleNSPopUpButtonCell[] = {
       &Ctx.Idents.get("insertItemWithTitle"), &Ctx.Idents.get("atIndex")};
   ADD_METHOD(NSPopUpButtonCell, insertItemWithTitleNSPopUpButtonCell, 2, 0)
   ADD_UNARY_METHOD(NSPopUpButtonCell, removeItemWithTitle, 0)
@@ -511,11 +509,11 @@ void NonLocalizedStringChecker::initUIMethods(ASTContext &Ctx) const {
 
   NEW_RECEIVER(NSMenu)
   ADD_UNARY_METHOD(NSMenu, initWithTitle, 0)
-  IdentifierInfo *insertItemWithTitleNSMenu[] = {
+  const IdentifierInfo *insertItemWithTitleNSMenu[] = {
       &Ctx.Idents.get("insertItemWithTitle"), &Ctx.Idents.get("action"),
       &Ctx.Idents.get("keyEquivalent"), &Ctx.Idents.get("atIndex")};
   ADD_METHOD(NSMenu, insertItemWithTitleNSMenu, 4, 0)
-  IdentifierInfo *addItemWithTitleNSMenu[] = {
+  const IdentifierInfo *addItemWithTitleNSMenu[] = {
       &Ctx.Idents.get("addItemWithTitle"), &Ctx.Idents.get("action"),
       &Ctx.Idents.get("keyEquivalent")};
   ADD_METHOD(NSMenu, addItemWithTitleNSMenu, 3, 0)
@@ -526,15 +524,15 @@ void NonLocalizedStringChecker::initUIMethods(ASTContext &Ctx) const {
 
   NEW_RECEIVER(NSForm)
   ADD_UNARY_METHOD(NSForm, addEntry, 0)
-  IdentifierInfo *insertEntryNSForm[] = {&Ctx.Idents.get("insertEntry"),
-                                         &Ctx.Idents.get("atIndex")};
+  const IdentifierInfo *insertEntryNSForm[] = {&Ctx.Idents.get("insertEntry"),
+                                               &Ctx.Idents.get("atIndex")};
   ADD_METHOD(NSForm, insertEntryNSForm, 2, 0)
 
   NEW_RECEIVER(NSTextFieldCell)
   ADD_UNARY_METHOD(NSTextFieldCell, setPlaceholderString, 0)
 
   NEW_RECEIVER(NSUserNotificationAction)
-  IdentifierInfo *actionWithIdentifierNSUserNotificationAction[] = {
+  const IdentifierInfo *actionWithIdentifierNSUserNotificationAction[] = {
       &Ctx.Idents.get("actionWithIdentifier"), &Ctx.Idents.get("title")};
   ADD_METHOD(NSUserNotificationAction,
              actionWithIdentifierNSUserNotificationAction, 2, 1)
@@ -544,7 +542,7 @@ void NonLocalizedStringChecker::initUIMethods(ASTContext &Ctx) const {
   ADD_UNARY_METHOD(UITextField, setPlaceholder, 0)
 
   NEW_RECEIVER(UIBarButtonItem)
-  IdentifierInfo *initWithTitleUIBarButtonItem[] = {
+  const IdentifierInfo *initWithTitleUIBarButtonItem[] = {
       &Ctx.Idents.get("initWithTitle"), &Ctx.Idents.get("style"),
       &Ctx.Idents.get("target"), &Ctx.Idents.get("action")};
   ADD_METHOD(UIBarButtonItem, initWithTitleUIBarButtonItem, 4, 0)
@@ -553,16 +551,16 @@ void NonLocalizedStringChecker::initUIMethods(ASTContext &Ctx) const {
   ADD_UNARY_METHOD(UIViewController, setTitle, 0)
 
   NEW_RECEIVER(UISegmentedControl)
-  IdentifierInfo *insertSegmentWithTitleUISegmentedControl[] = {
+  const IdentifierInfo *insertSegmentWithTitleUISegmentedControl[] = {
       &Ctx.Idents.get("insertSegmentWithTitle"), &Ctx.Idents.get("atIndex"),
       &Ctx.Idents.get("animated")};
   ADD_METHOD(UISegmentedControl, insertSegmentWithTitleUISegmentedControl, 3, 0)
-  IdentifierInfo *setTitleUISegmentedControl[] = {
+  const IdentifierInfo *setTitleUISegmentedControl[] = {
       &Ctx.Idents.get("setTitle"), &Ctx.Idents.get("forSegmentAtIndex")};
   ADD_METHOD(UISegmentedControl, setTitleUISegmentedControl, 2, 0)
 
   NEW_RECEIVER(NSAccessibilityCustomRotorItemResult)
-  IdentifierInfo
+  const IdentifierInfo
       *initWithItemLoadingTokenNSAccessibilityCustomRotorItemResult[] = {
           &Ctx.Idents.get("initWithItemLoadingToken"),
           &Ctx.Idents.get("customLabel")};
@@ -571,7 +569,7 @@ void NonLocalizedStringChecker::initUIMethods(ASTContext &Ctx) const {
   ADD_UNARY_METHOD(NSAccessibilityCustomRotorItemResult, setCustomLabel, 0)
 
   NEW_RECEIVER(UIContextualAction)
-  IdentifierInfo *contextualActionWithStyleUIContextualAction[] = {
+  const IdentifierInfo *contextualActionWithStyleUIContextualAction[] = {
       &Ctx.Idents.get("contextualActionWithStyle"), &Ctx.Idents.get("title"),
       &Ctx.Idents.get("handler")};
   ADD_METHOD(UIContextualAction, contextualActionWithStyleUIContextualAction, 3,
@@ -579,7 +577,7 @@ void NonLocalizedStringChecker::initUIMethods(ASTContext &Ctx) const {
   ADD_UNARY_METHOD(UIContextualAction, setTitle, 0)
 
   NEW_RECEIVER(NSAccessibilityCustomRotor)
-  IdentifierInfo *initWithLabelNSAccessibilityCustomRotor[] = {
+  const IdentifierInfo *initWithLabelNSAccessibilityCustomRotor[] = {
       &Ctx.Idents.get("initWithLabel"), &Ctx.Idents.get("itemSearchDelegate")};
   ADD_METHOD(NSAccessibilityCustomRotor,
              initWithLabelNSAccessibilityCustomRotor, 2, 0)
@@ -590,11 +588,11 @@ void NonLocalizedStringChecker::initUIMethods(ASTContext &Ctx) const {
   ADD_UNARY_METHOD(NSWindowTab, setToolTip, 0)
 
   NEW_RECEIVER(NSAccessibilityCustomAction)
-  IdentifierInfo *initWithNameNSAccessibilityCustomAction[] = {
+  const IdentifierInfo *initWithNameNSAccessibilityCustomAction[] = {
       &Ctx.Idents.get("initWithName"), &Ctx.Idents.get("handler")};
   ADD_METHOD(NSAccessibilityCustomAction,
              initWithNameNSAccessibilityCustomAction, 2, 0)
-  IdentifierInfo *initWithNameTargetNSAccessibilityCustomAction[] = {
+  const IdentifierInfo *initWithNameTargetNSAccessibilityCustomAction[] = {
       &Ctx.Idents.get("initWithName"), &Ctx.Idents.get("target"),
       &Ctx.Idents.get("selector")};
   ADD_METHOD(NSAccessibilityCustomAction,
@@ -618,12 +616,12 @@ void NonLocalizedStringChecker::initLocStringsMethods(ASTContext &Ctx) const {
   if (!LSM.empty())
     return;
 
-  IdentifierInfo *LocalizedStringMacro[] = {
+  const IdentifierInfo *LocalizedStringMacro[] = {
       &Ctx.Idents.get("localizedStringForKey"), &Ctx.Idents.get("value"),
       &Ctx.Idents.get("table")};
   LSM_INSERT_SELECTOR("NSBundle", LocalizedStringMacro, 3)
   LSM_INSERT_UNARY("NSDateFormatter", "stringFromDate")
-  IdentifierInfo *LocalizedStringFromDate[] = {
+  const IdentifierInfo *LocalizedStringFromDate[] = {
       &Ctx.Idents.get("localizedStringFromDate"), &Ctx.Idents.get("dateStyle"),
       &Ctx.Idents.get("timeStyle")};
   LSM_INSERT_SELECTOR("NSDateFormatter", LocalizedStringFromDate, 3)
@@ -903,7 +901,7 @@ static inline bool isNSStringType(QualType T, ASTContext &Ctx) {
   if (!Cls)
     return false;
 
-  IdentifierInfo *ClsName = Cls->getIdentifier();
+  const IdentifierInfo *ClsName = Cls->getIdentifier();
 
   // FIXME: Should we walk the chain of classes?
   return ClsName == &Ctx.Idents.get("NSString") ||
@@ -1159,7 +1157,7 @@ void EmptyLocalizationContextChecker::MethodCrawler::VisitObjCMessageExpr(
   }
 
   if (isAnyIdentifier(Result.getKind())) {
-    if (Result.getRawIdentifier().equals("nil")) {
+    if (Result.getRawIdentifier() == "nil") {
       reportEmptyContextError(ME);
       return;
     }
@@ -1191,7 +1189,7 @@ namespace {
 class PluralMisuseChecker : public Checker<check::ASTCodeBody> {
 
   // A helper class, which walks the AST
-  class MethodCrawler : public RecursiveASTVisitor<MethodCrawler> {
+  class MethodCrawler : public DynamicRecursiveASTVisitor {
     BugReporter &BR;
     const CheckerBase *Checker;
     AnalysisDeclContext *AC;
@@ -1209,13 +1207,13 @@ class PluralMisuseChecker : public Checker<check::ASTCodeBody> {
                            AnalysisDeclContext *InAC)
         : BR(InBR), Checker(Checker), AC(InAC) {}
 
-    bool VisitIfStmt(const IfStmt *I);
+    bool VisitIfStmt(IfStmt *I) override;
     bool EndVisitIfStmt(IfStmt *I);
-    bool TraverseIfStmt(IfStmt *x);
-    bool VisitConditionalOperator(const ConditionalOperator *C);
-    bool TraverseConditionalOperator(ConditionalOperator *C);
-    bool VisitCallExpr(const CallExpr *CE);
-    bool VisitObjCMessageExpr(const ObjCMessageExpr *ME);
+    bool TraverseIfStmt(IfStmt *x) override;
+    bool VisitConditionalOperator(ConditionalOperator *C) override;
+    bool TraverseConditionalOperator(ConditionalOperator *C) override;
+    bool VisitCallExpr(CallExpr *CE) override;
+    bool VisitObjCMessageExpr(ObjCMessageExpr *ME) override;
 
   private:
     void reportPluralMisuseError(const Stmt *S) const;
@@ -1274,7 +1272,7 @@ bool PluralMisuseChecker::MethodCrawler::isCheckingPlurality(
 // has been shown to almost always be a function that returns a localized
 // string. Raise a diagnostic when this is in a statement that matches
 // the condition.
-bool PluralMisuseChecker::MethodCrawler::VisitCallExpr(const CallExpr *CE) {
+bool PluralMisuseChecker::MethodCrawler::VisitCallExpr(CallExpr *CE) {
   if (InMatchingStatement) {
     if (const FunctionDecl *FD = CE->getDirectCallee()) {
       std::string NormalizedName =
@@ -1296,7 +1294,7 @@ bool PluralMisuseChecker::MethodCrawler::VisitCallExpr(const CallExpr *CE) {
 // diagnostic when this is in a statement that matches
 // the condition.
 bool PluralMisuseChecker::MethodCrawler::VisitObjCMessageExpr(
-    const ObjCMessageExpr *ME) {
+    ObjCMessageExpr *ME) {
   const ObjCInterfaceDecl *OD = ME->getReceiverInterface();
   if (!OD)
     return true;
@@ -1314,7 +1312,7 @@ bool PluralMisuseChecker::MethodCrawler::VisitObjCMessageExpr(
 
 /// Override TraverseIfStmt so we know when we are done traversing an IfStmt
 bool PluralMisuseChecker::MethodCrawler::TraverseIfStmt(IfStmt *I) {
-  RecursiveASTVisitor<MethodCrawler>::TraverseIfStmt(I);
+  DynamicRecursiveASTVisitor::TraverseIfStmt(I);
   return EndVisitIfStmt(I);
 }
 
@@ -1333,7 +1331,7 @@ bool PluralMisuseChecker::MethodCrawler::EndVisitIfStmt(IfStmt *I) {
   return true;
 }
 
-bool PluralMisuseChecker::MethodCrawler::VisitIfStmt(const IfStmt *I) {
+bool PluralMisuseChecker::MethodCrawler::VisitIfStmt(IfStmt *I) {
   const Expr *Condition = I->getCond();
   if (!Condition)
     return true;
@@ -1352,7 +1350,7 @@ bool PluralMisuseChecker::MethodCrawler::VisitIfStmt(const IfStmt *I) {
 // Preliminary support for conditional operators.
 bool PluralMisuseChecker::MethodCrawler::TraverseConditionalOperator(
     ConditionalOperator *C) {
-  RecursiveASTVisitor<MethodCrawler>::TraverseConditionalOperator(C);
+  DynamicRecursiveASTVisitor::TraverseConditionalOperator(C);
   MatchingStatements.pop_back();
   if (!MatchingStatements.empty()) {
     if (MatchingStatements.back() != nullptr)
@@ -1366,7 +1364,7 @@ bool PluralMisuseChecker::MethodCrawler::TraverseConditionalOperator(
 }
 
 bool PluralMisuseChecker::MethodCrawler::VisitConditionalOperator(
-    const ConditionalOperator *C) {
+    ConditionalOperator *C) {
   const Expr *Condition = C->getCond()->IgnoreParenImpCasts();
   if (isCheckingPlurality(Condition)) {
     MatchingStatements.push_back(C);

@@ -731,7 +731,7 @@ The first check line matches a regex ``%[a-z]+`` and captures it into the
 string variable ``REGISTER``.  The second line verifies that whatever is in
 ``REGISTER`` occurs later in the file after an "``andw``". :program:`FileCheck`
 string substitution blocks are always contained in ``[[ ]]`` pairs, and string
-variable names can be formed with the regex ``[a-zA-Z_][a-zA-Z0-9_]*``.  If a
+variable names can be formed with the regex ``\$[a-zA-Z_][a-zA-Z0-9_]*``.  If a
 colon follows the name, then it is a definition of the variable; otherwise, it
 is a substitution.
 

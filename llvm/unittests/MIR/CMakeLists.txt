@@ -1,5 +1,6 @@
 set(LLVM_LINK_COMPONENTS
   ${LLVM_TARGETS_TO_BUILD}
+  Analysis
   CodeGen
   CodeGenTypes
   Core
@@ -14,7 +15,7 @@ set(LLVM_LINK_COMPONENTS
 
 add_llvm_unittest(MIRTests
   MachineMetadata.cpp
-  PassBuilderCallbacksTest.cpp
+  MachineStableHashTest.cpp
   )
 
 target_link_libraries(MIRTests PRIVATE LLVMTestingSupport)

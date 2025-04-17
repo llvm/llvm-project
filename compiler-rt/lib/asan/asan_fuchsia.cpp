@@ -57,8 +57,6 @@ void AsanCheckDynamicRTPrereqs() {}
 void AsanCheckIncompatibleRT() {}
 void InitializeAsanInterceptors() {}
 
-void *AsanDoesNotSupportStaticLinkage() { return nullptr; }
-
 void InitializePlatformExceptionHandlers() {}
 void AsanOnDeadlySignal(int signo, void *siginfo, void *context) {
   UNIMPLEMENTED();
@@ -123,8 +121,7 @@ static AsanThread *CreateAsanThread(StackTrace *stack, u32 parent_tid,
   // In lieu of AsanThread::Create.
   AsanThread *thread = (AsanThread *)MmapOrDie(AsanThreadMmapSize(), __func__);
 
-  AsanThreadContext::CreateThreadContextArgs args = {thread, stack};
-  u32 tid = asanThreadRegistry().CreateThread(0, detached, parent_tid, &args);
+  u32 tid = asanThreadRegistry().CreateThread(0, detached, parent_tid, thread);
   asanThreadRegistry().SetThreadName(tid, name);
 
   return thread;

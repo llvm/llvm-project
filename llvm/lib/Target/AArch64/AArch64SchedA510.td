@@ -254,7 +254,7 @@ def : InstRW<[WriteIS], (instrs RBITWr, RBITXr)>;
 // Compute pointer authentication code for data address
 // Compute pointer authentication code, using generic key
 // Compute pointer authentication code for instruction address
-def : InstRW<[CortexA510Write<3, CortexA510UnitPAC>], (instregex "^AUT", "^PAC")>;
+def : InstRW<[CortexA510Write<5, CortexA510UnitPAC>], (instregex "^AUT", "^PAC")>;
 
 // Branch and link, register, with pointer authentication
 // Branch, register, with pointer authentication
@@ -394,35 +394,37 @@ def : InstRW<[CortexA510WriteFSqrtHP], (instregex "^.*SQRT.*16$")>;
 def : InstRW<[CortexA510WriteFSqrtSP], (instregex "^.*SQRT.*32$")>;
 def : InstRW<[CortexA510WriteFSqrtDP], (instregex "^.*SQRT.*64$")>;
 
+def : InstRW<[CortexA510WriteFPALU_F3], (instrs FCSELHrrr, FCSELSrrr, FCSELDrrr)>;
+
 // 4.15. Advanced SIMD integer instructions
 // ASIMD absolute diff
 def : InstRW<[CortexA510Write<3, CortexA510UnitVALU>], (instregex "[SU]ABDv(2i32|4i16|8i8)")>;
 def : InstRW<[CortexA510Write<3, CortexA510UnitVALU>], (instregex "[SU]ABDv(16i8|4i32|8i16)")>;
 // ASIMD absolute diff accum
-def : InstRW<[CortexA510Write<8, CortexA510UnitVALU>], (instregex "[SU]ABAL?v")>;
+def : InstRW<[CortexA510Write<6, CortexA510UnitVALU>], (instregex "[SU]ABAL?v")>;
 // ASIMD absolute diff long
 def : InstRW<[CortexA510Write<3, CortexA510UnitVALU>], (instregex "[SU]ABDLv")>;
 // ASIMD arith #1
-def : InstRW<[CortexA510Write<3, CortexA510UnitVALU>], (instregex "(ADD|SUB|NEG)v(1i64|2i32|4i16|8i8)",
-  "[SU]R?HADDv(2i32|4i16|8i8)", "[SU]HSUBv(2i32|4i16|8i8)")>;
-def : InstRW<[CortexA510Write<4, CortexA510UnitVALU>], (instregex "(ADD|SUB|NEG)v(2i64|4i32|8i16|16i8)",
-  "[SU]R?HADDv(8i16|4i32|16i8)", "[SU]HSUBv(8i16|4i32|16i8)")>;
+def : InstRW<[CortexA510Write<3, CortexA510UnitVALU>], (instregex "(ADD|SUB|NEG)v",
+  "[SU]R?HADDv", "[SU]HSUBv")>;
 // ASIMD arith #2
-def : InstRW<[CortexA510Write<4, CortexA510UnitVALU>], (instregex "ABSv(1i64|2i32|4i16|8i8)$",
+def : InstRW<[CortexA510Write<3, CortexA510UnitVALU>], (instregex "ABSv(1i64|2i32|4i16|8i8)$",
   "[SU]ADDLPv(2i32_v1i64|4i16_v2i32|8i8_v4i16)$",
-  "([SU]QADD|[SU]QSUB|SQNEG|SUQADD|USQADD)v(1i16|1i32|1i64|1i8|2i32|4i16|8i8)$",
   "ADDPv(2i32|4i16|8i8)$")>;
-def : InstRW<[CortexA510Write<4, CortexA510UnitVALU>], (instregex "ABSv(2i64|4i32|8i16|16i8)$",
+def : InstRW<[CortexA510Write<4, CortexA510UnitVALU>], (instregex "([SU]QADD|[SU]QSUB|SQNEG|SUQADD|USQADD)v(1i16|1i32|1i64|1i8|2i32|4i16|8i8)$")>;
+def : InstRW<[CortexA510Write<3, CortexA510UnitVALU>], (instregex "ABSv(2i64|4i32|8i16|16i8)$",
   "[SU]ADDLPv(16i8_v8i16|4i32_v2i64|8i16_v4i32)$",
-  "([SU]QADD|[SU]QSUB|SQNEG|SUQADD|USQADD)v(16i8|2i64|4i32|8i16)$",
   "ADDPv(16i8|2i64|4i32|8i16)$")>;
+def : InstRW<[CortexA510Write<4, CortexA510UnitVALU>], (instregex "([SU]QADD|[SU]QSUB|SQNEG|SUQADD|USQADD)v(16i8|2i64|4i32|8i16)$")>;
 // ASIMD arith #3
-def : InstRW<[CortexA510Write<4, CortexA510UnitVALU>], (instregex  "SADDLv", "UADDLv", "SADDWv",
-  "UADDWv", "SSUBLv", "USUBLv", "SSUBWv", "USUBWv", "ADDHNv", "SUBHNv")>;
+def : InstRW<[CortexA510Write<3, CortexA510UnitVALU>], (instregex  "SADDLv", "UADDLv", "SADDWv",
+  "UADDWv", "SSUBLv", "USUBLv", "SSUBWv", "USUBWv")>;
+def : InstRW<[CortexA510Write<4, CortexA510UnitVALU>], (instregex  "ADDHNv", "SUBHNv")>;
 // ASIMD arith #5
-def : InstRW<[CortexA510Write<4, CortexA510UnitVALU>], (instregex "RADDHNv", "RSUBHNv")>;
+def : InstRW<[CortexA510Write<8, CortexA510UnitVALU>], (instregex "RADDHNv", "RSUBHNv")>;
 // ASIMD arith, reduce
-def : InstRW<[CortexA510Write<4, CortexA510UnitVALU>], (instregex  "ADDVv", "SADDLVv", "UADDLVv")>;
+def : InstRW<[CortexA510Write<3, CortexA510UnitVALU>], (instregex  "ADDVv")>;
+def : InstRW<[CortexA510Write<4, CortexA510UnitVALU>], (instregex  "SADDLVv", "UADDLVv")>;
 // ASIMD compare #1
 def : InstRW<[CortexA510Write<3, CortexA510UnitVALU>], (instregex "CM(EQ|GE|GT|HI|HS|LE|LT)v(1i64|2i32|4i16|8i8)")>;
 def : InstRW<[CortexA510Write<3, CortexA510UnitVALU>], (instregex "CM(EQ|GE|GT|HI|HS|LE|LT)v(2i64|4i32|8i16|16i8)")>;
@@ -435,8 +437,8 @@ def : InstRW<[CortexA510Write<3, CortexA510UnitVALU>], (instregex "(AND|EOR|NOT|
 def : InstRW<[CortexA510Write<3, CortexA510UnitVALU>], (instregex "(AND|EOR|NOT|ORN)v16i8",
   "(ORR|BIC)v(16i8|4i32|8i16)$", "MVNIv(4i32|4s|8i16)")>;
 // ASIMD max/min, basic
-def : InstRW<[CortexA510Write<4, CortexA510UnitVALU>], (instregex "[SU](MIN|MAX)P?v(2i32|4i16|8i8)")>;
-def : InstRW<[CortexA510Write<4, CortexA510UnitVALU>], (instregex "[SU](MIN|MAX)P?v(16i8|4i132|8i16)")>;
+def : InstRW<[CortexA510Write<3, CortexA510UnitVALU>], (instregex "[SU](MIN|MAX)P?v(2i32|4i16|8i8)")>;
+def : InstRW<[CortexA510Write<3, CortexA510UnitVALU>], (instregex "[SU](MIN|MAX)P?v(16i8|4i132|8i16)")>;
 // SIMD max/min, reduce
 def : InstRW<[CortexA510Write<4, CortexA510UnitVALU>], (instregex "[SU](MAX|MIN)Vv")>;
 // ASIMD multiply, by element
@@ -465,12 +467,12 @@ def : InstRW<[CortexA510Write<4, CortexA510UnitVALU>], (instregex "[SU]MULLv", "
 // ASIMD polynomial (8x8) multiply long
 def : InstRW<[CortexA510Write<4, CortexA510UnitVALU>], (instrs PMULLv8i8, PMULLv16i8)>;
 // ASIMD pairwise add and accumulate
-def : InstRW<[CortexA510MCWrite<8, 2, CortexA510UnitVALU>], (instregex "[SU]ADALPv")>;
+def : InstRW<[CortexA510MCWrite<7, 2, CortexA510UnitVALU>], (instregex "[SU]ADALPv")>;
 // ASIMD shift accumulate
-def : InstRW<[CortexA510MCWrite<8, 2, CortexA510UnitVALU>], (instregex "[SU]SRA(d|v2i32|v4i16|v8i8)")>;
-def : InstRW<[CortexA510MCWrite<8, 2, CortexA510UnitVALU>], (instregex "[SU]SRAv(16i8|2i64|4i32|8i16)")>;
+def : InstRW<[CortexA510Write<3, CortexA510UnitVALU>], (instregex "[SU]SRA(d|v2i32|v4i16|v8i8)")>;
+def : InstRW<[CortexA510Write<3, CortexA510UnitVALU>], (instregex "[SU]SRAv(16i8|2i64|4i32|8i16)")>;
 // ASIMD shift accumulate #2
-def : InstRW<[CortexA510MCWrite<8, 2, CortexA510UnitVALU>], (instregex "[SU]RSRA[vd]")>;
+def : InstRW<[CortexA510MCWrite<7, 2, CortexA510UnitVALU>], (instregex "[SU]RSRA[vd]")>;
 // ASIMD shift by immed
 def : InstRW<[CortexA510Write<3, CortexA510UnitVALU>], (instregex "SHLd$", "SHLv",
   "SLId$", "SRId$", "[SU]SHR[vd]", "SHRNv")>;
@@ -502,7 +504,7 @@ def : InstRW<[CortexA510Write<4, CortexA510UnitVALU>], (instregex "[SU]QRSHLv(2i
 def : InstRW<[CortexA510Write<3, CortexA510UnitVALU>], (instregex "^AES[DE]rr$", "^AESI?MCrr")>;
 
 // Crypto polynomial (64x64) multiply long
-def : InstRW<[CortexA510MCWrite<8, 0, CortexA510UnitVMC>], (instrs PMULLv1i64, PMULLv2i64)>;
+def : InstRW<[CortexA510MCWrite<4, 0, CortexA510UnitVMC>], (instrs PMULLv1i64, PMULLv2i64)>;
 
 // Crypto SHA1 hash acceleration op
 // Crypto SHA1 schedule acceleration ops
@@ -510,25 +512,26 @@ def : InstRW<[CortexA510Write<3, CortexA510UnitVALU>], (instregex "^SHA1(H|SU0|S
 
 // Crypto SHA1 hash acceleration ops
 // Crypto SHA256 hash acceleration ops
-def : InstRW<[CortexA510MCWrite<8, 0, CortexA510UnitVMC>], (instregex "^SHA1[CMP]", "^SHA256H2?")>;
+def : InstRW<[CortexA510MCWrite<4, 0, CortexA510UnitVMC>], (instregex "^SHA1[CMP]", "^SHA256H2?")>;
 
 // Crypto SHA256 schedule acceleration ops
-def : InstRW<[CortexA510MCWrite<8, 0, CortexA510UnitVMC>], (instregex "^SHA256SU[01]")>;
+def : InstRW<[CortexA510MCWrite<4, 0, CortexA510UnitVMC>], (instregex "^SHA256SU[01]")>;
 
 // Crypto SHA512 hash acceleration ops
-def : InstRW<[CortexA510MCWrite<8, 0, CortexA510UnitVMC>], (instregex "^SHA512(H|H2|SU0|SU1)")>;
+def : InstRW<[CortexA510MCWrite<9, 0, CortexA510UnitVMC>], (instregex "^SHA512(H|H2|SU0|SU1)")>;
 
 // Crypto SHA3 ops
-def : InstRW<[CortexA510Write<3, CortexA510UnitVALU>], (instrs BCAX, EOR3, XAR)>;
-def : InstRW<[CortexA510MCWrite<8, 0, CortexA510UnitVMC>], (instrs RAX1)>;
+def : InstRW<[CortexA510Write<3, CortexA510UnitVALU>], (instrs BCAX, EOR3)>;
+def : InstRW<[CortexA510Write<4, CortexA510UnitVALU>], (instrs XAR)>;
+def : InstRW<[CortexA510MCWrite<9, 0, CortexA510UnitVMC>], (instrs RAX1)>;
 
 
 // Crypto SM3 ops
-def : InstRW<[CortexA510MCWrite<8, 0, CortexA510UnitVMC>], (instregex "^SM3PARTW[12]$", "^SM3SS1$",
+def : InstRW<[CortexA510MCWrite<9, 0, CortexA510UnitVMC>], (instregex "^SM3PARTW[12]$", "^SM3SS1$",
                                                             "^SM3TT[12][AB]$")>;
 
 // Crypto SM4 ops
-def : InstRW<[CortexA510MCWrite<8, 0, CortexA510UnitVMC>], (instrs SM4E, SM4ENCKEY)>;
+def : InstRW<[CortexA510MCWrite<9, 0, CortexA510UnitVMC>], (instrs SM4E, SM4ENCKEY)>;
 
 // CRC
 // -----------------------------------------------------------------------------
@@ -538,25 +541,25 @@ def : InstRW<[CortexA510MCWrite<2, 0, CortexA510UnitMAC>], (instregex "^CRC32")>
 // SVE Predicate instructions
 
 // Loop control, based on predicate
-def : InstRW<[CortexA510Write<6, CortexA510UnitVALU0>], (instrs BRKA_PPmP, BRKA_PPzP,
+def : InstRW<[CortexA510Write<2, CortexA510UnitVALU0>], (instrs BRKA_PPmP, BRKA_PPzP,
                                                   BRKB_PPmP, BRKB_PPzP)>;
 
 // Loop control, based on predicate and flag setting
-def : InstRW<[CortexA510Write<6, CortexA510UnitVALU0>], (instrs BRKAS_PPzP, BRKBS_PPzP)>;
+def : InstRW<[CortexA510Write<2, CortexA510UnitVALU0>], (instrs BRKAS_PPzP, BRKBS_PPzP)>;
 
 // Loop control, propagating
-def : InstRW<[CortexA510Write<6, CortexA510UnitVALU0>], (instrs BRKN_PPzP, BRKPA_PPzPP, BRKPB_PPzPP)>;
+def : InstRW<[CortexA510Write<2, CortexA510UnitVALU0>], (instrs BRKN_PPzP, BRKPA_PPzPP, BRKPB_PPzPP)>;
 
 // Loop control, propagating and flag setting
-def : InstRW<[CortexA510Write<6, CortexA510UnitVALU0>], (instrs BRKNS_PPzP)>;
-def : InstRW<[CortexA510Write<6, CortexA510UnitVALU0>], (instrs BRKPAS_PPzPP, BRKPBS_PPzPP)>;
+def : InstRW<[CortexA510Write<2, CortexA510UnitVALU0>], (instrs BRKNS_PPzP)>;
+def : InstRW<[CortexA510Write<4, CortexA510UnitVALU0>], (instrs BRKPAS_PPzPP, BRKPBS_PPzPP)>;
 
 
 // Loop control, based on GPR
-def : InstRW<[CortexA510Write<6, CortexA510UnitVALU0>],
+def : InstRW<[CortexA510Write<2, CortexA510UnitVALU0>],
              (instregex "^WHILE(GE|GT|HI|HS|LE|LO|LS|LT)_P(WW|XX)_[BHSD]")>;
 
-def : InstRW<[CortexA510Write<6, CortexA510UnitVALU0>], (instregex "^WHILE(RW|WR)_PXX_[BHSD]")>;
+def : InstRW<[CortexA510Write<2, CortexA510UnitVALU0>], (instregex "^WHILE(RW|WR)_PXX_[BHSD]")>;
 
 // Loop terminate
 def : InstRW<[CortexA510Write<1, CortexA510UnitALU>], (instregex "^CTERM(EQ|NE)_(WW|XX)")>;
@@ -567,20 +570,20 @@ def : InstRW<[CortexA510Write<1, CortexA510UnitALU>], (instrs ADDPL_XXI, ADDVL_X
 def : InstRW<[CortexA510Write<1, CortexA510UnitALU>],
              (instregex "^CNT[BHWD]_XPiI")>;
 
-def : InstRW<[CortexA510Write<1, CortexA510UnitALU>],
+def : InstRW<[CortexA510Write<3, CortexA510UnitALU>],
              (instregex "^(INC|DEC)[BHWD]_XPiI")>;
 
-def : InstRW<[CortexA510Write<1, CortexA510UnitALU>],
+def : InstRW<[CortexA510Write<4, CortexA510UnitALU>],
              (instregex "^(SQINC|SQDEC|UQINC|UQDEC)[BHWD]_[XW]Pi(Wd)?I")>;
 
 // Predicate counting scalar, active predicate
-def : InstRW<[CortexA510Write<6, CortexA510UnitVALU0>],
+def : InstRW<[CortexA510Write<4, CortexA510UnitVALU0>],
              (instregex "^CNTP_XPP_[BHSD]")>;
 
-def : InstRW<[CortexA510Write<6, CortexA510UnitVALU0>],
+def : InstRW<[CortexA510Write<4, CortexA510UnitVALU0>],
              (instregex "^(DEC|INC)P_XP_[BHSD]")>;
 
-def : InstRW<[CortexA510Write<8, CortexA510UnitVALU0>],
+def : InstRW<[CortexA510Write<9, CortexA510UnitVALU0>],
              (instregex "^(SQDEC|SQINC|UQDEC|UQINC)P_XP_[BHSD]",
                         "^(UQDEC|UQINC)P_WP_[BHSD]",
                         "^(SQDEC|SQINC|UQDEC|UQINC)P_XPWd_[BHSD]")>;
@@ -591,39 +594,39 @@ def : InstRW<[CortexA510Write<4, CortexA510UnitVALU>],
              (instregex "^(DEC|INC|SQDEC|SQINC|UQDEC|UQINC)P_ZP_[HSD]")>;
 
 // Predicate logical
-def : InstRW<[CortexA510Write<6, CortexA510UnitVALU0>],
+def : InstRW<[CortexA510Write<2, CortexA510UnitVALU0>],
              (instregex "^(AND|BIC|EOR|NAND|NOR|ORN|ORR)_PPzPP")>;
 
 // Predicate logical, flag setting
-def : InstRW<[CortexA510Write<6, CortexA510UnitVALU0>],
+def : InstRW<[CortexA510Write<2, CortexA510UnitVALU0>],
              (instregex "^(ANDS|BICS|EORS|NANDS|NORS|ORNS|ORRS)_PPzPP")>;
 
 // Predicate reverse
-def : InstRW<[CortexA510Write<6, CortexA510UnitVALU0>], (instregex "^REV_PP_[BHSD]")>;
+def : InstRW<[CortexA510Write<2, CortexA510UnitVALU0>], (instregex "^REV_PP_[BHSD]")>;
 
 // Predicate select
-def : InstRW<[CortexA510Write<6, CortexA510UnitVALU0>], (instrs SEL_PPPP)>;
+def : InstRW<[CortexA510Write<2, CortexA510UnitVALU0>], (instrs SEL_PPPP)>;
 
 // Predicate set
-def : InstRW<[CortexA510Write<6, CortexA510UnitVALU0>], (instregex "^PFALSE", "^PTRUE_[BHSD]")>;
+def : InstRW<[CortexA510Write<2, CortexA510UnitVALU0>], (instregex "^PFALSE", "^PTRUE_[BHSD]")>;
 
 // Predicate set/initialize, set flags
-def : InstRW<[CortexA510Write<6, CortexA510UnitVALU0>], (instregex "^PTRUES_[BHSD]")>;
+def : InstRW<[CortexA510Write<2, CortexA510UnitVALU0>], (instregex "^PTRUES_[BHSD]")>;
 
 // Predicate find first/next
-def : InstRW<[CortexA510Write<6, CortexA510UnitVALU0>], (instregex "^PFIRST_B", "^PNEXT_[BHSD]")>;
+def : InstRW<[CortexA510Write<2, CortexA510UnitVALU0>], (instregex "^PFIRST_B", "^PNEXT_[BHSD]")>;
 
 // Predicate test
-def : InstRW<[CortexA510Write<6, CortexA510UnitVALU0>], (instrs PTEST_PP)>;
+def : InstRW<[CortexA510Write<2, CortexA510UnitVALU0>], (instrs PTEST_PP)>;
 
 // Predicate transpose
-def : InstRW<[CortexA510Write<6, CortexA510UnitVALU0>], (instregex "^TRN[12]_PPP_[BHSDQ]")>;
+def : InstRW<[CortexA510Write<2, CortexA510UnitVALU0>], (instregex "^TRN[12]_PPP_[BHSDQ]")>;
 
 // Predicate unpack and widen
-def : InstRW<[CortexA510Write<6, CortexA510UnitVALU0>], (instrs PUNPKHI_PP, PUNPKLO_PP)>;
+def : InstRW<[CortexA510Write<2, CortexA510UnitVALU0>], (instrs PUNPKHI_PP, PUNPKLO_PP)>;
 
 // Predicate zip/unzip
-def : InstRW<[CortexA510Write<6, CortexA510UnitVALU0>], (instregex "^(ZIP|UZP)[12]_PPP_[BHSDQ]")>;
+def : InstRW<[CortexA510Write<2, CortexA510UnitVALU0>], (instregex "^(ZIP|UZP)[12]_PPP_[BHSDQ]")>;
 
 
 // SVE integer instructions
@@ -632,10 +635,10 @@ def : InstRW<[CortexA510Write<6, CortexA510UnitVALU0>], (instregex "^(ZIP|UZP)[1
 def : InstRW<[CortexA510Write<3, CortexA510UnitVALU>], (instregex "^[SU]ABD_(ZPmZ|ZPZZ)_[BHSD]")>;
 
 // Arithmetic, absolute diff accum
-def : InstRW<[CortexA510MCWrite<8, 2, CortexA510UnitVALU>], (instregex "^[SU]ABA_ZZZ_[BHSD]")>;
+def : InstRW<[CortexA510MCWrite<6, 2, CortexA510UnitVALU>], (instregex "^[SU]ABA_ZZZ_[BHSD]")>;
 
 // Arithmetic, absolute diff accum long
-def : InstRW<[CortexA510MCWrite<8, 2, CortexA510UnitVALU>], (instregex "^[SU]ABAL[TB]_ZZZ_[HSD]")>;
+def : InstRW<[CortexA510MCWrite<6, 2, CortexA510UnitVALU>], (instregex "^[SU]ABAL[TB]_ZZZ_[HSD]")>;
 
 // Arithmetic, absolute diff long
 def : InstRW<[CortexA510Write<3, CortexA510UnitVALU>], (instregex "^[SU]ABDL[TB]_ZZZ_[HSD]")>;
@@ -649,20 +652,22 @@ def : InstRW<[CortexA510Write<3, CortexA510UnitVALU>],
                         "^(ADD|SUB|SUBR)_ZI_[BHSD]",
                         "^ADR_[SU]XTW_ZZZ_D_[0123]",
                         "^ADR_LSL_ZZZ_[SD]_[0123]",
-                        "^[SU](ADD|SUB)[LW][BT]_ZZZ_[HSD]",
+                        "^[SU]H(ADD|SUB|SUBR)_ZPmZ_[BHSD]")>;
+def : InstRW<[CortexA510Write<4, CortexA510UnitVALU>],
+             (instregex "^[SU](ADD|SUB)[LW][BT]_ZZZ_[HSD]",
                         "^SADDLBT_ZZZ_[HSD]",
-                        "^[SU]H(ADD|SUB|SUBR)_ZPmZ_[BHSD]",
                         "^SSUBL(BT|TB)_ZZZ_[HSD]")>;
 
 // Arithmetic, complex
 def : InstRW<[CortexA510Write<4, CortexA510UnitVALU>],
-             (instregex "^R?(ADD|SUB)HN[BT]_ZZZ_[BHS]",
-                        "^SQ(ABS|NEG)_ZPmZ_[BHSD]",
+             (instregex "^SQ(ABS|NEG)_ZPmZ_[BHSD]",
                         "^SQ(ADD|SUB|SUBR)_ZPmZ_?[BHSD]",
                         "^[SU]Q(ADD|SUB)_ZZZ_[BHSD]",
                         "^[SU]Q(ADD|SUB)_ZI_[BHSD]",
                         "^(SRH|SUQ|UQ|USQ|URH)ADD_ZPmZ_[BHSD]",
                         "^(UQSUB|UQSUBR)_ZPmZ_[BHSD]")>;
+def : InstRW<[CortexA510Write<8, CortexA510UnitVALU>],
+             (instregex "^R?(ADD|SUB)HN[BT]_ZZZ_[BHS]")>;
 
 // Arithmetic, large integer
 def : InstRW<[CortexA510Write<4, CortexA510UnitVALU>], (instregex "^(AD|SB)CL[BT]_ZZZ_[SD]")>;
@@ -733,14 +738,14 @@ def : InstRW<[CortexA510Write<3, CortexA510UnitVALU>], (instregex "^(BSL|BSL1N|B
 
 // Count/reverse bits
 def : InstRW<[CortexA510Write<3, CortexA510UnitVALU>], (instregex "^(CLS|CLZ|RBIT)_ZPmZ_[BHSD]")>;
-def : InstRW<[CortexA510Write<4, CortexA510UnitVALU>], (instregex "^CNT_ZPmZ_[BH]")>;
+def : InstRW<[CortexA510Write<3, CortexA510UnitVALU>], (instregex "^CNT_ZPmZ_[BH]")>;
 def : InstRW<[CortexA510Write<8, CortexA510UnitVALU>], (instregex "^CNT_ZPmZ_S")>;
 def : InstRW<[CortexA510Write<12, CortexA510UnitVALU>], (instregex "^CNT_ZPmZ_D")>;
 // Broadcast logical bitmask immediate to vector
 def : InstRW<[CortexA510Write<4, CortexA510UnitVALU>], (instrs DUPM_ZI)>;
 
 // Compare and set flags
-def : InstRW<[CortexA510Write<3, CortexA510UnitVALU>],
+def : InstRW<[CortexA510Write<4, CortexA510UnitVALU>],
              (instregex "^CMP(EQ|GE|GT|HI|HS|LE|LO|LS|LT|NE)_PPzZ[IZ]_[BHSD]",
                         "^CMP(EQ|GE|GT|HI|HS|LE|LO|LS|LT|NE)_WIDE_PPzZZ_[BHS]")>;
 
@@ -937,12 +942,14 @@ def : InstRW<[CortexA510Write<4, CortexA510UnitVMAC>], (instregex "^SQRDMULH_ZZZ
 // Multiply/multiply long, (8x8) polynomial
 def : InstRW<[CortexA510Write<4, CortexA510UnitVALU>], (instregex "^PMUL_ZZZ_B")>;
 
-def : InstRW<[CortexA510Write<6, CortexA510UnitVMC>], (instregex "^PMULL[BT]_ZZZ_[HDQ]")>;
+def : InstRW<[CortexA510Write<9, CortexA510UnitVMC>], (instregex "^PMULL[BT]_ZZZ_[HDQ]")>;
 
 
 // Predicate counting vector
+def : InstRW<[CortexA510Write<3, CortexA510UnitVALU>],
+             (instregex "^(DEC|INC)[HWD]_ZPiI")>;
 def : InstRW<[CortexA510Write<4, CortexA510UnitVALU>],
-             (instregex "^(DEC|INC|SQDEC|SQINC|UQDEC|UQINC)[HWD]_ZPiI")>;
+             (instregex "^(SQDEC|SQINC|UQDEC|UQINC)[HWD]_ZPiI")>;
 
 // Reciprocal estimate
 def : InstRW<[CortexA510Write<4, CortexA510UnitVMAC>], (instregex "^URECPE_ZPmZ_S", "^URSQRTE_ZPmZ_S")>;
@@ -963,7 +970,7 @@ def : InstRW<[CortexA510Write<4, CortexA510UnitVALU0>], (instregex "^[SU](ADD|MA
 def : InstRW<[CortexA510Write<4, CortexA510UnitVALU0>], (instregex "^(ANDV|EORV|ORV)_VPZ_[BHSD]")>;
 
 // Reverse, vector
-def : InstRW<[CortexA510Write<4, CortexA510UnitVALU>], (instregex "^REV_ZZ_[BHSD]",
+def : InstRW<[CortexA510Write<3, CortexA510UnitVALU>], (instregex "^REV_ZZ_[BHSD]",
                                            "^REVB_ZPmZ_[HSD]",
                                            "^REVH_ZPmZ_[SD]",
                                            "^REVW_ZPmZ_D")>;
@@ -978,13 +985,13 @@ def : InstRW<[CortexA510Write<4, CortexA510UnitVALU>], (instregex "^TBL_ZZZZ?_[B
 def : InstRW<[CortexA510Write<4, CortexA510UnitVALU>], (instregex "^TBX_ZZZ_[BHSD]")>;
 
 // Transpose, vector form
-def : InstRW<[CortexA510Write<4, CortexA510UnitVALU>], (instregex "^TRN[12]_ZZZ_[BHSDQ]")>;
+def : InstRW<[CortexA510Write<3, CortexA510UnitVALU>], (instregex "^TRN[12]_ZZZ_[BHSDQ]")>;
 
 // Unpack and extend
 def : InstRW<[CortexA510Write<4, CortexA510UnitVALU>], (instregex "^[SU]UNPK(HI|LO)_ZZ_[HSD]")>;
 
 // Zip/unzip
-def : InstRW<[CortexA510Write<4, CortexA510UnitVALU>], (instregex "^(UZP|ZIP)[12]_ZZZ_[BHSDQ]")>;
+def : InstRW<[CortexA510Write<3, CortexA510UnitVALU>], (instregex "^(UZP|ZIP)[12]_ZZZ_[BHSDQ]")>;
 
 // SVE floating-point instructions
 // -----------------------------------------------------------------------------
@@ -1140,7 +1147,7 @@ def : InstRW<[CortexA510Write<4, CortexA510UnitVMAC>], (instregex "^FTMAD_ZZI_[H
 
 // Floating point trigonometric, miscellaneous
 def : InstRW<[CortexA510Write<4, CortexA510UnitVMAC>], (instregex "^FTSMUL_ZZZ_[HSD]")>;
-def : InstRW<[CortexA510Write<4, CortexA510UnitVALU>], (instregex "^FTSSEL_ZZZ_[HSD]")>;
+def : InstRW<[CortexA510Write<3, CortexA510UnitVALU>], (instregex "^FTSSEL_ZZZ_[HSD]")>;
 
 
 // SVE BFloat16 (BF16) instructions
@@ -1196,24 +1203,24 @@ def : InstRW<[CortexA510Write<3, CortexA510UnitLdSt>], (instregex "^LDNT1[BHWD]_
 def : InstRW<[CortexA510Write<3, CortexA510UnitLdSt>], (instregex "^LDNT1[BHWD]_ZRR$")>;
 
 // Non temporal gather load, vector + scalar 32-bit element size
-def : InstRW<[CortexA510MCWrite<9, 9, CortexA510UnitLdSt>], (instregex "^LDNT1[BHW]_ZZR_S_REAL$",
-                                              "^LDNT1S[BH]_ZZR_S_REAL$")>;
+def : InstRW<[CortexA510MCWrite<9, 9, CortexA510UnitLdSt>], (instregex "^LDNT1[BHW]_ZZR_S$",
+                                              "^LDNT1S[BH]_ZZR_S$")>;
 
 // Non temporal gather load, vector + scalar 64-bit element size
-def : InstRW<[CortexA510MCWrite<7, 7, CortexA510UnitLdSt>], (instregex "^LDNT1S?[BHW]_ZZR_D_REAL$")>;
-def : InstRW<[CortexA510MCWrite<7, 7, CortexA510UnitLdSt>], (instrs LDNT1D_ZZR_D_REAL)>;
+def : InstRW<[CortexA510MCWrite<7, 7, CortexA510UnitLdSt>], (instregex "^LDNT1S?[BHW]_ZZR_D$")>;
+def : InstRW<[CortexA510MCWrite<7, 7, CortexA510UnitLdSt>], (instrs LDNT1D_ZZR_D)>;
 
 // Contiguous first faulting load, scalar + scalar
-def : InstRW<[CortexA510Write<3, CortexA510UnitLd>], (instregex "^LDFF1[BHWD]_REAL$",
-                                              "^LDFF1S?B_[HSD]_REAL$",
-                                              "^LDFF1S?H_[SD]_REAL$",
-                                              "^LDFF1S?W_D_REAL$")>;
+def : InstRW<[CortexA510Write<3, CortexA510UnitLd>], (instregex "^LDFF1[BHWD]$",
+                                              "^LDFF1S?B_[HSD]$",
+                                              "^LDFF1S?H_[SD]$",
+                                              "^LDFF1S?W_D$")>;
 
 // Contiguous non faulting load, scalar + imm
-def : InstRW<[CortexA510Write<3, CortexA510UnitLd>], (instregex "^LDNF1[BHWD]_IMM_REAL$",
-                                           "^LDNF1S?B_[HSD]_IMM_REAL$",
-                                           "^LDNF1S?H_[SD]_IMM_REAL$",
-                                           "^LDNF1S?W_D_IMM_REAL$")>;
+def : InstRW<[CortexA510Write<3, CortexA510UnitLd>], (instregex "^LDNF1[BHWD]_IMM$",
+                                           "^LDNF1S?B_[HSD]_IMM$",
+                                           "^LDNF1S?H_[SD]_IMM$",
+                                           "^LDNF1S?W_D_IMM$")>;
 
 // Contiguous Load two structures to two vectors, scalar + imm
 def : InstRW<[CortexA510MCWrite<3, 1, CortexA510UnitLdSt>], (instregex "^LD2[BHWD]_IMM$")>;
@@ -1234,28 +1241,28 @@ def : InstRW<[CortexA510MCWrite<5, 3, CortexA510UnitLdSt>], (instregex "^LD4[BHW
 def : InstRW<[CortexA510MCWrite<5, 3, CortexA510UnitLdSt>], (instregex "^LD4[BHWD]$")>;
 
 // Gather load, vector + imm, 32-bit element size
-def : InstRW<[CortexA510MCWrite<9, 9, CortexA510UnitLdSt>], (instregex "^GLD(FF)?1S?[BH]_S_IMM_REAL$",
-                                              "^GLD(FF)?1W_IMM_REAL$")>;
+def : InstRW<[CortexA510MCWrite<9, 9, CortexA510UnitLdSt>], (instregex "^GLD(FF)?1S?[BH]_S_IMM$",
+                                              "^GLD(FF)?1W_IMM$")>;
 
 // Gather load, vector + imm, 64-bit element size
-def : InstRW<[CortexA510MCWrite<7, 7, CortexA510UnitLdSt>], (instregex "^GLD(FF)?1S?[BHW]_D_IMM_REAL$",
-                                              "^GLD(FF)?1D_IMM_REAL$")>;
+def : InstRW<[CortexA510MCWrite<7, 7, CortexA510UnitLdSt>], (instregex "^GLD(FF)?1S?[BHW]_D_IMM$",
+                                              "^GLD(FF)?1D_IMM$")>;
 
 // Gather load, 64-bit element size
 def : InstRW<[CortexA510MCWrite<7, 7, CortexA510UnitLdSt>],
-             (instregex "^GLD(FF)?1S?[BHW]_D_[SU]XTW_(SCALED_)?REAL$",
-                        "^GLD(FF)?1S?[BHW]_D_(SCALED_)?REAL$",
-                        "^GLD(FF)?1D_[SU]XTW_(SCALED_)?REAL$",
-                        "^GLD(FF)?1D_(SCALED_)?REAL$")>;
+             (instregex "^GLD(FF)?1S?[BHW]_D_[SU]XTW(_SCALED)?$",
+                        "^GLD(FF)?1S?[BHW]_D(_SCALED)?$",
+                        "^GLD(FF)?1D_[SU]XTW(_SCALED)?$",
+                        "^GLD(FF)?1D(_SCALED)?$")>;
 
 // Gather load, 32-bit scaled offset
-def : InstRW<[CortexA510MCWrite<9, 9, CortexA510UnitLd>],
-             (instregex "^GLD(FF)?1S?[HW]_S_[SU]XTW_SCALED_REAL$",
-                        "^GLD(FF)?1W_[SU]XTW_SCALED_REAL")>;
+def : InstRW<[CortexA510MCWrite<7, 7, CortexA510UnitLd>],
+             (instregex "^GLD(FF)?1S?[HW]_S_[SU]XTW_SCALED$",
+                        "^GLD(FF)?1W_[SU]XTW_SCALED")>;
 
 // Gather load, 32-bit unpacked unscaled offset
-def : InstRW<[CortexA510MCWrite<9, 9, CortexA510UnitLd>], (instregex "^GLD(FF)?1S?[BH]_S_[SU]XTW_REAL$",
-                                              "^GLD(FF)?1W_[SU]XTW_REAL$")>;
+def : InstRW<[CortexA510MCWrite<7, 7, CortexA510UnitLd>], (instregex "^GLD(FF)?1S?[BH]_S_[SU]XTW$",
+                                              "^GLD(FF)?1W_[SU]XTW$")>;
 
 def : InstRW<[CortexA510Write<0, CortexA510UnitVALU>], (instregex "^PRF(B|H|W|D).*")>;
 // SVE Store instructions
@@ -1355,10 +1362,10 @@ def : InstRW<[CortexA510VSt<8>], (instregex "^SST1[BHW]_D$",
 // -----------------------------------------------------------------------------
 
 // Read first fault register, unpredicated
-def : InstRW<[CortexA510Write<1, CortexA510UnitALU>], (instrs RDFFR_P_REAL)>;
+def : InstRW<[CortexA510Write<1, CortexA510UnitALU>], (instrs RDFFR_P)>;
 
 // Read first fault register, predicated
-def : InstRW<[CortexA510Write<3, CortexA510UnitALU0>], (instrs RDFFR_PPz_REAL)>;
+def : InstRW<[CortexA510Write<3, CortexA510UnitALU0>], (instrs RDFFR_PPz)>;
 
 // Read first fault register and set flags
 def : InstRW<[CortexA510Write<3, CortexA510UnitALU0>], (instrs RDFFRS_PPz)>;
@@ -1375,12 +1382,12 @@ def : InstRW<[CortexA510Write<3, CortexA510UnitVALU>], (instregex "^AES[DE]_ZZZ_
                                            "^AESI?MC_ZZ_B$")>;
 
 // Crypto SHA3 ops
-def : InstRW<[CortexA510Write<3, CortexA510UnitVALU>], (instregex "^(BCAX|EOR3)_ZZZZ$",
+def : InstRW<[CortexA510Write<4, CortexA510UnitVALU>], (instregex "^(BCAX|EOR3)_ZZZZ$",
                                             "^XAR_ZZZI_[BHSD]$")>;
 
-def : InstRW<[CortexA510MC_RC0Write<8, CortexA510UnitVMC>], (instregex "^RAX1_ZZZ_D$")>;
+def : InstRW<[CortexA510MC_RC0Write<9, CortexA510UnitVMC>], (instregex "^RAX1_ZZZ_D$")>;
 
 // Crypto SM4 ops
-def : InstRW<[CortexA510MC_RC0Write<8, CortexA510UnitVMC>], (instregex "^SM4E(KEY)?_ZZZ_S$")>;
+def : InstRW<[CortexA510MC_RC0Write<9, CortexA510UnitVMC>], (instregex "^SM4E(KEY)?_ZZZ_S$")>;
 
 }

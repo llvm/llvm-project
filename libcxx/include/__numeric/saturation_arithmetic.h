@@ -10,8 +10,10 @@
 #ifndef _LIBCPP___NUMERIC_SATURATION_ARITHMETIC_H
 #define _LIBCPP___NUMERIC_SATURATION_ARITHMETIC_H
 
+#include <__assert>
 #include <__concepts/arithmetic.h>
 #include <__config>
+#include <__memory/addressof.h>
 #include <__utility/cmp.h>
 #include <limits>
 
@@ -24,11 +26,11 @@ _LIBCPP_PUSH_MACROS
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER >= 26
+#if _LIBCPP_STD_VER >= 20
 
 template <__libcpp_integer _Tp>
-_LIBCPP_HIDE_FROM_ABI constexpr _Tp add_sat(_Tp __x, _Tp __y) noexcept {
-  if (_Tp __sum; !__builtin_add_overflow(__x, __y, &__sum))
+_LIBCPP_HIDE_FROM_ABI constexpr _Tp __add_sat(_Tp __x, _Tp __y) noexcept {
+  if (_Tp __sum; !__builtin_add_overflow(__x, __y, std::addressof(__sum)))
     return __sum;
   // Handle overflow
   if constexpr (__libcpp_unsigned_integer<_Tp>) {
@@ -45,8 +47,8 @@ _LIBCPP_HIDE_FROM_ABI constexpr _Tp add_sat(_Tp __x, _Tp __y) noexcept {
 }
 
 template <__libcpp_integer _Tp>
-_LIBCPP_HIDE_FROM_ABI constexpr _Tp sub_sat(_Tp __x, _Tp __y) noexcept {
-  if (_Tp __sub; !__builtin_sub_overflow(__x, __y, &__sub))
+_LIBCPP_HIDE_FROM_ABI constexpr _Tp __sub_sat(_Tp __x, _Tp __y) noexcept {
+  if (_Tp __sub; !__builtin_sub_overflow(__x, __y, std::addressof(__sub)))
     return __sub;
   // Handle overflow
   if constexpr (__libcpp_unsigned_integer<_Tp>) {
@@ -64,8 +66,8 @@ _LIBCPP_HIDE_FROM_ABI constexpr _Tp sub_sat(_Tp __x, _Tp __y) noexcept {
 }
 
 template <__libcpp_integer _Tp>
-_LIBCPP_HIDE_FROM_ABI constexpr _Tp mul_sat(_Tp __x, _Tp __y) noexcept {
-  if (_Tp __mul; !__builtin_mul_overflow(__x, __y, &__mul))
+_LIBCPP_HIDE_FROM_ABI constexpr _Tp __mul_sat(_Tp __x, _Tp __y) noexcept {
+  if (_Tp __mul; !__builtin_mul_overflow(__x, __y, std::addressof(__mul)))
     return __mul;
   // Handle overflow
   if constexpr (__libcpp_unsigned_integer<_Tp>) {
@@ -80,7 +82,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr _Tp mul_sat(_Tp __x, _Tp __y) noexcept {
 }
 
 template <__libcpp_integer _Tp>
-_LIBCPP_HIDE_FROM_ABI constexpr _Tp div_sat(_Tp __x, _Tp __y) noexcept {
+_LIBCPP_HIDE_FROM_ABI constexpr _Tp __div_sat(_Tp __x, _Tp __y) noexcept {
   _LIBCPP_ASSERT_UNCATEGORIZED(__y != 0, "Division by 0 is undefined");
   if constexpr (__libcpp_unsigned_integer<_Tp>) {
     return __x / __y;
@@ -93,7 +95,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr _Tp div_sat(_Tp __x, _Tp __y) noexcept {
 }
 
 template <__libcpp_integer _Rp, __libcpp_integer _Tp>
-_LIBCPP_HIDE_FROM_ABI constexpr _Rp saturate_cast(_Tp __x) noexcept {
+_LIBCPP_HIDE_FROM_ABI constexpr _Rp __saturate_cast(_Tp __x) noexcept {
   // Saturation is impossible edge case when ((min _Rp) < (min _Tp) && (max _Rp) > (max _Tp)) and it is expected to be
   // optimized out by the compiler.
 
@@ -104,6 +106,35 @@ _LIBCPP_HIDE_FROM_ABI constexpr _Rp saturate_cast(_Tp __x) noexcept {
     return std::numeric_limits<_Rp>::max();
   // No overflow
   return static_cast<_Rp>(__x);
+}
+
+#endif // _LIBCPP_STD_VER >= 20
+
+#if _LIBCPP_STD_VER >= 26
+
+template <__libcpp_integer _Tp>
+_LIBCPP_HIDE_FROM_ABI constexpr _Tp add_sat(_Tp __x, _Tp __y) noexcept {
+  return std::__add_sat(__x, __y);
+}
+
+template <__libcpp_integer _Tp>
+_LIBCPP_HIDE_FROM_ABI constexpr _Tp sub_sat(_Tp __x, _Tp __y) noexcept {
+  return std::__sub_sat(__x, __y);
+}
+
+template <__libcpp_integer _Tp>
+_LIBCPP_HIDE_FROM_ABI constexpr _Tp mul_sat(_Tp __x, _Tp __y) noexcept {
+  return std::__mul_sat(__x, __y);
+}
+
+template <__libcpp_integer _Tp>
+_LIBCPP_HIDE_FROM_ABI constexpr _Tp div_sat(_Tp __x, _Tp __y) noexcept {
+  return std::__div_sat(__x, __y);
+}
+
+template <__libcpp_integer _Rp, __libcpp_integer _Tp>
+_LIBCPP_HIDE_FROM_ABI constexpr _Rp saturate_cast(_Tp __x) noexcept {
+  return std::__saturate_cast<_Rp>(__x);
 }
 
 #endif // _LIBCPP_STD_VER >= 26

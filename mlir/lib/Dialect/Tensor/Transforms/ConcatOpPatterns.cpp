@@ -33,54 +33,13 @@ struct DecomposeTensorConcatOp : public OpRewritePattern<ConcatOp> {
 
   LogicalResult matchAndRewrite(ConcatOp concatOp,
                                 PatternRewriter &rewriter) const override {
-    Location loc = concatOp.getLoc();
-    FailureOr<Value> dest =
-        tensor::getOrCreateDestination(rewriter, loc, concatOp->getResult(0));
-    if (failed(dest))
-      return failure();
-
-    auto empty = dest->getDefiningOp<tensor::EmptyOp>();
-    if (!empty)
-      return failure();
-
-    int64_t dim = concatOp.getDim();
-    Value dimValue = rewriter.createOrFold<arith::ConstantOp>(
-        loc, rewriter.getIndexAttr(dim));
-
-    int64_t rank = concatOp.getResultType().getRank();
-    SmallVector<OpFoldResult> strides(rank, rewriter.getIndexAttr(1));
-    SmallVector<OpFoldResult> offsets(rank, rewriter.getIndexAttr(0));
-
-    // Compute the partial sums for the slice offsets.
-    AffineExpr sum = rewriter.getAffineDimExpr(0);
-    SmallVector<AffineExpr> partialSums = {sum};
-    SmallVector<OpFoldResult> offsetStrides = {rewriter.getIndexAttr(0)};
-    for (auto [idx, input] :
-         llvm::enumerate(concatOp.getInputs().drop_back())) {
-      sum = sum + rewriter.getAffineDimExpr(idx + 1);
-      partialSums.push_back(sum);
-      offsetStrides.push_back(
-          rewriter.createOrFold<tensor::DimOp>(loc, input, dimValue));
+    FailureOr<SmallVector<Value>> decomposed =
+        concatOp.decomposeOperation(rewriter);
+    if (failed(decomposed)) {
+      return rewriter.notifyMatchFailure(
+          concatOp, "failed to get the decomposed insert slices");
     }
-    auto partialSumMap = AffineMap::get(concatOp.getInputs().size(), 0,
-                                        partialSums, rewriter.getContext());
-    SmallVector<OpFoldResult> dimOffsets =
-        affine::makeComposedFoldedMultiResultAffineApply(
-            rewriter, loc, partialSumMap, offsetStrides);
-
-    // Construct the chain of insert_slice ops into the destination.
-    Value result = *dest;
-    for (auto [input, offset] :
-         llvm::zip_equal(concatOp.getInputs(), dimOffsets)) {
-      SmallVector<OpFoldResult> sizes =
-          tensor::getMixedSizes(rewriter, loc, input);
-      offsets[dim] = offset;
-      result = rewriter.createOrFold<tensor::InsertSliceOp>(
-          loc, input, result, offsets, sizes, strides);
-    }
-
-    rewriter.replaceOpWithNewOp<tensor::CastOp>(
-        concatOp, concatOp.getResultType(), result);
+    rewriter.replaceOp(concatOp, decomposed.value()[0]);
     return success();
   }
 };

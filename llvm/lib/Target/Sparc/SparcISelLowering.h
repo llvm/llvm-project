@@ -119,7 +119,7 @@ namespace llvm {
     }
 
     /// Override to support customized stack guard loading.
-    bool useLoadStackGuardNode() const override;
+    bool useLoadStackGuardNode(const Module &M) const override;
     void insertSSPDeclarations(Module &M) const override;
 
     /// getSetCCResultType - Return the ISD::SETCC ValueType
@@ -153,7 +153,7 @@ namespace llvm {
     bool CanLowerReturn(CallingConv::ID CallConv, MachineFunction &MF,
                         bool isVarArg,
                         const SmallVectorImpl<ISD::OutputArg> &Outs,
-                        LLVMContext &Context) const override;
+                        LLVMContext &Context, const Type *RetTy) const override;
 
     SDValue LowerReturn(SDValue Chain, CallingConv::ID CallConv, bool isVarArg,
                         const SmallVectorImpl<ISD::OutputArg> &Outs,
@@ -205,6 +205,15 @@ namespace llvm {
       // Do not shrink FP constpool if VT == MVT::f128.
       // (ldd, call _Q_fdtoq) is more expensive than two ldds.
       return VT != MVT::f128;
+    }
+
+    bool isFPImmLegal(const APFloat &Imm, EVT VT,
+                      bool ForCodeSize) const override;
+
+    bool isCtlzFast() const override;
+
+    bool isCheapToSpeculateCtlz(Type *Ty) const override {
+      return isCtlzFast();
     }
 
     bool shouldInsertFencesForAtomic(const Instruction *I) const override {

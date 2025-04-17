@@ -35,7 +35,3 @@ set(CMAKE_CXX_COMPILER_WORKS ON CACHE BOOL "")
 # them.
 set(LIBCXX_TEST_CONFIG "llvm-libc++-android-ndk.cfg.in" CACHE STRING "")
 set(LIBCXXABI_TEST_CONFIG "llvm-libc++abi-android-ndk.cfg.in" CACHE STRING "")
-
-# CMAKE_SOURCE_DIR refers to the "<monorepo>/runtimes" directory.
-set(LIBCXX_EXECUTOR "${CMAKE_SOURCE_DIR}/../libcxx/utils/adb_run.py" CACHE STRING "")
-set(LIBCXXABI_EXECUTOR "${LIBCXX_EXECUTOR}" CACHE STRING "")

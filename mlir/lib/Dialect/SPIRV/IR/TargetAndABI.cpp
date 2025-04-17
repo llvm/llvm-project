@@ -23,20 +23,17 @@ using namespace mlir;
 
 spirv::TargetEnv::TargetEnv(spirv::TargetEnvAttr targetAttr)
     : targetAttr(targetAttr) {
-  for (spirv::Extension ext : targetAttr.getExtensions())
-    givenExtensions.insert(ext);
+  givenExtensions.insert_range(targetAttr.getExtensions());
 
   // Add extensions implied by the current version.
-  for (spirv::Extension ext :
-       spirv::getImpliedExtensions(targetAttr.getVersion()))
-    givenExtensions.insert(ext);
+  givenExtensions.insert_range(
+      spirv::getImpliedExtensions(targetAttr.getVersion()));
 
   for (spirv::Capability cap : targetAttr.getCapabilities()) {
     givenCapabilities.insert(cap);
 
     // Add capabilities implied by the current capability.
-    for (spirv::Capability c : spirv::getRecursiveImpliedCapabilities(cap))
-      givenCapabilities.insert(c);
+    givenCapabilities.insert_range(spirv::getRecursiveImpliedCapabilities(cap));
   }
 }
 
@@ -120,17 +117,16 @@ bool spirv::needsInterfaceVarABIAttrs(spirv::TargetEnvAttr targetAttr) {
 
 StringRef spirv::getEntryPointABIAttrName() { return "spirv.entry_point_abi"; }
 
-spirv::EntryPointABIAttr
-spirv::getEntryPointABIAttr(MLIRContext *context,
-                            ArrayRef<int32_t> workgroupSize,
-                            std::optional<int> subgroupSize) {
+spirv::EntryPointABIAttr spirv::getEntryPointABIAttr(
+    MLIRContext *context, ArrayRef<int32_t> workgroupSize,
+    std::optional<int> subgroupSize, std::optional<int> targetWidth) {
   DenseI32ArrayAttr workgroupSizeAttr;
   if (!workgroupSize.empty()) {
     assert(workgroupSize.size() == 3);
     workgroupSizeAttr = DenseI32ArrayAttr::get(context, workgroupSize);
   }
-  return spirv::EntryPointABIAttr::get(context, workgroupSizeAttr,
-                                       subgroupSize);
+  return spirv::EntryPointABIAttr::get(context, workgroupSizeAttr, subgroupSize,
+                                       targetWidth);
 }
 
 spirv::EntryPointABIAttr spirv::lookupEntryPointABI(Operation *op) {

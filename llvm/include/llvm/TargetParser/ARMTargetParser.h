@@ -29,44 +29,45 @@ namespace ARM {
 // Arch extension modifiers for CPUs.
 // Note that this is not the same as the AArch64 list
 enum ArchExtKind : uint64_t {
-  AEK_INVALID =     0,
-  AEK_NONE =        1,
-  AEK_CRC =         1 << 1,
-  AEK_CRYPTO =      1 << 2,
-  AEK_FP =          1 << 3,
-  AEK_HWDIVTHUMB =  1 << 4,
-  AEK_HWDIVARM =    1 << 5,
-  AEK_MP =          1 << 6,
-  AEK_SIMD =        1 << 7,
-  AEK_SEC =         1 << 8,
-  AEK_VIRT =        1 << 9,
-  AEK_DSP =         1 << 10,
-  AEK_FP16 =        1 << 11,
-  AEK_RAS =         1 << 12,
-  AEK_DOTPROD =     1 << 13,
-  AEK_SHA2    =     1 << 14,
-  AEK_AES     =     1 << 15,
-  AEK_FP16FML =     1 << 16,
-  AEK_SB      =     1 << 17,
-  AEK_FP_DP   =     1 << 18,
-  AEK_LOB     =     1 << 19,
-  AEK_BF16    =     1 << 20,
-  AEK_I8MM    =     1 << 21,
-  AEK_CDECP0 =      1 << 22,
-  AEK_CDECP1 =      1 << 23,
-  AEK_CDECP2 =      1 << 24,
-  AEK_CDECP3 =      1 << 25,
-  AEK_CDECP4 =      1 << 26,
-  AEK_CDECP5 =      1 << 27,
-  AEK_CDECP6 =      1 << 28,
-  AEK_CDECP7 =      1 << 29,
-  AEK_PACBTI =      1 << 30,
+  AEK_INVALID = 0,
+  AEK_NONE = 1,
+  AEK_CRC = 1 << 1,
+  AEK_CRYPTO = 1 << 2,
+  AEK_FP = 1 << 3,
+  AEK_HWDIVTHUMB = 1 << 4,
+  AEK_HWDIVARM = 1 << 5,
+  AEK_MP = 1 << 6,
+  AEK_SIMD = 1 << 7,
+  AEK_SEC = 1 << 8,
+  AEK_VIRT = 1 << 9,
+  AEK_DSP = 1 << 10,
+  AEK_FP16 = 1 << 11,
+  AEK_RAS = 1 << 12,
+  AEK_DOTPROD = 1 << 13,
+  AEK_SHA2 = 1 << 14,
+  AEK_AES = 1 << 15,
+  AEK_FP16FML = 1 << 16,
+  AEK_SB = 1 << 17,
+  AEK_FP_DP = 1 << 18,
+  AEK_LOB = 1 << 19,
+  AEK_BF16 = 1 << 20,
+  AEK_I8MM = 1 << 21,
+  AEK_CDECP0 = 1 << 22,
+  AEK_CDECP1 = 1 << 23,
+  AEK_CDECP2 = 1 << 24,
+  AEK_CDECP3 = 1 << 25,
+  AEK_CDECP4 = 1 << 26,
+  AEK_CDECP5 = 1 << 27,
+  AEK_CDECP6 = 1 << 28,
+  AEK_CDECP7 = 1 << 29,
+  AEK_PACBTI = 1 << 30,
+  AEK_MVE = 1ULL << 31,
   // Unsupported extensions.
-  AEK_OS       =    1ULL << 59,
-  AEK_IWMMXT   =    1ULL << 60,
-  AEK_IWMMXT2  =    1ULL << 61,
-  AEK_MAVERICK =    1ULL << 62,
-  AEK_XSCALE   =    1ULL << 63,
+  AEK_OS = 1ULL << 59,
+  AEK_IWMMXT = 1ULL << 60,
+  AEK_IWMMXT2 = 1ULL << 61,
+  AEK_MAVERICK = 1ULL << 62,
+  AEK_XSCALE = 1ULL << 63,
 };
 
 // List of Arch Extension names.
@@ -77,7 +78,7 @@ struct ExtName {
   StringRef NegFeature;
 };
 
-const ExtName ARCHExtNames[] = {
+constexpr ExtName ARCHExtNames[] = {
 #define ARM_ARCH_EXT_NAME(NAME, ID, FEATURE, NEGFEATURE)                       \
   {NAME, ID, FEATURE, NEGFEATURE},
 #include "ARMTargetParser.def"
@@ -85,7 +86,7 @@ const ExtName ARCHExtNames[] = {
 
 // List of HWDiv names (use getHWDivSynonym) and which architectural
 // features they correspond to (use getHWDivFeatures).
-const struct {
+constexpr struct {
   StringRef Name;
   uint64_t ID;
 } HWDivNames[] = {
@@ -112,7 +113,7 @@ struct CpuNames {
   uint64_t DefaultExtensions;
 };
 
-const CpuNames CPUNames[] = {
+constexpr CpuNames CPUNames[] = {
 #define ARM_CPU_NAME(NAME, ID, DEFAULT_FPU, IS_DEFAULT, DEFAULT_EXT)           \
   {NAME, ARM::ArchKind::ID, IS_DEFAULT, DEFAULT_EXT},
 #include "ARMTargetParser.def"
@@ -173,7 +174,7 @@ struct FPUName {
   FPURestriction Restriction;
 };
 
-static const FPUName FPUNames[] = {
+static constexpr FPUName FPUNames[] = {
 #define ARM_FPU(NAME, KIND, VERSION, NEON_SUPPORT, RESTRICTION)                \
   {NAME, KIND, VERSION, NEON_SUPPORT, RESTRICTION},
 #include "llvm/TargetParser/ARMTargetParser.def"
@@ -199,7 +200,7 @@ struct ArchNames {
   StringRef getSubArch() const { return ArchFeature.substr(1); }
 };
 
-static const ArchNames ARMArchNames[] = {
+static constexpr ArchNames ARMArchNames[] = {
 #define ARM_ARCH(NAME, ID, CPU_ATTR, ARCH_FEATURE, ARCH_ATTR, ARCH_FPU,        \
                  ARCH_BASE_EXT)                                                \
   {NAME,          CPU_ATTR,     ARCH_FEATURE, ARCH_FPU,                        \

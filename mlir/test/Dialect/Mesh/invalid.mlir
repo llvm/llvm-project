@@ -13,10 +13,11 @@ mesh.mesh @mesh0(shape = -1)
 mesh.mesh @mesh0(shape = 2x4)
 
 func.func @mesh_axis_duplicated_different_subarray(
-    // expected-error@+1 {{mesh axis duplicated}}
-    %arg0 : tensor<4x8xf32, #mesh.shard<@mesh0, [[0], [0]]>>) -> 
-            tensor<4x8xf32, #mesh.shard<@mesh0, [[0], [0]]>> {
-  return %arg0 : tensor<4x8xf32, #mesh.shard<@mesh0, [[0], [0]]>>
+    %arg0 : tensor<4x8xf32>) -> tensor<4x8xf32> {
+  // expected-error@+1 {{mesh axis duplicated}}
+  %s = mesh.sharding @mesh0 split_axes = [[0], [0]] : !mesh.sharding
+  %0 = mesh.shard %arg0 to %s : tensor<4x8xf32>
+  return %0 : tensor<4x8xf32>
 }
 
 // -----
@@ -24,10 +25,11 @@ func.func @mesh_axis_duplicated_different_subarray(
 mesh.mesh @mesh0(shape = 2x4)
 
 func.func @mesh_axis_duplicated_same_subarray(
-    // expected-error@+1 {{mesh axis duplicated}}
-    %arg0 : tensor<4x8xf32, #mesh.shard<@mesh0, [[0, 0]]>>) -> 
-            tensor<4x8xf32, #mesh.shard<@mesh0, [[0, 0]]>> {
-  return %arg0 : tensor<4x8xf32, #mesh.shard<@mesh0, [[0, 0]]>>
+    %arg0 : tensor<4x8xf32>) -> tensor<4x8xf32> {
+  // expected-error@+1 {{mesh axis duplicated}}
+  %s = mesh.sharding @mesh0 split_axes = [[0, 0]] : !mesh.sharding
+  %0 = mesh.shard %arg0 to %s : tensor<4x8xf32>
+  return %0 : tensor<4x8xf32>
 }
 
 // -----
@@ -35,10 +37,11 @@ func.func @mesh_axis_duplicated_same_subarray(
 mesh.mesh @mesh0(shape = 2x4)
 
 func.func @mesh_axis_duplicated_bewteen_split_and_partial(
-    // expected-error@+1 {{mesh axis duplicated}}
-    %arg0 : tensor<4x8xf32, #mesh.shard<@mesh0, [[0]], partial=max[0]>>) -> 
-            tensor<4x8xf32, #mesh.shard<@mesh0, [[0]], partial=max[0]>> {
-  return %arg0 : tensor<4x8xf32, #mesh.shard<@mesh0, [[0]], partial=max[0]>>
+    %arg0 : tensor<4x8xf32>) -> tensor<4x8xf32> {
+  // expected-error@+1 {{mesh axis duplicated}}
+  %s = mesh.sharding @mesh0 split_axes = [[0]] partial=max[0] : !mesh.sharding
+  %0 = mesh.shard %arg0 to %s : tensor<4x8xf32>
+  return %0 : tensor<4x8xf32>
 }
 
 // -----
@@ -46,10 +49,11 @@ func.func @mesh_axis_duplicated_bewteen_split_and_partial(
 mesh.mesh @mesh0(shape = 2x4)
 
 func.func @mesh_axis_negtive_in_split_part(
-    // expected-error@+1 {{mesh axis is expected to be non-negative}}
-    %arg0 : tensor<4x8xf32, #mesh.shard<@mesh0, [[-1]]>>) -> 
-            tensor<4x8xf32, #mesh.shard<@mesh0, [[-1]]>> {
-  return %arg0 : tensor<4x8xf32, #mesh.shard<@mesh0, [[-1]]>>
+    %arg0 : tensor<4x8xf32>) -> tensor<4x8xf32> {
+  // expected-error@+1 {{mesh axis is expected to be non-negative}}
+  %s = mesh.sharding @mesh0 split_axes = [[-1]] : !mesh.sharding
+  %0 = mesh.shard %arg0 to %s : tensor<4x8xf32>
+  return %0 : tensor<4x8xf32>
 }
 
 // -----
@@ -57,18 +61,68 @@ func.func @mesh_axis_negtive_in_split_part(
 mesh.mesh @mesh0(shape = 2x4)
 
 func.func @mesh_axis_negtive_in_partial(
-    // expected-error@+1 {{mesh axis is expected to be non-negative}}
-    %arg0 : tensor<4x8xf32, #mesh.shard<@mesh0, [[0]], partial=max[-1]>>) -> 
-            tensor<4x8xf32, #mesh.shard<@mesh0, [[0]], partial=max[-1]>> {
-  return %arg0 : tensor<4x8xf32, #mesh.shard<@mesh0, [[0]], partial=max[-1]>>
+    %arg0 : tensor<4x8xf32>) -> tensor<4x8xf32> {
+  // expected-error@+1 {{mesh axis is expected to be non-negative}}
+  %s = mesh.sharding @mesh0 split_axes = [[0]] partial=max[-1] : !mesh.sharding
+  %0 = mesh.shard %arg0 to %s : tensor<4x8xf32>
+  return %0 : tensor<4x8xf32>
 }
 
 // -----
 
 func.func @sharding_attribute_invalid_nested_symbol(%arg0 : tensor<4x8xf32>) {
-  // expected-error@+2 {{custom op 'mesh.shard' invalid kind of attribute specified}}
-  // expected-error@+1 {{custom op 'mesh.shard' failed to parse MeshSharding parameter 'mesh' which is to be a `::mlir::FlatSymbolRefAttr`}}
-  %0 = mesh.shard %arg0 to <@a::@b, [[0]]> : tensor<4x8xf32>
+  // expected-error@+1 {{custom op 'mesh.sharding' invalid kind of attribute specified}}
+  %s = mesh.sharding @a::@b split_axes = [[0]] : !mesh.sharding
+  %0 = mesh.shard %arg0 to %s : tensor<4x8xf32>
+  return
+}
+
+// -----
+
+func.func @sharding_attribute_invalid_halo(%arg0 : tensor<4x8xf32>) {
+  // expected-error@+1 {{halo sizes must be specified for all split axes}}
+  %s = mesh.sharding @mesh0 split_axes = [[0], [1]] halo_sizes = [1, 2] : !mesh.sharding
+  %0 = mesh.shard %arg0 to %s : tensor<4x8xf32>
+  return
+}
+
+// -----
+
+func.func @sharding_attribute_invalid_sizes(%arg0 : tensor<4x8xf32>) {
+  // expected-error@+1 {{halo sizes and shard offsets are mutually exclusive}}
+  %s = mesh.sharding @mesh0 split_axes = [[0]] halo_sizes = [1, 2] sharded_dims_offsets = [0, 2, 2] : !mesh.sharding
+  %0 = mesh.shard %arg0 to %s : tensor<4x8xf32>
+  return
+}
+
+// -----
+
+mesh.mesh @mesh_dyn(shape = ?x?)
+func.func @sharding_dyn_mesh_and_sizes(%arg0 : tensor<4x8xf32>) {
+  // expected-error@+1 {{sharded dims offsets are not allowed for devices meshes with dynamic shape}}
+  %s = mesh.sharding @mesh_dyn split_axes = [[0]] sharded_dims_offsets = [0, 2, 2] : !mesh.sharding
+  %0 = mesh.shard %arg0 to %s : tensor<4x8xf32>
+  return
+}
+
+// -----
+
+mesh.mesh @mesh0(shape = 2x4)
+func.func @sharding_sizes_count(%arg0 : tensor<4x8xf32>) {
+  // expected-error@+1 {{sharded dims offsets has wrong size}}
+  %s = mesh.sharding @mesh0 split_axes = [[0], [1]] sharded_dims_offsets = [0, 2, 4, 0, 2, 4, 6] : !mesh.sharding
+  %0 = mesh.shard %arg0 to %s : tensor<4x8xf32>
+  return
+}
+
+// -----
+
+mesh.mesh @mesh0(shape = 4)
+func.func @sharding_sizes_decreasing(%arg0 : tensor<4x8xf32>) {
+  // expected-error@+1 {{sharded dims offsets must be non-decreasing}}
+  %s = mesh.sharding @mesh0 split_axes = [[0]] sharded_dims_offsets = [0, 2, 3, 2] : !mesh.sharding
+  %0 = mesh.shard %arg0 to %s : tensor<4x8xf32>
+  return
 }
 
 // -----
@@ -180,7 +234,7 @@ func.func @process_linear_index_invalid_mesh_name() -> (index) {
 func.func @all_reduce_invalid_mesh_symbol(
     %arg0 : tensor<4xf32>) -> tensor<4xf64> {
   // expected-error@+1 {{Undefined required mesh symbol "this_mesh_symbol_does_not_exist".}}
-  %0 = mesh.all_reduce %arg0 on @this_mesh_symbol_does_not_exist reduction = <sum>
+  %0 = mesh.all_reduce %arg0 on @this_mesh_symbol_does_not_exist reduction = sum
     : tensor<4xf32> -> tensor<4xf64>
   return %0 : tensor<4xf64>
 }
@@ -192,7 +246,7 @@ mesh.mesh @mesh0(shape = 2x4)
 func.func @all_reduce_invalid_mesh_axis(
     %arg0 : tensor<4xf32>) -> tensor<4xf64> {
   // expected-error@+1 {{0-based mesh axis index 2 is out of bounds. The referenced mesh "mesh0" is of rank 2.}}
-  %0 = mesh.all_reduce %arg0 on @mesh0 mesh_axes = [2] reduction = <sum>
+  %0 = mesh.all_reduce %arg0 on @mesh0 mesh_axes = [2] reduction = sum
     : tensor<4xf32> -> tensor<4xf64>
   return %0 : tensor<4xf64>
 }
@@ -204,7 +258,7 @@ mesh.mesh @mesh0(shape = 2x4)
 func.func @all_reduce_duplicate_mesh_axis(
     %arg0 : tensor<4xf32>) -> tensor<4xf64> {
   // expected-error@+1 {{Mesh axes contains duplicate elements.}}
-  %0 = mesh.all_reduce %arg0 on @mesh0 mesh_axes = [0, 1, 0] reduction = <sum>
+  %0 = mesh.all_reduce %arg0 on @mesh0 mesh_axes = [0, 1, 0] reduction = sum
     : tensor<4xf32> -> tensor<4xf64>
   return %0 : tensor<4xf64>
 }
@@ -312,6 +366,58 @@ func.func @all_gather_invalid_negative_gather_axis(
   %0 = mesh.all_gather %arg0 on @mesh0 mesh_axes = [0] gather_axis = -1
     : tensor<3xf32> -> tensor<3xf32>
   return %0 : tensor<3xf32>
+}
+
+// -----
+
+mesh.mesh @mesh0(shape = 3)
+
+func.func @all_slice_duplicate_mesh_axis(
+    %arg0 : tensor<?xf32>) -> tensor<?xf32> {
+  // expected-error@+1 {{Mesh axes contains duplicate elements.}}
+  %0 = mesh.all_slice %arg0 on @mesh0 mesh_axes = [0, 0]
+    slice_axis = 0
+    : tensor<?xf32> -> tensor<?xf32>
+  return %0 : tensor<?xf32>
+}
+
+// -----
+
+mesh.mesh @mesh0(shape = 3)
+
+func.func @all_slice_invalid_dynamic_dimension(
+    %arg0 : tensor<?xf32>) -> tensor<2xf32> {
+  // expected-error@+1 {{Dimension size mismatch for result axis 0. Expected dynamic, but got 2.}}
+  %0 = mesh.all_slice %arg0 on @mesh0
+    slice_axis = 0
+    : tensor<?xf32> -> tensor<2xf32>
+  return %0 : tensor<2xf32>
+}
+
+// -----
+
+mesh.mesh @mesh0(shape = 3)
+
+func.func @all_slice_invalid_static_dimension_size(
+    %arg0 : tensor<3xf32>) -> tensor<2xf32> {
+  // expected-error@+1 {{Dimension size mismatch for result axis 0. Expected 1, but got 2.}}
+  %0 = mesh.all_slice %arg0 on @mesh0 mesh_axes = [0]
+    slice_axis = 0
+    : tensor<3xf32> -> tensor<2xf32>
+  return %0 : tensor<2xf32>
+}
+
+// -----
+
+mesh.mesh @mesh0(shape = 3)
+
+func.func @all_slice_invalid_operand_static_dimension_size(
+    %arg0 : tensor<4xf32>) -> tensor<?xf32> {
+  // expected-error@+1 {{Operand dimension size 4 is not divisible by collective device group size 3 for tensor axis 0.}}
+  %0 = mesh.all_slice %arg0 on @mesh0 mesh_axes = [0]
+    slice_axis = 0
+    : tensor<4xf32> -> tensor<?xf32>
+  return %0 : tensor<?xf32>
 }
 
 // -----
@@ -660,7 +766,7 @@ mesh.mesh @mesh0(shape = 3)
 
 func.func @reduce_scatter_invalid_operand_static_dimension_size(
     %arg0 : tensor<4xf32>) -> tensor<?xf64> {
-  // expected-error@+1 {{Operand dimension size 4 is not divisible by collective device group size 3 for scatter axis 0.}}
+  // expected-error@+1 {{Operand dimension size 4 is not divisible by collective device group size 3 for tensor axis 0.}}
   %0 = mesh.reduce_scatter %arg0 on @mesh0 mesh_axes = [0] scatter_axis = 0
     : tensor<4xf32> -> tensor<?xf64>
   return %0 : tensor<?xf64>
@@ -711,7 +817,7 @@ mesh.mesh @mesh0(shape = 3)
 
 func.func @scatter_invalid_operand_static_dimension_size(
     %arg0 : tensor<4xf32>) -> tensor<?xf32> {
-  // expected-error@+1 {{Operand dimension size 4 is not divisible by collective device group size 3 for scatter axis 0.}}
+  // expected-error@+1 {{Operand dimension size 4 is not divisible by collective device group size 3 for tensor axis 0.}}
   %0 = mesh.scatter %arg0 on @mesh0 mesh_axes = [0]
     scatter_axis = 0 root = [1]
     : (tensor<4xf32>) -> tensor<?xf32>

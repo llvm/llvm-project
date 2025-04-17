@@ -52,6 +52,10 @@ class formatted_raw_ostream : public raw_ostream {
   /// have the rest of it.
   SmallString<4> PartialUTF8Char;
 
+  /// DisableScan - Temporarily disable scanning of output. Used to ignore color
+  /// codes.
+  bool DisableScan;
+
   void write_impl(const char *Ptr, size_t Size) override;
 
   /// current_pos - Return the current position within the stream,
@@ -89,8 +93,32 @@ class formatted_raw_ostream : public raw_ostream {
       SetUnbuffered();
     TheStream->SetUnbuffered();
 
+    enable_colors(TheStream->colors_enabled());
+
     Scanned = nullptr;
   }
+
+  void PreDisableScan() {
+    assert(!DisableScan);
+    ComputePosition(getBufferStart(), GetNumBytesInBuffer());
+    assert(PartialUTF8Char.empty());
+    DisableScan = true;
+  }
+
+  void PostDisableScan() {
+    assert(DisableScan);
+    DisableScan = false;
+    Scanned = getBufferStart() + GetNumBytesInBuffer();
+  }
+
+  struct DisableScanScope {
+    formatted_raw_ostream *S;
+
+    DisableScanScope(formatted_raw_ostream *FRO) : S(FRO) {
+      S->PreDisableScan();
+    }
+    ~DisableScanScope() { S->PostDisableScan(); }
+  };
 
 public:
   /// formatted_raw_ostream - Open the specified file for
@@ -104,12 +132,12 @@ public:
   /// underneath it.
   ///
   formatted_raw_ostream(raw_ostream &Stream)
-      : TheStream(nullptr), Position(0, 0) {
+      : TheStream(nullptr), Position(0, 0), DisableScan(false) {
     setStream(Stream);
   }
-  explicit formatted_raw_ostream() : TheStream(nullptr), Position(0, 0) {
-    Scanned = nullptr;
-  }
+  explicit formatted_raw_ostream()
+      : TheStream(nullptr), Position(0, 0), Scanned(nullptr),
+        DisableScan(false) {}
 
   ~formatted_raw_ostream() override {
     flush();
@@ -136,17 +164,26 @@ public:
   }
 
   raw_ostream &resetColor() override {
-    TheStream->resetColor();
+    if (colors_enabled()) {
+      DisableScanScope S(this);
+      raw_ostream::resetColor();
+    }
     return *this;
   }
 
   raw_ostream &reverseColor() override {
-    TheStream->reverseColor();
+    if (colors_enabled()) {
+      DisableScanScope S(this);
+      raw_ostream::reverseColor();
+    }
     return *this;
   }
 
   raw_ostream &changeColor(enum Colors Color, bool Bold, bool BG) override {
-    TheStream->changeColor(Color, Bold, BG);
+    if (colors_enabled()) {
+      DisableScanScope S(this);
+      raw_ostream::changeColor(Color, Bold, BG);
+    }
     return *this;
   }
 

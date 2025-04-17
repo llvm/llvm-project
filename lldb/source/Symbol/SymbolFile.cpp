@@ -227,7 +227,7 @@ SymbolFileCommon::GetTypeSystemForLanguage(lldb::LanguageType language) {
   return type_system_or_err;
 }
 
-uint64_t SymbolFileCommon::GetDebugInfoSize() {
+uint64_t SymbolFileCommon::GetDebugInfoSize(bool load_all_debug_info) {
   if (!m_objfile_sp)
     return 0;
   ModuleSP module_sp(m_objfile_sp->GetModule());
@@ -258,4 +258,10 @@ void SymbolFileCommon::Dump(Stream &s) {
 
   if (Symtab *symtab = GetSymtab())
     symtab->Dump(&s, nullptr, eSortOrderNone);
+}
+
+std::string SymbolFile::GetObjectName() const {
+  if (const ObjectFile *object_file = GetObjectFile())
+    return object_file->GetObjectName();
+  return "";
 }

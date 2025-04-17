@@ -9,7 +9,7 @@ CXXFLAGS_EXTRAS := -target $(TRIPLE)
 all: libbaz.dylib a.out
 
 libbaz.dylib: baz.cpp
-	$(MAKE) -f $(MAKEFILE_RULES) \
+	"$(MAKE)" -f $(MAKEFILE_RULES) \
 		DYLIB_ONLY=YES DYLIB_NAME=baz DYLIB_CXX_SOURCES=baz.cpp
 
 include Makefile.rules

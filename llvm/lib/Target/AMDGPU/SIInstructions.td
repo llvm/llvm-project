@@ -10,9 +10,7 @@
 // that are not yet supported remain commented out.
 //===----------------------------------------------------------------------===//
 
-class GCNPat<dag pattern, dag result> : Pat<pattern, result>, GCNPredicateControl {
-
-}
+class GCNPat<dag pattern, dag result> : Pat<pattern, result>, PredicateControl;
 
 class UniformSextInreg<ValueType VT> : PatFrag<
   (ops node:$src),
@@ -106,6 +104,12 @@ def ENDPGM_TRAP : SPseudoInstSI<
   let usesCustomInserter = 1;
 }
 
+def SIMULATED_TRAP : SPseudoInstSI<(outs), (ins), [(AMDGPUsimulated_trap)],
+                                   "SIMULATED_TRAP"> {
+  let hasSideEffects = 1;
+  let usesCustomInserter = 1;
+}
+
 def ATOMIC_FENCE : SPseudoInstSI<
   (outs), (ins i32imm:$ordering, i32imm:$scope),
   [(atomic_fence (i32 timm:$ordering), (i32 timm:$scope))],
@@ -131,6 +135,26 @@ def V_MOV_B64_PSEUDO : VPseudoInstSI <(outs VReg_64:$vdst),
   let isAsCheapAsAMove = 1;
   let isMoveImm = 1;
   let SchedRW = [Write64Bit];
+  let Size = 4;
+  let VOP1 = 1; // Not entirely correct, but close enough.
+  let UseNamedOperandTable = 1;
+}
+
+// 32-bit materialize immediate which supports AGPR or VGPR. Typically
+// this should just expand to V_MOV_B32, unless $vdst happens to be
+// allocated to an AGPR in which case it will lower to
+// V_ACCVGPR_WRITE_B32. This should always use an inline immediate
+// operand, as v_accvgpr_write_b32 does not support literal constants.
+def AV_MOV_B32_IMM_PSEUDO
+    : VPseudoInstSI<(outs AV_32:$vdst), (ins VCSrc_b32:$src0)> {
+  let isReMaterializable = 1;
+  let isAsCheapAsAMove = 1;
+
+  // Imprecise, technically if AGPR it's VOP3 and VOP1 for AGPR. But
+  // this tricks the rematerialize logic into working for it.
+  let VOP3 = 1;
+  let isMoveImm = 1;
+  let SchedRW = [Write32Bit];
   let Size = 4;
   let UseNamedOperandTable = 1;
 }
@@ -207,62 +231,77 @@ def EXIT_STRICT_WQM : SPseudoInstSI <(outs SReg_1:$sdst), (ins SReg_1:$src0)> {
   let mayStore = 0;
 }
 
-let usesCustomInserter = 1 in {
-def S_INVERSE_BALLOT_U32 : SPseudoInstSI <(outs SReg_32:$sdst), (ins SSrc_b32:$mask)>;
+let usesCustomInserter = 1, hasSideEffects = 0 in {
+let WaveSizePredicate = isWave32 in
+def S_INVERSE_BALLOT_U32 : SPseudoInstSI<
+  (outs SReg_32:$sdst), (ins SSrc_b32:$mask),
+  [(set i1:$sdst, (int_amdgcn_inverse_ballot i32:$mask))]
+>;
 
-def S_INVERSE_BALLOT_U64 : SPseudoInstSI <(outs SReg_64:$sdst), (ins SSrc_b64:$mask)>;
-} // End usesCustomInserter = 1
+let WaveSizePredicate = isWave64 in
+def S_INVERSE_BALLOT_U64 : SPseudoInstSI<
+  (outs SReg_64:$sdst), (ins SSrc_b64:$mask),
+  [(set i1:$sdst, (int_amdgcn_inverse_ballot i64:$mask))]
+>;
+} // End usesCustomInserter = 1, hasSideEffects = 0
 
-// PSEUDO_WM is treated like STRICT_WWM/STRICT_WQM without exec changes.
-def ENTER_PSEUDO_WM : SPseudoInstSI <(outs), (ins)> {
-  let Uses = [EXEC];
-  let Defs = [EXEC];
-  let hasSideEffects = 0;
-  let mayLoad = 0;
-  let mayStore = 0;
-}
+let WaveSizePredicate = isWave32 in
+  def : GCNPat <
+    (i1 (int_amdgcn_inverse_ballot i64:$src)),
+    (S_INVERSE_BALLOT_U32 (i32 (EXTRACT_SUBREG SReg_64:$src, sub0)))
+>;
 
-def EXIT_PSEUDO_WM : SPseudoInstSI <(outs), (ins)> {
-  let hasSideEffects = 0;
-  let mayLoad = 0;
-  let mayStore = 0;
-}
-
-// Pseudo instructions used for @llvm.fptrunc.round upward
-// and @llvm.fptrunc.round downward.
-// These intrinsics will be legalized to G_FPTRUNC_ROUND_UPWARD
-// and G_FPTRUNC_ROUND_DOWNWARD before being lowered to
-// FPTRUNC_UPWARD_PSEUDO and FPTRUNC_DOWNWARD_PSEUDO.
-// The final codegen is done in the ModeRegister pass.
+// Pseudo instructions used for @llvm.fptrunc.round. The final codegen is done
+// in the ModeRegister pass.
 let Uses = [MODE, EXEC] in {
-def FPTRUNC_UPWARD_PSEUDO : VPseudoInstSI <(outs VGPR_32:$vdst),
-  (ins VGPR_32:$src0),
-  [(set f16:$vdst, (SIfptrunc_round_upward f32:$src0))]>;
+let True16Predicate = NotHasTrue16BitInsts in
+def FPTRUNC_ROUND_F16_F32_PSEUDO : VPseudoInstSI <(outs VGPR_32:$vdst),
+  (ins VGPR_32:$src0, i32imm:$round)>;
 
-def FPTRUNC_DOWNWARD_PSEUDO : VPseudoInstSI <(outs VGPR_32:$vdst),
-  (ins VGPR_32:$src0),
-  [(set f16:$vdst, (SIfptrunc_round_downward f32:$src0))]>;
+let True16Predicate = UseFakeTrue16Insts in
+def FPTRUNC_ROUND_F16_F32_PSEUDO_fake16_e32 : VPseudoInstSI <(outs VGPR_32:$vdst),
+  (ins VGPR_32:$src0, i32imm:$round)>;
+
+let True16Predicate = UseRealTrue16Insts in
+// The operands of these pseudos should match V_CVT_F16_F32_t16_e64
+def FPTRUNC_ROUND_F16_F32_PSEUDO_t16_e64 : VPseudoInstSI <(outs VOPDstOperand_t16:$vdst),
+  (ins FP32InputMods:$src0_modifiers, VSrc_f32:$src0, Clamp0:$clamp, omod0:$omod, op_sel0:$op_sel, i32imm:$round)> {
+   let FPClamp = 1;
+   let ClampLo = 1;
+   let UseNamedOperandTable = 1;
+}
+
+def FPTRUNC_ROUND_F32_F64_PSEUDO : VPseudoInstSI <(outs VGPR_32:$vdst),
+  (ins VReg_64:$src0, i32imm:$round)>;
 } // End Uses = [MODE, EXEC]
+
+let True16Predicate = NotHasTrue16BitInsts in
+def : GCNPat <(f16 (fptrunc_round f32:$src0, (i32 SupportedRoundMode:$round))),
+     (FPTRUNC_ROUND_F16_F32_PSEUDO $src0, (as_hw_round_mode $round))>;
+
+let True16Predicate = UseFakeTrue16Insts in
+def : GCNPat <(f16 (fptrunc_round f32:$src0, (i32 SupportedRoundMode:$round))),
+     (FPTRUNC_ROUND_F16_F32_PSEUDO_fake16_e32 $src0, (as_hw_round_mode $round))>;
+
+let True16Predicate = UseRealTrue16Insts in
+def : GCNPat <(f16 (fptrunc_round (f32 (VOP3OpSelMods f32:$src0, i32:$src0_modifiers)), (i32 SupportedRoundMode:$round))),
+     (FPTRUNC_ROUND_F16_F32_PSEUDO_t16_e64 $src0_modifiers, $src0, (as_hw_round_mode $round))>;
+
+def : GCNPat <(f32 (fptrunc_round f64:$src0, (i32 SupportedRoundMode:$round))),
+     (FPTRUNC_ROUND_F32_F64_PSEUDO $src0, (as_hw_round_mode $round))>;
 
 // Invert the exec mask and overwrite the inactive lanes of dst with inactive,
 // restoring it after we're done.
-let Defs = [SCC], isConvergent = 1 in {
-def V_SET_INACTIVE_B32 : VPseudoInstSI <(outs VGPR_32:$vdst),
-  (ins VSrc_b32: $src, VSrc_b32:$inactive),
-  [(set i32:$vdst, (int_amdgcn_set_inactive i32:$src, i32:$inactive))]> {
-}
+let isConvergent = 1 in
+def V_SET_INACTIVE_B32 : VOP3_Pseudo<"v_set_inactive_b32", VOP2e_I32_I32_I32_I1>;
 
-def V_SET_INACTIVE_B64 : VPseudoInstSI <(outs VReg_64:$vdst),
-  (ins VSrc_b64: $src, VSrc_b64:$inactive),
-  [(set i64:$vdst, (int_amdgcn_set_inactive i64:$src, i64:$inactive))]> {
+foreach vt = Reg32Types.types in {
+def : GCNPat <(vt (int_amdgcn_set_inactive vt:$src, vt:$inactive)),
+     (V_SET_INACTIVE_B32 0, VSrc_b32:$src, 0, VSrc_b32:$inactive, (IMPLICIT_DEF))>;
 }
-} // End Defs = [SCC]
 
 def : GCNPat<(i32 (int_amdgcn_set_inactive_chain_arg i32:$src, i32:$inactive)),
-    (V_SET_INACTIVE_B32 VGPR_32:$src, VGPR_32:$inactive)>;
-
-def : GCNPat<(i64 (int_amdgcn_set_inactive_chain_arg i64:$src, i64:$inactive)),
-    (V_SET_INACTIVE_B64 VReg_64:$src, VReg_64:$inactive)>;
+    (V_SET_INACTIVE_B32 0, VGPR_32:$src, 0, VGPR_32:$inactive, (IMPLICIT_DEF))>;
 
 let usesCustomInserter = 1, hasSideEffects = 0, mayLoad = 0, mayStore = 0, Uses = [EXEC] in {
   def WAVE_REDUCE_UMIN_PSEUDO_U32 : VPseudoInstSI <(outs SGPR_32:$sdst),
@@ -299,21 +338,23 @@ def S_SUB_U64_PSEUDO : SPseudoInstSI <
   [(set SReg_64:$sdst, (UniformBinFrag<sub> i64:$src0, i64:$src1))]
 >;
 
-def S_ADD_CO_PSEUDO : SPseudoInstSI <
-  (outs SReg_32:$sdst, SSrc_i1:$scc_out), (ins SSrc_b32:$src0, SSrc_b32:$src1, SSrc_i1:$scc_in)
->;
+let hasSideEffects = 0 in {
+  def S_ADD_CO_PSEUDO : SPseudoInstSI <
+    (outs SReg_32:$sdst, SSrc_i1:$scc_out), (ins SSrc_b32:$src0, SSrc_b32:$src1, SSrc_i1:$scc_in)
+  >;
 
-def S_SUB_CO_PSEUDO : SPseudoInstSI <
-  (outs SReg_32:$sdst, SSrc_i1:$scc_out), (ins SSrc_b32:$src0, SSrc_b32:$src1, SSrc_i1:$scc_in)
->;
+  def S_SUB_CO_PSEUDO : SPseudoInstSI <
+    (outs SReg_32:$sdst, SSrc_i1:$scc_out), (ins SSrc_b32:$src0, SSrc_b32:$src1, SSrc_i1:$scc_in)
+  >;
 
-def S_UADDO_PSEUDO : SPseudoInstSI <
-  (outs SReg_32:$sdst, SSrc_i1:$scc_out), (ins SSrc_b32:$src0, SSrc_b32:$src1)
->;
+  def S_UADDO_PSEUDO : SPseudoInstSI <
+    (outs SReg_32:$sdst, SSrc_i1:$scc_out), (ins SSrc_b32:$src0, SSrc_b32:$src1)
+  >;
 
-def S_USUBO_PSEUDO : SPseudoInstSI <
-  (outs SReg_32:$sdst, SSrc_i1:$scc_out), (ins SSrc_b32:$src0, SSrc_b32:$src1)
->;
+  def S_USUBO_PSEUDO : SPseudoInstSI <
+    (outs SReg_32:$sdst, SSrc_i1:$scc_out), (ins SSrc_b32:$src0, SSrc_b32:$src1)
+  >;
+}
 
 let OtherPredicates = [HasShaderCyclesHiLoRegisters] in
 def GET_SHADERCYCLESHILO : SPseudoInstSI<
@@ -425,15 +466,6 @@ def IGLP_OPT : SPseudoInstSI<(outs), (ins i32imm:$mask),
 // generation as well as simplied CFG during Machine IR optimization stage.
 
 let isTerminator = 1, isNotDuplicable = 1 in {
-
-let OtherPredicates = [EnableLateCFGStructurize] in {
- def SI_NON_UNIFORM_BRCOND_PSEUDO : CFPseudoInstSI <
-  (outs),
-  (ins SReg_1:$vcc, brtarget:$target),
-  [(brcond i1:$vcc, bb:$target)]> {
-    let Size = 12;
-}
-}
 
 def SI_IF: CFPseudoInstSI <
   (outs SReg_1:$dst), (ins SReg_1:$vcc, brtarget:$target),
@@ -589,6 +621,16 @@ def SI_INIT_EXEC_FROM_INPUT : SPseudoInstSI <
   let Defs = [EXEC];
 }
 
+// Sets EXEC to all lanes and returns the previous EXEC.
+def SI_INIT_WHOLE_WAVE : SPseudoInstSI <
+  (outs SReg_1:$dst), (ins),
+  [(set i1:$dst, (int_amdgcn_init_whole_wave))]> {
+  let Defs = [EXEC];
+  let Uses = [EXEC];
+
+  let isConvergent = 1;
+}
+
 // Return for returning shaders to a shader variant epilog.
 def SI_RETURN_TO_EPILOG : SPseudoInstSI <
   (outs), (ins variable_ops), [(AMDGPUreturn_to_epilog)]> {
@@ -677,36 +719,42 @@ def : GCNPat<
   (SI_TCRETURN_GFX Gfx_CCR_SGPR_64:$src0, (i64 0), i32imm:$fpdiff)
 >;
 
-// Pseudo for the llvm.amdgcn.cs.chain intrinsic.
-// This is essentially a tail call, but it also takes a mask to put in EXEC
-// right before jumping to the callee.
-class SI_CS_CHAIN_TC<
+// Pseudos for the llvm.amdgcn.cs.chain intrinsic.
+multiclass SI_CS_CHAIN_TC<
     ValueType execvt, Predicate wavesizepred,
-    RegisterOperand execrc = getSOPSrcForVT<execvt>.ret>
-    : SPseudoInstSI <(outs),
-      (ins CCR_SGPR_64:$src0, unknown:$callee, i32imm:$fpdiff, execrc:$exec)> {
-  let FixedSize = 0;
-  let isCall = 1;
-  let isTerminator = 1;
-  let isBarrier = 1;
-  let isReturn = 1;
-  let UseNamedOperandTable = 1;
-  let SchedRW = [WriteBranch];
-  let isConvergent = 1;
+    RegisterOperand execrc = getSOPSrcForVT<execvt>.ret> {
+  let FixedSize = 0,
+      isCall = 1,
+      isTerminator = 1,
+      isBarrier = 1,
+      isReturn = 1,
+      UseNamedOperandTable = 1,
+      SchedRW = [WriteBranch],
+      isConvergent = 1,
+      WaveSizePredicate = wavesizepred in {
+    // This is essentially a tail call, but it also takes a mask to put in EXEC
+    // right before jumping to the callee.
+    def NAME: SPseudoInstSI <(outs),
+        (ins CCR_SGPR_64:$src0, unknown:$callee, i32imm:$fpdiff, execrc:$exec)>;
 
-  let WaveSizePredicate = wavesizepred;
+    // Same as above, but it will first try to reallocate the VGPRs, and choose an
+    // EXEC mask and a callee depending on the success of the reallocation attempt.
+    def _DVGPR : SPseudoInstSI <(outs),
+        (ins CCR_SGPR_64:$src0, i64imm:$callee, i32imm:$fpdiff, execrc:$exec,
+             SSrc_b32:$numvgprs, execrc:$fbexec, CCR_SGPR_64:$fbcallee)>;
+  } // End FixedSize = 0 etc
 }
 
-def SI_CS_CHAIN_TC_W32 : SI_CS_CHAIN_TC<i32, isWave32>;
-def SI_CS_CHAIN_TC_W64 : SI_CS_CHAIN_TC<i64, isWave64>;
+defm SI_CS_CHAIN_TC_W32 : SI_CS_CHAIN_TC<i32, isWave32>;
+defm SI_CS_CHAIN_TC_W64 : SI_CS_CHAIN_TC<i64, isWave64>;
 
 // Handle selecting direct & indirect calls via SI_CS_CHAIN_TC_W32/64
 multiclass si_cs_chain_tc_pattern<
   dag callee, ValueType execvt, RegisterOperand execrc, Instruction tc> {
-def : GCNPat<
-  (AMDGPUtc_return_chain i64:$src0, callee, (i32 timm:$fpdiff), execvt:$exec),
-  (tc CCR_SGPR_64:$src0, callee, i32imm:$fpdiff, execrc:$exec)
->;
+  def : GCNPat<
+    (AMDGPUtc_return_chain i64:$src0, callee, (i32 timm:$fpdiff), execvt:$exec),
+    (tc CCR_SGPR_64:$src0, callee, i32imm:$fpdiff, execrc:$exec)
+  >;
 }
 
 multiclass si_cs_chain_tc_patterns<
@@ -720,6 +768,25 @@ multiclass si_cs_chain_tc_patterns<
 
 defm : si_cs_chain_tc_patterns<i32>;
 defm : si_cs_chain_tc_patterns<i64>;
+
+// Match dynamic VGPR case. This is always indirect since we choose the callee
+// dynamically based on the result of the VGPR reallocation, so make sure to
+// drop the callee info if there is any.
+multiclass si_cs_chain_tc_dvgpr_patterns<
+  ValueType execvt, RegisterOperand execrc = getSOPSrcForVT<execvt>.ret,
+  Instruction tc = SI_CS_CHAIN_TC_W32_DVGPR> {
+  foreach callee = [ (i64 0), (tglobaladdr) ] in {
+  def : GCNPat<
+    (AMDGPUtc_return_chain_dvgpr i64:$src0, callee, (i32 timm:$fpdiff),
+                                 execvt:$exec, i32:$numvgprs,
+                                 execvt:$fbexec, i64:$fbcallee),
+    (tc CCR_SGPR_64:$src0, (i64 0), i32imm:$fpdiff, execrc:$exec,
+        SSrc_b32:$numvgprs, execrc:$fbexec, CCR_SGPR_64:$fbcallee)
+  >;
+  }
+}
+
+defm : si_cs_chain_tc_dvgpr_patterns<i32>; // On GFX12, dVGPR mode is wave32-only.
 
 def ADJCALLSTACKUP : SPseudoInstSI<
   (outs), (ins i32imm:$amt0, i32imm:$amt1),
@@ -895,7 +962,7 @@ def V_INDIRECT_REG_READ_GPR_IDX_B32_V16 : V_INDIRECT_REG_READ_GPR_IDX_pseudo<VRe
 def V_INDIRECT_REG_READ_GPR_IDX_B32_V32 : V_INDIRECT_REG_READ_GPR_IDX_pseudo<VReg_1024>;
 
 multiclass SI_SPILL_SGPR <RegisterClass sgpr_class> {
-  let UseNamedOperandTable = 1, SGPRSpill = 1, Uses = [EXEC] in {
+  let UseNamedOperandTable = 1, Spill = 1, SALU = 1, Uses = [EXEC] in {
     def _SAVE : PseudoInstSI <
       (outs),
       (ins sgpr_class:$data, i32imm:$addr)> {
@@ -931,7 +998,7 @@ defm SI_SPILL_S384 : SI_SPILL_SGPR <SReg_384>;
 defm SI_SPILL_S512 : SI_SPILL_SGPR <SReg_512>;
 defm SI_SPILL_S1024 : SI_SPILL_SGPR <SReg_1024>;
 
-let SGPRSpill = 1, VALU = 1, isConvergent = 1 in {
+let Spill = 1, VALU = 1, isConvergent = 1 in {
 def SI_SPILL_S32_TO_VGPR : PseudoInstSI <(outs VGPR_32:$vdst),
   (ins SReg_32:$src0, i32imm:$src1, VGPR_32:$vdst_in)> {
   let Size = 4;
@@ -940,6 +1007,7 @@ def SI_SPILL_S32_TO_VGPR : PseudoInstSI <(outs VGPR_32:$vdst),
   let hasSideEffects = 0;
   let mayLoad = 0;
   let mayStore = 0;
+  let hasExtraDefRegAllocReq = 1;
   let Constraints = "$vdst = $vdst_in";
 }
 
@@ -950,14 +1018,15 @@ def SI_RESTORE_S32_FROM_VGPR : PseudoInstSI <(outs SReg_32:$sdst),
   let hasSideEffects = 0;
   let mayLoad = 0;
   let mayStore = 0;
+  let hasExtraSrcRegAllocReq = 1;
 }
-} // End SGPRSpill = 1, VALU = 1, isConvergent = 1
+} // End Spill = 1, VALU = 1, isConvergent = 1
 
 // VGPR or AGPR spill instructions. In case of AGPR spilling a temp register
 // needs to be used and an extra instruction to move between VGPR and AGPR.
 // UsesTmp adds to the total size of an expanded spill in this case.
 multiclass SI_SPILL_VGPR <RegisterClass vgpr_class, bit UsesTmp = 0> {
-  let UseNamedOperandTable = 1, VGPRSpill = 1,
+  let UseNamedOperandTable = 1, Spill = 1, VALU = 1,
        SchedRW = [WriteVMEM] in {
     def _SAVE : VPseudoInstSI <
       (outs),
@@ -983,9 +1052,10 @@ multiclass SI_SPILL_VGPR <RegisterClass vgpr_class, bit UsesTmp = 0> {
       // Size field is unsigned char and cannot fit more.
       let Size = !if(!le(MaxSize, 256), MaxSize, 252);
     }
-  } // End UseNamedOperandTable = 1, VGPRSpill = 1, SchedRW = [WriteVMEM]
+  } // End UseNamedOperandTable = 1, Spill = 1, VALU = 1, SchedRW = [WriteVMEM]
 }
 
+defm SI_SPILL_V16  : SI_SPILL_VGPR <VGPR_16>;
 defm SI_SPILL_V32  : SI_SPILL_VGPR <VGPR_32>;
 defm SI_SPILL_V64  : SI_SPILL_VGPR <VReg_64>;
 defm SI_SPILL_V96  : SI_SPILL_VGPR <VReg_96>;
@@ -1036,6 +1106,7 @@ let isConvergent = 1 in {
   defm SI_SPILL_WWM_AV32 : SI_SPILL_VGPR <AV_32, 1>;
 }
 
+let isReMaterializable = 1, isAsCheapAsAMove = 1 in
 def SI_PC_ADD_REL_OFFSET : SPseudoInstSI <
   (outs SReg_64:$dst),
   (ins si_ga:$ptr_lo, si_ga:$ptr_hi),
@@ -1059,39 +1130,40 @@ def : GCNPat<
   (SI_ELSE $src, $target)
 >;
 
-def : Pat <
+def : GCNPat <
   (int_amdgcn_kill i1:$src),
   (SI_KILL_I1_PSEUDO SCSrc_i1:$src, 0)
 >;
 
-def : Pat <
+def : GCNPat <
   (int_amdgcn_kill (i1 (not i1:$src))),
   (SI_KILL_I1_PSEUDO SCSrc_i1:$src, -1)
 >;
 
-def : Pat <
+let SubtargetPredicate = NotHasSALUFloatInsts in
+def : GCNPat <
   (int_amdgcn_kill (i1 (setcc f32:$src, InlineImmFP32:$imm, cond:$cond))),
   (SI_KILL_F32_COND_IMM_PSEUDO VSrc_b32:$src, (bitcast_fpimm_to_i32 $imm), (cond_as_i32imm $cond))
 >;
 
-def : Pat <
+def : GCNPat <
   (int_amdgcn_wqm_demote i1:$src),
   (SI_DEMOTE_I1 SCSrc_i1:$src, 0)
 >;
 
-def : Pat <
+def : GCNPat <
   (int_amdgcn_wqm_demote (i1 (not i1:$src))),
   (SI_DEMOTE_I1 SCSrc_i1:$src, -1)
 >;
 
   // TODO: we could add more variants for other types of conditionals
 
-def : Pat <
+def : GCNPat <
   (i64 (int_amdgcn_icmp i1:$src, (i1 0), (i32 33))),
   (COPY $src) // Return the SGPRs representing i1 src
 >;
 
-def : Pat <
+def : GCNPat <
   (i32 (int_amdgcn_icmp i1:$src, (i1 0), (i32 33))),
   (COPY $src) // Return the SGPRs representing i1 src
 >;
@@ -1100,7 +1172,7 @@ def : Pat <
 // VOP1 Patterns
 //===----------------------------------------------------------------------===//
 
-multiclass f16_fp_Pats<Instruction cvt_f16_f32_inst_e64, Instruction cvt_f32_f16_inst_e64> {
+multiclass f16_to_fp_Pats<Instruction cvt_f16_f32_inst_e64, Instruction cvt_f32_f16_inst_e64> {
   // f16_to_fp patterns
   def : GCNPat <
     (f32 (any_f16_to_fp i32:$src0)),
@@ -1127,25 +1199,42 @@ multiclass f16_fp_Pats<Instruction cvt_f16_f32_inst_e64, Instruction cvt_f32_f16
     (cvt_f32_f16_inst_e64 SRCMODS.NEG, $src0)
   >;
 
-  def : GCNPat <
-    (f64 (any_fpextend f16:$src)),
-    (V_CVT_F64_F32_e32 (cvt_f32_f16_inst_e64 SRCMODS.NONE, $src))
-  >;
-
   // fp_to_fp16 patterns
   def : GCNPat <
     (i32 (AMDGPUfp_to_f16 (f32 (VOP3Mods f32:$src0, i32:$src0_modifiers)))),
     (cvt_f16_f32_inst_e64 $src0_modifiers, f32:$src0)
   >;
 
+  // This is only used on targets without half support
+  // TODO: Introduce strict variant of AMDGPUfp_to_f16 and share custom lowering
+  def : GCNPat <
+    (i32 (strict_fp_to_f16 (f32 (VOP3Mods f32:$src0, i32:$src0_modifiers)))),
+    (cvt_f16_f32_inst_e64 $src0_modifiers, f32:$src0)
+  >;
+}
+
+let True16Predicate = NotHasTrue16BitInsts in
+defm : f16_to_fp_Pats<V_CVT_F16_F32_e64, V_CVT_F32_F16_e64>;
+
+let True16Predicate = UseFakeTrue16Insts in
+defm : f16_to_fp_Pats<V_CVT_F16_F32_fake16_e64, V_CVT_F32_F16_fake16_e64>;
+
+multiclass f16_fp_Pats<Instruction cvt_f16_f32_inst_e64,
+                       Instruction cvt_f32_f16_inst_e64,
+                       RegOrImmOperand VSrc> {
+  def : GCNPat <
+    (f64 (any_fpextend f16:$src)),
+    (V_CVT_F64_F32_e32 (cvt_f32_f16_inst_e64 SRCMODS.NONE, $src))
+  >;
+
   def : GCNPat <
     (i32 (fp_to_sint f16:$src)),
-    (V_CVT_I32_F32_e32 (cvt_f32_f16_inst_e64 SRCMODS.NONE, VSrc_b32:$src))
+    (V_CVT_I32_F32_e32 (cvt_f32_f16_inst_e64 SRCMODS.NONE, VSrc:$src))
   >;
 
   def : GCNPat <
     (i32 (fp_to_uint f16:$src)),
-    (V_CVT_U32_F32_e32 (cvt_f32_f16_inst_e64 SRCMODS.NONE, VSrc_b32:$src))
+    (V_CVT_U32_F32_e32 (cvt_f32_f16_inst_e64 SRCMODS.NONE, VSrc:$src))
   >;
 
   def : GCNPat <
@@ -1157,20 +1246,16 @@ multiclass f16_fp_Pats<Instruction cvt_f16_f32_inst_e64, Instruction cvt_f32_f16
     (f16 (uint_to_fp i32:$src)),
     (cvt_f16_f32_inst_e64 SRCMODS.NONE, (V_CVT_F32_U32_e32 VSrc_b32:$src))
   >;
-
-  // This is only used on targets without half support
-  // TODO: Introduce strict variant of AMDGPUfp_to_f16 and share custom lowering
-  def : GCNPat <
-    (i32 (strict_fp_to_f16 (f32 (VOP3Mods f32:$src0, i32:$src0_modifiers)))),
-    (cvt_f16_f32_inst_e64 $src0_modifiers, f32:$src0)
-  >;
 }
 
-let SubtargetPredicate = NotHasTrue16BitInsts in
-defm : f16_fp_Pats<V_CVT_F16_F32_e64, V_CVT_F32_F16_e64>;
+let True16Predicate = NotHasTrue16BitInsts in
+defm : f16_fp_Pats<V_CVT_F16_F32_e64, V_CVT_F32_F16_e64, VSrc_b32>;
 
-let SubtargetPredicate = HasTrue16BitInsts in
-defm : f16_fp_Pats<V_CVT_F16_F32_t16_e64, V_CVT_F32_F16_t16_e64>;
+let True16Predicate = UseRealTrue16Insts in
+defm : f16_fp_Pats<V_CVT_F16_F32_t16_e64, V_CVT_F32_F16_t16_e64, VSrcT_b16>;
+
+let True16Predicate = UseFakeTrue16Insts in
+defm : f16_fp_Pats<V_CVT_F16_F32_fake16_e64, V_CVT_F32_F16_fake16_e64, VSrc_b16>;
 
 //===----------------------------------------------------------------------===//
 // VOP2 Patterns
@@ -1238,11 +1323,22 @@ class VOPSelectPat <ValueType vt> : GCNPat <
   (vt (select i1:$src0, vt:$src1, vt:$src2)),
   (V_CNDMASK_B32_e64 0, VSrc_b32:$src2, 0, VSrc_b32:$src1, SSrc_i1:$src0)
 >;
+class VOPSelectPat_t16 <ValueType vt> : GCNPat <
+  (vt (select i1:$src0, vt:$src1, vt:$src2)),
+  (V_CNDMASK_B16_t16_e64 0, VSrcT_b16:$src2, 0, VSrcT_b16:$src1, SSrc_i1:$src0)
+>;
 
 def : VOPSelectModsPat <i32>;
 def : VOPSelectModsPat <f32>;
-def : VOPSelectPat <f16>;
-def : VOPSelectPat <i16>;
+foreach p = [NotHasTrue16BitInsts, UseFakeTrue16Insts] in
+let True16Predicate = p in {
+  def : VOPSelectPat <f16>;
+  def : VOPSelectPat <i16>;
+} // End True16Predicate = p
+let True16Predicate = UseRealTrue16Insts in {
+  def : VOPSelectPat_t16 <f16>;
+  def : VOPSelectPat_t16 <i16>;
+} // End True16Predicate = UseRealTrue16Insts
 
 let AddedComplexity = 1 in {
 def : GCNPat <
@@ -1800,7 +1896,14 @@ def : BitConvert <v8i64,  v16f32, VReg_512>;
 def : BitConvert <v8f64,  v16f32, VReg_512>;
 def : BitConvert <v16f32, v8i64,  VReg_512>;
 def : BitConvert <v16f32, v8f64,  VReg_512>;
-
+def : BitConvert <v8i64,  v32f16, VReg_512>;
+def : BitConvert <v8i64,  v32i16, VReg_512>;
+def : BitConvert <v8f64,  v32f16, VReg_512>;
+def : BitConvert <v8f64,  v32i16, VReg_512>;
+def : BitConvert <v32f16, v8i64,  VReg_512>;
+def : BitConvert <v32f16, v8f64,  VReg_512>;
+def : BitConvert <v32i16, v8i64,  VReg_512>;
+def : BitConvert <v32i16, v8f64,  VReg_512>;
 
 
 def : BitConvert <v32bf16, v32i16, VReg_512>;
@@ -1901,20 +2004,22 @@ def : GCNPat <
   (S_XOR_B32 SReg_32:$src, (S_MOV_B32 (i32 0x80000000)))
 >;
 
+foreach fp16vt = [f16, bf16] in {
 def : GCNPat <
-  (UniformUnaryFrag<fneg> (f16 SReg_32:$src)),
+  (UniformUnaryFrag<fneg> (fp16vt SReg_32:$src)),
   (S_XOR_B32 SReg_32:$src, (S_MOV_B32 (i32 0x00008000)))
 >;
 
 def : GCNPat <
-  (UniformUnaryFrag<fabs> (f16 SReg_32:$src)),
+  (UniformUnaryFrag<fabs> (fp16vt SReg_32:$src)),
   (S_AND_B32 SReg_32:$src, (S_MOV_B32 (i32 0x00007fff)))
 >;
 
 def : GCNPat <
-  (UniformUnaryFrag<fneg> (fabs (f16 SReg_32:$src))),
+  (UniformUnaryFrag<fneg> (fabs (fp16vt SReg_32:$src))),
   (S_OR_B32 SReg_32:$src, (S_MOV_B32 (i32 0x00008000))) // Set sign bit
 >;
+} // End foreach fp16vt = ...
 
 def : GCNPat <
   (UniformUnaryFrag<fneg> (v2f16 SReg_32:$src)),
@@ -2023,20 +2128,42 @@ def : GCNPat <
   (V_XOR_B32_e64 (S_MOV_B32 (i32 0x80000000)), VGPR_32:$src)
 >;
 
+foreach fp16vt = [f16, bf16] in {
+foreach p = [NotHasTrue16BitInsts, UseFakeTrue16Insts] in
+let SubtargetPredicate = p in {
 def : GCNPat <
-  (fabs (f16 VGPR_32:$src)),
+  (fabs (fp16vt VGPR_32:$src)),
   (V_AND_B32_e64 (S_MOV_B32 (i32 0x00007fff)), VGPR_32:$src)
 >;
 
 def : GCNPat <
-  (fneg (f16 VGPR_32:$src)),
+  (fneg (fp16vt VGPR_32:$src)),
   (V_XOR_B32_e64 (S_MOV_B32 (i32 0x00008000)), VGPR_32:$src)
 >;
 
 def : GCNPat <
-  (fneg (fabs (f16 VGPR_32:$src))),
+  (fneg (fabs (fp16vt VGPR_32:$src))),
   (V_OR_B32_e64 (S_MOV_B32 (i32 0x00008000)), VGPR_32:$src) // Set sign bit
 >;
+}
+
+let SubtargetPredicate = UseRealTrue16Insts in {
+def : GCNPat <
+  (fabs (fp16vt VGPR_16:$src)),
+  (V_AND_B16_t16_e64 (i32 0), (i16 0x7fff), (i32 0), VGPR_16:$src)
+>;
+
+def : GCNPat <
+  (fneg (fp16vt VGPR_16:$src)),
+  (V_XOR_B16_t16_e64 (i32 0), (i16 0x8000), (i32 0), VGPR_16:$src)
+>;
+
+def : GCNPat <
+  (fneg (fabs (fp16vt VGPR_16:$src))),
+  (V_OR_B16_t16_e64 (i32 0), (i16 0x8000), (i32 0), VGPR_16:$src) // Set sign bit
+>;
+} // End SubtargetPredicate = UseRealTrue16Insts
+} // End foreach fp16vt = ...
 
 def : GCNPat <
   (fneg (v2f16 VGPR_32:$src)),
@@ -2086,7 +2213,7 @@ def : GCNPat <
 def : GCNPat <
   (DivergentUnaryFrag<fneg> (v2f32 VReg_64:$src)),
   (V_PK_ADD_F32 11 /* OP_SEL_1 | NEG_LO | HEG_HI */, VReg_64:$src,
-                11 /* OP_SEL_1 | NEG_LO | HEG_HI */, 0,
+                11 /* OP_SEL_1 | NEG_LO | HEG_HI */, (i64 0),
                 0, 0, 0, 0, 0)
 > {
   let SubtargetPredicate = HasPackedFP32Ops;
@@ -2130,19 +2257,31 @@ def : GCNPat <
 /********** Immediate Patterns **********/
 /********** ================== **********/
 
+// FIXME: Remove VGPRImm. Should be inferrable from register bank.
+
+foreach vt = [i32, p3, p5, p6, p2] in {
+  def : GCNPat <
+    (VGPRImm<(vt imm)>:$imm),
+    (V_MOV_B32_e32 imm:$imm)
+  >;
+
+  def : GCNPat <
+    (vt imm:$imm),
+    (S_MOV_B32 imm:$imm)
+  >;
+}
+
+// FIXME: The register bank of the frame index should depend on the
+// users, and transitive users of the add. We may require an
+// unnecessary copy from SGPR to VGPR.
 def : GCNPat <
-  (VGPRImm<(i32 imm)>:$imm),
-  (V_MOV_B32_e32 imm:$imm)
+  (VGPRImm<(p5 frameindex)>:$fi),
+  (V_MOV_B32_e32 (p5 (frameindex_to_targetframeindex $fi)))
 >;
 
 def : GCNPat <
-  (VGPRImm<(f32 fpimm)>:$imm),
-  (V_MOV_B32_e32 (f32 (bitcast_fpimm_to_i32 $imm)))
->;
-
-def : GCNPat <
-  (i32 imm:$imm),
-  (S_MOV_B32 imm:$imm)
+  (p5 frameindex:$fi),
+  (S_MOV_B32 (p5 (frameindex_to_targetframeindex $fi)))
 >;
 
 def : GCNPat <
@@ -2155,18 +2294,39 @@ def : GCNPat <
   (S_MOV_B32 $ga)
 >;
 
-// FIXME: Workaround for ordering issue with peephole optimizer where
-// a register class copy interferes with immediate folding.  Should
-// use s_mov_b32, which can be shrunk to s_movk_i32
-def : GCNPat <
-  (VGPRImm<(f16 fpimm)>:$imm),
-  (V_MOV_B32_e32 (f16 (bitcast_fpimm_to_i32 $imm)))
->;
+foreach pred = [NotHasTrue16BitInsts, UseFakeTrue16Insts] in {
+  let True16Predicate = pred in {
+    def : GCNPat <
+      (VGPRImm<(i16 imm)>:$imm),
+      (V_MOV_B32_e32 imm:$imm)
+    >;
+  }
 
-def : GCNPat <
-  (VGPRImm<(bf16 fpimm)>:$imm),
-  (V_MOV_B32_e32 (bf16 (bitcast_fpimm_to_i32 $imm)))
->;
+  // FIXME: Workaround for ordering issue with peephole optimizer where
+  // a register class copy interferes with immediate folding.  Should
+  // use s_mov_b32, which can be shrunk to s_movk_i32
+
+  foreach vt = [f16, bf16] in {
+    def : GCNPat <
+      (VGPRImm<(vt fpimm)>:$imm),
+      (V_MOV_B32_e32 (vt (bitcast_fpimm_to_i32 $imm)))
+    >;
+  }
+}
+
+let True16Predicate = UseRealTrue16Insts in {
+  def : GCNPat <
+    (VGPRImm<(i16 imm)>:$imm),
+    (V_MOV_B16_t16_e64 0, imm:$imm, 0)
+  >;
+
+  foreach vt = [f16, bf16] in {
+    def : GCNPat <
+      (VGPRImm<(vt fpimm)>:$imm),
+      (V_MOV_B16_t16_e64 0, (vt (bitcast_fpimm_to_i16 $imm)), 0)
+    >;
+  }
+}
 
 // V_MOV_B64_PSEUDO and S_MOV_B64_IMM_PSEUDO can be used with any 64-bit
 // immediate and wil be expanded as needed, but we will only use these patterns
@@ -2202,45 +2362,75 @@ def : GCNPat <
 >;
 
 def : GCNPat <
+  (VGPRImm<(bf16 fpimm)>:$imm),
+  (V_MOV_B32_e32 (bf16 (bitcast_fpimm_to_i32 $imm)))
+>;
+
+def : GCNPat <
   (bf16 fpimm:$imm),
   (S_MOV_B32 (i32 (bitcast_fpimm_to_i32 $imm)))
 >;
 
 def : GCNPat <
-  (p5 frameindex:$fi),
-  (V_MOV_B32_e32 (p5 (frameindex_to_targetframeindex $fi)))
+  (VGPRImm<(f32 fpimm)>:$imm),
+  (V_MOV_B32_e32 (f32 (bitcast_fpimm_to_i32 $imm)))
 >;
 
 def : GCNPat <
-  (p5 frameindex:$fi),
-  (S_MOV_B32 (p5 (frameindex_to_targetframeindex $fi)))
+  (f32 fpimm:$imm),
+  (S_MOV_B32 (f32 (bitcast_fpimm_to_i32 $imm)))
+>;
+
+foreach vt = [i64, p1, p0, p4] in { // FIXME: Should accept arbitrary addrspace
+  def : GCNPat <
+    (VGPRImm<(vt imm)>:$imm),
+    (V_MOV_B64_PSEUDO imm:$imm)
+  >;
+
+  def : GCNPat <
+    (vt InlineImm64:$imm),
+    (S_MOV_B64 InlineImm64:$imm)
+  >;
+
+  def : GCNPat <
+    (vt imm:$imm),
+    (S_MOV_B64_IMM_PSEUDO imm:$imm)
+  >;
+}
+
+def : GCNPat <
+  (VGPRImm<(f64 fpimm)>:$imm),
+  (V_MOV_B64_PSEUDO (f64 (bitcast_fpimm_to_i64 $imm)))
+>;
+
+// V_MOV_B64_PSEUDO and S_MOV_B64_IMM_PSEUDO can be used with any 64-bit
+// immediate and wil be expanded as needed, but we will only use these patterns
+// for values which can be encoded.
+def : GCNPat <
+  (f64 InlineImmFP64:$imm),
+  (S_MOV_B64 (i64 (bitcast_fpimm_to_i64 $imm)))
 >;
 
 def : GCNPat <
-  (i64 InlineImm64:$imm),
-  (S_MOV_B64 InlineImm64:$imm)
+  (f64 fpimm:$imm),
+  (S_MOV_B64_IMM_PSEUDO (i64 (bitcast_fpimm_to_i64 fpimm:$imm)))
 >;
-
-// XXX - Should this use a s_cmp to set SCC?
 
 // Set to sign-extended 64-bit value (true = -1, false = 0)
-def : GCNPat <
-  (i1 imm:$imm),
-  (S_MOV_B64 (i64 (as_i64imm $imm)))
-> {
+def : GCNPat <(i1 imm:$imm),
+              (S_MOV_B64 imm:$imm)> {
   let WaveSizePredicate = isWave64;
 }
 
-def : GCNPat <
-  (i1 imm:$imm),
-  (S_MOV_B32 (i32 (as_i32imm $imm)))
-> {
+def : GCNPat <(i1 imm:$imm),
+              (S_MOV_B32 imm:$imm)> {
   let WaveSizePredicate = isWave32;
 }
 
+let True16Predicate = UseRealTrue16Insts in
 def : GCNPat <
-  (f64 InlineImmFP64:$imm),
-  (S_MOV_B64 (f64 (bitcast_fpimm_to_i64 InlineImmFP64:$imm)))
+  (i32 (DivergentBinFrag<srl> VGPR_32:$src, (i32 16))),
+  (REG_SEQUENCE VGPR_32, (i16 (EXTRACT_SUBREG $src, hi16)), lo16, (V_MOV_B16_t16_e64 0, (i16 0x0000), 0), hi16)
 >;
 
 /********** ================== **********/
@@ -2374,6 +2564,7 @@ def : AMDGPUPat <
                $src1), sub1)
 >;
 
+let True16Predicate = NotHasTrue16BitInsts in {
 def : ROTRPattern <V_ALIGNBIT_B32_e64>;
 
 def : GCNPat<(i32 (trunc (srl i64:$src0, (and i32:$src1, (i32 31))))),
@@ -2383,6 +2574,69 @@ def : GCNPat<(i32 (trunc (srl i64:$src0, (and i32:$src1, (i32 31))))),
 def : GCNPat<(i32 (trunc (srl i64:$src0, (i32 ShiftAmt32Imm:$src1)))),
           (V_ALIGNBIT_B32_e64 (i32 (EXTRACT_SUBREG (i64 $src0), sub1)),
                           (i32 (EXTRACT_SUBREG (i64 $src0), sub0)), $src1)>;
+} // end True16Predicate = NotHasTrue16BitInsts
+
+let True16Predicate = UseRealTrue16Insts in {
+def : GCNPat <
+  (rotr i32:$src0, i32:$src1),
+  (V_ALIGNBIT_B32_t16_e64 /* src0_modifiers */ 0, $src0,
+                          /* src1_modifiers */ 0, $src0,
+                          /* src2_modifiers */ 0,
+                          (EXTRACT_SUBREG $src1, lo16),
+                          /* clamp */ 0, /* op_sel */ 0)
+>;
+
+def : GCNPat<(i32 (trunc (srl i64:$src0, (i32 ShiftAmt32Imm:$src1)))),
+          (V_ALIGNBIT_B32_t16_e64 0, /* src0_modifiers */
+                          (i32 (EXTRACT_SUBREG (i64 $src0), sub1)),
+                          0, /* src1_modifiers */
+                          (i32 (EXTRACT_SUBREG (i64 $src0), sub0)),
+                          0, /* src2_modifiers */
+                          (i16 (EXTRACT_SUBREG VGPR_32:$src1, lo16)),
+                          /* clamp */ 0, /* op_sel */ 0)>;
+
+def : GCNPat<(fshr i32:$src0, i32:$src1, i32:$src2),
+          (V_ALIGNBIT_B32_t16_e64 /* src0_modifiers */ 0, $src0,
+                          /* src1_modifiers */ 0, $src1,
+                          /* src2_modifiers */ 0,
+                          (EXTRACT_SUBREG VGPR_32:$src2, lo16),
+                          /* clamp */ 0, /* op_sel */ 0)>;
+} // end True16Predicate = UseRealTrue16Insts
+
+let True16Predicate = UseFakeTrue16Insts in {
+def : GCNPat <
+  (rotr i32:$src0, i32:$src1),
+  (V_ALIGNBIT_B32_fake16_e64 /* src0_modifiers */ 0, $src0,
+                             /* src1_modifiers */ 0, $src0,
+                             /* src2_modifiers */ 0,
+                             $src1, /* clamp */ 0, /* op_sel */ 0)
+>;
+
+def : GCNPat<(i32 (trunc (srl i64:$src0, (and i32:$src1, (i32 31))))),
+     (V_ALIGNBIT_B32_fake16_e64 0, /* src0_modifiers */
+                               (i32 (EXTRACT_SUBREG (i64 $src0), sub1)),
+                                0, /* src1_modifiers */
+                               (i32 (EXTRACT_SUBREG (i64 $src0), sub0)),
+                                0, /* src2_modifiers */
+                                $src1, /* clamp */ 0, /* op_sel */ 0)
+>;
+
+def : GCNPat<(i32 (trunc (srl i64:$src0, (i32 ShiftAmt32Imm:$src1)))),
+     (V_ALIGNBIT_B32_fake16_e64 0, /* src0_modifiers */
+                               (i32 (EXTRACT_SUBREG (i64 $src0), sub1)),
+                                0, /* src1_modifiers */
+                               (i32 (EXTRACT_SUBREG (i64 $src0), sub0)),
+                                0, /* src2_modifiers */
+                                $src1, /* clamp */ 0, /* op_sel */ 0)
+>;
+
+def : GCNPat<(fshr i32:$src0, i32:$src1, i32:$src2),
+     (V_ALIGNBIT_B32_fake16_e64 /* src0_modifiers */ 0, $src0,
+                                /* src1_modifiers */ 0, $src1,
+                                /* src2_modifiers */ 0,
+                                $src2, /* clamp */ 0, /* op_sel */ 0)
+>;
+} // end True16Predicate = UseFakeTrue16Insts
 
 /********** ====================== **********/
 /**********   Indirect addressing  **********/
@@ -2580,15 +2834,20 @@ class FPToI1Pat<Instruction Inst, int KOne, ValueType kone_type, ValueType vt, S
   (i1 (Inst 0, (kone_type KOne), $src0_modifiers, $src0, DSTCLAMP.NONE))
 >;
 
-let OtherPredicates = [NotHasTrue16BitInsts] in {
+let True16Predicate = NotHasTrue16BitInsts in {
   def : FPToI1Pat<V_CMP_EQ_F16_e64, CONST.FP16_ONE, i16, f16, fp_to_uint>;
   def : FPToI1Pat<V_CMP_EQ_F16_e64, CONST.FP16_NEG_ONE, i16, f16, fp_to_sint>;
-} // end OtherPredicates = [NotHasTrue16BitInsts]
+} // end True16Predicate = NotHasTrue16BitInsts
 
-let OtherPredicates = [HasTrue16BitInsts] in {
+let True16Predicate = UseRealTrue16Insts in {
   def : FPToI1Pat<V_CMP_EQ_F16_t16_e64, CONST.FP16_ONE, i16, f16, fp_to_uint>;
   def : FPToI1Pat<V_CMP_EQ_F16_t16_e64, CONST.FP16_NEG_ONE, i16, f16, fp_to_sint>;
-} // end OtherPredicates = [HasTrue16BitInsts]
+} // end True16Predicate = UseRealTrue16BitInsts
+
+let True16Predicate = UseFakeTrue16Insts in {
+  def : FPToI1Pat<V_CMP_EQ_F16_fake16_e64, CONST.FP16_ONE, i16, f16, fp_to_uint>;
+  def : FPToI1Pat<V_CMP_EQ_F16_fake16_e64, CONST.FP16_NEG_ONE, i16, f16, fp_to_sint>;
+} // end True16Predicate = UseFakeTrue16BitInsts
 
 def : FPToI1Pat<V_CMP_EQ_F32_e64, CONST.FP32_ONE, i32, f32, fp_to_uint>;
 def : FPToI1Pat<V_CMP_EQ_F32_e64, CONST.FP32_NEG_ONE, i32, f32, fp_to_sint>;
@@ -2702,16 +2961,27 @@ def : GCNPat <
                         SSrc_i1:$src))
 >;
 
-let SubtargetPredicate = HasTrue16BitInsts in
+let True16Predicate = UseRealTrue16Insts in
 def : GCNPat <
   (f16 (sint_to_fp i1:$src)),
-  (V_CVT_F16_F32_t16_e32 (
-      V_CNDMASK_B32_e64 /*src0mod*/(i32 0), /*src0*/(i32 0),
+  (V_CVT_F16_F32_t16_e64 /*src0_modifiers*/ 0,
+      (V_CNDMASK_B32_e64 /*src0mod*/(i32 0), /*src0*/(i32 0),
                         /*src1mod*/(i32 0), /*src1*/(i32 CONST.FP32_NEG_ONE),
-                        SSrc_i1:$src))
+                        SSrc_i1:$src),
+      /*clamp*/ 0, /*omod*/ 0, /*op_sel*/ 0)
 >;
 
-let SubtargetPredicate = NotHasTrue16BitInsts in
+let True16Predicate = UseFakeTrue16Insts in
+def : GCNPat <
+  (f16 (sint_to_fp i1:$src)),
+  (V_CVT_F16_F32_fake16_e64 /*src0_modifiers*/ 0,
+      (V_CNDMASK_B32_e64 /*src0mod*/(i32 0), /*src0*/(i32 0),
+                        /*src1mod*/(i32 0), /*src1*/(i32 CONST.FP32_NEG_ONE),
+                        SSrc_i1:$src),
+      /*clamp*/ 0, /*omod*/ 0)
+>;
+
+let True16Predicate = NotHasTrue16BitInsts in
 def : GCNPat <
   (f16 (uint_to_fp i1:$src)),
   (V_CVT_F16_F32_e32 (
@@ -2719,13 +2989,25 @@ def : GCNPat <
                         /*src1mod*/(i32 0), /*src1*/(i32 CONST.FP32_ONE),
                         SSrc_i1:$src))
 >;
-let SubtargetPredicate = HasTrue16BitInsts in
+
+let True16Predicate = UseRealTrue16Insts in
 def : GCNPat <
   (f16 (uint_to_fp i1:$src)),
-  (V_CVT_F16_F32_t16_e32 (
-      V_CNDMASK_B32_e64 /*src0mod*/(i32 0), /*src0*/(i32 0),
+  (V_CVT_F16_F32_t16_e64 /*src0_modifiers*/ 0,
+      (V_CNDMASK_B32_e64 /*src0mod*/(i32 0), /*src0*/(i32 0),
                         /*src1mod*/(i32 0), /*src1*/(i32 CONST.FP32_ONE),
-                        SSrc_i1:$src))
+                        SSrc_i1:$src),
+      /*clamp*/ 0, /*omod*/ 0, /*op_sel*/ 0)
+>;
+
+let True16Predicate = UseFakeTrue16Insts in
+def : GCNPat <
+  (f16 (uint_to_fp i1:$src)),
+  (V_CVT_F16_F32_fake16_e64 /*src0_modifiers*/ 0,
+      (V_CNDMASK_B32_e64 /*src0mod*/(i32 0), /*src0*/(i32 0),
+                        /*src1mod*/(i32 0), /*src1*/(i32 CONST.FP32_ONE),
+                        SSrc_i1:$src),
+      /*clamp*/ 0, /*omod*/ 0)
 >;
 
 def : GCNPat <
@@ -2844,6 +3126,17 @@ def IMMBitSelConst : SDNodeXForm<imm, [{
 
 // Handle the VALU case.
 def : GCNPat <
+  (i1 (xor (i1 (DivergentUnaryFrag<HasOneUseUnaryOp<trunc>> i32:$a)), -1)),
+  (V_CMP_NE_U32_e64 (V_AND_B32_e64 (i32 1), i32:$a), (i32 1))
+>;
+
+def : GCNPat <
+  (i1 (xor (i1 (DivergentUnaryFrag<HasOneUseUnaryOp<trunc>> i64:$a)), -1)),
+  (V_CMP_NE_U32_e64 (V_AND_B32_e64 (i32 1),
+  (i32 (EXTRACT_SUBREG $a, sub0))), (i32 1))
+>;
+
+def : GCNPat <
   (i1 (DivergentUnaryFrag<trunc> (i32 (srl i32:$a, (i32 imm:$b))))),
   (V_CMP_NE_U32_e64 (V_AND_B32_e64 (i32 (IMMBitSelConst $b)), $a),
     (i32 0))
@@ -2862,6 +3155,7 @@ def : GCNPat <
                     (i32 (EXTRACT_SUBREG $a, sub0))), (i32 1))
 >;
 
+let True16Predicate = NotHasTrue16BitInsts in
 def : GCNPat <
   (i32 (bswap i32:$a)),
   (V_BFI_B32_e64 (S_MOV_B32 (i32 0x00ff00ff)),
@@ -2869,28 +3163,61 @@ def : GCNPat <
              (V_ALIGNBIT_B32_e64 VSrc_b32:$a, VSrc_b32:$a, (i32 8)))
 >;
 
-// FIXME: This should have been narrowed to i32 during legalization.
-// This pattern should also be skipped for GlobalISel
+let True16Predicate = UseFakeTrue16Insts in
+def : GCNPat <
+  (i32 (bswap i32:$a)),
+  (V_BFI_B32_e64 (S_MOV_B32 (i32 0x00ff00ff)),
+             (V_ALIGNBIT_B32_fake16_e64 0, /* src0_modifiers */
+                                        VSrc_b32:$a,
+                                        0, /* src1_modifiers */
+                                        VSrc_b32:$a,
+                                        0, /* src2_modifiers */
+                                        (i32 24), /* clamp */ 0, /* op_sel */ 0),
+             (V_ALIGNBIT_B32_fake16_e64 0, /* src0_modifiers */
+                                        VSrc_b32:$a,
+                                        0, /* src1_modifiers */
+                                        VSrc_b32:$a,
+                                        0, /* src2_modifiers */
+                                        (i32 8), /* clamp */ 0, /* op_sel */ 0))
+>;
+
+class AlignBit32Inst<dag op1, dag op2, dag op3, bit isTrue16> {
+  defvar inst = !if(isTrue16, V_ALIGNBIT_B32_fake16_e64, V_ALIGNBIT_B32_e64);
+  defvar NoMods = !if(isTrue16, (inst 0), (inst));
+  dag ret = !con(NoMods, (inst op1), NoMods, (inst op2),
+                     NoMods, (inst op3), NoMods, NoMods);
+}
+
+multiclass bswapi64ExtPat<bit hasTrue16> {
 def : GCNPat <
   (i64 (bswap i64:$a)),
   (REG_SEQUENCE VReg_64,
   (V_BFI_B32_e64 (S_MOV_B32 (i32 0x00ff00ff)),
-             (V_ALIGNBIT_B32_e64 (i32 (EXTRACT_SUBREG VReg_64:$a, sub1)),
-                             (i32 (EXTRACT_SUBREG VReg_64:$a, sub1)),
-                             (i32 24)),
-             (V_ALIGNBIT_B32_e64 (i32 (EXTRACT_SUBREG VReg_64:$a, sub1)),
-                             (i32 (EXTRACT_SUBREG VReg_64:$a, sub1)),
-                             (i32 8))),
+     AlignBit32Inst<(i32 (EXTRACT_SUBREG VReg_64:$a, sub1)),
+                     (i32 (EXTRACT_SUBREG VReg_64:$a, sub1)),
+                     (i32 24), hasTrue16>.ret,
+     AlignBit32Inst<(i32 (EXTRACT_SUBREG VReg_64:$a, sub1)),
+                     (i32 (EXTRACT_SUBREG VReg_64:$a, sub1)),
+                     (i32 8), hasTrue16>.ret),
   sub0,
   (V_BFI_B32_e64 (S_MOV_B32 (i32 0x00ff00ff)),
-             (V_ALIGNBIT_B32_e64 (i32 (EXTRACT_SUBREG VReg_64:$a, sub0)),
-                             (i32 (EXTRACT_SUBREG VReg_64:$a, sub0)),
-                             (i32 24)),
-             (V_ALIGNBIT_B32_e64 (i32 (EXTRACT_SUBREG VReg_64:$a, sub0)),
-                             (i32 (EXTRACT_SUBREG VReg_64:$a, sub0)),
-                             (i32 8))),
+     AlignBit32Inst<(i32 (EXTRACT_SUBREG VReg_64:$a, sub0)),
+                     (i32 (EXTRACT_SUBREG VReg_64:$a, sub0)),
+                     (i32 24), hasTrue16>.ret,
+     AlignBit32Inst<(i32 (EXTRACT_SUBREG VReg_64:$a, sub0)),
+                     (i32 (EXTRACT_SUBREG VReg_64:$a, sub0)),
+                     (i32 8), hasTrue16>.ret),
   sub1)
 >;
+}
+
+// FIXME: This should have been narrowed to i32 during legalization.
+// This pattern should also be skipped for GlobalISel
+let True16Predicate = NotHasTrue16BitInsts in
+defm : bswapi64ExtPat</*hasTrue16*/0>;
+
+let True16Predicate = UseFakeTrue16Insts in
+defm : bswapi64ExtPat</*hasTrue16*/1>;
 
 // FIXME: The AddedComplexity should not be needed, but in GlobalISel
 // the BFI pattern ends up taking precedence without it.
@@ -2919,6 +3246,8 @@ def : GCNPat <
 
 // Magic number: 1 | (0 << 8) | (12 << 16) | (12 << 24)
 // The 12s emit 0s.
+foreach p = [NotHasTrue16BitInsts, UseFakeTrue16Insts] in
+let True16Predicate = p in {
 def : GCNPat <
   (i16 (bswap i16:$a)),
   (V_PERM_B32_e64  (i32 0), VSrc_b32:$a, (S_MOV_B32 (i32 0x0c0c0001)))
@@ -2928,6 +3257,19 @@ def : GCNPat <
   (i32 (zext (bswap i16:$a))),
   (V_PERM_B32_e64  (i32 0), VSrc_b32:$a, (S_MOV_B32 (i32 0x0c0c0001)))
 >;
+}
+
+let True16Predicate = UseRealTrue16Insts in {
+def : GCNPat <
+  (i16 (bswap i16:$a)),
+  (EXTRACT_SUBREG (V_PERM_B32_e64  (i32 0), (COPY VGPR_16:$a), (S_MOV_B32 (i32 0x0c0c0001))), lo16)
+>;
+
+def : GCNPat <
+  (i32 (zext (bswap i16:$a))),
+  (V_PERM_B32_e64  (i32 0), (COPY VGPR_16:$a), (S_MOV_B32 (i32 0x0c0c0001)))
+>;
+}
 
 // Magic number: 1 | (0 << 8) | (3 << 16) | (2 << 24)
 def : GCNPat <
@@ -2943,10 +3285,20 @@ def : GCNPat<
    (V_BFREV_B32_e64 (i32 (EXTRACT_SUBREG VReg_64:$a, sub1))), sub0,
    (V_BFREV_B32_e64 (i32 (EXTRACT_SUBREG VReg_64:$a, sub0))), sub1)>;
 
+// If fcanonicalize's operand is implicitly canonicalized, we only need a copy.
+let AddedComplexity = 8 in {
+foreach vt = [f16, v2f16, f32, v2f32, f64] in {
+  def : GCNPat<
+    (fcanonicalize (vt is_canonicalized:$src)),
+    (COPY vt:$src)
+  >;
+}
+}
+
 // Prefer selecting to max when legal, but using mul is always valid.
 let AddedComplexity = -5 in {
 
-let OtherPredicates = [NotHasTrue16BitInsts] in {
+let True16Predicate = NotHasTrue16BitInsts in {
 def : GCNPat<
   (fcanonicalize (f16 (VOP3Mods f16:$src, i32:$src_mods))),
   (V_MUL_F16_e64 0, (i32 CONST.FP16_ONE), $src_mods, $src)
@@ -2956,9 +3308,21 @@ def : GCNPat<
   (fcanonicalize (f16 (fneg (VOP3Mods f16:$src, i32:$src_mods)))),
   (V_MUL_F16_e64 0, (i32 CONST.FP16_NEG_ONE), $src_mods, $src)
 >;
-} // End OtherPredicates
+} // End True16Predicate
 
-let OtherPredicates = [HasTrue16BitInsts] in {
+let True16Predicate = UseRealTrue16Insts in {
+def : GCNPat<
+  (fcanonicalize (f16 (VOP3Mods f16:$src, i32:$src_mods))),
+  (V_MUL_F16_t16_e64 0, (i16 CONST.FP16_ONE), $src_mods, $src, 0/*Clamp*/, /*omod*/0, /*opsel*/0)
+>;
+
+def : GCNPat<
+  (fcanonicalize (f16 (fneg (VOP3Mods f16:$src, i32:$src_mods)))),
+  (V_MUL_F16_t16_e64 0, (i16 CONST.FP16_NEG_ONE), $src_mods, $src, 0/*Clamp*/, /*omod*/0, /*opsel*/0)
+>;
+} // End True16Predicate
+
+let True16Predicate = UseFakeTrue16Insts in {
 def : GCNPat<
   (fcanonicalize (f16 (VOP3Mods f16:$src, i32:$src_mods))),
   (V_MUL_F16_fake16_e64 0, (i32 CONST.FP16_ONE), $src_mods, $src)
@@ -2968,7 +3332,7 @@ def : GCNPat<
   (fcanonicalize (f16 (fneg (VOP3Mods f16:$src, i32:$src_mods)))),
   (V_MUL_F16_fake16_e64 0, (i32 CONST.FP16_NEG_ONE), $src_mods, $src)
 >;
-} // End OtherPredicates
+} // End True16Predicate
 
 def : GCNPat<
   (fcanonicalize (v2f16 (VOP3PMods v2f16:$src, i32:$src_mods))),
@@ -2988,7 +3352,7 @@ def : GCNPat<
 let SubtargetPredicate = HasPackedFP32Ops in {
 def : GCNPat<
   (fcanonicalize (v2f32 (VOP3PMods v2f32:$src, i32:$src_mods))),
-  (V_PK_MUL_F32 0, CONST.FP32_ONE, $src_mods, $src)
+  (V_PK_MUL_F32 0, (i64 CONST.FP32_ONE), $src_mods, $src)
 >;
 }
 
@@ -2996,7 +3360,7 @@ def : GCNPat<
 let SubtargetPredicate = isNotGFX12Plus in {
 def : GCNPat<
   (fcanonicalize (f64 (VOP3Mods f64:$src, i32:$src_mods))),
-  (V_MUL_F64_e64  0, CONST.FP64_ONE, $src_mods, $src)
+  (V_MUL_F64_e64  0, (i64 CONST.FP64_ONE), $src_mods, $src)
 >;
 }
 } // End AddedComplexity = -5
@@ -3026,13 +3390,22 @@ multiclass SelectCanonicalizeAsMax<
   def : GCNPat<
     (fcanonicalize (f16 (VOP3Mods f16:$src, i32:$src_mods))),
     (V_MAX_F16_e64 $src_mods, $src, $src_mods, $src, 0, 0)> {
-    let OtherPredicates = !listconcat(f16_preds, [Has16BitInsts, NotHasTrue16BitInsts]);
+    let OtherPredicates = !listconcat(f16_preds, [Has16BitInsts]);
+    let True16Predicate = NotHasTrue16BitInsts;
+  }
+
+  def : GCNPat<
+    (fcanonicalize (f16 (VOP3Mods f16:$src, i32:$src_mods))),
+    (V_MAX_F16_t16_e64 $src_mods, $src, $src_mods, $src, 0, 0)> {
+    let OtherPredicates = !listconcat(f16_preds, [Has16BitInsts]);
+    let True16Predicate = UseRealTrue16Insts;
   }
 
   def : GCNPat<
     (fcanonicalize (f16 (VOP3Mods f16:$src, i32:$src_mods))),
     (V_MAX_F16_fake16_e64 $src_mods, $src, $src_mods, $src, 0, 0)> {
-    let OtherPredicates = !listconcat(f16_preds, [Has16BitInsts, HasTrue16BitInsts]);
+    let OtherPredicates = !listconcat(f16_preds, [Has16BitInsts]);
+    let True16Predicate = UseFakeTrue16Insts;
   }
 
   def : GCNPat<
@@ -3082,7 +3455,7 @@ def : GCNPat <
 let SubtargetPredicate = isGFX10Plus in {
 // Don't allow source modifiers. If there are any source modifiers then it's
 // better to select fma instead of fmac.
-let OtherPredicates = [NotHasTrue16BitInsts] in
+let True16Predicate = NotHasTrue16BitInsts in
 def : GCNPat <
   (fma (f16 (VOP3NoMods f32:$src0)),
        (f16 (VOP3NoMods f32:$src1)),
@@ -3090,12 +3463,20 @@ def : GCNPat <
   (V_FMAC_F16_e64 SRCMODS.NONE, $src0, SRCMODS.NONE, $src1,
                   SRCMODS.NONE, $src2)
 >;
-let OtherPredicates = [HasTrue16BitInsts] in
+let True16Predicate = UseRealTrue16Insts in
 def : GCNPat <
-  (fma (f16 (VOP3NoMods f32:$src0)),
-       (f16 (VOP3NoMods f32:$src1)),
-       (f16 (VOP3NoMods f32:$src2))),
+  (fma (f16 (VOP3NoMods f16:$src0)),
+       (f16 (VOP3NoMods f16:$src1)),
+       (f16 (VOP3NoMods f16:$src2))),
   (V_FMAC_F16_t16_e64 SRCMODS.NONE, $src0, SRCMODS.NONE, $src1,
+                  SRCMODS.NONE, $src2)
+>;
+let True16Predicate = UseFakeTrue16Insts in
+def : GCNPat <
+  (fma (f16 (VOP3NoMods f16:$src0)),
+       (f16 (VOP3NoMods f16:$src1)),
+       (f16 (VOP3NoMods f16:$src2))),
+  (V_FMAC_F16_fake16_e64 SRCMODS.NONE, $src0, SRCMODS.NONE, $src1,
                   SRCMODS.NONE, $src2)
 >;
 }
@@ -3145,49 +3526,38 @@ def : GCNPat <
   (v2f16 (V_AND_B32_e64 (i32 (V_MOV_B32_e32 (i32 0xffff))), VGPR_32:$src1))
 >;
 
+foreach vecTy = [v2i16, v2f16, v2bf16] in {
+
+defvar Ty = vecTy.ElementType;
+
 def : GCNPat <
-  (v2i16 (UniformBinFrag<build_vector> (i16 SReg_32:$src0), (i16 undef))),
+  (vecTy (UniformBinFrag<build_vector> (Ty SReg_32:$src0), (Ty undef))),
   (COPY_TO_REGCLASS SReg_32:$src0, SReg_32)
 >;
 
+foreach p = [NotHasTrue16BitInsts, UseFakeTrue16Insts] in
+let True16Predicate = p in {
 def : GCNPat <
-  (v2i16 (DivergentBinFrag<build_vector> (i16 VGPR_32:$src0), (i16 undef))),
+  (vecTy (DivergentBinFrag<build_vector> (Ty VGPR_32:$src0), (Ty undef))),
   (COPY_TO_REGCLASS VGPR_32:$src0, VGPR_32)
 >;
 
 def : GCNPat <
-  (v2f16 (build_vector f16:$src0, (f16 undef))),
-  (COPY $src0)
->;
-
-def : GCNPat <
-  (v2i16 (UniformBinFrag<build_vector> (i16 undef), (i16 SReg_32:$src1))),
+  (vecTy (UniformBinFrag<build_vector> (Ty undef), (Ty SReg_32:$src1))),
   (S_LSHL_B32 SReg_32:$src1, (i32 16))
->;
-
-def : GCNPat <
-  (v2i16 (DivergentBinFrag<build_vector> (i16 undef), (i16 VGPR_32:$src1))),
-  (v2i16 (V_LSHLREV_B32_e64 (i32 16), VGPR_32:$src1))
->;
-
-
-def : GCNPat <
-  (v2f16 (UniformBinFrag<build_vector> (f16 undef), (f16 SReg_32:$src1))),
-  (S_LSHL_B32 SReg_32:$src1, (i32 16))
->;
-
-def : GCNPat <
-  (v2f16 (DivergentBinFrag<build_vector> (f16 undef), (f16 VGPR_32:$src1))),
-  (v2f16 (V_LSHLREV_B32_e64 (i32 16), VGPR_32:$src1))
 >;
 }
 
-let SubtargetPredicate = HasVOP3PInsts in {
 def : GCNPat <
-  (v2i16 (UniformBinFrag<build_vector> (i16 SReg_32:$src0), (i16 SReg_32:$src1))),
-  (S_PACK_LL_B32_B16 SReg_32:$src0, SReg_32:$src1)
+  (vecTy (DivergentBinFrag<build_vector> (Ty undef), (Ty VGPR_32:$src1))),
+  (vecTy (V_LSHLREV_B32_e64 (i32 16), VGPR_32:$src1))
 >;
+} // End foreach Ty = ...
+}
 
+let SubtargetPredicate = HasVOP3PInsts in {
+foreach p = [NotHasTrue16BitInsts, UseFakeTrue16Insts] in
+let True16Predicate = p in
 def : GCNPat <
   (v2i16 (DivergentBinFrag<build_vector> (i16 VGPR_32:$src0), (i16 VGPR_32:$src1))),
   (v2i16 (V_LSHL_OR_B32_e64 $src1, (i32 16), (i32 (V_AND_B32_e64 (i32 (V_MOV_B32_e32 (i32 0xffff))), $src0))))
@@ -3206,24 +3576,35 @@ def : GCNPat <
   (S_PACK_HH_B32_B16 SReg_32:$src0, SReg_32:$src1)
 >;
 
+
+foreach vecTy = [v2i16, v2f16, v2bf16] in {
+
+defvar Ty = vecTy.ElementType;
+defvar immzeroTy = !if(!eq(Ty, i16), immzero, fpimmzero);
+
 def : GCNPat <
-  (v2f16 (UniformBinFrag<build_vector> (f16 SReg_32:$src0), (f16 SReg_32:$src1))),
+  (vecTy (UniformBinFrag<build_vector> (Ty SReg_32:$src0), (Ty SReg_32:$src1))),
   (S_PACK_LL_B32_B16 SReg_32:$src0, SReg_32:$src1)
 >;
 
-
-
-foreach Ty = [i16, f16] in {
-
-defvar vecTy = !if(!eq(Ty, i16), v2i16, v2f16);
-defvar immzeroTy = !if(!eq(Ty, i16), immzero, fpimmzero);
-
+foreach p = [NotHasTrue16BitInsts, UseFakeTrue16Insts] in
+let True16Predicate = p in
 // Take the lower 16 bits from each VGPR_32 and concat them
 def : GCNPat <
   (vecTy (DivergentBinFrag<build_vector> (Ty VGPR_32:$a), (Ty VGPR_32:$b))),
   (V_PERM_B32_e64 VGPR_32:$b, VGPR_32:$a, (S_MOV_B32 (i32 0x05040100)))
 >;
 
+let True16Predicate = UseRealTrue16Insts in {
+def : GCNPat <
+  (vecTy (DivergentBinFrag<build_vector> (Ty VGPR_16:$a), (Ty VGPR_16:$b))),
+  (REG_SEQUENCE VGPR_32, VGPR_16:$a, lo16, VGPR_16:$b, hi16)
+>;
+def : GCNPat <
+  (vecTy (DivergentBinFrag<build_vector> (Ty VGPR_16:$src0), (Ty undef))),
+  (REG_SEQUENCE VGPR_32, $src0, lo16, (IMPLICIT_DEF), hi16)
+>;
+}
 
 // Take the lower 16 bits from V[0] and the upper 16 bits from V[1]
 // Special case, can use V_BFI (0xffff literal likely more reusable than 0x70601000)
@@ -3249,6 +3630,7 @@ def : GCNPat <
 
 // Take the upper 16 bits from V[0] and the lower 16 bits from V[1]
 // Special case, can use V_ALIGNBIT (always uses encoded literal)
+let True16Predicate = NotHasTrue16BitInsts in
 def : GCNPat <
   (vecTy (DivergentBinFrag<build_vector>
     (Ty !if(!eq(Ty, i16),
@@ -3258,7 +3640,19 @@ def : GCNPat <
     (V_ALIGNBIT_B32_e64 VGPR_32:$b, VGPR_32:$a, (i32 16))
 >;
 
+let True16Predicate = UseFakeTrue16Insts in
+def : GCNPat <
+  (vecTy (DivergentBinFrag<build_vector>
+    (Ty !if(!eq(Ty, i16),
+      (Ty (trunc (srl VGPR_32:$a, (i32 16)))),
+      (Ty (bitconvert (i16 (trunc (srl VGPR_32:$a, (i32 16)))))))),
+    (Ty VGPR_32:$b))),
+    (V_ALIGNBIT_B32_fake16_e64 0, VGPR_32:$b, 0, VGPR_32:$a, 0, (i16 16), 0, 0)
+>;
+
 // Take the upper 16 bits from each VGPR_32 and concat them
+foreach p = [NotHasTrue16BitInsts, UseFakeTrue16Insts] in
+let True16Predicate = p in
 def : GCNPat <
   (vecTy (DivergentBinFrag<build_vector>
     (Ty !if(!eq(Ty, i16),
@@ -3270,18 +3664,27 @@ def : GCNPat <
   (V_PERM_B32_e64 VGPR_32:$b, VGPR_32:$a, (S_MOV_B32 (i32 0x07060302)))
 >;
 
-
 } // end foreach Ty
 
+} // End SubtargetPredicate = HasVOP3PInsts
 
 let AddedComplexity = 5 in {
-def : GCNPat <
-  (v2f16 (is_canonicalized<build_vector> (f16 (VOP3Mods (f16 VGPR_32:$src0), i32:$src0_mods)),
-                                         (f16 (VOP3Mods (f16 VGPR_32:$src1), i32:$src1_mods)))),
-  (V_PACK_B32_F16_e64 $src0_mods, VGPR_32:$src0, $src1_mods, VGPR_32:$src1)
+class PackB32Pat<Instruction inst> : GCNPat <
+  (v2f16 (is_canonicalized_2<build_vector> (f16 (VOP3Mods (f16 VGPR_32:$src0), i32:$src0_mods)),
+                                           (f16 (VOP3Mods (f16 VGPR_32:$src1), i32:$src1_mods)))),
+  (inst $src0_mods, VGPR_32:$src0, $src1_mods, VGPR_32:$src1)
 >;
 }
-} // End SubtargetPredicate = HasVOP3PInsts
+let SubtargetPredicate = isGFX9Plus in {
+let True16Predicate = NotHasTrue16BitInsts in
+  def : PackB32Pat<V_PACK_B32_F16_e64>;
+
+let True16Predicate = UseRealTrue16Insts in
+  def : PackB32Pat<V_PACK_B32_F16_t16_e64>;
+
+let True16Predicate = UseFakeTrue16Insts in
+  def : PackB32Pat<V_PACK_B32_F16_fake16_e64>;
+} // End SubtargetPredicate = isGFX9Plus
 
 // With multiple uses of the shift, this will duplicate the shift and
 // increase register pressure.
@@ -3321,13 +3724,15 @@ def : GCNPat <
                         (as_i1timm $bound_ctrl))
 >;
 
+foreach vt = Reg64Types.types in {
 def : GCNPat <
-  (i64 (int_amdgcn_update_dpp i64:$old, i64:$src, timm:$dpp_ctrl, timm:$row_mask,
+  (vt (int_amdgcn_update_dpp vt:$old, vt:$src, timm:$dpp_ctrl, timm:$row_mask,
                               timm:$bank_mask, timm:$bound_ctrl)),
   (V_MOV_B64_DPP_PSEUDO VReg_64_Align2:$old, VReg_64_Align2:$src, (as_i32timm $dpp_ctrl),
                         (as_i32timm $row_mask), (as_i32timm $bank_mask),
                         (as_i1timm $bound_ctrl))
 >;
+}
 
 //===----------------------------------------------------------------------===//
 // Fract Patterns
@@ -3358,7 +3763,7 @@ def : GCNPat <
              SRCMODS.NONE,
              (V_FRACT_F64_e64 $mods, $x),
              SRCMODS.NONE,
-             (V_MOV_B64_PSEUDO 0x3fefffffffffffff)),
+             (V_MOV_B64_PSEUDO (i64 0x3fefffffffffffff))),
          $x,
          (V_CMP_CLASS_F64_e64 SRCMODS.NONE, $x, (i32 3 /*NaN*/))))
 >;
@@ -3394,7 +3799,7 @@ def : GCNPat<
 // FIXME: Should also do this for readlane, but tablegen crashes on
 // the ignored src1.
 def : GCNPat<
-  (int_amdgcn_readfirstlane (i32 imm:$src)),
+  (i32 (int_amdgcn_readfirstlane (i32 imm:$src))),
   (S_MOV_B32 SReg_32:$src)
 >;
 
@@ -3444,23 +3849,14 @@ def : AMDGPUPat <
   (V_BFE_U32_e64 $src, (i32 0), $width)
 >;
 
+def uint5Bits : PatLeaf<(i32 VGPR_32:$width), [{
+  return CurDAG->computeKnownBits(SDValue(N, 0)).countMaxActiveBits() <= 5;
+}]>;
+
 // x & (-1 >> (bitwidth - y))
 def : AMDGPUPat <
-  (DivergentBinFrag<and> i32:$src, (srl_oneuse -1, (sub 32, i32:$width))),
+  (DivergentBinFrag<and> i32:$src, (srl_oneuse -1, (sub 32, uint5Bits:$width))),
   (V_BFE_U32_e64 $src, (i32 0), $width)
->;
-
-// x << (bitwidth - y) >> (bitwidth - y)
-def : AMDGPUPat <
-  (DivergentBinFrag<srl> (shl_oneuse i32:$src, (sub 32, i32:$width)),
-                         (sub 32, i32:$width)),
-  (V_BFE_U32_e64 $src, (i32 0), $width)
->;
-
-def : AMDGPUPat <
-  (DivergentBinFrag<sra> (shl_oneuse i32:$src, (sub 32, i32:$width)),
-                         (sub 32, i32:$width)),
-  (V_BFE_I32_e64 $src, (i32 0), $width)
 >;
 
 // SHA-256 Ma patterns
@@ -3539,25 +3935,17 @@ multiclass FPMed3Pat<ValueType vt,
               DSTCLAMP.NONE, DSTOMOD.NONE)>;
 }
 
-class FP16Med3Pat<ValueType vt,
-                Instruction med3Inst> : GCNPat<
-  (fmaxnum_like_nnan (fminnum_like (VOP3Mods vt:$src0, i32:$src0_mods),
-                                   (VOP3Mods vt:$src1, i32:$src1_mods)),
-           (fminnum_like (fmaxnum_like (VOP3Mods vt:$src0, i32:$src0_mods),
-                                       (VOP3Mods vt:$src1, i32:$src1_mods)),
-                         (vt (VOP3Mods vt:$src2, i32:$src2_mods)))),
-  (med3Inst $src0_mods, $src0, $src1_mods, $src1, $src2_mods, $src2, DSTCLAMP.NONE)
->;
-
 multiclass Int16Med3Pat<Instruction med3Inst,
                         SDPatternOperator min,
-                        SDPatternOperator max> {
+                        SDPatternOperator max,
+                        RegisterOperand outputSrcType> {
   // This matches 16 permutations of
   // max(min(x, y), min(max(x, y), z))
   def : GCNPat <
   (max (min i16:$src0, i16:$src1),
        (min (max i16:$src0, i16:$src1), i16:$src2)),
-  (med3Inst SRCMODS.NONE, VSrc_b16:$src0, SRCMODS.NONE, VSrc_b16:$src1, SRCMODS.NONE, VSrc_b16:$src2, DSTCLAMP.NONE)
+  (med3Inst SRCMODS.NONE, outputSrcType:$src0, SRCMODS.NONE, outputSrcType:$src1,
+            SRCMODS.NONE, outputSrcType:$src2, DSTCLAMP.NONE)
 >;
 
   // This matches 16 permutations of
@@ -3570,6 +3958,15 @@ multiclass Int16Med3Pat<Instruction med3Inst,
 }
 
 defm : FPMed3Pat<f32, V_MED3_F32_e64>;
+
+let SubtargetPredicate = HasMed3_16 in {
+let True16Predicate = NotHasTrue16BitInsts in
+defm : FPMed3Pat<f16, V_MED3_F16_e64>;
+let True16Predicate = UseRealTrue16Insts in
+defm : FPMed3Pat<f16, V_MED3_F16_t16_e64>;
+let True16Predicate = UseFakeTrue16Insts in
+defm : FPMed3Pat<f16, V_MED3_F16_fake16_e64>;
+}
 
 class
 IntMinMaxPat<Instruction minmaxInst, SDPatternOperator min_or_max,
@@ -3589,6 +3986,17 @@ FPMinMaxPat<Instruction minmaxInst, ValueType vt, SDPatternOperator min_or_max,
               DSTCLAMP.NONE, DSTOMOD.NONE)
 >;
 
+class
+FPMinCanonMaxPat<Instruction minmaxInst, ValueType vt, SDPatternOperator min_or_max,
+                 SDPatternOperator max_or_min_oneuse> : GCNPat <
+  (min_or_max (is_canonicalized_1<fcanonicalize>
+                  (max_or_min_oneuse (VOP3Mods vt:$src0, i32:$src0_mods),
+                                     (VOP3Mods vt:$src1, i32:$src1_mods))),
+               (vt (VOP3Mods vt:$src2, i32:$src2_mods))),
+  (minmaxInst $src0_mods, $src0, $src1_mods, $src1, $src2_mods, $src2,
+              DSTCLAMP.NONE, DSTOMOD.NONE)
+>;
+
 let OtherPredicates = [isGFX11Plus] in {
 def : IntMinMaxPat<V_MAXMIN_I32_e64, smin, smax_oneuse>;
 def : IntMinMaxPat<V_MINMAX_I32_e64, smax, smin_oneuse>;
@@ -3596,21 +4004,58 @@ def : IntMinMaxPat<V_MAXMIN_U32_e64, umin, umax_oneuse>;
 def : IntMinMaxPat<V_MINMAX_U32_e64, umax, umin_oneuse>;
 def : FPMinMaxPat<V_MINMAX_F32_e64, f32, fmaxnum_like, fminnum_like_oneuse>;
 def : FPMinMaxPat<V_MAXMIN_F32_e64, f32, fminnum_like, fmaxnum_like_oneuse>;
-def : FPMinMaxPat<V_MINMAX_F16_e64, f16, fmaxnum_like, fminnum_like_oneuse>;
-def : FPMinMaxPat<V_MAXMIN_F16_e64, f16, fminnum_like, fmaxnum_like_oneuse>;
+def : FPMinCanonMaxPat<V_MINMAX_F32_e64, f32, fmaxnum_like, fminnum_like_oneuse>;
+def : FPMinCanonMaxPat<V_MAXMIN_F32_e64, f32, fminnum_like, fmaxnum_like_oneuse>;
 }
 
-let OtherPredicates = [isGFX9Plus] in {
-def : FP16Med3Pat<f16, V_MED3_F16_e64>;
-defm : Int16Med3Pat<V_MED3_I16_e64, smin, smax>;
-defm : Int16Med3Pat<V_MED3_U16_e64, umin, umax>;
-} // End Predicates = [isGFX9Plus]
+let True16Predicate = UseRealTrue16Insts in {
+def : FPMinMaxPat<V_MINMAX_F16_t16_e64, f16, fmaxnum_like, fminnum_like_oneuse>;
+def : FPMinMaxPat<V_MAXMIN_F16_t16_e64, f16, fminnum_like, fmaxnum_like_oneuse>;
+def : FPMinCanonMaxPat<V_MINMAX_F16_t16_e64, f16, fmaxnum_like, fminnum_like_oneuse>;
+def : FPMinCanonMaxPat<V_MAXMIN_F16_t16_e64, f16, fminnum_like, fmaxnum_like_oneuse>;
+}
 
-let OtherPredicates = [isGFX12Plus] in {
+let True16Predicate = UseFakeTrue16Insts in {
+def : FPMinMaxPat<V_MINMAX_F16_fake16_e64, f16, fmaxnum_like, fminnum_like_oneuse>;
+def : FPMinMaxPat<V_MAXMIN_F16_fake16_e64, f16, fminnum_like, fmaxnum_like_oneuse>;
+def : FPMinCanonMaxPat<V_MINMAX_F16_fake16_e64, f16, fmaxnum_like, fminnum_like_oneuse>;
+def : FPMinCanonMaxPat<V_MAXMIN_F16_fake16_e64, f16, fminnum_like, fmaxnum_like_oneuse>;
+}
+
+let SubtargetPredicate = isGFX9Plus in {
+let True16Predicate = NotHasTrue16BitInsts in {
+  defm : Int16Med3Pat<V_MED3_I16_e64, smin, smax, VSrc_b16>;
+  defm : Int16Med3Pat<V_MED3_U16_e64, umin, umax, VSrc_b16>;
+}
+let True16Predicate = UseRealTrue16Insts in {
+  defm : Int16Med3Pat<V_MED3_I16_t16_e64, smin, smax, VSrcT_b16>;
+  defm : Int16Med3Pat<V_MED3_U16_t16_e64, umin, umax, VSrcT_b16>;
+}
+let True16Predicate = UseFakeTrue16Insts in {
+  defm : Int16Med3Pat<V_MED3_I16_fake16_e64, smin, smax, VSrc_b16>;
+  defm : Int16Med3Pat<V_MED3_U16_fake16_e64, umin, umax, VSrc_b16>;
+}
+} // End SubtargetPredicate = [isGFX9Plus]
+
+let SubtargetPredicate = isGFX12Plus in {
 def : FPMinMaxPat<V_MINIMUMMAXIMUM_F32_e64, f32, DivergentBinFrag<fmaximum>, fminimum_oneuse>;
 def : FPMinMaxPat<V_MAXIMUMMINIMUM_F32_e64, f32, DivergentBinFrag<fminimum>, fmaximum_oneuse>;
-def : FPMinMaxPat<V_MINIMUMMAXIMUM_F16_e64, f16, DivergentBinFrag<fmaximum>, fminimum_oneuse>;
-def : FPMinMaxPat<V_MAXIMUMMINIMUM_F16_e64, f16, DivergentBinFrag<fminimum>, fmaximum_oneuse>;
+def : FPMinCanonMaxPat<V_MINIMUMMAXIMUM_F32_e64, f32, DivergentBinFrag<fmaximum>, fminimum_oneuse>;
+def : FPMinCanonMaxPat<V_MAXIMUMMINIMUM_F32_e64, f32, DivergentBinFrag<fminimum>, fmaximum_oneuse>;
+}
+
+let True16Predicate = UseRealTrue16Insts, SubtargetPredicate = isGFX12Plus in {
+def : FPMinMaxPat<V_MINIMUMMAXIMUM_F16_t16_e64, f16, DivergentBinFrag<fmaximum>, fminimum_oneuse>;
+def : FPMinMaxPat<V_MAXIMUMMINIMUM_F16_t16_e64, f16, DivergentBinFrag<fminimum>, fmaximum_oneuse>;
+def : FPMinCanonMaxPat<V_MINIMUMMAXIMUM_F16_t16_e64, f16, DivergentBinFrag<fmaximum>, fminimum_oneuse>;
+def : FPMinCanonMaxPat<V_MAXIMUMMINIMUM_F16_t16_e64, f16, DivergentBinFrag<fminimum>, fmaximum_oneuse>;
+}
+
+let True16Predicate = UseFakeTrue16Insts, SubtargetPredicate = isGFX12Plus in {
+def : FPMinMaxPat<V_MINIMUMMAXIMUM_F16_fake16_e64, f16, DivergentBinFrag<fmaximum>, fminimum_oneuse>;
+def : FPMinMaxPat<V_MAXIMUMMINIMUM_F16_fake16_e64, f16, DivergentBinFrag<fminimum>, fmaximum_oneuse>;
+def : FPMinCanonMaxPat<V_MINIMUMMAXIMUM_F16_fake16_e64, f16, DivergentBinFrag<fmaximum>, fminimum_oneuse>;
+def : FPMinCanonMaxPat<V_MAXIMUMMINIMUM_F16_fake16_e64, f16, DivergentBinFrag<fminimum>, fmaximum_oneuse>;
 }
 
 // Convert a floating-point power of 2 to the integer exponent.
@@ -3618,7 +4063,7 @@ def FPPow2ToExponentXForm : SDNodeXForm<fpimm, [{
   const auto &APF = N->getValueAPF();
   int Log2 = APF.getExactLog2Abs();
   assert(Log2 != INT_MIN);
-  return CurDAG->getTargetConstant(Log2, SDLoc(N), MVT::i32);
+  return CurDAG->getSignedTargetConstant(Log2, SDLoc(N), MVT::i32);
 }]>;
 
 // Check if a floating point value is a power of 2 floating-point
@@ -3737,6 +4182,11 @@ def G_AMDGPU_BUFFER_LOAD_SBYTE : BufferLoadGenericInstruction;
 def G_AMDGPU_BUFFER_LOAD_USHORT : BufferLoadGenericInstruction;
 def G_AMDGPU_BUFFER_LOAD_SSHORT : BufferLoadGenericInstruction;
 def G_AMDGPU_BUFFER_LOAD : BufferLoadGenericInstruction;
+def G_AMDGPU_BUFFER_LOAD_UBYTE_TFE : BufferLoadGenericInstruction;
+def G_AMDGPU_BUFFER_LOAD_SBYTE_TFE : BufferLoadGenericInstruction;
+def G_AMDGPU_BUFFER_LOAD_USHORT_TFE : BufferLoadGenericInstruction;
+def G_AMDGPU_BUFFER_LOAD_SSHORT_TFE : BufferLoadGenericInstruction;
+def G_AMDGPU_BUFFER_LOAD_TFE : BufferLoadGenericInstruction;
 def G_AMDGPU_BUFFER_LOAD_FORMAT : BufferLoadGenericInstruction;
 def G_AMDGPU_BUFFER_LOAD_FORMAT_TFE : BufferLoadGenericInstruction;
 def G_AMDGPU_BUFFER_LOAD_FORMAT_D16 : BufferLoadGenericInstruction;
@@ -3844,11 +4294,6 @@ def G_AMDGPU_ATOMIC_CMPXCHG : AMDGPUGenericInstruction {
   let mayStore = 1;
 }
 
-let Namespace = "AMDGPU" in {
-def G_AMDGPU_ATOMIC_FMIN : G_ATOMICRMW_OP;
-def G_AMDGPU_ATOMIC_FMAX : G_ATOMICRMW_OP;
-}
-
 class BufferAtomicGenericInstruction : AMDGPUGenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$vdata, type1:$rsrc, type2:$vindex, type2:$voffset,
@@ -3873,7 +4318,6 @@ def G_AMDGPU_BUFFER_ATOMIC_XOR : BufferAtomicGenericInstruction;
 def G_AMDGPU_BUFFER_ATOMIC_INC : BufferAtomicGenericInstruction;
 def G_AMDGPU_BUFFER_ATOMIC_DEC : BufferAtomicGenericInstruction;
 def G_AMDGPU_BUFFER_ATOMIC_FADD : BufferAtomicGenericInstruction;
-def G_AMDGPU_BUFFER_ATOMIC_FADD_BF16 : BufferAtomicGenericInstruction;
 def G_AMDGPU_BUFFER_ATOMIC_FMIN : BufferAtomicGenericInstruction;
 def G_AMDGPU_BUFFER_ATOMIC_FMAX : BufferAtomicGenericInstruction;
 
@@ -3904,6 +4348,16 @@ def G_AMDGPU_S_BUFFER_LOAD_SBYTE : SBufferLoadInstruction;
 def G_AMDGPU_S_BUFFER_LOAD_UBYTE : SBufferLoadInstruction;
 def G_AMDGPU_S_BUFFER_LOAD_SSHORT : SBufferLoadInstruction;
 def G_AMDGPU_S_BUFFER_LOAD_USHORT : SBufferLoadInstruction;
+
+class SBufferPrefetchInstruction : AMDGPUGenericInstruction {
+  let OutOperandList = (outs);
+  let InOperandList = (ins type0:$rsrc, untyped_imm_0:$offset, type1:$len);
+  let hasSideEffects = 0;
+  let mayLoad = 1;
+  let mayStore = 1;
+}
+
+def G_AMDGPU_S_BUFFER_PREFETCH : SBufferPrefetchInstruction;
 
 def G_AMDGPU_S_MUL_U64_U32 : AMDGPUGenericInstruction {
   let OutOperandList = (outs type0:$dst);
@@ -3939,6 +4393,14 @@ def G_AMDGPU_INTRIN_IMAGE_LOAD_D16 : AMDGPUGenericInstruction {
   let mayStore = 1;
 }
 
+def G_AMDGPU_INTRIN_IMAGE_LOAD_NORET : AMDGPUGenericInstruction {
+  let OutOperandList = (outs);
+  let InOperandList = (ins unknown:$intrin, variable_ops);
+  let hasSideEffects = 0;
+  let mayLoad = 1;
+  let mayStore = 1;
+}
+
 // This is equivalent to the G_INTRINSIC*, but the operands may have
 // been legalized depending on the subtarget requirements.
 def G_AMDGPU_INTRIN_IMAGE_STORE : AMDGPUGenericInstruction {
@@ -3955,9 +4417,25 @@ def G_AMDGPU_INTRIN_IMAGE_STORE_D16 : AMDGPUGenericInstruction {
   let mayStore = 1;
 }
 
-def G_AMDGPU_INTRIN_BVH_INTERSECT_RAY : AMDGPUGenericInstruction {
+def G_AMDGPU_BVH_INTERSECT_RAY : AMDGPUGenericInstruction {
   let OutOperandList = (outs type0:$dst);
-  let InOperandList = (ins unknown:$intrin, variable_ops);
+  let InOperandList = (ins unknown:$opcode, variable_ops);
+  let hasSideEffects = 0;
+  let mayLoad = 1;
+  let mayStore = 0;
+}
+
+def G_AMDGPU_BVH_DUAL_INTERSECT_RAY : AMDGPUGenericInstruction {
+  let OutOperandList = (outs type0:$dst, type1:$ray_origin, type1:$ray_dir);
+  let InOperandList = (ins unknown:$opcode, variable_ops);
+  let hasSideEffects = 0;
+  let mayLoad = 1;
+  let mayStore = 0;
+}
+
+def G_AMDGPU_BVH8_INTERSECT_RAY : AMDGPUGenericInstruction {
+  let OutOperandList = (outs type0:$dst, type1:$ray_origin, type1:$ray_dir);
+  let InOperandList = (ins unknown:$opcode, variable_ops);
   let hasSideEffects = 0;
   let mayLoad = 1;
   let mayStore = 0;
@@ -3976,15 +4454,34 @@ def G_SI_CALL : AMDGPUGenericInstruction {
   let isConvergent = 1;
 }
 
-def G_FPTRUNC_ROUND_UPWARD : AMDGPUGenericInstruction {
-  let OutOperandList = (outs type0:$vdst);
+// Uniform in vgpr - vgpr with same value in all active lanes.
+
+// $dst = $src0 != 0, selected as:
+// $dst(SCC) = s_cmp_lg $src0, 0
+// src0 is either exec or 0 (same value for all active lanes),
+// for example result of comparison of two uniform in vgpr.
+def G_AMDGPU_COPY_SCC_VCC : AMDGPUGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type1:$src0);
   let hasSideEffects = 0;
 }
 
-def G_FPTRUNC_ROUND_DOWNWARD : AMDGPUGenericInstruction {
-  let OutOperandList = (outs type0:$vdst);
+// $dst = $src0 ? exec : 0, selected as:
+// SCC = COPY $src0
+// $dst(SReg_32/64) = s_cselect exec, 0
+def G_AMDGPU_COPY_VCC_SCC : AMDGPUGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type1:$src0);
+  let hasSideEffects = 0;
+}
+
+// Move uniform in vgpr to sgpr. Selected as v_readfirstlane_b32.
+// Semantic difference in READ ANY instead of FIRST(active) LANE allows for
+// vgpr to sgpr back-to vgpr combine, vgpr has same value in all active lanes
+// vgprDst = COPY (G_AMDGPU_READANYLANE vgprSrc) -> vgprDst = sgprSrc
+def G_AMDGPU_READANYLANE : AMDGPUGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src0);
   let hasSideEffects = 0;
 }
 
@@ -4000,3 +4497,9 @@ def V_ILLEGAL : Enc32, InstSI<(outs), (ins), "v_illegal"> {
   let hasSideEffects = 1;
   let SubtargetPredicate = isGFX10Plus;
 }
+
+// FIXME: Would be nice if we could set the register class for the destination
+// register too.
+def IMP_DEF_FROM_INTRINSIC: Pat<
+  (i32 (int_amdgcn_dead)), (IMPLICIT_DEF)>;
+

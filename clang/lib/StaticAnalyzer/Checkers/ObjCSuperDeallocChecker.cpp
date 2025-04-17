@@ -26,8 +26,8 @@ namespace {
 class ObjCSuperDeallocChecker
     : public Checker<check::PostObjCMessage, check::PreObjCMessage,
                      check::PreCall, check::Location> {
-  mutable IdentifierInfo *IIdealloc = nullptr;
-  mutable IdentifierInfo *IINSObject = nullptr;
+  mutable const IdentifierInfo *IIdealloc = nullptr;
+  mutable const IdentifierInfo *IINSObject = nullptr;
   mutable Selector SELdealloc;
 
   const BugType DoubleSuperDeallocBugType{
@@ -164,7 +164,7 @@ void ObjCSuperDeallocChecker::checkLocation(SVal L, bool IsLoad, const Stmt *S,
   if (IvarRegion) {
     OS << "Use of instance variable '" << *IvarRegion->getDecl() <<
           "' after 'self' has been deallocated";
-    Desc = OS.str();
+    Desc = Buf;
   }
 
   reportUseAfterDealloc(BaseSym, Desc, S, C);

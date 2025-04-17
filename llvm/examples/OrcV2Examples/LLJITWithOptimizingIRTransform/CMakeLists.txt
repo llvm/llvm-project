@@ -12,5 +12,3 @@ set(LLVM_LINK_COMPONENTS
 add_llvm_example(LLJITWithOptimizingIRTransform
   LLJITWithOptimizingIRTransform.cpp
   )
-
-export_executable_symbols(LLJITWithOptimizingIRTransform)

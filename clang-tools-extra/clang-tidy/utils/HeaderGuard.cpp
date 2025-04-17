@@ -88,11 +88,10 @@ public:
         continue;
 
       // Look up Locations for this guard.
-      SourceLocation Ifndef =
-          Ifndefs[MacroEntry.first.getIdentifierInfo()].second;
+      const auto &Locs = Ifndefs[MacroEntry.first.getIdentifierInfo()];
+      SourceLocation Ifndef = Locs.second;
       SourceLocation Define = MacroEntry.first.getLocation();
-      SourceLocation EndIf =
-          EndIfs[Ifndefs[MacroEntry.first.getIdentifierInfo()].first];
+      SourceLocation EndIf = EndIfs[Locs.first];
 
       // If the macro Name is not equal to what we can compute, correct it in
       // the #ifndef and #define.
@@ -268,10 +267,6 @@ private:
   HeaderGuardCheck *Check;
 };
 } // namespace
-
-void HeaderGuardCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
-  Options.store(Opts, "HeaderFileExtensions", RawStringHeaderFileExtensions);
-}
 
 void HeaderGuardCheck::registerPPCallbacks(const SourceManager &SM,
                                            Preprocessor *PP,

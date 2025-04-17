@@ -23,9 +23,9 @@ Value::~Value(void) {
     bar();
 }
 
-// CHECK-LABEL:  Decision,File 0, 18:7 -> 18:31 = M:0, C:2
+// CHECK-LABEL:  Decision,File 0, 18:7 -> 18:31 = M:3, C:2
 // CHECK-NEXT:  Branch,File 0, 18:7 -> 18:17 = (#0 - #2), #2 [1,0,2]
 // CHECK:  Branch,File 0, 18:21 -> 18:31 = (#2 - #3), #3 [2,0,0]
-// CHECK-LABEL:  Decision,File 0, 22:7 -> 22:31 = M:0, C:2
+// CHECK-LABEL:  Decision,File 0, 22:7 -> 22:31 = M:3, C:2
 // CHECK-NEXT:  Branch,File 0, 22:7 -> 22:17 = (#0 - #2), #2 [1,0,2]
 // CHECK:  Branch,File 0, 22:21 -> 22:31 = (#2 - #3), #3 [2,0,0]

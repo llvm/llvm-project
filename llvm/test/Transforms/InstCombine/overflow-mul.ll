@@ -216,7 +216,7 @@ define <4 x i32> @pr20113(<4 x i16> %a, <4 x i16> %b) {
 ; CHECK-NEXT:    [[VMOVL_I_I726:%.*]] = zext <4 x i16> [[A:%.*]] to <4 x i32>
 ; CHECK-NEXT:    [[VMOVL_I_I712:%.*]] = zext <4 x i16> [[B:%.*]] to <4 x i32>
 ; CHECK-NEXT:    [[MUL_I703:%.*]] = mul nuw <4 x i32> [[VMOVL_I_I712]], [[VMOVL_I_I726]]
-; CHECK-NEXT:    [[TMP:%.*]] = icmp sgt <4 x i32> [[MUL_I703]], <i32 -1, i32 -1, i32 -1, i32 -1>
+; CHECK-NEXT:    [[TMP:%.*]] = icmp sgt <4 x i32> [[MUL_I703]], splat (i32 -1)
 ; CHECK-NEXT:    [[VCGEZ_I:%.*]] = sext <4 x i1> [[TMP]] to <4 x i32>
 ; CHECK-NEXT:    ret <4 x i32> [[VCGEZ_I]]
 ;

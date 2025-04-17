@@ -57,8 +57,7 @@ void MipsLLVMToolChain::AddClangSystemIncludeArgs(
   const auto &Callback = Multilibs.includeDirsCallback();
   if (Callback) {
     for (const auto &Path : Callback(SelectedMultilibs.back()))
-      addExternCSystemIncludeIfExists(DriverArgs, CC1Args,
-                                      D.getInstalledDir() + Path);
+      addExternCSystemIncludeIfExists(DriverArgs, CC1Args, D.Dir + Path);
   }
 }
 
@@ -70,7 +69,7 @@ std::string MipsLLVMToolChain::computeSysRoot() const {
   if (!getDriver().SysRoot.empty())
     return getDriver().SysRoot + SelectedMultilibs.back().osSuffix();
 
-  const std::string InstalledDir(getDriver().getInstalledDir());
+  const std::string InstalledDir(getDriver().Dir);
   std::string SysRootPath =
       InstalledDir + "/../sysroot" + SelectedMultilibs.back().osSuffix();
   if (llvm::sys::fs::exists(SysRootPath))
@@ -97,7 +96,7 @@ void MipsLLVMToolChain::addLibCxxIncludePaths(
     llvm::opt::ArgStringList &CC1Args) const {
   if (const auto &Callback = Multilibs.includeDirsCallback()) {
     for (std::string Path : Callback(SelectedMultilibs.back())) {
-      Path = getDriver().getInstalledDir() + Path + "/c++/v1";
+      Path = getDriver().Dir + Path + "/c++/v1";
       if (llvm::sys::fs::exists(Path)) {
         addSystemInclude(DriverArgs, CC1Args, Path);
         return;
@@ -119,8 +118,8 @@ void MipsLLVMToolChain::AddCXXStdlibLibArgs(const ArgList &Args,
 }
 
 std::string MipsLLVMToolChain::getCompilerRT(const ArgList &Args,
-                                             StringRef Component,
-                                             FileType Type) const {
+                                             StringRef Component, FileType Type,
+                                             bool IsFortran) const {
   SmallString<128> Path(getDriver().ResourceDir);
   llvm::sys::path::append(Path, SelectedMultilibs.back().osSuffix(), "lib" + LibSuffix,
                           getOS());

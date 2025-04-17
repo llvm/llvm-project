@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -std=c2x -fsyntax-only -verify %s
+// RUN: %clang_cc1 -std=c2x -fsyntax-only -verify %s -fexperimental-new-constant-interpreter
 
 _Static_assert(_Generic(true, _Bool : 1, default: 0));
 _Static_assert(_Generic(false, _Bool : 1, default: 0));

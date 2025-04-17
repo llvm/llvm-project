@@ -14,6 +14,7 @@
 #include "mlir/Conversion/AffineToStandard/AffineToStandard.h"
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/Affine/Transforms/Transforms.h"
 #include "mlir/Dialect/Affine/Utils.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
@@ -25,7 +26,7 @@
 #include "mlir/Transforms/Passes.h"
 
 namespace mlir {
-#define GEN_PASS_DEF_CONVERTAFFINETOSTANDARD
+#define GEN_PASS_DEF_LOWERAFFINEPASS
 #include "mlir/Conversion/Passes.h.inc"
 } // namespace mlir
 
@@ -34,12 +35,7 @@ using namespace mlir::affine;
 using namespace mlir::vector;
 
 /// Given a range of values, emit the code that reduces them with "min" or "max"
-/// depending on the provided comparison predicate.  The predicate defines which
-/// comparison to perform, "lt" for "min", "gt" for "max" and is used for the
-/// `cmpi` operation followed by the `select` operation:
-///
-///   %cond   = arith.cmpi "predicate" %v0, %v1
-///   %result = select %cond, %v0, %v1
+/// depending on the provided comparison predicate, sgt for max and slt for min.
 ///
 /// Multiple values are scanned in a linear sequence.  This creates a data
 /// dependences that wouldn't exist in a tree reduction, but is easier to
@@ -48,13 +44,16 @@ static Value buildMinMaxReductionSeq(Location loc,
                                      arith::CmpIPredicate predicate,
                                      ValueRange values, OpBuilder &builder) {
   assert(!values.empty() && "empty min/max chain");
+  assert(predicate == arith::CmpIPredicate::sgt ||
+         predicate == arith::CmpIPredicate::slt);
 
   auto valueIt = values.begin();
   Value value = *valueIt++;
   for (; valueIt != values.end(); ++valueIt) {
-    auto cmpOp = builder.create<arith::CmpIOp>(loc, predicate, value, *valueIt);
-    value = builder.create<arith::SelectOp>(loc, cmpOp.getResult(), value,
-                                            *valueIt);
+    if (predicate == arith::CmpIPredicate::sgt)
+      value = builder.create<arith::MaxSIOp>(loc, value, *valueIt);
+    else
+      value = builder.create<arith::MinSIOp>(loc, value, *valueIt);
   }
 
   return value;
@@ -554,12 +553,12 @@ void mlir::populateAffineToVectorConversionPatterns(
 }
 
 namespace {
-class LowerAffinePass
-    : public impl::ConvertAffineToStandardBase<LowerAffinePass> {
+class LowerAffine : public impl::LowerAffinePassBase<LowerAffine> {
   void runOnOperation() override {
     RewritePatternSet patterns(&getContext());
     populateAffineToStdConversionPatterns(patterns);
     populateAffineToVectorConversionPatterns(patterns);
+    populateAffineExpandIndexOpsPatterns(patterns);
     ConversionTarget target(getContext());
     target.addLegalDialect<arith::ArithDialect, memref::MemRefDialect,
                            scf::SCFDialect, VectorDialect>();
@@ -569,9 +568,3 @@ class LowerAffinePass
   }
 };
 } // namespace
-
-/// Lowers If and For operations within a function into their lower level CFG
-/// equivalent blocks.
-std::unique_ptr<Pass> mlir::createLowerAffinePass() {
-  return std::make_unique<LowerAffinePass>();
-}

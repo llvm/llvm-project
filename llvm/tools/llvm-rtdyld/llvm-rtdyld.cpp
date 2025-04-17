@@ -649,9 +649,9 @@ void applySpecificSectionMappings(RuntimeDyld &Dyld,
                                   const FileToSectionIDMap &FileToSecIDMap) {
 
   for (StringRef Mapping : SpecificSectionMappings) {
-    size_t EqualsIdx = Mapping.find_first_of("=");
+    size_t EqualsIdx = Mapping.find_first_of('=');
     std::string SectionIDStr = std::string(Mapping.substr(0, EqualsIdx));
-    size_t ComaIdx = Mapping.find_first_of(",");
+    size_t ComaIdx = Mapping.find_first_of(',');
 
     if (ComaIdx == StringRef::npos)
       report_fatal_error("Invalid section specification '" + Mapping +
@@ -929,15 +929,17 @@ static int linkAndVerify() {
                                        StringRef SymbolName,
                                        StringRef KindNameFilter)
       -> Expected<RuntimeDyldChecker::MemoryRegionInfo> {
-    if (!StubMap.count(StubContainer))
+    auto SMIt = StubMap.find(StubContainer);
+    if (SMIt == StubMap.end())
       return make_error<StringError>("Stub container not found: " +
                                          StubContainer,
                                      inconvertibleErrorCode());
-    if (!StubMap[StubContainer].count(SymbolName))
+    auto It = SMIt->second.find(SymbolName);
+    if (It == SMIt->second.end())
       return make_error<StringError>("Symbol name " + SymbolName +
                                          " in stub container " + StubContainer,
                                      inconvertibleErrorCode());
-    auto &SI = StubMap[StubContainer][SymbolName];
+    auto &SI = It->second;
     RuntimeDyldChecker::MemoryRegionInfo StubMemInfo;
     StubMemInfo.setTargetAddress(Dyld.getSectionLoadAddress(SI.SectionID) +
                                  SI.Offset);

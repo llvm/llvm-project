@@ -13,6 +13,7 @@
 #ifndef LLVM_TEXTAPI_DYLIBREADER_H
 #define LLVM_TEXTAPI_DYLIBREADER_H
 
+#include "llvm/ADT/StringMap.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/TextAPI/ArchitectureSet.h"
@@ -42,6 +43,14 @@ Expected<Records> readFile(MemoryBufferRef Buffer, const ParseOption &Opt);
 ///
 /// \param Buffer Data that points to dylib.
 Expected<std::unique_ptr<InterfaceFile>> get(MemoryBufferRef Buffer);
+
+using SymbolToSourceLocMap = llvm::StringMap<RecordLoc>;
+/// Get the source location for each symbol from dylib.
+///
+/// \param DSYM Path to DSYM file.
+/// \param T Requested target slice for dylib.
+SymbolToSourceLocMap accumulateSourceLocFromDSYM(const StringRef DSYM,
+                                                 const Target &T);
 
 } // namespace llvm::MachO::DylibReader
 

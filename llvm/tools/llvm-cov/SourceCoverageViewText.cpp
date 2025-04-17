@@ -179,7 +179,7 @@ void SourceCoverageViewText::renderLine(raw_ostream &OS, LineRef L,
   unsigned Col = 1;
   for (const auto *S : Segments) {
     unsigned End = std::min(S->Col, static_cast<unsigned>(Line.size()) + 1);
-    colored_ostream(OS, Highlight ? *Highlight : raw_ostream::SAVEDCOLOR,
+    colored_ostream(OS, Highlight.value_or(raw_ostream::SAVEDCOLOR),
                     getOptions().Colors && Highlight, /*Bold=*/false,
                     /*BG=*/true)
         << Line.substr(Col - 1, End - Col);
@@ -196,7 +196,7 @@ void SourceCoverageViewText::renderLine(raw_ostream &OS, LineRef L,
   }
 
   // Show the rest of the line.
-  colored_ostream(OS, Highlight ? *Highlight : raw_ostream::SAVEDCOLOR,
+  colored_ostream(OS, Highlight.value_or(raw_ostream::SAVEDCOLOR),
                   getOptions().Colors && Highlight, /*Bold=*/false, /*BG=*/true)
       << Line.substr(Col - 1, Line.size() - Col + 1);
   OS << '\n';
@@ -216,7 +216,7 @@ void SourceCoverageViewText::renderLineCoverageColumn(
     OS.indent(LineCoverageColumnWidth) << '|';
     return;
   }
-  std::string C = formatCount(Line.getExecutionCount());
+  std::string C = formatBinaryCount(Line.getExecutionCount());
   OS.indent(LineCoverageColumnWidth - C.size());
   colored_ostream(OS, raw_ostream::MAGENTA,
                   Line.hasMultipleRegions() && getOptions().Colors)
@@ -263,7 +263,7 @@ void SourceCoverageViewText::renderRegionMarkers(raw_ostream &OS,
 
     if (getOptions().Debug)
       errs() << "Marker at " << S->Line << ":" << S->Col << " = "
-            << formatCount(S->Count) << "\n";
+             << formatBinaryCount(S->Count) << "\n";
   }
   OS << '\n';
 }
@@ -294,46 +294,44 @@ void SourceCoverageViewText::renderBranchView(raw_ostream &OS, BranchView &BRV,
   if (getOptions().Debug)
     errs() << "Branch at line " << BRV.getLine() << '\n';
 
-  for (const auto &R : BRV.Regions) {
-    double TruePercent = 0.0;
-    double FalsePercent = 0.0;
-    // FIXME: It may overflow when the data is too large, but I have not
-    // encountered it in actual use, and not sure whether to use __uint128_t.
-    uint64_t Total = R.ExecutionCount + R.FalseExecutionCount;
+  auto BranchCount = [&](StringRef Label, uint64_t Count, bool Folded,
+                         double Total) {
+    if (Folded)
+      return std::string{"Folded"};
 
-    if (!getOptions().ShowBranchCounts && Total != 0) {
-      TruePercent = ((double)(R.ExecutionCount) / (double)Total) * 100.0;
-      FalsePercent = ((double)(R.FalseExecutionCount) / (double)Total) * 100.0;
-    }
+    std::string Str;
+    raw_string_ostream OS(Str);
+
+    colored_ostream(OS, raw_ostream::RED, getOptions().Colors && !Count,
+                    /*Bold=*/false, /*BG=*/true)
+        << Label;
+
+    if (getOptions().ShowBranchCounts)
+      OS << ": " << formatBinaryCount(Count);
+    else
+      OS << ": " << format("%0.2f", (Total != 0 ? 100.0 * Count / Total : 0.0))
+         << "%";
+
+    return Str;
+  };
+
+  for (const auto &R : BRV.Regions) {
+    // This can be `double` since it is only used as a denominator.
+    // FIXME: It is still inaccurate if Count is greater than (1LL << 53).
+    double Total =
+        static_cast<double>(R.ExecutionCount) + R.FalseExecutionCount;
 
     renderLinePrefix(OS, ViewDepth);
     OS << "  Branch (" << R.LineStart << ":" << R.ColumnStart << "): [";
 
-    if (R.Folded) {
+    if (R.TrueFolded && R.FalseFolded) {
       OS << "Folded - Ignored]\n";
       continue;
     }
 
-    colored_ostream(OS, raw_ostream::RED,
-                    getOptions().Colors && !R.ExecutionCount,
-                    /*Bold=*/false, /*BG=*/true)
-        << "True";
-
-    if (getOptions().ShowBranchCounts)
-      OS << ": " << formatCount(R.ExecutionCount) << ", ";
-    else
-      OS << ": " << format("%0.2f", TruePercent) << "%, ";
-
-    colored_ostream(OS, raw_ostream::RED,
-                    getOptions().Colors && !R.FalseExecutionCount,
-                    /*Bold=*/false, /*BG=*/true)
-        << "False";
-
-    if (getOptions().ShowBranchCounts)
-      OS << ": " << formatCount(R.FalseExecutionCount);
-    else
-      OS << ": " << format("%0.2f", FalsePercent) << "%";
-    OS << "]\n";
+    OS << BranchCount("True", R.ExecutionCount, R.TrueFolded, Total) << ", "
+       << BranchCount("False", R.FalseExecutionCount, R.FalseFolded, Total)
+       << "]\n";
   }
 }
 
@@ -382,7 +380,8 @@ void SourceCoverageViewText::renderMCDCView(raw_ostream &OS, MCDCView &MRV,
     colored_ostream(OS, raw_ostream::RED,
                     getOptions().Colors && Record.getPercentCovered() < 100.0,
                     /*Bold=*/false, /*BG=*/true)
-        << format("%0.2f", Record.getPercentCovered()) << "%\n";
+        << format("%0.2f", Record.getPercentCovered()) << "%";
+    OS << "\n";
     renderLinePrefix(OS, ViewDepth);
     OS << "\n";
   }
@@ -413,5 +412,4 @@ void SourceCoverageViewText::renderTitle(raw_ostream &OS, StringRef Title) {
         << getOptions().CreatedTimeStr << "\n";
 }
 
-void SourceCoverageViewText::renderTableHeader(raw_ostream &, unsigned,
-                                               unsigned) {}
+void SourceCoverageViewText::renderTableHeader(raw_ostream &, unsigned) {}

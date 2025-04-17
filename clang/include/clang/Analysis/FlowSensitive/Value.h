@@ -35,7 +35,6 @@ public:
   enum class Kind {
     Integer,
     Pointer,
-    Record,
 
     // TODO: Top values should not be need to be type-specific.
     TopBool,
@@ -67,7 +66,6 @@ public:
   /// Properties may not be set on `RecordValue`s; use synthetic fields instead
   /// (for details, see documentation for `RecordStorageLocation`).
   void setProperty(llvm::StringRef Name, Value &Val) {
-    assert(getKind() != Kind::Record);
     Properties.insert_or_assign(Name, &Val);
   }
 
@@ -182,45 +180,6 @@ public:
 
 private:
   StorageLocation &PointeeLoc;
-};
-
-/// Models a value of `struct` or `class` type.
-/// In C++, prvalues of class type serve only a limited purpose: They can only
-/// be used to initialize a result object. It is not possible to access member
-/// variables or call member functions on a prvalue of class type.
-/// Correspondingly, `RecordValue` also serves only a limited purpose: It
-/// conveys a prvalue of class type from the place where the object is
-/// constructed to the result object that it initializes.
-///
-/// When creating a prvalue of class type, we already need a storage location
-/// for `this`, even though prvalues are otherwise not associated with storage
-/// locations. `RecordValue` is therefore essentially a wrapper for a storage
-/// location, which is then used to set the storage location for the result
-/// object when we process the AST node for that result object.
-///
-/// For example:
-///    MyStruct S = MyStruct(3);
-///
-/// In this example, `MyStruct(3) is a prvalue, which is modeled as a
-/// `RecordValue` that wraps a `RecordStorageLocation`. This
-/// `RecordStorageLocation` is then used as the storage location for `S`.
-///
-/// Over time, we may eliminate `RecordValue` entirely. See also the discussion
-/// here: https://reviews.llvm.org/D155204#inline-1503204
-class RecordValue final : public Value {
-public:
-  explicit RecordValue(RecordStorageLocation &Loc)
-      : Value(Kind::Record), Loc(Loc) {}
-
-  static bool classof(const Value *Val) {
-    return Val->getKind() == Kind::Record;
-  }
-
-  /// Returns the storage location that this `RecordValue` is associated with.
-  RecordStorageLocation &getLoc() const { return Loc; }
-
-private:
-  RecordStorageLocation &Loc;
 };
 
 raw_ostream &operator<<(raw_ostream &OS, const Value &Val);

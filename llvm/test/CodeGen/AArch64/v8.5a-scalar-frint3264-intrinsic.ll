@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=aarch64-eabi -mattr=+v8.5a  | FileCheck %s
+; RUN: llc < %s -mtriple=aarch64 -mattr=+v8.5a  | FileCheck %s
 
 declare float @llvm.aarch64.frint32z.f32(float)
 declare double @llvm.aarch64.frint32z.f64(double)

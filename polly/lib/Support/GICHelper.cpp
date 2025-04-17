@@ -83,10 +83,10 @@ APInt polly::APIntFromVal(__isl_take isl_val *Val) {
 }
 
 template <typename ISLTy, typename ISL_CTX_GETTER, typename ISL_PRINTER>
-static inline std::string stringFromIslObjInternal(__isl_keep ISLTy *isl_obj,
-                                                   ISL_CTX_GETTER ctx_getter_fn,
-                                                   ISL_PRINTER printer_fn,
-                                                   std::string DefaultValue) {
+static inline std::string
+stringFromIslObjInternal(__isl_keep ISLTy *isl_obj,
+                         ISL_CTX_GETTER ctx_getter_fn, ISL_PRINTER printer_fn,
+                         const std::string &DefaultValue) {
   if (!isl_obj)
     return DefaultValue;
   isl_ctx *ctx = ctx_getter_fn(isl_obj);
@@ -134,21 +134,20 @@ ISL_C_OBJECT_TO_STRING(union_map)
 ISL_C_OBJECT_TO_STRING(union_pw_aff)
 ISL_C_OBJECT_TO_STRING(union_pw_multi_aff)
 
-static void replace(std::string &str, const std::string &find,
-                    const std::string &replace) {
+static void replace(std::string &str, StringRef find, StringRef replace) {
   size_t pos = 0;
   while ((pos = str.find(find, pos)) != std::string::npos) {
-    str.replace(pos, find.length(), replace);
-    pos += replace.length();
+    str.replace(pos, find.size(), replace);
+    pos += replace.size();
   }
 }
 
 static void makeIslCompatible(std::string &str) {
-  replace(str, ".", "_");
-  replace(str, "\"", "_");
-  replace(str, " ", "__");
-  replace(str, "=>", "TO");
-  replace(str, "+", "_");
+  llvm::replace(str, '.', '_');
+  llvm::replace(str, '\"', '_');
+  replace(str, StringRef(" "), StringRef("__"));
+  replace(str, StringRef("=>"), StringRef("TO"));
+  llvm::replace(str, '+', '_');
 }
 
 std::string polly::getIslCompatibleName(const std::string &Prefix,

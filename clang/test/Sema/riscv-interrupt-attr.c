@@ -25,6 +25,7 @@ struct a { int b; };
 
 struct a test __attribute__((interrupt)); // expected-warning {{'interrupt' attribute only applies to functions}}
 
+__attribute__((interrupt(42))) void foo0(void) {} // expected-error {{expected string literal as argument of 'interrupt' attribute}}
 __attribute__((interrupt("USER"))) void foo1(void) {} // expected-warning {{'interrupt' attribute argument not supported: USER}}
 __attribute__((interrupt("user"))) void foo1b(void) {} // expected-warning {{'interrupt' attribute argument not supported: user}}
 __attribute__((interrupt("MACHINE"))) void foo1c(void) {} // expected-warning {{'interrupt' attribute argument not supported: MACHINE}}

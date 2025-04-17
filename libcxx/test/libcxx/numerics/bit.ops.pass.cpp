@@ -9,7 +9,11 @@
 // Test the __XXXX routines in the <bit> header.
 // These are not supposed to be exhaustive tests, just sanity checks.
 
-#include <bit>
+// XFAIL: FROZEN-CXX03-HEADERS-FIXME
+
+#include <__bit/bit_log2.h>
+#include <__bit/countl.h>
+#include <__bit/rotate.h>
 #include <cassert>
 
 #include "test_macros.h"

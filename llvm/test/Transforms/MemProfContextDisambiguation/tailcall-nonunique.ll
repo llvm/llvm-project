@@ -9,10 +9,7 @@
 ; RUN:  -stats -debug %s -S 2>&1 | FileCheck %s --check-prefix=STATS \
 ; RUN:  --check-prefix=IR --check-prefix=DEBUG
 
-; DEBUG: Not found through unique tail call chain: _Z3barv from main that actually called _Z3foob (found multiple possible chains)
-; DEBUG: Not found through unique tail call chain: _Z3barv from main that actually called _Z3foob (found multiple possible chains)
-; DEBUG: Not found through unique tail call chain: _Z3barv from main that actually called _Z3foob (found multiple possible chains)
-; DEBUG: Not found through unique tail call chain: _Z3barv from main that actually called _Z3foob (found multiple possible chains)
+; DEBUG: Not found through unique tail call chain: _Z3barv from main that actually called xyz (found multiple possible chains)
 
 ;; Check that all calls in the IR are to the original functions, leading to a
 ;; non-cold operator new call.
@@ -91,39 +88,37 @@ return:                                           ; preds = %if.else, %if.then
 }
 
 ; Function Attrs: noinline
-; IR-LABEL: @main()
+; IR-LABEL: @xyz()
+define dso_local i32 @xyz() local_unnamed_addr #0 {
+  ; IR: call ptr @_Z3foob(i1 true)
+  %call = tail call ptr @_Z3foob(i1 true)
+  ; IR: call ptr @_Z3foob(i1 true)
+  %call1 = tail call ptr @_Z3foob(i1 true)
+  ; IR: call ptr @_Z3foob(i1 false)
+  %call2 = tail call ptr @_Z3foob(i1 false)
+  ; IR: call ptr @_Z3foob(i1 false)
+  %call3 = tail call ptr @_Z3foob(i1 false)
+  ret i32 0
+}
+
 define dso_local i32 @main() local_unnamed_addr #0 {
-delete.end13:
-  ; IR: call ptr @_Z3foob(i1 true)
-  %call = tail call ptr @_Z3foob(i1 true), !callsite !10
-  ; IR: call ptr @_Z3foob(i1 true)
-  %call1 = tail call ptr @_Z3foob(i1 true), !callsite !11
-  ; IR: call ptr @_Z3foob(i1 false)
-  %call2 = tail call ptr @_Z3foob(i1 false), !callsite !12
-  ; IR: call ptr @_Z3foob(i1 false)
-  %call3 = tail call ptr @_Z3foob(i1 false), !callsite !13
+  ; IR: call i32 @xyz()
+  %call1 = tail call i32 @xyz(), !callsite !11
   ret i32 0
 }
 
 ; IR: attributes #[[NOTCOLD]] = { builtin allocsize(0) "memprof"="notcold" }
 
-; STATS: 4 memprof-context-disambiguation - Number of profiled callees found via multiple tail call chains
+; STATS: 1 memprof-context-disambiguation - Number of profiled callees found via multiple tail call chains
 
 attributes #0 = { noinline }
 attributes #1 = { nobuiltin allocsize(0) }
 attributes #2 = { builtin allocsize(0) }
 
-!0 = !{!1, !3, !5, !7}
-!1 = !{!2, !"notcold"}
-!2 = !{i64 3186456655321080972, i64 6307901912192269588}
-!3 = !{!4, !"cold"}
-!4 = !{i64 3186456655321080972, i64 6792096022461663180}
+!0 = !{!5, !7}
 !5 = !{!6, !"notcold"}
 !6 = !{i64 3186456655321080972, i64 8632435727821051414}
 !7 = !{!8, !"cold"}
 !8 = !{i64 3186456655321080972, i64 -3421689549917153178}
 !9 = !{i64 3186456655321080972}
-!10 = !{i64 8632435727821051414}
 !11 = !{i64 -3421689549917153178}
-!12 = !{i64 6307901912192269588}
-!13 = !{i64 6792096022461663180}

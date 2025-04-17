@@ -72,12 +72,12 @@
 #define PLATFORM_DRIVERKIT 10
 #endif
 
-#ifndef PLATFORM_XROS
-#define PLATFORM_XROS 11
+#ifndef PLATFORM_VISIONOS
+#define PLATFORM_VISIONOS 11
 #endif
 
-#ifndef PLATFORM_XR_SIMULATOR
-#define PLATFORM_XR_SIMULATOR 12
+#ifndef PLATFORM_VISIONOSSIMULATOR
+#define PLATFORM_VISIONOSSIMULATOR 12
 #endif
 
 #ifdef WITH_SPRINGBOARD
@@ -472,6 +472,8 @@ FBSCreateOptionsDictionary(const char *app_bundle_path,
   // And there are some other options at the top level in this dictionary:
   [options setObject:[NSNumber numberWithBool:YES]
               forKey:FBSOpenApplicationOptionKeyUnlockDevice];
+  [options setObject:[NSNumber numberWithBool:YES]
+              forKey:FBSOpenApplicationOptionKeyPromptUnlockDevice];
 
   // We have to get the "sequence ID & UUID" for this app bundle path and send
   // them to FBS:
@@ -526,7 +528,7 @@ MachProcess::MachProcess()
       m_profile_data_mutex(PTHREAD_MUTEX_RECURSIVE), m_profile_data(),
       m_profile_events(0, eMachProcessProfileCancel), m_thread_actions(),
       m_exception_messages(),
-      m_exception_messages_mutex(PTHREAD_MUTEX_RECURSIVE), m_thread_list(),
+      m_exception_and_signal_mutex(PTHREAD_MUTEX_RECURSIVE), m_thread_list(),
       m_activities(), m_state(eStateUnloaded),
       m_state_mutex(PTHREAD_MUTEX_RECURSIVE), m_events(0, kAllEventsMask),
       m_private_events(0, kAllEventsMask), m_breakpoints(), m_watchpoints(),
@@ -754,9 +756,9 @@ MachProcess::GetPlatformString(unsigned char platform) {
     return "bridgeos";
   case PLATFORM_DRIVERKIT:
     return "driverkit";
-  case PLATFORM_XROS:
+  case PLATFORM_VISIONOS:
     return "xros";
-  case PLATFORM_XR_SIMULATOR:
+  case PLATFORM_VISIONOSSIMULATOR:
     return "xrossimulator";
   default:
     DNBLogError("Unknown platform %u found for one binary", platform);
@@ -1111,6 +1113,23 @@ MachProcess::GetAllLoadedLibrariesInfos(nub_process_t pid,
   return FormatDynamicLibrariesIntoJSON(image_infos, report_load_commands);
 }
 
+std::optional<std::pair<cpu_type_t, cpu_subtype_t>>
+MachProcess::GetMainBinaryCPUTypes(nub_process_t pid) {
+  int pointer_size = GetInferiorAddrSize(pid);
+  std::vector<struct binary_image_information> image_infos;
+  GetAllLoadedBinariesViaDYLDSPI(image_infos);
+  uint32_t platform = GetPlatform();
+  for (auto &image_info : image_infos)
+    if (GetMachOInformationFromMemory(platform, image_info.load_address,
+                                      pointer_size, image_info.macho_info))
+      if (image_info.macho_info.mach_header.filetype == MH_EXECUTE)
+        return {
+            {static_cast<cpu_type_t>(image_info.macho_info.mach_header.cputype),
+             static_cast<cpu_subtype_t>(
+                 image_info.macho_info.mach_header.cpusubtype)}};
+  return {};
+}
+
 // Fetch information about the shared libraries at the given load addresses
 // using the
 // dyld SPIs that exist in macOS 10.12, iOS 10, tvOS 10, watchOS 3 and newer.
@@ -1319,8 +1338,11 @@ void MachProcess::Clear(bool detaching) {
   m_stop_count = 0;
   m_thread_list.Clear();
   {
-    PTHREAD_MUTEX_LOCKER(locker, m_exception_messages_mutex);
+    PTHREAD_MUTEX_LOCKER(locker, m_exception_and_signal_mutex);
     m_exception_messages.clear();
+    m_sent_interrupt_signo = 0;
+    m_auto_resume_signo = 0;
+
   }
   m_activities.Clear();
   StopProfileThread();
@@ -1398,15 +1420,17 @@ void MachProcess::RefineWatchpointStopInfo(
       continue;
     for (uint32_t reg = 0; reg < reg_sets[set].num_registers; ++reg) {
       if (strcmp(reg_sets[set].registers[reg].name, "esr") == 0) {
-        DNBRegisterValue reg_value;
-        if (GetRegisterValue(tid, set, reg, &reg_value)) {
-          esr = reg_value.value.uint64;
+        std::unique_ptr<DNBRegisterValue> reg_value =
+            std::make_unique<DNBRegisterValue>();
+        if (GetRegisterValue(tid, set, reg, reg_value.get())) {
+          esr = reg_value->value.uint64;
         }
       }
       if (strcmp(reg_sets[set].registers[reg].name, "far") == 0) {
-        DNBRegisterValue reg_value;
-        if (GetRegisterValue(tid, set, reg, &reg_value)) {
-          far = reg_value.value.uint64;
+        std::unique_ptr<DNBRegisterValue> reg_value =
+            std::make_unique<DNBRegisterValue>();
+        if (GetRegisterValue(tid, set, reg, reg_value.get())) {
+          far = reg_value->value.uint64;
         }
       }
     }
@@ -1554,6 +1578,7 @@ bool MachProcess::Kill(const struct timespec *timeout_abstime) {
 bool MachProcess::Interrupt() {
   nub_state_t state = GetState();
   if (IsRunning(state)) {
+    PTHREAD_MUTEX_LOCKER(locker, m_exception_and_signal_mutex);
     if (m_sent_interrupt_signo == 0) {
       m_sent_interrupt_signo = SIGSTOP;
       if (Signal(m_sent_interrupt_signo)) {
@@ -1569,6 +1594,10 @@ bool MachProcess::Interrupt() {
                          m_sent_interrupt_signo);
       }
     } else {
+      // We've requested that the process stop anew; if we had recorded this
+      // requested stop as being in place when we resumed (& therefore would
+      // throw it away), clear that.
+      m_auto_resume_signo = 0;
       DNBLogThreadedIf(LOG_PROCESS, "MachProcess::Interrupt() - previously "
                                     "sent an interrupt signal %i that hasn't "
                                     "been received yet, interrupt aborted",
@@ -1707,7 +1736,7 @@ bool MachProcess::Detach() {
     m_thread_actions.Append(thread_action);
     m_thread_actions.SetDefaultThreadActionIfNeeded(eStateRunning, 0);
 
-    PTHREAD_MUTEX_LOCKER(locker, m_exception_messages_mutex);
+    PTHREAD_MUTEX_LOCKER(locker, m_exception_and_signal_mutex);
 
     ReplyToAllExceptions();
   }
@@ -1833,7 +1862,7 @@ nub_size_t MachProcess::WriteMemory(nub_addr_t addr, nub_size_t size,
 }
 
 void MachProcess::ReplyToAllExceptions() {
-  PTHREAD_MUTEX_LOCKER(locker, m_exception_messages_mutex);
+  PTHREAD_MUTEX_LOCKER(locker, m_exception_and_signal_mutex);
   if (!m_exception_messages.empty()) {
     MachException::Message::iterator pos;
     MachException::Message::iterator begin = m_exception_messages.begin();
@@ -1867,7 +1896,7 @@ void MachProcess::ReplyToAllExceptions() {
   }
 }
 void MachProcess::PrivateResume() {
-  PTHREAD_MUTEX_LOCKER(locker, m_exception_messages_mutex);
+  PTHREAD_MUTEX_LOCKER(locker, m_exception_and_signal_mutex);
 
   m_auto_resume_signo = m_sent_interrupt_signo;
   if (m_auto_resume_signo)
@@ -2269,7 +2298,7 @@ bool MachProcess::EnableWatchpoint(nub_addr_t addr) {
 // data has already been copied.
 void MachProcess::ExceptionMessageReceived(
     const MachException::Message &exceptionMessage) {
-  PTHREAD_MUTEX_LOCKER(locker, m_exception_messages_mutex);
+  PTHREAD_MUTEX_LOCKER(locker, m_exception_and_signal_mutex);
 
   if (m_exception_messages.empty())
     m_task.Suspend();
@@ -2283,7 +2312,7 @@ void MachProcess::ExceptionMessageReceived(
 
 task_t MachProcess::ExceptionMessageBundleComplete() {
   // We have a complete bundle of exceptions for our child process.
-  PTHREAD_MUTEX_LOCKER(locker, m_exception_messages_mutex);
+  PTHREAD_MUTEX_LOCKER(locker, m_exception_and_signal_mutex);
   DNBLogThreadedIf(LOG_EXCEPTIONS, "%s: %llu exception messages.",
                    __PRETTY_FUNCTION__, (uint64_t)m_exception_messages.size());
   bool auto_resume = false;
@@ -4051,10 +4080,10 @@ pid_t MachProcess::BoardServiceLaunchForDebug(
       m_flags |= eMachProcessFlagsAttached;
       DNBLog("[LaunchAttach] successfully attached to pid %d", m_pid);
     } else {
-      launch_err.SetErrorString(
-          "Failed to attach to pid %d, BoardServiceLaunchForDebug() unable to "
-          "ptrace(PT_ATTACHEXC)",
-          m_pid);
+      std::string errmsg = "Failed to attach to pid ";
+      errmsg += std::to_string(m_pid);
+      errmsg += ", BoardServiceLaunchForDebug() unable to ptrace(PT_ATTACHEXC)";
+      launch_err.SetErrorString(errmsg.c_str());
       SetState(eStateExited);
       DNBLog("[LaunchAttach] END (%d) error: failed to attach to pid %d",
              getpid(), m_pid);

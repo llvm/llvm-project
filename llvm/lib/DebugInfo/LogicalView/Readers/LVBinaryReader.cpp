@@ -24,18 +24,16 @@ using namespace llvm::logicalview;
 void LVSymbolTable::add(StringRef Name, LVScope *Function,
                         LVSectionIndex SectionIndex) {
   std::string SymbolName(Name);
-  if (SymbolNames.find(SymbolName) == SymbolNames.end()) {
-    SymbolNames.emplace(
-        std::piecewise_construct, std::forward_as_tuple(SymbolName),
-        std::forward_as_tuple(Function, 0, SectionIndex, false));
-  } else {
+  auto [It, Inserted] =
+      SymbolNames.try_emplace(SymbolName, Function, 0, SectionIndex, false);
+  if (!Inserted) {
     // Update a recorded entry with its logical scope and section index.
-    SymbolNames[SymbolName].Scope = Function;
+    It->second.Scope = Function;
     if (SectionIndex)
-      SymbolNames[SymbolName].SectionIndex = SectionIndex;
+      It->second.SectionIndex = SectionIndex;
   }
 
-  if (Function && SymbolNames[SymbolName].IsComdat)
+  if (Function && It->second.IsComdat)
     Function->setIsComdat();
 
   LLVM_DEBUG({ print(dbgs()); });
@@ -44,15 +42,13 @@ void LVSymbolTable::add(StringRef Name, LVScope *Function,
 void LVSymbolTable::add(StringRef Name, LVAddress Address,
                         LVSectionIndex SectionIndex, bool IsComdat) {
   std::string SymbolName(Name);
-  if (SymbolNames.find(SymbolName) == SymbolNames.end())
-    SymbolNames.emplace(
-        std::piecewise_construct, std::forward_as_tuple(SymbolName),
-        std::forward_as_tuple(nullptr, Address, SectionIndex, IsComdat));
-  else
+  auto [It, Inserted] = SymbolNames.try_emplace(SymbolName, nullptr, Address,
+                                                SectionIndex, IsComdat);
+  if (!Inserted)
     // Update a recorded symbol name with its logical scope.
-    SymbolNames[SymbolName].Address = Address;
+    It->second.Address = Address;
 
-  LVScope *Function = SymbolNames[SymbolName].Scope;
+  LVScope *Function = It->second.Scope;
   if (Function && IsComdat)
     Function->setIsComdat();
   LLVM_DEBUG({ print(dbgs()); });
@@ -65,20 +61,24 @@ LVSectionIndex LVSymbolTable::update(LVScope *Function) {
     Name = Function->getName();
   std::string SymbolName(Name);
 
-  if (SymbolName.empty() || (SymbolNames.find(SymbolName) == SymbolNames.end()))
+  if (SymbolName.empty())
+    return SectionIndex;
+
+  auto It = SymbolNames.find(SymbolName);
+  if (It == SymbolNames.end())
     return SectionIndex;
 
   // Update a recorded entry with its logical scope, only if the scope has
   // ranges. That is the case when in DWARF there are 2 DIEs connected via
   // the DW_AT_specification.
   if (Function->getHasRanges()) {
-    SymbolNames[SymbolName].Scope = Function;
-    SectionIndex = SymbolNames[SymbolName].SectionIndex;
+    It->second.Scope = Function;
+    SectionIndex = It->second.SectionIndex;
   } else {
     SectionIndex = UndefinedSectionIndex;
   }
 
-  if (SymbolNames[SymbolName].IsComdat)
+  if (It->second.IsComdat)
     Function->setIsComdat();
 
   LLVM_DEBUG({ print(dbgs()); });
@@ -87,20 +87,20 @@ LVSectionIndex LVSymbolTable::update(LVScope *Function) {
 
 const LVSymbolTableEntry &LVSymbolTable::getEntry(StringRef Name) {
   static LVSymbolTableEntry Empty = LVSymbolTableEntry();
-  LVSymbolNames::iterator Iter = SymbolNames.find(std::string(Name));
+  LVSymbolNames::iterator Iter = SymbolNames.find(Name);
   return Iter != SymbolNames.end() ? Iter->second : Empty;
 }
 LVAddress LVSymbolTable::getAddress(StringRef Name) {
-  LVSymbolNames::iterator Iter = SymbolNames.find(std::string(Name));
+  LVSymbolNames::iterator Iter = SymbolNames.find(Name);
   return Iter != SymbolNames.end() ? Iter->second.Address : 0;
 }
 LVSectionIndex LVSymbolTable::getIndex(StringRef Name) {
-  LVSymbolNames::iterator Iter = SymbolNames.find(std::string(Name));
+  LVSymbolNames::iterator Iter = SymbolNames.find(Name);
   return Iter != SymbolNames.end() ? Iter->second.SectionIndex
                                    : getReader().getDotTextSectionIndex();
 }
 bool LVSymbolTable::getIsComdat(StringRef Name) {
-  LVSymbolNames::iterator Iter = SymbolNames.find(std::string(Name));
+  LVSymbolNames::iterator Iter = SymbolNames.find(Name);
   return Iter != SymbolNames.end() ? Iter->second.IsComdat : false;
 }
 
@@ -146,6 +146,30 @@ bool LVBinaryReader::getSymbolTableIsComdat(StringRef Name) {
 
 void LVBinaryReader::mapVirtualAddress(const object::ObjectFile &Obj) {
   for (const object::SectionRef &Section : Obj.sections()) {
+    LLVM_DEBUG({
+      Expected<StringRef> SectionNameOrErr = Section.getName();
+      StringRef Name;
+      if (!SectionNameOrErr)
+        consumeError(SectionNameOrErr.takeError());
+      else
+        Name = *SectionNameOrErr;
+      dbgs() << "Index: " << format_decimal(Section.getIndex(), 3) << ", "
+             << "Address: " << hexValue(Section.getAddress()) << ", "
+             << "Size: " << hexValue(Section.getSize()) << ", "
+             << "Name: " << Name << "\n";
+      dbgs() << "isCompressed:   " << Section.isCompressed() << ", "
+             << "isText:         " << Section.isText() << ", "
+             << "isData:         " << Section.isData() << ", "
+             << "isBSS:          " << Section.isBSS() << ", "
+             << "isVirtual:      " << Section.isVirtual() << "\n";
+      dbgs() << "isBitcode:      " << Section.isBitcode() << ", "
+             << "isStripped:     " << Section.isStripped() << ", "
+             << "isBerkeleyText: " << Section.isBerkeleyText() << ", "
+             << "isBerkeleyData: " << Section.isBerkeleyData() << ", "
+             << "isDebugSection: " << Section.isDebugSection() << "\n";
+      dbgs() << "\n";
+    });
+
     if (!Section.isText() || Section.isVirtual() || !Section.getSize())
       continue;
 
@@ -160,9 +184,14 @@ void LVBinaryReader::mapVirtualAddress(const object::ObjectFile &Obj) {
       consumeError(SectionNameOrErr.takeError());
       continue;
     }
-    if ((*SectionNameOrErr).equals(".text") ||
-        (*SectionNameOrErr).equals(".code"))
+    if (*SectionNameOrErr == ".text" || *SectionNameOrErr == "CODE" ||
+        *SectionNameOrErr == ".code") {
       DotTextSectionIndex = Section.getIndex();
+      // If the object is WebAssembly, update the address offset that
+      // will be added to DWARF DW_AT_* attributes.
+      if (Obj.isWasm())
+        WasmCodeSectionOffset = Section.getAddress();
+    }
   }
 
   // Process the symbol table.

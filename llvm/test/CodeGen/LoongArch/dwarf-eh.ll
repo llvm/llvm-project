@@ -1,7 +1,7 @@
-; RUN: llc --mtriple=loongarch32 --relocation-model=static < %s | FileCheck %s
-; RUN: llc --mtriple=loongarch32 --relocation-model=pic < %s | FileCheck %s
-; RUN: llc --mtriple=loongarch64 --relocation-model=static < %s | FileCheck %s
-; RUN: llc --mtriple=loongarch64 --relocation-model=pic < %s | FileCheck %s
+; RUN: llc --mtriple=loongarch32 -mattr=+d --relocation-model=static < %s | FileCheck %s
+; RUN: llc --mtriple=loongarch32 -mattr=+d --relocation-model=pic < %s | FileCheck %s
+; RUN: llc --mtriple=loongarch64 -mattr=+d --relocation-model=static < %s | FileCheck %s
+; RUN: llc --mtriple=loongarch64 -mattr=+d --relocation-model=pic < %s | FileCheck %s
 
 declare void @throw_exception()
 

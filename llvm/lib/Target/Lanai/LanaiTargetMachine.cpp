@@ -19,25 +19,20 @@
 #include "TargetInfo/LanaiTargetInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/Passes.h"
-#include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/MC/TargetRegistry.h"
-#include "llvm/Support/FormattedStream.h"
 #include "llvm/Target/TargetOptions.h"
 #include <optional>
 
 using namespace llvm;
-
-namespace llvm {
-void initializeLanaiMemAluCombinerPass(PassRegistry &);
-} // namespace llvm
 
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeLanaiTarget() {
   // Register the target.
   RegisterTargetMachine<LanaiTargetMachine> registered_target(
       getTheLanaiTarget());
   PassRegistry &PR = *PassRegistry::getPassRegistry();
-  initializeLanaiDAGToDAGISelPass(PR);
+  initializeLanaiDAGToDAGISelLegacyPass(PR);
+  initializeLanaiMemAluCombinerPass(PR);
 }
 
 static std::string computeDataLayout() {
@@ -60,10 +55,10 @@ LanaiTargetMachine::LanaiTargetMachine(
     const TargetOptions &Options, std::optional<Reloc::Model> RM,
     std::optional<CodeModel::Model> CodeModel, CodeGenOptLevel OptLevel,
     bool JIT)
-    : LLVMTargetMachine(T, computeDataLayout(), TT, Cpu, FeatureString, Options,
-                        getEffectiveRelocModel(RM),
-                        getEffectiveCodeModel(CodeModel, CodeModel::Medium),
-                        OptLevel),
+    : CodeGenTargetMachineImpl(
+          T, computeDataLayout(), TT, Cpu, FeatureString, Options,
+          getEffectiveRelocModel(RM),
+          getEffectiveCodeModel(CodeModel, CodeModel::Medium), OptLevel),
       Subtarget(TT, Cpu, FeatureString, *this, Options, getCodeModel(),
                 OptLevel),
       TLOF(new LanaiTargetObjectFile()) {
@@ -106,7 +101,7 @@ LanaiTargetMachine::createPassConfig(PassManagerBase &PassManager) {
 }
 
 void LanaiPassConfig::addIRPasses() {
-  addPass(createAtomicExpandPass());
+  addPass(createAtomicExpandLegacyPass());
 
   TargetPassConfig::addIRPasses();
 }

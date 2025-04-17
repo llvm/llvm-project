@@ -2,6 +2,10 @@
 // RUN: %clang -### --target=x86_64 -fbasic-block-sections=all %s -S 2>&1 | FileCheck -check-prefix=CHECK-OPT-ALL %s
 // RUN: %clang -### --target=x86_64 -fbasic-block-sections=list=%s %s -S 2>&1 | FileCheck -check-prefix=CHECK-OPT-LIST %s
 // RUN: %clang -### --target=x86_64 -fbasic-block-sections=labels %s -S 2>&1 | FileCheck -check-prefix=CHECK-OPT-LABELS %s
+// RUN: %clang -### --target=aarch64 -fbasic-block-sections=none %s -S 2>&1 | FileCheck -check-prefix=CHECK-OPT-NONE %s
+// RUN: %clang -### --target=aarch64 -fbasic-block-sections=list=%s %s -S 2>&1 | FileCheck -check-prefix=CHECK-OPT-LIST %s
+// RUN: %clang -### --target=aarch64 -fbasic-block-sections=labels %s -S 2>&1 | FileCheck -check-prefix=CHECK-OPT-LABELS %s
+// RUN: not %clang -### --target=aarch64 -fbasic-block-sections=all %s -S 2>&1 | FileCheck -check-prefix=CHECK-INVALID-VALUE %s
 // RUN: not %clang -c --target=arm-unknown-linux -fbasic-block-sections=all %s -S 2>&1 | FileCheck -check-prefix=CHECK-TRIPLE %s
 // RUN: %clang -### --target=arm-unknown-linux -fbasic-block-sections=all -fbasic-block-sections=none %s -S 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK-NOOPT %s
@@ -18,7 +22,8 @@
 // CHECK-OPT-NONE:   "-fbasic-block-sections=none"
 // CHECK-OPT-ALL:    "-fbasic-block-sections=all"
 // CHECK-OPT-LIST:   "-fbasic-block-sections={{[^ ]*}}fbasic-block-sections.c"
-// CHECK-OPT-LABELS: "-fbasic-block-sections=labels"
+// CHECK-OPT-LABELS: warning: argument '-fbasic-block-sections=labels' is deprecated, use '-fbasic-block-address-map' instead
+// CHECK-OPT-LABELS: "-fbasic-block-address-map"
 // CHECK-TRIPLE:     error: unsupported option '-fbasic-block-sections=all' for target
 // CHECK-INVALID-VALUE: error: invalid value {{[^ ]*}} in '-fbasic-block-sections={{.*}}'
 // CHECK-OPT-NULL-LIST: "-fbasic-block-sections=list="

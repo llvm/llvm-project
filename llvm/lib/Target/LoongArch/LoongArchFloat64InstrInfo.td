@@ -253,6 +253,8 @@ let Predicates = [HasFrecipe] in {
 // FP approximate reciprocal operation
 def : Pat<(int_loongarch_frecipe_d FPR64:$src), (FRECIPE_D FPR64:$src)>;
 def : Pat<(int_loongarch_frsqrte_d FPR64:$src), (FRSQRTE_D FPR64:$src)>;
+def : Pat<(loongarch_frecipe FPR64:$src), (FRECIPE_D FPR64:$src)>;
+def : Pat<(loongarch_frsqrte FPR64:$src), (FRSQRTE_D FPR64:$src)>;
 }
 
 // fmadd.d: fj * fk + fa

@@ -14,12 +14,14 @@
 
 #include <algorithm>
 #include <concepts>
+#include <functional>
 #include <iterator>
 #include <memory>
 #include <random>
 #include <ranges>
 #include <type_traits>
 #include <utility>
+
 #include "test_macros.h"
 
 // Niebloids, unlike CPOs, are *not* required to be semiregular or even to have
@@ -34,7 +36,8 @@ template <class CPO, class... Args>
 constexpr bool test(CPO& o, Args&&...) {
   static_assert(std::is_const_v<CPO>);
   static_assert(std::is_class_v<CPO>);
-  static_assert(std::is_trivial_v<CPO>);
+  static_assert(std::is_trivially_copyable_v<CPO>);
+  static_assert(std::is_trivially_default_constructible_v<CPO>);
 
   auto p = o;
   using T = decltype(p);
@@ -67,6 +70,7 @@ static_assert(test(std::ranges::binary_search, a, 42));
 static_assert(test(std::ranges::clamp, 42, 42, 42));
 #if TEST_STD_VER >= 23
 static_assert(test(std::ranges::contains, a, 42));
+static_assert(test(std::ranges::contains_subrange, a, a));
 #endif
 static_assert(test(std::ranges::copy, a, a));
 static_assert(test(std::ranges::copy_backward, a, a));
@@ -87,6 +91,9 @@ static_assert(test(std::ranges::find_first_of, a, a));
 static_assert(test(std::ranges::find_if, a, odd));
 static_assert(test(std::ranges::find_if_not, a, odd));
 #if TEST_STD_VER >= 23
+static_assert(test(std::ranges::find_last, a, 42));
+static_assert(test(std::ranges::find_last_if, a, odd));
+static_assert(test(std::ranges::find_last_if_not, a, odd));
 static_assert(test(std::ranges::fold_left, a, 0, std::plus()));
 static_assert(test(std::ranges::fold_left_with_iter, a, 0, std::plus()));
 #endif

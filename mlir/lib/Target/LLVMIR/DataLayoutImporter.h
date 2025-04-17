@@ -17,6 +17,7 @@
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
+#include "llvm/ADT/MapVector.h"
 
 namespace llvm {
 class StringRef;
@@ -100,14 +101,18 @@ private:
   LogicalResult tryToEmplaceAddrSpaceEntry(StringRef token,
                                            llvm::StringLiteral spaceKey);
 
+  /// Adds an mangling mode entry if there is none yet.
+  LogicalResult tryToEmplaceManglingModeEntry(StringRef token,
+                                              llvm::StringLiteral manglingKey);
+
   /// Adds a stack alignment entry if there is none yet.
   LogicalResult tryToEmplaceStackAlignmentEntry(StringRef token);
 
   std::string layoutStr = {};
   StringRef lastToken = {};
   SmallVector<StringRef> unhandledTokens;
-  DenseMap<StringAttr, DataLayoutEntryInterface> keyEntries;
-  DenseMap<TypeAttr, DataLayoutEntryInterface> typeEntries;
+  llvm::MapVector<StringAttr, DataLayoutEntryInterface> keyEntries;
+  llvm::MapVector<TypeAttr, DataLayoutEntryInterface> typeEntries;
   MLIRContext *context;
   DataLayoutSpecInterface dataLayout;
 };

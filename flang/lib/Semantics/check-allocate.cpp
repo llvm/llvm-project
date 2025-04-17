@@ -39,11 +39,10 @@ class AllocationCheckerHelper {
 public:
   AllocationCheckerHelper(
       const parser::Allocation &alloc, AllocateCheckerInfo &info)
-      : allocateInfo_{info}, allocateObject_{std::get<parser::AllocateObject>(
-                                 alloc.t)},
-        allocateShapeSpecRank_{ShapeSpecRank(alloc)}, allocateCoarraySpecRank_{
-                                                          CoarraySpecRank(
-                                                              alloc)} {}
+      : allocateInfo_{info}, allocation_{alloc},
+        allocateObject_{std::get<parser::AllocateObject>(alloc.t)},
+        allocateShapeSpecRank_{ShapeSpecRank(alloc)},
+        allocateCoarraySpecRank_{CoarraySpecRank(alloc)} {}
 
   bool RunChecks(SemanticsContext &context);
 
@@ -84,6 +83,7 @@ private:
   }
 
   AllocateCheckerInfo &allocateInfo_;
+  const parser::Allocation &allocation_;
   const parser::AllocateObject &allocateObject_;
   const int allocateShapeSpecRank_{0};
   const int allocateCoarraySpecRank_{0};
@@ -270,11 +270,13 @@ static bool IsTypeCompatible(
     const DeclTypeSpec &type1, const DerivedTypeSpec &derivedType2) {
   if (const DerivedTypeSpec * derivedType1{type1.AsDerived()}) {
     if (type1.category() == DeclTypeSpec::Category::TypeDerived) {
-      return &derivedType1->typeSymbol() == &derivedType2.typeSymbol();
+      return evaluate::AreSameDerivedTypeIgnoringTypeParameters(
+          *derivedType1, derivedType2);
     } else if (type1.category() == DeclTypeSpec::Category::ClassDerived) {
       for (const DerivedTypeSpec *parent{&derivedType2}; parent;
            parent = parent->typeSymbol().GetParentTypeSpec()) {
-        if (&derivedType1->typeSymbol() == &parent->typeSymbol()) {
+        if (evaluate::AreSameDerivedTypeIgnoringTypeParameters(
+                *derivedType1, *parent)) {
           return true;
         }
       }
@@ -529,17 +531,15 @@ bool AllocationCheckerHelper::RunChecks(SemanticsContext &context) {
     // Character length distinction is allowed, with a warning
     if (!HaveCompatibleLengths(
             *type_, allocateInfo_.sourceExprType.value())) { // F'2023 C950
-      if (context.ShouldWarn(common::LanguageFeature::AllocateToOtherLength)) {
-        context.Say(name_.source,
-            "Character length of allocatable object in ALLOCATE should be the same as the SOURCE or MOLD"_port_en_US);
-      }
+      context.Warn(common::LanguageFeature::AllocateToOtherLength, name_.source,
+          "Character length of allocatable object in ALLOCATE should be the same as the SOURCE or MOLD"_port_en_US);
       return false;
     }
   }
   // Shape related checks
   if (ultimate_ && evaluate::IsAssumedRank(*ultimate_)) {
     context.Say(name_.source,
-        "An assumed-rank object may not appear in an ALLOCATE statement"_err_en_US);
+        "An assumed-rank dummy argument may not appear in an ALLOCATE statement"_err_en_US);
     return false;
   }
   if (ultimate_ && IsAssumedSizeArray(*ultimate_) && context.AnyFatalError()) {
@@ -600,15 +600,34 @@ bool AllocationCheckerHelper::RunChecks(SemanticsContext &context) {
   const Scope &subpScope{
       GetProgramUnitContaining(context.FindScope(name_.source))};
   if (allocateObject_.typedExpr && allocateObject_.typedExpr->v) {
-    if (auto whyNot{WhyNotDefinable(name_.source, subpScope,
-            {DefinabilityFlag::PointerDefinition,
-                DefinabilityFlag::AcceptAllocatable},
-            *allocateObject_.typedExpr->v)}) {
+    DefinabilityFlags flags{DefinabilityFlag::PointerDefinition,
+        DefinabilityFlag::AcceptAllocatable};
+    if (allocateInfo_.gotSource) {
+      flags.set(DefinabilityFlag::SourcedAllocation);
+    }
+    if (auto whyNot{WhyNotDefinable(
+            name_.source, subpScope, flags, *allocateObject_.typedExpr->v)}) {
       context
           .Say(name_.source,
               "Name in ALLOCATE statement is not definable"_err_en_US)
-          .Attach(std::move(*whyNot));
+          .Attach(std::move(whyNot->set_severity(parser::Severity::Because)));
       return false;
+    }
+  }
+  if (allocateInfo_.gotPinned) {
+    std::optional<common::CUDADataAttr> cudaAttr{GetCUDADataAttr(ultimate_)};
+    if ((!cudaAttr || *cudaAttr != common::CUDADataAttr::Pinned) &&
+        context.languageFeatures().ShouldWarn(
+            common::UsageWarning::CUDAUsage)) {
+      context.Say(name_.source,
+          "Object in ALLOCATE should have PINNED attribute when PINNED option is specified"_warn_en_US);
+    }
+  }
+  if (allocateInfo_.gotStream) {
+    std::optional<common::CUDADataAttr> cudaAttr{GetCUDADataAttr(ultimate_)};
+    if (!cudaAttr || *cudaAttr != common::CUDADataAttr::Device) {
+      context.Say(name_.source,
+          "Object in ALLOCATE must have DEVICE attribute when STREAM option is specified"_err_en_US);
     }
   }
   return RunCoarrayRelatedChecks(context);
@@ -673,6 +692,31 @@ bool AllocationCheckerHelper::RunCoarrayRelatedChecks(
             .Attach(ultimate_->name(), "Declared here with corank %d"_en_US,
                 corank_);
         return false;
+      }
+      if (const auto &coarraySpec{
+              std::get<std::optional<parser::AllocateCoarraySpec>>(
+                  allocation_.t)}) {
+        int dim{0};
+        for (const auto &spec :
+            std::get<std::list<parser::AllocateCoshapeSpec>>(coarraySpec->t)) {
+          if (auto ubv{evaluate::ToInt64(
+                  GetExpr(context, std::get<parser::BoundExpr>(spec.t)))}) {
+            if (auto *lbx{GetExpr(context,
+                    std::get<std::optional<parser::BoundExpr>>(spec.t))}) {
+              auto lbv{evaluate::ToInt64(*lbx)};
+              if (lbv && *ubv < *lbv) {
+                context.Say(name_.source,
+                    "Upper cobound %jd is less than lower cobound %jd of codimension %d"_err_en_US,
+                    std::intmax_t{*ubv}, std::intmax_t{*lbv}, dim + 1);
+              }
+            } else if (*ubv < 1) {
+              context.Say(name_.source,
+                  "Upper cobound %jd of codimension %d is less than 1"_err_en_US,
+                  std::intmax_t{*ubv}, dim + 1);
+            }
+          }
+          ++dim;
+        }
       }
     }
   } else { // Not a coarray

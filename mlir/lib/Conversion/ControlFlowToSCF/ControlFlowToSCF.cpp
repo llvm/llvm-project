@@ -16,7 +16,6 @@
 #include "mlir/Dialect/ControlFlow/IR/ControlFlow.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/UB/IR/UBOps.h"
 #include "mlir/Pass/Pass.h"
@@ -98,12 +97,10 @@ ControlFlowToSCFTransformation::createStructuredDoWhileLoopOp(
       loc, builder.create<arith::TruncIOp>(loc, builder.getI1Type(), condition),
       loopVariablesNextIter);
 
-  auto *afterBlock = new Block;
-  whileOp.getAfter().push_back(afterBlock);
+  Block *afterBlock = builder.createBlock(&whileOp.getAfter());
   afterBlock->addArguments(
       loopVariablesInit.getTypes(),
       SmallVector<Location>(loopVariablesInit.size(), loc));
-  builder.setInsertionPointToEnd(afterBlock);
   builder.create<scf::YieldOp>(loc, afterBlock->getArguments());
 
   return whileOp.getOperation();

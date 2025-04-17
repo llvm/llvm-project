@@ -45,7 +45,8 @@ TEST(AddressSanitizer, InternalSimpleDeathTest) {
   EXPECT_DEATH(exit(1), "");
 }
 
-static void MallocStress(size_t n) {
+static void *MallocStress(void *NumOfItrPtr) {
+  size_t n = *((size_t *)NumOfItrPtr);
   u32 seed = my_rand();
   BufferedStackTrace stack1;
   stack1.trace_buffer[0] = 0xa123;
@@ -90,20 +91,21 @@ static void MallocStress(size_t n) {
   }
   for (size_t i = 0; i < vec.size(); i++)
     __asan::asan_free(vec[i], &stack3, __asan::FROM_MALLOC);
+  return nullptr;
 }
 
-
 TEST(AddressSanitizer, NoInstMallocTest) {
-  MallocStress(ASAN_LOW_MEMORY ? 300000 : 1000000);
+  const size_t kNumIterations = (ASAN_LOW_MEMORY) ? 300000 : 1000000;
+  MallocStress((void *)&kNumIterations);
 }
 
 TEST(AddressSanitizer, ThreadedMallocStressTest) {
   const int kNumThreads = 4;
-  const int kNumIterations = (ASAN_LOW_MEMORY) ? 10000 : 100000;
+  const size_t kNumIterations = (ASAN_LOW_MEMORY) ? 10000 : 100000;
   pthread_t t[kNumThreads];
   for (int i = 0; i < kNumThreads; i++) {
-    PTHREAD_CREATE(&t[i], 0, (void* (*)(void *x))MallocStress,
-        (void*)kNumIterations);
+    PTHREAD_CREATE(&t[i], 0, (void *(*)(void *x))MallocStress,
+                   (void *)&kNumIterations);
   }
   for (int i = 0; i < kNumThreads; i++) {
     PTHREAD_JOIN(t[i], 0);
@@ -135,7 +137,7 @@ TEST(AddressSanitizer, DISABLED_InternalPrintShadow) {
 }
 
 TEST(AddressSanitizer, QuarantineTest) {
-  BufferedStackTrace stack;
+  UNINITIALIZED BufferedStackTrace stack;
   stack.trace_buffer[0] = 0x890;
   stack.size = 1;
 
@@ -157,7 +159,7 @@ TEST(AddressSanitizer, QuarantineTest) {
 void *ThreadedQuarantineTestWorker(void *unused) {
   (void)unused;
   u32 seed = my_rand();
-  BufferedStackTrace stack;
+  UNINITIALIZED BufferedStackTrace stack;
   stack.trace_buffer[0] = 0x890;
   stack.size = 1;
 
@@ -192,7 +194,7 @@ TEST(AddressSanitizer, ThreadedQuarantineTest) {
 
 void *ThreadedOneSizeMallocStress(void *unused) {
   (void)unused;
-  BufferedStackTrace stack;
+  UNINITIALIZED BufferedStackTrace stack;
   stack.trace_buffer[0] = 0x890;
   stack.size = 1;
   const size_t kNumMallocs = 1000;
@@ -236,7 +238,7 @@ static void TestLoadStoreCallbacks(CB cb[2][5]) {
   uptr buggy_ptr;
 
   __asan_test_only_reported_buggy_pointer = &buggy_ptr;
-  BufferedStackTrace stack;
+  UNINITIALIZED BufferedStackTrace stack;
   stack.trace_buffer[0] = 0x890;
   stack.size = 1;
 

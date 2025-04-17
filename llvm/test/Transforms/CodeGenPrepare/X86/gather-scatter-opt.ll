@@ -12,7 +12,7 @@ target triple = "x86_64-unknown-linux-gnu"
 define <4 x i32> @splat_base(ptr %base, <4 x i64> %index) {
 ; CHECK-LABEL: @splat_base(
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i32, ptr [[BASE:%.*]], <4 x i64> [[INDEX:%.*]]
-; CHECK-NEXT:    [[RES:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> [[TMP1]], i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i32> undef)
+; CHECK-NEXT:    [[RES:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> [[TMP1]], i32 4, <4 x i1> splat (i1 true), <4 x i32> undef)
 ; CHECK-NEXT:    ret <4 x i32> [[RES]]
 ;
   %broadcast.splatinsert = insertelement <4 x ptr> undef, ptr %base, i32 0
@@ -26,7 +26,7 @@ define <4 x i32> @splat_struct(ptr %base) {
 ; CHECK-LABEL: @splat_struct(
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr [[STRUCT_A:%.*]], ptr [[BASE:%.*]], i64 0, i32 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i32, ptr [[TMP1]], <4 x i64> zeroinitializer
-; CHECK-NEXT:    [[RES:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> [[TMP2]], i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i32> undef)
+; CHECK-NEXT:    [[RES:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> [[TMP2]], i32 4, <4 x i1> splat (i1 true), <4 x i32> undef)
 ; CHECK-NEXT:    ret <4 x i32> [[RES]]
 ;
   %gep = getelementptr %struct.a, ptr %base, <4 x i64> zeroinitializer, i32 1
@@ -38,7 +38,7 @@ define <4 x i32> @scalar_index(ptr %base, i64 %index) {
 ; CHECK-LABEL: @scalar_index(
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i32, ptr [[BASE:%.*]], i64 [[INDEX:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i32, ptr [[TMP1]], <4 x i64> zeroinitializer
-; CHECK-NEXT:    [[RES:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> [[TMP2]], i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i32> undef)
+; CHECK-NEXT:    [[RES:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> [[TMP2]], i32 4, <4 x i1> splat (i1 true), <4 x i32> undef)
 ; CHECK-NEXT:    ret <4 x i32> [[RES]]
 ;
   %broadcast.splatinsert = insertelement <4 x ptr> undef, ptr %base, i32 0
@@ -52,7 +52,7 @@ define <4 x i32> @splat_index(ptr %base, i64 %index) {
 ; CHECK-LABEL: @splat_index(
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i32, ptr [[BASE:%.*]], i64 [[INDEX:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i32, ptr [[TMP1]], <4 x i64> zeroinitializer
-; CHECK-NEXT:    [[RES:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> [[TMP2]], i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i32> undef)
+; CHECK-NEXT:    [[RES:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> [[TMP2]], i32 4, <4 x i1> splat (i1 true), <4 x i32> undef)
 ; CHECK-NEXT:    ret <4 x i32> [[RES]]
 ;
   %broadcast.splatinsert = insertelement <4 x i64> undef, i64 %index, i32 0
@@ -65,7 +65,7 @@ define <4 x i32> @splat_index(ptr %base, i64 %index) {
 define <4 x i32> @test_global_array(<4 x i64> %indxs) {
 ; CHECK-LABEL: @test_global_array(
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i32, ptr @glob_array, <4 x i64> [[INDXS:%.*]]
-; CHECK-NEXT:    [[G:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> [[TMP1]], i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i32> undef)
+; CHECK-NEXT:    [[G:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> [[TMP1]], i32 4, <4 x i1> splat (i1 true), <4 x i32> undef)
 ; CHECK-NEXT:    ret <4 x i32> [[G]]
 ;
   %p = getelementptr inbounds [16 x i32], ptr @glob_array, i64 0, <4 x i64> %indxs
@@ -75,7 +75,7 @@ define <4 x i32> @test_global_array(<4 x i64> %indxs) {
 
 define <4 x i32> @global_struct_splat() {
 ; CHECK-LABEL: @global_struct_splat(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> <ptr getelementptr inbounds (%struct.a, ptr @c, i64 0, i32 1), ptr getelementptr inbounds (%struct.a, ptr @c, i64 0, i32 1), ptr getelementptr inbounds (%struct.a, ptr @c, i64 0, i32 1), ptr getelementptr inbounds (%struct.a, ptr @c, i64 0, i32 1)>, i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i32> undef)
+; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> <ptr getelementptr ([[STRUCT_A:%.*]], ptr @c, i64 0, i32 1), ptr getelementptr ([[STRUCT_A]], ptr @c, i64 0, i32 1), ptr getelementptr ([[STRUCT_A]], ptr @c, i64 0, i32 1), ptr getelementptr ([[STRUCT_A]], ptr @c, i64 0, i32 1)>, i32 4, <4 x i1> splat (i1 true), <4 x i32> undef)
 ; CHECK-NEXT:    ret <4 x i32> [[TMP1]]
 ;
   %1 = insertelement <4 x ptr> undef, ptr @c, i32 0

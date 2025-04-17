@@ -30,9 +30,11 @@
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Parallel.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/Support/Threading.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
@@ -123,6 +125,14 @@ public:
 
 namespace {
 using namespace cl;
+
+enum ErrorDetailLevel {
+  OnlyDetailsNoSummary,
+  NoDetailsOnlySummary,
+  NoDetailsOrSummary,
+  BothDetailsAndSummary,
+  Unspecified
+};
 
 OptionCategory DwarfDumpCategory("Specific Options");
 static list<std::string>
@@ -264,7 +274,7 @@ static cl::opt<bool>
                               "expressed in bytes."),
                      cat(DwarfDumpCategory));
 static cl::opt<bool> ManuallyGenerateUnitIndex(
-    "manaully-generate-unit-index",
+    "manually-generate-unit-index",
     cl::desc("if the input is dwp file, parse .debug_info "
              "section and use it to populate "
              "DW_SECT_INFO contributions in cu-index. "
@@ -276,6 +286,32 @@ static cl::opt<bool>
                 cat(DwarfDumpCategory));
 static opt<bool> Verify("verify", desc("Verify the DWARF debug info."),
                         cat(DwarfDumpCategory));
+static opt<unsigned> VerifyNumThreads(
+    "verify-num-threads", init(1),
+    desc("Number of threads to use for --verify. Single threaded verification "
+         "is the default unless this option is specified. If 0 is specified, "
+         "maximum hardware threads will be used. This can cause the "
+         "output to be non determinisitic, but can speed up verification and "
+         "is useful when running with the summary only or JSON summary modes."),
+    cat(DwarfDumpCategory));
+static opt<ErrorDetailLevel> ErrorDetails(
+    "error-display", init(Unspecified),
+    desc("Set the level of detail and summary to display when verifying "
+         "(implies --verify)"),
+    values(clEnumValN(NoDetailsOrSummary, "quiet",
+                      "Only display whether errors occurred."),
+           clEnumValN(NoDetailsOnlySummary, "summary",
+                      "Display only a summary of the errors found."),
+           clEnumValN(OnlyDetailsNoSummary, "details",
+                      "Display each error in detail but no summary."),
+           clEnumValN(BothDetailsAndSummary, "full",
+                      "Display each error as well as a summary. [default]")),
+    cat(DwarfDumpCategory));
+static opt<std::string> JsonErrSummaryFile(
+    "verify-json", init(""),
+    desc("Output JSON-formatted error summary to the specified file. "
+         "(Implies --verify)"),
+    value_desc("filename.json"), cat(DwarfDumpCategory));
 static opt<bool> Quiet("quiet", desc("Use with -verify to not emit to STDOUT."),
                        cat(DwarfDumpCategory));
 static opt<bool> DumpUUID("uuid", desc("Show the UUID for each architecture."),
@@ -326,7 +362,11 @@ static DIDumpOptions getDumpOpts(DWARFContext &C) {
   DumpOpts.RecoverableErrorHandler = C.getRecoverableErrorHandler();
   // In -verify mode, print DIEs without children in error messages.
   if (Verify) {
-    DumpOpts.Verbose = true;
+    DumpOpts.Verbose = ErrorDetails != NoDetailsOnlySummary &&
+                       ErrorDetails != NoDetailsOrSummary;
+    DumpOpts.ShowAggregateErrors = ErrorDetails != OnlyDetailsNoSummary &&
+                                   ErrorDetails != NoDetailsOnlySummary;
+    DumpOpts.JsonErrSummaryFile = JsonErrSummaryFile;
     return DumpOpts.noImplicitRecursion();
   }
   return DumpOpts;
@@ -472,7 +512,7 @@ static void filterByAccelName(
     getDies(DICtx, DICtx.getDebugNames(), Name, Dies);
   }
   llvm::sort(Dies);
-  Dies.erase(std::unique(Dies.begin(), Dies.end()), Dies.end());
+  Dies.erase(llvm::unique(Dies), Dies.end());
 
   DIDumpOptions DumpOpts = getDumpOpts(DICtx);
   DumpOpts.GetNameForDWARFReg = GetNameForDWARFReg;
@@ -535,9 +575,13 @@ static bool lookup(ObjectFile &Obj, DWARFContext &DICtx, uint64_t Address,
 
   // TODO: it is neccessary to set proper SectionIndex here.
   // object::SectionedAddress::UndefSection works for only absolute addresses.
-  if (DILineInfo LineInfo = DICtx.getLineInfoForAddress(
-          {Lookup, object::SectionedAddress::UndefSection}))
+  if (DILineInfo LineInfo =
+          DICtx
+              .getLineInfoForAddress(
+                  {Lookup, object::SectionedAddress::UndefSection})
+              .value_or(DILineInfo())) {
     LineInfo.dump(OS);
+  }
 
   return true;
 }
@@ -616,7 +660,7 @@ static bool collectObjectSources(ObjectFile &Obj, DWARFContext &DICtx,
 
   // Dedup and order the sources.
   llvm::sort(Sources);
-  Sources.erase(std::unique(Sources.begin(), Sources.end()), Sources.end());
+  Sources.erase(llvm::unique(Sources), Sources.end());
 
   for (StringRef Name : Sources)
     OS << Name << "\n";
@@ -631,8 +675,7 @@ createRegInfo(const object::ObjectFile &Obj) {
   TT.setVendor(Triple::UnknownVendor);
   TT.setOS(Triple::UnknownOS);
   std::string TargetLookupError;
-  const Target *TheTarget =
-      TargetRegistry::lookupTarget(TT.str(), TargetLookupError);
+  const Target *TheTarget = TargetRegistry::lookupTarget(TT, TargetLookupError);
   if (!TargetLookupError.empty())
     return nullptr;
   MCRegInfo.reset(TheTarget->createMCRegInfo(TT.str()));
@@ -651,7 +694,7 @@ static bool dumpObjectFile(ObjectFile &Obj, DWARFContext &DICtx,
   auto GetRegName = [&MCRegInfo](uint64_t DwarfRegNum, bool IsEH) -> StringRef {
     if (!MCRegInfo)
       return {};
-    if (std::optional<unsigned> LLVMRegNum =
+    if (std::optional<MCRegister> LLVMRegNum =
             MCRegInfo->getLLVMRegNum(DwarfRegNum, IsEH))
       if (const char *RegName = MCRegInfo->getName(*LLVMRegNum))
         return StringRef(RegName);
@@ -745,7 +788,8 @@ static bool handleBuffer(StringRef Filename, MemoryBufferRef Buffer,
     if (filterArch(*Obj)) {
       std::unique_ptr<DWARFContext> DICtx = DWARFContext::create(
           *Obj, DWARFContext::ProcessDebugRelocations::Process, nullptr, "",
-          RecoverableErrorHandler);
+          RecoverableErrorHandler, WithColor::defaultWarningHandler,
+          /*ThreadSafe=*/true);
       DICtx->setParseCUTUIndexManually(ManuallyGenerateUnitIndex);
       if (!HandleObj(*Obj, *DICtx, Filename, OS))
         Result = false;
@@ -812,6 +856,10 @@ int main(int argc, char **argv) {
                           "-verbose is currently not supported";
     return 1;
   }
+  // -error-detail and -json-summary-file both imply -verify
+  if (ErrorDetails != Unspecified || !JsonErrSummaryFile.empty()) {
+    Verify = true;
+  }
 
   std::error_code EC;
   ToolOutputFile OutputFile(OutputFilename, EC, sys::fs::OF_TextWithCRLF);
@@ -821,8 +869,9 @@ int main(int argc, char **argv) {
 
   bool OffsetRequested = false;
 
-  // Defaults to dumping all sections, unless brief mode is specified in which
-  // case only the .debug_info section in dumped.
+  // Defaults to dumping only debug_info, unless: A) verbose mode is specified,
+  // in which case all sections are dumped, or B) a specific section is
+  // requested.
 #define HANDLE_DWARF_SECTION(ENUM_NAME, ELF_NAME, CMDLINE_NAME, OPTION)        \
   if (Dump##ENUM_NAME.IsRequested) {                                           \
     DumpType |= DIDT_##ENUM_NAME;                                              \
@@ -838,7 +887,7 @@ int main(int argc, char **argv) {
   if (DumpAll)
     DumpType = DIDT_All;
   if (DumpType == DIDT_Null) {
-    if (Verbose)
+    if (Verbose || Verify)
       DumpType = DIDT_All;
     else
       DumpType = DIDT_DebugInfo;
@@ -868,6 +917,11 @@ int main(int argc, char **argv) {
 
   bool Success = true;
   if (Verify) {
+    if (!VerifyNumThreads)
+      parallel::strategy =
+          hardware_concurrency(hardware_concurrency().compute_thread_count());
+    else
+      parallel::strategy = hardware_concurrency(VerifyNumThreads);
     for (StringRef Object : Objects)
       Success &= handleFile(Object, verifyObjectFile, OutputFile.os());
   } else if (Statistics) {

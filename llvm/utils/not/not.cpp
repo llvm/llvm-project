@@ -11,6 +11,7 @@
 //   not --crash cmd
 //     Will return true if cmd crashes (e.g. for testing crash reporting).
 
+#include "llvm/Support/Process.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
@@ -41,6 +42,9 @@ int main(int argc, const char **argv) {
     setenv("LLVM_DISABLE_CRASH_REPORT", "1", 0);
     setenv("LLVM_DISABLE_SYMBOLIZATION", "1", 0);
 #endif
+    // Try to disable coredumps for expected crashes as well since this can
+    // noticeably slow down running the test suite.
+    sys::Process::PreventCoreFiles();
   }
 
   if (argc == 0)
@@ -53,10 +57,7 @@ int main(int argc, const char **argv) {
     return 1;
   }
 
-  std::vector<StringRef> Argv;
-  Argv.reserve(argc);
-  for (int i = 0; i < argc; ++i)
-    Argv.push_back(argv[i]);
+  SmallVector<StringRef> Argv(ArrayRef(argv, argc));
   std::string ErrMsg;
   int Result =
       sys::ExecuteAndWait(*Program, Argv, std::nullopt, {}, 0, 0, &ErrMsg);

@@ -10,9 +10,9 @@ define <vscale x 16 x i8> @sdiv_i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b)
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sunpkhi z2.h, z1.b
 ; CHECK-NEXT:    sunpkhi z3.h, z0.b
-; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    sunpklo z1.h, z1.b
 ; CHECK-NEXT:    sunpklo z0.h, z0.b
+; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    sunpkhi z4.s, z2.h
 ; CHECK-NEXT:    sunpkhi z5.s, z3.h
 ; CHECK-NEXT:    sunpklo z2.s, z2.h
@@ -36,11 +36,11 @@ define <vscale x 16 x i8> @sdiv_i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b)
 define <vscale x 8 x i16> @sdiv_i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b) {
 ; CHECK-LABEL: sdiv_i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    sunpkhi z2.s, z1.h
 ; CHECK-NEXT:    sunpkhi z3.s, z0.h
 ; CHECK-NEXT:    sunpklo z1.s, z1.h
 ; CHECK-NEXT:    sunpklo z0.s, z0.h
+; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    sdivr z2.s, p0/m, z2.s, z3.s
 ; CHECK-NEXT:    sdiv z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT:    uzp1 z0.h, z0.h, z2.h
@@ -140,9 +140,9 @@ define <vscale x 16 x i8> @srem_i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b)
 define <vscale x 8 x i16> @srem_i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b) {
 ; CHECK-LABEL: srem_i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    sunpkhi z2.s, z1.h
 ; CHECK-NEXT:    sunpkhi z3.s, z0.h
+; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    sunpklo z4.s, z0.h
 ; CHECK-NEXT:    sdivr z2.s, p0/m, z2.s, z3.s
 ; CHECK-NEXT:    sunpklo z3.s, z1.h
@@ -188,9 +188,9 @@ define <vscale x 16 x i8> @udiv_i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b)
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    uunpkhi z2.h, z1.b
 ; CHECK-NEXT:    uunpkhi z3.h, z0.b
-; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    uunpklo z1.h, z1.b
 ; CHECK-NEXT:    uunpklo z0.h, z0.b
+; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    uunpkhi z4.s, z2.h
 ; CHECK-NEXT:    uunpkhi z5.s, z3.h
 ; CHECK-NEXT:    uunpklo z2.s, z2.h
@@ -214,11 +214,11 @@ define <vscale x 16 x i8> @udiv_i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b)
 define <vscale x 8 x i16> @udiv_i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b) {
 ; CHECK-LABEL: udiv_i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    uunpkhi z2.s, z1.h
 ; CHECK-NEXT:    uunpkhi z3.s, z0.h
 ; CHECK-NEXT:    uunpklo z1.s, z1.h
 ; CHECK-NEXT:    uunpklo z0.s, z0.h
+; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    udivr z2.s, p0/m, z2.s, z3.s
 ; CHECK-NEXT:    udiv z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT:    uzp1 z0.h, z0.h, z2.h
@@ -261,9 +261,9 @@ define <vscale x 8 x i32> @udiv_split_i32(<vscale x 8 x i32> %a, <vscale x 8 x i
 define <vscale x 2 x i32> @udiv_widen_i32(<vscale x 2 x i32> %a, <vscale x 2 x i32> %b) {
 ; CHECK-LABEL: udiv_widen_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    and z1.d, z1.d, #0xffffffff
 ; CHECK-NEXT:    and z0.d, z0.d, #0xffffffff
+; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    udiv z0.d, p0/m, z0.d, z1.d
 ; CHECK-NEXT:    ret
   %div = udiv <vscale x 2 x i32> %a, %b
@@ -319,9 +319,9 @@ define <vscale x 16 x i8> @urem_i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b)
 define <vscale x 8 x i16> @urem_i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b) {
 ; CHECK-LABEL: urem_i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    uunpkhi z2.s, z1.h
 ; CHECK-NEXT:    uunpkhi z3.s, z0.h
+; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    uunpklo z4.s, z0.h
 ; CHECK-NEXT:    udivr z2.s, p0/m, z2.s, z3.s
 ; CHECK-NEXT:    uunpklo z3.s, z1.h
@@ -558,9 +558,9 @@ define <vscale x 4 x i64> @umin_split_i64(<vscale x 4 x i64> %a, <vscale x 4 x i
 define <vscale x 8 x i8> @umin_promote_i8(<vscale x 8 x i8> %a, <vscale x 8 x i8> %b) {
 ; CHECK-LABEL: umin_promote_i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    and z1.h, z1.h, #0xff
 ; CHECK-NEXT:    and z0.h, z0.h, #0xff
+; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    umin z0.h, p0/m, z0.h, z1.h
 ; CHECK-NEXT:    ret
   %cmp = icmp ult <vscale x 8 x i8> %a, %b
@@ -704,9 +704,9 @@ define <vscale x 16 x i16> @umax_split_i16(<vscale x 16 x i16> %a, <vscale x 16 
 define <vscale x 2 x i32> @umax_promote_i32(<vscale x 2 x i32> %a, <vscale x 2 x i32> %b) {
 ; CHECK-LABEL: umax_promote_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    and z1.d, z1.d, #0xffffffff
 ; CHECK-NEXT:    and z0.d, z0.d, #0xffffffff
+; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    umax z0.d, p0/m, z0.d, z1.d
 ; CHECK-NEXT:    ret
   %cmp = icmp ugt <vscale x 2 x i32> %a, %b
@@ -883,8 +883,8 @@ define <vscale x 4 x i64> @lsl_split_i64(<vscale x 4 x i64> %a, <vscale x 4 x i6
 define <vscale x 4 x i16> @lsl_promote_i16(<vscale x 4 x i16> %a, <vscale x 4 x i16> %b){
 ; CHECK-LABEL: lsl_promote_i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    and z1.s, z1.s, #0xffff
+; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    lsl z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT:    ret
   %shl = shl <vscale x 4 x i16> %a, %b
@@ -982,9 +982,9 @@ define <vscale x 2 x i64> @lsr_i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b)
 define <vscale x 8 x i8> @lsr_promote_i8(<vscale x 8 x i8> %a, <vscale x 8 x i8> %b){
 ; CHECK-LABEL: lsr_promote_i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    and z1.h, z1.h, #0xff
 ; CHECK-NEXT:    and z0.h, z0.h, #0xff
+; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    lsr z0.h, p0/m, z0.h, z1.h
 ; CHECK-NEXT:    ret
   %shr = lshr <vscale x 8 x i8> %a, %b
@@ -1081,10 +1081,10 @@ declare <vscale x 2 x i64> @llvm.fshr.nxv2i64(<vscale x 2 x i64>, <vscale x 2 x 
 define <vscale x 2 x i64> @fshl_i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b, <vscale x 2 x i64> %c){
 ; CHECK-LABEL: fshl_i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    mov z3.d, #63 // =0x3f
 ; CHECK-NEXT:    mov z4.d, z2.d
 ; CHECK-NEXT:    lsr z1.d, z1.d, #1
+; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    bic z2.d, z3.d, z2.d
 ; CHECK-NEXT:    and z4.d, z4.d, #0x3f
 ; CHECK-NEXT:    lsl z0.d, p0/m, z0.d, z4.d
@@ -1098,17 +1098,16 @@ define <vscale x 2 x i64> @fshl_i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b
 define <vscale x 4 x i64> @fshl_illegal_i64(<vscale x 4 x i64> %a, <vscale x 4 x i64> %b, <vscale x 4 x i64> %c){
 ; CHECK-LABEL: fshl_illegal_i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    mov z6.d, #63 // =0x3f
-; CHECK-NEXT:    mov z7.d, z4.d
 ; CHECK-NEXT:    lsr z2.d, z2.d, #1
 ; CHECK-NEXT:    lsr z3.d, z3.d, #1
-; CHECK-NEXT:    bic z4.d, z6.d, z4.d
-; CHECK-NEXT:    and z7.d, z7.d, #0x3f
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    bic z7.d, z6.d, z4.d
+; CHECK-NEXT:    and z4.d, z4.d, #0x3f
 ; CHECK-NEXT:    bic z6.d, z6.d, z5.d
 ; CHECK-NEXT:    and z5.d, z5.d, #0x3f
-; CHECK-NEXT:    lsl z0.d, p0/m, z0.d, z7.d
-; CHECK-NEXT:    lsr z2.d, p0/m, z2.d, z4.d
+; CHECK-NEXT:    lsl z0.d, p0/m, z0.d, z4.d
+; CHECK-NEXT:    lsr z2.d, p0/m, z2.d, z7.d
 ; CHECK-NEXT:    lsr z3.d, p0/m, z3.d, z6.d
 ; CHECK-NEXT:    lsl z1.d, p0/m, z1.d, z5.d
 ; CHECK-NEXT:    orr z0.d, z0.d, z2.d
@@ -1121,9 +1120,9 @@ define <vscale x 4 x i64> @fshl_illegal_i64(<vscale x 4 x i64> %a, <vscale x 4 x
 define <vscale x 2 x i64> @fshl_rot_i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b){
 ; CHECK-LABEL: fshl_rot_i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    mov z2.d, z1.d
 ; CHECK-NEXT:    subr z1.d, z1.d, #0 // =0x0
+; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    and z2.d, z2.d, #0x3f
 ; CHECK-NEXT:    and z1.d, z1.d, #0x3f
 ; CHECK-NEXT:    lslr z2.d, p0/m, z2.d, z0.d
@@ -1138,15 +1137,15 @@ define <vscale x 2 x i64> @fshl_rot_i64(<vscale x 2 x i64> %a, <vscale x 2 x i64
 define <vscale x 4 x i64> @fshl_rot_illegal_i64(<vscale x 4 x i64> %a, <vscale x 4 x i64> %b){
 ; CHECK-LABEL: fshl_rot_illegal_i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    mov z4.d, z2.d
 ; CHECK-NEXT:    subr z2.d, z2.d, #0 // =0x0
 ; CHECK-NEXT:    mov z5.d, z3.d
 ; CHECK-NEXT:    subr z3.d, z3.d, #0 // =0x0
+; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    and z4.d, z4.d, #0x3f
 ; CHECK-NEXT:    and z2.d, z2.d, #0x3f
-; CHECK-NEXT:    and z3.d, z3.d, #0x3f
 ; CHECK-NEXT:    and z5.d, z5.d, #0x3f
+; CHECK-NEXT:    and z3.d, z3.d, #0x3f
 ; CHECK-NEXT:    lslr z4.d, p0/m, z4.d, z0.d
 ; CHECK-NEXT:    lsr z0.d, p0/m, z0.d, z2.d
 ; CHECK-NEXT:    movprfx z2, z1
@@ -1166,19 +1165,17 @@ define <vscale x 2 x i64> @fshl_rot_const_i64(<vscale x 2 x i64> %a){
 ; CHECK-NEXT:    lsl z0.d, z0.d, #3
 ; CHECK-NEXT:    orr z0.d, z0.d, z1.d
 ; CHECK-NEXT:    ret
-  %insert = insertelement <vscale x 2 x i64> poison, i64 3, i32 0
-  %shuf = shufflevector <vscale x 2 x i64> %insert, <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
-  %fshl = call <vscale x 2 x i64> @llvm.fshl.nxv2i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %a, <vscale x 2 x i64> %shuf)
+  %fshl = call <vscale x 2 x i64> @llvm.fshl.nxv2i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %a, <vscale x 2 x i64> splat(i64 3))
   ret <vscale x 2 x i64> %fshl
 }
 
 define <vscale x 2 x i64> @fshr_i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b, <vscale x 2 x i64> %c){
 ; CHECK-LABEL: fshr_i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    mov z3.d, #63 // =0x3f
 ; CHECK-NEXT:    mov z4.d, z2.d
 ; CHECK-NEXT:    lsl z0.d, z0.d, #1
+; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    bic z2.d, z3.d, z2.d
 ; CHECK-NEXT:    and z4.d, z4.d, #0x3f
 ; CHECK-NEXT:    lsr z1.d, p0/m, z1.d, z4.d
@@ -1192,9 +1189,9 @@ define <vscale x 2 x i64> @fshr_i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b
 define <vscale x 2 x i64> @fshr_rot_i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b){
 ; CHECK-LABEL: fshr_rot_i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    mov z2.d, z1.d
 ; CHECK-NEXT:    subr z1.d, z1.d, #0 // =0x0
+; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    and z2.d, z2.d, #0x3f
 ; CHECK-NEXT:    and z1.d, z1.d, #0x3f
 ; CHECK-NEXT:    lsrr z2.d, p0/m, z2.d, z0.d

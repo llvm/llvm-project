@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/GPU/IR/CompilationInterfaces.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 
 #include "mlir/Target/LLVMIR/Dialect/GPU/GPUToLLVMIRTranslation.h"
@@ -115,12 +116,22 @@ LogicalResult SelectObjectAttrImpl::embedBinary(
   llvm::Module *module = moduleTranslation.getLLVMModule();
 
   // Embed the object as a global string.
+  // Add null for assembly output for JIT paths that expect null-terminated
+  // strings.
+  bool addNull = (object.getFormat() == gpu::CompilationTarget::Assembly);
   llvm::Constant *binary = llvm::ConstantDataArray::getString(
-      builder.getContext(), object.getObject().getValue(), false);
+      builder.getContext(), object.getObject().getValue(), addNull);
   llvm::GlobalVariable *serializedObj =
       new llvm::GlobalVariable(*module, binary->getType(), true,
                                llvm::GlobalValue::LinkageTypes::InternalLinkage,
                                binary, getBinaryIdentifier(op.getName()));
+
+  if (object.getProperties()) {
+    if (auto section = mlir::dyn_cast_or_null<mlir::StringAttr>(
+            object.getProperties().get(gpu::elfSectionName))) {
+      serializedObj->setSection(section.getValue());
+    }
+  }
   serializedObj->setLinkage(llvm::GlobalValue::LinkageTypes::InternalLinkage);
   serializedObj->setAlignment(llvm::MaybeAlign(8));
   serializedObj->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::None);
@@ -167,7 +178,7 @@ public:
   Value *createKernelArgArray(mlir::gpu::LaunchFuncOp op);
 
   // Create the full kernel launch.
-  mlir::LogicalResult createKernelLaunch(mlir::gpu::LaunchFuncOp op,
+  llvm::LogicalResult createKernelLaunch(mlir::gpu::LaunchFuncOp op,
                                          mlir::gpu::ObjectAttr object);
 
 private:
@@ -345,7 +356,7 @@ llvm::LaunchKernel::createKernelArgArray(mlir::gpu::LaunchFuncOp op) {
 // call %streamSynchronize(%4)
 // call %streamDestroy(%4)
 // call %moduleUnload(%1)
-mlir::LogicalResult
+llvm::LogicalResult
 llvm::LaunchKernel::createKernelLaunch(mlir::gpu::LaunchFuncOp op,
                                        mlir::gpu::ObjectAttr object) {
   auto llvmValue = [&](mlir::Value value) -> Value * {

@@ -14,7 +14,9 @@
 #ifndef LLVM_CODEGEN_SELECTIONDAGISEL_H
 #define LLVM_CODEGEN_SELECTIONDAGISEL_H
 
+#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/IR/BasicBlock.h"
 #include <memory>
@@ -24,6 +26,7 @@ class AAResults;
 class AssumptionCache;
 class TargetInstrInfo;
 class TargetMachine;
+class SSPLayoutInfo;
 class SelectionDAGBuilder;
 class SDValue;
 class MachineRegisterInfo;
@@ -31,6 +34,7 @@ class MachineFunction;
 class OptimizationRemarkEmitter;
 class TargetLowering;
 class TargetLibraryInfo;
+class TargetTransformInfo;
 class FunctionLoweringInfo;
 class SwiftErrorValueTracking;
 class GCFunctionInfo;
@@ -38,19 +42,24 @@ class ScheduleDAGSDNodes;
 
 /// SelectionDAGISel - This is the common base class used for SelectionDAG-based
 /// pattern-matching instruction selectors.
-class SelectionDAGISel : public MachineFunctionPass {
+class SelectionDAGISel {
 public:
   TargetMachine &TM;
   const TargetLibraryInfo *LibInfo;
   std::unique_ptr<FunctionLoweringInfo> FuncInfo;
   SwiftErrorValueTracking *SwiftError;
   MachineFunction *MF;
+  MachineModuleInfo *MMI;
   MachineRegisterInfo *RegInfo;
   SelectionDAG *CurDAG;
   std::unique_ptr<SelectionDAGBuilder> SDB;
-  AAResults *AA = nullptr;
+  mutable std::optional<BatchAAResults> BatchAA;
   AssumptionCache *AC = nullptr;
   GCFunctionInfo *GFI = nullptr;
+  SSPLayoutInfo *SP = nullptr;
+#if !defined(NDEBUG) && LLVM_ENABLE_ABI_BREAKING_CHECKS
+  TargetTransformInfo *TTI = nullptr;
+#endif
   CodeGenOptLevel OptLevel;
   const TargetInstrInfo *TII;
   const TargetLowering *TLI;
@@ -67,16 +76,25 @@ public:
   /// functions. Storing the filter result here so that we only need to do the
   /// filtering once.
   bool MatchFilterFuncName = false;
+  StringRef FuncName;
 
-  explicit SelectionDAGISel(char &ID, TargetMachine &tm,
+  explicit SelectionDAGISel(TargetMachine &tm,
                             CodeGenOptLevel OL = CodeGenOptLevel::Default);
-  ~SelectionDAGISel() override;
+  virtual ~SelectionDAGISel();
+
+  /// Returns a (possibly null) pointer to the current BatchAAResults.
+  BatchAAResults *getBatchAA() const {
+    if (BatchAA.has_value())
+      return &BatchAA.value();
+    return nullptr;
+  }
 
   const TargetLowering *getTargetLowering() const { return TLI; }
 
-  void getAnalysisUsage(AnalysisUsage &AU) const override;
+  void initializeAnalysisResults(MachineFunctionAnalysisManager &MFAM);
+  void initializeAnalysisResults(MachineFunctionPass &MFP);
 
-  bool runOnMachineFunction(MachineFunction &MF) override;
+  virtual bool runOnMachineFunction(MachineFunction &mf);
 
   virtual void emitFunctionEntryCode() {}
 
@@ -305,25 +323,26 @@ public:
     OPC_MorphNodeTo1GlueOutput,
     OPC_MorphNodeTo2GlueOutput,
     OPC_CompleteMatch,
-    // Contains offset in table for pattern being selected
+    // Contains 32-bit offset in table for pattern being selected
     OPC_Coverage
   };
 
   enum {
-    OPFL_None       = 0,  // Node has no chain or glue input and isn't variadic.
-    OPFL_Chain      = 1,     // Node has a chain input.
-    OPFL_GlueInput  = 2,     // Node has a glue input.
-    OPFL_GlueOutput = 4,     // Node has a glue output.
-    OPFL_MemRefs    = 8,     // Node gets accumulated MemRefs.
-    OPFL_Variadic0  = 1<<4,  // Node is variadic, root has 0 fixed inputs.
-    OPFL_Variadic1  = 2<<4,  // Node is variadic, root has 1 fixed inputs.
-    OPFL_Variadic2  = 3<<4,  // Node is variadic, root has 2 fixed inputs.
-    OPFL_Variadic3  = 4<<4,  // Node is variadic, root has 3 fixed inputs.
-    OPFL_Variadic4  = 5<<4,  // Node is variadic, root has 4 fixed inputs.
-    OPFL_Variadic5  = 6<<4,  // Node is variadic, root has 5 fixed inputs.
-    OPFL_Variadic6  = 7<<4,  // Node is variadic, root has 6 fixed inputs.
+    OPFL_None = 0,       // Node has no chain or glue input and isn't variadic.
+    OPFL_Chain = 1,      // Node has a chain input.
+    OPFL_GlueInput = 2,  // Node has a glue input.
+    OPFL_GlueOutput = 4, // Node has a glue output.
+    OPFL_MemRefs = 8,    // Node gets accumulated MemRefs.
+    OPFL_Variadic0 = 1 << 4, // Node is variadic, root has 0 fixed inputs.
+    OPFL_Variadic1 = 2 << 4, // Node is variadic, root has 1 fixed inputs.
+    OPFL_Variadic2 = 3 << 4, // Node is variadic, root has 2 fixed inputs.
+    OPFL_Variadic3 = 4 << 4, // Node is variadic, root has 3 fixed inputs.
+    OPFL_Variadic4 = 5 << 4, // Node is variadic, root has 4 fixed inputs.
+    OPFL_Variadic5 = 6 << 4, // Node is variadic, root has 5 fixed inputs.
+    OPFL_Variadic6 = 7 << 4, // Node is variadic, root has 6 fixed inputs.
+    OPFL_Variadic7 = 8 << 4, // Node is variadic, root has 7 fixed inputs.
 
-    OPFL_VariadicInfo = OPFL_Variadic6
+    OPFL_VariadicInfo = 15 << 4 // Mask for extracting the OPFL_VariadicN bits.
   };
 
   /// getNumFixedFromVariadicInfo - Transform an EmitNode flags word into the
@@ -453,11 +472,16 @@ private:
   void Select_READ_REGISTER(SDNode *Op);
   void Select_WRITE_REGISTER(SDNode *Op);
   void Select_UNDEF(SDNode *N);
+  void Select_FAKE_USE(SDNode *N);
   void CannotYetSelect(SDNode *N);
 
   void Select_FREEZE(SDNode *N);
   void Select_ARITH_FENCE(SDNode *N);
   void Select_MEMBARRIER(SDNode *N);
+
+  void Select_CONVERGENCECTRL_ANCHOR(SDNode *N);
+  void Select_CONVERGENCECTRL_ENTRY(SDNode *N);
+  void Select_CONVERGENCECTRL_LOOP(SDNode *N);
 
   void pushStackMapLiveVariable(SmallVectorImpl<SDValue> &Ops, SDValue Operand,
                                 SDLoc DL);
@@ -513,6 +537,31 @@ private:
                     bool isMorphNodeTo);
 };
 
+class SelectionDAGISelLegacy : public MachineFunctionPass {
+  std::unique_ptr<SelectionDAGISel> Selector;
+
+public:
+  SelectionDAGISelLegacy(char &ID, std::unique_ptr<SelectionDAGISel> S);
+
+  ~SelectionDAGISelLegacy() override = default;
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override;
+
+  bool runOnMachineFunction(MachineFunction &MF) override;
+};
+
+class SelectionDAGISelPass : public PassInfoMixin<SelectionDAGISelPass> {
+  std::unique_ptr<SelectionDAGISel> Selector;
+
+protected:
+  SelectionDAGISelPass(std::unique_ptr<SelectionDAGISel> Selector)
+      : Selector(std::move(Selector)) {}
+
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+  static bool isRequired() { return true; }
+};
 }
 
 #endif /* LLVM_CODEGEN_SELECTIONDAGISEL_H */

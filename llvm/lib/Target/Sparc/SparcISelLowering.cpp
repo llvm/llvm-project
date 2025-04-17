@@ -13,6 +13,7 @@
 
 #include "SparcISelLowering.h"
 #include "MCTargetDesc/SparcMCExpr.h"
+#include "MCTargetDesc/SparcMCTargetDesc.h"
 #include "SparcMachineFunctionInfo.h"
 #include "SparcRegisterInfo.h"
 #include "SparcTargetMachine.h"
@@ -26,8 +27,10 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
+#include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -232,7 +235,8 @@ static unsigned toCallerWindow(unsigned Reg) {
 
 bool SparcTargetLowering::CanLowerReturn(
     CallingConv::ID CallConv, MachineFunction &MF, bool isVarArg,
-    const SmallVectorImpl<ISD::OutputArg> &Outs, LLVMContext &Context) const {
+    const SmallVectorImpl<ISD::OutputArg> &Outs, LLVMContext &Context,
+    const Type *RetTy) const {
   SmallVector<CCValAssign, 16> RVLocs;
   CCState CCInfo(CallConv, isVarArg, MF, RVLocs, Context);
   return CCInfo.CheckReturn(Outs, Subtarget->is64Bit() ? RetCC_Sparc64
@@ -636,8 +640,7 @@ SDValue SparcTargetLowering::LowerFormalArguments_64(
   // The argument array begins at %fp+BIAS+128, after the register save area.
   const unsigned ArgArea = 128;
 
-  for (unsigned i = 0, e = ArgLocs.size(); i != e; ++i) {
-    CCValAssign &VA = ArgLocs[i];
+  for (const CCValAssign &VA : ArgLocs) {
     if (VA.isRegLoc()) {
       // This argument is passed in a register.
       // All integer register arguments are promoted by the caller to i64.
@@ -729,6 +732,30 @@ SDValue SparcTargetLowering::LowerFormalArguments_64(
   return Chain;
 }
 
+// Check whether any of the argument registers are reserved
+static bool isAnyArgRegReserved(const SparcRegisterInfo *TRI,
+                                const MachineFunction &MF) {
+  // The register window design means that outgoing parameters at O*
+  // will appear in the callee as I*.
+  // Be conservative and check both sides of the register names.
+  bool Outgoing =
+      llvm::any_of(SP::GPROutgoingArgRegClass, [TRI, &MF](MCPhysReg r) {
+        return TRI->isReservedReg(MF, r);
+      });
+  bool Incoming =
+      llvm::any_of(SP::GPRIncomingArgRegClass, [TRI, &MF](MCPhysReg r) {
+        return TRI->isReservedReg(MF, r);
+      });
+  return Outgoing || Incoming;
+}
+
+static void emitReservedArgRegCallError(const MachineFunction &MF) {
+  const Function &F = MF.getFunction();
+  F.getContext().diagnose(DiagnosticInfoUnsupported{
+      F, ("SPARC doesn't support"
+          " function calls if any of the argument registers is reserved.")});
+}
+
 SDValue
 SparcTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
                                SmallVectorImpl<SDValue> &InVals) const {
@@ -805,6 +832,7 @@ SparcTargetLowering::LowerCall_32(TargetLowering::CallLoweringInfo &CLI,
   bool &isTailCall                      = CLI.IsTailCall;
   CallingConv::ID CallConv              = CLI.CallConv;
   bool isVarArg                         = CLI.IsVarArg;
+  MachineFunction &MF = DAG.getMachineFunction();
 
   // Analyze operands of the call, assigning locations to each operand.
   SmallVector<CCValAssign, 16> ArgLocs;
@@ -842,8 +870,8 @@ SparcTargetLowering::LowerCall_32(TargetLowering::CallLoweringInfo &CLI,
       Chain = DAG.getMemcpy(Chain, dl, FIPtr, Arg, SizeNode, Alignment,
                             false,        // isVolatile,
                             (Size <= 32), // AlwaysInline if size <= 32,
-                            false,        // isTailCall
-                            MachinePointerInfo(), MachinePointerInfo());
+                            /*CI=*/nullptr, std::nullopt, MachinePointerInfo(),
+                            MachinePointerInfo());
       ByValArgs.push_back(FIPtr);
     }
     else {
@@ -1028,8 +1056,8 @@ SparcTargetLowering::LowerCall_32(TargetLowering::CallLoweringInfo &CLI,
   // If the callee is a GlobalAddress node (quite common, every direct call is)
   // turn it into a TargetGlobalAddress node so that legalize doesn't hack it.
   // Likewise ExternalSymbol -> TargetExternalSymbol.
-  unsigned TF = isPositionIndependent() ? SparcMCExpr::VK_Sparc_WPLT30
-                                        : SparcMCExpr::VK_Sparc_WDISP30;
+  unsigned TF = isPositionIndependent() ? SparcMCExpr::VK_WPLT30
+                                        : SparcMCExpr::VK_WDISP30;
   if (GlobalAddressSDNode *G = dyn_cast<GlobalAddressSDNode>(Callee))
     Callee = DAG.getTargetGlobalAddress(G->getGlobal(), dl, MVT::i32, 0, TF);
   else if (ExternalSymbolSDNode *E = dyn_cast<ExternalSymbolSDNode>(Callee))
@@ -1055,6 +1083,10 @@ SparcTargetLowering::LowerCall_32(TargetLowering::CallLoweringInfo &CLI,
       ((hasReturnsTwice)
            ? TRI->getRTCallPreservedMask(CallConv)
            : TRI->getCallPreservedMask(DAG.getMachineFunction(), CallConv));
+
+  if (isAnyArgRegReserved(TRI, MF))
+    emitReservedArgRegCallError(MF);
+
   assert(Mask && "Missing call preserved mask for calling convention");
   Ops.push_back(DAG.getRegisterMask(Mask));
 
@@ -1125,6 +1157,13 @@ Register SparcTargetLowering::getRegisterByName(const char* RegName, LLT VT,
     .Case("g4", SP::G4).Case("g5", SP::G5).Case("g6", SP::G6).Case("g7", SP::G7)
     .Default(0);
 
+  // If we're directly referencing register names
+  // (e.g in GCC C extension `register int r asm("g1");`),
+  // make sure that said register is in the reserve list.
+  const SparcRegisterInfo *TRI = Subtarget->getRegisterInfo();
+  if (!TRI->isReservedReg(MF, Reg))
+    Reg = 0;
+
   if (Reg)
     return Reg;
 
@@ -1141,8 +1180,7 @@ Register SparcTargetLowering::getRegisterByName(const char* RegName, LLT VT,
 // AnalyzeCallOperands().
 static void fixupVariableFloatArgs(SmallVectorImpl<CCValAssign> &ArgLocs,
                                    ArrayRef<ISD::OutputArg> Outs) {
-  for (unsigned i = 0, e = ArgLocs.size(); i != e; ++i) {
-    CCValAssign &VA = ArgLocs[i];
+  for (CCValAssign &VA : ArgLocs) {
     MVT ValTy = VA.getLocVT();
     // FIXME: What about f32 arguments? C promotes them to f64 when calling
     // varargs functions.
@@ -1189,6 +1227,7 @@ SparcTargetLowering::LowerCall_64(TargetLowering::CallLoweringInfo &CLI,
   SDLoc DL = CLI.DL;
   SDValue Chain = CLI.Chain;
   auto PtrVT = getPointerTy(DAG.getDataLayout());
+  MachineFunction &MF = DAG.getMachineFunction();
 
   // Analyze operands of the call, assigning locations to each operand.
   SmallVector<CCValAssign, 16> ArgLocs;
@@ -1351,8 +1390,8 @@ SparcTargetLowering::LowerCall_64(TargetLowering::CallLoweringInfo &CLI,
   // Likewise ExternalSymbol -> TargetExternalSymbol.
   SDValue Callee = CLI.Callee;
   bool hasReturnsTwice = hasReturnsTwiceAttr(DAG, Callee, CLI.CB);
-  unsigned TF = isPositionIndependent() ? SparcMCExpr::VK_Sparc_WPLT30
-                                        : SparcMCExpr::VK_Sparc_WDISP30;
+  unsigned TF = isPositionIndependent() ? SparcMCExpr::VK_WPLT30
+                                        : SparcMCExpr::VK_WDISP30;
   if (GlobalAddressSDNode *G = dyn_cast<GlobalAddressSDNode>(Callee))
     Callee = DAG.getTargetGlobalAddress(G->getGlobal(), DL, PtrVT, 0, TF);
   else if (ExternalSymbolSDNode *E = dyn_cast<ExternalSymbolSDNode>(Callee))
@@ -1372,6 +1411,10 @@ SparcTargetLowering::LowerCall_64(TargetLowering::CallLoweringInfo &CLI,
       ((hasReturnsTwice) ? TRI->getRTCallPreservedMask(CLI.CallConv)
                          : TRI->getCallPreservedMask(DAG.getMachineFunction(),
                                                      CLI.CallConv));
+
+  if (isAnyArgRegReserved(TRI, MF))
+    emitReservedArgRegCallError(MF);
+
   assert(Mask && "Missing call preserved mask for calling convention");
   Ops.push_back(DAG.getRegisterMask(Mask));
 
@@ -1662,8 +1705,10 @@ SparcTargetLowering::SparcTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::FP16_TO_FP, MVT::f128, Expand);
   setOperationAction(ISD::FP_TO_FP16, MVT::f128, Expand);
 
-  setOperationAction(ISD::BITCAST, MVT::f32, Expand);
-  setOperationAction(ISD::BITCAST, MVT::i32, Expand);
+  setOperationAction(ISD::BITCAST, MVT::f32,
+                     Subtarget->isVIS3() ? Legal : Expand);
+  setOperationAction(ISD::BITCAST, MVT::i32,
+                     Subtarget->isVIS3() ? Legal : Expand);
 
   // Sparc has no select or setcc: expand to SELECT_CC.
   setOperationAction(ISD::SELECT, MVT::i32, Expand);
@@ -1690,18 +1735,21 @@ SparcTargetLowering::SparcTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::SELECT_CC, MVT::f64, Custom);
   setOperationAction(ISD::SELECT_CC, MVT::f128, Custom);
 
-  setOperationAction(ISD::ADDC, MVT::i32, Custom);
-  setOperationAction(ISD::ADDE, MVT::i32, Custom);
-  setOperationAction(ISD::SUBC, MVT::i32, Custom);
-  setOperationAction(ISD::SUBE, MVT::i32, Custom);
+  setOperationAction(ISD::ADDC, MVT::i32, Legal);
+  setOperationAction(ISD::ADDE, MVT::i32, Legal);
+  setOperationAction(ISD::SUBC, MVT::i32, Legal);
+  setOperationAction(ISD::SUBE, MVT::i32, Legal);
+
+  if (Subtarget->isVIS3()) {
+    setOperationAction(ISD::ADDC, MVT::i64, Legal);
+    setOperationAction(ISD::ADDE, MVT::i64, Legal);
+  }
 
   if (Subtarget->is64Bit()) {
-    setOperationAction(ISD::ADDC, MVT::i64, Custom);
-    setOperationAction(ISD::ADDE, MVT::i64, Custom);
-    setOperationAction(ISD::SUBC, MVT::i64, Custom);
-    setOperationAction(ISD::SUBE, MVT::i64, Custom);
-    setOperationAction(ISD::BITCAST, MVT::f64, Expand);
-    setOperationAction(ISD::BITCAST, MVT::i64, Expand);
+    setOperationAction(ISD::BITCAST, MVT::f64,
+                       Subtarget->isVIS3() ? Legal : Expand);
+    setOperationAction(ISD::BITCAST, MVT::i64,
+                       Subtarget->isVIS3() ? Legal : Expand);
     setOperationAction(ISD::SELECT, MVT::i64, Expand);
     setOperationAction(ISD::SETCC, MVT::i64, Expand);
     setOperationAction(ISD::BR_CC, MVT::i64, Custom);
@@ -1709,8 +1757,7 @@ SparcTargetLowering::SparcTargetLowering(const TargetMachine &TM,
 
     setOperationAction(ISD::CTPOP, MVT::i64,
                        Subtarget->usePopc() ? Legal : Expand);
-    setOperationAction(ISD::CTTZ , MVT::i64, Expand);
-    setOperationAction(ISD::CTLZ , MVT::i64, Expand);
+    setOperationAction(ISD::CTTZ, MVT::i64, Expand);
     setOperationAction(ISD::BSWAP, MVT::i64, Expand);
     setOperationAction(ISD::ROTL , MVT::i64, Expand);
     setOperationAction(ISD::ROTR , MVT::i64, Expand);
@@ -1721,9 +1768,14 @@ SparcTargetLowering::SparcTargetLowering(const TargetMachine &TM,
   // Atomics are supported on SparcV9. 32-bit atomics are also
   // supported by some Leon SparcV8 variants. Otherwise, atomics
   // are unsupported.
-  if (Subtarget->isV9())
-    setMaxAtomicSizeInBitsSupported(64);
-  else if (Subtarget->hasLeonCasa())
+  if (Subtarget->isV9()) {
+    // TODO: we _ought_ to be able to support 64-bit atomics on 32-bit sparcv9,
+    // but it hasn't been implemented in the backend yet.
+    if (Subtarget->is64Bit())
+      setMaxAtomicSizeInBitsSupported(64);
+    else
+      setMaxAtomicSizeInBitsSupported(32);
+  } else if (Subtarget->hasLeonCasa())
     setMaxAtomicSizeInBitsSupported(32);
   else
     setMaxAtomicSizeInBitsSupported(0);
@@ -1744,17 +1796,6 @@ SparcTargetLowering::SparcTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::ATOMIC_LOAD, MVT::i64, Custom);
     setOperationAction(ISD::ATOMIC_STORE, MVT::i64, Custom);
   }
-
-  if (!Subtarget->is64Bit()) {
-    // These libcalls are not available in 32-bit.
-    setLibcallName(RTLIB::MULO_I64, nullptr);
-    setLibcallName(RTLIB::MUL_I128, nullptr);
-    setLibcallName(RTLIB::SHL_I128, nullptr);
-    setLibcallName(RTLIB::SRL_I128, nullptr);
-    setLibcallName(RTLIB::SRA_I128, nullptr);
-  }
-
-  setLibcallName(RTLIB::MULO_I128, nullptr);
 
   if (!Subtarget->isV9()) {
     // SparcV8 does not have FNEGD and FABSD.
@@ -1777,8 +1818,7 @@ SparcTargetLowering::SparcTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::FSINCOS, MVT::f32, Expand);
   setOperationAction(ISD::FREM , MVT::f32, Expand);
   setOperationAction(ISD::FMA  , MVT::f32, Expand);
-  setOperationAction(ISD::CTTZ , MVT::i32, Expand);
-  setOperationAction(ISD::CTLZ , MVT::i32, Expand);
+  setOperationAction(ISD::CTTZ, MVT::i32, Expand);
   setOperationAction(ISD::ROTL , MVT::i32, Expand);
   setOperationAction(ISD::ROTR , MVT::i32, Expand);
   setOperationAction(ISD::BSWAP, MVT::i32, Expand);
@@ -1819,9 +1859,6 @@ SparcTargetLowering::SparcTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::SMUL_LOHI, MVT::i64, Expand);
     setOperationAction(ISD::MULHU,     MVT::i64, Expand);
     setOperationAction(ISD::MULHS,     MVT::i64, Expand);
-
-    setOperationAction(ISD::UMULO,     MVT::i64, Custom);
-    setOperationAction(ISD::SMULO,     MVT::i64, Custom);
 
     setOperationAction(ISD::SHL_PARTS, MVT::i64, Expand);
     setOperationAction(ISD::SRA_PARTS, MVT::i64, Expand);
@@ -1951,6 +1988,24 @@ SparcTargetLowering::SparcTargetLowering(const TargetMachine &TM,
 
   if (Subtarget->hasLeonCycleCounter())
     setOperationAction(ISD::READCYCLECOUNTER, MVT::i64, Custom);
+
+  if (Subtarget->isVIS3()) {
+    setOperationAction(ISD::CTLZ, MVT::i32, Legal);
+    setOperationAction(ISD::CTLZ, MVT::i64, Legal);
+    setOperationAction(ISD::CTLZ_ZERO_UNDEF, MVT::i32, Legal);
+    setOperationAction(ISD::CTLZ_ZERO_UNDEF, MVT::i64, Legal);
+  } else if (Subtarget->usePopc()) {
+    setOperationAction(ISD::CTLZ, MVT::i32, Expand);
+    setOperationAction(ISD::CTLZ, MVT::i64, Expand);
+    setOperationAction(ISD::CTLZ_ZERO_UNDEF, MVT::i32, Expand);
+    setOperationAction(ISD::CTLZ_ZERO_UNDEF, MVT::i64, Expand);
+  } else {
+    setOperationAction(ISD::CTLZ, MVT::i32, Expand);
+    setOperationAction(ISD::CTLZ, MVT::i64, Expand);
+    setOperationAction(ISD::CTLZ_ZERO_UNDEF, MVT::i32,
+                       Subtarget->is64Bit() ? Promote : LibCall);
+    setOperationAction(ISD::CTLZ_ZERO_UNDEF, MVT::i64, LibCall);
+  }
 
   setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::Other, Custom);
 
@@ -2109,11 +2164,10 @@ SDValue SparcTargetLowering::makeAddress(SDValue Op, SelectionDAG &DAG) const {
     if (picLevel == PICLevel::SmallPIC) {
       // This is the pic13 code model, the GOT is known to be smaller than 8KiB.
       Idx = DAG.getNode(SPISD::Lo, DL, Op.getValueType(),
-                        withTargetFlags(Op, SparcMCExpr::VK_Sparc_GOT13, DAG));
+                        withTargetFlags(Op, SparcMCExpr::VK_GOT13, DAG));
     } else {
       // This is the pic32 code model, the GOT is known to be smaller than 4GB.
-      Idx = makeHiLoPair(Op, SparcMCExpr::VK_Sparc_GOT22,
-                         SparcMCExpr::VK_Sparc_GOT10, DAG);
+      Idx = makeHiLoPair(Op, SparcMCExpr::VK_GOT22, SparcMCExpr::VK_GOT10, DAG);
     }
 
     SDValue GlobalBase = DAG.getNode(SPISD::GLOBAL_BASE_REG, DL, VT);
@@ -2132,24 +2186,21 @@ SDValue SparcTargetLowering::makeAddress(SDValue Op, SelectionDAG &DAG) const {
     llvm_unreachable("Unsupported absolute code model");
   case CodeModel::Small:
     // abs32.
-    return makeHiLoPair(Op, SparcMCExpr::VK_Sparc_HI,
-                        SparcMCExpr::VK_Sparc_LO, DAG);
+    return makeHiLoPair(Op, SparcMCExpr::VK_HI, SparcMCExpr::VK_LO, DAG);
   case CodeModel::Medium: {
     // abs44.
-    SDValue H44 = makeHiLoPair(Op, SparcMCExpr::VK_Sparc_H44,
-                               SparcMCExpr::VK_Sparc_M44, DAG);
+    SDValue H44 =
+        makeHiLoPair(Op, SparcMCExpr::VK_H44, SparcMCExpr::VK_M44, DAG);
     H44 = DAG.getNode(ISD::SHL, DL, VT, H44, DAG.getConstant(12, DL, MVT::i32));
-    SDValue L44 = withTargetFlags(Op, SparcMCExpr::VK_Sparc_L44, DAG);
+    SDValue L44 = withTargetFlags(Op, SparcMCExpr::VK_L44, DAG);
     L44 = DAG.getNode(SPISD::Lo, DL, VT, L44);
     return DAG.getNode(ISD::ADD, DL, VT, H44, L44);
   }
   case CodeModel::Large: {
     // abs64.
-    SDValue Hi = makeHiLoPair(Op, SparcMCExpr::VK_Sparc_HH,
-                              SparcMCExpr::VK_Sparc_HM, DAG);
+    SDValue Hi = makeHiLoPair(Op, SparcMCExpr::VK_HH, SparcMCExpr::VK_HM, DAG);
     Hi = DAG.getNode(ISD::SHL, DL, VT, Hi, DAG.getConstant(32, DL, MVT::i32));
-    SDValue Lo = makeHiLoPair(Op, SparcMCExpr::VK_Sparc_HI,
-                              SparcMCExpr::VK_Sparc_LO, DAG);
+    SDValue Lo = makeHiLoPair(Op, SparcMCExpr::VK_HI, SparcMCExpr::VK_LO, DAG);
     return DAG.getNode(ISD::ADD, DL, VT, Hi, Lo);
   }
   }
@@ -2184,18 +2235,18 @@ SDValue SparcTargetLowering::LowerGlobalTLSAddress(SDValue Op,
   TLSModel::Model model = getTargetMachine().getTLSModel(GV);
 
   if (model == TLSModel::GeneralDynamic || model == TLSModel::LocalDynamic) {
-    unsigned HiTF = ((model == TLSModel::GeneralDynamic)
-                     ? SparcMCExpr::VK_Sparc_TLS_GD_HI22
-                     : SparcMCExpr::VK_Sparc_TLS_LDM_HI22);
-    unsigned LoTF = ((model == TLSModel::GeneralDynamic)
-                     ? SparcMCExpr::VK_Sparc_TLS_GD_LO10
-                     : SparcMCExpr::VK_Sparc_TLS_LDM_LO10);
-    unsigned addTF = ((model == TLSModel::GeneralDynamic)
-                      ? SparcMCExpr::VK_Sparc_TLS_GD_ADD
-                      : SparcMCExpr::VK_Sparc_TLS_LDM_ADD);
-    unsigned callTF = ((model == TLSModel::GeneralDynamic)
-                       ? SparcMCExpr::VK_Sparc_TLS_GD_CALL
-                       : SparcMCExpr::VK_Sparc_TLS_LDM_CALL);
+    unsigned HiTF =
+        ((model == TLSModel::GeneralDynamic) ? SparcMCExpr::VK_TLS_GD_HI22
+                                             : SparcMCExpr::VK_TLS_LDM_HI22);
+    unsigned LoTF =
+        ((model == TLSModel::GeneralDynamic) ? SparcMCExpr::VK_TLS_GD_LO10
+                                             : SparcMCExpr::VK_TLS_LDM_LO10);
+    unsigned addTF =
+        ((model == TLSModel::GeneralDynamic) ? SparcMCExpr::VK_TLS_GD_ADD
+                                             : SparcMCExpr::VK_TLS_LDM_ADD);
+    unsigned callTF =
+        ((model == TLSModel::GeneralDynamic) ? SparcMCExpr::VK_TLS_GD_CALL
+                                             : SparcMCExpr::VK_TLS_LDM_CALL);
 
     SDValue HiLo = makeHiLoPair(Op, HiTF, LoTF, DAG);
     SDValue Base = DAG.getNode(SPISD::GLOBAL_BASE_REG, DL, PtrVT);
@@ -2230,18 +2281,20 @@ SDValue SparcTargetLowering::LowerGlobalTLSAddress(SDValue Op,
     if (model != TLSModel::LocalDynamic)
       return Ret;
 
-    SDValue Hi = DAG.getNode(SPISD::Hi, DL, PtrVT,
-                 withTargetFlags(Op, SparcMCExpr::VK_Sparc_TLS_LDO_HIX22, DAG));
-    SDValue Lo = DAG.getNode(SPISD::Lo, DL, PtrVT,
-                 withTargetFlags(Op, SparcMCExpr::VK_Sparc_TLS_LDO_LOX10, DAG));
+    SDValue Hi =
+        DAG.getNode(SPISD::Hi, DL, PtrVT,
+                    withTargetFlags(Op, SparcMCExpr::VK_TLS_LDO_HIX22, DAG));
+    SDValue Lo =
+        DAG.getNode(SPISD::Lo, DL, PtrVT,
+                    withTargetFlags(Op, SparcMCExpr::VK_TLS_LDO_LOX10, DAG));
     HiLo =  DAG.getNode(ISD::XOR, DL, PtrVT, Hi, Lo);
     return DAG.getNode(SPISD::TLS_ADD, DL, PtrVT, Ret, HiLo,
-                   withTargetFlags(Op, SparcMCExpr::VK_Sparc_TLS_LDO_ADD, DAG));
+                       withTargetFlags(Op, SparcMCExpr::VK_TLS_LDO_ADD, DAG));
   }
 
   if (model == TLSModel::InitialExec) {
-    unsigned ldTF     = ((PtrVT == MVT::i64)? SparcMCExpr::VK_Sparc_TLS_IE_LDX
-                         : SparcMCExpr::VK_Sparc_TLS_IE_LD);
+    unsigned ldTF = ((PtrVT == MVT::i64) ? SparcMCExpr::VK_TLS_IE_LDX
+                                         : SparcMCExpr::VK_TLS_IE_LD);
 
     SDValue Base = DAG.getNode(SPISD::GLOBAL_BASE_REG, DL, PtrVT);
 
@@ -2250,24 +2303,24 @@ SDValue SparcTargetLowering::LowerGlobalTLSAddress(SDValue Op,
     MachineFrameInfo &MFI = DAG.getMachineFunction().getFrameInfo();
     MFI.setHasCalls(true);
 
-    SDValue TGA = makeHiLoPair(Op,
-                               SparcMCExpr::VK_Sparc_TLS_IE_HI22,
-                               SparcMCExpr::VK_Sparc_TLS_IE_LO10, DAG);
+    SDValue TGA = makeHiLoPair(Op, SparcMCExpr::VK_TLS_IE_HI22,
+                               SparcMCExpr::VK_TLS_IE_LO10, DAG);
     SDValue Ptr = DAG.getNode(ISD::ADD, DL, PtrVT, Base, TGA);
     SDValue Offset = DAG.getNode(SPISD::TLS_LD,
                                  DL, PtrVT, Ptr,
                                  withTargetFlags(Op, ldTF, DAG));
     return DAG.getNode(SPISD::TLS_ADD, DL, PtrVT,
                        DAG.getRegister(SP::G7, PtrVT), Offset,
-                       withTargetFlags(Op,
-                                       SparcMCExpr::VK_Sparc_TLS_IE_ADD, DAG));
+                       withTargetFlags(Op, SparcMCExpr::VK_TLS_IE_ADD, DAG));
   }
 
   assert(model == TLSModel::LocalExec);
-  SDValue Hi = DAG.getNode(SPISD::Hi, DL, PtrVT,
-                  withTargetFlags(Op, SparcMCExpr::VK_Sparc_TLS_LE_HIX22, DAG));
-  SDValue Lo = DAG.getNode(SPISD::Lo, DL, PtrVT,
-                  withTargetFlags(Op, SparcMCExpr::VK_Sparc_TLS_LE_LOX10, DAG));
+  SDValue Hi =
+      DAG.getNode(SPISD::Hi, DL, PtrVT,
+                  withTargetFlags(Op, SparcMCExpr::VK_TLS_LE_HIX22, DAG));
+  SDValue Lo =
+      DAG.getNode(SPISD::Lo, DL, PtrVT,
+                  withTargetFlags(Op, SparcMCExpr::VK_TLS_LE_LOX10, DAG));
   SDValue Offset =  DAG.getNode(ISD::XOR, DL, PtrVT, Hi, Lo);
 
   return DAG.getNode(ISD::ADD, DL, PtrVT,
@@ -2294,7 +2347,7 @@ SDValue SparcTargetLowering::LowerF128_LibCallArg(SDValue Chain,
                          Align(8));
 
     Entry.Node = FIPtr;
-    Entry.Ty   = PointerType::getUnqual(ArgTy);
+    Entry.Ty = PointerType::getUnqual(ArgTy->getContext());
   }
   Args.push_back(Entry);
   return Chain;
@@ -2322,7 +2375,7 @@ SparcTargetLowering::LowerF128Op(SDValue Op, SelectionDAG &DAG,
     int RetFI = MFI.CreateStackObject(16, Align(8), false);
     RetPtr = DAG.getFrameIndex(RetFI, PtrVT);
     Entry.Node = RetPtr;
-    Entry.Ty   = PointerType::getUnqual(RetTy);
+    Entry.Ty = PointerType::getUnqual(RetTy->getContext());
     if (!Subtarget->is64Bit()) {
       Entry.IsSRet = true;
       Entry.IndirectType = RetTy;
@@ -2734,22 +2787,16 @@ static SDValue LowerVAARG(SDValue Op, SelectionDAG &DAG) {
 
 static SDValue LowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG,
                                        const SparcSubtarget *Subtarget) {
-  SDValue Chain = Op.getOperand(0);  // Legalize the chain.
-  SDValue Size  = Op.getOperand(1);  // Legalize the size.
-  MaybeAlign Alignment =
-      cast<ConstantSDNode>(Op.getOperand(2))->getMaybeAlignValue();
-  Align StackAlign = Subtarget->getFrameLowering()->getStackAlign();
+  SDValue Chain = Op.getOperand(0);
+  SDValue Size = Op.getOperand(1);
+  SDValue Alignment = Op.getOperand(2);
+  MaybeAlign MaybeAlignment =
+      cast<ConstantSDNode>(Alignment)->getMaybeAlignValue();
   EVT VT = Size->getValueType(0);
   SDLoc dl(Op);
 
-  // TODO: implement over-aligned alloca. (Note: also implies
-  // supporting support for overaligned function frames + dynamic
-  // allocations, at all, which currently isn't supported)
-  if (Alignment && *Alignment > StackAlign) {
-    const MachineFunction &MF = DAG.getMachineFunction();
-    report_fatal_error("Function \"" + Twine(MF.getName()) + "\": "
-                       "over-aligned dynamic alloca not supported.");
-  }
+  unsigned SPReg = SP::O6;
+  SDValue SP = DAG.getCopyFromReg(Chain, dl, SPReg, VT);
 
   // The resultant pointer needs to be above the register spill area
   // at the bottom of the stack.
@@ -2783,16 +2830,29 @@ static SDValue LowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG,
     regSpillArea = 96;
   }
 
-  unsigned SPReg = SP::O6;
-  SDValue SP = DAG.getCopyFromReg(Chain, dl, SPReg, VT);
-  SDValue NewSP = DAG.getNode(ISD::SUB, dl, VT, SP, Size); // Value
-  Chain = DAG.getCopyToReg(SP.getValue(1), dl, SPReg, NewSP);    // Output chain
+  int64_t Bias = Subtarget->getStackPointerBias();
 
-  regSpillArea += Subtarget->getStackPointerBias();
+  // Debias and increment SP past the reserved spill area.
+  // We need the SP to point to the first usable region before calculating
+  // anything to prevent any of the pointers from becoming out of alignment when
+  // we rebias the SP later on.
+  SDValue StartOfUsableStack = DAG.getNode(
+      ISD::ADD, dl, VT, SP, DAG.getConstant(regSpillArea + Bias, dl, VT));
+  SDValue AllocatedPtr =
+      DAG.getNode(ISD::SUB, dl, VT, StartOfUsableStack, Size);
 
-  SDValue NewVal = DAG.getNode(ISD::ADD, dl, VT, NewSP,
-                               DAG.getConstant(regSpillArea, dl, VT));
-  SDValue Ops[2] = { NewVal, Chain };
+  bool IsOveraligned = MaybeAlignment.has_value();
+  SDValue AlignedPtr =
+      IsOveraligned
+          ? DAG.getNode(ISD::AND, dl, VT, AllocatedPtr,
+                        DAG.getSignedConstant(-MaybeAlignment->value(), dl, VT))
+          : AllocatedPtr;
+
+  // Now that we are done, restore the bias and reserved spill area.
+  SDValue NewSP = DAG.getNode(ISD::SUB, dl, VT, AlignedPtr,
+                              DAG.getConstant(regSpillArea + Bias, dl, VT));
+  Chain = DAG.getCopyToReg(SP.getValue(1), dl, SPReg, NewSP);
+  SDValue Ops[2] = {AlignedPtr, Chain};
   return DAG.getMergeValues(Ops, dl);
 }
 
@@ -3070,110 +3130,6 @@ static SDValue LowerFNEGorFABS(SDValue Op, SelectionDAG &DAG, bool isV9) {
   return DstReg128;
 }
 
-static SDValue LowerADDC_ADDE_SUBC_SUBE(SDValue Op, SelectionDAG &DAG) {
-
-  if (Op.getValueType() != MVT::i64)
-    return Op;
-
-  SDLoc dl(Op);
-  SDValue Src1 = Op.getOperand(0);
-  SDValue Src1Lo = DAG.getNode(ISD::TRUNCATE, dl, MVT::i32, Src1);
-  SDValue Src1Hi = DAG.getNode(ISD::SRL, dl, MVT::i64, Src1,
-                               DAG.getConstant(32, dl, MVT::i64));
-  Src1Hi = DAG.getNode(ISD::TRUNCATE, dl, MVT::i32, Src1Hi);
-
-  SDValue Src2 = Op.getOperand(1);
-  SDValue Src2Lo = DAG.getNode(ISD::TRUNCATE, dl, MVT::i32, Src2);
-  SDValue Src2Hi = DAG.getNode(ISD::SRL, dl, MVT::i64, Src2,
-                               DAG.getConstant(32, dl, MVT::i64));
-  Src2Hi = DAG.getNode(ISD::TRUNCATE, dl, MVT::i32, Src2Hi);
-
-
-  bool hasChain = false;
-  unsigned hiOpc = Op.getOpcode();
-  switch (Op.getOpcode()) {
-  default: llvm_unreachable("Invalid opcode");
-  case ISD::ADDC: hiOpc = ISD::ADDE; break;
-  case ISD::ADDE: hasChain = true; break;
-  case ISD::SUBC: hiOpc = ISD::SUBE; break;
-  case ISD::SUBE: hasChain = true; break;
-  }
-  SDValue Lo;
-  SDVTList VTs = DAG.getVTList(MVT::i32, MVT::Glue);
-  if (hasChain) {
-    Lo = DAG.getNode(Op.getOpcode(), dl, VTs, Src1Lo, Src2Lo,
-                     Op.getOperand(2));
-  } else {
-    Lo = DAG.getNode(Op.getOpcode(), dl, VTs, Src1Lo, Src2Lo);
-  }
-  SDValue Hi = DAG.getNode(hiOpc, dl, VTs, Src1Hi, Src2Hi, Lo.getValue(1));
-  SDValue Carry = Hi.getValue(1);
-
-  Lo = DAG.getNode(ISD::ZERO_EXTEND, dl, MVT::i64, Lo);
-  Hi = DAG.getNode(ISD::ZERO_EXTEND, dl, MVT::i64, Hi);
-  Hi = DAG.getNode(ISD::SHL, dl, MVT::i64, Hi,
-                   DAG.getConstant(32, dl, MVT::i64));
-
-  SDValue Dst = DAG.getNode(ISD::OR, dl, MVT::i64, Hi, Lo);
-  SDValue Ops[2] = { Dst, Carry };
-  return DAG.getMergeValues(Ops, dl);
-}
-
-// Custom lower UMULO/SMULO for SPARC. This code is similar to ExpandNode()
-// in LegalizeDAG.cpp except the order of arguments to the library function.
-static SDValue LowerUMULO_SMULO(SDValue Op, SelectionDAG &DAG,
-                                const SparcTargetLowering &TLI)
-{
-  unsigned opcode = Op.getOpcode();
-  assert((opcode == ISD::UMULO || opcode == ISD::SMULO) && "Invalid Opcode.");
-
-  bool isSigned = (opcode == ISD::SMULO);
-  EVT VT = MVT::i64;
-  EVT WideVT = MVT::i128;
-  SDLoc dl(Op);
-  SDValue LHS = Op.getOperand(0);
-
-  if (LHS.getValueType() != VT)
-    return Op;
-
-  SDValue ShiftAmt = DAG.getConstant(63, dl, VT);
-
-  SDValue RHS = Op.getOperand(1);
-  SDValue HiLHS, HiRHS;
-  if (isSigned) {
-    HiLHS = DAG.getNode(ISD::SRA, dl, VT, LHS, ShiftAmt);
-    HiRHS = DAG.getNode(ISD::SRA, dl, MVT::i64, RHS, ShiftAmt);
-  } else {
-    HiLHS = DAG.getConstant(0, dl, VT);
-    HiRHS = DAG.getConstant(0, dl, MVT::i64);
-  }
-
-  SDValue Args[] = { HiLHS, LHS, HiRHS, RHS };
-
-  TargetLowering::MakeLibCallOptions CallOptions;
-  CallOptions.setSExt(isSigned);
-  SDValue MulResult = TLI.makeLibCall(DAG,
-                                      RTLIB::MUL_I128, WideVT,
-                                      Args, CallOptions, dl).first;
-  SDValue BottomHalf, TopHalf;
-  std::tie(BottomHalf, TopHalf) = DAG.SplitScalar(MulResult, dl, VT, VT);
-  if (isSigned) {
-    SDValue Tmp1 = DAG.getNode(ISD::SRA, dl, VT, BottomHalf, ShiftAmt);
-    TopHalf = DAG.getSetCC(dl, MVT::i32, TopHalf, Tmp1, ISD::SETNE);
-  } else {
-    TopHalf = DAG.getSetCC(dl, MVT::i32, TopHalf, DAG.getConstant(0, dl, VT),
-                           ISD::SETNE);
-  }
-  // MulResult is a node with an illegal type. Because such things are not
-  // generally permitted during this phase of legalization, ensure that
-  // nothing is left using the node. The above EXTRACT_ELEMENT nodes should have
-  // been folded.
-  assert(MulResult->use_empty() && "Illegally typed node still in use!");
-
-  SDValue Ops[2] = { BottomHalf, TopHalf } ;
-  return DAG.getMergeValues(Ops, dl);
-}
-
 static SDValue LowerATOMIC_LOAD_STORE(SDValue Op, SelectionDAG &DAG) {
   if (isStrongerThanMonotonic(cast<AtomicSDNode>(Op)->getSuccessOrdering())) {
     // Expand with a fence.
@@ -3248,12 +3204,6 @@ LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::FNEG:               return LowerFNEGorFABS(Op, DAG, isV9);
   case ISD::FP_EXTEND:          return LowerF128_FPEXTEND(Op, DAG, *this);
   case ISD::FP_ROUND:           return LowerF128_FPROUND(Op, DAG, *this);
-  case ISD::ADDC:
-  case ISD::ADDE:
-  case ISD::SUBC:
-  case ISD::SUBE:               return LowerADDC_ADDE_SUBC_SUBE(Op, DAG);
-  case ISD::UMULO:
-  case ISD::SMULO:              return LowerUMULO_SMULO(Op, DAG, *this);
   case ISD::ATOMIC_LOAD:
   case ISD::ATOMIC_STORE:       return LowerATOMIC_LOAD_STORE(Op, DAG);
   case ISD::INTRINSIC_WO_CHAIN: return LowerINTRINSIC_WO_CHAIN(Op, DAG);
@@ -3442,8 +3392,8 @@ void SparcTargetLowering::LowerAsmOperandForConstraint(
   case 'I':
     if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(Op)) {
       if (isInt<13>(C->getSExtValue())) {
-        Result = DAG.getTargetConstant(C->getSExtValue(), SDLoc(Op),
-                                       Op.getValueType());
+        Result = DAG.getSignedTargetConstant(C->getSExtValue(), SDLoc(Op),
+                                             Op.getValueType());
         break;
       }
       return;
@@ -3630,11 +3580,19 @@ void SparcTargetLowering::ReplaceNodeResults(SDNode *N,
 }
 
 // Override to enable LOAD_STACK_GUARD lowering on Linux.
-bool SparcTargetLowering::useLoadStackGuardNode() const {
+bool SparcTargetLowering::useLoadStackGuardNode(const Module &M) const {
   if (!Subtarget->isTargetLinux())
-    return TargetLowering::useLoadStackGuardNode();
+    return TargetLowering::useLoadStackGuardNode(M);
   return true;
 }
+
+bool SparcTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
+                                       bool ForCodeSize) const {
+  return Subtarget->isVIS() && (VT == MVT::f32 || VT == MVT::f64) &&
+         Imm.isZero();
+}
+
+bool SparcTargetLowering::isCtlzFast() const { return Subtarget->isVIS3(); }
 
 // Override to disable global variable loading on Linux.
 void SparcTargetLowering::insertSSPDeclarations(Module &M) const {

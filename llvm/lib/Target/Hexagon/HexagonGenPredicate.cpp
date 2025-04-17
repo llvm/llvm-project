@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "Hexagon.h"
 #include "HexagonInstrInfo.h"
 #include "HexagonSubtarget.h"
 #include "llvm/ADT/SetVector.h"
@@ -36,13 +37,6 @@
 #define DEBUG_TYPE "gen-pred"
 
 using namespace llvm;
-
-namespace llvm {
-
-  void initializeHexagonGenPredicatePass(PassRegistry& Registry);
-  FunctionPass *createHexagonGenPredicate();
-
-} // end namespace llvm
 
 namespace {
 
@@ -84,17 +78,15 @@ namespace {
   public:
     static char ID;
 
-    HexagonGenPredicate() : MachineFunctionPass(ID) {
-      initializeHexagonGenPredicatePass(*PassRegistry::getPassRegistry());
-    }
+    HexagonGenPredicate() : MachineFunctionPass(ID) {}
 
     StringRef getPassName() const override {
       return "Hexagon generate predicate operations";
     }
 
     void getAnalysisUsage(AnalysisUsage &AU) const override {
-      AU.addRequired<MachineDominatorTree>();
-      AU.addPreserved<MachineDominatorTree>();
+      AU.addRequired<MachineDominatorTreeWrapperPass>();
+      AU.addPreserved<MachineDominatorTreeWrapperPass>();
       MachineFunctionPass::getAnalysisUsage(AU);
     }
 
@@ -128,11 +120,11 @@ namespace {
 
 char HexagonGenPredicate::ID = 0;
 
-INITIALIZE_PASS_BEGIN(HexagonGenPredicate, "hexagon-gen-pred",
-  "Hexagon generate predicate operations", false, false)
-INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
-INITIALIZE_PASS_END(HexagonGenPredicate, "hexagon-gen-pred",
-  "Hexagon generate predicate operations", false, false)
+INITIALIZE_PASS_BEGIN(HexagonGenPredicate, "hexagon-gen-pred-pass",
+                      "Hexagon generate predicate operations", false, false)
+INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
+INITIALIZE_PASS_END(HexagonGenPredicate, "hexagon-gen-pred-pass",
+                    "Hexagon generate predicate operations", false, false)
 
 bool HexagonGenPredicate::isPredReg(Register R) {
   if (!R.isVirtual())

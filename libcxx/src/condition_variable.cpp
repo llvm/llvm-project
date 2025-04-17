@@ -26,17 +26,17 @@ void condition_variable::notify_all() noexcept { __libcpp_condvar_broadcast(&__c
 
 void condition_variable::wait(unique_lock<mutex>& lk) noexcept {
   if (!lk.owns_lock())
-    __throw_system_error(EPERM, "condition_variable::wait: mutex not locked");
+    std::__throw_system_error(EPERM, "condition_variable::wait: mutex not locked");
   int ec = __libcpp_condvar_wait(&__cv_, lk.mutex()->native_handle());
   if (ec)
-    __throw_system_error(ec, "condition_variable wait failed");
+    std::__throw_system_error(ec, "condition_variable wait failed");
 }
 
 void condition_variable::__do_timed_wait(unique_lock<mutex>& lk,
                                          chrono::time_point<chrono::system_clock, chrono::nanoseconds> tp) noexcept {
   using namespace chrono;
   if (!lk.owns_lock())
-    __throw_system_error(EPERM, "condition_variable::timed wait: mutex not locked");
+    std::__throw_system_error(EPERM, "condition_variable::timed wait: mutex not locked");
   nanoseconds d = tp.time_since_epoch();
   if (d > nanoseconds(0x59682F000000E941))
     d = nanoseconds(0x59682F000000E941);
@@ -53,7 +53,7 @@ void condition_variable::__do_timed_wait(unique_lock<mutex>& lk,
   }
   int ec = __libcpp_condvar_timedwait(&__cv_, lk.mutex()->native_handle(), &ts);
   if (ec != 0 && ec != ETIMEDOUT)
-    __throw_system_error(ec, "condition_variable timed_wait failed");
+    std::__throw_system_error(ec, "condition_variable timed_wait failed");
 }
 
 void notify_all_at_thread_exit(condition_variable& cond, unique_lock<mutex> lk) {

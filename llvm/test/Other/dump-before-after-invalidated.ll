@@ -7,7 +7,7 @@
 ; RUN: ls %t/logs | count 1
 ; RUN: cat %t/logs/* | FileCheck %s --check-prefix=CHECK-CONTENTS
 
-; CHECK-CONTENTS: ; *** IR Dump After LoopDeletionPass on bb1 (invalidated) ***
+; CHECK-CONTENTS: ; *** IR Dump After LoopDeletionPass on loop %bb1 in function foo (invalidated) ***
 ; CHECK-CONTENTS: define void @foo() {
 ; CHECK-CONTENTS:   br label %bb2
 ; CHECK-CONTENTS: bb2:                                              ; preds = %0

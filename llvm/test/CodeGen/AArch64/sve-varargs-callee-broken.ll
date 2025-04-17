@@ -14,7 +14,7 @@ entry:
   %0 = va_arg ptr %args, i32
   store i32 %0, ptr %vc, align 4
   %1 = va_arg ptr %args, <vscale x 4 x i32>
-  store <vscale x 4 x i32> %1, <vscale x 4 x i32>* %vv, align 16
+  store <vscale x 4 x i32> %1, ptr %vv, align 16
   ret void
 }
 

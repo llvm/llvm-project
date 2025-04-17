@@ -28,8 +28,8 @@ define i32 @main() nounwind {
 ; RV32IFD-NEXT:    call test
 ; RV32IFD-NEXT:    sw a0, 0(sp)
 ; RV32IFD-NEXT:    sw a1, 4(sp)
-; RV32IFD-NEXT:    fld fa5, 0(sp)
 ; RV32IFD-NEXT:    lui a0, %hi(.LCPI1_0)
+; RV32IFD-NEXT:    fld fa5, 0(sp)
 ; RV32IFD-NEXT:    fld fa4, %lo(.LCPI1_0)(a0)
 ; RV32IFD-NEXT:    flt.d a0, fa5, fa4
 ; RV32IFD-NEXT:    bnez a0, .LBB1_3
@@ -50,10 +50,6 @@ define i32 @main() nounwind {
 ; RV32IZFINXZDINX-NEXT:    lui a1, 262144
 ; RV32IZFINXZDINX-NEXT:    li a0, 0
 ; RV32IZFINXZDINX-NEXT:    call test
-; RV32IZFINXZDINX-NEXT:    sw a0, 0(sp)
-; RV32IZFINXZDINX-NEXT:    sw a1, 4(sp)
-; RV32IZFINXZDINX-NEXT:    lw a0, 0(sp)
-; RV32IZFINXZDINX-NEXT:    lw a1, 4(sp)
 ; RV32IZFINXZDINX-NEXT:    lui a2, %hi(.LCPI1_0)
 ; RV32IZFINXZDINX-NEXT:    lw a3, %lo(.LCPI1_0+4)(a2)
 ; RV32IZFINXZDINX-NEXT:    lw a2, %lo(.LCPI1_0)(a2)

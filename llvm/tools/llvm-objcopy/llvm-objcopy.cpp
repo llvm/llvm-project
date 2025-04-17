@@ -121,6 +121,7 @@ static Error executeObjcopyOnRawBinary(ConfigManager &ConfigMgr,
   case FileFormat::Binary:
   case FileFormat::IHex:
   case FileFormat::Unspecified:
+  case FileFormat::SREC:
     Expected<const ELFConfig &> ELFConfig = ConfigMgr.getELFConfig();
     if (!ELFConfig)
       return ELFConfig.takeError();
@@ -246,12 +247,16 @@ int llvm_objcopy_main(int argc, char **argv, const llvm::ToolContext &) {
                           WithColor::error(errs(), ToolName));
     return 1;
   }
+
+  int ret = 0;
   for (ConfigManager &ConfigMgr : DriverConfig->CopyConfigs) {
+    assert(!ConfigMgr.Common.ErrorCallback);
+    ConfigMgr.Common.ErrorCallback = reportWarning;
     if (Error E = executeObjcopy(ConfigMgr)) {
       logAllUnhandledErrors(std::move(E), WithColor::error(errs(), ToolName));
-      return 1;
+      ret = 1;
     }
   }
 
-  return 0;
+  return ret;
 }

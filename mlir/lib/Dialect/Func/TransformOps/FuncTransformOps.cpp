@@ -13,8 +13,8 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
-#include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
 #include "mlir/Dialect/Transform/IR/TransformOps.h"
+#include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.h"
 #include "mlir/Transforms/DialectConversion.h"
 
 using namespace mlir;
@@ -51,8 +51,7 @@ transform::CastAndCallOp::apply(transform::TransformRewriter &rewriter,
 
   SetVector<Value> outputs;
   if (getOutputs()) {
-    for (auto output : state.getPayloadValues(getOutputs()))
-      outputs.insert(output);
+    outputs.insert_range(state.getPayloadValues(getOutputs()));
 
     // Verify that the set of output values to be replaced is unique.
     if (outputs.size() !=
@@ -216,14 +215,14 @@ LogicalResult transform::CastAndCallOp::verify() {
 
 void transform::CastAndCallOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  transform::onlyReadsHandle(getInsertionPoint(), effects);
+  transform::onlyReadsHandle(getInsertionPointMutable(), effects);
   if (getInputs())
-    transform::onlyReadsHandle(getInputs(), effects);
+    transform::onlyReadsHandle(getInputsMutable(), effects);
   if (getOutputs())
-    transform::onlyReadsHandle(getOutputs(), effects);
+    transform::onlyReadsHandle(getOutputsMutable(), effects);
   if (getFunction())
-    transform::onlyReadsHandle(getFunction(), effects);
-  transform::producesHandle(getResult(), effects);
+    transform::onlyReadsHandle(getFunctionMutable(), effects);
+  transform::producesHandle(getOperation()->getOpResults(), effects);
   transform::modifiesPayload(effects);
 }
 
@@ -236,6 +235,8 @@ class FuncTransformDialectExtension
     : public transform::TransformDialectExtension<
           FuncTransformDialectExtension> {
 public:
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(FuncTransformDialectExtension)
+
   using Base::Base;
 
   void init() {

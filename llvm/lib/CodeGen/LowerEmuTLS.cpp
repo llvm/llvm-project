@@ -139,8 +139,7 @@ bool addEmuTlsVar(Module &M, const GlobalVariable *GV) {
   IntegerType *WordType = DL.getIntPtrType(C);
   PointerType *InitPtrType = PointerType::getUnqual(C);
   Type *ElementTypes[4] = {WordType, WordType, VoidPtrType, InitPtrType};
-  ArrayRef<Type*> ElementTypeArray(ElementTypes, 4);
-  StructType *EmuTlsVarType = StructType::create(ElementTypeArray);
+  StructType *EmuTlsVarType = StructType::create(ElementTypes);
   EmuTlsVar = cast<GlobalVariable>(
       M.getOrInsertGlobal(EmuTlsVarName, EmuTlsVarType));
   copyLinkageVisibility(M, GV, EmuTlsVar);
@@ -170,9 +169,7 @@ bool addEmuTlsVar(Module &M, const GlobalVariable *GV) {
       ConstantInt::get(WordType, DL.getTypeStoreSize(GVType)),
       ConstantInt::get(WordType, GVAlignment.value()), NullPtr,
       EmuTlsTmplVar ? EmuTlsTmplVar : NullPtr};
-  ArrayRef<Constant*> ElementValueArray(ElementValues, 4);
-  EmuTlsVar->setInitializer(
-      ConstantStruct::get(EmuTlsVarType, ElementValueArray));
+  EmuTlsVar->setInitializer(ConstantStruct::get(EmuTlsVarType, ElementValues));
   Align MaxAlignment =
       std::max(DL.getABITypeAlign(WordType), DL.getABITypeAlign(VoidPtrType));
   EmuTlsVar->setAlignment(MaxAlignment);

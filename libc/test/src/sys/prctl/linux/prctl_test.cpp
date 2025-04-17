@@ -9,7 +9,6 @@
 #include "src/errno/libc_errno.h"
 #include "src/sys/prctl/prctl.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
-#include <errno.h>
 #include <sys/prctl.h>
 
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
@@ -34,7 +33,7 @@ TEST(LlvmLibcSysPrctlTest, GetSetName) {
 TEST(LlvmLibcSysPrctlTest, GetTHPDisable) {
   // Manually check errno since the return value logic here is not
   // covered in ErrnoSetterMatcher.
-  libc_errno = 0;
+  LIBC_NAMESPACE::libc_errno = 0;
   int ret = LIBC_NAMESPACE::prctl(PR_GET_THP_DISABLE, 0, 0, 0, 0);
   ASSERT_ERRNO_SUCCESS();
   // PR_GET_THP_DISABLE return (as the function result) the current

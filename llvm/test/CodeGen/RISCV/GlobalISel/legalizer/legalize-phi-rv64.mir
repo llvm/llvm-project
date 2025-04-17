@@ -139,6 +139,7 @@ body:             |
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x10
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(s64) = COPY $x12
+  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY1]](s64)
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
   ; CHECK-NEXT:   [[AND:%[0-9]+]]:_(s64) = G_AND [[COPY]], [[C]]
   ; CHECK-NEXT:   G_BRCOND [[AND]](s64), %bb.2
@@ -147,10 +148,12 @@ body:             |
   ; CHECK-NEXT: bb.1.cond.false:
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
   ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[COPY2]](s64)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2.cond.end:
-  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:_(s64) = G_PHI [[COPY2]](s64), %bb.1, [[COPY1]](s64), %bb.0
-  ; CHECK-NEXT:   $x10 = COPY [[PHI]](s64)
+  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:_(s32) = G_PHI [[TRUNC1]](s32), %bb.1, [[TRUNC]](s32), %bb.0
+  ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[PHI]](s32)
+  ; CHECK-NEXT:   $x10 = COPY [[ANYEXT]](s64)
   ; CHECK-NEXT:   PseudoRET implicit $x10
   bb.1.entry:
     liveins: $x10, $x11, $x12
@@ -200,6 +203,7 @@ body:             |
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x10
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(s64) = COPY $x12
+  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY1]](s64)
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
   ; CHECK-NEXT:   [[AND:%[0-9]+]]:_(s64) = G_AND [[COPY]], [[C]]
   ; CHECK-NEXT:   G_BRCOND [[AND]](s64), %bb.2
@@ -208,10 +212,12 @@ body:             |
   ; CHECK-NEXT: bb.1.cond.false:
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
   ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[COPY2]](s64)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2.cond.end:
-  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:_(s64) = G_PHI [[COPY2]](s64), %bb.1, [[COPY1]](s64), %bb.0
-  ; CHECK-NEXT:   $x10 = COPY [[PHI]](s64)
+  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:_(s32) = G_PHI [[TRUNC1]](s32), %bb.1, [[TRUNC]](s32), %bb.0
+  ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[PHI]](s32)
+  ; CHECK-NEXT:   $x10 = COPY [[ANYEXT]](s64)
   ; CHECK-NEXT:   PseudoRET implicit $x10
   bb.1.entry:
     liveins: $x10, $x11, $x12
@@ -261,6 +267,7 @@ body:             |
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x10
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(s64) = COPY $x12
+  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY1]](s64)
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
   ; CHECK-NEXT:   [[AND:%[0-9]+]]:_(s64) = G_AND [[COPY]], [[C]]
   ; CHECK-NEXT:   G_BRCOND [[AND]](s64), %bb.2
@@ -269,10 +276,12 @@ body:             |
   ; CHECK-NEXT: bb.1.cond.false:
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
   ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[COPY2]](s64)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2.cond.end:
-  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:_(s64) = G_PHI [[COPY2]](s64), %bb.1, [[COPY1]](s64), %bb.0
-  ; CHECK-NEXT:   $x10 = COPY [[PHI]](s64)
+  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:_(s32) = G_PHI [[TRUNC1]](s32), %bb.1, [[TRUNC]](s32), %bb.0
+  ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[PHI]](s32)
+  ; CHECK-NEXT:   $x10 = COPY [[ANYEXT]](s64)
   ; CHECK-NEXT:   PseudoRET implicit $x10
   bb.1.entry:
     liveins: $x10, $x11, $x12
@@ -321,7 +330,9 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x10
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
+  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY1]](s64)
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(s64) = COPY $x12
+  ; CHECK-NEXT:   [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[COPY2]](s64)
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
   ; CHECK-NEXT:   [[AND:%[0-9]+]]:_(s64) = G_AND [[COPY]], [[C]]
   ; CHECK-NEXT:   G_BRCOND [[AND]](s64), %bb.2
@@ -330,10 +341,10 @@ body:             |
   ; CHECK-NEXT: bb.1.cond.false:
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2.cond.end:
-  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:_(s64) = G_PHI [[COPY2]](s64), %bb.1, [[COPY1]](s64), %bb.0
-  ; CHECK-NEXT:   $x10 = COPY [[PHI]](s64)
+  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:_(s32) = G_PHI [[TRUNC1]](s32), %bb.1, [[TRUNC]](s32), %bb.0
+  ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[PHI]](s32)
+  ; CHECK-NEXT:   $x10 = COPY [[ANYEXT]](s64)
   ; CHECK-NEXT:   PseudoRET implicit $x10
   bb.1.entry:
     liveins: $x10, $x11, $x12
@@ -388,7 +399,6 @@ body:             |
   ; CHECK-NEXT: bb.1.cond.false:
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2.cond.end:
   ; CHECK-NEXT:   [[PHI:%[0-9]+]]:_(s64) = G_PHI [[COPY2]](s64), %bb.1, [[COPY1]](s64), %bb.0
   ; CHECK-NEXT:   $x10 = COPY [[PHI]](s64)
@@ -442,7 +452,6 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1.cond.false:
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
-  ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2.cond.end:
   ; CHECK-NEXT:   [[PHI:%[0-9]+]]:_(p0) = G_PHI [[COPY2]](p0), %bb.1, [[COPY1]](p0), %bb.0
@@ -508,7 +517,6 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1.cond.false:
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
-  ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2.cond.end:
   ; CHECK-NEXT:   [[PHI:%[0-9]+]]:_(s64) = G_PHI [[COPY3]](s64), %bb.1, [[COPY1]](s64), %bb.0
@@ -582,7 +590,6 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1.cond.false:
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
-  ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2.cond.end:
   ; CHECK-NEXT:   [[PHI:%[0-9]+]]:_(s64) = G_PHI [[COPY3]](s64), %bb.1, [[COPY1]](s64), %bb.0
@@ -658,7 +665,6 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1.cond.false:
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
-  ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2.cond.end:
   ; CHECK-NEXT:   [[PHI:%[0-9]+]]:_(s64) = G_PHI [[COPY4]](s64), %bb.1, [[COPY1]](s64), %bb.0

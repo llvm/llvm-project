@@ -12,14 +12,14 @@ import os
 
 
 # Third-party modules
-import unittest2
+import unittest
 
 # LLDB Modules
 import lldbsuite
 
 
 # The test suite.
-suite = unittest2.TestSuite()
+suite = unittest.TestSuite()
 
 # The list of categories we said we care about
 categories_list = None
@@ -43,8 +43,13 @@ arch = None
 compiler = None
 dsymutil = None
 sdkroot = None
+make_path = None
 
 # The overriden dwarf verison.
+# Don't use this to test the current compiler's
+# DWARF version, as this won't be set if the
+# version isn't overridden.
+# Use lldbplatformutils.getDwarfVersion() instead.
 dwarf_version = 0
 
 # Any overridden settings.
@@ -98,6 +103,7 @@ failed = False
 lldb_platform_name = None
 lldb_platform_url = None
 lldb_platform_working_dir = None
+lldb_platform_available_ports = None
 
 # Apple SDK
 apple_sdk = None
@@ -117,8 +123,12 @@ test_result = None
 # same base name.
 all_tests = set()
 
+# Path to LLVM tools to be used by tests.
+llvm_tools_dir = None
+
 # LLDB library directory.
 lldb_libs_dir = None
+lldb_obj_root = None
 
 libcxx_include_dir = None
 libcxx_include_target_dir = None

@@ -9,7 +9,6 @@
 // RUN:     -ccc-install-dir %S/Inputs/basic_linux_tree/usr/bin \
 // RUN:     -resource-dir=%S/Inputs/resource_dir \
 // RUN:     --sysroot=%S/Inputs/basic_linux_libcxx_tree \
-// RUN:     --gcc-toolchain="" \
 // RUN:   | FileCheck --check-prefix=CHECK-BASIC-LIBCXX-SYSROOT %s
 // CHECK-BASIC-LIBCXX-SYSROOT: "-cc1"
 // CHECK-BASIC-LIBCXX-SYSROOT: "-isysroot" "[[SYSROOT:[^"]+]]"
@@ -24,7 +23,6 @@
 // RUN:     -ccc-install-dir %S/Inputs/basic_linux_tree/usr/bin \
 // RUN:     -resource-dir=%S/Inputs/resource_dir \
 // RUN:     --sysroot=%S/Inputs/basic_linux_libcxx_tree/ \
-// RUN:     --gcc-toolchain="" \
 // RUN:   | FileCheck --check-prefix=CHECK-BASIC-LIBCXX-SYSROOT-SLASH %s
 // CHECK-BASIC-LIBCXX-SYSROOT-SLASH: "-cc1"
 // CHECK-BASIC-LIBCXX-SYSROOT-SLASH-SAME: "-isysroot" "[[SYSROOT:[^"]+/]]"
@@ -38,7 +36,6 @@
 // RUN:     -ccc-install-dir %S/Inputs/basic_linux_libcxx_tree/usr/bin \
 // RUN:     -resource-dir=%S/Inputs/resource_dir \
 // RUN:     --sysroot=%S/Inputs/basic_linux_libcxx_tree \
-// RUN:     --gcc-toolchain="" \
 // RUN:   | FileCheck --check-prefix=CHECK-BASIC-LIBCXX-INSTALL %s
 // CHECK-BASIC-LIBCXX-INSTALL: "-cc1"
 // CHECK-BASIC-LIBCXX-INSTALL: "-isysroot" "[[SYSROOT:[^"]+]]"
@@ -52,7 +49,6 @@
 // RUN:     -ccc-install-dir %S/Inputs/basic_linux_tree/usr/bin \
 // RUN:     -resource-dir=%S/Inputs/resource_dir \
 // RUN:     --sysroot=%S/Inputs/basic_linux_libcxxv2_tree \
-// RUN:     --gcc-toolchain="" \
 // RUN:   | FileCheck --check-prefix=CHECK-BASIC-LIBCXXV2-SYSROOT %s
 // CHECK-BASIC-LIBCXXV2-SYSROOT: "-cc1"
 // CHECK-BASIC-LIBCXXV2-SYSROOT: "-isysroot" "[[SYSROOT:[^"]+]]"
@@ -65,7 +61,6 @@
 // RUN:     -ccc-install-dir %S/Inputs/basic_linux_libcxxv2_tree/usr/bin \
 // RUN:     -resource-dir=%S/Inputs/resource_dir \
 // RUN:     --sysroot=%S/Inputs/basic_linux_libcxxv2_tree \
-// RUN:     --gcc-toolchain="" \
 // RUN:   | FileCheck --check-prefix=CHECK-BASIC-LIBCXXV2-INSTALL %s
 // CHECK-BASIC-LIBCXXV2-INSTALL: "-cc1"
 // CHECK-BASIC-LIBCXXV2-INSTALL: "-isysroot" "[[SYSROOT:[^"]+]]"
@@ -80,7 +75,6 @@
 // RUN:     -ccc-install-dir %S/Inputs/basic_linux_tree/usr/bin \
 // RUN:     -resource-dir=%S/Inputs/resource_dir \
 // RUN:     --sysroot=%S/Inputs/basic_linux_libstdcxx_tree/ \
-// RUN:     --gcc-toolchain="" \
 // RUN:   | FileCheck --check-prefix=CHECK-BASIC-LIBSTDCXX-SYSROOT-SLASH %s
 // CHECK-BASIC-LIBSTDCXX-SYSROOT-SLASH: "-cc1"
 // CHECK-BASIC-LIBSTDCXX-SYSROOT-SLASH-SAME: "-isysroot" "[[SYSROOT:[^"]+/]]"
@@ -93,7 +87,6 @@
 // RUN:     -ccc-install-dir %S/Inputs/basic_linux_tree/usr/bin \
 // RUN:     -resource-dir=%S/Inputs/resource_dir \
 // RUN:     --sysroot=%S/Inputs/basic_linux_libstdcxx_libcxxv2_tree \
-// RUN:     --gcc-toolchain="" \
 // RUN:   | FileCheck --check-prefix=CHECK-BASIC-LIBSTDCXX-LIBCXXV2-SYSROOT %s
 // CHECK-BASIC-LIBSTDCXX-LIBCXXV2-SYSROOT: "-cc1"
 // CHECK-BASIC-LIBSTDCXX-LIBCXXV2-SYSROOT: "-isysroot" "[[SYSROOT:[^"]+]]"
@@ -106,7 +99,6 @@
 // RUN: %clang -### %s -fsyntax-only 2>&1 \
 // RUN:     --target=x86_64-unknown-linux-gnu -stdlib=libstdc++ \
 // RUN:     --sysroot=%S/Inputs/gentoo_linux_gcc_4.6.2_tree \
-// RUN:     --gcc-toolchain="" \
 // RUN:   | FileCheck --check-prefix=CHECK-GENTOO-4-6-2 %s
 // CHECK-GENTOO-4-6-2: "-cc1"
 // CHECK-GENTOO-4-6-2: "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
@@ -121,7 +113,6 @@
 // RUN: %clang -### %s -fsyntax-only 2>&1 \
 // RUN:     --target=x86_64-unknown-linux-gnu -stdlib=libstdc++ \
 // RUN:     --sysroot=%S/Inputs/gentoo_linux_gcc_4.6.4_tree \
-// RUN:     --gcc-toolchain="" \
 // RUN:   | FileCheck --check-prefix=CHECK-GENTOO-4-6-4 %s
 // CHECK-GENTOO-4-6-4: "-cc1"
 // CHECK-GENTOO-4-6-4: "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
@@ -136,7 +127,6 @@
 // RUN: %clang -### %s -fsyntax-only 2>&1 \
 // RUN:     --target=x86_64-unknown-linux-gnu -stdlib=libstdc++ \
 // RUN:     --sysroot=%S/Inputs/gentoo_linux_gcc_4.9.3_tree \
-// RUN:     --gcc-toolchain="" \
 // RUN:   | FileCheck --check-prefix=CHECK-GENTOO-4-9-3 %s
 // CHECK-GENTOO-4-9-3: "-cc1"
 // CHECK-GENTOO-4-9-3: "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
@@ -155,14 +145,12 @@
 // RUN: %clang -### %s -fsyntax-only 2>&1 \
 // RUN:     --target=x86_64-unknown-linux-gnu -stdlib=libstdc++ \
 // RUN:     --sysroot=%S/Inputs/gentoo_linux_gcc_multi_version_tree \
-// RUN:     --gcc-toolchain="" \
 // RUN:   | FileCheck --check-prefix=CHECK-GENTOO-4-9-3 %s
 //
 // Test that gcc-config support does not break multilib.
 // RUN: %clang -### %s -fsyntax-only 2>&1 \
 // RUN:     --target=x86_64-unknown-linux-gnux32 -stdlib=libstdc++ \
 // RUN:     --sysroot=%S/Inputs/gentoo_linux_gcc_multi_version_tree \
-// RUN:     --gcc-toolchain="" \
 // RUN:   | FileCheck --check-prefix=CHECK-GENTOO-4-9-3-X32 %s
 // CHECK-GENTOO-4-9-3-X32: "-cc1"
 // CHECK-GENTOO-4-9-3-X32: "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
@@ -178,7 +166,6 @@
 // RUN: %clang -### %s -fsyntax-only 2>&1 \
 // RUN:     --target=i386-unknown-linux-gnu -stdlib=libstdc++ \
 // RUN:     --sysroot=%S/Inputs/gentoo_linux_gcc_multi_version_tree \
-// RUN:     --gcc-toolchain="" \
 // RUN:   | FileCheck --check-prefix=CHECK-GENTOO-4-9-3-32 %s
 // CHECK-GENTOO-4-9-3-32: "-cc1"
 // CHECK-GENTOO-4-9-3-32: "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
@@ -198,7 +185,6 @@
 // RUN: %clang -### %s -fsyntax-only 2>&1 \
 // RUN:     --target=x86_64-unknown-linux-gnu -stdlib=libstdc++ \
 // RUN:     --sysroot=%S/Inputs/gentoo_linux_gcc_4.9.x_tree \
-// RUN:     --gcc-toolchain="" \
 // RUN:   | FileCheck --check-prefix=CHECK-GENTOO-4-9-X %s
 //
 // CHECK-GENTOO-4-9-X: "-cc1"
@@ -215,7 +201,6 @@
 // RUN: %clang -### %s -fsyntax-only 2>&1 \
 // RUN:     --target=x86_64-unknown-linux-gnux32 -stdlib=libstdc++ \
 // RUN:     --sysroot=%S/Inputs/gentoo_linux_gcc_4.9.x_tree \
-// RUN:     --gcc-toolchain="" \
 // RUN:   | FileCheck --check-prefix=CHECK-GENTOO-4-9-X-X32 %s
 // CHECK-GENTOO-4-9-X-X32: "-cc1"
 // CHECK-GENTOO-4-9-X-X32: "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
@@ -231,7 +216,6 @@
 // RUN: %clang -### %s -fsyntax-only 2>&1 \
 // RUN:     --target=i386-unknown-linux-gnu -stdlib=libstdc++ \
 // RUN:     --sysroot=%S/Inputs/gentoo_linux_gcc_4.9.x_tree \
-// RUN:     --gcc-toolchain="" \
 // RUN:   | FileCheck --check-prefix=CHECK-GENTOO-4-9-X-32 %s
 // CHECK-GENTOO-4-9-X-32: "-cc1"
 // CHECK-GENTOO-4-9-X-32: "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
@@ -248,14 +232,12 @@
 // RUN: %clang -### %s -fsyntax-only 2>&1 \
 // RUN:     --target=loongarch64-unknown-linux-gnu -stdlib=libstdc++ \
 // RUN:     --sysroot=%S/Inputs/debian_loong64_tree \
-// RUN:     --gcc-toolchain="" \
 // RUN:   | FileCheck --check-prefix=CHECK-LOONG64-GNU %s
 //
 // Check that "-gnuf64" is seen as "-gnu" for loong64.
 // RUN: %clang -### %s -fsyntax-only 2>&1 \
 // RUN:     --target=loongarch64-unknown-linux-gnuf64 -stdlib=libstdc++ \
 // RUN:     --sysroot=%S/Inputs/debian_loong64_tree \
-// RUN:     --gcc-toolchain="" \
 // RUN:   | FileCheck --check-prefix=CHECK-LOONG64-GNU %s
 // CHECK-LOONG64-GNU: "-cc1"
 // CHECK-LOONG64-GNU: "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
@@ -274,7 +256,6 @@
 // RUN: %clang -### %s -fsyntax-only 2>&1 \
 // RUN:     --target=mips64-unknown-linux-gnuabi64 -stdlib=libstdc++ \
 // RUN:     --sysroot=%S/Inputs/debian_6_mips64_tree \
-// RUN:     --gcc-toolchain="" \
 // RUN:   | FileCheck --check-prefix=CHECK-MIPS64-GNUABI %s
 // CHECK-MIPS64-GNUABI: "-cc1"
 // CHECK-MIPS64-GNUABI: "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
@@ -292,7 +273,6 @@
 // RUN: %clang -### %s -fsyntax-only 2>&1 \
 // RUN:     --target=mips64el-unknown-linux-gnuabi64 -stdlib=libstdc++ \
 // RUN:     --sysroot=%S/Inputs/debian_6_mips64_tree \
-// RUN:     --gcc-toolchain="" \
 // RUN:   | FileCheck --check-prefix=CHECK-MIPS64EL-GNUABI %s
 // CHECK-MIPS64EL-GNUABI: "-cc1"
 // CHECK-MIPS64EL-GNUABI: "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
@@ -311,7 +291,6 @@
 // RUN: %clang -### %s -fsyntax-only 2>&1 \
 // RUN:     --target=arm-oe-linux-gnueabi -stdlib=libstdc++ \
 // RUN:     --sysroot=%S/Inputs/openembedded_arm_linux_tree \
-// RUN:     --gcc-toolchain="" \
 // RUN:   | FileCheck --check-prefix=CHECK-OE-ARM %s
 
 // CHECK-OE-ARM: "-cc1"
@@ -323,7 +302,6 @@
 // RUN: %clang -### %s -fsyntax-only 2>&1 \
 // RUN:     --target=aarch64-oe-linux -stdlib=libstdc++ \
 // RUN:     --sysroot=%S/Inputs/openembedded_aarch64_linux_tree \
-// RUN:     --gcc-toolchain="" \
 // RUN:   | FileCheck --check-prefix=CHECK-OE-AARCH64 %s
 
 // CHECK-OE-AARCH64: "-cc1"

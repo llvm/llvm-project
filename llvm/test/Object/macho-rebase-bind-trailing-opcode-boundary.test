@@ -1,0 +1,16 @@
+RUN: yaml2obj %p/Inputs/MachO/rebase-bind-table-trailing-opcode.yaml | \
+RUN: llvm-objdump --rebase --bind --weak-bind --macho - | \
+RUN: FileCheck %s
+
+CHECK:      Rebase table:
+CHECK-NEXT: segment      section            address     type
+CHECK-NEXT: __DATA_CONST __got              0x00008000  pointer
+CHECK-NEXT: __DATA       __la_symbol_ptr    0x0000C000  pointer
+
+CHECK:      Bind table:
+CHECK-NEXT: segment      section            address     type       addend dylib            symbol
+CHECK-NEXT: __DATA_CONST __got              0x00008008  pointer         0 libSystem        dyld_stub_binder
+
+CHECK:      Weak bind table:
+CHECK-NEXT: segment      section            address     type       addend  symbol
+CHECK-NEXT: __DATA_CONST __got              0x00008000  pointer         0  _foo

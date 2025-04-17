@@ -39,7 +39,7 @@ struct CGRect {
 // leaking over from the previous function emission by accident.
 // CHECK: define internal void @"\01-[I setBounds:]"({{.*}} {
 // CHECK-NOT: !dbg
-// CHECK: call void @llvm.dbg.declare
+// CHECK: #dbg_declare
 - (void)setFrame:(CGRect)frameRect {}
 - (CGRect)frame {return bounds;}
 
@@ -116,7 +116,7 @@ void testB1(B *b) {
 // CHECK:    define{{.*}} void @_Z6testB0P1B(ptr
 // CHECK:      [[BVAR:%.*]] = alloca ptr, align 8
 // CHECK:      [[TEMP:%.*]] = alloca [[B0:%.*]], align 8
-// CHECK:      [[X:%.*]] = getelementptr inbounds [[B0]], ptr [[TEMP]], i32 0, i32 0
+// CHECK:      [[X:%.*]] = getelementptr inbounds nuw [[B0]], ptr [[TEMP]], i32 0, i32 0
 // CHECK-NEXT: [[T0:%.*]] = call noundef i32 @_Z9b_makeIntv()
 // CHECK-NEXT: [[T1:%.*]] = sext i32 [[T0]] to i64
 // CHECK-NEXT: store i64 [[T1]], ptr [[X]], align 8
@@ -158,7 +158,7 @@ void testB2(B *b) {
 
 // CHECK:    define{{.*}} void @_Z6testB2P1B(ptr
 // CHECK:      [[BVAR:%.*]] = alloca ptr, align 8
-// CHECK:      call void @llvm.dbg.declare(
+// CHECK:      #dbg_declare(
 // CHECK:      call void @_ZN2B3C1Ev(
 // CHECK-NEXT: [[T0:%.*]] = call i64 @_ZN2B3cv2B1Ev(
 // CHECK-NOT:  call

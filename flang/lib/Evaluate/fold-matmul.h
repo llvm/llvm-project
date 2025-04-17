@@ -58,23 +58,30 @@ static Expr<T> FoldMatmul(FoldingContext &context, FunctionRef<T> &&funcRef) {
         Element bElt{mb->At(bAt)};
         if constexpr (T::category == TypeCategory::Real ||
             T::category == TypeCategory::Complex) {
-          // Kahan summation
-          auto product{aElt.Multiply(bElt, rounding)};
+          auto product{aElt.Multiply(bElt)};
           overflow |= product.flags.test(RealFlag::Overflow);
-          auto next{correction.Add(product.value, rounding)};
-          overflow |= next.flags.test(RealFlag::Overflow);
-          auto added{sum.Add(next.value, rounding)};
-          overflow |= added.flags.test(RealFlag::Overflow);
-          correction = added.value.Subtract(sum, rounding)
-                           .value.Subtract(next.value, rounding)
-                           .value;
-          sum = std::move(added.value);
+          if constexpr (useKahanSummation) {
+            auto next{product.value.Subtract(correction, rounding)};
+            overflow |= next.flags.test(RealFlag::Overflow);
+            auto added{sum.Add(next.value, rounding)};
+            overflow |= added.flags.test(RealFlag::Overflow);
+            correction = added.value.Subtract(sum, rounding)
+                             .value.Subtract(next.value, rounding)
+                             .value;
+            sum = std::move(added.value);
+          } else {
+            auto added{sum.Add(product.value)};
+            overflow |= added.flags.test(RealFlag::Overflow);
+            sum = std::move(added.value);
+          }
         } else if constexpr (T::category == TypeCategory::Integer) {
           auto product{aElt.MultiplySigned(bElt)};
           overflow |= product.SignedMultiplicationOverflowed();
           auto added{sum.AddSigned(product.lower)};
           overflow |= added.overflow;
           sum = std::move(added.value);
+        } else if constexpr (T::category == TypeCategory::Unsigned) {
+          sum = sum.AddUnsigned(aElt.MultiplyUnsigned(bElt).lower).value;
         } else {
           static_assert(T::category == TypeCategory::Logical);
           sum = sum.OR(aElt.AND(bElt));
@@ -85,8 +92,10 @@ static Expr<T> FoldMatmul(FoldingContext &context, FunctionRef<T> &&funcRef) {
       elements.push_back(sum);
     }
   }
-  if (overflow) {
-    context.messages().Say(
+  if (overflow &&
+      context.languageFeatures().ShouldWarn(
+          common::UsageWarning::FoldingException)) {
+    context.messages().Say(common::UsageWarning::FoldingException,
         "MATMUL of %s data overflowed during computation"_warn_en_US,
         T::AsFortran());
   }

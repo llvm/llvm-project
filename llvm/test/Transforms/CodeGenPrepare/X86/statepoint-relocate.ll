@@ -18,10 +18,11 @@ entry:
 }
 
 define i32 @test_sor_two_derived(ptr addrspace(1) %base) gc "statepoint-example" {
+; CHECK-LABEL: @test_sor_two_derived(
 ; CHECK: getelementptr i32, ptr addrspace(1) %base, i32 15
 ; CHECK: getelementptr i32, ptr addrspace(1) %base, i32 12
-; CHECK: getelementptr i32, ptr addrspace(1) %base-new, i32 12
 ; CHECK: getelementptr i32, ptr addrspace(1) %base-new, i32 15
+; CHECK: getelementptr i32, ptr addrspace(1) %base-new, i32 12
 entry:
        %ptr = getelementptr i32, ptr addrspace(1) %base, i32 15
        %ptr2 = getelementptr i32, ptr addrspace(1) %base, i32 12
@@ -34,6 +35,7 @@ entry:
 }
 
 define i32 @test_sor_ooo(ptr addrspace(1) %base) gc "statepoint-example" {
+; CHECK-LABEL: @test_sor_ooo(
 ; CHECK: getelementptr i32, ptr addrspace(1) %base, i32 15
 ; CHECK: getelementptr i32, ptr addrspace(1) %base-new, i32 15
 entry:

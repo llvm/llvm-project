@@ -63,12 +63,13 @@ public:
 
   Expected<RunnableConfiguration>
   getRunnableConfiguration(const BenchmarkCode &Configuration,
-                           unsigned NumRepetitions, unsigned LoopUnrollFactor,
+                           unsigned MinInstructions, unsigned LoopUnrollFactor,
                            const SnippetRepetitor &Repetitor) const;
 
   std::pair<Error, Benchmark>
   runConfiguration(RunnableConfiguration &&RC,
-                   const std::optional<StringRef> &DumpFile) const;
+                   const std::optional<StringRef> &DumpFile,
+                   std::optional<int> BenchmarkProcessCPU) const;
 
   // Scratch space to run instructions that touch memory.
   struct ScratchSpace {
@@ -135,7 +136,8 @@ private:
 
   Expected<std::unique_ptr<FunctionExecutor>>
   createFunctionExecutor(object::OwningBinary<object::ObjectFile> Obj,
-                         const BenchmarkKey &Key) const;
+                         const BenchmarkKey &Key,
+                         std::optional<int> BenchmarkProcessCPU) const;
 };
 
 } // namespace exegesis

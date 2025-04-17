@@ -51,8 +51,24 @@ All patches go through the regular `LLVM review process
 
 Q: How to build an OpenMP GPU offload capable compiler?
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-To build an *effective* OpenMP offload capable compiler, only one extra CMake
-option, ``LLVM_ENABLE_RUNTIMES="openmp"``, is needed when building LLVM (Generic
+
+The easiest way to create an offload capable compiler is to use the provided 
+CMake cache file. This will enable the projects and runtimes necessary for 
+offloading as well as some extra options.
+
+.. code-block:: sh
+
+  $> cd llvm-project  # The llvm-project checkout
+  $> mkdir build
+  $> cd build
+  $> cmake ../llvm -G Ninja                                                 \
+     -C ../offload/cmake/caches/Offload.cmake \ # The preset cache file
+     -DCMAKE_BUILD_TYPE=<Debug|Release>   \ # Select build type
+     -DCMAKE_INSTALL_PREFIX=<PATH>        \ # Where the libraries will live
+  $> ninja install
+
+To manually build an *effective* OpenMP offload capable compiler, only one extra CMake
+option, ``LLVM_ENABLE_RUNTIMES="openmp;offload"``, is needed when building LLVM (Generic
 information about building LLVM is available `here
 <https://llvm.org/docs/GettingStarted.html>`__.). Make sure all backends that
 are targeted by OpenMP are enabled. That can be done by adjusting the CMake 
@@ -81,9 +97,9 @@ The Cuda SDK is required on the machine that will execute the openmp application
 If your build machine is not the target machine or automatic detection of the
 available GPUs failed, you should also set:
 
-- ``LIBOMPTARGET_DEVICE_ARCHITECTURES=sm_<xy>,...`` where ``<xy>`` is the numeric 
+- ``LIBOMPTARGET_DEVICE_ARCHITECTURES='sm_<xy>;...'`` where ``<xy>`` is the numeric
   compute capability of your GPU. For instance, set 
-  ``LIBOMPTARGET_DEVICE_ARCHITECTURES=sm_70,sm_80`` to target the Nvidia Volta 
+  ``LIBOMPTARGET_DEVICE_ARCHITECTURES='sm_70;sm_80'`` to target the Nvidia Volta
   and Ampere architectures. 
 
 
@@ -141,9 +157,9 @@ With those libraries installed, then LLVM build and installed, try:
 If your build machine is not the target machine or automatic detection of the
 available GPUs failed, you should also set:
 
-- ``LIBOMPTARGET_DEVICE_ARCHITECTURES=gfx<xyz>,...`` where ``<xyz>`` is the 
+- ``LIBOMPTARGET_DEVICE_ARCHITECTURES='gfx<xyz>;...'`` where ``<xyz>`` is the
   shader core instruction set architecture. For instance, set 
-  ``LIBOMPTARGET_DEVICE_ARCHITECTURES=gfx906,gfx90a`` to target AMD GCN5 
+  ``LIBOMPTARGET_DEVICE_ARCHITECTURES='gfx906;gfx90a'`` to target AMD GCN5
   and CDNA2 devices. 
 
 Q: What are the known limitations of OpenMP AMDGPU offload?
@@ -279,11 +295,12 @@ Q: How to build an OpenMP offload capable compiler with an outdated host compile
 
 Enabling the OpenMP runtime will perform a two-stage build for you.
 If your host compiler is different from your system-wide compiler, you may need
-to set the CMake variable `GCC_INSTALL_PREFIX` so clang will be able to find the
-correct GCC toolchain in the second stage of the build.
+to set ``CMAKE_{C,CXX}_FLAGS`` like
+``--gcc-install-dir=/usr/lib/gcc/x86_64-linux-gnu/12`` so that clang will be
+able to find the correct GCC toolchain in the second stage of the build.
 
 For example, if your system-wide GCC installation is too old to build LLVM and
-you would like to use a newer GCC, set the CMake variable `GCC_INSTALL_PREFIX`
+you would like to use a newer GCC, set ``--gcc-install-dir=``
 to inform clang of the GCC installation you would like to use in the second stage.
 
 Q: How can I include OpenMP offloading support in my CMake project?
@@ -452,6 +469,15 @@ Q: What command line options can I use for OpenMP?
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 We recommend taking a look at the OpenMP 
 :doc:`command line argument reference <CommandLineArgumentReference>` page.
+
+Q: Can I build the offloading runtimes without CUDA or HSA?
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+By default, the offloading runtime will load the associated vendor runtime 
+during initialization rather than directly linking against them. This allows the 
+program to be built and run on many machine. If you wish to directly link 
+against these libraries, use the ``LIBOMPTARGET_DLOPEN_PLUGINS=""`` option to 
+suppress it for each plugin. The default value is every plugin enabled with 
+``LIBOMPTARGET_PLUGINS_TO_BUILD``.
 
 Q: Why is my build taking a long time?
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

@@ -15,6 +15,7 @@
 #include <climits>
 #include <cstddef>
 #include <initializer_list>
+#include <iterator>
 #include <list>
 #include <tuple>
 #include <type_traits>
@@ -405,12 +406,38 @@ std::vector<int>::const_iterator end(const some_struct &s) {
   return s.data.end();
 }
 
+std::vector<int>::const_reverse_iterator rbegin(const some_struct &s) {
+  return s.data.rbegin();
+}
+
+std::vector<int>::const_reverse_iterator rend(const some_struct &s) {
+  return s.data.rend();
+}
+
 void swap(some_struct &lhs, some_struct &rhs) {
   // make swap visible as non-adl swap would even seem to
   // work with std::swap which defaults to moving
   lhs.swap_val = "lhs";
   rhs.swap_val = "rhs";
 }
+
+struct List {
+  std::list<int> data;
+};
+
+std::list<int>::const_iterator begin(const List &list) {
+  return list.data.begin();
+}
+std::list<int>::const_iterator end(const List &list) { return list.data.end(); }
+
+struct Pairs {
+  std::vector<std::pair<std::string, int>> data;
+  using const_iterator =
+      std::vector<std::pair<std::string, int>>::const_iterator;
+};
+
+Pairs::const_iterator begin(const Pairs &p) { return p.data.begin(); }
+Pairs::const_iterator end(const Pairs &p) { return p.data.end(); }
 
 struct requires_move {};
 int *begin(requires_move &&) { return nullptr; }
@@ -495,6 +522,62 @@ TEST(STLExtrasTest, ConcatRange) {
   EXPECT_EQ(Expected, Test);
 }
 
+TEST(STLExtrasTest, ConcatRangeADL) {
+  // Make sure that we use the `begin`/`end` functions from `some_namespace`,
+  // using ADL.
+  some_namespace::some_struct S0;
+  S0.data = {1, 2};
+  some_namespace::some_struct S1;
+  S1.data = {3, 4};
+  EXPECT_THAT(concat<const int>(S0, S1), ElementsAre(1, 2, 3, 4));
+}
+
+TEST(STLExtrasTest, MakeFirstSecondRangeADL) {
+  // Make sure that we use the `begin`/`end` functions from `some_namespace`,
+  // using ADL.
+  some_namespace::Pairs Pairs;
+  Pairs.data = {{"foo", 1}, {"bar", 2}};
+  EXPECT_THAT(make_first_range(Pairs), ElementsAre("foo", "bar"));
+  EXPECT_THAT(make_second_range(Pairs), ElementsAre(1, 2));
+}
+
+template <typename T> struct Iterator {
+  int i = 0;
+  T operator*() const { return i; }
+  Iterator &operator++() {
+    ++i;
+    return *this;
+  }
+  bool operator==(Iterator RHS) const { return i == RHS.i; }
+};
+
+template <typename T> struct RangeWithValueType {
+  int i;
+  RangeWithValueType(int i) : i(i) {}
+  Iterator<T> begin() { return Iterator<T>{0}; }
+  Iterator<T> end() { return Iterator<T>{i}; }
+};
+
+TEST(STLExtrasTest, ValueReturn) {
+  RangeWithValueType<int> R(1);
+  auto C = concat<int>(R, R);
+  auto I = C.begin();
+  ASSERT_NE(I, C.end());
+  static_assert(std::is_same_v<decltype((*I)), int>);
+  auto V = *I;
+  ASSERT_EQ(V, 0);
+}
+
+TEST(STLExtrasTest, ReferenceReturn) {
+  RangeWithValueType<const int&> R(1);
+  auto C = concat<const int>(R, R);
+  auto I = C.begin();
+  ASSERT_NE(I, C.end());
+  static_assert(std::is_same_v<decltype((*I)), const int &>);
+  auto V = *I;
+  ASSERT_EQ(V, 0);
+}
+
 TEST(STLExtrasTest, PartitionAdaptor) {
   std::vector<int> V = {1, 2, 3, 4, 5, 6, 7, 8};
 
@@ -573,6 +656,8 @@ TEST(STLExtrasTest, ADLTest) {
 
   EXPECT_EQ(*adl_begin(s), 1);
   EXPECT_EQ(*(adl_end(s) - 1), 5);
+  EXPECT_EQ(*adl_rbegin(s), 5);
+  EXPECT_EQ(*(adl_rend(s) - 1), 1);
 
   adl_swap(s, s2);
   EXPECT_EQ(s.swap_val, "lhs");
@@ -682,6 +767,18 @@ TEST(STLExtrasTest, DropEndDefaultTest) {
   EXPECT_EQ(i, 4);
 }
 
+TEST(STLExtrasTest, MapRangeTest) {
+  SmallVector<int, 5> Vec{0, 1, 2};
+  EXPECT_THAT(map_range(Vec, [](int V) { return V + 1; }),
+              ElementsAre(1, 2, 3));
+
+  // Make sure that we use the `begin`/`end` functions
+  // from `some_namespace`, using ADL.
+  some_namespace::some_struct S;
+  S.data = {3, 4, 5};
+  EXPECT_THAT(map_range(S, [](int V) { return V * 2; }), ElementsAre(6, 8, 10));
+}
+
 TEST(STLExtrasTest, EarlyIncrementTest) {
   std::list<int> L = {1, 2, 3, 4};
 
@@ -719,7 +816,7 @@ TEST(STLExtrasTest, EarlyIncrementTest) {
 #endif
 
   // Inserting shouldn't break anything. We should be able to keep dereferencing
-  // the currrent iterator and increment. The increment to go to the "next"
+  // the current iterator and increment. The increment to go to the "next"
   // iterator from before we inserted.
   L.insert(std::next(L.begin(), 2), -1);
   ++I;
@@ -731,6 +828,14 @@ TEST(STLExtrasTest, EarlyIncrementTest) {
   EXPECT_EQ(4, *I);
   ++I;
   EXPECT_EQ(EIR.end(), I);
+}
+
+TEST(STLExtrasTest, EarlyIncADLTest) {
+  // Make sure that we use the `begin`/`end` functions from `some_namespace`,
+  // using ADL.
+  some_namespace::some_struct S;
+  S.data = {1, 2, 3};
+  EXPECT_THAT(make_early_inc_range(S), ElementsAre(1, 2, 3));
 }
 
 // A custom iterator that returns a pointer when dereferenced. This is used to
@@ -806,8 +911,38 @@ TEST(STLExtrasTest, EarlyIncrementTestCustomPointerIterator) {
   EXPECT_EQ(EIR.end(), I);
 }
 
+TEST(STLExtrasTest, ReplaceADL) {
+  // Make sure that we use the `begin`/`end` functions from `some_namespace`,
+  // using ADL.
+  std::vector<int> Cont = {0, 1, 2, 3, 4, 5};
+  some_namespace::some_struct S;
+  S.data = {42, 43, 44};
+  replace(Cont, Cont.begin() + 2, Cont.begin() + 5, S);
+  EXPECT_THAT(Cont, ElementsAre(0, 1, 42, 43, 44, 5));
+}
+
 TEST(STLExtrasTest, AllEqual) {
   std::vector<int> V;
+  EXPECT_TRUE(all_equal(V));
+
+  V.push_back(1);
+  EXPECT_TRUE(all_equal(V));
+
+  V.push_back(1);
+  V.push_back(1);
+  EXPECT_TRUE(all_equal(V));
+
+  V.push_back(2);
+  EXPECT_FALSE(all_equal(V));
+}
+
+// Test to verify that all_equal works with a container that does not
+// model the random access iterator concept.
+TEST(STLExtrasTest, AllEqualNonRandomAccess) {
+  std::list<int> V;
+  static_assert(!std::is_convertible_v<
+                std::iterator_traits<decltype(V)::iterator>::iterator_category,
+                std::random_access_iterator_tag>);
   EXPECT_TRUE(all_equal(V));
 
   V.push_back(1);
@@ -866,10 +1001,55 @@ TEST(STLExtrasTest, hasSingleElement) {
   const std::vector<int> V0 = {}, V1 = {1}, V2 = {1, 2};
   const std::vector<int> V10(10);
 
-  EXPECT_EQ(hasSingleElement(V0), false);
-  EXPECT_EQ(hasSingleElement(V1), true);
-  EXPECT_EQ(hasSingleElement(V2), false);
-  EXPECT_EQ(hasSingleElement(V10), false);
+  EXPECT_FALSE(hasSingleElement(V0));
+  EXPECT_TRUE(hasSingleElement(V1));
+  EXPECT_FALSE(hasSingleElement(V2));
+  EXPECT_FALSE(hasSingleElement(V10));
+
+  // Make sure that we use the `begin`/`end` functions
+  // from `some_namespace`, using ADL.
+  some_namespace::some_struct S;
+  EXPECT_FALSE(hasSingleElement(S));
+  S.data = V1;
+  EXPECT_TRUE(hasSingleElement(S));
+  S.data = V2;
+  EXPECT_FALSE(hasSingleElement(S));
+}
+
+TEST(STLExtrasTest, getSingleElement) {
+  // Test const and non-const containers.
+  const std::vector<int> V1 = {7};
+  EXPECT_EQ(getSingleElement(V1), 7);
+  std::vector<int> V2 = {8};
+  EXPECT_EQ(getSingleElement(V2), 8);
+
+  // Test LLVM container.
+  SmallVector<int> V3{9};
+  EXPECT_EQ(getSingleElement(V3), 9);
+
+  // Test that the returned element is a reference.
+  getSingleElement(V3) = 11;
+  EXPECT_EQ(V3[0], 11);
+
+  // Test non-random access container.
+  std::list<int> L1 = {10};
+  EXPECT_EQ(getSingleElement(L1), 10);
+
+  // Make sure that we use the `begin`/`end` functions from `some_namespace`,
+  // using ADL.
+  some_namespace::some_struct S;
+  S.data = V2;
+  EXPECT_EQ(getSingleElement(S), 8);
+
+#if defined(GTEST_HAS_DEATH_TEST) && !defined(NDEBUG)
+  // Make sure that we crash on empty or too many elements.
+  SmallVector<int> V4;
+  EXPECT_DEATH(getSingleElement(V4), "expected container with single element");
+  SmallVector<int> V5{12, 13, 14};
+  EXPECT_DEATH(getSingleElement(V5), "expected container with single element");
+  std::list<int> L2;
+  EXPECT_DEATH(getSingleElement(L2), "expected container with single element");
+#endif
 }
 
 TEST(STLExtrasTest, hasNItems) {
@@ -884,6 +1064,13 @@ TEST(STLExtrasTest, hasNItems) {
   EXPECT_TRUE(hasNItems(V3.begin(), V3.end(), 3, [](int x) { return x < 10; }));
   EXPECT_TRUE(hasNItems(V3.begin(), V3.end(), 0, [](int x) { return x > 10; }));
   EXPECT_TRUE(hasNItems(V3.begin(), V3.end(), 2, [](int x) { return x < 5; }));
+
+  // Make sure that we use the `begin`/`end` functions from `some_namespace`,
+  // using ADL.
+  some_namespace::List L;
+  L.data = {0, 1, 2};
+  EXPECT_FALSE(hasNItems(L, 2));
+  EXPECT_TRUE(hasNItems(L, 3));
 }
 
 TEST(STLExtras, hasNItemsOrMore) {
@@ -906,6 +1093,13 @@ TEST(STLExtras, hasNItemsOrMore) {
       hasNItemsOrMore(V3.begin(), V3.end(), 3, [](int x) { return x > 10; }));
   EXPECT_TRUE(
       hasNItemsOrMore(V3.begin(), V3.end(), 2, [](int x) { return x < 5; }));
+
+  // Make sure that we use the `begin`/`end` functions from `some_namespace`,
+  // using ADL.
+  some_namespace::List L;
+  L.data = {0, 1, 2};
+  EXPECT_TRUE(hasNItemsOrMore(L, 1));
+  EXPECT_FALSE(hasNItems(L, 4));
 }
 
 TEST(STLExtras, hasNItemsOrLess) {
@@ -939,6 +1133,13 @@ TEST(STLExtras, hasNItemsOrLess) {
       hasNItemsOrLess(V3.begin(), V3.end(), 5, [](int x) { return x < 5; }));
   EXPECT_FALSE(
       hasNItemsOrLess(V3.begin(), V3.end(), 2, [](int x) { return x < 10; }));
+
+  // Make sure that we use the `begin`/`end` functions from `some_namespace`,
+  // using ADL.
+  some_namespace::List L;
+  L.data = {0, 1, 2};
+  EXPECT_FALSE(hasNItemsOrLess(L, 1));
+  EXPECT_TRUE(hasNItemsOrLess(L, 4));
 }
 
 TEST(STLExtras, MoveRange) {
@@ -995,6 +1196,19 @@ TEST(STLExtras, Unique) {
   std::vector<int> V = {1, 5, 5, 4, 3, 3, 3};
 
   auto I = llvm::unique(V, [](int a, int b) { return a == b; });
+
+  EXPECT_EQ(I, V.begin() + 4);
+
+  EXPECT_EQ(1, V[0]);
+  EXPECT_EQ(5, V[1]);
+  EXPECT_EQ(4, V[2]);
+  EXPECT_EQ(3, V[3]);
+}
+
+TEST(STLExtras, UniqueNoPred) {
+  std::vector<int> V = {1, 5, 5, 4, 3, 3, 3};
+
+  auto I = llvm::unique(V);
 
   EXPECT_EQ(I, V.begin() + 4);
 
@@ -1323,6 +1537,33 @@ TEST(STLExtrasTest, LessSecond) {
     std::tuple<int, int> B(1, 0);
     EXPECT_FALSE(less_second()(A, B));
     EXPECT_TRUE(less_second()(B, A));
+  }
+}
+
+TEST(STLExtrasTest, Mismatch) {
+  {
+    const int MMIndex = 5;
+    StringRef First = "FooBar";
+    StringRef Second = "FooBaz";
+    auto [MMFirst, MMSecond] = mismatch(First, Second);
+    EXPECT_EQ(MMFirst, First.begin() + MMIndex);
+    EXPECT_EQ(MMSecond, Second.begin() + MMIndex);
+  }
+
+  {
+    SmallVector<int> First = {0, 1, 2};
+    SmallVector<int> Second = {0, 1, 2, 3};
+    auto [MMFirst, MMSecond] = mismatch(First, Second);
+    EXPECT_EQ(MMFirst, First.end());
+    EXPECT_EQ(MMSecond, Second.begin() + 3);
+  }
+
+  {
+    SmallVector<int> First = {0, 1};
+    SmallVector<int> Empty;
+    auto [MMFirst, MMEmpty] = mismatch(First, Empty);
+    EXPECT_EQ(MMFirst, First.begin());
+    EXPECT_EQ(MMEmpty, Empty.begin());
   }
 }
 

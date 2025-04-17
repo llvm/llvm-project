@@ -35,6 +35,10 @@ public:
   explicit HexagonFrameLowering()
       : TargetFrameLowering(StackGrowsDown, Align(8), 0, Align(1), true) {}
 
+  void
+  orderFrameObjects(const MachineFunction &MF,
+                    SmallVectorImpl<int> &ObjectsToAllocate) const override;
+
   // All of the prolog/epilog functionality, including saving and restoring
   // callee-saved registers is handled in emitPrologue. This is to have the
   // logic for shrink-wrapping in one place.
@@ -85,7 +89,6 @@ public:
 
   StackOffset getFrameIndexReference(const MachineFunction &MF, int FI,
                                      Register &FrameReg) const override;
-  bool hasFP(const MachineFunction &MF) const override;
 
   const SpillSlot *getCalleeSavedSpillSlots(unsigned &NumEntries)
       const override {
@@ -109,6 +112,9 @@ public:
   const MachineInstr *getAlignaInstr(const MachineFunction &MF) const;
 
   void insertCFIInstructions(MachineFunction &MF) const;
+
+protected:
+  bool hasFPImpl(const MachineFunction &MF) const override;
 
 private:
   using CSIVect = std::vector<CalleeSavedInfo>;

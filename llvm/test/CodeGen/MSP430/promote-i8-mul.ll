@@ -13,10 +13,10 @@ entry:
   ret i8 %mul
 }
 
-define void @uint81(i16* nocapture %p_32) nounwind {
+define void @uint81(ptr nocapture %p_32) nounwind {
 entry:
-  %call = tail call i16 @bar(i8* bitcast (i8 (i8, i8)* @foo to i8*)) nounwind ; <i16> [#uses=0]
+  %call = tail call i16 @bar(ptr @foo) nounwind ; <i16> [#uses=0]
   ret void
 }
 
-declare i16 @bar(i8*)
+declare i16 @bar(ptr)

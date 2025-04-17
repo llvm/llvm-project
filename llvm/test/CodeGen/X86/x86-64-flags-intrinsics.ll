@@ -21,7 +21,9 @@ define i64 @read_flags() {
 ; WIN64-NEXT:    .seh_endprologue
 ; WIN64-NEXT:    pushfq
 ; WIN64-NEXT:    popq %rax
+; WIN64-NEXT:    .seh_startepilogue
 ; WIN64-NEXT:    popq %rbp
+; WIN64-NEXT:    .seh_endepilogue
 ; WIN64-NEXT:    retq
 ; WIN64-NEXT:    .seh_endproc
 entry:
@@ -45,7 +47,9 @@ define void @write_flags(i64 %arg) {
 ; WIN64-NEXT:    .seh_endprologue
 ; WIN64-NEXT:    pushq %rcx
 ; WIN64-NEXT:    popfq
+; WIN64-NEXT:    .seh_startepilogue
 ; WIN64-NEXT:    popq %rbp
+; WIN64-NEXT:    .seh_endepilogue
 ; WIN64-NEXT:    retq
 ; WIN64-NEXT:    .seh_endproc
 entry:
@@ -62,18 +66,13 @@ define i64 @read_flags_reg_pressure() nounwind {
 ; CHECK-NEXT:    pushq %r13
 ; CHECK-NEXT:    pushq %r12
 ; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:    subq $16, %rsp
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    movq %rdx, (%rsp) # 8-byte Spill
 ; CHECK-NEXT:    pushfq
-; CHECK-NEXT:    popq %rdx
-; CHECK-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; CHECK-NEXT:    movq (%rsp), %rdx # 8-byte Reload
+; CHECK-NEXT:    popq %rbp
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
-; CHECK-NEXT:    addq $16, %rsp
+; CHECK-NEXT:    movq %rbp, %rax
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    popq %r12
 ; CHECK-NEXT:    popq %r13
@@ -114,25 +113,24 @@ define i64 @read_flags_reg_pressure() nounwind {
 ; WIN64-NEXT:    popq %r15
 ; WIN64-NEXT:    popq %rbp
 ; WIN64-NEXT:    retq
-  %1 = tail call { i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64 } asm sideeffect "", "={ax},={bx},={cx},={dx},={si},={di},={bp},={r8},={r9},={r10},={r11},={r12},={r13},={r14},={r15},~{dirflag},~{fpsr},~{flags}"()
-  %2 = extractvalue { i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64 } %1, 0
-  %3 = extractvalue { i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64 } %1, 1
-  %4 = extractvalue { i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64 } %1, 2
-  %5 = extractvalue { i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64 } %1, 3
-  %6 = extractvalue { i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64 } %1, 4
-  %7 = extractvalue { i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64 } %1, 5
-  %8 = extractvalue { i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64 } %1, 6
-  %9 = extractvalue { i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64 } %1, 7
-  %10 = extractvalue { i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64 } %1, 8
-  %11 = extractvalue { i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64 } %1, 9
-  %12 = extractvalue { i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64 } %1, 10
-  %13 = extractvalue { i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64 } %1, 11
-  %14 = extractvalue { i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64 } %1, 12
-  %15 = extractvalue { i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64 } %1, 13
-  %16 = extractvalue { i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64 } %1, 14
-  %17 = tail call i64 @llvm.x86.flags.read.u64()
-  tail call void asm sideeffect "", "{ax},{bx},{cx},{dx},{si},{di},{bp},{r8},{r9},{r10},{r11},{r12},{r13},{r14},{r15},~{dirflag},~{fpsr},~{flags}"(i64 %2, i64 %3, i64 %4, i64 %5, i64 %6, i64 %7, i64 %8, i64 %9, i64 %10, i64 %11, i64 %12, i64 %13, i64 %14, i64 %15, i64 %16)
-  ret i64 %17
+  %1 = tail call { i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64 } asm sideeffect "", "={ax},={bx},={cx},={dx},={si},={di},={r8},={r9},={r10},={r11},={r12},={r13},={r14},={r15},~{dirflag},~{fpsr},~{flags}"()
+  %2 = extractvalue { i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64 } %1, 0
+  %3 = extractvalue { i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64 } %1, 1
+  %4 = extractvalue { i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64 } %1, 2
+  %5 = extractvalue { i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64 } %1, 3
+  %6 = extractvalue { i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64 } %1, 4
+  %7 = extractvalue { i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64 } %1, 5
+  %8 = extractvalue { i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64 } %1, 6
+  %9 = extractvalue { i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64 } %1, 7
+  %10 = extractvalue { i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64 } %1, 8
+  %11 = extractvalue { i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64 } %1, 9
+  %12 = extractvalue { i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64 } %1, 10
+  %13 = extractvalue { i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64 } %1, 11
+  %14 = extractvalue { i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64 } %1, 12
+  %15 = extractvalue { i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64 } %1, 13
+  %flags = tail call i64 @llvm.x86.flags.read.u64()
+  tail call void asm sideeffect "", "{ax},{bx},{cx},{dx},{si},{di},{r8},{r9},{r10},{r11},{r12},{r13},{r14},{r15},~{dirflag},~{fpsr},~{flags}"(i64 %2, i64 %3, i64 %4, i64 %5, i64 %6, i64 %7, i64 %8, i64 %9, i64 %10, i64 %11, i64 %12, i64 %13, i64 %14, i64 %15)
+  ret i64 %flags
 }
 
 define void @write_flags_reg_pressure(i64 noundef %0) nounwind {
@@ -144,18 +142,13 @@ define void @write_flags_reg_pressure(i64 noundef %0) nounwind {
 ; CHECK-NEXT:    pushq %r13
 ; CHECK-NEXT:    pushq %r12
 ; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:    subq $16, %rsp
-; CHECK-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; CHECK-NEXT:    movq %rdi, %rbp
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    movq %rdx, (%rsp) # 8-byte Spill
-; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdx # 8-byte Reload
-; CHECK-NEXT:    pushq %rdx
+; CHECK-NEXT:    pushq %rbp
 ; CHECK-NEXT:    popfq
-; CHECK-NEXT:    movq (%rsp), %rdx # 8-byte Reload
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    addq $16, %rsp
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    popq %r12
 ; CHECK-NEXT:    popq %r13
@@ -196,23 +189,22 @@ define void @write_flags_reg_pressure(i64 noundef %0) nounwind {
 ; WIN64-NEXT:    popq %r15
 ; WIN64-NEXT:    popq %rbp
 ; WIN64-NEXT:    retq
-  %2 = tail call { i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64 } asm sideeffect "", "={ax},={bx},={cx},={dx},={si},={di},={bp},={r8},={r9},={r10},={r11},={r12},={r13},={r14},={r15},~{dirflag},~{fpsr},~{flags}"()
-  %3 = extractvalue { i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64 } %2, 0
-  %4 = extractvalue { i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64 } %2, 1
-  %5 = extractvalue { i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64 } %2, 2
-  %6 = extractvalue { i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64 } %2, 3
-  %7 = extractvalue { i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64 } %2, 4
-  %8 = extractvalue { i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64 } %2, 5
-  %9 = extractvalue { i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64 } %2, 6
-  %10 = extractvalue { i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64 } %2, 7
-  %11 = extractvalue { i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64 } %2, 8
-  %12 = extractvalue { i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64 } %2, 9
-  %13 = extractvalue { i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64 } %2, 10
-  %14 = extractvalue { i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64 } %2, 11
-  %15 = extractvalue { i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64 } %2, 12
-  %16 = extractvalue { i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64 } %2, 13
-  %17 = extractvalue { i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64 } %2, 14
+  %2 = tail call { i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64 } asm sideeffect "", "={ax},={bx},={cx},={dx},={si},={di},={r8},={r9},={r10},={r11},={r12},={r13},={r14},={r15},~{dirflag},~{fpsr},~{flags}"()
+  %3 = extractvalue { i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64 } %2, 0
+  %4 = extractvalue { i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64 } %2, 1
+  %5 = extractvalue { i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64 } %2, 2
+  %6 = extractvalue { i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64 } %2, 3
+  %7 = extractvalue { i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64 } %2, 4
+  %8 = extractvalue { i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64 } %2, 5
+  %9 = extractvalue { i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64 } %2, 6
+  %10 = extractvalue { i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64 } %2, 7
+  %11 = extractvalue { i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64 } %2, 8
+  %12 = extractvalue { i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64 } %2, 9
+  %13 = extractvalue { i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64 } %2, 10
+  %14 = extractvalue { i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64 } %2, 11
+  %15 = extractvalue { i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64 } %2, 12
+  %16 = extractvalue { i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64 } %2, 13
   tail call void @llvm.x86.flags.write.u64(i64 %0)
-  tail call void asm sideeffect "", "{ax},{bx},{cx},{dx},{si},{di},{bp},{r8},{r9},{r10},{r11},{r12},{r13},{r14},{r15},~{dirflag},~{fpsr},~{flags}"(i64 %3, i64 %4, i64 %5, i64 %6, i64 %7, i64 %8, i64 %9, i64 %10, i64 %11, i64 %12, i64 %13, i64 %14, i64 %15, i64 %16, i64 %17)
+  tail call void asm sideeffect "", "{ax},{bx},{cx},{dx},{si},{di},{r8},{r9},{r10},{r11},{r12},{r13},{r14},{r15},~{dirflag},~{fpsr},~{flags}"(i64 %3, i64 %4, i64 %5, i64 %6, i64 %7, i64 %8, i64 %9, i64 %10, i64 %11, i64 %12, i64 %13, i64 %14, i64 %15, i64 %16)
   ret void
 }

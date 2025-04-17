@@ -8,7 +8,7 @@
 define <4 x double> @PR21780(ptr %ptr) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: read)
 ; CHECK-LABEL: define {{[^@]+}}@PR21780
-; CHECK-SAME: (ptr nocapture nofree noundef nonnull readonly align 8 dereferenceable(32) [[PTR:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: (ptr nofree noundef nonnull readonly align 8 captures(none) dereferenceable(32) [[PTR:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds double, ptr [[PTR]], i64 1
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds double, ptr [[PTR]], i64 2
 ; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds double, ptr [[PTR]], i64 3
@@ -46,7 +46,7 @@ define <4 x double> @PR21780(ptr %ptr) {
 define double @PR21780_only_access3_with_inbounds(ptr %ptr) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: read)
 ; CHECK-LABEL: define {{[^@]+}}@PR21780_only_access3_with_inbounds
-; CHECK-SAME: (ptr nocapture nofree nonnull readonly align 8 dereferenceable(32) [[PTR:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: (ptr nofree nonnull readonly align 8 captures(none) dereferenceable(32) [[PTR:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds double, ptr [[PTR]], i64 3
 ; CHECK-NEXT:    [[T3:%.*]] = load double, ptr [[ARRAYIDX3]], align 8
 ; CHECK-NEXT:    ret double [[T3]]
@@ -60,7 +60,7 @@ define double @PR21780_only_access3_with_inbounds(ptr %ptr) {
 define double @PR21780_only_access3_without_inbounds(ptr %ptr) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: read)
 ; CHECK-LABEL: define {{[^@]+}}@PR21780_only_access3_without_inbounds
-; CHECK-SAME: (ptr nocapture nofree readonly align 8 [[PTR:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: (ptr nofree readonly align 8 captures(none) [[PTR:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr double, ptr [[PTR]], i64 3
 ; CHECK-NEXT:    [[T3:%.*]] = load double, ptr [[ARRAYIDX3]], align 8
 ; CHECK-NEXT:    ret double [[T3]]
@@ -73,7 +73,7 @@ define double @PR21780_only_access3_without_inbounds(ptr %ptr) {
 define double @PR21780_without_inbounds(ptr %ptr) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: read)
 ; CHECK-LABEL: define {{[^@]+}}@PR21780_without_inbounds
-; CHECK-SAME: (ptr nocapture nofree noundef nonnull readonly align 8 dereferenceable(32) [[PTR:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: (ptr nofree noundef nonnull readonly align 8 captures(none) dereferenceable(32) [[PTR:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr double, ptr [[PTR]], i64 3
 ; CHECK-NEXT:    [[T3:%.*]] = load double, ptr [[ARRAYIDX3]], align 8
 ; CHECK-NEXT:    ret double [[T3]]
@@ -96,7 +96,7 @@ define double @PR21780_without_inbounds(ptr %ptr) {
 define void @gep0(ptr %unused, ptr %other, ptr %ptr) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite)
 ; CHECK-LABEL: define {{[^@]+}}@gep0
-; CHECK-SAME: (ptr nocapture nofree readnone [[UNUSED:%.*]], ptr nocapture nofree noundef nonnull writeonly dereferenceable(1) [[OTHER:%.*]], ptr nocapture nofree nonnull readonly dereferenceable(3) [[PTR:%.*]]) #[[ATTR1:[0-9]+]] {
+; CHECK-SAME: (ptr nofree readnone captures(none) [[UNUSED:%.*]], ptr nofree noundef nonnull writeonly captures(none) dereferenceable(1) [[OTHER:%.*]], ptr nofree nonnull readonly captures(none) dereferenceable(3) [[PTR:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr i8, ptr [[PTR]], i64 2
 ; CHECK-NEXT:    [[T2:%.*]] = load i8, ptr [[ARRAYIDX2]], align 1
 ; CHECK-NEXT:    store i8 [[T2]], ptr [[OTHER]], align 1
@@ -118,7 +118,7 @@ define void @gep0(ptr %unused, ptr %other, ptr %ptr) {
 define void @ordering(ptr %ptr1, ptr %ptr2) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@ordering
-; CHECK-SAME: (ptr nocapture nofree noundef nonnull readnone dereferenceable(3) [[PTR1:%.*]], ptr nocapture nofree nonnull readnone align 4 dereferenceable(8) [[PTR2:%.*]]) #[[ATTR2:[0-9]+]] {
+; CHECK-SAME: (ptr nofree noundef nonnull readnone captures(none) dereferenceable(3) [[PTR1:%.*]], ptr nofree nonnull readnone align 4 captures(none) dereferenceable(8) [[PTR2:%.*]]) #[[ATTR2:[0-9]+]] {
 ; CHECK-NEXT:    ret void
 ;
   %a20 = getelementptr i32, ptr %ptr2, i64 0
@@ -138,7 +138,7 @@ define void @ordering(ptr %ptr1, ptr %ptr2) {
 define void @not_entry_but_guaranteed_to_execute(ptr %ptr) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@not_entry_but_guaranteed_to_execute
-; CHECK-SAME: (ptr nocapture nofree nonnull readnone dereferenceable(3) [[PTR:%.*]]) #[[ATTR2]] {
+; CHECK-SAME: (ptr nofree nonnull readnone captures(none) dereferenceable(3) [[PTR:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       exit:
@@ -160,7 +160,7 @@ exit:
 define void @not_entry_not_guaranteed_to_execute(ptr %ptr, i1 %cond) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@not_entry_not_guaranteed_to_execute
-; CHECK-SAME: (ptr nocapture nofree readnone [[PTR:%.*]], i1 noundef [[COND:%.*]]) #[[ATTR2]] {
+; CHECK-SAME: (ptr nofree readnone captures(none) [[PTR:%.*]], i1 noundef [[COND:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[COND]], label [[LOADS:%.*]], label [[EXIT:%.*]]
 ; CHECK:       loads:
@@ -186,7 +186,7 @@ exit:
 define void @partial_in_entry(ptr %ptr, i1 %cond) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@partial_in_entry
-; CHECK-SAME: (ptr nocapture nofree noundef nonnull readnone align 2 dereferenceable(4) [[PTR:%.*]], i1 noundef [[COND:%.*]]) #[[ATTR2]] {
+; CHECK-SAME: (ptr nofree noundef nonnull readnone align 2 captures(none) dereferenceable(4) [[PTR:%.*]], i1 noundef [[COND:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[COND]], label [[LOADS:%.*]], label [[EXIT:%.*]]
 ; CHECK:       loads:
@@ -231,7 +231,7 @@ define void @volatile_is_not_dereferenceable(ptr %ptr) {
 define void @atomic_is_alright(ptr %ptr) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@atomic_is_alright
-; CHECK-SAME: (ptr nocapture nofree nonnull readnone align 2 dereferenceable(6) [[PTR:%.*]]) #[[ATTR2]] {
+; CHECK-SAME: (ptr nofree nonnull readnone align 2 captures(none) dereferenceable(6) [[PTR:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    ret void
 ;
   %arrayidx0 = getelementptr i16, ptr %ptr, i64 0
@@ -247,7 +247,7 @@ declare void @may_not_return()
 
 define void @not_guaranteed_to_transfer_execution(ptr %ptr) {
 ; CHECK-LABEL: define {{[^@]+}}@not_guaranteed_to_transfer_execution
-; CHECK-SAME: (ptr nocapture nofree nonnull readnone align 2 dereferenceable(2) [[PTR:%.*]]) {
+; CHECK-SAME: (ptr nofree nonnull readnone align 2 captures(none) dereferenceable(2) [[PTR:%.*]]) {
 ; CHECK-NEXT:    call void @may_not_return()
 ; CHECK-NEXT:    ret void
 ;
@@ -266,7 +266,7 @@ define void @not_guaranteed_to_transfer_execution(ptr %ptr) {
 define void @variable_gep_index(ptr %unused, ptr %ptr, i64 %variable_index) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@variable_gep_index
-; CHECK-SAME: (ptr nocapture nofree readnone [[UNUSED:%.*]], ptr nocapture nofree noundef nonnull readnone dereferenceable(1) [[PTR:%.*]], i64 [[VARIABLE_INDEX:%.*]]) #[[ATTR2]] {
+; CHECK-SAME: (ptr nofree readnone captures(none) [[UNUSED:%.*]], ptr nofree noundef nonnull readnone captures(none) dereferenceable(1) [[PTR:%.*]], i64 [[VARIABLE_INDEX:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    ret void
 ;
   %arrayidx1 = getelementptr i8, ptr %ptr, i64 %variable_index
@@ -283,10 +283,10 @@ define void @multi_index_gep(ptr %ptr) {
 ; FIXME: %ptr should be dereferenceable(4)
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@multi_index_gep
-; CHECK-SAME: (ptr nocapture nofree nonnull readnone dereferenceable(1) [[PTR:%.*]]) #[[ATTR2]] {
+; CHECK-SAME: (ptr nofree nonnull readnone captures(none) dereferenceable(1) [[PTR:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    ret void
 ;
-  %arrayidx00 = getelementptr <4 x i8>, <4 x i8>* %ptr, i64 0, i64 0
+  %arrayidx00 = getelementptr <4 x i8>, ptr %ptr, i64 0, i64 0
   %t0 = load i8, ptr %arrayidx00
   ret void
 }
@@ -296,7 +296,7 @@ define void @multi_index_gep(ptr %ptr) {
 define void @not_byte_multiple(ptr %ptr) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@not_byte_multiple
-; CHECK-SAME: (ptr nocapture nofree nonnull readnone align 2 dereferenceable(2) [[PTR:%.*]]) #[[ATTR2]] {
+; CHECK-SAME: (ptr nofree nonnull readnone align 2 captures(none) dereferenceable(2) [[PTR:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    ret void
 ;
   %arrayidx0 = getelementptr i9, ptr %ptr, i64 0
@@ -309,7 +309,7 @@ define void @not_byte_multiple(ptr %ptr) {
 define void @no_pointer_deref(ptr %ptr) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@no_pointer_deref
-; CHECK-SAME: (ptr nocapture nofree readnone align 2 [[PTR:%.*]]) #[[ATTR2]] {
+; CHECK-SAME: (ptr nofree readnone align 2 captures(none) [[PTR:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    ret void
 ;
   %arrayidx1 = getelementptr i16, ptr %ptr, i64 1
@@ -324,7 +324,7 @@ define void @no_pointer_deref(ptr %ptr) {
 define void @non_consecutive(ptr %ptr) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@non_consecutive
-; CHECK-SAME: (ptr nocapture nofree noundef nonnull readnone align 4 dereferenceable(8) [[PTR:%.*]]) #[[ATTR2]] {
+; CHECK-SAME: (ptr nofree noundef nonnull readnone align 4 captures(none) dereferenceable(8) [[PTR:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    ret void
 ;
   %arrayidx1 = getelementptr i32, ptr %ptr, i64 1
@@ -340,7 +340,7 @@ define void @non_consecutive(ptr %ptr) {
 define void @more_bytes(ptr dereferenceable(8) %ptr) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@more_bytes
-; CHECK-SAME: (ptr nocapture nofree noundef nonnull readnone align 4 dereferenceable(16) [[PTR:%.*]]) #[[ATTR2]] {
+; CHECK-SAME: (ptr nofree noundef nonnull readnone align 4 captures(none) dereferenceable(16) [[PTR:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    ret void
 ;
   %arrayidx3 = getelementptr i32, ptr %ptr, i64 3
@@ -358,7 +358,7 @@ define void @more_bytes(ptr dereferenceable(8) %ptr) {
 define void @more_bytes_and_not_null(ptr dereferenceable_or_null(8) %ptr) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@more_bytes_and_not_null
-; CHECK-SAME: (ptr nocapture nofree noundef nonnull readnone align 4 dereferenceable(16) [[PTR:%.*]]) #[[ATTR2]] {
+; CHECK-SAME: (ptr nofree noundef nonnull readnone align 4 captures(none) dereferenceable(16) [[PTR:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    ret void
 ;
   %arrayidx3 = getelementptr i32, ptr %ptr, i64 3
@@ -376,7 +376,7 @@ define void @more_bytes_and_not_null(ptr dereferenceable_or_null(8) %ptr) {
 define void @better_bytes(ptr dereferenceable(100) %ptr) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@better_bytes
-; CHECK-SAME: (ptr nocapture nofree noundef nonnull readnone align 4 dereferenceable(100) [[PTR:%.*]]) #[[ATTR2]] {
+; CHECK-SAME: (ptr nofree noundef nonnull readnone align 4 captures(none) dereferenceable(100) [[PTR:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    ret void
 ;
   %arrayidx3 = getelementptr i32, ptr %ptr, i64 3
@@ -392,7 +392,7 @@ define void @better_bytes(ptr dereferenceable(100) %ptr) {
 define void @bitcast(ptr %arg) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@bitcast
-; CHECK-SAME: (ptr nocapture nofree nonnull readnone align 4 dereferenceable(8) [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-SAME: (ptr nofree nonnull readnone align 4 captures(none) dereferenceable(8) [[ARG:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    ret void
 ;
   %ptr = bitcast ptr %arg to ptr
@@ -405,7 +405,7 @@ define void @bitcast(ptr %arg) {
 define void @bitcast_different_sizes(ptr %arg1, ptr %arg2) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@bitcast_different_sizes
-; CHECK-SAME: (ptr nocapture nofree nonnull readnone align 4 dereferenceable(12) [[ARG1:%.*]], ptr nocapture nofree noundef nonnull readnone align 4 dereferenceable(16) [[ARG2:%.*]]) #[[ATTR2]] {
+; CHECK-SAME: (ptr nofree nonnull readnone align 4 captures(none) dereferenceable(12) [[ARG1:%.*]], ptr nofree noundef nonnull readnone align 4 captures(none) dereferenceable(16) [[ARG2:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    ret void
 ;
   %ptr1 = bitcast ptr %arg1 to ptr
@@ -424,7 +424,7 @@ define void @bitcast_different_sizes(ptr %arg1, ptr %arg2) {
 define void @negative_offset(ptr %arg) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@negative_offset
-; CHECK-SAME: (ptr nocapture nofree nonnull readnone align 4 dereferenceable(4) [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-SAME: (ptr nofree nonnull readnone align 4 captures(none) dereferenceable(4) [[ARG:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    ret void
 ;
   %ptr = bitcast ptr %arg to ptr
@@ -437,7 +437,7 @@ define void @negative_offset(ptr %arg) {
 define void @stores(ptr %arg) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write)
 ; CHECK-LABEL: define {{[^@]+}}@stores
-; CHECK-SAME: (ptr nocapture nofree nonnull writeonly align 4 dereferenceable(8) [[ARG:%.*]]) #[[ATTR4:[0-9]+]] {
+; CHECK-SAME: (ptr nofree nonnull writeonly align 4 captures(none) dereferenceable(8) [[ARG:%.*]]) #[[ATTR4:[0-9]+]] {
 ; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr float, ptr [[ARG]], i64 1
 ; CHECK-NEXT:    store float 1.000000e+00, ptr [[ARG]], align 4
 ; CHECK-NEXT:    store float 2.000000e+00, ptr [[ARRAYIDX1]], align 4
@@ -453,7 +453,7 @@ define void @stores(ptr %arg) {
 define void @load_store(ptr %arg) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write)
 ; CHECK-LABEL: define {{[^@]+}}@load_store
-; CHECK-SAME: (ptr nocapture nofree nonnull writeonly align 4 dereferenceable(8) [[ARG:%.*]]) #[[ATTR4]] {
+; CHECK-SAME: (ptr nofree nonnull writeonly align 4 captures(none) dereferenceable(8) [[ARG:%.*]]) #[[ATTR4]] {
 ; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr float, ptr [[ARG]], i64 1
 ; CHECK-NEXT:    store float 2.000000e+00, ptr [[ARRAYIDX1]], align 4
 ; CHECK-NEXT:    ret void
@@ -468,7 +468,7 @@ define void @load_store(ptr %arg) {
 define void @different_size1(ptr %arg) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write)
 ; CHECK-LABEL: define {{[^@]+}}@different_size1
-; CHECK-SAME: (ptr nocapture nofree noundef nonnull writeonly align 8 dereferenceable(8) [[ARG:%.*]]) #[[ATTR4]] {
+; CHECK-SAME: (ptr nofree noundef nonnull writeonly align 8 captures(none) dereferenceable(8) [[ARG:%.*]]) #[[ATTR4]] {
 ; CHECK-NEXT:    store double 0.000000e+00, ptr [[ARG]], align 8
 ; CHECK-NEXT:    store i32 0, ptr [[ARG]], align 8
 ; CHECK-NEXT:    ret void
@@ -482,7 +482,7 @@ define void @different_size1(ptr %arg) {
 define void @different_size2(ptr %arg) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write)
 ; CHECK-LABEL: define {{[^@]+}}@different_size2
-; CHECK-SAME: (ptr nocapture nofree noundef nonnull writeonly align 8 dereferenceable(8) [[ARG:%.*]]) #[[ATTR4]] {
+; CHECK-SAME: (ptr nofree noundef nonnull writeonly align 8 captures(none) dereferenceable(8) [[ARG:%.*]]) #[[ATTR4]] {
 ; CHECK-NEXT:    store i32 0, ptr [[ARG]], align 8
 ; CHECK-NEXT:    store double 0.000000e+00, ptr [[ARG]], align 8
 ; CHECK-NEXT:    ret void
@@ -513,7 +513,7 @@ define void @different_size2(ptr %arg) {
 define i32 @require_cfg_analysis(i32 %c, ptr %p) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write)
 ; CHECK-LABEL: define {{[^@]+}}@require_cfg_analysis
-; CHECK-SAME: (i32 [[C:%.*]], ptr nocapture nofree nonnull writeonly align 4 dereferenceable(4) [[P:%.*]]) #[[ATTR4]] {
+; CHECK-SAME: (i32 [[C:%.*]], ptr nofree nonnull writeonly align 4 captures(none) dereferenceable(4) [[P:%.*]]) #[[ATTR4]] {
 ; CHECK-NEXT:    [[TOBOOL1:%.*]] = icmp eq i32 [[C]], 0
 ; CHECK-NEXT:    br i1 [[TOBOOL1]], label [[L1:%.*]], label [[L2:%.*]]
 ; CHECK:       l1:

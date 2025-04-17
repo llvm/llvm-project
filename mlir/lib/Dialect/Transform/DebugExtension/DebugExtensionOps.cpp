@@ -21,16 +21,15 @@ DiagnosedSilenceableFailure
 transform::DebugEmitRemarkAtOp::apply(transform::TransformRewriter &rewriter,
                                       transform::TransformResults &results,
                                       transform::TransformState &state) {
-  if (getAt().getType().isa<TransformHandleTypeInterface>()) {
+  if (isa<TransformHandleTypeInterface>(getAt().getType())) {
     auto payload = state.getPayloadOps(getAt());
     for (Operation *op : payload)
       op->emitRemark() << getMessage();
     return DiagnosedSilenceableFailure::success();
   }
 
-  assert(
-      getAt().getType().isa<transform::TransformValueHandleTypeInterface>() &&
-      "unhandled kind of transform type");
+  assert(isa<transform::TransformValueHandleTypeInterface>(getAt().getType()) &&
+         "unhandled kind of transform type");
 
   auto describeValue = [](Diagnostic &os, Value value) {
     os << "value handle points to ";
@@ -61,10 +60,10 @@ DiagnosedSilenceableFailure transform::DebugEmitParamAsRemarkOp::apply(
     os << *getMessage() << " ";
   llvm::interleaveComma(state.getParams(getParam()), os);
   if (!getAnchor()) {
-    emitRemark() << os.str();
+    emitRemark() << str;
     return DiagnosedSilenceableFailure::success();
   }
   for (Operation *payload : state.getPayloadOps(getAnchor()))
-    ::mlir::emitRemark(payload->getLoc()) << os.str();
+    ::mlir::emitRemark(payload->getLoc()) << str;
   return DiagnosedSilenceableFailure::success();
 }

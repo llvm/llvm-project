@@ -113,6 +113,7 @@ void PDLPatternModule::attachConfigToPatterns(ModuleOp module,
 
 //===----------------------------------------------------------------------===//
 // Function Registry
+//===----------------------------------------------------------------------===//
 
 void PDLPatternModule::registerConstraintFunction(
     StringRef name, PDLConstraintFunction constraintFn) {

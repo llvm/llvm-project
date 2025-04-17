@@ -135,7 +135,8 @@ void PPCallbacksTracker::InclusionDirective(
     SourceLocation HashLoc, const Token &IncludeTok, llvm::StringRef FileName,
     bool IsAngled, CharSourceRange FilenameRange, OptionalFileEntryRef File,
     llvm::StringRef SearchPath, llvm::StringRef RelativePath,
-    const Module *Imported, SrcMgr::CharacteristicKind FileType) {
+    const Module *SuggestedModule, bool ModuleImported,
+    SrcMgr::CharacteristicKind FileType) {
   beginCallback("InclusionDirective");
   appendArgument("HashLoc", HashLoc);
   appendArgument("IncludeTok", IncludeTok);
@@ -145,7 +146,8 @@ void PPCallbacksTracker::InclusionDirective(
   appendArgument("File", File);
   appendFilePathArgument("SearchPath", SearchPath);
   appendFilePathArgument("RelativePath", RelativePath);
-  appendArgument("Imported", Imported);
+  appendArgument("SuggestedModule", SuggestedModule);
+  appendArgument("ModuleImported", ModuleImported);
 }
 
 // Callback invoked whenever there was an explicit module-import
@@ -545,8 +547,8 @@ void PPCallbacksTracker::appendArgument(const char *Name, ModuleIdPath Value) {
     if (I)
       SS << ", ";
     SS << "{"
-       << "Name: " << Value[I].first->getName() << ", "
-       << "Loc: " << getSourceLocationString(PP, Value[I].second) << "}";
+       << "Name: " << Value[I].getIdentifierInfo()->getName() << ", "
+       << "Loc: " << getSourceLocationString(PP, Value[I].getLoc()) << "}";
   }
   SS << "]";
   appendArgument(Name, SS.str());

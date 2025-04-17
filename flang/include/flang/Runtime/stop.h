@@ -11,14 +11,16 @@
 
 #include "flang/Runtime/c-or-cpp.h"
 #include "flang/Runtime/entry-names.h"
+#include "flang/Runtime/extensions.h"
 #include <stdlib.h>
 
 FORTRAN_EXTERN_C_BEGIN
 
 // Program-initiated image stop
-NORETURN void RTNAME(StopStatement)(int code DEFAULT_VALUE(EXIT_SUCCESS),
-    bool isErrorStop DEFAULT_VALUE(false), bool quiet DEFAULT_VALUE(false));
-NORETURN void RTNAME(StopStatementText)(const char *, size_t,
+NORETURN RT_API_ATTRS void RTNAME(StopStatement)(
+    int code DEFAULT_VALUE(EXIT_SUCCESS), bool isErrorStop DEFAULT_VALUE(false),
+    bool quiet DEFAULT_VALUE(false));
+NORETURN RT_API_ATTRS void RTNAME(StopStatementText)(const char *, size_t,
     bool isErrorStop DEFAULT_VALUE(false), bool quiet DEFAULT_VALUE(false));
 void RTNAME(PauseStatement)(NO_ARGUMENTS);
 void RTNAME(PauseStatementInt)(int);
@@ -29,10 +31,11 @@ NORETURN void RTNAME(ProgramEndStatement)(NO_ARGUMENTS);
 // Extensions
 NORETURN void RTNAME(Exit)(int status DEFAULT_VALUE(EXIT_SUCCESS));
 NORETURN void RTNAME(Abort)(NO_ARGUMENTS);
+void FORTRAN_PROCEDURE_NAME(backtrace)(NO_ARGUMENTS);
 
 // Crash with an error message when the program dynamically violates a Fortran
 // constraint.
-NORETURN void RTNAME(ReportFatalUserError)(
+NORETURN RT_API_ATTRS void RTNAME(ReportFatalUserError)(
     const char *message, const char *source, int line);
 
 FORTRAN_EXTERN_C_END

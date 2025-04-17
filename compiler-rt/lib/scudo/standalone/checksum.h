@@ -30,6 +30,10 @@
 #include <arm_acle.h>
 #define CRC32_INTRINSIC FIRST_32_SECOND_64(__crc32cw, __crc32cd)
 #endif
+#ifdef __loongarch__
+#include <larchintrin.h>
+#define CRC32_INTRINSIC FIRST_32_SECOND_64(__crcc_w_w_w, __crcc_w_d_w)
+#endif
 
 namespace scudo {
 

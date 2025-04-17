@@ -62,6 +62,23 @@ mlir::LLVM::detail::verifyAliasAnalysisOpInterface(Operation *op) {
   return isArrayOf<TBAATagAttr>(op, tags);
 }
 
+//===----------------------------------------------------------------------===//
+// DereferenceableOpInterface
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+mlir::LLVM::detail::verifyDereferenceableOpInterface(Operation *op) {
+  auto iface = cast<DereferenceableOpInterface>(op);
+
+  if (auto derefAttr = iface.getDereferenceableOrNull())
+    if (op->getNumResults() != 1 ||
+        !mlir::isa<LLVMPointerType>(op->getResult(0).getType()))
+      return op->emitOpError(
+          "expected op to return a single LLVM pointer type");
+
+  return success();
+}
+
 SmallVector<Value> mlir::LLVM::AtomicCmpXchgOp::getAccessedOperands() {
   return {getPtr()};
 }
@@ -94,11 +111,14 @@ SmallVector<Value> mlir::LLVM::MemsetOp::getAccessedOperands() {
   return {getDst()};
 }
 
+SmallVector<Value> mlir::LLVM::MemsetInlineOp::getAccessedOperands() {
+  return {getDst()};
+}
+
 SmallVector<Value> mlir::LLVM::CallOp::getAccessedOperands() {
-  return llvm::to_vector(
-      llvm::make_filter_range(getArgOperands(), [](Value arg) {
-        return isa<LLVMPointerType>(arg.getType());
-      }));
+  return llvm::filter_to_vector(getArgOperands(), [](Value arg) {
+    return isa<LLVMPointerType>(arg.getType());
+  });
 }
 
 #include "mlir/Dialect/LLVMIR/LLVMInterfaces.cpp.inc"

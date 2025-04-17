@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-print-instructions -polly-print-scops -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly -polly-print-instructions '-passes=print<polly-function-scops>' -disable-output < %s 2>&1 | FileCheck %s
 ;
 ; CHECK:    Statements {
 ; CHECK-NEXT:   Stmt_Stmt

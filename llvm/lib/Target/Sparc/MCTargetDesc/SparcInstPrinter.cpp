@@ -14,7 +14,6 @@
 #include "Sparc.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
-#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/raw_ostream.h"
@@ -38,7 +37,7 @@ bool SparcInstPrinter::isV9(const MCSubtargetInfo &STI) const {
   return (STI.hasFeature(Sparc::FeatureV9)) != 0;
 }
 
-void SparcInstPrinter::printRegName(raw_ostream &OS, MCRegister Reg) const {
+void SparcInstPrinter::printRegName(raw_ostream &OS, MCRegister Reg) {
   OS << '%' << getRegisterName(Reg);
 }
 
@@ -67,12 +66,12 @@ bool SparcInstPrinter::printSparcAliasInstr(const MCInst *MI,
       return false;
     if (!MI->getOperand(0).isReg())
       return false;
-    switch (MI->getOperand(0).getReg()) {
+    switch (MI->getOperand(0).getReg().id()) {
     default: return false;
     case SP::G0: // jmp $addr | ret | retl
       if (MI->getOperand(2).isImm() &&
           MI->getOperand(2).getImm() == 8) {
-        switch(MI->getOperand(1).getReg()) {
+        switch (MI->getOperand(1).getReg().id()) {
         default: break;
         case SP::I7: O << "\tret"; return true;
         case SP::O7: O << "\tretl"; return true;
@@ -116,7 +115,7 @@ void SparcInstPrinter::printOperand(const MCInst *MI, int opNum,
   const MCOperand &MO = MI->getOperand (opNum);
 
   if (MO.isReg()) {
-    unsigned Reg = MO.getReg();
+    MCRegister Reg = MO.getReg();
     if (isV9(STI))
       printRegName(O, Reg, SP::RegNamesStateReg);
     else
@@ -250,6 +249,17 @@ void SparcInstPrinter::printASITag(const MCInst *MI, int opNum,
   auto ASITag = SparcASITag::lookupASITagByEncoding(Imm);
   if (isV9(STI) && ASITag)
     O << '#' << ASITag->Name;
+  else
+    O << Imm;
+}
+
+void SparcInstPrinter::printPrefetchTag(const MCInst *MI, int opNum,
+                                        const MCSubtargetInfo &STI,
+                                        raw_ostream &O) {
+  unsigned Imm = MI->getOperand(opNum).getImm();
+  auto PrefetchTag = SparcPrefetchTag::lookupPrefetchTagByEncoding(Imm);
+  if (PrefetchTag)
+    O << '#' << PrefetchTag->Name;
   else
     O << Imm;
 }

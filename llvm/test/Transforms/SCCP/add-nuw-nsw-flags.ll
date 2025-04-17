@@ -43,7 +43,7 @@ define <4 x i8> @range_from_lshr_vec(<4 x i8> %a) {
 ; CHECK-LABEL: @range_from_lshr_vec(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A_SHR:%.*]] = lshr <4 x i8> [[A:%.*]], <i8 1, i8 2, i8 3, i8 4>
-; CHECK-NEXT:    [[ADD_1:%.*]] = add <4 x i8> [[A_SHR]], <i8 1, i8 2, i8 3, i8 4>
+; CHECK-NEXT:    [[ADD_1:%.*]] = add nuw <4 x i8> [[A_SHR]], <i8 1, i8 2, i8 3, i8 4>
 ; CHECK-NEXT:    ret <4 x i8> [[ADD_1]]
 ;
 entry:
@@ -55,8 +55,8 @@ entry:
 define <4 x i8> @range_from_lshr_vec_2(<4 x i8> %a) {
 ; CHECK-LABEL: @range_from_lshr_vec_2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[A_SHR:%.*]] = lshr <4 x i8> [[A:%.*]], <i8 1, i8 1, i8 1, i8 1>
-; CHECK-NEXT:    [[ADD_1:%.*]] = add <4 x i8> [[A_SHR]], <i8 2, i8 2, i8 2, i8 2>
+; CHECK-NEXT:    [[A_SHR:%.*]] = lshr <4 x i8> [[A:%.*]], splat (i8 1)
+; CHECK-NEXT:    [[ADD_1:%.*]] = add nuw <4 x i8> [[A_SHR]], splat (i8 2)
 ; CHECK-NEXT:    ret <4 x i8> [[ADD_1]]
 ;
 entry:
@@ -169,7 +169,7 @@ else:
 define <6 x i8> @vector_constant_replacement_in_add(<6 x i8> %a) {
 ; CHECK-LABEL: @vector_constant_replacement_in_add(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ADD:%.*]] = add <6 x i8> [[A:%.*]], zeroinitializer
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw <6 x i8> [[A:%.*]], zeroinitializer
 ; CHECK-NEXT:    ret <6 x i8> [[ADD]]
 ;
 entry:
@@ -196,7 +196,7 @@ entry:
 define internal <4 x i8> @test_propagate_argument(<4 x i8> %a, <4 x i8> %b) {
 ; CHECK-LABEL: @test_propagate_argument(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ADD:%.*]] = add <4 x i8> [[A:%.*]], <i8 3, i8 3, i8 3, i8 3>
+; CHECK-NEXT:    [[ADD:%.*]] = add <4 x i8> [[A:%.*]], splat (i8 3)
 ; CHECK-NEXT:    ret <4 x i8> [[ADD]]
 ;
 entry:
@@ -206,7 +206,7 @@ entry:
 
 define <4 x i8> @test_propagate_caller(<4 x i8> %a) {
 ; CHECK-LABEL: @test_propagate_caller(
-; CHECK-NEXT:    [[RES_1:%.*]] = call <4 x i8> @test_propagate_argument(<4 x i8> [[A:%.*]], <4 x i8> <i8 3, i8 3, i8 3, i8 3>)
+; CHECK-NEXT:    [[RES_1:%.*]] = call <4 x i8> @test_propagate_argument(<4 x i8> [[A:%.*]], <4 x i8> splat (i8 3))
 ; CHECK-NEXT:    ret <4 x i8> [[RES_1]]
 ;
   %add = add <4 x i8> <i8 1, i8 1, i8 1, i8 1>, <i8 2, i8 2, i8 2, i8 2>
@@ -239,4 +239,33 @@ then:
 
 else:
   ret i16 0
+}
+
+define i1 @test_add_nuw_sub(i32 %a) {
+; CHECK-LABEL: @test_add_nuw_sub(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw i32 [[A:%.*]], 10000
+; CHECK-NEXT:    [[SUB:%.*]] = add i32 [[ADD]], -5000
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  %add = add nuw i32 %a, 10000
+  %sub = add i32 %add, -5000
+  %cond = icmp ult i32 %sub, 5000
+  ret i1 %cond
+}
+
+define i1 @test_add_nsw_sub(i32 %a) {
+; CHECK-LABEL: @test_add_nsw_sub(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[A:%.*]], 10000
+; CHECK-NEXT:    [[SUB:%.*]] = add nsw i32 [[ADD]], -5000
+; CHECK-NEXT:    [[COND:%.*]] = icmp ult i32 [[SUB]], 5000
+; CHECK-NEXT:    ret i1 [[COND]]
+;
+entry:
+  %add = add nsw i32 %a, 10000
+  %sub = add i32 %add, -5000
+  %cond = icmp ult i32 %sub, 5000
+  ret i1 %cond
 }

@@ -478,6 +478,44 @@ func.func @simple_arith.ceildivsi() -> (i32, i32, i32, i32, i32) {
 
 // -----
 
+// CHECK-LABEL: func @simple_arith.ceildivsi_overflow
+func.func @simple_arith.ceildivsi_overflow() -> (i8, i16, i32) {
+  // The negative values below are MININTs for the corresponding bit-width. The
+  // folder will try to negate them (so that the division operates on two
+  // positive numbers), but that would cause overflow (negating MININT
+  // overflows). Hence folding should not happen and the original ceildivsi is
+  // preserved.
+
+  // TODO: The folder should be able to fold the following by avoiding
+  // intermediate operations that overflow.
+
+  // CHECK-DAG: %[[C_1:.*]] = arith.constant 7 : i8
+  // CHECK-DAG: %[[MIN_I8:.*]] = arith.constant -128 : i8
+  // CHECK-DAG: %[[C_2:.*]] = arith.constant 7 : i16
+  // CHECK-DAG: %[[MIN_I16:.*]] = arith.constant -32768 : i16
+  // CHECK-DAG: %[[C_3:.*]] = arith.constant 7 : i32
+  // CHECK-DAG: %[[MIN_I32:.*]] = arith.constant -2147483648 : i32
+
+  // CHECK-NEXT: %[[CEILDIV_1:.*]] = arith.ceildivsi %[[MIN_I8]], %[[C_1]]  : i8
+  %0 = arith.constant 7 : i8
+  %min_int_i8 = arith.constant -128 : i8
+  %2 = arith.ceildivsi %min_int_i8, %0 : i8
+
+  // CHECK-NEXT: %[[CEILDIV_2:.*]] = arith.ceildivsi %[[MIN_I16]], %[[C_2]]  : i16
+  %3 = arith.constant 7 : i16
+  %min_int_i16 = arith.constant -32768 : i16
+  %5 = arith.ceildivsi %min_int_i16, %3 : i16
+
+  // CHECK-NEXT: %[[CEILDIV_2:.*]] = arith.ceildivsi %[[MIN_I32]], %[[C_3]]  : i32
+  %6 = arith.constant 7 : i32
+  %min_int_i32 = arith.constant -2147483648 : i32
+  %8 = arith.ceildivsi %min_int_i32, %6 : i32
+
+  return %2, %5, %8 : i8, i16, i32
+}
+
+// -----
+
 // CHECK-LABEL: func @simple_arith.ceildivui
 func.func @simple_arith.ceildivui() -> (i32, i32, i32, i32, i32) {
   // CHECK-DAG: [[C0:%.+]] = arith.constant 0
@@ -756,12 +794,15 @@ func.func @cmpf_inf() -> (i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1
 
 // CHECK-LABEL: func @nested_isolated_region
 func.func @nested_isolated_region() {
+  // CHECK-NEXT: builtin.module {
   // CHECK-NEXT: func @isolated_op
   // CHECK-NEXT: arith.constant 2
-  func.func @isolated_op() {
-    %0 = arith.constant 1 : i32
-    %2 = arith.addi %0, %0 : i32
-    "foo.yield"(%2) : (i32) -> ()
+  builtin.module {
+    func.func @isolated_op() {
+      %0 = arith.constant 1 : i32
+      %2 = arith.addi %0, %0 : i32
+      "foo.yield"(%2) : (i32) -> ()
+    }
   }
 
   // CHECK: "foo.unknown_region"

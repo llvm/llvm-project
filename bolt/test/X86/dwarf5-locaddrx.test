@@ -12,8 +12,8 @@
 ; RUN: llvm-dwarfdump --show-form --verbose --debug-info mainlocadddrx.dwo | FileCheck -check-prefix=PRE-BOLT-DWO %s
 ; RUN: llvm-dwarfdump --show-form --verbose --debug-info mainlocadddrx.dwo.dwo | FileCheck -check-prefix=BOLT-DWO %s
 
-; Testing dwarf5 split dwarf. Making sure DW_AT_low_pc/DW_AT_high_pc are converted correctly in the binary and in dwo.
-; Checking that DW_AT_location [DW_FORM_exprloc]	(DW_OP_addrx 0x0) is updated correctly.
+;; Testing dwarf5 split dwarf. Making sure DW_AT_low_pc/DW_AT_high_pc are converted correctly in the binary and in dwo.
+;; Checking that DW_AT_location [DW_FORM_exprloc]	(DW_OP_addrx 0x0) is updated correctly.
 
 ; PRE-BOLT: version = 0x0005
 ; PRE-BOLT: DW_TAG_skeleton_unit

@@ -1,4 +1,4 @@
-; RUN: not mlir-translate -import-llvm -emit-expensive-warnings -split-input-file %s 2>&1 | FileCheck %s
+; RUN: not mlir-translate -import-llvm -emit-expensive-warnings -split-input-file %s 2>&1 -o /dev/null | FileCheck %s
 
 ; CHECK:      <unknown>
 ; CHECK-SAME: error: unhandled instruction: indirectbr ptr %dst, [label %bb1, label %bb2]
@@ -12,62 +12,17 @@ bb2:
 
 ; // -----
 
-; CHECK:      <unknown>
-; CHECK-SAME: error: unhandled value: ptr asm "bswap $0", "=r,r"
-define i32 @unhandled_value(i32 %arg1) {
-  %1 = call i32 asm "bswap $0", "=r,r"(i32 %arg1)
-  ret i32 %1
-}
-
-; // -----
-
-; CHECK:      <unknown>
-; CHECK-SAME: unhandled constant: ptr blockaddress(@unhandled_constant, %bb1) since blockaddress(...) is unsupported
-; CHECK:      <unknown>
-; CHECK-SAME: error: unhandled instruction: ret ptr blockaddress(@unhandled_constant, %bb1)
-define ptr @unhandled_constant() {
-  br label %bb1
-bb1:
-  ret ptr blockaddress(@unhandled_constant, %bb1)
-}
-
-; // -----
-
-; CHECK:      <unknown>
-; CHECK-SAME: unhandled constant: ptr blockaddress(@unhandled_global, %bb1) since blockaddress(...) is unsupported
-; CHECK:      <unknown>
-; CHECK-SAME: error: unhandled global variable: @private = private global ptr blockaddress(@unhandled_global, %bb1)
-@private = private global ptr blockaddress(@unhandled_global, %bb1)
-
-define void @unhandled_global() {
-  br label %bb1
-bb1:
-  ret void
-}
-
-; // -----
-
-declare void @llvm.gcroot(ptr %arg1, ptr %arg2)
-
-; CHECK:      <unknown>
-; CHECK-SAME: error: unhandled intrinsic: call void @llvm.gcroot(ptr %arg1, ptr null)
-define void @unhandled_intrinsic() gc "example" {
-  %arg1 = alloca ptr
-  call void @llvm.gcroot(ptr %arg1, ptr null)
-  ret void
-}
-
-; // -----
+; Check that debug intrinsics with an unsupported argument are dropped.
 
 declare void @llvm.dbg.value(metadata, metadata, metadata)
 
 ; CHECK:      import-failure.ll
-; CHECK-SAME: warning: dropped intrinsic: call void @llvm.dbg.value(metadata !DIArgList(i64 %arg1, i64 undef), metadata !3, metadata !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_constu, 1, DW_OP_mul, DW_OP_plus, DW_OP_stack_value)), !dbg !5
+; CHECK-SAME: warning: dropped intrinsic: tail call void @llvm.dbg.value(metadata !DIArgList(i64 %{{.*}}, i64 undef), metadata !3, metadata !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_constu, 1, DW_OP_mul, DW_OP_plus, DW_OP_stack_value))
 ; CHECK:      import-failure.ll
-; CHECK-SAME: warning: dropped intrinsic: call void @llvm.dbg.value(metadata !6, metadata !3, metadata !DIExpression()), !dbg !5
-define void @dropped_instruction(i64 %arg1) {
-  call void @llvm.dbg.value(metadata !DIArgList(i64 %arg1, i64 undef), metadata !3, metadata !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_constu, 1, DW_OP_mul, DW_OP_plus, DW_OP_stack_value)), !dbg !5
-  call void @llvm.dbg.value(metadata !6, metadata !3, metadata !DIExpression()), !dbg !5
+; CHECK-SAME: warning: dropped intrinsic: tail call void @llvm.dbg.value(metadata !6, metadata !3, metadata !DIExpression())
+define void @unsupported_argument(i64 %arg1) {
+  tail call void @llvm.dbg.value(metadata !DIArgList(i64 %arg1, i64 undef), metadata !3, metadata !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_constu, 1, DW_OP_mul, DW_OP_plus, DW_OP_stack_value)), !dbg !5
+  tail call void @llvm.dbg.value(metadata !6, metadata !3, metadata !DIExpression()), !dbg !5
   ret void
 }
 
@@ -80,17 +35,6 @@ define void @dropped_instruction(i64 %arg1) {
 !4 = distinct !DISubprogram(name: "intrinsic", scope: !2, file: !2, spFlags: DISPFlagDefinition, unit: !1)
 !5 = !DILocation(line: 1, column: 2, scope: !4)
 !6 = !{}
-
-; // -----
-
-; global_dtors with non-null data fields cannot be represented in MLIR.
-; CHECK:      <unknown>
-; CHECK-SAME: error: unhandled global variable: @llvm.global_dtors
-@llvm.global_dtors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 0, ptr @foo, ptr @foo }]
-
-define void @foo() {
-  ret void
-}
 
 ; // -----
 
@@ -358,11 +302,61 @@ declare void @llvm.experimental.noalias.scope.decl(metadata)
 ; // -----
 
 ; CHECK:      import-failure.ll
-; CHECK-SAME: error: cannot translate data layout: i8:8:8:8
-target datalayout = "e-i8:8:8:8"
+; CHECK-SAME: dereferenceable metadata operand must be a non-negative constant integer
+define void @deref(i64 %0) {
+  %2 = inttoptr i64 %0 to ptr, !dereferenceable !0
+  ret void
+}
+
+!0 = !{i64 -4}
 
 ; // -----
 
 ; CHECK:      import-failure.ll
 ; CHECK-SAME: warning: unhandled data layout token: ni:42
 target datalayout = "e-ni:42-i64:64"
+
+; // -----
+
+; CHECK:      import-failure.ll
+; CHECK-SAME: malformed specification, must be of the form "m:<mangling>"
+target datalayout = "e-m-i64:64"
+
+; // -----
+
+; CHECK:      <unknown>
+; CHECK-SAME: incompatible call and callee types: '!llvm.func<void (i64)>' and '!llvm.func<void (ptr)>'
+define void @incompatible_call_and_callee_types() {
+  call void @callee(i64 0)
+  ret void
+}
+
+declare void @callee(ptr)
+
+; // -----
+
+; CHECK:      <unknown>
+; CHECK-SAME: incompatible call and callee types: '!llvm.func<void ()>' and '!llvm.func<i32 ()>'
+define void @f() personality ptr @__gxx_personality_v0 {
+entry:
+  invoke void @g() to label %bb1 unwind label %bb2
+bb1:
+  ret void
+bb2:
+  %0 = landingpad i32 cleanup
+  unreachable
+}
+
+declare i32 @g()
+
+declare i32 @__gxx_personality_v0(...)
+
+; // -----
+
+@g = private global ptr blockaddress(@fn, %bb1)
+define void @fn() {
+  ret void
+; CHECK: unreachable block 'bb1' with address taken
+bb1:
+  ret void
+}

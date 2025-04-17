@@ -136,8 +136,8 @@ done:
 
 ; GCN-LABEL: {{^}}test_sink_scratch_small_offset_i32:
 ; GCN: s_and_saveexec_b64
-; GCN: buffer_store_dword {{v[0-9]+}}, off, {{s\[[0-9]+:[0-9]+\]}}, 0 offset:4092{{$}}
-; GCN: buffer_load_dword {{v[0-9]+}}, off, {{s\[[0-9]+:[0-9]+\]}}, 0 offset:4092 glc{{$}}
+; GCN: buffer_store_dword {{v[0-9]+}}, off, {{s\[[0-9]+:[0-9]+\]}}, 0 offset:4088{{$}}
+; GCN: buffer_load_dword {{v[0-9]+}}, off, {{s\[[0-9]+:[0-9]+\]}}, 0 offset:4088 glc{{$}}
 ; GCN: {{^}}.LBB4_2:
 define amdgpu_kernel void @test_sink_scratch_small_offset_i32(ptr addrspace(1) %out, ptr addrspace(1) %in, i32 %arg) {
 entry:
@@ -166,7 +166,8 @@ done:
   ret void
 }
 
-; This ends up not fitting due to the reserved 4 bytes at offset 0
+; This used to be a special case when the scavenge slot was
+; fixed at offset 0.
 ; OPT-LABEL: @test_sink_scratch_small_offset_i32_reserved(
 ; OPT-NOT:  getelementptr [512 x i32]
 ; OPT: br i1
@@ -174,10 +175,8 @@ done:
 
 ; GCN-LABEL: {{^}}test_sink_scratch_small_offset_i32_reserved:
 ; GCN: s_and_saveexec_b64
-; GCN: v_mov_b32_e32 [[BASE_FI0:v[0-9]+]], 4
-; GCN: buffer_store_dword {{v[0-9]+}}, [[BASE_FI0]], {{s\[[0-9]+:[0-9]+\]}}, 0 offen offset:4092{{$}}
-; GCN: v_mov_b32_e32 [[BASE_FI1:v[0-9]+]], 4
-; GCN: buffer_load_dword {{v[0-9]+}}, [[BASE_FI1]], {{s\[[0-9]+:[0-9]+\]}}, 0 offen offset:4092 glc{{$}}
+; GCN: buffer_store_dword {{v[0-9]+}}, off, {{s\[[0-9]+:[0-9]+\]}}, 0 offset:4092{{$}}
+; GCN: buffer_load_dword {{v[0-9]+}}, off, {{s\[[0-9]+:[0-9]+\]}}, 0 offset:4092 glc{{$}}
 ; GCN: {{^.LBB[0-9]+}}_2:
 
 define amdgpu_kernel void @test_sink_scratch_small_offset_i32_reserved(ptr addrspace(1) %out, ptr addrspace(1) %in, i32 %arg) {
@@ -582,7 +581,7 @@ done:
 
 ; OPT-LABEL: @test_sink_local_small_offset_cmpxchg_i32(
 ; OPT: %sunkaddr = getelementptr i8, ptr addrspace(3) %in, i32 28
-; OPT: %tmp1.struct = cmpxchg ptr addrspace(3) %sunkaddr, i32 undef, i32 2 seq_cst monotonic
+; OPT: %tmp1.struct = cmpxchg ptr addrspace(3) %sunkaddr, i32 poison, i32 2 seq_cst monotonic
 define amdgpu_kernel void @test_sink_local_small_offset_cmpxchg_i32(ptr addrspace(3) %out, ptr addrspace(3) %in) {
 entry:
   %out.gep = getelementptr i32, ptr addrspace(3) %out, i32 999999
@@ -592,7 +591,7 @@ entry:
   br i1 %tmp0, label %endif, label %if
 
 if:
-  %tmp1.struct = cmpxchg ptr addrspace(3) %in.gep, i32 undef, i32 2 seq_cst monotonic
+  %tmp1.struct = cmpxchg ptr addrspace(3) %in.gep, i32 poison, i32 2 seq_cst monotonic
   %tmp1 = extractvalue { i32, i1 } %tmp1.struct, 0
   br label %endif
 
@@ -608,7 +607,7 @@ done:
 ; OPT-LABEL: @test_wrong_operand_local_small_offset_cmpxchg_i32(
 ; OPT: %in.gep = getelementptr i32, ptr addrspace(3) %in, i32 7
 ; OPT: br i1
-; OPT: cmpxchg ptr addrspace(3) undef, ptr addrspace(3) %in.gep, ptr addrspace(3) undef seq_cst monotonic
+; OPT: cmpxchg ptr addrspace(3) poison, ptr addrspace(3) %in.gep, ptr addrspace(3) poison seq_cst monotonic
 define amdgpu_kernel void @test_wrong_operand_local_small_offset_cmpxchg_i32(ptr addrspace(3) %out, ptr addrspace(3) %in) {
 entry:
   %out.gep = getelementptr ptr addrspace(3), ptr addrspace(3) %out, i32 999999
@@ -618,7 +617,7 @@ entry:
   br i1 %tmp0, label %endif, label %if
 
 if:
-  %tmp1.struct = cmpxchg ptr addrspace(3) undef, ptr addrspace(3) %in.gep, ptr addrspace(3) undef seq_cst monotonic
+  %tmp1.struct = cmpxchg ptr addrspace(3) poison, ptr addrspace(3) %in.gep, ptr addrspace(3) poison seq_cst monotonic
   %tmp1 = extractvalue { ptr addrspace(3), i1 } %tmp1.struct, 0
   br label %endif
 

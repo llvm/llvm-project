@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=mipsel-linux-gnu -march=mipsel -mattr=mips16 -relocation-model=static < %s | FileCheck %s -check-prefix=stel
+; RUN: llc -mtriple=mipsel-linux-gnu -mattr=mips16 -relocation-model=static < %s | FileCheck %s -check-prefix=stel
 
 @x = common global float 0.000000e+00, align 4
 @y = common global float 0.000000e+00, align 4
@@ -33,29 +33,29 @@ entry:
   store float 1.000000e+00, ptr @y, align 4
   store double 1.000000e+00, ptr @xd, align 8
   store double 1.000000e+00, ptr @yd, align 8
-  store float 1.000000e+00, ptr getelementptr inbounds ({ float, float }, ptr @xy, i32 0, i32 0)
+  store float 1.000000e+00, ptr @xy
   store float 0.000000e+00, ptr getelementptr inbounds ({ float, float }, ptr @xy, i32 0, i32 1)
-  store double 1.000000e+00, ptr getelementptr inbounds ({ double, double }, ptr @xyd, i32 0, i32 0)
+  store double 1.000000e+00, ptr @xyd
   store double 0.000000e+00, ptr getelementptr inbounds ({ double, double }, ptr @xyd, i32 0, i32 1)
   store float 1.000000e+00, ptr @ret_sf, align 4
   store double 1.000000e+00, ptr @ret_df, align 8
-  store float 1.000000e+00, ptr getelementptr inbounds ({ float, float }, ptr @ret_sc, i32 0, i32 0)
+  store float 1.000000e+00, ptr @ret_sc
   store float 0.000000e+00, ptr getelementptr inbounds ({ float, float }, ptr @ret_sc, i32 0, i32 1)
-  store double 1.000000e+00, ptr getelementptr inbounds ({ double, double }, ptr @ret_dc, i32 0, i32 0)
+  store double 1.000000e+00, ptr @ret_dc
   store double 0.000000e+00, ptr getelementptr inbounds ({ double, double }, ptr @ret_dc, i32 0, i32 1)
   store float 0.000000e+00, ptr @lx, align 4
   store float 0.000000e+00, ptr @ly, align 4
   store double 0.000000e+00, ptr @lxd, align 8
   store double 0.000000e+00, ptr @lyd, align 8
-  store float 0.000000e+00, ptr getelementptr inbounds ({ float, float }, ptr @lxy, i32 0, i32 0)
+  store float 0.000000e+00, ptr @lxy
   store float 0.000000e+00, ptr getelementptr inbounds ({ float, float }, ptr @lxy, i32 0, i32 1)
-  store double 0.000000e+00, ptr getelementptr inbounds ({ double, double }, ptr @lxyd, i32 0, i32 0)
+  store double 0.000000e+00, ptr @lxyd
   store double 0.000000e+00, ptr getelementptr inbounds ({ double, double }, ptr @lxyd, i32 0, i32 1)
   store float 0.000000e+00, ptr @lret_sf, align 4
   store double 0.000000e+00, ptr @lret_df, align 8
-  store float 0.000000e+00, ptr getelementptr inbounds ({ float, float }, ptr @lret_sc, i32 0, i32 0)
+  store float 0.000000e+00, ptr @lret_sc
   store float 0.000000e+00, ptr getelementptr inbounds ({ float, float }, ptr @lret_sc, i32 0, i32 1)
-  store double 0.000000e+00, ptr getelementptr inbounds ({ double, double }, ptr @lret_dc, i32 0, i32 0)
+  store double 0.000000e+00, ptr @lret_dc
   store double 0.000000e+00, ptr getelementptr inbounds ({ double, double }, ptr @lret_dc, i32 0, i32 1)
   ret void
 }
@@ -599,32 +599,32 @@ land.end198:                                      ; preds = %land.rhs195, %land.
   %land.ext199 = zext i1 %214 to i32
   %call200 = call i32 (ptr, ...) @printf(ptr @.str2, double %202, double %203, double %204, double %205, double %206, double %207, i32 %land.ext199)
   call void @clear()
-  store float 4.500000e+00, ptr getelementptr inbounds ({ float, float }, ptr @ret_sc, i32 0, i32 0)
+  store float 4.500000e+00, ptr @ret_sc
   store float 7.000000e+00, ptr getelementptr inbounds ({ float, float }, ptr @ret_sc, i32 0, i32 1)
   %call201 = call { float, float } @sc_v()
   %215 = extractvalue { float, float } %call201, 0
   %216 = extractvalue { float, float } %call201, 1
-  store float %215, ptr getelementptr inbounds ({ float, float }, ptr @lret_sc, i32 0, i32 0)
+  store float %215, ptr @lret_sc
   store float %216, ptr getelementptr inbounds ({ float, float }, ptr @lret_sc, i32 0, i32 1)
-  %ret_sc.real = load float, ptr getelementptr inbounds ({ float, float }, ptr @ret_sc, i32 0, i32 0)
+  %ret_sc.real = load float, ptr @ret_sc
   %ret_sc.imag = load float, ptr getelementptr inbounds ({ float, float }, ptr @ret_sc, i32 0, i32 1)
   %conv202 = fpext float %ret_sc.real to double
   %conv203 = fpext float %ret_sc.imag to double
-  %ret_sc.real204 = load float, ptr getelementptr inbounds ({ float, float }, ptr @ret_sc, i32 0, i32 0)
+  %ret_sc.real204 = load float, ptr @ret_sc
   %ret_sc.imag205 = load float, ptr getelementptr inbounds ({ float, float }, ptr @ret_sc, i32 0, i32 1)
   %conv206 = fpext float %ret_sc.real204 to double
   %conv207 = fpext float %ret_sc.imag205 to double
-  %lret_sc.real = load float, ptr getelementptr inbounds ({ float, float }, ptr @lret_sc, i32 0, i32 0)
+  %lret_sc.real = load float, ptr @lret_sc
   %lret_sc.imag = load float, ptr getelementptr inbounds ({ float, float }, ptr @lret_sc, i32 0, i32 1)
   %conv208 = fpext float %lret_sc.real to double
   %conv209 = fpext float %lret_sc.imag to double
-  %lret_sc.real210 = load float, ptr getelementptr inbounds ({ float, float }, ptr @lret_sc, i32 0, i32 0)
+  %lret_sc.real210 = load float, ptr @lret_sc
   %lret_sc.imag211 = load float, ptr getelementptr inbounds ({ float, float }, ptr @lret_sc, i32 0, i32 1)
   %conv212 = fpext float %lret_sc.real210 to double
   %conv213 = fpext float %lret_sc.imag211 to double
-  %ret_sc.real214 = load float, ptr getelementptr inbounds ({ float, float }, ptr @ret_sc, i32 0, i32 0)
+  %ret_sc.real214 = load float, ptr @ret_sc
   %ret_sc.imag215 = load float, ptr getelementptr inbounds ({ float, float }, ptr @ret_sc, i32 0, i32 1)
-  %lret_sc.real216 = load float, ptr getelementptr inbounds ({ float, float }, ptr @lret_sc, i32 0, i32 0)
+  %lret_sc.real216 = load float, ptr @lret_sc
   %lret_sc.imag217 = load float, ptr getelementptr inbounds ({ float, float }, ptr @lret_sc, i32 0, i32 1)
   %cmp.r = fcmp oeq float %ret_sc.real214, %lret_sc.real216
   %cmp.i = fcmp oeq float %ret_sc.imag215, %lret_sc.imag217
@@ -633,27 +633,27 @@ land.end198:                                      ; preds = %land.rhs195, %land.
   %call219 = call i32 (ptr, ...) @printf(ptr @.str3, double %conv202, double %conv207, double %conv208, double %conv213, i32 %conv218)
   call void @clear()
   store float 0x3FF7A99300000000, ptr @lx, align 4
-  store float 4.500000e+00, ptr getelementptr inbounds ({ float, float }, ptr @ret_sc, i32 0, i32 0)
+  store float 4.500000e+00, ptr @ret_sc
   store float 7.000000e+00, ptr getelementptr inbounds ({ float, float }, ptr @ret_sc, i32 0, i32 1)
   %217 = load float, ptr @lx, align 4
   %call220 = call { float, float } @sc_sf(float %217)
   %218 = extractvalue { float, float } %call220, 0
   %219 = extractvalue { float, float } %call220, 1
-  store float %218, ptr getelementptr inbounds ({ float, float }, ptr @lret_sc, i32 0, i32 0)
+  store float %218, ptr @lret_sc
   store float %219, ptr getelementptr inbounds ({ float, float }, ptr @lret_sc, i32 0, i32 1)
-  %ret_sc.real221 = load float, ptr getelementptr inbounds ({ float, float }, ptr @ret_sc, i32 0, i32 0)
+  %ret_sc.real221 = load float, ptr @ret_sc
   %ret_sc.imag222 = load float, ptr getelementptr inbounds ({ float, float }, ptr @ret_sc, i32 0, i32 1)
   %conv223 = fpext float %ret_sc.real221 to double
   %conv224 = fpext float %ret_sc.imag222 to double
-  %ret_sc.real225 = load float, ptr getelementptr inbounds ({ float, float }, ptr @ret_sc, i32 0, i32 0)
+  %ret_sc.real225 = load float, ptr @ret_sc
   %ret_sc.imag226 = load float, ptr getelementptr inbounds ({ float, float }, ptr @ret_sc, i32 0, i32 1)
   %conv227 = fpext float %ret_sc.real225 to double
   %conv228 = fpext float %ret_sc.imag226 to double
-  %lret_sc.real229 = load float, ptr getelementptr inbounds ({ float, float }, ptr @lret_sc, i32 0, i32 0)
+  %lret_sc.real229 = load float, ptr @lret_sc
   %lret_sc.imag230 = load float, ptr getelementptr inbounds ({ float, float }, ptr @lret_sc, i32 0, i32 1)
   %conv231 = fpext float %lret_sc.real229 to double
   %conv232 = fpext float %lret_sc.imag230 to double
-  %lret_sc.real233 = load float, ptr getelementptr inbounds ({ float, float }, ptr @lret_sc, i32 0, i32 0)
+  %lret_sc.real233 = load float, ptr @lret_sc
   %lret_sc.imag234 = load float, ptr getelementptr inbounds ({ float, float }, ptr @lret_sc, i32 0, i32 1)
   %conv235 = fpext float %lret_sc.real233 to double
   %conv236 = fpext float %lret_sc.imag234 to double
@@ -661,9 +661,9 @@ land.end198:                                      ; preds = %land.rhs195, %land.
   %conv237 = fpext float %220 to double
   %221 = load float, ptr @lx, align 4
   %conv238 = fpext float %221 to double
-  %ret_sc.real239 = load float, ptr getelementptr inbounds ({ float, float }, ptr @ret_sc, i32 0, i32 0)
+  %ret_sc.real239 = load float, ptr @ret_sc
   %ret_sc.imag240 = load float, ptr getelementptr inbounds ({ float, float }, ptr @ret_sc, i32 0, i32 1)
-  %lret_sc.real241 = load float, ptr getelementptr inbounds ({ float, float }, ptr @lret_sc, i32 0, i32 0)
+  %lret_sc.real241 = load float, ptr @lret_sc
   %lret_sc.imag242 = load float, ptr getelementptr inbounds ({ float, float }, ptr @lret_sc, i32 0, i32 1)
   %cmp.r243 = fcmp oeq float %ret_sc.real239, %lret_sc.real241
   %cmp.i244 = fcmp oeq float %ret_sc.imag240, %lret_sc.imag242
@@ -681,24 +681,24 @@ land.end250:                                      ; preds = %land.rhs247, %land.
   %land.ext251 = zext i1 %224 to i32
   %call252 = call i32 (ptr, ...) @printf(ptr @.str4, double %conv223, double %conv228, double %conv231, double %conv236, double %conv237, double %conv238, i32 %land.ext251)
   call void @clear()
-  store double 1.234500e+03, ptr getelementptr inbounds ({ double, double }, ptr @ret_dc, i32 0, i32 0)
+  store double 1.234500e+03, ptr @ret_dc
   store double 7.677000e+03, ptr getelementptr inbounds ({ double, double }, ptr @ret_dc, i32 0, i32 1)
   %call253 = call { double, double } @dc_v()
   %225 = extractvalue { double, double } %call253, 0
   %226 = extractvalue { double, double } %call253, 1
-  store double %225, ptr getelementptr inbounds ({ double, double }, ptr @lret_dc, i32 0, i32 0)
+  store double %225, ptr @lret_dc
   store double %226, ptr getelementptr inbounds ({ double, double }, ptr @lret_dc, i32 0, i32 1)
-  %ret_dc.real = load double, ptr getelementptr inbounds ({ double, double }, ptr @ret_dc, i32 0, i32 0)
+  %ret_dc.real = load double, ptr @ret_dc
   %ret_dc.imag = load double, ptr getelementptr inbounds ({ double, double }, ptr @ret_dc, i32 0, i32 1)
-  %ret_dc.real254 = load double, ptr getelementptr inbounds ({ double, double }, ptr @ret_dc, i32 0, i32 0)
+  %ret_dc.real254 = load double, ptr @ret_dc
   %ret_dc.imag255 = load double, ptr getelementptr inbounds ({ double, double }, ptr @ret_dc, i32 0, i32 1)
-  %lret_dc.real = load double, ptr getelementptr inbounds ({ double, double }, ptr @lret_dc, i32 0, i32 0)
+  %lret_dc.real = load double, ptr @lret_dc
   %lret_dc.imag = load double, ptr getelementptr inbounds ({ double, double }, ptr @lret_dc, i32 0, i32 1)
-  %lret_dc.real256 = load double, ptr getelementptr inbounds ({ double, double }, ptr @lret_dc, i32 0, i32 0)
+  %lret_dc.real256 = load double, ptr @lret_dc
   %lret_dc.imag257 = load double, ptr getelementptr inbounds ({ double, double }, ptr @lret_dc, i32 0, i32 1)
-  %ret_dc.real258 = load double, ptr getelementptr inbounds ({ double, double }, ptr @ret_dc, i32 0, i32 0)
+  %ret_dc.real258 = load double, ptr @ret_dc
   %ret_dc.imag259 = load double, ptr getelementptr inbounds ({ double, double }, ptr @ret_dc, i32 0, i32 1)
-  %lret_dc.real260 = load double, ptr getelementptr inbounds ({ double, double }, ptr @lret_dc, i32 0, i32 0)
+  %lret_dc.real260 = load double, ptr @lret_dc
   %lret_dc.imag261 = load double, ptr getelementptr inbounds ({ double, double }, ptr @lret_dc, i32 0, i32 1)
   %cmp.r262 = fcmp oeq double %ret_dc.real258, %lret_dc.real260
   %cmp.i263 = fcmp oeq double %ret_dc.imag259, %lret_dc.imag261
@@ -707,29 +707,29 @@ land.end250:                                      ; preds = %land.rhs247, %land.
   %call266 = call i32 (ptr, ...) @printf(ptr @.str3, double %ret_dc.real, double %ret_dc.imag255, double %lret_dc.real, double %lret_dc.imag257, i32 %conv265)
   call void @clear()
   store double 0x40AAF6F532617C1C, ptr @lxd, align 8
-  store double 4.444500e+03, ptr getelementptr inbounds ({ double, double }, ptr @ret_dc, i32 0, i32 0)
+  store double 4.444500e+03, ptr @ret_dc
   store double 7.888000e+03, ptr getelementptr inbounds ({ double, double }, ptr @ret_dc, i32 0, i32 1)
   %227 = load float, ptr @lx, align 4
   %call267 = call { double, double } @dc_sf(float %227)
   %228 = extractvalue { double, double } %call267, 0
   %229 = extractvalue { double, double } %call267, 1
-  store double %228, ptr getelementptr inbounds ({ double, double }, ptr @lret_dc, i32 0, i32 0)
+  store double %228, ptr @lret_dc
   store double %229, ptr getelementptr inbounds ({ double, double }, ptr @lret_dc, i32 0, i32 1)
-  %ret_dc.real268 = load double, ptr getelementptr inbounds ({ double, double }, ptr @ret_dc, i32 0, i32 0)
+  %ret_dc.real268 = load double, ptr @ret_dc
   %ret_dc.imag269 = load double, ptr getelementptr inbounds ({ double, double }, ptr @ret_dc, i32 0, i32 1)
-  %ret_dc.real270 = load double, ptr getelementptr inbounds ({ double, double }, ptr @ret_dc, i32 0, i32 0)
+  %ret_dc.real270 = load double, ptr @ret_dc
   %ret_dc.imag271 = load double, ptr getelementptr inbounds ({ double, double }, ptr @ret_dc, i32 0, i32 1)
-  %lret_dc.real272 = load double, ptr getelementptr inbounds ({ double, double }, ptr @lret_dc, i32 0, i32 0)
+  %lret_dc.real272 = load double, ptr @lret_dc
   %lret_dc.imag273 = load double, ptr getelementptr inbounds ({ double, double }, ptr @lret_dc, i32 0, i32 1)
-  %lret_dc.real274 = load double, ptr getelementptr inbounds ({ double, double }, ptr @lret_dc, i32 0, i32 0)
+  %lret_dc.real274 = load double, ptr @lret_dc
   %lret_dc.imag275 = load double, ptr getelementptr inbounds ({ double, double }, ptr @lret_dc, i32 0, i32 1)
   %230 = load float, ptr @x, align 4
   %conv276 = fpext float %230 to double
   %231 = load float, ptr @lx, align 4
   %conv277 = fpext float %231 to double
-  %ret_dc.real278 = load double, ptr getelementptr inbounds ({ double, double }, ptr @ret_dc, i32 0, i32 0)
+  %ret_dc.real278 = load double, ptr @ret_dc
   %ret_dc.imag279 = load double, ptr getelementptr inbounds ({ double, double }, ptr @ret_dc, i32 0, i32 1)
-  %lret_dc.real280 = load double, ptr getelementptr inbounds ({ double, double }, ptr @lret_dc, i32 0, i32 0)
+  %lret_dc.real280 = load double, ptr @lret_dc
   %lret_dc.imag281 = load double, ptr getelementptr inbounds ({ double, double }, ptr @lret_dc, i32 0, i32 1)
   %cmp.r282 = fcmp oeq double %ret_dc.real278, %lret_dc.real280
   %cmp.i283 = fcmp oeq double %ret_dc.imag279, %lret_dc.imag281

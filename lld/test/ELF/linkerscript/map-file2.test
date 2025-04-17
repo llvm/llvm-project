@@ -27,7 +27,7 @@ SECTIONS {
 # CHECK-NEXT:       1010             3000        8     1         {{.*}}{{/|\\}}map-file2.test.tmp.o:(.ccc)
 # CHECK-NEXT:       1018             3008      100     1 . += 0x100
 # CHECK-NEXT:       1118             3108      109     1 .ddd
-# CHECK-NEXT:       1118             3108        1     1         BYTE ( 0x11 )
+# CHECK-NEXT:       1118             3108        1     1         BYTE(0x11)
 # CHECK-NEXT:       1119             3109      100     1         . += 0x100
 # CHECK-NEXT:       1219             3209        8     1         {{.*}}{{/|\\}}map-file2.test.tmp.o:(.ddd)
 # CHECK-NEXT:       1228             3218       34     8 .eh_frame

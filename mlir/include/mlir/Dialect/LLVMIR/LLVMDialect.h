@@ -29,10 +29,11 @@
 #include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
+#include "mlir/Interfaces/ViewLikeInterface.h"
 #include "mlir/Support/ThreadLocalCache.h"
-#include "mlir/Transforms/Mem2Reg.h"
 #include "llvm/ADT/PointerEmbeddedInt.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
@@ -84,6 +85,13 @@ public:
 
   using BaseT::operator=;
 };
+} // namespace LLVM
+} // namespace mlir
+
+namespace mlir {
+namespace LLVM {
+struct AssumeAlignTag {};
+struct AssumeSeparateStorageTag {};
 } // namespace LLVM
 } // namespace mlir
 

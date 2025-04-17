@@ -228,6 +228,10 @@ def DontGenExecuteOnly : Predicate<"!Subtarget->genExecuteOnly()">;
 def GenT1ExecuteOnly : Predicate<"Subtarget->genExecuteOnly() && "
                                  "Subtarget->isThumb1Only() && "
                                  "!Subtarget->hasV8MBaselineOps()">;
+let RecomputePerFunction = 1 in {
+  def SignRetAddr : Predicate<[{ MF->getInfo<ARMFunctionInfo>()->shouldSignReturnAddress(true) }]>;
+  def NoSignRetAddr : Predicate<[{ !MF->getInfo<ARMFunctionInfo>()->shouldSignReturnAddress(true) }]>;
+}
 
 // Armv8.5-A extensions
 def HasSB            : Predicate<"Subtarget->hasSB()">,

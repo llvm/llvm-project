@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=mipsel-linux-gnu -march=mipsel -mcpu=mips32 -mattr=+mips16 -relocation-model=static < %s | FileCheck %s -check-prefix=static
+; RUN: llc -mtriple=mipsel-linux-gnu -mcpu=mips32 -mattr=+mips16 -relocation-model=static < %s | FileCheck %s -check-prefix=static
 
 @x = global i32 28912, align 4
 @y = common global i32 0, align 4

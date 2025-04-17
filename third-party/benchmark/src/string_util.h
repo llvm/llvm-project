@@ -4,15 +4,19 @@
 #include <sstream>
 #include <string>
 #include <utility>
+#include <vector>
 
+#include "benchmark/benchmark.h"
+#include "benchmark/export.h"
+#include "check.h"
 #include "internal_macros.h"
 
 namespace benchmark {
 
-void AppendHumanReadable(int n, std::string* str);
+BENCHMARK_EXPORT
+std::string HumanReadableNumber(double n, Counter::OneK one_k);
 
-std::string HumanReadableNumber(double n, double one_k = 1024.0);
-
+BENCHMARK_EXPORT
 #if defined(__MINGW32__)
 __attribute__((format(__MINGW_PRINTF_FORMAT, 1, 2)))
 #elif defined(__GNUC__)
@@ -38,6 +42,7 @@ inline std::string StrCat(Args&&... args) {
   return ss.str();
 }
 
+BENCHMARK_EXPORT
 std::vector<std::string> StrSplit(const std::string& str, char delim);
 
 // Disable lint checking for this block since it re-implements C functions.

@@ -15,18 +15,17 @@
 #define LLVM_ANALYSIS_PROFILESUMMARYINFO_H
 
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/ProfileSummary.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/BlockFrequency.h"
 #include <memory>
 #include <optional>
 
 namespace llvm {
-class BasicBlock;
-class CallBase;
+class BlockFrequencyInfo;
 class MachineFunction;
 
 /// Analysis providing profile information.
@@ -64,8 +63,9 @@ public:
   ProfileSummaryInfo(const Module &M) : M(&M) { refresh(); }
   ProfileSummaryInfo(ProfileSummaryInfo &&Arg) = default;
 
-  /// If no summary is present, attempt to refresh.
-  void refresh();
+  /// If a summary is provided as argument, use that. Otherwise,
+  /// if the `Summary` member is null, attempt to refresh.
+  void refresh(std::unique_ptr<ProfileSummary> &&Other = nullptr);
 
   /// Returns true if profile summary is available.
   bool hasProfileSummary() const { return Summary != nullptr; }

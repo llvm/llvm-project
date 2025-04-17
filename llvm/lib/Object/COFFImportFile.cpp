@@ -12,6 +12,8 @@
 
 #include "llvm/Object/COFFImportFile.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/ArchiveWriter.h"
@@ -52,6 +54,71 @@ StringRef COFFImportFile::getFileFormatName() const {
   }
 }
 
+static StringRef applyNameType(ImportNameType Type, StringRef name) {
+  auto ltrim1 = [](StringRef s, StringRef chars) {
+    return !s.empty() && chars.contains(s[0]) ? s.substr(1) : s;
+  };
+
+  switch (Type) {
+  case IMPORT_NAME_NOPREFIX:
+    name = ltrim1(name, "?@_");
+    break;
+  case IMPORT_NAME_UNDECORATE:
+    name = ltrim1(name, "?@_");
+    name = name.substr(0, name.find('@'));
+    break;
+  default:
+    break;
+  }
+  return name;
+}
+
+StringRef COFFImportFile::getExportName() const {
+  const coff_import_header *hdr = getCOFFImportHeader();
+  StringRef name = Data.getBuffer().substr(sizeof(*hdr)).split('\0').first;
+
+  switch (hdr->getNameType()) {
+  case IMPORT_ORDINAL:
+    name = "";
+    break;
+  case IMPORT_NAME_NOPREFIX:
+  case IMPORT_NAME_UNDECORATE:
+    name = applyNameType(static_cast<ImportNameType>(hdr->getNameType()), name);
+    break;
+  case IMPORT_NAME_EXPORTAS: {
+    // Skip DLL name
+    name = Data.getBuffer().substr(sizeof(*hdr) + name.size() + 1);
+    name = name.split('\0').second.split('\0').first;
+    break;
+  }
+  default:
+    break;
+  }
+
+  return name;
+}
+
+Error COFFImportFile::printSymbolName(raw_ostream &OS, DataRefImpl Symb) const {
+  switch (Symb.p) {
+  case ImpSymbol:
+    OS << "__imp_";
+    break;
+  case ECAuxSymbol:
+    OS << "__imp_aux_";
+    break;
+  }
+  const char *Name = Data.getBufferStart() + sizeof(coff_import_header);
+  if (Symb.p != ECThunkSymbol && COFF::isArm64EC(getMachine())) {
+    if (std::optional<std::string> DemangledName =
+            getArm64ECDemangledFunctionName(Name)) {
+      OS << StringRef(*DemangledName);
+      return Error::success();
+    }
+  }
+  OS << StringRef(Name);
+  return Error::success();
+}
+
 static uint16_t getImgRelRelocation(MachineTypes Machine) {
   switch (Machine) {
   default:
@@ -66,6 +133,8 @@ static uint16_t getImgRelRelocation(MachineTypes Machine) {
     return IMAGE_REL_ARM64_ADDR32NB;
   case IMAGE_FILE_MACHINE_I386:
     return IMAGE_REL_I386_DIR32NB;
+  case IMAGE_FILE_MACHINE_R4000:
+    return IMAGE_REL_MIPS_REFWORDNB;
   }
 }
 
@@ -76,7 +145,7 @@ template <class T> static void append(std::vector<uint8_t> &B, const T &Data) {
 }
 
 static void writeStringTable(std::vector<uint8_t> &B,
-                             ArrayRef<const std::string> Strings) {
+                             ArrayRef<const std::string_view> Strings) {
   // The COFF string table consists of a 4-byte value which is the size of the
   // table, including the length field itself.  This value is followed by the
   // string content itself, which is an array of null-terminated C-style
@@ -139,9 +208,6 @@ static Expected<std::string> replace(StringRef S, StringRef From,
   return (Twine(S.substr(0, Pos)) + To + S.substr(Pos + From.size())).str();
 }
 
-static const std::string NullImportDescriptorSymbolName =
-    "__NULL_IMPORT_DESCRIPTOR";
-
 namespace {
 // This class constructs various small object files necessary to support linking
 // symbols imported from a DLL.  The contents are pretty strictly defined and
@@ -160,8 +226,9 @@ class ObjectFactory {
 public:
   ObjectFactory(StringRef S, MachineTypes M)
       : NativeMachine(M), ImportName(S), Library(llvm::sys::path::stem(S)),
-        ImportDescriptorSymbolName(("__IMPORT_DESCRIPTOR_" + Library).str()),
-        NullThunkSymbolName(("\x7f" + Library + "_NULL_THUNK_DATA").str()) {}
+        ImportDescriptorSymbolName((ImportDescriptorPrefix + Library).str()),
+        NullThunkSymbolName(
+            (NullThunkDataPrefix + Library + NullThunkDataSuffix).str()) {}
 
   // Creates an Import Descriptor.  This is a small object file which contains a
   // reference to the terminators and contains the library name (entry) for the
@@ -183,6 +250,7 @@ public:
   // Library Format.
   NewArchiveMember createShortImport(StringRef Sym, uint16_t Ordinal,
                                      ImportType Type, ImportNameType NameType,
+                                     StringRef ExportName,
                                      MachineTypes Machine);
 
   // Create a weak external file which is described in PE/COFF Aux Format 3.
@@ -474,12 +542,13 @@ NewArchiveMember ObjectFactory::createNullThunk(std::vector<uint8_t> &Buffer) {
   return {MemoryBufferRef{F, ImportName}};
 }
 
-NewArchiveMember ObjectFactory::createShortImport(StringRef Sym,
-                                                  uint16_t Ordinal,
-                                                  ImportType ImportType,
-                                                  ImportNameType NameType,
-                                                  MachineTypes Machine) {
+NewArchiveMember
+ObjectFactory::createShortImport(StringRef Sym, uint16_t Ordinal,
+                                 ImportType ImportType, ImportNameType NameType,
+                                 StringRef ExportName, MachineTypes Machine) {
   size_t ImpSize = ImportName.size() + Sym.size() + 2; // +2 for NULs
+  if (!ExportName.empty())
+    ImpSize += ExportName.size() + 1;
   size_t Size = sizeof(coff_import_header) + ImpSize;
   char *Buf = Alloc.Allocate<char>(Size);
   memset(Buf, 0, Size);
@@ -499,6 +568,10 @@ NewArchiveMember ObjectFactory::createShortImport(StringRef Sym,
   memcpy(P, Sym.data(), Sym.size());
   P += Sym.size() + 1;
   memcpy(P, ImportName.data(), ImportName.size());
+  if (!ExportName.empty()) {
+    P += ImportName.size() + 1;
+    memcpy(P, ExportName.data(), ExportName.size());
+  }
 
   return {MemoryBufferRef(StringRef(Buf, Size), ImportName)};
 }
@@ -587,10 +660,14 @@ NewArchiveMember ObjectFactory::createWeakExternal(StringRef Sym,
 
 Error writeImportLibrary(StringRef ImportName, StringRef Path,
                          ArrayRef<COFFShortExport> Exports,
-                         MachineTypes Machine, bool MinGW) {
+                         MachineTypes Machine, bool MinGW,
+                         ArrayRef<COFFShortExport> NativeExports) {
 
-  MachineTypes NativeMachine =
-      isArm64EC(Machine) ? IMAGE_FILE_MACHINE_ARM64 : Machine;
+  MachineTypes NativeMachine = Machine;
+  if (isArm64EC(Machine)) {
+    NativeMachine = IMAGE_FILE_MACHINE_ARM64;
+    Machine = IMAGE_FILE_MACHINE_ARM64EC;
+  }
 
   std::vector<NewArchiveMember> Members;
   ObjectFactory OF(llvm::sys::path::filename(ImportName), NativeMachine);
@@ -604,42 +681,124 @@ Error writeImportLibrary(StringRef ImportName, StringRef Path,
   std::vector<uint8_t> NullThunk;
   Members.push_back(OF.createNullThunk(NullThunk));
 
-  for (const COFFShortExport &E : Exports) {
-    if (E.Private)
-      continue;
+  auto addExports = [&](ArrayRef<COFFShortExport> Exp,
+                        MachineTypes M) -> Error {
+    StringMap<std::string> RegularImports;
+    struct Deferred {
+      std::string Name;
+      ImportType ImpType;
+      const COFFShortExport *Export;
+    };
+    SmallVector<Deferred, 0> Renames;
+    for (const COFFShortExport &E : Exp) {
+      if (E.Private)
+        continue;
 
-    ImportType ImportType = IMPORT_CODE;
-    if (E.Data)
-      ImportType = IMPORT_DATA;
-    if (E.Constant)
-      ImportType = IMPORT_CONST;
+      ImportType ImportType = IMPORT_CODE;
+      if (E.Data)
+        ImportType = IMPORT_DATA;
+      if (E.Constant)
+        ImportType = IMPORT_CONST;
 
-    StringRef SymbolName = E.SymbolName.empty() ? E.Name : E.SymbolName;
-    ImportNameType NameType = E.Noname
-                                  ? IMPORT_ORDINAL
-                                  : getNameType(SymbolName, E.Name,
-                                                Machine, MinGW);
-    Expected<std::string> Name = E.ExtName.empty()
-                                     ? std::string(SymbolName)
-                                     : replace(SymbolName, E.Name, E.ExtName);
+      StringRef SymbolName = E.SymbolName.empty() ? E.Name : E.SymbolName;
+      std::string Name;
 
-    if (!Name)
-      return Name.takeError();
+      if (E.ExtName.empty()) {
+        Name = std::string(SymbolName);
+      } else {
+        Expected<std::string> ReplacedName =
+            object::replace(SymbolName, E.Name, E.ExtName);
+        if (!ReplacedName)
+          return ReplacedName.takeError();
+        Name.swap(*ReplacedName);
+      }
 
-    if (!E.AliasTarget.empty() && *Name != E.AliasTarget) {
-      Members.push_back(
-          OF.createWeakExternal(E.AliasTarget, *Name, false, Machine));
-      Members.push_back(
-          OF.createWeakExternal(E.AliasTarget, *Name, true, Machine));
-      continue;
+      ImportNameType NameType;
+      std::string ExportName;
+      if (E.Noname) {
+        NameType = IMPORT_ORDINAL;
+      } else if (!E.ExportAs.empty()) {
+        NameType = IMPORT_NAME_EXPORTAS;
+        ExportName = E.ExportAs;
+      } else if (!E.ImportName.empty()) {
+        // If we need to import from a specific ImportName, we may need to use
+        // a weak alias (which needs another import to point at). But if we can
+        // express ImportName based on the symbol name and a specific NameType,
+        // prefer that over an alias.
+        if (Machine == IMAGE_FILE_MACHINE_I386 &&
+            applyNameType(IMPORT_NAME_UNDECORATE, Name) == E.ImportName)
+          NameType = IMPORT_NAME_UNDECORATE;
+        else if (Machine == IMAGE_FILE_MACHINE_I386 &&
+                 applyNameType(IMPORT_NAME_NOPREFIX, Name) == E.ImportName)
+          NameType = IMPORT_NAME_NOPREFIX;
+        else if (isArm64EC(M)) {
+          NameType = IMPORT_NAME_EXPORTAS;
+          ExportName = E.ImportName;
+        } else if (Name == E.ImportName)
+          NameType = IMPORT_NAME;
+        else {
+          Deferred D;
+          D.Name = Name;
+          D.ImpType = ImportType;
+          D.Export = &E;
+          Renames.push_back(D);
+          continue;
+        }
+      } else {
+        NameType = getNameType(SymbolName, E.Name, M, MinGW);
+      }
+
+      // On ARM64EC, use EXPORTAS to import demangled name for mangled symbols.
+      if (ImportType == IMPORT_CODE && isArm64EC(M)) {
+        if (std::optional<std::string> MangledName =
+                getArm64ECMangledFunctionName(Name)) {
+          if (!E.Noname && ExportName.empty()) {
+            NameType = IMPORT_NAME_EXPORTAS;
+            ExportName.swap(Name);
+          }
+          Name = std::move(*MangledName);
+        } else if (!E.Noname && ExportName.empty()) {
+          std::optional<std::string> DemangledName =
+              getArm64ECDemangledFunctionName(Name);
+          if (!DemangledName)
+            return make_error<StringError>(
+                StringRef(Twine("Invalid ARM64EC function name '" + Name + "'")
+                              .str()),
+                object_error::parse_failed);
+          NameType = IMPORT_NAME_EXPORTAS;
+          ExportName = std::move(*DemangledName);
+        }
+      }
+
+      RegularImports[applyNameType(NameType, Name)] = Name;
+      Members.push_back(OF.createShortImport(Name, E.Ordinal, ImportType,
+                                             NameType, ExportName, M));
     }
+    for (const auto &D : Renames) {
+      auto It = RegularImports.find(D.Export->ImportName);
+      if (It != RegularImports.end()) {
+        // We have a regular import entry for a symbol with the name we
+        // want to reference; produce an alias pointing at that.
+        StringRef Symbol = It->second;
+        if (D.ImpType == IMPORT_CODE)
+          Members.push_back(OF.createWeakExternal(Symbol, D.Name, false, M));
+        Members.push_back(OF.createWeakExternal(Symbol, D.Name, true, M));
+      } else {
+        Members.push_back(OF.createShortImport(D.Name, D.Export->Ordinal,
+                                               D.ImpType, IMPORT_NAME_EXPORTAS,
+                                               D.Export->ImportName, M));
+      }
+    }
+    return Error::success();
+  };
 
-    Members.push_back(
-        OF.createShortImport(*Name, E.Ordinal, ImportType, NameType, Machine));
-  }
+  if (Error e = addExports(Exports, Machine))
+    return e;
+  if (Error e = addExports(NativeExports, NativeMachine))
+    return e;
 
   return writeArchive(Path, Members, SymtabWritingMode::NormalSymtab,
-                      MinGW ? object::Archive::K_GNU : object::Archive::K_COFF,
+                      object::Archive::K_COFF,
                       /*Deterministic*/ true, /*Thin*/ false,
                       /*OldArchiveBuf*/ nullptr, isArm64EC(Machine));
 }

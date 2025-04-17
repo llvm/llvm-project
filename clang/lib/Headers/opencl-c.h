@@ -15082,6 +15082,7 @@ half16 __ovld __cnfn shuffle2(half16, half16, ushort16);
 #pragma OPENCL EXTENSION cl_khr_gl_msaa_sharing : enable
 #endif //cl_khr_gl_msaa_sharing
 
+#if (defined(__opencl_c_images) || defined(__IMAGE_SUPPORT__))
 /**
  * Use the coordinate (coord.xy) to do an element lookup in
  * the 2D image object specified by image.
@@ -16142,6 +16143,8 @@ int __ovld __cnfn get_image_num_samples(read_write image2d_array_msaa_t);
 int __ovld __cnfn get_image_num_samples(read_write image2d_array_msaa_depth_t);
 #endif //defined(__opencl_c_read_write_images)
 #endif
+
+#endif // (defined(__opencl_c_images) || defined(__IMAGE_SUPPORT__))
 
 // OpenCL v2.0 s6.13.15 - Work-group Functions
 
@@ -17313,6 +17316,21 @@ double __ovld __conv sub_group_clustered_rotate(double, int, uint);
 half __ovld __conv sub_group_clustered_rotate(half, int, uint);
 #endif // cl_khr_fp16
 #endif // cl_khr_subgroup_rotate
+
+#if defined(cl_khr_kernel_clock)
+#if defined(__opencl_c_kernel_clock_scope_device)
+ulong __ovld clock_read_device();
+uint2 __ovld clock_read_hilo_device();
+#endif // __opencl_c_kernel_clock_scope_device
+#if defined(__opencl_c_kernel_clock_scope_work_group)
+ulong __ovld clock_read_work_group();
+uint2 __ovld clock_read_hilo_work_group();
+#endif // __opencl_c_kernel_clock_scope_work_group
+#if defined(__opencl_c_kernel_clock_scope_sub_group)
+ulong __ovld clock_read_sub_group();
+uint2 __ovld clock_read_hilo_sub_group();
+#endif // __opencl_c_kernel_clock_scope_sub_group
+#endif // cl_khr_kernel_clock
 
 #if defined(cl_intel_subgroups)
 // Intel-Specific Sub Group Functions

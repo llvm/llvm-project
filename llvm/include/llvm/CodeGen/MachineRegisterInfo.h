@@ -184,6 +184,8 @@ public:
       TheDelegate->MRI_NoteCloneVirtualRegister(NewReg, SrcReg);
   }
 
+  const MachineFunction &getMF() const { return *MF; }
+
   //===--------------------------------------------------------------------===//
   // Function State
   //===--------------------------------------------------------------------===//
@@ -243,16 +245,6 @@ public:
   /// Returns true if the updated CSR list was initialized and false otherwise.
   bool isUpdatedCSRsInitialized() const { return IsUpdatedCSRsInitialized; }
 
-  /// Returns true if a register can be used as an argument to a function.
-  bool isArgumentRegister(const MachineFunction &MF, MCRegister Reg) const;
-
-  /// Returns true if a register is a fixed register.
-  bool isFixedRegister(const MachineFunction &MF, MCRegister Reg) const;
-
-  /// Returns true if a register is a general purpose register.
-  bool isGeneralPurposeRegister(const MachineFunction &MF,
-                                MCRegister Reg) const;
-
   /// Disables the register from the list of CSRs.
   /// I.e. the register will not appear as part of the CSR mask.
   /// \see UpdatedCalleeSavedRegs.
@@ -285,23 +277,18 @@ public:
   /// reg_begin/reg_end - Provide iteration support to walk over all definitions
   /// and uses of a register within the MachineFunction that corresponds to this
   /// MachineRegisterInfo object.
-  template<bool Uses, bool Defs, bool SkipDebug,
-           bool ByOperand, bool ByInstr, bool ByBundle>
+  template <bool Uses, bool Defs, bool SkipDebug, bool ByOperand, bool ByInstr>
   class defusechain_iterator;
-  template<bool Uses, bool Defs, bool SkipDebug,
-           bool ByOperand, bool ByInstr, bool ByBundle>
+  template <bool Uses, bool Defs, bool SkipDebug, bool ByInstr>
   class defusechain_instr_iterator;
 
   // Make it a friend so it can access getNextOperandForReg().
-  template<bool, bool, bool, bool, bool, bool>
-    friend class defusechain_iterator;
-  template<bool, bool, bool, bool, bool, bool>
-    friend class defusechain_instr_iterator;
+  template <bool, bool, bool, bool, bool> friend class defusechain_iterator;
+  template <bool, bool, bool, bool> friend class defusechain_instr_iterator;
 
   /// reg_iterator/reg_begin/reg_end - Walk all defs and uses of the specified
   /// register.
-  using reg_iterator =
-      defusechain_iterator<true, true, false, true, false, false>;
+  using reg_iterator = defusechain_iterator<true, true, false, true, false>;
   reg_iterator reg_begin(Register RegNo) const {
     return reg_iterator(getRegUseDefListHead(RegNo));
   }
@@ -314,7 +301,7 @@ public:
   /// reg_instr_iterator/reg_instr_begin/reg_instr_end - Walk all defs and uses
   /// of the specified register, stepping by MachineInstr.
   using reg_instr_iterator =
-      defusechain_instr_iterator<true, true, false, false, true, false>;
+      defusechain_instr_iterator<true, true, false, /*ByInstr=*/true>;
   reg_instr_iterator reg_instr_begin(Register RegNo) const {
     return reg_instr_iterator(getRegUseDefListHead(RegNo));
   }
@@ -330,7 +317,7 @@ public:
   /// reg_bundle_iterator/reg_bundle_begin/reg_bundle_end - Walk all defs and uses
   /// of the specified register, stepping by bundle.
   using reg_bundle_iterator =
-      defusechain_instr_iterator<true, true, false, false, false, true>;
+      defusechain_instr_iterator<true, true, false, /*ByInstr=*/false>;
   reg_bundle_iterator reg_bundle_begin(Register RegNo) const {
     return reg_bundle_iterator(getRegUseDefListHead(RegNo));
   }
@@ -349,7 +336,7 @@ public:
   /// reg_nodbg_iterator/reg_nodbg_begin/reg_nodbg_end - Walk all defs and uses
   /// of the specified register, skipping those marked as Debug.
   using reg_nodbg_iterator =
-      defusechain_iterator<true, true, true, true, false, false>;
+      defusechain_iterator<true, true, true, true, false>;
   reg_nodbg_iterator reg_nodbg_begin(Register RegNo) const {
     return reg_nodbg_iterator(getRegUseDefListHead(RegNo));
   }
@@ -366,7 +353,7 @@ public:
   /// all defs and uses of the specified register, stepping by MachineInstr,
   /// skipping those marked as Debug.
   using reg_instr_nodbg_iterator =
-      defusechain_instr_iterator<true, true, true, false, true, false>;
+      defusechain_instr_iterator<true, true, true, /*ByInstr=*/true>;
   reg_instr_nodbg_iterator reg_instr_nodbg_begin(Register RegNo) const {
     return reg_instr_nodbg_iterator(getRegUseDefListHead(RegNo));
   }
@@ -383,7 +370,7 @@ public:
   /// all defs and uses of the specified register, stepping by bundle,
   /// skipping those marked as Debug.
   using reg_bundle_nodbg_iterator =
-      defusechain_instr_iterator<true, true, true, false, false, true>;
+      defusechain_instr_iterator<true, true, true, /*ByInstr=*/false>;
   reg_bundle_nodbg_iterator reg_bundle_nodbg_begin(Register RegNo) const {
     return reg_bundle_nodbg_iterator(getRegUseDefListHead(RegNo));
   }
@@ -403,8 +390,7 @@ public:
   }
 
   /// def_iterator/def_begin/def_end - Walk all defs of the specified register.
-  using def_iterator =
-      defusechain_iterator<false, true, false, true, false, false>;
+  using def_iterator = defusechain_iterator<false, true, false, true, false>;
   def_iterator def_begin(Register RegNo) const {
     return def_iterator(getRegUseDefListHead(RegNo));
   }
@@ -417,7 +403,7 @@ public:
   /// def_instr_iterator/def_instr_begin/def_instr_end - Walk all defs of the
   /// specified register, stepping by MachineInst.
   using def_instr_iterator =
-      defusechain_instr_iterator<false, true, false, false, true, false>;
+      defusechain_instr_iterator<false, true, false, /*ByInstr=*/true>;
   def_instr_iterator def_instr_begin(Register RegNo) const {
     return def_instr_iterator(getRegUseDefListHead(RegNo));
   }
@@ -433,7 +419,7 @@ public:
   /// def_bundle_iterator/def_bundle_begin/def_bundle_end - Walk all defs of the
   /// specified register, stepping by bundle.
   using def_bundle_iterator =
-      defusechain_instr_iterator<false, true, false, false, false, true>;
+      defusechain_instr_iterator<false, true, false, /*ByInstr=*/false>;
   def_bundle_iterator def_bundle_begin(Register RegNo) const {
     return def_bundle_iterator(getRegUseDefListHead(RegNo));
   }
@@ -483,8 +469,7 @@ public:
   }
 
   /// use_iterator/use_begin/use_end - Walk all uses of the specified register.
-  using use_iterator =
-      defusechain_iterator<true, false, false, true, false, false>;
+  using use_iterator = defusechain_iterator<true, false, false, true, false>;
   use_iterator use_begin(Register RegNo) const {
     return use_iterator(getRegUseDefListHead(RegNo));
   }
@@ -497,7 +482,7 @@ public:
   /// use_instr_iterator/use_instr_begin/use_instr_end - Walk all uses of the
   /// specified register, stepping by MachineInstr.
   using use_instr_iterator =
-      defusechain_instr_iterator<true, false, false, false, true, false>;
+      defusechain_instr_iterator<true, false, false, /*ByInstr=*/true>;
   use_instr_iterator use_instr_begin(Register RegNo) const {
     return use_instr_iterator(getRegUseDefListHead(RegNo));
   }
@@ -513,7 +498,7 @@ public:
   /// use_bundle_iterator/use_bundle_begin/use_bundle_end - Walk all uses of the
   /// specified register, stepping by bundle.
   using use_bundle_iterator =
-      defusechain_instr_iterator<true, false, false, false, false, true>;
+      defusechain_instr_iterator<true, false, false, /*ByInstr=*/false>;
   use_bundle_iterator use_bundle_begin(Register RegNo) const {
     return use_bundle_iterator(getRegUseDefListHead(RegNo));
   }
@@ -538,7 +523,7 @@ public:
   /// use_nodbg_iterator/use_nodbg_begin/use_nodbg_end - Walk all uses of the
   /// specified register, skipping those marked as Debug.
   using use_nodbg_iterator =
-      defusechain_iterator<true, false, true, true, false, false>;
+      defusechain_iterator<true, false, true, true, false>;
   use_nodbg_iterator use_nodbg_begin(Register RegNo) const {
     return use_nodbg_iterator(getRegUseDefListHead(RegNo));
   }
@@ -555,7 +540,7 @@ public:
   /// all uses of the specified register, stepping by MachineInstr, skipping
   /// those marked as Debug.
   using use_instr_nodbg_iterator =
-      defusechain_instr_iterator<true, false, true, false, true, false>;
+      defusechain_instr_iterator<true, false, true, /*ByInstr=*/true>;
   use_instr_nodbg_iterator use_instr_nodbg_begin(Register RegNo) const {
     return use_instr_nodbg_iterator(getRegUseDefListHead(RegNo));
   }
@@ -572,7 +557,7 @@ public:
   /// all uses of the specified register, stepping by bundle, skipping
   /// those marked as Debug.
   using use_bundle_nodbg_iterator =
-      defusechain_instr_iterator<true, false, true, false, false, true>;
+      defusechain_instr_iterator<true, false, true, /*ByInstr=*/false>;
   use_bundle_nodbg_iterator use_bundle_nodbg_begin(Register RegNo) const {
     return use_bundle_nodbg_iterator(getRegUseDefListHead(RegNo));
   }
@@ -682,6 +667,12 @@ public:
     return dyn_cast_if_present<const TargetRegisterClass *>(Val);
   }
 
+  /// Return the register bank of \p Reg.
+  /// This shouldn't be used directly unless \p Reg has a register bank.
+  const RegisterBank *getRegBank(Register Reg) const {
+    return cast<const RegisterBank *>(VRegInfo[Reg.id()].first);
+  }
+
   /// Return the register bank of \p Reg, or null if Reg has not been assigned
   /// a register bank or has been assigned a register class.
   /// \note It is possible to get the register bank from the register class via
@@ -752,6 +743,24 @@ public:
   Register createVirtualRegister(const TargetRegisterClass *RegClass,
                                  StringRef Name = "");
 
+  /// All attributes(register class or bank and low-level type) a virtual
+  /// register can have.
+  struct VRegAttrs {
+    RegClassOrRegBank RCOrRB;
+    LLT Ty;
+  };
+
+  /// Returns register class or bank and low level type of \p Reg. Always safe
+  /// to use. Special values are returned when \p Reg does not have some of the
+  /// attributes.
+  VRegAttrs getVRegAttrs(Register Reg) const {
+    return {getRegClassOrRegBank(Reg), getType(Reg)};
+  }
+
+  /// Create and return a new virtual register in the function with the
+  /// specified register attributes(register class or bank and low level type).
+  Register createVirtualRegister(VRegAttrs RegAttr, StringRef Name = "");
+
   /// Create and return a new virtual register in the function with the same
   /// attributes as the given register.
   Register cloneVirtualRegister(Register VReg, StringRef Name = "");
@@ -793,15 +802,18 @@ public:
   /// of an earlier hint it will be overwritten.
   void setRegAllocationHint(Register VReg, unsigned Type, Register PrefReg) {
     assert(VReg.isVirtual());
-    RegAllocHints[VReg].first  = Type;
-    RegAllocHints[VReg].second.clear();
-    RegAllocHints[VReg].second.push_back(PrefReg);
+    RegAllocHints.grow(Register::index2VirtReg(getNumVirtRegs()));
+    auto &Hint = RegAllocHints[VReg];
+    Hint.first = Type;
+    Hint.second.clear();
+    Hint.second.push_back(PrefReg);
   }
 
   /// addRegAllocationHint - Add a register allocation hint to the hints
   /// vector for VReg.
   void addRegAllocationHint(Register VReg, Register PrefReg) {
     assert(VReg.isVirtual());
+    RegAllocHints.grow(Register::index2VirtReg(getNumVirtRegs()));
     RegAllocHints[VReg].second.push_back(PrefReg);
   }
 
@@ -814,7 +826,8 @@ public:
   void clearSimpleHint(Register VReg) {
     assert (!RegAllocHints[VReg].first &&
             "Expected to clear a non-target hint!");
-    RegAllocHints[VReg].second.clear();
+    if (RegAllocHints.inBounds(VReg))
+      RegAllocHints[VReg].second.clear();
   }
 
   /// getRegAllocationHint - Return the register allocation hint for the
@@ -822,9 +835,11 @@ public:
   /// one with the greatest weight.
   std::pair<unsigned, Register> getRegAllocationHint(Register VReg) const {
     assert(VReg.isVirtual());
-    Register BestHint = (RegAllocHints[VReg.id()].second.size() ?
-                         RegAllocHints[VReg.id()].second[0] : Register());
-    return {RegAllocHints[VReg.id()].first, BestHint};
+    if (!RegAllocHints.inBounds(VReg))
+      return {0, Register()};
+    auto &Hint = RegAllocHints[VReg.id()];
+    Register BestHint = (Hint.second.size() ? Hint.second[0] : Register());
+    return {Hint.first, BestHint};
   }
 
   /// getSimpleHint - same as getRegAllocationHint except it will only return
@@ -837,10 +852,10 @@ public:
 
   /// getRegAllocationHints - Return a reference to the vector of all
   /// register allocation hints for VReg.
-  const std::pair<unsigned, SmallVector<Register, 4>> &
+  const std::pair<unsigned, SmallVector<Register, 4>> *
   getRegAllocationHints(Register VReg) const {
     assert(VReg.isVirtual());
-    return RegAllocHints[VReg];
+    return RegAllocHints.inBounds(VReg) ? &RegAllocHints[VReg] : nullptr;
   }
 
   /// markUsesInDebugValueAsUndef - Mark every DBG_VALUE referencing the
@@ -912,9 +927,9 @@ public:
 
   /// freezeReservedRegs - Called by the register allocator to freeze the set
   /// of reserved registers before allocation begins.
-  void freezeReservedRegs(const MachineFunction&);
+  void freezeReservedRegs();
 
-  /// reserveReg -- Mark a register as reserved so checks like isAllocatable 
+  /// reserveReg -- Mark a register as reserved so checks like isAllocatable
   /// will not suggest using it. This should not be used during the middle
   /// of a function walk, or when liveness info is available.
   void reserveReg(MCRegister PhysReg, const TargetRegisterInfo *TRI) {
@@ -923,7 +938,7 @@ public:
     MCRegAliasIterator R(PhysReg, TRI, true);
 
     for (; R.isValid(); ++R)
-      ReservedRegs.set(*R);
+      ReservedRegs.set((*R).id());
   }
 
   /// reservedRegsFrozen - Returns true after freezeReservedRegs() was called
@@ -936,7 +951,7 @@ public:
   /// register.  Any register can be reserved before freezeReservedRegs() is
   /// called.
   bool canReserveReg(MCRegister PhysReg) const {
-    return !reservedRegsFrozen() || ReservedRegs.test(PhysReg);
+    return !reservedRegsFrozen() || ReservedRegs.test(PhysReg.id());
   }
 
   /// getReservedRegs - Returns a reference to the frozen set of reserved
@@ -1025,9 +1040,11 @@ public:
   /// returns end().  If SkipDebug is true it skips uses marked Debug
   /// when incrementing.
   template <bool ReturnUses, bool ReturnDefs, bool SkipDebug, bool ByOperand,
-            bool ByInstr, bool ByBundle>
+            bool ByInstr>
   class defusechain_iterator {
     friend class MachineRegisterInfo;
+    static_assert(!ByOperand || !ByInstr,
+                  "ByOperand and ByInstr are mutually exclusive");
 
   public:
     using iterator_category = std::forward_iterator_tag;
@@ -1080,9 +1097,6 @@ public:
       return !operator==(x);
     }
 
-    /// atEnd - return true if this iterator is equal to reg_end() on the value.
-    bool atEnd() const { return Op == nullptr; }
-
     // Iterator traversal: forward iteration only
     defusechain_iterator &operator++() {          // Preincrement
       assert(Op && "Cannot increment end iterator!");
@@ -1093,7 +1107,7 @@ public:
         do {
           advance();
         } while (Op && Op->getParent() == P);
-      } else if (ByBundle) {
+      } else {
         MachineBasicBlock::instr_iterator P =
             getBundleStart(Op->getParent()->getIterator());
         do {
@@ -1132,8 +1146,7 @@ public:
   /// returns defs.  If neither are true then you are silly and it always
   /// returns end().  If SkipDebug is true it skips uses marked Debug
   /// when incrementing.
-  template <bool ReturnUses, bool ReturnDefs, bool SkipDebug, bool ByOperand,
-            bool ByInstr, bool ByBundle>
+  template <bool ReturnUses, bool ReturnDefs, bool SkipDebug, bool ByInstr>
   class defusechain_instr_iterator {
     friend class MachineRegisterInfo;
 
@@ -1188,20 +1201,15 @@ public:
       return !operator==(x);
     }
 
-    /// atEnd - return true if this iterator is equal to reg_end() on the value.
-    bool atEnd() const { return Op == nullptr; }
-
     // Iterator traversal: forward iteration only
     defusechain_instr_iterator &operator++() {          // Preincrement
       assert(Op && "Cannot increment end iterator!");
-      if (ByOperand)
-        advance();
-      else if (ByInstr) {
+      if (ByInstr) {
         MachineInstr *P = Op->getParent();
         do {
           advance();
         } while (Op && Op->getParent() == P);
-      } else if (ByBundle) {
+      } else {
         MachineBasicBlock::instr_iterator P =
             getBundleStart(Op->getParent()->getIterator());
         do {
@@ -1218,7 +1226,7 @@ public:
     // Retrieve a reference to the current operand.
     MachineInstr &operator*() const {
       assert(Op && "Cannot dereference end iterator!");
-      if (ByBundle)
+      if (!ByInstr)
         return *getBundleStart(Op->getParent()->getIterator());
       return *Op->getParent();
     }

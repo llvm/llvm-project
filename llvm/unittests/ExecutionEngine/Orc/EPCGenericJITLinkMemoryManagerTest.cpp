@@ -78,24 +78,21 @@ private:
   DenseMap<void *, sys::OwningMemoryBlock> Blocks;
 };
 
-llvm::orc::shared::CWrapperFunctionResult testReserve(const char *ArgData,
-                                                      size_t ArgSize) {
+CWrapperFunctionResult testReserve(const char *ArgData, size_t ArgSize) {
   return WrapperFunction<rt::SPSSimpleExecutorMemoryManagerReserveSignature>::
       handle(ArgData, ArgSize,
              makeMethodWrapperHandler(&SimpleAllocator::reserve))
           .release();
 }
 
-llvm::orc::shared::CWrapperFunctionResult testFinalize(const char *ArgData,
-                                                       size_t ArgSize) {
+CWrapperFunctionResult testFinalize(const char *ArgData, size_t ArgSize) {
   return WrapperFunction<rt::SPSSimpleExecutorMemoryManagerFinalizeSignature>::
       handle(ArgData, ArgSize,
              makeMethodWrapperHandler(&SimpleAllocator::finalize))
           .release();
 }
 
-llvm::orc::shared::CWrapperFunctionResult testDeallocate(const char *ArgData,
-                                                         size_t ArgSize) {
+CWrapperFunctionResult testDeallocate(const char *ArgData, size_t ArgSize) {
   return WrapperFunction<
              rt::SPSSimpleExecutorMemoryManagerDeallocateSignature>::
       handle(ArgData, ArgSize,
@@ -114,10 +111,11 @@ TEST(EPCGenericJITLinkMemoryManagerTest, AllocFinalizeFree) {
   SAs.Deallocate = ExecutorAddr::fromPtr(&testDeallocate);
 
   auto MemMgr = std::make_unique<EPCGenericJITLinkMemoryManager>(*SelfEPC, SAs);
-
   StringRef Hello = "hello";
   auto SSA = jitlink::SimpleSegmentAlloc::Create(
-      *MemMgr, nullptr, {{MemProt::Read, {Hello.size(), Align(1)}}});
+      *MemMgr, std::make_shared<SymbolStringPool>(),
+      Triple("x86_64-apple-darwin"), nullptr,
+      {{MemProt::Read, {Hello.size(), Align(1)}}});
   EXPECT_THAT_EXPECTED(SSA, Succeeded());
   auto SegInfo = SSA->getSegInfo(MemProt::Read);
   memcpy(SegInfo.WorkingMem.data(), Hello.data(), Hello.size());

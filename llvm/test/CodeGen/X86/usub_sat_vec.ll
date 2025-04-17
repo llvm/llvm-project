@@ -543,7 +543,7 @@ define <16 x i1> @v16i1(<16 x i1> %x, <16 x i1> %y) nounwind {
 ;
 ; AVX512BW-LABEL: v16i1:
 ; AVX512BW:       # %bb.0:
-; AVX512BW-NEXT:    vpternlogd $96, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm1, %xmm0
+; AVX512BW-NEXT:    vpternlogd {{.*#+}} xmm0 = xmm0 & (xmm1 ^ mem)
 ; AVX512BW-NEXT:    retq
   %z = call <16 x i1> @llvm.usub.sat.v16i1(<16 x i1> %x, <16 x i1> %y)
   ret <16 x i1> %z
@@ -1057,10 +1057,10 @@ define <2 x i128> @v2i128(<2 x i128> %x, <2 x i128> %y) nounwind {
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movq %rdi, %rax
 ; SSE-NEXT:    xorl %edi, %edi
-; SSE-NEXT:    subq {{[0-9]+}}(%rsp), %rsi
+; SSE-NEXT:    subq %r9, %rsi
 ; SSE-NEXT:    sbbq {{[0-9]+}}(%rsp), %rdx
-; SSE-NEXT:    cmovbq %rdi, %rdx
 ; SSE-NEXT:    cmovbq %rdi, %rsi
+; SSE-NEXT:    cmovbq %rdi, %rdx
 ; SSE-NEXT:    subq {{[0-9]+}}(%rsp), %rcx
 ; SSE-NEXT:    sbbq {{[0-9]+}}(%rsp), %r8
 ; SSE-NEXT:    cmovbq %rdi, %r8
@@ -1075,10 +1075,10 @@ define <2 x i128> @v2i128(<2 x i128> %x, <2 x i128> %y) nounwind {
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    movq %rdi, %rax
 ; AVX-NEXT:    xorl %edi, %edi
-; AVX-NEXT:    subq {{[0-9]+}}(%rsp), %rsi
+; AVX-NEXT:    subq %r9, %rsi
 ; AVX-NEXT:    sbbq {{[0-9]+}}(%rsp), %rdx
-; AVX-NEXT:    cmovbq %rdi, %rdx
 ; AVX-NEXT:    cmovbq %rdi, %rsi
+; AVX-NEXT:    cmovbq %rdi, %rdx
 ; AVX-NEXT:    subq {{[0-9]+}}(%rsp), %rcx
 ; AVX-NEXT:    sbbq {{[0-9]+}}(%rsp), %r8
 ; AVX-NEXT:    cmovbq %rdi, %r8
@@ -1093,22 +1093,56 @@ define <2 x i128> @v2i128(<2 x i128> %x, <2 x i128> %y) nounwind {
 }
 
 define void @PR48223(ptr %p0) {
-; SSE-LABEL: PR48223:
-; SSE:       # %bb.0:
-; SSE-NEXT:    movdqa (%rdi), %xmm0
-; SSE-NEXT:    movdqa 16(%rdi), %xmm1
-; SSE-NEXT:    movdqa 32(%rdi), %xmm2
-; SSE-NEXT:    movdqa 48(%rdi), %xmm3
-; SSE-NEXT:    movdqa {{.*#+}} xmm4 = [64,64,64,64,64,64,64,64]
-; SSE-NEXT:    psubusw %xmm4, %xmm1
-; SSE-NEXT:    psubusw %xmm4, %xmm0
-; SSE-NEXT:    psubusw %xmm4, %xmm3
-; SSE-NEXT:    psubusw %xmm4, %xmm2
-; SSE-NEXT:    movdqa %xmm2, 32(%rdi)
-; SSE-NEXT:    movdqa %xmm3, 48(%rdi)
-; SSE-NEXT:    movdqa %xmm0, (%rdi)
-; SSE-NEXT:    movdqa %xmm1, 16(%rdi)
-; SSE-NEXT:    retq
+; SSE2-LABEL: PR48223:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movdqa (%rdi), %xmm0
+; SSE2-NEXT:    movdqa 16(%rdi), %xmm1
+; SSE2-NEXT:    movdqa 32(%rdi), %xmm2
+; SSE2-NEXT:    movdqa 48(%rdi), %xmm3
+; SSE2-NEXT:    movdqa {{.*#+}} xmm4 = [64,64,64,64,64,64,64,64]
+; SSE2-NEXT:    psubusw %xmm4, %xmm1
+; SSE2-NEXT:    psubusw %xmm4, %xmm0
+; SSE2-NEXT:    psubusw %xmm4, %xmm3
+; SSE2-NEXT:    psubusw %xmm4, %xmm2
+; SSE2-NEXT:    movdqa %xmm2, 32(%rdi)
+; SSE2-NEXT:    movdqa %xmm3, 48(%rdi)
+; SSE2-NEXT:    movdqa %xmm0, (%rdi)
+; SSE2-NEXT:    movdqa %xmm1, 16(%rdi)
+; SSE2-NEXT:    retq
+;
+; SSSE3-LABEL: PR48223:
+; SSSE3:       # %bb.0:
+; SSSE3-NEXT:    movdqa (%rdi), %xmm0
+; SSSE3-NEXT:    movdqa 16(%rdi), %xmm1
+; SSSE3-NEXT:    movdqa 32(%rdi), %xmm2
+; SSSE3-NEXT:    movdqa 48(%rdi), %xmm3
+; SSSE3-NEXT:    movdqa {{.*#+}} xmm4 = [64,64,64,64,64,64,64,64]
+; SSSE3-NEXT:    psubusw %xmm4, %xmm1
+; SSSE3-NEXT:    psubusw %xmm4, %xmm0
+; SSSE3-NEXT:    psubusw %xmm4, %xmm3
+; SSSE3-NEXT:    psubusw %xmm4, %xmm2
+; SSSE3-NEXT:    movdqa %xmm2, 32(%rdi)
+; SSSE3-NEXT:    movdqa %xmm3, 48(%rdi)
+; SSSE3-NEXT:    movdqa %xmm0, (%rdi)
+; SSSE3-NEXT:    movdqa %xmm1, 16(%rdi)
+; SSSE3-NEXT:    retq
+;
+; SSE41-LABEL: PR48223:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    movdqa (%rdi), %xmm0
+; SSE41-NEXT:    movdqa 16(%rdi), %xmm1
+; SSE41-NEXT:    movdqa 32(%rdi), %xmm2
+; SSE41-NEXT:    movdqa 48(%rdi), %xmm3
+; SSE41-NEXT:    pmovsxbw {{.*#+}} xmm4 = [64,64,64,64,64,64,64,64]
+; SSE41-NEXT:    psubusw %xmm4, %xmm1
+; SSE41-NEXT:    psubusw %xmm4, %xmm0
+; SSE41-NEXT:    psubusw %xmm4, %xmm3
+; SSE41-NEXT:    psubusw %xmm4, %xmm2
+; SSE41-NEXT:    movdqa %xmm2, 32(%rdi)
+; SSE41-NEXT:    movdqa %xmm3, 48(%rdi)
+; SSE41-NEXT:    movdqa %xmm0, (%rdi)
+; SSE41-NEXT:    movdqa %xmm1, 16(%rdi)
+; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: PR48223:
 ; AVX1:       # %bb.0:

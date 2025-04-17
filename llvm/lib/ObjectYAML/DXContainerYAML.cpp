@@ -12,9 +12,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ObjectYAML/DXContainerYAML.h"
+#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/BinaryFormat/DXContainer.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/ScopedPrinter.h"
+#include <cstdint>
+#include <system_error>
 
 namespace llvm {
 
@@ -23,15 +27,80 @@ namespace llvm {
 static_assert((uint64_t)dxbc::FeatureFlags::NextUnusedBit <= 1ull << 63,
               "Shader flag bits exceed enum size.");
 
-DXContainerYAML::ShaderFlags::ShaderFlags(uint64_t FlagData) {
-#define SHADER_FLAG(Num, Val, Str)                                             \
+DXContainerYAML::ShaderFeatureFlags::ShaderFeatureFlags(uint64_t FlagData) {
+#define SHADER_FEATURE_FLAG(Num, DxilModuleNum, Val, Str)                      \
   Val = (FlagData & (uint64_t)dxbc::FeatureFlags::Val) > 0;
 #include "llvm/BinaryFormat/DXContainerConstants.def"
 }
 
-uint64_t DXContainerYAML::ShaderFlags::getEncodedFlags() {
+llvm::Expected<DXContainerYAML::RootSignatureYamlDesc>
+DXContainerYAML::RootSignatureYamlDesc::create(
+    const object::DirectX::RootSignature &Data) {
+
+  RootSignatureYamlDesc RootSigDesc;
+
+  RootSigDesc.Version = Data.getVersion();
+  RootSigDesc.NumStaticSamplers = Data.getNumStaticSamplers();
+  RootSigDesc.StaticSamplersOffset = Data.getStaticSamplersOffset();
+  RootSigDesc.NumRootParameters = Data.getNumRootParameters();
+  RootSigDesc.RootParametersOffset = Data.getRootParametersOffset();
+
+  uint32_t Flags = Data.getFlags();
+  for (const dxbc::RootParameterHeader &PH : Data.param_headers()) {
+
+    RootParameterYamlDesc NewP;
+    NewP.Offset = PH.ParameterOffset;
+
+    if (!dxbc::isValidParameterType(PH.ParameterType))
+      return createStringError(std::errc::invalid_argument,
+                               "Invalid value for parameter type");
+
+    NewP.Type = PH.ParameterType;
+
+    if (!dxbc::isValidShaderVisibility(PH.ShaderVisibility))
+      return createStringError(std::errc::invalid_argument,
+                               "Invalid value for shader visibility");
+
+    NewP.Visibility = PH.ShaderVisibility;
+
+    llvm::Expected<object::DirectX::RootParameterView> ParamViewOrErr =
+        Data.getParameter(PH);
+    if (Error E = ParamViewOrErr.takeError())
+      return std::move(E);
+    object::DirectX::RootParameterView ParamView = ParamViewOrErr.get();
+
+    if (auto *RCV = dyn_cast<object::DirectX::RootConstantView>(&ParamView)) {
+      llvm::Expected<dxbc::RootConstants> ConstantsOrErr = RCV->read();
+      if (Error E = ConstantsOrErr.takeError())
+        return std::move(E);
+
+      auto Constants = *ConstantsOrErr;
+
+      NewP.Constants.Num32BitValues = Constants.Num32BitValues;
+      NewP.Constants.ShaderRegister = Constants.ShaderRegister;
+      NewP.Constants.RegisterSpace = Constants.RegisterSpace;
+    }
+    RootSigDesc.Parameters.push_back(NewP);
+  }
+#define ROOT_ELEMENT_FLAG(Num, Val)                                            \
+  RootSigDesc.Val =                                                            \
+      (Flags & llvm::to_underlying(dxbc::RootElementFlag::Val)) > 0;
+#include "llvm/BinaryFormat/DXContainerConstants.def"
+  return RootSigDesc;
+}
+
+uint32_t DXContainerYAML::RootSignatureYamlDesc::getEncodedFlags() {
   uint64_t Flag = 0;
-#define SHADER_FLAG(Num, Val, Str)                                             \
+#define ROOT_ELEMENT_FLAG(Num, Val)                                            \
+  if (Val)                                                                     \
+    Flag |= (uint32_t)dxbc::RootElementFlag::Val;
+#include "llvm/BinaryFormat/DXContainerConstants.def"
+  return Flag;
+}
+
+uint64_t DXContainerYAML::ShaderFeatureFlags::getEncodedFlags() {
+  uint64_t Flag = 0;
+#define SHADER_FEATURE_FLAG(Num, DxilModuleNum, Val, Str)                      \
   if (Val)                                                                     \
     Flag |= (uint64_t)dxbc::FeatureFlags::Val;
 #include "llvm/BinaryFormat/DXContainerConstants.def"
@@ -74,6 +143,16 @@ DXContainerYAML::PSVInfo::PSVInfo(const dxbc::PSV::v2::RuntimeInfo *P)
   memcpy(&Info, P, sizeof(dxbc::PSV::v2::RuntimeInfo));
 }
 
+DXContainerYAML::PSVInfo::PSVInfo(const dxbc::PSV::v3::RuntimeInfo *P,
+                                  StringRef StringTable)
+    : Version(3),
+      EntryName(StringTable.substr(P->EntryNameOffset,
+                                   StringTable.find('\0', P->EntryNameOffset) -
+                                       P->EntryNameOffset)) {
+  memset(&Info, 0, sizeof(Info));
+  memcpy(&Info, P, sizeof(dxbc::PSV::v3::RuntimeInfo));
+}
+
 namespace yaml {
 
 void MappingTraits<DXContainerYAML::VersionTuple>::mapping(
@@ -103,9 +182,10 @@ void MappingTraits<DXContainerYAML::DXILProgram>::mapping(
   IO.mapOptional("DXIL", Program.DXIL);
 }
 
-void MappingTraits<DXContainerYAML::ShaderFlags>::mapping(
-    IO &IO, DXContainerYAML::ShaderFlags &Flags) {
-#define SHADER_FLAG(Num, Val, Str) IO.mapRequired(#Val, Flags.Val);
+void MappingTraits<DXContainerYAML::ShaderFeatureFlags>::mapping(
+    IO &IO, DXContainerYAML::ShaderFeatureFlags &Flags) {
+#define SHADER_FEATURE_FLAG(Num, DxilModuleNum, Val, Str)                      \
+  IO.mapRequired(#Val, Flags.Val);
 #include "llvm/BinaryFormat/DXContainerConstants.def"
 }
 
@@ -177,6 +257,37 @@ void MappingTraits<DXContainerYAML::Signature>::mapping(
   IO.mapRequired("Parameters", S.Parameters);
 }
 
+void MappingTraits<DXContainerYAML::RootSignatureYamlDesc>::mapping(
+    IO &IO, DXContainerYAML::RootSignatureYamlDesc &S) {
+  IO.mapRequired("Version", S.Version);
+  IO.mapRequired("NumRootParameters", S.NumRootParameters);
+  IO.mapRequired("RootParametersOffset", S.RootParametersOffset);
+  IO.mapRequired("NumStaticSamplers", S.NumStaticSamplers);
+  IO.mapRequired("StaticSamplersOffset", S.StaticSamplersOffset);
+  IO.mapRequired("Parameters", S.Parameters);
+#define ROOT_ELEMENT_FLAG(Num, Val) IO.mapOptional(#Val, S.Val, false);
+#include "llvm/BinaryFormat/DXContainerConstants.def"
+}
+
+void MappingTraits<llvm::DXContainerYAML::RootConstantsYaml>::mapping(
+    IO &IO, llvm::DXContainerYAML::RootConstantsYaml &C) {
+  IO.mapRequired("Num32BitValues", C.Num32BitValues);
+  IO.mapRequired("RegisterSpace", C.RegisterSpace);
+  IO.mapRequired("ShaderRegister", C.ShaderRegister);
+}
+
+void MappingTraits<llvm::DXContainerYAML::RootParameterYamlDesc>::mapping(
+    IO &IO, llvm::DXContainerYAML::RootParameterYamlDesc &P) {
+  IO.mapRequired("ParameterType", P.Type);
+  IO.mapRequired("ShaderVisibility", P.Visibility);
+
+  switch (P.Type) {
+  case llvm::to_underlying(dxbc::RootParameterType::Constants32Bit):
+    IO.mapRequired("Constants", P.Constants);
+    break;
+  }
+}
+
 void MappingTraits<DXContainerYAML::Part>::mapping(IO &IO,
                                                    DXContainerYAML::Part &P) {
   IO.mapRequired("Name", P.Name);
@@ -186,6 +297,7 @@ void MappingTraits<DXContainerYAML::Part>::mapping(IO &IO,
   IO.mapOptional("Hash", P.Hash);
   IO.mapOptional("PSVInfo", P.Info);
   IO.mapOptional("Signature", P.Signature);
+  IO.mapOptional("RootSignature", P.RootSignature);
 }
 
 void MappingTraits<DXContainerYAML::Object>::mapping(
@@ -193,6 +305,12 @@ void MappingTraits<DXContainerYAML::Object>::mapping(
   IO.mapTag("!dxcontainer", true);
   IO.mapRequired("Header", Obj.Header);
   IO.mapRequired("Parts", Obj.Parts);
+}
+
+void MappingTraits<DXContainerYAML::ResourceFlags>::mapping(
+    IO &IO, DXContainerYAML::ResourceFlags &Flags) {
+#define RESOURCE_FLAG(FlagIndex, Enum) IO.mapRequired(#Enum, Flags.Bits.Enum);
+#include "llvm/BinaryFormat/DXContainerConstants.def"
 }
 
 void MappingTraits<DXContainerYAML::ResourceBindInfo>::mapping(
@@ -240,6 +358,18 @@ void ScalarEnumerationTraits<dxbc::PSV::ComponentType>::enumeration(
 void ScalarEnumerationTraits<dxbc::PSV::InterpolationMode>::enumeration(
     IO &IO, dxbc::PSV::InterpolationMode &Value) {
   for (const auto &E : dxbc::PSV::getInterpolationModes())
+    IO.enumCase(Value, E.Name.str().c_str(), E.Value);
+}
+
+void ScalarEnumerationTraits<dxbc::PSV::ResourceType>::enumeration(
+    IO &IO, dxbc::PSV::ResourceType &Value) {
+  for (const auto &E : dxbc::PSV::getResourceTypes())
+    IO.enumCase(Value, E.Name.str().c_str(), E.Value);
+}
+
+void ScalarEnumerationTraits<dxbc::PSV::ResourceKind>::enumeration(
+    IO &IO, dxbc::PSV::ResourceKind &Value) {
+  for (const auto &E : dxbc::PSV::getResourceKinds())
     IO.enumCase(Value, E.Name.str().c_str(), E.Value);
 }
 
@@ -347,6 +477,11 @@ void DXContainerYAML::PSVInfo::mapInfoForVersion(yaml::IO &IO) {
   IO.mapRequired("NumThreadsX", Info.NumThreadsX);
   IO.mapRequired("NumThreadsY", Info.NumThreadsY);
   IO.mapRequired("NumThreadsZ", Info.NumThreadsZ);
+
+  if (Version == 2)
+    return;
+
+  IO.mapRequired("EntryName", EntryName);
 }
 
 } // namespace llvm

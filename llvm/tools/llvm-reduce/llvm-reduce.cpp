@@ -100,13 +100,6 @@ static cl::opt<int>
                                "of delta passes (default=5)"),
                       cl::init(5), cl::cat(LLVMReduceOptions));
 
-static cl::opt<bool> TryUseNewDbgInfoFormat(
-    "try-experimental-debuginfo-iterators",
-    cl::desc("Enable debuginfo iterator positions, if they're built in"),
-    cl::init(false));
-
-extern cl::opt<bool> UseNewDbgInfoFormat;
-
 static codegen::RegisterCodeGenFlags CGF;
 
 /// Turn off crash debugging features
@@ -148,18 +141,11 @@ int main(int Argc, char **Argv) {
   const StringRef ToolName(Argv[0]);
 
   cl::HideUnrelatedOptions({&LLVMReduceOptions, &getColorCategory()});
-  cl::ParseCommandLineOptions(Argc, Argv, "LLVM automatic testcase reducer.\n");
-
-  // RemoveDIs debug-info transition: tests may request that we /try/ to use the
-  // new debug-info format, if it's built in.
-#ifdef EXPERIMENTAL_DEBUGINFO_ITERATORS
-  if (TryUseNewDbgInfoFormat) {
-    // If LLVM was built with support for this, turn the new debug-info format
-    // on.
-    UseNewDbgInfoFormat = true;
-  }
-#endif
-  (void)TryUseNewDbgInfoFormat;
+  cl::ParseCommandLineOptions(
+      Argc, Argv,
+      "LLVM automatic testcase reducer.\n"
+      "See https://llvm.org/docs/CommandGuide/llvm-reduce.html for more "
+      "information.\n");
 
   if (Argc == 1) {
     cl::PrintHelpMessage();
@@ -218,7 +204,7 @@ int main(int Argc, char **Argv) {
   // interestingness checks.
   if (!Tester.getProgram().isReduced(Tester)) {
     errs() << "\nInput isn't interesting! Verify interesting-ness test\n";
-    return 1;
+    return 2;
   }
 
   // Try to reduce code

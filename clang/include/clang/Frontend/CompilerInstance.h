@@ -24,6 +24,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/BuryPointer.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include <cassert>
 #include <list>
 #include <memory>
@@ -50,8 +51,8 @@ class DiagnosticsEngine;
 class DiagnosticConsumer;
 class FileManager;
 class FrontendAction;
-class InMemoryModuleCache;
 class Module;
+class ModuleCache;
 class Preprocessor;
 class Sema;
 class SourceManager;
@@ -96,7 +97,7 @@ class CompilerInstance : public ModuleLoader {
   IntrusiveRefCntPtr<SourceManager> SourceMgr;
 
   /// The cache of PCM files.
-  IntrusiveRefCntPtr<InMemoryModuleCache> ModuleCache;
+  IntrusiveRefCntPtr<ModuleCache> ModCache;
 
   /// The preprocessor.
   std::shared_ptr<Preprocessor> PP;
@@ -117,7 +118,7 @@ class CompilerInstance : public ModuleLoader {
   std::unique_ptr<Sema> TheSema;
 
   /// The frontend timer group.
-  std::unique_ptr<llvm::TimerGroup> FrontendTimerGroup;
+  std::unique_ptr<llvm::TimerGroup> timerGroup;
 
   /// The frontend timer.
   std::unique_ptr<llvm::Timer> FrontendTimer;
@@ -132,6 +133,14 @@ class CompilerInstance : public ModuleLoader {
   std::shared_ptr<PCHContainerOperations> ThePCHContainerOperations;
 
   std::vector<std::shared_ptr<DependencyCollector>> DependencyCollectors;
+
+  /// The set of modules that failed to build.
+  ///
+  /// This value will be passed among all of the compiler instances created
+  /// to (re)build modules, so that once a module fails to build anywhere,
+  /// other instances will see that the module has failed and won't try to
+  /// build it again.
+  llvm::StringSet<> FailedModules;
 
   /// The set of top-level modules that has already been built on the
   /// fly as part of this overall compilation action.
@@ -190,7 +199,7 @@ public:
   explicit CompilerInstance(
       std::shared_ptr<PCHContainerOperations> PCHContainerOps =
           std::make_shared<PCHContainerOperations>(),
-      InMemoryModuleCache *SharedModuleCache = nullptr);
+      ModuleCache *ModCache = nullptr);
   ~CompilerInstance() override;
 
   /// @name High-Level Operations
@@ -224,6 +233,9 @@ public:
   // FIXME: Eliminate the llvm_shutdown requirement, that should either be part
   // of the context or else not CompilerInstance specific.
   bool ExecuteAction(FrontendAction &Act);
+
+  /// At the end of a compilation, print the number of warnings/errors.
+  void printDiagnosticStats();
 
   /// Load the list of plugins requested in the \c FrontendOptions.
   void LoadRequestedPlugins();
@@ -311,6 +323,9 @@ public:
 
   LangOptions &getLangOpts() { return Invocation->getLangOpts(); }
   const LangOptions &getLangOpts() const { return Invocation->getLangOpts(); }
+  std::shared_ptr<LangOptions> getLangOptsPtr() const {
+    return Invocation->getLangOptsPtr();
+  }
 
   PreprocessorOptions &getPreprocessorOpts() {
     return Invocation->getPreprocessorOpts();
@@ -605,14 +620,14 @@ public:
   /// @name Frontend timer
   /// @{
 
-  bool hasFrontendTimer() const { return (bool)FrontendTimer; }
+  llvm::TimerGroup &getTimerGroup() const { return *timerGroup; }
 
   llvm::Timer &getFrontendTimer() const {
     assert(FrontendTimer && "Compiler instance has no frontend timer!");
     return *FrontendTimer;
   }
 
-  /// @}
+  /// }
   /// @name Output Files
   /// @{
 
@@ -632,13 +647,17 @@ public:
   /// Note that this routine also replaces the diagnostic client,
   /// allocating one if one is not provided.
   ///
+  /// \param VFS is used for any IO needed when creating DiagnosticsEngine. It
+  /// doesn't replace VFS in the CompilerInstance (if any).
+  ///
   /// \param Client If non-NULL, a diagnostic client that will be
   /// attached to (and, then, owned by) the DiagnosticsEngine inside this AST
   /// unit.
   ///
   /// \param ShouldOwnClient If Client is non-NULL, specifies whether
   /// the diagnostic object should take ownership of the client.
-  void createDiagnostics(DiagnosticConsumer *Client = nullptr,
+  void createDiagnostics(llvm::vfs::FileSystem &VFS,
+                         DiagnosticConsumer *Client = nullptr,
                          bool ShouldOwnClient = true);
 
   /// Create a DiagnosticsEngine object with a the TextDiagnosticPrinter.
@@ -660,7 +679,7 @@ public:
   ///
   /// \return The new object on success, or null on failure.
   static IntrusiveRefCntPtr<DiagnosticsEngine>
-  createDiagnostics(DiagnosticOptions *Opts,
+  createDiagnostics(llvm::vfs::FileSystem &VFS, DiagnosticOptions *Opts,
                     DiagnosticConsumer *Client = nullptr,
                     bool ShouldOwnClient = true,
                     const CodeGenOptions *CodeGenOpts = nullptr);
@@ -699,9 +718,8 @@ public:
   static IntrusiveRefCntPtr<ASTReader> createPCHExternalASTSource(
       StringRef Path, StringRef Sysroot,
       DisableValidationForModuleKind DisableValidation,
-      bool AllowPCHWithCompilerErrors, Preprocessor &PP,
-      InMemoryModuleCache &ModuleCache, ASTContext &Context,
-      const PCHContainerReader &PCHContainerRdr,
+      bool AllowPCHWithCompilerErrors, Preprocessor &PP, ModuleCache &ModCache,
+      ASTContext &Context, const PCHContainerReader &PCHContainerRdr,
       ArrayRef<std::shared_ptr<ModuleFileExtension>> Extensions,
       ArrayRef<std::shared_ptr<DependencyCollector>> DependencyCollectors,
       void *DeserializationListener, bool OwnDeserializationListener,
@@ -824,7 +842,30 @@ private:
                                                  SourceLocation ModuleNameLoc,
                                                  bool IsInclusionDirective);
 
+  /// Creates a \c CompilerInstance for compiling a module.
+  ///
+  /// This expects a properly initialized \c FrontendInputFile.
+  std::unique_ptr<CompilerInstance> cloneForModuleCompileImpl(
+      SourceLocation ImportLoc, StringRef ModuleName, FrontendInputFile Input,
+      StringRef OriginalModuleMapFile, StringRef ModuleFileName);
+
 public:
+  /// Creates a new \c CompilerInstance for compiling a module.
+  ///
+  /// This takes care of creating appropriate \c FrontendInputFile for
+  /// public/private frameworks, inferred modules and such.
+  std::unique_ptr<CompilerInstance>
+  cloneForModuleCompile(SourceLocation ImportLoc, Module *Module,
+                        StringRef ModuleFileName);
+
+  /// Compile a module file for the given module, using the options
+  /// provided by the importing compiler instance. Returns true if the module
+  /// was built without errors.
+  // FIXME: This should be private, but it's called from static non-member
+  // functions in the implementation file.
+  bool compileModule(SourceLocation ImportLoc, StringRef ModuleName,
+                     StringRef ModuleFileName, CompilerInstance &Instance);
+
   ModuleLoadResult loadModule(SourceLocation ImportLoc, ModuleIdPath Path,
                               Module::NameVisibilityKind Visibility,
                               bool IsInclusionDirective) override;
@@ -849,7 +890,7 @@ public:
 
   void setExternalSemaSource(IntrusiveRefCntPtr<ExternalSemaSource> ESS);
 
-  InMemoryModuleCache &getModuleCache() const { return *ModuleCache; }
+  ModuleCache &getModuleCache() const { return *ModCache; }
 };
 
 } // end namespace clang

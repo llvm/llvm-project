@@ -68,10 +68,11 @@ struct BlockInfoBuilder {
     // operands as used. All defined value will be removed from the used set
     // at the end.
     block->walk([&](Operation *op) {
-      for (Value result : op->getResults())
-        defValues.insert(result);
-      for (Value operand : op->getOperands())
-        useValues.insert(operand);
+      defValues.insert_range(op->getResults());
+      useValues.insert_range(op->getOperands());
+      for (Region &region : op->getRegions())
+        for (Block &child : region.getBlocks())
+          defValues.insert_range(child.getArguments());
     });
     llvm::set_subtract(useValues, defValues);
   }

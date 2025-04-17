@@ -3,6 +3,7 @@ LLDB Formatters for LLVM data types.
 
 Load into LLDB with 'command script import /path/to/lldbDataFormatters.py'
 """
+from __future__ import annotations
 
 import collections
 import lldb
@@ -40,16 +41,6 @@ def __lldb_init_module(debugger, internal_dict):
         "type summary add -w llvm "
         '-e -s "size=${svar%#}" '
         '-x "^llvm::ArrayRef<.+>$"'
-    )
-    debugger.HandleCommand(
-        "type synthetic add -w llvm "
-        f"-l {__name__}.OptionalSynthProvider "
-        '-x "^llvm::Optional<.+>$"'
-    )
-    debugger.HandleCommand(
-        "type summary add -w llvm "
-        f"-e -F {__name__}.OptionalSummaryProvider "
-        '-x "^llvm::Optional<.+>$"'
     )
     debugger.HandleCommand(
         "type summary add -w llvm "
@@ -90,6 +81,12 @@ def __lldb_init_module(debugger, internal_dict):
         "type synthetic add -w llvm "
         f"-l {__name__}.DenseMapSynthetic "
         '-x "^llvm::DenseMap<.+>$"'
+    )
+
+    debugger.HandleCommand(
+        "type synthetic add -w llvm "
+        f"-l {__name__}.ExpectedSynthetic "
+        '-x "^llvm::Expected<.+>$"'
     )
 
 
@@ -168,53 +165,6 @@ class ArrayRefSynthProvider:
         self.data_type = self.data.GetType().GetPointeeType()
         self.type_size = self.data_type.GetByteSize()
         assert self.type_size != 0
-
-
-def GetOptionalValue(valobj):
-    storage = valobj.GetChildMemberWithName("Storage")
-    if not storage:
-        storage = valobj
-
-    failure = 2
-    hasVal = storage.GetChildMemberWithName("hasVal").GetValueAsUnsigned(failure)
-    if hasVal == failure:
-        return "<could not read llvm::Optional>"
-
-    if hasVal == 0:
-        return None
-
-    underlying_type = storage.GetType().GetTemplateArgumentType(0)
-    storage = storage.GetChildMemberWithName("value")
-    return storage.Cast(underlying_type)
-
-
-def OptionalSummaryProvider(valobj, internal_dict):
-    val = GetOptionalValue(valobj)
-    if val is None:
-        return "None"
-    if val.summary:
-        return val.summary
-    return ""
-
-
-class OptionalSynthProvider:
-    """Provides deref support to llvm::Optional<T>"""
-
-    def __init__(self, valobj, internal_dict):
-        self.valobj = valobj
-
-    def num_children(self):
-        return self.valobj.num_children
-
-    def get_child_index(self, name):
-        if name == "$$dereference$$":
-            return self.valobj.num_children
-        return self.valobj.GetIndexOfChildWithName(name)
-
-    def get_child_at_index(self, index):
-        if index < self.valobj.num_children:
-            return self.valobj.GetChildAtIndex(index)
-        return GetOptionalValue(self.valobj) or lldb.SBValue()
 
 
 def SmallStringSummaryProvider(valobj, internal_dict):
@@ -431,3 +381,43 @@ class DenseMapSynthetic:
         for indexes in key_buckets.values():
             if len(indexes) == 1:
                 self.child_buckets.append(indexes[0])
+
+
+class ExpectedSynthetic:
+    # The llvm::Expected<T> value.
+    expected: lldb.SBValue
+    # The stored success value or error value.
+    stored_value: lldb.SBValue
+
+    def __init__(self, valobj: lldb.SBValue, _) -> None:
+        self.expected = valobj
+
+    def update(self) -> None:
+        has_error = self.expected.GetChildMemberWithName("HasError").unsigned
+        if not has_error:
+            name = "value"
+            member = "TStorage"
+        else:
+            name = "error"
+            member = "ErrorStorage"
+        # Anonymous union.
+        union = self.expected.child[0]
+        storage = union.GetChildMemberWithName(member)
+        stored_type = storage.type.template_args[0]
+        self.stored_value = storage.Cast(stored_type).Clone(name)
+
+    def num_children(self) -> int:
+        return 1
+
+    def get_child_index(self, name: str) -> int:
+        if name == self.stored_value.name:
+            return 0
+        # Allow dereferencing for values, not errors.
+        if name == "$$dereference$$" and self.stored_value.name == "value":
+            return 0
+        return -1
+
+    def get_child_at_index(self, idx: int) -> lldb.SBValue:
+        if idx == 0:
+            return self.stored_value
+        return lldb.SBValue()

@@ -1,0 +1,32 @@
+---
+Name: SwiftImportAs
+Tags:
+- Name: ImmortalRefType
+  SwiftImportAs: reference
+  Methods:
+    - Name: methodReturningFrt__
+    - Name: methodReturningFrt_returns_unretained
+      SwiftReturnOwnership: unretained
+    - Name: methodReturningFrt_returns_retained
+      SwiftReturnOwnership: retained
+- Name: RefCountedType
+  SwiftImportAs: reference
+  SwiftReleaseOp: RCRelease
+  SwiftRetainOp: RCRetain
+  SwiftConformsTo: MySwiftModule.MySwiftRefCountedProtocol
+- Name: NonCopyableType
+  SwiftCopyable: false
+  SwiftConformsTo: MySwiftModule.MySwiftNonCopyableProtocol
+- Name: CopyableType
+  SwiftCopyable: true
+- Name: NonEscapableType
+  SwiftEscapable: false
+- Name: EscapableType
+  SwiftEscapable: true
+
+Functions:
+  - Name: functionReturningFrt__
+  - Name: functionReturningFrt_returns_unretained
+    SwiftReturnOwnership: unretained
+  - Name: functionReturningFrt_returns_retained
+    SwiftReturnOwnership: retained

@@ -1,4 +1,4 @@
-# RUN: llc -march=hexagon -o - %s -run-pass=machine-cp | FileCheck %s
+# RUN: llc -mtriple=hexagon -o - %s -run-pass=machine-cp | FileCheck %s
 
 ---
 name: dont_propagate_past_lower_subreg_kill

@@ -15,7 +15,7 @@ define void @f_fu(ptr %ret, ptr  %aa, float %b) {
 ; CHECK-NEXT:    vpsrad $1, %zmm2, %zmm2
 ; CHECK-NEXT:    movw $-21846, %ax ## imm = 0xAAAA
 ; CHECK-NEXT:    kmovw %eax, %k1
-; CHECK-NEXT:    vmovdqa32 {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm1 {%k1}
+; CHECK-NEXT:    vmovdqa32 {{.*#+}} zmm1 {%k1} = [u,3,u,5,u,7,u,9,u,11,u,13,u,15,u,17]
 ; CHECK-NEXT:    vpaddd %zmm0, %zmm2, %zmm0
 ; CHECK-NEXT:    vpaddd %zmm1, %zmm0, %zmm0
 ; CHECK-NEXT:    vcvtdq2ps %zmm0, %zmm0

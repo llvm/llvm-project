@@ -19,7 +19,7 @@
 ; CHECKUF1: %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
 ; CHECKUF1: %[[IDXB:.*]] = getelementptr inbounds double, ptr %b, i64 %index
 ; CHECKUF1: %wide.load = load <vscale x 4 x double>, ptr %[[IDXB]], align 8
-; CHECKUF1: %[[FADD:.*]] = fadd <vscale x 4 x double> %wide.load, shufflevector (<vscale x 4 x double> insertelement (<vscale x 4 x double> poison, double 1.000000e+00, i64 0), <vscale x 4 x double> poison, <vscale x 4 x i32> zeroinitializer)
+; CHECKUF1: %[[FADD:.*]] = fadd <vscale x 4 x double> %wide.load, splat (double 1.000000e+00)
 ; CHECKUF1: %[[IDXA:.*]] = getelementptr inbounds double, ptr %a, i64 %index
 ; CHECKUF1: store <vscale x 4 x double> %[[FADD]], ptr %[[IDXA]], align 8
 ; CHECKUF1: %index.next = add nuw i64 %index, %[[VSCALEX4]]
@@ -48,16 +48,16 @@
 ; CHECKUF2: %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
 ; CHECKUF2: %[[IDXB:.*]] = getelementptr inbounds double, ptr %b, i64 %index
 ; CHECKUF2: %[[VSCALE:.*]] = call i64 @llvm.vscale.i64()
-; CHECKUF2: %[[VSCALE2:.*]] = shl i64 %[[VSCALE]], 2
-; CHECKUF2: %[[IDXB_NEXT:.*]] = getelementptr inbounds double, ptr %[[IDXB]], i64 %[[VSCALE2]]
+; CHECKUF2: %[[VSCALE2:.*]] = shl i64 %[[VSCALE]], 5
+; CHECKUF2: %[[IDXB_NEXT:.*]] = getelementptr inbounds i8, ptr %[[IDXB]], i64 %[[VSCALE2]]
 ; CHECKUF2: %wide.load = load <vscale x 4 x double>, ptr %[[IDXB]], align 8
 ; CHECKUF2: %wide.load{{[0-9]+}} = load <vscale x 4 x double>, ptr %[[IDXB_NEXT]], align 8
-; CHECKUF2: %[[FADD:.*]] = fadd <vscale x 4 x double> %wide.load, shufflevector (<vscale x 4 x double> insertelement (<vscale x 4 x double> poison, double 1.000000e+00, i64 0), <vscale x 4 x double> poison, <vscale x 4 x i32> zeroinitializer)
-; CHECKUF2: %[[FADD_NEXT:.*]] = fadd <vscale x 4 x double> %wide.load{{[0-9]+}}, shufflevector (<vscale x 4 x double> insertelement (<vscale x 4 x double> poison, double 1.000000e+00, i64 0), <vscale x 4 x double> poison, <vscale x 4 x i32> zeroinitializer)
+; CHECKUF2: %[[FADD:.*]] = fadd <vscale x 4 x double> %wide.load, splat (double 1.000000e+00)
+; CHECKUF2: %[[FADD_NEXT:.*]] = fadd <vscale x 4 x double> %wide.load{{[0-9]+}}, splat (double 1.000000e+00)
 ; CHECKUF2: %[[IDXA:.*]] = getelementptr inbounds double, ptr %a, i64 %index
 ; CHECKUF2: %[[VSCALE:.*]] = call i64 @llvm.vscale.i64()
-; CHECKUF2: %[[VSCALE2:.*]] = shl i64 %[[VSCALE]], 2
-; CHECKUF2: %[[IDXA_NEXT:.*]] = getelementptr inbounds double, ptr %[[IDXA]], i64 %[[VSCALE2]]
+; CHECKUF2: %[[VSCALE2:.*]] = shl i64 %[[VSCALE]], 5
+; CHECKUF2: %[[IDXA_NEXT:.*]] = getelementptr inbounds i8, ptr %[[IDXA]], i64 %[[VSCALE2]]
 ; CHECKUF2: store <vscale x 4 x double> %[[FADD]], ptr %[[IDXA]], align 8
 ; CHECKUF2: store <vscale x 4 x double> %[[FADD_NEXT]], ptr %[[IDXA_NEXT]], align 8
 ; CHECKUF2: %index.next = add nuw i64 %index, %[[VSCALEX8]]

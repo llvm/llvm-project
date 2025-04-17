@@ -314,3 +314,79 @@ llvm.func @arm_sve_convert_to_svbool(
     : (vector<[1]xi1>) -> vector<[16]xi1>
   llvm.return
 }
+
+// CHECK-LABEL: arm_sve_zip_x2(
+// CHECK-SAME:                 <vscale x 16 x i8> %[[V1:[0-9]+]],
+// CHECK-SAME:                 <vscale x 8 x i16> %[[V2:[0-9]+]],
+// CHECK-SAME:                 <vscale x 4 x i32> %[[V3:[0-9]+]],
+// CHECK-SAME:                 <vscale x 2 x i64> %[[V4:[0-9]+]])
+llvm.func @arm_sve_zip_x2(%nxv16i8: vector<[16]xi8>, %nxv8i16: vector<[8]xi16>, %nxv4i32: vector<[4]xi32>, %nxv2i64: vector<[2]xi64>) {
+  // CHECK: call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.zip.x2.nxv16i8(<vscale x 16 x i8> %[[V1]], <vscale x 16 x i8> %[[V1]])
+  %0 = "arm_sve.intr.zip.x2"(%nxv16i8, %nxv16i8) : (vector<[16]xi8>, vector<[16]xi8>)
+    -> !llvm.struct<(vector<[16]xi8>, vector<[16]xi8>)>
+  // CHECK: call { <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.aarch64.sve.zip.x2.nxv8i16(<vscale x 8 x i16> %[[V2]], <vscale x 8 x i16> %[[V2]])
+  %1 = "arm_sve.intr.zip.x2"(%nxv8i16, %nxv8i16) : (vector<[8]xi16>, vector<[8]xi16>)
+    -> !llvm.struct<(vector<[8]xi16>, vector<[8]xi16>)>
+  // CHECK: call { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.aarch64.sve.zip.x2.nxv4i32(<vscale x 4 x i32> %[[V3]], <vscale x 4 x i32> %[[V3]])
+  %2 = "arm_sve.intr.zip.x2"(%nxv4i32, %nxv4i32) : (vector<[4]xi32>, vector<[4]xi32>)
+    -> !llvm.struct<(vector<[4]xi32>, vector<[4]xi32>)>
+  // CHECK: call { <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sve.zip.x2.nxv2i64(<vscale x 2 x i64> %[[V4]], <vscale x 2 x i64> %[[V4]])
+  %3 = "arm_sve.intr.zip.x2"(%nxv2i64, %nxv2i64) : (vector<[2]xi64>, vector<[2]xi64>)
+     -> !llvm.struct<(vector<[2]xi64>, vector<[2]xi64>)>
+  llvm.return
+}
+
+// CHECK-LABEL: arm_sve_zip_x4(
+// CHECK-SAME:                 <vscale x 16 x i8> %[[V1:[0-9]+]],
+// CHECK-SAME:                 <vscale x 8 x i16> %[[V2:[0-9]+]],
+// CHECK-SAME:                 <vscale x 4 x i32> %[[V3:[0-9]+]],
+// CHECK-SAME:                 <vscale x 2 x i64> %[[V4:[0-9]+]])
+llvm.func @arm_sve_zip_x4(%nxv16i8: vector<[16]xi8>, %nxv8i16: vector<[8]xi16>, %nxv4i32: vector<[4]xi32>, %nxv2i64: vector<[2]xi64>) {
+  // CHECK: call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.zip.x4.nxv16i8(<vscale x 16 x i8> %[[V1]], <vscale x 16 x i8> %[[V1]], <vscale x 16 x i8> %[[V1]], <vscale x 16 x i8> %[[V1]])
+  %0 = "arm_sve.intr.zip.x4"(%nxv16i8, %nxv16i8, %nxv16i8, %nxv16i8) : (vector<[16]xi8>, vector<[16]xi8>, vector<[16]xi8>, vector<[16]xi8>)
+    -> !llvm.struct<(vector<[16]xi8>, vector<[16]xi8>, vector<[16]xi8>, vector<[16]xi8>)>
+  // CHECK: call { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.aarch64.sve.zip.x4.nxv8i16(<vscale x 8 x i16> %[[V2]], <vscale x 8 x i16> %[[V2]], <vscale x 8 x i16> %[[V2]], <vscale x 8 x i16> %[[V2]])
+  %1 = "arm_sve.intr.zip.x4"(%nxv8i16, %nxv8i16, %nxv8i16, %nxv8i16) : (vector<[8]xi16>, vector<[8]xi16>, vector<[8]xi16>, vector<[8]xi16>)
+    -> !llvm.struct<(vector<[8]xi16>, vector<[8]xi16>, vector<[8]xi16>, vector<[8]xi16>)>
+  // CHECK: call { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.aarch64.sve.zip.x4.nxv4i32(<vscale x 4 x i32> %[[V3]], <vscale x 4 x i32> %[[V3]], <vscale x 4 x i32> %[[V3]], <vscale x 4 x i32> %[[V3]])
+  %2 = "arm_sve.intr.zip.x4"(%nxv4i32, %nxv4i32, %nxv4i32, %nxv4i32) : (vector<[4]xi32>, vector<[4]xi32>, vector<[4]xi32>, vector<[4]xi32>)
+    -> !llvm.struct<(vector<[4]xi32>, vector<[4]xi32>, vector<[4]xi32>, vector<[4]xi32>)>
+  // CHECK: call { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sve.zip.x4.nxv2i64(<vscale x 2 x i64> %[[V4]], <vscale x 2 x i64> %[[V4]], <vscale x 2 x i64> %[[V4]], <vscale x 2 x i64> %[[V4]])
+  %3 = "arm_sve.intr.zip.x4"(%nxv2i64, %nxv2i64, %nxv2i64, %nxv2i64) : (vector<[2]xi64>, vector<[2]xi64>, vector<[2]xi64>, vector<[2]xi64>)
+     -> !llvm.struct<(vector<[2]xi64>, vector<[2]xi64>, vector<[2]xi64>, vector<[2]xi64>)>
+  llvm.return
+}
+
+// CHECK-LABEL: arm_sve_whilelt(
+// CHECK-SAME:                  i64 %[[BASE:[0-9]+]],
+// CHECK-SAME:                  i64 %[[N:[0-9]+]]
+llvm.func @arm_sve_whilelt(%base: i64, %n: i64) {
+  // call <vscale x 2 x i1> @llvm.aarch64.sve.whilelt.nxv2i1.i64(i64 %[[BASE]], i64 %[[N]])
+  %1 = "arm_sve.intr.whilelt"(%base, %n) : (i64, i64) -> vector<[2]xi1>
+  // call <vscale x 4 x i1> @llvm.aarch64.sve.whilelt.nxv4i1.i64(i64 %[[BASE]], i64 %[[N]])
+  %2 = "arm_sve.intr.whilelt"(%base, %n) : (i64, i64) -> vector<[4]xi1>
+  // call <vscale x 8 x i1> @llvm.aarch64.sve.whilelt.nxv8i1.i64(i64 %[[BASE]], i64 %[[N]])
+  %3 = "arm_sve.intr.whilelt"(%base, %n) : (i64, i64) -> vector<[8]xi1>
+  // call <vscale x 16 x i1> @llvm.aarch64.sve.whilelt.nxv16i1.i64(i64 %[[BASE]], i64 %[[N]])
+  %4 = "arm_sve.intr.whilelt"(%base, %n) : (i64, i64) -> vector<[16]xi1>
+  llvm.return
+}
+
+// CHECK-LABEL: arm_sve_psel(
+// CHECK-SAME:               <vscale x 16 x i1> %[[PN:[0-9]+]],
+// CHECK-SAME:               <vscale x 2 x i1> %[[P1:[0-9]+]],
+// CHECK-SAME:               <vscale x 4 x i1> %[[P2:[0-9]+]],
+// CHECK-SAME:               <vscale x 8 x i1> %[[P3:[0-9]+]],
+// CHECK-SAME:               <vscale x 16 x i1> %[[P4:[0-9]+]],
+// CHECK-SAME:               i32 %[[INDEX:[0-9]+]])
+llvm.func @arm_sve_psel(%pn: vector<[16]xi1>, %p1: vector<[2]xi1>, %p2: vector<[4]xi1>, %p3: vector<[8]xi1>, %p4: vector<[16]xi1>, %index: i32) {
+  // CHECK: call <vscale x 16 x i1> @llvm.aarch64.sve.psel.nxv2i1(<vscale x 16 x i1> %[[PN]], <vscale x 2 x i1> %[[P1]], i32 %[[INDEX]])
+  "arm_sve.intr.psel"(%pn, %p1, %index) : (vector<[16]xi1>, vector<[2]xi1>, i32) -> vector<[16]xi1>
+  // CHECK: call <vscale x 16 x i1> @llvm.aarch64.sve.psel.nxv4i1(<vscale x 16 x i1> %[[PN]], <vscale x 4 x i1> %[[P2]], i32 %[[INDEX]])
+  "arm_sve.intr.psel"(%pn, %p2, %index) : (vector<[16]xi1>, vector<[4]xi1>, i32) -> vector<[16]xi1>
+  // CHECK: call <vscale x 16 x i1> @llvm.aarch64.sve.psel.nxv8i1(<vscale x 16 x i1> %[[PN]], <vscale x 8 x i1> %[[P3]], i32 %[[INDEX]])
+  "arm_sve.intr.psel"(%pn, %p3, %index) : (vector<[16]xi1>, vector<[8]xi1>, i32) -> vector<[16]xi1>
+  // CHECK: call <vscale x 16 x i1> @llvm.aarch64.sve.psel.nxv16i1(<vscale x 16 x i1> %[[PN]], <vscale x 16 x i1> %[[P4]], i32 %[[INDEX]])
+  "arm_sve.intr.psel"(%pn, %p4, %index) : (vector<[16]xi1>, vector<[16]xi1>, i32) -> vector<[16]xi1>
+  llvm.return
+}

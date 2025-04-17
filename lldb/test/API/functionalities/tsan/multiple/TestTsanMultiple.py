@@ -84,7 +84,7 @@ class TsanMultipleTestCase(TestBase):
                     lldb.eInstrumentationRuntimeTypeThreadSanitizer
                 )
             )
-            self.assertTrue(backtraces.GetSize() >= 1)
+            self.assertGreaterEqual(backtraces.GetSize(), 1)
 
             self.runCmd("continue")
 

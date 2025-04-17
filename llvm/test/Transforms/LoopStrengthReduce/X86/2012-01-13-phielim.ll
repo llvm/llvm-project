@@ -10,23 +10,23 @@ define i32 @test(ptr %base) nounwind uwtable ssp {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[WHILE_BODY_LR_PH_I:%.*]]
 ; CHECK:       while.body.lr.ph.i:
-; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 16
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 16
 ; CHECK-NEXT:    br label [[WHILE_BODY_I:%.*]]
 ; CHECK:       while.body.i:
 ; CHECK-NEXT:    [[INDVARS_IV7_I:%.*]] = phi i64 [ 16, [[WHILE_BODY_LR_PH_I]] ], [ [[INDVARS_IV_NEXT8_I:%.*]], [[COND_TRUE29_I:%.*]] ]
 ; CHECK-NEXT:    [[I_05_I:%.*]] = phi i64 [ 0, [[WHILE_BODY_LR_PH_I]] ], [ [[INDVARS_IV7_I]], [[COND_TRUE29_I]] ]
 ; CHECK-NEXT:    [[LSR4:%.*]] = trunc i64 [[I_05_I]] to i32
 ; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[LSR4]] to i64
-; CHECK-NEXT:    [[UGLYGEP1:%.*]] = getelementptr i8, ptr [[UGLYGEP]], i64 [[TMP0]]
+; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[SCEVGEP]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[SEXT_I:%.*]] = shl i64 [[I_05_I]], 32
 ; CHECK-NEXT:    [[IDX_EXT_I:%.*]] = ashr exact i64 [[SEXT_I]], 32
 ; CHECK-NEXT:    [[ADD_PTR_SUM_I:%.*]] = add i64 [[IDX_EXT_I]], 16
 ; CHECK-NEXT:    br label [[FOR_BODY_I:%.*]]
 ; CHECK:       for.body.i:
-; CHECK-NEXT:    [[LSR_IV2:%.*]] = phi ptr [ [[UGLYGEP3:%.*]], [[FOR_BODY_I]] ], [ [[UGLYGEP1]], [[WHILE_BODY_I]] ]
+; CHECK-NEXT:    [[LSR_IV2:%.*]] = phi ptr [ [[SCEVGEP3:%.*]], [[FOR_BODY_I]] ], [ [[SCEVGEP1]], [[WHILE_BODY_I]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr [[LSR_IV2]], align 1
 ; CHECK-NEXT:    [[CMP:%.*]] = call i1 @check() #[[ATTR3:[0-9]+]]
-; CHECK-NEXT:    [[UGLYGEP3]] = getelementptr i8, ptr [[LSR_IV2]], i64 1
+; CHECK-NEXT:    [[SCEVGEP3]] = getelementptr i8, ptr [[LSR_IV2]], i64 1
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_END_I:%.*]], label [[FOR_BODY_I]]
 ; CHECK:       for.end.i:
 ; CHECK-NEXT:    [[ADD_PTR_I144:%.*]] = getelementptr inbounds i8, ptr [[BASE]], i64 [[ADD_PTR_SUM_I]]
@@ -88,27 +88,27 @@ exit:                                 ; preds = %cond.true29.i, %cond.true.i
 ; Test phi reuse after LSR that requires SCEVExpander to hoist an
 ; interesting GEP.
 ;
-define void @test2(i32 %n) nounwind uwtable {
+define void @test2(i32 %n, i1 %arg) nounwind uwtable {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 undef, label [[WHILE_END:%.*]], label [[FOR_COND468_PREHEADER:%.*]]
+; CHECK-NEXT:    br i1 [[ARG:%.*]], label [[WHILE_END:%.*]], label [[FOR_COND468_PREHEADER:%.*]]
 ; CHECK:       for.cond468.preheader:
 ; CHECK-NEXT:    br label [[FOR_COND468:%.*]]
 ; CHECK:       for.cond468:
 ; CHECK-NEXT:    [[LSR_IV1:%.*]] = phi i32 [ 1, [[FOR_COND468_PREHEADER]] ], [ [[LSR_IV_NEXT:%.*]], [[IF_THEN477:%.*]] ]
-; CHECK-NEXT:    [[LSR_IV:%.*]] = phi ptr [ getelementptr inbounds ([5000 x %struct.anon.7.91.199.307.415.475.559.643.751.835.943.1003.1111.1219.1351.1375.1399.1435.1471.1483.1519.1531.1651.1771], ptr @tags, i64 0, i64 0, i32 2), [[FOR_COND468_PREHEADER]] ], [ [[UGLYGEP:%.*]], [[IF_THEN477]] ]
+; CHECK-NEXT:    [[LSR_IV:%.*]] = phi ptr [ getelementptr inbounds nuw (i8, ptr @tags, i64 8), [[FOR_COND468_PREHEADER]] ], [ [[SCEVGEP:%.*]], [[IF_THEN477]] ]
 ; CHECK-NEXT:    [[K_0:%.*]] = load i32, ptr [[LSR_IV]], align 4
 ; CHECK-NEXT:    [[CMP469:%.*]] = icmp slt i32 [[LSR_IV1]], [[N:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP469]], label [[FOR_BODY471:%.*]], label [[FOR_INC498_PREHEADER:%.*]]
 ; CHECK:       for.body471:
-; CHECK-NEXT:    [[UGLYGEP2:%.*]] = getelementptr i8, ptr [[LSR_IV]], i64 8
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[UGLYGEP2]], align 4
-; CHECK-NEXT:    br i1 false, label [[IF_THEN477]], label [[FOR_INC498_PREHEADER]]
+; CHECK-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[LSR_IV]], i64 8
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[SCEVGEP2]], align 4
+; CHECK-NEXT:    br i1 [[ARG]], label [[IF_THEN477]], label [[FOR_INC498_PREHEADER]]
 ; CHECK:       for.inc498.preheader:
 ; CHECK-NEXT:    br label [[FOR_INC498:%.*]]
 ; CHECK:       if.then477:
-; CHECK-NEXT:    [[UGLYGEP]] = getelementptr i8, ptr [[LSR_IV]], i64 12
-; CHECK-NEXT:    [[LSR_IV_NEXT]] = add nuw nsw i32 [[LSR_IV1]], 1
+; CHECK-NEXT:    [[SCEVGEP]] = getelementptr i8, ptr [[LSR_IV]], i64 12
+; CHECK-NEXT:    [[LSR_IV_NEXT]] = add nuw i32 [[LSR_IV1]], 1
 ; CHECK-NEXT:    br label [[FOR_COND468]]
 ; CHECK:       for.inc498:
 ; CHECK-NEXT:    br label [[FOR_INC498]]
@@ -116,7 +116,7 @@ define void @test2(i32 %n) nounwind uwtable {
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  br i1 undef, label %while.end, label %for.cond468
+  br i1 %arg, label %while.end, label %for.cond468
 
 for.cond468:                                      ; preds = %if.then477, %entry
   %indvars.iv1163 = phi i64 [ %indvars.iv.next1164, %if.then477 ], [ 1, %entry ]
@@ -129,7 +129,7 @@ for.cond468:                                      ; preds = %if.then477, %entry
 for.body471:                                      ; preds = %for.cond468
   %first = getelementptr inbounds [5000 x %struct.anon.7.91.199.307.415.475.559.643.751.835.943.1003.1111.1219.1351.1375.1399.1435.1471.1483.1519.1531.1651.1771], ptr @tags, i64 0, i64 %indvars.iv1163, i32 1
   %1 = load i32, ptr %first, align 4
-  br i1 undef, label %if.then477, label %for.inc498
+  br i1 %arg, label %if.then477, label %for.inc498
 
 if.then477:                                       ; preds = %for.body471
   %last = getelementptr inbounds [5000 x %struct.anon.7.91.199.307.415.475.559.643.751.835.943.1003.1111.1219.1351.1375.1399.1435.1471.1483.1519.1531.1651.1771], ptr @tags, i64 0, i64 %indvars.iv1163, i32 2
@@ -147,51 +147,51 @@ while.end:                                        ; preds = %entry
 ; Test redundant phi elimination when the deleted phi's increment is
 ; itself a phi.
 ;
-define fastcc void @test3(double* nocapture %u) nounwind uwtable ssp {
+define fastcc void @test3(ptr nocapture %u, i1 %arg) nounwind uwtable ssp {
 ; CHECK-LABEL: @test3(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 undef, label [[MESHBB1_PREHEADER:%.*]], label [[MESHBB5:%.*]]
+; CHECK-NEXT:    br i1 [[ARG:%.*]], label [[MESHBB1_PREHEADER:%.*]], label [[MESHBB5:%.*]]
 ; CHECK:       meshBB1.preheader:
 ; CHECK-NEXT:    br label [[MESHBB1:%.*]]
 ; CHECK:       for.inc8.us.i:
-; CHECK-NEXT:    br i1 true, label [[MESHBB1_LOOPEXIT:%.*]], label [[MESHBB:%.*]]
+; CHECK-NEXT:    br i1 [[ARG]], label [[MESHBB1_LOOPEXIT:%.*]], label [[MESHBB:%.*]]
 ; CHECK:       for.body3.us.i:
-; CHECK-NEXT:    [[INDVARS_IV_I_SV_PHI:%.*]] = phi i64 [ [[INDVARS_IV_NEXT_I:%.*]], [[MESHBB]] ], [ 0, [[FOR_BODY3_LR_PH_US_I:%.*]] ]
+; CHECK-NEXT:    [[TMP:%.*]] = phi i32 [ [[LSR_IV_NEXT:%.*]], [[MESHBB]] ], [ [[TMP3:%.*]], [[FOR_BODY3_LR_PH_US_I:%.*]] ]
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = phi ptr [ [[SCEVGEP1:%.*]], [[MESHBB]] ], [ [[U:%.*]], [[FOR_BODY3_LR_PH_US_I]] ]
 ; CHECK-NEXT:    [[OPQ_SA_CALC12:%.*]] = sub i32 undef, 227
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[LSR_IV:%.*]], [[INDVARS_IV_I_SV_PHI]]
-; CHECK-NEXT:    [[TMP:%.*]] = trunc i64 [[TMP0]] to i32
 ; CHECK-NEXT:    [[MUL_I_US_I:%.*]] = mul nsw i32 0, [[TMP]]
-; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[INDVARS_IV_I_SV_PHI]], 3
-; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[U:%.*]], i64 [[TMP1]]
-; CHECK-NEXT:    [[TMP2:%.*]] = load double, ptr [[UGLYGEP]], align 8
-; CHECK-NEXT:    br i1 undef, label [[FOR_INC8_US_I:%.*]], label [[MESHBB]]
+; CHECK-NEXT:    [[TMP2:%.*]] = load double, ptr [[SCEVGEP]], align 8
+; CHECK-NEXT:    br i1 [[ARG]], label [[FOR_INC8_US_I:%.*]], label [[MESHBB]]
 ; CHECK:       for.body3.lr.ph.us.i.loopexit:
-; CHECK-NEXT:    [[LSR_IV_NEXT:%.*]] = add i64 [[LSR_IV]], 1
 ; CHECK-NEXT:    br label [[FOR_BODY3_LR_PH_US_I]]
 ; CHECK:       for.body3.lr.ph.us.i:
-; CHECK-NEXT:    [[LSR_IV]] = phi i64 [ [[LSR_IV_NEXT]], [[FOR_BODY3_LR_PH_US_I_LOOPEXIT:%.*]] ], [ undef, [[MESHBB1]] ]
+; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i64 [ undef, [[MESHBB1]] ], [ [[INDVARS_IV8_I_SV_PHI24:%.*]], [[FOR_BODY3_LR_PH_US_I_LOOPEXIT:%.*]] ]
 ; CHECK-NEXT:    [[ARRAYIDX_US_I:%.*]] = getelementptr inbounds double, ptr undef, i64 [[LSR_IV]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[LSR_IV]], 1
+; CHECK-NEXT:    [[TMP3]] = trunc i64 [[LSR_IV]] to i32
 ; CHECK-NEXT:    br label [[FOR_BODY3_US_I:%.*]]
 ; CHECK:       for.inc8.us.i2:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       eval_At_times_u.exit:
 ; CHECK-NEXT:    ret void
 ; CHECK:       meshBB:
+; CHECK-NEXT:    [[INDVARS_IV8_I_SV_PHI24]] = phi i64 [ undef, [[FOR_BODY3_US_I]] ], [ [[TMP1]], [[FOR_INC8_US_I]] ]
 ; CHECK-NEXT:    [[MESHSTACKVARIABLE_PHI:%.*]] = phi i32 [ [[OPQ_SA_CALC12]], [[FOR_BODY3_US_I]] ], [ undef, [[FOR_INC8_US_I]] ]
-; CHECK-NEXT:    [[INDVARS_IV_NEXT_I]] = add i64 [[INDVARS_IV_I_SV_PHI]], 1
-; CHECK-NEXT:    br i1 true, label [[FOR_BODY3_LR_PH_US_I_LOOPEXIT]], label [[FOR_BODY3_US_I]]
+; CHECK-NEXT:    [[SCEVGEP1]] = getelementptr i8, ptr [[SCEVGEP]], i64 8
+; CHECK-NEXT:    [[LSR_IV_NEXT]] = add i32 [[TMP]], 1
+; CHECK-NEXT:    br i1 [[ARG]], label [[FOR_BODY3_LR_PH_US_I_LOOPEXIT]], label [[FOR_BODY3_US_I]]
 ; CHECK:       meshBB1.loopexit:
 ; CHECK-NEXT:    br label [[MESHBB1]]
 ; CHECK:       meshBB1:
 ; CHECK-NEXT:    br label [[FOR_BODY3_LR_PH_US_I]]
 ; CHECK:       meshBB5:
-; CHECK-NEXT:    br i1 undef, label [[EVAL_AT_TIMES_U_EXIT:%.*]], label [[FOR_INC8_US_I2:%.*]]
+; CHECK-NEXT:    br i1 [[ARG]], label [[EVAL_AT_TIMES_U_EXIT:%.*]], label [[FOR_INC8_US_I2:%.*]]
 ;
 entry:
-  br i1 undef, label %meshBB1, label %meshBB5
+  br i1 %arg, label %meshBB1, label %meshBB5
 
 for.inc8.us.i:                                    ; preds = %for.body3.us.i
-  br i1 undef, label %meshBB1, label %meshBB
+  br i1 %arg, label %meshBB1, label %meshBB
 
 for.body3.us.i:                                   ; preds = %meshBB, %for.body3.lr.ph.us.i
   %indvars.iv.i.SV.phi = phi i64 [ %indvars.iv.next.i, %meshBB ], [ 0, %for.body3.lr.ph.us.i ]
@@ -203,7 +203,7 @@ for.body3.us.i:                                   ; preds = %meshBB, %for.body3.
   %arrayidx5.us.i = getelementptr inbounds double, ptr %u, i64 %indvars.iv.i.SV.phi
   %2 = load double, ptr %arrayidx5.us.i, align 8
   %indvars.iv.next.i = add i64 %indvars.iv.i.SV.phi, 1
-  br i1 undef, label %for.inc8.us.i, label %meshBB
+  br i1 %arg, label %for.inc8.us.i, label %meshBB
 
 for.body3.lr.ph.us.i:                             ; preds = %meshBB1, %meshBB
   %indvars.iv8.i.SV.phi26 = phi i64 [ undef, %meshBB1 ], [ %indvars.iv8.i.SV.phi24, %meshBB ]
@@ -220,11 +220,11 @@ eval_At_times_u.exit:                             ; preds = %meshBB5
 meshBB:                                           ; preds = %for.body3.us.i, %for.inc8.us.i
   %indvars.iv8.i.SV.phi24 = phi i64 [ undef, %for.body3.us.i ], [ %3, %for.inc8.us.i ]
   %meshStackVariable.phi = phi i32 [ %Opq.sa.calc12, %for.body3.us.i ], [ undef, %for.inc8.us.i ]
-  br i1 undef, label %for.body3.lr.ph.us.i, label %for.body3.us.i
+  br i1 %arg, label %for.body3.lr.ph.us.i, label %for.body3.us.i
 
 meshBB1:                                          ; preds = %for.inc8.us.i, %entry
   br label %for.body3.lr.ph.us.i
 
 meshBB5:                                          ; preds = %entry
-  br i1 undef, label %eval_At_times_u.exit, label %for.inc8.us.i2
+  br i1 %arg, label %eval_At_times_u.exit, label %for.inc8.us.i2
 }

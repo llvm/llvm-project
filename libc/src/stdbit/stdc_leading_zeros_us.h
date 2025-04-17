@@ -9,10 +9,12 @@
 #ifndef LLVM_LIBC_SRC_STDBIT_STDC_LEADING_ZEROS_US_H
 #define LLVM_LIBC_SRC_STDBIT_STDC_LEADING_ZEROS_US_H
 
-namespace LIBC_NAMESPACE {
+#include "src/__support/macros/config.h"
 
-unsigned short stdc_leading_zeros_us(unsigned short value);
+namespace LIBC_NAMESPACE_DECL {
 
-} // namespace LIBC_NAMESPACE
+unsigned stdc_leading_zeros_us(unsigned short value);
+
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_STDBIT_STDC_LEADING_ZEROS_US_H

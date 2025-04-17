@@ -1,4 +1,4 @@
-// RUN: llvm-mc -arch=amdgcn -mcpu=gfx1200 -show-encoding %s | FileCheck -check-prefix=GFX12 %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=gfx1200 -show-encoding %s | FileCheck -check-prefix=GFX12 %s
 
 export mrt0 off, off, off, off
 // GFX12: export mrt0 off, off, off, off ; encoding: [0x00,0x00,0x00,0xf8,0x00,0x00,0x00,0x00]

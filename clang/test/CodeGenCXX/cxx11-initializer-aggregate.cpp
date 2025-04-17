@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -std=c++11 -S -emit-llvm -o - %s -triple x86_64-linux-gnu | FileCheck %s
-// RUN: %clang_cc1 -std=c++17 -S -emit-llvm -o - %s -triple x86_64-linux-gnu | FileCheck %s
+// RUN: %clang_cc1 -std=c++11 -emit-llvm -o - %s -triple x86_64-linux-gnu | FileCheck %s
+// RUN: %clang_cc1 -std=c++17 -emit-llvm -o - %s -triple x86_64-linux-gnu | FileCheck %s
 
 struct A { int a, b; int f(); };
 
@@ -51,9 +51,9 @@ namespace PR37560 {
 // CHECK-LABEL: define {{.*}}@_Z3fn1i(
 int fn1(int x) {
   // CHECK: %[[INITLIST:.*]] = alloca %struct.A
-  // CHECK: %[[A:.*]] = getelementptr inbounds %struct.A, ptr %[[INITLIST]], i32 0, i32 0
+  // CHECK: %[[A:.*]] = getelementptr inbounds nuw %struct.A, ptr %[[INITLIST]], i32 0, i32 0
   // CHECK: store i32 %{{.*}}, ptr %[[A]], align 4
-  // CHECK: %[[B:.*]] = getelementptr inbounds %struct.A, ptr %[[INITLIST]], i32 0, i32 1
+  // CHECK: %[[B:.*]] = getelementptr inbounds nuw %struct.A, ptr %[[INITLIST]], i32 0, i32 1
   // CHECK: store i32 5, ptr %[[B]], align 4
   // CHECK: call noundef i32 @_ZN1A1fEv(ptr {{[^,]*}} %[[INITLIST]])
   return A{x, 5}.f();
@@ -64,7 +64,7 @@ struct B { int &r; int &f() { return r; } };
 // CHECK-LABEL: define {{.*}}@_Z3fn2Ri(
 int &fn2(int &v) {
   // CHECK: %[[INITLIST2:.*]] = alloca %struct.B, align 8
-  // CHECK: %[[R:.*]] = getelementptr inbounds %struct.B, ptr %[[INITLIST2:.*]], i32 0, i32 0
+  // CHECK: %[[R:.*]] = getelementptr inbounds nuw %struct.B, ptr %[[INITLIST2:.*]], i32 0, i32 0
   // CHECK: store ptr %{{.*}}, ptr %[[R]], align 8
   // CHECK: call noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) ptr @_ZN1B1fEv(ptr {{[^,]*}} %[[INITLIST2:.*]])
   return B{v}.f();

@@ -10,10 +10,15 @@ config.lldb_src_root = "@LLDB_SOURCE_DIR@"
 config.lldb_obj_root = "@LLDB_BINARY_DIR@"
 config.lldb_libs_dir = lit_config.substitute("@LLDB_LIBS_DIR@")
 config.lldb_tools_dir = lit_config.substitute("@LLDB_TOOLS_DIR@")
+config.lldb_platform_url = lit_config.substitute("@LLDB_TEST_PLATFORM_URL@")
+config.lldb_platform_working_dir = lit_config.substitute("@LLDB_TEST_PLATFORM_WORKING_DIR@")
 # Since it comes from the command line, it may have backslashes which
 # should not need to be escaped.
 config.lldb_lit_tools_dir = lit_config.substitute(r"@LLDB_LIT_TOOLS_DIR@")
-config.cmake_sysroot = lit_config.substitute("@CMAKE_SYSROOT@")
+config.cmake_sysroot = lit_config.substitute("@LLDB_TEST_SYSROOT@" or "@DEFAULT_SYSROOT@")
+config.has_libcxx = @LLDB_HAS_LIBCXX@
+config.enable_remote = not @LLDB_TEST_SHELL_DISABLE_REMOTE@
+config.libcxx_libs_dir = "@LIBCXX_LIBRARY_DIR@"
 config.target_triple = "@LLVM_TARGET_TRIPLE@"
 config.python_executable = "@Python3_EXECUTABLE@"
 config.have_zlib = @LLVM_ENABLE_ZLIB@
@@ -26,6 +31,7 @@ config.lldb_enable_lua = @LLDB_ENABLE_LUA@
 config.lldb_build_directory = "@LLDB_TEST_BUILD_DIRECTORY@"
 config.have_lldb_server = @LLDB_TOOL_LLDB_SERVER_BUILD@
 config.lldb_system_debugserver = @LLDB_USE_SYSTEM_DEBUGSERVER@
+config.llvm_use_sanitizer = "@LLVM_USE_SANITIZER@"
 # The shell tests use their own module caches.
 config.lldb_module_cache = os.path.join("@LLDB_TEST_MODULE_CACHE_LLDB@", "lldb-shell")
 config.clang_module_cache = os.path.join("@LLDB_TEST_MODULE_CACHE_CLANG@", "lldb-shell")

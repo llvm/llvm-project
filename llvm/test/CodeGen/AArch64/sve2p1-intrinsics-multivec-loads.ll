@@ -3,24 +3,24 @@
 
 ;;LD2Q
 
-define { <vscale x 16 x i8>, <vscale x 16 x i8> } @ld2q_si_i8_off16(<vscale x 16 x i1> %pg, <vscale x 16 x i8> *%addr ) {
+define { <vscale x 16 x i8>, <vscale x 16 x i8> } @ld2q_si_i8_off16(<vscale x 16 x i1> %pg, ptr %addr ) {
 ; CHECK-LABEL: ld2q_si_i8_off16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ld2q { z0.q, z1.q }, p0/z, [x0, #-16, mul vl]
 ; CHECK-NEXT:    ret
-  %base = getelementptr <vscale x 16 x i8>, <vscale x 16 x i8>* %addr, i64 -16
-  %base_ptr = bitcast <vscale x 16 x i8>* %base to i8 *
+  %base = getelementptr <vscale x 16 x i8>, ptr %addr, i64 -16
+  %base_ptr = bitcast ptr %base to ptr
   %res = call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ld2q.sret.nxv16i8(<vscale x 16 x i1> %pg, ptr %base_ptr);
   ret { <vscale x 16 x i8>, <vscale x 16 x i8> } %res
 }
 
-define { <vscale x 16 x i8>, <vscale x 16 x i8> } @ld2q_si_i8_off14(<vscale x 16 x i1> %pg, <vscale x 16 x i8> *%addr ) {
+define { <vscale x 16 x i8>, <vscale x 16 x i8> } @ld2q_si_i8_off14(<vscale x 16 x i1> %pg, ptr %addr ) {
 ; CHECK-LABEL: ld2q_si_i8_off14:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ld2q { z0.q, z1.q }, p0/z, [x0, #14, mul vl]
 ; CHECK-NEXT:    ret
-  %base = getelementptr <vscale x 16 x i8>, <vscale x 16 x i8>* %addr, i64 14
-  %base_ptr = bitcast <vscale x 16 x i8>* %base to i8 *
+  %base = getelementptr <vscale x 16 x i8>, ptr %addr, i64 14
+  %base_ptr = bitcast ptr %base to ptr
   %res = call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ld2q.sret.nxv16i8(<vscale x 16 x i1> %pg, ptr %base_ptr);
   ret { <vscale x 16 x i8>, <vscale x 16 x i8> } %res
 }
@@ -44,13 +44,13 @@ define { <vscale x 16 x i8>, <vscale x 16 x i8> } @ld2q_i8(<vscale x 16 x i1> %p
   ret { <vscale x 16 x i8>, <vscale x 16 x i8> } %res
 }
 
-define { <vscale x 8 x i16>, <vscale x 8 x i16> } @ld2q_si_i16(<vscale x 8 x i1> %pg, <vscale x 8 x i16> *%addr ) {
+define { <vscale x 8 x i16>, <vscale x 8 x i16> } @ld2q_si_i16(<vscale x 8 x i1> %pg, ptr %addr ) {
 ; CHECK-LABEL: ld2q_si_i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ld2q { z0.q, z1.q }, p0/z, [x0, #-16, mul vl]
 ; CHECK-NEXT:    ret
-  %base = getelementptr <vscale x 8 x i16>, <vscale x 8 x i16>* %addr, i64 -16
-  %base_ptr = bitcast <vscale x 8 x i16>* %base to i16 *
+  %base = getelementptr <vscale x 8 x i16>, ptr %addr, i64 -16
+  %base_ptr = bitcast ptr %base to ptr
   %res = call { <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.aarch64.sve.ld2q.sret.nxv8i16(<vscale x 8 x i1> %pg, ptr %base_ptr);
   ret { <vscale x 8 x i16>, <vscale x 8 x i16> } %res
 }
@@ -103,13 +103,13 @@ define { <vscale x 4 x i32>, <vscale x 4 x i32> } @ld2q_i32(<vscale x 4 x i1> %p
   ret { <vscale x 4 x i32>, <vscale x 4 x i32> } %res
 }
 
-define { <vscale x 2 x i64>, <vscale x 2 x i64> } @ld2q_si_i64(<vscale x 2 x i1> %pg, <vscale x 2 x i64> *%addr ) {
+define { <vscale x 2 x i64>, <vscale x 2 x i64> } @ld2q_si_i64(<vscale x 2 x i1> %pg, ptr %addr ) {
 ; CHECK-LABEL: ld2q_si_i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ld2q { z0.q, z1.q }, p0/z, [x0, #-16, mul vl]
 ; CHECK-NEXT:    ret
-  %base = getelementptr <vscale x 2 x i64>, <vscale x 2 x i64>* %addr, i64 -16
-  %base_ptr = bitcast <vscale x 2 x i64>* %base to i64 *
+  %base = getelementptr <vscale x 2 x i64>, ptr %addr, i64 -16
+  %base_ptr = bitcast ptr %base to ptr
   %res = call { <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sve.ld2q.sret.nxv2i64(<vscale x 2 x i1> %pg, ptr %base_ptr);
   ret { <vscale x 2 x i64>, <vscale x 2 x i64> } %res
 }
@@ -133,13 +133,13 @@ define { <vscale x 2 x i64>, <vscale x 2 x i64> } @ld2q_i64(<vscale x 2 x i1> %p
   ret { <vscale x 2 x i64>, <vscale x 2 x i64> } %res
 }
 
-define { <vscale x 8 x half>, <vscale x 8 x half> } @ld2q_si_f16(<vscale x 8 x i1> %pg, <vscale x 8 x half> *%addr ) {
+define { <vscale x 8 x half>, <vscale x 8 x half> } @ld2q_si_f16(<vscale x 8 x i1> %pg, ptr %addr ) {
 ; CHECK-LABEL: ld2q_si_f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ld2q { z0.q, z1.q }, p0/z, [x0, #-16, mul vl]
 ; CHECK-NEXT:    ret
-  %base = getelementptr <vscale x 8 x half>, <vscale x 8 x half>* %addr, i64 -16
-  %base_ptr = bitcast <vscale x 8 x half>* %base to half *
+  %base = getelementptr <vscale x 8 x half>, ptr %addr, i64 -16
+  %base_ptr = bitcast ptr %base to ptr
   %res = call { <vscale x 8 x half>, <vscale x 8 x half> } @llvm.aarch64.sve.ld2q.sret.nxv8f16(<vscale x 8 x i1> %pg, ptr %base_ptr);
   ret { <vscale x 8 x half>, <vscale x 8 x half> } %res
 }
@@ -163,13 +163,13 @@ define { <vscale x 8 x half>, <vscale x 8 x half> } @ld2q_f16(<vscale x 8 x i1> 
   ret { <vscale x 8 x half>, <vscale x 8 x half> } %res
 }
 
-define { <vscale x 4 x float>, <vscale x 4 x float> } @ld2q_si_f32(<vscale x 4 x i1> %pg, <vscale x 4 x float> *%addr ) {
+define { <vscale x 4 x float>, <vscale x 4 x float> } @ld2q_si_f32(<vscale x 4 x i1> %pg, ptr %addr ) {
 ; CHECK-LABEL: ld2q_si_f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ld2q { z0.q, z1.q }, p0/z, [x0, #-16, mul vl]
 ; CHECK-NEXT:    ret
- %base = getelementptr <vscale x 4 x float>, <vscale x 4 x float>* %addr, i64 -16
-  %base_ptr = bitcast <vscale x 4 x float>* %base to float *
+ %base = getelementptr <vscale x 4 x float>, ptr %addr, i64 -16
+  %base_ptr = bitcast ptr %base to ptr
   %res = call { <vscale x 4 x float>, <vscale x 4 x float> } @llvm.aarch64.sve.ld2q.sret.nxv4f32(<vscale x 4 x i1> %pg, ptr %base_ptr);
   ret { <vscale x 4 x float>, <vscale x 4 x float> } %res
 }
@@ -193,13 +193,13 @@ define { <vscale x 4 x float>, <vscale x 4 x float> } @ld2q_f32(<vscale x 4 x i1
   ret { <vscale x 4 x float>, <vscale x 4 x float> } %res
 }
 
-define { <vscale x 2 x double>, <vscale x 2 x double> } @ld2q_si_f64(<vscale x 2 x i1> %pg, <vscale x 2 x double> *%addr ) {
+define { <vscale x 2 x double>, <vscale x 2 x double> } @ld2q_si_f64(<vscale x 2 x i1> %pg, ptr %addr ) {
 ; CHECK-LABEL: ld2q_si_f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ld2q { z0.q, z1.q }, p0/z, [x0, #-16, mul vl]
 ; CHECK-NEXT:    ret
-  %base = getelementptr <vscale x 2 x double>, <vscale x 2 x double>* %addr, i64 -16
-  %base_ptr = bitcast <vscale x 2 x double>* %base to double *
+  %base = getelementptr <vscale x 2 x double>, ptr %addr, i64 -16
+  %base_ptr = bitcast ptr %base to ptr
   %res = call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.aarch64.sve.ld2q.sret.nxv2f64(<vscale x 2 x i1> %pg, ptr %base_ptr);
   ret { <vscale x 2 x double>, <vscale x 2 x double> } %res
 }
@@ -223,13 +223,13 @@ define { <vscale x 2 x double>, <vscale x 2 x double> } @ld2q_f64(<vscale x 2 x 
   ret { <vscale x 2 x double>, <vscale x 2 x double> } %res
 }
 
-define { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @ld2q_si_bf16(<vscale x 8 x i1> %pg, <vscale x 8 x bfloat> *%addr ) {
+define { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @ld2q_si_bf16(<vscale x 8 x i1> %pg, ptr %addr ) {
 ; CHECK-LABEL: ld2q_si_bf16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ld2q { z0.q, z1.q }, p0/z, [x0, #-16, mul vl]
 ; CHECK-NEXT:    ret
-  %base = getelementptr <vscale x 8 x bfloat>, <vscale x 8 x bfloat>* %addr, i64 -16
-  %base_ptr = bitcast <vscale x 8 x bfloat>* %base to bfloat *
+  %base = getelementptr <vscale x 8 x bfloat>, ptr %addr, i64 -16
+  %base_ptr = bitcast ptr %base to ptr
   %res = call { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @llvm.aarch64.sve.ld2q.sret.nxv8bf16(<vscale x 8 x i1> %pg, ptr %base_ptr);
   ret { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } %res
 }
@@ -254,24 +254,24 @@ define { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @ld2q_bf16(<vscale x 8 x
 }
 
 ;; LD3Q
-define { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @ld3q_si_i8_off24(<vscale x 16 x i1> %pg, <vscale x 16 x i8> *%addr ) {
+define { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @ld3q_si_i8_off24(<vscale x 16 x i1> %pg, ptr %addr ) {
 ; CHECK-LABEL: ld3q_si_i8_off24:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ld3q { z0.q - z2.q }, p0/z, [x0, #-24, mul vl]
 ; CHECK-NEXT:    ret
-  %base = getelementptr <vscale x 16 x i8>, <vscale x 16 x i8>* %addr, i64 -24
-  %base_ptr = bitcast <vscale x 16 x i8>* %base to i8 *
+  %base = getelementptr <vscale x 16 x i8>, ptr %addr, i64 -24
+  %base_ptr = bitcast ptr %base to ptr
   %res = call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ld3q.sret.nxv16i8(<vscale x 16 x i1> %pg, ptr %base_ptr);
   ret { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } %res
 }
 
-define { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @ld3q_si_i8_off21(<vscale x 16 x i1> %pg, <vscale x 16 x i8> *%addr ) {
+define { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @ld3q_si_i8_off21(<vscale x 16 x i1> %pg, ptr %addr ) {
 ; CHECK-LABEL: ld3q_si_i8_off21:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ld3q { z0.q - z2.q }, p0/z, [x0, #21, mul vl]
 ; CHECK-NEXT:    ret
-  %base = getelementptr <vscale x 16 x i8>, <vscale x 16 x i8>* %addr, i64 21
-  %base_ptr = bitcast <vscale x 16 x i8>* %base to i8 *
+  %base = getelementptr <vscale x 16 x i8>, ptr %addr, i64 21
+  %base_ptr = bitcast ptr %base to ptr
   %res = call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ld3q.sret.nxv16i8(<vscale x 16 x i1> %pg, ptr %base_ptr);
   ret { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } %res
 }
@@ -295,13 +295,13 @@ define { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>} @ld3q_i8(<v
   ret { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>} %res
 }
 
-define { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } @ld3q_si_i16(<vscale x 8 x i1> %pg, <vscale x 8 x i16> *%addr ) {
+define { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } @ld3q_si_i16(<vscale x 8 x i1> %pg, ptr %addr ) {
 ; CHECK-LABEL: ld3q_si_i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ld3q { z0.q - z2.q }, p0/z, [x0, #-24, mul vl]
 ; CHECK-NEXT:    ret
-  %base = getelementptr <vscale x 8 x i16>, <vscale x 8 x i16>* %addr, i64 -24
-  %base_ptr = bitcast <vscale x 8 x i16>* %base to i16 *
+  %base = getelementptr <vscale x 8 x i16>, ptr %addr, i64 -24
+  %base_ptr = bitcast ptr %base to ptr
   %res = call { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.aarch64.sve.ld3q.sret.nxv8i16(<vscale x 8 x i1> %pg, ptr %base_ptr);
   ret { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } %res
 }
@@ -325,13 +325,13 @@ define { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } @ld3q_i16(
   ret { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } %res
 }
 
-define { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @ld3q_si_i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> *%addr ) {
+define { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @ld3q_si_i32(<vscale x 4 x i1> %pg, ptr %addr ) {
 ; CHECK-LABEL: ld3q_si_i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ld3q { z0.q - z2.q }, p0/z, [x0, #-24, mul vl]
 ; CHECK-NEXT:    ret
-  %base = getelementptr <vscale x 4 x i32>, <vscale x 4 x i32>* %addr, i64 -24
-  %base_ptr = bitcast <vscale x 4 x i32>* %base to i32 *
+  %base = getelementptr <vscale x 4 x i32>, ptr %addr, i64 -24
+  %base_ptr = bitcast ptr %base to ptr
   %res = call { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.aarch64.sve.ld3q.sret.nxv4i32(<vscale x 4 x i1> %pg, ptr %base_ptr);
   ret { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } %res
 }
@@ -384,13 +384,13 @@ define { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } @ld3q_i64(
   ret { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } %res
 }
 
-define { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } @ld3q_si_f16(<vscale x 8 x i1> %pg, <vscale x 8 x half> *%addr ) {
+define { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } @ld3q_si_f16(<vscale x 8 x i1> %pg, ptr %addr ) {
 ; CHECK-LABEL: ld3q_si_f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ld3q { z0.q - z2.q }, p0/z, [x0, #-24, mul vl]
 ; CHECK-NEXT:    ret
-  %base = getelementptr <vscale x 8 x half>, <vscale x 8 x half>* %addr, i64 -24
-  %base_ptr = bitcast <vscale x 8 x half>* %base to half *
+  %base = getelementptr <vscale x 8 x half>, ptr %addr, i64 -24
+  %base_ptr = bitcast ptr %base to ptr
   %res = call { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } @llvm.aarch64.sve.ld3q.sret.nxv8f16(<vscale x 8 x i1> %pg, ptr %base_ptr);
   ret { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } %res
 }
@@ -414,13 +414,13 @@ define { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } @ld3q_f
   ret { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } %res
 }
 
-define { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } @ld3q_si_f32(<vscale x 4 x i1> %pg, <vscale x 4 x float> *%addr ) {
+define { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } @ld3q_si_f32(<vscale x 4 x i1> %pg, ptr %addr ) {
 ; CHECK-LABEL: ld3q_si_f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ld3q { z0.q - z2.q }, p0/z, [x0, #-24, mul vl]
 ; CHECK-NEXT:    ret
- %base = getelementptr <vscale x 4 x float>, <vscale x 4 x float>* %addr, i64 -24
-  %base_ptr = bitcast <vscale x 4 x float>* %base to float *
+ %base = getelementptr <vscale x 4 x float>, ptr %addr, i64 -24
+  %base_ptr = bitcast ptr %base to ptr
   %res = call { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } @llvm.aarch64.sve.ld3q.sret.nxv4f32(<vscale x 4 x i1> %pg, ptr %base_ptr);
   ret { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } %res
 }
@@ -444,13 +444,13 @@ define { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } @ld3
   ret { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } %res
 }
 
-define { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } @ld3q_si_f64(<vscale x 2 x i1> %pg, <vscale x 2 x double> *%addr ) {
+define { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } @ld3q_si_f64(<vscale x 2 x i1> %pg, ptr %addr ) {
 ; CHECK-LABEL: ld3q_si_f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ld3q { z0.q - z2.q }, p0/z, [x0, #-24, mul vl]
 ; CHECK-NEXT:    ret
-  %base = getelementptr <vscale x 2 x double>, <vscale x 2 x double>* %addr, i64 -24
-  %base_ptr = bitcast <vscale x 2 x double>* %base to double *
+  %base = getelementptr <vscale x 2 x double>, ptr %addr, i64 -24
+  %base_ptr = bitcast ptr %base to ptr
   %res = call { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } @llvm.aarch64.sve.ld3q.sret.nxv2f64(<vscale x 2 x i1> %pg, ptr %base_ptr);
   ret { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } %res
 }
@@ -474,13 +474,13 @@ define { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } @
   ret { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } %res
 }
 
-define { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @ld3q_si_bf16(<vscale x 8 x i1> %pg, <vscale x 8 x bfloat> *%addr ) {
+define { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @ld3q_si_bf16(<vscale x 8 x i1> %pg, ptr %addr ) {
 ; CHECK-LABEL: ld3q_si_bf16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ld3q { z0.q - z2.q }, p0/z, [x0, #-24, mul vl]
 ; CHECK-NEXT:    ret
-  %base = getelementptr <vscale x 8 x bfloat>, <vscale x 8 x bfloat>* %addr, i64 -24
-  %base_ptr = bitcast <vscale x 8 x bfloat>* %base to bfloat *
+  %base = getelementptr <vscale x 8 x bfloat>, ptr %addr, i64 -24
+  %base_ptr = bitcast ptr %base to ptr
   %res = call { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @llvm.aarch64.sve.ld3q.sret.nxv8bf16(<vscale x 8 x i1> %pg, ptr %base_ptr);
   ret { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } %res
 }
@@ -505,24 +505,24 @@ define { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @
 }
 
 ;; LD4Q
-define { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @ld4q_si_i8_off32(<vscale x 16 x i1> %pg, <vscale x 16 x i8> *%addr ) {
+define { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @ld4q_si_i8_off32(<vscale x 16 x i1> %pg, ptr %addr ) {
 ; CHECK-LABEL: ld4q_si_i8_off32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ld4q { z0.q - z3.q }, p0/z, [x0, #-32, mul vl]
 ; CHECK-NEXT:    ret
-  %base = getelementptr <vscale x 16 x i8>, <vscale x 16 x i8>* %addr, i64 -32
-  %base_ptr = bitcast <vscale x 16 x i8>* %base to i8 *
+  %base = getelementptr <vscale x 16 x i8>, ptr %addr, i64 -32
+  %base_ptr = bitcast ptr %base to ptr
   %res = call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ld4q.sret.nxv16i8(<vscale x 16 x i1> %pg, ptr %base_ptr);
   ret { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } %res
 }
 
-define { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @ld4q_si_i8_off28(<vscale x 16 x i1> %pg, <vscale x 16 x i8> *%addr ) {
+define { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @ld4q_si_i8_off28(<vscale x 16 x i1> %pg, ptr %addr ) {
 ; CHECK-LABEL: ld4q_si_i8_off28:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ld4q { z0.q - z3.q }, p0/z, [x0, #28, mul vl]
 ; CHECK-NEXT:    ret
-  %base = getelementptr <vscale x 16 x i8>, <vscale x 16 x i8>* %addr, i64 28
-  %base_ptr = bitcast <vscale x 16 x i8>* %base to i8 *
+  %base = getelementptr <vscale x 16 x i8>, ptr %addr, i64 28
+  %base_ptr = bitcast ptr %base to ptr
   %res = call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ld4q.sret.nxv16i8(<vscale x 16 x i1> %pg, ptr %base_ptr);
   ret { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } %res
 }
@@ -546,13 +546,13 @@ define { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 1
   ret { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>} %res
 }
 
-define { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } @ld4q_si_i16(<vscale x 8 x i1> %pg, <vscale x 8 x i16> *%addr ) {
+define { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } @ld4q_si_i16(<vscale x 8 x i1> %pg, ptr %addr ) {
 ; CHECK-LABEL: ld4q_si_i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ld4q { z0.q - z3.q }, p0/z, [x0, #-32, mul vl]
 ; CHECK-NEXT:    ret
-  %base = getelementptr <vscale x 8 x i16>, <vscale x 8 x i16>* %addr, i64 -32
-  %base_ptr = bitcast <vscale x 8 x i16>* %base to i16 *
+  %base = getelementptr <vscale x 8 x i16>, ptr %addr, i64 -32
+  %base_ptr = bitcast ptr %base to ptr
   %res = call { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.aarch64.sve.ld4q.sret.nxv8i16(<vscale x 8 x i1> %pg, ptr %base_ptr);
   ret { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } %res
 }
@@ -576,13 +576,13 @@ define { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8
   ret { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } %res
 }
 
-define { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @ld4q_si_i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> *%addr ) {
+define { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @ld4q_si_i32(<vscale x 4 x i1> %pg, ptr %addr ) {
 ; CHECK-LABEL: ld4q_si_i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ld4q { z0.q - z3.q }, p0/z, [x0, #-32, mul vl]
 ; CHECK-NEXT:    ret
-  %base = getelementptr <vscale x 4 x i32>, <vscale x 4 x i32>* %addr, i64 -32
-  %base_ptr = bitcast <vscale x 4 x i32>* %base to i32 *
+  %base = getelementptr <vscale x 4 x i32>, ptr %addr, i64 -32
+  %base_ptr = bitcast ptr %base to ptr
   %res = call { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.aarch64.sve.ld4q.sret.nxv4i32(<vscale x 4 x i1> %pg, ptr %base_ptr);
   ret { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } %res
 }
@@ -606,13 +606,13 @@ define { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4
   ret { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } %res
 }
 
-define { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } @ld4q_si_i64(<vscale x 2 x i1> %pg, <vscale x 2 x i64> *%addr ) {
+define { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } @ld4q_si_i64(<vscale x 2 x i1> %pg, ptr %addr ) {
 ; CHECK-LABEL: ld4q_si_i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ld4q { z0.q - z3.q }, p0/z, [x0, #-32, mul vl]
 ; CHECK-NEXT:    ret
-  %base = getelementptr <vscale x 2 x i64>, <vscale x 2 x i64>* %addr, i64 -32
-  %base_ptr = bitcast <vscale x 2 x i64>* %base to i64 *
+  %base = getelementptr <vscale x 2 x i64>, ptr %addr, i64 -32
+  %base_ptr = bitcast ptr %base to ptr
   %res = call { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sve.ld4q.sret.nxv2i64(<vscale x 2 x i1> %pg, ptr %base_ptr);
   ret { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } %res
 }
@@ -636,13 +636,13 @@ define { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2
   ret { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } %res
 }
 
-define { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } @ld4q_si_f16(<vscale x 8 x i1> %pg, <vscale x 8 x half> *%addr ) {
+define { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } @ld4q_si_f16(<vscale x 8 x i1> %pg, ptr %addr ) {
 ; CHECK-LABEL: ld4q_si_f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ld4q { z0.q - z3.q }, p0/z, [x0, #-32, mul vl]
 ; CHECK-NEXT:    ret
-  %base = getelementptr <vscale x 8 x half>, <vscale x 8 x half>* %addr, i64 -32
-  %base_ptr = bitcast <vscale x 8 x half>* %base to half *
+  %base = getelementptr <vscale x 8 x half>, ptr %addr, i64 -32
+  %base_ptr = bitcast ptr %base to ptr
   %res = call { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } @llvm.aarch64.sve.ld4q.sret.nxv8f16(<vscale x 8 x i1> %pg, ptr %base_ptr);
   ret { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } %res
 }
@@ -666,13 +666,13 @@ define { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale 
   ret { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } %res
 }
 
-define { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } @ld4q_si_f32(<vscale x 4 x i1> %pg, <vscale x 4 x float> *%addr ) {
+define { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } @ld4q_si_f32(<vscale x 4 x i1> %pg, ptr %addr ) {
 ; CHECK-LABEL: ld4q_si_f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ld4q { z0.q - z3.q }, p0/z, [x0, #-32, mul vl]
 ; CHECK-NEXT:    ret
- %base = getelementptr <vscale x 4 x float>, <vscale x 4 x float>* %addr, i64 -32
-  %base_ptr = bitcast <vscale x 4 x float>* %base to float *
+ %base = getelementptr <vscale x 4 x float>, ptr %addr, i64 -32
+  %base_ptr = bitcast ptr %base to ptr
   %res = call { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } @llvm.aarch64.sve.ld4q.sret.nxv4f32(<vscale x 4 x i1> %pg, ptr %base_ptr);
   ret { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } %res
 }
@@ -696,13 +696,13 @@ define { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vsca
   ret { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } %res
 }
 
-define { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } @ld4q_si_f64(<vscale x 2 x i1> %pg, <vscale x 2 x double> *%addr ) {
+define { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } @ld4q_si_f64(<vscale x 2 x i1> %pg, ptr %addr ) {
 ; CHECK-LABEL: ld4q_si_f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ld4q { z0.q - z3.q }, p0/z, [x0, #-32, mul vl]
 ; CHECK-NEXT:    ret
-  %base = getelementptr <vscale x 2 x double>, <vscale x 2 x double>* %addr, i64 -32
-  %base_ptr = bitcast <vscale x 2 x double>* %base to double *
+  %base = getelementptr <vscale x 2 x double>, ptr %addr, i64 -32
+  %base_ptr = bitcast ptr %base to ptr
   %res = call { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } @llvm.aarch64.sve.ld4q.sret.nxv2f64(<vscale x 2 x i1> %pg, ptr %base_ptr);
   ret { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } %res
 }
@@ -726,13 +726,13 @@ define { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <v
   ret { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } %res
 }
 
-define { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @ld4q_si_bf16(<vscale x 8 x i1> %pg, <vscale x 8 x bfloat> *%addr ) {
+define { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @ld4q_si_bf16(<vscale x 8 x i1> %pg, ptr %addr ) {
 ; CHECK-LABEL: ld4q_si_bf16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ld4q { z0.q - z3.q }, p0/z, [x0, #-32, mul vl]
 ; CHECK-NEXT:    ret
-  %base = getelementptr <vscale x 8 x bfloat>, <vscale x 8 x bfloat>* %addr, i64 -32
-  %base_ptr = bitcast <vscale x 8 x bfloat>* %base to bfloat *
+  %base = getelementptr <vscale x 8 x bfloat>, ptr %addr, i64 -32
+  %base_ptr = bitcast ptr %base to ptr
   %res = call { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @llvm.aarch64.sve.ld4q.sret.nxv8bf16(<vscale x 8 x i1> %pg, ptr %base_ptr);
   ret { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } %res
 }

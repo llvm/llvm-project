@@ -98,8 +98,6 @@ bool getUseCtors();
 
 bool getDisableIntegratedAS();
 
-bool getRelaxELFRelocations();
-
 bool getDataSections();
 std::optional<bool> getExplicitDataSections();
 
@@ -124,6 +122,8 @@ bool getUniqueSectionNames();
 
 bool getUniqueBasicBlockSectionNames();
 
+bool getSeparateNamedSections();
+
 llvm::EABI getEABIVersion();
 
 llvm::DebuggerKind getDebuggerTuningOpt();
@@ -135,6 +135,8 @@ bool getEnableAddrsig();
 bool getEmitCallSiteInfo();
 
 bool getEnableMachineFunctionSplitter();
+
+bool getEnableStaticDataPartitioning();
 
 bool getEnableDebugEntryValues();
 
@@ -158,6 +160,8 @@ bool getXCOFFReadOnlyPointers();
 struct RegisterCodeGenFlags {
   RegisterCodeGenFlags();
 };
+
+bool getEnableBBAddrMap();
 
 llvm::BasicBlockSection getBBSectionsMode(llvm::TargetOptions &Options);
 

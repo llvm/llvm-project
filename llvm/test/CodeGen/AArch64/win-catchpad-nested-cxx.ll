@@ -18,7 +18,7 @@
 declare void @f(i32 %p)
 declare i32 @__CxxFrameHandler3(...)
 
-define i32 @try_in_catch() personality i32 (...)* @__CxxFrameHandler3 {
+define i32 @try_in_catch() personality ptr @__CxxFrameHandler3 {
 entry:
   invoke void @f(i32 1)
           to label %try.cont unwind label %catch.dispatch.1
@@ -28,7 +28,7 @@ try.cont:
 catch.dispatch.1:
   %cs1 = catchswitch within none [label %handler1] unwind to caller
 handler1:
-  %h1 = catchpad within %cs1 [i8* null, i32 64, i8* null]
+  %h1 = catchpad within %cs1 [ptr null, i32 64, ptr null]
   invoke void @f(i32 2) [ "funclet"(token %h1) ]
           to label %catchret1 unwind label %catch.dispatch.2
 catchret1:
@@ -37,7 +37,7 @@ catchret1:
 catch.dispatch.2:
   %cs2 = catchswitch within %h1 [label %handler2] unwind to caller
 handler2:
-  %h2 = catchpad within %cs2 [i8* null, i32 64, i8* null]
+  %h2 = catchpad within %cs2 [ptr null, i32 64, ptr null]
   call void @f(i32 3)
   catchret from %h2 to label %catchret1
 }
@@ -45,12 +45,12 @@ handler2:
 ; CHECK-LABEL: $cppxdata$try_in_catch:
 ; CHECK-NEXT: .word   429065506
 ; CHECK-NEXT: .word   4
-; CHECK-NEXT: .word   ($stateUnwindMap$try_in_catch)
+; CHECK-NEXT: .word   $stateUnwindMap$try_in_catch
 ; CHECK-NEXT: .word   2
-; CHECK-NEXT: .word   ($tryMap$try_in_catch)
+; CHECK-NEXT: .word   $tryMap$try_in_catch
 ; ip2state num + ptr
 ; CHECK-NEXT: .word   7
-; CHECK-NEXT: .word   ($ip2state$try_in_catch)
+; CHECK-NEXT: .word   $ip2state$try_in_catch
 ; unwindhelp offset
 ; CHECK-NEXT: .word   -16
 ; CHECK-NEXT: .word   0
@@ -62,12 +62,12 @@ handler2:
 ; CHECK-NEXT: .word   0
 ; CHECK-NEXT: .word   3
 ; CHECK-NEXT: .word   1
-; CHECK-NEXT: .word   ($handlerMap$0$try_in_catch)
+; CHECK-NEXT: .word   $handlerMap$0$try_in_catch
 ; CHECK-NEXT: .word   2
 ; CHECK-NEXT: .word   2
 ; CHECK-NEXT: .word   3
 ; CHECK-NEXT: .word   1
-; CHECK-NEXT: .word   ($handlerMap$1$try_in_catch)
+; CHECK-NEXT: .word   $handlerMap$1$try_in_catch
 
 ; CHECK: $handlerMap$0$try_in_catch:
 ; CHECK-NEXT:   .word   64

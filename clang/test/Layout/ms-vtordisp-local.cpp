@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fms-extensions -fexceptions -fcxx-exceptions -emit-llvm-only -triple x86_64-pc-win32 -fdump-record-layouts -fsyntax-only %s 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -fms-extensions -fexceptions -fcxx-exceptions -triple x86_64-pc-win32 -fdump-record-layouts -fsyntax-only %s 2>&1 | FileCheck %s
 
 struct Base {
   virtual ~Base() {}

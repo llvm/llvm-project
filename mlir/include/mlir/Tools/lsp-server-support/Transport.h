@@ -15,8 +15,8 @@
 #ifndef MLIR_TOOLS_LSPSERVERSUPPORT_TRANSPORT_H
 #define MLIR_TOOLS_LSPSERVERSUPPORT_TRANSPORT_H
 
+#include "mlir/Support/DebugStringHelper.h"
 #include "mlir/Support/LLVM.h"
-#include "mlir/Support/LogicalResult.h"
 #include "mlir/Tools/lsp-server-support/Logging.h"
 #include "mlir/Tools/lsp-server-support/Protocol.h"
 #include "llvm/ADT/FunctionExtras.h"
@@ -43,14 +43,59 @@ enum JSONStreamStyle {
   Delimited
 };
 
+/// An abstract class used by the JSONTransport to read JSON message.
+class JSONTransportInput {
+public:
+  explicit JSONTransportInput(JSONStreamStyle style = JSONStreamStyle::Standard)
+      : style(style) {}
+  virtual ~JSONTransportInput() = default;
+
+  virtual bool hasError() const = 0;
+  virtual bool isEndOfInput() const = 0;
+
+  /// Read in a message from the input stream.
+  LogicalResult readMessage(std::string &json) {
+    return style == JSONStreamStyle::Delimited ? readDelimitedMessage(json)
+                                               : readStandardMessage(json);
+  }
+  virtual LogicalResult readDelimitedMessage(std::string &json) = 0;
+  virtual LogicalResult readStandardMessage(std::string &json) = 0;
+
+private:
+  /// The JSON stream style to use.
+  JSONStreamStyle style;
+};
+
+/// Concrete implementation of the JSONTransportInput that reads from a file.
+class JSONTransportInputOverFile : public JSONTransportInput {
+public:
+  explicit JSONTransportInputOverFile(
+      std::FILE *in, JSONStreamStyle style = JSONStreamStyle::Standard)
+      : JSONTransportInput(style), in(in) {}
+
+  bool hasError() const final { return ferror(in); }
+  bool isEndOfInput() const final { return feof(in); }
+
+  LogicalResult readDelimitedMessage(std::string &json) final;
+  LogicalResult readStandardMessage(std::string &json) final;
+
+private:
+  std::FILE *in;
+};
+
 /// A transport class that performs the JSON-RPC communication with the LSP
 /// client.
 class JSONTransport {
 public:
+  JSONTransport(std::unique_ptr<JSONTransportInput> in, raw_ostream &out,
+                bool prettyOutput = false)
+      : in(std::move(in)), out(out), prettyOutput(prettyOutput) {}
+
   JSONTransport(std::FILE *in, raw_ostream &out,
                 JSONStreamStyle style = JSONStreamStyle::Standard,
                 bool prettyOutput = false)
-      : in(in), out(out), style(style), prettyOutput(prettyOutput) {}
+      : in(std::make_unique<JSONTransportInputOverFile>(in, style)), out(out),
+        prettyOutput(prettyOutput) {}
 
   /// The following methods are used to send a message to the LSP client.
   void notify(StringRef method, llvm::json::Value params);
@@ -66,22 +111,12 @@ private:
   /// Writes the given message to the output stream.
   void sendMessage(llvm::json::Value msg);
 
-  /// Read in a message from the input stream.
-  LogicalResult readMessage(std::string &json) {
-    return style == JSONStreamStyle::Delimited ? readDelimitedMessage(json)
-                                               : readStandardMessage(json);
-  }
-  LogicalResult readDelimitedMessage(std::string &json);
-  LogicalResult readStandardMessage(std::string &json);
-
-  /// An output buffer used when building output messages.
+private:
+  /// The input to read a message from.
+  std::unique_ptr<JSONTransportInput> in;
   SmallVector<char, 0> outputBuffer;
-  /// The input file stream.
-  std::FILE *in;
   /// The output file stream.
   raw_ostream &out;
-  /// The JSON stream style to use.
-  JSONStreamStyle style;
   /// If the output JSON should be formatted for easier readability.
   bool prettyOutput;
 };
@@ -99,6 +134,19 @@ using Callback = llvm::unique_function<void(llvm::Expected<T>)>;
 /// send to the client.
 template <typename T>
 using OutgoingNotification = llvm::unique_function<void(const T &)>;
+
+/// An OutgoingRequest<T> is a function used for outgoing requests to send to
+/// the client.
+template <typename T>
+using OutgoingRequest =
+    llvm::unique_function<void(const T &, llvm::json::Value id)>;
+
+/// An `OutgoingRequestCallback` is invoked when an outgoing request to the
+/// client receives a response in turn. It is passed the original request's ID,
+/// as well as the response result.
+template <typename T>
+using OutgoingRequestCallback =
+    std::function<void(llvm::json::Value, llvm::Expected<T>)>;
 
 /// A handler used to process the incoming transport messages.
 class MessageHandler {
@@ -147,9 +195,15 @@ public:
                     void (ThisT::*handler)(const Param &)) {
     notificationHandlers[method] = [method, handler,
                                     thisPtr](llvm::json::Value rawParams) {
-      llvm::Expected<Param> param = parse<Param>(rawParams, method, "request");
-      if (!param)
-        return llvm::consumeError(param.takeError());
+      llvm::Expected<Param> param =
+          parse<Param>(rawParams, method, "notification");
+      if (!param) {
+        return llvm::consumeError(
+            llvm::handleErrors(param.takeError(), [](const LSPError &lspError) {
+              Logger::error("JSON parsing error: {0}",
+                            lspError.message.c_str());
+            }));
+      }
       (thisPtr->*handler)(*param);
     };
   }
@@ -164,6 +218,42 @@ public:
     };
   }
 
+  /// Create an OutgoingRequest function that, when called, sends a request with
+  /// the given method via the transport. Should the outgoing request be
+  /// met with a response, the result JSON is parsed and the response callback
+  /// is invoked.
+  template <typename Param, typename Result>
+  OutgoingRequest<Param>
+  outgoingRequest(llvm::StringLiteral method,
+                  OutgoingRequestCallback<Result> callback) {
+    return [&, method, callback](const Param &param, llvm::json::Value id) {
+      auto callbackWrapper = [method, callback = std::move(callback)](
+                                 llvm::json::Value id,
+                                 llvm::Expected<llvm::json::Value> value) {
+        if (!value)
+          return callback(std::move(id), value.takeError());
+
+        std::string responseName = llvm::formatv("reply:{0}({1})", method, id);
+        llvm::Expected<Result> result =
+            parse<Result>(*value, responseName, "response");
+        if (!result)
+          return callback(std::move(id), result.takeError());
+
+        return callback(std::move(id), *result);
+      };
+
+      {
+        std::lock_guard<std::mutex> lock(responseHandlersMutex);
+        responseHandlers.insert(
+            {debugString(id), std::make_pair(method.str(), callbackWrapper)});
+      }
+
+      std::lock_guard<std::mutex> transportLock(transportOutputMutex);
+      Logger::info("--> {0}({1})", method, id);
+      transport.call(method, llvm::json::Value(param), id);
+    };
+  }
+
 private:
   template <typename HandlerT>
   using HandlerMap = llvm::StringMap<llvm::unique_function<HandlerT>>;
@@ -171,6 +261,15 @@ private:
   HandlerMap<void(llvm::json::Value)> notificationHandlers;
   HandlerMap<void(llvm::json::Value, Callback<llvm::json::Value>)>
       methodHandlers;
+
+  /// A pair of (1) the original request's method name, and (2) the callback
+  /// function to be invoked for responses.
+  using ResponseHandlerTy =
+      std::pair<std::string, OutgoingRequestCallback<llvm::json::Value>>;
+  /// A mapping from request/response ID to response handler.
+  llvm::StringMap<ResponseHandlerTy> responseHandlers;
+  /// Mutex to guard insertion into the response handler map.
+  std::mutex responseHandlersMutex;
 
   JSONTransport &transport;
 

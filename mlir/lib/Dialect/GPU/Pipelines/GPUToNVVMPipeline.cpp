@@ -38,7 +38,6 @@
 
 using namespace mlir;
 
-#if MLIR_CUDA_CONVERSIONS_ENABLED
 namespace {
 
 //===----------------------------------------------------------------------===//
@@ -49,9 +48,8 @@ void buildCommonPassPipeline(
   pm.addPass(createConvertNVGPUToNVVMPass());
   pm.addPass(createGpuKernelOutliningPass());
   pm.addPass(createConvertVectorToSCFPass());
-  pm.addPass(createConvertSCFToCFPass());
+  pm.addPass(createSCFToControlFlowPass());
   pm.addPass(createConvertNVVMToLLVMPass());
-  pm.addPass(createConvertMathToLLVMPass());
   pm.addPass(createConvertFuncToLLVMPass());
   pm.addPass(memref::createExpandStridedMetadataPass());
 
@@ -60,6 +58,7 @@ void buildCommonPassPipeline(
   nvvmTargetOptions.chip = options.cubinChip;
   nvvmTargetOptions.features = options.cubinFeatures;
   nvvmTargetOptions.optLevel = options.optLevel;
+  nvvmTargetOptions.cmdOptions = options.cmdOptions;
   pm.addPass(createGpuNVVMAttachTarget(nvvmTargetOptions));
   pm.addPass(createLowerAffinePass());
   pm.addPass(createArithToLLVMConversionPass());
@@ -75,7 +74,6 @@ void buildCommonPassPipeline(
 //===----------------------------------------------------------------------===//
 void buildGpuPassPipeline(OpPassManager &pm,
                           const mlir::gpu::GPUToNVVMPipelineOptions &options) {
-  pm.addNestedPass<gpu::GPUModuleOp>(createStripDebugInfoPass());
   ConvertGpuOpsToNVVMOpsOptions opt;
   opt.useBarePtrCallConv = options.kernelUseBarePtrCallConv;
   opt.indexBitwidth = options.indexBitWidth;
@@ -98,6 +96,7 @@ void buildHostPostPipeline(OpPassManager &pm,
   GpuModuleToBinaryPassOptions gpuModuleToBinaryPassOptions;
   gpuModuleToBinaryPassOptions.compilationTarget = options.cubinFormat;
   pm.addPass(createGpuModuleToBinaryPass(gpuModuleToBinaryPassOptions));
+  pm.addPass(createConvertMathToLLVMPass());
   pm.addPass(createCanonicalizerPass());
   pm.addPass(createCSEPass());
   pm.addPass(createReconcileUnrealizedCastsPass());
@@ -126,5 +125,3 @@ void mlir::gpu::registerGPUToNVVMPipeline() {
       "code.",
       buildLowerToNVVMPassPipeline);
 }
-
-#endif // MLIR_CUDA_CONVERSIONS_ENABLED

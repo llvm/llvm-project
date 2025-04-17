@@ -71,7 +71,6 @@ define i8 @test6(i8 %x) {
 ; CHECK-LABEL: @test6(
 ; CHECK-NEXT:    [[LIM:%.*]] = icmp uge i8 [[X:%.*]], 42
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[LIM]])
-; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.umin.i8(i8 [[X]], i8 42)
 ; CHECK-NEXT:    ret i8 42
 ;
   %lim = icmp uge i8 %x, 42
@@ -119,7 +118,6 @@ define i8 @test10(i8 %x) {
 ; CHECK-LABEL: @test10(
 ; CHECK-NEXT:    [[LIM:%.*]] = icmp ule i8 [[X:%.*]], 42
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[LIM]])
-; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.umax.i8(i8 [[X]], i8 42)
 ; CHECK-NEXT:    ret i8 42
 ;
   %lim = icmp ule i8 %x, 42
@@ -167,7 +165,6 @@ define i8 @test14(i8 %x) {
 ; CHECK-LABEL: @test14(
 ; CHECK-NEXT:    [[LIM:%.*]] = icmp sge i8 [[X:%.*]], 42
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[LIM]])
-; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.smin.i8(i8 [[X]], i8 42)
 ; CHECK-NEXT:    ret i8 42
 ;
   %lim = icmp sge i8 %x, 42
@@ -179,8 +176,8 @@ define i8 @test15(i8 %x) {
 ; CHECK-LABEL: @test15(
 ; CHECK-NEXT:    [[LIM:%.*]] = icmp sge i8 [[X:%.*]], 41
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[LIM]])
-; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.smin.i8(i8 [[X]], i8 42)
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.umin.i8(i8 [[X]], i8 42)
+; CHECK-NEXT:    ret i8 [[TMP1]]
 ;
   %lim = icmp sge i8 %x, 41
   call void @llvm.assume(i1 %lim)
@@ -192,8 +189,8 @@ define i8 @test16(i8 %x) {
 ; CHECK-LABEL: @test16(
 ; CHECK-NEXT:    [[LIM:%.*]] = icmp sge i8 [[X:%.*]], 41
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[LIM]])
-; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.smax.i8(i8 [[X]], i8 42)
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.umax.i8(i8 [[X]], i8 42)
+; CHECK-NEXT:    ret i8 [[TMP1]]
 ;
   %lim = icmp sge i8 %x, 41
   call void @llvm.assume(i1 %lim)
@@ -215,7 +212,6 @@ define i8 @test18(i8 %x) {
 ; CHECK-LABEL: @test18(
 ; CHECK-NEXT:    [[LIM:%.*]] = icmp sle i8 [[X:%.*]], 42
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[LIM]])
-; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.smax.i8(i8 [[X]], i8 42)
 ; CHECK-NEXT:    ret i8 42
 ;
   %lim = icmp sle i8 %x, 42
@@ -234,4 +230,128 @@ define i8 @test19(i8 %x) {
   call void @llvm.assume(i1 %lim)
   %r = call i8 @llvm.smax(i8 %x, i8 42)
   ret i8 %r
+}
+
+declare void @body(i32)
+
+define void @test_bidirectional() {
+; CHECK-LABEL: @test_bidirectional(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[INDVAR:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    call void @body(i32 65535)
+; CHECK-NEXT:    [[INC]] = add nsw i32 [[INDVAR]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[INDVAR]], 65535
+; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %for.body
+
+for.body:
+  %indvar = phi i32 [ 0, %entry ], [ %inc, %for.body ]
+  %smax = call i32 @llvm.smax.i32(i32 %indvar, i32 65535)
+  call void @body(i32 %smax)
+  %inc = add nsw i32 %indvar, 1
+  %cmp = icmp slt i32 %indvar, 65535
+  br i1 %cmp, label %for.body, label %exit
+
+exit:
+  ret void
+}
+
+define i64 @test_at_use(i1 %cond, i64 %x) {
+; CHECK-LABEL: @test_at_use(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[BB1:%.*]], label [[IF_END:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[X:%.*]], 0
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_END]]
+; CHECK:       if.then:
+; CHECK-NEXT:    ret i64 0
+; CHECK:       if.end:
+; CHECK-NEXT:    [[PHI:%.*]] = phi i64 [ [[X]], [[BB1]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    ret i64 [[PHI]]
+;
+entry:
+  br i1 %cond, label %bb1, label %if.end
+
+bb1:
+  %val = call i64 @llvm.smax.i64(i64 %x, i64 -1)
+  %cmp = icmp slt i64 %x, 0
+  br i1 %cmp, label %if.then, label %if.end
+
+if.then:
+  ret i64 0
+
+if.end:
+  %phi = phi i64 [%val, %bb1], [0, %entry]
+  ret i64 %phi
+}
+
+define i8 @test_smax_to_umax_nneg(i8 %a, i8 %b) {
+; CHECK-LABEL: @test_smax_to_umax_nneg(
+; CHECK-NEXT:    [[NNEG_A:%.*]] = and i8 [[A:%.*]], 127
+; CHECK-NEXT:    [[NNEG_B:%.*]] = and i8 [[B:%.*]], 127
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.umax.i8(i8 [[NNEG_A]], i8 [[NNEG_B]])
+; CHECK-NEXT:    ret i8 [[TMP1]]
+;
+  %nneg_a = and i8 %a, 127
+  %nneg_b = and i8 %b, 127
+  %ret = call i8 @llvm.smax.i8(i8 %nneg_a, i8 %nneg_b)
+  ret i8 %ret
+}
+
+define i8 @test_smax_to_umax_neg(i8 %a, i8 %b) {
+; CHECK-LABEL: @test_smax_to_umax_neg(
+; CHECK-NEXT:    [[NEG_A:%.*]] = or i8 [[A:%.*]], -128
+; CHECK-NEXT:    [[NEG_B:%.*]] = or i8 [[B:%.*]], -128
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.umax.i8(i8 [[NEG_A]], i8 [[NEG_B]])
+; CHECK-NEXT:    ret i8 [[TMP1]]
+;
+  %neg_a = or i8 %a, 128
+  %neg_b = or i8 %b, 128
+  %ret = call i8 @llvm.smax.i8(i8 %neg_a, i8 %neg_b)
+  ret i8 %ret
+}
+
+define i8 @test_smin_to_umin_nneg(i8 %a, i8 %b) {
+; CHECK-LABEL: @test_smin_to_umin_nneg(
+; CHECK-NEXT:    [[NNEG_A:%.*]] = and i8 [[A:%.*]], 127
+; CHECK-NEXT:    [[NNEG_B:%.*]] = and i8 [[B:%.*]], 127
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.umin.i8(i8 [[NNEG_A]], i8 [[NNEG_B]])
+; CHECK-NEXT:    ret i8 [[TMP1]]
+;
+  %nneg_a = and i8 %a, 127
+  %nneg_b = and i8 %b, 127
+  %ret = call i8 @llvm.smin.i8(i8 %nneg_a, i8 %nneg_b)
+  ret i8 %ret
+}
+
+define i8 @test_smin_to_umin_neg(i8 %a, i8 %b) {
+; CHECK-LABEL: @test_smin_to_umin_neg(
+; CHECK-NEXT:    [[NEG_A:%.*]] = or i8 [[A:%.*]], -128
+; CHECK-NEXT:    [[NEG_B:%.*]] = or i8 [[B:%.*]], -128
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.umin.i8(i8 [[NEG_A]], i8 [[NEG_B]])
+; CHECK-NEXT:    ret i8 [[TMP1]]
+;
+  %neg_a = or i8 %a, 128
+  %neg_b = or i8 %b, 128
+  %ret = call i8 @llvm.smin.i8(i8 %neg_a, i8 %neg_b)
+  ret i8 %ret
+}
+
+define i8 @test_umax_nneg(i8 %a, i8 %b) {
+; CHECK-LABEL: @test_umax_nneg(
+; CHECK-NEXT:    [[NNEG_A:%.*]] = and i8 [[A:%.*]], 127
+; CHECK-NEXT:    [[NNEG_B:%.*]] = and i8 [[B:%.*]], 127
+; CHECK-NEXT:    [[RET:%.*]] = call i8 @llvm.umax.i8(i8 [[NNEG_A]], i8 [[NNEG_B]])
+; CHECK-NEXT:    ret i8 [[RET]]
+;
+  %nneg_a = and i8 %a, 127
+  %nneg_b = and i8 %b, 127
+  %ret = call i8 @llvm.umax.i8(i8 %nneg_a, i8 %nneg_b)
+  ret i8 %ret
 }

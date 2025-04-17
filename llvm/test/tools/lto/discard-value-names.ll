@@ -7,11 +7,10 @@
 
 ; The test requires asserts, as it depends on the default value for
 ; -lto-discard-value-names at the moment.
-; FIXME: -lto-discard-value-names is ignored at the moment.
 
 ; REQUIRES: asserts
 
-; DISCARD: %cmp.i = icmp
+; DISCARD: %{{[0-9]+}} = icmp
 ; DISCARD: %add = add i32
 
 ; KEEP: %cmp.i = icmp

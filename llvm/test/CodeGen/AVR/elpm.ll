@@ -55,10 +55,10 @@ define i16 @foo0(i16 %a, i16 %b) {
 ; NOX-NEXT:    sbc r25, r19
 ; NOX-NEXT:    ret
 entry:
-  %arrayidx = getelementptr inbounds [4 x i16], [4 x i16] addrspace(1)* @arr0, i16 0, i16 %a
-  %0 = load i16, i16 addrspace(1)* %arrayidx, align 1
-  %arrayidx1 = getelementptr inbounds [4 x i16], [4 x i16] addrspace(1)* @arr0, i16 0, i16 %b
-  %1 = load i16, i16 addrspace(1)* %arrayidx1, align 1
+  %arrayidx = getelementptr inbounds [4 x i16], ptr addrspace(1) @arr0, i16 0, i16 %a
+  %0 = load i16, ptr addrspace(1) %arrayidx, align 1
+  %arrayidx1 = getelementptr inbounds [4 x i16], ptr addrspace(1) @arr0, i16 0, i16 %b
+  %1 = load i16, ptr addrspace(1) %arrayidx1, align 1
   %sub = sub nsw i16 %0, %1
   ret i16 %sub
 }
@@ -114,10 +114,10 @@ define i16 @foo1(i16 %a, i16 %b) {
 ; NOX-NEXT:    sbc r25, r21
 ; NOX-NEXT:    ret
 entry:
-  %arrayidx = getelementptr inbounds [4 x i16], [4 x i16] addrspace(1)* @arr0, i16 0, i16 %a
-  %0 = load i16, i16 addrspace(1)* %arrayidx, align 1
-  %arrayidx1 = getelementptr inbounds [4 x i16], [4 x i16] addrspace(2)* @arr1, i16 0, i16 %b
-  %1 = load i16, i16 addrspace(2)* %arrayidx1, align 1
+  %arrayidx = getelementptr inbounds [4 x i16], ptr addrspace(1) @arr0, i16 0, i16 %a
+  %0 = load i16, ptr addrspace(1) %arrayidx, align 1
+  %arrayidx1 = getelementptr inbounds [4 x i16], ptr addrspace(2) @arr1, i16 0, i16 %b
+  %1 = load i16, ptr addrspace(2) %arrayidx1, align 1
   %sub = sub nsw i16 %0, %1
   ret i16 %sub
 }
@@ -173,10 +173,10 @@ define i16 @foo2(i16 %a, i16 %b) {
 ; NOX-NEXT:    sbc r25, r19
 ; NOX-NEXT:    ret
 entry:
-  %arrayidx = getelementptr inbounds [4 x i16], [4 x i16] addrspace(3)* @arr2, i16 0, i16 %a
-  %0 = load i16, i16 addrspace(3)* %arrayidx, align 1
-  %arrayidx1 = getelementptr inbounds [4 x i16], [4 x i16] addrspace(1)* @arr0, i16 0, i16 %b
-  %1 = load i16, i16 addrspace(1)* %arrayidx1, align 1
+  %arrayidx = getelementptr inbounds [4 x i16], ptr addrspace(3) @arr2, i16 0, i16 %a
+  %0 = load i16, ptr addrspace(3) %arrayidx, align 1
+  %arrayidx1 = getelementptr inbounds [4 x i16], ptr addrspace(1) @arr0, i16 0, i16 %b
+  %1 = load i16, ptr addrspace(1) %arrayidx1, align 1
   %sub = sub nsw i16 %0, %1
   ret i16 %sub
 }
@@ -236,10 +236,10 @@ define i16 @foo3(i16 %a, i16 %b) {
 ; NOX-NEXT:    sbc r25, r21
 ; NOX-NEXT:    ret
 entry:
-  %arrayidx = getelementptr inbounds [4 x i16], [4 x i16] addrspace(3)* @arr2, i16 0, i16 %a
-  %0 = load i16, i16 addrspace(3)* %arrayidx, align 1
-  %arrayidx1 = getelementptr inbounds [4 x i16], [4 x i16] addrspace(2)* @arr1, i16 0, i16 %b
-  %1 = load i16, i16 addrspace(2)* %arrayidx1, align 1
+  %arrayidx = getelementptr inbounds [4 x i16], ptr addrspace(3) @arr2, i16 0, i16 %a
+  %0 = load i16, ptr addrspace(3) %arrayidx, align 1
+  %arrayidx1 = getelementptr inbounds [4 x i16], ptr addrspace(2) @arr1, i16 0, i16 %b
+  %1 = load i16, ptr addrspace(2) %arrayidx1, align 1
   %sub = sub nsw i16 %0, %1
   ret i16 %sub
 }
@@ -283,10 +283,10 @@ define signext i8 @foob0(i16 %a, i16 %b) {
 ; NOX-NEXT:    sbc r25, r25
 ; NOX-NEXT:    ret
 entry:
-  %arrayidx = getelementptr inbounds [4 x i8], [4 x i8] addrspace(1)* @arrb1, i16 0, i16 %a
-  %0 = load i8, i8 addrspace(1)* %arrayidx, align 1
-  %arrayidx1 = getelementptr inbounds [4 x i8], [4 x i8] addrspace(1)* @arrb1, i16 0, i16 %b
-  %1 = load i8, i8 addrspace(1)* %arrayidx1, align 1
+  %arrayidx = getelementptr inbounds [4 x i8], ptr addrspace(1) @arrb1, i16 0, i16 %a
+  %0 = load i8, ptr addrspace(1) %arrayidx, align 1
+  %arrayidx1 = getelementptr inbounds [4 x i8], ptr addrspace(1) @arrb1, i16 0, i16 %b
+  %1 = load i8, ptr addrspace(1) %arrayidx1, align 1
   %sub = sub i8 %0, %1
   ret i8 %sub
 }
@@ -330,10 +330,10 @@ define signext i8 @foob1(i16 %a, i16 %b) {
 ; NOX-NEXT:    sbc r25, r25
 ; NOX-NEXT:    ret
 entry:
-  %arrayidx = getelementptr inbounds [4 x i8], [4 x i8] addrspace(1)* @arrb1, i16 0, i16 %a
-  %0 = load i8, i8 addrspace(1)* %arrayidx, align 1
-  %arrayidx1 = getelementptr inbounds [4 x i8], [4 x i8] addrspace(3)* @arrb3, i16 0, i16 %b
-  %1 = load i8, i8 addrspace(3)* %arrayidx1, align 1
+  %arrayidx = getelementptr inbounds [4 x i8], ptr addrspace(1) @arrb1, i16 0, i16 %a
+  %0 = load i8, ptr addrspace(1) %arrayidx, align 1
+  %arrayidx1 = getelementptr inbounds [4 x i8], ptr addrspace(3) @arrb3, i16 0, i16 %b
+  %1 = load i8, ptr addrspace(3) %arrayidx1, align 1
   %sub = sub i8 %0, %1
   ret i8 %sub
 }
@@ -377,10 +377,10 @@ define signext i8 @foob2(i16 %a, i16 %b) {
 ; NOX-NEXT:    sbc r25, r25
 ; NOX-NEXT:    ret
 entry:
-  %arrayidx = getelementptr inbounds [4 x i8], [4 x i8] addrspace(5)* @arrb5, i16 0, i16 %a
-  %0 = load i8, i8 addrspace(5)* %arrayidx, align 1
-  %arrayidx1 = getelementptr inbounds [4 x i8], [4 x i8] addrspace(1)* @arrb1, i16 0, i16 %b
-  %1 = load i8, i8 addrspace(1)* %arrayidx1, align 1
+  %arrayidx = getelementptr inbounds [4 x i8], ptr addrspace(5) @arrb5, i16 0, i16 %a
+  %0 = load i8, ptr addrspace(5) %arrayidx, align 1
+  %arrayidx1 = getelementptr inbounds [4 x i8], ptr addrspace(1) @arrb1, i16 0, i16 %b
+  %1 = load i8, ptr addrspace(1) %arrayidx1, align 1
   %sub = sub i8 %0, %1
   ret i8 %sub
 }
@@ -428,10 +428,10 @@ define signext i8 @foob3(i16 %a, i16 %b) {
 ; NOX-NEXT:    sbc r25, r25
 ; NOX-NEXT:    ret
 entry:
-  %arrayidx = getelementptr inbounds [4 x i8], [4 x i8] addrspace(3)* @arrb3, i16 0, i16 %a
-  %0 = load i8, i8 addrspace(3)* %arrayidx, align 1
-  %arrayidx1 = getelementptr inbounds [4 x i8], [4 x i8] addrspace(5)* @arrb5, i16 0, i16 %b
-  %1 = load i8, i8 addrspace(5)* %arrayidx1, align 1
+  %arrayidx = getelementptr inbounds [4 x i8], ptr addrspace(3) @arrb3, i16 0, i16 %a
+  %0 = load i8, ptr addrspace(3) %arrayidx, align 1
+  %arrayidx1 = getelementptr inbounds [4 x i8], ptr addrspace(5) @arrb5, i16 0, i16 %b
+  %1 = load i8, ptr addrspace(5) %arrayidx1, align 1
   %sub = sub i8 %0, %1
   ret i8 %sub
 }
@@ -477,10 +477,10 @@ define signext i8 @foob4(i16 %a, i16 %b) {
 ; NOX-NEXT:    sbc r25, r25
 ; NOX-NEXT:    ret
 entry:
-  %arrayidx = getelementptr inbounds [4 x i8], [4 x i8] addrspace(3)* @arrb3, i16 0, i16 %a
-  %0 = load i8, i8 addrspace(3)* %arrayidx, align 1
-  %arrayidx1 = getelementptr inbounds [4 x i8], [4 x i8] addrspace(3)* @arrb3, i16 0, i16 %b
-  %1 = load i8, i8 addrspace(3)* %arrayidx1, align 1
+  %arrayidx = getelementptr inbounds [4 x i8], ptr addrspace(3) @arrb3, i16 0, i16 %a
+  %0 = load i8, ptr addrspace(3) %arrayidx, align 1
+  %arrayidx1 = getelementptr inbounds [4 x i8], ptr addrspace(3) @arrb3, i16 0, i16 %b
+  %1 = load i8, ptr addrspace(3) %arrayidx1, align 1
   %sub = sub i8 %0, %1
   ret i8 %sub
 }

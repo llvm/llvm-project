@@ -14,7 +14,7 @@ define i32 @foo(ptr nocapture %var1, ptr nocapture readnone %var2, ptr nocapture
 ; CHECK-NEXT:    [[CMP14:%.*]] = icmp eq i32 [[ITR:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP14]], label [[FOR_END13:%.*]], label [[FOR_COND1_PREHEADER_PREHEADER:%.*]]
 ; CHECK:       for.cond1.preheader.preheader:
-; CHECK-NEXT:    [[UGLYGEP1:%.*]] = getelementptr i8, ptr [[VAR1:%.*]], i64 4
+; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[VAR1:%.*]], i64 4
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[ITR]], -1
 ; CHECK-NEXT:    br label [[FOR_COND1_PREHEADER:%.*]]
 ; CHECK:       for.cond1.preheader:
@@ -22,25 +22,25 @@ define i32 @foo(ptr nocapture %var1, ptr nocapture readnone %var2, ptr nocapture
 ; CHECK-NEXT:    [[J_016:%.*]] = phi i32 [ [[J_1_LCSSA:%.*]], [[FOR_INC11]] ], [ 0, [[FOR_COND1_PREHEADER_PREHEADER]] ]
 ; CHECK-NEXT:    [[I_015:%.*]] = phi i32 [ [[INC12:%.*]], [[FOR_INC11]] ], [ 0, [[FOR_COND1_PREHEADER_PREHEADER]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[INDVAR]], 2
-; CHECK-NEXT:    [[UGLYGEP3:%.*]] = getelementptr i8, ptr [[VAR3:%.*]], i64 [[TMP1]]
+; CHECK-NEXT:    [[SCEVGEP3:%.*]] = getelementptr i8, ptr [[VAR3:%.*]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[TMP1]], 4
-; CHECK-NEXT:    [[UGLYGEP4:%.*]] = getelementptr i8, ptr [[VAR3]], i64 [[TMP2]]
+; CHECK-NEXT:    [[SCEVGEP4:%.*]] = getelementptr i8, ptr [[VAR3]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[CMP212:%.*]] = icmp ult i32 [[J_016]], [[ITR]]
 ; CHECK-NEXT:    br i1 [[CMP212]], label [[FOR_BODY3_LVER_CHECK:%.*]], label [[FOR_INC11]]
 ; CHECK:       for.body3.lver.check:
 ; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[I_015]], [[ITR]]
 ; CHECK-NEXT:    [[IDXPROM6:%.*]] = zext i32 [[I_015]] to i64
-; CHECK-NEXT:    [[ARRAYIDX7:%.*]] = getelementptr inbounds i32, ptr [[VAR3]], i64 [[IDXPROM6]]
+; CHECK-NEXT:    [[ARRAYIDX7:%.*]] = getelementptr inbounds nuw i32, ptr [[VAR3]], i64 [[IDXPROM6]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i32 [[J_016]] to i64
 ; CHECK-NEXT:    [[TMP4:%.*]] = shl nuw nsw i64 [[TMP3]], 2
-; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[VAR1]], i64 [[TMP4]]
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[VAR1]], i64 [[TMP4]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = sub i32 [[TMP0]], [[J_016]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = zext i32 [[TMP5]] to i64
 ; CHECK-NEXT:    [[TMP7:%.*]] = shl nuw nsw i64 [[TMP6]], 2
 ; CHECK-NEXT:    [[TMP8:%.*]] = add i64 [[TMP4]], [[TMP7]]
-; CHECK-NEXT:    [[UGLYGEP2:%.*]] = getelementptr i8, ptr [[UGLYGEP1]], i64 [[TMP8]]
-; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[UGLYGEP]], [[UGLYGEP4]]
-; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[UGLYGEP3]], [[UGLYGEP2]]
+; CHECK-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[SCEVGEP1]], i64 [[TMP8]]
+; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[SCEVGEP]], [[SCEVGEP4]]
+; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[SCEVGEP3]], [[SCEVGEP2]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label [[FOR_BODY3_PH_LVER_ORIG:%.*]], label [[FOR_BODY3_PH:%.*]]
 ; CHECK:       for.body3.ph.lver.orig:
@@ -48,7 +48,7 @@ define i32 @foo(ptr nocapture %var1, ptr nocapture readnone %var2, ptr nocapture
 ; CHECK:       for.body3.lver.orig:
 ; CHECK-NEXT:    [[J_113_LVER_ORIG:%.*]] = phi i32 [ [[J_016]], [[FOR_BODY3_PH_LVER_ORIG]] ], [ [[INC_LVER_ORIG:%.*]], [[FOR_BODY3_LVER_ORIG]] ]
 ; CHECK-NEXT:    [[IDXPROM_LVER_ORIG:%.*]] = zext i32 [[J_113_LVER_ORIG]] to i64
-; CHECK-NEXT:    [[ARRAYIDX_LVER_ORIG:%.*]] = getelementptr inbounds i32, ptr [[VAR1]], i64 [[IDXPROM_LVER_ORIG]]
+; CHECK-NEXT:    [[ARRAYIDX_LVER_ORIG:%.*]] = getelementptr inbounds nuw i32, ptr [[VAR1]], i64 [[IDXPROM_LVER_ORIG]]
 ; CHECK-NEXT:    store i32 [[ADD]], ptr [[ARRAYIDX_LVER_ORIG]], align 4
 ; CHECK-NEXT:    [[TMP9:%.*]] = load i32, ptr [[ARRAYIDX7]], align 4
 ; CHECK-NEXT:    [[ADD8_LVER_ORIG:%.*]] = add nsw i32 [[TMP9]], [[ADD]]
@@ -57,14 +57,14 @@ define i32 @foo(ptr nocapture %var1, ptr nocapture readnone %var2, ptr nocapture
 ; CHECK-NEXT:    [[CMP2_LVER_ORIG:%.*]] = icmp ult i32 [[INC_LVER_ORIG]], [[ITR]]
 ; CHECK-NEXT:    br i1 [[CMP2_LVER_ORIG]], label [[FOR_BODY3_LVER_ORIG]], label [[FOR_INC11_LOOPEXIT_LOOPEXIT:%.*]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       for.body3.ph:
-; CHECK-NEXT:    [[ARRAYIDX7_PROMOTED:%.*]] = load i32, ptr [[ARRAYIDX7]], align 4, !alias.scope !2, !noalias !2
+; CHECK-NEXT:    [[ARRAYIDX7_PROMOTED:%.*]] = load i32, ptr [[ARRAYIDX7]], align 4, !alias.scope [[META2:![0-9]+]], !noalias [[META2]]
 ; CHECK-NEXT:    br label [[FOR_BODY3:%.*]]
 ; CHECK:       for.body3:
 ; CHECK-NEXT:    [[ADD86:%.*]] = phi i32 [ [[ARRAYIDX7_PROMOTED]], [[FOR_BODY3_PH]] ], [ [[ADD8:%.*]], [[FOR_BODY3]] ]
 ; CHECK-NEXT:    [[J_113:%.*]] = phi i32 [ [[J_016]], [[FOR_BODY3_PH]] ], [ [[INC:%.*]], [[FOR_BODY3]] ]
 ; CHECK-NEXT:    [[IDXPROM:%.*]] = zext i32 [[J_113]] to i64
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[VAR1]], i64 [[IDXPROM]]
-; CHECK-NEXT:    store i32 [[ADD]], ptr [[ARRAYIDX]], align 4, !alias.scope !2, !noalias !2
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i32, ptr [[VAR1]], i64 [[IDXPROM]]
+; CHECK-NEXT:    store i32 [[ADD]], ptr [[ARRAYIDX]], align 4, !alias.scope [[META2]], !noalias [[META2]]
 ; CHECK-NEXT:    [[ADD8]] = add nsw i32 [[ADD86]], [[ADD]]
 ; CHECK-NEXT:    [[INC]] = add nuw i32 [[J_113]], 1
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i32 [[INC]], [[ITR]]
@@ -73,7 +73,7 @@ define i32 @foo(ptr nocapture %var1, ptr nocapture readnone %var2, ptr nocapture
 ; CHECK-NEXT:    br label [[FOR_INC11_LOOPEXIT:%.*]]
 ; CHECK:       for.inc11.loopexit.loopexit5:
 ; CHECK-NEXT:    [[ADD8_LCSSA:%.*]] = phi i32 [ [[ADD8]], [[FOR_BODY3]] ]
-; CHECK-NEXT:    store i32 [[ADD8_LCSSA]], ptr [[ARRAYIDX7]], align 4, !alias.scope !2, !noalias !2
+; CHECK-NEXT:    store i32 [[ADD8_LCSSA]], ptr [[ARRAYIDX7]], align 4, !alias.scope [[META2]], !noalias [[META2]]
 ; CHECK-NEXT:    br label [[FOR_INC11_LOOPEXIT]]
 ; CHECK:       for.inc11.loopexit:
 ; CHECK-NEXT:    br label [[FOR_INC11]]

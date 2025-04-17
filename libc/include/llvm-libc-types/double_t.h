@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __LLVM_LIBC_TYPES_DOUBLE_T_H__
-#define __LLVM_LIBC_TYPES_DOUBLE_T_H__
+#ifndef LLVM_LIBC_TYPES_DOUBLE_T_H
+#define LLVM_LIBC_TYPES_DOUBLE_T_H
 
 #if !defined(__FLT_EVAL_METHOD__) || __FLT_EVAL_METHOD__ == 0
 #define __LLVM_LIBC_DOUBLE_T double
@@ -21,4 +21,4 @@
 
 typedef __LLVM_LIBC_DOUBLE_T double_t;
 
-#endif // __LLVM_LIBC_TYPES_DOUBLE_T_H__
+#endif // LLVM_LIBC_TYPES_DOUBLE_T_H

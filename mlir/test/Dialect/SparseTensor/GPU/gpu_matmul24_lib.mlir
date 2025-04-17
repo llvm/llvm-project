@@ -4,7 +4,7 @@
   map = ( i, j ) ->
   ( i            : dense,
     j floordiv 4 : dense,
-    j mod 4      : block2_4
+    j mod 4      : structured[2, 4]
   )
 }>
 
@@ -14,19 +14,19 @@
 // CHECK-SAME:      %[[VAL_2:.*2]]: tensor<?x?xf16>) -> tensor<?x?xf16> {
 // CHECK-DAG:       %[[VAL_3:.*]] = arith.constant 0 : index
 // CHECK-DAG:       %[[VAL_4:.*]] = arith.constant 1 : index
-// CHECK:           %[[VAL_5:.*]] = bufferization.to_memref %[[VAL_0]] : memref<?x?xf16>
+// CHECK:           %[[VAL_5:.*]] = bufferization.to_memref %[[VAL_0]] : tensor<?x?xf16> to memref<?x?xf16>
 // CHECK:           %[[VAL_6:.*]] = gpu.wait async
 // CHECK:           %[[VAL_7:.*]] = memref.dim %[[VAL_5]], %[[VAL_3]] : memref<?x?xf16>
 // CHECK:           %[[VAL_8:.*]] = memref.dim %[[VAL_5]], %[[VAL_4]] : memref<?x?xf16>
 // CHECK:           %[[VAL_9:.*]], %[[VAL_10:.*]] = gpu.alloc async {{\[}}%[[VAL_6]]] (%[[VAL_7]], %[[VAL_8]]) : memref<?x?xf16>
 // CHECK:           %[[VAL_11:.*]] = gpu.memcpy async {{\[}}%[[VAL_10]]] %[[VAL_9]], %[[VAL_5]] : memref<?x?xf16>, memref<?x?xf16>
-// CHECK:           %[[VAL_12:.*]] = bufferization.to_memref %[[VAL_1]] : memref<?x?xf16>
+// CHECK:           %[[VAL_12:.*]] = bufferization.to_memref %[[VAL_1]] : tensor<?x?xf16> to memref<?x?xf16>
 // CHECK:           %[[VAL_13:.*]] = gpu.wait async
 // CHECK:           %[[VAL_14:.*]] = memref.dim %[[VAL_12]], %[[VAL_3]] : memref<?x?xf16>
 // CHECK:           %[[VAL_15:.*]] = memref.dim %[[VAL_12]], %[[VAL_4]] : memref<?x?xf16>
 // CHECK:           %[[VAL_16:.*]], %[[VAL_17:.*]] = gpu.alloc async {{\[}}%[[VAL_13]]] (%[[VAL_14]], %[[VAL_15]]) : memref<?x?xf16>
 // CHECK:           %[[VAL_18:.*]] = gpu.memcpy async {{\[}}%[[VAL_17]]] %[[VAL_16]], %[[VAL_12]] : memref<?x?xf16>, memref<?x?xf16>
-// CHECK:           %[[VAL_19:.*]] = bufferization.to_memref %[[VAL_2]] : memref<?x?xf16>
+// CHECK:           %[[VAL_19:.*]] = bufferization.to_memref %[[VAL_2]] : tensor<?x?xf16> to memref<?x?xf16>
 // CHECK:           %[[VAL_20:.*]] = gpu.wait async
 // CHECK:           %[[VAL_21:.*]] = memref.dim %[[VAL_19]], %[[VAL_3]] : memref<?x?xf16>
 // CHECK:           %[[VAL_22:.*]] = memref.dim %[[VAL_19]], %[[VAL_4]] : memref<?x?xf16>

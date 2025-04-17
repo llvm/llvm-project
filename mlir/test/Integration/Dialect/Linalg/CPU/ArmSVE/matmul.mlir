@@ -1,10 +1,10 @@
 // DEFINE: %{compile} =  mlir-opt %s \
 // DEFINE:    -transform-interpreter -test-transform-dialect-erase-schedule \
-// DEFINE:    -one-shot-bufferize -func-bufferize -cse -canonicalize -convert-vector-to-scf -arm-sve-legalize-vector-storage \
+// DEFINE:    -one-shot-bufferize="bufferize-function-boundaries" -buffer-deallocation-pipeline -cse -canonicalize -convert-vector-to-scf -arm-sve-legalize-vector-storage \
 // DEFINE:    -convert-vector-to-llvm="enable-arm-sve" -test-lower-to-llvm -o %t
 // DEFINE: %{entry_point} = matmul_f32
 // DEFINE: %{run} = %mcr_aarch64_cmd %t -e %{entry_point} -entry-point-result=void --march=aarch64 --mattr="+sve"\
-// DEFINE:    -shared-libs=%mlir_runner_utils,%mlir_c_runner_utils
+// DEFINE:    -shared-libs=%native_mlir_runner_utils,%native_mlir_c_runner_utils
 
 // RUN: %{compile}
 
@@ -36,7 +36,7 @@ func.func @matmul_f32() {
 
   // Print and verify the output
   // F32-LABEL: SVE: START OF TEST OUTPUT
-  vector.print str "SVE: START OF TEST OUTPUT"
+  vector.print str "SVE: START OF TEST OUTPUT\n"
 
   // F32-NEXT: Unranked Memref {{.*}} rank = 2 offset = 0 sizes = [5, 15] strides = [15, 1] data =
   // F32-COUNT-5: [29.5788, 29.5788, 29.5788, 29.5788, 29.5788, 29.5788, 29.5788, 29.5788, 29.5788, 29.5788, 29.5788, 29.5788, 29.5788, 29.5788, 29.5788]
@@ -44,7 +44,7 @@ func.func @matmul_f32() {
   call @printMemrefF32(%xf) : (tensor<*xf32>) -> ()
 
   // F32-NEXT: SVE: END OF TEST OUTPUT
-  vector.print str "SVE: END OF TEST OUTPUT"
+  vector.print str "SVE: END OF TEST OUTPUT\n"
 
   return
 }
@@ -73,7 +73,7 @@ func.func @matmul_mixed_ty() {
 
   // Print and verify the output
   // MIXED-LABEL: SVE: START OF TEST OUTPUT
-  vector.print str "SVE: START OF TEST OUTPUT"
+  vector.print str "SVE: START OF TEST OUTPUT\n"
 
   // MIXED-NEXT: Unranked Memref {{.*}} rank = 2 offset = 0 sizes = [5, 15] strides = [15, 1] data =
   // MIXED-COUNT-5: [45387,   45387,   45387,   45387,   45387,   45387,   45387,   45387,   45387,   45387,   45387,   45387,   45387,   45387,   45387]
@@ -81,7 +81,7 @@ func.func @matmul_mixed_ty() {
   call @printMemrefI32(%xf) : (tensor<*xi32>) -> ()
 
   // MIXED-NEXT: SVE: END OF TEST OUTPUT
-  vector.print str "SVE: END OF TEST OUTPUT"
+  vector.print str "SVE: END OF TEST OUTPUT\n"
 
   return
 }
@@ -96,9 +96,8 @@ module attributes {transform.with_named_sequence} {
       : (!transform.op<"func.func">) -> !transform.any_op
 
     // Step 1: Tile
-    %tiled_matmul, %loops:3 = transform.structured.tile_using_for %matmul [2, [4], 1]
+    %tiled_matmul, %loops:3 = transform.structured.tile_using_for %matmul tile_sizes [2, [4], 1]
       : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
-    transform.print %tiled_matmul {name = "matmul lal"}: !transform.any_op
 
     // Step 2: Vectorize
     transform.structured.vectorize %tiled_matmul vector_sizes [2, [4], 1] : !transform.any_op

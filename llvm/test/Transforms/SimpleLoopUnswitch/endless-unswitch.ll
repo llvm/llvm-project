@@ -106,3 +106,96 @@ for.inc:                                          ; preds = %for.cond5
   store i8 0, ptr @b, align 1
   br label %for.cond5
 }
+
+define void @e(ptr %p) {
+; CHECK-LABEL: @e(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[FOR_COND:%.*]]
+; CHECK:       for.cond:
+; CHECK-NEXT:    br i1 false, label [[FOR_END:%.*]], label [[FOR_COND]]
+; CHECK:       for.end:
+; CHECK-NEXT:    [[TMP0:%.*]] = load i16, ptr [[P:%.*]], align 2
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i16 [[TMP0]] to i1
+; CHECK-NEXT:    br i1 [[TMP1]], label [[FOR_END_SPLIT:%.*]], label [[FOR_END_SPLIT_US:%.*]]
+; CHECK:       for.end.split.us:
+; CHECK-NEXT:    br label [[G_US:%.*]]
+; CHECK:       g.us:
+; CHECK-NEXT:    br label [[G_SPLIT_US6:%.*]]
+; CHECK:       for.cond1.us1:
+; CHECK-NEXT:    [[TMP2:%.*]] = load i16, ptr [[P]], align 2
+; CHECK-NEXT:    [[TOBOOL4_NOT_US:%.*]] = trunc i16 [[TMP2]] to i1
+; CHECK-NEXT:    br i1 [[TOBOOL4_NOT_US]], label [[FOR_COND5_PREHEADER_US4:%.*]], label [[G_LOOPEXIT_US:%.*]]
+; CHECK:       for.cond5.us2:
+; CHECK-NEXT:    br i1 false, label [[FOR_COND1_LOOPEXIT_US5:%.*]], label [[FOR_INC_US3:%.*]]
+; CHECK:       for.inc.us3:
+; CHECK-NEXT:    store i8 0, ptr @b, align 1
+; CHECK-NEXT:    br label [[FOR_COND5_US2:%.*]]
+; CHECK:       for.cond5.preheader.us4:
+; CHECK-NEXT:    br label [[FOR_COND5_US2]]
+; CHECK:       for.cond1.loopexit.us5:
+; CHECK-NEXT:    br label [[FOR_COND1_US1:%.*]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK:       g.loopexit.us:
+; CHECK-NEXT:    br label [[G_US]]
+; CHECK:       g.split.us6:
+; CHECK-NEXT:    br label [[FOR_COND1_US1]]
+; CHECK:       for.end.split:
+; CHECK-NEXT:    br label [[G:%.*]]
+; CHECK:       g.loopexit:
+; CHECK-NEXT:    br label [[G]], !llvm.loop [[LOOP4:![0-9]+]]
+; CHECK:       g:
+; CHECK-NEXT:    [[TMP3:%.*]] = load i16, ptr [[P]], align 2
+; CHECK-NEXT:    [[TMP4:%.*]] = trunc i16 [[TMP3]] to i1
+; CHECK-NEXT:    br i1 [[TMP4]], label [[G_SPLIT_US:%.*]], label [[G_SPLIT:%.*]]
+; CHECK:       g.split.us:
+; CHECK-NEXT:    br label [[FOR_COND1_US:%.*]]
+; CHECK:       for.cond1.us:
+; CHECK-NEXT:    br label [[FOR_COND5_PREHEADER_US:%.*]]
+; CHECK:       for.cond5.us:
+; CHECK-NEXT:    br i1 false, label [[FOR_COND1_LOOPEXIT_US:%.*]], label [[FOR_INC_US:%.*]]
+; CHECK:       for.inc.us:
+; CHECK-NEXT:    store i8 0, ptr @b, align 1
+; CHECK-NEXT:    br label [[FOR_COND5_US:%.*]]
+; CHECK:       for.cond5.preheader.us:
+; CHECK-NEXT:    br label [[FOR_COND5_US]]
+; CHECK:       for.cond1.loopexit.us:
+; CHECK-NEXT:    br label [[FOR_COND1_US]]
+; CHECK:       g.split:
+; CHECK-NEXT:    br label [[FOR_COND1:%.*]]
+; CHECK:       for.cond1.loopexit:
+; CHECK-NEXT:    br label [[FOR_COND1]], !llvm.loop [[LOOP3]]
+; CHECK:       for.cond1:
+; CHECK-NEXT:    [[TMP5:%.*]] = load i16, ptr [[P]], align 2
+; CHECK-NEXT:    [[TOBOOL4_NOT:%.*]] = trunc i16 [[TMP5]] to i1
+; CHECK-NEXT:    br i1 [[TOBOOL4_NOT]], label [[FOR_COND5_PREHEADER:%.*]], label [[G_LOOPEXIT:%.*]]
+; CHECK:       for.cond5.preheader:
+; CHECK-NEXT:    br label [[FOR_COND5:%.*]]
+; CHECK:       for.cond5:
+; CHECK-NEXT:    br i1 false, label [[FOR_COND1_LOOPEXIT:%.*]], label [[FOR_INC:%.*]]
+; CHECK:       for.inc:
+; CHECK-NEXT:    store i8 0, ptr @b, align 1
+; CHECK-NEXT:    br label [[FOR_COND5]]
+;
+entry:
+  br label %for.cond
+
+for.cond:                                         ; preds = %for.cond, %entry
+  br i1 false, label %for.end, label %for.cond
+
+for.end:                                          ; preds = %for.cond
+  br label %g
+
+g:                                                ; preds = %for.cond1, %for.end
+  br label %for.cond1
+
+for.cond1:                                        ; preds = %for.cond5, %g
+  %0 = load i16, ptr %p, align 2
+  %tobool4.not = trunc i16 %0 to i1
+  br i1 %tobool4.not, label %for.cond5, label %g
+
+for.cond5:                                        ; preds = %for.inc, %for.cond1
+  br i1 false, label %for.cond1, label %for.inc
+
+for.inc:                                          ; preds = %for.cond5
+  store i8 0, ptr @b, align 1
+  br label %for.cond5
+}

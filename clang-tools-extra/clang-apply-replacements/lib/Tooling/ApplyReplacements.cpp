@@ -148,11 +148,8 @@ groupReplacements(const TUReplacements &TUs, const TUDiagnostics &TUDs,
 
     if (auto Entry = SM.getFileManager().getOptionalFileRef(Path)) {
       if (SourceTU) {
-        auto &Replaces = DiagReplacements[*Entry];
-        auto It = Replaces.find(R);
-        if (It == Replaces.end())
-          Replaces.emplace(R, SourceTU);
-        else if (It->second != SourceTU)
+        auto [It, Inserted] = DiagReplacements[*Entry].try_emplace(R, SourceTU);
+        if (!Inserted && It->second != SourceTU)
           // This replacement is a duplicate of one suggested by another TU.
           return;
       }

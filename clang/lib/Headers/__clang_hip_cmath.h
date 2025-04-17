@@ -395,7 +395,12 @@ template <class _Tp> struct __numeric_type {
   // No support for long double, use double instead.
   static double __test(long double);
 
-  typedef decltype(__test(declval<_Tp>())) type;
+  template <typename _U>
+  static auto __test_impl(int) -> decltype(__test(declval<_U>()));
+
+  template <typename _U> static void __test_impl(...);
+
+  typedef decltype(__test_impl<_Tp>(0)) type;
   static const bool value = !is_same<type, void>::value;
 };
 

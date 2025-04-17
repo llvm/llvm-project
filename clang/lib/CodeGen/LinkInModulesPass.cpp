@@ -16,14 +16,14 @@
 
 using namespace llvm;
 
-LinkInModulesPass::LinkInModulesPass(clang::BackendConsumer *BC,
-                                     bool ShouldLinkFiles)
-    : BC(BC), ShouldLinkFiles(ShouldLinkFiles) {}
+LinkInModulesPass::LinkInModulesPass(clang::BackendConsumer *BC) : BC(BC) {}
 
 PreservedAnalyses LinkInModulesPass::run(Module &M, ModuleAnalysisManager &AM) {
+  if (!BC)
+    return PreservedAnalyses::all();
 
-  if (BC && BC->LinkInModules(&M, ShouldLinkFiles))
-    report_fatal_error("Bitcode module linking failed, compilation aborted!");
+  if (BC->LinkInModules(&M))
+    report_fatal_error("Bitcode module postopt linking failed, aborted!");
 
-  return PreservedAnalyses::all();
+  return PreservedAnalyses::none();
 }

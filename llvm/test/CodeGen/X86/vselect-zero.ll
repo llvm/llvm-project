@@ -113,14 +113,22 @@ define float @fsel_zero_true_val(float %a, float %b, float %x) {
 }
 
 define double @fsel_nonzero_false_val(double %x, double %y, double %z) {
-; SSE-LABEL: fsel_nonzero_false_val:
-; SSE:       # %bb.0:
-; SSE-NEXT:    cmpeqsd %xmm1, %xmm0
-; SSE-NEXT:    andpd %xmm0, %xmm2
-; SSE-NEXT:    movsd {{.*#+}} xmm1 = [4.2E+1,0.0E+0]
-; SSE-NEXT:    andnpd %xmm1, %xmm0
-; SSE-NEXT:    orpd %xmm2, %xmm0
-; SSE-NEXT:    retq
+; SSE2-LABEL: fsel_nonzero_false_val:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    cmpeqsd %xmm1, %xmm0
+; SSE2-NEXT:    andpd %xmm0, %xmm2
+; SSE2-NEXT:    movsd {{.*#+}} xmm1 = [4.2E+1,0.0E+0]
+; SSE2-NEXT:    andnpd %xmm1, %xmm0
+; SSE2-NEXT:    orpd %xmm2, %xmm0
+; SSE2-NEXT:    retq
+;
+; SSE42-LABEL: fsel_nonzero_false_val:
+; SSE42:       # %bb.0:
+; SSE42-NEXT:    cmpeqsd %xmm1, %xmm0
+; SSE42-NEXT:    movapd {{.*#+}} xmm1 = [4.2E+1,4.2E+1]
+; SSE42-NEXT:    blendvpd %xmm0, %xmm2, %xmm1
+; SSE42-NEXT:    movapd %xmm1, %xmm0
+; SSE42-NEXT:    retq
 ;
 ; AVX-LABEL: fsel_nonzero_false_val:
 ; AVX:       # %bb.0:
@@ -142,14 +150,21 @@ define double @fsel_nonzero_false_val(double %x, double %y, double %z) {
 }
 
 define double @fsel_nonzero_true_val(double %x, double %y, double %z) {
-; SSE-LABEL: fsel_nonzero_true_val:
-; SSE:       # %bb.0:
-; SSE-NEXT:    cmpeqsd %xmm1, %xmm0
-; SSE-NEXT:    movsd {{.*#+}} xmm1 = [4.2E+1,0.0E+0]
-; SSE-NEXT:    andpd %xmm0, %xmm1
-; SSE-NEXT:    andnpd %xmm2, %xmm0
-; SSE-NEXT:    orpd %xmm1, %xmm0
-; SSE-NEXT:    retq
+; SSE2-LABEL: fsel_nonzero_true_val:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    cmpeqsd %xmm1, %xmm0
+; SSE2-NEXT:    movsd {{.*#+}} xmm1 = [4.2E+1,0.0E+0]
+; SSE2-NEXT:    andpd %xmm0, %xmm1
+; SSE2-NEXT:    andnpd %xmm2, %xmm0
+; SSE2-NEXT:    orpd %xmm1, %xmm0
+; SSE2-NEXT:    retq
+;
+; SSE42-LABEL: fsel_nonzero_true_val:
+; SSE42:       # %bb.0:
+; SSE42-NEXT:    cmpeqsd %xmm1, %xmm0
+; SSE42-NEXT:    blendvpd %xmm0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
+; SSE42-NEXT:    movapd %xmm2, %xmm0
+; SSE42-NEXT:    retq
 ;
 ; AVX-LABEL: fsel_nonzero_true_val:
 ; AVX:       # %bb.0:
@@ -160,7 +175,7 @@ define double @fsel_nonzero_true_val(double %x, double %y, double %z) {
 ; AVX512-LABEL: fsel_nonzero_true_val:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vcmpeqsd %xmm1, %xmm0, %k1
-; AVX512-NEXT:    vmovsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2 {%k1}
+; AVX512-NEXT:    vmovsd {{.*#+}} xmm2 {%k1} = [4.2E+1,0.0E+0]
 ; AVX512-NEXT:    vmovapd %xmm2, %xmm0
 ; AVX512-NEXT:    retq
   %cond = fcmp oeq double %x, %y
@@ -189,7 +204,7 @@ define double @fsel_nonzero_constants(double %x, double %y) {
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vcmpeqsd %xmm1, %xmm0, %k1
 ; AVX512-NEXT:    vmovsd {{.*#+}} xmm0 = [4.2E+1,0.0E+0]
-; AVX512-NEXT:    vmovsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 {%k1}
+; AVX512-NEXT:    vmovsd {{.*#+}} xmm0 {%k1} = [1.2E+1,0.0E+0]
 ; AVX512-NEXT:    retq
   %cond = fcmp oeq double %x, %y
   %r = select i1 %cond, double 12.0, double 42.0
@@ -227,7 +242,7 @@ define <2 x double> @vsel_nonzero_constants(<2 x double> %x, <2 x double> %y) {
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vcmplepd %xmm0, %xmm1, %k1
 ; AVX512-NEXT:    vmovsd {{.*#+}} xmm0 = [4.2E+1,0.0E+0]
-; AVX512-NEXT:    vmovapd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 {%k1}
+; AVX512-NEXT:    vmovapd {{.*#+}} xmm0 {%k1} = [1.2E+1,-1.0E+0]
 ; AVX512-NEXT:    retq
   %cond = fcmp oge <2 x double> %x, %y
   %r = select <2 x i1> %cond, <2 x double> <double 12.0, double -1.0>, <2 x double> <double 42.0, double 0.0>

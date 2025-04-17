@@ -8,8 +8,7 @@
 define <vscale x 4 x i32> @test_post_ld1_insert(ptr %a, ptr %ptr, i64 %inc) {
 ; CHECK-LABEL: test_post_ld1_insert:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr w8, [x0]
-; CHECK-NEXT:    fmov s0, w8
+; CHECK-NEXT:    ldr s0, [x0]
 ; CHECK-NEXT:    add x8, x0, x2, lsl #2
 ; CHECK-NEXT:    str x8, [x1]
 ; CHECK-NEXT:    ret
@@ -38,18 +37,18 @@ define <vscale x 2 x double> @test_post_ld1_dup(ptr %a, ptr %ptr, i64 %inc) {
 define void @test_post_ld1_int_fixed(ptr %data, i64 %idx, ptr %addr, ptr %res_ptr)  #1 {
 ; CHECK-LABEL: test_post_ld1_int_fixed:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    mov w8, #2 // =0x2
 ; CHECK-NEXT:    index z0.d, #0, #1
-; CHECK-NEXT:    ptrue p1.d, vl1
+; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    mov z1.d, x8
 ; CHECK-NEXT:    ldr x8, [x0]
-; CHECK-NEXT:    ldr x9, [x0, x1, lsl #3]
+; CHECK-NEXT:    ptrue p2.d, vl1
 ; CHECK-NEXT:    ld1d { z2.d }, p0/z, [x2]
-; CHECK-NEXT:    cmpeq p2.d, p0/z, z0.d, z1.d
+; CHECK-NEXT:    ldr x9, [x0, x1, lsl #3]
+; CHECK-NEXT:    cmpeq p1.d, p0/z, z0.d, z1.d
 ; CHECK-NEXT:    mov z0.d, z2.d
-; CHECK-NEXT:    mov z2.d, p2/m, x9
-; CHECK-NEXT:    mov z0.d, p1/m, x8
+; CHECK-NEXT:    mov z0.d, p2/m, x8
+; CHECK-NEXT:    mov z2.d, p1/m, x9
 ; CHECK-NEXT:    add z0.d, z0.d, z2.d
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x3]
 ; CHECK-NEXT:    ret
@@ -67,18 +66,18 @@ define void @test_post_ld1_int_fixed(ptr %data, i64 %idx, ptr %addr, ptr %res_pt
 define void @test_post_ld1_double_fixed(ptr %data, i64 %idx, ptr %addr, ptr %res_ptr)  #1 {
 ; CHECK-LABEL: test_post_ld1_double_fixed:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    mov w8, #2 // =0x2
 ; CHECK-NEXT:    index z0.d, #0, #1
+; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    mov z1.d, x8
-; CHECK-NEXT:    ptrue p1.d, vl1
-; CHECK-NEXT:    ld1d { z2.d }, p0/z, [x2]
-; CHECK-NEXT:    cmpeq p2.d, p0/z, z0.d, z1.d
-; CHECK-NEXT:    ldr d0, [x0]
-; CHECK-NEXT:    ldr d1, [x0, x1, lsl #3]
-; CHECK-NEXT:    sel z0.d, p1, z0.d, z2.d
-; CHECK-NEXT:    mov z2.d, p2/m, d1
-; CHECK-NEXT:    fadd z0.d, z0.d, z2.d
+; CHECK-NEXT:    ptrue p2.d, vl1
+; CHECK-NEXT:    ldr d2, [x0, x1, lsl #3]
+; CHECK-NEXT:    cmpeq p1.d, p0/z, z0.d, z1.d
+; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x2]
+; CHECK-NEXT:    ldr d1, [x0]
+; CHECK-NEXT:    sel z1.d, p2, z1.d, z0.d
+; CHECK-NEXT:    mov z0.d, p1/m, d2
+; CHECK-NEXT:    fadd z0.d, z1.d, z0.d
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x3]
 ; CHECK-NEXT:    ret
   %A = load <4 x double>, ptr %addr

@@ -34,15 +34,15 @@ int my_host() {
 // CHECK-SAME: {
 // CHECK:        %my_param.addr = alloca i32, align 4
 // CHECK:        %my_local = alloca i32, align 4
-// CHECK:        call void @llvm.dbg.declare(
-// CHECK-SAME:     metadata ptr %my_param.addr,
-// CHECK-SAME:     metadata [[MY_PARAM:![0-9]+]],
-// CHECK-SAME:     metadata !DIExpression(DW_OP_constu, 4, DW_OP_swap, DW_OP_xderef)
+// CHECK:        #dbg_declare(
+// CHECK-SAME:     ptr %my_param.addr,
+// CHECK-SAME:     [[MY_PARAM:![0-9]+]],
+// CHECK-SAME:     !DIExpression(DW_OP_constu, 4, DW_OP_swap, DW_OP_xderef)
 // CHECK-SAME:     )
-// CHECK:        call void @llvm.dbg.declare(
-// CHECK-SAME:     metadata ptr %my_local,
-// CHECK-SAME:     metadata [[MY_LOCAL:![0-9]+]],
-// CHECK-SAME:     metadata !DIExpression(DW_OP_constu, 4, DW_OP_swap, DW_OP_xderef)
+// CHECK:        #dbg_declare(
+// CHECK-SAME:     ptr %my_local,
+// CHECK-SAME:     [[MY_LOCAL:![0-9]+]],
+// CHECK-SAME:     !DIExpression(DW_OP_constu, 4, DW_OP_swap, DW_OP_xderef)
 // CHECK-SAME:     )
 // CHECK:      }
 

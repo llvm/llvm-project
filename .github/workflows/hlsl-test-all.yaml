@@ -1,0 +1,87 @@
+name: HLSL Test
+
+permissions:
+  contents: read
+
+on:
+  workflow_call:
+    inputs:
+      OffloadTest-branch:
+        description: 'Test Suite Branch'
+        required: false
+        default: 'main'
+        type: string
+      LLVM-ref:
+        description: 'LLVM Branch'
+        required: false
+        default: 'main'
+        type: string
+      SKU:
+        required: true
+        type: string
+      TestTarget:
+        required: false
+        default: 'check-hlsl'
+        type: string
+
+jobs:
+  build:
+    runs-on: ${{ inputs.SKU }}
+    steps:
+      - name: Checkout DXC
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        with:
+          repository: Microsoft/DirectXShaderCompiler
+          ref: main
+          path: DXC
+          submodules: true
+      - name: Checkout LLVM
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        with:
+          ref: ${{ inputs.LLVM-branch }}
+          path: llvm-project
+      - name: Checkout OffloadTest
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        with:
+          repository: llvm-beanz/offload-test-suite
+          ref: main
+          path: OffloadTest
+      - name: Checkout Golden Images
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        with:
+          repository: llvm-beanz/offload-golden-images
+          ref: main
+          path: golden-images
+      - name: Setup Windows
+        if: runner.os == 'Windows'
+        uses: llvm/actions/setup-windows@main
+        with:
+          arch: amd64
+      - name: Build DXC
+        run: |
+            cd DXC
+            mkdir build
+            cd build
+            cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -C ${{ github.workspace }}/DXC/cmake/caches/PredefinedParams.cmake -C ${{ github.workspace }}/OffloadTest/cmake/caches/sccache.cmake -DHLSL_DISABLE_SOURCE_GENERATION=On ${{ github.workspace }}/DXC/
+            ninja dxv llvm-dis
+      - name: Build LLVM
+        run: |
+            cd llvm-project
+            mkdir build
+            cd build
+            cmake -G Ninja -DDXIL_DIS=${{ github.workspace }}/DXC/build/bin/llvm-dis -DLLVM_INCLUDE_DXIL_TESTS=On -DCMAKE_BUILD_TYPE=Release -C ${{ github.workspace }}/llvm-project/clang/cmake/caches/HLSL.cmake -C ${{ github.workspace }}/OffloadTest/cmake/caches/sccache.cmake -DDXC_DIR=${{ github.workspace }}/DXC/build/bin -DLLVM_EXTERNAL_OFFLOADTEST_SOURCE_DIR=${{ github.workspace }}/OffloadTest -DLLVM_EXTERNAL_PROJECTS="OffloadTest" -DLLVM_LIT_ARGS="--xunit-xml-output=testresults.xunit.xml -v" -DGOLDENIMAGE_DIR=${{ github.workspace }}/golden-images ${{ github.workspace }}/llvm-project/llvm/
+            ninja hlsl-test-depends llvm-test-depends clang-test-depends
+      - name: Run HLSL Tests
+        run: |
+            cd llvm-project
+            cd build
+            ninja check-llvm
+            ninja check-clang
+            ninja check-hlsl-unit
+            ninja ${{ inputs.TestTarget }}
+      - name: Publish Test Results
+        uses: EnricoMi/publish-unit-test-result-action/macos@170bf24d20d201b842d7a52403b73ed297e6645b # v2
+        if: always() && runner.os == 'macOS'
+        with:
+          comment_mode: off
+          files: llvm-project/build/**/testresults.xunit.xml

@@ -76,7 +76,7 @@ struct DynamicAnnContext {
 };
 
 static DynamicAnnContext *dyn_ann_ctx;
-static char dyn_ann_ctx_placeholder[sizeof(DynamicAnnContext)] ALIGNED(64);
+alignas(64) static char dyn_ann_ctx_placeholder[sizeof(DynamicAnnContext)];
 
 static void AddExpectRace(ExpectRace *list,
     char *f, int l, uptr addr, uptr size, char *desc) {

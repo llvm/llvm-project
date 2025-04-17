@@ -73,6 +73,10 @@
  * WG14 DR085: yes
  * Returning from main
  *
+ * WG14 DR087: yes
+ * Order of evaluation
+ * Note: this DR is covered by C/C11/n1282.c
+ *
  * WG14 DR086: yes
  * Object-like macros in system headers
  *
@@ -135,7 +139,9 @@ int dr010_c = sizeof(dr010_t); /* expected-error {{invalid application of 'sizeo
  * Note: DR034 has a question resolved by DR011 and another question where the
  * result is UB.
  */
-static int dr011_a[]; /* expected-warning {{tentative array definition assumed to have one element}} */
+static int dr011_a[]; /* expected-warning {{tentative array definition assumed to have one element}}
+                         expected-warning {{tentative definition of variable with internal linkage has incomplete array type 'int[]'}}
+                       */
 void dr011(void) {
   extern int i[];
   {
@@ -214,7 +220,7 @@ _Static_assert(__builtin_types_compatible_p(struct S { int a; }, union U { int a
  */
 void dr031(int i) {
   switch (i) {
-  case __INT_MAX__ + 1: break; /* expected-warning {{overflow in expression; result is -2147483648 with type 'int'}} */
+  case __INT_MAX__ + 1: break; /* expected-warning {{overflow in expression; result is -2'147'483'648 with type 'int'}} */
   #pragma clang diagnostic push
   #pragma clang diagnostic ignored "-Wswitch"
   /* Silence the targets which issue:
@@ -426,7 +432,8 @@ void dr081(void) {
   /* Demonstrate that we don't crash when left shifting a signed value; that's
    * implementation defined behavior.
    */
- _Static_assert(-1 << 1 == -2, "fail"); /* Didn't shift a zero into the "sign bit". */
+ _Static_assert(-1 << 1 == -2, "fail"); /* expected-warning {{expression is not an integer constant expression; folding it to a constant is a GNU extension}}
+                                           expected-note {{left shift of negative value -1}} */
  _Static_assert(1 << 3 == 1u << 3u, "fail"); /* Shift of a positive signed value does sensible things. */
 }
 

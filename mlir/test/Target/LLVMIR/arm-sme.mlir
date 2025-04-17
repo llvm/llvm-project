@@ -63,6 +63,12 @@ llvm.func @arm_sme_imopa(%nxv8i16 : vector<[8]xi16>,
   // CHECK: call void @llvm.aarch64.sme.usmopa.wide.nxv16i8
   "arm_sme.intr.usmopa.wide"(%nxv16i1, %nxv16i1, %nxv16i8, %nxv16i8) <{tile_id = 0 : i32}> :
     (vector<[16]xi1>, vector<[16]xi1>, vector<[16]xi8>, vector<[16]xi8>) -> ()
+  // CHECK: call void @llvm.aarch64.sme.smopa.za32.nxv8i16
+  "arm_sme.intr.smopa.za32"(%nxv8i1, %nxv8i1, %nxv8i16, %nxv8i16) <{tile_id = 0 : i32}> :
+    (vector<[8]xi1>, vector<[8]xi1>, vector<[8]xi16>, vector<[8]xi16>) -> ()
+  // CHECK: call void @llvm.aarch64.sme.umopa.za32.nxv8i16
+  "arm_sme.intr.umopa.za32"(%nxv8i1, %nxv8i1, %nxv8i16, %nxv8i16) <{tile_id = 0 : i32}> :
+    (vector<[8]xi1>, vector<[8]xi1>, vector<[8]xi16>, vector<[8]xi16>) -> ()
   llvm.return
 }
 
@@ -122,6 +128,12 @@ llvm.func @arm_sme_imops(%nxv8i16 : vector<[8]xi16>,
   // CHECK: call void @llvm.aarch64.sme.usmops.wide.nxv16i8
   "arm_sme.intr.usmops.wide"(%nxv16i1, %nxv16i1, %nxv16i8, %nxv16i8) <{tile_id = 0 : i32}> :
     (vector<[16]xi1>, vector<[16]xi1>, vector<[16]xi8>, vector<[16]xi8>) -> ()
+  // CHECK: call void @llvm.aarch64.sme.smops.za32.nxv8i16
+  "arm_sme.intr.smops.za32"(%nxv8i1, %nxv8i1, %nxv8i16, %nxv8i16) <{tile_id = 0 : i32}> :
+    (vector<[8]xi1>, vector<[8]xi1>, vector<[8]xi16>, vector<[8]xi16>) -> ()
+  // CHECK: call void @llvm.aarch64.sme.umops.za32.nxv8i16
+  "arm_sme.intr.umops.za32"(%nxv8i1, %nxv8i1, %nxv8i16, %nxv8i16) <{tile_id = 0 : i32}> :
+    (vector<[8]xi1>, vector<[8]xi1>, vector<[8]xi16>, vector<[8]xi16>) -> ()
   llvm.return
 }
 

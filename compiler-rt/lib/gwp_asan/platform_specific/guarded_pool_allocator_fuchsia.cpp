@@ -24,13 +24,13 @@ void *GuardedPoolAllocator::map(size_t Size, const char *Name) const {
   assert((Size % State.PageSize) == 0);
   zx_handle_t Vmo;
   zx_status_t Status = _zx_vmo_create(Size, 0, &Vmo);
-  Check(Status == ZX_OK, "Failed to create Vmo");
+  checkWithErrorCode(Status == ZX_OK, "Failed to create Vmo", Status);
   _zx_object_set_property(Vmo, ZX_PROP_NAME, Name, strlen(Name));
   zx_vaddr_t Addr;
   Status = _zx_vmar_map(_zx_vmar_root_self(),
                         ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_ALLOW_FAULTS,
                         0, Vmo, 0, Size, &Addr);
-  Check(Status == ZX_OK, "Vmo mapping failed");
+  checkWithErrorCode(Status == ZX_OK, "Vmo mapping failed", Status);
   _zx_handle_close(Vmo);
   return reinterpret_cast<void *>(Addr);
 }
@@ -40,7 +40,7 @@ void GuardedPoolAllocator::unmap(void *Ptr, size_t Size) const {
   assert((Size % State.PageSize) == 0);
   zx_status_t Status = _zx_vmar_unmap(_zx_vmar_root_self(),
                                       reinterpret_cast<zx_vaddr_t>(Ptr), Size);
-  Check(Status == ZX_OK, "Vmo unmapping failed");
+  checkWithErrorCode(Status == ZX_OK, "Vmo unmapping failed", Status);
 }
 
 void *GuardedPoolAllocator::reserveGuardedPool(size_t Size) {
@@ -50,7 +50,8 @@ void *GuardedPoolAllocator::reserveGuardedPool(size_t Size) {
       _zx_vmar_root_self(),
       ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE | ZX_VM_CAN_MAP_SPECIFIC, 0,
       Size, &GuardedPagePoolPlatformData.Vmar, &Addr);
-  Check(Status == ZX_OK, "Failed to reserve guarded pool allocator memory");
+  checkWithErrorCode(Status == ZX_OK,
+                     "Failed to reserve guarded pool allocator memory", Status);
   _zx_object_set_property(GuardedPagePoolPlatformData.Vmar, ZX_PROP_NAME,
                           kGwpAsanGuardPageName, strlen(kGwpAsanGuardPageName));
   return reinterpret_cast<void *>(Addr);
@@ -59,8 +60,10 @@ void *GuardedPoolAllocator::reserveGuardedPool(size_t Size) {
 void GuardedPoolAllocator::unreserveGuardedPool() {
   const zx_handle_t Vmar = GuardedPagePoolPlatformData.Vmar;
   assert(Vmar != ZX_HANDLE_INVALID && Vmar != _zx_vmar_root_self());
-  Check(_zx_vmar_destroy(Vmar) == ZX_OK, "Failed to destroy a vmar");
-  Check(_zx_handle_close(Vmar) == ZX_OK, "Failed to close a vmar");
+  zx_status_t Status = _zx_vmar_destroy(Vmar);
+  checkWithErrorCode(Status == ZX_OK, "Failed to destroy a vmar", Status);
+  Status = _zx_handle_close(Vmar);
+  checkWithErrorCode(Status == ZX_OK, "Failed to close a vmar", Status);
   GuardedPagePoolPlatformData.Vmar = ZX_HANDLE_INVALID;
 }
 
@@ -69,7 +72,7 @@ void GuardedPoolAllocator::allocateInGuardedPool(void *Ptr, size_t Size) const {
   assert((Size % State.PageSize) == 0);
   zx_handle_t Vmo;
   zx_status_t Status = _zx_vmo_create(Size, 0, &Vmo);
-  Check(Status == ZX_OK, "Failed to create vmo");
+  checkWithErrorCode(Status == ZX_OK, "Failed to create vmo", Status);
   _zx_object_set_property(Vmo, ZX_PROP_NAME, kGwpAsanAliveSlotName,
                           strlen(kGwpAsanAliveSlotName));
   const zx_handle_t Vmar = GuardedPagePoolPlatformData.Vmar;
@@ -81,7 +84,7 @@ void GuardedPoolAllocator::allocateInGuardedPool(void *Ptr, size_t Size) const {
                         ZX_VM_PERM_READ | ZX_VM_PERM_WRITE |
                             ZX_VM_ALLOW_FAULTS | ZX_VM_SPECIFIC,
                         Offset, Vmo, 0, Size, &P);
-  Check(Status == ZX_OK, "Vmo mapping failed");
+  checkWithErrorCode(Status == ZX_OK, "Vmo mapping failed", Status);
   _zx_handle_close(Vmo);
 }
 
@@ -93,7 +96,7 @@ void GuardedPoolAllocator::deallocateInGuardedPool(void *Ptr,
   assert(Vmar != ZX_HANDLE_INVALID && Vmar != _zx_vmar_root_self());
   const zx_status_t Status =
       _zx_vmar_unmap(Vmar, reinterpret_cast<zx_vaddr_t>(Ptr), Size);
-  Check(Status == ZX_OK, "Vmar unmapping failed");
+  checkWithErrorCode(Status == ZX_OK, "Vmar unmapping failed", Status);
 }
 
 size_t GuardedPoolAllocator::getPlatformPageSize() {

@@ -41,7 +41,7 @@
   define signext i32 @fn2(i64 signext %a) local_unnamed_addr !dbg !14 {
   entry:
     call void @llvm.dbg.value(metadata i64 %a, metadata !18, metadata !DIExpression()), !dbg !20
-    tail call void bitcast (void (...)* @clobber to void ()*)(), !dbg !20
+    tail call void @clobber(), !dbg !20
     %add = add nsw i64 %a, 10, !dbg !20
     %call = tail call signext i32 @fn1(i64 signext 44, i64 signext %a, i64 signext %add), !dbg !20
     call void @llvm.dbg.value(metadata i32 %call, metadata !19, metadata !DIExpression()), !dbg !20

@@ -21,7 +21,7 @@
   target triple = "riscv64"
 
   ; Function Attrs: nounwind
-  define weak_odr dso_local void @foo(i8* %ay) nounwind {
+  define weak_odr dso_local void @foo(ptr %ay) nounwind {
   ; CHECK-LABEL: foo:
   ; CHECK:       # %bb.0: # %entry
   ; CHECK-NEXT:    addi sp, sp, -2032
@@ -41,10 +41,7 @@
   ; CHECK-NEXT:    sd a0, -8(a1)
   ; CHECK-NEXT:    ld a1, 0(sp)
   ; CHECK-NEXT:    call foo
-  ; CHECK-NEXT:    lui a0, 2
-  ; CHECK-NEXT:    sub sp, s0, a0
-  ; CHECK-NEXT:    addiw a0, a0, -2032
-  ; CHECK-NEXT:    add sp, sp, a0
+  ; CHECK-NEXT:    addi sp, s0, -2032
   ; CHECK-NEXT:    ld ra, 2024(sp) # 8-byte Folded Reload
   ; CHECK-NEXT:    ld s0, 2016(sp) # 8-byte Folded Reload
   ; CHECK-NEXT:    addi sp, sp, 2032

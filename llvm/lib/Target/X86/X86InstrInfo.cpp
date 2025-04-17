@@ -22,7 +22,6 @@
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/LiveVariables.h"
-#include "llvm/CodeGen/MachineCombinerPattern.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -36,6 +35,7 @@
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
@@ -486,21 +486,21 @@ bool X86InstrInfo::isFrameOperand(const MachineInstr &MI, unsigned int Op,
   return false;
 }
 
-static bool isFrameLoadOpcode(int Opcode, unsigned &MemBytes) {
+static bool isFrameLoadOpcode(int Opcode, TypeSize &MemBytes) {
   switch (Opcode) {
   default:
     return false;
   case X86::MOV8rm:
   case X86::KMOVBkm:
   case X86::KMOVBkm_EVEX:
-    MemBytes = 1;
+    MemBytes = TypeSize::getFixed(1);
     return true;
   case X86::MOV16rm:
   case X86::KMOVWkm:
   case X86::KMOVWkm_EVEX:
   case X86::VMOVSHZrm:
   case X86::VMOVSHZrm_alt:
-    MemBytes = 2;
+    MemBytes = TypeSize::getFixed(2);
     return true;
   case X86::MOV32rm:
   case X86::MOVSSrm:
@@ -511,7 +511,7 @@ static bool isFrameLoadOpcode(int Opcode, unsigned &MemBytes) {
   case X86::VMOVSSZrm_alt:
   case X86::KMOVDkm:
   case X86::KMOVDkm_EVEX:
-    MemBytes = 4;
+    MemBytes = TypeSize::getFixed(4);
     return true;
   case X86::MOV64rm:
   case X86::LD_Fp64m:
@@ -525,7 +525,7 @@ static bool isFrameLoadOpcode(int Opcode, unsigned &MemBytes) {
   case X86::MMX_MOVQ64rm:
   case X86::KMOVQkm:
   case X86::KMOVQkm_EVEX:
-    MemBytes = 8;
+    MemBytes = TypeSize::getFixed(8);
     return true;
   case X86::MOVAPSrm:
   case X86::MOVUPSrm:
@@ -551,7 +551,7 @@ static bool isFrameLoadOpcode(int Opcode, unsigned &MemBytes) {
   case X86::VMOVDQU32Z128rm:
   case X86::VMOVDQA64Z128rm:
   case X86::VMOVDQU64Z128rm:
-    MemBytes = 16;
+    MemBytes = TypeSize::getFixed(16);
     return true;
   case X86::VMOVAPSYrm:
   case X86::VMOVUPSYrm:
@@ -571,7 +571,7 @@ static bool isFrameLoadOpcode(int Opcode, unsigned &MemBytes) {
   case X86::VMOVDQU32Z256rm:
   case X86::VMOVDQA64Z256rm:
   case X86::VMOVDQU64Z256rm:
-    MemBytes = 32;
+    MemBytes = TypeSize::getFixed(32);
     return true;
   case X86::VMOVAPSZrm:
   case X86::VMOVUPSZrm:
@@ -583,25 +583,25 @@ static bool isFrameLoadOpcode(int Opcode, unsigned &MemBytes) {
   case X86::VMOVDQU32Zrm:
   case X86::VMOVDQA64Zrm:
   case X86::VMOVDQU64Zrm:
-    MemBytes = 64;
+    MemBytes = TypeSize::getFixed(64);
     return true;
   }
 }
 
-static bool isFrameStoreOpcode(int Opcode, unsigned &MemBytes) {
+static bool isFrameStoreOpcode(int Opcode, TypeSize &MemBytes) {
   switch (Opcode) {
   default:
     return false;
   case X86::MOV8mr:
   case X86::KMOVBmk:
   case X86::KMOVBmk_EVEX:
-    MemBytes = 1;
+    MemBytes = TypeSize::getFixed(1);
     return true;
   case X86::MOV16mr:
   case X86::KMOVWmk:
   case X86::KMOVWmk_EVEX:
   case X86::VMOVSHZmr:
-    MemBytes = 2;
+    MemBytes = TypeSize::getFixed(2);
     return true;
   case X86::MOV32mr:
   case X86::MOVSSmr:
@@ -609,7 +609,7 @@ static bool isFrameStoreOpcode(int Opcode, unsigned &MemBytes) {
   case X86::VMOVSSZmr:
   case X86::KMOVDmk:
   case X86::KMOVDmk_EVEX:
-    MemBytes = 4;
+    MemBytes = TypeSize::getFixed(4);
     return true;
   case X86::MOV64mr:
   case X86::ST_FpP64m:
@@ -621,7 +621,7 @@ static bool isFrameStoreOpcode(int Opcode, unsigned &MemBytes) {
   case X86::MMX_MOVNTQmr:
   case X86::KMOVQmk:
   case X86::KMOVQmk_EVEX:
-    MemBytes = 8;
+    MemBytes = TypeSize::getFixed(8);
     return true;
   case X86::MOVAPSmr:
   case X86::MOVUPSmr:
@@ -647,7 +647,7 @@ static bool isFrameStoreOpcode(int Opcode, unsigned &MemBytes) {
   case X86::VMOVDQU64Z128mr:
   case X86::VMOVDQU8Z128mr:
   case X86::VMOVDQU16Z128mr:
-    MemBytes = 16;
+    MemBytes = TypeSize::getFixed(16);
     return true;
   case X86::VMOVUPSYmr:
   case X86::VMOVAPSYmr:
@@ -667,7 +667,7 @@ static bool isFrameStoreOpcode(int Opcode, unsigned &MemBytes) {
   case X86::VMOVDQU32Z256mr:
   case X86::VMOVDQA64Z256mr:
   case X86::VMOVDQU64Z256mr:
-    MemBytes = 32;
+    MemBytes = TypeSize::getFixed(32);
     return true;
   case X86::VMOVUPSZmr:
   case X86::VMOVAPSZmr:
@@ -679,33 +679,32 @@ static bool isFrameStoreOpcode(int Opcode, unsigned &MemBytes) {
   case X86::VMOVDQU32Zmr:
   case X86::VMOVDQA64Zmr:
   case X86::VMOVDQU64Zmr:
-    MemBytes = 64;
+    MemBytes = TypeSize::getFixed(64);
     return true;
   }
   return false;
 }
 
-unsigned X86InstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
+Register X86InstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
                                            int &FrameIndex) const {
-  unsigned Dummy;
+  TypeSize Dummy = TypeSize::getZero();
   return X86InstrInfo::isLoadFromStackSlot(MI, FrameIndex, Dummy);
 }
 
-unsigned X86InstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
+Register X86InstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
                                            int &FrameIndex,
-                                           unsigned &MemBytes) const {
+                                           TypeSize &MemBytes) const {
   if (isFrameLoadOpcode(MI.getOpcode(), MemBytes))
     if (MI.getOperand(0).getSubReg() == 0 && isFrameOperand(MI, 1, FrameIndex))
       return MI.getOperand(0).getReg();
-  return 0;
+  return Register();
 }
 
-unsigned X86InstrInfo::isLoadFromStackSlotPostFE(const MachineInstr &MI,
+Register X86InstrInfo::isLoadFromStackSlotPostFE(const MachineInstr &MI,
                                                  int &FrameIndex) const {
-  unsigned Dummy;
+  TypeSize Dummy = TypeSize::getZero();
   if (isFrameLoadOpcode(MI.getOpcode(), Dummy)) {
-    unsigned Reg;
-    if ((Reg = isLoadFromStackSlot(MI, FrameIndex)))
+    if (Register Reg = isLoadFromStackSlot(MI, FrameIndex))
       return Reg;
     // Check for post-frame index elimination operations
     SmallVector<const MachineMemOperand *, 1> Accesses;
@@ -716,31 +715,30 @@ unsigned X86InstrInfo::isLoadFromStackSlotPostFE(const MachineInstr &MI,
       return MI.getOperand(0).getReg();
     }
   }
-  return 0;
+  return Register();
 }
 
-unsigned X86InstrInfo::isStoreToStackSlot(const MachineInstr &MI,
+Register X86InstrInfo::isStoreToStackSlot(const MachineInstr &MI,
                                           int &FrameIndex) const {
-  unsigned Dummy;
+  TypeSize Dummy = TypeSize::getZero();
   return X86InstrInfo::isStoreToStackSlot(MI, FrameIndex, Dummy);
 }
 
-unsigned X86InstrInfo::isStoreToStackSlot(const MachineInstr &MI,
+Register X86InstrInfo::isStoreToStackSlot(const MachineInstr &MI,
                                           int &FrameIndex,
-                                          unsigned &MemBytes) const {
+                                          TypeSize &MemBytes) const {
   if (isFrameStoreOpcode(MI.getOpcode(), MemBytes))
     if (MI.getOperand(X86::AddrNumOperands).getSubReg() == 0 &&
         isFrameOperand(MI, 0, FrameIndex))
       return MI.getOperand(X86::AddrNumOperands).getReg();
-  return 0;
+  return Register();
 }
 
-unsigned X86InstrInfo::isStoreToStackSlotPostFE(const MachineInstr &MI,
+Register X86InstrInfo::isStoreToStackSlotPostFE(const MachineInstr &MI,
                                                 int &FrameIndex) const {
-  unsigned Dummy;
+  TypeSize Dummy = TypeSize::getZero();
   if (isFrameStoreOpcode(MI.getOpcode(), Dummy)) {
-    unsigned Reg;
-    if ((Reg = isStoreToStackSlot(MI, FrameIndex)))
+    if (Register Reg = isStoreToStackSlot(MI, FrameIndex))
       return Reg;
     // Check for post-frame index elimination operations
     SmallVector<const MachineMemOperand *, 1> Accesses;
@@ -751,7 +749,7 @@ unsigned X86InstrInfo::isStoreToStackSlotPostFE(const MachineInstr &MI,
       return MI.getOperand(X86::AddrNumOperands).getReg();
     }
   }
-  return 0;
+  return Register();
 }
 
 /// Return true if register is PIC base; i.e.g defined by X86::MOVPC32r.
@@ -760,11 +758,8 @@ static bool regIsPICBase(Register BaseReg, const MachineRegisterInfo &MRI) {
   if (!BaseReg.isVirtual())
     return false;
   bool isPICBase = false;
-  for (MachineRegisterInfo::def_instr_iterator I = MRI.def_instr_begin(BaseReg),
-                                               E = MRI.def_instr_end();
-       I != E; ++I) {
-    MachineInstr *DefMI = &*I;
-    if (DefMI->getOpcode() != X86::MOVPC32r)
+  for (const MachineInstr &DefMI : MRI.def_instructions(BaseReg)) {
+    if (DefMI.getOpcode() != X86::MOVPC32r)
       return false;
     assert(!isPICBase && "More than one PIC base?");
     isPICBase = true;
@@ -861,7 +856,32 @@ bool X86InstrInfo::isReallyTriviallyReMaterializable(
   case X86::VMOVDQUYrm:
   case X86::MMX_MOVD64rm:
   case X86::MMX_MOVQ64rm:
+  case X86::VBROADCASTSSrm:
+  case X86::VBROADCASTSSYrm:
+  case X86::VBROADCASTSDYrm:
   // AVX-512
+  case X86::VPBROADCASTBZ128rm:
+  case X86::VPBROADCASTBZ256rm:
+  case X86::VPBROADCASTBZrm:
+  case X86::VBROADCASTF32X2Z256rm:
+  case X86::VBROADCASTF32X2Zrm:
+  case X86::VBROADCASTI32X2Z128rm:
+  case X86::VBROADCASTI32X2Z256rm:
+  case X86::VBROADCASTI32X2Zrm:
+  case X86::VPBROADCASTWZ128rm:
+  case X86::VPBROADCASTWZ256rm:
+  case X86::VPBROADCASTWZrm:
+  case X86::VPBROADCASTDZ128rm:
+  case X86::VPBROADCASTDZ256rm:
+  case X86::VPBROADCASTDZrm:
+  case X86::VBROADCASTSSZ128rm:
+  case X86::VBROADCASTSSZ256rm:
+  case X86::VBROADCASTSSZrm:
+  case X86::VPBROADCASTQZ128rm:
+  case X86::VPBROADCASTQZ256rm:
+  case X86::VPBROADCASTQZrm:
+  case X86::VBROADCASTSDZ256rm:
+  case X86::VBROADCASTSDZrm:
   case X86::VMOVSSZrm:
   case X86::VMOVSSZrm_alt:
   case X86::VMOVSDZrm:
@@ -1136,8 +1156,9 @@ static bool findRedundantFlagInstr(MachineInstr &CmpInstr,
 
 bool X86InstrInfo::classifyLEAReg(MachineInstr &MI, const MachineOperand &Src,
                                   unsigned Opc, bool AllowSP, Register &NewSrc,
-                                  bool &isKill, MachineOperand &ImplicitOp,
-                                  LiveVariables *LV, LiveIntervals *LIS) const {
+                                  unsigned &NewSrcSubReg, bool &isKill,
+                                  MachineOperand &ImplicitOp, LiveVariables *LV,
+                                  LiveIntervals *LIS) const {
   MachineFunction &MF = *MI.getParent()->getParent();
   const TargetRegisterClass *RC;
   if (AllowSP) {
@@ -1146,12 +1167,16 @@ bool X86InstrInfo::classifyLEAReg(MachineInstr &MI, const MachineOperand &Src,
     RC = Opc != X86::LEA32r ? &X86::GR64_NOSPRegClass : &X86::GR32_NOSPRegClass;
   }
   Register SrcReg = Src.getReg();
-  isKill = MI.killsRegister(SrcReg);
+  unsigned SubReg = Src.getSubReg();
+  isKill = MI.killsRegister(SrcReg, /*TRI=*/nullptr);
+
+  NewSrcSubReg = X86::NoSubRegister;
 
   // For both LEA64 and LEA32 the register already has essentially the right
   // type (32-bit or 64-bit) we may just need to forbid SP.
   if (Opc != X86::LEA64_32r) {
     NewSrc = SrcReg;
+    NewSrcSubReg = SubReg;
     assert(!Src.isUndef() && "Undef op doesn't need optimization");
 
     if (NewSrc.isVirtual() && !MF.getRegInfo().constrainRegClass(NewSrc, RC))
@@ -1167,16 +1192,18 @@ bool X86InstrInfo::classifyLEAReg(MachineInstr &MI, const MachineOperand &Src,
     ImplicitOp.setImplicit();
 
     NewSrc = getX86SubSuperRegister(SrcReg, 64);
+    assert(!SubReg && "no superregister for source");
     assert(NewSrc.isValid() && "Invalid Operand");
     assert(!Src.isUndef() && "Undef op doesn't need optimization");
   } else {
     // Virtual register of the wrong class, we have to create a temporary 64-bit
     // vreg to feed into the LEA.
     NewSrc = MF.getRegInfo().createVirtualRegister(RC);
+    NewSrcSubReg = X86::NoSubRegister;
     MachineInstr *Copy =
         BuildMI(*MI.getParent(), MI, MI.getDebugLoc(), get(TargetOpcode::COPY))
             .addReg(NewSrc, RegState::Define | RegState::Undef, X86::sub_32bit)
-            .addReg(SrcReg, getKillRegState(isKill));
+            .addReg(SrcReg, getKillRegState(isKill), SubReg);
 
     // Which is obviously going to be dead after we're done with it.
     isKill = true;
@@ -1236,7 +1263,9 @@ MachineInstr *X86InstrInfo::convertToThreeAddressWithLEA(unsigned MIOpc,
   MachineBasicBlock::iterator MBBI = MI.getIterator();
   Register Dest = MI.getOperand(0).getReg();
   Register Src = MI.getOperand(1).getReg();
+  unsigned SrcSubReg = MI.getOperand(1).getSubReg();
   Register Src2;
+  unsigned Src2SubReg;
   bool IsDead = MI.getOperand(0).isDead();
   bool IsKill = MI.getOperand(1).isKill();
   unsigned SubReg = Is8BitOp ? X86::sub_8bit : X86::sub_16bit;
@@ -1246,17 +1275,20 @@ MachineInstr *X86InstrInfo::convertToThreeAddressWithLEA(unsigned MIOpc,
   MachineInstr *InsMI =
       BuildMI(MBB, MBBI, MI.getDebugLoc(), get(TargetOpcode::COPY))
           .addReg(InRegLEA, RegState::Define, SubReg)
-          .addReg(Src, getKillRegState(IsKill));
+          .addReg(Src, getKillRegState(IsKill), SrcSubReg);
   MachineInstr *ImpDef2 = nullptr;
   MachineInstr *InsMI2 = nullptr;
 
   MachineInstrBuilder MIB =
       BuildMI(MBB, MBBI, MI.getDebugLoc(), get(Opcode), OutRegLEA);
+#define CASE_NF(OP)                                                            \
+  case X86::OP:                                                                \
+  case X86::OP##_NF:
   switch (MIOpc) {
   default:
     llvm_unreachable("Unreachable!");
-  case X86::SHL8ri:
-  case X86::SHL16ri: {
+  CASE_NF(SHL8ri)
+  CASE_NF(SHL16ri) {
     unsigned ShAmt = MI.getOperand(2).getImm();
     MIB.addReg(0)
         .addImm(1LL << ShAmt)
@@ -1265,31 +1297,33 @@ MachineInstr *X86InstrInfo::convertToThreeAddressWithLEA(unsigned MIOpc,
         .addReg(0);
     break;
   }
-  case X86::INC8r:
-  case X86::INC16r:
+  CASE_NF(INC8r)
+  CASE_NF(INC16r)
     addRegOffset(MIB, InRegLEA, true, 1);
     break;
-  case X86::DEC8r:
-  case X86::DEC16r:
+  CASE_NF(DEC8r)
+  CASE_NF(DEC16r)
     addRegOffset(MIB, InRegLEA, true, -1);
     break;
-  case X86::ADD8ri:
+  CASE_NF(ADD8ri)
+  CASE_NF(ADD16ri)
   case X86::ADD8ri_DB:
-  case X86::ADD16ri:
   case X86::ADD16ri_DB:
     addRegOffset(MIB, InRegLEA, true, MI.getOperand(2).getImm());
     break;
-  case X86::ADD8rr:
+  CASE_NF(ADD8rr)
+  CASE_NF(ADD16rr)
   case X86::ADD8rr_DB:
-  case X86::ADD16rr:
   case X86::ADD16rr_DB: {
     Src2 = MI.getOperand(2).getReg();
+    Src2SubReg = MI.getOperand(2).getSubReg();
     bool IsKill2 = MI.getOperand(2).isKill();
     assert(!MI.getOperand(2).isUndef() && "Undef op doesn't need optimization");
     if (Src == Src2) {
       // ADD8rr/ADD16rr killed %reg1028, %reg1028
       // just a single insert_subreg.
-      addRegReg(MIB, InRegLEA, true, InRegLEA, false);
+      addRegReg(MIB, InRegLEA, true, X86::NoSubRegister, InRegLEA, false,
+                X86::NoSubRegister);
     } else {
       if (Subtarget.is64Bit())
         InRegLEA2 = RegInfo.createVirtualRegister(&X86::GR64_NOSPRegClass);
@@ -1301,8 +1335,9 @@ MachineInstr *X86InstrInfo::convertToThreeAddressWithLEA(unsigned MIOpc,
                         InRegLEA2);
       InsMI2 = BuildMI(MBB, &*MIB, MI.getDebugLoc(), get(TargetOpcode::COPY))
                    .addReg(InRegLEA2, RegState::Define, SubReg)
-                   .addReg(Src2, getKillRegState(IsKill2));
-      addRegReg(MIB, InRegLEA, true, InRegLEA2, true);
+                   .addReg(Src2, getKillRegState(IsKill2), Src2SubReg);
+      addRegReg(MIB, InRegLEA, true, X86::NoSubRegister, InRegLEA2, true,
+                X86::NoSubRegister);
     }
     if (LV && IsKill2 && InsMI2)
       LV->replaceKillInstruction(Src2, MI, *InsMI2);
@@ -1406,6 +1441,7 @@ MachineInstr *X86InstrInfo::convertToThreeAddress(MachineInstr &MI,
 
   MachineInstr *NewMI = nullptr;
   Register SrcReg, SrcReg2;
+  unsigned SrcSubReg, SrcSubReg2;
   bool Is64Bit = Subtarget.is64Bit();
 
   bool Is8BitOp = false;
@@ -1414,7 +1450,7 @@ MachineInstr *X86InstrInfo::convertToThreeAddress(MachineInstr &MI,
   switch (MIOpc) {
   default:
     llvm_unreachable("Unreachable!");
-  case X86::SHL64ri: {
+  CASE_NF(SHL64ri) {
     assert(MI.getNumOperands() >= 3 && "Unknown shift instruction!");
     unsigned ShAmt = getTruncatedShiftCount(MI, 2);
     if (!isTruncatedShiftCountForLEA(ShAmt))
@@ -1434,7 +1470,7 @@ MachineInstr *X86InstrInfo::convertToThreeAddress(MachineInstr &MI,
                 .addReg(0);
     break;
   }
-  case X86::SHL32ri: {
+  CASE_NF(SHL32ri) {
     assert(MI.getNumOperands() >= 3 && "Unknown shift instruction!");
     unsigned ShAmt = getTruncatedShiftCount(MI, 2);
     if (!isTruncatedShiftCountForLEA(ShAmt))
@@ -1445,17 +1481,18 @@ MachineInstr *X86InstrInfo::convertToThreeAddress(MachineInstr &MI,
     // LEA can't handle ESP.
     bool isKill;
     MachineOperand ImplicitOp = MachineOperand::CreateReg(0, false);
-    if (!classifyLEAReg(MI, Src, Opc, /*AllowSP=*/false, SrcReg, isKill,
-                        ImplicitOp, LV, LIS))
+    if (!classifyLEAReg(MI, Src, Opc, /*AllowSP=*/false, SrcReg, SrcSubReg,
+                        isKill, ImplicitOp, LV, LIS))
       return nullptr;
 
-    MachineInstrBuilder MIB = BuildMI(MF, MI.getDebugLoc(), get(Opc))
-                                  .add(Dest)
-                                  .addReg(0)
-                                  .addImm(1LL << ShAmt)
-                                  .addReg(SrcReg, getKillRegState(isKill))
-                                  .addImm(0)
-                                  .addReg(0);
+    MachineInstrBuilder MIB =
+        BuildMI(MF, MI.getDebugLoc(), get(Opc))
+            .add(Dest)
+            .addReg(0)
+            .addImm(1LL << ShAmt)
+            .addReg(SrcReg, getKillRegState(isKill), SrcSubReg)
+            .addImm(0)
+            .addReg(0);
     if (ImplicitOp.getReg() != 0)
       MIB.add(ImplicitOp);
     NewMI = MIB;
@@ -1465,26 +1502,26 @@ MachineInstr *X86InstrInfo::convertToThreeAddress(MachineInstr &MI,
       LV->getVarInfo(SrcReg).Kills.push_back(NewMI);
     break;
   }
-  case X86::SHL8ri:
+  CASE_NF(SHL8ri)
     Is8BitOp = true;
     [[fallthrough]];
-  case X86::SHL16ri: {
+  CASE_NF(SHL16ri) {
     assert(MI.getNumOperands() >= 3 && "Unknown shift instruction!");
     unsigned ShAmt = getTruncatedShiftCount(MI, 2);
     if (!isTruncatedShiftCountForLEA(ShAmt))
       return nullptr;
     return convertToThreeAddressWithLEA(MIOpc, MI, LV, LIS, Is8BitOp);
   }
-  case X86::INC64r:
-  case X86::INC32r: {
+  CASE_NF(INC64r)
+  CASE_NF(INC32r) {
     assert(MI.getNumOperands() >= 2 && "Unknown inc instruction!");
-    unsigned Opc = MIOpc == X86::INC64r
+    unsigned Opc = (MIOpc == X86::INC64r || MIOpc == X86::INC64r_NF)
                        ? X86::LEA64r
                        : (Is64Bit ? X86::LEA64_32r : X86::LEA32r);
     bool isKill;
     MachineOperand ImplicitOp = MachineOperand::CreateReg(0, false);
-    if (!classifyLEAReg(MI, Src, Opc, /*AllowSP=*/false, SrcReg, isKill,
-                        ImplicitOp, LV, LIS))
+    if (!classifyLEAReg(MI, Src, Opc, /*AllowSP=*/false, SrcReg, SrcSubReg,
+                        isKill, ImplicitOp, LV, LIS))
       return nullptr;
 
     MachineInstrBuilder MIB = BuildMI(MF, MI.getDebugLoc(), get(Opc))
@@ -1500,17 +1537,17 @@ MachineInstr *X86InstrInfo::convertToThreeAddress(MachineInstr &MI,
       LV->getVarInfo(SrcReg).Kills.push_back(NewMI);
     break;
   }
-  case X86::DEC64r:
-  case X86::DEC32r: {
+  CASE_NF(DEC64r)
+  CASE_NF(DEC32r) {
     assert(MI.getNumOperands() >= 2 && "Unknown dec instruction!");
-    unsigned Opc = MIOpc == X86::DEC64r
+    unsigned Opc = (MIOpc == X86::DEC64r || MIOpc == X86::DEC64r_NF)
                        ? X86::LEA64r
                        : (Is64Bit ? X86::LEA64_32r : X86::LEA32r);
 
     bool isKill;
     MachineOperand ImplicitOp = MachineOperand::CreateReg(0, false);
-    if (!classifyLEAReg(MI, Src, Opc, /*AllowSP=*/false, SrcReg, isKill,
-                        ImplicitOp, LV, LIS))
+    if (!classifyLEAReg(MI, Src, Opc, /*AllowSP=*/false, SrcReg, SrcSubReg,
+                        isKill, ImplicitOp, LV, LIS))
       return nullptr;
 
     MachineInstrBuilder MIB = BuildMI(MF, MI.getDebugLoc(), get(Opc))
@@ -1526,20 +1563,21 @@ MachineInstr *X86InstrInfo::convertToThreeAddress(MachineInstr &MI,
       LV->getVarInfo(SrcReg).Kills.push_back(NewMI);
     break;
   }
-  case X86::DEC8r:
-  case X86::INC8r:
+  CASE_NF(DEC8r)
+  CASE_NF(INC8r)
     Is8BitOp = true;
     [[fallthrough]];
-  case X86::DEC16r:
-  case X86::INC16r:
+  CASE_NF(DEC16r)
+  CASE_NF(INC16r)
     return convertToThreeAddressWithLEA(MIOpc, MI, LV, LIS, Is8BitOp);
-  case X86::ADD64rr:
+  CASE_NF(ADD64rr)
+  CASE_NF(ADD32rr)
   case X86::ADD64rr_DB:
-  case X86::ADD32rr:
   case X86::ADD32rr_DB: {
     assert(MI.getNumOperands() >= 3 && "Unknown add instruction!");
     unsigned Opc;
-    if (MIOpc == X86::ADD64rr || MIOpc == X86::ADD64rr_DB)
+    if (MIOpc == X86::ADD64rr || MIOpc == X86::ADD64rr_NF ||
+        MIOpc == X86::ADD64rr_DB)
       Opc = X86::LEA64r;
     else
       Opc = Is64Bit ? X86::LEA64_32r : X86::LEA32r;
@@ -1547,8 +1585,8 @@ MachineInstr *X86InstrInfo::convertToThreeAddress(MachineInstr &MI,
     const MachineOperand &Src2 = MI.getOperand(2);
     bool isKill2;
     MachineOperand ImplicitOp2 = MachineOperand::CreateReg(0, false);
-    if (!classifyLEAReg(MI, Src2, Opc, /*AllowSP=*/false, SrcReg2, isKill2,
-                        ImplicitOp2, LV, LIS))
+    if (!classifyLEAReg(MI, Src2, Opc, /*AllowSP=*/false, SrcReg2, SrcSubReg2,
+                        isKill2, ImplicitOp2, LV, LIS))
       return nullptr;
 
     bool isKill;
@@ -1558,9 +1596,10 @@ MachineInstr *X86InstrInfo::convertToThreeAddress(MachineInstr &MI,
       // the first call inserted a COPY from Src2 and marked it as killed.
       isKill = isKill2;
       SrcReg = SrcReg2;
+      SrcSubReg = SrcSubReg2;
     } else {
-      if (!classifyLEAReg(MI, Src, Opc, /*AllowSP=*/true, SrcReg, isKill,
-                          ImplicitOp, LV, LIS))
+      if (!classifyLEAReg(MI, Src, Opc, /*AllowSP=*/true, SrcReg, SrcSubReg,
+                          isKill, ImplicitOp, LV, LIS))
         return nullptr;
     }
 
@@ -1570,7 +1609,8 @@ MachineInstr *X86InstrInfo::convertToThreeAddress(MachineInstr &MI,
     if (ImplicitOp2.getReg() != 0)
       MIB.add(ImplicitOp2);
 
-    NewMI = addRegReg(MIB, SrcReg, isKill, SrcReg2, isKill2);
+    NewMI =
+        addRegReg(MIB, SrcReg, isKill, SrcSubReg, SrcReg2, isKill2, SrcSubReg2);
 
     // Add kills if classifyLEAReg created a new register.
     if (LV) {
@@ -1582,34 +1622,35 @@ MachineInstr *X86InstrInfo::convertToThreeAddress(MachineInstr &MI,
     NumRegOperands = 3;
     break;
   }
-  case X86::ADD8rr:
+  CASE_NF(ADD8rr)
   case X86::ADD8rr_DB:
     Is8BitOp = true;
     [[fallthrough]];
-  case X86::ADD16rr:
+  CASE_NF(ADD16rr)
   case X86::ADD16rr_DB:
     return convertToThreeAddressWithLEA(MIOpc, MI, LV, LIS, Is8BitOp);
-  case X86::ADD64ri32:
+  CASE_NF(ADD64ri32)
   case X86::ADD64ri32_DB:
     assert(MI.getNumOperands() >= 3 && "Unknown add instruction!");
     NewMI = addOffset(
         BuildMI(MF, MI.getDebugLoc(), get(X86::LEA64r)).add(Dest).add(Src),
         MI.getOperand(2));
     break;
-  case X86::ADD32ri:
+  CASE_NF(ADD32ri)
   case X86::ADD32ri_DB: {
     assert(MI.getNumOperands() >= 3 && "Unknown add instruction!");
     unsigned Opc = Is64Bit ? X86::LEA64_32r : X86::LEA32r;
 
     bool isKill;
     MachineOperand ImplicitOp = MachineOperand::CreateReg(0, false);
-    if (!classifyLEAReg(MI, Src, Opc, /*AllowSP=*/true, SrcReg, isKill,
-                        ImplicitOp, LV, LIS))
+    if (!classifyLEAReg(MI, Src, Opc, /*AllowSP=*/true, SrcReg, SrcSubReg,
+                        isKill, ImplicitOp, LV, LIS))
       return nullptr;
 
-    MachineInstrBuilder MIB = BuildMI(MF, MI.getDebugLoc(), get(Opc))
-                                  .add(Dest)
-                                  .addReg(SrcReg, getKillRegState(isKill));
+    MachineInstrBuilder MIB =
+        BuildMI(MF, MI.getDebugLoc(), get(Opc))
+            .add(Dest)
+            .addReg(SrcReg, getKillRegState(isKill), SrcSubReg);
     if (ImplicitOp.getReg() != 0)
       MIB.add(ImplicitOp);
 
@@ -1620,18 +1661,18 @@ MachineInstr *X86InstrInfo::convertToThreeAddress(MachineInstr &MI,
       LV->getVarInfo(SrcReg).Kills.push_back(NewMI);
     break;
   }
-  case X86::ADD8ri:
+  CASE_NF(ADD8ri)
   case X86::ADD8ri_DB:
     Is8BitOp = true;
     [[fallthrough]];
-  case X86::ADD16ri:
+  CASE_NF(ADD16ri)
   case X86::ADD16ri_DB:
     return convertToThreeAddressWithLEA(MIOpc, MI, LV, LIS, Is8BitOp);
-  case X86::SUB8ri:
-  case X86::SUB16ri:
+  CASE_NF(SUB8ri)
+  CASE_NF(SUB16ri)
     /// FIXME: Support these similar to ADD8ri/ADD16ri*.
     return nullptr;
-  case X86::SUB32ri: {
+  CASE_NF(SUB32ri) {
     if (!MI.getOperand(2).isImm())
       return nullptr;
     int64_t Imm = MI.getOperand(2).getImm();
@@ -1643,13 +1684,14 @@ MachineInstr *X86InstrInfo::convertToThreeAddress(MachineInstr &MI,
 
     bool isKill;
     MachineOperand ImplicitOp = MachineOperand::CreateReg(0, false);
-    if (!classifyLEAReg(MI, Src, Opc, /*AllowSP=*/true, SrcReg, isKill,
-                        ImplicitOp, LV, LIS))
+    if (!classifyLEAReg(MI, Src, Opc, /*AllowSP=*/true, SrcReg, SrcSubReg,
+                        isKill, ImplicitOp, LV, LIS))
       return nullptr;
 
-    MachineInstrBuilder MIB = BuildMI(MF, MI.getDebugLoc(), get(Opc))
-                                  .add(Dest)
-                                  .addReg(SrcReg, getKillRegState(isKill));
+    MachineInstrBuilder MIB =
+        BuildMI(MF, MI.getDebugLoc(), get(Opc))
+            .add(Dest)
+            .addReg(SrcReg, getKillRegState(isKill), SrcSubReg);
     if (ImplicitOp.getReg() != 0)
       MIB.add(ImplicitOp);
 
@@ -1661,7 +1703,7 @@ MachineInstr *X86InstrInfo::convertToThreeAddress(MachineInstr &MI,
     break;
   }
 
-  case X86::SUB64ri32: {
+  CASE_NF(SUB64ri32) {
     if (!MI.getOperand(2).isImm())
       return nullptr;
     int64_t Imm = MI.getOperand(2).getImm();
@@ -1994,6 +2036,7 @@ MachineInstr *X86InstrInfo::convertToThreeAddress(MachineInstr &MI,
     break;
   }
   }
+#undef CASE_NF
 
   if (!NewMI)
     return nullptr;
@@ -2401,9 +2444,9 @@ MachineInstr *X86InstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
     WorkingMI->getOperand(3).setImm(Mask ^ Imm);
     break;
   }
-  case X86::INSERTPSrr:
-  case X86::VINSERTPSrr:
-  case X86::VINSERTPSZrr: {
+  case X86::INSERTPSrri:
+  case X86::VINSERTPSrri:
+  case X86::VINSERTPSZrri: {
     unsigned Imm = MI.getOperand(MI.getNumOperands() - 1).getImm();
     unsigned ZMask = Imm & 15;
     unsigned DstIdx = (Imm >> 4) & 3;
@@ -2469,12 +2512,12 @@ MachineInstr *X86InstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
     WorkingMI->removeOperand(3);
     break;
   }
-  case X86::PCLMULQDQrr:
-  case X86::VPCLMULQDQrr:
-  case X86::VPCLMULQDQYrr:
-  case X86::VPCLMULQDQZrr:
-  case X86::VPCLMULQDQZ128rr:
-  case X86::VPCLMULQDQZ256rr: {
+  case X86::PCLMULQDQrri:
+  case X86::VPCLMULQDQrri:
+  case X86::VPCLMULQDQYrri:
+  case X86::VPCLMULQDQZrri:
+  case X86::VPCLMULQDQZ128rri:
+  case X86::VPCLMULQDQZ256rri: {
     // SRC1 64bits = Imm[0] ? SRC1[127:64] : SRC1[63:0]
     // SRC2 64bits = Imm[4] ? SRC2[127:64] : SRC2[63:0]
     unsigned Imm = MI.getOperand(3).getImm();
@@ -2551,11 +2594,11 @@ MachineInstr *X86InstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
     WorkingMI->getOperand(3).setImm(
         X86::getSwappedVPCOMImm(MI.getOperand(3).getImm() & 0x7));
     break;
-  case X86::VCMPSDZrr:
-  case X86::VCMPSSZrr:
+  case X86::VCMPSDZrri:
+  case X86::VCMPSSZrri:
   case X86::VCMPPDZrri:
   case X86::VCMPPSZrri:
-  case X86::VCMPSHZrr:
+  case X86::VCMPSHZrri:
   case X86::VCMPPHZrri:
   case X86::VCMPPHZ128rri:
   case X86::VCMPPHZ256rri:
@@ -2574,8 +2617,8 @@ MachineInstr *X86InstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
         .setImm(X86::getSwappedVCMPImm(
             MI.getOperand(MI.getNumExplicitOperands() - 1).getImm() & 0x1f));
     break;
-  case X86::VPERM2F128rr:
-  case X86::VPERM2I128rr:
+  case X86::VPERM2F128rri:
+  case X86::VPERM2I128rri:
     // Flip permute source immediate.
     // Imm & 0x02: lo = if set, select Op1.lo/hi else Op0.lo/hi.
     // Imm & 0x20: hi = if set, select Op1.lo/hi else Op0.lo/hi.
@@ -2615,9 +2658,9 @@ MachineInstr *X86InstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
     WorkingMI = CloneIfNew(MI);
     WorkingMI->setDesc(get(Opc));
     break;
-  case X86::CMOV16rr:
-  case X86::CMOV32rr:
-  case X86::CMOV64rr: {
+  CASE_ND(CMOV16rr)
+  CASE_ND(CMOV32rr)
+  CASE_ND(CMOV64rr) {
     WorkingMI = CloneIfNew(MI);
     unsigned OpNo = MI.getDesc().getNumOperands() - 1;
     X86::CondCode CC = static_cast<X86::CondCode>(MI.getOperand(OpNo).getImm());
@@ -2798,21 +2841,21 @@ bool X86InstrInfo::findCommutedOpIndices(const MachineInstr &MI,
     return false;
 
   switch (MI.getOpcode()) {
-  case X86::CMPSDrr:
-  case X86::CMPSSrr:
+  case X86::CMPSDrri:
+  case X86::CMPSSrri:
   case X86::CMPPDrri:
   case X86::CMPPSrri:
-  case X86::VCMPSDrr:
-  case X86::VCMPSSrr:
+  case X86::VCMPSDrri:
+  case X86::VCMPSSrri:
   case X86::VCMPPDrri:
   case X86::VCMPPSrri:
   case X86::VCMPPDYrri:
   case X86::VCMPPSYrri:
-  case X86::VCMPSDZrr:
-  case X86::VCMPSSZrr:
+  case X86::VCMPSDZrri:
+  case X86::VCMPSSZrri:
   case X86::VCMPPDZrri:
   case X86::VCMPPSZrri:
-  case X86::VCMPSHZrr:
+  case X86::VCMPSHZrri:
   case X86::VCMPPHZrri:
   case X86::VCMPPHZ128rri:
   case X86::VCMPPHZ256rri:
@@ -2930,6 +2973,42 @@ bool X86InstrInfo::findCommutedOpIndices(const MachineInstr &MI,
   case X86::VPDPBUUDSYrr:
   case X86::VPDPBUUDrr:
   case X86::VPDPBUUDYrr:
+  case X86::VPDPBSSDSZ128r:
+  case X86::VPDPBSSDSZ128rk:
+  case X86::VPDPBSSDSZ128rkz:
+  case X86::VPDPBSSDSZ256r:
+  case X86::VPDPBSSDSZ256rk:
+  case X86::VPDPBSSDSZ256rkz:
+  case X86::VPDPBSSDSZr:
+  case X86::VPDPBSSDSZrk:
+  case X86::VPDPBSSDSZrkz:
+  case X86::VPDPBSSDZ128r:
+  case X86::VPDPBSSDZ128rk:
+  case X86::VPDPBSSDZ128rkz:
+  case X86::VPDPBSSDZ256r:
+  case X86::VPDPBSSDZ256rk:
+  case X86::VPDPBSSDZ256rkz:
+  case X86::VPDPBSSDZr:
+  case X86::VPDPBSSDZrk:
+  case X86::VPDPBSSDZrkz:
+  case X86::VPDPBUUDSZ128r:
+  case X86::VPDPBUUDSZ128rk:
+  case X86::VPDPBUUDSZ128rkz:
+  case X86::VPDPBUUDSZ256r:
+  case X86::VPDPBUUDSZ256rk:
+  case X86::VPDPBUUDSZ256rkz:
+  case X86::VPDPBUUDSZr:
+  case X86::VPDPBUUDSZrk:
+  case X86::VPDPBUUDSZrkz:
+  case X86::VPDPBUUDZ128r:
+  case X86::VPDPBUUDZ128rk:
+  case X86::VPDPBUUDZ128rkz:
+  case X86::VPDPBUUDZ256r:
+  case X86::VPDPBUUDZ256rk:
+  case X86::VPDPBUUDZ256rkz:
+  case X86::VPDPBUUDZr:
+  case X86::VPDPBUUDZrk:
+  case X86::VPDPBUUDZrkz:
   case X86::VPDPWSSDZ128r:
   case X86::VPDPWSSDZ128rk:
   case X86::VPDPWSSDZ128rkz:
@@ -2948,6 +3027,24 @@ bool X86InstrInfo::findCommutedOpIndices(const MachineInstr &MI,
   case X86::VPDPWSSDSZr:
   case X86::VPDPWSSDSZrk:
   case X86::VPDPWSSDSZrkz:
+  case X86::VPDPWUUDZ128r:
+  case X86::VPDPWUUDZ128rk:
+  case X86::VPDPWUUDZ128rkz:
+  case X86::VPDPWUUDZ256r:
+  case X86::VPDPWUUDZ256rk:
+  case X86::VPDPWUUDZ256rkz:
+  case X86::VPDPWUUDZr:
+  case X86::VPDPWUUDZrk:
+  case X86::VPDPWUUDZrkz:
+  case X86::VPDPWUUDSZ128r:
+  case X86::VPDPWUUDSZ128rk:
+  case X86::VPDPWUUDSZ128rkz:
+  case X86::VPDPWUUDSZ256r:
+  case X86::VPDPWUUDSZ256rk:
+  case X86::VPDPWUUDSZ256rkz:
+  case X86::VPDPWUUDSZr:
+  case X86::VPDPWUUDSZrk:
+  case X86::VPDPWUUDSZrkz:
   case X86::VPMADD52HUQrr:
   case X86::VPMADD52HUQYrr:
   case X86::VPMADD52HUQZ128r:
@@ -3098,7 +3195,9 @@ bool X86InstrInfo::hasCommutePreference(MachineInstr &MI, bool &Commute) const {
 
 int X86::getCondSrcNoFromDesc(const MCInstrDesc &MCID) {
   unsigned Opcode = MCID.getOpcode();
-  if (!(X86::isJCC(Opcode) || X86::isSETCC(Opcode) || X86::isCMOVCC(Opcode)))
+  if (!(X86::isJCC(Opcode) || X86::isSETCC(Opcode) || X86::isSETZUCC(Opcode) ||
+        X86::isCMOVCC(Opcode) || X86::isCFCMOVCC(Opcode) ||
+        X86::isCCMPCC(Opcode) || X86::isCTESTCC(Opcode)))
     return -1;
   // Assume that condition code is always the last use operand.
   unsigned NumUses = MCID.getNumOperands() - MCID.getNumDefs();
@@ -3120,13 +3219,117 @@ X86::CondCode X86::getCondFromBranch(const MachineInstr &MI) {
 }
 
 X86::CondCode X86::getCondFromSETCC(const MachineInstr &MI) {
-  return X86::isSETCC(MI.getOpcode()) ? X86::getCondFromMI(MI)
-                                      : X86::COND_INVALID;
+  return X86::isSETCC(MI.getOpcode()) || X86::isSETZUCC(MI.getOpcode())
+             ? X86::getCondFromMI(MI)
+             : X86::COND_INVALID;
 }
 
 X86::CondCode X86::getCondFromCMov(const MachineInstr &MI) {
   return X86::isCMOVCC(MI.getOpcode()) ? X86::getCondFromMI(MI)
                                        : X86::COND_INVALID;
+}
+
+X86::CondCode X86::getCondFromCFCMov(const MachineInstr &MI) {
+  return X86::isCFCMOVCC(MI.getOpcode()) ? X86::getCondFromMI(MI)
+                                         : X86::COND_INVALID;
+}
+
+X86::CondCode X86::getCondFromCCMP(const MachineInstr &MI) {
+  return X86::isCCMPCC(MI.getOpcode()) || X86::isCTESTCC(MI.getOpcode())
+             ? X86::getCondFromMI(MI)
+             : X86::COND_INVALID;
+}
+
+int X86::getCCMPCondFlagsFromCondCode(X86::CondCode CC) {
+  // CCMP/CTEST has two conditional operands:
+  // - SCC: source conditonal code (same as CMOV)
+  // - DCF: destination conditional flags, which has 4 valid bits
+  //
+  // +----+----+----+----+
+  // | OF | SF | ZF | CF |
+  // +----+----+----+----+
+  //
+  // If SCC(source conditional code) evaluates to false, CCMP/CTEST will updates
+  // the conditional flags by as follows:
+  //
+  // OF = DCF.OF
+  // SF = DCF.SF
+  // ZF = DCF.ZF
+  // CF = DCF.CF
+  // PF = DCF.CF
+  // AF = 0 (Auxiliary Carry Flag)
+  //
+  // Otherwise, the CMP or TEST is executed and it updates the
+  // CSPAZO flags normally.
+  //
+  // NOTE:
+  // If SCC = P, then SCC evaluates to true regardless of the CSPAZO value.
+  // If SCC = NP, then SCC evaluates to false regardless of the CSPAZO value.
+
+  enum { CF = 1, ZF = 2, SF = 4, OF = 8, PF = CF };
+
+  switch (CC) {
+  default:
+    llvm_unreachable("Illegal condition code!");
+  case X86::COND_NO:
+  case X86::COND_NE:
+  case X86::COND_GE:
+  case X86::COND_G:
+  case X86::COND_AE:
+  case X86::COND_A:
+  case X86::COND_NS:
+  case X86::COND_NP:
+    return 0;
+  case X86::COND_O:
+    return OF;
+  case X86::COND_B:
+  case X86::COND_BE:
+    return CF;
+    break;
+  case X86::COND_E:
+  case X86::COND_LE:
+    return ZF;
+  case X86::COND_S:
+  case X86::COND_L:
+    return SF;
+  case X86::COND_P:
+    return PF;
+  }
+}
+
+#define GET_X86_NF_TRANSFORM_TABLE
+#define GET_X86_ND2NONND_TABLE
+#include "X86GenInstrMapping.inc"
+
+static unsigned getNewOpcFromTable(ArrayRef<X86TableEntry> Table,
+                                   unsigned Opc) {
+  const auto I = llvm::lower_bound(Table, Opc);
+  return (I == Table.end() || I->OldOpc != Opc) ? 0U : I->NewOpc;
+}
+unsigned X86::getNFVariant(unsigned Opc) {
+#if defined(EXPENSIVE_CHECKS) && !defined(NDEBUG)
+  // Make sure the tables are sorted.
+  static std::atomic<bool> NFTableChecked(false);
+  if (!NFTableChecked.load(std::memory_order_relaxed)) {
+    assert(llvm::is_sorted(X86NFTransformTable) &&
+           "X86NFTransformTable is not sorted!");
+    NFTableChecked.store(true, std::memory_order_relaxed);
+  }
+#endif
+  return getNewOpcFromTable(X86NFTransformTable, Opc);
+}
+
+unsigned X86::getNonNDVariant(unsigned Opc) {
+#if defined(EXPENSIVE_CHECKS) && !defined(NDEBUG)
+  // Make sure the tables are sorted.
+  static std::atomic<bool> NDTableChecked(false);
+  if (!NDTableChecked.load(std::memory_order_relaxed)) {
+    assert(llvm::is_sorted(X86ND2NonNDTable) &&
+           "X86ND2NonNDTableis not sorted!");
+    NDTableChecked.store(true, std::memory_order_relaxed);
+  }
+#endif
+  return getNewOpcFromTable(X86ND2NonNDTable, Opc);
 }
 
 /// Return the inverse of the specified condition,
@@ -3290,16 +3493,21 @@ X86::getX86ConditionCode(CmpInst::Predicate Predicate) {
 }
 
 /// Return a cmov opcode for the given register size in bytes, and operand type.
-unsigned X86::getCMovOpcode(unsigned RegBytes, bool HasMemoryOperand) {
+unsigned X86::getCMovOpcode(unsigned RegBytes, bool HasMemoryOperand,
+                            bool HasNDD) {
   switch (RegBytes) {
   default:
     llvm_unreachable("Illegal register size!");
+#define GET_ND_IF_ENABLED(OPC) (HasNDD ? OPC##_ND : OPC)
   case 2:
-    return HasMemoryOperand ? X86::CMOV16rm : X86::CMOV16rr;
+    return HasMemoryOperand ? GET_ND_IF_ENABLED(X86::CMOV16rm)
+                            : GET_ND_IF_ENABLED(X86::CMOV16rr);
   case 4:
-    return HasMemoryOperand ? X86::CMOV32rm : X86::CMOV32rr;
+    return HasMemoryOperand ? GET_ND_IF_ENABLED(X86::CMOV32rm)
+                            : GET_ND_IF_ENABLED(X86::CMOV32rr);
   case 8:
-    return HasMemoryOperand ? X86::CMOV64rm : X86::CMOV64rr;
+    return HasMemoryOperand ? GET_ND_IF_ENABLED(X86::CMOV64rm)
+                            : GET_ND_IF_ENABLED(X86::CMOV64rr);
   }
 }
 
@@ -3401,14 +3609,31 @@ unsigned X86::getSwappedVCMPImm(unsigned Imm) {
   return Imm;
 }
 
+unsigned X86::getVectorRegisterWidth(const MCOperandInfo &Info) {
+  if (Info.RegClass == X86::VR128RegClassID ||
+      Info.RegClass == X86::VR128XRegClassID)
+    return 128;
+  if (Info.RegClass == X86::VR256RegClassID ||
+      Info.RegClass == X86::VR256XRegClassID)
+    return 256;
+  if (Info.RegClass == X86::VR512RegClassID)
+    return 512;
+  llvm_unreachable("Unknown register class!");
+}
+
 /// Return true if the Reg is X87 register.
-static bool isX87Reg(unsigned Reg) {
+static bool isX87Reg(Register Reg) {
   return (Reg == X86::FPCW || Reg == X86::FPSW ||
           (Reg >= X86::ST0 && Reg <= X86::ST7));
 }
 
 /// check if the instruction is X87 instruction
 bool X86::isX87Instruction(MachineInstr &MI) {
+  // Call and inlineasm defs X87 register, so we special case it here because
+  // otherwise calls are incorrectly flagged as x87 instructions
+  // as a result.
+  if (MI.isCall() || MI.isInlineAsm())
+    return false;
   for (const MachineOperand &MO : MI.operands()) {
     if (!MO.isReg())
       continue;
@@ -3520,7 +3745,7 @@ bool X86InstrInfo::canMakeTailCallConditional(
     if (Target.isSymbol()) {
       StringRef Symbol(Target.getSymbolName());
       // this is currently only relevant to r11/kernel indirect thunk.
-      if (Symbol.equals("__x86_indirect_thunk_r11"))
+      if (Symbol == "__x86_indirect_thunk_r11")
         return false;
     }
   }
@@ -3677,7 +3902,7 @@ bool X86InstrInfo::analyzeBranchImpl(
 
     // In practice we should never have an undef eflags operand, if we do
     // abort here as we are not prepared to preserve the flag.
-    if (I->findRegisterUseOperand(X86::EFLAGS)->isUndef())
+    if (I->findRegisterUseOperand(X86::EFLAGS, /*TRI=*/nullptr)->isUndef())
       return true;
 
     // Working from the bottom, handle the first conditional branch.
@@ -4008,8 +4233,9 @@ void X86InstrInfo::insertSelect(MachineBasicBlock &MBB,
   const TargetRegisterInfo &TRI = *MRI.getTargetRegisterInfo();
   const TargetRegisterClass &RC = *MRI.getRegClass(DstReg);
   assert(Cond.size() == 1 && "Invalid Cond array");
-  unsigned Opc = X86::getCMovOpcode(TRI.getRegSizeInBits(RC) / 8,
-                                    false /*HasMemoryOperand*/);
+  unsigned Opc =
+      X86::getCMovOpcode(TRI.getRegSizeInBits(RC) / 8,
+                         false /*HasMemoryOperand*/, Subtarget.hasNDD());
   BuildMI(MBB, I, DL, get(Opc), DstReg)
       .addReg(FalseReg)
       .addReg(TrueReg)
@@ -4017,12 +4243,12 @@ void X86InstrInfo::insertSelect(MachineBasicBlock &MBB,
 }
 
 /// Test if the given register is a physical h register.
-static bool isHReg(unsigned Reg) {
+static bool isHReg(Register Reg) {
   return X86::GR8_ABCD_HRegClass.contains(Reg);
 }
 
 // Try and copy between VR128/VR64 and GR64 registers.
-static unsigned CopyToFromAsymmetricReg(unsigned DestReg, unsigned SrcReg,
+static unsigned CopyToFromAsymmetricReg(Register DestReg, Register SrcReg,
                                         const X86Subtarget &Subtarget) {
   bool HasAVX = Subtarget.hasAVX();
   bool HasAVX512 = Subtarget.hasAVX512();
@@ -4104,8 +4330,9 @@ static unsigned CopyToFromAsymmetricReg(unsigned DestReg, unsigned SrcReg,
 
 void X86InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                MachineBasicBlock::iterator MI,
-                               const DebugLoc &DL, MCRegister DestReg,
-                               MCRegister SrcReg, bool KillSrc) const {
+                               const DebugLoc &DL, Register DestReg,
+                               Register SrcReg, bool KillSrc,
+                               bool RenamableDest, bool RenamableSrc) const {
   // First deal with the normal symmetric copies.
   bool HasAVX = Subtarget.hasAVX();
   bool HasVLX = Subtarget.hasVLX();
@@ -4349,6 +4576,11 @@ static unsigned getLoadStoreRegOpcode(Register Reg,
     return Load ? GET_EGPR_IF_ENABLED(X86::TILELOADD)
                 : GET_EGPR_IF_ENABLED(X86::TILESTORED);
 #undef GET_EGPR_IF_ENABLED
+  case 2048:
+    assert(X86::TILEPAIRRegClass.hasSubClassEq(RC) &&
+           "Unknown 2048-byte regclass");
+    assert(STI.hasAMXTILE() && "Using 2048-bit register requires AMX-TILE");
+    return Load ? X86::PTILEPAIRLOAD : X86::PTILEPAIRSTORE;
   }
 }
 
@@ -4480,7 +4712,7 @@ bool X86InstrInfo::preservesZeroValueInReg(
 
 bool X86InstrInfo::getMemOperandsWithOffsetWidth(
     const MachineInstr &MemOp, SmallVectorImpl<const MachineOperand *> &BaseOps,
-    int64_t &Offset, bool &OffsetIsScalable, unsigned &Width,
+    int64_t &Offset, bool &OffsetIsScalable, LocationSize &Width,
     const TargetRegisterInfo *TRI) const {
   const MCInstrDesc &Desc = MemOp.getDesc();
   int MemRefBegin = X86II::getMemoryOperandNo(Desc.TSFlags);
@@ -4543,6 +4775,8 @@ static bool isAMXOpcode(unsigned Opc) {
   case X86::TILESTORED:
   case X86::TILELOADD_EVEX:
   case X86::TILESTORED_EVEX:
+  case X86::PTILEPAIRLOAD:
+  case X86::PTILEPAIRSTORE:
     return true;
   }
 }
@@ -4555,7 +4789,8 @@ void X86InstrInfo::loadStoreTileReg(MachineBasicBlock &MBB,
   default:
     llvm_unreachable("Unexpected special opcode!");
   case X86::TILESTORED:
-  case X86::TILESTORED_EVEX: {
+  case X86::TILESTORED_EVEX:
+  case X86::PTILEPAIRSTORE: {
     // tilestored %tmm, (%sp, %idx)
     MachineRegisterInfo &RegInfo = MBB.getParent()->getRegInfo();
     Register VirtReg = RegInfo.createVirtualRegister(&X86::GR64_NOSPRegClass);
@@ -4569,7 +4804,8 @@ void X86InstrInfo::loadStoreTileReg(MachineBasicBlock &MBB,
     break;
   }
   case X86::TILELOADD:
-  case X86::TILELOADD_EVEX: {
+  case X86::TILELOADD_EVEX:
+  case X86::PTILEPAIRLOAD: {
     // tileloadd (%sp, %idx), %tmm
     MachineRegisterInfo &RegInfo = MBB.getParent()->getRegInfo();
     Register VirtReg = RegInfo.createVirtualRegister(&X86::GR64_NOSPRegClass);
@@ -4587,7 +4823,8 @@ void X86InstrInfo::loadStoreTileReg(MachineBasicBlock &MBB,
 void X86InstrInfo::storeRegToStackSlot(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register SrcReg,
     bool isKill, int FrameIdx, const TargetRegisterClass *RC,
-    const TargetRegisterInfo *TRI, Register VReg) const {
+    const TargetRegisterInfo *TRI, Register VReg,
+    MachineInstr::MIFlag Flags) const {
   const MachineFunction &MF = *MBB.getParent();
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   assert(MFI.getObjectSize(FrameIdx) >= TRI->getSpillSize(*RC) &&
@@ -4603,15 +4840,14 @@ void X86InstrInfo::storeRegToStackSlot(
     loadStoreTileReg(MBB, MI, Opc, SrcReg, FrameIdx, isKill);
   else
     addFrameReference(BuildMI(MBB, MI, DebugLoc(), get(Opc)), FrameIdx)
-        .addReg(SrcReg, getKillRegState(isKill));
+        .addReg(SrcReg, getKillRegState(isKill))
+        .setMIFlag(Flags);
 }
 
-void X86InstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
-                                        MachineBasicBlock::iterator MI,
-                                        Register DestReg, int FrameIdx,
-                                        const TargetRegisterClass *RC,
-                                        const TargetRegisterInfo *TRI,
-                                        Register VReg) const {
+void X86InstrInfo::loadRegFromStackSlot(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register DestReg,
+    int FrameIdx, const TargetRegisterClass *RC, const TargetRegisterInfo *TRI,
+    Register VReg, MachineInstr::MIFlag Flags) const {
   const MachineFunction &MF = *MBB.getParent();
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   assert(MFI.getObjectSize(FrameIdx) >= TRI->getSpillSize(*RC) &&
@@ -4625,8 +4861,8 @@ void X86InstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
   if (isAMXOpcode(Opc))
     loadStoreTileReg(MBB, MI, Opc, DestReg, FrameIdx);
   else
-    addFrameReference(BuildMI(MBB, MI, DebugLoc(), get(Opc), DestReg),
-                      FrameIdx);
+    addFrameReference(BuildMI(MBB, MI, DebugLoc(), get(Opc), DestReg), FrameIdx)
+        .setMIFlag(Flags);
 }
 
 bool X86InstrInfo::analyzeCompare(const MachineInstr &MI, Register &SrcReg,
@@ -4639,6 +4875,10 @@ bool X86InstrInfo::analyzeCompare(const MachineInstr &MI, Register &SrcReg,
   case X86::CMP32ri:
   case X86::CMP16ri:
   case X86::CMP8ri:
+  case X86::CCMP64ri32:
+  case X86::CCMP32ri:
+  case X86::CCMP16ri:
+  case X86::CCMP8ri:
     SrcReg = MI.getOperand(0).getReg();
     SrcReg2 = 0;
     if (MI.getOperand(1).isImm()) {
@@ -4735,6 +4975,18 @@ bool X86InstrInfo::isRedundantFlagInstr(const MachineInstr &FlagI,
       return true;
     }
     return false;
+  }
+  case X86::CCMP64ri32:
+  case X86::CCMP32ri:
+  case X86::CCMP16ri:
+  case X86::CCMP8ri: {
+    // The CCMP instruction should not be optimized if the scc/dfv in it is not
+    // same as the one in previous CCMP instruction.
+    if ((FlagI.getOpcode() != OI.getOpcode()) ||
+        (OI.getOperand(2).getImm() != FlagI.getOperand(2).getImm()) ||
+        (OI.getOperand(3).getImm() != FlagI.getOperand(3).getImm()))
+      return false;
+    [[fallthrough]];
   }
   case X86::CMP64ri32:
   case X86::CMP32ri:
@@ -5024,42 +5276,43 @@ inline static bool isDefConvertible(const MachineInstr &MI, bool &NoSignFlag,
 }
 
 /// Check whether the use can be converted to remove a comparison against zero.
-static X86::CondCode isUseDefConvertible(const MachineInstr &MI) {
+/// Returns the EFLAGS condition and the operand that we are comparing against zero.
+static std::pair<X86::CondCode, unsigned> isUseDefConvertible(const MachineInstr &MI) {
   switch (MI.getOpcode()) {
   default:
-    return X86::COND_INVALID;
+    return std::make_pair(X86::COND_INVALID, ~0U);
   CASE_ND(NEG8r)
   CASE_ND(NEG16r)
   CASE_ND(NEG32r)
   CASE_ND(NEG64r)
-    return X86::COND_AE;
+    return std::make_pair(X86::COND_AE, 1U);
   case X86::LZCNT16rr:
   case X86::LZCNT32rr:
   case X86::LZCNT64rr:
-    return X86::COND_B;
+    return std::make_pair(X86::COND_B, 1U);
   case X86::POPCNT16rr:
   case X86::POPCNT32rr:
   case X86::POPCNT64rr:
-    return X86::COND_E;
+    return std::make_pair(X86::COND_E, 1U);
   case X86::TZCNT16rr:
   case X86::TZCNT32rr:
   case X86::TZCNT64rr:
-    return X86::COND_B;
+    return std::make_pair(X86::COND_B, 1U);
   case X86::BSF16rr:
   case X86::BSF32rr:
   case X86::BSF64rr:
   case X86::BSR16rr:
   case X86::BSR32rr:
   case X86::BSR64rr:
-    return X86::COND_E;
+    return std::make_pair(X86::COND_E, 2U);
   case X86::BLSI32rr:
   case X86::BLSI64rr:
-    return X86::COND_AE;
+    return std::make_pair(X86::COND_AE, 1U);
   case X86::BLSR32rr:
   case X86::BLSR64rr:
   case X86::BLSMSK32rr:
   case X86::BLSMSK64rr:
-    return X86::COND_B;
+    return std::make_pair(X86::COND_B, 1U);
     // TODO: TBM instructions.
   }
 }
@@ -5136,10 +5389,13 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
   MachineInstr *MI = nullptr;
   MachineInstr *Sub = nullptr;
   MachineInstr *Movr0Inst = nullptr;
+  SmallVector<std::pair<MachineInstr *, unsigned>, 4> InstsToUpdate;
   bool NoSignFlag = false;
   bool ClearsOverflowFlag = false;
   bool ShouldUpdateCC = false;
   bool IsSwapped = false;
+  bool HasNF = Subtarget.hasNF();
+  unsigned OpNo = 0;
   X86::CondCode NewCC = X86::COND_INVALID;
   int64_t ImmDelta = 0;
 
@@ -5195,9 +5451,9 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
         //      ...                 // EFLAGS not changed
         //      testl %eax, %eax    // <-- can be removed
         if (IsCmpZero) {
-          NewCC = isUseDefConvertible(Inst);
-          if (NewCC != X86::COND_INVALID && Inst.getOperand(1).isReg() &&
-              Inst.getOperand(1).getReg() == SrcReg) {
+          std::tie(NewCC, OpNo) = isUseDefConvertible(Inst);
+          if (NewCC != X86::COND_INVALID && Inst.getOperand(OpNo).isReg() &&
+              Inst.getOperand(OpNo).getReg() == SrcReg) {
             ShouldUpdateCC = true;
             MI = &Inst;
             break;
@@ -5221,6 +5477,16 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
         if (!Movr0Inst && Inst.getOpcode() == X86::MOV32r0 &&
             Inst.registerDefIsDead(X86::EFLAGS, TRI)) {
           Movr0Inst = &Inst;
+          continue;
+        }
+
+        // Try to replace non-NF with NF instructions.
+        if (HasNF && Inst.registerDefIsDead(X86::EFLAGS, TRI)) {
+          unsigned NewOp = X86::getNFVariant(Inst.getOpcode());
+          if (!NewOp)
+            return false;
+
+          InstsToUpdate.push_back(std::make_pair(&Inst, NewOp));
           continue;
         }
 
@@ -5420,8 +5686,16 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
       return false;
   }
 
+  // Replace non-NF with NF instructions.
+  for (auto &Inst : InstsToUpdate) {
+    Inst.first->setDesc(get(Inst.second));
+    Inst.first->removeOperand(
+        Inst.first->findRegisterDefOperandIdx(X86::EFLAGS, /*TRI=*/nullptr));
+  }
+
   // Make sure Sub instruction defines EFLAGS and mark the def live.
-  MachineOperand *FlagDef = Sub->findRegisterDefOperand(X86::EFLAGS);
+  MachineOperand *FlagDef =
+      Sub->findRegisterDefOperand(X86::EFLAGS, /*TRI=*/nullptr);
   assert(FlagDef && "Unable to locate a def EFLAGS operand");
   FlagDef->setIsDead(false);
 
@@ -5440,47 +5714,6 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
       MBB->addLiveIn(X86::EFLAGS);
   }
   return true;
-}
-
-/// Try to remove the load by folding it to a register
-/// operand at the use. We fold the load instructions if load defines a virtual
-/// register, the virtual register is used once in the same BB, and the
-/// instructions in-between do not load or store, and have no side effects.
-MachineInstr *X86InstrInfo::optimizeLoadInstr(MachineInstr &MI,
-                                              const MachineRegisterInfo *MRI,
-                                              Register &FoldAsLoadDefReg,
-                                              MachineInstr *&DefMI) const {
-  // Check whether we can move DefMI here.
-  DefMI = MRI->getVRegDef(FoldAsLoadDefReg);
-  assert(DefMI);
-  bool SawStore = false;
-  if (!DefMI->isSafeToMove(nullptr, SawStore))
-    return nullptr;
-
-  // Collect information about virtual register operands of MI.
-  SmallVector<unsigned, 1> SrcOperandIds;
-  for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {
-    MachineOperand &MO = MI.getOperand(i);
-    if (!MO.isReg())
-      continue;
-    Register Reg = MO.getReg();
-    if (Reg != FoldAsLoadDefReg)
-      continue;
-    // Do not fold if we have a subreg use or a def.
-    if (MO.getSubReg() || MO.isDef())
-      return nullptr;
-    SrcOperandIds.push_back(i);
-  }
-  if (SrcOperandIds.empty())
-    return nullptr;
-
-  // Check whether we can fold the def into SrcOperandId.
-  if (MachineInstr *FoldMI = foldMemoryOperand(MI, SrcOperandIds, *DefMI)) {
-    FoldAsLoadDefReg = 0;
-    return FoldMI;
-  }
-
-  return nullptr;
 }
 
 /// \returns true if the instruction can be changed to COPY when imm is 0.
@@ -5544,9 +5777,13 @@ static unsigned convertALUrr2ALUri(unsigned Opc) {
   case X86::FROM:                                                              \
     return X86::TO;
     FROM_TO(TEST64rr, TEST64ri32)
+    FROM_TO(CTEST64rr, CTEST64ri32)
     FROM_TO(CMP64rr, CMP64ri32)
+    FROM_TO(CCMP64rr, CCMP64ri32)
     FROM_TO(TEST32rr, TEST32ri)
+    FROM_TO(CTEST32rr, CTEST32ri)
     FROM_TO(CMP32rr, CMP32ri)
+    FROM_TO(CCMP32rr, CCMP32ri)
 #undef FROM_TO
   }
 }
@@ -5574,7 +5811,7 @@ bool X86InstrInfo::foldImmediateImpl(MachineInstr &UseMI, MachineInstr *DefMI,
       return false;
   }
 
-  if (UseMI.findRegisterUseOperand(Reg)->getSubReg())
+  if (UseMI.findRegisterUseOperand(Reg, /*TRI=*/nullptr)->getSubReg())
     return false;
   // Immediate has larger code size than register. So avoid folding the
   // immediate if it has more than 1 use and we are optimizing for size.
@@ -5621,7 +5858,8 @@ bool X86InstrInfo::foldImmediateImpl(MachineInstr &UseMI, MachineInstr *DefMI,
         if (!MakeChange)
           return true;
         UseMI.setDesc(get(X86::MOV32r0));
-        UseMI.removeOperand(UseMI.findRegisterUseOperandIdx(Reg));
+        UseMI.removeOperand(
+            UseMI.findRegisterUseOperandIdx(Reg, /*TRI=*/nullptr));
         UseMI.addOperand(MachineOperand::CreateReg(X86::EFLAGS, /*isDef=*/true,
                                                    /*isImp=*/true,
                                                    /*isKill=*/false,
@@ -5643,17 +5881,18 @@ bool X86InstrInfo::foldImmediateImpl(MachineInstr &UseMI, MachineInstr *DefMI,
        NewOpc == X86::SBB64ri32 || NewOpc == X86::SBB32ri ||
        NewOpc == X86::SUB64ri32_ND || NewOpc == X86::SUB32ri_ND ||
        NewOpc == X86::SBB64ri32_ND || NewOpc == X86::SBB32ri_ND) &&
-      UseMI.findRegisterUseOperandIdx(Reg) != 2)
+      UseMI.findRegisterUseOperandIdx(Reg, /*TRI=*/nullptr) != 2)
     return false;
   // For CMP instructions the immediate can only be at index 1.
-  if ((NewOpc == X86::CMP64ri32 || NewOpc == X86::CMP32ri) &&
-      UseMI.findRegisterUseOperandIdx(Reg) != 1)
+  if (((NewOpc == X86::CMP64ri32 || NewOpc == X86::CMP32ri) ||
+       (NewOpc == X86::CCMP64ri32 || NewOpc == X86::CCMP32ri)) &&
+      UseMI.findRegisterUseOperandIdx(Reg, /*TRI=*/nullptr) != 1)
     return false;
 
   using namespace X86;
   if (isSHL(Opc) || isSHR(Opc) || isSAR(Opc) || isROL(Opc) || isROR(Opc) ||
       isRCL(Opc) || isRCR(Opc)) {
-    unsigned RegIdx = UseMI.findRegisterUseOperandIdx(Reg);
+    unsigned RegIdx = UseMI.findRegisterUseOperandIdx(Reg, /*TRI=*/nullptr);
     if (RegIdx < 2)
       return false;
     if (!isInt<8>(ImmVal))
@@ -5677,13 +5916,15 @@ bool X86InstrInfo::foldImmediateImpl(MachineInstr &UseMI, MachineInstr *DefMI,
   if (!Modified) {
     // Modify the instruction.
     if (ImmVal == 0 && canConvert2Copy(NewOpc) &&
-        UseMI.registerDefIsDead(X86::EFLAGS)) {
+        UseMI.registerDefIsDead(X86::EFLAGS, /*TRI=*/nullptr)) {
       //          %100 = add %101, 0
       //    ==>
       //          %100 = COPY %101
       UseMI.setDesc(get(TargetOpcode::COPY));
-      UseMI.removeOperand(UseMI.findRegisterUseOperandIdx(Reg));
-      UseMI.removeOperand(UseMI.findRegisterDefOperandIdx(X86::EFLAGS));
+      UseMI.removeOperand(
+          UseMI.findRegisterUseOperandIdx(Reg, /*TRI=*/nullptr));
+      UseMI.removeOperand(
+          UseMI.findRegisterDefOperandIdx(X86::EFLAGS, /*TRI=*/nullptr));
       UseMI.untieRegOperand(0);
       UseMI.clearFlag(MachineInstr::MIFlag::NoSWrap);
       UseMI.clearFlag(MachineInstr::MIFlag::NoUWrap);
@@ -5691,7 +5932,7 @@ bool X86InstrInfo::foldImmediateImpl(MachineInstr &UseMI, MachineInstr *DefMI,
       unsigned Op1 = 1, Op2 = CommuteAnyOperandIndex;
       unsigned ImmOpNum = 2;
       if (!UseMI.getOperand(0).isDef()) {
-        Op1 = 0; // TEST, CMP
+        Op1 = 0; // TEST, CMP, CTEST, CCMP
         ImmOpNum = 1;
       }
       if (Opc == TargetOpcode::COPY)
@@ -5998,7 +6239,7 @@ bool X86InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     }
     if (MI.getOpcode() == X86::AVX512_256_SET0) {
       // No VLX so we must reference a zmm.
-      unsigned ZReg =
+      MCRegister ZReg =
           TRI->getMatchingSuperReg(SrcReg, X86::sub_ymm, &X86::VR512RegClass);
       MIB->getOperand(0).setReg(ZReg);
     }
@@ -6048,28 +6289,28 @@ bool X86InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   }
   case X86::VMOVAPSZ128rm_NOVLX:
     return expandNOVLXLoad(MIB, &getRegisterInfo(), get(X86::VMOVAPSrm),
-                           get(X86::VBROADCASTF32X4rm), X86::sub_xmm);
+                           get(X86::VBROADCASTF32X4Zrm), X86::sub_xmm);
   case X86::VMOVUPSZ128rm_NOVLX:
     return expandNOVLXLoad(MIB, &getRegisterInfo(), get(X86::VMOVUPSrm),
-                           get(X86::VBROADCASTF32X4rm), X86::sub_xmm);
+                           get(X86::VBROADCASTF32X4Zrm), X86::sub_xmm);
   case X86::VMOVAPSZ256rm_NOVLX:
     return expandNOVLXLoad(MIB, &getRegisterInfo(), get(X86::VMOVAPSYrm),
-                           get(X86::VBROADCASTF64X4rm), X86::sub_ymm);
+                           get(X86::VBROADCASTF64X4Zrm), X86::sub_ymm);
   case X86::VMOVUPSZ256rm_NOVLX:
     return expandNOVLXLoad(MIB, &getRegisterInfo(), get(X86::VMOVUPSYrm),
-                           get(X86::VBROADCASTF64X4rm), X86::sub_ymm);
+                           get(X86::VBROADCASTF64X4Zrm), X86::sub_ymm);
   case X86::VMOVAPSZ128mr_NOVLX:
     return expandNOVLXStore(MIB, &getRegisterInfo(), get(X86::VMOVAPSmr),
-                            get(X86::VEXTRACTF32x4Zmr), X86::sub_xmm);
+                            get(X86::VEXTRACTF32X4Zmri), X86::sub_xmm);
   case X86::VMOVUPSZ128mr_NOVLX:
     return expandNOVLXStore(MIB, &getRegisterInfo(), get(X86::VMOVUPSmr),
-                            get(X86::VEXTRACTF32x4Zmr), X86::sub_xmm);
+                            get(X86::VEXTRACTF32X4Zmri), X86::sub_xmm);
   case X86::VMOVAPSZ256mr_NOVLX:
     return expandNOVLXStore(MIB, &getRegisterInfo(), get(X86::VMOVAPSYmr),
-                            get(X86::VEXTRACTF64x4Zmr), X86::sub_ymm);
+                            get(X86::VEXTRACTF64X4Zmri), X86::sub_ymm);
   case X86::VMOVUPSZ256mr_NOVLX:
     return expandNOVLXStore(MIB, &getRegisterInfo(), get(X86::VMOVUPSYmr),
-                            get(X86::VEXTRACTF64x4Zmr), X86::sub_ymm);
+                            get(X86::VEXTRACTF64X4Zmri), X86::sub_ymm);
   case X86::MOV32ri64: {
     Register Reg = MIB.getReg(0);
     Register Reg32 = RI.getSubReg(Reg, X86::sub_32bit);
@@ -6125,17 +6366,17 @@ bool X86InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   // FIXME: A more advanced approach would be to choose the best input mask
   // register based on context.
   case X86::KSET0W:
-    return Expand2AddrKreg(MIB, get(X86::KXORWrr), X86::K0);
+    return Expand2AddrKreg(MIB, get(X86::KXORWkk), X86::K0);
   case X86::KSET0D:
-    return Expand2AddrKreg(MIB, get(X86::KXORDrr), X86::K0);
+    return Expand2AddrKreg(MIB, get(X86::KXORDkk), X86::K0);
   case X86::KSET0Q:
-    return Expand2AddrKreg(MIB, get(X86::KXORQrr), X86::K0);
+    return Expand2AddrKreg(MIB, get(X86::KXORQkk), X86::K0);
   case X86::KSET1W:
-    return Expand2AddrKreg(MIB, get(X86::KXNORWrr), X86::K0);
+    return Expand2AddrKreg(MIB, get(X86::KXNORWkk), X86::K0);
   case X86::KSET1D:
-    return Expand2AddrKreg(MIB, get(X86::KXNORDrr), X86::K0);
+    return Expand2AddrKreg(MIB, get(X86::KXNORDkk), X86::K0);
   case X86::KSET1Q:
-    return Expand2AddrKreg(MIB, get(X86::KXNORQrr), X86::K0);
+    return Expand2AddrKreg(MIB, get(X86::KXNORQkk), X86::K0);
   case TargetOpcode::LOAD_STACK_GUARD:
     expandLoadStackGuard(MIB, *this);
     return true;
@@ -6220,10 +6461,10 @@ static bool hasPartialRegUpdate(unsigned Opcode, const X86Subtarget &Subtarget,
   case X86::RCPSSm:
   case X86::RCPSSr_Int:
   case X86::RCPSSm_Int:
-  case X86::ROUNDSDr:
-  case X86::ROUNDSDm:
-  case X86::ROUNDSSr:
-  case X86::ROUNDSSm:
+  case X86::ROUNDSDri:
+  case X86::ROUNDSDmi:
+  case X86::ROUNDSSri:
+  case X86::ROUNDSSmi:
   case X86::RSQRTSSr:
   case X86::RSQRTSSm:
   case X86::RSQRTSSr_Int:
@@ -6511,19 +6752,37 @@ static bool hasPartialRegUpdate(unsigned Opcode, const X86Subtarget &Subtarget,
 unsigned X86InstrInfo::getPartialRegUpdateClearance(
     const MachineInstr &MI, unsigned OpNum,
     const TargetRegisterInfo *TRI) const {
-  if (OpNum != 0 || !hasPartialRegUpdate(MI.getOpcode(), Subtarget))
+
+  if (OpNum != 0)
     return 0;
 
-  // If MI is marked as reading Reg, the partial register update is wanted.
+  // NDD ops with 8/16b results may appear to be partial register
+  // updates after register allocation.
+  bool HasNDDPartialWrite = false;
+  if (X86II::hasNewDataDest(MI.getDesc().TSFlags)) {
+    Register Reg = MI.getOperand(0).getReg();
+    if (!Reg.isVirtual())
+      HasNDDPartialWrite =
+          X86::GR8RegClass.contains(Reg) || X86::GR16RegClass.contains(Reg);
+  }
+
+  if (!(HasNDDPartialWrite || hasPartialRegUpdate(MI.getOpcode(), Subtarget)))
+    return 0;
+
+  // Check if the result register is also used as a source.
+  // For non-NDD ops, this means a partial update is wanted, hence we return 0.
+  // For NDD ops, this means it is possible to compress the instruction
+  // to a legacy form in CompressEVEX, which would create an unwanted partial
+  // update, so we return the clearance.
   const MachineOperand &MO = MI.getOperand(0);
   Register Reg = MO.getReg();
-  if (Reg.isVirtual()) {
-    if (MO.readsReg() || MI.readsVirtualRegister(Reg))
-      return 0;
-  } else {
-    if (MI.readsRegister(Reg, TRI))
-      return 0;
-  }
+  bool ReadsReg = false;
+  if (Reg.isVirtual())
+    ReadsReg = (MO.readsReg() || MI.readsVirtualRegister(Reg));
+  else
+    ReadsReg = MI.readsRegister(Reg, TRI);
+  if (ReadsReg != HasNDDPartialWrite)
+    return 0;
 
   // If any instructions in the clearance range are reading Reg, insert a
   // dependency breaking instruction, which is inexpensive and is likely to
@@ -6577,8 +6836,8 @@ static bool hasUndefRegUpdate(unsigned Opcode, unsigned OpNum,
   case X86::VPACKUSWBZ128rr:
   case X86::VPACKSSDWZ128rr:
   case X86::VPACKUSDWZ128rr:
-  case X86::VPERM2F128rr:
-  case X86::VPERM2I128rr:
+  case X86::VPERM2F128rri:
+  case X86::VPERM2I128rri:
   case X86::VSHUFF32X4Z256rri:
   case X86::VSHUFF32X4Zrri:
   case X86::VSHUFF64X2Z256rri:
@@ -6722,14 +6981,14 @@ static bool hasUndefRegUpdate(unsigned Opcode, unsigned OpNum,
   case X86::VRCPSSr_Int:
   case X86::VRCPSSm:
   case X86::VRCPSSm_Int:
-  case X86::VROUNDSDr:
-  case X86::VROUNDSDm:
-  case X86::VROUNDSDr_Int:
-  case X86::VROUNDSDm_Int:
-  case X86::VROUNDSSr:
-  case X86::VROUNDSSm:
-  case X86::VROUNDSSr_Int:
-  case X86::VROUNDSSm_Int:
+  case X86::VROUNDSDri:
+  case X86::VROUNDSDmi:
+  case X86::VROUNDSDri_Int:
+  case X86::VROUNDSDmi_Int:
+  case X86::VROUNDSSri:
+  case X86::VROUNDSSmi:
+  case X86::VROUNDSSri_Int:
+  case X86::VROUNDSSmi_Int:
   case X86::VRSQRTSSr:
   case X86::VRSQRTSSr_Int:
   case X86::VRSQRTSSm:
@@ -6765,16 +7024,16 @@ static bool hasUndefRegUpdate(unsigned Opcode, unsigned OpNum,
   case X86::VGETMANTSSZrri:
   case X86::VGETMANTSSZrrib:
   case X86::VGETMANTSSZrmi:
-  case X86::VRNDSCALESDZr:
-  case X86::VRNDSCALESDZr_Int:
-  case X86::VRNDSCALESDZrb_Int:
-  case X86::VRNDSCALESDZm:
-  case X86::VRNDSCALESDZm_Int:
-  case X86::VRNDSCALESSZr:
-  case X86::VRNDSCALESSZr_Int:
-  case X86::VRNDSCALESSZrb_Int:
-  case X86::VRNDSCALESSZm:
-  case X86::VRNDSCALESSZm_Int:
+  case X86::VRNDSCALESDZrri:
+  case X86::VRNDSCALESDZrri_Int:
+  case X86::VRNDSCALESDZrrib_Int:
+  case X86::VRNDSCALESDZrmi:
+  case X86::VRNDSCALESDZrmi_Int:
+  case X86::VRNDSCALESSZrri:
+  case X86::VRNDSCALESSZrri_Int:
+  case X86::VRNDSCALESSZrrib_Int:
+  case X86::VRNDSCALESSZrmi:
+  case X86::VRNDSCALESSZrmi_Int:
   case X86::VRCP14SDZrr:
   case X86::VRCP14SDZrm:
   case X86::VRCP14SSZrr:
@@ -6792,11 +7051,11 @@ static bool hasUndefRegUpdate(unsigned Opcode, unsigned OpNum,
   case X86::VGETMANTSHZrri:
   case X86::VGETMANTSHZrrib:
   case X86::VGETMANTSHZrmi:
-  case X86::VRNDSCALESHZr:
-  case X86::VRNDSCALESHZr_Int:
-  case X86::VRNDSCALESHZrb_Int:
-  case X86::VRNDSCALESHZm:
-  case X86::VRNDSCALESHZm_Int:
+  case X86::VRNDSCALESHZrri:
+  case X86::VRNDSCALESHZrri_Int:
+  case X86::VRNDSCALESHZrrib_Int:
+  case X86::VRNDSCALESHZrmi:
+  case X86::VRNDSCALESHZrmi_Int:
   case X86::VSQRTSHZr:
   case X86::VSQRTSHZr_Int:
   case X86::VSQRTSHZrb_Int:
@@ -6947,6 +7206,17 @@ void X86InstrInfo::breakPartialRegDependency(
         .addReg(Reg, RegState::Undef)
         .addReg(Reg, RegState::Undef);
     MI.addRegisterKilled(Reg, TRI, true);
+  } else if ((X86::GR16RegClass.contains(Reg) ||
+              X86::GR8RegClass.contains(Reg)) &&
+             X86II::hasNewDataDest(MI.getDesc().TSFlags)) {
+    // This case is only expected for NDD ops which appear to be partial
+    // writes, but are not due to the zeroing of the upper part. Here
+    // we add an implicit def of the superegister, which prevents
+    // CompressEVEX from converting this to a legacy form.
+    Register SuperReg = getX86SubSuperRegister(Reg, 64);
+    MachineInstrBuilder BuildMI(*MI.getParent()->getParent(), &MI);
+    if (!MI.definesRegister(SuperReg, /*TRI=*/nullptr))
+      BuildMI.addReg(SuperReg, RegState::ImplicitDefine);
   }
 }
 
@@ -7000,7 +7270,7 @@ static void updateOperandRegConstraints(MachineFunction &MF,
   }
 }
 
-static MachineInstr *FuseTwoAddrInst(MachineFunction &MF, unsigned Opcode,
+static MachineInstr *fuseTwoAddrInst(MachineFunction &MF, unsigned Opcode,
                                      ArrayRef<MachineOperand> MOs,
                                      MachineBasicBlock::iterator InsertPt,
                                      MachineInstr &MI,
@@ -7029,7 +7299,7 @@ static MachineInstr *FuseTwoAddrInst(MachineFunction &MF, unsigned Opcode,
   return MIB;
 }
 
-static MachineInstr *FuseInst(MachineFunction &MF, unsigned Opcode,
+static MachineInstr *fuseInst(MachineFunction &MF, unsigned Opcode,
                               unsigned OpNo, ArrayRef<MachineOperand> MOs,
                               MachineBasicBlock::iterator InsertPt,
                               MachineInstr &MI, const TargetInstrInfo &TII,
@@ -7061,7 +7331,7 @@ static MachineInstr *FuseInst(MachineFunction &MF, unsigned Opcode,
   return MIB;
 }
 
-static MachineInstr *MakeM0Inst(const TargetInstrInfo &TII, unsigned Opcode,
+static MachineInstr *makeM0Inst(const TargetInstrInfo &TII, unsigned Opcode,
                                 ArrayRef<MachineOperand> MOs,
                                 MachineBasicBlock::iterator InsertPt,
                                 MachineInstr &MI) {
@@ -7076,9 +7346,9 @@ MachineInstr *X86InstrInfo::foldMemoryOperandCustom(
     ArrayRef<MachineOperand> MOs, MachineBasicBlock::iterator InsertPt,
     unsigned Size, Align Alignment) const {
   switch (MI.getOpcode()) {
-  case X86::INSERTPSrr:
-  case X86::VINSERTPSrr:
-  case X86::VINSERTPSZrr:
+  case X86::INSERTPSrri:
+  case X86::VINSERTPSrri:
+  case X86::VINSERTPSZrri:
     // Attempt to convert the load of inserted vector into a fold load
     // of a single float.
     if (OpNum == 2) {
@@ -7091,15 +7361,15 @@ MachineInstr *X86InstrInfo::foldMemoryOperandCustom(
       const TargetRegisterClass *RC = getRegClass(MI.getDesc(), OpNum, &RI, MF);
       unsigned RCSize = TRI.getRegSizeInBits(*RC) / 8;
       if ((Size == 0 || Size >= 16) && RCSize >= 16 &&
-          (MI.getOpcode() != X86::INSERTPSrr || Alignment >= Align(4))) {
+          (MI.getOpcode() != X86::INSERTPSrri || Alignment >= Align(4))) {
         int PtrOffset = SrcIdx * 4;
         unsigned NewImm = (DstIdx << 4) | ZMask;
         unsigned NewOpCode =
-            (MI.getOpcode() == X86::VINSERTPSZrr)  ? X86::VINSERTPSZrm
-            : (MI.getOpcode() == X86::VINSERTPSrr) ? X86::VINSERTPSrm
-                                                   : X86::INSERTPSrm;
+            (MI.getOpcode() == X86::VINSERTPSZrri)  ? X86::VINSERTPSZrmi
+            : (MI.getOpcode() == X86::VINSERTPSrri) ? X86::VINSERTPSrmi
+                                                    : X86::INSERTPSrmi;
         MachineInstr *NewMI =
-            FuseInst(MF, NewOpCode, OpNum, MOs, InsertPt, MI, *this, PtrOffset);
+            fuseInst(MF, NewOpCode, OpNum, MOs, InsertPt, MI, *this, PtrOffset);
         NewMI->getOperand(NewMI->getNumOperands() - 1).setImm(NewImm);
         return NewMI;
       }
@@ -7121,7 +7391,7 @@ MachineInstr *X86InstrInfo::foldMemoryOperandCustom(
             : (MI.getOpcode() == X86::VMOVHLPSrr) ? X86::VMOVLPSrm
                                                   : X86::MOVLPSrm;
         MachineInstr *NewMI =
-            FuseInst(MF, NewOpCode, OpNum, MOs, InsertPt, MI, *this, 8);
+            fuseInst(MF, NewOpCode, OpNum, MOs, InsertPt, MI, *this, 8);
         return NewMI;
       }
     }
@@ -7136,10 +7406,16 @@ MachineInstr *X86InstrInfo::foldMemoryOperandCustom(
       unsigned RCSize = TRI.getRegSizeInBits(*RC) / 8;
       if ((Size == 0 || Size >= 16) && RCSize >= 16 && Alignment < Align(16)) {
         MachineInstr *NewMI =
-            FuseInst(MF, X86::MOVHPDrm, OpNum, MOs, InsertPt, MI, *this);
+            fuseInst(MF, X86::MOVHPDrm, OpNum, MOs, InsertPt, MI, *this);
         return NewMI;
       }
     }
+    break;
+  case X86::MOV32r0:
+    if (auto *NewMI =
+            makeM0Inst(*this, (Size == 4) ? X86::MOV32mi : X86::MOV64mi32, MOs,
+                       InsertPt, MI))
+      return NewMI;
     break;
   }
 
@@ -7165,35 +7441,61 @@ static bool shouldPreventUndefRegUpdateMemFold(MachineFunction &MF,
   return VRegDef && VRegDef->isImplicitDef();
 }
 
+unsigned X86InstrInfo::commuteOperandsForFold(MachineInstr &MI,
+                                              unsigned Idx1) const {
+  unsigned Idx2 = CommuteAnyOperandIndex;
+  if (!findCommutedOpIndices(MI, Idx1, Idx2))
+    return Idx1;
+
+  bool HasDef = MI.getDesc().getNumDefs();
+  Register Reg0 = HasDef ? MI.getOperand(0).getReg() : Register();
+  Register Reg1 = MI.getOperand(Idx1).getReg();
+  Register Reg2 = MI.getOperand(Idx2).getReg();
+  bool Tied1 = 0 == MI.getDesc().getOperandConstraint(Idx1, MCOI::TIED_TO);
+  bool Tied2 = 0 == MI.getDesc().getOperandConstraint(Idx2, MCOI::TIED_TO);
+
+  // If either of the commutable operands are tied to the destination
+  // then we can not commute + fold.
+  if ((HasDef && Reg0 == Reg1 && Tied1) || (HasDef && Reg0 == Reg2 && Tied2))
+    return Idx1;
+
+  return commuteInstruction(MI, false, Idx1, Idx2) ? Idx2 : Idx1;
+}
+
+static void printFailMsgforFold(const MachineInstr &MI, unsigned Idx) {
+  if (PrintFailedFusing && !MI.isCopy())
+    dbgs() << "We failed to fuse operand " << Idx << " in " << MI;
+}
+
 MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
     MachineFunction &MF, MachineInstr &MI, unsigned OpNum,
     ArrayRef<MachineOperand> MOs, MachineBasicBlock::iterator InsertPt,
     unsigned Size, Align Alignment, bool AllowCommute) const {
   bool isSlowTwoMemOps = Subtarget.slowTwoMemOps();
-  bool isTwoAddrFold = false;
+  unsigned Opc = MI.getOpcode();
 
   // For CPUs that favor the register form of a call or push,
   // do not fold loads into calls or pushes, unless optimizing for size
   // aggressively.
   if (isSlowTwoMemOps && !MF.getFunction().hasMinSize() &&
-      (MI.getOpcode() == X86::CALL32r || MI.getOpcode() == X86::CALL64r ||
-       MI.getOpcode() == X86::PUSH16r || MI.getOpcode() == X86::PUSH32r ||
-       MI.getOpcode() == X86::PUSH64r))
+      (Opc == X86::CALL32r || Opc == X86::CALL64r || Opc == X86::PUSH16r ||
+       Opc == X86::PUSH32r || Opc == X86::PUSH64r))
     return nullptr;
 
   // Avoid partial and undef register update stalls unless optimizing for size.
   if (!MF.getFunction().hasOptSize() &&
-      (hasPartialRegUpdate(MI.getOpcode(), Subtarget, /*ForLoadFold*/ true) ||
+      (hasPartialRegUpdate(Opc, Subtarget, /*ForLoadFold*/ true) ||
        shouldPreventUndefRegUpdateMemFold(MF, MI)))
     return nullptr;
 
   unsigned NumOps = MI.getDesc().getNumOperands();
-  bool isTwoAddr =
-      NumOps > 1 && MI.getDesc().getOperandConstraint(1, MCOI::TIED_TO) != -1;
+  bool IsTwoAddr = NumOps > 1 && OpNum < 2 && MI.getOperand(0).isReg() &&
+                   MI.getOperand(1).isReg() &&
+                   MI.getOperand(0).getReg() == MI.getOperand(1).getReg();
 
   // FIXME: AsmPrinter doesn't know how to handle
   // X86II::MO_GOT_ABSOLUTE_ADDRESS after folding.
-  if (MI.getOpcode() == X86::ADD32ri &&
+  if (Opc == X86::ADD32ri &&
       MI.getOperand(2).getTargetFlags() == X86II::MO_GOT_ABSOLUTE_ADDRESS)
     return nullptr;
 
@@ -7202,7 +7504,7 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
   // instructions.
   if (MOs.size() == X86::AddrNumOperands &&
       MOs[X86::AddrDisp].getTargetFlags() == X86II::MO_GOTTPOFF &&
-      MI.getOpcode() != X86::ADD64rr)
+      Opc != X86::ADD64rr)
     return nullptr;
 
   // Don't fold loads into indirect calls that need a KCFI check as we'll
@@ -7210,41 +7512,24 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
   if (MI.isCall() && MI.getCFIType())
     return nullptr;
 
-  MachineInstr *NewMI = nullptr;
-
   // Attempt to fold any custom cases we have.
-  if (MachineInstr *CustomMI = foldMemoryOperandCustom(
-          MF, MI, OpNum, MOs, InsertPt, Size, Alignment))
+  if (auto *CustomMI = foldMemoryOperandCustom(MF, MI, OpNum, MOs, InsertPt,
+                                               Size, Alignment))
     return CustomMI;
-
-  const X86FoldTableEntry *I = nullptr;
 
   // Folding a memory location into the two-address part of a two-address
   // instruction is different than folding it other places.  It requires
   // replacing the *two* registers with the memory location.
-  if (isTwoAddr && NumOps >= 2 && OpNum < 2 && MI.getOperand(0).isReg() &&
-      MI.getOperand(1).isReg() &&
-      MI.getOperand(0).getReg() == MI.getOperand(1).getReg()) {
-    I = lookupTwoAddrFoldTable(MI.getOpcode());
-    isTwoAddrFold = true;
-  } else {
-    if (OpNum == 0) {
-      if (MI.getOpcode() == X86::MOV32r0) {
-        NewMI = MakeM0Inst(*this, X86::MOV32mi, MOs, InsertPt, MI);
-        if (NewMI)
-          return NewMI;
-      }
-    }
+  //
+  // Utilize the mapping NonNDD -> RMW for the NDD variant.
+  unsigned NonNDOpc = Subtarget.hasNDD() ? X86::getNonNDVariant(Opc) : 0U;
+  const X86FoldTableEntry *I =
+      IsTwoAddr ? lookupTwoAddrFoldTable(NonNDOpc ? NonNDOpc : Opc)
+                : lookupFoldTable(Opc, OpNum);
 
-    I = lookupFoldTable(MI.getOpcode(), OpNum);
-  }
-
-  if (I != nullptr) {
+  MachineInstr *NewMI = nullptr;
+  if (I) {
     unsigned Opcode = I->DstOp;
-    bool FoldedLoad =
-        isTwoAddrFold || (OpNum == 0 && I->Flags & TB_FOLDED_LOAD) || OpNum > 0;
-    bool FoldedStore =
-        isTwoAddrFold || (OpNum == 0 && I->Flags & TB_FOLDED_STORE);
     if (Alignment <
         Align(1ULL << ((I->Flags & TB_ALIGN_MASK) >> TB_ALIGN_SHIFT)))
       return nullptr;
@@ -7256,7 +7541,7 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
       // Check if it's safe to fold the load. If the size of the object is
       // narrower than the load width, then it's not.
       // FIXME: Allow scalar intrinsic instructions like ADDSSrm_Int.
-      if (FoldedLoad && Size < RCSize) {
+      if ((I->Flags & TB_FOLDED_LOAD) && Size < RCSize) {
         // If this is a 64-bit load, but the spill slot is 32, then we can do
         // a 32-bit load which is implicitly zero-extended. This likely is
         // due to live interval analysis remat'ing a load from stack slot.
@@ -7270,14 +7555,12 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
       // For stores, make sure the size of the object is equal to the size of
       // the store. If the object is larger, the extra bits would be garbage. If
       // the object is smaller we might overwrite another object or fault.
-      if (FoldedStore && Size != RCSize)
+      if ((I->Flags & TB_FOLDED_STORE) && Size != RCSize)
         return nullptr;
     }
 
-    if (isTwoAddrFold)
-      NewMI = FuseTwoAddrInst(MF, Opcode, MOs, InsertPt, MI, *this);
-    else
-      NewMI = FuseInst(MF, Opcode, OpNum, MOs, InsertPt, MI, *this);
+    NewMI = IsTwoAddr ? fuseTwoAddrInst(MF, Opcode, MOs, InsertPt, MI, *this)
+                      : fuseInst(MF, Opcode, OpNum, MOs, InsertPt, MI, *this);
 
     if (NarrowToMOV32rm) {
       // If this is the special case where we use a MOV32rm to load a 32-bit
@@ -7292,65 +7575,24 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
     return NewMI;
   }
 
-  // If the instruction and target operand are commutable, commute the
-  // instruction and try again.
   if (AllowCommute) {
-    unsigned CommuteOpIdx1 = OpNum, CommuteOpIdx2 = CommuteAnyOperandIndex;
-    if (findCommutedOpIndices(MI, CommuteOpIdx1, CommuteOpIdx2)) {
-      bool HasDef = MI.getDesc().getNumDefs();
-      Register Reg0 = HasDef ? MI.getOperand(0).getReg() : Register();
-      Register Reg1 = MI.getOperand(CommuteOpIdx1).getReg();
-      Register Reg2 = MI.getOperand(CommuteOpIdx2).getReg();
-      bool Tied1 =
-          0 == MI.getDesc().getOperandConstraint(CommuteOpIdx1, MCOI::TIED_TO);
-      bool Tied2 =
-          0 == MI.getDesc().getOperandConstraint(CommuteOpIdx2, MCOI::TIED_TO);
-
-      // If either of the commutable operands are tied to the destination
-      // then we can not commute + fold.
-      if ((HasDef && Reg0 == Reg1 && Tied1) ||
-          (HasDef && Reg0 == Reg2 && Tied2))
-        return nullptr;
-
-      MachineInstr *CommutedMI =
-          commuteInstruction(MI, false, CommuteOpIdx1, CommuteOpIdx2);
-      if (!CommutedMI) {
-        // Unable to commute.
-        return nullptr;
-      }
-      if (CommutedMI != &MI) {
-        // New instruction. We can't fold from this.
-        CommutedMI->eraseFromParent();
-        return nullptr;
-      }
-
-      // Attempt to fold with the commuted version of the instruction.
-      NewMI = foldMemoryOperandImpl(MF, MI, CommuteOpIdx2, MOs, InsertPt, Size,
-                                    Alignment, /*AllowCommute=*/false);
-      if (NewMI)
-        return NewMI;
-
-      // Folding failed again - undo the commute before returning.
-      MachineInstr *UncommutedMI =
-          commuteInstruction(MI, false, CommuteOpIdx1, CommuteOpIdx2);
-      if (!UncommutedMI) {
-        // Unable to commute.
-        return nullptr;
-      }
-      if (UncommutedMI != &MI) {
-        // New instruction. It doesn't need to be kept.
-        UncommutedMI->eraseFromParent();
-        return nullptr;
-      }
-
-      // Return here to prevent duplicate fuse failure report.
+    // If the instruction and target operand are commutable, commute the
+    // instruction and try again.
+    unsigned CommuteOpIdx2 = commuteOperandsForFold(MI, OpNum);
+    if (CommuteOpIdx2 == OpNum) {
+      printFailMsgforFold(MI, OpNum);
       return nullptr;
     }
+    // Attempt to fold with the commuted version of the instruction.
+    NewMI = foldMemoryOperandImpl(MF, MI, CommuteOpIdx2, MOs, InsertPt, Size,
+                                  Alignment, /*AllowCommute=*/false);
+    if (NewMI)
+      return NewMI;
+    // Folding failed again - undo the commute before returning.
+    commuteInstruction(MI, false, OpNum, CommuteOpIdx2);
   }
 
-  // No fusion
-  if (PrintFailedFusing && !MI.isCopy())
-    dbgs() << "We failed to fuse operand " << OpNum << " in " << MI;
+  printFailMsgforFold(MI, OpNum);
   return nullptr;
 }
 
@@ -7372,6 +7614,10 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
   for (auto Op : Ops) {
     MachineOperand &MO = MI.getOperand(Op);
     auto SubReg = MO.getSubReg();
+    // MOV32r0 is special b/c it's used to clear a 64-bit register too.
+    // (See patterns for MOV32r0 in TD files).
+    if (MI.getOpcode() == X86::MOV32r0 && SubReg == X86::sub_32bit)
+      continue;
     if (SubReg && (MO.isDef() || SubReg == X86::sub_8bit_hi))
       return nullptr;
   }
@@ -7384,12 +7630,21 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
   if (!RI.hasStackRealignment(MF))
     Alignment =
         std::min(Alignment, Subtarget.getFrameLowering()->getStackAlign());
+
+  auto Impl = [&]() {
+    return foldMemoryOperandImpl(MF, MI, Ops[0],
+                                 MachineOperand::CreateFI(FrameIndex), InsertPt,
+                                 Size, Alignment, /*AllowCommute=*/true);
+  };
   if (Ops.size() == 2 && Ops[0] == 0 && Ops[1] == 1) {
     unsigned NewOpc = 0;
     unsigned RCSize = 0;
-    switch (MI.getOpcode()) {
+    unsigned Opc = MI.getOpcode();
+    switch (Opc) {
     default:
-      return nullptr;
+      // NDD can be folded into RMW though its Op0 and Op1 are not tied.
+      return (Subtarget.hasNDD() ? X86::getNonNDVariant(Opc) : 0U) ? Impl()
+                                                                   : nullptr;
     case X86::TEST8rr:
       NewOpc = X86::CMP8ri;
       RCSize = 1;
@@ -7417,9 +7672,7 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
   } else if (Ops.size() != 1)
     return nullptr;
 
-  return foldMemoryOperandImpl(MF, MI, Ops[0],
-                               MachineOperand::CreateFI(FrameIndex), InsertPt,
-                               Size, Alignment, /*AllowCommute=*/true);
+  return Impl();
 }
 
 /// Check if \p LoadMI is a partial register load that we can't fold into \p MI
@@ -7457,8 +7710,8 @@ static bool isNonFoldablePartialRegisterLoad(const MachineInstr &LoadMI,
     case X86::CVTSS2SDrr_Int:
     case X86::VCVTSS2SDrr_Int:
     case X86::VCVTSS2SDZrr_Int:
-    case X86::VCVTSS2SDZrr_Intk:
-    case X86::VCVTSS2SDZrr_Intkz:
+    case X86::VCVTSS2SDZrrk_Int:
+    case X86::VCVTSS2SDZrrkz_Int:
     case X86::CVTSS2SIrr_Int:
     case X86::CVTSS2SI64rr_Int:
     case X86::VCVTSS2SIrr_Int:
@@ -7479,8 +7732,8 @@ static bool isNonFoldablePartialRegisterLoad(const MachineInstr &LoadMI,
     case X86::VRCPSSr_Int:
     case X86::RSQRTSSr_Int:
     case X86::VRSQRTSSr_Int:
-    case X86::ROUNDSSr_Int:
-    case X86::VROUNDSSr_Int:
+    case X86::ROUNDSSri_Int:
+    case X86::VROUNDSSri_Int:
     case X86::COMISSrr_Int:
     case X86::VCOMISSrr_Int:
     case X86::VCOMISSZrr_Int:
@@ -7490,9 +7743,9 @@ static bool isNonFoldablePartialRegisterLoad(const MachineInstr &LoadMI,
     case X86::ADDSSrr_Int:
     case X86::VADDSSrr_Int:
     case X86::VADDSSZrr_Int:
-    case X86::CMPSSrr_Int:
-    case X86::VCMPSSrr_Int:
-    case X86::VCMPSSZrr_Int:
+    case X86::CMPSSrri_Int:
+    case X86::VCMPSSrri_Int:
+    case X86::VCMPSSZrri_Int:
     case X86::DIVSSrr_Int:
     case X86::VDIVSSrr_Int:
     case X86::VDIVSSZrr_Int:
@@ -7511,21 +7764,21 @@ static bool isNonFoldablePartialRegisterLoad(const MachineInstr &LoadMI,
     case X86::SUBSSrr_Int:
     case X86::VSUBSSrr_Int:
     case X86::VSUBSSZrr_Int:
-    case X86::VADDSSZrr_Intk:
-    case X86::VADDSSZrr_Intkz:
-    case X86::VCMPSSZrr_Intk:
-    case X86::VDIVSSZrr_Intk:
-    case X86::VDIVSSZrr_Intkz:
-    case X86::VMAXSSZrr_Intk:
-    case X86::VMAXSSZrr_Intkz:
-    case X86::VMINSSZrr_Intk:
-    case X86::VMINSSZrr_Intkz:
-    case X86::VMULSSZrr_Intk:
-    case X86::VMULSSZrr_Intkz:
-    case X86::VSQRTSSZr_Intk:
-    case X86::VSQRTSSZr_Intkz:
-    case X86::VSUBSSZrr_Intk:
-    case X86::VSUBSSZrr_Intkz:
+    case X86::VADDSSZrrk_Int:
+    case X86::VADDSSZrrkz_Int:
+    case X86::VCMPSSZrrik_Int:
+    case X86::VDIVSSZrrk_Int:
+    case X86::VDIVSSZrrkz_Int:
+    case X86::VMAXSSZrrk_Int:
+    case X86::VMAXSSZrrkz_Int:
+    case X86::VMINSSZrrk_Int:
+    case X86::VMINSSZrrkz_Int:
+    case X86::VMULSSZrrk_Int:
+    case X86::VMULSSZrrkz_Int:
+    case X86::VSQRTSSZrk_Int:
+    case X86::VSQRTSSZrkz_Int:
+    case X86::VSUBSSZrrk_Int:
+    case X86::VSUBSSZrrkz_Int:
     case X86::VFMADDSS4rr_Int:
     case X86::VFNMADDSS4rr_Int:
     case X86::VFMSUBSS4rr_Int:
@@ -7554,35 +7807,35 @@ static bool isNonFoldablePartialRegisterLoad(const MachineInstr &LoadMI,
     case X86::VFNMSUB213SSZr_Int:
     case X86::VFMSUB231SSZr_Int:
     case X86::VFNMSUB231SSZr_Int:
-    case X86::VFMADD132SSZr_Intk:
-    case X86::VFNMADD132SSZr_Intk:
-    case X86::VFMADD213SSZr_Intk:
-    case X86::VFNMADD213SSZr_Intk:
-    case X86::VFMADD231SSZr_Intk:
-    case X86::VFNMADD231SSZr_Intk:
-    case X86::VFMSUB132SSZr_Intk:
-    case X86::VFNMSUB132SSZr_Intk:
-    case X86::VFMSUB213SSZr_Intk:
-    case X86::VFNMSUB213SSZr_Intk:
-    case X86::VFMSUB231SSZr_Intk:
-    case X86::VFNMSUB231SSZr_Intk:
-    case X86::VFMADD132SSZr_Intkz:
-    case X86::VFNMADD132SSZr_Intkz:
-    case X86::VFMADD213SSZr_Intkz:
-    case X86::VFNMADD213SSZr_Intkz:
-    case X86::VFMADD231SSZr_Intkz:
-    case X86::VFNMADD231SSZr_Intkz:
-    case X86::VFMSUB132SSZr_Intkz:
-    case X86::VFNMSUB132SSZr_Intkz:
-    case X86::VFMSUB213SSZr_Intkz:
-    case X86::VFNMSUB213SSZr_Intkz:
-    case X86::VFMSUB231SSZr_Intkz:
-    case X86::VFNMSUB231SSZr_Intkz:
+    case X86::VFMADD132SSZrk_Int:
+    case X86::VFNMADD132SSZrk_Int:
+    case X86::VFMADD213SSZrk_Int:
+    case X86::VFNMADD213SSZrk_Int:
+    case X86::VFMADD231SSZrk_Int:
+    case X86::VFNMADD231SSZrk_Int:
+    case X86::VFMSUB132SSZrk_Int:
+    case X86::VFNMSUB132SSZrk_Int:
+    case X86::VFMSUB213SSZrk_Int:
+    case X86::VFNMSUB213SSZrk_Int:
+    case X86::VFMSUB231SSZrk_Int:
+    case X86::VFNMSUB231SSZrk_Int:
+    case X86::VFMADD132SSZrkz_Int:
+    case X86::VFNMADD132SSZrkz_Int:
+    case X86::VFMADD213SSZrkz_Int:
+    case X86::VFNMADD213SSZrkz_Int:
+    case X86::VFMADD231SSZrkz_Int:
+    case X86::VFNMADD231SSZrkz_Int:
+    case X86::VFMSUB132SSZrkz_Int:
+    case X86::VFNMSUB132SSZrkz_Int:
+    case X86::VFMSUB213SSZrkz_Int:
+    case X86::VFNMSUB213SSZrkz_Int:
+    case X86::VFMSUB231SSZrkz_Int:
+    case X86::VFNMSUB231SSZrkz_Int:
     case X86::VFIXUPIMMSSZrri:
     case X86::VFIXUPIMMSSZrrik:
     case X86::VFIXUPIMMSSZrrikz:
-    case X86::VFPCLASSSSZrr:
-    case X86::VFPCLASSSSZrrk:
+    case X86::VFPCLASSSSZri:
+    case X86::VFPCLASSSSZrik:
     case X86::VGETEXPSSZr:
     case X86::VGETEXPSSZrk:
     case X86::VGETEXPSSZrkz:
@@ -7601,9 +7854,9 @@ static bool isNonFoldablePartialRegisterLoad(const MachineInstr &LoadMI,
     case X86::VREDUCESSZrri:
     case X86::VREDUCESSZrrik:
     case X86::VREDUCESSZrrikz:
-    case X86::VRNDSCALESSZr_Int:
-    case X86::VRNDSCALESSZr_Intk:
-    case X86::VRNDSCALESSZr_Intkz:
+    case X86::VRNDSCALESSZrri_Int:
+    case X86::VRNDSCALESSZrrik_Int:
+    case X86::VRNDSCALESSZrrikz_Int:
     case X86::VRSQRT14SSZrr:
     case X86::VRSQRT14SSZrrk:
     case X86::VRSQRT14SSZrrkz:
@@ -7630,8 +7883,8 @@ static bool isNonFoldablePartialRegisterLoad(const MachineInstr &LoadMI,
     case X86::CVTSD2SSrr_Int:
     case X86::VCVTSD2SSrr_Int:
     case X86::VCVTSD2SSZrr_Int:
-    case X86::VCVTSD2SSZrr_Intk:
-    case X86::VCVTSD2SSZrr_Intkz:
+    case X86::VCVTSD2SSZrrk_Int:
+    case X86::VCVTSD2SSZrrkz_Int:
     case X86::CVTSD2SIrr_Int:
     case X86::CVTSD2SI64rr_Int:
     case X86::VCVTSD2SIrr_Int:
@@ -7648,8 +7901,8 @@ static bool isNonFoldablePartialRegisterLoad(const MachineInstr &LoadMI,
     case X86::VCVTSD2USI64Zrr_Int:
     case X86::VCVTTSD2USIZrr_Int:
     case X86::VCVTTSD2USI64Zrr_Int:
-    case X86::ROUNDSDr_Int:
-    case X86::VROUNDSDr_Int:
+    case X86::ROUNDSDri_Int:
+    case X86::VROUNDSDri_Int:
     case X86::COMISDrr_Int:
     case X86::VCOMISDrr_Int:
     case X86::VCOMISDZrr_Int:
@@ -7659,9 +7912,9 @@ static bool isNonFoldablePartialRegisterLoad(const MachineInstr &LoadMI,
     case X86::ADDSDrr_Int:
     case X86::VADDSDrr_Int:
     case X86::VADDSDZrr_Int:
-    case X86::CMPSDrr_Int:
-    case X86::VCMPSDrr_Int:
-    case X86::VCMPSDZrr_Int:
+    case X86::CMPSDrri_Int:
+    case X86::VCMPSDrri_Int:
+    case X86::VCMPSDZrri_Int:
     case X86::DIVSDrr_Int:
     case X86::VDIVSDrr_Int:
     case X86::VDIVSDZrr_Int:
@@ -7680,21 +7933,21 @@ static bool isNonFoldablePartialRegisterLoad(const MachineInstr &LoadMI,
     case X86::SUBSDrr_Int:
     case X86::VSUBSDrr_Int:
     case X86::VSUBSDZrr_Int:
-    case X86::VADDSDZrr_Intk:
-    case X86::VADDSDZrr_Intkz:
-    case X86::VCMPSDZrr_Intk:
-    case X86::VDIVSDZrr_Intk:
-    case X86::VDIVSDZrr_Intkz:
-    case X86::VMAXSDZrr_Intk:
-    case X86::VMAXSDZrr_Intkz:
-    case X86::VMINSDZrr_Intk:
-    case X86::VMINSDZrr_Intkz:
-    case X86::VMULSDZrr_Intk:
-    case X86::VMULSDZrr_Intkz:
-    case X86::VSQRTSDZr_Intk:
-    case X86::VSQRTSDZr_Intkz:
-    case X86::VSUBSDZrr_Intk:
-    case X86::VSUBSDZrr_Intkz:
+    case X86::VADDSDZrrk_Int:
+    case X86::VADDSDZrrkz_Int:
+    case X86::VCMPSDZrrik_Int:
+    case X86::VDIVSDZrrk_Int:
+    case X86::VDIVSDZrrkz_Int:
+    case X86::VMAXSDZrrk_Int:
+    case X86::VMAXSDZrrkz_Int:
+    case X86::VMINSDZrrk_Int:
+    case X86::VMINSDZrrkz_Int:
+    case X86::VMULSDZrrk_Int:
+    case X86::VMULSDZrrkz_Int:
+    case X86::VSQRTSDZrk_Int:
+    case X86::VSQRTSDZrkz_Int:
+    case X86::VSUBSDZrrk_Int:
+    case X86::VSUBSDZrrkz_Int:
     case X86::VFMADDSD4rr_Int:
     case X86::VFNMADDSD4rr_Int:
     case X86::VFMSUBSD4rr_Int:
@@ -7723,35 +7976,35 @@ static bool isNonFoldablePartialRegisterLoad(const MachineInstr &LoadMI,
     case X86::VFNMSUB213SDZr_Int:
     case X86::VFMSUB231SDZr_Int:
     case X86::VFNMSUB231SDZr_Int:
-    case X86::VFMADD132SDZr_Intk:
-    case X86::VFNMADD132SDZr_Intk:
-    case X86::VFMADD213SDZr_Intk:
-    case X86::VFNMADD213SDZr_Intk:
-    case X86::VFMADD231SDZr_Intk:
-    case X86::VFNMADD231SDZr_Intk:
-    case X86::VFMSUB132SDZr_Intk:
-    case X86::VFNMSUB132SDZr_Intk:
-    case X86::VFMSUB213SDZr_Intk:
-    case X86::VFNMSUB213SDZr_Intk:
-    case X86::VFMSUB231SDZr_Intk:
-    case X86::VFNMSUB231SDZr_Intk:
-    case X86::VFMADD132SDZr_Intkz:
-    case X86::VFNMADD132SDZr_Intkz:
-    case X86::VFMADD213SDZr_Intkz:
-    case X86::VFNMADD213SDZr_Intkz:
-    case X86::VFMADD231SDZr_Intkz:
-    case X86::VFNMADD231SDZr_Intkz:
-    case X86::VFMSUB132SDZr_Intkz:
-    case X86::VFNMSUB132SDZr_Intkz:
-    case X86::VFMSUB213SDZr_Intkz:
-    case X86::VFNMSUB213SDZr_Intkz:
-    case X86::VFMSUB231SDZr_Intkz:
-    case X86::VFNMSUB231SDZr_Intkz:
+    case X86::VFMADD132SDZrk_Int:
+    case X86::VFNMADD132SDZrk_Int:
+    case X86::VFMADD213SDZrk_Int:
+    case X86::VFNMADD213SDZrk_Int:
+    case X86::VFMADD231SDZrk_Int:
+    case X86::VFNMADD231SDZrk_Int:
+    case X86::VFMSUB132SDZrk_Int:
+    case X86::VFNMSUB132SDZrk_Int:
+    case X86::VFMSUB213SDZrk_Int:
+    case X86::VFNMSUB213SDZrk_Int:
+    case X86::VFMSUB231SDZrk_Int:
+    case X86::VFNMSUB231SDZrk_Int:
+    case X86::VFMADD132SDZrkz_Int:
+    case X86::VFNMADD132SDZrkz_Int:
+    case X86::VFMADD213SDZrkz_Int:
+    case X86::VFNMADD213SDZrkz_Int:
+    case X86::VFMADD231SDZrkz_Int:
+    case X86::VFNMADD231SDZrkz_Int:
+    case X86::VFMSUB132SDZrkz_Int:
+    case X86::VFNMSUB132SDZrkz_Int:
+    case X86::VFMSUB213SDZrkz_Int:
+    case X86::VFNMSUB213SDZrkz_Int:
+    case X86::VFMSUB231SDZrkz_Int:
+    case X86::VFNMSUB231SDZrkz_Int:
     case X86::VFIXUPIMMSDZrri:
     case X86::VFIXUPIMMSDZrrik:
     case X86::VFIXUPIMMSDZrrikz:
-    case X86::VFPCLASSSDZrr:
-    case X86::VFPCLASSSDZrrk:
+    case X86::VFPCLASSSDZri:
+    case X86::VFPCLASSSDZrik:
     case X86::VGETEXPSDZr:
     case X86::VGETEXPSDZrk:
     case X86::VGETEXPSDZrkz:
@@ -7770,9 +8023,9 @@ static bool isNonFoldablePartialRegisterLoad(const MachineInstr &LoadMI,
     case X86::VREDUCESDZrri:
     case X86::VREDUCESDZrrik:
     case X86::VREDUCESDZrrikz:
-    case X86::VRNDSCALESDZr_Int:
-    case X86::VRNDSCALESDZr_Intk:
-    case X86::VRNDSCALESDZr_Intkz:
+    case X86::VRNDSCALESDZrri_Int:
+    case X86::VRNDSCALESDZrrik_Int:
+    case X86::VRNDSCALESDZrrikz_Int:
     case X86::VRSQRT14SDZrr:
     case X86::VRSQRT14SDZrrk:
     case X86::VRSQRT14SDZrrkz:
@@ -7794,25 +8047,25 @@ static bool isNonFoldablePartialRegisterLoad(const MachineInstr &LoadMI,
     // instruction isn't scalar (SH).
     switch (UserOpc) {
     case X86::VADDSHZrr_Int:
-    case X86::VCMPSHZrr_Int:
+    case X86::VCMPSHZrri_Int:
     case X86::VDIVSHZrr_Int:
     case X86::VMAXSHZrr_Int:
     case X86::VMINSHZrr_Int:
     case X86::VMULSHZrr_Int:
     case X86::VSUBSHZrr_Int:
-    case X86::VADDSHZrr_Intk:
-    case X86::VADDSHZrr_Intkz:
-    case X86::VCMPSHZrr_Intk:
-    case X86::VDIVSHZrr_Intk:
-    case X86::VDIVSHZrr_Intkz:
-    case X86::VMAXSHZrr_Intk:
-    case X86::VMAXSHZrr_Intkz:
-    case X86::VMINSHZrr_Intk:
-    case X86::VMINSHZrr_Intkz:
-    case X86::VMULSHZrr_Intk:
-    case X86::VMULSHZrr_Intkz:
-    case X86::VSUBSHZrr_Intk:
-    case X86::VSUBSHZrr_Intkz:
+    case X86::VADDSHZrrk_Int:
+    case X86::VADDSHZrrkz_Int:
+    case X86::VCMPSHZrrik_Int:
+    case X86::VDIVSHZrrk_Int:
+    case X86::VDIVSHZrrkz_Int:
+    case X86::VMAXSHZrrk_Int:
+    case X86::VMAXSHZrrkz_Int:
+    case X86::VMINSHZrrk_Int:
+    case X86::VMINSHZrrkz_Int:
+    case X86::VMULSHZrrk_Int:
+    case X86::VMULSHZrrkz_Int:
+    case X86::VSUBSHZrrk_Int:
+    case X86::VSUBSHZrrkz_Int:
     case X86::VFMADD132SHZr_Int:
     case X86::VFNMADD132SHZr_Int:
     case X86::VFMADD213SHZr_Int:
@@ -7825,30 +8078,30 @@ static bool isNonFoldablePartialRegisterLoad(const MachineInstr &LoadMI,
     case X86::VFNMSUB213SHZr_Int:
     case X86::VFMSUB231SHZr_Int:
     case X86::VFNMSUB231SHZr_Int:
-    case X86::VFMADD132SHZr_Intk:
-    case X86::VFNMADD132SHZr_Intk:
-    case X86::VFMADD213SHZr_Intk:
-    case X86::VFNMADD213SHZr_Intk:
-    case X86::VFMADD231SHZr_Intk:
-    case X86::VFNMADD231SHZr_Intk:
-    case X86::VFMSUB132SHZr_Intk:
-    case X86::VFNMSUB132SHZr_Intk:
-    case X86::VFMSUB213SHZr_Intk:
-    case X86::VFNMSUB213SHZr_Intk:
-    case X86::VFMSUB231SHZr_Intk:
-    case X86::VFNMSUB231SHZr_Intk:
-    case X86::VFMADD132SHZr_Intkz:
-    case X86::VFNMADD132SHZr_Intkz:
-    case X86::VFMADD213SHZr_Intkz:
-    case X86::VFNMADD213SHZr_Intkz:
-    case X86::VFMADD231SHZr_Intkz:
-    case X86::VFNMADD231SHZr_Intkz:
-    case X86::VFMSUB132SHZr_Intkz:
-    case X86::VFNMSUB132SHZr_Intkz:
-    case X86::VFMSUB213SHZr_Intkz:
-    case X86::VFNMSUB213SHZr_Intkz:
-    case X86::VFMSUB231SHZr_Intkz:
-    case X86::VFNMSUB231SHZr_Intkz:
+    case X86::VFMADD132SHZrk_Int:
+    case X86::VFNMADD132SHZrk_Int:
+    case X86::VFMADD213SHZrk_Int:
+    case X86::VFNMADD213SHZrk_Int:
+    case X86::VFMADD231SHZrk_Int:
+    case X86::VFNMADD231SHZrk_Int:
+    case X86::VFMSUB132SHZrk_Int:
+    case X86::VFNMSUB132SHZrk_Int:
+    case X86::VFMSUB213SHZrk_Int:
+    case X86::VFNMSUB213SHZrk_Int:
+    case X86::VFMSUB231SHZrk_Int:
+    case X86::VFNMSUB231SHZrk_Int:
+    case X86::VFMADD132SHZrkz_Int:
+    case X86::VFNMADD132SHZrkz_Int:
+    case X86::VFMADD213SHZrkz_Int:
+    case X86::VFNMADD213SHZrkz_Int:
+    case X86::VFMADD231SHZrkz_Int:
+    case X86::VFNMADD231SHZrkz_Int:
+    case X86::VFMSUB132SHZrkz_Int:
+    case X86::VFNMSUB132SHZrkz_Int:
+    case X86::VFMSUB213SHZrkz_Int:
+    case X86::VFNMSUB213SHZrkz_Int:
+    case X86::VFMSUB231SHZrkz_Int:
+    case X86::VFNMSUB231SHZrkz_Int:
       return false;
     default:
       return true;
@@ -8063,6 +8316,39 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
     MOs.push_back(MachineOperand::CreateReg(0, false));
     break;
   }
+  case X86::VPBROADCASTBZ128rm:
+  case X86::VPBROADCASTBZ256rm:
+  case X86::VPBROADCASTBZrm:
+  case X86::VBROADCASTF32X2Z256rm:
+  case X86::VBROADCASTF32X2Zrm:
+  case X86::VBROADCASTI32X2Z128rm:
+  case X86::VBROADCASTI32X2Z256rm:
+  case X86::VBROADCASTI32X2Zrm:
+    // No instructions currently fuse with 8bits or 32bits x 2.
+    return nullptr;
+
+#define FOLD_BROADCAST(SIZE)                                                   \
+  MOs.append(LoadMI.operands_begin() + NumOps - X86::AddrNumOperands,          \
+             LoadMI.operands_begin() + NumOps);                                \
+  return foldMemoryBroadcast(MF, MI, Ops[0], MOs, InsertPt, /*Size=*/SIZE,     \
+                             /*AllowCommute=*/true);
+  case X86::VPBROADCASTWZ128rm:
+  case X86::VPBROADCASTWZ256rm:
+  case X86::VPBROADCASTWZrm:
+    FOLD_BROADCAST(16);
+  case X86::VPBROADCASTDZ128rm:
+  case X86::VPBROADCASTDZ256rm:
+  case X86::VPBROADCASTDZrm:
+  case X86::VBROADCASTSSZ128rm:
+  case X86::VBROADCASTSSZ256rm:
+  case X86::VBROADCASTSSZrm:
+    FOLD_BROADCAST(32);
+  case X86::VPBROADCASTQZ128rm:
+  case X86::VPBROADCASTQZ256rm:
+  case X86::VPBROADCASTQZrm:
+  case X86::VBROADCASTSDZ256rm:
+  case X86::VBROADCASTSDZrm:
+    FOLD_BROADCAST(64);
   default: {
     if (isNonFoldablePartialRegisterLoad(LoadMI, MI, MF))
       return nullptr;
@@ -8075,6 +8361,38 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
   }
   return foldMemoryOperandImpl(MF, MI, Ops[0], MOs, InsertPt,
                                /*Size=*/0, Alignment, /*AllowCommute=*/true);
+}
+
+MachineInstr *
+X86InstrInfo::foldMemoryBroadcast(MachineFunction &MF, MachineInstr &MI,
+                                  unsigned OpNum, ArrayRef<MachineOperand> MOs,
+                                  MachineBasicBlock::iterator InsertPt,
+                                  unsigned BitsSize, bool AllowCommute) const {
+
+  if (auto *I = lookupBroadcastFoldTable(MI.getOpcode(), OpNum))
+    return matchBroadcastSize(*I, BitsSize)
+               ? fuseInst(MF, I->DstOp, OpNum, MOs, InsertPt, MI, *this)
+               : nullptr;
+
+  if (AllowCommute) {
+    // If the instruction and target operand are commutable, commute the
+    // instruction and try again.
+    unsigned CommuteOpIdx2 = commuteOperandsForFold(MI, OpNum);
+    if (CommuteOpIdx2 == OpNum) {
+      printFailMsgforFold(MI, OpNum);
+      return nullptr;
+    }
+    MachineInstr *NewMI =
+        foldMemoryBroadcast(MF, MI, CommuteOpIdx2, MOs, InsertPt, BitsSize,
+                            /*AllowCommute=*/false);
+    if (NewMI)
+      return NewMI;
+    // Folding failed again - undo the commute before returning.
+    commuteInstruction(MI, false, OpNum, CommuteOpIdx2);
+  }
+
+  printFailMsgforFold(MI, OpNum);
+  return nullptr;
 }
 
 static SmallVector<MachineMemOperand *, 2>
@@ -8150,6 +8468,8 @@ static unsigned getBroadcastOpcode(const X86FoldTableEntry *I,
                         VPBROADCASTDZrm)
     CASE_BCAST_TYPE_OPC(TB_BCAST_Q, VPBROADCASTQZ128rm, VPBROADCASTQZ256rm,
                         VPBROADCASTQZrm)
+    CASE_BCAST_TYPE_OPC(TB_BCAST_SH, VPBROADCASTWZ128rm, VPBROADCASTWZ256rm,
+                        VPBROADCASTWZrm)
     CASE_BCAST_TYPE_OPC(TB_BCAST_SS, VBROADCASTSSZ128rm, VBROADCASTSSZ256rm,
                         VBROADCASTSSZrm)
     CASE_BCAST_TYPE_OPC(TB_BCAST_SD, VMOVDDUPZ128rm, VBROADCASTSDZ256rm,
@@ -8158,7 +8478,7 @@ static unsigned getBroadcastOpcode(const X86FoldTableEntry *I,
 }
 
 bool X86InstrInfo::unfoldMemoryOperand(
-    MachineFunction &MF, MachineInstr &MI, unsigned Reg, bool UnfoldLoad,
+    MachineFunction &MF, MachineInstr &MI, Register Reg, bool UnfoldLoad,
     bool UnfoldStore, SmallVectorImpl<MachineInstr *> &NewMIs) const {
   const X86FoldTableEntry *I = lookupUnfoldTable(MI.getOpcode());
   if (I == nullptr)
@@ -8641,6 +8961,11 @@ bool X86InstrInfo::isSchedulingBoundary(const MachineInstr &MI,
       Opcode == X86::PLDTILECFGV)
     return true;
 
+  // Frame setup and destroy can't be scheduled around.
+  if (MI.getFlag(MachineInstr::FrameSetup) ||
+      MI.getFlag(MachineInstr::FrameDestroy))
+    return true;
+
   return TargetInstrInfo::isSchedulingBoundary(MI, MBB, MF);
 }
 
@@ -8667,10 +8992,10 @@ bool X86InstrInfo::isSafeToMoveRegClassDefs(
 ///
 /// TODO: Eliminate this and move the code to X86MachineFunctionInfo.
 ///
-unsigned X86InstrInfo::getGlobalBaseReg(MachineFunction *MF) const {
+Register X86InstrInfo::getGlobalBaseReg(MachineFunction *MF) const {
   X86MachineFunctionInfo *X86FI = MF->getInfo<X86MachineFunctionInfo>();
   Register GlobalBaseReg = X86FI->getGlobalBaseReg();
-  if (GlobalBaseReg != 0)
+  if (GlobalBaseReg)
     return GlobalBaseReg;
 
   // Create the register. The code to initialize it is inserted
@@ -9228,25 +9553,25 @@ bool X86InstrInfo::isHighLatencyDef(int opc) const {
   case X86::VDIVSDZrm:
   case X86::VDIVSDZrr:
   case X86::VDIVSDZrm_Int:
-  case X86::VDIVSDZrm_Intk:
-  case X86::VDIVSDZrm_Intkz:
+  case X86::VDIVSDZrmk_Int:
+  case X86::VDIVSDZrmkz_Int:
   case X86::VDIVSDZrr_Int:
-  case X86::VDIVSDZrr_Intk:
-  case X86::VDIVSDZrr_Intkz:
+  case X86::VDIVSDZrrk_Int:
+  case X86::VDIVSDZrrkz_Int:
   case X86::VDIVSDZrrb_Int:
-  case X86::VDIVSDZrrb_Intk:
-  case X86::VDIVSDZrrb_Intkz:
+  case X86::VDIVSDZrrbk_Int:
+  case X86::VDIVSDZrrbkz_Int:
   case X86::VDIVSSZrm:
   case X86::VDIVSSZrr:
   case X86::VDIVSSZrm_Int:
-  case X86::VDIVSSZrm_Intk:
-  case X86::VDIVSSZrm_Intkz:
+  case X86::VDIVSSZrmk_Int:
+  case X86::VDIVSSZrmkz_Int:
   case X86::VDIVSSZrr_Int:
-  case X86::VDIVSSZrr_Intk:
-  case X86::VDIVSSZrr_Intkz:
+  case X86::VDIVSSZrrk_Int:
+  case X86::VDIVSSZrrkz_Int:
   case X86::VDIVSSZrrb_Int:
-  case X86::VDIVSSZrrb_Intk:
-  case X86::VDIVSSZrrb_Intkz:
+  case X86::VDIVSSZrrbk_Int:
+  case X86::VDIVSSZrrbkz_Int:
   case X86::VSQRTPDZ128m:
   case X86::VSQRTPDZ128mb:
   case X86::VSQRTPDZ128mbk:
@@ -9309,26 +9634,26 @@ bool X86InstrInfo::isHighLatencyDef(int opc) const {
   case X86::VSQRTPSZrkz:
   case X86::VSQRTSDZm:
   case X86::VSQRTSDZm_Int:
-  case X86::VSQRTSDZm_Intk:
-  case X86::VSQRTSDZm_Intkz:
+  case X86::VSQRTSDZmk_Int:
+  case X86::VSQRTSDZmkz_Int:
   case X86::VSQRTSDZr:
   case X86::VSQRTSDZr_Int:
-  case X86::VSQRTSDZr_Intk:
-  case X86::VSQRTSDZr_Intkz:
+  case X86::VSQRTSDZrk_Int:
+  case X86::VSQRTSDZrkz_Int:
   case X86::VSQRTSDZrb_Int:
-  case X86::VSQRTSDZrb_Intk:
-  case X86::VSQRTSDZrb_Intkz:
+  case X86::VSQRTSDZrbk_Int:
+  case X86::VSQRTSDZrbkz_Int:
   case X86::VSQRTSSZm:
   case X86::VSQRTSSZm_Int:
-  case X86::VSQRTSSZm_Intk:
-  case X86::VSQRTSSZm_Intkz:
+  case X86::VSQRTSSZmk_Int:
+  case X86::VSQRTSSZmkz_Int:
   case X86::VSQRTSSZr:
   case X86::VSQRTSSZr_Int:
-  case X86::VSQRTSSZr_Intk:
-  case X86::VSQRTSSZr_Intkz:
+  case X86::VSQRTSSZrk_Int:
+  case X86::VSQRTSSZrkz_Int:
   case X86::VSQRTSSZrb_Int:
-  case X86::VSQRTSSZrb_Intk:
-  case X86::VSQRTSSZrb_Intkz:
+  case X86::VSQRTSSZrbk_Int:
+  case X86::VSQRTSSZrbkz_Int:
 
   case X86::VGATHERDPDYrm:
   case X86::VGATHERDPDZ128rm:
@@ -9434,7 +9759,8 @@ bool X86InstrInfo::hasReassociableOperands(const MachineInstr &Inst,
   // not change anything because rearranging the operands could affect other
   // instructions that depend on the exact status flags (zero, sign, etc.)
   // that are set by using these particular operands with this operation.
-  const MachineOperand *FlagDef = Inst.findRegisterDefOperand(X86::EFLAGS);
+  const MachineOperand *FlagDef =
+      Inst.findRegisterDefOperand(X86::EFLAGS, /*TRI=*/nullptr);
   assert((Inst.getNumDefs() == 1 || FlagDef) && "Implicit def isn't flags?");
   if (FlagDef && !FlagDef->isDead())
     return false;
@@ -9551,22 +9877,22 @@ bool X86InstrInfo::isAssociativeAndCommutative(const MachineInstr &Inst,
   case X86::VXORPSZ256rr:
   case X86::VXORPDZrr:
   case X86::VXORPSZrr:
-  case X86::KADDBrr:
-  case X86::KADDWrr:
-  case X86::KADDDrr:
-  case X86::KADDQrr:
-  case X86::KANDBrr:
-  case X86::KANDWrr:
-  case X86::KANDDrr:
-  case X86::KANDQrr:
-  case X86::KORBrr:
-  case X86::KORWrr:
-  case X86::KORDrr:
-  case X86::KORQrr:
-  case X86::KXORBrr:
-  case X86::KXORWrr:
-  case X86::KXORDrr:
-  case X86::KXORQrr:
+  case X86::KADDBkk:
+  case X86::KADDWkk:
+  case X86::KADDDkk:
+  case X86::KADDQkk:
+  case X86::KANDBkk:
+  case X86::KANDWkk:
+  case X86::KANDDkk:
+  case X86::KANDQkk:
+  case X86::KORBkk:
+  case X86::KORWkk:
+  case X86::KORDkk:
+  case X86::KORQkk:
+  case X86::KXORBkk:
+  case X86::KXORWkk:
+  case X86::KXORDkk:
+  case X86::KXORQkk:
   case X86::VPADDBrr:
   case X86::VPADDWrr:
   case X86::VPADDDrr:
@@ -9956,8 +10282,10 @@ void X86InstrInfo::setSpecialOperandAttr(MachineInstr &OldMI1,
                                          MachineInstr &NewMI1,
                                          MachineInstr &NewMI2) const {
   // Integer instructions may define an implicit EFLAGS dest register operand.
-  MachineOperand *OldFlagDef1 = OldMI1.findRegisterDefOperand(X86::EFLAGS);
-  MachineOperand *OldFlagDef2 = OldMI2.findRegisterDefOperand(X86::EFLAGS);
+  MachineOperand *OldFlagDef1 =
+      OldMI1.findRegisterDefOperand(X86::EFLAGS, /*TRI=*/nullptr);
+  MachineOperand *OldFlagDef2 =
+      OldMI2.findRegisterDefOperand(X86::EFLAGS, /*TRI=*/nullptr);
 
   assert(!OldFlagDef1 == !OldFlagDef2 &&
          "Unexpected instruction type for reassociation");
@@ -9968,8 +10296,10 @@ void X86InstrInfo::setSpecialOperandAttr(MachineInstr &OldMI1,
   assert(OldFlagDef1->isDead() && OldFlagDef2->isDead() &&
          "Must have dead EFLAGS operand in reassociable instruction");
 
-  MachineOperand *NewFlagDef1 = NewMI1.findRegisterDefOperand(X86::EFLAGS);
-  MachineOperand *NewFlagDef2 = NewMI2.findRegisterDefOperand(X86::EFLAGS);
+  MachineOperand *NewFlagDef1 =
+      NewMI1.findRegisterDefOperand(X86::EFLAGS, /*TRI=*/nullptr);
+  MachineOperand *NewFlagDef2 =
+      NewMI2.findRegisterDefOperand(X86::EFLAGS, /*TRI=*/nullptr);
 
   assert(NewFlagDef1 && NewFlagDef2 &&
          "Unexpected operand in reassociable instruction");
@@ -10135,8 +10465,9 @@ struct LDTLSCleanup : public MachineFunctionPass {
       return false;
     }
 
-    MachineDominatorTree *DT = &getAnalysis<MachineDominatorTree>();
-    return VisitNode(DT->getRootNode(), 0);
+    MachineDominatorTree *DT =
+        &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
+    return VisitNode(DT->getRootNode(), Register());
   }
 
   // Visit the dominator subtree rooted at Node in pre-order.
@@ -10144,7 +10475,7 @@ struct LDTLSCleanup : public MachineFunctionPass {
   // TLS_base_addr instructions. Otherwise, create the register
   // when the first such instruction is seen, and then use it
   // as we encounter more instructions.
-  bool VisitNode(MachineDomTreeNode *Node, unsigned TLSBaseAddrReg) {
+  bool VisitNode(MachineDomTreeNode *Node, Register TLSBaseAddrReg) {
     MachineBasicBlock *BB = Node->getBlock();
     bool Changed = false;
 
@@ -10176,7 +10507,7 @@ struct LDTLSCleanup : public MachineFunctionPass {
   // Replace the TLS_base_addr instruction I with a copy from
   // TLSBaseAddrReg, returning the new instruction.
   MachineInstr *ReplaceTLSBaseAddrCall(MachineInstr &I,
-                                       unsigned TLSBaseAddrReg) {
+                                       Register TLSBaseAddrReg) {
     MachineFunction *MF = I.getParent()->getParent();
     const X86Subtarget &STI = MF->getSubtarget<X86Subtarget>();
     const bool is64Bit = STI.is64Bit();
@@ -10196,7 +10527,7 @@ struct LDTLSCleanup : public MachineFunctionPass {
 
   // Create a virtual register in *TLSBaseAddrReg, and populate it by
   // inserting a copy instruction after I. Returns the new instruction.
-  MachineInstr *SetRegister(MachineInstr &I, unsigned *TLSBaseAddrReg) {
+  MachineInstr *SetRegister(MachineInstr &I, Register *TLSBaseAddrReg) {
     MachineFunction *MF = I.getParent()->getParent();
     const X86Subtarget &STI = MF->getSubtarget<X86Subtarget>();
     const bool is64Bit = STI.is64Bit();
@@ -10222,7 +10553,7 @@ struct LDTLSCleanup : public MachineFunctionPass {
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
-    AU.addRequired<MachineDominatorTree>();
+    AU.addRequired<MachineDominatorTreeWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 };
@@ -10263,9 +10594,11 @@ FunctionPass *llvm::createCleanupLocalDynamicTLSPass() {
 ///
 enum MachineOutlinerClass { MachineOutlinerDefault, MachineOutlinerTailCall };
 
-std::optional<outliner::OutlinedFunction>
+std::optional<std::unique_ptr<outliner::OutlinedFunction>>
 X86InstrInfo::getOutliningCandidateInfo(
-    std::vector<outliner::Candidate> &RepeatedSequenceLocs) const {
+    const MachineModuleInfo &MMI,
+    std::vector<outliner::Candidate> &RepeatedSequenceLocs,
+    unsigned MinRepeats) const {
   unsigned SequenceSize = 0;
   for (auto &MI : RepeatedSequenceLocs[0]) {
     // FIXME: x86 doesn't implement getInstSizeInBytes, so
@@ -10302,9 +10635,10 @@ X86InstrInfo::getOutliningCandidateInfo(
     for (outliner::Candidate &C : RepeatedSequenceLocs)
       C.setCallInfo(MachineOutlinerTailCall, 1);
 
-    return outliner::OutlinedFunction(RepeatedSequenceLocs, SequenceSize,
-                                      0, // Number of bytes to emit frame.
-                                      MachineOutlinerTailCall // Type of frame.
+    return std::make_unique<outliner::OutlinedFunction>(
+        RepeatedSequenceLocs, SequenceSize,
+        0,                      // Number of bytes to emit frame.
+        MachineOutlinerTailCall // Type of frame.
     );
   }
 
@@ -10314,8 +10648,8 @@ X86InstrInfo::getOutliningCandidateInfo(
   for (outliner::Candidate &C : RepeatedSequenceLocs)
     C.setCallInfo(MachineOutlinerDefault, 1);
 
-  return outliner::OutlinedFunction(RepeatedSequenceLocs, SequenceSize, 1,
-                                    MachineOutlinerDefault);
+  return std::make_unique<outliner::OutlinedFunction>(
+      RepeatedSequenceLocs, SequenceSize, 1, MachineOutlinerDefault);
 }
 
 bool X86InstrInfo::isFunctionSafeToOutlineFrom(
@@ -10341,7 +10675,8 @@ bool X86InstrInfo::isFunctionSafeToOutlineFrom(
 }
 
 outliner::InstrType
-X86InstrInfo::getOutliningTypeImpl(MachineBasicBlock::iterator &MIT,
+X86InstrInfo::getOutliningTypeImpl(const MachineModuleInfo &MMI,
+                                   MachineBasicBlock::iterator &MIT,
                                    unsigned Flags) const {
   MachineInstr &MI = *MIT;
 
@@ -10466,7 +10801,7 @@ void X86InstrInfo::buildClearRegister(Register Reg, MachineBasicBlock &MBB,
       return;
 
     // KXOR is safe to use because it doesn't affect flags.
-    unsigned Op = ST.hasBWI() ? X86::KXORQrr : X86::KXORWrr;
+    unsigned Op = ST.hasBWI() ? X86::KXORQkk : X86::KXORWkk;
     BuildMI(MBB, Iter, DL, get(Op), Reg)
         .addReg(Reg, RegState::Undef)
         .addReg(Reg, RegState::Undef);
@@ -10474,19 +10809,19 @@ void X86InstrInfo::buildClearRegister(Register Reg, MachineBasicBlock &MBB,
 }
 
 bool X86InstrInfo::getMachineCombinerPatterns(
-    MachineInstr &Root, SmallVectorImpl<MachineCombinerPattern> &Patterns,
+    MachineInstr &Root, SmallVectorImpl<unsigned> &Patterns,
     bool DoRegPressureReduce) const {
   unsigned Opc = Root.getOpcode();
   switch (Opc) {
-  default:
-    return TargetInstrInfo::getMachineCombinerPatterns(Root, Patterns,
-                                                       DoRegPressureReduce);
   case X86::VPDPWSSDrr:
   case X86::VPDPWSSDrm:
   case X86::VPDPWSSDYrr:
   case X86::VPDPWSSDYrm: {
-    Patterns.push_back(MachineCombinerPattern::DPWSSD);
-    return true;
+    if (!Subtarget.hasFastDPWSSD()) {
+      Patterns.push_back(X86MachineCombinerPattern::DPWSSD);
+      return true;
+    }
+    break;
   }
   case X86::VPDPWSSDZ128r:
   case X86::VPDPWSSDZ128m:
@@ -10494,18 +10829,22 @@ bool X86InstrInfo::getMachineCombinerPatterns(
   case X86::VPDPWSSDZ256m:
   case X86::VPDPWSSDZr:
   case X86::VPDPWSSDZm: {
-    if (Subtarget.hasBWI())
-      Patterns.push_back(MachineCombinerPattern::DPWSSD);
-    return true;
+   if (Subtarget.hasBWI() && !Subtarget.hasFastDPWSSD()) {
+     Patterns.push_back(X86MachineCombinerPattern::DPWSSD);
+     return true;
+    }
+    break;
   }
   }
+  return TargetInstrInfo::getMachineCombinerPatterns(Root,
+                                                     Patterns, DoRegPressureReduce);
 }
 
 static void
 genAlternativeDpCodeSequence(MachineInstr &Root, const TargetInstrInfo &TII,
                              SmallVectorImpl<MachineInstr *> &InsInstrs,
                              SmallVectorImpl<MachineInstr *> &DelInstrs,
-                             DenseMap<unsigned, unsigned> &InstrIdxForVirtReg) {
+                             DenseMap<Register, unsigned> &InstrIdxForVirtReg) {
   MachineFunction *MF = Root.getMF();
   MachineRegisterInfo &RegInfo = MF->getRegInfo();
 
@@ -10592,17 +10931,17 @@ genAlternativeDpCodeSequence(MachineInstr &Root, const TargetInstrInfo &TII,
 }
 
 void X86InstrInfo::genAlternativeCodeSequence(
-    MachineInstr &Root, MachineCombinerPattern Pattern,
+    MachineInstr &Root, unsigned Pattern,
     SmallVectorImpl<MachineInstr *> &InsInstrs,
     SmallVectorImpl<MachineInstr *> &DelInstrs,
-    DenseMap<unsigned, unsigned> &InstrIdxForVirtReg) const {
+    DenseMap<Register, unsigned> &InstrIdxForVirtReg) const {
   switch (Pattern) {
   default:
     // Reassociate instructions.
     TargetInstrInfo::genAlternativeCodeSequence(Root, Pattern, InsInstrs,
                                                 DelInstrs, InstrIdxForVirtReg);
     return;
-  case MachineCombinerPattern::DPWSSD:
+  case X86MachineCombinerPattern::DPWSSD:
     genAlternativeDpCodeSequence(Root, *this, InsInstrs, DelInstrs,
                                  InstrIdxForVirtReg);
     return;

@@ -13,7 +13,6 @@
 #include "LoongArchAsmBackend.h"
 #include "LoongArchFixupKinds.h"
 #include "llvm/MC/MCAsmInfo.h"
-#include "llvm/MC/MCAsmLayout.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCELFObjectWriter.h"
@@ -71,13 +70,14 @@ LoongArchAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
 
   // Fixup kinds from .reloc directive are like R_LARCH_NONE. They
   // do not require any extra processing.
-  if (Kind >= FirstLiteralRelocationKind)
+  if (unsigned(Kind) >= FirstRelocationKind)
     return MCAsmBackend::getFixupKindInfo(FK_NONE);
 
   if (Kind < FirstTargetFixupKind)
     return MCAsmBackend::getFixupKindInfo(Kind);
 
-  assert(unsigned(Kind - FirstTargetFixupKind) < getNumFixupKinds() &&
+  assert(unsigned(Kind - FirstTargetFixupKind) <
+             LoongArch::NumTargetFixupKinds &&
          "Invalid kind!");
   return Infos[Kind - FirstTargetFixupKind];
 }
@@ -152,10 +152,10 @@ void LoongArchAsmBackend::applyFixup(const MCAssembler &Asm,
   if (!Value)
     return; // Doesn't change encoding.
 
-  MCFixupKind Kind = Fixup.getKind();
-  if (Kind >= FirstLiteralRelocationKind)
+  auto Kind = Fixup.getTargetKind();
+  if (Kind >= FirstRelocationKind)
     return;
-  MCFixupKindInfo Info = getFixupKindInfo(Kind);
+  MCFixupKindInfo Info = getFixupKindInfo(MCFixupKind(Kind));
   MCContext &Ctx = Asm.getContext();
 
   // Fixup leb128 separately.
@@ -206,16 +206,16 @@ bool LoongArchAsmBackend::shouldInsertExtraNopBytesForCodeAlign(
 // addend represent alignment and the other bits of addend represent the
 // maximum number of bytes to emit. The maximum number of bytes is zero
 // means ignore the emit limit.
-bool LoongArchAsmBackend::shouldInsertFixupForCodeAlign(
-    MCAssembler &Asm, const MCAsmLayout &Layout, MCAlignFragment &AF) {
+bool LoongArchAsmBackend::shouldInsertFixupForCodeAlign(MCAssembler &Asm,
+                                                        MCAlignFragment &AF) {
   // Insert the fixup only when linker relaxation enabled.
   if (!AF.getSubtargetInfo()->hasFeature(LoongArch::FeatureRelax))
     return false;
 
   // Calculate total Nops we need to insert. If there are none to insert
   // then simply return.
-  unsigned Count;
-  if (!shouldInsertExtraNopBytesForCodeAlign(AF, Count))
+  unsigned InsertedNopBytes;
+  if (!shouldInsertExtraNopBytesForCodeAlign(AF, InsertedNopBytes))
     return false;
 
   MCSection *Sec = AF.getParent();
@@ -224,21 +224,27 @@ bool LoongArchAsmBackend::shouldInsertFixupForCodeAlign(
   // Create fixup_loongarch_align fixup.
   MCFixup Fixup =
       MCFixup::create(0, Dummy, MCFixupKind(LoongArch::fixup_loongarch_align));
-  const MCSymbolRefExpr *MCSym = getSecToAlignSym()[Sec];
-  if (MCSym == nullptr) {
-    // Create a symbol and make the value of symbol is zero.
-    MCSymbol *Sym = Ctx.createNamedTempSymbol("la-relax-align");
-    Sym->setFragment(&*Sec->getBeginSymbol()->getFragment());
-    Asm.registerSymbol(*Sym);
-    MCSym = MCSymbolRefExpr::create(Sym, Ctx);
-    getSecToAlignSym()[Sec] = MCSym;
-  }
+  unsigned MaxBytesToEmit = AF.getMaxBytesToEmit();
+
+  auto createExtendedValue = [&]() {
+    const MCSymbolRefExpr *MCSym = getSecToAlignSym()[Sec];
+    if (MCSym == nullptr) {
+      // Define a marker symbol at the section with an offset of 0.
+      MCSymbol *Sym = Ctx.createNamedTempSymbol("la-relax-align");
+      Sym->setFragment(&*Sec->getBeginSymbol()->getFragment());
+      Asm.registerSymbol(*Sym);
+      MCSym = MCSymbolRefExpr::create(Sym, Ctx);
+      getSecToAlignSym()[Sec] = MCSym;
+    }
+    return MCValue::get(&MCSym->getSymbol(), nullptr,
+                        MaxBytesToEmit << 8 | Log2(AF.getAlignment()));
+  };
 
   uint64_t FixedValue = 0;
-  unsigned Lo = Log2_64(Count) + 1;
-  unsigned Hi = AF.getMaxBytesToEmit() >= Count ? 0 : AF.getMaxBytesToEmit();
-  MCValue Value = MCValue::get(MCSym, nullptr, Hi << 8 | Lo);
-  Asm.getWriter().recordRelocation(Asm, Layout, &AF, Fixup, Value, FixedValue);
+  MCValue Value = MaxBytesToEmit >= InsertedNopBytes
+                      ? MCValue::get(InsertedNopBytes)
+                      : createExtendedValue();
+  Asm.getWriter().recordRelocation(Asm, &AF, Fixup, Value, FixedValue);
 
   return true;
 }
@@ -247,8 +253,6 @@ bool LoongArchAsmBackend::shouldForceRelocation(const MCAssembler &Asm,
                                                 const MCFixup &Fixup,
                                                 const MCValue &Target,
                                                 const MCSubtargetInfo *STI) {
-  if (Fixup.getKind() >= FirstLiteralRelocationKind)
-    return true;
   switch (Fixup.getTargetKind()) {
   default:
     return STI->hasFeature(LoongArch::FeatureRelax);
@@ -267,47 +271,45 @@ getRelocPairForSize(unsigned Size) {
   default:
     llvm_unreachable("unsupported fixup size");
   case 6:
-    return std::make_pair(
-        MCFixupKind(FirstLiteralRelocationKind + ELF::R_LARCH_ADD6),
-        MCFixupKind(FirstLiteralRelocationKind + ELF::R_LARCH_SUB6));
+    return std::make_pair(MCFixupKind(FirstRelocationKind + ELF::R_LARCH_ADD6),
+                          MCFixupKind(FirstRelocationKind + ELF::R_LARCH_SUB6));
   case 8:
-    return std::make_pair(
-        MCFixupKind(FirstLiteralRelocationKind + ELF::R_LARCH_ADD8),
-        MCFixupKind(FirstLiteralRelocationKind + ELF::R_LARCH_SUB8));
+    return std::make_pair(MCFixupKind(FirstRelocationKind + ELF::R_LARCH_ADD8),
+                          MCFixupKind(FirstRelocationKind + ELF::R_LARCH_SUB8));
   case 16:
     return std::make_pair(
-        MCFixupKind(FirstLiteralRelocationKind + ELF::R_LARCH_ADD16),
-        MCFixupKind(FirstLiteralRelocationKind + ELF::R_LARCH_SUB16));
+        MCFixupKind(FirstRelocationKind + ELF::R_LARCH_ADD16),
+        MCFixupKind(FirstRelocationKind + ELF::R_LARCH_SUB16));
   case 32:
     return std::make_pair(
-        MCFixupKind(FirstLiteralRelocationKind + ELF::R_LARCH_ADD32),
-        MCFixupKind(FirstLiteralRelocationKind + ELF::R_LARCH_SUB32));
+        MCFixupKind(FirstRelocationKind + ELF::R_LARCH_ADD32),
+        MCFixupKind(FirstRelocationKind + ELF::R_LARCH_SUB32));
   case 64:
     return std::make_pair(
-        MCFixupKind(FirstLiteralRelocationKind + ELF::R_LARCH_ADD64),
-        MCFixupKind(FirstLiteralRelocationKind + ELF::R_LARCH_SUB64));
+        MCFixupKind(FirstRelocationKind + ELF::R_LARCH_ADD64),
+        MCFixupKind(FirstRelocationKind + ELF::R_LARCH_SUB64));
   case 128:
     return std::make_pair(
-        MCFixupKind(FirstLiteralRelocationKind + ELF::R_LARCH_ADD_ULEB128),
-        MCFixupKind(FirstLiteralRelocationKind + ELF::R_LARCH_SUB_ULEB128));
+        MCFixupKind(FirstRelocationKind + ELF::R_LARCH_ADD_ULEB128),
+        MCFixupKind(FirstRelocationKind + ELF::R_LARCH_SUB_ULEB128));
   }
 }
 
-std::pair<bool, bool> LoongArchAsmBackend::relaxLEB128(MCLEBFragment &LF,
-                                                       MCAsmLayout &Layout,
+std::pair<bool, bool> LoongArchAsmBackend::relaxLEB128(const MCAssembler &Asm,
+                                                       MCLEBFragment &LF,
                                                        int64_t &Value) const {
   const MCExpr &Expr = LF.getValue();
-  if (LF.isSigned() || !Expr.evaluateKnownAbsolute(Value, Layout))
+  if (LF.isSigned() || !Expr.evaluateKnownAbsolute(Value, Asm))
     return std::make_pair(false, false);
   LF.getFixups().push_back(
       MCFixup::create(0, &Expr, FK_Data_leb128, Expr.getLoc()));
   return std::make_pair(true, true);
 }
 
-bool LoongArchAsmBackend::relaxDwarfLineAddr(MCDwarfLineAddrFragment &DF,
-                                             MCAsmLayout &Layout,
+bool LoongArchAsmBackend::relaxDwarfLineAddr(const MCAssembler &Asm,
+                                             MCDwarfLineAddrFragment &DF,
                                              bool &WasRelaxed) const {
-  MCContext &C = Layout.getAssembler().getContext();
+  MCContext &C = Asm.getContext();
 
   int64_t LineDelta = DF.getLineDelta();
   const MCExpr &AddrDelta = DF.getAddrDelta();
@@ -316,9 +318,9 @@ bool LoongArchAsmBackend::relaxDwarfLineAddr(MCDwarfLineAddrFragment &DF,
   size_t OldSize = Data.size();
 
   int64_t Value;
-  if (AddrDelta.evaluateAsAbsolute(Value, Layout))
+  if (AddrDelta.evaluateAsAbsolute(Value, Asm))
     return false;
-  bool IsAbsolute = AddrDelta.evaluateKnownAbsolute(Value, Layout);
+  bool IsAbsolute = AddrDelta.evaluateKnownAbsolute(Value, Asm);
   assert(IsAbsolute && "CFA with invalid expression");
   (void)IsAbsolute;
 
@@ -372,8 +374,8 @@ bool LoongArchAsmBackend::relaxDwarfLineAddr(MCDwarfLineAddrFragment &DF,
   return true;
 }
 
-bool LoongArchAsmBackend::relaxDwarfCFA(MCDwarfCallFrameFragment &DF,
-                                        MCAsmLayout &Layout,
+bool LoongArchAsmBackend::relaxDwarfCFA(const MCAssembler &Asm,
+                                        MCDwarfCallFrameFragment &DF,
                                         bool &WasRelaxed) const {
   const MCExpr &AddrDelta = DF.getAddrDelta();
   SmallVectorImpl<char> &Data = DF.getContents();
@@ -381,9 +383,9 @@ bool LoongArchAsmBackend::relaxDwarfCFA(MCDwarfCallFrameFragment &DF,
   size_t OldSize = Data.size();
 
   int64_t Value;
-  if (AddrDelta.evaluateAsAbsolute(Value, Layout))
+  if (AddrDelta.evaluateAsAbsolute(Value, Asm))
     return false;
-  bool IsAbsolute = AddrDelta.evaluateKnownAbsolute(Value, Layout);
+  bool IsAbsolute = AddrDelta.evaluateKnownAbsolute(Value, Asm);
   assert(IsAbsolute && "CFA with invalid expression");
   (void)IsAbsolute;
 
@@ -391,10 +393,8 @@ bool LoongArchAsmBackend::relaxDwarfCFA(MCDwarfCallFrameFragment &DF,
   Fixups.clear();
   raw_svector_ostream OS(Data);
 
-  assert(
-      Layout.getAssembler().getContext().getAsmInfo()->getMinInstAlignment() ==
-          1 &&
-      "expected 1-byte alignment");
+  assert(Asm.getContext().getAsmInfo()->getMinInstAlignment() == 1 &&
+         "expected 1-byte alignment");
   if (Value == 0) {
     WasRelaxed = OldSize != Data.size();
     return true;
@@ -445,15 +445,17 @@ bool LoongArchAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
   return true;
 }
 
-bool LoongArchAsmBackend::handleAddSubRelocations(const MCAsmLayout &Layout,
+bool LoongArchAsmBackend::handleAddSubRelocations(const MCAssembler &Asm,
                                                   const MCFragment &F,
                                                   const MCFixup &Fixup,
                                                   const MCValue &Target,
                                                   uint64_t &FixedValue) const {
+  assert(Target.getSpecifier() == 0 &&
+         "relocatable SymA-SymB cannot have relocation specifier");
   std::pair<MCFixupKind, MCFixupKind> FK;
   uint64_t FixedValueA, FixedValueB;
-  const MCSymbol &SA = Target.getSymA()->getSymbol();
-  const MCSymbol &SB = Target.getSymB()->getSymbol();
+  const MCSymbol &SA = *Target.getAddSym();
+  const MCSymbol &SB = *Target.getSubSym();
 
   bool force = !SA.isInSection() || !SB.isInSection();
   if (!force) {
@@ -493,13 +495,13 @@ bool LoongArchAsmBackend::handleAddSubRelocations(const MCAsmLayout &Layout,
   default:
     llvm_unreachable("unsupported fixup size");
   }
-  MCValue A = MCValue::get(Target.getSymA(), nullptr, Target.getConstant());
-  MCValue B = MCValue::get(Target.getSymB());
+  MCValue A = MCValue::get(Target.getAddSym(), nullptr, Target.getConstant());
+  MCValue B = MCValue::get(Target.getSubSym());
   auto FA = MCFixup::create(Fixup.getOffset(), nullptr, std::get<0>(FK));
   auto FB = MCFixup::create(Fixup.getOffset(), nullptr, std::get<1>(FK));
-  auto &Asm = Layout.getAssembler();
-  Asm.getWriter().recordRelocation(Asm, Layout, &F, FA, A, FixedValueA);
-  Asm.getWriter().recordRelocation(Asm, Layout, &F, FB, B, FixedValueB);
+  auto &Assembler = const_cast<MCAssembler &>(Asm);
+  Asm.getWriter().recordRelocation(Assembler, &F, FA, A, FixedValueA);
+  Asm.getWriter().recordRelocation(Assembler, &F, FB, B, FixedValueB);
   FixedValue = FixedValueA - FixedValueB;
   return true;
 }

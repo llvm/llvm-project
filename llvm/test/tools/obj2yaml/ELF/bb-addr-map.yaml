@@ -14,30 +14,31 @@
 # VALID-NEXT:   - Name: .llvm_bb_addr_map
 # VALID-NEXT:     Type: SHT_LLVM_BB_ADDR_MAP
 # VALID-NEXT:     Entries:
-## The 'Address' field is omitted when it's zero.
 # VALID-NEXT:       - Version: 2
-# VALID-NEXT:         Feature: 0xFF
-# VALID-NEXT:         BBEntries:
-# VALID-NEXT:           - ID:            0
-# VALID-NEXT:             AddressOffset: 0x1
-# VALID-NEXT:             Size:          0x2
-# VALID-NEXT:             Metadata:      0x3
-# VALID-NEXT:           - ID:            2
-# VALID-NEXT:             AddressOffset: 0x4
-# VALID-NEXT:             Size:          0x5
-# VALID-NEXT:             Metadata:      0x6
-# VALID-NEXT:           - ID:            4
-# VALID-NEXT:             AddressOffset: 0xFFFFFFFFFFFFFFF7
-# VALID-NEXT:             Size:          0xFFFFFFFFFFFFFFF8
-# VALID-NEXT:             Metadata:      0xFFFFFFFFFFFFFFF9
+# VALID-NEXT:         BBRanges:
+## The 'BaseAddress' field is omitted when it's zero.
+# VALID-NEXT:           - BBEntries:
+# VALID-NEXT:             - ID:            0
+# VALID-NEXT:               AddressOffset: 0x1
+# VALID-NEXT:               Size:          0x2
+# VALID-NEXT:               Metadata:      0x3
+# VALID-NEXT:             - ID:            2
+# VALID-NEXT:               AddressOffset: 0x4
+# VALID-NEXT:               Size:          0x5
+# VALID-NEXT:               Metadata:      0x6
+# VALID-NEXT:             - ID:            4
+# VALID-NEXT:               AddressOffset: 0xFFFFFFFFFFFFFFF7
+# VALID-NEXT:               Size:          0xFFFFFFFFFFFFFFF8
+# VALID-NEXT:               Metadata:      0xFFFFFFFFFFFFFFF9
 # VALID-NEXT:       - Version: 2
-# VALID-NEXT:         Feature: 0xEE
-# VALID-NEXT:         Address: 0xFFFFFFFFFFFFFF20
-# VALID-NEXT:         BBEntries:
-# VALID-NEXT:           - ID:            6
-# VALID-NEXT:             AddressOffset: 0xA
-# VALID-NEXT:             Size:          0xB
-# VALID-NEXT:             Metadata:      0xC
+# VALID-NEXT:         Feature: 0x8
+# VALID-NEXT:         BBRanges:
+# VALID-NEXT:           - BaseAddress: 0xFFFFFFFFFFFFFF20
+# VALID-NEXT:             BBEntries:
+# VALID-NEXT:               - ID:            6
+# VALID-NEXT:                 AddressOffset: 0xA
+# VALID-NEXT:                 Size:          0xB
+# VALID-NEXT:                 Metadata:      0xC
 
 --- !ELF
 FileHeader:
@@ -50,30 +51,33 @@ Sections:
     ShSize: [[SIZE=<none>]]
     Entries:
       - Version: 2
-        Feature: 0xFF
-        Address: 0x0
-        BBEntries:
-          - ID:            0
-            AddressOffset: 0x1
-            Size:          0x2
-            Metadata:      0x3
-          - ID:            2
-            AddressOffset: 0x4
-            Size:          0x5
-            Metadata:      0x6
-          - ID:            4
-            AddressOffset: 0xFFFFFFFFFFFFFFF7
-            Size:          0xFFFFFFFFFFFFFFF8
-            Metadata:      0xFFFFFFFFFFFFFFF9
+        Feature: 0x0
+        BBRanges:
+          - BaseAddress: 0x0
+            BBEntries:
+              - ID:            0
+                AddressOffset: 0x1
+                Size:          0x2
+                Metadata:      0x3
+              - ID:            2
+                AddressOffset: 0x4
+                Size:          0x5
+                Metadata:      0x6
+              - ID:            4
+                AddressOffset: 0xFFFFFFFFFFFFFFF7
+                Size:          0xFFFFFFFFFFFFFFF8
+                Metadata:      0xFFFFFFFFFFFFFFF9
       - Version:   2
-        Feature:   0xEE
-        Address:   0xFFFFFFFFFFFFFF20
-        NumBlocks: [[NUMBLOCKS=<none>]]
-        BBEntries:
-          - ID:            6
-            AddressOffset: 0xA
-            Size:          0xB
-            Metadata:      0xC
+        Feature:   0x8
+        NumBBRanges: [[NUMBBRANGES=<none>]]
+        BBRanges:
+          - BaseAddress:   0xFFFFFFFFFFFFFF20
+            NumBlocks: [[NUMBLOCKS=<none>]]
+            BBEntries:
+             - ID:            6
+               AddressOffset: 0xA
+               Size:          0xB
+               Metadata:      0xC
 
 ## Check obj2yaml can dump empty .llvm_bb_addr_map sections.
 
@@ -114,19 +118,21 @@ Sections:
 # MULTI-NEXT:   - Name: .llvm_bb_addr_map
 # MULTI-NEXT:     Type: SHT_LLVM_BB_ADDR_MAP
 # MULTI-NEXT:     Entries:
-## Fields 'Address' and 'Feature' are omitted when they are zero.
+## Fields 'BaseAddress' and 'Feature' are omitted when they are zero.
 # MULTI-NEXT:       - Version: 0
-# MULTI-NEXT:         BBEntries:
-# MULTI-NEXT:           - ID:            0
-# MULTI-NEXT:             AddressOffset: 0x1
-# MULTI-NEXT:             Size:          0x2
-# MULTI-NEXT:             Metadata:      0x3
+# MULTI-NEXT:         BBRanges:
+# MULTI-NEXT:           - BBEntries:
+# MULTI-NEXT:              - ID:            0
+# MULTI-NEXT:                AddressOffset: 0x1
+# MULTI-NEXT:                Size:          0x2
+# MULTI-NEXT:                Metadata:      0x3
 # MULTI-NEXT:   - Name: '.llvm_bb_addr_map (1)'
 # MULTI-NEXT:     Type: SHT_LLVM_BB_ADDR_MAP
 # MULTI-NEXT:     Entries:
 # MULTI-NEXT:       - Version:   0
-# MULTI-NEXT:         Address:   0x20
-# MULTI-NEXT:         BBEntries: []
+# MULTI-NEXT:         BBRanges:
+# MULTI-NEXT:           - BaseAddress:   0x20
+# MULTI-NEXT:             BBEntries: []
 
 --- !ELF
 FileHeader:
@@ -141,26 +147,31 @@ Sections:
 ## they are zero.
       - Version: 0
         Feature: 0x0
-        Address: 0x0
-        BBEntries:
-          - AddressOffset: 0x1
-            Size:          0x2
-            Metadata:      0x3
+        BBRanges:
+          - BaseAddress: 0x0
+            BBEntries:
+              - AddressOffset: 0x1
+                Size:          0x2
+                Metadata:      0x3
   - Name: '.llvm_bb_addr_map (1)'
     Type:  SHT_LLVM_BB_ADDR_MAP
     Entries:
       - Version: 0
-        Address: 0x20
+        BBRanges:
+          - BaseAddress: 0x20
 
 ## Check that obj2yaml uses the "Content" tag to describe an .llvm_bb_addr_map section
 ## when it can't extract the entries, for example, when the section is truncated, or
-## when an invalid 'NumBlocks' field is specified.
+## when an invalid 'NumBlocks' or 'NumBBRanges` field is specified.
 
 # RUN: yaml2obj --docnum=1 -DSIZE=0x8 %s -o %t4
 # RUN: obj2yaml %t4 | FileCheck %s --check-prefixes=TRUNCATED,INVALID
 
 # RUN: yaml2obj --docnum=1 -DNUMBLOCKS=2 %s -o %t5
-# RUN: obj2yaml %t5 | FileCheck %s --check-prefixes=BADNUMBLOCKS,INVALID
+# RUN: obj2yaml %t5 | FileCheck %s --check-prefixes=BADNUM,INVALID
+
+# RUN: yaml2obj --docnum=1 -DNUMBBRANGES=2 %s -o %t6
+# RUN: obj2yaml %t6 | FileCheck %s --check-prefixes=BADNUM,INVALID
 
 # INVALID:           --- !ELF
 # INVALID-NEXT:      FileHeader:
@@ -170,86 +181,5 @@ Sections:
 # INVALID-NEXT:      Sections:
 # INVALID-NEXT:        - Name:    .llvm_bb_addr_map
 # INVALID-NEXT:          Type:    SHT_LLVM_BB_ADDR_MAP
-# BADNUMBLOCKS-NEXT:     Content: {{([[:xdigit:]]+)}}{{$}}
-# TRUNCATED-NEXT:        Content: {{([[:xdigit:]]{16})}}{{$}}
-
-## Check obj2yaml for SHT_LLVM_BB_ADDR_MAP_V0.
-# RUN: yaml2obj --docnum=4 %s -o %t6
-# RUN: obj2yaml %t6 | FileCheck %s --check-prefix=V0
-
-# V0:      --- !ELF
-# V0-NEXT: FileHeader:
-# V0-NEXT:   Class: ELFCLASS64
-# V0-NEXT:   Data:  ELFDATA2LSB
-# V0-NEXT:   Type:  ET_EXEC
-# V0-NEXT: Sections:
-# V0-NEXT:   - Name: .llvm_bb_addr_map
-# V0-NEXT:     Type: SHT_LLVM_BB_ADDR_MAP_V0
-# V0-NEXT:     Entries:
-# V0-NEXT:       - Version: 0
-# V0-NEXT:         Address: 0x1111
-# V0-NEXT:         BBEntries:
-# V0-NEXT:           - ID:            0
-# V0-NEXT:             AddressOffset: 0x1
-# V0-NEXT:             Size:          0x2
-# V0-NEXT:             Metadata:      0x3
-
---- !ELF
-FileHeader:
-  Class: ELFCLASS64
-  Data:  ELFDATA2LSB
-  Type:  ET_EXEC
-Sections:
-  - Name: .llvm_bb_addr_map
-    Type: SHT_LLVM_BB_ADDR_MAP_V0
-    Entries:
-      - Version: 0
-        Address: 0x1111
-        BBEntries:
-          - AddressOffset: 0x1
-            Size:          0x2
-            Metadata:      0x3
-
-## Check obj2yaml for version 1.
-# RUN: yaml2obj --docnum=5 %s -o %t7
-# RUN: obj2yaml %t7 | FileCheck %s --check-prefix=V1
-
-# V1:      --- !ELF
-# V1-NEXT: FileHeader:
-# V1-NEXT:   Class: ELFCLASS64
-# V1-NEXT:   Data:  ELFDATA2LSB
-# V1-NEXT:   Type:  ET_EXEC
-# V1-NEXT: Sections:
-# V1-NEXT:   - Name: .llvm_bb_addr_map
-# V1-NEXT:     Type: SHT_LLVM_BB_ADDR_MAP
-# V1-NEXT:     Entries:
-# V1-NEXT:       - Version: 1
-# V1-NEXT:         Address: 0x1111
-# V1-NEXT:         BBEntries:
-# V1-NEXT:           - ID:            0
-# V1-NEXT:             AddressOffset: 0x1
-# V1-NEXT:             Size:          0x2
-# V1-NEXT:             Metadata:      0x3
-# V1-NEXT:           - ID:            1
-# V1-NEXT:             AddressOffset: 0x4
-# V1-NEXT:             Size:          0x5
-# V1-NEXT:             Metadata:      0x6
-
---- !ELF
-FileHeader:
-  Class: ELFCLASS64
-  Data:  ELFDATA2LSB
-  Type:  ET_EXEC
-Sections:
-  - Name: .llvm_bb_addr_map
-    Type: SHT_LLVM_BB_ADDR_MAP
-    Entries:
-      - Version: 1
-        Address: 0x1111
-        BBEntries:
-          - AddressOffset: 0x1
-            Size:          0x2
-            Metadata:      0x3
-          - AddressOffset: 0x4
-            Size:          0x5
-            Metadata:      0x6
+# BADNUM-NEXT:           Content: {{([[:xdigit:]]+)}}{{$}}
+# TRUNCATED-NEXT:        Content: '{{([[:xdigit:]]{16})}}'{{$}}

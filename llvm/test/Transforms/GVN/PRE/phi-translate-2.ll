@@ -63,8 +63,8 @@ define void @test2(i64 %i) {
 ; CHECK:       if.then:
 ; CHECK-NEXT:    [[CALL:%.*]] = tail call i64 (...) @goo()
 ; CHECK-NEXT:    store i64 [[CALL]], ptr @g2, align 8
-; CHECK-NEXT:    [[T2_PRE:%.*]] = load i64, ptr getelementptr inbounds ([100 x i64], ptr @a, i64 0, i64 3), align 8
-; CHECK-NEXT:    [[T3_PRE:%.*]] = load i64, ptr getelementptr inbounds ([100 x i64], ptr @b, i64 0, i64 3), align 8
+; CHECK-NEXT:    [[T2_PRE:%.*]] = load i64, ptr getelementptr inbounds nuw (i8, ptr @a, i64 24), align 8
+; CHECK-NEXT:    [[T3_PRE:%.*]] = load i64, ptr getelementptr inbounds nuw (i8, ptr @b, i64 24), align 8
 ; CHECK-NEXT:    [[DOTPRE:%.*]] = mul nsw i64 [[T3_PRE]], [[T2_PRE]]
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
@@ -251,7 +251,7 @@ if.end3:                                          ; preds = %if.then2, %if.else,
 ; Here the load from arrayidx1 is partially redundant, but its value is
 ; available in if.then. Check that we correctly phi-translate to the phi that
 ; the load has been replaced with.
-define void @test6(ptr %ptr) {
+define void @test6(ptr %ptr, i1 %arg) {
 ; CHECK-LABEL: @test6(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ARRAYIDX1_PHI_TRANS_INSERT:%.*]] = getelementptr inbounds i32, ptr [[PTR:%.*]], i64 1
@@ -272,7 +272,7 @@ define void @test6(ptr %ptr) {
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[TMP2]] = phi i32 [ [[TMP0]], [[IF_THEN]] ], [ [[TMP1]], [[WHILE]] ]
-; CHECK-NEXT:    br i1 undef, label [[WHILE_END:%.*]], label [[WHILE]]
+; CHECK-NEXT:    br i1 [[ARG:%.*]], label [[WHILE_END:%.*]], label [[WHILE]]
 ; CHECK:       while.end:
 ; CHECK-NEXT:    ret void
 ;
@@ -295,7 +295,7 @@ if.then:
   br label %if.end
 
 if.end:
-  br i1 undef, label %while.end, label %while
+  br i1 %arg, label %while.end, label %while
 
 while.end:
   ret void

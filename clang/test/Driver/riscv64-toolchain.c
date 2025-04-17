@@ -23,7 +23,7 @@
 
 // C-RV64-BAREMETAL-LP64: "{{.*}}Inputs/basic_riscv64_tree/lib/gcc/riscv64-unknown-elf/8.0.1/../../../../bin/riscv64-unknown-elf-ld"
 // C-RV64-BAREMETAL-LP64: "--sysroot={{.*}}/Inputs/basic_riscv64_tree/riscv64-unknown-elf"
-// C-RV64-BAREMETAL-LP64-SAME: "-X"
+// C-RV64-BAREMETAL-LP64: "-X"
 // C-RV64-BAREMETAL-LP64: "{{.*}}/Inputs/basic_riscv64_tree/riscv64-unknown-elf/lib/crt0.o"
 // C-RV64-BAREMETAL-LP64: "{{.*}}/Inputs/basic_riscv64_tree/lib/gcc/riscv64-unknown-elf/8.0.1/crtbegin.o"
 // C-RV64-BAREMETAL-LP64: "-L{{.*}}/Inputs/basic_riscv64_tree/lib/gcc/riscv64-unknown-elf/8.0.1"
@@ -151,9 +151,9 @@
 // RUN:   --target=riscv64-unknown-elf --rtlib=compiler-rt --unwindlib=compiler-rt 2>&1 \
 // RUN:   | FileCheck -check-prefix=C-RV64-RTLIB-COMPILERRT-LP64 %s
 // C-RV64-RTLIB-COMPILERRT-LP64: "{{.*}}crt0.o"
-// C-RV64-RTLIB-COMPILERRT-LP64: "{{.*}}clang_rt.crtbegin-riscv64.o"
-// C-RV64-RTLIB-COMPILERRT-LP64: "--start-group" "-lc" "-lgloss" "--end-group" "{{.*}}libclang_rt.builtins-riscv64.a"
-// C-RV64-RTLIB-COMPILERRT-LP64: "{{.*}}clang_rt.crtend-riscv64.o"
+// C-RV64-RTLIB-COMPILERRT-LP64: "{{.*}}clang_rt.crtbegin.o"
+// C-RV64-RTLIB-COMPILERRT-LP64: "--start-group" "-lc" "-lgloss" "--end-group" "{{.*}}libclang_rt.builtins.a"
+// C-RV64-RTLIB-COMPILERRT-LP64: "{{.*}}clang_rt.crtend.o"
 
 // RUN: %clang -### %s --target=riscv64 \
 // RUN:   --gcc-toolchain=%S/Inputs/basic_riscv64_tree --sysroot= \

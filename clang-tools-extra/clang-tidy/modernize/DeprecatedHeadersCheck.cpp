@@ -32,7 +32,8 @@ public:
                           StringRef FileName, bool IsAngled,
                           CharSourceRange FilenameRange,
                           OptionalFileEntryRef File, StringRef SearchPath,
-                          StringRef RelativePath, const Module *Imported,
+                          StringRef RelativePath, const Module *SuggestedModule,
+                          bool ModuleImported,
                           SrcMgr::CharacteristicKind FileType) override;
 
 private:
@@ -157,7 +158,7 @@ IncludeModernizePPCallbacks::IncludeModernizePPCallbacks(
             {"wctype.h", "cwctype"}})) {
     CStyledHeaderToCxx.insert(KeyValue);
   }
-  // Add C++ 11 headers.
+  // Add C++11 headers.
   if (LangOpts.CPlusPlus11) {
     for (const auto &KeyValue :
          std::vector<std::pair<llvm::StringRef, std::string>>(
@@ -178,8 +179,8 @@ IncludeModernizePPCallbacks::IncludeModernizePPCallbacks(
 void IncludeModernizePPCallbacks::InclusionDirective(
     SourceLocation HashLoc, const Token &IncludeTok, StringRef FileName,
     bool IsAngled, CharSourceRange FilenameRange, OptionalFileEntryRef File,
-    StringRef SearchPath, StringRef RelativePath, const Module *Imported,
-    SrcMgr::CharacteristicKind FileType) {
+    StringRef SearchPath, StringRef RelativePath, const Module *SuggestedModule,
+    bool ModuleImported, SrcMgr::CharacteristicKind FileType) {
 
   // If we don't want to warn for non-main file reports and this is one, skip
   // it.
@@ -198,10 +199,10 @@ void IncludeModernizePPCallbacks::InclusionDirective(
   // 2. Insert `using namespace std;` to the beginning of TU.
   // 3. Do nothing and let the user deal with the migration himself.
   SourceLocation DiagLoc = FilenameRange.getBegin();
-  if (CStyledHeaderToCxx.count(FileName) != 0) {
-    IncludesToBeProcessed.emplace_back(
-        IncludeMarker{CStyledHeaderToCxx[FileName], FileName,
-                      FilenameRange.getAsRange(), DiagLoc});
+  if (auto It = CStyledHeaderToCxx.find(FileName);
+      It != CStyledHeaderToCxx.end()) {
+    IncludesToBeProcessed.emplace_back(IncludeMarker{
+        It->second, FileName, FilenameRange.getAsRange(), DiagLoc});
   } else if (DeleteHeaders.count(FileName) != 0) {
     IncludesToBeProcessed.emplace_back(
         // NOLINTNEXTLINE(modernize-use-emplace) - false-positive

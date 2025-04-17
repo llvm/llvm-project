@@ -10,6 +10,7 @@
 #define LLVM_CLANG_TOOLING_DEPENDENCYSCANNING_MODULEDEPCOLLECTOR_H
 
 #include "clang/Basic/LLVM.h"
+#include "clang/Basic/Module.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/Utils.h"
@@ -32,6 +33,7 @@ namespace dependencies {
 
 class DependencyActionController;
 class DependencyConsumer;
+class PrebuiltModuleASTAttrs;
 
 /// Modular dependency that has already been built prior to the dependency scan.
 struct PrebuiltModuleDep {
@@ -43,6 +45,47 @@ struct PrebuiltModuleDep {
       : ModuleName(M->getTopLevelModuleName()),
         PCMFile(M->getASTFile()->getName()),
         ModuleMapFile(M->PresumedModuleMapFile) {}
+};
+
+/// Attributes loaded from AST files of prebuilt modules collected prior to
+/// ModuleDepCollector creation.
+using PrebuiltModulesAttrsMap = llvm::StringMap<PrebuiltModuleASTAttrs>;
+class PrebuiltModuleASTAttrs {
+public:
+  /// When a module is discovered to not be in stable directories, traverse &
+  /// update all modules that depend on it.
+  void
+  updateDependentsNotInStableDirs(PrebuiltModulesAttrsMap &PrebuiltModulesMap);
+
+  /// Read-only access to whether the module is made up of dependencies in
+  /// stable directories.
+  bool isInStableDir() const { return IsInStableDirs; }
+
+  /// Read-only access to vfs map files.
+  const llvm::StringSet<> &getVFS() const { return VFSMap; }
+
+  /// Update the VFSMap to the one discovered from serializing the AST file.
+  void setVFS(llvm::StringSet<> &&VFS) { VFSMap = std::move(VFS); }
+
+  /// Add a direct dependent module file, so it can be updated if the current
+  /// module is from stable directores.
+  void addDependent(StringRef ModuleFile) {
+    ModuleFileDependents.insert(ModuleFile);
+  }
+
+  /// Update whether the prebuilt module resolves entirely in a stable
+  /// directories.
+  void setInStableDir(bool V = false) {
+    // Cannot reset attribute once it's false.
+    if (!IsInStableDirs)
+      return;
+    IsInStableDirs = V;
+  }
+
+private:
+  llvm::StringSet<> VFSMap;
+  bool IsInStableDirs = true;
+  std::set<StringRef> ModuleFileDependents;
 };
 
 /// This is used to identify a specific module.
@@ -113,15 +156,19 @@ struct ModuleDeps {
   /// Whether this is a "system" module.
   bool IsSystem;
 
+  /// Whether this module is fully composed of file & module inputs from
+  /// locations likely to stay the same across the active development and build
+  /// cycle. For example, when all those input paths only resolve in Sysroot.
+  ///
+  /// External paths, as opposed to virtual file paths, are always used
+  /// for computing this value.
+  bool IsInStableDirectories;
+
   /// The path to the modulemap file which defines this module.
   ///
   /// This can be used to explicitly build this module. This file will
   /// additionally appear in \c FileDeps as a dependency.
   std::string ClangModuleMapFile;
-
-  /// A collection of absolute paths to files that this module directly depends
-  /// on, not including transitive dependencies.
-  llvm::StringSet<> FileDeps;
 
   /// A collection of absolute paths to module map files that this module needs
   /// to know about. The ordering is significant.
@@ -138,14 +185,31 @@ struct ModuleDeps {
   /// determined that the differences are benign for this compilation.
   std::vector<ModuleID> ClangModuleDeps;
 
+  /// The set of libraries or frameworks to link against when
+  /// an entity from this module is used.
+  llvm::SmallVector<Module::LinkLibrary, 2> LinkLibraries;
+
+  /// Invokes \c Cb for all file dependencies of this module. Each provided
+  /// \c StringRef is only valid within the individual callback invocation.
+  void forEachFileDep(llvm::function_ref<void(StringRef)> Cb) const;
+
   /// Get (or compute) the compiler invocation that can be used to build this
   /// module. Does not include argv[0].
-  const std::vector<std::string> &getBuildArguments();
+  const std::vector<std::string> &getBuildArguments() const;
 
 private:
+  friend class ModuleDepCollector;
   friend class ModuleDepCollectorPP;
 
-  std::variant<std::monostate, CowCompilerInvocation, std::vector<std::string>>
+  /// The base directory for relative paths in \c FileDeps.
+  std::string FileDepsBaseDir;
+
+  /// A collection of paths to files that this module directly depends on, not
+  /// including transitive dependencies.
+  std::vector<std::string> FileDeps;
+
+  mutable std::variant<std::monostate, CowCompilerInvocation,
+                       std::vector<std::string>>
       BuildInfo;
 };
 
@@ -166,7 +230,8 @@ public:
                           StringRef FileName, bool IsAngled,
                           CharSourceRange FilenameRange,
                           OptionalFileEntryRef File, StringRef SearchPath,
-                          StringRef RelativePath, const Module *Imported,
+                          StringRef RelativePath, const Module *SuggestedModule,
+                          bool ModuleImported,
                           SrcMgr::CharacteristicKind FileType) override;
   void moduleImport(SourceLocation ImportLoc, ModuleIdPath Path,
                     const Module *Imported) override;
@@ -203,18 +268,22 @@ private:
                               llvm::DenseSet<const Module *> &AddedModules);
   void addAffectingClangModule(const Module *M, ModuleDeps &MD,
                           llvm::DenseSet<const Module *> &AddedModules);
+
+  /// Add discovered module dependency for the given module.
+  void addOneModuleDep(const Module *M, const ModuleID ID, ModuleDeps &MD);
 };
 
 /// Collects modular and non-modular dependencies of the main file by attaching
 /// \c ModuleDepCollectorPP to the preprocessor.
 class ModuleDepCollector final : public DependencyCollector {
 public:
-  ModuleDepCollector(std::unique_ptr<DependencyOutputOptions> Opts,
+  ModuleDepCollector(DependencyScanningService &Service,
+                     std::unique_ptr<DependencyOutputOptions> Opts,
                      CompilerInstance &ScanInstance, DependencyConsumer &C,
                      DependencyActionController &Controller,
                      CompilerInvocation OriginalCI,
-                     ScanningOptimizations OptimizeArgs, bool EagerLoadModules,
-                     bool IsStdModuleP1689Format);
+                     const PrebuiltModulesAttrsMap PrebuiltModulesASTMap,
+                     const ArrayRef<StringRef> StableDirs);
 
   void attachToPreprocessor(Preprocessor &PP) override;
   void attachToASTReader(ASTReader &R) override;
@@ -226,12 +295,20 @@ public:
 private:
   friend ModuleDepCollectorPP;
 
+  /// The parent dependency scanning service.
+  DependencyScanningService &Service;
   /// The compiler instance for scanning the current translation unit.
   CompilerInstance &ScanInstance;
   /// The consumer of collected dependency information.
   DependencyConsumer &Consumer;
   /// Callbacks for computing dependency information.
   DependencyActionController &Controller;
+  /// Mapping from prebuilt AST filepaths to their attributes referenced during
+  /// dependency collecting.
+  const PrebuiltModulesAttrsMap PrebuiltModulesASTMap;
+  /// Directory paths known to be stable through an active development and build
+  /// cycle.
+  const ArrayRef<StringRef> StableDirs;
   /// Path to the main source file.
   std::string MainFile;
   /// Hash identifying the compilation conditions of the current TU.
@@ -255,13 +332,6 @@ private:
   /// a discovered modular dependency. Note that this still needs to be adjusted
   /// for each individual module.
   CowCompilerInvocation CommonInvocation;
-  /// Whether to optimize the modules' command-line arguments.
-  ScanningOptimizations OptimizeArgs;
-  /// Whether to set up command-lines to load PCM files eagerly.
-  bool EagerLoadModules;
-  /// If we're generating dependency output in P1689 format
-  /// for standard C++ modules.
-  bool IsStdModuleP1689Format;
 
   std::optional<P1689ModuleInfo> ProvidedStdCXXModule;
   std::vector<P1689ModuleInfo> RequiredStdCXXModules;
@@ -298,9 +368,29 @@ private:
 
   /// Compute the context hash for \p Deps, and create the mapping
   /// \c ModuleDepsByID[Deps.ID] = &Deps.
-  void associateWithContextHash(const CowCompilerInvocation &CI,
+  void associateWithContextHash(const CowCompilerInvocation &CI, bool IgnoreCWD,
                                 ModuleDeps &Deps);
 };
+
+/// Resets codegen options that don't affect modules/PCH.
+void resetBenignCodeGenOptions(frontend::ActionKind ProgramAction,
+                               const LangOptions &LangOpts,
+                               CodeGenOptions &CGOpts);
+
+/// Determine if \c Input can be resolved within a stable directory.
+///
+/// \param Directories Paths known to be in a stable location. e.g. Sysroot.
+/// \param Input Path to evaluate.
+bool isPathInStableDir(const ArrayRef<StringRef> Directories,
+                       const StringRef Input);
+
+/// Determine if options collected from a module's
+/// compilation can safely be considered as stable.
+///
+/// \param Directories Paths known to be in a stable location. e.g. Sysroot.
+/// \param HSOpts Header search options derived from the compiler invocation.
+bool areOptionsInStableDir(const ArrayRef<StringRef> Directories,
+                           const HeaderSearchOptions &HSOpts);
 
 } // end namespace dependencies
 } // end namespace tooling

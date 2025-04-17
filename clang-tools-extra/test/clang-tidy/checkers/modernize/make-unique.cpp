@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy -std=c++14-or-later %s modernize-make-unique %t -- -- -I %S/Inputs/smart-ptr
+// RUN: %check_clang_tidy --match-partial-fixes -std=c++14-or-later %s modernize-make-unique %t -- -- -I %S/Inputs/smart-ptr
 
 #include "unique_ptr.h"
 #include "initializer_list.h"
@@ -606,11 +606,8 @@ void invoke_template() {
   template_fun(foo);
 }
 
-void no_fix_for_invalid_new_loc() {
-  // FIXME: Although the code is valid, the end location of `new struct Base` is
-  // invalid. Correct it once https://bugs.llvm.org/show_bug.cgi?id=35952 is
-  // fixed.
+void fix_for_c_style_struct() {
   auto T = std::unique_ptr<Base>(new struct Base);
   // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: use std::make_unique instead
-  // CHECK-FIXES: auto T = std::unique_ptr<Base>(new struct Base);
+  // CHECK-FIXES: auto T = std::make_unique<Base>();
 }

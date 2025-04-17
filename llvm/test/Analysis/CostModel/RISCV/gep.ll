@@ -272,7 +272,7 @@ define void @non_foldable_vector_uses(ptr %base, <2 x ptr> %base.vec) {
 ; RVI-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %5 = getelementptr i8, ptr %base, i32 42
 ; RVI-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %x5 = call <2 x i8> @llvm.vp.load.v2i8.p0(ptr %5, <2 x i1> undef, i32 undef)
 ; RVI-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %6 = getelementptr i8, ptr %base, i32 42
-; RVI-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %x6 = call <2 x i8> @llvm.experimental.vp.strided.load.v2i8.p0.i64(ptr %6, i64 undef, <2 x i1> undef, i32 undef)
+; RVI-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %x6 = call <2 x i8> @llvm.experimental.vp.strided.load.v2i8.p0.i64(ptr %6, i64 undef, <2 x i1> undef, i32 undef)
 ; RVI-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %7 = getelementptr i8, ptr %base, i32 42
 ; RVI-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store volatile <2 x i8> undef, ptr %7, align 2
 ; RVI-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %8 = getelementptr i8, ptr %base, i32 42
@@ -280,11 +280,11 @@ define void @non_foldable_vector_uses(ptr %base, <2 x ptr> %base.vec) {
 ; RVI-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %9 = getelementptr i8, <2 x ptr> %base.vec, <2 x i32> <i32 42, i32 43>
 ; RVI-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: call void @llvm.masked.scatter.v2i8.v2p0(<2 x i8> undef, <2 x ptr> %9, i32 1, <2 x i1> undef)
 ; RVI-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %10 = getelementptr i8, ptr %base, i32 42
-; RVI-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: call void @llvm.masked.compressstore.v2i8(<2 x i8> undef, ptr %10, <2 x i1> undef)
+; RVI-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: call void @llvm.masked.compressstore.v2i8(<2 x i8> undef, ptr %10, <2 x i1> undef)
 ; RVI-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %11 = getelementptr i8, ptr %base, i32 42
 ; RVI-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: call void @llvm.vp.store.v2i8.p0(<2 x i8> undef, ptr %11, <2 x i1> undef, i32 undef)
 ; RVI-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %12 = getelementptr i8, ptr %base, i32 42
-; RVI-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: call void @llvm.experimental.vp.strided.store.v2i8.p0.i64(<2 x i8> undef, ptr %12, i64 undef, <2 x i1> undef, i32 undef)
+; RVI-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: call void @llvm.experimental.vp.strided.store.v2i8.p0.i64(<2 x i8> undef, ptr %12, i64 undef, <2 x i1> undef, i32 undef)
 ; RVI-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   %1 = getelementptr i8, ptr %base, i32 42
@@ -342,7 +342,7 @@ define void @foldable_vector_uses(ptr %base, <2 x ptr> %base.vec) {
 ; RVI-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %5 = getelementptr i8, ptr %base, i32 0
 ; RVI-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %x5 = call <2 x i8> @llvm.vp.load.v2i8.p0(ptr %5, <2 x i1> undef, i32 undef)
 ; RVI-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %6 = getelementptr i8, ptr %base, i32 0
-; RVI-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %x6 = call <2 x i8> @llvm.experimental.vp.strided.load.v2i8.p0.i64(ptr %6, i64 undef, <2 x i1> undef, i32 undef)
+; RVI-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %x6 = call <2 x i8> @llvm.experimental.vp.strided.load.v2i8.p0.i64(ptr %6, i64 undef, <2 x i1> undef, i32 undef)
 ; RVI-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %7 = getelementptr i8, ptr %base, i32 0
 ; RVI-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store volatile <2 x i8> undef, ptr %7, align 2
 ; RVI-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %8 = getelementptr i8, ptr %base, i32 0
@@ -350,11 +350,11 @@ define void @foldable_vector_uses(ptr %base, <2 x ptr> %base.vec) {
 ; RVI-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %9 = getelementptr i8, <2 x ptr> %base.vec, <2 x i32> zeroinitializer
 ; RVI-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: call void @llvm.masked.scatter.v2i8.v2p0(<2 x i8> undef, <2 x ptr> %9, i32 1, <2 x i1> undef)
 ; RVI-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %10 = getelementptr i8, ptr %base, i32 0
-; RVI-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: call void @llvm.masked.compressstore.v2i8(<2 x i8> undef, ptr %10, <2 x i1> undef)
+; RVI-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: call void @llvm.masked.compressstore.v2i8(<2 x i8> undef, ptr %10, <2 x i1> undef)
 ; RVI-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %11 = getelementptr i8, ptr %base, i32 0
 ; RVI-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: call void @llvm.vp.store.v2i8.p0(<2 x i8> undef, ptr %11, <2 x i1> undef, i32 undef)
 ; RVI-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %12 = getelementptr i8, ptr %base, i32 0
-; RVI-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: call void @llvm.experimental.vp.strided.store.v2i8.p0.i64(<2 x i8> undef, ptr %12, i64 undef, <2 x i1> undef, i32 undef)
+; RVI-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: call void @llvm.experimental.vp.strided.store.v2i8.p0.i64(<2 x i8> undef, ptr %12, i64 undef, <2 x i1> undef, i32 undef)
 ; RVI-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   %1 = getelementptr i8, ptr %base, i32 0

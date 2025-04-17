@@ -2,9 +2,9 @@
 
 
 func.func @test_invalid_arg_materialization(
-  // expected-error@below {{failed to materialize conversion for block argument #0 that remained live after conversion, type was 'i16'}}
+  // expected-error@below {{failed to legalize unresolved materialization from () to ('i16') that remained live after conversion}}
   %arg0: i16) {
-  // expected-note@below {{see existing live user here}}
+  // expected-note@below{{see existing live user here}}
   "foo.return"(%arg0) : (i16) -> ()
 }
 
@@ -21,20 +21,18 @@ func.func @test_valid_arg_materialization(%arg0: i64) {
 // -----
 
 func.func @test_invalid_result_materialization() {
-  // expected-error@below {{failed to materialize conversion for result #0 of operation 'test.type_producer' that remained live after conversion}}
+  // expected-error@below {{failed to legalize unresolved materialization from ('f64') to ('f16') that remained live after conversion}}
   %result = "test.type_producer"() : () -> f16
-
-  // expected-note@below {{see existing live user here}}
+  // expected-note@below{{see existing live user here}}
   "foo.return"(%result) : (f16) -> ()
 }
 
 // -----
 
 func.func @test_invalid_result_materialization() {
-  // expected-error@below {{failed to materialize conversion for result #0 of operation 'test.type_producer' that remained live after conversion}}
+  // expected-error@below {{failed to legalize unresolved materialization from ('f64') to ('f16') that remained live after conversion}}
   %result = "test.type_producer"() : () -> f16
-
-  // expected-note@below {{see existing live user here}}
+  // expected-note@below{{see existing live user here}}
   "foo.return"(%result) : (f16) -> ()
 }
 
@@ -52,9 +50,9 @@ func.func @test_transitive_use_materialization() {
 // -----
 
 func.func @test_transitive_use_invalid_materialization() {
-  // expected-error@below {{failed to materialize conversion for result #0 of operation 'test.type_producer' that remained live after conversion}}
+  // expected-error@below {{failed to legalize unresolved materialization from ('f64') to ('f16') that remained live after conversion}}
   %result = "test.another_type_producer"() : () -> f16
-  // expected-note@below {{see existing live user here}}
+  // expected-note@below{{see existing live user here}}
   "foo.return"(%result) : (f16) -> ()
 }
 
@@ -104,10 +102,10 @@ func.func @test_block_argument_not_converted() {
 // Make sure argument type changes aren't implicitly forwarded.
 func.func @test_signature_conversion_no_converter() {
   "test.signature_conversion_no_converter"() ({
-  // expected-error@below {{failed to materialize conversion for block argument #0 that remained live after conversion}}
+  // expected-error@below {{failed to legalize unresolved materialization from ('f64') to ('f32') that remained live after conversion}}
   ^bb0(%arg0: f32):
-    // expected-note@below {{see existing live user here}}
     "test.type_consumer"(%arg0) : (f32) -> ()
+    // expected-note@below{{see existing live user here}}
     "test.return"(%arg0) : (f32) -> ()
   }) : () -> ()
   return
@@ -128,4 +126,19 @@ func.func @recursive_type_conversion() {
 llvm.func @unsupported_func_op_interface() {
   // CHECK: llvm.return
   llvm.return
+}
+
+// -----
+
+// CHECK-LABEL: func @test_signature_conversion_no_converter()
+func.func @test_signature_conversion_no_converter() {
+  // CHECK: "test.signature_conversion_no_converter"() ({
+  // CHECK: ^{{.*}}(%[[arg0:.*]]: f64):
+  "test.signature_conversion_no_converter"() ({
+  ^bb0(%arg0: f32):
+    // CHECK: "test.legal_op_d"(%[[arg0]]) : (f64) -> ()
+    "test.replace_with_legal_op"(%arg0) : (f32) -> ()
+    "test.return"() : () -> ()
+  }) : () -> ()
+  return
 }

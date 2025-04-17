@@ -10,6 +10,7 @@
 #define LLVM_CLANG_TOOLING_DEPENDENCYSCANNING_DEPENDENCYSCANNINGSERVICE_H
 
 #include "clang/Tooling/DependencyScanning/DependencyScanningFilesystem.h"
+#include "clang/Tooling/DependencyScanning/InProcessModuleCache.h"
 #include "llvm/ADT/BitmaskEnum.h"
 
 namespace clang {
@@ -45,6 +46,9 @@ enum class ScanningOutputFormat {
   P1689,
 };
 
+#define DSS_LAST_BITMASK_ENUM(Id)                                              \
+  LLVM_MARK_AS_BITMASK_ENUM(Id), All = llvm::NextPowerOf2(Id) - 1
+
 enum class ScanningOptimizations {
   None = 0,
 
@@ -52,12 +56,26 @@ enum class ScanningOptimizations {
   HeaderSearch = 1,
 
   /// Remove warnings from system modules.
-  SystemWarnings = 2,
+  SystemWarnings = (1 << 1),
 
-  LLVM_MARK_AS_BITMASK_ENUM(SystemWarnings),
-  All = HeaderSearch | SystemWarnings,
-  Default = All
+  /// Remove unused -ivfsoverlay arguments.
+  VFS = (1 << 2),
+
+  /// Canonicalize -D and -U options.
+  Macros = (1 << 3),
+
+  /// Ignore the compiler's working directory if it is safe.
+  IgnoreCWD = (1 << 4),
+
+  DSS_LAST_BITMASK_ENUM(IgnoreCWD),
+
+  // The build system needs to be aware that the current working
+  // directory is ignored. Without a good way of notifying the build
+  // system, it is less risky to default to off.
+  Default = All & (~IgnoreCWD)
 };
+
+#undef DSS_LAST_BITMASK_ENUM
 
 /// The dependency scanning service contains shared configuration and state that
 /// is used by the individual dependency scanning workers.
@@ -66,7 +84,7 @@ public:
   DependencyScanningService(
       ScanningMode Mode, ScanningOutputFormat Format,
       ScanningOptimizations OptimizeArgs = ScanningOptimizations::Default,
-      bool EagerLoadModules = false);
+      bool EagerLoadModules = false, bool TraceVFS = false);
 
   ScanningMode getMode() const { return Mode; }
 
@@ -76,9 +94,13 @@ public:
 
   bool shouldEagerLoadModules() const { return EagerLoadModules; }
 
+  bool shouldTraceVFS() const { return TraceVFS; }
+
   DependencyScanningFilesystemSharedCache &getSharedCache() {
     return SharedCache;
   }
+
+  ModuleCacheMutexes &getModuleCacheMutexes() { return ModCacheMutexes; }
 
 private:
   const ScanningMode Mode;
@@ -87,8 +109,12 @@ private:
   const ScanningOptimizations OptimizeArgs;
   /// Whether to set up command-lines to load PCM files eagerly.
   const bool EagerLoadModules;
+  /// Whether to trace VFS accesses.
+  const bool TraceVFS;
   /// The global file system cache.
   DependencyScanningFilesystemSharedCache SharedCache;
+  /// The global module cache mutexes.
+  ModuleCacheMutexes ModCacheMutexes;
 };
 
 } // end namespace dependencies

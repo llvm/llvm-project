@@ -40,10 +40,19 @@ void test_unary_expr_or_type_trait() {
 // CHECK-NEXT: |   | `-EnumDecl {{.*}} <col:3, col:11> col:8{{( imported)?}} referenced E
 // CHECK-NEXT: |   |-CStyleCastExpr {{.*}} <line:13:3, col:21> 'void' <ToVoid>
 // CHECK-NEXT: |   | `-TypeTraitExpr {{.*}} <col:10, col:21> 'bool' __is_enum
+// CHECK-NEXT: |   |   `-ElaboratedType {{.*}} 'E' sugar
+// CHECK-NEXT: |   |     `-EnumType {{.*}} 'E'
+// CHECK-NEXT: |   |       `-Enum {{.*}} 'E'
 // CHECK-NEXT: |   |-CStyleCastExpr {{.*}} <line:15:3, col:30> 'void' <ToVoid>
 // CHECK-NEXT: |   | `-TypeTraitExpr {{.*}} <col:10, col:30> 'bool' __is_same
+// CHECK-NEXT: |   |   |-BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |   |   `-BuiltinType {{.*}} 'float'
 // CHECK-NEXT: |   `-CStyleCastExpr {{.*}} <line:17:3, col:47> 'void' <ToVoid>
 // CHECK-NEXT: |     `-TypeTraitExpr {{.*}} <col:10, col:47> 'bool' __is_constructible
+// CHECK-NEXT:         |-BuiltinType {{.*}} 'int'
+// CHECK-NEXT:         |-BuiltinType {{.*}} 'int'
+// CHECK-NEXT:         |-BuiltinType {{.*}} 'int'
+// CHECK-NEXT:         `-BuiltinType {{.*}} 'int'
 // CHECK-NEXT: |-FunctionDecl {{.*}} <line:20:1, line:23:1> line:20:6{{( imported)?}} test_array_type_trait 'void ()'
 // CHECK-NEXT: | `-CompoundStmt {{.*}} <col:30, line:23:1>
 // CHECK-NEXT: |   `-CStyleCastExpr {{.*}} <line:22:3, col:34> 'void' <ToVoid>

@@ -21,7 +21,6 @@ add_tablegen(mlir-pdll MLIR_PDLL
   ${LIBS}
   )
 
-set_target_properties(mlir-pdll PROPERTIES FOLDER "Tablegenning")
 target_link_libraries(mlir-pdll PRIVATE ${LIBS})
 
 mlir_check_all_link_libraries(mlir-pdll)

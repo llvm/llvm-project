@@ -14,9 +14,9 @@ These different models provide entirely different interfaces from each
 other. To address this libc++ wraps the underlying threading API in a new and
 consistent API, which it uses internally to implement threading primitives.
 
-The ``<__threading_support>`` header is where libc++ defines its internal
-threading interface. It contains forward declarations of the internal threading
-interface as well as definitions for the interface.
+The ``<__thread/support.h>`` header is where libc++ defines its internal
+threading interface. It documents the functions and declarations required
+to fullfil the internal threading interface.
 
 External Threading API and the ``<__external_threading>`` header
 ================================================================
@@ -25,10 +25,10 @@ In order to support vendors with custom threading API's libc++ allows the
 entire internal threading interface to be provided by an external,
 vendor provided, header.
 
-When ``_LIBCPP_HAS_THREAD_API_EXTERNAL`` is defined the ``<__threading_support>``
+When ``_LIBCPP_HAS_THREAD_API_EXTERNAL`` is defined the ``<__thread/support.h>``
 header simply forwards to the ``<__external_threading>`` header (which must exist).
 It is expected that the ``<__external_threading>`` header provide the exact
-interface normally provided by ``<__threading_support>``.
+interface normally provided by ``<__thread/support.h>``.
 
 External Threading Library
 ==========================
@@ -45,9 +45,9 @@ API but leaves out the implementation.
 Threading Configuration Macros
 ==============================
 
-**_LIBCPP_HAS_NO_THREADS**
-  This macro is defined when libc++ is built without threading support. It
-  should not be manually defined by the user.
+**_LIBCPP_HAS_THREADS**
+  This macro is set to 1 when libc++ is built with threading support. Otherwise
+  it is set to 0. It should not be manually defined by the user.
 
 **_LIBCPP_HAS_THREAD_API_EXTERNAL**
   This macro is defined when libc++ should use the ``<__external_threading>``
@@ -56,6 +56,10 @@ Threading Configuration Macros
 
 **_LIBCPP_HAS_THREAD_API_PTHREAD**
   This macro is defined when libc++ should use POSIX threads to implement the
+  internal threading API.
+
+**_LIBCPP_HAS_THREAD_API_C11**
+  This macro is defined when libc++ should use C11 threads to implement the
   internal threading API.
 
 **_LIBCPP_HAS_THREAD_API_WIN32**

@@ -10,7 +10,6 @@
 #include "CommandObjectMemoryTag.h"
 #include "lldb/Core/DumpDataExtractor.h"
 #include "lldb/Core/Section.h"
-#include "lldb/Core/ValueObjectMemory.h"
 #include "lldb/Expression/ExpressionVariable.h"
 #include "lldb/Host/OptionParser.h"
 #include "lldb/Interpreter/CommandOptionArgumentTable.h"
@@ -36,6 +35,7 @@
 #include "lldb/Utility/Args.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/StreamString.h"
+#include "lldb/ValueObject/ValueObjectMemory.h"
 #include "llvm/Support/MathExtras.h"
 #include <cinttypes>
 #include <memory>
@@ -68,7 +68,7 @@ public:
     case 'l':
       error = m_num_per_line.SetValueFromString(option_value);
       if (m_num_per_line.GetCurrentValue() == 0)
-        error.SetErrorStringWithFormat(
+        error = Status::FromErrorStringWithFormat(
             "invalid value for --num-per-line option '%s'",
             option_value.str().c_str());
       break;
@@ -176,7 +176,7 @@ public:
     case eFormatBytesWithASCII:
       if (byte_size_option_set) {
         if (byte_size_value > 1)
-          error.SetErrorStringWithFormat(
+          error = Status::FromErrorStringWithFormat(
               "display format (bytes/bytes with ASCII) conflicts with the "
               "specified byte size %" PRIu64 "\n"
               "\tconsider using a different display format or don't specify "
@@ -519,14 +519,14 @@ protected:
         --pointer_count;
       }
 
-      std::optional<uint64_t> size = compiler_type.GetByteSize(nullptr);
-      if (!size) {
+      auto size_or_err = compiler_type.GetByteSize(nullptr);
+      if (!size_or_err) {
         result.AppendErrorWithFormat(
-            "unable to get the byte size of the type '%s'\n",
-            view_as_type_cstr);
+            "unable to get the byte size of the type '%s'\n%s",
+            view_as_type_cstr, llvm::toString(size_or_err.takeError()).c_str());
         return;
       }
-      m_format_options.GetByteSizeValue() = *size;
+      m_format_options.GetByteSizeValue() = *size_or_err;
 
       if (!m_format_options.GetCountValue().OptionWasSet())
         m_format_options.GetCountValue() = 1;
@@ -639,15 +639,16 @@ protected:
       if (!m_format_options.GetFormatValue().OptionWasSet())
         m_format_options.GetFormatValue().SetCurrentValue(eFormatDefault);
 
-      std::optional<uint64_t> size = compiler_type.GetByteSize(nullptr);
-      if (!size) {
-        result.AppendError("can't get size of type");
+      auto size_or_err = compiler_type.GetByteSize(nullptr);
+      if (!size_or_err) {
+        result.AppendError(llvm::toString(size_or_err.takeError()));
         return;
       }
-      bytes_read = *size * m_format_options.GetCountValue().GetCurrentValue();
+      auto size = *size_or_err;
+      bytes_read = size * m_format_options.GetCountValue().GetCurrentValue();
 
       if (argc > 0)
-        addr = addr + (*size * m_memory_options.m_offset.GetCurrentValue());
+        addr = addr + (size * m_memory_options.m_offset.GetCurrentValue());
     } else if (m_format_options.GetFormatValue().GetCurrentValue() !=
                eFormatCString) {
       data_sp = std::make_shared<DataBufferHeap>(total_byte_size, '\0');
@@ -815,7 +816,10 @@ protected:
           DumpValueObjectOptions options(m_varobj_options.GetAsDumpOptions(
               eLanguageRuntimeDescriptionDisplayVerbosityFull, format));
 
-          valobj_sp->Dump(*output_stream_p, options);
+          if (llvm::Error error = valobj_sp->Dump(*output_stream_p, options)) {
+            result.AppendError(toString(std::move(error)));
+            return;
+          }
         } else {
           result.AppendErrorWithFormat(
               "failed to create a value object for: (%s) %s\n",
@@ -910,12 +914,12 @@ public:
 
       case 'c':
         if (m_count.SetValueFromString(option_value).Fail())
-          error.SetErrorString("unrecognized value for count");
+          error = Status::FromErrorString("unrecognized value for count");
         break;
 
       case 'o':
         if (m_offset.SetValueFromString(option_value).Fail())
-          error.SetErrorString("unrecognized value for dump-offset");
+          error = Status::FromErrorString("unrecognized value for dump-offset");
         break;
 
       default:
@@ -977,35 +981,6 @@ public:
   Options *GetOptions() override { return &m_option_group; }
 
 protected:
-  class ProcessMemoryIterator {
-  public:
-    ProcessMemoryIterator(ProcessSP process_sp, lldb::addr_t base)
-        : m_process_sp(process_sp), m_base_addr(base) {
-      lldbassert(process_sp.get() != nullptr);
-    }
-
-    bool IsValid() { return m_is_valid; }
-
-    uint8_t operator[](lldb::addr_t offset) {
-      if (!IsValid())
-        return 0;
-
-      uint8_t retval = 0;
-      Status error;
-      if (0 ==
-          m_process_sp->ReadMemory(m_base_addr + offset, &retval, 1, error)) {
-        m_is_valid = false;
-        return 0;
-      }
-
-      return retval;
-    }
-
-  private:
-    ProcessSP m_process_sp;
-    lldb::addr_t m_base_addr;
-    bool m_is_valid = true;
-  };
   void DoExecute(Args &command, CommandReturnObject &result) override {
     // No need to check "process" for validity as eCommandRequiresProcess
     // ensures it is valid
@@ -1060,8 +1035,8 @@ protected:
                frame, result_sp)) &&
           result_sp) {
         uint64_t value = result_sp->GetValueAsUnsigned(0);
-        std::optional<uint64_t> size =
-            result_sp->GetCompilerType().GetByteSize(nullptr);
+        std::optional<uint64_t> size = llvm::expectedToOptional(
+            result_sp->GetCompilerType().GetByteSize(nullptr));
         if (!size)
           return;
         switch (*size) {
@@ -1106,8 +1081,8 @@ protected:
     found_location = low_addr;
     bool ever_found = false;
     while (count) {
-      found_location = FastSearch(found_location, high_addr, buffer.GetBytes(),
-                                  buffer.GetByteSize());
+      found_location = process->FindInMemory(
+          found_location, high_addr, buffer.GetBytes(), buffer.GetByteSize());
       if (found_location == LLDB_INVALID_ADDRESS) {
         if (!ever_found) {
           result.AppendMessage("data not found within the range.\n");
@@ -1144,34 +1119,6 @@ protected:
     result.SetStatus(lldb::eReturnStatusSuccessFinishResult);
   }
 
-  lldb::addr_t FastSearch(lldb::addr_t low, lldb::addr_t high, uint8_t *buffer,
-                          size_t buffer_size) {
-    const size_t region_size = high - low;
-
-    if (region_size < buffer_size)
-      return LLDB_INVALID_ADDRESS;
-
-    std::vector<size_t> bad_char_heuristic(256, buffer_size);
-    ProcessSP process_sp = m_exe_ctx.GetProcessSP();
-    ProcessMemoryIterator iterator(process_sp, low);
-
-    for (size_t idx = 0; idx < buffer_size - 1; idx++) {
-      decltype(bad_char_heuristic)::size_type bcu_idx = buffer[idx];
-      bad_char_heuristic[bcu_idx] = buffer_size - idx - 1;
-    }
-    for (size_t s = 0; s <= (region_size - buffer_size);) {
-      int64_t j = buffer_size - 1;
-      while (j >= 0 && buffer[j] == iterator[s + j])
-        j--;
-      if (j < 0)
-        return low + s;
-      else
-        s += bad_char_heuristic[iterator[s + buffer_size - 1]];
-    }
-
-    return LLDB_INVALID_ADDRESS;
-  }
-
   OptionGroupOptions m_option_group;
   OptionGroupFindMemory m_memory_options;
   OptionGroupMemoryTag m_memory_tag_options;
@@ -1204,16 +1151,16 @@ public:
         FileSystem::Instance().Resolve(m_infile);
         if (!FileSystem::Instance().Exists(m_infile)) {
           m_infile.Clear();
-          error.SetErrorStringWithFormat("input file does not exist: '%s'",
-                                         option_value.str().c_str());
+          error = Status::FromErrorStringWithFormat(
+              "input file does not exist: '%s'", option_value.str().c_str());
         }
         break;
 
       case 'o': {
         if (option_value.getAsInteger(0, m_infile_offset)) {
           m_infile_offset = 0;
-          error.SetErrorStringWithFormat("invalid offset string '%s'",
-                                         option_value.str().c_str());
+          error = Status::FromErrorStringWithFormat(
+              "invalid offset string '%s'", option_value.str().c_str());
         }
       } break;
 
@@ -1624,7 +1571,8 @@ protected:
 
     const bool stop_format = false;
     for (auto thread : thread_list) {
-      thread->GetStatus(*output_stream, 0, UINT32_MAX, 0, stop_format);
+      thread->GetStatus(*output_stream, 0, UINT32_MAX, 0, stop_format,
+                        /*should_filter*/ false);
     }
 
     result.SetStatus(eReturnStatusSuccessFinishResult);
@@ -1717,6 +1665,9 @@ protected:
     MemoryRegionInfo::OptionalBool memory_tagged = range_info.GetMemoryTagged();
     if (memory_tagged == MemoryRegionInfo::OptionalBool::eYes)
       result.AppendMessage("memory tagging: enabled");
+    MemoryRegionInfo::OptionalBool is_shadow_stack = range_info.IsShadowStack();
+    if (is_shadow_stack == MemoryRegionInfo::OptionalBool::eYes)
+      result.AppendMessage("shadow stack: yes");
 
     const std::optional<std::vector<addr_t>> &dirty_page_list =
         range_info.GetDirtyPageList();
@@ -1790,7 +1741,7 @@ protected:
 
     // It is important that we track the address used to request the region as
     // this will give the correct section name in the case that regions overlap.
-    // On Windows we get mutliple regions that start at the same place but are
+    // On Windows we get multiple regions that start at the same place but are
     // different sizes and refer to different sections.
     std::vector<std::pair<lldb_private::MemoryRegionInfo, lldb::addr_t>>
         region_list;

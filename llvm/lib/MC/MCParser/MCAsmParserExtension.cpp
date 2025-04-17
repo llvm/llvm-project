@@ -22,9 +22,9 @@ void MCAsmParserExtension::Initialize(MCAsmParser &Parser) {
   this->Parser = &Parser;
 }
 
-/// ParseDirectiveCGProfile
+/// parseDirectiveCGProfile
 ///  ::= .cg_profile identifier, identifier, <number>
-bool MCAsmParserExtension::ParseDirectiveCGProfile(StringRef, SMLoc) {
+bool MCAsmParserExtension::parseDirectiveCGProfile(StringRef, SMLoc) {
   StringRef From;
   SMLoc FromLoc = getLexer().getLoc();
   if (getParser().parseIdentifier(From))
@@ -44,8 +44,7 @@ bool MCAsmParserExtension::ParseDirectiveCGProfile(StringRef, SMLoc) {
   Lex();
 
   int64_t Count;
-  if (getParser().parseIntToken(
-          Count, "expected integer count in '.cg_profile' directive"))
+  if (getParser().parseIntToken(Count))
     return true;
 
   if (getLexer().isNot(AsmToken::EndOfStatement))
@@ -55,10 +54,7 @@ bool MCAsmParserExtension::ParseDirectiveCGProfile(StringRef, SMLoc) {
   MCSymbol *ToSym = getContext().getOrCreateSymbol(To);
 
   getStreamer().emitCGProfileEntry(
-      MCSymbolRefExpr::create(FromSym, MCSymbolRefExpr::VK_None, getContext(),
-                              FromLoc),
-      MCSymbolRefExpr::create(ToSym, MCSymbolRefExpr::VK_None, getContext(),
-                              ToLoc),
-      Count);
+      MCSymbolRefExpr::create(FromSym, getContext(), FromLoc),
+      MCSymbolRefExpr::create(ToSym, getContext(), ToLoc), Count);
   return false;
 }

@@ -18,10 +18,14 @@ protected:
   // void TearDown() override {}
 
   char str[60];
-  LIBC_NAMESPACE::printf_core::WriteBuffer wb =
-      LIBC_NAMESPACE::printf_core::WriteBuffer(str, sizeof(str) - 1);
-  LIBC_NAMESPACE::printf_core::Writer writer =
-      LIBC_NAMESPACE::printf_core::Writer(&wb);
+  LIBC_NAMESPACE::printf_core::WriteBuffer<
+      LIBC_NAMESPACE::printf_core::WriteMode::FILL_BUFF_AND_DROP_OVERFLOW>
+      wb = LIBC_NAMESPACE::printf_core::WriteBuffer<
+          LIBC_NAMESPACE::printf_core::WriteMode::FILL_BUFF_AND_DROP_OVERFLOW>(
+          str, sizeof(str) - 1);
+  LIBC_NAMESPACE::printf_core::Writer<
+      LIBC_NAMESPACE::printf_core::WriteMode::FILL_BUFF_AND_DROP_OVERFLOW>
+      writer = LIBC_NAMESPACE::printf_core::Writer(wb);
 };
 
 TEST_F(LlvmLibcPrintfConverterTest, SimpleRawConversion) {
@@ -208,6 +212,20 @@ TEST_F(LlvmLibcPrintfConverterTest, HexConversion) {
   wb.buff[wb.buff_cur] = '\0';
   ASSERT_STREQ(str, "0x00000000123456ab");
   ASSERT_EQ(writer.get_chars_written(), 18);
+}
+
+TEST_F(LlvmLibcPrintfConverterTest, BinaryConversion) {
+  LIBC_NAMESPACE::printf_core::FormatSection section;
+  section.has_conv = true;
+  section.raw_string = "%b";
+  section.conv_name = 'b';
+  section.conv_val_raw = 42;
+  LIBC_NAMESPACE::printf_core::convert(&writer, section);
+
+  wb.buff[wb.buff_cur] = '\0';
+
+  ASSERT_STREQ(str, "101010");
+  ASSERT_EQ(writer.get_chars_written(), 6);
 }
 
 TEST_F(LlvmLibcPrintfConverterTest, PointerConversion) {

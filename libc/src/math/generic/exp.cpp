@@ -21,16 +21,17 @@
 #include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/FPUtil/triple_double.h"
 #include "src/__support/common.h"
+#include "src/__support/integer_literals.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 
-#include <errno.h>
-
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 using fputil::DoubleDouble;
 using fputil::TripleDouble;
 using Float128 = typename fputil::DyadicFloat<128>;
-using Sign = fputil::Sign;
+
+using LIBC_NAMESPACE::operator""_u128;
 
 // log2(e)
 constexpr double LOG2_E = 0x1.71547652b82fep+0;
@@ -38,8 +39,11 @@ constexpr double LOG2_E = 0x1.71547652b82fep+0;
 // Error bounds:
 // Errors when using double precision.
 constexpr double ERR_D = 0x1.8p-63;
+
+#ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 // Errors when using double-double precision.
 constexpr double ERR_DD = 0x1.0p-99;
+#endif // LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
 // -2^-12 * log(2)
 // > a = -2^-12 * log(2);
@@ -49,8 +53,11 @@ constexpr double ERR_DD = 0x1.0p-99;
 // Errors < 1.5 * 2^-133
 constexpr double MLOG_2_EXP2_M12_HI = -0x1.62e42ffp-13;
 constexpr double MLOG_2_EXP2_M12_MID = 0x1.718432a1b0e26p-47;
+
+#ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 constexpr double MLOG_2_EXP2_M12_MID_30 = 0x1.718432ap-47;
 constexpr double MLOG_2_EXP2_M12_LO = 0x1.b0e2633fe0685p-79;
+#endif // LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
 namespace {
 
@@ -71,6 +78,7 @@ LIBC_INLINE double poly_approx_d(double dx) {
   return p;
 }
 
+#ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 // Polynomial approximation with double-double precision:
 // Return exp(dx) ~ 1 + dx + dx^2 / 2 + ... + dx^6 / 720
 // For |dx| < 2^-13 + 2^-30:
@@ -97,21 +105,15 @@ DoubleDouble poly_approx_dd(const DoubleDouble &dx) {
 // For |dx| < 2^-13 + 2^-30:
 //   | output - exp(dx) | < 2^-126.
 Float128 poly_approx_f128(const Float128 &dx) {
-  using MType = typename Float128::MantissaType;
-
   constexpr Float128 COEFFS_128[]{
-      {Sign::POS, -127, MType({0, 0x8000000000000000})},                  // 1.0
-      {Sign::POS, -127, MType({0, 0x8000000000000000})},                  // 1.0
-      {Sign::POS, -128, MType({0, 0x8000000000000000})},                  // 0.5
-      {Sign::POS, -130, MType({0xaaaaaaaaaaaaaaab, 0xaaaaaaaaaaaaaaaa})}, // 1/6
-      {Sign::POS, -132,
-       MType({0xaaaaaaaaaaaaaaab, 0xaaaaaaaaaaaaaaaa})}, // 1/24
-      {Sign::POS, -134,
-       MType({0x8888888888888889, 0x8888888888888888})}, // 1/120
-      {Sign::POS, -137,
-       MType({0x60b60b60b60b60b6, 0xb60b60b60b60b60b})}, // 1/720
-      {Sign::POS, -140,
-       MType({0x00d00d00d00d00d0, 0xd00d00d00d00d00d})}, // 1/5040
+      {Sign::POS, -127, 0x80000000'00000000'00000000'00000000_u128}, // 1.0
+      {Sign::POS, -127, 0x80000000'00000000'00000000'00000000_u128}, // 1.0
+      {Sign::POS, -128, 0x80000000'00000000'00000000'00000000_u128}, // 0.5
+      {Sign::POS, -130, 0xaaaaaaaa'aaaaaaaa'aaaaaaaa'aaaaaaab_u128}, // 1/6
+      {Sign::POS, -132, 0xaaaaaaaa'aaaaaaaa'aaaaaaaa'aaaaaaab_u128}, // 1/24
+      {Sign::POS, -134, 0x88888888'88888888'88888888'88888889_u128}, // 1/120
+      {Sign::POS, -137, 0xb60b60b6'0b60b60b'60b60b60'b60b60b6_u128}, // 1/720
+      {Sign::POS, -140, 0xd00d00d0'0d00d00d'00d00d00'd00d00d0_u128}, // 1/5040
   };
 
   Float128 p = fputil::polyeval(dx, COEFFS_128[0], COEFFS_128[1], COEFFS_128[2],
@@ -176,6 +178,7 @@ DoubleDouble exp_double_double(double x, double kd,
 
   return r;
 }
+#endif // LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
 // Check for exceptional cases when
 // |x| <= 2^-53 or x < log(2^-1075) or x >= 0x1.6232bdd7abcd3p+9
@@ -378,6 +381,19 @@ LLVM_LIBC_FUNCTION(double, exp, (double x)) {
 
   double lo = fputil::multiply_add(p, mid_lo, exp_mid.lo);
 
+#ifdef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
+  if (LIBC_UNLIKELY(denorm)) {
+    return ziv_test_denorm</*SKIP_ZIV_TEST=*/true>(hi, exp_mid.hi, lo, ERR_D)
+        .value();
+  } else {
+    // to multiply by 2^hi, a fast way is to simply add hi to the exponent
+    // field.
+    int64_t exp_hi = static_cast<int64_t>(hi) << FPBits::FRACTION_LEN;
+    double r =
+        cpp::bit_cast<double>(exp_hi + cpp::bit_cast<int64_t>(exp_mid.hi + lo));
+    return r;
+  }
+#else
   if (LIBC_UNLIKELY(denorm)) {
     if (auto r = ziv_test_denorm(hi, exp_mid.hi, lo, ERR_D);
         LIBC_LIKELY(r.has_value()))
@@ -418,6 +434,7 @@ LLVM_LIBC_FUNCTION(double, exp, (double x)) {
   Float128 r_f128 = exp_f128(x, kd, idx1, idx2);
 
   return static_cast<double>(r_f128);
+#endif // LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

@@ -1,6 +1,3 @@
-// REQUIRES: x86-registered-target
-// REQUIRES: nvptx-registered-target
-
 // RUN: not %clang --target=x86_64-linux -v -### --cuda-gpu-arch=sm_20 --cuda-path=%S/Inputs/CUDA/usr/local/cuda 2>&1 %s | \
 // RUN:    FileCheck %s --check-prefix=OK
 // RUN: %clang --target=x86_64-linux -v -### --cuda-gpu-arch=sm_20 --cuda-path=%S/Inputs/CUDA_80/usr/local/cuda 2>&1 %s | \

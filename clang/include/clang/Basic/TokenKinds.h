@@ -44,12 +44,12 @@ enum ObjCKeywordKind {
   NUM_OBJC_KEYWORDS
 };
 
-/// Provides a namespace for interesting identifers such as float_t and
+/// Provides a namespace for notable identifers such as float_t and
 /// double_t.
-enum InterestingIdentifierKind {
-#define INTERESTING_IDENTIFIER(X) X,
+enum NotableIdentifierKind {
+#define NOTABLE_IDENTIFIER(X) X,
 #include "clang/Basic/TokenKinds.def"
-  NUM_INTERESTING_IDENTIFIERS
+  NUM_NOTABLE_IDENTIFIERS
 };
 
 /// Defines the possible values of an on-off-switch (C99 6.10.6p2).
@@ -98,7 +98,7 @@ inline bool isLiteral(TokenKind K) {
   return K == tok::numeric_constant || K == tok::char_constant ||
          K == tok::wide_char_constant || K == tok::utf8_char_constant ||
          K == tok::utf16_char_constant || K == tok::utf32_char_constant ||
-         isStringLiteral(K) || K == tok::header_name;
+         isStringLiteral(K) || K == tok::header_name || K == tok::binary_data;
 }
 
 /// Return true if this is any of tok::annot_* kinds.

@@ -18,7 +18,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/CodeGen/LivePhysRegs.h"
+#include "llvm/CodeGen/LiveRegUnits.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -65,9 +65,7 @@ class SystemZElimCompare : public MachineFunctionPass {
 public:
   static char ID;
 
-  SystemZElimCompare() : MachineFunctionPass(ID) {
-    initializeSystemZElimComparePass(*PassRegistry::getPassRegistry());
-  }
+  SystemZElimCompare() : MachineFunctionPass(ID) {}
 
   bool processBlock(MachineBasicBlock &MBB);
   bool runOnMachineFunction(MachineFunction &F) override;
@@ -227,6 +225,9 @@ bool SystemZElimCompare::convertToBRCT(
   // this is not necessary there.
   if (BRCT != SystemZ::BRCTH)
     MIB.addReg(SystemZ::CC, RegState::ImplicitDefine | RegState::Dead);
+  // The debug instr tracking for the counter now used by BRCT needs to be
+  // updated.
+  MI.getParent()->getParent()->substituteDebugValuesForInst(MI, *MIB);
   MI.eraseFromParent();
   return true;
 }
@@ -268,6 +269,9 @@ bool SystemZElimCompare::convertToLoadAndTrap(
       .add(MI.getOperand(1))
       .add(MI.getOperand(2))
       .add(MI.getOperand(3));
+  // The debug instr tracking for the load target now used by the load-and-trap
+  // needs to be updated.
+  MI.getParent()->getParent()->substituteDebugValuesForInst(MI, *Branch);
   MI.eraseFromParent();
   return true;
 }
@@ -288,6 +292,9 @@ bool SystemZElimCompare::convertToLoadAndTest(
   for (const auto &MO : MI.operands())
     MIB.add(MO);
   MIB.setMemRefs(MI.memoperands());
+  // The debug instr tracking for the load target now needs to be updated
+  // because the load has moved to a new instruction
+  MI.getParent()->getParent()->substituteDebugValuesForInst(MI, *MIB);
   MI.eraseFromParent();
 
   // Mark instruction as not raising an FP exception if applicable.  We already
@@ -420,9 +427,7 @@ bool SystemZElimCompare::adjustCCMasksForInstr(
   if (!MIEquivalentToCmp) {
     // Now check whether these flags are enough for all users.
     SmallVector<MachineOperand *, 4> AlterMasks;
-    for (unsigned int I = 0, E = CCUsers.size(); I != E; ++I) {
-      MachineInstr *CCUserMI = CCUsers[I];
-
+    for (MachineInstr *CCUserMI : CCUsers) {
       // Fail if this isn't a use of CC that we understand.
       unsigned Flags = CCUserMI->getDesc().TSFlags;
       unsigned FirstOpNum;
@@ -633,7 +638,7 @@ bool SystemZElimCompare::fuseCompareOperations(
     RegMask = MBBI->getOperand(3).getRegMask();
 
   // Clear out all current operands.
-  int CCUse = MBBI->findRegisterUseOperandIdx(SystemZ::CC, false, TRI);
+  int CCUse = MBBI->findRegisterUseOperandIdx(SystemZ::CC, TRI, false);
   assert(CCUse >= 0 && "BRC/BCR must use CC");
   Branch->removeOperand(CCUse);
   // Remove regmask (sibcall).
@@ -690,9 +695,9 @@ bool SystemZElimCompare::processBlock(MachineBasicBlock &MBB) {
   // Walk backwards through the block looking for comparisons, recording
   // all CC users as we go.  The subroutines can delete Compare and
   // instructions before it.
-  LivePhysRegs LiveRegs(*TRI);
+  LiveRegUnits LiveRegs(*TRI);
   LiveRegs.addLiveOuts(MBB);
-  bool CompleteCCUsers = !LiveRegs.contains(SystemZ::CC);
+  bool CompleteCCUsers = LiveRegs.available(SystemZ::CC);
   SmallVector<MachineInstr *, 4> CCUsers;
   MachineBasicBlock::iterator MBBI = MBB.end();
   while (MBBI != MBB.begin()) {
@@ -707,11 +712,11 @@ bool SystemZElimCompare::processBlock(MachineBasicBlock &MBB) {
       continue;
     }
 
-    if (MI.definesRegister(SystemZ::CC)) {
+    if (MI.definesRegister(SystemZ::CC, /*TRI=*/nullptr)) {
       CCUsers.clear();
       CompleteCCUsers = true;
     }
-    if (MI.readsRegister(SystemZ::CC) && CompleteCCUsers)
+    if (MI.readsRegister(SystemZ::CC, /*TRI=*/nullptr) && CompleteCCUsers)
       CCUsers.push_back(&MI);
   }
   return Changed;

@@ -9,7 +9,6 @@
 // Per-type parsers for executable statements
 
 #include "basic-parsers.h"
-#include "debug-parser.h"
 #include "expr-parsers.h"
 #include "misc-parsers.h"
 #include "stmt-parser.h"
@@ -67,20 +66,19 @@ constexpr auto obsoleteExecutionPartConstruct{recovery(ignoredStatementPrefix >>
                 parenthesized(nonemptyList(Parser<AllocateShapeSpec>{}))))))};
 
 TYPE_PARSER(recovery(
-    withMessage("expected execution part construct"_err_en_US,
-        CONTEXT_PARSER("execution part construct"_en_US,
-            first(construct<ExecutionPartConstruct>(executableConstruct),
+    CONTEXT_PARSER("execution part construct"_en_US,
+        first(construct<ExecutionPartConstruct>(executableConstruct),
+            construct<ExecutionPartConstruct>(statement(indirect(formatStmt))),
+            construct<ExecutionPartConstruct>(statement(indirect(entryStmt))),
+            construct<ExecutionPartConstruct>(statement(indirect(dataStmt))),
+            extension<LanguageFeature::ExecutionPartNamelist>(
+                "nonstandard usage: NAMELIST in execution part"_port_en_US,
                 construct<ExecutionPartConstruct>(
-                    statement(indirect(formatStmt))),
-                construct<ExecutionPartConstruct>(
-                    statement(indirect(entryStmt))),
-                construct<ExecutionPartConstruct>(
-                    statement(indirect(dataStmt))),
-                extension<LanguageFeature::ExecutionPartNamelist>(
-                    "nonstandard usage: NAMELIST in execution part"_port_en_US,
-                    construct<ExecutionPartConstruct>(
-                        statement(indirect(Parser<NamelistStmt>{})))),
-                obsoleteExecutionPartConstruct))),
+                    statement(indirect(Parser<NamelistStmt>{})))),
+            obsoleteExecutionPartConstruct,
+            lookAhead(declarationConstruct) >> SkipTo<'\n'>{} >>
+                fail<ExecutionPartConstruct>(
+                    "misplaced declaration in the execution part"_err_en_US))),
     construct<ExecutionPartConstruct>(executionPartErrorRecovery)))
 
 // R509 execution-part -> executable-construct [execution-part-construct]...
@@ -254,11 +252,15 @@ TYPE_PARSER(construct<ConcurrentControl>(name / "=", scalarIntExpr / ":",
 
 // R1130 locality-spec ->
 //         LOCAL ( variable-name-list ) | LOCAL_INIT ( variable-name-list ) |
+//         REDUCE ( reduce-operation : variable-name-list ) |
 //         SHARED ( variable-name-list ) | DEFAULT ( NONE )
 TYPE_PARSER(construct<LocalitySpec>(construct<LocalitySpec::Local>(
                 "LOCAL" >> parenthesized(listOfNames))) ||
     construct<LocalitySpec>(construct<LocalitySpec::LocalInit>(
         "LOCAL_INIT"_sptok >> parenthesized(listOfNames))) ||
+    construct<LocalitySpec>(construct<LocalitySpec::Reduce>(
+        "REDUCE (" >> Parser<LocalitySpec::Reduce::Operator>{} / ":",
+        listOfNames / ")")) ||
     construct<LocalitySpec>(construct<LocalitySpec::Shared>(
         "SHARED" >> parenthesized(listOfNames))) ||
     construct<LocalitySpec>(
@@ -279,18 +281,26 @@ TYPE_CONTEXT_PARSER("loop control"_en_US,
                 "CONCURRENT" >> concurrentHeader,
                 many(Parser<LocalitySpec>{})))))
 
+// "DO" is a valid statement, so the loop control is optional; but for
+// better recovery from errors in the loop control, don't parse a
+// DO statement with a bad loop control as a DO statement that has
+// no loop control and is followed by garbage.
+static constexpr auto loopControlOrEndOfStmt{
+    construct<std::optional<LoopControl>>(Parser<LoopControl>{}) ||
+    lookAhead(";\n"_ch) >> construct<std::optional<LoopControl>>()};
+
 // R1121 label-do-stmt -> [do-construct-name :] DO label [loop-control]
 // A label-do-stmt with a do-construct-name is parsed as a nonlabel-do-stmt
 // with an optional label.
 TYPE_CONTEXT_PARSER("label DO statement"_en_US,
-    construct<LabelDoStmt>("DO" >> label, maybe(loopControl)))
+    construct<LabelDoStmt>("DO" >> label, loopControlOrEndOfStmt))
 
 // R1122 nonlabel-do-stmt -> [do-construct-name :] DO [loop-control]
 TYPE_CONTEXT_PARSER("nonlabel DO statement"_en_US,
     construct<NonLabelDoStmt>(
-        name / ":", "DO" >> maybe(label), maybe(loopControl)) ||
+        name / ":", "DO" >> maybe(label), loopControlOrEndOfStmt) ||
         construct<NonLabelDoStmt>(construct<std::optional<Name>>(),
-            construct<std::optional<Label>>(), "DO" >> maybe(loopControl)))
+            construct<std::optional<Label>>(), "DO" >> loopControlOrEndOfStmt))
 
 // R1132 end-do-stmt -> END DO [do-construct-name]
 TYPE_CONTEXT_PARSER("END DO statement"_en_US,
@@ -538,25 +548,38 @@ TYPE_CONTEXT_PARSER("UNLOCK statement"_en_US,
     construct<UnlockStmt>("UNLOCK (" >> lockVariable,
         defaulted("," >> nonemptyList(statOrErrmsg)) / ")"))
 
-// CUF-kernel-do-construct -> CUF-kernel-do-directive do-construct
-// CUF-kernel-do-directive ->
-//     !$CUF KERNEL DO [ (scalar-int-constant-expr) ] <<< grid, block [, stream]
-//     >>> do-construct
-// grid -> * | scalar-int-expr | ( scalar-int-expr-list )
-// block -> * | scalar-int-expr | ( scalar-int-expr-list )
-// stream -> ( 0, | STREAM = ) scalar-int-expr
+// CUF-kernel-do-construct ->
+//   !$CUF KERNEL DO [ (scalar-int-constant-expr) ]
+//      <<< grid, block [, stream] >>>
+//      [ cuf-reduction... ]
+//      do-construct
+// star-or-expr -> * | scalar-int-expr
+// grid -> * | scalar-int-expr | ( star-or-expr-list )
+// block -> * | scalar-int-expr | ( star-or-expr-list )
+// stream -> 0, scalar-int-expr | STREAM = scalar-int-expr
+// cuf-reduction -> [ REDUCTION | REDUCE ] (
+//                  acc-reduction-op : scalar-variable-list )
+
+constexpr auto starOrExpr{construct<CUFKernelDoConstruct::StarOrExpr>(
+    "*" >> pure<std::optional<ScalarIntExpr>>() ||
+    applyFunction(presentOptional<ScalarIntExpr>, scalarIntExpr))};
+constexpr auto gridOrBlock{parenthesized(nonemptyList(starOrExpr)) ||
+    applyFunction(singletonList<CUFKernelDoConstruct::StarOrExpr>, starOrExpr)};
+
+TYPE_PARSER(("REDUCTION"_tok || "REDUCE"_tok) >>
+    parenthesized(construct<CUFReduction>(Parser<CUFReduction::Operator>{},
+        ":" >> nonemptyList(scalar(variable)))))
+
+TYPE_PARSER("<<<" >>
+    construct<CUFKernelDoConstruct::LaunchConfiguration>(gridOrBlock,
+        "," >> gridOrBlock,
+        maybe((", 0 ,"_tok || ", STREAM ="_tok) >> scalarIntExpr) / ">>>"))
+
 TYPE_PARSER(sourced(beginDirective >> "$CUF KERNEL DO"_tok >>
     construct<CUFKernelDoConstruct::Directive>(
         maybe(parenthesized(scalarIntConstantExpr)),
-        "<<<" >>
-            ("*" >> pure<std::list<ScalarIntExpr>>() ||
-                parenthesized(nonemptyList(scalarIntExpr)) ||
-                applyFunction(singletonList<ScalarIntExpr>, scalarIntExpr)),
-        "," >> ("*" >> pure<std::list<ScalarIntExpr>>() ||
-                   parenthesized(nonemptyList(scalarIntExpr)) ||
-                   applyFunction(singletonList<ScalarIntExpr>, scalarIntExpr)),
-        maybe((", 0 ,"_tok || ", STREAM ="_tok) >> scalarIntExpr) / ">>>" /
-            endDirective)))
+        maybe(Parser<CUFKernelDoConstruct::LaunchConfiguration>{}),
+        many(Parser<CUFReduction>{}) / endDirective)))
 TYPE_CONTEXT_PARSER("!$CUF KERNEL DO construct"_en_US,
     extension<LanguageFeature::CUDA>(construct<CUFKernelDoConstruct>(
         Parser<CUFKernelDoConstruct::Directive>{},

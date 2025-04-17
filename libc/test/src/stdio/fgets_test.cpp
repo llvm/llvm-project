@@ -15,7 +15,6 @@
 #include "test/UnitTest/Test.h"
 
 #include "src/errno/libc_errno.h"
-#include <stdio.h>
 
 TEST(LlvmLibcFgetsTest, WriteAndReadCharacters) {
   constexpr char FILENAME[] = "testdata/fgets.test";
@@ -36,13 +35,15 @@ TEST(LlvmLibcFgetsTest, WriteAndReadCharacters) {
   // This is an error and not a real EOF.
   ASSERT_EQ(LIBC_NAMESPACE::feof(file), 0);
   ASSERT_NE(LIBC_NAMESPACE::ferror(file), 0);
-  libc_errno = 0;
+  LIBC_NAMESPACE::libc_errno = 0;
 
   ASSERT_EQ(0, LIBC_NAMESPACE::fclose(file));
 
   file = LIBC_NAMESPACE::fopen(FILENAME, "r");
   ASSERT_FALSE(file == nullptr);
 
+  // The GPU build relies on the host C library, so this check may be different.
+#ifndef LIBC_TARGET_ARCH_IS_GPU
   // If we request just 1 byte, it should return just a null byte and not
   // advance the read head. This is implementation defined.
   output = LIBC_NAMESPACE::fgets(buff, 1, file);
@@ -54,6 +55,7 @@ TEST(LlvmLibcFgetsTest, WriteAndReadCharacters) {
   // This is also implementation defined.
   output = LIBC_NAMESPACE::fgets(buff, 0, file);
   ASSERT_TRUE(output == nullptr);
+#endif
 
   const char *output_arr[] = {
       "1234567", "89\n", "1234567", "\n", "123456\n", "1",

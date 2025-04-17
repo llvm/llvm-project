@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-freebsd -S -emit-llvm -fno-use-init-array -fobjc-runtime=gnustep-2.0 -o - %s | FileCheck %s -check-prefix=CHECK-NEW
-// RUN: %clang_cc1 -triple x86_64-pc-windows-msvc -S -emit-llvm -fno-use-init-array -fobjc-runtime=gnustep-2.0 -o - %s | FileCheck %s -check-prefix=CHECK-WIN
-// RUN: %clang_cc1 -triple x86_64-unknown-freebsd -S -emit-llvm -fno-use-init-array -fobjc-runtime=gnustep-1.8 -o - %s | FileCheck %s -check-prefix=CHECK-OLD
-// RUN: %clang_cc1 -triple x86_64-unknown-freebsd -S -emit-llvm -fobjc-runtime=gnustep-2.0 -o - %s | FileCheck %s -check-prefix=CHECK-INIT_ARRAY
+// RUN: %clang_cc1 -triple x86_64-unknown-freebsd -emit-llvm -fno-use-init-array -fobjc-runtime=gnustep-2.0 -o - %s | FileCheck %s -check-prefix=CHECK-NEW
+// RUN: %clang_cc1 -triple x86_64-pc-windows-msvc -emit-llvm -fno-use-init-array -fobjc-runtime=gnustep-2.0 -o - %s | FileCheck %s -check-prefix=CHECK-WIN
+// RUN: %clang_cc1 -triple x86_64-unknown-freebsd -emit-llvm -fno-use-init-array -fobjc-runtime=gnustep-1.8 -o - %s | FileCheck %s -check-prefix=CHECK-OLD
+// RUN: %clang_cc1 -triple x86_64-unknown-freebsd -emit-llvm -fobjc-runtime=gnustep-2.0 -o - %s | FileCheck %s -check-prefix=CHECK-INIT_ARRAY
 
 // Almost minimal Objective-C file, check that it emits calls to the correct
 // runtime entry points.

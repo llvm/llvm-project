@@ -13,8 +13,8 @@
 #include "src/stdio/setvbuf.h"
 #include "test/UnitTest/Test.h"
 
+#include "hdr/stdio_macros.h"
 #include "src/errno/libc_errno.h"
-#include <stdio.h>
 
 TEST(LlvmLibcSetvbufTest, SetNBFBuffer) {
   // The idea in this test is that we open a file for writing and reading, and
@@ -102,6 +102,6 @@ TEST(LlvmLibcSetbufTest, InvalidBufferMode) {
             0);
   ASSERT_ERRNO_EQ(EINVAL);
 
-  libc_errno = 0;
+  LIBC_NAMESPACE::libc_errno = 0;
   ASSERT_EQ(0, LIBC_NAMESPACE::fclose(f));
 }

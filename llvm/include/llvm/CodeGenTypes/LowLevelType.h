@@ -45,6 +45,14 @@ public:
                /*AddressSpace=*/0};
   }
 
+  /// Get a low-level token; just a scalar with zero bits (or no size).
+  static constexpr LLT token() {
+    return LLT{/*isPointer=*/false, /*isVector=*/false,
+               /*isScalar=*/true,   ElementCount::getFixed(0),
+               /*SizeInBits=*/0,
+               /*AddressSpace=*/0};
+  }
+
   /// Get a low-level pointer in the given address space.
   static constexpr LLT pointer(unsigned AddressSpace, unsigned SizeInBits) {
     assert(SizeInBits > 0 && "invalid pointer size");
@@ -135,14 +143,16 @@ public:
   explicit LLT(MVT VT);
 
   constexpr bool isValid() const { return IsScalar || RawData != 0; }
-
   constexpr bool isScalar() const { return IsScalar; }
-
+  constexpr bool isToken() const { return IsScalar && RawData == 0; };
+  constexpr bool isVector() const { return isValid() && IsVector; }
   constexpr bool isPointer() const {
     return isValid() && IsPointer && !IsVector;
   }
-
-  constexpr bool isVector() const { return isValid() && IsVector; }
+  constexpr bool isPointerVector() const { return IsPointer && isVector(); }
+  constexpr bool isPointerOrPointerVector() const {
+    return IsPointer && isValid();
+  }
 
   /// Returns the number of elements in a vector LLT. Must only be called on
   /// vector types.
@@ -159,8 +169,7 @@ public:
   /// vector types.
   constexpr bool isScalable() const {
     assert(isVector() && "Expected a vector type");
-    return IsPointer ? getFieldValue(PointerVectorScalableFieldInfo)
-                     : getFieldValue(VectorScalableFieldInfo);
+    return getFieldValue(VectorScalableFieldInfo);
   }
 
   /// Returns true if the LLT is a fixed vector. Returns false otherwise, even
@@ -173,9 +182,7 @@ public:
 
   constexpr ElementCount getElementCount() const {
     assert(IsVector && "cannot get number of elements on scalar/aggregate");
-    return ElementCount::get(IsPointer
-                                 ? getFieldValue(PointerVectorElementsFieldInfo)
-                                 : getFieldValue(VectorElementsFieldInfo),
+    return ElementCount::get(getFieldValue(VectorElementsFieldInfo),
                              isScalable());
   }
 
@@ -209,7 +216,7 @@ public:
   /// but the new element size. Otherwise, return the new element type. Invalid
   /// for pointer types. For pointer types, use changeElementType.
   constexpr LLT changeElementSize(unsigned NewEltSize) const {
-    assert(!getScalarType().isPointer() &&
+    assert(!isPointerOrPointerVector() &&
            "invalid to directly change element size for pointers");
     return isVector() ? LLT::vector(getElementCount(), NewEltSize)
                       : LLT::scalar(NewEltSize);
@@ -255,25 +262,15 @@ public:
   }
 
   constexpr unsigned getScalarSizeInBits() const {
-    if (IsScalar)
-      return getFieldValue(ScalarSizeFieldInfo);
-    if (IsVector) {
-      if (!IsPointer)
-        return getFieldValue(VectorSizeFieldInfo);
-      else
-        return getFieldValue(PointerVectorSizeFieldInfo);
-    }
-    assert(IsPointer && "unexpected LLT");
-    return getFieldValue(PointerSizeFieldInfo);
+    if (isPointerOrPointerVector())
+      return getFieldValue(PointerSizeFieldInfo);
+    return getFieldValue(ScalarSizeFieldInfo);
   }
 
   constexpr unsigned getAddressSpace() const {
-    assert(RawData != 0 && "Invalid Type");
-    assert(IsPointer && "cannot get address space of non-pointer type");
-    if (!IsVector)
-      return getFieldValue(PointerAddressSpaceFieldInfo);
-    else
-      return getFieldValue(PointerVectorAddressSpaceFieldInfo);
+    assert(isPointerOrPointerVector() &&
+           "cannot get address space of non-pointer type");
+    return getFieldValue(PointerAddressSpaceFieldInfo);
   }
 
   /// Returns the vector's element type. Only valid for vector types.
@@ -312,6 +309,28 @@ private:
   /// described in static const *Field variables. Each of these variables
   /// is a 2-element array, with the first element describing the bitfield size
   /// and the second element describing the bitfield offset.
+  ///
+  /// +--------+---------+--------+----------+----------------------+
+  /// |isScalar|isPointer|isVector| RawData  |Notes                 |
+  /// +--------+---------+--------+----------+----------------------+
+  /// |   0    |    0    |   0    |    0     |Invalid               |
+  /// +--------+---------+--------+----------+----------------------+
+  /// |   0    |    0    |   1    |    0     |Tombstone Key         |
+  /// +--------+---------+--------+----------+----------------------+
+  /// |   0    |    1    |   0    |    0     |Empty Key             |
+  /// +--------+---------+--------+----------+----------------------+
+  /// |   1    |    0    |   0    |    0     |Token                 |
+  /// +--------+---------+--------+----------+----------------------+
+  /// |   1    |    0    |   0    | non-zero |Scalar                |
+  /// +--------+---------+--------+----------+----------------------+
+  /// |   0    |    1    |   0    | non-zero |Pointer               |
+  /// +--------+---------+--------+----------+----------------------+
+  /// |   0    |    0    |   1    | non-zero |Vector of non-pointer |
+  /// +--------+---------+--------+----------+----------------------+
+  /// |   0    |    1    |   1    | non-zero |Vector of pointer     |
+  /// +--------+---------+--------+----------+----------------------+
+  ///
+  /// Everything else is reserved.
   typedef int BitFieldInfo[2];
   ///
   /// This is how the bitfields are packed per Kind:
@@ -320,44 +339,23 @@ private:
   ///   valid encodings, SizeInBits/SizeOfElement must be larger than 0.
   /// * Non-pointer scalar (isPointer == 0 && isVector == 0):
   ///   SizeInBits: 32;
-  static const constexpr BitFieldInfo ScalarSizeFieldInfo{32, 0};
+  static const constexpr BitFieldInfo ScalarSizeFieldInfo{32, 29};
   /// * Pointer (isPointer == 1 && isVector == 0):
   ///   SizeInBits: 16;
   ///   AddressSpace: 24;
-  static const constexpr BitFieldInfo PointerSizeFieldInfo{16, 0};
-  static const constexpr BitFieldInfo PointerAddressSpaceFieldInfo{
-      24, PointerSizeFieldInfo[0] + PointerSizeFieldInfo[1]};
-  static_assert((PointerAddressSpaceFieldInfo[0] +
-                 PointerAddressSpaceFieldInfo[1]) <= 61,
-                "Insufficient bits to encode all data");
+  static const constexpr BitFieldInfo PointerSizeFieldInfo{16, 45};
+  static const constexpr BitFieldInfo PointerAddressSpaceFieldInfo{24, 21};
   /// * Vector-of-non-pointer (isPointer == 0 && isVector == 1):
   ///   NumElements: 16;
   ///   SizeOfElement: 32;
   ///   Scalable: 1;
-  static const constexpr BitFieldInfo VectorElementsFieldInfo{16, 0};
-  static const constexpr BitFieldInfo VectorSizeFieldInfo{
-      32, VectorElementsFieldInfo[0] + VectorElementsFieldInfo[1]};
-  static const constexpr BitFieldInfo VectorScalableFieldInfo{
-      1, VectorSizeFieldInfo[0] + VectorSizeFieldInfo[1]};
-  static_assert((VectorSizeFieldInfo[0] + VectorSizeFieldInfo[1]) <= 61,
-                "Insufficient bits to encode all data");
+  static const constexpr BitFieldInfo VectorElementsFieldInfo{16, 5};
+  static const constexpr BitFieldInfo VectorScalableFieldInfo{1, 0};
   /// * Vector-of-pointer (isPointer == 1 && isVector == 1):
   ///   NumElements: 16;
   ///   SizeOfElement: 16;
   ///   AddressSpace: 24;
   ///   Scalable: 1;
-  static const constexpr BitFieldInfo PointerVectorElementsFieldInfo{16, 0};
-  static const constexpr BitFieldInfo PointerVectorSizeFieldInfo{
-      16,
-      PointerVectorElementsFieldInfo[1] + PointerVectorElementsFieldInfo[0]};
-  static const constexpr BitFieldInfo PointerVectorAddressSpaceFieldInfo{
-      24, PointerVectorSizeFieldInfo[1] + PointerVectorSizeFieldInfo[0]};
-  static const constexpr BitFieldInfo PointerVectorScalableFieldInfo{
-      1, PointerVectorAddressSpaceFieldInfo[0] +
-             PointerVectorAddressSpaceFieldInfo[1]};
-  static_assert((PointerVectorAddressSpaceFieldInfo[0] +
-                 PointerVectorAddressSpaceFieldInfo[1]) <= 61,
-                "Insufficient bits to encode all data");
 
   uint64_t IsScalar : 1;
   uint64_t IsPointer : 1;
@@ -390,28 +388,16 @@ private:
     this->IsPointer = IsPointer;
     this->IsVector = IsVector;
     this->IsScalar = IsScalar;
-    if (IsScalar)
-      RawData = maskAndShift(SizeInBits, ScalarSizeFieldInfo);
-    else if (IsVector) {
-      assert(EC.isVector() && "invalid number of vector elements");
-      if (!IsPointer)
-        RawData =
-            maskAndShift(EC.getKnownMinValue(), VectorElementsFieldInfo) |
-            maskAndShift(SizeInBits, VectorSizeFieldInfo) |
-            maskAndShift(EC.isScalable() ? 1 : 0, VectorScalableFieldInfo);
-      else
-        RawData =
-            maskAndShift(EC.getKnownMinValue(),
-                         PointerVectorElementsFieldInfo) |
-            maskAndShift(SizeInBits, PointerVectorSizeFieldInfo) |
-            maskAndShift(AddressSpace, PointerVectorAddressSpaceFieldInfo) |
-            maskAndShift(EC.isScalable() ? 1 : 0,
-                         PointerVectorScalableFieldInfo);
-    } else if (IsPointer)
+    if (IsPointer) {
       RawData = maskAndShift(SizeInBits, PointerSizeFieldInfo) |
                 maskAndShift(AddressSpace, PointerAddressSpaceFieldInfo);
-    else
-      llvm_unreachable("unexpected LLT configuration");
+    } else {
+      RawData = maskAndShift(SizeInBits, ScalarSizeFieldInfo);
+    }
+    if (IsVector) {
+      RawData |= maskAndShift(EC.getKnownMinValue(), VectorElementsFieldInfo) |
+                 maskAndShift(EC.isScalable() ? 1 : 0, VectorScalableFieldInfo);
+    }
   }
 
 public:

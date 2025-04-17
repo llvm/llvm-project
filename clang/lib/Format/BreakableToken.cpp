@@ -46,7 +46,7 @@ static StringRef getLineCommentIndentPrefix(StringRef Comment,
   static constexpr StringRef KnownTextProtoPrefixes[] = {"####", "###", "##",
                                                          "//", "#"};
   ArrayRef<StringRef> KnownPrefixes(KnownCStylePrefixes);
-  if (Style.Language == FormatStyle::LK_TextProto)
+  if (Style.isTextProto())
     KnownPrefixes = KnownTextProtoPrefixes;
 
   assert(
@@ -420,7 +420,7 @@ BreakableComment::getSplit(unsigned LineIndex, unsigned TailOffset,
                            unsigned ColumnLimit, unsigned ContentStartColumn,
                            const llvm::Regex &CommentPragmasRegex) const {
   // Don't break lines matching the comment pragmas regex.
-  if (CommentPragmasRegex.match(Content[LineIndex]))
+  if (!AlwaysReflow || CommentPragmasRegex.match(Content[LineIndex]))
     return Split(StringRef::npos, 0);
   return getCommentSplit(Content[LineIndex].substr(TailOffset),
                          ContentStartColumn, ColumnLimit, Style.TabWidth,
@@ -449,11 +449,11 @@ const FormatToken &BreakableComment::tokenAt(unsigned LineIndex) const {
 
 static bool mayReflowContent(StringRef Content) {
   Content = Content.trim(Blanks);
-  // Lines starting with '@' commonly have special meaning.
+  // Lines starting with '@' or '\' commonly have special meaning.
   // Lines starting with '-', '-#', '+' or '*' are bulleted/numbered lists.
   bool hasSpecialMeaningPrefix = false;
   for (StringRef Prefix :
-       {"@", "TODO", "FIXME", "XXX", "-# ", "- ", "+ ", "* "}) {
+       {"@", "\\", "TODO", "FIXME", "XXX", "-# ", "- ", "+ ", "* "}) {
     if (Content.starts_with(Prefix)) {
       hasSpecialMeaningPrefix = true;
       break;
@@ -576,7 +576,7 @@ BreakableBlockComment::BreakableBlockComment(
   IndentAtLineBreak = std::max<unsigned>(IndentAtLineBreak, Decoration.size());
 
   // Detect a multiline jsdoc comment and set DelimitersOnNewline in that case.
-  if (Style.isJavaScript() || Style.Language == FormatStyle::LK_Java) {
+  if (Style.isJavaScript() || Style.isJava()) {
     if ((Lines[0] == "*" || Lines[0].starts_with("* ")) && Lines.size() > 1) {
       // This is a multiline jsdoc comment.
       DelimitersOnNewline = true;
@@ -608,7 +608,7 @@ BreakableToken::Split BreakableBlockComment::getSplit(
     unsigned LineIndex, unsigned TailOffset, unsigned ColumnLimit,
     unsigned ContentStartColumn, const llvm::Regex &CommentPragmasRegex) const {
   // Don't break lines matching the comment pragmas regex.
-  if (CommentPragmasRegex.match(Content[LineIndex]))
+  if (!AlwaysReflow || CommentPragmasRegex.match(Content[LineIndex]))
     return Split(StringRef::npos, 0);
   return getCommentSplit(Content[LineIndex].substr(TailOffset),
                          ContentStartColumn, ColumnLimit, Style.TabWidth,
@@ -694,7 +694,7 @@ const llvm::StringSet<>
 };
 
 unsigned BreakableBlockComment::getContentIndent(unsigned LineIndex) const {
-  if (Style.Language != FormatStyle::LK_Java && !Style.isJavaScript())
+  if (!Style.isJava() && !Style.isJavaScript())
     return 0;
   // The content at LineIndex 0 of a comment like:
   // /** line 0 */
@@ -855,7 +855,8 @@ bool BreakableBlockComment::mayReflow(
   StringRef IndentContent = Content[LineIndex];
   if (Lines[LineIndex].ltrim(Blanks).starts_with("*"))
     IndentContent = Lines[LineIndex].ltrim(Blanks).substr(1);
-  return LineIndex > 0 && !CommentPragmasRegex.match(IndentContent) &&
+  return LineIndex > 0 && AlwaysReflow &&
+         !CommentPragmasRegex.match(IndentContent) &&
          mayReflowContent(Content[LineIndex]) && !Tok.Finalized &&
          !switchesFormatting(tokenAt(LineIndex));
 }
@@ -1160,7 +1161,8 @@ bool BreakableLineCommentSection::mayReflow(
   // // text that protrudes
   // //    into text with different indent
   // We do reflow in that case in block comments.
-  return LineIndex > 0 && !CommentPragmasRegex.match(IndentContent) &&
+  return LineIndex > 0 && AlwaysReflow &&
+         !CommentPragmasRegex.match(IndentContent) &&
          mayReflowContent(Content[LineIndex]) && !Tok.Finalized &&
          !switchesFormatting(tokenAt(LineIndex)) &&
          OriginalPrefix[LineIndex] == OriginalPrefix[LineIndex - 1];

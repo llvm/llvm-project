@@ -20,7 +20,9 @@ define void @bar() {
 ; CHECK-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
 ; CHECK-NEXT:    callq foo
 ; CHECK-NEXT:    nop
+; CHECK-NEXT:    .seh_startepilogue
 ; CHECK-NEXT:    addq $56, %rsp
+; CHECK-NEXT:    .seh_endepilogue
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:    .seh_endproc
     call void @foo(ptr byval({ float, double }) @G)
@@ -43,7 +45,9 @@ define void @baz(ptr byval({ float, double }) %arg) {
 ; CHECK-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
 ; CHECK-NEXT:    callq foo
 ; CHECK-NEXT:    nop
+; CHECK-NEXT:    .seh_startepilogue
 ; CHECK-NEXT:    addq $56, %rsp
+; CHECK-NEXT:    .seh_endepilogue
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:    .seh_endproc
     call void @foo(ptr byval({ float, double }) %arg)
@@ -81,19 +85,21 @@ define void @test() {
 ; CHECK-NEXT:    leaq {{[0-9]+}}(%rsp), %r9
 ; CHECK-NEXT:    callq foo2
 ; CHECK-NEXT:    nop
+; CHECK-NEXT:    .seh_startepilogue
 ; CHECK-NEXT:    addq $136, %rsp
+; CHECK-NEXT:    .seh_endepilogue
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:    .seh_endproc
   call void @foo2(ptr byval({ float, double }) @G, ptr byval({ float, double }) @G, ptr byval({ float, double }) @G, ptr byval({ float, double }) @G, ptr byval({ float, double }) @G, i64 10)
   ret void
 }
 
-define i64 @receive_byval_arg_via_stack_arg(i64* byval(i64), i64* byval(i64), i64* byval(i64), i64* byval(i64), i64* byval(i64) %x) {
+define i64 @receive_byval_arg_via_stack_arg(ptr byval(i64), ptr byval(i64), ptr byval(i64), ptr byval(i64), ptr byval(i64) %x) {
 ; CHECK-LABEL: receive_byval_arg_via_stack_arg:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %rax
 ; CHECK-NEXT:    movq (%rax), %rax
 ; CHECK-NEXT:    retq
-  %r = load i64, i64* %x
+  %r = load i64, ptr %x
   ret i64 %r
 }

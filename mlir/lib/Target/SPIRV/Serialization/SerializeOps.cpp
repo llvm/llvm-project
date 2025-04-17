@@ -15,7 +15,6 @@
 #include "mlir/Dialect/SPIRV/IR/SPIRVAttributes.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVEnums.h"
 #include "mlir/IR/RegionGraphTraits.h"
-#include "mlir/Support/LogicalResult.h"
 #include "mlir/Target/SPIRV/SPIRVBinaryUtils.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/StringExtras.h"
@@ -138,7 +137,7 @@ Serializer::processSpecConstantOperationOp(spirv::SpecConstantOperationOp op) {
   std::string enclosedOpName;
   llvm::raw_string_ostream rss(enclosedOpName);
   rss << "Op" << enclosedOp.getName().stripDialect();
-  auto enclosedOpcode = spirv::symbolizeOpcode(rss.str());
+  auto enclosedOpcode = spirv::symbolizeOpcode(enclosedOpName);
 
   if (!enclosedOpcode) {
     op.emitError("Couldn't find op code for op ")
@@ -247,7 +246,8 @@ LogicalResult Serializer::processFuncOp(spirv::FuncOp op) {
     return op.emitError(
         "'spirv.module' cannot contain external functions "
         "without 'Import' linkage_attributes (LinkageAttributes)");
-  } else if (op.isExternal() && hasImportLinkage) {
+  }
+  if (op.isExternal() && hasImportLinkage) {
     // Add an entry block to set up the block arguments
     // to match the signature of the function.
     // This is to generate OpFunctionParameter for functions with
@@ -447,6 +447,15 @@ LogicalResult Serializer::processSelectionOp(spirv::SelectionOp selectionOp) {
   auto mergeID = getBlockID(mergeBlock);
   auto loc = selectionOp.getLoc();
 
+  // Before we do anything replace results of the selection operation with
+  // values yielded (with `mlir.merge`) from inside the region. The selection op
+  // is being flattened so we do not have to worry about values being defined
+  // inside a region and used outside it anymore.
+  auto mergeOp = cast<spirv::MergeOp>(mergeBlock->back());
+  assert(selectionOp.getNumResults() == mergeOp.getNumOperands());
+  for (unsigned i = 0, e = selectionOp.getNumResults(); i != e; ++i)
+    selectionOp.getResult(i).replaceAllUsesWith(mergeOp.getOperand(i));
+
   // This SelectionOp is in some MLIR block with preceding and following ops. In
   // the binary format, it should reside in separate SPIR-V blocks from its
   // preceding and following ops. So we need to emit unconditional branches to
@@ -483,6 +492,12 @@ LogicalResult Serializer::processSelectionOp(spirv::SelectionOp selectionOp) {
   // instruction to start a new SPIR-V block for ops following this SelectionOp.
   // The block should use the <id> for the merge block.
   encodeInstructionInto(functionBody, spirv::Opcode::OpLabel, {mergeID});
+
+  // We do not process the mergeBlock but we still need to generate phi
+  // functions from its block arguments.
+  if (failed(emitPhiForBlockArguments(mergeBlock)))
+    return failure();
+
   LLVM_DEBUG(llvm::dbgs() << "done merge ");
   LLVM_DEBUG(printBlock(mergeBlock, llvm::dbgs()));
   LLVM_DEBUG(llvm::dbgs() << "\n");
@@ -708,33 +723,37 @@ Serializer::processOp<spirv::CopyMemoryOp>(spirv::CopyMemoryOp op) {
     operands.push_back(id);
   }
 
-  if (auto attr = op->getAttr("memory_access")) {
+  StringAttr memoryAccess = op.getMemoryAccessAttrName();
+  if (auto attr = op->getAttr(memoryAccess)) {
     operands.push_back(
         static_cast<uint32_t>(cast<spirv::MemoryAccessAttr>(attr).getValue()));
   }
 
-  elidedAttrs.push_back("memory_access");
+  elidedAttrs.push_back(memoryAccess.strref());
 
-  if (auto attr = op->getAttr("alignment")) {
+  StringAttr alignment = op.getAlignmentAttrName();
+  if (auto attr = op->getAttr(alignment)) {
     operands.push_back(static_cast<uint32_t>(
         cast<IntegerAttr>(attr).getValue().getZExtValue()));
   }
 
-  elidedAttrs.push_back("alignment");
+  elidedAttrs.push_back(alignment.strref());
 
-  if (auto attr = op->getAttr("source_memory_access")) {
+  StringAttr sourceMemoryAccess = op.getSourceMemoryAccessAttrName();
+  if (auto attr = op->getAttr(sourceMemoryAccess)) {
     operands.push_back(
         static_cast<uint32_t>(cast<spirv::MemoryAccessAttr>(attr).getValue()));
   }
 
-  elidedAttrs.push_back("source_memory_access");
+  elidedAttrs.push_back(sourceMemoryAccess.strref());
 
-  if (auto attr = op->getAttr("source_alignment")) {
+  StringAttr sourceAlignment = op.getSourceAlignmentAttrName();
+  if (auto attr = op->getAttr(sourceAlignment)) {
     operands.push_back(static_cast<uint32_t>(
         cast<IntegerAttr>(attr).getValue().getZExtValue()));
   }
 
-  elidedAttrs.push_back("source_alignment");
+  elidedAttrs.push_back(sourceAlignment.strref());
   if (failed(emitDebugLine(functionBody, op.getLoc())))
     return failure();
   encodeInstructionInto(functionBody, spirv::Opcode::OpCopyMemory, operands);

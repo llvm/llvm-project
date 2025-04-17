@@ -1,7 +1,7 @@
-; RUN: llc -march=sparc --relocation-model=pic < %s | FileCheck %s --check-prefix=V8
-; RUN: llc -march=sparcv9 --relocation-model=pic < %s | FileCheck %s --check-prefix=V9
-; RUN: llc -march=sparc   --relocation-model=pic < %s -O0 | FileCheck %s --check-prefix=V8UNOPT
-; RUN: llc -march=sparcv9 --relocation-model=pic < %s -O0 | FileCheck %s --check-prefix=V9UNOPT
+; RUN: llc -mtriple=sparc --relocation-model=pic < %s | FileCheck %s --check-prefix=V8
+; RUN: llc -mtriple=sparcv9 --relocation-model=pic < %s | FileCheck %s --check-prefix=V9
+; RUN: llc -mtriple=sparc --relocation-model=pic < %s -O0 | FileCheck %s --check-prefix=V8UNOPT
+; RUN: llc -mtriple=sparcv9 --relocation-model=pic < %s -O0 | FileCheck %s --check-prefix=V9UNOPT
 
 
 ; V8-LABEL: func
@@ -14,7 +14,7 @@
 
 define i32 @func(i32 %a) nounwind readonly {
 entry:
-  %0 = load i32, i32* @foo, align 4                    ; <i32> [#uses=1]
+  %0 = load i32, ptr @foo, align 4                    ; <i32> [#uses=1]
   ret i32 %0
 }
 
@@ -36,7 +36,7 @@ entry:
   br i1 %cmp, label %if.then, label %if.end
 
 if.then:
-  %ret =  load i32, i32* @foo, align 4
+  %ret =  load i32, ptr @foo, align 4
   ret i32 %ret
 
 if.end:

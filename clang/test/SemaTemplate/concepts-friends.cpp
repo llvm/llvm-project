@@ -478,3 +478,73 @@ template <Concept> class Foo {
 };
 
 } // namespace FriendOfFriend
+
+namespace GH86769 {
+
+template <typename T>
+concept X = true;
+
+template <X T> struct Y {
+  Y(T) {}
+  template <X U> friend struct Y;
+  template <X U> friend struct Y;
+  template <X U> friend struct Y;
+};
+
+template <class T>
+struct Z {
+  // FIXME: This is ill-formed per C++11 N3337 [temp.param]p12:
+  // A default template argument shall not be specified in a friend class
+  // template declaration.
+  template <X U = void> friend struct Y;
+};
+
+template struct Y<int>;
+template struct Z<int>;
+Y y(1);
+
+}
+
+namespace GH98258 {
+
+struct S {
+  template <typename U>
+  friend void f() requires requires { []<typename V>(V){}; } {
+    return;
+  }
+
+  template <typename U>
+  friend void f2() requires requires { [](auto){}; } {
+    return;
+  }
+
+  template <typename U>
+  friend void f3() requires requires { []<int X>(){ return X; }; } {
+    return;
+  }
+};
+
+}
+
+namespace GH78101 {
+
+template <typename T, int i>
+concept True = true;
+
+template <typename T, int I> struct Template {
+  static constexpr int i = I;
+
+  friend constexpr auto operator+(True<i> auto f) { return i; }
+};
+
+template <int I> struct Template<float, I> {
+  static constexpr int i = I;
+
+  friend constexpr auto operator+(True<i> auto f) { return i; }
+};
+
+Template<void, 4> f{};
+
+static_assert(+Template<float, 5>{} == 5);
+
+} // namespace GH78101

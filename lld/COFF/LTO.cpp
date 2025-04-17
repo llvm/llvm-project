@@ -86,11 +86,12 @@ lto::Config BitcodeCompiler::createConfig() {
   c.CSIRProfile = std::string(ctx.config.ltoCSProfileFile);
   c.RunCSIRInstr = ctx.config.ltoCSProfileGenerate;
   c.PGOWarnMismatch = ctx.config.ltoPGOWarnMismatch;
+  c.SampleProfile = ctx.config.ltoSampleProfileName;
   c.TimeTraceEnabled = ctx.config.timeTraceEnabled;
   c.TimeTraceGranularity = ctx.config.timeTraceGranularity;
 
   if (ctx.config.emit == EmitKind::LLVM) {
-    c.PostInternalizeModuleHook = [this](size_t task, const Module &m) {
+    c.PreCodeGenModuleHook = [this](size_t task, const Module &m) {
       if (std::unique_ptr<raw_fd_ostream> os =
               openLTOOutputFile(ctx.config.outputFile))
         WriteBitcodeToFile(m, *os, false);
@@ -101,9 +102,10 @@ lto::Config BitcodeCompiler::createConfig() {
     c.Options.MCOptions.AsmVerbose = true;
   }
 
-  if (ctx.config.saveTemps)
+  if (!ctx.config.saveTempsArgs.empty())
     checkError(c.addSaveTemps(std::string(ctx.config.outputFile) + ".",
-                              /*UseInputModulePath*/ true));
+                              /*UseInputModulePath*/ true,
+                              ctx.config.saveTempsArgs));
   return c;
 }
 
@@ -117,6 +119,7 @@ BitcodeCompiler::BitcodeCompiler(COFFLinkerContext &c) : ctx(c) {
   if (ctx.config.thinLTOIndexOnly) {
     auto OnIndexWrite = [&](StringRef S) { thinIndices.erase(S); };
     backend = lto::createWriteIndexesThinBackend(
+        llvm::hardware_concurrency(ctx.config.thinLTOJobs),
         std::string(ctx.config.thinLTOPrefixReplaceOld),
         std::string(ctx.config.thinLTOPrefixReplaceNew),
         std::string(ctx.config.thinLTOPrefixReplaceNativeObject),
@@ -253,10 +256,10 @@ std::vector<InputFile *> BitcodeCompiler::compile() {
       sys::path::remove_dots(path, true);
       ltoObjName = saver().save(path.str());
     }
-    if (ctx.config.saveTemps || emitASM)
+    if (llvm::is_contained(ctx.config.saveTempsArgs, "prelink") || emitASM)
       saveBuffer(buf[i].second, ltoObjName);
     if (!emitASM)
-      ret.push_back(make<ObjFile>(ctx, MemoryBufferRef(objBuf, ltoObjName)));
+      ret.push_back(ObjFile::create(ctx, MemoryBufferRef(objBuf, ltoObjName)));
   }
 
   return ret;

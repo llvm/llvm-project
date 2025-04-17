@@ -19,6 +19,7 @@
 #define AVOID_NATIVE_UINT128_T 0
 #endif
 
+#include "api-attrs.h"
 #include "leading-zero-bit-count.h"
 #include <cstdint>
 #include <type_traits>
@@ -260,7 +261,9 @@ private:
       return LeadingZeroBitCount(high_);
     }
   }
+  RT_VAR_GROUP_BEGIN
   static constexpr std::uint64_t topBit{std::uint64_t{1} << 63};
+  RT_VAR_GROUP_END
 #if FLANG_LITTLE_ENDIAN
   std::uint64_t low_{0}, high_{0};
 #elif FLANG_BIG_ENDIAN
@@ -275,9 +278,11 @@ using SignedInt128 = Int128<true>;
 
 #if !AVOID_NATIVE_UINT128_T && (defined __GNUC__ || defined __clang__) && \
     defined __SIZEOF_INT128__
+#define USING_NATIVE_INT128_T 1
 using uint128_t = __uint128_t;
 using int128_t = __int128_t;
 #else
+#undef USING_NATIVE_INT128_T
 using uint128_t = UnsignedInt128;
 using int128_t = SignedInt128;
 #endif

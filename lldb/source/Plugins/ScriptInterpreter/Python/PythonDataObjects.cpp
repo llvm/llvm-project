@@ -61,7 +61,7 @@ Expected<std::string> python::As<std::string>(Expected<PythonObject> &&obj) {
   if (!obj)
     return obj.takeError();
   PyObject *str_obj = PyObject_Str(obj.get().get());
-  if (!obj)
+  if (!str_obj)
     return llvm::make_error<PythonException>();
   auto str = Take<PythonString>(str_obj);
   auto utf8 = str.AsUTF8();
@@ -71,10 +71,8 @@ Expected<std::string> python::As<std::string>(Expected<PythonObject> &&obj) {
 }
 
 static bool python_is_finalizing() {
-#if (PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION >= 13) || (PY_MAJOR_VERSION > 3)
+#if PY_VERSION_HEX >= 0x030d0000
   return Py_IsFinalizing();
-#elif PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION < 7
-  return _Py_Finalizing != nullptr;
 #else
   return _Py_IsFinalizing();
 #endif
@@ -810,7 +808,6 @@ bool PythonCallable::Check(PyObject *py_obj) {
   return PyCallable_Check(py_obj);
 }
 
-#if PY_MAJOR_VERSION >= 3 && PY_MINOR_VERSION >= 3
 static const char get_arg_info_script[] = R"(
 from inspect import signature, Parameter, ismethod
 from collections import namedtuple
@@ -832,14 +829,11 @@ def main(f):
             raise Exception(f'unknown parameter kind: {kind}')
     return ArgInfo(count, varargs)
 )";
-#endif
 
 Expected<PythonCallable::ArgInfo> PythonCallable::GetArgInfo() const {
   ArgInfo result = {};
   if (!IsValid())
     return nullDeref();
-
-#if PY_MAJOR_VERSION >= 3 && PY_MINOR_VERSION >= 3
 
   // no need to synchronize access to this global, we already have the GIL
   static PythonScript get_arg_info(get_arg_info_script);
@@ -851,57 +845,6 @@ Expected<PythonCallable::ArgInfo> PythonCallable::GetArgInfo() const {
   bool has_varargs =
       cantFail(As<bool>(pyarginfo.get().GetAttribute("has_varargs")));
   result.max_positional_args = has_varargs ? ArgInfo::UNBOUNDED : count;
-
-#else
-  PyObject *py_func_obj;
-  bool is_bound_method = false;
-  bool is_class = false;
-
-  if (PyType_Check(m_py_obj) || PyClass_Check(m_py_obj)) {
-    auto init = GetAttribute("__init__");
-    if (!init)
-      return init.takeError();
-    py_func_obj = init.get().get();
-    is_class = true;
-  } else {
-    py_func_obj = m_py_obj;
-  }
-
-  if (PyMethod_Check(py_func_obj)) {
-    py_func_obj = PyMethod_GET_FUNCTION(py_func_obj);
-    PythonObject im_self = GetAttributeValue("im_self");
-    if (im_self.IsValid() && !im_self.IsNone())
-      is_bound_method = true;
-  } else {
-    // see if this is a callable object with an __call__ method
-    if (!PyFunction_Check(py_func_obj)) {
-      PythonObject __call__ = GetAttributeValue("__call__");
-      if (__call__.IsValid()) {
-        auto __callable__ = __call__.AsType<PythonCallable>();
-        if (__callable__.IsValid()) {
-          py_func_obj = PyMethod_GET_FUNCTION(__callable__.get());
-          PythonObject im_self = __callable__.GetAttributeValue("im_self");
-          if (im_self.IsValid() && !im_self.IsNone())
-            is_bound_method = true;
-        }
-      }
-    }
-  }
-
-  if (!py_func_obj)
-    return result;
-
-  PyCodeObject *code = (PyCodeObject *)PyFunction_GET_CODE(py_func_obj);
-  if (!code)
-    return result;
-
-  auto count = code->co_argcount;
-  bool has_varargs = !!(code->co_flags & CO_VARARGS);
-  result.max_positional_args =
-      has_varargs ? ArgInfo::UNBOUNDED
-                  : (count - (int)is_bound_method) - (int)is_class;
-
-#endif
 
   return result;
 }
@@ -1105,12 +1048,13 @@ public:
     if (!m_borrowed) {
       auto r = m_py_obj.CallMethod("close");
       if (!r)
-        py_error = Status(r.takeError());
+        py_error = Status::FromError(r.takeError());
     }
     base_error = Base::Close();
+    // Cloning since the wrapped exception may still reference the PyThread.
     if (py_error.Fail())
-      return py_error;
-    return base_error;
+      return py_error.Clone();
+    return base_error.Clone();
   };
 
   PyObject *GetPythonObject() const {
@@ -1196,7 +1140,8 @@ public:
       return Flush();
     auto r = m_py_obj.CallMethod("close");
     if (!r)
-      return Status(r.takeError());
+      // Cloning since the wrapped exception may still reference the PyThread.
+      return Status::FromError(r.takeError()).Clone();
     return Status();
   }
 
@@ -1204,7 +1149,8 @@ public:
     GIL takeGIL;
     auto r = m_py_obj.CallMethod("flush");
     if (!r)
-      return Status(r.takeError());
+      // Cloning since the wrapped exception may still reference the PyThread.
+      return Status::FromError(r.takeError()).Clone();
     return Status();
   }
 
@@ -1240,14 +1186,16 @@ public:
     PyObject *pybuffer_p = PyMemoryView_FromMemory(
         const_cast<char *>((const char *)buf), num_bytes, PyBUF_READ);
     if (!pybuffer_p)
-      return Status(llvm::make_error<PythonException>());
+      // Cloning since the wrapped exception may still reference the PyThread.
+      return Status::FromError(llvm::make_error<PythonException>()).Clone();
     auto pybuffer = Take<PythonObject>(pybuffer_p);
     num_bytes = 0;
     auto bytes_written = As<long long>(m_py_obj.CallMethod("write", pybuffer));
     if (!bytes_written)
-      return Status(bytes_written.takeError());
+      return Status::FromError(bytes_written.takeError());
     if (bytes_written.get() < 0)
-      return Status(".write() method returned a negative number!");
+      return Status::FromErrorString(
+          ".write() method returned a negative number!");
     static_assert(sizeof(long long) >= sizeof(size_t), "overflow");
     num_bytes = bytes_written.get();
     return Status();
@@ -1259,7 +1207,8 @@ public:
     auto pybuffer_obj =
         m_py_obj.CallMethod("read", (unsigned long long)num_bytes);
     if (!pybuffer_obj)
-      return Status(pybuffer_obj.takeError());
+      // Cloning since the wrapped exception may still reference the PyThread.
+      return Status::FromError(pybuffer_obj.takeError()).Clone();
     num_bytes = 0;
     if (pybuffer_obj.get().IsNone()) {
       // EOF
@@ -1268,7 +1217,8 @@ public:
     }
     auto pybuffer = PythonBuffer::Create(pybuffer_obj.get());
     if (!pybuffer)
-      return Status(pybuffer.takeError());
+      // Cloning since the wrapped exception may still reference the PyThread.
+      return Status::FromError(pybuffer.takeError()).Clone();
     memcpy(buf, pybuffer.get().get().buf, pybuffer.get().get().len);
     num_bytes = pybuffer.get().get().len;
     return Status();
@@ -1294,14 +1244,16 @@ public:
     auto pystring =
         PythonString::FromUTF8(llvm::StringRef((const char *)buf, num_bytes));
     if (!pystring)
-      return Status(pystring.takeError());
+      return Status::FromError(pystring.takeError());
     num_bytes = 0;
     auto bytes_written =
         As<long long>(m_py_obj.CallMethod("write", pystring.get()));
     if (!bytes_written)
-      return Status(bytes_written.takeError());
+      // Cloning since the wrapped exception may still reference the PyThread.
+      return Status::FromError(bytes_written.takeError()).Clone();
     if (bytes_written.get() < 0)
-      return Status(".write() method returned a negative number!");
+      return Status::FromErrorString(
+          ".write() method returned a negative number!");
     static_assert(sizeof(long long) >= sizeof(size_t), "overflow");
     num_bytes = bytes_written.get();
     return Status();
@@ -1313,19 +1265,22 @@ public:
     size_t orig_num_bytes = num_bytes;
     num_bytes = 0;
     if (orig_num_bytes < 6) {
-      return Status("can't read less than 6 bytes from a utf8 text stream");
+      return Status::FromErrorString(
+          "can't read less than 6 bytes from a utf8 text stream");
     }
     auto pystring = As<PythonString>(
         m_py_obj.CallMethod("read", (unsigned long long)num_chars));
     if (!pystring)
-      return Status(pystring.takeError());
+      // Cloning since the wrapped exception may still reference the PyThread.
+      return Status::FromError(pystring.takeError()).Clone();
     if (pystring.get().IsNone()) {
       // EOF
       return Status();
     }
     auto stringref = pystring.get().AsUTF8();
     if (!stringref)
-      return Status(stringref.takeError());
+      // Cloning since the wrapped exception may still reference the PyThread.
+      return Status::FromError(stringref.takeError()).Clone();
     num_bytes = stringref.get().size();
     memcpy(buf, stringref.get().begin(), num_bytes);
     return Status();

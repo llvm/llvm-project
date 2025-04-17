@@ -1,4 +1,5 @@
 //===----------------------------------------------------------------------===//
+//
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
@@ -61,26 +62,24 @@ struct valid {
   void insert(iterator, CharT*, CharT*);
 };
 
-namespace std::__format {
 template <>
-inline constexpr bool __enable_insertable<no_value_type<char>> = true;
+inline constexpr bool std::__format::__enable_insertable<no_value_type<char>> = true;
 template <>
-inline constexpr bool __enable_insertable<no_end<char>> = true;
+inline constexpr bool std::__format::__enable_insertable<no_end<char>> = true;
 template <>
-inline constexpr bool __enable_insertable<no_insert<char>> = true;
+inline constexpr bool std::__format::__enable_insertable<no_insert<char>> = true;
 template <>
-inline constexpr bool __enable_insertable<valid<char>> = true;
+inline constexpr bool std::__format::__enable_insertable<valid<char>> = true;
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
 template <>
-inline constexpr bool __enable_insertable<no_value_type<wchar_t>> = true;
+inline constexpr bool std::__format::__enable_insertable<no_value_type<wchar_t>> = true;
 template <>
-inline constexpr bool __enable_insertable<no_end<wchar_t>> = true;
+inline constexpr bool std::__format::__enable_insertable<no_end<wchar_t>> = true;
 template <>
-inline constexpr bool __enable_insertable<no_insert<wchar_t>> = true;
+inline constexpr bool std::__format::__enable_insertable<no_insert<wchar_t>> = true;
 template <>
-inline constexpr bool __enable_insertable<valid<wchar_t>> = true;
+inline constexpr bool std::__format::__enable_insertable<valid<wchar_t>> = true;
 #endif
-} // namespace std::__format
 
 static_assert(!std::__format::__insertable<no_value_type<char>>);
 static_assert(!std::__format::__insertable<no_end<char>>);
@@ -95,12 +94,10 @@ static_assert(!std::__format::__insertable<no_specialization<wchar_t>>);
 static_assert(std::__format::__insertable<valid<wchar_t>>);
 #endif
 
-namespace std::__format {
 template <>
-inline constexpr bool __enable_insertable<valid<signed char>> = true;
+inline constexpr bool std::__format::__enable_insertable<valid<signed char>> = true;
 template <>
-inline constexpr bool __enable_insertable<valid<unsigned char>> = true;
-} // namespace std::__format
+inline constexpr bool std::__format::__enable_insertable<valid<unsigned char>> = true;
 
 static_assert(!std::__format::__insertable<valid<signed char>>);
 static_assert(!std::__format::__insertable<valid<unsigned char>>);

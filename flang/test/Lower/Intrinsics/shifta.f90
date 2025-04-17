@@ -13,7 +13,7 @@ subroutine shifta1_test(a, b, c)
   c = shifta(a, b)
   ! CHECK: %[[C_BITS:.*]] = arith.constant 8 : i8
   ! CHECK: %[[B_CONV:.*]] = fir.convert %[[B_VAL]] : (i32) -> i8
-  ! CHECK: %[[SHIFT_IS_BITWIDTH:.*]] = arith.cmpi eq, %[[B_CONV]], %[[C_BITS]] : i8
+  ! CHECK: %[[SHIFT_IS_BITWIDTH:.*]] = arith.cmpi uge, %[[B_CONV]], %[[C_BITS]] : i8
   ! CHECK: %[[C0:.*]] = arith.constant 0 : i8
   ! CHECK: %[[CM1:.*]] = arith.constant -1 : i8
   ! CHECK: %[[IS_NEG:.*]] = arith.cmpi slt, %[[A_VAL]], %[[C0]] : i8
@@ -34,7 +34,7 @@ subroutine shifta2_test(a, b, c)
   c = shifta(a, b)
   ! CHECK: %[[C_BITS:.*]] = arith.constant 16 : i16
   ! CHECK: %[[B_CONV:.*]] = fir.convert %[[B_VAL]] : (i32) -> i16
-  ! CHECK: %[[SHIFT_IS_BITWIDTH:.*]] = arith.cmpi eq, %[[B_CONV]], %[[C_BITS]] : i16
+  ! CHECK: %[[SHIFT_IS_BITWIDTH:.*]] = arith.cmpi uge, %[[B_CONV]], %[[C_BITS]] : i16
   ! CHECK: %[[C0:.*]] = arith.constant 0 : i16
   ! CHECK: %[[CM1:.*]] = arith.constant -1 : i16
   ! CHECK: %[[IS_NEG:.*]] = arith.cmpi slt, %[[A_VAL]], %[[C0]] : i16
@@ -54,7 +54,7 @@ subroutine shifta4_test(a, b, c)
   ! CHECK: %[[B_VAL:.*]] = fir.load %[[B]] : !fir.ref<i32>
   c = shifta(a, b)
   ! CHECK: %[[C_BITS:.*]] = arith.constant 32 : i32
-  ! CHECK: %[[SHIFT_IS_BITWIDTH:.*]] = arith.cmpi eq, %[[B_VAL]], %[[C_BITS]] : i32
+  ! CHECK: %[[SHIFT_IS_BITWIDTH:.*]] = arith.cmpi uge, %[[B_VAL]], %[[C_BITS]] : i32
   ! CHECK: %[[C0:.*]] = arith.constant 0 : i32
   ! CHECK: %[[CM1:.*]] = arith.constant -1 : i32
   ! CHECK: %[[IS_NEG:.*]] = arith.cmpi slt, %[[A_VAL]], %[[C0]] : i32
@@ -75,7 +75,7 @@ subroutine shifta8_test(a, b, c)
   c = shifta(a, b)
   ! CHECK: %[[C_BITS:.*]] = arith.constant 64 : i64
   ! CHECK: %[[B_CONV:.*]] = fir.convert %[[B_VAL]] : (i32) -> i64
-  ! CHECK: %[[SHIFT_IS_BITWIDTH:.*]] = arith.cmpi eq, %[[B_CONV]], %[[C_BITS]] : i64
+  ! CHECK: %[[SHIFT_IS_BITWIDTH:.*]] = arith.cmpi uge, %[[B_CONV]], %[[C_BITS]] : i64
   ! CHECK: %[[C0:.*]] = arith.constant 0 : i64
   ! CHECK: %[[CM1:.*]] = arith.constant -1 : i64
   ! CHECK: %[[IS_NEG:.*]] = arith.cmpi slt, %[[A_VAL]], %[[C0]] : i64
@@ -96,7 +96,7 @@ subroutine shifta16_test(a, b, c)
   c = shifta(a, b)
   ! CHECK: %[[C_BITS:.*]] = arith.constant 128 : i128
   ! CHECK: %[[B_CONV:.*]] = fir.convert %[[B_VAL]] : (i32) -> i128
-  ! CHECK: %[[SHIFT_IS_BITWIDTH:.*]] = arith.cmpi eq, %[[B_CONV]], %[[C_BITS]] : i128
+  ! CHECK: %[[SHIFT_IS_BITWIDTH:.*]] = arith.cmpi uge, %[[B_CONV]], %[[C_BITS]] : i128
   ! CHECK: %[[C0:.*]] = arith.constant 0 : i128
   ! CHECK: %[[CM1:.*]] = arith.constant {{.*}} : i128
   ! CHECK: %[[IS_NEG:.*]] = arith.cmpi slt, %[[A_VAL]], %[[C0]] : i128

@@ -6,9 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __LLVM_LIBC_TYPES_FEXCEPT_T_H__
-#define __LLVM_LIBC_TYPES_FEXCEPT_T_H__
+#ifndef LLVM_LIBC_TYPES_FEXCEPT_T_H
+#define LLVM_LIBC_TYPES_FEXCEPT_T_H
 
-typedef int fexcept_t;
+#if defined(__x86_64__) || defined(__i386__)
+typedef unsigned short int fexcept_t;
+#else
+typedef unsigned int fexcept_t;
+#endif
 
-#endif // __LLVM_LIBC_TYPES_FEXCEPT_T_H__
+#endif // LLVM_LIBC_TYPES_FEXCEPT_T_H

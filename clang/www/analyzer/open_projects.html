@@ -35,35 +35,6 @@ mailing list</a> to notify other members of the community.</p>
     Such checkers should either be improved
     up to a point where they can be enabled by default,
     or removed from the analyzer entirely.
-
-    <ul>
-      <li><code>alpha.security.ArrayBound</code> and
-      <code>alpha.security.ArrayBoundV2</code>
-      <p>Array bounds checking is a desired feature,
-      but having an acceptable rate of false positives might not be possible
-      without a proper
-      <a href="https://en.wikipedia.org/wiki/Widening_(computer_science)">loop widening</a> support.
-      Additionally, it might be more promising to perform index checking based on
-      <a href="https://en.wikipedia.org/wiki/Taint_checking">tainted</a> index values.
-      <p><i>(Difficulty: Medium)</i></p></p>
-      </li>
-
-      <li><code>alpha.unix.StreamChecker</code>
-        <p>A SimpleStreamChecker has been presented in the Building a Checker in 24
-        Hours talk
-        (<a href="https://llvm.org/devmtg/2012-11/Zaks-Rose-Checker24Hours.pdf">slides</a>
-        <a href="https://youtu.be/kdxlsP5QVPw">video</a>).</p>
-
-        <p>This alpha checker is an attempt to write a production grade stream checker.
-        However, it was found to have an unacceptably high false positive rate.
-        One of the found problems was that eagerly splitting the state
-        based on whether the system call may fail leads to too many reports.
-        A <em>delayed</em> split where the implication is stored in the state
-        (similarly to nullability implications in <code>TrustNonnullChecker</code>)
-        may produce much better results.</p>
-        <p><i>(Difficulty: Medium)</i></p>
-      </li>
-    </ul>
   </li>
 
   <li>Improve C++ support

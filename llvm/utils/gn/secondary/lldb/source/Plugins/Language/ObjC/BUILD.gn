@@ -15,6 +15,7 @@ static_library("ObjC") {
     "//lldb/source/Symbol",
     "//lldb/source/Target",
     "//lldb/source/Utility",
+    "//lldb/source/ValueObject",
 
     #"//lldb/source/Plugins/TypeSystem/Clang", # 3-hop dependency cycle.
     "//llvm/lib/Support",

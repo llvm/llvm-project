@@ -257,6 +257,7 @@ void installSignalHandlers(gwp_asan::GuardedPoolAllocator *GPA, Printf_t Printf,
   Action.sa_flags = SA_SIGINFO;
   sigaction(SIGSEGV, &Action, &PreviousHandler);
   SignalHandlerInstalled = true;
+  HasReportedBadPoolAccess = false;
 }
 
 void uninstallSignalHandlers() {

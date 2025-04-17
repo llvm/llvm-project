@@ -145,7 +145,7 @@ printableTextForNextCharacter(StringRef SourceLine, size_t *I,
     (void)Res;
     assert(Res == llvm::conversionOK);
     assert(OriginalBegin < Begin);
-    assert((Begin - OriginalBegin) == CharSize);
+    assert(unsigned(Begin - OriginalBegin) == CharSize);
 
     (*I) += (Begin - OriginalBegin);
 
@@ -1251,11 +1251,11 @@ highlightLines(StringRef FileData, unsigned StartLineNumber,
     unsigned LineLength = 0;
     for (unsigned I = 0; I <= Spelling.size(); ++I) {
       // This line is done.
-      if (isVerticalWhitespace(Spelling[I]) || I == Spelling.size()) {
-        SmallVector<TextDiagnostic::StyleRange> &LineRanges =
-            SnippetRanges[L - StartLineNumber];
-
+      if (I == Spelling.size() || isVerticalWhitespace(Spelling[I])) {
         if (L >= StartLineNumber) {
+          SmallVector<TextDiagnostic::StyleRange> &LineRanges =
+              SnippetRanges[L - StartLineNumber];
+
           if (L == TokenStartLine) // First line
             appendStyle(LineRanges, T, StartCol, LineLength);
           else if (L == TokenEndLine) // Last line
@@ -1349,7 +1349,7 @@ void TextDiagnostic::emitSnippetAndCaret(
   // Prepare source highlighting information for the lines we're about to
   // emit, starting from the first line.
   std::unique_ptr<SmallVector<StyleRange>[]> SourceStyles =
-      highlightLines(BufStart, Lines.first, Lines.second, PP, LangOpts,
+      highlightLines(BufData, Lines.first, Lines.second, PP, LangOpts,
                      DiagOpts->ShowColors, FID, SM);
 
   SmallVector<LineRange> LineRanges =

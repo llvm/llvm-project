@@ -21,6 +21,36 @@
 namespace clang {
 namespace targets {
 
+enum AArch64AddrSpace { ptr32_sptr = 270, ptr32_uptr = 271, ptr64 = 272 };
+
+static const unsigned ARM64AddrSpaceMap[] = {
+    0, // Default
+    0, // opencl_global
+    0, // opencl_local
+    0, // opencl_constant
+    0, // opencl_private
+    0, // opencl_generic
+    0, // opencl_global_device
+    0, // opencl_global_host
+    0, // cuda_device
+    0, // cuda_constant
+    0, // cuda_shared
+    0, // sycl_global
+    0, // sycl_global_device
+    0, // sycl_global_host
+    0, // sycl_local
+    0, // sycl_private
+    static_cast<unsigned>(AArch64AddrSpace::ptr32_sptr),
+    static_cast<unsigned>(AArch64AddrSpace::ptr32_uptr),
+    static_cast<unsigned>(AArch64AddrSpace::ptr64),
+    0, // hlsl_groupshared
+    0, // hlsl_constant
+    0, // hlsl_private
+    // Wasm address space values for this target are dummy values,
+    // as it is only enabled for Wasm targets.
+    20, // wasm_funcref
+};
+
 class LLVM_LIBRARY_VISIBILITY AArch64TargetInfo : public TargetInfo {
   virtual void setDataLayout() = 0;
   static const TargetInfo::GCCRegAlias GCCRegAliases[];
@@ -38,7 +68,6 @@ class LLVM_LIBRARY_VISIBILITY AArch64TargetInfo : public TargetInfo {
   bool HasSHA2 = false;
   bool HasSHA3 = false;
   bool HasSM4 = false;
-  bool HasUnaligned = true;
   bool HasFullFP16 = false;
   bool HasDotProd = false;
   bool HasFP16FML = false;
@@ -50,10 +79,12 @@ class LLVM_LIBRARY_VISIBILITY AArch64TargetInfo : public TargetInfo {
   bool HasMatMul = false;
   bool HasBFloat16 = false;
   bool HasSVE2 = false;
-  bool HasSVE2AES = false;
+  bool HasSVE2p1 = false;
+  bool HasSVEAES = false;
   bool HasSVE2SHA3 = false;
   bool HasSVE2SM4 = false;
-  bool HasSVE2BitPerm = false;
+  bool HasSVEB16B16 = false;
+  bool HasSVEBitPerm = false;
   bool HasMatmulFP64 = false;
   bool HasMatmulFP32 = false;
   bool HasLSE = false;
@@ -68,8 +99,12 @@ class LLVM_LIBRARY_VISIBILITY AArch64TargetInfo : public TargetInfo {
   bool HasCCDP = false;
   bool HasFRInt3264 = false;
   bool HasSME = false;
+  bool HasSME2 = false;
   bool HasSMEF64F64 = false;
   bool HasSMEI16I64 = false;
+  bool HasSMEF16F16 = false;
+  bool HasSMEB16B16 = false;
+  bool HasSME2p1 = false;
   bool HasSB = false;
   bool HasPredRes = false;
   bool HasSSBS = false;
@@ -84,6 +119,7 @@ class LLVM_LIBRARY_VISIBILITY AArch64TargetInfo : public TargetInfo {
   bool HasGCS = false;
   bool HasRCPC3 = false;
   bool HasSMEFA64 = false;
+  bool HasPAuthLR = false;
 
   const llvm::AArch64::ArchInfo *ArchInfo = &llvm::AArch64::ARMV8A;
 
@@ -97,19 +133,15 @@ public:
 
   bool validateBranchProtection(StringRef Spec, StringRef Arch,
                                 BranchProtectionInfo &BPI,
+                                const LangOptions &LO,
                                 StringRef &Err) const override;
 
   bool isValidCPUName(StringRef Name) const override;
   void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const override;
   bool setCPU(const std::string &Name) override;
 
-  unsigned multiVersionSortPriority(StringRef Name) const override;
-  unsigned multiVersionFeatureCost() const override;
+  uint64_t getFMVPriority(ArrayRef<StringRef> Features) const override;
 
-  bool
-  initFeatureMap(llvm::StringMap<bool> &Features, DiagnosticsEngine &Diags,
-                 StringRef CPU,
-                 const std::vector<std::string> &FeaturesVec) const override;
   bool useFP16ConversionIntrinsics() const override {
     return false;
   }
@@ -146,15 +178,17 @@ public:
                                MacroBuilder &Builder) const;
   void getTargetDefinesARMV95A(const LangOptions &Opts,
                                MacroBuilder &Builder) const;
+  void getTargetDefinesARMV96A(const LangOptions &Opts,
+                               MacroBuilder &Builder) const;
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;
 
-  ArrayRef<Builtin::Info> getTargetBuiltins() const override;
+  llvm::SmallVector<Builtin::InfosShard> getTargetBuiltins() const override;
 
   std::optional<std::pair<unsigned, unsigned>>
-  getVScaleRange(const LangOptions &LangOpts) const override;
+  getVScaleRange(const LangOptions &LangOpts,
+                 bool IsArmStreamingFunction) const override;
   bool doesFeatureAffectCodeGen(StringRef Name) const override;
-  StringRef getFeatureDependencies(StringRef Name) const override;
   bool validateCpuSupports(StringRef FeatureStr) const override;
   bool hasFeature(StringRef Feature) const override;
   void setFeatureEnabled(llvm::StringMap<bool> &Features, StringRef Name,
@@ -163,7 +197,7 @@ public:
                             DiagnosticsEngine &Diags) override;
   ParsedTargetAttr parseTargetAttr(StringRef Str) const override;
   bool supportsTargetAttributeTune() const override { return true; }
-
+  bool supportsCpuSupports() const override { return true; }
   bool checkArithmeticFenceSupported() const override { return true; }
 
   bool hasBFloat16Type() const override;
@@ -193,10 +227,34 @@ public:
 
   int getEHDataRegisterNumber(unsigned RegNo) const override;
 
+  bool validatePointerAuthKey(const llvm::APSInt &value) const override;
+
   const char *getBFloat16Mangling() const override { return "u6__bf16"; };
+
+  std::pair<unsigned, unsigned> hardwareInterferenceSizes() const override {
+    return std::make_pair(256, 64);
+  }
+
   bool hasInt128Type() const override;
 
   bool hasBitIntType() const override { return true; }
+
+  bool validateTarget(DiagnosticsEngine &Diags) const override;
+
+  bool validateGlobalRegisterVariable(StringRef RegName, unsigned RegSize,
+                                      bool &HasSizeMismatch) const override;
+
+  uint64_t getPointerWidthV(LangAS AddrSpace) const override {
+    if (AddrSpace == LangAS::ptr32_sptr || AddrSpace == LangAS::ptr32_uptr)
+      return 32;
+    if (AddrSpace == LangAS::ptr64)
+      return 64;
+    return PointerWidth;
+  }
+
+  uint64_t getPointerAlignV(LangAS AddrSpace) const override {
+    return getPointerWidthV(AddrSpace);
+  }
 };
 
 class LLVM_LIBRARY_VISIBILITY AArch64leTargetInfo : public AArch64TargetInfo {
@@ -257,6 +315,20 @@ private:
   void setDataLayout() override;
 };
 
+void getAppleMachOAArch64Defines(MacroBuilder &Builder, const LangOptions &Opts,
+                                 const llvm::Triple &Triple);
+
+class LLVM_LIBRARY_VISIBILITY AppleMachOAArch64TargetInfo
+    : public AppleMachOTargetInfo<AArch64leTargetInfo> {
+public:
+  AppleMachOAArch64TargetInfo(const llvm::Triple &Triple,
+                              const TargetOptions &Opts);
+
+protected:
+  void getOSDefines(const LangOptions &Opts, const llvm::Triple &Triple,
+                    MacroBuilder &Builder) const override;
+};
+
 class LLVM_LIBRARY_VISIBILITY DarwinAArch64TargetInfo
     : public DarwinTargetInfo<AArch64leTargetInfo> {
 public:
@@ -267,17 +339,6 @@ public:
  protected:
   void getOSDefines(const LangOptions &Opts, const llvm::Triple &Triple,
                     MacroBuilder &Builder) const override;
-};
-
-// 64-bit RenderScript is aarch64
-class LLVM_LIBRARY_VISIBILITY RenderScript64TargetInfo
-    : public AArch64leTargetInfo {
-public:
-  RenderScript64TargetInfo(const llvm::Triple &Triple,
-                           const TargetOptions &Opts);
-
-  void getTargetDefines(const LangOptions &Opts,
-                        MacroBuilder &Builder) const override;
 };
 
 } // namespace targets

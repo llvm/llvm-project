@@ -27,7 +27,6 @@
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/FileManager.h"
-#include "clang/Basic/FileSystemStatCache.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/LangOptions.h"
@@ -55,7 +54,6 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Capacity.h"
@@ -79,13 +77,13 @@ LLVM_INSTANTIATE_REGISTRY(PragmaHandlerRegistry)
 
 ExternalPreprocessorSource::~ExternalPreprocessorSource() = default;
 
-Preprocessor::Preprocessor(std::shared_ptr<PreprocessorOptions> PPOpts,
+Preprocessor::Preprocessor(const PreprocessorOptions &PPOpts,
                            DiagnosticsEngine &diags, const LangOptions &opts,
                            SourceManager &SM, HeaderSearch &Headers,
                            ModuleLoader &TheModuleLoader,
                            IdentifierInfoLookup *IILookup, bool OwnsHeaders,
                            TranslationUnitKind TUKind)
-    : PPOpts(std::move(PPOpts)), Diags(&diags), LangOpts(opts),
+    : PPOpts(PPOpts), Diags(&diags), LangOpts(opts),
       FileMgr(Headers.getFileMgr()), SourceMgr(SM),
       ScratchBuf(new ScratchBuffer(SourceMgr)), HeaderInfo(Headers),
       TheModuleLoader(TheModuleLoader), ExternalSource(nullptr),
@@ -158,18 +156,18 @@ Preprocessor::Preprocessor(std::shared_ptr<PreprocessorOptions> PPOpts,
     SkippingUntilPragmaHdrStop = true;
 
   // If using a PCH with a through header, start skipping tokens.
-  if (!this->PPOpts->PCHThroughHeader.empty() &&
-      !this->PPOpts->ImplicitPCHInclude.empty())
+  if (!this->PPOpts.PCHThroughHeader.empty() &&
+      !this->PPOpts.ImplicitPCHInclude.empty())
     SkippingUntilPCHThroughHeader = true;
 
-  if (this->PPOpts->GeneratePreamble)
+  if (this->PPOpts.GeneratePreamble)
     PreambleConditionalStack.startRecording();
 
   MaxTokens = LangOpts.MaxTokens;
 }
 
 Preprocessor::~Preprocessor() {
-  assert(BacktrackPositions.empty() && "EnableBacktrack/Backtrack imbalance!");
+  assert(!isBacktrackEnabled() && "EnableBacktrack/Backtrack imbalance!");
 
   IncludeMacroStack.clear();
 
@@ -579,18 +577,18 @@ void Preprocessor::EnterMainSourceFile() {
   // Start parsing the predefines.
   EnterSourceFile(FID, nullptr, SourceLocation());
 
-  if (!PPOpts->PCHThroughHeader.empty()) {
+  if (!PPOpts.PCHThroughHeader.empty()) {
     // Lookup and save the FileID for the through header. If it isn't found
     // in the search path, it's a fatal error.
     OptionalFileEntryRef File = LookupFile(
-        SourceLocation(), PPOpts->PCHThroughHeader,
+        SourceLocation(), PPOpts.PCHThroughHeader,
         /*isAngled=*/false, /*FromDir=*/nullptr, /*FromFile=*/nullptr,
         /*CurDir=*/nullptr, /*SearchPath=*/nullptr, /*RelativePath=*/nullptr,
         /*SuggestedModule=*/nullptr, /*IsMapped=*/nullptr,
         /*IsFrameworkFound=*/nullptr);
     if (!File) {
       Diag(SourceLocation(), diag::err_pp_through_header_not_found)
-          << PPOpts->PCHThroughHeader;
+          << PPOpts.PCHThroughHeader;
       return;
     }
     setPCHThroughHeaderFileID(
@@ -616,21 +614,21 @@ bool Preprocessor::isPCHThroughHeader(const FileEntry *FE) {
 }
 
 bool Preprocessor::creatingPCHWithThroughHeader() {
-  return TUKind == TU_Prefix && !PPOpts->PCHThroughHeader.empty() &&
+  return TUKind == TU_Prefix && !PPOpts.PCHThroughHeader.empty() &&
          PCHThroughHeaderFileID.isValid();
 }
 
 bool Preprocessor::usingPCHWithThroughHeader() {
-  return TUKind != TU_Prefix && !PPOpts->PCHThroughHeader.empty() &&
+  return TUKind != TU_Prefix && !PPOpts.PCHThroughHeader.empty() &&
          PCHThroughHeaderFileID.isValid();
 }
 
 bool Preprocessor::creatingPCHWithPragmaHdrStop() {
-  return TUKind == TU_Prefix && PPOpts->PCHWithHdrStop;
+  return TUKind == TU_Prefix && PPOpts.PCHWithHdrStop;
 }
 
 bool Preprocessor::usingPCHWithPragmaHdrStop() {
-  return TUKind != TU_Prefix && PPOpts->PCHWithHdrStop;
+  return TUKind != TU_Prefix && PPOpts.PCHWithHdrStop;
 }
 
 /// Skip tokens until after the #include of the through header or
@@ -659,8 +657,8 @@ void Preprocessor::SkipTokensWhileUsingPCH() {
   if (ReachedMainFileEOF) {
     if (UsingPCHThroughHeader)
       Diag(SourceLocation(), diag::err_pp_through_header_not_seen)
-          << PPOpts->PCHThroughHeader << 1;
-    else if (!PPOpts->PCHWithHdrStopCreate)
+          << PPOpts.PCHThroughHeader << 1;
+    else if (!PPOpts.PCHWithHdrStopCreate)
       Diag(SourceLocation(), diag::err_pp_pragma_hdrstop_not_seen);
   }
 }
@@ -759,7 +757,7 @@ void Preprocessor::HandlePoisonedIdentifier(Token & Identifier) {
     Diag(Identifier,it->second) << Identifier.getIdentifierInfo();
 }
 
-void Preprocessor::updateOutOfDateIdentifier(IdentifierInfo &II) const {
+void Preprocessor::updateOutOfDateIdentifier(const IdentifierInfo &II) const {
   assert(II.isOutOfDate() && "not out of date");
   getExternalSource()->updateOutOfDateIdentifier(II);
 }
@@ -901,6 +899,10 @@ void Preprocessor::Lex(Token &Result) {
     case tok::r_brace:
       StdCXXImportSeqState.handleCloseBrace();
       break;
+#define PRAGMA_ANNOTATION(X) case tok::annot_##X:
+// For `#pragma ...` mimic ';'.
+#include "clang/Basic/TokenKinds.def"
+#undef PRAGMA_ANNOTATION
     // This token is injected to represent the translation of '#include "a.h"'
     // into "import a.h;". Mimic the notional ';'.
     case tok::annot_module_include:
@@ -987,7 +989,7 @@ void Preprocessor::LexTokensUntilEOF(std::vector<Token> *Tokens) {
 }
 
 /// Lex a header-name token (including one formed from header-name-tokens if
-/// \p AllowConcatenation is \c true).
+/// \p AllowMacroExpansion is \c true).
 ///
 /// \param FilenameTok Filled in with the next token. On success, this will
 ///        be either a header_name token. On failure, it will be whatever other
@@ -1157,8 +1159,8 @@ bool Preprocessor::LexAfterModuleImport(Token &Result) {
     if (Result.is(tok::colon) && ModuleDeclState.isNamedModule()) {
       std::string Name = ModuleDeclState.getPrimaryName().str();
       Name += ":";
-      NamedModuleImportPath.push_back(
-          {getIdentifierInfo(Name), Result.getLocation()});
+      NamedModuleImportPath.emplace_back(Result.getLocation(),
+                                         getIdentifierInfo(Name));
       CurLexerCallback = CLK_LexAfterModuleImport;
       return true;
     }
@@ -1256,8 +1258,8 @@ bool Preprocessor::LexAfterModuleImport(Token &Result) {
   if (ModuleImportExpectsIdentifier && Result.getKind() == tok::identifier) {
     // We expected to see an identifier here, and we did; continue handling
     // identifiers.
-    NamedModuleImportPath.push_back(
-        std::make_pair(Result.getIdentifierInfo(), Result.getLocation()));
+    NamedModuleImportPath.emplace_back(Result.getLocation(),
+                                       Result.getIdentifierInfo());
     ModuleImportExpectsIdentifier = false;
     CurLexerCallback = CLK_LexAfterModuleImport;
     return true;
@@ -1300,12 +1302,12 @@ bool Preprocessor::LexAfterModuleImport(Token &Result) {
       // If the FlatModuleName ends with colon, it implies it is a partition.
       if (!FlatModuleName.empty() && FlatModuleName.back() != ':')
         FlatModuleName += ".";
-      FlatModuleName += Piece.first->getName();
+      FlatModuleName += Piece.getIdentifierInfo()->getName();
     }
-    SourceLocation FirstPathLoc = NamedModuleImportPath[0].second;
+    SourceLocation FirstPathLoc = NamedModuleImportPath[0].getLoc();
     NamedModuleImportPath.clear();
-    NamedModuleImportPath.push_back(
-        std::make_pair(getIdentifierInfo(FlatModuleName), FirstPathLoc));
+    NamedModuleImportPath.emplace_back(FirstPathLoc,
+                                       getIdentifierInfo(FlatModuleName));
   }
 
   Module *Imported = nullptr;
@@ -1329,9 +1331,10 @@ bool Preprocessor::LexAfterModuleImport(Token &Result) {
   return true;
 }
 
-void Preprocessor::makeModuleVisible(Module *M, SourceLocation Loc) {
+void Preprocessor::makeModuleVisible(Module *M, SourceLocation Loc,
+                                     bool IncludeExports) {
   CurSubmoduleState->VisibleModules.setVisible(
-      M, Loc, [](Module *) {},
+      M, Loc, IncludeExports, [](Module *) {},
       [&](ArrayRef<Module *> Path, Module *Conflict, StringRef Message) {
         // FIXME: Include the path in the diagnostic.
         // FIXME: Include the import location for the conflicting module.
@@ -1483,26 +1486,56 @@ void Preprocessor::emitFinalMacroWarning(const Token &Identifier,
 }
 
 bool Preprocessor::isSafeBufferOptOut(const SourceManager &SourceMgr,
-                                           const SourceLocation &Loc) const {
-  // Try to find a region in `SafeBufferOptOutMap` where `Loc` is in:
-  auto FirstRegionEndingAfterLoc = llvm::partition_point(
-      SafeBufferOptOutMap,
-      [&SourceMgr,
-       &Loc](const std::pair<SourceLocation, SourceLocation> &Region) {
-        return SourceMgr.isBeforeInTranslationUnit(Region.second, Loc);
-      });
+                                      const SourceLocation &Loc) const {
+  // The lambda that tests if a `Loc` is in an opt-out region given one opt-out
+  // region map:
+  auto TestInMap = [&SourceMgr](const SafeBufferOptOutRegionsTy &Map,
+                                const SourceLocation &Loc) -> bool {
+    // Try to find a region in `SafeBufferOptOutMap` where `Loc` is in:
+    auto FirstRegionEndingAfterLoc = llvm::partition_point(
+        Map, [&SourceMgr,
+              &Loc](const std::pair<SourceLocation, SourceLocation> &Region) {
+          return SourceMgr.isBeforeInTranslationUnit(Region.second, Loc);
+        });
 
-  if (FirstRegionEndingAfterLoc != SafeBufferOptOutMap.end()) {
-    // To test if the start location of the found region precedes `Loc`:
-    return SourceMgr.isBeforeInTranslationUnit(FirstRegionEndingAfterLoc->first,
-                                               Loc);
-  }
-  // If we do not find a region whose end location passes `Loc`, we want to
-  // check if the current region is still open:
-  if (!SafeBufferOptOutMap.empty() &&
-      SafeBufferOptOutMap.back().first == SafeBufferOptOutMap.back().second)
-    return SourceMgr.isBeforeInTranslationUnit(SafeBufferOptOutMap.back().first,
-                                               Loc);
+    if (FirstRegionEndingAfterLoc != Map.end()) {
+      // To test if the start location of the found region precedes `Loc`:
+      return SourceMgr.isBeforeInTranslationUnit(
+          FirstRegionEndingAfterLoc->first, Loc);
+    }
+    // If we do not find a region whose end location passes `Loc`, we want to
+    // check if the current region is still open:
+    if (!Map.empty() && Map.back().first == Map.back().second)
+      return SourceMgr.isBeforeInTranslationUnit(Map.back().first, Loc);
+    return false;
+  };
+
+  // What the following does:
+  //
+  // If `Loc` belongs to the local TU, we just look up `SafeBufferOptOutMap`.
+  // Otherwise, `Loc` is from a loaded AST.  We look up the
+  // `LoadedSafeBufferOptOutMap` first to get the opt-out region map of the
+  // loaded AST where `Loc` is at.  Then we find if `Loc` is in an opt-out
+  // region w.r.t. the region map.  If the region map is absent, it means there
+  // is no opt-out pragma in that loaded AST.
+  //
+  // Opt-out pragmas in the local TU or a loaded AST is not visible to another
+  // one of them.  That means if you put the pragmas around a `#include
+  // "module.h"`, where module.h is a module, it is not actually suppressing
+  // warnings in module.h.  This is fine because warnings in module.h will be
+  // reported when module.h is compiled in isolation and nothing in module.h
+  // will be analyzed ever again.  So you will not see warnings from the file
+  // that imports module.h anyway. And you can't even do the same thing for PCHs
+  //  because they can only be included from the command line.
+
+  if (SourceMgr.isLocalSourceLocation(Loc))
+    return TestInMap(SafeBufferOptOutMap, Loc);
+
+  const SafeBufferOptOutRegionsTy *LoadedRegions =
+      LoadedSafeBufferOptOutMap.lookupLoadedOptOutMap(Loc, SourceMgr);
+
+  if (LoadedRegions)
+    return TestInMap(*LoadedRegions, Loc);
   return false;
 }
 
@@ -1549,6 +1582,47 @@ bool Preprocessor::isPPInSafeBufferOptOutRegion() {
 bool Preprocessor::isPPInSafeBufferOptOutRegion(SourceLocation &StartLoc) {
   StartLoc = CurrentSafeBufferOptOutStart;
   return InSafeBufferOptOutRegion;
+}
+
+SmallVector<SourceLocation, 64>
+Preprocessor::serializeSafeBufferOptOutMap() const {
+  assert(!InSafeBufferOptOutRegion &&
+         "Attempt to serialize safe buffer opt-out regions before file being "
+         "completely preprocessed");
+
+  SmallVector<SourceLocation, 64> SrcSeq;
+
+  for (const auto &[begin, end] : SafeBufferOptOutMap) {
+    SrcSeq.push_back(begin);
+    SrcSeq.push_back(end);
+  }
+  // Only `SafeBufferOptOutMap` gets serialized. No need to serialize
+  // `LoadedSafeBufferOptOutMap` because if this TU loads a pch/module, every
+  // pch/module in the pch-chain/module-DAG will be loaded one by one in order.
+  // It means that for each loading pch/module m, it just needs to load m's own
+  // `SafeBufferOptOutMap`.
+  return SrcSeq;
+}
+
+bool Preprocessor::setDeserializedSafeBufferOptOutMap(
+    const SmallVectorImpl<SourceLocation> &SourceLocations) {
+  if (SourceLocations.size() == 0)
+    return false;
+
+  assert(SourceLocations.size() % 2 == 0 &&
+         "ill-formed SourceLocation sequence");
+
+  auto It = SourceLocations.begin();
+  SafeBufferOptOutRegionsTy &Regions =
+      LoadedSafeBufferOptOutMap.findAndConsLoadedOptOutMap(*It, SourceMgr);
+
+  do {
+    SourceLocation Begin = *It++;
+    SourceLocation End = *It++;
+
+    Regions.emplace_back(Begin, End);
+  } while (It != SourceLocations.end());
+  return true;
 }
 
 ModuleLoader::~ModuleLoader() = default;

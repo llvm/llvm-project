@@ -14,12 +14,7 @@
 ;     C[i] = D[i] * A[stride * i];
 ;   }
 
-target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
-target triple = "x86_64-apple-macosx10.10.0"
-
-define void @f(ptr noalias %a,
-;
-;
+define void @f(ptr noalias %a, ptr noalias %b, ptr noalias %c, ptr noalias %d, i64 %stride) {
 ; DEFAULT-LABEL: @f(
 ; DEFAULT-NEXT:  entry:
 ; DEFAULT-NEXT:    br label [[FOR_BODY_LVER_CHECK:%.*]]
@@ -110,10 +105,6 @@ define void @f(ptr noalias %a,
 ; NO-VERSION:       for.end:
 ; NO-VERSION-NEXT:    ret void
 ;
-  i32* noalias %b,
-  ptr noalias %c,
-  ptr noalias %d,
-  i64 %stride) {
 entry:
   br label %for.body
 
