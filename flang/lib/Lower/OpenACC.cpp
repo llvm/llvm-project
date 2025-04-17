@@ -1804,7 +1804,7 @@ static void privatizeIv(Fortran::lower::AbstractConverter &converter,
     builder.restoreInsertionPoint(insPt);
   }
 
-  mlir::Operation* privateOp = nullptr;
+  mlir::Operation *privateOp = nullptr;
   for (auto privateVal : privateOperands) {
     if (mlir::acc::getVar(privateVal.getDefiningOp()) == ivValue) {
       privateOp = privateVal.getDefiningOp();
