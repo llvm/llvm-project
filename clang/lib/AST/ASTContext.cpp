@@ -5747,6 +5747,30 @@ ASTContext::getMacroQualifiedType(QualType UnderlyingTy,
   return QualType(newType, 0);
 }
 
+static ElaboratedTypeKeyword
+getCanonicalElaboratedTypeKeyword(ElaboratedTypeKeyword Keyword) {
+  switch (Keyword) {
+  // These are just themselves.
+  case ElaboratedTypeKeyword::None:
+  case ElaboratedTypeKeyword::Struct:
+  case ElaboratedTypeKeyword::Union:
+  case ElaboratedTypeKeyword::Enum:
+  case ElaboratedTypeKeyword::Interface:
+    return Keyword;
+
+  // These are equivalent.
+  case ElaboratedTypeKeyword::Typename:
+    return ElaboratedTypeKeyword::None;
+
+  // These are functionally equivalent, so relying on their equivalence is
+  // IFNDR. By making them equivalent, we disallow overloading, which at least
+  // can produce a diagnostic.
+  case ElaboratedTypeKeyword::Class:
+    return ElaboratedTypeKeyword::Struct;
+  }
+  llvm_unreachable("unexpected keyword kind");
+}
+
 QualType ASTContext::getDependentNameType(ElaboratedTypeKeyword Keyword,
                                           NestedNameSpecifier *NNS,
                                           const IdentifierInfo *Name) const {
@@ -5758,10 +5782,13 @@ QualType ASTContext::getDependentNameType(ElaboratedTypeKeyword Keyword,
           DependentNameTypes.FindNodeOrInsertPos(ID, InsertPos))
     return QualType(T, 0);
 
+  ElaboratedTypeKeyword CanonKeyword =
+      getCanonicalElaboratedTypeKeyword(Keyword);
+  NestedNameSpecifier *CanonNNS = getCanonicalNestedNameSpecifier(NNS);
+
   QualType Canon;
-  if (NestedNameSpecifier *CanonNNS = getCanonicalNestedNameSpecifier(NNS);
-      CanonNNS != NNS) {
-    Canon = getDependentNameType(Keyword, CanonNNS, Name);
+  if (CanonKeyword != Keyword || CanonNNS != NNS) {
+    Canon = getDependentNameType(CanonKeyword, CanonNNS, Name);
     [[maybe_unused]] DependentNameType *T =
         DependentNameTypes.FindNodeOrInsertPos(ID, InsertPos);
     assert(!T && "broken canonicalization");
@@ -5800,19 +5827,19 @@ QualType ASTContext::getDependentTemplateSpecializationType(
 
   QualType Canon;
   if (!IsCanonical) {
-    ElaboratedTypeKeyword CanonKeyword = Keyword != ElaboratedTypeKeyword::None
-                                             ? Keyword
-                                             : ElaboratedTypeKeyword::Typename;
+    ElaboratedTypeKeyword CanonKeyword =
+        getCanonicalElaboratedTypeKeyword(Keyword);
     NestedNameSpecifier *CanonNNS = getCanonicalNestedNameSpecifier(NNS);
     bool AnyNonCanonArgs = false;
     auto CanonArgs =
         ::getCanonicalTemplateArguments(*this, Args, AnyNonCanonArgs);
 
-    if (AnyNonCanonArgs || CanonNNS != NNS || !Name.hasTemplateKeyword() ||
-        CanonKeyword != Keyword) {
+    if (CanonKeyword != Keyword || AnyNonCanonArgs || CanonNNS != NNS ||
+        !Name.hasTemplateKeyword()) {
       Canon = getDependentTemplateSpecializationType(
           CanonKeyword, {CanonNNS, Name.getName(), /*HasTemplateKeyword=*/true},
-          CanonArgs, /*IsCanonical=*/true);
+          CanonArgs,
+          /*IsCanonical=*/true);
       // Find the insert position again.
       [[maybe_unused]] auto *Nothing =
           DependentTemplateSpecializationTypes.FindNodeOrInsertPos(ID,
@@ -5820,7 +5847,7 @@ QualType ASTContext::getDependentTemplateSpecializationType(
       assert(!Nothing && "canonical type broken");
     }
   } else {
-    assert(Keyword != ElaboratedTypeKeyword::None);
+    assert(Keyword == getCanonicalElaboratedTypeKeyword(Keyword));
     assert(Name.hasTemplateKeyword());
     assert(NNS == getCanonicalNestedNameSpecifier(NNS));
 #ifndef NDEBUG
@@ -7657,7 +7684,7 @@ ASTContext::getCanonicalNestedNameSpecifier(NestedNameSpecifier *NNS) const {
     if (const auto *DTST = T->getAs<DependentTemplateSpecializationType>()) {
       const DependentTemplateStorage &DTN = DTST->getDependentTemplateName();
       QualType NewT = getDependentTemplateSpecializationType(
-          ElaboratedTypeKeyword::Typename,
+          ElaboratedTypeKeyword::None,
           {/*NNS=*/nullptr, DTN.getName(), /*HasTemplateKeyword=*/true},
           DTST->template_arguments(), /*IsCanonical=*/true);
       assert(NewT.isCanonical());
