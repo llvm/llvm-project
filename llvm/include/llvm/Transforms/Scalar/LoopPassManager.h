@@ -136,12 +136,10 @@ public:
     IsLoopNestPass.reserve(IsLoopNestPass.size() + VecSize);
     for (size_t I = 0; I != VecSize; ++I)
       IsLoopNestPass.push_back(PM.IsLoopNestPass[I]);
-    LoopPasses.insert(LoopPasses.end(),
-                      std::make_move_iterator(PM.LoopPasses.begin()),
-                      std::make_move_iterator(PM.LoopPasses.end()));
-    LoopNestPasses.insert(LoopNestPasses.end(),
-                          std::make_move_iterator(PM.LoopNestPasses.begin()),
-                          std::make_move_iterator(PM.LoopNestPasses.end()));
+    for (auto &P : PM.LoopPasses)
+      LoopPasses.push_back(std::move(P));
+    for (auto &P : PM.LoopNestPasses)
+      LoopNestPasses.push_back(std::move(P));
   }
 
   bool isEmpty() const { return LoopPasses.empty() && LoopNestPasses.empty(); }
