@@ -85,7 +85,7 @@ TEST(LlvmLibcStrSpnTest, DuplicatedCharactersToBeSearchedForShouldStillMatch) {
   EXPECT_EQ(LIBC_NAMESPACE::strspn("aaaa", "aa"), size_t{4});
 }
 
-#if defined(LIBC_TARGET_OS_IS_LINUX)
+#ifdef LIBC_TARGET_OS_IS_LINUX
 
 TEST(LlvmLibcStrSpnTest, CrashOnNullPtr) {
   ASSERT_DEATH([]() { LIBC_NAMESPACE::strspn(nullptr, nullptr); },

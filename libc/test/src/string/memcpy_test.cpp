@@ -73,7 +73,7 @@ TEST(LlvmLibcMemcpyTest, CheckAccess) {
 
 #endif // !defined(LIBC_FULL_BUILD) && defined(LIBC_TARGET_OS_IS_LINUX)
 
-#if defined(LIBC_TARGET_OS_IS_LINUX)
+#ifdef LIBC_TARGET_OS_IS_LINUX
 
 TEST(LlvmLibcMemcpyTest, CrashOnNullPtr) {
   ASSERT_DEATH([]() { LIBC_NAMESPACE::memcpy(nullptr, nullptr, 1); },

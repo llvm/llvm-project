@@ -27,7 +27,7 @@ TEST(LlvmLibcMempcpyTest, ZeroCount) {
   ASSERT_EQ(static_cast<char *>(result), dest + 0);
 }
 
-#if defined(LIBC_TARGET_OS_IS_LINUX)
+#ifdef LIBC_TARGET_OS_IS_LINUX
 
 TEST(LlvmLibcMempcpyTest, CrashOnNullPtr) {
   ASSERT_DEATH([]() { LIBC_NAMESPACE::mempcpy(nullptr, nullptr, 0); },

@@ -73,7 +73,7 @@ TEST_F(LlvmLibcStpncpyTest, CopyTwoWithNull) {
   check_stpncpy(dst, src, 2, expected, 1);
 }
 
-#if defined(LIBC_TARGET_OS_IS_LINUX)
+#ifdef LIBC_TARGET_OS_IS_LINUX
 
 TEST_F(LlvmLibcStpncpyTest, CrashOnNullPtr) {
   ASSERT_DEATH([]() { LIBC_NAMESPACE::stpncpy(nullptr, nullptr, 1); },

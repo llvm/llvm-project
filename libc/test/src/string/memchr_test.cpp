@@ -122,7 +122,7 @@ TEST(LlvmLibcMemChrTest, SignedCharacterFound) {
   ASSERT_EQ(actual[0], c);
 }
 
-#if defined(LIBC_TARGET_OS_IS_LINUX)
+#ifdef LIBC_TARGET_OS_IS_LINUX
 
 TEST(LlvmLibcMemChrTest, CrashOnNullPtr) {
   ASSERT_DEATH([]() { LIBC_NAMESPACE::memchr(nullptr, 1, 1); },

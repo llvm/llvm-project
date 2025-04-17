@@ -66,7 +66,7 @@ TEST(LlvmLibcMemcmpTest, SizeSweep) {
   }
 }
 
-#if defined(LIBC_TARGET_OS_IS_LINUX)
+#ifdef LIBC_TARGET_OS_IS_LINUX
 
 TEST(LlvmLibcMemcmpTest, CrashOnNullPtr) {
   ASSERT_DEATH([]() { LIBC_NAMESPACE::memcmp(nullptr, nullptr, 1); },
