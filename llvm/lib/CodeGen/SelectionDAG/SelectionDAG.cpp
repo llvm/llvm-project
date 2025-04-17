@@ -7578,7 +7578,8 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     } else {
       switch (Opcode) {
       case ISD::SUB:
-        return getUNDEF(VT);     // fold op(undef, arg2) -> undef
+        // fold op(undef, arg2) -> undef, fold op(poison, arg2) ->poison.
+        return N1.getOpcode() == ISD::POISON ? getPOISON(VT) : getUNDEF(VT);
       case ISD::SIGN_EXTEND_INREG:
       case ISD::UDIV:
       case ISD::SDIV:
@@ -7586,7 +7587,9 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
       case ISD::SREM:
       case ISD::SSUBSAT:
       case ISD::USUBSAT:
-        return getConstant(0, DL, VT);    // fold op(undef, arg2) -> 0
+        // fold op(undef, arg2) -> 0, fold op(poison, arg2) -> poison.
+        return N1.getOpcode() == ISD::POISON ? getPOISON(VT)
+                                             : getConstant(0, DL, VT);
       }
     }
   }
@@ -7606,16 +7609,22 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     case ISD::SDIV:
     case ISD::UREM:
     case ISD::SREM:
-      return getUNDEF(VT);       // fold op(arg1, undef) -> undef
+      // fold op(arg1, undef) -> undef, fold op(arg1, poison) -> poison.
+      return N2.getOpcode() == ISD::POISON ? getPOISON(VT) : getUNDEF(VT);
     case ISD::MUL:
     case ISD::AND:
     case ISD::SSUBSAT:
     case ISD::USUBSAT:
-      return getConstant(0, DL, VT);  // fold op(arg1, undef) -> 0
+      // fold op(arg1, undef) -> 0, fold op(arg1, poison) -> poison.
+      return N2.getOpcode() == ISD::POISON ? getPOISON(VT)
+                                           : getConstant(0, DL, VT);
     case ISD::OR:
     case ISD::SADDSAT:
     case ISD::UADDSAT:
-      return getAllOnesConstant(DL, VT);
+      // fold op(arg1, undef) -> an all-ones constant, fold op(arg1, poison) ->
+      // poison.
+      return N2.getOpcode() == ISD::POISON ? getPOISON(VT)
+                                           : getAllOnesConstant(DL, VT);
     }
   }
 
