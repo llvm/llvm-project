@@ -52,6 +52,16 @@ struct FlowInfo {
   FunctionFlowMapTy CallGraphIncomingFlows;
 };
 
+// When reporting exception handling stats, we only consider functions with at
+// least MinLPECSum counts in landing pads to avoid false positives due to
+// sampling noise
+const uint16_t MinLPECSum = 50;
+
+// When reporting CFG flow conservation stats, we only consider blocks with
+// execution counts > MinBlockCount when reporting the distribution of worst
+// gaps.
+const uint16_t MinBlockCount = 500;
+
 template <typename T>
 void printDistribution(raw_ostream &OS, std::vector<T> &values,
                        bool Fraction = false) {
@@ -245,7 +255,7 @@ void printCallGraphFlowConservationStats(
       const double CallGraphGap = 1 - (double)Min / Max;
 
       if (opts::Verbosity >= 2 && CallGraphGap >= 0.5) {
-        OS << "Nontrivial call graph gap of size "
+        OS << "Non-trivial call graph gap of size "
            << formatv("{0:P}", CallGraphGap) << " observed in function "
            << Function->getPrintName() << "\n";
         if (opts::Verbosity >= 3)
@@ -275,9 +285,6 @@ void printCFGFlowConservationStats(const BinaryContext &BC, raw_ostream &OS,
   std::vector<double> CFGGapsWeightedAvg;
   std::vector<double> CFGGapsWorst;
   std::vector<uint64_t> CFGGapsWorstAbs;
-  // We only consider blocks with execution counts > MinBlockCount when
-  // reporting the distribution of worst gaps.
-  const uint16_t MinBlockCount = 500;
   for (const BinaryFunction *Function : Functions) {
     if (Function->size() <= 1 || !Function->isSimple()) {
       CFGGapsWeightedAvg.push_back(0.0);
@@ -311,14 +318,9 @@ void printCFGFlowConservationStats(const BinaryContext &BC, raw_ostream &OS,
       if (BB.isLandingPad())
         continue;
 
-      bool HasPosECLP = false;
-      for (const BinaryBasicBlock *LP : BB.landing_pads()) {
-        if (LP->getKnownExecutionCount() > 0) {
-          HasPosECLP = true;
-          break;
-        }
-      }
-      if (HasPosECLP)
+      auto isPosEC = std::bind(&BinaryBasicBlock::getKnownExecutionCount,
+                               std::placeholders::_1);
+      if (llvm::any_of(BB.landing_pads(), isPosEC))
         continue;
 
       // We don't consider blocks that end with a recursive call instruction
@@ -354,7 +356,7 @@ void printCFGFlowConservationStats(const BinaryContext &BC, raw_ostream &OS,
     if (WeightSum > 0)
       WeightedGap /= WeightSum;
     if (opts::Verbosity >= 2 && WorstGap >= 0.9) {
-      OS << "Nontrivial CFG gap observed in function "
+      OS << "Non-trivial CFG gap observed in function "
          << Function->getPrintName() << "\n"
          << "Weighted gap: " << formatv("{0:P}", WeightedGap) << "\n";
       if (BBWorstGap)
@@ -420,9 +422,7 @@ void printExceptionHandlingStats(const BinaryContext &BC, raw_ostream &OS,
         }
       }
     }
-    // We only consider functions with at least MinLPECSum counts in landing
-    // pads to avoid false positives due to sampling noise
-    const uint16_t MinLPECSum = 50;
+
     if (LPECSum <= MinLPECSum) {
       LPCountFractionsOfTotalBBEC.push_back(0.0);
       LPCountFractionsOfTotalInvokeEC.push_back(0.0);
