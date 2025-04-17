@@ -1519,11 +1519,8 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *ce) {
 }
 
 mlir::Value ScalarExprEmitter::VisitCallExpr(const CallExpr *e) {
-  if (e->getCallReturnType(cgf.getContext())->isReferenceType()) {
-    cgf.getCIRGenModule().errorNYI(
-        e->getSourceRange(), "call to function with non-void return type");
-    return {};
-  }
+  if (e->getCallReturnType(cgf.getContext())->isReferenceType())
+    return emitLoadOfLValue(e);
 
   auto v = cgf.emitCallExpr(e).getScalarVal();
   assert(!cir::MissingFeatures::emitLValueAlignmentAssumption());
