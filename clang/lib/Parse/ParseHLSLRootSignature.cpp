@@ -88,50 +88,52 @@ bool RootSignatureParser::parseDescriptorTableClause() {
           CurToken.TokKind == TokenKind::kw_UAV ||
           CurToken.TokKind == TokenKind::kw_Sampler) &&
          "Expects to only be invoked starting at given keyword");
-  TokenKind ParamKind = CurToken.TokKind; // retain for diagnostics
+
+  TokenKind ParamKind = CurToken.TokKind;
+
+  if (consumeExpectedToken(TokenKind::pu_l_paren, diag::err_expected_after,
+                           CurToken.TokKind))
+    return true;
 
   DescriptorTableClause Clause;
-  TokenKind ExpectedRegister;
+  TokenKind ExpectedReg;
   switch (ParamKind) {
   default:
     llvm_unreachable("Switch for consumed token was not provided");
   case TokenKind::kw_CBV:
     Clause.Type = ClauseType::CBuffer;
-    ExpectedRegister = TokenKind::bReg;
+    ExpectedReg = TokenKind::bReg;
     break;
   case TokenKind::kw_SRV:
     Clause.Type = ClauseType::SRV;
-    ExpectedRegister = TokenKind::tReg;
+    ExpectedReg = TokenKind::tReg;
     break;
   case TokenKind::kw_UAV:
     Clause.Type = ClauseType::UAV;
-    ExpectedRegister = TokenKind::uReg;
+    ExpectedReg = TokenKind::uReg;
     break;
   case TokenKind::kw_Sampler:
     Clause.Type = ClauseType::Sampler;
-    ExpectedRegister = TokenKind::sReg;
+    ExpectedReg = TokenKind::sReg;
     break;
   }
 
-  if (consumeExpectedToken(TokenKind::pu_l_paren, diag::err_expected_after,
-                           ParamKind))
-    return true;
-
-  ParsedParams Result;
-  if (parseDescriptorTableClauseParams(Result, ExpectedRegister))
+  auto Params = parseDescriptorTableClauseParams(ExpectedReg);
+  if (!Params.has_value())
     return true;
 
   // Check mandatory parameters were provided
-  if (!Result.Register.has_value()) {
+  if (!Params->Register.has_value()) {
     getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_missing_param)
-        << ExpectedRegister;
+        << ExpectedReg;
     return true;
   }
 
-  Clause.Register = *Result.Register;
+  Clause.Register = Params->Register.value();
 
-  if (Result.Space)
-    Clause.Space = *Result.Space;
+  // Fill in optional values
+  if (Params->Space.has_value())
+    Clause.Space = Params->Space.value();
 
   if (consumeExpectedToken(TokenKind::pu_r_paren,
                            diag::err_hlsl_unexpected_end_of_params,
@@ -142,56 +144,68 @@ bool RootSignatureParser::parseDescriptorTableClause() {
   return false;
 }
 
-bool RootSignatureParser::parseDescriptorTableClauseParams(ParsedParams &Params, TokenKind RegType) {
+std::optional<RootSignatureParser::ParsedClauseParams>
+RootSignatureParser::parseDescriptorTableClauseParams(TokenKind RegType) {
   assert(CurToken.TokKind == TokenKind::pu_l_paren &&
          "Expects to only be invoked starting at given token");
 
+  // Parameter arguments (eg. `bReg`, `space`, ...) can be specified in any
+  // order and only exactly once. Parse through as many arguments as possible
+  // reporting an error if a duplicate is seen.
+  ParsedClauseParams Params;
   do {
+    // ( `b` | `t` | `u` | `s`) POS_INT
     if (tryConsumeExpectedToken(RegType)) {
       if (Params.Register.has_value()) {
         getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_repeat_param)
-          << CurToken.TokKind;
-        return true;
+            << CurToken.TokKind;
+        return std::nullopt;
       }
-      Register Reg;
-      if (parseRegister(Reg))
-        return true;
+      auto Reg = parseRegister();
+      if (!Reg.has_value())
+        return std::nullopt;
       Params.Register = Reg;
     }
+
+    // `space` `=` POS_INT
     if (tryConsumeExpectedToken(TokenKind::kw_space)) {
       if (Params.Space.has_value()) {
         getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_repeat_param)
-          << CurToken.TokKind;
-        return true;
+            << CurToken.TokKind;
+        return std::nullopt;
       }
+
       if (consumeExpectedToken(TokenKind::pu_equal))
-        return true;
-      uint32_t Space;
-      if (parseUIntParam(Space))
-        return true;
+        return std::nullopt;
+
+      auto Space = parseUIntParam();
+      if (!Space.has_value())
+        return std::nullopt;
       Params.Space = Space;
     }
   } while (tryConsumeExpectedToken(TokenKind::pu_comma));
 
-  return false;
+  return Params;
 }
 
-bool RootSignatureParser::parseUIntParam(uint32_t &X) {
+std::optional<uint32_t> RootSignatureParser::parseUIntParam() {
   assert(CurToken.TokKind == TokenKind::pu_equal &&
          "Expects to only be invoked starting at given keyword");
   tryConsumeExpectedToken(TokenKind::pu_plus);
-  return consumeExpectedToken(TokenKind::int_literal, diag::err_expected_after,
-                              CurToken.TokKind) ||
-         handleUIntLiteral(X);
+  if (consumeExpectedToken(TokenKind::int_literal, diag::err_expected_after,
+                           CurToken.TokKind))
+    return std::nullopt;
+  return handleUIntLiteral();
 }
 
-bool RootSignatureParser::parseRegister(Register &Register) {
+std::optional<Register> RootSignatureParser::parseRegister() {
   assert((CurToken.TokKind == TokenKind::bReg ||
           CurToken.TokKind == TokenKind::tReg ||
           CurToken.TokKind == TokenKind::uReg ||
           CurToken.TokKind == TokenKind::sReg) &&
          "Expects to only be invoked starting at given keyword");
 
+  Register Register;
   switch (CurToken.TokKind) {
   default:
     llvm_unreachable("Switch for consumed token was not provided");
@@ -209,13 +223,15 @@ bool RootSignatureParser::parseRegister(Register &Register) {
     break;
   }
 
-  if (handleUIntLiteral(Register.Number))
-    return true; // propogate NumericLiteralParser error
+  auto Number = handleUIntLiteral();
+  if (!Number.has_value())
+    return std::nullopt; // propogate NumericLiteralParser error
 
-  return false;
+  Register.Number = *Number;
+  return Register;
 }
 
-bool RootSignatureParser::handleUIntLiteral(uint32_t &X) {
+std::optional<uint32_t> RootSignatureParser::handleUIntLiteral() {
   // Parse the numeric value and do semantic checks on its specification
   clang::NumericLiteralParser Literal(CurToken.NumSpelling, CurToken.TokLoc,
                                       PP.getSourceManager(), PP.getLangOpts(),
@@ -231,11 +247,10 @@ bool RootSignatureParser::handleUIntLiteral(uint32_t &X) {
     PP.getDiagnostics().Report(CurToken.TokLoc,
                                diag::err_hlsl_number_literal_overflow)
         << 0 << CurToken.NumSpelling;
-    return true;
+    return std::nullopt;
   }
 
-  X = Val.getExtValue();
-  return false;
+  return Val.getExtValue();
 }
 
 bool RootSignatureParser::peekExpectedToken(TokenKind Expected) {
