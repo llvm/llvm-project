@@ -96,8 +96,8 @@ public:
   /// Called when we write to this object anywhere other than the end.
   virtual void notifyInsertion(size_t /*Position*/, size_t /*Count*/) {}
 
-  /// Called when we reset the \c CurrentPosition of this object.
-  virtual void notifyPositionChanged(size_t /*OldPos*/, size_t /*NewPos*/) {}
+  /// Called when we make the \c CurrentPosition of this object smaller.
+  virtual void notifyDeletion(size_t /*OldPos*/, size_t /*NewPos*/) {}
 
   /// If a ParameterPackExpansion (or similar type) is encountered, the offset
   /// into the pack that we're currently printing.
@@ -137,12 +137,12 @@ public:
   OutputBuffer &prepend(std::string_view R) {
     size_t Size = R.size();
 
-    notifyInsertion(/*Position=*/0, /*Count=*/Size);
-
     grow(Size);
     std::memmove(Buffer + Size, Buffer, CurrentPosition);
     std::memcpy(Buffer, &*R.begin(), Size);
     CurrentPosition += Size;
+
+    notifyInsertion(/*Position=*/0, /*Count=*/Size);
 
     return *this;
   }
@@ -180,17 +180,17 @@ public:
     if (N == 0)
       return;
 
-    notifyInsertion(Pos, N);
-
     grow(N);
     std::memmove(Buffer + Pos + N, Buffer + Pos, CurrentPosition - Pos);
     std::memcpy(Buffer + Pos, S, N);
     CurrentPosition += N;
+
+    notifyInsertion(Pos, N);
   }
 
   size_t getCurrentPosition() const { return CurrentPosition; }
   void setCurrentPosition(size_t NewPos) {
-    notifyPositionChanged(CurrentPosition, NewPos);
+    notifyDeletion(CurrentPosition, NewPos);
     CurrentPosition = NewPos;
   }
 

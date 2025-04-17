@@ -99,7 +99,7 @@ TEST(OutputBufferTest, Notifications) {
     size_t Inserted = 0;
     size_t LatestPos = 0;
 
-    void notifyPositionChanged(size_t OldPos, size_t NewPos) override {
+    void notifyDeletion(size_t OldPos, size_t NewPos) override {
       LatestPos = NewPos;
     }
 
