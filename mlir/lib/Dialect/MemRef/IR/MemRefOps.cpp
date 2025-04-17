@@ -98,11 +98,11 @@ static void constifyIndexValues(SmallVectorImpl<OpFoldResult> &values,
                                 ArrayRef<int64_t> constValues) {
   assert(constValues.size() == values.size() &&
          "incorrect number of const values");
-  for (int64_t i = 0, e = constValues.size(); i < e; ++i) {
+  for (auto [i, cstVal] : llvm::enumerate(constValues)) {
     Builder builder(values[i].getContext());
-    if (!ShapedType::isDynamic(constValues[i])) {
+    if (!ShapedType::isDynamic(cstVal)) {
       // Constant value is known, use it directly.
-      values[i] = builder.getIndexAttr(constValues[i]);
+      values[i] = builder.getIndexAttr(cstVal);
       continue;
     }
     if (std::optional<int64_t> cst = getConstantIntValue(values[i])) {
