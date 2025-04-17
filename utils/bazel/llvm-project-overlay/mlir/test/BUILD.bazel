@@ -616,23 +616,6 @@ cc_library(
 )
 
 cc_library(
-    name = "TestOneToNTypeConversion",
-    srcs = glob(["lib/Conversion/OneToNTypeConversion/*.cpp"]),
-    includes = ["lib/Dialect/Test"],
-    deps = [
-        ":TestDialect",
-        "//mlir:FuncDialect",
-        "//mlir:FuncTransforms",
-        "//mlir:IR",
-        "//mlir:Pass",
-        "//mlir:SCFDialect",
-        "//mlir:SCFTransforms",
-        "//mlir:TransformUtils",
-        "//mlir:Transforms",
-    ],
-)
-
-cc_library(
     name = "TestVectorToSPIRV",
     srcs = glob(["lib/Conversion/VectorToSPIRV/*.cpp"]),
     deps = [
