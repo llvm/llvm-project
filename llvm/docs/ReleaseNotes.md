@@ -85,6 +85,14 @@ Changes to Interprocedural Optimizations
 Changes to the AArch64 Backend
 ------------------------------
 
+* Added the `execute-only` target feature, which indicates that the generated
+  program code doesn't contain any inline data, and there are no data accesses
+  to code sections. On ELF targets this property is indicated by the
+  `SHF_AARCH64_PURECODE` section flag.
+  ([#125687](https://github.com/llvm/llvm-project/pull/125687),
+  [#132196](https://github.com/llvm/llvm-project/pull/132196),
+  [#133084](https://github.com/llvm/llvm-project/pull/133084))
+
 Changes to the AMDGPU Backend
 -----------------------------
 

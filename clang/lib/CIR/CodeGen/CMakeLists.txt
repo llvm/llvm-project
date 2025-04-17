@@ -22,6 +22,7 @@ add_clang_library(clangCIR
   CIRGenStmt.cpp
   CIRGenStmtOpenACC.cpp
   CIRGenTypes.cpp
+  TargetInfo.cpp
 
   DEPENDS
   MLIRCIR
