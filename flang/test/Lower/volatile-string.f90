@@ -57,11 +57,11 @@ end program
 ! CHECK:           %[[VAL_28:.*]] = fir.zero_bits !fir.heap<!fir.char<1,3>>
 ! CHECK:           %[[VAL_29:.*]] = fir.embox %[[VAL_28]] : (!fir.heap<!fir.char<1,3>>) -> !fir.box<!fir.heap<!fir.char<1,3>>>
 ! CHECK:           fir.store %[[VAL_29]] to %[[VAL_9]] : !fir.ref<!fir.box<!fir.heap<!fir.char<1,3>>>>
-! CHECK:           %[[VAL_30:.*]] = fir.address_of(@_QQclXd1ee14519ece0b1bf697ca53870092e5) : !fir.ref<!fir.char<1,85>>
+! CHECK:           %[[VAL_30:.*]] = fir.address_of(
 ! CHECK:           %[[VAL_31:.*]] = fir.convert %[[VAL_9]] : (!fir.ref<!fir.box<!fir.heap<!fir.char<1,3>>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK:           %[[VAL_32:.*]] = fir.volatile_cast %[[VAL_27]] : (!fir.box<!fir.char<1,3>, volatile>) -> !fir.box<!fir.char<1,3>>
 ! CHECK:           %[[VAL_33:.*]] = fir.convert %[[VAL_32]] : (!fir.box<!fir.char<1,3>>) -> !fir.box<none>
-! CHECK:           %[[VAL_34:.*]] = fir.convert %[[VAL_30]] : (!fir.ref<!fir.char<1,85>>) -> !fir.ref<i8>
+! CHECK:           %[[VAL_34:.*]] = fir.convert %[[VAL_30]] : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
 ! CHECK:           fir.call @_FortranAAdjustl(%[[VAL_31]], %[[VAL_33]], %[[VAL_34]], %[[VAL_3]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.ref<i8>, i32) -> ()
 ! CHECK:           %[[VAL_35:.*]] = fir.load %[[VAL_9]] : !fir.ref<!fir.box<!fir.heap<!fir.char<1,3>>>>
 ! CHECK:           %[[VAL_36:.*]] = fir.box_elesize %[[VAL_35]] : (!fir.box<!fir.heap<!fir.char<1,3>>>) -> index
