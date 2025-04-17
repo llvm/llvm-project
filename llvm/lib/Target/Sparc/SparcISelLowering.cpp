@@ -1755,7 +1755,7 @@ SparcTargetLowering::SparcTargetLowering(const TargetMachine &TM,
                        Subtarget->usePopc() ? Legal : Expand);
     setOperationAction(ISD::CTTZ , MVT::i64, Expand);
     setOperationAction(ISD::CTLZ, MVT::i64,
-                       Subtarget->isVIS3() ? Legal : LibCall);
+                       Subtarget->isVIS3() ? Legal : Expand);
     setOperationAction(ISD::BSWAP, MVT::i64, Expand);
     setOperationAction(ISD::ROTL , MVT::i64, Expand);
     setOperationAction(ISD::ROTR , MVT::i64, Expand);
@@ -1818,7 +1818,7 @@ SparcTargetLowering::SparcTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::FMA  , MVT::f32, Expand);
   setOperationAction(ISD::CTTZ , MVT::i32, Expand);
   setOperationAction(ISD::CTLZ, MVT::i32,
-                     Subtarget->isVIS3() ? Promote : LibCall);
+                     Subtarget->isVIS3() ? Promote : Expand);
   setOperationAction(ISD::ROTL , MVT::i32, Expand);
   setOperationAction(ISD::ROTR , MVT::i32, Expand);
   setOperationAction(ISD::BSWAP, MVT::i32, Expand);
@@ -1992,6 +1992,13 @@ SparcTargetLowering::SparcTargetLowering(const TargetMachine &TM,
   if (Subtarget->isVIS3()) {
     setOperationAction(ISD::CTLZ_ZERO_UNDEF, MVT::i32, Promote);
     setOperationAction(ISD::CTLZ_ZERO_UNDEF, MVT::i64, Legal);
+  } else if (Subtarget->usePopc()) {
+    setOperationAction(ISD::CTLZ_ZERO_UNDEF, MVT::i32, Expand);
+    setOperationAction(ISD::CTLZ_ZERO_UNDEF, MVT::i64, Expand);
+  } else {
+    setOperationAction(ISD::CTLZ_ZERO_UNDEF, MVT::i32,
+                       Subtarget->is64Bit() ? Promote : LibCall);
+    setOperationAction(ISD::CTLZ_ZERO_UNDEF, MVT::i64, LibCall);
   }
 
   setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::Other, Custom);

@@ -6,46 +6,18 @@
 define i32 @i32_nopoison(i32 %x) nounwind {
 ; V9-LABEL: i32_nopoison:
 ; V9:       ! %bb.0:
-; V9-NEXT:    cmp %o0, 0
+; V9-NEXT:    save %sp, -176, %sp
+; V9-NEXT:    cmp %i0, 0
 ; V9-NEXT:    be %icc, .LBB0_2
 ; V9-NEXT:    nop
 ; V9-NEXT:  ! %bb.1: ! %cond.false
-; V9-NEXT:    srl %o0, 1, %o1
-; V9-NEXT:    or %o0, %o1, %o0
-; V9-NEXT:    srl %o0, 2, %o1
-; V9-NEXT:    or %o0, %o1, %o0
-; V9-NEXT:    srl %o0, 4, %o1
-; V9-NEXT:    or %o0, %o1, %o0
-; V9-NEXT:    srl %o0, 8, %o1
-; V9-NEXT:    or %o0, %o1, %o0
-; V9-NEXT:    srl %o0, 16, %o1
-; V9-NEXT:    or %o0, %o1, %o0
-; V9-NEXT:    xor %o0, -1, %o0
-; V9-NEXT:    srl %o0, 1, %o1
-; V9-NEXT:    sethi 1398101, %o2
-; V9-NEXT:    or %o2, 341, %o2
-; V9-NEXT:    and %o1, %o2, %o1
-; V9-NEXT:    sub %o0, %o1, %o0
-; V9-NEXT:    sethi 838860, %o1
-; V9-NEXT:    or %o1, 819, %o1
-; V9-NEXT:    and %o0, %o1, %o2
-; V9-NEXT:    srl %o0, 2, %o0
-; V9-NEXT:    and %o0, %o1, %o0
-; V9-NEXT:    add %o2, %o0, %o0
-; V9-NEXT:    srl %o0, 4, %o1
-; V9-NEXT:    add %o0, %o1, %o0
-; V9-NEXT:    sethi 246723, %o1
-; V9-NEXT:    or %o1, 783, %o1
-; V9-NEXT:    and %o0, %o1, %o0
-; V9-NEXT:    sll %o0, 8, %o1
-; V9-NEXT:    add %o0, %o1, %o0
-; V9-NEXT:    sll %o0, 16, %o1
-; V9-NEXT:    add %o0, %o1, %o0
-; V9-NEXT:    retl
-; V9-NEXT:    srl %o0, 24, %o0
+; V9-NEXT:    call __clzdi2
+; V9-NEXT:    sllx %i0, 32, %o0
+; V9-NEXT:    ret
+; V9-NEXT:    restore %g0, %o0, %o0
 ; V9-NEXT:  .LBB0_2:
-; V9-NEXT:    retl
-; V9-NEXT:    mov 32, %o0
+; V9-NEXT:    ret
+; V9-NEXT:    restore %g0, 32, %o0
 ;
 ; POPC-LABEL: i32_nopoison:
 ; POPC:       ! %bb.0:
@@ -90,39 +62,11 @@ define i32 @i32_nopoison(i32 %x) nounwind {
 define i32 @i32_poison(i32 %x) nounwind {
 ; V9-LABEL: i32_poison:
 ; V9:       ! %bb.0:
-; V9-NEXT:    srl %o0, 1, %o1
-; V9-NEXT:    or %o0, %o1, %o0
-; V9-NEXT:    srl %o0, 2, %o1
-; V9-NEXT:    or %o0, %o1, %o0
-; V9-NEXT:    srl %o0, 4, %o1
-; V9-NEXT:    or %o0, %o1, %o0
-; V9-NEXT:    srl %o0, 8, %o1
-; V9-NEXT:    or %o0, %o1, %o0
-; V9-NEXT:    srl %o0, 16, %o1
-; V9-NEXT:    or %o0, %o1, %o0
-; V9-NEXT:    xor %o0, -1, %o0
-; V9-NEXT:    srl %o0, 1, %o1
-; V9-NEXT:    sethi 1398101, %o2
-; V9-NEXT:    or %o2, 341, %o2
-; V9-NEXT:    and %o1, %o2, %o1
-; V9-NEXT:    sub %o0, %o1, %o0
-; V9-NEXT:    sethi 838860, %o1
-; V9-NEXT:    or %o1, 819, %o1
-; V9-NEXT:    and %o0, %o1, %o2
-; V9-NEXT:    srl %o0, 2, %o0
-; V9-NEXT:    and %o0, %o1, %o0
-; V9-NEXT:    add %o2, %o0, %o0
-; V9-NEXT:    srl %o0, 4, %o1
-; V9-NEXT:    add %o0, %o1, %o0
-; V9-NEXT:    sethi 246723, %o1
-; V9-NEXT:    or %o1, 783, %o1
-; V9-NEXT:    and %o0, %o1, %o0
-; V9-NEXT:    sll %o0, 8, %o1
-; V9-NEXT:    add %o0, %o1, %o0
-; V9-NEXT:    sll %o0, 16, %o1
-; V9-NEXT:    add %o0, %o1, %o0
-; V9-NEXT:    retl
-; V9-NEXT:    srl %o0, 24, %o0
+; V9-NEXT:    save %sp, -176, %sp
+; V9-NEXT:    call __clzdi2
+; V9-NEXT:    sllx %i0, 32, %o0
+; V9-NEXT:    ret
+; V9-NEXT:    restore %g0, %o0, %o0
 ;
 ; POPC-LABEL: i32_poison:
 ; POPC:       ! %bb.0:
@@ -153,54 +97,17 @@ define i32 @i32_poison(i32 %x) nounwind {
 define i64 @i64_nopoison(i64 %x) nounwind {
 ; V9-LABEL: i64_nopoison:
 ; V9:       ! %bb.0:
-; V9-NEXT:    brz %o0, .LBB2_2
+; V9-NEXT:    save %sp, -176, %sp
+; V9-NEXT:    brz %i0, .LBB2_2
 ; V9-NEXT:    nop
 ; V9-NEXT:  ! %bb.1: ! %cond.false
-; V9-NEXT:    srlx %o0, 1, %o1
-; V9-NEXT:    or %o0, %o1, %o0
-; V9-NEXT:    srlx %o0, 2, %o1
-; V9-NEXT:    or %o0, %o1, %o0
-; V9-NEXT:    srlx %o0, 4, %o1
-; V9-NEXT:    or %o0, %o1, %o0
-; V9-NEXT:    srlx %o0, 8, %o1
-; V9-NEXT:    or %o0, %o1, %o0
-; V9-NEXT:    srlx %o0, 16, %o1
-; V9-NEXT:    or %o0, %o1, %o0
-; V9-NEXT:    srlx %o0, 32, %o1
-; V9-NEXT:    or %o0, %o1, %o0
-; V9-NEXT:    xor %o0, -1, %o0
-; V9-NEXT:    srlx %o0, 1, %o1
-; V9-NEXT:    sethi 1398101, %o2
-; V9-NEXT:    or %o2, 341, %o2
-; V9-NEXT:    sllx %o2, 32, %o3
-; V9-NEXT:    or %o3, %o2, %o2
-; V9-NEXT:    and %o1, %o2, %o1
-; V9-NEXT:    sub %o0, %o1, %o0
-; V9-NEXT:    sethi 838860, %o1
-; V9-NEXT:    or %o1, 819, %o1
-; V9-NEXT:    sllx %o1, 32, %o2
-; V9-NEXT:    or %o2, %o1, %o1
-; V9-NEXT:    and %o0, %o1, %o2
-; V9-NEXT:    srlx %o0, 2, %o0
-; V9-NEXT:    and %o0, %o1, %o0
-; V9-NEXT:    add %o2, %o0, %o0
-; V9-NEXT:    srlx %o0, 4, %o1
-; V9-NEXT:    add %o0, %o1, %o0
-; V9-NEXT:    sethi 246723, %o1
-; V9-NEXT:    or %o1, 783, %o1
-; V9-NEXT:    sllx %o1, 32, %o2
-; V9-NEXT:    or %o2, %o1, %o1
-; V9-NEXT:    and %o0, %o1, %o0
-; V9-NEXT:    sethi 16448, %o1
-; V9-NEXT:    or %o1, 257, %o1
-; V9-NEXT:    sllx %o1, 32, %o2
-; V9-NEXT:    or %o2, %o1, %o1
-; V9-NEXT:    mulx %o0, %o1, %o0
-; V9-NEXT:    retl
-; V9-NEXT:    srlx %o0, 56, %o0
+; V9-NEXT:    call __clzdi2
+; V9-NEXT:    mov %i0, %o0
+; V9-NEXT:    ret
+; V9-NEXT:    restore %g0, %o0, %o0
 ; V9-NEXT:  .LBB2_2:
-; V9-NEXT:    retl
-; V9-NEXT:    mov 64, %o0
+; V9-NEXT:    ret
+; V9-NEXT:    restore %g0, 64, %o0
 ;
 ; POPC-LABEL: i64_nopoison:
 ; POPC:       ! %bb.0:
@@ -243,48 +150,11 @@ define i64 @i64_nopoison(i64 %x) nounwind {
 define i64 @i64_poison(i64 %x) nounwind {
 ; V9-LABEL: i64_poison:
 ; V9:       ! %bb.0:
-; V9-NEXT:    srlx %o0, 1, %o1
-; V9-NEXT:    or %o0, %o1, %o0
-; V9-NEXT:    srlx %o0, 2, %o1
-; V9-NEXT:    or %o0, %o1, %o0
-; V9-NEXT:    srlx %o0, 4, %o1
-; V9-NEXT:    or %o0, %o1, %o0
-; V9-NEXT:    srlx %o0, 8, %o1
-; V9-NEXT:    or %o0, %o1, %o0
-; V9-NEXT:    srlx %o0, 16, %o1
-; V9-NEXT:    or %o0, %o1, %o0
-; V9-NEXT:    srlx %o0, 32, %o1
-; V9-NEXT:    or %o0, %o1, %o0
-; V9-NEXT:    xor %o0, -1, %o0
-; V9-NEXT:    srlx %o0, 1, %o1
-; V9-NEXT:    sethi 1398101, %o2
-; V9-NEXT:    or %o2, 341, %o2
-; V9-NEXT:    sllx %o2, 32, %o3
-; V9-NEXT:    or %o3, %o2, %o2
-; V9-NEXT:    and %o1, %o2, %o1
-; V9-NEXT:    sub %o0, %o1, %o0
-; V9-NEXT:    sethi 838860, %o1
-; V9-NEXT:    or %o1, 819, %o1
-; V9-NEXT:    sllx %o1, 32, %o2
-; V9-NEXT:    or %o2, %o1, %o1
-; V9-NEXT:    and %o0, %o1, %o2
-; V9-NEXT:    srlx %o0, 2, %o0
-; V9-NEXT:    and %o0, %o1, %o0
-; V9-NEXT:    add %o2, %o0, %o0
-; V9-NEXT:    srlx %o0, 4, %o1
-; V9-NEXT:    add %o0, %o1, %o0
-; V9-NEXT:    sethi 246723, %o1
-; V9-NEXT:    or %o1, 783, %o1
-; V9-NEXT:    sllx %o1, 32, %o2
-; V9-NEXT:    or %o2, %o1, %o1
-; V9-NEXT:    and %o0, %o1, %o0
-; V9-NEXT:    sethi 16448, %o1
-; V9-NEXT:    or %o1, 257, %o1
-; V9-NEXT:    sllx %o1, 32, %o2
-; V9-NEXT:    or %o2, %o1, %o1
-; V9-NEXT:    mulx %o0, %o1, %o0
-; V9-NEXT:    retl
-; V9-NEXT:    srlx %o0, 56, %o0
+; V9-NEXT:    save %sp, -176, %sp
+; V9-NEXT:    call __clzdi2
+; V9-NEXT:    mov %i0, %o0
+; V9-NEXT:    ret
+; V9-NEXT:    restore %g0, %o0, %o0
 ;
 ; POPC-LABEL: i64_poison:
 ; POPC:       ! %bb.0:
