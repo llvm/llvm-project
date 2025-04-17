@@ -1,4 +1,4 @@
-//===- unittests/Tooling/EnterExitRecursiveASTVisitorPostOrderASTVisitor.cpp -------===//
+//===- unittests/Tooling/RecursiveASTEnterExitVisitorPostOrderASTVisitor.cpp -------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // This file contains tests for the post-order traversing functionality
-// of EnterExitRecursiveASTVisitor.
+// of RecursiveASTEnterExitVisitor.
 //
 //===----------------------------------------------------------------------===//
 
@@ -72,7 +72,7 @@ public:
 };
 } // namespace
 
-TEST(EnterExitRecursiveASTVisitor, PostOrderTraversal) {
+TEST(RecursiveASTEnterExitVisitor, PostOrderTraversal) {
   // We traverse the translation unit and store all visited nodes.
   RecordingVisitor Visitor(true);
   Visitor.runOver("class A {\n"
@@ -94,7 +94,7 @@ TEST(EnterExitRecursiveASTVisitor, PostOrderTraversal) {
   }
 }
 
-TEST(EnterExitRecursiveASTVisitor, NoPostOrderTraversal) {
+TEST(RecursiveASTEnterExitVisitor, NoPostOrderTraversal) {
   // We traverse the translation unit and store all visited nodes.
   RecordingVisitor Visitor(false);
   Visitor.runOver("class A {\n"

@@ -1,4 +1,4 @@
-//===- unittest/Tooling/EnterExitRecursiveASTVisitorTestDeclVisitor.cpp ------------===//
+//===- unittest/Tooling/RecursiveASTEnterExitVisitorTestDeclVisitor.cpp ------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -21,7 +21,7 @@ public:
   }
 };
 
-TEST(EnterExitRecursiveASTVisitor, VisitsCXXForRangeStmtLoopVariable) {
+TEST(RecursiveASTEnterExitVisitor, VisitsCXXForRangeStmtLoopVariable) {
   VarDeclVisitor Visitor;
   Visitor.ExpectMatch("i", 2, 17);
   EXPECT_TRUE(Visitor.runOver(
@@ -42,7 +42,7 @@ public:
 
 // Test RAV visits parameter variable declaration of the implicit
 // copy assignment operator and implicit copy constructor.
-TEST(EnterExitRecursiveASTVisitor, VisitsParmVarDeclForImplicitCode) {
+TEST(RecursiveASTEnterExitVisitor, VisitsParmVarDeclForImplicitCode) {
   ParmVarDeclVisitorForImplicitCode Visitor;
   // Match parameter variable name of implicit copy assignment operator and
   // implicit copy constructor.
@@ -71,7 +71,7 @@ public:
   }
 };
 
-TEST(EnterExitRecursiveASTVisitor, VisitsPartialTemplateSpecialization) {
+TEST(RecursiveASTEnterExitVisitor, VisitsPartialTemplateSpecialization) {
   // From cfe-commits/Week-of-Mon-20100830/033998.html
   // Contrary to the approach suggested in that email, we visit all
   // specializations when we visit the primary template.  Visiting them when we
@@ -87,7 +87,7 @@ TEST(EnterExitRecursiveASTVisitor, VisitsPartialTemplateSpecialization) {
     "A<char*> acp;\n"));
 }
 
-TEST(EnterExitRecursiveASTVisitor, VisitsUndefinedClassTemplateSpecialization) {
+TEST(RecursiveASTEnterExitVisitor, VisitsUndefinedClassTemplateSpecialization) {
   NamedDeclVisitor Visitor;
   Visitor.ExpectMatch("A<int>", 1, 29);
   EXPECT_TRUE(Visitor.runOver(
@@ -95,7 +95,7 @@ TEST(EnterExitRecursiveASTVisitor, VisitsUndefinedClassTemplateSpecialization) {
     "A<int> *p;\n"));
 }
 
-TEST(EnterExitRecursiveASTVisitor, VisitsNestedUndefinedClassTemplateSpecialization) {
+TEST(RecursiveASTEnterExitVisitor, VisitsNestedUndefinedClassTemplateSpecialization) {
   NamedDeclVisitor Visitor;
   Visitor.ExpectMatch("A<int>::B<char>", 2, 31);
   EXPECT_TRUE(Visitor.runOver(
@@ -105,7 +105,7 @@ TEST(EnterExitRecursiveASTVisitor, VisitsNestedUndefinedClassTemplateSpecializat
     "A<int>::B<char> *p;\n"));
 }
 
-TEST(EnterExitRecursiveASTVisitor, VisitsUndefinedFunctionTemplateSpecialization) {
+TEST(RecursiveASTEnterExitVisitor, VisitsUndefinedFunctionTemplateSpecialization) {
   NamedDeclVisitor Visitor;
   Visitor.ExpectMatch("A<int>", 1, 26);
   EXPECT_TRUE(Visitor.runOver(
@@ -113,7 +113,7 @@ TEST(EnterExitRecursiveASTVisitor, VisitsUndefinedFunctionTemplateSpecialization
     "int k = A<int>();\n"));
 }
 
-TEST(EnterExitRecursiveASTVisitor, VisitsNestedUndefinedFunctionTemplateSpecialization) {
+TEST(RecursiveASTEnterExitVisitor, VisitsNestedUndefinedFunctionTemplateSpecialization) {
   NamedDeclVisitor Visitor;
   Visitor.ExpectMatch("A<int>::B<char>", 2, 35);
   EXPECT_TRUE(Visitor.runOver(
@@ -123,7 +123,7 @@ TEST(EnterExitRecursiveASTVisitor, VisitsNestedUndefinedFunctionTemplateSpeciali
     "int k = A<int>::B<char>();\n"));
 }
 
-TEST(EnterExitRecursiveASTVisitor, NoRecursionInSelfFriend) {
+TEST(RecursiveASTEnterExitVisitor, NoRecursionInSelfFriend) {
   // From cfe-commits/Week-of-Mon-20100830/033977.html
   NamedDeclVisitor Visitor;
   Visitor.ExpectMatch("vector_iterator<int>", 2, 7);

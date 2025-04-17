@@ -21,13 +21,13 @@ public:
   }
 };
 
-TEST(EnterExitRecursiveASTVisitor, VisitsBaseClassDeclarations) {
+TEST(RecursiveASTEnterExitVisitor, VisitsBaseClassDeclarations) {
   TypeLocVisitor Visitor;
   Visitor.ExpectMatch("class X", 1, 30);
   EXPECT_TRUE(Visitor.runOver("class X {}; class Y : public X {};"));
 }
 
-TEST(EnterExitRecursiveASTVisitor, VisitsCXXBaseSpecifiersOfForwardDeclaredClass) {
+TEST(RecursiveASTEnterExitVisitor, VisitsCXXBaseSpecifiersOfForwardDeclaredClass) {
   TypeLocVisitor Visitor;
   Visitor.ExpectMatch("class X", 3, 18);
   EXPECT_TRUE(Visitor.runOver(
@@ -36,7 +36,7 @@ TEST(EnterExitRecursiveASTVisitor, VisitsCXXBaseSpecifiersOfForwardDeclaredClass
     "class Y : public X {};"));
 }
 
-TEST(EnterExitRecursiveASTVisitor, VisitsCXXBaseSpecifiersWithIncompleteInnerClass) {
+TEST(RecursiveASTEnterExitVisitor, VisitsCXXBaseSpecifiersWithIncompleteInnerClass) {
   TypeLocVisitor Visitor;
   Visitor.ExpectMatch("class X", 2, 18);
   EXPECT_TRUE(Visitor.runOver(
@@ -44,7 +44,7 @@ TEST(EnterExitRecursiveASTVisitor, VisitsCXXBaseSpecifiersWithIncompleteInnerCla
     "class Y : public X { class Z; };"));
 }
 
-TEST(EnterExitRecursiveASTVisitor, VisitsCXXBaseSpecifiersOfSelfReferentialType) {
+TEST(RecursiveASTEnterExitVisitor, VisitsCXXBaseSpecifiersOfSelfReferentialType) {
   TypeLocVisitor Visitor;
   Visitor.ExpectMatch("X<Y>", 2, 18, 2);
   EXPECT_TRUE(Visitor.runOver(
@@ -52,7 +52,7 @@ TEST(EnterExitRecursiveASTVisitor, VisitsCXXBaseSpecifiersOfSelfReferentialType)
     "class Y : public X<Y> {};"));
 }
 
-TEST(EnterExitRecursiveASTVisitor, VisitsClassTemplateTypeParmDefaultArgument) {
+TEST(RecursiveASTEnterExitVisitor, VisitsClassTemplateTypeParmDefaultArgument) {
   TypeLocVisitor Visitor;
   Visitor.ExpectMatch("class X", 2, 23);
   EXPECT_TRUE(Visitor.runOver(
@@ -61,7 +61,7 @@ TEST(EnterExitRecursiveASTVisitor, VisitsClassTemplateTypeParmDefaultArgument) {
     "template<typename T> class Y {};\n"));
 }
 
-TEST(EnterExitRecursiveASTVisitor, VisitsCompoundLiteralType) {
+TEST(RecursiveASTEnterExitVisitor, VisitsCompoundLiteralType) {
   TypeLocVisitor Visitor;
   Visitor.ExpectMatch("struct S", 1, 26);
   EXPECT_TRUE(Visitor.runOver(
@@ -69,7 +69,7 @@ TEST(EnterExitRecursiveASTVisitor, VisitsCompoundLiteralType) {
       TypeLocVisitor::Lang_C));
 }
 
-TEST(EnterExitRecursiveASTVisitor, VisitsObjCPropertyType) {
+TEST(RecursiveASTEnterExitVisitor, VisitsObjCPropertyType) {
   TypeLocVisitor Visitor;
   Visitor.ExpectMatch("NSNumber", 2, 33);
   EXPECT_TRUE(Visitor.runOver(
@@ -78,7 +78,7 @@ TEST(EnterExitRecursiveASTVisitor, VisitsObjCPropertyType) {
       TypeLocVisitor::Lang_OBJC));
 }
 
-TEST(EnterExitRecursiveASTVisitor, VisitInvalidType) {
+TEST(RecursiveASTEnterExitVisitor, VisitInvalidType) {
   TypeLocVisitor Visitor;
   // FIXME: It would be nice to have information about subtypes of invalid type
   //Visitor.ExpectMatch("typeof(struct F *) []", 1, 1);
@@ -89,7 +89,7 @@ TEST(EnterExitRecursiveASTVisitor, VisitInvalidType) {
       TypeLocVisitor::Lang_C));
 }
 
-TEST(EnterExitRecursiveASTVisitor, VisitsUsingEnumType) {
+TEST(RecursiveASTEnterExitVisitor, VisitsUsingEnumType) {
   TypeLocVisitor Visitor;
   Visitor.ExpectMatch("::A", 2, 12);
   EXPECT_TRUE(Visitor.runOver("enum class A {}; \n"
