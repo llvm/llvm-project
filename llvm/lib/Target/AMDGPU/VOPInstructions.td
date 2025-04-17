@@ -504,11 +504,11 @@ class VOP3Pe <bits<7> op, VOPProfile P> : Enc64, VOP3Pe_Base {
                      !if(P.HasMatrixScale, matrix_a_scale{0}, 0)); // op_sel(0)
   let Inst{12} = !if(!and(P.HasSrc1, P.HasOpSel), src1_modifiers{2}, 0); // op_sel(1)
   let Inst{13} = !if(!and(P.HasSrc2, P.HasOpSel), src2_modifiers{2},
-                     !if(P.HasMatrixScale, matrix_a_reuse, 0));    // op_sel(2)
+                     !if(P.HasMatrixReuse, matrix_a_reuse, 0));    // op_sel(2)
 
   let Inst{14} = !cond(!and(P.HasSrc2, P.HasOpSel) : src2_modifiers{3},
                        P.IsDOT : 1,
-                       P.HasMatrixScale : matrix_b_reuse,
+                       P.HasMatrixReuse : matrix_b_reuse,
                        1: ?); // op_sel_hi(2)
 
   let Inst{15} = !if(P.HasClamp, clamp{0}, 0);
