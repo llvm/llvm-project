@@ -659,6 +659,33 @@ mlir::Value hlfir::genLBound(mlir::Location loc, fir::FirOpBuilder &builder,
   return dimInfo.getLowerBound();
 }
 
+llvm::SmallVector<mlir::Value> hlfir::genLBounds(mlir::Location loc,
+                                                 fir::FirOpBuilder &builder,
+                                                 hlfir::Entity entity) {
+  assert(!entity.isAssumedRank() &&
+         "cannot compute all lower bounds for assumed rank");
+  assert(!entity.isScalar() && "expected an array entity");
+  int rank = entity.getRank();
+  mlir::Type idxTy = builder.getIndexType();
+  if (!entity.mayHaveNonDefaultLowerBounds())
+    return {static_cast<std::size_t>(rank),
+            builder.createIntegerConstant(loc, idxTy, 1)};
+
+  if (auto shape = tryRetrievingShapeOrShift(entity)) {
+    auto lbounds = getExplicitLboundsFromShape(shape);
+    if (!lbounds.empty())
+      return lbounds;
+  }
+
+  if (entity.isMutableBox())
+    entity = hlfir::derefPointersAndAllocatables(loc, builder, entity);
+
+  llvm::SmallVector<mlir::Value> lbounds;
+  fir::factory::genDimInfoFromBox(builder, loc, entity, &lbounds,
+                                  /*extents=*/nullptr, /*strides=*/nullptr);
+  return lbounds;
+}
+
 void hlfir::genLengthParameters(mlir::Location loc, fir::FirOpBuilder &builder,
                                 Entity entity,
                                 llvm::SmallVectorImpl<mlir::Value> &result) {
