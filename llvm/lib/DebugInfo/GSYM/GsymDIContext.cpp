@@ -97,7 +97,6 @@ GsymDIContext::getLineInfoForAddress(object::SectionedAddress Address,
 
 std::optional<DILineInfo>
 GsymDIContext::getLineInfoForDataAddress(object::SectionedAddress Address) {
-  // TODO:
   // We can't implement this, there's no such information in the GSYM file.
 
   return {};

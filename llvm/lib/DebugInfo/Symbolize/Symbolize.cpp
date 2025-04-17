@@ -505,7 +505,6 @@ std::string LLVMSymbolizer::lookUpGsymFile(const std::string &Path) {
     return {};
 
   auto CheckGsymFile = [](const llvm::StringRef &GsymPath) {
-    // TODO Also check if GSYM file is up-to-date?
     sys::fs::file_status Status;
     std::error_code EC = llvm::sys::fs::status(GsymPath, Status);
     return !EC && !llvm::sys::fs::is_directory(Status);
