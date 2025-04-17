@@ -55,23 +55,23 @@ define amdgpu_ps float @v_test_cvt_v2f32_v2bf16_v(<2 x float> %src) {
 define amdgpu_ps float @v_test_cvt_v2f32_v2bf16_s(<2 x float> inreg %src) {
 ; GFX-942-LABEL: v_test_cvt_v2f32_v2bf16_s:
 ; GFX-942:       ; %bb.0:
-; GFX-942-NEXT:    s_bfe_u32 s2, s1, 0x10010
-; GFX-942-NEXT:    s_add_i32 s2, s2, s1
-; GFX-942-NEXT:    s_or_b32 s4, s1, 0x400000
+; GFX-942-NEXT:    s_bfe_u32 s3, s1, 0x10010
+; GFX-942-NEXT:    s_add_i32 s3, s3, s1
+; GFX-942-NEXT:    s_or_b32 s2, s1, 0x400000
+; GFX-942-NEXT:    s_addk_i32 s3, 0x7fff
+; GFX-942-NEXT:    v_cmp_u_f32_e64 s[4:5], s1, s1
+; GFX-942-NEXT:    s_and_b64 s[4:5], s[4:5], exec
+; GFX-942-NEXT:    s_cselect_b32 s1, s2, s3
+; GFX-942-NEXT:    s_bfe_u32 s2, s0, 0x10010
+; GFX-942-NEXT:    s_add_i32 s2, s2, s0
+; GFX-942-NEXT:    s_lshr_b32 s4, s1, 16
+; GFX-942-NEXT:    s_or_b32 s1, s0, 0x400000
 ; GFX-942-NEXT:    s_add_i32 s5, s2, 0x7fff
-; GFX-942-NEXT:    v_cmp_u_f32_e64 s[2:3], s1, s1
+; GFX-942-NEXT:    v_cmp_u_f32_e64 s[2:3], s0, s0
 ; GFX-942-NEXT:    s_and_b64 s[2:3], s[2:3], exec
-; GFX-942-NEXT:    s_cselect_b32 s1, s4, s5
-; GFX-942-NEXT:    s_lshr_b32 s2, s1, 16
-; GFX-942-NEXT:    s_bfe_u32 s1, s0, 0x10010
-; GFX-942-NEXT:    s_add_i32 s1, s1, s0
-; GFX-942-NEXT:    s_or_b32 s3, s0, 0x400000
-; GFX-942-NEXT:    s_add_i32 s4, s1, 0x7fff
-; GFX-942-NEXT:    v_cmp_u_f32_e64 s[0:1], s0, s0
-; GFX-942-NEXT:    s_and_b64 s[0:1], s[0:1], exec
-; GFX-942-NEXT:    s_cselect_b32 s0, s3, s4
+; GFX-942-NEXT:    s_cselect_b32 s0, s1, s5
 ; GFX-942-NEXT:    s_lshr_b32 s0, s0, 16
-; GFX-942-NEXT:    s_pack_ll_b32_b16 s0, s0, s2
+; GFX-942-NEXT:    s_pack_ll_b32_b16 s0, s0, s4
 ; GFX-942-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX-942-NEXT:    ; return to shader part epilog
 ;

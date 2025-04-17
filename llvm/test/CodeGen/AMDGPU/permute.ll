@@ -283,20 +283,20 @@ bb:
 define amdgpu_kernel void @known_ffff0500(ptr addrspace(1) nocapture %arg, i32 %arg1) {
 ; GCN-LABEL: known_ffff0500:
 ; GCN:       ; %bb.0: ; %bb
-; GCN-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; GCN-NEXT:    s_load_dword s2, s[4:5], 0x2c
+; GCN-NEXT:    s_load_dwordx2 s[2:3], s[4:5], 0x24
+; GCN-NEXT:    s_load_dword s0, s[4:5], 0x2c
 ; GCN-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GCN-NEXT:    v_mov_b32_e32 v5, 0xffff8004
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    v_mov_b32_e32 v1, s1
-; GCN-NEXT:    v_add_u32_e32 v0, vcc, s0, v0
+; GCN-NEXT:    v_mov_b32_e32 v1, s3
+; GCN-NEXT:    v_add_u32_e32 v0, vcc, s2, v0
 ; GCN-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; GCN-NEXT:    flat_load_dword v4, v[0:1]
-; GCN-NEXT:    s_bitset1_b32 s2, 15
-; GCN-NEXT:    v_mov_b32_e32 v3, s1
-; GCN-NEXT:    v_mov_b32_e32 v2, s0
-; GCN-NEXT:    s_and_b32 s0, s2, 0xff00
+; GCN-NEXT:    s_bitset1_b32 s0, 15
+; GCN-NEXT:    s_and_b32 s0, s0, 0xff00
 ; GCN-NEXT:    s_or_b32 s0, s0, 0xffff0000
+; GCN-NEXT:    v_mov_b32_e32 v2, s2
+; GCN-NEXT:    v_mov_b32_e32 v3, s3
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    v_or_b32_e32 v4, 4, v4
 ; GCN-NEXT:    v_and_b32_e32 v4, 0xff00ff, v4

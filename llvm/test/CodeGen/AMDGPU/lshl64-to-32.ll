@@ -45,17 +45,17 @@ define amdgpu_kernel void @sext_shl64_to_32(ptr addrspace(1) nocapture %out, i32
 define amdgpu_kernel void @zext_shl64_overflow(ptr addrspace(1) nocapture %out, i32 %x) {
 ; GCN-LABEL: zext_shl64_overflow:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_load_dword s6, s[4:5], 0xb
-; GCN-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
-; GCN-NEXT:    s_mov_b32 s5, 0
-; GCN-NEXT:    s_mov_b32 s3, 0xf000
-; GCN-NEXT:    s_mov_b32 s2, -1
+; GCN-NEXT:    s_load_dword s0, s[4:5], 0xb
+; GCN-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x9
+; GCN-NEXT:    s_mov_b32 s1, 0
+; GCN-NEXT:    s_mov_b32 s7, 0xf000
+; GCN-NEXT:    s_mov_b32 s6, -1
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    s_and_b32 s4, s6, 0x7fffffff
-; GCN-NEXT:    s_lshl_b64 s[4:5], s[4:5], 2
-; GCN-NEXT:    v_mov_b32_e32 v0, s4
-; GCN-NEXT:    v_mov_b32_e32 v1, s5
-; GCN-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
+; GCN-NEXT:    s_bitset0_b32 s0, 31
+; GCN-NEXT:    s_lshl_b64 s[0:1], s[0:1], 2
+; GCN-NEXT:    v_mov_b32_e32 v0, s0
+; GCN-NEXT:    v_mov_b32_e32 v1, s1
+; GCN-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
 ; GCN-NEXT:    s_endpgm
   %and = and i32 %x, 2147483647
   %ext = zext i32 %and to i64
@@ -67,17 +67,17 @@ define amdgpu_kernel void @zext_shl64_overflow(ptr addrspace(1) nocapture %out, 
 define amdgpu_kernel void @sext_shl64_overflow(ptr addrspace(1) nocapture %out, i32 %x) {
 ; GCN-LABEL: sext_shl64_overflow:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_load_dword s6, s[4:5], 0xb
-; GCN-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
-; GCN-NEXT:    s_mov_b32 s5, 0
-; GCN-NEXT:    s_mov_b32 s3, 0xf000
-; GCN-NEXT:    s_mov_b32 s2, -1
+; GCN-NEXT:    s_load_dword s0, s[4:5], 0xb
+; GCN-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x9
+; GCN-NEXT:    s_mov_b32 s1, 0
+; GCN-NEXT:    s_mov_b32 s7, 0xf000
+; GCN-NEXT:    s_mov_b32 s6, -1
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    s_and_b32 s4, s6, 0x7fffffff
-; GCN-NEXT:    s_lshl_b64 s[4:5], s[4:5], 2
-; GCN-NEXT:    v_mov_b32_e32 v0, s4
-; GCN-NEXT:    v_mov_b32_e32 v1, s5
-; GCN-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
+; GCN-NEXT:    s_bitset0_b32 s0, 31
+; GCN-NEXT:    s_lshl_b64 s[0:1], s[0:1], 2
+; GCN-NEXT:    v_mov_b32_e32 v0, s0
+; GCN-NEXT:    v_mov_b32_e32 v1, s1
+; GCN-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
 ; GCN-NEXT:    s_endpgm
   %and = and i32 %x, 2147483647
   %ext = sext i32 %and to i64
