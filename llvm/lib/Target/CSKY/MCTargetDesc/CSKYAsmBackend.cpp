@@ -13,6 +13,7 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCFixupKindInfo.h"
 #include "llvm/MC/MCObjectWriter.h"
+#include "llvm/MC/MCValue.h"
 #include "llvm/Support/Debug.h"
 
 #define DEBUG_TYPE "csky-asmbackend"
@@ -71,7 +72,7 @@ CSKYAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
          "Not all fixup kinds added to Infos array");
 
   if (FirstTargetFixupKind <= Kind && Kind < FirstLiteralRelocationKind) {
-    assert(unsigned(Kind - FirstTargetFixupKind) < getNumFixupKinds() &&
+    assert(unsigned(Kind - FirstTargetFixupKind) < CSKY::NumTargetFixupKinds &&
            "Invalid kind!");
 
     return Infos[Kind];
@@ -170,16 +171,13 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
   }
 }
 
-bool CSKYAsmBackend::fixupNeedsRelaxationAdvanced(const MCAssembler &Asm,
+bool CSKYAsmBackend::fixupNeedsRelaxationAdvanced(const MCAssembler &,
                                                   const MCFixup &Fixup,
-                                                  bool Resolved, uint64_t Value,
-                                                  const MCRelaxableFragment *DF,
-                                                  const bool WasForced) const {
-  // Return true if the symbol is actually unresolved.
-  // Resolved could be always false when shouldForceRelocation return true.
-  // We use !WasForced to indicate that the symbol is unresolved and not forced
-  // by shouldForceRelocation.
-  if (!Resolved && !WasForced)
+                                                  const MCValue &,
+                                                  uint64_t Value,
+                                                  bool Resolved) const {
+  // Return true if the symbol is unresolved.
+  if (!Resolved)
     return true;
 
   int64_t Offset = int64_t(Value);
@@ -262,19 +260,12 @@ bool CSKYAsmBackend::mayNeedRelaxation(const MCInst &Inst,
 bool CSKYAsmBackend::shouldForceRelocation(const MCAssembler &Asm,
                                            const MCFixup &Fixup,
                                            const MCValue &Target,
-                                           const uint64_t /*Value*/,
                                            const MCSubtargetInfo * /*STI*/) {
-  if (Fixup.getKind() >= FirstLiteralRelocationKind)
+  if (Target.getSpecifier())
     return true;
   switch (Fixup.getTargetKind()) {
   default:
     break;
-  case CSKY::fixup_csky_got32:
-  case CSKY::fixup_csky_got_imm18_scale4:
-  case CSKY::fixup_csky_gotoff:
-  case CSKY::fixup_csky_gotpc:
-  case CSKY::fixup_csky_plt32:
-  case CSKY::fixup_csky_plt_imm18_scale4:
   case CSKY::fixup_csky_doffset_imm18:
   case CSKY::fixup_csky_doffset_imm18_scale2:
   case CSKY::fixup_csky_doffset_imm18_scale4:

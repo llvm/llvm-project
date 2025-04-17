@@ -140,6 +140,24 @@ llvm::LogicalResult cuf::DeallocateOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// KernelLaunchOp
+//===----------------------------------------------------------------------===//
+
+template <typename OpTy>
+static llvm::LogicalResult checkStreamType(OpTy op) {
+  if (!op.getStream())
+    return mlir::success();
+  auto refTy = mlir::dyn_cast<fir::ReferenceType>(op.getStream().getType());
+  if (!refTy.getEleTy().isInteger(64))
+    return op.emitOpError("stream is expected to be a i64 reference");
+  return mlir::success();
+}
+
+llvm::LogicalResult cuf::KernelLaunchOp::verify() {
+  return checkStreamType(*this);
+}
+
+//===----------------------------------------------------------------------===//
 // KernelOp
 //===----------------------------------------------------------------------===//
 
@@ -298,6 +316,33 @@ mlir::LogicalResult cuf::RegisterKernelOp::verify() {
     return mlir::success();
   }
   return emitOpError("device function not found");
+}
+
+//===----------------------------------------------------------------------===//
+// SharedMemoryOp
+//===----------------------------------------------------------------------===//
+
+void cuf::SharedMemoryOp::build(
+    mlir::OpBuilder &builder, mlir::OperationState &result, mlir::Type inType,
+    llvm::StringRef uniqName, llvm::StringRef bindcName,
+    mlir::ValueRange typeparams, mlir::ValueRange shape,
+    llvm::ArrayRef<mlir::NamedAttribute> attributes) {
+  mlir::StringAttr nameAttr =
+      uniqName.empty() ? mlir::StringAttr{} : builder.getStringAttr(uniqName);
+  mlir::StringAttr bindcAttr =
+      bindcName.empty() ? mlir::StringAttr{} : builder.getStringAttr(bindcName);
+  build(builder, result, wrapAllocaResultType(inType),
+        mlir::TypeAttr::get(inType), nameAttr, bindcAttr, typeparams, shape,
+        /*offset=*/mlir::Value{});
+  result.addAttributes(attributes);
+}
+
+//===----------------------------------------------------------------------===//
+// StreamCastOp
+//===----------------------------------------------------------------------===//
+
+llvm::LogicalResult cuf::StreamCastOp::verify() {
+  return checkStreamType(*this);
 }
 
 // Tablegen operators

@@ -46,7 +46,7 @@ void test_tellg(std::streamoff total_size) {
     ofs.open(p, std::ios::out | std::ios::binary);
     assert(ofs.is_open());
     for (std::streamoff size = 0; size < total_size;) {
-      std::size_t n = std::min(static_cast<std::streamoff>(data.size()), total_size - size);
+      std::streamoff n = std::min(static_cast<std::streamoff>(data.size()), total_size - size);
       ofs.write(data.data(), n);
       size += n;
     }

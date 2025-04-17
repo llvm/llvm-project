@@ -15,13 +15,26 @@
 
 namespace fir {
 
-/// Return true iff the Operation is a non-volatile LoadOp or ArrayLoadOp.
-inline bool nonVolatileLoad(mlir::Operation *op) {
-  if (auto load = mlir::dyn_cast<fir::LoadOp>(op))
-    return !load->getAttr("volatile");
-  if (auto arrLoad = mlir::dyn_cast<fir::ArrayLoadOp>(op))
-    return !arrLoad->getAttr("volatile");
-  return false;
+/// The LLVM dialect represents volatile memory accesses as read and write
+/// effects to an unknown memory location, but this may be overly conservative.
+/// LLVM Language Reference only specifies that volatile memory accesses
+/// must not be reordered relative to other volatile memory accesses, so it
+/// is more precise to use a separate memory resource for volatile memory
+/// accesses.
+inline void addVolatileMemoryEffects(
+    mlir::TypeRange type,
+    llvm::SmallVectorImpl<
+        mlir::SideEffects::EffectInstance<mlir::MemoryEffects::Effect>>
+        &effects) {
+  for (mlir::Type t : type) {
+    if (fir::isa_volatile_type(t)) {
+      effects.emplace_back(mlir::MemoryEffects::Read::get(),
+                           fir::VolatileMemoryResource::get());
+      effects.emplace_back(mlir::MemoryEffects::Write::get(),
+                           fir::VolatileMemoryResource::get());
+      break;
+    }
+  }
 }
 
 /// Return true iff the Operation is a call.

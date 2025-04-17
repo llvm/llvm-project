@@ -33,7 +33,8 @@ define void @fp_trunc(ptr %a, double %b) nounwind {
 ; LA64F-NEXT:    st.d $fp, $sp, 0 # 8-byte Folded Spill
 ; LA64F-NEXT:    move $fp, $a0
 ; LA64F-NEXT:    move $a0, $a1
-; LA64F-NEXT:    bl %plt(__truncdfsf2)
+; LA64F-NEXT:    pcaddu18i $ra, %call36(__truncdfsf2)
+; LA64F-NEXT:    jirl $ra, $ra, 0
 ; LA64F-NEXT:    fst.s $fa0, $fp, 0
 ; LA64F-NEXT:    ld.d $fp, $sp, 0 # 8-byte Folded Reload
 ; LA64F-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload

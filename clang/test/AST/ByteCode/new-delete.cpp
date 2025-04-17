@@ -558,6 +558,11 @@ namespace DeleteThis {
   }
   static_assert(super_secret_double_delete()); // both-error {{not an integral constant expression}} \
                                                // both-note {{in call to 'super_secret_double_delete()'}}
+
+  struct B {
+    constexpr void reset() { delete this; }
+  };
+  static_assert(((new B)->reset(), true));
 }
 
 namespace CastedDelete {
@@ -940,6 +945,63 @@ namespace ArrayBaseCast {
     return true;
   }
   static_assert(test());
+}
+
+namespace PR45350 {
+  int q;
+  struct V { int n; int *p = &n; constexpr ~V() { *p = *p * 10 + n; }};
+  constexpr int f(int n) {
+    int k = 0;
+    V *p = new V[n];
+    for (int i = 0; i != n; ++i) {
+      if (p[i].p != &p[i].n) return -1;
+      p[i].n = i;
+      p[i].p = &k;
+    }
+    delete[] p;
+    return k;
+  }
+  // [expr.delete]p6:
+  //   In the case of an array, the elements will be destroyed in order of
+  //   decreasing address
+  static_assert(f(6) == 543210);
+}
+
+namespace ZeroSizeSub {
+  consteval unsigned ptr_diff1() {
+    int *b = new int[0];
+    unsigned d = 0;
+    d = b - b;
+    delete[] b;
+
+    return d;
+  }
+  static_assert(ptr_diff1() == 0);
+
+
+  consteval unsigned ptr_diff2() { // both-error {{never produces a constant expression}}
+    int *a = new int[0];
+    int *b = new int[0];
+
+    unsigned d = a - b; // both-note 2{{arithmetic involving unrelated objects}}
+    delete[] b;
+    delete[] a;
+    return d;
+  }
+  static_assert(ptr_diff2() == 0); // both-error {{not an integral constant expression}} \
+                                   // both-note {{in call to}}
+}
+
+namespace WrongFrame {
+  constexpr int foo() {
+    int *p = nullptr;
+    __builtin_operator_delete(p); // both-note {{subexpression not valid in a constant expression}}
+
+    return 1;
+  }
+  static_assert(foo()); // both-error {{not an integral constant expression}} \
+                        // both-note {{in call to}}
+
 }
 
 #else

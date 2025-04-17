@@ -379,3 +379,27 @@
 ; CHECK-EMPTY:
 ; CHECK-NEXT: .?AUBase@@@8
 ; CHECK-NEXT: error: Invalid mangled name
+
+; Begin GH129970
+
+??_C@_12EEHFKJGG@?$AAt?$AAe?$AAx@
+; CHECK-EMPTY:
+; CHECK-NEXT: ??_C@_12EEHFKJGG@?$AAt?$AAe?$AAx@
+; CHECK-NEXT: error: Invalid mangled name
+
+??_C@_16EEHFKJGG@?$AAt?$AAe?$AAx@
+; CHECK-EMPTY:
+; CHECK-NEXT: ??_C@_16EEHFKJGG@?$AAt?$AAe?$AAx@
+; CHECK-NEXT: error: Invalid mangled name
+
+??_C@_18EEHFKJGG@?$AAt?$AAe?$AAx@
+; CHECK-EMPTY:
+; CHECK-NEXT: ??_C@_18EEHFKJGG@?$AAt?$AAe?$AAx@
+; CHECK-NEXT: error: Invalid mangled name
+
+??_C@_15EEHFKJGG@?$AAt?$AAe?$AAx?$AAx@
+; CHECK-EMPTY:
+; CHECK-NEXT: ??_C@_15EEHFKJGG@?$AAt?$AAe?$AAx?$AAx@
+; CHECK-NEXT: error: Invalid mangled name
+
+; End GH129970

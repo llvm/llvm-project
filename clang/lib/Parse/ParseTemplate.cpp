@@ -179,6 +179,13 @@ Parser::DeclGroupPtrTy Parser::ParseTemplateDeclarationOrSpecialization(
       Context, TemplateInfo, ParsingTemplateParams, DeclEnd, AccessAttrs, AS);
 }
 
+Parser::DeclGroupPtrTy Parser::ParseTemplateDeclarationOrSpecialization(
+    DeclaratorContext Context, SourceLocation &DeclEnd, AccessSpecifier AS) {
+  ParsedAttributes AccessAttrs(AttrFactory);
+  return ParseTemplateDeclarationOrSpecialization(Context, DeclEnd, AccessAttrs,
+                                                  AS);
+}
+
 /// Parse a single declaration that declares a template,
 /// template specialization, or explicit instantiation of a template.
 ///

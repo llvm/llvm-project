@@ -12,7 +12,7 @@ body:             |
     ; CHECK-NEXT: ALL VALUES UNIFORM
     %0:vgpr_32 = IMPLICIT_DEF
     %1:vgpr_32 = IMPLICIT_DEF
-    %2:sgpr_32 = V_READFIRSTLANE_B32 %0, implicit $exec
+    %2:sreg_32_xm0 = V_READFIRSTLANE_B32 %0, implicit $exec
     %3:sgpr_32 = V_READLANE_B32 %1, 0, implicit $exec
     $sgpr0 = V_READFIRSTLANE_B32 $vgpr0, implicit $exec
     $sgpr1 = V_READLANE_B32 $vgpr1, $sgpr0, implicit $exec
@@ -33,7 +33,7 @@ body:             |
     %4:sgpr_32 = V_READLANE_B32 $vgpr0, 0, implicit $exec
     $sgpr0 = V_READFIRSTLANE_B32 $vgpr0, implicit $exec
     $sgpr1 = V_READLANE_B32 $vgpr1, $sgpr0, implicit $exec
-    %5:sgpr_32 = V_READFIRSTLANE_B32 $vgpr1, implicit $exec
+    %5:sreg_32_xm0 = V_READFIRSTLANE_B32 $vgpr1, implicit $exec
     S_ENDPGM 0
 ...
 

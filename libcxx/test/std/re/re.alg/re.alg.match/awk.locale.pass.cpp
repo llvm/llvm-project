@@ -19,6 +19,7 @@
 // TODO: investigation needed
 // TODO(netbsd): incomplete support for locales
 // XFAIL: target={{.*}}-linux-gnu{{.*}}, netbsd, freebsd
+// XFAIL: target={{.*}}-amazon-linux{{.*}}
 // REQUIRES: locale.cs_CZ.ISO8859-2
 
 #include <regex>

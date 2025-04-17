@@ -22,7 +22,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 #if __has_builtin(__is_pointer)
 
 template <class _Tp>
-struct _LIBCPP_TEMPLATE_VIS _LIBCPP_NO_SPECIALIZATIONS is_pointer : _BoolConstant<__is_pointer(_Tp)> {};
+struct _LIBCPP_NO_SPECIALIZATIONS is_pointer : _BoolConstant<__is_pointer(_Tp)> {};
 
 #  if _LIBCPP_STD_VER >= 17
 template <class _Tp>
@@ -32,9 +32,9 @@ _LIBCPP_NO_SPECIALIZATIONS inline constexpr bool is_pointer_v = __is_pointer(_Tp
 #else // __has_builtin(__is_pointer)
 
 template <class _Tp>
-struct __libcpp_is_pointer : public false_type {};
+struct __libcpp_is_pointer : false_type {};
 template <class _Tp>
-struct __libcpp_is_pointer<_Tp*> : public true_type {};
+struct __libcpp_is_pointer<_Tp*> : true_type {};
 
 template <class _Tp>
 struct __libcpp_remove_objc_qualifiers {
@@ -50,8 +50,7 @@ template <class _Tp> struct __libcpp_remove_objc_qualifiers<_Tp __unsafe_unretai
 #  endif
 
 template <class _Tp>
-struct _LIBCPP_TEMPLATE_VIS is_pointer
-    : public __libcpp_is_pointer<typename __libcpp_remove_objc_qualifiers<__remove_cv_t<_Tp> >::type> {};
+struct is_pointer : __libcpp_is_pointer<typename __libcpp_remove_objc_qualifiers<__remove_cv_t<_Tp> >::type> {};
 
 #  if _LIBCPP_STD_VER >= 17
 template <class _Tp>

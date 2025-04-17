@@ -79,9 +79,6 @@ static bool isVMV0(const MCOperandInfo &MCOI) {
 }
 
 bool RISCVVMV0Elimination::runOnMachineFunction(MachineFunction &MF) {
-  if (skipFunction(MF.getFunction()))
-    return false;
-
   // Skip if the vector extension is not enabled.
   const RISCVSubtarget *ST = &MF.getSubtarget<RISCVSubtarget>();
   if (!ST->hasVInstructions())
@@ -115,6 +112,7 @@ bool RISCVVMV0Elimination::runOnMachineFunction(MachineFunction &MF) {
 #endif
 
   bool MadeChange = false;
+  SmallVector<MachineInstr *> DeadCopies;
 
   // For any instruction with a vmv0 operand, replace it with a copy to v0.
   for (MachineBasicBlock &MBB : MF) {
@@ -132,8 +130,12 @@ bool RISCVVMV0Elimination::runOnMachineFunction(MachineFunction &MF) {
           // Peek through a single copy to match what isel does.
           if (MachineInstr *SrcMI = MRI.getVRegDef(Src);
               SrcMI->isCopy() && SrcMI->getOperand(1).getReg().isVirtual() &&
-              SrcMI->getOperand(1).getSubReg() == RISCV::NoSubRegister)
+              SrcMI->getOperand(1).getSubReg() == RISCV::NoSubRegister) {
+            // Delete any dead copys to vmv0 to avoid allocating them.
+            if (MRI.hasOneNonDBGUse(Src))
+              DeadCopies.push_back(SrcMI);
             Src = SrcMI->getOperand(1).getReg();
+          }
 
           BuildMI(MBB, MI, MI.getDebugLoc(), TII->get(RISCV::COPY), RISCV::V0)
               .addReg(Src);
@@ -145,6 +147,9 @@ bool RISCVVMV0Elimination::runOnMachineFunction(MachineFunction &MF) {
       }
     }
   }
+
+  for (MachineInstr *MI : DeadCopies)
+    MI->eraseFromParent();
 
   if (!MadeChange)
     return false;

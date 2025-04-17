@@ -1734,3 +1734,56 @@ namespace DeadUpcast {
   static_assert(foo(), "");
 }
 #endif
+
+namespace CtorOfInvalidClass {
+  constexpr struct { Unknown U; } InvalidCtor; // both-error {{unknown type name 'Unknown'}} \
+                                               // both-error {{must be initialized by a constant expression}}
+
+#if __cplusplus >= 202002L
+  template <typename T, auto Q>
+  concept ReferenceOf = Q;
+  /// This calls a valid and constexpr copy constructor of InvalidCtor, 
+  /// but should still be rejected.
+  template<ReferenceOf<InvalidCtor> auto R, typename Rep> int F; // both-error {{non-type template argument is not a constant expression}}
+#endif
+}
+
+namespace IncompleteTypes {
+  struct Incomplete;
+
+  constexpr bool foo() {
+    extern Incomplete bounded[10];
+    extern Incomplete unbounded[];
+    extern Incomplete IT;
+    return true;
+  }
+  static_assert(foo(), "");
+}
+
+namespace RedeclaredCtor {
+
+  struct __sp_mut {
+    void *__lx_;
+    constexpr __sp_mut(void *) noexcept;
+  };
+  int mut_back[1];
+
+  constexpr __sp_mut::__sp_mut(void *p) noexcept : __lx_(p) {}
+  constexpr __sp_mut muts = &mut_back[0];
+}
+
+namespace IntegralBaseCast {
+  class A {};
+  class B : public A {};
+  struct S {
+    B *a;
+  };
+
+  constexpr int f() {
+    S s{};
+    A *a = s.a;
+    return 0;
+  }
+
+  static_assert(f() == 0, "");
+}

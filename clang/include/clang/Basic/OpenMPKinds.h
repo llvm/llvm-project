@@ -190,6 +190,13 @@ enum OpenMPReductionClauseModifier {
   OMPC_REDUCTION_unknown,
 };
 
+/// OpenMP 6.0 original sharing modifiers
+enum OpenMPOriginalSharingModifier {
+#define OPENMP_ORIGINAL_SHARING_MODIFIER(Name) OMPC_ORIGINAL_SHARING_##Name,
+#include "clang/Basic/OpenMPKinds.def"
+  OMPC_ORIGINAL_SHARING_unknown,
+};
+
 /// OpenMP adjust-op kinds for 'adjust_args' clause.
 enum OpenMPAdjustArgsOpKind {
 #define OPENMP_ADJUST_ARGS_KIND(Name) OMPC_ADJUST_ARGS_##Name,

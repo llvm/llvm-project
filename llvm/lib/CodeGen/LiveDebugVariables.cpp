@@ -587,7 +587,7 @@ class LiveDebugVariables::LDVImpl {
   SmallVector<std::unique_ptr<UserLabel>, 2> userLabels;
 
   /// Map virtual register to eq class leader.
-  using VRMap = DenseMap<unsigned, UserValue *>;
+  using VRMap = DenseMap<Register, UserValue *>;
   VRMap virtRegToEqClass;
 
   /// Map to find existing UserValue instances.

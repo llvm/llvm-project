@@ -215,6 +215,42 @@ namespace llvm {
                                  DINode::DIFlags Flags = DINode::FlagZero,
                                  uint32_t NumExtraInhabitants = 0);
 
+    /// Create debugging information entry for a binary fixed-point type.
+    /// \param Name        Type name.
+    /// \param Encoding    DWARF encoding code, either
+    ///                    dwarf::DW_ATE_signed_fixed or DW_ATE_unsigned_fixed.
+    /// \param Flags       Optional DWARF attributes, e.g., DW_AT_endianity.
+    /// \param Factor      Binary scale factor.
+    DIFixedPointType *
+    createBinaryFixedPointType(StringRef Name, uint64_t SizeInBits,
+                               uint32_t AlignInBits, unsigned Encoding,
+                               DINode::DIFlags Flags, int Factor);
+
+    /// Create debugging information entry for a decimal fixed-point type.
+    /// \param Name        Type name.
+    /// \param Encoding    DWARF encoding code, either
+    ///                    dwarf::DW_ATE_signed_fixed or DW_ATE_unsigned_fixed.
+    /// \param Flags       Optional DWARF attributes, e.g., DW_AT_endianity.
+    /// \param Factor      Decimal scale factor.
+    DIFixedPointType *
+    createDecimalFixedPointType(StringRef Name, uint64_t SizeInBits,
+                                uint32_t AlignInBits, unsigned Encoding,
+                                DINode::DIFlags Flags, int Factor);
+
+    /// Create debugging information entry for an arbitrary rational
+    /// fixed-point type.
+    /// \param Name        Type name.
+    /// \param Encoding    DWARF encoding code, either
+    ///                    dwarf::DW_ATE_signed_fixed or DW_ATE_unsigned_fixed.
+    /// \param Flags       Optional DWARF attributes, e.g., DW_AT_endianity.
+    /// \param Numerator   Numerator of scale factor.
+    /// \param Denominator Denominator of scale factor.
+    DIFixedPointType *
+    createRationalFixedPointType(StringRef Name, uint64_t SizeInBits,
+                                 uint32_t AlignInBits, unsigned Encoding,
+                                 DINode::DIFlags Flags, APInt Numerator,
+                                 APInt Denominator);
+
     /// Create debugging information entry for a string
     /// type.
     /// \param Name        Type name.
@@ -588,6 +624,37 @@ namespace llvm {
         PointerUnion<DIExpression *, DIVariable *> Allocated = nullptr,
         PointerUnion<DIExpression *, DIVariable *> Rank = nullptr);
 
+    /// Create debugging information entry for an array.
+    /// \param Scope          Scope in which this enumeration is defined.
+    /// \param Name           Union name.
+    /// \param File           File where this member is defined.
+    /// \param LineNumber     Line number.
+    /// \param Size           Array size.
+    /// \param AlignInBits    Alignment.
+    /// \param Ty             Element type.
+    /// \param Subscripts     Subscripts.
+    /// \param DataLocation   The location of the raw data of a descriptor-based
+    ///                       Fortran array, either a DIExpression* or
+    ///                       a DIVariable*.
+    /// \param Associated     The associated attribute of a descriptor-based
+    ///                       Fortran array, either a DIExpression* or
+    ///                       a DIVariable*.
+    /// \param Allocated      The allocated attribute of a descriptor-based
+    ///                       Fortran array, either a DIExpression* or
+    ///                       a DIVariable*.
+    /// \param Rank           The rank attribute of a descriptor-based
+    ///                       Fortran array, either a DIExpression* or
+    ///                       a DIVariable*.
+    /// \param BitStride      The bit size of an element of the array.
+    DICompositeType *createArrayType(
+        DIScope *Scope, StringRef Name, DIFile *File, unsigned LineNumber,
+        uint64_t Size, uint32_t AlignInBits, DIType *Ty, DINodeArray Subscripts,
+        PointerUnion<DIExpression *, DIVariable *> DataLocation = nullptr,
+        PointerUnion<DIExpression *, DIVariable *> Associated = nullptr,
+        PointerUnion<DIExpression *, DIVariable *> Allocated = nullptr,
+        PointerUnion<DIExpression *, DIVariable *> Rank = nullptr,
+        Metadata *BitStride = nullptr);
+
     /// Create debugging information entry for a vector type.
     /// \param Size         Array size.
     /// \param AlignInBits  Alignment.
@@ -648,6 +715,26 @@ namespace llvm {
     /// Create a uniqued clone of \p Ty with FlagObjectPointer set.
     /// If \p Implicit is true, also set FlagArtificial.
     static DIType *createObjectPointerType(DIType *Ty, bool Implicit);
+
+    /// Create a type describing a subrange of another type.
+    /// \param Scope          Scope in which this set is defined.
+    /// \param Name           Set name.
+    /// \param File           File where this set is defined.
+    /// \param LineNo         Line number.
+    /// \param SizeInBits     Size.
+    /// \param AlignInBits    Alignment.
+    /// \param Flags          Flags to encode attributes.
+    /// \param Ty             Base type.
+    /// \param LowerBound     Lower bound.
+    /// \param UpperBound     Upper bound.
+    /// \param Stride         Stride, if any.
+    /// \param Bias           Bias, if any.
+    DISubrangeType *
+    createSubrangeType(StringRef Name, DIFile *File, unsigned LineNo,
+                       DIScope *Scope, uint64_t SizeInBits,
+                       uint32_t AlignInBits, DINode::DIFlags Flags, DIType *Ty,
+                       Metadata *LowerBound, Metadata *UpperBound,
+                       Metadata *Stride, Metadata *Bias);
 
     /// Create a permanent forward-declared type.
     DICompositeType *

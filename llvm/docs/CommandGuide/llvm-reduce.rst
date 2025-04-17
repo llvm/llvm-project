@@ -71,6 +71,12 @@ GENERIC OPTIONS
 
  Delta passes to not run, separated by commas. By default, run all delta passes.
 
+.. option::--skip-verify-interesting-after-counting-chunks
+
+ Do not validate testcase is interesting after counting chunks. This
+ will save time by avoiding extra executions of the interestingness
+ test, but a warning will no longer be printed on flaky reproducers.
+
 .. option:: --starting-granularity-level=<uint>
 
   Number of times to divide chunks prior to first test.
@@ -102,8 +108,9 @@ GENERIC OPTIONS
 EXIT STATUS
 ------------
 
-:program:`llvm-reduce` returns 0 under normal operation. It returns a non-zero
-exit code if there were any errors.
+:program:`llvm-reduce` returns 0 under normal operation. It returns a
+non-zero exit code if there were any errors. Returns 2 if the
+interestingness test reported the initial input was not interesting.
 
 EXAMPLE
 -------
