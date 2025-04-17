@@ -443,8 +443,11 @@ Code Generation Options
     :option:`-Oz` Like :option:`-Os` (and thus :option:`-O2`), but reduces code
     size further.
 
-    :option:`-Og` Like :option:`-O1`. In future versions, this option might
-    disable different optimizations in order to improve debuggability.
+    :option:`-Og` Similar to :option:`-O1`, but with slightly reduced
+    optimization and better variable visibility. The same optimizations are run
+    as at :option:`-O1`, but the ``-fextend-variable-liveness`` flag is
+    also set, which tries to prevent optimizations from reducing the liveness of
+    user variables, improving their availability when debugging.
 
     :option:`-O` Equivalent to :option:`-O1`.
 
