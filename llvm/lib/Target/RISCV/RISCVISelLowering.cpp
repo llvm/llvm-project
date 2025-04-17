@@ -4213,17 +4213,17 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
     // pressure at high LMUL.
     if (all_of(Op->ops().drop_front(),
                [](const SDUse &U) { return U.get().isUndef(); })) {
-      unsigned Opc = VT.isFloatingPoint() ? RISCVISD::VFMV_S_F_VL
-        : RISCVISD::VMV_S_X_VL;
+      unsigned Opc =
+          VT.isFloatingPoint() ? RISCVISD::VFMV_S_F_VL : RISCVISD::VMV_S_X_VL;
       if (!VT.isFloatingPoint())
         Splat = DAG.getNode(ISD::ANY_EXTEND, DL, XLenVT, Splat);
-      Splat =
-        DAG.getNode(Opc, DL, ContainerVT, DAG.getUNDEF(ContainerVT), Splat, VL);
+      Splat = DAG.getNode(Opc, DL, ContainerVT, DAG.getUNDEF(ContainerVT),
+                          Splat, VL);
       return convertFromScalableVector(VT, Splat, DAG, Subtarget);
     }
 
-    unsigned Opc = VT.isFloatingPoint() ? RISCVISD::VFMV_V_F_VL
-                                        : RISCVISD::VMV_V_X_VL;
+    unsigned Opc =
+        VT.isFloatingPoint() ? RISCVISD::VFMV_V_F_VL : RISCVISD::VMV_V_X_VL;
     if (!VT.isFloatingPoint())
       Splat = DAG.getNode(ISD::ANY_EXTEND, DL, XLenVT, Splat);
     Splat =
