@@ -3362,10 +3362,14 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
     Returns[0]->eraseFromParent();
     ReturnBB->eraseFromParent();
   } else if (!CB.use_empty()) {
-    // No returns, but something is using the return value of the call.  Just
-    // nuke the result.
+    // In this case there are no returns to use, so there is no clear source
+    // location for the "return".
+    // FIXME: It may be correct to use the scope end line of the function here,
+    // since this likely means we are falling out of the function.
     if (CreatedBranchToNormalDest)
       CreatedBranchToNormalDest->setDebugLoc(DebugLoc::getUnknown());
+    // No returns, but something is using the return value of the call.  Just
+    // nuke the result.
     CB.replaceAllUsesWith(PoisonValue::get(CB.getType()));
   }
 
