@@ -1405,16 +1405,6 @@ void CXXNameMangler::mangleUnresolvedPrefix(NestedNameSpecifier *qualifier,
     //   - a template template parameter with arguments
     // In all of these cases, we should have no prefix.
     if (NestedNameSpecifier *Prefix = qualifier->getPrefix()) {
-      if (const auto *DTST =
-              dyn_cast<DependentTemplateSpecializationType>(type)) {
-        Out << "srN";
-        TemplateName Template = getASTContext().getDependentTemplateName(
-            {Prefix, DTST->getDependentTemplateName().getName(),
-             /*HasTemplateKeyword=*/true});
-        mangleTemplatePrefix(Template);
-        mangleTemplateArgs(Template, DTST->template_arguments());
-        break;
-      }
       mangleUnresolvedPrefix(Prefix,
                              /*recursive=*/true);
     } else {
@@ -2511,7 +2501,6 @@ bool CXXNameMangler::mangleUnresolvedTypeOrSimpleId(QualType Ty,
   case Type::PackIndexing:
   case Type::TemplateTypeParm:
   case Type::UnaryTransform:
-  case Type::SubstTemplateTypeParm:
   unresolvedType:
     // Some callers want a prefix before the mangled type.
     Out << Prefix;
@@ -2523,6 +2512,16 @@ bool CXXNameMangler::mangleUnresolvedTypeOrSimpleId(QualType Ty,
     // We never want to print 'E' directly after an unresolved-type,
     // so we return directly.
     return true;
+
+  case Type::SubstTemplateTypeParm: {
+    auto *ST = cast<SubstTemplateTypeParmType>(Ty);
+    // If this was replaced from a type alias, this is not substituted
+    // from an outer template parameter, so it's not an unresolved-type.
+    if (auto *TD = dyn_cast<TemplateDecl>(ST->getAssociatedDecl());
+        TD && TD->isTypeAlias())
+      return mangleUnresolvedTypeOrSimpleId(ST->getReplacementType(), Prefix);
+    goto unresolvedType;
+  }
 
   case Type::Typedef:
     mangleSourceNameWithAbiTags(cast<TypedefType>(Ty)->getDecl());
@@ -2609,7 +2608,8 @@ bool CXXNameMangler::mangleUnresolvedTypeOrSimpleId(QualType Ty,
         cast<DependentTemplateSpecializationType>(Ty);
     TemplateName Template = getASTContext().getDependentTemplateName(
         DTST->getDependentTemplateName());
-    mangleTemplatePrefix(Template);
+    const DependentTemplateStorage &S = DTST->getDependentTemplateName();
+    mangleSourceName(S.getName().getIdentifier());
     mangleTemplateArgs(Template, DTST->template_arguments());
     break;
   }
@@ -2885,6 +2885,26 @@ void CXXNameMangler::mangleQualifiers(Qualifiers Quals, const DependentAddressSp
   // __unaligned (from -fms-extensions)
   if (Quals.hasUnaligned())
     mangleVendorQualifier("__unaligned");
+
+  // __ptrauth.  Note that this is parameterized.
+  if (PointerAuthQualifier PtrAuth = Quals.getPointerAuth()) {
+    mangleVendorQualifier("__ptrauth");
+    // For now, since we only allow non-dependent arguments, we can just
+    // inline the mangling of those arguments as literals.  We treat the
+    // key and extra-discriminator arguments as 'unsigned int' and the
+    // address-discriminated argument as 'bool'.
+    Out << "I"
+           "Lj"
+        << PtrAuth.getKey()
+        << "E"
+           "Lb"
+        << unsigned(PtrAuth.isAddressDiscriminated())
+        << "E"
+           "Lj"
+        << PtrAuth.getExtraDiscriminator()
+        << "E"
+           "E";
+  }
 
   // Remaining ARC ownership qualifiers.
   switch (Quals.getObjCLifetime()) {
@@ -6038,8 +6058,6 @@ void CXXNameMangler::mangleCXXDtorType(CXXDtorType T) {
   case Dtor_Comdat:
     Out << "D5";
     break;
-  case Dtor_VectorDeleting:
-    llvm_unreachable("Itanium ABI does not use vector deleting dtors");
   }
 }
 

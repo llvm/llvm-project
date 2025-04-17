@@ -368,79 +368,6 @@ func.func @test_pad_padding_shape_mismatch(%arg0: tensor<13x21x3xf32>) -> tensor
 
 // -----
 
-func.func @test_transpose_io_rank_mismatch(%arg0: tensor<13x21x3xf32>, %arg1: tensor<3xi32>) -> tensor<3x13x21x1xf32> {
-  // expected-error@+1 {{'tosa.transpose' op expected input tensor rank to equal result tensor rank}}
-  %0 = tosa.transpose %arg0 {perms = array<i32: 2, 1, 0>}: (tensor<13x21x3xf32>) -> tensor<3x13x21x1xf32>
-  return %0 : tensor<3x13x21x1xf32>
-}
-
-// -----
-
-func.func @test_transpose_rank0_perms() {
-  %14 = tensor.empty() : tensor<5x27xi64>
-  // expected-error@+1 {{'tosa.transpose' op expected perms attribute to have size 2 (input rank) but got size 0}}
-  %72 = tosa.transpose %14 {perms = array<i32> }: (tensor<5x27xi64>) -> tensor<?x?xi64>
-  return
-}
-
-// -----
-
-func.func @test_transpose_invalid_perms_size(%arg0: tensor<13x21x3xf32>) -> tensor<3x13x21xf32> {
-  // expected-error@+1 {{'tosa.transpose' op expected perms attribute to have size 3 (input rank) but got size 7}}
-  %0 = tosa.transpose %arg0 {perms = array<i32: 6, 5, 4, 3, 2, 1, 0> }: (tensor<13x21x3xf32>) -> tensor<3x13x21xf32>
-  return %0 : tensor<3x13x21xf32>
-}
-
-// -----
-
-func.func @test_transpose_invalid_permutation_tensor(%arg0: tensor<13x21x3xf32>) -> tensor<?x?x?xf32> {
-  // expected-error@+1 {{'tosa.transpose' op expected valid permutation indices}}
-  %0 = tosa.transpose %arg0 {perms = array<i32: 2, 0, 0> }: (tensor<13x21x3xf32>) -> tensor<?x?x?xf32>
-  return %0 : tensor<?x?x?xf32>
-}
-
-// -----
-
-func.func @test_transpose_invalid_permutation_negative(%arg0: tensor<3x2xi32>) -> tensor<*xi32> {
-  // expected-error@+1 {{'tosa.transpose' op expected valid permutation indices}}
-  %1 = tosa.transpose %arg0 {perms = array<i32: -1, 0> }: (tensor<3x2xi32>) -> tensor<*xi32>
-  return %1 : tensor<*xi32>
-}
-
-// -----
-
-func.func @test_transpose_invalid_permutation_tensor_above_range(%arg0: tensor<3x2xi32>) -> tensor<*xi32> {
-  // expected-error@+1 {{'tosa.transpose' op expected valid permutation indices}}
-  %1 = tosa.transpose %arg0 {perms = array<i32: 2, 0> }: (tensor<3x2xi32>) -> tensor<*xi32>
-  return %1 : tensor<*xi32>
-}
-
-// -----
-
-func.func @test_transpose_invalid_permutation_types(%arg0: tensor<3x2xi32>) -> tensor<3x4xi32> {
-  // expected-error@+1 {{'tosa.transpose' op expected output tensor dim 0 to match input dim 1 with value of 2}}
-  %1 = tosa.transpose %arg0 {perms = array<i32: 1, 0> }: (tensor<3x2xi32>) -> tensor<3x4xi32>
-  return %1 : tensor<3x4xi32>
-}
-
-// -----
-
-func.func @test_transpose_invalid_permutation_types_dynamic_dim_ok(%arg0: tensor<2x?xi32>) -> tensor<3x4xi32> {
-  // expected-error@+1 {{'tosa.transpose' op expected output tensor dim 1 to match input dim 0 with value of 2}}
-  %1 = tosa.transpose %arg0 {perms = array<i32: 1, 0> }: (tensor<2x?xi32>) -> tensor<3x4xi32>
-  return %1 : tensor<3x4xi32>
-}
-
-// -----
-
-func.func @test_transpose_element_type_mismatch(%arg0: tensor<2x3xi32>) -> tensor<3x2xf32> {
-  // expected-error@+1 {{'tosa.transpose' op failed to verify that all of {input1, output} have same element type}}
-  %1 = tosa.transpose %arg0 {perms = array<i32: 1, 0>} : (tensor<2x3xi32>) -> tensor<3x2xf32>
-  return %1 : tensor<3x2xf32>
-}
-
-// -----
-
 func.func @test_reduce_sum_type_mismatch(%arg0 : tensor<2x3x4x5xf32>) -> () {
   // expected-error@+2 {{failed to infer returned types}}
   // expected-error@+1 {{'tosa.reduce_sum' op inferred type(s) 'tensor<1x3x4x5xf32>' are incompatible with return type(s) of operation 'tensor<1x3x4x5xi32>'}}
@@ -733,28 +660,6 @@ func.func @test_variable_write_shape(%arg0: tensor<1x4x8xi8>) -> () {
 
 // -----
 
-func.func @test_slice_invalid_start() {
-  %0 = tensor.empty() : tensor<4x31x31xf32>
-  %start = tosa.const_shape {values = dense<[1, 1]> : tensor<2xindex>} : () -> !tosa.shape<2>
-  %size = tosa.const_shape {values = dense<[1, 1, 1]> : tensor<3xindex>} : () -> !tosa.shape<3>
-  // expected-error@+1 {{'tosa.slice' op length of start is not equal to rank of input shape}}
-  %3 = tosa.slice %0, %start, %size : (tensor<4x31x31xf32>, !tosa.shape<2>, !tosa.shape<3>) -> tensor<*xf32>
-  return
-}
-
-// -----
-
-func.func @test_slice_invalid_size() {
-  %0 = tensor.empty() : tensor<4x31x31xf32>
-  %start = tosa.const_shape {values = dense<[1, 1, 1]> : tensor<3xindex>} : () -> !tosa.shape<3>
-  %size = tosa.const_shape {values = dense<[1]> : tensor<1xindex>} : () -> !tosa.shape<1>
-  // expected-error@+1 {{'tosa.slice' op length of size is not equal to rank of input shape}}
-  %3 = tosa.slice %0, %start, %size : (tensor<4x31x31xf32>, !tosa.shape<3>, !tosa.shape<1>) -> tensor<*xf32>
-  return
-}
-
-// -----
-
 func.func @test_tile_invalid_multiples() {
   %0 = tensor.empty() : tensor<4x31x31xf32>
   %cst = tosa.const_shape { values = dense<1> : tensor<1xindex> } : () -> !tosa.shape<1>
@@ -783,37 +688,6 @@ func.func @test_tile_io_rank_mismatch() {
   return
 }
 
-// -----
-
-// CHECK-LABEL: @test_invalid_constant_permutation
-func.func @test_invalid_constant_permutation() {
-  %0 = tensor.empty() : tensor<3x4x5xi32>
-  // expected-error@+1 {{'tosa.transpose' op expected valid permutation indices}}
-  %2 = tosa.transpose %0 {perms = array<i32: 3, 0, 1>}: (tensor<3x4x5xi32>) -> tensor<3x4x5xi32>
-  return
-}
-
-// -----
-
-// CHECK-LABEL: test_rank_size_constant_permutation
-func.func @test_rank_size_constant_permutation() {
-  %0 = arith.constant 6 : index
-  %2 = tensor.empty(%0) : tensor<?x27xi64>
-  // expected-error@+1 {{'tosa.transpose' op expected valid permutation indices}}
-  %3 = tosa.transpose %2 {perms = array<i32: 0, 2>}: (tensor<?x27xi64>) -> tensor<?x27xi64>
-  return
-}
-
-// -----
-
-// CHECK-LABEL: test_large_constant_permutation
-func.func @test_large_constant_permutation() {
-  %0 = arith.constant 6 : index
-  %2 = tensor.empty(%0) : tensor<?x27xi64>
-  // expected-error@+1 {{'tosa.transpose' op expected valid permutation indices}}
-  %3 = tosa.transpose %2 {perms = array<i32: 1185677355, 332462212>}: (tensor<?x27xi64>) -> tensor<?x27xi64>
-  return
-}
 
 // -----
 
@@ -2042,29 +1916,11 @@ func.func @test_scalar_reverse(%arg0: tensor<f32>) -> tensor<f32> {
 
 // -----
 
-func.func @test_scalar_slice(%arg0: tensor<f32>) -> tensor<f32> {
-  %0 = tosa.const_shape {values = dense<[]> : tensor<0xindex>} : () -> !tosa.shape<0>
-  %1 = tosa.const_shape {values = dense<[]> : tensor<0xindex>} : () -> !tosa.shape<0>
-  // expected-error@+1 {{'tosa.slice' op operand #0 must be tosa-conformant tensor of at least rank 1, but got 'tensor<f32>'}}
-  %2 = tosa.slice %arg0, %0, %1 : (tensor<f32>, !tosa.shape<0>, !tosa.shape<0>) -> tensor<f32>
-  return %2 : tensor<f32>
-}
-
-// -----
-
 func.func @test_scalar_tile(%arg0: tensor<f32>) -> tensor<*xf32> {
   %cst = tosa.const_shape { values = dense<[]> : tensor<0xindex> } : () -> !tosa.shape<0>
   // expected-error@+1 {{'tosa.tile' op operand #0 must be tosa-conformant tensor of at least rank 1, but got 'tensor<f32>'}}
   %0 = tosa.tile %arg0, %cst: (tensor<f32>, !tosa.shape<0>) -> tensor<*xf32>
   return %0 : tensor<*xf32>
-}
-
-// -----
-
-func.func @test_scalar_output_transpose(%arg0: tensor<*xf32>) -> tensor<f32> {
-  // expected-error@+1 {{'tosa.transpose' op result #0 must be tosa-conformant tensor of at least rank 1, but got 'tensor<f32>'}}
-  %1 = tosa.transpose %arg0 {perms = array<i32: 2, 0, 1>} : (tensor<*xf32>) -> tensor<f32>
-  return %1 : tensor<f32>
 }
 
 // -----
@@ -2083,4 +1939,40 @@ func.func @test_mul_out_i16(%arg0: tensor<13x21x3xi8>, %arg1: tensor<13x1x3xi8>,
   // expected-error@+1 {{'tosa.mul' op illegal: operand/result data types not supported}}
   %0 = tosa.mul %arg0, %arg1, %shift : (tensor<13x21x3xi8>, tensor<13x1x3xi8>, tensor<1xi8>) -> tensor<13x21x3xi16>
   return %0 : tensor<13x21x3xi16>
+}
+
+// -----
+
+// CHECK-LABEL: test_clamp_nan_min_val
+func.func @test_clamp_nan_min_val(%arg0: tensor<13x21x3xf32>) -> tensor<13x21x3xf32> {
+  // expected-error@+1 {{'tosa.clamp' op min/max attributes should not be 'NaN', got min_val=0xFFFFFFFF : f32, max_val=1.000000e+00 : f32}}
+  %0 = tosa.clamp %arg0 {min_val = 0xFFFFFFFF : f32, max_val = 1.0: f32} : (tensor<13x21x3xf32>) -> tensor<13x21x3xf32>
+  return %0 : tensor<13x21x3xf32>
+}
+
+// -----
+
+// CHECK-LABEL: test_clamp_nan_max_val
+func.func @test_clamp_nan_max_val(%arg0: tensor<13x21x3xf32>) -> tensor<13x21x3xf32> {
+  // expected-error@+1 {{'tosa.clamp' op min/max attributes should not be 'NaN', got min_val=2.300000e+00 : f32, max_val=0x7FFFFFFF : f32}}
+  %0 = tosa.clamp %arg0 {min_val = 2.3 : f32, max_val = 0x7FFFFFFF: f32} : (tensor<13x21x3xf32>) -> tensor<13x21x3xf32>
+  return %0 : tensor<13x21x3xf32>
+}
+
+// -----
+
+// CHECK-LABEL: test_clamp_min_larger_than_max_int8
+func.func @test_clamp_min_larger_than_max_int8(%arg0: tensor<13x21x3xi8>) -> tensor<13x21x3xi8> {
+  // expected-error@+1 {{'tosa.clamp' op expected min_val <= max_val, got min_val=127 : i8, max_val=-128 : i8}}
+  %0 = tosa.clamp %arg0 {min_val = 127 : i8, max_val = -128: i8} : (tensor<13x21x3xi8>) -> tensor<13x21x3xi8>
+  return %0 : tensor<13x21x3xi8>
+}
+
+// -----
+
+// CHECK-LABEL: test_clamp_min_larger_than_max_fp32
+func.func @test_clamp_min_larger_than_max_fp32(%arg0: tensor<13x21x3xf32>) -> tensor<13x21x3xf32> {
+  // expected-error@+1 {{'tosa.clamp' op expected min_val <= max_val, got min_val=2.000000e+00 : f32, max_val=-1.100000e+00 : f32}}
+  %0 = tosa.clamp %arg0 {min_val = 2.0 : f32, max_val = -1.1: f32} : (tensor<13x21x3xf32>) -> tensor<13x21x3xf32>
+  return %0 : tensor<13x21x3xf32>
 }

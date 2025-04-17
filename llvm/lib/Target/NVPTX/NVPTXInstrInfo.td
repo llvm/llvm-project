@@ -226,14 +226,17 @@ class RegTyInfo<ValueType ty, NVPTXRegClass rc, Operand imm, SDNode imm_node,
   int Size = ty.Size;
 }
 
-def I16RT : RegTyInfo<i16, Int16Regs, i16imm, imm>;
-def I32RT : RegTyInfo<i32, Int32Regs, i32imm, imm>;
-def I64RT : RegTyInfo<i64, Int64Regs, i64imm, imm>;
+def I16RT    : RegTyInfo<i16, Int16Regs, i16imm, imm>;
+def I32RT    : RegTyInfo<i32, Int32Regs, i32imm, imm>;
+def I64RT    : RegTyInfo<i64, Int64Regs, i64imm, imm>;
 
-def F32RT : RegTyInfo<f32, Float32Regs, f32imm, fpimm>;
-def F64RT : RegTyInfo<f64, Float64Regs, f64imm, fpimm>;
-def F16RT : RegTyInfo<f16, Int16Regs, f16imm, fpimm, supports_imm = 0>;
-def BF16RT : RegTyInfo<bf16, Int16Regs, bf16imm, fpimm, supports_imm = 0>;
+def F32RT    : RegTyInfo<f32, Float32Regs, f32imm, fpimm>;
+def F64RT    : RegTyInfo<f64, Float64Regs, f64imm, fpimm>;
+def F16RT    : RegTyInfo<f16, Int16Regs, f16imm, fpimm, supports_imm = 0>;
+def BF16RT   : RegTyInfo<bf16, Int16Regs, bf16imm, fpimm, supports_imm = 0>;
+
+def F16X2RT  : RegTyInfo<v2f16, Int32Regs, ?, ?, supports_imm = 0>;
+def BF16X2RT : RegTyInfo<v2bf16, Int32Regs, ?, ?, supports_imm = 0>;
 
 
 // Template for instructions which take three int64, int32, or int16 args.
@@ -703,6 +706,41 @@ let hasSideEffects = false in {
   defm CVT_to_tf32_rz_satf : CVT_TO_TF32<"rz.satfinite", [hasPTX<86>, hasSM<100>]>;
   defm CVT_to_tf32_rn_relu_satf  : CVT_TO_TF32<"rn.relu.satfinite", [hasPTX<86>, hasSM<100>]>;
   defm CVT_to_tf32_rz_relu_satf  : CVT_TO_TF32<"rz.relu.satfinite", [hasPTX<86>, hasSM<100>]>;
+
+  // FP6 conversions.
+  foreach type = ["e2m3x2", "e3m2x2"] in {
+    def CVT_ # type # _f32_sf : NVPTXInst<(outs Int16Regs:$dst),
+                                          (ins Float32Regs:$src1, 
+                                            Float32Regs:$src2, CvtMode:$mode),
+                                          "cvt${mode:base}.satfinite${mode:relu}." 
+                                            # type # ".f32 \t$dst, $src1, $src2;", []>;
+    def CVT_f16x2_ # type : NVPTXInst<(outs Int32Regs:$dst),
+                                      (ins Int16Regs:$src, CvtMode:$mode),
+                                      "cvt${mode:base}${mode:relu}.f16x2." 
+                                        # type # " \t$dst, $src;", []>;
+  }
+  
+  // UE8M0x2 conversions.
+  class CVT_f32_to_ue8m0x2<string sat = ""> :
+    NVPTXInst<(outs Int16Regs:$dst),
+              (ins Float32Regs:$src1, Float32Regs:$src2, CvtMode:$mode),
+              "cvt${mode:base}" # sat # ".ue8m0x2.f32 \t$dst, $src1, $src2;", []>;
+  
+  class CVT_bf16x2_to_ue8m0x2<string sat = ""> :
+    NVPTXInst<(outs Int16Regs:$dst),
+              (ins Int32Regs:$src, CvtMode:$mode),
+              "cvt${mode:base}" # sat # ".ue8m0x2.bf16x2 \t$dst, $src;", []>;
+              
+  def CVT_ue8m0x2_f32 : CVT_f32_to_ue8m0x2;
+  def CVT_ue8m0x2_f32_sf : CVT_f32_to_ue8m0x2<".satfinite">;
+  def CVT_ue8m0x2_bf16x2 : CVT_bf16x2_to_ue8m0x2;
+  def CVT_ue8m0x2_bf16x2_sf : CVT_bf16x2_to_ue8m0x2<".satfinite">;
+
+  def CVT_bf16x2_ue8m0x2 :
+      NVPTXInst<(outs Int32Regs:$dst),
+                (ins Int16Regs:$src),
+                "cvt.rn.bf16x2.ue8m0x2 \t$dst, $src;", []>;
+
 }
 
 def fpround_oneuse : OneUse1<fpround>;
@@ -1703,39 +1741,6 @@ def SETP_bf16x2rr :
                 []>,
                 Requires<[hasBF16Math, hasPTX<78>, hasSM<90>]>;
 
-
-// FIXME: This doesn't appear to be correct.  The "set" mnemonic has the form
-// "set.CmpOp{.ftz}.dtype.stype", where dtype is the type of the destination
-// reg, either u32, s32, or f32.  Anyway these aren't used at the moment.
-
-let hasSideEffects = false in {
-  multiclass SET<string TypeStr, RegisterClass RC, Operand ImmCls> {
-    def rr : NVPTXInst<(outs Int32Regs:$dst),
-                       (ins RC:$a, RC:$b, CmpMode:$cmp),
-                       !strconcat("set$cmp.", TypeStr, " \t$dst, $a, $b;"), []>;
-    def ri : NVPTXInst<(outs Int32Regs:$dst),
-                       (ins RC:$a, ImmCls:$b, CmpMode:$cmp),
-                       !strconcat("set$cmp.", TypeStr, " \t$dst, $a, $b;"), []>;
-    def ir : NVPTXInst<(outs Int32Regs:$dst),
-                       (ins ImmCls:$a, RC:$b, CmpMode:$cmp),
-                       !strconcat("set$cmp.", TypeStr, " \t$dst, $a, $b;"), []>;
-  }
-}
-
-defm SET_b16 : SET<"b16", Int16Regs, i16imm>;
-defm SET_s16 : SET<"s16", Int16Regs, i16imm>;
-defm SET_u16 : SET<"u16", Int16Regs, i16imm>;
-defm SET_b32 : SET<"b32", Int32Regs, i32imm>;
-defm SET_s32 : SET<"s32", Int32Regs, i32imm>;
-defm SET_u32 : SET<"u32", Int32Regs, i32imm>;
-defm SET_b64 : SET<"b64", Int64Regs, i64imm>;
-defm SET_s64 : SET<"s64", Int64Regs, i64imm>;
-defm SET_u64 : SET<"u64", Int64Regs, i64imm>;
-defm SET_f16 : SET<"f16", Int16Regs, f16imm>;
-defm SET_bf16 : SET<"bf16", Int16Regs, bf16imm>, Requires<[hasPTX<78>, hasSM<90>]>;
-defm SET_f32 : SET<"f32", Float32Regs, f32imm>;
-defm SET_f64 : SET<"f64", Float64Regs, f64imm>;
-
 //-----------------------------------
 // Data Movement (Load / Store, Move)
 //-----------------------------------
@@ -1842,16 +1847,7 @@ multiclass ISET_FORMAT<PatFrag OpNode, PatLeaf Mode,
                        Instruction setp_32ir,
                        Instruction setp_64rr,
                        Instruction setp_64ri,
-                       Instruction setp_64ir,
-                       Instruction set_16rr,
-                       Instruction set_16ri,
-                       Instruction set_16ir,
-                       Instruction set_32rr,
-                       Instruction set_32ri,
-                       Instruction set_32ir,
-                       Instruction set_64rr,
-                       Instruction set_64ri,
-                       Instruction set_64ir> {
+                       Instruction setp_64ir> {
   // i16 -> pred
   def : Pat<(i1 (OpNode i16:$a, i16:$b)),
             (setp_16rr $a, $b, Mode)>;
@@ -1873,38 +1869,13 @@ multiclass ISET_FORMAT<PatFrag OpNode, PatLeaf Mode,
             (setp_64ri $a, imm:$b, Mode)>;
   def : Pat<(i1 (OpNode imm:$a, i64:$b)),
             (setp_64ir imm:$a, $b, Mode)>;
-
-  // i16 -> i32
-  def : Pat<(i32 (OpNode i16:$a, i16:$b)),
-            (set_16rr $a, $b, Mode)>;
-  def : Pat<(i32 (OpNode i16:$a, imm:$b)),
-            (set_16ri $a, imm:$b, Mode)>;
-  def : Pat<(i32 (OpNode imm:$a, i16:$b)),
-            (set_16ir imm:$a, $b, Mode)>;
-  // i32 -> i32
-  def : Pat<(i32 (OpNode i32:$a, i32:$b)),
-            (set_32rr $a, $b, Mode)>;
-  def : Pat<(i32 (OpNode i32:$a, imm:$b)),
-            (set_32ri $a, imm:$b, Mode)>;
-  def : Pat<(i32 (OpNode imm:$a, i32:$b)),
-            (set_32ir imm:$a, $b, Mode)>;
-  // i64 -> i32
-  def : Pat<(i32 (OpNode i64:$a, Int64Regs:$b)),
-            (set_64rr $a, $b, Mode)>;
-  def : Pat<(i32 (OpNode i64:$a, imm:$b)),
-            (set_64ri $a, imm:$b, Mode)>;
-  def : Pat<(i32 (OpNode imm:$a, i64:$b)),
-            (set_64ir imm:$a, $b, Mode)>;
 }
 
 multiclass ISET_FORMAT_SIGNED<PatFrag OpNode, PatLeaf Mode>
   : ISET_FORMAT<OpNode, Mode,
                 SETP_s16rr, SETP_s16ri, SETP_s16ir,
                 SETP_s32rr, SETP_s32ri, SETP_s32ir,
-                SETP_s64rr, SETP_s64ri, SETP_s64ir,
-                SET_s16rr, SET_s16ri, SET_s16ir,
-                SET_s32rr, SET_s32ri, SET_s32ir,
-                SET_s64rr, SET_s64ri, SET_s64ir> {
+                SETP_s64rr, SETP_s64ri, SETP_s64ir> {
   // TableGen doesn't like empty multiclasses.
   def : PatLeaf<(i32 0)>;
 }
@@ -1913,10 +1884,7 @@ multiclass ISET_FORMAT_UNSIGNED<PatFrag OpNode, PatLeaf Mode>
   : ISET_FORMAT<OpNode, Mode,
                 SETP_u16rr, SETP_u16ri, SETP_u16ir,
                 SETP_u32rr, SETP_u32ri, SETP_u32ir,
-                SETP_u64rr, SETP_u64ri, SETP_u64ir,
-                SET_u16rr, SET_u16ri, SET_u16ir,
-                SET_u32rr, SET_u32ri, SET_u32ir,
-                SET_u64rr, SET_u64ri, SET_u64ir> {
+                SETP_u64rr, SETP_u64ri, SETP_u64ir> {
   // TableGen doesn't like empty multiclasses.
   def : PatLeaf<(i32 0)>;
 }
@@ -2048,47 +2016,6 @@ multiclass FSET_FORMAT<PatFrag OpNode, PatLeaf Mode, PatLeaf ModeFTZ> {
             (SETP_f64ri $a, fpimm:$b, Mode)>;
   def : Pat<(i1 (OpNode fpimm:$a, f64:$b)),
             (SETP_f64ir fpimm:$a, $b, Mode)>;
-
-  // f16 -> i32
-  def : Pat<(i32 (OpNode f16:$a, f16:$b)),
-            (SET_f16rr $a, $b, ModeFTZ)>,
-        Requires<[useFP16Math, doF32FTZ]>;
-  def : Pat<(i32 (OpNode f16:$a, f16:$b)),
-            (SET_f16rr $a, $b, Mode)>,
-        Requires<[useFP16Math]>;
-
-  // bf16 -> i32
-  def : Pat<(i32 (OpNode bf16:$a, bf16:$b)),
-            (SET_bf16rr $a, $b, ModeFTZ)>,
-        Requires<[hasBF16Math, doF32FTZ]>;
-  def : Pat<(i32 (OpNode bf16:$a, bf16:$b)),
-            (SET_bf16rr $a, $b, Mode)>,
-        Requires<[hasBF16Math]>;
-
-  // f32 -> i32
-  def : Pat<(i32 (OpNode f32:$a, f32:$b)),
-            (SET_f32rr $a, $b, ModeFTZ)>,
-        Requires<[doF32FTZ]>;
-  def : Pat<(i32 (OpNode f32:$a, f32:$b)),
-            (SET_f32rr $a, $b, Mode)>;
-  def : Pat<(i32 (OpNode f32:$a, fpimm:$b)),
-            (SET_f32ri $a, fpimm:$b, ModeFTZ)>,
-        Requires<[doF32FTZ]>;
-  def : Pat<(i32 (OpNode f32:$a, fpimm:$b)),
-            (SET_f32ri $a, fpimm:$b, Mode)>;
-  def : Pat<(i32 (OpNode fpimm:$a, f32:$b)),
-            (SET_f32ir fpimm:$a, $b, ModeFTZ)>,
-        Requires<[doF32FTZ]>;
-  def : Pat<(i32 (OpNode fpimm:$a, f32:$b)),
-            (SET_f32ir fpimm:$a, $b, Mode)>;
-
-  // f64 -> i32
-  def : Pat<(i32 (OpNode f64:$a, f64:$b)),
-            (SET_f64rr $a, $b, Mode)>;
-  def : Pat<(i32 (OpNode f64:$a, fpimm:$b)),
-            (SET_f64ri $a, fpimm:$b, Mode)>;
-  def : Pat<(i32 (OpNode fpimm:$a, f64:$b)),
-            (SET_f64ir fpimm:$a, $b, Mode)>;
 }
 
 defm FSetOGT : FSET_FORMAT<setogt, CmpGT, CmpGT_FTZ>;
@@ -2899,17 +2826,17 @@ def : Pat<(i32 (trunc i64:$a)),
 def : Pat<(i16 (trunc i64:$a)),
           (CVT_u16_u64 $a, CvtNONE)>;
 def : Pat<(i1 (trunc i64:$a)),
-          (SETP_b64ri (ANDb64ri $a, 1), 1, CmpEQ)>;
+          (SETP_b64ri (ANDb64ri $a, 1), 0, CmpNE)>;
 
 // truncate i32
 def : Pat<(i16 (trunc i32:$a)),
           (CVT_u16_u32 $a, CvtNONE)>;
 def : Pat<(i1 (trunc i32:$a)),
-          (SETP_b32ri (ANDb32ri $a, 1), 1, CmpEQ)>;
+          (SETP_b32ri (ANDb32ri $a, 1), 0, CmpNE)>;
 
 // truncate i16
 def : Pat<(i1 (trunc i16:$a)),
-          (SETP_b16ri (ANDb16ri $a, 1), 1, CmpEQ)>;
+          (SETP_b16ri (ANDb16ri $a, 1), 0, CmpNE)>;
 
 // sext_inreg
 def : Pat<(sext_inreg i16:$a, i8), (CVT_INREG_s16_s8 $a)>;
@@ -2918,31 +2845,6 @@ def : Pat<(sext_inreg i32:$a, i16), (CVT_INREG_s32_s16 $a)>;
 def : Pat<(sext_inreg i64:$a, i8), (CVT_INREG_s64_s8 $a)>;
 def : Pat<(sext_inreg i64:$a, i16), (CVT_INREG_s64_s16 $a)>;
 def : Pat<(sext_inreg i64:$a, i32), (CVT_INREG_s64_s32 $a)>;
-
-
-// Select instructions with 32-bit predicates
-def : Pat<(select i32:$pred, i16:$a, i16:$b),
-          (SELP_b16rr $a, $b,
-          (SETP_b32ri (ANDb32ri $pred, 1), 1, CmpEQ))>;
-def : Pat<(select i32:$pred, i32:$a, i32:$b),
-          (SELP_b32rr $a, $b,
-          (SETP_b32ri (ANDb32ri $pred, 1), 1, CmpEQ))>;
-def : Pat<(select i32:$pred, i64:$a, i64:$b),
-          (SELP_b64rr $a, $b,
-          (SETP_b32ri (ANDb32ri $pred, 1), 1, CmpEQ))>;
-def : Pat<(select i32:$pred, f16:$a, f16:$b),
-          (SELP_f16rr $a, $b,
-          (SETP_b32ri (ANDb32ri $pred, 1), 1, CmpEQ))>;
-def : Pat<(select i32:$pred, bf16:$a, bf16:$b),
-          (SELP_bf16rr $a, $b,
-          (SETP_b32ri (ANDb32ri $pred, 1), 1, CmpEQ))>;
-def : Pat<(select i32:$pred, f32:$a, f32:$b),
-          (SELP_f32rr $a, $b,
-          (SETP_b32ri (ANDb32ri $pred, 1), 1, CmpEQ))>;
-def : Pat<(select i32:$pred, f64:$a, f64:$b),
-          (SELP_f64rr $a, $b,
-          (SETP_b32ri (ANDb32ri $pred, 1), 1, CmpEQ))>;
-
 
 let hasSideEffects = false in {
   // pack a set of smaller int registers to a larger int register

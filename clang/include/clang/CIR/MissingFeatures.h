@@ -35,6 +35,7 @@ struct MissingFeatures {
   static bool opGlobalThreadLocal() { return false; }
   static bool opGlobalConstant() { return false; }
   static bool opGlobalAlignment() { return false; }
+  static bool opGlobalWeakRef() { return false; }
 
   static bool supportIFuncAttr() { return false; }
   static bool supportVisibility() { return false; }
@@ -100,8 +101,22 @@ struct MissingFeatures {
   static bool mayHaveIntegerOverflow() { return false; }
   static bool shouldReverseUnaryCondOnBoolExpr() { return false; }
 
+  // RecordType
+  static bool recordTypeLayoutInfo() { return false; }
+  static bool recursiveRecordLayout() { return false; }
+  static bool skippedLayout() { return false; }
+  static bool astRecordDeclAttr() { return false; }
+  static bool cxxSupport() { return false; }
+  static bool packedRecords() { return false; }
+  static bool recordPadding() { return false; }
+  static bool recordZeroInit() { return false; }
+  static bool zeroSizeRecordMembers() { return false; }
+
   // Misc
   static bool cxxABI() { return false; }
+  static bool cirgenABIInfo() { return false; }
+  static bool cirgenTargetInfo() { return false; }
+  static bool abiArgInfo() { return false; }
   static bool tryEmitAsConstant() { return false; }
   static bool constructABIArgDirectExtend() { return false; }
   static bool opGlobalViewAttr() { return false; }
@@ -120,6 +135,8 @@ struct MissingFeatures {
   static bool fpConstraints() { return false; }
   static bool sanitizers() { return false; }
   static bool addHeapAllocSiteMetadata() { return false; }
+  static bool targetCIRGenInfoArch() { return false; }
+  static bool targetCIRGenInfoOS() { return false; }
   static bool targetCodeGenInfoGetNullPointer() { return false; }
   static bool loopInfoStack() { return false; }
   static bool requiresCleanups() { return false; }
@@ -136,6 +153,13 @@ struct MissingFeatures {
   static bool objCGC() { return false; }
   static bool weakRefReference() { return false; }
   static bool hip() { return false; }
+  static bool setObjCGCLValueClass() { return false; }
+  static bool mangledNames() { return false; }
+  static bool setDLLStorageClass() { return false; }
+  static bool openMP() { return false; }
+  static bool emitCheckedInBoundsGEP() { return false; }
+  static bool preservedAccessIndexRegion() { return false; }
+  static bool bitfields() { return false; }
 
   // Missing types
   static bool dataMemberType() { return false; }

@@ -1,7 +1,7 @@
-# RUN: llvm-mc %s -triple=riscv64 -mattr=+xmipslsp,+xmipscmove -M no-aliases -show-encoding \
+# RUN: llvm-mc %s -triple=riscv64 -mattr=+xmipslsp,+xmipscmov -M no-aliases -show-encoding \
 # RUN:   | FileCheck -check-prefixes=CHECK-INST,CHECK-ENC %s
-# RUN: llvm-mc -filetype=obj -triple=riscv64 -mattr=+xmipslsp,+xmipscmove < %s \
-# RUN:   | llvm-objdump --mattr=+xmipslsp,+xmipscmove -M no-aliases -d - \
+# RUN: llvm-mc -filetype=obj -triple=riscv64 -mattr=+xmipslsp,+xmipscmov < %s \
+# RUN:   | llvm-objdump --mattr=+xmipslsp,+xmipscmov -M no-aliases -d - \
 # RUN:   | FileCheck -check-prefix=CHECK-DIS %s
 
 # CHECK-INST: mips.ccmov	s0, s1, s2, s3

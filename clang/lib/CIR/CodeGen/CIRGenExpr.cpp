@@ -12,6 +12,7 @@
 
 #include "Address.h"
 #include "CIRGenFunction.h"
+#include "CIRGenModule.h"
 #include "CIRGenValue.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "clang/AST/Attr.h"
@@ -183,6 +184,43 @@ void CIRGenFunction::emitStoreThroughLValue(RValue src, LValue dst,
   emitStoreOfScalar(src.getScalarVal(), dst, isInit);
 }
 
+static LValue emitGlobalVarDeclLValue(CIRGenFunction &cgf, const Expr *e,
+                                      const VarDecl *vd) {
+  QualType T = e->getType();
+
+  // If it's thread_local, emit a call to its wrapper function instead.
+  assert(!cir::MissingFeatures::opGlobalThreadLocal());
+  if (vd->getTLSKind() == VarDecl::TLS_Dynamic)
+    cgf.cgm.errorNYI(e->getSourceRange(),
+                     "emitGlobalVarDeclLValue: thread_local variable");
+
+  // Check if the variable is marked as declare target with link clause in
+  // device codegen.
+  if (cgf.getLangOpts().OpenMP)
+    cgf.cgm.errorNYI(e->getSourceRange(), "emitGlobalVarDeclLValue: OpenMP");
+
+  // Traditional LLVM codegen handles thread local separately, CIR handles
+  // as part of getAddrOfGlobalVar.
+  mlir::Value v = cgf.cgm.getAddrOfGlobalVar(vd);
+
+  assert(!cir::MissingFeatures::addressSpace());
+  mlir::Type realVarTy = cgf.convertTypeForMem(vd->getType());
+  cir::PointerType realPtrTy = cgf.getBuilder().getPointerTo(realVarTy);
+  if (realPtrTy != v.getType())
+    v = cgf.getBuilder().createBitcast(v.getLoc(), v, realPtrTy);
+
+  CharUnits alignment = cgf.getContext().getDeclAlign(vd);
+  Address addr(v, realVarTy, alignment);
+  LValue lv;
+  if (vd->getType()->isReferenceType())
+    cgf.cgm.errorNYI(e->getSourceRange(),
+                     "emitGlobalVarDeclLValue: reference type");
+  else
+    lv = cgf.makeAddrLValue(addr, T, AlignmentSource::Decl);
+  assert(!cir::MissingFeatures::setObjCGCLValueClass());
+  return lv;
+}
+
 void CIRGenFunction::emitStoreOfScalar(mlir::Value value, Address addr,
                                        bool isVolatile, QualType ty,
                                        bool isInit, bool isNontemporal) {
@@ -217,6 +255,13 @@ void CIRGenFunction::emitStoreOfScalar(mlir::Value value, Address addr,
   }
 
   assert(!cir::MissingFeatures::opTBAA());
+}
+
+mlir::Value CIRGenFunction::emitStoreThroughBitfieldLValue(RValue src,
+                                                           LValue dst) {
+  assert(!cir::MissingFeatures::bitfields());
+  cgm.errorNYI("bitfields");
+  return {};
 }
 
 mlir::Value CIRGenFunction::emitToMemory(mlir::Value value, QualType ty) {
@@ -288,7 +333,7 @@ LValue CIRGenFunction::emitDeclRefLValue(const DeclRefExpr *e) {
 
     // Check if this is a global variable
     if (vd->hasLinkage() || vd->isStaticDataMember())
-      cgm.errorNYI(vd->getSourceRange(), "emitDeclRefLValue: global variable");
+      return emitGlobalVarDeclLValue(*this, e, vd);
 
     Address addr = Address::invalid();
 
@@ -299,7 +344,7 @@ LValue CIRGenFunction::emitDeclRefLValue(const DeclRefExpr *e) {
     } else {
       // Otherwise, it might be static local we haven't emitted yet for some
       // reason; most likely, because it's in an outer function.
-      cgm.errorNYI(vd->getSourceRange(), "emitDeclRefLValue: static local");
+      cgm.errorNYI(e->getSourceRange(), "emitDeclRefLValue: static local");
     }
 
     return makeAddrLValue(addr, ty, AlignmentSource::Type);
@@ -393,6 +438,176 @@ LValue CIRGenFunction::emitUnaryOpLValue(const UnaryOperator *e) {
   llvm_unreachable("Unknown unary operator kind!");
 }
 
+/// If the specified expr is a simple decay from an array to pointer,
+/// return the array subexpression.
+/// FIXME: this could be abstracted into a common AST helper.
+static const Expr *getSimpleArrayDecayOperand(const Expr *e) {
+  // If this isn't just an array->pointer decay, bail out.
+  const auto *castExpr = dyn_cast<CastExpr>(e);
+  if (!castExpr || castExpr->getCastKind() != CK_ArrayToPointerDecay)
+    return nullptr;
+
+  // If this is a decay from variable width array, bail out.
+  const Expr *subExpr = castExpr->getSubExpr();
+  if (subExpr->getType()->isVariableArrayType())
+    return nullptr;
+
+  return subExpr;
+}
+
+static cir::IntAttr getConstantIndexOrNull(mlir::Value idx) {
+  // TODO(cir): should we consider using MLIRs IndexType instead of IntegerAttr?
+  if (auto constantOp = dyn_cast<cir::ConstantOp>(idx.getDefiningOp()))
+    return mlir::dyn_cast<cir::IntAttr>(constantOp.getValue());
+  return {};
+}
+
+static CharUnits getArrayElementAlign(CharUnits arrayAlign, mlir::Value idx,
+                                      CharUnits eltSize) {
+  // If we have a constant index, we can use the exact offset of the
+  // element we're accessing.
+  const cir::IntAttr constantIdx = getConstantIndexOrNull(idx);
+  if (constantIdx) {
+    const CharUnits offset = constantIdx.getValue().getZExtValue() * eltSize;
+    return arrayAlign.alignmentAtOffset(offset);
+  }
+  // Otherwise, use the worst-case alignment for any element.
+  return arrayAlign.alignmentOfArrayElement(eltSize);
+}
+
+static QualType getFixedSizeElementType(const ASTContext &astContext,
+                                        const VariableArrayType *vla) {
+  QualType eltType;
+  do {
+    eltType = vla->getElementType();
+  } while ((vla = astContext.getAsVariableArrayType(eltType)));
+  return eltType;
+}
+
+static mlir::Value emitArraySubscriptPtr(CIRGenFunction &cgf,
+                                         mlir::Location beginLoc,
+                                         mlir::Location endLoc, mlir::Value ptr,
+                                         mlir::Type eltTy, mlir::Value idx,
+                                         bool shouldDecay) {
+  CIRGenModule &cgm = cgf.getCIRGenModule();
+  // TODO(cir): LLVM codegen emits in bound gep check here, is there anything
+  // that would enhance tracking this later in CIR?
+  assert(!cir::MissingFeatures::emitCheckedInBoundsGEP());
+  return cgm.getBuilder().getArrayElement(beginLoc, endLoc, ptr, eltTy, idx,
+                                          shouldDecay);
+}
+
+static Address emitArraySubscriptPtr(CIRGenFunction &cgf,
+                                     mlir::Location beginLoc,
+                                     mlir::Location endLoc, Address addr,
+                                     QualType eltType, mlir::Value idx,
+                                     mlir::Location loc, bool shouldDecay) {
+
+  // Determine the element size of the statically-sized base.  This is
+  // the thing that the indices are expressed in terms of.
+  if (const VariableArrayType *vla =
+          cgf.getContext().getAsVariableArrayType(eltType)) {
+    eltType = getFixedSizeElementType(cgf.getContext(), vla);
+  }
+
+  // We can use that to compute the best alignment of the element.
+  const CharUnits eltSize = cgf.getContext().getTypeSizeInChars(eltType);
+  const CharUnits eltAlign =
+      getArrayElementAlign(addr.getAlignment(), idx, eltSize);
+
+  assert(!cir::MissingFeatures::preservedAccessIndexRegion());
+  const mlir::Value eltPtr =
+      emitArraySubscriptPtr(cgf, beginLoc, endLoc, addr.getPointer(),
+                            addr.getElementType(), idx, shouldDecay);
+  const mlir::Type elementType = cgf.convertTypeForMem(eltType);
+  return Address(eltPtr, elementType, eltAlign);
+}
+
+LValue
+CIRGenFunction::emitArraySubscriptExpr(const clang::ArraySubscriptExpr *e) {
+  if (e->getBase()->getType()->isVectorType() &&
+      !isa<ExtVectorElementExpr>(e->getBase())) {
+    cgm.errorNYI(e->getSourceRange(), "emitArraySubscriptExpr: VectorType");
+    return LValue::makeAddr(Address::invalid(), e->getType(), LValueBaseInfo());
+  }
+
+  if (isa<ExtVectorElementExpr>(e->getBase())) {
+    cgm.errorNYI(e->getSourceRange(),
+                 "emitArraySubscriptExpr: ExtVectorElementExpr");
+    return LValue::makeAddr(Address::invalid(), e->getType(), LValueBaseInfo());
+  }
+
+  if (getContext().getAsVariableArrayType(e->getType())) {
+    cgm.errorNYI(e->getSourceRange(),
+                 "emitArraySubscriptExpr: VariableArrayType");
+    return LValue::makeAddr(Address::invalid(), e->getType(), LValueBaseInfo());
+  }
+
+  if (e->getType()->getAs<ObjCObjectType>()) {
+    cgm.errorNYI(e->getSourceRange(), "emitArraySubscriptExpr: ObjCObjectType");
+    return LValue::makeAddr(Address::invalid(), e->getType(), LValueBaseInfo());
+  }
+
+  // The index must always be an integer, which is not an aggregate.  Emit it
+  // in lexical order (this complexity is, sadly, required by C++17).
+  assert((e->getIdx() == e->getLHS() || e->getIdx() == e->getRHS()) &&
+         "index was neither LHS nor RHS");
+
+  auto emitIdxAfterBase = [&]() -> mlir::Value {
+    const mlir::Value idx = emitScalarExpr(e->getIdx());
+
+    // Extend or truncate the index type to 32 or 64-bits.
+    auto ptrTy = mlir::dyn_cast<cir::PointerType>(idx.getType());
+    if (ptrTy && mlir::isa<cir::IntType>(ptrTy.getPointee()))
+      cgm.errorNYI(e->getSourceRange(),
+                   "emitArraySubscriptExpr: index type cast");
+    return idx;
+  };
+
+  const mlir::Value idx = emitIdxAfterBase();
+  if (const Expr *array = getSimpleArrayDecayOperand(e->getBase())) {
+    LValue arrayLV;
+    if (const auto *ase = dyn_cast<ArraySubscriptExpr>(array))
+      arrayLV = emitArraySubscriptExpr(ase);
+    else
+      arrayLV = emitLValue(array);
+
+    // Propagate the alignment from the array itself to the result.
+    const Address addr = emitArraySubscriptPtr(
+        *this, cgm.getLoc(array->getBeginLoc()), cgm.getLoc(array->getEndLoc()),
+        arrayLV.getAddress(), e->getType(), idx, cgm.getLoc(e->getExprLoc()),
+        /*shouldDecay=*/true);
+
+    const LValue lv = LValue::makeAddr(addr, e->getType(), LValueBaseInfo());
+
+    if (getLangOpts().ObjC && getLangOpts().getGC() != LangOptions::NonGC) {
+      cgm.errorNYI(e->getSourceRange(), "emitArraySubscriptExpr: ObjC with GC");
+    }
+
+    return lv;
+  }
+
+  // The base must be a pointer; emit it with an estimate of its alignment.
+  assert(e->getBase()->getType()->isPointerType() &&
+         "The base must be a pointer");
+
+  LValueBaseInfo eltBaseInfo;
+  const Address ptrAddr = emitPointerWithAlignment(e->getBase(), &eltBaseInfo);
+  // Propagate the alignment from the array itself to the result.
+  const Address addxr = emitArraySubscriptPtr(
+      *this, cgm.getLoc(e->getBeginLoc()), cgm.getLoc(e->getEndLoc()), ptrAddr,
+      e->getType(), idx, cgm.getLoc(e->getExprLoc()),
+      /*shouldDecay=*/false);
+
+  const LValue lv = LValue::makeAddr(addxr, e->getType(), eltBaseInfo);
+
+  if (getLangOpts().ObjC && getLangOpts().getGC() != LangOptions::NonGC) {
+    cgm.errorNYI(e->getSourceRange(), "emitArraySubscriptExpr: ObjC with GC");
+  }
+
+  return lv;
+}
+
 LValue CIRGenFunction::emitBinaryOperatorLValue(const BinaryOperator *e) {
   // Comma expressions just emit their LHS then their RHS as an l-value.
   if (e->getOpcode() == BO_Comma) {
@@ -480,23 +695,36 @@ static CIRGenCallee emitDirectCallee(CIRGenModule &cgm, GlobalDecl gd) {
   return CIRGenCallee::forDirect(callee, gd);
 }
 
+RValue CIRGenFunction::getUndefRValue(QualType ty) {
+  if (ty->isVoidType())
+    return RValue::get(nullptr);
+
+  cgm.errorNYI("unsupported type for undef rvalue");
+  return RValue::get(nullptr);
+}
+
 RValue CIRGenFunction::emitCall(clang::QualType calleeTy,
                                 const CIRGenCallee &callee,
-                                const clang::CallExpr *e) {
+                                const clang::CallExpr *e,
+                                ReturnValueSlot returnValue) {
   // Get the actual function type. The callee type will always be a pointer to
   // function type or a block pointer type.
   assert(calleeTy->isFunctionPointerType() &&
          "Callee must have function pointer type!");
 
   calleeTy = getContext().getCanonicalType(calleeTy);
+  auto pointeeTy = cast<PointerType>(calleeTy)->getPointeeType();
 
   if (getLangOpts().CPlusPlus)
     assert(!cir::MissingFeatures::sanitizers());
 
+  const auto *fnType = cast<FunctionType>(pointeeTy);
+
   assert(!cir::MissingFeatures::sanitizers());
   assert(!cir::MissingFeatures::opCallArgs());
 
-  const CIRGenFunctionInfo &funcInfo = cgm.getTypes().arrangeFreeFunctionCall();
+  const CIRGenFunctionInfo &funcInfo =
+      cgm.getTypes().arrangeFreeFunctionCall(fnType);
 
   assert(!cir::MissingFeatures::opCallNoPrototypeFunc());
   assert(!cir::MissingFeatures::opCallChainCall());
@@ -505,7 +733,7 @@ RValue CIRGenFunction::emitCall(clang::QualType calleeTy,
 
   cir::CIRCallOpInterface callOp;
   RValue callResult =
-      emitCall(funcInfo, callee, &callOp, getLoc(e->getExprLoc()));
+      emitCall(funcInfo, callee, returnValue, &callOp, getLoc(e->getExprLoc()));
 
   assert(!cir::MissingFeatures::generateDebugInfo());
 
@@ -531,7 +759,8 @@ CIRGenCallee CIRGenFunction::emitCallee(const clang::Expr *e) {
   return {};
 }
 
-RValue CIRGenFunction::emitCallExpr(const clang::CallExpr *e) {
+RValue CIRGenFunction::emitCallExpr(const clang::CallExpr *e,
+                                    ReturnValueSlot returnValue) {
   assert(!cir::MissingFeatures::objCBlocks());
 
   if (isa<CXXMemberCallExpr>(e)) {
@@ -563,7 +792,7 @@ RValue CIRGenFunction::emitCallExpr(const clang::CallExpr *e) {
   }
   assert(!cir::MissingFeatures::opCallPseudoDtor());
 
-  return emitCall(e->getCallee()->getType(), callee, e);
+  return emitCall(e->getCallee()->getType(), callee, e, returnValue);
 }
 
 /// Emit code to compute the specified expression, ignoring the result.
