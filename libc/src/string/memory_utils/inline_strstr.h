@@ -11,7 +11,6 @@
 
 #include "src/__support/macros/attributes.h" // LIBC_INLINE
 #include "src/__support/macros/config.h"     // LIBC_NAMESPACE_DECL
-#include "src/__support/macros/null_check.h"
 #include "src/string/memory_utils/inline_memmem.h"
 #include "src/string/string_utils.h"
 #include <stddef.h>
@@ -21,8 +20,6 @@ namespace LIBC_NAMESPACE_DECL {
 template <typename Comp>
 LIBC_INLINE constexpr char *inline_strstr(const char *haystack,
                                           const char *needle, Comp &&comp) {
-  LIBC_CRASH_ON_NULLPTR(haystack);
-  LIBC_CRASH_ON_NULLPTR(needle);
   void *result = inline_memmem(
       static_cast<const void *>(haystack), internal::string_length(haystack),
       static_cast<const void *>(needle), internal::string_length(needle), comp);
