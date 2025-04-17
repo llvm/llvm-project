@@ -1021,7 +1021,9 @@ public:
     /// The key is ClassID of target-provided register class.
     SmallMapVector<unsigned, unsigned, 4> MaxLocalUsers;
 
-    bool anyGreaterThanNumberOfRegisters(const TargetTransformInfo &TTI) {
+    /// Check if any of the tracked live intervals exceeds the number of
+    /// available registers for the target.
+    bool exceedsMaxNumRegs(const TargetTransformInfo &TTI) {
       return any_of(MaxLocalUsers, [&](auto &LU) {
         return LU.second > TTI.getNumberOfRegisters(LU.first);
       });
@@ -4556,7 +4558,7 @@ VectorizationFactor LoopVectorizationPlanner::selectVectorizationFactor() {
 
       /// Don't consider the VF if it exceeds the number of registers for the
       /// target.
-      if (RU.anyGreaterThanNumberOfRegisters(TTI))
+      if (RU.exceedsMaxNumRegs(TTI))
         continue;
 
       InstructionCost C = CM.expectedCost(VF);
@@ -5025,6 +5027,7 @@ calculateRegisterUsage(VPlan &Plan, ArrayRef<ElementCount> VFs,
         if (isa<VPVectorPointerRecipe, VPVectorEndPointerRecipe,
                 VPBranchOnMaskRecipe>(R))
           continue;
+        /// In-loop reductions don't carry their output across iterations.
         if (auto *Phi = dyn_cast<VPReductionPHIRecipe>(R);
             Phi && Phi->isInLoop())
           continue;
@@ -7599,9 +7602,7 @@ VectorizationFactor LoopVectorizationPlanner::computeBestVF() {
       InstructionCost Cost = cost(*P, VF);
       VectorizationFactor CurrentFactor(VF, Cost, ScalarCost);
 
-      // Make sure that the VF doesn't use more than the number of available
-      // registers
-      if (RU.anyGreaterThanNumberOfRegisters(TTI)) {
+      if (RU.exceedsMaxNumRegs(TTI)) {
         LLVM_DEBUG(dbgs() << "LV(REG): Ignoring VF " << VF
                           << " as it uses too many registers\n");
         continue;
