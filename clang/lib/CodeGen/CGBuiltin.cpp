@@ -1087,6 +1087,28 @@ static llvm::Value *EmitPositiveResultOrZero(CodeGenFunction &CGF,
   return CGF.Builder.CreateSelect(Cmp, Res, ConstantInt::get(ResType, 0, IsSigned));
 }
 
+static std::pair<llvm::Value *, llvm::Value *>
+GetCountFieldAndIndex(CodeGenFunction &CGF, const MemberExpr *ME,
+                      const FieldDecl *ArrayFD, const FieldDecl *CountFD,
+                      const Expr *Idx, llvm::IntegerType *ResType,
+                      bool IsSigned) {
+  //  count = ptr->count;
+  Value *Count = CGF.EmitLoadOfCountedByField(ME, ArrayFD, CountFD);
+  if (!Count)
+    return std::make_pair<Value *>(nullptr, nullptr);
+  Count = CGF.Builder.CreateIntCast(Count, ResType, IsSigned, "count");
+
+  //  index = ptr->index;
+  Value *Index = nullptr;
+  if (Idx) {
+    bool IdxSigned = Idx->getType()->isSignedIntegerType();
+    Index = CGF.EmitScalarExpr(Idx);
+    Index = CGF.Builder.CreateIntCast(Index, ResType, IdxSigned, "index");
+  }
+
+  return std::make_pair(Count, Index);
+}
+
 llvm::Value *CodeGenFunction::emitCountedByPointerSize(
     const ImplicitCastExpr *E, const Expr *Idx, llvm::Value *EmittedE,
     unsigned Type, llvm::IntegerType *ResType) {
@@ -1170,18 +1192,12 @@ llvm::Value *CodeGenFunction::emitCountedByPointerSize(
       llvm::ConstantInt::get(ResType, BaseSize.getQuantity(), IsSigned);
 
   //  count = ptr->count;
-  Value *Count = EmitLoadOfCountedByField(ME, ArrayBaseFD, CountFD);
+  //  index = ptr->index;
+  Value *Count, *Index;
+  std::tie(Count, Index) = GetCountFieldAndIndex(
+      *this, ME, ArrayBaseFD, CountFD, Idx, ResType, IsSigned);
   if (!Count)
     return nullptr;
-  Count = Builder.CreateIntCast(Count, ResType, IsSigned, "count");
-
-  //  index = ptr->index;
-  Value *Index = nullptr;
-  if (Idx) {
-    bool IdxSigned = Idx->getType()->isSignedIntegerType();
-    Index = EmitScalarExpr(Idx);
-    Index = Builder.CreateIntCast(Index, ResType, IdxSigned, "index");
-  }
 
   //  array_size = count * array_base_size;
   Value *ArraySize = Builder.CreateMul(Count, ArrayBaseSize, "array_size",
@@ -1335,18 +1351,12 @@ CodeGenFunction::emitCountedByMemberSize(const MemberExpr *ME, const Expr *Idx,
   }
 
   //  count = ptr->count;
-  Value *Count = EmitLoadOfCountedByField(ME, FlexibleArrayMemberFD, CountFD);
+  //  index = ptr->index;
+  Value *Count, *Index;
+  std::tie(Count, Index) = GetCountFieldAndIndex(
+      *this, ME, FlexibleArrayMemberFD, CountFD, Idx, ResType, IsSigned);
   if (!Count)
     return nullptr;
-  Count = Builder.CreateIntCast(Count, ResType, IsSigned, "count");
-
-  //  index = ptr->index;
-  Value *Index = nullptr;
-  if (Idx) {
-    bool IdxSigned = Idx->getType()->isSignedIntegerType();
-    Index = EmitScalarExpr(Idx);
-    Index = Builder.CreateIntCast(Index, ResType, IdxSigned, "index");
-  }
 
   //  flexible_array_member_base_size = sizeof (*ptr->array);
   const ArrayType *ArrayTy = Ctx.getAsArrayType(FlexibleArrayMemberTy);
