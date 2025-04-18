@@ -2521,14 +2521,25 @@ sema::AnalysisBasedWarnings::getPolicyInEffectAt(SourceLocation Loc) {
   DiagnosticsEngine &D = S.getDiagnostics();
   Policy P;
 
+  // Note: The enabled checks should be kept in sync with the switch in
+  // SemaPPCallbacks::PragmaDiagnostic().
   P.enableCheckUnreachable =
+      PolicyOverrides.enableCheckUnreachable ||
       isEnabled(D, Loc, warn_unreachable, warn_unreachable_break,
                 warn_unreachable_return, warn_unreachable_loop_increment);
 
-  P.enableThreadSafetyAnalysis = isEnabled(D, Loc, warn_double_lock);
+  P.enableThreadSafetyAnalysis = PolicyOverrides.enableThreadSafetyAnalysis ||
+                                 isEnabled(D, Loc, warn_double_lock);
 
-  P.enableConsumedAnalysis = isEnabled(D, Loc, warn_use_in_invalid_state);
+  P.enableConsumedAnalysis = PolicyOverrides.enableConsumedAnalysis ||
+                             isEnabled(D, Loc, warn_use_in_invalid_state);
   return P;
+}
+
+void sema::AnalysisBasedWarnings::clearOverrides() {
+  PolicyOverrides.enableCheckUnreachable = false;
+  PolicyOverrides.enableConsumedAnalysis = false;
+  PolicyOverrides.enableThreadSafetyAnalysis = false;
 }
 
 static void flushDiagnostics(Sema &S, const sema::FunctionScopeInfo *fscope) {
@@ -2879,6 +2890,9 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
   if (LogicalErrorHandler::hasActiveDiagnostics(Diags, D->getBeginLoc())) {
     AC.getCFG();
   }
+
+  // Clear any of our policy overrides.
+  clearOverrides();
 
   // Collect statistics about the CFG if it was built.
   if (S.CollectStats && AC.isCFGBuilt()) {
