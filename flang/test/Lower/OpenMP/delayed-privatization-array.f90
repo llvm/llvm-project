@@ -108,15 +108,14 @@ end program
 ! ONE_DIM_DEFAULT_LB-SAME: @[[PRIVATIZER_SYM:.*]] : [[BOX_TYPE:!fir.box<!fir.array<10xi32>>]] init {
 
 ! ONE_DIM_DEFAULT_LB-NEXT: ^bb0(%[[PRIV_ARG:.*]]: [[TYPE:!fir.ref<!fir.box<!fir.array<10xi32>>>]], %[[PRIV_BOX_ALLOC:.*]]: [[TYPE]]):
-! ONE_DIM_DEFAULT_LB-NEXT:   %[[PRIV_ARG_VAL:.*]] = fir.load %[[PRIV_ARG]]
 ! ONE_DIM_DEFAULT_LB-NEXT:   %[[C10:.*]] = arith.constant 10 : index
 ! ONE_DIM_DEFAULT_LB-NEXT:   %[[SHAPE:.*]] = fir.shape %[[C10]]
 ! ONE_DIM_DEFAULT_LB-NEXT:   %[[ARRAY_ALLOC:.*]] = fir.allocmem !fir.array<10xi32>
 ! ONE_DIM_DEFAULT_LB-NEXT:   %[[TRUE:.*]] = arith.constant true
 ! ONE_DIM_DEFAULT_LB-NEXT:   %[[DECL:.*]]:2 = hlfir.declare %[[ARRAY_ALLOC]](%[[SHAPE]])
-! ONE_DIM_DEFAULT_LB-NEXT:   %[[C0_0:.*]] = arith.constant 0
-! ONE_DIM_DEFAULT_LB-NEXT:   %[[DIMS2:.*]]:3 = fir.box_dims %[[PRIV_ARG_VAL]], %[[C0_0]]
-! ONE_DIM_DEFAULT_LB-NEXT:   %[[SHAPE_SHIFT:.*]] = fir.shape_shift %[[DIMS2]]#0, %[[DIMS2]]#1
+! ONE_DIM_DEFAULT_LB-NEXT:   %[[ONE:.*]] = arith.constant 1 : index
+! ONE_DIM_DEFAULT_LB-NEXT:   %[[TEN:.*]] = arith.constant 10 : index
+! ONE_DIM_DEFAULT_LB-NEXT:   %[[SHAPE_SHIFT:.*]] = fir.shape_shift %[[ONE]], %[[TEN]]
 ! ONE_DIM_DEFAULT_LB-NEXT:   %[[EMBOX:.*]] = fir.embox %[[DECL]]#0(%[[SHAPE_SHIFT]])
 ! ONE_DIM_DEFAULT_LB-NEXT:   fir.store %[[EMBOX]] to %[[PRIV_BOX_ALLOC]]
 ! ONE_DIM_DEFAULT_LB-NEXT:   omp.yield(%[[PRIV_BOX_ALLOC]] : [[TYPE]])

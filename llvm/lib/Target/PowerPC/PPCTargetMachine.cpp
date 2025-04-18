@@ -561,7 +561,6 @@ void PPCPassConfig::addMachineSSAOptimization() {
 
 void PPCPassConfig::addPreRegAlloc() {
   if (getOptLevel() != CodeGenOptLevel::None) {
-    initializePPCVSXFMAMutatePass(*PassRegistry::getPassRegistry());
     insertPass(VSXFMAMutateEarly ? &RegisterCoalescerID : &MachineSchedulerID,
                &PPCVSXFMAMutateID);
   }

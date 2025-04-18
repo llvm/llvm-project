@@ -35,6 +35,8 @@
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/InterleavedRange.h"
 #include "llvm/Support/StringSaver.h"
 #include <cassert>
 #include <numeric>
@@ -479,10 +481,11 @@ static void printAttributions(OpAsmPrinter &p, StringRef keyword,
   if (values.empty())
     return;
 
-  p << ' ' << keyword << '(';
-  llvm::interleaveComma(
-      values, p, [&p](BlockArgument v) { p << v << " : " << v.getType(); });
-  p << ')';
+  auto printBlockArg = [](BlockArgument v) {
+    return llvm::formatv("{} : {}", v, v.getType());
+  };
+  p << ' ' << keyword << '('
+    << llvm::interleaved(llvm::map_range(values, printBlockArg)) << ')';
 }
 
 /// Verifies a GPU function memory attribution.
@@ -1311,11 +1314,10 @@ static void printLaunchFuncOperands(OpAsmPrinter &printer, Operation *,
   if (operands.empty())
     return;
   printer << "args(";
-  llvm::interleaveComma(llvm::zip(operands, types), printer,
+  llvm::interleaveComma(llvm::zip_equal(operands, types), printer,
                         [&](const auto &pair) {
-                          printer.printOperand(std::get<0>(pair));
-                          printer << " : ";
-                          printer.printType(std::get<1>(pair));
+                          auto [operand, type] = pair;
+                          printer << operand << " : " << type;
                         });
   printer << ")";
 }
@@ -2564,7 +2566,7 @@ CompilationTarget TargetOptions::getDefaultCompilationTarget() {
 }
 
 std::pair<llvm::BumpPtrAllocator, SmallVector<const char *>>
-TargetOptions::tokenizeCmdOptions() const {
+TargetOptions::tokenizeCmdOptions(const std::string &cmdOptions) {
   std::pair<llvm::BumpPtrAllocator, SmallVector<const char *>> options;
   llvm::StringSaver stringSaver(options.first);
   StringRef opts = cmdOptions;
@@ -2584,6 +2586,23 @@ TargetOptions::tokenizeCmdOptions() const {
                                    /*MarkEOLs=*/false);
 #endif // _WIN32
   return options;
+}
+
+std::pair<llvm::BumpPtrAllocator, SmallVector<const char *>>
+TargetOptions::tokenizeCmdOptions() const {
+  return tokenizeCmdOptions(cmdOptions);
+}
+
+std::pair<llvm::BumpPtrAllocator, SmallVector<const char *>>
+TargetOptions::tokenizeAndRemoveSuffixCmdOptions(llvm::StringRef startsWith) {
+  size_t startPos = cmdOptions.find(startsWith);
+  if (startPos == std::string::npos)
+    return {llvm::BumpPtrAllocator(), SmallVector<const char *>()};
+
+  auto tokenized =
+      tokenizeCmdOptions(cmdOptions.substr(startPos + startsWith.size()));
+  cmdOptions.resize(startPos);
+  return tokenized;
 }
 
 MLIR_DEFINE_EXPLICIT_TYPE_ID(::mlir::gpu::TargetOptions)

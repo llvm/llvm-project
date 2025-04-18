@@ -655,7 +655,7 @@ void AArch64FrameLowering::emitCalleeSavedSVELocations(
     // Not all unwinders may know about SVE registers, so assume the lowest
     // common demoninator.
     assert(!Info.isSpilledToReg() && "Spilling to registers not implemented");
-    unsigned Reg = Info.getReg();
+    MCRegister Reg = Info.getReg();
     if (!static_cast<const AArch64RegisterInfo &>(TRI).regNeedsCFI(Reg, Reg))
       continue;
 
@@ -716,7 +716,7 @@ void AArch64FrameLowering::resetCFIToInitialState(
   const std::vector<CalleeSavedInfo> &CSI =
       MF.getFrameInfo().getCalleeSavedInfo();
   for (const auto &Info : CSI) {
-    unsigned Reg = Info.getReg();
+    MCRegister Reg = Info.getReg();
     if (!TRI.regNeedsCFI(Reg, Reg))
       continue;
     insertCFISameValue(CFIDesc, MF, MBB, InsertPt,
@@ -744,7 +744,7 @@ static void emitCalleeSavedRestores(MachineBasicBlock &MBB,
         (MFI.getStackID(Info.getFrameIdx()) == TargetStackID::ScalableVector))
       continue;
 
-    unsigned Reg = Info.getReg();
+    MCRegister Reg = Info.getReg();
     if (SVE &&
         !static_cast<const AArch64RegisterInfo &>(TRI).regNeedsCFI(Reg, Reg))
       continue;
@@ -2612,8 +2612,13 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
   }
 }
 
-bool AArch64FrameLowering::enableCFIFixup(MachineFunction &MF) const {
+bool AArch64FrameLowering::enableCFIFixup(const MachineFunction &MF) const {
   return TargetFrameLowering::enableCFIFixup(MF) &&
+         MF.getInfo<AArch64FunctionInfo>()->needsDwarfUnwindInfo(MF);
+}
+
+bool AArch64FrameLowering::enableFullCFIFixup(const MachineFunction &MF) const {
+  return enableCFIFixup(MF) &&
          MF.getInfo<AArch64FunctionInfo>()->needsAsyncDwarfUnwindInfo(MF);
 }
 
@@ -3046,7 +3051,7 @@ static void computeCalleeSaveRegisterPairs(
     int Scale = TRI->getSpillSize(*RPI.RC);
     // Add the next reg to the pair if it is in the same register class.
     if (unsigned(i + RegInc) < Count && !AFI->hasStackHazardSlotIndex()) {
-      Register NextReg = CSI[i + RegInc].getReg();
+      MCRegister NextReg = CSI[i + RegInc].getReg();
       bool IsFirst = i == FirstReg;
       switch (RPI.Type) {
       case RegPairInfo::GPR:
@@ -3975,13 +3980,13 @@ bool AArch64FrameLowering::assignCalleeSavedSpillSlots(
       }
 
     if (!InsertBeforeLR)
-      CSI.insert(CSI.end(), VGSaves.begin(), VGSaves.end());
+      llvm::append_range(CSI, VGSaves);
   }
 
   Register LastReg = 0;
   int HazardSlotIndex = std::numeric_limits<int>::max();
   for (auto &CS : CSI) {
-    Register Reg = CS.getReg();
+    MCRegister Reg = CS.getReg();
     const TargetRegisterClass *RC = RegInfo->getMinimalPhysRegClass(Reg);
 
     // Create a hazard slot as we switch between GPR and FPR CSRs.
@@ -5547,12 +5552,9 @@ void AArch64FrameLowering::emitRemarks(
     return;
 
   llvm::sort(StackAccesses);
-  StackAccesses.erase(llvm::remove_if(StackAccesses,
-                                      [](const StackAccess &S) {
-                                        return S.AccessTypes ==
-                                               StackAccess::NotAccessed;
-                                      }),
-                      StackAccesses.end());
+  llvm::erase_if(StackAccesses, [](const StackAccess &S) {
+    return S.AccessTypes == StackAccess::NotAccessed;
+  });
 
   SmallVector<const StackAccess *> MixedObjects;
   SmallVector<std::pair<const StackAccess *, const StackAccess *>> HazardPairs;

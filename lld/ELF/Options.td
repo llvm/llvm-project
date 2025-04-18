@@ -432,6 +432,10 @@ defm rosegment: BB<"rosegment",
   "Put read-only non-executable sections in their own segment (default)",
   "Do not put read-only non-executable sections in their own segment">;
 
+defm xosegment: BB<"xosegment",
+  "Put execute-only sections in their own segment",
+  "Do not put execute-only sections in their own segment (default)">;
+
 defm rpath: Eq<"rpath", "Add a DT_RUNPATH to the output">;
 
 def relocatable: F<"relocatable">, HelpText<"Create relocatable object file">;
@@ -568,6 +572,12 @@ defm whole_archive: B<"whole-archive",
 
 def why_extract: JJ<"why-extract=">, HelpText<"Print to a file about why archive members are extracted">;
 
+defm why_live
+    : EEq<"why-live",
+          "Report a chain of references preventing garbage collection for "
+          "each symbol matching <glob>">,
+      MetaVarName<"<glob>">;
+
 defm wrap : Eq<"wrap", "Redirect symbol references to __wrap_symbol and "
                        "__real_symbol references to symbol">,
             MetaVarName<"<symbol>">;
@@ -578,7 +588,7 @@ def z: JoinedOrSeparate<["-"], "z">, MetaVarName<"<option>">,
 def visual_studio_diagnostics_format : FF<"vs-diagnostics">,
 HelpText<"Format diagnostics for Visual Studio compatibility">;
 
-def package_metadata: JJ<"package-metadata=">, HelpText<"Emit package metadata note">;
+def package_metadata: JJ<"package-metadata=">, HelpText<"Emit a percent-encoded string to the .note.package section">;
 
 // Aliases
 def: Separate<["-"], "dT">, Alias<default_script>, HelpText<"Alias for --default-script">;

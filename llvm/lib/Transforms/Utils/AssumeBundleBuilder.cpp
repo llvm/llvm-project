@@ -178,11 +178,9 @@ struct AssumeBuilderState {
     if (tryToPreserveWithoutAddingAssume(RK))
       return;
     MapKey Key{RK.WasOn, RK.AttrKind};
-    auto Lookup = AssumedKnowledgeMap.find(Key);
-    if (Lookup == AssumedKnowledgeMap.end()) {
-      AssumedKnowledgeMap[Key] = RK.ArgValue;
+    auto [Lookup, Inserted] = AssumedKnowledgeMap.try_emplace(Key, RK.ArgValue);
+    if (Inserted)
       return;
-    }
     assert(((Lookup->second == 0 && RK.ArgValue == 0) ||
             (Lookup->second != 0 && RK.ArgValue != 0)) &&
            "inconsistent argument value");

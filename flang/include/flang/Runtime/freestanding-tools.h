@@ -88,7 +88,7 @@ static inline RT_API_ATTRS void *memmove(
   const char *from{reinterpret_cast<const char *>(src)};
 
   if (to == from) {
-    return;
+    return dest;
   }
   if (to + count <= from || from + count <= to) {
     std::memcpy(dest, src, count);

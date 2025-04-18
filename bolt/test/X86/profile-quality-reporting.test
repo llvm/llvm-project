@@ -1,0 +1,4 @@
+## Check profile quality stats reporting
+RUN: yaml2obj %p/Inputs/blarge_new.yaml &> %t.exe
+RUN: llvm-bolt %t.exe -o %t.out --pa -p %p/Inputs/blarge_new.preagg.txt | FileCheck %s
+CHECK: profile quality metrics for the hottest 5 functions (reporting top 5% values): function CFG discontinuity 100.00%; call graph flow conservation gap 60.00%; CFG flow conservation gap 45.53% (weighted) 96.87% (worst)

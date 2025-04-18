@@ -168,13 +168,6 @@ static bool Execute(ProcessInfo &PI, StringRef Program,
                     ArrayRef<std::optional<StringRef>> Redirects,
                     unsigned MemoryLimit, std::string *ErrMsg,
                     BitVector *AffinityMask, bool DetachProcess) {
-  if (!llvm::sys::fs::exists(Program)) {
-    if (ErrMsg)
-      *ErrMsg = std::string("Executable \"") + Program.str() +
-                std::string("\" doesn't exist!");
-    return false;
-  }
-
   assert(!AffinityMask && "Starting a process with an affinity mask is "
                           "currently not supported on Unix!");
 

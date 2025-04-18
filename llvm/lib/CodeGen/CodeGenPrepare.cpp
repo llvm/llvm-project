@@ -834,9 +834,8 @@ bool CodeGenPrepare::eliminateFallThrough(Function &F, DominatorTree *DT) {
   // Scan all of the blocks in the function, except for the entry block.
   // Use a temporary array to avoid iterator being invalidated when
   // deleting blocks.
-  SmallVector<WeakTrackingVH, 16> Blocks;
-  for (auto &Block : llvm::drop_begin(F))
-    Blocks.push_back(&Block);
+  SmallVector<WeakTrackingVH, 16> Blocks(
+      llvm::make_pointer_range(llvm::drop_begin(F)));
 
   SmallSet<WeakTrackingVH, 16> Preds;
   for (auto &Block : Blocks) {
@@ -1082,7 +1081,7 @@ bool CodeGenPrepare::canMergeBlocks(const BasicBlock *BB,
     for (unsigned i = 0, e = BBPN->getNumIncomingValues(); i != e; ++i)
       BBPreds.insert(BBPN->getIncomingBlock(i));
   } else {
-    BBPreds.insert(pred_begin(BB), pred_end(BB));
+    BBPreds.insert_range(predecessors(BB));
   }
 
   // Walk the preds of DestBB.
@@ -4370,8 +4369,7 @@ private:
         // If it does not match, collect all Phi nodes from matcher.
         // if we end up with no match, them all these Phi nodes will not match
         // later.
-        for (auto M : Matched)
-          WillNotMatch.insert(M.first);
+        WillNotMatch.insert_range(llvm::make_first_range(Matched));
         Matched.clear();
       }
       if (IsMatched) {
@@ -4672,8 +4670,8 @@ class TypePromotionHelper {
   static void addPromotedInst(InstrToOrigTy &PromotedInsts,
                               Instruction *ExtOpnd, bool IsSExt) {
     ExtType ExtTy = IsSExt ? SignExtension : ZeroExtension;
-    InstrToOrigTy::iterator It = PromotedInsts.find(ExtOpnd);
-    if (It != PromotedInsts.end()) {
+    auto [It, Inserted] = PromotedInsts.try_emplace(ExtOpnd);
+    if (!Inserted) {
       // If the new extension is same as original, the information in
       // PromotedInsts[ExtOpnd] is still correct.
       if (It->second.getInt() == ExtTy)
@@ -4684,7 +4682,7 @@ class TypePromotionHelper {
       // BothExtension.
       ExtTy = BothExtension;
     }
-    PromotedInsts[ExtOpnd] = TypeIsSExt(ExtOpnd->getType(), ExtTy);
+    It->second = TypeIsSExt(ExtOpnd->getType(), ExtTy);
   }
 
   /// Utility function to query the original type of instruction \p Opnd
@@ -6809,8 +6807,7 @@ bool CodeGenPrepare::optimizePhiType(
   }
 
   // Save the removed phis to be deleted later.
-  for (PHINode *Phi : PhiNodes)
-    DeletedInstrs.insert(Phi);
+  DeletedInstrs.insert_range(PhiNodes);
   return true;
 }
 
@@ -7576,8 +7573,7 @@ bool CodeGenPrepare::optimizeSelectInst(SelectInst *SI) {
   else if (FalseBlock == nullptr)
     FalseBlock = StartBlock;
 
-  SmallPtrSet<const Instruction *, 2> INS;
-  INS.insert(ASI.begin(), ASI.end());
+  SmallPtrSet<const Instruction *, 2> INS(llvm::from_range, ASI);
   // Use reverse iterator because later select may use the value of the
   // earlier select, and we need to propagate value through earlier select
   // to get the PHI operand.
@@ -8578,7 +8574,8 @@ static bool optimizeBranch(BranchInst *Branch, const TargetLowering &TLI,
     }
     if (Cmp->isEquality() &&
         (match(UI, m_Add(m_Specific(X), m_SpecificInt(-CmpC))) ||
-         match(UI, m_Sub(m_Specific(X), m_SpecificInt(CmpC))))) {
+         match(UI, m_Sub(m_Specific(X), m_SpecificInt(CmpC))) ||
+         match(UI, m_Xor(m_Specific(X), m_SpecificInt(CmpC))))) {
       IRBuilder<> Builder(Branch);
       if (UI->getParent() != Branch->getParent())
         UI->moveBefore(Branch->getIterator());

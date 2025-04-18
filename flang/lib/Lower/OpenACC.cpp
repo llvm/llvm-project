@@ -522,13 +522,17 @@ static void genPrivateLikeInitRegion(mlir::OpBuilder &builder, RecipeOp recipe,
                                      mlir::Type ty, mlir::Location loc) {
   mlir::Value retVal = recipe.getInitRegion().front().getArgument(0);
   ty = fir::unwrapRefType(ty);
-  if (fir::isa_trivial(ty)) {
+
+  auto getDeclareOpForType = [&](mlir::Type ty) -> hlfir::DeclareOp {
     auto alloca = builder.create<fir::AllocaOp>(loc, ty);
-    auto declareOp = builder.create<hlfir::DeclareOp>(
+    return builder.create<hlfir::DeclareOp>(
         loc, alloca, accPrivateInitName, /*shape=*/nullptr,
         llvm::ArrayRef<mlir::Value>{}, /*dummy_scope=*/nullptr,
         fir::FortranVariableFlagsAttr{});
-    retVal = declareOp.getBase();
+  };
+
+  if (fir::isa_trivial(ty)) {
+    retVal = getDeclareOpForType(ty).getBase();
   } else if (auto seqTy = mlir::dyn_cast_or_null<fir::SequenceType>(ty)) {
     if (fir::isa_trivial(seqTy.getEleTy())) {
       mlir::Value shape;
@@ -552,12 +556,16 @@ static void genPrivateLikeInitRegion(mlir::OpBuilder &builder, RecipeOp recipe,
     }
   } else if (auto boxTy = mlir::dyn_cast_or_null<fir::BaseBoxType>(ty)) {
     mlir::Type innerTy = fir::unwrapRefType(boxTy.getEleTy());
-    if (!fir::isa_trivial(innerTy) && !mlir::isa<fir::SequenceType>(innerTy))
+    if (fir::isa_trivial(innerTy)) {
+      retVal = getDeclareOpForType(ty).getBase();
+    } else if (mlir::isa<fir::SequenceType>(innerTy)) {
+      fir::FirOpBuilder firBuilder{builder, recipe.getOperation()};
+      hlfir::Entity source = hlfir::Entity{retVal};
+      auto [temp, cleanup] = hlfir::createTempFromMold(loc, firBuilder, source);
+      retVal = temp;
+    } else {
       TODO(loc, "Unsupported boxed type in OpenACC privatization");
-    fir::FirOpBuilder firBuilder{builder, recipe.getOperation()};
-    hlfir::Entity source = hlfir::Entity{retVal};
-    auto [temp, cleanup] = hlfir::createTempFromMold(loc, firBuilder, source);
-    retVal = temp;
+    }
   }
   builder.create<mlir::acc::YieldOp>(loc, retVal);
 }
@@ -1796,26 +1804,38 @@ static void privatizeIv(Fortran::lower::AbstractConverter &converter,
     builder.restoreInsertionPoint(insPt);
   }
 
-  std::string recipeName =
-      fir::getTypeAsString(ivValue.getType(), converter.getKindMap(),
-                           Fortran::lower::privatizationRecipePrefix);
-  auto recipe = Fortran::lower::createOrGetPrivateRecipe(
-      builder, recipeName, loc, ivValue.getType());
+  mlir::Operation *privateOp = nullptr;
+  for (auto privateVal : privateOperands) {
+    if (mlir::acc::getVar(privateVal.getDefiningOp()) == ivValue) {
+      privateOp = privateVal.getDefiningOp();
+      break;
+    }
+  }
 
-  std::stringstream asFortran;
-  auto op = createDataEntryOp<mlir::acc::PrivateOp>(
-      builder, loc, ivValue, asFortran, {}, true, /*implicit=*/true,
-      mlir::acc::DataClause::acc_private, ivValue.getType(),
-      /*async=*/{}, /*asyncDeviceTypes=*/{}, /*asyncOnlyDeviceTypes=*/{});
+  if (privateOp == nullptr) {
+    std::string recipeName =
+        fir::getTypeAsString(ivValue.getType(), converter.getKindMap(),
+                             Fortran::lower::privatizationRecipePrefix);
+    auto recipe = Fortran::lower::createOrGetPrivateRecipe(
+        builder, recipeName, loc, ivValue.getType());
 
-  privateOperands.push_back(op.getAccVar());
-  privatizations.push_back(mlir::SymbolRefAttr::get(builder.getContext(),
-                                                    recipe.getSymName().str()));
+    std::stringstream asFortran;
+    asFortran << Fortran::lower::mangle::demangleName(toStringRef(sym.name()));
+    auto op = createDataEntryOp<mlir::acc::PrivateOp>(
+        builder, loc, ivValue, asFortran, {}, true, /*implicit=*/true,
+        mlir::acc::DataClause::acc_private, ivValue.getType(),
+        /*async=*/{}, /*asyncDeviceTypes=*/{}, /*asyncOnlyDeviceTypes=*/{});
+    privateOp = op.getOperation();
+
+    privateOperands.push_back(op.getAccVar());
+    privatizations.push_back(mlir::SymbolRefAttr::get(
+        builder.getContext(), recipe.getSymName().str()));
+  }
 
   // Map the new private iv to its symbol for the scope of the loop. bindSymbol
   // might create a hlfir.declare op, if so, we map its result in order to
   // use the sym value in the scope.
-  converter.bindSymbol(sym, op.getAccVar());
+  converter.bindSymbol(sym, mlir::acc::getAccVar(privateOp));
   auto privateValue = converter.getSymbolAddress(sym);
   if (auto declareOp =
           mlir::dyn_cast<hlfir::DeclareOp>(privateValue.getDefiningOp()))
@@ -1853,92 +1873,6 @@ static mlir::acc::LoopOp createLoopOp(
   llvm::SmallVector<mlir::Attribute> crtDeviceTypes;
   crtDeviceTypes.push_back(mlir::acc::DeviceTypeAttr::get(
       builder.getContext(), mlir::acc::DeviceType::None));
-
-  llvm::SmallVector<mlir::Type> ivTypes;
-  llvm::SmallVector<mlir::Location> ivLocs;
-  llvm::SmallVector<bool> inclusiveBounds;
-
-  llvm::SmallVector<mlir::Location> locs;
-  locs.push_back(currentLocation); // Location of the directive
-  Fortran::lower::pft::Evaluation *crtEval = &eval.getFirstNestedEvaluation();
-  bool isDoConcurrent = outerDoConstruct.IsDoConcurrent();
-  if (isDoConcurrent) {
-    locs.push_back(converter.genLocation(
-        Fortran::parser::FindSourceLocation(outerDoConstruct)));
-    const Fortran::parser::LoopControl *loopControl =
-        &*outerDoConstruct.GetLoopControl();
-    const auto &concurrent =
-        std::get<Fortran::parser::LoopControl::Concurrent>(loopControl->u);
-    if (!std::get<std::list<Fortran::parser::LocalitySpec>>(concurrent.t)
-             .empty())
-      TODO(currentLocation, "DO CONCURRENT with locality spec");
-
-    const auto &concurrentHeader =
-        std::get<Fortran::parser::ConcurrentHeader>(concurrent.t);
-    const auto &controls =
-        std::get<std::list<Fortran::parser::ConcurrentControl>>(
-            concurrentHeader.t);
-    for (const auto &control : controls) {
-      lowerbounds.push_back(fir::getBase(converter.genExprValue(
-          *Fortran::semantics::GetExpr(std::get<1>(control.t)), stmtCtx)));
-      upperbounds.push_back(fir::getBase(converter.genExprValue(
-          *Fortran::semantics::GetExpr(std::get<2>(control.t)), stmtCtx)));
-      if (const auto &expr =
-              std::get<std::optional<Fortran::parser::ScalarIntExpr>>(
-                  control.t))
-        steps.push_back(fir::getBase(converter.genExprValue(
-            *Fortran::semantics::GetExpr(*expr), stmtCtx)));
-      else // If `step` is not present, assume it is `1`.
-        steps.push_back(builder.createIntegerConstant(
-            currentLocation, upperbounds[upperbounds.size() - 1].getType(), 1));
-
-      const auto &name = std::get<Fortran::parser::Name>(control.t);
-      privatizeIv(converter, *name.symbol, currentLocation, ivTypes, ivLocs,
-                  privateOperands, ivPrivate, privatizations, isDoConcurrent);
-
-      inclusiveBounds.push_back(true);
-    }
-  } else {
-    int64_t collapseValue = Fortran::lower::getCollapseValue(accClauseList);
-    for (unsigned i = 0; i < collapseValue; ++i) {
-      const Fortran::parser::LoopControl *loopControl;
-      if (i == 0) {
-        loopControl = &*outerDoConstruct.GetLoopControl();
-        locs.push_back(converter.genLocation(
-            Fortran::parser::FindSourceLocation(outerDoConstruct)));
-      } else {
-        auto *doCons = crtEval->getIf<Fortran::parser::DoConstruct>();
-        assert(doCons && "expect do construct");
-        loopControl = &*doCons->GetLoopControl();
-        locs.push_back(converter.genLocation(
-            Fortran::parser::FindSourceLocation(*doCons)));
-      }
-
-      const Fortran::parser::LoopControl::Bounds *bounds =
-          std::get_if<Fortran::parser::LoopControl::Bounds>(&loopControl->u);
-      assert(bounds && "Expected bounds on the loop construct");
-      lowerbounds.push_back(fir::getBase(converter.genExprValue(
-          *Fortran::semantics::GetExpr(bounds->lower), stmtCtx)));
-      upperbounds.push_back(fir::getBase(converter.genExprValue(
-          *Fortran::semantics::GetExpr(bounds->upper), stmtCtx)));
-      if (bounds->step)
-        steps.push_back(fir::getBase(converter.genExprValue(
-            *Fortran::semantics::GetExpr(bounds->step), stmtCtx)));
-      else // If `step` is not present, assume it is `1`.
-        steps.push_back(builder.createIntegerConstant(
-            currentLocation, upperbounds[upperbounds.size() - 1].getType(), 1));
-
-      Fortran::semantics::Symbol &ivSym =
-          bounds->name.thing.symbol->GetUltimate();
-      privatizeIv(converter, ivSym, currentLocation, ivTypes, ivLocs,
-                  privateOperands, ivPrivate, privatizations);
-
-      inclusiveBounds.push_back(true);
-
-      if (i < collapseValue - 1)
-        crtEval = &*std::next(crtEval->getNestedEvaluations().begin());
-    }
-  }
 
   for (const Fortran::parser::AccClause &clause : accClauseList.v) {
     mlir::Location clauseLocation = converter.genLocation(clause.source);
@@ -2089,6 +2023,91 @@ static mlir::acc::LoopOp createLoopOp(
         collapseValues.push_back(*collapseValue);
         collapseDeviceTypes.push_back(crtDeviceTypeAttr);
       }
+    }
+  }
+
+  llvm::SmallVector<mlir::Type> ivTypes;
+  llvm::SmallVector<mlir::Location> ivLocs;
+  llvm::SmallVector<bool> inclusiveBounds;
+  llvm::SmallVector<mlir::Location> locs;
+  locs.push_back(currentLocation); // Location of the directive
+  Fortran::lower::pft::Evaluation *crtEval = &eval.getFirstNestedEvaluation();
+  bool isDoConcurrent = outerDoConstruct.IsDoConcurrent();
+  if (isDoConcurrent) {
+    locs.push_back(converter.genLocation(
+        Fortran::parser::FindSourceLocation(outerDoConstruct)));
+    const Fortran::parser::LoopControl *loopControl =
+        &*outerDoConstruct.GetLoopControl();
+    const auto &concurrent =
+        std::get<Fortran::parser::LoopControl::Concurrent>(loopControl->u);
+    if (!std::get<std::list<Fortran::parser::LocalitySpec>>(concurrent.t)
+             .empty())
+      TODO(currentLocation, "DO CONCURRENT with locality spec");
+
+    const auto &concurrentHeader =
+        std::get<Fortran::parser::ConcurrentHeader>(concurrent.t);
+    const auto &controls =
+        std::get<std::list<Fortran::parser::ConcurrentControl>>(
+            concurrentHeader.t);
+    for (const auto &control : controls) {
+      lowerbounds.push_back(fir::getBase(converter.genExprValue(
+          *Fortran::semantics::GetExpr(std::get<1>(control.t)), stmtCtx)));
+      upperbounds.push_back(fir::getBase(converter.genExprValue(
+          *Fortran::semantics::GetExpr(std::get<2>(control.t)), stmtCtx)));
+      if (const auto &expr =
+              std::get<std::optional<Fortran::parser::ScalarIntExpr>>(
+                  control.t))
+        steps.push_back(fir::getBase(converter.genExprValue(
+            *Fortran::semantics::GetExpr(*expr), stmtCtx)));
+      else // If `step` is not present, assume it is `1`.
+        steps.push_back(builder.createIntegerConstant(
+            currentLocation, upperbounds[upperbounds.size() - 1].getType(), 1));
+
+      const auto &name = std::get<Fortran::parser::Name>(control.t);
+      privatizeIv(converter, *name.symbol, currentLocation, ivTypes, ivLocs,
+                  privateOperands, ivPrivate, privatizations, isDoConcurrent);
+
+      inclusiveBounds.push_back(true);
+    }
+  } else {
+    int64_t collapseValue = Fortran::lower::getCollapseValue(accClauseList);
+    for (unsigned i = 0; i < collapseValue; ++i) {
+      const Fortran::parser::LoopControl *loopControl;
+      if (i == 0) {
+        loopControl = &*outerDoConstruct.GetLoopControl();
+        locs.push_back(converter.genLocation(
+            Fortran::parser::FindSourceLocation(outerDoConstruct)));
+      } else {
+        auto *doCons = crtEval->getIf<Fortran::parser::DoConstruct>();
+        assert(doCons && "expect do construct");
+        loopControl = &*doCons->GetLoopControl();
+        locs.push_back(converter.genLocation(
+            Fortran::parser::FindSourceLocation(*doCons)));
+      }
+
+      const Fortran::parser::LoopControl::Bounds *bounds =
+          std::get_if<Fortran::parser::LoopControl::Bounds>(&loopControl->u);
+      assert(bounds && "Expected bounds on the loop construct");
+      lowerbounds.push_back(fir::getBase(converter.genExprValue(
+          *Fortran::semantics::GetExpr(bounds->lower), stmtCtx)));
+      upperbounds.push_back(fir::getBase(converter.genExprValue(
+          *Fortran::semantics::GetExpr(bounds->upper), stmtCtx)));
+      if (bounds->step)
+        steps.push_back(fir::getBase(converter.genExprValue(
+            *Fortran::semantics::GetExpr(bounds->step), stmtCtx)));
+      else // If `step` is not present, assume it is `1`.
+        steps.push_back(builder.createIntegerConstant(
+            currentLocation, upperbounds[upperbounds.size() - 1].getType(), 1));
+
+      Fortran::semantics::Symbol &ivSym =
+          bounds->name.thing.symbol->GetUltimate();
+      privatizeIv(converter, ivSym, currentLocation, ivTypes, ivLocs,
+                  privateOperands, ivPrivate, privatizations);
+
+      inclusiveBounds.push_back(true);
+
+      if (i < collapseValue - 1)
+        crtEval = &*std::next(crtEval->getNestedEvaluations().begin());
     }
   }
 
@@ -2281,8 +2300,8 @@ static Op createComputeOp(
   mlir::Value selfCond;
   llvm::SmallVector<mlir::Value> waitOperands, attachEntryOperands,
       copyEntryOperands, copyinEntryOperands, copyoutEntryOperands,
-      createEntryOperands, dataClauseOperands, numGangs, numWorkers,
-      vectorLength, async;
+      createEntryOperands, nocreateEntryOperands, presentEntryOperands,
+      dataClauseOperands, numGangs, numWorkers, vectorLength, async;
   llvm::SmallVector<mlir::Attribute> numGangsDeviceTypes, numWorkersDeviceTypes,
       vectorLengthDeviceTypes, asyncDeviceTypes, asyncOnlyDeviceTypes,
       waitOperandsDeviceTypes, waitOnlyDeviceTypes;
@@ -2457,19 +2476,25 @@ static Op createComputeOp(
     } else if (const auto *noCreateClause =
                    std::get_if<Fortran::parser::AccClause::NoCreate>(
                        &clause.u)) {
+      auto crtDataStart = dataClauseOperands.size();
       genDataOperandOperations<mlir::acc::NoCreateOp>(
           noCreateClause->v, converter, semanticsContext, stmtCtx,
           dataClauseOperands, mlir::acc::DataClause::acc_no_create,
           /*structured=*/true, /*implicit=*/false, async, asyncDeviceTypes,
           asyncOnlyDeviceTypes);
+      nocreateEntryOperands.append(dataClauseOperands.begin() + crtDataStart,
+                                   dataClauseOperands.end());
     } else if (const auto *presentClause =
                    std::get_if<Fortran::parser::AccClause::Present>(
                        &clause.u)) {
+      auto crtDataStart = dataClauseOperands.size();
       genDataOperandOperations<mlir::acc::PresentOp>(
           presentClause->v, converter, semanticsContext, stmtCtx,
           dataClauseOperands, mlir::acc::DataClause::acc_present,
           /*structured=*/true, /*implicit=*/false, async, asyncDeviceTypes,
           asyncOnlyDeviceTypes);
+      presentEntryOperands.append(dataClauseOperands.begin() + crtDataStart,
+                                  dataClauseOperands.end());
     } else if (const auto *devicePtrClause =
                    std::get_if<Fortran::parser::AccClause::Deviceptr>(
                        &clause.u)) {
@@ -2634,6 +2659,10 @@ static Op createComputeOp(
       builder, attachEntryOperands, /*structured=*/true);
   genDataExitOperations<mlir::acc::CreateOp, mlir::acc::DeleteOp>(
       builder, createEntryOperands, /*structured=*/true);
+  genDataExitOperations<mlir::acc::NoCreateOp, mlir::acc::DeleteOp>(
+      builder, nocreateEntryOperands, /*structured=*/true);
+  genDataExitOperations<mlir::acc::PresentOp, mlir::acc::DeleteOp>(
+      builder, presentEntryOperands, /*structured=*/true);
 
   builder.restoreInsertionPoint(insPt);
   return computeOp;
@@ -2648,7 +2677,8 @@ static void genACCDataOp(Fortran::lower::AbstractConverter &converter,
   mlir::Value ifCond;
   llvm::SmallVector<mlir::Value> attachEntryOperands, createEntryOperands,
       copyEntryOperands, copyinEntryOperands, copyoutEntryOperands,
-      dataClauseOperands, waitOperands, async;
+      nocreateEntryOperands, presentEntryOperands, dataClauseOperands,
+      waitOperands, async;
   llvm::SmallVector<mlir::Attribute> asyncDeviceTypes, asyncOnlyDeviceTypes,
       waitOperandsDeviceTypes, waitOnlyDeviceTypes;
   llvm::SmallVector<int32_t> waitOperandsSegments;
@@ -2745,19 +2775,25 @@ static void genACCDataOp(Fortran::lower::AbstractConverter &converter,
     } else if (const auto *noCreateClause =
                    std::get_if<Fortran::parser::AccClause::NoCreate>(
                        &clause.u)) {
+      auto crtDataStart = dataClauseOperands.size();
       genDataOperandOperations<mlir::acc::NoCreateOp>(
           noCreateClause->v, converter, semanticsContext, stmtCtx,
           dataClauseOperands, mlir::acc::DataClause::acc_no_create,
           /*structured=*/true, /*implicit=*/false, async, asyncDeviceTypes,
           asyncOnlyDeviceTypes);
+      nocreateEntryOperands.append(dataClauseOperands.begin() + crtDataStart,
+                                   dataClauseOperands.end());
     } else if (const auto *presentClause =
                    std::get_if<Fortran::parser::AccClause::Present>(
                        &clause.u)) {
+      auto crtDataStart = dataClauseOperands.size();
       genDataOperandOperations<mlir::acc::PresentOp>(
           presentClause->v, converter, semanticsContext, stmtCtx,
           dataClauseOperands, mlir::acc::DataClause::acc_present,
           /*structured=*/true, /*implicit=*/false, async, asyncDeviceTypes,
           asyncOnlyDeviceTypes);
+      presentEntryOperands.append(dataClauseOperands.begin() + crtDataStart,
+                                  dataClauseOperands.end());
     } else if (const auto *deviceptrClause =
                    std::get_if<Fortran::parser::AccClause::Deviceptr>(
                        &clause.u)) {
@@ -2837,6 +2873,10 @@ static void genACCDataOp(Fortran::lower::AbstractConverter &converter,
       builder, attachEntryOperands, /*structured=*/true);
   genDataExitOperations<mlir::acc::CreateOp, mlir::acc::DeleteOp>(
       builder, createEntryOperands, /*structured=*/true);
+  genDataExitOperations<mlir::acc::NoCreateOp, mlir::acc::DeleteOp>(
+      builder, nocreateEntryOperands, /*structured=*/true);
+  genDataExitOperations<mlir::acc::PresentOp, mlir::acc::DeleteOp>(
+      builder, presentEntryOperands, /*structured=*/true);
 
   builder.restoreInsertionPoint(insPt);
 }
@@ -3814,7 +3854,7 @@ genDeclareInFunction(Fortran::lower::AbstractConverter &converter,
                      const Fortran::parser::AccClauseList &accClauseList) {
   llvm::SmallVector<mlir::Value> dataClauseOperands, copyEntryOperands,
       copyinEntryOperands, createEntryOperands, copyoutEntryOperands,
-      deviceResidentEntryOperands;
+      presentEntryOperands, deviceResidentEntryOperands;
   Fortran::lower::StatementContext stmtCtx;
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
 
@@ -3845,11 +3885,14 @@ genDeclareInFunction(Fortran::lower::AbstractConverter &converter,
     } else if (const auto *presentClause =
                    std::get_if<Fortran::parser::AccClause::Present>(
                        &clause.u)) {
+      auto crtDataStart = dataClauseOperands.size();
       genDeclareDataOperandOperations<mlir::acc::PresentOp,
-                                      mlir::acc::PresentOp>(
+                                      mlir::acc::DeleteOp>(
           presentClause->v, converter, semanticsContext, stmtCtx,
           dataClauseOperands, mlir::acc::DataClause::acc_present,
           /*structured=*/true, /*implicit=*/false);
+      presentEntryOperands.append(dataClauseOperands.begin() + crtDataStart,
+                                  dataClauseOperands.end());
     } else if (const auto *copyinClause =
                    std::get_if<Fortran::parser::AccClause::Copyin>(&clause.u)) {
       auto crtDataStart = dataClauseOperands.size();
@@ -3928,14 +3971,15 @@ genDeclareInFunction(Fortran::lower::AbstractConverter &converter,
 
   openAccCtx.attachCleanup([&builder, loc, createEntryOperands,
                             copyEntryOperands, copyinEntryOperands,
-                            copyoutEntryOperands, deviceResidentEntryOperands,
-                            declareToken]() {
+                            copyoutEntryOperands, presentEntryOperands,
+                            deviceResidentEntryOperands, declareToken]() {
     llvm::SmallVector<mlir::Value> operands;
     operands.append(createEntryOperands);
     operands.append(deviceResidentEntryOperands);
     operands.append(copyEntryOperands);
     operands.append(copyinEntryOperands);
     operands.append(copyoutEntryOperands);
+    operands.append(presentEntryOperands);
 
     mlir::func::FuncOp funcOp = builder.getFunction();
     auto ops = funcOp.getOps<mlir::acc::DeclareExitOp>();
@@ -3957,6 +4001,8 @@ genDeclareInFunction(Fortran::lower::AbstractConverter &converter,
         builder, copyinEntryOperands, /*structured=*/true);
     genDataExitOperations<mlir::acc::CreateOp, mlir::acc::CopyoutOp>(
         builder, copyoutEntryOperands, /*structured=*/true);
+    genDataExitOperations<mlir::acc::PresentOp, mlir::acc::DeleteOp>(
+        builder, presentEntryOperands, /*structured=*/true);
   });
 }
 

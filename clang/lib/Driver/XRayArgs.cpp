@@ -157,7 +157,7 @@ XRayArgs::XRayArgs(const ToolChain &TC, const ArgList &Args) {
   // Get the list of modes we want to support.
   auto SpecifiedModes = Args.getAllArgValues(options::OPT_fxray_modes);
   if (SpecifiedModes.empty())
-    llvm::copy(XRaySupportedModes, std::back_inserter(Modes));
+    llvm::append_range(Modes, XRaySupportedModes);
   else
     for (const auto &Arg : SpecifiedModes) {
       // Parse CSV values for -fxray-modes=...
@@ -167,7 +167,7 @@ XRayArgs::XRayArgs(const ToolChain &TC, const ArgList &Args) {
         if (M == "none")
           Modes.clear();
         else if (M == "all")
-          llvm::copy(XRaySupportedModes, std::back_inserter(Modes));
+          llvm::append_range(Modes, XRaySupportedModes);
         else
           Modes.push_back(std::string(M));
     }

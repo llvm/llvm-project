@@ -58,9 +58,9 @@ define void @test1(i32 signext %s) {
 ; O32-PIC-NEXT:  # %bb.1: # %entry
 ; O32-PIC-NEXT:    addiu $sp, $sp, -8
 ; O32-PIC-NEXT:    sw $ra, 0($sp)
-; O32-PIC-NEXT:    lui $1, %hi(($BB0_4)-($BB0_2))
+; O32-PIC-NEXT:    lui $1, %hi($BB0_4-$BB0_2)
 ; O32-PIC-NEXT:    bal $BB0_2
-; O32-PIC-NEXT:    addiu $1, $1, %lo(($BB0_4)-($BB0_2))
+; O32-PIC-NEXT:    addiu $1, $1, %lo($BB0_4-$BB0_2)
 ; O32-PIC-NEXT:  $BB0_2: # %entry
 ; O32-PIC-NEXT:    addu $1, $ra, $1
 ; O32-PIC-NEXT:    lw $ra, 0($sp)
@@ -98,8 +98,8 @@ define void @test1(i32 signext %s) {
 ; O32-R6-PIC-NEXT:  # %bb.1: # %entry
 ; O32-R6-PIC-NEXT:    addiu $sp, $sp, -8
 ; O32-R6-PIC-NEXT:    sw $ra, 0($sp)
-; O32-R6-PIC-NEXT:    lui $1, %hi(($BB0_4)-($BB0_2))
-; O32-R6-PIC-NEXT:    addiu $1, $1, %lo(($BB0_4)-($BB0_2))
+; O32-R6-PIC-NEXT:    lui $1, %hi($BB0_4-$BB0_2)
+; O32-R6-PIC-NEXT:    addiu $1, $1, %lo($BB0_4-$BB0_2)
 ; O32-R6-PIC-NEXT:    balc $BB0_2
 ; O32-R6-PIC-NEXT:  $BB0_2: # %entry
 ; O32-R6-PIC-NEXT:    addu $1, $ra, $1
@@ -212,9 +212,9 @@ define void @test1(i32 signext %s) {
 ; MICROMIPS-NEXT:  # %bb.1: # %entry
 ; MICROMIPS-NEXT:    addiu $sp, $sp, -8
 ; MICROMIPS-NEXT:    sw $ra, 0($sp)
-; MICROMIPS-NEXT:    lui $1, %hi(($BB0_4)-($BB0_2))
+; MICROMIPS-NEXT:    lui $1, %hi($BB0_4-$BB0_2)
 ; MICROMIPS-NEXT:    bal $BB0_2
-; MICROMIPS-NEXT:    addiu $1, $1, %lo(($BB0_4)-($BB0_2))
+; MICROMIPS-NEXT:    addiu $1, $1, %lo($BB0_4-$BB0_2)
 ; MICROMIPS-NEXT:  $BB0_2: # %entry
 ; MICROMIPS-NEXT:    addu $1, $ra, $1
 ; MICROMIPS-NEXT:    lw $ra, 0($sp)
@@ -261,8 +261,8 @@ define void @test1(i32 signext %s) {
 ; MICROMIPSR6PIC-NEXT:  # %bb.1: # %entry
 ; MICROMIPSR6PIC-NEXT:    addiu $sp, $sp, -8
 ; MICROMIPSR6PIC-NEXT:    sw $ra, 0($sp)
-; MICROMIPSR6PIC-NEXT:    lui $1, %hi(($BB0_4)-($BB0_2))
-; MICROMIPSR6PIC-NEXT:    addiu $1, $1, %lo(($BB0_4)-($BB0_2))
+; MICROMIPSR6PIC-NEXT:    lui $1, %hi($BB0_4-$BB0_2)
+; MICROMIPSR6PIC-NEXT:    addiu $1, $1, %lo($BB0_4-$BB0_2)
 ; MICROMIPSR6PIC-NEXT:    balc $BB0_2
 ; MICROMIPSR6PIC-NEXT:  $BB0_2: # %entry
 ; MICROMIPSR6PIC-NEXT:    addu $1, $ra, $1
@@ -285,9 +285,9 @@ define void @test1(i32 signext %s) {
 ; NACL-NEXT:  # %bb.1:
 ; NACL-NEXT:    addiu $sp, $sp, -8
 ; NACL-NEXT:    sw  $ra, 0($sp)
-; NACL-NEXT:    lui $1, %hi(($BB0_4)-($BB0_2))
+; NACL-NEXT:    lui $1, %hi($BB0_4-$BB0_2)
 ; NACL-NEXT:    bal $BB0_2
-; NACL-NEXT:    addiu $1, $1, %lo(($BB0_4)-($BB0_2))
+; NACL-NEXT:    addiu $1, $1, %lo($BB0_4-$BB0_2)
 ; NACL-NEXT:  $BB0_2:
 ; NACL-NEXT:    addu  $1, $ra, $1
 ; NACL-NEXT:    lw  $ra, 0($sp)

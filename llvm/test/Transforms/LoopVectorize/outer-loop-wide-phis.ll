@@ -134,7 +134,7 @@ define void @wide_phi_2_predecessors_phi_ops_swapped(ptr noalias %A, ptr noalias
 ; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <4 x i64> @llvm.masked.gather.v4i64.v4p0(<4 x ptr> [[TMP1]], i32 8, <4 x i1> splat (i1 true), <4 x i64> poison)
 ; CHECK-NEXT:    br label %[[INNER_LATCH4]]
 ; CHECK:       [[INNER_LATCH4]]:
-; CHECK-NEXT:    [[VEC_PHI5:%.*]] = phi <4 x i64> [ zeroinitializer, %[[INNER_HEADER1]] ], [ [[WIDE_MASKED_GATHER]], %[[THEN3]] ]
+; CHECK-NEXT:    [[VEC_PHI5:%.*]] = phi <4 x i64> [ [[WIDE_MASKED_GATHER]], %[[THEN3]] ], [ zeroinitializer, %[[INNER_HEADER1]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nsw <4 x i64> [[VEC_PHI5]], [[VEC_IND]]
 ; CHECK-NEXT:    [[TMP3]] = add nsw <4 x i64> [[TMP2]], [[VEC_PHI2]]
 ; CHECK-NEXT:    [[TMP4]] = add nuw nsw <4 x i64> [[VEC_PHI]], splat (i64 1)

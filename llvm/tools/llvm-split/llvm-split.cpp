@@ -92,7 +92,7 @@ int main(int argc, char **argv) {
 
     TargetOptions Options;
     TM = std::unique_ptr<TargetMachine>(T->createTargetMachine(
-        MTriple, MCPU, /*FS*/ "", Options, std::nullopt, std::nullopt));
+        Triple(MTriple), MCPU, /*FS*/ "", Options, std::nullopt, std::nullopt));
   }
 
   std::unique_ptr<Module> M = parseIRFile(InputFilename, Err, Context);

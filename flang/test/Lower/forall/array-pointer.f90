@@ -407,10 +407,9 @@ end subroutine s3
 ! CHECK:           %[[VAL_23:.*]] = fir.convert %[[VAL_22]] : (i64) -> index
 ! CHECK:           %[[VAL_24:.*]] = arith.subi %[[VAL_23]], %[[VAL_20]] : index
 ! CHECK:           %[[VAL_25:.*]] = fir.field_index ip, !fir.type<_QMarray_of_pointer_testTtu{ip:!fir.box<!fir.ptr<!fir.type<_QMarray_of_pointer_testTu{v:i32}>>>}>
-! CHECK:           %[[VAL_26:.*]] = fir.field_index v, !fir.type<_QMarray_of_pointer_testTu{v:i32}>
 ! CHECK:           %[[VAL_27:.*]] = fir.array_access %[[VAL_12]], %[[VAL_24]], %[[VAL_25]] : (!fir.array<?x!fir.type<_QMarray_of_pointer_testTtu{ip:!fir.box<!fir.ptr<!fir.type<_QMarray_of_pointer_testTu{v:i32}>>>}>>, index, !fir.field) -> !fir.ref<!fir.box<!fir.ptr<!fir.type<_QMarray_of_pointer_testTu{v:i32}>>>>
 ! CHECK:           %[[VAL_28:.*]] = fir.load %[[VAL_27]] : !fir.ref<!fir.box<!fir.ptr<!fir.type<_QMarray_of_pointer_testTu{v:i32}>>>>
-! CHECK:           %[[VAL_29:.*]] = fir.coordinate_of %[[VAL_28]], %[[VAL_26]] : (!fir.box<!fir.ptr<!fir.type<_QMarray_of_pointer_testTu{v:i32}>>>, !fir.field) -> !fir.ref<i32>
+! CHECK:           %[[VAL_29:.*]] = fir.coordinate_of %[[VAL_28]], v : (!fir.box<!fir.ptr<!fir.type<_QMarray_of_pointer_testTu{v:i32}>>>) -> !fir.ref<i32>
 ! CHECK:           fir.store %[[VAL_19]] to %[[VAL_29]] : !fir.ref<i32>
 ! CHECK:           %[[VAL_30:.*]] = fir.array_amend %[[VAL_12]], %[[VAL_27]] : (!fir.array<?x!fir.type<_QMarray_of_pointer_testTtu{ip:!fir.box<!fir.ptr<!fir.type<_QMarray_of_pointer_testTu{v:i32}>>>}>>, !fir.ref<!fir.box<!fir.ptr<!fir.type<_QMarray_of_pointer_testTu{v:i32}>>>>) -> !fir.array<?x!fir.type<_QMarray_of_pointer_testTtu{ip:!fir.box<!fir.ptr<!fir.type<_QMarray_of_pointer_testTu{v:i32}>>>}>>
 ! CHECK:           fir.result %[[VAL_30]] : !fir.array<?x!fir.type<_QMarray_of_pointer_testTtu{ip:!fir.box<!fir.ptr<!fir.type<_QMarray_of_pointer_testTu{v:i32}>>>}>>
@@ -456,10 +455,9 @@ end subroutine s3_1
 ! CHECK:           %[[VAL_23:.*]] = fir.convert %[[VAL_22]] : (i64) -> index
 ! CHECK:           %[[VAL_24:.*]] = arith.subi %[[VAL_23]], %[[VAL_20]] : index
 ! CHECK:           %[[VAL_25:.*]] = fir.field_index ip, !fir.type<_QMarray_of_pointer_testTtu{ip:!fir.box<!fir.ptr<!fir.type<_QMarray_of_pointer_testTu{v:i32}>>>}>
-! CHECK:           %[[VAL_26:.*]] = fir.field_index v, !fir.type<_QMarray_of_pointer_testTu{v:i32}>
 ! CHECK:           %[[VAL_27:.*]] = fir.array_access %[[VAL_12]], %[[VAL_24]], %[[VAL_25]] : (!fir.array<?x!fir.type<_QMarray_of_pointer_testTtu{ip:!fir.box<!fir.ptr<!fir.type<_QMarray_of_pointer_testTu{v:i32}>>>}>>, index, !fir.field) -> !fir.ref<!fir.box<!fir.ptr<!fir.type<_QMarray_of_pointer_testTu{v:i32}>>>>
 ! CHECK:           %[[VAL_28:.*]] = fir.load %[[VAL_27]] : !fir.ref<!fir.box<!fir.ptr<!fir.type<_QMarray_of_pointer_testTu{v:i32}>>>>
-! CHECK:           %[[VAL_29:.*]] = fir.coordinate_of %[[VAL_28]], %[[VAL_26]] : (!fir.box<!fir.ptr<!fir.type<_QMarray_of_pointer_testTu{v:i32}>>>, !fir.field) -> !fir.ref<i32>
+! CHECK:           %[[VAL_29:.*]] = fir.coordinate_of %[[VAL_28]], v : (!fir.box<!fir.ptr<!fir.type<_QMarray_of_pointer_testTu{v:i32}>>>) -> !fir.ref<i32>
 ! CHECK:           fir.store %[[VAL_19]] to %[[VAL_29]] : !fir.ref<i32>
 ! CHECK:           %[[VAL_30:.*]] = fir.array_amend %[[VAL_12]], %[[VAL_27]] : (!fir.array<?x!fir.type<_QMarray_of_pointer_testTtu{ip:!fir.box<!fir.ptr<!fir.type<_QMarray_of_pointer_testTu{v:i32}>>>}>>, !fir.ref<!fir.box<!fir.ptr<!fir.type<_QMarray_of_pointer_testTu{v:i32}>>>>) -> !fir.array<?x!fir.type<_QMarray_of_pointer_testTtu{ip:!fir.box<!fir.ptr<!fir.type<_QMarray_of_pointer_testTu{v:i32}>>>}>>
 ! CHECK:           fir.result %[[VAL_30]] : !fir.array<?x!fir.type<_QMarray_of_pointer_testTtu{ip:!fir.box<!fir.ptr<!fir.type<_QMarray_of_pointer_testTu{v:i32}>>>}>>
@@ -605,14 +603,12 @@ end subroutine s6
 ! CHECK:             %[[VAL_38:.*]] = fir.convert %[[VAL_37]] : (i32) -> i64
 ! CHECK:             %[[VAL_39:.*]] = fir.convert %[[VAL_38]] : (i64) -> index
 ! CHECK:             %[[VAL_40:.*]] = arith.subi %[[VAL_39]], %[[VAL_31]] : index
-! CHECK:             %[[VAL_41:.*]] = fir.field_index ip, !fir.type<_QMarray_of_pointer_testTtu{ip:!fir.box<!fir.ptr<!fir.type<_QMarray_of_pointer_testTu{v:i32}>>>}>
-! CHECK:             %[[VAL_42:.*]] = fir.field_index v, !fir.type<_QMarray_of_pointer_testTu{v:i32}>
 ! CHECK:             %[[VAL_43:.*]] = fir.array_access %[[VAL_23]], %[[VAL_35]], %[[VAL_36]] : (!fir.array<?x!fir.type<_QMarray_of_pointer_testTtv{jp:!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QMarray_of_pointer_testTtu{ip:!fir.box<!fir.ptr<!fir.type<_QMarray_of_pointer_testTu{v:i32}>>>}>>>>}>>, index, !fir.field) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QMarray_of_pointer_testTtu{ip:!fir.box<!fir.ptr<!fir.type<_QMarray_of_pointer_testTu{v:i32}>>>}>>>>>
 ! CHECK:             %[[VAL_44:.*]] = fir.load %[[VAL_43]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QMarray_of_pointer_testTtu{ip:!fir.box<!fir.ptr<!fir.type<_QMarray_of_pointer_testTu{v:i32}>>>}>>>>>
 ! CHECK:             %[[VAL_45:.*]] = fir.coordinate_of %[[VAL_44]], %[[VAL_40]] : (!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QMarray_of_pointer_testTtu{ip:!fir.box<!fir.ptr<!fir.type<_QMarray_of_pointer_testTu{v:i32}>>>}>>>>, index) -> !fir.ref<!fir.type<_QMarray_of_pointer_testTtu{ip:!fir.box<!fir.ptr<!fir.type<_QMarray_of_pointer_testTu{v:i32}>>>}>>
-! CHECK:             %[[VAL_46:.*]] = fir.coordinate_of %[[VAL_45]], %[[VAL_41]] : (!fir.ref<!fir.type<_QMarray_of_pointer_testTtu{ip:!fir.box<!fir.ptr<!fir.type<_QMarray_of_pointer_testTu{v:i32}>>>}>>, !fir.field) -> !fir.ref<!fir.box<!fir.ptr<!fir.type<_QMarray_of_pointer_testTu{v:i32}>>>>
+! CHECK:             %[[VAL_46:.*]] = fir.coordinate_of %[[VAL_45]], ip : (!fir.ref<!fir.type<_QMarray_of_pointer_testTtu{ip:!fir.box<!fir.ptr<!fir.type<_QMarray_of_pointer_testTu{v:i32}>>>}>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.type<_QMarray_of_pointer_testTu{v:i32}>>>>
 ! CHECK:             %[[VAL_47:.*]] = fir.load %[[VAL_46]] : !fir.ref<!fir.box<!fir.ptr<!fir.type<_QMarray_of_pointer_testTu{v:i32}>>>>
-! CHECK:             %[[VAL_48:.*]] = fir.coordinate_of %[[VAL_47]], %[[VAL_42]] : (!fir.box<!fir.ptr<!fir.type<_QMarray_of_pointer_testTu{v:i32}>>>, !fir.field) -> !fir.ref<i32>
+! CHECK:             %[[VAL_48:.*]] = fir.coordinate_of %[[VAL_47]], v : (!fir.box<!fir.ptr<!fir.type<_QMarray_of_pointer_testTu{v:i32}>>>) -> !fir.ref<i32>
 ! CHECK:             fir.store %[[VAL_30]] to %[[VAL_48]] : !fir.ref<i32>
 ! CHECK:             %[[VAL_49:.*]] = fir.array_amend %[[VAL_23]], %[[VAL_43]] : (!fir.array<?x!fir.type<_QMarray_of_pointer_testTtv{jp:!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QMarray_of_pointer_testTtu{ip:!fir.box<!fir.ptr<!fir.type<_QMarray_of_pointer_testTu{v:i32}>>>}>>>>}>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QMarray_of_pointer_testTtu{ip:!fir.box<!fir.ptr<!fir.type<_QMarray_of_pointer_testTu{v:i32}>>>}>>>>>) -> !fir.array<?x!fir.type<_QMarray_of_pointer_testTtv{jp:!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QMarray_of_pointer_testTtu{ip:!fir.box<!fir.ptr<!fir.type<_QMarray_of_pointer_testTu{v:i32}>>>}>>>>}>>
 ! CHECK:             fir.result %[[VAL_49]] : !fir.array<?x!fir.type<_QMarray_of_pointer_testTtv{jp:!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QMarray_of_pointer_testTtu{ip:!fir.box<!fir.ptr<!fir.type<_QMarray_of_pointer_testTu{v:i32}>>>}>>>>}>>
@@ -658,8 +654,7 @@ end subroutine s7
 ! CHECK:           %[[VAL_22:.*]] = arith.constant 1 : i64
 ! CHECK:           %[[VAL_23:.*]] = arith.subi %[[VAL_21]], %[[VAL_22]] : i64
 ! CHECK:           %[[VAL_24:.*]] = fir.coordinate_of %[[VAL_0]], %[[VAL_23]] : (!fir.box<!fir.array<?x!fir.type<_QMarray_of_pointer_testTt{ip:!fir.box<!fir.ptr<i32>>}>>>, i64) -> !fir.ref<!fir.type<_QMarray_of_pointer_testTt{ip:!fir.box<!fir.ptr<i32>>}>>
-! CHECK:           %[[VAL_25:.*]] = fir.field_index ip, !fir.type<_QMarray_of_pointer_testTt{ip:!fir.box<!fir.ptr<i32>>}>
-! CHECK:           %[[VAL_26:.*]] = fir.coordinate_of %[[VAL_24]], %[[VAL_25]] : (!fir.ref<!fir.type<_QMarray_of_pointer_testTt{ip:!fir.box<!fir.ptr<i32>>}>>, !fir.field) -> !fir.ref<!fir.box<!fir.ptr<i32>>>
+! CHECK:           %[[VAL_26:.*]] = fir.coordinate_of %[[VAL_24]], ip : (!fir.ref<!fir.type<_QMarray_of_pointer_testTt{ip:!fir.box<!fir.ptr<i32>>}>>) -> !fir.ref<!fir.box<!fir.ptr<i32>>>
 ! CHECK:           %[[VAL_27:.*]] = fir.load %[[VAL_26]] : !fir.ref<!fir.box<!fir.ptr<i32>>>
 ! CHECK:           %[[VAL_28:.*]] = fir.box_addr %[[VAL_27]] : (!fir.box<!fir.ptr<i32>>) -> !fir.ptr<i32>
 ! CHECK:           %[[VAL_29:.*]] = fir.load %[[VAL_28]] : !fir.ptr<i32>

@@ -70,7 +70,7 @@ void Mips16FrameLowering::emitPrologue(MachineFunction &MF,
 
     for (const CalleeSavedInfo &I : CSI) {
       int64_t Offset = MFI.getObjectOffset(I.getFrameIdx());
-      Register Reg = I.getReg();
+      MCRegister Reg = I.getReg();
       unsigned DReg = MRI->getDwarfRegNum(Reg, true);
       unsigned CFIIndex = MF.addFrameInst(
           MCCFIInstruction::createOffset(nullptr, DReg, Offset));
@@ -120,7 +120,7 @@ bool Mips16FrameLowering::spillCalleeSavedRegisters(
     // method MipsTargetLowering::lowerRETURNADDR.
     // It's killed at the spill, unless the register is RA and return address
     // is taken.
-    Register Reg = I.getReg();
+    MCRegister Reg = I.getReg();
     bool IsRAAndRetAddrIsTaken = (Reg == Mips::RA)
       && MF->getFrameInfo().isReturnAddressTaken();
     if (!IsRAAndRetAddrIsTaken)

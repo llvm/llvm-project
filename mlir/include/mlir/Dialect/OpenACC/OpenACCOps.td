@@ -65,6 +65,74 @@ def OpenACC_ReductionOperatorAttr : EnumAttr<OpenACC_Dialect,
   let assemblyFormat = [{ ```<` $value `>` }];
 }
 
+// OpenACC variable type categorization. This is needed because OpenACC
+// dialect is used with other dialects, and each dialect defines its own
+// types. Thus, in order to be able to classify types and apply right semantics,
+// it is needed to ensure the types can be categorized.
+def OpenACC_VariableTypeUncategorized : I32BitEnumAttrCaseNone<"uncategorized">;
+
+// The OpenACC spec definition of scalar type is as follows (from 3.3 spec,
+// line 5454):
+// Scalar datatype - an intrinsic or built-in datatype that is not an array or
+// aggregate datatype. In Fortran, scalar datatypes are integer, real, double
+// precision, complex, or logical. In C, scalar datatypes are char (signed or
+// unsigned), int (signed or unsigned, with optional short, long or long long
+// attribute), enum, float, double, long double, Complex (with optional float
+// or long attribute), or any pointer datatype. In C++, scalar datatypes are
+// char (signed or unsigned), wchar t, int (signed or unsigned, with optional
+// short, long or long long attribute), enum, bool, float, double, long double,
+// or any pointer datatype. Not all implementations or targets will support all
+// of these datatypes.
+// From an MLIR type perspective, the types that those language types map to
+// will be categorized as scalar.
+def OpenACC_VariableTypeScalar : I32BitEnumAttrCaseBit<"scalar", 0>;
+
+// Not in OpenACC spec glossary as its own definition but used throughout the
+// spec. One definition of array that can be assumed for purposes of type
+// categorization is that it is a collection of elements of same type.
+def OpenACC_VariableTypeArray : I32BitEnumAttrCaseBit<"array", 1>;
+
+// The OpenACC spec definition of composite type is as follows (from 3.3 spec,
+// line 5354):
+// Composite datatype - a derived type in Fortran, or a struct or union type in
+// C, or a class, struct, or union type in C++. (This is different from the use
+// of the term composite data type in the C and C++ languages.)
+def OpenACC_VariableTypeComposite : I32BitEnumAttrCaseBit<"composite", 2>;
+
+// The OpenACC spec uses the type category "aggregate" to capture both arrays
+// and composite types. However, it includes types which do not fall in either
+// of those categories. Thus create a case for the others.
+// For example, reading the definition of "Aggregate Variables" in the 3.3
+// spec line 5346 shows this distinction:
+// Aggregate variables - a variable of any non-scalar datatype, including array
+// or composite variables. In Fortran, this includes any variable with
+// allocatable or pointer attribute and character variables
+def OpenACC_VariableTypeOtherNonScalar : I32BitEnumAttrCaseBit<"nonscalar", 3>;
+
+// The OpenACC spec definition of aggregate type is as follows (from 3.3 spec,
+// line 5342):
+// Aggregate datatype - any non-scalar datatype such as array and composite
+// datatypes. In Fortran, aggregate datatypes include arrays, derived types,
+// character types. In C, aggregate datatypes include arrays, targets of
+// pointers, structs, and unions. In C++, aggregate datatypes include arrays,
+// targets of pointers, classes, structs, and unions.
+def OpenACC_VariableTypeAggregate : I32BitEnumAttrCaseGroup<"aggregate",
+  [OpenACC_VariableTypeArray, OpenACC_VariableTypeComposite,
+  OpenACC_VariableTypeOtherNonScalar]>;
+
+def OpenACC_VariableTypeCategory : I32BitEnumAttr<
+    "VariableTypeCategory",
+    "Captures different type categories described in OpenACC spec",
+    [
+      OpenACC_VariableTypeUncategorized, OpenACC_VariableTypeScalar,
+      OpenACC_VariableTypeArray, OpenACC_VariableTypeComposite,
+      OpenACC_VariableTypeOtherNonScalar, OpenACC_VariableTypeAggregate]> {
+  let separator = ",";
+  let cppNamespace = "::mlir::acc";
+  let genSpecializedAttr = 0;
+  let printBitEnumPrimaryGroups = 1;
+}
+
 // Type used in operation below.
 def IntOrIndex : AnyTypeOf<[AnyInteger, Index]>;
 
@@ -494,53 +562,33 @@ class OpenACC_DataEntryOp<string mnemonic, string clause, string extraDescriptio
   let hasVerifier = 1;
 
   let builders = [
-    OpBuilder<(ins "::mlir::TypedValue<::mlir::acc::PointerLikeType>":$varPtr,
+    OpBuilder<(ins "::mlir::Value":$var,
                    "bool":$structured, "bool":$implicit,
                    CArg<"::mlir::ValueRange", "{}">:$bounds),
       [{
-        build($_builder, $_state, varPtr.getType(), varPtr,
-          /*varType=*/::mlir::TypeAttr::get(
-            varPtr.getType().getElementType()),
-          /*varPtrPtr=*/{}, bounds, /*asyncOperands=*/{},
-          /*asyncOperandsDeviceType=*/nullptr,
-          /*asyncOnly=*/nullptr, /*dataClause=*/nullptr,
-          /*structured=*/$_builder.getBoolAttr(structured),
-          /*implicit=*/$_builder.getBoolAttr(implicit), /*name=*/nullptr);
-      }]>,
-    OpBuilder<(ins "::mlir::TypedValue<::mlir::acc::PointerLikeType>":$varPtr,
-                   "bool":$structured, "bool":$implicit,
-                   "const ::llvm::Twine &":$name,
-                   CArg<"::mlir::ValueRange", "{}">:$bounds),
-      [{
-        build($_builder, $_state, varPtr.getType(), varPtr,
-          /*varType=*/::mlir::TypeAttr::get(
-            varPtr.getType().getElementType()),
-          /*varPtrPtr=*/{}, bounds, /*asyncOperands=*/{},
-          /*asyncOperandsDeviceType=*/nullptr,
-          /*asyncOnly=*/nullptr, /*dataClause=*/nullptr,
-          /*structured=*/$_builder.getBoolAttr(structured),
-          /*implicit=*/$_builder.getBoolAttr(implicit),
-          /*name=*/$_builder.getStringAttr(name));
-      }]>,
-    OpBuilder<(ins "::mlir::TypedValue<::mlir::acc::MappableType>":$var,
-                   "bool":$structured, "bool":$implicit,
-                   CArg<"::mlir::ValueRange", "{}">:$bounds),
-      [{
+        auto ptrLikeTy = ::mlir::dyn_cast<::mlir::acc::PointerLikeType>(
+          var.getType());
         build($_builder, $_state, var.getType(), var,
-          /*varType=*/::mlir::TypeAttr::get(var.getType()),
+          /*varType=*/ptrLikeTy ?
+            ::mlir::TypeAttr::get(ptrLikeTy.getElementType()) :
+            ::mlir::TypeAttr::get(var.getType()),
           /*varPtrPtr=*/{}, bounds, /*asyncOperands=*/{},
           /*asyncOperandsDeviceType=*/nullptr,
           /*asyncOnly=*/nullptr, /*dataClause=*/nullptr,
           /*structured=*/$_builder.getBoolAttr(structured),
           /*implicit=*/$_builder.getBoolAttr(implicit), /*name=*/nullptr);
       }]>,
-    OpBuilder<(ins "::mlir::TypedValue<::mlir::acc::MappableType>":$var,
+    OpBuilder<(ins "::mlir::Value":$var,
                    "bool":$structured, "bool":$implicit,
                    "const ::llvm::Twine &":$name,
                   CArg<"::mlir::ValueRange", "{}">:$bounds),
       [{
+        auto ptrLikeTy = ::mlir::dyn_cast<::mlir::acc::PointerLikeType>(
+          var.getType());
         build($_builder, $_state, var.getType(), var,
-          /*varType=*/::mlir::TypeAttr::get(var.getType()),
+          /*varType=*/ptrLikeTy ?
+            ::mlir::TypeAttr::get(ptrLikeTy.getElementType()) :
+            ::mlir::TypeAttr::get(var.getType()),
           /*varPtrPtr=*/{}, bounds, /*asyncOperands=*/{},
           /*asyncOperandsDeviceType=*/nullptr,
           /*asyncOnly=*/nullptr, /*dataClause=*/nullptr,
@@ -874,28 +922,34 @@ class OpenACC_DataExitOpWithVarPtr<string mnemonic, string clause>
   }];
 
   let builders = [
-    OpBuilder<(ins "::mlir::TypedValue<::mlir::acc::PointerLikeType>":$accPtr,
-                   "::mlir::TypedValue<::mlir::acc::PointerLikeType>":$varPtr,
+    OpBuilder<(ins "::mlir::Value":$accVar,
+                   "::mlir::Value":$var,
                    "bool":$structured, "bool":$implicit,
                    CArg<"::mlir::ValueRange", "{}">:$bounds),
       [{
-        build($_builder, $_state, accPtr, varPtr,
-          /*varType=*/::mlir::TypeAttr::get(
-            varPtr.getType().getElementType()),
+        auto ptrLikeTy = ::mlir::dyn_cast<::mlir::acc::PointerLikeType>(
+          var.getType());
+        build($_builder, $_state, accVar, var,
+          /*varType=*/ptrLikeTy ?
+            ::mlir::TypeAttr::get(ptrLikeTy.getElementType()) :
+            ::mlir::TypeAttr::get(var.getType()),
           bounds, /*asyncOperands=*/{}, /*asyncOperandsDeviceType=*/nullptr,
           /*asyncOnly=*/nullptr, /*dataClause=*/nullptr,
           /*structured=*/$_builder.getBoolAttr(structured),
           /*implicit=*/$_builder.getBoolAttr(implicit), /*name=*/nullptr);
       }]>,
-    OpBuilder<(ins "::mlir::TypedValue<::mlir::acc::PointerLikeType>":$accPtr,
-                   "::mlir::TypedValue<::mlir::acc::PointerLikeType>":$varPtr,
+    OpBuilder<(ins "::mlir::Value":$accVar,
+                   "::mlir::Value":$var,
                    "bool":$structured, "bool":$implicit,
                    "const ::llvm::Twine &":$name,
                    CArg<"::mlir::ValueRange", "{}">:$bounds),
       [{
-        build($_builder, $_state, accPtr, varPtr,
-          /*varType=*/::mlir::TypeAttr::get(
-            varPtr.getType().getElementType()),
+        auto ptrLikeTy = ::mlir::dyn_cast<::mlir::acc::PointerLikeType>(
+          var.getType());
+        build($_builder, $_state, accVar, var,
+          /*varType=*/ptrLikeTy ?
+            ::mlir::TypeAttr::get(ptrLikeTy.getElementType()) :
+            ::mlir::TypeAttr::get(var.getType()),
           bounds, /*asyncOperands=*/{}, /*asyncOperandsDeviceType=*/nullptr,
           /*asyncOnly=*/nullptr, /*dataClause=*/nullptr,
           /*structured=*/$_builder.getBoolAttr(structured),
@@ -928,22 +982,22 @@ class OpenACC_DataExitOpNoVarPtr<string mnemonic, string clause> :
   }];
 
   let builders = [
-    OpBuilder<(ins "::mlir::TypedValue<::mlir::acc::PointerLikeType>":$accPtr,
+    OpBuilder<(ins "::mlir::Value":$accVar,
                    "bool":$structured, "bool":$implicit,
                    CArg<"::mlir::ValueRange", "{}">:$bounds),
       [{
-        build($_builder, $_state, accPtr,
+        build($_builder, $_state, accVar,
           bounds, /*asyncOperands=*/{}, /*asyncOperandsDeviceType=*/nullptr,
           /*asyncOnly=*/nullptr, /*dataClause=*/nullptr,
           /*structured=*/$_builder.getBoolAttr(structured),
           /*implicit=*/$_builder.getBoolAttr(implicit), /*name=*/nullptr);
       }]>,
-    OpBuilder<(ins "::mlir::TypedValue<::mlir::acc::PointerLikeType>":$accPtr,
+    OpBuilder<(ins "::mlir::Value":$accVar,
                    "bool":$structured, "bool":$implicit,
                    "const ::llvm::Twine &":$name,
                    CArg<"::mlir::ValueRange", "{}">:$bounds),
       [{
-        build($_builder, $_state, accPtr,
+        build($_builder, $_state, accVar,
           bounds, /*asyncOperands=*/{}, /*asyncOperandsDeviceType=*/nullptr,
           /*asyncOnly=*/nullptr, /*dataClause=*/nullptr,
           /*structured=*/$_builder.getBoolAttr(structured),

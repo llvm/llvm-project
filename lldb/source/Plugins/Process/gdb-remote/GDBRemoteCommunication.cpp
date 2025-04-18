@@ -7,14 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "GDBRemoteCommunication.h"
-
-#include <climits>
-#include <cstring>
-#include <future>
-#include <sys/stat.h>
-
+#include "ProcessGDBRemoteLog.h"
 #include "lldb/Host/Config.h"
-#include "lldb/Host/ConnectionFileDescriptor.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
@@ -31,10 +25,13 @@
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/StreamString.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Config/llvm-config.h" // for LLVM_ENABLE_ZLIB
 #include "llvm/Support/ScopedPrinter.h"
-
-#include "ProcessGDBRemoteLog.h"
+#include <climits>
+#include <cstring>
+#include <future>
+#include <sys/stat.h>
 
 #if defined(__APPLE__)
 #define DEBUGSERVER_BASENAME "debugserver"
@@ -786,9 +783,14 @@ GDBRemoteCommunication::CheckForPacket(const uint8_t *src, size_t src_len,
 
       // Copy the packet from m_bytes to packet_str expanding the run-length
       // encoding in the process.
-      std ::string packet_str =
+      auto maybe_packet_str =
           ExpandRLE(m_bytes.substr(content_start, content_end - content_start));
-      packet = StringExtractorGDBRemote(packet_str);
+      if (!maybe_packet_str) {
+        m_bytes.erase(0, total_length);
+        packet.Clear();
+        return GDBRemoteCommunication::PacketType::Invalid;
+      }
+      packet = StringExtractorGDBRemote(*maybe_packet_str);
 
       if (m_bytes[0] == '$' || m_bytes[0] == '%') {
         assert(checksum_idx < m_bytes.size());
@@ -1154,17 +1156,25 @@ Status GDBRemoteCommunication::StartDebugserverProcess(
       if (socket_pipe.CanWrite())
         socket_pipe.CloseWriteFileDescriptor();
       if (socket_pipe.CanRead()) {
-        // The port number may be up to "65535\0".
-        char port_cstr[6] = {0};
-        size_t num_bytes = sizeof(port_cstr);
         // Read port from pipe with 10 second timeout.
-        error = socket_pipe.ReadWithTimeout(
-            port_cstr, num_bytes, std::chrono::seconds{10}, num_bytes);
+        std::string port_str;
+        while (error.Success()) {
+          char buf[10];
+          if (llvm::Expected<size_t> num_bytes = socket_pipe.Read(
+                  buf, std::size(buf), std::chrono::seconds(10))) {
+            if (*num_bytes == 0)
+              break;
+            port_str.append(buf, *num_bytes);
+          } else {
+            error = Status::FromError(num_bytes.takeError());
+          }
+        }
         if (error.Success() && (port != nullptr)) {
-          assert(num_bytes > 0 && port_cstr[num_bytes - 1] == '\0');
+          // NB: Deliberately using .c_str() to stop at embedded '\0's
+          llvm::StringRef port_ref = port_str.c_str();
           uint16_t child_port = 0;
           // FIXME: improve error handling
-          llvm::to_integer(port_cstr, child_port);
+          llvm::to_integer(port_ref, child_port);
           if (*port == 0 || *port == child_port) {
             *port = child_port;
             LLDB_LOGF(log,
@@ -1301,17 +1311,22 @@ void llvm::format_provider<GDBRemoteCommunication::PacketResult>::format(
   }
 }
 
-std::string GDBRemoteCommunication::ExpandRLE(std::string packet) {
+std::optional<std::string>
+GDBRemoteCommunication::ExpandRLE(std::string packet) {
   // Reserve enough byte for the most common case (no RLE used).
   std::string decoded;
   decoded.reserve(packet.size());
   for (std::string::const_iterator c = packet.begin(); c != packet.end(); ++c) {
     if (*c == '*') {
+      if (decoded.empty())
+        return std::nullopt;
       // '*' indicates RLE. Next character will give us the repeat count and
       // previous character is what is to be repeated.
       char char_to_repeat = decoded.back();
       // Number of time the previous character is repeated.
-      int repeat_count = *++c + 3 - ' ';
+      if (++c == packet.end())
+        return std::nullopt;
+      int repeat_count = *c + 3 - ' ';
       // We have the char_to_repeat and repeat_count. Now push it in the
       // packet.
       for (int i = 0; i < repeat_count; ++i)
@@ -1319,7 +1334,9 @@ std::string GDBRemoteCommunication::ExpandRLE(std::string packet) {
     } else if (*c == 0x7d) {
       // 0x7d is the escape character.  The next character is to be XOR'd with
       // 0x20.
-      char escapee = *++c ^ 0x20;
+      if (++c == packet.end())
+        return std::nullopt;
+      char escapee = *c ^ 0x20;
       decoded.push_back(escapee);
     } else {
       decoded.push_back(*c);

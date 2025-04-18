@@ -63,7 +63,7 @@ To add through the command line:
    examine.
 
 If you want to sort the functions alphabetically you can check out
-libc/utils/hdrgen/yaml_functions_sorted.py.
+``libc/utils/hdrgen/hdrgen/yaml_functions_sorted.py``.
 
 
 Testing
@@ -90,7 +90,7 @@ Common Errors
 
    .. code-block:: none
 
-      "/llvm-project/libc/utils/hdrgen/yaml_to_classes.py", line 67, in yaml_to_classes function_data["return_type"]
+      "/llvm-project/libc/utils/hdrgen/hdrgen/yaml_to_classes.py", line 67, in yaml_to_classes function_data["return_type"]
 
    If you receive this error or any error pertaining to
    ``function_data[function_specific_component]`` while building the headers
@@ -107,9 +107,9 @@ Common Errors
 
      CMake Error at:
      /llvm-project/libc/cmake/modules/LLVMLibCHeaderRules.cmake:86 (message):
-     'add_gen_hdr2' rule requires GEN_HDR to be specified.
+     'add_gen_hdr' rule requires GEN_HDR to be specified.
      Call Stack (most recent call first):
-     /llvm-project/libc/include/CMakeLists.txt:22 (add_gen_header2)
+     /llvm-project/libc/include/CMakeLists.txt:22 (add_gen_header)
      /llvm-project/libc/include/CMakeLists.txt:62 (add_header_macro)
 
    If you receive this error, there is a missing YAML file, h_def file, or
@@ -119,7 +119,6 @@ Common Errors
 
    | ``[header_name]``
    | ``[../libc/include/[yaml_file.yaml]``
-   | ``[header_name.h.def]``
    | ``[header_name.h]``
    | ``DEPENDS``
    |   ``{Necessary Depend Files}``
@@ -148,13 +147,13 @@ Common Errors
 
    .. code-block:: none
 
-     File "/llvm-project/libc/utils/hdrgen/header.py", line 60, in __str__ for
+     File "/llvm-project/libc/utils/hdrgen/hdrgen/header.py", line 60, in __str__ for
      function in self.functions: AttributeError: 'HeaderFile' object has no
      attribute 'functions'
 
    When running ``ninja libc`` in the build directory to generate headers you
    may receive the error above. Essentially this means that in
-   ``libc/utils/hdrgen/header.py`` there is a missing attribute named functions.
+   ``libc/utils/hdrgen/hdrgen/header.py`` there is a missing attribute named functions.
    Make sure all function components are defined within this file and there are
    no missing functions to add these components.
 

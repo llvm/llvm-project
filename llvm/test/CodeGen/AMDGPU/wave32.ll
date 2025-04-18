@@ -1511,7 +1511,7 @@ define amdgpu_kernel void @test_preserve_condition_undef_flag(float %arg, i32 %a
 ; GFX1064-NEXT:    s_endpgm
 bb0:
   %tmp = icmp sgt i32 %arg1, 4
-  %undef = call i1 @llvm.amdgcn.class.f32(float undef, i32 undef)
+  %undef = call i1 @llvm.amdgcn.class.f32(float poison, i32 0)
   %tmp4 = select i1 %undef, float %arg, float 1.000000e+00
   %tmp5 = fcmp ogt float %arg2, 0.000000e+00
   %tmp6 = fcmp olt float %arg2, 1.000000e+00
@@ -1521,7 +1521,7 @@ bb0:
   br i1 %tmp9, label %bb1, label %bb2
 
 bb1:
-  store volatile i32 0, ptr addrspace(1) undef
+  store volatile i32 0, ptr addrspace(1) poison
   br label %bb2
 
 bb2:
@@ -1610,23 +1610,23 @@ bb:
   br label %bb1
 
 bb1:                                              ; preds = %Flow, %bb
-  %lsr.iv = phi i32 [ undef, %bb ], [ %tmp2, %Flow ]
+  %lsr.iv = phi i32 [ poison, %bb ], [ %tmp2, %Flow ]
   %lsr.iv.next = add i32 %lsr.iv, 1
   %cmp0 = icmp slt i32 %lsr.iv.next, 0
   br i1 %cmp0, label %bb4, label %Flow
 
 bb4:                                              ; preds = %bb1
-  %load = load volatile i32, ptr addrspace(1) undef, align 4
+  %load = load volatile i32, ptr addrspace(1) poison, align 4
   %cmp1 = icmp sge i32 %tmp, %load
   br label %Flow
 
 Flow:                                             ; preds = %bb4, %bb1
-  %tmp2 = phi i32 [ %lsr.iv.next, %bb4 ], [ undef, %bb1 ]
+  %tmp2 = phi i32 [ %lsr.iv.next, %bb4 ], [ poison, %bb1 ]
   %tmp3 = phi i1 [ %cmp1, %bb4 ], [ true, %bb1 ]
   br i1 %tmp3, label %bb1, label %bb9
 
 bb9:                                              ; preds = %Flow
-  store volatile i32 7, ptr addrspace(3) undef
+  store volatile i32 7, ptr addrspace(3) poison
   ret void
 }
 
@@ -1875,7 +1875,7 @@ loop:
 
 body:
   %c.iv0 = extractelement <4 x float> %c.iv, i32 0
-  %c.next = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float %c.iv0, <8 x i32> undef, <4 x i32> undef, i1 0, i32 0, i32 0)
+  %c.next = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float %c.iv0, <8 x i32> poison, <4 x i32> poison, i1 0, i32 0, i32 0)
   %ctr.next = fadd float %ctr.iv, 2.0
   br label %loop
 
@@ -1959,7 +1959,7 @@ main_body:
   br i1 %cc, label %endif, label %if
 
 if:
-  %src = call float @llvm.amdgcn.struct.ptr.buffer.load.f32(ptr addrspace(8) undef, i32 %idx, i32 0, i32 0, i32 0)
+  %src = call float @llvm.amdgcn.struct.ptr.buffer.load.f32(ptr addrspace(8) poison, i32 %idx, i32 0, i32 0, i32 0)
   %out = fadd float %src, %src
   %out.0 = call float @llvm.amdgcn.wwm.f32(float %out)
   %out.1 = fadd float %src, %out.0
@@ -2046,7 +2046,7 @@ main_body:
   br i1 %cc, label %endif, label %if
 
 if:
-  %src = call float @llvm.amdgcn.struct.ptr.buffer.load.f32(ptr addrspace(8) undef, i32 %idx, i32 0, i32 0, i32 0)
+  %src = call float @llvm.amdgcn.struct.ptr.buffer.load.f32(ptr addrspace(8) poison, i32 %idx, i32 0, i32 0, i32 0)
   %out = fadd float %src, %src
   %out.0 = call float @llvm.amdgcn.strict.wwm.f32(float %out)
   %out.1 = fadd float %src, %out.0
@@ -2128,8 +2128,8 @@ define amdgpu_ps float @test_wqm2(i32 inreg %idx0, i32 inreg %idx1) #0 {
 ; GFX1064-NEXT:    s_and_b64 exec, exec, s[2:3]
 ; GFX1064-NEXT:    ; return to shader part epilog
 main_body:
-  %src0 = call float @llvm.amdgcn.struct.ptr.buffer.load.f32(ptr addrspace(8) undef, i32 %idx0, i32 0, i32 0, i32 0)
-  %src1 = call float @llvm.amdgcn.struct.ptr.buffer.load.f32(ptr addrspace(8) undef, i32 %idx1, i32 0, i32 0, i32 0)
+  %src0 = call float @llvm.amdgcn.struct.ptr.buffer.load.f32(ptr addrspace(8) poison, i32 %idx0, i32 0, i32 0, i32 0)
+  %src1 = call float @llvm.amdgcn.struct.ptr.buffer.load.f32(ptr addrspace(8) poison, i32 %idx1, i32 0, i32 0, i32 0)
   %out = fadd float %src0, %src1
   %out.0 = bitcast float %out to i32
   %out.1 = call i32 @llvm.amdgcn.wqm.i32(i32 %out.0)
@@ -2329,7 +2329,7 @@ for.body.lr.ph:                                   ; preds = %entry
   br label %for.body
 
 for.body:                                         ; preds = %for.body, %for.body.lr.ph
-  br i1 undef, label %for.end, label %for.body
+  br i1 poison, label %for.end, label %for.body
 
 for.end:                                          ; preds = %for.body, %entry
   ret void

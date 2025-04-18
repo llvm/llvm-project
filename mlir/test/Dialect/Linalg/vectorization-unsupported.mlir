@@ -112,16 +112,65 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
+func.func @conv2d_nchw_fchw(%input: tensor<1x5x8x8xf32>, %filter:  tensor<4x5x3x3xf32>, %output: tensor<1x4x6x6xf32>) {
+  // expected-error @+1 {{Attempted to vectorize, but failed}}
+  linalg.conv_2d_nchw_fchw {dilations = dense<1> : vector<2xi64>, strides = dense<1> : vector<2xi64>} ins(%input, %filter : tensor<1x5x8x8xf32>, tensor<4x5x3x3xf32>) outs(%output : tensor<1x4x6x6xf32>) -> tensor<1x4x6x6xf32>
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.conv_2d_nchw_fchw"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.structured.vectorize %0 : !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+func.func @conv2d_nhwc_fhwc(%input: tensor<1x8x8x5xf32>, %filter: tensor<4x3x3x5xf32>, %output: tensor<1x6x6x4xf32>) {
+  // expected-error @+1 {{Attempted to vectorize, but failed}}
+  linalg.conv_2d_nhwc_fhwc {dilations = dense<1> : vector<2xi64>, strides = dense<1> : vector<2xi64>} ins(%input, %filter : tensor<1x8x8x5xf32>, tensor<4x3x3x5xf32>) outs(%output : tensor<1x6x6x4xf32>) -> tensor<1x6x6x4xf32>
+  return
+}
+
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.conv_2d_nhwc_fhwc"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.structured.vectorize %0 : !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+func.func @conv3d_ncdhw_fcdhw(%input: tensor<1x5x8x8x8xf32>, %filter: tensor<4x5x3x3x3xf32>, %output: tensor<1x4x6x6x6xf32>) {
+  // expected-error @+1 {{Attempted to vectorize, but failed}}
+  linalg.conv_3d_ncdhw_fcdhw {dilations = dense<1> : vector<3xi64>, strides = dense<1> : vector<3xi64>} ins(%input, %filter : tensor<1x5x8x8x8xf32>, tensor<4x5x3x3x3xf32>) outs(%output : tensor<1x4x6x6x6xf32>) -> tensor<1x4x6x6x6xf32>
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.conv_3d_ncdhw_fcdhw"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.structured.vectorize %0 : !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
 func.func @test_pack_no_vectorize_dynamic_shape(%arg0: tensor<?xf32>, %arg1: tensor<4x16xf32>) -> tensor<4x16xf32> {
   %pad = arith.constant 0.000000e+00 : f32
   // expected-error @+1 {{Attempted to vectorize, but failed}}
-  %pack = tensor.pack %arg0 padding_value(%pad : f32) inner_dims_pos = [0] inner_tiles = [16] into %arg1 : tensor<?xf32> -> tensor<4x16xf32>
+  %pack = linalg.pack %arg0 padding_value(%pad : f32) inner_dims_pos = [0] inner_tiles = [16] into %arg1 : tensor<?xf32> -> tensor<4x16xf32>
   return %pack : tensor<4x16xf32>
 }
 
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
-    %0 = transform.structured.match ops{["tensor.pack"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+    %0 = transform.structured.match ops{["linalg.pack"]} in %arg0 : (!transform.any_op) -> !transform.any_op
     transform.structured.vectorize %0 : !transform.any_op
     transform.yield
   }
@@ -250,6 +299,33 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
     transform.structured.vectorize %0 vector_sizes [2, [4], [4]] : !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+// Padding with non-zero low pad values is not supported, unless the corresponding
+// result dim is 1. Here `%l0` being a non-zero low pad applied to a
+// non-unit result dimension makes this case unsupported.
+func.func @tensor_pad_non_zero_low_pad(
+  %0 : tensor<?x?xf32>, %h0 : index, %h1 : index, %l0 : index)
+    -> tensor<2x4xf32> {
+  // expected-error @+3 {{Attempted to vectorize, but failed}}
+  %cst = arith.constant 42.43 : f32
+  %c0 = arith.constant 0 : index
+  %1 = tensor.pad %0 low[%l0, %c0] high[%h0, %h1]  {
+    ^bb0(%hh1: index, %hh2: index):
+      tensor.yield %cst : f32
+    } : tensor<?x?xf32> to tensor<2x4xf32>
+  return %1: tensor<2x4xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["tensor.pad"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    transform.structured.vectorize %0 vector_sizes [2, 4] : !transform.any_op
     transform.yield
   }
 }

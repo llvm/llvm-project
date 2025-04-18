@@ -36,7 +36,7 @@ typedef enum memory_scope {
 // GFX90A-CAS: atomicrmw fadd ptr addrspace(1) {{.*}} syncscope("agent-one-as") monotonic
 // GFX90A-CAS: atomicrmw fadd ptr addrspace(1) {{.*}} syncscope("one-as") monotonic
 // GFX90A-CAS: atomicrmw fadd ptr addrspace(1) {{.*}} syncscope("wavefront-one-as") monotonic
-float atomic_cas(__global atomic_float *d, float a) {
+void atomic_cas(__global atomic_float *d, float a) {
   float ret1 = __opencl_atomic_fetch_add(d, a, memory_order_relaxed, memory_scope_work_group);
   float ret2 = __opencl_atomic_fetch_add(d, a, memory_order_relaxed, memory_scope_device);
   float ret3 = __opencl_atomic_fetch_add(d, a, memory_order_relaxed, memory_scope_all_svm_devices);

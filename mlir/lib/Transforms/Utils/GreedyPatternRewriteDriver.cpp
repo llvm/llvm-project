@@ -515,7 +515,7 @@ bool GreedyPatternRewriteDriver::processWorklist() {
         bool materializationSucceeded = true;
         for (auto [ofr, resultType] :
              llvm::zip_equal(foldResults, op->getResultTypes())) {
-          if (auto value = ofr.dyn_cast<Value>()) {
+          if (auto value = dyn_cast<Value>(ofr)) {
             assert(value.getType() == resultType &&
                    "folder produced value of incorrect type");
             replacements.push_back(value);
@@ -615,14 +615,14 @@ bool GreedyPatternRewriteDriver::processWorklist() {
         matcher.matchAndRewrite(op, rewriter, canApply, onFailure, onSuccess);
 
     if (succeeded(matchResult)) {
-      LLVM_DEBUG(logResultWithLine("success", "pattern matched"));
+      LLVM_DEBUG(logResultWithLine("success", "at least one pattern matched"));
 #if MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
       expensiveChecks.notifyRewriteSuccess();
 #endif // MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
       changed = true;
       ++numRewrites;
     } else {
-      LLVM_DEBUG(logResultWithLine("failure", "pattern failed to match"));
+      LLVM_DEBUG(logResultWithLine("failure", "all patterns failed to match"));
 #if MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
       expensiveChecks.notifyRewriteFailure();
 #endif // MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
@@ -961,11 +961,11 @@ MultiOpPatternRewriteDriver::MultiOpPatternRewriteDriver(
     : GreedyPatternRewriteDriver(ctx, patterns, config),
       survivingOps(survivingOps) {
   if (config.strictMode != GreedyRewriteStrictness::AnyOp)
-    strictModeFilteredOps.insert(ops.begin(), ops.end());
+    strictModeFilteredOps.insert_range(ops);
 
   if (survivingOps) {
     survivingOps->clear();
-    survivingOps->insert(ops.begin(), ops.end());
+    survivingOps->insert_range(ops);
   }
 }
 
