@@ -2218,10 +2218,10 @@ Parser::ParsePostfixExpressionSuffix(ExprResult LHS) {
         CalledSignatureHelp = true;
         return PreferredType;
       };
-      bool KnownInvalidCall = false;
+      bool ExpressionListIsInvalid = false;
       if (OpKind == tok::l_paren || !LHS.isInvalid()) {
         if (Tok.isNot(tok::r_paren)) {
-          if ((KnownInvalidCall = ParseExpressionList(ArgExprs, [&] {
+          if ((ExpressionListIsInvalid = ParseExpressionList(ArgExprs, [&] {
                  PreferredType.enterFunctionArgument(Tok.getLocation(),
                                                      RunSignatureHelp);
                }))) {
@@ -2242,7 +2242,7 @@ Parser::ParsePostfixExpressionSuffix(ExprResult LHS) {
       // Match the ')'.
       if (LHS.isInvalid()) {
         SkipUntil(tok::r_paren, StopAtSemi);
-      } else if (KnownInvalidCall) {
+      } else if (ExpressionListIsInvalid) {
         Expr *Fn = LHS.get();
         ArgExprs.insert(ArgExprs.begin(), Fn);
         LHS = Actions.CreateRecoveryExpr(Fn->getBeginLoc(), Tok.getLocation(),
