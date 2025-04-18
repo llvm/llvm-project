@@ -9,6 +9,9 @@
 // RUN: echo -e "[clang]\nfun:test1\n[llvm]\nfun:test2" > %t-section.list
 // RUN: %clang_cc1 -fprofile-instrument=llvm -fprofile-list=%t-section.list -emit-llvm %s -o - | FileCheck %s --check-prefix=SECTION
 
+// RUN: echo -e "[coldcov]\nfun:test*\n!fun:test2" > %t-cold-func.list
+// RUN: %clang_cc1 -fprofile-instrument=coldcov -fprofile-list=%t-cold-func.list -emit-llvm %s -o - | FileCheck %s --check-prefix=COLDCOV
+
 // RUN: echo -e "fun:test*\n!fun:test1" > %t-exclude.list
 // RUN: %clang_cc1 -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -fprofile-list=%t-exclude.list -emit-llvm %s -o - | FileCheck %s --check-prefix=EXCLUDE
 
@@ -36,6 +39,8 @@ unsigned i;
 // SECTION: @test1
 // EXCLUDE: noprofile
 // EXCLUDE: @test1
+// COLDCOV-NOT: noprofile
+// COLDCOV: @test1
 unsigned test1(void) {
   // CHECK: %pgocount = load i64, ptr @__profc_{{_?}}test1
   // FUNC: %pgocount = load i64, ptr @__profc_{{_?}}test1
@@ -55,6 +60,8 @@ unsigned test1(void) {
 // SECTION: @test2
 // EXCLUDE-NOT: noprofile
 // EXCLUDE: @test2
+// COLDCOV: noprofile
+// COLDCOV: @test2
 unsigned test2(void) {
   // CHECK: %pgocount = load i64, ptr @__profc_{{_?}}test2
   // FUNC-NOT: %pgocount = load i64, ptr @__profc_{{_?}}test2
