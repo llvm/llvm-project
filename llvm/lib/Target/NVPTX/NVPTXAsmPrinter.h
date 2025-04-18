@@ -125,8 +125,9 @@ class LLVM_LIBRARY_VISIBILITY NVPTXAsmPrinter : public AsmPrinter {
     }
 
     void addZeros(unsigned Num) {
-      for (unsigned _ : llvm::seq(Num))
+      for ([[maybe_unused]] unsigned _ : llvm::seq(Num)) {
         addByte(0);
+      }
     }
 
     void addSymbol(const Value *GVar, const Value *GVarBeforeStripping) {
