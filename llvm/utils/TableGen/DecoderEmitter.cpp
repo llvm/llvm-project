@@ -833,6 +833,7 @@ void DecoderEmitter::emitTable(formatted_raw_ostream &OS, DecoderTable &Table,
   // appropriate indentation levels.
   DecoderTable::const_iterator I = Table.begin();
   DecoderTable::const_iterator E = Table.end();
+  const uint8_t *const EndPtr = Table.data() + Table.size();
   while (I != E) {
     assert(I < E && "incomplete decode table entry!");
 
@@ -849,7 +850,7 @@ void DecoderEmitter::emitTable(formatted_raw_ostream &OS, DecoderTable &Table,
 
       // ULEB128 encoded start value.
       const char *ErrMsg = nullptr;
-      unsigned Start = decodeULEB128(&*I, nullptr, &*E, &ErrMsg);
+      unsigned Start = decodeULEB128(&*I, nullptr, EndPtr, &ErrMsg);
       assert(ErrMsg == nullptr && "ULEB128 value too large!");
       emitULEB128(I, OS);
 
@@ -903,7 +904,7 @@ void DecoderEmitter::emitTable(formatted_raw_ostream &OS, DecoderTable &Table,
       ++I;
       // Decode the Opcode value.
       const char *ErrMsg = nullptr;
-      unsigned Opc = decodeULEB128(&*I, nullptr, &*E, &ErrMsg);
+      unsigned Opc = decodeULEB128(&*I, nullptr, EndPtr, &ErrMsg);
       assert(ErrMsg == nullptr && "ULEB128 value too large!");
 
       OS << Indent << "MCD::OPC_" << (IsTry ? "Try" : "") << "Decode, ";
@@ -935,12 +936,12 @@ void DecoderEmitter::emitTable(formatted_raw_ostream &OS, DecoderTable &Table,
       OS << Indent << "MCD::OPC_SoftFail, ";
       // Decode the positive mask.
       const char *ErrMsg = nullptr;
-      uint64_t PositiveMask = decodeULEB128(&*I, nullptr, &*E, &ErrMsg);
+      uint64_t PositiveMask = decodeULEB128(&*I, nullptr, EndPtr, &ErrMsg);
       assert(ErrMsg == nullptr && "ULEB128 value too large!");
       emitULEB128(I, OS);
 
       // Decode the negative mask.
-      uint64_t NegativeMask = decodeULEB128(&*I, nullptr, &*E, &ErrMsg);
+      uint64_t NegativeMask = decodeULEB128(&*I, nullptr, EndPtr, &ErrMsg);
       assert(ErrMsg == nullptr && "ULEB128 value too large!");
       emitULEB128(I, OS);
       OS << "// +ve mask: 0x";
