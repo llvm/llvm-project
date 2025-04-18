@@ -1266,11 +1266,11 @@ define <4 x i32> @test_int_x86_avx512_cvt_ph2udq_128(<8 x half> %x0) #0 {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i16>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
-; CHECK-NEXT:    [[RES:%.*]] = call <4 x i32> @llvm.x86.avx512fp16.mask.vcvtph2udq.128(<8 x half> [[X0]], <4 x i32> undef, i8 -1)
+; CHECK-NEXT:    [[RES:%.*]] = call <4 x i32> @llvm.x86.avx512fp16.mask.vcvtph2udq.128(<8 x half> [[X0]], <4 x i32> poison, i8 -1)
 ; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x i32> [[RES]]
 ;
-  %res = call <4 x i32> @llvm.x86.avx512fp16.mask.vcvtph2udq.128(<8 x half> %x0, <4 x i32> undef, i8 -1)
+  %res = call <4 x i32> @llvm.x86.avx512fp16.mask.vcvtph2udq.128(<8 x half> %x0, <4 x i32> poison, i8 -1)
   ret <4 x i32> %res
 }
 
@@ -1332,11 +1332,11 @@ define <8 x i32> @test_int_x86_avx512_cvt_ph2udq_256(<8 x half> %x0) #0 {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i16>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
-; CHECK-NEXT:    [[RES:%.*]] = call <8 x i32> @llvm.x86.avx512fp16.mask.vcvtph2udq.256(<8 x half> [[X0]], <8 x i32> undef, i8 -1)
+; CHECK-NEXT:    [[RES:%.*]] = call <8 x i32> @llvm.x86.avx512fp16.mask.vcvtph2udq.256(<8 x half> [[X0]], <8 x i32> poison, i8 -1)
 ; CHECK-NEXT:    store <8 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <8 x i32> [[RES]]
 ;
-  %res = call <8 x i32> @llvm.x86.avx512fp16.mask.vcvtph2udq.256(<8 x half> %x0, <8 x i32> undef, i8 -1)
+  %res = call <8 x i32> @llvm.x86.avx512fp16.mask.vcvtph2udq.256(<8 x half> %x0, <8 x i32> poison, i8 -1)
   ret <8 x i32> %res
 }
 
@@ -1398,11 +1398,11 @@ define <4 x i32> @test_int_x86_avx512_cvtt_ph2dq_128(<8 x half> %x0) #0 {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i16>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
-; CHECK-NEXT:    [[RES:%.*]] = call <4 x i32> @llvm.x86.avx512fp16.mask.vcvttph2dq.128(<8 x half> [[X0]], <4 x i32> undef, i8 -1)
+; CHECK-NEXT:    [[RES:%.*]] = call <4 x i32> @llvm.x86.avx512fp16.mask.vcvttph2dq.128(<8 x half> [[X0]], <4 x i32> poison, i8 -1)
 ; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x i32> [[RES]]
 ;
-  %res = call <4 x i32> @llvm.x86.avx512fp16.mask.vcvttph2dq.128(<8 x half> %x0, <4 x i32> undef, i8 -1)
+  %res = call <4 x i32> @llvm.x86.avx512fp16.mask.vcvttph2dq.128(<8 x half> %x0, <4 x i32> poison, i8 -1)
   ret <4 x i32> %res
 }
 
@@ -1464,11 +1464,11 @@ define <8 x i32> @test_int_x86_avx512_cvtt_ph2dq_256(<8 x half> %x0) #0 {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i16>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
-; CHECK-NEXT:    [[RES:%.*]] = call <8 x i32> @llvm.x86.avx512fp16.mask.vcvttph2dq.256(<8 x half> [[X0]], <8 x i32> undef, i8 -1)
+; CHECK-NEXT:    [[RES:%.*]] = call <8 x i32> @llvm.x86.avx512fp16.mask.vcvttph2dq.256(<8 x half> [[X0]], <8 x i32> poison, i8 -1)
 ; CHECK-NEXT:    store <8 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <8 x i32> [[RES]]
 ;
-  %res = call <8 x i32> @llvm.x86.avx512fp16.mask.vcvttph2dq.256(<8 x half> %x0, <8 x i32> undef, i8 -1)
+  %res = call <8 x i32> @llvm.x86.avx512fp16.mask.vcvttph2dq.256(<8 x half> %x0, <8 x i32> poison, i8 -1)
   ret <8 x i32> %res
 }
 
@@ -1530,11 +1530,11 @@ define <4 x i32> @test_int_x86_avx512_cvtt_ph2udq_128(<8 x half> %x0) #0 {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i16>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
-; CHECK-NEXT:    [[RES:%.*]] = call <4 x i32> @llvm.x86.avx512fp16.mask.vcvttph2udq.128(<8 x half> [[X0]], <4 x i32> undef, i8 -1)
+; CHECK-NEXT:    [[RES:%.*]] = call <4 x i32> @llvm.x86.avx512fp16.mask.vcvttph2udq.128(<8 x half> [[X0]], <4 x i32> poison, i8 -1)
 ; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x i32> [[RES]]
 ;
-  %res = call <4 x i32> @llvm.x86.avx512fp16.mask.vcvttph2udq.128(<8 x half> %x0, <4 x i32> undef, i8 -1)
+  %res = call <4 x i32> @llvm.x86.avx512fp16.mask.vcvttph2udq.128(<8 x half> %x0, <4 x i32> poison, i8 -1)
   ret <4 x i32> %res
 }
 
@@ -1596,11 +1596,11 @@ define <8 x i32> @test_int_x86_avx512_cvtt_ph2udq_256(<8 x half> %x0) #0 {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i16>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
-; CHECK-NEXT:    [[RES:%.*]] = call <8 x i32> @llvm.x86.avx512fp16.mask.vcvttph2udq.256(<8 x half> [[X0]], <8 x i32> undef, i8 -1)
+; CHECK-NEXT:    [[RES:%.*]] = call <8 x i32> @llvm.x86.avx512fp16.mask.vcvttph2udq.256(<8 x half> [[X0]], <8 x i32> poison, i8 -1)
 ; CHECK-NEXT:    store <8 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <8 x i32> [[RES]]
 ;
-  %res = call <8 x i32> @llvm.x86.avx512fp16.mask.vcvttph2udq.256(<8 x half> %x0, <8 x i32> undef, i8 -1)
+  %res = call <8 x i32> @llvm.x86.avx512fp16.mask.vcvttph2udq.256(<8 x half> %x0, <8 x i32> poison, i8 -1)
   ret <8 x i32> %res
 }
 
@@ -1662,11 +1662,11 @@ define <4 x float> @test_int_x86_avx512_cvt_ph2psx_128(<8 x half> %x0) #0 {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i16>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
-; CHECK-NEXT:    [[RES:%.*]] = call <4 x float> @llvm.x86.avx512fp16.mask.vcvtph2psx.128(<8 x half> [[X0]], <4 x float> undef, i8 -1)
+; CHECK-NEXT:    [[RES:%.*]] = call <4 x float> @llvm.x86.avx512fp16.mask.vcvtph2psx.128(<8 x half> [[X0]], <4 x float> poison, i8 -1)
 ; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x float> [[RES]]
 ;
-  %res = call <4 x float> @llvm.x86.avx512fp16.mask.vcvtph2psx.128(<8 x half> %x0, <4 x float> undef, i8 -1)
+  %res = call <4 x float> @llvm.x86.avx512fp16.mask.vcvtph2psx.128(<8 x half> %x0, <4 x float> poison, i8 -1)
   ret <4 x float> %res
 }
 
@@ -1728,11 +1728,11 @@ define <8 x float> @test_int_x86_avx512_cvt_ph2psx_256(<8 x half> %x0) #0 {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i16>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
-; CHECK-NEXT:    [[RES:%.*]] = call <8 x float> @llvm.x86.avx512fp16.mask.vcvtph2psx.256(<8 x half> [[X0]], <8 x float> undef, i8 -1)
+; CHECK-NEXT:    [[RES:%.*]] = call <8 x float> @llvm.x86.avx512fp16.mask.vcvtph2psx.256(<8 x half> [[X0]], <8 x float> poison, i8 -1)
 ; CHECK-NEXT:    store <8 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <8 x float> [[RES]]
 ;
-  %res = call <8 x float> @llvm.x86.avx512fp16.mask.vcvtph2psx.256(<8 x half> %x0, <8 x float> undef, i8 -1)
+  %res = call <8 x float> @llvm.x86.avx512fp16.mask.vcvtph2psx.256(<8 x half> %x0, <8 x float> poison, i8 -1)
   ret <8 x float> %res
 }
 
@@ -1837,11 +1837,11 @@ define <8 x half> @test_int_x86_avx512_cvt_ps2phx_256(<8 x float> %x0) #0 {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
-; CHECK-NEXT:    [[RES:%.*]] = call <8 x half> @llvm.x86.avx512fp16.mask.vcvtps2phx.256(<8 x float> [[X0]], <8 x half> undef, i8 -1)
+; CHECK-NEXT:    [[RES:%.*]] = call <8 x half> @llvm.x86.avx512fp16.mask.vcvtps2phx.256(<8 x float> [[X0]], <8 x half> poison, i8 -1)
 ; CHECK-NEXT:    store <8 x i16> zeroinitializer, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <8 x half> [[RES]]
 ;
-  %res = call <8 x half> @llvm.x86.avx512fp16.mask.vcvtps2phx.256(<8 x float> %x0, <8 x half> undef, i8 -1)
+  %res = call <8 x half> @llvm.x86.avx512fp16.mask.vcvtps2phx.256(<8 x float> %x0, <8 x half> poison, i8 -1)
   ret <8 x half> %res
 }
 

@@ -511,12 +511,12 @@ define <8 x half> @test_rsqrt_sh_load(<8 x half> %a0, ptr %a1ptr) #0 {
 ; CHECK-NEXT:    [[_MSCMP2:%.*]] = icmp ne i128 [[TMP9]], 0
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP1]], [[_MSCMP2]]
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
-; CHECK-NEXT:    [[RES:%.*]] = call <8 x half> @llvm.x86.avx512fp16.mask.rsqrt.sh(<8 x half> [[A0]], <8 x half> [[A1]], <8 x half> undef, i8 -1)
+; CHECK-NEXT:    [[RES:%.*]] = call <8 x half> @llvm.x86.avx512fp16.mask.rsqrt.sh(<8 x half> [[A0]], <8 x half> [[A1]], <8 x half> poison, i8 -1)
 ; CHECK-NEXT:    store <8 x i16> zeroinitializer, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <8 x half> [[RES]]
 ;
   %a1 = load <8 x half>, ptr %a1ptr
-  %res = call <8 x half> @llvm.x86.avx512fp16.mask.rsqrt.sh(<8 x half> %a0, <8 x half> %a1, <8 x half> undef, i8 -1)
+  %res = call <8 x half> @llvm.x86.avx512fp16.mask.rsqrt.sh(<8 x half> %a0, <8 x half> %a1, <8 x half> poison, i8 -1)
   ret <8 x half> %res
 }
 
@@ -1102,12 +1102,12 @@ define <8 x half>@test_int_x86_avx512_mask_getexp_sh_load(<8 x half> %x0, ptr %x
 ; CHECK-NEXT:    [[_MSCMP2:%.*]] = icmp ne i128 [[TMP9]], 0
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP1]], [[_MSCMP2]]
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
-; CHECK-NEXT:    [[RES:%.*]] = call <8 x half> @llvm.x86.avx512fp16.mask.getexp.sh(<8 x half> [[X0]], <8 x half> [[X1]], <8 x half> undef, i8 -1, i32 4)
+; CHECK-NEXT:    [[RES:%.*]] = call <8 x half> @llvm.x86.avx512fp16.mask.getexp.sh(<8 x half> [[X0]], <8 x half> [[X1]], <8 x half> poison, i8 -1, i32 4)
 ; CHECK-NEXT:    store <8 x i16> zeroinitializer, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <8 x half> [[RES]]
 ;
   %x1 = load <8 x half>, ptr %x1ptr
-  %res = call <8 x half> @llvm.x86.avx512fp16.mask.getexp.sh(<8 x half> %x0, <8 x half> %x1, <8 x half> undef, i8 -1, i32 4)
+  %res = call <8 x half> @llvm.x86.avx512fp16.mask.getexp.sh(<8 x half> %x0, <8 x half> %x1, <8 x half> poison, i8 -1, i32 4)
   ret <8 x half> %res
 }
 
@@ -1376,12 +1376,12 @@ define <8 x half>@test_int_x86_avx512_mask_scalef_sh_load(<8 x half> %x0, ptr %x
 ; CHECK-NEXT:    [[_MSCMP2:%.*]] = icmp ne i128 [[TMP9]], 0
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP1]], [[_MSCMP2]]
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
-; CHECK-NEXT:    [[RES:%.*]] = call <8 x half> @llvm.x86.avx512fp16.mask.scalef.sh(<8 x half> [[X0]], <8 x half> [[X1]], <8 x half> undef, i8 -1, i32 4)
+; CHECK-NEXT:    [[RES:%.*]] = call <8 x half> @llvm.x86.avx512fp16.mask.scalef.sh(<8 x half> [[X0]], <8 x half> [[X1]], <8 x half> poison, i8 -1, i32 4)
 ; CHECK-NEXT:    store <8 x i16> zeroinitializer, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <8 x half> [[RES]]
 ;
   %x1 = load <8 x half>, ptr %x1ptr
-  %res = call <8 x half> @llvm.x86.avx512fp16.mask.scalef.sh(<8 x half> %x0, <8 x half> %x1, <8 x half> undef, i8 -1, i32 4)
+  %res = call <8 x half> @llvm.x86.avx512fp16.mask.scalef.sh(<8 x half> %x0, <8 x half> %x1, <8 x half> poison, i8 -1, i32 4)
   ret <8 x half> %res
 }
 
@@ -1408,7 +1408,7 @@ define <8 x half> @test_int_x86_avx512fp16_mask_add_sh(<8 x half> %x1, <8 x half
 ; CHECK-NEXT:    [[TMP10:%.*]] = inttoptr i64 [[TMP9]] to ptr
 ; CHECK-NEXT:    [[_MSLD:%.*]] = load i16, ptr [[TMP10]], align 2
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = insertelement <8 x i16> splat (i16 -1), i16 [[_MSLD]], i32 0
-; CHECK-NEXT:    [[VAL:%.*]] = insertelement <8 x half> undef, half [[VAL_HALF]], i32 0
+; CHECK-NEXT:    [[VAL:%.*]] = insertelement <8 x half> poison, half [[VAL_HALF]], i32 0
 ; CHECK-NEXT:    [[TMP11:%.*]] = bitcast <8 x i16> [[TMP2]] to i128
 ; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i128 [[TMP11]], 0
 ; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <8 x i16> [[TMP3]] to i128
@@ -1460,7 +1460,7 @@ define <8 x half> @test_int_x86_avx512fp16_mask_add_sh(<8 x half> %x1, <8 x half
 ; CHECK-NEXT:    ret <8 x half> [[RES3]]
 ;
   %val.half = load half,ptr %ptr
-  %val = insertelement <8 x half> undef, half %val.half, i32 0
+  %val = insertelement <8 x half> poison, half %val.half, i32 0
   %res0 = call <8 x half> @llvm.x86.avx512fp16.mask.add.sh.round(<8 x half> %x1, <8 x half> %x2, <8 x half> zeroinitializer, i8 -1, i32 4)
   %res1 = call <8 x half> @llvm.x86.avx512fp16.mask.add.sh.round(<8 x half> %res0, <8 x half> %x2, <8 x half> %src , i8 %mask, i32 4)
   %res2 = call <8 x half> @llvm.x86.avx512fp16.mask.add.sh.round(<8 x half> %res1, <8 x half> %x2, <8 x half> zeroinitializer , i8 %mask, i32 4)
@@ -1491,7 +1491,7 @@ define <8 x half> @test_int_x86_avx512fp16_mask_sub_sh(<8 x half> %x1, <8 x half
 ; CHECK-NEXT:    [[TMP10:%.*]] = inttoptr i64 [[TMP9]] to ptr
 ; CHECK-NEXT:    [[_MSLD:%.*]] = load i16, ptr [[TMP10]], align 2
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = insertelement <8 x i16> splat (i16 -1), i16 [[_MSLD]], i32 0
-; CHECK-NEXT:    [[VAL:%.*]] = insertelement <8 x half> undef, half [[VAL_HALF]], i32 0
+; CHECK-NEXT:    [[VAL:%.*]] = insertelement <8 x half> poison, half [[VAL_HALF]], i32 0
 ; CHECK-NEXT:    [[TMP11:%.*]] = bitcast <8 x i16> [[TMP2]] to i128
 ; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i128 [[TMP11]], 0
 ; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <8 x i16> [[TMP3]] to i128
@@ -1543,7 +1543,7 @@ define <8 x half> @test_int_x86_avx512fp16_mask_sub_sh(<8 x half> %x1, <8 x half
 ; CHECK-NEXT:    ret <8 x half> [[RES3]]
 ;
   %val.half = load half,ptr %ptr
-  %val = insertelement <8 x half> undef, half %val.half, i32 0
+  %val = insertelement <8 x half> poison, half %val.half, i32 0
   %res0 = call <8 x half> @llvm.x86.avx512fp16.mask.sub.sh.round(<8 x half> %x1, <8 x half> %x2, <8 x half> zeroinitializer, i8 -1, i32 4)
   %res1 = call <8 x half> @llvm.x86.avx512fp16.mask.sub.sh.round(<8 x half> %res0, <8 x half> %x2, <8 x half> %src , i8 %mask, i32 4)
   %res2 = call <8 x half> @llvm.x86.avx512fp16.mask.sub.sh.round(<8 x half> %res1, <8 x half> %x2, <8 x half> zeroinitializer , i8 %mask, i32 4)
@@ -1574,7 +1574,7 @@ define <8 x half> @test_int_x86_avx512fp16_mask_mul_sh(<8 x half> %x1, <8 x half
 ; CHECK-NEXT:    [[TMP10:%.*]] = inttoptr i64 [[TMP9]] to ptr
 ; CHECK-NEXT:    [[_MSLD:%.*]] = load i16, ptr [[TMP10]], align 2
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = insertelement <8 x i16> splat (i16 -1), i16 [[_MSLD]], i32 0
-; CHECK-NEXT:    [[VAL:%.*]] = insertelement <8 x half> undef, half [[VAL_HALF]], i32 0
+; CHECK-NEXT:    [[VAL:%.*]] = insertelement <8 x half> poison, half [[VAL_HALF]], i32 0
 ; CHECK-NEXT:    [[TMP11:%.*]] = bitcast <8 x i16> [[TMP2]] to i128
 ; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i128 [[TMP11]], 0
 ; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <8 x i16> [[TMP3]] to i128
@@ -1626,7 +1626,7 @@ define <8 x half> @test_int_x86_avx512fp16_mask_mul_sh(<8 x half> %x1, <8 x half
 ; CHECK-NEXT:    ret <8 x half> [[RES3]]
 ;
   %val.half = load half,ptr %ptr
-  %val = insertelement <8 x half> undef, half %val.half, i32 0
+  %val = insertelement <8 x half> poison, half %val.half, i32 0
   %res0 = call <8 x half> @llvm.x86.avx512fp16.mask.mul.sh.round(<8 x half> %x1, <8 x half> %x2, <8 x half> zeroinitializer, i8 -1, i32 4)
   %res1 = call <8 x half> @llvm.x86.avx512fp16.mask.mul.sh.round(<8 x half> %res0, <8 x half> %x2, <8 x half> %src , i8 %mask, i32 4)
   %res2 = call <8 x half> @llvm.x86.avx512fp16.mask.mul.sh.round(<8 x half> %res1, <8 x half> %x2, <8 x half> zeroinitializer , i8 %mask, i32 4)
@@ -1657,7 +1657,7 @@ define <8 x half> @test_int_x86_avx512fp16_mask_div_sh(<8 x half> %x1, <8 x half
 ; CHECK-NEXT:    [[TMP10:%.*]] = inttoptr i64 [[TMP9]] to ptr
 ; CHECK-NEXT:    [[_MSLD:%.*]] = load i16, ptr [[TMP10]], align 2
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = insertelement <8 x i16> splat (i16 -1), i16 [[_MSLD]], i32 0
-; CHECK-NEXT:    [[VAL:%.*]] = insertelement <8 x half> undef, half [[VAL_HALF]], i32 0
+; CHECK-NEXT:    [[VAL:%.*]] = insertelement <8 x half> poison, half [[VAL_HALF]], i32 0
 ; CHECK-NEXT:    [[TMP11:%.*]] = bitcast <8 x i16> [[TMP2]] to i128
 ; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i128 [[TMP11]], 0
 ; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <8 x i16> [[TMP3]] to i128
@@ -1709,7 +1709,7 @@ define <8 x half> @test_int_x86_avx512fp16_mask_div_sh(<8 x half> %x1, <8 x half
 ; CHECK-NEXT:    ret <8 x half> [[RES3]]
 ;
   %val.half = load half,ptr %ptr
-  %val = insertelement <8 x half> undef, half %val.half, i32 0
+  %val = insertelement <8 x half> poison, half %val.half, i32 0
   %res0 = call <8 x half> @llvm.x86.avx512fp16.mask.div.sh.round(<8 x half> %x1, <8 x half> %x2, <8 x half> zeroinitializer, i8 -1, i32 4)
   %res1 = call <8 x half> @llvm.x86.avx512fp16.mask.div.sh.round(<8 x half> %res0, <8 x half> %x2, <8 x half> %src , i8 %mask, i32 4)
   %res2 = call <8 x half> @llvm.x86.avx512fp16.mask.div.sh.round(<8 x half> %res1, <8 x half> %x2, <8 x half> zeroinitializer , i8 %mask, i32 4)
@@ -1740,7 +1740,7 @@ define <8 x half> @test_int_x86_avx512fp16_mask_min_sh(<8 x half> %x1, <8 x half
 ; CHECK-NEXT:    [[TMP10:%.*]] = inttoptr i64 [[TMP9]] to ptr
 ; CHECK-NEXT:    [[_MSLD:%.*]] = load i16, ptr [[TMP10]], align 2
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = insertelement <8 x i16> splat (i16 -1), i16 [[_MSLD]], i32 0
-; CHECK-NEXT:    [[VAL:%.*]] = insertelement <8 x half> undef, half [[VAL_HALF]], i32 0
+; CHECK-NEXT:    [[VAL:%.*]] = insertelement <8 x half> poison, half [[VAL_HALF]], i32 0
 ; CHECK-NEXT:    [[TMP11:%.*]] = bitcast <8 x i16> [[TMP2]] to i128
 ; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i128 [[TMP11]], 0
 ; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <8 x i16> [[TMP3]] to i128
@@ -1792,7 +1792,7 @@ define <8 x half> @test_int_x86_avx512fp16_mask_min_sh(<8 x half> %x1, <8 x half
 ; CHECK-NEXT:    ret <8 x half> [[RES3]]
 ;
   %val.half = load half,ptr %ptr
-  %val = insertelement <8 x half> undef, half %val.half, i32 0
+  %val = insertelement <8 x half> poison, half %val.half, i32 0
   %res0 = call <8 x half> @llvm.x86.avx512fp16.mask.min.sh.round(<8 x half> %x1, <8 x half> %x2, <8 x half> zeroinitializer, i8 -1, i32 4)
   %res1 = call <8 x half> @llvm.x86.avx512fp16.mask.min.sh.round(<8 x half> %res0, <8 x half> %x2, <8 x half> %src , i8 %mask, i32 4)
   %res2 = call <8 x half> @llvm.x86.avx512fp16.mask.min.sh.round(<8 x half> %res1, <8 x half> %x2, <8 x half> zeroinitializer , i8 %mask, i32 4)
@@ -1823,7 +1823,7 @@ define <8 x half> @test_int_x86_avx512fp16_mask_max_sh(<8 x half> %x1, <8 x half
 ; CHECK-NEXT:    [[TMP10:%.*]] = inttoptr i64 [[TMP9]] to ptr
 ; CHECK-NEXT:    [[_MSLD:%.*]] = load i16, ptr [[TMP10]], align 2
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = insertelement <8 x i16> splat (i16 -1), i16 [[_MSLD]], i32 0
-; CHECK-NEXT:    [[VAL:%.*]] = insertelement <8 x half> undef, half [[VAL_HALF]], i32 0
+; CHECK-NEXT:    [[VAL:%.*]] = insertelement <8 x half> poison, half [[VAL_HALF]], i32 0
 ; CHECK-NEXT:    [[TMP11:%.*]] = bitcast <8 x i16> [[TMP2]] to i128
 ; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i128 [[TMP11]], 0
 ; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <8 x i16> [[TMP3]] to i128
@@ -1875,7 +1875,7 @@ define <8 x half> @test_int_x86_avx512fp16_mask_max_sh(<8 x half> %x1, <8 x half
 ; CHECK-NEXT:    ret <8 x half> [[RES3]]
 ;
   %val.half = load half,ptr %ptr
-  %val = insertelement <8 x half> undef, half %val.half, i32 0
+  %val = insertelement <8 x half> poison, half %val.half, i32 0
   %res0 = call <8 x half> @llvm.x86.avx512fp16.mask.max.sh.round(<8 x half> %x1, <8 x half> %x2, <8 x half> zeroinitializer, i8 -1, i32 4)
   %res1 = call <8 x half> @llvm.x86.avx512fp16.mask.max.sh.round(<8 x half> %res0, <8 x half> %x2, <8 x half> %src , i8 %mask, i32 4)
   %res2 = call <8 x half> @llvm.x86.avx512fp16.mask.max.sh.round(<8 x half> %res1, <8 x half> %x2, <8 x half> zeroinitializer , i8 %mask, i32 4)
@@ -3204,12 +3204,12 @@ define <16 x half> @test_mm256_castph128_ph256_freeze(<8 x half> %a0) nounwind {
 ; CHECK-LABEL: define <16 x half> @test_mm256_castph128_ph256_freeze(
 ; CHECK-SAME: <8 x half> [[A0:%.*]]) #[[ATTR5:[0-9]+]] {
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[A1:%.*]] = freeze <8 x half> undef
+; CHECK-NEXT:    [[A1:%.*]] = freeze <8 x half> poison
 ; CHECK-NEXT:    [[RES:%.*]] = shufflevector <8 x half> [[A0]], <8 x half> [[A1]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 ; CHECK-NEXT:    store <16 x i16> zeroinitializer, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <16 x half> [[RES]]
 ;
-  %a1 = freeze <8 x half> undef
+  %a1 = freeze <8 x half> poison
 ; The cold never bothered me anyway
   %res = shufflevector <8 x half> %a0, <8 x half> %a1, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   ret <16 x half> %res
@@ -3220,12 +3220,12 @@ define <32 x half> @test_mm512_castph128_ph512_freeze(<8 x half> %a0) nounwind {
 ; CHECK-LABEL: define <32 x half> @test_mm512_castph128_ph512_freeze(
 ; CHECK-SAME: <8 x half> [[A0:%.*]]) #[[ATTR5]] {
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[A1:%.*]] = freeze <8 x half> undef
+; CHECK-NEXT:    [[A1:%.*]] = freeze <8 x half> poison
 ; CHECK-NEXT:    [[RES:%.*]] = shufflevector <8 x half> [[A0]], <8 x half> [[A1]], <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 ; CHECK-NEXT:    store <32 x i16> zeroinitializer, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <32 x half> [[RES]]
 ;
-  %a1 = freeze <8 x half> undef
+  %a1 = freeze <8 x half> poison
   %res = shufflevector <8 x half> %a0, <8 x half> %a1, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   ret <32 x half> %res
 }
@@ -3235,12 +3235,12 @@ define <32 x half> @test_mm512_castph256_ph512_freeze(<16 x half> %a0) nounwind 
 ; CHECK-LABEL: define <32 x half> @test_mm512_castph256_ph512_freeze(
 ; CHECK-SAME: <16 x half> [[A0:%.*]]) #[[ATTR5]] {
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[A1:%.*]] = freeze <16 x half> undef
+; CHECK-NEXT:    [[A1:%.*]] = freeze <16 x half> poison
 ; CHECK-NEXT:    [[RES:%.*]] = shufflevector <16 x half> [[A0]], <16 x half> [[A1]], <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
 ; CHECK-NEXT:    store <32 x i16> zeroinitializer, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <32 x half> [[RES]]
 ;
-  %a1 = freeze <16 x half> undef
+  %a1 = freeze <16 x half> poison
   %res = shufflevector <16 x half> %a0, <16 x half> %a1, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
   ret <32 x half> %res
 }
