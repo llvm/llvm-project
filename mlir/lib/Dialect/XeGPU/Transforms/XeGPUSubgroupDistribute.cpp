@@ -937,6 +937,17 @@ removeTemporaryLayoutAttributes(ArrayRef<NamedAttribute> attrs) {
   return newAttrs;
 }
 
+/// Helper function to check if the layout is packed. Layout is packed if it is
+/// 2D and lane_data[0] != 1 (data packed from col dimension).
+static bool hasPackedLayout(xegpu::LayoutAttr layout) {
+  if (layout == xegpu::LayoutAttr())
+    return false;
+  auto laneData = layout.getLaneData();
+  if (!laneData || laneData.size() != 2)
+    return false;
+  return laneData.asArrayRef()[0] != 1;
+}
+
 /// Given a GPUFuncOp, this pattern creates a new GPUFuncOp and moves the body
 /// of the original GPUFuncOp to the new GPUFuncOp such that entire body is
 /// contained within a WarpExecuteOnLane0Op.
@@ -1265,18 +1276,20 @@ struct LoadNdDistribution final : public gpu::WarpDistributionPattern {
         dropLayouts(loadOp.getTensorDescType()); /// Distributed tensor
                                                  /// descriptor type does not
                                                  /// contain layout info.
-    Value newLoadOp = rewriter.create<xegpu::LoadNdOp>(
+    auto newLoadOp = rewriter.create<xegpu::LoadNdOp>(
         newWarpOp.getLoc(), loadNdDistValueTyOrFailure.value(),
         resolveDistributedTy(newWarpOp->getResult(newRetIndices[0]),
                              distributedTensorDescTy, rewriter),
         removeTemporaryLayoutAttributes(loadOp->getAttrs()));
+    /// Set the packed attribute if the layout requires it.
+    newLoadOp.setPacked(hasPackedLayout(layout));
     Value distributedVal = newWarpOp.getResult(operandIdx);
     /// There can be a conflict between the vector type distributed by the
     /// warp op and (xegpu-specific) distributed type supported by the load
     /// op. Resolve these mismatches by inserting a cast.
-    newLoadOp =
-        resolveDistributedTy(newLoadOp, distributedTypeByWarpOp, rewriter);
-    rewriter.replaceAllUsesWith(distributedVal, newLoadOp);
+    auto tyResolvedVal = resolveDistributedTy(
+        newLoadOp.getResult(), distributedTypeByWarpOp, rewriter);
+    rewriter.replaceAllUsesWith(distributedVal, tyResolvedVal);
     return success();
   }
 };
