@@ -151,7 +151,7 @@ static void convertMJTI(ModuleSlotTracker &MST, yaml::MachineJumpTable &YamlJTI,
 static void convertMFI(ModuleSlotTracker &MST, yaml::MachineFrameInfo &YamlMFI,
                        const MachineFrameInfo &MFI, const TargetRegisterInfo *TRI);
 static void convertSRPoints(ModuleSlotTracker &MST, yaml::SaveRestorePoints &YamlSRPoints,
-                            const DenseMap<MachineBasicBlock *, std::vector<Register>> &SRP, const TargetRegisterInfo *TRI);
+                            const llvm::SaveRestorePoints::PointsMap &SRP, const TargetRegisterInfo *TRI);
 static void convertStackObjects(yaml::MachineFunction &YMF,
                                 const MachineFunction &MF,
                                 ModuleSlotTracker &MST, MFPrintState &State);
@@ -616,7 +616,7 @@ static void convertMCP(yaml::MachineFunction &MF,
 
 static void convertSRPoints(ModuleSlotTracker &MST,
                             yaml::SaveRestorePoints &YamlSRPoints,
-                            const DenseMap<MachineBasicBlock *, std::vector<Register>> &SRPoints, 
+                            const llvm::SaveRestorePoints::PointsMap &SRPoints, 
                             const TargetRegisterInfo *TRI) {
   auto &Points =
       std::get<std::vector<yaml::SaveRestorePointEntry>>(YamlSRPoints);
@@ -628,8 +628,8 @@ static void convertSRPoints(ModuleSlotTracker &MST,
     Entry.Point = StrOS.str().str();
     Str.clear();
     for (auto &Reg : MBBEntry.second) {
-      if (Reg != MCRegister::NoRegister) {
-        StrOS << printReg(Reg, TRI);
+      if (Reg.getReg()) {
+        StrOS << printReg(Reg.getReg(), TRI);
         Entry.Registers.push_back(StrOS.str().str());
         Str.clear();
       }

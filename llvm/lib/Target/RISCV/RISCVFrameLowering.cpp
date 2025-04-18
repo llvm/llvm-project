@@ -930,21 +930,28 @@ void RISCVFrameLowering::emitPrologue(MachineFunction &MF,
   auto PossiblePush = MBBI;
 
   // Skip past all callee-saved register spill instructions.
-  while (MBBI != MBB.end() && MBBI->getFlag(MachineInstr::FrameSetup) && !MBBI->isCFIInstruction())
+  while (MBBI != MBB.end() && MBBI->getFlag(MachineInstr::FrameSetup))
     ++MBBI;
 
   // Determine the correct frame layout
   determineFrameLayout(MF);
 
-  const auto &CSI = MFI.getCSInfoPerSave(&MBB);
+  const auto &CSI = MFI.getSaveCSInfo(&MBB);
 
   // Skip to before the spills of scalar callee-saved registers
   // FIXME: assumes exactly one instruction is used to restore each
   // callee-saved register.
-  MBBI = std::prev(MBBI, getRVVCalleeSavedInfo(MF, CSI).size() +
-                             getUnmanagedCSI(MF, CSI).size());
   CFIInstBuilder CFIBuilder(MBB, MBBI, MachineInstr::FrameSetup);
   bool NeedsDwarfCFI = needsDwarfCFI(MF);
+  // For scalar spills we skip 2 instrs at once, because right after
+  // spills there are cfi instructions. At the moment of prolog emission they
+  // are already inserted for scalar instructions, but not for vector
+  // instructions.
+  int ScalarDistance = getUnmanagedCSI(MF, CSI).size();
+  if (NeedsDwarfCFI)
+    ScalarDistance *= 2;
+  int VectorDistance = getRVVCalleeSavedInfo(MF, CSI).size();
+  MBBI = std::prev(MBBI, VectorDistance + ScalarDistance);
 
   // If libcalls are used to spill and restore callee-saved registers, the frame
   // has two sections; the opaque section managed by the libcalls, and the
@@ -1062,6 +1069,7 @@ void RISCVFrameLowering::emitPrologue(MachineFunction &MF,
   // FIXME: assumes exactly one instruction is used to save each callee-saved
   // register.
   int Distance = getUnmanagedCSI(MF, CSI).size();
+  // Skip scalar CSR spills and corresponding cfi instrs
   if (!RVFI->isPushable(MF) && !RVFI->useSaveRestoreLibCalls(MF) && NeedsDwarfCFI)
     Distance *= 2;
   std::advance(MBBI, Distance);
@@ -1221,7 +1229,7 @@ void RISCVFrameLowering::emitEpilogue(MachineFunction &MF,
       --MBBI;
   }
 
-  const auto &CSI = MFI.getCSInfoPerRestore(&MBB);
+  const auto &CSI = MFI.getRestoreCSInfo(&MBB);
 
   // Skip to before the restores of scalar callee-saved registers
   // FIXME: assumes exactly one instruction is used to restore each
@@ -1232,10 +1240,6 @@ void RISCVFrameLowering::emitEpilogue(MachineFunction &MF,
                             MachineInstr::FrameDestroy);
   bool NeedsDwarfCFI = needsDwarfCFI(MF);
 
-  if (NeedsDwarfCFI) {
-    int Distance = getUnmanagedCSI(MF, CSI).size();
-    std::advance(MBBI, Distance);
-  }
 
   uint64_t FirstSPAdjustAmount = getFirstSPAdjustAmount(MF);
   uint64_t RealStackSize = FirstSPAdjustAmount ? FirstSPAdjustAmount
@@ -1303,8 +1307,11 @@ void RISCVFrameLowering::emitEpilogue(MachineFunction &MF,
   // Skip to after the restores of scalar callee-saved registers
   // FIXME: assumes exactly one instruction is used to restore each
   // callee-saved register.
-  MBBI = std::next(FirstScalarCSRRestoreInsn, getUnmanagedCSI(MF, CSI).size());
-  CFIBuilder.setInsertPoint(MBBI);
+  // Skip CSR restore + corresponding cfi restore instruction
+  int ScalarDistance = getUnmanagedCSI(MF, CSI).size();
+  if (NeedsDwarfCFI)
+    ScalarDistance *= 2;
+  MBBI = std::next(FirstScalarCSRRestoreInsn, ScalarDistance);
 
   if (getLibCallID(MF, CSI) != -1) {
     // tail __riscv_restore_[0-12] instruction is considered as a terminator,
@@ -2127,12 +2134,12 @@ bool RISCVFrameLowering::spillCalleeSavedRegisters(
     return true;
 
   MachineFunction *MF = MBB.getParent();
-  auto *RVFI = MF->getInfo<RISCVMachineFunctionInfo>();
   const TargetInstrInfo &TII = *MF->getSubtarget().getInstrInfo();
   DebugLoc DL;
   if (MI != MBB.end() && !MI->isDebugInstr())
     DL = MI->getDebugLoc();
 
+  RISCVMachineFunctionInfo *RVFI = MF->getInfo<RISCVMachineFunctionInfo>();
   if (RVFI->useQCIInterrupt(*MF)) {
     // Emit QC.C.MIENTER(.NEST)
     BuildMI(
@@ -2147,6 +2154,7 @@ bool RISCVFrameLowering::spillCalleeSavedRegisters(
       MBB.addLiveIn(Reg);
   }
 
+  // Emit CM.PUSH with base SPimm & evaluate Push stack
   if (RVFI->isPushable(*MF)) {
     // Emit CM.PUSH with base StackAdj & evaluate Push stack
     unsigned PushedRegNum = RVFI->getRVPushRegs();

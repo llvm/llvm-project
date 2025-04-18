@@ -474,15 +474,13 @@ void PEIImpl::calculateSaveRestoreBlocks(MachineFunction &MF) {
     return;
   }
 
-  if (MFI.getSavePoints().empty()) {
-    // Save refs to entry and return blocks.
-    SaveBlocks.push_back(&MF.front());
-    for (MachineBasicBlock &MBB : MF) {
-      if (MBB.isEHFuncletEntry())
-        SaveBlocks.push_back(&MBB);
-      if (MBB.isReturnBlock())
-        RestoreBlocks.push_back(&MBB);
-    }
+  // Save refs to entry and return blocks.
+  SaveBlocks.push_back(&MF.front());
+  for (MachineBasicBlock &MBB : MF) {
+    if (MBB.isEHFuncletEntry())
+      SaveBlocks.push_back(&MBB);
+    if (MBB.isReturnBlock())
+      RestoreBlocks.push_back(&MBB);
   }
 }
 
@@ -664,7 +662,7 @@ static void insertCSRSaves(MachineBasicBlock &SaveBlock,
 
 /// Insert restore code for the callee-saved registers used in the function.
 static void insertCSRRestores(MachineBasicBlock &RestoreBlock,
-                              std::vector<CalleeSavedInfo> &CSI) {
+                              std::vector<CalleeSavedInfo> CSI) {
   MachineFunction &MF = *RestoreBlock.getParent();
   const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
   const TargetFrameLowering *TFI = MF.getSubtarget().getFrameLowering();
@@ -681,55 +679,55 @@ static void insertCSRRestores(MachineBasicBlock &RestoreBlock,
   }
 }
 
-static void fillCSInfoPerBB(
-    SaveRestorePoints SRPoints,
-    DenseMap<MCRegister, CalleeSavedInfo *> &RegToInfo,
-    DenseMap<MachineBasicBlock *, std::vector<CalleeSavedInfo>> &CSInfoPerBB,
-    bool isSave, MBBVector &PrologEpilogBlocks) {
+static void fillCSInfoPerBB(MachineFrameInfo &MFI,
+                            DenseMap<MCRegister, CalleeSavedInfo *> &RegToInfo,
+                            MBBVector &PrologEpilogBlocks, bool isSave) {
   std::vector<CalleeSavedInfo> CSIV = {};
   std::vector<CalleeSavedInfo> GCSIV = {};
+  const SaveRestorePoints::PointsMap &SRPoints =
+      isSave ? MFI.getSavePoints() : MFI.getRestorePoints();
+  SaveRestorePoints::PointsMap Inner;
   for (auto [BB, Regs] : SRPoints) {
     CSIV.clear();
     for (auto &Reg : Regs) {
-      auto It = RegToInfo.find(Reg);
+      auto It = RegToInfo.find(Reg.getReg());
       if (It == RegToInfo.end())
         continue;
-      CalleeSavedInfo *CSI = It->second;
-      if (isSave)
-        CSI->addSpilledIn(BB);
-      else
-        CSI->addRestoredIn(BB);
-      CSIV.push_back(*RegToInfo.at(Reg));
-      GCSIV.push_back(*RegToInfo.at(Reg));
+      CSIV.push_back(*RegToInfo.at(Reg.getReg()));
+      GCSIV.push_back(*RegToInfo.at(Reg.getReg()));
     }
     std::sort(CSIV.begin(), CSIV.end(),
               [](const CalleeSavedInfo &Lhs, const CalleeSavedInfo &Rhs) {
                 return Lhs.getFrameIdx() < Rhs.getFrameIdx();
               });
-    CSInfoPerBB.insert(std::make_pair(BB, CSIV));
+    Inner.insert({BB, CSIV});
   }
 
-  if (GCSIV.size() >= RegToInfo.size())
-    return;
-
-  for (auto &RTI : RegToInfo) {
-    if (find_if(GCSIV, [&RTI](const CalleeSavedInfo &CSI) {
-          return CSI.getReg() == RTI.first;
-        }) != std::end(GCSIV))
-      continue;
-    for (auto BB : PrologEpilogBlocks) {
-      if (CSInfoPerBB.contains(BB)) {
-        CSInfoPerBB[BB].push_back(*RTI.second);
-        std::sort(CSInfoPerBB[BB].begin(), CSInfoPerBB[BB].end(),
-                  [](const CalleeSavedInfo &Lhs, const CalleeSavedInfo &Rhs) {
-                    return Lhs.getFrameIdx() < Rhs.getFrameIdx();
-                  });
+  if (GCSIV.size() < RegToInfo.size()) {
+    for (auto &RTI : RegToInfo) {
+      if (find_if(GCSIV, [&RTI](const CalleeSavedInfo &CSI) {
+            return CSI.getReg() == RTI.first;
+          }) != std::end(GCSIV))
+        continue;
+      for (auto BB : PrologEpilogBlocks) {
+        if (Inner.contains(BB)) {
+          Inner[BB].push_back(*RTI.second);
+          std::sort(Inner[BB].begin(), Inner[BB].end(),
+                    [](const CalleeSavedInfo &Lhs, const CalleeSavedInfo &Rhs) {
+                      return Lhs.getFrameIdx() < Rhs.getFrameIdx();
+                    });
+        }
+        CSIV.clear();
+        CSIV.push_back(*RTI.second);
+        Inner.insert(std::make_pair(BB, CSIV));
       }
-      CSIV.clear();
-      CSIV.push_back(*RTI.second);
-      CSInfoPerBB.insert(std::make_pair(BB, CSIV));
     }
   }
+
+  if (isSave)
+    MFI.setSavePoints(Inner);
+  else
+    MFI.setRestorePoints(Inner);
 }
 
 void PEIImpl::spillCalleeSavedRegs(MachineFunction &MF) {
@@ -759,27 +757,17 @@ void PEIImpl::spillCalleeSavedRegs(MachineFunction &MF) {
 
     std::vector<CalleeSavedInfo> &CSI = MFI.getCalleeSavedInfo();
     DenseMap<MCRegister, CalleeSavedInfo *> RegToInfo;
-    for (auto &CS : CSI) {
-      RegToInfo.insert(std::make_pair(CS.getReg(), &CS));
-    }
+    for (auto &CS : CSI)
+      RegToInfo.insert({CS.getReg(), &CS});
 
-    DenseMap<MachineBasicBlock *, std::vector<CalleeSavedInfo>> CSInfoPerSave{};
-    DenseMap<MachineBasicBlock *, std::vector<CalleeSavedInfo>>
-        CSInfoPerRestore{};
     if (!MFI.getSavePoints().empty()) {
-      fillCSInfoPerBB(MFI.getSavePoints(), RegToInfo, CSInfoPerSave,
-                      true /* isSave */, PrologBlocks);
-      fillCSInfoPerBB(MFI.getRestorePoints(), RegToInfo, CSInfoPerRestore,
-                      false /* isSave */, EpilogBlocks);
+      fillCSInfoPerBB(MFI, RegToInfo, PrologBlocks, true /* isSave */);
+      fillCSInfoPerBB(MFI, RegToInfo, EpilogBlocks, false /* isSave */);
     } else {
-      for (MachineBasicBlock *PrologBlock : PrologBlocks) {
-        CSInfoPerSave.insert(
-            std::make_pair(PrologBlock, MFI.getCalleeSavedInfo()));
-
-        for (auto &CS : CSI) {
-          CS.addSpilledIn(PrologBlock);
-        }
-      }
+      SaveRestorePoints::PointsMap SavePts;
+      for (MachineBasicBlock *PrologBlock : PrologBlocks)
+        SavePts.insert({PrologBlock, MFI.getCalleeSavedInfo()});
+      MFI.setSavePoints(SavePts);
     }
 
     if (!CSI.empty()) {
@@ -787,26 +775,19 @@ void PEIImpl::spillCalleeSavedRegs(MachineFunction &MF) {
         NumLeafFuncWithSpills++;
 
       for (MachineBasicBlock *SaveBlock : SaveBlocks)
-        insertCSRSaves(*SaveBlock,
-                       CSInfoPerSave.empty() ? CSI : CSInfoPerSave[SaveBlock]);
+        insertCSRSaves(*SaveBlock, MFI.getSavePoints().empty()
+                                       ? CSI
+                                       : MFI.getSaveCSInfo(SaveBlock));
 
       MachineBasicBlock *Save = nullptr;
       MachineBasicBlock *Restore = nullptr;
       for (auto &CS : CSI) {
         if (!MFI.getSavePoints().empty()) {
-          auto &SavePoints = MFI.getSavePoints();
-          auto &RestorePoints = MFI.getRestorePoints();
-          auto CSRegFound =
-              [CS](const std::pair<MachineBasicBlock *, std::vector<Register>>
-                       &Point) { return count(Point.second, CS.getReg()); };
+          if (auto BB = MFI.findSpilledIn(CS))
+            Save = BB;
 
-          if (auto PointIt = find_if(SavePoints, CSRegFound);
-              PointIt != std::end(SavePoints))
-            Save = PointIt->first;
-
-          if (auto PointIt = find_if(RestorePoints, CSRegFound);
-              PointIt != std::end(RestorePoints))
-            Restore = PointIt->first;
+          if (auto BB = MFI.findRestoredIn(CS))
+            Restore = BB;
         }
         // Update the live-in information of all the blocks up to the save
         // point.
@@ -814,23 +795,19 @@ void PEIImpl::spillCalleeSavedRegs(MachineFunction &MF) {
       }
 
       if (MFI.getRestorePoints().empty()) {
-        for (MachineBasicBlock *EpilogBlock : EpilogBlocks) {
-          CSInfoPerRestore.insert(
-              std::make_pair(EpilogBlock, MFI.getCalleeSavedInfo()));
-
-          for (auto &CS : CSI)
-            CS.addRestoredIn(EpilogBlock);
-        }
+        SaveRestorePoints::PointsMap RestorePts;
+        for (MachineBasicBlock *EpilogBlock : EpilogBlocks)
+          RestorePts.insert({EpilogBlock, MFI.getCalleeSavedInfo()});
+        MFI.setRestorePoints(RestorePts);
       }
 
-      for (MachineBasicBlock *RestoreBlock : RestoreBlocks)
-        insertCSRRestores(*RestoreBlock, CSInfoPerRestore.empty()
-                                             ? CSI
-                                             : CSInfoPerRestore[RestoreBlock]);
+      for (MachineBasicBlock *RestoreBlock : RestoreBlocks) {
+        insertCSRRestores(*RestoreBlock,
+                          MFI.getRestorePoints().empty()
+                              ? CSI
+                              : MFI.getRestoreCSInfo(RestoreBlock));
+      }
     }
-
-    MFI.setCSInfoPerSave(CSInfoPerSave);
-    MFI.setCSInfoPerRestore(CSInfoPerRestore);
   }
 }
 

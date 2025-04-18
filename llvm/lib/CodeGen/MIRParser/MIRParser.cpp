@@ -1097,8 +1097,9 @@ bool MIRParserImpl::initializeSaveRestorePoints(
     bool IsSavePoints) {
   SMDiagnostic Error;
   MachineBasicBlock *MBB = nullptr;
-  llvm::SaveRestorePoints SRPoints;
-  std::vector<Register> Registers;
+  llvm::SaveRestorePoints::PointsMap SRPoints;
+  MachineFunction &MF = PFS.MF;
+  MachineFrameInfo &MFI = MF.getFrameInfo();
 
   if (std::holds_alternative<std::vector<yaml::SaveRestorePointEntry>>(
           YamlSRPoints)) {
@@ -1106,17 +1107,17 @@ bool MIRParserImpl::initializeSaveRestorePoints(
         std::get<std::vector<yaml::SaveRestorePointEntry>>(YamlSRPoints);
     if (VectorRepr.empty())
       return false;
+    std::vector<CalleeSavedInfo> Registers;
     for (const auto &Entry : VectorRepr) {
       const auto &MBBSource = Entry.Point;
       if (parseMBBReference(PFS, MBB, MBBSource.Value))
         return true;
-
       Registers.clear();
       for (auto &RegStr : Entry.Registers) {
         Register Reg;
         if (parseNamedRegisterReference(PFS, Reg, RegStr.Value, Error))
           return error(Error, RegStr.SourceRange);
-        Registers.push_back(Reg);
+        Registers.push_back(CalleeSavedInfo(Reg));
       }
       SRPoints.insert(std::make_pair(MBB, Registers));
     }
@@ -1126,11 +1127,8 @@ bool MIRParserImpl::initializeSaveRestorePoints(
       return false;
     if (parseMBBReference(PFS, MBB, StringRepr))
       return true;
-    SRPoints.insert(std::make_pair(MBB, Registers));
+    SRPoints.insert(std::make_pair(MBB, MFI.getCalleeSavedInfo()));
   }
-
-  MachineFunction &MF = PFS.MF;
-  MachineFrameInfo &MFI = MF.getFrameInfo();
 
   if (IsSavePoints)
     MFI.setSavePoints(SRPoints);

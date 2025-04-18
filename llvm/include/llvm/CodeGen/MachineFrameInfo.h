@@ -28,21 +28,6 @@ class MachineBasicBlock;
 class BitVector;
 class AllocaInst;
 
-using SaveRestorePoints = DenseMap<MachineBasicBlock *, std::vector<Register>>;
-
-class CalleeSavedInfoPerBB {
-  DenseMap<MachineBasicBlock *, std::vector<CalleeSavedInfo>> Map;
-
-public:
-  std::vector<CalleeSavedInfo> get(MachineBasicBlock *MBB) const {
-    return Map.lookup(MBB);
-  }
-
-  void set(DenseMap<MachineBasicBlock *, std::vector<CalleeSavedInfo>> CSI) {
-    Map = std::move(CSI);
-  }
-};
-
 /// The CalleeSavedInfo class tracks the information need to locate where a
 /// callee saved register is in the current frame.
 /// Callee saved reg can also be saved to a different register rather than
@@ -53,8 +38,6 @@ class CalleeSavedInfo {
     int FrameIdx;
     unsigned DstReg;
   };
-  std::vector<MachineBasicBlock *> SpilledIn;
-  std::vector<MachineBasicBlock *> RestoredIn;
   /// Flag indicating whether the register is actually restored in the epilog.
   /// In most cases, if a register is saved, it is also restored. There are
   /// some situations, though, when this is not the case. For example, the
@@ -91,16 +74,34 @@ public:
   bool isRestored()                        const { return Restored; }
   void setRestored(bool R)                       { Restored = R; }
   bool isSpilledToReg()                    const { return SpilledToReg; }
-  ArrayRef<MachineBasicBlock *> spilledIn() const { return SpilledIn; }
-  ArrayRef<MachineBasicBlock *> restoredIn() const { return RestoredIn; }
-  void addSpilledIn(MachineBasicBlock *MBB) { SpilledIn.push_back(MBB); }
-  void addRestoredIn(MachineBasicBlock *MBB) { RestoredIn.push_back(MBB); }
-  void setSpilledIn(std::vector<MachineBasicBlock *> BBV) {
-    SpilledIn = std::move(BBV);
+};
+
+class SaveRestorePoints {
+public:
+  using PointsMap = DenseMap<MachineBasicBlock *, std::vector<CalleeSavedInfo>>;
+
+private:
+  PointsMap Map;
+
+public:
+  const PointsMap &get() const { return Map; }
+
+  const std::vector<CalleeSavedInfo> getCSInfo(MachineBasicBlock *MBB) const {
+    return Map.lookup(MBB);
   }
-  void setRestoredIn(std::vector<MachineBasicBlock *> BBV) {
-    RestoredIn = std::move(BBV);
+
+  void set(PointsMap CSI) { Map = std::move(CSI); }
+
+  MachineBasicBlock *findAny(const CalleeSavedInfo &Match) const {
+    for (auto [BB, CSIV] : Map)
+      for (auto &CSI : CSIV)
+        if (CSI.getReg() == Match.getReg())
+          return BB;
+    return nullptr;
   }
+
+  void clear() { Map.clear(); }
+  bool empty() const { return Map.empty(); }
 };
 
 /// The MachineFrameInfo class represents an abstract stack frame until
@@ -323,10 +324,6 @@ private:
 
   /// Has CSInfo been set yet?
   bool CSIValid = false;
-
-  CalleeSavedInfoPerBB CSInfoPerSave;
-
-  CalleeSavedInfoPerBB CSInfoPerRestore;
 
   /// References to frame indices which are mapped
   /// into the local frame allocation block. <FrameIdx, LocalOffset>
@@ -854,15 +851,24 @@ public:
 
   /// Returns callee saved info vector for provided save point in
   /// the current function.
-  std::vector<CalleeSavedInfo> getCSInfoPerSave(MachineBasicBlock *MBB) const {
-    return CSInfoPerSave.get(MBB);
+  const std::vector<CalleeSavedInfo>
+  getSaveCSInfo(MachineBasicBlock *MBB) const {
+    return SavePoints.getCSInfo(MBB);
   }
 
   /// Returns callee saved info vector for provided restore point
   /// in the current function.
-  std::vector<CalleeSavedInfo>
-  getCSInfoPerRestore(MachineBasicBlock *MBB) const {
-    return CSInfoPerRestore.get(MBB);
+  const std::vector<CalleeSavedInfo>
+  getRestoreCSInfo(MachineBasicBlock *MBB) const {
+    return RestorePoints.getCSInfo(MBB);
+  }
+
+  MachineBasicBlock *findSpilledIn(const CalleeSavedInfo &CSI) const {
+    return SavePoints.findAny(CSI);
+  }
+
+  MachineBasicBlock *findRestoredIn(const CalleeSavedInfo &CSI) const {
+    return RestorePoints.findAny(CSI);
   }
 
   /// Used by prolog/epilog inserter to set the function's callee saved
@@ -871,71 +877,34 @@ public:
     CSInfo = std::move(CSI);
   }
 
-  /// Used by prolog/epilog inserter to set the function's callee saved
-  /// information for particular save point.
-  void setCSInfoPerSave(
-      DenseMap<MachineBasicBlock *, std::vector<CalleeSavedInfo>> CSI) {
-    CSInfoPerSave.set(CSI);
-  }
-
-  /// Used by prolog/epilog inserter to set the function's callee saved
-  /// information for particular restore point.
-  void setCSInfoPerRestore(
-      DenseMap<MachineBasicBlock *, std::vector<CalleeSavedInfo>> CSI) {
-    CSInfoPerRestore.set(CSI);
-  }
-
   /// Has the callee saved info been calculated yet?
   bool isCalleeSavedInfoValid() const { return CSIValid; }
 
   void setCalleeSavedInfoValid(bool v) { CSIValid = v; }
 
-  const SaveRestorePoints &getRestorePoints() const { return RestorePoints; }
-
-  const SaveRestorePoints &getSavePoints() const { return SavePoints; }
-
-  std::pair<MachineBasicBlock *, std::vector<Register>>
-  getRestorePoint(MachineBasicBlock *MBB) const {
-    if (auto It = RestorePoints.find(MBB); It != RestorePoints.end())
-      return *It;
-
-    std::vector<Register> Regs = {};
-    return std::make_pair(nullptr, Regs);
+  const SaveRestorePoints::PointsMap &getRestorePoints() const {
+    return RestorePoints.get();
   }
 
-  std::pair<MachineBasicBlock *, std::vector<Register>>
-  getSavePoint(MachineBasicBlock *MBB) const {
-    if (auto It = SavePoints.find(MBB); It != SavePoints.end())
-      return *It;
-
-    std::vector<Register> Regs = {};
-    return std::make_pair(nullptr, Regs);
+  const SaveRestorePoints::PointsMap &getSavePoints() const {
+    return SavePoints.get();
   }
 
-  void setSavePoints(SaveRestorePoints NewSavePoints) {
-    SavePoints = std::move(NewSavePoints);
+  void setSavePoints(SaveRestorePoints::PointsMap NewSavePoints) {
+    SavePoints.set(NewSavePoints);
   }
 
-  void setRestorePoints(SaveRestorePoints NewRestorePoints) {
-    RestorePoints = std::move(NewRestorePoints);
+  void setRestorePoints(SaveRestorePoints::PointsMap NewRestorePoints) {
+    RestorePoints.set(NewRestorePoints);
   }
 
-  void setSavePoint(MachineBasicBlock *MBB, const std::vector<Register> &Regs) {
-    SavePoints[MBB] = Regs;
-  }
-
-  static const SaveRestorePoints constructSaveRestorePoints(
-      const SaveRestorePoints &SRP,
+  static const SaveRestorePoints::PointsMap constructSaveRestorePoints(
+      const SaveRestorePoints::PointsMap &SRPoints,
       const DenseMap<MachineBasicBlock *, MachineBasicBlock *> &BBMap) {
-    SaveRestorePoints Pts{};
-    for (auto &Src : SRP) {
-      Pts.insert(std::make_pair(BBMap.find(Src.first)->second, Src.second));
-    }
+    SaveRestorePoints::PointsMap Pts{};
+    for (auto &Src : SRPoints)
+      Pts.insert({BBMap.find(Src.first)->second, Src.second});
     return Pts;
-  }
-
-  void setRestorePoint(MachineBasicBlock *MBB, std::vector<Register> &Regs) {
-    RestorePoints[MBB] = Regs;
   }
 
   MachineBasicBlock *getProlog() const { return Prolog; }

@@ -250,14 +250,14 @@ void MachineFrameInfo::print(const MachineFunction &MF, raw_ostream &OS) const{
   if (!SavePoints.empty()) {
     OS << "save points:\n";
 
-    for (auto &item : SavePoints)
+    for (auto &item : SavePoints.get())
       OS << printMBBReference(*item.first) << "\n";
   } else
     OS << "save points are empty\n";
 
   if (!RestorePoints.empty()) {
     OS << "restore points:\n";
-    for (auto &item : RestorePoints)
+    for (auto &item : RestorePoints.get())
       OS << printMBBReference(*item.first) << "\n";
   } else
     OS << "restore points are empty\n";

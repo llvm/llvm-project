@@ -581,22 +581,22 @@ bool RISCVRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
         return CS.getFrameIdx() == FrameIndex;
       });
 
-      if (It != CSI.end()) {
-        if (MI.mayStore() && !It->spilledIn().empty())
-          SpilledIn = *It->spilledIn().begin();
+      assert(It != CSI.end() &&
+             "Did't find CalleeSavedInfo for CalleeSaved FrameIndex");
 
-        else if (MI.mayLoad() && !It->restoredIn().empty())
-          RestoredIn = *It->restoredIn().begin();
-      }
+      if (MI.mayStore())
+        SpilledIn = MFI.findSpilledIn(*It);
+
+      else if (MI.mayLoad())
+        RestoredIn = MFI.findRestoredIn(*It);
+
       bool SpilledRestoredInPrologEpilog = true;
-      if (MI.mayStore() && !MFI.getSavePoints().empty() && SpilledIn) {
-        SpilledRestoredInPrologEpilog =
-            MFI.getSavePoint(SpilledIn).first == MFI.getProlog();
-      } else if (MI.mayLoad() && !MFI.getRestorePoints().empty() &&
-                 RestoredIn) {
-        SpilledRestoredInPrologEpilog =
-            MFI.getRestorePoint(RestoredIn).first == MFI.getEpilog();
-      }
+      // If we didn't managed to find NCD (NCPD) for the list of Save (Restore)
+      // blocks, spill (restore) will be unconditionally in Prolog (Epilog)
+      if (MI.mayStore() && MFI.getProlog())
+        SpilledRestoredInPrologEpilog = SpilledIn == MFI.getProlog();
+      else if (MI.mayLoad() && MFI.getEpilog())
+        SpilledRestoredInPrologEpilog = RestoredIn == MFI.getEpilog();
 
       // For spills/restores performed not in Prolog/Epilog we need to add full
       // SP offset, despite SPAdjusment optimization, because at the end of
