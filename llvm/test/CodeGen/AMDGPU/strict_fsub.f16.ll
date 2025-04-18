@@ -742,8 +742,9 @@ define amdgpu_ps <2 x half> @s_constained_fsub_v2f16_fpexcept_strict(<2 x half> 
 ;
 ; GFX9-GISEL-LABEL: s_constained_fsub_v2f16_fpexcept_strict:
 ; GFX9-GISEL:       ; %bb.0:
-; GFX9-GISEL-NEXT:    v_mov_b32_e32 v0, s3
-; GFX9-GISEL-NEXT:    v_pk_add_f16 v0, s2, v0 neg_lo:[0,1] neg_hi:[0,1]
+; GFX9-GISEL-NEXT:    s_xor_b32 s0, s3, 0x80008000
+; GFX9-GISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX9-GISEL-NEXT:    v_pk_add_f16 v0, s2, v0
 ; GFX9-GISEL-NEXT:    ; return to shader part epilog
 ;
 ; GFX8-SDAG-LABEL: s_constained_fsub_v2f16_fpexcept_strict:
@@ -783,7 +784,8 @@ define amdgpu_ps <2 x half> @s_constained_fsub_v2f16_fpexcept_strict(<2 x half> 
 ;
 ; GFX10-GISEL-LABEL: s_constained_fsub_v2f16_fpexcept_strict:
 ; GFX10-GISEL:       ; %bb.0:
-; GFX10-GISEL-NEXT:    v_pk_add_f16 v0, s2, s3 neg_lo:[0,1] neg_hi:[0,1]
+; GFX10-GISEL-NEXT:    s_xor_b32 s0, s3, 0x80008000
+; GFX10-GISEL-NEXT:    v_pk_add_f16 v0, s2, s0
 ; GFX10-GISEL-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-SDAG-TRUE16-LABEL: s_constained_fsub_v2f16_fpexcept_strict:
@@ -808,7 +810,8 @@ define amdgpu_ps <2 x half> @s_constained_fsub_v2f16_fpexcept_strict(<2 x half> 
 ;
 ; GFX11-GISEL-LABEL: s_constained_fsub_v2f16_fpexcept_strict:
 ; GFX11-GISEL:       ; %bb.0:
-; GFX11-GISEL-NEXT:    v_pk_add_f16 v0, s2, s3 neg_lo:[0,1] neg_hi:[0,1]
+; GFX11-GISEL-NEXT:    s_xor_b32 s0, s3, 0x80008000
+; GFX11-GISEL-NEXT:    v_pk_add_f16 v0, s2, s0
 ; GFX11-GISEL-NEXT:    ; return to shader part epilog
 ; GFX10PLUS-SDAG-LABEL: s_constained_fsub_v2f16_fpexcept_strict:
 ; GFX10PLUS-SDAG:       ; %bb.0:
@@ -821,7 +824,8 @@ define amdgpu_ps <2 x half> @s_constained_fsub_v2f16_fpexcept_strict(<2 x half> 
 ; GFX10PLUS-SDAG-NEXT:    ; return to shader part epilog
 ; GFX10PLUS-GISEL-LABEL: s_constained_fsub_v2f16_fpexcept_strict:
 ; GFX10PLUS-GISEL:       ; %bb.0:
-; GFX10PLUS-GISEL-NEXT:    v_pk_add_f16 v0, s2, s3 neg_lo:[0,1] neg_hi:[0,1]
+; GFX10PLUS-GISEL-NEXT:    s_xor_b32 s0, s3, 0x80008000
+; GFX10PLUS-GISEL-NEXT:    v_pk_add_f16 v0, s2, s0
 ; GFX10PLUS-GISEL-NEXT:    ; return to shader part epilog
   %val = call <2 x half> @llvm.experimental.constrained.fsub.v2f16(<2 x half> %x, <2 x half> %y, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ret <2 x half> %val

@@ -289,19 +289,22 @@ define i32 @v_udot2_shuffle10_a(<2 x i16> %a, <2 x i16> %b, i32 %c) {
 ; GFX906-LABEL: v_udot2_shuffle10_a:
 ; GFX906:       ; %bb.0:
 ; GFX906-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX906-NEXT:    v_dot2_u32_u16 v0, v0, v1, v2 op_sel:[1,0,0] op_sel_hi:[0,1,1]
+; GFX906-NEXT:    v_alignbit_b32 v0, v0, v0, 16
+; GFX906-NEXT:    v_dot2_u32_u16 v0, v0, v1, v2
 ; GFX906-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX908-LABEL: v_udot2_shuffle10_a:
 ; GFX908:       ; %bb.0:
 ; GFX908-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX908-NEXT:    v_dot2_u32_u16 v0, v0, v1, v2 op_sel:[1,0,0] op_sel_hi:[0,1,1]
+; GFX908-NEXT:    v_alignbit_b32 v0, v0, v0, 16
+; GFX908-NEXT:    v_dot2_u32_u16 v0, v0, v1, v2
 ; GFX908-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_udot2_shuffle10_a:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    v_dot2_u32_u16 v0, v0, v1, v2 op_sel:[1,0,0] op_sel_hi:[0,1,1]
+; GFX10-NEXT:    v_alignbit_b32 v0, v0, v0, 16
+; GFX10-NEXT:    v_dot2_u32_u16 v0, v0, v1, v2
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %shuf.a = shufflevector <2 x i16> %a, <2 x i16> poison, <2 x i32> <i32 1, i32 0>
   %r = call i32 @llvm.amdgcn.udot2(<2 x i16> %shuf.a, <2 x i16> %b, i32 %c, i1 false)
@@ -312,19 +315,22 @@ define i32 @v_udot2_shuffle10_b(<2 x i16> %a, <2 x i16> %b, i32 %c) {
 ; GFX906-LABEL: v_udot2_shuffle10_b:
 ; GFX906:       ; %bb.0:
 ; GFX906-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX906-NEXT:    v_dot2_u32_u16 v0, v0, v1, v2 op_sel:[0,1,0] op_sel_hi:[1,0,1]
+; GFX906-NEXT:    v_alignbit_b32 v1, v1, v1, 16
+; GFX906-NEXT:    v_dot2_u32_u16 v0, v0, v1, v2
 ; GFX906-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX908-LABEL: v_udot2_shuffle10_b:
 ; GFX908:       ; %bb.0:
 ; GFX908-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX908-NEXT:    v_dot2_u32_u16 v0, v0, v1, v2 op_sel:[0,1,0] op_sel_hi:[1,0,1]
+; GFX908-NEXT:    v_alignbit_b32 v1, v1, v1, 16
+; GFX908-NEXT:    v_dot2_u32_u16 v0, v0, v1, v2
 ; GFX908-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_udot2_shuffle10_b:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    v_dot2_u32_u16 v0, v0, v1, v2 op_sel:[0,1,0] op_sel_hi:[1,0,1]
+; GFX10-NEXT:    v_alignbit_b32 v1, v1, v1, 16
+; GFX10-NEXT:    v_dot2_u32_u16 v0, v0, v1, v2
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %shuf.b = shufflevector <2 x i16> %b, <2 x i16> poison, <2 x i32> <i32 1, i32 0>
   %r = call i32 @llvm.amdgcn.udot2(<2 x i16> %a, <2 x i16> %shuf.b, i32 %c, i1 false)
