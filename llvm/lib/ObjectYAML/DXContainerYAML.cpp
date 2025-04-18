@@ -81,7 +81,6 @@ DXContainerYAML::RootSignatureYamlDesc::create(
       NewP.Constants.RegisterSpace = Constants.RegisterSpace;
     }
 
-    if (V == 1) {
       if (auto *RDV =
               dyn_cast<object::DirectX::RootDescriptorView_V1_0>(&ParamView)) {
         llvm::Expected<dxbc::RootDescriptor_V1_0> DescriptorOrErr = RDV->read();
@@ -92,9 +91,7 @@ DXContainerYAML::RootSignatureYamlDesc::create(
         NewP.Descriptor.ShaderRegister = Descriptor.ShaderRegister;
         NewP.Descriptor.RegisterSpace = Descriptor.RegisterSpace;
       }
-    }
 
-    if (V == 2) {
       if (auto *RDV =
               dyn_cast<object::DirectX::RootDescriptorView_V1_1>(&ParamView)) {
         llvm::Expected<dxbc::RootDescriptor_V1_1> DescriptorOrErr = RDV->read();
@@ -109,7 +106,6 @@ DXContainerYAML::RootSignatureYamlDesc::create(
        llvm::to_underlying(dxbc::RootDescriptorFlag::Val)) > 0;
 #include "llvm/BinaryFormat/DXContainerConstants.def"
       }
-    }
 
     RootSigDesc.Parameters.push_back(NewP);
   }

@@ -25,6 +25,7 @@
 #include "llvm/TargetParser/Triple.h"
 #include <array>
 #include <cstddef>
+#include <cstdint>
 #include <variant>
 
 namespace llvm {
@@ -121,9 +122,10 @@ template <typename T> struct ViewArray {
 namespace DirectX {
 struct RootParameterView {
   const dxbc::RootParameterHeader &Header;
+  uint32_t Version;
   StringRef ParamData;
-  RootParameterView(const dxbc::RootParameterHeader &H, StringRef P)
-      : Header(H), ParamData(P) {}
+  RootParameterView(uint32_t V, const dxbc::RootParameterHeader &H, StringRef P)
+      : Header(H), Version(V), ParamData(P) {}
 
   template <typename T> Expected<T> readParameter() {
     T Struct;
@@ -152,12 +154,13 @@ struct RootConstantView : RootParameterView {
 
 struct RootDescriptorView_V1_0 : RootParameterView {
   static bool classof(const RootParameterView *V) {
-    return (V->Header.ParameterType ==
-                llvm::to_underlying(dxbc::RootParameterType::CBV) ||
-            V->Header.ParameterType ==
-                llvm::to_underlying(dxbc::RootParameterType::SRV) ||
-            V->Header.ParameterType ==
-                llvm::to_underlying(dxbc::RootParameterType::UAV));
+    return (V->Version == 1 &&
+            (V->Header.ParameterType ==
+                 llvm::to_underlying(dxbc::RootParameterType::CBV) ||
+             V->Header.ParameterType ==
+                 llvm::to_underlying(dxbc::RootParameterType::SRV) ||
+             V->Header.ParameterType ==
+                 llvm::to_underlying(dxbc::RootParameterType::UAV)));
   }
 
   llvm::Expected<dxbc::RootDescriptor_V1_0> read() {
@@ -167,12 +170,13 @@ struct RootDescriptorView_V1_0 : RootParameterView {
 
 struct RootDescriptorView_V1_1 : RootParameterView {
   static bool classof(const RootParameterView *V) {
-    return (V->Header.ParameterType ==
-                llvm::to_underlying(dxbc::RootParameterType::CBV) ||
-            V->Header.ParameterType ==
-                llvm::to_underlying(dxbc::RootParameterType::SRV) ||
-            V->Header.ParameterType ==
-                llvm::to_underlying(dxbc::RootParameterType::UAV));
+    return (V->Version == 2 &&
+            (V->Header.ParameterType ==
+                 llvm::to_underlying(dxbc::RootParameterType::CBV) ||
+             V->Header.ParameterType ==
+                 llvm::to_underlying(dxbc::RootParameterType::SRV) ||
+             V->Header.ParameterType ==
+                 llvm::to_underlying(dxbc::RootParameterType::UAV)));
   }
 
   llvm::Expected<dxbc::RootDescriptor_V1_1> read() {
@@ -240,7 +244,7 @@ public:
       return parseFailed("Reading structure out of file bounds");
 
     StringRef Buff = PartData.substr(Header.ParameterOffset, DataSize);
-    RootParameterView View = RootParameterView(Header, Buff);
+    RootParameterView View = RootParameterView(Version, Header, Buff);
     return View;
   }
 };
