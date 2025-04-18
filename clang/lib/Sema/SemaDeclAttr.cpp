@@ -2406,7 +2406,7 @@ static void handleFeatureAvailabilityAttr(Sema &S, Decl *D,
     return;
   }
 
-  IdentifierInfo *II = AL.getArgAsIdent(0)->Ident;
+  IdentifierInfo *II = AL.getArgAsIdent(0)->getIdentifierInfo();
 
   if (S.Context.getFeatureAvailInfo(II->getName()).isInvalid()) {
     S.Diag(AL.getLoc(), diag::err_features_invalid_name) << II->getName();
@@ -2719,7 +2719,7 @@ static void handleAvailabilityAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 
 static void handleAvailabilityDomainAttr(Sema &S, Decl *D,
                                          const ParsedAttr &AL) {
-  IdentifierInfo *II = AL.getArgAsIdent(0)->Ident;
+  IdentifierInfo *II = AL.getArgAsIdent(0)->getIdentifierInfo();
   D->addAttr(::new (S.Context) AvailabilityDomainAttr(S.Context, AL, II));
 }
 

@@ -117,11 +117,11 @@ public:
       return reportError(Node.takeError());
 
     auto MakeModuleImport = [&](cas::IncludeTree::ModuleImport Import) {
-      SmallVector<std::pair<IdentifierInfo *, SourceLocation>, 2> Path;
+      SmallVector<IdentifierLoc, 2> Path;
       SmallVector<StringRef, 2> ModuleComponents;
       Import.getModuleName().split(ModuleComponents, '.');
       for (StringRef Component : ModuleComponents)
-        Path.emplace_back(PP.getIdentifierInfo(Component), IncludeLoc);
+        Path.emplace_back(IncludeLoc, PP.getIdentifierInfo(Component));
       return IncludeModule{std::move(Path), Import.visibilityOnly()};
     };
 

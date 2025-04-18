@@ -4043,7 +4043,7 @@ std::optional<AvailabilitySpec> Parser::ParseAvailabilitySpec() {
     }
 
     if (Tok.is(tok::identifier) && GetLookAheadToken(1).is(tok::colon)) {
-      if (ParseIdentifierLoc()->Ident->getName() != "domain") {
+      if (ParseIdentifierLoc()->getIdentifierInfo()->getName() != "domain") {
         return std::nullopt;
       }
 
@@ -4054,8 +4054,8 @@ std::optional<AvailabilitySpec> Parser::ParseAvailabilitySpec() {
       }
 
       IdentifierLoc *DomainIdentifier = ParseIdentifierLoc();
-      return AvailabilitySpec(DomainIdentifier->Ident->getName(),
-                              DomainIdentifier->Loc);
+      return AvailabilitySpec(DomainIdentifier->getIdentifierInfo()->getName(),
+                              DomainIdentifier->getLoc());
     }
 
     if (Tok.isNot(tok::identifier)) {

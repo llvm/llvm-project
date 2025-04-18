@@ -14,6 +14,7 @@
 #ifndef LLVM_CLANG_LEX_PPCACHEDACTIONS_H
 #define LLVM_CLANG_LEX_PPCACHEDACTIONS_H
 
+#include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/SmallVector.h"
 #include <variant>
@@ -39,7 +40,7 @@ public:
   };
   /// The module that is imported by an \c #include directive or \c \@import.
   struct IncludeModule {
-    SmallVector<std::pair<IdentifierInfo *, SourceLocation>, 2> ImportPath;
+    SmallVector<IdentifierLoc, 2> ImportPath;
     // Whether this module should only be "marked visible" rather than imported.
     bool VisibilityOnly;
   };

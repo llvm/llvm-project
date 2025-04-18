@@ -2175,13 +2175,14 @@ void Preprocessor::HandleIncludeDirective(SourceLocation HashLoc,
         return;
 
       auto Path = Import->ImportPath;
-      std::string PathStr = Path.front().first->getName().str();
+      std::string PathStr = Path.front().getIdentifierInfo()->getName().str();
       for (unsigned I = 1; I != Path.size(); ++I)
-        PathStr += ("." + Path[I].first->getName()).str();
+        PathStr += ("." + Path[I].getIdentifierInfo()->getName()).str();
 
       getDiagnostics().Report(IncludeTok.getLocation(),
                               diag::warn_missing_submodule)
-          << PathStr << SourceRange(Path.front().second, Path.back().second);
+          << PathStr
+          << SourceRange(Path.front().getLoc(), Path.back().getLoc());
     };
 
     auto HandleIncludeMod = [&](const PPCachedActions::IncludeModule *Import) {
@@ -2190,7 +2191,8 @@ void Preprocessor::HandleIncludeDirective(SourceLocation HashLoc,
         ModuleMap &MMap = getHeaderSearchInfo().getModuleMap();
         Module *M = nullptr;
         for (auto &NameLoc : Import->ImportPath) {
-          M = MMap.lookupModuleQualified(NameLoc.first->getName(), M);
+          M = MMap.lookupModuleQualified(NameLoc.getIdentifierInfo()->getName(),
+                                         M);
           if (!M)
             break;
         }
