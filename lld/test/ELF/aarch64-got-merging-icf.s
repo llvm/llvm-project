@@ -1,4 +1,5 @@
-// REQUIRES: aarch64
+## REQUIRES: aarch64
+## Check that symbols that ICF assumes to be the same get a single GOT entry
 
 # RUN: llvm-mc -filetype=obj -triple=aarch64 %s -o %t
 # RUN: llvm-mc -filetype=obj -crel -triple=aarch64 %s -o %tcrel

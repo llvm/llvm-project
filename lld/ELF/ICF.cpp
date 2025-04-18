@@ -561,7 +561,7 @@ template <class ELFT> void ICF<ELFT>::run() {
 
   EquivalenceClasses<Symbol *> symbolEquivalence;
   // Merge sections by the equivalence class.
-  // Merge symbols identified as equivalent during ICF
+  // Merge symbols identified as equivalent during ICF.
   forEachClassRange(0, sections.size(), [&](size_t begin, size_t end) {
     if (end - begin == 1)
       return;
