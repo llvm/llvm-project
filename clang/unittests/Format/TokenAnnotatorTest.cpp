@@ -3966,7 +3966,7 @@ TEST_F(TokenAnnotatorTest, UTF8StringLiteral) {
 TEST_F(TokenAnnotatorTest, IdentifierPackage) {
   auto Tokens = annotate("auto package;");
   ASSERT_EQ(Tokens.size(), 4u) << Tokens;
-  EXPECT_TOKEN(Tokens[1], tok::identifier, TT_StartOfName);
+  EXPECT_FALSE(Tokens[0]->isObjCAccessSpecifier());
 }
 
 } // namespace
