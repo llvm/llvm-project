@@ -7,11 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/setjmp/sigsetjmp.h"
+#include "hdr/offsetof_macros.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
 #include "src/setjmp/setjmp_impl.h"
 #include "src/setjmp/sigsetjmp_epilogue.h"
-#include "hdr/offsetof_macros.h"
 
 #if !defined(LIBC_TARGET_ARCH_IS_X86)
 #error "Invalid file include"
