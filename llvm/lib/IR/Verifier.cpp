@@ -720,8 +720,7 @@ static void forEachUser(const Value *User,
   if (!Visited.insert(User).second)
     return;
 
-  SmallVector<const Value *> WorkList;
-  append_range(WorkList, User->materialized_users());
+  SmallVector<const Value *> WorkList(User->materialized_users());
   while (!WorkList.empty()) {
    const Value *Cur = WorkList.pop_back_val();
     if (!Visited.insert(Cur).second)
@@ -807,10 +806,6 @@ void Verifier::visitGlobalValue(const GlobalValue &GV) {
           "GlobalValue with local linkage or non-default "
           "visibility must be dso_local!",
           &GV);
-
-  if (GV.isTagged()) {
-    Check(!GV.hasSection(), "tagged GlobalValue must not be in section.", &GV);
-  }
 
   forEachUser(&GV, GlobalValueVisited, [&](const Value *V) -> bool {
     if (const Instruction *I = dyn_cast<Instruction>(V)) {

@@ -3,6 +3,16 @@
 ;
 ; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z196 | FileCheck %s
 
+; Check i32->f16.
+define half @f0(i32 %i) {
+; CHECK-LABEL: f0:
+; CHECK: celfbr %f0, 0, %r2, 0
+; CHECK-NEXT: brasl %r14, __truncsfhf2@PLT
+; CHECK: br %r14
+  %conv = uitofp i32 %i to half
+  ret half %conv
+}
+
 ; Check i32->f32.
 define float @f1(i32 %i) {
 ; CHECK-LABEL: f1:
@@ -33,9 +43,19 @@ define void @f3(i32 %i, ptr %dst) {
   ret void
 }
 
-; Check i64->f32.
-define float @f4(i64 %i) {
+; Check i64->f16.
+define half @f4(i64 %i) {
 ; CHECK-LABEL: f4:
+; CHECK: celgbr %f0, 0, %r2, 0
+; CHECK-NEXT: brasl %r14, __truncsfhf2@PLT
+; CHECK: br %r14
+  %conv = uitofp i64 %i to half
+  ret half %conv
+}
+
+; Check i64->f32.
+define float @f5(i64 %i) {
+; CHECK-LABEL: f5:
 ; CHECK: celgbr %f0, 0, %r2, 0
 ; CHECK: br %r14
   %conv = uitofp i64 %i to float
@@ -43,8 +63,8 @@ define float @f4(i64 %i) {
 }
 
 ; Check i64->f64.
-define double @f5(i64 %i) {
-; CHECK-LABEL: f5:
+define double @f6(i64 %i) {
+; CHECK-LABEL: f6:
 ; CHECK: cdlgbr %f0, 0, %r2, 0
 ; CHECK: br %r14
   %conv = uitofp i64 %i to double
@@ -52,8 +72,8 @@ define double @f5(i64 %i) {
 }
 
 ; Check i64->f128.
-define void @f6(i64 %i, ptr %dst) {
-; CHECK-LABEL: f6:
+define void @f7(i64 %i, ptr %dst) {
+; CHECK-LABEL: f7:
 ; CHECK: cxlgbr %f0, 0, %r2, 0
 ; CHECK-DAG: std %f0, 0(%r3)
 ; CHECK-DAG: std %f2, 8(%r3)

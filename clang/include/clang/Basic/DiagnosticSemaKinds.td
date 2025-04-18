@@ -1014,6 +1014,22 @@ def err_ptrauth_indirect_goto_addrlabel_arithmetic : Error<
   "%select{subtraction|addition}0 of address-of-label expressions is not "
   "supported with ptrauth indirect gotos">;
 
+// __ptrauth qualifier
+def err_ptrauth_qualifier_invalid : Error<
+  "%select{return type|parameter type|property}1 may not be qualified with '__ptrauth'; type is %0">;
+def err_ptrauth_qualifier_cast : Error<
+  "cannot cast to '__ptrauth'-qualified type %0">;
+def err_ptrauth_qualifier_nonpointer : Error<
+  "'__ptrauth' qualifier only applies to pointer types; %0 is invalid">;
+def err_ptrauth_qualifier_redundant : Error<
+  "type %0 is already %1-qualified">;
+def err_ptrauth_arg_not_ice : Error<
+  "argument to '__ptrauth' must be an integer constant expression">;
+def err_ptrauth_address_discrimination_invalid : Error<
+  "invalid address discrimination flag '%0'; '__ptrauth' requires '0' or '1'">;
+def err_ptrauth_extra_discriminator_invalid : Error<
+  "invalid extra discriminator flag '%0'; '__ptrauth' requires a value between '0' and '%1'">;
+
 /// main()
 // static main() is not an error in C, just in C++.
 def warn_static_main : Warning<"'main' should not be declared static">,
@@ -2250,7 +2266,8 @@ def err_constructor_byvalue_arg : Error<
   "copy constructor must pass its first argument by reference">;
 def warn_no_constructor_for_refconst : Warning<
   "%select{struct|interface|union|class|enum}0 %1 does not declare any "
-  "constructor to initialize its non-modifiable members">;
+  "constructor to initialize its non-modifiable members">,
+  InGroup<Uninitialized>;
 def note_refconst_member_not_initialized : Note<
   "%select{const|reference}0 member %1 will never be initialized">;
 def ext_ms_explicit_constructor_call : ExtWarn<
@@ -3923,7 +3940,8 @@ def note_cannot_use_trivial_abi_reason : Note<
   "its copy constructors and move constructors are all deleted|"
   "it is polymorphic|"
   "it has a base of a non-trivial class type|it has a virtual base|"
-  "it has a __weak field|it has a field of a non-trivial class type}1">;
+  "it has a __weak field|it has a field of a non-trivial class type|"
+  "it has an address-discriminated '__ptrauth' field}1">;
 
 // Availability attribute
 def warn_availability_unknown_platform : Warning<
@@ -5021,6 +5039,10 @@ def note_ovl_candidate_bad_ownership : Note<
     "%select{no|__unsafe_unretained|__strong|__weak|__autoreleasing}4 ownership,"
     " but parameter has %select{no|__unsafe_unretained|__strong|__weak|"
     "__autoreleasing}5 ownership">;
+def note_ovl_candidate_bad_ptrauth : Note<
+    "candidate %sub{select_ovl_candidate_kind}0,1,2 not viable: "
+    "%ordinal8 argument (%3) has %select{no '__ptrauth'|%5}4 qualifier,"
+    " but parameter has %select{no '__ptrauth'|%7}6 qualifier">;
 def note_ovl_candidate_bad_cvr_this : Note<
     "candidate %sub{select_ovl_candidate_kind}0,1,2 not viable: "
     "'this' argument has type %3, but method is not marked "
@@ -6092,7 +6114,7 @@ def note_deleted_special_member_class_subobject : Note<
   "%select{default|corresponding|default|default|default}4 constructor}0|"
   "destructor}5"
   "%select{||s||}4"
-  "|is an ObjC pointer}6">;
+  "|is an ObjC pointer|has an address-discriminated '__ptrauth' qualifier}6">;
 def note_default_constructed_field
     : Note<"default constructed field %0 declared here">;
 def note_deleted_default_ctor_uninit_field : Note<
@@ -8938,6 +8960,19 @@ def err_typecheck_incompatible_ownership : Error<
   "sending to parameter of different type}0,1"
   "|%diff{casting $ to type $|casting between types}0,1}2"
   " changes retain/release properties of pointer">;
+def err_typecheck_incompatible_ptrauth : Error<
+  "%enum_select<AssignmentAction>{%Assigning{%diff{assigning $ to $|assigning to different types}1,0}"
+  "|%Passing{%diff{passing $ to parameter of type $|"
+  "passing to parameter of different type}0,1}"
+  "|%Returning{%diff{returning $ from a function with result type $|"
+  "returning from function with different return type}0,1}"
+  "|%Converting{%diff{converting $ to type $|converting between types}0,1}"
+  "|%Initializing{%diff{initializing $ with an expression of type $|"
+  "initializing with expression of different type}0,1}"
+  "|%Sending{%diff{sending $ to parameter of type $|"
+  "sending to parameter of different type}0,1}"
+  "|%Casting{%diff{casting $ to type $|casting between types}0,1}}2"
+  " changes pointer authentication of pointee type">;
 def err_typecheck_comparison_of_distinct_blocks : Error<
   "comparison of distinct block types%diff{ ($ and $)|}0,1">;
 
@@ -9066,6 +9101,9 @@ def err_atomic_op_needs_non_const_atomic : Error<
 def err_atomic_op_needs_non_const_pointer : Error<
   "address argument to atomic operation must be a pointer to non-const "
   "type (%0 invalid)">;
+def err_atomic_op_needs_non_address_discriminated_pointer : Error<
+  "address argument to %select{atomic|__sync}0 operation must be a pointer to a non address discriminated "
+  "type (%1 invalid)">;
 def err_atomic_op_needs_trivial_copy : Error<
   "address argument to atomic operation must be a pointer to a "
   "trivially-copyable type (%0 invalid)">;
@@ -9343,6 +9381,8 @@ def ext_typecheck_cond_pointer_integer_mismatch : ExtWarn<
   "pointer/integer type mismatch in conditional expression"
   "%diff{ ($ and $)|}0,1">,
   InGroup<DiagGroup<"conditional-type-mismatch">>;
+def err_typecheck_cond_incompatible_ptrauth : Error<
+  "'__ptrauth' qualification mismatch%diff{ ($ and $)|}0,1">;
 def err_typecheck_choose_expr_requires_constant : Error<
   "'__builtin_choose_expr' requires a constant expression">;
 def warn_unused_expr : Warning<"expression result unused">,
@@ -12695,6 +12735,7 @@ def warn_hlsl_deprecated_register_type_i: Warning<"binding type 'i' ignored. The
 def err_hlsl_unsupported_register_number : Error<"register number should be an integer">;
 def err_hlsl_expected_space : Error<"invalid space specifier '%0' used; expected 'space' followed by an integer, like space1">;
 def err_hlsl_space_on_global_constant : Error<"register space cannot be specified on global constants">;
+def warn_hlsl_implicit_binding : Warning<"resource has implicit register binding">, InGroup<HLSLImplicitBinding>, DefaultError;
 def warn_hlsl_packoffset_mix : Warning<"cannot mix packoffset elements with nonpackoffset elements in a cbuffer">,
     InGroup<HLSLMixPackOffset>;
 def err_hlsl_packoffset_overlap : Error<"packoffset overlap between %0, %1">;

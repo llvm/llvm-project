@@ -15,14 +15,13 @@ When performing tests we make sure to always use the internal version.
 load("//libc:libc_build_rules.bzl", "libc_common_copts")
 load("//libc:libc_configure_options.bzl", "LIBC_CONFIGURE_OPTIONS")
 
-def libc_test(name, libc_function_deps = [], copts = [], deps = [], local_defines = [], **kwargs):
+def libc_test(name, copts = [], deps = [], local_defines = [], **kwargs):
     """Add target for a libc test.
 
     Args:
       name: Test target name
-      libc_function_deps: List of libc_function targets used by this test.
       copts: The list of options to add to the C++ compilation command.
-      deps: The list of other libraries to be linked in to the test target.
+      deps: The list of libc functions and libraries to be linked in.
       local_defines: The list of target local_defines if any.
       **kwargs: Attributes relevant for a cc_test.
     """
@@ -37,7 +36,7 @@ def libc_test(name, libc_function_deps = [], copts = [], deps = [], local_define
             "//libc:func_free",
             "//libc:func_malloc",
             "//libc:func_realloc",
-        ] + libc_function_deps + deps,
+        ] + deps,
         copts = copts + libc_common_copts(),
         linkstatic = 1,
         **kwargs
