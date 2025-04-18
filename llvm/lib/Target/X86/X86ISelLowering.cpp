@@ -56580,6 +56580,14 @@ static SDValue combineGatherScatter(SDNode *N, SelectionDAG &DAG,
 
   EVT PtrVT = TLI.getPointerTy(DAG.getDataLayout());
 
+  if (Index.getOpcode() == ISD::SHL) {
+    unsigned BitWidth = Index.getScalarValueSizeInBits();
+    unsigned MaskBits = BitWidth - Log2_32(Scale->getAsZExtVal());
+    APInt DemandedBits = APInt::getLowBitsSet(BitWidth, MaskBits);
+    if (TLI.SimplifyDemandedBits(Index, DemandedBits, DCI)) {
+      return SDValue(N, 0);
+    }
+  }
   // Try to move splat adders from the index operand to the base
   // pointer operand. Taking care to multiply by the scale. We can only do
   // this when index element type is the same as the pointer type.
