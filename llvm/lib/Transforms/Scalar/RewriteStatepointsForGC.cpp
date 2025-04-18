@@ -3327,7 +3327,7 @@ static void computeLiveInValues(DominatorTree &DT, Function &F,
     Data.LiveOut[BB] = LiveOut;
 
     // Apply the effects of this basic block
-    SetVector<Value *> LiveTmp = LiveOut;
+    SetVector<Value *> LiveTmp = std::move(LiveOut);
     LiveTmp.set_union(Data.LiveSet[BB]);
     LiveTmp.set_subtract(Data.KillSet[BB]);
 
