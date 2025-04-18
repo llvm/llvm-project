@@ -247,15 +247,15 @@ static ParsedType recoverFromTypeInKnownDependentBase(Sema &S,
     return nullptr;
 
   // We found some types in dependent base classes.  Recover as if the user
-  // wrote 'typename MyClass::II' instead of 'II'.  We'll fully resolve the
-  // lookup during template instantiation.
+  // wrote 'MyClass::II' instead of 'II', and this implicit typename was
+  // allowed.  We'll fully resolve the lookup during template instantiation.
   S.Diag(NameLoc, diag::ext_found_in_dependent_base) << &II;
 
   ASTContext &Context = S.Context;
   auto *NNS = NestedNameSpecifier::Create(
       Context, nullptr, cast<Type>(Context.getRecordType(RD)));
   QualType T =
-      Context.getDependentNameType(ElaboratedTypeKeyword::Typename, NNS, &II);
+      Context.getDependentNameType(ElaboratedTypeKeyword::None, NNS, &II);
 
   CXXScopeSpec SS;
   SS.MakeTrivial(Context, NNS, SourceRange(NameLoc));
@@ -16199,16 +16199,11 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
     // This is meant to pop the context added in ActOnStartOfFunctionDef().
     ExitFunctionBodyRAII ExitRAII(*this, isLambdaCallOperator(FD));
     if (FD) {
-      // If this is called by Parser::ParseFunctionDefinition() after marking
-      // the declaration as deleted, and if the deleted-function-body contains
-      // a message (C++26), then a DefaultedOrDeletedInfo will have already been
-      // added to store that message; do not overwrite it in that case.
-      //
-      // Since this would always set the body to 'nullptr' in that case anyway,
-      // which is already done when the function decl is initially created,
-      // always skipping this irrespective of whether there is a delete message
-      // should not be a problem.
-      if (!FD->isDeletedAsWritten())
+      // The function body and the DefaultedOrDeletedInfo, if present, use
+      // the same storage; don't overwrite the latter if the former is null
+      // (the body is initialised to null anyway, so even if the latter isn't
+      // present, this would still be a no-op).
+      if (Body)
         FD->setBody(Body);
       FD->setWillHaveBody(false);
 

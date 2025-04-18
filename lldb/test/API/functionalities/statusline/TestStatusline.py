@@ -77,3 +77,20 @@ class TestStatusline(PExpectTest):
                 "\x1b[7m",
             ],
         )
+
+    def test_deadlock(self):
+        """Regression test for lock inversion between the statusline mutex and
+        the output mutex."""
+        self.build()
+        self.launch(extra_args=["-o", "settings set use-color false"])
+        self.child.expect("(lldb)")
+
+        # Change the terminal dimensions.
+        terminal_height = 10
+        terminal_width = 60
+        self.child.setwinsize(terminal_height, terminal_width)
+
+        exe = self.getBuildArtifact("a.out")
+
+        self.expect("file {}".format(exe), ["Current executable"])
+        self.expect("help", ["Debugger commands"])

@@ -248,7 +248,7 @@ def InsnDirectiveOpcode : AsmOperandClass {
 
 def uimm1 : RISCVUImmLeafOp<1>;
 def uimm2 : RISCVUImmLeafOp<2>;
-def uimm3 : RISCVUImmOp<3>;
+def uimm3 : RISCVUImmLeafOp<3>;
 def uimm4 : RISCVUImmLeafOp<4>;
 def uimm5 : RISCVUImmLeafOp<5>;
 def uimm6 : RISCVUImmLeafOp<6>;

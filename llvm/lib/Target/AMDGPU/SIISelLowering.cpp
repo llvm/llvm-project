@@ -915,10 +915,6 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::BUILD_VECTOR, MVT::v2bf16, Legal);
   }
 
-  if (Subtarget->hasCvtPkF16F32Inst()) {
-    setOperationAction(ISD::FP_ROUND, MVT::v2f16, Legal);
-  }
-
   setTargetDAGCombine({ISD::ADD,
                        ISD::UADDO_CARRY,
                        ISD::SUB,
@@ -16506,7 +16502,8 @@ Align SITargetLowering::computeKnownAlignForTargetInstr(
     // site specifies a lower alignment?
     Intrinsic::ID IID = GI->getIntrinsicID();
     LLVMContext &Ctx = VT.getMachineFunction().getFunction().getContext();
-    AttributeList Attrs = Intrinsic::getAttributes(Ctx, IID);
+    AttributeList Attrs =
+        Intrinsic::getAttributes(Ctx, IID, Intrinsic::getType(Ctx, IID));
     if (MaybeAlign RetAlign = Attrs.getRetAlignment())
       return *RetAlign;
   }
