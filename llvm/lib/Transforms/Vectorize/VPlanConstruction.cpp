@@ -14,26 +14,88 @@
 #include "LoopVectorizationPlanner.h"
 #include "VPlan.h"
 #include "VPlanCFG.h"
+#include "VPlanDominatorTree.h"
 #include "VPlanTransforms.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 
 using namespace llvm;
 
-void VPlanTransforms::introduceTopLevelVectorLoopRegion(
-    VPlan &Plan, Type *InductionTy, PredicatedScalarEvolution &PSE,
-    bool RequiresScalarEpilogueCheck, bool TailFolded, Loop *TheLoop) {
-  // TODO: Generalize to introduce all loop regions.
-  auto *HeaderVPBB = cast<VPBasicBlock>(Plan.getEntry()->getSingleSuccessor());
-  VPBlockUtils::disconnectBlocks(Plan.getEntry(), HeaderVPBB);
+/// Checks if \p HeaderVPB is a loop header block in the plain CFG; that is, it
+/// has exactly 2 predecessors (preheader and latch), where the block
+/// dominates the latch and the preheader dominates the block. If it is a
+/// header block return true, making sure the preheader appears first and
+/// the latch second. Otherwise return false.
+static bool canonicalHeader(VPBlockBase *HeaderVPB,
+                            const VPDominatorTree &VPDT) {
+  ArrayRef<VPBlockBase *> Preds = HeaderVPB->getPredecessors();
+  if (Preds.size() != 2)
+    return false;
 
-  VPBasicBlock *OriginalLatch =
-      cast<VPBasicBlock>(HeaderVPBB->getSinglePredecessor());
-  VPBlockUtils::disconnectBlocks(OriginalLatch, HeaderVPBB);
-  VPBasicBlock *VecPreheader = Plan.createVPBasicBlock("vector.ph");
-  VPBlockUtils::connectBlocks(Plan.getEntry(), VecPreheader);
-  assert(OriginalLatch->getNumSuccessors() == 0 &&
-         "Plan should end at top level latch");
+  auto *PreheaderVPBB = Preds[0];
+  auto *LatchVPBB = Preds[1];
+  if (VPDT.dominates(PreheaderVPBB, HeaderVPB) &&
+      VPDT.dominates(HeaderVPB, LatchVPBB))
+    return true;
+
+  std::swap(PreheaderVPBB, LatchVPBB);
+
+  if (VPDT.dominates(PreheaderVPBB, HeaderVPB) &&
+      VPDT.dominates(HeaderVPB, LatchVPBB)) {
+    // Canonicalize predecessors of header so that preheader is first and latch
+    // second.
+    HeaderVPB->swapPredecessors();
+    for (VPRecipeBase &R : cast<VPBasicBlock>(HeaderVPB)->phis())
+      R.swapOperands();
+    return true;
+  }
+
+  return false;
+}
+
+/// Create a new VPRegionBlock for the loop starting at \p HeaderVPB.
+static void createLoopRegion(VPlan &Plan, VPBlockBase *HeaderVPB) {
+  auto *PreheaderVPBB = HeaderVPB->getPredecessors()[0];
+  auto *LatchVPBB = HeaderVPB->getPredecessors()[1];
+
+  VPBlockUtils::disconnectBlocks(PreheaderVPBB, HeaderVPB);
+  VPBlockUtils::disconnectBlocks(LatchVPBB, HeaderVPB);
+  VPBlockBase *Succ = LatchVPBB->getSingleSuccessor();
+  assert(LatchVPBB->getNumSuccessors() <= 1 &&
+         "Latch has more than one successor");
+  if (Succ)
+    VPBlockUtils::disconnectBlocks(LatchVPBB, Succ);
+
+  auto *R = Plan.createVPRegionBlock(HeaderVPB, LatchVPBB, "",
+                                     false /*isReplicator*/);
+  R->setParent(HeaderVPB->getParent());
+  // All VPBB's reachable shallowly from HeaderVPB belong to top level loop,
+  // because VPlan is expected to end at top level latch disconnected above.
+  for (VPBlockBase *VPBB : vp_depth_first_shallow(HeaderVPB))
+    VPBB->setParent(R);
+
+  VPBlockUtils::insertBlockAfter(R, PreheaderVPBB);
+  if (Succ)
+    VPBlockUtils::connectBlocks(R, Succ);
+}
+
+void VPlanTransforms::createLoopRegions(VPlan &Plan, Type *InductionTy,
+                                        PredicatedScalarEvolution &PSE,
+                                        bool RequiresScalarEpilogueCheck,
+                                        bool TailFolded, Loop *TheLoop) {
+  VPDominatorTree VPDT;
+  VPDT.recalculate(Plan);
+  for (VPBlockBase *HeaderVPB : vp_depth_first_shallow(Plan.getEntry()))
+    if (canonicalHeader(HeaderVPB, VPDT))
+      createLoopRegion(Plan, HeaderVPB);
+
+  VPRegionBlock *TopRegion = Plan.getVectorLoopRegion();
+  auto *OrigExiting = TopRegion->getExiting();
+  VPBasicBlock *LatchVPBB = Plan.createVPBasicBlock("vector.latch");
+  VPBlockUtils::insertBlockAfter(LatchVPBB, OrigExiting);
+  TopRegion->setExiting(LatchVPBB);
+  TopRegion->setName("vector loop");
+  TopRegion->getEntryBasicBlock()->setName("vector.body");
 
   // Create SCEV and VPValue for the trip count.
   // We use the symbolic max backedge-taken-count, which works also when
@@ -47,18 +109,9 @@ void VPlanTransforms::introduceTopLevelVectorLoopRegion(
   Plan.setTripCount(
       vputils::getOrCreateVPValueForSCEVExpr(Plan, TripCount, SE));
 
-  // Create VPRegionBlock, with existing header and new empty latch block, to be
-  // filled.
-  VPBasicBlock *LatchVPBB = Plan.createVPBasicBlock("vector.latch");
-  VPBlockUtils::insertBlockAfter(LatchVPBB, OriginalLatch);
-  auto *TopRegion = Plan.createVPRegionBlock(
-      HeaderVPBB, LatchVPBB, "vector loop", false /*isReplicator*/);
-  // All VPBB's reachable shallowly from HeaderVPBB belong to top level loop,
-  // because VPlan is expected to end at top level latch.
-  for (VPBlockBase *VPBB : vp_depth_first_shallow(HeaderVPBB))
-    VPBB->setParent(TopRegion);
+  VPBasicBlock *VecPreheader = Plan.createVPBasicBlock("vector.ph");
+  VPBlockUtils::insertBlockAfter(VecPreheader, Plan.getEntry());
 
-  VPBlockUtils::insertBlockAfter(TopRegion, VecPreheader);
   VPBasicBlock *MiddleVPBB = Plan.createVPBasicBlock("middle.block");
   VPBlockUtils::insertBlockAfter(MiddleVPBB, TopRegion);
 

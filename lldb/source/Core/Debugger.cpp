@@ -932,7 +932,6 @@ Debugger::Debugger(lldb::LogOutputCallback log_callback, void *baton)
           stdout, NativeFile::Unowned, m_output_mutex)),
       m_error_stream_sp(std::make_shared<LockableStreamFile>(
           stderr, NativeFile::Unowned, m_output_mutex)),
-      m_input_recorder(nullptr),
       m_broadcaster_manager_sp(BroadcasterManager::MakeBroadcasterManager()),
       m_terminal_state(), m_target_list(*this), m_platform_list(),
       m_listener_sp(Listener::MakeListener("lldb.Debugger")),
@@ -1080,8 +1079,6 @@ bool Debugger::GetAsyncExecution() {
 void Debugger::SetAsyncExecution(bool async_execution) {
   m_command_interpreter_up->SetSynchronous(!async_execution);
 }
-
-repro::DataRecorder *Debugger::GetInputRecorder() { return m_input_recorder; }
 
 static inline int OpenPipe(int fds[2], std::size_t size) {
 #ifdef _WIN32

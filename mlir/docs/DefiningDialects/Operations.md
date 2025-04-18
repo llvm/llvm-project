@@ -248,7 +248,7 @@ To declare a variadic operand that has a variadic number of sub-ranges, wrap the
 `TypeConstraint` for the operand with `VariadicOfVariadic<...,
 "<segment-attribute-name>">`.
 
-The second field of the `VariadicOfVariadic` is the name of an `I32ElementsAttr`
+The second field of the `VariadicOfVariadic` is the name of a `DenseI32ArrayAttr`
 argument that contains the sizes of the variadic sub-ranges. This attribute will
 be used when determining the size of sub-ranges, or when updating the size of
 sub-ranges.
@@ -906,11 +906,12 @@ declarative parameter to `parse` method argument is detailed below:
     -   Variadic: `SmallVectorImpl<Type> &`
     -   VariadicOfVariadic: `SmallVectorImpl<SmallVector<Type>> &`
 *   `attr-dict` Directive: `NamedAttrList &`
+*   `prop-dict` Directive: `OperationState &`
 
 When a variable is optional, the value should only be specified if the variable
 is present. Otherwise, the value should remain `None` or null.
 
-The arguments to the `print<UserDirective>` method is firstly a reference to the
+The arguments to the `print<UserDirective>` method are firstly a reference to the
 `OpAsmPrinter`(`OpAsmPrinter &`), second the op (e.g. `FooOp op` which can be
 `Operation *op` alternatively), and finally a set of output parameters
 corresponding to the parameters specified in the format. The mapping of
@@ -940,6 +941,7 @@ declarative parameter to `print` method argument is detailed below:
     -   Variadic: `TypeRange`
     -   VariadicOfVariadic: `TypeRangeRange`
 *   `attr-dict` Directive: `DictionaryAttr`
+*   `prop-dict` Directive: `FooOp::Properties`
 
 When a variable is optional, the provided value may be null. When a variable is
 referenced in a custom directive parameter using `ref`, it is passed in by
@@ -1397,7 +1399,7 @@ is used. They serve as "hooks" to the enclosing environment. This includes
     information of the current operation.
 *   `$_self` will be replaced with the entity this predicate is attached to.
     E.g., `BoolAttr` is an attribute constraint that wraps a
-    `CPred<"$_self.isa<BoolAttr>()">`. Then for `BoolAttr:$attr`,`$_self` will be
+    `CPred<"isa<BoolAttr>($_self)">`. Then for `BoolAttr:$attr`,`$_self` will be
     replaced by `$attr`. For type constraints, it's a little bit special since
     we want the constraints on each type definition reads naturally and we want
     to attach type constraints directly to an operand/result, `$_self` will be
@@ -1409,8 +1411,8 @@ to allow referencing operand/result `$-name`s; such `$-name`s can start with
 underscore.
 
 For example, to write an attribute `attr` is an `IntegerAttr`, in C++ you can
-just call `attr.isa<IntegerAttr>()`. The code can be wrapped in a `CPred` as
-`$_self.isa<IntegerAttr>()`, with `$_self` as the special placeholder to be
+just call `isa<IntegerAttr>(attr)`. The code can be wrapped in a `CPred` as
+`isa<IntegerAttr>($_self)`, with `$_self` as the special placeholder to be
 replaced by the current attribute `attr` at expansion time.
 
 For more complicated predicates, you can wrap it in a single `CPred`, or you can
@@ -1419,10 +1421,10 @@ that an attribute `attr` is a 32-bit or 64-bit integer, you can write it as
 
 ```tablegen
 And<[
-  CPred<"$_self.isa<IntegerAttr>()">,
+  CPred<"$isa<IntegerAttr>(_self)()">,
   Or<[
-    CPred<"$_self.cast<IntegerAttr>().getType().isInteger(32)">,
-    CPred<"$_self.cast<IntegerAttr>().getType().isInteger(64)">
+    CPred<"cast<IntegerAttr>($_self).getType().isInteger(32)">,
+    CPred<"cast<IntegerAttr>($_self).getType().isInteger(64)">
   ]>
 ]>
 ```
@@ -1755,6 +1757,23 @@ that it has a value within the valid range of the enum. If their
 `genSpecializedAttr` parameter is set, they will also generate a
 wrapper attribute instead of using a bare signless integer attribute
 for storage.
+
+### Enum properties
+
+Enums can be wrapped in properties so that they can be stored inline.
+This causes a value of the enum's C++ class to become a member of the operation's
+property struct and for the operation's verifier to check that the enum's value
+is a valid value for the enum.
+
+The basic wrapper is `EnumProp`, which simply takes an `EnumInfo`.
+
+A less ambiguous syntax, namely putting a mnemonic and `<>`s surrounding
+the enum is generated with `NamedEnumProp`, which takes a `*EnumInfo`
+and a mnemonic string, which becomes part of the property's syntax.
+
+Both of these `EnumProp` types have a `*EnumPropWithAttrForm`, which allows for
+transparently upgrading from `EnumAttr`s and optionally retaining those
+attributes in the generic form.
 
 ## Debugging Tips
 

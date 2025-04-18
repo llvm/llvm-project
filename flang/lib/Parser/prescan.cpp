@@ -891,51 +891,57 @@ bool Prescanner::HandleExponent(TokenSequence &tokens) {
   if (char ed{ToLowerCaseLetter(*at_)}; ed == 'e' || ed == 'd') {
     // Do some look-ahead to ensure that this 'e'/'d' is an exponent,
     // not the start of an identifier that could be a macro.
-    const char *p{SkipWhiteSpace(at_ + 1)};
-    if (*p == '+' || *p == '-') {
-      p = SkipWhiteSpace(p + 1);
+    const char *startAt{at_};
+    int startColumn{column_};
+    TokenSequence possible;
+    EmitCharAndAdvance(possible, *at_);
+    if (*at_ == '+' || *at_ == '-') {
+      EmitCharAndAdvance(possible, *at_);
     }
-    if (IsDecimalDigit(*p)) { // it's an exponent
-      EmitCharAndAdvance(tokens, ed);
-      if (*at_ == '+' || *at_ == '-') {
-        EmitCharAndAdvance(tokens, *at_);
-      }
+    if (IsDecimalDigit(*at_)) { // it's an exponent; scan it
       while (IsDecimalDigit(*at_)) {
-        EmitCharAndAdvance(tokens, *at_);
+        EmitCharAndAdvance(possible, *at_);
       }
+      possible.CloseToken();
+      tokens.CloseToken();
+      tokens.Put(possible);
       return true;
     }
+    // Not an exponent; backtrack
+    at_ = startAt;
+    column_ = startColumn;
   }
   return false;
 }
 
 bool Prescanner::HandleKindSuffix(TokenSequence &tokens) {
-  if (*at_ == '_' && IsLegalInIdentifier(at_[1])) {
-    // The kind specifier might be a macro (with or without its leading
-    // underscore); put it into its own token if it has been defined.
-    const char *p{at_ + 1};
-    while (IsLegalInIdentifier(*++p)) {
-    }
-    if (CharBlock id{at_, static_cast<std::size_t>(p - at_)};
-        preprocessor_.IsNameDefined(id)) {
-      // In 1.0e0_foo, "_foo" is a defined name; retain the
-      // underscore
-      tokens.CloseToken();
-    } else {
-      EmitCharAndAdvance(tokens, '_');
-      if (CharBlock id{at_, static_cast<std::size_t>(p - at_)};
-          preprocessor_.IsNameDefined(id)) {
-        // In 1.0e0_foo, "foo" is a defined name
-        tokens.CloseToken();
-      }
-    }
-    while (IsLegalInIdentifier(*at_)) {
-      EmitCharAndAdvance(tokens, *at_);
-    }
-    return true;
-  } else {
+  if (*at_ != '_') {
     return false;
   }
+  TokenSequence withUnderscore, separate;
+  EmitChar(withUnderscore, '_');
+  EmitCharAndAdvance(separate, '_');
+  if (IsLegalInIdentifier(*at_)) {
+    separate.CloseToken();
+    EmitChar(withUnderscore, *at_);
+    EmitCharAndAdvance(separate, *at_);
+    while (IsLegalInIdentifier(*at_)) {
+      EmitChar(withUnderscore, *at_);
+      EmitCharAndAdvance(separate, *at_);
+    }
+  }
+  withUnderscore.CloseToken();
+  separate.CloseToken();
+  tokens.CloseToken();
+  if (separate.SizeInTokens() == 2 &&
+      preprocessor_.IsNameDefined(separate.TokenAt(1)) &&
+      !preprocessor_.IsNameDefined(withUnderscore.ToCharBlock())) {
+    // "_foo" is not defined, but "foo" is
+    tokens.Put(separate); // '_' "foo"
+  } else {
+    tokens.Put(withUnderscore); // "_foo"
+  }
+  return true;
 }
 
 bool Prescanner::HandleExponentAndOrKindSuffix(TokenSequence &tokens) {
@@ -1309,22 +1315,22 @@ const char *Prescanner::FixedFormContinuationLine(bool mightNeedSpace) {
   tabInCurrentLine_ = false;
   char col1{*nextLine_};
   if (InCompilerDirective()) {
-    if (directiveSentinel_[0] == '$' && directiveSentinel_[1] == '\0') {
+    if (!IsFixedFormCommentChar(col1)) {
+      return nullptr;
+    } else if (directiveSentinel_[0] == '$' && directiveSentinel_[1] == '\0') {
       // !$ OpenMP conditional compilation
       if (preprocessingOnly_) {
         // in -E mode, don't treat "!$   &" as a continuation
         return nullptr;
-      } else if (IsFixedFormCommentChar(col1)) {
-        if (nextLine_[1] == '$') {
-          // accept but do not require a matching sentinel
-          if (!(nextLine_[2] == '&' || IsSpaceOrTab(&nextLine_[2]))) {
-            return nullptr;
-          }
-        } else {
-          return nullptr; // distinct directive
+      } else if (nextLine_[1] == '$') {
+        // accept but do not require a matching sentinel
+        if (!(nextLine_[2] == '&' || IsSpaceOrTab(&nextLine_[2]))) {
+          return nullptr;
         }
+      } else {
+        return nullptr; // distinct directive
       }
-    } else if (IsFixedFormCommentChar(col1)) {
+    } else { // all other directives
       int j{1};
       for (; j < 5; ++j) {
         char ch{directiveSentinel_[j - 1]};
@@ -1339,8 +1345,6 @@ const char *Prescanner::FixedFormContinuationLine(bool mightNeedSpace) {
           return nullptr;
         }
       }
-    } else {
-      return nullptr;
     }
     const char *col6{nextLine_ + 5};
     if (*col6 != '\n' && *col6 != '0' && !IsSpaceOrTab(col6)) {

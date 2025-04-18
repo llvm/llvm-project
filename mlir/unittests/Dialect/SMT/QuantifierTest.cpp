@@ -26,7 +26,7 @@ TEST(QuantifierTest, ExistsBuilderWithPattern) {
   OpBuilder builder(&context);
   auto boolTy = BoolType::get(&context);
 
-  ExistsOp existsOp = builder.create<ExistsOp>(
+  OwningOpRef<ExistsOp> existsOp = builder.create<ExistsOp>(
       loc, TypeRange{boolTy, boolTy},
       [](OpBuilder &builder, Location loc, ValueRange boundVars) {
         return builder.create<AndOp>(loc, boundVars);
@@ -39,7 +39,7 @@ TEST(QuantifierTest, ExistsBuilderWithPattern) {
 
   SmallVector<char, 1024> buffer;
   llvm::raw_svector_ostream stream(buffer);
-  existsOp.print(stream);
+  existsOp->print(stream);
 
   ASSERT_STREQ(
       stream.str().str().c_str(),
@@ -57,7 +57,7 @@ TEST(QuantifierTest, ExistsBuilderNoPattern) {
   OpBuilder builder(&context);
   auto boolTy = BoolType::get(&context);
 
-  ExistsOp existsOp = builder.create<ExistsOp>(
+  OwningOpRef<ExistsOp> existsOp = builder.create<ExistsOp>(
       loc, TypeRange{boolTy, boolTy},
       [](OpBuilder &builder, Location loc, ValueRange boundVars) {
         return builder.create<AndOp>(loc, boundVars);
@@ -66,7 +66,7 @@ TEST(QuantifierTest, ExistsBuilderNoPattern) {
 
   SmallVector<char, 1024> buffer;
   llvm::raw_svector_ostream stream(buffer);
-  existsOp.print(stream);
+  existsOp->print(stream);
 
   ASSERT_STREQ(stream.str().str().c_str(),
                "%0 = smt.exists [\"a\", \"b\"] no_pattern {\n^bb0(%arg0: "
@@ -82,7 +82,7 @@ TEST(QuantifierTest, ExistsBuilderDefault) {
   OpBuilder builder(&context);
   auto boolTy = BoolType::get(&context);
 
-  ExistsOp existsOp = builder.create<ExistsOp>(
+  OwningOpRef<ExistsOp> existsOp = builder.create<ExistsOp>(
       loc, TypeRange{boolTy, boolTy},
       [](OpBuilder &builder, Location loc, ValueRange boundVars) {
         return builder.create<AndOp>(loc, boundVars);
@@ -91,7 +91,7 @@ TEST(QuantifierTest, ExistsBuilderDefault) {
 
   SmallVector<char, 1024> buffer;
   llvm::raw_svector_ostream stream(buffer);
-  existsOp.print(stream);
+  existsOp->print(stream);
 
   ASSERT_STREQ(stream.str().str().c_str(),
                "%0 = smt.exists [\"a\", \"b\"] {\n^bb0(%arg0: !smt.bool, "
@@ -111,7 +111,7 @@ TEST(QuantifierTest, ForallBuilderWithPattern) {
   OpBuilder builder(&context);
   auto boolTy = BoolType::get(&context);
 
-  ForallOp forallOp = builder.create<ForallOp>(
+  OwningOpRef<ForallOp> forallOp = builder.create<ForallOp>(
       loc, TypeRange{boolTy, boolTy},
       [](OpBuilder &builder, Location loc, ValueRange boundVars) {
         return builder.create<AndOp>(loc, boundVars);
@@ -124,7 +124,7 @@ TEST(QuantifierTest, ForallBuilderWithPattern) {
 
   SmallVector<char, 1024> buffer;
   llvm::raw_svector_ostream stream(buffer);
-  forallOp.print(stream);
+  forallOp->print(stream);
 
   ASSERT_STREQ(
       stream.str().str().c_str(),
@@ -142,7 +142,7 @@ TEST(QuantifierTest, ForallBuilderNoPattern) {
   OpBuilder builder(&context);
   auto boolTy = BoolType::get(&context);
 
-  ForallOp forallOp = builder.create<ForallOp>(
+  OwningOpRef<ForallOp> forallOp = builder.create<ForallOp>(
       loc, TypeRange{boolTy, boolTy},
       [](OpBuilder &builder, Location loc, ValueRange boundVars) {
         return builder.create<AndOp>(loc, boundVars);
@@ -151,7 +151,7 @@ TEST(QuantifierTest, ForallBuilderNoPattern) {
 
   SmallVector<char, 1024> buffer;
   llvm::raw_svector_ostream stream(buffer);
-  forallOp.print(stream);
+  forallOp->print(stream);
 
   ASSERT_STREQ(stream.str().str().c_str(),
                "%0 = smt.forall [\"a\", \"b\"] no_pattern {\n^bb0(%arg0: "
@@ -167,7 +167,7 @@ TEST(QuantifierTest, ForallBuilderDefault) {
   OpBuilder builder(&context);
   auto boolTy = BoolType::get(&context);
 
-  ForallOp forallOp = builder.create<ForallOp>(
+  OwningOpRef<ForallOp> forallOp = builder.create<ForallOp>(
       loc, TypeRange{boolTy, boolTy},
       [](OpBuilder &builder, Location loc, ValueRange boundVars) {
         return builder.create<AndOp>(loc, boundVars);
@@ -176,7 +176,7 @@ TEST(QuantifierTest, ForallBuilderDefault) {
 
   SmallVector<char, 1024> buffer;
   llvm::raw_svector_ostream stream(buffer);
-  forallOp.print(stream);
+  forallOp->print(stream);
 
   ASSERT_STREQ(stream.str().str().c_str(),
                "%0 = smt.forall {\n^bb0(%arg0: !smt.bool, "

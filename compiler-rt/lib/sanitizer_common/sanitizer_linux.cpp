@@ -606,7 +606,7 @@ uptr internal_execve(const char *filename, char *const argv[],
   return internal_syscall(SYSCALL(execve), (uptr)filename, (uptr)argv,
                           (uptr)envp);
 }
-#  endif  // !SANITIZER_SOLARIS && !SANITIZER_NETBSD
+#  endif  // !SANITIZER_SOLARIS && !SANITIZER_NETBSD && !SANITIZER_HAIKU
 
 #  if !SANITIZER_NETBSD && !SANITIZER_HAIKU
 void internal__exit(int exitcode) {
@@ -617,7 +617,7 @@ void internal__exit(int exitcode) {
 #    endif
   Die();  // Unreachable.
 }
-#  endif  // !SANITIZER_NETBSD
+#  endif  // !SANITIZER_NETBSD && !SANITIZER_HAIKU
 
 // ----------------- sanitizer_common.h
 bool FileExists(const char *filename) {
@@ -807,7 +807,7 @@ static void GetArgsAndEnv(char ***argv, char ***envp) {
 #    if !SANITIZER_GO
   }
 #    endif  // !SANITIZER_GO
-#  endif    // SANITIZER_FREEBSD
+#  endif    // SANITIZER_HAIKU
 }
 
 char **GetArgv() {

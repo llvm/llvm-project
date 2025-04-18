@@ -36,10 +36,13 @@ enum MCFixupKind {
 
   FirstTargetFixupKind = 128,
 
+  /// Targets can use FirstRelocationKind+t to encode relocation type t.
+  FirstRelocationKind = 256,
+
   /// The range [FirstLiteralRelocationKind, MaxTargetFixupKind) is used for
   /// relocations coming from .reloc directive. Fixup kind
   /// FirstLiteralRelocationKind+V represents the relocation type with number V.
-  FirstLiteralRelocationKind = 256,
+  FirstLiteralRelocationKind = 256 + 1032 + 32,
 
   /// Set limit to accommodate the highest reloc type in use for all Targets,
   /// currently R_AARCH64_IRELATIVE at 1032, including room for expansion.
@@ -85,6 +88,10 @@ public:
     FI.Kind = Kind;
     FI.Loc = Loc;
     return FI;
+  }
+  static MCFixup create(uint32_t Offset, const MCExpr *Value, unsigned Kind,
+                        SMLoc Loc = SMLoc()) {
+    return create(Offset, Value, MCFixupKind(Kind), Loc);
   }
 
   MCFixupKind getKind() const { return Kind; }

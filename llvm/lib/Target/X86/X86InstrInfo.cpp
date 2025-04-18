@@ -4748,8 +4748,8 @@ bool X86InstrInfo::getMemOperandsWithOffsetWidth(
   // FIXME: Relying on memoperands() may not be right thing to do here. Check
   // with X86 maintainers, and fix it accordingly. For now, it is ok, since
   // there is no use of `Width` for X86 back-end at the moment.
-  Width =
-      !MemOp.memoperands_empty() ? MemOp.memoperands().front()->getSize() : 0;
+  Width = !MemOp.memoperands_empty() ? MemOp.memoperands().front()->getSize()
+                                     : LocationSize::precise(0);
   BaseOps.push_back(BaseOp);
   return true;
 }
@@ -8961,7 +8961,7 @@ bool X86InstrInfo::isSchedulingBoundary(const MachineInstr &MI,
       Opcode == X86::PLDTILECFGV)
     return true;
 
-  // Frame setup and destory can't be scheduled around.
+  // Frame setup and destroy can't be scheduled around.
   if (MI.getFlag(MachineInstr::FrameSetup) ||
       MI.getFlag(MachineInstr::FrameDestroy))
     return true;

@@ -109,8 +109,6 @@ unsigned AArch64ELFObjectWriter::getRelocType(MCContext &Ctx,
                                               const MCFixup &Fixup,
                                               bool IsPCRel) const {
   unsigned Kind = Fixup.getTargetKind();
-  if (Kind >= FirstLiteralRelocationKind)
-    return Kind - FirstLiteralRelocationKind;
   AArch64MCExpr::Specifier RefKind =
       static_cast<AArch64MCExpr::Specifier>(Target.getSpecifier());
   AArch64MCExpr::Specifier SymLoc = AArch64MCExpr::getSymbolLoc(RefKind);
@@ -128,6 +126,11 @@ unsigned AArch64ELFObjectWriter::getRelocType(MCContext &Ctx,
   default:
     break;
   }
+
+  // Extract the relocation type from the fixup kind, after applying STT_TLS as
+  // needed.
+  if (Kind >= FirstRelocationKind)
+    return Kind - FirstRelocationKind;
 
   if (IsPCRel) {
     switch (Kind) {
