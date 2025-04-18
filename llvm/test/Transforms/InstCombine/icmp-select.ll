@@ -758,3 +758,20 @@ entry:
   %res = icmp eq i8 %sel1, %sel2
   ret i1 %res
 }
+
+define <2 x i1> @discr_eq_simple_vec(<2 x i8> %a, <2 x i8> %b, i1 %cond) {
+; CHECK-LABEL: @discr_eq_simple_vec(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[ADD1:%.*]] = add <2 x i8> [[A:%.*]], <i8 poison, i8 -2>
+; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[COND:%.*]], <2 x i8> [[ADD1]], <2 x i8> splat (i8 1)
+; CHECK-NEXT:    [[ADD2:%.*]] = add <2 x i8> [[B:%.*]], <i8 -2, i8 poison>
+; CHECK-NEXT:    [[RES:%.*]] = icmp eq <2 x i8> [[SEL1]], [[ADD2]]
+; CHECK-NEXT:    ret <2 x i1> [[RES]]
+;
+entry:
+  %add1 = add <2 x i8> %a, <i8 poison, i8 -2>
+  %sel1 = select i1 %cond, <2 x i8> %add1, <2 x i8> splat(i8 1)
+  %add2 = add <2 x i8> %b, <i8 -2, i8 poison>
+  %res = icmp eq <2 x i8> %sel1, %add2
+  ret <2 x i1> %res
+}

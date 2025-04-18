@@ -5819,13 +5819,16 @@ static void collectOffsetOp(Value *V, SmallVectorImpl<OffsetOp> &Offsets,
 
   switch (Inst->getOpcode()) {
   case Instruction::Add:
-    if (match(Inst->getOperand(1), m_ImmConstant(C)))
+    if (match(Inst->getOperand(1), m_ImmConstant(C)) &&
+        !C->containsUndefOrPoisonElement())
       if (Constant *NegC = ConstantExpr::getNeg(C))
         Offsets.emplace_back(Instruction::Add, NegC);
     break;
   case Instruction::Xor:
-    Offsets.emplace_back(Instruction::Xor, Inst->getOperand(1));
-    Offsets.emplace_back(Instruction::Xor, Inst->getOperand(0));
+    if (isGuaranteedNotToBeUndefOrPoison(Inst->getOperand(1)))
+      Offsets.emplace_back(Instruction::Xor, Inst->getOperand(1));
+    if (isGuaranteedNotToBeUndefOrPoison(Inst->getOperand(0)))
+      Offsets.emplace_back(Instruction::Xor, Inst->getOperand(0));
     break;
   case Instruction::Select:
     if (AllowRecursion) {
