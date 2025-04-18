@@ -932,6 +932,14 @@ public:
     return isUImmPred([](int64_t Imm) { return 0 == Imm; });
   }
 
+  bool isImmThree() const {
+    return isUImmPred([](int64_t Imm) { return 3 == Imm; });
+  }
+
+  bool isImmFour() const {
+    return isUImmPred([](int64_t Imm) { return 4 == Imm; });
+  }
+
   bool isSImm5Plus1() const {
     return isSImmPred(
         [](int64_t Imm) { return Imm != INT64_MIN && isInt<5>(Imm - 1); });
@@ -3661,19 +3669,6 @@ bool RISCVAsmParser::validateInstruction(MCInst &Inst,
       SMLoc Loc = Operands[1]->getStartLoc();
       return Error(Loc, "rs1 and rs2 must be different");
     }
-  }
-
-  bool IsTHeadMemPair32 = (Opcode == RISCV::TH_LWD ||
-                           Opcode == RISCV::TH_LWUD || Opcode == RISCV::TH_SWD);
-  bool IsTHeadMemPair64 = (Opcode == RISCV::TH_LDD || Opcode == RISCV::TH_SDD);
-  // The last operand of XTHeadMemPair instructions must be constant 3 or 4
-  // depending on the data width.
-  if (IsTHeadMemPair32 && Inst.getOperand(4).getImm() != 3) {
-    SMLoc Loc = Operands.back()->getStartLoc();
-    return Error(Loc, "operand must be constant 3");
-  } else if (IsTHeadMemPair64 && Inst.getOperand(4).getImm() != 4) {
-    SMLoc Loc = Operands.back()->getStartLoc();
-    return Error(Loc, "operand must be constant 4");
   }
 
   const MCInstrDesc &MCID = MII.get(Opcode);
