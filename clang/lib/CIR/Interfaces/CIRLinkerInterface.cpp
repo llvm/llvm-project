@@ -138,6 +138,15 @@ public:
   }
 
   static unsigned getBitWidth(Operation *op) { llvm_unreachable("NYI"); }
+
+  // FIXME: CIR does not yet have UnnamedAddr attribute
+  static UnnamedAddr getUnnamedAddr(Operation */* op*/) {
+      return UnnamedAddr::Global;
+  }
+
+  // FIXME: CIR does not yet have UnnamedAddr attribute
+  static void setUnnamedAddr(Operation */* op*/, UnnamedAddr addr) {}
+
 };
 
 //===----------------------------------------------------------------------===//
