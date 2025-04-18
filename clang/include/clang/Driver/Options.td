@@ -7893,23 +7893,23 @@ defm disable_free : BoolOption<"",
   "disable-free",
   FrontendOpts<"DisableFree">,
   DefaultFalse,
-  PosFlag<SetTrue, [], [ClangOption], "Disable">,
-  NegFlag<SetFalse, [], [ClangOption], "Don't disable">,
-  BothFlags<[], [ClangOption], " freeing of memory on exit">>;
+  PosFlag<SetTrue, [], [], "Disable">,
+  NegFlag<SetFalse, [], [], "Don't disable">,
+  BothFlags<[], [], " freeing of memory on exit">>;
 defm clear_ast_before_backend : BoolOption<"",
   "clear-ast-before-backend",
   CodeGenOpts<"ClearASTBeforeBackend">,
   DefaultFalse,
-  PosFlag<SetTrue, [], [ClangOption], "Clear">,
-  NegFlag<SetFalse, [], [ClangOption], "Don't clear">,
-  BothFlags<[], [ClangOption], " the Clang AST before running backend code generation">>;
+  PosFlag<SetTrue, [], [], "Clear">,
+  NegFlag<SetFalse, [], [], "Don't clear">,
+  BothFlags<[], [], " the Clang AST before running backend code generation">>;
 defm enable_noundef_analysis : BoolOption<"",
   "enable-noundef-analysis",
   CodeGenOpts<"EnableNoundefAttrs">,
   DefaultTrue,
-  PosFlag<SetTrue, [], [ClangOption], "Enable">,
-  NegFlag<SetFalse, [], [ClangOption], "Disable">,
-  BothFlags<[], [ClangOption], " analyzing function argument and return types for mandatory definedness">>;
+  PosFlag<SetTrue, [], [], "Enable">,
+  NegFlag<SetFalse, [], [], "Disable">,
+  BothFlags<[], [], " analyzing function argument and return types for mandatory definedness">>;
 def discard_value_names : Flag<["-"], "discard-value-names">,
   HelpText<"Discard value names in LLVM IR">,
   MarshallingInfoFlag<CodeGenOpts<"DiscardValueNames">>;
@@ -7953,7 +7953,7 @@ def fmodules_embed_file_EQ : Joined<["-"], "fmodules-embed-file=">,
 defm fimplicit_modules_use_lock : BoolOption<"f", "implicit-modules-use-lock",
   FrontendOpts<"BuildingImplicitModuleUsesLock">, DefaultTrue,
   NegFlag<SetFalse>,
-  PosFlag<SetTrue, [], [ClangOption],
+  PosFlag<SetTrue, [], [],
           "Use filesystem locks for implicit modules builds to avoid "
           "duplicating work in competing clang invocations.">>;
 // FIXME: We only need this in C++ modules if we might textually
@@ -7986,12 +7986,12 @@ def ftest_module_file_extension_EQ :
 defm recovery_ast : BoolOption<"f", "recovery-ast",
   LangOpts<"RecoveryAST">, DefaultTrue,
   NegFlag<SetFalse>,
-  PosFlag<SetTrue, [], [ClangOption], "Preserve expressions in AST rather "
+  PosFlag<SetTrue, [], [], "Preserve expressions in AST rather "
                               "than dropping them when encountering semantic errors">>;
 defm recovery_ast_type : BoolOption<"f", "recovery-ast-type",
   LangOpts<"RecoveryASTType">, DefaultTrue,
   NegFlag<SetFalse>,
-  PosFlag<SetTrue, [], [ClangOption], "Preserve the type for recovery "
+  PosFlag<SetTrue, [], [], "Preserve the type for recovery "
                               "expressions when possible">>;
 
 let Group = Action_Group in {
@@ -8068,9 +8068,9 @@ def dump_minimization_hints : Joined<["-"],
 
 defm emit_llvm_uselists : BoolOption<"", "emit-llvm-uselists",
   CodeGenOpts<"EmitLLVMUseLists">, DefaultFalse,
-  PosFlag<SetTrue, [], [ClangOption], "Preserve">,
-  NegFlag<SetFalse, [], [ClangOption], "Don't preserve">,
-  BothFlags<[], [ClangOption], " order of LLVM use-lists when serializing">>;
+  PosFlag<SetTrue, [], [], "Preserve">,
+  NegFlag<SetFalse, [], [], "Don't preserve">,
+  BothFlags<[], [], " order of LLVM use-lists when serializing">>;
 
 def print_stats : Flag<["-"], "print-stats">,
   HelpText<"Print performance metrics and statistics">,
