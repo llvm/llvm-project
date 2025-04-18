@@ -32,9 +32,7 @@ define double @fmul_strict_tan_strict_cos_reassoc(double %a) {
 define double @fmul_reassoc_tan_strict_cos_strict(double %a, ptr dereferenceable(2) %dummy) {
 ; CHECK-LABEL: define double @fmul_reassoc_tan_strict_cos_strict(
 ; CHECK-SAME: double [[A:%.*]], ptr dereferenceable(2) [[DUMMY:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.tan.f64(double [[A]])
-; CHECK-NEXT:    [[TMP2:%.*]] = call double @llvm.cos.f64(double [[A]])
-; CHECK-NEXT:    [[RES:%.*]] = fmul reassoc double [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[RES:%.*]] = call reassoc double @llvm.sin.f64(double [[A]])
 ; CHECK-NEXT:    ret double [[RES]]
 ;
   %1 = call double @llvm.tan.f64(double %a)
@@ -46,9 +44,7 @@ define double @fmul_reassoc_tan_strict_cos_strict(double %a, ptr dereferenceable
 define double @fmul_reassoc_tan_reassoc_cos_strict(double %a) {
 ; CHECK-LABEL: define double @fmul_reassoc_tan_reassoc_cos_strict(
 ; CHECK-SAME: double [[A:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = call reassoc double @llvm.tan.f64(double [[A]])
-; CHECK-NEXT:    [[TMP2:%.*]] = call double @llvm.cos.f64(double [[A]])
-; CHECK-NEXT:    [[RES:%.*]] = fmul reassoc double [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[RES:%.*]] = call reassoc double @llvm.sin.f64(double [[A]])
 ; CHECK-NEXT:    ret double [[RES]]
 ;
   %1 = call reassoc double @llvm.tan.f64(double %a)
@@ -76,9 +72,7 @@ define double @fmul_tan_cos_reassoc_multiple_uses(double %a) {
 define double @fmul_tan_cos_reassoc(double %a) {
 ; CHECK-LABEL: define double @fmul_tan_cos_reassoc(
 ; CHECK-SAME: double [[A:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = call reassoc double @llvm.tan.f64(double [[A]])
-; CHECK-NEXT:    [[TMP2:%.*]] = call reassoc double @llvm.cos.f64(double [[A]])
-; CHECK-NEXT:    [[RES:%.*]] = fmul reassoc double [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[RES:%.*]] = call reassoc double @llvm.sin.f64(double [[A]])
 ; CHECK-NEXT:    ret double [[RES]]
 ;
   %1 = call reassoc double @llvm.tan.f64(double %a)
@@ -90,9 +84,7 @@ define double @fmul_tan_cos_reassoc(double %a) {
 define float @fmul_tanf_cosf_reassoc(float %a) {
 ; CHECK-LABEL: define float @fmul_tanf_cosf_reassoc(
 ; CHECK-SAME: float [[A:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = call reassoc float @llvm.tan.f32(float [[A]])
-; CHECK-NEXT:    [[TMP2:%.*]] = call reassoc float @llvm.cos.f32(float [[A]])
-; CHECK-NEXT:    [[RES:%.*]] = fmul reassoc float [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[RES:%.*]] = call reassoc float @llvm.sin.f32(float [[A]])
 ; CHECK-NEXT:    ret float [[RES]]
 ;
   %1 = call reassoc float @llvm.tan.f32(float %a)
@@ -104,9 +96,7 @@ define float @fmul_tanf_cosf_reassoc(float %a) {
 define fp128 @fmul_tanfp128_cosfp128_reassoc(fp128 %a) {
 ; CHECK-LABEL: define fp128 @fmul_tanfp128_cosfp128_reassoc(
 ; CHECK-SAME: fp128 [[A:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = call reassoc fp128 @llvm.tan.f128(fp128 [[A]])
-; CHECK-NEXT:    [[TMP2:%.*]] = call reassoc fp128 @llvm.cos.f128(fp128 [[A]])
-; CHECK-NEXT:    [[RES:%.*]] = fmul reassoc fp128 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[RES:%.*]] = call reassoc fp128 @llvm.sin.f128(fp128 [[A]])
 ; CHECK-NEXT:    ret fp128 [[RES]]
 ;
   %1 = call reassoc fp128 @llvm.tan.fp128(fp128 %a)
