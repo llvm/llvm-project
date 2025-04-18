@@ -121,10 +121,9 @@ private:
 } // namespace
 
 const NoteTag *BuiltinFunctionChecker::createBuiltinOverflowNoteTag(
-    CheckerContext &C, bool overflow, SVal Arg1, SVal Arg2,
-    SVal Result) const {
-  return C.getNoteTag([Result, Arg1, Arg2, overflow](
-                          PathSensitiveBugReport &BR, llvm::raw_ostream &OS) {
+    CheckerContext &C, bool overflow, SVal Arg1, SVal Arg2, SVal Result) const {
+  return C.getNoteTag([Result, Arg1, Arg2, overflow](PathSensitiveBugReport &BR,
+                                                     llvm::raw_ostream &OS) {
     if (!BR.isInteresting(Result))
       return;
 
@@ -200,10 +199,9 @@ void BuiltinFunctionChecker::handleOverflowBuiltin(const CallEvent &Call,
         NewState = addTaint(NewState, *L);
     }
 
-    C.addTransition(
-        NewState,
-        createBuiltinOverflowNoteTag(
-            C, /*overflow=*/isOverflow, Arg1, Arg2, RetVal));
+    C.addTransition(NewState,
+                    createBuiltinOverflowNoteTag(C, /*overflow=*/isOverflow,
+                                                 Arg1, Arg2, RetVal));
   };
 
   if (NotOverflow)
