@@ -4082,7 +4082,9 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::mergeClones() {
     mergeClones(Node, Visited, ContextIdToAllocationNode);
 
     // Make a copy so the recursive post order traversal that may create new
-    // clones doesn't mess up iteration.
+    // clones doesn't mess up iteration. Note that the recursive traversal
+    // itself does not call mergeClones on any of these nodes, which are all
+    // (clones of) allocations.
     auto Clones = Node->Clones;
     for (auto *Clone : Clones)
       mergeClones(Clone, Visited, ContextIdToAllocationNode);
