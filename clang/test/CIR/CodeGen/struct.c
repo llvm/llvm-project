@@ -8,9 +8,13 @@
 // For LLVM IR checks, the structs are defined before the variables, so these
 // checks are at the top.
 // LLVM: %struct.CompleteS = type { i32, i8 }
+// LLVM: %struct.OuterS = type { %struct.InnerS, i32 }
+// LLVM: %struct.InnerS = type { i32, i8 }
 // LLVM: %struct.PackedS = type <{ i32, i8 }>
 // LLVM: %struct.PackedAndPaddedS = type <{ i32, i8, i8 }>
 // OGCG: %struct.CompleteS = type { i32, i8 }
+// OGCG: %struct.OuterS = type { %struct.InnerS, i32 }
+// OGCG: %struct.InnerS = type { i32, i8 }
 // OGCG: %struct.PackedS = type <{ i32, i8 }>
 // OGCG: %struct.PackedAndPaddedS = type <{ i32, i8, i8 }>
 
@@ -30,6 +34,23 @@ struct CompleteS {
 // CIR-SAME:      "CompleteS" {!s32i, !s8i}>
 // LLVM:      @cs = dso_local global %struct.CompleteS zeroinitializer
 // OGCG:      @cs = global %struct.CompleteS zeroinitializer, align 4
+
+struct InnerS {
+  int a;
+  char b;
+};
+
+struct OuterS {
+  struct InnerS is;
+  int c;
+};
+
+struct OuterS os;
+
+// CIR:       cir.global external @os = #cir.zero : !cir.record<struct
+// CIR-SAME:      "OuterS" {!cir.record<struct "InnerS" {!s32i, !s8i}>, !s32i}>
+// LLVM:      @os = dso_local global %struct.OuterS zeroinitializer
+// OGCG:      @os = global %struct.OuterS zeroinitializer, align 4
 
 #pragma pack(push)
 #pragma pack(1)
