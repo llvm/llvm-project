@@ -415,9 +415,17 @@ class Sema;
       // If we are not performing a reference binding, we can skip comparing
       // the types, which has a noticeable performance impact.
       if (!ReferenceBinding) {
+#ifndef NDEBUG
+        auto Decay = [&](QualType T) {
+          return (T->isArrayType() || T->isFunctionType()) ? C.getDecayedType(T)
+                                                           : T;
+        };
         // The types might differ if there is an array-to-pointer conversion
-        // or lvalue-to-rvalue conversion.
-        assert(First || C.hasSameUnqualifiedType(getFromType(), getToType(2)));
+        // an function-to-pointer conversion, or lvalue-to-rvalue conversion.
+        // In some cases, this may happen even if First is not set.
+        assert(C.hasSameUnqualifiedType(Decay(getFromType()),
+                                        Decay(getToType(2))));
+#endif
         return true;
       }
       if (!C.hasSameType(getFromType(), getToType(2)))
@@ -1342,6 +1350,9 @@ class Sema;
     iterator end() { return Candidates.end(); }
 
     size_t size() const { return Candidates.size() + DeferredCandidatesCount; }
+
+    size_t nonDeferredCandidatesCount() const { return Candidates.size(); }
+
     bool empty() const {
       return Candidates.empty() && DeferredCandidatesCount == 0;
     }

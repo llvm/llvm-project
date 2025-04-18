@@ -194,7 +194,13 @@ struct t6 {
   }
 };
 
-int main() {
+void testT6() {
   t6 v6;
   v6.operator t1<float>();
 }
+
+
+using a = void(int &);
+template <typename c> void d(c &);
+void f(a);
+template <class> void f(bool j) { f(&d<int>); }

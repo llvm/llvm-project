@@ -112,6 +112,8 @@ the following values for the :ref:`offload kind<table-offload_kind>` and the
     +------------+-------+---------------------------------------+
     | OFK_HIP    | 0x03  | The producer was HIP                  |
     +------------+-------+---------------------------------------+
+    | OFK_SYCL   | 0x04  | The producer was SYCL                 |
+    +------------+-------+---------------------------------------+
 
 The flags are used to signify certain conditions, such as the presence of
 debugging information or whether or not LTO was used. The string entry table is

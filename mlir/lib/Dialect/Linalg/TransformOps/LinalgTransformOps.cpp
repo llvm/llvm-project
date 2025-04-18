@@ -3587,9 +3587,9 @@ transform::VectorizeChildrenAndApplyPatternsOp::applyToOne(
   vector::populateVectorStepLoweringPatterns(patterns);
 
   TrackingListener listener(state, *this);
-  GreedyRewriteConfig config;
-  config.listener = &listener;
-  if (failed(applyPatternsGreedily(target, std::move(patterns), config)))
+  if (failed(
+          applyPatternsGreedily(target, std::move(patterns),
+                                GreedyRewriteConfig().setListener(&listener))))
     return emitDefaultDefiniteFailure(target);
 
   results.push_back(target);
