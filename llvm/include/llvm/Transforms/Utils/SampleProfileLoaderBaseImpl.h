@@ -21,6 +21,7 @@
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/LazyCallGraph.h"
 #include "llvm/Analysis/LoopInfo.h"
@@ -39,6 +40,7 @@
 #include "llvm/ProfileData/SampleProf.h"
 #include "llvm/ProfileData/SampleProfReader.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/GenericDomTree.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/SampleProfileInference.h"
@@ -1104,12 +1106,13 @@ void SampleProfileLoaderBaseImpl<BT>::emitCoverageRemarks(FunctionT &F) {
     unsigned Used = CoverageTracker.countUsedRecords(Samples, PSI);
     unsigned Total = CoverageTracker.countBodyRecords(Samples, PSI);
     unsigned Coverage = CoverageTracker.computeCoverage(Used, Total);
+    SmallString<128> Msg =
+        formatv("{0} of {1} available profile records ({2}%) were applied",
+                Used, Total, Coverage);
     if (Coverage < SampleProfileRecordCoverage) {
-      Func.getContext().diagnose(DiagnosticInfoSampleProfile(
-          Func.getSubprogram()->getFilename(), getFunctionLoc(F),
-          Twine(Used) + " of " + Twine(Total) + " available profile records (" +
-              Twine(Coverage) + "%) were applied",
-          DS_Warning));
+      Func.getContext().diagnose(
+          DiagnosticInfoSampleProfile(Func.getSubprogram()->getFilename(),
+                                      getFunctionLoc(F), Msg, DS_Warning));
     }
   }
 
@@ -1117,12 +1120,13 @@ void SampleProfileLoaderBaseImpl<BT>::emitCoverageRemarks(FunctionT &F) {
     uint64_t Used = CoverageTracker.getTotalUsedSamples();
     uint64_t Total = CoverageTracker.countBodySamples(Samples, PSI);
     unsigned Coverage = CoverageTracker.computeCoverage(Used, Total);
+    SmallString<128> Msg =
+        formatv("{0} of {1} available profile samples ({2}%) were applied",
+                Used, Total, Coverage);
     if (Coverage < SampleProfileSampleCoverage) {
-      Func.getContext().diagnose(DiagnosticInfoSampleProfile(
-          Func.getSubprogram()->getFilename(), getFunctionLoc(F),
-          Twine(Used) + " of " + Twine(Total) + " available profile samples (" +
-              Twine(Coverage) + "%) were applied",
-          DS_Warning));
+      Func.getContext().diagnose(
+          DiagnosticInfoSampleProfile(Func.getSubprogram()->getFilename(),
+                                      getFunctionLoc(F), Msg, DS_Warning));
     }
   }
 }
@@ -1149,10 +1153,11 @@ unsigned SampleProfileLoaderBaseImpl<BT>::getFunctionLoc(FunctionT &F) {
 
   // If the start of \p F is missing, emit a diagnostic to inform the user
   // about the missed opportunity.
-  Func.getContext().diagnose(DiagnosticInfoSampleProfile(
-      "No debug information found in function " + Func.getName() +
-          ": Function profile not used",
-      DS_Warning));
+  SmallString<128> Msg = formatv(
+      "No debug information found in function {0}: Function profile not used",
+      Func.getName());
+
+  Func.getContext().diagnose(DiagnosticInfoSampleProfile(Msg, DS_Warning));
   return 0;
 }
 

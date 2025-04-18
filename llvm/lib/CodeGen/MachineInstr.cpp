@@ -2332,13 +2332,15 @@ void MachineInstr::emitInlineAsmError(const Twine &Msg) const {
           ? mdconst::extract<ConstantInt>(LocMD->getOperand(0))->getZExtValue()
           : 0;
   LLVMContext &Ctx = getMF()->getFunction().getContext();
-  Ctx.diagnose(DiagnosticInfoInlineAsm(LocCookie, Msg));
+  SmallString<128> Storage;
+  Ctx.diagnose(DiagnosticInfoInlineAsm(LocCookie, Msg.toStringRef(Storage)));
 }
 
 void MachineInstr::emitGenericError(const Twine &Msg) const {
   const Function &Fn = getMF()->getFunction();
-  Fn.getContext().diagnose(
-      DiagnosticInfoGenericWithLoc(Msg, Fn, getDebugLoc()));
+  SmallString<128> Storage;
+  Fn.getContext().diagnose(DiagnosticInfoGenericWithLoc(
+      Msg.toStringRef(Storage), Fn, getDebugLoc()));
 }
 
 MachineInstrBuilder llvm::BuildMI(MachineFunction &MF, const DebugLoc &DL,

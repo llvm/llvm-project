@@ -13,6 +13,7 @@
 
 #include "llvm/IR/LLVMContext.h"
 #include "LLVMContextImpl.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -204,12 +205,14 @@ void LLVMContext::yield() {
 }
 
 void LLVMContext::emitError(const Twine &ErrorStr) {
-  diagnose(DiagnosticInfoGeneric(ErrorStr));
+  SmallString<128> Storage;
+  diagnose(DiagnosticInfoGeneric(ErrorStr.toStringRef(Storage)));
 }
 
 void LLVMContext::emitError(const Instruction *I, const Twine &ErrorStr) {
   assert(I && "Invalid instruction");
-  diagnose(DiagnosticInfoGeneric(I, ErrorStr));
+  SmallString<128> Storage;
+  diagnose(DiagnosticInfoGeneric(I, ErrorStr.toStringRef(Storage)));
 }
 
 static bool isDiagnosticEnabled(const DiagnosticInfo &DI) {

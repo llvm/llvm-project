@@ -18,7 +18,6 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/Twine.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/Support/CBindingWrapping.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -139,22 +138,22 @@ public:
 using DiagnosticHandlerFunction = std::function<void(const DiagnosticInfo &)>;
 
 class DiagnosticInfoGeneric : public DiagnosticInfo {
-  const Twine &MsgStr;
+  StringRef MsgStr;
   const Instruction *Inst = nullptr;
 
 public:
   /// \p MsgStr is the message to be reported to the frontend.
   /// This class does not copy \p MsgStr, therefore the reference must be valid
   /// for the whole life time of the Diagnostic.
-  DiagnosticInfoGeneric(const Twine &MsgStr,
+  DiagnosticInfoGeneric(StringRef MsgStr,
                         DiagnosticSeverity Severity = DS_Error)
       : DiagnosticInfo(DK_Generic, Severity), MsgStr(MsgStr) {}
 
-  DiagnosticInfoGeneric(const Instruction *I, const Twine &ErrMsg,
+  DiagnosticInfoGeneric(const Instruction *I, StringRef ErrMsg,
                         DiagnosticSeverity Severity = DS_Error)
       : DiagnosticInfo(DK_Generic, Severity), MsgStr(ErrMsg), Inst(I) {}
 
-  const Twine &getMsgStr() const { return MsgStr; }
+  StringRef getMsgStr() const { return MsgStr; }
   const Instruction *getInstruction() const { return Inst; }
 
   /// \see DiagnosticInfo::print.
@@ -172,7 +171,7 @@ private:
   /// Optional line information. 0 if not set.
   uint64_t LocCookie = 0;
   /// Message to be reported.
-  const Twine &MsgStr;
+  StringRef MsgStr;
   /// Optional origin of the problem.
   const Instruction *Instr = nullptr;
 
@@ -181,7 +180,7 @@ public:
   /// \p MsgStr gives the message.
   /// This class does not copy \p MsgStr, therefore the reference must be valid
   /// for the whole life time of the Diagnostic.
-  DiagnosticInfoInlineAsm(uint64_t LocCookie, const Twine &MsgStr,
+  DiagnosticInfoInlineAsm(uint64_t LocCookie, StringRef MsgStr,
                           DiagnosticSeverity Severity = DS_Error);
 
   /// \p Instr gives the original instruction that triggered the diagnostic.
@@ -189,11 +188,11 @@ public:
   /// This class does not copy \p MsgStr, therefore the reference must be valid
   /// for the whole life time of the Diagnostic.
   /// Same for \p I.
-  DiagnosticInfoInlineAsm(const Instruction &I, const Twine &MsgStr,
+  DiagnosticInfoInlineAsm(const Instruction &I, StringRef MsgStr,
                           DiagnosticSeverity Severity = DS_Error);
 
   uint64_t getLocCookie() const { return LocCookie; }
-  const Twine &getMsgStr() const { return MsgStr; }
+  StringRef getMsgStr() const { return MsgStr; }
   const Instruction *getInstruction() const { return Instr; }
 
   /// \see DiagnosticInfo::print.
@@ -258,15 +257,15 @@ public:
 class DiagnosticInfoSampleProfile : public DiagnosticInfo {
 public:
   DiagnosticInfoSampleProfile(StringRef FileName, unsigned LineNum,
-                              const Twine &Msg,
+                              StringRef Msg,
                               DiagnosticSeverity Severity = DS_Error)
       : DiagnosticInfo(DK_SampleProfile, Severity), FileName(FileName),
         LineNum(LineNum), Msg(Msg) {}
-  DiagnosticInfoSampleProfile(StringRef FileName, const Twine &Msg,
+  DiagnosticInfoSampleProfile(StringRef FileName, StringRef Msg,
                               DiagnosticSeverity Severity = DS_Error)
       : DiagnosticInfo(DK_SampleProfile, Severity), FileName(FileName),
         Msg(Msg) {}
-  DiagnosticInfoSampleProfile(const Twine &Msg,
+  DiagnosticInfoSampleProfile(StringRef Msg,
                               DiagnosticSeverity Severity = DS_Error)
       : DiagnosticInfo(DK_SampleProfile, Severity), Msg(Msg) {}
 
@@ -279,7 +278,7 @@ public:
 
   StringRef getFileName() const { return FileName; }
   unsigned getLineNum() const { return LineNum; }
-  const Twine &getMsg() const { return Msg; }
+  StringRef getMsg() const { return Msg; }
 
 private:
   /// Name of the input file associated with this diagnostic.
@@ -290,13 +289,13 @@ private:
   unsigned LineNum = 0;
 
   /// Message to report.
-  const Twine &Msg;
+  StringRef Msg;
 };
 
 /// Diagnostic information for the PGO profiler.
 class DiagnosticInfoPGOProfile : public DiagnosticInfo {
 public:
-  DiagnosticInfoPGOProfile(const char *FileName, const Twine &Msg,
+  DiagnosticInfoPGOProfile(const char *FileName, StringRef Msg,
                            DiagnosticSeverity Severity = DS_Error)
       : DiagnosticInfo(DK_PGOProfile, Severity), FileName(FileName), Msg(Msg) {}
 
@@ -308,14 +307,14 @@ public:
   }
 
   const char *getFileName() const { return FileName; }
-  const Twine &getMsg() const { return Msg; }
+  StringRef getMsg() const { return Msg; }
 
 private:
   /// Name of the input file associated with this diagnostic.
   const char *FileName;
 
   /// Message to report.
-  const Twine &Msg;
+  StringRef Msg;
 };
 
 class DiagnosticLocation {
@@ -364,7 +363,7 @@ public:
 
   /// Return the absolute path tot the file.
   std::string getAbsolutePath() const;
-  
+
   const Function &getFunction() const { return Fn; }
   DiagnosticLocation getLocation() const { return Loc; }
 
@@ -379,19 +378,19 @@ private:
 class DiagnosticInfoGenericWithLoc : public DiagnosticInfoWithLocationBase {
 private:
   /// Message to be reported.
-  const Twine &MsgStr;
+  StringRef MsgStr;
 
 public:
   /// \p MsgStr is the message to be reported to the frontend.
   /// This class does not copy \p MsgStr, therefore the reference must be valid
   /// for the whole life time of the Diagnostic.
-  DiagnosticInfoGenericWithLoc(const Twine &MsgStr, const Function &Fn,
+  DiagnosticInfoGenericWithLoc(StringRef MsgStr, const Function &Fn,
                                const DiagnosticLocation &Loc,
                                DiagnosticSeverity Severity = DS_Error)
       : DiagnosticInfoWithLocationBase(DK_GenericWithLoc, Severity, Fn, Loc),
         MsgStr(MsgStr) {}
 
-  const Twine &getMsgStr() const { return MsgStr; }
+  StringRef getMsgStr() const { return MsgStr; }
 
   /// \see DiagnosticInfo::print.
   void print(DiagnosticPrinter &DP) const override;
@@ -404,20 +403,20 @@ public:
 class DiagnosticInfoRegAllocFailure : public DiagnosticInfoWithLocationBase {
 private:
   /// Message to be reported.
-  const Twine &MsgStr;
+  StringRef MsgStr;
 
 public:
   /// \p MsgStr is the message to be reported to the frontend.
   /// This class does not copy \p MsgStr, therefore the reference must be valid
   /// for the whole life time of the Diagnostic.
-  DiagnosticInfoRegAllocFailure(const Twine &MsgStr, const Function &Fn,
+  DiagnosticInfoRegAllocFailure(StringRef MsgStr, const Function &Fn,
                                 const DiagnosticLocation &DL,
                                 DiagnosticSeverity Severity = DS_Error);
 
-  DiagnosticInfoRegAllocFailure(const Twine &MsgStr, const Function &Fn,
+  DiagnosticInfoRegAllocFailure(StringRef MsgStr, const Function &Fn,
                                 DiagnosticSeverity Severity = DS_Error);
 
-  const Twine &getMsgStr() const { return MsgStr; }
+  StringRef getMsgStr() const { return MsgStr; }
 
   /// \see DiagnosticInfo::print.
   void print(DiagnosticPrinter &DP) const override;
@@ -707,7 +706,7 @@ public:
   DiagnosticInfoIROptimization(enum DiagnosticKind Kind,
                                enum DiagnosticSeverity Severity,
                                const char *PassName, const Function &Fn,
-                               const DiagnosticLocation &Loc, const Twine &Msg)
+                               const DiagnosticLocation &Loc, StringRef Msg)
       : DiagnosticInfoOptimizationBase(Kind, Severity, PassName, "", Fn, Loc) {
     *this << Msg.str();
   }
@@ -764,7 +763,7 @@ private:
   /// Note that this class does not copy this message, so this reference
   /// must be valid for the whole life time of the diagnostic.
   OptimizationRemark(const char *PassName, const Function &Fn,
-                     const DiagnosticLocation &Loc, const Twine &Msg)
+                     const DiagnosticLocation &Loc, StringRef Msg)
       : DiagnosticInfoIROptimization(DK_OptimizationRemark, DS_Remark, PassName,
                                      Fn, Loc, Msg) {}
 };
@@ -810,7 +809,7 @@ private:
   /// Note that this class does not copy this message, so this reference
   /// must be valid for the whole life time of the diagnostic.
   OptimizationRemarkMissed(const char *PassName, const Function &Fn,
-                           const DiagnosticLocation &Loc, const Twine &Msg)
+                           const DiagnosticLocation &Loc, StringRef Msg)
       : DiagnosticInfoIROptimization(DK_OptimizationRemarkMissed, DS_Remark,
                                      PassName, Fn, Loc, Msg) {}
 };
@@ -863,7 +862,7 @@ public:
 protected:
   OptimizationRemarkAnalysis(enum DiagnosticKind Kind, const char *PassName,
                              const Function &Fn, const DiagnosticLocation &Loc,
-                             const Twine &Msg)
+                             StringRef Msg)
       : DiagnosticInfoIROptimization(Kind, DS_Remark, PassName, Fn, Loc, Msg) {}
 
   OptimizationRemarkAnalysis(enum DiagnosticKind Kind, const char *PassName,
@@ -882,7 +881,7 @@ private:
   /// this class does not copy this message, so this reference must be valid for
   /// the whole life time of the diagnostic.
   OptimizationRemarkAnalysis(const char *PassName, const Function &Fn,
-                             const DiagnosticLocation &Loc, const Twine &Msg)
+                             const DiagnosticLocation &Loc, StringRef Msg)
       : DiagnosticInfoIROptimization(DK_OptimizationRemarkAnalysis, DS_Remark,
                                      PassName, Fn, Loc, Msg) {}
 };
@@ -924,7 +923,7 @@ private:
   /// diagnostic.
   OptimizationRemarkAnalysisFPCommute(const char *PassName, const Function &Fn,
                                       const DiagnosticLocation &Loc,
-                                      const Twine &Msg)
+                                      StringRef Msg)
       : OptimizationRemarkAnalysis(DK_OptimizationRemarkAnalysisFPCommute,
                                    PassName, Fn, Loc, Msg) {}
 };
@@ -965,7 +964,7 @@ private:
   /// diagnostic.
   OptimizationRemarkAnalysisAliasing(const char *PassName, const Function &Fn,
                                      const DiagnosticLocation &Loc,
-                                     const Twine &Msg)
+                                     StringRef Msg)
       : OptimizationRemarkAnalysis(DK_OptimizationRemarkAnalysisAliasing,
                                    PassName, Fn, Loc, Msg) {}
 };
@@ -991,10 +990,10 @@ public:
 
 /// Diagnostic information for IR instrumentation reporting.
 class DiagnosticInfoInstrumentation : public DiagnosticInfo {
-  const Twine &Msg;
+  StringRef Msg;
 
 public:
-  DiagnosticInfoInstrumentation(const Twine &DiagMsg,
+  DiagnosticInfoInstrumentation(StringRef DiagMsg,
                                 DiagnosticSeverity Severity = DS_Warning)
       : DiagnosticInfo(DK_Instrumentation, Severity), Msg(DiagMsg) {}
 
@@ -1038,7 +1037,7 @@ public:
   /// of the diagnostic.
   DiagnosticInfoOptimizationFailure(const Function &Fn,
                                     const DiagnosticLocation &Loc,
-                                    const Twine &Msg)
+                                    StringRef Msg)
       : DiagnosticInfoIROptimization(DK_OptimizationFailure, DS_Warning,
                                      nullptr, Fn, Loc, Msg) {}
 
@@ -1062,7 +1061,7 @@ public:
 /// Diagnostic information for unsupported feature in backend.
 class DiagnosticInfoUnsupported : public DiagnosticInfoWithLocationBase {
 private:
-  Twine Msg;
+  StringRef Msg;
 
 public:
   /// \p Fn is the function where the diagnostic is being emitted. \p Loc is
@@ -1072,7 +1071,7 @@ public:
   /// copy this message, so this reference must be valid for the whole life time
   /// of the diagnostic.
   DiagnosticInfoUnsupported(
-      const Function &Fn, const Twine &Msg,
+      const Function &Fn, StringRef Msg,
       const DiagnosticLocation &Loc = DiagnosticLocation(),
       DiagnosticSeverity Severity = DS_Error)
       : DiagnosticInfoWithLocationBase(DK_Unsupported, Severity, Fn, Loc),
@@ -1082,7 +1081,7 @@ public:
     return DI->getKind() == DK_Unsupported;
   }
 
-  const Twine &getMessage() const { return Msg; }
+  const StringRef getMessage() const { return Msg; }
 
   void print(DiagnosticPrinter &DP) const override;
 };
@@ -1090,7 +1089,7 @@ public:
 /// Diagnostic information for MisExpect analysis.
 class DiagnosticInfoMisExpect : public DiagnosticInfoWithLocationBase {
 public:
-  DiagnosticInfoMisExpect(const Instruction *Inst, Twine &Msg);
+  DiagnosticInfoMisExpect(const Instruction *Inst, StringRef Msg);
 
   /// \see DiagnosticInfo::print.
   void print(DiagnosticPrinter &DP) const override;
@@ -1099,11 +1098,11 @@ public:
     return DI->getKind() == DK_MisExpect;
   }
 
-  const Twine &getMsg() const { return Msg; }
+  StringRef getMsg() const { return Msg; }
 
 private:
   /// Message to report.
-  const Twine &Msg;
+  StringRef Msg;
 };
 
 static DiagnosticSeverity getDiagnosticSeverity(SourceMgr::DiagKind DK) {

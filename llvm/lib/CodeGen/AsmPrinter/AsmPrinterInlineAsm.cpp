@@ -34,6 +34,7 @@
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/raw_ostream.h"
@@ -313,9 +314,9 @@ static void EmitInlineAsmStr(const char *AsmStr, const MachineInstr *MI,
         }
         if (Error) {
           const Function &Fn = MI->getMF()->getFunction();
-          Fn.getContext().diagnose(DiagnosticInfoInlineAsm(
-              LocCookie,
-              "invalid operand in inline asm: '" + Twine(AsmStr) + "'"));
+          SmallString<128> Msg =
+              formatv("invalid operand in inline asm: '{0}'", AsmStr);
+          Fn.getContext().diagnose(DiagnosticInfoInlineAsm(LocCookie, Msg));
         }
       }
       break;

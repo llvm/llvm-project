@@ -316,15 +316,16 @@ getCopyFromParts(SelectionDAG &DAG, const SDLoc &DL, const SDValue *Parts,
 }
 
 static void diagnosePossiblyInvalidConstraint(LLVMContext &Ctx, const Value *V,
-                                              const Twine &ErrMsg) {
+                                              StringRef ErrMsg) {
   const Instruction *I = dyn_cast_or_null<Instruction>(V);
   if (!I)
     return Ctx.emitError(ErrMsg);
 
   if (const CallInst *CI = dyn_cast<CallInst>(I))
     if (CI->isInlineAsm()) {
-      return Ctx.diagnose(DiagnosticInfoInlineAsm(
-          *CI, ErrMsg + ", possible invalid constraint for vector type"));
+      SmallString<128> Msg(
+          {ErrMsg, ", possible invalid constraint for vector type"});
+      return Ctx.diagnose(DiagnosticInfoInlineAsm(*CI, Msg));
     }
 
   return Ctx.emitError(I, ErrMsg);
@@ -10445,7 +10446,8 @@ void SelectionDAGBuilder::visitInlineAsm(const CallBase &Call,
 void SelectionDAGBuilder::emitInlineAsmError(const CallBase &Call,
                                              const Twine &Message) {
   LLVMContext &Ctx = *DAG.getContext();
-  Ctx.diagnose(DiagnosticInfoInlineAsm(Call, Message));
+  SmallString<128> Storage;
+  Ctx.diagnose(DiagnosticInfoInlineAsm(Call, Message.toStringRef(Storage)));
 
   // Make sure we leave the DAG in a valid state
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();

@@ -404,6 +404,13 @@ public:
 };
 } // namespace
 
+static void emitDiagnostic(LLVMContext &Ctx, StringRef Filename,
+                           const Twine &Msg, DiagnosticSeverity Severity) {
+  SmallString<128> Storage;
+  Ctx.diagnose(DiagnosticInfoPGOProfile(Filename.data(),
+                                        Msg.toStringRef(Storage), Severity));
+}
+
 // Return a string describing the branch condition that can be
 // used in static branch probability heuristics:
 static std::string getBranchCondString(Instruction *TI) {
@@ -1434,8 +1441,7 @@ void PGOUseFunc::handleInstrProfError(Error Err, uint64_t MismatchedFuncSum) {
         std::string(" up to ") + std::to_string(MismatchedFuncSum) +
         std::string(" count discarded");
 
-    Ctx.diagnose(
-        DiagnosticInfoPGOProfile(M->getName().data(), Msg, DS_Warning));
+    emitDiagnostic(Ctx, M->getName(), Msg, DS_Warning);
   });
 }
 
@@ -1478,12 +1484,12 @@ bool PGOUseFunc::readCounters(IndexedInstrProfReader *PGOReader, bool &AllZeros,
   if (!setInstrumentedCounts(CountFromProfile)) {
     LLVM_DEBUG(
         dbgs() << "Inconsistent number of counts, skipping this function");
-    Ctx.diagnose(DiagnosticInfoPGOProfile(
-        M->getName().data(),
+    emitDiagnostic(
+        Ctx, M->getName(),
         Twine("Inconsistent number of counts in ") + F.getName().str() +
             Twine(": the profile may be stale or there is a function name "
                   "collision."),
-        DS_Warning));
+        DS_Warning);
     return false;
   }
   ProgramMaxCount = PGOReader->getMaximumFunctionCount(IsCS);
@@ -1590,12 +1596,11 @@ void PGOUseFunc::populateCoverage(IndexedInstrProfReader *PGOReader) {
       ++NumCoveredBlocks;
   }
   if (PGOVerifyBFI && NumCorruptCoverage) {
-    auto &Ctx = M->getContext();
-    Ctx.diagnose(DiagnosticInfoPGOProfile(
-        M->getName().data(),
-        Twine("Found inconsistent block coverage for function ") + F.getName() +
-            " in " + Twine(NumCorruptCoverage) + " blocks.",
-        DS_Warning));
+    emitDiagnostic(M->getContext(), M->getName(),
+                   Twine("Found inconsistent block coverage for function ") +
+                       F.getName() + " in " + Twine(NumCorruptCoverage) +
+                       " blocks.",
+                   DS_Warning);
   }
   if (PGOViewBlockCoverageGraph)
     FuncInfo.BCI->viewBlockCoverageGraph(&Coverage);
@@ -1729,13 +1734,11 @@ void PGOUseFunc::setBranchWeights() {
       // A zero MaxCount can come about when we have a BB with a positive
       // count, and whose successor blocks all have 0 count. This can happen
       // when there is no exit block and the code exits via a noreturn function.
-      auto &Ctx = M->getContext();
-      Ctx.diagnose(DiagnosticInfoPGOProfile(
-          M->getName().data(),
-          Twine("Profile in ") + F.getName().str() +
-              Twine(" partially ignored") +
-              Twine(", possibly due to the lack of a return path."),
-          DS_Warning));
+      emitDiagnostic(M->getContext(), M->getName(),
+                     Twine("Profile in ") + F.getName().str() +
+                         Twine(" partially ignored") +
+                         Twine(", possibly due to the lack of a return path."),
+                     DS_Warning);
     }
   }
 }
@@ -1865,14 +1868,12 @@ void PGOUseFunc::annotateValueSites(uint32_t Kind) {
     FuncInfo.ValueSites[IPVK_VTableTarget] = VPC.get(IPVK_VTableTarget);
   auto &ValueSites = FuncInfo.ValueSites[Kind];
   if (NumValueSites != ValueSites.size()) {
-    auto &Ctx = M->getContext();
-    Ctx.diagnose(DiagnosticInfoPGOProfile(
-        M->getName().data(),
-        Twine("Inconsistent number of value sites for ") +
-            Twine(ValueProfKindDescr[Kind]) + Twine(" profiling in \"") +
-            F.getName().str() +
-            Twine("\", possibly due to the use of a stale profile."),
-        DS_Warning));
+    emitDiagnostic(M->getContext(), M->getName(),
+                   Twine("Inconsistent number of value sites for ") +
+                       Twine(ValueProfKindDescr[Kind]) +
+                       Twine(" profiling in \"") + F.getName().str() +
+                       Twine("\", possibly due to the use of a stale profile."),
+                   DS_Warning);
     return;
   }
 
@@ -1962,13 +1963,11 @@ static bool InstrumentAllFunctions(
     createIRLevelProfileFlagVar(M, InstrumentationType);
 
   Triple TT(M.getTargetTriple());
-  LLVMContext &Ctx = M.getContext();
   if (!TT.isOSBinFormatELF() && EnableVTableValueProfiling)
-    Ctx.diagnose(DiagnosticInfoPGOProfile(
-        M.getName().data(),
-        Twine("VTable value profiling is presently not "
-              "supported for non-ELF object formats"),
-        DS_Warning));
+    emitDiagnostic(M.getContext(), M.getName(),
+                   Twine("VTable value profiling is presently not "
+                         "supported for non-ELF object formats"),
+                   DS_Warning);
   std::unordered_multimap<Comdat *, GlobalValue *> ComdatMembers;
   collectComdatMembers(M, ComdatMembers);
 
@@ -2161,8 +2160,7 @@ static bool annotateAllFunctions(
                                                     ProfileRemappingFileName);
   if (Error E = ReaderOrErr.takeError()) {
     handleAllErrors(std::move(E), [&](const ErrorInfoBase &EI) {
-      Ctx.diagnose(
-          DiagnosticInfoPGOProfile(ProfileFileName.data(), EI.message()));
+      emitDiagnostic(Ctx, ProfileFileName, EI.message(), DS_Error);
     });
     return false;
   }
@@ -2170,8 +2168,7 @@ static bool annotateAllFunctions(
   std::unique_ptr<IndexedInstrProfReader> PGOReader =
       std::move(ReaderOrErr.get());
   if (!PGOReader) {
-    Ctx.diagnose(DiagnosticInfoPGOProfile(ProfileFileName.data(),
-                                          StringRef("Cannot get PGOReader")));
+    emitDiagnostic(Ctx, ProfileFileName, "Cannot get PGOReader", DS_Error);
     return false;
   }
   if (!PGOReader->hasCSIRLevelProfile() && IsCS)
@@ -2179,14 +2176,15 @@ static bool annotateAllFunctions(
 
   // TODO: might need to change the warning once the clang option is finalized.
   if (!PGOReader->isIRLevelProfile()) {
-    Ctx.diagnose(DiagnosticInfoPGOProfile(
-        ProfileFileName.data(), "Not an IR level instrumentation profile"));
+    emitDiagnostic(Ctx, ProfileFileName,
+                   "Not an IR level instrumentation profile", DS_Error);
     return false;
   }
   if (PGOReader->functionEntryOnly()) {
-    Ctx.diagnose(DiagnosticInfoPGOProfile(
-        ProfileFileName.data(),
-        "Function entry profiles are not yet supported for optimization"));
+    emitDiagnostic(
+        Ctx, ProfileFileName,
+        "Function entry profiles are not yet supported for optimization",
+        DS_Error);
     return false;
   }
 
@@ -2335,12 +2333,11 @@ static bool annotateAllFunctions(
     // Only set when there is no Attribute::Hot set by the user. For Hot
     // attribute, user's annotation has the precedence over the profile.
     if (F->hasFnAttribute(Attribute::Hot)) {
-      auto &Ctx = M.getContext();
-      std::string Msg = std::string("Function ") + F->getName().str() +
-                        std::string(" is annotated as a hot function but"
-                                    " the profile is cold");
-      Ctx.diagnose(
-          DiagnosticInfoPGOProfile(M.getName().data(), Msg, DS_Warning));
+      emitDiagnostic(M.getContext(), M.getName(),
+                     Twine("Function ") + F->getName().str() +
+                         Twine(" is annotated as a hot function but"
+                               " the profile is cold"),
+                     DS_Warning);
       continue;
     }
     F->addFnAttr(Attribute::Cold);

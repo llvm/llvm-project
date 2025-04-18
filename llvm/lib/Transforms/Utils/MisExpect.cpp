@@ -100,18 +100,17 @@ Instruction *getInstCondition(Instruction *I) {
 void emitMisexpectDiagnostic(Instruction *I, LLVMContext &Ctx,
                              uint64_t ProfCount, uint64_t TotalCount) {
   double PercentageCorrect = (double)ProfCount / TotalCount;
-  auto PerString =
+  SmallString<32> PerString =
       formatv("{0:P} ({1} / {2})", PercentageCorrect, ProfCount, TotalCount);
-  auto RemStr = formatv(
+  SmallString<128> RemStr = formatv(
       "Potential performance regression from use of the llvm.expect intrinsic: "
       "Annotation was correct on {0} of profiled executions.",
       PerString);
-  Twine Msg(PerString);
   Instruction *Cond = getInstCondition(I);
   if (isMisExpectDiagEnabled(Ctx))
-    Ctx.diagnose(DiagnosticInfoMisExpect(Cond, Msg));
+    Ctx.diagnose(DiagnosticInfoMisExpect(Cond, PerString));
   OptimizationRemarkEmitter ORE(I->getParent()->getParent());
-  ORE.emit(OptimizationRemark(DEBUG_TYPE, "misexpect", Cond) << RemStr.str());
+  ORE.emit(OptimizationRemark(DEBUG_TYPE, "misexpect", Cond) << RemStr);
 }
 
 } // namespace

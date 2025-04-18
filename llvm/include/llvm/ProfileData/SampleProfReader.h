@@ -449,8 +449,9 @@ public:
 
   /// Report a parse error message.
   void reportError(int64_t LineNumber, const Twine &Msg) const {
-    Ctx.diagnose(DiagnosticInfoSampleProfile(Buffer->getBufferIdentifier(),
-                                             LineNumber, Msg));
+    SmallString<128> Storage;
+    Ctx.diagnose(DiagnosticInfoSampleProfile(
+        Buffer->getBufferIdentifier(), LineNumber, Msg.toStringRef(Storage)));
   }
 
   /// Create a sample profile reader appropriate to the file format.

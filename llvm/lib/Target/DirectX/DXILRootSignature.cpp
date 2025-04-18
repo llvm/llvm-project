@@ -34,9 +34,8 @@
 using namespace llvm;
 using namespace llvm::dxil;
 
-static bool reportError(LLVMContext *Ctx, Twine Message,
-                        DiagnosticSeverity Severity = DS_Error) {
-  Ctx->diagnose(DiagnosticInfoGeneric(Message, Severity));
+static bool reportError(LLVMContext *Ctx, Twine Message) {
+  Ctx->emitError(Message);
   return true;
 }
 
