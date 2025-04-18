@@ -1132,17 +1132,17 @@ void State::addInfoFor(BasicBlock &BB) {
     case Intrinsic::umax:
     case Intrinsic::smin:
     case Intrinsic::smax:
+    case Intrinsic::usub_sat:
       // TODO: handle llvm.abs as well
       WorkList.push_back(
           FactOrCheck::getCheck(DT.getNode(&BB), cast<CallInst>(&I)));
       // TODO: Check if it is possible to instead only added the min/max facts
       // when simplifying uses of the min/max intrinsics.
-      if (!isGuaranteedNotToBePoison(&I))
-        break;
       [[fallthrough]];
     case Intrinsic::abs:
     case Intrinsic::uadd_sat:
-    case Intrinsic::usub_sat:
+      if (!isGuaranteedNotToBePoison(&I))
+        break;
       WorkList.push_back(FactOrCheck::getInstFact(DT.getNode(&BB), &I));
       break;
     }
@@ -1519,6 +1519,24 @@ static bool checkAndReplaceCmp(CmpIntrinsic *I, ConstraintInfo &Info,
   return false;
 }
 
+static bool checkAndReplaceUSubSat(SaturatingInst *I, ConstraintInfo &Info,
+                                   SmallVectorImpl<Instruction *> &ToRemove) {
+  Value *LHS = I->getOperand(0);
+  Value *RHS = I->getOperand(1);
+  if (checkCondition(ICmpInst::ICMP_UGT, LHS, RHS, I, Info).value_or(false)) {
+    IRBuilder<> Builder(I->getParent(), I->getIterator());
+    I->replaceAllUsesWith(Builder.CreateSub(LHS, RHS));
+    ToRemove.push_back(I);
+    return true;
+  }
+  if (checkCondition(ICmpInst::ICMP_ULE, LHS, RHS, I, Info).value_or(false)) {
+    I->replaceAllUsesWith(ConstantInt::get(I->getType(), 0));
+    ToRemove.push_back(I);
+    return true;
+  }
+  return false;
+}
+
 static void
 removeEntryFromStack(const StackEntry &E, ConstraintInfo &Info,
                      Module *ReproducerModule,
@@ -1840,6 +1858,11 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
         Changed |= checkAndReplaceMinMax(MinMax, Info, ToRemove);
       } else if (auto *CmpIntr = dyn_cast<CmpIntrinsic>(Inst)) {
         Changed |= checkAndReplaceCmp(CmpIntr, Info, ToRemove);
+      } else if (auto *SatIntr = dyn_cast<SaturatingInst>(Inst)) {
+        if (SatIntr->getIntrinsicID() == Intrinsic::usub_sat)
+          Changed |= checkAndReplaceUSubSat(SatIntr, Info, ToRemove);
+        else
+          llvm_unreachable("Unexpected intrinsic.");
       }
       continue;
     }
