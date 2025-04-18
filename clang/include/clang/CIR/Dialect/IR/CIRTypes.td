@@ -502,6 +502,11 @@ def CIR_RecordType : CIR_Type<"Record", "record",
 
     void complete(llvm::ArrayRef<mlir::Type> members, bool packed,
                   bool isPadded);
+
+  private:
+    unsigned computeStructSize(const mlir::DataLayout &dataLayout) const;
+    uint64_t computeStructAlignment(const mlir::DataLayout &dataLayout) const;
+  public:
   }];
 
   let hasCustomAssemblyFormat = 1;
