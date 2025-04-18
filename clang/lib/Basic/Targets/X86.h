@@ -842,7 +842,7 @@ public:
     // Windows target in the future.
     this->TheCXXABI.set(TargetCXXABI::Microsoft);
     LongWidth = LongAlign = 32;
-    DoubleAlign = LongLongAlign = 64;
+    LongLongAlign = 64;
     LongDoubleWidth = LongDoubleAlign = 64;
     LongDoubleFormat = &llvm::APFloat::IEEEdouble();
     IntMaxType = SignedLongLong;
