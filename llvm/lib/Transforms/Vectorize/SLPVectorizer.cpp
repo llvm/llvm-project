@@ -18414,8 +18414,14 @@ Value *BoUpSLP::vectorizeTree(
   // need to rebuild it.
   EntryToLastInstruction.clear();
   // All blocks must be scheduled before any instructions are inserted.
-  for (auto &BSIter : BlocksSchedules) {
+  for (auto &BSIter : BlocksSchedules)
     scheduleBlock(BSIter.second.get());
+  // Cache last instructions for the nodes to avoid side effects, which may
+  // appear during vectorization, like extra uses, etc.
+  for (const std::unique_ptr<TreeEntry> &TE : VectorizableTree) {
+    if (TE->isGather())
+      continue;
+    (void)getLastInstructionInBundle(TE.get());
   }
 
   if (ReductionRoot)
