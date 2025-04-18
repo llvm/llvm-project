@@ -67,9 +67,9 @@ public:
         {"fixup_aarch64_pcrel_branch26", 0, 26, PCRelFlagVal},
         {"fixup_aarch64_pcrel_call26", 0, 26, PCRelFlagVal}};
 
-    // Fixup kinds from .reloc directive are like R_AARCH64_NONE. They do not
-    // require any extra processing.
-    if (Kind >= FirstLiteralRelocationKind)
+    // Fixup kinds from raw relocation types and .reloc directives force
+    // relocations and do not need these fields.
+    if (Kind >= FirstRelocationKind)
       return MCAsmBackend::getFixupKindInfo(FK_NONE);
 
     if (Kind < FirstTargetFixupKind)
@@ -442,7 +442,7 @@ void AArch64AsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
   if (!Value)
     return; // Doesn't change encoding.
   unsigned Kind = Fixup.getKind();
-  if (Kind >= FirstLiteralRelocationKind)
+  if (Kind >= FirstRelocationKind)
     return;
   unsigned NumBytes = getFixupKindNumBytes(Kind);
   MCFixupKindInfo Info = getFixupKindInfo(Fixup.getKind());
