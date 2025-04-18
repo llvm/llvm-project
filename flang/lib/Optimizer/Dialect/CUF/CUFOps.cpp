@@ -140,6 +140,24 @@ llvm::LogicalResult cuf::DeallocateOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// KernelLaunchOp
+//===----------------------------------------------------------------------===//
+
+template <typename OpTy>
+static llvm::LogicalResult checkStreamType(OpTy op) {
+  if (!op.getStream())
+    return mlir::success();
+  auto refTy = mlir::dyn_cast<fir::ReferenceType>(op.getStream().getType());
+  if (!refTy.getEleTy().isInteger(64))
+    return op.emitOpError("stream is expected to be a i64 reference");
+  return mlir::success();
+}
+
+llvm::LogicalResult cuf::KernelLaunchOp::verify() {
+  return checkStreamType(*this);
+}
+
+//===----------------------------------------------------------------------===//
 // KernelOp
 //===----------------------------------------------------------------------===//
 
@@ -324,10 +342,7 @@ void cuf::SharedMemoryOp::build(
 //===----------------------------------------------------------------------===//
 
 llvm::LogicalResult cuf::StreamCastOp::verify() {
-  auto refTy = mlir::dyn_cast<fir::ReferenceType>(getStream().getType());
-  if (!refTy.getEleTy().isInteger(64))
-    return emitOpError("stream is expected to be a i64 reference");
-  return mlir::success();
+  return checkStreamType(*this);
 }
 
 // Tablegen operators
