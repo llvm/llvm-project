@@ -137,7 +137,6 @@ struct GPUShuffleOpLowering : public ConvertOpToLLVMPattern<gpu::ShuffleOp> {
                   ConversionPatternRewriter &rewriter) const override {
     Location loc = op->getLoc();
     Value initShflValue = adaptor.getValue();
-    Type shflType = initShflValue.getType();
 
     const unsigned indexBitwidth = getTypeConverter()->getIndexTypeBitwidth();
     Value srcLaneId = getLaneId(rewriter, loc, indexBitwidth);
