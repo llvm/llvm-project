@@ -71,6 +71,10 @@ public:
     insertCFIInst(MCCFIInstruction::cfiDefCfaOffset(nullptr, Offset));
   }
 
+  void buildAdjustCFAOffset(int64_t Adjustment) const {
+    insertCFIInst(MCCFIInstruction::createAdjustCfaOffset(nullptr, Adjustment));
+  }
+
   void buildOffset(MCRegister Reg, int64_t Offset) const {
     insertCFIInst(MCCFIInstruction::createOffset(
         nullptr, TRI.getDwarfRegNum(Reg, IsEH), Offset));
