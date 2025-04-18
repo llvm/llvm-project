@@ -585,8 +585,10 @@ public:
                                                 unsigned &NumIntermediates,
                                                 MVT &RegisterVT) const override;
 
-  bool shouldFoldSelectWithIdentityConstant(unsigned BinOpcode,
-                                            EVT VT) const override;
+  bool
+  shouldFoldSelectWithIdentityConstant(unsigned BinOpcode, EVT VT,
+                                       unsigned SelectOpcode, SDValue X,
+                                       SDValue NonIdConstNode) const override;
 
   /// Return true if the given shuffle mask can be codegen'd directly, or if it
   /// should be stack expanded.
