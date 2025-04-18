@@ -699,7 +699,7 @@ bool AArch64ABIInfo::passAsPureScalableType(
       return false;
 
     for (uint64_t I = 0; I < NElt; ++I)
-      llvm::copy(EltCoerceToSeq, std::back_inserter(CoerceToSeq));
+      llvm::append_range(CoerceToSeq, EltCoerceToSeq);
 
     NVec += NElt * NV;
     NPred += NElt * NP;
@@ -818,7 +818,7 @@ void AArch64ABIInfo::flattenType(
     flattenType(AT->getElementType(), EltFlattened);
 
     for (uint64_t I = 0; I < NElt; ++I)
-      llvm::copy(EltFlattened, std::back_inserter(Flattened));
+      llvm::append_range(Flattened, EltFlattened);
     return;
   }
 
