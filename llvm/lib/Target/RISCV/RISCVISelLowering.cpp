@@ -11517,9 +11517,9 @@ SDValue RISCVTargetLowering::lowerVECTOR_DEINTERLEAVE(SDValue Op,
     SDValue V1 = Op->getOperand(0);
     SDValue V2 = Op->getOperand(1);
     SDValue Even =
-      lowerVZIP(RISCVISD::RI_VUNZIP2A_VL, V1, V2, DL, DAG, Subtarget);
+        lowerVZIP(RISCVISD::RI_VUNZIP2A_VL, V1, V2, DL, DAG, Subtarget);
     SDValue Odd =
-      lowerVZIP(RISCVISD::RI_VUNZIP2B_VL, V1, V2, DL, DAG, Subtarget);
+        lowerVZIP(RISCVISD::RI_VUNZIP2B_VL, V1, V2, DL, DAG, Subtarget);
     return DAG.getMergeValues({Even, Odd}, DL);
   }
 
