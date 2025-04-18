@@ -261,11 +261,9 @@ define i8 @ucmp_switch(i32 %x, i32 %y) {
 ; CHECK-LABEL: @ucmp_switch(
 ; CHECK-NEXT:    [[CMP:%.*]] = call i8 @llvm.ucmp.i8.i32(i32 [[X:%.*]], i32 [[Y:%.*]])
 ; CHECK-NEXT:    switch i8 [[CMP]], label [[DEFAULT_UNREACHABLE:%.*]] [
-; CHECK-NEXT:      i8 -2, label [[BB_NEG2:%.*]]
+; CHECK-NEXT:      i8 1, label [[BB_1:%.*]]
 ; CHECK-NEXT:      i8 -1, label [[BB_NEG1:%.*]]
 ; CHECK-NEXT:      i8 0, label [[BB_0:%.*]]
-; CHECK-NEXT:      i8 1, label [[BB_1:%.*]]
-; CHECK-NEXT:      i8 2, label [[BB_2:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       bb.neg2:
 ; CHECK-NEXT:    ret i8 -2
@@ -277,6 +275,8 @@ define i8 @ucmp_switch(i32 %x, i32 %y) {
 ; CHECK-NEXT:    ret i8 1
 ; CHECK:       bb.2:
 ; CHECK-NEXT:    ret i8 2
+; CHECK:       default.unreachable:
+; CHECK-NEXT:    unreachable
 ; CHECK:       default:
 ; CHECK-NEXT:    ret i8 123
 ;
@@ -312,11 +312,9 @@ define i8 @scmp_switch(i32 %x, i32 %y) {
 ; CHECK-LABEL: @scmp_switch(
 ; CHECK-NEXT:    [[CMP:%.*]] = call i8 @llvm.scmp.i8.i32(i32 [[X:%.*]], i32 [[Y:%.*]])
 ; CHECK-NEXT:    switch i8 [[CMP]], label [[DEFAULT_UNREACHABLE:%.*]] [
-; CHECK-NEXT:      i8 -2, label [[BB_NEG2:%.*]]
+; CHECK-NEXT:      i8 1, label [[BB_1:%.*]]
 ; CHECK-NEXT:      i8 -1, label [[BB_NEG1:%.*]]
 ; CHECK-NEXT:      i8 0, label [[BB_0:%.*]]
-; CHECK-NEXT:      i8 1, label [[BB_1:%.*]]
-; CHECK-NEXT:      i8 2, label [[BB_2:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       bb.neg2:
 ; CHECK-NEXT:    ret i8 -2
@@ -328,6 +326,8 @@ define i8 @scmp_switch(i32 %x, i32 %y) {
 ; CHECK-NEXT:    ret i8 1
 ; CHECK:       bb.2:
 ; CHECK-NEXT:    ret i8 2
+; CHECK:       default.unreachable:
+; CHECK-NEXT:    unreachable
 ; CHECK:       default:
 ; CHECK-NEXT:    ret i8 123
 ;
