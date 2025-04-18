@@ -41,7 +41,9 @@ namespace logicalview {
 // Generate get and set 'std::string' functions.
 #define STD_STRING_FUNCTION(FAMILY, FIELD)                                     \
   std::string get##FAMILY##FIELD() const { return FAMILY.FIELD; }              \
-  void set##FAMILY##FIELD(std::string FIELD) { FAMILY.FIELD = FIELD; }         \
+  void set##FAMILY##FIELD(std::string FIELD) {                                 \
+    FAMILY.FIELD = std::move(FIELD);                                           \
+  }                                                                            \
   void reset##FAMILY##FIELD() { FAMILY.FIELD = ""; }
 
 // Generate get and set 'std::set' functions.
