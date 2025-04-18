@@ -756,9 +756,8 @@ public:
       case Intrinsic::not_intrinsic:
         continue;
       default: {
-        std::string Msg =
-            formatv("Unsupported intrinsic {0} for DXIL lowering", F.getName())
-                .str();
+        SmallString<128> Msg =
+            formatv("Unsupported intrinsic {0} for DXIL lowering", F.getName());
         M.getContext().emitError(Msg);
         HasErrors |= true;
         break;
