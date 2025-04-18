@@ -870,12 +870,22 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
     setTargetDAGCombine(ISD::SETCC);
 
   // Vector reduction operations. These are transformed into a tree evaluation
-  // of nodes which may or may not be legal.
+  // of nodes which may initially be illegal.
   for (MVT VT : MVT::fixedlen_vector_valuetypes()) {
-    setOperationAction({ISD::VECREDUCE_FADD, ISD::VECREDUCE_FMUL,
-                        ISD::VECREDUCE_FMAX, ISD::VECREDUCE_FMIN,
-                        ISD::VECREDUCE_FMAXIMUM, ISD::VECREDUCE_FMINIMUM},
-                       VT, Custom);
+    MVT EltVT = VT.getVectorElementType();
+    if (EltVT == MVT::f16 || EltVT == MVT::bf16 || EltVT == MVT::f32 ||
+        EltVT == MVT::f64) {
+      setOperationAction({ISD::VECREDUCE_FADD, ISD::VECREDUCE_FMUL,
+                          ISD::VECREDUCE_FMAX, ISD::VECREDUCE_FMIN,
+                          ISD::VECREDUCE_FMAXIMUM, ISD::VECREDUCE_FMINIMUM},
+                         VT, Custom);
+    } else if (EltVT.isScalarInteger()) {
+      setOperationAction(
+          {ISD::VECREDUCE_ADD, ISD::VECREDUCE_MUL, ISD::VECREDUCE_AND,
+           ISD::VECREDUCE_OR, ISD::VECREDUCE_XOR, ISD::VECREDUCE_SMAX,
+           ISD::VECREDUCE_SMIN, ISD::VECREDUCE_UMAX, ISD::VECREDUCE_UMIN},
+          VT, Custom);
+    }
   }
 
   // Promote fp16 arithmetic if fp16 hardware isn't available or the
@@ -2213,29 +2223,17 @@ NVPTXTargetLowering::LowerCONCAT_VECTORS(SDValue Op, SelectionDAG &DAG) const {
   return DAG.getBuildVector(Node->getValueType(0), dl, Ops);
 }
 
-/// A generic routine for constructing a tree reduction for a vector operand.
+/// A generic routine for constructing a tree reduction on a vector operand.
 /// This method differs from iterative splitting in DAGTypeLegalizer by
-/// first scalarizing the vector and then progressively grouping elements
-/// bottom-up. This allows easily building the optimal (minimum) number of nodes
-/// with different numbers of operands (eg. max3 vs max2).
+/// progressively grouping elements bottom-up.
 static SDValue BuildTreeReduction(
-    const SDValue &VectorOp,
+    const SmallVector<SDValue> &Elements, EVT EltTy,
     ArrayRef<std::pair<unsigned /*NodeType*/, unsigned /*NumInputs*/>> Ops,
     const SDLoc &DL, const SDNodeFlags Flags, SelectionDAG &DAG) {
-  EVT VectorTy = VectorOp.getValueType();
-  EVT EltTy = VectorTy.getVectorElementType();
-  const unsigned NumElts = VectorTy.getVectorNumElements();
-
-  // scalarize vector
-  SmallVector<SDValue> Elements(NumElts);
-  for (unsigned I = 0, E = NumElts; I != E; ++I) {
-    Elements[I] = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, EltTy, VectorOp,
-                              DAG.getConstant(I, DL, MVT::i64));
-  }
-
   // now build the computation graph in place at each level
   SmallVector<SDValue> Level = Elements;
-  for (unsigned OpIdx = 0; Level.size() > 1 && OpIdx < Ops.size();) {
+  unsigned OpIdx = 0;
+  while (Level.size() > 1) {
     const auto [DefaultScalarOp, DefaultGroupSize] = Ops[OpIdx];
 
     // partially reduce all elements in level
@@ -2267,52 +2265,139 @@ static SDValue BuildTreeReduction(
   return *Level.begin();
 }
 
-/// Lower fadd/fmul vector reductions. Builds a computation graph (tree) and
-/// serializes it.
+/// Lower reductions to either a sequence of operations or a tree if
+/// reassociations are allowed. This method will use larger operations like
+/// max3/min3 when the target supports them.
 SDValue NVPTXTargetLowering::LowerVECREDUCE(SDValue Op,
                                             SelectionDAG &DAG) const {
-  // If we can't reorder sub-operations, let DAGTypeLegalizer lower this op.
-  if (DisableFOpTreeReduce || !Op->getFlags().hasAllowReassociation())
+  if (DisableFOpTreeReduce)
     return SDValue();
 
-  EVT EltTy = Op.getOperand(0).getValueType().getVectorElementType();
+  SDLoc DL(Op);
+  const SDNodeFlags Flags = Op->getFlags();
+  const SDValue &Vector = Op.getOperand(0);
+  EVT EltTy = Vector.getValueType().getVectorElementType();
   const bool CanUseMinMax3 = EltTy == MVT::f32 && STI.getSmVersion() >= 100 &&
                              STI.getPTXVersion() >= 88;
-  SDLoc DL(Op);
-  SmallVector<std::pair<unsigned /*Op*/, unsigned /*NumIn*/>, 2> Operators;
+
+  // A list of SDNode opcodes with equivalent semantics, sorted descending by
+  // number of inputs they take.
+  SmallVector<std::pair<unsigned /*Op*/, unsigned /*NumIn*/>, 2> ScalarOps;
+  bool IsReassociatable;
+
   switch (Op->getOpcode()) {
   case ISD::VECREDUCE_FADD:
-    Operators = {{ISD::FADD, 2}};
+    ScalarOps = {{ISD::FADD, 2}};
+    IsReassociatable = false;
     break;
   case ISD::VECREDUCE_FMUL:
-    Operators = {{ISD::FMUL, 2}};
+    ScalarOps = {{ISD::FMUL, 2}};
+    IsReassociatable = false;
     break;
   case ISD::VECREDUCE_FMAX:
     if (CanUseMinMax3)
-      Operators.push_back({NVPTXISD::FMAXNUM3, 3});
-    Operators.push_back({ISD::FMAXNUM, 2});
+      ScalarOps.push_back({NVPTXISD::FMAXNUM3, 3});
+    ScalarOps.push_back({ISD::FMAXNUM, 2});
+    IsReassociatable = false;
     break;
   case ISD::VECREDUCE_FMIN:
     if (CanUseMinMax3)
-      Operators.push_back({NVPTXISD::FMINNUM3, 3});
-    Operators.push_back({ISD::FMINNUM, 2});
+      ScalarOps.push_back({NVPTXISD::FMINNUM3, 3});
+    ScalarOps.push_back({ISD::FMINNUM, 2});
+    IsReassociatable = false;
     break;
   case ISD::VECREDUCE_FMAXIMUM:
     if (CanUseMinMax3)
-      Operators.push_back({NVPTXISD::FMAXIMUM3, 3});
-    Operators.push_back({ISD::FMAXIMUM, 2});
+      ScalarOps.push_back({NVPTXISD::FMAXIMUM3, 3});
+    ScalarOps.push_back({ISD::FMAXIMUM, 2});
+    IsReassociatable = false;
     break;
   case ISD::VECREDUCE_FMINIMUM:
     if (CanUseMinMax3)
-      Operators.push_back({NVPTXISD::FMINIMUM3, 3});
-    Operators.push_back({ISD::FMINIMUM, 2});
+      ScalarOps.push_back({NVPTXISD::FMINIMUM3, 3});
+    ScalarOps.push_back({ISD::FMINIMUM, 2});
+    IsReassociatable = false;
+    break;
+  case ISD::VECREDUCE_ADD:
+    ScalarOps = {{ISD::ADD, 2}};
+    IsReassociatable = true;
+    break;
+  case ISD::VECREDUCE_MUL:
+    ScalarOps = {{ISD::MUL, 2}};
+    IsReassociatable = true;
+    break;
+  case ISD::VECREDUCE_UMAX:
+    ScalarOps = {{ISD::UMAX, 2}};
+    IsReassociatable = true;
+    break;
+  case ISD::VECREDUCE_UMIN:
+    ScalarOps = {{ISD::UMIN, 2}};
+    IsReassociatable = true;
+    break;
+  case ISD::VECREDUCE_SMAX:
+    ScalarOps = {{ISD::SMAX, 2}};
+    IsReassociatable = true;
+    break;
+  case ISD::VECREDUCE_SMIN:
+    ScalarOps = {{ISD::SMIN, 2}};
+    IsReassociatable = true;
+    break;
+  case ISD::VECREDUCE_AND:
+    ScalarOps = {{ISD::AND, 2}};
+    IsReassociatable = true;
+    break;
+  case ISD::VECREDUCE_OR:
+    ScalarOps = {{ISD::OR, 2}};
+    IsReassociatable = true;
+    break;
+  case ISD::VECREDUCE_XOR:
+    ScalarOps = {{ISD::XOR, 2}};
+    IsReassociatable = true;
     break;
   default:
     llvm_unreachable("unhandled vecreduce operation");
   }
 
-  return BuildTreeReduction(Op.getOperand(0), Operators, DL, Op->getFlags(),
-                            DAG);
+  EVT VectorTy = Vector.getValueType();
+  const unsigned NumElts = VectorTy.getVectorNumElements();
+
+  // scalarize vector
+  SmallVector<SDValue> Elements(NumElts);
+  for (unsigned I = 0, E = NumElts; I != E; ++I) {
+    Elements[I] = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, EltTy, Vector,
+                              DAG.getConstant(I, DL, MVT::i64));
+  }
+
+  // Lower to tree reduction.
+  if (IsReassociatable || Flags.hasAllowReassociation())
+    return BuildTreeReduction(Elements, EltTy, ScalarOps, DL, Flags, DAG);
+
+  // Lower to sequential reduction.
+  SDValue Accumulator;
+  for (unsigned OpIdx = 0, I = 0; I < NumElts; ++OpIdx) {
+    assert(OpIdx < ScalarOps.size() && "no smaller operators for reduction");
+    const auto [DefaultScalarOp, DefaultGroupSize] = ScalarOps[OpIdx];
+
+    if (!Accumulator) {
+      if (I + DefaultGroupSize <= NumElts) {
+        Accumulator = DAG.getNode(
+            DefaultScalarOp, DL, EltTy,
+            ArrayRef(Elements).slice(I, I + DefaultGroupSize), Flags);
+        I += DefaultGroupSize;
+      }
+    }
+
+    if (Accumulator) {
+      for (; I + (DefaultGroupSize - 1) <= NumElts; I += DefaultGroupSize - 1) {
+        SmallVector<SDValue> Operands = {Accumulator};
+        for (unsigned K = 0; K < DefaultGroupSize - 1; ++K)
+          Operands.push_back(Elements[I + K]);
+        Accumulator = DAG.getNode(DefaultScalarOp, DL, EltTy, Operands, Flags);
+      }
+    }
+  }
+
+  return Accumulator;
 }
 
 SDValue NVPTXTargetLowering::LowerBITCAST(SDValue Op, SelectionDAG &DAG) const {
@@ -3153,6 +3238,15 @@ NVPTXTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::VECREDUCE_FMIN:
   case ISD::VECREDUCE_FMAXIMUM:
   case ISD::VECREDUCE_FMINIMUM:
+  case ISD::VECREDUCE_ADD:
+  case ISD::VECREDUCE_MUL:
+  case ISD::VECREDUCE_UMAX:
+  case ISD::VECREDUCE_UMIN:
+  case ISD::VECREDUCE_SMAX:
+  case ISD::VECREDUCE_SMIN:
+  case ISD::VECREDUCE_AND:
+  case ISD::VECREDUCE_OR:
+  case ISD::VECREDUCE_XOR:
     return LowerVECREDUCE(Op, DAG);
   case ISD::STORE:
     return LowerSTORE(Op, DAG);
