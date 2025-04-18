@@ -825,7 +825,7 @@ void computeSPIRKernelABIInfo(CodeGenModule &CGM, CGFunctionInfo &FI);
 }
 }
 
-std::unique_ptr<ABIQualType> getABIType(QualType QT){
+std::unique_ptr<ABI::Type> getABIType(QualType QT){
   const clang::Type *BaseType = QT.getTypePtr();
 
   unsigned Quals = 0;
@@ -850,21 +850,21 @@ std::unique_ptr<ABIQualType> getABIType(QualType QT){
             ABIKind = ABIBuiltinType::Integer;
             break;
         case clang::BuiltinType::UInt:
-            ABIKind = ABIBuiltinType::UnsignedInteger;
+            ABIKind = ABIBuiltinType::UInt128;
             break;
         case clang::BuiltinType::Float:
-            ABIKind = ABIBuiltinType::FloatingPoint;
+            ABIKind = ABIBuiltinType::Float;
             break;
         default:
             // TODO: support additional types
-            return std::make_unique<ABIQualType>(ABI::ABIBuiltinType(ABIBuiltinType::Void), 0);
+            return std::make_unique<ABI::Type>(ABI::ABIBuiltinType(ABIBuiltinType::Void), 0);
         }
       auto *ABIType = new ABI::ABIBuiltinType(ABIKind);
-      return std::make_unique<ABIQualType>(ABIType, Quals);
+      return std::make_unique<ABI::Type>(ABIType, 0);
     }
     default :
       // TODO: support additonal types
-      return std::make_unique<ABIQualType>(ABI::ABIBuiltinType(ABIBuiltinType::Void), 0);
+      return std::make_unique<ABI::Type>(ABI::ABIBuiltinType(ABIBuiltinType::Void), 0);
   }
 }
 
@@ -899,9 +899,9 @@ const CGFunctionInfo &CodeGenTypes::arrangeLLVMFunctionInfo(
 
   // map clang::QualType -> abi::Type
   // implicit conversion from clang::CanQualType to clang::QualType
-  std::unique_ptr<ABIQualType> resultTypeABI = getABIType(resultType);
+  std::unique_ptr<ABI::Type> resultTypeABI = getABIType(resultType);
 
-  std::vector<ABIQualType> abiTypes;
+  std::vector<ABI::Type> abiTypes;
   abiTypes.reserve(argTypes.size());  
 
   for (CanQualType &element : argTypes) {

@@ -111,50 +111,6 @@ class ABIRecordType : public Type {
     uint64_t Alignment;
 };
 
-
-class ABIQualifiers {
-public:
-enum QualifierFlags {
-  Const = 1 << 0,
-  Volatile = 1 << 1,
-  Restrict = 1 << 2,
-};
-
-private:
-unsigned Quals;
-
-public:
-ABIQualifiers() : Quals(0) {}
-ABIQualifiers(unsigned Q) : Quals(Q) {}
-
-bool hasConst() const { return Quals & Const; }
-bool hasVolatile() const { return Quals & Volatile; }
-bool hasRestrict() const { return Quals & Restrict; }
-
-unsigned getQualifiers() const { return Quals; }
-};
-
-class ABIQualType {
-  // similar to how clang implements QualTypes. I don't think this is dependent on AST at all, just on support. Verify once.
-  llvm::PointerIntPair<const Type *, 3, unsigned> Value; // 3 bits for qualifiers
-  
-  public:
-  ABIQualType() = default;
-  ABIQualType(const Type *T, unsigned Quals = 0) : Value(T, Quals) {}
-  
-  const Type *getTypePtr() const { return Value.getPointer(); }
-  
-  bool isConstQualified() const { return Value.getInt() & ABIQualifiers::Const; }
-  bool isVolatileQualified() const { return Value.getInt() & ABIQualifiers::Volatile; }
-  bool isRestrictQualified() const { return Value.getInt() & ABIQualifiers::Restrict; }
-  
-  ABIQualifiers getQualifiers() const { return ABIQualifiers(Value.getInt()); }
-  
-  ABIQualType withConst() const { return ABIQualType(getTypePtr(), Value.getInt() | ABIQualifiers::Const); }
-  ABIQualType withVolatile() const { return ABIQualType(getTypePtr(), Value.getInt() | ABIQualifiers::Volatile); }
-  ABIQualType withRestrict() const { return ABIQualType(getTypePtr(), Value.getInt() | ABIQualifiers::Restrict); }
-};
-
 } // namespace ABI
 
 #endif
