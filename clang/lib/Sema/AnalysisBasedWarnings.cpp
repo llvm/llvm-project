@@ -29,6 +29,7 @@
 #include "clang/Analysis/Analyses/CFGReachabilityAnalysis.h"
 #include "clang/Analysis/Analyses/CalledOnceCheck.h"
 #include "clang/Analysis/Analyses/Consumed.h"
+#include "clang/Analysis/Analyses/ConvergenceCheck.h"
 #include "clang/Analysis/Analyses/ReachableCode.h"
 #include "clang/Analysis/Analyses/ThreadSafety.h"
 #include "clang/Analysis/Analyses/UninitializedValues.h"
@@ -2666,7 +2667,7 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
     return;
   }
 
-  const Stmt *Body = D->getBody();
+  Stmt *Body = D->getBody();
   assert(Body);
 
   // Construct the analysis context with the specified CFG build options.
@@ -2864,6 +2865,10 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
     if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(D))
       if (S.getLangOpts().CPlusPlus && !fscope->isCoroutine() && isNoexcept(FD))
         checkThrowInNonThrowingFunc(S, FD, AC);
+
+  if (!Diags.isIgnored(diag::warn_cycle_created_by_goto_affects_convergence,
+                       D->getBeginLoc()))
+    analyzeForConvergence(S, AC);
 
   // If none of the previous checks caused a CFG build, trigger one here
   // for the logical error handler.

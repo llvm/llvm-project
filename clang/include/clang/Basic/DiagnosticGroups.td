@@ -1504,6 +1504,9 @@ def HIPOpenMPOffloading: DiagGroup<"hip-omp-target-directives">;
 // Warning about multiple GPUs are detected.
 def MultiGPU: DiagGroup<"multi-gpu">;
 
+// A warning group for thread convergence.
+def Convergence : DiagGroup<"convergence">;
+
 // Warnings which cause linking of the runtime libraries like
 // libc and the CRT to be skipped.
 def AVRRtlibLinkingQuirks : DiagGroup<"avr-rtlib-linking-quirks">;

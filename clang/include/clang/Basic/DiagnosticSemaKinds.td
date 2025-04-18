@@ -6510,6 +6510,10 @@ def warn_unused_label : Warning<"unused label %0">,
 def err_continue_from_cond_var_init : Error<
   "cannot jump from this continue statement to the loop increment; "
   "jump bypasses initialization of loop condition variable">;
+def note_goto_affects_convergence : Note<
+  "jump from this goto statement affects convergence">;
+def note_switch_case_affects_convergence : Note<
+  "jump to this case statement affects convergence of loop">;
 def err_goto_into_protected_scope : Error<
   "cannot jump from this goto statement to its label">;
 def ext_goto_into_protected_scope : ExtWarn<
@@ -10513,6 +10517,12 @@ def warn_loop_ctrl_binds_to_inner : Warning<
 def err_omp_bind_required_on_loop : Error<
   "expected 'bind' clause for 'loop' construct without an enclosing OpenMP "
   "construct">;
+def warn_loop_side_entry_affects_convergence : Warning<
+  "jump enters an iteration statement; convergence is implementation-defined">,
+  InGroup<Convergence>, DefaultIgnore;
+def warn_cycle_created_by_goto_affects_convergence : Warning<
+  "convergence is implementation-defined due to a backwards goto">,
+  InGroup<Convergence>, DefaultIgnore;
 def err_omp_loop_reduction_clause : Error<
   "'reduction' clause not allowed with '#pragma omp loop bind(teams)'">;
 def warn_break_binds_to_switch : Warning<

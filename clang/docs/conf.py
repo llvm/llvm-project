@@ -94,6 +94,10 @@ rst_epilog = f"""
 .. |ReleaseNotesTitle| replace:: {in_progress_title} Release Notes
 """
 
+# -- General options for output ------------------------------------------------
+
+numfig = True
+
 # -- Options for HTML output ---------------------------------------------------
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for

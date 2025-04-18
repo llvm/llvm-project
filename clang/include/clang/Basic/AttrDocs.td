@@ -1675,15 +1675,13 @@ of the condition.
 def ConvergentDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
-The ``convergent`` attribute can be placed on a function declaration. It is
-translated into the LLVM ``convergent`` attribute, which indicates that the call
-instructions of a function with this attribute cannot be made control-dependent
-on any additional values.
+The ``convergent`` attribute can be placed on a function declaration to indicate
+that every call to this function should be treated as a
+:ref:`convergent operation<convergent-operation>`.
 
-This attribute is different from ``noduplicate`` because it allows duplicating
-function calls if it can be proved that the duplicated function calls are
-not made control-dependent on any additional values, e.g., unrolling a loop
-executed by all work items.
+This attribute is different from ``noduplicate``. In general, ``convergent``
+calls can be duplicated if each copy retains the threads that are converged at
+each execution of the original call.
 
 Sample usage:
 
