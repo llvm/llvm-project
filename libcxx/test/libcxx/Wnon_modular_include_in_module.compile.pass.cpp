@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // REQUIRES: target={{.*}}-apple-{{.*}}
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
+// UNSUPPORTED: c++03
 
 // This test ensures that libc++ supports being compiled with modules enabled and with
 // -Wnon-modular-include-in-module. This effectively checks that we don't include any
