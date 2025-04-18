@@ -28,6 +28,7 @@
 
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Config/llvm-config.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -244,7 +245,10 @@ private:
   /// 1. The toolkit path in `targetOptions`.
   /// 2. In the system PATH.
   /// 3. The path from `getCUDAToolkitPath()`.
-  std::optional<std::string> findTool(StringRef tool);
+  ///
+  /// If warn_on_missing is true we emit a warning to the user when the tool is
+  /// missing.
+  std::optional<std::string> findTool(StringRef tool, bool warn_on_missing);
 
   /// Target options.
   gpu::TargetOptions targetOptions;
@@ -288,7 +292,7 @@ gpu::GPUModuleOp NVPTXSerializer::getOperation() {
   return dyn_cast<gpu::GPUModuleOp>(&SerializeGPUModuleBase::getOperation());
 }
 
-std::optional<std::string> NVPTXSerializer::findTool(StringRef tool) {
+std::optional<std::string> NVPTXSerializer::findTool(StringRef tool, bool warn_on_missing) {
   // Find the `tool` path.
   // 1. Check the toolkit path given in the command line.
   StringRef pathRef = targetOptions.getToolkitPath();
@@ -314,11 +318,15 @@ std::optional<std::string> NVPTXSerializer::findTool(StringRef tool) {
     if (llvm::sys::fs::can_execute(path))
       return StringRef(path.data(), path.size()).str();
   }
-  getOperation().emitError()
-      << "Couldn't find the `" << tool
-      << "` binary. Please specify the toolkit "
-         "path, add the compiler to $PATH, or set one of the environment "
-         "variables in `NVVM::getCUDAToolkitPath()`.";
+
+  // If we reached this point we failed to find the tool.
+  if (warn_on_missing) {
+    getOperation().emitWarning()
+        << "Couldn't find the `" << tool
+        << "` binary. Please specify the toolkit "
+        "path, add the compiler to $PATH, or set one of the environment "
+        "variables in `NVVM::getCUDAToolkitPath()`.";
+  }
   return std::nullopt;
 }
 
@@ -351,15 +359,13 @@ NVPTXSerializer::compileToBinary(const std::string &ptxCode) {
       targetOptions.getCompilationTarget() == gpu::CompilationTarget::Fatbin;
 
   // Find the `ptxas` & `fatbinary` tools.
-  std::optional<std::string> ptxasCompiler = findTool("ptxas");
+  std::optional<std::string> ptxasCompiler = findTool("ptxas", true);
   if (!ptxasCompiler)
     return std::nullopt;
-  std::optional<std::string> fatbinaryTool;
-  if (createFatbin) {
-    fatbinaryTool = findTool("fatbinary");
-    if (!fatbinaryTool)
-      return std::nullopt;
-  }
+  std::optional<std::string> fatbinaryTool =
+      findTool("fatbinary", createFatbin);
+  if (createFatbin && !fatbinaryTool)
+    return std::nullopt;
   Location loc = getOperation().getLoc();
 
   // Base name for all temp files: mlir-<module name>-<target triple>-<chip>.
