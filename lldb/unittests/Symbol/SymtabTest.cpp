@@ -721,7 +721,7 @@ LinkEditData:
   ASSERT_NE(symbol, nullptr);
 }
 
-TEST_F(SymtabTest, TestSymtabCreatedOnDemand) {
+TEST_F(SymtabTest, TestSymbolFileAndSymbolTableCreatedOnDemand) {
   auto ExpectedFile = TestFile::fromYaml(R"(
 --- !ELF
 FileHeader:
@@ -749,8 +749,18 @@ Symbols:
   ASSERT_THAT_EXPECTED(ExpectedFile, llvm::Succeeded());
   auto module_sp = std::make_shared<Module>(ExpectedFile->moduleSpec());
 
-  // The symbol table should not be loaded by default.
+  // The symbol file should not be created by default.
   Symtab *module_symtab = module_sp->GetSymtab(/*can_create=*/false);
+  ASSERT_EQ(module_symtab, nullptr);
+
+  // Even if the symbol file is created, the symbol table should not be created by default.
+
+  // TODO:
+  // I need to create a symbol file here, but without causing it to parse the symbol table.
+  // See next line as a failed attempt.
+
+  // module_sp->GetSymbolFile(/*can_create=*/true); // Cannot do this because it will parse the symbol table.
+  module_symtab = module_sp->GetSymtab(/*can_create=*/false);
   ASSERT_EQ(module_symtab, nullptr);
 
   // But it should be created on demand.

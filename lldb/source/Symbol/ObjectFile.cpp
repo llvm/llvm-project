@@ -734,7 +734,6 @@ void llvm::format_provider<ObjectFile::Strata>::format(
   }
 }
 
-
 Symtab *ObjectFile::GetSymtab(bool can_create) {
   ModuleSP module_sp(GetModule());
   if (module_sp && can_create) {
