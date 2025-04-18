@@ -23,19 +23,19 @@ define half @reduce_fadd_half(<8 x half> %in) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.v4.u32 {%r1, %r2, %r3, %r4}, [reduce_fadd_half_param_0];
-; CHECK-NEXT:    mov.b32 {%rs1, %rs2}, %r4;
-; CHECK-NEXT:    mov.b32 {%rs3, %rs4}, %r3;
-; CHECK-NEXT:    mov.b32 {%rs5, %rs6}, %r2;
-; CHECK-NEXT:    mov.b32 {%rs7, %rs8}, %r1;
-; CHECK-NEXT:    mov.b16 %rs9, 0x0000;
-; CHECK-NEXT:    add.rn.f16 %rs10, %rs7, %rs9;
-; CHECK-NEXT:    add.rn.f16 %rs11, %rs10, %rs8;
-; CHECK-NEXT:    add.rn.f16 %rs12, %rs11, %rs5;
-; CHECK-NEXT:    add.rn.f16 %rs13, %rs12, %rs6;
-; CHECK-NEXT:    add.rn.f16 %rs14, %rs13, %rs3;
-; CHECK-NEXT:    add.rn.f16 %rs15, %rs14, %rs4;
-; CHECK-NEXT:    add.rn.f16 %rs16, %rs15, %rs1;
-; CHECK-NEXT:    add.rn.f16 %rs17, %rs16, %rs2;
+; CHECK-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
+; CHECK-NEXT:    mov.b16 %rs3, 0x0000;
+; CHECK-NEXT:    add.rn.f16 %rs4, %rs1, %rs3;
+; CHECK-NEXT:    add.rn.f16 %rs5, %rs4, %rs2;
+; CHECK-NEXT:    mov.b32 {%rs6, %rs7}, %r2;
+; CHECK-NEXT:    add.rn.f16 %rs8, %rs5, %rs6;
+; CHECK-NEXT:    add.rn.f16 %rs9, %rs8, %rs7;
+; CHECK-NEXT:    mov.b32 {%rs10, %rs11}, %r3;
+; CHECK-NEXT:    add.rn.f16 %rs12, %rs9, %rs10;
+; CHECK-NEXT:    add.rn.f16 %rs13, %rs12, %rs11;
+; CHECK-NEXT:    mov.b32 {%rs14, %rs15}, %r4;
+; CHECK-NEXT:    add.rn.f16 %rs16, %rs13, %rs14;
+; CHECK-NEXT:    add.rn.f16 %rs17, %rs16, %rs15;
 ; CHECK-NEXT:    st.param.b16 [func_retval0], %rs17;
 ; CHECK-NEXT:    ret;
   %res = call half @llvm.vector.reduce.fadd(half 0.0, <8 x half> %in)
@@ -174,17 +174,17 @@ define half @reduce_fmul_half(<8 x half> %in) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.v4.u32 {%r1, %r2, %r3, %r4}, [reduce_fmul_half_param_0];
-; CHECK-NEXT:    mov.b32 {%rs1, %rs2}, %r4;
-; CHECK-NEXT:    mov.b32 {%rs3, %rs4}, %r3;
-; CHECK-NEXT:    mov.b32 {%rs5, %rs6}, %r2;
-; CHECK-NEXT:    mov.b32 {%rs7, %rs8}, %r1;
-; CHECK-NEXT:    mul.rn.f16 %rs9, %rs7, %rs8;
-; CHECK-NEXT:    mul.rn.f16 %rs10, %rs9, %rs5;
-; CHECK-NEXT:    mul.rn.f16 %rs11, %rs10, %rs6;
-; CHECK-NEXT:    mul.rn.f16 %rs12, %rs11, %rs3;
-; CHECK-NEXT:    mul.rn.f16 %rs13, %rs12, %rs4;
-; CHECK-NEXT:    mul.rn.f16 %rs14, %rs13, %rs1;
-; CHECK-NEXT:    mul.rn.f16 %rs15, %rs14, %rs2;
+; CHECK-NEXT:    mov.b32 {%rs1, %rs2}, %r2;
+; CHECK-NEXT:    mov.b32 {%rs3, %rs4}, %r1;
+; CHECK-NEXT:    mul.rn.f16 %rs5, %rs3, %rs4;
+; CHECK-NEXT:    mul.rn.f16 %rs6, %rs5, %rs1;
+; CHECK-NEXT:    mul.rn.f16 %rs7, %rs6, %rs2;
+; CHECK-NEXT:    mov.b32 {%rs8, %rs9}, %r3;
+; CHECK-NEXT:    mul.rn.f16 %rs10, %rs7, %rs8;
+; CHECK-NEXT:    mul.rn.f16 %rs11, %rs10, %rs9;
+; CHECK-NEXT:    mov.b32 {%rs12, %rs13}, %r4;
+; CHECK-NEXT:    mul.rn.f16 %rs14, %rs11, %rs12;
+; CHECK-NEXT:    mul.rn.f16 %rs15, %rs14, %rs13;
 ; CHECK-NEXT:    st.param.b16 [func_retval0], %rs15;
 ; CHECK-NEXT:    ret;
   %res = call half @llvm.vector.reduce.fmul(half 1.0, <8 x half> %in)
