@@ -759,8 +759,7 @@ public:
         std::string Msg =
             formatv("Unsupported intrinsic {0} for DXIL lowering", F.getName())
                 .str();
-        DiagnosticInfoGeneric Diag(Msg);
-        M.getContext().diagnose(Diag);
+        M.getContext().emitError(Msg);
         HasErrors |= true;
         break;
       }

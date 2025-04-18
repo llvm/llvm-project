@@ -139,7 +139,7 @@ public:
 using DiagnosticHandlerFunction = std::function<void(const DiagnosticInfo &)>;
 
 class DiagnosticInfoGeneric : public DiagnosticInfo {
-  const Twine &MsgStr;
+  const Twine MsgStr;
   const Instruction *Inst = nullptr;
 
 public:
