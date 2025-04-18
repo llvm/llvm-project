@@ -32,10 +32,10 @@ struct Canonicalizer : public impl::CanonicalizerBase<Canonicalizer> {
                 ArrayRef<std::string> disabledPatterns,
                 ArrayRef<std::string> enabledPatterns)
       : config(config) {
-    this->topDownProcessingEnabled = config.getUseTopDownTraversal();
-    this->regionSimplifyLevel = config.getRegionSimplificationLevel();
-    this->maxIterations = config.getMaxIterations();
-    this->maxNumRewrites = config.getMaxNumRewrites();
+    this->topDownProcessingEnabled = config.useTopDownTraversal;
+    this->enableRegionSimplification = config.enableRegionSimplification;
+    this->maxIterations = config.maxIterations;
+    this->maxNumRewrites = config.maxNumRewrites;
     this->disabledPatterns = disabledPatterns;
     this->enabledPatterns = enabledPatterns;
   }
@@ -44,10 +44,10 @@ struct Canonicalizer : public impl::CanonicalizerBase<Canonicalizer> {
   /// execution.
   LogicalResult initialize(MLIRContext *context) override {
     // Set the config from possible pass options set in the meantime.
-    config.setUseTopDownTraversal(topDownProcessingEnabled);
-    config.setRegionSimplificationLevel(regionSimplifyLevel);
-    config.setMaxIterations(maxIterations);
-    config.setMaxNumRewrites(maxNumRewrites);
+    config.useTopDownTraversal = topDownProcessingEnabled;
+    config.enableRegionSimplification = enableRegionSimplification;
+    config.maxIterations = maxIterations;
+    config.maxNumRewrites = maxNumRewrites;
 
     RewritePatternSet owningPatterns(context);
     for (auto *dialect : context->getLoadedDialects())

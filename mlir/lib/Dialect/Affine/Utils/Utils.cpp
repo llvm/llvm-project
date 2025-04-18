@@ -426,11 +426,11 @@ LogicalResult mlir::affine::hoistAffineIfOp(AffineIfOp ifOp, bool *folded) {
   RewritePatternSet patterns(ifOp.getContext());
   AffineIfOp::getCanonicalizationPatterns(patterns, ifOp.getContext());
   FrozenRewritePatternSet frozenPatterns(std::move(patterns));
+  GreedyRewriteConfig config;
+  config.strictMode = GreedyRewriteStrictness::ExistingOps;
   bool erased;
-  (void)applyOpPatternsGreedily(
-      ifOp.getOperation(), frozenPatterns,
-      GreedyRewriteConfig().setStrictness(GreedyRewriteStrictness::ExistingOps),
-      /*changed=*/nullptr, &erased);
+  (void)applyOpPatternsGreedily(ifOp.getOperation(), frozenPatterns, config,
+                                /*changed=*/nullptr, &erased);
   if (erased) {
     if (folded)
       *folded = true;
