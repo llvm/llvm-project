@@ -2493,14 +2493,9 @@ public:
   CalledOnceInterProceduralData CalledOnceData;
 };
 
-static bool isEnabledImpl(DiagnosticsEngine &D, SourceLocation Loc,
-                          unsigned Diag) {
-  return !D.isIgnored(Diag, Loc);
-}
-
 template <typename... Ts>
 static bool isEnabled(DiagnosticsEngine &D, SourceLocation Loc, Ts... Diags) {
-  return (isEnabledImpl(D, Loc, Diags) || ...);
+  return (!D.isIgnored(Diags, Loc) || ...);
 };
 
 sema::AnalysisBasedWarnings::AnalysisBasedWarnings(Sema &s)
