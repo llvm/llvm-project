@@ -757,10 +757,9 @@ public:
         continue;
       default: {
         std::string Msg =
-            llvm::formatv("Unsupported intrinsic {0} for DXIL lowering",
-                          F.getName())
+            formatv("Unsupported intrinsic {0} for DXIL lowering", F.getName())
                 .str();
-        DiagnosticInfoUnsupported Diag(F, Msg);
+        DiagnosticInfoGeneric Diag(Msg);
         M.getContext().diagnose(Diag);
         HasErrors |= true;
         break;
