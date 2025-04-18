@@ -2493,10 +2493,15 @@ public:
   CalledOnceInterProceduralData CalledOnceData;
 };
 
-static bool isEnabled(DiagnosticsEngine &D, unsigned diag,
-                          SourceLocation Loc) {
-  return !D.isIgnored(diag, Loc);
+static bool isEnabledImpl(DiagnosticsEngine &D, SourceLocation Loc,
+                          unsigned Diag) {
+  return !D.isIgnored(Diag, Loc);
 }
+
+template <typename... Ts>
+static bool isEnabled(DiagnosticsEngine &D, SourceLocation Loc, Ts... Diags) {
+  return (isEnabledImpl(D, Loc, Diags) || ...);
+};
 
 sema::AnalysisBasedWarnings::AnalysisBasedWarnings(Sema &s)
     : S(s), IPData(std::make_unique<InterProceduralData>()),
@@ -2516,14 +2521,13 @@ sema::AnalysisBasedWarnings::getPolicyInEffectAt(SourceLocation Loc) {
   DiagnosticsEngine &D = S.getDiagnostics();
   Policy P;
 
-  P.enableCheckUnreachable = isEnabled(D, warn_unreachable, Loc) ||
-                             isEnabled(D, warn_unreachable_break, Loc) ||
-                             isEnabled(D, warn_unreachable_return, Loc) ||
-                             isEnabled(D, warn_unreachable_loop_increment, Loc);
+  P.enableCheckUnreachable =
+      isEnabled(D, Loc, warn_unreachable, warn_unreachable_break,
+                warn_unreachable_return, warn_unreachable_loop_increment);
 
-  P.enableThreadSafetyAnalysis = isEnabled(D, warn_double_lock, Loc);
+  P.enableThreadSafetyAnalysis = isEnabled(D, Loc, warn_double_lock);
 
-  P.enableConsumedAnalysis = isEnabled(D, warn_use_in_invalid_state, Loc);
+  P.enableConsumedAnalysis = isEnabled(D, Loc, warn_use_in_invalid_state);
   return P;
 }
 
