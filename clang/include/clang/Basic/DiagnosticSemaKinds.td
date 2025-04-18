@@ -6738,6 +6738,30 @@ def err_counted_by_attr_pointee_unknown_size : Error<
     "%select{|. This will be an error in a future compiler version}3"
     ""
   "}2">;
+def err_counted_by_on_incomplete_type_on_assign : Error <
+  "cannot %select{"
+    "assign to %select{object|'%1'}2 with|" // AA_Assigning,
+    "pass argument to %select{parameter|parameter '%1'}2 with|" // AA_Passing,
+    "return|" // AA_Returning,
+    "convert to|" // AA_Converting (UNUSED)
+    "%select{|implicitly }3initialize %select{object|'%1'}2 with|" // AA_Initializing,
+    "pass argument to parameter with|" // AA_Sending (UNUSED)
+    "cast to|" // AA_Casting (UNUSED)
+    "pass argument to parameter with" // AA_Passing_CFAudited (UNUSED)
+  "}0 '%5' attributed type %4 because the pointee type %6 is incomplete">;
+
+def err_counted_by_on_incomplete_type_on_use : Error <
+  "cannot %select{"
+    "use '%1' with '%4' attributed|" // Generic expr
+    "call '%1' with '%4' attributed return" // CallExpr
+  "}0 type %2 because the pointee type %3 is incomplete">;
+
+def note_counted_by_consider_completing_pointee_ty : Note<
+  "consider providing a complete definition for %0">;
+  
+def note_counted_by_consider_using_sized_by : Note<
+  "consider using '__sized_by%select{|_or_null}0' instead of "
+  "'__counted_by%select{|_or_null}0'">;
 
 def warn_counted_by_attr_elt_type_unknown_size :
   Warning<err_counted_by_attr_pointee_unknown_size.Summary>,
