@@ -2,6 +2,7 @@
 // RUN: cat %t.txt | FileCheck %s --check-prefix=SUPPORTED
 // RUN: not %clang_cc1 -E -header-include-format=textual -header-include-filtering=only-direct-system -header-include-file %t.txt -I %S/Inputs/print-header-json -isystem %S/Inputs/print-header-json/system %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=UNSUPPORTED0
 // RUN: not %clang_cc1 -E -header-include-format=json -header-include-filtering=none -header-include-file %t.txt -I %S/Inputs/print-header-json -isystem %S/Inputs/print-header-json/system %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=UNSUPPORTED1
+// RUN: not %clang_cc1 -E -header-include-format=json -header-include-file %t.txt -I %S/Inputs/print-header-json -isystem %S/Inputs/print-header-json/system %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=UNSUPPORTED1
 // RUN: rm %t.txt
 // RUN: env CC_PRINT_HEADERS_FORMAT=json CC_PRINT_HEADERS_FILTERING=only-direct-system CC_PRINT_HEADERS_FILE=%t.txt %clang -fsyntax-only -I %S/Inputs/print-header-json -isystem %S/Inputs/print-header-json/system %s -o /dev/null
 // RUN: env CC_PRINT_HEADERS_FORMAT=textual CC_PRINT_HEADERS_FILTERING=only-direct-system CC_PRINT_HEADERS_FILE=%t.txt not %clang -fsyntax-only -I %S/Inputs/print-header-json -isystem %S/Inputs/print-header-json/system %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=UNSUPPORTED2

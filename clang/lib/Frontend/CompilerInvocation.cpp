@@ -2440,8 +2440,8 @@ static bool ParseDependencyOutputArgs(DependencyOutputOptions &Opts,
       (Opts.HeaderIncludeFormat == HIFMT_JSON &&
        Opts.HeaderIncludeFiltering != HIFIL_Only_Direct_System))
     Diags.Report(diag::err_drv_print_header_env_var_combination_cc1)
-        << Args.getLastArg(OPT_header_include_format_EQ)->getValue()
-        << Args.getLastArg(OPT_header_include_filtering_EQ)->getValue();
+        << headerIncludeFormatKindToString(Opts.HeaderIncludeFormat)
+        << headerIncludeFilteringKindToString(Opts.HeaderIncludeFiltering);
 
   return Diags.getNumErrors() == NumErrorsBefore;
 }
