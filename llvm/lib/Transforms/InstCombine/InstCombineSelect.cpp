@@ -3730,31 +3730,29 @@ static Value *foldSelectBitTest(SelectInst &Sel, Value *CondVal, Value *TrueVal,
   Value *CmpLHS, *CmpRHS;
 
   if (match(CondVal, m_ICmp(Pred, m_Value(CmpLHS), m_Value(CmpRHS)))) {
-    if (ICmpInst::isEquality(Pred)) {
-      if (!match(CmpRHS, m_Zero()))
-        return nullptr;
+    auto Res = decomposeBitTestICmp(
+        CmpLHS, CmpRHS, Pred, /*LookThroughTrunc=*/true,
+        /*AllowNonZeroC=*/false, /*DecomposeBitMask=*/true);
 
-      V = CmpLHS;
-      const APInt *AndRHS;
-      if (!match(CmpLHS, m_And(m_Value(), m_Power2(AndRHS))))
-        return nullptr;
+    if (!Res)
+      return nullptr;
 
-      AndMask = *AndRHS;
-    } else if (auto Res = decomposeBitTestICmp(CmpLHS, CmpRHS, Pred)) {
-      assert(ICmpInst::isEquality(Res->Pred) && "Not equality test?");
-      AndMask = Res->Mask;
+    V = CmpLHS;
+    AndMask = Res->Mask;
+
+    if (!ICmpInst::isEquality(Pred)) {
       V = Res->X;
       KnownBits Known =
           computeKnownBits(V, /*Depth=*/0, SQ.getWithInstruction(&Sel));
       AndMask &= Known.getMaxValue();
-      if (!AndMask.isPowerOf2())
-        return nullptr;
-
-      Pred = Res->Pred;
       CreateAnd = true;
-    } else {
-      return nullptr;
     }
+
+    Pred = Res->Pred;
+
+    if (!AndMask.isPowerOf2())
+      return nullptr;
+
   } else if (auto *Trunc = dyn_cast<TruncInst>(CondVal)) {
     V = Trunc->getOperand(0);
     AndMask = APInt(V->getType()->getScalarSizeInBits(), 1);

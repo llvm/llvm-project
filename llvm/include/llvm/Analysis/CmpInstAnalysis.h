@@ -95,24 +95,28 @@ namespace llvm {
   /// Represents the operation icmp (X & Mask) pred C, where pred can only be
   /// eq or ne.
   struct DecomposedBitTest {
-    Value *X;
+    Value *X = nullptr;
     CmpInst::Predicate Pred;
     APInt Mask;
     APInt C;
   };
 
   /// Decompose an icmp into the form ((X & Mask) pred C) if possible.
-  /// Unless \p AllowNonZeroC is true, C will always be 0.
+  /// Unless \p AllowNonZeroC is true, C will always be 0. If \p
+  /// DecomposeBitMask is specified, then, for equality predicates, this will
+  /// decompose bitmasking (e.g. implemented via `and`).
   std::optional<DecomposedBitTest>
   decomposeBitTestICmp(Value *LHS, Value *RHS, CmpInst::Predicate Pred,
-                       bool LookThroughTrunc = true,
-                       bool AllowNonZeroC = false);
+                       bool LookThroughTrunc = true, bool AllowNonZeroC = false,
+                       bool DecomposeBitMask = false);
 
   /// Decompose an icmp into the form ((X & Mask) pred C) if
   /// possible. Unless \p AllowNonZeroC is true, C will always be 0.
+  /// If \p DecomposeBitMask is specified, then, for equality predicates, this
+  /// will decompose bitmasking (e.g. implemented via `and`).
   std::optional<DecomposedBitTest>
   decomposeBitTest(Value *Cond, bool LookThroughTrunc = true,
-                   bool AllowNonZeroC = false);
+                   bool AllowNonZeroC = false, bool DecomposeBitMask = false);
 
 } // end namespace llvm
 
