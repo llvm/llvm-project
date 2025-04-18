@@ -23,14 +23,6 @@
 
 using namespace clang;
 
-IdentifierLoc *IdentifierLoc::create(ASTContext &Ctx, SourceLocation Loc,
-                                     IdentifierInfo *Ident) {
-  IdentifierLoc *Result = new (Ctx) IdentifierLoc;
-  Result->Loc = Loc;
-  Result->Ident = Ident;
-  return Result;
-}
-
 size_t ParsedAttr::allocated_size() const {
   if (IsAvailability) return AttributeFactory::AvailabilityAllocSize;
   else if (IsTypeTagForDatatype)
