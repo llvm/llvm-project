@@ -426,7 +426,7 @@ define i32 @sext_sextinreg_sra_2(i16 %a) nounwind {
 ;
 ; RV32XTHEADBB-LABEL: sext_sextinreg_sra_2:
 ; RV32XTHEADBB:       # %bb.0:
-; RV32XTHEADBB-NEXT:    th.ext a0, a0, 15, 24
+; RV32XTHEADBB-NEXT:    th.ext a0, a0, 15, 15
 ; RV32XTHEADBB-NEXT:    ret
   %sext = sext i16 %a to i32
   %shr = ashr exact i32 %sext, 24
