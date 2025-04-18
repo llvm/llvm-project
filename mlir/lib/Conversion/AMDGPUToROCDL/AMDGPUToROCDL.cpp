@@ -1394,6 +1394,7 @@ struct AMDGPUSwizzleBitModeLowering
     unsigned xorMask = op.getXorMask();
 
     // bit 15 is 0 for the BitMode swizzle.
+    // https://gpuopen.com/learn/amd-gcn-assembly-cross-lane-operations/
     unsigned mask = andMask | (orMask << 5) | (xorMask << 10);
     Value maskValue = createI32Constant(rewriter, loc, mask);
     SmallVector<Value> swizzled;

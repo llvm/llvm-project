@@ -427,7 +427,7 @@ SmallVector<Value> mlir::LLVM::decomposeValue(OpBuilder &builder, Location loc,
   src = builder.create<LLVM::BitcastOp>(loc, vecType, src);
 
   SmallVector<Value> res;
-  for (auto i : llvm::seq<int64_t>(0, numElements)) {
+  for (auto i : llvm::seq(numElements)) {
     Value idx = createI32Constant(builder, loc, i);
     Value elem = builder.create<LLVM::ExtractElementOp>(loc, src, idx);
     res.emplace_back(elem);
