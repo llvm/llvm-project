@@ -11,9 +11,7 @@
 #include "src/__support/macros/config.h"
 #include "src/setjmp/setjmp_impl.h"
 #include "src/setjmp/sigsetjmp_epilogue.h"
-
-#define __need_offsetof
-#include <stddef.h> // compiler resource header
+#include "hdr/offsetof_macros.h"
 
 #if !defined(LIBC_TARGET_ARCH_IS_X86)
 #error "Invalid file include"

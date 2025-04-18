@@ -52,7 +52,8 @@ typedef struct {
 #else
 #error "__jmp_buf not available for your target architecture."
 #endif
-  // TODO: implement sigjmp_buf related functions
+  // TODO: implement sigjmp_buf related functions for other architectures
+  // Issue: https://github.com/llvm/llvm-project/issues/136358
 #if defined(__i386__) || defined(__x86_64__)
   // return address
   void *sig_retaddr;
