@@ -7889,9 +7889,13 @@ def code_completion_with_fixits : Flag<["-"], "code-completion-with-fixits">,
 def skip_function_bodies : Flag<["-"], "skip-function-bodies">,
   HelpText<"Skip function bodies when possible">,
   MarshallingInfoFlag<FrontendOpts<"SkipFunctionBodies">>;
-def disable_free : Flag<["-"], "disable-free">,
-  HelpText<"Disable freeing of memory on exit">,
-  MarshallingInfoFlag<FrontendOpts<"DisableFree">>;
+defm disable_free : BoolOption<"",
+  "disable-free",
+  FrontendOpts<"DisableFree">,
+  DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption], "Disable">,
+  NegFlag<SetFalse, [], [ClangOption], "Don't disable">,
+  BothFlags<[], [ClangOption], " freeing of memory on exit">>;
 defm clear_ast_before_backend : BoolOption<"",
   "clear-ast-before-backend",
   CodeGenOpts<"ClearASTBeforeBackend">,
