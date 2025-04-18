@@ -28,7 +28,7 @@ liveins:
 frameInfo:
   maxAlignment:    1
   hasCalls:        true
-  savePoints:
+  savePoint:
     - point:           '%bb.1'
       registers:
         - '$rbx'
@@ -36,7 +36,7 @@ frameInfo:
         - '$r13'
         - '$r14'
         - '$r15'
-  restorePoints:
+  restorePoint:
     - point:           '%bb.1'
       registers:
         - '$rbx'

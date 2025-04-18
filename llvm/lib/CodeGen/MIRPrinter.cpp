@@ -119,7 +119,7 @@ public:
   void convert(ModuleSlotTracker &MST, yaml::MachineFrameInfo &YamlMFI,
                const MachineFrameInfo &MFI, const TargetRegisterInfo *TRI);
   void convert(ModuleSlotTracker &MST, yaml::SaveRestorePoints &YamlSRPoints,
-               const DenseMap<MachineBasicBlock *, std::vector<Register>> &SRP,
+               const llvm::SaveRestorePoints::PointsMap &SRP,
                const TargetRegisterInfo *TRI);
   void convert(yaml::MachineFunction &MF,
                const MachineConstantPool &ConstantPool);
@@ -649,7 +649,7 @@ void MIRPrinter::convert(yaml::MachineFunction &MF,
 
 void MIRPrinter::convert(ModuleSlotTracker &MST,
                          yaml::SaveRestorePoints &YamlSRPoints,
-                         const SaveRestorePoints &SRPoints,
+                         const llvm::SaveRestorePoints::PointsMap &SRPoints,
                          const TargetRegisterInfo *TRI) {
   auto &Points =
       std::get<std::vector<yaml::SaveRestorePointEntry>>(YamlSRPoints);
@@ -661,9 +661,9 @@ void MIRPrinter::convert(ModuleSlotTracker &MST,
     Entry.Point = StrOS.str().str();
     Str.clear();
     for (auto &Reg : MBBEntry.second) {
-      if (Reg != MCRegister::NoRegister) {
-        StrOS << printReg(Reg, TRI);
-        Entry.Registers.push_back(StrOS.str());
+      if (Reg.getReg() != MCRegister::NoRegister) {
+        StrOS << printReg(Reg.getReg(), TRI);
+        Entry.Registers.push_back(StrOS.str().str());
         Str.clear();
       }
     }

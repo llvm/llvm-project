@@ -949,6 +949,7 @@ bool ShrinkWrap::runOnMachineFunction(MachineFunction &MF) {
   bool HasCandidate = performShrinkWrapping(RPOT, RS.get());
   StackAddressUsedBlockInfo.clear();
   Changed = postShrinkWrapping(HasCandidate, MF, RS.get());
+
   if (!HasCandidate && !Changed)
     return false;
   if (!ArePointsInteresting())
@@ -960,13 +961,13 @@ bool ShrinkWrap::runOnMachineFunction(MachineFunction &MF) {
 
   MachineFrameInfo &MFI = MF.getFrameInfo();
 
-  std::vector<Register> CSRVec;
+  std::vector<CalleeSavedInfo> CSIVec;
   SetOfRegs CSRSet = getCurrentCSRs(RS.get());
   for (unsigned Reg : CSRSet)
-    CSRVec.push_back(Reg);
+    CSIVec.push_back(CalleeSavedInfo(Reg));
 
-  llvm::SaveRestorePoints SavePoints({{Save, CSRVec}});
-  llvm::SaveRestorePoints RestorePoints({{Restore, CSRVec}});
+  SaveRestorePoints::PointsMap SavePoints({{Save, CSIVec}});
+  SaveRestorePoints::PointsMap RestorePoints({{Restore, CSIVec}});
 
   MFI.setSavePoints(SavePoints);
   MFI.setRestorePoints(RestorePoints);

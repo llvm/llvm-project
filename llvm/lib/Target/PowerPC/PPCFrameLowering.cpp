@@ -2080,7 +2080,7 @@ void PPCFrameLowering::processFunctionBeforeFrameFinalized(MachineFunction &MF,
   // RestoreBlock. So we handle this case here.
   if (!MFI.getSavePoints().empty() && MFI.hasTailCall()) {
     for (MachineBasicBlock &MBB : MF) {
-      if (MBB.isReturnBlock() && (!MFI.getRestorePoint(&MBB).first))
+      if (MBB.isReturnBlock() && (!MFI.getRestorePoints().contains(&MBB)))
         createTailCallBranchInstr(MBB);
     }
   }
