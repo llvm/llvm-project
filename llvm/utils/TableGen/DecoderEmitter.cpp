@@ -2417,7 +2417,7 @@ void DecoderEmitter::run(raw_ostream &o) {
 #include "llvm/TargetParser/SubtargetFeature.h"
 #include <assert.h>
 
-namespace llvm {
+namespace {
 )";
 
   emitFieldFromInstruction(OS);
@@ -2561,7 +2561,7 @@ namespace llvm {
   // Emit the main entry point for the decoder, decodeInstruction().
   emitDecodeInstruction(OS, IsVarLenInst);
 
-  OS << "\n} // end namespace llvm\n";
+  OS << "\n} // namespace\n";
 }
 
 void llvm::EmitDecoder(const RecordKeeper &RK, raw_ostream &OS,
