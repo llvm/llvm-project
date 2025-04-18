@@ -9491,6 +9491,10 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
               "--lto-newpm-passes=default-post-link<O" + OOpt + ">"));
         }
       }
+      // If this is OpenMP the device linker will need `-lompdevice`.
+      if (Kind == Action::OFK_OpenMP && !Args.hasArg(OPT_no_offloadlib) &&
+          (TC->getTriple().isAMDGPU() || TC->getTriple().isNVPTX()))
+        LinkerArgs.emplace_back("-lompdevice");
 
       // Forward all of these to the appropriate toolchain.
       for (StringRef Arg : CompilerArgs)
