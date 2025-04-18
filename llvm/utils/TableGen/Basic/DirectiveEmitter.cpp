@@ -813,7 +813,7 @@ static void generateDirectiveClauseSets(const DirectiveLanguage &DirLang,
   // same name but different layout is UB.  So just put the 'clang' on in the
   // clang namespace.
   OS << "namespace " << (FE == DirectiveClauseFE::Flang ? "llvm" : "clang")
-     << "{\n";
+     << " {\n";
 
   // Open namespaces defined in the directive language.
   SmallVector<StringRef, 2> Namespaces;
