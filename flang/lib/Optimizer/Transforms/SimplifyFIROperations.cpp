@@ -205,8 +205,7 @@ void SimplifyFIROperationsPass::runOnOperation() {
   fir::populateSimplifyFIROperationsPatterns(patterns,
                                              preferInlineImplementation);
   mlir::GreedyRewriteConfig config;
-  config.setRegionSimplificationLevel(
-      mlir::GreedySimplifyRegionLevel::Disabled);
+  config.enableRegionSimplification = mlir::GreedySimplifyRegionLevel::Disabled;
 
   if (mlir::failed(
           mlir::applyPatternsGreedily(module, std::move(patterns), config))) {
