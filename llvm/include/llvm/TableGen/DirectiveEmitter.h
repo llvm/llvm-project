@@ -160,6 +160,30 @@ public:
   }
 
   const Record *getCategory() const { return Def->getValueAsDef("category"); }
+
+  // Clang uses a different format for names of its directives enum.
+  std::string getClangAccSpelling() const {
+    std::string Name = Def->getValueAsString("name").str();
+
+    // Clang calls the 'unknown' value 'invalid'.
+    if (Name == "unknown")
+      return "Invalid";
+
+    // Clang entries all start with a capital letter, so apply that.
+    Name[0] = std::toupper(Name[0]);
+    // Additionally, spaces/underscores are handled by capitalizing the next
+    // letter of the name and removing the space/underscore.
+    for (unsigned I = 0; I < Name.size(); ++I) {
+      if (Name[I] == ' ' || Name[I] == '_') {
+        Name.erase(I, 1);
+        assert(Name[I] != ' ' && Name[I] != '_' &&
+               "No double spaces/underscores");
+        Name[I] = std::toupper(Name[I]);
+      }
+    }
+
+    return Name;
+  }
 };
 
 // Wrapper class that contains Clause's information defined in DirectiveBase.td
@@ -198,6 +222,30 @@ public:
     });
     erase(N, '_');
     return N;
+  }
+
+  // Clang uses a different format for names of its clause enum, which can be
+  // overwritten with the `clangSpelling` value. So get the proper spelling
+  // here.
+  std::string getClangAccSpelling() const {
+    if (StringRef ClangSpelling = Def->getValueAsString("clangAccSpelling");
+        !ClangSpelling.empty())
+      return ClangSpelling.str();
+
+    std::string Name = Def->getValueAsString("name").str();
+    // Clang entries all start with a capital letter, so apply that.
+    Name[0] = std::toupper(Name[0]);
+    // Additionally, underscores are handled by capitalizing the next letter of
+    // the name and removing the underscore.
+    for (unsigned I = 0; I < Name.size(); ++I) {
+      if (Name[I] == '_') {
+        Name.erase(I, 1);
+        assert(Name[I] != '_' && "No double underscores");
+        Name[I] = std::toupper(Name[I]);
+      }
+    }
+
+    return Name;
   }
 
   // Optional field.

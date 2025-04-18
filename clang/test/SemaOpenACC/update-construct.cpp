@@ -36,15 +36,15 @@ void uses() {
 
   // These diagnose because there isn't at least 1 of 'self', 'host', or
   // 'device'.
-  // expected-error@+1{{OpenACC 'update' construct must have at least one 'self', 'host' or 'device' clause}}
+  // expected-error@+1{{OpenACC 'update' construct must have at least one 'device', 'host', or 'self' clause}}
 #pragma acc update async
-  // expected-error@+1{{OpenACC 'update' construct must have at least one 'self', 'host' or 'device' clause}}
+  // expected-error@+1{{OpenACC 'update' construct must have at least one 'device', 'host', or 'self' clause}}
 #pragma acc update wait
-  // expected-error@+1{{OpenACC 'update' construct must have at least one 'self', 'host' or 'device' clause}}
+  // expected-error@+1{{OpenACC 'update' construct must have at least one 'device', 'host', or 'self' clause}}
 #pragma acc update device_type(host)
-  // expected-error@+1{{OpenACC 'update' construct must have at least one 'self', 'host' or 'device' clause}}
+  // expected-error@+1{{OpenACC 'update' construct must have at least one 'device', 'host', or 'self' clause}}
 #pragma acc update if(true)
-  // expected-error@+1{{OpenACC 'update' construct must have at least one 'self', 'host' or 'device' clause}}
+  // expected-error@+1{{OpenACC 'update' construct must have at least one 'device', 'host', or 'self' clause}}
 #pragma acc update if_present
 
   // expected-error@+1{{value of type 'struct NotConvertible' is not contextually convertible to 'bool'}}
