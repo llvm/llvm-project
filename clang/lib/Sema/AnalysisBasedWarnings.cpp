@@ -2494,7 +2494,8 @@ public:
 };
 
 template <typename... Ts>
-static bool isEnabled(DiagnosticsEngine &D, SourceLocation Loc, Ts... Diags) {
+static bool areAnyEnabled(DiagnosticsEngine &D, SourceLocation Loc,
+                          Ts... Diags) {
   return (!D.isIgnored(Diags, Loc) || ...);
 };
 
@@ -2520,14 +2521,14 @@ sema::AnalysisBasedWarnings::getPolicyInEffectAt(SourceLocation Loc) {
   // SemaPPCallbacks::PragmaDiagnostic().
   P.enableCheckUnreachable =
       PolicyOverrides.enableCheckUnreachable ||
-      isEnabled(D, Loc, warn_unreachable, warn_unreachable_break,
-                warn_unreachable_return, warn_unreachable_loop_increment);
+      areAnyEnabled(D, Loc, warn_unreachable, warn_unreachable_break,
+                    warn_unreachable_return, warn_unreachable_loop_increment);
 
   P.enableThreadSafetyAnalysis = PolicyOverrides.enableThreadSafetyAnalysis ||
-                                 isEnabled(D, Loc, warn_double_lock);
+                                 areAnyEnabled(D, Loc, warn_double_lock);
 
   P.enableConsumedAnalysis = PolicyOverrides.enableConsumedAnalysis ||
-                             isEnabled(D, Loc, warn_use_in_invalid_state);
+                             areAnyEnabled(D, Loc, warn_use_in_invalid_state);
   return P;
 }
 
