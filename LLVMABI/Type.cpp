@@ -6,14 +6,38 @@ using namespace ABI;
 
 void ABIBuiltinType::dump() const {
     std::cout << "BuiltinType: ";
+    // Assuming you're sticking with these only:
     switch (kind) {
         case Void: std::cout << "Void\n"; break;
         case Bool: std::cout << "Bool\n"; break;
-        case Integer: std::cout << "Integer\n"; break;
-        case SignedInteger: std::cout << "SignedInteger\n"; break;
-        case UnsignedInteger: std::cout << "UnsignedInteger\n"; break;
+        case Integer:
+          std::cout << "Integer\n";
+          break;
         case Int128: std::cout << "Int128\n"; break;
-        case FloatingPoint: std::cout << "FloatingPoint\n"; break;
+        case UInt128:
+          std::cout << "UInt128\n";
+          break;
+        case LongLong:
+          std::cout << "LongLong\n";
+          break;
+        case Float:
+          std::cout << "Float\n";
+          break;
+        case Double:
+          std::cout << "Double\n";
+          break;
+        case Float16:
+          std::cout << "Float16\n";
+          break;
+        case BFloat16:
+          std::cout << "BFloat16\n";
+          break;
+        case Float128:
+          std::cout << "Float128\n";
+          break;
+        case LongDouble:
+          std::cout << "LongDouble\n";
+          break;
     }
 }
 

@@ -97,7 +97,7 @@ enum CallingConv {
 };
 
 struct ABIFunctionInfoArgInfo {
-  Type type;
+  Type *type;
   ABIArgInfo info;
 };
 
@@ -110,23 +110,30 @@ class ABIFunctionInfo {
   ArgInfo RetInfo;
   
   public:
-    ABIFunctionInfo(CallingConv cc, std::vector<Type> parameters,
+    ABIFunctionInfo(CallingConv cc, std::vector<const Type *> parameters,
                     Type ReturnInfo);
 
-    static ABIFunctionInfo *create(CallingConv cc, std::vector<Type> parameters,
+    static ABIFunctionInfo *create(CallingConv cc,
+                                   std::vector<const Type *> parameters,
                                    Type ReturnInfo);
 
-    ABIArgInfo &ABIFunctionInfo::getReturnInfo() { return RetInfo.info; }
-    Type &ABIFunctionInfo::getReturnType() { return RetInfo.type; }
+    ABIArgInfo &getReturnInfo();
+    const ABIArgInfo &getReturnInfo() const;
+
+    const Type *getReturnType() const;
 
     using arg_iterator = std::vector<ArgInfo>::iterator;
+    using const_arg_iterator = std::vector<ArgInfo>::const_iterator;
 
-    arg_iterator ABIFunctionInfo::arg_begin() { return Parameters.begin(); }
-    arg_iterator ABIFunctionInfo::arg_end() { return Parameters.end(); }
+    arg_iterator arg_begin();
+    arg_iterator arg_end();
+
+    const_arg_iterator arg_begin() const;
+    const_arg_iterator arg_end() const;
+
+    void dump() const;
 
     unsigned getCallingConvention() const { return CC; }
-
-    // TODO: add supporting dump method
 };
 
 }

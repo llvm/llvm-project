@@ -64,9 +64,7 @@ class ABIBuiltinType : public Type {
     }
     bool isFloatingPoint() const { return getKind() == Kind::Float; }
 
-    static bool classof(const Type T) {
-      return T.getTypeClass() == Builtin;
-    }
+    static bool classof(const Type *T) { return T->getTypeClass() == Builtin; }
 
     void dump() const override;
 };
@@ -76,7 +74,7 @@ class ABIRecordType : public Type {
     struct Field {
       std::string Name;
       const Type *FieldType;
-      uint64_t OffsetInBits; // is this needed?
+      uint64_t OffsetInBits;
 
       Field(const std::string &N, const Type *T, uint64_t Offset = 0)
           : Name(N), FieldType(T), OffsetInBits(Offset) {}
@@ -88,8 +86,7 @@ class ABIRecordType : public Type {
         : Type(Record), RecordName(Name), Alignment(AlignInBits) {}
 
     void addField(const std::string &Name, const Type *T, uint64_t Offset = 0) {
-      Fields.emplace_back(Name, T,
-                          Offset); // --> can I use soem other method for this?
+      Fields.emplace_back(Name, T, Offset);
     }
 
     const FieldList &getFields() const { return Fields; }
@@ -99,9 +96,7 @@ class ABIRecordType : public Type {
 
     const std::string &getName() const { return RecordName; }
 
-    static bool classof(const Type T) {
-      return T.getTypeClass() == Record;
-    }
+    static bool classof(const Type *T) { return T->getTypeClass() == Record; }
 
     void dump() const;
 
