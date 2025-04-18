@@ -2236,9 +2236,7 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
   const DataLayout &DL = F.getDataLayout();
   State S(DT, LI, SE, DL, F.getContext());
   S.collectPHIInductionVars(F);
-  SmallVector<Value *> FunctionArgs;
-  for (Value &Arg : F.args())
-    FunctionArgs.push_back(&Arg);
+  SmallVector<Value *> FunctionArgs(llvm::make_pointer_range(F.args()));
   ConstraintInfo Info(S, FunctionArgs);
   std::unique_ptr<Module> ReproducerModule(
       DumpReproducers ? new Module(F.getName(), F.getContext()) : nullptr);
