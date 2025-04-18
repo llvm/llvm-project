@@ -323,7 +323,7 @@ llvm::json::Value DebuggerStats::ReportStatistics(
     if (symtab) {
       module_stat.num_symbols_loaded = symtab->GetNumSymbols();
       num_symbols_loaded += module_stat.num_symbols_loaded;
-      symtabs_loaded++;
+      ++symtabs_loaded;
       module_stat.symtab_loaded_from_cache = symtab->GetWasLoadedFromCache();
       if (module_stat.symtab_loaded_from_cache)
         ++symtabs_loaded_from_cache;
