@@ -651,6 +651,14 @@ class MinMaxvalAsElementalConverter
     : public NumericReductionAsElementalConverterBase<T> {
   static_assert(std::is_same_v<T, hlfir::MaxvalOp> ||
                 std::is_same_v<T, hlfir::MinvalOp>);
+  // We have two reduction values:
+  //   * The current MIN/MAX value.
+  //   * 1 boolean indicating whether it is the first time
+  //     the mask is true.
+  //
+  // The boolean flag is used to replace the initial value
+  // with the first input element even if it is NaN.
+  static constexpr unsigned numReductions = 2;
   static constexpr bool isMax = std::is_same_v<T, hlfir::MaxvalOp>;
   using Base = NumericReductionAsElementalConverterBase<T>;
 
@@ -668,22 +676,63 @@ private:
   }
 
   virtual llvm::SmallVector<mlir::Value> genReductionInitValues() final {
-    return {genMinMaxInitValue<isMax>(this->loc, this->builder,
-                                      this->getResultElementType())};
+    llvm::SmallVector<mlir::Value> result;
+    fir::FirOpBuilder &builder = this->builder;
+    mlir::Location loc = this->loc;
+    mlir::Value init =
+        genMinMaxInitValue<isMax>(loc, builder, this->getResultElementType());
+    result.push_back(init);
+    // Initial value for isFirst predicate. It is switched to false,
+    // when the reduction update dynamically happens inside the reduction
+    // loop.
+    result.push_back(builder.createBool(loc, true));
+    return result;
   }
+
   virtual llvm::SmallVector<mlir::Value>
   reduceOneElement(const llvm::SmallVectorImpl<mlir::Value> &currentValue,
                    hlfir::Entity array,
                    mlir::ValueRange oneBasedIndices) final {
     this->checkReductions(currentValue);
+    llvm::SmallVector<mlir::Value> result;
     fir::FirOpBuilder &builder = this->builder;
     mlir::Location loc = this->loc;
     hlfir::Entity elementValue =
         hlfir::loadElementAt(loc, builder, array, oneBasedIndices);
+    mlir::Value currentMinMax = getCurrentMinMax(currentValue);
     mlir::Value cmp =
-        genMinMaxComparison<isMax>(loc, builder, elementValue, currentValue[0]);
-    return {builder.create<mlir::arith::SelectOp>(loc, cmp, elementValue,
-                                                  currentValue[0])};
+        genMinMaxComparison<isMax>(loc, builder, elementValue, currentMinMax);
+    cmp =
+        builder.create<mlir::arith::OrIOp>(loc, cmp, getIsFirst(currentValue));
+    mlir::Value newMinMax = builder.create<mlir::arith::SelectOp>(
+        loc, cmp, elementValue, currentMinMax);
+    result.push_back(newMinMax);
+    result.push_back(builder.createBool(loc, false));
+    return result;
+  }
+
+  virtual hlfir::Entity genFinalResult(
+      const llvm::SmallVectorImpl<mlir::Value> &reductionResults) final {
+    this->checkReductions(reductionResults);
+    return hlfir::Entity{getCurrentMinMax(reductionResults)};
+  }
+
+  void
+  checkReductions(const llvm::SmallVectorImpl<mlir::Value> &reductions) const {
+    assert(reductions.size() == numReductions &&
+           "invalid number of reductions for MINVAL/MAXVAL");
+  }
+
+  mlir::Value
+  getCurrentMinMax(const llvm::SmallVectorImpl<mlir::Value> &reductions) const {
+    this->checkReductions(reductions);
+    return reductions[0];
+  }
+
+  mlir::Value
+  getIsFirst(const llvm::SmallVectorImpl<mlir::Value> &reductions) const {
+    this->checkReductions(reductions);
+    return reductions[1];
   }
 };
 
