@@ -124,9 +124,6 @@ INITIALIZE_PASS(BranchFolderLegacy, DEBUG_TYPE, "Control Flow Optimizer", false,
 PreservedAnalyses BranchFolderPass::run(MachineFunction &MF,
                                         MachineFunctionAnalysisManager &MFAM) {
   MFPropsModifier _(*this, MF);
-  bool EnableTailMerge =
-      !MF.getTarget().requiresStructuredCFG() && this->EnableTailMerge;
-
   auto &MBPI = MFAM.getResult<MachineBranchProbabilityAnalysis>(MF);
   auto *PSI = MFAM.getResult<ModuleAnalysisManagerMachineFunctionProxy>(MF)
                   .getCachedResult<ProfileSummaryAnalysis>(

@@ -1518,7 +1518,8 @@ void TargetPassConfig::addMachineLateOptimization() {
   addPass(&MachineLateInstrsCleanupID);
 
   // Branch folding must be run after regalloc and prolog/epilog insertion.
-  addPass(createBranchFolderPass(getEnableTailMerge()));
+  addPass(createBranchFolderPass(!TM->requiresStructuredCFG() &&
+                                 getEnableTailMerge()));
 
   // Tail duplication.
   // Note that duplicating tail just increases code size and degrades
