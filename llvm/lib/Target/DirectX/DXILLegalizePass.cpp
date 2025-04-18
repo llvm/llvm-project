@@ -13,6 +13,7 @@
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/Module.h"
 #include "llvm/Pass.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include <functional>
@@ -239,6 +240,82 @@ downcastI64toI32InsertExtractElements(Instruction &I,
   }
 }
 
+void emitMemset(IRBuilder<> &Builder, Value *Dst, Value *Val,
+                ConstantInt *SizeCI) {
+  LLVMContext &Ctx = Builder.getContext();
+  [[maybe_unused]] DataLayout DL =
+      Builder.GetInsertBlock()->getModule()->getDataLayout();
+  [[maybe_unused]] uint64_t OrigSize = SizeCI->getZExtValue();
+
+  AllocaInst *Alloca = dyn_cast<AllocaInst>(Dst);
+
+  assert(Alloca && "Expected memset on an Alloca");
+  assert(OrigSize == Alloca->getAllocationSize(DL)->getFixedValue() &&
+         "Expected for memset size to match DataLayout size");
+
+  Type *AllocatedTy = Alloca->getAllocatedType();
+  ArrayType *ArrTy = dyn_cast<ArrayType>(AllocatedTy);
+  assert(ArrTy && "Expected Alloca for an Array Type");
+
+  Type *ElemTy = ArrTy->getElementType();
+  uint64_t Size = ArrTy->getArrayNumElements();
+
+  [[maybe_unused]] uint64_t ElemSize = DL.getTypeStoreSize(ElemTy);
+
+  assert(ElemSize > 0 && "Size must be set");
+  assert(OrigSize == ElemSize * Size && "Size in bytes must match");
+
+  Value *TypedVal = Val;
+  if (Val->getType() != ElemTy)
+    TypedVal = Builder.CreateIntCast(Val, ElemTy,
+                                     false); // Or use CreateBitCast for float
+
+  for (uint64_t I = 0; I < Size; ++I) {
+    Value *Offset = ConstantInt::get(Type::getInt32Ty(Ctx), I);
+    Value *Ptr = Builder.CreateGEP(ElemTy, Dst, Offset, "gep");
+    Builder.CreateStore(TypedVal, Ptr);
+  }
+}
+
+void removeLifetimesForMemset(CallInst *Memset,
+                              SmallVectorImpl<Instruction *> &ToRemove) {
+  assert(Memset->getCalledFunction()->getIntrinsicID() == Intrinsic::memset &&
+         "Expected a memset intrinsic");
+
+  Value *DstPtr = Memset->getArgOperand(0);
+  DstPtr = DstPtr->stripPointerCasts();
+
+  for (User *U : DstPtr->users()) {
+    if (auto *CI = dyn_cast<CallInst>(U)) {
+      switch (CI->getIntrinsicID()) {
+      case Intrinsic::lifetime_start:
+      case Intrinsic::lifetime_end:
+        ToRemove.push_back(CI);
+        break;
+      }
+    }
+  }
+}
+
+static void removeMemSet(Instruction &I,
+                         SmallVectorImpl<Instruction *> &ToRemove,
+                         DenseMap<Value *, Value *>) {
+  if (CallInst *CI = dyn_cast<CallInst>(&I)) {
+    Intrinsic::ID ID = CI->getIntrinsicID();
+    if (ID == Intrinsic::memset) {
+      IRBuilder<> Builder(&I);
+      Value *Dst = CI->getArgOperand(0);
+      Value *Val = CI->getArgOperand(1);
+      [[maybe_unused]] ConstantInt *Size =
+          dyn_cast<ConstantInt>(CI->getArgOperand(2));
+      assert(Size && "Expected Size to be a ConstantInt");
+      emitMemset(Builder, Dst, Val, Size);
+      removeLifetimesForMemset(CI, ToRemove);
+      ToRemove.push_back(CI);
+    }
+  }
+}
+
 namespace {
 class DXILLegalizationPipeline {
 
@@ -266,6 +343,7 @@ private:
       LegalizationPipeline;
 
   void initializeLegalizationPipeline() {
+    LegalizationPipeline.push_back(removeMemSet);
     LegalizationPipeline.push_back(upcastI8AllocasAndUses);
     LegalizationPipeline.push_back(fixI8UseChain);
     LegalizationPipeline.push_back(downcastI64toI32InsertExtractElements);
