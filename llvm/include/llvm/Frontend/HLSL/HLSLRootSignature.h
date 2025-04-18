@@ -23,13 +23,6 @@ namespace rootsig {
 
 // Definitions of the in-memory data layout structures
 
-// Models the different registers: bReg | tReg | uReg | sReg
-enum class RegisterType { BReg, TReg, UReg, SReg };
-struct Register {
-  RegisterType ViewType;
-  uint32_t Number;
-};
-
 // Models the end of a descriptor table and stores its visibility
 struct DescriptorTable {
   uint32_t NumClauses = 0; // The number of clauses in the table
@@ -39,8 +32,6 @@ struct DescriptorTable {
 using ClauseType = llvm::dxil::ResourceClass;
 struct DescriptorTableClause {
   ClauseType Type;
-  Register Register;
-  uint32_t Space = 0;
 };
 
 // Models RootElement : DescriptorTable | DescriptorTableClause
