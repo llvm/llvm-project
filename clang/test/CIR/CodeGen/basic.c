@@ -232,3 +232,24 @@ int f8(int *p) {
 // OGCG:   store i32 2, ptr %[[P]], align 4
 // OGCG:   %[[P2:.*]] = load ptr, ptr %[[P_PTR]], align 8
 // OGCG:   %[[STAR_P:.*]] = load i32, ptr %[[P2]], align 4
+
+typedef unsigned long size_type;
+typedef unsigned long _Tp;
+
+size_type max_size(void) {
+  return (size_type)~0 / sizeof(_Tp);
+}
+
+// CIR: cir.func @max_size()
+// CIR:   %0 = cir.alloca !u64i, !cir.ptr<!u64i>, ["__retval"] {alignment = 8 : i64}
+// CIR:   %1 = cir.const #cir.int<0> : !s32i
+// CIR:   %2 = cir.unary(not, %1) : !s32i, !s32i
+// CIR:   %3 = cir.cast(integral, %2 : !s32i), !u64i
+// CIR:   %4 = cir.const #cir.int<8> : !u64i
+// CIR:   %5 = cir.binop(div, %3, %4) : !u64i
+
+// LLVM: define i64 @max_size()
+// LLVM:   store i64 2305843009213693951, ptr
+
+// OGCG: define{{.*}} i64 @max_size()
+// OGCG:   ret i64 2305843009213693951
