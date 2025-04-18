@@ -9,9 +9,8 @@
 #ifndef _LIBCPP___ALGORITHM_FILL_H
 #define _LIBCPP___ALGORITHM_FILL_H
 
-#include <__algorithm/fill_n.h>
+#include <__algorithm/fill_fill_n_common.h>
 #include <__config>
-#include <__iterator/iterator_traits.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -23,21 +22,8 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _ForwardIterator, class _Tp>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void
-__fill(_ForwardIterator __first, _ForwardIterator __last, const _Tp& __value, forward_iterator_tag) {
-  for (; __first != __last; ++__first)
-    *__first = __value;
-}
-
-template <class _RandomAccessIterator, class _Tp>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void
-__fill(_RandomAccessIterator __first, _RandomAccessIterator __last, const _Tp& __value, random_access_iterator_tag) {
-  std::fill_n(__first, __last - __first, __value);
-}
-
-template <class _ForwardIterator, class _Tp>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void
 fill(_ForwardIterator __first, _ForwardIterator __last, const _Tp& __value) {
-  std::__fill(__first, __last, __value, typename iterator_traits<_ForwardIterator>::iterator_category());
+  std::__fill(__first, __last, __value);
 }
 
 _LIBCPP_END_NAMESPACE_STD
