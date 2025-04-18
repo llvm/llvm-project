@@ -49,7 +49,6 @@ public:
 
 private:
   Sema &S;
-  Policy DefaultPolicy;
 
   class InterProceduralData;
   std::unique_ptr<InterProceduralData> IPData;
@@ -103,7 +102,8 @@ public:
   // Issue warnings that require whole-translation-unit analysis.
   void IssueWarnings(TranslationUnitDecl *D);
 
-  Policy getDefaultPolicy() { return DefaultPolicy; }
+  // Gets the default policy which is in effect at the given source location.
+  Policy getPolicyInEffectAt(SourceLocation Loc);
 
   void PrintStats() const;
 };

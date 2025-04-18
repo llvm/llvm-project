@@ -1202,6 +1202,30 @@ Clang also allows you to push and pop the current warning state. This is
 particularly useful when writing a header file that will be compiled by
 other people, because you don't know what warning flags they build with.
 
+Note that the following diagnostic groups, which are ones based on analyzing
+the control flow graph for a function, require the diagnostic group to be
+enabled at the end of the function body (after the closing ``}``) in order to
+run the analysis, in addition to requiring the diagnostic group to be enabled
+at the line being diagnosed:
+
+  * ``-Wconsumed``
+  * ``-Wthread-safety-analysis``
+  * ``-Wunreachable-code``, ``-Wunreachable-code-aggressive``, or warnings
+    controlled by either of those flags
+
+thus, it is generally better for a ``push`` and ``pop`` pair of pragmas
+controlling behavior for an entire function be placed outside of the function
+body rather than within it. e.g.,
+
+.. code-block:: c
+
+  #pragma clang diagnostic push
+  #pragma clang diagnostic warning "-Wwhatever"
+  int d() {
+    // Better to put the pragmas outside of the function rather than within it.
+  }
+  #pragma clang diagnostic pop
+
 In the below example :option:`-Wextra-tokens` is ignored for only a single line
 of code, after which the diagnostics return to whatever state had previously
 existed.

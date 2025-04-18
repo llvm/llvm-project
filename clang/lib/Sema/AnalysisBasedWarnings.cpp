@@ -2493,8 +2493,9 @@ public:
   CalledOnceInterProceduralData CalledOnceData;
 };
 
-static unsigned isEnabled(DiagnosticsEngine &D, unsigned diag) {
-  return (unsigned)!D.isIgnored(diag, SourceLocation());
+static bool isEnabled(DiagnosticsEngine &D, unsigned diag,
+                          SourceLocation Loc) {
+  return !D.isIgnored(diag, Loc);
 }
 
 sema::AnalysisBasedWarnings::AnalysisBasedWarnings(Sema &s)
@@ -2504,23 +2505,27 @@ sema::AnalysisBasedWarnings::AnalysisBasedWarnings(Sema &s)
       NumUninitAnalysisVariables(0), MaxUninitAnalysisVariablesPerFunction(0),
       NumUninitAnalysisBlockVisits(0),
       MaxUninitAnalysisBlockVisitsPerFunction(0) {
-
-  using namespace diag;
-  DiagnosticsEngine &D = S.getDiagnostics();
-
-  DefaultPolicy.enableCheckUnreachable =
-      isEnabled(D, warn_unreachable) || isEnabled(D, warn_unreachable_break) ||
-      isEnabled(D, warn_unreachable_return) ||
-      isEnabled(D, warn_unreachable_loop_increment);
-
-  DefaultPolicy.enableThreadSafetyAnalysis = isEnabled(D, warn_double_lock);
-
-  DefaultPolicy.enableConsumedAnalysis =
-      isEnabled(D, warn_use_in_invalid_state);
 }
 
 // We need this here for unique_ptr with forward declared class.
 sema::AnalysisBasedWarnings::~AnalysisBasedWarnings() = default;
+
+sema::AnalysisBasedWarnings::Policy
+sema::AnalysisBasedWarnings::getPolicyInEffectAt(SourceLocation Loc) {
+  using namespace diag;
+  DiagnosticsEngine &D = S.getDiagnostics();
+  Policy P;
+
+  P.enableCheckUnreachable = isEnabled(D, warn_unreachable, Loc) ||
+                             isEnabled(D, warn_unreachable_break, Loc) ||
+                             isEnabled(D, warn_unreachable_return, Loc) ||
+                             isEnabled(D, warn_unreachable_loop_increment, Loc);
+
+  P.enableThreadSafetyAnalysis = isEnabled(D, warn_double_lock, Loc);
+
+  P.enableConsumedAnalysis = isEnabled(D, warn_use_in_invalid_state, Loc);
+  return P;
+}
 
 static void flushDiagnostics(Sema &S, const sema::FunctionScopeInfo *fscope) {
   for (const auto &D : fscope->PossiblyUnreachableDiags)
