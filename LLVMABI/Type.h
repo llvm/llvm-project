@@ -14,43 +14,56 @@ namespace ABI{
     enum TypeClass { Builtin, Record };
     
     Type(TypeClass TC) : Tc(TC) {} 
+
+    // getter method
     TypeClass getTypeClass() const { return Tc; }
+
     virtual ~Type() = default;
     bool isBuiltinType() const { return getTypeClass() == Builtin; }
-    bool isRecordType() const { return getTypeClass() == Record; }
+    bool isAggregateType() const { return getTypeClass() == Record; }
+
+    // debug info
+    virtual void dump() const;
 
     private:
     //save the type class
     TypeClass Tc;
 };
 
+
 class ABIBuiltinType : public Type {
   public:
-  enum Kind {
-      Void,
-      Bool,
-      Integer,
-      SignedInteger,
-      UnsignedInteger,
-      Int128,
-      FloatingPoint
-    };
+    enum Kind {
+        Void,
+        Bool,
+        Integer,
+        Int128,
+        UInt128,
+        LongLong,
+        Float,
+        Double,
+        Float16,
+        BFloat16,
+        Float128,
+        LongDouble
+      };
 
-    private:
-  Kind kind; 
+  private:
+    Kind kind; 
+    uint64_t Size;
+    uint64_t Alignment;
   
   public:
-  ABIBuiltinType(Kind K)
-  : Type(Builtin), kind(K){}
-  
-  Kind getKind() const { return kind;}
-  
-  bool isInteger() const { return getKind() == Kind::Integer || getKind() == Kind::SignedInteger || getKind() == Kind::UnsignedInteger || getKind() == Kind::Int128; }
-  bool isSignedInteger() const { return getKind() == Kind::SignedInteger; }
-  bool isUnsignedInteger() const { return getKind() == Kind::UnsignedInteger; }
-  bool isFloatingPoint() const { return getKind() == Kind::FloatingPoint; }
-  void dump() const;
-  
+    ABIBuiltinType(Kind K)
+    : Type(Builtin), kind(K){}
+    
+    Kind getKind() const { return kind;}
+    
+    bool isInteger() const { return getKind() == Kind::Integer ||  getKind() == Kind::Int128; }
+    bool isFloatingPoint() const { return getKind() == Kind::Float; }
+
+    void dump() const override;
+    
 };
 
 class ABIRecordType : public Type {
@@ -58,7 +71,7 @@ class ABIRecordType : public Type {
     struct Field {
       std::string Name;
       const Type *FieldType;
-      uint64_t OffsetInBits;
+      uint64_t OffsetInBits; // is this needed?
 
       Field(const std::string &N, const Type *T, uint64_t Offset = 0)
           : Name(N), FieldType(T), OffsetInBits(Offset) {}
@@ -67,16 +80,16 @@ class ABIRecordType : public Type {
     using FieldList = std::vector<Field>;
 
     ABIRecordType(const std::string &Name, uint64_t AlignInBits = 0)
-        : Type(Record), RecordName(Name), AlignmentInBits(AlignInBits) {}
+        : Type(Record), RecordName(Name), Alignment(AlignInBits) {}
 
     void addField(const std::string &Name, const Type *T, uint64_t Offset = 0) {
-      Fields.emplace_back(Name, T, Offset);
+      Fields.emplace_back(Name, T, Offset); // --> can I use soem other method for this?
     }
 
     const FieldList &getFields() const { return Fields; }
 
-    uint64_t getAlignmentInBits() const { return AlignmentInBits; }
-    void setAlignmentInBits(uint64_t Align) { AlignmentInBits = Align; }
+    uint64_t getAlignmentInBits() const { return Alignment; }
+    void setAlignmentInBits(uint64_t Align) { Alignment = Align; }
 
     const std::string &getName() const { return RecordName; }
 
@@ -85,7 +98,7 @@ class ABIRecordType : public Type {
   private:
     std::string RecordName;
     FieldList Fields;
-    uint64_t AlignmentInBits;
+    uint64_t Alignment;
 };
 
 

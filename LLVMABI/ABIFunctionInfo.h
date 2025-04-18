@@ -4,7 +4,6 @@
 #include "LLVMABI/Type.h"
 #include <vector>
 
-// Does the leaf leave the tree or the tree let go of the leaf?
 using namespace ABI;
 
 namespace ABIFunction{
@@ -77,6 +76,14 @@ public:
         
   Kind getKind() const { return TheKind; }
 
+  static Kind getDirect() { return Direct; }
+  static Kind getExtend() { return Extend; }
+  static Kind getIndirect() { return Indirect; }
+  static Kind getIndirectAliased() { return IndirectAliased; }
+  static Kind getIgnore() { return Ignore; }
+  static Kind getExpand() { return Expand; }
+  static Kind getCoerceAndExpand() { return CoerceAndExpand; }
+
   // TODO
   void dump() const;
 };
@@ -84,11 +91,13 @@ public:
 // taken from clang, needs to be extended.
 enum CallingConv {
     CC_C,                  // __attribute__((cdecl))
-    CC_X86StdCall       // __attribute__((stdcall))
+    CC_X86StdCall,       // __attribute__((stdcall))
+    Win64,
+    X86_RegCall
 };
 
 struct ABIFunctionInfoArgInfo {
-  ABIQualType type;
+  Type type;
   ABIArgInfo info;
 };
 
@@ -101,13 +110,13 @@ class ABIFunctionInfo {
   ArgInfo RetInfo;
   
   public:
-    ABIFunctionInfo(CallingConv cc, std::vector<ABIQualType> parameters, ABIQualType ReturnInfo);
+    ABIFunctionInfo(CallingConv cc, std::vector<Type> parameters, Type ReturnInfo);
 
     static ABIFunctionInfo *
-      create(CallingConv cc, std::vector<ABIQualType> parameters, ABIQualType ReturnInfo);
+      create(CallingConv cc, std::vector<Type> parameters, Type ReturnInfo);
 
     ABIArgInfo &ABIFunctionInfo::getReturnInfo() { return RetInfo.info; }
-    ABIQualType &ABIFunctionInfo::getReturnType() { return RetInfo.type; }
+    Type &ABIFunctionInfo::getReturnType() { return RetInfo.type; }
 
     using arg_iterator = std::vector<ArgInfo>::iterator;
 
@@ -116,6 +125,7 @@ class ABIFunctionInfo {
 
     unsigned getCallingConvention() const { return CC; }
 
+    // TODO: add supporting dump method
 };
 
 }

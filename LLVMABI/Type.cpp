@@ -2,6 +2,8 @@
 #include <iostream>
 #include <string>
 
+using namespace ABI;
+
 void ABIBuiltinType::dump() const {
     std::cout << "BuiltinType: ";
     switch (kind) {
@@ -16,8 +18,8 @@ void ABIBuiltinType::dump() const {
 }
 
 void ABIRecordType::dump() const {
-    std::cout << "RecordType: " << RecordName << "\n";
-    std::cout << "Alignment: " << AlignmentInBits << " bits\n";
+    std::cout << "Record: " << RecordName << "\n";
+    std::cout << "Alignment: " << Alignment << " bits\n";
     for (const auto &F : Fields) {
         std::cout << "  Field: " << F.Name
                   << ", Offset: " << F.OffsetInBits << " bits"
