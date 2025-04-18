@@ -876,6 +876,7 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
     if (EltVT == MVT::f16 || EltVT == MVT::bf16 || EltVT == MVT::f32 ||
         EltVT == MVT::f64) {
       setOperationAction({ISD::VECREDUCE_FADD, ISD::VECREDUCE_FMUL,
+                          ISD::VECREDUCE_SEQ_FADD, ISD::VECREDUCE_SEQ_FMUL,
                           ISD::VECREDUCE_FMAX, ISD::VECREDUCE_FMIN,
                           ISD::VECREDUCE_FMAXIMUM, ISD::VECREDUCE_FMINIMUM},
                          VT, Custom);
@@ -2270,12 +2271,19 @@ static SDValue BuildTreeReduction(
 /// max3/min3 when the target supports them.
 SDValue NVPTXTargetLowering::LowerVECREDUCE(SDValue Op,
                                             SelectionDAG &DAG) const {
-  if (DisableFOpTreeReduce)
-    return SDValue();
-
   SDLoc DL(Op);
   const SDNodeFlags Flags = Op->getFlags();
-  const SDValue &Vector = Op.getOperand(0);
+  SDValue Vector;
+  SDValue Accumulator;
+  if (Op->getOpcode() == ISD::VECREDUCE_SEQ_FADD ||
+      Op->getOpcode() == ISD::VECREDUCE_SEQ_FMUL) {
+    // special case with accumulator as first arg
+    Accumulator = Op.getOperand(0);
+    Vector = Op.getOperand(1);
+  } else {
+    // default case
+    Vector = Op.getOperand(0);
+  }
   EVT EltTy = Vector.getValueType().getVectorElementType();
   const bool CanUseMinMax3 = EltTy == MVT::f32 && STI.getSmVersion() >= 100 &&
                              STI.getPTXVersion() >= 88;
@@ -2287,10 +2295,12 @@ SDValue NVPTXTargetLowering::LowerVECREDUCE(SDValue Op,
 
   switch (Op->getOpcode()) {
   case ISD::VECREDUCE_FADD:
+  case ISD::VECREDUCE_SEQ_FADD:
     ScalarOps = {{ISD::FADD, 2}};
     IsReassociatable = false;
     break;
   case ISD::VECREDUCE_FMUL:
+  case ISD::VECREDUCE_SEQ_FMUL:
     ScalarOps = {{ISD::FMUL, 2}};
     IsReassociatable = false;
     break;
@@ -2369,11 +2379,13 @@ SDValue NVPTXTargetLowering::LowerVECREDUCE(SDValue Op,
   }
 
   // Lower to tree reduction.
-  if (IsReassociatable || Flags.hasAllowReassociation())
+  if (IsReassociatable || Flags.hasAllowReassociation()) {
+    // we don't expect an accumulator for reassociatable vector reduction ops
+    assert(!Accumulator && "unexpected accumulator");
     return BuildTreeReduction(Elements, EltTy, ScalarOps, DL, Flags, DAG);
+  }
 
   // Lower to sequential reduction.
-  SDValue Accumulator;
   for (unsigned OpIdx = 0, I = 0; I < NumElts; ++OpIdx) {
     assert(OpIdx < ScalarOps.size() && "no smaller operators for reduction");
     const auto [DefaultScalarOp, DefaultGroupSize] = ScalarOps[OpIdx];
@@ -3234,6 +3246,8 @@ NVPTXTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return LowerCONCAT_VECTORS(Op, DAG);
   case ISD::VECREDUCE_FADD:
   case ISD::VECREDUCE_FMUL:
+  case ISD::VECREDUCE_SEQ_FADD:
+  case ISD::VECREDUCE_SEQ_FMUL:
   case ISD::VECREDUCE_FMAX:
   case ISD::VECREDUCE_FMIN:
   case ISD::VECREDUCE_FMAXIMUM:
