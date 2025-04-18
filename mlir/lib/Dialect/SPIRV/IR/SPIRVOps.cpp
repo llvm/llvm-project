@@ -35,6 +35,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/Support/InterleavedRange.h"
 #include <cassert>
 #include <numeric>
 #include <optional>
@@ -808,8 +809,7 @@ void spirv::EntryPointOp::print(OpAsmPrinter &printer) {
   printer.printSymbolName(getFn());
   auto interfaceVars = getInterface().getValue();
   if (!interfaceVars.empty()) {
-    printer << ", ";
-    llvm::interleaveComma(interfaceVars, printer);
+    printer << ", " << llvm::interleaved(interfaceVars);
   }
 }
 
@@ -862,13 +862,9 @@ void spirv::ExecutionModeOp::print(OpAsmPrinter &printer) {
   printer << " ";
   printer.printSymbolName(getFn());
   printer << " \"" << stringifyExecutionMode(getExecutionMode()) << "\"";
-  auto values = this->getValues();
-  if (values.empty())
-    return;
-  printer << ", ";
-  llvm::interleaveComma(values, printer, [&](Attribute a) {
-    printer << llvm::cast<IntegerAttr>(a).getInt();
-  });
+  ArrayAttr values = this->getValues();
+  if (!values.empty())
+    printer << ", " << llvm::interleaved(values.getAsValueRange<IntegerAttr>());
 }
 
 //===----------------------------------------------------------------------===//
@@ -1824,13 +1820,8 @@ ParseResult spirv::SpecConstantCompositeOp::parse(OpAsmParser &parser,
 void spirv::SpecConstantCompositeOp::print(OpAsmPrinter &printer) {
   printer << " ";
   printer.printSymbolName(getSymName());
-  printer << " (";
-  auto constituents = this->getConstituents().getValue();
-
-  if (!constituents.empty())
-    llvm::interleaveComma(constituents, printer);
-
-  printer << ") : " << getType();
+  printer << " (" << llvm::interleaved(this->getConstituents().getValue())
+          << ") : " << getType();
 }
 
 LogicalResult spirv::SpecConstantCompositeOp::verify() {
