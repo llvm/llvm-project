@@ -102,6 +102,7 @@ add_clang_library(clangSema
 
   DEPENDS
   ClangOpenCLBuiltinsImpl
+  acc_gen
   omp_gen
   ClangDriverOptions
 
