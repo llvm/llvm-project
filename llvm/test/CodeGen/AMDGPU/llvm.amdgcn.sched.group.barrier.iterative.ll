@@ -7,8 +7,8 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_MFMA_interleave(ptr
 ; GCN-MINREG-LABEL: test_sched_group_barrier_pipeline_MFMA_interleave:
 ; GCN-MINREG:       ; %bb.0: ; %entry
 ; GCN-MINREG-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; GCN-MINREG-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GCN-MINREG-NEXT:    v_lshlrev_b32_e32 v0, 7, v0
-; GCN-MINREG-NEXT:    v_and_b32_e32 v0, 0x1ff80, v0
 ; GCN-MINREG-NEXT:    v_mov_b32_e32 v2, 1.0
 ; GCN-MINREG-NEXT:    v_mov_b32_e32 v1, 2.0
 ; GCN-MINREG-NEXT:    s_waitcnt lgkmcnt(0)
@@ -140,8 +140,8 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_MFMA_interleave(ptr
 ; GCN-MAXOCC-LABEL: test_sched_group_barrier_pipeline_MFMA_interleave:
 ; GCN-MAXOCC:       ; %bb.0: ; %entry
 ; GCN-MAXOCC-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; GCN-MAXOCC-NEXT:    v_lshlrev_b32_e32 v0, 7, v0
-; GCN-MAXOCC-NEXT:    v_and_b32_e32 v1, 0x1ff80, v0
+; GCN-MAXOCC-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; GCN-MAXOCC-NEXT:    v_lshlrev_b32_e32 v1, 7, v0
 ; GCN-MAXOCC-NEXT:    v_mov_b32_e32 v2, 1.0
 ; GCN-MAXOCC-NEXT:    v_mov_b32_e32 v3, 2.0
 ; GCN-MAXOCC-NEXT:    s_waitcnt lgkmcnt(0)
@@ -274,8 +274,8 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_MFMA_interleave(ptr
 ; GCN-ILP-LABEL: test_sched_group_barrier_pipeline_MFMA_interleave:
 ; GCN-ILP:       ; %bb.0: ; %entry
 ; GCN-ILP-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; GCN-ILP-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GCN-ILP-NEXT:    v_lshlrev_b32_e32 v0, 7, v0
-; GCN-ILP-NEXT:    v_and_b32_e32 v0, 0x1ff80, v0
 ; GCN-ILP-NEXT:    v_mov_b32_e32 v1, 1.0
 ; GCN-ILP-NEXT:    v_mov_b32_e32 v2, 2.0
 ; GCN-ILP-NEXT:    s_waitcnt lgkmcnt(0)
@@ -469,8 +469,8 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_MFMA_interleave_spl
 ; GCN-MINREG-LABEL: test_sched_group_barrier_pipeline_MFMA_interleave_split_region:
 ; GCN-MINREG:       ; %bb.0: ; %entry
 ; GCN-MINREG-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; GCN-MINREG-NEXT:    v_lshlrev_b32_e32 v0, 7, v0
-; GCN-MINREG-NEXT:    v_and_b32_e32 v2, 0x1ff80, v0
+; GCN-MINREG-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; GCN-MINREG-NEXT:    v_lshlrev_b32_e32 v2, 7, v0
 ; GCN-MINREG-NEXT:    v_mov_b32_e32 v1, 1.0
 ; GCN-MINREG-NEXT:    v_mov_b32_e32 v0, 2.0
 ; GCN-MINREG-NEXT:    s_waitcnt lgkmcnt(0)
@@ -604,8 +604,8 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_MFMA_interleave_spl
 ; GCN-MAXOCC-LABEL: test_sched_group_barrier_pipeline_MFMA_interleave_split_region:
 ; GCN-MAXOCC:       ; %bb.0: ; %entry
 ; GCN-MAXOCC-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; GCN-MAXOCC-NEXT:    v_lshlrev_b32_e32 v0, 7, v0
-; GCN-MAXOCC-NEXT:    v_and_b32_e32 v3, 0x1ff80, v0
+; GCN-MAXOCC-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; GCN-MAXOCC-NEXT:    v_lshlrev_b32_e32 v3, 7, v0
 ; GCN-MAXOCC-NEXT:    v_mov_b32_e32 v1, 1.0
 ; GCN-MAXOCC-NEXT:    v_mov_b32_e32 v2, 2.0
 ; GCN-MAXOCC-NEXT:    s_waitcnt lgkmcnt(0)
@@ -739,8 +739,8 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_MFMA_interleave_spl
 ; GCN-ILP-LABEL: test_sched_group_barrier_pipeline_MFMA_interleave_split_region:
 ; GCN-ILP:       ; %bb.0: ; %entry
 ; GCN-ILP-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; GCN-ILP-NEXT:    v_lshlrev_b32_e32 v0, 7, v0
-; GCN-ILP-NEXT:    v_and_b32_e32 v2, 0x1ff80, v0
+; GCN-ILP-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; GCN-ILP-NEXT:    v_lshlrev_b32_e32 v2, 7, v0
 ; GCN-ILP-NEXT:    v_mov_b32_e32 v0, 1.0
 ; GCN-ILP-NEXT:    v_mov_b32_e32 v1, 2.0
 ; GCN-ILP-NEXT:    s_waitcnt lgkmcnt(0)
