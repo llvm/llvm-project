@@ -300,6 +300,10 @@ class FunctionAnalysis {
   void findUnsafeUses(SmallVector<BriefReport<MCPhysReg>> &Reports);
   void augmentUnsafeUseReports(const ArrayRef<BriefReport<MCPhysReg>> Reports);
 
+  /// Process the reports which do not have to be augmented, and remove them
+  /// from Reports.
+  void handleSimpleReports(SmallVector<BriefReport<MCPhysReg>> &Reports);
+
 public:
   FunctionAnalysis(BinaryFunction &BF, MCPlusBuilder::AllocatorIdTy AllocatorId,
                    bool PacRetGadgetsOnly)

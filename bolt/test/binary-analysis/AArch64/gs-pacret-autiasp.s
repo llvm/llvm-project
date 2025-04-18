@@ -217,6 +217,7 @@ f_callclobbered_calleesaved:
 f_unreachable_instruction:
 // CHECK-LABEL: GS-PAUTH: Warning: unreachable instruction found in function f_unreachable_instruction, basic block {{[0-9a-zA-Z.]+}}, at address
 // CHECK-NEXT:    The instruction is     {{[0-9a-f]+}}:       add     x0, x1, x2
+// CHECK-NOT:   instructions that write to the affected registers after any authentication are:
         b       1f
         add     x0, x1, x2
 1:

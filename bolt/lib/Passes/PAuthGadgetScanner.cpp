@@ -517,13 +517,11 @@ protected:
 public:
   std::vector<MCInstReference>
   getLastClobberingInsts(const MCInst &Inst, BinaryFunction &BF,
-                         std::optional<MCPhysReg> ClobberedReg) const {
-    if (!ClobberedReg || RegsToTrackInstsFor.empty())
-      return {};
+                         MCPhysReg ClobberedReg) const {
     const SrcState &S = getStateBefore(Inst);
 
     std::vector<MCInstReference> Result;
-    for (const MCInst *Inst : lastWritingInsts(S, *ClobberedReg)) {
+    for (const MCInst *Inst : lastWritingInsts(S, ClobberedReg)) {
       MCInstReference Ref = MCInstReference::get(Inst, BF);
       assert(Ref && "Expected Inst to be found");
       Result.push_back(Ref);
@@ -871,14 +869,27 @@ void FunctionAnalysis::augmentUnsafeUseReports(
   });
 
   // Augment gadget reports.
-  for (auto Report : Reports) {
+  for (auto &Report : Reports) {
     MCInstReference Location = Report.Issue->Location;
     LLVM_DEBUG({ traceInst(BC, "Attaching clobbering info to", Location); });
+    assert(Report.RequestedDetails &&
+           "Should be removed by handleSimpleReports");
     auto DetailedInfo =
         std::make_shared<ClobberingInfo>(Analysis->getLastClobberingInsts(
-            Location, BF, Report.RequestedDetails));
+            Location, BF, *Report.RequestedDetails));
     Result.Diagnostics.emplace_back(Report.Issue, DetailedInfo);
   }
+}
+
+void FunctionAnalysis::handleSimpleReports(
+    SmallVector<BriefReport<MCPhysReg>> &Reports) {
+  // Before re-running the detailed analysis, process the reports which do not
+  // need any additional details to be attached.
+  for (auto &Report : Reports) {
+    if (!Report.RequestedDetails)
+      Result.Diagnostics.emplace_back(Report.Issue, nullptr);
+  }
+  llvm::erase_if(Reports, [](const auto &R) { return !R.RequestedDetails; });
 }
 
 void FunctionAnalysis::run() {
@@ -890,6 +901,7 @@ void FunctionAnalysis::run() {
 
   SmallVector<BriefReport<MCPhysReg>> UnsafeUses;
   findUnsafeUses(UnsafeUses);
+  handleSimpleReports(UnsafeUses);
   if (!UnsafeUses.empty())
     augmentUnsafeUseReports(UnsafeUses);
 }
