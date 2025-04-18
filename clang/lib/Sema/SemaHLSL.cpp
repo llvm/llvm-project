@@ -3446,8 +3446,11 @@ public:
     // When we're generating initializer lists for incomplete array types we
     // need to wrap around both when building the initializers and when
     // generating the final initializer lists.
-    if (Wrap)
-      InitTy = QualType(InitTy->getBaseElementTypeUnsafe(), 0);
+    if (Wrap) {
+      assert(InitTy->isIncompleteArrayType());
+      const IncompleteArrayType *IAT = Ctx.getAsIncompleteArrayType(InitTy);
+      InitTy = IAT->getElementType();
+    }
     BuildFlattenedTypeList(InitTy, DestTypes);
     DstIt = DestTypes.begin();
   }
@@ -3509,6 +3512,8 @@ bool SemaHLSL::transformInitList(const InitializedEntity &Entity,
   // rvalue-reference. When checking the initializer we should look through
   // the reference.
   QualType InitTy = Entity.getType().getNonReferenceType();
+  if (InitTy.hasAddressSpace())
+    InitTy = SemaRef.getASTContext().removeAddrSpaceQualType(InitTy);
   if (ExpectedSize != ActualSize) {
     int TooManyOrFew = ActualSize > ExpectedSize ? 1 : 0;
     SemaRef.Diag(Init->getBeginLoc(), diag::err_hlsl_incorrect_num_initializers)
