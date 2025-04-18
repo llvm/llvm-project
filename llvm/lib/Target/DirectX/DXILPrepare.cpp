@@ -189,6 +189,26 @@ public:
       for (auto &BB : F) {
         IRBuilder<> Builder(&BB);
         for (auto &I : make_early_inc_range(BB)) {
+
+          // TODO: Audit this list - is it enough? Too much?
+          static unsigned DXILCompatibleMDs[] = {
+              LLVMContext::MD_dbg,
+              LLVMContext::MD_tbaa,
+              LLVMContext::MD_prof,
+              LLVMContext::MD_fpmath,
+              LLVMContext::MD_range,
+              LLVMContext::MD_tbaa_struct,
+              LLVMContext::MD_invariant_load,
+              LLVMContext::MD_alias_scope,
+              LLVMContext::MD_noalias,
+              LLVMContext::MD_nontemporal,
+              LLVMContext::MD_mem_parallel_loop_access,
+              LLVMContext::MD_nonnull,
+              LLVMContext::MD_dereferenceable,
+              LLVMContext::MD_dereferenceable_or_null,
+          };
+          I.dropUnknownNonDebugMetadata(DXILCompatibleMDs);
+
           if (I.getOpcode() == Instruction::FNeg) {
             Builder.SetInsertPoint(&I);
             Value *In = I.getOperand(0);
