@@ -22,6 +22,8 @@ namespace ABI{
     bool isBuiltinType() const { return getTypeClass() == Builtin; }
     bool isAggregateType() const { return getTypeClass() == Record; }
 
+    static bool classof(const Type *T) { return true; }
+
     // debug info
     virtual void dump() const;
 
@@ -62,6 +64,10 @@ class ABIBuiltinType : public Type {
     }
     bool isFloatingPoint() const { return getKind() == Kind::Float; }
 
+    static bool classof(const Type T) {
+      return T.getTypeClass() == Builtin;
+    }
+
     void dump() const override;
 };
 
@@ -92,6 +98,10 @@ class ABIRecordType : public Type {
     void setAlignmentInBits(uint64_t Align) { Alignment = Align; }
 
     const std::string &getName() const { return RecordName; }
+
+    static bool classof(const Type T) {
+      return T.getTypeClass() == Record;
+    }
 
     void dump() const;
 

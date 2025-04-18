@@ -1,6 +1,8 @@
 #include "Type.h"
 #include "ABIFunctionInfo.h"
 #include "ABICall.h"
+#include "llvm/Support/Casting.h"
+
 using namespace ABI;
 using namespace ABIFunction;
 
@@ -34,8 +36,7 @@ void X86_64ABIInfo::classify(Type Ty, uint64_t OffsetBase, Class &Lo, Class &Hi,
   Class &Current = OffsetBase < 64 ? Lo : Hi;
   Current = Memory;
 
-  if (Ty.isBuiltinType()) {
-    // Bt= Ty->getAs(BuiltinType); -->TODO
+  if (const ABIBuiltinType *BT = llvm::dyn_cast<ABIBuiltinType>(&Ty)) {
     ABIBuiltinType::Kind k = BT->getKind();
 
     if (k == ABIBuiltinType::Void) {
