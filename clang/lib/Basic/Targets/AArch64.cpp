@@ -1824,3 +1824,32 @@ TargetInfo::BuiltinVaListKind
 DarwinAArch64TargetInfo::getBuiltinVaListKind() const {
   return TargetInfo::CharPtrBuiltinVaList;
 }
+
+UEFIAArch64TargetInfo::UEFIAArch64TargetInfo(const llvm::Triple &Triple,
+                                             const TargetOptions &Opts)
+    : UEFITargetInfo<AArch64leTargetInfo>(Triple, Opts), Triple(Triple) {
+
+  // This is an LLP64 platform.
+  // int:4, long:4, long long:8, long double:8.
+  IntWidth = IntAlign = 32;
+  LongWidth = LongAlign = 32;
+  DoubleAlign = LongLongAlign = 64;
+  LongDoubleWidth = LongDoubleAlign = 64;
+  LongDoubleFormat = &llvm::APFloat::IEEEdouble();
+  IntMaxType = SignedLongLong;
+  Int64Type = SignedLongLong;
+  SizeType = UnsignedLongLong;
+  PtrDiffType = SignedLongLong;
+  IntPtrType = SignedLongLong;
+}
+
+void UEFIAArch64TargetInfo::setDataLayout() {
+  assert(Triple.isOSBinFormatCOFF());
+  resetDataLayout("e-m:w-p270:32:32-p271:32:32-p272:64:64-p:64:64-i32:"
+                  "32-i64:64-i128:128-n32:64-S128-Fn32");
+}
+
+TargetInfo::BuiltinVaListKind
+UEFIAArch64TargetInfo::getBuiltinVaListKind() const {
+  return TargetInfo::CharPtrBuiltinVaList;
+}

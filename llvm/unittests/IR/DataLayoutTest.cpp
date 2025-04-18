@@ -682,6 +682,11 @@ TEST(DataLayoutTest, UEFI) {
 
   // Test UEFI X86_64 Mangling Component.
   EXPECT_STREQ(DataLayout::getManglingComponent(TT), "-m:w");
+
+  TT = Triple("aarch64-unknown-uefi");
+
+  // Test UEFI AArch64 Mangling Component.
+  EXPECT_STREQ(DataLayout::getManglingComponent(TT), "-m:w");
 }
 
 } // anonymous namespace

@@ -341,6 +341,18 @@ public:
                     MacroBuilder &Builder) const override;
 };
 
+class LLVM_LIBRARY_VISIBILITY UEFIAArch64TargetInfo
+    : public UEFITargetInfo<AArch64leTargetInfo> {
+  const llvm::Triple Triple;
+
+public:
+  UEFIAArch64TargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts);
+
+  void setDataLayout() override;
+
+  BuiltinVaListKind getBuiltinVaListKind() const override;
+};
+
 } // namespace targets
 } // namespace clang
 

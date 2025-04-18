@@ -166,8 +166,7 @@ std::unique_ptr<TargetInfo> AllocateTarget(const llvm::Triple &Triple,
       }
 
     case llvm::Triple::UEFI:
-      return std::make_unique<UEFITargetInfo<AArch64leTargetInfo>>(Triple,
-                                                                   Opts);
+      return std::make_unique<UEFIAArch64TargetInfo>(Triple, Opts);
 
     case llvm::Triple::NetBSD:
       return std::make_unique<NetBSDTargetInfo<AArch64leTargetInfo>>(Triple,
