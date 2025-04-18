@@ -515,10 +515,22 @@ func.func @test_create_mask() -> vector<1x16xi1> {
   // BW-128: %[[C0:.*]] = arith.constant 0 : index
   // DEFAULT: %[[C20:.*]] = arith.constant 20 : index
   // BW-128: %[[C20:.*]] = arith.constant 20 : index
-  // DEFAULT: %[[MASK:.*]] = vector.create_mask %[[C20]] : vector<16xi1>
-  // BW-128: %[[MASK:.*]] = vector.create_mask %[[C20]] : vector<16xi1>
-  // DEFAULT: %[[CAST:.*]] = vector.shape_cast %[[MASK]] : vector<16xi1> to vector<1x16xi1>
-  // BW-128: %[[CAST:.*]] = vector.shape_cast %[[MASK]] : vector<16xi1> to vector<1x16xi1>
+  // DEFAULT: %[[C0_0:.*]] = arith.constant 0 : index
+  // BW-128: %[[C0_0:.*]] = arith.constant 0 : index
+  // DEFAULT: %[[CMP:.*]] = arith.cmpi sle, %[[C0]], %[[C0_0]] : index
+  // BW-128: %[[CMP:.*]] = arith.cmpi sle, %[[C0]], %[[C0_0]] : index
+  // DEFAULT: %[[SPLAT:.*]] = vector.splat %[[CMP]] : vector<16xi1>
+  // BW-128: %[[SPLAT:.*]] = vector.splat %[[CMP]] : vector<16xi1>
+  // DEFAULT: %[[CST:.*]] = arith.constant dense<false> : vector<16xi1>
+  // BW-128: %[[CST:.*]] = arith.constant dense<false> : vector<16xi1>
+  // DEFAULT: %[[MASK_1D:.*]] = vector.create_mask %[[C20]] : vector<16xi1>
+  // BW-128: %[[MASK_1D:.*]] = vector.create_mask %[[C20]] : vector<16xi1>
+  // DEFAULT: %[[SELECT:.*]] = arith.select %[[SPLAT]], %[[CST]], %[[MASK_1D]] : vector<16xi1>, vector<16xi1>
+  // BW-128: %[[SELECT:.*]] = arith.select %[[SPLAT]], %[[CST]], %[[MASK_1D]] : vector<16xi1>
+  // DEFAULT: %[[CAST:.*]] = vector.shape_cast %[[SELECT]] : vector<16xi1> to vector<1x16xi1>
+  // BW-128: %[[CAST:.*]] = vector.shape_cast %[[SELECT]] : vector<16xi1> to vector<1x16xi1>
+  // DEFAULT: return %[[CAST]] : vector<1x16xi1>
+  // BW-128: return %[[CAST]] : vector<1x16xi1>
 
   // BW-0: %[[C0:.*]] = arith.constant 0 : index
   // BW-0: %[[C20:.*]] = arith.constant 20 : index
