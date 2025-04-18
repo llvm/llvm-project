@@ -318,9 +318,8 @@ void printCFGFlowConservationStats(const BinaryContext &BC, raw_ostream &OS,
       if (BB.isLandingPad())
         continue;
 
-      auto isPosEC = std::bind(&BinaryBasicBlock::getKnownExecutionCount,
-                               std::placeholders::_1);
-      if (llvm::any_of(BB.landing_pads(), isPosEC))
+      if (llvm::any_of(BB.landing_pads(),
+          std::mem_fn(&BinaryBasicBlock::getKnownExecutionCount)))
         continue;
 
       // We don't consider blocks that end with a recursive call instruction
