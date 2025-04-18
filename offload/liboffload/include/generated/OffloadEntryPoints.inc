@@ -172,24 +172,23 @@ ol_result_t olGetPlatformInfoSizeWithCodeLoc(ol_platform_handle_t Platform,
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-ol_impl_result_t olGetDeviceCount_val(uint32_t *NumDevices) {
+ol_impl_result_t olIterateDevices_val(ol_device_iterate_cb_t Callback,
+                                      void *UserData) {
   if (offloadConfig().ValidationEnabled) {
-    if (NULL == NumDevices) {
-      return OL_ERRC_INVALID_NULL_POINTER;
-    }
   }
 
-  return llvm::offload::olGetDeviceCount_impl(NumDevices);
+  return llvm::offload::olIterateDevices_impl(Callback, UserData);
 }
-OL_APIEXPORT ol_result_t OL_APICALL olGetDeviceCount(uint32_t *NumDevices) {
+OL_APIEXPORT ol_result_t OL_APICALL
+olIterateDevices(ol_device_iterate_cb_t Callback, void *UserData) {
   if (offloadConfig().TracingEnabled) {
-    llvm::errs() << "---> olGetDeviceCount";
+    llvm::errs() << "---> olIterateDevices";
   }
 
-  ol_result_t Result = olGetDeviceCount_val(NumDevices);
+  ol_result_t Result = olIterateDevices_val(Callback, UserData);
 
   if (offloadConfig().TracingEnabled) {
-    ol_get_device_count_params_t Params = {&NumDevices};
+    ol_iterate_devices_params_t Params = {&Callback, &UserData};
     llvm::errs() << "(" << &Params << ")";
     llvm::errs() << "-> " << Result << "\n";
     if (Result && Result->Details) {
@@ -198,145 +197,11 @@ OL_APIEXPORT ol_result_t OL_APICALL olGetDeviceCount(uint32_t *NumDevices) {
   }
   return Result;
 }
-ol_result_t olGetDeviceCountWithCodeLoc(uint32_t *NumDevices,
+ol_result_t olIterateDevicesWithCodeLoc(ol_device_iterate_cb_t Callback,
+                                        void *UserData,
                                         ol_code_location_t *CodeLocation) {
   currentCodeLocation() = CodeLocation;
-  ol_result_t Result = ::olGetDeviceCount(NumDevices);
-
-  currentCodeLocation() = nullptr;
-  return Result;
-}
-
-///////////////////////////////////////////////////////////////////////////////
-ol_impl_result_t olGetDevices_val(uint32_t NumEntries,
-                                  ol_device_handle_t *Devices) {
-  if (offloadConfig().ValidationEnabled) {
-    if (NumEntries == 0) {
-      return OL_ERRC_INVALID_SIZE;
-    }
-
-    if (NULL == Devices) {
-      return OL_ERRC_INVALID_NULL_POINTER;
-    }
-  }
-
-  return llvm::offload::olGetDevices_impl(NumEntries, Devices);
-}
-OL_APIEXPORT ol_result_t OL_APICALL olGetDevices(uint32_t NumEntries,
-                                                 ol_device_handle_t *Devices) {
-  if (offloadConfig().TracingEnabled) {
-    llvm::errs() << "---> olGetDevices";
-  }
-
-  ol_result_t Result = olGetDevices_val(NumEntries, Devices);
-
-  if (offloadConfig().TracingEnabled) {
-    ol_get_devices_params_t Params = {&NumEntries, &Devices};
-    llvm::errs() << "(" << &Params << ")";
-    llvm::errs() << "-> " << Result << "\n";
-    if (Result && Result->Details) {
-      llvm::errs() << "     *Error Details* " << Result->Details << " \n";
-    }
-  }
-  return Result;
-}
-ol_result_t olGetDevicesWithCodeLoc(uint32_t NumEntries,
-                                    ol_device_handle_t *Devices,
-                                    ol_code_location_t *CodeLocation) {
-  currentCodeLocation() = CodeLocation;
-  ol_result_t Result = ::olGetDevices(NumEntries, Devices);
-
-  currentCodeLocation() = nullptr;
-  return Result;
-}
-
-///////////////////////////////////////////////////////////////////////////////
-ol_impl_result_t olGetFilteredDevices_val(
-    uint32_t MaxNumDevices, ol_platform_filter_cb_t PlatformFilter,
-    ol_device_filter_cb_t DeviceFilter, ol_device_handle_t *FilteredDevices) {
-  if (offloadConfig().ValidationEnabled) {
-    if (NULL == FilteredDevices) {
-      return OL_ERRC_INVALID_NULL_POINTER;
-    }
-  }
-
-  return llvm::offload::olGetFilteredDevices_impl(
-      MaxNumDevices, PlatformFilter, DeviceFilter, FilteredDevices);
-}
-OL_APIEXPORT ol_result_t OL_APICALL olGetFilteredDevices(
-    uint32_t MaxNumDevices, ol_platform_filter_cb_t PlatformFilter,
-    ol_device_filter_cb_t DeviceFilter, ol_device_handle_t *FilteredDevices) {
-  if (offloadConfig().TracingEnabled) {
-    llvm::errs() << "---> olGetFilteredDevices";
-  }
-
-  ol_result_t Result = olGetFilteredDevices_val(MaxNumDevices, PlatformFilter,
-                                                DeviceFilter, FilteredDevices);
-
-  if (offloadConfig().TracingEnabled) {
-    ol_get_filtered_devices_params_t Params = {&MaxNumDevices, &PlatformFilter,
-                                               &DeviceFilter, &FilteredDevices};
-    llvm::errs() << "(" << &Params << ")";
-    llvm::errs() << "-> " << Result << "\n";
-    if (Result && Result->Details) {
-      llvm::errs() << "     *Error Details* " << Result->Details << " \n";
-    }
-  }
-  return Result;
-}
-ol_result_t olGetFilteredDevicesWithCodeLoc(
-    uint32_t MaxNumDevices, ol_platform_filter_cb_t PlatformFilter,
-    ol_device_filter_cb_t DeviceFilter, ol_device_handle_t *FilteredDevices,
-    ol_code_location_t *CodeLocation) {
-  currentCodeLocation() = CodeLocation;
-  ol_result_t Result = ::olGetFilteredDevices(MaxNumDevices, PlatformFilter,
-                                              DeviceFilter, FilteredDevices);
-
-  currentCodeLocation() = nullptr;
-  return Result;
-}
-
-///////////////////////////////////////////////////////////////////////////////
-ol_impl_result_t olGetFilteredDevicesCount_val(
-    uint32_t MaxNumDevices, ol_platform_filter_cb_t PlatformFilter,
-    ol_device_filter_cb_t DeviceFilter, uint32_t *NumFilteredDevices) {
-  if (offloadConfig().ValidationEnabled) {
-    if (NULL == NumFilteredDevices) {
-      return OL_ERRC_INVALID_NULL_POINTER;
-    }
-  }
-
-  return llvm::offload::olGetFilteredDevicesCount_impl(
-      MaxNumDevices, PlatformFilter, DeviceFilter, NumFilteredDevices);
-}
-OL_APIEXPORT ol_result_t OL_APICALL olGetFilteredDevicesCount(
-    uint32_t MaxNumDevices, ol_platform_filter_cb_t PlatformFilter,
-    ol_device_filter_cb_t DeviceFilter, uint32_t *NumFilteredDevices) {
-  if (offloadConfig().TracingEnabled) {
-    llvm::errs() << "---> olGetFilteredDevicesCount";
-  }
-
-  ol_result_t Result = olGetFilteredDevicesCount_val(
-      MaxNumDevices, PlatformFilter, DeviceFilter, NumFilteredDevices);
-
-  if (offloadConfig().TracingEnabled) {
-    ol_get_filtered_devices_count_params_t Params = {
-        &MaxNumDevices, &PlatformFilter, &DeviceFilter, &NumFilteredDevices};
-    llvm::errs() << "(" << &Params << ")";
-    llvm::errs() << "-> " << Result << "\n";
-    if (Result && Result->Details) {
-      llvm::errs() << "     *Error Details* " << Result->Details << " \n";
-    }
-  }
-  return Result;
-}
-ol_result_t olGetFilteredDevicesCountWithCodeLoc(
-    uint32_t MaxNumDevices, ol_platform_filter_cb_t PlatformFilter,
-    ol_device_filter_cb_t DeviceFilter, uint32_t *NumFilteredDevices,
-    ol_code_location_t *CodeLocation) {
-  currentCodeLocation() = CodeLocation;
-  ol_result_t Result = ::olGetFilteredDevicesCount(
-      MaxNumDevices, PlatformFilter, DeviceFilter, NumFilteredDevices);
+  ol_result_t Result = ::olIterateDevices(Callback, UserData);
 
   currentCodeLocation() = nullptr;
   return Result;
@@ -437,43 +302,6 @@ ol_result_t olGetDeviceInfoSizeWithCodeLoc(ol_device_handle_t Device,
                                            ol_code_location_t *CodeLocation) {
   currentCodeLocation() = CodeLocation;
   ol_result_t Result = ::olGetDeviceInfoSize(Device, PropName, PropSizeRet);
-
-  currentCodeLocation() = nullptr;
-  return Result;
-}
-
-///////////////////////////////////////////////////////////////////////////////
-ol_impl_result_t olGetHostDevice_val(ol_device_handle_t *Device) {
-  if (offloadConfig().ValidationEnabled) {
-    if (NULL == Device) {
-      return OL_ERRC_INVALID_NULL_POINTER;
-    }
-  }
-
-  return llvm::offload::olGetHostDevice_impl(Device);
-}
-OL_APIEXPORT ol_result_t OL_APICALL
-olGetHostDevice(ol_device_handle_t *Device) {
-  if (offloadConfig().TracingEnabled) {
-    llvm::errs() << "---> olGetHostDevice";
-  }
-
-  ol_result_t Result = olGetHostDevice_val(Device);
-
-  if (offloadConfig().TracingEnabled) {
-    ol_get_host_device_params_t Params = {&Device};
-    llvm::errs() << "(" << &Params << ")";
-    llvm::errs() << "-> " << Result << "\n";
-    if (Result && Result->Details) {
-      llvm::errs() << "     *Error Details* " << Result->Details << " \n";
-    }
-  }
-  return Result;
-}
-ol_result_t olGetHostDeviceWithCodeLoc(ol_device_handle_t *Device,
-                                       ol_code_location_t *CodeLocation) {
-  currentCodeLocation() = CodeLocation;
-  ol_result_t Result = ::olGetHostDevice(Device);
 
   currentCodeLocation() = nullptr;
   return Result;

@@ -106,8 +106,8 @@ PlatformVecT &Platforms() {
 }
 
 ol_device_handle_t HostDevice() {
-  static ol_device_impl_t HostDeviceImpl{-1, nullptr, nullptr};
-  return &HostDeviceImpl;
+  // The host platform is always inserted last
+  return &Platforms().back().Devices[0];
 }
 
 template <typename HandleT> ol_impl_result_t olDestroy(HandleT Handle) {
@@ -140,6 +140,26 @@ void initPlugins() {
   } while (false);
 #include "Shared/Targets.def"
 
+  // Preemptively initialize all devices in the plugin
+  for (auto &Platform : Platforms()) {
+    auto Err = Platform.Plugin->init();
+    [[maybe_unused]] std::string InfoMsg = toString(std::move(Err));
+    for (auto DevNum = 0; DevNum < Platform.Plugin->number_of_devices();
+         DevNum++) {
+      if (Platform.Plugin->init_device(DevNum) == OFFLOAD_SUCCESS) {
+        Platform.Devices.emplace_back(ol_device_impl_t{
+            DevNum, &Platform.Plugin->getDevice(DevNum), &Platform});
+      }
+    }
+  }
+
+  // Add the special host device
+  auto &HostPlatform = Platforms().emplace_back(
+      ol_platform_impl_t{nullptr,
+                         {ol_device_impl_t{-1, nullptr, nullptr}},
+                         OL_PLATFORM_BACKEND_HOST});
+  HostDevice()->Platform = &HostPlatform;
+
   offloadConfig().TracingEnabled = std::getenv("OFFLOAD_TRACE");
   offloadConfig().ValidationEnabled =
       !std::getenv("OFFLOAD_DISABLE_VALIDATION");
@@ -160,10 +180,11 @@ ol_impl_result_t olGetPlatformInfoImplDetail(ol_platform_handle_t Platform,
                                              size_t PropSize, void *PropValue,
                                              size_t *PropSizeRet) {
   ReturnHelper ReturnValue(PropSize, PropValue, PropSizeRet);
+  bool IsHost = Platform->BackendType == OL_PLATFORM_BACKEND_HOST;
 
   switch (PropName) {
   case OL_PLATFORM_INFO_NAME:
-    return ReturnValue(Platform->Plugin->getName());
+    return ReturnValue(IsHost ? "Host" : Platform->Plugin->getName());
   case OL_PLATFORM_INFO_VENDOR_NAME:
     // TODO: Implement this
     return ReturnValue("Unknown platform vendor");
@@ -174,14 +195,7 @@ ol_impl_result_t olGetPlatformInfoImplDetail(ol_platform_handle_t Platform,
                            .c_str());
   }
   case OL_PLATFORM_INFO_BACKEND: {
-    auto PluginName = Platform->Plugin->getName();
-    if (PluginName == StringRef("CUDA")) {
-      return ReturnValue(OL_PLATFORM_BACKEND_CUDA);
-    } else if (PluginName == StringRef("AMDGPU")) {
-      return ReturnValue(OL_PLATFORM_BACKEND_AMDGPU);
-    } else {
-      return ReturnValue(OL_PLATFORM_BACKEND_UNKNOWN);
-    }
+    return ReturnValue(Platform->BackendType);
   }
   default:
     return OL_ERRC_INVALID_ENUMERATION;
@@ -211,12 +225,12 @@ ol_impl_result_t olGetDeviceInfoImplDetail(ol_device_handle_t Device,
 
   ReturnHelper ReturnValue(PropSize, PropValue, PropSizeRet);
 
-  InfoQueueTy DevInfo;
-  if (auto Err = Device->Device->obtainInfoImpl(DevInfo))
-    return OL_ERRC_OUT_OF_RESOURCES;
-
   // Find the info if it exists under any of the given names
-  auto GetInfo = [&DevInfo](std::vector<std::string> Names) {
+  auto GetInfo = [&](std::vector<std::string> Names) {
+    InfoQueueTy DevInfo;
+    if (auto Err = Device->Device->obtainInfoImpl(DevInfo))
+      return std::string("");
+
     for (auto Name : Names) {
       auto InfoKeyMatches = [&](const InfoQueueTy::InfoQueueEntryTy &Info) {
         return Info.Key == Name;
@@ -264,78 +278,17 @@ ol_impl_result_t olGetDeviceInfoSize_impl(ol_device_handle_t Device,
   return olGetDeviceInfoImplDetail(Device, PropName, 0, nullptr, PropSizeRet);
 }
 
-ol_impl_result_t olGetFilteredDevicesImplDetail(
-    uint32_t NumEntries, ol_platform_filter_cb_t PlatformFilter,
-    ol_device_filter_cb_t DeviceFilter, ol_device_handle_t *FilteredDevices,
-    uint32_t *NumFilteredDevices) {
-  size_t DeviceIndex = 0;
-
+ol_impl_result_t olIterateDevices_impl(ol_device_iterate_cb_t Callback,
+                                       void *UserData) {
   for (auto &Platform : Platforms()) {
-    if (PlatformFilter(Platform.BackendType, Platform.Plugin->getName())) {
-      auto Err = Platform.Plugin->init();
-      if (Err)
-        return {OL_ERRC_UNKNOWN, "Could not initialize plugin."};
-
-      for (auto DevNum = 0; DevNum < Platform.Plugin->number_of_devices();
-           DevNum++) {
-        ol_device_handle_t Device = nullptr;
-        if (!Platform.Plugin->is_device_initialized(DevNum)) {
-          if (Platform.Plugin->init_device(DevNum) != OFFLOAD_SUCCESS)
-            return {OL_ERRC_UNKNOWN, "Could not initialize device."};
-          Device = &Platform.Devices.emplace_back(ol_device_impl_t{
-              DevNum, &Platform.Plugin->getDevice(DevNum), &Platform});
-        } else {
-          Device = &Platform.Devices[DevNum];
-        }
-
-        ol_device_type_t DeviceType;
-        olGetDeviceInfoImplDetail(Device, OL_DEVICE_INFO_TYPE,
-                                  sizeof(DeviceType), &DeviceType, nullptr);
-        if (DeviceFilter(DeviceType)) {
-          if (FilteredDevices) {
-            FilteredDevices[DeviceIndex] = Device;
-          }
-          DeviceIndex++;
-          if (DeviceIndex == NumEntries) {
-            if (NumFilteredDevices)
-              *NumFilteredDevices = DeviceIndex;
-            return OL_SUCCESS;
-          }
-        }
+    for (auto &Device : Platform.Devices) {
+      if (!Callback(&Device, UserData)) {
+        break;
       }
     }
   }
 
-  if (NumFilteredDevices)
-    *NumFilteredDevices = DeviceIndex;
   return OL_SUCCESS;
-}
-
-ol_impl_result_t olGetFilteredDevices_impl(
-    uint32_t MaxNumDevices, ol_platform_filter_cb_t PlatformFilter,
-    ol_device_filter_cb_t DeviceFilter, ol_device_handle_t *FilteredDevices) {
-  return olGetFilteredDevicesImplDetail(MaxNumDevices, PlatformFilter,
-                                        DeviceFilter, FilteredDevices, nullptr);
-}
-
-ol_impl_result_t olGetFilteredDevicesCount_impl(
-    uint32_t MaxNumDevices, ol_platform_filter_cb_t PlatformFilter,
-    ol_device_filter_cb_t DeviceFilter, uint32_t *NumFilteredDevices) {
-  return olGetFilteredDevicesImplDetail(
-      MaxNumDevices, PlatformFilter, DeviceFilter, nullptr, NumFilteredDevices);
-}
-
-ol_impl_result_t olGetDeviceCount_impl(uint32_t *pNumDevices) {
-  return olGetFilteredDevicesCount_impl(
-      1024, [](ol_platform_backend_t, const char *) { return true; },
-      [](ol_device_type_t) { return true; }, pNumDevices);
-}
-
-ol_impl_result_t olGetDevices_impl(uint32_t NumEntries,
-                                   ol_device_handle_t *Devices) {
-  return olGetFilteredDevices_impl(
-      NumEntries, [](ol_platform_backend_t, const char *) { return true; },
-      [](ol_device_type_t) { return true; }, Devices);
 }
 
 ol_impl_result_t olGetHostDevice_impl(ol_device_handle_t *Device) {

@@ -17,8 +17,6 @@ TEST_F(olMemcpyTest, SuccessHtoD) {
   void *Alloc;
   ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_DEVICE, Size, &Alloc));
   std::vector<uint8_t> Input(Size, 42);
-  ol_device_handle_t Host;
-  ASSERT_SUCCESS(olGetHostDevice(&Host));
   ASSERT_SUCCESS(
       olMemcpy(Queue, Alloc, Device, Input.data(), Host, Size, nullptr));
   olWaitQueue(Queue);
@@ -30,8 +28,6 @@ TEST_F(olMemcpyTest, SuccessDtoH) {
   void *Alloc;
   std::vector<uint8_t> Input(Size, 42);
   std::vector<uint8_t> Output(Size, 0);
-  ol_device_handle_t Host;
-  ASSERT_SUCCESS(olGetHostDevice(&Host));
 
   ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_DEVICE, Size, &Alloc));
   ASSERT_SUCCESS(
@@ -51,8 +47,6 @@ TEST_F(olMemcpyTest, SuccessDtoD) {
   void *AllocB;
   std::vector<uint8_t> Input(Size, 42);
   std::vector<uint8_t> Output(Size, 0);
-  ol_device_handle_t Host;
-  ASSERT_SUCCESS(olGetHostDevice(&Host));
 
   ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_DEVICE, Size, &AllocA));
   ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_DEVICE, Size, &AllocB));
@@ -74,8 +68,6 @@ TEST_F(olMemcpyTest, SuccessHtoHSync) {
   constexpr size_t Size = 1024;
   std::vector<uint8_t> Input(Size, 42);
   std::vector<uint8_t> Output(Size, 0);
-  ol_device_handle_t Host;
-  ASSERT_SUCCESS(olGetHostDevice(&Host));
 
   ASSERT_SUCCESS(olMemcpy(nullptr, Output.data(), Host, Input.data(), Host,
                           Size, nullptr));
@@ -90,8 +82,6 @@ TEST_F(olMemcpyTest, SuccessDtoHSync) {
   void *Alloc;
   std::vector<uint8_t> Input(Size, 42);
   std::vector<uint8_t> Output(Size, 0);
-  ol_device_handle_t Host;
-  ASSERT_SUCCESS(olGetHostDevice(&Host));
 
   ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_DEVICE, Size, &Alloc));
   ASSERT_SUCCESS(
@@ -108,8 +98,6 @@ TEST_F(olMemcpyTest, SuccessSizeZero) {
   constexpr size_t Size = 1024;
   std::vector<uint8_t> Input(Size, 42);
   std::vector<uint8_t> Output(Size, 0);
-  ol_device_handle_t Host;
-  ASSERT_SUCCESS(olGetHostDevice(&Host));
 
   // As with std::memcpy, size 0 is allowed. Keep all other arguments valid even
   // if they aren't used.

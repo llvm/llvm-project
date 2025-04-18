@@ -43,7 +43,7 @@
   (void)0
 
 struct OffloadTest : ::testing::Test {
-  // No special behavior now, but just in case we need to override it in future
+  ol_device_handle_t Host = TestEnvironment::getHostDevice();
 };
 
 struct OffloadDeviceTest : OffloadTest {

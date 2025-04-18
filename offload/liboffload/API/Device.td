@@ -34,82 +34,22 @@ def : Enum {
   ];
 }
 
-def : Function {
-  let name = "olGetDeviceCount";
-  let desc = "Retrieves the number of available devices.";
-  let params = [
-    Param<"uint32_t*", "NumDevices", "pointer to the number of devices.", PARAM_OUT>
-  ];
-  let returns = [];
-}
-
-def : Function {
-  let name = "olGetDevices";
-  let desc = "Retrieves devices.";
-  let details = [
-    "Multiple calls to this function will return identical device handles, in the same order.",
-  ];
-  let params = [
-    Param<"uint32_t", "NumEntries", "the number of devices to be added to phDevices, which must be greater than zero", PARAM_IN>,
-    RangedParam<"ol_device_handle_t*", "Devices", "Array of device handles. "
-        "If NumEntries is less than the number of devices available, then this function shall only retrieve that number of devices.", PARAM_OUT,
-        Range<"0", "NumEntries">>
-  ];
-  let returns = [
-    Return<"OL_ERRC_INVALID_SIZE", [
-      "`NumEntries == 0`"
-    ]>
-  ];
-}
-
 def : FptrTypedef {
-  let name = "ol_platform_filter_cb_t";
-  let desc = "User-provided function to determine whether a platform is selected.";
+  let name = "ol_device_iterate_cb_t";
+  let desc = "User-provided function called for each available device.";
   let params = [
-    Param<"ol_platform_backend_t", "Backend", "the backend of the platform which is selected for filtering", PARAM_IN>,
-    Param<"const char*", "Name", "the name of the platform which is selected for filtering", PARAM_IN>
-  ];
-  let return = "bool";
-}
-
-def : FptrTypedef {
-  let name = "ol_device_filter_cb_t";
-  let desc = "User-provided function to determine whether a device is selected.";
-  let params = [
-    Param<"ol_device_type_t", "Type", "the type of the device which is selected for filtering", PARAM_IN>
+    Param<"ol_device_handle_t", "Device", "the device handle of the current iteration", PARAM_IN>,
+    Param<"void*", "UserData", "optional user data", PARAM_IN_OPTIONAL>
   ];
   let return = "bool";
 }
 
 def : Function {
-  let name = "olGetFilteredDevices";
-  let desc = "Retrieve a subset of the available devices";
-  let details = [
-    "Platforms and devices are lazily initialized when they are first filtered",
-    "Use MaxNumDevices to stop device and platform discovery after a fixed number of devices",
-    "Multiple calls to this function will return identical device handles, in the same order.",
-  ];
+  let name = "olIterateDevices";
+  let desc = "";
   let params = [
-    Param<"uint32_t", "MaxNumDevices", "the maximum number of devices to be added to phDevices, which must be greater than zero", PARAM_IN>,
-    Param<"ol_platform_filter_cb_t", "PlatformFilter", "the callback used to decide whether a platform is included", PARAM_IN>,
-    Param<"ol_device_filter_cb_t", "DeviceFilter", "the callback used to decide whether a platform is included", PARAM_IN>,
-    Param<"ol_device_handle_t*", "FilteredDevices", "output pointer for the selected devices", PARAM_OUT>,
-  ];
-  let returns = [];
-}
-
-def : Function {
-  let name = "olGetFilteredDevicesCount";
-  let desc = "Retrieve the number of devices that would be returned by olGetFilteredDevices with the given filters.";
-  let details = [
-      "Platforms and devices are lazily initialized when they are first filtered",
-      "Use MaxNumDevices to stop device and platform discovery after a fixed number of devices",
-  ];
-  let params = [
-    Param<"uint32_t", "MaxNumDevices", "the maximum number of devices to be added to phDevices; a value of 0 implies no limit.", PARAM_IN>,
-    Param<"ol_platform_filter_cb_t", "PlatformFilter", "the callback used to decide whether a platform is included", PARAM_IN>,
-    Param<"ol_device_filter_cb_t", "DeviceFilter", "the callback used to decide whether a platform is included", PARAM_IN>,
-    Param<"uint32_t*", "NumFilteredDevices", "output pointer for the number of selected devices", PARAM_OUT>
+    Param<"ol_device_iterate_cb_t", "Callback", "User-provided function called for each available device", PARAM_IN>,
+    Param<"void*", "UserData", "Optional user data to pass to the callback", PARAM_IN_OPTIONAL>
   ];
   let returns = [];
 }
@@ -153,16 +93,4 @@ def : Function {
     ]>,
     Return<"OL_ERRC_INVALID_DEVICE">
   ];
-}
-
-def : Function {
-  let name = "olGetHostDevice";
-  let desc = "Return the special host device used to represent the host in memory transfer operations.";
-  let details = [
-    "The host device does not support queues"
-  ];
-  let params = [
-    Param<"ol_device_handle_t*", "Device", "Output pointer for the device">
-  ]; // TODO: Take a platform?
-  let returns = [];
 }

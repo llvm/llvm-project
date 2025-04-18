@@ -17,18 +17,8 @@ ol_impl_result_t olGetPlatformInfoSize_impl(ol_platform_handle_t Platform,
                                             ol_platform_info_t PropName,
                                             size_t *PropSizeRet);
 
-ol_impl_result_t olGetDeviceCount_impl(uint32_t *NumDevices);
-
-ol_impl_result_t olGetDevices_impl(uint32_t NumEntries,
-                                   ol_device_handle_t *Devices);
-
-ol_impl_result_t olGetFilteredDevices_impl(
-    uint32_t MaxNumDevices, ol_platform_filter_cb_t PlatformFilter,
-    ol_device_filter_cb_t DeviceFilter, ol_device_handle_t *FilteredDevices);
-
-ol_impl_result_t olGetFilteredDevicesCount_impl(
-    uint32_t MaxNumDevices, ol_platform_filter_cb_t PlatformFilter,
-    ol_device_filter_cb_t DeviceFilter, uint32_t *NumFilteredDevices);
+ol_impl_result_t olIterateDevices_impl(ol_device_iterate_cb_t Callback,
+                                       void *UserData);
 
 ol_impl_result_t olGetDeviceInfo_impl(ol_device_handle_t Device,
                                       ol_device_info_t PropName,
@@ -37,8 +27,6 @@ ol_impl_result_t olGetDeviceInfo_impl(ol_device_handle_t Device,
 ol_impl_result_t olGetDeviceInfoSize_impl(ol_device_handle_t Device,
                                           ol_device_info_t PropName,
                                           size_t *PropSizeRet);
-
-ol_impl_result_t olGetHostDevice_impl(ol_device_handle_t *Device);
 
 ol_impl_result_t olMemAlloc_impl(ol_device_handle_t Device,
                                  ol_alloc_type_t Type, size_t Size,

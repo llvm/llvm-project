@@ -39,10 +39,16 @@ raw_ostream &operator<<(raw_ostream &Out,
 
 void printPlatforms() {
   SmallDenseSet<ol_platform_handle_t> Platforms;
-  uint32_t DeviceCount = 0;
-  olGetDeviceCount(&DeviceCount);
-  std::vector<ol_device_handle_t> Devices{DeviceCount};
-  olGetDevices(DeviceCount, Devices.data());
+  using DeviceVecT = SmallVector<ol_device_handle_t, 8>;
+  DeviceVecT Devices{};
+
+  olIterateDevices(
+      [](ol_device_handle_t D, void *Data) {
+        static_cast<DeviceVecT *>(Data)->push_back(D);
+        return true;
+      },
+      &Devices);
+
   for (auto &Device : Devices) {
     ol_platform_handle_t Platform;
     olGetDeviceInfo(Device, OL_DEVICE_INFO_PLATFORM, sizeof(Platform),
@@ -59,25 +65,40 @@ ol_device_handle_t TestEnvironment::getDevice() {
   static ol_device_handle_t Device = nullptr;
 
   if (!Device) {
-    uint32_t DeviceCount = 0;
-    auto PlatformFilter = [](ol_platform_backend_t Backend, const char *Name) {
-      if (SelectedPlatform != "") {
-        return SelectedPlatform == Name;
-      } else {
-        return Backend != OL_PLATFORM_BACKEND_UNKNOWN;
+    if (SelectedPlatform != "") {
+      olIterateDevices(
+          [](ol_device_handle_t D, void *Data) {
+            ol_platform_handle_t Platform;
+            olGetDeviceInfo(D, OL_DEVICE_INFO_PLATFORM, sizeof(Platform),
+                            &Platform);
+
+            std::string PlatformName;
+            raw_string_ostream S(PlatformName);
+            S << Platform;
+
+            if (PlatformName == SelectedPlatform) {
+              *(static_cast<ol_device_handle_t *>(Data)) = D;
+              return false;
+            }
+
+            return true;
+          },
+          &Device);
+
+      if (Device == nullptr) {
+        errs() << "No device found with the platform \"" << SelectedPlatform
+               << "\". Choose from:"
+               << "\n";
+        printPlatforms();
+        std::exit(1);
       }
-    };
-    // Accept any device in the filtered platform
-    auto DeviceFilter = [](ol_device_type_t) { return true; };
-    olGetFilteredDevicesCount(128, PlatformFilter, DeviceFilter, &DeviceCount);
-    if (DeviceCount > 0) {
-      olGetFilteredDevices(1, PlatformFilter, DeviceFilter, &Device);
     } else {
-      errs() << "No device found with the platform \"" << SelectedPlatform
-             << "\". Choose from:"
-             << "\n";
-      printPlatforms();
-      std::exit(1);
+      olIterateDevices(
+          [](ol_device_handle_t D, void *Data) {
+            *(static_cast<ol_device_handle_t *>(Data)) = D;
+            return false;
+          },
+          &Device);
     }
   }
 
@@ -85,8 +106,28 @@ ol_device_handle_t TestEnvironment::getDevice() {
 }
 
 ol_device_handle_t TestEnvironment::getHostDevice() {
-  ol_device_handle_t HostDevice = nullptr;
-  olGetHostDevice(&HostDevice);
+  static ol_device_handle_t HostDevice = nullptr;
+
+  if (!HostDevice) {
+    olIterateDevices(
+        [](ol_device_handle_t D, void *Data) {
+          ol_platform_handle_t Platform;
+          olGetDeviceInfo(D, OL_DEVICE_INFO_PLATFORM, sizeof(Platform),
+                          &Platform);
+          ol_platform_backend_t Backend;
+          olGetPlatformInfo(Platform, OL_PLATFORM_INFO_BACKEND, sizeof(Backend),
+                            &Backend);
+
+          if (Backend == OL_PLATFORM_BACKEND_HOST) {
+            *(static_cast<ol_device_handle_t *>(Data)) = D;
+            return false;
+          }
+
+          return true;
+        },
+        &HostDevice);
+  }
+
   return HostDevice;
 }
 

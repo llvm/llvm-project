@@ -230,6 +230,8 @@ typedef enum ol_platform_backend_t {
   OL_PLATFORM_BACKEND_CUDA = 1,
   /// The backend is AMDGPU
   OL_PLATFORM_BACKEND_AMDGPU = 2,
+  /// The backend is the host
+  OL_PLATFORM_BACKEND_HOST = 3,
   /// @cond
   OL_PLATFORM_BACKEND_FORCE_UINT32 = 0x7fffffff
   /// @endcond
@@ -331,7 +333,15 @@ typedef enum ol_device_info_t {
 } ol_device_info_t;
 
 ///////////////////////////////////////////////////////////////////////////////
-/// @brief Retrieves the number of available devices.
+/// @brief User-provided function called for each available device.
+typedef bool (*ol_device_iterate_cb_t)(
+    // the device handle of the current iteration
+    ol_device_handle_t Device,
+    // optional user data
+    void *UserData);
+
+///////////////////////////////////////////////////////////////////////////////
+/// @brief
 ///
 /// @details
 ///
@@ -341,106 +351,11 @@ typedef enum ol_device_info_t {
 ///     - ::OL_ERRC_DEVICE_LOST
 ///     - ::OL_ERRC_INVALID_NULL_HANDLE
 ///     - ::OL_ERRC_INVALID_NULL_POINTER
-///         + `NULL == NumDevices`
-OL_APIEXPORT ol_result_t OL_APICALL olGetDeviceCount(
-    // [out] pointer to the number of devices.
-    uint32_t *NumDevices);
-
-///////////////////////////////////////////////////////////////////////////////
-/// @brief Retrieves devices.
-///
-/// @details
-///    - Multiple calls to this function will return identical device handles,
-///    in the same order.
-///
-/// @returns
-///     - ::OL_RESULT_SUCCESS
-///     - ::OL_ERRC_UNINITIALIZED
-///     - ::OL_ERRC_DEVICE_LOST
-///     - ::OL_ERRC_INVALID_SIZE
-///         + `NumEntries == 0`
-///     - ::OL_ERRC_INVALID_NULL_HANDLE
-///     - ::OL_ERRC_INVALID_NULL_POINTER
-///         + `NULL == Devices`
-OL_APIEXPORT ol_result_t OL_APICALL olGetDevices(
-    // [in] the number of devices to be added to phDevices, which must be
-    // greater than zero
-    uint32_t NumEntries,
-    // [out] Array of device handles. If NumEntries is less than the number of
-    // devices available, then this function shall only retrieve that number of
-    // devices.
-    ol_device_handle_t *Devices);
-
-///////////////////////////////////////////////////////////////////////////////
-/// @brief User-provided function to determine whether a platform is selected.
-typedef bool (*ol_platform_filter_cb_t)(
-    // the backend of the platform which is selected for filtering
-    ol_platform_backend_t Backend,
-    // the name of the platform which is selected for filtering
-    const char *Name);
-
-///////////////////////////////////////////////////////////////////////////////
-/// @brief User-provided function to determine whether a device is selected.
-typedef bool (*ol_device_filter_cb_t)(
-    // the type of the device which is selected for filtering
-    ol_device_type_t Type);
-
-///////////////////////////////////////////////////////////////////////////////
-/// @brief Retrieve a subset of the available devices
-///
-/// @details
-///    - Platforms and devices are lazily initialized when they are first
-///    filtered
-///    - Use MaxNumDevices to stop device and platform discovery after a fixed
-///    number of devices
-///    - Multiple calls to this function will return identical device handles,
-///    in the same order.
-///
-/// @returns
-///     - ::OL_RESULT_SUCCESS
-///     - ::OL_ERRC_UNINITIALIZED
-///     - ::OL_ERRC_DEVICE_LOST
-///     - ::OL_ERRC_INVALID_NULL_HANDLE
-///     - ::OL_ERRC_INVALID_NULL_POINTER
-///         + `NULL == FilteredDevices`
-OL_APIEXPORT ol_result_t OL_APICALL olGetFilteredDevices(
-    // [in] the maximum number of devices to be added to phDevices, which must
-    // be greater than zero
-    uint32_t MaxNumDevices,
-    // [in] the callback used to decide whether a platform is included
-    ol_platform_filter_cb_t PlatformFilter,
-    // [in] the callback used to decide whether a platform is included
-    ol_device_filter_cb_t DeviceFilter,
-    // [out] output pointer for the selected devices
-    ol_device_handle_t *FilteredDevices);
-
-///////////////////////////////////////////////////////////////////////////////
-/// @brief Retrieve the number of devices that would be returned by
-/// olGetFilteredDevices with the given filters.
-///
-/// @details
-///    - Platforms and devices are lazily initialized when they are first
-///    filtered
-///    - Use MaxNumDevices to stop device and platform discovery after a fixed
-///    number of devices
-///
-/// @returns
-///     - ::OL_RESULT_SUCCESS
-///     - ::OL_ERRC_UNINITIALIZED
-///     - ::OL_ERRC_DEVICE_LOST
-///     - ::OL_ERRC_INVALID_NULL_HANDLE
-///     - ::OL_ERRC_INVALID_NULL_POINTER
-///         + `NULL == NumFilteredDevices`
-OL_APIEXPORT ol_result_t OL_APICALL olGetFilteredDevicesCount(
-    // [in] the maximum number of devices to be added to phDevices; a value of 0
-    // implies no limit.
-    uint32_t MaxNumDevices,
-    // [in] the callback used to decide whether a platform is included
-    ol_platform_filter_cb_t PlatformFilter,
-    // [in] the callback used to decide whether a platform is included
-    ol_device_filter_cb_t DeviceFilter,
-    // [out] output pointer for the number of selected devices
-    uint32_t *NumFilteredDevices);
+OL_APIEXPORT ol_result_t OL_APICALL olIterateDevices(
+    // [in] User-provided function called for each available device
+    ol_device_iterate_cb_t Callback,
+    // [in][optional] Optional user data to pass to the callback
+    void *UserData);
 
 ///////////////////////////////////////////////////////////////////////////////
 /// @brief Queries the given property of the device.
@@ -497,24 +412,6 @@ OL_APIEXPORT ol_result_t OL_APICALL olGetDeviceInfoSize(
     ol_device_info_t PropName,
     // [out] pointer to the number of bytes required to store the query
     size_t *PropSizeRet);
-
-///////////////////////////////////////////////////////////////////////////////
-/// @brief Return the special host device used to represent the host in memory
-/// transfer operations.
-///
-/// @details
-///    - The host device does not support queues
-///
-/// @returns
-///     - ::OL_RESULT_SUCCESS
-///     - ::OL_ERRC_UNINITIALIZED
-///     - ::OL_ERRC_DEVICE_LOST
-///     - ::OL_ERRC_INVALID_NULL_HANDLE
-///     - ::OL_ERRC_INVALID_NULL_POINTER
-///         + `NULL == Device`
-OL_APIEXPORT ol_result_t OL_APICALL olGetHostDevice(
-    //  Output pointer for the device
-    ol_device_handle_t *Device);
 
 ///////////////////////////////////////////////////////////////////////////////
 /// @brief Represents the type of allocation made with olMemAlloc.
@@ -826,39 +723,12 @@ typedef struct ol_get_platform_info_size_params_t {
 } ol_get_platform_info_size_params_t;
 
 ///////////////////////////////////////////////////////////////////////////////
-/// @brief Function parameters for olGetDeviceCount
+/// @brief Function parameters for olIterateDevices
 /// @details Each entry is a pointer to the parameter passed to the function;
-typedef struct ol_get_device_count_params_t {
-  uint32_t **pNumDevices;
-} ol_get_device_count_params_t;
-
-///////////////////////////////////////////////////////////////////////////////
-/// @brief Function parameters for olGetDevices
-/// @details Each entry is a pointer to the parameter passed to the function;
-typedef struct ol_get_devices_params_t {
-  uint32_t *pNumEntries;
-  ol_device_handle_t **pDevices;
-} ol_get_devices_params_t;
-
-///////////////////////////////////////////////////////////////////////////////
-/// @brief Function parameters for olGetFilteredDevices
-/// @details Each entry is a pointer to the parameter passed to the function;
-typedef struct ol_get_filtered_devices_params_t {
-  uint32_t *pMaxNumDevices;
-  ol_platform_filter_cb_t *pPlatformFilter;
-  ol_device_filter_cb_t *pDeviceFilter;
-  ol_device_handle_t **pFilteredDevices;
-} ol_get_filtered_devices_params_t;
-
-///////////////////////////////////////////////////////////////////////////////
-/// @brief Function parameters for olGetFilteredDevicesCount
-/// @details Each entry is a pointer to the parameter passed to the function;
-typedef struct ol_get_filtered_devices_count_params_t {
-  uint32_t *pMaxNumDevices;
-  ol_platform_filter_cb_t *pPlatformFilter;
-  ol_device_filter_cb_t *pDeviceFilter;
-  uint32_t **pNumFilteredDevices;
-} ol_get_filtered_devices_count_params_t;
+typedef struct ol_iterate_devices_params_t {
+  ol_device_iterate_cb_t *pCallback;
+  void **pUserData;
+} ol_iterate_devices_params_t;
 
 ///////////////////////////////////////////////////////////////////////////////
 /// @brief Function parameters for olGetDeviceInfo
@@ -878,13 +748,6 @@ typedef struct ol_get_device_info_size_params_t {
   ol_device_info_t *pPropName;
   size_t **pPropSizeRet;
 } ol_get_device_info_size_params_t;
-
-///////////////////////////////////////////////////////////////////////////////
-/// @brief Function parameters for olGetHostDevice
-/// @details Each entry is a pointer to the parameter passed to the function;
-typedef struct ol_get_host_device_params_t {
-  ol_device_handle_t **pDevice;
-} ol_get_host_device_params_t;
 
 ///////////////////////////////////////////////////////////////////////////////
 /// @brief Function parameters for olMemAlloc
@@ -1020,37 +883,12 @@ OL_APIEXPORT ol_result_t OL_APICALL olGetPlatformInfoSizeWithCodeLoc(
     size_t *PropSizeRet, ol_code_location_t *CodeLocation);
 
 ///////////////////////////////////////////////////////////////////////////////
-/// @brief Variant of olGetDeviceCount that also sets source code location
+/// @brief Variant of olIterateDevices that also sets source code location
 /// information
-/// @details See also ::olGetDeviceCount
-OL_APIEXPORT ol_result_t OL_APICALL olGetDeviceCountWithCodeLoc(
-    uint32_t *NumDevices, ol_code_location_t *CodeLocation);
-
-///////////////////////////////////////////////////////////////////////////////
-/// @brief Variant of olGetDevices that also sets source code location
-/// information
-/// @details See also ::olGetDevices
+/// @details See also ::olIterateDevices
 OL_APIEXPORT ol_result_t OL_APICALL
-olGetDevicesWithCodeLoc(uint32_t NumEntries, ol_device_handle_t *Devices,
-                        ol_code_location_t *CodeLocation);
-
-///////////////////////////////////////////////////////////////////////////////
-/// @brief Variant of olGetFilteredDevices that also sets source code location
-/// information
-/// @details See also ::olGetFilteredDevices
-OL_APIEXPORT ol_result_t OL_APICALL olGetFilteredDevicesWithCodeLoc(
-    uint32_t MaxNumDevices, ol_platform_filter_cb_t PlatformFilter,
-    ol_device_filter_cb_t DeviceFilter, ol_device_handle_t *FilteredDevices,
-    ol_code_location_t *CodeLocation);
-
-///////////////////////////////////////////////////////////////////////////////
-/// @brief Variant of olGetFilteredDevicesCount that also sets source code
-/// location information
-/// @details See also ::olGetFilteredDevicesCount
-OL_APIEXPORT ol_result_t OL_APICALL olGetFilteredDevicesCountWithCodeLoc(
-    uint32_t MaxNumDevices, ol_platform_filter_cb_t PlatformFilter,
-    ol_device_filter_cb_t DeviceFilter, uint32_t *NumFilteredDevices,
-    ol_code_location_t *CodeLocation);
+olIterateDevicesWithCodeLoc(ol_device_iterate_cb_t Callback, void *UserData,
+                            ol_code_location_t *CodeLocation);
 
 ///////////////////////////////////////////////////////////////////////////////
 /// @brief Variant of olGetDeviceInfo that also sets source code location
@@ -1067,13 +905,6 @@ OL_APIEXPORT ol_result_t OL_APICALL olGetDeviceInfoWithCodeLoc(
 OL_APIEXPORT ol_result_t OL_APICALL olGetDeviceInfoSizeWithCodeLoc(
     ol_device_handle_t Device, ol_device_info_t PropName, size_t *PropSizeRet,
     ol_code_location_t *CodeLocation);
-
-///////////////////////////////////////////////////////////////////////////////
-/// @brief Variant of olGetHostDevice that also sets source code location
-/// information
-/// @details See also ::olGetHostDevice
-OL_APIEXPORT ol_result_t OL_APICALL olGetHostDeviceWithCodeLoc(
-    ol_device_handle_t *Device, ol_code_location_t *CodeLocation);
 
 ///////////////////////////////////////////////////////////////////////////////
 /// @brief Variant of olMemAlloc that also sets source code location information
