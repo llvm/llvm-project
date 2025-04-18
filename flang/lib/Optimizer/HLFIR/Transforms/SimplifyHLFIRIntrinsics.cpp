@@ -556,27 +556,10 @@ hlfir::Entity MinMaxlocAsElementalConverter<T>::genFinalResult(
   //     - The result is an array of rank RANK(ARRAY)-1.
   checkReductions(reductionResults);
 
-  // We need to adjust the one-based indices to real array indices.
-  // The adjustment must only be done, if there was an actual update
-  // of the coordinates in the reduction loop. For this check we only
-  // need to compare if any of the reduction results is not zero.
-  mlir::Value zero = fir::factory::createZeroValue(
-      builder, loc, reductionResults[0].getType());
-  mlir::Value doAdjust = builder.create<mlir::arith::CmpIOp>(
-      loc, mlir::arith::CmpIPredicate::ne, reductionResults[0], zero);
+  // 16.9.137 & 16.9.143:
+  // The subscripts returned by MINLOC/MAXLOC are in the range
+  // 1 to the extent of the corresponding dimension.
   mlir::Type indexType = builder.getIndexType();
-  mlir::Value one = builder.createIntegerConstant(loc, indexType, 1);
-
-  auto adjustCoor = [&](mlir::Value coor, mlir::Value lbound) {
-    assert(mlir::isa<mlir::IndexType>(lbound.getType()));
-    mlir::Value coorAsIndex = builder.createConvert(loc, indexType, coor);
-    mlir::Value tmp =
-        builder.create<mlir::arith::AddIOp>(loc, coorAsIndex, lbound);
-    tmp = builder.create<mlir::arith::SubIOp>(loc, tmp, one);
-    tmp =
-        builder.create<mlir::arith::SelectOp>(loc, doAdjust, tmp, coorAsIndex);
-    return builder.createConvert(loc, coor.getType(), tmp);
-  };
 
   // For partial reductions, the final result of the reduction
   // loop is just a scalar - the coordinate within DIM dimension.
@@ -584,17 +567,7 @@ hlfir::Entity MinMaxlocAsElementalConverter<T>::genFinalResult(
     // The result is a scalar, so just return the scalar.
     assert(getNumCoors() == 1 &&
            "unpexpected number of coordinates for scalar result");
-
-    int64_t dim = 1;
-    if (!isTotalReduction()) {
-      auto dimVal = getConstDim();
-      assert(mlir::succeeded(dimVal) &&
-             "partial MINLOC/MAXLOC reduction with invalid DIM");
-      dim = *dimVal;
-    }
-    mlir::Value dimLbound =
-        hlfir::genLBound(loc, builder, hlfir::Entity{getSource()}, dim - 1);
-    return hlfir::Entity{adjustCoor(reductionResults[0], dimLbound)};
+    return hlfir::Entity{reductionResults[0]};
   }
   // This is a total reduction, and there is no wrapping hlfir.elemental.
   // We have to pack the reduced coordinates into a rank-one array.
@@ -606,10 +579,8 @@ hlfir::Entity MinMaxlocAsElementalConverter<T>::genFinalResult(
   // for this.
   mlir::Value tempArray = builder.createTemporary(
       loc, fir::SequenceType::get(rank, getResultElementType()));
-  llvm::SmallVector<mlir::Value, maxRank> arrayLbounds =
-      hlfir::genLBounds(loc, builder, hlfir::Entity(getSource()));
   for (unsigned i = 0; i < rank; ++i) {
-    mlir::Value coor = adjustCoor(reductionResults[i], arrayLbounds[i]);
+    mlir::Value coor = reductionResults[i];
     mlir::Value idx = builder.createIntegerConstant(loc, indexType, i + 1);
     mlir::Value resultElement =
         hlfir::getElementAt(loc, builder, hlfir::Entity{tempArray}, {idx});

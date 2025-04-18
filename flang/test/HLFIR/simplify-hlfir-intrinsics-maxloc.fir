@@ -31,10 +31,8 @@ func.func @test_1d_total_expr(%input: !hlfir.expr<?xi32>, %mask: !hlfir.expr<?x!
 // CHECK:             }
 // CHECK:             fir.result %[[VAL_24:.*]]#0, %[[VAL_24]]#1, %[[VAL_24]]#2 : i32, i32, i1
 // CHECK:           }
-// CHECK:           %[[VAL_25:.*]] = fir.convert %[[VAL_26:.*]]#0 : (i32) -> index
-// CHECK:           %[[VAL_27:.*]] = fir.convert %[[VAL_25]] : (index) -> i32
 // CHECK:           %[[VAL_28:.*]] = hlfir.designate %[[VAL_7]] (%[[VAL_3]])  : (!fir.ref<!fir.array<1xi32>>, index) -> !fir.ref<i32>
-// CHECK:           hlfir.assign %[[VAL_27]] to %[[VAL_28]] : i32, !fir.ref<i32>
+// CHECK:           hlfir.assign %[[VAL_10]]#0 to %[[VAL_28]] : i32, !fir.ref<i32>
 // CHECK:           %[[VAL_29:.*]] = hlfir.as_expr %[[VAL_7]] move %[[VAL_2]] : (!fir.ref<!fir.array<1xi32>>, i1) -> !hlfir.expr<1xi32>
 // CHECK:           return %[[VAL_29]] : !hlfir.expr<1xi32>
 // CHECK:         }
@@ -74,9 +72,7 @@ func.func @test_1d_dim_expr(%input: !hlfir.expr<?xf32>, %mask: !hlfir.expr<?x!fi
 // CHECK:             }
 // CHECK:             fir.result %[[VAL_27:.*]]#0, %[[VAL_27]]#1, %[[VAL_27]]#2 : i32, f32, i1
 // CHECK:           }
-// CHECK:           %[[VAL_28:.*]] = fir.convert %[[VAL_29:.*]]#0 : (i32) -> index
-// CHECK:           %[[VAL_30:.*]] = fir.convert %[[VAL_28]] : (index) -> i32
-// CHECK:           return %[[VAL_30]] : i32
+// CHECK:           return %[[VAL_9]]#0 : i32
 // CHECK:         }
 
 func.func @test_1d_total_var(%input: !fir.box<!fir.array<?xf32>>, %mask: !hlfir.expr<?x!fir.logical<4>>) -> !hlfir.expr<1xi16> {
@@ -118,15 +114,8 @@ func.func @test_1d_total_var(%input: !fir.box<!fir.array<?xf32>>, %mask: !hlfir.
 // CHECK:             }
 // CHECK:             fir.result %[[VAL_32:.*]]#0, %[[VAL_32]]#1, %[[VAL_32]]#2 : i16, f32, i1
 // CHECK:           }
-// CHECK:           %[[VAL_33:.*]] = arith.cmpi ne, %[[VAL_34:.*]]#0, %[[VAL_6]] : i16
-// CHECK:           %[[VAL_35:.*]]:3 = fir.box_dims %[[VAL_0]], %[[VAL_7]] : (!fir.box<!fir.array<?xf32>>, index) -> (index, index, index)
-// CHECK:           %[[VAL_36:.*]] = fir.convert %[[VAL_34]]#0 : (i16) -> index
-// CHECK:           %[[VAL_37:.*]] = arith.addi %[[VAL_36]], %[[VAL_35]]#0 : index
-// CHECK:           %[[VAL_38:.*]] = arith.subi %[[VAL_37]], %[[VAL_3]] : index
-// CHECK:           %[[VAL_39:.*]] = arith.select %[[VAL_33]], %[[VAL_38]], %[[VAL_36]] : index
-// CHECK:           %[[VAL_40:.*]] = fir.convert %[[VAL_39]] : (index) -> i16
 // CHECK:           %[[VAL_41:.*]] = hlfir.designate %[[VAL_8]] (%[[VAL_3]])  : (!fir.ref<!fir.array<1xi16>>, index) -> !fir.ref<i16>
-// CHECK:           hlfir.assign %[[VAL_40]] to %[[VAL_41]] : i16, !fir.ref<i16>
+// CHECK:           hlfir.assign %[[VAL_10]]#0 to %[[VAL_41]] : i16, !fir.ref<i16>
 // CHECK:           %[[VAL_42:.*]] = hlfir.as_expr %[[VAL_8]] move %[[VAL_2]] : (!fir.ref<!fir.array<1xi16>>, i1) -> !hlfir.expr<1xi16>
 // CHECK:           return %[[VAL_42]] : !hlfir.expr<1xi16>
 // CHECK:         }
@@ -170,14 +159,7 @@ func.func @test_1d_dim_var(%input: !fir.box<!fir.array<?xf64>>, %mask: !hlfir.ex
 // CHECK:             }
 // CHECK:             fir.result %[[VAL_31:.*]]#0, %[[VAL_31]]#1, %[[VAL_31]]#2 : i64, f64, i1
 // CHECK:           }
-// CHECK:           %[[VAL_32:.*]] = arith.cmpi ne, %[[VAL_33:.*]]#0, %[[VAL_6]] : i64
-// CHECK:           %[[VAL_34:.*]]:3 = fir.box_dims %[[VAL_0]], %[[VAL_7]] : (!fir.box<!fir.array<?xf64>>, index) -> (index, index, index)
-// CHECK:           %[[VAL_35:.*]] = fir.convert %[[VAL_33]]#0 : (i64) -> index
-// CHECK:           %[[VAL_36:.*]] = arith.addi %[[VAL_35]], %[[VAL_34]]#0 : index
-// CHECK:           %[[VAL_37:.*]] = arith.subi %[[VAL_36]], %[[VAL_3]] : index
-// CHECK:           %[[VAL_38:.*]] = arith.select %[[VAL_32]], %[[VAL_37]], %[[VAL_35]] : index
-// CHECK:           %[[VAL_39:.*]] = fir.convert %[[VAL_38]] : (index) -> i64
-// CHECK:           return %[[VAL_39]] : i64
+// CHECK:           return %[[VAL_9]]#0 : i64
 // CHECK:         }
 
 func.func @test_total_expr(%input: !hlfir.expr<?x?x?xf32>, %mask: !hlfir.expr<?x?x?x!fir.logical<4>>) -> !hlfir.expr<3xi32> {
@@ -229,18 +211,12 @@ func.func @test_total_expr(%input: !hlfir.expr<?x?x?xf32>, %mask: !hlfir.expr<?x
 // CHECK:             }
 // CHECK:             fir.result %[[VAL_54:.*]]#0, %[[VAL_54]]#1, %[[VAL_54]]#2, %[[VAL_54]]#3, %[[VAL_54]]#4 : i32, i32, i32, f32, i1
 // CHECK:           }
-// CHECK:           %[[VAL_55:.*]] = fir.convert %[[VAL_56:.*]]#0 : (i32) -> index
-// CHECK:           %[[VAL_57:.*]] = fir.convert %[[VAL_55]] : (index) -> i32
 // CHECK:           %[[VAL_58:.*]] = hlfir.designate %[[VAL_9]] (%[[VAL_5]])  : (!fir.ref<!fir.array<3xi32>>, index) -> !fir.ref<i32>
-// CHECK:           hlfir.assign %[[VAL_57]] to %[[VAL_58]] : i32, !fir.ref<i32>
-// CHECK:           %[[VAL_59:.*]] = fir.convert %[[VAL_56]]#1 : (i32) -> index
-// CHECK:           %[[VAL_60:.*]] = fir.convert %[[VAL_59]] : (index) -> i32
+// CHECK:           hlfir.assign %[[VAL_14]]#0 to %[[VAL_58]] : i32, !fir.ref<i32>
 // CHECK:           %[[VAL_61:.*]] = hlfir.designate %[[VAL_9]] (%[[VAL_3]])  : (!fir.ref<!fir.array<3xi32>>, index) -> !fir.ref<i32>
-// CHECK:           hlfir.assign %[[VAL_60]] to %[[VAL_61]] : i32, !fir.ref<i32>
-// CHECK:           %[[VAL_62:.*]] = fir.convert %[[VAL_56]]#2 : (i32) -> index
-// CHECK:           %[[VAL_63:.*]] = fir.convert %[[VAL_62]] : (index) -> i32
+// CHECK:           hlfir.assign %[[VAL_14]]#1 to %[[VAL_61]] : i32, !fir.ref<i32>
 // CHECK:           %[[VAL_64:.*]] = hlfir.designate %[[VAL_9]] (%[[VAL_2]])  : (!fir.ref<!fir.array<3xi32>>, index) -> !fir.ref<i32>
-// CHECK:           hlfir.assign %[[VAL_63]] to %[[VAL_64]] : i32, !fir.ref<i32>
+// CHECK:           hlfir.assign %[[VAL_14]]#2 to %[[VAL_64]] : i32, !fir.ref<i32>
 // CHECK:           %[[VAL_65:.*]] = hlfir.as_expr %[[VAL_9]] move %[[VAL_4]] : (!fir.ref<!fir.array<3xi32>>, i1) -> !hlfir.expr<3xi32>
 // CHECK:           return %[[VAL_65]] : !hlfir.expr<3xi32>
 // CHECK:         }
@@ -313,14 +289,7 @@ func.func @test_partial_var(%input: !fir.box<!fir.array<?x?x?xf32>>, %mask: !fir
 // CHECK:               }
 // CHECK:               fir.result %[[VAL_57:.*]]#0, %[[VAL_57]]#1, %[[VAL_57]]#2 : i32, f32, i1
 // CHECK:             }
-// CHECK:             %[[VAL_58:.*]] = arith.cmpi ne, %[[VAL_59:.*]]#0, %[[VAL_5]] : i32
-// CHECK:             %[[VAL_60:.*]]:3 = fir.box_dims %[[VAL_0]], %[[VAL_7]] : (!fir.box<!fir.array<?x?x?xf32>>, index) -> (index, index, index)
-// CHECK:             %[[VAL_61:.*]] = fir.convert %[[VAL_59]]#0 : (i32) -> index
-// CHECK:             %[[VAL_62:.*]] = arith.addi %[[VAL_61]], %[[VAL_60]]#0 : index
-// CHECK:             %[[VAL_63:.*]] = arith.subi %[[VAL_62]], %[[VAL_7]] : index
-// CHECK:             %[[VAL_64:.*]] = arith.select %[[VAL_58]], %[[VAL_63]], %[[VAL_61]] : index
-// CHECK:             %[[VAL_65:.*]] = fir.convert %[[VAL_64]] : (index) -> i32
-// CHECK:             hlfir.yield_element %[[VAL_65]] : i32
+// CHECK:             hlfir.yield_element %[[VAL_17]]#0 : i32
 // CHECK:           }
 // CHECK:           return %[[VAL_14]] : !hlfir.expr<?x?xi32>
 // CHECK:         }
