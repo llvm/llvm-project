@@ -691,7 +691,7 @@ Options::processAndFilterOutInstallAPIOptions(ArrayRef<const char *> Args) {
     if (A->getOption().getID() > (unsigned)OPT_UNKNOWN) {
       ClangDriverArgs.push_back(A->getSpelling().data());
     } else
-      llvm::copy(A->getValues(), std::back_inserter(ClangDriverArgs));
+      llvm::append_range(ClangDriverArgs, A->getValues());
   }
   return ClangDriverArgs;
 }
@@ -751,7 +751,7 @@ Options::Options(DiagnosticsEngine &Diag, FileManager *FM,
     if (A->isClaimed())
       continue;
     FrontendArgs.emplace_back(A->getSpelling());
-    llvm::copy(A->getValues(), std::back_inserter(FrontendArgs));
+    llvm::append_range(FrontendArgs, A->getValues());
   }
 }
 
