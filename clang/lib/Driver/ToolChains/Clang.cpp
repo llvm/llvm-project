@@ -7681,7 +7681,13 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (Args.hasArg(options::OPT_fretain_comments_from_system_headers))
     CmdArgs.push_back("-fretain-comments-from-system-headers");
 
-  Args.AddLastArg(CmdArgs, options::OPT_fextend_variable_liveness_EQ);
+  if (Arg *A = Args.getLastArg(options::OPT_fextend_variable_liveness_EQ)) {
+    A->render(Args, CmdArgs);
+  } else if (Arg *A = Args.getLastArg(options::OPT_O_Group);
+             A && A->containsValue("g")) {
+    // Set -fextend-variable-liveness=all by default at -Og.
+    CmdArgs.push_back("-fextend-variable-liveness=all");
+  }
 
   // Forward -fcomment-block-commands to -cc1.
   Args.AddAllArgs(CmdArgs, options::OPT_fcomment_block_commands);
@@ -9260,6 +9266,11 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
         else if (ShouldForward(LinkerOptions, A))
           A->render(Args, LinkerArgs);
       }
+
+      // If this is OpenMP the device linker will need `-lompdevice`.
+      if (Kind == Action::OFK_OpenMP && !Args.hasArg(OPT_no_offloadlib) &&
+          (TC->getTriple().isAMDGPU() || TC->getTriple().isNVPTX()))
+        LinkerArgs.emplace_back("-lompdevice");
 
       // Forward all of these to the appropriate toolchain.
       for (StringRef Arg : CompilerArgs)

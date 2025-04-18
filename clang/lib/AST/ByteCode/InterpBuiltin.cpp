@@ -1651,6 +1651,41 @@ static bool interp__builtin_operator_delete(InterpState &S, CodePtr OpPC,
   const Expr *Source = nullptr;
   const Block *BlockToDelete = nullptr;
 
+  if (S.checkingPotentialConstantExpression())
+    return false;
+
+  // This is permitted only within a call to std::allocator<T>::deallocate.
+  bool DeallocateFrameFound = false;
+  for (const InterpFrame *F = Frame; F; F = F->Caller) {
+    const Function *Func = F->getFunction();
+    if (!Func)
+      continue;
+    const auto *MD = dyn_cast_if_present<CXXMethodDecl>(Func->getDecl());
+    if (!MD)
+      continue;
+    const IdentifierInfo *FnII = MD->getIdentifier();
+    if (!FnII || !FnII->isStr("deallocate"))
+      continue;
+
+    const auto *CTSD =
+        dyn_cast<ClassTemplateSpecializationDecl>(MD->getParent());
+    if (!CTSD)
+      continue;
+
+    const IdentifierInfo *ClassII = CTSD->getIdentifier();
+    const TemplateArgumentList &TAL = CTSD->getTemplateArgs();
+    if (CTSD->isInStdNamespace() && ClassII && ClassII->isStr("allocator") &&
+        TAL.size() >= 1 && TAL[0].getKind() == TemplateArgument::Type) {
+      DeallocateFrameFound = true;
+      break;
+    }
+  }
+
+  if (!DeallocateFrameFound) {
+    S.FFDiag(Call);
+    return true;
+  }
+
   {
     const Pointer &Ptr = S.Stk.peek<Pointer>();
 
@@ -1872,7 +1907,23 @@ static bool interp__builtin_memcpy(InterpState &S, CodePtr OpPC,
     return false;
   }
 
-  // Check if we have enough elements to read from and write to/
+  if (DestElemType->isIncompleteType() ||
+      DestPtr.getType()->isIncompleteType()) {
+    QualType DiagType =
+        DestElemType->isIncompleteType() ? DestElemType : DestPtr.getType();
+    S.FFDiag(S.Current->getSource(OpPC),
+             diag::note_constexpr_memcpy_incomplete_type)
+        << Move << DiagType;
+    return false;
+  }
+
+  if (!DestElemType.isTriviallyCopyableType(ASTCtx)) {
+    S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_memcpy_nontrivial)
+        << Move << DestElemType;
+    return false;
+  }
+
+  // Check if we have enough elements to read from and write to.
   size_t RemainingDestBytes = RemainingDestElems * DestElemSize;
   size_t RemainingSrcBytes = RemainingSrcElems * SrcElemSize;
   if (Size.ugt(RemainingDestBytes) || Size.ugt(RemainingSrcBytes)) {

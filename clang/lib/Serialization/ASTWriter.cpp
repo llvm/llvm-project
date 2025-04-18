@@ -5670,14 +5670,16 @@ void ASTWriter::PrepareWritingSpecialDecls(Sema &SemaRef) {
     llvm::SmallVector<const IdentifierInfo*, 256> IIs;
     for (const auto &ID : SemaRef.PP.getIdentifierTable()) {
       const IdentifierInfo *II = ID.second;
-      if (!Chain || !II->isFromAST() || II->hasChangedSinceDeserialization())
+      if (!Chain || !II->isFromAST() || II->hasChangedSinceDeserialization() ||
+          II->hasFETokenInfoChangedSinceDeserialization())
         IIs.push_back(II);
     }
     // Sort the identifiers to visit based on their name.
     llvm::sort(IIs, llvm::deref<std::less<>>());
+    const LangOptions &LangOpts = getLangOpts();
     for (const IdentifierInfo *II : IIs)
-      for (const Decl *D : SemaRef.IdResolver.decls(II))
-        GetDeclRef(D);
+      for (NamedDecl *D : SemaRef.IdResolver.decls(II))
+        GetDeclRef(getDeclForLocalLookup(LangOpts, D));
   }
 
   // Write all of the DeclsToCheckForDeferredDiags.
@@ -8780,10 +8782,10 @@ void ASTRecordWriter::writeOpenACCClause(const OpenACCClause *C) {
     writeSourceLocation(DTC->getLParenLoc());
     writeUInt32(DTC->getArchitectures().size());
     for (const DeviceTypeArgument &Arg : DTC->getArchitectures()) {
-      writeBool(Arg.first);
-      if (Arg.first)
-        AddIdentifierRef(Arg.first);
-      writeSourceLocation(Arg.second);
+      writeBool(Arg.getIdentifierInfo());
+      if (Arg.getIdentifierInfo())
+        AddIdentifierRef(Arg.getIdentifierInfo());
+      writeSourceLocation(Arg.getLoc());
     }
     return;
   }
