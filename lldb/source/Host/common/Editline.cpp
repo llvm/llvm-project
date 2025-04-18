@@ -567,9 +567,6 @@ int Editline::GetCharacter(EditLineGetCharType *c) {
     m_needs_prompt_repaint = false;
   }
 
-  if (m_redraw_callback)
-    m_redraw_callback();
-
   if (m_multiline_enabled) {
     // Detect when the number of rows used for this input line changes due to
     // an edit
@@ -585,54 +582,56 @@ int Editline::GetCharacter(EditLineGetCharType *c) {
     m_current_line_rows = new_line_rows;
   }
 
+  if (m_terminal_size_has_changed)
+    ApplyTerminalSizeChange();
+
+  // This mutex is locked by our caller (GetLine). Unlock it while we read a
+  // character (blocking operation), so we do not hold the mutex
+  // indefinitely. This gives a chance for someone to interrupt us. After
+  // Read returns, immediately lock the mutex again and check if we were
+  // interrupted.
+  m_locked_output.reset();
+
+  if (m_redraw_callback)
+    m_redraw_callback();
+
   // Read an actual character
-  while (true) {
-    lldb::ConnectionStatus status = lldb::eConnectionStatusSuccess;
-    char ch = 0;
+  lldb::ConnectionStatus status = lldb::eConnectionStatusSuccess;
+  char ch = 0;
+  int read_count =
+      m_input_connection.Read(&ch, 1, std::nullopt, status, nullptr);
 
-    if (m_terminal_size_has_changed)
-      ApplyTerminalSizeChange();
-
-    // This mutex is locked by our caller (GetLine). Unlock it while we read a
-    // character (blocking operation), so we do not hold the mutex
-    // indefinitely. This gives a chance for someone to interrupt us. After
-    // Read returns, immediately lock the mutex again and check if we were
-    // interrupted.
-    m_locked_output.reset();
-    int read_count =
-        m_input_connection.Read(&ch, 1, std::nullopt, status, nullptr);
-    m_locked_output.emplace(m_output_stream_sp->Lock());
-    if (m_editor_status == EditorStatus::Interrupted) {
-      while (read_count > 0 && status == lldb::eConnectionStatusSuccess)
-        read_count =
-            m_input_connection.Read(&ch, 1, std::nullopt, status, nullptr);
-      lldbassert(status == lldb::eConnectionStatusInterrupted);
-      return 0;
-    }
-
-    if (read_count) {
-      if (CompleteCharacter(ch, *c))
-        return 1;
-    } else {
-      switch (status) {
-      case lldb::eConnectionStatusSuccess: // Success
-        break;
-
-      case lldb::eConnectionStatusInterrupted:
-        llvm_unreachable("Interrupts should have been handled above.");
-
-      case lldb::eConnectionStatusError:        // Check GetError() for details
-      case lldb::eConnectionStatusTimedOut:     // Request timed out
-      case lldb::eConnectionStatusEndOfFile:    // End-of-file encountered
-      case lldb::eConnectionStatusNoConnection: // No connection
-      case lldb::eConnectionStatusLostConnection: // Lost connection while
-                                                  // connected to a valid
-                                                  // connection
-        m_editor_status = EditorStatus::EndOfInput;
-        return 0;
-      }
-    }
+  // Re-lock the output mutex to protected m_editor_status here and in the
+  // switch below.
+  m_locked_output.emplace(m_output_stream_sp->Lock());
+  if (m_editor_status == EditorStatus::Interrupted) {
+    while (read_count > 0 && status == lldb::eConnectionStatusSuccess)
+      read_count =
+          m_input_connection.Read(&ch, 1, std::nullopt, status, nullptr);
+    lldbassert(status == lldb::eConnectionStatusInterrupted);
+    return 0;
   }
+
+  if (read_count) {
+    if (CompleteCharacter(ch, *c))
+      return 1;
+    return 0;
+  }
+
+  switch (status) {
+  case lldb::eConnectionStatusSuccess:
+    llvm_unreachable("Success should have resulted in positive read_count.");
+  case lldb::eConnectionStatusInterrupted:
+    llvm_unreachable("Interrupts should have been handled above.");
+  case lldb::eConnectionStatusError:
+  case lldb::eConnectionStatusTimedOut:
+  case lldb::eConnectionStatusEndOfFile:
+  case lldb::eConnectionStatusNoConnection:
+  case lldb::eConnectionStatusLostConnection:
+    m_editor_status = EditorStatus::EndOfInput;
+  }
+
+  return 0;
 }
 
 const char *Editline::Prompt() {
