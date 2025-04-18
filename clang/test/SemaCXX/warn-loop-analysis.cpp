@@ -318,8 +318,11 @@ void test1() {
 
 void test2() {
   int a = 0;
+  int *c = &a;
+
   auto incr_a = [a]() {  };
   auto incr_b = [](int b) { };
+  auto incr_c = [c]() { ++*c; };
 
   for (int b = 10; a <= b; incr_a()) // expected-warning {{variables 'a' and 'b' used in loop condition not modified in loop body}}
     foo(a);
@@ -332,5 +335,9 @@ void test2() {
 
   for (int b = 10; a <= b;) // expected-warning {{variables 'a' and 'b' used in loop condition not modified in loop body}}
     incr_b(b);
+
+  // FIXME: handle modification of loop control variable inside lambda body
+  for (a = 10; a <= 20; incr_c()) // expected-warning {{variable 'a' used in loop condition not modified in loop body}}
+    foo(a);
 }
 }
