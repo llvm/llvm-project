@@ -409,7 +409,7 @@ void collapse_tile_depth() {
   }
 }
 void no_dupes_since_last_device_type() {
-  // expected-error@+3{{OpenACC 'tile' clause cannot appear more than once on a 'loop' directive in a 'device_type' region}}
+  // expected-error@+3{{OpenACC 'tile' clause cannot appear more than once in a 'device_type' region on a 'loop' directive}}
   // expected-note@+2{{previous clause is here}}
   // expected-note@+1{{previous clause is here}}
 #pragma acc loop tile(1) device_type(*) tile(1) tile(2)

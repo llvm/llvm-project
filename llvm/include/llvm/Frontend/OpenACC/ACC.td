@@ -333,18 +333,18 @@ def ACC_Kernels : Directive<"kernels"> {
     VersionedClause<ACCC_Create>,
     VersionedClause<ACCC_DeviceType>,
     VersionedClause<ACCC_NoCreate>,
+    VersionedClause<ACCC_NumGangs>,
+    VersionedClause<ACCC_NumWorkers>,
     VersionedClause<ACCC_Present>,
     VersionedClause<ACCC_DevicePtr>,
+    VersionedClause<ACCC_VectorLength>,
     VersionedClause<ACCC_Wait>
   ];
   let allowedOnceClauses = [
     VersionedClause<ACCC_Async>,
     VersionedClause<ACCC_Default>,
     VersionedClause<ACCC_If>,
-    VersionedClause<ACCC_NumGangs>,
-    VersionedClause<ACCC_NumWorkers>,
-    VersionedClause<ACCC_Self>,
-    VersionedClause<ACCC_VectorLength>
+    VersionedClause<ACCC_Self>
   ];
   let association = AS_Block;
   let category = CA_Executable;

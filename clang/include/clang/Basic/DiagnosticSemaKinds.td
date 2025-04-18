@@ -12971,8 +12971,8 @@ def err_acc_clause_routine_one_of_in_region
     : Error<"OpenACC 'routine' construct must have at least one 'gang', 'seq', "
             "'vector', or 'worker' clause that applies to each 'device_type'">;
 def err_acc_clause_since_last_device_type
-    : Error<"OpenACC '%0' clause cannot appear more than once on a '%1' "
-            "directive %select{|in a 'device_type' region}2}">;
+    : Error<"OpenACC '%0' clause cannot appear more than once%select{| in a "
+            "'device_type' region}2 on a '%1' directive">;
 
 def err_acc_reduction_num_gangs_conflict
     : Error<"OpenACC '%1' clause %select{|with more than 1 argument }0may not "

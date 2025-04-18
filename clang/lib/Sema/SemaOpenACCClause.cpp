@@ -334,6 +334,7 @@ class SemaOpenACCClauseVisitor {
   }
 
   // For 'tile' and 'collapse', only allow 1 per 'device_type'.
+  // Also applies to num_worker, num_gangs, and vector_length.
   template <typename TheClauseTy>
   bool DisallowSinceLastDeviceType(SemaOpenACC::OpenACCParsedClause &Clause) {
     auto LastDeviceTypeItr =
@@ -356,7 +357,6 @@ class SemaOpenACCClauseVisitor {
       SemaRef.Diag((*LastDeviceTypeItr)->getBeginLoc(),
                    diag::note_acc_previous_clause_here);
 
-    // TODO: DIAG
     return true;
   }
 
@@ -483,6 +483,9 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitSelfClause(
 OpenACCClause *SemaOpenACCClauseVisitor::VisitNumGangsClause(
     SemaOpenACC::OpenACCParsedClause &Clause) {
 
+  if (DisallowSinceLastDeviceType<OpenACCNumGangsClause>(Clause))
+    return nullptr;
+
   // num_gangs requires at least 1 int expr in all forms.  Diagnose here, but
   // allow us to continue, an empty clause might be useful for future
   // diagnostics.
@@ -573,6 +576,9 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitNumGangsClause(
 OpenACCClause *SemaOpenACCClauseVisitor::VisitNumWorkersClause(
     SemaOpenACC::OpenACCParsedClause &Clause) {
 
+  if (DisallowSinceLastDeviceType<OpenACCNumWorkersClause>(Clause))
+    return nullptr;
+
   // OpenACC 3.3 Section 2.9.2:
   // An argument is allowed only when the 'num_workers' does not appear on the
   // kernels construct.
@@ -601,6 +607,10 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitNumWorkersClause(
 
 OpenACCClause *SemaOpenACCClauseVisitor::VisitVectorLengthClause(
     SemaOpenACC::OpenACCParsedClause &Clause) {
+
+  if (DisallowSinceLastDeviceType<OpenACCVectorLengthClause>(Clause))
+    return nullptr;
+
   // OpenACC 3.3 Section 2.9.4:
   // An argument is allowed only when the 'vector_length' does not appear on the
   // 'kernels' construct.
