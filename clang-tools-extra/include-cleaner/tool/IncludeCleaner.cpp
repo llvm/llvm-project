@@ -90,10 +90,21 @@ cl::opt<bool> Edit{
     cl::desc("Apply edits to analyzed source files"),
     cl::cat(IncludeCleaner),
 };
-
+cl::opt<bool> Insert{
+    "insert",
+    cl::desc("Allow header insertions"),
+    cl::init(true),
+    cl::cat(IncludeCleaner),
+};
+cl::opt<bool> Remove{
+    "remove",
+    cl::desc("Allow header removals"),
+    cl::init(true),
+    cl::cat(IncludeCleaner),
+};
 cl::opt<bool> DisableInsert{
     "disable-insert",
-    cl::desc("DIsable header insertions"),
+    cl::desc("Disable header insertions"),
     cl::init(false),
     cl::cat(IncludeCleaner),
 };
@@ -183,9 +194,9 @@ private:
     auto Results =
         analyze(AST.Roots, PP.MacroReferences, PP.Includes, &PI,
                 getCompilerInstance().getPreprocessor(), HeaderFilter);
-    if (DisableInsert)
+    if (!Insert || DisableInsert)
       Results.Missing.clear();
-    if (DisableRemove)
+    if (!Remove || DisableRemove)
       Results.Unused.clear();
     std::string Final = fixIncludes(Results, AbsPath, Code, getStyle(AbsPath));
 
