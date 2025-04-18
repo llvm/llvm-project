@@ -1247,8 +1247,8 @@ CodeGenFunction::emitCountedByMemberSize(const Expr *E, llvm::Value *EmittedE,
       }
 
       //  field_offset += index * casted_field_base_size;
-      Value *Mul = Builder.CreateMul(Index, CastedArrayElementSize, "field_offset",
-                                     !IsSigned, IsSigned);
+      Value *Mul = Builder.CreateMul(Index, CastedArrayElementSize,
+                                     "field_offset", !IsSigned, IsSigned);
       FieldOffset = Builder.CreateAdd(FieldOffset, Mul);
     }
     // Option (3) '&ptr->field', and Option (4) continuation.
