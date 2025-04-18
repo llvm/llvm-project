@@ -3085,8 +3085,9 @@ floating-point control modes and the treatment of status bits respectively.
 An operand bundle tagged with "fp.control" contains information about the
 control modes used for the operation execution. Operands specified in this
 bundle represent particular options. Currently, only rounding mode is supported.
-It is represented by a metadata string value, which specifies the rounding mode
-to be used for the operation evaluation. Possible values are:
+
+Rounding mode is represented by a metadata string value, which specifies the
+the mode used for the operation evaluation. Possible values are:
 
 ::
 
@@ -3097,10 +3098,10 @@ to be used for the operation evaluation. Possible values are:
     "rmm"  - to nearest, ties away from zero
     "dyn"  - rounding mode is taken from control register
 
-If "fp.control" is absent, the default rounding rounding mode is taken from the
-control register (dynamic rounding). In the particular case of
-:ref:`default floating-point environment <floatenv>`, it must be rounding to
-nearest, ties to even.
+Only one such value may be specified. If "fp.control" is absent, the default
+rounding rounding mode is taken from the control register (dynamic rounding).
+In the particular case of :ref:`default floating-point environment <floatenv>`,
+the operation uses rounding to nearest, ties to even.
 
 An operand bundle tagged with "fp.except" may be associated with operations
 that can read or write floating-point exception flags. It contains a single
