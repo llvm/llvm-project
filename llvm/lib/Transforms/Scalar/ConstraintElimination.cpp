@@ -1738,9 +1738,7 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
                                  OptimizationRemarkEmitter &ORE) {
   bool Changed = false;
   DT.updateDFSNumbers();
-  SmallVector<Value *> FunctionArgs;
-  for (Value &Arg : F.args())
-    FunctionArgs.push_back(&Arg);
+  SmallVector<Value *> FunctionArgs(llvm::make_pointer_range(F.args()));
   ConstraintInfo Info(F.getDataLayout(), FunctionArgs);
   State S(DT, LI, SE);
   std::unique_ptr<Module> ReproducerModule(
