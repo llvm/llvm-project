@@ -524,6 +524,9 @@ float DataReader::evaluateProfileData(BinaryFunction &BF,
       // when we identify tail calls, so they are still represented
       // by regular branch instructions and we need isBranch() here.
       MCInst *Instr = BF.getInstructionAtOffset(BI.From.Offset);
+      // If it's a RISCV PseudoCALL - fix it
+      if (!Instr && BC.isRISCV())
+        Instr = BF.getInstructionAtOffset(BI.From.Offset + 4);
       // If it's a prefix - skip it.
       if (Instr && BC.MIB->isPrefix(*Instr))
         Instr = BF.getInstructionAtOffset(BI.From.Offset + 1);
