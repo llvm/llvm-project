@@ -2661,9 +2661,6 @@ public:
   /// Return if this MulAcc recipe contains extend instructions.
   bool isExtended() const { return ExtOp != Instruction::CastOps::CastOpsEnd; }
 
-  /// Return if the operands of mul instruction come from same extend.
-  bool isSameExtend() const { return getVecOp0() == getVecOp1(); }
-
   /// Return the opcode of the underlying extend.
   Instruction::CastOps getExtOpcode() const { return ExtOp; }
 
@@ -3902,8 +3899,6 @@ public:
     VFs.clear();
     VFs.insert(VF);
   }
-
-  void removeVF(ElementCount VF) { VFs.remove(VF); }
 
   bool hasVF(ElementCount VF) const { return VFs.count(VF); }
   bool hasScalableVF() const {

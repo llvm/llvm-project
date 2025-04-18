@@ -2390,9 +2390,8 @@ void VPlanTransforms::createInterleaveGroups(
 
 // Expand VPExtendedReductionRecipe to VPWidenCastRecipe + VPReductionRecipe.
 static void expandVPExtendedReduction(VPExtendedReductionRecipe *ExtRed) {
-  // Genearte VPWidenCastRecipe.
   VPWidenCastRecipe *Ext;
-  // Only ZExt contiains non-neg flags.
+  // Only ZExt contains non-neg flags.
   if (ExtRed->isZExt())
     Ext = new VPWidenCastRecipe(ExtRed->getExtOpcode(), ExtRed->getVecOp(),
                                 ExtRed->getResultType(), ExtRed->isNonNeg(),
@@ -2401,7 +2400,6 @@ static void expandVPExtendedReduction(VPExtendedReductionRecipe *ExtRed) {
     Ext = new VPWidenCastRecipe(ExtRed->getExtOpcode(), ExtRed->getVecOp(),
                                 ExtRed->getResultType(), ExtRed->getDebugLoc());
 
-  // Generate VPreductionRecipe.
   auto *Red = new VPReductionRecipe(
       ExtRed->getRecurrenceKind(), FastMathFlags(), ExtRed->getChainOp(), Ext,
       ExtRed->getCondOp(), ExtRed->isOrdered(), ExtRed->getDebugLoc());
@@ -2450,7 +2448,6 @@ expandVPMulAccumulateReduction(VPMulAccumulateReductionRecipe *MulAcc) {
     Op1 = MulAcc->getVecOp1();
   }
 
-  // Generate VPWidenRecipe.
   std::array<VPValue *, 2> MulOps = {Op0, Op1};
   auto *Mul = new VPWidenRecipe(
       Instruction::Mul, make_range(MulOps.begin(), MulOps.end()),
@@ -2458,7 +2455,6 @@ expandVPMulAccumulateReduction(VPMulAccumulateReductionRecipe *MulAcc) {
       MulAcc->getDebugLoc());
   Mul->insertBefore(MulAcc);
 
-  // Generate VPReductionRecipe.
   auto *Red = new VPReductionRecipe(
       MulAcc->getRecurrenceKind(), FastMathFlags(), MulAcc->getChainOp(), Mul,
       MulAcc->getCondOp(), MulAcc->isOrdered(), MulAcc->getDebugLoc());
@@ -2636,7 +2632,7 @@ void VPlanTransforms::handleUncountableEarlyExit(
 
 /// This function tries convert extended in-loop reductions to
 /// VPExtendedReductionRecipe and clamp the \p Range if it is beneficial and
-/// valid. The created VPExtendedReductionRecipe must be lower to concrete
+/// valid. The created recipe must be lowered to concrete
 /// recipes before execution.
 static VPExtendedReductionRecipe *
 tryToMatchAndCreateExtendedReduction(VPReductionRecipe *Red, VPCostContext &Ctx,
@@ -2646,7 +2642,7 @@ tryToMatchAndCreateExtendedReduction(VPReductionRecipe *Red, VPCostContext &Ctx,
   Type *RedTy = Ctx.Types.inferScalarType(Red);
   VPValue *VecOp = Red->getVecOp();
 
-  // Test if using extended-reduction is beneficial and clamp the range.
+  // Test if using extended-reduction is profitable and clamp the range.
   auto IsExtendedRedValidAndClampRange = [&](unsigned Opcode, bool isZExt,
                                              Type *SrcTy) -> bool {
     return LoopVectorizationPlanner::getDecisionAndClampRange(
@@ -2665,7 +2661,7 @@ tryToMatchAndCreateExtendedReduction(VPReductionRecipe *Red, VPCostContext &Ctx,
   };
 
   VPValue *A;
-  // Matched reduce(ext)).
+  // Match reduce(ext)).
   if (match(VecOp, m_ZExtOrSExt(m_VPValue(A))) &&
       IsExtendedRedValidAndClampRange(
           RecurrenceDescriptor::getOpcode(Red->getRecurrenceKind()),
@@ -2734,7 +2730,7 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
         dyn_cast_if_present<VPWidenCastRecipe>(B->getDefiningRecipe());
     auto *Mul = cast<VPWidenRecipe>(VecOp->getDefiningRecipe());
 
-    // Matched reduce.add(mul(ext, ext))
+    // Match reduce.add(mul(ext, ext))
     if (RecipeA && RecipeB &&
         (RecipeA->getOpcode() == RecipeB->getOpcode() || A == B) &&
         match(RecipeA, m_ZExtOrSExt(m_VPValue())) &&
@@ -2744,11 +2740,11 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
                                    Mul, RecipeA, RecipeB, nullptr))
       return new VPMulAccumulateReductionRecipe(Red, Mul, RecipeA, RecipeB,
                                                 RecipeA->getResultType());
-    // Matched reduce.add(mul)
+    // Match reduce.add(mul)
     if (IsMulAccValidAndClampRange(true, Mul, nullptr, nullptr, nullptr))
       return new VPMulAccumulateReductionRecipe(Red, Mul);
   }
-  // Matched reduce.add(ext(mul(ext(A), ext(B))))
+  // Match reduce.add(ext(mul(ext(A), ext(B))))
   // All extend recipes must have same opcode or A == B
   // which can be transform to reduce.add(zext(mul(sext(A), sext(B)))).
   if (match(VecOp, m_ZExtOrSExt(m_Mul(m_ZExtOrSExt(m_VPValue()),

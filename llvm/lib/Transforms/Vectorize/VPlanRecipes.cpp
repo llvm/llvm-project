@@ -2494,7 +2494,7 @@ InstructionCost VPReductionRecipe::computeCost(ElementCount VF,
       "Any-of reduction not implemented in VPlan-based cost model currently.");
 
   // Note that TTI should model the cost of moving result to the scalar register
-  // and the binOp cost in the getReductionCost().
+  // and the BinOp cost in the getReductionCost().
   if (RecurrenceDescriptor::isMinMaxRecurrenceKind(RdxKind)) {
     Intrinsic::ID Id = getMinMaxReductionIntrinsicOp(RdxKind);
     return Ctx.TTI.getMinMaxReductionCost(Id, VectorTy, FMFs, Ctx.CostKind);

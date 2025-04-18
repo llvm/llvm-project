@@ -28,7 +28,7 @@ class PredicatedScalarEvolution;
 class TargetLibraryInfo;
 class VPBuilder;
 class VPRecipeBuilder;
-class VPCostContext;
+struct VPCostContext;
 struct VFRange;
 
 extern cl::opt<bool> VerifyEachVPlan;
