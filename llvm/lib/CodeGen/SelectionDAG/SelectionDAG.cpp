@@ -5687,8 +5687,6 @@ bool SelectionDAG::isKnownNeverNaN(SDValue Op, bool SNaN, unsigned Depth) const 
     // TODO: Refine on operand
     return false;
   }
-  case ISD::FMINNUM:
-  case ISD::FMAXNUM:
   case ISD::FMINIMUMNUM:
   case ISD::FMAXIMUMNUM: {
     // Only one needs to be known not-nan, since it will be returned if the
@@ -5696,6 +5694,8 @@ bool SelectionDAG::isKnownNeverNaN(SDValue Op, bool SNaN, unsigned Depth) const 
     return isKnownNeverNaN(Op.getOperand(0), SNaN, Depth + 1) ||
            isKnownNeverNaN(Op.getOperand(1), SNaN, Depth + 1);
   }
+  case ISD::FMINNUM:
+  case ISD::FMAXNUM:
   case ISD::FMINNUM_IEEE:
   case ISD::FMAXNUM_IEEE: {
     if (SNaN)
@@ -5709,7 +5709,8 @@ bool SelectionDAG::isKnownNeverNaN(SDValue Op, bool SNaN, unsigned Depth) const 
   }
   case ISD::FMINIMUM:
   case ISD::FMAXIMUM: {
-    // TODO: Does this quiet or return the origina NaN as-is?
+    if (SNaN)
+      return true;
     return isKnownNeverNaN(Op.getOperand(0), SNaN, Depth + 1) &&
            isKnownNeverNaN(Op.getOperand(1), SNaN, Depth + 1);
   }
