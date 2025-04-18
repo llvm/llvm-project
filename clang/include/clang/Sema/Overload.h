@@ -1350,6 +1350,9 @@ class Sema;
     iterator end() { return Candidates.end(); }
 
     size_t size() const { return Candidates.size() + DeferredCandidatesCount; }
+
+    size_t nonDeferredCandidatesCount() const { return Candidates.size(); }
+
     bool empty() const {
       return Candidates.empty() && DeferredCandidatesCount == 0;
     }
