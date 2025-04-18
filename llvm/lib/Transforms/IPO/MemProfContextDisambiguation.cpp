@@ -4099,14 +4099,14 @@ bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::assignFunctions() {
         assert(FuncClonesToCallMap.count(FuncClone));
         std::map<CallInfo, CallInfo> &CallMap = FuncClonesToCallMap[FuncClone];
         CallInfo CallClone(Call);
-        if (CallMap.count(Call))
-          CallClone = CallMap[Call];
+        if (auto It = CallMap.find(Call); It != CallMap.end())
+          CallClone = It->second;
         CallsiteClone->setCall(CallClone);
         // Need to do the same for all matching calls.
         for (auto &MatchingCall : Node->MatchingCalls) {
           CallInfo CallClone(MatchingCall);
-          if (CallMap.count(MatchingCall))
-            CallClone = CallMap[MatchingCall];
+          if (auto It = CallMap.find(MatchingCall); It != CallMap.end())
+            CallClone = It->second;
           // Updates the call in the list.
           MatchingCall = CallClone;
         }
