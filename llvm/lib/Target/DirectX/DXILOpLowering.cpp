@@ -8,7 +8,6 @@
 
 #include "DXILOpLowering.h"
 #include "DXILConstants.h"
-#include "DXILIntrinsicExpansion.h"
 #include "DXILOpBuilder.h"
 #include "DXILShaderFlags.h"
 #include "DirectX.h"
@@ -27,6 +26,7 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/FormatVariadic.h"
 
 #define DEBUG_TYPE "dxil-op-lower"
 
@@ -756,8 +756,11 @@ public:
       case Intrinsic::not_intrinsic:
         continue;
       default: {
-        DiagnosticInfoUnsupported Diag(
-            F, "Unsupported intrinsic for DXIL lowering");
+        std::string Msg =
+            llvm::formatv("Unsupported intrinsic {0} for DXIL lowering",
+                          F.getName())
+                .str();
+        DiagnosticInfoUnsupported Diag(F, Msg);
         M.getContext().diagnose(Diag);
         HasErrors |= true;
         break;
