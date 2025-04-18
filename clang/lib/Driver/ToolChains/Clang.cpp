@@ -7681,7 +7681,13 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (Args.hasArg(options::OPT_fretain_comments_from_system_headers))
     CmdArgs.push_back("-fretain-comments-from-system-headers");
 
-  Args.AddLastArg(CmdArgs, options::OPT_fextend_variable_liveness_EQ);
+  if (Arg *A = Args.getLastArg(options::OPT_fextend_variable_liveness_EQ)) {
+    A->render(Args, CmdArgs);
+  } else if (Arg *A = Args.getLastArg(options::OPT_O_Group);
+             A && A->containsValue("g")) {
+    // Set -fextend-variable-liveness=all by default at -Og.
+    CmdArgs.push_back("-fextend-variable-liveness=all");
+  }
 
   // Forward -fcomment-block-commands to -cc1.
   Args.AddAllArgs(CmdArgs, options::OPT_fcomment_block_commands);
@@ -7743,6 +7749,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   Args.addOptInFlag(CmdArgs, options::OPT_fexperimental_late_parse_attributes,
                     options::OPT_fno_experimental_late_parse_attributes);
+
+  Args.addOptInFlag(CmdArgs, options::OPT_funique_source_file_names,
+                    options::OPT_fno_unique_source_file_names);
 
   // Setup statistics file output.
   SmallString<128> StatsFile = getStatsFileName(Args, Output, Input, D);

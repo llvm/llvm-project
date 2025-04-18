@@ -246,14 +246,11 @@ static void ComputePTXValueVTs(const TargetLowering &TLI, const DataLayout &DL,
   SmallVector<uint64_t, 16> TempOffsets;
 
   // Special case for i128 - decompose to (i64, i64)
-  if (Ty->isIntegerTy(128)) {
-    ValueVTs.push_back(EVT(MVT::i64));
-    ValueVTs.push_back(EVT(MVT::i64));
+  if (Ty->isIntegerTy(128) || Ty->isFP128Ty()) {
+    ValueVTs.append({MVT::i64, MVT::i64});
 
-    if (Offsets) {
-      Offsets->push_back(StartingOffset + 0);
-      Offsets->push_back(StartingOffset + 8);
-    }
+    if (Offsets)
+      Offsets->append({StartingOffset + 0, StartingOffset + 8});
 
     return;
   }
@@ -1165,11 +1162,6 @@ NVPTXTargetLowering::LowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const {
   return DAG.getNode(NVPTXISD::Wrapper, dl, PtrVT, Op);
 }
 
-static bool IsTypePassedAsArray(const Type *Ty) {
-  return Ty->isAggregateType() || Ty->isVectorTy() || Ty->isIntegerTy(128) ||
-         Ty->isHalfTy() || Ty->isBFloatTy();
-}
-
 std::string NVPTXTargetLowering::getPrototype(
     const DataLayout &DL, Type *retTy, const ArgListTy &Args,
     const SmallVectorImpl<ISD::OutputArg> &Outs, MaybeAlign retAlignment,
@@ -1186,7 +1178,7 @@ std::string NVPTXTargetLowering::getPrototype(
   } else {
     O << "(";
     if ((retTy->isFloatingPointTy() || retTy->isIntegerTy()) &&
-        !IsTypePassedAsArray(retTy)) {
+        !shouldPassAsArray(retTy)) {
       unsigned size = 0;
       if (auto *ITy = dyn_cast<IntegerType>(retTy)) {
         size = ITy->getBitWidth();
@@ -1203,7 +1195,7 @@ std::string NVPTXTargetLowering::getPrototype(
       O << ".param .b" << size << " _";
     } else if (isa<PointerType>(retTy)) {
       O << ".param .b" << PtrVT.getSizeInBits() << " _";
-    } else if (IsTypePassedAsArray(retTy)) {
+    } else if (shouldPassAsArray(retTy)) {
       O << ".param .align " << (retAlignment ? retAlignment->value() : 0)
         << " .b8 _[" << DL.getTypeAllocSize(retTy) << "]";
     } else {
@@ -1224,7 +1216,7 @@ std::string NVPTXTargetLowering::getPrototype(
     first = false;
 
     if (!Outs[OIdx].Flags.isByVal()) {
-      if (IsTypePassedAsArray(Ty)) {
+      if (shouldPassAsArray(Ty)) {
         Align ParamAlign =
             getArgumentAlignment(&CB, Ty, i + AttributeList::FirstArgIndex, DL);
         O << ".param .align " << ParamAlign.value() << " .b8 ";
@@ -1529,7 +1521,7 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     SDVTList DeclareParamVTs = DAG.getVTList(MVT::Other, MVT::Glue);
 
     bool NeedAlign; // Does argument declaration specify alignment?
-    bool PassAsArray = IsByVal || IsTypePassedAsArray(Ty);
+    const bool PassAsArray = IsByVal || shouldPassAsArray(Ty);
     if (IsVAArg) {
       if (ParamCount == FirstVAArg) {
         SDValue DeclareParamOps[] = {
@@ -1718,7 +1710,7 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     //  .param .align N .b8 retval0[<size-in-bytes>], or
     //  .param .b<size-in-bits> retval0
     unsigned resultsz = DL.getTypeAllocSizeInBits(RetTy);
-    if (!IsTypePassedAsArray(RetTy)) {
+    if (!shouldPassAsArray(RetTy)) {
       resultsz = promoteScalarArgumentSize(resultsz);
       SDVTList DeclareRetVTs = DAG.getVTList(MVT::Other, MVT::Glue);
       SDValue DeclareRetOps[] = { Chain, DAG.getConstant(1, dl, MVT::i32),
@@ -2850,6 +2842,40 @@ static SDValue lowerFREM(SDValue Op, SelectionDAG &DAG,
   return DAG.getSelect(DL, Ty, IsInf, X, Sub);
 }
 
+static SDValue lowerSELECT(SDValue Op, SelectionDAG &DAG) {
+  assert(Op.getValueType() == MVT::i1 && "Custom lowering enabled only for i1");
+
+  SDValue Cond = Op->getOperand(0);
+  SDValue TrueVal = Op->getOperand(1);
+  SDValue FalseVal = Op->getOperand(2);
+  SDLoc DL(Op);
+
+  // If both operands are truncated, we push the select through the truncates.
+  if (TrueVal.getOpcode() == ISD::TRUNCATE &&
+      FalseVal.getOpcode() == ISD::TRUNCATE) {
+    TrueVal = TrueVal.getOperand(0);
+    FalseVal = FalseVal.getOperand(0);
+
+    EVT VT = TrueVal.getSimpleValueType().bitsLE(FalseVal.getSimpleValueType())
+                 ? TrueVal.getValueType()
+                 : FalseVal.getValueType();
+    TrueVal = DAG.getAnyExtOrTrunc(TrueVal, DL, VT);
+    FalseVal = DAG.getAnyExtOrTrunc(FalseVal, DL, VT);
+    SDValue Select = DAG.getSelect(DL, VT, Cond, TrueVal, FalseVal);
+    return DAG.getNode(ISD::TRUNCATE, DL, MVT::i1, Select);
+  }
+
+  // Otherwise, expand the select into a series of logical operations. These
+  // often can be folded into other operations either by us or ptxas.
+  TrueVal = DAG.getFreeze(TrueVal);
+  FalseVal = DAG.getFreeze(FalseVal);
+  SDValue And1 = DAG.getNode(ISD::AND, DL, MVT::i1, Cond, TrueVal);
+  SDValue NotCond = DAG.getNOT(DL, Cond, MVT::i1);
+  SDValue And2 = DAG.getNode(ISD::AND, DL, MVT::i1, NotCond, FalseVal);
+  SDValue Or = DAG.getNode(ISD::OR, DL, MVT::i1, And1, And2);
+  return Or;
+}
+
 SDValue
 NVPTXTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   switch (Op.getOpcode()) {
@@ -2889,7 +2915,7 @@ NVPTXTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::SRL_PARTS:
     return LowerShiftRightParts(Op, DAG);
   case ISD::SELECT:
-    return LowerSelect(Op, DAG);
+    return lowerSELECT(Op, DAG);
   case ISD::FROUND:
     return LowerFROUND(Op, DAG);
   case ISD::FCOPYSIGN:
@@ -3054,22 +3080,6 @@ SDValue NVPTXTargetLowering::LowerVASTART(SDValue Op, SelectionDAG &DAG) const {
   const Value *SV = cast<SrcValueSDNode>(Op.getOperand(2))->getValue();
   return DAG.getStore(Op.getOperand(0), DL, VAReg, Op.getOperand(1),
                       MachinePointerInfo(SV));
-}
-
-SDValue NVPTXTargetLowering::LowerSelect(SDValue Op, SelectionDAG &DAG) const {
-  SDValue Op0 = Op->getOperand(0);
-  SDValue Op1 = Op->getOperand(1);
-  SDValue Op2 = Op->getOperand(2);
-  SDLoc DL(Op.getNode());
-
-  assert(Op.getValueType() == MVT::i1 && "Custom lowering enabled only for i1");
-
-  Op1 = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i32, Op1);
-  Op2 = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i32, Op2);
-  SDValue Select = DAG.getNode(ISD::SELECT, DL, MVT::i32, Op0, Op1, Op2);
-  SDValue Trunc = DAG.getNode(ISD::TRUNCATE, DL, MVT::i1, Select);
-
-  return Trunc;
 }
 
 SDValue NVPTXTargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
@@ -3344,7 +3354,7 @@ SDValue NVPTXTargetLowering::LowerFormalArguments(
 
     if (theArgs[i]->use_empty()) {
       // argument is dead
-      if (IsTypePassedAsArray(Ty) && !Ty->isVectorTy()) {
+      if (shouldPassAsArray(Ty) && !Ty->isVectorTy()) {
         SmallVector<EVT, 16> vtparts;
 
         ComputePTXValueVTs(*this, DAG.getDataLayout(), Ty, vtparts);

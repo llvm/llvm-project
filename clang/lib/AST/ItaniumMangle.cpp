@@ -1405,16 +1405,6 @@ void CXXNameMangler::mangleUnresolvedPrefix(NestedNameSpecifier *qualifier,
     //   - a template template parameter with arguments
     // In all of these cases, we should have no prefix.
     if (NestedNameSpecifier *Prefix = qualifier->getPrefix()) {
-      if (const auto *DTST =
-              dyn_cast<DependentTemplateSpecializationType>(type)) {
-        Out << "srN";
-        TemplateName Template = getASTContext().getDependentTemplateName(
-            {Prefix, DTST->getDependentTemplateName().getName(),
-             /*HasTemplateKeyword=*/true});
-        mangleTemplatePrefix(Template);
-        mangleTemplateArgs(Template, DTST->template_arguments());
-        break;
-      }
       mangleUnresolvedPrefix(Prefix,
                              /*recursive=*/true);
     } else {
@@ -2618,7 +2608,8 @@ bool CXXNameMangler::mangleUnresolvedTypeOrSimpleId(QualType Ty,
         cast<DependentTemplateSpecializationType>(Ty);
     TemplateName Template = getASTContext().getDependentTemplateName(
         DTST->getDependentTemplateName());
-    mangleTemplatePrefix(Template);
+    const DependentTemplateStorage &S = DTST->getDependentTemplateName();
+    mangleSourceName(S.getName().getIdentifier());
     mangleTemplateArgs(Template, DTST->template_arguments());
     break;
   }
@@ -2894,6 +2885,26 @@ void CXXNameMangler::mangleQualifiers(Qualifiers Quals, const DependentAddressSp
   // __unaligned (from -fms-extensions)
   if (Quals.hasUnaligned())
     mangleVendorQualifier("__unaligned");
+
+  // __ptrauth.  Note that this is parameterized.
+  if (PointerAuthQualifier PtrAuth = Quals.getPointerAuth()) {
+    mangleVendorQualifier("__ptrauth");
+    // For now, since we only allow non-dependent arguments, we can just
+    // inline the mangling of those arguments as literals.  We treat the
+    // key and extra-discriminator arguments as 'unsigned int' and the
+    // address-discriminated argument as 'bool'.
+    Out << "I"
+           "Lj"
+        << PtrAuth.getKey()
+        << "E"
+           "Lb"
+        << unsigned(PtrAuth.isAddressDiscriminated())
+        << "E"
+           "Lj"
+        << PtrAuth.getExtraDiscriminator()
+        << "E"
+           "E";
+  }
 
   // Remaining ARC ownership qualifiers.
   switch (Quals.getObjCLifetime()) {
