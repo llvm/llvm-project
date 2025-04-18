@@ -113,6 +113,60 @@ struct GPULaneIdOpToROCDL : ConvertOpToLLVMPattern<gpu::LaneIdOp> {
   }
 };
 
+/// Lowers gpu.shuffle xor to ds_swizzle if possible.
+struct GPUShuffleOpLoweringSwizzle
+    : public ConvertOpToLLVMPattern<gpu::ShuffleOp> {
+  using ConvertOpToLLVMPattern<gpu::ShuffleOp>::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(gpu::ShuffleOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    if (op.getMode() != gpu::ShuffleMode::XOR)
+      return rewriter.notifyMatchFailure(op, "only xor mode is supported");
+
+    // Check unconverted width and offset.
+    if (!isConstantIntValue(op.getWidth(), 64))
+      return rewriter.notifyMatchFailure(op, "width must be 64");
+
+    std::optional<int64_t> offsetVal = getConstantIntValue(op.getOffset());
+    if (!offsetVal)
+      return rewriter.notifyMatchFailure(op, "offset must be a constant");
+
+    int64_t offset = *offsetVal;
+    if (offset < 0 || offset >= (1 << 5))
+      return rewriter.notifyMatchFailure(op, "unsupported offset value");
+
+    Location loc = op.getLoc();
+    Value initShflValue = adaptor.getValue();
+
+    auto int32Type = rewriter.getI32Type();
+
+    // TODO: It may be possible to lower specific xor patterns to DPP ops.
+
+    // bit 15 is 0 for the BitMode swizzle.
+    // https://gpuopen.com/learn/amd-gcn-assembly-cross-lane-operations/
+    int64_t mask = ((1 << 5) - 1) | (offset << 10);
+    Value maskValue = rewriter.create<LLVM::ConstantOp>(loc, int32Type, mask);
+
+    SmallVector<Value> decomposed =
+        LLVM::decomposeValue(rewriter, loc, initShflValue, int32Type);
+    SmallVector<Value> swizzled;
+    for (Value v : decomposed) {
+      Value res =
+          rewriter.create<ROCDL::DsSwizzleOp>(loc, v.getType(), v, maskValue);
+      swizzled.emplace_back(res);
+    }
+    Value shflValue =
+        LLVM::composeValue(rewriter, loc, swizzled, initShflValue.getType());
+
+    // We checked width is 64, so it's always true.
+    Value isActiveSrcLane =
+        rewriter.create<LLVM::ConstantOp>(loc, rewriter.getI1Type(), 1);
+    rewriter.replaceOp(op, {shflValue, isActiveSrcLane});
+    return success();
+  }
+};
+
 struct GPUShuffleOpLowering : public ConvertOpToLLVMPattern<gpu::ShuffleOp> {
   using ConvertOpToLLVMPattern<gpu::ShuffleOp>::ConvertOpToLLVMPattern;
 
@@ -135,13 +189,13 @@ struct GPUShuffleOpLowering : public ConvertOpToLLVMPattern<gpu::ShuffleOp> {
   LogicalResult
   matchAndRewrite(gpu::ShuffleOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    Location loc = op->getLoc();
+    Location loc = op.getLoc();
     Value initShflValue = adaptor.getValue();
 
     const unsigned indexBitwidth = getTypeConverter()->getIndexTypeBitwidth();
     Value srcLaneId = getLaneId(rewriter, loc, indexBitwidth);
 
-    auto int32Type = IntegerType::get(rewriter.getContext(), 32);
+    auto int32Type = rewriter.getI32Type();
     Value width = adaptor.getWidth();
     Value zero = rewriter.create<LLVM::ConstantOp>(loc, int32Type, 0);
     Value negwidth = rewriter.create<LLVM::SubOp>(loc, int32Type, zero, width);
@@ -177,14 +231,14 @@ struct GPUShuffleOpLowering : public ConvertOpToLLVMPattern<gpu::ShuffleOp> {
 
     SmallVector<Value> decomposed =
         LLVM::decomposeValue(rewriter, loc, initShflValue, int32Type);
-    SmallVector<Value> swizzled;
+    SmallVector<Value> permuted;
     for (Value v : decomposed) {
       Value res = rewriter.create<ROCDL::DsBpermuteOp>(loc, int32Type,
                                                        dwordAlignedDstLane, v);
-      swizzled.emplace_back(res);
+      permuted.emplace_back(res);
     }
     Value shflValue =
-        LLVM::composeValue(rewriter, loc, swizzled, initShflValue.getType());
+        LLVM::composeValue(rewriter, loc, permuted, initShflValue.getType());
     rewriter.replaceOp(op, {shflValue, isActiveSrcLane});
     return success();
   }
@@ -405,6 +459,8 @@ void mlir::populateGpuToROCDLConversionPatterns(
   // TODO: Add alignment for workgroup memory
   patterns.add<GPUDynamicSharedMemoryOpLowering>(converter);
 
+  // Try to lower to swizzle first
+  patterns.add<GPUShuffleOpLoweringSwizzle>(converter, /*benefit*/ 10);
   patterns.add<GPUShuffleOpLowering, GPULaneIdOpToROCDL>(converter);
 
   populateMathToROCDLConversionPatterns(converter, patterns);
