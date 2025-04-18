@@ -50,11 +50,7 @@ namespace logicalview {
     return FAMILY.SET.find(TYPE::FIELD) != FAMILY.SET.end();                   \
   }                                                                            \
   void set##FAMILY##FIELD() { FAMILY.SET.insert(TYPE::FIELD); }                \
-  void reset##FAMILY##FIELD() {                                                \
-    std::set<TYPE>::iterator Iter = FAMILY.SET.find(TYPE::FIELD);              \
-    if (Iter != FAMILY.SET.end())                                              \
-      FAMILY.SET.erase(Iter);                                                  \
-  }
+  void reset##FAMILY##FIELD() { FAMILY.SET.erase(TYPE::FIELD); }
 
 #define STDSET_FUNCTION_5(FAMILY, FIELD, ENTRY, TYPE, SET)                     \
   bool get##FAMILY##FIELD##ENTRY() const {                                     \
