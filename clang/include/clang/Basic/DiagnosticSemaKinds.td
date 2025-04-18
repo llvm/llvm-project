@@ -12961,6 +12961,19 @@ def err_acc_clause_after_device_type
 def err_acc_clause_cannot_combine
     : Error<"OpenACC clause '%0' may not appear on the same construct as a "
             "'%1' clause on a '%2' construct">;
+def err_acc_clause_routine_cannot_combine_before_device_type
+    : Error<"OpenACC clause '%0' after 'device_type' clause on a 'routine' "
+              "conflicts with the '%1' clause before the first 'device_type'">;
+def err_acc_clause_routine_cannot_combine_same_device_type
+    : Error<"OpenACC clause '%0' on a 'routine' directive conflicts with the "
+            "'%1' clause applying to the same 'device_type'">;
+def err_acc_clause_routine_one_of_in_region
+    : Error<"OpenACC 'routine' construct must have at least one 'gang', 'seq', "
+            "'vector', or 'worker' clause that applies to each 'device_type'">;
+def err_acc_clause_since_last_device_type
+    : Error<"OpenACC '%0' clause cannot appear more than once%select{| in a "
+            "'device_type' region}2 on a '%1' directive">;
+
 def err_acc_reduction_num_gangs_conflict
     : Error<"OpenACC '%1' clause %select{|with more than 1 argument }0may not "
             "appear on a '%2' construct "
@@ -12978,9 +12991,6 @@ def note_acc_reduction_composite_member_loc : Note<"invalid field is here">;
 def err_acc_loop_not_for_loop
     : Error<"OpenACC '%0' construct can only be applied to a 'for' loop">;
 def note_acc_construct_here : Note<"'%0' construct is here">;
-def err_acc_loop_spec_conflict
-    : Error<"OpenACC clause '%0' on '%1' construct conflicts with previous "
-            "data dependence clause">;
 def err_acc_collapse_loop_count
     : Error<"OpenACC 'collapse' clause loop count must be a %select{constant "
             "expression|positive integer value, evaluated to %1}0">;
@@ -13032,9 +13042,10 @@ def err_acc_gang_reduction_numgangs_conflict
             "'%1' clause %select{inside a compute construct with a|and a}3 "
             "'num_gangs' clause with more than one argument">;
 
-    def err_reduction_op_mismatch
+def err_reduction_op_mismatch
     : Error<"OpenACC 'reduction' variable must have the same operator in all "
             "nested constructs (%0 vs %1)">;
+
 def err_acc_loop_variable_type
     : Error<"loop variable of loop associated with an OpenACC '%0' construct "
             "must be of integer, pointer, or random-access-iterator type (is "
