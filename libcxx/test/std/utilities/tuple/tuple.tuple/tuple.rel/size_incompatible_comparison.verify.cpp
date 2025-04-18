@@ -21,15 +21,9 @@
 
 #include <tuple>
 
-#include "test_macros.h"
-
 void f(std::tuple<int> t1, std::tuple<int, long> t2) {
   // We test only the core comparison operators and trust that the others
   // fall back on the same implementations prior to C++20.
-#if TEST_STD_VER >= 26
-  static_cast<void>(t1 == t2);
-#else
   static_cast<void>(t1 == t2); // expected-error@*:* {{}}
-#endif
   static_cast<void>(t1 < t2); // expected-error@*:* {{}}
 }

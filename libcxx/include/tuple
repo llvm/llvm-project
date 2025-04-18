@@ -216,7 +216,6 @@ template <class... Types>
 #  include <__compare/common_comparison_category.h>
 #  include <__compare/ordering.h>
 #  include <__compare/synth_three_way.h>
-#  include <__concepts/boolean_testable.h>
 #  include <__config>
 #  include <__cstddef/size_t.h>
 #  include <__fwd/array.h>
@@ -1161,16 +1160,8 @@ struct __tuple_equal<0> {
 
 template <class... _Tp, class... _Up>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 bool
-operator==(const tuple<_Tp...>& __x, const tuple<_Up...>& __y)
-#    if _LIBCPP_STD_VER >= 26
-  requires requires {
-    { sizeof...(_Tp) == sizeof...(_Up) } -> __boolean_testable;
-  }
-#    endif
-{
-#    if _LIBCPP_STD_VER < 26
+operator==(const tuple<_Tp...>& __x, const tuple<_Up...>& __y) {
   static_assert(sizeof...(_Tp) == sizeof...(_Up), "Can't compare tuples of different sizes");
-#    endif
   return __tuple_equal<sizeof...(_Tp)>()(__x, __y);
 }
 

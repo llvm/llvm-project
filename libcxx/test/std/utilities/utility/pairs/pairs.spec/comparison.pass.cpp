@@ -25,27 +25,7 @@
 
 #if TEST_STD_VER >= 26
 
-// template <typename T>
-// class EqualityComparable {
-// public:
-//   constexpr EqualityComparable(T value) : value_{value} {};
-
-//   friend constexpr bool operator==(const EqualityComparable&, const EqualityComparable&) noexcept = default;
-
-// private:
-//   T value_;
-// };
-
-// static_assert(std::equality_comparable<EqualityComparable<std::pair<int,int>>>);
-// // static_assert(std::equality_comparable<EqualityComparable<std::pair<int,int>>, std::pair<int,int>>);
-// // static_assert(std::equality_comparable<EqualityComparable<std::pair<int,int>>, EqualityComparable<std::pair<int,int>>>);
-// // static_assert(std::equality_comparable<EqualityComparable<std::pair<int,int>>, std::pair<int,int>, std::pair<int,int>>);
-// // static_assert(std::equality_comparable<EqualityComparable<std::pair<int,int>>, EqualityComparable<std::pair<int,int>>, std::pair<int,int>>);
-// // static_assert(std::equality_comparable<EqualityComparable<std::pair<int,int>>, std::pair<int,int>, EqualityComparable<std::pair<int,int>>>);
-// // static_assert(std::equality_comparable<EqualityComparable<std::pair<int,int>>, EqualityComparable<std::pair<int,int>>, EqualityComparable<std::pair<int,int>>>);
-// static_assert(std::equality_comparable<EqualityComparable<std::pair<int,int>>, std::pair<int,int>, std::pair<int,int>, EqualityComparable<std::pair<int,int>>>);
-// static_assert(EqualityComparable<std::pair<int,int>>{std::pair{94, 82}} == EqualityComparable<std::pair<int,int>>{std::pair{94, 82}});
-// static_assert(EqualityComparable<std::pair<int,int>>{std::pair{94, 82}} != EqualityComparable<std::pair<int,int>>{std::pair{82, 82}});
+// Test SFINAE.
 
 struct EqualityComparable {
   constexpr EqualityComparable(int value) : value_{value} {};
@@ -60,42 +40,14 @@ static_assert(EqualityComparable{94} == EqualityComparable{94});
 static_assert(EqualityComparable{94} != EqualityComparable{82});
 
 static_assert(std::equality_comparable<std::pair<EqualityComparable, EqualityComparable>>);
-static_assert(std::pair{EqualityComparable{94}, EqualityComparable{94}} ==
-              std::pair{EqualityComparable{94}, EqualityComparable{94}});
-static_assert(std::pair{EqualityComparable{82}, EqualityComparable{94}} !=
-              std::pair{EqualityComparable{94}, EqualityComparable{94}});
-static_assert(std::pair{EqualityComparable{94}, EqualityComparable{82}} !=
-              std::pair{EqualityComparable{94}, EqualityComparable{94}});
 
 struct NonComparable {};
 
-static_assert(!std::three_way_comparable<std::pair<NonComparable, NonComparable>>);
-static_assert(!std::three_way_comparable<std::pair<EqualityComparable, NonComparable>>);
-static_assert(!std::three_way_comparable<std::pair<NonComparable, EqualityComparable>>);
+static_assert(!std::equality_comparable<NonComparable>);
 
 static_assert(!std::equality_comparable<std::pair<EqualityComparable, NonComparable>>);
 static_assert(!std::equality_comparable<std::pair<NonComparable, EqualityComparable>>);
 
-
-template <typename T, typename U>
-concept HasCompare = requires(T t, U u) {
-  { t == u } -> std::same_as<bool>;
-  { t != u } -> std::same_as<bool>;
-  { t < u } -> std::same_as<bool>;
-  { t > u } -> std::same_as<bool>;
-  { t <= u } -> std::same_as<bool>;
-  { t >= u } -> std::same_as<bool>;
-};
-
-template <typename T, typename U>
-concept HasCompare = requires(std::pair p1, std::pair p2) {
-  { t == u } -> std::same_as<bool>;
-  { t != u } -> std::same_as<bool>;
-  { t < u } -> std::same_as<bool>;
-  { t > u } -> std::same_as<bool>;
-  { t <= u } -> std::same_as<bool>;
-  { t >= u } -> std::same_as<bool>;
-};
 
 #endif // TEST_STD_VER >= 26
 
