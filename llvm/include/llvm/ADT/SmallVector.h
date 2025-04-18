@@ -707,9 +707,9 @@ public:
         size_type InitialSize = this->size();
         size_type ExtraCap = this->capacity() - InitialSize;
         size_type NumCopied = 0;
-        for (; NumCopied != ExtraCap && It != in_end; ++It, ++NumCopied) {
+        for (; NumCopied != ExtraCap && It != in_end; ++It, ++NumCopied)
           ::new ((void *)(Dest + NumCopied)) T(*It);
-        }
+
         size_type NewSize = InitialSize + NumCopied;
         this->set_size(NewSize);
 
@@ -910,7 +910,8 @@ public:
     // Convert iterator to elt# to avoid invalidating iterator when we reserve()
     size_t InsertElt = I - this->begin();
 
-    if (I == this->end()) {  // Important special case for empty vector.
+    // Important special case for appending to a vector, including empty vector.
+    if (I == this->end()) {
       append(From, To);
       return this->begin()+InsertElt;
     }
