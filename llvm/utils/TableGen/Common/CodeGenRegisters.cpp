@@ -922,8 +922,7 @@ bool CodeGenRegisterClass::hasType(const ValueTypeByHwMode &VT) const {
 }
 
 bool CodeGenRegisterClass::contains(const CodeGenRegister *Reg) const {
-  return std::binary_search(Members.begin(), Members.end(), Reg,
-                            deref<std::less<>>());
+  return llvm::binary_search(Members, Reg, deref<std::less<>>());
 }
 
 unsigned CodeGenRegisterClass::getWeight(const CodeGenRegBank &RegBank) const {
