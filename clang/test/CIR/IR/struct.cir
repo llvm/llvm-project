@@ -1,9 +1,15 @@
 // RUN: cir-opt %s | FileCheck %s
 
+!ty_S = !cir.record<struct "S" incomplete>
+!ty_U = !cir.record<union "U" incomplete>
+
+// CHECK: !ty_S = !cir.record<struct "S" incomplete>
+// CHECK: !ty_U = !cir.record<union "U" incomplete>
+
 module  {
-    cir.global external @p1 = #cir.ptr<null> : !cir.ptr<!cir.record<struct "S" incomplete>>
-    cir.global external @p2 = #cir.ptr<null> : !cir.ptr<!cir.record<union "U" incomplete>>
+    cir.global external @p1 = #cir.ptr<null> : !cir.ptr<!ty_S>
+    cir.global external @p2 = #cir.ptr<null> : !cir.ptr<!ty_U>
 }
 
-// CHECK: cir.global external @p1 = #cir.ptr<null> : !cir.ptr<!cir.record<struct "S" incomplete>>
-// CHECK: cir.global external @p2 = #cir.ptr<null> : !cir.ptr<!cir.record<union "U" incomplete>>
+// CHECK: cir.global external @p1 = #cir.ptr<null> : !cir.ptr<!ty_S>
+// CHECK: cir.global external @p2 = #cir.ptr<null> : !cir.ptr<!ty_U>
