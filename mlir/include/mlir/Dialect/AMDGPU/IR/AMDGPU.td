@@ -38,7 +38,7 @@ def AMDGPU_Dialect : Dialect {
 def AnyIntegerOrFloat : AnyTypeOf<[AnySignlessInteger, AnyFloat], "Integer or Float">;
 
 def AnyIntegerOrFloatOr1DVector :
-  AnyTypeOf<[AnyIntegerOrFloat, VectorOfRankAndType<[1], [AnyIntegerOrFloat]>]>;
+  AnyTypeOf<[AnyIntegerOrFloat, FixedVectorOfRankAndType<[1], [AnyIntegerOrFloat]>]>;
 
 //===----------------------------------------------------------------------===//
 // AMDGPU general attribute definitions
