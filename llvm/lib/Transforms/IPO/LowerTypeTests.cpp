@@ -447,10 +447,9 @@ class LowerTypeTestsModule {
 
   IntegerType *Int1Ty = Type::getInt1Ty(M.getContext());
   IntegerType *Int8Ty = Type::getInt8Ty(M.getContext());
-  PointerType *Int8PtrTy = PointerType::getUnqual(M.getContext());
+  PointerType *PtrTy = PointerType::getUnqual(M.getContext());
   ArrayType *Int8Arr0Ty = ArrayType::get(Type::getInt8Ty(M.getContext()), 0);
   IntegerType *Int32Ty = Type::getInt32Ty(M.getContext());
-  PointerType *Int32PtrTy = PointerType::getUnqual(M.getContext());
   IntegerType *Int64Ty = Type::getInt64Ty(M.getContext());
   IntegerType *IntPtrTy = M.getDataLayout().getIntPtrType(M.getContext(), 0);
 
@@ -654,7 +653,7 @@ void LowerTypeTestsModule::allocateByteArrays() {
     BAB.allocate(BAI->Bits, BAI->BitSize, ByteArrayOffsets[I], Mask);
 
     BAI->MaskGlobal->replaceAllUsesWith(
-        ConstantExpr::getIntToPtr(ConstantInt::get(Int8Ty, Mask), Int8PtrTy));
+        ConstantExpr::getIntToPtr(ConstantInt::get(Int8Ty, Mask), PtrTy));
     BAI->MaskGlobal->eraseFromParent();
     if (BAI->MaskPtr)
       *BAI->MaskPtr = Mask;
@@ -948,7 +947,7 @@ uint8_t *LowerTypeTestsModule::exportTypeId(StringRef TypeId,
 
   auto ExportConstant = [&](StringRef Name, uint64_t &Storage, Constant *C) {
     if (shouldExportConstantsAsAbsoluteSymbols())
-      ExportGlobal(Name, ConstantExpr::getIntToPtr(C, Int8PtrTy));
+      ExportGlobal(Name, ConstantExpr::getIntToPtr(C, PtrTy));
     else
       Storage = cast<ConstantInt>(C)->getZExtValue();
   };
@@ -1046,7 +1045,7 @@ LowerTypeTestsModule::importTypeId(StringRef TypeId) {
 
   if (TIL.TheKind == TypeTestResolution::ByteArray) {
     TIL.TheByteArray = ImportGlobal("byte_array");
-    TIL.BitMask = ImportConstant("bit_mask", TTRes.BitMask, 8, Int8PtrTy);
+    TIL.BitMask = ImportConstant("bit_mask", TTRes.BitMask, 8, PtrTy);
   }
 
   if (TIL.TheKind == TypeTestResolution::Inline)
@@ -1778,7 +1777,7 @@ void LowerTypeTestsModule::buildBitSetsFromFunctionsWASM(
 
   // The indirect function table index space starts at zero, so pass a NULL
   // pointer as the subtracted "jump table" offset.
-  lowerTypeTestCalls(TypeIds, ConstantPointerNull::get(Int32PtrTy),
+  lowerTypeTestCalls(TypeIds, ConstantPointerNull::get(PtrTy),
                      GlobalLayout);
 }
 

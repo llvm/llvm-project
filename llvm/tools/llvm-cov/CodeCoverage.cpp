@@ -547,7 +547,7 @@ void CodeCoverageTool::removeUnmappedInputs(const CoverageMapping &Coverage) {
   // The user may have specified source files which aren't in the coverage
   // mapping. Filter these files away.
   llvm::erase_if(SourceFiles, [&](const std::string &SF) {
-    return !std::binary_search(CoveredFiles.begin(), CoveredFiles.end(), SF);
+    return !llvm::binary_search(CoveredFiles, SF);
   });
 }
 

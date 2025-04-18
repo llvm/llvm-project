@@ -3332,10 +3332,10 @@ static void computeLiveInValues(DominatorTree &DT, Function &F,
     LiveTmp.set_subtract(Data.KillSet[BB]);
 
     assert(Data.LiveIn.count(BB));
-    const SetVector<Value *> &OldLiveIn = Data.LiveIn[BB];
-    // assert: OldLiveIn is a subset of LiveTmp
-    if (OldLiveIn.size() != LiveTmp.size()) {
-      Data.LiveIn[BB] = LiveTmp;
+    SetVector<Value *> &LiveIn = Data.LiveIn[BB];
+    // assert: LiveIn is a subset of LiveTmp
+    if (LiveIn.size() != LiveTmp.size()) {
+      LiveIn = std::move(LiveTmp);
       Worklist.insert_range(predecessors(BB));
     }
   } // while (!Worklist.empty())
