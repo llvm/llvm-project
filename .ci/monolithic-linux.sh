@@ -58,6 +58,11 @@ export PIP_BREAK_SYSTEM_PACKAGES=1
 pip install -q -r "${MONOREPO_ROOT}"/mlir/python/requirements.txt
 pip install -q -r "${MONOREPO_ROOT}"/lldb/test/requirements.txt
 pip install -q -r "${MONOREPO_ROOT}"/.ci/requirements.txt
+
+# Set the system llvm-symbolizer as preferred.
+export LLVM_SYMBOLIZER_PATH=`which llvm-symbolizer`
+[[ ! -f "${LLVM_SYMBOLIZER_PATH}" ]] && echo "llvm-symbolizer not found!"
+
 cmake -S "${MONOREPO_ROOT}"/llvm -B "${BUILD_DIR}" \
       -D LLVM_ENABLE_PROJECTS="${projects}" \
       -G Ninja \
