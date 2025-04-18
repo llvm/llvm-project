@@ -96,7 +96,7 @@ public:
 #if LLVM_ENABLE_TELEMETRY
 #define TELEMETRY_TEST(suite, test) TEST_F(suite, test)
 #else
-#define TELEMETRY_TEST(suite, test) TEST(DISABLED_##suite, test)
+#define TELEMETRY_TEST(suite, test) TEST_F(suite, DISABLED_##test)
 #endif
 
 TELEMETRY_TEST(TelemetryTest, PluginTest) {
