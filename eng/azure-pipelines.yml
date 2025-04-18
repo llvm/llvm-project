@@ -86,9 +86,6 @@ extends:
       tsa:
         enabled: true
       codeql:
-        compiled:
-          enabled: false
-          justificationForDisabling: CodeQL times out on Windows even after 10 hours timeout
         runSourceLanguagesInSourceAnalysis: true
       sourceAnalysisPool:
         name: $(DncEngInternalBuildPool)
@@ -139,6 +136,12 @@ extends:
                 image: 1es-ubuntu-2204
                 os: linux
               container: ${{ buildjob.imagename }}
+              templateContext:
+                sdl:
+                  codeql:
+                    compiled:
+                      enabled: false
+                      justificationForDisabling: CodeQL times out on Windows even after 10 hours timeout and we have a separate pipeline for CodeQL
               steps:
               - bash: |
                   set -ex
@@ -168,6 +171,12 @@ extends:
                 name: Azure Pipelines
                 image: macos-13
                 os: macOS
+              templateContext:
+                sdl:
+                  codeql:
+                    compiled:
+                      enabled: false
+                      justificationForDisabling: CodeQL times out on Windows even after 10 hours timeout and we have a separate pipeline for CodeQL
               steps:
               - bash: |
                   set -ex
@@ -195,6 +204,12 @@ extends:
                 name: $(DncEngInternalBuildPool)
                 image: windows.vs2022.amd64
                 os: windows
+              templateContext:
+                sdl:
+                  codeql:
+                    compiled:
+                      enabled: false
+                      justificationForDisabling: CodeQL times out on Windows even after 10 hours timeout and we have a separate pipeline for CodeQL
               steps:
               - checkout: self
                 clean: true
