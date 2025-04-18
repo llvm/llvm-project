@@ -849,8 +849,7 @@ void DecoderEmitter::emitTable(formatted_raw_ostream &OS, DecoderTable &Table,
 
       // ULEB128 encoded start value.
       const char *ErrMsg = nullptr;
-      unsigned Start = decodeULEB128(Table.data() + Pos + 1, nullptr,
-                                     Table.data() + Table.size(), &ErrMsg);
+      unsigned Start = decodeULEB128(&*I, nullptr, &*E, &ErrMsg);
       assert(ErrMsg == nullptr && "ULEB128 value too large!");
       emitULEB128(I, OS);
 
@@ -904,8 +903,7 @@ void DecoderEmitter::emitTable(formatted_raw_ostream &OS, DecoderTable &Table,
       ++I;
       // Decode the Opcode value.
       const char *ErrMsg = nullptr;
-      unsigned Opc = decodeULEB128(Table.data() + Pos + 1, nullptr,
-                                   Table.data() + Table.size(), &ErrMsg);
+      unsigned Opc = decodeULEB128(&*I, nullptr, &*E, &ErrMsg);
       assert(ErrMsg == nullptr && "ULEB128 value too large!");
 
       OS << Indent << "MCD::OPC_" << (IsTry ? "Try" : "") << "Decode, ";
@@ -934,34 +932,22 @@ void DecoderEmitter::emitTable(formatted_raw_ostream &OS, DecoderTable &Table,
     }
     case MCD::OPC_SoftFail: {
       ++I;
-      OS << Indent << "MCD::OPC_SoftFail";
-      // Positive mask
-      uint64_t Value = 0;
-      unsigned Shift = 0;
-      do {
-        OS << ", " << (unsigned)*I;
-        Value += ((uint64_t)(*I & 0x7f)) << Shift;
-        Shift += 7;
-      } while (*I++ >= 128);
-      if (Value > 127) {
-        OS << " /* 0x";
-        OS.write_hex(Value);
-        OS << " */";
-      }
-      // Negative mask
-      Value = 0;
-      Shift = 0;
-      do {
-        OS << ", " << (unsigned)*I;
-        Value += ((uint64_t)(*I & 0x7f)) << Shift;
-        Shift += 7;
-      } while (*I++ >= 128);
-      if (Value > 127) {
-        OS << " /* 0x";
-        OS.write_hex(Value);
-        OS << " */";
-      }
-      OS << ",\n";
+      OS << Indent << "MCD::OPC_SoftFail, ";
+      // Decode the positive mask.
+      const char *ErrMsg = nullptr;
+      uint64_t PositiveMask = decodeULEB128(&*I, nullptr, &*E, &ErrMsg);
+      assert(ErrMsg == nullptr && "ULEB128 value too large!");
+      emitULEB128(I, OS);
+
+      // Decode the negative mask.
+      uint64_t NegativeMask = decodeULEB128(&*I, nullptr, &*E, &ErrMsg);
+      assert(ErrMsg == nullptr && "ULEB128 value too large!");
+      emitULEB128(I, OS);
+      OS << "// +ve mask: 0x";
+      OS.write_hex(PositiveMask);
+      OS << ", -ve mask: 0x";
+      OS.write_hex(NegativeMask);
+      OS << '\n';
       break;
     }
     case MCD::OPC_Fail: {
