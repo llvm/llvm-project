@@ -822,23 +822,6 @@ static bool isGlobalMemoryObject(MachineInstr &MI) {
          (MI.hasOrderedMemoryRef() && !MI.isDereferenceableInvariantLoad());
 }
 
-/// Return the underlying objects for the memory references of an instruction.
-/// This function calls the code in ValueTracking, but first checks that the
-/// instruction has a memory operand.
-static bool getUnderlyingObjectsForInstr(const MachineInstr *MI,
-                                         SmallVectorImpl<const Value *> &Objs,
-                                         AAMDNodes *AA) {
-  *AA = AAMDNodes();
-  if (!MI->hasOneMemOperand())
-    return false;
-  MachineMemOperand *MM = *MI->memoperands_begin();
-  if (!MM->getValue())
-    return false;
-  getUnderlyingObjects(MM->getValue(), Objs);
-  *AA = MM->getAAInfo();
-  return true;
-}
-
 // static std::optional<MemoryLocation>
 // getMemoryLocationForAA(const MachineInstr *MI, const Value *Val) {
 //   const MachineMemOperand *MMO = *MI->memoperands_begin();
@@ -1483,6 +1466,7 @@ public:
 struct SUnitWithMemInfo {
   SUnit *SU;
   SmallVector<const Value *, 2> Objs;
+  const Value *MMOValue = nullptr;
   AAMDNodes AATags;
   bool IsAllIdentified = false;
   bool IsUnknown = true;
@@ -1500,15 +1484,29 @@ struct SUnitWithMemInfo {
 
 private:
   void init() {
-    if (!getUnderlyingObjectsForInstr(SU->getInstr(), Objs, &AATags))
+    if (!getUnderlyingObjects())
       return;
-
     IsUnknown = false;
     for (const Value *Obj : Objs)
       if (!isIdentifiedObject(Obj)) {
         IsAllIdentified = false;
         break;
       }
+  }
+  /// Return the underlying objects for the memory references of an instruction.
+  /// This function calls the code in ValueTracking, but first checks that the
+  /// instruction has a memory operand.
+  bool getUnderlyingObjects() {
+    const MachineInstr *MI = SU->getInstr();
+    if (!MI->hasOneMemOperand())
+      return false;
+    MachineMemOperand *MM = *MI->memoperands_begin();
+    if (!MM->getValue())
+      return false;
+    MMOValue = MM->getValue();
+    ::getUnderlyingObjects(MMOValue, Objs);
+    AATags = MM->getAAInfo();
+    return true;
   }
 };
 
@@ -1678,6 +1676,16 @@ private:
     // check by using alias analysis.
     if (!BAA || Src.IsUnknown || Dst.IsUnknown)
       return true;
+
+    // TODO: Correct?
+    if (Src.MMOValue && Dst.MMOValue) {
+      const auto SrcLoc =
+          MemoryLocation::getBeforeOrAfter(Src.MMOValue, Src.AATags);
+      const auto DstLoc =
+          MemoryLocation::getBeforeOrAfter(Dst.MMOValue, Dst.AATags);
+      if (BAA->isNoAlias(SrcLoc, DstLoc))
+        return false;
+    }
 
     for (const Value *SrcObj : Src.Objs)
       for (const Value *DstObj : Dst.Objs) {
