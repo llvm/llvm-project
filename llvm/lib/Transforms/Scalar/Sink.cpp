@@ -17,6 +17,7 @@
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/InitializePasses.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Scalar.h"
@@ -77,18 +78,36 @@ static bool isSafeToMove(Instruction *Inst, AliasAnalysis &AA,
   return true;
 }
 
+static cl::opt<unsigned>
+    SinkLoadBlockLimit("sink-load-block-limit", cl::Hidden, cl::init(15),
+                       cl::desc("Maximum number of descendant blocks that will "
+                                "be analyzed when attempting to sink a load."));
+
+static cl::opt<unsigned> SinkLoadStoreLimit(
+    "sink-load-store-limit", cl::Hidden, cl::init(3),
+    cl::desc("Maximum number of stores in descendant blocks that will be "
+             "analyzed when attempting to sink a load."));
+
 using BlocksSet = SmallPtrSet<BasicBlock *, 8>;
-static void findStores(SmallPtrSetImpl<Instruction *> &Stores,
+// Return false if finding stores is too complex.  True otherwise.
+static bool findStores(SmallPtrSetImpl<Instruction *> &Stores,
                        BasicBlock *LoadBB, BasicBlock *BB,
                        BlocksSet &VisitedBlocksSet) {
   if (BB == LoadBB || !VisitedBlocksSet.insert(BB).second)
-    return;
+    return true;
 
+  if (VisitedBlocksSet.size() > SinkLoadBlockLimit)
+    return false;
   for (Instruction &Inst : *BB)
-    if (Inst.mayWriteToMemory())
+    if (Inst.mayWriteToMemory()) {
       Stores.insert(&Inst);
+      if (Stores.size() > SinkLoadStoreLimit)
+        return false;
+    }
   for (BasicBlock *Pred : predecessors(BB))
-    findStores(Stores, LoadBB, Pred, VisitedBlocksSet);
+    if (!findStores(Stores, LoadBB, Pred, VisitedBlocksSet))
+      return false;
+  return true;
 }
 
 static bool hasConflictingStoreBeforeSuccToSinkTo(AliasAnalysis &AA,
@@ -98,7 +117,9 @@ static bool hasConflictingStoreBeforeSuccToSinkTo(AliasAnalysis &AA,
   SmallPtrSet<Instruction *, 8> Stores;
   BasicBlock *LoadBB = ReadMemInst->getParent();
   for (BasicBlock *Pred : predecessors(SuccToSinkTo))
-    findStores(Stores, LoadBB, Pred, VisitedBlocksSet);
+    // If finding stores is too complex, assume there is a conflict.
+    if (!findStores(Stores, LoadBB, Pred, VisitedBlocksSet))
+      return true;
   return hasStoreConflict(ReadMemInst, AA, Stores);
 }
 
