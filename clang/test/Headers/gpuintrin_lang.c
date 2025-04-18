@@ -36,7 +36,7 @@ __device__ int foo() { return __gpu_thread_id_x(); }
 // CUDA-LABEL: define dso_local i32 @foo(
 // CUDA-SAME: ) #[[ATTR0:[0-9]+]] {
 // CUDA-NEXT:  [[ENTRY:.*:]]
-// CUDA-NEXT:    [[TMP0:%.*]] = call i32 @llvm.nvvm.read.ptx.sreg.tid.x()
+// CUDA-NEXT:    [[TMP0:%.*]] = call {{.*}}i32 @llvm.nvvm.read.ptx.sreg.tid.x()
 // CUDA-NEXT:    ret i32 [[TMP0]]
 //
 // HIP-LABEL: define dso_local i32 @foo(
