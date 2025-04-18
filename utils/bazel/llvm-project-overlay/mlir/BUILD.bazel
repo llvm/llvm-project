@@ -897,6 +897,26 @@ mlir_c_api_cc_library(
 )
 
 mlir_c_api_cc_library(
+    name = "CAPISMT",
+    srcs = [
+        "lib/CAPI/Dialect/SMT.cpp",
+        "lib/CAPI/Target/ExportSMTLIB.cpp",
+    ],
+    hdrs = [
+        "include/mlir-c/Dialect/SMT.h",
+        "include/mlir-c/Target/ExportSMTLIB.h",
+    ],
+    capi_deps = [
+        ":CAPIIR",
+    ],
+    includes = ["include"],
+    deps = [
+        ":SMTDialect",
+        ":TargetSMTLIB",
+    ],
+)
+
+mlir_c_api_cc_library(
     name = "CAPIRegisterEverything",
     srcs = ["lib/CAPI/RegisterEverything/RegisterEverything.cpp"],
     hdrs = ["include/mlir-c/RegisterEverything.h"],
