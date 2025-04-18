@@ -28,9 +28,6 @@
 #include <utility>
 #include <variant>
 
-namespace {
-class SemaOpenACCClauseVisitor;
-}
 namespace clang {
 class IdentifierInfo;
 class OpenACCClause;
