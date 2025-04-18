@@ -4,18 +4,31 @@
 ; TODO: Load a element and splat it to a vector could be lowerd to vldrepl
 
 ; A load has more than one user shouldn't be lowered to vldrepl
-define <16 x i8> @should_not_be_optimized(ptr %ptr, ptr %dst){
+define <2 x i64> @should_not_be_optimized(ptr %ptr, ptr %dst){
 ; CHECK-LABEL: should_not_be_optimized:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    ld.b $a0, $a0, 0
-; CHECK-NEXT:    vreplgr2vr.b $vr0, $a0
-; CHECK-NEXT:    st.b $a0, $a1, 0
+; CHECK-NEXT:    ld.d $a0, $a0, 0
+; CHECK-NEXT:    vreplgr2vr.d $vr0, $a0
+; CHECK-NEXT:    st.d $a0, $a1, 0
 ; CHECK-NEXT:    ret
-  %tmp = load i8, ptr %ptr
-  store i8 %tmp, ptr %dst
-  %tmp1 = insertelement <16 x i8> zeroinitializer, i8 %tmp, i32 0
-  %tmp2 = shufflevector <16 x i8> %tmp1, <16 x i8> poison, <16 x i32> zeroinitializer
-  ret <16 x i8> %tmp2
+  %tmp = load i64, ptr %ptr
+  store i64 %tmp, ptr %dst
+  %tmp1 = insertelement <2 x i64> zeroinitializer, i64 %tmp, i32 0
+  %tmp2 = shufflevector <2 x i64> %tmp1, <2 x i64> poison, <2 x i32> zeroinitializer
+  ret <2 x i64> %tmp2
+}
+
+define <2 x i64> @vldrepl_d_unaligned_offset(ptr %ptr) {
+; CHECK-LABEL: vldrepl_d_unaligned_offset:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ld.d $a0, $a0, 4
+; CHECK-NEXT:    vreplgr2vr.d $vr0, $a0
+; CHECK-NEXT:    ret
+  %p = getelementptr i32, ptr %ptr, i32 1
+  %tmp = load i64, ptr %p
+  %tmp1 = insertelement <2 x i64> zeroinitializer, i64 %tmp, i32 0
+  %tmp2 = shufflevector <2 x i64> %tmp1, <2 x i64> poison, <2 x i32> zeroinitializer
+  ret <2 x i64> %tmp2
 }
 
 define <16 x i8> @vldrepl_b(ptr %ptr) {
