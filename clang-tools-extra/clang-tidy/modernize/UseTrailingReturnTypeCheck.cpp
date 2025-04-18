@@ -448,10 +448,9 @@ void UseTrailingReturnTypeCheck::registerMatchers(MatchFinder *Finder) {
     Finder->addMatcher(friendDecl(hasDescendant(F)).bind("Friend"), this);
   }
 
-  if (TransformLambdas != TransformLambda::None) {
+  if (TransformLambdas != TransformLambda::None)
     Finder->addMatcher(
         lambdaExpr(unless(hasExplicitResultType())).bind("Lambda"), this);
-  }
 }
 
 void UseTrailingReturnTypeCheck::registerPPCallbacks(
@@ -603,11 +602,10 @@ SourceLocation UseTrailingReturnTypeCheck::findLambdaTrailingReturnInsertLoc(
   // 'requires' keyword is present in lambda declaration
   if (Method->getTrailingRequiresClause()) {
     SourceLocation ParamEndLoc;
-    if (Method->param_empty()) {
+    if (Method->param_empty())
       ParamEndLoc = Method->getBeginLoc();
-    } else {
+    else
       ParamEndLoc = Method->getParametersSourceRange().getEnd();
-    }
 
     std::pair<FileID, unsigned> ParamEndLocInfo =
         SM.getDecomposedLoc(ParamEndLoc);
@@ -626,9 +624,8 @@ SourceLocation UseTrailingReturnTypeCheck::findLambdaTrailingReturnInsertLoc(
         Token.setKind(Info.getTokenID());
       }
 
-      if (Token.is(tok::kw_requires)) {
+      if (Token.is(tok::kw_requires))
         return Token.getLocation().getLocWithOffset(-1);
-      }
     }
 
     return {};
