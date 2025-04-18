@@ -640,12 +640,19 @@ public:
   /// it may be important for the compiler to check the address explicitly not
   /// to introduce a signing or authentication oracle.
   ///
-  /// If this function returns a (Reg, Inst) pair and before execution of Inst
+  /// This function is intended to detect a complex, multi-instruction pointer-
+  /// checking sequence spanning a contiguous range of instructions at the end
+  /// of the basic block (as these sequences are expected to end with a
+  /// conditional branch - this is how they are implemented on AArch64 by LLVM).
+  /// If a (Reg, FirstInst) pair is returned and before execution of FirstInst
   /// Reg was last written to by an authentication instruction, then it is known
   /// that in any successor of BB either
   /// * the authentication instruction that last wrote to Reg succeeded, or
   /// * the program is terminated abnormally without introducing any signing
   ///   or authentication oracles
+  ///
+  /// Note that this function is not expected to repeat the results returned
+  /// by getAuthCheckedReg(Inst, MayOverwrite) function below.
   virtual std::optional<std::pair<MCPhysReg, MCInst *>>
   getAuthCheckedReg(BinaryBasicBlock &BB) const {
     llvm_unreachable("not implemented");
@@ -660,6 +667,9 @@ public:
   ///
   /// Additionally, if MayOverwrite is false, it is known that the authenticated
   /// pointer is not clobbered by Inst itself.
+  ///
+  /// Use this function for simple, single-instruction patterns instead of
+  /// its getAuthCheckedReg(BB) counterpart.
   virtual MCPhysReg getAuthCheckedReg(const MCInst &Inst,
                                       bool MayOverwrite) const {
     llvm_unreachable("not implemented");

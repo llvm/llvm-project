@@ -629,6 +629,33 @@ resign_load_unscaled_good:
         ret
         .size resign_load_unscaled_good, .-resign_load_unscaled_good
 
+// Any basic block can check at most one register using a multi-instruction
+// pointer-checking sequence, but it can contain an arbitrary number of single-
+// instruction pointer checks.
+
+        .globl  many_checked_regs
+        .type   many_checked_regs,@function
+many_checked_regs:
+// CHECK-NOT: many_checked_regs
+        autdzb  x0
+        autdzb  x1
+        autdzb  x2
+        b       1f
+1:
+        ldr     w3, [x0]  // single-instruction check
+        ldr     w3, [x1]  // single-instruction check
+        mov     x16, x2   // start of multi-instruction checker sequence
+        xpacd   x16       // ...
+        cmp     x2, x16   // ...
+        b.eq    2f        // end of basic block
+        brk     0x1234
+2:
+        pacdza  x0
+        pacdza  x1
+        pacdza  x2
+        ret
+        .size many_checked_regs, .-many_checked_regs
+
         .globl  main
         .type   main,@function
 main:
