@@ -269,6 +269,12 @@ class SPIRVInstructionSelect : public InstructionSelect {
     return InstructionSelect::getRequiredProperties().reset(
         MachineFunctionProperties::Property::RegBankSelected);
   }
+
+  MachineFunctionProperties getClearedProperties() const override {
+    // No generic Phis remain, replaced with OpPhi
+    return InstructionSelect::getClearedProperties().reset(
+        MachineFunctionProperties::Property::NoPHIs);
+  }
 };
 } // namespace
 
