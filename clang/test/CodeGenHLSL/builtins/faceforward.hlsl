@@ -6,8 +6,8 @@
 // RUN:   -emit-llvm -o - | FileCheck %s --check-prefix=SPVCHECK
 
 // CHECK-LABEL: test_faceforward_half
-// CHECK: %mul.i = fmul reassoc nnan ninf nsz arcp afn half %{{.*}}, %{{.*}}
-// CHECK: %cmp.i = fcmp reassoc nnan ninf nsz arcp afn olt half %mul.i, 0xH0000
+// CHECK: %hlsl.dot.i = fmul reassoc nnan ninf nsz arcp afn half %{{.*}}, %{{.*}}
+// CHECK: %cmp.i = fcmp reassoc nnan ninf nsz arcp afn olt half %hlsl.dot.i, 0xH0000
 // CHECK: %fneg.i = fneg reassoc nnan ninf nsz arcp afn half %{{.*}}
 // CHECK: %hlsl.select.i = select reassoc nnan ninf nsz arcp afn i1 %cmp.i, half %{{.*}}, half %fneg.i
 // CHECK: ret half %hlsl.select.i
@@ -50,8 +50,8 @@ half3 test_faceforward_half3(half3 N, half3 I, half3 Ng) { return faceforward(N,
 half4 test_faceforward_half4(half4 N, half4 I, half4 Ng) { return faceforward(N, I, Ng); }
 
 // CHECK-LABEL: test_faceforward_float
-// CHECK: %mul.i = fmul reassoc nnan ninf nsz arcp afn float %{{.*}}, %{{.*}}
-// CHECK: %cmp.i = fcmp reassoc nnan ninf nsz arcp afn olt float %mul.i, 0.000000e+00
+// CHECK: %hlsl.dot.i = fmul reassoc nnan ninf nsz arcp afn float %{{.*}}, %{{.*}}
+// CHECK: %cmp.i = fcmp reassoc nnan ninf nsz arcp afn olt float %hlsl.dot.i, 0.000000e+00
 // CHECK: %fneg.i = fneg reassoc nnan ninf nsz arcp afn float %{{.*}}
 // CHECK: %hlsl.select.i = select reassoc nnan ninf nsz arcp afn i1 %cmp.i, float %{{.*}}, float %fneg.i
 // CHECK: ret float %hlsl.select.i

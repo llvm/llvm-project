@@ -250,7 +250,7 @@ const inline __detail::HLSL_FIXED_VECTOR<half, L> faceforward(
     __detail::HLSL_FIXED_VECTOR<half, L> N,
     __detail::HLSL_FIXED_VECTOR<half, L> I,
     __detail::HLSL_FIXED_VECTOR<half, L> Ng) {
-  return __detail::faceforward_vec_impl(N, I, Ng);
+  return __detail::faceforward_impl(N, I, Ng);
 }
 
 template <int L>
@@ -258,7 +258,7 @@ const inline __detail::HLSL_FIXED_VECTOR<float, L>
 faceforward(__detail::HLSL_FIXED_VECTOR<float, L> N,
             __detail::HLSL_FIXED_VECTOR<float, L> I,
             __detail::HLSL_FIXED_VECTOR<float, L> Ng) {
-  return __detail::faceforward_vec_impl(N, I, Ng);
+  return __detail::faceforward_impl(N, I, Ng);
 }
 
 //===----------------------------------------------------------------------===//

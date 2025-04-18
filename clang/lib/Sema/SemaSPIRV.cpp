@@ -16,20 +16,6 @@ namespace clang {
 
 SemaSPIRV::SemaSPIRV(Sema &S) : SemaBase(S) {}
 
-static bool CheckAllArgsHaveFloatRepresentation(Sema *S, CallExpr *TheCall) {
-  for (unsigned I = 0, N = TheCall->getNumArgs(); I < N; ++I) {
-    ExprResult Arg = TheCall->getArg(I);
-    QualType ArgTy = Arg.get()->getType();
-    if (!ArgTy->hasFloatingRepresentation()) {
-      S->Diag(Arg.get()->getBeginLoc(), diag::err_builtin_invalid_arg_type)
-          << /* ordinal */ I + 1 << /* scalar or vector */ 5 << /* no int */ 0
-          << /* fp */ 1 << ArgTy;
-      return true;
-    }
-  }
-  return false;
-}
-
 static bool CheckAllArgsHaveSameType(Sema *S, CallExpr *TheCall) {
   assert(TheCall->getNumArgs() > 1);
   QualType ArgTy0 = TheCall->getArg(0)->getType();
@@ -136,13 +122,20 @@ bool SemaSPIRV::CheckSPIRVBuiltinFunctionCall(unsigned BuiltinID,
     if (SemaRef.checkArgCount(TheCall, 3))
       return true;
 
-    if (CheckAllArgsHaveFloatRepresentation(&SemaRef, TheCall))
+    // Check if first argument has floating representation
+    ExprResult A = TheCall->getArg(0);
+    QualType ArgTyA = A.get()->getType();
+    if (!ArgTyA->hasFloatingRepresentation()) {
+      SemaRef.Diag(A.get()->getBeginLoc(), diag::err_builtin_invalid_arg_type)
+          << /* ordinal */ 1 << /* scalar or vector */ 5 << /* no int */ 0
+          << /* fp */ 1 << ArgTyA;
       return true;
+    }
 
     if (CheckAllArgsHaveSameType(&SemaRef, TheCall))
       return true;
 
-    QualType RetTy = TheCall->getArg(0)->getType();
+    QualType RetTy = ArgTyA;
     TheCall->setType(RetTy);
     break;
   }
@@ -150,13 +143,20 @@ bool SemaSPIRV::CheckSPIRVBuiltinFunctionCall(unsigned BuiltinID,
     if (SemaRef.checkArgCount(TheCall, 3))
       return true;
 
-    if (CheckAllArgsHaveFloatRepresentation(&SemaRef, TheCall))
+    // Check if first argument has floating representation
+    ExprResult A = TheCall->getArg(0);
+    QualType ArgTyA = A.get()->getType();
+    if (!ArgTyA->hasFloatingRepresentation()) {
+      SemaRef.Diag(A.get()->getBeginLoc(), diag::err_builtin_invalid_arg_type)
+          << /* ordinal */ 1 << /* scalar or vector */ 5 << /* no int */ 0
+          << /* fp */ 1 << ArgTyA;
       return true;
+    }
 
     if (CheckAllArgsHaveSameType(&SemaRef, TheCall))
       return true;
 
-    QualType RetTy = TheCall->getArg(0)->getType();
+    QualType RetTy = ArgTyA;
     TheCall->setType(RetTy);
     break;
   }

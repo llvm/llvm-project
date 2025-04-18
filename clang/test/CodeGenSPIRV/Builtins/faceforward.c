@@ -2,12 +2,44 @@
 
 // RUN: %clang_cc1 -O1 -triple spirv-pc-vulkan-compute %s -emit-llvm -o - | FileCheck %s
 
+typedef _Float16 half;
+typedef half half2 __attribute__((ext_vector_type(2)));
+typedef half half3 __attribute__((ext_vector_type(3)));
+typedef half half4 __attribute__((ext_vector_type(4)));
 typedef float float2 __attribute__((ext_vector_type(2)));
 typedef float float3 __attribute__((ext_vector_type(3)));
 typedef float float4 __attribute__((ext_vector_type(4)));
 
+// CHECK-LABEL: define spir_func half @test_faceforward_half(
+// CHECK-SAME: half noundef [[N:%.*]], half noundef [[I:%.*]], half noundef [[NG:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[SPV_FACEFORWARD:%.*]] = tail call half @llvm.spv.smoothstep.f16(half [[N]], half [[I]], half [[NG]])
+// CHECK-NEXT:    ret half [[SPV_FACEFORWARD]]
+half test_faceforward_half(half N, half I, half Ng) { return __builtin_spirv_faceforward(N, I, Ng); }
+
+// CHECK-LABEL: define spir_func <2 x half> @test_faceforward_half2(
+// CHECK-SAME: <2 x half> noundef [[N:%.*]], <2 x half> noundef [[I:%.*]], <2 x half> noundef [[NG:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[SPV_FACEFORWARD:%.*]] = tail call <2 x half> @llvm.spv.smoothstep.v2f16(<2 x half> [[N]], <2 x half> [[I]], <2 x half> [[NG]])
+// CHECK-NEXT:    ret <2 x half> [[SPV_FACEFORWARD]]
+half2 test_faceforward_half2(half2 N, half2 I, half2 Ng) { return __builtin_spirv_faceforward(N, I, Ng); }
+
+// CHECK-LABEL: define spir_func <3 x half> @test_faceforward_half3(
+// CHECK-SAME: <3 x half> noundef [[N:%.*]], <3 x half> noundef [[I:%.*]], <3 x half> noundef [[NG:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[SPV_FACEFORWARD:%.*]] = tail call <3 x half> @llvm.spv.smoothstep.v3f16(<3 x half> [[N]], <3 x half> [[I]], <3 x half> [[NG]])
+// CHECK-NEXT:    ret <3 x half> [[SPV_FACEFORWARD]]
+half3 test_faceforward_half3(half3 N, half3 I, half3 Ng) { return __builtin_spirv_faceforward(N, I, Ng); }
+
+// CHECK-LABEL: define spir_func <4 x half> @test_faceforward_half4(
+// CHECK-SAME: <4 x half> noundef [[N:%.*]], <4 x half> noundef [[I:%.*]], <4 x half> noundef [[NG:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[SPV_FACEFORWARD:%.*]] = tail call <4 x half> @llvm.spv.smoothstep.v4f16(<4 x half> [[N]], <4 x half> [[I]], <4 x half> [[NG]])
+// CHECK-NEXT:    ret <4 x half> [[SPV_FACEFORWARD]]
+half4 test_faceforward_half4(half4 N, half4 I, half4 Ng) { return __builtin_spirv_faceforward(N, I, Ng); }
+
 // CHECK-LABEL: define spir_func float @test_faceforward_float(
-// CHECK-SAME: float noundef [[N:%.*]], float noundef [[I:%.*]], float noundef [[NG:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+// CHECK-SAME: float noundef [[N:%.*]], float noundef [[I:%.*]], float noundef [[NG:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[SPV_FACEFORWARD:%.*]] = tail call float @llvm.spv.smoothstep.f32(float [[N]], float [[I]], float [[NG]])
 // CHECK-NEXT:    ret float [[SPV_FACEFORWARD]]

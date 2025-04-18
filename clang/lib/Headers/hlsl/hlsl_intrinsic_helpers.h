@@ -130,16 +130,6 @@ template <typename T> constexpr T faceforward_impl(T N, T I, T Ng) {
 #if (__has_builtin(__builtin_spirv_faceforward))
   return __builtin_spirv_faceforward(N, I, Ng);
 #else
-  return select(I * Ng < 0, N, -N);
-#endif
-}
-
-template <typename T, int L>
-constexpr vector<T, L> faceforward_vec_impl(vector<T, L> N, vector<T, L> I,
-                                            vector<T, L> Ng) {
-#if (__has_builtin(__builtin_spirv_faceforward))
-  return __builtin_spirv_faceforward(N, I, Ng);
-#else
   return select(dot(I, Ng) < 0, N, -N);
 #endif
 }
