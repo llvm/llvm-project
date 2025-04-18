@@ -29,14 +29,16 @@ STATISTIC(NumSinkIter, "Number of sinking iterations");
 
 static bool hasStoreConflict(Instruction *Inst, AliasAnalysis &AA,
                              SmallPtrSetImpl<Instruction *> &Stores) {
+  BatchAAResults BatchAA(AA);
+
   if (LoadInst *L = dyn_cast<LoadInst>(Inst)) {
     MemoryLocation Loc = MemoryLocation::get(L);
     for (Instruction *S : Stores)
-      if (isModSet(AA.getModRefInfo(S, Loc)))
+      if (isModSet(BatchAA.getModRefInfo(S, Loc)))
         return true;
   } else if (auto *Call = dyn_cast<CallBase>(Inst)) {
     for (Instruction *S : Stores)
-      if (isModSet(AA.getModRefInfo(S, Call)))
+      if (isModSet(BatchAA.getModRefInfo(S, Call)))
         return true;
   }
   return false;
