@@ -391,6 +391,10 @@ Improvements to Clang's diagnostics
 
   Fixes #GH131127
 
+- ``-Wuninitialized`` now diagnoses when a class does not declare any
+  constructors to initialize their non-modifiable members. The diagnostic is
+  not new; being controlled via a warning group is what's new. Fixes #GH41104
+
 Improvements to Clang's time-trace
 ----------------------------------
 
