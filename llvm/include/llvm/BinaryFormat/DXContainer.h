@@ -18,6 +18,7 @@
 #include "llvm/Support/SwapByteOrder.h"
 #include "llvm/TargetParser/Triple.h"
 
+#include <cstdint>
 #include <stdint.h>
 
 namespace llvm {
@@ -155,6 +156,11 @@ static_assert((uint64_t)FeatureFlags::NextUnusedBit <= 1ull << 63,
 
 #define ROOT_ELEMENT_FLAG(Num, Val) Val = 1ull << Num,
 enum class RootElementFlag : uint32_t {
+#include "DXContainerConstants.def"
+};
+
+#define ROOT_DESCRIPTOR_FLAG(Num, Val) Val = 1ull << Num,
+enum class RootDescriptorFlag : uint32_t {
 #include "DXContainerConstants.def"
 };
 
@@ -592,6 +598,25 @@ struct RootConstants {
     sys::swapByteOrder(ShaderRegister);
     sys::swapByteOrder(RegisterSpace);
     sys::swapByteOrder(Num32BitValues);
+  }
+};
+struct RootDescriptor_V1_0 {
+  uint32_t ShaderRegister;
+  uint32_t RegisterSpace;
+  void swapBytes() {
+    sys::swapByteOrder(ShaderRegister);
+    sys::swapByteOrder(RegisterSpace);
+  }
+};
+
+struct RootDescriptor_V1_1 {
+  uint32_t ShaderRegister;
+  uint32_t RegisterSpace;
+  uint32_t Flags;
+  void swapBytes() {
+    sys::swapByteOrder(ShaderRegister);
+    sys::swapByteOrder(RegisterSpace);
+    sys::swapByteOrder(Flags);
   }
 };
 

@@ -15,6 +15,7 @@
 #ifndef LLVM_OBJECT_DXCONTAINER_H
 #define LLVM_OBJECT_DXCONTAINER_H
 
+#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/DXContainer.h"
@@ -149,6 +150,36 @@ struct RootConstantView : RootParameterView {
   }
 };
 
+struct RootDescriptorView_V1_0 : RootParameterView {
+  static bool classof(const RootParameterView *V) {
+    return (V->Header.ParameterType ==
+                llvm::to_underlying(dxbc::RootParameterType::CBV) ||
+            V->Header.ParameterType ==
+                llvm::to_underlying(dxbc::RootParameterType::SRV) ||
+            V->Header.ParameterType ==
+                llvm::to_underlying(dxbc::RootParameterType::UAV));
+  }
+
+  llvm::Expected<dxbc::RootDescriptor_V1_0> read() {
+    return readParameter<dxbc::RootDescriptor_V1_0>();
+  }
+};
+
+struct RootDescriptorView_V1_1 : RootParameterView {
+  static bool classof(const RootParameterView *V) {
+    return (V->Header.ParameterType ==
+                llvm::to_underlying(dxbc::RootParameterType::CBV) ||
+            V->Header.ParameterType ==
+                llvm::to_underlying(dxbc::RootParameterType::SRV) ||
+            V->Header.ParameterType ==
+                llvm::to_underlying(dxbc::RootParameterType::UAV));
+  }
+
+  llvm::Expected<dxbc::RootDescriptor_V1_1> read() {
+    return readParameter<dxbc::RootDescriptor_V1_1>();
+  }
+};
+
 static Error parseFailed(const Twine &Msg) {
   return make_error<GenericBinaryError>(Msg.str(), object_error::parse_failed);
 }
@@ -191,6 +222,14 @@ public:
     switch (static_cast<dxbc::RootParameterType>(Header.ParameterType)) {
     case dxbc::RootParameterType::Constants32Bit:
       DataSize = sizeof(dxbc::RootConstants);
+      break;
+    case dxbc::RootParameterType::CBV:
+    case dxbc::RootParameterType::SRV:
+    case dxbc::RootParameterType::UAV:
+      if (Version == 1)
+        DataSize = sizeof(dxbc::RootDescriptor_V1_0);
+      else
+        DataSize = sizeof(dxbc::RootDescriptor_V1_1);
       break;
     }
     size_t EndOfSectionByte = getNumStaticSamplers() == 0

@@ -273,7 +273,7 @@ void DXContainerWriter::writeParts(raw_ostream &OS) {
       RS.NumStaticSamplers = P.RootSignature->NumStaticSamplers;
       RS.StaticSamplersOffset = P.RootSignature->StaticSamplersOffset;
 
-      for (const auto &Param : P.RootSignature->Parameters) {
+      for (auto &Param : P.RootSignature->Parameters) {
         mcdxbc::RootParameter NewParam;
         NewParam.Header = dxbc::RootParameterHeader{
             Param.Type, Param.Visibility, Param.Offset};
@@ -283,6 +283,23 @@ void DXContainerWriter::writeParts(raw_ostream &OS) {
           NewParam.Constants.Num32BitValues = Param.Constants.Num32BitValues;
           NewParam.Constants.RegisterSpace = Param.Constants.RegisterSpace;
           NewParam.Constants.ShaderRegister = Param.Constants.ShaderRegister;
+          break;
+        case llvm::to_underlying(dxbc::RootParameterType::SRV):
+        case llvm::to_underlying(dxbc::RootParameterType::UAV):
+        case llvm::to_underlying(dxbc::RootParameterType::CBV):
+          if (RS.Version == 1) {
+            NewParam.Descriptor_V10.RegisterSpace =
+                Param.Descriptor.RegisterSpace;
+            NewParam.Descriptor_V10.ShaderRegister =
+                Param.Descriptor.ShaderRegister;
+          } else {
+            NewParam.Descriptor_V11.RegisterSpace =
+                Param.Descriptor.RegisterSpace;
+            NewParam.Descriptor_V11.ShaderRegister =
+                Param.Descriptor.ShaderRegister;
+            NewParam.Descriptor_V11.Flags = Param.Descriptor.getEncodedFlags();
+          }
+
           break;
         }
 

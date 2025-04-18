@@ -8,6 +8,7 @@
 
 #include "llvm/MC/DXContainerRootSignature.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/Support/EndianStream.h"
 
 using namespace llvm;
@@ -36,6 +37,15 @@ size_t RootSignatureDesc::getSize() const {
     switch (P.Header.ParameterType) {
     case llvm::to_underlying(dxbc::RootParameterType::Constants32Bit):
       Size += sizeof(dxbc::RootConstants);
+      break;
+    case llvm::to_underlying(dxbc::RootParameterType::CBV):
+    case llvm::to_underlying(dxbc::RootParameterType::SRV):
+    case llvm::to_underlying(dxbc::RootParameterType::UAV):
+      if (Version == 1)
+        Size += sizeof(dxbc::RootDescriptor_V1_0);
+      else
+        Size += sizeof(dxbc::RootDescriptor_V1_1);
+
       break;
     }
   }
@@ -80,6 +90,22 @@ void RootSignatureDesc::write(raw_ostream &OS) const {
       support::endian::write(BOS, P.Constants.Num32BitValues,
                              llvm::endianness::little);
       break;
+    case llvm::to_underlying(dxbc::RootParameterType::CBV):
+    case llvm::to_underlying(dxbc::RootParameterType::SRV):
+    case llvm::to_underlying(dxbc::RootParameterType::UAV):
+      if (Version == 1) {
+        support::endian::write(BOS, P.Descriptor_V10.RegisterSpace,
+                               llvm::endianness::little);
+        support::endian::write(BOS, P.Descriptor_V10.ShaderRegister,
+                               llvm::endianness::little);
+      } else {
+        support::endian::write(BOS, P.Descriptor_V11.RegisterSpace,
+                               llvm::endianness::little);
+        support::endian::write(BOS, P.Descriptor_V11.ShaderRegister,
+                               llvm::endianness::little);
+        support::endian::write(BOS, P.Descriptor_V11.Flags,
+                               llvm::endianness::little);
+      }
     }
   }
   assert(Storage.size() == getSize());
