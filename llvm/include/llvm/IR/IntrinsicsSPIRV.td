@@ -145,4 +145,8 @@ let TargetPrefix = "spv" in {
 
   // FPMaxErrorDecorationINTEL
   def int_spv_assign_fpmaxerror_decoration: Intrinsic<[], [llvm_any_ty, llvm_metadata_ty]>;
+  
+  // ExecutionModeMaxRedId
+  def int_spv_max_reg_constant : Intrinsic<[], [llvm_i32_ty], [ImmArg<ArgIndex<0>>]>;
+
 }

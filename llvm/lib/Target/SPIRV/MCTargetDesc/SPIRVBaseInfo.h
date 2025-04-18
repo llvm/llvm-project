@@ -217,6 +217,11 @@ namespace CooperativeMatrixOperands {
 #include "SPIRVGenTables.inc"
 } // namespace CooperativeMatrixOperands
 
+namespace NamedMaximumNumberOfRegisters {
+#define GET_NamedMaximumNumberOfRegisters_DECL
+#include "SPIRVGenTables.inc"
+} // namespace NamedMaximumNumberOfRegisters
+
 struct ExtendedBuiltin {
   StringRef Name;
   InstructionSet::InstructionSet Set;
