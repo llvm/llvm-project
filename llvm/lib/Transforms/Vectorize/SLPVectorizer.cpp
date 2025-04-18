@@ -6572,6 +6572,12 @@ static bool areTwoInsertFromSameBuildVector(
   return false;
 }
 
+/// Checks if the specified instruction \p I is an alternate operation for
+/// the given \p MainOp and \p AltOp instructions.
+static bool isAlternateInstruction(Instruction *I, Instruction *MainOp,
+                                   Instruction *AltOp,
+                                   const TargetLibraryInfo &TLI);
+
 std::optional<BoUpSLP::OrdersType>
 BoUpSLP::getReorderingData(const TreeEntry &TE, bool TopToBottom,
                            bool IgnoreReorder) {
@@ -6713,6 +6719,28 @@ BoUpSLP::getReorderingData(const TreeEntry &TE, bool TopToBottom,
            "Alternate instructions are only supported by "
            "BinaryOperator and CastInst.");
     return TE.ReorderIndices;
+  }
+  if (!TopToBottom && IgnoreReorder && TE.State == TreeEntry::Vectorize &&
+      TE.isAltShuffle()) {
+    assert(TE.ReuseShuffleIndices.empty() &&
+           "ReuseShuffleIndices should be "
+           "empty for alternate instructions.");
+    SmallVector<int> Mask;
+    TE.buildAltOpShuffleMask(
+        [&](Instruction *I) {
+          assert(TE.getMatchingMainOpOrAltOp(I) &&
+                 "Unexpected main/alternate opcode");
+          return isAlternateInstruction(I, TE.getMainOp(), TE.getAltOp(), *TLI);
+        },
+        Mask);
+    const int VF = TE.getVectorFactor();
+    OrdersType ResOrder(VF, VF);
+    for (unsigned I : seq<unsigned>(VF)) {
+      if (Mask[I] == PoisonMaskElem)
+        continue;
+      ResOrder[Mask[I] % VF] = I;
+    }
+    return std::move(ResOrder);
   }
   if (TE.State == TreeEntry::Vectorize && TE.getOpcode() == Instruction::PHI) {
     if (!TE.ReorderIndices.empty())
@@ -7782,13 +7810,18 @@ void BoUpSLP::reorderBottomToTop(bool IgnoreReorder) {
       }
       // Reorder operands of the user node and set the ordering for the user
       // node itself.
+      auto IsNotProfitableAltCodeNode = [](const TreeEntry &TE) {
+        return TE.isAltShuffle() &&
+               (!TE.ReuseShuffleIndices.empty() || TE.getVectorFactor() == 2 ||
+                TE.ReorderIndices.empty());
+      };
       if (Data.first->State != TreeEntry::Vectorize ||
           !isa<ExtractElementInst, ExtractValueInst, LoadInst>(
               Data.first->getMainOp()) ||
-          Data.first->isAltShuffle())
+          IsNotProfitableAltCodeNode(*Data.first))
         Data.first->reorderOperands(Mask);
       if (!isa<InsertElementInst, StoreInst>(Data.first->getMainOp()) ||
-          Data.first->isAltShuffle() ||
+          IsNotProfitableAltCodeNode(*Data.first) ||
           Data.first->State == TreeEntry::StridedVectorize ||
           Data.first->State == TreeEntry::CompressVectorize) {
         reorderScalars(Data.first->Scalars, Mask);
@@ -7796,7 +7829,7 @@ void BoUpSLP::reorderBottomToTop(bool IgnoreReorder) {
                      /*BottomOrder=*/true);
         if (Data.first->ReuseShuffleIndices.empty() &&
             !Data.first->ReorderIndices.empty() &&
-            !Data.first->isAltShuffle()) {
+            !IsNotProfitableAltCodeNode(*Data.first)) {
           // Insert user node to the list to try to sink reordering deeper in
           // the graph.
           Queue.push(Data.first);
@@ -8772,12 +8805,6 @@ static std::pair<size_t, size_t> generateKeySubkey(
 /// \p MainOp and \p AltOp instructions.
 static bool isMainInstruction(Instruction *I, Instruction *MainOp,
                               Instruction *AltOp, const TargetLibraryInfo &TLI);
-
-/// Checks if the specified instruction \p I is an alternate operation for
-/// the given \p MainOp and \p AltOp instructions.
-static bool isAlternateInstruction(Instruction *I, Instruction *MainOp,
-                                   Instruction *AltOp,
-                                   const TargetLibraryInfo &TLI);
 
 bool BoUpSLP::areAltOperandsProfitable(const InstructionsState &S,
                                        ArrayRef<Value *> VL) const {
