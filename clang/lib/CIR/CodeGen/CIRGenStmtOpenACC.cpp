@@ -124,7 +124,7 @@ public:
 
       for (const DeviceTypeArgument &arg : clause.getArchitectures()) {
         deviceTypes.push_back(mlir::acc::DeviceTypeAttr::get(
-            builder.getContext(), decodeDeviceType(arg.first)));
+            builder.getContext(), decodeDeviceType(arg.getIdentifierInfo())));
       }
       operation.removeDeviceTypesAttr();
       operation.setDeviceTypesAttr(
@@ -135,7 +135,7 @@ public:
 
       if (!clause.getArchitectures().empty())
         operation.setDeviceType(
-            decodeDeviceType(clause.getArchitectures()[0].first));
+            decodeDeviceType(clause.getArchitectures()[0].getIdentifierInfo()));
     } else {
       return clauseNotImplemented(clause);
     }
