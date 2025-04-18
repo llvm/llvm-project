@@ -1997,11 +1997,10 @@ static Value extractInsertFoldConstantOp(OpType op, AdaptorType adaptor,
   OperandRange dynamicPosition = op.getDynamicPosition();
   ArrayRef<Attribute> dynamicPositionAttr = adaptor.getDynamicPosition();
   ArrayRef<int64_t> vectorShape;
-  if constexpr (std::is_same_v<OpType, ExtractOp>) {
+  if constexpr (std::is_same_v<OpType, ExtractOp>)
     vectorShape = op.getSourceVectorType().getShape();
-  } else {
+  else
     vectorShape = op.getDestVectorType().getShape();
-  }
 
   // If the dynamic operands is empty, it is returned directly.
   if (!dynamicPosition.size())
