@@ -59,7 +59,6 @@
 #include "VPlan.h"
 #include "VPlanAnalysis.h"
 #include "VPlanCFG.h"
-#include "VPlanHCFGBuilder.h"
 #include "VPlanHelpers.h"
 #include "VPlanPatternMatch.h"
 #include "VPlanTransforms.h"
@@ -9557,13 +9556,8 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
             return !CM.requiresScalarEpilogue(VF.isVector());
           },
           Range);
-  auto Plan = std::make_unique<VPlan>(OrigLoop);
-  // Build hierarchical CFG.
-  // TODO: Convert to VPlan-transform and consolidate all transforms for VPlan
-  // creation.
-  VPlanHCFGBuilder HCFGBuilder(OrigLoop, LI, *Plan);
-  HCFGBuilder.buildPlainCFG();
-
+  DenseMap<VPBlockBase *, BasicBlock *> VPB2IRBB;
+  auto Plan = VPlanTransforms::buildPlainCFG(OrigLoop, *LI, VPB2IRBB);
   VPlanTransforms::createLoopRegions(*Plan, Legal->getWidestInductionType(),
                                      PSE, RequiresScalarEpilogueCheck,
                                      CM.foldTailByMasking(), OrigLoop);
@@ -9642,7 +9636,7 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(RPOT)) {
     // Handle VPBBs down to the latch.
     if (VPBB == LoopRegion->getExiting()) {
-      assert(!HCFGBuilder.getIRBBForVPB(VPBB) &&
+      assert(!VPB2IRBB.contains(VPBB) &&
              "the latch block shouldn't have a corresponding IRBB");
       VPBlockUtils::connectBlocks(PrevVPBB, VPBB);
       break;
@@ -9658,7 +9652,7 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
       // FIXME: At the moment, masks need to be placed at the beginning of the
       // block, as blends introduced for phi nodes need to use it. The created
       // blends should be sunk after the mask recipes.
-      RecipeBuilder.createBlockInMask(HCFGBuilder.getIRBBForVPB(VPBB));
+      RecipeBuilder.createBlockInMask(VPB2IRBB.lookup(VPBB));
     }
 
     // Convert input VPInstructions to widened recipes.
@@ -9862,12 +9856,8 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VFRange &Range) {
   assert(!OrigLoop->isInnermost());
   assert(EnableVPlanNativePath && "VPlan-native path is not enabled.");
 
-  // Create new empty VPlan
-  auto Plan = std::make_unique<VPlan>(OrigLoop);
-  // Build hierarchical CFG
-  VPlanHCFGBuilder HCFGBuilder(OrigLoop, LI, *Plan);
-  HCFGBuilder.buildPlainCFG();
-
+  DenseMap<VPBlockBase *, BasicBlock *> VPB2IRBB;
+  auto Plan = VPlanTransforms::buildPlainCFG(OrigLoop, *LI, VPB2IRBB);
   VPlanTransforms::createLoopRegions(*Plan, Legal->getWidestInductionType(),
                                      PSE, true, false, OrigLoop);
 
