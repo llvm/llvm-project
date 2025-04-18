@@ -1,4 +1,4 @@
-<!--===- docs/FortranStandardsSupport.md
+<!--===- docs/OpenMPSupport.md
 
    Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
    See https://llvm.org/LICENSE.txt for license information.
@@ -21,6 +21,7 @@ offers full support for OpenMP 3.1 ([See details here](#openmp-31-openmp-25-open
 Partial support for OpenMP 4.0 is also available and currently under active development.
 The table below outlines the current status of OpenMP 4.0 feature support.
 Work is ongoing to add support for OpenMP 4.5 and newer versions; a support statement for these will be shared in the future.
+The table entries are derived from the information provided in the Version Differences subsection of the Features History section in the OpenMP standard.
 
 The feature support information is provided as a table with three columns that are self explanatory. The Status column uses
 the letters **P**, **Y**, **N** for the implementation status:
@@ -35,32 +36,32 @@ Note : No distinction is made between the support in Parser/Semantics, MLIR, Low
 | Feature                                                    | Status | Comments                                                |
 |------------------------------------------------------------|--------|---------------------------------------------------------|
 | proc_bind clause                                           | Y      | |
-| simd construct                                             | P      | Some clauses are not supported |
+| simd construct                                             | P      | linear clause is not supported |
 | declare simd construct                                     | N      | |
-| do simd construct                                          | Y      | |
-| target data construct                                      | P      | |
-| target construct                                           | P      | |
-| target update construct                                    | P      | |
+| do simd construct                                          | P      | linear clause is not supported |
+| target data construct                                      | P      | device clause not supported |
+| target construct                                           | P      | device clause not supported |
+| target update construct                                    | P      | device clause not supported |
 | declare target directive                                   | P      | |
-| teams construct                                            | P      | |
-| distribute construct                                       | P      | |
-| distribute simd construct                                  | P      | |
-| distribute parallel loop construct                         | P      | |
-| distribute parallel loop simd construct                    | P      | |
-| depend clause                                              | P      | Depend clause with array sections are not supported |
+| teams construct                                            | P      | reduction clause not supported |
+| distribute construct                                       | P      | dist_schedule clause not supported |
+| distribute simd construct                                  | P      | dist_schedule and linear clauses are not supported |
+| distribute parallel loop construct                         | P      | dist_schedule clause not supported |
+| distribute parallel loop simd construct                    | P      | dist_schedule and linear clauses are not supported |
+| depend clause                                              | P      | depend clause with array sections are not supported |
 | declare reduction construct                                | N      | |
 | atomic construct extensions                                | Y      | |
 | cancel construct                                           | N      | |
 | cancellation point construct                               | N      | |
-| parallel do simd construct                                 | Y      | |
-| target teams construct                                     | P      | |
-| teams distribute construct                                 | P      | |
-| teams distribute simd construct                            | P      | |
-| target teams distribute construct                          | P      | |
-| teams distribute parallel loop construct                   | P      | |
-| target teams distribute parallel loop construct            | P      | |
-| teams distribute parallel loop simd construct              | P      | |
-| target teams distribute parallel loop simd construct       | P      | |
+| parallel do simd construct                                 | P      | linear clause is not supported |
+| target teams construct                                     | P      | device and reduction clauses are not supported |
+| teams distribute construct                                 | P      | reduction and dist_schedule clauses not supported |
+| teams distribute simd construct                            | P      | reduction, dist_schedule and linear clauses are not supported |
+| target teams distribute construct                          | P      | device, reduction and dist_schedule clauses are not supported |
+| teams distribute parallel loop construct                   | P      | reduction and dist_schedule clauses are not supported |
+| target teams distribute parallel loop construct            | P      | device, reduction and dist_schedule clauses are not supported |
+| teams distribute parallel loop simd construct              | P      | reduction, dist_schedule, and linear clauses are not supported |
+| target teams distribute parallel loop simd construct       | P      | device, reduction, dist_schedule and linear clauses are not supported |
 
 ## OpenMP 3.1, OpenMP 2.5, OpenMP 1.1
 All features except a few corner cases in atomic (complex type, different but compatible types in lhs and rhs), threadprivate (character type) constructs/clauses are supported.
