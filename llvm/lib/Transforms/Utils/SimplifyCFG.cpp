@@ -3460,9 +3460,9 @@ typedef SmallPtrSet<BasicBlock *, 8> BlocksSet;
 static bool reachesUsed(BasicBlock *BB,
                         const BlocksSet &UsedInNonLocalBlocksSet,
                         BlocksSet &VisitedBlocksSet) {
-  if (VisitedBlocksSet.contains(BB))
+  if (!VisitedBlocksSet.insert(BB).second)
     return false;
-  VisitedBlocksSet.insert(BB);
+
   if (UsedInNonLocalBlocksSet.contains(BB))
     return true;
   for (BasicBlock *Succ : successors(BB))
