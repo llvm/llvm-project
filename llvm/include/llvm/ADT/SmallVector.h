@@ -36,10 +36,18 @@ template <typename T> class ArrayRef;
 
 template <typename IteratorT> class iterator_range;
 
-template <class Iterator>
-using EnableIfConvertibleToInputIterator = std::enable_if_t<std::is_convertible<
+namespace detail {
+template <typename Iterator, typename IteratorCategory>
+inline constexpr bool IsOfIteratorCategory = std::is_convertible_v<
     typename std::iterator_traits<Iterator>::iterator_category,
-    std::input_iterator_tag>::value>;
+    IteratorCategory>;
+
+template <typename Iterator>
+using EnableIfConvertibleToInputIterator =
+    std::enable_if_t<std::is_convertible_v<
+        typename std::iterator_traits<Iterator>::iterator_category,
+        std::input_iterator_tag>>;
+} // namespace detail
 
 /// This is all the stuff common to all SmallVectors.
 ///
@@ -679,13 +687,37 @@ public:
   void swap(SmallVectorImpl &RHS);
 
   /// Add the specified range to the end of the SmallVector.
-  template <typename ItTy, typename = EnableIfConvertibleToInputIterator<ItTy>>
+  template <typename ItTy,
+            typename = detail::EnableIfConvertibleToInputIterator<ItTy>>
   void append(ItTy in_start, ItTy in_end) {
     this->assertSafeToAddRange(in_start, in_end);
-    size_type NumInputs = std::distance(in_start, in_end);
-    this->reserve(this->size() + NumInputs);
-    this->uninitialized_copy(in_start, in_end, this->end());
-    this->set_size(this->size() + NumInputs);
+    if constexpr (detail::IsOfIteratorCategory<
+                      ItTy, std::random_access_iterator_tag>) {
+      // Only reserve the required extra size upfront when the size calculation
+      // is guaranteed to be O(1).
+      size_type NumInputs = std::distance(in_start, in_end);
+      this->reserve(this->size() + NumInputs);
+      this->uninitialized_copy(in_start, in_end, this->end());
+      this->set_size(this->size() + NumInputs);
+    } else {
+      // Otherwise, append using `in_end` as the sentinel and reserve more space
+      // as necessary.
+      for (ItTy It = in_start; It != in_end;) {
+        iterator Dest = this->end();
+        size_type InitialSize = this->size();
+        size_type ExtraCap = this->capacity() - InitialSize;
+        size_type NumCopied = 0;
+        for (; NumCopied != ExtraCap && It != in_end; ++It, ++NumCopied) {
+          ::new ((void *)(Dest + NumCopied)) T(*It);
+        }
+        size_type NewSize = InitialSize + NumCopied;
+        this->set_size(NewSize);
+
+        if (It != in_end) {
+          this->reserve(NewSize + 1);
+        }
+      }
+    }
   }
 
   /// Append \p NumInputs copies of \p Elt to the end.
@@ -720,7 +752,8 @@ public:
   // FIXME: Consider assigning over existing elements, rather than clearing &
   // re-initializing them - for all assign(...) variants.
 
-  template <typename ItTy, typename = EnableIfConvertibleToInputIterator<ItTy>>
+  template <typename ItTy,
+            typename = detail::EnableIfConvertibleToInputIterator<ItTy>>
   void assign(ItTy in_start, ItTy in_end) {
     this->assertSafeToReferenceAfterClear(in_start, in_end);
     clear();
@@ -871,7 +904,8 @@ public:
     return I;
   }
 
-  template <typename ItTy, typename = EnableIfConvertibleToInputIterator<ItTy>>
+  template <typename ItTy,
+            typename = detail::EnableIfConvertibleToInputIterator<ItTy>>
   iterator insert(iterator I, ItTy From, ItTy To) {
     // Convert iterator to elt# to avoid invalidating iterator when we reserve()
     size_t InsertElt = I - this->begin();
@@ -887,8 +921,8 @@ public:
     this->assertSafeToAddRange(From, To);
 
     size_t NumToInsert = std::distance(From, To);
-
-    // Ensure there is enough space.
+    // Ensure there is enough space so that we do not have to re-allocate mid
+    // insertion.
     reserve(this->size() + NumToInsert);
 
     // Uninvalidate the iterator.
@@ -1212,7 +1246,8 @@ public:
     this->assign(Size, Value);
   }
 
-  template <typename ItTy, typename = EnableIfConvertibleToInputIterator<ItTy>>
+  template <typename ItTy,
+            typename = detail::EnableIfConvertibleToInputIterator<ItTy>>
   SmallVector(ItTy S, ItTy E) : SmallVectorImpl<T>(N) {
     this->append(S, E);
   }
