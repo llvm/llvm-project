@@ -62,8 +62,8 @@ static bool canBeCalledWithBarePointers(gpu::GPUFuncOp func) {
   return canBeBare;
 }
 
-Value getLaneId(ConversionPatternRewriter &rewriter, Location loc,
-                const unsigned indexBitwidth) {
+static Value getLaneId(ConversionPatternRewriter &rewriter, Location loc,
+                       const unsigned indexBitwidth) {
   auto int32Type = IntegerType::get(rewriter.getContext(), 32);
   Value zero = rewriter.create<arith::ConstantIntOp>(loc, 0, 32);
   Value minus1 = rewriter.create<arith::ConstantIntOp>(loc, -1, 32);
@@ -138,10 +138,6 @@ struct GPUShuffleOpLowering : public ConvertOpToLLVMPattern<gpu::ShuffleOp> {
     Location loc = op->getLoc();
     Value initShflValue = adaptor.getValue();
     Type shflType = initShflValue.getType();
-    // TODO: Add support for non 32-bit shuffle values.
-    if (!shflType.isIntOrFloat() || shflType.getIntOrFloatBitWidth() != 32)
-      return rewriter.notifyMatchFailure(
-          op, "only 32-bit int/float types are supported");
 
     const unsigned indexBitwidth = getTypeConverter()->getIndexTypeBitwidth();
     Value srcLaneId = getLaneId(rewriter, loc, indexBitwidth);
@@ -179,15 +175,17 @@ struct GPUShuffleOpLowering : public ConvertOpToLLVMPattern<gpu::ShuffleOp> {
     Value two = rewriter.create<LLVM::ConstantOp>(loc, int32Type, 2);
     Value dwordAlignedDstLane =
         rewriter.create<LLVM::ShlOp>(loc, int32Type, selectDstLane, two);
-    if (shflType.isF32()) {
-      initShflValue =
-          rewriter.create<LLVM::BitcastOp>(loc, int32Type, initShflValue);
+
+    SmallVector<Value> decomposed =
+        LLVM::decomposeValue(rewriter, loc, initShflValue, int32Type);
+    SmallVector<Value> swizzled;
+    for (Value v : decomposed) {
+      Value res = rewriter.create<ROCDL::DsBpermuteOp>(loc, int32Type,
+                                                       dwordAlignedDstLane, v);
+      swizzled.emplace_back(res);
     }
-    Value shflValue = rewriter.create<ROCDL::DsBpermuteOp>(
-        loc, int32Type, dwordAlignedDstLane, initShflValue);
-    if (shflType.isF32()) {
-      shflValue = rewriter.create<LLVM::BitcastOp>(loc, shflType, shflValue);
-    }
+    Value shflValue =
+        LLVM::composeValue(rewriter, loc, swizzled, initShflValue.getType());
     rewriter.replaceOp(op, {shflValue, isActiveSrcLane});
     return success();
   }
