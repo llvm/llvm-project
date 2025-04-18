@@ -90,10 +90,10 @@ public:
 
 // taken from clang, needs to be extended.
 enum CallingConv {
-    CC_C,                  // __attribute__((cdecl))
-    CC_X86StdCall,       // __attribute__((stdcall))
-    Win64,
-    X86_RegCall
+  CC_C,          // __attribute__((cdecl))
+  CC_X86StdCall, // __attribute__((stdcall))
+  Win64,
+  X86_RegCall
 };
 
 struct ABIFunctionInfoArgInfo {
@@ -110,10 +110,11 @@ class ABIFunctionInfo {
   ArgInfo RetInfo;
   
   public:
-    ABIFunctionInfo(CallingConv cc, std::vector<Type> parameters, Type ReturnInfo);
+    ABIFunctionInfo(CallingConv cc, std::vector<Type> parameters,
+                    Type ReturnInfo);
 
-    static ABIFunctionInfo *
-      create(CallingConv cc, std::vector<Type> parameters, Type ReturnInfo);
+    static ABIFunctionInfo *create(CallingConv cc, std::vector<Type> parameters,
+                                   Type ReturnInfo);
 
     ABIArgInfo &ABIFunctionInfo::getReturnInfo() { return RetInfo.info; }
     Type &ABIFunctionInfo::getReturnType() { return RetInfo.type; }

@@ -18,12 +18,11 @@ void ABIBuiltinType::dump() const {
 }
 
 void ABIRecordType::dump() const {
-    std::cout << "Record: " << RecordName << "\n";
-    std::cout << "Alignment: " << Alignment << " bits\n";
-    for (const auto &F : Fields) {
-        std::cout << "  Field: " << F.Name
-                  << ", Offset: " << F.OffsetInBits << " bits"
-                  << ", TypeClass: " << F.FieldType->getTypeClass()
-                  << "\n";
+  std::cout << "Record: " << RecordName << "\n";
+  std::cout << "Alignment: " << Alignment << " bits\n";
+  for (const auto &F : Fields) {
+    std::cout << "  Field: " << F.Name << ", Offset: " << F.OffsetInBits
+              << " bits"
+              << ", TypeClass: " << F.FieldType->getTypeClass() << "\n";
     }
 }
