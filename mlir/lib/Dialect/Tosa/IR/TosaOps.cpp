@@ -483,8 +483,7 @@ LogicalResult tosa::ArgMaxOp::verify() {
 
   const ArrayRef<int64_t> inputShape = inputType.getShape();
   const ArrayRef<int64_t> outputShape = resultType.getShape();
-  llvm::SmallVector<int64_t> expectedOutputShape(inputShape.begin(),
-                                                 inputShape.end());
+  llvm::SmallVector<int64_t> expectedOutputShape(inputShape);
   expectedOutputShape.erase(expectedOutputShape.begin() + axis);
   if (failed(verifyCompatibleShape(expectedOutputShape, outputShape)))
     return emitOpError("expected output shape '")
@@ -1447,19 +1446,26 @@ LogicalResult tosa::SliceOp::verify() {
                              /* outType = */ getOutput().getType())
           .failed())
     return failure();
-  auto inputType = llvm::dyn_cast<RankedTensorType>(getInput1().getType());
-  if (!inputType)
-    return success();
 
-  auto startShapeRank =
-      llvm::cast<tosa::shapeType>(getStart().getType()).getRank();
-  if (inputType.getRank() != startShapeRank)
-    return emitOpError("length of start is not equal to rank of input shape");
+  const ShapeAdaptor inputShape(getInput1().getType());
+  if (inputShape.hasRank()) {
+    const auto inputRank = inputShape.getRank();
+    const ShapeAdaptor outputShape(getOutput().getType());
+    if (outputShape.hasRank() && inputRank != outputShape.getRank())
+      return emitOpError(
+                 "expect input1 and output to have the same ranks, got ")
+             << inputRank << " and " << outputShape.getRank();
 
-  auto sizeShapeRank =
-      llvm::cast<tosa::shapeType>(getSize().getType()).getRank();
-  if (inputType.getRank() != sizeShapeRank)
-    return emitOpError("length of size is not equal to rank of input shape");
+    const auto startShapeRank =
+        llvm::cast<tosa::shapeType>(getStart().getType()).getRank();
+    if (inputRank != startShapeRank)
+      return emitOpError("length of start is not equal to rank of input shape");
+
+    const auto sizeShapeRank =
+        llvm::cast<tosa::shapeType>(getSize().getType()).getRank();
+    if (inputRank != sizeShapeRank)
+      return emitOpError("length of size is not equal to rank of input shape");
+  }
 
   return success();
 }

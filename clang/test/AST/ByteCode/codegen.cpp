@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple x86_64-linux -emit-llvm -o - %s                                         | FileCheck %s
-// RUN: %clang_cc1 -triple x86_64-linux -emit-llvm -o - %s -fexperimental-new-constant-interpreter | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-linux -emit-llvm -o - %s -fcxx-exceptions                                         | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-linux -emit-llvm -o - %s -fcxx-exceptions -fexperimental-new-constant-interpreter | FileCheck %s
 
 #ifdef __SIZEOF_INT128__
 // CHECK: @PR11705 = global i128 0
@@ -104,3 +104,34 @@ int notdead() {
 }
 // CHECK: _ZZ7notdeadvEN3$_0clEv
 // CHECK: ret i32 %cond
+
+/// The conmparison of those two parameters should NOT work.
+bool paramcmp(const int& lhs, const int& rhs) {
+  if (&lhs == &rhs)
+    return true;
+  return false;
+}
+// CHECK: _Z8paramcmpRKiS0_
+// CHECK: if.then
+// CHECK: if.end
+
+/// &x == &OuterX should work and return 0.
+class X {
+public:
+  X();
+  X(const X&);
+  X(const volatile X &);
+  ~X();
+};
+
+extern X OuterX;
+
+X test24() {
+  X x;
+  if (&x == &OuterX)
+    throw 0;
+  return x;
+}
+// CHECK: _Z6test24v
+// CHECK-NOT: eh.resume
+// CHECK-NOT: unreachable

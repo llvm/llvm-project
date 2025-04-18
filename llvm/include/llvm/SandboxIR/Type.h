@@ -275,6 +275,7 @@ public:
   static Type *getInt1Ty(Context &Ctx);
   static Type *getDoubleTy(Context &Ctx);
   static Type *getFloatTy(Context &Ctx);
+  static Type *getHalfTy(Context &Ctx);
   // TODO: missing get*
 
   /// Get the address space of this pointer or pointer vector type.
