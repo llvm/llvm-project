@@ -249,22 +249,17 @@ static bool isReInterleaveMask(ShuffleVectorInst *SVI, unsigned &Factor,
   return false;
 }
 
-/// Return true if it's a non-all-zeros, interleaving mask. For instance,
-/// 111000111000 is interleaved from three 1010 masks.
-/// \p SubMask returns the mask of individual lane.
+/// Return true if it's an interleaving mask. For instance, 111000111000 is
+/// interleaved from three 1010 masks. \p SubMask returns the mask of individual
+/// lane.
 static bool isInterleavedConstantMask(unsigned Factor, ConstantVector *Mask,
                                       SmallVectorImpl<Constant *> &LaneMask) {
   unsigned LaneMaskLen = LaneMask.size();
   if (auto *Splat = Mask->getSplatValue()) {
-    // All-zeros mask.
-    if (Splat->isZeroValue())
-      return false;
-    // All-ones mask.
-    std::fill(LaneMask.begin(), LaneMask.end(),
-              ConstantInt::getTrue(Mask->getContext()));
+    std::fill(LaneMask.begin(), LaneMask.end(), Splat);
   } else {
     for (unsigned Idx = 0U, N = LaneMaskLen * Factor; Idx < N; ++Idx) {
-      Constant *Ref = Mask->getAggregateElement((Idx / Factor) * Factor);
+      Constant *Ref = Mask->getAggregateElement(alignDown(Idx, Factor));
       if (Ref != Mask->getAggregateElement(Idx))
         return false;
       LaneMask[Idx / Factor] = Ref;
