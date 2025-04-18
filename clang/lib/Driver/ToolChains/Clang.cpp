@@ -7098,6 +7098,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     if (Args.hasFlag(options::OPT_fhip_new_launch_api,
                      options::OPT_fno_hip_new_launch_api, true))
       CmdArgs.push_back("-fhip-new-launch-api");
+    if (Args.hasFlag(options::OPT_fconvergence_control,
+                     options::OPT_fno_convergence_control, false))
+      CmdArgs.push_back("-fconvergence-control");
     Args.addOptInFlag(CmdArgs, options::OPT_fgpu_allow_device_init,
                       options::OPT_fno_gpu_allow_device_init);
     Args.AddLastArg(CmdArgs, options::OPT_hipstdpar);

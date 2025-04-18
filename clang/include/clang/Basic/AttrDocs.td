@@ -1700,13 +1700,12 @@ def NoConvergentDocs : Documentation {
 This attribute prevents a function from being treated as convergent; when a
 function is marked ``noconvergent``, calls to that function are not
 automatically assumed to be convergent, unless such calls are explicitly marked
-as ``convergent``. If a statement is marked as ``noconvergent``, any calls to
-inline ``asm`` in that statement are no longer treated as convergent.
+as ``convergent``.
 
-In languages following SPMD/SIMT programming model, e.g., CUDA/HIP, function
-declarations and inline asm calls are treated as convergent by default for
-correctness. This ``noconvergent`` attribute is helpful for developers to
-prevent them from being treated as convergent when it's safe.
+If a statement is marked as ``noconvergent``, the semantics depends on whether
+convergence control tokens are used in the generated LLVM IR. When convergence
+control tokens are not in use, any calls to inline ``asm`` in that statement are
+treated as not convergent.
 
 .. code-block:: c
 
@@ -1718,6 +1717,10 @@ prevent them from being treated as convergent when it's safe.
     [[clang::noconvergent]] x = bar(x); // no effect on convergence
     [[clang::noconvergent]] { asm volatile ("nop"); } // the asm call is non-convergent
   }
+
+When tokens are in use, placing the ``noconvergent`` attribute on a statement
+indicates that thread convergence at the entry to that statement is
+:ref:`implementation-defined<noconvergent-statement>`.
 
   }];
 }

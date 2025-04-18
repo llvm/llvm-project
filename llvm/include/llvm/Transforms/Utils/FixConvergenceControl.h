@@ -6,21 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Analyse implicit convergence in the CFG.
+// A utility function to fix convergence control tokens in the presence of
+// irreducible control flow.
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_ANALYSIS_ANALYSES_CONVERGENCECHECK_H
-#define LLVM_CLANG_ANALYSIS_ANALYSES_CONVERGENCECHECK_H
+namespace llvm {
+class Function;
 
-namespace clang {
-class AnalysisDeclContext;
-class Sema;
-class Stmt;
+// Detect and fix invalid convergence control tokens after the entire function
+// is emitted in LLVM IR.
+void fixConvergenceControl(llvm::Function *F);
 
-void analyzeForConvergence(Sema &S, AnalysisDeclContext &AC,
-                           bool GenerateWarnings, bool GenerateTokens);
-
-} // end namespace clang
-
-#endif // LLVM_CLANG_ANALYSIS_ANALYSES_CONVERGENCECHECK_H
+} // namespace llvm

@@ -45,6 +45,7 @@ class StringRef;
 class Type;
 class Value;
 class ConstantRange;
+class ConvergenceControlInst;
 
 namespace Intrinsic {
 typedef unsigned ID;
@@ -1180,12 +1181,7 @@ public:
                                        InsertPosition InsertPt = nullptr);
 
   /// Return the convergence control token for this call, if it exists.
-  Value *getConvergenceControlToken() const {
-    if (auto Bundle = getOperandBundle(llvm::LLVMContext::OB_convergencectrl)) {
-      return Bundle->Inputs[0].get();
-    }
-    return nullptr;
-  }
+  ConvergenceControlInst *getConvergenceControlToken() const;
 
   static bool classof(const Instruction *I) {
     return I->getOpcode() == Instruction::Call ||

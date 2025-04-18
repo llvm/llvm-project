@@ -1751,7 +1751,7 @@ public:
   bool shouldEmitConvergenceTokens() const {
     // TODO: this should probably become unconditional once the controlled
     // convergence becomes the norm.
-    return getTriple().isSPIRVLogical();
+    return getTriple().isSPIRVLogical() || getLangOpts().ConvergenceControl;
   }
 
   void addUndefinedGlobalForTailCall(

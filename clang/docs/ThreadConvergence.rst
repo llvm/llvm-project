@@ -564,6 +564,33 @@ backwards ``goto`` instead of a ``while`` statement.
   ``outside_loop``. This includes threads that jumped from ``G2`` as well as
   threads that  reached ``outside_loop`` after executing ``C``.
 
+.. _noconvergent-statement:
+
+The ``noconvergent`` Statement
+==============================
+
+When a statement is marked as ``noconvergent`` the convergence of threads at the
+start of this statement is not constrained by any convergent operations inside
+the statement.
+
+- When two threads execute a statement marked ``noconvergent``, it is
+  implementation-defined whether they are converged at that execution. [Note:
+  The resulting evaluations must still satisfy the strict partial order imposed
+  by convergence-before.]
+- When two threads are converged at the start of this statement (as determined
+  by the implementation), whether they are converged at each convergent
+  operation inside this statement is determined by the usual rules.
+
+For every label statement ``L`` occurring inside a ``noconvergent``
+statement, every ``goto`` or ``switch`` statement that transfers control to
+``L`` must also occur inside that statement.
+
+.. note::
+
+   Convergence control tokens are necessary for correctly implementing the
+   "noconvergent" statement attribute. When tokens are not in use, the legacy
+   behaviour is retained, where the only effect of this attribute is that
+   ``asm`` calls within the statement are not treated as convergent operations.
 
 Implementation-defined Convergence
 ==================================

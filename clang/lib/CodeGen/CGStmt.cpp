@@ -829,14 +829,24 @@ void CodeGenFunction::EmitAttributedStmt(const AttributedStmt &S) {
     } break;
     }
   }
+  bool LegacyNoConvergent = noconvergent && !CGM.shouldEmitConvergenceTokens();
   SaveAndRestore save_nomerge(InNoMergeAttributedStmt, nomerge);
   SaveAndRestore save_noinline(InNoInlineAttributedStmt, noinline);
   SaveAndRestore save_alwaysinline(InAlwaysInlineAttributedStmt, alwaysinline);
-  SaveAndRestore save_noconvergent(InNoConvergentAttributedStmt, noconvergent);
+  SaveAndRestore save_noconvergent(InNoConvergentAttributedStmt,
+                                   LegacyNoConvergent);
   SaveAndRestore save_musttail(MustTailCall, musttail);
   SaveAndRestore save_flattenOrBranch(HLSLControlFlowAttr, flattenOrBranch);
   CGAtomicOptionsRAII AORAII(CGM, AA);
+  if (noconvergent && CGM.shouldEmitConvergenceTokens()) {
+    EmitBlock(createBasicBlock("noconvergent.anchor"));
+    ConvergenceTokenStack.push_back(
+        emitConvergenceAnchorToken(Builder.GetInsertBlock()));
+  }
   EmitStmt(S.getSubStmt(), S.getAttrs());
+  if (noconvergent && CGM.shouldEmitConvergenceTokens()) {
+    ConvergenceTokenStack.pop_back();
+  }
 }
 
 void CodeGenFunction::EmitGotoStmt(const GotoStmt &S) {
@@ -3317,16 +3327,6 @@ CodeGenFunction::GenerateCapturedStmtFunction(const CapturedStmt &S) {
   return F;
 }
 
-// Returns the first convergence entry/loop/anchor instruction found in |BB|.
-// std::nullptr otherwise.
-static llvm::ConvergenceControlInst *getConvergenceToken(llvm::BasicBlock *BB) {
-  for (auto &I : *BB) {
-    if (auto *CI = dyn_cast<llvm::ConvergenceControlInst>(&I))
-      return CI;
-  }
-  return nullptr;
-}
-
 llvm::CallBase *
 CodeGenFunction::addConvergenceControlToken(llvm::CallBase *Input) {
   llvm::ConvergenceControlInst *ParentToken = ConvergenceTokenStack.back();
@@ -3349,14 +3349,32 @@ CodeGenFunction::emitConvergenceLoopToken(llvm::BasicBlock *BB) {
 }
 
 llvm::ConvergenceControlInst *
+CodeGenFunction::emitConvergenceAnchorToken(llvm::BasicBlock *BB) {
+  return llvm::ConvergenceControlInst::CreateAnchor(*BB);
+}
+
+llvm::ConvergenceControlInst *
 CodeGenFunction::getOrEmitConvergenceEntryToken(llvm::Function *F) {
   llvm::BasicBlock *BB = &F->getEntryBlock();
-  llvm::ConvergenceControlInst *Token = getConvergenceToken(BB);
+  llvm::ConvergenceControlInst *Token = llvm::getConvergenceControlDef(*BB);
   if (Token)
     return Token;
 
-  // Adding a convergence token requires the function to be marked as
+  // Adding a convergence entry token requires the function to be marked as
   // convergent.
   F->setConvergent();
   return llvm::ConvergenceControlInst::CreateEntry(*BB);
+}
+
+llvm::ConvergenceControlInst *
+CodeGenFunction::getOrEmitConvergenceAnchorToken(llvm::Function *F) {
+  llvm::BasicBlock *BB = &F->getEntryBlock();
+  llvm::ConvergenceControlInst *Token = llvm::getConvergenceControlDef(*BB);
+  if (Token)
+    return Token;
+
+  // Adding a convergence anchor token requires the function to be marked as
+  // not convergent.
+  F->setNotConvergent();
+  return llvm::ConvergenceControlInst::CreateAnchor(*BB);
 }

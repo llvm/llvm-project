@@ -913,3 +913,24 @@ ConvergenceControlInst::CreateLoop(BasicBlock &BB,
   auto *Call = CallInst::Create(Fn, {}, {OB}, "", BB.getFirstInsertionPt());
   return cast<ConvergenceControlInst>(Call);
 }
+
+CallBase *llvm::setConvergenceControlToken(CallBase *CB,
+                                           ConvergenceControlInst *Token) {
+  llvm::Value *bundleArgs[] = {Token};
+  llvm::OperandBundleDef OB("convergencectrl", bundleArgs);
+
+  SmallVector<OperandBundleDef> Bundles;
+  for (unsigned I = 0, E = CB->getNumOperandBundles(); I != E; ++I) {
+    auto Bundle = CB->getOperandBundleAt(I);
+    if (Bundle.getTagID() == LLVMContext::OB_convergencectrl) {
+      continue;
+    }
+    Bundles.emplace_back(Bundle);
+  }
+  Bundles.push_back(OB);
+
+  CallBase *NewCB = CallBase::Create(CB, Bundles, CB->getIterator());
+  CB->replaceAllUsesWith(NewCB);
+  CB->eraseFromParent();
+  return NewCB;
+}

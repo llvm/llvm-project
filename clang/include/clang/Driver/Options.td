@@ -1397,6 +1397,11 @@ def fhip_emit_relocatable : Flag<["-"], "fhip-emit-relocatable">,
   HelpText<"Compile HIP source to relocatable">;
 def fno_hip_emit_relocatable : Flag<["-"], "fno-hip-emit-relocatable">,
   HelpText<"Do not override toolchain to compile HIP source to relocatable">;
+defm convergence_control : BoolFOption<"convergence-control",
+  LangOpts<"ConvergenceControl">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option], "Generate">,
+  NegFlag<SetFalse, [], [ClangOption], "Don't generate">,
+  BothFlags<[], [ClangOption], " explicit convergence control tokens (experimental)">>;
 }
 
 // Clang specific/exclusive options for OpenACC.
