@@ -807,10 +807,6 @@ void Verifier::visitGlobalValue(const GlobalValue &GV) {
           "visibility must be dso_local!",
           &GV);
 
-  if (GV.isTagged()) {
-    Check(!GV.hasSection(), "tagged GlobalValue must not be in section.", &GV);
-  }
-
   forEachUser(&GV, GlobalValueVisited, [&](const Value *V) -> bool {
     if (const Instruction *I = dyn_cast<Instruction>(V)) {
       if (!I->getParent() || !I->getParent()->getParent())

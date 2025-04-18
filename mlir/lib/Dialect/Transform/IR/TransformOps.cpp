@@ -393,16 +393,16 @@ DiagnosedSilenceableFailure transform::ApplyPatternsOp::applyToOne(
 
   // Configure the GreedyPatternRewriteDriver.
   GreedyRewriteConfig config;
-  config.listener =
-      static_cast<RewriterBase::Listener *>(rewriter.getListener());
+  config.setListener(
+      static_cast<RewriterBase::Listener *>(rewriter.getListener()));
   FrozenRewritePatternSet frozenPatterns(std::move(patterns));
 
-  config.maxIterations = getMaxIterations() == static_cast<uint64_t>(-1)
-                             ? GreedyRewriteConfig::kNoLimit
-                             : getMaxIterations();
-  config.maxNumRewrites = getMaxNumRewrites() == static_cast<uint64_t>(-1)
+  config.setMaxIterations(getMaxIterations() == static_cast<uint64_t>(-1)
                               ? GreedyRewriteConfig::kNoLimit
-                              : getMaxNumRewrites();
+                              : getMaxIterations());
+  config.setMaxNumRewrites(getMaxNumRewrites() == static_cast<uint64_t>(-1)
+                               ? GreedyRewriteConfig::kNoLimit
+                               : getMaxNumRewrites());
 
   // Apply patterns and CSE repetitively until a fixpoint is reached. If no CSE
   // was requested, apply the greedy pattern rewrite only once. (The greedy
