@@ -358,26 +358,16 @@ struct XeGPUUnrollPass final
     vector::UnrollVectorOptions options;
     options.setNativeShapeFn(
         [&](Operation *op) -> std::optional<SmallVector<int64_t>> {
-          if (auto createNdOp = dyn_cast<xegpu::CreateNdDescOp>(op)) {
-            auto tdescTy = createNdOp.getType();
-            if (auto layout = tdescTy.getLayoutAttr()) {
-              if (auto inst_data = layout.getInstData())
-                return SmallVector<int64_t>(inst_data.asArrayRef().begin(),
-                                            inst_data.asArrayRef().end());
+          if (isa<xegpu::CreateNdDescOp, xegpu::LoadNdOp, xegpu::StoreNdOp>(op)) {
+            xegpu::TensorDescType tdescTy;
+            if (auto createNdOp = dyn_cast<xegpu::CreateNdDescOp>(op)) {
+              tdescTy = createNdOp.getType();
+            } else if (auto loadNdOp = dyn_cast<xegpu::LoadNdOp>(op)) {
+              tdescTy = loadNdOp.getTensorDescType();
+            } else if (auto storeNdOp = dyn_cast<xegpu::StoreNdOp>(op)) {
+              tdescTy = storeNdOp.getTensorDescType();
             }
-          }
 
-          if (auto loadNdOp = dyn_cast<xegpu::LoadNdOp>(op)) {
-            auto tdescTy = loadNdOp.getTensorDescType();
-            if (auto layout = tdescTy.getLayoutAttr()) {
-              if (auto inst_data = layout.getInstData())
-                return SmallVector<int64_t>(inst_data.asArrayRef().begin(),
-                                            inst_data.asArrayRef().end());
-            }
-          }
-
-          if (auto storeNdOp = dyn_cast<xegpu::StoreNdOp>(op)) {
-            auto tdescTy = storeNdOp.getTensorDescType();
             if (auto layout = tdescTy.getLayoutAttr()) {
               if (auto inst_data = layout.getInstData())
                 return SmallVector<int64_t>(inst_data.asArrayRef().begin(),
