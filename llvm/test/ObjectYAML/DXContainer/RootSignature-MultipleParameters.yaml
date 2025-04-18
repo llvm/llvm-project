@@ -64,8 +64,8 @@ Parts:
 # CHECK-NEXT:        - ParameterType:   2
 # CHECK-NEXT:          ShaderVisibility: 3
 # CHECK-NEXT:          Descriptor:
-# CHECK-NEXT:            RegisterSpace:   31
-# CHECK-NEXT:            ShaderRegister:  32
+# CHECK-NEXT:            RegisterSpace:   32
+# CHECK-NEXT:            ShaderRegister:  31
 # CHECK-NEXT:            DATA_STATIC_WHILE_SET_AT_EXECUTE: true
 # CHECK-NEXT:      AllowInputAssemblerInputLayout: true
 # CHECK-NEXT:      DenyGeometryShaderRootAccess: true

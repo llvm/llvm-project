@@ -94,14 +94,14 @@ void RootSignatureDesc::write(raw_ostream &OS) const {
     case llvm::to_underlying(dxbc::RootParameterType::SRV):
     case llvm::to_underlying(dxbc::RootParameterType::UAV):
       if (Version == 1) {
-        support::endian::write(BOS, P.Descriptor_V10.RegisterSpace,
-                               llvm::endianness::little);
         support::endian::write(BOS, P.Descriptor_V10.ShaderRegister,
                                llvm::endianness::little);
-      } else {
-        support::endian::write(BOS, P.Descriptor_V11.RegisterSpace,
+        support::endian::write(BOS, P.Descriptor_V10.RegisterSpace,
                                llvm::endianness::little);
+      } else {
         support::endian::write(BOS, P.Descriptor_V11.ShaderRegister,
+                               llvm::endianness::little);
+        support::endian::write(BOS, P.Descriptor_V11.RegisterSpace,
                                llvm::endianness::little);
         support::endian::write(BOS, P.Descriptor_V11.Flags,
                                llvm::endianness::little);
