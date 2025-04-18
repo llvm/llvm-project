@@ -11513,7 +11513,7 @@ SDValue RISCVTargetLowering::lowerVECTOR_DEINTERLEAVE(SDValue Op,
   // TODO: Remove the e64 restriction once the fractional LMUL lowering
   // is improved to always beat the vnsrl lowering below.
   if (Subtarget.hasVendorXRivosVizip() && Factor == 2 &&
-      VecVT.getVectorElementType() == MVT::i64) {
+      VecVT.getVectorElementType().getSizeInBits() == 64) {
     SDValue V1 = Op->getOperand(0);
     SDValue V2 = Op->getOperand(1);
     SDValue Even =
