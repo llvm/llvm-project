@@ -135,8 +135,8 @@ public:
 
     mlir::GreedyRewriteConfig config;
     // Prevent the pattern driver from merging blocks.
-    config.setRegionSimplificationLevel(
-        mlir::GreedySimplifyRegionLevel::Disabled);
+    config.enableRegionSimplification =
+        mlir::GreedySimplifyRegionLevel::Disabled;
 
     mlir::RewritePatternSet patterns(context);
     patterns.insert<InlineHLFIRAssignConversion>(context);
