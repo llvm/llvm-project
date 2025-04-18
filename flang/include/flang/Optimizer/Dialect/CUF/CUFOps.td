@@ -18,6 +18,7 @@ include "flang/Optimizer/Dialect/CUF/CUFDialect.td"
 include "flang/Optimizer/Dialect/CUF/Attributes/CUFAttr.td"
 include "flang/Optimizer/Dialect/FIRTypes.td"
 include "flang/Optimizer/Dialect/FIRAttr.td"
+include "mlir/Dialect/GPU/IR/GPUBase.td"
 include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
 include "mlir/Interfaces/LoopLikeInterface.td"
 include "mlir/IR/BuiltinAttributes.td"
@@ -368,6 +369,27 @@ def cuf_SharedMemoryOp
       CArg<"mlir::ValueRange", "{}">:$typeparams,
       CArg<"mlir::ValueRange", "{}">:$shape,
       CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attributes)>];
+}
+
+def cuf_StreamCastOp : cuf_Op<"stream_cast", [NoMemoryEffect]> {
+  let summary = "Adapt a stream value to a GPU async token";
+
+  let description = [{
+    Cast a stream object reference as a GPU async token. This is useful to be
+    able to connect the stream representation of CUDA Fortran and the async
+    mechanism of the GPU dialect.
+    Later in the lowering this will become a no op.
+  }];
+
+  let arguments = (ins fir_ReferenceType:$stream);
+
+  let results = (outs GPU_AsyncToken:$token);
+
+  let assemblyFormat = [{
+    $stream attr-dict `:` type($stream)
+  }];
+
+  let hasVerifier = 1;
 }
 
 #endif // FORTRAN_DIALECT_CUF_CUF_OPS

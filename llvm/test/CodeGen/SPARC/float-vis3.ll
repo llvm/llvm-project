@@ -23,8 +23,8 @@ entry:
   ret double %fneg
 }
 
-define float @fnmuls(float %a, float %b) nounwind {
-; CHECK-LABEL: fnmuls:
+define float @fnmuls1(float %a, float %b) nounwind {
+; CHECK-LABEL: fnmuls1:
 ; CHECK:       ! %bb.0: ! %entry
 ; CHECK-NEXT:    retl
 ; CHECK-NEXT:    fnmuls %f1, %f3, %f0
@@ -34,8 +34,30 @@ entry:
   ret float %fneg
 }
 
-define double @fnmuld(double %a, double %b) nounwind {
-; CHECK-LABEL: fnmuld:
+define float @fnmuls2(float %a, float %b) nounwind {
+; CHECK-LABEL: fnmuls2:
+; CHECK:       ! %bb.0: ! %entry
+; CHECK-NEXT:    retl
+; CHECK-NEXT:    fnmuls %f1, %f3, %f0
+entry:
+  %fneg = fneg float %a
+  %mul = fmul float %fneg, %b
+  ret float %mul
+}
+
+define float @fnmuls3(float %a, float %b) nounwind {
+; CHECK-LABEL: fnmuls3:
+; CHECK:       ! %bb.0: ! %entry
+; CHECK-NEXT:    retl
+; CHECK-NEXT:    fnmuls %f3, %f1, %f0
+entry:
+  %fneg = fneg float %b
+  %mul = fmul float %fneg, %a
+  ret float %mul
+}
+
+define double @fnmuld1(double %a, double %b) nounwind {
+; CHECK-LABEL: fnmuld1:
 ; CHECK:       ! %bb.0: ! %entry
 ; CHECK-NEXT:    retl
 ; CHECK-NEXT:    fnmuld %f0, %f2, %f0
@@ -45,17 +67,65 @@ entry:
   ret double %fneg
 }
 
-define double @fnsmuld(float %a, float %b) nounwind {
-; CHECK-LABEL: fnsmuld:
+define double @fnmuld2(double %a, double %b) nounwind {
+; CHECK-LABEL: fnmuld2:
+; CHECK:       ! %bb.0: ! %entry
+; CHECK-NEXT:    retl
+; CHECK-NEXT:    fnmuld %f0, %f2, %f0
+entry:
+  %fneg = fneg double %a
+  %mul = fmul double %fneg, %b
+  ret double %mul
+}
+
+define double @fnmuld3(double %a, double %b) nounwind {
+; CHECK-LABEL: fnmuld3:
+; CHECK:       ! %bb.0: ! %entry
+; CHECK-NEXT:    retl
+; CHECK-NEXT:    fnmuld %f2, %f0, %f0
+entry:
+  %fneg = fneg double %b
+  %mul = fmul double %fneg, %a
+  ret double %mul
+}
+
+define double @fnsmuld1(float %a, float %b) nounwind {
+; CHECK-LABEL: fnsmuld1:
 ; CHECK:       ! %bb.0: ! %entry
 ; CHECK-NEXT:    retl
 ; CHECK-NEXT:    fnsmuld %f1, %f3, %f0
 entry:
-  %conv.i = fpext float %a to double
-  %conv1.i = fpext float %b to double
-  %mul = fmul double %conv.i, %conv1.i
+  %da = fpext float %a to double
+  %db = fpext float %b to double
+  %mul = fmul double %da, %db
   %fneg = fneg double %mul
   ret double %fneg
+}
+
+define double @fnsmuld2(float %a, float %b) nounwind {
+; CHECK-LABEL: fnsmuld2:
+; CHECK:       ! %bb.0: ! %entry
+; CHECK-NEXT:    retl
+; CHECK-NEXT:    fnsmuld %f1, %f3, %f0
+entry:
+  %da = fpext float %a to double
+  %db = fpext float %b to double
+  %fneg = fneg double %da
+  %mul = fmul double %fneg, %db
+  ret double %mul
+}
+
+define double @fnsmuld3(float %a, float %b) nounwind {
+; CHECK-LABEL: fnsmuld3:
+; CHECK:       ! %bb.0: ! %entry
+; CHECK-NEXT:    retl
+; CHECK-NEXT:    fnsmuld %f3, %f1, %f0
+entry:
+  %da = fpext float %a to double
+  %db = fpext float %b to double
+  %fneg = fneg double %db
+  %mul = fmul double %fneg, %da
+  ret double %mul
 }
 
 define float @fhadds(float %a, float %b) nounwind {
@@ -122,4 +192,248 @@ entry:
   %add.i = fadd double %a, %b
   %fneg = fmul double %add.i, -5.000000e-01
   ret double %fneg
+}
+
+define <4 x float> @vec_fnadds(<4 x float> %a, <4 x float> %b) nounwind {
+; CHECK-LABEL: vec_fnadds:
+; CHECK:       ! %bb.0: ! %entry
+; CHECK-NEXT:    fnadds %f1, %f9, %f0
+; CHECK-NEXT:    fnadds %f3, %f11, %f1
+; CHECK-NEXT:    fnadds %f5, %f13, %f2
+; CHECK-NEXT:    retl
+; CHECK-NEXT:    fnadds %f7, %f15, %f3
+entry:
+  %add = fadd <4 x float> %a, %b
+  %fneg = fneg <4 x float> %add
+  ret <4 x float> %fneg
+}
+
+define <4 x double> @vec_fnaddd(<4 x double> %a, <4 x double> %b) nounwind {
+; CHECK-LABEL: vec_fnaddd:
+; CHECK:       ! %bb.0: ! %entry
+; CHECK-NEXT:    fnaddd %f0, %f8, %f0
+; CHECK-NEXT:    fnaddd %f2, %f10, %f2
+; CHECK-NEXT:    fnaddd %f4, %f12, %f4
+; CHECK-NEXT:    retl
+; CHECK-NEXT:    fnaddd %f6, %f14, %f6
+entry:
+  %add = fadd <4 x double> %a, %b
+  %fneg = fneg <4 x double> %add
+  ret <4 x double> %fneg
+}
+
+define <4 x float> @vec_fnmuls1(<4 x float> %a, <4 x float> %b) nounwind {
+; CHECK-LABEL: vec_fnmuls1:
+; CHECK:       ! %bb.0: ! %entry
+; CHECK-NEXT:    fnmuls %f1, %f9, %f0
+; CHECK-NEXT:    fnmuls %f3, %f11, %f1
+; CHECK-NEXT:    fnmuls %f5, %f13, %f2
+; CHECK-NEXT:    retl
+; CHECK-NEXT:    fnmuls %f7, %f15, %f3
+entry:
+  %mul = fmul <4 x float> %a, %b
+  %fneg = fneg <4 x float> %mul
+  ret <4 x float> %fneg
+}
+
+define <4 x float> @vec_fnmuls2(<4 x float> %a, <4 x float> %b) nounwind {
+; CHECK-LABEL: vec_fnmuls2:
+; CHECK:       ! %bb.0: ! %entry
+; CHECK-NEXT:    fnmuls %f1, %f9, %f0
+; CHECK-NEXT:    fnmuls %f3, %f11, %f1
+; CHECK-NEXT:    fnmuls %f5, %f13, %f2
+; CHECK-NEXT:    retl
+; CHECK-NEXT:    fnmuls %f7, %f15, %f3
+entry:
+  %fneg = fneg <4 x float> %a
+  %mul = fmul <4 x float> %fneg, %b
+  ret <4 x float> %mul
+}
+
+define <4 x float> @vec_fnmuls3(<4 x float> %a, <4 x float> %b) nounwind {
+; CHECK-LABEL: vec_fnmuls3:
+; CHECK:       ! %bb.0: ! %entry
+; CHECK-NEXT:    fnmuls %f9, %f1, %f0
+; CHECK-NEXT:    fnmuls %f11, %f3, %f1
+; CHECK-NEXT:    fnmuls %f13, %f5, %f2
+; CHECK-NEXT:    retl
+; CHECK-NEXT:    fnmuls %f15, %f7, %f3
+entry:
+  %fneg = fneg <4 x float> %b
+  %mul = fmul <4 x float> %fneg, %a
+  ret <4 x float> %mul
+}
+
+define <4 x double> @vec_nmuld1(<4 x double> %a, <4 x double> %b) nounwind {
+; CHECK-LABEL: vec_nmuld1:
+; CHECK:       ! %bb.0: ! %entry
+; CHECK-NEXT:    fnmuld %f0, %f8, %f0
+; CHECK-NEXT:    fnmuld %f2, %f10, %f2
+; CHECK-NEXT:    fnmuld %f4, %f12, %f4
+; CHECK-NEXT:    retl
+; CHECK-NEXT:    fnmuld %f6, %f14, %f6
+entry:
+  %mul = fmul <4 x double> %a, %b
+  %fneg = fneg <4 x double> %mul
+  ret <4 x double> %fneg
+}
+
+define <4 x double> @vec_fnmuld2(<4 x double> %a, <4 x double> %b) nounwind {
+; CHECK-LABEL: vec_fnmuld2:
+; CHECK:       ! %bb.0: ! %entry
+; CHECK-NEXT:    fnmuld %f0, %f8, %f0
+; CHECK-NEXT:    fnmuld %f2, %f10, %f2
+; CHECK-NEXT:    fnmuld %f4, %f12, %f4
+; CHECK-NEXT:    retl
+; CHECK-NEXT:    fnmuld %f6, %f14, %f6
+entry:
+  %fneg = fneg <4 x double> %a
+  %mul = fmul <4 x double> %fneg, %b
+  ret <4 x double> %mul
+}
+
+define <4 x double> @vec_fnmuld3(<4 x double> %a, <4 x double> %b) nounwind {
+; CHECK-LABEL: vec_fnmuld3:
+; CHECK:       ! %bb.0: ! %entry
+; CHECK-NEXT:    fnmuld %f8, %f0, %f0
+; CHECK-NEXT:    fnmuld %f10, %f2, %f2
+; CHECK-NEXT:    fnmuld %f12, %f4, %f4
+; CHECK-NEXT:    retl
+; CHECK-NEXT:    fnmuld %f14, %f6, %f6
+entry:
+  %fneg = fneg <4 x double> %b
+  %mul = fmul <4 x double> %fneg, %a
+  ret <4 x double> %mul
+}
+
+define <4 x double> @vec_fnsmuld1(<4 x float> %a, <4 x float> %b) nounwind {
+; CHECK-LABEL: vec_fnsmuld1:
+; CHECK:       ! %bb.0: ! %entry
+; CHECK-NEXT:    fnsmuld %f1, %f9, %f0
+; CHECK-NEXT:    fnsmuld %f3, %f11, %f2
+; CHECK-NEXT:    fnsmuld %f5, %f13, %f4
+; CHECK-NEXT:    retl
+; CHECK-NEXT:    fnsmuld %f7, %f15, %f6
+entry:
+  %da = fpext <4 x float> %a to <4 x double>
+  %db = fpext <4 x float> %b to <4 x double>
+  %mul = fmul <4 x double> %da, %db
+  %fneg = fneg <4 x double> %mul
+  ret <4 x double> %fneg
+}
+
+define <4 x double> @vec_fnsmuld2(<4 x float> %a, <4 x float> %b) nounwind {
+; CHECK-LABEL: vec_fnsmuld2:
+; CHECK:       ! %bb.0: ! %entry
+; CHECK-NEXT:    fnsmuld %f1, %f9, %f0
+; CHECK-NEXT:    fnsmuld %f3, %f11, %f2
+; CHECK-NEXT:    fnsmuld %f5, %f13, %f4
+; CHECK-NEXT:    retl
+; CHECK-NEXT:    fnsmuld %f7, %f15, %f6
+entry:
+  %da = fpext <4 x float> %a to <4 x double>
+  %db = fpext <4 x float> %b to <4 x double>
+  %fneg = fneg <4 x double> %da
+  %mul = fmul <4 x double> %fneg, %db
+  ret <4 x double> %mul
+}
+
+define <4 x double> @vec_fnsmuld3(<4 x float> %a, <4 x float> %b) nounwind {
+; CHECK-LABEL: vec_fnsmuld3:
+; CHECK:       ! %bb.0: ! %entry
+; CHECK-NEXT:    fnsmuld %f9, %f1, %f0
+; CHECK-NEXT:    fnsmuld %f11, %f3, %f2
+; CHECK-NEXT:    fnsmuld %f13, %f5, %f4
+; CHECK-NEXT:    retl
+; CHECK-NEXT:    fnsmuld %f15, %f7, %f6
+entry:
+  %da = fpext <4 x float> %a to <4 x double>
+  %db = fpext <4 x float> %b to <4 x double>
+  %fneg = fneg <4 x double> %db
+  %mul = fmul <4 x double> %fneg, %da
+  ret <4 x double> %mul
+}
+
+define <4 x float> @vec_fhadds(<4 x float> %a, <4 x float> %b) nounwind {
+; CHECK-LABEL: vec_fhadds:
+; CHECK:       ! %bb.0: ! %entry
+; CHECK-NEXT:    fhadds %f1, %f9, %f0
+; CHECK-NEXT:    fhadds %f3, %f11, %f1
+; CHECK-NEXT:    fhadds %f5, %f13, %f2
+; CHECK-NEXT:    retl
+; CHECK-NEXT:    fhadds %f7, %f15, %f3
+entry:
+  %add = fadd <4 x float> %a, %b
+  %div = fmul <4 x float> %add, <float 5.000000e-01, float 5.000000e-01, float 5.000000e-01, float 5.000000e-01>
+  ret <4 x float> %div
+}
+
+define <4 x double> @vec_fhaddd(<4 x double> %a, <4 x double> %b) nounwind {
+; CHECK-LABEL: vec_fhaddd:
+; CHECK:       ! %bb.0: ! %entry
+; CHECK-NEXT:    fhaddd %f0, %f8, %f0
+; CHECK-NEXT:    fhaddd %f2, %f10, %f2
+; CHECK-NEXT:    fhaddd %f4, %f12, %f4
+; CHECK-NEXT:    retl
+; CHECK-NEXT:    fhaddd %f6, %f14, %f6
+entry:
+  %add = fadd <4 x double> %a, %b
+  %div = fmul <4 x double> %add, <double 5.000000e-01, double 5.000000e-01, double 5.000000e-01, double 5.000000e-01>
+  ret <4 x double> %div
+}
+
+define <4 x float> @vec_fhsubs(<4 x float> %a, <4 x float> %b) nounwind {
+; CHECK-LABEL: vec_fhsubs:
+; CHECK:       ! %bb.0: ! %entry
+; CHECK-NEXT:    fhsubs %f1, %f9, %f0
+; CHECK-NEXT:    fhsubs %f3, %f11, %f1
+; CHECK-NEXT:    fhsubs %f5, %f13, %f2
+; CHECK-NEXT:    retl
+; CHECK-NEXT:    fhsubs %f7, %f15, %f3
+entry:
+  %sub = fsub <4 x float> %a, %b
+  %div = fmul <4 x float> %sub, <float 5.000000e-01, float 5.000000e-01, float 5.000000e-01, float 5.000000e-01>
+  ret <4 x float> %div
+}
+
+define <4 x double> @vec_fhsubd(<4 x double> %a, <4 x double> %b) nounwind {
+; CHECK-LABEL: vec_fhsubd:
+; CHECK:       ! %bb.0: ! %entry
+; CHECK-NEXT:    fhsubd %f0, %f8, %f0
+; CHECK-NEXT:    fhsubd %f2, %f10, %f2
+; CHECK-NEXT:    fhsubd %f4, %f12, %f4
+; CHECK-NEXT:    retl
+; CHECK-NEXT:    fhsubd %f6, %f14, %f6
+entry:
+  %sub = fsub <4 x double> %a, %b
+  %div = fmul <4 x double> %sub, <double 5.000000e-01, double 5.000000e-01, double 5.000000e-01, double 5.000000e-01>
+  ret <4 x double> %div
+}
+
+define <4 x float> @vec_fnhadds(<4 x float> %a, <4 x float> %b) nounwind {
+; CHECK-LABEL: vec_fnhadds:
+; CHECK:       ! %bb.0: ! %entry
+; CHECK-NEXT:    fnhadds %f1, %f9, %f0
+; CHECK-NEXT:    fnhadds %f3, %f11, %f1
+; CHECK-NEXT:    fnhadds %f5, %f13, %f2
+; CHECK-NEXT:    retl
+; CHECK-NEXT:    fnhadds %f7, %f15, %f3
+entry:
+  %add.i = fadd <4 x float> %a, %b
+  %fneg = fmul <4 x float> %add.i, <float -5.000000e-01, float -5.000000e-01, float -5.000000e-01, float -5.000000e-01>
+  ret <4 x float> %fneg
+}
+
+define <4 x double> @vec_fnhaddd(<4 x double> %a, <4 x double> %b) nounwind {
+; CHECK-LABEL: vec_fnhaddd:
+; CHECK:       ! %bb.0: ! %entry
+; CHECK-NEXT:    fnhaddd %f0, %f8, %f0
+; CHECK-NEXT:    fnhaddd %f2, %f10, %f2
+; CHECK-NEXT:    fnhaddd %f4, %f12, %f4
+; CHECK-NEXT:    retl
+; CHECK-NEXT:    fnhaddd %f6, %f14, %f6
+entry:
+  %add.i = fadd <4 x double> %a, %b
+  %fneg = fmul <4 x double> %add.i, <double -5.000000e-01, double -5.000000e-01, double -5.000000e-01, double -5.000000e-01>
+  ret <4 x double> %fneg
 }
