@@ -21,8 +21,8 @@ typedef struct IncompleteTy Incomplete_t;
 
 struct CBBufDeclPos {
   int count;
-  struct IncompleteTy* buf __counted_by(count); // OK expected-note 27{{consider using '__sized_by' instead of __counted_by}}
-  Incomplete_t* buf_typedef __counted_by(count); // OK expected-note 27{{consider using '__sized_by' instead of __counted_by}}
+  struct IncompleteTy* buf __counted_by(count); // OK expected-note 27{{consider using '__sized_by' instead of '__counted_by'}}
+  Incomplete_t* buf_typedef __counted_by(count); // OK expected-note 27{{consider using '__sized_by' instead of '__counted_by'}}
 };
 
 void consume_struct_IncompleteTy(struct IncompleteTy* buf);
@@ -359,8 +359,8 @@ void consume_struct_IncompleteTy2(struct IncompleteTy2* buf);
 
 struct CBBufTyPos {
   int count;
-  struct IncompleteTy2* __counted_by(count) buf ; // OK expected-note 8{{consider using '__sized_by' instead of __counted_by}}
-  Incomplete_ty2 *__counted_by(count) buf_typedef; // OK expected-note 8{{consider using '__sized_by' instead of __counted_by}}
+  struct IncompleteTy2* __counted_by(count) buf ; // OK expected-note 8{{consider using '__sized_by' instead of '__counted_by'}}
+  Incomplete_ty2 *__counted_by(count) buf_typedef; // OK expected-note 8{{consider using '__sized_by' instead of '__counted_by'}}
 };
 
 void use_CBBufTyPos(struct CBBufTyPos* ptr) {
@@ -433,8 +433,8 @@ void consume_struct_IncompleteUnionTy(union IncompleteUnionTy* buf);
 
 struct CBBufUnionTyPos {
   int count;
-  union IncompleteUnionTy* __counted_by(count) buf ; // OK expected-note 8{{consider using '__sized_by' instead of __counted_by}}
-  IncompleteUnion_ty *__counted_by(count) buf_typedef; // OK expected-note 8{{consider using '__sized_by' instead of __counted_by}}
+  union IncompleteUnionTy* __counted_by(count) buf ; // OK expected-note 8{{consider using '__sized_by' instead of '__counted_by'}}
+  IncompleteUnion_ty *__counted_by(count) buf_typedef; // OK expected-note 8{{consider using '__sized_by' instead of '__counted_by'}}
 };
 
 void use_CBBufUnionTyPos(struct CBBufUnionTyPos* ptr) {
@@ -507,8 +507,8 @@ void consume_struct_IncompleteEnumTy(enum IncompleteEnumTy* buf);
 
 struct CBBufEnumTyPos {
   int count;
-  enum IncompleteEnumTy* __counted_by(count) buf ; // OK expected-note 8{{consider using '__sized_by' instead of __counted_by}}
-  IncompleteEnum_ty *__counted_by(count) buf_typedef; // OK expected-note 8{{consider using '__sized_by' instead of __counted_by}}
+  enum IncompleteEnumTy* __counted_by(count) buf ; // OK expected-note 8{{consider using '__sized_by' instead of '__counted_by'}}
+  IncompleteEnum_ty *__counted_by(count) buf_typedef; // OK expected-note 8{{consider using '__sized_by' instead of '__counted_by'}}
 };
 
 void use_CBBufEnumTyPos(struct CBBufEnumTyPos* ptr) {

@@ -6724,19 +6724,16 @@ def err_counted_by_on_incomplete_type_on_assign : Error <
 
 def err_counted_by_on_incomplete_type_on_use : Error <
   "cannot %select{"
-    "use '%1'|" // Generic expr
-    "call '%1'" // CallExpr
-  "}0 with%select{"
-    "|"       // Generic expr
-    " return" // CallExpr
-  "}0 '%4' attributed type %2 because the pointee type %3 is incomplete">;
+    "use '%1' with '%4' attributed|" // Generic expr
+    "call '%1' with '%4' attributed return" // CallExpr
+  "}0 type %2 because the pointee type %3 is incomplete">;
 
 def note_counted_by_consider_completing_pointee_ty : Note<
   "consider providing a complete definition for %0">;
   
 def note_counted_by_consider_using_sized_by : Note<
   "consider using '__sized_by%select{|_or_null}0' instead of "
-  "__counted_by%select{|_or_null}0">;
+  "'__counted_by%select{|_or_null}0'">;
 
 def warn_counted_by_attr_elt_type_unknown_size :
   Warning<err_counted_by_attr_pointee_unknown_size.Summary>,
