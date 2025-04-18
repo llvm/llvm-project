@@ -1384,6 +1384,20 @@ public:
   void Post(const parser::AccEndBlockDirective &) {
     messageHandler().set_currStmtSource(std::nullopt);
   }
+  bool Pre(const parser::AccBeginCombinedDirective &x) {
+    AddAccSourceRange(x.source);
+    return true;
+  }
+  void Post(const parser::AccBeginCombinedDirective &) {
+    messageHandler().set_currStmtSource(std::nullopt);
+  }
+  bool Pre(const parser::AccEndCombinedDirective &x) {
+    AddAccSourceRange(x.source);
+    return true;
+  }
+  void Post(const parser::AccEndCombinedDirective &) {
+    messageHandler().set_currStmtSource(std::nullopt);
+  }
   bool Pre(const parser::AccBeginLoopDirective &x) {
     AddAccSourceRange(x.source);
     return true;
