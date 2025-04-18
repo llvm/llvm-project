@@ -4006,19 +4006,20 @@ std::optional<AvailabilitySpec> Parser::ParseAvailabilitySpec() {
     if (Version.empty())
       return std::nullopt;
 
-    StringRef GivenPlatform = PlatformIdentifier->Ident->getName();
+    StringRef GivenPlatform =
+        PlatformIdentifier->getIdentifierInfo()->getName();
     StringRef Platform =
         AvailabilityAttr::canonicalizePlatformName(GivenPlatform);
 
     if (AvailabilityAttr::getPrettyPlatformName(Platform).empty() ||
         (GivenPlatform.contains("xros") || GivenPlatform.contains("xrOS"))) {
-      Diag(PlatformIdentifier->Loc,
+      Diag(PlatformIdentifier->getLoc(),
            diag::err_avail_query_unrecognized_platform_name)
           << GivenPlatform;
       return std::nullopt;
     }
 
-    return AvailabilitySpec(Version, Platform, PlatformIdentifier->Loc,
+    return AvailabilitySpec(Version, Platform, PlatformIdentifier->getLoc(),
                             VersionRange.getEnd());
   }
 }

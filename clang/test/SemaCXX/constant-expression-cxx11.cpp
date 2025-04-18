@@ -409,6 +409,10 @@ constexpr int a = 0;
 constexpr int b = 1;
 constexpr int n = &b - &a; // expected-error {{must be initialized by a constant expression}} \
                            // expected-note {{arithmetic involving unrelated objects '&b' and '&a' has unspecified value}}
+constexpr static int arrk[2] = {1,2};
+constexpr static int arrk2[2] = {3,4};
+constexpr int k2 = &arrk[1] - &arrk2[0]; // expected-error {{must be initialized by a constant expression}} \
+                                         // expected-note {{arithmetic involving unrelated objects}}
 
 namespace MaterializeTemporary {
 
