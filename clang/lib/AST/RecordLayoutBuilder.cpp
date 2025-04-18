@@ -1302,6 +1302,7 @@ ItaniumRecordLayoutBuilder::LayoutBase(const BaseSubobjectInfo *Base) {
     setSize(std::max(getSize(), Offset + Layout.getSize()));
 
   // Remember max struct/class alignment.
+  UnadjustedAlignment = std::max(UnadjustedAlignment, BaseAlign);
   UpdateAlignment(BaseAlign, UnpackedAlignTo, PreferredBaseAlign);
 
   return Offset;
