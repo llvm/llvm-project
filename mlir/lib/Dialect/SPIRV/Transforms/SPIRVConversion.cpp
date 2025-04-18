@@ -29,6 +29,7 @@
 #include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "mlir/Transforms/OneToNTypeConversion.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
@@ -932,8 +933,7 @@ struct FuncOpVectorUnroll final : OpRewritePattern<func::FuncOp> {
     OpBuilder::InsertionGuard guard(rewriter);
     rewriter.setInsertionPointToStart(&entryBlock);
 
-    TypeConverter::SignatureConversion oneToNTypeMapping(
-        fnType.getInputs().size());
+    OneToNTypeMapping oneToNTypeMapping(fnType.getInputs());
 
     // For arguments that are of illegal types and require unrolling.
     // `unrolledInputNums` stores the indices of arguments that result from
@@ -1073,8 +1073,7 @@ struct ReturnOpVectorUnroll final : OpRewritePattern<func::ReturnOp> {
       return failure();
 
     FunctionType fnType = funcOp.getFunctionType();
-    TypeConverter::SignatureConversion oneToNTypeMapping(
-        fnType.getResults().size());
+    OneToNTypeMapping oneToNTypeMapping(fnType.getResults());
     Location loc = returnOp.getLoc();
 
     // For the new return op.

@@ -8,6 +8,7 @@ add_mlir_library(MLIRTransformUtils
   Inliner.cpp
   InliningUtils.cpp
   LoopInvariantCodeMotionUtils.cpp
+  OneToNTypeConversion.cpp
   RegionUtils.cpp
   WalkPatternRewriteDriver.cpp
 
