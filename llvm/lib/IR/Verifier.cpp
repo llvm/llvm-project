@@ -2932,7 +2932,7 @@ void Verifier::visitFunction(const Function &F) {
     Check(Arg.getType()->isFirstClassType(),
           "Function arguments must have first-class types!", &Arg);
     Check(!Arg.getType()->isLabelTy(),
-          "Function argument cannot be of label type!", &Arg);
+          "Function argument cannot be of label type!", &Arg, &F);
     if (!IsIntrinsic) {
       Check(!Arg.getType()->isMetadataTy(),
             "Function takes metadata but isn't an intrinsic", &Arg, &F);
