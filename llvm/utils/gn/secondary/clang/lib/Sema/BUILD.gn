@@ -99,6 +99,7 @@ static_library("Sema") {
     "SemaOpenACC.cpp",
     "SemaOpenACCAtomic.cpp",
     "SemaOpenACCClause.cpp",
+    "SemaOpenACCClauseAppertainment.cpp",
     "SemaOpenCL.cpp",
     "SemaOpenMP.cpp",
     "SemaOverload.cpp",
