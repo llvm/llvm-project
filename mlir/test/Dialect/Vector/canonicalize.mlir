@@ -3311,3 +3311,41 @@ func.func @fold_insert_constant_indices(%arg : vector<4x1xi32>) -> vector<4x1xi3
   %res = vector.insert %1, %arg[%0, %0] : i32 into vector<4x1xi32>
   return %res : vector<4x1xi32>
 }
+
+// -----
+
+// Check that out of bounds indices are not folded for vector.insert.
+
+// CHECK-LABEL: @fold_insert_oob
+//  CHECK-SAME:   %[[ARG:.*]]: vector<4x1x2xi32>) -> vector<4x1x2xi32> {
+//       CHECK:   %[[OOB1:.*]] = arith.constant -2 : index
+//       CHECK:   %[[OOB2:.*]] = arith.constant 2 : index
+//       CHECK:   %[[VAL:.*]] = arith.constant 1 : i32
+//       CHECK:   %[[RES:.*]] = vector.insert %[[VAL]], %[[ARG]] [0, %[[OOB1]], %[[OOB2]]] : i32 into vector<4x1x2xi32>
+//       CHECK:   return %[[RES]] : vector<4x1x2xi32>
+func.func @fold_insert_oob(%arg : vector<4x1x2xi32>) -> vector<4x1x2xi32> {
+  %c0 = arith.constant 0 : index
+  %c-2 = arith.constant -2 : index
+  %c2 = arith.constant 2 : index
+  %c1 = arith.constant 1 : i32
+  %res = vector.insert %c1, %arg[%c0, %c-2, %c2] : i32 into vector<4x1x2xi32>
+  return %res : vector<4x1x2xi32>
+}
+
+// -----
+
+// Check that out of bounds indices are not folded for vector.extract.
+
+// CHECK-LABEL: @fold_extract_oob
+//  CHECK-SAME:   %[[ARG:.*]]: vector<4x1x2xi32>) -> i32 {
+//       CHECK:   %[[OOB1:.*]] = arith.constant -2 : index
+//       CHECK:   %[[OOB2:.*]] = arith.constant 2 : index
+//       CHECK:   %[[RES:.*]] = vector.extract %[[ARG]][0, %[[OOB1]], %[[OOB2]]] : i32 from vector<4x1x2xi32>
+//       CHECK:   return %[[RES]] : i32
+func.func @fold_extract_oob(%arg : vector<4x1x2xi32>) -> i32 {
+  %c0 = arith.constant 0 : index
+  %c-2 = arith.constant -2 : index
+  %c2 = arith.constant 2 : index
+  %res = vector.extract %arg[%c0, %c-2, %c2] : i32 from vector<4x1x2xi32>
+  return %res : i32
+}
