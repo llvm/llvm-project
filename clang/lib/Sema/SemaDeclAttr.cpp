@@ -5524,6 +5524,10 @@ bool Sema::CheckCallingConvAttr(const ParsedAttr &Attrs, CallingConv &CC,
       A = DeviceTI->checkCallingConvention(CC);
   } else if (LangOpts.SYCLIsDevice && TI.getTriple().isAMDGPU() &&
              CC == CC_X86VectorCall) {
+    // Assuming SYCL Device AMDGPU CC_X86VectorCall functions are always to be
+    // emitted on the host. The MSVC STL has CC-based specializations so we
+    // cannot change the CC to be the default as that will cause a clash with
+    // another specialization.
     A = TI.checkCallingConvention(CC);
     if (Aux && A != TargetInfo::CCCR_OK)
       A = Aux->checkCallingConvention(CC);
