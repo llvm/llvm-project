@@ -3963,6 +3963,12 @@ TEST_F(TokenAnnotatorTest, UTF8StringLiteral) {
   EXPECT_TOKEN(Tokens[1], tok::utf8_string_literal, TT_Unknown);
 }
 
+TEST_F(TokenAnnotatorTest, IdentifierPackage) {
+  auto Tokens = annotate("auto package;");
+  ASSERT_EQ(Tokens.size(), 4u) << Tokens;
+  EXPECT_FALSE(Tokens[0]->isObjCAccessSpecifier());
+}
+
 } // namespace
 } // namespace format
 } // namespace clang
