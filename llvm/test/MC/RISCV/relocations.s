@@ -1,6 +1,6 @@
-# RUN: llvm-mc -triple riscv32 -M no-aliases < %s -show-encoding \
+# RUN: llvm-mc -triple riscv32 -M no-aliases %s -show-encoding \
 # RUN:     | FileCheck -check-prefix=INSTR %s
-# RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+c < %s \
+# RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+c %s \
 # RUN:     | llvm-readobj -r - | FileCheck -check-prefix=RELOC %s
 
 # Check prefixes:

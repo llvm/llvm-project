@@ -2645,6 +2645,12 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
         case RISCVOp::OPERAND_ZERO:
           Ok = Imm == 0;
           break;
+        case RISCVOp::OPERAND_THREE:
+          Ok = Imm == 3;
+          break;
+        case RISCVOp::OPERAND_FOUR:
+          Ok = Imm == 4;
+          break;
           // clang-format off
         CASE_OPERAND_SIMM(5)
         CASE_OPERAND_SIMM(6)

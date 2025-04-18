@@ -146,8 +146,7 @@ module attributes {gpu.container_module, dlti.dl_spec = #dlti.dl_spec<#dlti.dl_e
     %1:2 = hlfir.declare %0 {uniq_name = "_QMtest_callFhostEstream"} : (!fir.ref<i64>) -> (!fir.ref<i64>, !fir.ref<i64>)
     %c1_i32 = arith.constant 1 : i32
     %c0_i32 = arith.constant 0 : i32
-    %2 = fir.load %1#0 : !fir.ref<i64>
-    cuf.kernel_launch @_QMdevptrPtest<<<%c1_i32, %c1_i32, %c1_i32, %c1_i32, %c1_i32, %c1_i32, %c0_i32, %2 : i64>>>()
+    cuf.kernel_launch @_QMdevptrPtest<<<%c1_i32, %c1_i32, %c1_i32, %c1_i32, %c1_i32, %c1_i32, %c0_i32, %1#0 : !fir.ref<i64>>>>()
     return
   }
 }
@@ -155,5 +154,5 @@ module attributes {gpu.container_module, dlti.dl_spec = #dlti.dl_spec<#dlti.dl_e
 // CHECK-LABEL: func.func @_QQmain()
 // CHECK: %[[STREAM:.*]] = fir.alloca i64 {bindc_name = "stream", uniq_name = "_QMtest_callFhostEstream"}
 // CHECK: %[[DECL_STREAM:.*]]:2 = hlfir.declare %[[STREAM]] {uniq_name = "_QMtest_callFhostEstream"} : (!fir.ref<i64>) -> (!fir.ref<i64>, !fir.ref<i64>)
-// CHECK: %[[STREAM_LOADED:.*]] = fir.load %[[DECL_STREAM]]#0 : !fir.ref<i64>
-// CHECK: gpu.launch_func <%[[STREAM_LOADED]] : i64> @cuda_device_mod::@_QMdevptrPtest
+// CHECK: %[[TOKEN:.*]] = cuf.stream_cast %[[DECL_STREAM]]#0 : <i64>
+// CHECK: gpu.launch_func [%[[TOKEN]]] @cuda_device_mod::@_QMdevptrPtest
