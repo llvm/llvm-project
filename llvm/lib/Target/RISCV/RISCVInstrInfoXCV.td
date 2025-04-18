@@ -17,8 +17,6 @@
 def CVrrAsmOperand : AsmOperandClass {
   let Name = "RegReg";
   let ParserMethod = "parseRegReg";
-  let DiagnosticType = "InvalidRegReg";
-  let DiagnosticString = "operands must be register and register";
 }
 
 def CVrr : Operand<i32>,
