@@ -18,12 +18,25 @@ define i32 @ds_consume(ptr addrspace(3) %ptr) {
   ret i32 %ret
 }
 
+; CHECK: declare noundef i32 @llvm.amdgcn.mbcnt.hi(i32, i32) #1
+define i32 @mbcnt_hi(i32 %a, i32 %b) {
+  %ret = call i32 @llvm.amdgcn.mbcnt.hi(i32 %a, i32 %b)
+  ret i32 %ret
+}
+
+; CHECK: declare noundef i32 @llvm.amdgcn.mbcnt.lo(i32, i32) #1
+define i32 @mbcnt_lo(i32 %a, i32 %b) {
+  %ret = call i32 @llvm.amdgcn.mbcnt.lo(i32 %a, i32 %b)
+  ret i32 %ret
+}
+
 ; Test assumed range
-; CHECK: declare noundef range(i32 32, 65) i32 @llvm.amdgcn.wavefrontsize() #1
+; CHECK: declare noundef range(i32 32, 65) i32 @llvm.amdgcn.wavefrontsize() #2
 define i32 @wavefrontsize() {
   %ret = call i32 @llvm.amdgcn.wavefrontsize()
   ret i32 %ret
 }
 
 ; CHECK: attributes #0 = { convergent nocallback nofree nounwind willreturn memory(argmem: readwrite) }
-; CHECK: attributes #1 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
+; CHECK: attributes #1 = { nocallback nofree nosync nounwind willreturn memory(none) }
+; CHECK: attributes #2 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
