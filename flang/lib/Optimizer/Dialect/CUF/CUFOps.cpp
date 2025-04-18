@@ -149,7 +149,7 @@ static llvm::LogicalResult checkStreamType(OpTy op) {
     return mlir::success();
   if (auto refTy = mlir::dyn_cast<fir::ReferenceType>(op.getStream().getType()))
     if (!refTy.getEleTy().isInteger(64))
-      return op.emitOpError("stream is expected to be a i64 reference");
+      return op.emitOpError("stream is expected to be an i64 reference");
   return mlir::success();
 }
 
