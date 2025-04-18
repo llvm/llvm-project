@@ -150,8 +150,7 @@ class MCJIT : public ExecutionEngine {
     }
 
     void markAllLoadedModulesAsFinalized() {
-      for (Module *M : LoadedModules)
-        FinalizedModules.insert(M);
+      FinalizedModules.insert_range(LoadedModules);
       LoadedModules.clear();
     }
 

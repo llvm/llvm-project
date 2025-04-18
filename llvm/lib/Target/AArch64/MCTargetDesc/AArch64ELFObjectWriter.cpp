@@ -58,8 +58,7 @@ AArch64ELFObjectWriter::AArch64ELFObjectWriter(uint8_t OSABI, bool IsILP32)
 
 // assumes IsILP32 is true
 static bool isNonILP32reloc(const MCFixup &Fixup,
-                            AArch64MCExpr::VariantKind RefKind,
-                            MCContext &Ctx) {
+                            AArch64MCExpr::Specifier RefKind, MCContext &Ctx) {
   if (Fixup.getTargetKind() != AArch64::fixup_aarch64_movw)
     return false;
   switch (RefKind) {
@@ -110,22 +109,10 @@ unsigned AArch64ELFObjectWriter::getRelocType(MCContext &Ctx,
                                               const MCFixup &Fixup,
                                               bool IsPCRel) const {
   unsigned Kind = Fixup.getTargetKind();
-  if (Kind >= FirstLiteralRelocationKind)
-    return Kind - FirstLiteralRelocationKind;
-  AArch64MCExpr::VariantKind RefKind =
-      static_cast<AArch64MCExpr::VariantKind>(Target.getRefKind());
-  AArch64MCExpr::VariantKind SymLoc = AArch64MCExpr::getSymbolLoc(RefKind);
+  AArch64MCExpr::Specifier RefKind =
+      static_cast<AArch64MCExpr::Specifier>(Target.getSpecifier());
+  AArch64MCExpr::Specifier SymLoc = AArch64MCExpr::getSymbolLoc(RefKind);
   bool IsNC = AArch64MCExpr::isNotChecked(RefKind);
-
-  assert((!Target.getSymA() ||
-          Target.getSymA()->getKind() == MCSymbolRefExpr::VK_None ||
-          Target.getSymA()->getKind() == MCSymbolRefExpr::VK_PLT ||
-          Target.getSymA()->getKind() == MCSymbolRefExpr::VK_GOTPCREL) &&
-         "Should only be expression-level modifiers here");
-
-  assert((!Target.getSymB() ||
-          Target.getSymB()->getKind() == MCSymbolRefExpr::VK_None) &&
-         "Should only be expression-level modifiers here");
 
   switch (SymLoc) {
   case AArch64MCExpr::VK_DTPREL:
@@ -133,8 +120,8 @@ unsigned AArch64ELFObjectWriter::getRelocType(MCContext &Ctx,
   case AArch64MCExpr::VK_TPREL:
   case AArch64MCExpr::VK_TLSDESC:
   case AArch64MCExpr::VK_TLSDESC_AUTH:
-    if (auto *S = Target.getSymA())
-      cast<MCSymbolELF>(S->getSymbol()).setType(ELF::STT_TLS);
+    if (auto *SA = Target.getAddSym())
+      cast<MCSymbolELF>(SA)->setType(ELF::STT_TLS);
     break;
   default:
     break;
@@ -148,7 +135,8 @@ unsigned AArch64ELFObjectWriter::getRelocType(MCContext &Ctx,
     case FK_Data_2:
       return R_CLS(PREL16);
     case FK_Data_4: {
-      return Target.getAccessVariant() == MCSymbolRefExpr::VK_PLT
+      return AArch64MCExpr::Specifier(Target.getSpecifier()) ==
+                     AArch64MCExpr::VK_PLT
                  ? R_CLS(PLT32)
                  : R_CLS(PREL32);
     }
@@ -259,8 +247,8 @@ unsigned AArch64ELFObjectWriter::getRelocType(MCContext &Ctx,
     case FK_Data_2:
       return R_CLS(ABS16);
     case FK_Data_4:
-      return (!IsILP32 &&
-              Target.getAccessVariant() == MCSymbolRefExpr::VK_GOTPCREL)
+      return (!IsILP32 && AArch64MCExpr::Specifier(Target.getSpecifier()) ==
+                              AArch64MCExpr::VK_GOTPCREL)
                  ? ELF::R_AARCH64_GOTPCREL32
                  : R_CLS(ABS32);
     case FK_Data_8: {
@@ -403,7 +391,7 @@ unsigned AArch64ELFObjectWriter::getRelocType(MCContext &Ctx,
       if ((SymLoc == AArch64MCExpr::VK_GOT ||
            SymLoc == AArch64MCExpr::VK_GOT_AUTH) &&
           IsNC) {
-        AArch64MCExpr::VariantKind AddressLoc =
+        AArch64MCExpr::Specifier AddressLoc =
             AArch64MCExpr::getAddressFrag(RefKind);
         bool IsAuth = (SymLoc == AArch64MCExpr::VK_GOT_AUTH);
         if (!IsILP32) {
@@ -553,10 +541,10 @@ bool AArch64ELFObjectWriter::needsRelocateWithSymbol(const MCValue &Val,
   if (Val.getAddSym() && cast<MCSymbolELF>(Val.getAddSym())->isMemtag())
     return true;
 
-  if ((Val.getRefKind() & AArch64MCExpr::VK_GOT) == AArch64MCExpr::VK_GOT)
+  if ((Val.getSpecifier() & AArch64MCExpr::VK_GOT) == AArch64MCExpr::VK_GOT)
     return true;
-  return is_contained({MCSymbolRefExpr::VK_GOTPCREL, MCSymbolRefExpr::VK_PLT},
-                      Val.getAccessVariant());
+  return is_contained({AArch64MCExpr::VK_GOTPCREL, AArch64MCExpr::VK_PLT},
+                      AArch64MCExpr::Specifier(Val.getSpecifier()));
 }
 
 std::unique_ptr<MCObjectTargetWriter>

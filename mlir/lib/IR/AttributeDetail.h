@@ -24,7 +24,6 @@
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/Support/TrailingObjects.h"
-#include <mutex>
 
 namespace mlir {
 namespace detail {
@@ -402,8 +401,7 @@ private:
 /// is freed after the destruction of the distinct attribute allocator.
 class DistinctAttributeAllocator {
 public:
-  DistinctAttributeAllocator(bool threadingIsEnabled)
-      : threadingIsEnabled(threadingIsEnabled), useThreadLocalAllocator(true) {};
+  DistinctAttributeAllocator() = default;
 
   DistinctAttributeAllocator(DistinctAttributeAllocator &&) = delete;
   DistinctAttributeAllocator(const DistinctAttributeAllocator &) = delete;
@@ -413,49 +411,12 @@ public:
   /// Allocates a distinct attribute storage using a thread local bump pointer
   /// allocator to enable synchronization free parallel allocations.
   DistinctAttrStorage *allocate(Attribute referencedAttr) {
-    if (!useThreadLocalAllocator && threadingIsEnabled) {
-      std::scoped_lock<std::mutex> lock(allocatorMutex);
-      return allocateImpl(referencedAttr);
-    }
-    return allocateImpl(referencedAttr);
-  }
-
-  /// Sets a flag that stores if multithreading is enabled. The flag is used to
-  /// decide if locking is needed when using a non thread-safe allocator.
-  void disableMultiThreading(bool disable = true) {
-    threadingIsEnabled = !disable;
-  }
-
-  /// Sets a flag to disable using thread local bump pointer allocators and use
-  /// a single thread-safe allocator. Use this to persist allocated storage
-  /// beyond the lifetime of a child thread calling this function while ensuring
-  /// thread-safe allocation.
-  void disableThreadLocalStorage(bool disable = true) {
-    useThreadLocalAllocator = !disable;
-  }
-
-private:
-  DistinctAttrStorage *allocateImpl(Attribute referencedAttr) {
-    return new (getAllocatorInUse().Allocate<DistinctAttrStorage>())
+    return new (allocatorCache.get().Allocate<DistinctAttrStorage>())
         DistinctAttrStorage(referencedAttr);
   }
 
-  /// If threading is disabled on the owning MLIR context, a normal non
-  /// thread-local, non-thread safe bump pointer allocator is used instead to
-  /// prevent use-after-free errors whenever attribute storage created on a
-  /// crash recover thread is accessed after the thread joins.
-  llvm::BumpPtrAllocator &getAllocatorInUse() {
-    if (useThreadLocalAllocator)
-      return allocatorCache.get();
-    return allocator;
-  }
-
+private:
   ThreadLocalCache<llvm::BumpPtrAllocator> allocatorCache;
-  llvm::BumpPtrAllocator allocator;
-  std::mutex allocatorMutex;
-
-  bool threadingIsEnabled : 1;
-  bool useThreadLocalAllocator : 1;
 };
 } // namespace detail
 } // namespace mlir

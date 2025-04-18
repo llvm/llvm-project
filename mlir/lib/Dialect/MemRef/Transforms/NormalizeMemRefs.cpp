@@ -356,12 +356,12 @@ void NormalizeMemRefs::normalizeFuncOpMemRefs(func::FuncOp funcOp,
   SmallVector<memref::AllocOp, 4> allocOps;
   funcOp.walk([&](memref::AllocOp op) { allocOps.push_back(op); });
   for (memref::AllocOp allocOp : allocOps)
-    (void)normalizeMemRef(&allocOp);
+    (void)normalizeMemRef(allocOp);
 
   SmallVector<memref::AllocaOp> allocaOps;
   funcOp.walk([&](memref::AllocaOp op) { allocaOps.push_back(op); });
   for (memref::AllocaOp allocaOp : allocaOps)
-    (void)normalizeMemRef(&allocaOp);
+    (void)normalizeMemRef(allocaOp);
 
   // We use this OpBuilder to create new memref layout later.
   OpBuilder b(funcOp);

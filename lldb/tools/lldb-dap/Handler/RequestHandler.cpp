@@ -11,11 +11,15 @@
 #include "Handler/ResponseHandler.h"
 #include "JSONUtils.h"
 #include "LLDBUtils.h"
+#include "Protocol/ProtocolBase.h"
 #include "RunInTerminal.h"
+#include "llvm/Support/Error.h"
 
 #if !defined(_WIN32)
 #include <unistd.h>
 #endif
+
+using namespace lldb_dap::protocol;
 
 namespace lldb_dap {
 
@@ -97,6 +101,11 @@ void BaseRequestHandler::SetSourceMapFromArguments(
 static llvm::Error RunInTerminal(DAP &dap,
                                  const llvm::json::Object &launch_request,
                                  const uint64_t timeout_seconds) {
+  if (!dap.clientFeatures.contains(
+          protocol::eClientFeatureRunInTerminalRequest))
+    return llvm::make_error<DAPError>("Cannot use runInTerminal, feature is "
+                                      "not supported by the connected client");
+
   dap.is_attach = true;
   lldb::SBAttachInfo attach_info;
 
@@ -113,7 +122,7 @@ static llvm::Error RunInTerminal(DAP &dap,
   debugger_pid = getpid();
 #endif
   llvm::json::Object reverse_request = CreateRunInTerminalReverseRequest(
-      launch_request, dap.debug_adapter_path, comm_file.m_path, debugger_pid);
+      launch_request, comm_file.m_path, debugger_pid);
   dap.SendReverseRequest<LogFailureResponseHandler>("runInTerminal",
                                                     std::move(reverse_request));
 
@@ -157,6 +166,28 @@ static llvm::Error RunInTerminal(DAP &dap,
     return llvm::Error::success();
   return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                  error.GetCString());
+}
+
+void BaseRequestHandler::Run(const Request &request) {
+  // If this request was cancelled, send a cancelled response.
+  if (dap.IsCancelled(request)) {
+    Response cancelled{/*request_seq=*/request.seq,
+                       /*command=*/request.command,
+                       /*success=*/false,
+                       /*message=*/eResponseMessageCancelled,
+                       /*body=*/std::nullopt};
+    dap.Send(cancelled);
+    return;
+  }
+
+  // FIXME: After all the requests have migrated from LegacyRequestHandler >
+  // RequestHandler<> we should be able to move this into
+  // RequestHandler<>::operator().
+  operator()(request);
+
+  // FIXME: After all the requests have migrated from LegacyRequestHandler >
+  // RequestHandler<> we should be able to check `debugger.InterruptRequest` and
+  // mark the response as cancelled.
 }
 
 lldb::SBError

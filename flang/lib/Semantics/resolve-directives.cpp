@@ -953,7 +953,14 @@ void AccAttributeVisitor::Post(
   const auto &clauseList = std::get<parser::AccClauseList>(x.t);
   for (const auto &clause : clauseList.v) {
     // Restriction - line 2414
-    DoNotAllowAssumedSizedArray(GetAccObjectList(clause));
+    // We assume the restriction is present because clauses that require
+    // moving data would require the size of the data to be present, but
+    // the deviceptr and present clauses do not require moving data and
+    // thus we permit them.
+    if (!std::holds_alternative<parser::AccClause::Deviceptr>(clause.u) &&
+        !std::holds_alternative<parser::AccClause::Present>(clause.u)) {
+      DoNotAllowAssumedSizedArray(GetAccObjectList(clause));
+    }
   }
 }
 
@@ -2301,12 +2308,12 @@ void OmpAttributeVisitor::Post(const parser::Name &name) {
         if (symbol != found) {
           name.symbol = found; // adjust the symbol within region
         } else if (GetContext().defaultDSA == Symbol::Flag::OmpNone &&
-            !symbol->test(Symbol::Flag::OmpThreadprivate) &&
+            !symbol->GetUltimate().test(Symbol::Flag::OmpThreadprivate) &&
             // Exclude indices of sequential loops that are privatised in
             // the scope of the parallel region, and not in this scope.
             // TODO: check whether this should be caught in IsObjectWithDSA
             !symbol->test(Symbol::Flag::OmpPrivate)) {
-          if (symbol->test(Symbol::Flag::CrayPointee)) {
+          if (symbol->GetUltimate().test(Symbol::Flag::CrayPointee)) {
             std::string crayPtrName{
                 semantics::GetCrayPointer(*symbol).name().ToString()};
             if (!IsObjectWithDSA(*currScope().FindSymbol(crayPtrName)))
@@ -2512,6 +2519,15 @@ void OmpAttributeVisitor::ResolveOmpObject(
                         "with the INSCAN modifier of the parent "
                         "directive"_err_en_US,
                         name->ToString());
+                  }
+                }
+                if (ompFlag == Symbol::Flag::OmpDeclareTarget) {
+                  if (symbol->IsFuncResult()) {
+                    if (Symbol * func{currScope().symbol()}) {
+                      CHECK(func->IsSubprogram());
+                      func->set(ompFlag);
+                      name->symbol = func;
+                    }
                   }
                 }
                 if (GetContext().directive ==

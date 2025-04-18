@@ -1062,8 +1062,7 @@ static SmallVector<unsigned, 4> getInputSegmentList(ShuffleMask SM,
       Segs.set(M >> Shift);
   }
 
-  for (unsigned B : Segs.set_bits())
-    SegList.push_back(B);
+  llvm::append_range(SegList, Segs.set_bits());
   return SegList;
 }
 

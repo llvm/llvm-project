@@ -2266,13 +2266,12 @@ define amdgpu_kernel void @dynamic_insertelement_v4f64(ptr addrspace(1) %out, <4
 define amdgpu_kernel void @dynamic_insertelement_v8f64(ptr addrspace(1) %out, <8 x double> %a, i32 %b) #0 {
 ; SI-LABEL: dynamic_insertelement_v8f64:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_load_dword s4, s[8:9], 0x20
 ; SI-NEXT:    s_load_dwordx16 s[12:27], s[8:9], 0x10
+; SI-NEXT:    s_load_dword s4, s[8:9], 0x20
 ; SI-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; SI-NEXT:    v_mov_b32_e32 v16, 0x40200000
 ; SI-NEXT:    s_mov_b32 s3, 0x100f000
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-NEXT:    s_lshl_b32 s4, s4, 1
 ; SI-NEXT:    v_mov_b32_e32 v0, s12
 ; SI-NEXT:    v_mov_b32_e32 v1, s13
 ; SI-NEXT:    v_mov_b32_e32 v2, s14
@@ -2289,7 +2288,7 @@ define amdgpu_kernel void @dynamic_insertelement_v8f64(ptr addrspace(1) %out, <8
 ; SI-NEXT:    v_mov_b32_e32 v13, s25
 ; SI-NEXT:    v_mov_b32_e32 v14, s26
 ; SI-NEXT:    v_mov_b32_e32 v15, s27
-; SI-NEXT:    s_mov_b32 m0, s4
+; SI-NEXT:    s_lshl_b32 m0, s4, 1
 ; SI-NEXT:    v_movreld_b32_e32 v0, 0
 ; SI-NEXT:    s_mov_b32 s2, -1
 ; SI-NEXT:    v_movreld_b32_e32 v1, v16
@@ -2301,13 +2300,12 @@ define amdgpu_kernel void @dynamic_insertelement_v8f64(ptr addrspace(1) %out, <8
 ;
 ; VI-LABEL: dynamic_insertelement_v8f64:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dword s4, s[8:9], 0x80
 ; VI-NEXT:    s_load_dwordx16 s[12:27], s[8:9], 0x40
+; VI-NEXT:    s_load_dword s4, s[8:9], 0x80
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; VI-NEXT:    v_mov_b32_e32 v16, 0x40200000
 ; VI-NEXT:    s_mov_b32 s3, 0x1100f000
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    s_lshl_b32 s4, s4, 1
 ; VI-NEXT:    v_mov_b32_e32 v0, s12
 ; VI-NEXT:    v_mov_b32_e32 v1, s13
 ; VI-NEXT:    v_mov_b32_e32 v2, s14
@@ -2324,7 +2322,7 @@ define amdgpu_kernel void @dynamic_insertelement_v8f64(ptr addrspace(1) %out, <8
 ; VI-NEXT:    v_mov_b32_e32 v13, s25
 ; VI-NEXT:    v_mov_b32_e32 v14, s26
 ; VI-NEXT:    v_mov_b32_e32 v15, s27
-; VI-NEXT:    s_mov_b32 m0, s4
+; VI-NEXT:    s_lshl_b32 m0, s4, 1
 ; VI-NEXT:    v_movreld_b32_e32 v0, 0
 ; VI-NEXT:    s_mov_b32 s2, -1
 ; VI-NEXT:    v_movreld_b32_e32 v1, v16

@@ -631,7 +631,7 @@ std::vector<std::pair<uint64_t, uint64_t>>
 X86MCInstrAnalysis::findPltEntries(uint64_t PltSectionVA,
                                    ArrayRef<uint8_t> PltContents,
                                    const MCSubtargetInfo &STI) const {
-  const auto TargetTriple = STI.getTargetTriple();
+  const Triple &TargetTriple = STI.getTargetTriple();
   switch (TargetTriple.getArch()) {
   case Triple::x86:
     return findX86PltEntries(PltSectionVA, PltContents);

@@ -42,16 +42,16 @@ unsigned CSKYELFObjectWriter::getRelocType(MCContext &Ctx,
   const MCExpr *Expr = Fixup.getValue();
   // Determine the type of the relocation
   unsigned Kind = Fixup.getTargetKind();
-  uint8_t Modifier = Target.getAccessVariant();
+  uint8_t Modifier = Target.getSpecifier();
 
-  switch (Target.getRefKind()) {
+  switch (Target.getSpecifier()) {
   case CSKYMCExpr::VK_TLSIE:
   case CSKYMCExpr::VK_TLSLE:
   case CSKYMCExpr::VK_TLSGD:
   case CSKYMCExpr::VK_TLSLDM:
   case CSKYMCExpr::VK_TLSLDO:
-    if (auto *S = Target.getSymA())
-      cast<MCSymbolELF>(S->getSymbol()).setType(ELF::STT_TLS);
+    if (auto *SA = Target.getAddSym())
+      cast<MCSymbolELF>(SA)->setType(ELF::STT_TLS);
     break;
   default:
     break;
@@ -170,7 +170,7 @@ unsigned CSKYELFObjectWriter::getRelocType(MCContext &Ctx,
 bool CSKYELFObjectWriter::needsRelocateWithSymbol(const MCValue &V,
                                                   const MCSymbol &,
                                                   unsigned Type) const {
-  switch (V.getRefKind()) {
+  switch (V.getSpecifier()) {
   case CSKYMCExpr::VK_PLT:
   case CSKYMCExpr::VK_GOT:
     return true;

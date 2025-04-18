@@ -7,14 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "GDBRemoteCommunication.h"
-
-#include <climits>
-#include <cstring>
-#include <future>
-#include <sys/stat.h>
-
+#include "ProcessGDBRemoteLog.h"
 #include "lldb/Host/Config.h"
-#include "lldb/Host/ConnectionFileDescriptor.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
@@ -30,13 +24,14 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/StreamString.h"
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Config/llvm-config.h" // for LLVM_ENABLE_ZLIB
 #include "llvm/Support/ScopedPrinter.h"
-
-#include "ProcessGDBRemoteLog.h"
+#include <climits>
+#include <cstring>
+#include <future>
+#include <sys/stat.h>
 
 #if defined(__APPLE__)
 #define DEBUGSERVER_BASENAME "debugserver"

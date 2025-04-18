@@ -105,8 +105,11 @@ struct AllocaOpLowering : public AllocLikeOpLLVMLowering {
     auto allocaOp = cast<memref::AllocaOp>(op);
     auto elementType =
         typeConverter->convertType(allocaOp.getType().getElementType());
-    unsigned addrSpace =
-        *getTypeConverter()->getMemRefAddressSpace(allocaOp.getType());
+    FailureOr<unsigned> maybeAddressSpace =
+        getTypeConverter()->getMemRefAddressSpace(allocaOp.getType());
+    if (failed(maybeAddressSpace))
+      return std::make_tuple(Value(), Value());
+    unsigned addrSpace = *maybeAddressSpace;
     auto elementPtrType =
         LLVM::LLVMPointerType::get(rewriter.getContext(), addrSpace);
 

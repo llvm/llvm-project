@@ -418,7 +418,10 @@ module std [system] {
     module copy_backward                          { header "__algorithm/copy_backward.h" }
     module copy_if                                { header "__algorithm/copy_if.h" }
     module copy_move_common                       { header "__algorithm/copy_move_common.h" }
-    module copy_n                                 { header "__algorithm/copy_n.h" }
+    module copy_n                                 {
+      header "__algorithm/copy_n.h"
+      export std.iterator_traits
+    }
     module copy                                   { header "__algorithm/copy.h" }
     module count_if                               { header "__algorithm/count_if.h" }
     module count                                  { header "__algorithm/count.h" }
@@ -487,6 +490,7 @@ module std [system] {
     module next_permutation                       { header "__algorithm/next_permutation.h" }
     module none_of                                { header "__algorithm/none_of.h" }
     module nth_element                            { header "__algorithm/nth_element.h" }
+    module out_value_result                       { header "__algorithm/out_value_result.h" }
     module partial_sort_copy                      { header "__algorithm/partial_sort_copy.h" }
     module partial_sort                           { header "__algorithm/partial_sort.h" }
     module partition_copy                         { header "__algorithm/partition_copy.h" }
@@ -940,7 +944,10 @@ module std [system] {
     module to_chars                   { header "__charconv/to_chars.h" }
     module to_chars_base_10           { header "__charconv/to_chars_base_10.h" }
     module to_chars_floating_point    { header "__charconv/to_chars_floating_point.h" }
-    module to_chars_integral          { header "__charconv/to_chars_integral.h" }
+    module to_chars_integral          {
+      header "__charconv/to_chars_integral.h"
+      export std.charconv.to_chars_result
+    }
     module to_chars_result            { header "__charconv/to_chars_result.h" }
     module traits                     { header "__charconv/traits.h" }
 
@@ -1301,13 +1308,16 @@ module std [system] {
   module flat_set {
     module flat_set                       {
       header "__flat_set/flat_set.h"
+      header "__flat_set/flat_multiset.h"
       export std.vector.vector
       export std.vector.fwd
     }
     module ra_iterator                    { header "__flat_set/ra_iterator.h" }
+    module utils                          { header "__flat_set/utils.h" }
 
     header "flat_set"
     export std.flat_map.sorted_unique
+    export std.flat_map.sorted_equivalent
     export *
   }
 
@@ -1499,6 +1509,7 @@ module std [system] {
     module iterator_traits {
       header "__iterator/iterator_traits.h"
       export std_core.type_traits.integral_constant
+      export std_core.type_traits.is_convertible
     }
     module iterator_with_data         { header "__iterator/iterator_with_data.h" }
     module iterator                   { header "__iterator/iterator.h" }
@@ -1582,6 +1593,7 @@ module std [system] {
   }
 
   module mdspan {
+    module aligned_accessor   { header "__mdspan/aligned_accessor.h" }
     module default_accessor   { header "__mdspan/default_accessor.h" }
     module extents            { header "__mdspan/extents.h" }
     module fwd                { header "__fwd/mdspan.h" }
@@ -1620,6 +1632,7 @@ module std [system] {
     module destruct_n                         { header "__memory/destruct_n.h" }
     module fwd                                { header "__fwd/memory.h" }
     module inout_ptr                          { header "__memory/inout_ptr.h" }
+    module is_sufficiently_aligned            { header "__memory/is_sufficiently_aligned.h" }
     module noexcept_move_assign_container     { header "__memory/noexcept_move_assign_container.h" }
     module out_ptr                            { header "__memory/out_ptr.h" }
     module pointer_traits                     { header "__memory/pointer_traits.h" }
@@ -1723,6 +1736,7 @@ module std [system] {
     module partial_sum                { header "__numeric/partial_sum.h" }
     module pstl                       { header "__numeric/pstl.h" }
     module reduce                     { header "__numeric/reduce.h" }
+    module ranges_iota                { header "__numeric/ranges_iota.h" }
     module saturation_arithmetic      { header "__numeric/saturation_arithmetic.h" }
     module transform_exclusive_scan   { header "__numeric/transform_exclusive_scan.h" }
     module transform_inclusive_scan   { header "__numeric/transform_inclusive_scan.h" }

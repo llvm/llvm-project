@@ -154,8 +154,7 @@ struct ConversionValueMapping {
         next = it->second;
       }
     });
-    for (Value v : newVal)
-      mappedTo.insert(v);
+    mappedTo.insert_range(newVal);
 
     mapping[std::forward<OldVal>(oldVal)] = std::forward<NewVal>(newVal);
   }
@@ -172,6 +171,10 @@ struct ConversionValueMapping {
     } else {
       map(ValueVector{oldVal}, ValueVector{newVal});
     }
+  }
+
+  void map(Value oldVal, SmallVector<Value> &&newVal) {
+    map(ValueVector{oldVal}, ValueVector(std::move(newVal)));
   }
 
   /// Drop the last mapping for the given values.
@@ -947,7 +950,8 @@ struct ConversionPatternRewriterImpl : public RewriterBase::Listener {
                                OpBuilder::InsertPoint previous) override;
 
   /// Notifies that an op is about to be replaced with the given values.
-  void notifyOpReplaced(Operation *op, ArrayRef<ValueRange> newValues);
+  void notifyOpReplaced(Operation *op,
+                        SmallVector<SmallVector<Value>> &&newValues);
 
   /// Notifies that a block is about to be erased.
   void notifyBlockIsBeingErased(Block *block);
@@ -1194,6 +1198,7 @@ void ConversionPatternRewriterImpl::applyRewrites() {
 
 //===----------------------------------------------------------------------===//
 // State Management
+//===----------------------------------------------------------------------===//
 
 RewriterState ConversionPatternRewriterImpl::getCurrentState() {
   return RewriterState(rewrites.size(), ignoredOps.size(), replacedOps.size());
@@ -1284,6 +1289,7 @@ bool ConversionPatternRewriterImpl::wasOpReplaced(Operation *op) const {
 
 //===----------------------------------------------------------------------===//
 // Type Conversion
+//===----------------------------------------------------------------------===//
 
 FailureOr<Block *> ConversionPatternRewriterImpl::convertRegionTypes(
     ConversionPatternRewriter &rewriter, Region *region,
@@ -1385,7 +1391,7 @@ Block *ConversionPatternRewriterImpl::applySignatureConversion(
           MaterializationKind::Source,
           OpBuilder::InsertPoint(newBlock, newBlock->begin()), origArg.getLoc(),
           /*valuesToMap=*/{origArg}, /*inputs=*/ValueRange(),
-          /*outputType=*/origArgType, /*originalType=*/Type(), converter);
+          /*outputTypes=*/origArgType, /*originalType=*/Type(), converter);
       appendRewrite<ReplaceBlockArgRewrite>(block, origArg, converter);
       continue;
     }
@@ -1490,7 +1496,7 @@ Value ConversionPatternRewriterImpl::findOrBuildReplacementValue(
       buildUnresolvedMaterialization(MaterializationKind::Source,
                                      computeInsertPoint(repl), value.getLoc(),
                                      /*valuesToMap=*/repl, /*inputs=*/repl,
-                                     /*outputType=*/value.getType(),
+                                     /*outputTypes=*/value.getType(),
                                      /*originalType=*/Type(), converter)
           .front();
   return castValue;
@@ -1498,6 +1504,7 @@ Value ConversionPatternRewriterImpl::findOrBuildReplacementValue(
 
 //===----------------------------------------------------------------------===//
 // Rewriter Notification Hooks
+//===----------------------------------------------------------------------===//
 
 void ConversionPatternRewriterImpl::notifyOperationInserted(
     Operation *op, OpBuilder::InsertPoint previous) {
@@ -1520,7 +1527,7 @@ void ConversionPatternRewriterImpl::notifyOperationInserted(
 }
 
 void ConversionPatternRewriterImpl::notifyOpReplaced(
-    Operation *op, ArrayRef<ValueRange> newValues) {
+    Operation *op, SmallVector<SmallVector<Value>> &&newValues) {
   assert(newValues.size() == op->getNumResults());
   assert(!ignoredOps.contains(op) && "operation was already replaced");
 
@@ -1545,7 +1552,7 @@ void ConversionPatternRewriterImpl::notifyOpReplaced(
       buildUnresolvedMaterialization(
           MaterializationKind::Source, computeInsertPoint(result),
           result.getLoc(), /*valuesToMap=*/{result}, /*inputs=*/ValueRange(),
-          /*outputType=*/result.getType(), /*originalType=*/Type(),
+          /*outputTypes=*/result.getType(), /*originalType=*/Type(),
           currentTypeConverter);
       continue;
     } else {
@@ -1562,7 +1569,7 @@ void ConversionPatternRewriterImpl::notifyOpReplaced(
     // Remap result to replacement value.
     if (repl.empty())
       continue;
-    mapping.map(result, repl);
+    mapping.map(static_cast<Value>(result), std::move(repl));
   }
 
   appendRewrite<ReplaceOperationRewrite>(op, currentTypeConverter);
@@ -1640,26 +1647,22 @@ void ConversionPatternRewriter::replaceOp(Operation *op, ValueRange newValues) {
     impl->logger.startLine()
         << "** Replace : '" << op->getName() << "'(" << op << ")\n";
   });
-  SmallVector<ValueRange> newVals;
-  for (size_t i = 0; i < newValues.size(); ++i) {
-    if (newValues[i]) {
-      newVals.push_back(newValues.slice(i, 1));
-    } else {
-      newVals.push_back(ValueRange());
-    }
-  }
-  impl->notifyOpReplaced(op, newVals);
+  SmallVector<SmallVector<Value>> newVals =
+      llvm::map_to_vector(newValues, [](Value v) -> SmallVector<Value> {
+        return v ? SmallVector<Value>{v} : SmallVector<Value>();
+      });
+  impl->notifyOpReplaced(op, std::move(newVals));
 }
 
 void ConversionPatternRewriter::replaceOpWithMultiple(
-    Operation *op, ArrayRef<ValueRange> newValues) {
+    Operation *op, SmallVector<SmallVector<Value>> &&newValues) {
   assert(op->getNumResults() == newValues.size() &&
          "incorrect # of replacement values");
   LLVM_DEBUG({
     impl->logger.startLine()
         << "** Replace : '" << op->getName() << "'(" << op << ")\n";
   });
-  impl->notifyOpReplaced(op, newValues);
+  impl->notifyOpReplaced(op, std::move(newValues));
 }
 
 void ConversionPatternRewriter::eraseOp(Operation *op) {
@@ -1667,8 +1670,8 @@ void ConversionPatternRewriter::eraseOp(Operation *op) {
     impl->logger.startLine()
         << "** Erase   : '" << op->getName() << "'(" << op << ")\n";
   });
-  SmallVector<ValueRange> nullRepls(op->getNumResults(), {});
-  impl->notifyOpReplaced(op, nullRepls);
+  SmallVector<SmallVector<Value>> nullRepls(op->getNumResults(), {});
+  impl->notifyOpReplaced(op, std::move(nullRepls));
 }
 
 void ConversionPatternRewriter::eraseBlock(Block *block) {
@@ -2106,9 +2109,6 @@ OperationLegalizer::legalizeWithFold(Operation *op,
   if (replacementValues.empty())
     return legalize(op, rewriter);
 
-  // Insert a replacement for 'op' with the folded replacement values.
-  rewriter.replaceOp(op, replacementValues);
-
   // Recursively legalize any new constant operations.
   for (unsigned i = curState.numRewrites, e = rewriterImpl.rewrites.size();
        i != e; ++i) {
@@ -2124,6 +2124,9 @@ OperationLegalizer::legalizeWithFold(Operation *op,
       return failure();
     }
   }
+
+  // Insert a replacement for 'op' with the folded replacement values.
+  rewriter.replaceOp(op, replacementValues);
 
   LLVM_DEBUG(logSuccess(rewriterImpl.logger, ""));
   return success();
@@ -2336,6 +2339,7 @@ LogicalResult OperationLegalizer::legalizePatternRootUpdates(
 
 //===----------------------------------------------------------------------===//
 // Cost Model
+//===----------------------------------------------------------------------===//
 
 void OperationLegalizer::buildLegalizationGraph(
     LegalizationPatterns &anyOpLegalizerPatterns,
@@ -2927,17 +2931,6 @@ TypeConverter::convertSignatureArgs(TypeRange types,
   return success();
 }
 
-Value TypeConverter::materializeArgumentConversion(OpBuilder &builder,
-                                                   Location loc,
-                                                   Type resultType,
-                                                   ValueRange inputs) const {
-  for (const MaterializationCallbackFn &fn :
-       llvm::reverse(argumentMaterializations))
-    if (Value result = fn(builder, resultType, inputs, loc))
-      return result;
-  return nullptr;
-}
-
 Value TypeConverter::materializeSourceConversion(OpBuilder &builder,
                                                  Location loc, Type resultType,
                                                  ValueRange inputs) const {
@@ -3355,6 +3348,7 @@ void mlir::registerConversionPDLFunctions(RewritePatternSet &patterns) {
 
 //===----------------------------------------------------------------------===//
 // Partial Conversion
+//===----------------------------------------------------------------------===//
 
 LogicalResult mlir::applyPartialConversion(
     ArrayRef<Operation *> ops, const ConversionTarget &target,
@@ -3372,6 +3366,7 @@ mlir::applyPartialConversion(Operation *op, const ConversionTarget &target,
 
 //===----------------------------------------------------------------------===//
 // Full Conversion
+//===----------------------------------------------------------------------===//
 
 LogicalResult mlir::applyFullConversion(ArrayRef<Operation *> ops,
                                         const ConversionTarget &target,
@@ -3390,6 +3385,7 @@ LogicalResult mlir::applyFullConversion(Operation *op,
 
 //===----------------------------------------------------------------------===//
 // Analysis Conversion
+//===----------------------------------------------------------------------===//
 
 /// Find a common IsolatedFromAbove ancestor of the given ops. If at least one
 /// op is a top-level module op (which is expected to be isolated from above),

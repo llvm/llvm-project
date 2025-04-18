@@ -55,6 +55,8 @@ bool doesClauseApplyToDirective(OpenACCDirectiveKind DirectiveKind,
     case OpenACCDirectiveKind::ParallelLoop:
     case OpenACCDirectiveKind::SerialLoop:
     case OpenACCDirectiveKind::KernelsLoop:
+      // OpenACC 3.4(prerelease) PR #511 adds 'if' to atomic.
+    case OpenACCDirectiveKind::Atomic:
       return true;
     default:
       return false;
@@ -681,6 +683,59 @@ class SemaOpenACCClauseVisitor {
     return false;
   }
 
+  OpenACCModifierKind
+  CheckModifierList(SemaOpenACC::OpenACCParsedClause &Clause,
+                    OpenACCModifierKind Mods) {
+    auto CheckSingle = [=](OpenACCModifierKind CurMods,
+                           OpenACCModifierKind ValidKinds,
+                           OpenACCModifierKind Bit) {
+      if (!isOpenACCModifierBitSet(CurMods, Bit) ||
+          isOpenACCModifierBitSet(ValidKinds, Bit))
+        return CurMods;
+
+      SemaRef.Diag(Clause.getLParenLoc(), diag::err_acc_invalid_modifier)
+          << Bit << Clause.getClauseKind();
+
+      return CurMods ^ Bit;
+    };
+    auto Check = [&](OpenACCModifierKind ValidKinds) {
+      if ((Mods | ValidKinds) == ValidKinds)
+        return Mods;
+
+      Mods = CheckSingle(Mods, ValidKinds, OpenACCModifierKind::Always);
+      Mods = CheckSingle(Mods, ValidKinds, OpenACCModifierKind::AlwaysIn);
+      Mods = CheckSingle(Mods, ValidKinds, OpenACCModifierKind::AlwaysOut);
+      Mods = CheckSingle(Mods, ValidKinds, OpenACCModifierKind::Readonly);
+      Mods = CheckSingle(Mods, ValidKinds, OpenACCModifierKind::Zero);
+      return Mods;
+    };
+
+    switch (Clause.getClauseKind()) {
+    default:
+      llvm_unreachable("Only for copy, copyin, copyout, create");
+    case OpenACCClauseKind::Copy:
+    case OpenACCClauseKind::PCopy:
+    case OpenACCClauseKind::PresentOrCopy:
+      return Check(OpenACCModifierKind::Always | OpenACCModifierKind::AlwaysIn |
+                   OpenACCModifierKind::AlwaysOut);
+    case OpenACCClauseKind::CopyIn:
+    case OpenACCClauseKind::PCopyIn:
+    case OpenACCClauseKind::PresentOrCopyIn:
+      return Check(OpenACCModifierKind::Always | OpenACCModifierKind::AlwaysIn |
+                   OpenACCModifierKind::Readonly);
+    case OpenACCClauseKind::CopyOut:
+    case OpenACCClauseKind::PCopyOut:
+    case OpenACCClauseKind::PresentOrCopyOut:
+      return Check(OpenACCModifierKind::Always | OpenACCModifierKind::AlwaysIn |
+                   OpenACCModifierKind::Zero);
+    case OpenACCClauseKind::Create:
+    case OpenACCClauseKind::PCreate:
+    case OpenACCClauseKind::PresentOrCreate:
+      return Check(OpenACCModifierKind::Zero);
+    }
+    llvm_unreachable("didn't return from switch above?");
+  }
+
 public:
   SemaOpenACCClauseVisitor(SemaOpenACC &S,
                            ArrayRef<const OpenACCClause *> ExistingClauses)
@@ -1068,7 +1123,7 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitPresentClause(
 
   // 'declare' has some restrictions that need to be enforced separately, so
   // check it here.
-  if (SemaRef.CheckDeclareClause(Clause))
+  if (SemaRef.CheckDeclareClause(Clause, OpenACCModifierKind::Invalid))
     return nullptr;
 
   return OpenACCPresentClause::Create(Ctx, Clause.getBeginLoc(),
@@ -1104,25 +1159,28 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitCopyClause(
   // really isn't anything to do here. GCC does some duplicate-finding, though
   // it isn't apparent in the standard where this is justified.
 
+  OpenACCModifierKind NewMods =
+      CheckModifierList(Clause, Clause.getModifierList());
+
   // 'declare' has some restrictions that need to be enforced separately, so
   // check it here.
-  if (SemaRef.CheckDeclareClause(Clause))
+  if (SemaRef.CheckDeclareClause(Clause, NewMods))
     return nullptr;
 
   return OpenACCCopyClause::Create(
       Ctx, Clause.getClauseKind(), Clause.getBeginLoc(), Clause.getLParenLoc(),
-      Clause.getVarList(), Clause.getEndLoc());
+      Clause.getModifierList(), Clause.getVarList(), Clause.getEndLoc());
 }
 
 OpenACCClause *SemaOpenACCClauseVisitor::VisitLinkClause(
     SemaOpenACC::OpenACCParsedClause &Clause) {
   // 'declare' has some restrictions that need to be enforced separately, so
   // check it here.
-  if (SemaRef.CheckDeclareClause(Clause))
+  if (SemaRef.CheckDeclareClause(Clause, OpenACCModifierKind::Invalid))
     return nullptr;
 
   Clause.setVarListDetails(SemaRef.CheckLinkClauseVarList(Clause.getVarList()),
-                           /*IsReadOnly=*/false, /*IsZero=*/false);
+                           OpenACCModifierKind::Invalid);
 
   return OpenACCLinkClause::Create(Ctx, Clause.getBeginLoc(),
                                    Clause.getLParenLoc(), Clause.getVarList(),
@@ -1133,7 +1191,7 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitDeviceResidentClause(
     SemaOpenACC::OpenACCParsedClause &Clause) {
   // 'declare' has some restrictions that need to be enforced separately, so
   // check it here.
-  if (SemaRef.CheckDeclareClause(Clause))
+  if (SemaRef.CheckDeclareClause(Clause, OpenACCModifierKind::Invalid))
     return nullptr;
 
   return OpenACCDeviceResidentClause::Create(
@@ -1147,14 +1205,17 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitCopyInClause(
   // really isn't anything to do here. GCC does some duplicate-finding, though
   // it isn't apparent in the standard where this is justified.
 
+  OpenACCModifierKind NewMods =
+      CheckModifierList(Clause, Clause.getModifierList());
+
   // 'declare' has some restrictions that need to be enforced separately, so
   // check it here.
-  if (SemaRef.CheckDeclareClause(Clause))
+  if (SemaRef.CheckDeclareClause(Clause, NewMods))
     return nullptr;
 
   return OpenACCCopyInClause::Create(
       Ctx, Clause.getClauseKind(), Clause.getBeginLoc(), Clause.getLParenLoc(),
-      Clause.isReadOnly(), Clause.getVarList(), Clause.getEndLoc());
+      Clause.getModifierList(), Clause.getVarList(), Clause.getEndLoc());
 }
 
 OpenACCClause *SemaOpenACCClauseVisitor::VisitCopyOutClause(
@@ -1163,14 +1224,17 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitCopyOutClause(
   // really isn't anything to do here. GCC does some duplicate-finding, though
   // it isn't apparent in the standard where this is justified.
 
+  OpenACCModifierKind NewMods =
+      CheckModifierList(Clause, Clause.getModifierList());
+
   // 'declare' has some restrictions that need to be enforced separately, so
   // check it here.
-  if (SemaRef.CheckDeclareClause(Clause))
+  if (SemaRef.CheckDeclareClause(Clause, NewMods))
     return nullptr;
 
   return OpenACCCopyOutClause::Create(
       Ctx, Clause.getClauseKind(), Clause.getBeginLoc(), Clause.getLParenLoc(),
-      Clause.isZero(), Clause.getVarList(), Clause.getEndLoc());
+      Clause.getModifierList(), Clause.getVarList(), Clause.getEndLoc());
 }
 
 OpenACCClause *SemaOpenACCClauseVisitor::VisitCreateClause(
@@ -1179,14 +1243,17 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitCreateClause(
   // really isn't anything to do here. GCC does some duplicate-finding, though
   // it isn't apparent in the standard where this is justified.
 
+  OpenACCModifierKind NewMods =
+      CheckModifierList(Clause, Clause.getModifierList());
+
   // 'declare' has some restrictions that need to be enforced separately, so
   // check it here.
-  if (SemaRef.CheckDeclareClause(Clause))
+  if (SemaRef.CheckDeclareClause(Clause, NewMods))
     return nullptr;
 
   return OpenACCCreateClause::Create(
       Ctx, Clause.getClauseKind(), Clause.getBeginLoc(), Clause.getLParenLoc(),
-      Clause.isZero(), Clause.getVarList(), Clause.getEndLoc());
+      Clause.getModifierList(), Clause.getVarList(), Clause.getEndLoc());
 }
 
 OpenACCClause *SemaOpenACCClauseVisitor::VisitAttachClause(
@@ -1197,8 +1264,7 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitAttachClause(
   llvm::erase_if(VarList, [&](Expr *E) {
     return SemaRef.CheckVarIsPointerType(OpenACCClauseKind::Attach, E);
   });
-  Clause.setVarListDetails(VarList,
-                           /*IsReadOnly=*/false, /*IsZero=*/false);
+  Clause.setVarListDetails(VarList, OpenACCModifierKind::Invalid);
   return OpenACCAttachClause::Create(Ctx, Clause.getBeginLoc(),
                                      Clause.getLParenLoc(), Clause.getVarList(),
                                      Clause.getEndLoc());
@@ -1212,8 +1278,7 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitDetachClause(
   llvm::erase_if(VarList, [&](Expr *E) {
     return SemaRef.CheckVarIsPointerType(OpenACCClauseKind::Detach, E);
   });
-  Clause.setVarListDetails(VarList,
-                           /*IsReadOnly=*/false, /*IsZero=*/false);
+  Clause.setVarListDetails(VarList, OpenACCModifierKind::Invalid);
   return OpenACCDetachClause::Create(Ctx, Clause.getBeginLoc(),
                                      Clause.getLParenLoc(), Clause.getVarList(),
                                      Clause.getEndLoc());
@@ -1246,12 +1311,11 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitDevicePtrClause(
   llvm::erase_if(VarList, [&](Expr *E) {
     return SemaRef.CheckVarIsPointerType(OpenACCClauseKind::DevicePtr, E);
   });
-  Clause.setVarListDetails(VarList,
-                           /*IsReadOnly=*/false, /*IsZero=*/false);
+  Clause.setVarListDetails(VarList, OpenACCModifierKind::Invalid);
 
   // 'declare' has some restrictions that need to be enforced separately, so
   // check it here.
-  if (SemaRef.CheckDeclareClause(Clause))
+  if (SemaRef.CheckDeclareClause(Clause, OpenACCModifierKind::Invalid))
     return nullptr;
 
   return OpenACCDevicePtrClause::Create(
@@ -1274,13 +1338,61 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitDeviceTypeClause(
       checkAlreadyHasClauseOfKind(SemaRef, ExistingClauses, Clause))
     return nullptr;
 
-  // TODO OpenACC: Once we get enough of the CodeGen implemented that we have
-  // a source for the list of valid architectures, we need to warn on unknown
-  // identifiers here.
+  // Based on discussions, having more than 1 'architecture' on a 'set' is
+  // nonsensical, so we're going to fix the standard to reflect this.  Implement
+  // the limitation, since the Dialect requires this.
+  if (Clause.getDirectiveKind() == OpenACCDirectiveKind::Set &&
+      Clause.getDeviceTypeArchitectures().size() > 1) {
+    SemaRef.Diag(Clause.getDeviceTypeArchitectures()[1].getLoc(),
+                 diag::err_acc_device_type_multiple_archs);
+    return nullptr;
+  }
+
+  // The list of valid device_type values. Flang also has these hardcoded in
+  // openacc_parsers.cpp, as there does not seem to be a reliable backend
+  // source. The list below is sourced from Flang, though NVC++ supports only
+  // 'nvidia', 'host', 'multicore', and 'default'.
+  const std::array<llvm::StringLiteral, 6> ValidValues{
+      "default", "nvidia", "acc_device_nvidia", "radeon", "host", "multicore"};
+  // As an optimization, we have a manually maintained list of valid values
+  // below, rather than trying to calculate from above. These should be kept in
+  // sync if/when the above list ever changes.
+  std::string ValidValuesString =
+      "'default', 'nvidia', 'acc_device_nvidia', 'radeon', 'host', 'multicore'";
+
+  llvm::SmallVector<DeviceTypeArgument> Architectures{
+      Clause.getDeviceTypeArchitectures()};
+
+  // The parser has ensured that we either have a single entry of just '*'
+  // (represented by a nullptr IdentifierInfo), or a list.
+
+  bool Diagnosed = false;
+  auto FilterPred = [&](const DeviceTypeArgument &Arch) {
+    // The '*' case.
+    if (!Arch.getIdentifierInfo())
+      return false;
+    return llvm::find_if(ValidValues, [&](StringRef RHS) {
+             return Arch.getIdentifierInfo()->getName().equals_insensitive(RHS);
+           }) == ValidValues.end();
+  };
+
+  auto Diagnose = [&](const DeviceTypeArgument &Arch) {
+    Diagnosed = SemaRef.Diag(Arch.getLoc(), diag::err_acc_invalid_default_type)
+                << Arch.getIdentifierInfo() << Clause.getClauseKind()
+                << ValidValuesString;
+  };
+
+  // There aren't stable enumertor versions of 'for-each-then-erase', so do it
+  // here.  We DO keep track of whether we diagnosed something to make sure we
+  // don't do the 'erase_if' in the event that the first list didn't find
+  // anything.
+  llvm::for_each(llvm::make_filter_range(Architectures, FilterPred), Diagnose);
+  if (Diagnosed)
+    llvm::erase_if(Architectures, FilterPred);
 
   return OpenACCDeviceTypeClause::Create(
       Ctx, Clause.getClauseKind(), Clause.getBeginLoc(), Clause.getLParenLoc(),
-      Clause.getDeviceTypeArchitectures(), Clause.getEndLoc());
+      Architectures, Clause.getEndLoc());
 }
 
 OpenACCClause *SemaOpenACCClauseVisitor::VisitAutoClause(
@@ -2394,7 +2506,8 @@ SemaOpenACC::CheckLinkClauseVarList(ArrayRef<Expr *> VarExprs) {
 
   return NewVarList;
 }
-bool SemaOpenACC::CheckDeclareClause(SemaOpenACC::OpenACCParsedClause &Clause) {
+bool SemaOpenACC::CheckDeclareClause(SemaOpenACC::OpenACCParsedClause &Clause,
+                                     OpenACCModifierKind Mods) {
 
   if (Clause.getDirectiveKind() != OpenACCDirectiveKind::Declare)
     return false;
@@ -2485,7 +2598,6 @@ bool SemaOpenACC::CheckDeclareClause(SemaOpenACC::OpenACCParsedClause &Clause) {
     FilteredVarList.push_back(VarExpr);
   }
 
-  Clause.setVarListDetails(FilteredVarList, Clause.isReadOnly(),
-                           Clause.isZero());
+  Clause.setVarListDetails(FilteredVarList, Mods);
   return false;
 }

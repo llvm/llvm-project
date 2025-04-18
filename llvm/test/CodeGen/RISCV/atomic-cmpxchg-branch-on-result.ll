@@ -99,8 +99,8 @@ define void @cmpxchg_masked_and_branch1(ptr %ptr, i8 signext %cmp, i8 signext %v
 ; RV32IA-NEXT:    andi a3, a0, -4
 ; RV32IA-NEXT:    slli a4, a0, 3
 ; RV32IA-NEXT:    li a0, 255
-; RV32IA-NEXT:    andi a1, a1, 255
-; RV32IA-NEXT:    andi a2, a2, 255
+; RV32IA-NEXT:    zext.b a1, a1
+; RV32IA-NEXT:    zext.b a2, a2
 ; RV32IA-NEXT:    sll a0, a0, a4
 ; RV32IA-NEXT:    sll a1, a1, a4
 ; RV32IA-NEXT:    sll a2, a2, a4
@@ -129,8 +129,8 @@ define void @cmpxchg_masked_and_branch1(ptr %ptr, i8 signext %cmp, i8 signext %v
 ; RV32IA-ZACAS-NEXT:    andi a3, a0, -4
 ; RV32IA-ZACAS-NEXT:    slli a4, a0, 3
 ; RV32IA-ZACAS-NEXT:    li a0, 255
-; RV32IA-ZACAS-NEXT:    andi a1, a1, 255
-; RV32IA-ZACAS-NEXT:    andi a2, a2, 255
+; RV32IA-ZACAS-NEXT:    zext.b a1, a1
+; RV32IA-ZACAS-NEXT:    zext.b a2, a2
 ; RV32IA-ZACAS-NEXT:    sll a0, a0, a4
 ; RV32IA-ZACAS-NEXT:    sll a1, a1, a4
 ; RV32IA-ZACAS-NEXT:    sll a2, a2, a4
@@ -159,8 +159,8 @@ define void @cmpxchg_masked_and_branch1(ptr %ptr, i8 signext %cmp, i8 signext %v
 ; RV64IA-NEXT:    andi a3, a0, -4
 ; RV64IA-NEXT:    slli a4, a0, 3
 ; RV64IA-NEXT:    li a0, 255
-; RV64IA-NEXT:    andi a1, a1, 255
-; RV64IA-NEXT:    andi a2, a2, 255
+; RV64IA-NEXT:    zext.b a1, a1
+; RV64IA-NEXT:    zext.b a2, a2
 ; RV64IA-NEXT:    sllw a0, a0, a4
 ; RV64IA-NEXT:    sllw a1, a1, a4
 ; RV64IA-NEXT:    sllw a2, a2, a4
@@ -189,8 +189,8 @@ define void @cmpxchg_masked_and_branch1(ptr %ptr, i8 signext %cmp, i8 signext %v
 ; RV64IA-ZACAS-NEXT:    andi a3, a0, -4
 ; RV64IA-ZACAS-NEXT:    slli a4, a0, 3
 ; RV64IA-ZACAS-NEXT:    li a0, 255
-; RV64IA-ZACAS-NEXT:    andi a1, a1, 255
-; RV64IA-ZACAS-NEXT:    andi a2, a2, 255
+; RV64IA-ZACAS-NEXT:    zext.b a1, a1
+; RV64IA-ZACAS-NEXT:    zext.b a2, a2
 ; RV64IA-ZACAS-NEXT:    sllw a0, a0, a4
 ; RV64IA-ZACAS-NEXT:    sllw a1, a1, a4
 ; RV64IA-ZACAS-NEXT:    sllw a2, a2, a4
@@ -240,8 +240,8 @@ define void @cmpxchg_masked_and_branch2(ptr %ptr, i8 signext %cmp, i8 signext %v
 ; RV32IA-NEXT:    andi a3, a0, -4
 ; RV32IA-NEXT:    slli a4, a0, 3
 ; RV32IA-NEXT:    li a0, 255
-; RV32IA-NEXT:    andi a1, a1, 255
-; RV32IA-NEXT:    andi a2, a2, 255
+; RV32IA-NEXT:    zext.b a1, a1
+; RV32IA-NEXT:    zext.b a2, a2
 ; RV32IA-NEXT:    sll a0, a0, a4
 ; RV32IA-NEXT:    sll a1, a1, a4
 ; RV32IA-NEXT:    sll a2, a2, a4
@@ -273,8 +273,8 @@ define void @cmpxchg_masked_and_branch2(ptr %ptr, i8 signext %cmp, i8 signext %v
 ; RV32IA-ZACAS-NEXT:    andi a3, a0, -4
 ; RV32IA-ZACAS-NEXT:    slli a4, a0, 3
 ; RV32IA-ZACAS-NEXT:    li a0, 255
-; RV32IA-ZACAS-NEXT:    andi a1, a1, 255
-; RV32IA-ZACAS-NEXT:    andi a2, a2, 255
+; RV32IA-ZACAS-NEXT:    zext.b a1, a1
+; RV32IA-ZACAS-NEXT:    zext.b a2, a2
 ; RV32IA-ZACAS-NEXT:    sll a0, a0, a4
 ; RV32IA-ZACAS-NEXT:    sll a1, a1, a4
 ; RV32IA-ZACAS-NEXT:    sll a2, a2, a4
@@ -306,8 +306,8 @@ define void @cmpxchg_masked_and_branch2(ptr %ptr, i8 signext %cmp, i8 signext %v
 ; RV64IA-NEXT:    andi a3, a0, -4
 ; RV64IA-NEXT:    slli a4, a0, 3
 ; RV64IA-NEXT:    li a0, 255
-; RV64IA-NEXT:    andi a1, a1, 255
-; RV64IA-NEXT:    andi a2, a2, 255
+; RV64IA-NEXT:    zext.b a1, a1
+; RV64IA-NEXT:    zext.b a2, a2
 ; RV64IA-NEXT:    sllw a0, a0, a4
 ; RV64IA-NEXT:    sllw a1, a1, a4
 ; RV64IA-NEXT:    sllw a2, a2, a4
@@ -339,8 +339,8 @@ define void @cmpxchg_masked_and_branch2(ptr %ptr, i8 signext %cmp, i8 signext %v
 ; RV64IA-ZACAS-NEXT:    andi a3, a0, -4
 ; RV64IA-ZACAS-NEXT:    slli a4, a0, 3
 ; RV64IA-ZACAS-NEXT:    li a0, 255
-; RV64IA-ZACAS-NEXT:    andi a1, a1, 255
-; RV64IA-ZACAS-NEXT:    andi a2, a2, 255
+; RV64IA-ZACAS-NEXT:    zext.b a1, a1
+; RV64IA-ZACAS-NEXT:    zext.b a2, a2
 ; RV64IA-ZACAS-NEXT:    sllw a0, a0, a4
 ; RV64IA-ZACAS-NEXT:    sllw a1, a1, a4
 ; RV64IA-ZACAS-NEXT:    sllw a2, a2, a4

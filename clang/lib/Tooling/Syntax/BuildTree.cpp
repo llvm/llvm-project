@@ -959,8 +959,6 @@ public:
     case NestedNameSpecifier::NamespaceAlias:
     case NestedNameSpecifier::Identifier:
       return syntax::NodeKind::IdentifierNameSpecifier;
-    case NestedNameSpecifier::TypeSpecWithTemplate:
-      return syntax::NodeKind::SimpleTemplateNameSpecifier;
     case NestedNameSpecifier::TypeSpec: {
       const auto *NNSType = NNS.getAsType();
       assert(NNSType);

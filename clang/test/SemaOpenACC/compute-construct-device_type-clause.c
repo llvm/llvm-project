@@ -6,22 +6,22 @@ void uses() {
   typedef struct S{} STy;
   STy SImpl;
 
-#pragma acc parallel device_type(I)
+#pragma acc parallel device_type(radeon)
   while(1);
-#pragma acc serial device_type(S) dtype(STy)
+#pragma acc serial device_type(nvidia) dtype(multicore)
   while(1);
-#pragma acc kernels dtype(SImpl)
+#pragma acc kernels dtype(host)
   while(1);
-#pragma acc kernels dtype(int) device_type(*)
+#pragma acc kernels dtype(default) device_type(*)
   while(1);
-#pragma acc kernels dtype(true) device_type(false)
+#pragma acc kernels dtype(nvidia) device_type(multicore)
   while(1);
 
   // expected-error@+1{{expected identifier}}
-#pragma acc kernels dtype(int, *)
+#pragma acc kernels dtype(default, *)
   while(1);
 
-#pragma acc parallel device_type(I, int)
+#pragma acc parallel device_type(host, radeon)
   while(1);
   // expected-error@+2{{expected ','}}
   // expected-error@+1{{expected identifier}}
