@@ -74,7 +74,7 @@ bb16:                                             ; preds = %bb14, %bb11, %bb10,
   ret void
 }
 
-; Replacement of CMP should happen with SUB not with AND as it is AND_NF
+; We must not try to replace CMP with AND_NF as it sets no flags
 define void @cmp_peephole_and_nf(i64 %arg0, ptr %ptr1, ptr %ptr2) {
 ; CHECK-LABEL: cmp_peephole_and_nf:
 ; CHECK:       # %bb.0: # %entry
