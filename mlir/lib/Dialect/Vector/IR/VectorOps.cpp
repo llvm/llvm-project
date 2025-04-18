@@ -1997,6 +1997,11 @@ static Value extractInsertFoldConstantOp(OpType op, AdaptorType adaptor,
   std::vector<int64_t> staticPosition = op.getStaticPosition().vec();
   OperandRange dynamicPosition = op.getDynamicPosition();
   ArrayRef<Attribute> dynamicPositionAttr = adaptor.getDynamicPosition();
+  ArrayRef<int64_t> vectorShape;
+  if constexpr (std::is_same_v<OpType, ExtractOp>)
+    vectorShape = op.getSourceVectorType().getShape();
+  else
+    vectorShape = op.getDestVectorType().getShape();
 
   // If the dynamic operands is empty, it is returned directly.
   if (!dynamicPosition.size())
@@ -2013,9 +2018,13 @@ static Value extractInsertFoldConstantOp(OpType op, AdaptorType adaptor,
     Attribute positionAttr = dynamicPositionAttr[index];
     Value position = dynamicPosition[index++];
     if (auto attr = mlir::dyn_cast_if_present<IntegerAttr>(positionAttr)) {
-      staticPosition[i] = attr.getInt();
-      opChange = true;
-      continue;
+      int64_t value = attr.getInt();
+      // Do not fold if the value is out of bounds.
+      if (value >= 0 && value < vectorShape[i]) {
+        staticPosition[i] = attr.getInt();
+        opChange = true;
+        continue;
+      }
     }
     operands.push_back(position);
   }
