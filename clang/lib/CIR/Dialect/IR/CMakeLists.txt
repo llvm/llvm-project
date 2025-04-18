@@ -6,6 +6,7 @@ add_clang_library(MLIRCIR
   CIRMemorySlot.cpp
   CIRTypes.cpp
   FPEnv.cpp
+  CIRLinkerInterface.cpp
 
   DEPENDS
   MLIRBuiltinLocationAttributesIncGen

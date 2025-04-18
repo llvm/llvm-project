@@ -1,7 +1,6 @@
 add_clang_library(MLIRCIRInterfaces
   ASTAttrInterfaces.cpp
   CIROpInterfaces.cpp
-  CIRLinkerInterface.cpp
   CIRLoopOpInterface.cpp
   CIRFPTypeInterface.cpp
 
