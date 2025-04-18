@@ -37,6 +37,7 @@ namespace {
 
 typedef DenseSet<MachineInstr *> InstSet;
 typedef DenseSet<MachineBasicBlock *> BlockSet;
+template <typename T> using BlockMap = MapVector<MachineBasicBlock *, T>;
 
 struct RematNode {
   enum class RematKind {
@@ -107,20 +108,17 @@ public:
   AMDGPUHotBlockRematerialize() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
+
+  void applyCloneRemat(RematNode &Node,
+    std::vector<BlockLiveInfo> &HotBlocks,
+    MachineDominatorTree *DT, MachineRegisterInfo &MRI,
+    SlotIndexes *SlotIndexes, const SIRegisterInfo *SIRI,
+    const SIInstrInfo *SIII, MachineFunction &MF);
   void applyRemat(MapVector<Register, RematNode> &RematMap,
     std::vector<BlockLiveInfo> &HotBlocks, MachineDominatorTree *DT,
     llvm::SlotIndexes *SlotIndexes, MachineRegisterInfo &MRI,
     const SIRegisterInfo *SIRI, const SIInstrInfo *SIII,
     MachineFunction &MF);
-  void applyOneDefOneUseRemat(RematNode &Node, MachineRegisterInfo &MRI,
-    llvm::SlotIndexes *SlotIndexes,
-    const SIRegisterInfo *SIRI,
-    const SIInstrInfo *SIII);
-  void applyCloneRemat(RematNode &Node,
-    std::vector<BlockLiveInfo> &HotBlocks,
-    MachineDominatorTree *DT, MachineRegisterInfo &MRI,
-    llvm::SlotIndexes *SlotIndexes, const SIRegisterInfo *SIRI,
-    const SIInstrInfo *SIII, MachineFunction &MF);
   bool hotBlockRemat(MachineFunction &MF, MachineLoopInfo *MLI,
     LiveIntervals *LIS, MachineDominatorTree *DT,
     MachinePostDominatorTree *PDT, bool &IsNearTarget);
@@ -137,6 +135,227 @@ public:
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 };
+
+MachineBasicBlock::iterator adjustInsertPointToAvoidSccSmash(
+    MachineInstr *InstructionToMove, MachineBasicBlock *MBB,
+    MachineBasicBlock::iterator CurrentInsertPoint, MachineRegisterInfo &MRI,
+    const SIRegisterInfo *SIRI, const SIInstrInfo *SIII) {
+  const bool WillSmashScc =
+      InstructionToMove->modifiesRegister(AMDGPU::SCC, SIRI);
+  if (WillSmashScc) {
+    CurrentInsertPoint = llvm::findOrCreateInsertionPointForSccDef(
+        MBB, CurrentInsertPoint, SIRI, SIII, &MRI);
+  }
+
+  return CurrentInsertPoint;
+}
+
+DenseMap<MachineBasicBlock *, BlockSet> reduceClonedMBBs(
+    unsigned Reg, BlockMap<SmallVector<MachineInstr *, 2>> &UserBlocks,
+    DenseSet<MachineBasicBlock *> &UserMBBSet,
+    std::vector<BlockLiveInfo> &HotBlocks, MachineDominatorTree *DT) {
+  // Collect hot blocks which Exp is live in.
+  DenseSet<MachineBasicBlock *> HotBlockSet;
+  for (BlockLiveInfo &HotBlock : HotBlocks) {
+    if (HotBlock.InputLive.count(Reg)) {
+      HotBlockSet.insert(HotBlock.BB);
+    }
+  }
+
+  // For userBlocks which dominate all hotBlocks, don't need to clone because
+  // the value not cross hotBlocks when later blocks are cloned.
+  // For userBlocks which dominated by all hotBlocks, they could share clones
+  // because once after hot block, the pressure is OK.
+  DenseSet<MachineBasicBlock *> AfterHotRangeMBBs;
+  for (MachineBasicBlock *MBB : UserMBBSet) {
+    // Always clone in hot block.
+    if (HotBlockSet.count(MBB))
+      continue;
+
+    bool IsDomAllHotBlocks = true;
+    bool IsDomedByAllHotBlocks = true;
+    for (MachineBasicBlock *HotMBB : HotBlockSet) {
+      if (!DT->dominates(MBB, HotMBB)) {
+        IsDomAllHotBlocks = false;
+      }
+      if (!DT->dominates(HotMBB, MBB)) {
+        IsDomedByAllHotBlocks = false;
+      }
+      if (!IsDomAllHotBlocks && !IsDomedByAllHotBlocks) {
+        break;
+      }
+    }
+    if (IsDomAllHotBlocks) {
+      UserBlocks.erase(MBB);
+    } else if (IsDomedByAllHotBlocks) {
+      AfterHotRangeMBBs.insert(MBB);
+    }
+  }
+
+  // Split after hotRange block set by domtree.
+  DenseMap<MachineBasicBlock *, BlockSet> DomMap;
+  if (!AfterHotRangeMBBs.empty()) {
+    for (MachineBasicBlock *MBB : AfterHotRangeMBBs) {
+      for (MachineBasicBlock *MBB2 : AfterHotRangeMBBs) {
+        if (MBB == MBB2)
+          continue;
+        if (DT->dominates(MBB, MBB2)) {
+          auto &Dom = DomMap[MBB];
+          Dom.insert(MBB2);
+          auto &Dom2 = DomMap[MBB2];
+          Dom.insert(Dom2.begin(), Dom2.end());
+        }
+      }
+    }
+    for (MachineBasicBlock *MBB : AfterHotRangeMBBs) {
+      auto &Dom = DomMap[MBB];
+      for (MachineBasicBlock *DomedMBB : Dom) {
+        // Remove domedMBB.
+        DomMap.erase(DomedMBB);
+        UserMBBSet.erase(DomedMBB);
+      }
+    }
+  }
+
+  return DomMap;
+}
+
+void updateUsers(unsigned Reg, unsigned NewReg, bool IsSubRegDef,
+                 SmallVector<MachineInstr *, 2> &UserMIs) {
+  for (MachineInstr *UseMI : UserMIs) {
+    for (MachineOperand &MO : UseMI->operands()) {
+      if (!MO.isReg())
+        continue;
+      if (MO.getReg() == Reg) {
+        MO.setReg(NewReg);
+        if (IsSubRegDef)
+          MO.setSubReg(0);
+      }
+    }
+  }
+}
+
+void AMDGPUHotBlockRematerialize::applyCloneRemat(RematNode &Node,
+                     std::vector<BlockLiveInfo> &HotBlocks,
+                     MachineDominatorTree *DT, MachineRegisterInfo &MRI,
+                     SlotIndexes *SlotIndexes, const SIRegisterInfo *SIRI,
+                     const SIInstrInfo *SIII, MachineFunction &MF) {
+  unsigned Reg = Node.Reg;
+
+  MachineInstr *DefMI = MRI.getUniqueVRegDef(Reg);
+  auto DefOp = DefMI->getOperand(0);
+  const MCInstrDesc &Desc = DefMI->getDesc();
+  const TargetRegisterClass *RC = MRI.getRegClass(Reg);
+  // When the unique def has subReg, just create newReg for the subReg part.
+  bool IsSubRegDef = false;
+  if (DefOp.getSubReg() != 0) {
+    RC = SIRI->getSubRegisterClass(RC, DefOp.getSubReg());
+    IsSubRegDef = true;
+  }
+  const DebugLoc DL = DefMI->getDebugLoc();
+  unsigned OpNum = DefMI->getNumOperands();
+
+  Node.Kind = RematNode::RematKind::Clone;
+
+  // Group user in same blocks.
+  BlockMap<SmallVector<MachineInstr *, 2>> UserMap;
+  DenseSet<MachineBasicBlock *> UserMBBSet;
+  for (auto UseIt = MRI.use_instr_nodbg_begin(Reg);
+       UseIt != MRI.use_instr_nodbg_end();) {
+    MachineInstr &UseMI = *(UseIt++);
+    UserMap[UseMI.getParent()].emplace_back(&UseMI);
+    UserMBBSet.insert(UseMI.getParent());
+  }
+
+  DenseMap<MachineBasicBlock *, BlockSet> DomMap =
+      reduceClonedMBBs(Reg, UserMap, UserMBBSet, HotBlocks, DT);
+
+  for (auto UseIt : UserMap) {
+    MachineBasicBlock *MBB = UseIt.first;
+    // Skip same block uses.
+    if (MBB == DefMI->getParent()) {
+      continue;
+    }
+    // Skip MBB which share clone from other MBBs.
+    if (UserMBBSet.count(MBB) == 0)
+      continue;
+
+    Register NewReg = MRI.createVirtualRegister(RC);
+    auto NewDef = BuildMI(MF, DL, Desc).addDef(NewReg);
+    for (unsigned I = 1; I < OpNum; I++) {
+      NewDef = NewDef.add(DefMI->getOperand(I));
+    }
+
+    MachineInstr *InsertPointMI = UseIt.second.front();
+    SlotIndex LastSlot = SlotIndexes->getInstructionIndex(*InsertPointMI);
+
+    for (MachineInstr *UseMI : UseIt.second) {
+      SlotIndex Slot = SlotIndexes->getInstructionIndex(*UseMI);
+      if (LastSlot > Slot) {
+        LastSlot = Slot;
+        InsertPointMI = UseMI;
+      }
+    }
+
+    MachineBasicBlock::iterator InsertPoint = adjustInsertPointToAvoidSccSmash(
+        DefMI, InsertPointMI->getParent(), InsertPointMI, MRI, SIRI, SIII);
+
+    for (MachineMemOperand *MO : DefMI->memoperands()) {
+      NewDef->addMemOperand(MF, MO);
+    }
+
+    MBB->insert(InsertPoint, NewDef);
+
+    SlotIndexes->insertMachineInstrInMaps(*NewDef);
+
+    SmallVector<MachineInstr *, 2> &UserMIs = UseIt.second;
+    updateUsers(Reg, NewReg, IsSubRegDef, UserMIs);
+
+    // update users in dom MBBs.
+    auto DomMapIt = DomMap.find(MBB);
+    if (DomMapIt != DomMap.end()) {
+      for (MachineBasicBlock *UpdateMBB : DomMapIt->second) {
+        SmallVector<MachineInstr *, 2> &UserMIs = UserMap[UpdateMBB];
+        updateUsers(Reg, NewReg, IsSubRegDef, UserMIs);
+      }
+    }
+
+    llvm::removeUnusedLanes(*NewDef.getInstr(), MRI, SIRI, SIII, SlotIndexes);
+  }
+  if (MRI.use_empty(Reg)) {
+    SlotIndexes->removeSingleMachineInstrFromMaps(*DefMI);
+  }
+}
+
+void applyOneDefOneUseRemat(RematNode &Node, MachineRegisterInfo &MRI,
+                            SlotIndexes *SlotIndexes,
+                            const SIRegisterInfo *SIRI,
+                            const SIInstrInfo *SIII) {
+  MachineInstr *DefMI = Node.DefMI;
+  MachineInstr *InsertPointMI = Node.InsertPointMI;
+  MachineBasicBlock *MBB = nullptr;
+
+  // Find a valid insert point.
+  MachineBasicBlock::iterator InsertPoint;
+  if (InsertPointMI) {
+    InsertPoint = InsertPointMI->getIterator();
+    MBB = InsertPointMI->getParent();
+  } else {
+    InsertPoint = Node.InsertBlock->getFirstTerminator();
+    MBB = Node.InsertBlock;
+  }
+
+  InsertPoint = adjustInsertPointToAvoidSccSmash(DefMI, MBB, InsertPoint, MRI,
+                                                 SIRI, SIII);
+
+  // Move instruction to new location.
+  DefMI->removeFromParent();
+  InsertPoint->getParent()->insert(InsertPoint, DefMI);
+
+  // Update slot index.
+  SlotIndexes->removeSingleMachineInstrFromMaps(*DefMI);
+  SlotIndexes->insertMachineInstrInMaps(*DefMI);
+}
 
 void AMDGPUHotBlockRematerialize::applyRemat(MapVector<Register, RematNode> &RematMap,
                 std::vector<BlockLiveInfo> &HotBlocks, MachineDominatorTree *DT,

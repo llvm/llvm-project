@@ -15,11 +15,16 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_AMDGPUOCCUPANCYANDLATENCYHELPER_H
 #define LLVM_LIB_TARGET_AMDGPU_AMDGPUOCCUPANCYANDLATENCYHELPER_H
 
+#include "llvm/MC/MCInstrItineraries.h"
+#include "llvm/ADT/DenseMap.h"
+
 namespace llvm {
 
+class MachineInstr;
 class MachineFunction;
 class GCNSubtarget;
 class MachineLoopInfo;
+class SIInstrInfo;
 
 struct SchedScore {
   // Score for this Sched result.
@@ -43,6 +48,28 @@ struct SchedScore {
   bool isMemBound(unsigned TargetOccupancy, unsigned ExtraOcc = 1) const;
   // More latency can be hiden with ExtraOcc.
   unsigned latencyGain(unsigned TargetOccupancy, unsigned ExtraOcc) const;
+};
+
+struct AMDGPULatencyTracker {
+  AMDGPULatencyTracker(const llvm::GCNSubtarget &ST);
+  const llvm::SIInstrInfo *SIII;
+  const llvm::InstrItineraryData *ItinerayData;
+  // Latency MI dst reg to cycle map.
+  llvm::DenseMap<unsigned, int> LatencyMIs;
+  SchedScore Score;
+  // Low latency MI not wait.
+  unsigned HideLatency = 0;
+  unsigned MemLatency = 0;
+  // For simple, only consider mixture as one valu one salu.
+  // Not group now.
+  unsigned PrevSAlu = 0;
+  unsigned PrevVAlu = 0;
+  enum class AluStatus {
+    Nothing,
+    Vector,
+    Scalar,
+  } PrevStatus = AluStatus::Nothing;
+  void scan(const llvm::MachineInstr &MI);
 };
 
 SchedScore collectLatency(llvm::MachineFunction &MF,
