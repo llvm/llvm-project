@@ -10,9 +10,6 @@ pr: none
 variables:
 - template: /eng/common-variables.yml@self
 - template: /eng/common/templates-official/variables/pool-providers.yml@self
-# disable CodeQL here, we have a separate pipeline for it
-- name: Codeql.Enabled
-  value: false
 
 resources:
   repositories:
@@ -92,6 +89,7 @@ extends:
         compiled:
           enabled: false
           justificationForDisabling: CodeQL times out on Windows even after 10 hours timeout
+        runSourceLanguagesInSourceAnalysis: true
       sourceAnalysisPool:
         name: $(DncEngInternalBuildPool)
         image: 1es-windows-2022
