@@ -319,7 +319,7 @@ void printCFGFlowConservationStats(const BinaryContext &BC, raw_ostream &OS,
         continue;
 
       if (llvm::any_of(BB.landing_pads(),
-          std::mem_fn(&BinaryBasicBlock::getKnownExecutionCount)))
+                       std::mem_fn(&BinaryBasicBlock::getKnownExecutionCount)))
         continue;
 
       // We don't consider blocks that end with a recursive call instruction
