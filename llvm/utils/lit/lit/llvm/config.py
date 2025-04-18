@@ -24,6 +24,16 @@ def user_is_root():
     return False
 
 
+def remove_triple_vendor(triple):
+    components = triple.split("-")
+
+    # Remove vendor component (e.g. unknown, pc) if present.
+    if len(components) == 4:
+        del components[1]
+
+    return "-".join(components)
+
+
 class LLVMConfig(object):
     def __init__(self, lit_config, config):
         self.lit_config = lit_config
@@ -108,14 +118,17 @@ class LLVMConfig(object):
         elif platform.system() == "OS/390":
             features.add("system-zos")
 
-        # Native compilation: host arch == default triple arch
+        # Native compilation: host arch == default triple arch (sans vendor)
         # Both of these values should probably be in every site config (e.g. as
         # part of the standard header.  But currently they aren't)
         host_triple = getattr(config, "host_triple", None)
         target_triple = getattr(config, "target_triple", None)
         features.add("host=%s" % host_triple)
         features.add("target=%s" % target_triple)
-        if host_triple and host_triple == target_triple:
+
+        if host_triple and remove_triple_vendor(host_triple) == remove_triple_vendor(
+            target_triple
+        ):
             features.add("native")
 
         # Sanitizers.
