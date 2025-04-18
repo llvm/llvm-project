@@ -164,6 +164,11 @@ std::unique_ptr<TargetInfo> AllocateTarget(const llvm::Triple &Triple,
         return std::make_unique<OHOSTargetInfo<AArch64leTargetInfo>>(Triple,
                                                                      Opts);
       }
+
+    case llvm::Triple::UEFI:
+      return std::make_unique<UEFITargetInfo<AArch64leTargetInfo>>(Triple,
+                                                                   Opts);
+
     case llvm::Triple::NetBSD:
       return std::make_unique<NetBSDTargetInfo<AArch64leTargetInfo>>(Triple,
                                                                      Opts);
@@ -227,6 +232,8 @@ std::unique_ptr<TargetInfo> AllocateTarget(const llvm::Triple &Triple,
       return std::make_unique<HaikuTargetInfo<ARMleTargetInfo>>(Triple, Opts);
     case llvm::Triple::NaCl:
       return std::make_unique<NaClTargetInfo<ARMleTargetInfo>>(Triple, Opts);
+    case llvm::Triple::UEFI:
+      return std::make_unique<UEFITargetInfo<ARMleTargetInfo>>(Triple, Opts);
     case llvm::Triple::Win32:
       switch (Triple.getEnvironment()) {
       case llvm::Triple::Cygnus:
@@ -457,6 +464,8 @@ std::unique_ptr<TargetInfo> AllocateTarget(const llvm::Triple &Triple,
     case llvm::Triple::Haiku:
       return std::make_unique<HaikuTargetInfo<RISCV64TargetInfo>>(Triple,
                                                                   Opts);
+    case llvm::Triple::UEFI:
+      return std::make_unique<UEFITargetInfo<RISCV64TargetInfo>>(Triple, Opts);
     case llvm::Triple::Linux:
       switch (Triple.getEnvironment()) {
       default:
@@ -569,6 +578,8 @@ std::unique_ptr<TargetInfo> AllocateTarget(const llvm::Triple &Triple,
     case llvm::Triple::Solaris:
       return std::make_unique<SolarisTargetInfo<X86_32TargetInfo>>(Triple,
                                                                    Opts);
+    case llvm::Triple::UEFI:
+      return std::make_unique<UEFITargetInfo<X86_32TargetInfo>>(Triple, Opts);
     case llvm::Triple::Win32: {
       switch (Triple.getEnvironment()) {
       case llvm::Triple::Cygnus:
@@ -760,6 +771,9 @@ std::unique_ptr<TargetInfo> AllocateTarget(const llvm::Triple &Triple,
     case llvm::Triple::FreeBSD:
       return std::make_unique<FreeBSDTargetInfo<LoongArch64TargetInfo>>(Triple,
                                                                         Opts);
+    case llvm::Triple::UEFI:
+      return std::make_unique<UEFITargetInfo<LoongArch64TargetInfo>>(Triple,
+                                                                     Opts);
     default:
       return std::make_unique<LoongArch64TargetInfo>(Triple, Opts);
     }
