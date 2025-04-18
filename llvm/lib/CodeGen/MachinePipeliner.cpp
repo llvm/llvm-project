@@ -1861,10 +1861,24 @@ unsigned SwingSchedulerDAG::calculateRecMII(NodeSetType &NodeSets) {
 void SwingSchedulerDAG::Circuits::createAdjacencyStructure(
     const SwingSchedulerDDG *DDG) {
   BitVector Added(SUnits.size());
-  for (int I = 0, E = SUnits.size(); I != E; ++I) {
+  DenseMap<int, int> OutputDeps;
+  for (int i = 0, e = SUnits.size(); i != e; ++i) {
     Added.reset();
     // Add any successor to the adjacency matrix and exclude duplicates.
-    for (const auto &OE : DDG->getOutEdges(&SUnits[I])) {
+    for (const auto &OE : DDG->getOutEdges(&SUnits[i])) {
+      // Only create a back-edge on the first and last nodes of a dependence
+      // chain. This records any chains and adds them later.
+      if (OE.isOutputDep()) {
+        int N = OE.getDst()->NodeNum;
+        int BackEdge = i;
+        auto Dep = OutputDeps.find(BackEdge);
+        if (Dep != OutputDeps.end()) {
+          BackEdge = Dep->second;
+          OutputDeps.erase(Dep);
+        }
+        OutputDeps[N] = BackEdge;
+      }
+
       // Do not process a boundary node, an artificial node.
       if (OE.getDst()->isBoundaryNode() || OE.isArtificial())
         continue;
@@ -1890,11 +1904,18 @@ void SwingSchedulerDAG::Circuits::createAdjacencyStructure(
       int N = OE.getDst()->NodeNum;
 
       if (!Added.test(N)) {
-        AdjK[I].push_back(N);
+        AdjK[i].push_back(N);
         Added.set(N);
       }
     }
   }
+
+  // Add back-edges in the adjacency matrix for the output dependences.
+  for (auto &OD : OutputDeps)
+    if (!Added.test(OD.second)) {
+      AdjK[OD.first].push_back(OD.second);
+      Added.set(OD.second);
+    }
 }
 
 /// Identify an elementary circuit in the dependence graph starting at the
