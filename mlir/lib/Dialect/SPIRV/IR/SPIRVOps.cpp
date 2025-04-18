@@ -808,9 +808,8 @@ void spirv::EntryPointOp::print(OpAsmPrinter &printer) {
   printer << " \"" << stringifyExecutionModel(getExecutionModel()) << "\" ";
   printer.printSymbolName(getFn());
   auto interfaceVars = getInterface().getValue();
-  if (!interfaceVars.empty()) {
+  if (!interfaceVars.empty())
     printer << ", " << llvm::interleaved(interfaceVars);
-  }
 }
 
 LogicalResult spirv::EntryPointOp::verify() {
