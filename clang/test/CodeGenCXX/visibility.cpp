@@ -1457,9 +1457,45 @@ namespace test71 {
   // CHECK-LABEL: declare hidden noundef i32 @_ZN6test713fooIiE3zedEv(
   // CHECK-LABEL: define linkonce_odr noundef i32 @_ZN6test713fooIiE3barIiEET_v(
   // CHECK-LABEL: define linkonce_odr hidden noundef i64 @_ZN6test713fooIlE3zedEv(
-  // CHECK-LABEL: define linkonce_odr noundef i32 @_ZN6test713fooIlE3barIiEET_v(
+  // CHECK-LABEL: define linkonce_odr hidden noundef i32 @_ZN6test713fooIlE3barIiEET_v(
   // CHECK-HIDDEN-LABEL: declare hidden noundef i32 @_ZN6test713fooIiE3zedEv(
   // CHECK-HIDDEN-LABEL: define linkonce_odr noundef i32 @_ZN6test713fooIiE3barIiEET_v(
   // CHECK-HIDDEN-LABEL: define linkonce_odr hidden noundef i64 @_ZN6test713fooIlE3zedEv(
   // CHECK-HIDDEN-LABEL: define linkonce_odr hidden noundef i32 @_ZN6test713fooIlE3barIiEET_v(
+}
+
+// https://github.com/llvm/llvm-project/issues/103477
+namespace test72 {
+  template <class a>
+  struct t {
+    template <int>
+    static HIDDEN void bar() {}
+  };
+
+  void test() {
+      t<char>::bar<1>();
+  }
+  // CHECK-LABEL: define linkonce_odr hidden void @_ZN6test721tIcE3barILi1EEEvv(
+  // CHECK-HIDDEN-LABEL: define linkonce_odr hidden void @_ZN6test721tIcE3barILi1EEEvv(
+}
+
+// https://github.com/llvm/llvm-project/issues/31462
+namespace test73 {
+  template <class T> struct s {
+    template <class U>
+    __attribute__((__visibility__("hidden"))) U should_not_be_exported();
+  };
+
+  template <class T> template <class U> U s<T>::should_not_be_exported() {
+    return U();
+  }
+
+  extern template struct __attribute__((__visibility__("default"))) s<int>;
+
+  int f() {
+    s<int> o;
+    return o.should_not_be_exported<int>();
+  }
+  // CHECK-LABEL: define linkonce_odr noundef i32 @_ZN6test731sIiE22should_not_be_exportedIiEET_v(
+  // CHECK-HIDDEN-LABEL: define linkonce_odr noundef i32 @_ZN6test731sIiE22should_not_be_exportedIiEET_v(
 }
