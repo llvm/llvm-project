@@ -30,11 +30,7 @@ class RISCVAsmBackend : public MCAsmBackend {
 
 public:
   RISCVAsmBackend(const MCSubtargetInfo &STI, uint8_t OSABI, bool Is64Bit,
-                  const MCTargetOptions &Options)
-      : MCAsmBackend(llvm::endianness::little, RISCV::fixup_riscv_relax),
-        STI(STI), OSABI(OSABI), Is64Bit(Is64Bit), TargetOptions(Options) {
-    RISCVFeatures::validate(STI.getTargetTriple(), STI.getFeatureBits());
-  }
+                  const MCTargetOptions &Options);
   ~RISCVAsmBackend() override = default;
 
   void setForceRelocs() { ForceRelocs = true; }

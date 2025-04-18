@@ -181,7 +181,7 @@ void RISCVMCCodeEmitter::expandTLSDESCCall(const MCInst &MI,
   MCRegister Dest = MI.getOperand(1).getReg();
   int64_t Imm = MI.getOperand(2).getImm();
   Fixups.push_back(MCFixup::create(
-      0, Expr, MCFixupKind(RISCV::fixup_riscv_tlsdesc_call), MI.getLoc()));
+      0, Expr, FirstRelocationKind + ELF::R_RISCV_TLSDESC_CALL, MI.getLoc()));
   MCInst Call =
       MCInstBuilder(RISCV::JALR).addReg(Link).addReg(Dest).addImm(Imm);
 
@@ -210,13 +210,13 @@ void RISCVMCCodeEmitter::expandAddTPRel(const MCInst &MI,
 
   // Emit the correct tprel_add relocation for the symbol.
   Fixups.push_back(MCFixup::create(
-      0, Expr, MCFixupKind(RISCV::fixup_riscv_tprel_add), MI.getLoc()));
+      0, Expr, FirstRelocationKind + ELF::R_RISCV_TPREL_ADD, MI.getLoc()));
 
-  // Emit fixup_riscv_relax for tprel_add where the relax feature is enabled.
+  // Emit R_RISCV_RELAX for tprel_add where the relax feature is enabled.
   if (STI.hasFeature(RISCV::FeatureRelax)) {
     const MCConstantExpr *Dummy = MCConstantExpr::create(0, Ctx);
     Fixups.push_back(MCFixup::create(
-        0, Dummy, MCFixupKind(RISCV::fixup_riscv_relax), MI.getLoc()));
+        0, Dummy, FirstRelocationKind + ELF::R_RISCV_RELAX, MI.getLoc()));
   }
 
   // Emit a normal ADD instruction with the given operands.
@@ -567,7 +567,7 @@ uint64_t RISCVMCCodeEmitter::getImmOpValue(const MCInst &MI, unsigned OpNo,
          "getImmOpValue expects only expressions or immediates");
   const MCExpr *Expr = MO.getExpr();
   MCExpr::ExprKind Kind = Expr->getKind();
-  RISCV::Fixups FixupKind = RISCV::fixup_riscv_invalid;
+  unsigned FixupKind = RISCV::fixup_riscv_invalid;
   bool RelaxCandidate = false;
   if (Kind == MCExpr::Target) {
     const RISCVMCExpr *RVExpr = cast<RISCVMCExpr>(Expr);
@@ -612,26 +612,26 @@ uint64_t RISCVMCCodeEmitter::getImmOpValue(const MCInst &MI, unsigned OpNo,
       RelaxCandidate = true;
       break;
     case RISCVMCExpr::VK_GOT_HI:
-      FixupKind = RISCV::fixup_riscv_got_hi20;
+      FixupKind = FirstRelocationKind + ELF::R_RISCV_GOT_HI20;
       break;
     case RISCVMCExpr::VK_TPREL_LO:
       if (MIFrm == RISCVII::InstFormatI)
-        FixupKind = RISCV::fixup_riscv_tprel_lo12_i;
+        FixupKind = FirstRelocationKind + ELF::R_RISCV_TPREL_LO12_I;
       else if (MIFrm == RISCVII::InstFormatS)
-        FixupKind = RISCV::fixup_riscv_tprel_lo12_s;
+        FixupKind = FirstRelocationKind + ELF::R_RISCV_TPREL_LO12_S;
       else
         llvm_unreachable("VK_TPREL_LO used with unexpected instruction format");
       RelaxCandidate = true;
       break;
     case RISCVMCExpr::VK_TPREL_HI:
-      FixupKind = RISCV::fixup_riscv_tprel_hi20;
+      FixupKind = FirstRelocationKind + ELF::R_RISCV_TPREL_HI20;
       RelaxCandidate = true;
       break;
     case RISCVMCExpr::VK_TLS_GOT_HI:
-      FixupKind = RISCV::fixup_riscv_tls_got_hi20;
+      FixupKind = FirstRelocationKind + ELF::R_RISCV_TLS_GOT_HI20;
       break;
     case RISCVMCExpr::VK_TLS_GD_HI:
-      FixupKind = RISCV::fixup_riscv_tls_gd_hi20;
+      FixupKind = FirstRelocationKind + ELF::R_RISCV_TLS_GD_HI20;
       break;
     case RISCVMCExpr::VK_CALL:
       FixupKind = RISCV::fixup_riscv_call;
@@ -642,16 +642,16 @@ uint64_t RISCVMCCodeEmitter::getImmOpValue(const MCInst &MI, unsigned OpNo,
       RelaxCandidate = true;
       break;
     case RISCVMCExpr::VK_TLSDESC_HI:
-      FixupKind = RISCV::fixup_riscv_tlsdesc_hi20;
+      FixupKind = FirstRelocationKind + ELF::R_RISCV_TLSDESC_HI20;
       break;
     case RISCVMCExpr::VK_TLSDESC_LOAD_LO:
-      FixupKind = RISCV::fixup_riscv_tlsdesc_load_lo12;
+      FixupKind = FirstRelocationKind + ELF::R_RISCV_TLSDESC_LOAD_LO12;
       break;
     case RISCVMCExpr::VK_TLSDESC_ADD_LO:
-      FixupKind = RISCV::fixup_riscv_tlsdesc_add_lo12;
+      FixupKind = FirstRelocationKind + ELF::R_RISCV_TLSDESC_ADD_LO12;
       break;
     case RISCVMCExpr::VK_TLSDESC_CALL:
-      FixupKind = RISCV::fixup_riscv_tlsdesc_call;
+      FixupKind = FirstRelocationKind + ELF::R_RISCV_TLSDESC_CALL;
       break;
     case RISCVMCExpr::VK_QC_ABS20:
       FixupKind = RISCV::fixup_riscv_qc_abs20_u;
@@ -689,9 +689,8 @@ uint64_t RISCVMCCodeEmitter::getImmOpValue(const MCInst &MI, unsigned OpNo,
   // relaxed.
   if (EnableRelax && RelaxCandidate) {
     const MCConstantExpr *Dummy = MCConstantExpr::create(0, Ctx);
-    Fixups.push_back(
-    MCFixup::create(0, Dummy, MCFixupKind(RISCV::fixup_riscv_relax),
-                    MI.getLoc()));
+    Fixups.push_back(MCFixup::create(
+        0, Dummy, FirstRelocationKind + ELF::R_RISCV_RELAX, MI.getLoc()));
     ++MCNumFixups;
   }
 
