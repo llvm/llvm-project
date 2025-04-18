@@ -1,0 +1,28 @@
+## Tests --call-graph-info prints functions.
+
+# RUN: llvm-mc %s -filetype=obj -triple=x86_64-pc-linux -o %t
+# RUN: llvm-objdump --call-graph-info %t 2>&1 | FileCheck %s -DFILE=%t
+
+# CHECK: [[FILE]]: file format elf64-x86-64
+
+# CHECK: FUNCTIONS (FUNC_ENTRY_ADDR, SYM_NAME)
+# CHECK-NEXT: 0 foo
+# CHECK-NEXT: 1 bar
+# CHECK-NEXT: 2 baz
+
+.text
+
+.globl foo
+.type foo,@function
+foo:
+ retq
+
+.globl bar
+.type bar,@function
+bar:
+ retq
+
+.globl baz
+.type baz,@function
+baz:
+ retq

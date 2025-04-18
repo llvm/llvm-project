@@ -1,0 +1,15 @@
+## Tests that --call-graph-info warns if there is no .callgraph section.
+
+# RUN: llvm-mc %s -filetype=obj -triple=x86_64-pc-linux -o %t
+# RUN: llvm-objdump --call-graph-info %t 2>&1 | FileCheck %s -DFILE=%t
+
+# CHECK: [[FILE]]: file format elf64-x86-64
+# CHECK-NEXT: llvm-objdump: warning: '[[FILE]]': there is no .callgraph section
+# CHECK-NOT: INDIRECT TARGET TYPES (TYPEID [FUNC_ADDR,])
+# CHECK-NOT: INDIRECT CALL TYPES (TYPEID [CALL_SITE_ADDR,])
+
+.text
+.globl _Z3foov
+.type _Z3foov,@function
+_Z3foov:
+ callq _Z3foov@PLT

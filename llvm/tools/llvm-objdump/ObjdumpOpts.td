@@ -45,6 +45,10 @@ defm build_id :
 def : Flag<["-"], "a">, Alias<archive_headers>,
   HelpText<"Alias for --archive-headers">;
 
+def call_graph_info : Flag<["--"], "call-graph-info">,
+  HelpText<"Dump call graph information including indirect call and target IDs "
+           "from call graph section, if available.">;
+
 def demangle : Flag<["--"], "demangle">, HelpText<"Demangle symbol names">;
 def : Flag<["-"], "C">, Alias<demangle>, HelpText<"Alias for --demangle">;
 

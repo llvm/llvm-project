@@ -1,0 +1,35 @@
+## Tests --call-graph-info warnings for missing/invalid .callgraph section
+## contents.
+
+# RUN: llvm-mc %s -filetype=obj -triple=x86_64-pc-linux -o %t
+# RUN: llvm-objdump --call-graph-info %t 2>&1 | FileCheck %s -DFILE=%t
+
+# CHECK: [[FILE]]: file format elf64-x86-64
+# CHECK-NEXT: llvm-objdump: warning: '[[FILE]]': callgraph section has type ids for 1 instructions which are not indirect calls
+# CHECK-NEXT: llvm-objdump: warning: '[[FILE]]': callgraph section does not have type ids for 1 indirect calls
+# CHECK-NEXT: llvm-objdump: warning: '[[FILE]]': callgraph section does not have information for 1 functions
+# CHECK-NEXT: llvm-objdump: warning: '[[FILE]]': callgraph section has unknown type id for 1 indirect targets
+
+.text
+.globl foo
+.type foo,@function
+foo:
+.Lfoo_begin:
+.Lnot_indirect_call:
+ retq
+
+.globl bar
+.type bar,@function
+bar:
+ callq	*%rcx
+
+.section	.callgraph,"o",@progbits,.text
+.quad	0             #< Format version number.
+.quad	.Lfoo_begin   #< foo()'s entry address.
+.quad	1             #< A warning: function kind is 1: the type id for indirect target foo is unknown.
+.quad	1             #< Count of indirect call sites that follow: 1.
+.quad	0             #< Indirect call type id.
+.quad	.Lnot_indirect_call  #< A warning: type id for non-indirect call instruction.
+# A warning: .callgraph section does not have information for 1 function (bar).
+# A warning: .callgraph section does not have type id for 1 indirect call (one in bar).
+.text
