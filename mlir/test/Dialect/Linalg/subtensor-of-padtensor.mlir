@@ -216,3 +216,20 @@ func.func @dynamic_zero_high_padding(%arg0 : tensor<?x?xf32>, %pad : f32,
   %1 = tensor.extract_slice %0[%o1, %o2] [%s1, %s2] [1, 1] : tensor<?x?xf32> to tensor<?x?xf32>
   return %1 : tensor<?x?xf32>
 }
+
+// -----
+// CHECK-LABEL: @nopaddim_with_dynamic_extract(
+//  CHECK-SAME:     %[[ARG0:.*]]: tensor<3x4x5xf32>
+//  CHECK-SAME:     %[[ARG1:.*]]: f32
+//  CHECK-SAME:     %[[ARG2:.*]]: index
+//       CHECK:   %[[RESULT:.*]] = tensor.extract_slice %[[ARG0]][%[[ARG2]], 1, 2] [%[[ARG2]], 2, 1] [1, 1, 1] : tensor<3x4x5xf32> to tensor<?x2x1xf32>
+//       CHECK:   return %[[RESULT]]
+func.func @nopaddim_with_dynamic_extract(%arg0 : tensor<3x4x5xf32>, %pad : f32, %index : index)
+    -> tensor<?x2x1xf32> {
+  %0 = tensor.pad %arg0 low[0, 0, 0] high[0, 7, 8] {
+    ^bb0(%arg1: index, %arg2: index, %arg3: index):
+      tensor.yield %pad : f32
+    } : tensor<3x4x5xf32> to tensor<3x11x13xf32>
+  %1 = tensor.extract_slice %0[%index, 1, 2] [%index, 2, 1] [1, 1, 1] : tensor<3x11x13xf32> to tensor<?x2x1xf32>
+  return %1 : tensor<?x2x1xf32>
+}
