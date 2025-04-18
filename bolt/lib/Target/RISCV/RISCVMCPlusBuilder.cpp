@@ -322,6 +322,8 @@ public:
     default:
       return false;
     case RISCV::C_J:
+    case RISCV::PseudoCALL:
+    case RISCV::PseudoTAIL:
       OpNum = 0;
       return true;
     case RISCV::AUIPC:
