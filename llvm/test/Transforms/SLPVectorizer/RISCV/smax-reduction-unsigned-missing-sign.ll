@@ -7,8 +7,9 @@ define i32 @test(i8 %0) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i8> <i8 poison, i8 0, i8 0, i8 0>, i8 [[TMP0]], i32 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <4 x i8> [[TMP1]], zeroinitializer
-; CHECK-NEXT:    [[TMP3:%.*]] = call i1 @llvm.vector.reduce.smax.v4i1(<4 x i1> [[TMP2]])
-; CHECK-NEXT:    [[TMP4:%.*]] = zext i1 [[TMP3]] to i32
+; CHECK-NEXT:    [[TMP3:%.*]] = zext <4 x i1> [[TMP2]] to <4 x i8>
+; CHECK-NEXT:    [[TMP5:%.*]] = call i8 @llvm.vector.reduce.smax.v4i8(<4 x i8> [[TMP3]])
+; CHECK-NEXT:    [[TMP4:%.*]] = zext i8 [[TMP5]] to i32
 ; CHECK-NEXT:    ret i32 [[TMP4]]
 ;
 entry:
