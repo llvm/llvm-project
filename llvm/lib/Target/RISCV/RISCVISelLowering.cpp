@@ -11755,8 +11755,8 @@ SDValue RISCVTargetLowering::lowerVECTOR_INTERLEAVE(SDValue Op,
 
   // Use ri.vzip2{a,b} if available
   // TODO: Figure out the best lowering for the spread variants
-  if (Subtarget.hasVendorXRivosVizip() &&
-      !Op.getOperand(0).isUndef() && !Op.getOperand(1).isUndef()) {
+  if (Subtarget.hasVendorXRivosVizip() && !Op.getOperand(0).isUndef() &&
+      !Op.getOperand(1).isUndef()) {
     SDValue V1 = Op->getOperand(0);
     SDValue V2 = Op->getOperand(1);
     SDValue Lo = lowerVZIP(RISCVISD::RI_VZIP2A_VL, V1, V2, DL, DAG, Subtarget);
