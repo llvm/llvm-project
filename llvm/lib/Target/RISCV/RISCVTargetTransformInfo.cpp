@@ -385,7 +385,7 @@ static VectorType *getVRGatherIndexType(MVT DataVT, const RISCVSubtarget &ST,
 
 /// Attempt to approximate the cost of a shuffle which will require splitting
 /// during legalization.  Note that processShuffleMasks is not an exact proxy
-/// for the algorithm used in LegalizeVectorTypes, but hopefull it's a
+/// for the algorithm used in LegalizeVectorTypes, but hopefully it's a
 /// reasonably close upperbound.
 static InstructionCost costShuffleViaSplitting(RISCVTTIImpl &TTI, MVT LegalVT,
                                                VectorType *Tp,
