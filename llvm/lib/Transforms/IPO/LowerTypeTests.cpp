@@ -1490,7 +1490,8 @@ Triple::ArchType LowerTypeTestsModule::selectJumpTableArmEncoding(
 }
 
 void LowerTypeTestsModule::createJumpTable(
-    Function *F, ArrayRef<GlobalTypeMember *> Functions, Triple::ArchType JumpTableArch) {
+    Function *F, ArrayRef<GlobalTypeMember *> Functions,
+    Triple::ArchType JumpTableArch) {
   std::string AsmStr, ConstraintStr;
   raw_string_ostream AsmOS(AsmStr), ConstraintOS(ConstraintStr);
   SmallVector<Value *, 16> AsmArgs;
