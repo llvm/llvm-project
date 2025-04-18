@@ -1137,10 +1137,10 @@ void State::addInfoFor(BasicBlock &BB) {
           FactOrCheck::getCheck(DT.getNode(&BB), cast<CallInst>(&I)));
       // TODO: Check if it is possible to instead only added the min/max facts
       // when simplifying uses of the min/max intrinsics.
-      if (!isGuaranteedNotToBePoison(&I))
-        break;
       [[fallthrough]];
     case Intrinsic::abs:
+      if (!isGuaranteedNotToBePoison(&I))
+        break;
       WorkList.push_back(FactOrCheck::getInstFact(DT.getNode(&BB), &I));
       break;
     }
