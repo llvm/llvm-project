@@ -992,6 +992,18 @@ namespace ZeroSizeSub {
                                    // both-note {{in call to}}
 }
 
+namespace WrongFrame {
+  constexpr int foo() {
+    int *p = nullptr;
+    __builtin_operator_delete(p); // both-note {{subexpression not valid in a constant expression}}
+
+    return 1;
+  }
+  static_assert(foo()); // both-error {{not an integral constant expression}} \
+                        // both-note {{in call to}}
+
+}
+
 #else
 /// Make sure we reject this prior to C++20
 constexpr int a() { // both-error {{never produces a constant expression}}
