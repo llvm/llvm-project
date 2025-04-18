@@ -9,7 +9,7 @@ body:             |
   ; CHECK: bb.1:
   ; CHECK: %[[A:[0-9]*]]:sreg_32 = S_ADD_I32
   ; CHECK: COPY %[[A]]
-  ; CHECKL SI_LOOP
+  ; CHECK: SI_LOOP
   ; CHECK: bb.2:
 
   bb.0:
