@@ -5,21 +5,21 @@
 
 typedef typeof(sizeof(0)) size_t;
 
-// CHECK-LABEL: define{{( dso_local)?}} i64 @test1(
+// CHECK-LABEL: define{{( dso_local)?}} i{{64|32}} @test1(
 // CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[ARRAY:%.*]] = alloca [12 x i32], align
-// CHECK-NEXT:    ret i64 12
+// CHECK-NEXT:    ret i{{64|32}} 12
 //
 size_t test1() {
   int array[12];
   return _Countof(array);
 }
 
-// CHECK-LABEL: define{{( dso_local)?}} i64 @test2(
+// CHECK-LABEL: define{{( dso_local)?}} i{{64|32}} @test2(
 // CHECK-SAME: ) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    ret i64 100
+// CHECK-NEXT:    ret i{{64|32}} 100
 //
 size_t test2() {
   return _Countof(float[100]);
