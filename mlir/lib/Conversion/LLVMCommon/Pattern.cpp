@@ -387,6 +387,7 @@ static unsigned getBitWidth(Type type) {
     return type.getIntOrFloatBitWidth();
 
   auto vec = cast<VectorType>(type);
+  assert(!vec.isScalable() && "scalable vectors are not supported");
   return vec.getNumElements() * getBitWidth(vec.getElementType());
 }
 
