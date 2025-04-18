@@ -16,7 +16,7 @@ def : Enum {
   let etors = [
     Etor<"HOST", "Host allocation">,
     Etor<"DEVICE", "Device allocation">,
-    Etor<"SHARED", "Shared allocation">
+    Etor<"MANAGED", "Managed allocation">
   ];
 }
 

@@ -420,8 +420,8 @@ typedef enum ol_alloc_type_t {
   OL_ALLOC_TYPE_HOST = 0,
   /// Device allocation
   OL_ALLOC_TYPE_DEVICE = 1,
-  /// Shared allocation
-  OL_ALLOC_TYPE_SHARED = 2,
+  /// Managed allocation
+  OL_ALLOC_TYPE_MANAGED = 2,
   /// @cond
   OL_ALLOC_TYPE_FORCE_UINT32 = 0x7fffffff
   /// @endcond

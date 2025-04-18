@@ -302,7 +302,7 @@ TargetAllocTy convertOlToPluginAllocTy(ol_alloc_type_t Type) {
     return TARGET_ALLOC_DEVICE;
   case OL_ALLOC_TYPE_HOST:
     return TARGET_ALLOC_HOST;
-  case OL_ALLOC_TYPE_SHARED:
+  case OL_ALLOC_TYPE_MANAGED:
   default:
     return TARGET_ALLOC_SHARED;
   }

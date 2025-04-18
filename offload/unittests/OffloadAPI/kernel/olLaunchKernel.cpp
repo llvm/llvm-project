@@ -45,7 +45,7 @@ struct olLaunchKernelTest : OffloadQueueTest {
 
 TEST_F(olLaunchKernelTest, Success) {
   void *Mem;
-  ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_SHARED, 64, &Mem));
+  ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_MANAGED, 64, &Mem));
   struct {
     void *Mem;
   } Args{Mem};
@@ -65,7 +65,7 @@ TEST_F(olLaunchKernelTest, Success) {
 
 TEST_F(olLaunchKernelTest, SuccessSynchronous) {
   void *Mem;
-  ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_SHARED, 64, &Mem));
+  ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_MANAGED, 64, &Mem));
 
   struct {
     void *Mem;

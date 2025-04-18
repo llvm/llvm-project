@@ -297,8 +297,8 @@ inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
   case OL_ALLOC_TYPE_DEVICE:
     os << "OL_ALLOC_TYPE_DEVICE";
     break;
-  case OL_ALLOC_TYPE_SHARED:
-    os << "OL_ALLOC_TYPE_SHARED";
+  case OL_ALLOC_TYPE_MANAGED:
+    os << "OL_ALLOC_TYPE_MANAGED";
     break;
   default:
     os << "unknown enumerator";

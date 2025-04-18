@@ -12,9 +12,9 @@
 
 using olMemAllocTest = OffloadDeviceTest;
 
-TEST_F(olMemAllocTest, SuccessAllocShared) {
+TEST_F(olMemAllocTest, SuccessAllocManaged) {
   void *Alloc = nullptr;
-  ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_SHARED, 1024, &Alloc));
+  ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_MANAGED, 1024, &Alloc));
   ASSERT_NE(Alloc, nullptr);
   olMemFree(Alloc);
 }
