@@ -89,6 +89,10 @@ public:
     FI.Loc = Loc;
     return FI;
   }
+  static MCFixup create(uint32_t Offset, const MCExpr *Value, unsigned Kind,
+                        SMLoc Loc = SMLoc()) {
+    return create(Offset, Value, MCFixupKind(Kind), Loc);
+  }
 
   MCFixupKind getKind() const { return Kind; }
 
