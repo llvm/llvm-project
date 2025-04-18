@@ -19,10 +19,9 @@ gpu.func @test_store_nd_1d(%arg0: memref<16xf32>){
 // -----
 // CHECK-LABEL: gpu.func @test_store_nd_2d
 // CHECK: (%[[ARG0:[0-9a-zA-Z]+]]: memref<16x16xf16>) {
-// CHECK: %[[CST:.*]] = arith.constant dense<1.000000e+00> : vector<16x1xf16>
+// CHECK: %[[CST:.*]] = arith.constant dense<1.000000e+00> : vector<16xf16>
 // CHECK: %[[T0:.*]] = xegpu.create_nd_tdesc %[[ARG0]][%{{.*}}] : memref<16x16xf16> -> !xegpu.tensor_desc<16x16xf16>
-// CHECK: %[[T1:.*]] = vector.shape_cast %[[CST]] : vector<16x1xf16> to vector<16xf16>
-// CHECK: xegpu.store_nd %[[T1]], %[[T0]]  : vector<16xf16>, !xegpu.tensor_desc<16x16xf16>
+// CHECK: xegpu.store_nd %[[CST]], %[[T0]]  : vector<16xf16>, !xegpu.tensor_desc<16x16xf16>
 gpu.module @test {
 gpu.func @test_store_nd_2d(%arg0: memref<16x16xf16>){
   %c0 = arith.constant 0 : index
