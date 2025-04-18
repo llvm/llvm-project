@@ -1,6 +1,7 @@
 // This module contains headers related to the configuration of the library. These headers
 // are free of any dependency on the rest of libc++.
 module std_config [system] {
+  @LIBCXX_CONFIG_SITE_MODULE_ENTRY@ // generated via CMake
   textual header "__config"
   textual header "__configuration/abi.h"
   textual header "__configuration/availability.h"
