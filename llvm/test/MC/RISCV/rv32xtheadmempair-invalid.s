@@ -2,10 +2,10 @@
 
 th.ldd t0, t1, (t2), 5, 4   # CHECK: [[@LINE]]:22: error: invalid operand for instruction
 th.ldd t0, t1, (t2)         # CHECK: [[@LINE]]:1: error: too few operands for instruction
-th.ldd t0, t1, (t2), 3, 5   # CHECK: [[@LINE]]:1: error: instruction requires the following: RV64I Base Instruction Set{{$}}
+th.ldd t0, t1, (t2), 3, 5   # CHECK: [[@LINE]]:25: error: invalid operand for instruction
 th.sdd a0, a1, (a2), 5, 4   # CHECK: [[@LINE]]:22: error: invalid operand for instruction
 th.sdd a0, a1, (a2)         # CHECK: [[@LINE]]:1: error: too few operands for instruction
-th.sdd a0, a1, (a2), 3, 5   # CHECK: [[@LINE]]:1: error: instruction requires the following: RV64I Base Instruction Set{{$}}
+th.sdd a0, a1, (a2), 3, 5   # CHECK: [[@LINE]]:25: error: invalid operand for instruction
 th.lwud t0, t1, (t2), 5, 4  # CHECK: [[@LINE]]:23: error: immediate must be an integer in the range [0, 3]
 th.lwud t0, t1, (t2)        # CHECK: [[@LINE]]:1: error: too few operands for instruction
 th.lwud t0, t1, (t2), 3, 5  # CHECK: [[@LINE]]:26: error: operand must be constant 3
