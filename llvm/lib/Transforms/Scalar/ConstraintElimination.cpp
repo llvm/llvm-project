@@ -1128,18 +1128,17 @@ void State::addInfoFor(BasicBlock &BB) {
           FactOrCheck::getCheck(DT.getNode(&BB), cast<CallInst>(&I)));
       break;
     // Enqueue the intrinsics to add extra info.
+    case Intrinsic::abs:
     case Intrinsic::umin:
     case Intrinsic::umax:
     case Intrinsic::smin:
     case Intrinsic::smax:
     case Intrinsic::usub_sat:
-      // TODO: handle llvm.abs as well
       WorkList.push_back(
           FactOrCheck::getCheck(DT.getNode(&BB), cast<CallInst>(&I)));
       // TODO: Check if it is possible to instead only added the min/max facts
       // when simplifying uses of the min/max intrinsics.
       [[fallthrough]];
-    case Intrinsic::abs:
     case Intrinsic::uadd_sat:
       if (!isGuaranteedNotToBePoison(&I))
         break;
@@ -1537,6 +1536,28 @@ static bool checkAndReplaceUSubSat(SaturatingInst *I, ConstraintInfo &Info,
   return false;
 }
 
+static bool checkAndReplaceAbs(IntrinsicInst *I, ConstraintInfo &Info,
+                               SmallVectorImpl<Instruction *> &ToRemove) {
+  assert(I->getIntrinsicID() == Intrinsic::abs && "Expected abs intrinsic");
+  Value *Op = I->getOperand(0);
+  if (checkCondition(ICmpInst::ICMP_SGE, Op, ConstantInt::get(Op->getType(), 0),
+                     I, Info)
+          .value_or(false)) {
+    I->replaceAllUsesWith(Op);
+    ToRemove.push_back(I);
+    return true;
+  }
+  if (checkCondition(ICmpInst::ICMP_SLT, Op, ConstantInt::get(Op->getType(), 0),
+                     I, Info)
+          .value_or(false)) {
+    IRBuilder<> Builder(I->getParent(), I->getIterator());
+    I->replaceAllUsesWith(Builder.CreateNeg(Op));
+    ToRemove.push_back(I);
+    return true;
+  }
+  return false;
+}
+
 static void
 removeEntryFromStack(const StackEntry &E, ConstraintInfo &Info,
                      Module *ReproducerModule,
@@ -1858,6 +1879,9 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
         Changed |= checkAndReplaceMinMax(MinMax, Info, ToRemove);
       } else if (auto *CmpIntr = dyn_cast<CmpIntrinsic>(Inst)) {
         Changed |= checkAndReplaceCmp(CmpIntr, Info, ToRemove);
+      } else if (match(Inst, m_Intrinsic<Intrinsic::abs>(m_Value()))) {
+        Changed |=
+            checkAndReplaceAbs(dyn_cast<IntrinsicInst>(Inst), Info, ToRemove);
       } else if (auto *SatIntr = dyn_cast<SaturatingInst>(Inst)) {
         if (SatIntr->getIntrinsicID() == Intrinsic::usub_sat)
           Changed |= checkAndReplaceUSubSat(SatIntr, Info, ToRemove);
