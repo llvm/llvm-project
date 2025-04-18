@@ -618,6 +618,8 @@ void CIRGenModule::emitTopLevelDecl(Decl *decl) {
     emitGlobalOpenACCDecl(cast<OpenACCDeclareDecl>(decl));
     break;
 
+  case Decl::Typedef:
+  case Decl::TypeAlias: // using foo = bar; [C++11]
   case Decl::Record:
   case Decl::CXXRecord:
     assert(!cir::MissingFeatures::generateDebugInfo());
