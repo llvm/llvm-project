@@ -87,7 +87,7 @@ public:
   virtual std::optional<MCFixupKind> getFixupKind(StringRef Name) const;
 
   /// Get information on a fixup kind.
-  virtual const MCFixupKindInfo &getFixupKindInfo(MCFixupKind Kind) const;
+  virtual MCFixupKindInfo getFixupKindInfo(MCFixupKind Kind) const;
 
   // Hook to check if a relocation is needed. The default implementation tests
   // whether the MCValue has a relocation specifier.

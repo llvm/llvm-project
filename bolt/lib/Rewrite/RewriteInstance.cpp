@@ -237,6 +237,12 @@ UseGnuStack("use-gnu-stack",
   cl::ZeroOrMore,
   cl::cat(BoltCategory));
 
+static cl::opt<uint64_t> CustomAllocationVMA(
+    "custom-allocation-vma",
+    cl::desc("use a custom address at which new code will be put, "
+             "bypassing BOLT's logic to detect where to put code"),
+    cl::Hidden, cl::cat(BoltCategory));
+
 static cl::opt<bool>
 SequentialDisassembly("sequential-disassembly",
   cl::desc("performs disassembly sequentially"),
@@ -592,6 +598,25 @@ Error RewriteInstance::discoverStorage() {
 
   FirstNonAllocatableOffset = NextAvailableOffset;
 
+  if (opts::CustomAllocationVMA) {
+    // If user specified a custom address where we should start writing new
+    // data, honor that.
+    NextAvailableAddress = opts::CustomAllocationVMA;
+    // Sanity check the user-supplied address and emit warnings if something
+    // seems off.
+    for (const ELF64LE::Phdr &Phdr : PHs) {
+      switch (Phdr.p_type) {
+      case ELF::PT_LOAD:
+        if (NextAvailableAddress >= Phdr.p_vaddr &&
+            NextAvailableAddress < Phdr.p_vaddr + Phdr.p_memsz) {
+          BC->errs() << "BOLT-WARNING: user-supplied allocation vma 0x"
+                     << Twine::utohexstr(NextAvailableAddress)
+                     << " conflicts with ELF segment at 0x"
+                     << Twine::utohexstr(Phdr.p_vaddr) << "\n";
+        }
+      }
+    }
+  }
   NextAvailableAddress = alignTo(NextAvailableAddress, BC->PageAlign);
   NextAvailableOffset = alignTo(NextAvailableOffset, BC->PageAlign);
 

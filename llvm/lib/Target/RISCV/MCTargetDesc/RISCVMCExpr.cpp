@@ -75,7 +75,7 @@ const MCFixup *RISCVMCExpr::getPCRelHiFixup(const MCFragment **DFOut) const {
       }
       break;
     }
-    switch (Kind - FirstRelocationKind) {
+    switch (Kind) {
     case ELF::R_RISCV_GOT_HI20:
     case ELF::R_RISCV_TLS_GOT_HI20:
     case ELF::R_RISCV_TLS_GD_HI20:
