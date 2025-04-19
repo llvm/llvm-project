@@ -1,5 +1,5 @@
-;; Tests that call site type ids can be extracted and set from type operand
-;; bundles.
+;; Tests that call site callee type ids can be extracted and set from
+;; callee_type metadata.
 
 ;; Verify the exact calleeTypeId value to ensure it is not garbage but the value
 ;; computed as the type id from the callee_type operand bundle.
@@ -17,11 +17,12 @@ entry:
   store ptr @foo, ptr %fp, align 8
   %fp_val = load ptr, ptr %fp, align 8
   ; CHECK: callSites:
-  ; CHECK-NEXT: - { bb: {{.*}}, offset: {{.*}}, fwdArgRegs: [], calleeTypeId:
-  ; CHECK-NEXT: 7854600665770582568 }
-  call void %fp_val(i8 signext 97) [ "callee_type"(metadata !"_ZTSFvcE.generalized") ]
+  ; CHECK-NEXT: - { bb: {{.*}}, offset: {{.*}}, fwdArgRegs: [], calleeTypeIds:
+  ; CHECK-NEXT: [ 7854600665770582568 ] }
+  call void %fp_val(i8 signext 97), !callee_type !2
   ret i32 0
 }
 
 !0 = !{i64 0, !"_ZTSFvcE.generalized"}
 !1 = !{i64 0, !"_ZTSFiE.generalized"}
+!2 = !{!0}
