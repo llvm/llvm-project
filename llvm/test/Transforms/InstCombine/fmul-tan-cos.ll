@@ -4,120 +4,115 @@
 define double @fmul_tan_cos(double %a) {
 ; CHECK-LABEL: define double @fmul_tan_cos(
 ; CHECK-SAME: double [[A:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.tan.f64(double [[A]])
-; CHECK-NEXT:    [[TMP2:%.*]] = call double @llvm.cos.f64(double [[A]])
-; CHECK-NEXT:    [[RES:%.*]] = fmul double [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TAN:%.*]] = call double @llvm.tan.f64(double [[A]])
+; CHECK-NEXT:    [[COS:%.*]] = call double @llvm.cos.f64(double [[A]])
+; CHECK-NEXT:    [[RES:%.*]] = fmul double [[TAN]], [[COS]]
 ; CHECK-NEXT:    ret double [[RES]]
 ;
-  %1 = call double @llvm.tan.f64(double %a)
-  %2 = call double @llvm.cos.f64(double %a)
-  %res = fmul double %1, %2
+  %tan = call double @llvm.tan.f64(double %a)
+  %cos = call double @llvm.cos.f64(double %a)
+  %res = fmul double %tan, %cos
   ret double %res
 }
 
 define double @fmul_strict_tan_strict_cos_reassoc(double %a) {
 ; CHECK-LABEL: define double @fmul_strict_tan_strict_cos_reassoc(
 ; CHECK-SAME: double [[A:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.tan.f64(double [[A]])
-; CHECK-NEXT:    [[TMP2:%.*]] = call reassoc double @llvm.cos.f64(double [[A]])
-; CHECK-NEXT:    [[RES:%.*]] = fmul double [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TAN:%.*]] = call double @llvm.tan.f64(double [[A]])
+; CHECK-NEXT:    [[COS:%.*]] = call reassoc double @llvm.cos.f64(double [[A]])
+; CHECK-NEXT:    [[RES:%.*]] = fmul double [[TAN]], [[COS]]
 ; CHECK-NEXT:    ret double [[RES]]
 ;
-  %1 = call double @llvm.tan.f64(double %a)
-  %2 = call reassoc double @llvm.cos.f64(double %a)
-  %res = fmul double %1, %2
+  %tan = call double @llvm.tan.f64(double %a)
+  %cos = call reassoc double @llvm.cos.f64(double %a)
+  %res = fmul double %tan, %cos
   ret double %res
 }
 
-define double @fmul_reassoc_tan_strict_cos_strict(double %a, ptr dereferenceable(2) %dummy) {
+define double @fmul_reassoc_tan_strict_cos_strict(double %a) {
 ; CHECK-LABEL: define double @fmul_reassoc_tan_strict_cos_strict(
-; CHECK-SAME: double [[A:%.*]], ptr dereferenceable(2) [[DUMMY:%.*]]) {
-; CHECK-NEXT:    [[RES:%.*]] = call reassoc double @llvm.sin.f64(double [[A]])
+; CHECK-SAME: double [[A:%.*]]) {
+; CHECK-NEXT:    [[TAN:%.*]] = call double @llvm.tan.f64(double [[A]])
+; CHECK-NEXT:    [[COS:%.*]] = call double @llvm.cos.f64(double [[A]])
+; CHECK-NEXT:    [[RES:%.*]] = fmul reassoc double [[TAN]], [[COS]]
 ; CHECK-NEXT:    ret double [[RES]]
 ;
-  %1 = call double @llvm.tan.f64(double %a)
-  %2 = call double @llvm.cos.f64(double %a)
-  %res = fmul reassoc double %1, %2
+  %tan = call double @llvm.tan.f64(double %a)
+  %cos = call double @llvm.cos.f64(double %a)
+  %res = fmul reassoc double %tan, %cos
   ret double %res
 }
 
 define double @fmul_reassoc_tan_reassoc_cos_strict(double %a) {
 ; CHECK-LABEL: define double @fmul_reassoc_tan_reassoc_cos_strict(
 ; CHECK-SAME: double [[A:%.*]]) {
-; CHECK-NEXT:    [[RES:%.*]] = call reassoc double @llvm.sin.f64(double [[A]])
+; CHECK-NEXT:    [[TAN:%.*]] = call reassoc double @llvm.tan.f64(double [[A]])
+; CHECK-NEXT:    [[COS:%.*]] = call double @llvm.cos.f64(double [[A]])
+; CHECK-NEXT:    [[RES:%.*]] = fmul reassoc double [[TAN]], [[COS]]
 ; CHECK-NEXT:    ret double [[RES]]
 ;
-  %1 = call reassoc double @llvm.tan.f64(double %a)
-  %2 = call double @llvm.cos.f64(double %a)
-  %res = fmul reassoc double %1, %2
+  %tan = call reassoc double @llvm.tan.f64(double %a)
+  %cos = call double @llvm.cos.f64(double %a)
+  %res = fmul reassoc double %tan, %cos
   ret double %res
 }
 
 define double @fmul_tan_cos_reassoc_multiple_uses(double %a) {
 ; CHECK-LABEL: define double @fmul_tan_cos_reassoc_multiple_uses(
 ; CHECK-SAME: double [[A:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = call reassoc double @llvm.tan.f64(double [[A]])
-; CHECK-NEXT:    [[TMP2:%.*]] = call reassoc double @llvm.cos.f64(double [[A]])
-; CHECK-NEXT:    [[RES:%.*]] = fmul reassoc double [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    call void @use(double [[TMP2]])
+; CHECK-NEXT:    [[TAN:%.*]] = call reassoc double @llvm.tan.f64(double [[A]])
+; CHECK-NEXT:    [[COS:%.*]] = call reassoc double @llvm.cos.f64(double [[A]])
+; CHECK-NEXT:    [[RES:%.*]] = fmul reassoc double [[TAN]], [[COS]]
+; CHECK-NEXT:    call void @use(double [[COS]])
 ; CHECK-NEXT:    ret double [[RES]]
 ;
-  %1 = call reassoc double @llvm.tan.f64(double %a)
-  %2 = call reassoc double @llvm.cos.f64(double %a)
-  %res = fmul reassoc double %1, %2
-  call void @use(double %2)
+  %tan = call reassoc double @llvm.tan.f64(double %a)
+  %cos = call reassoc double @llvm.cos.f64(double %a)
+  %res = fmul reassoc double %tan, %cos
+  call void @use(double %cos)
   ret double %res
 }
 
 define double @fmul_tan_cos_reassoc(double %a) {
 ; CHECK-LABEL: define double @fmul_tan_cos_reassoc(
 ; CHECK-SAME: double [[A:%.*]]) {
-; CHECK-NEXT:    [[RES:%.*]] = call reassoc double @llvm.sin.f64(double [[A]])
+; CHECK-NEXT:    [[TAN:%.*]] = call reassoc double @llvm.tan.f64(double [[A]])
+; CHECK-NEXT:    [[COS:%.*]] = call reassoc double @llvm.cos.f64(double [[A]])
+; CHECK-NEXT:    [[RES:%.*]] = fmul reassoc double [[TAN]], [[COS]]
 ; CHECK-NEXT:    ret double [[RES]]
 ;
-  %1 = call reassoc double @llvm.tan.f64(double %a)
-  %2 = call reassoc double @llvm.cos.f64(double %a)
-  %res = fmul reassoc double %1, %2
+  %tan = call reassoc double @llvm.tan.f64(double %a)
+  %cos = call reassoc double @llvm.cos.f64(double %a)
+  %res = fmul reassoc double %tan, %cos
   ret double %res
 }
 
 define float @fmul_tanf_cosf_reassoc(float %a) {
 ; CHECK-LABEL: define float @fmul_tanf_cosf_reassoc(
 ; CHECK-SAME: float [[A:%.*]]) {
-; CHECK-NEXT:    [[RES:%.*]] = call reassoc float @llvm.sin.f32(float [[A]])
+; CHECK-NEXT:    [[TAN:%.*]] = call reassoc float @llvm.tan.f32(float [[A]])
+; CHECK-NEXT:    [[COS:%.*]] = call reassoc float @llvm.cos.f32(float [[A]])
+; CHECK-NEXT:    [[RES:%.*]] = fmul reassoc float [[TAN]], [[COS]]
 ; CHECK-NEXT:    ret float [[RES]]
 ;
-  %1 = call reassoc float @llvm.tan.f32(float %a)
-  %2 = call reassoc float @llvm.cos.f32(float %a)
-  %res = fmul reassoc float %1, %2
+  %tan = call reassoc float @llvm.tan.f32(float %a)
+  %cos = call reassoc float @llvm.cos.f32(float %a)
+  %res = fmul reassoc float %tan, %cos
   ret float %res
 }
 
 define fp128 @fmul_tanfp128_cosfp128_reassoc(fp128 %a) {
 ; CHECK-LABEL: define fp128 @fmul_tanfp128_cosfp128_reassoc(
 ; CHECK-SAME: fp128 [[A:%.*]]) {
-; CHECK-NEXT:    [[RES:%.*]] = call reassoc fp128 @llvm.sin.f128(fp128 [[A]])
+; CHECK-NEXT:    [[TAN:%.*]] = call reassoc fp128 @llvm.tan.f128(fp128 [[A]])
+; CHECK-NEXT:    [[COS:%.*]] = call reassoc fp128 @llvm.cos.f128(fp128 [[A]])
+; CHECK-NEXT:    [[RES:%.*]] = fmul reassoc fp128 [[TAN]], [[COS]]
 ; CHECK-NEXT:    ret fp128 [[RES]]
 ;
-  %1 = call reassoc fp128 @llvm.tan.fp128(fp128 %a)
-  %2 = call reassoc fp128 @llvm.cos.fp128(fp128 %a)
-  %res = fmul reassoc fp128 %1, %2
+  %tan = call reassoc fp128 @llvm.tan.fp128(fp128 %a)
+  %cos = call reassoc fp128 @llvm.cos.fp128(fp128 %a)
+  %res = fmul reassoc fp128 %tan, %cos
   ret fp128 %res
 }
 
-declare double @llvm.sin.f64(double) #1
-declare float @llvm.sin.f32(float) #1
-declare fp128 @llvm.sin.fp128(fp128) #1
-
-declare double @llvm.cos.f64(double) #1
-declare float @llvm.cos.f32(float) #1
-declare fp128 @llvm.cos.fp128(fp128) #1
-
-declare double @llvm.tan.f64(double) #1
-declare float @llvm.tan.f32(float) #1
-declare fp128 @llvm.tan.fp128(fp128) #1
-
 declare void @use(double)
-
-attributes #0 = { nounwind readnone speculatable }
-attributes #1 = { nounwind readnone }

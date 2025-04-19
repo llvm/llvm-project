@@ -947,6 +947,14 @@ Instruction *InstCombinerImpl::foldFMulReassoc(BinaryOperator &I) {
     return BinaryOperator::CreateFMulFMF(XX, Y, &I);
   }
 
+  // tan(X) * cos(X) -> sin(X)
+  if (match(&I,
+            m_c_FMul(m_OneUse(m_Intrinsic<Intrinsic::tan>(m_Value(X))),
+                     m_OneUse(m_Intrinsic<Intrinsic::cos>(m_Specific(X)))))) {
+    Value *Sin = Builder.CreateUnaryIntrinsic(Intrinsic::sin, X, &I);
+    return replaceInstUsesWith(I, Sin);
+  }
+
   return nullptr;
 }
 
@@ -1071,16 +1079,6 @@ Instruction *InstCombinerImpl::visitFMul(BinaryOperator &I) {
     if (!Result->hasNoNaNs())
       Result->setHasNoInfs(false);
     return Result;
-  }
-
-  // tan(X) * cos(X) -> sin(X)
-  if (I.hasAllowReassoc() && Op0->hasOneUse() && Op1->hasOneUse()) {
-    Value *X;
-    if (match(Op0, m_Intrinsic<Intrinsic::tan>(m_Value(X))) &&
-        match(Op1, m_Intrinsic<Intrinsic::cos>(m_Specific(X)))) {
-      Value *Sin = Builder.CreateUnaryIntrinsic(Intrinsic::sin, X, &I);
-      return replaceInstUsesWith(I, Sin);
-    }
   }
 
   return nullptr;
