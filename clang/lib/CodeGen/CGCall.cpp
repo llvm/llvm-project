@@ -5076,11 +5076,6 @@ static unsigned getMaxVectorWidth(const llvm::Type *Ty) {
   return MaxVectorWidth;
 }
 
-static bool isCXXDeclType(const FunctionDecl *FD) {
-  return isa<CXXConstructorDecl>(FD) || isa<CXXMethodDecl>(FD) ||
-         isa<CXXDestructorDecl>(FD);
-}
-
 RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
                                  const CGCallee &Callee,
                                  ReturnValueSlot ReturnValue,
@@ -5768,25 +5763,6 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
   AllocAlignAttrEmitter AllocAlignAttrEmitter(*this, TargetDecl, CallArgs);
   Attrs = AllocAlignAttrEmitter.TryEmitAsCallSiteAttribute(Attrs);
 
-  if (CGM.getCodeGenOpts().CallGraphSection) {
-    assert((TargetDecl && TargetDecl->getFunctionType() ||
-            Callee.getAbstractInfo().getCalleeFunctionProtoType()) &&
-           "cannot find callsite type");
-    QualType CST;
-    if (TargetDecl && TargetDecl->getFunctionType())
-      CST = QualType(TargetDecl->getFunctionType(), 0);
-    else if (const auto *FPT =
-                 Callee.getAbstractInfo().getCalleeFunctionProtoType())
-      CST = QualType(FPT, 0);
-
-    if (!CST.isNull()) {
-      auto *TypeIdMD = CGM.CreateMetadataIdentifierGeneralized(CST);
-      auto *TypeIdMDVal =
-          llvm::MetadataAsValue::get(getLLVMContext(), TypeIdMD);
-      BundleList.emplace_back("callee_type", TypeIdMDVal);
-    }
-  }
-
   // Emit the actual call/invoke instruction.
   llvm::CallBase *CI;
   if (!InvokeDest) {
@@ -5804,13 +5780,19 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
   if (callOrInvoke) {
     *callOrInvoke = CI;
     if (CGM.getCodeGenOpts().CallGraphSection) {
+      assert((TargetDecl && TargetDecl->getFunctionType() ||
+              Callee.getAbstractInfo().getCalleeFunctionProtoType()) &&
+             "cannot find callsite type");
+      QualType CST;
+      if (TargetDecl && TargetDecl->getFunctionType())
+        CST = QualType(TargetDecl->getFunctionType(), 0);
+      else if (const auto *FPT =
+                   Callee.getAbstractInfo().getCalleeFunctionProtoType())
+        CST = QualType(FPT, 0);
+
       // Set type identifier metadata of indirect calls for call graph section.
-      if (const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(TargetDecl)) {
-        // Type id metadata is set only for C/C++ contexts.
-        if (isCXXDeclType(FD)) {
-          CGM.CreateFunctionTypeMetadataForIcall(FD->getType(), *callOrInvoke);
-        }
-      }
+      if (!CST.isNull())
+        CGM.CreateCalleeTypeMetadataForIcall(CST, *callOrInvoke);
     }
   }
 

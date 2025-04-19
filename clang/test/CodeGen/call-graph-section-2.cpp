@@ -5,7 +5,6 @@
 // RUN: -emit-llvm -o %t %s
 // RUN: FileCheck --check-prefix=FT    %s < %t
 // RUN: FileCheck --check-prefix=CST   %s < %t
-// RUN: FileCheck --check-prefix=CHECK %s < %t
 
 ////////////////////////////////////////////////////////////////////////////////
 // Class definitions and template classes (check for indirect target metadata)
@@ -57,12 +56,10 @@ void foo() {
   // Methods for Cls2<Cls1> is checked above within the template description.
   Cls2<Cls1> Obj;
 
-  // CHECK-DAG: define {{.*}} @_Z6T_funcI4Cls1EPT_S1_S2_PKS1_RS1_RS3_({{.*}} !type [[F_TFUNC_CLS1:![0-9]+]]
-  // CHECK-DAG: [[F_TFUNC_CLS1]] = !{i64 0, !"_ZTSFPv4Cls1S_PKvRS0_RKS0_E.generalized"}
   Obj.fp = T_func<Cls1>;
   Cls1 Cls1Obj;
-
-  // CST: call noundef ptr %{{.*}} [ "callee_type"(metadata !"_ZTSFPv4Cls1S_PKvRS0_RKS0_E.generalized") ]
+  
+  // CST: call noundef ptr %{{.*}}, !callee_type [[F_TFUNC_CLS1_CT:![0-9]+]]
   Obj.fp(Cls1Obj, &Cls1Obj, &Cls1Obj, Cls1Obj, Cls1Obj);
 
   // Make indirect calls to Cls2's member methods
@@ -75,21 +72,43 @@ void foo() {
 
   auto *Obj2Ptr = &Obj;
 
-  // CST: call void %{{.*}} [ "callee_type"(metadata !"_ZTSFvvE.generalized") ]
+  // CST: call void %{{.*}}, !callee_type [[F_TCLS2F1_CT:![0-9]+]]
   (Obj2Ptr->*fp_f1)();
 
-  // CST: call void %{{.*}} [ "callee_type"(metadata !"_ZTSFv4Cls1E.generalized") ]
+  // CST: call void %{{.*}}, !callee_type [[F_TCLS2F2_CT:![0-9]+]]
   (Obj2Ptr->*fp_f2)(Cls1Obj);
 
-  // CST: call void %{{.*}} [ "callee_type"(metadata !"_ZTSFvPvE.generalized") ]
+  // CST: call void %{{.*}}, !callee_type [[F_TCLS2F3_CT:![0-9]+]]
   (Obj2Ptr->*fp_f3)(&Cls1Obj);
 
-  // CST: call void %{{.*}} [ "callee_type"(metadata !"_ZTSFvPKvE.generalized") ]
+  // CST: call void %{{.*}}, !callee_type [[F_TCLS2F4_CT:![0-9]+]]
   (Obj2Ptr->*fp_f4)(&Cls1Obj);
 
-  // CST: call void %{{.*}} [ "callee_type"(metadata !"_ZTSFvR4Cls1E.generalized") ]
+  // CST: call void %{{.*}}, !callee_type [[F_TCLS2F5_CT:![0-9]+]]
   (Obj2Ptr->*fp_f5)(Cls1Obj);
 
-  // CST: call void %{{.*}} [ "callee_type"(metadata !"_ZTSFvRK4Cls1E.generalized") ]
+  // CST: call void %{{.*}}, !callee_type [[F_TCLS2F6_CT:![0-9]+]]
   (Obj2Ptr->*fp_f6)(Cls1Obj);
 }
+
+// CST: define {{.*}} @_Z6T_funcI4Cls1EPT_S1_S2_PKS1_RS1_RS3_({{.*}} !type [[F_TFUNC_CLS1:![0-9]+]]
+// CST-DAG: [[F_TFUNC_CLS1_CT]] = !{[[F_TFUNC_CLS1:![0-9]+]]}
+// CST-DAG: [[F_TFUNC_CLS1]] = !{i64 0, !"_ZTSFPv4Cls1S_PKvRS0_RKS0_E.generalized"}
+
+// CST-DAG: [[F_TCLS2F1_CT]] = !{[[F_TCLS2F1:![0-9]+]]}
+// CST-DAG: [[F_TCLS2F1]] = !{i64 0, !"_ZTSFvvE.generalized"}
+
+// CST-DAG: [[F_TCLS2F2_CT]] = !{[[F_TCLS2F2:![0-9]+]]}
+// CST-DAG: [[F_TCLS2F2]] = !{i64 0, !"_ZTSFv4Cls1E.generalized"}
+
+// CST-DAG: [[F_TCLS2F3_CT]] = !{[[F_TCLS2F3:![0-9]+]]}
+// CST-DAG: [[F_TCLS2F3]] = !{i64 0, !"_ZTSFvPvE.generalized"}
+
+// CST-DAG: [[F_TCLS2F4_CT]] = !{[[F_TCLS2F4:![0-9]+]]}
+// CST-DAG: [[F_TCLS2F4]] = !{i64 0, !"_ZTSFvPKvE.generalized"}
+
+// CST-DAG: [[F_TCLS2F5_CT]] = !{[[F_TCLS2F5:![0-9]+]]}
+// CST-DAG: [[F_TCLS2F5]] = !{i64 0, !"_ZTSFvR4Cls1E.generalized"}
+
+// CST-DAG: [[F_TCLS2F6_CT]] = !{[[F_TCLS2F6:![0-9]+]]}
+// CST-DAG: [[F_TCLS2F6]] = !{i64 0, !"_ZTSFvRK4Cls1E.generalized"}
