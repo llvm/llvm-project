@@ -37,15 +37,6 @@ enum Fixups {
   fixup_loongarch_abs64_lo20,
   // 12-bit fixup corresponding to %abs_hi12(foo) for instruction lu52i.d.
   fixup_loongarch_abs64_hi12,
-  // 20-bit fixup corresponding to %le_hi20(foo) for instruction lu12i.w.
-  fixup_loongarch_tls_le_hi20,
-  // 12-bit fixup corresponding to %le_lo12(foo) for instruction ori.
-  fixup_loongarch_tls_le_lo12,
-  // 20-bit fixup corresponding to %le64_lo20(foo) for instruction lu32i.d.
-  fixup_loongarch_tls_le64_lo20,
-  // 12-bit fixup corresponding to %le64_hi12(foo) for instruction lu52i.d.
-  fixup_loongarch_tls_le64_hi12,
-  // TODO: Add more fixup kind.
 
   // Used as a sentinel, must be the last of the fixup which can be handled by
   // LoongArchAsmBackend::applyFixup.

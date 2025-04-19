@@ -58,11 +58,6 @@ LoongArchAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
       {"fixup_loongarch_abs_lo12", 10, 12, 0},
       {"fixup_loongarch_abs64_lo20", 5, 20, 0},
       {"fixup_loongarch_abs64_hi12", 10, 12, 0},
-      {"fixup_loongarch_tls_le_hi20", 5, 20, 0},
-      {"fixup_loongarch_tls_le_lo12", 10, 12, 0},
-      {"fixup_loongarch_tls_le64_lo20", 5, 20, 0},
-      {"fixup_loongarch_tls_le64_hi12", 10, 12, 0},
-      // TODO: Add more fixup kinds.
   };
 
   static_assert((std::size(Infos)) == LoongArch::NumTargetFixupKinds,
