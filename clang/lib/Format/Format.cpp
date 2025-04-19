@@ -2427,19 +2427,23 @@ public:
 private:
   void editEnumTrailingComma(SmallVectorImpl<AnnotatedLine *> &Lines,
                              tooling::Replacements &Result) {
+    bool InEnumBraces = false;
+    const FormatToken *BeforeRBrace = nullptr;
     const auto &SourceMgr = Env.getSourceManager();
     for (auto *Line : Lines) {
       if (!Line->Children.empty())
         editEnumTrailingComma(Line->Children, Result);
-      if (!Line->Affected)
-        continue;
       for (const auto *Token = Line->First; Token && !Token->Finalized;
            Token = Token->Next) {
-        if (Token->isNot(TT_EnumRBrace))
+        if (Token->isNot(TT_EnumRBrace)) {
+          if (Token->is(TT_EnumLBrace))
+            InEnumBraces = true;
+          else if (InEnumBraces && Token->isNot(tok::comment))
+            BeforeRBrace = Line->Affected ? Token : nullptr;
           continue;
-        const auto *BeforeRBrace = Token->getPreviousNonComment();
-        assert(BeforeRBrace);
-        if (BeforeRBrace->is(TT_EnumLBrace)) // Empty braces.
+        }
+        InEnumBraces = false;
+        if (!BeforeRBrace) // Empty braces or Line not affected.
           continue;
         if (BeforeRBrace->is(tok::comma)) {
           if (Style.EnumTrailingComma == FormatStyle::ETC_Remove)
@@ -2448,6 +2452,7 @@ private:
           cantFail(Result.add(tooling::Replacement(
               SourceMgr, BeforeRBrace->Tok.getEndLoc(), 0, ",")));
         }
+        BeforeRBrace = nullptr;
       }
     }
   }
