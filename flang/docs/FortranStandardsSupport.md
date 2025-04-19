@@ -27,7 +27,7 @@ Note : No distinction is made between the support in the Parser/Semantics and ML
 
 ## Fortran 2023
 See [document](F202X.md) for a brief discussion about the new features in Fortran 2023. The following table summarizes the
-status of all important Fortran 2023 features.
+status of all important Fortran 2023 features. The table entries are based on the document [The new features in Fortran 2023](https://wg5-fortran.org/N2201-N2250/N2212.pdf).
 
 | Feature                                                    | Status | Comments                                                |
 |------------------------------------------------------------|--------|---------------------------------------------------------|
@@ -59,7 +59,7 @@ status of all important Fortran 2023 features.
 
 ## Fortran 2018
 All features except those listed in the following table are supported. Almost all of the unsupported features are related to
-the multi-image execution.
+the multi-image execution. The table entries are based on the document [The new features in Fortran 2018](https://wg5-fortran.org/N2151-N2200/ISO-IECJTC1-SC22-WG5_N2161_The_New_Features_of_Fortran_2018.pdf).
 
 | Feature                                                    | Status | Comments                                                |
 |------------------------------------------------------------|--------|---------------------------------------------------------|
