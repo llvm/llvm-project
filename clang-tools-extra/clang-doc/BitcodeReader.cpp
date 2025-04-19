@@ -878,7 +878,7 @@ llvm::Error ClangDocBitcodeReader::validateStream() {
     Expected<llvm::SimpleBitstreamCursor::word_t> MaybeRead = Stream.Read(8);
     if (!MaybeRead)
       return MaybeRead.takeError();
-    else if (MaybeRead.get() != BitCodeConstants::Signature[Idx])
+    if (MaybeRead.get() != BitCodeConstants::Signature[Idx])
       return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                      "invalid bitcode signature");
   }
@@ -890,8 +890,7 @@ llvm::Error ClangDocBitcodeReader::readBlockInfoBlock() {
       Stream.ReadBlockInfoBlock();
   if (!MaybeBlockInfo)
     return MaybeBlockInfo.takeError();
-  else
-    BlockInfo = MaybeBlockInfo.get();
+  BlockInfo = MaybeBlockInfo.get();
   if (!BlockInfo)
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "unable to parse BlockInfoBlock");
