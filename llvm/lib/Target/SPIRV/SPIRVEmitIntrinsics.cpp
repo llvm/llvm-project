@@ -1829,7 +1829,7 @@ void SPIRVEmitIntrinsics::processGlobalValue(GlobalVariable &GV,
                                        {GV.getType(), Ty}, {&GV, Const});
     InitInst->setArgOperand(1, Init);
   }
-  if (!Init && GV.getNumUses() == 0)
+  if (!Init && GV.use_empty())
     B.CreateIntrinsic(Intrinsic::spv_unref_global, GV.getType(), &GV);
 }
 
