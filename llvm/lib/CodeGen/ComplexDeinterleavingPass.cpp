@@ -1793,8 +1793,7 @@ bool ComplexDeinterleavingGraph::checkNodes() {
   // Extract all instructions that are used by all XCMLA/XCADD/ADD/SUB/NEG
   // chains
   while (!Worklist.empty()) {
-    auto *I = Worklist.back();
-    Worklist.pop_back();
+    auto *I = Worklist.pop_back_val();
 
     if (!AllInstructions.insert(I).second)
       continue;
@@ -1828,8 +1827,7 @@ bool ComplexDeinterleavingGraph::checkNodes() {
   // that somehow connect to those instructions.
   SmallPtrSet<Instruction *, 16> Visited;
   while (!Worklist.empty()) {
-    auto *I = Worklist.back();
-    Worklist.pop_back();
+    auto *I = Worklist.pop_back_val();
     if (!Visited.insert(I).second)
       continue;
 
