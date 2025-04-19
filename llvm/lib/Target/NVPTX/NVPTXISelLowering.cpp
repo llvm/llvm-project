@@ -18,6 +18,7 @@
 #include "NVPTXTargetMachine.h"
 #include "NVPTXTargetObjectFile.h"
 #include "NVPTXUtilities.h"
+#include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
@@ -42,6 +43,7 @@
 #include "llvm/IR/FPEnv.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicsNVPTX.h"
@@ -49,6 +51,7 @@
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Alignment.h"
+#include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/CommandLine.h"
@@ -64,14 +67,13 @@
 #include <iterator>
 #include <optional>
 #include <string>
+#include <tuple>
 #include <utility>
 #include <vector>
 
 #define DEBUG_TYPE "nvptx-lower"
 
 using namespace llvm;
-
-static std::atomic<unsigned> GlobalUniqueCallSite;
 
 static cl::opt<bool> sched4reg(
     "nvptx-sched4reg",
@@ -93,6 +95,13 @@ static cl::opt<bool> UsePrecSqrtF32(
     "nvptx-prec-sqrtf32", cl::Hidden,
     cl::desc("NVPTX Specific: 0 use sqrt.approx, 1 use sqrt.rn."),
     cl::init(true));
+
+/// Whereas CUDA's implementation (see libdevice) uses ex2.approx for exp2(), it
+/// does NOT use lg2.approx for log2, so this is disabled by default.
+static cl::opt<bool> UseApproxLog2F32(
+    "nvptx-approx-log2f32",
+    cl::desc("NVPTX Specific: whether to use lg2.approx for log2"),
+    cl::init(false));
 
 static cl::opt<bool> ForceMinByValParamAlign(
     "nvptx-force-min-byval-param-align", cl::Hidden,
@@ -136,6 +145,8 @@ static bool IsPTXVectorType(MVT VT) {
   case MVT::v4i1:
   case MVT::v2i8:
   case MVT::v4i8:
+  case MVT::v8i8:  // <2 x i8x4>
+  case MVT::v16i8: // <4 x i8x4>
   case MVT::v2i16:
   case MVT::v4i16:
   case MVT::v8i16: // <4 x i16x2>
@@ -160,6 +171,67 @@ static bool Is16bitsType(MVT VT) {
           VT.SimpleTy == MVT::i16);
 }
 
+// When legalizing vector loads/stores, this function is called, which does two
+// things:
+// 1. Determines Whether the vector is something we want to custom lower,
+// std::nullopt is returned if we do not want to custom lower it.
+// 2. If we do want to handle it, returns two parameters:
+//    - unsigned int NumElts - The number of elements in the final vector
+//    - EVT EltVT - The type of the elements in the final vector
+static std::optional<std::pair<unsigned int, EVT>>
+getVectorLoweringShape(EVT VectorVT) {
+  if (!VectorVT.isVector() || !VectorVT.isSimple())
+    return std::nullopt;
+
+  EVT EltVT = VectorVT.getVectorElementType();
+  unsigned NumElts = VectorVT.getVectorNumElements();
+
+  // We only handle "native" vector sizes for now, e.g. <4 x double> is not
+  // legal.  We can (and should) split that into 2 stores of <2 x double> here
+  // but I'm leaving that as a TODO for now.
+  switch (VectorVT.getSimpleVT().SimpleTy) {
+  default:
+    return std::nullopt;
+  case MVT::v2i8:
+  case MVT::v2i16:
+  case MVT::v2i32:
+  case MVT::v2i64:
+  case MVT::v2f16:
+  case MVT::v2bf16:
+  case MVT::v2f32:
+  case MVT::v2f64:
+  case MVT::v4i8:
+  case MVT::v4i16:
+  case MVT::v4i32:
+  case MVT::v4f16:
+  case MVT::v4bf16:
+  case MVT::v4f32:
+    // This is a "native" vector type
+    return std::pair(NumElts, EltVT);
+  case MVT::v8i8:   // <2 x i8x4>
+  case MVT::v8f16:  // <4 x f16x2>
+  case MVT::v8bf16: // <4 x bf16x2>
+  case MVT::v8i16:  // <4 x i16x2>
+  case MVT::v16i8:  // <4 x i8x4>
+    // This can be upsized into a "native" vector type.
+    // Despite vectors like v8i8, v16i8, v8i16 being within the bit-limit for
+    // total load/store size, PTX syntax only supports v2/v4. Thus, we can't use
+    // vectorized loads/stores with the actual element type for i8/i16 as that
+    // would require v8/v16 variants that do not exist.
+    // In order to load/store such vectors efficiently, here in Type
+    // Legalization, we split the vector into word-sized chunks (v2x16/v4i8).
+    // Later, we will lower to PTX as vectors of b32.
+
+    // Number of elements to pack in one word.
+    unsigned NPerWord = 32 / EltVT.getSizeInBits();
+
+    return std::pair(NumElts / NPerWord,
+                      MVT::getVectorVT(EltVT.getSimpleVT(), NPerWord));
+  }
+
+  llvm_unreachable("All cases in switch should return.");
+}
+
 /// ComputePTXValueVTs - For the given Type \p Ty, returns the set of primitive
 /// EVTs that compose it.  Unlike ComputeValueVTs, this will break apart vectors
 /// into their primitive components.
@@ -174,14 +246,11 @@ static void ComputePTXValueVTs(const TargetLowering &TLI, const DataLayout &DL,
   SmallVector<uint64_t, 16> TempOffsets;
 
   // Special case for i128 - decompose to (i64, i64)
-  if (Ty->isIntegerTy(128)) {
-    ValueVTs.push_back(EVT(MVT::i64));
-    ValueVTs.push_back(EVT(MVT::i64));
+  if (Ty->isIntegerTy(128) || Ty->isFP128Ty()) {
+    ValueVTs.append({MVT::i64, MVT::i64});
 
-    if (Offsets) {
-      Offsets->push_back(StartingOffset + 0);
-      Offsets->push_back(StartingOffset + 8);
-    }
+    if (Offsets)
+      Offsets->append({StartingOffset + 0, StartingOffset + 8});
 
     return;
   }
@@ -198,6 +267,15 @@ static void ComputePTXValueVTs(const TargetLowering &TLI, const DataLayout &DL,
     return;
   }
 
+  // Given an array type, recursively traverse the elements with custom ComputePTXValueVTs.
+  if (ArrayType *ATy = dyn_cast<ArrayType>(Ty)) {
+    Type *EltTy = ATy->getElementType();
+    uint64_t EltSize = DL.getTypeAllocSize(EltTy);
+    for (int I : llvm::seq<int>(ATy->getNumElements()))
+      ComputePTXValueVTs(TLI, DL, EltTy, ValueVTs, Offsets, StartingOffset + I * EltSize);
+    return;
+  }
+
   ComputeValueVTs(TLI, DL, Ty, TempVTs, &TempOffsets, StartingOffset);
   for (unsigned i = 0, e = TempVTs.size(); i != e; ++i) {
     EVT VT = TempVTs[i];
@@ -207,7 +285,7 @@ static void ComputePTXValueVTs(const TargetLowering &TLI, const DataLayout &DL,
     if (VT.isVector()) {
       unsigned NumElts = VT.getVectorNumElements();
       EVT EltVT = VT.getVectorElementType();
-      // We require power-of-2 sized vectors becuase
+      // We require power-of-2 sized vectors because
       // TargetLoweringBase::getVectorTypeBreakdown() which is invoked in
       // ComputePTXValueVTs() cannot currently break down non-power-of-2 sized
       // vectors.
@@ -419,7 +497,7 @@ static SDValue MaybeBitcast(SelectionDAG &DAG, SDLoc DL, EVT VT,
 // NVPTXTargetLowering Constructor.
 NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
                                          const NVPTXSubtarget &STI)
-    : TargetLowering(TM), nvTM(&TM), STI(STI) {
+    : TargetLowering(TM), nvTM(&TM), STI(STI), GlobalUniqueCallSite(0) {
   // always lower memset, memcpy, and memmove intrinsics to load/store
   // instructions, rather
   // then generating calls to memset, mempcy or memmove.
@@ -457,40 +535,16 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
     case ISD::FMINIMUM:
       IsOpSupported &= STI.getSmVersion() >= 80 && STI.getPTXVersion() >= 70;
       break;
+    case ISD::FEXP2:
+      IsOpSupported &= STI.getSmVersion() >= 75 && STI.getPTXVersion() >= 70;
+      break;
     }
     setOperationAction(Op, VT, IsOpSupported ? Action : NoF16Action);
   };
 
   auto setBF16OperationAction = [&](unsigned Op, MVT VT, LegalizeAction Action,
                                     LegalizeAction NoBF16Action) {
-    bool IsOpSupported = STI.hasBF16Math();
-    switch (Op) {
-    // Several BF16 instructions are available on sm_90 only.
-    case ISD::FADD:
-    case ISD::FMUL:
-    case ISD::FSUB:
-    case ISD::SELECT:
-    case ISD::SELECT_CC:
-    case ISD::SETCC:
-    case ISD::FEXP2:
-    case ISD::FCEIL:
-    case ISD::FFLOOR:
-    case ISD::FNEARBYINT:
-    case ISD::FRINT:
-    case ISD::FROUNDEVEN:
-    case ISD::FTRUNC:
-      IsOpSupported = STI.getSmVersion() >= 90 && STI.getPTXVersion() >= 78;
-      break;
-    // Several BF16 instructions are available on sm_80 only.
-    case ISD::FMINNUM:
-    case ISD::FMAXNUM:
-    case ISD::FMAXNUM_IEEE:
-    case ISD::FMINNUM_IEEE:
-    case ISD::FMAXIMUM:
-    case ISD::FMINIMUM:
-      IsOpSupported &= STI.getSmVersion() >= 80 && STI.getPTXVersion() >= 70;
-      break;
-    }
+    bool IsOpSupported = STI.hasNativeBF16Support(Op);
     setOperationAction(
         Op, VT, IsOpSupported ? Action : NoBF16Action);
   };
@@ -613,8 +667,11 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
                      {MVT::i8, MVT::i16, MVT::v2i16, MVT::i32, MVT::i64},
                      Expand);
 
-  if (STI.hasHWROT32())
+  if (STI.hasHWROT32()) {
     setOperationAction({ISD::FSHL, ISD::FSHR}, MVT::i32, Legal);
+    setOperationAction({ISD::ROTL, ISD::ROTR, ISD::FSHL, ISD::FSHR}, MVT::i64,
+                       Custom);
+  }
 
   setOperationAction(ISD::BSWAP, MVT::i16, Expand);
 
@@ -667,6 +724,11 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
     setTruncStoreAction(VT, MVT::i1, Expand);
   }
 
+  setCondCodeAction({ISD::SETNE, ISD::SETEQ, ISD::SETUGE, ISD::SETULE,
+                     ISD::SETUGT, ISD::SETULT, ISD::SETGT, ISD::SETLT,
+                     ISD::SETGE, ISD::SETLE},
+                    MVT::i1, Expand);
+
   // expand extload of vector of integers.
   setLoadExtAction({ISD::EXTLOAD, ISD::SEXTLOAD, ISD::ZEXTLOAD}, MVT::v2i16,
                    MVT::v2i8, Expand);
@@ -704,16 +766,13 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   // Custom handling for i8 intrinsics
   setOperationAction(ISD::INTRINSIC_W_CHAIN, MVT::i8, Custom);
 
-  for (const auto& Ty : {MVT::i16, MVT::i32, MVT::i64}) {
-    setOperationAction(ISD::ABS,  Ty, Legal);
-    setOperationAction(ISD::SMIN, Ty, Legal);
-    setOperationAction(ISD::SMAX, Ty, Legal);
-    setOperationAction(ISD::UMIN, Ty, Legal);
-    setOperationAction(ISD::UMAX, Ty, Legal);
+  setOperationAction({ISD::ABS, ISD::SMIN, ISD::SMAX, ISD::UMIN, ISD::UMAX},
+                     {MVT::i16, MVT::i32, MVT::i64}, Legal);
 
-    setOperationAction(ISD::CTPOP, Ty, Legal);
-    setOperationAction(ISD::CTLZ, Ty, Legal);
-  }
+  setOperationAction({ISD::CTPOP, ISD::CTLZ, ISD::CTLZ_ZERO_UNDEF}, MVT::i16,
+                     Promote);
+  setOperationAction({ISD::CTPOP, ISD::CTLZ}, MVT::i32, Legal);
+  setOperationAction({ISD::CTPOP, ISD::CTLZ}, MVT::i64, Custom);
 
   setI16x2OperationAction(ISD::ABS, MVT::v2i16, Legal, Custom);
   setI16x2OperationAction(ISD::SMIN, MVT::v2i16, Legal, Custom);
@@ -761,8 +820,8 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
 
   // We have some custom DAG combine patterns for these nodes
   setTargetDAGCombine({ISD::ADD, ISD::AND, ISD::EXTRACT_VECTOR_ELT, ISD::FADD,
-                       ISD::LOAD, ISD::MUL, ISD::SHL, ISD::SREM, ISD::UREM,
-                       ISD::VSELECT});
+                       ISD::MUL, ISD::SHL, ISD::SREM, ISD::UREM, ISD::VSELECT,
+                       ISD::BUILD_VECTOR, ISD::ADDRSPACECAST});
 
   // setcc for f16x2 and bf16x2 needs special handling to prevent
   // legalizer's attempt to scalarize it due to v2i1 not being legal.
@@ -783,6 +842,15 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
     setBF16OperationAction(Op, MVT::bf16, Legal, Promote);
     if (getOperationAction(Op, MVT::bf16) == Promote)
       AddPromotedToType(Op, MVT::bf16, MVT::f32);
+  }
+
+  // On SM80, we select add/mul/sub as fma to avoid promotion to float
+  for (const auto &Op : {ISD::FADD, ISD::FMUL, ISD::FSUB}) {
+    for (const auto &VT : {MVT::bf16, MVT::v2bf16}) {
+      if (!STI.hasNativeBF16Support(Op) && STI.hasNativeBF16Support(ISD::FMA)) {
+        setOperationAction(Op, VT, Custom);
+      }
+    }
   }
 
   // f16/f16x2 neg was introduced in PTX 60, SM_53.
@@ -862,6 +930,7 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
     setOperationAction(Op, MVT::bf16, Promote);
     AddPromotedToType(Op, MVT::bf16, MVT::f32);
   }
+  setOperationAction(ISD::FREM, {MVT::f32, MVT::f64}, Custom);
 
   setOperationAction(ISD::FABS, {MVT::f32, MVT::f64}, Legal);
   if (STI.getPTXVersion() >= 65) {
@@ -900,16 +969,51 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   setOperationAction(ISD::CopyToReg, MVT::i128, Custom);
   setOperationAction(ISD::CopyFromReg, MVT::i128, Custom);
 
-  // No FEXP2, FLOG2.  The PTX ex2 and log2 functions are always approximate.
+  // FEXP2 support:
+  // - f32
+  // - f16/f16x2 (sm_70+, PTX 7.0+)
+  // - bf16/bf16x2 (sm_90+, PTX 7.8+)
+  // When f16/bf16 types aren't supported, they are promoted/expanded to f32.
+  setOperationAction(ISD::FEXP2, MVT::f32, Legal);
+  setFP16OperationAction(ISD::FEXP2, MVT::f16, Legal, Promote);
+  setFP16OperationAction(ISD::FEXP2, MVT::v2f16, Legal, Expand);
+  setBF16OperationAction(ISD::FEXP2, MVT::bf16, Legal, Promote);
+  setBF16OperationAction(ISD::FEXP2, MVT::v2bf16, Legal, Expand);
+
+  // FLOG2 supports f32 only
+  // f16/bf16 types aren't supported, but they are promoted/expanded to f32.
+  if (UseApproxLog2F32) {
+    setOperationAction(ISD::FLOG2, MVT::f32, Legal);
+    setOperationPromotedToType(ISD::FLOG2, MVT::f16, MVT::f32);
+    setOperationPromotedToType(ISD::FLOG2, MVT::bf16, MVT::f32);
+    setOperationAction(ISD::FLOG2, {MVT::v2f16, MVT::v2bf16}, Expand);
+  }
+
+  setOperationAction(ISD::ADDRSPACECAST, {MVT::i32, MVT::i64}, Custom);
+
+  setOperationAction(ISD::ATOMIC_LOAD_SUB, {MVT::i32, MVT::i64}, Expand);
   // No FPOW or FREM in PTX.
 
   // Now deduce the information based on the above mentioned
   // actions
   computeRegisterProperties(STI.getRegisterInfo());
 
-  setMinCmpXchgSizeInBits(STI.hasAtomCas16() ? 16 : 32);
+  // PTX support for 16-bit CAS is emulated. Only use 32+
+  setMinCmpXchgSizeInBits(STI.getMinCmpXchgSizeInBits());
   setMaxAtomicSizeInBitsSupported(64);
   setMaxDivRemBitWidthSupported(64);
+
+  // Custom lowering for tcgen05.ld vector operands
+  setOperationAction(ISD::INTRINSIC_W_CHAIN,
+                     {MVT::v2i32, MVT::v4i32, MVT::v8i32, MVT::v16i32,
+                      MVT::v32i32, MVT::v64i32, MVT::v128i32},
+                     Custom);
+
+  // Custom lowering for tcgen05.st vector operands
+  setOperationAction(ISD::INTRINSIC_VOID,
+                     {MVT::v2i32, MVT::v4i32, MVT::v8i32, MVT::v16i32,
+                      MVT::v32i32, MVT::v64i32, MVT::v128i32},
+                     Custom);
 }
 
 const char *NVPTXTargetLowering::getTargetNodeName(unsigned Opcode) const {
@@ -956,6 +1060,8 @@ const char *NVPTXTargetLowering::getTargetNodeName(unsigned Opcode) const {
     MAKE_CASE(NVPTXISD::StoreRetvalV2)
     MAKE_CASE(NVPTXISD::StoreRetvalV4)
     MAKE_CASE(NVPTXISD::PseudoUseParam)
+    MAKE_CASE(NVPTXISD::UNPACK_VECTOR)
+    MAKE_CASE(NVPTXISD::BUILD_VECTOR)
     MAKE_CASE(NVPTXISD::RETURN)
     MAKE_CASE(NVPTXISD::CallSeqBegin)
     MAKE_CASE(NVPTXISD::CallSeqEnd)
@@ -969,7 +1075,6 @@ const char *NVPTXTargetLowering::getTargetNodeName(unsigned Opcode) const {
     MAKE_CASE(NVPTXISD::StoreV4)
     MAKE_CASE(NVPTXISD::FSHL_CLAMP)
     MAKE_CASE(NVPTXISD::FSHR_CLAMP)
-    MAKE_CASE(NVPTXISD::IMAD)
     MAKE_CASE(NVPTXISD::BFE)
     MAKE_CASE(NVPTXISD::BFI)
     MAKE_CASE(NVPTXISD::PRMT)
@@ -985,361 +1090,6 @@ const char *NVPTXTargetLowering::getTargetNodeName(unsigned Opcode) const {
     MAKE_CASE(NVPTXISD::BrxEnd)
     MAKE_CASE(NVPTXISD::BrxItem)
     MAKE_CASE(NVPTXISD::BrxStart)
-    MAKE_CASE(NVPTXISD::Tex1DFloatS32)
-    MAKE_CASE(NVPTXISD::Tex1DFloatFloat)
-    MAKE_CASE(NVPTXISD::Tex1DFloatFloatLevel)
-    MAKE_CASE(NVPTXISD::Tex1DFloatFloatGrad)
-    MAKE_CASE(NVPTXISD::Tex1DS32S32)
-    MAKE_CASE(NVPTXISD::Tex1DS32Float)
-    MAKE_CASE(NVPTXISD::Tex1DS32FloatLevel)
-    MAKE_CASE(NVPTXISD::Tex1DS32FloatGrad)
-    MAKE_CASE(NVPTXISD::Tex1DU32S32)
-    MAKE_CASE(NVPTXISD::Tex1DU32Float)
-    MAKE_CASE(NVPTXISD::Tex1DU32FloatLevel)
-    MAKE_CASE(NVPTXISD::Tex1DU32FloatGrad)
-    MAKE_CASE(NVPTXISD::Tex1DArrayFloatS32)
-    MAKE_CASE(NVPTXISD::Tex1DArrayFloatFloat)
-    MAKE_CASE(NVPTXISD::Tex1DArrayFloatFloatLevel)
-    MAKE_CASE(NVPTXISD::Tex1DArrayFloatFloatGrad)
-    MAKE_CASE(NVPTXISD::Tex1DArrayS32S32)
-    MAKE_CASE(NVPTXISD::Tex1DArrayS32Float)
-    MAKE_CASE(NVPTXISD::Tex1DArrayS32FloatLevel)
-    MAKE_CASE(NVPTXISD::Tex1DArrayS32FloatGrad)
-    MAKE_CASE(NVPTXISD::Tex1DArrayU32S32)
-    MAKE_CASE(NVPTXISD::Tex1DArrayU32Float)
-    MAKE_CASE(NVPTXISD::Tex1DArrayU32FloatLevel)
-    MAKE_CASE(NVPTXISD::Tex1DArrayU32FloatGrad)
-    MAKE_CASE(NVPTXISD::Tex2DFloatS32)
-    MAKE_CASE(NVPTXISD::Tex2DFloatFloat)
-    MAKE_CASE(NVPTXISD::Tex2DFloatFloatLevel)
-    MAKE_CASE(NVPTXISD::Tex2DFloatFloatGrad)
-    MAKE_CASE(NVPTXISD::Tex2DS32S32)
-    MAKE_CASE(NVPTXISD::Tex2DS32Float)
-    MAKE_CASE(NVPTXISD::Tex2DS32FloatLevel)
-    MAKE_CASE(NVPTXISD::Tex2DS32FloatGrad)
-    MAKE_CASE(NVPTXISD::Tex2DU32S32)
-    MAKE_CASE(NVPTXISD::Tex2DU32Float)
-    MAKE_CASE(NVPTXISD::Tex2DU32FloatLevel)
-    MAKE_CASE(NVPTXISD::Tex2DU32FloatGrad)
-    MAKE_CASE(NVPTXISD::Tex2DArrayFloatS32)
-    MAKE_CASE(NVPTXISD::Tex2DArrayFloatFloat)
-    MAKE_CASE(NVPTXISD::Tex2DArrayFloatFloatLevel)
-    MAKE_CASE(NVPTXISD::Tex2DArrayFloatFloatGrad)
-    MAKE_CASE(NVPTXISD::Tex2DArrayS32S32)
-    MAKE_CASE(NVPTXISD::Tex2DArrayS32Float)
-    MAKE_CASE(NVPTXISD::Tex2DArrayS32FloatLevel)
-    MAKE_CASE(NVPTXISD::Tex2DArrayS32FloatGrad)
-    MAKE_CASE(NVPTXISD::Tex2DArrayU32S32)
-    MAKE_CASE(NVPTXISD::Tex2DArrayU32Float)
-    MAKE_CASE(NVPTXISD::Tex2DArrayU32FloatLevel)
-    MAKE_CASE(NVPTXISD::Tex2DArrayU32FloatGrad)
-    MAKE_CASE(NVPTXISD::Tex3DFloatS32)
-    MAKE_CASE(NVPTXISD::Tex3DFloatFloat)
-    MAKE_CASE(NVPTXISD::Tex3DFloatFloatLevel)
-    MAKE_CASE(NVPTXISD::Tex3DFloatFloatGrad)
-    MAKE_CASE(NVPTXISD::Tex3DS32S32)
-    MAKE_CASE(NVPTXISD::Tex3DS32Float)
-    MAKE_CASE(NVPTXISD::Tex3DS32FloatLevel)
-    MAKE_CASE(NVPTXISD::Tex3DS32FloatGrad)
-    MAKE_CASE(NVPTXISD::Tex3DU32S32)
-    MAKE_CASE(NVPTXISD::Tex3DU32Float)
-    MAKE_CASE(NVPTXISD::Tex3DU32FloatLevel)
-    MAKE_CASE(NVPTXISD::Tex3DU32FloatGrad)
-    MAKE_CASE(NVPTXISD::TexCubeFloatFloat)
-    MAKE_CASE(NVPTXISD::TexCubeFloatFloatLevel)
-    MAKE_CASE(NVPTXISD::TexCubeS32Float)
-    MAKE_CASE(NVPTXISD::TexCubeS32FloatLevel)
-    MAKE_CASE(NVPTXISD::TexCubeU32Float)
-    MAKE_CASE(NVPTXISD::TexCubeU32FloatLevel)
-    MAKE_CASE(NVPTXISD::TexCubeArrayFloatFloat)
-    MAKE_CASE(NVPTXISD::TexCubeArrayFloatFloatLevel)
-    MAKE_CASE(NVPTXISD::TexCubeArrayS32Float)
-    MAKE_CASE(NVPTXISD::TexCubeArrayS32FloatLevel)
-    MAKE_CASE(NVPTXISD::TexCubeArrayU32Float)
-    MAKE_CASE(NVPTXISD::TexCubeArrayU32FloatLevel)
-    MAKE_CASE(NVPTXISD::Tld4R2DFloatFloat)
-    MAKE_CASE(NVPTXISD::Tld4G2DFloatFloat)
-    MAKE_CASE(NVPTXISD::Tld4B2DFloatFloat)
-    MAKE_CASE(NVPTXISD::Tld4A2DFloatFloat)
-    MAKE_CASE(NVPTXISD::Tld4R2DS64Float)
-    MAKE_CASE(NVPTXISD::Tld4G2DS64Float)
-    MAKE_CASE(NVPTXISD::Tld4B2DS64Float)
-    MAKE_CASE(NVPTXISD::Tld4A2DS64Float)
-    MAKE_CASE(NVPTXISD::Tld4R2DU64Float)
-    MAKE_CASE(NVPTXISD::Tld4G2DU64Float)
-    MAKE_CASE(NVPTXISD::Tld4B2DU64Float)
-    MAKE_CASE(NVPTXISD::Tld4A2DU64Float)
-
-    MAKE_CASE(NVPTXISD::TexUnified1DFloatS32)
-    MAKE_CASE(NVPTXISD::TexUnified1DFloatFloat)
-    MAKE_CASE(NVPTXISD::TexUnified1DFloatFloatLevel)
-    MAKE_CASE(NVPTXISD::TexUnified1DFloatFloatGrad)
-    MAKE_CASE(NVPTXISD::TexUnified1DS32S32)
-    MAKE_CASE(NVPTXISD::TexUnified1DS32Float)
-    MAKE_CASE(NVPTXISD::TexUnified1DS32FloatLevel)
-    MAKE_CASE(NVPTXISD::TexUnified1DS32FloatGrad)
-    MAKE_CASE(NVPTXISD::TexUnified1DU32S32)
-    MAKE_CASE(NVPTXISD::TexUnified1DU32Float)
-    MAKE_CASE(NVPTXISD::TexUnified1DU32FloatLevel)
-    MAKE_CASE(NVPTXISD::TexUnified1DU32FloatGrad)
-    MAKE_CASE(NVPTXISD::TexUnified1DArrayFloatS32)
-    MAKE_CASE(NVPTXISD::TexUnified1DArrayFloatFloat)
-    MAKE_CASE(NVPTXISD::TexUnified1DArrayFloatFloatLevel)
-    MAKE_CASE(NVPTXISD::TexUnified1DArrayFloatFloatGrad)
-    MAKE_CASE(NVPTXISD::TexUnified1DArrayS32S32)
-    MAKE_CASE(NVPTXISD::TexUnified1DArrayS32Float)
-    MAKE_CASE(NVPTXISD::TexUnified1DArrayS32FloatLevel)
-    MAKE_CASE(NVPTXISD::TexUnified1DArrayS32FloatGrad)
-    MAKE_CASE(NVPTXISD::TexUnified1DArrayU32S32)
-    MAKE_CASE(NVPTXISD::TexUnified1DArrayU32Float)
-    MAKE_CASE(NVPTXISD::TexUnified1DArrayU32FloatLevel)
-    MAKE_CASE(NVPTXISD::TexUnified1DArrayU32FloatGrad)
-    MAKE_CASE(NVPTXISD::TexUnified2DFloatS32)
-    MAKE_CASE(NVPTXISD::TexUnified2DFloatFloat)
-    MAKE_CASE(NVPTXISD::TexUnified2DFloatFloatLevel)
-    MAKE_CASE(NVPTXISD::TexUnified2DFloatFloatGrad)
-    MAKE_CASE(NVPTXISD::TexUnified2DS32S32)
-    MAKE_CASE(NVPTXISD::TexUnified2DS32Float)
-    MAKE_CASE(NVPTXISD::TexUnified2DS32FloatLevel)
-    MAKE_CASE(NVPTXISD::TexUnified2DS32FloatGrad)
-    MAKE_CASE(NVPTXISD::TexUnified2DU32S32)
-    MAKE_CASE(NVPTXISD::TexUnified2DU32Float)
-    MAKE_CASE(NVPTXISD::TexUnified2DU32FloatLevel)
-    MAKE_CASE(NVPTXISD::TexUnified2DU32FloatGrad)
-    MAKE_CASE(NVPTXISD::TexUnified2DArrayFloatS32)
-    MAKE_CASE(NVPTXISD::TexUnified2DArrayFloatFloat)
-    MAKE_CASE(NVPTXISD::TexUnified2DArrayFloatFloatLevel)
-    MAKE_CASE(NVPTXISD::TexUnified2DArrayFloatFloatGrad)
-    MAKE_CASE(NVPTXISD::TexUnified2DArrayS32S32)
-    MAKE_CASE(NVPTXISD::TexUnified2DArrayS32Float)
-    MAKE_CASE(NVPTXISD::TexUnified2DArrayS32FloatLevel)
-    MAKE_CASE(NVPTXISD::TexUnified2DArrayS32FloatGrad)
-    MAKE_CASE(NVPTXISD::TexUnified2DArrayU32S32)
-    MAKE_CASE(NVPTXISD::TexUnified2DArrayU32Float)
-    MAKE_CASE(NVPTXISD::TexUnified2DArrayU32FloatLevel)
-    MAKE_CASE(NVPTXISD::TexUnified2DArrayU32FloatGrad)
-    MAKE_CASE(NVPTXISD::TexUnified3DFloatS32)
-    MAKE_CASE(NVPTXISD::TexUnified3DFloatFloat)
-    MAKE_CASE(NVPTXISD::TexUnified3DFloatFloatLevel)
-    MAKE_CASE(NVPTXISD::TexUnified3DFloatFloatGrad)
-    MAKE_CASE(NVPTXISD::TexUnified3DS32S32)
-    MAKE_CASE(NVPTXISD::TexUnified3DS32Float)
-    MAKE_CASE(NVPTXISD::TexUnified3DS32FloatLevel)
-    MAKE_CASE(NVPTXISD::TexUnified3DS32FloatGrad)
-    MAKE_CASE(NVPTXISD::TexUnified3DU32S32)
-    MAKE_CASE(NVPTXISD::TexUnified3DU32Float)
-    MAKE_CASE(NVPTXISD::TexUnified3DU32FloatLevel)
-    MAKE_CASE(NVPTXISD::TexUnified3DU32FloatGrad)
-    MAKE_CASE(NVPTXISD::TexUnifiedCubeFloatFloat)
-    MAKE_CASE(NVPTXISD::TexUnifiedCubeFloatFloatLevel)
-    MAKE_CASE(NVPTXISD::TexUnifiedCubeS32Float)
-    MAKE_CASE(NVPTXISD::TexUnifiedCubeS32FloatLevel)
-    MAKE_CASE(NVPTXISD::TexUnifiedCubeU32Float)
-    MAKE_CASE(NVPTXISD::TexUnifiedCubeU32FloatLevel)
-    MAKE_CASE(NVPTXISD::TexUnifiedCubeArrayFloatFloat)
-    MAKE_CASE(NVPTXISD::TexUnifiedCubeArrayFloatFloatLevel)
-    MAKE_CASE(NVPTXISD::TexUnifiedCubeArrayS32Float)
-    MAKE_CASE(NVPTXISD::TexUnifiedCubeArrayS32FloatLevel)
-    MAKE_CASE(NVPTXISD::TexUnifiedCubeArrayU32Float)
-    MAKE_CASE(NVPTXISD::TexUnifiedCubeArrayU32FloatLevel)
-    MAKE_CASE(NVPTXISD::TexUnifiedCubeFloatFloatGrad)
-    MAKE_CASE(NVPTXISD::TexUnifiedCubeS32FloatGrad)
-    MAKE_CASE(NVPTXISD::TexUnifiedCubeU32FloatGrad)
-    MAKE_CASE(NVPTXISD::TexUnifiedCubeArrayFloatFloatGrad)
-    MAKE_CASE(NVPTXISD::TexUnifiedCubeArrayS32FloatGrad)
-    MAKE_CASE(NVPTXISD::TexUnifiedCubeArrayU32FloatGrad)
-    MAKE_CASE(NVPTXISD::Tld4UnifiedR2DFloatFloat)
-    MAKE_CASE(NVPTXISD::Tld4UnifiedG2DFloatFloat)
-    MAKE_CASE(NVPTXISD::Tld4UnifiedB2DFloatFloat)
-    MAKE_CASE(NVPTXISD::Tld4UnifiedA2DFloatFloat)
-    MAKE_CASE(NVPTXISD::Tld4UnifiedR2DS64Float)
-    MAKE_CASE(NVPTXISD::Tld4UnifiedG2DS64Float)
-    MAKE_CASE(NVPTXISD::Tld4UnifiedB2DS64Float)
-    MAKE_CASE(NVPTXISD::Tld4UnifiedA2DS64Float)
-    MAKE_CASE(NVPTXISD::Tld4UnifiedR2DU64Float)
-    MAKE_CASE(NVPTXISD::Tld4UnifiedG2DU64Float)
-    MAKE_CASE(NVPTXISD::Tld4UnifiedB2DU64Float)
-    MAKE_CASE(NVPTXISD::Tld4UnifiedA2DU64Float)
-
-    MAKE_CASE(NVPTXISD::Suld1DI8Clamp)
-    MAKE_CASE(NVPTXISD::Suld1DI16Clamp)
-    MAKE_CASE(NVPTXISD::Suld1DI32Clamp)
-    MAKE_CASE(NVPTXISD::Suld1DI64Clamp)
-    MAKE_CASE(NVPTXISD::Suld1DV2I8Clamp)
-    MAKE_CASE(NVPTXISD::Suld1DV2I16Clamp)
-    MAKE_CASE(NVPTXISD::Suld1DV2I32Clamp)
-    MAKE_CASE(NVPTXISD::Suld1DV2I64Clamp)
-    MAKE_CASE(NVPTXISD::Suld1DV4I8Clamp)
-    MAKE_CASE(NVPTXISD::Suld1DV4I16Clamp)
-    MAKE_CASE(NVPTXISD::Suld1DV4I32Clamp)
-
-    MAKE_CASE(NVPTXISD::Suld1DArrayI8Clamp)
-    MAKE_CASE(NVPTXISD::Suld1DArrayI16Clamp)
-    MAKE_CASE(NVPTXISD::Suld1DArrayI32Clamp)
-    MAKE_CASE(NVPTXISD::Suld1DArrayI64Clamp)
-    MAKE_CASE(NVPTXISD::Suld1DArrayV2I8Clamp)
-    MAKE_CASE(NVPTXISD::Suld1DArrayV2I16Clamp)
-    MAKE_CASE(NVPTXISD::Suld1DArrayV2I32Clamp)
-    MAKE_CASE(NVPTXISD::Suld1DArrayV2I64Clamp)
-    MAKE_CASE(NVPTXISD::Suld1DArrayV4I8Clamp)
-    MAKE_CASE(NVPTXISD::Suld1DArrayV4I16Clamp)
-    MAKE_CASE(NVPTXISD::Suld1DArrayV4I32Clamp)
-
-    MAKE_CASE(NVPTXISD::Suld2DI8Clamp)
-    MAKE_CASE(NVPTXISD::Suld2DI16Clamp)
-    MAKE_CASE(NVPTXISD::Suld2DI32Clamp)
-    MAKE_CASE(NVPTXISD::Suld2DI64Clamp)
-    MAKE_CASE(NVPTXISD::Suld2DV2I8Clamp)
-    MAKE_CASE(NVPTXISD::Suld2DV2I16Clamp)
-    MAKE_CASE(NVPTXISD::Suld2DV2I32Clamp)
-    MAKE_CASE(NVPTXISD::Suld2DV2I64Clamp)
-    MAKE_CASE(NVPTXISD::Suld2DV4I8Clamp)
-    MAKE_CASE(NVPTXISD::Suld2DV4I16Clamp)
-    MAKE_CASE(NVPTXISD::Suld2DV4I32Clamp)
-
-    MAKE_CASE(NVPTXISD::Suld2DArrayI8Clamp)
-    MAKE_CASE(NVPTXISD::Suld2DArrayI16Clamp)
-    MAKE_CASE(NVPTXISD::Suld2DArrayI32Clamp)
-    MAKE_CASE(NVPTXISD::Suld2DArrayI64Clamp)
-    MAKE_CASE(NVPTXISD::Suld2DArrayV2I8Clamp)
-    MAKE_CASE(NVPTXISD::Suld2DArrayV2I16Clamp)
-    MAKE_CASE(NVPTXISD::Suld2DArrayV2I32Clamp)
-    MAKE_CASE(NVPTXISD::Suld2DArrayV2I64Clamp)
-    MAKE_CASE(NVPTXISD::Suld2DArrayV4I8Clamp)
-    MAKE_CASE(NVPTXISD::Suld2DArrayV4I16Clamp)
-    MAKE_CASE(NVPTXISD::Suld2DArrayV4I32Clamp)
-
-    MAKE_CASE(NVPTXISD::Suld3DI8Clamp)
-    MAKE_CASE(NVPTXISD::Suld3DI16Clamp)
-    MAKE_CASE(NVPTXISD::Suld3DI32Clamp)
-    MAKE_CASE(NVPTXISD::Suld3DI64Clamp)
-    MAKE_CASE(NVPTXISD::Suld3DV2I8Clamp)
-    MAKE_CASE(NVPTXISD::Suld3DV2I16Clamp)
-    MAKE_CASE(NVPTXISD::Suld3DV2I32Clamp)
-    MAKE_CASE(NVPTXISD::Suld3DV2I64Clamp)
-    MAKE_CASE(NVPTXISD::Suld3DV4I8Clamp)
-    MAKE_CASE(NVPTXISD::Suld3DV4I16Clamp)
-    MAKE_CASE(NVPTXISD::Suld3DV4I32Clamp)
-
-    MAKE_CASE(NVPTXISD::Suld1DI8Trap)
-    MAKE_CASE(NVPTXISD::Suld1DI16Trap)
-    MAKE_CASE(NVPTXISD::Suld1DI32Trap)
-    MAKE_CASE(NVPTXISD::Suld1DI64Trap)
-    MAKE_CASE(NVPTXISD::Suld1DV2I8Trap)
-    MAKE_CASE(NVPTXISD::Suld1DV2I16Trap)
-    MAKE_CASE(NVPTXISD::Suld1DV2I32Trap)
-    MAKE_CASE(NVPTXISD::Suld1DV2I64Trap)
-    MAKE_CASE(NVPTXISD::Suld1DV4I8Trap)
-    MAKE_CASE(NVPTXISD::Suld1DV4I16Trap)
-    MAKE_CASE(NVPTXISD::Suld1DV4I32Trap)
-
-    MAKE_CASE(NVPTXISD::Suld1DArrayI8Trap)
-    MAKE_CASE(NVPTXISD::Suld1DArrayI16Trap)
-    MAKE_CASE(NVPTXISD::Suld1DArrayI32Trap)
-    MAKE_CASE(NVPTXISD::Suld1DArrayI64Trap)
-    MAKE_CASE(NVPTXISD::Suld1DArrayV2I8Trap)
-    MAKE_CASE(NVPTXISD::Suld1DArrayV2I16Trap)
-    MAKE_CASE(NVPTXISD::Suld1DArrayV2I32Trap)
-    MAKE_CASE(NVPTXISD::Suld1DArrayV2I64Trap)
-    MAKE_CASE(NVPTXISD::Suld1DArrayV4I8Trap)
-    MAKE_CASE(NVPTXISD::Suld1DArrayV4I16Trap)
-    MAKE_CASE(NVPTXISD::Suld1DArrayV4I32Trap)
-
-    MAKE_CASE(NVPTXISD::Suld2DI8Trap)
-    MAKE_CASE(NVPTXISD::Suld2DI16Trap)
-    MAKE_CASE(NVPTXISD::Suld2DI32Trap)
-    MAKE_CASE(NVPTXISD::Suld2DI64Trap)
-    MAKE_CASE(NVPTXISD::Suld2DV2I8Trap)
-    MAKE_CASE(NVPTXISD::Suld2DV2I16Trap)
-    MAKE_CASE(NVPTXISD::Suld2DV2I32Trap)
-    MAKE_CASE(NVPTXISD::Suld2DV2I64Trap)
-    MAKE_CASE(NVPTXISD::Suld2DV4I8Trap)
-    MAKE_CASE(NVPTXISD::Suld2DV4I16Trap)
-    MAKE_CASE(NVPTXISD::Suld2DV4I32Trap)
-
-    MAKE_CASE(NVPTXISD::Suld2DArrayI8Trap)
-    MAKE_CASE(NVPTXISD::Suld2DArrayI16Trap)
-    MAKE_CASE(NVPTXISD::Suld2DArrayI32Trap)
-    MAKE_CASE(NVPTXISD::Suld2DArrayI64Trap)
-    MAKE_CASE(NVPTXISD::Suld2DArrayV2I8Trap)
-    MAKE_CASE(NVPTXISD::Suld2DArrayV2I16Trap)
-    MAKE_CASE(NVPTXISD::Suld2DArrayV2I32Trap)
-    MAKE_CASE(NVPTXISD::Suld2DArrayV2I64Trap)
-    MAKE_CASE(NVPTXISD::Suld2DArrayV4I8Trap)
-    MAKE_CASE(NVPTXISD::Suld2DArrayV4I16Trap)
-    MAKE_CASE(NVPTXISD::Suld2DArrayV4I32Trap)
-
-    MAKE_CASE(NVPTXISD::Suld3DI8Trap)
-    MAKE_CASE(NVPTXISD::Suld3DI16Trap)
-    MAKE_CASE(NVPTXISD::Suld3DI32Trap)
-    MAKE_CASE(NVPTXISD::Suld3DI64Trap)
-    MAKE_CASE(NVPTXISD::Suld3DV2I8Trap)
-    MAKE_CASE(NVPTXISD::Suld3DV2I16Trap)
-    MAKE_CASE(NVPTXISD::Suld3DV2I32Trap)
-    MAKE_CASE(NVPTXISD::Suld3DV2I64Trap)
-    MAKE_CASE(NVPTXISD::Suld3DV4I8Trap)
-    MAKE_CASE(NVPTXISD::Suld3DV4I16Trap)
-    MAKE_CASE(NVPTXISD::Suld3DV4I32Trap)
-
-    MAKE_CASE(NVPTXISD::Suld1DI8Zero)
-    MAKE_CASE(NVPTXISD::Suld1DI16Zero)
-    MAKE_CASE(NVPTXISD::Suld1DI32Zero)
-    MAKE_CASE(NVPTXISD::Suld1DI64Zero)
-    MAKE_CASE(NVPTXISD::Suld1DV2I8Zero)
-    MAKE_CASE(NVPTXISD::Suld1DV2I16Zero)
-    MAKE_CASE(NVPTXISD::Suld1DV2I32Zero)
-    MAKE_CASE(NVPTXISD::Suld1DV2I64Zero)
-    MAKE_CASE(NVPTXISD::Suld1DV4I8Zero)
-    MAKE_CASE(NVPTXISD::Suld1DV4I16Zero)
-    MAKE_CASE(NVPTXISD::Suld1DV4I32Zero)
-
-    MAKE_CASE(NVPTXISD::Suld1DArrayI8Zero)
-    MAKE_CASE(NVPTXISD::Suld1DArrayI16Zero)
-    MAKE_CASE(NVPTXISD::Suld1DArrayI32Zero)
-    MAKE_CASE(NVPTXISD::Suld1DArrayI64Zero)
-    MAKE_CASE(NVPTXISD::Suld1DArrayV2I8Zero)
-    MAKE_CASE(NVPTXISD::Suld1DArrayV2I16Zero)
-    MAKE_CASE(NVPTXISD::Suld1DArrayV2I32Zero)
-    MAKE_CASE(NVPTXISD::Suld1DArrayV2I64Zero)
-    MAKE_CASE(NVPTXISD::Suld1DArrayV4I8Zero)
-    MAKE_CASE(NVPTXISD::Suld1DArrayV4I16Zero)
-    MAKE_CASE(NVPTXISD::Suld1DArrayV4I32Zero)
-
-    MAKE_CASE(NVPTXISD::Suld2DI8Zero)
-    MAKE_CASE(NVPTXISD::Suld2DI16Zero)
-    MAKE_CASE(NVPTXISD::Suld2DI32Zero)
-    MAKE_CASE(NVPTXISD::Suld2DI64Zero)
-    MAKE_CASE(NVPTXISD::Suld2DV2I8Zero)
-    MAKE_CASE(NVPTXISD::Suld2DV2I16Zero)
-    MAKE_CASE(NVPTXISD::Suld2DV2I32Zero)
-    MAKE_CASE(NVPTXISD::Suld2DV2I64Zero)
-    MAKE_CASE(NVPTXISD::Suld2DV4I8Zero)
-    MAKE_CASE(NVPTXISD::Suld2DV4I16Zero)
-    MAKE_CASE(NVPTXISD::Suld2DV4I32Zero)
-
-    MAKE_CASE(NVPTXISD::Suld2DArrayI8Zero)
-    MAKE_CASE(NVPTXISD::Suld2DArrayI16Zero)
-    MAKE_CASE(NVPTXISD::Suld2DArrayI32Zero)
-    MAKE_CASE(NVPTXISD::Suld2DArrayI64Zero)
-    MAKE_CASE(NVPTXISD::Suld2DArrayV2I8Zero)
-    MAKE_CASE(NVPTXISD::Suld2DArrayV2I16Zero)
-    MAKE_CASE(NVPTXISD::Suld2DArrayV2I32Zero)
-    MAKE_CASE(NVPTXISD::Suld2DArrayV2I64Zero)
-    MAKE_CASE(NVPTXISD::Suld2DArrayV4I8Zero)
-    MAKE_CASE(NVPTXISD::Suld2DArrayV4I16Zero)
-    MAKE_CASE(NVPTXISD::Suld2DArrayV4I32Zero)
-
-    MAKE_CASE(NVPTXISD::Suld3DI8Zero)
-    MAKE_CASE(NVPTXISD::Suld3DI16Zero)
-    MAKE_CASE(NVPTXISD::Suld3DI32Zero)
-    MAKE_CASE(NVPTXISD::Suld3DI64Zero)
-    MAKE_CASE(NVPTXISD::Suld3DV2I8Zero)
-    MAKE_CASE(NVPTXISD::Suld3DV2I16Zero)
-    MAKE_CASE(NVPTXISD::Suld3DV2I32Zero)
-    MAKE_CASE(NVPTXISD::Suld3DV2I64Zero)
-    MAKE_CASE(NVPTXISD::Suld3DV4I8Zero)
-    MAKE_CASE(NVPTXISD::Suld3DV4I16Zero)
-    MAKE_CASE(NVPTXISD::Suld3DV4I32Zero)
   }
   return nullptr;
 
@@ -1412,22 +1162,12 @@ NVPTXTargetLowering::LowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const {
   return DAG.getNode(NVPTXISD::Wrapper, dl, PtrVT, Op);
 }
 
-static bool IsTypePassedAsArray(const Type *Ty) {
-  return Ty->isAggregateType() || Ty->isVectorTy() || Ty->isIntegerTy(128) ||
-         Ty->isHalfTy() || Ty->isBFloatTy();
-}
-
 std::string NVPTXTargetLowering::getPrototype(
     const DataLayout &DL, Type *retTy, const ArgListTy &Args,
     const SmallVectorImpl<ISD::OutputArg> &Outs, MaybeAlign retAlignment,
     std::optional<std::pair<unsigned, const APInt &>> VAInfo,
     const CallBase &CB, unsigned UniqueCallSite) const {
   auto PtrVT = getPointerTy(DL);
-
-  bool isABI = (STI.getSmVersion() >= 20);
-  assert(isABI && "Non-ABI compilation is not supported");
-  if (!isABI)
-    return "";
 
   std::string Prototype;
   raw_string_ostream O(Prototype);
@@ -1438,7 +1178,7 @@ std::string NVPTXTargetLowering::getPrototype(
   } else {
     O << "(";
     if ((retTy->isFloatingPointTy() || retTy->isIntegerTy()) &&
-        !IsTypePassedAsArray(retTy)) {
+        !shouldPassAsArray(retTy)) {
       unsigned size = 0;
       if (auto *ITy = dyn_cast<IntegerType>(retTy)) {
         size = ITy->getBitWidth();
@@ -1455,7 +1195,7 @@ std::string NVPTXTargetLowering::getPrototype(
       O << ".param .b" << size << " _";
     } else if (isa<PointerType>(retTy)) {
       O << ".param .b" << PtrVT.getSizeInBits() << " _";
-    } else if (IsTypePassedAsArray(retTy)) {
+    } else if (shouldPassAsArray(retTy)) {
       O << ".param .align " << (retAlignment ? retAlignment->value() : 0)
         << " .b8 _[" << DL.getTypeAllocSize(retTy) << "]";
     } else {
@@ -1476,7 +1216,7 @@ std::string NVPTXTargetLowering::getPrototype(
     first = false;
 
     if (!Outs[OIdx].Flags.isByVal()) {
-      if (IsTypePassedAsArray(Ty)) {
+      if (shouldPassAsArray(Ty)) {
         Align ParamAlign =
             getArgumentAlignment(&CB, Ty, i + AttributeList::FirstArgIndex, DL);
         O << ".param .align " << ParamAlign.value() << " .b8 ";
@@ -1676,6 +1416,19 @@ static bool shouldConvertToIndirectCall(const CallBase *CB,
   return false;
 }
 
+static MachinePointerInfo refinePtrAS(SDValue &Ptr, SelectionDAG &DAG,
+                                      const DataLayout &DL,
+                                      const TargetLowering &TL) {
+  if (Ptr->getOpcode() == ISD::FrameIndex) {
+    auto Ty = TL.getPointerTy(DL, ADDRESS_SPACE_LOCAL);
+    Ptr = DAG.getAddrSpaceCast(SDLoc(), Ty, Ptr, ADDRESS_SPACE_GENERIC,
+                               ADDRESS_SPACE_LOCAL);
+
+    return MachinePointerInfo(ADDRESS_SPACE_LOCAL);
+  }
+  return MachinePointerInfo();
+}
+
 SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
                                        SmallVectorImpl<SDValue> &InVals) const {
 
@@ -1697,11 +1450,6 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   const CallBase *CB = CLI.CB;
   const DataLayout &DL = DAG.getDataLayout();
 
-  bool isABI = (STI.getSmVersion() >= 20);
-  assert(isABI && "Non-ABI compilation is not supported");
-  if (!isABI)
-    return Chain;
-
   // Variadic arguments.
   //
   // Normally, for each argument, we declare a param scalar or a param
@@ -1722,7 +1470,7 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   unsigned FirstVAArg = CLI.NumFixedArgs; // position of the first variadic
   unsigned VAOffset = 0;                  // current offset in the param array
 
-  unsigned UniqueCallSite = GlobalUniqueCallSite.fetch_add(1);
+  const unsigned UniqueCallSite = GlobalUniqueCallSite++;
   SDValue TempChain = Chain;
   Chain = DAG.getCALLSEQ_START(Chain, UniqueCallSite, 0, dl);
   SDValue InGlue = Chain.getValue(1);
@@ -1773,7 +1521,7 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     SDVTList DeclareParamVTs = DAG.getVTList(MVT::Other, MVT::Glue);
 
     bool NeedAlign; // Does argument declaration specify alignment?
-    bool PassAsArray = IsByVal || IsTypePassedAsArray(Ty);
+    const bool PassAsArray = IsByVal || shouldPassAsArray(Ty);
     if (IsVAArg) {
       if (ParamCount == FirstVAArg) {
         SDValue DeclareParamOps[] = {
@@ -1840,11 +1588,12 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
       }
 
       if (IsByVal) {
-        auto PtrVT = getPointerTy(DL);
-        SDValue srcAddr = DAG.getNode(ISD::ADD, dl, PtrVT, StVal,
+        auto MPI = refinePtrAS(StVal, DAG, DL, *this);
+        const EVT PtrVT = StVal.getValueType();
+        SDValue SrcAddr = DAG.getNode(ISD::ADD, dl, PtrVT, StVal,
                                       DAG.getConstant(CurOffset, dl, PtrVT));
-        StVal = DAG.getLoad(EltVT, dl, TempChain, srcAddr, MachinePointerInfo(),
-                            PartAlign);
+
+        StVal = DAG.getLoad(EltVT, dl, TempChain, SrcAddr, MPI, PartAlign);
       } else if (ExtendIntegerParam) {
         assert(VTs.size() == 1 && "Scalar can't have multiple parts.");
         // zext/sext to i32
@@ -1882,6 +1631,12 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
         StoreOperands.push_back(Chain);
         StoreOperands.push_back(
             DAG.getConstant(IsVAArg ? FirstVAArg : ParamCount, dl, MVT::i32));
+
+        if (!IsByVal && IsVAArg) {
+          // Align each part of the variadic argument to their type.
+          VAOffset = alignTo(VAOffset, DL.getABITypeAlign(EltVT.getTypeForEVT(
+                                           *DAG.getContext())));
+        }
 
         StoreOperands.push_back(DAG.getConstant(
             IsByVal ? CurOffset + VAOffset : (IsVAArg ? VAOffset : CurOffset),
@@ -1955,7 +1710,7 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     //  .param .align N .b8 retval0[<size-in-bytes>], or
     //  .param .b<size-in-bits> retval0
     unsigned resultsz = DL.getTypeAllocSizeInBits(RetTy);
-    if (!IsTypePassedAsArray(RetTy)) {
+    if (!shouldPassAsArray(RetTy)) {
       resultsz = promoteScalarArgumentSize(resultsz);
       SDVTList DeclareRetVTs = DAG.getVTList(MVT::Other, MVT::Glue);
       SDValue DeclareRetOps[] = { Chain, DAG.getConstant(1, dl, MVT::i32),
@@ -2777,6 +2532,27 @@ SDValue NVPTXTargetLowering::LowerFROUND64(SDValue Op,
   return DAG.getNode(ISD::SELECT, SL, VT, IsLarge, A, RoundedA);
 }
 
+static SDValue PromoteBinOpToF32(SDNode *N, SelectionDAG &DAG) {
+  EVT VT = N->getValueType(0);
+  EVT NVT = MVT::f32;
+  if (VT.isVector()) {
+    NVT = EVT::getVectorVT(*DAG.getContext(), NVT, VT.getVectorElementCount());
+  }
+  SDLoc DL(N);
+  SDValue Tmp0 = DAG.getFPExtendOrRound(N->getOperand(0), DL, NVT);
+  SDValue Tmp1 = DAG.getFPExtendOrRound(N->getOperand(1), DL, NVT);
+  SDValue Res = DAG.getNode(N->getOpcode(), DL, NVT, Tmp0, Tmp1, N->getFlags());
+  return DAG.getFPExtendOrRound(Res, DL, VT);
+}
+
+SDValue NVPTXTargetLowering::PromoteBinOpIfF32FTZ(SDValue Op,
+                                                  SelectionDAG &DAG) const {
+  if (useF32FTZ(DAG.getMachineFunction())) {
+    return PromoteBinOpToF32(Op.getNode(), DAG);
+  }
+  return Op;
+}
+
 SDValue NVPTXTargetLowering::LowerINT_TO_FP(SDValue Op,
                                             SelectionDAG &DAG) const {
   assert(STI.getSmVersion() < 90 || STI.getPTXVersion() < 78);
@@ -2892,6 +2668,214 @@ static SDValue LowerVectorArith(SDValue Op, SelectionDAG &DAG) {
   return V;
 }
 
+static SDValue LowerTcgen05St(SDValue Op, SelectionDAG &DAG) {
+  SDNode *N = Op.getNode();
+  SDLoc DL(N);
+  SmallVector<SDValue, 32> Ops;
+
+  // split the vector argument
+  for (size_t I = 0; I < N->getNumOperands(); I++) {
+    SDValue Val = N->getOperand(I);
+    EVT ValVT = Val.getValueType();
+    if (ValVT.isVector()) {
+      EVT EltVT = ValVT.getVectorElementType();
+      for (unsigned J = 0, NElts = ValVT.getVectorNumElements(); J < NElts; J++)
+        Ops.push_back(DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, EltVT, Val,
+                                  DAG.getIntPtrConstant(J, DL)));
+    } else
+      Ops.push_back(Val);
+  }
+
+  MemIntrinsicSDNode *MemSD = cast<MemIntrinsicSDNode>(N);
+  SDValue Tcgen05StNode =
+      DAG.getMemIntrinsicNode(ISD::INTRINSIC_VOID, DL, N->getVTList(), Ops,
+                              MemSD->getMemoryVT(), MemSD->getMemOperand());
+
+  return Tcgen05StNode;
+}
+
+static SDValue LowerIntrinsicVoid(SDValue Op, SelectionDAG &DAG) {
+  SDNode *N = Op.getNode();
+  SDValue Intrin = N->getOperand(1);
+  SDLoc DL(N);
+
+  // Get the intrinsic ID
+  unsigned IntrinNo = cast<ConstantSDNode>(Intrin.getNode())->getZExtValue();
+  switch (IntrinNo) {
+  default:
+    break;
+  case Intrinsic::nvvm_tcgen05_st_16x64b_x1:
+  case Intrinsic::nvvm_tcgen05_st_16x64b_x2:
+  case Intrinsic::nvvm_tcgen05_st_16x64b_x4:
+  case Intrinsic::nvvm_tcgen05_st_16x64b_x8:
+  case Intrinsic::nvvm_tcgen05_st_16x64b_x16:
+  case Intrinsic::nvvm_tcgen05_st_16x64b_x32:
+  case Intrinsic::nvvm_tcgen05_st_16x64b_x128:
+  case Intrinsic::nvvm_tcgen05_st_16x128b_x1:
+  case Intrinsic::nvvm_tcgen05_st_16x128b_x2:
+  case Intrinsic::nvvm_tcgen05_st_16x128b_x4:
+  case Intrinsic::nvvm_tcgen05_st_16x128b_x8:
+  case Intrinsic::nvvm_tcgen05_st_16x128b_x16:
+  case Intrinsic::nvvm_tcgen05_st_16x128b_x32:
+  case Intrinsic::nvvm_tcgen05_st_16x128b_x64:
+  case Intrinsic::nvvm_tcgen05_st_16x256b_x1:
+  case Intrinsic::nvvm_tcgen05_st_16x256b_x2:
+  case Intrinsic::nvvm_tcgen05_st_16x256b_x4:
+  case Intrinsic::nvvm_tcgen05_st_16x256b_x8:
+  case Intrinsic::nvvm_tcgen05_st_16x256b_x16:
+  case Intrinsic::nvvm_tcgen05_st_16x256b_x32:
+  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x1:
+  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x2:
+  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x4:
+  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x8:
+  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x16:
+  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x32:
+  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x64:
+  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x128:
+  case Intrinsic::nvvm_tcgen05_st_32x32b_x1:
+  case Intrinsic::nvvm_tcgen05_st_32x32b_x2:
+  case Intrinsic::nvvm_tcgen05_st_32x32b_x4:
+  case Intrinsic::nvvm_tcgen05_st_32x32b_x8:
+  case Intrinsic::nvvm_tcgen05_st_32x32b_x16:
+  case Intrinsic::nvvm_tcgen05_st_32x32b_x32:
+  case Intrinsic::nvvm_tcgen05_st_16x64b_x64:
+  case Intrinsic::nvvm_tcgen05_st_32x32b_x64:
+  case Intrinsic::nvvm_tcgen05_st_32x32b_x128:
+    return LowerTcgen05St(Op, DAG);
+  }
+  return Op;
+}
+
+// In PTX 64-bit CTLZ and CTPOP are supported, but they return a 32-bit value.
+// Lower these into a node returning the correct type which is zero-extended
+// back to the correct size.
+static SDValue lowerCTLZCTPOP(SDValue Op, SelectionDAG &DAG) {
+  SDValue V = Op->getOperand(0);
+  assert(V.getValueType() == MVT::i64 &&
+         "Unexpected CTLZ/CTPOP type to legalize");
+
+  SDLoc DL(Op);
+  SDValue CT = DAG.getNode(Op->getOpcode(), DL, MVT::i32, V);
+  return DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, CT, SDNodeFlags::NonNeg);
+}
+
+static SDValue expandFSH64(SDValue A, SDValue B, SDValue ShiftAmount, SDLoc DL,
+                           unsigned Opcode, SelectionDAG &DAG) {
+  assert(A.getValueType() == MVT::i64 && B.getValueType() == MVT::i64);
+
+  const auto *AmtConst = dyn_cast<ConstantSDNode>(ShiftAmount);
+  if (!AmtConst)
+    return SDValue();
+  const auto Amt = AmtConst->getZExtValue() & 63;
+
+  SDValue UnpackA =
+      DAG.getNode(NVPTXISD::UNPACK_VECTOR, DL, {MVT::i32, MVT::i32}, A);
+  SDValue UnpackB =
+      DAG.getNode(NVPTXISD::UNPACK_VECTOR, DL, {MVT::i32, MVT::i32}, B);
+
+  // Arch is Little endiain: 0 = low bits, 1 = high bits
+  SDValue ALo = UnpackA.getValue(0);
+  SDValue AHi = UnpackA.getValue(1);
+  SDValue BLo = UnpackB.getValue(0);
+  SDValue BHi = UnpackB.getValue(1);
+
+  // The bitfeild consists of { AHi : ALo : BHi : BLo }
+  //
+  // * FSHL, Amt <  32 - The window will contain { AHi : ALo : BHi }
+  // * FSHL, Amt >= 32 - The window will contain { ALo : BHi : BLo }
+  // * FSHR, Amt <  32 - The window will contain { ALo : BHi : BLo }
+  // * FSHR, Amt >= 32 - The window will contain { AHi : ALo : BHi }
+  //
+  // Note that Amt = 0 and Amt = 32 are special cases where 32-bit funnel shifts
+  // are not needed at all. Amt = 0 is a no-op producing either A or B depending
+  // on the direction. Amt = 32 can be implemented by a packing and unpacking
+  // move to select and arrange the 32bit values. For simplicity, these cases
+  // are not handled here explicitly and instead we rely on DAGCombiner to
+  // remove the no-op funnel shifts we insert.
+  auto [High, Mid, Low] = ((Opcode == ISD::FSHL) == (Amt < 32))
+                              ? std::make_tuple(AHi, ALo, BHi)
+                              : std::make_tuple(ALo, BHi, BLo);
+
+  SDValue NewAmt = DAG.getConstant(Amt & 31, DL, MVT::i32);
+  SDValue RHi = DAG.getNode(Opcode, DL, MVT::i32, {High, Mid, NewAmt});
+  SDValue RLo = DAG.getNode(Opcode, DL, MVT::i32, {Mid, Low, NewAmt});
+
+  return DAG.getNode(NVPTXISD::BUILD_VECTOR, DL, MVT::i64, {RLo, RHi});
+}
+
+static SDValue lowerFSH(SDValue Op, SelectionDAG &DAG) {
+  return expandFSH64(Op->getOperand(0), Op->getOperand(1), Op->getOperand(2),
+                     SDLoc(Op), Op->getOpcode(), DAG);
+}
+
+static SDValue lowerROT(SDValue Op, SelectionDAG &DAG) {
+  unsigned Opcode = Op->getOpcode() == ISD::ROTL ? ISD::FSHL : ISD::FSHR;
+  return expandFSH64(Op->getOperand(0), Op->getOperand(0), Op->getOperand(1),
+                     SDLoc(Op), Opcode, DAG);
+}
+
+static SDValue lowerFREM(SDValue Op, SelectionDAG &DAG,
+                         bool AllowUnsafeFPMath) {
+  // Lower (frem x, y) into (sub x, (mul (ftrunc (div x, y)) y)),
+  // i.e. "poor man's fmod()". When y is infinite, x is returned. This matches
+  // the semantics of LLVM's frem.
+  SDLoc DL(Op);
+  SDValue X = Op->getOperand(0);
+  SDValue Y = Op->getOperand(1);
+  EVT Ty = Op.getValueType();
+
+  SDValue Div = DAG.getNode(ISD::FDIV, DL, Ty, X, Y);
+  SDValue Trunc = DAG.getNode(ISD::FTRUNC, DL, Ty, Div);
+  SDValue Mul =
+      DAG.getNode(ISD::FMUL, DL, Ty, Trunc, Y, SDNodeFlags::AllowContract);
+  SDValue Sub =
+      DAG.getNode(ISD::FSUB, DL, Ty, X, Mul, SDNodeFlags::AllowContract);
+
+  if (AllowUnsafeFPMath || Op->getFlags().hasNoInfs())
+    return Sub;
+
+  // If Y is infinite, return X
+  SDValue AbsY = DAG.getNode(ISD::FABS, DL, Ty, Y);
+  SDValue Inf =
+      DAG.getConstantFP(APFloat::getInf(Ty.getFltSemantics()), DL, Ty);
+  SDValue IsInf = DAG.getSetCC(DL, MVT::i1, AbsY, Inf, ISD::SETEQ);
+  return DAG.getSelect(DL, Ty, IsInf, X, Sub);
+}
+
+static SDValue lowerSELECT(SDValue Op, SelectionDAG &DAG) {
+  assert(Op.getValueType() == MVT::i1 && "Custom lowering enabled only for i1");
+
+  SDValue Cond = Op->getOperand(0);
+  SDValue TrueVal = Op->getOperand(1);
+  SDValue FalseVal = Op->getOperand(2);
+  SDLoc DL(Op);
+
+  // If both operands are truncated, we push the select through the truncates.
+  if (TrueVal.getOpcode() == ISD::TRUNCATE &&
+      FalseVal.getOpcode() == ISD::TRUNCATE) {
+    TrueVal = TrueVal.getOperand(0);
+    FalseVal = FalseVal.getOperand(0);
+
+    EVT VT = TrueVal.getSimpleValueType().bitsLE(FalseVal.getSimpleValueType())
+                 ? TrueVal.getValueType()
+                 : FalseVal.getValueType();
+    TrueVal = DAG.getAnyExtOrTrunc(TrueVal, DL, VT);
+    FalseVal = DAG.getAnyExtOrTrunc(FalseVal, DL, VT);
+    SDValue Select = DAG.getSelect(DL, VT, Cond, TrueVal, FalseVal);
+    return DAG.getNode(ISD::TRUNCATE, DL, MVT::i1, Select);
+  }
+
+  // Otherwise, expand the select into a series of logical operations. These
+  // often can be folded into other operations either by us or ptxas.
+  TrueVal = DAG.getFreeze(TrueVal);
+  FalseVal = DAG.getFreeze(FalseVal);
+  SDValue And1 = DAG.getNode(ISD::AND, DL, MVT::i1, Cond, TrueVal);
+  SDValue NotCond = DAG.getNOT(DL, Cond, MVT::i1);
+  SDValue And2 = DAG.getNode(ISD::AND, DL, MVT::i1, NotCond, FalseVal);
+  SDValue Or = DAG.getNode(ISD::OR, DL, MVT::i1, And1, And2);
+  return Or;
+}
+
 SDValue
 NVPTXTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   switch (Op.getOpcode()) {
@@ -2899,10 +2883,14 @@ NVPTXTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return SDValue();
   case ISD::FRAMEADDR:
     return SDValue();
+  case ISD::ADDRSPACECAST:
+    return LowerADDRSPACECAST(Op, DAG);
   case ISD::GlobalAddress:
     return LowerGlobalAddress(Op, DAG);
   case ISD::INTRINSIC_W_CHAIN:
     return Op;
+  case ISD::INTRINSIC_VOID:
+    return LowerIntrinsicVoid(Op, DAG);
   case ISD::BUILD_VECTOR:
     return LowerBUILD_VECTOR(Op, DAG);
   case ISD::BITCAST:
@@ -2927,7 +2915,7 @@ NVPTXTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::SRL_PARTS:
     return LowerShiftRightParts(Op, DAG);
   case ISD::SELECT:
-    return LowerSelect(Op, DAG);
+    return lowerSELECT(Op, DAG);
   case ISD::FROUND:
     return LowerFROUND(Op, DAG);
   case ISD::FCOPYSIGN:
@@ -2948,6 +2936,12 @@ NVPTXTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return LowerVAARG(Op, DAG);
   case ISD::VASTART:
     return LowerVASTART(Op, DAG);
+  case ISD::FSHL:
+  case ISD::FSHR:
+    return lowerFSH(Op, DAG);
+  case ISD::ROTL:
+  case ISD::ROTR:
+    return lowerROT(Op, DAG);
   case ISD::ABS:
   case ISD::SMIN:
   case ISD::SMAX:
@@ -2968,6 +2962,17 @@ NVPTXTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return LowerSTACKSAVE(Op, DAG);
   case ISD::CopyToReg:
     return LowerCopyToReg_128(Op, DAG);
+  case ISD::FADD:
+  case ISD::FSUB:
+  case ISD::FMUL:
+    // Used only for bf16 on SM80, where we select fma for non-ftz operation
+    return PromoteBinOpIfF32FTZ(Op, DAG);
+  case ISD::CTPOP:
+  case ISD::CTLZ:
+    return lowerCTLZCTPOP(Op, DAG);
+  case ISD::FREM:
+    return lowerFREM(Op, DAG, allowUnsafeFPMath(DAG.getMachineFunction()));
+
   default:
     llvm_unreachable("Custom lowering not defined for operation");
   }
@@ -3008,6 +3013,17 @@ unsigned NVPTXTargetLowering::getJumpTableEncoding() const {
   return MachineJumpTableInfo::EK_Inline;
 }
 
+SDValue NVPTXTargetLowering::LowerADDRSPACECAST(SDValue Op,
+                                                SelectionDAG &DAG) const {
+  AddrSpaceCastSDNode *N = cast<AddrSpaceCastSDNode>(Op.getNode());
+  unsigned SrcAS = N->getSrcAddressSpace();
+  unsigned DestAS = N->getDestAddressSpace();
+  if (SrcAS != llvm::ADDRESS_SPACE_GENERIC &&
+      DestAS != llvm::ADDRESS_SPACE_GENERIC)
+    return DAG.getUNDEF(Op.getValueType());
+  return Op;
+}
+
 // This function is almost a copy of SelectionDAG::expandVAArg().
 // The only diff is that this one produces loads from local address space.
 SDValue NVPTXTargetLowering::LowerVAARG(SDValue Op, SelectionDAG &DAG) const {
@@ -3045,8 +3061,8 @@ SDValue NVPTXTargetLowering::LowerVAARG(SDValue Op, SelectionDAG &DAG) const {
   Tmp1 = DAG.getStore(VAListLoad.getValue(1), DL, Tmp1, Tmp2,
                       MachinePointerInfo(V));
 
-  const Value *SrcV =
-      Constant::getNullValue(PointerType::get(Ty, ADDRESS_SPACE_LOCAL));
+  const Value *SrcV = Constant::getNullValue(
+      PointerType::get(*DAG.getContext(), ADDRESS_SPACE_LOCAL));
 
   // Load the actual argument out of the pointer VAList
   return DAG.getLoad(VT, DL, Tmp1, VAList, MachinePointerInfo(SrcV));
@@ -3064,22 +3080,6 @@ SDValue NVPTXTargetLowering::LowerVASTART(SDValue Op, SelectionDAG &DAG) const {
   const Value *SV = cast<SrcValueSDNode>(Op.getOperand(2))->getValue();
   return DAG.getStore(Op.getOperand(0), DL, VAReg, Op.getOperand(1),
                       MachinePointerInfo(SV));
-}
-
-SDValue NVPTXTargetLowering::LowerSelect(SDValue Op, SelectionDAG &DAG) const {
-  SDValue Op0 = Op->getOperand(0);
-  SDValue Op1 = Op->getOperand(1);
-  SDValue Op2 = Op->getOperand(2);
-  SDLoc DL(Op.getNode());
-
-  assert(Op.getValueType() == MVT::i1 && "Custom lowering enabled only for i1");
-
-  Op1 = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i32, Op1);
-  Op2 = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i32, Op2);
-  SDValue Select = DAG.getNode(ISD::SELECT, DL, MVT::i32, Op0, Op1, Op2);
-  SDValue Trunc = DAG.getNode(ISD::TRUNCATE, DL, MVT::i1, Select);
-
-  return Trunc;
 }
 
 SDValue NVPTXTargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
@@ -3157,122 +3157,86 @@ NVPTXTargetLowering::LowerSTOREVector(SDValue Op, SelectionDAG &DAG) const {
   SDLoc DL(N);
   EVT ValVT = Val.getValueType();
 
-  if (ValVT.isVector()) {
-    // We only handle "native" vector sizes for now, e.g. <4 x double> is not
-    // legal.  We can (and should) split that into 2 stores of <2 x double> here
-    // but I'm leaving that as a TODO for now.
-    if (!ValVT.isSimple())
-      return SDValue();
-    switch (ValVT.getSimpleVT().SimpleTy) {
-    default:
-      return SDValue();
-    case MVT::v2i8:
-    case MVT::v2i16:
-    case MVT::v2i32:
-    case MVT::v2i64:
-    case MVT::v2f16:
-    case MVT::v2bf16:
-    case MVT::v2f32:
-    case MVT::v2f64:
-    case MVT::v4i8:
-    case MVT::v4i16:
-    case MVT::v4i32:
-    case MVT::v4f16:
-    case MVT::v4bf16:
-    case MVT::v4f32:
-    case MVT::v8f16: // <4 x f16x2>
-    case MVT::v8bf16: // <4 x bf16x2>
-    case MVT::v8i16:  // <4 x i16x2>
-      // This is a "native" vector type
-      break;
-    }
+  auto NumEltsAndEltVT = getVectorLoweringShape(ValVT);
+  if (!NumEltsAndEltVT)
+    return SDValue();
+  auto [NumElts, EltVT] = NumEltsAndEltVT.value();
 
-    MemSDNode *MemSD = cast<MemSDNode>(N);
-    const DataLayout &TD = DAG.getDataLayout();
+  MemSDNode *MemSD = cast<MemSDNode>(N);
+  const DataLayout &TD = DAG.getDataLayout();
 
-    Align Alignment = MemSD->getAlign();
-    Align PrefAlign =
-        TD.getPrefTypeAlign(ValVT.getTypeForEVT(*DAG.getContext()));
-    if (Alignment < PrefAlign) {
-      // This store is not sufficiently aligned, so bail out and let this vector
-      // store be scalarized.  Note that we may still be able to emit smaller
-      // vector stores.  For example, if we are storing a <4 x float> with an
-      // alignment of 8, this check will fail but the legalizer will try again
-      // with 2 x <2 x float>, which will succeed with an alignment of 8.
-      return SDValue();
-    }
-
-    unsigned Opcode = 0;
-    EVT EltVT = ValVT.getVectorElementType();
-    unsigned NumElts = ValVT.getVectorNumElements();
-
-    // Since StoreV2 is a target node, we cannot rely on DAG type legalization.
-    // Therefore, we must ensure the type is legal.  For i1 and i8, we set the
-    // stored type to i16 and propagate the "real" type as the memory type.
-    bool NeedExt = false;
-    if (EltVT.getSizeInBits() < 16)
-      NeedExt = true;
-
-    bool StoreF16x2 = false;
-    switch (NumElts) {
-    default:
-      return SDValue();
-    case 2:
-      Opcode = NVPTXISD::StoreV2;
-      break;
-    case 4:
-      Opcode = NVPTXISD::StoreV4;
-      break;
-    case 8:
-      // v8f16 is a special case. PTX doesn't have st.v8.f16
-      // instruction. Instead, we split the vector into v2f16 chunks and
-      // store them with st.v4.b32.
-      assert(Is16bitsType(EltVT.getSimpleVT()) && "Wrong type for the vector.");
-      Opcode = NVPTXISD::StoreV4;
-      StoreF16x2 = true;
-      break;
-    }
-
-    SmallVector<SDValue, 8> Ops;
-
-    // First is the chain
-    Ops.push_back(N->getOperand(0));
-
-    if (StoreF16x2) {
-      // Combine f16,f16 -> v2f16
-      NumElts /= 2;
-      for (unsigned i = 0; i < NumElts; ++i) {
-        SDValue E0 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, EltVT, Val,
-                                 DAG.getIntPtrConstant(i * 2, DL));
-        SDValue E1 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, EltVT, Val,
-                                 DAG.getIntPtrConstant(i * 2 + 1, DL));
-        EVT VecVT = EVT::getVectorVT(*DAG.getContext(), EltVT, 2);
-        SDValue V2 = DAG.getNode(ISD::BUILD_VECTOR, DL, VecVT, E0, E1);
-        Ops.push_back(V2);
-      }
-    } else {
-      // Then the split values
-      for (unsigned i = 0; i < NumElts; ++i) {
-        SDValue ExtVal = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, EltVT, Val,
-                                     DAG.getIntPtrConstant(i, DL));
-        if (NeedExt)
-          ExtVal = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i16, ExtVal);
-        Ops.push_back(ExtVal);
-      }
-    }
-
-    // Then any remaining arguments
-    Ops.append(N->op_begin() + 2, N->op_end());
-
-    SDValue NewSt =
-        DAG.getMemIntrinsicNode(Opcode, DL, DAG.getVTList(MVT::Other), Ops,
-                                MemSD->getMemoryVT(), MemSD->getMemOperand());
-
-    // return DCI.CombineTo(N, NewSt, true);
-    return NewSt;
+  Align Alignment = MemSD->getAlign();
+  Align PrefAlign = TD.getPrefTypeAlign(ValVT.getTypeForEVT(*DAG.getContext()));
+  if (Alignment < PrefAlign) {
+    // This store is not sufficiently aligned, so bail out and let this vector
+    // store be scalarized.  Note that we may still be able to emit smaller
+    // vector stores.  For example, if we are storing a <4 x float> with an
+    // alignment of 8, this check will fail but the legalizer will try again
+    // with 2 x <2 x float>, which will succeed with an alignment of 8.
+    return SDValue();
   }
 
-  return SDValue();
+  // Since StoreV2 is a target node, we cannot rely on DAG type legalization.
+  // Therefore, we must ensure the type is legal.  For i1 and i8, we set the
+  // stored type to i16 and propagate the "real" type as the memory type.
+  bool NeedExt = false;
+  if (EltVT.getSizeInBits() < 16)
+    NeedExt = true;
+
+  unsigned Opcode = 0;
+  switch (NumElts) {
+  default:
+    return SDValue();
+  case 2:
+    Opcode = NVPTXISD::StoreV2;
+    break;
+  case 4:
+    Opcode = NVPTXISD::StoreV4;
+    break;
+  }
+
+  SmallVector<SDValue, 8> Ops;
+
+  // First is the chain
+  Ops.push_back(N->getOperand(0));
+
+  // Then the split values
+  assert(NumElts <= ValVT.getVectorNumElements() &&
+         "NumElts should not increase, only decrease or stay the same.");
+  if (NumElts < ValVT.getVectorNumElements()) {
+    // If the number of elements has decreased, getVectorLoweringShape has
+    // upsized the element types
+    assert(EltVT.isVector() && EltVT.getSizeInBits() == 32 &&
+           EltVT.getVectorNumElements() <= 4 && "Unexpected upsized type.");
+    // Combine individual elements into v2[i,f,bf]16/v4i8 subvectors to be
+    // stored as b32s
+    unsigned NumEltsPerSubVector = EltVT.getVectorNumElements();
+    for (unsigned i = 0; i < NumElts; ++i) {
+      SmallVector<SDValue, 4> SubVectorElts;
+      DAG.ExtractVectorElements(Val, SubVectorElts, i * NumEltsPerSubVector,
+                                NumEltsPerSubVector);
+      SDValue SubVector = DAG.getBuildVector(EltVT, DL, SubVectorElts);
+      Ops.push_back(SubVector);
+    }
+  } else {
+    for (unsigned i = 0; i < NumElts; ++i) {
+      SDValue ExtVal = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, EltVT, Val,
+                                   DAG.getIntPtrConstant(i, DL));
+      if (NeedExt)
+        ExtVal = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i16, ExtVal);
+      Ops.push_back(ExtVal);
+    }
+  }
+
+  // Then any remaining arguments
+  Ops.append(N->op_begin() + 2, N->op_end());
+
+  SDValue NewSt =
+      DAG.getMemIntrinsicNode(Opcode, DL, DAG.getVTList(MVT::Other), Ops,
+                              MemSD->getMemoryVT(), MemSD->getMemOperand());
+
+  // return DCI.CombineTo(N, NewSt, true);
+  return NewSt;
 }
 
 // st i1 v, addr
@@ -3368,11 +3332,6 @@ SDValue NVPTXTargetLowering::LowerFormalArguments(
   SDValue Root = DAG.getRoot();
   std::vector<SDValue> OutChains;
 
-  bool isABI = (STI.getSmVersion() >= 20);
-  assert(isABI && "Non-ABI compilation is not supported");
-  if (!isABI)
-    return Chain;
-
   std::vector<Type *> argTypes;
   std::vector<const Argument *> theArgs;
   for (const Argument &I : F->args()) {
@@ -3395,7 +3354,7 @@ SDValue NVPTXTargetLowering::LowerFormalArguments(
 
     if (theArgs[i]->use_empty()) {
       // argument is dead
-      if (IsTypePassedAsArray(Ty) && !Ty->isVectorTy()) {
+      if (shouldPassAsArray(Ty) && !Ty->isVectorTy()) {
         SmallVector<EVT, 16> vtparts;
 
         ComputePTXValueVTs(*this, DAG.getDataLayout(), Ty, vtparts);
@@ -3471,8 +3430,8 @@ SDValue NVPTXTargetLowering::LowerFormalArguments(
           SDValue VecAddr =
               DAG.getNode(ISD::ADD, dl, PtrVT, Arg,
                           DAG.getConstant(Offsets[VecIdx], dl, PtrVT));
-          Value *srcValue = Constant::getNullValue(PointerType::get(
-              EltVT.getTypeForEVT(F->getContext()), ADDRESS_SPACE_PARAM));
+          Value *srcValue = Constant::getNullValue(
+              PointerType::get(F->getContext(), ADDRESS_SPACE_PARAM));
 
           const MaybeAlign PartAlign = [&]() -> MaybeAlign {
             if (aggregateIsPacked)
@@ -3538,10 +3497,18 @@ SDValue NVPTXTargetLowering::LowerFormalArguments(
     assert(ObjectVT == Ins[InsIdx].VT &&
            "Ins type did not match function type");
     SDValue Arg = getParamSymbol(DAG, i, PtrVT);
-    SDValue p = DAG.getNode(NVPTXISD::MoveParam, dl, ObjectVT, Arg);
-    if (p.getNode())
-      p.getNode()->setIROrder(i + 1);
-    InVals.push_back(p);
+
+    SDValue P;
+    if (isKernelFunction(*F)) {
+      P = DAG.getNode(NVPTXISD::Wrapper, dl, ObjectVT, Arg);
+      P.getNode()->setIROrder(i + 1);
+    } else {
+      P = DAG.getNode(NVPTXISD::MoveParam, dl, ObjectVT, Arg);
+      P.getNode()->setIROrder(i + 1);
+      P = DAG.getAddrSpaceCast(dl, ObjectVT, P, ADDRESS_SPACE_LOCAL,
+                               ADDRESS_SPACE_GENERIC);
+    }
+    InVals.push_back(P);
   }
 
   if (!OutChains.empty())
@@ -3586,11 +3553,6 @@ NVPTXTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
   const MachineFunction &MF = DAG.getMachineFunction();
   const Function &F = MF.getFunction();
   Type *RetTy = MF.getFunction().getReturnType();
-
-  bool isABI = (STI.getSmVersion() >= 20);
-  assert(isABI && "Non-ABI compilation is not supported");
-  if (!isABI)
-    return Chain;
 
   const DataLayout &DL = DAG.getDataLayout();
   SmallVector<SDValue, 16> PromotedOutVals;
@@ -3706,715 +3668,6 @@ void NVPTXTargetLowering::LowerAsmOperandForConstraint(
   if (Constraint.size() > 1)
     return;
   TargetLowering::LowerAsmOperandForConstraint(Op, Constraint, Ops, DAG);
-}
-
-static unsigned getOpcForTextureInstr(unsigned Intrinsic) {
-  switch (Intrinsic) {
-  default:
-    return 0;
-
-  case Intrinsic::nvvm_tex_1d_v4f32_s32:
-    return NVPTXISD::Tex1DFloatS32;
-  case Intrinsic::nvvm_tex_1d_v4f32_f32:
-    return NVPTXISD::Tex1DFloatFloat;
-  case Intrinsic::nvvm_tex_1d_level_v4f32_f32:
-    return NVPTXISD::Tex1DFloatFloatLevel;
-  case Intrinsic::nvvm_tex_1d_grad_v4f32_f32:
-    return NVPTXISD::Tex1DFloatFloatGrad;
-  case Intrinsic::nvvm_tex_1d_v4s32_s32:
-    return NVPTXISD::Tex1DS32S32;
-  case Intrinsic::nvvm_tex_1d_v4s32_f32:
-    return NVPTXISD::Tex1DS32Float;
-  case Intrinsic::nvvm_tex_1d_level_v4s32_f32:
-    return NVPTXISD::Tex1DS32FloatLevel;
-  case Intrinsic::nvvm_tex_1d_grad_v4s32_f32:
-    return NVPTXISD::Tex1DS32FloatGrad;
-  case Intrinsic::nvvm_tex_1d_v4u32_s32:
-    return NVPTXISD::Tex1DU32S32;
-  case Intrinsic::nvvm_tex_1d_v4u32_f32:
-    return NVPTXISD::Tex1DU32Float;
-  case Intrinsic::nvvm_tex_1d_level_v4u32_f32:
-    return NVPTXISD::Tex1DU32FloatLevel;
-  case Intrinsic::nvvm_tex_1d_grad_v4u32_f32:
-    return NVPTXISD::Tex1DU32FloatGrad;
-
-  case Intrinsic::nvvm_tex_1d_array_v4f32_s32:
-    return NVPTXISD::Tex1DArrayFloatS32;
-  case Intrinsic::nvvm_tex_1d_array_v4f32_f32:
-    return NVPTXISD::Tex1DArrayFloatFloat;
-  case Intrinsic::nvvm_tex_1d_array_level_v4f32_f32:
-    return NVPTXISD::Tex1DArrayFloatFloatLevel;
-  case Intrinsic::nvvm_tex_1d_array_grad_v4f32_f32:
-    return NVPTXISD::Tex1DArrayFloatFloatGrad;
-  case Intrinsic::nvvm_tex_1d_array_v4s32_s32:
-    return NVPTXISD::Tex1DArrayS32S32;
-  case Intrinsic::nvvm_tex_1d_array_v4s32_f32:
-    return NVPTXISD::Tex1DArrayS32Float;
-  case Intrinsic::nvvm_tex_1d_array_level_v4s32_f32:
-    return NVPTXISD::Tex1DArrayS32FloatLevel;
-  case Intrinsic::nvvm_tex_1d_array_grad_v4s32_f32:
-    return NVPTXISD::Tex1DArrayS32FloatGrad;
-  case Intrinsic::nvvm_tex_1d_array_v4u32_s32:
-    return NVPTXISD::Tex1DArrayU32S32;
-  case Intrinsic::nvvm_tex_1d_array_v4u32_f32:
-    return NVPTXISD::Tex1DArrayU32Float;
-  case Intrinsic::nvvm_tex_1d_array_level_v4u32_f32:
-    return NVPTXISD::Tex1DArrayU32FloatLevel;
-  case Intrinsic::nvvm_tex_1d_array_grad_v4u32_f32:
-    return NVPTXISD::Tex1DArrayU32FloatGrad;
-
-  case Intrinsic::nvvm_tex_2d_v4f32_s32:
-    return NVPTXISD::Tex2DFloatS32;
-  case Intrinsic::nvvm_tex_2d_v4f32_f32:
-    return NVPTXISD::Tex2DFloatFloat;
-  case Intrinsic::nvvm_tex_2d_level_v4f32_f32:
-    return NVPTXISD::Tex2DFloatFloatLevel;
-  case Intrinsic::nvvm_tex_2d_grad_v4f32_f32:
-    return NVPTXISD::Tex2DFloatFloatGrad;
-  case Intrinsic::nvvm_tex_2d_v4s32_s32:
-    return NVPTXISD::Tex2DS32S32;
-  case Intrinsic::nvvm_tex_2d_v4s32_f32:
-    return NVPTXISD::Tex2DS32Float;
-  case Intrinsic::nvvm_tex_2d_level_v4s32_f32:
-    return NVPTXISD::Tex2DS32FloatLevel;
-  case Intrinsic::nvvm_tex_2d_grad_v4s32_f32:
-    return NVPTXISD::Tex2DS32FloatGrad;
-  case Intrinsic::nvvm_tex_2d_v4u32_s32:
-    return NVPTXISD::Tex2DU32S32;
-  case Intrinsic::nvvm_tex_2d_v4u32_f32:
-    return NVPTXISD::Tex2DU32Float;
-  case Intrinsic::nvvm_tex_2d_level_v4u32_f32:
-    return NVPTXISD::Tex2DU32FloatLevel;
-  case Intrinsic::nvvm_tex_2d_grad_v4u32_f32:
-    return NVPTXISD::Tex2DU32FloatGrad;
-
-  case Intrinsic::nvvm_tex_2d_array_v4f32_s32:
-    return NVPTXISD::Tex2DArrayFloatS32;
-  case Intrinsic::nvvm_tex_2d_array_v4f32_f32:
-    return NVPTXISD::Tex2DArrayFloatFloat;
-  case Intrinsic::nvvm_tex_2d_array_level_v4f32_f32:
-    return NVPTXISD::Tex2DArrayFloatFloatLevel;
-  case Intrinsic::nvvm_tex_2d_array_grad_v4f32_f32:
-    return NVPTXISD::Tex2DArrayFloatFloatGrad;
-  case Intrinsic::nvvm_tex_2d_array_v4s32_s32:
-    return NVPTXISD::Tex2DArrayS32S32;
-  case Intrinsic::nvvm_tex_2d_array_v4s32_f32:
-    return NVPTXISD::Tex2DArrayS32Float;
-  case Intrinsic::nvvm_tex_2d_array_level_v4s32_f32:
-    return NVPTXISD::Tex2DArrayS32FloatLevel;
-  case Intrinsic::nvvm_tex_2d_array_grad_v4s32_f32:
-    return NVPTXISD::Tex2DArrayS32FloatGrad;
-  case Intrinsic::nvvm_tex_2d_array_v4u32_s32:
-    return NVPTXISD::Tex2DArrayU32S32;
-  case Intrinsic::nvvm_tex_2d_array_v4u32_f32:
-    return NVPTXISD::Tex2DArrayU32Float;
-  case Intrinsic::nvvm_tex_2d_array_level_v4u32_f32:
-    return NVPTXISD::Tex2DArrayU32FloatLevel;
-  case Intrinsic::nvvm_tex_2d_array_grad_v4u32_f32:
-    return NVPTXISD::Tex2DArrayU32FloatGrad;
-
-  case Intrinsic::nvvm_tex_3d_v4f32_s32:
-    return NVPTXISD::Tex3DFloatS32;
-  case Intrinsic::nvvm_tex_3d_v4f32_f32:
-    return NVPTXISD::Tex3DFloatFloat;
-  case Intrinsic::nvvm_tex_3d_level_v4f32_f32:
-    return NVPTXISD::Tex3DFloatFloatLevel;
-  case Intrinsic::nvvm_tex_3d_grad_v4f32_f32:
-    return NVPTXISD::Tex3DFloatFloatGrad;
-  case Intrinsic::nvvm_tex_3d_v4s32_s32:
-    return NVPTXISD::Tex3DS32S32;
-  case Intrinsic::nvvm_tex_3d_v4s32_f32:
-    return NVPTXISD::Tex3DS32Float;
-  case Intrinsic::nvvm_tex_3d_level_v4s32_f32:
-    return NVPTXISD::Tex3DS32FloatLevel;
-  case Intrinsic::nvvm_tex_3d_grad_v4s32_f32:
-    return NVPTXISD::Tex3DS32FloatGrad;
-  case Intrinsic::nvvm_tex_3d_v4u32_s32:
-    return NVPTXISD::Tex3DU32S32;
-  case Intrinsic::nvvm_tex_3d_v4u32_f32:
-    return NVPTXISD::Tex3DU32Float;
-  case Intrinsic::nvvm_tex_3d_level_v4u32_f32:
-    return NVPTXISD::Tex3DU32FloatLevel;
-  case Intrinsic::nvvm_tex_3d_grad_v4u32_f32:
-    return NVPTXISD::Tex3DU32FloatGrad;
-
-  case Intrinsic::nvvm_tex_cube_v4f32_f32:
-    return NVPTXISD::TexCubeFloatFloat;
-  case Intrinsic::nvvm_tex_cube_level_v4f32_f32:
-    return NVPTXISD::TexCubeFloatFloatLevel;
-  case Intrinsic::nvvm_tex_cube_v4s32_f32:
-    return NVPTXISD::TexCubeS32Float;
-  case Intrinsic::nvvm_tex_cube_level_v4s32_f32:
-    return NVPTXISD::TexCubeS32FloatLevel;
-  case Intrinsic::nvvm_tex_cube_v4u32_f32:
-    return NVPTXISD::TexCubeU32Float;
-  case Intrinsic::nvvm_tex_cube_level_v4u32_f32:
-    return NVPTXISD::TexCubeU32FloatLevel;
-
-  case Intrinsic::nvvm_tex_cube_array_v4f32_f32:
-    return NVPTXISD::TexCubeArrayFloatFloat;
-  case Intrinsic::nvvm_tex_cube_array_level_v4f32_f32:
-    return NVPTXISD::TexCubeArrayFloatFloatLevel;
-  case Intrinsic::nvvm_tex_cube_array_v4s32_f32:
-    return NVPTXISD::TexCubeArrayS32Float;
-  case Intrinsic::nvvm_tex_cube_array_level_v4s32_f32:
-    return NVPTXISD::TexCubeArrayS32FloatLevel;
-  case Intrinsic::nvvm_tex_cube_array_v4u32_f32:
-    return NVPTXISD::TexCubeArrayU32Float;
-  case Intrinsic::nvvm_tex_cube_array_level_v4u32_f32:
-    return NVPTXISD::TexCubeArrayU32FloatLevel;
-
-  case Intrinsic::nvvm_tld4_r_2d_v4f32_f32:
-    return NVPTXISD::Tld4R2DFloatFloat;
-  case Intrinsic::nvvm_tld4_g_2d_v4f32_f32:
-    return NVPTXISD::Tld4G2DFloatFloat;
-  case Intrinsic::nvvm_tld4_b_2d_v4f32_f32:
-    return NVPTXISD::Tld4B2DFloatFloat;
-  case Intrinsic::nvvm_tld4_a_2d_v4f32_f32:
-    return NVPTXISD::Tld4A2DFloatFloat;
-  case Intrinsic::nvvm_tld4_r_2d_v4s32_f32:
-    return NVPTXISD::Tld4R2DS64Float;
-  case Intrinsic::nvvm_tld4_g_2d_v4s32_f32:
-    return NVPTXISD::Tld4G2DS64Float;
-  case Intrinsic::nvvm_tld4_b_2d_v4s32_f32:
-    return NVPTXISD::Tld4B2DS64Float;
-  case Intrinsic::nvvm_tld4_a_2d_v4s32_f32:
-    return NVPTXISD::Tld4A2DS64Float;
-  case Intrinsic::nvvm_tld4_r_2d_v4u32_f32:
-    return NVPTXISD::Tld4R2DU64Float;
-  case Intrinsic::nvvm_tld4_g_2d_v4u32_f32:
-    return NVPTXISD::Tld4G2DU64Float;
-  case Intrinsic::nvvm_tld4_b_2d_v4u32_f32:
-    return NVPTXISD::Tld4B2DU64Float;
-  case Intrinsic::nvvm_tld4_a_2d_v4u32_f32:
-    return NVPTXISD::Tld4A2DU64Float;
-
-  case Intrinsic::nvvm_tex_unified_1d_v4f32_s32:
-    return NVPTXISD::TexUnified1DFloatS32;
-  case Intrinsic::nvvm_tex_unified_1d_v4f32_f32:
-    return NVPTXISD::TexUnified1DFloatFloat;
-  case Intrinsic::nvvm_tex_unified_1d_level_v4f32_f32:
-    return NVPTXISD::TexUnified1DFloatFloatLevel;
-  case Intrinsic::nvvm_tex_unified_1d_grad_v4f32_f32:
-    return NVPTXISD::TexUnified1DFloatFloatGrad;
-  case Intrinsic::nvvm_tex_unified_1d_v4s32_s32:
-    return NVPTXISD::TexUnified1DS32S32;
-  case Intrinsic::nvvm_tex_unified_1d_v4s32_f32:
-    return NVPTXISD::TexUnified1DS32Float;
-  case Intrinsic::nvvm_tex_unified_1d_level_v4s32_f32:
-    return NVPTXISD::TexUnified1DS32FloatLevel;
-  case Intrinsic::nvvm_tex_unified_1d_grad_v4s32_f32:
-    return NVPTXISD::TexUnified1DS32FloatGrad;
-  case Intrinsic::nvvm_tex_unified_1d_v4u32_s32:
-    return NVPTXISD::TexUnified1DU32S32;
-  case Intrinsic::nvvm_tex_unified_1d_v4u32_f32:
-    return NVPTXISD::TexUnified1DU32Float;
-  case Intrinsic::nvvm_tex_unified_1d_level_v4u32_f32:
-    return NVPTXISD::TexUnified1DU32FloatLevel;
-  case Intrinsic::nvvm_tex_unified_1d_grad_v4u32_f32:
-    return NVPTXISD::TexUnified1DU32FloatGrad;
-
-  case Intrinsic::nvvm_tex_unified_1d_array_v4f32_s32:
-    return NVPTXISD::TexUnified1DArrayFloatS32;
-  case Intrinsic::nvvm_tex_unified_1d_array_v4f32_f32:
-    return NVPTXISD::TexUnified1DArrayFloatFloat;
-  case Intrinsic::nvvm_tex_unified_1d_array_level_v4f32_f32:
-    return NVPTXISD::TexUnified1DArrayFloatFloatLevel;
-  case Intrinsic::nvvm_tex_unified_1d_array_grad_v4f32_f32:
-    return NVPTXISD::TexUnified1DArrayFloatFloatGrad;
-  case Intrinsic::nvvm_tex_unified_1d_array_v4s32_s32:
-    return NVPTXISD::TexUnified1DArrayS32S32;
-  case Intrinsic::nvvm_tex_unified_1d_array_v4s32_f32:
-    return NVPTXISD::TexUnified1DArrayS32Float;
-  case Intrinsic::nvvm_tex_unified_1d_array_level_v4s32_f32:
-    return NVPTXISD::TexUnified1DArrayS32FloatLevel;
-  case Intrinsic::nvvm_tex_unified_1d_array_grad_v4s32_f32:
-    return NVPTXISD::TexUnified1DArrayS32FloatGrad;
-  case Intrinsic::nvvm_tex_unified_1d_array_v4u32_s32:
-    return NVPTXISD::TexUnified1DArrayU32S32;
-  case Intrinsic::nvvm_tex_unified_1d_array_v4u32_f32:
-    return NVPTXISD::TexUnified1DArrayU32Float;
-  case Intrinsic::nvvm_tex_unified_1d_array_level_v4u32_f32:
-    return NVPTXISD::TexUnified1DArrayU32FloatLevel;
-  case Intrinsic::nvvm_tex_unified_1d_array_grad_v4u32_f32:
-    return NVPTXISD::TexUnified1DArrayU32FloatGrad;
-
-  case Intrinsic::nvvm_tex_unified_2d_v4f32_s32:
-    return NVPTXISD::TexUnified2DFloatS32;
-  case Intrinsic::nvvm_tex_unified_2d_v4f32_f32:
-    return NVPTXISD::TexUnified2DFloatFloat;
-  case Intrinsic::nvvm_tex_unified_2d_level_v4f32_f32:
-    return NVPTXISD::TexUnified2DFloatFloatLevel;
-  case Intrinsic::nvvm_tex_unified_2d_grad_v4f32_f32:
-    return NVPTXISD::TexUnified2DFloatFloatGrad;
-  case Intrinsic::nvvm_tex_unified_2d_v4s32_s32:
-    return NVPTXISD::TexUnified2DS32S32;
-  case Intrinsic::nvvm_tex_unified_2d_v4s32_f32:
-    return NVPTXISD::TexUnified2DS32Float;
-  case Intrinsic::nvvm_tex_unified_2d_level_v4s32_f32:
-    return NVPTXISD::TexUnified2DS32FloatLevel;
-  case Intrinsic::nvvm_tex_unified_2d_grad_v4s32_f32:
-    return NVPTXISD::TexUnified2DS32FloatGrad;
-  case Intrinsic::nvvm_tex_unified_2d_v4u32_s32:
-    return NVPTXISD::TexUnified2DU32S32;
-  case Intrinsic::nvvm_tex_unified_2d_v4u32_f32:
-    return NVPTXISD::TexUnified2DU32Float;
-  case Intrinsic::nvvm_tex_unified_2d_level_v4u32_f32:
-    return NVPTXISD::TexUnified2DU32FloatLevel;
-  case Intrinsic::nvvm_tex_unified_2d_grad_v4u32_f32:
-    return NVPTXISD::TexUnified2DU32FloatGrad;
-
-  case Intrinsic::nvvm_tex_unified_2d_array_v4f32_s32:
-    return NVPTXISD::TexUnified2DArrayFloatS32;
-  case Intrinsic::nvvm_tex_unified_2d_array_v4f32_f32:
-    return NVPTXISD::TexUnified2DArrayFloatFloat;
-  case Intrinsic::nvvm_tex_unified_2d_array_level_v4f32_f32:
-    return NVPTXISD::TexUnified2DArrayFloatFloatLevel;
-  case Intrinsic::nvvm_tex_unified_2d_array_grad_v4f32_f32:
-    return NVPTXISD::TexUnified2DArrayFloatFloatGrad;
-  case Intrinsic::nvvm_tex_unified_2d_array_v4s32_s32:
-    return NVPTXISD::TexUnified2DArrayS32S32;
-  case Intrinsic::nvvm_tex_unified_2d_array_v4s32_f32:
-    return NVPTXISD::TexUnified2DArrayS32Float;
-  case Intrinsic::nvvm_tex_unified_2d_array_level_v4s32_f32:
-    return NVPTXISD::TexUnified2DArrayS32FloatLevel;
-  case Intrinsic::nvvm_tex_unified_2d_array_grad_v4s32_f32:
-    return NVPTXISD::TexUnified2DArrayS32FloatGrad;
-  case Intrinsic::nvvm_tex_unified_2d_array_v4u32_s32:
-    return NVPTXISD::TexUnified2DArrayU32S32;
-  case Intrinsic::nvvm_tex_unified_2d_array_v4u32_f32:
-    return NVPTXISD::TexUnified2DArrayU32Float;
-  case Intrinsic::nvvm_tex_unified_2d_array_level_v4u32_f32:
-    return NVPTXISD::TexUnified2DArrayU32FloatLevel;
-  case Intrinsic::nvvm_tex_unified_2d_array_grad_v4u32_f32:
-    return NVPTXISD::TexUnified2DArrayU32FloatGrad;
-
-  case Intrinsic::nvvm_tex_unified_3d_v4f32_s32:
-    return NVPTXISD::TexUnified3DFloatS32;
-  case Intrinsic::nvvm_tex_unified_3d_v4f32_f32:
-    return NVPTXISD::TexUnified3DFloatFloat;
-  case Intrinsic::nvvm_tex_unified_3d_level_v4f32_f32:
-    return NVPTXISD::TexUnified3DFloatFloatLevel;
-  case Intrinsic::nvvm_tex_unified_3d_grad_v4f32_f32:
-    return NVPTXISD::TexUnified3DFloatFloatGrad;
-  case Intrinsic::nvvm_tex_unified_3d_v4s32_s32:
-    return NVPTXISD::TexUnified3DS32S32;
-  case Intrinsic::nvvm_tex_unified_3d_v4s32_f32:
-    return NVPTXISD::TexUnified3DS32Float;
-  case Intrinsic::nvvm_tex_unified_3d_level_v4s32_f32:
-    return NVPTXISD::TexUnified3DS32FloatLevel;
-  case Intrinsic::nvvm_tex_unified_3d_grad_v4s32_f32:
-    return NVPTXISD::TexUnified3DS32FloatGrad;
-  case Intrinsic::nvvm_tex_unified_3d_v4u32_s32:
-    return NVPTXISD::TexUnified3DU32S32;
-  case Intrinsic::nvvm_tex_unified_3d_v4u32_f32:
-    return NVPTXISD::TexUnified3DU32Float;
-  case Intrinsic::nvvm_tex_unified_3d_level_v4u32_f32:
-    return NVPTXISD::TexUnified3DU32FloatLevel;
-  case Intrinsic::nvvm_tex_unified_3d_grad_v4u32_f32:
-    return NVPTXISD::TexUnified3DU32FloatGrad;
-
-  case Intrinsic::nvvm_tex_unified_cube_v4f32_f32:
-    return NVPTXISD::TexUnifiedCubeFloatFloat;
-  case Intrinsic::nvvm_tex_unified_cube_level_v4f32_f32:
-    return NVPTXISD::TexUnifiedCubeFloatFloatLevel;
-  case Intrinsic::nvvm_tex_unified_cube_v4s32_f32:
-    return NVPTXISD::TexUnifiedCubeS32Float;
-  case Intrinsic::nvvm_tex_unified_cube_level_v4s32_f32:
-    return NVPTXISD::TexUnifiedCubeS32FloatLevel;
-  case Intrinsic::nvvm_tex_unified_cube_v4u32_f32:
-    return NVPTXISD::TexUnifiedCubeU32Float;
-  case Intrinsic::nvvm_tex_unified_cube_level_v4u32_f32:
-    return NVPTXISD::TexUnifiedCubeU32FloatLevel;
-
-  case Intrinsic::nvvm_tex_unified_cube_array_v4f32_f32:
-    return NVPTXISD::TexUnifiedCubeArrayFloatFloat;
-  case Intrinsic::nvvm_tex_unified_cube_array_level_v4f32_f32:
-    return NVPTXISD::TexUnifiedCubeArrayFloatFloatLevel;
-  case Intrinsic::nvvm_tex_unified_cube_array_v4s32_f32:
-    return NVPTXISD::TexUnifiedCubeArrayS32Float;
-  case Intrinsic::nvvm_tex_unified_cube_array_level_v4s32_f32:
-    return NVPTXISD::TexUnifiedCubeArrayS32FloatLevel;
-  case Intrinsic::nvvm_tex_unified_cube_array_v4u32_f32:
-    return NVPTXISD::TexUnifiedCubeArrayU32Float;
-  case Intrinsic::nvvm_tex_unified_cube_array_level_v4u32_f32:
-    return NVPTXISD::TexUnifiedCubeArrayU32FloatLevel;
-
-  case Intrinsic::nvvm_tex_unified_cube_grad_v4f32_f32:
-    return NVPTXISD::TexUnifiedCubeFloatFloatGrad;
-  case Intrinsic::nvvm_tex_unified_cube_grad_v4s32_f32:
-    return NVPTXISD::TexUnifiedCubeS32FloatGrad;
-  case Intrinsic::nvvm_tex_unified_cube_grad_v4u32_f32:
-    return NVPTXISD::TexUnifiedCubeU32FloatGrad;
-  case Intrinsic::nvvm_tex_unified_cube_array_grad_v4f32_f32:
-    return NVPTXISD::TexUnifiedCubeArrayFloatFloatGrad;
-  case Intrinsic::nvvm_tex_unified_cube_array_grad_v4s32_f32:
-    return NVPTXISD::TexUnifiedCubeArrayS32FloatGrad;
-  case Intrinsic::nvvm_tex_unified_cube_array_grad_v4u32_f32:
-    return NVPTXISD::TexUnifiedCubeArrayU32FloatGrad;
-
-  case Intrinsic::nvvm_tld4_unified_r_2d_v4f32_f32:
-    return NVPTXISD::Tld4UnifiedR2DFloatFloat;
-  case Intrinsic::nvvm_tld4_unified_g_2d_v4f32_f32:
-    return NVPTXISD::Tld4UnifiedG2DFloatFloat;
-  case Intrinsic::nvvm_tld4_unified_b_2d_v4f32_f32:
-    return NVPTXISD::Tld4UnifiedB2DFloatFloat;
-  case Intrinsic::nvvm_tld4_unified_a_2d_v4f32_f32:
-    return NVPTXISD::Tld4UnifiedA2DFloatFloat;
-  case Intrinsic::nvvm_tld4_unified_r_2d_v4s32_f32:
-    return NVPTXISD::Tld4UnifiedR2DS64Float;
-  case Intrinsic::nvvm_tld4_unified_g_2d_v4s32_f32:
-    return NVPTXISD::Tld4UnifiedG2DS64Float;
-  case Intrinsic::nvvm_tld4_unified_b_2d_v4s32_f32:
-    return NVPTXISD::Tld4UnifiedB2DS64Float;
-  case Intrinsic::nvvm_tld4_unified_a_2d_v4s32_f32:
-    return NVPTXISD::Tld4UnifiedA2DS64Float;
-  case Intrinsic::nvvm_tld4_unified_r_2d_v4u32_f32:
-    return NVPTXISD::Tld4UnifiedR2DU64Float;
-  case Intrinsic::nvvm_tld4_unified_g_2d_v4u32_f32:
-    return NVPTXISD::Tld4UnifiedG2DU64Float;
-  case Intrinsic::nvvm_tld4_unified_b_2d_v4u32_f32:
-    return NVPTXISD::Tld4UnifiedB2DU64Float;
-  case Intrinsic::nvvm_tld4_unified_a_2d_v4u32_f32:
-    return NVPTXISD::Tld4UnifiedA2DU64Float;
-  }
-}
-
-static unsigned getOpcForSurfaceInstr(unsigned Intrinsic) {
-  switch (Intrinsic) {
-  default:
-    return 0;
-  case Intrinsic::nvvm_suld_1d_i8_clamp:
-    return NVPTXISD::Suld1DI8Clamp;
-  case Intrinsic::nvvm_suld_1d_i16_clamp:
-    return NVPTXISD::Suld1DI16Clamp;
-  case Intrinsic::nvvm_suld_1d_i32_clamp:
-    return NVPTXISD::Suld1DI32Clamp;
-  case Intrinsic::nvvm_suld_1d_i64_clamp:
-    return NVPTXISD::Suld1DI64Clamp;
-  case Intrinsic::nvvm_suld_1d_v2i8_clamp:
-    return NVPTXISD::Suld1DV2I8Clamp;
-  case Intrinsic::nvvm_suld_1d_v2i16_clamp:
-    return NVPTXISD::Suld1DV2I16Clamp;
-  case Intrinsic::nvvm_suld_1d_v2i32_clamp:
-    return NVPTXISD::Suld1DV2I32Clamp;
-  case Intrinsic::nvvm_suld_1d_v2i64_clamp:
-    return NVPTXISD::Suld1DV2I64Clamp;
-  case Intrinsic::nvvm_suld_1d_v4i8_clamp:
-    return NVPTXISD::Suld1DV4I8Clamp;
-  case Intrinsic::nvvm_suld_1d_v4i16_clamp:
-    return NVPTXISD::Suld1DV4I16Clamp;
-  case Intrinsic::nvvm_suld_1d_v4i32_clamp:
-    return NVPTXISD::Suld1DV4I32Clamp;
-  case Intrinsic::nvvm_suld_1d_array_i8_clamp:
-    return NVPTXISD::Suld1DArrayI8Clamp;
-  case Intrinsic::nvvm_suld_1d_array_i16_clamp:
-    return NVPTXISD::Suld1DArrayI16Clamp;
-  case Intrinsic::nvvm_suld_1d_array_i32_clamp:
-    return NVPTXISD::Suld1DArrayI32Clamp;
-  case Intrinsic::nvvm_suld_1d_array_i64_clamp:
-    return NVPTXISD::Suld1DArrayI64Clamp;
-  case Intrinsic::nvvm_suld_1d_array_v2i8_clamp:
-    return NVPTXISD::Suld1DArrayV2I8Clamp;
-  case Intrinsic::nvvm_suld_1d_array_v2i16_clamp:
-    return NVPTXISD::Suld1DArrayV2I16Clamp;
-  case Intrinsic::nvvm_suld_1d_array_v2i32_clamp:
-    return NVPTXISD::Suld1DArrayV2I32Clamp;
-  case Intrinsic::nvvm_suld_1d_array_v2i64_clamp:
-    return NVPTXISD::Suld1DArrayV2I64Clamp;
-  case Intrinsic::nvvm_suld_1d_array_v4i8_clamp:
-    return NVPTXISD::Suld1DArrayV4I8Clamp;
-  case Intrinsic::nvvm_suld_1d_array_v4i16_clamp:
-    return NVPTXISD::Suld1DArrayV4I16Clamp;
-  case Intrinsic::nvvm_suld_1d_array_v4i32_clamp:
-    return NVPTXISD::Suld1DArrayV4I32Clamp;
-  case Intrinsic::nvvm_suld_2d_i8_clamp:
-    return NVPTXISD::Suld2DI8Clamp;
-  case Intrinsic::nvvm_suld_2d_i16_clamp:
-    return NVPTXISD::Suld2DI16Clamp;
-  case Intrinsic::nvvm_suld_2d_i32_clamp:
-    return NVPTXISD::Suld2DI32Clamp;
-  case Intrinsic::nvvm_suld_2d_i64_clamp:
-    return NVPTXISD::Suld2DI64Clamp;
-  case Intrinsic::nvvm_suld_2d_v2i8_clamp:
-    return NVPTXISD::Suld2DV2I8Clamp;
-  case Intrinsic::nvvm_suld_2d_v2i16_clamp:
-    return NVPTXISD::Suld2DV2I16Clamp;
-  case Intrinsic::nvvm_suld_2d_v2i32_clamp:
-    return NVPTXISD::Suld2DV2I32Clamp;
-  case Intrinsic::nvvm_suld_2d_v2i64_clamp:
-    return NVPTXISD::Suld2DV2I64Clamp;
-  case Intrinsic::nvvm_suld_2d_v4i8_clamp:
-    return NVPTXISD::Suld2DV4I8Clamp;
-  case Intrinsic::nvvm_suld_2d_v4i16_clamp:
-    return NVPTXISD::Suld2DV4I16Clamp;
-  case Intrinsic::nvvm_suld_2d_v4i32_clamp:
-    return NVPTXISD::Suld2DV4I32Clamp;
-  case Intrinsic::nvvm_suld_2d_array_i8_clamp:
-    return NVPTXISD::Suld2DArrayI8Clamp;
-  case Intrinsic::nvvm_suld_2d_array_i16_clamp:
-    return NVPTXISD::Suld2DArrayI16Clamp;
-  case Intrinsic::nvvm_suld_2d_array_i32_clamp:
-    return NVPTXISD::Suld2DArrayI32Clamp;
-  case Intrinsic::nvvm_suld_2d_array_i64_clamp:
-    return NVPTXISD::Suld2DArrayI64Clamp;
-  case Intrinsic::nvvm_suld_2d_array_v2i8_clamp:
-    return NVPTXISD::Suld2DArrayV2I8Clamp;
-  case Intrinsic::nvvm_suld_2d_array_v2i16_clamp:
-    return NVPTXISD::Suld2DArrayV2I16Clamp;
-  case Intrinsic::nvvm_suld_2d_array_v2i32_clamp:
-    return NVPTXISD::Suld2DArrayV2I32Clamp;
-  case Intrinsic::nvvm_suld_2d_array_v2i64_clamp:
-    return NVPTXISD::Suld2DArrayV2I64Clamp;
-  case Intrinsic::nvvm_suld_2d_array_v4i8_clamp:
-    return NVPTXISD::Suld2DArrayV4I8Clamp;
-  case Intrinsic::nvvm_suld_2d_array_v4i16_clamp:
-    return NVPTXISD::Suld2DArrayV4I16Clamp;
-  case Intrinsic::nvvm_suld_2d_array_v4i32_clamp:
-    return NVPTXISD::Suld2DArrayV4I32Clamp;
-  case Intrinsic::nvvm_suld_3d_i8_clamp:
-    return NVPTXISD::Suld3DI8Clamp;
-  case Intrinsic::nvvm_suld_3d_i16_clamp:
-    return NVPTXISD::Suld3DI16Clamp;
-  case Intrinsic::nvvm_suld_3d_i32_clamp:
-    return NVPTXISD::Suld3DI32Clamp;
-  case Intrinsic::nvvm_suld_3d_i64_clamp:
-    return NVPTXISD::Suld3DI64Clamp;
-  case Intrinsic::nvvm_suld_3d_v2i8_clamp:
-    return NVPTXISD::Suld3DV2I8Clamp;
-  case Intrinsic::nvvm_suld_3d_v2i16_clamp:
-    return NVPTXISD::Suld3DV2I16Clamp;
-  case Intrinsic::nvvm_suld_3d_v2i32_clamp:
-    return NVPTXISD::Suld3DV2I32Clamp;
-  case Intrinsic::nvvm_suld_3d_v2i64_clamp:
-    return NVPTXISD::Suld3DV2I64Clamp;
-  case Intrinsic::nvvm_suld_3d_v4i8_clamp:
-    return NVPTXISD::Suld3DV4I8Clamp;
-  case Intrinsic::nvvm_suld_3d_v4i16_clamp:
-    return NVPTXISD::Suld3DV4I16Clamp;
-  case Intrinsic::nvvm_suld_3d_v4i32_clamp:
-    return NVPTXISD::Suld3DV4I32Clamp;
-  case Intrinsic::nvvm_suld_1d_i8_trap:
-    return NVPTXISD::Suld1DI8Trap;
-  case Intrinsic::nvvm_suld_1d_i16_trap:
-    return NVPTXISD::Suld1DI16Trap;
-  case Intrinsic::nvvm_suld_1d_i32_trap:
-    return NVPTXISD::Suld1DI32Trap;
-  case Intrinsic::nvvm_suld_1d_i64_trap:
-    return NVPTXISD::Suld1DI64Trap;
-  case Intrinsic::nvvm_suld_1d_v2i8_trap:
-    return NVPTXISD::Suld1DV2I8Trap;
-  case Intrinsic::nvvm_suld_1d_v2i16_trap:
-    return NVPTXISD::Suld1DV2I16Trap;
-  case Intrinsic::nvvm_suld_1d_v2i32_trap:
-    return NVPTXISD::Suld1DV2I32Trap;
-  case Intrinsic::nvvm_suld_1d_v2i64_trap:
-    return NVPTXISD::Suld1DV2I64Trap;
-  case Intrinsic::nvvm_suld_1d_v4i8_trap:
-    return NVPTXISD::Suld1DV4I8Trap;
-  case Intrinsic::nvvm_suld_1d_v4i16_trap:
-    return NVPTXISD::Suld1DV4I16Trap;
-  case Intrinsic::nvvm_suld_1d_v4i32_trap:
-    return NVPTXISD::Suld1DV4I32Trap;
-  case Intrinsic::nvvm_suld_1d_array_i8_trap:
-    return NVPTXISD::Suld1DArrayI8Trap;
-  case Intrinsic::nvvm_suld_1d_array_i16_trap:
-    return NVPTXISD::Suld1DArrayI16Trap;
-  case Intrinsic::nvvm_suld_1d_array_i32_trap:
-    return NVPTXISD::Suld1DArrayI32Trap;
-  case Intrinsic::nvvm_suld_1d_array_i64_trap:
-    return NVPTXISD::Suld1DArrayI64Trap;
-  case Intrinsic::nvvm_suld_1d_array_v2i8_trap:
-    return NVPTXISD::Suld1DArrayV2I8Trap;
-  case Intrinsic::nvvm_suld_1d_array_v2i16_trap:
-    return NVPTXISD::Suld1DArrayV2I16Trap;
-  case Intrinsic::nvvm_suld_1d_array_v2i32_trap:
-    return NVPTXISD::Suld1DArrayV2I32Trap;
-  case Intrinsic::nvvm_suld_1d_array_v2i64_trap:
-    return NVPTXISD::Suld1DArrayV2I64Trap;
-  case Intrinsic::nvvm_suld_1d_array_v4i8_trap:
-    return NVPTXISD::Suld1DArrayV4I8Trap;
-  case Intrinsic::nvvm_suld_1d_array_v4i16_trap:
-    return NVPTXISD::Suld1DArrayV4I16Trap;
-  case Intrinsic::nvvm_suld_1d_array_v4i32_trap:
-    return NVPTXISD::Suld1DArrayV4I32Trap;
-  case Intrinsic::nvvm_suld_2d_i8_trap:
-    return NVPTXISD::Suld2DI8Trap;
-  case Intrinsic::nvvm_suld_2d_i16_trap:
-    return NVPTXISD::Suld2DI16Trap;
-  case Intrinsic::nvvm_suld_2d_i32_trap:
-    return NVPTXISD::Suld2DI32Trap;
-  case Intrinsic::nvvm_suld_2d_i64_trap:
-    return NVPTXISD::Suld2DI64Trap;
-  case Intrinsic::nvvm_suld_2d_v2i8_trap:
-    return NVPTXISD::Suld2DV2I8Trap;
-  case Intrinsic::nvvm_suld_2d_v2i16_trap:
-    return NVPTXISD::Suld2DV2I16Trap;
-  case Intrinsic::nvvm_suld_2d_v2i32_trap:
-    return NVPTXISD::Suld2DV2I32Trap;
-  case Intrinsic::nvvm_suld_2d_v2i64_trap:
-    return NVPTXISD::Suld2DV2I64Trap;
-  case Intrinsic::nvvm_suld_2d_v4i8_trap:
-    return NVPTXISD::Suld2DV4I8Trap;
-  case Intrinsic::nvvm_suld_2d_v4i16_trap:
-    return NVPTXISD::Suld2DV4I16Trap;
-  case Intrinsic::nvvm_suld_2d_v4i32_trap:
-    return NVPTXISD::Suld2DV4I32Trap;
-  case Intrinsic::nvvm_suld_2d_array_i8_trap:
-    return NVPTXISD::Suld2DArrayI8Trap;
-  case Intrinsic::nvvm_suld_2d_array_i16_trap:
-    return NVPTXISD::Suld2DArrayI16Trap;
-  case Intrinsic::nvvm_suld_2d_array_i32_trap:
-    return NVPTXISD::Suld2DArrayI32Trap;
-  case Intrinsic::nvvm_suld_2d_array_i64_trap:
-    return NVPTXISD::Suld2DArrayI64Trap;
-  case Intrinsic::nvvm_suld_2d_array_v2i8_trap:
-    return NVPTXISD::Suld2DArrayV2I8Trap;
-  case Intrinsic::nvvm_suld_2d_array_v2i16_trap:
-    return NVPTXISD::Suld2DArrayV2I16Trap;
-  case Intrinsic::nvvm_suld_2d_array_v2i32_trap:
-    return NVPTXISD::Suld2DArrayV2I32Trap;
-  case Intrinsic::nvvm_suld_2d_array_v2i64_trap:
-    return NVPTXISD::Suld2DArrayV2I64Trap;
-  case Intrinsic::nvvm_suld_2d_array_v4i8_trap:
-    return NVPTXISD::Suld2DArrayV4I8Trap;
-  case Intrinsic::nvvm_suld_2d_array_v4i16_trap:
-    return NVPTXISD::Suld2DArrayV4I16Trap;
-  case Intrinsic::nvvm_suld_2d_array_v4i32_trap:
-    return NVPTXISD::Suld2DArrayV4I32Trap;
-  case Intrinsic::nvvm_suld_3d_i8_trap:
-    return NVPTXISD::Suld3DI8Trap;
-  case Intrinsic::nvvm_suld_3d_i16_trap:
-    return NVPTXISD::Suld3DI16Trap;
-  case Intrinsic::nvvm_suld_3d_i32_trap:
-    return NVPTXISD::Suld3DI32Trap;
-  case Intrinsic::nvvm_suld_3d_i64_trap:
-    return NVPTXISD::Suld3DI64Trap;
-  case Intrinsic::nvvm_suld_3d_v2i8_trap:
-    return NVPTXISD::Suld3DV2I8Trap;
-  case Intrinsic::nvvm_suld_3d_v2i16_trap:
-    return NVPTXISD::Suld3DV2I16Trap;
-  case Intrinsic::nvvm_suld_3d_v2i32_trap:
-    return NVPTXISD::Suld3DV2I32Trap;
-  case Intrinsic::nvvm_suld_3d_v2i64_trap:
-    return NVPTXISD::Suld3DV2I64Trap;
-  case Intrinsic::nvvm_suld_3d_v4i8_trap:
-    return NVPTXISD::Suld3DV4I8Trap;
-  case Intrinsic::nvvm_suld_3d_v4i16_trap:
-    return NVPTXISD::Suld3DV4I16Trap;
-  case Intrinsic::nvvm_suld_3d_v4i32_trap:
-    return NVPTXISD::Suld3DV4I32Trap;
-  case Intrinsic::nvvm_suld_1d_i8_zero:
-    return NVPTXISD::Suld1DI8Zero;
-  case Intrinsic::nvvm_suld_1d_i16_zero:
-    return NVPTXISD::Suld1DI16Zero;
-  case Intrinsic::nvvm_suld_1d_i32_zero:
-    return NVPTXISD::Suld1DI32Zero;
-  case Intrinsic::nvvm_suld_1d_i64_zero:
-    return NVPTXISD::Suld1DI64Zero;
-  case Intrinsic::nvvm_suld_1d_v2i8_zero:
-    return NVPTXISD::Suld1DV2I8Zero;
-  case Intrinsic::nvvm_suld_1d_v2i16_zero:
-    return NVPTXISD::Suld1DV2I16Zero;
-  case Intrinsic::nvvm_suld_1d_v2i32_zero:
-    return NVPTXISD::Suld1DV2I32Zero;
-  case Intrinsic::nvvm_suld_1d_v2i64_zero:
-    return NVPTXISD::Suld1DV2I64Zero;
-  case Intrinsic::nvvm_suld_1d_v4i8_zero:
-    return NVPTXISD::Suld1DV4I8Zero;
-  case Intrinsic::nvvm_suld_1d_v4i16_zero:
-    return NVPTXISD::Suld1DV4I16Zero;
-  case Intrinsic::nvvm_suld_1d_v4i32_zero:
-    return NVPTXISD::Suld1DV4I32Zero;
-  case Intrinsic::nvvm_suld_1d_array_i8_zero:
-    return NVPTXISD::Suld1DArrayI8Zero;
-  case Intrinsic::nvvm_suld_1d_array_i16_zero:
-    return NVPTXISD::Suld1DArrayI16Zero;
-  case Intrinsic::nvvm_suld_1d_array_i32_zero:
-    return NVPTXISD::Suld1DArrayI32Zero;
-  case Intrinsic::nvvm_suld_1d_array_i64_zero:
-    return NVPTXISD::Suld1DArrayI64Zero;
-  case Intrinsic::nvvm_suld_1d_array_v2i8_zero:
-    return NVPTXISD::Suld1DArrayV2I8Zero;
-  case Intrinsic::nvvm_suld_1d_array_v2i16_zero:
-    return NVPTXISD::Suld1DArrayV2I16Zero;
-  case Intrinsic::nvvm_suld_1d_array_v2i32_zero:
-    return NVPTXISD::Suld1DArrayV2I32Zero;
-  case Intrinsic::nvvm_suld_1d_array_v2i64_zero:
-    return NVPTXISD::Suld1DArrayV2I64Zero;
-  case Intrinsic::nvvm_suld_1d_array_v4i8_zero:
-    return NVPTXISD::Suld1DArrayV4I8Zero;
-  case Intrinsic::nvvm_suld_1d_array_v4i16_zero:
-    return NVPTXISD::Suld1DArrayV4I16Zero;
-  case Intrinsic::nvvm_suld_1d_array_v4i32_zero:
-    return NVPTXISD::Suld1DArrayV4I32Zero;
-  case Intrinsic::nvvm_suld_2d_i8_zero:
-    return NVPTXISD::Suld2DI8Zero;
-  case Intrinsic::nvvm_suld_2d_i16_zero:
-    return NVPTXISD::Suld2DI16Zero;
-  case Intrinsic::nvvm_suld_2d_i32_zero:
-    return NVPTXISD::Suld2DI32Zero;
-  case Intrinsic::nvvm_suld_2d_i64_zero:
-    return NVPTXISD::Suld2DI64Zero;
-  case Intrinsic::nvvm_suld_2d_v2i8_zero:
-    return NVPTXISD::Suld2DV2I8Zero;
-  case Intrinsic::nvvm_suld_2d_v2i16_zero:
-    return NVPTXISD::Suld2DV2I16Zero;
-  case Intrinsic::nvvm_suld_2d_v2i32_zero:
-    return NVPTXISD::Suld2DV2I32Zero;
-  case Intrinsic::nvvm_suld_2d_v2i64_zero:
-    return NVPTXISD::Suld2DV2I64Zero;
-  case Intrinsic::nvvm_suld_2d_v4i8_zero:
-    return NVPTXISD::Suld2DV4I8Zero;
-  case Intrinsic::nvvm_suld_2d_v4i16_zero:
-    return NVPTXISD::Suld2DV4I16Zero;
-  case Intrinsic::nvvm_suld_2d_v4i32_zero:
-    return NVPTXISD::Suld2DV4I32Zero;
-  case Intrinsic::nvvm_suld_2d_array_i8_zero:
-    return NVPTXISD::Suld2DArrayI8Zero;
-  case Intrinsic::nvvm_suld_2d_array_i16_zero:
-    return NVPTXISD::Suld2DArrayI16Zero;
-  case Intrinsic::nvvm_suld_2d_array_i32_zero:
-    return NVPTXISD::Suld2DArrayI32Zero;
-  case Intrinsic::nvvm_suld_2d_array_i64_zero:
-    return NVPTXISD::Suld2DArrayI64Zero;
-  case Intrinsic::nvvm_suld_2d_array_v2i8_zero:
-    return NVPTXISD::Suld2DArrayV2I8Zero;
-  case Intrinsic::nvvm_suld_2d_array_v2i16_zero:
-    return NVPTXISD::Suld2DArrayV2I16Zero;
-  case Intrinsic::nvvm_suld_2d_array_v2i32_zero:
-    return NVPTXISD::Suld2DArrayV2I32Zero;
-  case Intrinsic::nvvm_suld_2d_array_v2i64_zero:
-    return NVPTXISD::Suld2DArrayV2I64Zero;
-  case Intrinsic::nvvm_suld_2d_array_v4i8_zero:
-    return NVPTXISD::Suld2DArrayV4I8Zero;
-  case Intrinsic::nvvm_suld_2d_array_v4i16_zero:
-    return NVPTXISD::Suld2DArrayV4I16Zero;
-  case Intrinsic::nvvm_suld_2d_array_v4i32_zero:
-    return NVPTXISD::Suld2DArrayV4I32Zero;
-  case Intrinsic::nvvm_suld_3d_i8_zero:
-    return NVPTXISD::Suld3DI8Zero;
-  case Intrinsic::nvvm_suld_3d_i16_zero:
-    return NVPTXISD::Suld3DI16Zero;
-  case Intrinsic::nvvm_suld_3d_i32_zero:
-    return NVPTXISD::Suld3DI32Zero;
-  case Intrinsic::nvvm_suld_3d_i64_zero:
-    return NVPTXISD::Suld3DI64Zero;
-  case Intrinsic::nvvm_suld_3d_v2i8_zero:
-    return NVPTXISD::Suld3DV2I8Zero;
-  case Intrinsic::nvvm_suld_3d_v2i16_zero:
-    return NVPTXISD::Suld3DV2I16Zero;
-  case Intrinsic::nvvm_suld_3d_v2i32_zero:
-    return NVPTXISD::Suld3DV2I32Zero;
-  case Intrinsic::nvvm_suld_3d_v2i64_zero:
-    return NVPTXISD::Suld3DV2I64Zero;
-  case Intrinsic::nvvm_suld_3d_v4i8_zero:
-    return NVPTXISD::Suld3DV4I8Zero;
-  case Intrinsic::nvvm_suld_3d_v4i16_zero:
-    return NVPTXISD::Suld3DV4I16Zero;
-  case Intrinsic::nvvm_suld_3d_v4i32_zero:
-    return NVPTXISD::Suld3DV4I32Zero;
-  }
 }
 
 // llvm.ptx.memcpy.const and llvm.ptx.memmove.const need to be modeled as
@@ -4538,7 +3791,12 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
   case Intrinsic::nvvm_wmma_m16n16k8_load_b_tf32_row:
   case Intrinsic::nvvm_wmma_m16n16k8_load_b_tf32_row_stride:
   case Intrinsic::nvvm_ldmatrix_sync_aligned_m8n8_x4_b16:
-  case Intrinsic::nvvm_ldmatrix_sync_aligned_m8n8_x4_trans_b16: {
+  case Intrinsic::nvvm_ldmatrix_sync_aligned_m8n8_x4_trans_b16:
+  case Intrinsic::nvvm_ldmatrix_sync_aligned_m16n16_x2_trans_b8:
+  case Intrinsic::nvvm_ldmatrix_sync_aligned_m16n16_x2_trans_b8x16_b4x16_p64:
+  case Intrinsic::nvvm_ldmatrix_sync_aligned_m16n16_x2_trans_b8x16_b6x16_p32:
+  case Intrinsic::nvvm_ldmatrix_sync_aligned_m8n16_x4_b8x16_b4x16_p64:
+  case Intrinsic::nvvm_ldmatrix_sync_aligned_m8n16_x4_b8x16_b6x16_p32: {
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = MVT::v4i32;
     Info.ptrVal = I.getArgOperand(0);
@@ -4578,7 +3836,9 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
   case Intrinsic::nvvm_wmma_m8n8k32_load_b_u4_col_stride:
   case Intrinsic::nvvm_wmma_m8n8k32_load_b_u4_col:
   case Intrinsic::nvvm_ldmatrix_sync_aligned_m8n8_x1_b16:
-  case Intrinsic::nvvm_ldmatrix_sync_aligned_m8n8_x1_trans_b16: {
+  case Intrinsic::nvvm_ldmatrix_sync_aligned_m8n8_x1_trans_b16:
+  case Intrinsic::nvvm_ldmatrix_sync_aligned_m8n16_x1_b8x16_b4x16_p64:
+  case Intrinsic::nvvm_ldmatrix_sync_aligned_m8n16_x1_b8x16_b6x16_p32: {
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = MVT::i32;
     Info.ptrVal = I.getArgOperand(0);
@@ -4674,7 +3934,12 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
   case Intrinsic::nvvm_wmma_m8n8k32_load_c_s32_row:
   case Intrinsic::nvvm_wmma_m8n8k32_load_c_s32_row_stride:
   case Intrinsic::nvvm_ldmatrix_sync_aligned_m8n8_x2_b16:
-  case Intrinsic::nvvm_ldmatrix_sync_aligned_m8n8_x2_trans_b16: {
+  case Intrinsic::nvvm_ldmatrix_sync_aligned_m8n8_x2_trans_b16:
+  case Intrinsic::nvvm_ldmatrix_sync_aligned_m16n16_x1_trans_b8:
+  case Intrinsic::nvvm_ldmatrix_sync_aligned_m16n16_x1_trans_b8x16_b4x16_p64:
+  case Intrinsic::nvvm_ldmatrix_sync_aligned_m16n16_x1_trans_b8x16_b6x16_p32:
+  case Intrinsic::nvvm_ldmatrix_sync_aligned_m8n16_x2_b8x16_b4x16_p64:
+  case Intrinsic::nvvm_ldmatrix_sync_aligned_m8n16_x2_b8x16_b6x16_p32: {
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = MVT::v2i32;
     Info.ptrVal = I.getArgOperand(0);
@@ -4812,9 +4077,6 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
     return true;
   }
 
-  case Intrinsic::nvvm_atomic_load_inc_32:
-  case Intrinsic::nvvm_atomic_load_dec_32:
-
   case Intrinsic::nvvm_atomic_add_gen_f_cta:
   case Intrinsic::nvvm_atomic_add_gen_f_sys:
   case Intrinsic::nvvm_atomic_add_gen_i_cta:
@@ -4923,7 +4185,7 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
   case Intrinsic::nvvm_tld4_unified_g_2d_v4f32_f32:
   case Intrinsic::nvvm_tld4_unified_b_2d_v4f32_f32:
   case Intrinsic::nvvm_tld4_unified_a_2d_v4f32_f32:
-    Info.opc = getOpcForTextureInstr(Intrinsic);
+    Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = MVT::v4f32;
     Info.ptrVal = nullptr;
     Info.offset = 0;
@@ -5047,7 +4309,7 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
   case Intrinsic::nvvm_tld4_unified_g_2d_v4u32_f32:
   case Intrinsic::nvvm_tld4_unified_b_2d_v4u32_f32:
   case Intrinsic::nvvm_tld4_unified_a_2d_v4u32_f32:
-    Info.opc = getOpcForTextureInstr(Intrinsic);
+    Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = MVT::v4i32;
     Info.ptrVal = nullptr;
     Info.offset = 0;
@@ -5100,7 +4362,7 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
   case Intrinsic::nvvm_suld_3d_i8_zero:
   case Intrinsic::nvvm_suld_3d_v2i8_zero:
   case Intrinsic::nvvm_suld_3d_v4i8_zero:
-    Info.opc = getOpcForSurfaceInstr(Intrinsic);
+    Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = MVT::i8;
     Info.ptrVal = nullptr;
     Info.offset = 0;
@@ -5153,7 +4415,7 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
   case Intrinsic::nvvm_suld_3d_i16_zero:
   case Intrinsic::nvvm_suld_3d_v2i16_zero:
   case Intrinsic::nvvm_suld_3d_v4i16_zero:
-    Info.opc = getOpcForSurfaceInstr(Intrinsic);
+    Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = MVT::i16;
     Info.ptrVal = nullptr;
     Info.offset = 0;
@@ -5206,7 +4468,7 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
   case Intrinsic::nvvm_suld_3d_i32_zero:
   case Intrinsic::nvvm_suld_3d_v2i32_zero:
   case Intrinsic::nvvm_suld_3d_v4i32_zero:
-    Info.opc = getOpcForSurfaceInstr(Intrinsic);
+    Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = MVT::i32;
     Info.ptrVal = nullptr;
     Info.offset = 0;
@@ -5244,13 +4506,231 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
   case Intrinsic::nvvm_suld_2d_array_v2i64_zero:
   case Intrinsic::nvvm_suld_3d_i64_zero:
   case Intrinsic::nvvm_suld_3d_v2i64_zero:
-    Info.opc = getOpcForSurfaceInstr(Intrinsic);
+    Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = MVT::i64;
     Info.ptrVal = nullptr;
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOLoad;
     Info.align = Align(16);
     return true;
+
+  case Intrinsic::nvvm_tcgen05_ld_16x64b_x1:
+  case Intrinsic::nvvm_tcgen05_ld_32x32b_x1:
+  case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x1: {
+    Info.opc = ISD::INTRINSIC_W_CHAIN;
+    Info.memVT = MVT::v1i32;
+    Info.ptrVal = I.getArgOperand(0);
+    Info.offset = 0;
+    Info.flags = MachineMemOperand::MOLoad;
+    Info.align.reset();
+    return true;
+  }
+
+  case Intrinsic::nvvm_tcgen05_ld_16x64b_x2:
+  case Intrinsic::nvvm_tcgen05_ld_16x128b_x1:
+  case Intrinsic::nvvm_tcgen05_ld_32x32b_x2:
+  case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x2: {
+    Info.opc = ISD::INTRINSIC_W_CHAIN;
+    Info.memVT = MVT::v2i32;
+    Info.ptrVal = I.getArgOperand(0);
+    Info.offset = 0;
+    Info.flags = MachineMemOperand::MOLoad;
+    Info.align.reset();
+    return true;
+  }
+
+  case Intrinsic::nvvm_tcgen05_ld_16x64b_x4:
+  case Intrinsic::nvvm_tcgen05_ld_16x128b_x2:
+  case Intrinsic::nvvm_tcgen05_ld_32x32b_x4:
+  case Intrinsic::nvvm_tcgen05_ld_16x256b_x1:
+  case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x4: {
+    Info.opc = ISD::INTRINSIC_W_CHAIN;
+    Info.memVT = MVT::v4i32;
+    Info.ptrVal = I.getArgOperand(0);
+    Info.offset = 0;
+    Info.flags = MachineMemOperand::MOLoad;
+    Info.align.reset();
+    return true;
+  }
+
+  case Intrinsic::nvvm_tcgen05_ld_16x64b_x8:
+  case Intrinsic::nvvm_tcgen05_ld_16x128b_x4:
+  case Intrinsic::nvvm_tcgen05_ld_16x256b_x2:
+  case Intrinsic::nvvm_tcgen05_ld_32x32b_x8:
+  case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x8: {
+    Info.opc = ISD::INTRINSIC_W_CHAIN;
+    Info.memVT = MVT::v8i32;
+    Info.ptrVal = I.getArgOperand(0);
+    Info.offset = 0;
+    Info.flags = MachineMemOperand::MOLoad;
+    Info.align.reset();
+    return true;
+  }
+
+  case Intrinsic::nvvm_tcgen05_ld_16x64b_x16:
+  case Intrinsic::nvvm_tcgen05_ld_16x128b_x8:
+  case Intrinsic::nvvm_tcgen05_ld_16x256b_x4:
+  case Intrinsic::nvvm_tcgen05_ld_32x32b_x16:
+  case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x16: {
+    Info.opc = ISD::INTRINSIC_W_CHAIN;
+    Info.memVT = MVT::v16i32;
+    Info.ptrVal = I.getArgOperand(0);
+    Info.offset = 0;
+    Info.flags = MachineMemOperand::MOLoad;
+    Info.align.reset();
+    return true;
+  }
+
+  case Intrinsic::nvvm_tcgen05_ld_16x64b_x32:
+  case Intrinsic::nvvm_tcgen05_ld_16x128b_x16:
+  case Intrinsic::nvvm_tcgen05_ld_16x256b_x8:
+  case Intrinsic::nvvm_tcgen05_ld_32x32b_x32:
+  case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x32: {
+    Info.opc = ISD::INTRINSIC_W_CHAIN;
+    Info.memVT = MVT::v32i32;
+    Info.ptrVal = I.getArgOperand(0);
+    Info.offset = 0;
+    Info.flags = MachineMemOperand::MOLoad;
+    Info.align.reset();
+    return true;
+  }
+
+  case Intrinsic::nvvm_tcgen05_ld_16x64b_x64:
+  case Intrinsic::nvvm_tcgen05_ld_16x128b_x32:
+  case Intrinsic::nvvm_tcgen05_ld_16x256b_x16:
+  case Intrinsic::nvvm_tcgen05_ld_32x32b_x64:
+  case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x64: {
+    Info.opc = ISD::INTRINSIC_W_CHAIN;
+    Info.memVT = MVT::v64i32;
+    Info.ptrVal = I.getArgOperand(0);
+    Info.offset = 0;
+    Info.flags = MachineMemOperand::MOLoad;
+    Info.align.reset();
+    return true;
+  }
+
+  case Intrinsic::nvvm_tcgen05_ld_16x64b_x128:
+  case Intrinsic::nvvm_tcgen05_ld_16x128b_x64:
+  case Intrinsic::nvvm_tcgen05_ld_16x256b_x32:
+  case Intrinsic::nvvm_tcgen05_ld_32x32b_x128:
+  case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x128: {
+    Info.opc = ISD::INTRINSIC_W_CHAIN;
+    Info.memVT = MVT::v128i32;
+    Info.ptrVal = I.getArgOperand(0);
+    Info.offset = 0;
+    Info.flags = MachineMemOperand::MOLoad;
+    Info.align.reset();
+    return true;
+  }
+
+  case Intrinsic::nvvm_tcgen05_st_16x64b_x1:
+  case Intrinsic::nvvm_tcgen05_st_32x32b_x1:
+  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x1: {
+    Info.opc = ISD::INTRINSIC_VOID;
+    Info.memVT = MVT::i32;
+    Info.ptrVal = I.getArgOperand(0);
+    Info.offset = 0;
+    Info.flags = MachineMemOperand::MOStore;
+    Info.align.reset();
+    return true;
+  }
+
+  case Intrinsic::nvvm_tcgen05_st_16x64b_x2:
+  case Intrinsic::nvvm_tcgen05_st_16x128b_x1:
+  case Intrinsic::nvvm_tcgen05_st_32x32b_x2:
+  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x2: {
+    Info.opc = ISD::INTRINSIC_VOID;
+    Info.memVT = MVT::v2i32;
+    Info.ptrVal = I.getArgOperand(0);
+    Info.offset = 0;
+    Info.flags = MachineMemOperand::MOStore;
+    Info.align.reset();
+    return true;
+  }
+
+  case Intrinsic::nvvm_tcgen05_st_16x64b_x4:
+  case Intrinsic::nvvm_tcgen05_st_16x128b_x2:
+  case Intrinsic::nvvm_tcgen05_st_16x256b_x1:
+  case Intrinsic::nvvm_tcgen05_st_32x32b_x4:
+  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x4: {
+    Info.opc = ISD::INTRINSIC_VOID;
+    Info.memVT = MVT::v4i32;
+    Info.ptrVal = I.getArgOperand(0);
+    Info.offset = 0;
+    Info.flags = MachineMemOperand::MOStore;
+    Info.align.reset();
+    return true;
+  }
+
+  case Intrinsic::nvvm_tcgen05_st_16x64b_x8:
+  case Intrinsic::nvvm_tcgen05_st_16x128b_x4:
+  case Intrinsic::nvvm_tcgen05_st_16x256b_x2:
+  case Intrinsic::nvvm_tcgen05_st_32x32b_x8:
+  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x8: {
+    Info.opc = ISD::INTRINSIC_VOID;
+    Info.memVT = MVT::v8i32;
+    Info.ptrVal = I.getArgOperand(0);
+    Info.offset = 0;
+    Info.flags = MachineMemOperand::MOStore;
+    Info.align.reset();
+    return true;
+  }
+
+  case Intrinsic::nvvm_tcgen05_st_16x64b_x16:
+  case Intrinsic::nvvm_tcgen05_st_16x128b_x8:
+  case Intrinsic::nvvm_tcgen05_st_16x256b_x4:
+  case Intrinsic::nvvm_tcgen05_st_32x32b_x16:
+  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x16: {
+    Info.opc = ISD::INTRINSIC_VOID;
+    Info.memVT = MVT::v16i32;
+    Info.ptrVal = I.getArgOperand(0);
+    Info.offset = 0;
+    Info.flags = MachineMemOperand::MOStore;
+    Info.align.reset();
+    return true;
+  }
+
+  case Intrinsic::nvvm_tcgen05_st_16x64b_x32:
+  case Intrinsic::nvvm_tcgen05_st_16x128b_x16:
+  case Intrinsic::nvvm_tcgen05_st_16x256b_x8:
+  case Intrinsic::nvvm_tcgen05_st_32x32b_x32:
+  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x32: {
+    Info.opc = ISD::INTRINSIC_VOID;
+    Info.memVT = MVT::v32i32;
+    Info.ptrVal = I.getArgOperand(0);
+    Info.offset = 0;
+    Info.flags = MachineMemOperand::MOStore;
+    Info.align.reset();
+    return true;
+  }
+
+  case Intrinsic::nvvm_tcgen05_st_16x64b_x64:
+  case Intrinsic::nvvm_tcgen05_st_16x128b_x32:
+  case Intrinsic::nvvm_tcgen05_st_16x256b_x16:
+  case Intrinsic::nvvm_tcgen05_st_32x32b_x64:
+  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x64: {
+    Info.opc = ISD::INTRINSIC_VOID;
+    Info.memVT = MVT::v64i32;
+    Info.ptrVal = I.getArgOperand(0);
+    Info.offset = 0;
+    Info.flags = MachineMemOperand::MOStore;
+    Info.align.reset();
+    return true;
+  }
+
+  case Intrinsic::nvvm_tcgen05_st_16x64b_x128:
+  case Intrinsic::nvvm_tcgen05_st_16x128b_x64:
+  case Intrinsic::nvvm_tcgen05_st_16x256b_x32:
+  case Intrinsic::nvvm_tcgen05_st_32x32b_x128:
+  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x128: {
+    Info.opc = ISD::INTRINSIC_VOID;
+    Info.memVT = MVT::v128i32;
+    Info.ptrVal = I.getArgOperand(0);
+    Info.offset = 0;
+    Info.flags = MachineMemOperand::MOStore;
+    Info.align.reset();
+    return true;
+  }
   }
   return false;
 }
@@ -5474,14 +4954,8 @@ PerformADDCombineWithOperands(SDNode *N, SDValue N0, SDValue N1,
   if (!N0.getNode()->hasOneUse())
     return SDValue();
 
-  // fold (add (mul a, b), c) -> (mad a, b, c)
-  //
-  if (N0.getOpcode() == ISD::MUL)
-    return DCI.DAG.getNode(NVPTXISD::IMAD, SDLoc(N), VT, N0.getOperand(0),
-                           N0.getOperand(1), N1);
-
   // fold (add (select cond, 0, (mul a, b)), c)
-  //   -> (select cond, c, (mad a, b, c))
+  //   -> (select cond, c, (add (mul a, b), c))
   //
   if (N0.getOpcode() == ISD::SELECT) {
     unsigned ZeroOpNum;
@@ -5496,8 +4970,10 @@ PerformADDCombineWithOperands(SDNode *N, SDValue N0, SDValue N1,
     if (M->getOpcode() != ISD::MUL || !M.getNode()->hasOneUse())
       return SDValue();
 
-    SDValue MAD = DCI.DAG.getNode(NVPTXISD::IMAD, SDLoc(N), VT,
-                                  M->getOperand(0), M->getOperand(1), N1);
+    SDLoc DL(N);
+    SDValue Mul =
+        DCI.DAG.getNode(ISD::MUL, DL, VT, M->getOperand(0), M->getOperand(1));
+    SDValue MAD = DCI.DAG.getNode(ISD::ADD, DL, VT, Mul, N1);
     return DCI.DAG.getSelect(SDLoc(N), VT, N0->getOperand(0),
                              ((ZeroOpNum == 1) ? N1 : MAD),
                              ((ZeroOpNum == 1) ? MAD : N1));
@@ -5514,7 +4990,9 @@ PerformFADDCombineWithOperands(SDNode *N, SDValue N0, SDValue N1,
   if (N0.getOpcode() == ISD::FMUL) {
     const auto *TLI = static_cast<const NVPTXTargetLowering *>(
         &DCI.DAG.getTargetLoweringInfo());
-    if (!TLI->allowFMA(DCI.DAG.getMachineFunction(), OptLevel))
+    if (!(TLI->allowFMA(DCI.DAG.getMachineFunction(), OptLevel) ||
+          (N->getFlags().hasAllowContract() &&
+           N0->getFlags().hasAllowContract())))
       return SDValue();
 
     // For floating point:
@@ -5527,7 +5005,7 @@ PerformFADDCombineWithOperands(SDNode *N, SDValue N0, SDValue N1,
     //
     int numUses = 0;
     int nonAddCount = 0;
-    for (const SDNode *User : N0.getNode()->uses()) {
+    for (const SDNode *User : N0.getNode()->users()) {
       numUses++;
       if (User->getOpcode() != ISD::FADD)
         ++nonAddCount;
@@ -5555,7 +5033,7 @@ PerformFADDCombineWithOperands(SDNode *N, SDValue N0, SDValue N1,
         opIsLive = true;
 
       if (!opIsLive)
-        for (const SDNode *User : left->uses()) {
+        for (const SDNode *User : left->users()) {
           int orderNo3 = User->getIROrder();
           if (orderNo3 > orderNo) {
             opIsLive = true;
@@ -5564,7 +5042,7 @@ PerformFADDCombineWithOperands(SDNode *N, SDValue N0, SDValue N1,
         }
 
       if (!opIsLive)
-        for (const SDNode *User : right->uses()) {
+        for (const SDNode *User : right->users()) {
           int orderNo3 = User->getIROrder();
           if (orderNo3 > orderNo) {
             opIsLive = true;
@@ -5762,7 +5240,7 @@ static SDValue PerformREMCombine(SDNode *N,
   const SDValue &Num = N->getOperand(0);
   const SDValue &Den = N->getOperand(1);
 
-  for (const SDNode *U : Num->uses()) {
+  for (const SDNode *U : Num->users()) {
     if (U->getOpcode() == DivOpc && U->getOperand(0) == Num &&
         U->getOperand(1) == Den) {
       // Num % Den -> Num - (Num / Den) * Den
@@ -5934,8 +5412,10 @@ static SDValue matchMADConstOnePattern(SDValue Add) {
 static SDValue combineMADConstOne(SDValue X, SDValue Add, EVT VT, SDLoc DL,
                                   TargetLowering::DAGCombinerInfo &DCI) {
 
-  if (SDValue Y = matchMADConstOnePattern(Add))
-    return DCI.DAG.getNode(NVPTXISD::IMAD, DL, VT, X, Y, X);
+  if (SDValue Y = matchMADConstOnePattern(Add)) {
+    SDValue Mul = DCI.DAG.getNode(ISD::MUL, DL, VT, X, Y);
+    return DCI.DAG.getNode(ISD::ADD, DL, VT, Mul, X);
+  }
 
   return SDValue();
 }
@@ -5982,7 +5462,7 @@ PerformMULCombineWithOperands(SDNode *N, SDValue N0, SDValue N1,
 
   SDLoc DL(N);
 
-  // (mul x, (add y, 1)) -> (mad x, y, x)
+  // (mul x, (add y, 1)) -> (add (mul x, y), x)
   if (SDValue Res = combineMADConstOne(N0, N1, VT, DL, DCI))
     return Res;
   if (SDValue Res = combineMADConstOne(N1, N0, VT, DL, DCI))
@@ -6136,47 +5616,79 @@ static SDValue PerformVSELECTCombine(SDNode *N,
   return DCI.DAG.getNode(ISD::BUILD_VECTOR, DL, MVT::v4i8, E);
 }
 
-static SDValue PerformLOADCombine(SDNode *N,
-                                  TargetLowering::DAGCombinerInfo &DCI) {
-  SelectionDAG &DAG = DCI.DAG;
-  LoadSDNode *LD = cast<LoadSDNode>(N);
-
-  // Lower a v16i8 load into a LoadV4 operation with i32 results instead of
-  // letting ReplaceLoadVector split it into smaller loads during legalization.
-  // This is done at dag-combine1 time, so that vector operations with i8
-  // elements can be optimised away instead of being needlessly split during
-  // legalization, which involves storing to the stack and loading it back.
-  EVT VT = N->getValueType(0);
-  bool CorrectlyAligned =
-      DCI.DAG.getTargetLoweringInfo().allowsMemoryAccessForAlignment(
-          *DAG.getContext(), DAG.getDataLayout(), LD->getMemoryVT(),
-          *LD->getMemOperand());
-  if (!(VT == MVT::v16i8 && CorrectlyAligned))
+static SDValue
+PerformBUILD_VECTORCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
+  auto VT = N->getValueType(0);
+  if (!DCI.isAfterLegalizeDAG() || !Isv2x16VT(VT))
     return SDValue();
 
+  auto Op0 = N->getOperand(0);
+  auto Op1 = N->getOperand(1);
+
+  // Start out by assuming we want to take the lower 2 bytes of each i32
+  // operand.
+  uint64_t Op0Bytes = 0x10;
+  uint64_t Op1Bytes = 0x54;
+
+  std::pair<SDValue *, uint64_t *> OpData[2] = {{&Op0, &Op0Bytes},
+                                                {&Op1, &Op1Bytes}};
+
+  // Check that each operand is an i16, truncated from an i32 operand. We'll
+  // select individual bytes from those original operands. Optionally, fold in a
+  // shift right of that original operand.
+  for (auto &[Op, OpBytes] : OpData) {
+    // Eat up any bitcast
+    if (Op->getOpcode() == ISD::BITCAST)
+      *Op = Op->getOperand(0);
+
+    if (!(Op->getValueType() == MVT::i16 && Op->getOpcode() == ISD::TRUNCATE &&
+          Op->getOperand(0).getValueType() == MVT::i32))
+      return SDValue();
+
+    // If the truncate has multiple uses, this optimization can increase
+    // register pressure
+    if (!Op->hasOneUse())
+      return SDValue();
+
+    *Op = Op->getOperand(0);
+
+    // Optionally, fold in a shift-right of the original operand and let permute
+    // pick the two higher bytes of the original value directly.
+    if (Op->getOpcode() == ISD::SRL && isa<ConstantSDNode>(Op->getOperand(1))) {
+      if (cast<ConstantSDNode>(Op->getOperand(1))->getZExtValue() == 16) {
+        // Shift the PRMT byte selector to pick upper bytes from each respective
+        // value, instead of the lower ones: 0x10 -> 0x32, 0x54 -> 0x76
+        assert((*OpBytes == 0x10 || *OpBytes == 0x54) &&
+               "PRMT selector values out of range");
+        *OpBytes += 0x22;
+        *Op = Op->getOperand(0);
+      }
+    }
+  }
+
   SDLoc DL(N);
+  auto &DAG = DCI.DAG;
 
-  // Create a v4i32 vector load operation, effectively <4 x v4i8>.
-  unsigned Opc = NVPTXISD::LoadV4;
-  EVT NewVT = MVT::v4i32;
-  EVT EltVT = NewVT.getVectorElementType();
-  unsigned NumElts = NewVT.getVectorNumElements();
-  EVT RetVTs[] = {EltVT, EltVT, EltVT, EltVT, MVT::Other};
-  SDVTList RetVTList = DAG.getVTList(RetVTs);
-  SmallVector<SDValue, 8> Ops(N->ops());
-  Ops.push_back(DAG.getIntPtrConstant(LD->getExtensionType(), DL));
-  SDValue NewLoad = DAG.getMemIntrinsicNode(Opc, DL, RetVTList, Ops, NewVT,
-                                            LD->getMemOperand());
-  SDValue NewChain = NewLoad.getValue(NumElts);
+  auto PRMT = DAG.getNode(
+      NVPTXISD::PRMT, DL, MVT::v4i8,
+      {Op0, Op1, DAG.getConstant((Op1Bytes << 8) | Op0Bytes, DL, MVT::i32),
+       DAG.getConstant(NVPTX::PTXPrmtMode::NONE, DL, MVT::i32)});
+  return DAG.getNode(ISD::BITCAST, DL, VT, PRMT);
+}
 
-  // Create a vector of the same type returned by the original load.
-  SmallVector<SDValue, 4> Elts;
-  for (unsigned i = 0; i < NumElts; i++)
-    Elts.push_back(NewLoad.getValue(i));
-  return DCI.DAG.getMergeValues(
-      {DCI.DAG.getBitcast(VT, DCI.DAG.getBuildVector(NewVT, DL, Elts)),
-       NewChain},
-      DL);
+static SDValue combineADDRSPACECAST(SDNode *N,
+                                    TargetLowering::DAGCombinerInfo &DCI) {
+  auto *ASCN1 = cast<AddrSpaceCastSDNode>(N);
+
+  if (auto *ASCN2 = dyn_cast<AddrSpaceCastSDNode>(ASCN1->getOperand(0))) {
+    assert(ASCN2->getDestAddressSpace() == ASCN1->getSrcAddressSpace());
+
+    // Fold asc[B -> A](asc[A -> B](x)) -> x
+    if (ASCN1->getDestAddressSpace() == ASCN2->getSrcAddressSpace())
+      return ASCN2->getOperand(0);
+  }
+
+  return SDValue();
 }
 
 SDValue NVPTXTargetLowering::PerformDAGCombine(SDNode *N,
@@ -6199,8 +5711,6 @@ SDValue NVPTXTargetLowering::PerformDAGCombine(SDNode *N,
       return PerformREMCombine(N, DCI, OptLevel);
     case ISD::SETCC:
       return PerformSETCCCombine(N, DCI, STI.getSmVersion());
-    case ISD::LOAD:
-      return PerformLOADCombine(N, DCI);
     case NVPTXISD::StoreRetval:
     case NVPTXISD::StoreRetvalV2:
     case NVPTXISD::StoreRetvalV4:
@@ -6213,6 +5723,10 @@ SDValue NVPTXTargetLowering::PerformDAGCombine(SDNode *N,
       return PerformEXTRACTCombine(N, DCI);
     case ISD::VSELECT:
       return PerformVSELECTCombine(N, DCI);
+    case ISD::BUILD_VECTOR:
+      return PerformBUILD_VECTORCombine(N, DCI);
+    case ISD::ADDRSPACECAST:
+      return combineADDRSPACECAST(N, DCI);
   }
   return SDValue();
 }
@@ -6247,32 +5761,10 @@ static void ReplaceLoadVector(SDNode *N, SelectionDAG &DAG,
 
   assert(ResVT.isVector() && "Vector load must have vector type");
 
-  // We only handle "native" vector sizes for now, e.g. <4 x double> is not
-  // legal.  We can (and should) split that into 2 loads of <2 x double> here
-  // but I'm leaving that as a TODO for now.
-  assert(ResVT.isSimple() && "Can only handle simple types");
-  switch (ResVT.getSimpleVT().SimpleTy) {
-  default:
+  auto NumEltsAndEltVT = getVectorLoweringShape(ResVT);
+  if (!NumEltsAndEltVT)
     return;
-  case MVT::v2i8:
-  case MVT::v2i16:
-  case MVT::v2i32:
-  case MVT::v2i64:
-  case MVT::v2f16:
-  case MVT::v2f32:
-  case MVT::v2f64:
-  case MVT::v4i8:
-  case MVT::v4i16:
-  case MVT::v4i32:
-  case MVT::v4f16:
-  case MVT::v4bf16:
-  case MVT::v4f32:
-  case MVT::v8f16:  // <4 x f16x2>
-  case MVT::v8bf16: // <4 x bf16x2>
-  case MVT::v8i16:  // <4 x i16x2>
-    // This is a "native" vector type
-    break;
-  }
+  auto [NumElts, EltVT] = NumEltsAndEltVT.value();
 
   LoadSDNode *LD = cast<LoadSDNode>(N);
 
@@ -6289,9 +5781,6 @@ static void ReplaceLoadVector(SDNode *N, SelectionDAG &DAG,
     return;
   }
 
-  EVT EltVT = ResVT.getVectorElementType();
-  unsigned NumElts = ResVT.getVectorNumElements();
-
   // Since LoadV2 is a target node, we cannot rely on DAG type legalization.
   // Therefore, we must ensure the type is legal.  For i1 and i8, we set the
   // loaded type to i16 and propagate the "real" type as the memory type.
@@ -6303,7 +5792,6 @@ static void ReplaceLoadVector(SDNode *N, SelectionDAG &DAG,
 
   unsigned Opcode = 0;
   SDVTList LdResVTs;
-  bool Load16x2 = false;
 
   switch (NumElts) {
   default:
@@ -6315,31 +5803,6 @@ static void ReplaceLoadVector(SDNode *N, SelectionDAG &DAG,
   case 4: {
     Opcode = NVPTXISD::LoadV4;
     EVT ListVTs[] = { EltVT, EltVT, EltVT, EltVT, MVT::Other };
-    LdResVTs = DAG.getVTList(ListVTs);
-    break;
-  }
-  case 8: {
-    // v8f16 is a special case. PTX doesn't have ld.v8.f16
-    // instruction. Instead, we split the vector into v2f16 chunks and
-    // load them with ld.v4.b32.
-    assert(Is16bitsType(EltVT.getSimpleVT()) && "Unsupported v8 vector type.");
-    Load16x2 = true;
-    Opcode = NVPTXISD::LoadV4;
-    EVT VVT;
-    switch (EltVT.getSimpleVT().SimpleTy) {
-    case MVT::f16:
-      VVT = MVT::v2f16;
-      break;
-    case MVT::bf16:
-      VVT = MVT::v2bf16;
-      break;
-    case MVT::i16:
-      VVT = MVT::v2i16;
-      break;
-    default:
-      llvm_unreachable("Unsupported v8 vector type.");
-    }
-    EVT ListVTs[] = {VVT, VVT, VVT, VVT, MVT::Other};
     LdResVTs = DAG.getVTList(ListVTs);
     break;
   }
@@ -6356,18 +5819,19 @@ static void ReplaceLoadVector(SDNode *N, SelectionDAG &DAG,
                                           LD->getMemoryVT(),
                                           LD->getMemOperand());
 
-  SmallVector<SDValue, 8> ScalarRes;
-  if (Load16x2) {
-    // Split v2f16 subvectors back into individual elements.
-    NumElts /= 2;
+  SmallVector<SDValue> ScalarRes;
+  assert(NumElts <= ResVT.getVectorNumElements() &&
+         "NumElts should not increase, only decrease or stay the same.");
+  if (NumElts < ResVT.getVectorNumElements()) {
+    // If the number of elements has decreased, getVectorLoweringShape has
+    // upsized the element types
+    assert(EltVT.isVector() && EltVT.getSizeInBits() == 32 &&
+           EltVT.getVectorNumElements() <= 4 && "Unexpected upsized type.");
+    // Generate EXTRACT_VECTOR_ELTs to split v2[i,f,bf]16/v4i8 subvectors back
+    // into individual elements.
     for (unsigned i = 0; i < NumElts; ++i) {
       SDValue SubVector = NewLD.getValue(i);
-      SDValue E0 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, EltVT, SubVector,
-                               DAG.getIntPtrConstant(0, DL));
-      SDValue E1 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, EltVT, SubVector,
-                               DAG.getIntPtrConstant(1, DL));
-      ScalarRes.push_back(E0);
-      ScalarRes.push_back(E1);
+      DAG.ExtractVectorElements(SubVector, ScalarRes);
     }
   } else {
     for (unsigned i = 0; i < NumElts; ++i) {
@@ -6384,6 +5848,54 @@ static void ReplaceLoadVector(SDNode *N, SelectionDAG &DAG,
 
   Results.push_back(BuildVec);
   Results.push_back(LoadChain);
+}
+
+// Lower vector return type of tcgen05.ld intrinsics
+static void ReplaceTcgen05Ld(SDNode *N, SelectionDAG &DAG,
+                             SmallVectorImpl<SDValue> &Results,
+                             bool hasOffset = false) {
+  SDLoc DL(N);
+  EVT ResVT = N->getValueType(0);
+  if (!ResVT.isVector())
+    return; // already legalized.
+
+  const unsigned NumElts = ResVT.getVectorNumElements();
+
+  // Create the return type of the instructions
+  SmallVector<EVT, 5> ListVTs;
+  for (unsigned i = 0; i < NumElts; ++i)
+    ListVTs.push_back(MVT::i32);
+
+  ListVTs.push_back(N->getValueType(1)); // Chain
+
+  SDVTList ResVTs = DAG.getVTList(ListVTs);
+
+  SmallVector<SDValue, 8> Ops{N->getOperand(0), N->getOperand(1),
+                              N->getOperand(2)};
+
+  if (hasOffset) {
+    Ops.push_back(N->getOperand(3)); // offset
+    Ops.push_back(N->getOperand(4)); // Pack flag
+  } else
+    Ops.push_back(N->getOperand(3)); // Pack flag
+
+  MemIntrinsicSDNode *MemSD = cast<MemIntrinsicSDNode>(N);
+  SDValue NewNode =
+      DAG.getMemIntrinsicNode(ISD::INTRINSIC_W_CHAIN, DL, ResVTs, Ops,
+                              MemSD->getMemoryVT(), MemSD->getMemOperand());
+
+  // split the vector result
+  SmallVector<SDValue, 4> ScalarRes;
+  for (unsigned i = 0; i < NumElts; ++i) {
+    SDValue Res = NewNode.getValue(i);
+    ScalarRes.push_back(Res);
+  }
+
+  SDValue Chain = NewNode.getValue(NumElts);
+  SDValue BuildVector = DAG.getNode(ISD::BUILD_VECTOR, DL, ResVT, ScalarRes);
+  Results.push_back(BuildVector); // Build Vector
+  Results.push_back(Chain);       // Chain
+  return;
 }
 
 static void ReplaceINTRINSIC_W_CHAIN(SDNode *N, SelectionDAG &DAG,
@@ -6491,7 +6003,46 @@ static void ReplaceINTRINSIC_W_CHAIN(SDNode *N, SelectionDAG &DAG,
                                     NewLD.getValue(0)));
       Results.push_back(NewLD.getValue(1));
     }
+    return;
   }
+
+  case Intrinsic::nvvm_tcgen05_ld_16x64b_x2:
+  case Intrinsic::nvvm_tcgen05_ld_16x64b_x4:
+  case Intrinsic::nvvm_tcgen05_ld_16x64b_x8:
+  case Intrinsic::nvvm_tcgen05_ld_16x64b_x16:
+  case Intrinsic::nvvm_tcgen05_ld_16x64b_x32:
+  case Intrinsic::nvvm_tcgen05_ld_16x64b_x64:
+  case Intrinsic::nvvm_tcgen05_ld_16x64b_x128:
+  case Intrinsic::nvvm_tcgen05_ld_32x32b_x2:
+  case Intrinsic::nvvm_tcgen05_ld_32x32b_x4:
+  case Intrinsic::nvvm_tcgen05_ld_32x32b_x8:
+  case Intrinsic::nvvm_tcgen05_ld_32x32b_x16:
+  case Intrinsic::nvvm_tcgen05_ld_32x32b_x32:
+  case Intrinsic::nvvm_tcgen05_ld_32x32b_x64:
+  case Intrinsic::nvvm_tcgen05_ld_32x32b_x128:
+  case Intrinsic::nvvm_tcgen05_ld_16x128b_x1:
+  case Intrinsic::nvvm_tcgen05_ld_16x128b_x2:
+  case Intrinsic::nvvm_tcgen05_ld_16x128b_x4:
+  case Intrinsic::nvvm_tcgen05_ld_16x128b_x8:
+  case Intrinsic::nvvm_tcgen05_ld_16x128b_x16:
+  case Intrinsic::nvvm_tcgen05_ld_16x128b_x32:
+  case Intrinsic::nvvm_tcgen05_ld_16x128b_x64:
+  case Intrinsic::nvvm_tcgen05_ld_16x256b_x1:
+  case Intrinsic::nvvm_tcgen05_ld_16x256b_x2:
+  case Intrinsic::nvvm_tcgen05_ld_16x256b_x4:
+  case Intrinsic::nvvm_tcgen05_ld_16x256b_x8:
+  case Intrinsic::nvvm_tcgen05_ld_16x256b_x16:
+  case Intrinsic::nvvm_tcgen05_ld_16x256b_x32:
+    return ReplaceTcgen05Ld(N, DAG, Results);
+
+  case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x2:
+  case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x4:
+  case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x8:
+  case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x16:
+  case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x32:
+  case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x64:
+  case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x128:
+    return ReplaceTcgen05Ld(N, DAG, Results, /* Offset */ true);
   }
 }
 
@@ -6601,9 +6152,112 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
     default:
       llvm_unreachable("unsupported width encountered");
     }
+  case AtomicRMWInst::BinOp::UIncWrap:
+  case AtomicRMWInst::BinOp::UDecWrap:
+    switch (ITy->getBitWidth()) {
+    case 32:
+      return AtomicExpansionKind::None;
+    case 8:
+    case 16:
+    case 64:
+      return AtomicExpansionKind::CmpXChg;
+    default:
+      llvm_unreachable("unsupported width encountered");
+    }
   }
 
   return AtomicExpansionKind::CmpXChg;
+}
+
+bool NVPTXTargetLowering::shouldInsertFencesForAtomic(
+    const Instruction *I) const {
+  auto *CI = dyn_cast<AtomicCmpXchgInst>(I);
+  // When CAS bitwidth is not supported on the hardware, the CAS is emulated
+  // using a retry loop that uses a higher-bitwidth monotonic CAS. We enforce
+  // the memory order using explicit fences around the retry loop.
+  // The memory order of natively supported CAS operations can be enforced
+  // by lowering to an atom.cas with the right memory synchronizing effect.
+  // However, atom.cas only supports relaxed, acquire, release and acq_rel.
+  // So we also use explicit fences for enforcing memory order for
+  // seq_cast CAS with natively-supported bitwidths.
+  return CI &&
+         (cast<IntegerType>(CI->getCompareOperand()->getType())->getBitWidth() <
+              STI.getMinCmpXchgSizeInBits() ||
+          CI->getMergedOrdering() == AtomicOrdering::SequentiallyConsistent);
+}
+
+AtomicOrdering NVPTXTargetLowering::atomicOperationOrderAfterFenceSplit(
+    const Instruction *I) const {
+  auto *CI = dyn_cast<AtomicCmpXchgInst>(I);
+  bool BitwidthSupportedAndIsSeqCst =
+      CI && CI->getMergedOrdering() == AtomicOrdering::SequentiallyConsistent &&
+      cast<IntegerType>(CI->getCompareOperand()->getType())->getBitWidth() >=
+          STI.getMinCmpXchgSizeInBits();
+  return BitwidthSupportedAndIsSeqCst ? AtomicOrdering::Acquire
+                                      : AtomicOrdering::Monotonic;
+}
+
+Instruction *NVPTXTargetLowering::emitLeadingFence(IRBuilderBase &Builder,
+                                                   Instruction *Inst,
+                                                   AtomicOrdering Ord) const {
+  if (!isa<AtomicCmpXchgInst>(Inst))
+    return TargetLoweringBase::emitLeadingFence(Builder, Inst, Ord);
+
+  // Specialize for cmpxchg
+  // Emit a fence.sc leading fence for cmpxchg seq_cst which are not emulated
+  if (isReleaseOrStronger(Ord))
+    return Ord == AtomicOrdering::SequentiallyConsistent
+               ? Builder.CreateFence(AtomicOrdering::SequentiallyConsistent)
+               : Builder.CreateFence(AtomicOrdering::Release);
+
+  return nullptr;
+}
+
+Instruction *NVPTXTargetLowering::emitTrailingFence(IRBuilderBase &Builder,
+                                                    Instruction *Inst,
+                                                    AtomicOrdering Ord) const {
+  // Specialize for cmpxchg
+  if (!isa<AtomicCmpXchgInst>(Inst))
+    return TargetLoweringBase::emitTrailingFence(Builder, Inst, Ord);
+
+  auto CASWidth =
+      cast<IntegerType>(
+          dyn_cast<AtomicCmpXchgInst>(Inst)->getCompareOperand()->getType())
+          ->getBitWidth();
+  // Do not emit a trailing fence for cmpxchg seq_cst which are not emulated
+  if (isAcquireOrStronger(Ord) &&
+      (Ord != AtomicOrdering::SequentiallyConsistent ||
+       CASWidth < STI.getMinCmpXchgSizeInBits()))
+    return Builder.CreateFence(AtomicOrdering::Acquire);
+
+  return nullptr;
+}
+
+// Rather than default to SINT when both UINT and SINT are custom, we only
+// change the opcode when UINT is not legal and SINT is. UINT is preferred when
+// both are custom since unsigned CVT instructions can lead to slightly better
+// SASS code with fewer instructions.
+unsigned NVPTXTargetLowering::getPreferredFPToIntOpcode(unsigned Op, EVT FromVT,
+                                                        EVT ToVT) const {
+  if (isOperationLegal(Op, ToVT))
+    return Op;
+  switch (Op) {
+  case ISD::FP_TO_UINT:
+    if (isOperationLegal(ISD::FP_TO_SINT, ToVT))
+      return ISD::FP_TO_SINT;
+    break;
+  case ISD::STRICT_FP_TO_UINT:
+    if (isOperationLegal(ISD::STRICT_FP_TO_SINT, ToVT))
+      return ISD::STRICT_FP_TO_SINT;
+    break;
+  case ISD::VP_FP_TO_UINT:
+    if (isOperationLegal(ISD::VP_FP_TO_SINT, ToVT))
+      return ISD::VP_FP_TO_SINT;
+    break;
+  default:
+    break;
+  }
+  return Op;
 }
 
 // Pin NVPTXTargetObjectFile's vtables to this file.

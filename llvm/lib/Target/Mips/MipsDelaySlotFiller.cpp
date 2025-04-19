@@ -208,9 +208,7 @@ namespace {
 
   class MipsDelaySlotFiller : public MachineFunctionPass {
   public:
-    MipsDelaySlotFiller() : MachineFunctionPass(ID) {
-      initializeMipsDelaySlotFillerPass(*PassRegistry::getPassRegistry());
-    }
+    MipsDelaySlotFiller() : MachineFunctionPass(ID) {}
 
     StringRef getPassName() const override { return "Mips Delay Slot Filler"; }
 
@@ -402,7 +400,7 @@ void RegDefsUses::addLiveOut(const MachineBasicBlock &MBB,
   for (const MachineBasicBlock *S : MBB.successors())
     if (S != &SuccBB)
       for (const auto &LI : S->liveins())
-        Uses.set(LI.PhysReg);
+        Uses.set(LI.PhysReg.id());
 }
 
 bool RegDefsUses::update(const MachineInstr &MI, unsigned Begin, unsigned End) {
@@ -563,9 +561,10 @@ Iter MipsDelaySlotFiller::replaceWithCompactBranch(MachineBasicBlock &MBB,
   Branch = TII->genInstrWithNewOpc(NewOpcode, Branch);
 
   auto *ToErase = cast<MachineInstr>(&*std::next(Branch));
-  // Update call site info for the Branch.
-  if (ToErase->shouldUpdateCallSiteInfo())
-    ToErase->getMF()->moveCallSiteInfo(ToErase, cast<MachineInstr>(&*Branch));
+  // Update call info for the Branch.
+  if (ToErase->shouldUpdateAdditionalCallInfo())
+    ToErase->getMF()->moveAdditionalCallInfo(ToErase,
+                                             cast<MachineInstr>(&*Branch));
   ToErase->eraseFromParent();
   return Branch;
 }

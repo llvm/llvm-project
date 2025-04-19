@@ -358,6 +358,9 @@ bool Constant::containsUndefElement() const {
 }
 
 bool Constant::containsConstantExpression() const {
+  if (isa<ConstantInt>(this) || isa<ConstantFP>(this))
+    return false;
+
   if (auto *VTy = dyn_cast<FixedVectorType>(getType())) {
     for (unsigned i = 0, e = VTy->getNumElements(); i != e; ++i)
       if (isa<ConstantExpr>(getAggregateElement(i)))
@@ -446,6 +449,13 @@ Constant *Constant::getAggregateElement(unsigned Elt) const {
                        ->getElementCount()
                        .getKnownMinValue()
                ? ConstantInt::get(getContext(), CI->getValue())
+               : nullptr;
+
+  if (const auto *CFP = dyn_cast<ConstantFP>(this))
+    return Elt < cast<VectorType>(getType())
+                       ->getElementCount()
+                       .getKnownMinValue()
+               ? ConstantFP::get(getContext(), CFP->getValue())
                : nullptr;
 
   // FIXME: getNumElements() will fail for non-fixed vector types.
@@ -831,6 +841,8 @@ Constant *Constant::mergeUndefsWith(Constant *C, Constant *Other) {
 }
 
 bool Constant::isManifestConstant() const {
+  if (isa<UndefValue>(this))
+    return false;
   if (isa<ConstantData>(this))
     return true;
   if (isa<ConstantAggregate>(this) || isa<ConstantExpr>(this)) {
@@ -2385,10 +2397,10 @@ bool ConstantExpr::isDesirableBinOp(unsigned Opcode) {
   case Instruction::LShr:
   case Instruction::AShr:
   case Instruction::Shl:
+  case Instruction::Mul:
     return false;
   case Instruction::Add:
   case Instruction::Sub:
-  case Instruction::Mul:
   case Instruction::Xor:
     return true;
   default:
@@ -2412,10 +2424,10 @@ bool ConstantExpr::isSupportedBinOp(unsigned Opcode) {
   case Instruction::LShr:
   case Instruction::AShr:
   case Instruction::Shl:
+  case Instruction::Mul:
     return false;
   case Instruction::Add:
   case Instruction::Sub:
-  case Instruction::Mul:
   case Instruction::Xor:
     return true;
   default:
@@ -2472,7 +2484,8 @@ Constant *ConstantExpr::getSizeOf(Type* Ty) {
   // Note that a non-inbounds gep is used, as null isn't within any object.
   Constant *GEPIdx = ConstantInt::get(Type::getInt32Ty(Ty->getContext()), 1);
   Constant *GEP = getGetElementPtr(
-      Ty, Constant::getNullValue(PointerType::getUnqual(Ty)), GEPIdx);
+      Ty, Constant::getNullValue(PointerType::getUnqual(Ty->getContext())),
+      GEPIdx);
   return getPtrToInt(GEP,
                      Type::getInt64Ty(Ty->getContext()));
 }
@@ -2636,13 +2649,6 @@ Constant *ConstantExpr::getSub(Constant *C1, Constant *C2,
   unsigned Flags = (HasNUW ? OverflowingBinaryOperator::NoUnsignedWrap : 0) |
                    (HasNSW ? OverflowingBinaryOperator::NoSignedWrap   : 0);
   return get(Instruction::Sub, C1, C2, Flags);
-}
-
-Constant *ConstantExpr::getMul(Constant *C1, Constant *C2,
-                               bool HasNUW, bool HasNSW) {
-  unsigned Flags = (HasNUW ? OverflowingBinaryOperator::NoUnsignedWrap : 0) |
-                   (HasNSW ? OverflowingBinaryOperator::NoSignedWrap   : 0);
-  return get(Instruction::Mul, C1, C2, Flags);
 }
 
 Constant *ConstantExpr::getXor(Constant *C1, Constant *C2) {
@@ -2844,23 +2850,21 @@ bool ConstantDataSequential::isElementTypeCompatible(Type *Ty) {
   return false;
 }
 
-unsigned ConstantDataSequential::getNumElements() const {
+uint64_t ConstantDataSequential::getNumElements() const {
   if (ArrayType *AT = dyn_cast<ArrayType>(getType()))
     return AT->getNumElements();
   return cast<FixedVectorType>(getType())->getNumElements();
 }
 
-
 uint64_t ConstantDataSequential::getElementByteSize() const {
-  return getElementType()->getPrimitiveSizeInBits()/8;
+  return getElementType()->getPrimitiveSizeInBits() / 8;
 }
 
 /// Return the start of the specified element.
-const char *ConstantDataSequential::getElementPointer(unsigned Elt) const {
+const char *ConstantDataSequential::getElementPointer(uint64_t Elt) const {
   assert(Elt < getNumElements() && "Invalid Elt");
-  return DataElements+Elt*getElementByteSize();
+  return DataElements + Elt * getElementByteSize();
 }
-
 
 /// Return true if the array is empty or all zeros.
 static bool isAllZeros(StringRef Arr) {
@@ -3100,8 +3104,7 @@ Constant *ConstantDataVector::getSplat(unsigned NumElts, Constant *V) {
   return ConstantVector::getSplat(ElementCount::getFixed(NumElts), V);
 }
 
-
-uint64_t ConstantDataSequential::getElementAsInteger(unsigned Elt) const {
+uint64_t ConstantDataSequential::getElementAsInteger(uint64_t Elt) const {
   assert(isa<IntegerType>(getElementType()) &&
          "Accessor can only be used when element is an integer");
   const char *EltPtr = getElementPointer(Elt);
@@ -3121,7 +3124,7 @@ uint64_t ConstantDataSequential::getElementAsInteger(unsigned Elt) const {
   }
 }
 
-APInt ConstantDataSequential::getElementAsAPInt(unsigned Elt) const {
+APInt ConstantDataSequential::getElementAsAPInt(uint64_t Elt) const {
   assert(isa<IntegerType>(getElementType()) &&
          "Accessor can only be used when element is an integer");
   const char *EltPtr = getElementPointer(Elt);
@@ -3149,7 +3152,7 @@ APInt ConstantDataSequential::getElementAsAPInt(unsigned Elt) const {
   }
 }
 
-APFloat ConstantDataSequential::getElementAsAPFloat(unsigned Elt) const {
+APFloat ConstantDataSequential::getElementAsAPFloat(uint64_t Elt) const {
   const char *EltPtr = getElementPointer(Elt);
 
   switch (getElementType()->getTypeID()) {
@@ -3174,19 +3177,19 @@ APFloat ConstantDataSequential::getElementAsAPFloat(unsigned Elt) const {
   }
 }
 
-float ConstantDataSequential::getElementAsFloat(unsigned Elt) const {
+float ConstantDataSequential::getElementAsFloat(uint64_t Elt) const {
   assert(getElementType()->isFloatTy() &&
          "Accessor can only be used when element is a 'float'");
   return *reinterpret_cast<const float *>(getElementPointer(Elt));
 }
 
-double ConstantDataSequential::getElementAsDouble(unsigned Elt) const {
+double ConstantDataSequential::getElementAsDouble(uint64_t Elt) const {
   assert(getElementType()->isDoubleTy() &&
          "Accessor can only be used when element is a 'float'");
   return *reinterpret_cast<const double *>(getElementPointer(Elt));
 }
 
-Constant *ConstantDataSequential::getElementAsConstant(unsigned Elt) const {
+Constant *ConstantDataSequential::getElementAsConstant(uint64_t Elt) const {
   if (getElementType()->isHalfTy() || getElementType()->isBFloatTy() ||
       getElementType()->isFloatTy() || getElementType()->isDoubleTy())
     return ConstantFP::get(getContext(), getElementAsAPFloat(Elt));

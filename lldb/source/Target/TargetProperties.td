@@ -217,13 +217,16 @@ let Definition = "target" in {
          "launched. If you change this setting, the new value will only apply to "
          "subsequent launches. Commands that take an explicit working directory "
          "will override this setting.">;
+  def ParallelModuleLoad: Property<"parallel-module-load", "Boolean">,
+    DefaultTrue,
+    Desc<"Enable loading of modules in parallel for the dynamic loader.">;
 }
 
 let Definition = "process_experimental" in {
   def OSPluginReportsAllThreads: Property<"os-plugin-reports-all-threads", "Boolean">,
     Global,
     DefaultTrue,
-    Desc<"Set to False if your OS Plugins doesn't report all threads on each stop.">;
+    Desc<"Set to False if your Python OS Plugin doesn't report all threads on each stop.">;
 }
 
 let Definition = "process" in {

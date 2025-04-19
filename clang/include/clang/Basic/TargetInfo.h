@@ -16,6 +16,7 @@
 
 #include "clang/Basic/AddressSpaces.h"
 #include "clang/Basic/BitmaskEnum.h"
+#include "clang/Basic/Builtins.h"
 #include "clang/Basic/CFProtectionOptions.h"
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/Basic/LLVM.h"
@@ -32,6 +33,7 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
+#include "llvm/ADT/StringTable.h"
 #include "llvm/Frontend/OpenMP/OMPGridValues.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/Support/DataTypes.h"
@@ -197,6 +199,10 @@ protected:
   /// zero length bitfield, regardless of the zero length bitfield type.
   unsigned ZeroLengthBitfieldBoundary;
 
+  /// The largest container size which should be used for an over-sized
+  /// bitfield, in bits.
+  unsigned LargestOverSizedBitfieldContainer;
+
   /// If non-zero, specifies a maximum alignment to truncate alignment
   /// specified in the aligned attribute of a static variable to this value.
   unsigned MaxAlignedAttribute;
@@ -229,7 +235,7 @@ protected:
   bool NoAsmVariants;  // True if {|} are normal characters.
   bool HasLegalHalfType; // True if the backend supports operations on the half
                          // LLVM IR type.
-  bool HalfArgsAndReturns;
+  bool HalfArgsAndReturns; // OpenCL 6.1.1.1, NEON (IEEE 754-2008 half) type.
   bool HasFloat128;
   bool HasFloat16;
   bool HasBFloat16;
@@ -247,6 +253,7 @@ protected:
   const char *MCountName;
   unsigned char RegParmMax, SSERegParmMax;
   TargetCXXABI TheCXXABI;
+  bool UseMicrosoftManglingForC = false;
   const LangASMap *AddrSpaceMap;
 
   mutable StringRef PlatformName;
@@ -294,6 +301,9 @@ protected:
   // macros or checking availability of builtin functions and can be omitted
   // in function attributes in IR.
   llvm::StringSet<> ReadOnlyFeatures;
+
+  // Default atomic options
+  AtomicOptions AtomicOpts;
 
 public:
   /// Construct a target for the given options.
@@ -358,7 +368,14 @@ public:
     //    void *__saved_reg_area_end_pointer;
     //    void *__overflow_area_pointer;
     //} va_list;
-    HexagonBuiltinVaList
+    HexagonBuiltinVaList,
+
+    // typedef struct __va_list_tag {
+    //    int* __va_stk;
+    //    int* __va_reg;
+    //    int __va_ndx;
+    //} va_list;
+    XtensaABIBuiltinVaList
   };
 
 protected:
@@ -945,6 +962,10 @@ public:
     return ZeroLengthBitfieldBoundary;
   }
 
+  unsigned getLargestOverSizedBitfieldContainer() const {
+    return LargestOverSizedBitfieldContainer;
+  }
+
   /// Get the maximum alignment in bits for a static variable with
   /// aligned attribute.
   unsigned getMaxAlignedAttribute() const { return MaxAlignedAttribute; }
@@ -1009,15 +1030,15 @@ public:
   virtual void getTargetDefines(const LangOptions &Opts,
                                 MacroBuilder &Builder) const = 0;
 
-
-  /// Return information about target-specific builtins for
-  /// the current primary target, and info about which builtins are non-portable
-  /// across the current set of primary and secondary targets.
-  virtual ArrayRef<Builtin::Info> getTargetBuiltins() const = 0;
+  /// Return information about target-specific builtins for the current primary
+  /// target, and info about which builtins are non-portable across the current
+  /// set of primary and secondary targets.
+  virtual llvm::SmallVector<Builtin::InfosShard> getTargetBuiltins() const = 0;
 
   /// Returns target-specific min and max values VScale_Range.
   virtual std::optional<std::pair<unsigned, unsigned>>
-  getVScaleRange(const LangOptions &LangOpts) const {
+  getVScaleRange(const LangOptions &LangOpts,
+                 bool IsArmStreamingFunction) const {
     return std::nullopt;
   }
   /// The __builtin_clz* and __builtin_ctz* built-in
@@ -1042,10 +1063,6 @@ public:
   /// Returns whether or not the RISC-V V built-in types are
   /// available on this target.
   bool hasRISCVVTypes() const { return HasRISCVVTypes; }
-
-  /// Returns whether or not the AMDGPU unsafe floating point atomics are
-  /// allowed.
-  bool allowAMDGPUUnsafeFPAtomics() const { return AllowAMDGPUUnsafeFPAtomics; }
 
   /// For ARM targets returns a mask defining which coprocessors are configured
   /// as Custom Datapath.
@@ -1158,8 +1175,7 @@ public:
     }
     void setRequiresImmediate(llvm::ArrayRef<int> Exacts) {
       Flags |= CI_ImmediateConstant;
-      for (int Exact : Exacts)
-        ImmSet.insert(Exact);
+      ImmSet.insert_range(Exacts);
     }
     void setRequiresImmediate(int Exact) {
       Flags |= CI_ImmediateConstant;
@@ -1328,6 +1344,11 @@ public:
     return TheCXXABI;
   }
 
+  /// Should the Microsoft mangling scheme be used for C Calling Convention.
+  bool shouldUseMicrosoftCCforMangling() const {
+    return UseMicrosoftManglingForC;
+  }
+
   /// Target the specified CPU.
   ///
   /// \return  False on error (invalid CPU name).
@@ -1462,6 +1483,7 @@ public:
   /// specification
   virtual bool validateBranchProtection(StringRef Spec, StringRef Arch,
                                         BranchProtectionInfo &BPI,
+                                        const LangOptions &LO,
                                         StringRef &Err) const {
     Err = "";
     return false;
@@ -1525,7 +1547,7 @@ public:
 
   // Return the target-specific priority for features/cpus/vendors so
   // that they can be properly sorted for checking.
-  virtual unsigned getFMVPriority(ArrayRef<StringRef> Features) const {
+  virtual uint64_t getFMVPriority(ArrayRef<StringRef> Features) const {
     return 0;
   }
 
@@ -1680,6 +1702,9 @@ public:
     // an explicit calling convention.
     return CC_C;
   }
+
+  /// Get the default atomic options.
+  AtomicOptions getAtomicOpts() const { return AtomicOpts; }
 
   enum CallingConvCheckResult {
     CCCR_OK,

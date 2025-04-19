@@ -70,11 +70,6 @@ public:
   getLargestLegalSuperClass(const TargetRegisterClass *RC,
                             const MachineFunction &MF) const override;
 
-  bool shouldRewriteCopySrc(const TargetRegisterClass *DefRC,
-                            unsigned DefSubReg,
-                            const TargetRegisterClass *SrcRC,
-                            unsigned SrcSubReg) const override;
-
   /// getPointerRegClass - Returns a TargetRegisterClass used for pointer
   /// values.
   const TargetRegisterClass *
@@ -160,8 +155,8 @@ public:
 
   // Debug information queries.
   Register getFrameRegister(const MachineFunction &MF) const override;
-  unsigned getPtrSizedFrameRegister(const MachineFunction &MF) const;
-  unsigned getPtrSizedStackRegister(const MachineFunction &MF) const;
+  Register getPtrSizedFrameRegister(const MachineFunction &MF) const;
+  Register getPtrSizedStackRegister(const MachineFunction &MF) const;
   Register getStackRegister() const { return StackPtr; }
   Register getBaseRegister() const { return BasePtr; }
   /// Returns physical register used as frame pointer.

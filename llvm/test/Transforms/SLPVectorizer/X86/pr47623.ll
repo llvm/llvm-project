@@ -13,31 +13,27 @@ define void @foo() {
 ; SSE-LABEL: @foo(
 ; SSE-NEXT:    [[TMP1:%.*]] = load i32, ptr @b, align 16
 ; SSE-NEXT:    store i32 [[TMP1]], ptr @a, align 16
-; SSE-NEXT:    [[TMP2:%.*]] = load i32, ptr getelementptr inbounds (i8, ptr @b, i64 8), align 8
-; SSE-NEXT:    store i32 [[TMP2]], ptr getelementptr inbounds (i8, ptr @a, i64 4), align 4
-; SSE-NEXT:    store i32 [[TMP1]], ptr getelementptr inbounds (i8, ptr @a, i64 8), align 8
-; SSE-NEXT:    store i32 [[TMP2]], ptr getelementptr inbounds (i8, ptr @a, i64 12), align 4
-; SSE-NEXT:    store i32 [[TMP1]], ptr getelementptr inbounds (i8, ptr @a, i64 16), align 16
-; SSE-NEXT:    store i32 [[TMP2]], ptr getelementptr inbounds (i8, ptr @a, i64 20), align 4
-; SSE-NEXT:    store i32 [[TMP1]], ptr getelementptr inbounds (i8, ptr @a, i64 24), align 8
-; SSE-NEXT:    store i32 [[TMP2]], ptr getelementptr inbounds (i8, ptr @a, i64 28), align 4
+; SSE-NEXT:    [[TMP2:%.*]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @b, i64 8), align 8
+; SSE-NEXT:    store i32 [[TMP2]], ptr getelementptr inbounds nuw (i8, ptr @a, i64 4), align 4
+; SSE-NEXT:    store i32 [[TMP1]], ptr getelementptr inbounds nuw (i8, ptr @a, i64 8), align 8
+; SSE-NEXT:    store i32 [[TMP2]], ptr getelementptr inbounds nuw (i8, ptr @a, i64 12), align 4
+; SSE-NEXT:    store i32 [[TMP1]], ptr getelementptr inbounds nuw (i8, ptr @a, i64 16), align 16
+; SSE-NEXT:    store i32 [[TMP2]], ptr getelementptr inbounds nuw (i8, ptr @a, i64 20), align 4
+; SSE-NEXT:    store i32 [[TMP1]], ptr getelementptr inbounds nuw (i8, ptr @a, i64 24), align 8
+; SSE-NEXT:    store i32 [[TMP2]], ptr getelementptr inbounds nuw (i8, ptr @a, i64 28), align 4
 ; SSE-NEXT:    ret void
 ;
 ; AVX-LABEL: @foo(
-; AVX-NEXT:    [[TMP1:%.*]] = load i32, ptr @b, align 16
-; AVX-NEXT:    [[TMP2:%.*]] = load i32, ptr getelementptr inbounds (i8, ptr @b, i64 8), align 8
-; AVX-NEXT:    [[TMP3:%.*]] = insertelement <8 x i32> poison, i32 [[TMP1]], i64 0
-; AVX-NEXT:    [[TMP4:%.*]] = insertelement <8 x i32> [[TMP3]], i32 [[TMP2]], i64 1
-; AVX-NEXT:    [[TMP5:%.*]] = shufflevector <8 x i32> [[TMP4]], <8 x i32> poison, <8 x i32> <i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1>
+; AVX-NEXT:    [[TMP1:%.*]] = load <3 x i32>, ptr @b, align 16
+; AVX-NEXT:    [[TMP2:%.*]] = shufflevector <3 x i32> [[TMP1]], <3 x i32> poison, <2 x i32> <i32 0, i32 2>
+; AVX-NEXT:    [[TMP5:%.*]] = shufflevector <2 x i32> [[TMP2]], <2 x i32> poison, <8 x i32> <i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1>
 ; AVX-NEXT:    store <8 x i32> [[TMP5]], ptr @a, align 16
 ; AVX-NEXT:    ret void
 ;
 ; AVX512-LABEL: @foo(
-; AVX512-NEXT:    [[TMP1:%.*]] = load i32, ptr @b, align 16
-; AVX512-NEXT:    [[TMP2:%.*]] = load i32, ptr getelementptr inbounds (i8, ptr @b, i64 8), align 8
-; AVX512-NEXT:    [[TMP3:%.*]] = insertelement <8 x i32> poison, i32 [[TMP1]], i64 0
-; AVX512-NEXT:    [[TMP4:%.*]] = insertelement <8 x i32> [[TMP3]], i32 [[TMP2]], i64 1
-; AVX512-NEXT:    [[TMP5:%.*]] = shufflevector <8 x i32> [[TMP4]], <8 x i32> poison, <8 x i32> <i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1>
+; AVX512-NEXT:    [[TMP1:%.*]] = load <3 x i32>, ptr @b, align 16
+; AVX512-NEXT:    [[TMP2:%.*]] = shufflevector <3 x i32> [[TMP1]], <3 x i32> poison, <2 x i32> <i32 0, i32 2>
+; AVX512-NEXT:    [[TMP5:%.*]] = shufflevector <2 x i32> [[TMP2]], <2 x i32> poison, <8 x i32> <i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1>
 ; AVX512-NEXT:    store <8 x i32> [[TMP5]], ptr @a, align 16
 ; AVX512-NEXT:    ret void
 ;

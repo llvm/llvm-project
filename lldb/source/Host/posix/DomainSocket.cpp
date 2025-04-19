@@ -20,14 +20,6 @@
 using namespace lldb;
 using namespace lldb_private;
 
-#ifdef __ANDROID__
-// Android does not have SUN_LEN
-#ifndef SUN_LEN
-#define SUN_LEN(ptr)                                                           \
-  (offsetof(struct sockaddr_un, sun_path) + strlen((ptr)->sun_path))
-#endif
-#endif // #ifdef __ANDROID__
-
 static const int kDomain = AF_UNIX;
 static const int kType = SOCK_STREAM;
 
@@ -86,7 +78,8 @@ Status DomainSocket::Connect(llvm::StringRef name) {
   if (error.Fail())
     return error;
   if (llvm::sys::RetryAfterSignal(-1, ::connect, GetNativeSocket(),
-        (struct sockaddr *)&saddr_un, saddr_un_len) < 0)
+                                  (struct sockaddr *)&saddr_un,
+                                  saddr_un_len) < 0)
     SetLastError(error);
 
   return error;
@@ -174,4 +167,18 @@ std::string DomainSocket::GetRemoteConnectionURI() const {
   return llvm::formatv(
       "{0}://{1}",
       GetNameOffset() == 0 ? "unix-connect" : "unix-abstract-connect", name);
+}
+
+std::vector<std::string> DomainSocket::GetListeningConnectionURI() const {
+  if (m_socket == kInvalidSocketValue)
+    return {};
+
+  struct sockaddr_un addr;
+  memset(&addr, 0, sizeof(struct sockaddr_un));
+  addr.sun_family = AF_UNIX;
+  socklen_t addr_len = sizeof(struct sockaddr_un);
+  if (::getsockname(m_socket, (struct sockaddr *)&addr, &addr_len) != 0)
+    return {};
+
+  return {llvm::formatv("unix-connect://{0}", addr.sun_path)};
 }

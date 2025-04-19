@@ -186,7 +186,7 @@ struct CollapseShapeOpInterface
         // the source type.
         SmallVector<int64_t> strides;
         int64_t offset;
-        if (failed(getStridesAndOffset(bufferType, strides, offset)))
+        if (failed(bufferType.getStridesAndOffset(strides, offset)))
           return failure();
         resultType = MemRefType::get(
             {}, tensorResultType.getElementType(),
@@ -337,14 +337,12 @@ struct ExpandShapeOpInterface
     if (failed(buffer))
       return failure();
 
-    // Memref result type is inferred by the builder based on reassociation
-    // indices and result shape.
-    // TODO: Instead of inferring the output shape argument of
-    // memref.expand_shape op, use output_shape argument of tensor.expand_shape
-    // op.
-    replaceOpWithNewBufferizedOp<memref::ExpandShapeOp>(
-        rewriter, op, tensorResultType.getShape(), *buffer,
-        expandShapeOp.getReassociationIndices());
+    auto memrefExpandShape = rewriter.create<memref::ExpandShapeOp>(
+        op->getLoc(), tensorResultType.getShape(), *buffer,
+        expandShapeOp.getReassociationIndices(),
+        expandShapeOp.getMixedOutputShape());
+    replaceOpWithBufferizedValues(rewriter, op,
+                                  memrefExpandShape->getResults());
     return success();
   }
 };
@@ -407,10 +405,10 @@ struct ExtractSliceOpInterface
     SmallVector<OpFoldResult> mixedOffsets = extractSliceOp.getMixedOffsets();
     SmallVector<OpFoldResult> mixedSizes = extractSliceOp.getMixedSizes();
     SmallVector<OpFoldResult> mixedStrides = extractSliceOp.getMixedStrides();
-    return cast<BaseMemRefType>(memref::SubViewOp::inferRankReducedResultType(
+    return memref::SubViewOp::inferRankReducedResultType(
         extractSliceOp.getType().getShape(),
         llvm::cast<MemRefType>(*srcMemrefType), mixedOffsets, mixedSizes,
-        mixedStrides));
+        mixedStrides);
   }
 };
 
@@ -692,10 +690,10 @@ struct InsertSliceOpInterface
 
     // Take a subview of the destination buffer.
     auto dstMemrefType = cast<MemRefType>(dstMemref->getType());
-    auto subviewMemRefType =
-        cast<MemRefType>(memref::SubViewOp::inferRankReducedResultType(
+    MemRefType subviewMemRefType =
+        memref::SubViewOp::inferRankReducedResultType(
             insertSliceOp.getSourceType().getShape(), dstMemrefType,
-            mixedOffsets, mixedSizes, mixedStrides));
+            mixedOffsets, mixedSizes, mixedStrides);
     Value subView = rewriter.create<memref::SubViewOp>(
         loc, subviewMemRefType, *dstMemref, mixedOffsets, mixedSizes,
         mixedStrides);
@@ -761,8 +759,8 @@ struct PadOpInterface
     RankedTensorType srcType = padOp.getSourceType();
 
     auto toValue = [&](OpFoldResult ofr) {
-      if (ofr.is<Value>())
-        return ofr.get<Value>();
+      if (auto value = dyn_cast<Value>(ofr))
+        return value;
       return rewriter
           .create<arith::ConstantIndexOp>(loc, *getConstantIntValue(ofr))
           .getResult();
@@ -862,6 +860,10 @@ struct ReshapeOpInterface
 
   AliasingValueList getAliasingValues(Operation *op, OpOperand &opOperand,
                                       const AnalysisState &state) const {
+    // Only the 'source' operand aliases the result.
+    auto reshapeOp = cast<tensor::ReshapeOp>(op);
+    if (reshapeOp.getSourceMutable() != opOperand)
+      return {};
     return {{op->getOpResult(0), BufferRelation::Equivalent}};
   }
 
@@ -928,8 +930,7 @@ struct ParallelInsertSliceOpInterface
 
   bool bufferizesToMemoryRead(Operation *op, OpOperand &opOperand,
                               const AnalysisState &state) const {
-    return insertSliceOpRequiresRead(cast<tensor::ParallelInsertSliceOp>(op),
-                                     opOperand);
+    return opOperand == cast<ParallelInsertSliceOp>(op).getSourceMutable();
   }
 
   bool bufferizesToMemoryWrite(Operation *op, OpOperand &opOperand,
@@ -960,12 +961,12 @@ struct ParallelInsertSliceOpInterface
 
     // Take a subview of the destination buffer.
     auto destBufferType = cast<MemRefType>(destBuffer->getType());
-    auto subviewMemRefType =
-        cast<MemRefType>(memref::SubViewOp::inferRankReducedResultType(
+    MemRefType subviewMemRefType =
+        memref::SubViewOp::inferRankReducedResultType(
             parallelInsertSliceOp.getSourceType().getShape(), destBufferType,
             parallelInsertSliceOp.getMixedOffsets(),
             parallelInsertSliceOp.getMixedSizes(),
-            parallelInsertSliceOp.getMixedStrides()));
+            parallelInsertSliceOp.getMixedStrides());
     Value subview = rewriter.create<memref::SubViewOp>(
         parallelInsertSliceOp.getLoc(), subviewMemRefType, *destBuffer,
         parallelInsertSliceOp.getMixedOffsets(),

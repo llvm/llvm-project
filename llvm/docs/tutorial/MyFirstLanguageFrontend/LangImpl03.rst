@@ -313,7 +313,7 @@ in "``TheModule``"s symbol table.
 Finally, we set the name of each of the function's arguments according to the
 names given in the Prototype. This step isn't strictly necessary, but keeping
 the names consistent makes the IR more readable, and allows subsequent code to
-refer directly to the arguments for their names, rather than having to look up
+refer directly to the arguments for their names, rather than having to look
 them up in the Prototype AST.
 
 At this point we have a function prototype with no body. This is how LLVM IR

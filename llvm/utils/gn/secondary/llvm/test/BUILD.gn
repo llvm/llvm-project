@@ -60,6 +60,7 @@ write_lit_config("lit_site_cfg") {
     # LLVM_HOST_TRIPLE.)
     "HOST_LDFLAGS=",
 
+    "ENABLE_BACKTRACES=1",
     "LLVM_APPEND_VC_REV=0",
     "LLVM_ENABLE_FFI=0",
     "LLVM_ENABLE_HTTPLIB=0",
@@ -294,7 +295,7 @@ group("test") {
     "//llvm/tools/llvm-lto2",
     "//llvm/tools/llvm-mc",
     "//llvm/tools/llvm-mca",
-    "//llvm/tools/llvm-ml",
+    "//llvm/tools/llvm-ml:symlinks",
     "//llvm/tools/llvm-modextract",
     "//llvm/tools/llvm-mt",
     "//llvm/tools/llvm-nm",

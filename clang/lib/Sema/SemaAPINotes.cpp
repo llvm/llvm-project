@@ -478,7 +478,7 @@ static void ProcessAPINotes(Sema &S, FunctionOrMethod AnyFunc,
                             const api_notes::FunctionInfo &Info,
                             VersionedInfoMetadata Metadata) {
   // Find the declaration itself.
-  FunctionDecl *FD = AnyFunc.dyn_cast<FunctionDecl *>();
+  FunctionDecl *FD = dyn_cast<FunctionDecl *>(AnyFunc);
   Decl *D = FD;
   ObjCMethodDecl *MD = nullptr;
   if (!D) {
@@ -510,6 +510,11 @@ static void ProcessAPINotes(Sema &S, FunctionOrMethod AnyFunc,
     if (ParamTypeBefore.getAsOpaquePtr() != Param->getType().getAsOpaquePtr())
       AnyTypeChanged = true;
   }
+
+  // returns_(un)retained
+  if (!Info.SwiftReturnOwnership.empty())
+    D->addAttr(SwiftAttrAttr::Create(S.Context,
+                                     "returns_" + Info.SwiftReturnOwnership));
 
   // Result type override.
   QualType OverriddenResultType;

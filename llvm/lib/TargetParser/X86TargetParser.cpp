@@ -145,7 +145,7 @@ constexpr FeatureBitset FeaturesDiamondRapids =
     FeatureSM4 | FeatureEGPR | FeatureZU | FeatureCCMP | FeaturePush2Pop2 |
     FeaturePPX | FeatureNDD | FeatureNF | FeatureCF | FeatureMOVRS |
     FeatureAMX_MOVRS | FeatureAMX_AVX512 | FeatureAMX_FP8 | FeatureAMX_TF32 |
-    FeatureAMX_TRANSPOSE;
+    FeatureAMX_TRANSPOSE | FeatureUSERMSR;
 
 // Intel Atom processors.
 // Bonnell has feature parity with Core2 and adds MOVBE.
@@ -637,8 +637,7 @@ constexpr FeatureBitset ImpliedFeaturesAVXVNNI = FeatureAVX2;
 constexpr FeatureBitset ImpliedFeaturesAVX10_1 =
     FeatureAVX512CD | FeatureAVX512VBMI | FeatureAVX512IFMA |
     FeatureAVX512VNNI | FeatureAVX512BF16 | FeatureAVX512VPOPCNTDQ |
-    FeatureAVX512VBMI2 | FeatureAVX512BITALG | FeatureVAES | FeatureVPCLMULQDQ |
-    FeatureAVX512FP16;
+    FeatureAVX512VBMI2 | FeatureAVX512BITALG | FeatureAVX512FP16;
 constexpr FeatureBitset ImpliedFeaturesAVX10_1_512 =
     FeatureAVX10_1 | FeatureEVEX512;
 constexpr FeatureBitset ImpliedFeaturesAVX10_2 = FeatureAVX10_1;

@@ -51,8 +51,8 @@ class DiagnosticsEngine;
 class DiagnosticConsumer;
 class FileManager;
 class FrontendAction;
-class InMemoryModuleCache;
 class Module;
+class ModuleCache;
 class Preprocessor;
 class Sema;
 class SourceManager;
@@ -97,7 +97,7 @@ class CompilerInstance : public ModuleLoader {
   IntrusiveRefCntPtr<SourceManager> SourceMgr;
 
   /// The cache of PCM files.
-  IntrusiveRefCntPtr<InMemoryModuleCache> ModuleCache;
+  IntrusiveRefCntPtr<ModuleCache> ModCache;
 
   /// The preprocessor.
   std::shared_ptr<Preprocessor> PP;
@@ -118,7 +118,7 @@ class CompilerInstance : public ModuleLoader {
   std::unique_ptr<Sema> TheSema;
 
   /// The frontend timer group.
-  std::unique_ptr<llvm::TimerGroup> FrontendTimerGroup;
+  std::unique_ptr<llvm::TimerGroup> timerGroup;
 
   /// The frontend timer.
   std::unique_ptr<llvm::Timer> FrontendTimer;
@@ -134,23 +134,13 @@ class CompilerInstance : public ModuleLoader {
 
   std::vector<std::shared_ptr<DependencyCollector>> DependencyCollectors;
 
-  /// Records the set of modules
-  class FailedModulesSet {
-    llvm::StringSet<> Failed;
-
-  public:
-    bool hasAlreadyFailed(StringRef module) { return Failed.count(module) > 0; }
-
-    void addFailed(StringRef module) { Failed.insert(module); }
-  };
-
   /// The set of modules that failed to build.
   ///
-  /// This pointer will be shared among all of the compiler instances created
+  /// This value will be passed among all of the compiler instances created
   /// to (re)build modules, so that once a module fails to build anywhere,
   /// other instances will see that the module has failed and won't try to
   /// build it again.
-  std::shared_ptr<FailedModulesSet> FailedModules;
+  llvm::StringSet<> FailedModules;
 
   /// The set of top-level modules that has already been built on the
   /// fly as part of this overall compilation action.
@@ -209,7 +199,7 @@ public:
   explicit CompilerInstance(
       std::shared_ptr<PCHContainerOperations> PCHContainerOps =
           std::make_shared<PCHContainerOperations>(),
-      InMemoryModuleCache *SharedModuleCache = nullptr);
+      ModuleCache *ModCache = nullptr);
   ~CompilerInstance() override;
 
   /// @name High-Level Operations
@@ -630,29 +620,11 @@ public:
   /// @name Frontend timer
   /// @{
 
-  bool hasFrontendTimer() const { return (bool)FrontendTimer; }
+  llvm::TimerGroup &getTimerGroup() const { return *timerGroup; }
 
   llvm::Timer &getFrontendTimer() const {
     assert(FrontendTimer && "Compiler instance has no frontend timer!");
     return *FrontendTimer;
-  }
-
-  /// @}
-  /// @name Failed modules set
-  /// @{
-
-  bool hasFailedModulesSet() const { return (bool)FailedModules; }
-
-  void createFailedModulesSet() {
-    FailedModules = std::make_shared<FailedModulesSet>();
-  }
-
-  std::shared_ptr<FailedModulesSet> getFailedModulesSetPtr() const {
-    return FailedModules;
-  }
-
-  void setFailedModulesSet(std::shared_ptr<FailedModulesSet> FMS) {
-    FailedModules = FMS;
   }
 
   /// }
@@ -746,9 +718,8 @@ public:
   static IntrusiveRefCntPtr<ASTReader> createPCHExternalASTSource(
       StringRef Path, StringRef Sysroot,
       DisableValidationForModuleKind DisableValidation,
-      bool AllowPCHWithCompilerErrors, Preprocessor &PP,
-      InMemoryModuleCache &ModuleCache, ASTContext &Context,
-      const PCHContainerReader &PCHContainerRdr,
+      bool AllowPCHWithCompilerErrors, Preprocessor &PP, ModuleCache &ModCache,
+      ASTContext &Context, const PCHContainerReader &PCHContainerRdr,
       ArrayRef<std::shared_ptr<ModuleFileExtension>> Extensions,
       ArrayRef<std::shared_ptr<DependencyCollector>> DependencyCollectors,
       void *DeserializationListener, bool OwnDeserializationListener,
@@ -871,7 +842,30 @@ private:
                                                  SourceLocation ModuleNameLoc,
                                                  bool IsInclusionDirective);
 
+  /// Creates a \c CompilerInstance for compiling a module.
+  ///
+  /// This expects a properly initialized \c FrontendInputFile.
+  std::unique_ptr<CompilerInstance> cloneForModuleCompileImpl(
+      SourceLocation ImportLoc, StringRef ModuleName, FrontendInputFile Input,
+      StringRef OriginalModuleMapFile, StringRef ModuleFileName);
+
 public:
+  /// Creates a new \c CompilerInstance for compiling a module.
+  ///
+  /// This takes care of creating appropriate \c FrontendInputFile for
+  /// public/private frameworks, inferred modules and such.
+  std::unique_ptr<CompilerInstance>
+  cloneForModuleCompile(SourceLocation ImportLoc, Module *Module,
+                        StringRef ModuleFileName);
+
+  /// Compile a module file for the given module, using the options
+  /// provided by the importing compiler instance. Returns true if the module
+  /// was built without errors.
+  // FIXME: This should be private, but it's called from static non-member
+  // functions in the implementation file.
+  bool compileModule(SourceLocation ImportLoc, StringRef ModuleName,
+                     StringRef ModuleFileName, CompilerInstance &Instance);
+
   ModuleLoadResult loadModule(SourceLocation ImportLoc, ModuleIdPath Path,
                               Module::NameVisibilityKind Visibility,
                               bool IsInclusionDirective) override;
@@ -896,7 +890,7 @@ public:
 
   void setExternalSemaSource(IntrusiveRefCntPtr<ExternalSemaSource> ESS);
 
-  InMemoryModuleCache &getModuleCache() const { return *ModuleCache; }
+  ModuleCache &getModuleCache() const { return *ModCache; }
 };
 
 } // end namespace clang

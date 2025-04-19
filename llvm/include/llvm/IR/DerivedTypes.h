@@ -536,6 +536,15 @@ public:
                            EltCnt.divideCoefficientBy(2));
   }
 
+  static VectorType *getOneNthElementsVectorType(VectorType *VTy,
+                                                 unsigned Denominator) {
+    auto EltCnt = VTy->getElementCount();
+    assert(EltCnt.isKnownMultipleOf(Denominator) &&
+           "Cannot take one-nth of a vector");
+    return VectorType::get(VTy->getScalarType(),
+                           EltCnt.divideCoefficientBy(Denominator));
+  }
+
   /// This static method returns a VectorType with twice as many elements as the
   /// input type and the same element type.
   static VectorType *getDoubleElementsVectorType(VectorType *VTy) {
@@ -676,6 +685,8 @@ public:
 
   /// This constructs a pointer to an object of the specified type in a numbered
   /// address space.
+  [[deprecated("PointerType::get with pointee type is pending removal. Use "
+               "Context overload.")]]
   static PointerType *get(Type *ElementType, unsigned AddressSpace);
   /// This constructs an opaque pointer to an object in a numbered address
   /// space.
@@ -683,8 +694,13 @@ public:
 
   /// This constructs a pointer to an object of the specified type in the
   /// default address space (address space zero).
+  [[deprecated("PointerType::getUnqual with pointee type is pending removal. "
+               "Use Context overload.")]]
   static PointerType *getUnqual(Type *ElementType) {
-    return PointerType::get(ElementType, 0);
+    assert(ElementType && "Can't get a pointer to <null> type!");
+    assert(isValidElementType(ElementType) &&
+           "Invalid type for pointer element!");
+    return PointerType::getUnqual(ElementType->getContext());
   }
 
   /// This constructs an opaque pointer to an object in the

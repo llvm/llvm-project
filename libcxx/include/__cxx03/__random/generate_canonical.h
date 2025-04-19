@@ -6,13 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___RANDOM_GENERATE_CANONICAL_H
-#define _LIBCPP___RANDOM_GENERATE_CANONICAL_H
+#ifndef _LIBCPP___CXX03___RANDOM_GENERATE_CANONICAL_H
+#define _LIBCPP___CXX03___RANDOM_GENERATE_CANONICAL_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__random/log2.h>
 #include <__cxx03/cstdint>
-#include <__cxx03/initializer_list>
 #include <__cxx03/limits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -48,4 +47,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___RANDOM_GENERATE_CANONICAL_H
+#endif // _LIBCPP___CXX03___RANDOM_GENERATE_CANONICAL_H

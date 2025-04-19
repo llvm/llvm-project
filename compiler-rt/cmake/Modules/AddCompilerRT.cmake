@@ -389,7 +389,8 @@ function(add_compiler_rt_runtime name type)
         set_target_properties(${libname} PROPERTIES IMPORT_PREFIX "")
         set_target_properties(${libname} PROPERTIES IMPORT_SUFFIX ".lib")
       endif()
-      if (APPLE AND NOT CMAKE_LINKER MATCHES ".*lld.*")
+      find_program(CODESIGN codesign)
+      if (APPLE AND NOT CMAKE_LINKER MATCHES ".*lld.*" AND CODESIGN)
         # Apple's linker signs the resulting dylib with an ad-hoc code signature in
         # most situations, except:
         # 1. Versions of ld64 prior to ld64-609 in Xcode 12 predate this behavior.
@@ -404,7 +405,7 @@ function(add_compiler_rt_runtime name type)
         # argument and looking for `invalid argument "linker-signed"` in its output.
         # FIXME: Remove this once all supported toolchains support `-o linker-signed`.
         execute_process(
-          COMMAND sh -c "codesign -f -s - -o linker-signed this-does-not-exist 2>&1 | grep -q linker-signed"
+          COMMAND sh -c "${CODESIGN} -f -s - -o linker-signed this-does-not-exist 2>&1 | grep -q linker-signed"
           RESULT_VARIABLE CODESIGN_SUPPORTS_LINKER_SIGNED
         )
 
@@ -415,7 +416,7 @@ function(add_compiler_rt_runtime name type)
 
         add_custom_command(TARGET ${libname}
           POST_BUILD
-          COMMAND codesign --sign - ${EXTRA_CODESIGN_ARGUMENTS} $<TARGET_FILE:${libname}>
+          COMMAND ${CODESIGN} --sign - ${EXTRA_CODESIGN_ARGUMENTS} $<TARGET_FILE:${libname}>
           WORKING_DIRECTORY ${COMPILER_RT_OUTPUT_LIBRARY_DIR}
           COMMAND_EXPAND_LISTS
         )
@@ -524,7 +525,7 @@ function(add_compiler_rt_test test_suite test_name arch)
   # when linking, not the compiler. Here, we hack it to use the compiler
   # because we want to use -fsanitize flags.
 
-  # Only add CMAKE_EXE_LINKER_FLAGS when in a standalone bulid.
+  # Only add CMAKE_EXE_LINKER_FLAGS when in a standalone build.
   # Or else CMAKE_EXE_LINKER_FLAGS contains flags for build compiler of Clang/llvm.
   # This might not be the same as what the COMPILER_RT_TEST_COMPILER supports.
   # eg: the build compiler use lld linker and we build clang with default ld linker

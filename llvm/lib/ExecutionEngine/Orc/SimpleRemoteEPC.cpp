@@ -47,8 +47,7 @@ lookupSymbolsAsyncHelper(EPCGenericDylibManager &DylibMgr,
                            return Complete(R.takeError());
                          Result.push_back({});
                          Result.back().reserve(R->size());
-                         for (auto Addr : *R)
-                           Result.back().push_back(Addr);
+                         llvm::append_range(Result.back(), *R);
 
                          lookupSymbolsAsyncHelper(
                              DylibMgr, Request.drop_front(), std::move(Result),
@@ -227,7 +226,17 @@ SimpleRemoteEPC::createDefaultMemoryManager(SimpleRemoteEPC &SREPC) {
 
 Expected<std::unique_ptr<ExecutorProcessControl::MemoryAccess>>
 SimpleRemoteEPC::createDefaultMemoryAccess(SimpleRemoteEPC &SREPC) {
-  return nullptr;
+  EPCGenericMemoryAccess::FuncAddrs FAs;
+  if (auto Err = SREPC.getBootstrapSymbols(
+          {{FAs.WriteUInt8s, rt::MemoryWriteUInt8sWrapperName},
+           {FAs.WriteUInt16s, rt::MemoryWriteUInt16sWrapperName},
+           {FAs.WriteUInt32s, rt::MemoryWriteUInt32sWrapperName},
+           {FAs.WriteUInt64s, rt::MemoryWriteUInt64sWrapperName},
+           {FAs.WriteBuffers, rt::MemoryWriteBuffersWrapperName},
+           {FAs.WritePointers, rt::MemoryWritePointersWrapperName}}))
+    return std::move(Err);
+
+  return std::make_unique<EPCGenericMemoryAccess>(SREPC, FAs);
 }
 
 Error SimpleRemoteEPC::sendMessage(SimpleRemoteEPCOpcode OpC, uint64_t SeqNo,

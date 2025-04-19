@@ -72,12 +72,13 @@ enum LipoID {
 };
 
 namespace lipo {
-#define PREFIX(NAME, VALUE)                                                    \
-  static constexpr llvm::StringLiteral NAME##_init[] = VALUE;                  \
-  static constexpr llvm::ArrayRef<llvm::StringLiteral> NAME(                   \
-      NAME##_init, std::size(NAME##_init) - 1);
+#define OPTTABLE_STR_TABLE_CODE
 #include "LipoOpts.inc"
-#undef PREFIX
+#undef OPTTABLE_STR_TABLE_CODE
+
+#define OPTTABLE_PREFIXES_TABLE_CODE
+#include "LipoOpts.inc"
+#undef OPTTABLE_PREFIXES_TABLE_CODE
 
 using namespace llvm::opt;
 static constexpr opt::OptTable::Info LipoInfoTable[] = {
@@ -89,7 +90,9 @@ static constexpr opt::OptTable::Info LipoInfoTable[] = {
 
 class LipoOptTable : public opt::GenericOptTable {
 public:
-  LipoOptTable() : opt::GenericOptTable(lipo::LipoInfoTable) {}
+  LipoOptTable()
+      : opt::GenericOptTable(lipo::OptionStrTable, lipo::OptionPrefixesTable,
+                             lipo::LipoInfoTable) {}
 };
 
 enum class LipoAction {
@@ -246,8 +249,8 @@ static Config parseLipoOptions(ArrayRef<const char *> ArgsArr) {
 
   switch (ActionArgs[0]->getOption().getID()) {
   case LIPO_verify_arch:
-    for (auto A : InputArgs.getAllArgValues(LIPO_verify_arch))
-      C.VerifyArchList.push_back(A);
+    llvm::append_range(C.VerifyArchList,
+                       InputArgs.getAllArgValues(LIPO_verify_arch));
     if (C.VerifyArchList.empty())
       reportError(
           "verify_arch requires at least one architecture to be specified");

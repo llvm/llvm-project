@@ -18,6 +18,7 @@
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/DiagnosticIDs.h"
 #include "clang/Basic/LLVM.h"
+#include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/TokenKinds.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/FoldingSet.h"
@@ -76,9 +77,6 @@ inline bool isReservedInAllContexts(ReservedIdentifierStatus Status) {
          Status != ReservedIdentifierStatus::StartsWithUnderscoreAndIsExternC;
 }
 
-/// A simple pair of identifier info and location.
-using IdentifierLocPair = std::pair<IdentifierInfo *, SourceLocation>;
-
 /// IdentifierInfo and other related classes are aligned to
 /// 8 bytes so that DeclarationName can use the lower 3 bits
 /// of a pointer to one of these classes.
@@ -101,8 +99,9 @@ enum class InterestingIdentifier {
   NUM_OBJC_KEYWORDS_AND_NOTABLE_IDENTIFIERS,
 
   NotBuiltin,
-#define BUILTIN(ID, TYPE, ATTRS) BI##ID,
+#define GET_BUILTIN_ENUMERATORS
 #include "clang/Basic/Builtins.inc"
+#undef GET_BUILTIN_ENUMERATORS
   FirstTSBuiltin,
 
   NotInterestingIdentifier = 65534
@@ -1008,11 +1007,11 @@ class Selector {
   }
 
   const IdentifierInfo *getAsIdentifierInfo() const {
-    return InfoPtr.getPointer().dyn_cast<const IdentifierInfo *>();
+    return dyn_cast_if_present<const IdentifierInfo *>(InfoPtr.getPointer());
   }
 
   MultiKeywordSelector *getMultiKeywordSelector() const {
-    return InfoPtr.getPointer().get<MultiKeywordSelector *>();
+    return cast<MultiKeywordSelector *>(InfoPtr.getPointer());
   }
 
   unsigned getIdentifierInfoFlag() const {
@@ -1020,7 +1019,7 @@ class Selector {
     // IMPORTANT NOTE: We have to reconstitute this data rather than use the
     // value directly from the PointerIntPair. See the comments in `InfoPtr`
     // for more details.
-    if (InfoPtr.getPointer().is<MultiKeywordSelector *>())
+    if (isa<MultiKeywordSelector *>(InfoPtr.getPointer()))
       new_flags |= MultiArg;
     return new_flags;
   }
@@ -1164,6 +1163,28 @@ public:
   static std::string getPropertyNameFromSetterSelector(Selector Sel);
 };
 
+/// A simple pair of identifier info and location.
+class IdentifierLoc {
+  SourceLocation Loc;
+  IdentifierInfo *II = nullptr;
+
+public:
+  IdentifierLoc() = default;
+  IdentifierLoc(SourceLocation L, IdentifierInfo *Ident) : Loc(L), II(Ident) {}
+
+  void setLoc(SourceLocation L) { Loc = L; }
+  void setIdentifierInfo(IdentifierInfo *Ident) { II = Ident; }
+  SourceLocation getLoc() const { return Loc; }
+  IdentifierInfo *getIdentifierInfo() const { return II; }
+
+  bool operator==(const IdentifierLoc &X) const {
+    return Loc == X.Loc && II == X.II;
+  }
+
+  bool operator!=(const IdentifierLoc &X) const {
+    return Loc != X.Loc || II != X.II;
+  }
+};
 }  // namespace clang
 
 namespace llvm {

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.2-compute -finclude-default-header -fnative-half-type -emit-llvm -o - %s | FileCheck %s -check-prefixes=DXIL
+// RUN: %clang_cc1 -Wno-hlsl-implicit-binding -triple dxil-pc-shadermodel6.2-compute -finclude-default-header -fnative-half-type -emit-llvm -o - %s | FileCheck %s -check-prefixes=DXIL
 
 struct MyStruct {
   float4 a;
@@ -11,14 +11,15 @@ struct MyStruct {
 // DXIL: %"class.hlsl::ConsumeStructuredBuffer.2" = type { target("dx.RawBuffer", i32, 1, 0)
 // DXIL: %"class.hlsl::ConsumeStructuredBuffer.3" = type { target("dx.RawBuffer", i64, 1, 0)
 // DXIL: %"class.hlsl::ConsumeStructuredBuffer.4" = type { target("dx.RawBuffer", i64, 1, 0)
-// DXIL: %"class.hlsl::ConsumeStructuredBuffer.5" = type { target("dx.RawBuffer", half, 1, 0) 
+// DXIL: %"class.hlsl::ConsumeStructuredBuffer.5" = type { target("dx.RawBuffer", half, 1, 0)
 // DXIL: %"class.hlsl::ConsumeStructuredBuffer.6" = type { target("dx.RawBuffer", float, 1, 0)
 // DXIL: %"class.hlsl::ConsumeStructuredBuffer.7" = type { target("dx.RawBuffer", double, 1, 0)
 // DXIL: %"class.hlsl::ConsumeStructuredBuffer.8" = type { target("dx.RawBuffer", <4 x i16>, 1, 0)
 // DXIL: %"class.hlsl::ConsumeStructuredBuffer.9" = type { target("dx.RawBuffer", <3 x i32>, 1, 0)
 // DXIL: %"class.hlsl::ConsumeStructuredBuffer.10" = type { target("dx.RawBuffer", <2 x half>, 1, 0)
 // DXIL: %"class.hlsl::ConsumeStructuredBuffer.11" = type { target("dx.RawBuffer", <3 x float>, 1, 0)
-// DXIL: %"class.hlsl::ConsumeStructuredBuffer.12" = type { target("dx.RawBuffer", %struct.MyStruct = type { <4 x float>, <2 x i32>, [8 x i8] }, 1, 0)
+// DXIL: %"class.hlsl::ConsumeStructuredBuffer.12" = type { target("dx.RawBuffer", %struct.MyStruct, 1, 0)
+// DXIL: %struct.MyStruct = type { <4 x float>, <2 x i32>, [8 x i8] }
 
 ConsumeStructuredBuffer<int16_t> BufI16;
 ConsumeStructuredBuffer<uint16_t> BufU16;

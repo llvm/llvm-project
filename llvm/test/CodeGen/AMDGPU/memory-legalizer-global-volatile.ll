@@ -37,6 +37,9 @@ define amdgpu_kernel void @global_volatile_load_0(
 ;
 ; GFX7-LABEL: global_volatile_load_0:
 ; GFX7:       ; %bb.0: ; %entry
+; GFX7-NEXT:    s_mov_b32 flat_scratch_lo, s13
+; GFX7-NEXT:    s_add_i32 s12, s12, s17
+; GFX7-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; GFX7-NEXT:    s_load_dwordx2 s[6:7], s[8:9], 0x0
 ; GFX7-NEXT:    s_load_dwordx2 s[4:5], s[8:9], 0x2
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
@@ -184,6 +187,9 @@ define amdgpu_kernel void @global_volatile_load_1(
 ;
 ; GFX7-LABEL: global_volatile_load_1:
 ; GFX7:       ; %bb.0: ; %entry
+; GFX7-NEXT:    s_mov_b32 flat_scratch_lo, s13
+; GFX7-NEXT:    s_add_i32 s12, s12, s17
+; GFX7-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; GFX7-NEXT:    s_mov_b64 s[4:5], s[8:9]
 ; GFX7-NEXT:    s_load_dwordx2 s[8:9], s[4:5], 0x0
 ; GFX7-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x2
@@ -309,7 +315,6 @@ define amdgpu_kernel void @global_volatile_load_1(
 ; GFX12-WGP-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8
 ; GFX12-WGP-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX12-WGP-NEXT:    s_mov_b32 s4, 0x3ff
-; GFX12-WGP-NEXT:    s_wait_alu 0xfffe
 ; GFX12-WGP-NEXT:    v_and_b32_e64 v1, v1, s4
 ; GFX12-WGP-NEXT:    s_mov_b32 s4, 2
 ; GFX12-WGP-NEXT:    s_wait_alu 0xfffe
@@ -329,7 +334,6 @@ define amdgpu_kernel void @global_volatile_load_1(
 ; GFX12-CU-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8
 ; GFX12-CU-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX12-CU-NEXT:    s_mov_b32 s4, 0x3ff
-; GFX12-CU-NEXT:    s_wait_alu 0xfffe
 ; GFX12-CU-NEXT:    v_and_b32_e64 v1, v1, s4
 ; GFX12-CU-NEXT:    s_mov_b32 s4, 2
 ; GFX12-CU-NEXT:    s_wait_alu 0xfffe
@@ -374,6 +378,9 @@ define amdgpu_kernel void @global_volatile_store_0(
 ;
 ; GFX7-LABEL: global_volatile_store_0:
 ; GFX7:       ; %bb.0: ; %entry
+; GFX7-NEXT:    s_mov_b32 flat_scratch_lo, s13
+; GFX7-NEXT:    s_add_i32 s12, s12, s17
+; GFX7-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; GFX7-NEXT:    s_load_dwordx2 s[4:5], s[8:9], 0x0
 ; GFX7-NEXT:    s_load_dwordx2 s[6:7], s[8:9], 0x2
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
@@ -529,6 +536,9 @@ define amdgpu_kernel void @global_volatile_store_1(
 ;
 ; GFX7-LABEL: global_volatile_store_1:
 ; GFX7:       ; %bb.0: ; %entry
+; GFX7-NEXT:    s_mov_b32 flat_scratch_lo, s13
+; GFX7-NEXT:    s_add_i32 s12, s12, s17
+; GFX7-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; GFX7-NEXT:    s_load_dwordx2 s[4:5], s[8:9], 0x0
 ; GFX7-NEXT:    s_load_dwordx2 s[8:9], s[8:9], 0x2
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
@@ -647,7 +657,6 @@ define amdgpu_kernel void @global_volatile_store_1(
 ; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-WGP-NEXT:    s_load_b32 s2, s[2:3], 0x0
 ; GFX12-WGP-NEXT:    s_mov_b32 s3, 0x3ff
-; GFX12-WGP-NEXT:    s_wait_alu 0xfffe
 ; GFX12-WGP-NEXT:    v_and_b32_e64 v0, v0, s3
 ; GFX12-WGP-NEXT:    s_mov_b32 s3, 2
 ; GFX12-WGP-NEXT:    s_wait_alu 0xfffe
@@ -670,7 +679,6 @@ define amdgpu_kernel void @global_volatile_store_1(
 ; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-CU-NEXT:    s_load_b32 s2, s[2:3], 0x0
 ; GFX12-CU-NEXT:    s_mov_b32 s3, 0x3ff
-; GFX12-CU-NEXT:    s_wait_alu 0xfffe
 ; GFX12-CU-NEXT:    v_and_b32_e64 v0, v0, s3
 ; GFX12-CU-NEXT:    s_mov_b32 s3, 2
 ; GFX12-CU-NEXT:    s_wait_alu 0xfffe
@@ -722,6 +730,9 @@ define amdgpu_kernel void @global_volatile_workgroup_acquire_load(
 ;
 ; GFX7-LABEL: global_volatile_workgroup_acquire_load:
 ; GFX7:       ; %bb.0: ; %entry
+; GFX7-NEXT:    s_mov_b32 flat_scratch_lo, s13
+; GFX7-NEXT:    s_add_i32 s12, s12, s17
+; GFX7-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; GFX7-NEXT:    s_load_dwordx2 s[6:7], s[8:9], 0x0
 ; GFX7-NEXT:    s_load_dwordx2 s[4:5], s[8:9], 0x2
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
@@ -856,6 +867,9 @@ define amdgpu_kernel void @global_volatile_workgroup_release_store(
 ;
 ; GFX7-LABEL: global_volatile_workgroup_release_store:
 ; GFX7:       ; %bb.0: ; %entry
+; GFX7-NEXT:    s_mov_b32 flat_scratch_lo, s13
+; GFX7-NEXT:    s_add_i32 s12, s12, s17
+; GFX7-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; GFX7-NEXT:    s_load_dword s4, s[8:9], 0x0
 ; GFX7-NEXT:    s_load_dwordx2 s[6:7], s[8:9], 0x2
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)

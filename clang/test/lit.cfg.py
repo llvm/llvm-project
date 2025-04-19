@@ -29,10 +29,12 @@ config.suffixes = [
     ".c",
     ".cpp",
     ".i",
+    ".cir",
     ".cppm",
     ".m",
     ".mm",
     ".cu",
+    ".cuh",
     ".hip",
     ".hlsl",
     ".ll",
@@ -84,6 +86,7 @@ tool_dirs = [config.clang_tools_dir, config.llvm_tools_dir]
 tools = [
     "apinotes-test",
     "c-index-test",
+    "cir-opt",
     "clang-diff",
     "clang-format",
     "clang-repl",
@@ -183,6 +186,14 @@ if config.clang_staticanalyzer:
         )
     )
 
+    csv2json_path = os.path.join(config.test_source_root, "Analysis", "csv2json.py")
+    config.substitutions.append(
+        (
+            "%csv2json",
+            '"%s" %s' % (config.python_executable, csv2json_path),
+        )
+    )
+
 llvm_config.add_tool_substitutions(tools, tool_dirs)
 
 config.substitutions.append(
@@ -250,6 +261,7 @@ if platform.system() not in ["Darwin", "Fuchsia"]:
 
 
 def is_filesystem_case_insensitive():
+    os.makedirs(config.test_exec_root, exist_ok=True)
     handle, path = tempfile.mkstemp(prefix="case-test", dir=config.test_exec_root)
     isInsensitive = os.path.exists(
         os.path.join(os.path.dirname(path), os.path.basename(path).upper())

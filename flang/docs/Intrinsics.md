@@ -1,9 +1,9 @@
-<!--===- docs/Intrinsics.md 
-  
+<!--===- docs/Intrinsics.md
+
    Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
    See https://llvm.org/LICENSE.txt for license information.
    SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-  
+
 -->
 
 # A categorization of standard (2018) and extended Fortran intrinsic procedures
@@ -241,8 +241,14 @@ BESSEL_Y0(REAL(k) X) -> REAL(k)
 BESSEL_Y1(REAL(k) X) -> REAL(k)
 BESSEL_YN(INTEGER(n) N, REAL(k) X) -> REAL(k)
 ERF(REAL(k) X) -> REAL(k)
+DERF(REAL(8) X) -> REAL(8)
+QERF(REAL(16) X) -> REAL(16)
 ERFC(REAL(k) X) -> REAL(k)
+DERFC(REAL(8) X) -> REAL(8)
+QERFC(REAL(16) X) -> REAL(16)
 ERFC_SCALED(REAL(k) X) -> REAL(k)
+DERFC_SCALED(REAL(8) X) -> REAL(8)
+QERFC_SCALED(REAL(16) X) -> REAL(16)
 FRACTION(REAL(k) X) -> REAL(k)
 GAMMA(REAL(k) X) -> REAL(k)
 HYPOT(REAL(k) X, REAL(k) Y) -> REAL(k) = SQRT(X*X+Y*Y) without spurious overflow
@@ -703,8 +709,9 @@ CACHESIZE, EOF, FP_CLASS, INT_PTR_KIND, ISNAN, LOC
 MALLOC, FREE
 ```
 
-### Library subroutine 
+### Library subroutine
 ```
+CALL BACKTRACE()
 CALL FDATE(TIME)
 CALL GETLOG(USRNAME)
 CALL GETENV(NAME [, VALUE, LENGTH, STATUS, TRIM_NAME, ERRMSG ])
@@ -766,10 +773,10 @@ This phase currently supports all the intrinsic procedures listed above but the 
 | Object characteristic inquiry functions | ALLOCATED, ASSOCIATED, EXTENDS_TYPE_OF, IS_CONTIGUOUS, PRESENT, RANK, SAME_TYPE, STORAGE_SIZE |
 | Type inquiry intrinsic functions | BIT_SIZE, DIGITS, EPSILON, HUGE, KIND, MAXEXPONENT, MINEXPONENT, NEW_LINE, PRECISION, RADIX, RANGE, TINY|
 | Non-standard intrinsic functions | AND, OR, XOR, SHIFT, ZEXT, IZEXT, COSD, SIND, TAND, ACOSD, ASIND, ATAND, ATAN2D, COMPL, EQV, NEQV, INT8, JINT, JNINT, KNINT, QCMPLX, DREAL, DFLOAT, QEXT, QFLOAT, QREAL, DNUM, NUM, JNUM, KNUM, QNUM, RNUM, RAN, RANF, ILEN, SIZEOF, MCLOCK, SECNDS, COTAN, IBCHNG, ISHA, ISHC, ISHL, IXOR, IARG, IARGC, NARGS, GETPID, NUMARG, BADDRESS, IADDR, CACHESIZE, EOF, FP_CLASS, INT_PTR_KIND, ISNAN, MALLOC, FREE, GETUID, GETGID |
-| Intrinsic subroutines |MVBITS (elemental), CPU_TIME, DATE_AND_TIME, EVENT_QUERY, EXECUTE_COMMAND_LINE, GET_COMMAND, GET_COMMAND_ARGUMENT, GET_ENVIRONMENT_VARIABLE, MOVE_ALLOC, RANDOM_INIT, RANDOM_NUMBER, RANDOM_SEED, SIGNAL, SLEEP, SYSTEM, SYSTEM_CLOCK |
+| Intrinsic subroutines |MVBITS (elemental), CHDIR, CPU_TIME, DATE_AND_TIME, EVENT_QUERY, EXECUTE_COMMAND_LINE, GET_COMMAND, GET_COMMAND_ARGUMENT, GET_ENVIRONMENT_VARIABLE, MOVE_ALLOC, RANDOM_INIT, RANDOM_NUMBER, RANDOM_SEED, SIGNAL, SLEEP, SYSTEM, SYSTEM_CLOCK |
 | Atomic intrinsic subroutines | ATOMIC_ADD |
 | Collective intrinsic subroutines | CO_REDUCE |
-| Library subroutines | FDATE, GETLOG, GETENV |
+| Library subroutines | BACKTRACE, FDATE, GETLOG, GETENV |
 
 
 ### Intrinsic Function Folding
@@ -809,7 +816,7 @@ otherwise an error message will be produced by f18 when attempting to fold relat
 
 | C/C++ Host Type | Intrinsic Functions with Host Standard C++ Library Based Folding Support |
 | --- | --- |
-| float, double and long double | ACOS, ACOSH, ASINH, ATAN, ATAN2, ATANH, COS, COSH, ERF, ERFC, EXP, GAMMA, HYPOT, LOG, LOG10, LOG_GAMMA, MOD, SIN, SQRT, SINH, SQRT, TAN, TANH |
+| float, double and long double | ACOS, ACOSH, ASINH, ATAN, ATAN2, ATANH, COS, COSH, DERF, DERFC, ERF, ERFC, EXP, GAMMA, HYPOT, LOG, LOG10, LOG_GAMMA, MOD, QERF, QERFC, SIN, SQRT, SINH, SQRT, TAN, TANH |
 | std::complex for float, double and long double| ACOS, ACOSH, ASIN, ASINH, ATAN, ATANH, COS, COSH, EXP, LOG, SIN, SINH, SQRT, TAN, TANH |
 
 On top of the default usage of C++ standard library functions for folding described
@@ -828,7 +835,7 @@ types related to host float and double types.
 
 | C/C++ Host Type | Additional Intrinsic Function Folding Support with Libpgmath (Optional) |
 | --- | --- |
-|float and double| BESSEL_J0, BESSEL_J1, BESSEL_JN (elemental only), BESSEL_Y0, BESSEL_Y1, BESSEL_Yn (elemental only), ERFC_SCALED |
+|float and double| BESSEL_J0, BESSEL_J1, BESSEL_JN (elemental only), BESSEL_Y0, BESSEL_Y1, BESSEL_Yn (elemental only), DERFC_SCALED, ERFC_SCALED, QERFC_SCALED |
 
 Libpgmath comes in three variants (precise, relaxed and fast). So far, only the
 precise version is used for intrinsic function folding in f18. It guarantees the greatest numerical precision.
@@ -960,7 +967,7 @@ program test_etime
     call ETIME(tarray, result)
     print *, result
     print *, tarray(1)
-    print *, tarray(2)   
+    print *, tarray(2)
     do i=1,100000000    ! Just a delay
         j = i * i - i
     end do
@@ -1001,6 +1008,73 @@ PROGRAM example_getcwd
   PRINT *, status
 END PROGRAM
 ```
+
+### Non-Standard Intrinsics: HOSTNM
+
+#### Description
+`HOSTNM(C, STATUS)` returns the host name of the system.
+
+This intrinsic is provided in both subroutine and function forms; however, only one form can be used in any given program unit.
+
+*C* and *STATUS* are `INTENT(OUT)` and provide the following:
+
+|            |                                                                                                   |
+|------------|---------------------------------------------------------------------------------------------------|
+| `C`        | The host name of the system. The type shall be `CHARACTER` and of default kind.       |
+| `STATUS`   | (Optional) Status flag. Returns 0 on success, a system specific and nonzero error code otherwise. The type shall be `INTEGER` and of a kind greater or equal to 4. |
+
+#### Usage and Info
+
+- **Standard:** GNU extension
+- **Class:** Subroutine, function
+- **Syntax:** `CALL HOSTNM(C, STATUS)`, `STATUS = HOSTNM(C)`
+
+#### Example
+```Fortran
+PROGRAM example_hostnm
+  CHARACTER(len=255) :: hnam
+  INTEGER :: status
+  CALL hostnm(hnam, status)
+  PRINT *, hnam
+  PRINT *, status
+END PROGRAM
+```
+
+### Non-Standard Intrinsics: PUTENV
+
+#### Description
+`PUTENV(STR [, STATUS])` sets or deletes environment variable.
+
+This intrinsic is provided in both subroutine and function forms; however, only
+one form can be used in any given program unit.
+
+| ARGUMENT | INTENT | TYPE        |  KIND   | Description                     |
+|----------|--------|-------------|---------|---------------------------------|
+| `STR`    | `IN`   | `CHARACTER` | default | String in the form "name=value" (see below) |
+| `STATUS` | `OUT`  | `INTEGER`   | default | Optional. Returns 0 on success, C's `errno` on failure. |
+
+#### Usage and Info
+
+- **Standard:** extension
+- **Class:** Subroutine, function
+- **Syntax:** `CALL PUTENV(STR [, STATUS])`, `STATUS = PUTENV(STR)`
+
+The passed string can be in the form "name=value" to set environment variable "name" to value "value". It can also be of the form "name=" to delete environment variable "name".
+
+The environment variables set by PUTENV can be read by GET_ENVIRONMENT_VARIABLE.
+
+#### Example
+```Fortran
+  integer :: status
+
+  ! Set variable my_var to value my_value
+  putenv("my_var=my_value", status)
+
+  ! Delete variable my_var
+  putenv("my_var=")
+  end
+```
+
 
 ### Non-standard Intrinsics: RENAME
 `RENAME(OLD, NEW[, STATUS])` renames/moves a file on the filesystem.
@@ -1052,6 +1126,69 @@ end program rename_proc
 This intrinsic is an alias for `CPU_TIME`: supporting both a subroutine and a
 function form.
 
+### Non-Standard Intrinsics: TIME
+
+#### Description
+`TIME()` returns the current time of the system as a INTEGER(8).
+
+#### Usage and Info
+
+- **Standard:** GNU extension
+- **Class:** function
+- **Syntax:** `RESULT = TIME()`
+
+#### Example
+```Fortran
+PROGRAM example_time
+  print *, TIME()
+  print *, TIME()
+  call SLEEP(10)
+  print *, TIME()
+END PROGRAM
+```
+
+### Non-Standard Intrinsics: UNLINK
+
+#### Description
+`UNLINK(PATH [, STATUS])` deletes a link to a file.
+
+This intrinsic is provided in both subroutine and function forms; however, only
+one form can be used in any given program unit.
+
+| ARGUMENT | INTENT | TYPE        |  KIND   | Description                     |
+|----------|--------|-------------|---------|---------------------------------|
+| `PATH`   | `IN`   | `CHARACTER` | default | The path of the file to unlink. |
+| `STATUS` | `OUT`  | `INTEGER`   | default | Optional. Returns 0 on success, C's `errno` on failure. |
+
+#### Usage and Info
+
+- **Standard:** GNU extension
+- **Class:** Subroutine, function
+- **Syntax:** `CALL UNLINK(PATH [, STATUS])`, `STATUS = UNLINK(PATH)`
+
+#### Example
+The following example just prints "hello.txt doesn't exist".
+```Fortran
+SUBROUTINE try_unlink_hello_again()
+  INTEGER :: status
+  CALL UNLINK("hello.txt", status)
+  IF (status .NE. 0) PRINT *, "hello.txt doesn't exist"
+END SUBROUTINE
+
+PROGRAM example_unlink
+  INTEGER :: hello
+  ! Create ./hello.txt
+  OPEN(newunit=hello, file="hello.txt")
+  WRITE (hello, *), "Hello!"
+  CLOSE(hello)
+
+  ! Delete ./hello.txt
+  IF (UNLINK("hello.txt") .NE. 0) PRINT *, "didn't create a file"
+
+  CALL try_unlink_hello_again()
+END PROGRAM
+```
+
 ### Non-standard Intrinsics: LNBLNK
 This intrinsic is an alias for `LEN_TRIM`, without the optional KIND argument.
 
@@ -1063,3 +1200,126 @@ This intrinsic is an alias for `LEN_TRIM`, without the optional KIND argument.
 - **Arguments:** `TIME` - a REAL value into which the elapsed CPU time in
                           seconds is written
 - **RETURN value:** same as TIME argument
+
+### Non-Standard Intrinsics: CHDIR
+
+#### Description
+`CHDIR(NAME[, STATUS])` Change current working directory to a specified path.
+
+This intrinsic is provided in both subroutine and function forms; however, only one form can be used in any given program unit.
+*STATUS* is `INTENT(OUT)` and provide the following:
+
+|            |                                                                                                   |
+|------------|---------------------------------------------------------------------------------------------------|
+| `NAME`     | The type shall be `CHARACTER` of default kind and shall specify a valid path within the file system.       |
+| `STATUS`   | (Optional) Status flag. Returns 0 on success, a system specific and nonzero error code otherwise. The type shall be `INTEGER` and of the default kind. |
+
+#### Usage and Info
+
+- **Standard:** GNU extension
+- **Class:** Subroutine, function
+- **Syntax:** `CALL CHDIR(NAME[, STATUS])` and `STATUS = CHDIR(NAME)`
+
+#### Example
+```Fortran
+program chdir_func
+  character(len=) :: path
+  integer :: status
+
+  call chdir("/tmp")
+  status = chdir("..")
+  print *, "status: ", status
+end program chdir_func
+```
+
+### Non-Standard Intrinsics: FSEEK and FTELL
+
+#### Description
+`FSEEK(UNIT, OFFSET, WHENCE)` Sets position in file opened as `UNIT`, returns status.
+
+`CALL FSEEK(UNIT, OFFSET, WHENCE[, STATUS])` Sets position, returns any error in `STATUS` if present.
+
+`FTELL(UNIT)` Returns current absolute byte offset.
+
+`CALL FTELL(UNIT, OFFSET)` Set `OFFSET` to current byte offset in file.
+
+These intrinsic procedures are available as both functions and subroutines,
+but both forms cannot be used in the same scope.
+
+These arguments must all be integers.
+The value returned from the function form of `FTELL` is `INTEGER(8)`.
+
+|            |                                                 |
+|------------|-------------------------------------------------|
+| `UNIT`     | An open unit number                             |
+| `OFFSET`   | A byte offset; set to -1 by `FTELL` on error    |
+| `WHENCE`   | 0: `OFFSET` is an absolute position             |
+|            | 1: `OFFSET` is relative to the current position |
+|            | 2: `OFFSET` is relative to the end of the file  |
+| `STATUS`   | Set to a nonzero value if an error occurs       |
+|------------|-------------------------------------------------|
+
+The aliases `FSEEK64`, `FSEEKO64`, `FSEEKI8`, `FTELL64`, `FTELLO64`, and
+`FTELLI8` are also accepted for further compatibility.
+
+Avoid using these intrinsics in new code when the standard `ACCESS="STREAM"`
+feature meets your needs.
+
+#### Usage and Info
+
+- **Standard:** Extensions to GNU, Intel, and SUN (at least)
+- **Class:** Subroutine, function
+
+### Non-Standard Intrinsics: IERRNO
+
+#### Description
+`IERRNO()` returns the last system error number, as given by the C `errno` variable.
+
+#### Usage and Info
+
+- **Standard:** GNU extension
+- **Class:** function
+- **Syntax:** `RESULT = IERRNO()`
+
+### Non-Standard Intrinsics: QSORT
+
+#### Description
+
+```
+SUBROUTINE QSORT(ARRAY, LEN, ISIZE, COMPAR)
+  TYPE(*) :: ARRAY(*)
+  INTEGER(4) :: LEN, ISIZE
+  INTERFACE
+    INTEGER(4) FUNCTION COMPAR(A, B)
+      TYPE(*) :: A, B
+    END FUNCTION
+  END INTERFACE
+END SUBROUTINE
+```
+
+Sort `ARRAY` in place in ascending order given the comparison function `COMPAR`.
+The array number of elements is given by `LEN` and the element byte size is given
+by `ISIZE`.
+
+`COMPAR` function takes the addresses of element `A` and `B` and must return:
+- a negative value if `A` < `B`
+- zero if `A` == `B`
+- a positive value otherwise.
+
+#### Usage and Info
+
+- **Standard:** lib3f (section 3f of old man pages).
+- **Class:** subroutine
+- **Syntax:** `CALL QSORT(ARRAY, LEN, ISIZE, COMPAR)`
+
+### Non-Standard Intrinsics: PERROR
+
+#### Description
+`PERROR(STRING)` prints (on the C stderr stream) a newline-terminated error message corresponding to the last system error.
+This is prefixed by `STRING`, a colon and a space.
+
+#### Usage and Info
+
+- **Standard:** GNU extension
+- **Class:** subroutine
+- **Syntax:** `CALL PERROR(STRING)`

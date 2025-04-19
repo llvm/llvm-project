@@ -49,7 +49,8 @@ public:
                                       llvm::StringRef VarName) const;
   // Generate Replacement for declaring the selected Expr as a new variable
   tooling::Replacement insertDeclaration(llvm::StringRef VarName,
-                                         SourceRange InitChars) const;
+                                         SourceRange InitChars,
+                                         bool AddSemicolon) const;
 
 private:
   bool Extractable = false;
@@ -99,9 +100,9 @@ computeReferencedDecls(const clang::Expr *Expr) {
         TraverseLambdaCapture(LExpr, &Capture, Initializer);
       }
 
-      if (clang::Expr *const RequiresClause =
-              LExpr->getTrailingRequiresClause()) {
-        TraverseStmt(RequiresClause);
+      if (const clang::Expr *RequiresClause =
+              LExpr->getTrailingRequiresClause().ConstraintExpr) {
+        TraverseStmt(const_cast<clang::Expr *>(RequiresClause));
       }
 
       for (auto *const TemplateParam : LExpr->getExplicitTemplateParameters())
@@ -252,7 +253,8 @@ ExtractionContext::replaceWithVar(SourceRange Chars,
 // returns the Replacement for declaring a new variable storing the extraction
 tooling::Replacement
 ExtractionContext::insertDeclaration(llvm::StringRef VarName,
-                                     SourceRange InitializerChars) const {
+                                     SourceRange InitializerChars,
+                                     bool AddSemicolon) const {
   llvm::StringRef ExtractionCode = toSourceCode(SM, InitializerChars);
   const SourceLocation InsertionLoc =
       toHalfOpenFileRange(SM, Ctx.getLangOpts(),
@@ -260,7 +262,9 @@ ExtractionContext::insertDeclaration(llvm::StringRef VarName,
           ->getBegin();
   std::string ExtractedVarDecl =
       printType(VarType, ExprNode->getDeclContext(), VarName) + " = " +
-      ExtractionCode.str() + "; ";
+      ExtractionCode.str();
+  if (AddSemicolon)
+    ExtractedVarDecl += "; ";
   return tooling::Replacement(SM, InsertionLoc, 0, ExtractedVarDecl);
 }
 
@@ -419,12 +423,10 @@ const SelectionTree::Node *getCallExpr(const SelectionTree::Node *DeclRef) {
 
 // Returns true if Inner (which is a direct child of Outer) is appearing as
 // a statement rather than an expression whose value can be used.
-bool childExprIsStmt(const Stmt *Outer, const Expr *Inner) {
+bool childExprIsDisallowedStmt(const Stmt *Outer, const Expr *Inner) {
   if (!Outer || !Inner)
     return false;
   // Exclude the most common places where an expr can appear but be unused.
-  if (llvm::isa<CompoundStmt>(Outer))
-    return true;
   if (llvm::isa<SwitchCase>(Outer))
     return true;
   // Control flow statements use condition etc, but not the body.
@@ -476,12 +478,9 @@ bool eligibleForExtraction(const SelectionTree::Node *N) {
   const auto *Parent = OuterImplicit.Parent;
   if (!Parent)
     return false;
-  // We don't want to extract expressions used as statements, that would leave
-  // a `placeholder;` around that has no effect.
-  // Unfortunately because the AST doesn't have ExprStmt, we have to check in
-  // this roundabout way.
-  if (childExprIsStmt(Parent->ASTNode.get<Stmt>(),
-                      OuterImplicit.ASTNode.get<Expr>()))
+  // Filter non-applicable expression statements.
+  if (childExprIsDisallowedStmt(Parent->ASTNode.get<Stmt>(),
+                                OuterImplicit.ASTNode.get<Expr>()))
     return false;
 
   std::function<bool(const SelectionTree::Node *)> IsFullySelected =
@@ -515,6 +514,12 @@ bool eligibleForExtraction(const SelectionTree::Node *N) {
     if (BO->isAssignmentOp() && ExprIsFullySelectedTargetNode(BO->getRHS()))
       return false;
   }
+
+  // If e.g. a capture clause was selected, the target node is the lambda
+  // expression. We only want to offer the extraction if the entire lambda
+  // expression was selected.
+  if (llvm::isa<LambdaExpr>(E))
+    return N->Selected == SelectionTree::Complete;
 
   // The same logic as for assignments applies to initializations.
   // However, we do allow extracting the RHS of an init capture, as it is
@@ -599,10 +604,24 @@ Expected<Tweak::Effect> ExtractVariable::apply(const Selection &Inputs) {
   // FIXME: get variable name from user or suggest based on type
   std::string VarName = "placeholder";
   SourceRange Range = Target->getExtractionChars();
-  // insert new variable declaration
-  if (auto Err = Result.add(Target->insertDeclaration(VarName, Range)))
+
+  const SelectionTree::Node &OuterImplicit =
+      Target->getExprNode()->outerImplicit();
+  assert(OuterImplicit.Parent);
+  bool IsExprStmt = llvm::isa_and_nonnull<CompoundStmt>(
+      OuterImplicit.Parent->ASTNode.get<Stmt>());
+
+  // insert new variable declaration. add a semicolon if and only if
+  // we are not dealing with an expression statement, which already has
+  // a semicolon that stays where it is, as it's not part of the range.
+  if (auto Err =
+          Result.add(Target->insertDeclaration(VarName, Range, !IsExprStmt)))
     return std::move(Err);
-  // replace expression with variable name
+
+  // replace expression with variable name, unless it's an expression statement,
+  // in which case we remove it.
+  if (IsExprStmt)
+    VarName.clear();
   if (auto Err = Result.add(Target->replaceWithVar(Range, VarName)))
     return std::move(Err);
   return Effect::mainFileEdit(Inputs.AST->getSourceManager(),

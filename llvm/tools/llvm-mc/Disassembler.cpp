@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Disassembler.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
@@ -94,10 +95,8 @@ static bool SkipToToken(StringRef &Str) {
   }
 }
 
-
-static bool ByteArrayFromString(ByteArrayTy &ByteArray,
-                                StringRef &Str,
-                                SourceMgr &SM) {
+static bool byteArrayFromString(ByteArrayTy &ByteArray, StringRef &Str,
+                                SourceMgr &SM, bool HexBytes) {
   while (SkipToToken(Str)) {
     // Handled by higher level
     if (Str[0] == '[' || Str[0] == ']')
@@ -109,7 +108,24 @@ static bool ByteArrayFromString(ByteArrayTy &ByteArray,
 
     // Convert to a byte and add to the byte vector.
     unsigned ByteVal;
-    if (Value.getAsInteger(0, ByteVal) || ByteVal > 255) {
+    if (HexBytes) {
+      if (Next < 2) {
+        SM.PrintMessage(SMLoc::getFromPointer(Value.data()),
+                        SourceMgr::DK_Error, "expected two hex digits");
+        Str = Str.substr(Next);
+        return true;
+      }
+      Next = 2;
+      unsigned C0 = hexDigitValue(Value[0]);
+      unsigned C1 = hexDigitValue(Value[1]);
+      if (C0 == -1u || C1 == -1u) {
+        SM.PrintMessage(SMLoc::getFromPointer(Value.data()),
+                        SourceMgr::DK_Error, "invalid input token");
+        Str = Str.substr(Next);
+        return true;
+      }
+      ByteVal = C0 * 16 + C1;
+    } else if (Value.getAsInteger(0, ByteVal) || ByteVal > 255) {
       // If we have an error, print it and skip to the end of line.
       SM.PrintMessage(SMLoc::getFromPointer(Value.data()), SourceMgr::DK_Error,
                       "invalid input token");
@@ -130,9 +146,8 @@ static bool ByteArrayFromString(ByteArrayTy &ByteArray,
 int Disassembler::disassemble(const Target &T, const std::string &Triple,
                               MCSubtargetInfo &STI, MCStreamer &Streamer,
                               MemoryBuffer &Buffer, SourceMgr &SM,
-                              MCContext &Ctx,
-                              const MCTargetOptions &MCOptions) {
-
+                              MCContext &Ctx, const MCTargetOptions &MCOptions,
+                              bool HexBytes) {
   std::unique_ptr<const MCRegisterInfo> MRI(T.createMCRegInfo(Triple));
   if (!MRI) {
     errs() << "error: no register info for target " << Triple << "\n";
@@ -152,9 +167,6 @@ int Disassembler::disassemble(const Target &T, const std::string &Triple,
     errs() << "error: no disassembler for target " << Triple << "\n";
     return -1;
   }
-
-  // Set up initial section manually here
-  Streamer.initSections(false, STI);
 
   bool ErrorOccurred = false;
 
@@ -188,7 +200,7 @@ int Disassembler::disassemble(const Target &T, const std::string &Triple,
     }
 
     // It's a real token, get the bytes and emit them
-    ErrorOccurred |= ByteArrayFromString(ByteArray, Str, SM);
+    ErrorOccurred |= byteArrayFromString(ByteArray, Str, SM, HexBytes);
 
     if (!ByteArray.first.empty())
       ErrorOccurred |=

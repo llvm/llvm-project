@@ -138,7 +138,7 @@
 @__omp_offloading_14_a36502b_simple_state_machine_interprocedural_nested_recursive_l92_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @1, ptr null }
 @__omp_offloading_14_a36502b_no_state_machine_weak_callee_l112_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @1, ptr null }
 
-define weak void @__omp_offloading_14_a36502b_no_state_machine_needed_l14(ptr %dyn) #0 {
+define weak ptx_kernel void @__omp_offloading_14_a36502b_no_state_machine_needed_l14(ptr %dyn) #0 {
 entry:
   %.zero.addr = alloca i32, align 4
   %.threadid_temp. = alloca i32, align 4
@@ -197,7 +197,7 @@ declare i32 @__kmpc_global_thread_num(ptr) #3
 
 declare void @__kmpc_target_deinit()
 
-define weak void @__omp_offloading_14_a36502b_simple_state_machine_l22(ptr %dyn) #0 {
+define weak ptx_kernel void @__omp_offloading_14_a36502b_simple_state_machine_l22(ptr %dyn) #0 {
 entry:
   %.zero.addr = alloca i32, align 4
   %.threadid_temp. = alloca i32, align 4
@@ -290,7 +290,7 @@ entry:
   ret void
 }
 
-define weak void @__omp_offloading_14_a36502b_simple_state_machine_interprocedural_l39(ptr %dyn) #0 {
+define weak ptx_kernel void @__omp_offloading_14_a36502b_simple_state_machine_interprocedural_l39(ptr %dyn) #0 {
 entry:
   %.zero.addr = alloca i32, align 4
   %.threadid_temp. = alloca i32, align 4
@@ -367,7 +367,7 @@ entry:
   ret void
 }
 
-define weak void @__omp_offloading_14_a36502b_simple_state_machine_with_fallback_l55(ptr %dyn) #0 {
+define weak ptx_kernel void @__omp_offloading_14_a36502b_simple_state_machine_with_fallback_l55(ptr %dyn) #0 {
 entry:
   %.zero.addr = alloca i32, align 4
   %.threadid_temp. = alloca i32, align 4
@@ -453,7 +453,7 @@ entry:
   ret void
 }
 
-define weak void @__omp_offloading_14_a36502b_simple_state_machine_no_openmp_attr_l66(ptr %dyn) #0 {
+define weak ptx_kernel void @__omp_offloading_14_a36502b_simple_state_machine_no_openmp_attr_l66(ptr %dyn) #0 {
 entry:
   %.zero.addr = alloca i32, align 4
   %.threadid_temp. = alloca i32, align 4
@@ -537,7 +537,7 @@ entry:
   ret void
 }
 
-define weak void @__omp_offloading_14_a36502b_simple_state_machine_pure_l77(ptr %dyn) #0 {
+define weak ptx_kernel void @__omp_offloading_14_a36502b_simple_state_machine_pure_l77(ptr %dyn) #0 {
 entry:
   %.zero.addr = alloca i32, align 4
   %.threadid_temp. = alloca i32, align 4
@@ -624,7 +624,7 @@ entry:
   ret void
 }
 
-define weak void @__omp_offloading_14_a36502b_simple_state_machine_interprocedural_nested_recursive_l92(ptr %dyn) #0 {
+define weak ptx_kernel void @__omp_offloading_14_a36502b_simple_state_machine_interprocedural_nested_recursive_l92(ptr %dyn) #0 {
 entry:
   %.zero.addr = alloca i32, align 4
   %.threadid_temp. = alloca i32, align 4
@@ -679,7 +679,7 @@ return:                                           ; preds = %if.end, %if.then
 
 declare i32 @omp_get_thread_num(...) #4
 
-define weak void @__omp_offloading_14_a36502b_no_state_machine_weak_callee_l112(ptr %dyn) #0 {
+define weak ptx_kernel void @__omp_offloading_14_a36502b_no_state_machine_weak_callee_l112(ptr %dyn) #0 {
 entry:
   %.zero.addr = alloca i32, align 4
   %.threadid_temp. = alloca i32, align 4
@@ -812,7 +812,6 @@ attributes #8 = { convergent "llvm.assume"="omp_no_openmp" }
 attributes #9 = { convergent nounwind readonly willreturn }
 
 !omp_offload.info = !{!0, !1, !2, !3, !4, !5, !6, !7}
-!nvvm.annotations = !{!8, !9, !10, !11, !12, !13, !14, !15}
 !llvm.module.flags = !{!16, !17, !18}
 
 !0 = !{i32 0, i32 20, i32 171331627, !"simple_state_machine_interprocedural", i32 39, i32 2}
@@ -823,14 +822,6 @@ attributes #9 = { convergent nounwind readonly willreturn }
 !5 = !{i32 0, i32 20, i32 171331627, !"simple_state_machine_interprocedural_nested_recursive", i32 92, i32 6}
 !6 = !{i32 0, i32 20, i32 171331627, !"no_state_machine_weak_callee", i32 112, i32 7}
 !7 = !{i32 0, i32 20, i32 171331627, !"simple_state_machine", i32 22, i32 1}
-!8 = !{ptr @__omp_offloading_14_a36502b_no_state_machine_needed_l14, !"kernel", i32 1}
-!9 = !{ptr @__omp_offloading_14_a36502b_simple_state_machine_l22, !"kernel", i32 1}
-!10 = !{ptr @__omp_offloading_14_a36502b_simple_state_machine_interprocedural_l39, !"kernel", i32 1}
-!11 = !{ptr @__omp_offloading_14_a36502b_simple_state_machine_with_fallback_l55, !"kernel", i32 1}
-!12 = !{ptr @__omp_offloading_14_a36502b_simple_state_machine_no_openmp_attr_l66, !"kernel", i32 1}
-!13 = !{ptr @__omp_offloading_14_a36502b_simple_state_machine_pure_l77, !"kernel", i32 1}
-!14 = !{ptr @__omp_offloading_14_a36502b_simple_state_machine_interprocedural_nested_recursive_l92, !"kernel", i32 1}
-!15 = !{ptr @__omp_offloading_14_a36502b_no_state_machine_weak_callee_l112, !"kernel", i32 1}
 !16 = !{i32 1, !"wchar_size", i32 4}
 !17 = !{i32 7, !"openmp", i32 50}
 !18 = !{i32 7, !"openmp-device", i32 50}
@@ -4107,17 +4098,9 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; AMDGPU: [[META5:![0-9]+]] = !{i32 0, i32 20, i32 171331627, !"simple_state_machine_interprocedural_nested_recursive", i32 92, i32 6}
 ; AMDGPU: [[META6:![0-9]+]] = !{i32 0, i32 20, i32 171331627, !"no_state_machine_weak_callee", i32 112, i32 7}
 ; AMDGPU: [[META7:![0-9]+]] = !{i32 0, i32 20, i32 171331627, !"simple_state_machine", i32 22, i32 1}
-; AMDGPU: [[META8:![0-9]+]] = !{ptr @__omp_offloading_14_a36502b_no_state_machine_needed_l14, !"kernel", i32 1}
-; AMDGPU: [[META9:![0-9]+]] = !{ptr @__omp_offloading_14_a36502b_simple_state_machine_l22, !"kernel", i32 1}
-; AMDGPU: [[META10:![0-9]+]] = !{ptr @__omp_offloading_14_a36502b_simple_state_machine_interprocedural_l39, !"kernel", i32 1}
-; AMDGPU: [[META11:![0-9]+]] = !{ptr @__omp_offloading_14_a36502b_simple_state_machine_with_fallback_l55, !"kernel", i32 1}
-; AMDGPU: [[META12:![0-9]+]] = !{ptr @__omp_offloading_14_a36502b_simple_state_machine_no_openmp_attr_l66, !"kernel", i32 1}
-; AMDGPU: [[META13:![0-9]+]] = !{ptr @__omp_offloading_14_a36502b_simple_state_machine_pure_l77, !"kernel", i32 1}
-; AMDGPU: [[META14:![0-9]+]] = !{ptr @__omp_offloading_14_a36502b_simple_state_machine_interprocedural_nested_recursive_l92, !"kernel", i32 1}
-; AMDGPU: [[META15:![0-9]+]] = !{ptr @__omp_offloading_14_a36502b_no_state_machine_weak_callee_l112, !"kernel", i32 1}
-; AMDGPU: [[META16:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
-; AMDGPU: [[META17:![0-9]+]] = !{i32 7, !"openmp", i32 50}
-; AMDGPU: [[META18:![0-9]+]] = !{i32 7, !"openmp-device", i32 50}
+; AMDGPU: [[META8:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
+; AMDGPU: [[META9:![0-9]+]] = !{i32 7, !"openmp", i32 50}
+; AMDGPU: [[META10:![0-9]+]] = !{i32 7, !"openmp-device", i32 50}
 ;.
 ; NVPTX: [[META0:![0-9]+]] = !{i32 0, i32 20, i32 171331627, !"simple_state_machine_interprocedural", i32 39, i32 2}
 ; NVPTX: [[META1:![0-9]+]] = !{i32 0, i32 20, i32 171331627, !"simple_state_machine_no_openmp_attr", i32 66, i32 4}
@@ -4127,17 +4110,9 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; NVPTX: [[META5:![0-9]+]] = !{i32 0, i32 20, i32 171331627, !"simple_state_machine_interprocedural_nested_recursive", i32 92, i32 6}
 ; NVPTX: [[META6:![0-9]+]] = !{i32 0, i32 20, i32 171331627, !"no_state_machine_weak_callee", i32 112, i32 7}
 ; NVPTX: [[META7:![0-9]+]] = !{i32 0, i32 20, i32 171331627, !"simple_state_machine", i32 22, i32 1}
-; NVPTX: [[META8:![0-9]+]] = !{ptr @__omp_offloading_14_a36502b_no_state_machine_needed_l14, !"kernel", i32 1}
-; NVPTX: [[META9:![0-9]+]] = !{ptr @__omp_offloading_14_a36502b_simple_state_machine_l22, !"kernel", i32 1}
-; NVPTX: [[META10:![0-9]+]] = !{ptr @__omp_offloading_14_a36502b_simple_state_machine_interprocedural_l39, !"kernel", i32 1}
-; NVPTX: [[META11:![0-9]+]] = !{ptr @__omp_offloading_14_a36502b_simple_state_machine_with_fallback_l55, !"kernel", i32 1}
-; NVPTX: [[META12:![0-9]+]] = !{ptr @__omp_offloading_14_a36502b_simple_state_machine_no_openmp_attr_l66, !"kernel", i32 1}
-; NVPTX: [[META13:![0-9]+]] = !{ptr @__omp_offloading_14_a36502b_simple_state_machine_pure_l77, !"kernel", i32 1}
-; NVPTX: [[META14:![0-9]+]] = !{ptr @__omp_offloading_14_a36502b_simple_state_machine_interprocedural_nested_recursive_l92, !"kernel", i32 1}
-; NVPTX: [[META15:![0-9]+]] = !{ptr @__omp_offloading_14_a36502b_no_state_machine_weak_callee_l112, !"kernel", i32 1}
-; NVPTX: [[META16:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
-; NVPTX: [[META17:![0-9]+]] = !{i32 7, !"openmp", i32 50}
-; NVPTX: [[META18:![0-9]+]] = !{i32 7, !"openmp-device", i32 50}
+; NVPTX: [[META8:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
+; NVPTX: [[META9:![0-9]+]] = !{i32 7, !"openmp", i32 50}
+; NVPTX: [[META10:![0-9]+]] = !{i32 7, !"openmp-device", i32 50}
 ;.
 ; AMDGPU-DISABLED: [[META0:![0-9]+]] = !{i32 0, i32 20, i32 171331627, !"simple_state_machine_interprocedural", i32 39, i32 2}
 ; AMDGPU-DISABLED: [[META1:![0-9]+]] = !{i32 0, i32 20, i32 171331627, !"simple_state_machine_no_openmp_attr", i32 66, i32 4}
@@ -4147,17 +4122,9 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; AMDGPU-DISABLED: [[META5:![0-9]+]] = !{i32 0, i32 20, i32 171331627, !"simple_state_machine_interprocedural_nested_recursive", i32 92, i32 6}
 ; AMDGPU-DISABLED: [[META6:![0-9]+]] = !{i32 0, i32 20, i32 171331627, !"no_state_machine_weak_callee", i32 112, i32 7}
 ; AMDGPU-DISABLED: [[META7:![0-9]+]] = !{i32 0, i32 20, i32 171331627, !"simple_state_machine", i32 22, i32 1}
-; AMDGPU-DISABLED: [[META8:![0-9]+]] = !{ptr @__omp_offloading_14_a36502b_no_state_machine_needed_l14, !"kernel", i32 1}
-; AMDGPU-DISABLED: [[META9:![0-9]+]] = !{ptr @__omp_offloading_14_a36502b_simple_state_machine_l22, !"kernel", i32 1}
-; AMDGPU-DISABLED: [[META10:![0-9]+]] = !{ptr @__omp_offloading_14_a36502b_simple_state_machine_interprocedural_l39, !"kernel", i32 1}
-; AMDGPU-DISABLED: [[META11:![0-9]+]] = !{ptr @__omp_offloading_14_a36502b_simple_state_machine_with_fallback_l55, !"kernel", i32 1}
-; AMDGPU-DISABLED: [[META12:![0-9]+]] = !{ptr @__omp_offloading_14_a36502b_simple_state_machine_no_openmp_attr_l66, !"kernel", i32 1}
-; AMDGPU-DISABLED: [[META13:![0-9]+]] = !{ptr @__omp_offloading_14_a36502b_simple_state_machine_pure_l77, !"kernel", i32 1}
-; AMDGPU-DISABLED: [[META14:![0-9]+]] = !{ptr @__omp_offloading_14_a36502b_simple_state_machine_interprocedural_nested_recursive_l92, !"kernel", i32 1}
-; AMDGPU-DISABLED: [[META15:![0-9]+]] = !{ptr @__omp_offloading_14_a36502b_no_state_machine_weak_callee_l112, !"kernel", i32 1}
-; AMDGPU-DISABLED: [[META16:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
-; AMDGPU-DISABLED: [[META17:![0-9]+]] = !{i32 7, !"openmp", i32 50}
-; AMDGPU-DISABLED: [[META18:![0-9]+]] = !{i32 7, !"openmp-device", i32 50}
+; AMDGPU-DISABLED: [[META8:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
+; AMDGPU-DISABLED: [[META9:![0-9]+]] = !{i32 7, !"openmp", i32 50}
+; AMDGPU-DISABLED: [[META10:![0-9]+]] = !{i32 7, !"openmp-device", i32 50}
 ;.
 ; NVPTX-DISABLED: [[META0:![0-9]+]] = !{i32 0, i32 20, i32 171331627, !"simple_state_machine_interprocedural", i32 39, i32 2}
 ; NVPTX-DISABLED: [[META1:![0-9]+]] = !{i32 0, i32 20, i32 171331627, !"simple_state_machine_no_openmp_attr", i32 66, i32 4}
@@ -4167,15 +4134,7 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; NVPTX-DISABLED: [[META5:![0-9]+]] = !{i32 0, i32 20, i32 171331627, !"simple_state_machine_interprocedural_nested_recursive", i32 92, i32 6}
 ; NVPTX-DISABLED: [[META6:![0-9]+]] = !{i32 0, i32 20, i32 171331627, !"no_state_machine_weak_callee", i32 112, i32 7}
 ; NVPTX-DISABLED: [[META7:![0-9]+]] = !{i32 0, i32 20, i32 171331627, !"simple_state_machine", i32 22, i32 1}
-; NVPTX-DISABLED: [[META8:![0-9]+]] = !{ptr @__omp_offloading_14_a36502b_no_state_machine_needed_l14, !"kernel", i32 1}
-; NVPTX-DISABLED: [[META9:![0-9]+]] = !{ptr @__omp_offloading_14_a36502b_simple_state_machine_l22, !"kernel", i32 1}
-; NVPTX-DISABLED: [[META10:![0-9]+]] = !{ptr @__omp_offloading_14_a36502b_simple_state_machine_interprocedural_l39, !"kernel", i32 1}
-; NVPTX-DISABLED: [[META11:![0-9]+]] = !{ptr @__omp_offloading_14_a36502b_simple_state_machine_with_fallback_l55, !"kernel", i32 1}
-; NVPTX-DISABLED: [[META12:![0-9]+]] = !{ptr @__omp_offloading_14_a36502b_simple_state_machine_no_openmp_attr_l66, !"kernel", i32 1}
-; NVPTX-DISABLED: [[META13:![0-9]+]] = !{ptr @__omp_offloading_14_a36502b_simple_state_machine_pure_l77, !"kernel", i32 1}
-; NVPTX-DISABLED: [[META14:![0-9]+]] = !{ptr @__omp_offloading_14_a36502b_simple_state_machine_interprocedural_nested_recursive_l92, !"kernel", i32 1}
-; NVPTX-DISABLED: [[META15:![0-9]+]] = !{ptr @__omp_offloading_14_a36502b_no_state_machine_weak_callee_l112, !"kernel", i32 1}
-; NVPTX-DISABLED: [[META16:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
-; NVPTX-DISABLED: [[META17:![0-9]+]] = !{i32 7, !"openmp", i32 50}
-; NVPTX-DISABLED: [[META18:![0-9]+]] = !{i32 7, !"openmp-device", i32 50}
+; NVPTX-DISABLED: [[META8:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
+; NVPTX-DISABLED: [[META9:![0-9]+]] = !{i32 7, !"openmp", i32 50}
+; NVPTX-DISABLED: [[META10:![0-9]+]] = !{i32 7, !"openmp-device", i32 50}
 ;.

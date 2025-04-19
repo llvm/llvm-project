@@ -31,19 +31,45 @@ using namespace mlir;
 // AliasAnalysis: alias
 //===----------------------------------------------------------------------===//
 
-/// Temporary function to skip through all the no op operations
-/// TODO: Generalize support of fir.load
-static mlir::Value getOriginalDef(mlir::Value v) {
-  mlir::Operation *defOp;
-  bool breakFromLoop = false;
-  while (!breakFromLoop && (defOp = v.getDefiningOp())) {
-    llvm::TypeSwitch<Operation *>(defOp)
-        .Case<fir::ConvertOp>([&](fir::ConvertOp op) { v = op.getValue(); })
-        .Case<fir::DeclareOp, hlfir::DeclareOp>(
-            [&](auto op) { v = op.getMemref(); })
-        .Default([&](auto op) { breakFromLoop = true; });
+static fir::AliasAnalysis::Source::Attributes
+getAttrsFromVariable(fir::FortranVariableOpInterface var) {
+  fir::AliasAnalysis::Source::Attributes attrs;
+  if (var.isTarget())
+    attrs.set(fir::AliasAnalysis::Attribute::Target);
+  if (var.isPointer())
+    attrs.set(fir::AliasAnalysis::Attribute::Pointer);
+  if (var.isIntentIn())
+    attrs.set(fir::AliasAnalysis::Attribute::IntentIn);
+
+  return attrs;
+}
+
+static bool hasGlobalOpTargetAttr(mlir::Value v, fir::AddrOfOp op) {
+  auto globalOpName =
+      mlir::OperationName(fir::GlobalOp::getOperationName(), op->getContext());
+  return fir::valueHasFirAttribute(
+      v, fir::GlobalOp::getTargetAttrName(globalOpName));
+}
+
+static bool isEvaluateInMemoryBlockArg(mlir::Value v) {
+  if (auto evalInMem = llvm::dyn_cast_or_null<hlfir::EvaluateInMemoryOp>(
+          v.getParentRegion()->getParentOp()))
+    return evalInMem.getMemory() == v;
+  return false;
+}
+
+template <typename OMPTypeOp, typename DeclTypeOp>
+static bool isPrivateArg(omp::BlockArgOpenMPOpInterface &argIface,
+                         OMPTypeOp &op, DeclTypeOp &declOp) {
+  if (!op.getPrivateSyms().has_value())
+    return false;
+  for (auto [opSym, blockArg] :
+       llvm::zip_equal(*op.getPrivateSyms(), argIface.getPrivateBlockArgs())) {
+    if (blockArg == declOp.getMemref()) {
+      return true;
+    }
   }
-  return v;
+  return false;
 }
 
 namespace fir {
@@ -457,44 +483,31 @@ ModRefResult AliasAnalysis::getModRef(Operation *op, Value location) {
   return result;
 }
 
-AliasAnalysis::Source::Attributes
-getAttrsFromVariable(fir::FortranVariableOpInterface var) {
-  AliasAnalysis::Source::Attributes attrs;
-  if (var.isTarget())
-    attrs.set(AliasAnalysis::Attribute::Target);
-  if (var.isPointer())
-    attrs.set(AliasAnalysis::Attribute::Pointer);
-  if (var.isIntentIn())
-    attrs.set(AliasAnalysis::Attribute::IntentIn);
-
-  return attrs;
-}
-
-template <typename OMPTypeOp, typename DeclTypeOp>
-static Value getPrivateArg(omp::BlockArgOpenMPOpInterface &argIface,
-                           OMPTypeOp &op, DeclTypeOp &declOp) {
-  Value privateArg;
-  if (!op.getPrivateSyms().has_value())
-    return privateArg;
-  for (auto [opSym, blockArg] :
-       llvm::zip_equal(*op.getPrivateSyms(), argIface.getPrivateBlockArgs())) {
-    if (blockArg == declOp.getMemref()) {
-      omp::PrivateClauseOp privateOp =
-          SymbolTable::lookupNearestSymbolFrom<omp::PrivateClauseOp>(
-              op, cast<SymbolRefAttr>(opSym));
-      privateOp.walk([&](omp::YieldOp yieldOp) {
-        // TODO Extend alias analysis if omp.yield points to
-        // block argument value
-        if (!yieldOp.getResults()[0].getDefiningOp())
-          return;
-        llvm::TypeSwitch<Operation *>(yieldOp.getResults()[0].getDefiningOp())
-            .template Case<fir::DeclareOp, hlfir::DeclareOp>(
-                [&](auto declOp) { privateArg = declOp.getMemref(); });
-      });
-      return privateArg;
+ModRefResult AliasAnalysis::getModRef(mlir::Region &region,
+                                      mlir::Value location) {
+  ModRefResult result = ModRefResult::getNoModRef();
+  for (mlir::Operation &op : region.getOps()) {
+    if (op.hasTrait<mlir::OpTrait::HasRecursiveMemoryEffects>()) {
+      for (mlir::Region &subRegion : op.getRegions()) {
+        result = result.merge(getModRef(subRegion, location));
+        // Fast return is already mod and ref.
+        if (result.isModAndRef())
+          return result;
+      }
+      // In MLIR, RecursiveMemoryEffects can be combined with
+      // MemoryEffectOpInterface to describe extra effects on top of the
+      // effects of the nested operations.  However, the presence of
+      // RecursiveMemoryEffects and the absence of MemoryEffectOpInterface
+      // implies the operation has no other memory effects than the one of its
+      // nested operations.
+      if (!mlir::isa<mlir::MemoryEffectOpInterface>(op))
+        continue;
     }
+    result = result.merge(getModRef(&op, location));
+    if (result.isModAndRef())
+      return result;
   }
-  return privateArg;
+  return result;
 }
 
 AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
@@ -552,25 +565,52 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
             breakFromLoop = true;
         })
         .Case<fir::LoadOp>([&](auto op) {
-          // If the load is from a leaf source, return the leaf. Do not track
-          // through indirections otherwise.
-          // TODO: Add support to fir.alloca and fir.allocmem
-          auto def = getOriginalDef(op.getMemref());
-          if (isDummyArgument(def) ||
-              def.template getDefiningOp<fir::AddrOfOp>()) {
-            v = def;
-            defOp = v.getDefiningOp();
-            return;
-          }
           // If load is inside target and it points to mapped item,
           // continue tracking.
           Operation *loadMemrefOp = op.getMemref().getDefiningOp();
-          bool isDeclareOp = llvm::isa<fir::DeclareOp>(loadMemrefOp) ||
-                             llvm::isa<hlfir::DeclareOp>(loadMemrefOp);
+          bool isDeclareOp =
+              llvm::isa_and_present<fir::DeclareOp>(loadMemrefOp) ||
+              llvm::isa_and_present<hlfir::DeclareOp>(loadMemrefOp);
           if (isDeclareOp &&
               llvm::isa<omp::TargetOp>(loadMemrefOp->getParentOp())) {
             v = op.getMemref();
             defOp = v.getDefiningOp();
+            return;
+          }
+
+          // If we are loading a box reference, but following the data,
+          // we gather the attributes of the box to populate the source
+          // and stop tracking.
+          if (auto boxTy = mlir::dyn_cast<fir::BaseBoxType>(ty);
+              boxTy && followingData) {
+
+            if (mlir::isa<fir::PointerType>(boxTy.getEleTy()))
+              attributes.set(Attribute::Pointer);
+
+            auto boxSrc = getSource(op.getMemref());
+            attributes |= boxSrc.attributes;
+            approximateSource |= boxSrc.approximateSource;
+            isCapturedInInternalProcedure |=
+                boxSrc.isCapturedInInternalProcedure;
+
+            global = llvm::dyn_cast<mlir::SymbolRefAttr>(boxSrc.origin.u);
+            if (global) {
+              type = SourceKind::Global;
+            } else {
+              auto def = llvm::cast<mlir::Value>(boxSrc.origin.u);
+              // TODO: Add support to fir.allocmem
+              if (auto allocOp = def.template getDefiningOp<fir::AllocaOp>()) {
+                v = def;
+                defOp = v.getDefiningOp();
+                type = SourceKind::Allocate;
+              } else if (isDummyArgument(def)) {
+                defOp = nullptr;
+                v = def;
+              } else {
+                type = SourceKind::Indirect;
+              }
+            }
+            breakFromLoop = true;
             return;
           }
           // No further tracking for addresses loaded from memory for now.
@@ -582,10 +622,7 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
           ty = v.getType();
           type = SourceKind::Global;
 
-          auto globalOpName = mlir::OperationName(
-              fir::GlobalOp::getOperationName(), defOp->getContext());
-          if (fir::valueHasFirAttribute(
-                  v, fir::GlobalOp::getTargetAttrName(globalOpName)))
+          if (hasGlobalOpTargetAttr(v, op))
             attributes.set(Attribute::Target);
 
           // TODO: Take followBoxData into account when setting the pointer
@@ -596,6 +633,7 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
           breakFromLoop = true;
         })
         .Case<hlfir::DeclareOp, fir::DeclareOp>([&](auto op) {
+          bool isPrivateItem = false;
           if (omp::BlockArgOpenMPOpInterface argIface =
                   dyn_cast<omp::BlockArgOpenMPOpInterface>(op->getParentOp())) {
             Value ompValArg;
@@ -609,19 +647,18 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
                       omp::MapInfoOp mapInfo =
                           llvm::cast<omp::MapInfoOp>(opArg.getDefiningOp());
                       ompValArg = mapInfo.getVarPtr();
-                      break;
+                      return;
                     }
                   }
                   // If given operation does not reflect mapping item,
                   // check private clause
-                  if (!ompValArg)
-                    ompValArg = getPrivateArg(argIface, targetOp, op);
+                  isPrivateItem = isPrivateArg(argIface, targetOp, op);
                 })
                 .template Case<omp::DistributeOp, omp::ParallelOp,
                                omp::SectionsOp, omp::SimdOp, omp::SingleOp,
                                omp::TaskloopOp, omp::TaskOp, omp::WsloopOp>(
                     [&](auto privateOp) {
-                      ompValArg = getPrivateArg(argIface, privateOp, op);
+                      isPrivateItem = isPrivateArg(argIface, privateOp, op);
                     });
             if (ompValArg) {
               v = ompValArg;
@@ -671,6 +708,11 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
           } else {
             instantiationPoint = op;
           }
+          if (isPrivateItem) {
+            type = SourceKind::Allocate;
+            breakFromLoop = true;
+            return;
+          }
           // TODO: Look for the fortran attributes present on the operation
           // Track further through the operand
           v = op.getMemref();
@@ -698,7 +740,7 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
           breakFromLoop = true;
         });
   }
-  if (!defOp && type == SourceKind::Unknown)
+  if (!defOp && type == SourceKind::Unknown) {
     // Check if the memory source is coming through a dummy argument.
     if (isDummyArgument(v)) {
       type = SourceKind::Argument;
@@ -708,7 +750,12 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
 
       if (isPointerReference(ty))
         attributes.set(Attribute::Pointer);
+    } else if (isEvaluateInMemoryBlockArg(v)) {
+      // hlfir.eval_in_mem block operands is allocated by the operation.
+      type = SourceKind::Allocate;
+      ty = v.getType();
     }
+  }
 
   if (type == SourceKind::Global) {
     return {{global, instantiationPoint, followingData},

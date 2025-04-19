@@ -7,16 +7,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FUNCTIONAL_REFERENCE_WRAPPER_H
-#define _LIBCPP___FUNCTIONAL_REFERENCE_WRAPPER_H
+#ifndef _LIBCPP___CXX03___FUNCTIONAL_REFERENCE_WRAPPER_H
+#define _LIBCPP___CXX03___FUNCTIONAL_REFERENCE_WRAPPER_H
 
-#include <__cxx03/__compare/synth_three_way.h>
-#include <__cxx03/__concepts/boolean_testable.h>
 #include <__cxx03/__config>
-#include <__cxx03/__functional/invoke.h>
 #include <__cxx03/__functional/weak_result_type.h>
 #include <__cxx03/__memory/addressof.h>
 #include <__cxx03/__type_traits/enable_if.h>
+#include <__cxx03/__type_traits/invoke.h>
 #include <__cxx03/__type_traits/is_const.h>
 #include <__cxx03/__type_traits/remove_cvref.h>
 #include <__cxx03/__type_traits/void_t.h>
@@ -151,4 +149,4 @@ void cref(const _Tp&&) = delete;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___FUNCTIONAL_REFERENCE_WRAPPER_H
+#endif // _LIBCPP___CXX03___FUNCTIONAL_REFERENCE_WRAPPER_H

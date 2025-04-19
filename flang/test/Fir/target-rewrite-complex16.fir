@@ -66,7 +66,7 @@ func.func @addrof() {
 // CHECK-LABEL:   func.func @callcomplex16() {
 // CHECK:           %[[VAL_0:.*]] = llvm.intr.stacksave : !llvm.ptr
 // CHECK:           %[[VAL_1:.*]] = fir.alloca tuple<f128, f128>
-// CHECK:           fir.call @returncomplex16(%[[VAL_1]]) : (!fir.ref<tuple<f128, f128>>) -> ()
+// CHECK:           fir.call @returncomplex16(%[[VAL_1]]) : (!fir.ref<tuple<f128, f128>> {llvm.align = 16 : i32, llvm.sret = tuple<f128, f128>}) -> ()
 // CHECK:           %[[VAL_2:.*]] = fir.convert %[[VAL_1]] : (!fir.ref<tuple<f128, f128>>) -> !fir.ref<complex<f128>>
 // CHECK:           %[[VAL_3:.*]] = fir.load %[[VAL_2]] : !fir.ref<complex<f128>>
 // CHECK:           llvm.intr.stackrestore %[[VAL_0]] : !llvm.ptr
@@ -74,7 +74,7 @@ func.func @addrof() {
 // CHECK:           %[[VAL_5:.*]] = fir.alloca complex<f128>
 // CHECK:           fir.store %[[VAL_3]] to %[[VAL_5]] : !fir.ref<complex<f128>>
 // CHECK:           %[[VAL_6:.*]] = fir.convert %[[VAL_5]] : (!fir.ref<complex<f128>>) -> !fir.ref<tuple<f128, f128>>
-// CHECK:           fir.call @paramcomplex16(%[[VAL_6]]) : (!fir.ref<tuple<f128, f128>>) -> ()
+// CHECK:           fir.call @paramcomplex16(%[[VAL_6]]) : (!fir.ref<tuple<f128, f128>> {llvm.align = 16 : i32, llvm.byval = tuple<f128, f128>}) -> ()
 // CHECK:           llvm.intr.stackrestore %[[VAL_4]] : !llvm.ptr
 // CHECK:           return
 // CHECK:         }
@@ -98,7 +98,7 @@ func.func @addrof() {
 // CHECK:           %[[VAL_14:.*]] = fir.alloca complex<f128>
 // CHECK:           fir.store %[[VAL_4]] to %[[VAL_14]] : !fir.ref<complex<f128>>
 // CHECK:           %[[VAL_15:.*]] = fir.convert %[[VAL_14]] : (!fir.ref<complex<f128>>) -> !fir.ref<tuple<f128, f128>>
-// CHECK:           fir.call @calleemultipleparamscomplex16(%[[VAL_11]], %[[VAL_13]], %[[VAL_15]]) : (!fir.ref<tuple<f128, f128>>, !fir.ref<tuple<f128, f128>>, !fir.ref<tuple<f128, f128>>) -> ()
+// CHECK:           fir.call @calleemultipleparamscomplex16(%[[VAL_11]], %[[VAL_13]], %[[VAL_15]]) : (!fir.ref<tuple<f128, f128>> {llvm.align = 16 : i32, llvm.byval = tuple<f128, f128>}, !fir.ref<tuple<f128, f128>> {llvm.align = 16 : i32, llvm.byval = tuple<f128, f128>}, !fir.ref<tuple<f128, f128>> {llvm.align = 16 : i32, llvm.byval = tuple<f128, f128>}) -> ()
 // CHECK:           llvm.intr.stackrestore %[[VAL_9]] : !llvm.ptr
 // CHECK:           return
 // CHECK:         }
@@ -117,7 +117,7 @@ func.func @addrof() {
 // CHECK:           %[[VAL_11:.*]] = fir.alloca complex<f128>
 // CHECK:           fir.store %[[VAL_4]] to %[[VAL_11]] : !fir.ref<complex<f128>>
 // CHECK:           %[[VAL_12:.*]] = fir.convert %[[VAL_11]] : (!fir.ref<complex<f128>>) -> !fir.ref<tuple<f128, f128>>
-// CHECK:           fir.call @mlircomplexf128(%[[VAL_8]], %[[VAL_10]], %[[VAL_12]]) : (!fir.ref<tuple<f128, f128>>, !fir.ref<tuple<f128, f128>>, !fir.ref<tuple<f128, f128>>) -> ()
+// CHECK:           fir.call @mlircomplexf128(%[[VAL_8]], %[[VAL_10]], %[[VAL_12]]) : (!fir.ref<tuple<f128, f128>> {llvm.align = 16 : i32, llvm.sret = tuple<f128, f128>}, !fir.ref<tuple<f128, f128>> {llvm.align = 16 : i32, llvm.byval = tuple<f128, f128>}, !fir.ref<tuple<f128, f128>> {llvm.align = 16 : i32, llvm.byval = tuple<f128, f128>}) -> ()
 // CHECK:           %[[VAL_13:.*]] = fir.convert %[[VAL_8]] : (!fir.ref<tuple<f128, f128>>) -> !fir.ref<complex<f128>>
 // CHECK:           %[[VAL_14:.*]] = fir.load %[[VAL_13]] : !fir.ref<complex<f128>>
 // CHECK:           llvm.intr.stackrestore %[[VAL_7]] : !llvm.ptr

@@ -1410,6 +1410,9 @@ class CursorKind(BaseEnumeration):
     # OpenMP scope directive.
     OMP_SCOPE_DIRECTIVE = 306
 
+    # OpenMP stripe directive.
+    OMP_STRIPE_DIRECTIVE = 310
+
     # OpenACC Compute Construct.
     OPEN_ACC_COMPUTE_DIRECTIVE = 320
 
@@ -1557,6 +1560,9 @@ class Cursor(Structure):
 
     def __ne__(self, other):
         return not self.__eq__(other)
+
+    def __hash__(self) -> int:
+        return self.hash
 
     def is_definition(self):
         """
@@ -1769,6 +1775,16 @@ class Cursor(Structure):
             )
 
         return self._spelling
+
+    def pretty_printed(self, policy):
+        """
+        Pretty print declarations.
+        Parameters:
+        policy -- The policy to control the entities being printed.
+        """
+        return _CXString.from_result(
+            conf.lib.clang_getCursorPrettyPrinted(self, policy)
+        )
 
     @property
     def displayname(self):
@@ -2023,6 +2039,13 @@ class Cursor(Structure):
         return self._lexical_parent
 
     @property
+    def specialized_template(self) -> Cursor | None:
+        """Return the primary template that this cursor is a specialization of, if any."""
+        return Cursor.from_cursor_result(
+            conf.lib.clang_getSpecializedCursorTemplate(self), self
+        )
+
+    @property
     def translation_unit(self):
         """Returns the TranslationUnit to which this Cursor belongs."""
         # If this triggers an AttributeError, the instance was not properly
@@ -2123,13 +2146,35 @@ class Cursor(Structure):
         """Returns the offsetof the FIELD_DECL pointed by this Cursor."""
         return conf.lib.clang_Cursor_getOffsetOfField(self)  # type: ignore [no-any-return]
 
+    def get_base_offsetof(self, parent):
+        """Returns the offsetof the CXX_BASE_SPECIFIER pointed by this Cursor."""
+        return conf.lib.clang_getOffsetOfBase(parent, self)  # type: ignore [no-any-return]
+
+    def is_virtual_base(self):
+        """Returns whether the CXX_BASE_SPECIFIER pointed by this Cursor is virtual."""
+        return conf.lib.clang_isVirtualBase(self)  # type: ignore [no-any-return]
+
     def is_anonymous(self):
         """
-        Check if the record is anonymous.
+        Check whether this is a record type without a name, or a field where
+        the type is a record type without a name.
+
+        Use is_anonymous_record_decl to check whether a record is an
+        "anonymous union" as defined in the C/C++ standard.
         """
         if self.kind == CursorKind.FIELD_DECL:
             return self.type.get_declaration().is_anonymous()
         return conf.lib.clang_Cursor_isAnonymous(self)  # type: ignore [no-any-return]
+
+    def is_anonymous_record_decl(self):
+        """
+        Check if the record is an anonymous union as defined in the C/C++ standard
+        (or an "anonymous struct", the corresponding non-standard extension for
+        structs).
+        """
+        if self.kind == CursorKind.FIELD_DECL:
+            return self.type.get_declaration().is_anonymous_record_decl()
+        return conf.lib.clang_Cursor_isAnonymousRecordDecl(self)  # type: ignore [no-any-return]
 
     def is_bitfield(self):
         """
@@ -2142,6 +2187,12 @@ class Cursor(Structure):
         Retrieve the width of a bitfield.
         """
         return conf.lib.clang_getFieldDeclBitWidth(self)  # type: ignore [no-any-return]
+
+    def has_attrs(self) -> bool:
+        """
+        Determine whether the given cursor has any attributes.
+        """
+        return bool(conf.lib.clang_Cursor_hasAttrs(self))
 
     @staticmethod
     def from_result(res, arg):
@@ -2542,6 +2593,19 @@ class Type(Structure):
         """
         return Type.from_result(conf.lib.clang_getCanonicalType(self), (self,))
 
+    def get_fully_qualified_name(self, policy, with_global_ns_prefix=False):
+        """
+        Get the fully qualified name for a type.
+
+        This includes full qualification of all template parameters.
+
+        policy - This PrintingPolicy can further refine the type formatting
+        with_global_ns_prefix - If true, prepend '::' to qualified names
+        """
+        return _CXString.from_result(
+            conf.lib.clang_getFullyQualifiedName(self, policy, with_global_ns_prefix)
+        )
+
     def is_const_qualified(self):
         """Determine whether a Type has the "const" qualifier set.
 
@@ -2663,6 +2727,36 @@ class Type(Structure):
         conf.lib.clang_Type_visitFields(self, fields_visit_callback(visitor), fields)
         return iter(fields)
 
+    def get_bases(self):
+        """Return an iterator for accessing the base classes of this type."""
+
+        def visitor(base, children):
+            assert base != conf.lib.clang_getNullCursor()
+
+            # Create reference to TU so it isn't GC'd before Cursor.
+            base._tu = self._tu
+            bases.append(base)
+            return 1  # continue
+
+        bases: list[Cursor] = []
+        conf.lib.clang_visitCXXBaseClasses(self, fields_visit_callback(visitor), bases)
+        return iter(bases)
+
+    def get_methods(self):
+        """Return an iterator for accessing the methods of this type."""
+
+        def visitor(method, children):
+            assert method != conf.lib.clang_getNullCursor()
+
+            # Create reference to TU so it isn't GC'd before Cursor.
+            method._tu = self._tu
+            methods.append(method)
+            return 1  # continue
+
+        methods: list[Cursor] = []
+        conf.lib.clang_visitCXXMethods(self, fields_visit_callback(visitor), methods)
+        return iter(methods)
+
     def get_exception_specification_kind(self):
         """
         Return the kind of the exception specification; a value from
@@ -2676,6 +2770,10 @@ class Type(Structure):
     def spelling(self):
         """Retrieve the spelling of this Type."""
         return _CXString.from_result(conf.lib.clang_getTypeSpelling(self))
+
+    def pretty_printed(self, policy):
+        """Pretty-prints this Type with the given PrintingPolicy"""
+        return _CXString.from_result(conf.lib.clang_getTypePrettyPrinted(self, policy))
 
     def __eq__(self, other):
         if type(other) != type(self):
@@ -2717,7 +2815,7 @@ class _CXUnsavedFile(Structure):
 # Functions calls through the python interface are rather slow. Fortunately,
 # for most symboles, we do not need to perform a function call. Their spelling
 # never changes and is consequently provided by this spelling cache.
-SpellingCache = {
+SPELLING_CACHE = {
     # 0: CompletionChunk.Kind("Optional"),
     # 1: CompletionChunk.Kind("TypedText"),
     # 2: CompletionChunk.Kind("Text"),
@@ -2763,8 +2861,8 @@ class CompletionChunk:
 
     @CachedProperty
     def spelling(self):
-        if self.__kindNumber in SpellingCache:
-            return SpellingCache[self.__kindNumber]
+        if self.__kindNumber in SPELLING_CACHE:
+            return SPELLING_CACHE[self.__kindNumber]
         return _CXString.from_result(
             conf.lib.clang_getCompletionChunkText(self.cs, self.key)
         )
@@ -3685,6 +3783,72 @@ class Rewriter(ClangObject):
         conf.lib.clang_CXRewriter_writeMainFileToStdOut(self)
 
 
+class PrintingPolicyProperty(BaseEnumeration):
+
+    """
+    A PrintingPolicyProperty identifies a property of a PrintingPolicy.
+    """
+
+    Indentation = 0
+    SuppressSpecifiers = 1
+    SuppressTagKeyword = 2
+    IncludeTagDefinition = 3
+    SuppressScope = 4
+    SuppressUnwrittenScope = 5
+    SuppressInitializers = 6
+    ConstantArraySizeAsWritten = 7
+    AnonymousTagLocations = 8
+    SuppressStrongLifetime = 9
+    SuppressLifetimeQualifiers = 10
+    SuppressTemplateArgsInCXXConstructors = 11
+    Bool = 12
+    Restrict = 13
+    Alignof = 14
+    UnderscoreAlignof = 15
+    UseVoidForZeroParams = 16
+    TerseOutput = 17
+    PolishForDeclaration = 18
+    Half = 19
+    MSWChar = 20
+    IncludeNewlines = 21
+    MSVCFormatting = 22
+    ConstantsAsWritten = 23
+    SuppressImplicitBase = 24
+    FullyQualifiedName = 25
+
+
+class PrintingPolicy(ClangObject):
+    """
+    The PrintingPolicy is a wrapper class around clang::PrintingPolicy
+
+    It allows specifying how declarations, expressions, and types should be
+    pretty-printed.
+    """
+
+    @staticmethod
+    def create(cursor):
+        """
+        Creates a new PrintingPolicy
+        Parameters:
+        cursor -- Any cursor for a translation unit.
+        """
+        return PrintingPolicy(conf.lib.clang_getCursorPrintingPolicy(cursor))
+
+    def __init__(self, ptr):
+        ClangObject.__init__(self, ptr)
+
+    def __del__(self):
+        conf.lib.clang_PrintingPolicy_dispose(self)
+
+    def get_property(self, property):
+        """Get a property value for the given printing policy."""
+        return conf.lib.clang_PrintingPolicy_getProperty(self, property.value)
+
+    def set_property(self, property, value):
+        """Set a property value for the given printing policy."""
+        conf.lib.clang_PrintingPolicy_setProperty(self, property.value, value)
+
+
 # Now comes the plumbing to hook up the C library.
 
 # Register callback types
@@ -3695,7 +3859,7 @@ cursor_visit_callback = CFUNCTYPE(c_int, Cursor, Cursor, py_object)
 fields_visit_callback = CFUNCTYPE(c_int, Cursor, py_object)
 
 # Functions strictly alphabetical order.
-functionList: list[LibFunc] = [
+FUNCTION_LIST: list[LibFunc] = [
     (
         "clang_annotateTokens",
         [TranslationUnit, POINTER(Token), c_uint, POINTER(Cursor)],
@@ -3787,6 +3951,8 @@ functionList: list[LibFunc] = [
     ("clang_getCursorExtent", [Cursor], SourceRange),
     ("clang_getCursorLexicalParent", [Cursor], Cursor),
     ("clang_getCursorLocation", [Cursor], SourceLocation),
+    ("clang_getCursorPrettyPrinted", [Cursor, PrintingPolicy], _CXString),
+    ("clang_getCursorPrintingPolicy", [Cursor], c_object_p),
     ("clang_getCursorReferenced", [Cursor], Cursor),
     ("clang_getCursorReferenceNameRange", [Cursor, c_uint, c_uint], SourceRange),
     ("clang_getCursorResultType", [Cursor], Type),
@@ -3795,6 +3961,7 @@ functionList: list[LibFunc] = [
     ("clang_getCursorType", [Cursor], Type),
     ("clang_getCursorUSR", [Cursor], _CXString),
     ("clang_Cursor_getMangling", [Cursor], _CXString),
+    ("clang_Cursor_hasAttrs", [Cursor], c_uint),
     # ("clang_getCXTUResourceUsage",
     #  [TranslationUnit],
     #  CXTUResourceUsage),
@@ -3844,6 +4011,7 @@ functionList: list[LibFunc] = [
     ("clang_getNumDiagnosticsInSet", [c_object_p], c_uint),
     ("clang_getNumElements", [Type], c_longlong),
     ("clang_getNumOverloadedDecls", [Cursor], c_uint),
+    ("clang_getOffsetOfBase", [Cursor, Cursor], c_longlong),
     ("clang_getOverloadedDecl", [Cursor, c_uint], Cursor),
     ("clang_getPointeeType", [Type], Type),
     ("clang_getRange", [SourceLocation, SourceLocation], SourceRange),
@@ -3863,9 +4031,11 @@ functionList: list[LibFunc] = [
     ("clang_getTypedefDeclUnderlyingType", [Cursor], Type),
     ("clang_getTypedefName", [Type], _CXString),
     ("clang_getTypeKindSpelling", [c_uint], _CXString),
+    ("clang_getTypePrettyPrinted", [Type, PrintingPolicy], _CXString),
     ("clang_getTypeSpelling", [Type], _CXString),
     ("clang_hashCursor", [Cursor], c_uint),
     ("clang_isAttribute", [CursorKind], bool),
+    ("clang_getFullyQualifiedName", [Type, PrintingPolicy, c_uint], _CXString),
     ("clang_isConstQualifiedType", [Type], bool),
     ("clang_isCursorDefinition", [Cursor], bool),
     ("clang_isDeclaration", [CursorKind], bool),
@@ -3895,6 +4065,8 @@ functionList: list[LibFunc] = [
         [TranslationUnit, SourceRange, POINTER(POINTER(Token)), POINTER(c_uint)],
     ),
     ("clang_visitChildren", [Cursor, cursor_visit_callback, py_object], c_uint),
+    ("clang_visitCXXBaseClasses", [Type, fields_visit_callback, py_object], c_uint),
+    ("clang_visitCXXMethods", [Type, fields_visit_callback, py_object], c_uint),
     ("clang_Cursor_getNumArguments", [Cursor], c_int),
     ("clang_Cursor_getArgument", [Cursor, c_uint], Cursor),
     ("clang_Cursor_getNumTemplateArguments", [Cursor], c_int),
@@ -3902,13 +4074,17 @@ functionList: list[LibFunc] = [
     ("clang_Cursor_getTemplateArgumentType", [Cursor, c_uint], Type),
     ("clang_Cursor_getTemplateArgumentValue", [Cursor, c_uint], c_longlong),
     ("clang_Cursor_getTemplateArgumentUnsignedValue", [Cursor, c_uint], c_ulonglong),
-    ("clang_Cursor_isAnonymous", [Cursor], bool),
-    ("clang_Cursor_isBitField", [Cursor], bool),
     ("clang_Cursor_getBinaryOpcode", [Cursor], c_int),
     ("clang_Cursor_getBriefCommentText", [Cursor], _CXString),
     ("clang_Cursor_getRawCommentText", [Cursor], _CXString),
     ("clang_Cursor_getOffsetOfField", [Cursor], c_longlong),
+    ("clang_Cursor_isAnonymous", [Cursor], bool),
+    ("clang_Cursor_isAnonymousRecordDecl", [Cursor], bool),
+    ("clang_Cursor_isBitField", [Cursor], bool),
     ("clang_Location_isInSystemHeader", [SourceLocation], bool),
+    ("clang_PrintingPolicy_dispose", [PrintingPolicy]),
+    ("clang_PrintingPolicy_getProperty", [PrintingPolicy, c_int], c_uint),
+    ("clang_PrintingPolicy_setProperty", [PrintingPolicy, c_int, c_uint]),
     ("clang_Type_getAlignOf", [Type], c_longlong),
     ("clang_Type_getClassType", [Type], Type),
     ("clang_Type_getNumTemplateArguments", [Type], c_int),
@@ -3963,7 +4139,7 @@ def register_functions(lib: CDLL, ignore_errors: bool) -> None:
     def register(item: LibFunc) -> None:
         register_function(lib, item, ignore_errors)
 
-    for f in functionList:
+    for f in FUNCTION_LIST:
         register(f)
 
 
@@ -4089,6 +4265,8 @@ __all__ = [
     "FixIt",
     "Index",
     "LinkageKind",
+    "PrintingPolicy",
+    "PrintingPolicyProperty",
     "RefQualifierKind",
     "SourceLocation",
     "SourceRange",

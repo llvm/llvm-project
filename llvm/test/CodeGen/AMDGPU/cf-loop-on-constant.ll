@@ -359,7 +359,7 @@ for.body:
   %add = fadd float %vecload, 1.0
   store float %add, ptr addrspace(3) %arrayidx, align 8
   %inc = add i32 %indvar, 1
-  br i1 undef, label %for.body, label %for.exit
+  br i1 poison, label %for.body, label %for.exit
 }
 
 define amdgpu_kernel void @loop_arg_0(ptr addrspace(3) %ptr, i32 %n) nounwind {

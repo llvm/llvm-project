@@ -284,7 +284,10 @@ public:
     ak_qualtype_pair,
 
     /// Attr *
-    ak_attr
+    ak_attr,
+
+    /// Expr *
+    ak_expr,
   };
 
   /// Represents on argument value, which is a union discriminated
@@ -375,10 +378,12 @@ private:
     // Map extensions to warnings or errors?
     diag::Severity ExtBehavior = diag::Severity::Ignored;
 
-    DiagState()
+    DiagnosticIDs &DiagIDs;
+
+    DiagState(DiagnosticIDs &DiagIDs)
         : IgnoreAllWarnings(false), EnableAllWarnings(false),
           WarningsAsErrors(false), ErrorsAsFatal(false),
-          SuppressSystemWarnings(false) {}
+          SuppressSystemWarnings(false), DiagIDs(DiagIDs) {}
 
     using iterator = llvm::DenseMap<unsigned, DiagnosticMapping>::iterator;
     using const_iterator =
@@ -560,7 +565,8 @@ private:
   ArgToStringFnTy ArgToStringFn;
 
   /// Whether the diagnostic should be suppressed in FilePath.
-  llvm::unique_function<bool(diag::kind, StringRef /*FilePath*/) const>
+  llvm::unique_function<bool(diag::kind, SourceLocation /*DiagLoc*/,
+                             const SourceManager &) const>
       DiagSuppressionMapping;
 
 public:
@@ -892,6 +898,8 @@ public:
   /// \param FormatString A fixed diagnostic format string that will be hashed
   /// and mapped to a unique DiagID.
   template <unsigned N>
+  // TODO: Deprecate this once all uses are removed from Clang.
+  // [[deprecated("Use a CustomDiagDesc instead of a Level")]]
   unsigned getCustomDiagID(Level L, const char (&FormatString)[N]) {
     return Diags->getCustomDiagID((DiagnosticIDs::Level)L,
                                   StringRef(FormatString, N - 1));
@@ -972,7 +980,7 @@ public:
   /// These take presumed locations into account, and can still be overriden by
   /// clang-diagnostics pragmas.
   void setDiagSuppressionMapping(llvm::MemoryBuffer &Input);
-  bool isSuppressedViaMapping(diag::kind DiagId, StringRef FilePath) const;
+  bool isSuppressedViaMapping(diag::kind DiagId, SourceLocation DiagLoc) const;
 
   /// Issue the message to the client.
   ///

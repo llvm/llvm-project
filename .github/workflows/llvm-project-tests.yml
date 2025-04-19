@@ -14,7 +14,7 @@ on:
         required: false
       os_list:
         required: false
-        default: '["ubuntu-latest", "windows-2019", "macOS-13"]'
+        default: '["ubuntu-24.04", "windows-2019", "macOS-13"]'
       python_version:
         required: false
         type: string
@@ -39,7 +39,7 @@ on:
         type: string
         # Use windows-2019 due to:
         # https://developercommunity.visualstudio.com/t/Prev-Issue---with-__assume-isnan-/1597317
-        default: '["ubuntu-latest", "windows-2019", "macOS-13"]'
+        default: '["ubuntu-24.04", "windows-2019", "macOS-13"]'
 
       python_version:
         required: false
@@ -59,7 +59,7 @@ jobs:
     name: Lit Tests
     runs-on: ${{ matrix.os }}
     container:
-      image: ${{(startsWith(matrix.os, 'ubuntu') && 'ghcr.io/llvm/ci-ubuntu-22.04:latest') || null}}
+      image: ${{(startsWith(matrix.os, 'ubuntu') && 'ghcr.io/llvm/ci-ubuntu-24.04:latest') || null}}
       volumes:
         - /mnt/:/mnt/
     strategy:
@@ -77,7 +77,7 @@ jobs:
       # lldb.  Using this setup-python action to make 3.10 the default
       # python fixes this.
       - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38 # v5.4.0
         with:
           python-version: ${{ inputs.python_version }}
       - name: Install Ninja
@@ -86,11 +86,11 @@ jobs:
       # actions/checkout deletes any existing files in the new git directory,
       # so this needs to either run before ccache-action or it has to use
       # clean: false.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           fetch-depth: 250
       - name: Setup ccache
-        uses: hendrikmuhs/ccache-action@v1
+        uses: hendrikmuhs/ccache-action@a1209f81afb8c005c13b4296c32e363431bffea5 # v1.2.17
         with:
           # A full build of llvm, clang, lld, and lldb takes about 250MB
           # of ccache space. There's not much reason to have more than this,
@@ -113,7 +113,8 @@ jobs:
         run: |
           if [ "${{ runner.os }}" == "Linux" ]; then
             builddir="/mnt/build/"
-            mkdir -p $builddir
+            sudo mkdir -p $builddir
+            sudo chown gha $builddir
             extra_cmake_args="-DCMAKE_CXX_COMPILER=clang++ -DCMAKE_C_COMPILER=clang"
           else
             builddir="$(pwd)"/build

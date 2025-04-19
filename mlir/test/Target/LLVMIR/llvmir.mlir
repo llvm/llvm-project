@@ -84,7 +84,7 @@ llvm.mlir.global external @explicit_undef() : i32 {
   llvm.return %0 : i32
 }
 
-// CHECK: @int_gep = internal constant ptr getelementptr (i32, ptr @i32_global, i32 2)
+// CHECK: @int_gep = internal constant ptr getelementptr (i8, ptr @i32_global, i64 8)
 llvm.mlir.global internal constant @int_gep() : !llvm.ptr {
   %addr = llvm.mlir.addressof @i32_global : !llvm.ptr
   %_c0 = llvm.mlir.constant(2: i32) : i32
@@ -1195,7 +1195,7 @@ llvm.func @dereferenceableornullattr_decl(!llvm.ptr {llvm.dereferenceable_or_nul
 // CHECK-LABEL: declare void @inregattr_decl(ptr inreg)
 llvm.func @inregattr_decl(!llvm.ptr {llvm.inreg})
 
-// CHECK-LABEL: declare void @nocaptureattr_decl(ptr nocapture)
+// CHECK-LABEL: declare void @nocaptureattr_decl(ptr captures(none))
 llvm.func @nocaptureattr_decl(!llvm.ptr {llvm.nocapture})
 
 // CHECK-LABEL: declare void @nofreeattr_decl(ptr nofree)
@@ -1851,7 +1851,7 @@ llvm.mlir.global linkonce @take_self_address() : !llvm.struct<(i32, !llvm.ptr)> 
 // -----
 
 // CHECK: @llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 0, ptr @foo, ptr null }]
-llvm.mlir.global_ctors { ctors = [@foo], priorities = [0 : i32]}
+llvm.mlir.global_ctors ctors = [@foo], priorities = [0 : i32], data = [#llvm.zero]
 
 llvm.func @foo() {
   llvm.return
@@ -1859,8 +1859,16 @@ llvm.func @foo() {
 
 // -----
 
+// CHECK: @llvm.global_ctors = appending global [0 x { i32, ptr, ptr }] zeroinitializer
+llvm.mlir.global_ctors ctors = [], priorities = [], data = []
+
+// CHECK: @llvm.global_dtors = appending global [0 x { i32, ptr, ptr }] zeroinitializer
+llvm.mlir.global_dtors dtors = [], priorities = [], data = []
+
+// -----
+
 // CHECK: @llvm.global_dtors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 0, ptr @foo, ptr null }]
-llvm.mlir.global_dtors { dtors = [@foo], priorities = [0 : i32]}
+llvm.mlir.global_dtors dtors = [@foo], priorities = [0 : i32], data = [#llvm.zero]
 
 llvm.func @foo() {
   llvm.return
@@ -2347,7 +2355,7 @@ llvm.func @readonly_function(%arg0: !llvm.ptr {llvm.readonly})
 llvm.func @arg_mem_none_func() attributes {
   memory_effects = #llvm.memory_effects<other = readwrite, argMem = none, inaccessibleMem = readwrite>}
 
-// CHECK: attributes #[[ATTR]] = { memory(readwrite, argmem: none) }
+// CHECK: attributes #[[ATTR]] = { memory(readwrite, argmem: none, errnomem: none) }
 
 // -----
 
@@ -2355,7 +2363,19 @@ llvm.func @arg_mem_none_func() attributes {
 llvm.func @readwrite_func() attributes {
   memory_effects = #llvm.memory_effects<other = readwrite, argMem = readwrite, inaccessibleMem = readwrite>}
 
-// CHECK: attributes #[[ATTR]] = { memory(readwrite) }
+// CHECK: attributes #[[ATTR]] = { memory(readwrite, errnomem: none) }
+
+// -----
+
+//
+// target-features attribute.
+//
+
+// CHECK-LABEL: @tf
+// CHECK-SAME: #[[TargetFeat:.*]]
+llvm.func @tf(!llvm.ptr) attributes {target_features = #llvm.target_features<["+fix-cortex-a53-835769", "+fp-armv8", "+neon", "+outline-atomics", "+v8a"]>}
+
+// CHECK: attributes #[[TargetFeat]] = { "target-features"="+fix-cortex-a53-835769,+fp-armv8,+neon,+outline-atomics,+v8a" }
 
 // -----
 
@@ -2447,6 +2467,18 @@ llvm.func @preserves_za_func() attributes {arm_preserves_za} {
 // -----
 
 //
+// frame pointer attribute.
+//
+
+// CHECK-LABEL: @t
+// CHECK-SAME: #[[FP:.*]]
+llvm.func @t(!llvm.ptr) attributes {frame_pointer = #llvm.framePointerKind<"non-leaf">}
+
+// CHECK: attributes #[[FP]] = { "frame-pointer"="non-leaf" }
+
+// -----
+
+//
 // Zero-initialize operation.
 //
 
@@ -2461,11 +2493,11 @@ llvm.mlir.global linkonce @partially_zeroinit_aggregate() : !llvm.struct<(i32, i
 llvm.func @zeroinit_complex_local_aggregate() {
   // CHECK: %[[#VAR:]] = alloca [1000 x { i32, [3 x { double, <4 x ptr>, [2 x ptr] }], [6 x ptr] }], i64 1, align 32
   %0 = llvm.mlir.constant(1 : i64) : i64
-  %1 = llvm.alloca %0 x !llvm.array<1000 x !llvm.struct<(i32, !llvm.array<3 x !llvm.struct<(f64, !llvm.vec<4 x ptr>, !llvm.array<2 x ptr>)>>, !llvm.array<6 x ptr>)>> : (i64) -> !llvm.ptr
+  %1 = llvm.alloca %0 x !llvm.array<1000 x !llvm.struct<(i32, !llvm.array<3 x !llvm.struct<(f64, vector<4 x !llvm.ptr>, !llvm.array<2 x ptr>)>>, !llvm.array<6 x ptr>)>> : (i64) -> !llvm.ptr
 
   // CHECK: store [1000 x { i32, [3 x { double, <4 x ptr>, [2 x ptr] }], [6 x ptr] }] zeroinitializer, ptr %[[#VAR]], align 32
-  %2 = llvm.mlir.zero : !llvm.array<1000 x !llvm.struct<(i32, !llvm.array<3 x !llvm.struct<(f64, !llvm.vec<4 x ptr>, !llvm.array<2 x ptr>)>>, !llvm.array<6 x ptr>)>>
-  llvm.store %2, %1 : !llvm.array<1000 x !llvm.struct<(i32, !llvm.array<3 x !llvm.struct<(f64, !llvm.vec<4 x ptr>, !llvm.array<2 x ptr>)>>, !llvm.array<6 x ptr>)>>, !llvm.ptr
+  %2 = llvm.mlir.zero : !llvm.array<1000 x !llvm.struct<(i32, !llvm.array<3 x !llvm.struct<(f64, vector<4 x !llvm.ptr>, !llvm.array<2 x ptr>)>>, !llvm.array<6 x ptr>)>>
+  llvm.store %2, %1 : !llvm.array<1000 x !llvm.struct<(i32, !llvm.array<3 x !llvm.struct<(f64, vector<4 x !llvm.ptr>, !llvm.array<2 x ptr>)>>, !llvm.array<6 x ptr>)>>, !llvm.ptr
 
   llvm.return
 }
@@ -2591,6 +2623,48 @@ llvm.func @willreturn_call() {
 
 // -----
 
+llvm.func @f()
+
+// CHECK-LABEL: @no_inline_call
+// CHECK: call void @f() #[[ATTRS:[0-9]+]]
+llvm.func @no_inline_call() {
+  llvm.call @f() {no_inline} : () -> ()
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: noinline
+
+// -----
+
+llvm.func @f()
+
+// CHECK-LABEL: @always_inline_call
+// CHECK: call void @f() #[[ATTRS:[0-9]+]]
+llvm.func @always_inline_call() {
+  llvm.call @f() {always_inline} : () -> ()
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: alwaysinline
+
+// -----
+
+llvm.func @f()
+
+// CHECK-LABEL: @inline_hint_call
+// CHECK: call void @f() #[[ATTRS:[0-9]+]]
+llvm.func @inline_hint_call() {
+  llvm.call @f() {inline_hint} : () -> ()
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: inlinehint
+
+// -----
+
 llvm.func @fa()
 llvm.func @fb()
 llvm.func @fc()
@@ -2613,11 +2687,11 @@ llvm.func @mem_effects_call() {
 // CHECK: #[[ATTRS_0]]
 // CHECK-SAME: memory(none)
 // CHECK: #[[ATTRS_1]]
-// CHECK-SAME: memory(read, argmem: none, inaccessiblemem: write)
+// CHECK-SAME: memory(read, argmem: none, inaccessiblemem: write, errnomem: none)
 // CHECK: #[[ATTRS_2]]
-// CHECK-SAME: memory(read, inaccessiblemem: write)
+// CHECK-SAME: memory(read, inaccessiblemem: write, errnomem: none)
 // CHECK: #[[ATTRS_3]]
-// CHECK-SAME: memory(readwrite, argmem: read)
+// CHECK-SAME: memory(readwrite, argmem: read, errnomem: none)
 
 // -----
 
@@ -2731,3 +2805,114 @@ llvm.func @call_intrin_with_opbundle(%arg0 : !llvm.ptr) {
 // CHECK-NEXT:   call void @llvm.assume(i1 true) [ "align"(ptr %0, i32 16) ]
 // CHECK-NEXT:   ret void
 // CHECK-NEXT: }
+
+// -----
+
+module {
+  llvm.module_flags [#llvm.mlir.module_flag<error, "wchar_size", 4>,
+                     #llvm.mlir.module_flag<min, "PIC Level", 2>,
+                     #llvm.mlir.module_flag<max, "PIE Level", 2>,
+                     #llvm.mlir.module_flag<max, "uwtable", 2>,
+                     #llvm.mlir.module_flag<max, "frame-pointer", 1>]
+}
+
+// CHECK: !llvm.module.flags = !{![[#WCHAR:]], ![[#PIC:]], ![[#PIE:]], ![[#UWTABLE:]], ![[#FrameP:]], ![[#DBG:]]}
+
+// CHECK: ![[#WCHAR]] = !{i32 1, !"wchar_size", i32 4}
+// CHECK: ![[#PIC]] = !{i32 8, !"PIC Level", i32 2}
+// CHECK: ![[#PIE]] = !{i32 7, !"PIE Level", i32 2}
+// CHECK: ![[#UWTABLE]] = !{i32 7, !"uwtable", i32 2}
+// CHECK: ![[#FrameP]] = !{i32 7, !"frame-pointer", i32 1}
+// CHECK: ![[#DBG]] = !{i32 2, !"Debug Info Version", i32 3}
+
+// -----
+
+// Verifies that the debug info version is not added twice, if it's already present initially.
+
+module {
+  llvm.module_flags [#llvm.mlir.module_flag<warning, "Debug Info Version", 3>]
+}
+
+// CHECK: !llvm.module.flags = !{![[#DBG:]]}
+// CHECK: ![[#DBG]] = !{i32 2, !"Debug Info Version", i32 3}
+
+// -----
+
+module attributes {llvm.dependent_libraries = ["foo", "bar"]} {}
+
+// CHECK: !llvm.dependent-libraries =  !{![[#LIBFOO:]], ![[#LIBBAR:]]}
+// CHECK: ![[#LIBFOO]] = !{!"foo"}
+// CHECK: ![[#LIBBAR]] = !{!"bar"}
+
+// -----
+
+llvm.mlir.global external constant @const() {addr_space = 0 : i32, dso_local} : i32 {
+  %0 = llvm.mlir.addressof @const : !llvm.ptr
+  %1 = llvm.ptrtoint %0 : !llvm.ptr to i64
+  %2 = llvm.dso_local_equivalent @extern_func : !llvm.ptr
+  %3 = llvm.ptrtoint %2 : !llvm.ptr to i64
+  %4 = llvm.sub %3, %1 : i64
+  %5 = llvm.trunc %4 : i64 to i32
+  llvm.return %5 : i32
+}
+
+llvm.func @extern_func()
+
+// CHECK: @const = dso_local constant i32 trunc
+// CHECK-SAME: (i64 sub (i64 ptrtoint
+// CHECK-SAME: (ptr dso_local_equivalent @extern_func to i64),
+// CHECK-SAME: i64 ptrtoint (ptr @const to i64)) to i32)
+
+// -----
+
+llvm.func @extern_func() -> i32
+llvm.func @call_extern_func() {
+  %0 = llvm.dso_local_equivalent @extern_func : !llvm.ptr
+  %1 = llvm.call %0() : !llvm.ptr, () -> (i32 {llvm.noundef})
+  llvm.return
+}
+
+// CHECK-LABEL: @call_extern_func()
+// CHECK: call noundef i32 dso_local_equivalent @extern_func()
+
+// -----
+
+llvm.mlir.alias external @alias_func : !llvm.func<void ()> {
+  %0 = llvm.mlir.addressof @aliasee_func : !llvm.ptr
+  llvm.return %0 : !llvm.ptr
+}
+llvm.func @aliasee_func() {
+  llvm.return
+}
+llvm.func @call_alias_func() {
+  %0 = llvm.dso_local_equivalent @alias_func : !llvm.ptr
+  llvm.call %0() : !llvm.ptr, () -> ()
+  llvm.return
+}
+
+// CHECK-LABEL: @call_alias_func
+// CHECK: call void dso_local_equivalent @alias_func()
+
+// -----
+
+llvm.func local_unnamed_addr @testfn(!llvm.array<2 x f32> {llvm.alignstack = 8 : i64})
+llvm.func internal @g(%arg0: !llvm.array<2 x f32>) attributes {dso_local} {
+  // CHECK-LABEL: @g
+  // CHECK: call void @testfn([2 x float] alignstack(8) %0)
+  llvm.call @testfn(%arg0) : (!llvm.array<2 x f32> {llvm.alignstack = 8 : i64}) -> ()
+  llvm.return
+}
+llvm.func local_unnamed_addr @testfn2(!llvm.struct<(i8, i8)> {llvm.alignstack = 8 : i64})
+llvm.func internal @h(%arg0: !llvm.struct<(i8, i8)>) attributes {dso_local} {
+  // CHECK-LABEL: @h
+  // CHECK: call void @testfn2({ i8, i8 } alignstack(8) %0)
+  llvm.call @testfn2(%arg0) : (!llvm.struct<(i8, i8)> {llvm.alignstack = 8 : i64}) -> ()
+  llvm.return
+}
+llvm.func local_unnamed_addr @testfn3(i32 {llvm.alignstack = 8 : i64})
+llvm.func internal @i(%arg0: i32) attributes {dso_local} {
+  // CHECK-LABEL: @i
+  // CHECK: call void @testfn3(i32 alignstack(8) %0)
+  llvm.call @testfn3(%arg0) : (i32 {llvm.alignstack = 8 : i64}) -> ()
+  llvm.return
+}

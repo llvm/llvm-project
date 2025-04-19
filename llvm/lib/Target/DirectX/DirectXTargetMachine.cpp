@@ -12,12 +12,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "DirectXTargetMachine.h"
+#include "DXILCBufferAccess.h"
 #include "DXILDataScalarization.h"
 #include "DXILFlattenArrays.h"
 #include "DXILIntrinsicExpansion.h"
+#include "DXILLegalizePass.h"
 #include "DXILOpLowering.h"
 #include "DXILPrettyPrinter.h"
-#include "DXILResourceAnalysis.h"
+#include "DXILResourceAccess.h"
+#include "DXILRootSignature.h"
 #include "DXILShaderFlags.h"
 #include "DXILTranslateMetadata.h"
 #include "DXILWriter/DXILWriterPass.h"
@@ -51,15 +54,19 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeDirectXTarget() {
   initializeDXILDataScalarizationLegacyPass(*PR);
   initializeDXILFlattenArraysLegacyPass(*PR);
   initializeScalarizerLegacyPassPass(*PR);
+  initializeDXILLegalizeLegacyPass(*PR);
   initializeDXILPrepareModulePass(*PR);
   initializeEmbedDXILPassPass(*PR);
   initializeWriteDXILPassPass(*PR);
   initializeDXContainerGlobalsPass(*PR);
   initializeDXILOpLoweringLegacyPass(*PR);
+  initializeDXILResourceAccessLegacyPass(*PR);
   initializeDXILTranslateMetadataLegacyPass(*PR);
-  initializeDXILResourceMDWrapperPass(*PR);
   initializeShaderFlagsAnalysisWrapperPass(*PR);
+  initializeRootSignatureAnalysisWrapperPass(*PR);
   initializeDXILFinalizeLinkageLegacyPass(*PR);
+  initializeDXILPrettyPrinterLegacyPass(*PR);
+  initializeDXILCBufferAccessLegacyPass(*PR);
 }
 
 class DXILTargetObjectFile : public TargetLoweringObjectFile {
@@ -91,13 +98,16 @@ public:
   void addCodeGenPrepare() override {
     addPass(createDXILFinalizeLinkageLegacyPass());
     addPass(createDXILIntrinsicExpansionLegacyPass());
+    addPass(createDXILCBufferAccessLegacyPass());
     addPass(createDXILDataScalarizationLegacyPass());
+    addPass(createDXILFlattenArraysLegacyPass());
+    addPass(createDXILResourceAccessLegacyPass());
     ScalarizerPassOptions DxilScalarOptions;
     DxilScalarOptions.ScalarizeLoadStore = true;
-    addPass(createDXILFlattenArraysLegacyPass());
     addPass(createScalarizerPass(DxilScalarOptions));
-    addPass(createDXILOpLoweringLegacyPass());
+    addPass(createDXILLegalizeLegacyPass());
     addPass(createDXILTranslateMetadataLegacyPass());
+    addPass(createDXILOpLoweringLegacyPass());
     addPass(createDXILPrepareModulePass());
   }
 };
@@ -182,4 +192,7 @@ DirectXTargetMachine::getTargetTransformInfo(const Function &F) const {
 
 DirectXTargetLowering::DirectXTargetLowering(const DirectXTargetMachine &TM,
                                              const DirectXSubtarget &STI)
-    : TargetLowering(TM) {}
+    : TargetLowering(TM) {
+  addRegisterClass(MVT::i32, &dxil::DXILClassRegClass);
+  computeRegisterProperties(STI.getRegisterInfo());
+}

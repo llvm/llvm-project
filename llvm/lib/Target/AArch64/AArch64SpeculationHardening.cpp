@@ -126,9 +126,7 @@ public:
 
   static char ID;
 
-  AArch64SpeculationHardening() : MachineFunctionPass(ID) {
-    initializeAArch64SpeculationHardeningPass(*PassRegistry::getPassRegistry());
-  }
+  AArch64SpeculationHardening() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &Fn) override;
 

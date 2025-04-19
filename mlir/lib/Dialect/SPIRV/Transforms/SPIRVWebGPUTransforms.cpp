@@ -236,8 +236,7 @@ struct WebGPUPreparePass final
     populateSPIRVExpandExtendedMultiplicationPatterns(patterns);
     populateSPIRVExpandNonFiniteArithmeticPatterns(patterns);
 
-    if (failed(
-            applyPatternsAndFoldGreedily(getOperation(), std::move(patterns))))
+    if (failed(applyPatternsGreedily(getOperation(), std::move(patterns))))
       signalPassFailure();
   }
 };

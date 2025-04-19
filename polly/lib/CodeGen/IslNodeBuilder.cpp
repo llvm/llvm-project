@@ -325,8 +325,7 @@ void IslNodeBuilder::getReferencesInSubtree(const isl::ast_node &For,
   SubtreeReferences References = {
       LI, SE, S, ValueMap, Values, SCEVs, getBlockGenerator(), nullptr};
 
-  for (const auto &I : IDToValue)
-    Values.insert(I.second);
+  Values.insert_range(llvm::make_second_range(IDToValue));
 
   // NOTE: this is populated in IslNodeBuilder::addParameters
   for (const auto &I : OutsideLoopIterations)
@@ -600,8 +599,7 @@ void IslNodeBuilder::createForParallel(__isl_take isl_ast_node *For) {
   // derived class determined by TargetMachine, AssumptionCache can be
   // configured using a TargetTransformInfo object also derived from
   // TargetMachine.
-  TargetLibraryInfoImpl BaselineInfoImpl(
-      Triple(SubFn->getParent()->getTargetTriple()));
+  TargetLibraryInfoImpl BaselineInfoImpl(SubFn->getParent()->getTargetTriple());
   TargetLibraryInfo CalleeTLI(BaselineInfoImpl, SubFn);
   AssumptionCache CalleeAC(*SubFn);
   std::unique_ptr<ScalarEvolution> SubSE = std::make_unique<ScalarEvolution>(
@@ -612,6 +610,7 @@ void IslNodeBuilder::createForParallel(__isl_take isl_ast_node *For) {
   GenLI = SubLI;
   GenSE = SubSE.get();
   BlockGen.switchGeneratedFunc(SubFn, GenDT, GenLI, GenSE);
+  RegionGen.switchGeneratedFunc(SubFn, GenDT, GenLI, GenSE);
   ExprBuilder.switchGeneratedFunc(SubFn, GenDT, GenLI, GenSE);
   Builder.SetInsertPoint(&*LoopBody);
 
@@ -681,6 +680,7 @@ void IslNodeBuilder::createForParallel(__isl_take isl_ast_node *For) {
   IDToValue = std::move(IDToValueCopy);
   ValueMap = std::move(CallerGlobals);
   ExprBuilder.switchGeneratedFunc(CallerFn, CallerDT, CallerLI, CallerSE);
+  RegionGen.switchGeneratedFunc(CallerFn, CallerDT, CallerLI, CallerSE);
   BlockGen.switchGeneratedFunc(CallerFn, CallerDT, CallerLI, CallerSE);
   Builder.SetInsertPoint(&*AfterLoop);
 
@@ -895,7 +895,7 @@ void IslNodeBuilder::createUser(__isl_take isl_ast_node *User) {
   Id = isl_ast_expr_get_id(StmtExpr);
   isl_ast_expr_free(StmtExpr);
 
-  LTS.insert(OutsideLoopIterations.begin(), OutsideLoopIterations.end());
+  LTS.insert_range(OutsideLoopIterations);
 
   Stmt = (ScopStmt *)isl_id_get_user(Id);
   auto *NewAccesses = createNewAccesses(Stmt, User);
@@ -1101,7 +1101,7 @@ Value *IslNodeBuilder::preloadInvariantLoad(const MemoryAccess &MA,
   Domain = nullptr;
 
   ExprBuilder.setTrackOverflow(true);
-  Value *Cond = ExprBuilder.create(DomainCond);
+  Value *Cond = ExprBuilder.createBool(DomainCond);
   Value *OverflowHappened = Builder.CreateNot(ExprBuilder.getOverflowState(),
                                               "polly.preload.cond.overflown");
   Cond = Builder.CreateAnd(Cond, OverflowHappened, "polly.preload.cond.result");
@@ -1157,7 +1157,7 @@ bool IslNodeBuilder::preloadInvariantEquivClass(
   // For an equivalence class of invariant loads we pre-load the representing
   // element with the unified execution context. However, we have to map all
   // elements of the class to the one preloaded load as they are referenced
-  // during the code generation and therefor need to be mapped.
+  // during the code generation and therefore need to be mapped.
   const MemoryAccessList &MAs = IAClass.InvariantAccesses;
   if (MAs.empty())
     return true;

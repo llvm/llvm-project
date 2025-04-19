@@ -15,6 +15,7 @@
 #include "SPIRVCallLowering.h"
 #include "SPIRVGlobalRegistry.h"
 #include "SPIRVLegalizerInfo.h"
+#include "SPIRVStructurizerWrapper.h"
 #include "SPIRVTargetObjectFile.h"
 #include "SPIRVTargetTransformInfo.h"
 #include "TargetInfo/SPIRVTargetInfo.h"
@@ -28,6 +29,7 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Pass.h"
+#include "llvm/Passes/PassBuilder.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/Transforms/Scalar/Reg2Mem.h"
 #include "llvm/Transforms/Utils.h"
@@ -45,6 +47,17 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSPIRVTarget() {
   initializeGlobalISel(PR);
   initializeSPIRVModuleAnalysisPass(PR);
   initializeSPIRVConvergenceRegionAnalysisWrapperPassPass(PR);
+  initializeSPIRVStructurizerPass(PR);
+  initializeSPIRVPreLegalizerCombinerPass(PR);
+  initializeSPIRVLegalizePointerCastPass(PR);
+  initializeSPIRVRegularizerPass(PR);
+  initializeSPIRVPreLegalizerPass(PR);
+  initializeSPIRVPostLegalizerPass(PR);
+  initializeSPIRVMergeRegionExitTargetsPass(PR);
+  initializeSPIRVEmitIntrinsicsPass(PR);
+  initializeSPIRVEmitNonSemanticDIPass(PR);
+  initializeSPIRVPrepareFunctionsPass(PR);
+  initializeSPIRVStripConvergentIntrinsicsPass(PR);
 }
 
 static std::string computeDataLayout(const Triple &TT) {
@@ -57,6 +70,9 @@ static std::string computeDataLayout(const Triple &TT) {
   if (Arch == Triple::spirv32)
     return "e-p:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-"
            "v256:256-v512:512-v1024:1024-n8:16:32:64-G1";
+  if (Arch == Triple::spirv)
+    return "e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-"
+           "v512:512-v1024:1024-n8:16:32:64-G10";
   if (TT.getVendor() == Triple::VendorType::AMD &&
       TT.getOS() == Triple::OSType::AMDHSA)
     return "e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-"
@@ -90,6 +106,11 @@ SPIRVTargetMachine::SPIRVTargetMachine(const Target &T, const Triple &TT,
   setFastISel(false);
   setO0WantsFastISel(false);
   setRequiresStructuredCFG(false);
+}
+
+void SPIRVTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
+#define GET_PASS_REGISTRY "SPIRVPassRegistry.def"
+#include "llvm/Passes/TargetPassRegistry.inc"
 }
 
 namespace {
@@ -130,13 +151,8 @@ FunctionPass *SPIRVPassConfig::createTargetRegisterAllocator(bool) {
   return nullptr;
 }
 
-// Disable passes that may break CFG.
+// A place to disable passes that may break CFG.
 void SPIRVPassConfig::addMachineSSAOptimization() {
-  // Some standard passes that optimize machine instructions in SSA form uses
-  // MI.isPHI() that doesn't account for OpPhi in SPIR-V and so are able to
-  // break the CFG (e.g., MachineSink).
-  disablePass(&MachineSinkingID);
-
   TargetPassConfig::addMachineSSAOptimization();
 }
 
@@ -205,6 +221,8 @@ void SPIRVPassConfig::addIRPasses() {
 
 void SPIRVPassConfig::addISelPrepare() {
   addPass(createSPIRVEmitIntrinsicsPass(&getTM<SPIRVTargetMachine>()));
+  if (TM.getSubtargetImpl()->isVulkanEnv())
+    addPass(createSPIRVLegalizePointerCastPass(&getTM<SPIRVTargetMachine>()));
   TargetPassConfig::addISelPrepare();
 }
 
@@ -214,6 +232,7 @@ bool SPIRVPassConfig::addIRTranslator() {
 }
 
 void SPIRVPassConfig::addPreLegalizeMachineIR() {
+  addPass(createSPIRVPreLegalizerCombiner());
   addPass(createSPIRVPreLegalizerPass());
 }
 

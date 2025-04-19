@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=avr | FileCheck %s
+; RUN: llc < %s -mtriple=avr | FileCheck %s
 
 declare void @ret_void_args_i8(i8 %a)
 declare void @ret_void_args_i8_i32(i8 %a, i32 %b)

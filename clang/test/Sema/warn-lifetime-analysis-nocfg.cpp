@@ -121,13 +121,13 @@ MyLongPointerFromConversion global2;
 
 void initLocalGslPtrWithTempOwner() {
   MyIntPointer p = MyIntOwner{}; // expected-warning {{object backing the pointer will be destroyed at the end of the full-expression}}
-  MyIntPointer pp = p = MyIntOwner{}; // expected-warning {{object backing the pointer p will be}}
-  p = MyIntOwner{}; // expected-warning {{object backing the pointer p }}
+  MyIntPointer pp = p = MyIntOwner{}; // expected-warning {{object backing the pointer 'p' will be}}
+  p = MyIntOwner{}; // expected-warning {{object backing the pointer 'p' }}
   pp = p; // no warning
-  global = MyIntOwner{}; // expected-warning {{object backing the pointer global }}
+  global = MyIntOwner{}; // expected-warning {{object backing the pointer 'global' }}
   MyLongPointerFromConversion p2 = MyLongOwnerWithConversion{}; // expected-warning {{object backing the pointer will be destroyed at the end of the full-expression}}
-  p2 = MyLongOwnerWithConversion{}; // expected-warning {{object backing the pointer p2 }}
-  global2 = MyLongOwnerWithConversion{}; // expected-warning {{object backing the pointer global2 }}
+  p2 = MyLongOwnerWithConversion{}; // expected-warning {{object backing the pointer 'p2' }}
+  global2 = MyLongOwnerWithConversion{}; // expected-warning {{object backing the pointer 'global2' }}
 }
 
 
@@ -604,8 +604,9 @@ struct [[gsl::Pointer]] Span {
 
 // Pointer from Owner<Pointer>
 std::string_view test5() {
-  std::string_view a = StatusOr<std::string_view>().valueLB(); // expected-warning {{object backing the pointer will be dest}}
-  return StatusOr<std::string_view>().valueLB(); // expected-warning {{returning address of local temporary}}
+  // The Owner<Pointer> doesn't own the object which its inner pointer points to.
+  std::string_view a = StatusOr<std::string_view>().valueLB(); // OK
+  return StatusOr<std::string_view>().valueLB(); // OK
 
   // No dangling diagnostics on non-lifetimebound methods.
   std::string_view b = StatusOr<std::string_view>().valueNoLB();
@@ -652,7 +653,7 @@ Span<std::string> test10(StatusOr<std::vector<std::string>> aa) {
 
 // Pointer<Owner>> from Owner<Pointer<Owner>>
 Span<std::string> test11(StatusOr<Span<std::string>> aa) {
-  return aa.valueLB(); // expected-warning {{address of stack memory}}
+  return aa.valueLB(); // OK
   return aa.valueNoLB(); // OK.
 }
 
@@ -693,3 +694,185 @@ void test() {
   auto y = std::set<int>{}.begin(); // expected-warning {{object backing the pointer}}
 }
 } // namespace GH118064
+
+namespace LifetimeboundInterleave {
+
+const std::string& Ref(const std::string& abc [[clang::lifetimebound]]);
+
+std::string_view TakeSv(std::string_view abc [[clang::lifetimebound]]);
+std::string_view TakeStrRef(const std::string& abc [[clang::lifetimebound]]);
+std::string_view TakeStr(std::string abc [[clang::lifetimebound]]);
+
+std::string_view test1() {
+  std::string_view t1 = Ref(std::string()); // expected-warning {{object backing}}
+  t1 = Ref(std::string()); // expected-warning {{object backing}}
+  return Ref(std::string()); // expected-warning {{returning address}}
+
+  std::string_view t2 = TakeSv(std::string()); // expected-warning {{object backing}}
+  t2 = TakeSv(std::string()); // expected-warning {{object backing}}
+  return TakeSv(std::string()); // expected-warning {{returning address}}
+
+  std::string_view t3 = TakeStrRef(std::string()); // expected-warning {{temporary}}
+  t3 = TakeStrRef(std::string()); // expected-warning {{object backing}}
+  return TakeStrRef(std::string()); // expected-warning {{returning address}}
+
+
+  std::string_view t4 = TakeStr(std::string());
+  t4 = TakeStr(std::string());
+  return TakeStr(std::string());
+}
+
+template <typename T>
+struct Foo {
+  const T& get() const [[clang::lifetimebound]];
+  const T& getNoLB() const;
+};
+std::string_view test2(Foo<std::string> r1, Foo<std::string_view> r2) {
+  std::string_view t1 = Foo<std::string>().get(); // expected-warning {{object backing}}
+  t1 = Foo<std::string>().get(); // expected-warning {{object backing}}
+  return r1.get(); // expected-warning {{address of stack}}
+
+  std::string_view t2 = Foo<std::string_view>().get();
+  t2 = Foo<std::string_view>().get();
+  return r2.get();
+
+  // no warning on no-LB-annotated method.
+  std::string_view t3 = Foo<std::string>().getNoLB();
+  t3 = Foo<std::string>().getNoLB();
+  return r1.getNoLB();
+}
+
+struct Bar {};
+struct [[gsl::Pointer]] Pointer {
+  Pointer(const Bar & bar [[clang::lifetimebound]]);
+};
+Pointer test3(Bar bar) {
+  Pointer p = Pointer(Bar()); // expected-warning {{temporary}}
+  p = Pointer(Bar()); // expected-warning {{object backing}}
+  return bar; // expected-warning {{address of stack}}
+}
+
+template<typename T>
+struct MySpan {
+  MySpan(const std::vector<T>& v);
+  using iterator = std::iterator<T>;
+  iterator begin() const [[clang::lifetimebound]];
+};
+template <typename T>
+typename MySpan<T>::iterator ReturnFirstIt(const MySpan<T>& v [[clang::lifetimebound]]);
+
+void test4() {
+  std::vector<int> v{1};
+  // MySpan<T> doesn't own any underlying T objects, the pointee object of
+  // the MySpan iterator is still alive when the whole span is destroyed, thus
+  // no diagnostic.
+  const int& t1 = *MySpan<int>(v).begin();
+  const int& t2 = *ReturnFirstIt(MySpan<int>(v));
+  // Ideally, we would diagnose the following case, but due to implementation
+  // constraints, we do not.
+  const int& t4 = *MySpan<int>(std::vector<int>{}).begin();
+
+  auto it1 = MySpan<int>(v).begin(); // expected-warning {{temporary whose address is use}}
+  auto it2 = ReturnFirstIt(MySpan<int>(v)); // expected-warning {{temporary whose address is used}}
+}
+
+} // namespace LifetimeboundInterleave
+
+namespace GH120206 {
+struct S {
+  std::string_view s;
+};
+
+struct [[gsl::Owner]] Q1 {
+  const S* get() const [[clang::lifetimebound]];
+};
+std::string_view test1(int c, std::string_view sv) {
+  std::string_view k = c > 1 ? Q1().get()->s : sv;
+  if (c == 1)
+    return  c > 1 ? Q1().get()->s : sv;
+  Q1 q;
+  return c > 1 ? q.get()->s : sv;
+}
+
+struct Q2 {
+  const S* get() const [[clang::lifetimebound]];
+};
+std::string_view test2(int c, std::string_view sv) {
+  std::string_view k = c > 1 ? Q2().get()->s : sv;
+  if (c == 1)
+    return c > 1 ? Q2().get()->s : sv;
+  Q2 q;
+  return c > 1 ? q.get()->s : sv;
+}
+
+} // namespace GH120206
+
+namespace GH120543 {
+struct S {
+  std::string_view sv;
+  std::string s;
+};
+struct Q {
+  const S* get() const [[clang::lifetimebound]];
+};
+
+std::string_view foo(std::string_view sv [[clang::lifetimebound]]);
+
+void test1() {
+  std::string_view k1 = S().sv; // OK
+  std::string_view k2 = S().s; // expected-warning {{object backing the pointer will}}
+
+  std::string_view k3 = Q().get()->sv; // OK
+  std::string_view k4  = Q().get()->s; // expected-warning {{object backing the pointer will}}
+
+  std::string_view lb1 = foo(S().s); // expected-warning {{object backing the pointer will}}
+  std::string_view lb2 = foo(Q().get()->s); // expected-warning {{object backing the pointer will}}
+}
+
+struct Bar {};
+struct Foo {
+  std::vector<Bar> v;
+};
+Foo getFoo();
+void test2() {
+  const Foo& foo = getFoo();
+  const Bar& bar = foo.v.back(); // OK
+}
+
+struct Foo2 {
+   std::unique_ptr<Bar> bar;
+};
+
+struct Test {
+  Test(Foo2 foo) : bar(foo.bar.get()), // OK
+      storage(std::move(foo.bar)) {};
+
+  Bar* bar;
+  std::unique_ptr<Bar> storage;
+};
+
+} // namespace GH120543
+
+namespace GH127195 {
+template <typename T>
+struct StatusOr {
+  T* operator->() [[clang::lifetimebound]];
+  T* value() [[clang::lifetimebound]];
+};
+
+const char* foo() {
+  StatusOr<std::string> s;
+  return s->data(); // expected-warning {{address of stack memory associated with local variable}}
+
+  StatusOr<std::string_view> s2;
+  return s2->data();
+
+  StatusOr<StatusOr<std::string_view>> s3;
+  return s3.value()->value()->data();
+
+  // FIXME: nested cases are not supported now.
+  StatusOr<StatusOr<std::string>> s4;
+  return s4.value()->value()->data();
+}
+
+} // namespace GH127195

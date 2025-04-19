@@ -699,6 +699,53 @@ def hlfir_MatmulTransposeOp : hlfir_Op<"matmul_transpose",
   let hasVerifier = 1;
 }
 
+def hlfir_CShiftOp
+    : hlfir_Op<
+          "cshift", [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
+  let summary = "CSHIFT transformational intrinsic";
+  let description = [{
+    Circular shift of an array
+  }];
+
+  let arguments = (ins AnyFortranArrayObject:$array,
+      AnyFortranIntegerScalarOrArrayObject:$shift,
+      Optional<AnyIntegerType>:$dim);
+
+  let results = (outs hlfir_ExprType);
+
+  let assemblyFormat = [{
+    $array $shift (`dim` $dim^)? attr-dict `:` functional-type(operands, results)
+  }];
+
+  let hasVerifier = 1;
+}
+
+def hlfir_ReshapeOp
+    : hlfir_Op<
+          "reshape", [AttrSizedOperandSegments,
+                      DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
+  let summary = "RESHAPE transformational intrinsic";
+  let description = [{
+    Reshapes an ARRAY to correspond to the given SHAPE.
+    If PAD is specified the new array may be padded with elements
+    from PAD array.
+    If ORDER is specified the new array may be permuted accordingly.
+  }];
+
+  let arguments = (ins AnyFortranArrayEntity:$array,
+      AnyFortranNumericalArrayEntity:$shape,
+      Optional<AnyFortranArrayEntity>:$pad,
+      Optional<AnyFortranNumericalArrayEntity>:$order);
+
+  let results = (outs hlfir_ExprType);
+
+  let assemblyFormat = [{
+    $array $shape (`pad` $pad^)? (`order` $order^)? attr-dict `:` functional-type(operands, results)
+  }];
+
+  let hasVerifier = 1;
+}
+
 // An allocation effect is needed because the value produced by the associate
 // is "deallocated" by hlfir.end_associate (the end_associate must not be
 // removed, and there must be only one hlfir.end_associate).
@@ -1184,6 +1231,7 @@ def hlfir_ShapeOfOp : hlfir_Op<"shape_of", [Pure]> {
   }];
 
   let builders = [OpBuilder<(ins "mlir::Value":$expr)>];
+  let hasFolder = 1;
 }
 
 def hlfir_GetExtentOp : hlfir_Op<"get_extent", [Pure]> {
@@ -1329,7 +1377,9 @@ def hlfir_RegionAssignOp : hlfir_Op<"region_assign", [hlfir_OrderedAssignmentTre
         regions.push_back(&getUserDefinedAssignment());
     }
     mlir::Region* getSubTreeRegion() { return nullptr; }
-
+    bool isPointerAssignment();
+    bool isPointerObjectAssignment();
+    bool isProcedurePointerAssignment();
   }];
 
   let hasCustomAssemblyFormat = 1;

@@ -117,7 +117,7 @@ namespace null_ptr {
 
 namespace ref_counted_lookalike {
   struct Decoy {
-    RefCountable* get() { return nullptr; }
+    RefCountable* get();
   };
 
   void foo() {
@@ -359,9 +359,84 @@ namespace call_with_ptr_on_ref {
   }
 }
 
+namespace call_with_explicit_construct_from_auto {
+
+  struct Impl {
+    void ref() const;
+    void deref() const;
+
+    static Ref<Impl> create();
+  };
+
+  template <typename T>
+  struct ArgObj {
+    T* t;
+  };
+
+  struct Object {
+    Object();
+    Object(Ref<Impl>&&);
+
+    Impl* impl() const { return m_impl.get(); }
+
+    static Object create(ArgObj<char>&) { return Impl::create(); }
+    static void bar(Impl&);
+
+  private:
+    RefPtr<Impl> m_impl;
+  };
+
+  template<typename CharacterType> void foo()
+  {
+      auto result = Object::create(ArgObj<CharacterType> { });
+      Object::bar(Ref { *result.impl() });
+  }
+
+}
+
 namespace call_with_explicit_temporary_obj {
   void foo() {
     Ref { *provide() }->method();
     RefPtr { provide() }->method();
+  }
+  template <typename T>
+  void bar() {
+    Ref(*provide())->method();
+    RefPtr(provide())->method();
+  }
+  void baz() {
+    bar<int>();
+  }
+
+  class Foo {
+    Ref<RefCountable> ensure();
+    void foo() {
+      Ref { ensure() }->method();
+    }
+  };
+
+  void baz(Ref<RefCountable>&& arg) {
+    Ref { arg }->method();
+  }
+}
+
+namespace call_with_explicit_construct {
+}
+
+namespace call_with_adopt_ref {
+  class Obj {
+  public:
+    void ref() const;
+    void deref() const;
+    void method();
+  };
+
+  // This is needed due to rdar://141692212.
+  struct dummy {
+    RefPtr<Obj> any;
+  };
+
+  void foo() {
+    adoptRef(new Obj)->method();
   }
 }

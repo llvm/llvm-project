@@ -91,7 +91,7 @@ private:
       ScopedHashTable<MachineInstr *, unsigned, MachineInstrExpressionTrait,
                       AllocatorTy>;
   using ScopeType = ScopedHTType::ScopeTy;
-  using PhysDefVector = SmallVector<std::pair<unsigned, unsigned>, 2>;
+  using PhysDefVector = SmallVector<std::pair<unsigned, Register>, 2>;
 
   unsigned LookAheadLimit = 0;
   DenseMap<MachineBasicBlock *, ScopeType *> ScopeMap;
@@ -110,8 +110,8 @@ private:
                              SmallSet<MCRegister, 8> &PhysRefs,
                              PhysDefVector &PhysDefs, bool &PhysUseDef) const;
   bool PhysRegDefsReach(MachineInstr *CSMI, MachineInstr *MI,
-                        SmallSet<MCRegister, 8> &PhysRefs,
-                        PhysDefVector &PhysDefs, bool &NonLocal) const;
+                        const SmallSet<MCRegister, 8> &PhysRefs,
+                        const PhysDefVector &PhysDefs, bool &NonLocal) const;
   bool isCSECandidate(MachineInstr *MI);
   bool isProfitableToCSE(Register CSReg, Register Reg, MachineBasicBlock *CSBB,
                          MachineInstr *MI);
@@ -186,8 +186,6 @@ bool MachineCSEImpl::PerformTrivialCopyPropagation(MachineInstr *MI,
       continue;
     Register SrcReg = DefMI->getOperand(1).getReg();
     if (!SrcReg.isVirtual())
-      continue;
-    if (DefMI->getOperand(0).getSubReg())
       continue;
     // FIXME: We should trivially coalesce subregister copies to expose CSE
     // opportunities on instructions with truncated operands (see
@@ -323,7 +321,7 @@ bool MachineCSEImpl::hasLivePhysRegDefUses(const MachineInstr *MI,
     // common since this pass is run before livevariables. We can scan
     // forward a few instructions and check if it is obviously dead.
     if (!MO.isDead() && !isPhysDefTriviallyDead(Reg.asMCReg(), I, MBB->end()))
-      PhysDefs.push_back(std::make_pair(MOP.index(), Reg));
+      PhysDefs.emplace_back(MOP.index(), Reg);
   }
 
   // Finally, add all defs to PhysRefs as well.
@@ -336,8 +334,8 @@ bool MachineCSEImpl::hasLivePhysRegDefUses(const MachineInstr *MI,
 }
 
 bool MachineCSEImpl::PhysRegDefsReach(MachineInstr *CSMI, MachineInstr *MI,
-                                      SmallSet<MCRegister, 8> &PhysRefs,
-                                      PhysDefVector &PhysDefs,
+                                      const SmallSet<MCRegister, 8> &PhysRefs,
+                                      const PhysDefVector &PhysDefs,
                                       bool &NonLocal) const {
   // For now conservatively returns false if the common subexpression is
   // not in the same basic block as the given instruction. The only exception
@@ -533,9 +531,9 @@ void MachineCSEImpl::ExitScope(MachineBasicBlock *MBB) {
 bool MachineCSEImpl::ProcessBlockCSE(MachineBasicBlock *MBB) {
   bool Changed = false;
 
-  SmallVector<std::pair<unsigned, unsigned>, 8> CSEPairs;
+  SmallVector<std::pair<Register, Register>, 8> CSEPairs;
   SmallVector<unsigned, 2> ImplicitDefsToUpdate;
-  SmallVector<unsigned, 2> ImplicitDefs;
+  SmallVector<Register, 2> ImplicitDefs;
   for (MachineInstr &MI : llvm::make_early_inc_range(*MBB)) {
     if (!isCSECandidate(&MI))
       continue;
@@ -669,15 +667,15 @@ bool MachineCSEImpl::ProcessBlockCSE(MachineBasicBlock *MBB) {
         break;
       }
 
-      CSEPairs.push_back(std::make_pair(OldReg, NewReg));
+      CSEPairs.emplace_back(OldReg, NewReg);
       --NumDefs;
     }
 
     // Actually perform the elimination.
     if (DoCSE) {
-      for (const std::pair<unsigned, unsigned> &CSEPair : CSEPairs) {
-        unsigned OldReg = CSEPair.first;
-        unsigned NewReg = CSEPair.second;
+      for (const std::pair<Register, Register> &CSEPair : CSEPairs) {
+        Register OldReg = CSEPair.first;
+        Register NewReg = CSEPair.second;
         // OldReg may have been unused but is used now, clear the Dead flag
         MachineInstr *Def = MRI->getUniqueVRegDef(NewReg);
         assert(Def != nullptr && "CSEd register has no unique definition?");
@@ -832,12 +830,11 @@ bool MachineCSEImpl::ProcessBlockPRE(MachineDominatorTree *DT,
     if (!isPRECandidate(&MI, PhysRefs))
       continue;
 
-    if (!PREMap.count(&MI)) {
-      PREMap[&MI] = MBB;
+    auto [It, Inserted] = PREMap.try_emplace(&MI, MBB);
+    if (Inserted)
       continue;
-    }
 
-    auto MBB1 = PREMap[&MI];
+    auto *MBB1 = It->second;
     assert(
         !DT->properlyDominates(MBB, MBB1) &&
         "MBB cannot properly dominate MBB1 while DFS through dominators tree!");

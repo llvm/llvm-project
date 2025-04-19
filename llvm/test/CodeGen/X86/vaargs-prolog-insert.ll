@@ -31,7 +31,7 @@ define void @reduce(i32, i32, i32, i32, i32, i32, ...) nounwind {
 ; CHECK-NEXT:  .LBB0_2:
 ; CHECK-NEXT:    addq $56, %rsp
 ; CHECK-NEXT:    retq
-  br i1 undef, label %8, label %7
+  br i1 poison, label %8, label %7
 
 7:                                                ; preds = %6
   call void @llvm.va_start(ptr null)

@@ -10,8 +10,8 @@ define amdgpu_cs void @max_6_vgprs(ptr addrspace(1) %p) "amdgpu-num-vgpr"="6" {
 ; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; CHECK-NEXT:    v_lshlrev_b64_e32 v[2:3], 2, v[2:3]
 ; CHECK-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v2
-; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; CHECK-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, v1, v3, vcc_lo
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; CHECK-NEXT:    v_add_co_ci_u32_e64 v1, null, v1, v3, vcc_lo
 ; CHECK-NEXT:    global_load_b32 v5, v[0:1], off scope:SCOPE_SYS
 ; CHECK-NEXT:    s_wait_loadcnt 0x0
 ; CHECK-NEXT:    global_load_b32 v2, v[0:1], off offset:16 scope:SCOPE_SYS
@@ -48,7 +48,7 @@ define amdgpu_cs void @max_6_vgprs(ptr addrspace(1) %p) "amdgpu-num-vgpr"="6" {
 ; CHECK-NEXT:    global_store_b32 v[0:1], v0, off scope:SCOPE_SYS
 ; CHECK-NEXT:    s_wait_storecnt 0x0
 ; CHECK-NEXT:    s_endpgm
-  %tid = load volatile i32, ptr addrspace(1) undef
+  %tid = load volatile i32, ptr addrspace(1) poison
   %p1 = getelementptr inbounds i32, ptr addrspace(1) %p, i32 %tid
   %p2 = getelementptr inbounds i32, ptr addrspace(1) %p1, i32 4
   %p3 = getelementptr inbounds i32, ptr addrspace(1) %p2, i32 8
@@ -60,11 +60,11 @@ define amdgpu_cs void @max_6_vgprs(ptr addrspace(1) %p) "amdgpu-num-vgpr"="6" {
   %v4 = load volatile i32, ptr addrspace(1) %p4
   %v5 = load volatile i32, ptr addrspace(1) %p5
   call void asm sideeffect "", "~{v[0:4]}" ()
-  store volatile i32 %v1, ptr addrspace(1) undef
-  store volatile i32 %v2, ptr addrspace(1) undef
-  store volatile i32 %v3, ptr addrspace(1) undef
-  store volatile i32 %v4, ptr addrspace(1) undef
-  store volatile i32 %v5, ptr addrspace(1) undef
+  store volatile i32 %v1, ptr addrspace(1) poison
+  store volatile i32 %v2, ptr addrspace(1) poison
+  store volatile i32 %v3, ptr addrspace(1) poison
+  store volatile i32 %v4, ptr addrspace(1) poison
+  store volatile i32 %v5, ptr addrspace(1) poison
   ret void
 }
 
@@ -78,8 +78,8 @@ define amdgpu_cs void @max_11_vgprs_branch(ptr addrspace(1) %p, i32 %tmp) "amdgp
 ; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; CHECK-NEXT:    v_lshlrev_b64_e32 v[3:4], 2, v[3:4]
 ; CHECK-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v3
-; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; CHECK-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, v1, v4, vcc_lo
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; CHECK-NEXT:    v_add_co_ci_u32_e64 v1, null, v1, v4, vcc_lo
 ; CHECK-NEXT:    global_load_b32 v3, v[0:1], off offset:336 scope:SCOPE_SYS
 ; CHECK-NEXT:    s_wait_loadcnt 0x0
 ; CHECK-NEXT:    scratch_store_b32 off, v3, off offset:8 ; 4-byte Folded Spill
@@ -218,7 +218,7 @@ define amdgpu_cs void @max_11_vgprs_branch(ptr addrspace(1) %p, i32 %tmp) "amdgp
 ; CHECK-NEXT:    s_wait_storecnt 0x0
 ; CHECK-NEXT:    s_endpgm
 .entry:
-  %tid = load volatile i32, ptr addrspace(1) undef
+  %tid = load volatile i32, ptr addrspace(1) poison
   %p1 = getelementptr inbounds i32, ptr addrspace(1) %p, i32 %tid
   %p2 = getelementptr inbounds i32, ptr addrspace(1) %p1, i32 4
   %p3 = getelementptr inbounds i32, ptr addrspace(1) %p2, i32 8
@@ -244,14 +244,14 @@ define amdgpu_cs void @max_11_vgprs_branch(ptr addrspace(1) %p, i32 %tmp) "amdgp
   %v5_t = load volatile i32, ptr addrspace(1) %p5
   %v6_t = load volatile i32, ptr addrspace(1) %p6
   call void asm sideeffect "", "~{v[0:9]}" ()
-  store volatile i32 %v1_t, ptr addrspace(1) undef
-  store volatile i32 %v2_t, ptr addrspace(1) undef
-  store volatile i32 %v3_t, ptr addrspace(1) undef
-  store volatile i32 %v4_t, ptr addrspace(1) undef
-  store volatile i32 %v5_t, ptr addrspace(1) undef
-  store volatile i32 %v6_t, ptr addrspace(1) undef
-  store volatile i32 %v7, ptr addrspace(1) undef
-  store volatile i32 %v8, ptr addrspace(1) undef
+  store volatile i32 %v1_t, ptr addrspace(1) poison
+  store volatile i32 %v2_t, ptr addrspace(1) poison
+  store volatile i32 %v3_t, ptr addrspace(1) poison
+  store volatile i32 %v4_t, ptr addrspace(1) poison
+  store volatile i32 %v5_t, ptr addrspace(1) poison
+  store volatile i32 %v6_t, ptr addrspace(1) poison
+  store volatile i32 %v7, ptr addrspace(1) poison
+  store volatile i32 %v8, ptr addrspace(1) poison
 
   br label %.exit
 
@@ -263,19 +263,19 @@ define amdgpu_cs void @max_11_vgprs_branch(ptr addrspace(1) %p, i32 %tmp) "amdgp
   %v5_f = load volatile i32, ptr addrspace(1) %p5
   %v6_f = load volatile i32, ptr addrspace(1) %p6
   call void asm sideeffect "", "~{v[0:9]}" ()
-  store volatile i32 %v1_f, ptr addrspace(1) undef
-  store volatile i32 %v2_f, ptr addrspace(1) undef
-  store volatile i32 %v3_f, ptr addrspace(1) undef
-  store volatile i32 %v4_f, ptr addrspace(1) undef
-  store volatile i32 %v5_f, ptr addrspace(1) undef
-  store volatile i32 %v6_f, ptr addrspace(1) undef
-  store volatile i32 %v7, ptr addrspace(1) undef
-  store volatile i32 %v8, ptr addrspace(1) undef
+  store volatile i32 %v1_f, ptr addrspace(1) poison
+  store volatile i32 %v2_f, ptr addrspace(1) poison
+  store volatile i32 %v3_f, ptr addrspace(1) poison
+  store volatile i32 %v4_f, ptr addrspace(1) poison
+  store volatile i32 %v5_f, ptr addrspace(1) poison
+  store volatile i32 %v6_f, ptr addrspace(1) poison
+  store volatile i32 %v7, ptr addrspace(1) poison
+  store volatile i32 %v8, ptr addrspace(1) poison
 
   br label %.exit
 
 .exit:
-  store volatile i32 %v9, ptr addrspace(1) undef
-  store volatile i32 %v10, ptr addrspace(1) undef
+  store volatile i32 %v9, ptr addrspace(1) poison
+  store volatile i32 %v10, ptr addrspace(1) poison
   ret void
 }

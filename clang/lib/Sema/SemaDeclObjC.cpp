@@ -659,6 +659,7 @@ void SemaObjC::ActOnSuperClassOfClassInterface(
 
     IDecl->setSuperClass(SuperClassTInfo);
     IDecl->setEndOfDefinitionLoc(SuperClassTInfo->getTypeLoc().getEndLoc());
+    getASTContext().addObjCSubClass(IDecl->getSuperClass(), IDecl);
   }
 }
 
@@ -1309,24 +1310,26 @@ static bool NestedProtocolHasNoDefinition(ObjCProtocolDecl *PDecl,
 /// protocol declarations in its 'Protocols' argument.
 void SemaObjC::FindProtocolDeclaration(bool WarnOnDeclarations,
                                        bool ForObjCContainer,
-                                       ArrayRef<IdentifierLocPair> ProtocolId,
+                                       ArrayRef<IdentifierLoc> ProtocolId,
                                        SmallVectorImpl<Decl *> &Protocols) {
-  for (const IdentifierLocPair &Pair : ProtocolId) {
-    ObjCProtocolDecl *PDecl = LookupProtocol(Pair.first, Pair.second);
+  for (const IdentifierLoc &Pair : ProtocolId) {
+    ObjCProtocolDecl *PDecl =
+        LookupProtocol(Pair.getIdentifierInfo(), Pair.getLoc());
     if (!PDecl) {
       DeclFilterCCC<ObjCProtocolDecl> CCC{};
-      TypoCorrection Corrected =
-          SemaRef.CorrectTypo(DeclarationNameInfo(Pair.first, Pair.second),
-                              Sema::LookupObjCProtocolName, SemaRef.TUScope,
-                              nullptr, CCC, Sema::CTK_ErrorRecovery);
+      TypoCorrection Corrected = SemaRef.CorrectTypo(
+          DeclarationNameInfo(Pair.getIdentifierInfo(), Pair.getLoc()),
+          Sema::LookupObjCProtocolName, SemaRef.TUScope, nullptr, CCC,
+          Sema::CTK_ErrorRecovery);
       if ((PDecl = Corrected.getCorrectionDeclAs<ObjCProtocolDecl>()))
         SemaRef.diagnoseTypo(Corrected,
                              PDiag(diag::err_undeclared_protocol_suggest)
-                                 << Pair.first);
+                                 << Pair.getIdentifierInfo());
     }
 
     if (!PDecl) {
-      Diag(Pair.second, diag::err_undeclared_protocol) << Pair.first;
+      Diag(Pair.getLoc(), diag::err_undeclared_protocol)
+          << Pair.getIdentifierInfo();
       continue;
     }
     // If this is a forward protocol declaration, get its definition.
@@ -1336,7 +1339,7 @@ void SemaObjC::FindProtocolDeclaration(bool WarnOnDeclarations,
     // For an objc container, delay protocol reference checking until after we
     // can set the objc decl as the availability context, otherwise check now.
     if (!ForObjCContainer) {
-      (void)SemaRef.DiagnoseUseOfDecl(PDecl, Pair.second);
+      (void)SemaRef.DiagnoseUseOfDecl(PDecl, Pair.getLoc());
     }
 
     // If this is a forward declaration and we are supposed to warn in this
@@ -1346,7 +1349,8 @@ void SemaObjC::FindProtocolDeclaration(bool WarnOnDeclarations,
 
     if (WarnOnDeclarations &&
         NestedProtocolHasNoDefinition(PDecl, UndefinedProtocol)) {
-      Diag(Pair.second, diag::warn_undef_protocolref) << Pair.first;
+      Diag(Pair.getLoc(), diag::warn_undef_protocolref)
+          << Pair.getIdentifierInfo();
       Diag(UndefinedProtocol->getLocation(), diag::note_protocol_decl_undefined)
         << UndefinedProtocol;
     }
@@ -1584,7 +1588,7 @@ void SemaObjC::actOnObjCTypeArgsOrProtocolQualifiers(
     const char* prevSpec; // unused
     unsigned diagID; // unused
     QualType type;
-    if (auto *actualTypeDecl = typeDecl.dyn_cast<TypeDecl *>())
+    if (auto *actualTypeDecl = dyn_cast<TypeDecl *>(typeDecl))
       type = Context.getTypeDeclType(actualTypeDecl);
     else
       type = Context.getObjCInterfaceType(cast<ObjCInterfaceDecl *>(typeDecl));
@@ -1783,17 +1787,17 @@ void SemaObjC::DiagnoseClassExtensionDupMethods(ObjCCategoryDecl *CAT,
 
 /// ActOnForwardProtocolDeclaration - Handle \@protocol foo;
 SemaObjC::DeclGroupPtrTy SemaObjC::ActOnForwardProtocolDeclaration(
-    SourceLocation AtProtocolLoc, ArrayRef<IdentifierLocPair> IdentList,
+    SourceLocation AtProtocolLoc, ArrayRef<IdentifierLoc> IdentList,
     const ParsedAttributesView &attrList) {
   ASTContext &Context = getASTContext();
   SmallVector<Decl *, 8> DeclsInGroup;
-  for (const IdentifierLocPair &IdentPair : IdentList) {
-    IdentifierInfo *Ident = IdentPair.first;
+  for (const IdentifierLoc &IdentPair : IdentList) {
+    IdentifierInfo *Ident = IdentPair.getIdentifierInfo();
     ObjCProtocolDecl *PrevDecl = LookupProtocol(
-        Ident, IdentPair.second, SemaRef.forRedeclarationInCurContext());
+        Ident, IdentPair.getLoc(), SemaRef.forRedeclarationInCurContext());
     ObjCProtocolDecl *PDecl =
         ObjCProtocolDecl::Create(Context, SemaRef.CurContext, Ident,
-                                 IdentPair.second, AtProtocolLoc, PrevDecl);
+                                 IdentPair.getLoc(), AtProtocolLoc, PrevDecl);
 
     SemaRef.PushOnScopeChains(PDecl, SemaRef.TUScope);
     CheckObjCDeclScope(PDecl);
@@ -2129,6 +2133,12 @@ SemaObjC::ActOnFinishObjCImplementation(Decl *ObjCImpDecl,
 
   DeclsInGroup.push_back(ObjCImpDecl);
 
+  // Reset the cached layout if there are any ivars added to
+  // the implementation.
+  if (auto *ImplD = dyn_cast<ObjCImplementationDecl>(ObjCImpDecl))
+    if (!ImplD->ivar_empty())
+      getASTContext().ResetObjCLayout(ImplD->getClassInterface());
+
   return SemaRef.BuildDeclaratorGroup(DeclsInGroup);
 }
 
@@ -2210,8 +2220,7 @@ void SemaObjC::CheckImplementationIvars(ObjCImplementationDecl *ImpDecl,
         << ImplIvar->getType() << ClsIvar->getType();
       Diag(ClsIvar->getLocation(), diag::note_previous_definition);
     } else if (ImplIvar->isBitField() && ClsIvar->isBitField() &&
-               ImplIvar->getBitWidthValue(Context) !=
-               ClsIvar->getBitWidthValue(Context)) {
+               ImplIvar->getBitWidthValue() != ClsIvar->getBitWidthValue()) {
       Diag(ImplIvar->getBitWidth()->getBeginLoc(),
            diag::err_conflicting_ivar_bitwidth)
           << ImplIvar->getIdentifier();

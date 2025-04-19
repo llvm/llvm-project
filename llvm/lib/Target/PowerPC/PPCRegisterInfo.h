@@ -65,15 +65,19 @@ public:
   /// for a given imm form load/store opcode \p ImmFormOpcode.
   /// FIXME: move this to PPCInstrInfo class.
   unsigned getMappedIdxOpcForImmOpc(unsigned ImmOpcode) const {
-    if (!ImmToIdxMap.count(ImmOpcode))
+    auto It = ImmToIdxMap.find(ImmOpcode);
+    if (It == ImmToIdxMap.end())
       return PPC::INSTRUCTION_LIST_END;
-    return ImmToIdxMap.find(ImmOpcode)->second;
+    return It->second;
   }
 
   /// getPointerRegClass - Return the register class to use to hold pointers.
   /// This is used for addressing modes.
   const TargetRegisterClass *
   getPointerRegClass(const MachineFunction &MF, unsigned Kind=0) const override;
+
+  const TargetRegisterClass *
+  getCrossCopyRegClass(const TargetRegisterClass *RC) const override;
 
   unsigned getRegPressureLimit(const TargetRegisterClass *RC,
                                MachineFunction &MF) const override;
@@ -174,6 +178,10 @@ public:
 
   bool isNonallocatableRegisterCalleeSave(MCRegister Reg) const override {
     return Reg == PPC::LR || Reg == PPC::LR8;
+  }
+
+  bool isVirtualFrameRegister(MCRegister Reg) const override {
+    return Reg == PPC::FP || Reg == PPC::FP8;
   }
 };
 

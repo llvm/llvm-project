@@ -91,10 +91,7 @@ static bool isBlockValidForExtraction(const BasicBlock &BB,
   // don't hoist code that uses another basicblock address, as it's likely to
   // lead to unexpected behavior, like cross-function jumps
   SmallPtrSet<User const *, 16> Visited;
-  SmallVector<User const *, 16> ToVisit;
-
-  for (Instruction const &Inst : BB)
-    ToVisit.push_back(&Inst);
+  SmallVector<User const *, 16> ToVisit(llvm::make_pointer_range(BB));
 
   while (!ToVisit.empty()) {
     User const *Curr = ToVisit.pop_back_val();
@@ -170,6 +167,14 @@ static bool isBlockValidForExtraction(const BasicBlock &BB,
     }
 
     if (const CallInst *CI = dyn_cast<CallInst>(I)) {
+      // musttail calls have several restrictions, generally enforcing matching
+      // calling conventions between the caller parent and musttail callee.
+      // We can't usually honor them, because the extracted function has a
+      // different signature altogether, taking inputs/outputs and returning
+      // a control-flow identifier rather than the actual return value.
+      if (CI->isMustTailCall())
+        return false;
+
       if (const Function *F = CI->getCalledFunction()) {
         auto IID = F->getIntrinsicID();
         if (IID == Intrinsic::vastart) {
@@ -238,6 +243,21 @@ buildExtractionBlockSet(ArrayRef<BasicBlock *> BBs, DominatorTree *DT,
   }
 
   return Result;
+}
+
+/// isAlignmentPreservedForAddrCast - Return true if the cast operation
+/// for specified target preserves original alignment
+static bool isAlignmentPreservedForAddrCast(const Triple &TargetTriple) {
+  switch (TargetTriple.getArch()) {
+  case Triple::ArchType::amdgcn:
+  case Triple::ArchType::r600:
+    return true;
+  // TODO: Add other architectures for which we are certain that alignment
+  // is preserved during address space cast operations.
+  default:
+    return false;
+  }
+  return false;
 }
 
 CodeExtractor::CodeExtractor(ArrayRef<BasicBlock *> BBs, DominatorTree *DT,
@@ -410,8 +430,8 @@ CodeExtractor::findOrCreateBlockForHoisting(BasicBlock *CommonExitBlock) {
   assert(!getFirstPHI(CommonExitBlock) && "Phi not expected");
 #endif
 
-  BasicBlock *NewExitBlock = CommonExitBlock->splitBasicBlock(
-      CommonExitBlock->getFirstNonPHI()->getIterator());
+  BasicBlock *NewExitBlock =
+      CommonExitBlock->splitBasicBlock(CommonExitBlock->getFirstNonPHIIt());
 
   for (BasicBlock *Pred :
        llvm::make_early_inc_range(predecessors(CommonExitBlock))) {
@@ -535,11 +555,8 @@ void CodeExtractor::findAllocas(const CodeExtractorAnalysisCache &CEAC,
 
       Instruction *Bitcast = cast<Instruction>(U);
       for (User *BU : Bitcast->users()) {
-        IntrinsicInst *IntrInst = dyn_cast<IntrinsicInst>(BU);
+        auto *IntrInst = dyn_cast<LifetimeIntrinsic>(BU);
         if (!IntrInst)
-          continue;
-
-        if (!IntrInst->isLifetimeStartOrEnd())
           continue;
 
         if (definedInRegion(Blocks, IntrInst))
@@ -627,6 +644,24 @@ bool CodeExtractor::isEligible() const {
         return false;
     }
   }
+  // stacksave as input implies stackrestore in the outlined function.
+  // This can confuse prolog epilog insertion phase.
+  // stacksave's uses must not cross outlined function.
+  for (BasicBlock *BB : Blocks) {
+    for (Instruction &I : *BB) {
+      IntrinsicInst *II = dyn_cast<IntrinsicInst>(&I);
+      if (!II)
+        continue;
+      bool IsSave = II->getIntrinsicID() == Intrinsic::stacksave;
+      bool IsRestore = II->getIntrinsicID() == Intrinsic::stackrestore;
+      if (IsSave && any_of(II->users(), [&Blks = this->Blocks](User *U) {
+            return !definedInRegion(Blks, U);
+          }))
+        return false;
+      if (IsRestore && !definedInRegion(Blocks, II->getArgOperand(0)))
+        return false;
+    }
+  }
   return true;
 }
 
@@ -683,7 +718,7 @@ void CodeExtractor::severSplitPHINodesOfEntry(BasicBlock *&Header) {
   // containing PHI nodes merging values from outside of the region, and a
   // second that contains all of the code for the block and merges back any
   // incoming values from inside of the region.
-  BasicBlock *NewBB = SplitBlock(Header, Header->getFirstNonPHI(), DT);
+  BasicBlock *NewBB = SplitBlock(Header, Header->getFirstNonPHIIt(), DT);
 
   // We only want to code extract the second block now, and it becomes the new
   // header of the region.
@@ -831,7 +866,7 @@ Function *CodeExtractor::constructFunctionDeclaration(
       StructValues.insert(output);
     } else
       ParamTy.push_back(
-          PointerType::get(output->getType(), DL.getAllocaAddrSpace()));
+          PointerType::get(output->getContext(), DL.getAllocaAddrSpace()));
   }
 
   assert(
@@ -845,7 +880,7 @@ Function *CodeExtractor::constructFunctionDeclaration(
   if (!AggParamTy.empty()) {
     StructTy = StructType::get(M->getContext(), AggParamTy);
     ParamTy.push_back(PointerType::get(
-        StructTy, ArgsInZeroAddressSpace ? 0 : DL.getAllocaAddrSpace()));
+        M->getContext(), ArgsInZeroAddressSpace ? 0 : DL.getAllocaAddrSpace()));
   }
 
   Type *RetTy = getSwitchType();
@@ -935,6 +970,7 @@ Function *CodeExtractor::constructFunctionDeclaration(
       case Attribute::SanitizeMemory:
       case Attribute::SanitizeNumericalStability:
       case Attribute::SanitizeThread:
+      case Attribute::SanitizeType:
       case Attribute::SanitizeHWAddress:
       case Attribute::SanitizeMemTag:
       case Attribute::SanitizeRealtime:
@@ -956,6 +992,7 @@ Function *CodeExtractor::constructFunctionDeclaration(
       case Attribute::AllocatedPointer:
       case Attribute::AllocAlign:
       case Attribute::ByVal:
+      case Attribute::Captures:
       case Attribute::Dereferenceable:
       case Attribute::DereferenceableOrNull:
       case Attribute::ElementType:
@@ -963,7 +1000,6 @@ Function *CodeExtractor::constructFunctionDeclaration(
       case Attribute::InReg:
       case Attribute::Nest:
       case Attribute::NoAlias:
-      case Attribute::NoCapture:
       case Attribute::NoUndef:
       case Attribute::NonNull:
       case Attribute::Preallocated:
@@ -1064,8 +1100,8 @@ static void eraseLifetimeMarkersOnInputs(const SetVector<BasicBlock *> &Blocks,
                                          SetVector<Value *> &LifetimesStart) {
   for (BasicBlock *BB : Blocks) {
     for (Instruction &I : llvm::make_early_inc_range(*BB)) {
-      auto *II = dyn_cast<IntrinsicInst>(&I);
-      if (!II || !II->isLifetimeStartOrEnd())
+      auto *II = dyn_cast<LifetimeIntrinsic>(&I);
+      if (!II)
         continue;
 
       // Get the memory operand of the lifetime marker. If the underlying
@@ -1104,9 +1140,9 @@ static void insertLifetimeMarkersSurroundingCall(
           Intrinsic::getOrInsertDeclaration(M, MarkerFunc, Mem->getType());
       auto Marker = CallInst::Create(Func, {NegativeOne, Mem});
       if (InsertBefore)
-        Marker->insertBefore(TheCall);
+        Marker->insertBefore(TheCall->getIterator());
       else
-        Marker->insertBefore(Term);
+        Marker->insertBefore(Term->getIterator());
     }
   };
 
@@ -1421,7 +1457,7 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
     auto *HoistToBlock = findOrCreateBlockForHoisting(CommonExit);
     Instruction *TI = HoistToBlock->getTerminator();
     for (auto *II : HoistingCands)
-      cast<Instruction>(II)->moveBefore(TI);
+      cast<Instruction>(II)->moveBefore(TI->getIterator());
     computeExtractedFuncRetVals();
   }
 
@@ -1588,8 +1624,42 @@ void CodeExtractor::emitFunctionBody(
       Idx[1] = ConstantInt::get(Type::getInt32Ty(header->getContext()), aggIdx);
       GetElementPtrInst *GEP = GetElementPtrInst::Create(
           StructArgTy, AggArg, Idx, "gep_" + inputs[i]->getName(), newFuncRoot);
-      RewriteVal = new LoadInst(StructArgTy->getElementType(aggIdx), GEP,
-                                "loadgep_" + inputs[i]->getName(), newFuncRoot);
+      LoadInst *LoadGEP =
+          new LoadInst(StructArgTy->getElementType(aggIdx), GEP,
+                       "loadgep_" + inputs[i]->getName(), newFuncRoot);
+      // If we load pointer, we can add optional !align metadata
+      // The existence of the !align metadata on the instruction tells
+      // the optimizer that the value loaded is known to be aligned to
+      // a boundary specified by the integer value in the metadata node.
+      // Example:
+      // %res = load ptr, ptr %input, align 8, !align !align_md_node
+      //                                 ^         ^
+      //                                 |         |
+      //            alignment of %input address    |
+      //                                           |
+      //                                     alignment of %res object
+      if (StructArgTy->getElementType(aggIdx)->isPointerTy()) {
+        unsigned AlignmentValue;
+        const Triple &TargetTriple =
+            newFunction->getParent()->getTargetTriple();
+        const DataLayout &DL = header->getDataLayout();
+        // Pointers without casting can provide more information about
+        // alignment. Use pointers without casts if given target preserves
+        // alignment information for cast the operation.
+        if (isAlignmentPreservedForAddrCast(TargetTriple))
+          AlignmentValue =
+              inputs[i]->stripPointerCasts()->getPointerAlignment(DL).value();
+        else
+          AlignmentValue = inputs[i]->getPointerAlignment(DL).value();
+        MDBuilder MDB(header->getContext());
+        LoadGEP->setMetadata(
+            LLVMContext::MD_align,
+            MDNode::get(
+                header->getContext(),
+                MDB.createConstant(ConstantInt::get(
+                    Type::getInt64Ty(header->getContext()), AlignmentValue))));
+      }
+      RewriteVal = LoadGEP;
       ++aggIdx;
     } else
       RewriteVal = &*ScalarAI++;
@@ -1795,7 +1865,7 @@ CallInst *CodeExtractor::emitReplacerCall(
     if (ArgsInZeroAddressSpace && DL.getAllocaAddrSpace() != 0) {
       auto *StructSpaceCast = new AddrSpaceCastInst(
           Struct, PointerType ::get(Context, 0), "structArg.ascast");
-      StructSpaceCast->insertAfter(Struct);
+      StructSpaceCast->insertAfter(Struct->getIterator());
       params.push_back(StructSpaceCast);
     } else {
       params.push_back(Struct);

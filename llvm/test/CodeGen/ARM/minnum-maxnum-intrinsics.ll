@@ -494,13 +494,13 @@ define <4 x float> @fminnumv432_intrinsic(<4 x float> %x, <4 x float> %y) {
 ; ARMV7-NEXT:    vld1.64 {d0, d1}, [r12]
 ; ARMV7-NEXT:    vmov d3, r2, r3
 ; ARMV7-NEXT:    vmov d2, r0, r1
-; ARMV7-NEXT:    vcmp.f32 s7, s3
-; ARMV7-NEXT:    vmrs APSR_nzcv, fpscr
 ; ARMV7-NEXT:    vcmp.f32 s6, s2
-; ARMV7-NEXT:    vmovlt.f32 s3, s7
+; ARMV7-NEXT:    vmrs APSR_nzcv, fpscr
+; ARMV7-NEXT:    vcmp.f32 s7, s3
+; ARMV7-NEXT:    vmovlt.f32 s2, s6
 ; ARMV7-NEXT:    vmrs APSR_nzcv, fpscr
 ; ARMV7-NEXT:    vcmp.f32 s5, s1
-; ARMV7-NEXT:    vmovlt.f32 s2, s6
+; ARMV7-NEXT:    vmovlt.f32 s3, s7
 ; ARMV7-NEXT:    vmrs APSR_nzcv, fpscr
 ; ARMV7-NEXT:    vcmp.f32 s4, s0
 ; ARMV7-NEXT:    vmovlt.f32 s1, s5
@@ -610,20 +610,20 @@ define <4 x float> @fminnumv432_one_zero_intrinsic(<4 x float> %x) {
 ; ARMV7-LABEL: fminnumv432_one_zero_intrinsic:
 ; ARMV7:       @ %bb.0:
 ; ARMV7-NEXT:    vmov d1, r2, r3
-; ARMV7-NEXT:    vldr s8, .LCPI18_0
+; ARMV7-NEXT:    vldr s4, .LCPI18_0
 ; ARMV7-NEXT:    vmov d0, r0, r1
-; ARMV7-NEXT:    vmov.f32 s10, #-1.000000e+00
+; ARMV7-NEXT:    vmov.f32 s6, #-1.000000e+00
 ; ARMV7-NEXT:    vcmp.f32 s1, #0
 ; ARMV7-NEXT:    vmrs APSR_nzcv, fpscr
-; ARMV7-NEXT:    vmov.f32 s4, s3
-; ARMV7-NEXT:    vmin.f32 d6, d2, d5
-; ARMV7-NEXT:    vmin.f32 d3, d1, d5
-; ARMV7-NEXT:    vmin.f32 d2, d0, d5
-; ARMV7-NEXT:    vmovlt.f32 s8, s1
-; ARMV7-NEXT:    vmov.f32 s5, s8
-; ARMV7-NEXT:    vmov.f32 s7, s12
-; ARMV7-NEXT:    vmov r0, r1, d2
-; ARMV7-NEXT:    vmov r2, r3, d3
+; ARMV7-NEXT:    vmov.f32 s8, s3
+; ARMV7-NEXT:    vmin.f32 d7, d1, d3
+; ARMV7-NEXT:    vmin.f32 d6, d0, d3
+; ARMV7-NEXT:    vmin.f32 d4, d4, d3
+; ARMV7-NEXT:    vmovlt.f32 s4, s1
+; ARMV7-NEXT:    vmov.f32 s13, s4
+; ARMV7-NEXT:    vmov.f32 s15, s8
+; ARMV7-NEXT:    vmov r0, r1, d6
+; ARMV7-NEXT:    vmov r2, r3, d7
 ; ARMV7-NEXT:    bx lr
 ; ARMV7-NEXT:    .p2align 2
 ; ARMV7-NEXT:  @ %bb.1:
@@ -676,13 +676,13 @@ define <4 x float> @fmaxnumv432_intrinsic(<4 x float> %x, <4 x float> %y) {
 ; ARMV7-NEXT:    vld1.64 {d0, d1}, [r12]
 ; ARMV7-NEXT:    vmov d3, r2, r3
 ; ARMV7-NEXT:    vmov d2, r0, r1
-; ARMV7-NEXT:    vcmp.f32 s7, s3
-; ARMV7-NEXT:    vmrs APSR_nzcv, fpscr
 ; ARMV7-NEXT:    vcmp.f32 s6, s2
-; ARMV7-NEXT:    vmovgt.f32 s3, s7
+; ARMV7-NEXT:    vmrs APSR_nzcv, fpscr
+; ARMV7-NEXT:    vcmp.f32 s7, s3
+; ARMV7-NEXT:    vmovgt.f32 s2, s6
 ; ARMV7-NEXT:    vmrs APSR_nzcv, fpscr
 ; ARMV7-NEXT:    vcmp.f32 s5, s1
-; ARMV7-NEXT:    vmovgt.f32 s2, s6
+; ARMV7-NEXT:    vmovgt.f32 s3, s7
 ; ARMV7-NEXT:    vmrs APSR_nzcv, fpscr
 ; ARMV7-NEXT:    vcmp.f32 s4, s0
 ; ARMV7-NEXT:    vmovgt.f32 s1, s5
@@ -760,15 +760,15 @@ define <4 x float> @fmaxnumv432_zero_intrinsic(<4 x float> %x) {
 ; ARMV7-NEXT:    vmov d3, r2, r3
 ; ARMV7-NEXT:    vldr s0, .LCPI21_0
 ; ARMV7-NEXT:    vmov d2, r0, r1
-; ARMV7-NEXT:    vcmp.f32 s7, #0
-; ARMV7-NEXT:    vmrs APSR_nzcv, fpscr
-; ARMV7-NEXT:    vmov.f32 s3, s0
 ; ARMV7-NEXT:    vcmp.f32 s6, #0
-; ARMV7-NEXT:    vmovgt.f32 s3, s7
 ; ARMV7-NEXT:    vmrs APSR_nzcv, fpscr
 ; ARMV7-NEXT:    vmov.f32 s2, s0
-; ARMV7-NEXT:    vcmp.f32 s5, #0
+; ARMV7-NEXT:    vcmp.f32 s7, #0
 ; ARMV7-NEXT:    vmovgt.f32 s2, s6
+; ARMV7-NEXT:    vmrs APSR_nzcv, fpscr
+; ARMV7-NEXT:    vmov.f32 s3, s0
+; ARMV7-NEXT:    vcmp.f32 s5, #0
+; ARMV7-NEXT:    vmovgt.f32 s3, s7
 ; ARMV7-NEXT:    vmrs APSR_nzcv, fpscr
 ; ARMV7-NEXT:    vmov.f32 s1, s0
 ; ARMV7-NEXT:    vcmp.f32 s4, #0
@@ -812,18 +812,18 @@ define <4 x float> @fmaxnumv432_minus_zero_intrinsic(<4 x float> %x) {
 ; ARMV7-NEXT:    vldr s0, .LCPI22_0
 ; ARMV7-NEXT:    vmov d3, r2, r3
 ; ARMV7-NEXT:    vmov d2, r0, r1
-; ARMV7-NEXT:    vcmp.f32 s7, s0
-; ARMV7-NEXT:    vmrs APSR_nzcv, fpscr
-; ARMV7-NEXT:    vmov.f32 s3, s0
 ; ARMV7-NEXT:    vcmp.f32 s6, s0
-; ARMV7-NEXT:    vmovgt.f32 s3, s7
 ; ARMV7-NEXT:    vmrs APSR_nzcv, fpscr
+; ARMV7-NEXT:    vcmp.f32 s7, s0
 ; ARMV7-NEXT:    vmov.f32 s2, s0
-; ARMV7-NEXT:    vcmp.f32 s5, s0
 ; ARMV7-NEXT:    vmovgt.f32 s2, s6
 ; ARMV7-NEXT:    vmrs APSR_nzcv, fpscr
-; ARMV7-NEXT:    vmov.f32 s1, s0
+; ARMV7-NEXT:    vcmp.f32 s5, s0
+; ARMV7-NEXT:    vmov.f32 s3, s0
+; ARMV7-NEXT:    vmovgt.f32 s3, s7
+; ARMV7-NEXT:    vmrs APSR_nzcv, fpscr
 ; ARMV7-NEXT:    vcmp.f32 s4, s0
+; ARMV7-NEXT:    vmov.f32 s1, s0
 ; ARMV7-NEXT:    vmovgt.f32 s1, s5
 ; ARMV7-NEXT:    vmrs APSR_nzcv, fpscr
 ; ARMV7-NEXT:    vmovgt.f32 s0, s4
@@ -933,8 +933,8 @@ define <2 x double> @fminnumv264_intrinsic(<2 x double> %x, <2 x double> %y) {
 ; ARMV8M-NEXT:    vselgt.f64 d0, d0, d2
 ; ARMV8M-NEXT:    vmrs APSR_nzcv, fpscr
 ; ARMV8M-NEXT:    vmov r0, r1, d0
-; ARMV8M-NEXT:    vselgt.f64 d1, d1, d3
-; ARMV8M-NEXT:    vmov r2, r3, d1
+; ARMV8M-NEXT:    vselgt.f64 d0, d1, d3
+; ARMV8M-NEXT:    vmov r2, r3, d0
 ; ARMV8M-NEXT:    bx lr
   %a = call nnan <2 x double> @llvm.minnum.v2f64(<2 x double> %x, <2 x double> %y)
   ret <2 x double> %a
@@ -981,8 +981,8 @@ define <2 x double> @fminnumv264_nsz_intrinsic(<2 x double> %x, <2 x double> %y)
 ; ARMV8M-NEXT:    vselgt.f64 d0, d0, d2
 ; ARMV8M-NEXT:    vmrs APSR_nzcv, fpscr
 ; ARMV8M-NEXT:    vmov r0, r1, d0
-; ARMV8M-NEXT:    vselgt.f64 d1, d1, d3
-; ARMV8M-NEXT:    vmov r2, r3, d1
+; ARMV8M-NEXT:    vselgt.f64 d0, d1, d3
+; ARMV8M-NEXT:    vmov r2, r3, d0
 ; ARMV8M-NEXT:    bx lr
   %a = call nnan nsz <2 x double> @llvm.minnum.v2f64(<2 x double> %x, <2 x double> %y)
   ret <2 x double> %a
@@ -1225,26 +1225,26 @@ define <2 x double> @fmaxnumv264_zero_intrinsic(<2 x double> %x) {
 ; ARMV8M-LABEL: fmaxnumv264_zero_intrinsic:
 ; ARMV8M:       @ %bb.0:
 ; ARMV8M-NEXT:    vmov d2, r0, r1
-; ARMV8M-NEXT:    vldr d1, .LCPI30_1
+; ARMV8M-NEXT:    vldr d0, .LCPI30_0
 ; ARMV8M-NEXT:    vcmp.f64 d2, #0
 ; ARMV8M-NEXT:    vmrs APSR_nzcv, fpscr
-; ARMV8M-NEXT:    vmov d3, r2, r3
-; ARMV8M-NEXT:    vcmp.f64 d3, d1
-; ARMV8M-NEXT:    vldr d0, .LCPI30_0
-; ARMV8M-NEXT:    vselgt.f64 d0, d2, d0
+; ARMV8M-NEXT:    vmov d1, r2, r3
+; ARMV8M-NEXT:    vcmp.f64 d1, d0
+; ARMV8M-NEXT:    vldr d3, .LCPI30_1
+; ARMV8M-NEXT:    vselgt.f64 d2, d2, d3
 ; ARMV8M-NEXT:    vmrs APSR_nzcv, fpscr
-; ARMV8M-NEXT:    vmov r0, r1, d0
-; ARMV8M-NEXT:    vselgt.f64 d1, d3, d1
-; ARMV8M-NEXT:    vmov r2, r3, d1
+; ARMV8M-NEXT:    vmov r0, r1, d2
+; ARMV8M-NEXT:    vselgt.f64 d0, d1, d0
+; ARMV8M-NEXT:    vmov r2, r3, d0
 ; ARMV8M-NEXT:    bx lr
 ; ARMV8M-NEXT:    .p2align 3
 ; ARMV8M-NEXT:  @ %bb.1:
 ; ARMV8M-NEXT:  .LCPI30_0:
-; ARMV8M-NEXT:    .long 0 @ double 0
-; ARMV8M-NEXT:    .long 0
-; ARMV8M-NEXT:  .LCPI30_1:
 ; ARMV8M-NEXT:    .long 0 @ double -0
 ; ARMV8M-NEXT:    .long 2147483648
+; ARMV8M-NEXT:  .LCPI30_1:
+; ARMV8M-NEXT:    .long 0 @ double 0
+; ARMV8M-NEXT:    .long 0
   %a = call nnan <2 x double> @llvm.maxnum.v2f64(<2 x double> %x, <2 x double><double 0.0, double -0.0>)
   ret <2 x double> %a
 }

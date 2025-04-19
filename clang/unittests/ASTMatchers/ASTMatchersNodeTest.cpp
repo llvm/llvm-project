@@ -556,6 +556,21 @@ TEST_P(ASTMatchersTest, DeclRefExpr) {
                          Reference));
 }
 
+TEST_P(ASTMatchersTest, DependentScopeDeclRefExpr) {
+  if (!GetParam().isCXX() || GetParam().hasDelayedTemplateParsing()) {
+    // FIXME: Fix this test to work with delayed template parsing.
+    return;
+  }
+
+  EXPECT_TRUE(matches("template <class T> class X : T { void f() { T::v; } };",
+                      dependentScopeDeclRefExpr()));
+
+  EXPECT_TRUE(
+      matches("template <typename T> struct S { static T Foo; };"
+              "template <typename T> void declToImport() { (void)S<T>::Foo; }",
+              dependentScopeDeclRefExpr()));
+}
+
 TEST_P(ASTMatchersTest, CXXMemberCallExpr) {
   if (!GetParam().isCXX()) {
     return;
@@ -629,10 +644,8 @@ TEST_P(ASTMatchersTest, MemberExpr_MatchesVariable) {
   EXPECT_TRUE(matches("template <class T>"
                       "class X : T { void f() { this->T::v; } };",
                       cxxDependentScopeMemberExpr()));
-  // FIXME: Add a matcher for DependentScopeDeclRefExpr.
-  EXPECT_TRUE(
-      notMatches("template <class T> class X : T { void f() { T::v; } };",
-                 cxxDependentScopeMemberExpr()));
+  EXPECT_TRUE(matches("template <class T> class X : T { void f() { T::v; } };",
+                      dependentScopeDeclRefExpr()));
   EXPECT_TRUE(matches("template <class T> void x() { T t; t.v; }",
                       cxxDependentScopeMemberExpr()));
 }
@@ -1002,6 +1015,67 @@ TEST_P(ASTMatchersTest, FloatLiteral) {
   EXPECT_TRUE(notMatches("double i = 5.0;", floatLiteral(equals(6.0f))));
   EXPECT_TRUE(
       notMatches("double i = 5.0;", floatLiteral(equals(llvm::APFloat(6.0)))));
+}
+
+TEST_P(ASTMatchersTest, FixedPointLiterals) {
+  StatementMatcher HasFixedPointLiteral = fixedPointLiteral();
+  EXPECT_TRUE(matchesWithFixedpoint("_Fract i = 0.25r;", HasFixedPointLiteral));
+  EXPECT_TRUE(
+      matchesWithFixedpoint("_Fract i = 0.25hr;", HasFixedPointLiteral));
+  EXPECT_TRUE(
+      matchesWithFixedpoint("_Fract i = 0.25uhr;", HasFixedPointLiteral));
+  EXPECT_TRUE(
+      matchesWithFixedpoint("_Fract i = 0.25ur;", HasFixedPointLiteral));
+  EXPECT_TRUE(
+      matchesWithFixedpoint("_Fract i = 0.25lr;", HasFixedPointLiteral));
+  EXPECT_TRUE(
+      matchesWithFixedpoint("_Fract i = 0.25ulr;", HasFixedPointLiteral));
+  EXPECT_TRUE(matchesWithFixedpoint("_Accum i = 1.25k;", HasFixedPointLiteral));
+  EXPECT_TRUE(
+      matchesWithFixedpoint("_Accum i = 1.25hk;", HasFixedPointLiteral));
+  EXPECT_TRUE(
+      matchesWithFixedpoint("_Accum i = 1.25uhk;", HasFixedPointLiteral));
+  EXPECT_TRUE(
+      matchesWithFixedpoint("_Accum i = 1.25uk;", HasFixedPointLiteral));
+  EXPECT_TRUE(
+      matchesWithFixedpoint("_Accum i = 1.25lk;", HasFixedPointLiteral));
+  EXPECT_TRUE(
+      matchesWithFixedpoint("_Accum i = 1.25ulk;", HasFixedPointLiteral));
+  EXPECT_TRUE(matchesWithFixedpoint("_Accum decexp1 = 1.575e1k;",
+                                    HasFixedPointLiteral));
+  EXPECT_TRUE(
+      matchesWithFixedpoint("_Accum hex = 0x1.25fp2k;", HasFixedPointLiteral));
+  EXPECT_TRUE(matchesWithFixedpoint("_Sat long _Fract i = 0.25r;",
+                                    HasFixedPointLiteral));
+  EXPECT_TRUE(matchesWithFixedpoint("_Sat short _Accum i = 256.0k;",
+                                    HasFixedPointLiteral));
+  EXPECT_TRUE(matchesWithFixedpoint(
+      "_Accum i = 256.0k;",
+      fixedPointLiteral(equals(llvm::APInt(32, 0x800000, true)))));
+  EXPECT_TRUE(matchesWithFixedpoint(
+      "_Fract i = 0.25ulr;",
+      fixedPointLiteral(equals(llvm::APInt(32, 0x40000000, false)))));
+  EXPECT_TRUE(matchesWithFixedpoint(
+      "_Fract i = 0.5hr;",
+      fixedPointLiteral(equals(llvm::APInt(8, 0x40, true)))));
+
+  EXPECT_TRUE(
+      notMatchesWithFixedpoint("short _Accum i = 2u;", HasFixedPointLiteral));
+  EXPECT_TRUE(
+      notMatchesWithFixedpoint("short _Accum i = 2;", HasFixedPointLiteral));
+  EXPECT_TRUE(
+      notMatchesWithFixedpoint("_Accum i = 1.25;", HasFixedPointLiteral));
+  EXPECT_TRUE(notMatchesWithFixedpoint("_Accum i = (double)(1.25 *  4.5i);",
+                                       HasFixedPointLiteral));
+  EXPECT_TRUE(notMatchesWithFixedpoint(
+      "_Accum i = 256.0k;",
+      fixedPointLiteral(equals(llvm::APInt(32, 0x800001, true)))));
+  EXPECT_TRUE(notMatchesWithFixedpoint(
+      "_Fract i = 0.25ulr;",
+      fixedPointLiteral(equals(llvm::APInt(32, 0x40000001, false)))));
+  EXPECT_TRUE(notMatchesWithFixedpoint(
+      "_Fract i = 0.5hr;",
+      fixedPointLiteral(equals(llvm::APInt(8, 0x41, true)))));
 }
 
 TEST_P(ASTMatchersTest, CXXNullPtrLiteralExpr) {
@@ -1897,6 +1971,35 @@ TEST_P(ASTMatchersTest, DeducedTemplateSpecializationType) {
   EXPECT_TRUE(
       matches("template <typename T> class A{ public: A(T) {} }; A a(1);",
               deducedTemplateSpecializationType()));
+}
+
+TEST_P(ASTMatchersTest, DependentNameType) {
+  if (!GetParam().isCXX()) {
+    return;
+  }
+
+  EXPECT_TRUE(matches(
+      R"(
+        template <typename T> struct declToImport {
+          typedef typename T::type dependent_name;
+        };
+      )",
+      dependentNameType()));
+}
+
+TEST_P(ASTMatchersTest, DependentTemplateSpecializationType) {
+  if (!GetParam().isCXX()) {
+    return;
+  }
+
+  EXPECT_TRUE(matches(
+      R"(
+        template<typename T> struct A;
+        template<typename T> struct declToImport {
+          typename A<T>::template B<T> a;
+        };
+      )",
+      dependentTemplateSpecializationType()));
 }
 
 TEST_P(ASTMatchersTest, RecordType) {

@@ -214,14 +214,17 @@ void no_other_directives() {
 #pragma acc serial loop collapse(2)
   for(unsigned i = 0; i < 5; ++i) {
     for(unsigned j = 0; j < 5; ++j) {
-#pragma acc data // expected-warning{{OpenACC construct 'data' not yet implemented}}
+    // expected-error@+1{{OpenACC 'data' construct must have at least one 'attach', 'copy', 'copyin', 'copyout', 'create', 'default', 'deviceptr', 'no_create', or 'present' clause}}
+#pragma acc data
+      ;
     }
   }
   // expected-note@+1{{active 'collapse' clause defined here}}
 #pragma acc kernels loop collapse(2)
   for(unsigned i = 0; i < 5; ++i) {
+    // expected-error@+2{{OpenACC 'data' construct must have at least one 'attach', 'copy', 'copyin', 'copyout', 'create', 'default', 'deviceptr', 'no_create', or 'present' clause}}
     // expected-error@+1{{OpenACC 'data' construct cannot appear in intervening code of a 'kernels loop' with a 'collapse' clause}}
-#pragma acc data // expected-warning{{OpenACC construct 'data' not yet implemented}}
+#pragma acc data
     for(unsigned j = 0; j < 5; ++j) {
     }
   }

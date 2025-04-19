@@ -50,6 +50,7 @@ add_clang_library(clangAST
   DeclFriend.cpp
   DeclGroup.cpp
   DeclObjC.cpp
+  DeclOpenACC.cpp
   DeclOpenMP.cpp
   DeclPrinter.cpp
   DeclTemplate.cpp
@@ -65,6 +66,7 @@ add_clang_library(clangAST
   ExternalASTSource.cpp
   FormatString.cpp
   InheritViz.cpp
+  ByteCode/BitcastBuffer.cpp
   ByteCode/ByteCodeEmitter.cpp
   ByteCode/Compiler.cpp
   ByteCode/Context.cpp

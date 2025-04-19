@@ -18,7 +18,7 @@ void only_one_on_loop() {
   // expected-error@+2{{OpenACC 'collapse' clause cannot appear more than once on a 'loop' directive}}
   // expected-note@+1{{previous clause is here}}
 #pragma acc loop collapse(1) collapse(1)
-  for(unsigned i = 0; i < 5; ++i);
+  for(int i = 0; i < 5; ++i);
 }
 
 constexpr int three() { return 3; }
@@ -323,14 +323,17 @@ void no_other_directives() {
 #pragma acc loop collapse(2)
   for(unsigned i = 0; i < 5; ++i) {
     for(unsigned j = 0; j < 5; ++j) {
-#pragma acc data // expected-warning{{OpenACC construct 'data' not yet implemented}}
+    // expected-error@+1{{OpenACC 'data' construct must have at least one 'attach', 'copy', 'copyin', 'copyout', 'create', 'default', 'deviceptr', 'no_create', or 'present' clause}}
+#pragma acc data
+      ;
     }
   }
   // expected-note@+1{{active 'collapse' clause defined here}}
 #pragma acc loop collapse(2)
   for(unsigned i = 0; i < 5; ++i) {
+    // expected-error@+2{{OpenACC 'data' construct must have at least one 'attach', 'copy', 'copyin', 'copyout', 'create', 'default', 'deviceptr', 'no_create', or 'present' clause}}
     // expected-error@+1{{OpenACC 'data' construct cannot appear in intervening code of a 'loop' with a 'collapse' clause}}
-#pragma acc data // expected-warning{{OpenACC construct 'data' not yet implemented}}
+#pragma acc data
     for(unsigned j = 0; j < 5; ++j) {
     }
   }
@@ -497,3 +500,43 @@ void intervening_without_force() {
       for(;;);
 }
 
+template<unsigned N>
+void allow_multiple_collapse_templ() {
+    // expected-error@+2{{'collapse' clause specifies a loop count greater than the number of available loops}}
+    // expected-note@+1{{active 'collapse' clause defined here}}
+#pragma acc loop collapse(N) device_type(*) collapse(N+1)
+  for(unsigned i = 0; i < 5; ++i)
+    for(unsigned j = 0; j < 5; ++j);
+    // expected-error@+2{{'collapse' clause specifies a loop count greater than the number of available loops}}
+    // expected-note@+1{{active 'collapse' clause defined here}}
+#pragma acc loop collapse(N+1) device_type(*) collapse(N)
+  for(unsigned i = 0; i < 5; ++i)
+    for(unsigned j = 0; j < 5; ++j);
+}
+void allow_multiple_collapse() {
+  allow_multiple_collapse_templ<2>(); // expected-note{{in instantiation}}
+
+    // expected-error@+2{{'collapse' clause specifies a loop count greater than the number of available loops}}
+    // expected-note@+1{{active 'collapse' clause defined here}}
+#pragma acc loop collapse(2) device_type(*) collapse(3)
+  for(unsigned i = 0; i < 5; ++i)
+    for(unsigned j = 0; j < 5; ++j);
+    // expected-error@+2{{'collapse' clause specifies a loop count greater than the number of available loops}}
+    // expected-note@+1{{active 'collapse' clause defined here}}
+#pragma acc loop collapse(3) device_type(*) collapse(2)
+  for(unsigned i = 0; i < 5; ++i)
+    for(unsigned j = 0; j < 5; ++j);
+}
+
+void no_dupes_since_last_device_type() {
+  // expected-error@+3{{OpenACC 'collapse' clause cannot appear more than once in a 'device_type' region on a 'loop' directive}}
+  // expected-note@+2{{previous clause is here}}
+  // expected-note@+1{{previous clause is here}}
+#pragma acc loop collapse(1) device_type(*) collapse(1) collapse(2)
+  for(unsigned i = 0; i < 5; ++i)
+    for(unsigned j = 0; j < 5; ++j);
+ 
+#pragma acc loop collapse(1) device_type(*) collapse(1) device_type(nvidia) collapse(2)
+  for(unsigned i = 0; i < 5; ++i)
+    for(unsigned j = 0; j < 5; ++j);
+}

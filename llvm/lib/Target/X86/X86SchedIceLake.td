@@ -429,16 +429,14 @@ defm : ICXWriteResPair<WriteVarVecShiftY, [ICXPort01], 1, [1], 1, 7>;
 defm : ICXWriteResPair<WriteVarVecShiftZ, [ICXPort0], 1, [1], 1, 7>;
 
 // Vector insert/extract operations.
-def : WriteRes<WriteVecInsert, [ICXPort5]> {
+def : WriteRes<WriteVecInsert, [ICXPort15,ICXPort5]> {
   let Latency = 2;
   let NumMicroOps = 2;
-  let ReleaseAtCycles = [2];
 }
-def : WriteRes<WriteVecInsertLd, [ICXPort5,ICXPort23]> {
+def : WriteRes<WriteVecInsertLd, [ICXPort15,ICXPort23]> {
   let Latency = 6;
   let NumMicroOps = 2;
 }
-def: InstRW<[WriteVecInsertLd], (instregex "(V?)MOV(H|L)(PD|PS)rm")>;
 
 def : WriteRes<WriteVecExtract, [ICXPort0,ICXPort15]> {
   let Latency = 3;
@@ -1297,7 +1295,8 @@ def ICXWriteResGroup92 : SchedWriteRes<[ICXPort5,ICXPort23]> {
   let ReleaseAtCycles = [1,1];
 }
 def: InstRW<[ICXWriteResGroup92], (instregex "VMOV(SD|SS)Zrm(b?)",
-                                              "VPBROADCAST(B|W)(Z128)?rm",
+                                             "VPBROADCAST(B|W)(Z128)?rm",
+                                             "(V?)MOV(H|L)(PD|PS)rm",
                                              "(V?)INSERTPS(Z?)rm",
                                              "(V?)PALIGNR(Z128)?rmi",
                                              "(V?)PERMIL(PD|PS)(Z128)?m(b?)i",

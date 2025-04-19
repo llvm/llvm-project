@@ -18,7 +18,7 @@ subroutine etime_test(values, time)
   ! CHECK-NEXT:        %[[timeTmpBox:.*]] = fir.embox %[[timeTmpAddr]] : (!fir.ref<f32>) -> !fir.box<f32>
   ! CHECK:             %[[values:.*]] = fir.convert %[[valuesBox]] : (!fir.box<!fir.array<2xf32>>) -> !fir.box<none>
   ! CHECK:             %[[timeTmp:.*]] = fir.convert %[[timeTmpBox]] : (!fir.box<f32>) -> !fir.box<none>
-  ! CHECK:             %[[VAL_9:.*]] = fir.call @_FortranAEtime(%[[values]], %[[timeTmp]], %[[VAL_7:.*]], %[[c9]]) fastmath<contract> : (!fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> none
+  ! CHECK:             fir.call @_FortranAEtime(%[[values]], %[[timeTmp]], %[[VAL_7:.*]], %[[c9]]) fastmath<contract> : (!fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> ()
   ! CHECK-NEXT:        %[[timeValue:.*]] = fir.load %[[timeTmpAddr]] : !fir.ref<f32>
   ! CHECK-NEXT:        fir.store %[[timeValue]] to %[[timeDeclare]] : !fir.ref<f32>
   ! CHECK-NEXT:        return

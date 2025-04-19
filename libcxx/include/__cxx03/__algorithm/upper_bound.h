@@ -6,18 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_UPPER_BOUND_H
-#define _LIBCPP___ALGORITHM_UPPER_BOUND_H
+#ifndef _LIBCPP___CXX03___ALGORITHM_UPPER_BOUND_H
+#define _LIBCPP___CXX03___ALGORITHM_UPPER_BOUND_H
 
 #include <__cxx03/__algorithm/comp.h>
 #include <__cxx03/__algorithm/half_positive.h>
 #include <__cxx03/__algorithm/iterator_operations.h>
 #include <__cxx03/__config>
 #include <__cxx03/__functional/identity.h>
-#include <__cxx03/__functional/invoke.h>
 #include <__cxx03/__iterator/advance.h>
 #include <__cxx03/__iterator/distance.h>
 #include <__cxx03/__iterator/iterator_traits.h>
+#include <__cxx03/__type_traits/invoke.h>
 #include <__cxx03/__type_traits/is_constructible.h>
 #include <__cxx03/__utility/move.h>
 
@@ -65,4 +65,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___ALGORITHM_UPPER_BOUND_H
+#endif // _LIBCPP___CXX03___ALGORITHM_UPPER_BOUND_H

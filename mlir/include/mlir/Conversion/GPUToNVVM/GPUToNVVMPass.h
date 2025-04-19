@@ -10,6 +10,7 @@
 
 #include "mlir/Conversion/LLVMCommon/LoweringOptions.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
+#include "mlir/IR/PatternMatch.h"
 #include <memory>
 
 namespace mlir {
@@ -35,18 +36,27 @@ void configureGpuToNVVMConversionLegality(ConversionTarget &target);
 /// GPU dialect to NVVM.
 void configureGpuToNVVMTypeConverter(LLVMTypeConverter &converter);
 
+/// Populate patterns that lower certain arith and math dialect ops to
+/// libdevice calls.
+void populateLibDeviceConversionPatterns(const LLVMTypeConverter &converter,
+                                         RewritePatternSet &patterns,
+                                         PatternBenefit benefit = 1);
+
 /// Collect a set of patterns to convert from the GPU dialect to NVVM.
 void populateGpuToNVVMConversionPatterns(const LLVMTypeConverter &converter,
-                                         RewritePatternSet &patterns);
+                                         RewritePatternSet &patterns,
+                                         PatternBenefit benefit = 1);
 
 /// Populate GpuSubgroupReduce pattern to NVVM. It generates a specific nvvm
 /// op that is not available on every GPU.
 void populateGpuSubgroupReduceOpLoweringPattern(
-    const LLVMTypeConverter &converter, RewritePatternSet &patterns);
+    const LLVMTypeConverter &converter, RewritePatternSet &patterns,
+    PatternBenefit benefit = 1);
 
 /// Collect a set of patterns to convert WMMA ops from GPU dialect to NVVM.
 void populateGpuWMMAToNVVMConversionPatterns(const LLVMTypeConverter &converter,
-                                             RewritePatternSet &patterns);
+                                             RewritePatternSet &patterns,
+                                             PatternBenefit benefit = 1);
 } // namespace mlir
 
 #endif // MLIR_CONVERSION_GPUTONVVM_GPUTONVVMPASS_H_

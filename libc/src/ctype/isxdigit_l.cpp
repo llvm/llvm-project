@@ -16,7 +16,8 @@ namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, isxdigit_l, (int c, locale_t)) {
   const unsigned ch = static_cast<unsigned>(c);
-  return static_cast<int>(internal::isdigit(ch) || (ch | 32) - 'a' < 6);
+  return static_cast<int>(internal::isalnum(ch) &&
+                          internal::b36_char_to_int(ch) < 16);
 }
 
 } // namespace LIBC_NAMESPACE_DECL

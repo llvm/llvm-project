@@ -1,0 +1,12 @@
+// Coverage/profile data recycled from the showLineExecutionCounts.cpp test.
+//
+// RUN: rm -rf %t.dir
+// RUN: llvm-profdata merge %S/Inputs/lineExecutionCounts.proftext -o %t.profdata
+// RUN: llvm-cov show %S/Inputs/lineExecutionCounts.covmapping -j 1 -o %t.dir/1 -instr-profile %t.profdata -path-equivalence=/tmp,%S/Inputs
+// RUN: llvm-cov show %S/Inputs/lineExecutionCounts.covmapping -num-threads 2 -o %t.dir/2 -instr-profile %t.profdata -path-equivalence=/tmp,%S/Inputs
+// RUN: llvm-cov show %S/Inputs/lineExecutionCounts.covmapping -o %t.dir/3 -instr-profile %t.profdata -path-equivalence=/tmp,%S/Inputs
+//
+// RUN: diff %t.dir/1/index.txt %t.dir/2/index.txt
+// RUN: diff %t.dir/1/coverage/tmp/showLineExecutionCounts.cpp.txt %t.dir/2/coverage/tmp/showLineExecutionCounts.cpp.txt
+// RUN: diff %t.dir/1/index.txt %t.dir/3/index.txt
+// RUN: diff %t.dir/1/coverage/tmp/showLineExecutionCounts.cpp.txt %t.dir/3/coverage/tmp/showLineExecutionCounts.cpp.txt

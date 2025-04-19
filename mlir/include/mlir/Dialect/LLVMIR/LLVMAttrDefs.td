@@ -825,7 +825,7 @@ def LLVM_MemoryEffectsAttr : LLVM_Attr<"MemoryEffects", "memory_effects"> {
 def LLVM_AliasScopeDomainAttr : LLVM_Attr<"AliasScopeDomain",
                                           "alias_scope_domain"> {
   let parameters = (ins
-    "DistinctAttr":$id,
+    "Attribute":$id,
     OptionalParameter<"StringAttr">:$description
   );
 
@@ -853,7 +853,7 @@ def LLVM_AliasScopeDomainAttr : LLVM_Attr<"AliasScopeDomain",
 
 def LLVM_AliasScopeAttr : LLVM_Attr<"AliasScope", "alias_scope"> {
   let parameters = (ins
-    "DistinctAttr":$id,
+    "Attribute":$id,
     "AliasScopeDomainAttr":$domain,
     OptionalParameter<"StringAttr">:$description
   );
@@ -891,6 +891,8 @@ def LLVM_AliasScopeAttr : LLVM_Attr<"AliasScope", "alias_scope"> {
     }
     ```
 
+    The first attribute can either be a DistinctAttr or a StringAttr.
+
     See the following link for more details:
     https://llvm.org/docs/LangRef.html#noalias-and-alias-scope-metadata
   }];
@@ -898,6 +900,8 @@ def LLVM_AliasScopeAttr : LLVM_Attr<"AliasScope", "alias_scope"> {
   let summary = "LLVM dialect alias scope";
 
   let assemblyFormat = "`<` struct(params) `>`";
+
+  let genVerifyDecl = 1;
 }
 
 def LLVM_AliasScopeArrayAttr
@@ -1091,8 +1095,8 @@ def LLVM_TBAATagArrayAttr
 //===----------------------------------------------------------------------===//
 def LLVM_ConstantRangeAttr : LLVM_Attr<"ConstantRange", "constant_range"> {
   let parameters = (ins
-    "::llvm::APInt":$lower,
-    "::llvm::APInt":$upper
+    APIntParameter<"">:$lower,
+    APIntParameter<"">:$upper
   );
   let summary = "A range of two integers, corresponding to LLVM's ConstantRange";
   let description = [{
@@ -1210,6 +1214,36 @@ def LLVM_UndefAttr : LLVM_Attr<"Undef", "undef">;
 def LLVM_PoisonAttr : LLVM_Attr<"Poison", "poison">;
 
 //===----------------------------------------------------------------------===//
+// DSOLocalEquivalentAttr
+//===----------------------------------------------------------------------===//
+
+/// Folded into from LLVM::DSOLocalEquivalentOp.
+def LLVM_DSOLocalEquivalentAttr : LLVM_Attr<"DSOLocalEquivalent",
+                                            "dso_local_equivalent"> {
+  let parameters = (ins "FlatSymbolRefAttr":$sym);
+  let assemblyFormat = "$sym";
+}
+
+//===----------------------------------------------------------------------===//
+// BlockAddressAttr
+//===----------------------------------------------------------------------===//
+
+def LLVM_BlockTagAttr : LLVM_Attr<"BlockTag", "blocktag"> {
+  let parameters = (ins "uint32_t":$id);
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
+/// Folded into from LLVM_BlockAddressAttr.
+def LLVM_BlockAddressAttr : LLVM_Attr<"BlockAddress", "blockaddress"> {
+  let description = [{
+    Describes a block address identified by a pair of `$function` and `$tag`.
+  }];
+  let parameters = (ins "FlatSymbolRefAttr":$function,
+                        "BlockTagAttr":$tag);
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
+//===----------------------------------------------------------------------===//
 // VecTypeHintAttr
 //===----------------------------------------------------------------------===//
 
@@ -1261,6 +1295,83 @@ def WorkgroupAttributionAttr
   let parameters = (ins "IntegerAttr":$num_elements,
                         "TypeAttr":$element_type);
   let assemblyFormat = "`<` $num_elements `,` $element_type `>`";
+}
+
+//===----------------------------------------------------------------------===//
+// DereferenceableAttr
+//===----------------------------------------------------------------------===//
+
+def LLVM_DereferenceableAttr : LLVM_Attr<"Dereferenceable", "dereferenceable"> {
+  let summary = "LLVM dereferenceable attribute";
+  let description = [{
+    Defines `dereferenceable` or `dereferenceable_or_null` metadata that can
+    be set via the `DereferenceableOpInterface` on an `inttoptr` operation or
+    on a `load` operation which loads a pointer. The attribute is used to
+    denote that the result of these operations is dereferenceable up to a
+    certain number of bytes, represented by `$bytes`. The optional `$mayBeNull`
+    parameter is set to true if the attribute defines `dereferenceable_or_null`
+    metadata.
+
+    See the following links for more details:
+    https://llvm.org/docs/LangRef.html#dereferenceable-metadata
+    https://llvm.org/docs/LangRef.html#dereferenceable-or-null-metadata
+  }];
+  let parameters = (ins "uint64_t":$bytes,
+                        DefaultValuedParameter<"bool", "false">:$mayBeNull);
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
+//===----------------------------------------------------------------------===//
+// ModuleFlagAttr
+//===----------------------------------------------------------------------===//
+
+def ModuleFlagAttr
+    : LLVM_Attr<"ModuleFlag", "mlir.module_flag"> {
+  let summary = "LLVM module flag metadata";
+  let description = [{
+    Represents a single entry of llvm.module.flags metadata
+    (llvm::Module::ModuleFlagEntry in LLVM). The first element is a behavior
+    flag described by `ModFlagBehaviorAttr`, the second is a string ID
+    and third is the value of the flag (currently only integer constants
+    are supported).
+
+    Example:
+    ```mlir
+      #llvm.mlir.module_flag<error, "wchar_size", 4>
+    ```
+  }];
+  let parameters = (ins "ModFlagBehavior":$behavior,
+                        "StringAttr":$key,
+                        "uint32_t":$value);
+  let assemblyFormat = "`<` $behavior `,` $key `,` $value `>`";
+}
+
+//===----------------------------------------------------------------------===//
+// LLVM_DependentLibrariesAttr
+//===----------------------------------------------------------------------===//
+
+def LLVM_DependentLibrariesAttr
+    : LLVM_Attr<"DependentLibraries", "dependent_libraries"> {
+  let summary = "LLVM dependent libraries attribute";
+  let description = [{
+    Represents the list of dependent libraries for the current module.
+    This attribute is used to specify the libraries that the module depends
+    on, and it can be used for linking purposes.
+
+    See the following links for more details:
+    https://llvm.org/docs/LangRef.html#dependent-libs-named-metadata
+  }];
+  let parameters = (ins OptionalArrayRefParameter<"StringAttr">:$libs);
+  let assemblyFormat = "`<` $libs `>`";
+}
+
+//===----------------------------------------------------------------------===//
+// UWTableKindAttr
+//===----------------------------------------------------------------------===//
+
+def UWTableKindAttr : LLVM_Attr<"UWTableKind", "uwtableKind"> {
+  let parameters = (ins "uwtable::UWTableKind":$uwtableKind);
+  let assemblyFormat = "`<` $uwtableKind `>`";
 }
 
 #endif // LLVMIR_ATTRDEFS

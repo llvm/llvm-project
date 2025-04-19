@@ -924,18 +924,12 @@ bool Sema::LookupBuiltin(LookupResult &R) {
     IdentifierInfo *II = R.getLookupName().getAsIdentifierInfo();
     if (II) {
       if (getLangOpts().CPlusPlus && NameKind == Sema::LookupOrdinaryName) {
-        if (II == getASTContext().getMakeIntegerSeqName()) {
-          R.addDecl(getASTContext().getMakeIntegerSeqDecl());
-          return true;
-        }
-        if (II == getASTContext().getTypePackElementName()) {
-          R.addDecl(getASTContext().getTypePackElementDecl());
-          return true;
-        }
-        if (II == getASTContext().getBuiltinCommonTypeName()) {
-          R.addDecl(getASTContext().getBuiltinCommonTypeDecl());
-          return true;
-        }
+#define BuiltinTemplate(BIName)                                                \
+  if (II == getASTContext().get##BIName##Name()) {                             \
+    R.addDecl(getASTContext().get##BIName##Decl());                            \
+    return true;                                                               \
+  }
+#include "clang/Basic/BuiltinTemplates.inc"
       }
 
       // Check if this is an OpenCL Builtin, and if so, insert its overloads.
@@ -1614,7 +1608,7 @@ bool Sema::isUsableModule(const Module *M) {
 
   // Otherwise, the global module fragment from other translation unit is not
   // directly usable.
-  if (M->isGlobalModule())
+  if (M->isExplicitGlobalModule())
     return false;
 
   Module *Current = getCurrentModule();
@@ -1623,6 +1617,13 @@ bool Sema::isUsableModule(const Module *M) {
   // another module easily.
   if (!Current)
     return false;
+
+  // For implicit global module, the decls in the same modules with the parent
+  // module should be visible to the decls in the implicit global module.
+  if (Current->isImplicitGlobalModule())
+    Current = Current->getTopLevelModule();
+  if (M->isImplicitGlobalModule())
+    M = M->getTopLevelModule();
 
   // If M is the module we're parsing or M and the current module unit lives in
   // the same module, M should be usable.
@@ -2907,7 +2908,57 @@ static void CollectEnclosingNamespace(Sema::AssociatedNamespaceSet &Namespaces,
   while (!Ctx->isFileContext() || Ctx->isInlineNamespace())
     Ctx = Ctx->getParent();
 
-  Namespaces.insert(Ctx->getPrimaryContext());
+  // Actually it is fine to always do `Namespaces.insert(Ctx);` simply. But it
+  // may cause more allocations in Namespaces and more unnecessary lookups. So
+  // we'd like to insert the representative namespace only.
+  DeclContext *PrimaryCtx = Ctx->getPrimaryContext();
+  Decl *PrimaryD = cast<Decl>(PrimaryCtx);
+  Decl *D = cast<Decl>(Ctx);
+  ASTContext &AST = D->getASTContext();
+
+  // TODO: Technically it is better to insert one namespace per module. e.g.,
+  //
+  // ```
+  // //--- first.cppm
+  // export module first;
+  // namespace ns { ... } // first namespace
+  //
+  // //--- m-partA.cppm
+  // export module m:partA;
+  // import first;
+  //
+  // namespace ns { ... }
+  // namespace ns { ... }
+  //
+  // //--- m-partB.cppm
+  // export module m:partB;
+  // import first;
+  // import :partA;
+  //
+  // namespace ns { ... }
+  // namespace ns { ... }
+  //
+  // ...
+  //
+  // //--- m-partN.cppm
+  // export module m:partN;
+  // import first;
+  // import :partA;
+  // ...
+  // import :part$(N-1);
+  //
+  // namespace ns { ... }
+  // namespace ns { ... }
+  //
+  // consume(ns::any_decl); // the lookup
+  // ```
+  //
+  // We should only insert once for all namespaces in module m.
+  if (D->isInNamedModule() &&
+      !AST.isInSameModule(D->getOwningModule(), PrimaryD->getOwningModule()))
+    Namespaces.insert(Ctx);
+  else
+    Namespaces.insert(PrimaryCtx);
 }
 
 // Add the associated classes and namespaces for argument-dependent
@@ -3159,11 +3210,8 @@ addAssociatedClassesAndNamespaces(AssociatedLookup &Result, QualType Ty) {
     //        X.
     case Type::MemberPointer: {
       const MemberPointerType *MemberPtr = cast<MemberPointerType>(T);
-
-      // Queue up the class type into which this points.
-      Queue.push_back(MemberPtr->getClass());
-
-      // And directly continue with the pointee type.
+      if (CXXRecordDecl *Class = MemberPtr->getMostRecentCXXRecordDecl())
+        addAssociatedClassesAndNamespaces(Result, Class);
       T = MemberPtr->getPointeeType().getTypePtr();
       continue;
     }
@@ -3664,11 +3712,12 @@ Sema::LookupLiteralOperator(Scope *S, LookupResult &R,
         // is a well-formed template argument for the template parameter.
         if (StringLit) {
           SFINAETrap Trap(*this);
-          SmallVector<TemplateArgument, 1> SugaredChecked, CanonicalChecked;
-          TemplateArgumentLoc Arg(TemplateArgument(StringLit), StringLit);
+          CheckTemplateArgumentInfo CTAI;
+          TemplateArgumentLoc Arg(
+              TemplateArgument(StringLit, /*IsCanonical=*/false), StringLit);
           if (CheckTemplateArgument(
                   Params->getParam(0), Arg, FD, R.getNameLoc(), R.getNameLoc(),
-                  0, SugaredChecked, CanonicalChecked, CTAK_Specified) ||
+                  /*ArgumentPackIndex=*/0, CTAI, CTAK_Specified) ||
               Trap.hasErrorOccurred())
             IsTemplate = false;
         }
@@ -4482,7 +4531,6 @@ static void getNestedNameSpecifierIdentifiers(
     II = NNS->getAsNamespaceAlias()->getIdentifier();
     break;
 
-  case NestedNameSpecifier::TypeSpecWithTemplate:
   case NestedNameSpecifier::TypeSpec:
     II = QualType(NNS->getAsType(), 0).getBaseTypeIdentifier();
     break;
@@ -4847,8 +4895,7 @@ TypoCorrectionConsumer::NamespaceSpecifierSet::buildNestedNameSpecifier(
       NNS = NestedNameSpecifier::Create(Context, NNS, ND);
       ++NumSpecifiers;
     } else if (auto *RD = dyn_cast_or_null<RecordDecl>(C)) {
-      NNS = NestedNameSpecifier::Create(Context, NNS, RD->isTemplateDecl(),
-                                        RD->getTypeForDecl());
+      NNS = NestedNameSpecifier::Create(Context, NNS, RD->getTypeForDecl());
       ++NumSpecifiers;
     }
   }

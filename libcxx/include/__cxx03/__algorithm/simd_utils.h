@@ -6,11 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_SIMD_UTILS_H
-#define _LIBCPP___ALGORITHM_SIMD_UTILS_H
+#ifndef _LIBCPP___CXX03___ALGORITHM_SIMD_UTILS_H
+#define _LIBCPP___CXX03___ALGORITHM_SIMD_UTILS_H
 
 #include <__cxx03/__algorithm/min.h>
-#include <__cxx03/__bit/bit_cast.h>
 #include <__cxx03/__bit/countl.h>
 #include <__cxx03/__bit/countr.h>
 #include <__cxx03/__config>
@@ -161,4 +160,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___ALGORITHM_SIMD_UTILS_H
+#endif // _LIBCPP___CXX03___ALGORITHM_SIMD_UTILS_H

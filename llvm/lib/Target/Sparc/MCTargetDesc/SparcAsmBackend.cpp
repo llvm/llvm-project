@@ -142,9 +142,6 @@ namespace {
           Is64Bit(STI.getTargetTriple().isArch64Bit()),
           IsV8Plus(STI.hasFeature(Sparc::FeatureV8Plus)) {}
 
-    unsigned getNumFixupKinds() const override {
-      return Sparc::NumTargetFixupKinds;
-    }
 
     std::optional<MCFixupKind> getFixupKind(StringRef Name) const override {
       unsigned Type;
@@ -163,7 +160,7 @@ namespace {
       return static_cast<MCFixupKind>(FirstLiteralRelocationKind + Type);
     }
 
-    const MCFixupKindInfo &getFixupKindInfo(MCFixupKind Kind) const override {
+    MCFixupKindInfo getFixupKindInfo(MCFixupKind Kind) const override {
       const static MCFixupKindInfo InfosBE[Sparc::NumTargetFixupKinds] = {
         // name                    offset bits  flags
         { "fixup_sparc_call30",     2,     30,  MCFixupKindInfo::FKF_IsPCRel },
@@ -258,13 +255,14 @@ namespace {
 
       // Fixup kinds from .reloc directive are like R_SPARC_NONE. They do
       // not require any extra processing.
-      if (Kind >= FirstLiteralRelocationKind)
+      if (mc::isRelocation(Kind))
         return MCAsmBackend::getFixupKindInfo(FK_NONE);
 
       if (Kind < FirstTargetFixupKind)
         return MCAsmBackend::getFixupKindInfo(Kind);
 
-      assert(unsigned(Kind - FirstTargetFixupKind) < getNumFixupKinds() &&
+      assert(unsigned(Kind - FirstTargetFixupKind) <
+                 Sparc::NumTargetFixupKinds &&
              "Invalid kind!");
       if (Endian == llvm::endianness::little)
         return InfosLE[Kind - FirstTargetFixupKind];
@@ -275,13 +273,11 @@ namespace {
     bool shouldForceRelocation(const MCAssembler &Asm, const MCFixup &Fixup,
                                const MCValue &Target,
                                const MCSubtargetInfo *STI) override {
-      if (Fixup.getKind() >= FirstLiteralRelocationKind)
-        return true;
       switch ((Sparc::Fixups)Fixup.getKind()) {
       default:
         return false;
       case Sparc::fixup_sparc_wplt30:
-        if (Target.getSymA()->getSymbol().isTemporary())
+        if (Target.getAddSym()->isTemporary())
           return false;
         [[fallthrough]];
       case Sparc::fixup_sparc_tls_gd_hi22:
@@ -339,7 +335,7 @@ namespace {
                     uint64_t Value, bool IsResolved,
                     const MCSubtargetInfo *STI) const override {
 
-      if (Fixup.getKind() >= FirstLiteralRelocationKind)
+      if (mc::isRelocation(Fixup.getKind()))
         return;
       Value = adjustFixupValue(Fixup.getKind(), Value);
       if (!Value) return;           // Doesn't change encoding.

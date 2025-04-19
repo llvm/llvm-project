@@ -25,8 +25,13 @@ config.name = "AddressSanitizer" + config.name_suffix
 default_asan_opts = list(config.default_sanitizer_opts)
 
 # On Darwin, leak checking is not enabled by default. Enable on macOS
-# tests to prevent regressions
-if config.host_os == "Darwin" and config.apple_platform == "osx":
+# tests to prevent regressions.
+# Currently, detect_leaks for asan tests only work on Intel MacOS.
+if (
+    config.host_os == "Darwin"
+    and config.apple_platform == "osx"
+    and config.target_arch == "x86_64"
+):
     default_asan_opts += ["detect_leaks=1"]
 
 default_asan_opts_str = ":".join(default_asan_opts)
@@ -183,6 +188,7 @@ if platform.system() == "Windows":
         config.substitutions.append(("%MD", "-MD"))
         config.substitutions.append(("%MT", "-MT"))
         config.substitutions.append(("%Gw", "-Gw"))
+        config.substitutions.append(("%Oy-", "-Oy-"))
 
         base_lib = os.path.join(
             config.compiler_rt_libdir, "clang_rt.asan%%s%s.lib" % config.target_suffix
@@ -220,6 +226,7 @@ if platform.system() == "Windows":
         config.substitutions.append(("%MD", ""))
         config.substitutions.append(("%MT", ""))
         config.substitutions.append(("%Gw", "-fdata-sections"))
+        config.substitutions.append(("%Oy-", "-fno-omit-frame-pointer"))
 
 # FIXME: De-hardcode this path.
 asan_source_dir = os.path.join(
@@ -271,7 +278,11 @@ leak_detection_linux = (
     and (not config.android)
     and (config.target_arch in ["x86_64", "i386", "riscv64", "loongarch64"])
 )
-leak_detection_mac = (config.host_os == "Darwin") and (config.apple_platform == "osx")
+leak_detection_mac = (
+    (config.host_os == "Darwin")
+    and (config.apple_platform == "osx")
+    and (config.target_arch == "x86_64")
+)
 leak_detection_netbsd = (config.host_os == "NetBSD") and (
     config.target_arch in ["x86_64", "i386"]
 )

@@ -287,7 +287,7 @@ bool Argument::hasNoAliasAttr() const {
 
 bool Argument::hasNoCaptureAttr() const {
   if (!getType()->isPointerTy()) return false;
-  return hasAttribute(Attribute::NoCapture);
+  return capturesNothing(getAttributes().getCaptureInfo());
 }
 
 bool Argument::hasNoFreeAttr() const {
@@ -514,8 +514,15 @@ Function::Function(FunctionType *Ty, LinkageTypes Linkage, unsigned AddrSpace,
   // Ensure intrinsics have the right parameter attributes.
   // Note, the IntID field will have been set in Value::setName if this function
   // name is a valid intrinsic ID.
-  if (IntID)
-    setAttributes(Intrinsic::getAttributes(getContext(), IntID));
+  if (IntID) {
+    // Don't set the attributes if the intrinsic signature is invalid. This
+    // case will either be auto-upgraded or fail verification.
+    SmallVector<Type *> OverloadTys;
+    if (!Intrinsic::getIntrinsicSignature(IntID, Ty, OverloadTys))
+      return;
+
+    setAttributes(Intrinsic::getAttributes(getContext(), IntID, Ty));
+  }
 }
 
 Function::~Function() {
@@ -904,7 +911,7 @@ void Function::setOnlyWritesMemory() {
   setMemoryEffects(getMemoryEffects() & MemoryEffects::writeOnly());
 }
 
-/// Determine if the call can access memmory only using pointers based
+/// Determine if the call can access memory only using pointers based
 /// on its arguments.
 bool Function::onlyAccessesArgMemory() const {
   return getMemoryEffects().onlyAccessesArgPointees();
@@ -1162,22 +1169,6 @@ DenseSet<GlobalValue::GUID> Function::getImportGUIDs() const {
                        ->getValue()
                        .getZExtValue());
   return R;
-}
-
-void Function::setSectionPrefix(StringRef Prefix) {
-  MDBuilder MDB(getContext());
-  setMetadata(LLVMContext::MD_section_prefix,
-              MDB.createFunctionSectionPrefix(Prefix));
-}
-
-std::optional<StringRef> Function::getSectionPrefix() const {
-  if (MDNode *MD = getMetadata(LLVMContext::MD_section_prefix)) {
-    assert(cast<MDString>(MD->getOperand(0))->getString() ==
-               "function_section_prefix" &&
-           "Metadata not match");
-    return cast<MDString>(MD->getOperand(1))->getString();
-  }
-  return std::nullopt;
 }
 
 bool Function::nullPointerIsDefined() const {

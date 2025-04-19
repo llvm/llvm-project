@@ -1,0 +1,12 @@
+! RUN: bbc -emit-hlfir -fcuda %s -o - | FileCheck %s
+
+attributes(global) subroutine sharedmem()
+  real, shared :: s(32)
+  integer :: t
+  t = threadIdx%x
+  s(t) = t
+end subroutine
+
+! CHECK-LABEL: func.func @_QPsharedmem() attributes {cuf.proc_attr = #cuf.cuda_proc<global>}
+! CHECK: %{{.*}} = cuf.shared_memory !fir.array<32xf32> {bindc_name = "s", uniq_name = "_QFsharedmemEs"} -> !fir.ref<!fir.array<32xf32>>
+! CHECK-NOT: cuf.free

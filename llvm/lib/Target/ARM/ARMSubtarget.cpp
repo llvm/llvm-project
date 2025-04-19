@@ -226,9 +226,6 @@ void ARMSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
 
   SupportsTailCall = !isThumb1Only() || hasV8MBaselineOps();
 
-  if (isTargetMachO() && isTargetIOS() && getTargetTriple().isOSVersionLT(5, 0))
-    SupportsTailCall = false;
-
   switch (IT) {
   case DefaultIT:
     RestrictIT = false;
@@ -287,6 +284,7 @@ void ARMSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
   case CortexA78:
   case CortexA78AE:
   case CortexA78C:
+  case CortexA510:
   case CortexA710:
   case CortexR4:
   case CortexR5:
@@ -477,7 +475,7 @@ unsigned ARMSubtarget::getGPRAllocationOrder(const MachineFunction &MF) const {
 }
 
 bool ARMSubtarget::ignoreCSRForAllocationOrder(const MachineFunction &MF,
-                                               unsigned PhysReg) const {
+                                               MCRegister PhysReg) const {
   // To minimize code size in Thumb2, we prefer the usage of low regs (lower
   // cost per use) so we can  use narrow encoding. By default, caller-saved
   // registers (e.g. lr, r12) are always  allocated first, regardless of

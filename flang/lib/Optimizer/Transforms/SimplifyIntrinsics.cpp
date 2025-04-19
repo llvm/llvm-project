@@ -22,8 +22,8 @@
 /// and small in size.
 //===----------------------------------------------------------------------===//
 
-#include "flang/Common/Fortran.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
+#include "flang/Optimizer/Builder/CUFCommon.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/LowLevelIntrinsics.h"
 #include "flang/Optimizer/Builder/Todo.h"
@@ -31,10 +31,10 @@
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/HLFIR/HLFIRDialect.h"
-#include "flang/Optimizer/Transforms/CUFCommon.h"
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "flang/Optimizer/Transforms/Utils.h"
 #include "flang/Runtime/entry-names.h"
+#include "flang/Support/Fortran.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/Operation.h"
@@ -821,21 +821,15 @@ static void genRuntimeMinMaxlocBody(fir::FirOpBuilder &builder,
   // if mask is a logical scalar, we can check its value before the main loop
   // and either ignore the fact it is there or exit early.
   if (maskRank == 0) {
-    mlir::Type logical = builder.getI1Type();
-    mlir::IndexType idxTy = builder.getIndexType();
-
-    fir::SequenceType::Shape singleElement(1, 1);
-    mlir::Type arrTy = fir::SequenceType::get(singleElement, logical);
-    mlir::Type boxArrTy = fir::BoxType::get(arrTy);
-    mlir::Value array = builder.create<fir::ConvertOp>(loc, boxArrTy, mask);
-
-    mlir::Value indx = builder.createIntegerConstant(loc, idxTy, 0);
+    mlir::Type i1Type = builder.getI1Type();
+    mlir::Type logical = maskElemType;
     mlir::Type logicalRefTy = builder.getRefType(logical);
     mlir::Value condAddr =
-        builder.create<fir::CoordinateOp>(loc, logicalRefTy, array, indx);
+        builder.create<fir::BoxAddrOp>(loc, logicalRefTy, mask);
     mlir::Value cond = builder.create<fir::LoadOp>(loc, condAddr);
+    mlir::Value condI1 = builder.create<fir::ConvertOp>(loc, i1Type, cond);
 
-    fir::IfOp ifOp = builder.create<fir::IfOp>(loc, elementType, cond,
+    fir::IfOp ifOp = builder.create<fir::IfOp>(loc, elementType, condI1,
                                                /*withElseRegion=*/true);
 
     builder.setInsertionPointToStart(&ifOp.getElseRegion().front());
@@ -1277,7 +1271,7 @@ void SimplifyIntrinsicsPass::runOnOperation() {
   fir::KindMapping kindMap = fir::getKindMapping(module);
   module.walk([&](mlir::Operation *op) {
     if (auto call = mlir::dyn_cast<fir::CallOp>(op)) {
-      if (cuf::isInCUDADeviceContext(op))
+      if (cuf::isCUDADeviceContext(op))
         return;
       if (mlir::SymbolRefAttr callee = call.getCalleeAttr()) {
         mlir::StringRef funcName = callee.getLeafReference().getValue();
