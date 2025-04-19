@@ -120,7 +120,14 @@ movaps (%rbx), %xmm3
 # CHECK-NEXT:  -      -      -      -      -      -     1.00    -     movb	(%rbx), %dil
 
 # CHECK:      Timeline view:
-# CHECK-NEXT: Index     012345678
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:      Index     012345678
 
 # CHECK:      [0,0]     DeeeeeER.   movb	(%rax), %spl
 # CHECK-NEXT: [0,1]     DeeeeeER.   movb	(%rcx), %bpl
@@ -217,7 +224,14 @@ movaps (%rbx), %xmm3
 # CHECK-NEXT:  -      -      -      -      -      -     1.00    -     movw	(%rbx), %di
 
 # CHECK:      Timeline view:
-# CHECK-NEXT: Index     012345678
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:      Index     012345678
 
 # CHECK:      [0,0]     DeeeeeER.   movw	(%rax), %sp
 # CHECK-NEXT: [0,1]     DeeeeeER.   movw	(%rcx), %bp
@@ -314,7 +328,14 @@ movaps (%rbx), %xmm3
 # CHECK-NEXT:  -      -      -      -      -      -     1.00    -     movl	(%rbx), %edi
 
 # CHECK:      Timeline view:
-# CHECK-NEXT: Index     012345678
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:      Index     012345678
 
 # CHECK:      [0,0]     DeeeeeER.   movl	(%rax), %esp
 # CHECK-NEXT: [0,1]     DeeeeeER.   movl	(%rcx), %ebp
@@ -411,7 +432,14 @@ movaps (%rbx), %xmm3
 # CHECK-NEXT:  -      -      -      -      -      -     1.00    -     movq	(%rbx), %rdi
 
 # CHECK:      Timeline view:
-# CHECK-NEXT: Index     012345678
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:      Index     012345678
 
 # CHECK:      [0,0]     DeeeeeER.   movq	(%rax), %rsp
 # CHECK-NEXT: [0,1]     DeeeeeER.   movq	(%rcx), %rbp
@@ -508,7 +536,14 @@ movaps (%rbx), %xmm3
 # CHECK-NEXT:  -      -      -      -      -      -     1.00    -     movd	(%rbx), %mm3
 
 # CHECK:      Timeline view:
-# CHECK-NEXT: Index     012345678
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:      Index     012345678
 
 # CHECK:      [0,0]     DeeeeeER.   movd	(%rax), %mm0
 # CHECK-NEXT: [0,1]     DeeeeeER.   movd	(%rcx), %mm1
@@ -605,7 +640,14 @@ movaps (%rbx), %xmm3
 # CHECK-NEXT:  -      -      -      -      -      -     1.00    -     movaps	(%rbx), %xmm3
 
 # CHECK:      Timeline view:
-# CHECK-NEXT: Index     0123456789
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:      Index     0123456789
 
 # CHECK:      [0,0]     DeeeeeeER.   movaps	(%rax), %xmm0
 # CHECK-NEXT: [0,1]     DeeeeeeER.   movaps	(%rcx), %xmm1

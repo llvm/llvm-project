@@ -61,7 +61,14 @@ vbroadcastss (%rax), %ymm0
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     2.00   2.00    -      -      -      -     1.00   1.00    -      -      -     0.50   0.50    -      -     vbroadcastss	(%rax), %ymm0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     012
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          012
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeER.    . .   leaq	8(%rsp,%rdi,2), %rax

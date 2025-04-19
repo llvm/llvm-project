@@ -38,17 +38,24 @@ bsf   %rax, %rcx
 # CHECK-NEXT:  1      3     1.00                        bsfq	%rax, %rcx
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     012345678
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          012345678
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeER    .    .  .   imulq	$5, %rcx, %rax
 # CHECK-NEXT: [0,1]     D=eeeER   .    .  .   lzcntl	%ecx, %eax
-# CHECK-NEXT: [0,2]     D====eER  .    .  .   andq	%rcx, %rax
-# CHECK-NEXT: [0,3]     D=====eeeER    .  .   bsfq	%rax, %rcx
-# CHECK-NEXT: [1,0]     .D=======eeeER .  .   imulq	$5, %rcx, %rax
-# CHECK-NEXT: [1,1]     .D========eeeER.  .   lzcntl	%ecx, %eax
-# CHECK-NEXT: [1,2]     .D===========eER  .   andq	%rcx, %rax
-# CHECK-NEXT: [1,3]     .D============eeeER   bsfq	%rax, %rcx
+# CHECK-NEXT: [0,2]     DPPPPeER  .    .  .   andq	%rcx, %rax
+# CHECK-NEXT: [0,3]     DPPPPPeeeER    .  .   bsfq	%rax, %rcx
+# CHECK-NEXT: [1,0]     .DPPPPPPPeeeER .  .   imulq	$5, %rcx, %rax
+# CHECK-NEXT: [1,1]     .DPPPPPPP=eeeER.  .   lzcntl	%ecx, %eax
+# CHECK-NEXT: [1,2]     .DPPPPPPPPPPPeER  .   andq	%rcx, %rax
+# CHECK-NEXT: [1,3]     .DPPPPPPPPPPPPeeeER   bsfq	%rax, %rcx
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions

@@ -81,18 +81,25 @@ vaddps %xmm1, %xmm1, %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.67   0.33    -      -      -      -     1.00    -      -      -      -      -      -      -      -     vaddps	%xmm1, %xmm1, %xmm2
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     012
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          012
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DR   .    . .   vxorps	%xmm0, %xmm0, %xmm0
 # CHECK-NEXT: [0,1]     DeER .    . .   vmovaps	%xmm0, %xmm1
-# CHECK-NEXT: [0,2]     D=eeeeeER . .   vaddps	%xmm1, %xmm1, %xmm2
+# CHECK-NEXT: [0,2]     DPeeeeeER . .   vaddps	%xmm1, %xmm1, %xmm2
 # CHECK-NEXT: [1,0]     D-------R . .   vxorps	%xmm0, %xmm0, %xmm0
 # CHECK-NEXT: [1,1]     .D=eE---R . .   vmovaps	%xmm0, %xmm1
-# CHECK-NEXT: [1,2]     .D===eeeeeER.   vaddps	%xmm1, %xmm1, %xmm2
+# CHECK-NEXT: [1,2]     .DPP=eeeeeER.   vaddps	%xmm1, %xmm1, %xmm2
 # CHECK-NEXT: [2,0]     .D---------R.   vxorps	%xmm0, %xmm0, %xmm0
 # CHECK-NEXT: [2,1]     .D=eE------R.   vmovaps	%xmm0, %xmm1
-# CHECK-NEXT: [2,2]     . D===eeeeeER   vaddps	%xmm1, %xmm1, %xmm2
+# CHECK-NEXT: [2,2]     . DP==eeeeeER   vaddps	%xmm1, %xmm1, %xmm2
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions

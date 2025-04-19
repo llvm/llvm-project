@@ -69,16 +69,23 @@ pcmpeqw %xmm2, %xmm2
 # CHECK-NEXT:  -      -      -     0.79    -     0.21    -      -     pcmpeqw	%xmm2, %xmm2
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     01
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          01
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeER    ..   pcmpeqb	%mm2, %mm2
-# CHECK-NEXT: [0,1]     D===eeeER ..   pcmpeqd	%mm2, %mm2
-# CHECK-NEXT: [0,2]     D======eeeER   pcmpeqw	%mm2, %mm2
+# CHECK-NEXT: [0,1]     DPPPeeeER ..   pcmpeqd	%mm2, %mm2
+# CHECK-NEXT: [0,2]     DPPPPPPeeeER   pcmpeqw	%mm2, %mm2
 # CHECK-NEXT: [0,3]     DeE--------R   pcmpeqb	%xmm2, %xmm2
 # CHECK-NEXT: [0,4]     .DeE-------R   pcmpeqd	%xmm2, %xmm2
-# CHECK-NEXT: [0,5]     .D=eE------R   pcmpeqq	%xmm2, %xmm2
-# CHECK-NEXT: [0,6]     .D==eE-----R   pcmpeqw	%xmm2, %xmm2
+# CHECK-NEXT: [0,5]     .DPeE------R   pcmpeqq	%xmm2, %xmm2
+# CHECK-NEXT: [0,6]     .DPPeE-----R   pcmpeqw	%xmm2, %xmm2
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions

@@ -53,18 +53,25 @@ sbb %eax, %eax
 # CHECK-NEXT:  -      -     1.00    -      -     1.00    -      -     sbbl	%eax, %eax
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     01234567
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          01234567
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeER    .    . .   imull	%edx, %eax
 # CHECK-NEXT: [0,1]     DeE--R    .    . .   addl	%edx, %edx
-# CHECK-NEXT: [0,2]     D===eeER  .    . .   sbbl	%eax, %eax
-# CHECK-NEXT: [1,0]     .D====eeeER    . .   imull	%edx, %eax
+# CHECK-NEXT: [0,2]     DPPPeeER  .    . .   sbbl	%eax, %eax
+# CHECK-NEXT: [1,0]     .DPPPPeeeER    . .   imull	%edx, %eax
 # CHECK-NEXT: [1,1]     .DeE------R    . .   addl	%edx, %edx
-# CHECK-NEXT: [1,2]     .D=======eeER  . .   sbbl	%eax, %eax
-# CHECK-NEXT: [2,0]     . D========eeeER .   imull	%edx, %eax
+# CHECK-NEXT: [1,2]     .DPPPPPPPeeER  . .   sbbl	%eax, %eax
+# CHECK-NEXT: [2,0]     . DPPPPPPPPeeeER .   imull	%edx, %eax
 # CHECK-NEXT: [2,1]     . DeE----------R .   addl	%edx, %edx
-# CHECK-NEXT: [2,2]     . D===========eeER   sbbl	%eax, %eax
+# CHECK-NEXT: [2,2]     . DPPPPPPPPPPPeeER   sbbl	%eax, %eax
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions

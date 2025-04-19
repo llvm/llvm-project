@@ -73,21 +73,28 @@ vpcmpeqq %xmm3, %xmm3, %xmm0
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     1.00    -      -      -      -      -     vpcmpeqq	%xmm3, %xmm3, %xmm0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeER.    .   vpcmpeqb	%xmm0, %xmm0, %xmm1
 # CHECK-NEXT: [0,1]     D=eeER    .   vpcmpeqw	%xmm1, %xmm1, %xmm2
 # CHECK-NEXT: [0,2]     DeeE-R    .   vpcmpeqd	%xmm2, %xmm2, %xmm3
-# CHECK-NEXT: [0,3]     D==eeER   .   vpcmpeqq	%xmm3, %xmm3, %xmm0
+# CHECK-NEXT: [0,3]     DPPeeER   .   vpcmpeqq	%xmm3, %xmm3, %xmm0
 # CHECK-NEXT: [1,0]     .DeeE-R   .   vpcmpeqb	%xmm0, %xmm0, %xmm1
 # CHECK-NEXT: [1,1]     .D==eeER  .   vpcmpeqw	%xmm1, %xmm1, %xmm2
 # CHECK-NEXT: [1,2]     .D=eeE-R  .   vpcmpeqd	%xmm2, %xmm2, %xmm3
-# CHECK-NEXT: [1,3]     .D===eeER .   vpcmpeqq	%xmm3, %xmm3, %xmm0
+# CHECK-NEXT: [1,3]     .DPPPeeER .   vpcmpeqq	%xmm3, %xmm3, %xmm0
 # CHECK-NEXT: [2,0]     . D=eeE-R .   vpcmpeqb	%xmm0, %xmm0, %xmm1
 # CHECK-NEXT: [2,1]     . D===eeER.   vpcmpeqw	%xmm1, %xmm1, %xmm2
 # CHECK-NEXT: [2,2]     . D==eeE-R.   vpcmpeqd	%xmm2, %xmm2, %xmm3
-# CHECK-NEXT: [2,3]     . D====eeER   vpcmpeqq	%xmm3, %xmm3, %xmm0
+# CHECK-NEXT: [2,3]     . DPPPPeeER   vpcmpeqq	%xmm3, %xmm3, %xmm0
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions

@@ -31,7 +31,14 @@ vmulps  (%rdi), %xmm1, %xmm2
 # CHECK-NEXT:  1      10    1.50    *                   vmulps	(%rdi), %xmm1, %xmm2
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     012
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          012
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeeER  . .   vaddps	%xmm0, %xmm0, %xmm1

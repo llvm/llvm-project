@@ -107,72 +107,78 @@ vaddps  (%rax), %xmm1, %xmm1
 # ZNVER4-NEXT:    Block RThroughput: 3.0
 
 # ALL:            Timeline view:
+# ALL-NEXT:       D: Instruction dispatched
+# ALL-NEXT:       e: Instruction executing
+# ALL-NEXT:       E: Instruction executed (write-back stage)
+# ALL-NEXT:       P: Instruction waiting for data dependency
+# ALL-NEXT:       =: Instruction waiting for available HW resource
+# ALL-NEXT:       -: Instruction executed, waiting to retire in order.
 
-# BARCELONA-NEXT:                     0123456789
+# BARCELONA:                          0123456789
 # BARCELONA-NEXT: Index     0123456789
 
-# BDVER2-NEXT:                        0123456
+# BDVER2:                             0123456
 # BDVER2-NEXT:    Index     0123456789
 
-# BDWELL-NEXT:                        0123456
+# BDWELL:                             0123456
 # BDWELL-NEXT:    Index     0123456789
 
-# BTVER2-NEXT:                        0123456789
+# BTVER2:                             0123456789
 # BTVER2-NEXT:    Index     0123456789          01234
 
-# HASWELL-NEXT:                       012345678
+# HASWELL:                            012345678
 # HASWELL-NEXT:   Index     0123456789
 
-# SANDY-NEXT:                         0123456789
+# SANDY:                              0123456789
 # SANDY-NEXT:     Index     0123456789
 
-# SKYLAKE-NEXT:                       01234567
+# SKYLAKE:                            01234567
 # SKYLAKE-NEXT:   Index     0123456789
 
-# ZNVER1-NEXT:                        01234
+# ZNVER1:                             01234
 # ZNVER1-NEXT:    Index     0123456789
 
-# ZNVER2-NEXT:                        012345
+# ZNVER2:                             012345
 # ZNVER2-NEXT:    Index     0123456789
 
-# ZNVER3-NEXT:                        0123456
+# ZNVER3:                             0123456
 # ZNVER3-NEXT:    Index     0123456789
 
-# ZNVER4-NEXT:                        0123456
+# ZNVER4:                             0123456
 # ZNVER4-NEXT:    Index     0123456789
 
 # BARCELONA:      [0,0]     DeeeeeeeeeeeeeeER  .   vdivps	%xmm0, %xmm1, %xmm1
-# BARCELONA-NEXT: [0,1]     D========eeeeeeeeeER   vaddps	(%rax), %xmm1, %xmm1
+# BARCELONA-NEXT: [0,1]     DPPPPPPPPeeeeeeeeeER   vaddps	(%rax), %xmm1, %xmm1
 
 # BDVER2:         [0,0]     DeeeeeeeeeER   ..   vdivps	%xmm0, %xmm1, %xmm1
-# BDVER2-NEXT:    [0,1]     D====eeeeeeeeeeER   vaddps	(%rax), %xmm1, %xmm1
+# BDVER2-NEXT:    [0,1]     DPPPPeeeeeeeeeeER   vaddps	(%rax), %xmm1, %xmm1
 
 # BDWELL:         [0,0]     DeeeeeeeeeeeER ..   vdivps	%xmm0, %xmm1, %xmm1
-# BDWELL-NEXT:    [0,1]     D======eeeeeeeeER   vaddps	(%rax), %xmm1, %xmm1
+# BDWELL-NEXT:    [0,1]     DPPPPPPeeeeeeeeER   vaddps	(%rax), %xmm1, %xmm1
 
 # BTVER2:         [0,0]     DeeeeeeeeeeeeeeeeeeeER  .   vdivps	%xmm0, %xmm1, %xmm1
-# BTVER2-NEXT:    [0,1]     D==============eeeeeeeeER   vaddps	(%rax), %xmm1, %xmm1
+# BTVER2-NEXT:    [0,1]     DPPPPPPPPPPPPPPeeeeeeeeER   vaddps	(%rax), %xmm1, %xmm1
 
 # HASWELL:        [0,0]     DeeeeeeeeeeeeeER  .   vdivps	%xmm0, %xmm1, %xmm1
-# HASWELL-NEXT:   [0,1]     D=======eeeeeeeeeER   vaddps	(%rax), %xmm1, %xmm1
+# HASWELL-NEXT:   [0,1]     DPPPPPPPeeeeeeeeeER   vaddps	(%rax), %xmm1, %xmm1
 
 # SANDY:          [0,0]     DeeeeeeeeeeeeeeER  .   vdivps	%xmm0, %xmm1, %xmm1
-# SANDY-NEXT:     [0,1]     D========eeeeeeeeeER   vaddps	(%rax), %xmm1, %xmm1
+# SANDY-NEXT:     [0,1]     DPPPPPPPPeeeeeeeeeER   vaddps	(%rax), %xmm1, %xmm1
 
 # SKYLAKE:        [0,0]     DeeeeeeeeeeeER . .   vdivps	%xmm0, %xmm1, %xmm1
-# SKYLAKE-NEXT:   [0,1]     D=====eeeeeeeeeeER   vaddps	(%rax), %xmm1, %xmm1
+# SKYLAKE-NEXT:   [0,1]     DPPPPPeeeeeeeeeeER   vaddps	(%rax), %xmm1, %xmm1
 
 # ZNVER1:         [0,0]     DeeeeeeeeeeER .   vdivps	%xmm0, %xmm1, %xmm1
-# ZNVER1-NEXT:    [0,1]     D==eeeeeeeeeeER   vaddps	(%rax), %xmm1, %xmm1
+# ZNVER1-NEXT:    [0,1]     DPPeeeeeeeeeeER   vaddps	(%rax), %xmm1, %xmm1
 
 # ZNVER2:         [0,0]     DeeeeeeeeeeER  .   vdivps	%xmm0, %xmm1, %xmm1
-# ZNVER2-NEXT:    [0,1]     D===eeeeeeeeeeER   vaddps	(%rax), %xmm1, %xmm1
+# ZNVER2-NEXT:    [0,1]     DPPPeeeeeeeeeeER   vaddps	(%rax), %xmm1, %xmm1
 
 # ZNVER3:         [0,0]     DeeeeeeeeeeeER ..   vdivps	%xmm0, %xmm1, %xmm1
-# ZNVER3-NEXT:    [0,1]     D====eeeeeeeeeeER   vaddps	(%rax), %xmm1, %xmm1
+# ZNVER3-NEXT:    [0,1]     DPPPPeeeeeeeeeeER   vaddps	(%rax), %xmm1, %xmm1
 
 # ZNVER4:         [0,0]     DeeeeeeeeeeeER ..   vdivps	%xmm0, %xmm1, %xmm1
-# ZNVER4-NEXT:    [0,1]     D====eeeeeeeeeeER   vaddps	(%rax), %xmm1, %xmm1
+# ZNVER4-NEXT:    [0,1]     DPPPPeeeeeeeeeeER   vaddps	(%rax), %xmm1, %xmm1
 
 # ALL:            Average Wait times (based on the timeline view):
 # ALL-NEXT:       [0]: Executions

@@ -105,18 +105,25 @@
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     nop
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0123456
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeeeeER.    ..   div	a0, a1, a2
 # CHECK-NEXT: [0,1]     DeeeeE---R.    ..   mul	a4, a1, a2
 # CHECK-NEXT: [0,2]     DeeeeeE--R.    ..   fmul.s	ft1, ft2, ft3
-# CHECK-NEXT: [0,3]     D=======eeeeER ..   lw	a3, 0(a0)
-# CHECK-NEXT: [0,4]     .D==========eeeER   sw	a3, 0(a1)
+# CHECK-NEXT: [0,3]     DPPPPPPPeeeeER ..   lw	a3, 0(a0)
+# CHECK-NEXT: [0,4]     .DPPPPPPPPPPeeeER   sw	a3, 0(a1)
 # CHECK-NEXT: [0,5]     .DeE------------R   add	a5, a1, a2
-# CHECK-NEXT: [0,6]     .D=eE-----------R   ror	a6, a5, a2
+# CHECK-NEXT: [0,6]     .DPeE-----------R   ror	a6, a5, a2
 # CHECK-NEXT: [0,7]     .DeE------------R   j	.Lend
-# CHECK-NEXT: [0,8]     . D=====eE------R   add	a7, a4, a0
+# CHECK-NEXT: [0,8]     . DPPPPPeE------R   add	a7, a4, a0
 # CHECK-NEXT: [0,9]     . DE------------R   nop
 
 # CHECK:      Average Wait times (based on the timeline view):

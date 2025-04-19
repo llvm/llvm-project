@@ -55,34 +55,41 @@ cmpl $1025, %eax
 # CHECK-NEXT:  -      -     0.33   0.33    -     0.34    -      -     cmpl	$1025, %eax
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0123456789
 # CHECK-NEXT: Index     0123456789          012345678
 
 # CHECK:      [0,0]     DeER .    .    .    .    .  .   sete	%r9b
 # CHECK-NEXT: [0,1]     DeER .    .    .    .    .  .   movzbl	%al, %eax
-# CHECK-NEXT: [0,2]     D=eER.    .    .    .    .  .   shll	$2, %eax
-# CHECK-NEXT: [0,3]     D==eeeER  .    .    .    .  .   imull	%ecx, %eax
-# CHECK-NEXT: [0,4]     .D====eER .    .    .    .  .   cmpl	$1025, %eax
-# CHECK-NEXT: [1,0]     .D=====eER.    .    .    .  .   sete	%r9b
-# CHECK-NEXT: [1,1]     .D====eE-R.    .    .    .  .   movzbl	%al, %eax
-# CHECK-NEXT: [1,2]     .D=====eER.    .    .    .  .   shll	$2, %eax
-# CHECK-NEXT: [1,3]     . D=====eeeER  .    .    .  .   imull	%ecx, %eax
-# CHECK-NEXT: [1,4]     . D========eER .    .    .  .   cmpl	$1025, %eax
-# CHECK-NEXT: [2,0]     . D=========eER.    .    .  .   sete	%r9b
-# CHECK-NEXT: [2,1]     . D========eE-R.    .    .  .   movzbl	%al, %eax
-# CHECK-NEXT: [2,2]     .  D========eER.    .    .  .   shll	$2, %eax
-# CHECK-NEXT: [2,3]     .  D=========eeeER  .    .  .   imull	%ecx, %eax
-# CHECK-NEXT: [2,4]     .  D============eER .    .  .   cmpl	$1025, %eax
-# CHECK-NEXT: [3,0]     .  D=============eER.    .  .   sete	%r9b
-# CHECK-NEXT: [3,1]     .   D===========eE-R.    .  .   movzbl	%al, %eax
-# CHECK-NEXT: [3,2]     .   D============eER.    .  .   shll	$2, %eax
-# CHECK-NEXT: [3,3]     .   D=============eeeER  .  .   imull	%ecx, %eax
-# CHECK-NEXT: [3,4]     .   D================eER .  .   cmpl	$1025, %eax
-# CHECK-NEXT: [4,0]     .    D================eER.  .   sete	%r9b
-# CHECK-NEXT: [4,1]     .    D===============eE-R.  .   movzbl	%al, %eax
-# CHECK-NEXT: [4,2]     .    D================eER.  .   shll	$2, %eax
-# CHECK-NEXT: [4,3]     .    D=================eeeER.   imull	%ecx, %eax
-# CHECK-NEXT: [4,4]     .    .D===================eER   cmpl	$1025, %eax
+# CHECK-NEXT: [0,2]     DPeER.    .    .    .    .  .   shll	$2, %eax
+# CHECK-NEXT: [0,3]     DPPeeeER  .    .    .    .  .   imull	%ecx, %eax
+# CHECK-NEXT: [0,4]     .DPPPPeER .    .    .    .  .   cmpl	$1025, %eax
+# CHECK-NEXT: [1,0]     .DPPPPPeER.    .    .    .  .   sete	%r9b
+# CHECK-NEXT: [1,1]     .DPPPPeE-R.    .    .    .  .   movzbl	%al, %eax
+# CHECK-NEXT: [1,2]     .DPPPPPeER.    .    .    .  .   shll	$2, %eax
+# CHECK-NEXT: [1,3]     . DPPPPPeeeER  .    .    .  .   imull	%ecx, %eax
+# CHECK-NEXT: [1,4]     . DPPPPPPPPeER .    .    .  .   cmpl	$1025, %eax
+# CHECK-NEXT: [2,0]     . DPPPPPPPPPeER.    .    .  .   sete	%r9b
+# CHECK-NEXT: [2,1]     . DPPPPPPPPeE-R.    .    .  .   movzbl	%al, %eax
+# CHECK-NEXT: [2,2]     .  DPPPPPPPPeER.    .    .  .   shll	$2, %eax
+# CHECK-NEXT: [2,3]     .  DPPPPPPPPPeeeER  .    .  .   imull	%ecx, %eax
+# CHECK-NEXT: [2,4]     .  DPPPPPPPPPPPPeER .    .  .   cmpl	$1025, %eax
+# CHECK-NEXT: [3,0]     .  DPPPPPPPPPPPPPeER.    .  .   sete	%r9b
+# CHECK-NEXT: [3,1]     .   DPPPPPPPPPPPeE-R.    .  .   movzbl	%al, %eax
+# CHECK-NEXT: [3,2]     .   DPPPPPPPPPPPPeER.    .  .   shll	$2, %eax
+# CHECK-NEXT: [3,3]     .   DPPPPPPPPPPPPPeeeER  .  .   imull	%ecx, %eax
+# CHECK-NEXT: [3,4]     .   DPPPPPPPPPPPPPPPPeER .  .   cmpl	$1025, %eax
+# CHECK-NEXT: [4,0]     .    DPPPPPPPPPPPPPPPPeER.  .   sete	%r9b
+# CHECK-NEXT: [4,1]     .    DPPPPPPPPPPPPPPPeE-R.  .   movzbl	%al, %eax
+# CHECK-NEXT: [4,2]     .    DPPPPPPPPPPPPPPPPeER.  .   shll	$2, %eax
+# CHECK-NEXT: [4,3]     .    DPPPPPPPPPPPPPPPPPeeeER.   imull	%ecx, %eax
+# CHECK-NEXT: [4,4]     .    .DPPPPPPPPPPPPPPPPPPPeER   cmpl	$1025, %eax
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions

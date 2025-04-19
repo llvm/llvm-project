@@ -81,12 +81,19 @@ add %edx, %eax
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -      -     addl	%edx, %eax
 
 # CHECK:      Timeline view:
-# CHECK-NEXT: Index     0123456
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:      Index     0123456
 
 # CHECK:      [0,0]     DeER ..   addl	%eax, %ebx
-# CHECK-NEXT: [0,1]     D=eER..   addl	%ebx, %ecx
-# CHECK-NEXT: [0,2]     .D=eER.   addl	%ecx, %edx
-# CHECK-NEXT: [0,3]     .D==eER   addl	%edx, %eax
+# CHECK-NEXT: [0,1]     DPeER..   addl	%ebx, %ecx
+# CHECK-NEXT: [0,2]     .DPeER.   addl	%ecx, %edx
+# CHECK-NEXT: [0,3]     .DPPeER   addl	%edx, %eax
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions

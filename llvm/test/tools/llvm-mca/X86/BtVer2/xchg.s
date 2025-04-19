@@ -61,19 +61,26 @@ imul %ecx, %ecx
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     1.00    -      -      -      -      -     imull	%ecx, %ecx
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789          01234567
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0123456789          01234567
 # CHECK-NEXT: Index     0123456789          0123456789
 
 # CHECK:      [0,0]     DeeeeeeeeeeeeeeeeER .    .    .    . .   xchgl	%ecx, (%rsp)
-# CHECK-NEXT: [0,1]     .D==========eE----R .    .    .    . .   addl	%ecx, %ecx
-# CHECK-NEXT: [0,2]     . D==========eE----R.    .    .    . .   addl	%ecx, %ecx
-# CHECK-NEXT: [0,3]     . D===========eeeE-R.    .    .    . .   imull	%ecx, %ecx
-# CHECK-NEXT: [0,4]     .  D=============eeeER   .    .    . .   imull	%ecx, %ecx
-# CHECK-NEXT: [1,0]     .   D============eeeeeeeeeeeeeeeeER. .   xchgl	%ecx, (%rsp)
-# CHECK-NEXT: [1,1]     .    D======================eE----R. .   addl	%ecx, %ecx
-# CHECK-NEXT: [1,2]     .    .D======================eE----R .   addl	%ecx, %ecx
-# CHECK-NEXT: [1,3]     .    .D=======================eeeE-R .   imull	%ecx, %ecx
-# CHECK-NEXT: [1,4]     .    . D=========================eeeER   imull	%ecx, %ecx
+# CHECK-NEXT: [0,1]     .DPPPPPPPPPPeE----R .    .    .    . .   addl	%ecx, %ecx
+# CHECK-NEXT: [0,2]     . DPPPPPPPPPPeE----R.    .    .    . .   addl	%ecx, %ecx
+# CHECK-NEXT: [0,3]     . DPPPPPPPPPPPeeeE-R.    .    .    . .   imull	%ecx, %ecx
+# CHECK-NEXT: [0,4]     .  DPPPPPPPPPPPPPeeeER   .    .    . .   imull	%ecx, %ecx
+# CHECK-NEXT: [1,0]     .   DPPPPPPPPPPPPeeeeeeeeeeeeeeeeER. .   xchgl	%ecx, (%rsp)
+# CHECK-NEXT: [1,1]     .    DPPPPPPPPPPPPPPPPPPPPPPeE----R. .   addl	%ecx, %ecx
+# CHECK-NEXT: [1,2]     .    .DPPPPPPPPPPPPPPPPPPPPPPeE----R .   addl	%ecx, %ecx
+# CHECK-NEXT: [1,3]     .    .DPPPPPPPPPPPPPPPPPPPPPPPeeeE-R .   imull	%ecx, %ecx
+# CHECK-NEXT: [1,4]     .    . DPPPPPPPPPPPPPPPPPPPPPPPPPeeeER   imull	%ecx, %ecx
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions

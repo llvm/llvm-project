@@ -164,12 +164,19 @@ paddq %xmm0, %xmm0
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50    -     0.25   0.25    -      -      -      -      -      -      -      -      -      -      -     xorps	%xmm0, %xmm1
 
 # CHECK:      Timeline view:
-# CHECK-NEXT: Index     01234
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:      Index     01234
 
 # CHECK:      [0,0]     DeER.   xorps	%xmm1, %xmm1
-# CHECK-NEXT: [0,1]     D=eER   xorps	%xmm0, %xmm1
+# CHECK-NEXT: [0,1]     DPeER   xorps	%xmm0, %xmm1
 # CHECK-NEXT: [1,0]     DeE-R   xorps	%xmm1, %xmm1
-# CHECK-NEXT: [1,1]     D=eER   xorps	%xmm0, %xmm1
+# CHECK-NEXT: [1,1]     DPeER   xorps	%xmm0, %xmm1
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -255,12 +262,19 @@ paddq %xmm0, %xmm0
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50    -     0.25   0.25    -      -      -      -      -      -      -      -      -      -      -     xorpd	%xmm0, %xmm1
 
 # CHECK:      Timeline view:
-# CHECK-NEXT: Index     01234
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:      Index     01234
 
 # CHECK:      [0,0]     DeER.   xorpd	%xmm1, %xmm1
-# CHECK-NEXT: [0,1]     D=eER   xorpd	%xmm0, %xmm1
+# CHECK-NEXT: [0,1]     DPeER   xorpd	%xmm0, %xmm1
 # CHECK-NEXT: [1,0]     DeE-R   xorpd	%xmm1, %xmm1
-# CHECK-NEXT: [1,1]     D=eER   xorpd	%xmm0, %xmm1
+# CHECK-NEXT: [1,1]     DPeER   xorpd	%xmm0, %xmm1
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -346,12 +360,19 @@ paddq %xmm0, %xmm0
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50    -     0.25   0.25    -      -      -      -      -      -      -      -      -      -      -     andnps	%xmm0, %xmm1
 
 # CHECK:      Timeline view:
-# CHECK-NEXT: Index     01234
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:      Index     01234
 
 # CHECK:      [0,0]     DeER.   andnps	%xmm1, %xmm1
-# CHECK-NEXT: [0,1]     D=eER   andnps	%xmm0, %xmm1
+# CHECK-NEXT: [0,1]     DPeER   andnps	%xmm0, %xmm1
 # CHECK-NEXT: [1,0]     DeE-R   andnps	%xmm1, %xmm1
-# CHECK-NEXT: [1,1]     D=eER   andnps	%xmm0, %xmm1
+# CHECK-NEXT: [1,1]     DPeER   andnps	%xmm0, %xmm1
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -437,12 +458,19 @@ paddq %xmm0, %xmm0
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50    -     0.25   0.25    -      -      -      -      -      -      -      -      -      -      -     andnpd	%xmm0, %xmm1
 
 # CHECK:      Timeline view:
-# CHECK-NEXT: Index     01234
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:      Index     01234
 
 # CHECK:      [0,0]     DeER.   andnpd	%xmm1, %xmm1
-# CHECK-NEXT: [0,1]     D=eER   andnpd	%xmm0, %xmm1
+# CHECK-NEXT: [0,1]     DPeER   andnpd	%xmm0, %xmm1
 # CHECK-NEXT: [1,0]     DeE-R   andnpd	%xmm1, %xmm1
-# CHECK-NEXT: [1,1]     D=eER   andnpd	%xmm0, %xmm1
+# CHECK-NEXT: [1,1]     DPeER   andnpd	%xmm0, %xmm1
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -528,12 +556,19 @@ paddq %xmm0, %xmm0
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50    -     0.25   0.25    -      -      -      -      -      -      -      -      -      -      -     pxor	%xmm0, %xmm1
 
 # CHECK:      Timeline view:
-# CHECK-NEXT: Index     01234
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:      Index     01234
 
 # CHECK:      [0,0]     DeER.   pxor	%xmm1, %xmm1
-# CHECK-NEXT: [0,1]     D=eER   pxor	%xmm0, %xmm1
+# CHECK-NEXT: [0,1]     DPeER   pxor	%xmm0, %xmm1
 # CHECK-NEXT: [1,0]     DeE-R   pxor	%xmm1, %xmm1
-# CHECK-NEXT: [1,1]     D=eER   pxor	%xmm0, %xmm1
+# CHECK-NEXT: [1,1]     DPeER   pxor	%xmm0, %xmm1
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -619,12 +654,19 @@ paddq %xmm0, %xmm0
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50    -     0.25   0.25    -      -      -      -      -      -      -      -      -      -      -     pandn	%xmm0, %xmm1
 
 # CHECK:      Timeline view:
-# CHECK-NEXT: Index     01234
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:      Index     01234
 
 # CHECK:      [0,0]     DeER.   pandn	%xmm1, %xmm1
-# CHECK-NEXT: [0,1]     D=eER   pandn	%xmm0, %xmm1
+# CHECK-NEXT: [0,1]     DPeER   pandn	%xmm0, %xmm1
 # CHECK-NEXT: [1,0]     DeE-R   pandn	%xmm1, %xmm1
-# CHECK-NEXT: [1,1]     D=eER   pandn	%xmm0, %xmm1
+# CHECK-NEXT: [1,1]     DPeER   pandn	%xmm0, %xmm1
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -710,12 +752,19 @@ paddq %xmm0, %xmm0
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50    -     0.25   0.25    -      -      -      -      -      -      -      -      -      -      -     psubb	%xmm0, %xmm1
 
 # CHECK:      Timeline view:
-# CHECK-NEXT: Index     01234
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:      Index     01234
 
 # CHECK:      [0,0]     DeER.   psubb	%xmm1, %xmm1
-# CHECK-NEXT: [0,1]     D=eER   psubb	%xmm0, %xmm1
+# CHECK-NEXT: [0,1]     DPeER   psubb	%xmm0, %xmm1
 # CHECK-NEXT: [1,0]     DeE-R   psubb	%xmm1, %xmm1
-# CHECK-NEXT: [1,1]     D=eER   psubb	%xmm0, %xmm1
+# CHECK-NEXT: [1,1]     DPeER   psubb	%xmm0, %xmm1
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -801,12 +850,19 @@ paddq %xmm0, %xmm0
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50    -     0.25   0.25    -      -      -      -      -      -      -      -      -      -      -     psubw	%xmm0, %xmm1
 
 # CHECK:      Timeline view:
-# CHECK-NEXT: Index     01234
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:      Index     01234
 
 # CHECK:      [0,0]     DeER.   psubw	%xmm1, %xmm1
-# CHECK-NEXT: [0,1]     D=eER   psubw	%xmm0, %xmm1
+# CHECK-NEXT: [0,1]     DPeER   psubw	%xmm0, %xmm1
 # CHECK-NEXT: [1,0]     DeE-R   psubw	%xmm1, %xmm1
-# CHECK-NEXT: [1,1]     D=eER   psubw	%xmm0, %xmm1
+# CHECK-NEXT: [1,1]     DPeER   psubw	%xmm0, %xmm1
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -892,12 +948,19 @@ paddq %xmm0, %xmm0
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50    -     0.25   0.25    -      -      -      -      -      -      -      -      -      -      -     psubd	%xmm0, %xmm1
 
 # CHECK:      Timeline view:
-# CHECK-NEXT: Index     01234
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:      Index     01234
 
 # CHECK:      [0,0]     DeER.   psubd	%xmm1, %xmm1
-# CHECK-NEXT: [0,1]     D=eER   psubd	%xmm0, %xmm1
+# CHECK-NEXT: [0,1]     DPeER   psubd	%xmm0, %xmm1
 # CHECK-NEXT: [1,0]     DeE-R   psubd	%xmm1, %xmm1
-# CHECK-NEXT: [1,1]     D=eER   psubd	%xmm0, %xmm1
+# CHECK-NEXT: [1,1]     DPeER   psubd	%xmm0, %xmm1
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -983,12 +1046,19 @@ paddq %xmm0, %xmm0
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50    -     0.25   0.25    -      -      -      -      -      -      -      -      -      -      -     psubq	%xmm0, %xmm1
 
 # CHECK:      Timeline view:
-# CHECK-NEXT: Index     01234
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:      Index     01234
 
 # CHECK:      [0,0]     DeER.   psubq	%xmm1, %xmm1
-# CHECK-NEXT: [0,1]     D=eER   psubq	%xmm0, %xmm1
+# CHECK-NEXT: [0,1]     DPeER   psubq	%xmm0, %xmm1
 # CHECK-NEXT: [1,0]     DeE-R   psubq	%xmm1, %xmm1
-# CHECK-NEXT: [1,1]     D=eER   psubq	%xmm0, %xmm1
+# CHECK-NEXT: [1,1]     DPeER   psubq	%xmm0, %xmm1
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -1074,12 +1144,19 @@ paddq %xmm0, %xmm0
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -     pxor	%xmm0, %xmm1
 
 # CHECK:      Timeline view:
-# CHECK-NEXT: Index     01234
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:      Index     01234
 
 # CHECK:      [0,0]     DeER.   psubsb	%xmm1, %xmm1
-# CHECK-NEXT: [0,1]     D=eER   pxor	%xmm0, %xmm1
+# CHECK-NEXT: [0,1]     DPeER   pxor	%xmm0, %xmm1
 # CHECK-NEXT: [1,0]     DeE-R   psubsb	%xmm1, %xmm1
-# CHECK-NEXT: [1,1]     D=eER   pxor	%xmm0, %xmm1
+# CHECK-NEXT: [1,1]     DPeER   pxor	%xmm0, %xmm1
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -1165,12 +1242,19 @@ paddq %xmm0, %xmm0
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -     pxor	%xmm0, %xmm1
 
 # CHECK:      Timeline view:
-# CHECK-NEXT: Index     01234
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:      Index     01234
 
 # CHECK:      [0,0]     DeER.   psubsw	%xmm1, %xmm1
-# CHECK-NEXT: [0,1]     D=eER   pxor	%xmm0, %xmm1
+# CHECK-NEXT: [0,1]     DPeER   pxor	%xmm0, %xmm1
 # CHECK-NEXT: [1,0]     DeE-R   psubsw	%xmm1, %xmm1
-# CHECK-NEXT: [1,1]     D=eER   pxor	%xmm0, %xmm1
+# CHECK-NEXT: [1,1]     DPeER   pxor	%xmm0, %xmm1
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -1256,12 +1340,19 @@ paddq %xmm0, %xmm0
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -     pxor	%xmm0, %xmm1
 
 # CHECK:      Timeline view:
-# CHECK-NEXT: Index     01234
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:      Index     01234
 
 # CHECK:      [0,0]     DeER.   psubusb	%xmm1, %xmm1
-# CHECK-NEXT: [0,1]     D=eER   pxor	%xmm0, %xmm1
+# CHECK-NEXT: [0,1]     DPeER   pxor	%xmm0, %xmm1
 # CHECK-NEXT: [1,0]     DeE-R   psubusb	%xmm1, %xmm1
-# CHECK-NEXT: [1,1]     D=eER   pxor	%xmm0, %xmm1
+# CHECK-NEXT: [1,1]     DPeER   pxor	%xmm0, %xmm1
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -1347,12 +1438,19 @@ paddq %xmm0, %xmm0
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -     pxor	%xmm0, %xmm1
 
 # CHECK:      Timeline view:
-# CHECK-NEXT: Index     01234
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:      Index     01234
 
 # CHECK:      [0,0]     DeER.   psubusw	%xmm1, %xmm1
-# CHECK-NEXT: [0,1]     D=eER   pxor	%xmm0, %xmm1
+# CHECK-NEXT: [0,1]     DPeER   pxor	%xmm0, %xmm1
 # CHECK-NEXT: [1,0]     DeE-R   psubusw	%xmm1, %xmm1
-# CHECK-NEXT: [1,1]     D=eER   pxor	%xmm0, %xmm1
+# CHECK-NEXT: [1,1]     DPeER   pxor	%xmm0, %xmm1
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -1438,12 +1536,19 @@ paddq %xmm0, %xmm0
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.25   0.25    -     0.50    -      -      -      -      -      -      -      -      -      -      -     paddb	%xmm0, %xmm0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT: Index     01234
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:      Index     01234
 
 # CHECK:      [0,0]     DeER.   pcmpgtb	%xmm0, %xmm0
-# CHECK-NEXT: [0,1]     D=eER   paddb	%xmm0, %xmm0
+# CHECK-NEXT: [0,1]     DPeER   paddb	%xmm0, %xmm0
 # CHECK-NEXT: [1,0]     DeE-R   pcmpgtb	%xmm0, %xmm0
-# CHECK-NEXT: [1,1]     D=eER   paddb	%xmm0, %xmm0
+# CHECK-NEXT: [1,1]     DPeER   paddb	%xmm0, %xmm0
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -1529,12 +1634,19 @@ paddq %xmm0, %xmm0
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.25   0.25    -     0.50    -      -      -      -      -      -      -      -      -      -      -     paddw	%xmm0, %xmm0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT: Index     01234
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:      Index     01234
 
 # CHECK:      [0,0]     DeER.   pcmpgtw	%xmm0, %xmm0
-# CHECK-NEXT: [0,1]     D=eER   paddw	%xmm0, %xmm0
+# CHECK-NEXT: [0,1]     DPeER   paddw	%xmm0, %xmm0
 # CHECK-NEXT: [1,0]     DeE-R   pcmpgtw	%xmm0, %xmm0
-# CHECK-NEXT: [1,1]     D=eER   paddw	%xmm0, %xmm0
+# CHECK-NEXT: [1,1]     DPeER   paddw	%xmm0, %xmm0
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -1620,12 +1732,19 @@ paddq %xmm0, %xmm0
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.25   0.25    -     0.50    -      -      -      -      -      -      -      -      -      -      -     paddd	%xmm0, %xmm0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT: Index     01234
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:      Index     01234
 
 # CHECK:      [0,0]     DeER.   pcmpgtd	%xmm0, %xmm0
-# CHECK-NEXT: [0,1]     D=eER   paddd	%xmm0, %xmm0
+# CHECK-NEXT: [0,1]     DPeER   paddd	%xmm0, %xmm0
 # CHECK-NEXT: [1,0]     DeE-R   pcmpgtd	%xmm0, %xmm0
-# CHECK-NEXT: [1,1]     D=eER   paddd	%xmm0, %xmm0
+# CHECK-NEXT: [1,1]     DPeER   paddd	%xmm0, %xmm0
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -1711,12 +1830,19 @@ paddq %xmm0, %xmm0
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.25   0.25    -     0.50    -      -      -      -      -      -      -      -      -      -      -     paddq	%xmm0, %xmm0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT: Index     01234
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:      Index     01234
 
 # CHECK:      [0,0]     DeER.   pcmpgtq	%xmm0, %xmm0
-# CHECK-NEXT: [0,1]     D=eER   paddq	%xmm0, %xmm0
+# CHECK-NEXT: [0,1]     DPeER   paddq	%xmm0, %xmm0
 # CHECK-NEXT: [1,0]     DeE-R   pcmpgtq	%xmm0, %xmm0
-# CHECK-NEXT: [1,1]     D=eER   paddq	%xmm0, %xmm0
+# CHECK-NEXT: [1,1]     DPeER   paddq	%xmm0, %xmm0
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions

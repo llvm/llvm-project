@@ -126,6 +126,7 @@ class TimelineView : public InstructionView {
 
   struct TimelineViewEntry {
     int CycleDispatched; // A negative value is an "invalid cycle".
+    unsigned CyclePending;
     unsigned CycleReady;
     unsigned CycleIssued;
     unsigned CycleExecuted;
@@ -156,6 +157,7 @@ class TimelineView : public InstructionView {
     static const char Dispatched = 'D';
     static const char Executed = 'E';
     static const char Retired = 'R';
+    static const char Pending = 'P';
     static const char Waiting = '='; // Instruction is waiting in the scheduler.
     static const char Executing = 'e';
     static const char RetireLag = '-'; // The instruction is waiting to retire.

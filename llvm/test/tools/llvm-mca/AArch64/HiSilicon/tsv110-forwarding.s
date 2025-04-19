@@ -28,12 +28,19 @@ madd x0, x0, x0, x0
 # CHECK-NEXT: Block RThroughput: 1.0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT: Index     0123456789
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:      Index     0123456789
 
 # CHECK:      [0,0]     DeeeeER  .   mul	x0, x1, x2
-# CHECK-NEXT: [0,1]     D====eER .   add	x0, x0, x1
-# CHECK-NEXT: [0,2]     D=====eER.   add	x0, x0, x1
-# CHECK-NEXT: [0,3]     D======eER   add	x0, x0, x1
+# CHECK-NEXT: [0,1]     DPPPPeER .   add	x0, x0, x1
+# CHECK-NEXT: [0,2]     DPPPPPeER.   add	x0, x0, x1
+# CHECK-NEXT: [0,3]     DPPPPPPeER   add	x0, x0, x1
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -61,13 +68,20 @@ madd x0, x0, x0, x0
 # CHECK-NEXT: Block RThroughput: 4.0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     01
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          01
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeER   ..   mul	x0, x1, x2
 # CHECK-NEXT: [0,1]     D==eeeeER ..   madd	x0, x1, x2, x0
 # CHECK-NEXT: [0,2]     D=eeeeE-R ..   madd	x0, x1, x2, x0
-# CHECK-NEXT: [0,3]     D=====eeeeER   madd	x0, x0, x0, x0
+# CHECK-NEXT: [0,3]     DPPPPPeeeeER   madd	x0, x0, x0, x0
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions

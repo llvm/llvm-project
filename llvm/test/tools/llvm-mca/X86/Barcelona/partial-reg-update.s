@@ -29,11 +29,18 @@ add  %ecx, %ebx
 # CHECK-NEXT:  1      1     0.33                        addl	%ecx, %ebx
 
 # CHECK:      Timeline view:
-# CHECK-NEXT: Index     01234567
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:      Index     01234567
 
 # CHECK:      [0,0]     DeeeER .   imulw	%ax, %cx
-# CHECK-NEXT: [0,1]     D===eER.   addb	%al, %cl
-# CHECK-NEXT: [0,2]     D====eER   addl	%ecx, %ebx
+# CHECK-NEXT: [0,1]     DPPPeER.   addb	%al, %cl
+# CHECK-NEXT: [0,2]     DPPPPeER   addl	%ecx, %ebx
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions

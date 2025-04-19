@@ -64,15 +64,22 @@ vpinsrd $3, %ebx, %xmm8, %xmm10
 # CHECK-NEXT:  -      -      -      -      -      -     1.00    -      -      -      -      -     1.00    -     vpinsrd	$3, %ebx, %xmm8, %xmm10
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     012
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          012
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeER .    . .   addl	%ebx, %ebx
-# CHECK-NEXT: [0,1]     .D======eER .   vpinsrd	$1, %ebx, %xmm0, %xmm1
-# CHECK-NEXT: [0,2]     . D=====eER .   vpinsrd	$1, %ebx, %xmm2, %xmm3
-# CHECK-NEXT: [0,3]     .  D=====eER.   vpinsrd	$2, %ebx, %xmm4, %xmm5
-# CHECK-NEXT: [0,4]     .   D====eER.   vpinsrd	$2, %ebx, %xmm6, %xmm7
-# CHECK-NEXT: [0,5]     .    D====eER   vpinsrd	$3, %ebx, %xmm8, %xmm10
+# CHECK-NEXT: [0,1]     .DPPPPPPeER .   vpinsrd	$1, %ebx, %xmm0, %xmm1
+# CHECK-NEXT: [0,2]     . DPPPPPeER .   vpinsrd	$1, %ebx, %xmm2, %xmm3
+# CHECK-NEXT: [0,3]     .  DPPPP=eER.   vpinsrd	$2, %ebx, %xmm4, %xmm5
+# CHECK-NEXT: [0,4]     .   DPPP=eER.   vpinsrd	$2, %ebx, %xmm6, %xmm7
+# CHECK-NEXT: [0,5]     .    DPP==eER   vpinsrd	$3, %ebx, %xmm8, %xmm10
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions

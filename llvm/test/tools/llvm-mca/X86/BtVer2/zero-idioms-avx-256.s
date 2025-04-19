@@ -88,7 +88,14 @@ vaddps  %ymm1, %ymm1, %ymm0
 # CHECK-NEXT:  -      -      -     1.00   1.00   1.00   1.00    -      -      -      -      -      -      -     vblendps	$2, %ymm1, %ymm2, %ymm3
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0123
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeER    .  .   vaddps	%ymm0, %ymm0, %ymm1
@@ -165,7 +172,14 @@ vaddps  %ymm1, %ymm1, %ymm0
 # CHECK-NEXT:  -      -      -     1.00   1.00   1.00   1.00    -      -      -      -      -      -      -     vblendpd	$2, %ymm1, %ymm2, %ymm3
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0123
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeER    .  .   vaddpd	%ymm0, %ymm0, %ymm1
@@ -240,7 +254,14 @@ vaddps  %ymm1, %ymm1, %ymm0
 # CHECK-NEXT:  -      -      -      -     1.00    -     1.00    -      -      -      -      -      -      -     vandnps	%ymm2, %ymm2, %ymm3
 
 # CHECK:      Timeline view:
-# CHECK-NEXT: Index     0123456789
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:      Index     0123456789
 
 # CHECK:      [0,0]     DeeeER   .   vaddps	%ymm0, %ymm1, %ymm2
 # CHECK-NEXT: [0,1]     .DeE-R   .   vandnps	%ymm2, %ymm2, %ymm3
@@ -310,7 +331,14 @@ vaddps  %ymm1, %ymm1, %ymm0
 # CHECK-NEXT:  -      -      -      -     1.00    -     1.00    -      -      -      -      -      -      -     vandnps	%ymm2, %ymm2, %ymm3
 
 # CHECK:      Timeline view:
-# CHECK-NEXT: Index     0123456789
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:      Index     0123456789
 
 # CHECK:      [0,0]     DeeeER   .   vaddps	%ymm0, %ymm1, %ymm2
 # CHECK-NEXT: [0,1]     .DeE-R   .   vandnps	%ymm2, %ymm2, %ymm3
@@ -380,7 +408,14 @@ vaddps  %ymm1, %ymm1, %ymm0
 # CHECK-NEXT:  -      -      -     2.00    -     2.00    -      -      -      -      -      -      -      -     vaddps	%ymm1, %ymm1, %ymm0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeER .    .   vperm2f128	$136, %ymm0, %ymm0, %ymm1

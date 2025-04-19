@@ -69,21 +69,28 @@ lzcnt 2(%rsp), %cx
 # CHECK-NEXT: 0.33   0.33   0.33   0.33    -     0.33   0.33    -      -      -      -      -      -      -      -     0.33   0.33   0.33   0.33   0.33   0.33    -      -     lzcntw	2(%rsp), %cx
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0123456789
 # CHECK-NEXT: Index     0123456789          0123456
 
 # CHECK:      [0,0]     DeeeER    .    .    .    ..   imull	%edx, %ecx
 # CHECK-NEXT: [0,1]     DeeeeeER  .    .    .    ..   lzcntw	(%rsp), %cx
-# CHECK-NEXT: [0,2]     D=eeeeeER .    .    .    ..   lzcntw	2(%rsp), %cx
-# CHECK-NEXT: [1,0]     D======eeeER   .    .    ..   imull	%edx, %ecx
-# CHECK-NEXT: [1,1]     D======eeeeeER .    .    ..   lzcntw	(%rsp), %cx
-# CHECK-NEXT: [1,2]     D=======eeeeeER.    .    ..   lzcntw	2(%rsp), %cx
-# CHECK-NEXT: [2,0]     .D===========eeeER  .    ..   imull	%edx, %ecx
-# CHECK-NEXT: [2,1]     .D===========eeeeeER.    ..   lzcntw	(%rsp), %cx
-# CHECK-NEXT: [2,2]     .D============eeeeeER    ..   lzcntw	2(%rsp), %cx
-# CHECK-NEXT: [3,0]     .D=================eeeER ..   imull	%edx, %ecx
-# CHECK-NEXT: [3,1]     .D=================eeeeeER.   lzcntw	(%rsp), %cx
-# CHECK-NEXT: [3,2]     .D==================eeeeeER   lzcntw	2(%rsp), %cx
+# CHECK-NEXT: [0,2]     DPeeeeeER .    .    .    ..   lzcntw	2(%rsp), %cx
+# CHECK-NEXT: [1,0]     DPPPPPPeeeER   .    .    ..   imull	%edx, %ecx
+# CHECK-NEXT: [1,1]     DPPPPPPeeeeeER .    .    ..   lzcntw	(%rsp), %cx
+# CHECK-NEXT: [1,2]     DPPPPPPPeeeeeER.    .    ..   lzcntw	2(%rsp), %cx
+# CHECK-NEXT: [2,0]     .DPPPPPPPPPPPeeeER  .    ..   imull	%edx, %ecx
+# CHECK-NEXT: [2,1]     .DPPPPPPPPPPPeeeeeER.    ..   lzcntw	(%rsp), %cx
+# CHECK-NEXT: [2,2]     .DPPPPPPPPPPPPeeeeeER    ..   lzcntw	2(%rsp), %cx
+# CHECK-NEXT: [3,0]     .DPPPPPPPPPPPPPPPPPeeeER ..   imull	%edx, %ecx
+# CHECK-NEXT: [3,1]     .DPPPPPPPPPPPPPPPPPeeeeeER.   lzcntw	(%rsp), %cx
+# CHECK-NEXT: [3,2]     .DPPPPPPPPPPPPPPPPPPeeeeeER   lzcntw	2(%rsp), %cx
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions

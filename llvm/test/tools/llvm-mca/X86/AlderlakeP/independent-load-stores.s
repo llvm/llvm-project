@@ -84,11 +84,17 @@
 # ALL-NEXT:      1.00    -     0.33   0.33   1.00    -      -     1.00    -      -     0.34    -      -     addq	$44, 640(%r14)
 
 # ALL:           Timeline view:
+# ALL-NEXT:      D: Instruction dispatched
+# ALL-NEXT:      e: Instruction executing
+# ALL-NEXT:      E: Instruction executed (write-back stage)
+# ALL-NEXT:      P: Instruction waiting for data dependency
+# ALL-NEXT:      =: Instruction waiting for available HW resource
+# ALL-NEXT:      -: Instruction executed, waiting to retire in order.
 
-# NOALIAS-NEXT:                      0123456789
+# NOALIAS:                           0123456789
 # NOALIAS-NEXT:  Index     0123456789          0123
 
-# YESALIAS-NEXT:                     0123456789          0123456789          0123456789          01234
+# YESALIAS:                          0123456789          0123456789          0123456789          01234
 # YESALIAS-NEXT: Index     0123456789          0123456789          0123456789          0123456789
 
 # NOALIAS:       [0,0]     DeeeeeeeeeeeeER.    .  .   addq	$44, 64(%r14)
@@ -103,11 +109,11 @@
 # NOALIAS-NEXT:  [0,9]     .    .   DeeeeeeeeeeeeER   addq	$44, 640(%r14)
 
 # YESALIAS:      [0,0]     DeeeeeeeeeeeeER.    .    .    .    .    .    .    .    .    .    .    .   .   addq	$44, 64(%r14)
-# YESALIAS-NEXT: [0,1]     .D===========eeeeeeeeeeeeER   .    .    .    .    .    .    .    .    .   .   addq	$44, 128(%r14)
-# YESALIAS-NEXT: [0,2]     . D======================eeeeeeeeeeeeER .    .    .    .    .    .    .   .   addq	$44, 192(%r14)
-# YESALIAS-NEXT: [0,3]     .  D=================================eeeeeeeeeeeeER    .    .    .    .   .   addq	$44, 256(%r14)
-# YESALIAS-NEXT: [0,4]     .   D============================================eeeeeeeeeeeeER  .    .   .   addq	$44, 320(%r14)
-# YESALIAS-NEXT: [0,5]     .    D=======================================================eeeeeeeeeeeeER   addq	$44, 384(%r14)
+# YESALIAS-NEXT: [0,1]     .DPPPPPPPPPPPeeeeeeeeeeeeER   .    .    .    .    .    .    .    .    .   .   addq	$44, 128(%r14)
+# YESALIAS-NEXT: [0,2]     . DPPPPPPPPPPPPPPPPPPPPPPeeeeeeeeeeeeER .    .    .    .    .    .    .   .   addq	$44, 192(%r14)
+# YESALIAS-NEXT: [0,3]     .  DPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPeeeeeeeeeeeeER    .    .    .    .   .   addq	$44, 256(%r14)
+# YESALIAS-NEXT: [0,4]     .   DPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPeeeeeeeeeeeeER  .    .   .   addq	$44, 320(%r14)
+# YESALIAS-NEXT: [0,5]     .    DPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPeeeeeeeeeeeeER   addq	$44, 384(%r14)
 # YESALIAS-NEXT: Truncated display due to cycle limit
 
 # ALL:           Average Wait times (based on the timeline view):

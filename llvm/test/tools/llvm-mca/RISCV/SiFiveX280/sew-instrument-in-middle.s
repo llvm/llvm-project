@@ -30,7 +30,7 @@ vdiv.vv v8, v8, v12
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  1      1920   1920.00                      vdiv.vv	v8, v8, v12
+# CHECK-NEXT:  1      1920  1920.00                     vdiv.vv	v8, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, a0, e8, m8, tu, mu
 # CHECK-NEXT:  1      912   912.00                      vdiv.vv	v8, v8, v12
 
@@ -55,7 +55,14 @@ vdiv.vv v8, v8, v12
 # CHECK-NEXT:  -      -      -      -     913.00 1.00    -      -     vdiv.vv	v8, v8, v12
 
 # CHECK:      Timeline view:
-# CHECK-NEXT: Index     0
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:      Index     0
 # CHECK-NEXT: Truncated display due to cycle limit
 
 # CHECK:      Average Wait times (based on the timeline view):

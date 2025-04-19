@@ -739,14 +739,21 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: Block RThroughput: 1.7
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     012
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          012
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeeeER . .   ld1	{ v1.1d }, [x27], #8
-# CHECK-NEXT: [0,1]     D=eeeeeeER. .   ld1	{ v1.2d }, [x27], #16
-# CHECK-NEXT: [0,2]     D==eeeeeeER .   ld1	{ v1.2s }, [x27], #8
-# CHECK-NEXT: [0,3]     D===eeeeeeER.   ld1	{ v1.4h }, [x27], #8
-# CHECK-NEXT: [0,4]     D====eeeeeeER   ld1	{ v1.4s }, [x27], #16
+# CHECK-NEXT: [0,1]     DPeeeeeeER. .   ld1	{ v1.2d }, [x27], #16
+# CHECK-NEXT: [0,2]     DPPeeeeeeER .   ld1	{ v1.2s }, [x27], #8
+# CHECK-NEXT: [0,3]     DPPPeeeeeeER.   ld1	{ v1.4h }, [x27], #8
+# CHECK-NEXT: [0,4]     DPPPPeeeeeeER   ld1	{ v1.4s }, [x27], #16
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -775,14 +782,21 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: Block RThroughput: 1.7
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     012
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          012
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeeeER . .   ld1	{ v1.8b }, [x27], #8
-# CHECK-NEXT: [0,1]     D=eeeeeeER. .   ld1	{ v1.8h }, [x27], #16
-# CHECK-NEXT: [0,2]     D==eeeeeeER .   ld1	{ v1.16b }, [x27], #16
-# CHECK-NEXT: [0,3]     D===eeeeeeER.   ld1	{ v1.1d }, [x27], x28
-# CHECK-NEXT: [0,4]     D====eeeeeeER   ld1	{ v1.2d }, [x27], x28
+# CHECK-NEXT: [0,1]     DPeeeeeeER. .   ld1	{ v1.8h }, [x27], #16
+# CHECK-NEXT: [0,2]     DPPeeeeeeER .   ld1	{ v1.16b }, [x27], #16
+# CHECK-NEXT: [0,3]     DPPPeeeeeeER.   ld1	{ v1.1d }, [x27], x28
+# CHECK-NEXT: [0,4]     DPPPPeeeeeeER   ld1	{ v1.2d }, [x27], x28
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -811,14 +825,21 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: Block RThroughput: 1.7
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     012
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          012
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeeeER . .   ld1	{ v1.2s }, [x27], x28
-# CHECK-NEXT: [0,1]     D=eeeeeeER. .   ld1	{ v1.4h }, [x27], x28
-# CHECK-NEXT: [0,2]     D==eeeeeeER .   ld1	{ v1.4s }, [x27], x28
-# CHECK-NEXT: [0,3]     D===eeeeeeER.   ld1	{ v1.8b }, [x27], x28
-# CHECK-NEXT: [0,4]     D====eeeeeeER   ld1	{ v1.8h }, [x27], x28
+# CHECK-NEXT: [0,1]     DPeeeeeeER. .   ld1	{ v1.4h }, [x27], x28
+# CHECK-NEXT: [0,2]     DPPeeeeeeER .   ld1	{ v1.4s }, [x27], x28
+# CHECK-NEXT: [0,3]     DPPPeeeeeeER.   ld1	{ v1.8b }, [x27], x28
+# CHECK-NEXT: [0,4]     DPPPPeeeeeeER   ld1	{ v1.8h }, [x27], x28
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -847,14 +868,21 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: Block RThroughput: 3.0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     012
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          012
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeeeER . .   ld1	{ v1.16b }, [x27], x28
-# CHECK-NEXT: [0,1]     D=eeeeeeER. .   ld1	{ v1.1d, v2.1d }, [x27], #16
-# CHECK-NEXT: [0,2]     D==eeeeeeER .   ld1	{ v1.2d, v2.2d }, [x27], #32
-# CHECK-NEXT: [0,3]     D===eeeeeeER.   ld1	{ v1.2s, v2.2s }, [x27], #16
-# CHECK-NEXT: [0,4]     D====eeeeeeER   ld1	{ v1.4h, v2.4h }, [x27], #16
+# CHECK-NEXT: [0,1]     DPeeeeeeER. .   ld1	{ v1.1d, v2.1d }, [x27], #16
+# CHECK-NEXT: [0,2]     DPPeeeeeeER .   ld1	{ v1.2d, v2.2d }, [x27], #32
+# CHECK-NEXT: [0,3]     DPPPeeeeeeER.   ld1	{ v1.2s, v2.2s }, [x27], #16
+# CHECK-NEXT: [0,4]     DPPPPeeeeeeER   ld1	{ v1.4h, v2.4h }, [x27], #16
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -883,14 +911,21 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: Block RThroughput: 3.3
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     012
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          012
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeeeER . .   ld1	{ v1.4s, v2.4s }, [x27], #32
-# CHECK-NEXT: [0,1]     D=eeeeeeER. .   ld1	{ v1.8b, v2.8b }, [x27], #16
-# CHECK-NEXT: [0,2]     D==eeeeeeER .   ld1	{ v1.8h, v2.8h }, [x27], #32
-# CHECK-NEXT: [0,3]     D===eeeeeeER.   ld1	{ v1.16b, v2.16b }, [x27], #32
-# CHECK-NEXT: [0,4]     D====eeeeeeER   ld1	{ v1.1d, v2.1d }, [x27], x28
+# CHECK-NEXT: [0,1]     DPeeeeeeER. .   ld1	{ v1.8b, v2.8b }, [x27], #16
+# CHECK-NEXT: [0,2]     DPPeeeeeeER .   ld1	{ v1.8h, v2.8h }, [x27], #32
+# CHECK-NEXT: [0,3]     DPPPeeeeeeER.   ld1	{ v1.16b, v2.16b }, [x27], #32
+# CHECK-NEXT: [0,4]     DPPPPeeeeeeER   ld1	{ v1.1d, v2.1d }, [x27], x28
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -919,14 +954,21 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: Block RThroughput: 3.3
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     012
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          012
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeeeER . .   ld1	{ v1.2d, v2.2d }, [x27], x28
-# CHECK-NEXT: [0,1]     D=eeeeeeER. .   ld1	{ v1.2s, v2.2s }, [x27], x28
-# CHECK-NEXT: [0,2]     D==eeeeeeER .   ld1	{ v1.4h, v2.4h }, [x27], x28
-# CHECK-NEXT: [0,3]     D===eeeeeeER.   ld1	{ v1.4s, v2.4s }, [x27], x28
-# CHECK-NEXT: [0,4]     D====eeeeeeER   ld1	{ v1.8b, v2.8b }, [x27], x28
+# CHECK-NEXT: [0,1]     DPeeeeeeER. .   ld1	{ v1.2s, v2.2s }, [x27], x28
+# CHECK-NEXT: [0,2]     DPPeeeeeeER .   ld1	{ v1.4h, v2.4h }, [x27], x28
+# CHECK-NEXT: [0,3]     DPPPeeeeeeER.   ld1	{ v1.4s, v2.4s }, [x27], x28
+# CHECK-NEXT: [0,4]     DPPPPeeeeeeER   ld1	{ v1.8b, v2.8b }, [x27], x28
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -955,14 +997,21 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: Block RThroughput: 4.3
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     012
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          012
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeeeER . .   ld1	{ v1.8h, v2.8h }, [x27], x28
-# CHECK-NEXT: [0,1]     D=eeeeeeER. .   ld1	{ v1.16b, v2.16b }, [x27], x28
-# CHECK-NEXT: [0,2]     D==eeeeeeER .   ld1	{ v1.1d, v2.1d, v3.1d }, [x27], #24
-# CHECK-NEXT: [0,3]     D===eeeeeeER.   ld1	{ v1.2d, v2.2d, v3.2d }, [x27], #48
-# CHECK-NEXT: [0,4]     .D===eeeeeeER   ld1	{ v1.2s, v2.2s, v3.2s }, [x27], #24
+# CHECK-NEXT: [0,1]     DPeeeeeeER. .   ld1	{ v1.16b, v2.16b }, [x27], x28
+# CHECK-NEXT: [0,2]     DPPeeeeeeER .   ld1	{ v1.1d, v2.1d, v3.1d }, [x27], #24
+# CHECK-NEXT: [0,3]     DPPPeeeeeeER.   ld1	{ v1.2d, v2.2d, v3.2d }, [x27], #48
+# CHECK-NEXT: [0,4]     .DPPPeeeeeeER   ld1	{ v1.2s, v2.2s, v3.2s }, [x27], #24
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -991,14 +1040,21 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: Block RThroughput: 5.0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     012
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          012
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeeeER . .   ld1	{ v1.4h, v2.4h, v3.4h }, [x27], #24
-# CHECK-NEXT: [0,1]     D=eeeeeeER. .   ld1	{ v1.4s, v2.4s, v3.4s }, [x27], #48
-# CHECK-NEXT: [0,2]     D==eeeeeeER .   ld1	{ v1.8b, v2.8b, v3.8b }, [x27], #24
-# CHECK-NEXT: [0,3]     D===eeeeeeER.   ld1	{ v1.8h, v2.8h, v3.8h }, [x27], #48
-# CHECK-NEXT: [0,4]     .D===eeeeeeER   ld1	{ v1.16b, v2.16b, v3.16b }, [x27], #48
+# CHECK-NEXT: [0,1]     DPeeeeeeER. .   ld1	{ v1.4s, v2.4s, v3.4s }, [x27], #48
+# CHECK-NEXT: [0,2]     DPPeeeeeeER .   ld1	{ v1.8b, v2.8b, v3.8b }, [x27], #24
+# CHECK-NEXT: [0,3]     DPPPeeeeeeER.   ld1	{ v1.8h, v2.8h, v3.8h }, [x27], #48
+# CHECK-NEXT: [0,4]     .DPPPeeeeeeER   ld1	{ v1.16b, v2.16b, v3.16b }, [x27], #48
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -1027,14 +1083,21 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: Block RThroughput: 5.0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     012
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          012
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeeeER . .   ld1	{ v1.1d, v2.1d, v3.1d }, [x27], x28
-# CHECK-NEXT: [0,1]     D=eeeeeeER. .   ld1	{ v1.2d, v2.2d, v3.2d }, [x27], x28
-# CHECK-NEXT: [0,2]     D==eeeeeeER .   ld1	{ v1.2s, v2.2s, v3.2s }, [x27], x28
-# CHECK-NEXT: [0,3]     D===eeeeeeER.   ld1	{ v1.4h, v2.4h, v3.4h }, [x27], x28
-# CHECK-NEXT: [0,4]     .D===eeeeeeER   ld1	{ v1.4s, v2.4s, v3.4s }, [x27], x28
+# CHECK-NEXT: [0,1]     DPeeeeeeER. .   ld1	{ v1.2d, v2.2d, v3.2d }, [x27], x28
+# CHECK-NEXT: [0,2]     DPPeeeeeeER .   ld1	{ v1.2s, v2.2s, v3.2s }, [x27], x28
+# CHECK-NEXT: [0,3]     DPPPeeeeeeER.   ld1	{ v1.4h, v2.4h, v3.4h }, [x27], x28
+# CHECK-NEXT: [0,4]     .DPPPeeeeeeER   ld1	{ v1.4s, v2.4s, v3.4s }, [x27], x28
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -1063,14 +1126,21 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: Block RThroughput: 5.7
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0123
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeeeER .  .   ld1	{ v1.8b, v2.8b, v3.8b }, [x27], x28
-# CHECK-NEXT: [0,1]     D=eeeeeeER.  .   ld1	{ v1.8h, v2.8h, v3.8h }, [x27], x28
-# CHECK-NEXT: [0,2]     D==eeeeeeER  .   ld1	{ v1.16b, v2.16b, v3.16b }, [x27], x28
-# CHECK-NEXT: [0,3]     .D==eeeeeeeER.   ld1	{ v1.1d, v2.1d, v3.1d, v4.1d }, [x27], #32
-# CHECK-NEXT: [0,4]     .D===eeeeeeeER   ld1	{ v1.2d, v2.2d, v3.2d, v4.2d }, [x27], #64
+# CHECK-NEXT: [0,1]     DPeeeeeeER.  .   ld1	{ v1.8h, v2.8h, v3.8h }, [x27], x28
+# CHECK-NEXT: [0,2]     DPPeeeeeeER  .   ld1	{ v1.16b, v2.16b, v3.16b }, [x27], x28
+# CHECK-NEXT: [0,3]     .DPPeeeeeeeER.   ld1	{ v1.1d, v2.1d, v3.1d, v4.1d }, [x27], #32
+# CHECK-NEXT: [0,4]     .DPPPeeeeeeeER   ld1	{ v1.2d, v2.2d, v3.2d, v4.2d }, [x27], #64
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -1099,14 +1169,21 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: Block RThroughput: 6.7
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     01234
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          01234
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeeeeER.   .   ld1	{ v1.2s, v2.2s, v3.2s, v4.2s }, [x27], #32
-# CHECK-NEXT: [0,1]     D=eeeeeeeER   .   ld1	{ v1.4h, v2.4h, v3.4h, v4.4h }, [x27], #32
-# CHECK-NEXT: [0,2]     D==eeeeeeeER  .   ld1	{ v1.4s, v2.4s, v3.4s, v4.4s }, [x27], #64
-# CHECK-NEXT: [0,3]     .D===eeeeeeeER.   ld1	{ v1.8b, v2.8b, v3.8b, v4.8b }, [x27], #32
-# CHECK-NEXT: [0,4]     .D====eeeeeeeER   ld1	{ v1.8h, v2.8h, v3.8h, v4.8h }, [x27], #64
+# CHECK-NEXT: [0,1]     DPeeeeeeeER   .   ld1	{ v1.4h, v2.4h, v3.4h, v4.4h }, [x27], #32
+# CHECK-NEXT: [0,2]     DPPeeeeeeeER  .   ld1	{ v1.4s, v2.4s, v3.4s, v4.4s }, [x27], #64
+# CHECK-NEXT: [0,3]     .DPP=eeeeeeeER.   ld1	{ v1.8b, v2.8b, v3.8b, v4.8b }, [x27], #32
+# CHECK-NEXT: [0,4]     .DPPPPeeeeeeeER   ld1	{ v1.8h, v2.8h, v3.8h, v4.8h }, [x27], #64
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -1135,14 +1212,21 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: Block RThroughput: 6.7
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     01234
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          01234
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeeeeER.   .   ld1	{ v1.16b, v2.16b, v3.16b, v4.16b }, [x27], #64
-# CHECK-NEXT: [0,1]     D=eeeeeeeER   .   ld1	{ v1.1d, v2.1d, v3.1d, v4.1d }, [x27], x28
-# CHECK-NEXT: [0,2]     D==eeeeeeeER  .   ld1	{ v1.2d, v2.2d, v3.2d, v4.2d }, [x27], x28
-# CHECK-NEXT: [0,3]     .D===eeeeeeeER.   ld1	{ v1.2s, v2.2s, v3.2s, v4.2s }, [x27], x28
-# CHECK-NEXT: [0,4]     .D====eeeeeeeER   ld1	{ v1.4h, v2.4h, v3.4h, v4.4h }, [x27], x28
+# CHECK-NEXT: [0,1]     DPeeeeeeeER   .   ld1	{ v1.1d, v2.1d, v3.1d, v4.1d }, [x27], x28
+# CHECK-NEXT: [0,2]     DPPeeeeeeeER  .   ld1	{ v1.2d, v2.2d, v3.2d, v4.2d }, [x27], x28
+# CHECK-NEXT: [0,3]     .DPP=eeeeeeeER.   ld1	{ v1.2s, v2.2s, v3.2s, v4.2s }, [x27], x28
+# CHECK-NEXT: [0,4]     .DPPPPeeeeeeeER   ld1	{ v1.4h, v2.4h, v3.4h, v4.4h }, [x27], x28
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -1171,14 +1255,21 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: Block RThroughput: 5.7
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0123456789
 # CHECK-NEXT: Index     0123456789          01
 
 # CHECK:      [0,0]     DeeeeeeeER.    .    ..   ld1	{ v1.4s, v2.4s, v3.4s, v4.4s }, [x27], x28
-# CHECK-NEXT: [0,1]     D=eeeeeeeER    .    ..   ld1	{ v1.8b, v2.8b, v3.8b, v4.8b }, [x27], x28
-# CHECK-NEXT: [0,2]     D==eeeeeeeER   .    ..   ld1	{ v1.8h, v2.8h, v3.8h, v4.8h }, [x27], x28
-# CHECK-NEXT: [0,3]     .D===eeeeeeeER .    ..   ld1	{ v1.16b, v2.16b, v3.16b, v4.16b }, [x27], x28
-# CHECK-NEXT: [0,4]     .D==========eeeeeeeeER   ld1	{ v1.b }[0], [x27], #1
+# CHECK-NEXT: [0,1]     DPeeeeeeeER    .    ..   ld1	{ v1.8b, v2.8b, v3.8b, v4.8b }, [x27], x28
+# CHECK-NEXT: [0,2]     DPPeeeeeeeER   .    ..   ld1	{ v1.8h, v2.8h, v3.8h, v4.8h }, [x27], x28
+# CHECK-NEXT: [0,3]     .DPP=eeeeeeeER .    ..   ld1	{ v1.16b, v2.16b, v3.16b, v4.16b }, [x27], x28
+# CHECK-NEXT: [0,4]     .DPPPPPPPPPPeeeeeeeeER   ld1	{ v1.b }[0], [x27], #1
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -1207,14 +1298,21 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: Block RThroughput: 1.7
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789          0123456789
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0123456789          0123456789
 # CHECK-NEXT: Index     0123456789          0123456789          012
 
 # CHECK:      [0,0]     DeeeeeeeeER    .    .    .    .    .    . .   ld1	{ v1.b }[8], [x27], #1
-# CHECK-NEXT: [0,1]     D========eeeeeeeeER .    .    .    .    . .   ld1	{ v1.b }[0], [x27], x28
-# CHECK-NEXT: [0,2]     D================eeeeeeeeER   .    .    . .   ld1	{ v1.b }[8], [x27], x28
-# CHECK-NEXT: [0,3]     D========================eeeeeeeeER.    . .   ld1	{ v1.h }[0], [x27], #2
-# CHECK-NEXT: [0,4]     D================================eeeeeeeeER   ld1	{ v1.h }[4], [x27], #2
+# CHECK-NEXT: [0,1]     DPPPPPPPPeeeeeeeeER .    .    .    .    . .   ld1	{ v1.b }[0], [x27], x28
+# CHECK-NEXT: [0,2]     DPPPPPPPPPPPPPPPPeeeeeeeeER   .    .    . .   ld1	{ v1.b }[8], [x27], x28
+# CHECK-NEXT: [0,3]     DPPPPPPPPPPPPPPPPPPPPPPPPeeeeeeeeER.    . .   ld1	{ v1.h }[0], [x27], #2
+# CHECK-NEXT: [0,4]     DPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPeeeeeeeeER   ld1	{ v1.h }[4], [x27], #2
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -1243,14 +1341,21 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: Block RThroughput: 1.7
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789          0123456789
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0123456789          0123456789
 # CHECK-NEXT: Index     0123456789          0123456789          012
 
 # CHECK:      [0,0]     DeeeeeeeeER    .    .    .    .    .    . .   ld1	{ v1.h }[0], [x27], x28
-# CHECK-NEXT: [0,1]     D========eeeeeeeeER .    .    .    .    . .   ld1	{ v1.h }[4], [x27], x28
-# CHECK-NEXT: [0,2]     D================eeeeeeeeER   .    .    . .   ld1	{ v1.s }[0], [x27], #4
-# CHECK-NEXT: [0,3]     D========================eeeeeeeeER.    . .   ld1	{ v1.s }[0], [x27], x28
-# CHECK-NEXT: [0,4]     D================================eeeeeeeeER   ld1	{ v1.d }[0], [x27], #8
+# CHECK-NEXT: [0,1]     DPPPPPPPPeeeeeeeeER .    .    .    .    . .   ld1	{ v1.h }[4], [x27], x28
+# CHECK-NEXT: [0,2]     DPPPPPPPPPPPPPPPPeeeeeeeeER   .    .    . .   ld1	{ v1.s }[0], [x27], #4
+# CHECK-NEXT: [0,3]     DPPPPPPPPPPPPPPPPPPPPPPPPeeeeeeeeER.    . .   ld1	{ v1.s }[0], [x27], x28
+# CHECK-NEXT: [0,4]     DPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPeeeeeeeeER   ld1	{ v1.d }[0], [x27], #8
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -1279,14 +1384,21 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: Block RThroughput: 1.7
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     01234
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          01234
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeeeeeER   .   ld1	{ v1.d }[0], [x27], x28
-# CHECK-NEXT: [0,1]     D=eeeeeeeeER  .   ld1r	{ v1.1d }, [x27], #8
-# CHECK-NEXT: [0,2]     D==eeeeeeeeER .   ld1r	{ v1.2d }, [x27], #8
-# CHECK-NEXT: [0,3]     D===eeeeeeeeER.   ld1r	{ v1.2s }, [x27], #4
-# CHECK-NEXT: [0,4]     D====eeeeeeeeER   ld1r	{ v1.4h }, [x27], #2
+# CHECK-NEXT: [0,1]     DPeeeeeeeeER  .   ld1r	{ v1.1d }, [x27], #8
+# CHECK-NEXT: [0,2]     DPPeeeeeeeeER .   ld1r	{ v1.2d }, [x27], #8
+# CHECK-NEXT: [0,3]     DPPPeeeeeeeeER.   ld1r	{ v1.2s }, [x27], #4
+# CHECK-NEXT: [0,4]     DPPPPeeeeeeeeER   ld1r	{ v1.4h }, [x27], #2
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -1315,14 +1427,21 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: Block RThroughput: 1.7
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     01234
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          01234
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeeeeeER   .   ld1r	{ v1.4s }, [x27], #4
-# CHECK-NEXT: [0,1]     D=eeeeeeeeER  .   ld1r	{ v1.8b }, [x27], #1
-# CHECK-NEXT: [0,2]     D==eeeeeeeeER .   ld1r	{ v1.8h }, [x27], #2
-# CHECK-NEXT: [0,3]     D===eeeeeeeeER.   ld1r	{ v1.16b }, [x27], #1
-# CHECK-NEXT: [0,4]     D====eeeeeeeeER   ld1r	{ v1.1d }, [x27], x28
+# CHECK-NEXT: [0,1]     DPeeeeeeeeER  .   ld1r	{ v1.8b }, [x27], #1
+# CHECK-NEXT: [0,2]     DPPeeeeeeeeER .   ld1r	{ v1.8h }, [x27], #2
+# CHECK-NEXT: [0,3]     DPPPeeeeeeeeER.   ld1r	{ v1.16b }, [x27], #1
+# CHECK-NEXT: [0,4]     DPPPPeeeeeeeeER   ld1r	{ v1.1d }, [x27], x28
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -1351,14 +1470,21 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: Block RThroughput: 1.7
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     01234
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          01234
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeeeeeER   .   ld1r	{ v1.2d }, [x27], x28
-# CHECK-NEXT: [0,1]     D=eeeeeeeeER  .   ld1r	{ v1.2s }, [x27], x28
-# CHECK-NEXT: [0,2]     D==eeeeeeeeER .   ld1r	{ v1.4h }, [x27], x28
-# CHECK-NEXT: [0,3]     D===eeeeeeeeER.   ld1r	{ v1.4s }, [x27], x28
-# CHECK-NEXT: [0,4]     D====eeeeeeeeER   ld1r	{ v1.8b }, [x27], x28
+# CHECK-NEXT: [0,1]     DPeeeeeeeeER  .   ld1r	{ v1.2s }, [x27], x28
+# CHECK-NEXT: [0,2]     DPPeeeeeeeeER .   ld1r	{ v1.4h }, [x27], x28
+# CHECK-NEXT: [0,3]     DPPPeeeeeeeeER.   ld1r	{ v1.4s }, [x27], x28
+# CHECK-NEXT: [0,4]     DPPPPeeeeeeeeER   ld1r	{ v1.8b }, [x27], x28
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -1387,14 +1513,21 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: Block RThroughput: 2.0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     01234
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          01234
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeeeeeER   .   ld1r	{ v1.8h }, [x27], x28
-# CHECK-NEXT: [0,1]     D=eeeeeeeeER  .   ld1r	{ v1.16b }, [x27], x28
-# CHECK-NEXT: [0,2]     D==eeeeeeeeER .   ld2	{ v1.2d, v2.2d }, [x27], #32
-# CHECK-NEXT: [0,3]     D===eeeeeeeeER.   ld2	{ v1.2s, v2.2s }, [x27], #16
-# CHECK-NEXT: [0,4]     .D===eeeeeeeeER   ld2	{ v1.4h, v2.4h }, [x27], #16
+# CHECK-NEXT: [0,1]     DPeeeeeeeeER  .   ld1r	{ v1.16b }, [x27], x28
+# CHECK-NEXT: [0,2]     DPPeeeeeeeeER .   ld2	{ v1.2d, v2.2d }, [x27], #32
+# CHECK-NEXT: [0,3]     DPPPeeeeeeeeER.   ld2	{ v1.2s, v2.2s }, [x27], #16
+# CHECK-NEXT: [0,4]     .DPPPeeeeeeeeER   ld2	{ v1.4h, v2.4h }, [x27], #16
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -1423,14 +1556,21 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: Block RThroughput: 3.0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     01234
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          01234
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeeeeeER   .   ld2	{ v1.4s, v2.4s }, [x27], #32
-# CHECK-NEXT: [0,1]     D=eeeeeeeeER  .   ld2	{ v1.8b, v2.8b }, [x27], #16
-# CHECK-NEXT: [0,2]     D==eeeeeeeeER .   ld2	{ v1.8h, v2.8h }, [x27], #32
-# CHECK-NEXT: [0,3]     .D==eeeeeeeeER.   ld2	{ v1.16b, v2.16b }, [x27], #32
-# CHECK-NEXT: [0,4]     .D===eeeeeeeeER   ld2	{ v1.2d, v2.2d }, [x27], x28
+# CHECK-NEXT: [0,1]     DPeeeeeeeeER  .   ld2	{ v1.8b, v2.8b }, [x27], #16
+# CHECK-NEXT: [0,2]     DPPeeeeeeeeER .   ld2	{ v1.8h, v2.8h }, [x27], #32
+# CHECK-NEXT: [0,3]     .DPPeeeeeeeeER.   ld2	{ v1.16b, v2.16b }, [x27], #32
+# CHECK-NEXT: [0,4]     .DPPPeeeeeeeeER   ld2	{ v1.2d, v2.2d }, [x27], x28
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -1459,14 +1599,21 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: Block RThroughput: 2.5
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     01234
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          01234
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeeeeeER   .   ld2	{ v1.2s, v2.2s }, [x27], x28
-# CHECK-NEXT: [0,1]     D=eeeeeeeeER  .   ld2	{ v1.4h, v2.4h }, [x27], x28
-# CHECK-NEXT: [0,2]     D==eeeeeeeeER .   ld2	{ v1.4s, v2.4s }, [x27], x28
-# CHECK-NEXT: [0,3]     .D==eeeeeeeeER.   ld2	{ v1.8b, v2.8b }, [x27], x28
-# CHECK-NEXT: [0,4]     .D===eeeeeeeeER   ld2	{ v1.8h, v2.8h }, [x27], x28
+# CHECK-NEXT: [0,1]     DPeeeeeeeeER  .   ld2	{ v1.4h, v2.4h }, [x27], x28
+# CHECK-NEXT: [0,2]     DPPeeeeeeeeER .   ld2	{ v1.4s, v2.4s }, [x27], x28
+# CHECK-NEXT: [0,3]     .DPPeeeeeeeeER.   ld2	{ v1.8b, v2.8b }, [x27], x28
+# CHECK-NEXT: [0,4]     .DPPPeeeeeeeeER   ld2	{ v1.8h, v2.8h }, [x27], x28
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -1495,14 +1642,21 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: Block RThroughput: 2.5
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789          0123456789
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0123456789          0123456789
 # CHECK-NEXT: Index     0123456789          0123456789          012
 
 # CHECK:      [0,0]     DeeeeeeeeER    .    .    .    .    .    . .   ld2	{ v1.16b, v2.16b }, [x27], x28
-# CHECK-NEXT: [0,1]     D========eeeeeeeeER .    .    .    .    . .   ld2	{ v1.b, v2.b }[0], [x27], #2
-# CHECK-NEXT: [0,2]     D================eeeeeeeeER   .    .    . .   ld2	{ v1.b, v2.b }[8], [x27], #2
-# CHECK-NEXT: [0,3]     .D=======================eeeeeeeeER.    . .   ld2	{ v1.b, v2.b }[0], [x27], x28
-# CHECK-NEXT: [0,4]     .D===============================eeeeeeeeER   ld2	{ v1.b, v2.b }[8], [x27], x28
+# CHECK-NEXT: [0,1]     DPPPPPPPPeeeeeeeeER .    .    .    .    . .   ld2	{ v1.b, v2.b }[0], [x27], #2
+# CHECK-NEXT: [0,2]     DPPPPPPPPPPPPPPPPeeeeeeeeER   .    .    . .   ld2	{ v1.b, v2.b }[8], [x27], #2
+# CHECK-NEXT: [0,3]     .DPPPPPPPPPPPPPPPPPPPPPPPeeeeeeeeER.    . .   ld2	{ v1.b, v2.b }[0], [x27], x28
+# CHECK-NEXT: [0,4]     .DPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPeeeeeeeeER   ld2	{ v1.b, v2.b }[8], [x27], x28
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -1531,14 +1685,21 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: Block RThroughput: 2.5
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789          0123456789
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0123456789          0123456789
 # CHECK-NEXT: Index     0123456789          0123456789          012
 
 # CHECK:      [0,0]     DeeeeeeeeER    .    .    .    .    .    . .   ld2	{ v1.h, v2.h }[0], [x27], #4
-# CHECK-NEXT: [0,1]     D========eeeeeeeeER .    .    .    .    . .   ld2	{ v1.h, v2.h }[4], [x27], #4
-# CHECK-NEXT: [0,2]     D================eeeeeeeeER   .    .    . .   ld2	{ v1.h, v2.h }[0], [x27], x28
-# CHECK-NEXT: [0,3]     D========================eeeeeeeeER.    . .   ld2	{ v1.h, v2.h }[4], [x27], x28
-# CHECK-NEXT: [0,4]     .D===============================eeeeeeeeER   ld2	{ v1.s, v2.s }[0], [x27], #8
+# CHECK-NEXT: [0,1]     DPPPPPPPPeeeeeeeeER .    .    .    .    . .   ld2	{ v1.h, v2.h }[4], [x27], #4
+# CHECK-NEXT: [0,2]     DPPPPPPPPPPPPPPPPeeeeeeeeER   .    .    . .   ld2	{ v1.h, v2.h }[0], [x27], x28
+# CHECK-NEXT: [0,3]     DPPPPPPPPPPPPPPPPPPPPPPPPeeeeeeeeER.    . .   ld2	{ v1.h, v2.h }[4], [x27], x28
+# CHECK-NEXT: [0,4]     .DPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPeeeeeeeeER   ld2	{ v1.s, v2.s }[0], [x27], #8
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -1567,14 +1728,21 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: Block RThroughput: 2.5
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0123456789
 # CHECK-NEXT: Index     0123456789          012345678
 
 # CHECK:      [0,0]     DeeeeeeeeER    .    .    .  .   ld2	{ v1.s, v2.s }[0], [x27], x28
-# CHECK-NEXT: [0,1]     D========eeeeeeeeER .    .  .   ld2	{ v1.d, v2.d }[0], [x27], #16
-# CHECK-NEXT: [0,2]     D================eeeeeeeeER .   ld2	{ v1.d, v2.d }[0], [x27], x28
-# CHECK-NEXT: [0,3]     D=================eeeeeeeeER.   ld2r	{ v1.1d, v2.1d }, [x27], #16
-# CHECK-NEXT: [0,4]     .D=================eeeeeeeeER   ld2r	{ v1.2d, v2.2d }, [x27], #16
+# CHECK-NEXT: [0,1]     DPPPPPPPPeeeeeeeeER .    .  .   ld2	{ v1.d, v2.d }[0], [x27], #16
+# CHECK-NEXT: [0,2]     DPPPPPPPPPPPPPPPPeeeeeeeeER .   ld2	{ v1.d, v2.d }[0], [x27], x28
+# CHECK-NEXT: [0,3]     DPPPPPPPPPPPPPPPPPeeeeeeeeER.   ld2r	{ v1.1d, v2.1d }, [x27], #16
+# CHECK-NEXT: [0,4]     .DPPPPPPPPPPPPPPPPPeeeeeeeeER   ld2r	{ v1.2d, v2.2d }, [x27], #16
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -1603,14 +1771,21 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: Block RThroughput: 2.5
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     01234
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          01234
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeeeeeER   .   ld2r	{ v1.2s, v2.2s }, [x27], #8
-# CHECK-NEXT: [0,1]     D=eeeeeeeeER  .   ld2r	{ v1.4h, v2.4h }, [x27], #4
-# CHECK-NEXT: [0,2]     D==eeeeeeeeER .   ld2r	{ v1.4s, v2.4s }, [x27], #8
-# CHECK-NEXT: [0,3]     D===eeeeeeeeER.   ld2r	{ v1.8b, v2.8b }, [x27], #2
-# CHECK-NEXT: [0,4]     .D===eeeeeeeeER   ld2r	{ v1.8h, v2.8h }, [x27], #4
+# CHECK-NEXT: [0,1]     DPeeeeeeeeER  .   ld2r	{ v1.4h, v2.4h }, [x27], #4
+# CHECK-NEXT: [0,2]     DPPeeeeeeeeER .   ld2r	{ v1.4s, v2.4s }, [x27], #8
+# CHECK-NEXT: [0,3]     DPPPeeeeeeeeER.   ld2r	{ v1.8b, v2.8b }, [x27], #2
+# CHECK-NEXT: [0,4]     .DPPPeeeeeeeeER   ld2r	{ v1.8h, v2.8h }, [x27], #4
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -1639,14 +1814,21 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: Block RThroughput: 2.5
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     01234
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          01234
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeeeeeER   .   ld2r	{ v1.16b, v2.16b }, [x27], #2
-# CHECK-NEXT: [0,1]     D=eeeeeeeeER  .   ld2r	{ v1.1d, v2.1d }, [x27], x28
-# CHECK-NEXT: [0,2]     D==eeeeeeeeER .   ld2r	{ v1.2d, v2.2d }, [x27], x28
-# CHECK-NEXT: [0,3]     D===eeeeeeeeER.   ld2r	{ v1.2s, v2.2s }, [x27], x28
-# CHECK-NEXT: [0,4]     .D===eeeeeeeeER   ld2r	{ v1.4h, v2.4h }, [x27], x28
+# CHECK-NEXT: [0,1]     DPeeeeeeeeER  .   ld2r	{ v1.1d, v2.1d }, [x27], x28
+# CHECK-NEXT: [0,2]     DPPeeeeeeeeER .   ld2r	{ v1.2d, v2.2d }, [x27], x28
+# CHECK-NEXT: [0,3]     DPPPeeeeeeeeER.   ld2r	{ v1.2s, v2.2s }, [x27], x28
+# CHECK-NEXT: [0,4]     .DPPPeeeeeeeeER   ld2r	{ v1.4h, v2.4h }, [x27], x28
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -1675,14 +1857,21 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: Block RThroughput: 2.8
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     01234
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          01234
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeeeeeER   .   ld2r	{ v1.4s, v2.4s }, [x27], x28
-# CHECK-NEXT: [0,1]     D=eeeeeeeeER  .   ld2r	{ v1.8b, v2.8b }, [x27], x28
-# CHECK-NEXT: [0,2]     D==eeeeeeeeER .   ld2r	{ v1.8h, v2.8h }, [x27], x28
-# CHECK-NEXT: [0,3]     D===eeeeeeeeER.   ld2r	{ v1.16b, v2.16b }, [x27], x28
-# CHECK-NEXT: [0,4]     .D===eeeeeeeeER   ld3	{ v1.2d, v2.2d, v3.2d }, [x27], #48
+# CHECK-NEXT: [0,1]     DPeeeeeeeeER  .   ld2r	{ v1.8b, v2.8b }, [x27], x28
+# CHECK-NEXT: [0,2]     DPPeeeeeeeeER .   ld2r	{ v1.8h, v2.8h }, [x27], x28
+# CHECK-NEXT: [0,3]     DPPPeeeeeeeeER.   ld2r	{ v1.16b, v2.16b }, [x27], x28
+# CHECK-NEXT: [0,4]     .DPPPeeeeeeeeER   ld3	{ v1.2d, v2.2d, v3.2d }, [x27], #48
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -1711,14 +1900,21 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: Block RThroughput: 4.0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     01234
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          01234
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeeeeeER   .   ld3	{ v1.2s, v2.2s, v3.2s }, [x27], #24
-# CHECK-NEXT: [0,1]     D=eeeeeeeeER  .   ld3	{ v1.4h, v2.4h, v3.4h }, [x27], #24
-# CHECK-NEXT: [0,2]     .D=eeeeeeeeER .   ld3	{ v1.4s, v2.4s, v3.4s }, [x27], #48
-# CHECK-NEXT: [0,3]     .D==eeeeeeeeER.   ld3	{ v1.8b, v2.8b, v3.8b }, [x27], #24
-# CHECK-NEXT: [0,4]     . D==eeeeeeeeER   ld3	{ v1.8h, v2.8h, v3.8h }, [x27], #48
+# CHECK-NEXT: [0,1]     DPeeeeeeeeER  .   ld3	{ v1.4h, v2.4h, v3.4h }, [x27], #24
+# CHECK-NEXT: [0,2]     .DPeeeeeeeeER .   ld3	{ v1.4s, v2.4s, v3.4s }, [x27], #48
+# CHECK-NEXT: [0,3]     .DPPeeeeeeeeER.   ld3	{ v1.8b, v2.8b, v3.8b }, [x27], #24
+# CHECK-NEXT: [0,4]     . DPPeeeeeeeeER   ld3	{ v1.8h, v2.8h, v3.8h }, [x27], #48
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -1747,14 +1943,21 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: Block RThroughput: 4.3
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     01234
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          01234
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeeeeeER   .   ld3	{ v1.16b, v2.16b, v3.16b }, [x27], #48
-# CHECK-NEXT: [0,1]     D=eeeeeeeeER  .   ld3	{ v1.2d, v2.2d, v3.2d }, [x27], x28
-# CHECK-NEXT: [0,2]     .D=eeeeeeeeER .   ld3	{ v1.2s, v2.2s, v3.2s }, [x27], x28
-# CHECK-NEXT: [0,3]     .D==eeeeeeeeER.   ld3	{ v1.4h, v2.4h, v3.4h }, [x27], x28
-# CHECK-NEXT: [0,4]     . D==eeeeeeeeER   ld3	{ v1.4s, v2.4s, v3.4s }, [x27], x28
+# CHECK-NEXT: [0,1]     DPeeeeeeeeER  .   ld3	{ v1.2d, v2.2d, v3.2d }, [x27], x28
+# CHECK-NEXT: [0,2]     .DPeeeeeeeeER .   ld3	{ v1.2s, v2.2s, v3.2s }, [x27], x28
+# CHECK-NEXT: [0,3]     .DPPeeeeeeeeER.   ld3	{ v1.4h, v2.4h, v3.4h }, [x27], x28
+# CHECK-NEXT: [0,4]     . DPPeeeeeeeeER   ld3	{ v1.4s, v2.4s, v3.4s }, [x27], x28
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -1783,14 +1986,21 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: Block RThroughput: 4.0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0123456789
 # CHECK-NEXT: Index     0123456789          012345678
 
 # CHECK:      [0,0]     DeeeeeeeeER    .    .    .  .   ld3	{ v1.8b, v2.8b, v3.8b }, [x27], x28
-# CHECK-NEXT: [0,1]     D=eeeeeeeeER   .    .    .  .   ld3	{ v1.8h, v2.8h, v3.8h }, [x27], x28
-# CHECK-NEXT: [0,2]     .D=eeeeeeeeER  .    .    .  .   ld3	{ v1.16b, v2.16b, v3.16b }, [x27], x28
-# CHECK-NEXT: [0,3]     .D=========eeeeeeeeER    .  .   ld3	{ v1.b, v2.b, v3.b }[0], [x27], #3
-# CHECK-NEXT: [0,4]     . D================eeeeeeeeER   ld3	{ v1.b, v2.b, v3.b }[8], [x27], #3
+# CHECK-NEXT: [0,1]     DPeeeeeeeeER   .    .    .  .   ld3	{ v1.8h, v2.8h, v3.8h }, [x27], x28
+# CHECK-NEXT: [0,2]     .DPeeeeeeeeER  .    .    .  .   ld3	{ v1.16b, v2.16b, v3.16b }, [x27], x28
+# CHECK-NEXT: [0,3]     .DPPPPPPPPPeeeeeeeeER    .  .   ld3	{ v1.b, v2.b, v3.b }[0], [x27], #3
+# CHECK-NEXT: [0,4]     . DPPPPPPPPPPPPPPPPeeeeeeeeER   ld3	{ v1.b, v2.b, v3.b }[8], [x27], #3
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -1819,14 +2029,21 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: Block RThroughput: 3.8
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789          0123456789
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0123456789          0123456789
 # CHECK-NEXT: Index     0123456789          0123456789          012
 
 # CHECK:      [0,0]     DeeeeeeeeER    .    .    .    .    .    . .   ld3	{ v1.b, v2.b, v3.b }[0], [x27], x28
-# CHECK-NEXT: [0,1]     D========eeeeeeeeER .    .    .    .    . .   ld3	{ v1.b, v2.b, v3.b }[8], [x27], x28
-# CHECK-NEXT: [0,2]     .D===============eeeeeeeeER   .    .    . .   ld3	{ v1.h, v2.h, v3.h }[0], [x27], #6
-# CHECK-NEXT: [0,3]     .D=======================eeeeeeeeER.    . .   ld3	{ v1.h, v2.h, v3.h }[4], [x27], #6
-# CHECK-NEXT: [0,4]     . D==============================eeeeeeeeER   ld3	{ v1.h, v2.h, v3.h }[0], [x27], x28
+# CHECK-NEXT: [0,1]     DPPPPPPPPeeeeeeeeER .    .    .    .    . .   ld3	{ v1.b, v2.b, v3.b }[8], [x27], x28
+# CHECK-NEXT: [0,2]     .DPPPPPPPPPPPPPPPeeeeeeeeER   .    .    . .   ld3	{ v1.h, v2.h, v3.h }[0], [x27], #6
+# CHECK-NEXT: [0,3]     .DPPPPPPPPPPPPPPPPPPPPPPPeeeeeeeeER.    . .   ld3	{ v1.h, v2.h, v3.h }[4], [x27], #6
+# CHECK-NEXT: [0,4]     . DPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPeeeeeeeeER   ld3	{ v1.h, v2.h, v3.h }[0], [x27], x28
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -1855,14 +2072,21 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: Block RThroughput: 3.8
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789          0123456789
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0123456789          0123456789
 # CHECK-NEXT: Index     0123456789          0123456789          012
 
 # CHECK:      [0,0]     DeeeeeeeeER    .    .    .    .    .    . .   ld3	{ v1.h, v2.h, v3.h }[4], [x27], x28
-# CHECK-NEXT: [0,1]     D========eeeeeeeeER .    .    .    .    . .   ld3	{ v1.s, v2.s, v3.s }[0], [x27], #12
-# CHECK-NEXT: [0,2]     .D===============eeeeeeeeER   .    .    . .   ld3	{ v1.s, v2.s, v3.s }[0], [x27], x28
-# CHECK-NEXT: [0,3]     .D=======================eeeeeeeeER.    . .   ld3	{ v1.d, v2.d, v3.d }[0], [x27], #24
-# CHECK-NEXT: [0,4]     . D==============================eeeeeeeeER   ld3	{ v1.d, v2.d, v3.d }[0], [x27], x28
+# CHECK-NEXT: [0,1]     DPPPPPPPPeeeeeeeeER .    .    .    .    . .   ld3	{ v1.s, v2.s, v3.s }[0], [x27], #12
+# CHECK-NEXT: [0,2]     .DPPPPPPPPPPPPPPPeeeeeeeeER   .    .    . .   ld3	{ v1.s, v2.s, v3.s }[0], [x27], x28
+# CHECK-NEXT: [0,3]     .DPPPPPPPPPPPPPPPPPPPPPPPeeeeeeeeER.    . .   ld3	{ v1.d, v2.d, v3.d }[0], [x27], #24
+# CHECK-NEXT: [0,4]     . DPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPeeeeeeeeER   ld3	{ v1.d, v2.d, v3.d }[0], [x27], x28
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -1891,14 +2115,21 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: Block RThroughput: 4.0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     01234
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          01234
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeeeeeER   .   ld3r	{ v1.1d, v2.1d, v3.1d }, [x27], #24
-# CHECK-NEXT: [0,1]     D=eeeeeeeeER  .   ld3r	{ v1.2d, v2.2d, v3.2d }, [x27], #24
-# CHECK-NEXT: [0,2]     .D=eeeeeeeeER .   ld3r	{ v1.2s, v2.2s, v3.2s }, [x27], #12
-# CHECK-NEXT: [0,3]     .D==eeeeeeeeER.   ld3r	{ v1.4h, v2.4h, v3.4h }, [x27], #6
-# CHECK-NEXT: [0,4]     . D==eeeeeeeeER   ld3r	{ v1.4s, v2.4s, v3.4s }, [x27], #12
+# CHECK-NEXT: [0,1]     DPeeeeeeeeER  .   ld3r	{ v1.2d, v2.2d, v3.2d }, [x27], #24
+# CHECK-NEXT: [0,2]     .DPeeeeeeeeER .   ld3r	{ v1.2s, v2.2s, v3.2s }, [x27], #12
+# CHECK-NEXT: [0,3]     .DPPeeeeeeeeER.   ld3r	{ v1.4h, v2.4h, v3.4h }, [x27], #6
+# CHECK-NEXT: [0,4]     . DPPeeeeeeeeER   ld3r	{ v1.4s, v2.4s, v3.4s }, [x27], #12
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -1927,14 +2158,21 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: Block RThroughput: 4.3
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     01234
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          01234
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeeeeeER   .   ld3r	{ v1.8b, v2.8b, v3.8b }, [x27], #3
-# CHECK-NEXT: [0,1]     D=eeeeeeeeER  .   ld3r	{ v1.8h, v2.8h, v3.8h }, [x27], #6
-# CHECK-NEXT: [0,2]     .D=eeeeeeeeER .   ld3r	{ v1.16b, v2.16b, v3.16b }, [x27], #3
-# CHECK-NEXT: [0,3]     .D==eeeeeeeeER.   ld3r	{ v1.1d, v2.1d, v3.1d }, [x27], x28
-# CHECK-NEXT: [0,4]     . D==eeeeeeeeER   ld3r	{ v1.2d, v2.2d, v3.2d }, [x27], x28
+# CHECK-NEXT: [0,1]     DPeeeeeeeeER  .   ld3r	{ v1.8h, v2.8h, v3.8h }, [x27], #6
+# CHECK-NEXT: [0,2]     .DPeeeeeeeeER .   ld3r	{ v1.16b, v2.16b, v3.16b }, [x27], #3
+# CHECK-NEXT: [0,3]     .DPPeeeeeeeeER.   ld3r	{ v1.1d, v2.1d, v3.1d }, [x27], x28
+# CHECK-NEXT: [0,4]     . DPPeeeeeeeeER   ld3r	{ v1.2d, v2.2d, v3.2d }, [x27], x28
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -1963,14 +2201,21 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: Block RThroughput: 4.0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     01234
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          01234
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeeeeeER   .   ld3r	{ v1.2s, v2.2s, v3.2s }, [x27], x28
-# CHECK-NEXT: [0,1]     D=eeeeeeeeER  .   ld3r	{ v1.4h, v2.4h, v3.4h }, [x27], x28
-# CHECK-NEXT: [0,2]     .D=eeeeeeeeER .   ld3r	{ v1.4s, v2.4s, v3.4s }, [x27], x28
-# CHECK-NEXT: [0,3]     .D==eeeeeeeeER.   ld3r	{ v1.8b, v2.8b, v3.8b }, [x27], x28
-# CHECK-NEXT: [0,4]     . D==eeeeeeeeER   ld3r	{ v1.8h, v2.8h, v3.8h }, [x27], x28
+# CHECK-NEXT: [0,1]     DPeeeeeeeeER  .   ld3r	{ v1.4h, v2.4h, v3.4h }, [x27], x28
+# CHECK-NEXT: [0,2]     .DPeeeeeeeeER .   ld3r	{ v1.4s, v2.4s, v3.4s }, [x27], x28
+# CHECK-NEXT: [0,3]     .DPPeeeeeeeeER.   ld3r	{ v1.8b, v2.8b, v3.8b }, [x27], x28
+# CHECK-NEXT: [0,4]     . DPPeeeeeeeeER   ld3r	{ v1.8h, v2.8h, v3.8h }, [x27], x28
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -1999,14 +2244,21 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: Block RThroughput: 7.0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0123456
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeeeeeER    ..   ld3r	{ v1.16b, v2.16b, v3.16b }, [x27], x28
 # CHECK-NEXT: [0,1]     .DeeeeeeeeeER  ..   ld4	{ v1.2d, v2.2d, v3.2d, v4.2d }, [x27], #64
 # CHECK-NEXT: [0,2]     . DeeeeeeeeER  ..   ld4	{ v1.2s, v2.2s, v3.2s, v4.2s }, [x27], #32
-# CHECK-NEXT: [0,3]     . D=eeeeeeeeER ..   ld4	{ v1.4h, v2.4h, v3.4h, v4.4h }, [x27], #32
-# CHECK-NEXT: [0,4]     .  D==eeeeeeeeeER   ld4	{ v1.4s, v2.4s, v3.4s, v4.4s }, [x27], #64
+# CHECK-NEXT: [0,3]     . DPeeeeeeeeER ..   ld4	{ v1.4h, v2.4h, v3.4h, v4.4h }, [x27], #32
+# CHECK-NEXT: [0,4]     .  DP=eeeeeeeeeER   ld4	{ v1.4s, v2.4s, v3.4s, v4.4s }, [x27], #64
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -2035,7 +2287,14 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: Block RThroughput: 8.0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     01234567
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          01234567
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeeeeeER    . .   ld4	{ v1.8b, v2.8b, v3.8b, v4.8b }, [x27], #32
@@ -2071,7 +2330,14 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: Block RThroughput: 8.0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0123456
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeeeeeER    ..   ld4	{ v1.4h, v2.4h, v3.4h, v4.4h }, [x27], x28
@@ -2107,14 +2373,21 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: Block RThroughput: 5.0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789          0123456789
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0123456789          0123456789
 # CHECK-NEXT: Index     0123456789          0123456789          012
 
 # CHECK:      [0,0]     DeeeeeeeeER    .    .    .    .    .    . .   ld4	{ v1.b, v2.b, v3.b, v4.b }[0], [x27], #4
-# CHECK-NEXT: [0,1]     D========eeeeeeeeER .    .    .    .    . .   ld4	{ v1.b, v2.b, v3.b, v4.b }[8], [x27], #4
-# CHECK-NEXT: [0,2]     .D===============eeeeeeeeER   .    .    . .   ld4	{ v1.b, v2.b, v3.b, v4.b }[0], [x27], x28
-# CHECK-NEXT: [0,3]     .D=======================eeeeeeeeER.    . .   ld4	{ v1.b, v2.b, v3.b, v4.b }[8], [x27], x28
-# CHECK-NEXT: [0,4]     . D==============================eeeeeeeeER   ld4	{ v1.h, v2.h, v3.h, v4.h }[0], [x27], #8
+# CHECK-NEXT: [0,1]     DPPPPPPPPeeeeeeeeER .    .    .    .    . .   ld4	{ v1.b, v2.b, v3.b, v4.b }[8], [x27], #4
+# CHECK-NEXT: [0,2]     .DPPPPPPPPPPPPPPPeeeeeeeeER   .    .    . .   ld4	{ v1.b, v2.b, v3.b, v4.b }[0], [x27], x28
+# CHECK-NEXT: [0,3]     .DPPPPPPPPPPPPPPPPPPPPPPPeeeeeeeeER.    . .   ld4	{ v1.b, v2.b, v3.b, v4.b }[8], [x27], x28
+# CHECK-NEXT: [0,4]     . DPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPeeeeeeeeER   ld4	{ v1.h, v2.h, v3.h, v4.h }[0], [x27], #8
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -2143,14 +2416,21 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: Block RThroughput: 5.0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789          0123456789
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0123456789          0123456789
 # CHECK-NEXT: Index     0123456789          0123456789          012
 
 # CHECK:      [0,0]     DeeeeeeeeER    .    .    .    .    .    . .   ld4	{ v1.h, v2.h, v3.h, v4.h }[4], [x27], #8
-# CHECK-NEXT: [0,1]     D========eeeeeeeeER .    .    .    .    . .   ld4	{ v1.h, v2.h, v3.h, v4.h }[0], [x27], x28
-# CHECK-NEXT: [0,2]     .D===============eeeeeeeeER   .    .    . .   ld4	{ v1.h, v2.h, v3.h, v4.h }[4], [x27], x28
-# CHECK-NEXT: [0,3]     .D=======================eeeeeeeeER.    . .   ld4	{ v1.s, v2.s, v3.s, v4.s }[0], [x27], #16
-# CHECK-NEXT: [0,4]     . D==============================eeeeeeeeER   ld4	{ v1.s, v2.s, v3.s, v4.s }[0], [x27], x28
+# CHECK-NEXT: [0,1]     DPPPPPPPPeeeeeeeeER .    .    .    .    . .   ld4	{ v1.h, v2.h, v3.h, v4.h }[0], [x27], x28
+# CHECK-NEXT: [0,2]     .DPPPPPPPPPPPPPPPeeeeeeeeER   .    .    . .   ld4	{ v1.h, v2.h, v3.h, v4.h }[4], [x27], x28
+# CHECK-NEXT: [0,3]     .DPPPPPPPPPPPPPPPPPPPPPPPeeeeeeeeER.    . .   ld4	{ v1.s, v2.s, v3.s, v4.s }[0], [x27], #16
+# CHECK-NEXT: [0,4]     . DPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPeeeeeeeeER   ld4	{ v1.s, v2.s, v3.s, v4.s }[0], [x27], x28
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -2179,14 +2459,21 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: Block RThroughput: 5.3
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0123456789
 # CHECK-NEXT: Index     0123456789          01
 
 # CHECK:      [0,0]     DeeeeeeeeER    .    ..   ld4	{ v1.d, v2.d, v3.d, v4.d }[0], [x27], #32
-# CHECK-NEXT: [0,1]     D========eeeeeeeeER ..   ld4	{ v1.d, v2.d, v3.d, v4.d }[0], [x27], x28
-# CHECK-NEXT: [0,2]     .D========eeeeeeeeER..   ld4r	{ v1.1d, v2.1d, v3.1d, v4.1d }, [x27], #32
-# CHECK-NEXT: [0,3]     . D========eeeeeeeeER.   ld4r	{ v1.2d, v2.2d, v3.2d, v4.2d }, [x27], #32
-# CHECK-NEXT: [0,4]     .  D========eeeeeeeeER   ld4r	{ v1.2s, v2.2s, v3.2s, v4.2s }, [x27], #16
+# CHECK-NEXT: [0,1]     DPPPPPPPPeeeeeeeeER ..   ld4	{ v1.d, v2.d, v3.d, v4.d }[0], [x27], x28
+# CHECK-NEXT: [0,2]     .DPPPPPPPPeeeeeeeeER..   ld4r	{ v1.1d, v2.1d, v3.1d, v4.1d }, [x27], #32
+# CHECK-NEXT: [0,3]     . DPPPPPPPPeeeeeeeeER.   ld4r	{ v1.2d, v2.2d, v3.2d, v4.2d }, [x27], #32
+# CHECK-NEXT: [0,4]     .  DPPPPPPPPeeeeeeeeER   ld4r	{ v1.2s, v2.2s, v3.2s, v4.2s }, [x27], #16
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -2215,7 +2502,14 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: Block RThroughput: 6.0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     012345
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          012345
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeeeeeER    .   ld4r	{ v1.4h, v2.4h, v3.4h, v4.4h }, [x27], #8
@@ -2251,14 +2545,21 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: Block RThroughput: 5.7
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     012345
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          012345
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeeeeeER    .   ld4r	{ v1.1d, v2.1d, v3.1d, v4.1d }, [x27], x28
 # CHECK-NEXT: [0,1]     .DeeeeeeeeER   .   ld4r	{ v1.2d, v2.2d, v3.2d, v4.2d }, [x27], x28
 # CHECK-NEXT: [0,2]     . DeeeeeeeeER  .   ld4r	{ v1.2s, v2.2s, v3.2s, v4.2s }, [x27], x28
-# CHECK-NEXT: [0,3]     . D=eeeeeeeeER .   ld4r	{ v1.4h, v2.4h, v3.4h, v4.4h }, [x27], x28
-# CHECK-NEXT: [0,4]     .  D==eeeeeeeeER   ld4r	{ v1.4s, v2.4s, v3.4s, v4.4s }, [x27], x28
+# CHECK-NEXT: [0,3]     . DPeeeeeeeeER .   ld4r	{ v1.4h, v2.4h, v3.4h, v4.4h }, [x27], x28
+# CHECK-NEXT: [0,4]     .  DP=eeeeeeeeER   ld4r	{ v1.4s, v2.4s, v3.4s, v4.4s }, [x27], x28
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -2287,14 +2588,21 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: Block RThroughput: 4.3
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     012
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          012
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeeeeeER .   ld4r	{ v1.8b, v2.8b, v3.8b, v4.8b }, [x27], x28
 # CHECK-NEXT: [0,1]     .DeeeeeeeeER.   ld4r	{ v1.8h, v2.8h, v3.8h, v4.8h }, [x27], x28
 # CHECK-NEXT: [0,2]     . DeeeeeeeeER   ld4r	{ v1.16b, v2.16b, v3.16b, v4.16b }, [x27], x28
-# CHECK-NEXT: [0,3]     . D=eeeeeeE-R   ldp	s1, s2, [x27], #248
-# CHECK-NEXT: [0,4]     .  D=eeeeeeER   ldp	d1, d2, [x27], #496
+# CHECK-NEXT: [0,3]     . DPeeeeeeE-R   ldp	s1, s2, [x27], #248
+# CHECK-NEXT: [0,4]     .  DPeeeeeeER   ldp	d1, d2, [x27], #496
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -2323,14 +2631,21 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: Block RThroughput: 2.3
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     01
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          01
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeeeER ..   ldp	q1, q2, [x27], #992
-# CHECK-NEXT: [0,1]     D=eeeeeeER..   ldp	s1, s2, [x27, #248]!
-# CHECK-NEXT: [0,2]     D==eeeeeeER.   ldp	d1, d2, [x27, #496]!
-# CHECK-NEXT: [0,3]     .D==eeeeeeER   ldp	q1, q2, [x27, #992]!
-# CHECK-NEXT: [0,4]     .D===eeeeE-R   ldp	w1, w2, [x27], #248
+# CHECK-NEXT: [0,1]     DPeeeeeeER..   ldp	s1, s2, [x27, #248]!
+# CHECK-NEXT: [0,2]     DPPeeeeeeER.   ldp	d1, d2, [x27, #496]!
+# CHECK-NEXT: [0,3]     .DPPeeeeeeER   ldp	q1, q2, [x27, #992]!
+# CHECK-NEXT: [0,4]     .DPPPeeeeE-R   ldp	w1, w2, [x27], #248
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -2359,14 +2674,21 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: Block RThroughput: 3.0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     01
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          01
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeER   ..   ldp	x1, x2, [x27], #496
-# CHECK-NEXT: [0,1]     D=eeeeER  ..   ldp	w1, w2, [x27, #248]!
-# CHECK-NEXT: [0,2]     D==eeeeER ..   ldp	x1, x2, [x27, #496]!
-# CHECK-NEXT: [0,3]     D===eeeeeER.   ldpsw	x1, x2, [x27], #248
-# CHECK-NEXT: [0,4]     .D===eeeeeER   ldpsw	x1, x2, [x27, #248]!
+# CHECK-NEXT: [0,1]     DPeeeeER  ..   ldp	w1, w2, [x27, #248]!
+# CHECK-NEXT: [0,2]     DPPeeeeER ..   ldp	x1, x2, [x27, #496]!
+# CHECK-NEXT: [0,3]     DPPPeeeeeER.   ldpsw	x1, x2, [x27], #248
+# CHECK-NEXT: [0,4]     .DPPPeeeeeER   ldpsw	x1, x2, [x27, #248]!
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -2395,14 +2717,21 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: Block RThroughput: 1.7
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     012
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          012
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeeeER . .   ldr	b1, [x27], #254
-# CHECK-NEXT: [0,1]     D=eeeeeeER. .   ldr	h1, [x27], #254
-# CHECK-NEXT: [0,2]     D==eeeeeeER .   ldr	s1, [x27], #254
-# CHECK-NEXT: [0,3]     D===eeeeeeER.   ldr	d1, [x27], #254
-# CHECK-NEXT: [0,4]     D====eeeeeeER   ldr	q1, [x27], #254
+# CHECK-NEXT: [0,1]     DPeeeeeeER. .   ldr	h1, [x27], #254
+# CHECK-NEXT: [0,2]     DPPeeeeeeER .   ldr	s1, [x27], #254
+# CHECK-NEXT: [0,3]     DPPPeeeeeeER.   ldr	d1, [x27], #254
+# CHECK-NEXT: [0,4]     DPPPPeeeeeeER   ldr	q1, [x27], #254
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -2431,14 +2760,21 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: Block RThroughput: 1.7
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     012
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          012
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeeeER . .   ldr	b1, [x27, #254]!
-# CHECK-NEXT: [0,1]     D=eeeeeeER. .   ldr	h1, [x27, #254]!
-# CHECK-NEXT: [0,2]     D==eeeeeeER .   ldr	s1, [x27, #254]!
-# CHECK-NEXT: [0,3]     D===eeeeeeER.   ldr	d1, [x27, #254]!
-# CHECK-NEXT: [0,4]     D====eeeeeeER   ldr	q1, [x27, #254]!
+# CHECK-NEXT: [0,1]     DPeeeeeeER. .   ldr	h1, [x27, #254]!
+# CHECK-NEXT: [0,2]     DPPeeeeeeER .   ldr	s1, [x27, #254]!
+# CHECK-NEXT: [0,3]     DPPPeeeeeeER.   ldr	d1, [x27, #254]!
+# CHECK-NEXT: [0,4]     DPPPPeeeeeeER   ldr	q1, [x27, #254]!
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -2467,14 +2803,21 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: Block RThroughput: 1.7
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeER   .   ldr	w1, [x27], #254
-# CHECK-NEXT: [0,1]     D=eeeeER  .   ldr	x1, [x27], #254
-# CHECK-NEXT: [0,2]     D==eeeeER .   ldr	w1, [x27, #254]!
-# CHECK-NEXT: [0,3]     D===eeeeER.   ldr	x1, [x27, #254]!
-# CHECK-NEXT: [0,4]     D====eeeeER   ldrb	w1, [x27], #254
+# CHECK-NEXT: [0,1]     DPeeeeER  .   ldr	x1, [x27], #254
+# CHECK-NEXT: [0,2]     DPPeeeeER .   ldr	w1, [x27, #254]!
+# CHECK-NEXT: [0,3]     DPPPeeeeER.   ldr	x1, [x27, #254]!
+# CHECK-NEXT: [0,4]     DPPPPeeeeER   ldrb	w1, [x27], #254
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -2503,14 +2846,21 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: Block RThroughput: 1.7
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeER   .   ldrb	w1, [x27, #254]!
-# CHECK-NEXT: [0,1]     D=eeeeER  .   ldrh	w1, [x27], #254
-# CHECK-NEXT: [0,2]     D==eeeeER .   ldrh	w1, [x27, #254]!
-# CHECK-NEXT: [0,3]     D===eeeeER.   ldrsb	w1, [x27], #254
-# CHECK-NEXT: [0,4]     D====eeeeER   ldrsb	x1, [x27], #254
+# CHECK-NEXT: [0,1]     DPeeeeER  .   ldrh	w1, [x27], #254
+# CHECK-NEXT: [0,2]     DPPeeeeER .   ldrh	w1, [x27, #254]!
+# CHECK-NEXT: [0,3]     DPPPeeeeER.   ldrsb	w1, [x27], #254
+# CHECK-NEXT: [0,4]     DPPPPeeeeER   ldrsb	x1, [x27], #254
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -2539,14 +2889,21 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: Block RThroughput: 1.7
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeER   .   ldrsb	w1, [x27, #254]!
-# CHECK-NEXT: [0,1]     D=eeeeER  .   ldrsb	x1, [x27, #254]!
-# CHECK-NEXT: [0,2]     D==eeeeER .   ldrsh	w1, [x27], #254
-# CHECK-NEXT: [0,3]     D===eeeeER.   ldrsh	x1, [x27], #254
-# CHECK-NEXT: [0,4]     D====eeeeER   ldrsh	w1, [x27, #254]!
+# CHECK-NEXT: [0,1]     DPeeeeER  .   ldrsb	x1, [x27, #254]!
+# CHECK-NEXT: [0,2]     DPPeeeeER .   ldrsh	w1, [x27], #254
+# CHECK-NEXT: [0,3]     DPPPeeeeER.   ldrsh	x1, [x27], #254
+# CHECK-NEXT: [0,4]     DPPPPeeeeER   ldrsh	w1, [x27, #254]!
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -2575,13 +2932,20 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: Block RThroughput: 1.0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT: Index     012345678
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:      Index     012345678
 
 # CHECK:      [0,0]     DeeeeER .   ldrsh	x1, [x27, #254]!
-# CHECK-NEXT: [0,1]     D=eeeeER.   ldrsw	x1, [x27], #254
-# CHECK-NEXT: [0,2]     D==eeeeER   ldrsw	x1, [x27, #254]!
-# CHECK-NEXT: [0,3]     D===eeE-R   st1	{ v1.1d }, [x27], #8
-# CHECK-NEXT: [0,4]     D====eeER   st1	{ v1.2d }, [x27], #16
+# CHECK-NEXT: [0,1]     DPeeeeER.   ldrsw	x1, [x27], #254
+# CHECK-NEXT: [0,2]     DPPeeeeER   ldrsw	x1, [x27, #254]!
+# CHECK-NEXT: [0,3]     DPPPeeE-R   st1	{ v1.1d }, [x27], #8
+# CHECK-NEXT: [0,4]     DPPPPeeER   st1	{ v1.2d }, [x27], #16
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -2610,13 +2974,20 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: Block RThroughput: 2.5
 
 # CHECK:      Timeline view:
-# CHECK-NEXT: Index     012345678
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:      Index     012345678
 
 # CHECK:      [0,0]     DeeER.  .   st1	{ v1.2s }, [x27], #8
-# CHECK-NEXT: [0,1]     D=eeER  .   st1	{ v1.4h }, [x27], #8
-# CHECK-NEXT: [0,2]     D==eeER .   st1	{ v1.4s }, [x27], #16
-# CHECK-NEXT: [0,3]     D===eeER.   st1	{ v1.8b }, [x27], #8
-# CHECK-NEXT: [0,4]     D====eeER   st1	{ v1.8h }, [x27], #16
+# CHECK-NEXT: [0,1]     DPeeER  .   st1	{ v1.4h }, [x27], #8
+# CHECK-NEXT: [0,2]     DPPeeER .   st1	{ v1.4s }, [x27], #16
+# CHECK-NEXT: [0,3]     DPPPeeER.   st1	{ v1.8b }, [x27], #8
+# CHECK-NEXT: [0,4]     DPPPPeeER   st1	{ v1.8h }, [x27], #16
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -2645,13 +3016,20 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: Block RThroughput: 2.5
 
 # CHECK:      Timeline view:
-# CHECK-NEXT: Index     012345678
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:      Index     012345678
 
 # CHECK:      [0,0]     DeeER.  .   st1	{ v1.16b }, [x27], #16
-# CHECK-NEXT: [0,1]     D=eeER  .   st1	{ v1.1d }, [x27], x28
-# CHECK-NEXT: [0,2]     D==eeER .   st1	{ v1.2d }, [x27], x28
-# CHECK-NEXT: [0,3]     D===eeER.   st1	{ v1.2s }, [x27], x28
-# CHECK-NEXT: [0,4]     D====eeER   st1	{ v1.4h }, [x27], x28
+# CHECK-NEXT: [0,1]     DPeeER  .   st1	{ v1.1d }, [x27], x28
+# CHECK-NEXT: [0,2]     DPPeeER .   st1	{ v1.2d }, [x27], x28
+# CHECK-NEXT: [0,3]     DPPPeeER.   st1	{ v1.2s }, [x27], x28
+# CHECK-NEXT: [0,4]     DPPPPeeER   st1	{ v1.4h }, [x27], x28
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -2680,13 +3058,20 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: Block RThroughput: 2.5
 
 # CHECK:      Timeline view:
-# CHECK-NEXT: Index     012345678
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:      Index     012345678
 
 # CHECK:      [0,0]     DeeER.  .   st1	{ v1.4s }, [x27], x28
-# CHECK-NEXT: [0,1]     D=eeER  .   st1	{ v1.8b }, [x27], x28
-# CHECK-NEXT: [0,2]     D==eeER .   st1	{ v1.8h }, [x27], x28
-# CHECK-NEXT: [0,3]     D===eeER.   st1	{ v1.16b }, [x27], x28
-# CHECK-NEXT: [0,4]     D====eeER   st1	{ v1.1d, v2.1d }, [x27], #16
+# CHECK-NEXT: [0,1]     DPeeER  .   st1	{ v1.8b }, [x27], x28
+# CHECK-NEXT: [0,2]     DPPeeER .   st1	{ v1.8h }, [x27], x28
+# CHECK-NEXT: [0,3]     DPPPeeER.   st1	{ v1.16b }, [x27], x28
+# CHECK-NEXT: [0,4]     DPPPPeeER   st1	{ v1.1d, v2.1d }, [x27], #16
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -2715,13 +3100,20 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: Block RThroughput: 3.5
 
 # CHECK:      Timeline view:
-# CHECK-NEXT: Index     012345678
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:      Index     012345678
 
 # CHECK:      [0,0]     DeeER.  .   st1	{ v1.2d, v2.2d }, [x27], #32
-# CHECK-NEXT: [0,1]     D=eeER  .   st1	{ v1.2s, v2.2s }, [x27], #16
-# CHECK-NEXT: [0,2]     D==eeER .   st1	{ v1.4h, v2.4h }, [x27], #16
-# CHECK-NEXT: [0,3]     D===eeER.   st1	{ v1.4s, v2.4s }, [x27], #32
-# CHECK-NEXT: [0,4]     .D===eeER   st1	{ v1.8b, v2.8b }, [x27], #16
+# CHECK-NEXT: [0,1]     DPeeER  .   st1	{ v1.2s, v2.2s }, [x27], #16
+# CHECK-NEXT: [0,2]     DPPeeER .   st1	{ v1.4h, v2.4h }, [x27], #16
+# CHECK-NEXT: [0,3]     DPPPeeER.   st1	{ v1.4s, v2.4s }, [x27], #32
+# CHECK-NEXT: [0,4]     .DPPPeeER   st1	{ v1.8b, v2.8b }, [x27], #16
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -2750,13 +3142,20 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: Block RThroughput: 4.0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT: Index     012345678
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:      Index     012345678
 
 # CHECK:      [0,0]     DeeER.  .   st1	{ v1.8h, v2.8h }, [x27], #32
-# CHECK-NEXT: [0,1]     D=eeER  .   st1	{ v1.16b, v2.16b }, [x27], #32
-# CHECK-NEXT: [0,2]     D==eeER .   st1	{ v1.1d, v2.1d }, [x27], x28
-# CHECK-NEXT: [0,3]     .D==eeER.   st1	{ v1.2d, v2.2d }, [x27], x28
-# CHECK-NEXT: [0,4]     .D===eeER   st1	{ v1.2s, v2.2s }, [x27], x28
+# CHECK-NEXT: [0,1]     DPeeER  .   st1	{ v1.16b, v2.16b }, [x27], #32
+# CHECK-NEXT: [0,2]     DPPeeER .   st1	{ v1.1d, v2.1d }, [x27], x28
+# CHECK-NEXT: [0,3]     .DPPeeER.   st1	{ v1.2d, v2.2d }, [x27], x28
+# CHECK-NEXT: [0,4]     .DPPPeeER   st1	{ v1.2s, v2.2s }, [x27], x28
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -2785,13 +3184,20 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: Block RThroughput: 4.0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT: Index     012345678
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:      Index     012345678
 
 # CHECK:      [0,0]     DeeER.  .   st1	{ v1.4h, v2.4h }, [x27], x28
-# CHECK-NEXT: [0,1]     D=eeER  .   st1	{ v1.4s, v2.4s }, [x27], x28
-# CHECK-NEXT: [0,2]     D==eeER .   st1	{ v1.8b, v2.8b }, [x27], x28
-# CHECK-NEXT: [0,3]     D===eeER.   st1	{ v1.8h, v2.8h }, [x27], x28
-# CHECK-NEXT: [0,4]     .D===eeER   st1	{ v1.16b, v2.16b }, [x27], x28
+# CHECK-NEXT: [0,1]     DPeeER  .   st1	{ v1.4s, v2.4s }, [x27], x28
+# CHECK-NEXT: [0,2]     DPPeeER .   st1	{ v1.8b, v2.8b }, [x27], x28
+# CHECK-NEXT: [0,3]     DPPPeeER.   st1	{ v1.8h, v2.8h }, [x27], x28
+# CHECK-NEXT: [0,4]     .DPPPeeER   st1	{ v1.16b, v2.16b }, [x27], x28
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -2820,13 +3226,20 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: Block RThroughput: 6.0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT: Index     0123456789
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:      Index     0123456789
 
 # CHECK:      [0,0]     DeeER.   .   st1	{ v1.1d, v2.1d, v3.1d }, [x27], #24
-# CHECK-NEXT: [0,1]     D=eeER   .   st1	{ v1.2d, v2.2d, v3.2d }, [x27], #48
-# CHECK-NEXT: [0,2]     .D=eeER  .   st1	{ v1.2s, v2.2s, v3.2s }, [x27], #24
-# CHECK-NEXT: [0,3]     .D===eeER.   st1	{ v1.4h, v2.4h, v3.4h }, [x27], #24
-# CHECK-NEXT: [0,4]     . D===eeER   st1	{ v1.4s, v2.4s, v3.4s }, [x27], #48
+# CHECK-NEXT: [0,1]     DPeeER   .   st1	{ v1.2d, v2.2d, v3.2d }, [x27], #48
+# CHECK-NEXT: [0,2]     .DPeeER  .   st1	{ v1.2s, v2.2s, v3.2s }, [x27], #24
+# CHECK-NEXT: [0,3]     .DPP=eeER.   st1	{ v1.4h, v2.4h, v3.4h }, [x27], #24
+# CHECK-NEXT: [0,4]     . DPPPeeER   st1	{ v1.4s, v2.4s, v3.4s }, [x27], #48
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -2855,13 +3268,20 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: Block RThroughput: 6.5
 
 # CHECK:      Timeline view:
-# CHECK-NEXT: Index     0123456789
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:      Index     0123456789
 
 # CHECK:      [0,0]     DeeER.   .   st1	{ v1.8b, v2.8b, v3.8b }, [x27], #24
-# CHECK-NEXT: [0,1]     D=eeER   .   st1	{ v1.8h, v2.8h, v3.8h }, [x27], #48
-# CHECK-NEXT: [0,2]     .D=eeER  .   st1	{ v1.16b, v2.16b, v3.16b }, [x27], #48
-# CHECK-NEXT: [0,3]     .D===eeER.   st1	{ v1.1d, v2.1d, v3.1d }, [x27], x28
-# CHECK-NEXT: [0,4]     . D===eeER   st1	{ v1.2d, v2.2d, v3.2d }, [x27], x28
+# CHECK-NEXT: [0,1]     DPeeER   .   st1	{ v1.8h, v2.8h, v3.8h }, [x27], #48
+# CHECK-NEXT: [0,2]     .DPeeER  .   st1	{ v1.16b, v2.16b, v3.16b }, [x27], #48
+# CHECK-NEXT: [0,3]     .DPP=eeER.   st1	{ v1.1d, v2.1d, v3.1d }, [x27], x28
+# CHECK-NEXT: [0,4]     . DPPPeeER   st1	{ v1.2d, v2.2d, v3.2d }, [x27], x28
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -2890,13 +3310,20 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: Block RThroughput: 6.0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT: Index     0123456789
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:      Index     0123456789
 
 # CHECK:      [0,0]     DeeER.   .   st1	{ v1.2s, v2.2s, v3.2s }, [x27], x28
-# CHECK-NEXT: [0,1]     D=eeER   .   st1	{ v1.4h, v2.4h, v3.4h }, [x27], x28
-# CHECK-NEXT: [0,2]     .D=eeER  .   st1	{ v1.4s, v2.4s, v3.4s }, [x27], x28
-# CHECK-NEXT: [0,3]     .D==eeER .   st1	{ v1.8b, v2.8b, v3.8b }, [x27], x28
-# CHECK-NEXT: [0,4]     . D===eeER   st1	{ v1.8h, v2.8h, v3.8h }, [x27], x28
+# CHECK-NEXT: [0,1]     DPeeER   .   st1	{ v1.4h, v2.4h, v3.4h }, [x27], x28
+# CHECK-NEXT: [0,2]     .DPeeER  .   st1	{ v1.4s, v2.4s, v3.4s }, [x27], x28
+# CHECK-NEXT: [0,3]     .DPPeeER .   st1	{ v1.8b, v2.8b, v3.8b }, [x27], x28
+# CHECK-NEXT: [0,4]     . DPP=eeER   st1	{ v1.8h, v2.8h, v3.8h }, [x27], x28
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -2925,14 +3352,21 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: Block RThroughput: 6.5
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeER.    .   st1	{ v1.16b, v2.16b, v3.16b }, [x27], x28
-# CHECK-NEXT: [0,1]     D=eeER    .   st1	{ v1.1d, v2.1d, v3.1d, v4.1d }, [x27], #32
-# CHECK-NEXT: [0,2]     .D==eeER  .   st1	{ v1.2d, v2.2d, v3.2d, v4.2d }, [x27], #64
-# CHECK-NEXT: [0,3]     .D===eeER .   st1	{ v1.2s, v2.2s, v3.2s, v4.2s }, [x27], #32
-# CHECK-NEXT: [0,4]     . D====eeER   st1	{ v1.4h, v2.4h, v3.4h, v4.4h }, [x27], #32
+# CHECK-NEXT: [0,1]     DPeeER    .   st1	{ v1.1d, v2.1d, v3.1d, v4.1d }, [x27], #32
+# CHECK-NEXT: [0,2]     .DP=eeER  .   st1	{ v1.2d, v2.2d, v3.2d, v4.2d }, [x27], #64
+# CHECK-NEXT: [0,3]     .DPPPeeER .   st1	{ v1.2s, v2.2s, v3.2s, v4.2s }, [x27], #32
+# CHECK-NEXT: [0,4]     . DPPP=eeER   st1	{ v1.4h, v2.4h, v3.4h, v4.4h }, [x27], #32
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -2961,14 +3395,21 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: Block RThroughput: 8.0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     01
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          01
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeER.    ..   st1	{ v1.4s, v2.4s, v3.4s, v4.4s }, [x27], #64
-# CHECK-NEXT: [0,1]     D=eeER    ..   st1	{ v1.8b, v2.8b, v3.8b, v4.8b }, [x27], #32
-# CHECK-NEXT: [0,2]     .D==eeER  ..   st1	{ v1.8h, v2.8h, v3.8h, v4.8h }, [x27], #64
-# CHECK-NEXT: [0,3]     . D==eeER ..   st1	{ v1.16b, v2.16b, v3.16b, v4.16b }, [x27], #64
-# CHECK-NEXT: [0,4]     . D=====eeER   st1	{ v1.1d, v2.1d, v3.1d, v4.1d }, [x27], x28
+# CHECK-NEXT: [0,1]     DPeeER    ..   st1	{ v1.8b, v2.8b, v3.8b, v4.8b }, [x27], #32
+# CHECK-NEXT: [0,2]     .DP=eeER  ..   st1	{ v1.8h, v2.8h, v3.8h, v4.8h }, [x27], #64
+# CHECK-NEXT: [0,3]     . DPPeeER ..   st1	{ v1.16b, v2.16b, v3.16b, v4.16b }, [x27], #64
+# CHECK-NEXT: [0,4]     . DPPP==eeER   st1	{ v1.1d, v2.1d, v3.1d, v4.1d }, [x27], x28
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -2997,13 +3438,20 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: Block RThroughput: 7.0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT: Index     0123456789
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:      Index     0123456789
 
 # CHECK:      [0,0]     DeeER.   .   st1	{ v1.2d, v2.2d, v3.2d, v4.2d }, [x27], x28
-# CHECK-NEXT: [0,1]     D=eeER   .   st1	{ v1.2s, v2.2s, v3.2s, v4.2s }, [x27], x28
-# CHECK-NEXT: [0,2]     .D==eeER .   st1	{ v1.4h, v2.4h, v3.4h, v4.4h }, [x27], x28
-# CHECK-NEXT: [0,3]     .D===eeER.   st1	{ v1.4s, v2.4s, v3.4s, v4.4s }, [x27], x28
-# CHECK-NEXT: [0,4]     . D===eeER   st1	{ v1.8b, v2.8b, v3.8b, v4.8b }, [x27], x28
+# CHECK-NEXT: [0,1]     DPeeER   .   st1	{ v1.2s, v2.2s, v3.2s, v4.2s }, [x27], x28
+# CHECK-NEXT: [0,2]     .DP=eeER .   st1	{ v1.4h, v2.4h, v3.4h, v4.4h }, [x27], x28
+# CHECK-NEXT: [0,3]     .DPPPeeER.   st1	{ v1.4s, v2.4s, v3.4s, v4.4s }, [x27], x28
+# CHECK-NEXT: [0,4]     . DPPPeeER   st1	{ v1.8b, v2.8b, v3.8b, v4.8b }, [x27], x28
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -3032,14 +3480,21 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: Block RThroughput: 7.0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     012
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          012
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeER.    . .   st1	{ v1.8h, v2.8h, v3.8h, v4.8h }, [x27], x28
 # CHECK-NEXT: [0,1]     .DeeER    . .   st1	{ v1.16b, v2.16b, v3.16b, v4.16b }, [x27], x28
-# CHECK-NEXT: [0,2]     .D===eeeeER .   st1	{ v1.b }[0], [x27], #1
-# CHECK-NEXT: [0,3]     . D===eeeeER.   st1	{ v1.b }[8], [x27], #1
-# CHECK-NEXT: [0,4]     . D====eeeeER   st1	{ v1.b }[0], [x27], x28
+# CHECK-NEXT: [0,2]     .DP==eeeeER .   st1	{ v1.b }[0], [x27], #1
+# CHECK-NEXT: [0,3]     . DPPPeeeeER.   st1	{ v1.b }[8], [x27], #1
+# CHECK-NEXT: [0,4]     . DPPPPeeeeER   st1	{ v1.b }[0], [x27], x28
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -3068,14 +3523,21 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: Block RThroughput: 5.0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeER   .   st1	{ v1.b }[8], [x27], x28
-# CHECK-NEXT: [0,1]     D=eeeeER  .   st1	{ v1.h }[0], [x27], #2
-# CHECK-NEXT: [0,2]     D==eeeeER .   st1	{ v1.h }[4], [x27], #2
-# CHECK-NEXT: [0,3]     D===eeeeER.   st1	{ v1.h }[0], [x27], x28
-# CHECK-NEXT: [0,4]     .D===eeeeER   st1	{ v1.h }[4], [x27], x28
+# CHECK-NEXT: [0,1]     DPeeeeER  .   st1	{ v1.h }[0], [x27], #2
+# CHECK-NEXT: [0,2]     DPPeeeeER .   st1	{ v1.h }[4], [x27], #2
+# CHECK-NEXT: [0,3]     DPPPeeeeER.   st1	{ v1.h }[0], [x27], x28
+# CHECK-NEXT: [0,4]     .DPPPeeeeER   st1	{ v1.h }[4], [x27], x28
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -3104,14 +3566,21 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: Block RThroughput: 6.0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeER   .   st1	{ v1.s }[0], [x27], #4
-# CHECK-NEXT: [0,1]     D=eeeeER  .   st1	{ v1.s }[0], [x27], x28
-# CHECK-NEXT: [0,2]     D==eeeeER .   st1	{ v1.d }[0], [x27], #8
-# CHECK-NEXT: [0,3]     D===eeeeER.   st1	{ v1.d }[0], [x27], x28
-# CHECK-NEXT: [0,4]     .D===eeeeER   st2	{ v1.2d, v2.2d }, [x27], #32
+# CHECK-NEXT: [0,1]     DPeeeeER  .   st1	{ v1.s }[0], [x27], x28
+# CHECK-NEXT: [0,2]     DPPeeeeER .   st1	{ v1.d }[0], [x27], #8
+# CHECK-NEXT: [0,3]     DPPPeeeeER.   st1	{ v1.d }[0], [x27], x28
+# CHECK-NEXT: [0,4]     .DPPPeeeeER   st2	{ v1.2d, v2.2d }, [x27], #32
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -3140,14 +3609,21 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: Block RThroughput: 7.0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     01
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          01
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeER   ..   st2	{ v1.2s, v2.2s }, [x27], #16
-# CHECK-NEXT: [0,1]     D=eeeeER  ..   st2	{ v1.4h, v2.4h }, [x27], #16
-# CHECK-NEXT: [0,2]     D==eeeeER ..   st2	{ v1.4s, v2.4s }, [x27], #32
-# CHECK-NEXT: [0,3]     .D==eeeeER..   st2	{ v1.8b, v2.8b }, [x27], #16
-# CHECK-NEXT: [0,4]     .D====eeeeER   st2	{ v1.8h, v2.8h }, [x27], #32
+# CHECK-NEXT: [0,1]     DPeeeeER  ..   st2	{ v1.4h, v2.4h }, [x27], #16
+# CHECK-NEXT: [0,2]     DPPeeeeER ..   st2	{ v1.4s, v2.4s }, [x27], #32
+# CHECK-NEXT: [0,3]     .DPPeeeeER..   st2	{ v1.8b, v2.8b }, [x27], #16
+# CHECK-NEXT: [0,4]     .DPPP=eeeeER   st2	{ v1.8h, v2.8h }, [x27], #32
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -3176,14 +3652,21 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: Block RThroughput: 8.0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     012
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          012
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeER   . .   st2	{ v1.16b, v2.16b }, [x27], #32
-# CHECK-NEXT: [0,1]     D=eeeeER  . .   st2	{ v1.2d, v2.2d }, [x27], x28
-# CHECK-NEXT: [0,2]     .D===eeeeER .   st2	{ v1.2s, v2.2s }, [x27], x28
-# CHECK-NEXT: [0,3]     .D====eeeeER.   st2	{ v1.4h, v2.4h }, [x27], x28
-# CHECK-NEXT: [0,4]     .D=====eeeeER   st2	{ v1.4s, v2.4s }, [x27], x28
+# CHECK-NEXT: [0,1]     DPeeeeER  . .   st2	{ v1.2d, v2.2d }, [x27], x28
+# CHECK-NEXT: [0,2]     .DP==eeeeER .   st2	{ v1.2s, v2.2s }, [x27], x28
+# CHECK-NEXT: [0,3]     .DPPPPeeeeER.   st2	{ v1.4h, v2.4h }, [x27], x28
+# CHECK-NEXT: [0,4]     .DPPPPPeeeeER   st2	{ v1.4s, v2.4s }, [x27], x28
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -3212,14 +3695,21 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: Block RThroughput: 7.0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     012
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          012
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeER   . .   st2	{ v1.8b, v2.8b }, [x27], x28
-# CHECK-NEXT: [0,1]     D=eeeeER  . .   st2	{ v1.8h, v2.8h }, [x27], x28
-# CHECK-NEXT: [0,2]     .D=eeeeER . .   st2	{ v1.16b, v2.16b }, [x27], x28
-# CHECK-NEXT: [0,3]     .D====eeeeER.   st2	{ v1.b, v2.b }[0], [x27], #2
-# CHECK-NEXT: [0,4]     .D=====eeeeER   st2	{ v1.b, v2.b }[8], [x27], #2
+# CHECK-NEXT: [0,1]     DPeeeeER  . .   st2	{ v1.8h, v2.8h }, [x27], x28
+# CHECK-NEXT: [0,2]     .DPeeeeER . .   st2	{ v1.16b, v2.16b }, [x27], x28
+# CHECK-NEXT: [0,3]     .DPP==eeeeER.   st2	{ v1.b, v2.b }[0], [x27], #2
+# CHECK-NEXT: [0,4]     .DPPPPPeeeeER   st2	{ v1.b, v2.b }[8], [x27], #2
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -3248,14 +3738,21 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: Block RThroughput: 5.0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeER   .   st2	{ v1.b, v2.b }[0], [x27], x28
-# CHECK-NEXT: [0,1]     D=eeeeER  .   st2	{ v1.b, v2.b }[8], [x27], x28
-# CHECK-NEXT: [0,2]     D==eeeeER .   st2	{ v1.h, v2.h }[0], [x27], #4
-# CHECK-NEXT: [0,3]     D===eeeeER.   st2	{ v1.h, v2.h }[4], [x27], #4
-# CHECK-NEXT: [0,4]     .D===eeeeER   st2	{ v1.h, v2.h }[0], [x27], x28
+# CHECK-NEXT: [0,1]     DPeeeeER  .   st2	{ v1.b, v2.b }[8], [x27], x28
+# CHECK-NEXT: [0,2]     DPPeeeeER .   st2	{ v1.h, v2.h }[0], [x27], #4
+# CHECK-NEXT: [0,3]     DPPPeeeeER.   st2	{ v1.h, v2.h }[4], [x27], #4
+# CHECK-NEXT: [0,4]     .DPPPeeeeER   st2	{ v1.h, v2.h }[0], [x27], x28
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -3284,14 +3781,21 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: Block RThroughput: 5.0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeER   .   st2	{ v1.h, v2.h }[4], [x27], x28
-# CHECK-NEXT: [0,1]     D=eeeeER  .   st2	{ v1.s, v2.s }[0], [x27], #8
-# CHECK-NEXT: [0,2]     D==eeeeER .   st2	{ v1.s, v2.s }[0], [x27], x28
-# CHECK-NEXT: [0,3]     D===eeeeER.   st2	{ v1.d, v2.d }[0], [x27], #16
-# CHECK-NEXT: [0,4]     .D===eeeeER   st2	{ v1.d, v2.d }[0], [x27], x28
+# CHECK-NEXT: [0,1]     DPeeeeER  .   st2	{ v1.s, v2.s }[0], [x27], #8
+# CHECK-NEXT: [0,2]     DPPeeeeER .   st2	{ v1.s, v2.s }[0], [x27], x28
+# CHECK-NEXT: [0,3]     DPPPeeeeER.   st2	{ v1.d, v2.d }[0], [x27], #16
+# CHECK-NEXT: [0,4]     .DPPPeeeeER   st2	{ v1.d, v2.d }[0], [x27], x28
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -3320,14 +3824,21 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: Block RThroughput: 7.0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     01234
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          01234
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeER .    .   .   st2g	x26, [x27], #4064
-# CHECK-NEXT: [0,1]     D=eER.    .   .   st2g	x26, [x27, #4064]!
-# CHECK-NEXT: [0,2]     D==eeeeeeER   .   st3	{ v1.2d, v2.2d, v3.2d }, [x27], #48
-# CHECK-NEXT: [0,3]     .D==eeeeeER   .   st3	{ v1.2s, v2.2s, v3.2s }, [x27], #24
-# CHECK-NEXT: [0,4]     .D======eeeeeER   st3	{ v1.4h, v2.4h, v3.4h }, [x27], #24
+# CHECK-NEXT: [0,1]     DPeER.    .   .   st2g	x26, [x27, #4064]!
+# CHECK-NEXT: [0,2]     DPPeeeeeeER   .   st3	{ v1.2d, v2.2d, v3.2d }, [x27], #48
+# CHECK-NEXT: [0,3]     .DPPeeeeeER   .   st3	{ v1.2s, v2.2s, v3.2s }, [x27], #24
+# CHECK-NEXT: [0,4]     .DPPP===eeeeeER   st3	{ v1.4h, v2.4h, v3.4h }, [x27], #24
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -3356,14 +3867,21 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: Block RThroughput: 14.0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0123456789
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeeeER .    .   .   st3	{ v1.4s, v2.4s, v3.4s }, [x27], #48
 # CHECK-NEXT: [0,1]     .DeeeeeER .    .   .   st3	{ v1.8b, v2.8b, v3.8b }, [x27], #24
 # CHECK-NEXT: [0,2]     . D===eeeeeeER .   .   st3	{ v1.8h, v2.8h, v3.8h }, [x27], #48
-# CHECK-NEXT: [0,3]     .  D===eeeeeeER.   .   st3	{ v1.16b, v2.16b, v3.16b }, [x27], #48
-# CHECK-NEXT: [0,4]     .   D=======eeeeeeER   st3	{ v1.2d, v2.2d, v3.2d }, [x27], x28
+# CHECK-NEXT: [0,3]     .  DPPPeeeeeeER.   .   st3	{ v1.16b, v2.16b, v3.16b }, [x27], #48
+# CHECK-NEXT: [0,4]     .   DPPP====eeeeeeER   st3	{ v1.2d, v2.2d, v3.2d }, [x27], x28
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -3392,14 +3910,21 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: Block RThroughput: 12.0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     01234567
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          01234567
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeeER  .    . .   st3	{ v1.2s, v2.2s, v3.2s }, [x27], x28
-# CHECK-NEXT: [0,1]     D=eeeeeER .    . .   st3	{ v1.4h, v2.4h, v3.4h }, [x27], x28
-# CHECK-NEXT: [0,2]     .D===eeeeeeER  . .   st3	{ v1.4s, v2.4s, v3.4s }, [x27], x28
-# CHECK-NEXT: [0,3]     . D===eeeeeER  . .   st3	{ v1.8b, v2.8b, v3.8b }, [x27], x28
-# CHECK-NEXT: [0,4]     .  D======eeeeeeER   st3	{ v1.8h, v2.8h, v3.8h }, [x27], x28
+# CHECK-NEXT: [0,1]     DPeeeeeER .    . .   st3	{ v1.4h, v2.4h, v3.4h }, [x27], x28
+# CHECK-NEXT: [0,2]     .DP==eeeeeeER  . .   st3	{ v1.4s, v2.4s, v3.4s }, [x27], x28
+# CHECK-NEXT: [0,3]     . DPPPeeeeeER  . .   st3	{ v1.8b, v2.8b, v3.8b }, [x27], x28
+# CHECK-NEXT: [0,4]     .  DPPP===eeeeeeER   st3	{ v1.8h, v2.8h, v3.8h }, [x27], x28
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -3428,14 +3953,21 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: Block RThroughput: 11.0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0123456
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeeeER .    ..   st3	{ v1.16b, v2.16b, v3.16b }, [x27], x28
 # CHECK-NEXT: [0,1]     .DeeeeeER .    ..   st3	{ v1.b, v2.b, v3.b }[0], [x27], #3
-# CHECK-NEXT: [0,2]     .D====eeeeeER  ..   st3	{ v1.b, v2.b, v3.b }[8], [x27], #3
-# CHECK-NEXT: [0,3]     . D====eeeeeER ..   st3	{ v1.b, v2.b, v3.b }[0], [x27], x28
-# CHECK-NEXT: [0,4]     . D=======eeeeeER   st3	{ v1.b, v2.b, v3.b }[8], [x27], x28
+# CHECK-NEXT: [0,2]     .DP===eeeeeER  ..   st3	{ v1.b, v2.b, v3.b }[8], [x27], #3
+# CHECK-NEXT: [0,3]     . DPPPPeeeeeER ..   st3	{ v1.b, v2.b, v3.b }[0], [x27], x28
+# CHECK-NEXT: [0,4]     . DPPPPP==eeeeeER   st3	{ v1.b, v2.b, v3.b }[8], [x27], x28
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -3464,14 +3996,21 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: Block RThroughput: 10.0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     012345
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          012345
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeeER  .    .   st3	{ v1.h, v2.h, v3.h }[0], [x27], #6
-# CHECK-NEXT: [0,1]     D=eeeeeER .    .   st3	{ v1.h, v2.h, v3.h }[4], [x27], #6
-# CHECK-NEXT: [0,2]     .D===eeeeeER   .   st3	{ v1.h, v2.h, v3.h }[0], [x27], x28
-# CHECK-NEXT: [0,3]     .D====eeeeeER  .   st3	{ v1.h, v2.h, v3.h }[4], [x27], x28
-# CHECK-NEXT: [0,4]     . D======eeeeeER   st3	{ v1.s, v2.s, v3.s }[0], [x27], #12
+# CHECK-NEXT: [0,1]     DPeeeeeER .    .   st3	{ v1.h, v2.h, v3.h }[4], [x27], #6
+# CHECK-NEXT: [0,2]     .DP==eeeeeER   .   st3	{ v1.h, v2.h, v3.h }[0], [x27], x28
+# CHECK-NEXT: [0,3]     .DPPPPeeeeeER  .   st3	{ v1.h, v2.h, v3.h }[4], [x27], x28
+# CHECK-NEXT: [0,4]     . DPPPP==eeeeeER   st3	{ v1.s, v2.s, v3.s }[0], [x27], #12
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -3500,14 +4039,21 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: Block RThroughput: 13.0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0123456
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeeER  .    ..   st3	{ v1.s, v2.s, v3.s }[0], [x27], x28
-# CHECK-NEXT: [0,1]     D=eeeeeER .    ..   st3	{ v1.d, v2.d, v3.d }[0], [x27], #24
-# CHECK-NEXT: [0,2]     .D===eeeeeER   ..   st3	{ v1.d, v2.d, v3.d }[0], [x27], x28
-# CHECK-NEXT: [0,3]     . D===eeeeeER  ..   st4	{ v1.2d, v2.2d, v3.2d, v4.2d }, [x27], #64
-# CHECK-NEXT: [0,4]     .  D=====eeeeeeER   st4	{ v1.2s, v2.2s, v3.2s, v4.2s }, [x27], #32
+# CHECK-NEXT: [0,1]     DPeeeeeER .    ..   st3	{ v1.d, v2.d, v3.d }[0], [x27], #24
+# CHECK-NEXT: [0,2]     .DP==eeeeeER   ..   st3	{ v1.d, v2.d, v3.d }[0], [x27], x28
+# CHECK-NEXT: [0,3]     . DPPPeeeeeER  ..   st4	{ v1.2d, v2.2d, v3.2d, v4.2d }, [x27], #64
+# CHECK-NEXT: [0,4]     .  DPPP==eeeeeeER   st4	{ v1.2s, v2.2s, v3.2s, v4.2s }, [x27], #32
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -3536,14 +4082,21 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: Block RThroughput: 24.0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0123456789
 # CHECK-NEXT: Index     0123456789          012
 
 # CHECK:      [0,0]     DeeeeeeER .    .    . .   st4	{ v1.4h, v2.4h, v3.4h, v4.4h }, [x27], #32
 # CHECK-NEXT: [0,1]     .DeeeeeeeER    .    . .   st4	{ v1.4s, v2.4s, v3.4s, v4.4s }, [x27], #64
 # CHECK-NEXT: [0,2]     . D====eeeeeeER.    . .   st4	{ v1.8b, v2.8b, v3.8b, v4.8b }, [x27], #32
-# CHECK-NEXT: [0,3]     .  D=========eeeeeeeER.   st4	{ v1.8h, v2.8h, v3.8h, v4.8h }, [x27], #64
-# CHECK-NEXT: [0,4]     .    D========eeeeeeeER   st4	{ v1.16b, v2.16b, v3.16b, v4.16b }, [x27], #64
+# CHECK-NEXT: [0,3]     .  DPPPP=====eeeeeeeER.   st4	{ v1.8h, v2.8h, v3.8h, v4.8h }, [x27], #64
+# CHECK-NEXT: [0,4]     .    DPPPPPPPPeeeeeeeER   st4	{ v1.16b, v2.16b, v3.16b, v4.16b }, [x27], #64
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -3572,14 +4125,21 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: Block RThroughput: 19.0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0123456789
 # CHECK-NEXT: Index     0123456789          01
 
 # CHECK:      [0,0]     DeeeeeER  .    .    ..   st4	{ v1.2d, v2.2d, v3.2d, v4.2d }, [x27], x28
 # CHECK-NEXT: [0,1]     .DeeeeeeER.    .    ..   st4	{ v1.2s, v2.2s, v3.2s, v4.2s }, [x27], x28
 # CHECK-NEXT: [0,2]     . D=====eeeeeeER    ..   st4	{ v1.4h, v2.4h, v3.4h, v4.4h }, [x27], x28
-# CHECK-NEXT: [0,3]     .  D=====eeeeeeeER  ..   st4	{ v1.4s, v2.4s, v3.4s, v4.4s }, [x27], x28
-# CHECK-NEXT: [0,4]     .   D=========eeeeeeER   st4	{ v1.8b, v2.8b, v3.8b, v4.8b }, [x27], x28
+# CHECK-NEXT: [0,3]     .  DPPPPPeeeeeeeER  ..   st4	{ v1.4s, v2.4s, v3.4s, v4.4s }, [x27], x28
+# CHECK-NEXT: [0,4]     .   DPPPPP====eeeeeeER   st4	{ v1.8b, v2.8b, v3.8b, v4.8b }, [x27], x28
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -3608,14 +4168,21 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: Block RThroughput: 16.5
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0123456789
 # CHECK-NEXT: Index     0123456789          0123
 
 # CHECK:      [0,0]     DeeeeeeeER.    .    .  .   st4	{ v1.8h, v2.8h, v3.8h, v4.8h }, [x27], x28
 # CHECK-NEXT: [0,1]     . DeeeeeeeER   .    .  .   st4	{ v1.16b, v2.16b, v3.16b, v4.16b }, [x27], x28
 # CHECK-NEXT: [0,2]     .  D=========eeeeeeER  .   st4	{ v1.b, v2.b, v3.b, v4.b }[0], [x27], #4
-# CHECK-NEXT: [0,3]     .  D===========eeeeeeER.   st4	{ v1.b, v2.b, v3.b, v4.b }[8], [x27], #4
-# CHECK-NEXT: [0,4]     .  D============eeeeeeER   st4	{ v1.b, v2.b, v3.b, v4.b }[0], [x27], x28
+# CHECK-NEXT: [0,3]     .  DPPPPPPPPPP=eeeeeeER.   st4	{ v1.b, v2.b, v3.b, v4.b }[8], [x27], #4
+# CHECK-NEXT: [0,4]     .  DPPPPPPPPPPPPeeeeeeER   st4	{ v1.b, v2.b, v3.b, v4.b }[0], [x27], x28
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -3644,14 +4211,21 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: Block RThroughput: 7.5
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     01234
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          01234
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeeeER .   .   st4	{ v1.b, v2.b, v3.b, v4.b }[8], [x27], x28
-# CHECK-NEXT: [0,1]     D=eeeeeeER.   .   st4	{ v1.h, v2.h, v3.h, v4.h }[0], [x27], #8
-# CHECK-NEXT: [0,2]     D===eeeeeeER  .   st4	{ v1.h, v2.h, v3.h, v4.h }[4], [x27], #8
-# CHECK-NEXT: [0,3]     .D===eeeeeeER .   st4	{ v1.h, v2.h, v3.h, v4.h }[0], [x27], x28
-# CHECK-NEXT: [0,4]     .D=====eeeeeeER   st4	{ v1.h, v2.h, v3.h, v4.h }[4], [x27], x28
+# CHECK-NEXT: [0,1]     DPeeeeeeER.   .   st4	{ v1.h, v2.h, v3.h, v4.h }[0], [x27], #8
+# CHECK-NEXT: [0,2]     DPP=eeeeeeER  .   st4	{ v1.h, v2.h, v3.h, v4.h }[4], [x27], #8
+# CHECK-NEXT: [0,3]     .DPPPeeeeeeER .   st4	{ v1.h, v2.h, v3.h, v4.h }[0], [x27], x28
+# CHECK-NEXT: [0,4]     .DPPPP=eeeeeeER   st4	{ v1.h, v2.h, v3.h, v4.h }[4], [x27], x28
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -3680,14 +4254,21 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: Block RThroughput: 7.0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeeeER .   st4	{ v1.s, v2.s, v3.s, v4.s }[0], [x27], #16
-# CHECK-NEXT: [0,1]     D=eeeeeeER.   st4	{ v1.s, v2.s, v3.s, v4.s }[0], [x27], x28
-# CHECK-NEXT: [0,2]     .D==eeeeER.   st4	{ v1.d, v2.d, v3.d, v4.d }[0], [x27], #32
-# CHECK-NEXT: [0,3]     .D===eeeeER   st4	{ v1.d, v2.d, v3.d, v4.d }[0], [x27], x28
-# CHECK-NEXT: [0,4]     . D===eE--R   stg	x26, [x27], #4064
+# CHECK-NEXT: [0,1]     DPeeeeeeER.   st4	{ v1.s, v2.s, v3.s, v4.s }[0], [x27], x28
+# CHECK-NEXT: [0,2]     .DP=eeeeER.   st4	{ v1.d, v2.d, v3.d, v4.d }[0], [x27], #32
+# CHECK-NEXT: [0,3]     .DPPPeeeeER   st4	{ v1.d, v2.d, v3.d, v4.d }[0], [x27], x28
+# CHECK-NEXT: [0,4]     . DPPPeE--R   stg	x26, [x27], #4064
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -3716,13 +4297,20 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: Block RThroughput: 2.5
 
 # CHECK:      Timeline view:
-# CHECK-NEXT: Index     012345678
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:      Index     012345678
 
 # CHECK:      [0,0]     DeER .  .   stg	x26, [x27, #4064]!
-# CHECK-NEXT: [0,1]     D=eER.  .   stgp	x1, x2, [x27], #992
-# CHECK-NEXT: [0,2]     D==eER  .   stgp	x1, x2, [x27, #992]!
-# CHECK-NEXT: [0,3]     D===eeER.   stp	s1, s2, [x27], #248
-# CHECK-NEXT: [0,4]     .D===eeER   stp	d1, d2, [x27], #496
+# CHECK-NEXT: [0,1]     DPeER.  .   stgp	x1, x2, [x27], #992
+# CHECK-NEXT: [0,2]     DPPeER  .   stgp	x1, x2, [x27, #992]!
+# CHECK-NEXT: [0,3]     DPPPeeER.   stp	s1, s2, [x27], #248
+# CHECK-NEXT: [0,4]     .DPPPeeER   stp	d1, d2, [x27], #496
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -3751,13 +4339,20 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: Block RThroughput: 3.0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT: Index     0123456789
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:      Index     0123456789
 
 # CHECK:      [0,0]     DeeER.   .   stp	q1, q2, [x27], #992
-# CHECK-NEXT: [0,1]     D==eeER  .   stp	s1, s2, [x27, #248]!
-# CHECK-NEXT: [0,2]     D===eeER .   stp	d1, d2, [x27, #496]!
-# CHECK-NEXT: [0,3]     .D===eeER.   stp	q1, q2, [x27, #992]!
-# CHECK-NEXT: [0,4]     .D=====eER   stp	w1, w2, [x27], #248
+# CHECK-NEXT: [0,1]     DPPeeER  .   stp	s1, s2, [x27, #248]!
+# CHECK-NEXT: [0,2]     DPPPeeER .   stp	d1, d2, [x27, #496]!
+# CHECK-NEXT: [0,3]     .DPPPeeER.   stp	q1, q2, [x27, #992]!
+# CHECK-NEXT: [0,4]     .DPPPPPeER   stp	w1, w2, [x27], #248
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -3786,13 +4381,20 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: Block RThroughput: 2.5
 
 # CHECK:      Timeline view:
-# CHECK-NEXT: Index     012345678
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:      Index     012345678
 
 # CHECK:      [0,0]     DeER .  .   stp	x1, x2, [x27], #496
-# CHECK-NEXT: [0,1]     D=eER.  .   stp	w1, w2, [x27, #248]!
-# CHECK-NEXT: [0,2]     D==eER  .   stp	x1, x2, [x27, #496]!
-# CHECK-NEXT: [0,3]     D===eeER.   str	b1, [x27], #254
-# CHECK-NEXT: [0,4]     .D===eeER   str	h1, [x27], #254
+# CHECK-NEXT: [0,1]     DPeER.  .   stp	w1, w2, [x27, #248]!
+# CHECK-NEXT: [0,2]     DPPeER  .   stp	x1, x2, [x27, #496]!
+# CHECK-NEXT: [0,3]     DPPPeeER.   str	b1, [x27], #254
+# CHECK-NEXT: [0,4]     .DPPPeeER   str	h1, [x27], #254
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -3821,13 +4423,20 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: Block RThroughput: 2.5
 
 # CHECK:      Timeline view:
-# CHECK-NEXT: Index     012345678
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:      Index     012345678
 
 # CHECK:      [0,0]     DeeER.  .   str	s1, [x27], #254
-# CHECK-NEXT: [0,1]     D=eeER  .   str	d1, [x27], #254
-# CHECK-NEXT: [0,2]     D==eeER .   str	q1, [x27], #254
-# CHECK-NEXT: [0,3]     D===eeER.   str	b1, [x27, #254]!
-# CHECK-NEXT: [0,4]     .D===eeER   str	h1, [x27, #254]!
+# CHECK-NEXT: [0,1]     DPeeER  .   str	d1, [x27], #254
+# CHECK-NEXT: [0,2]     DPPeeER .   str	q1, [x27], #254
+# CHECK-NEXT: [0,3]     DPPPeeER.   str	b1, [x27, #254]!
+# CHECK-NEXT: [0,4]     .DPPPeeER   str	h1, [x27, #254]!
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -3856,13 +4465,20 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: Block RThroughput: 2.5
 
 # CHECK:      Timeline view:
-# CHECK-NEXT: Index     01234567
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:      Index     01234567
 
 # CHECK:      [0,0]     DeeER. .   str	s1, [x27, #254]!
-# CHECK-NEXT: [0,1]     D=eeER .   str	d1, [x27, #254]!
-# CHECK-NEXT: [0,2]     D==eeER.   str	q1, [x27, #254]!
-# CHECK-NEXT: [0,3]     D===eER.   str	w1, [x27], #254
-# CHECK-NEXT: [0,4]     .D===eER   str	x1, [x27], #254
+# CHECK-NEXT: [0,1]     DPeeER .   str	d1, [x27, #254]!
+# CHECK-NEXT: [0,2]     DPPeeER.   str	q1, [x27, #254]!
+# CHECK-NEXT: [0,3]     DPPPeER.   str	w1, [x27], #254
+# CHECK-NEXT: [0,4]     .DPPPeER   str	x1, [x27], #254
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -3891,13 +4507,20 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: Block RThroughput: 2.5
 
 # CHECK:      Timeline view:
-# CHECK-NEXT: Index     01234567
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:      Index     01234567
 
 # CHECK:      [0,0]     DeER . .   str	w1, [x27, #254]!
-# CHECK-NEXT: [0,1]     D=eER. .   str	x1, [x27, #254]!
-# CHECK-NEXT: [0,2]     D==eER .   strb	w1, [x27], #254
-# CHECK-NEXT: [0,3]     D===eER.   strb	w1, [x27, #254]!
-# CHECK-NEXT: [0,4]     D====eER   strh	w1, [x27], #254
+# CHECK-NEXT: [0,1]     DPeER. .   str	x1, [x27, #254]!
+# CHECK-NEXT: [0,2]     DPPeER .   strb	w1, [x27], #254
+# CHECK-NEXT: [0,3]     DPPPeER.   strb	w1, [x27, #254]!
+# CHECK-NEXT: [0,4]     DPPPPeER   strh	w1, [x27], #254
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -3926,13 +4549,20 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: Block RThroughput: 2.5
 
 # CHECK:      Timeline view:
-# CHECK-NEXT: Index     01234567
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:      Index     01234567
 
 # CHECK:      [0,0]     DeER . .   strh	w1, [x27, #254]!
-# CHECK-NEXT: [0,1]     D=eER. .   stz2g	x26, [x27], #4064
-# CHECK-NEXT: [0,2]     D==eER .   stz2g	x26, [x27, #4064]!
-# CHECK-NEXT: [0,3]     D===eER.   stzg	x26, [x27], #4064
-# CHECK-NEXT: [0,4]     D====eER   stzg	x26, [x27, #4064]!
+# CHECK-NEXT: [0,1]     DPeER. .   stz2g	x26, [x27], #4064
+# CHECK-NEXT: [0,2]     DPPeER .   stz2g	x26, [x27, #4064]!
+# CHECK-NEXT: [0,3]     DPPPeER.   stzg	x26, [x27], #4064
+# CHECK-NEXT: [0,4]     DPPPPeER   stzg	x26, [x27, #4064]!
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -3961,11 +4591,18 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: Block RThroughput: 0.7
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeER   .   ldr	x1, [x27], #254
-# CHECK-NEXT: [0,1]     D====eeeeER   ldr	x2, [x1], #254
+# CHECK-NEXT: [0,1]     DPPPPeeeeER   ldr	x2, [x1], #254
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions

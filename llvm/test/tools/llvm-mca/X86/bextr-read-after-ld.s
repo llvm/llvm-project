@@ -102,14 +102,26 @@ bextrl	%esi, (%rdi), %eax
 # ZNVER2-NEXT:   2      5     0.33    *                   bextrl	%esi, (%rdi), %eax
 
 # ALL:          Timeline view:
+# ALL-NEXT:     D: Instruction dispatched
+# ALL-NEXT:     e: Instruction executing
+# ALL-NEXT:     E: Instruction executed (write-back stage)
+# ALL-NEXT:     P: Instruction waiting for data dependency
+# ALL-NEXT:     =: Instruction waiting for available HW resource
+# ALL-NEXT:     -: Instruction executed, waiting to retire in order.
 
-# BDVER2-NEXT:  Index     012345678
-# BDWELL-NEXT:  Index     0123456789
-# BTVER2-NEXT:  Index     0123456
-# HASWELL-NEXT: Index     0123456789
-# SKYLAKE-NEXT: Index     0123456789
-# ZNVER1-NEXT:  Index     01234567
-# ZNVER2-NEXT:  Index     01234567
+# BDVER2:       Index     012345678
+
+# BDWELL:       Index     0123456789
+
+# BTVER2:       Index     0123456
+
+# HASWELL:      Index     0123456789
+
+# SKYLAKE:      Index     0123456789
+
+# ZNVER1:       Index     01234567
+
+# ZNVER2:       Index     01234567
 
 # BDVER2:       [0,0]     DeER .  .   addl	%edi, %esi
 # BDVER2-NEXT:  [0,1]     DeeeeeeER   bextrl	%esi, (%rdi), %eax

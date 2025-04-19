@@ -65,30 +65,37 @@ movdqu %xmm5, %xmm0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     movdqu	%xmm5, %xmm0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0123456
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DR   .    .    ..   vxorps	%xmm0, %xmm0, %xmm0
 # CHECK-NEXT: [0,1]     DeER .    .    ..   movaps	%xmm0, %xmm1
-# CHECK-NEXT: [0,2]     D=eER.    .    ..   movups	%xmm1, %xmm2
-# CHECK-NEXT: [0,3]     D==eER    .    ..   movapd	%xmm2, %xmm3
-# CHECK-NEXT: [0,4]     .D==eER   .    ..   movupd	%xmm3, %xmm4
-# CHECK-NEXT: [0,5]     .D===eER  .    ..   movdqa	%xmm4, %xmm5
-# CHECK-NEXT: [0,6]     .D====eER .    ..   movdqu	%xmm5, %xmm0
+# CHECK-NEXT: [0,2]     DPeER.    .    ..   movups	%xmm1, %xmm2
+# CHECK-NEXT: [0,3]     DPPeER    .    ..   movapd	%xmm2, %xmm3
+# CHECK-NEXT: [0,4]     .DPPeER   .    ..   movupd	%xmm3, %xmm4
+# CHECK-NEXT: [0,5]     .DPPPeER  .    ..   movdqa	%xmm4, %xmm5
+# CHECK-NEXT: [0,6]     .DPPPPeER .    ..   movdqu	%xmm5, %xmm0
 # CHECK-NEXT: [1,0]     .D------R .    ..   vxorps	%xmm0, %xmm0, %xmm0
 # CHECK-NEXT: [1,1]     . D==eE-R .    ..   movaps	%xmm0, %xmm1
-# CHECK-NEXT: [1,2]     . D===eER .    ..   movups	%xmm1, %xmm2
-# CHECK-NEXT: [1,3]     . D====eER.    ..   movapd	%xmm2, %xmm3
-# CHECK-NEXT: [1,4]     . D=====eER    ..   movupd	%xmm3, %xmm4
-# CHECK-NEXT: [1,5]     .  D=====eER   ..   movdqa	%xmm4, %xmm5
-# CHECK-NEXT: [1,6]     .  D======eER  ..   movdqu	%xmm5, %xmm0
+# CHECK-NEXT: [1,2]     . DPPPeER .    ..   movups	%xmm1, %xmm2
+# CHECK-NEXT: [1,3]     . DPPPPeER.    ..   movapd	%xmm2, %xmm3
+# CHECK-NEXT: [1,4]     . DPPPPPeER    ..   movupd	%xmm3, %xmm4
+# CHECK-NEXT: [1,5]     .  DPPPPPeER   ..   movdqa	%xmm4, %xmm5
+# CHECK-NEXT: [1,6]     .  DPPPPPPeER  ..   movdqu	%xmm5, %xmm0
 # CHECK-NEXT: [2,0]     .  D--------R  ..   vxorps	%xmm0, %xmm0, %xmm0
 # CHECK-NEXT: [2,1]     .  D=====eE-R  ..   movaps	%xmm0, %xmm1
-# CHECK-NEXT: [2,2]     .   D=====eER  ..   movups	%xmm1, %xmm2
-# CHECK-NEXT: [2,3]     .   D======eER ..   movapd	%xmm2, %xmm3
-# CHECK-NEXT: [2,4]     .   D=======eER..   movupd	%xmm3, %xmm4
-# CHECK-NEXT: [2,5]     .   D========eER.   movdqa	%xmm4, %xmm5
-# CHECK-NEXT: [2,6]     .    D========eER   movdqu	%xmm5, %xmm0
+# CHECK-NEXT: [2,2]     .   DPPPPPeER  ..   movups	%xmm1, %xmm2
+# CHECK-NEXT: [2,3]     .   DPPPPPPeER ..   movapd	%xmm2, %xmm3
+# CHECK-NEXT: [2,4]     .   DPPPPPPPeER..   movupd	%xmm3, %xmm4
+# CHECK-NEXT: [2,5]     .   DPPPPPPPPeER.   movdqa	%xmm4, %xmm5
+# CHECK-NEXT: [2,6]     .    DPPPPPPPPeER   movdqu	%xmm5, %xmm0
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions

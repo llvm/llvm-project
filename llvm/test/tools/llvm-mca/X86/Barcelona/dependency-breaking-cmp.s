@@ -49,15 +49,22 @@ cmovae %ebx, %eax
 # CHECK-NEXT:  -      -     1.00   1.00    -      -      -      -     cmovael	%ebx, %eax
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     01
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          01
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeER .    ..   cmpl	%eax, %eax
-# CHECK-NEXT: [0,1]     D=eeER    ..   cmovael	%ebx, %eax
-# CHECK-NEXT: [1,0]     D===eER   ..   cmpl	%eax, %eax
-# CHECK-NEXT: [1,1]     .D===eeER ..   cmovael	%ebx, %eax
-# CHECK-NEXT: [2,0]     .D=====eER..   cmpl	%eax, %eax
-# CHECK-NEXT: [2,1]     . D=====eeER   cmovael	%ebx, %eax
+# CHECK-NEXT: [0,1]     DPeeER    ..   cmovael	%ebx, %eax
+# CHECK-NEXT: [1,0]     DPPPeER   ..   cmpl	%eax, %eax
+# CHECK-NEXT: [1,1]     .DPPPeeER ..   cmovael	%ebx, %eax
+# CHECK-NEXT: [2,0]     .DPPPPPeER..   cmpl	%eax, %eax
+# CHECK-NEXT: [2,1]     . DPPPPPeeER   cmovael	%ebx, %eax
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions

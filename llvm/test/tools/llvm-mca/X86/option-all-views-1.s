@@ -128,19 +128,26 @@ add %eax, %eax
 # DEFAULTREPORT-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -     addl	%eax, %eax
 
 # FULLREPORT:         Timeline view:
-# FULLREPORT-NEXT:                        012
+# FULLREPORT-NEXT:    D: Instruction dispatched
+# FULLREPORT-NEXT:    e: Instruction executing
+# FULLREPORT-NEXT:    E: Instruction executed (write-back stage)
+# FULLREPORT-NEXT:    P: Instruction waiting for data dependency
+# FULLREPORT-NEXT:    =: Instruction waiting for available HW resource
+# FULLREPORT-NEXT:    -: Instruction executed, waiting to retire in order.
+
+# FULLREPORT:                             012
 # FULLREPORT-NEXT:    Index     0123456789
 
 # FULLREPORT:         [0,0]     DeER .    . .   addl	%eax, %eax
-# FULLREPORT-NEXT:    [1,0]     D=eER.    . .   addl	%eax, %eax
-# FULLREPORT-NEXT:    [2,0]     .D=eER    . .   addl	%eax, %eax
-# FULLREPORT-NEXT:    [3,0]     .D==eER   . .   addl	%eax, %eax
-# FULLREPORT-NEXT:    [4,0]     . D==eER  . .   addl	%eax, %eax
-# FULLREPORT-NEXT:    [5,0]     . D===eER . .   addl	%eax, %eax
-# FULLREPORT-NEXT:    [6,0]     .  D===eER. .   addl	%eax, %eax
-# FULLREPORT-NEXT:    [7,0]     .  D====eER .   addl	%eax, %eax
-# FULLREPORT-NEXT:    [8,0]     .   D====eER.   addl	%eax, %eax
-# FULLREPORT-NEXT:    [9,0]     .   D=====eER   addl	%eax, %eax
+# FULLREPORT-NEXT:    [1,0]     DPeER.    . .   addl	%eax, %eax
+# FULLREPORT-NEXT:    [2,0]     .DPeER    . .   addl	%eax, %eax
+# FULLREPORT-NEXT:    [3,0]     .DPPeER   . .   addl	%eax, %eax
+# FULLREPORT-NEXT:    [4,0]     . DPPeER  . .   addl	%eax, %eax
+# FULLREPORT-NEXT:    [5,0]     . DPPPeER . .   addl	%eax, %eax
+# FULLREPORT-NEXT:    [6,0]     .  DPPPeER. .   addl	%eax, %eax
+# FULLREPORT-NEXT:    [7,0]     .  DPPPPeER .   addl	%eax, %eax
+# FULLREPORT-NEXT:    [8,0]     .   DPPPPeER.   addl	%eax, %eax
+# FULLREPORT-NEXT:    [9,0]     .   DPPPPPeER   addl	%eax, %eax
 
 # FULLREPORT:         Average Wait times (based on the timeline view):
 # FULLREPORT-NEXT:    [0]: Executions

@@ -52,15 +52,22 @@ xor %bx, %dx
 # CHECK-NEXT:  -      -     0.33   0.33    -     0.33    -      -     xorw	%bx, %dx
 
 # CHECK:      Timeline view:
-# CHECK-NEXT: Index     0123456
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:      Index     0123456
 
 # CHECK:      [0,0]     DeER ..   addw	%cx, %dx
 # CHECK-NEXT: [0,1]     DeER ..   movw	%ax, %dx
-# CHECK-NEXT: [0,2]     D=eER..   xorw	%bx, %dx
-# CHECK-NEXT: [1,0]     D==eER.   addw	%cx, %dx
+# CHECK-NEXT: [0,2]     DPeER..   xorw	%bx, %dx
+# CHECK-NEXT: [1,0]     DPPeER.   addw	%cx, %dx
 # CHECK-NEXT: [1,1]     .DeE-R.   movw	%ax, %dx
-# CHECK-NEXT: [1,2]     .D=eER.   xorw	%bx, %dx
-# CHECK-NEXT: [2,0]     .D==eER   addw	%cx, %dx
+# CHECK-NEXT: [1,2]     .DPeER.   xorw	%bx, %dx
+# CHECK-NEXT: [2,0]     .DPPeER   addw	%cx, %dx
 # CHECK-NEXT: [2,1]     .DeE--R   movw	%ax, %dx
 # CHECK-NEXT: [2,2]     . DeE-R   xorw	%bx, %dx
 
