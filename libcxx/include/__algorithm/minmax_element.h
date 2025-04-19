@@ -154,29 +154,28 @@ __minmax_element_vectorized(_Iter __first, _Iter __last) {
     } else if (__epilogue_min_element < __min_element) {
       __min_element = __epilogue_min_element;
       __min_block_start = __epilogue.first;
-      __min_block_end = __epilogue.first;  // this is global min_element
-    } else if (__epilogue_max_element >= __max_element) {  
+      __min_block_end   = __epilogue.first; // this is global min_element
+    } else if (__epilogue_max_element >= __max_element) {
       __max_element = __epilogue_max_element;
       __max_block_start = __epilogue.second;
-      __max_block_end = __epilogue.second;  // this is global max_element 
+      __max_block_end   = __epilogue.second; // this is global max_element
     }
   }
 
   // locate min
-  for(; __min_block_start != __min_block_end; ++__min_block_start) {
+  for (; __min_block_start != __min_block_end; ++__min_block_start) {
     __value_type __cur_min_element = *__min_block_start;
-    if ( __cur_min_element == __min_element) 
+    if (__cur_min_element == __min_element)
       break;
   }
 
   // locate max
-  for(_Iter __it = __max_block_start; __it != __max_block_end; ++__it) {
+  for (_Iter __it = __max_block_start; __it != __max_block_end; ++__it) {
     __value_type __cur_max_element = *__it;
-    if ( __cur_max_element == __max_element)
+    if (__cur_max_element == __max_element)
       __max_block_start = __it;
   }
 
-  
   return {__min_block_start, __max_block_start};
 }
 
@@ -214,7 +213,7 @@ __minmax_element_impl(_Iter __first, _Iter __last, _Comp& __comp, _Proj& __proj)
 //   } else {
 //   }
 // }
-#endif  // _LIBCPP_VECTORIZE_ALGORITHMS
+#endif // _LIBCPP_VECTORIZE_ALGORITHMS
 
 template <class _Iter, class _Sent, class _Proj, class _Comp>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 pair<_Iter, _Iter>
