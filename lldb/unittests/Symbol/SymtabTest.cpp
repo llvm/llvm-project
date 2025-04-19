@@ -816,12 +816,15 @@ DWARF:
   EXPECT_THAT_EXPECTED(file, llvm::Succeeded());
   auto module_sp = std::make_shared<Module>(file->moduleSpec());
 
-  SymbolFile* symbol_file = module_sp->GetSymbolFile();
-  // At this point, the symbol table is not created. This is because the above yaml data contains the necessary sections in order for SymbolFileDWARF::CalculateAbilities() to identify all abilities,
-  // saving the code from calling SymbolFileDWARFDebugMap::CalculateAbilities(), which eventually loads the symbol table, which we don't want.
+  SymbolFile *symbol_file = module_sp->GetSymbolFile();
+  // At this point, the symbol table is not created. This is because the above
+  // yaml data contains the necessary sections in order for
+  // SymbolFileDWARF::CalculateAbilities() to identify all abilities, saving it
+  // from calling SymbolFileDWARFDebugMap::CalculateAbilities(), which
+  // eventually loads the symbol table, which we don't want.
 
   // The symbol table should not be created if asked not to.
-  Symtab* symtab = symbol_file->GetSymtab(/*can_create=*/false);
+  Symtab *symtab = symbol_file->GetSymtab(/*can_create=*/false);
   ASSERT_EQ(symtab, nullptr);
 
   // But it should be created on demand.
