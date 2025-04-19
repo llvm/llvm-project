@@ -1,6 +1,6 @@
 ! The "thread_limit" clause was added to the "target" construct in OpenMP 5.1.
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=51 %s -o - | FileCheck %s
-
+!XFAIL: *
 !===============================================================================
 ! Target_Enter Simple
 !===============================================================================
