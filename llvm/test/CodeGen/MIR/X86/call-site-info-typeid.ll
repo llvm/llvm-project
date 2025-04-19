@@ -11,7 +11,7 @@
 ;; Verify that fwdArgRegs is not set, calleeTypeIds is set.
 ;; Verify the exact calleeTypeIds value to ensure it is not garbage but the value
 ;; computed as the type id from the callee_type metadata.
-; RUN: llc --call-graph-section %s -stop-before=finalize-isel -o %t1.mir
+; RUN: llc --call-graph-section %s -stop-after=finalize-isel -o %t1.mir
 ; RUN: cat %t1.mir | FileCheck %s --check-prefix=PRINTER_CGS
 ; PRINTER_CGS: name: main
 ; PRINTER_CGS: callSites:
@@ -32,8 +32,8 @@
 ;; Test printer and parser with -emit-call-site-info only.
 
 ;; Test printer.
-;; Verify that fwdArgRegs is set, calleeTypeId is not set.
-; RUN: llc -emit-call-site-info %s -stop-before=finalize-isel -o %t2.mir
+;; Verify that fwdArgRegs is set, calleeTypeIds is not set.
+; RUN: llc -emit-call-site-info %s -stop-after=finalize-isel -o %t2.mir
 ; RUN: cat %t2.mir | FileCheck %s --check-prefix=PRINTER_CSI
 ; PRINTER_CSI: name: main
 ; PRINTER_CSI: callSites:
@@ -56,10 +56,10 @@
 ;; Test printer and parser with both -emit-call-site-info and --call-graph-section.
 
 ;; Test printer.
-;; Verify both fwdArgRegs and calleeTypeId are set.
-;; Verify the exact calleeTypeId value to ensure it is not garbage but the value
+;; Verify both fwdArgRegs and calleeTypeIds are set.
+;; Verify the exact calleeTypeIds value to ensure it is not garbage but the value
 ;; computed as the type id from the callee_type metadata.
-; RUN: llc --call-graph-section -emit-call-site-info %s -stop-before=finalize-isel -o %t2.mir
+; RUN: llc --call-graph-section -emit-call-site-info %s -stop-after=finalize-isel -o %t2.mir
 ; RUN: cat %t2.mir | FileCheck %s --check-prefix=PRINTER_CGS_CSI
 ; PRINTER_CGS_CSI: name: main
 ; PRINTER_CGS_CSI: callSites:
@@ -93,8 +93,8 @@ entry:
   %fp = alloca ptr, align 8
   store i32 0, ptr %retval, align 4
   store ptr @foo, ptr %fp, align 8
-  %0 = load ptr, ptr %fp, align 8
-  call void %0(i8 signext 97), !callee_type !5
+  %fp_val = load ptr, ptr %fp, align 8
+  call void %fp_val(i8 signext 97), !callee_type !5
   ret i32 0
 }
 
