@@ -57,9 +57,7 @@ public:
   /// Comparison operator.
   bool operator==(const Vector &V) const {
     assert(Length != 0 && Data && "Invalid vector");
-    if (Length != V.Length)
-      return false;
-    return std::equal(begin(), end(), V.begin());
+    return llvm::equal(*this, V);
   }
 
   /// Return the length of the vector
