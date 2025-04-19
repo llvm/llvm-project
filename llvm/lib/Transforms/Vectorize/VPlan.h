@@ -1194,23 +1194,17 @@ using MDArrayRef = ArrayRef<std::pair<unsigned, MDNode *>>;
 
 /// Helper to manage IR metadata for recipes. It filters out metadata that
 /// cannot be proagated.
-class VPWithIRMetadata {
+class VPIRMetadata {
   SmallVector<std::pair<unsigned, MDNode *>> Metadata;
 
 protected:
-  VPWithIRMetadata() {}
-  VPWithIRMetadata(MDArrayRef Metadata) : Metadata(Metadata) {}
-
-  void addMetadata(MDArrayRef Metadata) {
-    append_range(this->Metadata, Metadata);
-  }
+  VPIRMetadata(MDArrayRef Metadata) : Metadata(Metadata) {}
 
 public:
   /// Add all metadata to \p V if it is an instruction.
-  void setMetadata(Value *V) const;
+  void applyMetadata(Value *V) const;
 
-  void addMetadata(unsigned Kind, MDNode *N) { Metadata.emplace_back(Kind, N); }
-
+  /// Return the IR metadata.
   MDArrayRef getMetadata() const { return Metadata; }
 };
 
@@ -1218,15 +1212,15 @@ public:
 /// opcode and operands of the recipe. This recipe covers most of the
 /// traditional vectorization cases where each recipe transforms into a
 /// vectorized version of itself.
-class VPWidenRecipe : public VPRecipeWithIRFlags, public VPWithIRMetadata {
+class VPWidenRecipe : public VPRecipeWithIRFlags, public VPIRMetadata {
   unsigned Opcode;
 
 protected:
   template <typename IterT>
   VPWidenRecipe(unsigned VPDefOpcode, Instruction &I,
                 iterator_range<IterT> Operands, MDArrayRef Metadata)
-      : VPRecipeWithIRFlags(VPDefOpcode, Operands, I),
-        VPWithIRMetadata(Metadata), Opcode(I.getOpcode()) {}
+      : VPRecipeWithIRFlags(VPDefOpcode, Operands, I), VPIRMetadata(Metadata),
+        Opcode(I.getOpcode()) {}
 
 public:
   template <typename IterT>
@@ -1263,7 +1257,7 @@ public:
 };
 
 /// VPWidenCastRecipe is a recipe to create vector cast instructions.
-class VPWidenCastRecipe : public VPRecipeWithIRFlags, public VPWithIRMetadata {
+class VPWidenCastRecipe : public VPRecipeWithIRFlags, public VPIRMetadata {
   /// Cast instruction opcode.
   Instruction::CastOps Opcode;
 
@@ -1274,13 +1268,13 @@ public:
   VPWidenCastRecipe(Instruction::CastOps Opcode, VPValue *Op, Type *ResultTy,
                     CastInst &UI, MDArrayRef Metadata)
       : VPRecipeWithIRFlags(VPDef::VPWidenCastSC, Op, UI),
-        VPWithIRMetadata(Metadata), Opcode(Opcode), ResultTy(ResultTy) {
+        VPIRMetadata(Metadata), Opcode(Opcode), ResultTy(ResultTy) {
     assert(UI.getOpcode() == Opcode &&
            "opcode of underlying cast doesn't match");
   }
 
   VPWidenCastRecipe(Instruction::CastOps Opcode, VPValue *Op, Type *ResultTy)
-      : VPRecipeWithIRFlags(VPDef::VPWidenCastSC, Op), VPWithIRMetadata(),
+      : VPRecipeWithIRFlags(VPDef::VPWidenCastSC, Op), VPIRMetadata({}),
         Opcode(Opcode), ResultTy(ResultTy) {}
 
   ~VPWidenCastRecipe() override = default;
@@ -1315,8 +1309,7 @@ public:
 };
 
 /// A recipe for widening vector intrinsics.
-class VPWidenIntrinsicRecipe : public VPRecipeWithIRFlags,
-                               public VPWithIRMetadata {
+class VPWidenIntrinsicRecipe : public VPRecipeWithIRFlags, public VPIRMetadata {
   /// ID of the vector intrinsic to widen.
   Intrinsic::ID VectorIntrinsicID;
 
@@ -1337,7 +1330,7 @@ public:
                          ArrayRef<VPValue *> CallArguments, Type *Ty,
                          MDArrayRef Metadata, DebugLoc DL = {})
       : VPRecipeWithIRFlags(VPDef::VPWidenIntrinsicSC, CallArguments, CI),
-        VPWithIRMetadata(Metadata), VectorIntrinsicID(VectorIntrinsicID),
+        VPIRMetadata(Metadata), VectorIntrinsicID(VectorIntrinsicID),
         ResultTy(Ty), MayReadFromMemory(CI.mayReadFromMemory()),
         MayWriteToMemory(CI.mayWriteToMemory()),
         MayHaveSideEffects(CI.mayHaveSideEffects()) {}
@@ -1346,7 +1339,7 @@ public:
                          ArrayRef<VPValue *> CallArguments, Type *Ty,
                          MDArrayRef Metadata, DebugLoc DL = {})
       : VPRecipeWithIRFlags(VPDef::VPWidenIntrinsicSC, CallArguments, DL),
-        VPWithIRMetadata(Metadata), VectorIntrinsicID(VectorIntrinsicID),
+        VPIRMetadata(Metadata), VectorIntrinsicID(VectorIntrinsicID),
         ResultTy(Ty) {
     LLVMContext &Ctx = Ty->getContext();
     AttributeSet Attrs = Intrinsic::getFnAttributes(Ctx, VectorIntrinsicID);
@@ -1403,7 +1396,7 @@ public:
 };
 
 /// A recipe for widening Call instructions using library calls.
-class VPWidenCallRecipe : public VPRecipeWithIRFlags, public VPWithIRMetadata {
+class VPWidenCallRecipe : public VPRecipeWithIRFlags, public VPIRMetadata {
   /// Variant stores a pointer to the chosen function. There is a 1:1 mapping
   /// between a given VF and the chosen vectorized variant, so there will be a
   /// different VPlan for each VF with a valid variant.
@@ -1415,7 +1408,7 @@ public:
                     DebugLoc DL = {})
       : VPRecipeWithIRFlags(VPDef::VPWidenCallSC, CallArguments,
                             *cast<Instruction>(UV)),
-        VPWithIRMetadata(Metadata), Variant(Variant) {
+        VPIRMetadata(Metadata), Variant(Variant) {
     assert(
         isa<Function>(getOperand(getNumOperands() - 1)->getLiveInIRValue()) &&
         "last operand must be the called function");
@@ -1502,13 +1495,12 @@ public:
 };
 
 /// A recipe for widening select instructions.
-struct VPWidenSelectRecipe : public VPRecipeWithIRFlags,
-                             public VPWithIRMetadata {
+struct VPWidenSelectRecipe : public VPRecipeWithIRFlags, public VPIRMetadata {
   template <typename IterT>
   VPWidenSelectRecipe(SelectInst &I, iterator_range<IterT> Operands,
                       MDArrayRef Metadata)
       : VPRecipeWithIRFlags(VPDef::VPWidenSelectSC, Operands, I),
-        VPWithIRMetadata(Metadata) {}
+        VPIRMetadata(Metadata) {}
 
   ~VPWidenSelectRecipe() override = default;
 
@@ -2636,7 +2628,7 @@ public:
 
 /// A common base class for widening memory operations. An optional mask can be
 /// provided as the last operand.
-class VPWidenMemoryRecipe : public VPRecipeBase, public VPWithIRMetadata {
+class VPWidenMemoryRecipe : public VPRecipeBase, public VPIRMetadata {
 protected:
   Instruction &Ingredient;
 
@@ -2661,8 +2653,8 @@ protected:
                       std::initializer_list<VPValue *> Operands,
                       bool Consecutive, bool Reverse, MDArrayRef Metadata,
                       DebugLoc DL)
-      : VPRecipeBase(SC, Operands, DL), VPWithIRMetadata(Metadata),
-        Ingredient(I), Consecutive(Consecutive), Reverse(Reverse) {
+      : VPRecipeBase(SC, Operands, DL), VPIRMetadata(Metadata), Ingredient(I),
+        Consecutive(Consecutive), Reverse(Reverse) {
     assert((Consecutive || !Reverse) && "Reverse implies consecutive");
   }
 
@@ -2731,7 +2723,6 @@ struct VPWidenLoadRecipe final : public VPWidenMemoryRecipe, public VPValue {
     auto *Copy = new VPWidenLoadRecipe(cast<LoadInst>(Ingredient), getAddr(),
                                        getMask(), Consecutive, Reverse,
                                        getMetadata(), getDebugLoc());
-    Copy->addMetadata(getMetadata());
     return Copy;
   }
 
@@ -2766,7 +2757,6 @@ struct VPWidenLoadEVLRecipe final : public VPWidenMemoryRecipe, public VPValue {
                             L.isReverse(), L.getMetadata(), L.getDebugLoc()),
         VPValue(this, &getIngredient()) {
     setMask(Mask);
-    addMetadata(L.getMetadata());
   }
 
   VP_CLASSOF_IMPL(VPDef::VPWidenLoadEVLSC)
@@ -2812,7 +2802,6 @@ struct VPWidenStoreRecipe final : public VPWidenMemoryRecipe {
     auto *Copy = new VPWidenStoreRecipe(
         cast<StoreInst>(Ingredient), getAddr(), getStoredValue(), getMask(),
         Consecutive, Reverse, getMetadata(), getDebugLoc());
-    Copy->addMetadata(getMetadata());
     return Copy;
   }
 
@@ -2850,7 +2839,6 @@ struct VPWidenStoreEVLRecipe final : public VPWidenMemoryRecipe {
                             S.isConsecutive(), S.isReverse(), S.getMetadata(),
                             S.getDebugLoc()) {
     setMask(Mask);
-    addMetadata(S.getMetadata());
   }
 
   VP_CLASSOF_IMPL(VPDef::VPWidenStoreEVLSC)

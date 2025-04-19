@@ -1204,7 +1204,7 @@ void VPIRPhi::print(raw_ostream &O, const Twine &Indent,
 }
 #endif
 
-void VPWithIRMetadata::setMetadata(Value *V) const {
+void VPIRMetadata::applyMetadata(Value *V) const {
   auto *I = dyn_cast<Instruction>(V);
   if (!I)
     return;
@@ -1239,10 +1239,10 @@ void VPWidenCallRecipe::execute(VPTransformState &State) {
 
   CallInst *V = State.Builder.CreateCall(Variant, Args, OpBundles);
   setFlags(V);
+  applyMetadata(V);
 
   if (!V->getType()->isVoidTy())
     State.set(this, V);
-  setMetadata(V);
 }
 
 InstructionCost VPWidenCallRecipe::computeCost(ElementCount VF,
@@ -1318,10 +1318,10 @@ void VPWidenIntrinsicRecipe::execute(VPTransformState &State) {
   CallInst *V = State.Builder.CreateCall(VectorF, Args, OpBundles);
 
   setFlags(V);
+  applyMetadata(V);
 
   if (!V->getType()->isVoidTy())
     State.set(this, V);
-  setMetadata(V);
 }
 
 InstructionCost VPWidenIntrinsicRecipe::computeCost(ElementCount VF,
@@ -1518,7 +1518,7 @@ void VPWidenSelectRecipe::execute(VPTransformState &State) {
   State.set(this, Sel);
   if (isa<FPMathOperator>(Sel))
     setFlags(cast<Instruction>(Sel));
-  setMetadata(Sel);
+  applyMetadata(Sel);
 }
 
 InstructionCost VPWidenSelectRecipe::computeCost(ElementCount VF,
@@ -1649,12 +1649,13 @@ void VPWidenRecipe::execute(VPTransformState &State) {
 
     Value *V = Builder.CreateNAryOp(Opcode, Ops);
 
-    if (auto *VecOp = dyn_cast<Instruction>(V))
+    if (auto *VecOp = dyn_cast<Instruction>(V)) {
       setFlags(VecOp);
+      applyMetadata(V);
+    }
 
     // Use this vector value for all users of the original instruction.
     State.set(this, V);
-    setMetadata(V);
     break;
   }
   case Instruction::ExtractValue: {
@@ -1686,8 +1687,8 @@ void VPWidenRecipe::execute(VPTransformState &State) {
     } else {
       C = Builder.CreateICmp(getPredicate(), A, B);
     }
+    applyMetadata(C);
     State.set(this, C);
-    setMetadata(C);
     break;
   }
   default:
@@ -1805,7 +1806,7 @@ void VPWidenCastRecipe::execute(VPTransformState &State) {
   State.set(this, Cast);
   if (auto *CastOp = dyn_cast<Instruction>(Cast)) {
     setFlags(CastOp);
-    setMetadata(CastOp);
+    applyMetadata(CastOp);
   }
 }
 
@@ -2759,7 +2760,7 @@ void VPWidenLoadRecipe::execute(VPTransformState &State) {
   }
   // Add metadata to the load, but setVectorValue to the reverse shuffle.
   State.addNewMetadata(NewLI, LI);
-  setMetadata(NewLI);
+  applyMetadata(NewLI);
   if (Reverse)
     NewLI = Builder.CreateVectorReverse(NewLI, "reverse");
   State.set(this, NewLI);
@@ -2820,7 +2821,7 @@ void VPWidenLoadEVLRecipe::execute(VPTransformState &State) {
   NewLI->addParamAttr(
       0, Attribute::getWithAlignment(NewLI->getContext(), Alignment));
   State.addNewMetadata(NewLI, LI);
-  setMetadata(NewLI);
+  applyMetadata(NewLI);
   Instruction *Res = NewLI;
   if (isReverse())
     Res = createReverseEVL(Builder, Res, EVL, "vp.reverse");
@@ -2897,7 +2898,7 @@ void VPWidenStoreRecipe::execute(VPTransformState &State) {
   else
     NewSI = Builder.CreateAlignedStore(StoredVal, Addr, Alignment);
   State.addNewMetadata(NewSI, SI);
-  setMetadata(NewSI);
+  applyMetadata(NewSI);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -2945,7 +2946,7 @@ void VPWidenStoreEVLRecipe::execute(VPTransformState &State) {
   NewSI->addParamAttr(
       1, Attribute::getWithAlignment(NewSI->getContext(), Alignment));
   State.addNewMetadata(NewSI, SI);
-  setMetadata(NewSI);
+  applyMetadata(NewSI);
 }
 
 InstructionCost VPWidenStoreEVLRecipe::computeCost(ElementCount VF,

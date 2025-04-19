@@ -236,7 +236,7 @@ public:
 
   /// Returns the metatadata that can be preserved from the original instruction
   /// \p I, including noalias metadata guaranteed by runtime checks.
-  SmallVector<std::pair<unsigned, MDNode *>>
+  static SmallVector<std::pair<unsigned, MDNode *>>
   getMetadataToPropagate(Instruction *I);
 };
 } // end namespace llvm

@@ -70,8 +70,7 @@ bool VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
         NewRecipe = new VPWidenIntOrFpInductionRecipe(
             Phi, Start, Step, &Plan->getVF(), *II, Ingredient.getDebugLoc());
       } else {
-        SmallVector<std::pair<unsigned, MDNode *>> Metadata;
-        getMetadataToPropagate(Inst, Metadata);
+        auto Metadata = VPRecipeBuilder::getMetadataToPropagate(Inst);
         assert(isa<VPInstruction>(&Ingredient) &&
                "only VPInstructions expected here");
         assert(!isa<PHINode>(Inst) && "phis should be handled above");
