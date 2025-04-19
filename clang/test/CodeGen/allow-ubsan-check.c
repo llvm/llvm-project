@@ -29,7 +29,7 @@
 // CHECK:       [[HANDLER_DIVREM_OVERFLOW]]:
 // CHECK-NEXT:    [[TMP10:%.*]] = zext i32 [[X]] to i64, !nosanitize [[META2]]
 // CHECK-NEXT:    [[TMP11:%.*]] = zext i32 [[Y]] to i64, !nosanitize [[META2]]
-// CHECK-NEXT:    tail call void @__ubsan_handle_divrem_overflow_abort(ptr nonnull @[[GLOB1:[0-9]+]], i64 [[TMP10]], i64 [[TMP11]]) #[[ATTR8:[0-9]+]], !nosanitize [[META2]]
+// CHECK-NEXT:    tail call void @__ubsan_handle_divrem_overflow_abort(ptr nonnull @[[GLOB1:[0-9]+]], i64 [[TMP10]], i64 [[TMP11]]) #[[ATTR6:[0-9]+]], !nosanitize [[META2]]
 // CHECK-NEXT:    unreachable, !nosanitize [[META2]]
 // CHECK:       [[CONT]]:
 // CHECK-NEXT:    [[DIV:%.*]] = sdiv i32 [[X]], [[Y]]
@@ -75,7 +75,7 @@
 // REC:       [[HANDLER_DIVREM_OVERFLOW]]:
 // REC-NEXT:    [[TMP10:%.*]] = zext i32 [[X]] to i64, !nosanitize [[META2]]
 // REC-NEXT:    [[TMP11:%.*]] = zext i32 [[Y]] to i64, !nosanitize [[META2]]
-// REC-NEXT:    tail call void @__ubsan_handle_divrem_overflow(ptr nonnull @[[GLOB1:[0-9]+]], i64 [[TMP10]], i64 [[TMP11]]) #[[ATTR8:[0-9]+]], !nosanitize [[META2]]
+// REC-NEXT:    tail call void @__ubsan_handle_divrem_overflow(ptr nonnull @[[GLOB1:[0-9]+]], i64 [[TMP10]], i64 [[TMP11]]) #[[ATTR6:[0-9]+]], !nosanitize [[META2]]
 // REC-NEXT:    br label %[[CONT]], !nosanitize [[META2]]
 // REC:       [[CONT]]:
 // REC-NEXT:    [[DIV:%.*]] = sdiv i32 [[X]], [[Y]]
@@ -86,7 +86,7 @@ int div(int x, int y) {
 }
 
 // CHECK-LABEL: define dso_local i32 @null(
-// CHECK-SAME: ptr noundef readonly captures(address_is_null) [[X:%.*]]) local_unnamed_addr #[[ATTR3:[0-9]+]] {
+// CHECK-SAME: ptr noundef readonly captures(address_is_null) [[X:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = icmp eq ptr [[X]], null, !nosanitize [[META2]]
 //
@@ -95,7 +95,7 @@ int div(int x, int y) {
 // CHECK-NEXT:    [[DOTNOT1:%.*]] = and i1 [[TMP0]], [[TMP1]]
 // CHECK-NEXT:    br i1 [[DOTNOT1]], label %[[HANDLER_TYPE_MISMATCH:.*]], label %[[CONT:.*]], !prof [[PROF4:![0-9]+]], !nosanitize [[META2]]
 // CHECK:       [[HANDLER_TYPE_MISMATCH]]:
-// CHECK-NEXT:    tail call void @__ubsan_handle_type_mismatch_v1_abort(ptr nonnull @[[GLOB2:[0-9]+]], i64 0) #[[ATTR8]], !nosanitize [[META2]]
+// CHECK-NEXT:    tail call void @__ubsan_handle_type_mismatch_v1_abort(ptr nonnull @[[GLOB2:[0-9]+]], i64 0) #[[ATTR6]], !nosanitize [[META2]]
 // CHECK-NEXT:    unreachable, !nosanitize [[META2]]
 // CHECK:       [[CONT]]:
 // CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[X]], align 4, !tbaa [[TBAA5:![0-9]+]]
@@ -116,14 +116,14 @@ int div(int x, int y) {
 // TR-NEXT:    ret i32 [[TMP2]]
 //
 // REC-LABEL: define dso_local i32 @null(
-// REC-SAME: ptr noundef readonly captures(address_is_null) [[X:%.*]]) local_unnamed_addr #[[ATTR3:[0-9]+]] {
+// REC-SAME: ptr noundef readonly captures(address_is_null) [[X:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // REC-NEXT:  [[ENTRY:.*:]]
 // REC-NEXT:    [[TMP0:%.*]] = icmp eq ptr [[X]], null, !nosanitize [[META2]]
 // REC-NEXT:    [[TMP1:%.*]] = tail call i1 @llvm.allow.ubsan.check(i8 29), !nosanitize [[META2]]
 // REC-NEXT:    [[DOTNOT1:%.*]] = and i1 [[TMP0]], [[TMP1]]
 // REC-NEXT:    br i1 [[DOTNOT1]], label %[[HANDLER_TYPE_MISMATCH:.*]], label %[[CONT:.*]], !prof [[PROF4:![0-9]+]], !nosanitize [[META2]]
 // REC:       [[HANDLER_TYPE_MISMATCH]]:
-// REC-NEXT:    tail call void @__ubsan_handle_type_mismatch_v1(ptr nonnull @[[GLOB2:[0-9]+]], i64 0) #[[ATTR8]], !nosanitize [[META2]]
+// REC-NEXT:    tail call void @__ubsan_handle_type_mismatch_v1(ptr nonnull @[[GLOB2:[0-9]+]], i64 0) #[[ATTR6]], !nosanitize [[META2]]
 // REC-NEXT:    br label %[[CONT]], !nosanitize [[META2]]
 // REC:       [[CONT]]:
 // REC-NEXT:    [[TMP2:%.*]] = load i32, ptr [[X]], align 4, !tbaa [[TBAA5:![0-9]+]]
@@ -146,7 +146,7 @@ int null(int* x) {
 // CHECK:       [[HANDLER_ADD_OVERFLOW]]:
 // CHECK-NEXT:    [[TMP3:%.*]] = zext i32 [[X]] to i64, !nosanitize [[META2]]
 // CHECK-NEXT:    [[TMP4:%.*]] = zext i32 [[Y]] to i64, !nosanitize [[META2]]
-// CHECK-NEXT:    tail call void @__ubsan_handle_add_overflow_abort(ptr nonnull @[[GLOB3:[0-9]+]], i64 [[TMP3]], i64 [[TMP4]]) #[[ATTR8]], !nosanitize [[META2]]
+// CHECK-NEXT:    tail call void @__ubsan_handle_add_overflow_abort(ptr nonnull @[[GLOB3:[0-9]+]], i64 [[TMP3]], i64 [[TMP4]]) #[[ATTR6]], !nosanitize [[META2]]
 // CHECK-NEXT:    unreachable, !nosanitize [[META2]]
 // CHECK:       [[CONT]]:
 // CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { i32, i1 } [[TMP0]], 0, !nosanitize [[META2]]
@@ -178,7 +178,7 @@ int null(int* x) {
 // REC:       [[HANDLER_ADD_OVERFLOW]]:
 // REC-NEXT:    [[TMP3:%.*]] = zext i32 [[X]] to i64, !nosanitize [[META2]]
 // REC-NEXT:    [[TMP4:%.*]] = zext i32 [[Y]] to i64, !nosanitize [[META2]]
-// REC-NEXT:    tail call void @__ubsan_handle_add_overflow(ptr nonnull @[[GLOB3:[0-9]+]], i64 [[TMP3]], i64 [[TMP4]]) #[[ATTR8]], !nosanitize [[META2]]
+// REC-NEXT:    tail call void @__ubsan_handle_add_overflow(ptr nonnull @[[GLOB3:[0-9]+]], i64 [[TMP3]], i64 [[TMP4]]) #[[ATTR6]], !nosanitize [[META2]]
 // REC-NEXT:    br label %[[CONT]], !nosanitize [[META2]]
 // REC:       [[CONT]]:
 // REC-NEXT:    [[TMP5:%.*]] = extractvalue { i32, i1 } [[TMP0]], 0, !nosanitize [[META2]]
@@ -191,11 +191,11 @@ int overflow(int x, int y) {
 void use(double*);
 
 // CHECK-LABEL: define dso_local double @lbounds(
-// CHECK-SAME: i32 noundef [[B:%.*]], i32 noundef [[I:%.*]]) local_unnamed_addr #[[ATTR5:[0-9]+]] {
+// CHECK-SAME: i32 noundef [[B:%.*]], i32 noundef [[I:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[B]] to i64
 // CHECK-NEXT:    [[VLA:%.*]] = alloca double, i64 [[TMP0]], align 16
-// CHECK-NEXT:    call void @use(ptr noundef nonnull [[VLA]]) #[[ATTR9:[0-9]+]]
+// CHECK-NEXT:    call void @use(ptr noundef nonnull [[VLA]]) #[[ATTR7:[0-9]+]]
 // CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[I]] to i64
 // CHECK-NEXT:    [[TMP1:%.*]] = icmp ule i64 [[TMP0]], [[IDXPROM]]
 //
@@ -208,7 +208,7 @@ void use(double*);
 // CHECK-NEXT:    [[TMP5:%.*]] = load double, ptr [[ARRAYIDX]], align 8, !tbaa [[TBAA9:![0-9]+]]
 // CHECK-NEXT:    ret double [[TMP5]]
 // CHECK:       [[TRAP]]:
-// CHECK-NEXT:    call void @__ubsan_handle_local_out_of_bounds_abort() #[[ATTR8]], !nosanitize [[META2]]
+// CHECK-NEXT:    call void @__ubsan_handle_local_out_of_bounds_abort() #[[ATTR6]], !nosanitize [[META2]]
 // CHECK-NEXT:    unreachable, !nosanitize [[META2]]
 //
 // TR-LABEL: define dso_local double @lbounds(
@@ -231,11 +231,11 @@ void use(double*);
 // TR-NEXT:    unreachable, !nosanitize [[META2]]
 //
 // REC-LABEL: define dso_local double @lbounds(
-// REC-SAME: i32 noundef [[B:%.*]], i32 noundef [[I:%.*]]) local_unnamed_addr #[[ATTR5:[0-9]+]] {
+// REC-SAME: i32 noundef [[B:%.*]], i32 noundef [[I:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // REC-NEXT:  [[ENTRY:.*:]]
 // REC-NEXT:    [[TMP0:%.*]] = zext i32 [[B]] to i64
 // REC-NEXT:    [[VLA:%.*]] = alloca double, i64 [[TMP0]], align 16
-// REC-NEXT:    call void @use(ptr noundef nonnull [[VLA]]) #[[ATTR7:[0-9]+]]
+// REC-NEXT:    call void @use(ptr noundef nonnull [[VLA]]) #[[ATTR5:[0-9]+]]
 // REC-NEXT:    [[IDXPROM:%.*]] = sext i32 [[I]] to i64
 // REC-NEXT:    [[TMP1:%.*]] = icmp ule i64 [[TMP0]], [[IDXPROM]]
 // REC-NEXT:    [[TMP2:%.*]] = call i1 @llvm.allow.ubsan.check(i8 71), !nosanitize [[META2]]
@@ -246,7 +246,7 @@ void use(double*);
 // REC-NEXT:    [[TMP5:%.*]] = load double, ptr [[ARRAYIDX]], align 8, !tbaa [[TBAA9:![0-9]+]]
 // REC-NEXT:    ret double [[TMP5]]
 // REC:       [[TRAP]]:
-// REC-NEXT:    call void @__ubsan_handle_local_out_of_bounds() #[[ATTR8]], !nosanitize [[META2]]
+// REC-NEXT:    call void @__ubsan_handle_local_out_of_bounds() #[[ATTR6]], !nosanitize [[META2]]
 // REC-NEXT:    br label %[[BB4]], !nosanitize [[META2]]
 //
 double lbounds(int b, int i) {
