@@ -4,8 +4,8 @@
 # RUN: llc --call-graph-section %s -run-pass=none -o - | FileCheck %s
 # CHECK: name: main
 # CHECK: callSites:
-# CHECK-NEXT: - { bb: {{.*}}, offset: {{.*}}, fwdArgRegs: [], calleeTypeId:
-# CHECK-NEXT: 123456789 }
+# CHECK-NEXT: - { bb: {{.*}}, offset: {{.*}}, fwdArgRegs: [], calleeTypeIds:
+# CHECK-NEXT: [ 123456789 ] }
 
 --- |
   declare void @foo(i8 signext %a)
@@ -25,8 +25,8 @@
 ---
 name:            main
 callSites:
-  - { bb: 0, offset: 1, fwdArgRegs: [], calleeTypeId: 
-    123456789 }
+  - { bb: 0, offset: 1, fwdArgRegs: [], calleeTypeIds: 
+    [ 123456789 ] }
 body:             |
   bb.0.entry:    
     %0:gr64 = MOV32ri64 @foo    

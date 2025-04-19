@@ -504,10 +504,12 @@ bool MIRParserImpl::initializeCallSiteInfo(
         return error(Error, ArgRegPair.Reg.SourceRange);
       CSInfo.ArgRegPairs.emplace_back(Reg, ArgRegPair.ArgNo);
     }
-    if (YamlCSInfo.CalleeTypeId) {
-      IntegerType *Int64Ty = Type::getInt64Ty(Context);
-      CSInfo.CalleeTypeId = ConstantInt::get(Int64Ty, *YamlCSInfo.CalleeTypeId,
-                                             /*isSigned=*/false);
+    if (!YamlCSInfo.CalleeTypeIds.empty()) {
+      for (auto CalleeTypeId : YamlCSInfo.CalleeTypeIds) {
+        IntegerType *Int64Ty = Type::getInt64Ty(Context);
+        CSInfo.CalleeTypeIds.push_back(ConstantInt::get(Int64Ty, CalleeTypeId,
+                                                        /*isSigned=*/false));
+      }
     }
 
     if (TM.Options.EmitCallSiteInfo || TM.Options.EmitCallGraphSection)

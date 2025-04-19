@@ -1651,7 +1651,7 @@ static ConstantInt *extractNumericCGTypeId(const Function &F) {
   for (const auto &Type : Types) {
     if (Type->getNumOperands() == 2 && isa<MDString>(Type->getOperand(1))) {
       auto *TMDS = cast<MDString>(Type->getOperand(1));
-      if (TMDS->getString().ends_with("generalized")) {
+      if (TMDS->getString().ends_with(".generalized")) {
         MDGeneralizedTypeId = TMDS;
         break;
       }
@@ -2054,16 +2054,18 @@ void AsmPrinter::emitFunctionBody() {
         // Only indirect calls have type identifiers set.
         const auto &CallSiteInfo = CallSitesInfoMap.find(&MI);
         if (CallSiteInfo != CallSitesInfoMap.end()) {
-          if (auto *TypeId = CallSiteInfo->second.CalleeTypeId) {
-            // Emit label.
-            MCSymbol *S = MF->getContext().createTempSymbol();
-            OutStreamer->emitLabel(S);
+          if (!CallSiteInfo->second.CalleeTypeIds.empty()) {
+            for (auto *CalleeTypeId : CallSiteInfo->second.CalleeTypeIds) {
+              // Emit label.
+              MCSymbol *S = MF->getContext().createTempSymbol();
+              OutStreamer->emitLabel(S);
 
-            // Get type id value.
-            uint64_t TypeIdVal = TypeId->getZExtValue();
+              // Get numeric callee_type id value.
+              uint64_t CalleeTypeIdVal = CalleeTypeId->getZExtValue();
 
-            // Add to function's callsite labels.
-            FuncInfo.CallSiteLabels.emplace_back(TypeIdVal, S);
+              // Add to function's callsite labels.
+              FuncInfo.CallSiteLabels.emplace_back(CalleeTypeIdVal, S);
+            }
           }
         }
       }
