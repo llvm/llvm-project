@@ -92,7 +92,7 @@ private:
 std::optional<ModuleDependencyScanner::ModuleDependencyInfo>
 ModuleDependencyScanner::scan(PathRef FilePath,
                               const ProjectModules::CommandMangler &Mangler) {
-  auto Candidates = CDB->getCompileCommands(FilePath);
+  auto Candidates = CDB->getCompileCommands(FilePath.raw());
   if (Candidates.empty())
     return std::nullopt;
 
@@ -106,7 +106,7 @@ ModuleDependencyScanner::scan(PathRef FilePath,
 
   using namespace clang::tooling::dependencies;
 
-  llvm::SmallString<128> FilePathDir(FilePath);
+  llvm::SmallString<128> FilePathDir(FilePath.raw());
   llvm::sys::path::remove_filename(FilePathDir);
   DependencyScanningTool ScanningTool(Service, TFS.view(FilePathDir));
 
@@ -125,7 +125,7 @@ ModuleDependencyScanner::scan(PathRef FilePath,
     Result.ModuleName = ScanningResult->Provides->ModuleName;
 
     auto [Iter, Inserted] = ModuleNameToSource.try_emplace(
-        ScanningResult->Provides->ModuleName, FilePath);
+        ScanningResult->Provides->ModuleName, FilePath.raw().str());
 
     if (!Inserted && Iter->second != FilePath) {
       elog("Detected multiple source files ({0}, {1}) declaring the same "
@@ -204,7 +204,7 @@ public:
   std::string getSourceForModuleName(llvm::StringRef ModuleName,
                                      PathRef RequiredSourceFile) override {
     Scanner.globalScan(Mangler);
-    return Scanner.getSourceForModuleName(ModuleName).str();
+    return Scanner.getSourceForModuleName(ModuleName).owned().raw();
   }
 
   std::string getModuleNameForSource(PathRef File) override {

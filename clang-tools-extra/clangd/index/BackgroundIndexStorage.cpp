@@ -109,7 +109,7 @@ public:
   // Creates or fetches to storage from cache for the specified project.
   BackgroundIndexStorage *operator()(PathRef File) {
     std::lock_guard<std::mutex> Lock(*IndexStorageMapMu);
-    llvm::SmallString<128> StorageDir(FallbackDir);
+    llvm::SmallString<128> StorageDir(FallbackDir.raw());
     if (auto PI = GetProjectInfo(File)) {
       StorageDir = PI->SourceRoot;
       llvm::sys::path::append(StorageDir, ".cache", "clangd", "index");
@@ -126,7 +126,7 @@ private:
       elog("Tried to create storage for empty directory!");
       return std::make_unique<NullStorage>();
     }
-    return std::make_unique<DiskBackedIndexStorage>(CDBDirectory);
+    return std::make_unique<DiskBackedIndexStorage>(CDBDirectory.raw());
   }
 
   Path FallbackDir;

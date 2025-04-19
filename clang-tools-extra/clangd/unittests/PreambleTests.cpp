@@ -883,14 +883,14 @@ TEST(PreamblePatch, PatchFileEntry) {
 #define FOO)cpp");
   {
     auto AST = createPatchedAST(Code.code(), Code.code());
-    EXPECT_EQ(
-        PreamblePatch::getPatchEntry(AST->tuPath(), AST->getSourceManager()),
-        nullptr);
+    EXPECT_EQ(PreamblePatch::getPatchEntry(AST->tuPath().raw(),
+                                           AST->getSourceManager()),
+              nullptr);
   }
   {
     auto AST = createPatchedAST(Code.code(), NewCode.code());
-    auto FE =
-        PreamblePatch::getPatchEntry(AST->tuPath(), AST->getSourceManager());
+    auto FE = PreamblePatch::getPatchEntry(AST->tuPath().raw(),
+                                           AST->getSourceManager());
     ASSERT_NE(FE, std::nullopt);
     EXPECT_THAT(FE->getName().str(),
                 testing::EndsWith(PreamblePatch::HeaderName.str()));

@@ -13,6 +13,7 @@
 #include "Protocol.h"
 #include "URI.h"
 #include "support/Logger.h"
+#include "support/Path.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Index/IndexSymbol.h"
 #include "llvm/ADT/StringExtras.h"
@@ -43,15 +44,14 @@ bool mapOptOrNull(const llvm::json::Value &Params, llvm::StringLiteral Prop,
 
 char LSPError::ID;
 
-URIForFile URIForFile::canonicalize(llvm::StringRef AbsPath,
-                                    llvm::StringRef TUPath) {
-  assert(llvm::sys::path::is_absolute(AbsPath) && "the path is relative");
-  auto Resolved = URI::resolvePath(AbsPath, TUPath);
+URIForFile URIForFile::canonicalize(PathRef AbsPath, PathRef TUPath) {
+  assert(AbsPath.isAbsolute() && "the path is relative");
+  auto Resolved = URI::resolvePath(AbsPath.raw(), TUPath.raw());
   if (!Resolved) {
     elog("URIForFile: failed to resolve path {0} with TU path {1}: "
          "{2}.\nUsing unresolved path.",
          AbsPath, TUPath, Resolved.takeError());
-    return URIForFile(std::string(AbsPath));
+    return URIForFile(AbsPath.owned().raw());
   }
   return URIForFile(std::move(*Resolved));
 }

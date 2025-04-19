@@ -211,6 +211,7 @@ private:
   std::mutex ShardVersionsMu;
 
   BackgroundIndexStorage::Factory IndexStorageFactory;
+  // XXX: `MainFiles` should be a vector of `Path`s
   // Tries to load shards for the MainFiles and their dependencies.
   std::vector<std::string> loadProject(std::vector<std::string> MainFiles);
 

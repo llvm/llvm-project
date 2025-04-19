@@ -226,7 +226,7 @@ std::optional<LocatedSymbol> locateFileReferent(const Position &Pos,
   for (auto &Inc : AST.getIncludeStructure().MainFileIncludes) {
     if (!Inc.Resolved.empty() && Inc.HashLine == Pos.line) {
       LocatedSymbol File;
-      File.Name = std::string(llvm::sys::path::filename(Inc.Resolved));
+      File.Name = Inc.Resolved.ref().filename().str();
       File.PreferredDeclaration = {
           URIForFile::canonicalize(Inc.Resolved, MainFilePath), Range{}};
       File.Definition = File.PreferredDeclaration;
@@ -514,7 +514,7 @@ std::vector<LocatedSymbol> locateSymbolForType(const ParsedAST &AST,
                                                const QualType &Type,
                                                const SymbolIndex *Index) {
   const auto &SM = AST.getSourceManager();
-  auto MainFilePath = AST.tuPath();
+  auto MainFilePath = AST.tuPath().raw();
 
   // FIXME: this sends unique_ptr<Foo> to unique_ptr<T>.
   // Likely it would be better to send it to Foo (heuristically) or to both.
@@ -776,7 +776,7 @@ const syntax::Token *findNearbyIdentifier(const SpelledWord &Word,
 std::vector<LocatedSymbol> locateSymbolAt(ParsedAST &AST, Position Pos,
                                           const SymbolIndex *Index) {
   const auto &SM = AST.getSourceManager();
-  auto MainFilePath = AST.tuPath();
+  auto MainFilePath = AST.tuPath().raw();
 
   if (auto File = locateFileReferent(Pos, AST, MainFilePath))
     return {std::move(*File)};
@@ -1352,7 +1352,7 @@ std::vector<LocatedSymbol> findImplementations(ParsedAST &AST, Position Pos,
       QueryKind = RelationKind::BaseOf;
     }
   }
-  return findImplementors(std::move(IDs), QueryKind, Index, AST.tuPath());
+  return findImplementors(std::move(IDs), QueryKind, Index, AST.tuPath().raw());
 }
 
 namespace {
@@ -1570,8 +1570,9 @@ ReferencesResult findReferences(ParsedAST &AST, Position Pos, uint32_t Limit,
           return;
         }
         const auto LSPLocDecl =
-            toLSPLocation(Object.CanonicalDeclaration, MainFilePath);
-        const auto LSPLocDef = toLSPLocation(Object.Definition, MainFilePath);
+            toLSPLocation(Object.CanonicalDeclaration, MainFilePath.raw());
+        const auto LSPLocDef =
+            toLSPLocation(Object.Definition, MainFilePath.raw());
         if (LSPLocDecl && LSPLocDecl != LSPLocDef) {
           ReferencesResult::Reference Result;
           Result.Loc = {std::move(*LSPLocDecl), std::nullopt};
@@ -1622,7 +1623,7 @@ ReferencesResult findReferences(ParsedAST &AST, Position Pos, uint32_t Limit,
     LookupRequest ContainerLookup;
     llvm::DenseMap<SymbolID, std::vector<size_t>> RefIndicesForContainer;
     Results.HasMore |= Index->refs(Req, [&](const Ref &R) {
-      auto LSPLoc = toLSPLocation(R.Location, MainFilePath);
+      auto LSPLoc = toLSPLocation(R.Location, MainFilePath.raw());
       // Avoid indexed results for the main file - the AST is authoritative.
       if (!LSPLoc ||
           (!AllowMainFileSymbols && LSPLoc->uri.file() == MainFilePath))
@@ -1700,9 +1701,9 @@ std::vector<SymbolDetails> getSymbolInfo(ParsedAST &AST, Position Pos) {
     }
     if (const NamedDecl *Def = getDefinition(D))
       NewSymbol.definitionRange = makeLocation(
-          AST.getASTContext(), nameLocation(*Def, SM), MainFilePath);
-    NewSymbol.declarationRange =
-        makeLocation(AST.getASTContext(), nameLocation(*D, SM), MainFilePath);
+          AST.getASTContext(), nameLocation(*Def, SM), MainFilePath.raw());
+    NewSymbol.declarationRange = makeLocation(
+        AST.getASTContext(), nameLocation(*D, SM), MainFilePath.raw());
 
     Results.push_back(std::move(NewSymbol));
   }
@@ -1821,7 +1822,7 @@ declToCallHierarchyItem(const NamedDecl &ND, llvm::StringRef TUPath) {
 template <typename HierarchyItem>
 static std::optional<HierarchyItem> symbolToHierarchyItem(const Symbol &S,
                                                           PathRef TUPath) {
-  auto Loc = symbolToLocation(S, TUPath);
+  auto Loc = symbolToLocation(S, TUPath.raw());
   if (!Loc) {
     elog("Failed to convert symbol to hierarchy item: {0}", Loc.takeError());
     return std::nullopt;
@@ -2242,12 +2243,12 @@ getTypeHierarchy(ParsedAST &AST, Position Pos, int ResolveLevels,
     }
 
     std::optional<TypeHierarchyItem> Result =
-        declToTypeHierarchyItem(*CXXRD, AST.tuPath());
+        declToTypeHierarchyItem(*CXXRD, AST.tuPath().raw());
     if (!Result)
       continue;
 
     RecursionProtectionSet RPSet;
-    fillSuperTypes(*CXXRD, AST.tuPath(), *Result, RPSet);
+    fillSuperTypes(*CXXRD, AST.tuPath().raw(), *Result, RPSet);
 
     if (WantChildren && ResolveLevels > 0) {
       Result->children.emplace();
@@ -2328,7 +2329,7 @@ prepareCallHierarchy(ParsedAST &AST, Position Pos, PathRef TUPath) {
         Decl->getKind() != Decl::Kind::Field &&
         Decl->getKind() != Decl::Kind::EnumConstant)
       continue;
-    if (auto CHI = declToCallHierarchyItem(*Decl, AST.tuPath()))
+    if (auto CHI = declToCallHierarchyItem(*Decl, AST.tuPath().raw()))
       Result.emplace_back(std::move(*CHI));
   }
   return Result;

@@ -474,7 +474,7 @@ public:
     const tooling::Replacement DeleteFuncBody(SM, DefRange->getBegin(),
                                               SourceLen, "");
 
-    llvm::SmallVector<std::pair<std::string, Edit>> Edits;
+    llvm::SmallVector<std::pair<Path, Edit>> Edits;
     // Edit for Target.
     auto FE = Effect::fileEdit(SM, SM.getFileID(*Semicolon),
                                std::move(TargetFileReplacements));
@@ -499,7 +499,8 @@ public:
 
     Effect E;
     for (auto &Pair : Edits)
-      E.ApplyEdits.try_emplace(std::move(Pair.first), std::move(Pair.second));
+      E.ApplyEdits.try_emplace(std::move(Pair.first).raw(),
+                               std::move(Pair.second));
     return E;
   }
 

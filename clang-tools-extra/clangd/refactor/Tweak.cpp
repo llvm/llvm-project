@@ -100,7 +100,7 @@ prepareTweak(StringRef ID, const Tweak::Selection &S,
   return error("tweak ID {0} is invalid", ID);
 }
 
-llvm::Expected<std::pair<Path, Edit>>
+llvm::Expected<std::pair<std::string, Edit>>
 Tweak::Effect::fileEdit(const SourceManager &SM, FileID FID,
                         tooling::Replacements Replacements) {
   Edit Ed(SM.getBufferData(FID), std::move(Replacements));
