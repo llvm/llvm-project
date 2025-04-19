@@ -21,7 +21,7 @@ namespace doc {
 static llvm::StringSet<> USRVisited;
 static llvm::sys::SmartMutex<true> USRVisitedGuard;
 
-template <typename T> bool isTypedefAnonRecord(const T *D) {
+template <typename T> static bool isTypedefAnonRecord(const T *D) {
   if (const auto *C = dyn_cast<CXXRecordDecl>(D)) {
     return C->getTypedefNameForAnonDecl();
   }

@@ -48,7 +48,7 @@ static void populateMemberTypeInfo(RecordInfo &I, AccessSpecifier &Access,
 //
 // }
 // }
-llvm::SmallString<128>
+static llvm::SmallString<128>
 getInfoRelativePath(const llvm::SmallVectorImpl<doc::Reference> &Namespaces) {
   llvm::SmallString<128> Path;
   for (auto R = Namespaces.rbegin(), E = Namespaces.rend(); R != E; ++R)
@@ -56,7 +56,7 @@ getInfoRelativePath(const llvm::SmallVectorImpl<doc::Reference> &Namespaces) {
   return Path;
 }
 
-llvm::SmallString<128> getInfoRelativePath(const Decl *D) {
+static llvm::SmallString<128> getInfoRelativePath(const Decl *D) {
   llvm::SmallVector<Reference, 4> Namespaces;
   // The third arg in populateParentNamespaces is a boolean passed by reference,
   // its value is not relevant in here so it's not used anywhere besides the
@@ -185,7 +185,7 @@ std::string ClangDocCommentVisitor::getCommandName(unsigned CommandID) const {
 
 // Serializing functions.
 
-std::string getSourceCode(const Decl *D, const SourceRange &R) {
+static std::string getSourceCode(const Decl *D, const SourceRange &R) {
   return Lexer::getSourceText(CharSourceRange::getTokenRange(R),
                               D->getASTContext().getSourceManager(),
                               D->getASTContext().getLangOpts())
@@ -239,7 +239,8 @@ static RecordDecl *getRecordDeclForType(const QualType &T) {
   return nullptr;
 }
 
-TypeInfo getTypeInfoForType(const QualType &T, const PrintingPolicy &Policy) {
+static TypeInfo getTypeInfoForType(const QualType &T,
+                                   const PrintingPolicy &Policy) {
   const TagDecl *TD = getTagDeclForType(T);
   if (!TD)
     return TypeInfo(Reference(SymbolID(), T.getAsString(Policy)));
@@ -319,7 +320,7 @@ static void InsertChild(ScopeChildren &Scope, TypedefInfo Info) {
 // parameter. Since each variant is used once, it's not worth having a more
 // elaborate system to automatically deduce this information.
 template <typename ChildType>
-std::unique_ptr<Info> MakeAndInsertIntoParent(ChildType Child) {
+static std::unique_ptr<Info> MakeAndInsertIntoParent(ChildType Child) {
   if (Child.Namespace.empty()) {
     // Insert into unnamed parent namespace.
     auto ParentNS = std::make_unique<NamespaceInfo>();
@@ -496,8 +497,9 @@ populateParentNamespaces(llvm::SmallVector<Reference, 4> &Namespaces,
                             InfoType::IT_namespace);
 }
 
-void PopulateTemplateParameters(std::optional<TemplateInfo> &TemplateInfo,
-                                const clang::Decl *D) {
+static void
+PopulateTemplateParameters(std::optional<TemplateInfo> &TemplateInfo,
+                           const clang::Decl *D) {
   if (const TemplateParameterList *ParamList =
           D->getDescribedTemplateParams()) {
     if (!TemplateInfo) {
@@ -510,8 +512,8 @@ void PopulateTemplateParameters(std::optional<TemplateInfo> &TemplateInfo,
   }
 }
 
-TemplateParamInfo TemplateArgumentToInfo(const clang::Decl *D,
-                                         const TemplateArgument &Arg) {
+static TemplateParamInfo TemplateArgumentToInfo(const clang::Decl *D,
+                                                const TemplateArgument &Arg) {
   // The TemplateArgument's pretty printing handles all the normal cases
   // well enough for our requirements.
   std::string Str;
