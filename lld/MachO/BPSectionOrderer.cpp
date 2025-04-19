@@ -73,7 +73,7 @@ struct BPOrdererMachO : lld::BPOrderer<BPOrdererMachO> {
     }
 
     llvm::sort(hashes);
-    hashes.erase(std::unique(hashes.begin(), hashes.end()), hashes.end());
+    hashes.erase(llvm::unique(hashes), hashes.end());
   }
 
   static llvm::StringRef getSymName(const Defined &sym) {
