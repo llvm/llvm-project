@@ -1728,9 +1728,7 @@ void AsmPrinter::emitCallGraphSection(const MachineFunction &MF,
   OutStreamer->emitInt64(CallSiteLabels.size());
 
   // Emit the type id and call site label pairs.
-  for (const std::pair<uint64_t, MCSymbol *> &El : CallSiteLabels) {
-    auto TypeId = El.first;
-    const auto &Label = El.second;
+  for (const auto& [TypeId, Label] : CallSiteLabels) {
     OutStreamer->emitInt64(TypeId);
     OutStreamer->emitSymbolValue(Label, TM.getProgramPointerSize());
   }
