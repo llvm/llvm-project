@@ -11,7 +11,7 @@
 #include "src/__support/fixed_point/fx_rep.h"
 #include "src/__support/macros/sanitizer.h"
 
-#include <signal.h>
+#include "hdr/signal_macros.h"
 
 template <typename T, typename XType>
 class IdivTest : public LIBC_NAMESPACE::testing::Test {

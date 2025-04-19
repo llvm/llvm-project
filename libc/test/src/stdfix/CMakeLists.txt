@@ -116,6 +116,7 @@ foreach(suffix IN ITEMS r lr k lk ur ulr uk ulk)
     DEPENDS
       libc.src.stdfix.idiv${suffix}
       libc.src.__support.fixed_point.fx_bits
+      libc.hdr.signal_macros
   )
 endforeach()
 
