@@ -72,7 +72,7 @@ unsigned LoongArchELFObjectWriter::getRelocType(MCContext &Ctx,
   }
 
   unsigned Kind = Fixup.getTargetKind();
-  if (Kind >= FirstRelocationKind)
+  if (mc::isRelocation(Fixup.getKind()))
     return Kind - FirstRelocationKind;
   switch (Kind) {
   default:

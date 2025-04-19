@@ -129,7 +129,7 @@ unsigned AArch64ELFObjectWriter::getRelocType(MCContext &Ctx,
 
   // Extract the relocation type from the fixup kind, after applying STT_TLS as
   // needed.
-  if (Kind >= FirstRelocationKind)
+  if (mc::isRelocation(Fixup.getKind()))
     return Kind - FirstRelocationKind;
 
   if (IsPCRel) {

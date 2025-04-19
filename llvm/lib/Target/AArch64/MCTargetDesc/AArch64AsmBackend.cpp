@@ -421,6 +421,10 @@ void AArch64AsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                                    MutableArrayRef<char> Data, uint64_t Value,
                                    bool IsResolved,
                                    const MCSubtargetInfo *STI) const {
+  MCFixupKind Kind = Fixup.getKind();
+  if (mc::isRelocation(Kind))
+    return;
+
   if (Fixup.getTargetKind() == FK_Data_8 && TheTriple.isOSBinFormatELF()) {
     auto RefKind = static_cast<AArch64MCExpr::Specifier>(Target.getSpecifier());
     AArch64MCExpr::Specifier SymLoc = AArch64MCExpr::getSymbolLoc(RefKind);
@@ -441,9 +445,6 @@ void AArch64AsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
 
   if (!Value)
     return; // Doesn't change encoding.
-  unsigned Kind = Fixup.getKind();
-  if (Kind >= FirstRelocationKind)
-    return;
   unsigned NumBytes = getFixupKindNumBytes(Kind);
   MCFixupKindInfo Info = getFixupKindInfo(Fixup.getKind());
   MCContext &Ctx = Asm.getContext();
