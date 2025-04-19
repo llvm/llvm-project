@@ -67,9 +67,13 @@ pip install -q -r "${MONOREPO_ROOT}"/.ci/requirements.txt
 export LLVM_SYMBOLIZER_PATH=`which llvm-symbolizer`
 [[ ! -f "${LLVM_SYMBOLIZER_PATH}" ]] && echo "llvm-symbolizer not found!"
 
+# Set up all runtimes either way. libcxx is a dependency of LLDB.
+# It will not be built unless it is used.
 cmake -S "${MONOREPO_ROOT}"/llvm -B "${BUILD_DIR}" \
       -D LLVM_ENABLE_PROJECTS="${projects}" \
+      -D LLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;libunwind" \
       -G Ninja \
+      -D CMAKE_PREFIX_PATH="${HOME}/.local" \
       -D CMAKE_BUILD_TYPE=Release \
       -D LLVM_ENABLE_ASSERTIONS=ON \
       -D LLVM_BUILD_EXAMPLES=ON \
@@ -78,7 +82,10 @@ cmake -S "${MONOREPO_ROOT}"/llvm -B "${BUILD_DIR}" \
       -D LLVM_ENABLE_LLD=ON \
       -D CMAKE_CXX_FLAGS=-gmlt \
       -D LLVM_CCACHE_BUILD=ON \
+      -D LIBCXX_CXX_ABI=libcxxabi \
       -D MLIR_ENABLE_BINDINGS_PYTHON=ON \
+      -D LLDB_ENABLE_PYTHON=ON \
+      -D LLDB_ENFORCE_STRICT_TEST_REQUIREMENTS=ON \
       -D CMAKE_INSTALL_PREFIX="${INSTALL_DIR}"
 
 echo "--- ninja"
