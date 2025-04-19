@@ -43,13 +43,11 @@ The currently supported control `<name>`s and values `N` are
   * `finite_only_opt` - floating point Inf and NaN are never expected to be consumed or produced.  `N` may be 1 (on/true/enabled), or 0 (off/false/disabled).
   * `unsafe_math_opt` - lower accuracy results may be produced with higher performance.  `N` may be 1 (on/true/enabled) or 0 (off/false/disabled).
   * `daz_opt` - subnormal values consumed and produced may be flushed to zero.  `N`may be 1 (on/true/enabled) or 0 (off/false/disabled).
-  * `correctly_rounded_sqrt32` - float square root must be correctly rounded.  `N` may be 1 (on/true/enabled) or 0 (off/false/disabled).
   * `wavefrontsize64` - the wave front size is 64.  `N` may be 1 (on/true/enabled) or 0 (off/false/disabled).  Very few current devices support a value of 0.
   * `ISA_version` - an integer representation of the ISA version of the target device
 
 The language runtime can link a specific set of OCLC control libraries to properly configure OCML and other device libraries which also use the controls.  If linking OCLC libraries is used to define the control variables, then the runtime must link in:
 
-- Exactly one of `oclc_correctly_rounded_sqrt_on.amdgcn.bc` or `oclc_correctly_rounded_sqrt_off.amdgcn.bc` depending on the kernel's requirements
 - Exactly one of `oclc_daz_opt_on.amdgcn.bc` or `oclc_daz_opt_off.amdgcn.bc` depending on the kernel's requirements
 - Exactly one of `oclc_finite_only_on.amdgcn.bc` or `oclc_finite_only_off.amdgcn.bc` depending on the kernel's requirements
 - Exactly one of `oclc_unsafe_math_on.amdgcn.bc` or `oclc_unsafe_math_off.amdgcn.bc` depending on the kernel's requirements
@@ -84,7 +82,7 @@ where `{function}` is generally the familiar libm name of the function, and `{ty
 
 For example, `__ocml_sqrt_f32` is the name of the OCML single precision square root function.
 
-OCML does not currently support higher precision than double precision due to the lack of hardware support for such precisions. 
+OCML does not currently support higher precision than double precision due to the lack of hardware support for such precisions.
 
 ### Supported functions
 
