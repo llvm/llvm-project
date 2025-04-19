@@ -5,8 +5,8 @@
 # CHECK: name: main
 # CHECK: callSites:
 # CHECK-NEXT: - { bb: {{.*}}, offset: {{.*}}, fwdArgRegs: []
-# CHECK-NEXT: - { bb: {{.*}}, offset: {{.*}}, fwdArgRegs: [], calleeTypeId:
-# CHECK-NEXT: 1234567890 }
+# CHECK-NEXT: - { bb: {{.*}}, offset: {{.*}}, fwdArgRegs: [], calleeTypeIds:
+# CHECK-NEXT: [ 1234567890 ] }
 
 --- |  
   
@@ -16,7 +16,7 @@
   
   declare !type !1 noundef ptr @_Z13get_operationb(i1 noundef zeroext %is_addition)
   
-  define dso_local noundef i32 @main(i32 noundef %argc) !type !2 !type !2 {
+  define dso_local noundef i32 @main(i32 noundef %argc) !type !2 {
   entry:
     %retval = alloca i32, align 4
     %argc.addr = alloca i32, align 4
@@ -30,26 +30,27 @@
     %argc_val = load i32, ptr %argc.addr, align 4
     %rem = srem i32 %argc_val, 2
     %cmp = icmp eq i32 %rem, 0
-    %call = call noundef ptr @_Z13get_operationb(i1 noundef zeroext %cmp) [ "callee_type"(metadata !"_ZTSFPvbE.generalized") ]
+    %call = call noundef ptr @_Z13get_operationb(i1 noundef zeroext %cmp)
     store ptr %call, ptr %op, align 8
     %op_val = load ptr, ptr %op, align 8
     %x_val = load i32, ptr %x, align 4
     %y_val = load i32, ptr %y, align 4
-    %call1 = call noundef i32 %op_val(i32 noundef %x_val, i32 noundef %y_val) [ "callee_type"(metadata !"_ZTSFiiiE.generalized") ]
+    %call1 = call noundef i32 %op_val(i32 noundef %x_val, i32 noundef %y_val), !callee_type !3
     ret i32 %call1
   }
   
   !0 = !{i64 0, !"_ZTSFiiiE.generalized"}
   !1 = !{i64 0, !"_ZTSFPvbE.generalized"}
   !2 = !{i64 0, !"_ZTSFiiE.generalized"}
+  !3 = !{!0}
 
 ...
 ---
 name:            main
 callSites:
   - { bb: 0, offset: 0, fwdArgRegs: [] }
-  - { bb: 0, offset: 2, fwdArgRegs: [], calleeTypeId: 
-    1234567890 }
+  - { bb: 0, offset: 2, fwdArgRegs: [], calleeTypeIds: 
+    [ 1234567890 ] }
 body:             |
   bb.0.entry:
     CALL64pcrel32 @_Z13get_operationb, csr_64, implicit $rsp, implicit $ssp, implicit $edi, implicit-def $rsp, implicit-def $ssp, implicit-def $rax    

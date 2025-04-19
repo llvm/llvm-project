@@ -530,6 +530,7 @@ private:
   void visitCallStackMetadata(MDNode *MD);
   void visitMemProfMetadata(Instruction &I, MDNode *MD);
   void visitCallsiteMetadata(Instruction &I, MDNode *MD);
+  void visitCalleeTypeMetadata(Instruction &I, MDNode *MD);
   void visitDIAssignIDMetadata(Instruction &I, MDNode *MD);
   void visitMMRAMetadata(Instruction &I, MDNode *MD);
   void visitAnnotationMetadata(MDNode *Annotation);
@@ -3721,14 +3722,14 @@ void Verifier::visitCallBase(CallBase &Call) {
     if (Intrinsic::ID ID = (Intrinsic::ID)F->getIntrinsicID())
       visitIntrinsicCall(ID, Call);
 
-  // Verify that a callsite has at most one operand bundle for each of the
-  // following: "deopt", "funclet", "gc-transition", "cfguardtarget",
-  // "callee_type", "preallocated", and "ptrauth".
+  // Verify that a callsite has at most one "deopt", at most one "funclet", at
+  // most one "gc-transition", at most one "cfguardtarget", at most one
+  // "preallocated" operand bundle, and at most one "ptrauth" operand bundle.
   bool FoundDeoptBundle = false, FoundFuncletBundle = false,
        FoundGCTransitionBundle = false, FoundCFGuardTargetBundle = false,
        FoundPreallocatedBundle = false, FoundGCLiveBundle = false,
        FoundPtrauthBundle = false, FoundKCFIBundle = false,
-       FoundAttachedCallBundle = false, FoundCalleeTypeBundle = false;
+       FoundAttachedCallBundle = false;
   for (unsigned i = 0, e = Call.getNumOperandBundles(); i < e; ++i) {
     OperandBundleUse BU = Call.getOperandBundleAt(i);
     uint32_t Tag = BU.getTagID();
@@ -3791,16 +3792,6 @@ void Verifier::visitCallBase(CallBase &Call) {
             "Multiple \"clang.arc.attachedcall\" operand bundles", Call);
       FoundAttachedCallBundle = true;
       verifyAttachedCallBundle(Call, BU);
-    } else if (Tag == LLVMContext::OB_callee_type) {
-      Check(!FoundCalleeTypeBundle, "Multiple \"callee_type\" operand bundles",
-            Call);
-      Value *CalleeTypeOBVal = BU.Inputs.front().get();
-      Metadata *TypeIdMD =
-          cast<MetadataAsValue>(CalleeTypeOBVal)->getMetadata();
-      MDString *TypeIdStr = cast<MDString>(TypeIdMD);
-      Check(TypeIdStr->getString().ends_with(".generalized"),
-            "Invalid \"callee_type\" type identifier", Call);
-      FoundCalleeTypeBundle = true;
     }
   }
 
@@ -5060,6 +5051,21 @@ void Verifier::visitCallsiteMetadata(Instruction &I, MDNode *MD) {
   visitCallStackMetadata(MD);
 }
 
+void Verifier::visitCalleeTypeMetadata(Instruction &I, MDNode *MD) {
+  Check(isa<CallBase>(I), "!callee_type metadata should only exist on calls",
+        &I);
+  CallBase *CB = cast<CallBase>(&I);
+  Check(CB->isIndirectCall(),
+        "!callee_type metadata should only exist on indirect function calls",
+        &I);
+  for (const auto &Op : MD->operands()) {
+    auto *TypeMD = cast<MDNode>(Op.get());
+    MDString *TypeIdStr = cast<MDString>(TypeMD->getOperand(1));
+    Check(TypeIdStr->getString().ends_with(".generalized"),
+          "Invalid \"callee_type\" type identifier", &I);
+  }
+}
+
 void Verifier::visitAnnotationMetadata(MDNode *Annotation) {
   Check(isa<MDTuple>(Annotation), "annotation must be a tuple");
   Check(Annotation->getNumOperands() >= 1,
@@ -5334,6 +5340,9 @@ void Verifier::visitInstruction(Instruction &I) {
 
   if (MDNode *MD = I.getMetadata(LLVMContext::MD_callsite))
     visitCallsiteMetadata(I, MD);
+
+  if (MDNode *MD = I.getMetadata(LLVMContext::MD_callee_type))
+    visitCalleeTypeMetadata(I, MD);
 
   if (MDNode *MD = I.getMetadata(LLVMContext::MD_DIAssignID))
     visitDIAssignIDMetadata(I, MD);
