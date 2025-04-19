@@ -44,15 +44,6 @@ static llvm::Error decodeRecord(const Record &R, bool &Field,
   return llvm::Error::success();
 }
 
-static llvm::Error decodeRecord(const Record &R, int &Field,
-                                llvm::StringRef Blob) {
-  if (R[0] > INT_MAX)
-    return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                   "integer too large to parse");
-  Field = static_cast<int>(R[0]);
-  return llvm::Error::success();
-}
-
 static llvm::Error decodeRecord(const Record &R, AccessSpecifier &Field,
                                 llvm::StringRef Blob) {
   switch (R[0]) {
@@ -431,11 +422,6 @@ template <> llvm::Expected<CommentInfo *> getCommentInfo(EnumValueInfo *I) {
 template <> llvm::Expected<CommentInfo *> getCommentInfo(CommentInfo *I) {
   I->Children.emplace_back(std::make_unique<CommentInfo>());
   return I->Children.back().get();
-}
-
-template <>
-llvm::Expected<CommentInfo *> getCommentInfo(std::unique_ptr<CommentInfo> &I) {
-  return getCommentInfo(I.get());
 }
 
 // When readSubBlock encounters a TypeInfo sub-block, it calls addTypeInfo on
