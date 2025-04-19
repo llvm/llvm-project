@@ -413,6 +413,7 @@ BENIGN_LANGOPT(ArrowDepth, 32, 256,
                "maximum number of operator->s to follow")
 BENIGN_LANGOPT(InstantiationDepth, 32, 1024,
                "maximum template instantiation depth")
+COMPATIBLE_LANGOPT(ImplicitConstexpr, 1, 0, "make functions implicitly 'constexpr'")
 BENIGN_LANGOPT(ConstexprCallDepth, 32, 512,
                "maximum constexpr call depth")
 BENIGN_LANGOPT(ConstexprStepLimit, 32, 1048576,

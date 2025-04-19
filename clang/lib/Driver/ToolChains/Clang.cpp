@@ -6612,6 +6612,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   Args.AddLastArg(CmdArgs, options::OPT_fconstexpr_depth_EQ);
   Args.AddLastArg(CmdArgs, options::OPT_fconstexpr_steps_EQ);
 
+  if (types::isCXX(InputType))
+    Args.AddLastArg(CmdArgs, options::OPT_fimplicit_constexpr);
+
   Args.AddLastArg(CmdArgs, options::OPT_fexperimental_library);
 
   if (Args.hasArg(options::OPT_fexperimental_new_constant_interpreter))

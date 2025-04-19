@@ -18384,16 +18384,18 @@ void Sema::MarkFunctionReferenced(SourceLocation Loc, FunctionDecl *Func,
         }
 
         if (FirstInstantiation || TSK != TSK_ImplicitInstantiation ||
-            Func->isConstexpr()) {
+            Func->isConstexprOrImplicitlyCanBe(getLangOpts())) {
           if (isa<CXXRecordDecl>(Func->getDeclContext()) &&
               cast<CXXRecordDecl>(Func->getDeclContext())->isLocalClass() &&
               CodeSynthesisContexts.size())
             PendingLocalImplicitInstantiations.push_back(
                 std::make_pair(Func, PointOfInstantiation));
-          else if (Func->isConstexpr())
+          else if (Func->isConstexprOrImplicitlyCanBe(getLangOpts()))
             // Do not defer instantiations of constexpr functions, to avoid the
             // expression evaluator needing to call back into Sema if it sees a
             // call to such a function.
+            // (When -fimplicit-instantiation is enabled, all functions are
+            // implicitly constexpr)
             InstantiateFunctionDefinition(PointOfInstantiation, Func);
           else {
             Func->setInstantiationIsPending(true);

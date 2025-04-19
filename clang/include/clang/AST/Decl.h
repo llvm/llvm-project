@@ -2418,6 +2418,9 @@ public:
   bool isConstexpr() const {
     return getConstexprKind() != ConstexprSpecKind::Unspecified;
   }
+  /// Support for `-fimplicit-constexpr`
+  bool isConstexprOrImplicitlyCanBe(const LangOptions &LangOpts,
+                                    bool MustBeInlined = true) const;
   void setConstexprKind(ConstexprSpecKind CSK) {
     FunctionDeclBits.ConstexprKind = static_cast<uint64_t>(CSK);
   }

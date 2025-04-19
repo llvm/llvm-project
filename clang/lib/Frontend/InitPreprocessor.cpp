@@ -779,6 +779,9 @@ static void InitializeCPlusPlusFeatureTestMacros(const LangOptions &LangOpts,
 
   // TODO: Final number?
   Builder.defineMacro("__cpp_type_aware_allocators", "202500L");
+
+  if (LangOpts.ImplicitConstexpr) // same value as GCC
+    Builder.defineMacro("__cpp_implicit_constexpr", "20211111");
 }
 
 /// InitializeOpenCLFeatureTestMacros - Define OpenCL macros based on target
