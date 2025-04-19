@@ -7873,6 +7873,7 @@ PreservedAnalyses VerifierPass::run(Module &M, ModuleAnalysisManager &AM) {
     //M.IsValid = false;
     if (VerifyAbortOnError && FatalErrors)
       report_fatal_error("Broken module found, compilation aborted!");
+    return PreservedAnalyses::none();
   }
 
   return PreservedAnalyses::all();
@@ -7884,6 +7885,7 @@ PreservedAnalyses VerifierPass::run(Function &F, FunctionAnalysisManager &AM) {
     //F.getParent()->IsValid = false;
     if (VerifyAbortOnError && FatalErrors)
       report_fatal_error("Broken function found, compilation aborted!");
+    return PreservedAnalyses::none();
   }
 
   return PreservedAnalyses::all();
