@@ -499,36 +499,33 @@ public:
   struct CallSiteInfo {
     /// Vector of call argument and its forwarding register.
     SmallVector<ArgRegPair, 1> ArgRegPairs;
-
-    /// Callee type id.
-    ConstantInt *CalleeTypeId = nullptr;
+    /// Callee type ids.
+    SmallVector<ConstantInt *, 4> CalleeTypeIds;
 
     CallSiteInfo() = default;
 
-    /// Extracts the numeric type id from the CallBase's type operand bundle,
-    /// and sets TypeId. This is used as type id for the indirect call in the
-    /// call graph section.
+    /// Extracts the numeric type id from the CallBase's callee_type Metadata,
+    /// and sets CalleeTypeIds. This is used as type id for the indirect call in
+    /// the call graph section.
     CallSiteInfo(const CallBase &CB) {
-      // Call graph section needs numeric type id only for indirect calls.
+      // Call graph section needs numeric callee_type id only for indirect
+      // calls.
       if (!CB.isIndirectCall())
         return;
 
-      std::optional<OperandBundleUse> CalleeTypeOB =
-          CB.getOperandBundle(LLVMContext::OB_callee_type);
-      // Return if the operand bundle for call graph section cannot be found.
-      if (!CalleeTypeOB)
+      MDNode *CalleeTypeList = CB.getMetadata(LLVMContext::MD_callee_type);
+      if (!CalleeTypeList)
         return;
 
-      // Get generalized type id string
-      Value *CalleeTypeOBVal = CalleeTypeOB->Inputs.front().get();
-      Metadata *TypeIdMD =
-          cast<MetadataAsValue>(CalleeTypeOBVal)->getMetadata();
-      MDString *TypeIdStr = cast<MDString>(TypeIdMD);
-
-      // Compute numeric type id from generalized type id string
-      uint64_t TypeIdVal = MD5Hash(TypeIdStr->getString());
-      IntegerType *Int64Ty = Type::getInt64Ty(CB.getContext());
-      CalleeTypeId = ConstantInt::get(Int64Ty, TypeIdVal, /*IsSigned=*/false);
+      for (const MDOperand &Op : CalleeTypeList->operands()) {
+        MDNode *TypeMD = cast<MDNode>(Op);
+        MDString *TypeIdStr = cast<MDString>(TypeMD->getOperand(1));
+        // Compute numeric type id from generalized type id string
+        uint64_t TypeIdVal = MD5Hash(TypeIdStr->getString());
+        IntegerType *Int64Ty = Type::getInt64Ty(CB.getContext());
+        CalleeTypeIds.push_back(
+            ConstantInt::get(Int64Ty, TypeIdVal, /*IsSigned=*/false));
+      }
     }
   };
 
