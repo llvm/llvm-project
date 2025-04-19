@@ -395,8 +395,7 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
   case Type::ConstantArray: {
     const ConstantArrayType *arrTy = cast<ConstantArrayType>(ty);
     mlir::Type elemTy = convertTypeForMem(arrTy->getElementType());
-    resultType = cir::ArrayType::get(builder.getContext(), elemTy,
-                                     arrTy->getSize().getZExtValue());
+    resultType = cir::ArrayType::get(elemTy, arrTy->getSize().getZExtValue());
     break;
   }
 
