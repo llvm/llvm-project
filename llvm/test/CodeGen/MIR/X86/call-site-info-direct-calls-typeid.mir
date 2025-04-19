@@ -1,9 +1,9 @@
-# Test MIR printer and parser to NOT have `typeId` field in callSites.
-# `typeId` is used for propagating call site type identifiers for
+# Test MIR printer and parser to NOT have `CalleeTypeIds` field in callSites.
+# `CalleeTypeId` is used for propagating call site type identifiers for
 # indirect targets only. This test does not contain any indirect targets.
 
 # RUN: llc --call-graph-section %s -run-pass=none -o - | FileCheck %s
-# CHECK-NOT: - { bb: {{.*}}, offset: {{.*}}, fwdArgRegs: [], calleeTypeId:
+# CHECK-NOT: - { bb: {{.*}}, offset: {{.*}}, fwdArgRegs: [], calleeTypeIds:
 # CHECK: name: _Z3barii
 # CHECK: callSites:
 # CHECK-NEXT: - { bb: {{.*}}, offset: {{.*}}, fwdArgRegs: []
@@ -13,11 +13,11 @@
 # CHECK-NEXT: - { bb: {{.*}}, offset: {{.*}}, fwdArgRegs: []
 
 --- |  
-  declare !type !0 noundef i32 @_Z4fizzii(i32 noundef %x, i32 noundef %y)
+  declare noundef i32 @_Z4fizzii(i32 noundef %x, i32 noundef %y)
   
-  declare !type !0 noundef i32 @_Z4buzzii(i32 noundef %x, i32 noundef %y)
+  declare noundef i32 @_Z4buzzii(i32 noundef %x, i32 noundef %y)
   
-  define dso_local noundef i32 @_Z3barii(i32 noundef %x, i32 noundef %y) !type !0 !type !0 {
+  define dso_local noundef i32 @_Z3barii(i32 noundef %x, i32 noundef %y) {
   entry:
     %x.addr = alloca i32, align 4
     %y.addr = alloca i32, align 4
@@ -25,15 +25,15 @@
     store i32 %y, ptr %y.addr, align 4
     %x_val = load i32, ptr %x.addr, align 4
     %y_val = load i32, ptr %y.addr, align 4
-    %call = call noundef i32 @_Z4buzzii(i32 noundef %x_val, i32 noundef %y_val) [ "callee_type"(metadata !"_ZTSFiiiE.generalized") ]
+    %call = call noundef i32 @_Z4buzzii(i32 noundef %x_val, i32 noundef %y_val)
     %x_val_2 = load i32, ptr %x.addr, align 4
     %y_val_2 = load i32, ptr %y.addr, align 4
-    %call1 = call noundef i32 @_Z4fizzii(i32 noundef %x_val_2, i32 noundef %y_val_2) [ "callee_type"(metadata !"_ZTSFiiiE.generalized") ]
+    %call1 = call noundef i32 @_Z4fizzii(i32 noundef %x_val_2, i32 noundef %y_val_2)
     %sub = sub nsw i32 %call, %call1
     ret i32 %sub
   }
   
-  define dso_local noundef i32 @_Z3fooii(i32 noundef %x, i32 noundef %y) !type !0 !type !0 {
+  define dso_local noundef i32 @_Z3fooii(i32 noundef %x, i32 noundef %y) {
   entry:
     %x.addr = alloca i32, align 4
     %y.addr = alloca i32, align 4
@@ -41,7 +41,7 @@
     store i32 %y, ptr %y.addr, align 4
     %x_val = load i32, ptr %x.addr, align 4
     %y_val = load i32, ptr %y.addr, align 4
-    %call = call noundef i32 @_Z3barii(i32 noundef %x_val, i32 noundef %y_val) [ "callee_type"(metadata !"_ZTSFiiiE.generalized") ]
+    %call = call noundef i32 @_Z3barii(i32 noundef %x_val, i32 noundef %y_val)
     ret i32 %call
   }
   
