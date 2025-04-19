@@ -33,13 +33,13 @@ public:
   /// Construct a PBQP vector with initializer.
   Vector(unsigned Length, PBQPNum InitVal)
     : Length(Length), Data(std::make_unique<PBQPNum []>(Length)) {
-    std::fill(Data.get(), Data.get() + Length, InitVal);
+    std::fill(begin(), end(), InitVal);
   }
 
   /// Copy construct a PBQP vector.
   Vector(const Vector &V)
     : Length(V.Length), Data(std::make_unique<PBQPNum []>(Length)) {
-    std::copy(V.Data.get(), V.Data.get() + Length, Data.get());
+    llvm::copy(V, begin());
   }
 
   /// Move construct a PBQP vector.
