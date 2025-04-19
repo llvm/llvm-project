@@ -15,24 +15,24 @@
 using namespace mlir;
 
 static FailureOr<LLVM::LLVMFuncOp>
-getNotalignedAllocFn(const LLVMTypeConverter *typeConverter, Operation *module,
-                     Type indexType) {
+getNotalignedAllocFn(OpBuilder &b, const LLVMTypeConverter *typeConverter,
+                     Operation *module, Type indexType) {
   bool useGenericFn = typeConverter->getOptions().useGenericFunctions;
   if (useGenericFn)
-    return LLVM::lookupOrCreateGenericAllocFn(module, indexType);
+    return LLVM::lookupOrCreateGenericAllocFn(b, module, indexType);
 
-  return LLVM::lookupOrCreateMallocFn(module, indexType);
+  return LLVM::lookupOrCreateMallocFn(b, module, indexType);
 }
 
 static FailureOr<LLVM::LLVMFuncOp>
-getAlignedAllocFn(const LLVMTypeConverter *typeConverter, Operation *module,
-                  Type indexType) {
+getAlignedAllocFn(OpBuilder &b, const LLVMTypeConverter *typeConverter,
+                  Operation *module, Type indexType) {
   bool useGenericFn = typeConverter->getOptions().useGenericFunctions;
 
   if (useGenericFn)
-    return LLVM::lookupOrCreateGenericAlignedAllocFn(module, indexType);
+    return LLVM::lookupOrCreateGenericAlignedAllocFn(b, module, indexType);
 
-  return LLVM::lookupOrCreateAlignedAllocFn(module, indexType);
+  return LLVM::lookupOrCreateAlignedAllocFn(b, module, indexType);
 }
 
 Value AllocationOpLLVMLowering::createAligned(
@@ -75,8 +75,8 @@ std::tuple<Value, Value> AllocationOpLLVMLowering::allocateBufferManuallyAlign(
   Type elementPtrType = this->getElementPtrType(memRefType);
   assert(elementPtrType && "could not compute element ptr type");
   FailureOr<LLVM::LLVMFuncOp> allocFuncOp = getNotalignedAllocFn(
-      getTypeConverter(), op->getParentWithTrait<OpTrait::SymbolTable>(),
-      getIndexType());
+      rewriter, getTypeConverter(),
+      op->getParentWithTrait<OpTrait::SymbolTable>(), getIndexType());
   if (failed(allocFuncOp))
     return std::make_tuple(Value(), Value());
   auto results =
@@ -144,8 +144,8 @@ Value AllocationOpLLVMLowering::allocateBufferAutoAlign(
 
   Type elementPtrType = this->getElementPtrType(memRefType);
   FailureOr<LLVM::LLVMFuncOp> allocFuncOp = getAlignedAllocFn(
-      getTypeConverter(), op->getParentWithTrait<OpTrait::SymbolTable>(),
-      getIndexType());
+      rewriter, getTypeConverter(),
+      op->getParentWithTrait<OpTrait::SymbolTable>(), getIndexType());
   if (failed(allocFuncOp))
     return Value();
   auto results = rewriter.create<LLVM::CallOp>(
