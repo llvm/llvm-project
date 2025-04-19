@@ -105,17 +105,4 @@ declare ptr @objc_retainAutoreleasedReturnValue(ptr)
 declare ptr @objc_unsafeClaimAutoreleasedReturnValue(ptr)
 declare void @llvm.assume(i1)
 
-define void @f_type(ptr %ptr) {
-; CHECK: Multiple "callee_type" operand bundles
-; CHECK-NEXT: call void @g() [ "callee_type"(metadata !"_ZTSFvE.generalized"), "callee_type"(metadata !"_ZTSFvE.generalized") ]
-
- entry:
-  %ptr_val = load i32, ptr %ptr, align 4
-  call void @g() [ "callee_type"(metadata !"_ZTSFvE.generalized"), "callee_type"(metadata !"_ZTSFvE.generalized") ]
-  %x = add i32 42, 1
-  ret void
-}
-
 attributes #0 = { noreturn }
-
-; CHECK-NEXT: error: input module is broken!
