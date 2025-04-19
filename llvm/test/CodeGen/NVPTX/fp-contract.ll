@@ -15,7 +15,7 @@ target triple = "nvptx64-unknown-cuda"
 define float @t0(float %a, float %b, float %c) {
 ; FAST-LABEL: t0(
 ; FAST:       {
-; FAST-NEXT:    .reg .f32 %f<5>;
+; FAST-NEXT:    .reg .b32 %f<5>;
 ; FAST-EMPTY:
 ; FAST-NEXT:  // %bb.0:
 ; FAST-NEXT:    ld.param.f32 %f1, [t0_param_0];
@@ -27,7 +27,7 @@ define float @t0(float %a, float %b, float %c) {
 ;
 ; DEFAULT-LABEL: t0(
 ; DEFAULT:       {
-; DEFAULT-NEXT:    .reg .f32 %f<6>;
+; DEFAULT-NEXT:    .reg .b32 %f<6>;
 ; DEFAULT-EMPTY:
 ; DEFAULT-NEXT:  // %bb.0:
 ; DEFAULT-NEXT:    ld.param.f32 %f1, [t0_param_0];
@@ -47,7 +47,7 @@ define float @t0(float %a, float %b, float %c) {
 define float @t1(float %a, float %b) {
 ; FAST-LABEL: t1(
 ; FAST:       {
-; FAST-NEXT:    .reg .f32 %f<6>;
+; FAST-NEXT:    .reg .b32 %f<6>;
 ; FAST-EMPTY:
 ; FAST-NEXT:  // %bb.0:
 ; FAST-NEXT:    ld.param.f32 %f1, [t1_param_0];
@@ -60,7 +60,7 @@ define float @t1(float %a, float %b) {
 ;
 ; DEFAULT-LABEL: t1(
 ; DEFAULT:       {
-; DEFAULT-NEXT:    .reg .f32 %f<6>;
+; DEFAULT-NEXT:    .reg .b32 %f<6>;
 ; DEFAULT-EMPTY:
 ; DEFAULT-NEXT:  // %bb.0:
 ; DEFAULT-NEXT:    ld.param.f32 %f1, [t1_param_0];
@@ -81,7 +81,7 @@ define float @t1(float %a, float %b) {
 define float @t2(float %a, float %b) {
 ; CHECK-LABEL: t2(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<6>;
+; CHECK-NEXT:    .reg .b32 %f<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.f32 %f1, [t2_param_0];
@@ -101,7 +101,7 @@ define float @t2(float %a, float %b) {
 define float @t3(float %a, float %b, float %c) {
 ; CHECK-LABEL: t3(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<5>;
+; CHECK-NEXT:    .reg .b32 %f<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.f32 %f1, [t3_param_0];
