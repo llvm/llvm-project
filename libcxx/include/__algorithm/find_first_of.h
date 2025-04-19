@@ -27,7 +27,7 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _ForwardIterator1 __find_fir
     _ForwardIterator2 __last2,
     _BinaryPredicate&& __pred) {
   return std::find_if(first1, last1, [&](const auto& x) {
-    return std::any_of(first2, last2, [&](const auto& y) { return x == y; });
+    return std::any_of(first2, last2, [&](const auto& y) { return __pred(x, y); });
   });
 }
 
