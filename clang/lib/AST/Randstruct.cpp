@@ -159,7 +159,7 @@ void randomizeStructureLayoutImpl(const ASTContext &Context,
     if (!B->isBitfieldRun())
       std::shuffle(std::begin(RandFields), std::end(RandFields), RNG);
 
-    FinalOrder.insert(FinalOrder.end(), RandFields.begin(), RandFields.end());
+    llvm::append_range(FinalOrder, RandFields);
   }
 
   FieldsOut = FinalOrder;
