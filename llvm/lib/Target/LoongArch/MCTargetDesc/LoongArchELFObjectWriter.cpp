@@ -73,7 +73,7 @@ unsigned LoongArchELFObjectWriter::getRelocType(MCContext &Ctx,
 
   unsigned Kind = Fixup.getTargetKind();
   if (mc::isRelocation(Fixup.getKind()))
-    return Kind - FirstRelocationKind;
+    return Kind;
   switch (Kind) {
   default:
     Ctx.reportError(Fixup.getLoc(), "Unsupported relocation type");
