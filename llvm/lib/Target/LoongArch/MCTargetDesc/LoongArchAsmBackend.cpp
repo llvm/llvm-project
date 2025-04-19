@@ -70,7 +70,7 @@ LoongArchAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
 
   // Fixup kinds from .reloc directive are like R_LARCH_NONE. They
   // do not require any extra processing.
-  if (unsigned(Kind) >= FirstRelocationKind)
+  if (mc::isRelocation(Kind))
     return MCAsmBackend::getFixupKindInfo(FK_NONE);
 
   if (Kind < FirstTargetFixupKind)
@@ -152,10 +152,10 @@ void LoongArchAsmBackend::applyFixup(const MCAssembler &Asm,
   if (!Value)
     return; // Doesn't change encoding.
 
-  auto Kind = Fixup.getTargetKind();
-  if (Kind >= FirstRelocationKind)
+  auto Kind = Fixup.getKind();
+  if (mc::isRelocation(Kind))
     return;
-  MCFixupKindInfo Info = getFixupKindInfo(MCFixupKind(Kind));
+  MCFixupKindInfo Info = getFixupKindInfo(Kind);
   MCContext &Ctx = Asm.getContext();
 
   // Fixup leb128 separately.
