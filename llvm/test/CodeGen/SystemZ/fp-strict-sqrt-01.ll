@@ -6,7 +6,23 @@
 ; Test strict 32-bit square root.
 ;
 
+declare half @llvm.experimental.constrained.sqrt.f16(half, metadata, metadata)
 declare float @llvm.experimental.constrained.sqrt.f32(float, metadata, metadata)
+
+; Check register square root.
+define half @f0(half %val) #0 {
+; CHECK-LABEL: f0:
+; CHECK:       # %bb.0:
+; CHECK:      brasl %r14, __extendhfsf2@PLT
+; CHECK-NEXT: sqebr %f0, %f0
+; CHECK-NEXT: brasl %r14, __truncsfhf2@PLT
+; CHECK:      br %r14
+  %res = call half @llvm.experimental.constrained.sqrt.f16(
+                        half %val,
+                        metadata !"round.dynamic",
+                        metadata !"fpexcept.strict") #0
+  ret half %res
+}
 
 ; Check register square root.
 define float @f1(float %val) #0 {

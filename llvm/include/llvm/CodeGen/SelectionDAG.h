@@ -1345,7 +1345,8 @@ public:
       EVT MemVT, MachinePointerInfo PtrInfo, Align Alignment,
       MachineMemOperand::Flags Flags = MachineMemOperand::MOLoad |
                                        MachineMemOperand::MOStore,
-      LocationSize Size = 0, const AAMDNodes &AAInfo = AAMDNodes());
+      LocationSize Size = LocationSize::precise(0),
+      const AAMDNodes &AAInfo = AAMDNodes());
 
   inline SDValue getMemIntrinsicNode(
       unsigned Opcode, const SDLoc &dl, SDVTList VTList, ArrayRef<SDValue> Ops,
@@ -1353,7 +1354,8 @@ public:
       MaybeAlign Alignment = std::nullopt,
       MachineMemOperand::Flags Flags = MachineMemOperand::MOLoad |
                                        MachineMemOperand::MOStore,
-      LocationSize Size = 0, const AAMDNodes &AAInfo = AAMDNodes()) {
+      LocationSize Size = LocationSize::precise(0),
+      const AAMDNodes &AAInfo = AAMDNodes()) {
     // Ensure that codegen never sees alignment 0
     return getMemIntrinsicNode(Opcode, dl, VTList, Ops, MemVT, PtrInfo,
                                Alignment.value_or(getEVTAlign(MemVT)), Flags,
@@ -2143,9 +2145,23 @@ public:
   bool isBaseWithConstantOffset(SDValue Op) const;
 
   /// Test whether the given SDValue (or all elements of it, if it is a
+  /// vector) is known to never be NaN in \p DemandedElts. If \p SNaN is true,
+  /// returns if \p Op is known to never be a signaling NaN (it may still be a
+  /// qNaN).
+  bool isKnownNeverNaN(SDValue Op, const APInt &DemandedElts, bool SNaN = false,
+                       unsigned Depth = 0) const;
+
+  /// Test whether the given SDValue (or all elements of it, if it is a
   /// vector) is known to never be NaN. If \p SNaN is true, returns if \p Op is
   /// known to never be a signaling NaN (it may still be a qNaN).
   bool isKnownNeverNaN(SDValue Op, bool SNaN = false, unsigned Depth = 0) const;
+
+  /// \returns true if \p Op is known to never be a signaling NaN in \p
+  /// DemandedElts.
+  bool isKnownNeverSNaN(SDValue Op, const APInt &DemandedElts,
+                        unsigned Depth = 0) const {
+    return isKnownNeverNaN(Op, DemandedElts, true, Depth);
+  }
 
   /// \returns true if \p Op is known to never be a signaling NaN.
   bool isKnownNeverSNaN(SDValue Op, unsigned Depth = 0) const {

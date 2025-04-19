@@ -1674,6 +1674,19 @@ extern "C" __attribute((naked)) void __bolt_instr_indirect_call()
                        "ret\n"
                        :::);
   // clang-format on
+#elif defined(__riscv)
+  // clang-format off
+  __asm__ __volatile__(
+                      SAVE_ALL
+                      "addi sp, sp, 288\n"
+                      "ld x10, 0(sp)\n"
+                      "ld x11, 8(sp)\n"
+                      "addi sp, sp, -288\n"
+                      "jal x1, instrumentIndirectCall\n"
+                      RESTORE_ALL
+                      "ret\n"
+                      :::);
+  // clang-format on
 #else
   // clang-format off
   __asm__ __volatile__(SAVE_ALL
@@ -1697,6 +1710,18 @@ extern "C" __attribute((naked)) void __bolt_instr_indirect_tailcall()
                        RESTORE_ALL
                        "ret\n"
                        :::);
+  // clang-format on
+#elif defined(__riscv)
+  // clang-format off
+  __asm__ __volatile__(SAVE_ALL
+                      "addi sp, sp, 288\n"
+                      "ld x10, 0(sp)\n"
+                      "ld x11, 8(sp)\n"
+                      "addi sp, sp, -288\n"
+                      "jal x1, instrumentIndirectCall\n"
+                      RESTORE_ALL
+                      "ret\n"
+                      :::);
   // clang-format on
 #else
   // clang-format off
@@ -1724,6 +1749,18 @@ extern "C" __attribute((naked)) void __bolt_instr_start()
                        "br x16\n"
                        :::);
   // clang-format on
+#elif defined(__riscv)
+  // clang-format off
+  __asm__ __volatile__(
+                      SAVE_ALL
+                      "jal x1, __bolt_instr_setup\n"
+                      RESTORE_ALL
+                      "setup_symbol:\n"
+                      "auipc x5, %%pcrel_hi(__bolt_start_trampoline)\n" 
+                      "addi x5, x5, %%pcrel_lo(setup_symbol)\n"
+                      "jr x5\n"
+                      :::);
+  // clang-format on
 #else
   // clang-format off
   __asm__ __volatile__(SAVE_ALL
@@ -1745,6 +1782,17 @@ extern "C" void __bolt_instr_fini() {
                        "blr x16\n"
                        RESTORE_ALL
                        :::);
+  // clang-format on
+#elif defined(__riscv)
+  // clang-format off
+  __asm__ __volatile__(
+                      SAVE_ALL
+                      "fini_symbol:\n"
+                      "auipc x5, %%pcrel_hi(__bolt_fini_trampoline)\n" 
+                      "addi x5, x5, %%pcrel_lo(fini_symbol)\n" 
+                      "jalr x1, 0(x5)\n"
+                      RESTORE_ALL
+                      :::);
   // clang-format on
 #else
   __asm__ __volatile__("call __bolt_fini_trampoline\n" :::);
