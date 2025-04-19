@@ -208,12 +208,10 @@ bool randomizeStructureLayout(const ASTContext &Context, RecordDecl *RD,
   randomizeStructureLayoutImpl(Context, RandomizedFields, RNG);
 
   // Plorp the randomized decls into the final ordering.
-  FinalOrdering.insert(FinalOrdering.end(), RandomizedFields.begin(),
-                       RandomizedFields.end());
+  llvm::append_range(FinalOrdering, RandomizedFields);
 
   // Add fields that belong towards the end of the RecordDecl.
-  FinalOrdering.insert(FinalOrdering.end(), PostRandomizedFields.begin(),
-                       PostRandomizedFields.end());
+  llvm::append_range(FinalOrdering, PostRandomizedFields);
 
   // Add back the flexible array.
   if (FlexibleArray)
