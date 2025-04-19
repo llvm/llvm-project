@@ -10,7 +10,9 @@
 #ifndef _LIBCPP___ALGORITHM_FIND_FIRST_OF_H
 #define _LIBCPP___ALGORITHM_FIND_FIRST_OF_H
 
+#include <__algorithm/any_of.h>
 #include <__algorithm/comp.h>
+#include <__algorithm/find_if.h>
 #include <__config>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
