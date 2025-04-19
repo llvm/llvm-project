@@ -1,4 +1,5 @@
 // RUN: %check_clang_tidy -std=c++98-or-later %s bugprone-tagged-union-member-count %t -- -- \
+// RUN: -I%S/Inputs/tagged-union-member-count \
 // RUN: -isystem %S/Inputs/tagged-union-member-count/system
 // Test check with C++ features
 
@@ -318,6 +319,16 @@ void DoNotMatchLambdas() {
 // even though pthread_mutex_t may be declared as a typedefed union.
 struct SystemTypedefedUnionDataMemberShouldBeIgnored {
   pthread_mutex_t Mutex;
+  enum {
+    MyEnum
+  } EnumField;
+};
+
+// Filter when union or enum comes from the std namespace but not a system header
+#include "stdnamespace.h"
+
+struct StdNameSpaceUnionDataMemberShouldBeIgnored {
+  std::pthread_mutex_t Mutex;
   enum {
     MyEnum
   } EnumField;
