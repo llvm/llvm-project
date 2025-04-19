@@ -1,9 +1,9 @@
 ;; Tests that call site callee type ids can be extracted and set from
 ;; callee_type metadata.
 
-;; Verify the exact calleeTypeId value to ensure it is not garbage but the value
+;; Verify the exact calleeTypeIds value to ensure it is not garbage but the value
 ;; computed as the type id from the callee_type metadata.
-; RUN: llc --call-graph-section -mtriple=x86_64-unknown-linux < %s -stop-before=finalize-isel -o - | FileCheck %s
+; RUN: llc --call-graph-section -mtriple=x86_64-unknown-linux < %s -stop-after=finalize-isel -o - | FileCheck %s
 
 declare !type !0 void @foo(i8 signext %a)
 
