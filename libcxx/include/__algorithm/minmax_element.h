@@ -81,7 +81,7 @@ __minmax_element_loop(_Iter __first, _Sent __last, _Comp& __comp, _Proj& __proj)
   return __result;
 }
 
-
+#if _LIBCPP_VECTORIZE_ALGORITHMS
 template<class _Iter>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 pair<_Iter, _Iter> 
 __minmax_element_vectorized(_Iter __first, _Iter __last) {
@@ -89,8 +89,11 @@ __minmax_element_vectorized(_Iter __first, _Iter __last) {
   constexpr size_t __unroll_count = 4;
   constexpr size_t __vec_size     = __native_vector_size<__value_type>;
   using __vec_type                = __simd_vector<__value_type, __vec_size>;
-  if (__last == __first) [[__unlikely__]] {
-    return {__first, __first};
+
+  auto __comp = std::__less<>{};
+  std::__identity __proj;
+  if (static_cast<size_t>(__last - __first) < __vec_size) [[__unlikely__]] {
+    return std::__minmax_element_loop(__first, __last, __comp, __proj);
   }
 
   __value_type __min_element = *__first;
@@ -114,7 +117,7 @@ __minmax_element_vectorized(_Iter __first, _Iter __last) {
       }
       // block max
       auto __block_max_element = __builtin_reduce_max(__vec[__i]);
-      if (__block_max_element > __max_element) {
+      if (__block_max_element >= __max_element) {
         __max_element = __block_max_element;
         __max_block_start = __first + __i * __vec_size;
         __max_block_end = __first + (__i + 1) * __vec_size;
@@ -134,7 +137,7 @@ __minmax_element_vectorized(_Iter __first, _Iter __last) {
       }
       // max
       auto __block_max_element = __builtin_reduce_max(__vec);
-      if (__block_max_element > __max_element) {
+      if (__block_max_element >= __max_element) {
         __max_element = __block_max_element;
         __max_block_start = __first;
         __max_block_end = __first + __vec_size;
@@ -143,34 +146,34 @@ __minmax_element_vectorized(_Iter __first, _Iter __last) {
   }
 
   if (__last > __first) {
-    auto __comp = std::__less<>{};
-    std::__identity __proj;
     auto __epilogue = std::__minmax_element_loop(__first, __last, __comp, __proj);
-    auto __epilogue_min_element = *__epilogue.first;
-    auto __epilogue_max_element = *__epilogue.second;
-    if (__epilogue_min_element < __min_element && __epilogue_max_element > __max_element) {
+    __value_type __epilogue_min_element = *__epilogue.first;
+    __value_type __epilogue_max_element = *__epilogue.second;
+    if (__epilogue_min_element < __min_element && __epilogue_max_element >= __max_element) {
       return __epilogue;
     } else if (__epilogue_min_element < __min_element) {
       __min_element = __epilogue_min_element;
-      __min_block_start = __first;
-      __min_block_end = __first;  // this is global min_element
-    } else {  // __epilogue_max_element > __max_element 
+      __min_block_start = __epilogue.first;
+      __min_block_end = __epilogue.first;  // this is global min_element
+    } else if (__epilogue_max_element >= __max_element) {  
       __max_element = __epilogue_max_element;
-      __max_block_start = __first;
-      __max_block_end = __first;  // this is global max_element 
+      __max_block_start = __epilogue.second;
+      __max_block_end = __epilogue.second;  // this is global max_element 
     }
   }
 
   // locate min
   for(; __min_block_start != __min_block_end; ++__min_block_start) {
-    if (*__min_block_start == __min_element) 
+    __value_type __cur_min_element = *__min_block_start;
+    if ( __cur_min_element == __min_element) 
       break;
   }
 
   // locate max
-  for(; __max_block_start != __max_block_end; ++__max_block_start) {
-    if (*__max_block_start == __max_element) 
-      break;
+  for(_Iter __it = __max_block_start; __it != __max_block_end; ++__it) {
+    __value_type __cur_max_element = *__it;
+    if ( __cur_max_element == __max_element)
+      __max_block_start = __it;
   }
 
   
@@ -211,6 +214,8 @@ __minmax_element_impl(_Iter __first, _Iter __last, _Comp& __comp, _Proj& __proj)
 //   } else {
 //   }
 // }
+#endif  // _LIBCPP_VECTORIZE_ALGORITHMS
+
 template <class _Iter, class _Sent, class _Proj, class _Comp>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 pair<_Iter, _Iter>
 __minmax_element_impl(_Iter __first, _Sent __last, _Comp& __comp, _Proj& __proj) {
