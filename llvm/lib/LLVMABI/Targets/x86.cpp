@@ -1,6 +1,6 @@
-#include "Type.h"
-#include "ABIFunctionInfo.h"
 #include "ABICall.h"
+#include "ABIFunctionInfo.h"
+#include "Type.h"
 #include "llvm/Support/Casting.h"
 
 using namespace ABI;
@@ -191,9 +191,8 @@ void X86_64ABIInfo::computeInfo(ABIFunctionInfo &FI) const {
   for (ABIFunctionInfo::arg_iterator it = FI.arg_begin(), ie = FI.arg_end();
        it != ie; ++it) {
     it->info = classifyArgumentType(it->type);
-    }
+  }
 }
-
 
 // TODO: still need to figure out how to pass the Target info to the library.
 std::unique_ptr<TargetCodeGenInfo>

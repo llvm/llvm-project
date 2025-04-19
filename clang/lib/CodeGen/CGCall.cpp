@@ -828,11 +828,6 @@ void computeSPIRKernelABIInfo(CodeGenModule &CGM, CGFunctionInfo &FI);
 std::unique_ptr<ABI::Type> getABIType(QualType QT){
   const clang::Type *BaseType = QT.getTypePtr();
 
-  unsigned Quals = 0;
-  if (QT.isConstQualified()) Quals |= ABI::ABIQualifiers::Const;
-  if (QT.isVolatileQualified()) Quals |= ABI::ABIQualifiers::Volatile;
-  if (QT.isRestrictQualified()) Quals |= ABI::ABIQualifiers::Restrict;
-
   switch (BaseType->getTypeClass()) {
     case clang::Type::Builtin: {
         // Cast to BuiltinType to access its kind
