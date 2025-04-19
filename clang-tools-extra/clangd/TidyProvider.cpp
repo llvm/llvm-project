@@ -64,7 +64,7 @@ public:
               }
             };
             if (auto Parsed = tidy::parseConfigurationWithDiags(
-                    llvm::MemoryBufferRef(*Data, path()), Diagnostics))
+                    llvm::MemoryBufferRef(*Data, path().raw()), Diagnostics))
               Value = std::make_shared<const tidy::ClangTidyOptions>(
                   std::move(*Parsed));
             else
@@ -99,21 +99,21 @@ public:
 
   void apply(tidy::ClangTidyOptions &Result, PathRef AbsPath) {
     namespace path = llvm::sys::path;
-    assert(path::is_absolute(AbsPath));
+    assert(AbsPath.isAbsolute());
 
     // Compute absolute paths to all ancestors (substrings of P.Path).
     // Ensure cache entries for each ancestor exist in the map.
     llvm::SmallVector<DotClangTidyCache *> Caches;
     {
       std::lock_guard<std::mutex> Lock(Mu);
-      for (auto Ancestor = absoluteParent(AbsPath); !Ancestor.empty();
-           Ancestor = absoluteParent(Ancestor)) {
-        auto It = Cache.find(Ancestor);
+      for (auto Ancestor = AbsPath.absoluteParent(); !Ancestor.empty();
+           Ancestor = Ancestor.absoluteParent()) {
+        auto It = Cache.find(Ancestor.raw());
         // Assemble the actual config file path only if needed.
         if (It == Cache.end()) {
-          llvm::SmallString<256> ConfigPath = Ancestor;
+          llvm::SmallString<256> ConfigPath = Ancestor.raw();
           path::append(ConfigPath, RelPath);
-          It = Cache.try_emplace(Ancestor, ConfigPath.str()).first;
+          It = Cache.try_emplace(Ancestor.raw(), ConfigPath.str()).first;
         }
         Caches.push_back(&It->second);
       }
