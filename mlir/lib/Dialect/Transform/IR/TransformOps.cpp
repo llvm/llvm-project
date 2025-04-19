@@ -41,6 +41,7 @@
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/InterleavedRange.h"
 #include <optional>
 
 #define DEBUG_TYPE "transform-dialect"
@@ -2630,11 +2631,8 @@ static void printSequenceOpOperands(OpAsmPrinter &printer, Operation *op,
     printer << "(";
 
   printer << rootType;
-  if (hasExtras) {
-    printer << ", ";
-    llvm::interleaveComma(extraBindingTypes, printer.getStream());
-    printer << ")";
-  }
+  if (hasExtras)
+    printer << ", " << llvm::interleaved(extraBindingTypes) << ')';
 }
 
 /// Returns `true` if the given op operand may be consuming the handle value in
