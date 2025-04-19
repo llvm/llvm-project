@@ -590,7 +590,7 @@ SmallVector<EhFrameSection::FdeData, 0> EhFrameSection::getFdeData() const {
   auto eq = [](const FdeData &a, const FdeData &b) {
     return a.pcRel == b.pcRel;
   };
-  ret.erase(std::unique(ret.begin(), ret.end(), eq), ret.end());
+  ret.erase(llvm::unique(ret, eq), ret.end());
 
   return ret;
 }
