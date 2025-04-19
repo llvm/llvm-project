@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/MemoryProfileInfo.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/Support/CommandLine.h"
 
@@ -434,4 +435,24 @@ MDNode *MDNode::getMergedCallsiteMetadata(MDNode *A, MDNode *B) {
   if (A)
     return A;
   return B;
+}
+
+MDNode *MDNode::getMergedCalleeTypeMetadata([[maybe_unused]] LLVMContext &Ctx,
+                                            MDNode *A, MDNode *B) {
+  SmallVector<Metadata *, 8> AB;
+  SmallSet<Metadata *, 8> MergedCallees;
+  auto AddUniqueCallees = [&](llvm::MDNode *N) {
+    if (!N)
+      return;
+    for (const MDOperand &Op : N->operands()) {
+      Metadata *MD = Op.get();
+      if (!MergedCallees.contains(MD)) {
+        MergedCallees.insert(MD);
+        AB.push_back(MD);
+      }
+    }
+  };
+  AddUniqueCallees(A);
+  AddUniqueCallees(B);
+  return llvm::MDNode::get(Ctx, AB);
 }
