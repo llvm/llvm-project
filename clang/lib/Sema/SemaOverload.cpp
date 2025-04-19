@@ -2275,6 +2275,7 @@ static bool IsStandardConversion(Sema &S, Expr* From, QualType ToType,
 
     SCS.First = ICK_HLSL_Array_RValue;
 
+    // Don't consider qualifiers, which include things like address spaces
     if (FromType.getCanonicalType().getUnqualifiedType() !=
         ToType.getCanonicalType().getUnqualifiedType())
       return false;
