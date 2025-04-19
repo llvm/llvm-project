@@ -71,16 +71,11 @@ CSKYAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   assert(Infos.size() == CSKY::NumTargetFixupKinds &&
          "Not all fixup kinds added to Infos array");
 
-  if (FirstTargetFixupKind <= Kind && Kind < FirstLiteralRelocationKind) {
-    assert(unsigned(Kind - FirstTargetFixupKind) < CSKY::NumTargetFixupKinds &&
-           "Invalid kind!");
-
-    return Infos[Kind];
-  } else if (Kind < FirstTargetFixupKind) {
-    return MCAsmBackend::getFixupKindInfo(Kind);
-  } else {
+  if (mc::isRelocation(Kind))
     return MCAsmBackend::getFixupKindInfo(FK_NONE);
-  }
+  if (Kind < FirstTargetFixupKind)
+    return MCAsmBackend::getFixupKindInfo(Kind);
+  return Infos[Kind];
 }
 
 static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
