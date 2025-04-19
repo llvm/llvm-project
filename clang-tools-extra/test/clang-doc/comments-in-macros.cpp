@@ -28,8 +28,8 @@
 
 class MyClass {
 public:
-// MD-MYCLASS-LINE: *Defined at {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}macro.cpp#[[@LINE+2]]*
-// HTML-MYCLASS-LINE: <p>Defined at line [[@LINE+1]] of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}macro.cpp</p>
+// MD-MYCLASS-LINE: *Defined at {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}comments-in-macros.cpp#[[@LINE+2]]*
+// HTML-MYCLASS-LINE: <p>Defined at line [[@LINE+1]] of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}comments-in-macros.cpp</p>
     DECLARE_METHODS
 };
 
