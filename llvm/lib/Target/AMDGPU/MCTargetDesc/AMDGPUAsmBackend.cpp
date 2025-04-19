@@ -50,7 +50,7 @@ public:
                     const MCSubtargetInfo *STI) const override;
 
   std::optional<MCFixupKind> getFixupKind(StringRef Name) const override;
-  const MCFixupKindInfo &getFixupKindInfo(MCFixupKind Kind) const override;
+  MCFixupKindInfo getFixupKindInfo(MCFixupKind Kind) const override;
 };
 
 } //End anonymous namespace
@@ -172,8 +172,7 @@ AMDGPUAsmBackend::getFixupKind(StringRef Name) const {
   return std::nullopt;
 }
 
-const MCFixupKindInfo &AMDGPUAsmBackend::getFixupKindInfo(
-                                                       MCFixupKind Kind) const {
+MCFixupKindInfo AMDGPUAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   const static MCFixupKindInfo Infos[AMDGPU::NumTargetFixupKinds] = {
     // name                   offset bits  flags
     { "fixup_si_sopp_br",     0,     16,   MCFixupKindInfo::FKF_IsPCRel },

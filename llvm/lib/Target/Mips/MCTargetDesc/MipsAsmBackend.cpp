@@ -353,8 +353,7 @@ std::optional<MCFixupKind> MipsAsmBackend::getFixupKind(StringRef Name) const {
       .Default(MCAsmBackend::getFixupKind(Name));
 }
 
-const MCFixupKindInfo &MipsAsmBackend::
-getFixupKindInfo(MCFixupKind Kind) const {
+MCFixupKindInfo MipsAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   const static MCFixupKindInfo LittleEndianInfos[] = {
       // This table *must* be in same the order of fixup_* kinds in
       // MipsFixupKinds.h.

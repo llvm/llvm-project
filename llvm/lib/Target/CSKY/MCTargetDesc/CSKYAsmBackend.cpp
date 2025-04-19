@@ -25,8 +25,7 @@ CSKYAsmBackend::createObjectTargetWriter() const {
   return createCSKYELFObjectWriter();
 }
 
-const MCFixupKindInfo &
-CSKYAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
+MCFixupKindInfo CSKYAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
 
   static llvm::DenseMap<unsigned, MCFixupKindInfo> Infos = {
       {CSKY::Fixups::fixup_csky_addr32, {"fixup_csky_addr32", 0, 32, 0}},

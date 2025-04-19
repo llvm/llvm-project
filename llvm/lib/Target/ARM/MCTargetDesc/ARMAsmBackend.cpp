@@ -65,7 +65,7 @@ ARMAsmBackendELF::getFixupKind(StringRef Name) const {
   return static_cast<MCFixupKind>(FirstLiteralRelocationKind + Type);
 }
 
-const MCFixupKindInfo &ARMAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
+MCFixupKindInfo ARMAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   const static MCFixupKindInfo InfosLE[ARM::NumTargetFixupKinds] = {
       // This table *must* be in the order that the fixup_* kinds are defined in
       // ARMFixupKinds.h.
