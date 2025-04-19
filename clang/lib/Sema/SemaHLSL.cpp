@@ -2749,7 +2749,7 @@ static void BuildFlattenedTypeList(QualType BaseTy,
       BuildFlattenedTypeList(AT->getElementType(), ElementFields);
       // Repeat the element's field list n times.
       for (uint64_t Ct = 0; Ct < AT->getZExtSize(); ++Ct)
-        List.insert(List.end(), ElementFields.begin(), ElementFields.end());
+        llvm::append_range(List, ElementFields);
       continue;
     }
     // Vectors can only have element types that are builtin types, so this can
@@ -2777,7 +2777,7 @@ static void BuildFlattenedTypeList(QualType BaseTy,
         FieldTypes.push_back(FD->getType());
       // Reverse the newly added sub-range.
       std::reverse(FieldTypes.begin(), FieldTypes.end());
-      WorkList.insert(WorkList.end(), FieldTypes.begin(), FieldTypes.end());
+      llvm::append_range(WorkList, FieldTypes);
 
       // If this wasn't a standard layout type we may also have some base
       // classes to deal with.
@@ -2786,7 +2786,7 @@ static void BuildFlattenedTypeList(QualType BaseTy,
         for (const auto &Base : RD->bases())
           FieldTypes.push_back(Base.getType());
         std::reverse(FieldTypes.begin(), FieldTypes.end());
-        WorkList.insert(WorkList.end(), FieldTypes.begin(), FieldTypes.end());
+        llvm::append_range(WorkList, FieldTypes);
       }
       continue;
     }

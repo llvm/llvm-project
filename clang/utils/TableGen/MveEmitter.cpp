@@ -753,7 +753,7 @@ public:
     OS << "})";
   }
   void morePrerequisites(std::vector<Ptr> &output) const override {
-    output.insert(output.end(), Args.begin(), Args.end());
+    llvm::append_range(output, Args);
   }
 };
 
