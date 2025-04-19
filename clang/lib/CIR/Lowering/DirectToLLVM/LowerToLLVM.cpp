@@ -1467,6 +1467,8 @@ void ConvertCIRToLLVMPass::runOnOperation() {
                CIRToLLVMConstantOpLowering,
                CIRToLLVMFuncOpLowering,
                CIRToLLVMGetGlobalOpLowering,
+               CIRToLLVMStackSaveOpLowering,
+               CIRToLLVMStackRestoreOpLowering,
                CIRToLLVMTrapOpLowering,
                CIRToLLVMUnaryOpLowering
       // clang-format on
@@ -1509,6 +1511,22 @@ mlir::LogicalResult CIRToLLVMTrapOpLowering::matchAndRewrite(
   // block.
   rewriter.create<mlir::LLVM::UnreachableOp>(loc);
 
+  return mlir::success();
+}
+
+mlir::LogicalResult CIRToLLVMStackSaveOpLowering::matchAndRewrite(
+    cir::StackSaveOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  const mlir::Type ptrTy = getTypeConverter()->convertType(op.getType());
+  rewriter.replaceOpWithNewOp<mlir::LLVM::StackSaveOp>(op, ptrTy);
+  return mlir::success();
+}
+
+mlir::LogicalResult CIRToLLVMStackRestoreOpLowering::matchAndRewrite(
+    cir::StackRestoreOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  rewriter.replaceOpWithNewOp<mlir::LLVM::StackRestoreOp>(
+      op, adaptor.getOperands().front());
   return mlir::success();
 }
 
