@@ -40,7 +40,8 @@ define i16 @test_extract_0(<2 x i16> %a) #0 {
 ; COMMON-EMPTY:
 ; COMMON-NEXT:  // %bb.0:
 ; COMMON-NEXT:    ld.param.u32 %r1, [test_extract_0_param_0];
-; COMMON-NEXT:    { .reg .b16 tmp; mov.b32 {%rs1, tmp}, %r1; }
+; I16x2-NEXT:    mov.b32 {%rs1, _}, %r1;
+; NO-I16x2-NEXT: { .reg .b16 tmp; mov.b32 {%rs1, tmp}, %r1; }
 ; COMMON-NEXT:    cvt.u32.u16 %r2, %rs1;
 ; COMMON-NEXT:    st.param.b32 [func_retval0], %r2;
 ; COMMON-NEXT:    ret;
@@ -56,7 +57,8 @@ define i16 @test_extract_1(<2 x i16> %a) #0 {
 ; COMMON-EMPTY:
 ; COMMON-NEXT:  // %bb.0:
 ; COMMON-NEXT:    ld.param.u32 %r1, [test_extract_1_param_0];
-; COMMON-NEXT:    { .reg .b16 tmp; mov.b32 {tmp, %rs1}, %r1; }
+; I16x2-NEXT:    mov.b32 {_, %rs1}, %r1;
+; NO-I16x2-NEXT: { .reg .b16 tmp; mov.b32 {tmp, %rs1}, %r1; }
 ; COMMON-NEXT:    cvt.u32.u16 %r2, %rs1;
 ; COMMON-NEXT:    st.param.b32 [func_retval0], %r2;
 ; COMMON-NEXT:    ret;
@@ -1006,7 +1008,8 @@ define <2 x i16> @test_insertelement(<2 x i16> %a, i16 %x) #0 {
 ; COMMON-NEXT:  // %bb.0:
 ; COMMON-NEXT:    ld.param.u16 %rs1, [test_insertelement_param_1];
 ; COMMON-NEXT:    ld.param.u32 %r1, [test_insertelement_param_0];
-; COMMON-NEXT:    { .reg .b16 tmp; mov.b32 {%rs2, tmp}, %r1; }
+; I16x2-NEXT:    mov.b32 {%rs2, _}, %r1;
+; NO-I16x2-NEXT: { .reg .b16 tmp; mov.b32 {%rs2, tmp}, %r1; }
 ; COMMON-NEXT:    mov.b32 %r2, {%rs2, %rs1};
 ; COMMON-NEXT:    st.param.b32 [func_retval0], %r2;
 ; COMMON-NEXT:    ret;

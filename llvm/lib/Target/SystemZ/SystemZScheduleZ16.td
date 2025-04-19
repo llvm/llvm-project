@@ -1555,12 +1555,12 @@ def : InstRW<[WLat2, VecDFX, NormalGr], (instregex "V(T|C)P$")>;
 
 def : InstRW<[WLat30, VecDF2, NormalGr], (instregex "VSCH(S|D|X)?P$")>;
 def : InstRW<[WLat30, VecDF2, NormalGr], (instregex "VSCSHP$")>;
-def : InstRW<[WLat30, VecDF2, NormalGr], (instregex "VCSPH")>;
-def : InstRW<[WLat2, WLat2, VecXsPm, NormalGr], (instregex "VCLZDP")>;
-def : InstRW<[WLat10, WLat10, VecDF2, NormalGr], (instregex "VSRPR")>;
-def : InstRW<[WLat2, WLat2, VecDFX, NormalGr], (instregex "VPKZR")>;
-def : InstRW<[WLat2, WLat2, VecDFX, NormalGr], (instregex "VUPKZH")>;
-def : InstRW<[WLat2, WLat2, VecDFX, NormalGr], (instregex "VUPKZL")>;
+def : InstRW<[WLat30, VecDF2, NormalGr], (instregex "VCSPH$")>;
+def : InstRW<[WLat2, WLat2, VecXsPm, NormalGr], (instregex "VCLZDP$")>;
+def : InstRW<[WLat10, WLat10, VecDF2, NormalGr], (instregex "VSRPR$")>;
+def : InstRW<[WLat2, WLat2, VecDFX, NormalGr], (instregex "VPKZR$")>;
+def : InstRW<[WLat2, WLat2, VecDFX, NormalGr], (instregex "VUPKZH$")>;
+def : InstRW<[WLat2, WLat2, VecDFX, NormalGr], (instregex "VUPKZL$")>;
 
 // -------------------------------- System ---------------------------------- //
 
@@ -1597,8 +1597,8 @@ def : InstRW<[WLat30, MCD], (instregex "S(T)?PX$")>;
 // System: Breaking-Event-Address-Register Instructions
 //===----------------------------------------------------------------------===//
 
-def : InstRW<[WLat3LSU, LSU2, GroupAlone], (instregex "LBEAR")>;
-def : InstRW<[WLat1, LSU2, FXb, GroupAlone], (instregex "STBEAR")>;
+def : InstRW<[WLat3LSU, LSU2, GroupAlone], (instregex "LBEAR$")>;
+def : InstRW<[WLat1, LSU2, FXb, GroupAlone], (instregex "STBEAR$")>;
 
 //===----------------------------------------------------------------------===//
 // System: Storage-Key and Real Memory Instructions

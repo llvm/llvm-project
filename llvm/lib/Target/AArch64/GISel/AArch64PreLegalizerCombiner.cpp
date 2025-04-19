@@ -482,9 +482,7 @@ void applyExtUaddvToUaddlv(MachineInstr &MI, MachineRegisterInfo &MRI,
     // the values inside a small vec
     extractParts(SrcReg, SrcTy, MainTy, LeftoverTy, WorkingRegisters,
                  LeftoverRegs, B, MRI);
-    for (unsigned I = 0; I < LeftoverRegs.size(); I++) {
-      WorkingRegisters.push_back(LeftoverRegs[I]);
-    }
+    llvm::append_range(WorkingRegisters, LeftoverRegs);
   } else {
     WorkingRegisters.push_back(SrcReg);
     MainTy = SrcTy;
@@ -833,8 +831,6 @@ void AArch64PreLegalizerCombiner::getAnalysisUsage(AnalysisUsage &AU) const {
 
 AArch64PreLegalizerCombiner::AArch64PreLegalizerCombiner()
     : MachineFunctionPass(ID) {
-  initializeAArch64PreLegalizerCombinerPass(*PassRegistry::getPassRegistry());
-
   if (!RuleConfig.parseCommandLineOption())
     report_fatal_error("Invalid rule identifier");
 }

@@ -34,7 +34,8 @@ const RISCVMCExpr *RISCVMCExpr::create(const MCExpr *Expr, Specifier S,
 
 void RISCVMCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {
   Specifier S = getSpecifier();
-  bool HasVariant = ((S != VK_None) && (S != VK_CALL) && (S != VK_CALL_PLT));
+  bool HasVariant = ((S != VK_None) && (S != VK_CALL) && (S != VK_CALL_PLT) &&
+                     (S != VK_QC_E_JUMP_PLT));
 
   if (HasVariant)
     OS << '%' << getSpecifierName(S) << '(';
@@ -48,11 +49,9 @@ const MCFixup *RISCVMCExpr::getPCRelHiFixup(const MCFragment **DFOut) const {
   if (!getSubExpr()->evaluateAsRelocatable(AUIPCLoc, nullptr))
     return nullptr;
 
-  const MCSymbolRefExpr *AUIPCSRE = AUIPCLoc.getSymA();
-  if (!AUIPCSRE)
+  const MCSymbol *AUIPCSymbol = AUIPCLoc.getAddSym();
+  if (!AUIPCSymbol)
     return nullptr;
-
-  const MCSymbol *AUIPCSymbol = &AUIPCSRE->getSymbol();
   const auto *DF = dyn_cast_or_null<MCDataFragment>(AUIPCSymbol->getFragment());
 
   if (!DF)
@@ -94,7 +93,7 @@ bool RISCVMCExpr::evaluateAsRelocatableImpl(MCValue &Res,
   Res.setSpecifier(specifier);
 
   // Custom fixup types are not valid with symbol difference expressions.
-  return Res.getSymB() ? getSpecifier() == VK_None : true;
+  return !Res.getSubSym();
 }
 
 void RISCVMCExpr::visitUsedExpr(MCStreamer &Streamer) const {
@@ -118,6 +117,7 @@ RISCVMCExpr::getSpecifierForName(StringRef name) {
       .Case("tlsdesc_load_lo", VK_TLSDESC_LOAD_LO)
       .Case("tlsdesc_add_lo", VK_TLSDESC_ADD_LO)
       .Case("tlsdesc_call", VK_TLSDESC_CALL)
+      .Case("qc.abs20", VK_QC_ABS20)
       // Used in data directives
       .Case("pltpcrel", VK_PLTPCREL)
       .Case("gotpcrel", VK_GOTPCREL)
@@ -166,6 +166,10 @@ StringRef RISCVMCExpr::getSpecifierName(Specifier S) {
     return "gotpcrel";
   case VK_PLTPCREL:
     return "pltpcrel";
+  case VK_QC_ABS20:
+    return "qc.abs20";
+  case VK_QC_E_JUMP_PLT:
+    return "qc_e_jump_plt";
   }
   llvm_unreachable("Invalid ELF symbol kind");
 }

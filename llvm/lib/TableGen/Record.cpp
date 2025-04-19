@@ -1015,8 +1015,7 @@ const Init *UnOpInit::Fold(const Record *CurRec, bool IsFinal) const {
           const auto *InnerList = dyn_cast<ListInit>(InnerInit);
           if (!InnerList)
             return std::nullopt;
-          for (const Init *InnerElem : InnerList->getValues())
-            Flattened.push_back(InnerElem);
+          llvm::append_range(Flattened, InnerList->getValues());
         };
         return Flattened;
       };

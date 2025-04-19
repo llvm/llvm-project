@@ -194,7 +194,7 @@ public:
 typedef DenseMap<Value *, VPValue *> Value2VPValueTy;
 typedef DenseMap<VPValue *, Value *> VPValue2ValueTy;
 
-raw_ostream &operator<<(raw_ostream &OS, const VPValue &V);
+raw_ostream &operator<<(raw_ostream &OS, const VPRecipeBase &R);
 
 /// This class augments VPValue with operands which provide the inverse def-use
 /// edges from VPValue's users to their defs.
@@ -245,6 +245,9 @@ public:
     Operands[I] = New;
     New->addUser(*this);
   }
+
+  /// Replaces all uses of \p From in the VPUser with \p To.
+  void replaceUsesOfWith(VPValue *From, VPValue *To);
 
   typedef SmallVectorImpl<VPValue *>::iterator operand_iterator;
   typedef SmallVectorImpl<VPValue *>::const_iterator const_operand_iterator;
@@ -332,7 +335,6 @@ public:
     VPReductionSC,
     VPPartialReductionSC,
     VPReplicateSC,
-    VPScalarCastSC,
     VPScalarIVStepsSC,
     VPVectorPointerSC,
     VPVectorEndPointerSC,

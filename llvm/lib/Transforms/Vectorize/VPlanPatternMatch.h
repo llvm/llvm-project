@@ -66,13 +66,33 @@ struct specificval_ty {
 
 inline specificval_ty m_Specific(const VPValue *VPV) { return VPV; }
 
-/// Match a specified integer value or vector of all elements of that
-/// value. \p BitWidth optionally specifies the bitwidth the matched constant
-/// must have. If it is 0, the matched constant can have any bitwidth.
-template <unsigned BitWidth = 0> struct specific_intval {
-  APInt Val;
+/// Stores a reference to the VPValue *, not the VPValue * itself,
+/// thus can be used in commutative matchers.
+struct deferredval_ty {
+  VPValue *const &Val;
 
-  specific_intval(APInt V) : Val(std::move(V)) {}
+  deferredval_ty(VPValue *const &V) : Val(V) {}
+
+  bool match(VPValue *const V) const { return V == Val; }
+};
+
+/// Like m_Specific(), but works if the specific value to match is determined
+/// as part of the same match() expression. For example:
+/// m_Mul(m_VPValue(X), m_Specific(X)) is incorrect, because m_Specific() will
+/// bind X before the pattern match starts.
+/// m_Mul(m_VPValue(X), m_Deferred(X)) is correct, and will check against
+/// whichever value m_VPValue(X) populated.
+inline deferredval_ty m_Deferred(VPValue *const &V) { return V; }
+
+/// Match an integer constant or vector of constants if Pred::isValue returns
+/// true for the APInt. \p BitWidth optionally specifies the bitwidth the
+/// matched constant must have. If it is 0, the matched constant can have any
+/// bitwidth.
+template <typename Pred, unsigned BitWidth = 0> struct int_pred_ty {
+  Pred P;
+
+  int_pred_ty(Pred P) : P(std::move(P)) {}
+  int_pred_ty() : P() {}
 
   bool match(VPValue *VPV) const {
     if (!VPV->isLiveIn())
@@ -90,17 +110,45 @@ template <unsigned BitWidth = 0> struct specific_intval {
 
     if (BitWidth != 0 && CI->getBitWidth() != BitWidth)
       return false;
-    return APInt::isSameValue(CI->getValue(), Val);
+    return P.isValue(CI->getValue());
   }
 };
 
+/// Match a specified integer value or vector of all elements of that
+/// value. \p BitWidth optionally specifies the bitwidth the matched constant
+/// must have. If it is 0, the matched constant can have any bitwidth.
+struct is_specific_int {
+  APInt Val;
+
+  is_specific_int(APInt Val) : Val(std::move(Val)) {}
+
+  bool isValue(const APInt &C) const { return APInt::isSameValue(Val, C); }
+};
+
+template <unsigned Bitwidth = 0>
+using specific_intval = int_pred_ty<is_specific_int, Bitwidth>;
+
 inline specific_intval<0> m_SpecificInt(uint64_t V) {
-  return specific_intval<0>(APInt(64, V));
+  return specific_intval<0>(is_specific_int(APInt(64, V)));
 }
 
-inline specific_intval<1> m_False() { return specific_intval<1>(APInt(64, 0)); }
+inline specific_intval<1> m_False() {
+  return specific_intval<1>(is_specific_int(APInt(64, 0)));
+}
 
-inline specific_intval<1> m_True() { return specific_intval<1>(APInt(64, 1)); }
+inline specific_intval<1> m_True() {
+  return specific_intval<1>(is_specific_int(APInt(64, 1)));
+}
+
+struct is_all_ones {
+  bool isValue(const APInt &C) const { return C.isAllOnes(); }
+};
+
+/// Match an integer or vector with all bits set.
+/// For vectors, this includes constants with undefined elements.
+inline int_pred_ty<is_all_ones> m_AllOnes() {
+  return int_pred_ty<is_all_ones>();
+}
 
 /// Matching combinators
 template <typename LTy, typename RTy> struct match_combine_or {

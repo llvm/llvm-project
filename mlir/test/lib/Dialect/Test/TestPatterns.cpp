@@ -772,6 +772,7 @@ void TestDerivedAttributeDriver::runOnOperation() {
 namespace {
 //===----------------------------------------------------------------------===//
 // Region-Block Rewrite Testing
+//===----------------------------------------------------------------------===//
 
 /// This pattern applies a signature conversion to a block inside a detached
 /// region.
@@ -958,6 +959,7 @@ struct TestUndoPropertiesModification : public ConversionPattern {
 
 //===----------------------------------------------------------------------===//
 // Type-Conversion Rewrite Testing
+//===----------------------------------------------------------------------===//
 
 /// This patterns erases a region operation that has had a type conversion.
 struct TestDropOpSignatureConversion : public ConversionPattern {

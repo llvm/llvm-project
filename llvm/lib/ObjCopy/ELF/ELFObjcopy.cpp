@@ -857,8 +857,7 @@ static Error handleArgs(const CommonConfig &Config, const ELFConfig &ELFConfig,
           "cannot change section address in a non-relocatable file");
     StringMap<AddressUpdate> SectionsToUpdateAddress;
     for (const SectionPatternAddressUpdate &PatternUpdate :
-         make_range(Config.ChangeSectionAddress.rbegin(),
-                    Config.ChangeSectionAddress.rend())) {
+         reverse(Config.ChangeSectionAddress)) {
       for (SectionBase &Sec : Obj.sections()) {
         if (PatternUpdate.SectionPattern.matches(Sec.Name) &&
             SectionsToUpdateAddress.try_emplace(Sec.Name, PatternUpdate.Update)

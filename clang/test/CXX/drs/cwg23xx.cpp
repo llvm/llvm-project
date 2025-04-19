@@ -379,6 +379,20 @@ class C {
 };
 } // namespace cwg2370
 
+namespace cwg2376 { // cwg2376: 21
+#if __cplusplus >= 201703L
+template<int = 0> class C {};
+
+C a;
+const volatile C b = C<2>();
+C (c) = {};
+C* d;
+// expected-error@-1 {{cannot form pointer to deduced class template specialization type}}
+C e[1];
+// expected-error@-1 {{cannot form array of deduced class template specialization type}}
+#endif
+}
+
 namespace cwg2386 { // cwg2386: 9
 // Otherwise, if the qualified-id std::tuple_size<E> names a complete class
 // type **with a member value**, the expression std::tuple_size<E>::value shall

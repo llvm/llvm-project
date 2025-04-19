@@ -569,9 +569,10 @@ void
 DependentTemplateSpecializationTypeLoc::initializeLocal(ASTContext &Context,
                                                         SourceLocation Loc) {
   setElaboratedKeywordLoc(Loc);
-  if (getTypePtr()->getQualifier()) {
+  if (NestedNameSpecifier *Qualifier =
+          getTypePtr()->getDependentTemplateName().getQualifier()) {
     NestedNameSpecifierLocBuilder Builder;
-    Builder.MakeTrivial(Context, getTypePtr()->getQualifier(), Loc);
+    Builder.MakeTrivial(Context, Qualifier, Loc);
     setQualifierLoc(Builder.getWithLocInContext(Context));
   } else {
     setQualifierLoc(NestedNameSpecifierLoc());

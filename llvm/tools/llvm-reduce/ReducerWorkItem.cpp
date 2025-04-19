@@ -757,13 +757,20 @@ void ReducerWorkItem::readBitcode(MemoryBufferRef Data, LLVMContext &Ctx,
     WithColor::error(errs(), ToolName) << IF.takeError();
     exit(1);
   }
+
   BitcodeModule BM = IF->Mods[0];
   Expected<BitcodeLTOInfo> LI = BM.getLTOInfo();
-  Expected<std::unique_ptr<Module>> MOrErr = BM.parseModule(Ctx);
-  if (!LI || !MOrErr) {
-    WithColor::error(errs(), ToolName) << IF.takeError();
+  if (!LI) {
+    WithColor::error(errs(), ToolName) << LI.takeError();
     exit(1);
   }
+
+  Expected<std::unique_ptr<Module>> MOrErr = BM.parseModule(Ctx);
+  if (!MOrErr) {
+    WithColor::error(errs(), ToolName) << MOrErr.takeError();
+    exit(1);
+  }
+
   LTOInfo = std::make_unique<BitcodeLTOInfo>(*LI);
   M = std::move(MOrErr.get());
 }

@@ -200,37 +200,28 @@ public:
     if (isZero() || isUnknownSizeArray())
       return *this;
 
+    unsigned Base = asBlockPointer().Base;
     // Pointer to an array of base types - enter block.
-    if (asBlockPointer().Base == RootPtrMark)
+    if (Base == RootPtrMark)
       return Pointer(asBlockPointer().Pointee, sizeof(InlineDescriptor),
                      Offset == 0 ? Offset : PastEndMark);
 
     // Pointer is one past end - magic offset marks that.
     if (isOnePastEnd())
-      return Pointer(asBlockPointer().Pointee, asBlockPointer().Base,
-                     PastEndMark);
+      return Pointer(asBlockPointer().Pointee, Base, PastEndMark);
 
-    // Primitive arrays are a bit special since they do not have inline
-    // descriptors. If Offset != Base, then the pointer already points to
-    // an element and there is nothing to do. Otherwise, the pointer is
-    // adjusted to the first element of the array.
-    if (inPrimitiveArray()) {
-      if (Offset != asBlockPointer().Base)
+    if (Offset != Base) {
+      // If we're pointing to a primitive array element, there's nothing to do.
+      if (inPrimitiveArray())
         return *this;
-      return Pointer(asBlockPointer().Pointee, asBlockPointer().Base,
-                     Offset + sizeof(InitMapPtr));
+      // Pointer is to a composite array element - enter it.
+      if (Offset != Base)
+        return Pointer(asBlockPointer().Pointee, Offset, Offset);
     }
 
-    // Pointer is to a field or array element - enter it.
-    if (Offset != asBlockPointer().Base)
-      return Pointer(asBlockPointer().Pointee, Offset, Offset);
-
-    // Enter the first element of an array.
-    if (!getFieldDesc()->isArray())
-      return *this;
-
-    const unsigned NewBase = asBlockPointer().Base + sizeof(InlineDescriptor);
-    return Pointer(asBlockPointer().Pointee, NewBase, NewBase);
+    // Otherwise, we're pointing to a non-array element or
+    // are already narrowed to a composite array element. Nothing to do.
+    return *this;
   }
 
   /// Expands a pointer to the containing array, undoing narrowing.
@@ -417,7 +408,7 @@ public:
     return false;
   }
   bool inUnion() const {
-    if (isBlockPointer())
+    if (isBlockPointer() && asBlockPointer().Base >= sizeof(InlineDescriptor))
       return getInlineDesc()->InUnion;
     return false;
   };
@@ -478,6 +469,10 @@ public:
     assert(isFunctionPointer());
     return PointeeStorage.Fn;
   }
+  [[nodiscard]] const TypeidPointer &asTypeidPointer() const {
+    assert(isTypeidPointer());
+    return PointeeStorage.Typeid;
+  }
 
   bool isBlockPointer() const { return StorageKind == Storage::Block; }
   bool isIntegralPointer() const { return StorageKind == Storage::Int; }
@@ -534,6 +529,8 @@ public:
   }
 
   bool isWeak() const {
+    if (isFunctionPointer())
+      return asFunctionPointer().isWeak();
     if (!isBlockPointer())
       return false;
 
@@ -584,6 +581,8 @@ public:
   uint64_t getByteOffset() const {
     if (isIntegralPointer())
       return asIntPointer().Value + Offset;
+    if (isTypeidPointer())
+      return reinterpret_cast<uintptr_t>(asTypeidPointer().TypePtr) + Offset;
     if (isOnePastEnd())
       return PastEndMark;
     return Offset;
@@ -726,6 +725,8 @@ public:
 
   /// Prints the pointer.
   void print(llvm::raw_ostream &OS) const;
+
+  size_t computeOffsetForComparison() const;
 
 private:
   friend class Block;

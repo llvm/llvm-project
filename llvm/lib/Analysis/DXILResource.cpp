@@ -531,8 +531,8 @@ void ResourceTypeInfo::print(raw_ostream &OS, const DataLayout &DL) const {
   }
 }
 
-GlobalVariable *ResourceBindingInfo::createSymbol(Module &M, StructType *Ty,
-                                                  StringRef Name) {
+GlobalVariable *ResourceInfo::createSymbol(Module &M, StructType *Ty,
+                                           StringRef Name) {
   assert(!Symbol && "Symbol has already been created");
   Symbol = new GlobalVariable(M, Ty, /*isConstant=*/true,
                               GlobalValue::ExternalLinkage,
@@ -540,8 +540,8 @@ GlobalVariable *ResourceBindingInfo::createSymbol(Module &M, StructType *Ty,
   return Symbol;
 }
 
-MDTuple *ResourceBindingInfo::getAsMetadata(Module &M,
-                                            dxil::ResourceTypeInfo &RTI) const {
+MDTuple *ResourceInfo::getAsMetadata(Module &M,
+                                     dxil::ResourceTypeInfo &RTI) const {
   LLVMContext &Ctx = M.getContext();
   const DataLayout &DL = M.getDataLayout();
 
@@ -610,8 +610,7 @@ MDTuple *ResourceBindingInfo::getAsMetadata(Module &M,
 }
 
 std::pair<uint32_t, uint32_t>
-ResourceBindingInfo::getAnnotateProps(Module &M,
-                                      dxil::ResourceTypeInfo &RTI) const {
+ResourceInfo::getAnnotateProps(Module &M, dxil::ResourceTypeInfo &RTI) const {
   const DataLayout &DL = M.getDataLayout();
 
   uint32_t ResourceKind = llvm::to_underlying(RTI.getResourceKind());
@@ -658,8 +657,8 @@ ResourceBindingInfo::getAnnotateProps(Module &M,
   return {Word0, Word1};
 }
 
-void ResourceBindingInfo::print(raw_ostream &OS, dxil::ResourceTypeInfo &RTI,
-                                const DataLayout &DL) const {
+void ResourceInfo::print(raw_ostream &OS, dxil::ResourceTypeInfo &RTI,
+                         const DataLayout &DL) const {
   if (Symbol) {
     OS << "  Symbol: ";
     Symbol->printAsOperand(OS);
@@ -686,9 +685,8 @@ bool DXILResourceTypeMap::invalidate(Module &M, const PreservedAnalyses &PA,
 
 //===----------------------------------------------------------------------===//
 
-void DXILBindingMap::populate(Module &M, DXILResourceTypeMap &DRTM) {
-  SmallVector<std::tuple<CallInst *, ResourceBindingInfo, ResourceTypeInfo>>
-      CIToInfos;
+void DXILResourceMap::populate(Module &M, DXILResourceTypeMap &DRTM) {
+  SmallVector<std::tuple<CallInst *, ResourceInfo, ResourceTypeInfo>> CIToInfos;
 
   for (Function &F : M.functions()) {
     if (!F.isDeclaration())
@@ -711,10 +709,10 @@ void DXILBindingMap::populate(Module &M, DXILResourceTypeMap &DRTM) {
               cast<ConstantInt>(CI->getArgOperand(1))->getZExtValue();
           uint32_t Size =
               cast<ConstantInt>(CI->getArgOperand(2))->getZExtValue();
-          ResourceBindingInfo RBI = ResourceBindingInfo{
-              /*RecordID=*/0, Space, LowerBound, Size, HandleTy};
+          ResourceInfo RI =
+              ResourceInfo{/*RecordID=*/0, Space, LowerBound, Size, HandleTy};
 
-          CIToInfos.emplace_back(CI, RBI, RTI);
+          CIToInfos.emplace_back(CI, RI, RTI);
         }
 
       break;
@@ -723,18 +721,18 @@ void DXILBindingMap::populate(Module &M, DXILResourceTypeMap &DRTM) {
   }
 
   llvm::stable_sort(CIToInfos, [](auto &LHS, auto &RHS) {
-    const auto &[LCI, LRBI, LRTI] = LHS;
-    const auto &[RCI, RRBI, RRTI] = RHS;
+    const auto &[LCI, LRI, LRTI] = LHS;
+    const auto &[RCI, RRI, RRTI] = RHS;
     // Sort by resource class first for grouping purposes, and then by the
     // binding and type so we can remove duplicates.
     ResourceClass LRC = LRTI.getResourceClass();
     ResourceClass RRC = RRTI.getResourceClass();
 
-    return std::tie(LRC, LRBI, LRTI) < std::tie(RRC, RRBI, RRTI);
+    return std::tie(LRC, LRI, LRTI) < std::tie(RRC, RRI, RRTI);
   });
-  for (auto [CI, RBI, RTI] : CIToInfos) {
-    if (Infos.empty() || RBI != Infos.back())
-      Infos.push_back(RBI);
+  for (auto [CI, RI, RTI] : CIToInfos) {
+    if (Infos.empty() || RI != Infos.back())
+      Infos.push_back(RI);
     CallMap[CI] = Infos.size() - 1;
   }
 
@@ -743,8 +741,8 @@ void DXILBindingMap::populate(Module &M, DXILResourceTypeMap &DRTM) {
   FirstUAV = FirstCBuffer = FirstSampler = Size;
   uint32_t NextID = 0;
   for (unsigned I = 0, E = Size; I != E; ++I) {
-    ResourceBindingInfo &RBI = Infos[I];
-    ResourceTypeInfo &RTI = DRTM[RBI.getHandleTy()];
+    ResourceInfo &RI = Infos[I];
+    ResourceTypeInfo &RTI = DRTM[RI.getHandleTy()];
     if (RTI.isUAV() && FirstUAV == Size) {
       FirstUAV = I;
       NextID = 0;
@@ -762,16 +760,16 @@ void DXILBindingMap::populate(Module &M, DXILResourceTypeMap &DRTM) {
     FirstUAV = std::min({FirstUAV, FirstCBuffer});
 
     // Adjust the resource binding to use the next ID.
-    RBI.setBindingID(NextID++);
+    RI.setBindingID(NextID++);
   }
 }
 
-void DXILBindingMap::print(raw_ostream &OS, DXILResourceTypeMap &DRTM,
-                           const DataLayout &DL) const {
+void DXILResourceMap::print(raw_ostream &OS, DXILResourceTypeMap &DRTM,
+                            const DataLayout &DL) const {
   for (unsigned I = 0, E = Infos.size(); I != E; ++I) {
     OS << "Binding " << I << ":\n";
-    const dxil::ResourceBindingInfo &RBI = Infos[I];
-    RBI.print(OS, DRTM[RBI.getHandleTy()], DL);
+    const dxil::ResourceInfo &RI = Infos[I];
+    RI.print(OS, DRTM[RI.getHandleTy()], DL);
     OS << "\n";
   }
 
@@ -782,10 +780,10 @@ void DXILBindingMap::print(raw_ostream &OS, DXILResourceTypeMap &DRTM,
   }
 }
 
-SmallVector<dxil::ResourceBindingInfo>
-DXILBindingMap::findByUse(const Value *Key) const {
+SmallVector<dxil::ResourceInfo>
+DXILResourceMap::findByUse(const Value *Key) const {
   if (const PHINode *Phi = dyn_cast<PHINode>(Key)) {
-    SmallVector<dxil::ResourceBindingInfo> Children;
+    SmallVector<dxil::ResourceInfo> Children;
     for (const Value *V : Phi->operands()) {
       Children.append(findByUse(V));
     }
@@ -810,7 +808,7 @@ DXILBindingMap::findByUse(const Value *Key) const {
   // Check if any of the parameters are the resource we are following. If so
   // keep searching. If none of them are return an empty list
   const Type *UseType = CI->getType();
-  SmallVector<dxil::ResourceBindingInfo> Children;
+  SmallVector<dxil::ResourceInfo> Children;
   for (const Value *V : CI->args()) {
     if (V->getType() != UseType)
       continue;
@@ -824,22 +822,22 @@ DXILBindingMap::findByUse(const Value *Key) const {
 //===----------------------------------------------------------------------===//
 
 AnalysisKey DXILResourceTypeAnalysis::Key;
-AnalysisKey DXILResourceBindingAnalysis::Key;
+AnalysisKey DXILResourceAnalysis::Key;
 
-DXILBindingMap DXILResourceBindingAnalysis::run(Module &M,
-                                                ModuleAnalysisManager &AM) {
-  DXILBindingMap Data;
+DXILResourceMap DXILResourceAnalysis::run(Module &M,
+                                          ModuleAnalysisManager &AM) {
+  DXILResourceMap Data;
   DXILResourceTypeMap &DRTM = AM.getResult<DXILResourceTypeAnalysis>(M);
   Data.populate(M, DRTM);
   return Data;
 }
 
-PreservedAnalyses
-DXILResourceBindingPrinterPass::run(Module &M, ModuleAnalysisManager &AM) {
-  DXILBindingMap &DBM = AM.getResult<DXILResourceBindingAnalysis>(M);
+PreservedAnalyses DXILResourcePrinterPass::run(Module &M,
+                                               ModuleAnalysisManager &AM) {
+  DXILResourceMap &DRM = AM.getResult<DXILResourceAnalysis>(M);
   DXILResourceTypeMap &DRTM = AM.getResult<DXILResourceTypeAnalysis>(M);
 
-  DBM.print(OS, DRTM, M.getDataLayout());
+  DRM.print(OS, DRTM, M.getDataLayout());
   return PreservedAnalyses::all();
 }
 
@@ -857,21 +855,19 @@ ModulePass *llvm::createDXILResourceTypeWrapperPassPass() {
   return new DXILResourceTypeWrapperPass();
 }
 
-DXILResourceBindingWrapperPass::DXILResourceBindingWrapperPass()
-    : ModulePass(ID) {
-  initializeDXILResourceBindingWrapperPassPass(
-      *PassRegistry::getPassRegistry());
+DXILResourceWrapperPass::DXILResourceWrapperPass() : ModulePass(ID) {
+  initializeDXILResourceWrapperPassPass(*PassRegistry::getPassRegistry());
 }
 
-DXILResourceBindingWrapperPass::~DXILResourceBindingWrapperPass() = default;
+DXILResourceWrapperPass::~DXILResourceWrapperPass() = default;
 
-void DXILResourceBindingWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
+void DXILResourceWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequiredTransitive<DXILResourceTypeWrapperPass>();
   AU.setPreservesAll();
 }
 
-bool DXILResourceBindingWrapperPass::runOnModule(Module &M) {
-  Map.reset(new DXILBindingMap());
+bool DXILResourceWrapperPass::runOnModule(Module &M) {
+  Map.reset(new DXILResourceMap());
 
   DRTM = &getAnalysis<DXILResourceTypeWrapperPass>().getResourceTypeMap();
   Map->populate(M, *DRTM);
@@ -879,10 +875,9 @@ bool DXILResourceBindingWrapperPass::runOnModule(Module &M) {
   return false;
 }
 
-void DXILResourceBindingWrapperPass::releaseMemory() { Map.reset(); }
+void DXILResourceWrapperPass::releaseMemory() { Map.reset(); }
 
-void DXILResourceBindingWrapperPass::print(raw_ostream &OS,
-                                           const Module *M) const {
+void DXILResourceWrapperPass::print(raw_ostream &OS, const Module *M) const {
   if (!Map) {
     OS << "No resource map has been built!\n";
     return;
@@ -892,13 +887,13 @@ void DXILResourceBindingWrapperPass::print(raw_ostream &OS,
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD
-void DXILResourceBindingWrapperPass::dump() const { print(dbgs(), nullptr); }
+void DXILResourceWrapperPass::dump() const { print(dbgs(), nullptr); }
 #endif
 
-INITIALIZE_PASS(DXILResourceBindingWrapperPass, "dxil-resource-binding",
+INITIALIZE_PASS(DXILResourceWrapperPass, "dxil-resources",
                 "DXIL Resource Binding Analysis", false, true)
-char DXILResourceBindingWrapperPass::ID = 0;
+char DXILResourceWrapperPass::ID = 0;
 
-ModulePass *llvm::createDXILResourceBindingWrapperPassPass() {
-  return new DXILResourceBindingWrapperPass();
+ModulePass *llvm::createDXILResourceWrapperPassPass() {
+  return new DXILResourceWrapperPass();
 }

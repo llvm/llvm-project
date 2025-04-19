@@ -1374,6 +1374,11 @@ Demangler::demangleStringLiteral(std::string_view &MangledName) {
       Result->IsTruncated = true;
 
     while (!consumeFront(MangledName, '@')) {
+      // For a wide string StringByteSize has to have an even length.
+      if (StringByteSize % 2 != 0)
+        goto StringLiteralError;
+      if (StringByteSize == 0)
+        goto StringLiteralError;
       if (MangledName.size() < 2)
         goto StringLiteralError;
       wchar_t W = demangleWcharLiteral(MangledName);

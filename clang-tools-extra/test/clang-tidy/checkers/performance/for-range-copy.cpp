@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s performance-for-range-copy %t -- -- -fno-delayed-template-parsing
+// RUN: %check_clang_tidy --match-partial-fixes %s performance-for-range-copy %t -- -- -fno-delayed-template-parsing
 
 namespace std {
 

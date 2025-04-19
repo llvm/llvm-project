@@ -106,6 +106,7 @@ static_library("CodeGen") {
     "SwiftCallingConv.cpp",
     "TargetBuiltins/AMDGPU.cpp",
     "TargetBuiltins/ARM.cpp",
+    "TargetBuiltins/DirectX.cpp",
     "TargetBuiltins/Hexagon.cpp",
     "TargetBuiltins/NVPTX.cpp",
     "TargetBuiltins/PPC.cpp",

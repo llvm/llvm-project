@@ -145,6 +145,7 @@ class ROCDL_DimGetterFunctionOp<string mnemonic, string device_function,
 
 //===----------------------------------------------------------------------===//
 // Wave-level primitives
+//===----------------------------------------------------------------------===//
 
 class ROCDL_MbcntOp<string mnemonic> :
     ROCDL_IntrPure1Op<"mbcnt." # mnemonic>,
@@ -205,6 +206,7 @@ def ROCDL_ReadlaneOp : ROCDL_IntrOp<"readlane", [], [0], [AllTypesMatch<["res", 
 
 //===----------------------------------------------------------------------===//
 // Thread index and Block index
+//===----------------------------------------------------------------------===//
 
 def ROCDL_ThreadIdXOp : ROCDL_SpecialIdRegisterOp<"workitem.id.x">;
 def ROCDL_ThreadIdYOp : ROCDL_SpecialIdRegisterOp<"workitem.id.y">;
@@ -216,6 +218,7 @@ def ROCDL_BlockIdZOp : ROCDL_SpecialIdRegisterOp<"workgroup.id.z">;
 
 //===----------------------------------------------------------------------===//
 // Thread range and Block range
+//===----------------------------------------------------------------------===//
 
 def ROCDL_BlockDimXOp : ROCDL_DimGetterFunctionOp<"workgroup.dim.x",
                                                "__ockl_get_local_size", 0>;
@@ -237,6 +240,7 @@ def ROCDL_GridDimZOp : ROCDL_DimGetterFunctionOp<"grid.dim.z",
 
 //===----------------------------------------------------------------------===//
 // Synchronization primitives
+//===----------------------------------------------------------------------===//
 
 // Emits the waintcnt instruction. The bitfield's semantics depend
 // on the target chipset
@@ -676,7 +680,7 @@ def ROCDL_V2BF16Type : FixedVectorOfLengthAndType<[2], [BF16]>,
                         BuildableType<"::mlir::VectorType::get("
                           "{2},$_builder.getBF16Type())">;
 
-// TODO: The word and byte selectors are immarg in LLVM 
+// TODO: The word and byte selectors are immarg in LLVM
 // update to be attributes in MLIR
 //===---------------------------------------------------------------------===//
 // 16-bit float intrinsics
@@ -1125,7 +1129,7 @@ def ROCDL_TargetAttr :
     StringRefParameter<"Target chip features.", "\"\"">:$features,
     // Also update the default builder below and rocdl-attach-target in
     // Dialect/GPU/Transforms/Passes.td .
-    StringRefParameter<"ABI version.", "\"500\"">:$abi,
+    StringRefParameter<"ABI version.", "\"600\"">:$abi,
     OptionalParameter<"DictionaryAttr", "Target specific flags.">:$flags,
     OptionalParameter<"ArrayAttr", "Files to link to the LLVM module.">:$link
   );
@@ -1137,7 +1141,7 @@ def ROCDL_TargetAttr :
                      CArg<"StringRef", "\"amdgcn-amd-amdhsa\"">:$triple,
                      CArg<"StringRef", "\"gfx900\"">:$chip,
                      CArg<"StringRef", "\"\"">:$features,
-                     CArg<"StringRef", "\"500\"">:$abiVersion,
+                     CArg<"StringRef", "\"600\"">:$abiVersion,
                      CArg<"DictionaryAttr", "nullptr">:$targetFlags,
                      CArg<"ArrayAttr", "nullptr">:$linkFiles), [{
       return Base::get($_ctxt, optLevel, triple, chip, features, abiVersion,

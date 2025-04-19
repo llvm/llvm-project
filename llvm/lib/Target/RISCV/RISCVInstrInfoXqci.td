@@ -94,6 +94,8 @@ def simm5nonzero : RISCVOp<XLenVT>,
 
 def simm11 : RISCVSImmLeafOp<11>;
 
+def simm16 : RISCVSImmOp<16>;
+
 def simm16nonzero : RISCVOp<XLenVT>,
                     ImmLeaf<XLenVT, [{return (Imm != 0) && isInt<16>(Imm);}]> {
   let ParserMatchClass = SImmAsmOperand<16, "NonZero">;
@@ -101,22 +103,38 @@ def simm16nonzero : RISCVOp<XLenVT>,
   let OperandType = "OPERAND_SIMM16_NONZERO";
 }
 
-def simm20 : RISCVSImmLeafOp<20>;
+def simm20_li : RISCVOp<XLenVT> {
+  let ParserMatchClass = SImmAsmOperand<20, "LI">;
+  let EncoderMethod = "getImmOpValue";
+  let DecoderMethod = "decodeSImmOperand<20>";
+  let OperandType = "OPERAND_SIMM20_LI";
+  let MCOperandPredicate = [{
+    int64_t Imm;
+    if (MCOp.evaluateAsConstantImm(Imm))
+      return isInt<20>(Imm);
+    return MCOp.isBareSymbolRef();
+  }];
+}
 
 def simm26 : RISCVSImmLeafOp<26>;
 
+class BareSImmNAsmOperand<int width>
+    : ImmAsmOperand<"BareS", width, ""> {
+  let PredicateMethod = "isBareSimmN<" # width # ">";
+}
+
 // 32-bit Immediate, used by RV32 Instructions in 32-bit operations, so no
 // sign-/zero-extension. This is represented internally as a signed 32-bit value.
-def simm32 : RISCVOp<XLenVT> {
-  let ParserMatchClass = SImmAsmOperand<32, "">;
+def bare_simm32 : RISCVOp<XLenVT> {
+  let ParserMatchClass = BareSImmNAsmOperand<32>;
   let EncoderMethod = "getImmOpValue";
   let DecoderMethod = "decodeSImmOperand<32>";
-  let OperandType = "OPERAND_SIMM32";
+  let OperandType = "OPERAND_BARE_SIMM32";
   let MCOperandPredicate = [{
     int64_t Imm;
     if (MCOp.evaluateAsConstantImm(Imm))
       return isInt<32>(Imm);
-    return false;
+    return MCOp.isBareSymbolRef();
   }];
 }
 
@@ -135,9 +153,234 @@ def simm32_lsb0 : Operand<OtherVT> {
   let OperandType = "OPERAND_PCREL";
 }
 
+def PseudoQCJumpSymbol : AsmOperandClass {
+  let Name = "PseudoQCJumpSymbol";
+  let RenderMethod = "addImmOperands";
+  let DiagnosticType = "InvalidPseudoQCJumpSymbol";
+  let DiagnosticString = "operand must be a valid jump target";
+  let ParserMethod = "parsePseudoQCJumpSymbol";
+}
+
+def pseudo_qc_jump_symbol : Operand<XLenVT> {
+  let ParserMatchClass = PseudoQCJumpSymbol;
+}
+
 //===----------------------------------------------------------------------===//
 // Instruction Formats
 //===----------------------------------------------------------------------===//
+
+
+class DirectiveInsnQC_EAI<dag outs, dag ins, string argstr>
+  : RVInst48<outs, ins, "", "", [], InstFormatQC_EAI> {
+  bits<7> opcode;
+  bits<3> func3;
+  bits<1> func1;
+
+  bits<5> rd;
+  bits<32> imm32;
+
+  let Inst{47-16} = imm32;
+  let Inst{15}    = func1;
+  let Inst{14-12} = func3;
+  let Inst{11-7}  = rd;
+  let Inst{6-0}   = opcode;
+
+  let AsmString = ".insn qc.eai " # argstr;
+}
+
+class DirectiveInsnQC_EI<dag outs, dag ins, string argstr>
+  : RVInst48<outs, ins, "", "", [], InstFormatQC_EI> {
+  bits<7> opcode;
+  bits<3> func3;
+  bits<2> func2;
+
+  bits<5> rd;
+  bits<5> rs1;
+  bits<26> imm26;
+
+  let Inst{47-32} = imm26{25-10};
+  let Inst{31-30} = func2;
+  let Inst{29-20} = imm26{9-0};
+  let Inst{19-15} = rs1;
+  let Inst{14-12} = func3;
+  let Inst{11-7}  = rd;
+  let Inst{6-0}   = opcode;
+
+  let AsmString = ".insn qc.ei " # argstr;
+}
+
+class DirectiveInsnQC_EB<dag outs, dag ins, string argstr>
+  : RVInst48<outs, ins, "", "", [], InstFormatQC_EB> {
+  bits<7> opcode;
+  bits<3> func3;
+  bits<5> func5;
+
+  bits<5> rs1;
+  bits<12> imm12; // This one is the PC-relative offset
+  bits<16> imm16;
+
+  let Inst{47-32} = imm16;
+  let Inst{31}    = imm12{11};
+  let Inst{30-25} = imm12{9-4};
+  let Inst{24-20} = func5;
+  let Inst{19-15} = rs1;
+  let Inst{14-12} = func3;
+  let Inst{11-8}  = imm12{3-0};
+  let Inst{7}     = imm12{10};
+  let Inst{6-0}   = opcode;
+
+  let AsmString = ".insn qc.eb " # argstr;
+}
+
+class DirectiveInsnQC_EJ<dag outs, dag ins, string argstr>
+  : RVInst48<outs, ins, "", "", [], InstFormatQC_EJ> {
+  bits<7> opcode;
+  bits<3> func3;
+  bits<2> func2;
+  bits<5> func5;
+
+  bits<31> imm31;
+
+  let Inst{47-32} = imm31{30-15};
+  let Inst{31}    = imm31{11};
+  let Inst{30-25} = imm31{9-4};
+  let Inst{24-20} = func5;
+  let Inst{19-17} = imm31{14-12};
+  let Inst{16-15} = func2;
+  let Inst{14-12} = func3;
+  let Inst{11-8}  = imm31{3-0};
+  let Inst{7}     = imm31{10};
+  let Inst{6-0}   = opcode;
+
+  let AsmString = ".insn qc.ej " # argstr;
+}
+
+class DirectiveInsnQC_ES<dag outs, dag ins, string argstr>
+  : RVInst48<outs, ins, "", "", [], InstFormatQC_ES> {
+  bits<7> opcode;
+  bits<3> func3;
+  bits<2> func2;
+
+  bits<5> rs1;
+  bits<5> rs2;
+  bits<26> imm26;
+
+  let Inst{47-32} = imm26{25-10};
+  let Inst{31-30} = func2;
+  let Inst{29-25} = imm26{9-5};
+  let Inst{24-20} = rs2;
+  let Inst{19-15} = rs1;
+  let Inst{14-12} = func3;
+  let Inst{11-7}  = imm26{4-0};
+  let Inst{6-0}   = opcode;
+
+  let AsmString = ".insn qc.es " # argstr;
+}
+
+
+let isCodeGenOnly = true, hasSideEffects = true, mayLoad = true,
+    mayStore = true, hasNoSchedulingInfo = true, Predicates=[IsRV32] in {
+def InsnQC_EAI : DirectiveInsnQC_EAI<(outs AnyReg:$rd),
+                                     (ins uimm7_opcode:$opcode,
+                                          uimm3:$func3,
+                                          uimm1:$func1,
+                                          bare_simm32:$imm32),
+                                     "$opcode, $func3, $func1, $rd, $imm32">;
+def InsnQC_EI : DirectiveInsnQC_EI<(outs AnyReg:$rd),
+                                   (ins uimm7_opcode:$opcode,
+                                        uimm3:$func3,
+                                        uimm2:$func2,
+                                        AnyReg:$rs1,
+                                        simm26:$imm26),
+                                   "$opcode, $func3, $func2, $rd, $rs1, $imm26">;
+def InsnQC_EI_Mem : DirectiveInsnQC_EI<(outs AnyReg:$rd),
+                                       (ins uimm7_opcode:$opcode,
+                                            uimm3:$func3,
+                                            uimm2:$func2,
+                                            AnyReg:$rs1,
+                                            simm26:$imm26),
+                                       "$opcode, $func3, $func2, $rd, ${imm26}(${rs1})">;
+def InsnQC_EB : DirectiveInsnQC_EB<(outs),
+                                   (ins uimm7_opcode:$opcode,
+                                        uimm3:$func3,
+                                        uimm5:$func5,
+                                        AnyReg:$rs1,
+                                        simm16:$imm16,
+                                        bare_simm13_lsb0:$imm12),
+                                   "$opcode, $func3, $func5, $rs1, $imm16, $imm12">;
+def InsnQC_EJ : DirectiveInsnQC_EJ<(outs),
+                                   (ins uimm7_opcode:$opcode,
+                                        uimm3:$func3,
+                                        uimm2:$func2,
+                                        uimm5:$func5,
+                                        simm32_lsb0:$imm31),
+                                   "$opcode, $func3, $func2, $func5, $imm31">;
+def InsnQC_ES : DirectiveInsnQC_ES<(outs),
+                                   (ins uimm7_opcode:$opcode,
+                                        uimm3:$func3,
+                                        uimm2:$func2,
+                                        AnyReg:$rs2,
+                                        AnyReg:$rs1,
+                                        simm26:$imm26),
+                                   "$opcode, $func3, $func2, $rs2, ${imm26}(${rs1})">;
+} // isCodeGenOnly, hasSideEffects, mayLoad, mayStore, hasNoSchedulingInfo, Predicates
+
+let EmitPriority = 0, Predicates = [IsRV32] in {
+def : InstAlias<".insn_qc.eai $opcode, $func3, $func1, $rd, $imm32",
+                (InsnQC_EAI AnyReg:$rd,
+                            uimm7_opcode:$opcode,
+                            uimm3:$func3,
+                            uimm1:$func1,
+                            bare_simm32:$imm32)>;
+def : InstAlias<".insn_qc.ei $opcode, $func3, $func2, $rd, $rs1, $imm26",
+                (InsnQC_EI AnyReg:$rd,
+                           uimm7_opcode:$opcode,
+                           uimm3:$func3,
+                           uimm2:$func2,
+                           AnyReg:$rs1,
+                           simm26:$imm26)>;
+def : InstAlias<".insn_qc.ei $opcode, $func3, $func2, $rd, ${imm26}(${rs1})",
+                (InsnQC_EI_Mem AnyReg:$rd,
+                               uimm7_opcode:$opcode,
+                               uimm3:$func3,
+                               uimm2:$func2,
+                               AnyReg:$rs1,
+                               simm26:$imm26)>;
+def : InstAlias<".insn_qc.ei $opcode, $func3, $func2, $rd, (${rs1})",
+                (InsnQC_EI_Mem AnyReg:$rd,
+                               uimm7_opcode:$opcode,
+                               uimm3:$func3,
+                               uimm2:$func2,
+                               AnyReg:$rs1,
+                               0)>;
+def : InstAlias<".insn_qc.eb $opcode, $func3, $func5, $rs1, $imm16, $imm12",
+                 (InsnQC_EB uimm7_opcode:$opcode,
+                            uimm3:$func3,
+                            uimm5:$func5,
+                            AnyReg:$rs1,
+                            simm16:$imm16,
+                            bare_simm13_lsb0:$imm12)>;
+def : InstAlias<".insn_qc.ej $opcode, $func3, $func2, $func5, $imm31",
+                 (InsnQC_EJ uimm7_opcode:$opcode,
+                            uimm3:$func3,
+                            uimm2:$func2,
+                            uimm5:$func5,
+                            simm32_lsb0:$imm31)>;
+def : InstAlias<".insn_qc.es $opcode, $func3, $func2, $rs2, ${imm26}(${rs1})",
+                 (InsnQC_ES uimm7_opcode:$opcode,
+                            uimm3:$func3,
+                            uimm2:$func2,
+                            AnyReg:$rs2,
+                            AnyReg:$rs1,
+                            simm26:$imm26)>;
+def : InstAlias<".insn_qc.es $opcode, $func3, $func2, $rs2, (${rs1})",
+                 (InsnQC_ES uimm7_opcode:$opcode,
+                            uimm3:$func3,
+                            uimm2:$func2,
+                            AnyReg:$rs2,
+                            AnyReg:$rs1,
+                            0)>;
+} // EmitPriority = 0, Predicates = [IsRV32]
 
 //===----------------------------------------------------------------------===//
 // Instruction Class Templates
@@ -335,7 +578,7 @@ class QCIBranchInst_rii<bits<3> funct3, DAGOperand InTyImm5, string opcodestr>
 class QCIBranchInst48_rii<bits<5> funct5, DAGOperand InTyImm16, string opcodestr>
     : RVInst48<(outs),
                (ins GPRNoX0:$rs1, InTyImm16:$imm16, bare_simm13_lsb0:$imm12),
-               opcodestr, "$rs1, $imm16, $imm12", [], InstFormatOther> {
+               opcodestr, "$rs1, $imm16, $imm12", [], InstFormatQC_EB> {
   bits<5> rs1;
   bits<16> imm16;
   bits<12> imm12;
@@ -456,7 +699,7 @@ class QCIRVInstESStore<bits<3> funct3, bits<2> funct2, string opcodestr>
                       opcodestr, "$rs2, ${imm}(${rs1})">;
 
 class QCIRVInstEAI<bits<3> funct3, bits<1> funct1, string opcodestr>
-    : RVInst48<(outs GPRNoX0:$rd_wb), (ins GPRNoX0:$rd, simm32:$imm),
+    : RVInst48<(outs GPRNoX0:$rd_wb), (ins GPRNoX0:$rd, bare_simm32:$imm),
                opcodestr, "$rd, $imm", [], InstFormatOther> {
   bits<5> rd;
   bits<32> imm;
@@ -477,7 +720,7 @@ class QCIRVInstEI<bits<3> funct3, bits<2> funct2, string opcodestr>
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class QCIRVInst48EJ<bits<2> func2, string opcodestr>
     : RVInst48<(outs), (ins simm32_lsb0:$imm31),
-               opcodestr, "$imm31", [], InstFormatOther> {
+               opcodestr, "$imm31", [], InstFormatQC_EJ> {
   bits<31> imm31;
 
   let Inst{47-32} = imm31{30-15};
@@ -584,15 +827,15 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
   def QC_INSBPR : QCIRVInstRR<0b00010, GPR, "qc.insbpr">;
   def QC_INSBPRH : QCIRVInstRR<0b00011, GPR, "qc.insbprh">;
   def QC_EXTU : QCIBitManipRII<0b010, 0b00, GPRNoX0, "qc.extu">;
-  def QC_EXTDU : QCIBitManipRII<0b010, 0b10, GPR, "qc.extdu">;
-  def QC_EXTDUR : QCIRVInstRR<0b00100, GPR, "qc.extdur">;
-  def QC_EXTDUPR : QCIRVInstRR<0b00110, GPR, "qc.extdupr">;
-  def QC_EXTDUPRH : QCIRVInstRR<0b00111, GPR, "qc.extduprh">;
+  def QC_EXTDU : QCIBitManipRII<0b010, 0b10, GPRNoX31, "qc.extdu">;
+  def QC_EXTDUR : QCIRVInstRR<0b00100, GPRNoX31, "qc.extdur">;
+  def QC_EXTDUPR : QCIRVInstRR<0b00110, GPRNoX31, "qc.extdupr">;
+  def QC_EXTDUPRH : QCIRVInstRR<0b00111, GPRNoX31, "qc.extduprh">;
   def QC_EXT : QCIBitManipRII<0b010, 0b01, GPRNoX0, "qc.ext">;
-  def QC_EXTD : QCIBitManipRII<0b010, 0b11, GPR, "qc.extd">;
-  def QC_EXTDR : QCIRVInstRR<0b00101, GPR, "qc.extdr">;
-  def QC_EXTDPR : QCIRVInstRR<0b01000, GPR, "qc.extdpr">;
-  def QC_EXTDPRH : QCIRVInstRR<0b01001, GPR, "qc.extdprh">;
+  def QC_EXTD : QCIBitManipRII<0b010, 0b11, GPRNoX31, "qc.extd">;
+  def QC_EXTDR : QCIRVInstRR<0b00101, GPRNoX31, "qc.extdr">;
+  def QC_EXTDPR : QCIRVInstRR<0b01000, GPRNoX31, "qc.extdpr">;
+  def QC_EXTDPRH : QCIRVInstRR<0b01001, GPRNoX31, "qc.extdprh">;
   def QC_COMPRESS2 : QCIRVInstI<0b0000, "qc.compress2">;
   def QC_COMPRESS3 : QCIRVInstI<0b0001, "qc.compress3">;
   def QC_EXPAND2 : QCIRVInstI<0b0010, "qc.expand2">;
@@ -794,15 +1037,15 @@ let Predicates = [HasVendorXqcilb, IsRV32] in {
 
 let Predicates = [HasVendorXqcili, IsRV32] in {
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
-  def QC_LI : RVInstU<OPC_OP_IMM_32, (outs GPRNoX0:$rd), (ins simm20:$imm20),
+  def QC_LI : RVInstU<OPC_OP_IMM_32, (outs GPRNoX0:$rd), (ins simm20_li:$imm20),
                       "qc.li", "$rd, $imm20"> {
     let Inst{31} = imm20{19};
     let Inst{30-16} = imm20{14-0};
     let Inst{15-12} = imm20{18-15};
   }
 
-  def QC_E_LI : RVInst48<(outs GPRNoX0:$rd), (ins simm32:$imm),
-                         "qc.e.li", "$rd, $imm", [], InstFormatOther> {
+  def QC_E_LI : RVInst48<(outs GPRNoX0:$rd), (ins bare_simm32:$imm),
+                         "qc.e.li", "$rd, $imm", [], InstFormatQC_EAI> {
     bits<5> rd;
     bits<32> imm;
 
@@ -937,6 +1180,66 @@ let EmitPriority = 0 in {
 } // EmitPriority = 0
 } // Predicates = [HasVendorXqcilo, IsRV32]
 
+//===----------------------------------------------------------------------===//
+// Pseudo-instructions
+//===----------------------------------------------------------------------===//
+
+class LongBcciPseudo<DAGOperand InTyImm, int size>
+    : Pseudo<(outs), (ins GPR:$rs1, InTyImm:$imm, simm21_lsb0_jal:$imm20), []>
+{
+  let Size = size;
+  let isBarrier = 1;
+  let isBranch = 1;
+  let hasSideEffects = 0;
+  let mayStore = 0;
+  let mayLoad = 0;
+  let isAsmParserOnly = 1;
+  let hasNoSchedulingInfo = 1;
+}
+
+// This will be expanded into either:
+// QC.BXXX(4 bytes) + JAL(4 bytes)
+// or
+// QC.E.BXXX(6 bytes) + JAL(4 bytes)
+def PseudoLongQC_BEQI : LongBcciPseudo<simm5nonzero, 8>;
+def PseudoLongQC_BNEI : LongBcciPseudo<simm5nonzero, 8>;
+def PseudoLongQC_BLTI : LongBcciPseudo<simm5nonzero, 8>;
+def PseudoLongQC_BGEI : LongBcciPseudo<simm5nonzero, 8>;
+def PseudoLongQC_BLTUI : LongBcciPseudo<uimm5nonzero, 8>;
+def PseudoLongQC_BGEUI : LongBcciPseudo<uimm5nonzero, 8>;
+def PseudoLongQC_E_BEQI : LongBcciPseudo<simm16nonzero, 10>;
+def PseudoLongQC_E_BNEI : LongBcciPseudo<simm16nonzero, 10>;
+def PseudoLongQC_E_BLTI : LongBcciPseudo<simm16nonzero, 10>;
+def PseudoLongQC_E_BGEI : LongBcciPseudo<simm16nonzero, 10>;
+def PseudoLongQC_E_BLTUI : LongBcciPseudo<uimm16nonzero, 10>;
+def PseudoLongQC_E_BGEUI : LongBcciPseudo<uimm16nonzero, 10>;
+
+// Load/Store pseudos with QC.E.* Mnemonics. These expand to an AUIPC +
+// (Standard) Load/Store sequence, as this can materialize all 32-bit addresses,
+// and is shorter than e.g. an AUIPC + Xqcilo Load/Store sequence. These
+// sequences can be turned back into a single Xqcilo instruction using linker
+// relaxation.
+let Predicates = [HasVendorXqcilo, IsRV32] in {
+def PseudoQC_E_LB : PseudoLoad<"qc.e.lb">;
+def PseudoQC_E_LBU : PseudoLoad<"qc.e.lbu">;
+def PseudoQC_E_LH : PseudoLoad<"qc.e.lh">;
+def PseudoQC_E_LHU : PseudoLoad<"qc.e.lhu">;
+def PseudoQC_E_LW : PseudoLoad<"qc.e.lw">;
+
+def PseudoQC_E_SB : PseudoStore<"qc.e.sb">;
+def PseudoQC_E_SH : PseudoStore<"qc.e.sh">;
+def PseudoQC_E_SW : PseudoStore<"qc.e.sw">;
+} // Predicates = [HasVendorXqcilo, IsRV32]
+
+let isCall = 0, isBarrier = 1, isTerminator = 1,
+    isCodeGenOnly = 0, hasSideEffects = 0, mayStore = 0, mayLoad = 0 in
+def PseudoQC_E_J : Pseudo<(outs), (ins pseudo_qc_jump_symbol:$func), [],
+                          "qc.e.j", "$func">;
+
+let isCall = 1, Defs = [X1], isCodeGenOnly = 0, hasSideEffects = 0,
+    mayStore = 0, mayLoad = 0 in
+def PseudoQC_E_JAL: Pseudo<(outs), (ins pseudo_qc_jump_symbol:$func), [],
+                           "qc.e.jal", "$func">;
 
 //===----------------------------------------------------------------------===//
 // Code Gen Patterns

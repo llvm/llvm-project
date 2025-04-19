@@ -47,9 +47,9 @@ define i128 @srem_i128(i128 %lhs, i128 %rhs) {
 ; CHECK-NEXT:    subc.cc.s64 %rd67, %rd117, 0;
 ; CHECK-NEXT:    setp.eq.s64 %p8, %rd67, 0;
 ; CHECK-NEXT:    setp.ne.s64 %p9, %rd67, 0;
-; CHECK-NEXT:    selp.u32 %r5, -1, 0, %p9;
+; CHECK-NEXT:    selp.b32 %r5, -1, 0, %p9;
 ; CHECK-NEXT:    setp.gt.u64 %p10, %rd66, 127;
-; CHECK-NEXT:    selp.u32 %r6, -1, 0, %p10;
+; CHECK-NEXT:    selp.b32 %r6, -1, 0, %p10;
 ; CHECK-NEXT:    selp.b32 %r7, %r6, %r5, %p8;
 ; CHECK-NEXT:    and.b32 %r8, %r7, 1;
 ; CHECK-NEXT:    setp.eq.b32 %p11, %r8, 1;
@@ -180,9 +180,9 @@ define i128 @urem_i128(i128 %lhs, i128 %rhs) {
 ; CHECK-NEXT:    subc.cc.s64 %rd57, %rd103, 0;
 ; CHECK-NEXT:    setp.eq.s64 %p6, %rd57, 0;
 ; CHECK-NEXT:    setp.ne.s64 %p7, %rd57, 0;
-; CHECK-NEXT:    selp.u32 %r5, -1, 0, %p7;
+; CHECK-NEXT:    selp.b32 %r5, -1, 0, %p7;
 ; CHECK-NEXT:    setp.gt.u64 %p8, %rd56, 127;
-; CHECK-NEXT:    selp.u32 %r6, -1, 0, %p8;
+; CHECK-NEXT:    selp.b32 %r6, -1, 0, %p8;
 ; CHECK-NEXT:    selp.b32 %r7, %r6, %r5, %p6;
 ; CHECK-NEXT:    and.b32 %r8, %r7, 1;
 ; CHECK-NEXT:    setp.eq.b32 %p9, %r8, 1;
@@ -356,9 +356,9 @@ define i128 @sdiv_i128(i128 %lhs, i128 %rhs) {
 ; CHECK-NEXT:    subc.cc.s64 %rd68, %rd112, 0;
 ; CHECK-NEXT:    setp.eq.s64 %p8, %rd68, 0;
 ; CHECK-NEXT:    setp.ne.s64 %p9, %rd68, 0;
-; CHECK-NEXT:    selp.u32 %r5, -1, 0, %p9;
+; CHECK-NEXT:    selp.b32 %r5, -1, 0, %p9;
 ; CHECK-NEXT:    setp.gt.u64 %p10, %rd67, 127;
-; CHECK-NEXT:    selp.u32 %r6, -1, 0, %p10;
+; CHECK-NEXT:    selp.b32 %r6, -1, 0, %p10;
 ; CHECK-NEXT:    selp.b32 %r7, %r6, %r5, %p8;
 ; CHECK-NEXT:    and.b32 %r8, %r7, 1;
 ; CHECK-NEXT:    setp.eq.b32 %p11, %r8, 1;
@@ -483,9 +483,9 @@ define i128 @udiv_i128(i128 %lhs, i128 %rhs) {
 ; CHECK-NEXT:    subc.cc.s64 %rd57, %rd97, 0;
 ; CHECK-NEXT:    setp.eq.s64 %p6, %rd57, 0;
 ; CHECK-NEXT:    setp.ne.s64 %p7, %rd57, 0;
-; CHECK-NEXT:    selp.u32 %r5, -1, 0, %p7;
+; CHECK-NEXT:    selp.b32 %r5, -1, 0, %p7;
 ; CHECK-NEXT:    setp.gt.u64 %p8, %rd56, 127;
-; CHECK-NEXT:    selp.u32 %r6, -1, 0, %p8;
+; CHECK-NEXT:    selp.b32 %r6, -1, 0, %p8;
 ; CHECK-NEXT:    selp.b32 %r7, %r6, %r5, %p6;
 ; CHECK-NEXT:    and.b32 %r8, %r7, 1;
 ; CHECK-NEXT:    setp.eq.b32 %p9, %r8, 1;

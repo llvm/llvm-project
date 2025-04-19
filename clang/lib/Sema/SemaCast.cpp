@@ -3091,10 +3091,10 @@ void CastOperation::CheckCStyleCast() {
     return;
   }
 
-  // C23 6.5.4p4:
-  //   The type nullptr_t shall not be converted to any type other than void,
-  //   bool, or a pointer type. No type other than nullptr_t shall be converted
-  //   to nullptr_t.
+  // C23 6.5.5p4:
+  //   ... The type nullptr_t shall not be converted to any type other than
+  //   void, bool or a pointer type.If the target type is nullptr_t, the cast
+  //   expression shall be a null pointer constant or have type nullptr_t.
   if (SrcType->isNullPtrType()) {
     // FIXME: 6.3.2.4p2 says that nullptr_t can be converted to itself, but
     // 6.5.4p4 is a constraint check and nullptr_t is not void, bool, or a
@@ -3115,11 +3115,20 @@ void CastOperation::CheckCStyleCast() {
                                          Self.CurFPFeatureOverrides());
     }
   }
+
   if (DestType->isNullPtrType() && !SrcType->isNullPtrType()) {
-    Self.Diag(SrcExpr.get()->getExprLoc(), diag::err_nullptr_cast)
-        << /*type to nullptr*/ 1 << SrcType;
-    SrcExpr = ExprError();
-    return;
+    if (!SrcExpr.get()->isNullPointerConstant(Self.Context,
+                                              Expr::NPC_NeverValueDependent)) {
+      Self.Diag(SrcExpr.get()->getExprLoc(), diag::err_nullptr_cast)
+          << /*type to nullptr*/ 1 << SrcType;
+      SrcExpr = ExprError();
+      return;
+    }
+    // Need to convert the source from whatever its type is to a null pointer
+    // type first.
+    SrcExpr = ImplicitCastExpr::Create(Self.Context, DestType, CK_NullToPointer,
+                                       SrcExpr.get(), nullptr, VK_PRValue,
+                                       Self.CurFPFeatureOverrides());
   }
 
   if (DestType->isExtVectorType()) {

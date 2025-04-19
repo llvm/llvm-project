@@ -833,6 +833,12 @@ else ()
     append_list_if(COMPILER_RT_HAS_FLTO_FLAG -flto BUILTIN_CFLAGS)
     append_list_if(COMPILER_RT_HAS_FCONVERGENT_FUNCTIONS_FLAG
                    -fconvergent-functions BUILTIN_CFLAGS)
+
+    # AMDGPU targets want to use a generic ABI.
+    if("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "amdgcn")
+      append_list_if(COMPILER_RT_HAS_CODE_OBJECT_VERSION_FLAG
+                     "SHELL:-Xclang -mcode-object-version=none" BUILTIN_CFLAGS)
+    endif()
   endif()
 
   set(BUILTIN_DEFS "")
@@ -854,15 +860,17 @@ else ()
       cmake_push_check_state()
       # TODO: we should probably make most of the checks in builtin-config depend on the target flags.
       set(BUILTIN_CFLAGS_${arch} ${BUILTIN_CFLAGS})
-      # CMAKE_REQUIRED_FLAGS must be a space separated string but unlike TARGET_${arch}_CFLAGS,
-      # BUILTIN_CFLAGS_${arch} is a CMake list, so we have to join it to create a valid command line.
-      list(JOIN BUILTIN_CFLAGS " " CMAKE_REQUIRED_FLAGS)
-      set(CMAKE_REQUIRED_FLAGS "${TARGET_${arch}_CFLAGS} ${BUILTIN_CFLAGS_${arch}}")
+      # CMAKE_REQUIRED_FLAGS must be a space separated string
+      # Join BUILTIN_CFLAGS_${arch} and TARGET_${arch}_CFLAGS as a
+      # space-separated string.
+      list(APPEND CMAKE_REQUIRED_FLAGS
+        ${BUILTIN_CFLAGS_${arch}}
+        ${TARGET_${arch}_CFLAGS})
+      list(JOIN CMAKE_REQUIRED_FLAGS " " CMAKE_REQUIRED_FLAGS)
       message(STATUS "Performing additional configure checks with target flags: ${CMAKE_REQUIRED_FLAGS}")
       # For ARM archs, exclude any VFP builtins if VFP is not supported
       if (${arch} MATCHES "^(arm|armhf|armv7|armv7s|armv7k|armv7m|armv7em|armv8m.main|armv8.1m.main)$")
-        string(REPLACE ";" " " _TARGET_${arch}_CFLAGS "${TARGET_${arch}_CFLAGS}")
-        check_compile_definition(__ARM_FP "${CMAKE_C_FLAGS} ${_TARGET_${arch}_CFLAGS}" COMPILER_RT_HAS_${arch}_VFP)
+        check_compile_definition(__ARM_FP "${CMAKE_C_FLAGS}" COMPILER_RT_HAS_${arch}_VFP)
         if(NOT COMPILER_RT_HAS_${arch}_VFP)
           list(REMOVE_ITEM ${arch}_SOURCES ${arm_Thumb1_VFPv2_DP_SOURCES} ${arm_Thumb1_VFPv2_SP_SOURCES} ${arm_Thumb1_SjLj_EH_SOURCES})
         else()

@@ -216,16 +216,25 @@ class fpimm_pos_inf<ValueType vt>
 
 // Utility class to wrap up information about a register and DAG type for more
 // convenient iteration and parameterization
-class RegTyInfo<ValueType ty, NVPTXRegClass rc, Operand imm> {
+class RegTyInfo<ValueType ty, NVPTXRegClass rc, Operand imm, SDNode imm_node,
+                bit supports_imm = 1> {
   ValueType Ty = ty;
   NVPTXRegClass RC = rc;
   Operand Imm = imm;
+  SDNode ImmNode = imm_node;
+  bit SupportsImm = supports_imm;
   int Size = ty.Size;
 }
 
-def I16RT : RegTyInfo<i16, Int16Regs, i16imm>;
-def I32RT : RegTyInfo<i32, Int32Regs, i32imm>;
-def I64RT : RegTyInfo<i64, Int64Regs, i64imm>;
+def I16RT : RegTyInfo<i16, Int16Regs, i16imm, imm>;
+def I32RT : RegTyInfo<i32, Int32Regs, i32imm, imm>;
+def I64RT : RegTyInfo<i64, Int64Regs, i64imm, imm>;
+
+def F32RT : RegTyInfo<f32, Float32Regs, f32imm, fpimm>;
+def F64RT : RegTyInfo<f64, Float64Regs, f64imm, fpimm>;
+def F16RT : RegTyInfo<f16, Int16Regs, f16imm, fpimm, supports_imm = 0>;
+def BF16RT : RegTyInfo<bf16, Int16Regs, bf16imm, fpimm, supports_imm = 0>;
+
 
 // Template for instructions which take three int64, int32, or int16 args.
 // The instructions are named "<OpcStr><Width>" (e.g. "add.s64").
@@ -716,62 +725,40 @@ def : Pat<(v2f16 (build_vector (f16 (fpround_oneuse f32:$lo)),
 // selp instructions that don't have any pattern matches; we explicitly use
 // them within this file.
 let hasSideEffects = false in {
-  multiclass SELP<string TypeStr, RegisterClass RC, Operand ImmCls> {
-    def rr : NVPTXInst<(outs RC:$dst),
-                       (ins RC:$a, RC:$b, Int1Regs:$p),
-                       !strconcat("selp.", TypeStr, " \t$dst, $a, $b, $p;"), []>;
-    def ri : NVPTXInst<(outs RC:$dst),
-                       (ins RC:$a, ImmCls:$b, Int1Regs:$p),
-                       !strconcat("selp.", TypeStr, " \t$dst, $a, $b, $p;"), []>;
-    def ir : NVPTXInst<(outs RC:$dst),
-                       (ins ImmCls:$a, RC:$b, Int1Regs:$p),
-                       !strconcat("selp.", TypeStr, " \t$dst, $a, $b, $p;"), []>;
-    def ii : NVPTXInst<(outs RC:$dst),
-                       (ins ImmCls:$a, ImmCls:$b, Int1Regs:$p),
-                       !strconcat("selp.", TypeStr, " \t$dst, $a, $b, $p;"), []>;
-  }
-
-  multiclass SELP_PATTERN<string TypeStr, ValueType T, RegisterClass RC,
-                          Operand ImmCls, SDNode ImmNode> {
+  multiclass SELP_PATTERN<string TypeStr, RegTyInfo t> {
+    defvar asm_str = "selp." # TypeStr # " \t$dst, $a, $b, $p;";
     def rr :
-      NVPTXInst<(outs RC:$dst),
-                (ins RC:$a, RC:$b, Int1Regs:$p),
-                !strconcat("selp.", TypeStr, " \t$dst, $a, $b, $p;"),
-                [(set T:$dst, (select i1:$p, T:$a, T:$b))]>;
+      NVPTXInst<(outs t.RC:$dst),
+                (ins t.RC:$a, t.RC:$b, Int1Regs:$p),
+                asm_str,
+                [(set t.Ty:$dst, (select i1:$p, t.Ty:$a, t.Ty:$b))]>;
     def ri :
-      NVPTXInst<(outs RC:$dst),
-                (ins RC:$a, ImmCls:$b, Int1Regs:$p),
-                !strconcat("selp.", TypeStr, " \t$dst, $a, $b, $p;"),
-                [(set T:$dst, (select i1:$p, T:$a, (T ImmNode:$b)))]>;
+      NVPTXInst<(outs t.RC:$dst),
+                (ins t.RC:$a, t.Imm:$b, Int1Regs:$p),
+                asm_str,
+                [(set t.Ty:$dst, (select i1:$p, t.Ty:$a, t.ImmNode:$b))]>;
     def ir :
-      NVPTXInst<(outs RC:$dst),
-                (ins ImmCls:$a, RC:$b, Int1Regs:$p),
-                !strconcat("selp.", TypeStr, " \t$dst, $a, $b, $p;"),
-                [(set T:$dst, (select i1:$p, ImmNode:$a, T:$b))]>;
+      NVPTXInst<(outs t.RC:$dst),
+                (ins t.Imm:$a, t.RC:$b, Int1Regs:$p),
+                asm_str,
+                [(set t.Ty:$dst, (select i1:$p, t.ImmNode:$a, t.Ty:$b))]>;
     def ii :
-      NVPTXInst<(outs RC:$dst),
-                (ins ImmCls:$a, ImmCls:$b, Int1Regs:$p),
-                !strconcat("selp.", TypeStr, " \t$dst, $a, $b, $p;"),
-                [(set T:$dst, (select i1:$p, ImmNode:$a, ImmNode:$b))]>;
+      NVPTXInst<(outs t.RC:$dst),
+                (ins t.Imm:$a, t.Imm:$b, Int1Regs:$p),
+                asm_str,
+                [(set t.Ty:$dst, (select i1:$p, t.ImmNode:$a, t.ImmNode:$b))]>;
   }
 }
 
 // Don't pattern match on selp.{s,u}{16,32,64} -- selp.b{16,32,64} is just as
 // good.
-defm SELP_b16 : SELP_PATTERN<"b16", i16, Int16Regs, i16imm, imm>;
-defm SELP_s16 : SELP<"s16", Int16Regs, i16imm>;
-defm SELP_u16 : SELP<"u16", Int16Regs, i16imm>;
-defm SELP_b32 : SELP_PATTERN<"b32", i32, Int32Regs, i32imm, imm>;
-defm SELP_s32 : SELP<"s32", Int32Regs, i32imm>;
-defm SELP_u32 : SELP<"u32", Int32Regs, i32imm>;
-defm SELP_b64 : SELP_PATTERN<"b64", i64, Int64Regs, i64imm, imm>;
-defm SELP_s64 : SELP<"s64", Int64Regs, i64imm>;
-defm SELP_u64 : SELP<"u64", Int64Regs, i64imm>;
-defm SELP_f16 : SELP_PATTERN<"b16", f16, Int16Regs, f16imm, fpimm>;
-defm SELP_bf16 : SELP_PATTERN<"b16", bf16, Int16Regs, bf16imm, fpimm>;
-
-defm SELP_f32 : SELP_PATTERN<"f32", f32, Float32Regs, f32imm, fpimm>;
-defm SELP_f64 : SELP_PATTERN<"f64", f64, Float64Regs, f64imm, fpimm>;
+defm SELP_b16  : SELP_PATTERN<"b16", I16RT>;
+defm SELP_b32  : SELP_PATTERN<"b32", I32RT>;
+defm SELP_b64  : SELP_PATTERN<"b64", I64RT>;
+defm SELP_f16  : SELP_PATTERN<"b16", F16RT>;
+defm SELP_bf16 : SELP_PATTERN<"b16", BF16RT>;
+defm SELP_f32  : SELP_PATTERN<"f32", F32RT>;
+defm SELP_f64  : SELP_PATTERN<"f64", F64RT>;
 
 // This does not work as tablegen fails to infer the type of 'imm'.
 // def v2f16imm : Operand<v2f16>;
@@ -2014,9 +2001,9 @@ def: Pat<(setne (i16 (and (trunc (bfe Int32Regs:$a, imm:$oa, 8)), 255)),
 
 // i1 compare -> i32
 def : Pat<(i32 (setne i1:$a, i1:$b)),
-          (SELP_u32ii -1, 0, (XORb1rr $a, $b))>;
+          (SELP_b32ii -1, 0, (XORb1rr $a, $b))>;
 def : Pat<(i32 (setne i1:$a, i1:$b)),
-          (SELP_u32ii 0, -1, (XORb1rr $a, $b))>;
+          (SELP_b32ii 0, -1, (XORb1rr $a, $b))>;
 
 
 
@@ -2681,7 +2668,7 @@ foreach ta = [v2f16, v2bf16, v2i16, v4i8, i32] in {
 
 // sint -> f16
 def : Pat<(f16 (sint_to_fp i1:$a)),
-          (CVT_f16_s32 (SELP_s32ii -1, 0, $a), CvtRN)>;
+          (CVT_f16_s32 (SELP_b32ii -1, 0, $a), CvtRN)>;
 def : Pat<(f16 (sint_to_fp Int16Regs:$a)),
           (CVT_f16_s16 $a, CvtRN)>;
 def : Pat<(f16 (sint_to_fp i32:$a)),
@@ -2691,7 +2678,7 @@ def : Pat<(f16 (sint_to_fp i64:$a)),
 
 // uint -> f16
 def : Pat<(f16 (uint_to_fp i1:$a)),
-          (CVT_f16_u32 (SELP_u32ii 1, 0, $a), CvtRN)>;
+          (CVT_f16_u32 (SELP_b32ii 1, 0, $a), CvtRN)>;
 def : Pat<(f16 (uint_to_fp Int16Regs:$a)),
           (CVT_f16_u16 $a, CvtRN)>;
 def : Pat<(f16 (uint_to_fp i32:$a)),
@@ -2701,7 +2688,7 @@ def : Pat<(f16 (uint_to_fp i64:$a)),
 
 // sint -> bf16
 def : Pat<(bf16 (sint_to_fp i1:$a)),
-          (CVT_bf16_s32 (SELP_u32ii 1, 0, $a), CvtRN)>, Requires<[hasPTX<78>, hasSM<90>]>;
+          (CVT_bf16_s32 (SELP_b32ii 1, 0, $a), CvtRN)>, Requires<[hasPTX<78>, hasSM<90>]>;
 def : Pat<(bf16 (sint_to_fp i16:$a)),
           (CVT_bf16_s16 $a, CvtRN)>, Requires<[hasPTX<78>, hasSM<90>]>;
 def : Pat<(bf16 (sint_to_fp i32:$a)),
@@ -2711,7 +2698,7 @@ def : Pat<(bf16 (sint_to_fp i64:$a)),
 
 // uint -> bf16
 def : Pat<(bf16 (uint_to_fp i1:$a)),
-          (CVT_bf16_u32 (SELP_u32ii 1, 0, $a), CvtRN)>, Requires<[hasPTX<78>, hasSM<90>]>;
+          (CVT_bf16_u32 (SELP_b32ii 1, 0, $a), CvtRN)>, Requires<[hasPTX<78>, hasSM<90>]>;
 def : Pat<(bf16 (uint_to_fp i16:$a)),
           (CVT_bf16_u16 $a, CvtRN)>, Requires<[hasPTX<78>, hasSM<90>]>;
 def : Pat<(bf16 (uint_to_fp i32:$a)),
@@ -2721,7 +2708,7 @@ def : Pat<(bf16 (uint_to_fp i64:$a)),
 
 // sint -> f32
 def : Pat<(f32 (sint_to_fp i1:$a)),
-          (CVT_f32_s32 (SELP_s32ii -1, 0, $a), CvtRN)>;
+          (CVT_f32_s32 (SELP_b32ii -1, 0, $a), CvtRN)>;
 def : Pat<(f32 (sint_to_fp i16:$a)),
           (CVT_f32_s16 $a, CvtRN)>;
 def : Pat<(f32 (sint_to_fp i32:$a)),
@@ -2731,7 +2718,7 @@ def : Pat<(f32 (sint_to_fp i64:$a)),
 
 // uint -> f32
 def : Pat<(f32 (uint_to_fp i1:$a)),
-          (CVT_f32_u32 (SELP_u32ii 1, 0, $a), CvtRN)>;
+          (CVT_f32_u32 (SELP_b32ii 1, 0, $a), CvtRN)>;
 def : Pat<(f32 (uint_to_fp i16:$a)),
           (CVT_f32_u16 $a, CvtRN)>;
 def : Pat<(f32 (uint_to_fp i32:$a)),
@@ -2741,7 +2728,7 @@ def : Pat<(f32 (uint_to_fp i64:$a)),
 
 // sint -> f64
 def : Pat<(f64 (sint_to_fp i1:$a)),
-          (CVT_f64_s32 (SELP_s32ii -1, 0, $a), CvtRN)>;
+          (CVT_f64_s32 (SELP_b32ii -1, 0, $a), CvtRN)>;
 def : Pat<(f64 (sint_to_fp i16:$a)),
           (CVT_f64_s16 $a, CvtRN)>;
 def : Pat<(f64 (sint_to_fp i32:$a)),
@@ -2751,7 +2738,7 @@ def : Pat<(f64 (sint_to_fp i64:$a)),
 
 // uint -> f64
 def : Pat<(f64 (uint_to_fp i1:$a)),
-          (CVT_f64_u32 (SELP_u32ii 1, 0, $a), CvtRN)>;
+          (CVT_f64_u32 (SELP_b32ii 1, 0, $a), CvtRN)>;
 def : Pat<(f64 (uint_to_fp i16:$a)),
           (CVT_f64_u16 $a, CvtRN)>;
 def : Pat<(f64 (uint_to_fp i32:$a)),
@@ -2853,27 +2840,27 @@ def : Pat<(i64 (fp_to_uint f64:$a)),
 
 // sext i1
 def : Pat<(i16 (sext i1:$a)),
-          (SELP_s16ii -1, 0, $a)>;
+          (SELP_b16ii -1, 0, $a)>;
 def : Pat<(i32 (sext i1:$a)),
-          (SELP_s32ii -1, 0, $a)>;
+          (SELP_b32ii -1, 0, $a)>;
 def : Pat<(i64 (sext i1:$a)),
-          (SELP_s64ii -1, 0, $a)>;
+          (SELP_b64ii -1, 0, $a)>;
 
 // zext i1
 def : Pat<(i16 (zext i1:$a)),
-          (SELP_u16ii 1, 0, $a)>;
+          (SELP_b16ii 1, 0, $a)>;
 def : Pat<(i32 (zext i1:$a)),
-          (SELP_u32ii 1, 0, $a)>;
+          (SELP_b32ii 1, 0, $a)>;
 def : Pat<(i64 (zext i1:$a)),
-          (SELP_u64ii 1, 0, $a)>;
+          (SELP_b64ii 1, 0, $a)>;
 
 // anyext i1
 def : Pat<(i16 (anyext i1:$a)),
-          (SELP_u16ii -1, 0, $a)>;
+          (SELP_b16ii -1, 0, $a)>;
 def : Pat<(i32 (anyext i1:$a)),
-          (SELP_u32ii -1, 0, $a)>;
+          (SELP_b32ii -1, 0, $a)>;
 def : Pat<(i64 (anyext i1:$a)),
-          (SELP_u64ii -1, 0, $a)>;
+          (SELP_b64ii -1, 0, $a)>;
 
 // sext i16
 def : Pat<(i32 (sext i16:$a)),
@@ -3011,27 +2998,46 @@ let hasSideEffects = false in {
                              "{{ .reg .b32 tmp; mov.b64 {$low, tmp}, $s; }}",
                              []>;
 
+  // PTX 7.1 lets you avoid a temp register and just use _ as a "sink" for the
+  // unused high/low part.
+  def I32toI16H_Sink  : NVPTXInst<(outs Int16Regs:$high),
+                             (ins Int32Regs:$s),
+                             "mov.b32 \t{{_, $high}}, $s;",
+                             []>, Requires<[hasPTX<71>]>;
+  def I32toI16L_Sink  : NVPTXInst<(outs Int16Regs:$low),
+                             (ins Int32Regs:$s),
+                             "mov.b32 \t{{$low, _}}, $s;",
+                             []>, Requires<[hasPTX<71>]>;
+  def I64toI32H_Sink  : NVPTXInst<(outs Int32Regs:$high),
+                             (ins Int64Regs:$s),
+                             "mov.b64 \t{{_, $high}}, $s;",
+                             []>, Requires<[hasPTX<71>]>;
+  def I64toI32L_Sink  : NVPTXInst<(outs Int32Regs:$low),
+                             (ins Int64Regs:$s),
+                             "mov.b64 \t{{$low, _}}, $s;",
+                             []>, Requires<[hasPTX<71>]>;
 }
 
-// Using partial vectorized move produces better SASS code for extraction of
-// upper/lower parts of an integer.
-def : Pat<(i16 (trunc (srl i32:$s, (i32 16)))),
-          (I32toI16H $s)>;
-def : Pat<(i16 (trunc (sra i32:$s, (i32 16)))),
-          (I32toI16H $s)>;
-def : Pat<(i32 (trunc (srl i64:$s, (i32 32)))),
-          (I64toI32H $s)>;
-def : Pat<(i32 (trunc (sra i64:$s, (i32 32)))),
-          (I64toI32H $s)>;
+def : Pat<(i16 (trunc (srl i32:$s, (i32 16)))), (I32toI16H_Sink i32:$s)>, Requires<[hasPTX<71>]>;
+def : Pat<(i16 (trunc (sra i32:$s, (i32 16)))), (I32toI16H_Sink i32:$s)>, Requires<[hasPTX<71>]>;
+def : Pat<(i32 (trunc (srl i64:$s, (i32 32)))), (I64toI32H_Sink i64:$s)>, Requires<[hasPTX<71>]>;
+def : Pat<(i32 (trunc (sra i64:$s, (i32 32)))), (I64toI32H_Sink i64:$s)>, Requires<[hasPTX<71>]>;
+
+// Fall back to the old way if we don't have PTX 7.1.
+def : Pat<(i16 (trunc (srl i32:$s, (i32 16)))), (I32toI16H $s)>;
+def : Pat<(i16 (trunc (sra i32:$s, (i32 16)))), (I32toI16H $s)>;
+def : Pat<(i32 (trunc (srl i64:$s, (i32 32)))), (I64toI32H $s)>;
+def : Pat<(i32 (trunc (sra i64:$s, (i32 32)))), (I64toI32H $s)>;
 
 def: Pat<(i32 (sext (extractelt v2i16:$src, 0))),
          (CVT_INREG_s32_s16 $src)>;
 
 foreach vt = [v2f16, v2bf16, v2i16] in {
-def : Pat<(extractelt vt:$src, 0),
-          (I32toI16L $src)>;
-def : Pat<(extractelt vt:$src, 1),
-          (I32toI16H $src)>;
+  def : Pat<(extractelt vt:$src, 0), (I32toI16L_Sink $src)>, Requires<[hasPTX<71>]>;
+  def : Pat<(extractelt vt:$src, 1), (I32toI16H_Sink $src)>, Requires<[hasPTX<71>]>;
+
+  def : Pat<(extractelt vt:$src, 0), (I32toI16L $src)>;
+  def : Pat<(extractelt vt:$src, 1), (I32toI16H $src)>;
 }
 def : Pat<(v2f16 (build_vector f16:$a, f16:$b)),
           (V2I16toI32 $a, $b)>;
@@ -3418,6 +3424,14 @@ def : Pat <
   (v2i16 (bswap v2i16:$a)),
   (INT_NVVM_PRMT $a, (i32 0), (i32 0x2301))>;
 
+def : Pat <
+  (i64 (bswap i64:$a)),
+  (V2I32toI64
+    (INT_NVVM_PRMT (I64toI32H_Sink $a), (i32 0), (i32 0x0123)),
+    (INT_NVVM_PRMT (I64toI32L_Sink $a), (i32 0), (i32 0x0123)))>,
+  Requires<[hasPTX<71>]>;
+
+// Fall back to the old way if we don't have PTX 7.1.
 def : Pat <
   (i64 (bswap i64:$a)),
   (V2I32toI64

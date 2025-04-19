@@ -78,18 +78,18 @@ static LogicalResult
 isArgShapesValid(TensorDescType tdescTy, VectorType valueTy,
                  ArrayRef<int64_t> adjustedTdescShape,
                  function_ref<InFlightDiagnostic()> emitError) {
-  auto sgMap = tdescTy.getSGMapAttr();
+  auto layout = tdescTy.getLayoutAttr();
   auto valueShape = valueTy.getShape();
-  // sg_map not present means IR is in SIMD mode. In this case value shape must
+  // layout not present means IR is in SIMD mode. In this case value shape must
   // match adjusted tensor descriptor shape.
-  if (!sgMap)
+  if (!layout)
     return valueShape == adjustedTdescShape
                ? success()
                : emitError()
                      << "Value shape " << makeString(valueShape)
                      << " is not consistent with tensor descriptor " << tdescTy;
 
-  // sg_map present means IR is in SIMT mode. In this case sg_map determines the
+  // layout present means IR is in SIMT mode. In this case layout determines the
   // value shape.
   auto expectedValueShapeOrFailure = tdescTy.getDistributedVectorType();
   assert(succeeded(expectedValueShapeOrFailure) &&
@@ -103,6 +103,34 @@ isArgShapesValid(TensorDescType tdescTy, VectorType valueTy,
                    << " is not consistent with distributed vector shape "
                    << makeString(expectedValueShapeOrFailure.value().getShape())
                    << " for tensor descriptor " << tdescTy;
+}
+
+// Checks if the given shape is evenly distributed based on the layout
+// and data factors provided by the LayoutAttr. The function ensures that
+// each dimension of the shape can be evenly divided by the corresponding
+// data factor, and the resulting quotient can be evenly divided by the
+// layout factor. Returns `true` if the shape is evenly distributed,
+// otherwise `false`.
+static bool isEvenDistributed(llvm::ArrayRef<int64_t> shape,
+                              xegpu::LayoutAttr attr) {
+  assert(attr && "Layout attribute is missing.");
+  llvm::SmallVector<int32_t> defaults(shape.size(), 1);
+  llvm::ArrayRef<int32_t> layout, data;
+  if (auto sg_layout = attr.getSgLayout()) {
+    layout = sg_layout.asArrayRef();
+    auto sg_data = attr.getSgData();
+    data = sg_data ? sg_data.asArrayRef() : defaults;
+  } else {
+    layout = attr.getLaneLayout().asArrayRef();
+    auto lane_data = attr.getLaneData();
+    data = lane_data ? lane_data.asArrayRef() : defaults;
+  }
+  for (auto [dimSize, dataFactor, layoutFactor] :
+       llvm::zip_equal(shape, data, layout)) {
+    if (dimSize % dataFactor != 0 || (dimSize / dataFactor) % layoutFactor != 0)
+      return false;
+  }
+  return true;
 }
 
 //===----------------------------------------------------------------------===//
@@ -569,61 +597,101 @@ void UpdateOffsetOp::build(OpBuilder &builder, OperationState &state,
 LogicalResult DpasOp::verify() {
   int64_t lhsRank = getLhsType().getRank();
   int64_t rhsRank = getRhsType().getRank();
-  int64_t resultRank = getResultType().getRank();
+  int64_t resRank = getResultType().getRank();
   auto lhsShape = getLhsType().getShape();
   auto rhsShape = getRhsType().getShape();
-  auto resultShape = getResultType().getShape();
+  auto resShape = getResultType().getShape();
 
-  auto sgMapA = getSgMapAAttr();
-  auto sgMapB = getSgMapBAttr();
-  auto sgMapC = getSgMapCAttr();
+  auto aLayout = getALayoutAttr();
+  auto bLayout = getBLayoutAttr();
+  auto cLayout = getCLayoutAttr();
 
-  // If sg_maps are not present, then the operation is in SIMD mode.
-  if (!sgMapA && !sgMapB && !sgMapC) {
-    if (lhsRank != 2 || (rhsRank != 2 && rhsRank != 3) || resultRank != 2)
+  // make sure the layout attribute is either set for every available
+  // operand or simply not set at all. C is special, since ACC is optional.
+  auto hasValidLayoutAttrs = [&]() {
+    bool result = (aLayout != nullptr) ^ (bLayout != nullptr);
+    if (hasAcc()) {
+      result |= (aLayout != nullptr) ^ (cLayout != nullptr);
+    }
+    return !result;
+  };
+
+  if (!hasValidLayoutAttrs())
+    return emitOpError(
+        "layout attributes should be either set for all operands (for SIMT "
+        "code) or not set at all (for SIMD code).");
+
+  // query the scope from aLayout (a valid setting).
+  if (aLayout) {
+    // In SIMT mode, All data fragments must be 2D
+    if (lhsRank != 2 || rhsRank != 2 || resRank != 2)
+      return emitOpError("expecting lhs, rhs, and result to be a 2D vector.");
+
+    auto laneLayoutA = aLayout.getLaneLayout();
+    auto laneLayoutB = bLayout.getLaneLayout();
+    auto laneLayoutC = cLayout.getLaneLayout();
+    // Obtain the expanded shapes of the operands and result using lane_layout.
+    // NOTE: For B, get rid of the packed dimension for the expanded shape.
+    SmallVector<int64_t> expandedShapeA = {lhsShape[0] * laneLayoutA[0],
+                                           lhsShape[1] * laneLayoutA[1]};
+    SmallVector<int64_t> expandedShapeB = {
+        rhsShape[0] * rhsShape[1] * laneLayoutB[0], 1 * laneLayoutB[1]};
+    SmallVector<int64_t> expandedShapeC = {resShape[0] * laneLayoutC[0],
+                                           resShape[1] * laneLayoutC[1]};
+    auto bK = expandedShapeB[0];
+    if (bK != expandedShapeA[1])
+      return emitOpError("K-dimension mismatch.");
+    if (expandedShapeA[0] != expandedShapeC[0])
+      return emitOpError("M-dimension mismatch.");
+    if (expandedShapeB[1] != expandedShapeC[1])
+      return emitOpError("N-dimension mismatch.");
+  } else { // For other scopes, operands' shape should match the mxkxn
+           // semantics.
+    if (lhsRank != 2 || (rhsRank != 2 && rhsRank != 3) || resRank != 2)
       return emitOpError(
           "expecting lhs and result to be a 2D vector, and rhs to be either "
           "2D or 3D (packed) vector.");
     auto bK = rhsRank == 3 ? rhsShape[0] * rhsShape[2] : rhsShape[0];
     if (bK != lhsShape[1])
       return emitOpError("K-dimension mismatch.");
-    if (lhsShape[0] != resultShape[0])
+    if (lhsShape[0] != resShape[0])
       return emitOpError("M-dimension mismatch.");
-    if (rhsShape[1] != resultShape[1])
+    if (rhsShape[1] != resShape[1])
       return emitOpError("N-dimension mismatch.");
-    return success();
   }
-  // Otherwise, in SIMT mode we expect sg_map attributes for all operands and
-  // result of DPAS operation.
-  if (!sgMapA || !sgMapB || !sgMapC)
-    return emitOpError("sg_map attributes for all operands and outputs are "
-                       "expected in SIMT xegpu::Dpas operation");
-
-  // In SIMT mode, All data fragments must be 2D
-  if (lhsRank != 2 || rhsRank != 2 || resultRank != 2)
-    return emitOpError("expecting lhs, rhs, and result to be a 2D vector.");
-
-  auto wiLayoutA = sgMapA.getWiLayout();
-  auto wiLayoutB = sgMapB.getWiLayout();
-  auto wiLayoutC = sgMapC.getWiLayout();
-  // Obtain the expanded shapes of the operands and result using wi_layout.
-  // NOTE: For B, get rid of the packed dimension for the expanded shape.
-  SmallVector<int64_t> expandedShapeA = {lhsShape[0] * wiLayoutA[0],
-                                         lhsShape[1] * wiLayoutA[1]};
-  SmallVector<int64_t> expandedShapeB = {
-      rhsShape[0] * rhsShape[1] * wiLayoutB[0], 1 * wiLayoutB[1]};
-  SmallVector<int64_t> expandedShapeC = {resultShape[0] * wiLayoutC[0],
-                                         resultShape[1] * wiLayoutC[1]};
-  auto bK = expandedShapeB[0];
-  if (bK != expandedShapeA[1])
-    return emitOpError("K-dimension mismatch.");
-  if (expandedShapeA[0] != expandedShapeC[0])
-    return emitOpError("M-dimension mismatch.");
-  if (expandedShapeB[1] != expandedShapeC[1])
-    return emitOpError("N-dimension mismatch.");
-
   return success();
 }
+
+//===----------------------------------------------------------------------===//
+// XeGPU_ConvertLayoutOp
+//===----------------------------------------------------------------------===//
+LogicalResult ConvertLayoutOp::verify() {
+  auto srcMap = getSrcMapAttr();
+  auto resMap = getResMapAttr();
+  if (!srcMap)
+    return emitOpError("expected srcMap.");
+  if (!resMap)
+    return emitOpError("expected resMap.");
+
+  if (srcMap == resMap)
+    return emitOpError("expected different srcMap and resMap.");
+
+  // both srcMap and resMap should be WgLayout or SgLayout at the same time.
+  if ((!srcMap.isWgLayout() || !resMap.isWgLayout()) &&
+      (!srcMap.isSgLayout() || !resMap.isSgLayout()))
+    return emitOpError(
+        "expected srcMap and resMap be WgLayout or SgLayout at the same time.");
+
+  auto shape = getSource().getType().getShape();
+  if (!isEvenDistributed(shape, srcMap))
+    return emitOpError("invalid srcMap, data cannot be evenly distributed.");
+
+  if (!isEvenDistributed(shape, resMap))
+    return emitOpError("invalid resMap, data cannot be evenly distributed.");
+
+  return mlir::success();
+}
+
 } // namespace xegpu
 } // namespace mlir
 

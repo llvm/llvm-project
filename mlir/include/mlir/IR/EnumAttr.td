@@ -13,6 +13,7 @@ include "mlir/IR/AttrTypeBase.td"
 
 //===----------------------------------------------------------------------===//
 // Enum attribute kinds
+//===----------------------------------------------------------------------===//
 
 // Additional information for an enum case.
 class EnumCase<string sym, int intVal, string strVal, int widthVal> {

@@ -10279,6 +10279,71 @@ INTERCEPTOR(SSIZE_T, freadlink, int fd, char *buf, SIZE_T bufsiz) {
 #  define INIT_FREADLINK
 #endif
 
+#if SANITIZER_INTERCEPT_GETSERVENT_R || SANITIZER_INTERCEPT_GETSERVBYNAME_R || \
+    SANITIZER_INTERCEPT_GETSERVBYPORT_R
+
+UNUSED static void HandleGetServentReentrantResult(
+    void *ctx, int res, struct __sanitizer_servent *result_buf, char *buf,
+    SIZE_T buflen, struct __sanitizer_servent **result) {
+  COMMON_INTERCEPTOR_WRITE_RANGE(ctx, (char *)result, sizeof(void *));
+  if (res)
+    return;
+  if (*result) {
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, (char *)*result,
+                                   sizeof(__sanitizer_servent));
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, buf, buflen);
+  }
+}
+
+#endif
+
+#if SANITIZER_INTERCEPT_GETSERVENT_R
+INTERCEPTOR(int, getservent_r, struct __sanitizer_servent *result_buf,
+            char *buf, SIZE_T buflen, struct __sanitizer_servent **result) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, getservent_r, result_buf, buf, buflen, result);
+  int res = REAL(getservent_r)(result_buf, buf, buflen, result);
+  HandleGetServentReentrantResult(ctx, res, result_buf, buf, buflen, result);
+  return res;
+}
+#  define INIT_GETSERVENT_R COMMON_INTERCEPT_FUNCTION(getservent_r)
+#else
+#  define INIT_GETSERVENT_R
+#endif
+
+#if SANITIZER_INTERCEPT_GETSERVBYNAME_R
+INTERCEPTOR(int, getservbyname_r, const char *name, const char *proto,
+            struct __sanitizer_servent *result_buf, char *buf, SIZE_T buflen,
+            struct __sanitizer_servent **result) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, getservbyname_r, name, proto, result_buf, buf,
+                           buflen, result);
+  COMMON_INTERCEPTOR_READ_STRING(ctx, name, internal_strlen(name));
+  int res = REAL(getservbyname_r)(name, proto, result_buf, buf, buflen, result);
+  HandleGetServentReentrantResult(ctx, res, result_buf, buf, buflen, result);
+  return res;
+}
+#  define INIT_GETSERVBYNAME_R COMMON_INTERCEPT_FUNCTION(getservbyname_r)
+#else
+#  define INIT_GETSERVBYNAME_R
+#endif
+
+#if SANITIZER_INTERCEPT_GETSERVBYPORT_R
+INTERCEPTOR(int, getservbyport_r, int port, const char *proto,
+            struct __sanitizer_servent *result_buf, char *buf, SIZE_T buflen,
+            struct __sanitizer_servent **result) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, getservbyport_r, port, proto, result_buf, buf,
+                           buflen, result);
+  int res = REAL(getservbyport_r)(port, proto, result_buf, buf, buflen, result);
+  HandleGetServentReentrantResult(ctx, res, result_buf, buf, buflen, result);
+  return res;
+}
+#  define INIT_GETSERVBYPORT_R COMMON_INTERCEPT_FUNCTION(getservbyport_r)
+#else
+#  define INIT_GETSERVBYPORT_R
+#endif
+
 #include "sanitizer_common_interceptors_netbsd_compat.inc"
 
 namespace __sanitizer {
@@ -10604,4 +10669,7 @@ static void InitializeCommonInterceptors() {
   INIT_FREADLINK;
 
   INIT___PRINTF_CHK;
+  INIT_GETSERVENT_R;
+  INIT_GETSERVBYNAME_R;
+  INIT_GETSERVBYPORT_R;
 }

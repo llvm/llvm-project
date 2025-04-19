@@ -89,13 +89,10 @@ public:
   /// Get information on a fixup kind.
   virtual const MCFixupKindInfo &getFixupKindInfo(MCFixupKind Kind) const;
 
-  /// Hook to check if a relocation is needed for some target specific reason.
-  virtual bool shouldForceRelocation(const MCAssembler &Asm,
-                                     const MCFixup &Fixup,
-                                     const MCValue &Target,
-                                     const MCSubtargetInfo *STI) {
-    return false;
-  }
+  // Hook to check if a relocation is needed. The default implementation tests
+  // whether the MCValue has a relocation specifier.
+  virtual bool shouldForceRelocation(const MCAssembler &, const MCFixup &,
+                                     const MCValue &, const MCSubtargetInfo *);
 
   /// Hook to check if extra nop bytes must be inserted for alignment directive.
   /// For some targets this may be necessary in order to support linker

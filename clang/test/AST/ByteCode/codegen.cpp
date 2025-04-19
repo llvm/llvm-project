@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-linux -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-linux -emit-llvm -o - %s                                         | FileCheck %s
 // RUN: %clang_cc1 -triple x86_64-linux -emit-llvm -o - %s -fexperimental-new-constant-interpreter | FileCheck %s
 
 #ifdef __SIZEOF_INT128__
@@ -95,3 +95,12 @@ void f(A *a) {
   // CHECK: call void @_ZN1AD1Ev(
   A::E e3 = A().Foo;
 }
+
+int notdead() {
+  auto l = [c=0]() mutable {
+    return  c++ < 5 ? 10 : 12;
+  };
+  return l();
+}
+// CHECK: _ZZ7notdeadvEN3$_0clEv
+// CHECK: ret i32 %cond

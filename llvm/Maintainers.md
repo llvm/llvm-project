@@ -395,6 +395,13 @@ andrea.dibiagio@sony.com, andrea.dibiagio@gmail.com (email), [adibiagio](https:/
 Min-Yih Hsu \
 min.hsu@sifive.com, min@myhsu.dev (email), [mshockwave](https://github.com/mshockwave) (GitHub)
 
+#### llvm-cov and Coverage parts of ProfileData
+
+Takumi Nakamura \
+geek4civic@gmail.com (email), [chapuni](https://github.com/chapuni) (GitHub) \
+Alan Phipps \
+a-phipps@ti.com (email), [evodius96](https://github.com/evodius96) (GitHub)
+
 #### Binary Utilities
 
 James Henderson \
@@ -411,6 +418,11 @@ tejohnson@google.com (email), [teresajohnson](https://github.com/teresajohnson) 
 
 Aiden Grossman \
 agrossman154@yahoo.com (email), [boomanaiden154](https://github.com/boomanaiden154) (Github)
+
+#### llvm-reduce
+
+Matt Arsenault \
+Matthew.Arsenault@amd.com, arsenm2@gmail.com (email), [arsenm](https://github.com/arsenm) (GitHub)
 
 ### Other
 

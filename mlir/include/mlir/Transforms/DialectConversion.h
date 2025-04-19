@@ -531,81 +531,13 @@ private:
 // Conversion Patterns
 //===----------------------------------------------------------------------===//
 
-namespace detail {
-/// Helper class that derives from a ConversionRewritePattern class and
-/// provides separate `match` and `rewrite` entry points instead of a combined
-/// `matchAndRewrite`.
-template <typename PatternT>
-class ConversionSplitMatchAndRewriteImpl : public PatternT {
-  using PatternT::PatternT;
-
-  /// Attempt to match against IR rooted at the specified operation, which is
-  /// the same operation kind as getRootKind().
-  ///
-  /// Note: This function must not modify the IR.
-  virtual LogicalResult match(typename PatternT::OperationT op) const = 0;
-
-  /// Rewrite the IR rooted at the specified operation with the result of
-  /// this pattern, generating any new operations with the specified
-  /// rewriter.
-  virtual void rewrite(typename PatternT::OperationT op,
-                       typename PatternT::OpAdaptor adaptor,
-                       ConversionPatternRewriter &rewriter) const {
-    // One of the two `rewrite` functions must be implemented.
-    llvm_unreachable("rewrite is not implemented");
-  }
-
-  virtual void rewrite(typename PatternT::OperationT op,
-                       typename PatternT::OneToNOpAdaptor adaptor,
-                       ConversionPatternRewriter &rewriter) const {
-    if constexpr (std::is_same<typename PatternT::OpAdaptor,
-                               ArrayRef<Value>>::value) {
-      rewrite(op, PatternT::getOneToOneAdaptorOperands(adaptor), rewriter);
-    } else {
-      SmallVector<Value> oneToOneOperands =
-          PatternT::getOneToOneAdaptorOperands(adaptor.getOperands());
-      rewrite(op, typename PatternT::OpAdaptor(oneToOneOperands, adaptor),
-              rewriter);
-    }
-  }
-
-  LogicalResult
-  matchAndRewrite(typename PatternT::OperationT op,
-                  typename PatternT::OneToNOpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const final {
-    if (succeeded(match(op))) {
-      rewrite(op, adaptor, rewriter);
-      return success();
-    }
-    return failure();
-  }
-
-  LogicalResult
-  matchAndRewrite(typename PatternT::OperationT op,
-                  typename PatternT::OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const final {
-    // Users would normally override this function in conversion patterns to
-    // implement a 1:1 pattern. Patterns that are derived from this class have
-    // separate `match` and `rewrite` functions, so this `matchAndRewrite`
-    // overload is obsolete.
-    llvm_unreachable("this function is unreachable");
-  }
-};
-} // namespace detail
-
 /// Base class for the conversion patterns. This pattern class enables type
 /// conversions, and other uses specific to the conversion framework. As such,
 /// patterns of this type can only be used with the 'apply*' methods below.
 class ConversionPattern : public RewritePattern {
 public:
-  using OperationT = Operation *;
   using OpAdaptor = ArrayRef<Value>;
   using OneToNOpAdaptor = ArrayRef<ValueRange>;
-
-  /// `SplitMatchAndRewrite` is deprecated. Use `matchAndRewrite` instead of
-  /// separate `match` and `rewrite`.
-  using SplitMatchAndRewrite =
-      detail::ConversionSplitMatchAndRewriteImpl<ConversionPattern>;
 
   /// Hook for derived classes to implement combined matching and rewriting.
   /// This overload supports only 1:1 replacements. The 1:N overload is called
@@ -671,15 +603,9 @@ protected:
 template <typename SourceOp>
 class OpConversionPattern : public ConversionPattern {
 public:
-  using OperationT = SourceOp;
   using OpAdaptor = typename SourceOp::Adaptor;
   using OneToNOpAdaptor =
       typename SourceOp::template GenericAdaptor<ArrayRef<ValueRange>>;
-
-  /// `SplitMatchAndRewrite` is deprecated. Use `matchAndRewrite` instead of
-  /// separate `match` and `rewrite`.
-  using SplitMatchAndRewrite =
-      detail::ConversionSplitMatchAndRewriteImpl<OpConversionPattern<SourceOp>>;
 
   OpConversionPattern(MLIRContext *context, PatternBenefit benefit = 1)
       : ConversionPattern(SourceOp::getOperationName(), benefit, context) {}

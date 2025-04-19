@@ -39,8 +39,19 @@ ELF Improvements
   items that kept it live during garbage collection. This is inspired by the
   Mach-O LLD feature of the same name.
 
+* Linker script ``OVERLAY`` descriptions now support virtual memory regions
+  (e.g. ``>region``) and ``NOCROSSREFS``.
+
+* Added ``--xosegment`` and ``--no-xosegment`` flags to control whether to place
+  executable-only and readable-executable sections in the same segment. The
+  default value is ``--no-xosegment``.
+  (`#132412 <https://github.com/llvm/llvm-project/pull/132412>`_)
+
 Breaking changes
 ----------------
+* Executable-only and readable-executable sections are now allowed to be placed
+  in the same segment by default. Pass ``--xosegment`` to lld in order to get
+  the old behavior back.
 
 COFF Improvements
 -----------------

@@ -5641,7 +5641,7 @@ Instruction *InstCombinerImpl::foldICmpWithMinMax(Instruction &I,
   // execute comparisons. For example, `icmp samesign ult umax(X, -46), -32`
   // cannot be decomposed into `(icmp samesign ult X, -46) or (icmp samesign ult
   // -46, -32)`. `X` is allowed to be non-negative here.
-  Pred = static_cast<CmpInst::Predicate>(Pred);
+  Pred = Pred.dropSameSign();
   auto CmpXZ = IsCondKnownTrue(simplifyICmpInst(Pred, X, Z, Q));
   auto CmpYZ = IsCondKnownTrue(simplifyICmpInst(Pred, Y, Z, Q));
   if (!CmpXZ.has_value() && !CmpYZ.has_value())

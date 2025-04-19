@@ -765,8 +765,8 @@ llvm.func @rocdl_8bit_floats(%source: i32, %source_half: f16, %source_bfloat: bf
 // CHECK: rocdl.cvt.f32.fp8
 // CHECK: rocdl.cvt.scalef32.f32.bf8
 // CHECK: rocdl.cvt.scalef32.f32.fp8
-// CHECK: rocdl.cvt.scalef32.pk.f16.bf8 
-// CHECK: rocdl.cvt.scalef32.pk.f16.fp8 
+// CHECK: rocdl.cvt.scalef32.pk.f16.bf8
+// CHECK: rocdl.cvt.scalef32.pk.f16.fp8
 // CHECK: rocdl.cvt.scalef32.pk.bf16.bf8
 // CHECK: rocdl.cvt.scalef32.pk.bf16.fp8
 // CHECK: rocdl.cvt.scalef32.f16.fp8
@@ -899,4 +899,7 @@ gpu.module @module_1 [#rocdl.target<O = 1, chip = "gfx900", abi = "500", link = 
 }
 
 gpu.module @module_2 [#rocdl.target<chip = "gfx900">, #rocdl.target<chip = "gfx90a">] {
+}
+
+gpu.module @module_3 [#rocdl.target<O = 1, chip = "gfx900", abi = "600", link = ["my_device_lib.bc"], flags = {fast, daz, unsafe_math}>] {
 }

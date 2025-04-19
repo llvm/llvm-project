@@ -356,7 +356,7 @@ static std::vector<FixItHint> handleReturnType(const FunctionDecl *Function,
   if (!TypeText)
     return {};
 
-  SmallVector<const Expr *, 3> ExistingConstraints;
+  SmallVector<AssociatedConstraint, 3> ExistingConstraints;
   Function->getAssociatedConstraints(ExistingConstraints);
   if (!ExistingConstraints.empty()) {
     // FIXME - Support adding new constraints to existing ones. Do we need to
@@ -404,7 +404,7 @@ handleTrailingTemplateType(const FunctionTemplateDecl *FunctionTemplate,
   if (!ConditionText)
     return {};
 
-  SmallVector<const Expr *, 3> ExistingConstraints;
+  SmallVector<AssociatedConstraint, 3> ExistingConstraints;
   Function->getAssociatedConstraints(ExistingConstraints);
   if (!ExistingConstraints.empty()) {
     // FIXME - Support adding new constraints to existing ones. Do we need to

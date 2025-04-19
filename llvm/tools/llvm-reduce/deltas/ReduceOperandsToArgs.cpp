@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "ReduceOperandsToArgs.h"
-#include "Delta.h"
 #include "Utils.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/IR/Constants.h"
@@ -20,12 +19,9 @@
 
 using namespace llvm;
 
-static bool canReplaceFunction(Function *F) {
-  return all_of(F->uses(), [](Use &Op) {
-    if (auto *CI = dyn_cast<CallBase>(Op.getUser()))
-      return &CI->getCalledOperandUse() == &Op;
-    return false;
-  });
+static bool canReplaceFunction(const Function &F) {
+  // TODO: Add controls to avoid ABI breaks (e.g. don't break main)
+  return true;
 }
 
 static bool canReduceUse(Use &Op) {
@@ -37,7 +33,7 @@ static bool canReduceUse(Use &Op) {
     return false;
 
   // Don't pass labels/metadata as arguments.
-  if (Ty->isLabelTy() || Ty->isMetadataTy())
+  if (Ty->isLabelTy() || Ty->isMetadataTy() || Ty->isTokenTy())
     return false;
 
   // No need to replace values that are already arguments.
@@ -60,8 +56,9 @@ static bool canReduceUse(Use &Op) {
 static void replaceFunctionCalls(Function *OldF, Function *NewF) {
   SmallVector<CallBase *> Callers;
   for (Use &U : OldF->uses()) {
-    auto *CI = cast<CallBase>(U.getUser());
-    assert(&U == &CI->getCalledOperandUse());
+    auto *CI = dyn_cast<CallBase>(U.getUser());
+    if (!CI || !CI->isCallee(&U)) // RAUW can handle these fine.
+      continue;
 
     Function *CalledF = CI->getCalledFunction();
     if (CalledF == OldF) {
@@ -156,9 +153,11 @@ static void substituteOperandWithArgument(Function *OldF,
     Argument &OldArg = std::get<0>(Z);
     Argument &NewArg = std::get<1>(Z);
 
-    NewArg.setName(OldArg.getName()); // Copy the name over...
-    VMap[&OldArg] = &NewArg;          // Add mapping to VMap
+    NewArg.takeName(&OldArg); // Copy the name over...
+    VMap[&OldArg] = &NewArg;  // Add mapping to VMap
   }
+
+  LLVMContext &Ctx = OldF->getContext();
 
   // Adjust the new parameters.
   ValueToValueMapTy OldValMap;
@@ -176,8 +175,15 @@ static void substituteOperandWithArgument(Function *OldF,
 
   // Replace the actual operands.
   for (Use *Op : OpsToReplace) {
-    Value *NewArg = OldValMap.lookup(Op->get());
+    Argument *NewArg = cast<Argument>(OldValMap.lookup(Op->get()));
     auto *NewUser = cast<Instruction>(VMap.lookup(Op->getUser()));
+
+    // Try to preserve any information contained metadata annotations as the
+    // equivalent parameter attributes if possible.
+    if (auto *MDSrcInst = dyn_cast<Instruction>(Op)) {
+      AttrBuilder AB(Ctx);
+      NewArg->addAttrs(AB.addFromEquivalentMetadata(*MDSrcInst));
+    }
 
     if (PHINode *NewPhi = dyn_cast<PHINode>(NewUser)) {
       PHINode *OldPhi = cast<PHINode>(Op->getUser());
@@ -196,12 +202,12 @@ static void substituteOperandWithArgument(Function *OldF,
   OldF->eraseFromParent();
 }
 
-static void reduceOperandsToArgs(Oracle &O, ReducerWorkItem &WorkItem) {
+void llvm::reduceOperandsToArgsDeltaPass(Oracle &O, ReducerWorkItem &WorkItem) {
   Module &Program = WorkItem.getModule();
 
   SmallVector<Use *> OperandsToReduce;
   for (Function &F : make_early_inc_range(Program.functions())) {
-    if (!canReplaceFunction(&F))
+    if (!canReplaceFunction(F))
       continue;
     OperandsToReduce.clear();
     for (Instruction &I : instructions(&F)) {
@@ -217,9 +223,4 @@ static void reduceOperandsToArgs(Oracle &O, ReducerWorkItem &WorkItem) {
 
     substituteOperandWithArgument(&F, OperandsToReduce);
   }
-}
-
-void llvm::reduceOperandsToArgsDeltaPass(TestRunner &Test) {
-  runDeltaPass(Test, reduceOperandsToArgs,
-               "Converting operands to function arguments");
 }

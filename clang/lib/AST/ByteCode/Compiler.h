@@ -531,9 +531,10 @@ public:
     if (!Idx)
       return true;
 
+    // NB: We are *not* resetting Idx here as to allow multiple
+    // calls to destroyLocals().
     bool Success = this->emitDestructors(E);
     this->Ctx->emitDestroy(*Idx, E);
-    this->Idx = std::nullopt;
     return Success;
   }
 

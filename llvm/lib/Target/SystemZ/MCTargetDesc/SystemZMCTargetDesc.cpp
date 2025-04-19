@@ -192,19 +192,18 @@ static MCTargetStreamer *createAsmTargetStreamer(MCStreamer &S,
     return new SystemZTargetGNUStreamer(S, OS);
 }
 
-static MCStreamer *createAsmStreamer(MCContext &Ctx,
-                                     std::unique_ptr<formatted_raw_ostream> OS,
-                                     MCInstPrinter *IP,
-                                     std::unique_ptr<MCCodeEmitter> CE,
-                                     std::unique_ptr<MCAsmBackend> TAB) {
+static MCStreamer *createSystemZAsmStreamer(
+    MCContext &Ctx, std::unique_ptr<formatted_raw_ostream> OS,
+    std::unique_ptr<MCInstPrinter> IP, std::unique_ptr<MCCodeEmitter> CE,
+    std::unique_ptr<MCAsmBackend> TAB) {
 
   auto TT = Ctx.getTargetTriple();
   if (TT.isOSzOS() && !GNUAsOnzOSCL)
-    return new SystemZHLASMAsmStreamer(Ctx, std::move(OS), IP, std::move(CE),
-                                       std::move(TAB));
+    return new SystemZHLASMAsmStreamer(Ctx, std::move(OS), std::move(IP),
+                                       std::move(CE), std::move(TAB));
 
-  return llvm::createAsmStreamer(Ctx, std::move(OS), IP, std::move(CE),
-                                 std::move(TAB));
+  return llvm::createAsmStreamer(Ctx, std::move(OS), std::move(IP),
+                                 std::move(CE), std::move(TAB));
 }
 
 static MCTargetStreamer *
@@ -254,7 +253,8 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSystemZTargetMC() {
                                         createSystemZMCInstPrinter);
 
   // Register the asm streamer.
-  TargetRegistry::RegisterAsmStreamer(getTheSystemZTarget(), createAsmStreamer);
+  TargetRegistry::RegisterAsmStreamer(getTheSystemZTarget(),
+                                      createSystemZAsmStreamer);
 
   // Register the asm target streamer.
   TargetRegistry::RegisterAsmTargetStreamer(getTheSystemZTarget(),

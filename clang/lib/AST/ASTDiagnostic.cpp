@@ -128,7 +128,7 @@ QualType clang::desugarForDiagnostic(ASTContext &Context, QualType QT,
         if (DesugarArgument) {
           ShouldAKA = true;
           QT = Context.getTemplateSpecializationType(
-              TST->getTemplateName(), Args, QT);
+              TST->getTemplateName(), Args, /*CanonicalArgs=*/std::nullopt, QT);
         }
         break;
       }
@@ -505,6 +505,14 @@ void clang::FormatASTNodeDiagnosticArgument(
       const Attr *At = reinterpret_cast<Attr *>(Val);
       assert(At && "Received null Attr object!");
       OS << '\'' << At->getSpelling() << '\'';
+      NeedQuotes = false;
+      break;
+    }
+    case DiagnosticsEngine::ak_expr: {
+      const Expr *E = reinterpret_cast<Expr *>(Val);
+      assert(E && "Received null Expr!");
+      E->printPretty(OS, /*Helper=*/nullptr, Context.getPrintingPolicy());
+      // FIXME: Include quotes when printing expressions.
       NeedQuotes = false;
       break;
     }
@@ -1134,9 +1142,9 @@ class TemplateDiff {
       return nullptr;
 
     Ty = Context.getTemplateSpecializationType(
-             TemplateName(CTSD->getSpecializedTemplate()),
-             CTSD->getTemplateArgs().asArray(),
-             Ty.getLocalUnqualifiedType().getCanonicalType());
+        TemplateName(CTSD->getSpecializedTemplate()),
+        CTSD->getTemplateArgs().asArray(), /*CanonicalArgs=*/std::nullopt,
+        Ty.getLocalUnqualifiedType().getCanonicalType());
 
     return Ty->getAs<TemplateSpecializationType>();
   }

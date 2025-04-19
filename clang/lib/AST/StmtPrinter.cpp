@@ -1258,6 +1258,7 @@ void StmtPrinter::VisitOpenACCAtomicConstruct(OpenACCAtomicConstruct *S) {
   if (S->getAtomicKind() != OpenACCAtomicKind::None)
     OS << " " << S->getAtomicKind();
 
+  PrintOpenACCClauseList(S);
   OS << '\n';
   PrintStmt(S->getAssociatedStmt());
 }

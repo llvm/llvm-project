@@ -4,12 +4,12 @@
 # RUN: llvm-readobj -r %t | FileCheck %s
 
 # ASM:      .Ltmp0:
-# ASM-NEXT:  .reloc (.Ltmp0+3)-2, R_X86_64_NONE, foo
+# ASM-NEXT:  .reloc .Ltmp0+3-2, R_X86_64_NONE, foo
 # ASM-NEXT: .Ltmp1:
 # ASM-NEXT:  .reloc .Ltmp1-1, R_X86_64_NONE, foo
 # ASM-NEXT: .Ltmp2:
 # ASM-NEXT:  .reloc 2+.Ltmp2, R_X86_64_NONE, foo
-# ASM-NEXT:  .reloc (1+foo)+3, R_X86_64_NONE, data+1
+# ASM-NEXT:  .reloc 1+foo+3, R_X86_64_NONE, data+1
 # ASM-NEXT: .Ltmp3:
 # ASM-NEXT:  .reloc .Ltmp3, BFD_RELOC_NONE, unused
 

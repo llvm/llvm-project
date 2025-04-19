@@ -69,6 +69,7 @@ json::Value toJSON(const ColumnType &T) {
   case eColumnTypeTimestamp:
     return "unixTimestampUTC";
   }
+  llvm_unreachable("unhandled column type.");
 }
 
 json::Value toJSON(const ColumnDescriptor &CD) {
@@ -95,6 +96,7 @@ json::Value toJSON(const ChecksumAlgorithm &CA) {
   case eChecksumAlgorithmTimestamp:
     return "timestamp";
   }
+  llvm_unreachable("unhandled checksum algorithm.");
 }
 
 json::Value toJSON(const BreakpointModeApplicability &BMA) {
@@ -108,6 +110,7 @@ json::Value toJSON(const BreakpointModeApplicability &BMA) {
   case eBreakpointModeApplicabilityInstruction:
     return "instruction";
   }
+  llvm_unreachable("unhandled breakpoint mode applicability.");
 }
 
 json::Value toJSON(const BreakpointMode &BM) {
@@ -200,6 +203,7 @@ static llvm::StringLiteral ToString(AdapterFeature feature) {
   case eAdapterFeatureTerminateDebuggee:
     return "supportTerminateDebuggee";
   }
+  llvm_unreachable("unhandled adapter feature.");
 }
 
 json::Value toJSON(const Capabilities &C) {

@@ -8,7 +8,7 @@
 //
 // \file
 // This file implements the TOSA Specification:
-// https://developer.mlplatform.org/w/tosa/
+// https://www.mlplatform.org/tosa/tosa_spec.html
 //
 //===----------------------------------------------------------------------===//
 
@@ -425,17 +425,7 @@ static LogicalResult verifyConvOpModes(T op) {
   if (auto quantType = llvm::dyn_cast<mlir::quant::QuantizedType>(resultEType))
     resultEType = quantType.getStorageType();
 
-  // check allowed input/result element types combinations
-  if ((inputEType.isInteger(8) && resultEType.isInteger(32)) ||
-      (inputEType.isInteger(16) && resultEType.isInteger(48)) ||
-      (isa<Float8E5M2Type>(inputEType) && resultEType.isF16()) ||
-      (isa<Float8E4M3FNType>(inputEType) && resultEType.isF16()) ||
-      (inputEType.isF16() && resultEType.isF16()) ||
-      (inputEType.isBF16() && resultEType.isBF16()) ||
-      (inputEType.isF32() && resultEType.isF32()))
-    return success();
-
-  return op.emitOpError("input/output element types are incompatible.");
+  return success();
 }
 
 // verify that inType and outType have same element types
@@ -663,6 +653,13 @@ LogicalResult tosa::ClampOp::verify() {
         (intMaxValAttr.getType() != inputETy))
       return emitOpError("min/max attributes types are incompatible with "
                          "input/output element types.");
+
+    const bool isUnsigned = cast<IntegerType>(inputETy).isUnsigned();
+    const APInt minVal = intMinValAttr.getValue();
+    const APInt maxVal = intMaxValAttr.getValue();
+    if (isUnsigned ? maxVal.ult(minVal) : maxVal.slt(minVal))
+      return emitOpError("expected min_val <= max_val, got min_val=")
+             << minValAttr << ", max_val=" << maxValAttr;
   } else {
     // otherwise, input datatype is float, check that the min_val/max_val
     // attributes share the same type and that their type is the same as the
@@ -674,6 +671,16 @@ LogicalResult tosa::ClampOp::verify() {
         (floatMaxValAttr.getType() != inputETy))
       return emitOpError("min/max attributes types are incompatible with "
                          "input/output element types.");
+
+    const APFloat minVal = floatMinValAttr.getValue();
+    const APFloat maxVal = floatMaxValAttr.getValue();
+    if (minVal.isNaN() || maxVal.isNaN())
+      return emitOpError("min/max attributes should not be 'NaN', got min_val=")
+             << minValAttr << ", max_val=" << maxValAttr;
+
+    if (maxVal < minVal)
+      return emitOpError("expected min_val <= max_val, got min_val=")
+             << minValAttr << ", max_val=" << maxValAttr;
   }
 
   return success();
@@ -1076,6 +1083,10 @@ LogicalResult tosa::ConcatOp::inferReturnTypeComponents(
 
     hasRankedInput = true;
   }
+
+  if (adaptor.getInput1().empty())
+    return failure();
+
   Type inputType =
       llvm::cast<TensorType>(adaptor.getInput1().getType()[0]).getElementType();
   if (!hasRankedInput) {
@@ -1622,19 +1633,25 @@ LogicalResult tosa::TileOp::inferReturnTypeComponents(
     MLIRContext *context, ::std::optional<Location> location,
     TileOp::Adaptor adaptor,
     SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
-  DenseIntElementsAttr multiplesAttr;
-  if (!matchPattern(adaptor.getMultiples(), m_Constant(&multiplesAttr)))
-    return failure();
-
-  SmallVector<int64_t> multiples = llvm::to_vector(
-      llvm::map_range(multiplesAttr.getValues<APInt>(),
-                      [](const APInt &val) { return val.getSExtValue(); }));
+  Type inputType = getElementTypeOrSelf(adaptor.getInput1().getType());
+  SmallVector<int64_t> multiples;
+  if (!tosa::getConstShapeValues(adaptor.getMultiples().getDefiningOp(),
+                                 multiples)) {
+    auto rank =
+        cast<tosa::shapeType>(adaptor.getMultiples().getType()).getRank();
+    SmallVector<int64_t> fallback(rank, ShapedType::kDynamic);
+    inferredReturnShapes.push_back(ShapedTypeComponents(fallback, inputType));
+    return success();
+  } else {
+    multiples = convertToMlirShape(multiples);
+  }
 
   ShapeAdaptor inputShape(adaptor.getInput1().getType());
   SmallVector<int64_t> outputShape;
   if (!inputShape.hasRank()) {
     outputShape.resize(multiples.size(), ShapedType::kDynamic);
-    inferredReturnShapes.push_back(ShapedTypeComponents(outputShape));
+    inferredReturnShapes.push_back(
+        ShapedTypeComponents(outputShape, inputType));
     return success();
   } else if (static_cast<size_t>(inputShape.getRank()) != multiples.size())
     return failure();
@@ -1642,13 +1659,17 @@ LogicalResult tosa::TileOp::inferReturnTypeComponents(
   // Any non dynamic dimension can be multiplied to a known size.
   outputShape.reserve(multiples.size());
   for (int i = 0, s = inputShape.getRank(); i < s; i++) {
-    int64_t dim = inputShape.getDimSize(i);
-    if (dim != ShapedType::kDynamic)
-      dim *= multiples[i];
-    outputShape.push_back(dim);
+    if (multiples[i] == ShapedType::kDynamic) {
+      outputShape.push_back(ShapedType::kDynamic);
+    } else {
+      int64_t dim = inputShape.getDimSize(i);
+      if (dim != ShapedType::kDynamic)
+        dim *= multiples[i];
+      outputShape.push_back(dim);
+    }
   }
 
-  inferredReturnShapes.push_back(ShapedTypeComponents(outputShape));
+  inferredReturnShapes.push_back(ShapedTypeComponents(outputShape, inputType));
   return success();
 }
 
@@ -2896,6 +2917,118 @@ LogicalResult TransposeConv2DOp::inferReturnTypeComponents(
 LogicalResult TransposeConv2DOp::verify() {
   if (verifyConvOp(*this).failed() || verifyConvOpModes(*this).failed())
     return failure();
+
+  const llvm::ArrayRef<int64_t> strides = getStride();
+  const int64_t strideY = strides[0];
+  const int64_t strideX = strides[1];
+
+  if (strideY < 1 || strideX < 1)
+    return emitOpError("expect all stride values to be >= 1, got [")
+           << strides << "]";
+
+  const auto inputType = llvm::dyn_cast<RankedTensorType>(getInput().getType());
+
+  const auto outputType =
+      llvm::dyn_cast<RankedTensorType>(getOutput().getType());
+
+  const auto weightType =
+      llvm::dyn_cast<RankedTensorType>(getWeight().getType());
+
+  const auto checkPadAgainstKernelDim =
+      [this](int64_t pad_value, int64_t kernel_dim_size,
+             llvm::StringRef pad_name,
+             llvm::StringRef kernel_dim_name) -> LogicalResult {
+    if (pad_value <= -kernel_dim_size)
+      return emitOpError("expected ")
+             << pad_name << " > -" << kernel_dim_name
+             << ", but got: " << pad_name << "=" << pad_value << " and "
+             << kernel_dim_name << "=" << kernel_dim_size;
+    return success();
+  };
+
+  const llvm::ArrayRef<int64_t> padding = getOutPad();
+
+  const int64_t outPadTop = padding[0];
+  const int64_t outPadBottom = padding[1];
+
+  const int64_t kernelHeight = weightType.getDimSize(1);
+
+  if (!ShapedType::isDynamic(kernelHeight)) {
+    if (failed(checkPadAgainstKernelDim(outPadTop, kernelHeight, "out_pad_top",
+                                        "KH")))
+      return failure();
+
+    if (failed(checkPadAgainstKernelDim(outPadBottom, kernelHeight,
+                                        "out_pad_bottom", "KH")))
+      return failure();
+  }
+
+  const int64_t kernelWidth = weightType.getDimSize(2);
+
+  const int64_t outPadLeft = padding[2];
+  const int64_t outPadRight = padding[3];
+
+  if (!ShapedType::isDynamic(kernelWidth)) {
+    if (failed(checkPadAgainstKernelDim(outPadLeft, kernelWidth, "out_pad_left",
+                                        "KW")))
+      return failure();
+
+    if (failed(checkPadAgainstKernelDim(outPadRight, kernelWidth,
+                                        "out_pad_right", "KW")))
+      return failure();
+  }
+
+  // Rest of the checks depend on the output type being a RankedTensorType
+  if (!outputType)
+    return success();
+
+  const int64_t inputHeight = inputType.getDimSize(1);
+  const int64_t outputHeight = outputType.getDimSize(1);
+
+  if (!ShapedType::isDynamic(inputHeight) &&
+      !ShapedType::isDynamic(outputHeight)) {
+    if (outputHeight !=
+        (inputHeight - 1) * strideY + outPadTop + outPadBottom + kernelHeight)
+      return emitOpError(
+                 "dimension mismatch: expected OH == (IH - 1) * stride_y "
+                 "+ out_pad_top + out_pad_bottom + KH, but got ")
+             << outputHeight << " != (" << inputHeight << " - 1) * " << strideY
+             << " + " << outPadTop << " + " << outPadBottom << " + "
+             << kernelHeight;
+  }
+
+  const int64_t inputWidth = inputType.getDimSize(2);
+  const int64_t outputWidth = outputType.getDimSize(2);
+
+  if (!ShapedType::isDynamic(inputWidth) &&
+      !ShapedType::isDynamic(outputWidth)) {
+    if (outputWidth !=
+        (inputWidth - 1) * strideX + outPadLeft + outPadRight + kernelWidth)
+      return emitOpError(
+                 "dimension mismatch: expected OW == (IW - 1) * stride_x "
+                 "+ out_pad_left + out_pad_right + KW, but got ")
+             << outputWidth << " != (" << inputWidth << " - 1) * " << strideX
+             << " + " << outPadLeft << " + " << outPadRight << " + "
+             << kernelWidth;
+  }
+
+  const auto biasType = llvm::dyn_cast<RankedTensorType>(getBias().getType());
+
+  if (!biasType)
+    return success();
+
+  const int64_t biasChannels = biasType.getDimSize(0);
+
+  // Skip further checks if bias is dynamic
+  if (biasChannels == ShapedType::kDynamic)
+    return success();
+
+  const int64_t outputChannels = outputType.getDimSize(3);
+  if (biasChannels != outputChannels && biasChannels != 1)
+    return emitOpError(
+               "bias channels expected to be equal to output channels (")
+           << outputChannels << ") or 1, got " << biasChannels;
+
   return success();
 }
 

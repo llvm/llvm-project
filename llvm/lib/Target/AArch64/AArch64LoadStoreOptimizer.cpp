@@ -124,9 +124,7 @@ using LdStPairFlags = struct LdStPairFlags {
 struct AArch64LoadStoreOpt : public MachineFunctionPass {
   static char ID;
 
-  AArch64LoadStoreOpt() : MachineFunctionPass(ID) {
-    initializeAArch64LoadStoreOptPass(*PassRegistry::getPassRegistry());
-  }
+  AArch64LoadStoreOpt() : MachineFunctionPass(ID) {}
 
   AliasAnalysis *AA;
   const AArch64InstrInfo *TII;

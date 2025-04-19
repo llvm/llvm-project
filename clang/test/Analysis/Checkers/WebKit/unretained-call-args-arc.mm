@@ -18,6 +18,7 @@ void foo() {
 
 @interface AnotherObj : NSObject
 - (void)foo:(SomeObj *)obj;
+- (SomeObj *)getSomeObj;
 @end
 
 @implementation AnotherObj
@@ -26,5 +27,13 @@ void foo() {
   [provide() doWork];
   CFArrayAppendValue(provide_cf(), nullptr);
   // expected-warning@-1{{Call argument for parameter 'theArray' is unretained and unsafe [alpha.webkit.UnretainedCallArgsChecker]}}
+}
+
+- (SomeObj *)getSomeObj {
+    return provide();
+}
+
+- (void)doWorkOnSomeObj {
+    [[self getSomeObj] doWork];
 }
 @end

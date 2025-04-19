@@ -9,7 +9,8 @@ Introduction
 ============
 
 Certain kinds of code transformations can inadvertently result in a loss of
-debug info, or worse, make debug info misrepresent the state of a program.
+debug info, or worse, make debug info misrepresent the state of a program. Debug
+info availability is also essential for SamplePGO.
 
 This document specifies how to correctly update debug info in various kinds of
 code transformations, and offers suggestions for how to create targeted debug
@@ -89,9 +90,14 @@ has a location with an accurate scope attached, and b) to prevent misleading
 single-stepping (or breakpoint) behavior. Often, merged instructions are memory
 accesses which can trap: having an accurate scope attached greatly assists in
 crash triage by identifying the (possibly inlined) function where the bad
-memory access occurred. This rule is also meant to assist SamplePGO by banning
-scenarios in which a sample of a block containing a merged instruction is
-misattributed to a block containing one of the instructions-to-be-merged.
+memory access occurred.
+
+To maintain distinct source locations for SamplePGO, it is often beneficial to
+retain an arbitrary but deterministic location instead of discarding line and
+column information as part of merging. In particular, loss of location
+information for calls inhibit optimizations such as indirect call promotion.
+This behavior can be optionally enabled until support for accurately
+representing merged instructions in the line table is implemented.
 
 Examples of transformations that should follow this rule include:
 

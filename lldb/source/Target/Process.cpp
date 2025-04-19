@@ -808,30 +808,11 @@ bool Process::HandleProcessStateChangedEvent(
         std::lock_guard<std::recursive_mutex> guard(thread_list.GetMutex());
 
         ThreadSP curr_thread(thread_list.GetSelectedThread());
-        ThreadSP thread;
-        StopReason curr_thread_stop_reason = eStopReasonInvalid;
-        bool prefer_curr_thread = false;
-        if (curr_thread && curr_thread->IsValid()) {
-          curr_thread_stop_reason = curr_thread->GetStopReason();
-          switch (curr_thread_stop_reason) {
-          case eStopReasonNone:
-          case eStopReasonInvalid:
-            // Don't prefer the current thread if it didn't stop for a reason.
-            break;
-          case eStopReasonSignal: {
-            // We need to do the same computation we do for other threads
-            // below in case the current thread happens to be the one that
-            // stopped for the no-stop signal.
-            uint64_t signo = curr_thread->GetStopInfo()->GetValue();
-            if (process_sp->GetUnixSignals()->GetShouldStop(signo))
-              prefer_curr_thread = true;
-          } break;
-          default:
-            prefer_curr_thread = true;
-            break;
-          }
+
+        if (curr_thread && curr_thread->IsValid())
           curr_thread_stop_info_sp = curr_thread->GetStopInfo();
-        }
+        bool prefer_curr_thread = curr_thread_stop_info_sp &&
+                                  curr_thread_stop_info_sp->ShouldSelect();
 
         if (!prefer_curr_thread) {
           // Prefer a thread that has just completed its plan over another
@@ -839,47 +820,16 @@ bool Process::HandleProcessStateChangedEvent(
           ThreadSP plan_thread;
           ThreadSP other_thread;
 
-          const size_t num_threads = thread_list.GetSize();
-          size_t i;
-          for (i = 0; i < num_threads; ++i) {
-            thread = thread_list.GetThreadAtIndex(i);
-            StopReason thread_stop_reason = thread->GetStopReason();
-            switch (thread_stop_reason) {
-            case eStopReasonInvalid:
-            case eStopReasonNone:
-            case eStopReasonHistoryBoundary:
-              break;
-
-            case eStopReasonSignal: {
-              // Don't select a signal thread if we weren't going to stop at
-              // that signal.  We have to have had another reason for stopping
-              // here, and the user doesn't want to see this thread.
-              uint64_t signo = thread->GetStopInfo()->GetValue();
-              if (process_sp->GetUnixSignals()->GetShouldStop(signo)) {
-                if (!other_thread)
-                  other_thread = thread;
-              }
-              break;
-            }
-            case eStopReasonTrace:
-            case eStopReasonBreakpoint:
-            case eStopReasonWatchpoint:
-            case eStopReasonException:
-            case eStopReasonExec:
-            case eStopReasonFork:
-            case eStopReasonVFork:
-            case eStopReasonVForkDone:
-            case eStopReasonThreadExiting:
-            case eStopReasonInstrumentation:
-            case eStopReasonProcessorTrace:
-            case eStopReasonInterrupt:
-              if (!other_thread)
-                other_thread = thread;
-              break;
-            case eStopReasonPlanComplete:
+          for (ThreadSP thread : thread_list.Threads()) {
+            StopInfoSP stop_info = thread->GetStopInfo();
+            if (!stop_info || !stop_info->ShouldSelect())
+              continue;
+            StopReason thread_stop_reason = stop_info->GetStopReason();
+            if (thread_stop_reason == eStopReasonPlanComplete) {
               if (!plan_thread)
                 plan_thread = thread;
-              break;
+            } else if (!other_thread) {
+              other_thread = thread;
             }
           }
           if (plan_thread)
@@ -887,6 +837,7 @@ bool Process::HandleProcessStateChangedEvent(
           else if (other_thread)
             thread_list.SetSelectedThreadByID(other_thread->GetID());
           else {
+            ThreadSP thread;
             if (curr_thread && curr_thread->IsValid())
               thread = curr_thread;
             else
@@ -1067,6 +1018,20 @@ const char *Process::GetExitDescription() {
 bool Process::SetExitStatus(int status, llvm::StringRef exit_string) {
   // Use a mutex to protect setting the exit status.
   std::lock_guard<std::mutex> guard(m_exit_status_mutex);
+  Log *log(GetLog(LLDBLog::State | LLDBLog::Process));
+  LLDB_LOG(log, "(plugin = {0} status = {1} ({1:x8}), description=\"{2}\")",
+           GetPluginName(), status, exit_string);
+
+  // We were already in the exited state
+  if (m_private_state.GetValue() == eStateExited) {
+    LLDB_LOG(
+        log,
+        "(plugin = {0}) ignoring exit status because state was already set "
+        "to eStateExited",
+        GetPluginName());
+    return false;
+  }
+
   telemetry::ScopedDispatcher<telemetry::ProcessExitInfo> helper;
 
   UUID module_uuid;
@@ -1088,20 +1053,6 @@ bool Process::SetExitStatus(int status, llvm::StringRef exit_string) {
     info->module_uuid = module_uuid;
     info->pid = m_pid;
   });
-
-  Log *log(GetLog(LLDBLog::State | LLDBLog::Process));
-  LLDB_LOG(log, "(plugin = {0} status = {1} ({1:x8}), description=\"{2}\")",
-           GetPluginName(), status, exit_string);
-
-  // We were already in the exited state
-  if (m_private_state.GetValue() == eStateExited) {
-    LLDB_LOG(
-        log,
-        "(plugin = {0}) ignoring exit status because state was already set "
-        "to eStateExited",
-        GetPluginName());
-    return false;
-  }
 
   m_exit_status = status;
   if (!exit_string.empty())
@@ -2230,6 +2181,50 @@ size_t Process::ReadMemoryFromInferior(addr_t addr, void *buf, size_t size,
   // into "buf" before we return
   if (bytes_read > 0)
     RemoveBreakpointOpcodesFromBuffer(addr, bytes_read, (uint8_t *)buf);
+  return bytes_read;
+}
+
+lldb::offset_t Process::ReadMemoryInChunks(lldb::addr_t vm_addr, void *buf,
+                                           lldb::addr_t chunk_size,
+                                           lldb::offset_t size,
+                                           ReadMemoryChunkCallback callback) {
+  // Safety check to prevent an infinite loop.
+  if (chunk_size == 0)
+    return 0;
+
+  // Buffer for when a NULL buf is provided, initialized
+  // to 0 bytes, we set it to chunk_size and then replace buf
+  // with the new buffer.
+  DataBufferHeap data_buffer;
+  if (!buf) {
+    data_buffer.SetByteSize(chunk_size);
+    buf = data_buffer.GetBytes();
+  }
+
+  uint64_t bytes_remaining = size;
+  uint64_t bytes_read = 0;
+  Status error;
+  while (bytes_remaining > 0) {
+    // Get the next read chunk size as the minimum of the remaining bytes and
+    // the write chunk max size.
+    const lldb::addr_t bytes_to_read = std::min(bytes_remaining, chunk_size);
+    const lldb::addr_t current_addr = vm_addr + bytes_read;
+    const lldb::addr_t bytes_read_for_chunk =
+        ReadMemoryFromInferior(current_addr, buf, bytes_to_read, error);
+
+    bytes_read += bytes_read_for_chunk;
+    // If the bytes read in this chunk would cause us to overflow, something
+    // went wrong and we should fail fast.
+    if (bytes_read_for_chunk > bytes_remaining)
+      return 0;
+    else
+      bytes_remaining -= bytes_read_for_chunk;
+
+    if (callback(error, current_addr, buf, bytes_read_for_chunk) ==
+        IterationAction::Stop)
+      break;
+  }
+
   return bytes_read;
 }
 
@@ -5080,7 +5075,13 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
     return eExpressionSetupError;
   }
 
-  StackID ctx_frame_id = selected_frame_sp->GetStackID();
+  // If the ExecutionContext has a frame, we want to make sure to save/restore
+  // that frame into exe_ctx. This can happen when we run expressions from a
+  // non-selected SBFrame, in which case we don't want some thread-plan
+  // to overwrite the ExecutionContext frame.
+  StackID ctx_frame_id = exe_ctx.HasFrameScope()
+                             ? exe_ctx.GetFrameRef().GetStackID()
+                             : selected_frame_sp->GetStackID();
 
   // N.B. Running the target may unset the currently selected thread and frame.
   // We don't want to do that either, so we should arrange to reset them as
@@ -5826,7 +5827,7 @@ size_t Process::GetThreadStatus(Stream &strm,
     if (thread_sp) {
       if (only_threads_with_stop_reason) {
         StopInfoSP stop_info_sp = thread_sp->GetStopInfo();
-        if (!stop_info_sp || !stop_info_sp->IsValid())
+        if (!stop_info_sp || !stop_info_sp->ShouldShow())
           continue;
       }
       thread_sp->GetStatus(strm, start_frame, num_frames,
