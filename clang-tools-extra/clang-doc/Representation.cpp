@@ -215,7 +215,7 @@ void SymbolInfo::merge(SymbolInfo &&Other) {
   // Unconditionally extend the list of locations, since we want all of them.
   std::move(Other.Loc.begin(), Other.Loc.end(), std::back_inserter(Loc));
   llvm::sort(Loc);
-  auto Last = std::unique(Loc.begin(), Loc.end());
+  auto *Last = std::unique(Loc.begin(), Loc.end());
   Loc.erase(Last, Loc.end());
   mergeBase(std::move(Other));
 }
