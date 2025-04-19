@@ -5018,7 +5018,8 @@ static SDValue lowerVZIP(unsigned Opc, SDValue Op0, SDValue Op1,
                          const SDLoc &DL, SelectionDAG &DAG,
                          const RISCVSubtarget &Subtarget) {
   assert(RISCVISD::RI_VZIPEVEN_VL == Opc || RISCVISD::RI_VZIPODD_VL == Opc ||
-         RISCVISD::RI_VZIP2A_VL == Opc);
+         RISCVISD::RI_VZIP2A_VL == Opc || RISCVISD::RI_VUNZIP2A_VL == Opc ||
+         RISCVISD::RI_VUNZIP2B_VL == Opc);
   assert(Op0.getSimpleValueType() == Op1.getSimpleValueType());
 
   MVT VT = Op0.getSimpleValueType();
@@ -6934,7 +6935,7 @@ static bool hasPassthruOp(unsigned Opcode) {
          Opcode <= RISCVISD::LAST_STRICTFP_OPCODE &&
          "not a RISC-V target specific op");
   static_assert(
-      RISCVISD::LAST_VL_VECTOR_OP - RISCVISD::FIRST_VL_VECTOR_OP == 130 &&
+      RISCVISD::LAST_VL_VECTOR_OP - RISCVISD::FIRST_VL_VECTOR_OP == 132 &&
       RISCVISD::LAST_STRICTFP_OPCODE - RISCVISD::FIRST_STRICTFP_OPCODE == 21 &&
       "adding target specific op should update this function");
   if (Opcode >= RISCVISD::ADD_VL && Opcode <= RISCVISD::VFMAX_VL)
@@ -6958,7 +6959,7 @@ static bool hasMaskOp(unsigned Opcode) {
          Opcode <= RISCVISD::LAST_STRICTFP_OPCODE &&
          "not a RISC-V target specific op");
   static_assert(
-      RISCVISD::LAST_VL_VECTOR_OP - RISCVISD::FIRST_VL_VECTOR_OP == 130 &&
+      RISCVISD::LAST_VL_VECTOR_OP - RISCVISD::FIRST_VL_VECTOR_OP == 132 &&
       RISCVISD::LAST_STRICTFP_OPCODE - RISCVISD::FIRST_STRICTFP_OPCODE == 21 &&
       "adding target specific op should update this function");
   if (Opcode >= RISCVISD::TRUNCATE_VECTOR_VL && Opcode <= RISCVISD::SETCC_VL)
@@ -11509,6 +11510,19 @@ SDValue RISCVTargetLowering::lowerVECTOR_DEINTERLEAVE(SDValue Op,
     return DAG.getMergeValues(Res, DL);
   }
 
+  // TODO: Remove the e64 restriction once the fractional LMUL lowering
+  // is improved to always beat the vnsrl lowering below.
+  if (Subtarget.hasVendorXRivosVizip() && Factor == 2 &&
+      VecVT.getVectorElementType().getSizeInBits() == 64) {
+    SDValue V1 = Op->getOperand(0);
+    SDValue V2 = Op->getOperand(1);
+    SDValue Even =
+        lowerVZIP(RISCVISD::RI_VUNZIP2A_VL, V1, V2, DL, DAG, Subtarget);
+    SDValue Odd =
+        lowerVZIP(RISCVISD::RI_VUNZIP2B_VL, V1, V2, DL, DAG, Subtarget);
+    return DAG.getMergeValues({Even, Odd}, DL);
+  }
+
   SmallVector<SDValue, 8> Ops(Op->op_values());
 
   // Concatenate the vectors as one vector to deinterleave
@@ -11582,7 +11596,7 @@ SDValue RISCVTargetLowering::lowerVECTOR_DEINTERLEAVE(SDValue Op,
   SDValue Chain = DAG.getMemIntrinsicNode(
       ISD::INTRINSIC_VOID, DL, DAG.getVTList(MVT::Other), StoreOps,
       ConcatVT.getVectorElementType(), PtrInfo, Alignment,
-      MachineMemOperand::MOStore, MemoryLocation::UnknownSize);
+      MachineMemOperand::MOStore, LocationSize::beforeOrAfterPointer());
 
   static const Intrinsic::ID VlsegIntrinsicsIds[] = {
       Intrinsic::riscv_vlseg2, Intrinsic::riscv_vlseg3, Intrinsic::riscv_vlseg4,
@@ -11604,7 +11618,7 @@ SDValue RISCVTargetLowering::lowerVECTOR_DEINTERLEAVE(SDValue Op,
   SDValue Load = DAG.getMemIntrinsicNode(
       ISD::INTRINSIC_W_CHAIN, DL, DAG.getVTList({VecTupTy, MVT::Other}),
       LoadOps, ConcatVT.getVectorElementType(), PtrInfo, Alignment,
-      MachineMemOperand::MOLoad, MemoryLocation::UnknownSize);
+      MachineMemOperand::MOLoad, LocationSize::beforeOrAfterPointer());
 
   SmallVector<SDValue, 8> Res(Factor);
 
@@ -11721,7 +11735,7 @@ SDValue RISCVTargetLowering::lowerVECTOR_INTERLEAVE(SDValue Op,
     SDValue Chain = DAG.getMemIntrinsicNode(
         ISD::INTRINSIC_VOID, DL, DAG.getVTList(MVT::Other), Ops,
         VecVT.getVectorElementType(), PtrInfo, Alignment,
-        MachineMemOperand::MOStore, MemoryLocation::UnknownSize);
+        MachineMemOperand::MOStore, LocationSize::beforeOrAfterPointer());
 
     SmallVector<SDValue, 8> Loads(Factor);
 
@@ -22242,6 +22256,8 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(RI_VZIPEVEN_VL)
   NODE_NAME_CASE(RI_VZIPODD_VL)
   NODE_NAME_CASE(RI_VZIP2A_VL)
+  NODE_NAME_CASE(RI_VUNZIP2A_VL)
+  NODE_NAME_CASE(RI_VUNZIP2B_VL)
   NODE_NAME_CASE(READ_CSR)
   NODE_NAME_CASE(WRITE_CSR)
   NODE_NAME_CASE(SWAP_CSR)

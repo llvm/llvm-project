@@ -958,10 +958,18 @@ def Xclang : Separate<["-"], "Xclang">,
   HelpText<"Pass <arg> to clang -cc1">, MetaVarName<"<arg>">,
   Flags<[NoXarchOption]>, Visibility<[ClangOption, CLOption, DXCOption]>,
   Group<CompileOnly_Group>;
+def Xclangas : Separate<["-"], "Xclangas">,
+  HelpText<"Pass <arg> to clang -cc1as">, MetaVarName<"<arg>">,
+  Flags<[NoXarchOption]>, Visibility<[ClangOption, CLOption, DXCOption]>,
+  Group<CompileOnly_Group>;
 def : Joined<["-"], "Xclang=">, Group<CompileOnly_Group>,
   Flags<[NoXarchOption]>, Visibility<[ClangOption, CLOption, DXCOption]>,
   Alias<Xclang>,
   HelpText<"Alias for -Xclang">, MetaVarName<"<arg>">;
+def : Joined<["-"], "Xclangas=">, Group<CompileOnly_Group>,
+  Flags<[NoXarchOption]>, Visibility<[ClangOption, CLOption, DXCOption]>,
+  Alias<Xclangas>,
+  HelpText<"Alias for -Xclangas">, MetaVarName<"<arg>">;
 def Xcuda_fatbinary : Separate<["-"], "Xcuda-fatbinary">,
   HelpText<"Pass <arg> to fatbinary invocation">, MetaVarName<"<arg>">;
 def Xcuda_ptxas : Separate<["-"], "Xcuda-ptxas">,

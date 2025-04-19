@@ -154,5 +154,5 @@ module attributes {gpu.container_module, dlti.dl_spec = #dlti.dl_spec<#dlti.dl_e
 // CHECK-LABEL: func.func @_QQmain()
 // CHECK: %[[STREAM:.*]] = fir.alloca i64 {bindc_name = "stream", uniq_name = "_QMtest_callFhostEstream"}
 // CHECK: %[[DECL_STREAM:.*]]:2 = hlfir.declare %[[STREAM]] {uniq_name = "_QMtest_callFhostEstream"} : (!fir.ref<i64>) -> (!fir.ref<i64>, !fir.ref<i64>)
-// CHECK: %[[TOKEN:.*]] = cuf.stream_cast %[[DECL_STREAM]]#0 : <i64>
+// CHECK: %[[TOKEN:.*]] = cuf.stream_cast %[[DECL_STREAM]]#0 : !fir.ref<i64>
 // CHECK: gpu.launch_func [%[[TOKEN]]] @cuda_device_mod::@_QMdevptrPtest
