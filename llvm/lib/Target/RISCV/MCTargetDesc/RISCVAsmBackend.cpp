@@ -94,9 +94,9 @@ RISCVAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   static_assert((std::size(Infos)) == RISCV::NumTargetFixupKinds,
                 "Not all fixup kinds added to Infos array");
 
-  // Fixup kinds from raw relocation types and .reloc directive are like
-  // R_RISCV_NONE. They do not require any extra processing.
-  if (Kind >= FirstRelocationKind)
+  // Fixup kinds from raw relocation types and .reloc directives force
+  // relocations and do not use these fields.
+  if (mc::isRelocation(Kind))
     return MCAsmBackend::getFixupKindInfo(FK_NONE);
 
   if (Kind < FirstTargetFixupKind)
