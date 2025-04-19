@@ -78,11 +78,11 @@ static cl::opt<SuppressLevel> DecoderEmitterSuppressDuplicates(
             "significantly reducing Table Duplications")),
     cl::init(SUPPRESSION_DISABLE), cl::cat(DisassemblerEmitterCat));
 
-static cl::opt<uint32_t>
-    NumToSkipSizeInBytes("num-to-skip-size",
-                         cl::desc("number of bytes to use for num-to-skip "
-                                  "entries in the decoder table (2 or 3)"),
-                         cl::init(2), cl::cat(DisassemblerEmitterCat));
+static cl::opt<bool> LargeTable(
+    "large-decoder-table",
+    cl::desc("Use large decoder table format. This uses 24 bits for offset\n"
+             "in the table instead of the default 16 bits."),
+    cl::init(false), cl::cat(DisassemblerEmitterCat));
 
 STATISTIC(NumEncodings, "Number of encodings considered");
 STATISTIC(NumEncodingsLackingDisasm,
@@ -92,6 +92,8 @@ STATISTIC(NumEncodingsSupported, "Number of encodings supported");
 STATISTIC(NumEncodingsOmitted, "Number of encodings omitted");
 
 namespace {
+
+unsigned getNumToSkipInBytes() { return LargeTable ? 3 : 2; }
 
 struct EncodingField {
   unsigned Base, Width, Offset;
@@ -138,25 +140,25 @@ struct DecoderTable : public std::vector<uint8_t> {
   // in the table for patching.
   size_t insertNumToSkip() {
     size_t Size = size();
-    insert(end(), NumToSkipSizeInBytes, 0);
+    insert(end(), getNumToSkipInBytes(), 0);
     return Size;
   }
 
   void patchNumToSkip(size_t FixupIdx, uint32_t DestIdx) {
     // Calculate the distance from the byte following the fixup entry byte
     // to the destination. The Target is calculated from after the
-    // `NumToSkipSizeInBytes`-byte NumToSkip entry itself, so subtract
-    // `NumToSkipSizeInBytes` from the displacement here to account for that.
-    assert(DestIdx >= FixupIdx + NumToSkipSizeInBytes &&
+    // `getNumToSkipInBytes()`-byte NumToSkip entry itself, so subtract
+    // `getNumToSkipInBytes()` from the displacement here to account for that.
+    assert(DestIdx >= FixupIdx + getNumToSkipInBytes() &&
            "Expecting a forward jump in the decoding table");
-    uint32_t Delta = DestIdx - FixupIdx - NumToSkipSizeInBytes;
-    if (!isUIntN(8 * NumToSkipSizeInBytes, Delta))
+    uint32_t Delta = DestIdx - FixupIdx - getNumToSkipInBytes();
+    if (!isUIntN(8 * getNumToSkipInBytes(), Delta))
       PrintFatalError(
-          "disassembler decoding table too large, try --num-to-skip-size=3");
+          "disassembler decoding table too large, try --large-decoder-table");
 
     (*this)[FixupIdx] = static_cast<uint8_t>(Delta);
     (*this)[FixupIdx + 1] = static_cast<uint8_t>(Delta >> 8);
-    if (NumToSkipSizeInBytes == 3)
+    if (getNumToSkipInBytes() == 3)
       (*this)[FixupIdx + 2] = static_cast<uint8_t>(Delta >> 16);
   }
 };
@@ -824,7 +826,7 @@ void DecoderEmitter::emitTable(formatted_raw_ostream &OS, DecoderTable &Table,
     OS << (unsigned)*I++ << ", ";
   };
 
-  // Emit `NumToSkipSizeInBytes`-byte numtoskip value to OS, returning the
+  // Emit `getNumToSkipInBytes()`-byte numtoskip value to OS, returning the
   // NumToSkip value.
   auto emitNumToSkip = [](DecoderTable::const_iterator &I,
                           formatted_raw_ostream &OS) {
@@ -834,7 +836,7 @@ void DecoderEmitter::emitTable(formatted_raw_ostream &OS, DecoderTable &Table,
     Byte = *I++;
     OS << (unsigned)Byte << ", ";
     NumToSkip |= Byte << 8;
-    if (NumToSkipSizeInBytes == 3) {
+    if (getNumToSkipInBytes() == 3) {
       Byte = *I++;
       OS << (unsigned)(Byte) << ", ";
       NumToSkip |= Byte << 16;
@@ -879,7 +881,6 @@ void DecoderEmitter::emitTable(formatted_raw_ostream &OS, DecoderTable &Table,
       // The filter value is ULEB128 encoded.
       emitULEB128(I, OS);
 
-      // numtoskip value.
       uint32_t NumToSkip = emitNumToSkip(I, OS);
       OS << "// Skip to: " << ((I - Table.begin()) + NumToSkip) << "\n";
       break;
@@ -894,7 +895,6 @@ void DecoderEmitter::emitTable(formatted_raw_ostream &OS, DecoderTable &Table,
       // ULEB128 encoded field value.
       emitULEB128(I, OS);
 
-      // numtoskip value.
       uint32_t NumToSkip = emitNumToSkip(I, OS);
       OS << "// Skip to: " << ((I - Table.begin()) + NumToSkip) << "\n";
       break;
@@ -903,7 +903,6 @@ void DecoderEmitter::emitTable(formatted_raw_ostream &OS, DecoderTable &Table,
       OS << Indent << "MCD::OPC_CheckPredicate, ";
       emitULEB128(I, OS);
 
-      // numtoskip value.
       uint32_t NumToSkip = emitNumToSkip(I, OS);
       OS << "// Skip to: " << ((I - Table.begin()) + NumToSkip) << "\n";
       break;
@@ -933,7 +932,6 @@ void DecoderEmitter::emitTable(formatted_raw_ostream &OS, DecoderTable &Table,
 
       // Fallthrough for OPC_TryDecode.
 
-      // numtoskip value.
       uint32_t NumToSkip = emitNumToSkip(I, OS);
 
       OS << "// Opcode: " << NumberedEncodings[EncodingID]
@@ -1405,9 +1403,8 @@ void FilterChooser::emitSingletonTableEntry(DecoderTableInfo &TableInfo,
     TableInfo.Table.push_back(NumBits);
     TableInfo.Table.insertULEB128(Ilnd.FieldVal);
 
-    // Allocate space in the table for fixup (NumToSkipSizeInBytes) so all
-    // our relative position calculations work OK even before we fully
-    // resolve the real value here.
+    // Allocate space in the table for fixup so all our relative position
+    // calculations work OK even before we fully resolve the real value here.
 
     // Push location for NumToSkip backpatching.
     TableInfo.FixupStack.back().push_back(TableInfo.Table.insertNumToSkip());
@@ -2151,16 +2148,14 @@ insertBits(InsnType &field, uint64_t bits, unsigned startBit, unsigned numBits) 
 // decodeInstruction().
 static void emitDecodeInstruction(formatted_raw_ostream &OS,
                                   bool IsVarLenInst) {
-  OS << formatv("\nconstexpr unsigned NumToSkipSizeInBytes = {};\n",
-                NumToSkipSizeInBytes);
-
   OS << R"(
-inline unsigned decodeNumToSkip(const uint8_t *&Ptr) {
+static unsigned decodeNumToSkip(const uint8_t *&Ptr) {
   unsigned NumToSkip = *Ptr++;
   NumToSkip |= (*Ptr++) << 8;
-  if constexpr (NumToSkipSizeInBytes == 3)
-    NumToSkip |= (*Ptr++) << 16;
-  return NumToSkip;
+)";
+  if (getNumToSkipInBytes() == 3)
+    OS << "  NumToSkip |= (*Ptr++) << 16;\n";
+  OS << R"(  return NumToSkip;
 }
 
 template <typename InsnType>
@@ -2399,9 +2394,6 @@ handleHwModesUnrelatedEncodings(const CodeGenInstruction *Instr,
 
 // Emits disassembler code for instruction decoding.
 void DecoderEmitter::run(raw_ostream &o) {
-  if (NumToSkipSizeInBytes != 2 && NumToSkipSizeInBytes != 3)
-    PrintFatalError("Invalid value for num-to-skip-size, must be 2 or 3");
-
   formatted_raw_ostream OS(o);
   OS << R"(
 #include "llvm/MC/MCInst.h"
