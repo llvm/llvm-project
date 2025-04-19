@@ -752,8 +752,7 @@ bool DependencyScanningWorker::scanDependencies(
           // Insert -cc1 comand line options into Argv
           std::vector<std::string> Argv;
           Argv.push_back(Cmd.getExecutable());
-          Argv.insert(Argv.end(), Cmd.getArguments().begin(),
-                      Cmd.getArguments().end());
+          llvm::append_range(Argv, Cmd.getArguments());
 
           // Create an invocation that uses the underlying file
           // system to ensure that any file system requests that
