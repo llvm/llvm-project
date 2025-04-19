@@ -409,13 +409,13 @@ bool Preprocessor::HandleEndOfFile(Token &Result, bool isEndOfMacro) {
   // Complain about reaching a true EOF within arc_cf_code_audited.
   // We don't want to complain about reaching the end of a macro
   // instantiation or a _Pragma.
-  if (PragmaARCCFCodeAuditedInfo.second.isValid() && !isEndOfMacro &&
+  if (PragmaARCCFCodeAuditedInfo.getLoc().isValid() && !isEndOfMacro &&
       !(CurLexer && CurLexer->Is_PragmaLexer)) {
-    Diag(PragmaARCCFCodeAuditedInfo.second,
+    Diag(PragmaARCCFCodeAuditedInfo.getLoc(),
          diag::err_pp_eof_in_arc_cf_code_audited);
 
     // Recover by leaving immediately.
-    PragmaARCCFCodeAuditedInfo = {nullptr, SourceLocation()};
+    PragmaARCCFCodeAuditedInfo = IdentifierLoc();
   }
 
   // Complain about reaching a true EOF within assume_nonnull.

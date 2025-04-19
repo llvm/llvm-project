@@ -714,30 +714,39 @@ void Filter::emitTableEntry(DecoderTableInfo &TableInfo) const {
   TableInfo.Table.insertULEB128(StartBit);
   TableInfo.Table.push_back(NumBits);
 
-  // A new filter entry begins a new scope for fixup resolution.
-  TableInfo.FixupStack.emplace_back();
+  // If the NO_FIXED_SEGMENTS_SENTINEL is present, we need to add a new scope
+  // for this filter. Otherwise, we can skip adding a new scope and any
+  // patching added will automatically be added to the enclosing scope.
+
+  // If NO_FIXED_SEGMENTS_SENTINEL is present, it will be last entry in
+  // FilterChooserMap.
+
+  const uint64_t LastFilter = FilterChooserMap.rbegin()->first;
+  bool HasFallthrough = LastFilter == NO_FIXED_SEGMENTS_SENTINEL;
+  if (HasFallthrough)
+    TableInfo.FixupStack.emplace_back();
 
   DecoderTable &Table = TableInfo.Table;
 
   size_t PrevFilter = 0;
-  bool HasFallthrough = false;
-  for (const auto &Filter : FilterChooserMap) {
-    // Field value -1 implies a non-empty set of variable instructions.
-    // See also recurse().
-    if (Filter.first == NO_FIXED_SEGMENTS_SENTINEL) {
-      HasFallthrough = true;
-
+  for (const auto &[FilterVal, Delegate] : FilterChooserMap) {
+    // Field value NO_FIXED_SEGMENTS_SENTINEL implies a non-empty set of
+    // variable instructions. See also recurse().
+    if (FilterVal == NO_FIXED_SEGMENTS_SENTINEL) {
       // Each scope should always have at least one filter value to check
       // for.
       assert(PrevFilter != 0 && "empty filter set!");
       FixupList &CurScope = TableInfo.FixupStack.back();
       // Resolve any NumToSkip fixups in the current scope.
       resolveTableFixups(Table, CurScope, Table.size());
-      CurScope.clear();
+
+      // Delete the scope we have added here.
+      TableInfo.FixupStack.pop_back();
+
       PrevFilter = 0; // Don't re-process the filter's fallthrough.
     } else {
       Table.push_back(MCD::OPC_FilterValue);
-      Table.insertULEB128(Filter.first);
+      Table.insertULEB128(FilterVal);
       // Reserve space for the NumToSkip entry. We'll backpatch the value
       // later.
       PrevFilter = Table.insertNumToSkip();
@@ -747,11 +756,11 @@ void Filter::emitTableEntry(DecoderTableInfo &TableInfo) const {
     // Now delegate to the sub filter chooser for further decodings.
     // The case may fallthrough, which happens if the remaining well-known
     // encoding bits do not match exactly.
-    Filter.second->emitTableEntries(TableInfo);
+    Delegate->emitTableEntries(TableInfo);
 
     // Now that we've emitted the body of the handler, update the NumToSkip
     // of the filter itself to be able to skip forward when false. Subtract
-    // two as to account for the width of the NumToSkip field itself.
+    // three as to account for the width of the NumToSkip field itself.
     if (PrevFilter) {
       uint32_t NumToSkip = Table.size() - PrevFilter - 3;
       assert(isUInt<24>(NumToSkip) && "disassembler decoding table too large!");
@@ -760,13 +769,6 @@ void Filter::emitTableEntry(DecoderTableInfo &TableInfo) const {
       Table[PrevFilter + 2] = (uint8_t)(NumToSkip >> 16);
     }
   }
-
-  // Any remaining unresolved fixups bubble up to the parent fixup scope.
-  assert(TableInfo.FixupStack.size() > 1 && "fixup stack underflow!");
-  FixupScopeList::iterator Source = TableInfo.FixupStack.end() - 1;
-  FixupScopeList::iterator Dest = Source - 1;
-  llvm::append_range(*Dest, *Source);
-  TableInfo.FixupStack.pop_back();
 
   // If there is no fallthrough, then the final filter should get fixed
   // up according to the enclosing scope rather than the current position.
@@ -831,6 +833,7 @@ void DecoderEmitter::emitTable(formatted_raw_ostream &OS, DecoderTable &Table,
   // appropriate indentation levels.
   DecoderTable::const_iterator I = Table.begin();
   DecoderTable::const_iterator E = Table.end();
+  const uint8_t *const EndPtr = Table.data() + Table.size();
   while (I != E) {
     assert(I < E && "incomplete decode table entry!");
 
@@ -838,17 +841,16 @@ void DecoderEmitter::emitTable(formatted_raw_ostream &OS, DecoderTable &Table,
     OS << "/* " << Pos << " */";
     OS.PadToColumn(12);
 
-    switch (*I) {
+    const uint8_t DecoderOp = *I++;
+    switch (DecoderOp) {
     default:
-      PrintFatalError("invalid decode table opcode");
+      PrintFatalError("Invalid decode table opcode: " + Twine(DecoderOp));
     case MCD::OPC_ExtractField: {
-      ++I;
       OS << Indent << "MCD::OPC_ExtractField, ";
 
       // ULEB128 encoded start value.
       const char *ErrMsg = nullptr;
-      unsigned Start = decodeULEB128(Table.data() + Pos + 1, nullptr,
-                                     Table.data() + Table.size(), &ErrMsg);
+      unsigned Start = decodeULEB128(&*I, nullptr, EndPtr, &ErrMsg);
       assert(ErrMsg == nullptr && "ULEB128 value too large!");
       emitULEB128(I, OS);
 
@@ -860,7 +862,6 @@ void DecoderEmitter::emitTable(formatted_raw_ostream &OS, DecoderTable &Table,
       break;
     }
     case MCD::OPC_FilterValue: {
-      ++I;
       OS << Indent << "MCD::OPC_FilterValue, ";
       // The filter value is ULEB128 encoded.
       emitULEB128(I, OS);
@@ -871,7 +872,6 @@ void DecoderEmitter::emitTable(formatted_raw_ostream &OS, DecoderTable &Table,
       break;
     }
     case MCD::OPC_CheckField: {
-      ++I;
       OS << Indent << "MCD::OPC_CheckField, ";
       // ULEB128 encoded start value.
       emitULEB128(I, OS);
@@ -887,7 +887,6 @@ void DecoderEmitter::emitTable(formatted_raw_ostream &OS, DecoderTable &Table,
       break;
     }
     case MCD::OPC_CheckPredicate: {
-      ++I;
       OS << Indent << "MCD::OPC_CheckPredicate, ";
       emitULEB128(I, OS);
 
@@ -898,12 +897,10 @@ void DecoderEmitter::emitTable(formatted_raw_ostream &OS, DecoderTable &Table,
     }
     case MCD::OPC_Decode:
     case MCD::OPC_TryDecode: {
-      bool IsTry = *I == MCD::OPC_TryDecode;
-      ++I;
+      bool IsTry = DecoderOp == MCD::OPC_TryDecode;
       // Decode the Opcode value.
       const char *ErrMsg = nullptr;
-      unsigned Opc = decodeULEB128(Table.data() + Pos + 1, nullptr,
-                                   Table.data() + Table.size(), &ErrMsg);
+      unsigned Opc = decodeULEB128(&*I, nullptr, EndPtr, &ErrMsg);
       assert(ErrMsg == nullptr && "ULEB128 value too large!");
 
       OS << Indent << "MCD::OPC_" << (IsTry ? "Try" : "") << "Decode, ";
@@ -931,39 +928,25 @@ void DecoderEmitter::emitTable(formatted_raw_ostream &OS, DecoderTable &Table,
       break;
     }
     case MCD::OPC_SoftFail: {
-      ++I;
-      OS << Indent << "MCD::OPC_SoftFail";
-      // Positive mask
-      uint64_t Value = 0;
-      unsigned Shift = 0;
-      do {
-        OS << ", " << (unsigned)*I;
-        Value += ((uint64_t)(*I & 0x7f)) << Shift;
-        Shift += 7;
-      } while (*I++ >= 128);
-      if (Value > 127) {
-        OS << " /* 0x";
-        OS.write_hex(Value);
-        OS << " */";
-      }
-      // Negative mask
-      Value = 0;
-      Shift = 0;
-      do {
-        OS << ", " << (unsigned)*I;
-        Value += ((uint64_t)(*I & 0x7f)) << Shift;
-        Shift += 7;
-      } while (*I++ >= 128);
-      if (Value > 127) {
-        OS << " /* 0x";
-        OS.write_hex(Value);
-        OS << " */";
-      }
-      OS << ",\n";
+      OS << Indent << "MCD::OPC_SoftFail, ";
+      // Decode the positive mask.
+      const char *ErrMsg = nullptr;
+      uint64_t PositiveMask = decodeULEB128(&*I, nullptr, EndPtr, &ErrMsg);
+      assert(ErrMsg == nullptr && "ULEB128 value too large!");
+      emitULEB128(I, OS);
+
+      // Decode the negative mask.
+      uint64_t NegativeMask = decodeULEB128(&*I, nullptr, EndPtr, &ErrMsg);
+      assert(ErrMsg == nullptr && "ULEB128 value too large!");
+      emitULEB128(I, OS);
+      OS << "// +ve mask: 0x";
+      OS.write_hex(PositiveMask);
+      OS << ", -ve mask: 0x";
+      OS.write_hex(NegativeMask);
+      OS << '\n';
       break;
     }
     case MCD::OPC_Fail: {
-      ++I;
       OS << Indent << "MCD::OPC_Fail,\n";
       break;
     }
@@ -2173,13 +2156,13 @@ static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
   DecodeStatus S = MCDisassembler::Success;
   while (true) {
     ptrdiff_t Loc = Ptr - DecodeTable;
-    switch (*Ptr) {
+    switch (*Ptr++) {
     default:
       errs() << Loc << ": Unexpected decode table opcode!\n";
       return MCDisassembler::Fail;
     case MCD::OPC_ExtractField: {
       // Decode the start value.
-      unsigned Start = decodeULEB128AndIncUnsafe(++Ptr);
+      unsigned Start = decodeULEB128AndIncUnsafe(Ptr);
       unsigned Len = *Ptr++;)";
   if (IsVarLenInst)
     OS << "\n      makeUp(insn, Start + Len);";
@@ -2191,7 +2174,7 @@ static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
     }
     case MCD::OPC_FilterValue: {
       // Decode the field value.
-      uint64_t Val = decodeULEB128AndIncUnsafe(++Ptr);
+      uint64_t Val = decodeULEB128AndIncUnsafe(Ptr);
       bool Failed = Val != CurFieldValue;
       // NumToSkip is a plain 24-bit integer.
       unsigned NumToSkip = *Ptr++;
@@ -2209,7 +2192,7 @@ static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
     }
     case MCD::OPC_CheckField: {
       // Decode the start value.
-      unsigned Start = decodeULEB128AndIncUnsafe(++Ptr);
+      unsigned Start = decodeULEB128AndIncUnsafe(Ptr);
       unsigned Len = *Ptr;)";
   if (IsVarLenInst)
     OS << "\n      makeUp(insn, Start + Len);";
@@ -2237,7 +2220,7 @@ static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
     }
     case MCD::OPC_CheckPredicate: {
       // Decode the Predicate Index value.
-      unsigned PIdx = decodeULEB128AndIncUnsafe(++Ptr);
+      unsigned PIdx = decodeULEB128AndIncUnsafe(Ptr);
       // NumToSkip is a plain 24-bit integer.
       unsigned NumToSkip = *Ptr++;
       NumToSkip |= (*Ptr++) << 8;
@@ -2253,7 +2236,7 @@ static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
     }
     case MCD::OPC_Decode: {
       // Decode the Opcode value.
-      unsigned Opc = decodeULEB128AndIncUnsafe(++Ptr);
+      unsigned Opc = decodeULEB128AndIncUnsafe(Ptr);
       unsigned DecodeIdx = decodeULEB128AndIncUnsafe(Ptr);
 
       MI.clear();
@@ -2274,7 +2257,7 @@ static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
     }
     case MCD::OPC_TryDecode: {
       // Decode the Opcode value.
-      unsigned Opc = decodeULEB128AndIncUnsafe(++Ptr);
+      unsigned Opc = decodeULEB128AndIncUnsafe(Ptr);
       unsigned DecodeIdx = decodeULEB128AndIncUnsafe(Ptr);
       // NumToSkip is a plain 24-bit integer.
       unsigned NumToSkip = *Ptr++;
@@ -2307,7 +2290,7 @@ static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
     }
     case MCD::OPC_SoftFail: {
       // Decode the mask values.
-      uint64_t PositiveMask = decodeULEB128AndIncUnsafe(++Ptr);
+      uint64_t PositiveMask = decodeULEB128AndIncUnsafe(Ptr);
       uint64_t NegativeMask = decodeULEB128AndIncUnsafe(Ptr);
       bool Fail = (insn & PositiveMask) != 0 || (~insn & NegativeMask) != 0;
       if (Fail)
@@ -2415,7 +2398,7 @@ void DecoderEmitter::run(raw_ostream &o) {
 #include "llvm/TargetParser/SubtargetFeature.h"
 #include <assert.h>
 
-namespace llvm {
+namespace {
 )";
 
   emitFieldFromInstruction(OS);
@@ -2559,7 +2542,7 @@ namespace llvm {
   // Emit the main entry point for the decoder, decodeInstruction().
   emitDecodeInstruction(OS, IsVarLenInst);
 
-  OS << "\n} // end namespace llvm\n";
+  OS << "\n} // namespace\n";
 }
 
 void llvm::EmitDecoder(const RecordKeeper &RK, raw_ostream &OS,

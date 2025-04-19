@@ -226,14 +226,17 @@ class RegTyInfo<ValueType ty, NVPTXRegClass rc, Operand imm, SDNode imm_node,
   int Size = ty.Size;
 }
 
-def I16RT : RegTyInfo<i16, Int16Regs, i16imm, imm>;
-def I32RT : RegTyInfo<i32, Int32Regs, i32imm, imm>;
-def I64RT : RegTyInfo<i64, Int64Regs, i64imm, imm>;
+def I16RT    : RegTyInfo<i16, Int16Regs, i16imm, imm>;
+def I32RT    : RegTyInfo<i32, Int32Regs, i32imm, imm>;
+def I64RT    : RegTyInfo<i64, Int64Regs, i64imm, imm>;
 
-def F32RT : RegTyInfo<f32, Float32Regs, f32imm, fpimm>;
-def F64RT : RegTyInfo<f64, Float64Regs, f64imm, fpimm>;
-def F16RT : RegTyInfo<f16, Int16Regs, f16imm, fpimm, supports_imm = 0>;
-def BF16RT : RegTyInfo<bf16, Int16Regs, bf16imm, fpimm, supports_imm = 0>;
+def F32RT    : RegTyInfo<f32, Float32Regs, f32imm, fpimm>;
+def F64RT    : RegTyInfo<f64, Float64Regs, f64imm, fpimm>;
+def F16RT    : RegTyInfo<f16, Int16Regs, f16imm, fpimm, supports_imm = 0>;
+def BF16RT   : RegTyInfo<bf16, Int16Regs, bf16imm, fpimm, supports_imm = 0>;
+
+def F16X2RT  : RegTyInfo<v2f16, Int32Regs, ?, ?, supports_imm = 0>;
+def BF16X2RT : RegTyInfo<v2bf16, Int32Regs, ?, ?, supports_imm = 0>;
 
 
 // Template for instructions which take three int64, int32, or int16 args.
@@ -703,6 +706,41 @@ let hasSideEffects = false in {
   defm CVT_to_tf32_rz_satf : CVT_TO_TF32<"rz.satfinite", [hasPTX<86>, hasSM<100>]>;
   defm CVT_to_tf32_rn_relu_satf  : CVT_TO_TF32<"rn.relu.satfinite", [hasPTX<86>, hasSM<100>]>;
   defm CVT_to_tf32_rz_relu_satf  : CVT_TO_TF32<"rz.relu.satfinite", [hasPTX<86>, hasSM<100>]>;
+
+  // FP6 conversions.
+  foreach type = ["e2m3x2", "e3m2x2"] in {
+    def CVT_ # type # _f32_sf : NVPTXInst<(outs Int16Regs:$dst),
+                                          (ins Float32Regs:$src1, 
+                                            Float32Regs:$src2, CvtMode:$mode),
+                                          "cvt${mode:base}.satfinite${mode:relu}." 
+                                            # type # ".f32 \t$dst, $src1, $src2;", []>;
+    def CVT_f16x2_ # type : NVPTXInst<(outs Int32Regs:$dst),
+                                      (ins Int16Regs:$src, CvtMode:$mode),
+                                      "cvt${mode:base}${mode:relu}.f16x2." 
+                                        # type # " \t$dst, $src;", []>;
+  }
+  
+  // UE8M0x2 conversions.
+  class CVT_f32_to_ue8m0x2<string sat = ""> :
+    NVPTXInst<(outs Int16Regs:$dst),
+              (ins Float32Regs:$src1, Float32Regs:$src2, CvtMode:$mode),
+              "cvt${mode:base}" # sat # ".ue8m0x2.f32 \t$dst, $src1, $src2;", []>;
+  
+  class CVT_bf16x2_to_ue8m0x2<string sat = ""> :
+    NVPTXInst<(outs Int16Regs:$dst),
+              (ins Int32Regs:$src, CvtMode:$mode),
+              "cvt${mode:base}" # sat # ".ue8m0x2.bf16x2 \t$dst, $src;", []>;
+              
+  def CVT_ue8m0x2_f32 : CVT_f32_to_ue8m0x2;
+  def CVT_ue8m0x2_f32_sf : CVT_f32_to_ue8m0x2<".satfinite">;
+  def CVT_ue8m0x2_bf16x2 : CVT_bf16x2_to_ue8m0x2;
+  def CVT_ue8m0x2_bf16x2_sf : CVT_bf16x2_to_ue8m0x2<".satfinite">;
+
+  def CVT_bf16x2_ue8m0x2 :
+      NVPTXInst<(outs Int32Regs:$dst),
+                (ins Int16Regs:$src),
+                "cvt.rn.bf16x2.ue8m0x2 \t$dst, $src;", []>;
+
 }
 
 def fpround_oneuse : OneUse1<fpround>;

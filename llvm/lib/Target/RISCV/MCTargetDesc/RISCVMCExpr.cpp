@@ -34,8 +34,7 @@ const RISCVMCExpr *RISCVMCExpr::create(const MCExpr *Expr, Specifier S,
 
 void RISCVMCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {
   Specifier S = getSpecifier();
-  bool HasVariant = ((S != VK_None) && (S != VK_CALL) && (S != VK_CALL_PLT) &&
-                     (S != VK_QC_E_JUMP_PLT));
+  bool HasVariant = ((S != VK_None) && (S != VK_CALL) && (S != VK_CALL_PLT));
 
   if (HasVariant)
     OS << '%' << getSpecifierName(S) << '(';
@@ -68,17 +67,20 @@ const MCFixup *RISCVMCExpr::getPCRelHiFixup(const MCFragment **DFOut) const {
   for (const MCFixup &F : DF->getFixups()) {
     if (F.getOffset() != Offset)
       continue;
-
-    switch ((unsigned)F.getKind()) {
-    default:
-      continue;
-    case RISCV::fixup_riscv_got_hi20:
-    case RISCV::fixup_riscv_tls_got_hi20:
-    case RISCV::fixup_riscv_tls_gd_hi20:
-    case RISCV::fixup_riscv_pcrel_hi20:
-    case RISCV::fixup_riscv_tlsdesc_hi20:
-      if (DFOut)
+    auto Kind = F.getTargetKind();
+    if (!mc::isRelocation(F.getKind())) {
+      if (Kind == RISCV::fixup_riscv_pcrel_hi20) {
         *DFOut = DF;
+        return &F;
+      }
+      break;
+    }
+    switch (Kind) {
+    case ELF::R_RISCV_GOT_HI20:
+    case ELF::R_RISCV_TLS_GOT_HI20:
+    case ELF::R_RISCV_TLS_GD_HI20:
+    case ELF::R_RISCV_TLSDESC_HI20:
+      *DFOut = DF;
       return &F;
     }
   }
@@ -168,8 +170,6 @@ StringRef RISCVMCExpr::getSpecifierName(Specifier S) {
     return "pltpcrel";
   case VK_QC_ABS20:
     return "qc.abs20";
-  case VK_QC_E_JUMP_PLT:
-    return "qc_e_jump_plt";
   }
   llvm_unreachable("Invalid ELF symbol kind");
 }

@@ -5971,10 +5971,9 @@ unsigned AMDGPUTargetLowering::computeNumSignBitsForTargetInstr(
   }
 }
 
-bool AMDGPUTargetLowering::isKnownNeverNaNForTargetNode(SDValue Op,
-                                                        const SelectionDAG &DAG,
-                                                        bool SNaN,
-                                                        unsigned Depth) const {
+bool AMDGPUTargetLowering::isKnownNeverNaNForTargetNode(
+    SDValue Op, const APInt &DemandedElts, const SelectionDAG &DAG, bool SNaN,
+    unsigned Depth) const {
   unsigned Opcode = Op.getOpcode();
   switch (Opcode) {
   case AMDGPUISD::FMIN_LEGACY:

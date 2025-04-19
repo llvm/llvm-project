@@ -5747,6 +5747,30 @@ ASTContext::getMacroQualifiedType(QualType UnderlyingTy,
   return QualType(newType, 0);
 }
 
+static ElaboratedTypeKeyword
+getCanonicalElaboratedTypeKeyword(ElaboratedTypeKeyword Keyword) {
+  switch (Keyword) {
+  // These are just themselves.
+  case ElaboratedTypeKeyword::None:
+  case ElaboratedTypeKeyword::Struct:
+  case ElaboratedTypeKeyword::Union:
+  case ElaboratedTypeKeyword::Enum:
+  case ElaboratedTypeKeyword::Interface:
+    return Keyword;
+
+  // These are equivalent.
+  case ElaboratedTypeKeyword::Typename:
+    return ElaboratedTypeKeyword::None;
+
+  // These are functionally equivalent, so relying on their equivalence is
+  // IFNDR. By making them equivalent, we disallow overloading, which at least
+  // can produce a diagnostic.
+  case ElaboratedTypeKeyword::Class:
+    return ElaboratedTypeKeyword::Struct;
+  }
+  llvm_unreachable("unexpected keyword kind");
+}
+
 QualType ASTContext::getDependentNameType(ElaboratedTypeKeyword Keyword,
                                           NestedNameSpecifier *NNS,
                                           const IdentifierInfo *Name) const {
@@ -5758,10 +5782,13 @@ QualType ASTContext::getDependentNameType(ElaboratedTypeKeyword Keyword,
           DependentNameTypes.FindNodeOrInsertPos(ID, InsertPos))
     return QualType(T, 0);
 
+  ElaboratedTypeKeyword CanonKeyword =
+      getCanonicalElaboratedTypeKeyword(Keyword);
+  NestedNameSpecifier *CanonNNS = getCanonicalNestedNameSpecifier(NNS);
+
   QualType Canon;
-  if (NestedNameSpecifier *CanonNNS = getCanonicalNestedNameSpecifier(NNS);
-      CanonNNS != NNS) {
-    Canon = getDependentNameType(Keyword, CanonNNS, Name);
+  if (CanonKeyword != Keyword || CanonNNS != NNS) {
+    Canon = getDependentNameType(CanonKeyword, CanonNNS, Name);
     [[maybe_unused]] DependentNameType *T =
         DependentNameTypes.FindNodeOrInsertPos(ID, InsertPos);
     assert(!T && "broken canonicalization");
@@ -5800,19 +5827,19 @@ QualType ASTContext::getDependentTemplateSpecializationType(
 
   QualType Canon;
   if (!IsCanonical) {
-    ElaboratedTypeKeyword CanonKeyword = Keyword != ElaboratedTypeKeyword::None
-                                             ? Keyword
-                                             : ElaboratedTypeKeyword::Typename;
+    ElaboratedTypeKeyword CanonKeyword =
+        getCanonicalElaboratedTypeKeyword(Keyword);
     NestedNameSpecifier *CanonNNS = getCanonicalNestedNameSpecifier(NNS);
     bool AnyNonCanonArgs = false;
     auto CanonArgs =
         ::getCanonicalTemplateArguments(*this, Args, AnyNonCanonArgs);
 
-    if (AnyNonCanonArgs || CanonNNS != NNS || !Name.hasTemplateKeyword() ||
-        CanonKeyword != Keyword) {
+    if (CanonKeyword != Keyword || AnyNonCanonArgs || CanonNNS != NNS ||
+        !Name.hasTemplateKeyword()) {
       Canon = getDependentTemplateSpecializationType(
           CanonKeyword, {CanonNNS, Name.getName(), /*HasTemplateKeyword=*/true},
-          CanonArgs, /*IsCanonical=*/true);
+          CanonArgs,
+          /*IsCanonical=*/true);
       // Find the insert position again.
       [[maybe_unused]] auto *Nothing =
           DependentTemplateSpecializationTypes.FindNodeOrInsertPos(ID,
@@ -5820,7 +5847,7 @@ QualType ASTContext::getDependentTemplateSpecializationType(
       assert(!Nothing && "canonical type broken");
     }
   } else {
-    assert(Keyword != ElaboratedTypeKeyword::None);
+    assert(Keyword == getCanonicalElaboratedTypeKeyword(Keyword));
     assert(Name.hasTemplateKeyword());
     assert(NNS == getCanonicalNestedNameSpecifier(NNS));
 #ifndef NDEBUG
@@ -7657,7 +7684,7 @@ ASTContext::getCanonicalNestedNameSpecifier(NestedNameSpecifier *NNS) const {
     if (const auto *DTST = T->getAs<DependentTemplateSpecializationType>()) {
       const DependentTemplateStorage &DTN = DTST->getDependentTemplateName();
       QualType NewT = getDependentTemplateSpecializationType(
-          ElaboratedTypeKeyword::Typename,
+          ElaboratedTypeKeyword::None,
           {/*NNS=*/nullptr, DTN.getName(), /*HasTemplateKeyword=*/true},
           DTST->template_arguments(), /*IsCanonical=*/true);
       assert(NewT.isCanonical());
@@ -11454,6 +11481,7 @@ QualType ASTContext::mergeTypes(QualType LHS, QualType RHS, bool OfBlockPointer,
     if (LQuals.getCVRQualifiers() != RQuals.getCVRQualifiers() ||
         LQuals.getAddressSpace() != RQuals.getAddressSpace() ||
         LQuals.getObjCLifetime() != RQuals.getObjCLifetime() ||
+        !LQuals.getPointerAuth().isEquivalent(RQuals.getPointerAuth()) ||
         LQuals.hasUnaligned() != RQuals.hasUnaligned())
       return {};
 
@@ -12796,6 +12824,15 @@ bool ASTContext::DeclMustBeEmitted(const Decl *D) {
     // Forward declarations aren't required.
     if (!FD->doesThisDeclarationHaveABody())
       return FD->doesDeclarationForceExternallyVisibleDefinition();
+
+    // Function definitions with the sycl_kernel_entry_point attribute are
+    // required during device compilation so that SYCL kernel caller offload
+    // entry points are emitted.
+    if (LangOpts.SYCLIsDevice && FD->hasAttr<SYCLKernelEntryPointAttr>())
+      return true;
+
+    // FIXME: Functions declared with SYCL_EXTERNAL are required during
+    // device compilation.
 
     // Constructors and destructors are required.
     if (FD->hasAttr<ConstructorAttr>() || FD->hasAttr<DestructorAttr>())
@@ -14804,9 +14841,36 @@ void ASTContext::getFunctionFeatureMap(llvm::StringMap<bool> &FeatureMap,
   }
 }
 
-static SYCLKernelInfo BuildSYCLKernelInfo(CanQualType KernelNameType,
+static SYCLKernelInfo BuildSYCLKernelInfo(ASTContext &Context,
+                                          CanQualType KernelNameType,
                                           const FunctionDecl *FD) {
-  return {KernelNameType, FD};
+  // Host and device compilation may use different ABIs and different ABIs
+  // may allocate name mangling discriminators differently. A discriminator
+  // override is used to ensure consistent discriminator allocation across
+  // host and device compilation.
+  auto DeviceDiscriminatorOverrider =
+      [](ASTContext &Ctx, const NamedDecl *ND) -> UnsignedOrNone {
+    if (const auto *RD = dyn_cast<CXXRecordDecl>(ND))
+      if (RD->isLambda())
+        return RD->getDeviceLambdaManglingNumber();
+    return std::nullopt;
+  };
+  std::unique_ptr<MangleContext> MC{ItaniumMangleContext::create(
+      Context, Context.getDiagnostics(), DeviceDiscriminatorOverrider)};
+
+  // Construct a mangled name for the SYCL kernel caller offload entry point.
+  // FIXME: The Itanium typeinfo mangling (_ZTS<type>) is currently used to
+  // name the SYCL kernel caller offload entry point function. This mangling
+  // does not suffice to clearly identify symbols that correspond to SYCL
+  // kernel caller functions, nor is this mangling natural for targets that
+  // use a non-Itanium ABI.
+  std::string Buffer;
+  Buffer.reserve(128);
+  llvm::raw_string_ostream Out(Buffer);
+  MC->mangleCanonicalTypeName(KernelNameType, Out);
+  std::string KernelName = Out.str();
+
+  return {KernelNameType, FD, KernelName};
 }
 
 void ASTContext::registerSYCLEntryPointFunction(FunctionDecl *FD) {
@@ -14827,8 +14891,8 @@ void ASTContext::registerSYCLEntryPointFunction(FunctionDecl *FD) {
           declaresSameEntity(FD, IT->second.getKernelEntryPointDecl())) &&
          "SYCL kernel name conflict");
   (void)IT;
-  SYCLKernels.insert(
-      std::make_pair(KernelNameType, BuildSYCLKernelInfo(KernelNameType, FD)));
+  SYCLKernels.insert(std::make_pair(
+      KernelNameType, BuildSYCLKernelInfo(*this, KernelNameType, FD)));
 }
 
 const SYCLKernelInfo &ASTContext::getSYCLKernelInfo(QualType T) const {
