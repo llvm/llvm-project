@@ -22,17 +22,11 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-static constexpr size_t N_EXCEPTS = 4;
+static constexpr size_t N_EXCEPTS = 1;
 static constexpr fputil::ExceptValues<float16, N_EXCEPTS> ATANHF16_EXCEPTS{{
     // (input, RZ output, RU offset, RD offset, RN offset)
     // x = 0x1.a5cp-4, atanhf16(x) = 0x1.a74p-4 (RZ)
     {0x2E97, 0x2E9D, 1, 0, 0},
-    // x = -0x1.a5cp-4, atanhf16(x) = -0x1.a74p-4 (RZ)
-    {0xAE97, 0xAE9D, 0, 1, 0},
-    // x = -0x1.99cp-4, atanhf16(x) = -0x1.9bp-4 (RZ)
-    {0xAE67, 0xAE6C, 0, 1, 1},
-    // x = -0x1.b8cp-3, atanhf16(x) = -0x1.bfcp-3 (RZ)
-    {0xB2E3, 0xB2FF, 0, 1, 0},
 }};
 
 LLVM_LIBC_FUNCTION(float16, atanhf16, (float16 x)) {
@@ -76,9 +70,9 @@ LLVM_LIBC_FUNCTION(float16, atanhf16, (float16 x)) {
     // The Taylor expansion of atanh(x) is:
     //    atanh(x) = x + x^3/3 + x^5/5 + x^7/7 + x^9/9 + x^11/11
     //             = x * [1 + x^2/3 + x^4/5 + x^6/7 + x^8/9 + x^10/11]
-    // When |x| < 2^-16, this can be approximated by:
+    // When |x| < 2^-6 (0x2400U), this can be approximated by:
     //    atanh(x) ≈ x + (1/3)*x^3
-    if (LIBC_UNLIKELY(x_abs < 0x0100U)) {
+    if (LIBC_UNLIKELY(x_abs < 0x2400U)) {
       float xf = x;
       return fputil::cast<float16>(xf + 0x1.555556p-2f * xf * xf * xf);
     }
