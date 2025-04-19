@@ -1470,6 +1470,8 @@ public:
                                        const Instruction *BInstr);
   static MDNode *getMergedMemProfMetadata(MDNode *A, MDNode *B);
   static MDNode *getMergedCallsiteMetadata(MDNode *A, MDNode *B);
+  static MDNode *getMergedCalleeTypeMetadata(LLVMContext &Ctx, MDNode *A,
+                                             MDNode *B);
 };
 
 /// Tuple of metadata.
