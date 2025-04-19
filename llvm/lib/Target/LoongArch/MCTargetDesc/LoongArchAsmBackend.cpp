@@ -120,16 +120,12 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
     return ((Value & 0x3fffc) << 8) | ((Value >> 18) & 0x3ff);
   }
   case LoongArch::fixup_loongarch_abs_hi20:
-  case LoongArch::fixup_loongarch_tls_le_hi20:
     return (Value >> 12) & 0xfffff;
   case LoongArch::fixup_loongarch_abs_lo12:
-  case LoongArch::fixup_loongarch_tls_le_lo12:
     return Value & 0xfff;
   case LoongArch::fixup_loongarch_abs64_lo20:
-  case LoongArch::fixup_loongarch_tls_le64_lo20:
     return (Value >> 32) & 0xfffff;
   case LoongArch::fixup_loongarch_abs64_hi12:
-  case LoongArch::fixup_loongarch_tls_le64_hi12:
     return (Value >> 52) & 0xfff;
   }
 }
