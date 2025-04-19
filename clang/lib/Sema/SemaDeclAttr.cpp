@@ -909,7 +909,7 @@ static void handleNoBuiltinAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 
   // Repeating the same attribute is fine.
   llvm::sort(Names);
-  Names.erase(std::unique(Names.begin(), Names.end()), Names.end());
+  Names.erase(llvm::unique(Names), Names.end());
 
   // Empty no_builtin must be on its own.
   if (HasWildcard && Names.size() > 1)
@@ -6037,7 +6037,7 @@ static void handleAbiTagAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 
   // Store tags sorted and without duplicates.
   llvm::sort(Tags);
-  Tags.erase(std::unique(Tags.begin(), Tags.end()), Tags.end());
+  Tags.erase(llvm::unique(Tags), Tags.end());
 
   D->addAttr(::new (S.Context)
                  AbiTagAttr(S.Context, AL, Tags.data(), Tags.size()));
