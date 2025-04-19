@@ -763,3 +763,25 @@ gpu.module @test_module {
 gpu.module @test_custom_data_layout attributes {llvm.data_layout = "e"} {
 
 }
+
+// -----
+
+gpu.module @test_module {
+  // CHECK-LABEL: func @gpu_subgroup_id()
+  func.func @gpu_subgroup_id() -> (index) {
+    // CHECK: %[[widx:.*]] = rocdl.workitem.id.x : i32
+    // CHECK: %[[widy:.*]] = rocdl.workitem.id.y : i32
+    // CHECK: %[[widz:.*]] = rocdl.workitem.id.z : i32
+    // CHECK: %[[dimx:.*]] = rocdl.workgroup.dim.x : i32
+    // CHECK: %[[dimy:.*]] = rocdl.workgroup.dim.y : i32
+    // CHECK: %[[int5:.*]] = llvm.mul %[[dimy]], %[[widz]] overflow<nsw, nuw> : i32
+    // CHECK: %[[int6:.*]] = llvm.add %[[int5]], %[[widy]] overflow<nsw, nuw> : i32
+    // CHECK: %[[int7:.*]] = llvm.mul %[[dimx]], %[[int6]] overflow<nsw, nuw> : i32
+    // CHECK: %[[int8:.*]] = llvm.add %[[widx]], %[[int7]] overflow<nsw, nuw> : i32
+    // CHECK: %[[wavefrontsize:.*]] = rocdl.wavefrontsize : i32
+    // CHECK: %[[result:.*]] = llvm.udiv %[[int8]], %[[wavefrontsize]] : i32
+    // CHECK: = llvm.sext %[[result]] : i32 to i64
+    %subgroupId = gpu.subgroup_id : index
+    func.return  %subgroupId :  index
+  }
+}

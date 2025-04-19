@@ -608,6 +608,10 @@ def ConvertGpuOpsToROCDLOps : Pass<"convert-gpu-to-rocdl", "gpu::GPUModuleOp"> {
                clEnumValN(::mlir::gpu::amd::Runtime::HIP, "HIP", "HIP"),
                clEnumValN(::mlir::gpu::amd::Runtime::OpenCL, "OpenCL",
                           "OpenCL"))}]>,
+    Option<"subgroupSize", "subgroup-size", "unsigned",
+           "0",
+           "specify subgroup size for the kernel, if left empty, the default "
+           "value will be decided by the target chipset.">,
     ListOption<"allowedDialects", "allowed-dialects", "std::string",
                "Run conversion patterns of only the specified dialects">,
   ];

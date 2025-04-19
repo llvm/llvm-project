@@ -10,6 +10,7 @@
 
 #include "mlir/Conversion/GPUToROCDL/Runtimes.h"
 #include "mlir/Conversion/LLVMCommon/LoweringOptions.h"
+#include "mlir/Dialect/AMDGPU/Utils/Chipset.h"
 #include <memory>
 
 namespace mlir {
@@ -46,11 +47,7 @@ void configureGpuToROCDLConversionLegality(ConversionTarget &target);
 /// index bitwidth used for the lowering of the device side index computations
 /// is configurable.
 std::unique_ptr<OperationPass<gpu::GPUModuleOp>>
-createLowerGpuOpsToROCDLOpsPass(
-    const std::string &chipset = "gfx900",
-    unsigned indexBitwidth = kDeriveIndexBitwidthFromDataLayout,
-    bool useBarePtrCallConv = false,
-    gpu::amd::Runtime runtime = gpu::amd::Runtime::Unknown);
+createLowerGpuOpsToROCDLOpsPass();
 
 } // namespace mlir
 
