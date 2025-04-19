@@ -223,6 +223,7 @@ APValue Pointer::toAPValue(const ASTContext &ASTCtx) const {
     UsePath = false;
 
   // Build the path into the object.
+  bool OnePastEnd = isOnePastEnd();
   Pointer Ptr = *this;
   while (Ptr.isField() || Ptr.isArrayElement()) {
 
@@ -251,9 +252,10 @@ APValue Pointer::toAPValue(const ASTContext &ASTCtx) const {
       Ptr = Ptr.expand();
       const Descriptor *Desc = Ptr.getFieldDesc();
       unsigned Index;
-      if (Ptr.isOnePastEnd())
+      if (Ptr.isOnePastEnd()) {
         Index = Ptr.getArray().getNumElems();
-      else
+        OnePastEnd = false;
+      } else
         Index = Ptr.getIndex();
 
       QualType ElemType = Desc->getElemQualType();
@@ -304,8 +306,7 @@ APValue Pointer::toAPValue(const ASTContext &ASTCtx) const {
   std::reverse(Path.begin(), Path.end());
 
   if (UsePath)
-    return APValue(Base, Offset, Path,
-                   /*IsOnePastEnd=*/!isElementPastEnd() && isOnePastEnd());
+    return APValue(Base, Offset, Path, OnePastEnd);
 
   return APValue(Base, Offset, APValue::NoLValuePath());
 }
