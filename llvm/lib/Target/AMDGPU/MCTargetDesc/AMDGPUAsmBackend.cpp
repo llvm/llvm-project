@@ -135,7 +135,7 @@ void AMDGPUAsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                                   MutableArrayRef<char> Data, uint64_t Value,
                                   bool IsResolved,
                                   const MCSubtargetInfo *STI) const {
-  if (Fixup.getKind() >= FirstLiteralRelocationKind)
+  if (mc::isRelocation(Fixup.getKind()))
     return;
 
   Value = adjustFixupValue(Fixup, Value, &Asm.getContext());
@@ -179,7 +179,7 @@ const MCFixupKindInfo &AMDGPUAsmBackend::getFixupKindInfo(
     { "fixup_si_sopp_br",     0,     16,   MCFixupKindInfo::FKF_IsPCRel },
   };
 
-  if (Kind >= FirstLiteralRelocationKind)
+  if (mc::isRelocation(Kind))
     return MCAsmBackend::getFixupKindInfo(FK_NONE);
 
   if (Kind < FirstTargetFixupKind)
