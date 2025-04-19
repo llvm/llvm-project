@@ -241,7 +241,7 @@ static cl::opt<uint64_t> CustomAllocationVMA(
     "custom-allocation-vma",
     cl::desc("use a custom address at which new code will be put, "
              "bypassing BOLT's logic to detect where to put code"),
-    cl::ZeroOrMore, cl::cat(BoltCategory));
+    cl::Hidden, cl::cat(BoltCategory));
 
 static cl::opt<bool>
 SequentialDisassembly("sequential-disassembly",
