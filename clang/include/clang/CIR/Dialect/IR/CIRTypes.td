@@ -308,6 +308,26 @@ def CIR_ArrayType : CIR_Type<"Array", "array",
 }
 
 //===----------------------------------------------------------------------===//
+// VectorType (fixed size)
+//===----------------------------------------------------------------------===//
+
+def CIR_VectorType : CIR_Type<"Vector", "vector",
+    [DeclareTypeInterfaceMethods<DataLayoutTypeInterface>]> {
+
+  let summary = "CIR vector type";
+  let description = [{
+    `cir.vector' represents fixed-size vector types.  The parameters are the
+    element type and the number of elements.
+  }];
+
+  let parameters = (ins "mlir::Type":$eltType, "uint64_t":$size);
+
+  let assemblyFormat = [{
+    `<` $eltType `x` $size `>`
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // FuncType
 //===----------------------------------------------------------------------===//
 
@@ -533,7 +553,7 @@ def CIRRecordType : Type<
 //===----------------------------------------------------------------------===//
 
 def CIR_AnyType : AnyTypeOf<[
-  CIR_VoidType, CIR_BoolType, CIR_ArrayType, CIR_IntType, CIR_AnyFloat,
+  CIR_VoidType, CIR_BoolType, CIR_ArrayType, CIR_VectorType, CIR_IntType, CIR_AnyFloat,
   CIR_PointerType, CIR_FuncType, CIR_RecordType
 ]>;
 

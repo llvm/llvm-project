@@ -652,7 +652,7 @@ BoolType::getABIAlignment(const ::mlir::DataLayout &dataLayout,
 }
 
 //===----------------------------------------------------------------------===//
-//  Definitions
+//  ArrayType Definitions
 //===----------------------------------------------------------------------===//
 
 llvm::TypeSize
@@ -665,6 +665,23 @@ uint64_t
 ArrayType::getABIAlignment(const ::mlir::DataLayout &dataLayout,
                            ::mlir::DataLayoutEntryListRef params) const {
   return dataLayout.getTypeABIAlignment(getEltType());
+}
+
+//===----------------------------------------------------------------------===//
+// VectorType Definitions
+//===----------------------------------------------------------------------===//
+
+llvm::TypeSize cir::VectorType::getTypeSizeInBits(
+    const ::mlir::DataLayout &dataLayout,
+    ::mlir::DataLayoutEntryListRef params) const {
+  return llvm::TypeSize::getFixed(getSize() *
+                                  dataLayout.getTypeSizeInBits(getEltType()));
+}
+
+uint64_t
+cir::VectorType::getABIAlignment(const ::mlir::DataLayout &dataLayout,
+                                 ::mlir::DataLayoutEntryListRef params) const {
+  return llvm::NextPowerOf2(dataLayout.getTypeSizeInBits(*this));
 }
 
 //===----------------------------------------------------------------------===//
