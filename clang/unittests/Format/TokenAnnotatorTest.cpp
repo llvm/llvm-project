@@ -2164,6 +2164,11 @@ TEST_F(TokenAnnotatorTest, UnderstandsLambdas) {
   ASSERT_EQ(Tokens.size(), 23u) << Tokens;
   EXPECT_TOKEN(Tokens[13], tok::l_square, TT_LambdaLSquare);
   EXPECT_TOKEN(Tokens[15], tok::l_brace, TT_LambdaLBrace);
+
+  Tokens = annotate("auto foo{(int (*)())[] { return 0; }};");
+  ASSERT_EQ(Tokens.size(), 21u) << Tokens;
+  EXPECT_TOKEN(Tokens[11], tok::l_square, TT_LambdaLSquare);
+  EXPECT_TOKEN(Tokens[13], tok::l_brace, TT_LambdaLBrace);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsFunctionAnnotations) {
