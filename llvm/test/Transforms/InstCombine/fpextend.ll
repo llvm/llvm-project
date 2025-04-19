@@ -448,3 +448,14 @@ define bfloat @bf16_frem(bfloat %x) {
   %t3 = fptrunc float %t2 to bfloat
   ret bfloat %t3
 }
+
+define <4 x float> @v4f32_fadd(<4 x float> %a) {
+; CHECK-LABEL: @v4f32_fadd(
+; CHECK-NEXT:    [[TMP1:%.*]] = fadd <4 x float> [[A:%.*]], splat (float -1.000000e+00)
+; CHECK-NEXT:    ret <4 x float> [[TMP1]]
+;
+  %2 = fpext <4 x float> %a to <4 x double>
+  %4 = fadd <4 x double> %2, splat (double -1.000000e+00)
+  %5 = fptrunc <4 x double> %4 to <4 x float>
+  ret <4 x float> %5
+}

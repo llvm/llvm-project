@@ -17,8 +17,10 @@
 #include "clang/AST/DeclTemplate.h"
 #include "clang/Basic/DiagnosticParse.h"
 #include "clang/Basic/FileManager.h"
+#include "clang/Basic/StackExhaustionHandler.h"
 #include "clang/Parse/RAIIObjectsForParser.h"
 #include "clang/Sema/DeclSpec.h"
+#include "clang/Sema/EnterExpressionEvaluationContext.h"
 #include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/SemaCodeCompletion.h"
@@ -52,10 +54,12 @@ IdentifierInfo *Parser::getSEHExceptKeyword() {
 }
 
 Parser::Parser(Preprocessor &pp, Sema &actions, bool skipFunctionBodies)
-    : PP(pp), PreferredType(pp.isCodeCompletionEnabled()), Actions(actions),
-      Diags(PP.getDiagnostics()), GreaterThanIsOperator(true),
-      ColonIsSacred(false), InMessageExpression(false),
-      TemplateParameterDepth(0), ParsingInObjCContainer(false) {
+    : PP(pp),
+      PreferredType(&actions.getASTContext(), pp.isCodeCompletionEnabled()),
+      Actions(actions), Diags(PP.getDiagnostics()), StackHandler(Diags),
+      GreaterThanIsOperator(true), ColonIsSacred(false),
+      InMessageExpression(false), TemplateParameterDepth(0),
+      ParsingInObjCContainer(false) {
   SkipFunctionBodies = pp.isCodeCompletionEnabled() || skipFunctionBodies;
   Tok.startToken();
   Tok.setKind(tok::eof);
@@ -84,6 +88,16 @@ DiagnosticBuilder Parser::Diag(SourceLocation Loc, unsigned DiagID) {
 
 DiagnosticBuilder Parser::Diag(const Token &Tok, unsigned DiagID) {
   return Diag(Tok.getLocation(), DiagID);
+}
+
+DiagnosticBuilder Parser::DiagCompat(SourceLocation Loc,
+                                     unsigned CompatDiagId) {
+  return Diag(Loc,
+              DiagnosticIDs::getCXXCompatDiagId(getLangOpts(), CompatDiagId));
+}
+
+DiagnosticBuilder Parser::DiagCompat(const Token &Tok, unsigned CompatDiagId) {
+  return DiagCompat(Tok.getLocation(), CompatDiagId);
 }
 
 /// Emits a diagnostic suggesting parentheses surrounding a
@@ -864,8 +878,11 @@ Parser::ParseExternalDeclaration(ParsedAttributes &Attrs,
     AccessSpecifier AS = AS_none;
     return ParseOpenMPDeclarativeDirectiveWithExtDecl(AS, Attrs);
   }
-  case tok::annot_pragma_openacc:
-    return ParseOpenACCDirectiveDecl();
+  case tok::annot_pragma_openacc: {
+    AccessSpecifier AS = AS_none;
+    return ParseOpenACCDirectiveDecl(AS, Attrs, DeclSpec::TST_unspecified,
+                                     /*TagDecl=*/nullptr);
+  }
   case tok::annot_pragma_ms_pointers_to_members:
     HandlePragmaMSPointersToMembers();
     return nullptr;
@@ -1668,28 +1685,40 @@ void Parser::ParseKNRParamDeclarations(Declarator &D) {
 ///         string-literal
 ///
 ExprResult Parser::ParseAsmStringLiteral(bool ForAsmLabel) {
-  if (!isTokenStringLiteral()) {
-    Diag(Tok, diag::err_expected_string_literal)
-      << /*Source='in...'*/0 << "'asm'";
-    return ExprError();
-  }
 
-  ExprResult AsmString(ParseStringLiteralExpression());
-  if (!AsmString.isInvalid()) {
+  ExprResult AsmString;
+  if (isTokenStringLiteral()) {
+    AsmString = ParseStringLiteralExpression();
+    if (AsmString.isInvalid())
+      return AsmString;
+
     const auto *SL = cast<StringLiteral>(AsmString.get());
     if (!SL->isOrdinary()) {
       Diag(Tok, diag::err_asm_operand_wide_string_literal)
-        << SL->isWide()
-        << SL->getSourceRange();
+          << SL->isWide() << SL->getSourceRange();
       return ExprError();
     }
-    if (ForAsmLabel && SL->getString().empty()) {
-      Diag(Tok, diag::err_asm_operand_wide_string_literal)
-          << 2 /* an empty */ << SL->getSourceRange();
+  } else if (!ForAsmLabel && getLangOpts().CPlusPlus11 &&
+             Tok.is(tok::l_paren)) {
+    ParenParseOption ExprType = SimpleExpr;
+    SourceLocation RParenLoc;
+    ParsedType CastTy;
+
+    EnterExpressionEvaluationContext ConstantEvaluated(
+        Actions, Sema::ExpressionEvaluationContext::ConstantEvaluated);
+    AsmString = ParseParenExpression(ExprType, true /*stopIfCastExpr*/, false,
+                                     CastTy, RParenLoc);
+    if (!AsmString.isInvalid())
+      AsmString = Actions.ActOnConstantExpression(AsmString);
+
+    if (AsmString.isInvalid())
       return ExprError();
-    }
+  } else {
+    Diag(Tok, diag::err_asm_expected_string) << /*and expression=*/(
+        (getLangOpts().CPlusPlus11 && !ForAsmLabel) ? 0 : 1);
   }
-  return AsmString;
+
+  return Actions.ActOnGCCAsmStmtString(AsmString.get(), ForAsmLabel);
 }
 
 /// ParseSimpleAsm
@@ -2512,17 +2541,17 @@ Parser::ParseModuleDecl(Sema::ModuleImportState &ImportState) {
     return Actions.ActOnPrivateModuleFragmentDecl(ModuleLoc, PrivateLoc);
   }
 
-  SmallVector<std::pair<IdentifierInfo *, SourceLocation>, 2> Path;
+  SmallVector<IdentifierLoc, 2> Path;
   if (ParseModuleName(ModuleLoc, Path, /*IsImport*/ false))
     return nullptr;
 
   // Parse the optional module-partition.
-  SmallVector<std::pair<IdentifierInfo *, SourceLocation>, 2> Partition;
+  SmallVector<IdentifierLoc, 2> Partition;
   if (Tok.is(tok::colon)) {
     SourceLocation ColonLoc = ConsumeToken();
     if (!getLangOpts().CPlusPlusModules)
       Diag(ColonLoc, diag::err_unsupported_module_partition)
-          << SourceRange(ColonLoc, Partition.back().second);
+          << SourceRange(ColonLoc, Partition.back().getLoc());
     // Recover by ignoring the partition name.
     else if (ParseModuleName(ModuleLoc, Partition, /*IsImport*/ false))
       return nullptr;
@@ -2571,7 +2600,7 @@ Decl *Parser::ParseModuleImport(SourceLocation AtLoc,
   SourceLocation ImportLoc = ConsumeToken();
 
   // For C++20 modules, we can have "name" or ":Partition name" as valid input.
-  SmallVector<std::pair<IdentifierInfo *, SourceLocation>, 2> Path;
+  SmallVector<IdentifierLoc, 2> Path;
   bool IsPartition = false;
   Module *HeaderUnit = nullptr;
   if (Tok.is(tok::header_name)) {
@@ -2587,7 +2616,7 @@ Decl *Parser::ParseModuleImport(SourceLocation AtLoc,
     SourceLocation ColonLoc = ConsumeToken();
     if (!getLangOpts().CPlusPlusModules)
       Diag(ColonLoc, diag::err_unsupported_module_partition)
-          << SourceRange(ColonLoc, Path.back().second);
+          << SourceRange(ColonLoc, Path.back().getLoc());
     // Recover by leaving partition empty.
     else if (ParseModuleName(ColonLoc, Path, /*IsImport*/ true))
       return nullptr;
@@ -2689,10 +2718,9 @@ Decl *Parser::ParseModuleImport(SourceLocation AtLoc,
 ///           module-name-qualifier[opt] identifier
 ///         module-name-qualifier:
 ///           module-name-qualifier[opt] identifier '.'
-bool Parser::ParseModuleName(
-    SourceLocation UseLoc,
-    SmallVectorImpl<std::pair<IdentifierInfo *, SourceLocation>> &Path,
-    bool IsImport) {
+bool Parser::ParseModuleName(SourceLocation UseLoc,
+                             SmallVectorImpl<IdentifierLoc> &Path,
+                             bool IsImport) {
   // Parse the module path.
   while (true) {
     if (!Tok.is(tok::identifier)) {
@@ -2708,7 +2736,7 @@ bool Parser::ParseModuleName(
     }
 
     // Record this part of the module path.
-    Path.push_back(std::make_pair(Tok.getIdentifierInfo(), Tok.getLocation()));
+    Path.emplace_back(Tok.getLocation(), Tok.getIdentifierInfo());
     ConsumeToken();
 
     if (Tok.isNot(tok::period))

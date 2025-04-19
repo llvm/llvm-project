@@ -38,7 +38,6 @@ class SymbolTable;
 
 const COFFSyncStream &operator<<(const COFFSyncStream &,
                                  const llvm::object::Archive::Symbol *);
-const COFFSyncStream &operator<<(const COFFSyncStream &, Symbol *);
 
 // The base class for real symbol classes.
 class Symbol {

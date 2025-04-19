@@ -9,11 +9,12 @@
 #ifndef FORTRAN_COMMON_ERFC_SCALED_H_
 #define FORTRAN_COMMON_ERFC_SCALED_H_
 
+#include "flang/Common/api-attrs.h"
 #include <cmath>
 #include <limits>
 
 namespace Fortran::common {
-template <typename T> inline T ErfcScaled(T arg) {
+template <typename T> inline RT_API_ATTRS T ErfcScaled(T arg) {
   // Coefficients for approximation to erfc in the first interval.
   static const T a[5] = {3.16112374387056560e00, 1.13864154151050156e02,
       3.77485237685302021e02, 3.20937758913846947e03, 1.85777706184603153e-1};

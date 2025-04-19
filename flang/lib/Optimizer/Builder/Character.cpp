@@ -15,6 +15,7 @@
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "llvm/Support/Debug.h"
 #include <optional>
 
@@ -335,13 +336,12 @@ void fir::factory::CharacterExprHelper::createCopy(
     auto castCount = builder.createConvert(loc, i64Ty, count);
     auto totalBytes =
         builder.create<mlir::arith::MulIOp>(loc, kindBytes, castCount);
-    auto notVolatile = builder.createBool(loc, false);
-    auto memmv = getLlvmMemmove(builder);
-    auto argTys = memmv.getFunctionType().getInputs();
-    auto toPtr = builder.createConvert(loc, argTys[0], toBuff);
-    auto fromPtr = builder.createConvert(loc, argTys[1], fromBuff);
-    builder.create<fir::CallOp>(
-        loc, memmv, mlir::ValueRange{toPtr, fromPtr, totalBytes, notVolatile});
+    auto llvmPointerType =
+        mlir::LLVM::LLVMPointerType::get(builder.getContext());
+    auto toPtr = builder.createConvert(loc, llvmPointerType, toBuff);
+    auto fromPtr = builder.createConvert(loc, llvmPointerType, fromBuff);
+    builder.create<mlir::LLVM::MemmoveOp>(loc, toPtr, fromPtr, totalBytes,
+                                          /*isVolatile=*/false);
     return;
   }
 

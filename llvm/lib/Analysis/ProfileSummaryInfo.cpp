@@ -47,7 +47,11 @@ static cl::opt<double> PartialSampleProfileWorkingSetSizeScaleFactor(
 // any backend passes (IR level instrumentation, for example). This method
 // checks if the Summary is null and if so checks if the summary metadata is now
 // available in the module and parses it to get the Summary object.
-void ProfileSummaryInfo::refresh() {
+void ProfileSummaryInfo::refresh(std::unique_ptr<ProfileSummary> &&Other) {
+  if (Other) {
+    Summary.swap(Other);
+    return;
+  }
   if (hasProfileSummary())
     return;
   // First try to get context sensitive ProfileSummary.

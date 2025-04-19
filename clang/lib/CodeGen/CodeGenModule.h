@@ -1073,10 +1073,8 @@ public:
 
   // Return whether RTTI information should be emitted for this target.
   bool shouldEmitRTTI(bool ForEH = false) {
-    return (ForEH || getLangOpts().RTTI) && !getLangOpts().CUDAIsDevice &&
-           !(getLangOpts().OpenMP && getLangOpts().OpenMPIsTargetDevice &&
-             (getTriple().isNVPTX() || getTriple().isAMDGPU() ||
-              getTriple().isSPIRV()));
+    return (ForEH || getLangOpts().RTTI) &&
+           (!getLangOpts().isTargetDevice() || !getTriple().isGPU());
   }
 
   /// Get the address of the RTTI descriptor for the given type.
@@ -1570,7 +1568,11 @@ public:
                             CodeGenFunction *CGF = nullptr);
 
   // Emit code for the OpenACC Declare declaration.
-  void EmitOpenACCDeclare(const OpenACCDeclareDecl *D, CodeGenFunction *CGF);
+  void EmitOpenACCDeclare(const OpenACCDeclareDecl *D,
+                          CodeGenFunction *CGF = nullptr);
+  // Emit code for the OpenACC Routine declaration.
+  void EmitOpenACCRoutine(const OpenACCRoutineDecl *D,
+                          CodeGenFunction *CGF = nullptr);
 
   /// Emit a code for requires directive.
   /// \param D Requires declaration
@@ -1969,6 +1971,11 @@ private:
   /// Emit the llvm.gcov metadata used to tell LLVM where to emit the .gcno and
   /// .gcda files in a way that persists in .bc files.
   void EmitCoverageFile();
+
+  /// Given a sycl_kernel_entry_point attributed function, emit the
+  /// corresponding SYCL kernel caller offload entry point function.
+  void EmitSYCLKernelCaller(const FunctionDecl *KernelEntryPointFn,
+                            ASTContext &Ctx);
 
   /// Determine whether the definition must be emitted; if this returns \c
   /// false, the definition can be emitted lazily if it's used.

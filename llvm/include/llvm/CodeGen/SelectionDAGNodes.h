@@ -421,6 +421,8 @@ public:
 
     PoisonGeneratingFlags = NoUnsignedWrap | NoSignedWrap | Exact | Disjoint |
                             NonNeg | NoNaNs | NoInfs | SameSign,
+    FastMathFlags = NoNaNs | NoInfs | NoSignedZeros | AllowReciprocal |
+                    AllowContract | ApproximateFuncs | AllowReassociation,
   };
 
   /// Default constructor turns off all optimization flags.
@@ -690,8 +692,10 @@ public:
   /// \<target\>ISD namespace).
   bool isTargetOpcode() const { return NodeType >= ISD::BUILTIN_OP_END; }
 
-  /// Return true if the type of the node type undefined.
-  bool isUndef() const { return NodeType == ISD::UNDEF; }
+  /// Returns true if the node type is UNDEF or POISON.
+  bool isUndef() const {
+    return NodeType == ISD::UNDEF || NodeType == ISD::POISON;
+  }
 
   /// Test if this node is a memory intrinsic (with valid pointer information).
   bool isMemIntrinsic() const { return SDNodeBits.IsMemIntrinsic; }
@@ -1663,10 +1667,13 @@ public:
 
   bool isSplat() const { return isSplatMask(getMask()); }
 
-  int getSplatIndex() const {
-    assert(isSplat() && "Cannot get splat index for non-splat!");
-    EVT VT = getValueType(0);
-    for (unsigned i = 0, e = VT.getVectorNumElements(); i != e; ++i)
+  int getSplatIndex() const { return getSplatMaskIndex(getMask()); }
+
+  static bool isSplatMask(ArrayRef<int> Mask);
+
+  static int getSplatMaskIndex(ArrayRef<int> Mask) {
+    assert(isSplatMask(Mask) && "Cannot get splat index for non-splat!");
+    for (unsigned i = 0, e = Mask.size(); i != e; ++i)
       if (Mask[i] >= 0)
         return Mask[i];
 
@@ -1674,8 +1681,6 @@ public:
     // are undefined. Return 0 for better potential for callers to simplify.
     return 0;
   }
-
-  static bool isSplatMask(ArrayRef<int> Mask);
 
   /// Change values in a shuffle permute mask assuming
   /// the two vector operands have swapped position.

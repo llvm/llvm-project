@@ -794,6 +794,28 @@ bool MachineInstr::shouldUpdateAdditionalCallInfo() const {
   return isCandidateForAdditionalCallInfo();
 }
 
+template <typename Operand, typename Instruction>
+static iterator_range<
+    filter_iterator<Operand *, std::function<bool(Operand &Op)>>>
+getDebugOperandsForRegHelper(Instruction *MI, Register Reg) {
+  std::function<bool(Operand & Op)> OpUsesReg(
+      [Reg](Operand &Op) { return Op.isReg() && Op.getReg() == Reg; });
+  return make_filter_range(MI->debug_operands(), OpUsesReg);
+}
+
+iterator_range<filter_iterator<const MachineOperand *,
+                               std::function<bool(const MachineOperand &Op)>>>
+MachineInstr::getDebugOperandsForReg(Register Reg) const {
+  return getDebugOperandsForRegHelper<const MachineOperand, const MachineInstr>(
+      this, Reg);
+}
+
+iterator_range<
+    filter_iterator<MachineOperand *, std::function<bool(MachineOperand &Op)>>>
+MachineInstr::getDebugOperandsForReg(Register Reg) {
+  return getDebugOperandsForRegHelper<MachineOperand, MachineInstr>(this, Reg);
+}
+
 unsigned MachineInstr::getNumExplicitOperands() const {
   unsigned NumOperands = MCID->getNumOperands();
   if (!MCID->isVariadic())
@@ -2420,9 +2442,8 @@ static const DIExpression *computeExprForSpill(
 static const DIExpression *computeExprForSpill(const MachineInstr &MI,
                                                Register SpillReg) {
   assert(MI.hasDebugOperandForReg(SpillReg) && "Spill Reg is not used in MI.");
-  SmallVector<const MachineOperand *> SpillOperands;
-  for (const MachineOperand &Op : MI.getDebugOperandsForReg(SpillReg))
-    SpillOperands.push_back(&Op);
+  SmallVector<const MachineOperand *> SpillOperands(
+      llvm::make_pointer_range(MI.getDebugOperandsForReg(SpillReg)));
   return computeExprForSpill(MI, SpillOperands);
 }
 
@@ -2525,7 +2546,7 @@ using MMOList = SmallVector<const MachineMemOperand *, 2>;
 
 static LocationSize getSpillSlotSize(const MMOList &Accesses,
                                      const MachineFrameInfo &MFI) {
-  uint64_t Size = 0;
+  std::optional<TypeSize> Size;
   for (const auto *A : Accesses) {
     if (MFI.isSpillSlotObjectIndex(
             cast<FixedStackPseudoSourceValue>(A->getPseudoValue())
@@ -2533,10 +2554,15 @@ static LocationSize getSpillSlotSize(const MMOList &Accesses,
       LocationSize S = A->getSize();
       if (!S.hasValue())
         return LocationSize::beforeOrAfterPointer();
-      Size += S.getValue();
+      if (!Size)
+        Size = S.getValue();
+      else
+        Size = *Size + S.getValue();
     }
   }
-  return Size;
+  if (!Size)
+    return LocationSize::precise(0);
+  return LocationSize::precise(*Size);
 }
 
 std::optional<LocationSize>

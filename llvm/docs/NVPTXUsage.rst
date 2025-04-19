@@ -309,6 +309,59 @@ space casted to this space), 1 is returned, otherwise 0 is returned.
 Arithmetic Intrinsics
 ---------------------
 
+'``llvm.nvvm.fabs.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+    declare float @llvm.nvvm.fabs.f32(float %a)
+    declare double @llvm.nvvm.fabs.f64(double %a)
+    declare half @llvm.nvvm.fabs.f16(half %a)
+    declare <2 x half> @llvm.nvvm.fabs.v2f16(<2 x half> %a)
+    declare bfloat @llvm.nvvm.fabs.bf16(bfloat %a)
+    declare <2 x bfloat> @llvm.nvvm.fabs.v2bf16(<2 x bfloat> %a)
+
+Overview:
+"""""""""
+
+The '``llvm.nvvm.fabs.*``' intrinsics return the absolute value of the operand.
+
+Semantics:
+""""""""""
+
+Unlike, '``llvm.fabs.*``', these intrinsics do not perfectly preserve NaN
+values. Instead, a NaN input yeilds an unspecified NaN output.
+
+
+'``llvm.nvvm.fabs.ftz.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+    declare float @llvm.nvvm.fabs.ftz.f32(float %a)
+    declare half @llvm.nvvm.fabs.ftz.f16(half %a)
+    declare <2 x half> @llvm.nvvm.fabs.ftz.v2f16(<2 x half> %a)
+
+Overview:
+"""""""""
+
+The '``llvm.nvvm.fabs.ftz.*``' intrinsics return the absolute value of the
+operand, flushing subnormals to sign preserving zero.
+
+Semantics:
+""""""""""
+
+Before the absolute value is taken, the input is flushed to sign preserving
+zero if it is a subnormal. In addtion, unlike '``llvm.fabs.*``', a NaN input
+yields an unspecified NaN output.
+
+
 '``llvm.nvvm.idp2a.[us].[us]``' Intrinsics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -1445,6 +1498,38 @@ The last argument `i1 %unpack` is a compile-time constant which when set, indica
 
 For more information, refer to the
 `PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-instructions-tcgen05-st>`__.
+
+Store Intrinsics
+----------------
+
+'``llvm.nvvm.st.bulk.*``'
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.st.bulk(ptr addrspace(1) %dst, i64 %size, i64 immarg %initval)
+  declare void @llvm.nvvm.st.bulk.shared.cta(ptr addrspace(3) %dst, i64 %size, i64 immarg %initval)
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.st.bulk.*``' intrinsics initialize a region of shared memory 
+starting from the location specified by the destination address operand `%dst`.
+
+The integer operand `%size` specifies the amount of memory to be initialized in 
+terms of number of bytes and must be a multiple of 8. Otherwise, the behavior 
+is undefined.
+
+The integer immediate operand `%initval` specifies the initialization value for 
+the memory locations. The only numeric value allowed is 0.
+
+The ``@llvm.nvvm.st.bulk.shared.cta`` and ``@llvm.nvvm.st.bulk`` intrinsics are 
+similar but the latter uses generic addressing (see `Generic Addressing <https://docs.nvidia.com/cuda/parallel-thread-execution/#generic-addressing>`__).
+
+For more information, refer `PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-st-bulk>`__.
 
 Other Intrinsics
 ----------------

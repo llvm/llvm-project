@@ -16,36 +16,24 @@
 #include <cstdint>
 #include <functional>
 #include <optional>
-#include <type_traits>
 
-#include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
-#include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
-#include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Transforms/VectorRewritePatterns.h"
 #include "mlir/Dialect/Vector/Utils/VectorUtils.h"
-#include "mlir/IR/BuiltinAttributeInterfaces.h"
 #include "mlir/IR/BuiltinTypes.h"
-#include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
-#include "mlir/Interfaces/VectorInterfaces.h"
 
-#include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/Support/FormatVariadic.h"
-#include "llvm/Support/raw_ostream.h"
 
 #define DEBUG_TYPE "vector-to-vector"
 
@@ -70,54 +58,6 @@ static std::optional<int64_t> getResultIndex(AffineMap map, int64_t index) {
 }
 
 namespace {
-
-/// ShapeCastOpFolder folds cancelling ShapeCastOps away.
-//
-// Example:
-//
-//  The following MLIR with cancelling ShapeCastOps:
-//
-//   %0 = source : vector<5x4x2xf32>
-//   %1 = shape_cast %0 : vector<5x4x2xf32> to vector<20x2xf32>
-//   %2 = shape_cast %1 : vector<20x2xf32> to vector<5x4x2xf32>
-//   %3 = user %2 : vector<5x4x2xf32>
-//
-//  Should canonicalize to the following:
-//
-//   %0 = source : vector<5x4x2xf32>
-//   %1 = user %0 : vector<5x4x2xf32>
-//
-struct ShapeCastOpFolder : public OpRewritePattern<vector::ShapeCastOp> {
-  using OpRewritePattern::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(vector::ShapeCastOp shapeCastOp,
-                                PatternRewriter &rewriter) const override {
-    // Check if 'shapeCastOp' has vector source/result type.
-    auto sourceVectorType =
-        dyn_cast_or_null<VectorType>(shapeCastOp.getSource().getType());
-    auto resultVectorType =
-        dyn_cast_or_null<VectorType>(shapeCastOp.getResult().getType());
-    if (!sourceVectorType || !resultVectorType)
-      return failure();
-
-    // Check if shape cast op source operand is also a shape cast op.
-    auto sourceShapeCastOp = dyn_cast_or_null<vector::ShapeCastOp>(
-        shapeCastOp.getSource().getDefiningOp());
-    if (!sourceShapeCastOp)
-      return failure();
-    auto operandSourceVectorType =
-        cast<VectorType>(sourceShapeCastOp.getSource().getType());
-    auto operandResultVectorType = sourceShapeCastOp.getType();
-
-    // Check if shape cast operations invert each other.
-    if (operandSourceVectorType != resultVectorType ||
-        operandResultVectorType != sourceVectorType)
-      return failure();
-
-    rewriter.replaceOp(shapeCastOp, sourceShapeCastOp.getSource());
-    return success();
-  }
-};
 
 /// Convert MulIOp/MulFOp + MultiDimReductionOp<add> into ContractionOp.
 /// Ex:
@@ -748,7 +688,7 @@ struct BubbleUpBitCastForInsert : public OpRewritePattern<vector::BitCastOp> {
       return failure();
 
     // Only vector sources are supported for now.
-    auto insertSrcType = dyn_cast<VectorType>(insertOp.getSourceType());
+    auto insertSrcType = dyn_cast<VectorType>(insertOp.getValueToStoreType());
     if (!insertSrcType)
       return failure();
 
@@ -759,7 +699,7 @@ struct BubbleUpBitCastForInsert : public OpRewritePattern<vector::BitCastOp> {
     VectorType newCastSrcType =
         VectorType::get(srcDims, castDstType.getElementType());
     auto newCastSrcOp = rewriter.create<vector::BitCastOp>(
-        bitcastOp.getLoc(), newCastSrcType, insertOp.getSource());
+        bitcastOp.getLoc(), newCastSrcType, insertOp.getValueToStore());
 
     SmallVector<int64_t> dstDims(insertOp.getDestVectorType().getShape());
     dstDims.back() =
@@ -850,7 +790,7 @@ struct BubbleUpBitCastForStridedSliceInsert
         VectorType::get(srcDims, castDstType.getElementType());
 
     auto newCastSrcOp = rewriter.create<vector::BitCastOp>(
-        bitcastOp.getLoc(), newCastSrcType, insertOp.getSource());
+        bitcastOp.getLoc(), newCastSrcType, insertOp.getValueToStore());
 
     SmallVector<int64_t> dstDims =
         llvm::to_vector<4>(insertOp.getDestVectorType().getShape());
@@ -1039,6 +979,66 @@ struct ReorderElementwiseOpsOnBroadcast final
     rewriter.replaceOpWithNewOp<vector::BroadcastOp>(
         op, vectorType, elementwiseOp->getResults());
 
+    return success();
+  }
+};
+
+/// Pattern to rewrite a ExtractOp(Elementwise) -> Elementwise(ExtractOp).
+/// This may result in cleaner code when extracting a single value
+/// from multi-element vector and also to help canonicalize 1-element vectors to
+/// scalars.
+/// ```
+///  %0 = arith.addf %arg0, %arg1 : vector<4xf32>
+///  %1 = vector.extract %0[1] : f32 from vector<4xf32>
+/// ```
+/// Gets converted to:
+/// ```
+///  %0 = vector.extract %arg0[1] : f32 from vector<4xf32>
+///  %1 = vector.extract %arg1[1] : f32 from vector<4xf32>
+///  %2 = arith.addf %0, %1 : f32
+/// ```
+class ExtractOpFromElementwise final
+    : public OpRewritePattern<vector::ExtractOp> {
+public:
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(vector::ExtractOp op,
+                                PatternRewriter &rewriter) const override {
+    Operation *eltwise = op.getVector().getDefiningOp();
+
+    // TODO: vector::FMAOp is not an ElemetwiseMappable even if it claims to be,
+    // as it doesn't support scalars.
+    if (!eltwise || !OpTrait::hasElementwiseMappableTraits(eltwise) ||
+        isa<vector::FMAOp>(eltwise))
+      return rewriter.notifyMatchFailure(op, "not an elementwise op");
+
+    if (eltwise->getNumResults() != 1)
+      return rewriter.notifyMatchFailure(op, "expected single result");
+
+    if (!eltwise->hasOneUse())
+      return rewriter.notifyMatchFailure(op, "expected single op use");
+
+    if (!llvm::all_equal(eltwise->getOperandTypes()))
+      return rewriter.notifyMatchFailure(op, "operand types are different");
+
+    Type dstType = op.getType();
+
+    OpBuilder::InsertionGuard g(rewriter);
+    rewriter.setInsertionPoint(eltwise);
+
+    IRMapping mapping;
+    Location loc = eltwise->getLoc();
+    SmallVector<OpFoldResult> pos = op.getMixedPosition();
+    for (Value arg : eltwise->getOperands()) {
+      Value newArg = rewriter.create<vector::ExtractOp>(loc, arg, pos);
+      mapping.map(arg, newArg);
+    }
+
+    Operation *newEltwise = rewriter.clone(*eltwise, mapping);
+    newEltwise->getResult(0).setType(dstType);
+
+    rewriter.replaceOp(op, newEltwise);
+    rewriter.eraseOp(eltwise);
     return success();
   }
 };
@@ -2053,11 +2053,6 @@ void mlir::vector::populateVectorMaskMaterializationPatterns(
   patterns.add<FoldI1Select>(patterns.getContext(), benefit);
 }
 
-void mlir::vector::populateShapeCastFoldingPatterns(RewritePatternSet &patterns,
-                                                    PatternBenefit benefit) {
-  patterns.add<ShapeCastOpFolder>(patterns.getContext(), benefit);
-}
-
 void mlir::vector::populateDropUnitDimWithShapeCastPatterns(
     RewritePatternSet &patterns, PatternBenefit benefit) {
   // TODO: Consider either:
@@ -2066,8 +2061,7 @@ void mlir::vector::populateDropUnitDimWithShapeCastPatterns(
   //  * better naming to distinguish this and
   //    populateVectorTransferCollapseInnerMostContiguousDimsPatterns.
   patterns.add<DropUnitDimFromElementwiseOps, DropUnitDimsFromScfForOp,
-               DropUnitDimsFromTransposeOp, ShapeCastOpFolder>(
-      patterns.getContext(), benefit);
+               DropUnitDimsFromTransposeOp>(patterns.getContext(), benefit);
 }
 
 void mlir::vector::populateBubbleVectorBitCastOpPatterns(
@@ -2111,8 +2105,8 @@ void mlir::vector::
 void mlir::vector::populateSinkVectorOpsPatterns(RewritePatternSet &patterns,
                                                  PatternBenefit benefit) {
   patterns.add<ReorderElementwiseOpsOnTranspose, ReorderCastOpsOnBroadcast,
-               ReorderElementwiseOpsOnBroadcast>(patterns.getContext(),
-                                                 benefit);
+               ReorderElementwiseOpsOnBroadcast, ExtractOpFromElementwise>(
+      patterns.getContext(), benefit);
 }
 
 void mlir::vector::populateChainedVectorReductionFoldingPatterns(

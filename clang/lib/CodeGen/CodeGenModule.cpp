@@ -843,7 +843,7 @@ static void setVisibilityFromDLLStorageClass(const clang::LangOptions &LO,
 static bool isStackProtectorOn(const LangOptions &LangOpts,
                                const llvm::Triple &Triple,
                                clang::LangOptions::StackProtectorMode Mode) {
-  if (Triple.isAMDGPU() || Triple.isNVPTX())
+  if (Triple.isGPU())
     return false;
   return LangOpts.getStackProtector() == Mode;
 }
@@ -853,8 +853,7 @@ void CodeGenModule::Release() {
   if (CXX20ModuleInits && Primary && !Primary->isHeaderLikeModule())
     EmitModuleInitializers(Primary);
   EmitDeferred();
-  DeferredDecls.insert(EmittedDeferredDecls.begin(),
-                       EmittedDeferredDecls.end());
+  DeferredDecls.insert_range(EmittedDeferredDecls);
   EmittedDeferredDecls.clear();
   EmitVTablesOpportunistically();
   applyGlobalValReplacements();
@@ -1143,6 +1142,10 @@ void CodeGenModule::Release() {
   if (CodeGenOpts.SanitizeCfiICallNormalizeIntegers) {
     getModule().addModuleFlag(llvm::Module::Override, "cfi-normalize-integers",
                               1);
+  }
+
+  if (CodeGenOpts.UniqueSourceFileNames) {
+    getModule().addModuleFlag(llvm::Module::Max, "Unique Source File Names", 1);
   }
 
   if (LangOpts.Sanitize.has(SanitizerKind::KCFI)) {
@@ -1904,6 +1907,9 @@ static std::string getMangledNameImpl(CodeGenModule &CGM, GlobalDecl GD,
     } else if (FD && FD->hasAttr<CUDAGlobalAttr>() &&
                GD.getKernelReferenceKind() == KernelReferenceKind::Stub) {
       Out << "__device_stub__" << II->getName();
+    } else if (FD && FD->hasAttr<OpenCLKernelAttr>() &&
+               GD.getKernelReferenceKind() == KernelReferenceKind::Stub) {
+      Out << "__clang_ocl_kern_imp_" << II->getName();
     } else {
       Out << II->getName();
     }
@@ -2068,9 +2074,10 @@ StringRef CodeGenModule::getMangledName(GlobalDecl GD) {
   // Prior work:
   // https://discourse.llvm.org/t/rfc-clang-diagnostic-for-demangling-failures/82835/8
   // https://github.com/llvm/llvm-project/issues/111345
-  // assert((MangledName.startswith("_Z") || MangledName.startswith("?")) &&
-  //        !GD->hasAttr<AsmLabelAttr>() &&
-  //        llvm::demangle(MangledName) != MangledName &&
+  // assert(!((StringRef(MangledName).starts_with("_Z") ||
+  //           StringRef(MangledName).starts_with("?")) &&
+  //          !GD.getDecl()->hasAttr<AsmLabelAttr>() &&
+  //          llvm::demangle(MangledName) == MangledName) &&
   //        "LLVM demangler must demangle clang-generated names");
 
   auto Result = Manglings.insert(std::make_pair(MangledName, GD));
@@ -2666,7 +2673,7 @@ void CodeGenModule::SetLLVMFunctionAttributesForDefinition(const Decl *D,
     for (const CXXRecordDecl *Base : getMostBaseClasses(MD->getParent())) {
       llvm::Metadata *Id =
           CreateMetadataIdentifierForType(Context.getMemberPointerType(
-              MD->getType(), Context.getRecordType(Base).getTypePtr()));
+              MD->getType(), /*Qualifier=*/nullptr, Base));
       F->addTypeMetadata(0, Id);
     }
   }
@@ -2934,10 +2941,9 @@ void CodeGenModule::SetFunctionAttributes(GlobalDecl GD, llvm::Function *F,
                                           bool IsIncompleteFunction,
                                           bool IsThunk) {
 
-  if (llvm::Intrinsic::ID IID = F->getIntrinsicID()) {
-    // If this is an intrinsic function, set the function's attributes
-    // to the intrinsic's attributes.
-    F->setAttributes(llvm::Intrinsic::getAttributes(getLLVMContext(), IID));
+  if (F->getIntrinsicID() != llvm::Intrinsic::not_intrinsic) {
+    // If this is an intrinsic function, the attributes will have been set
+    // when the function was created.
     return;
   }
 
@@ -3303,6 +3309,27 @@ void CodeGenModule::EmitDeferred() {
   CurDeclsToEmit.swap(DeferredDeclsToEmit);
 
   for (GlobalDecl &D : CurDeclsToEmit) {
+    // Functions declared with the sycl_kernel_entry_point attribute are
+    // emitted normally during host compilation. During device compilation,
+    // a SYCL kernel caller offload entry point function is generated and
+    // emitted in place of each of these functions.
+    if (const auto *FD = D.getDecl()->getAsFunction()) {
+      if (LangOpts.SYCLIsDevice && FD->hasAttr<SYCLKernelEntryPointAttr>() &&
+          FD->isDefined()) {
+        // Functions with an invalid sycl_kernel_entry_point attribute are
+        // ignored during device compilation.
+        if (!FD->getAttr<SYCLKernelEntryPointAttr>()->isInvalidAttr()) {
+          // Generate and emit the SYCL kernel caller function.
+          EmitSYCLKernelCaller(FD, getContext());
+          // Recurse to emit any symbols directly or indirectly referenced
+          // by the SYCL kernel caller function.
+          EmitDeferred();
+        }
+        // Do not emit the sycl_kernel_entry_point attributed function.
+        continue;
+      }
+    }
+
     // We should call GetAddrOfGlobal with IsForDefinition set to true in order
     // to get GlobalValue with exactly the type we need, not something that
     // might had been created for another decl with the same mangled name but
@@ -3638,6 +3665,10 @@ bool CodeGenModule::MayBeEmittedEagerly(const ValueDecl *Global) {
     // Defer until all versions have been semantically checked.
     if (FD->hasAttr<TargetVersionAttr>() && !FD->isMultiVersion())
       return false;
+    // Defer emission of SYCL kernel entry point functions during device
+    // compilation.
+    if (LangOpts.SYCLIsDevice && FD->hasAttr<SYCLKernelEntryPointAttr>())
+      return false;
   }
   if (const auto *VD = dyn_cast<VarDecl>(Global)) {
     if (Context.getInlineVariableDefinitionKind(VD) ==
@@ -3891,6 +3922,9 @@ void CodeGenModule::EmitGlobal(GlobalDecl GD) {
 
   // Ignore declarations, they will be emitted on their first use.
   if (const auto *FD = dyn_cast<FunctionDecl>(Global)) {
+    if (FD->hasAttr<OpenCLKernelAttr>() && FD->doesThisDeclarationHaveABody())
+      addDeferredDeclToEmit(GlobalDecl(FD, KernelReferenceKind::Stub));
+
     // Update deferred annotations with the latest declaration if the function
     // function was already used or defined.
     if (FD->hasAttr<AnnotateAttr>()) {
@@ -4858,6 +4892,11 @@ CodeGenModule::GetAddrOfFunction(GlobalDecl GD, llvm::Type *Ty, bool ForVTable,
   if (!Ty) {
     const auto *FD = cast<FunctionDecl>(GD.getDecl());
     Ty = getTypes().ConvertType(FD->getType());
+    if (FD->hasAttr<OpenCLKernelAttr>() &&
+        GD.getKernelReferenceKind() == KernelReferenceKind::Stub) {
+      const CGFunctionInfo &FI = getTypes().arrangeGlobalDeclaration(GD);
+      Ty = getTypes().GetFunctionType(FI);
+    }
   }
 
   // Devirtualized destructor calls may come through here instead of via
@@ -5595,7 +5634,11 @@ void CodeGenModule::EmitGlobalVarDefinition(const VarDecl *D,
       if (D->getType()->isReferenceType())
         T = D->getType();
 
-      if (getLangOpts().CPlusPlus) {
+      if (getLangOpts().HLSL &&
+          D->getType().getTypePtr()->isHLSLResourceRecord()) {
+        Init = llvm::PoisonValue::get(getTypes().ConvertType(ASTTy));
+        NeedsGlobalCtor = true;
+      } else if (getLangOpts().CPlusPlus) {
         Init = EmitNullConstant(T);
         if (!IsDefinitionAvailableExternally)
           NeedsGlobalCtor = true;
@@ -7294,6 +7337,13 @@ void CodeGenModule::EmitTopLevelDecl(Decl *D) {
 
   case Decl::HLSLBuffer:
     getHLSLRuntime().addBuffer(cast<HLSLBufferDecl>(D));
+    break;
+
+  case Decl::OpenACCDeclare:
+    EmitOpenACCDeclare(cast<OpenACCDeclareDecl>(D));
+    break;
+  case Decl::OpenACCRoutine:
+    EmitOpenACCRoutine(cast<OpenACCRoutineDecl>(D));
     break;
 
   default:

@@ -818,7 +818,7 @@ void JSONNodeDumper::VisitObjCInterfaceType(const ObjCInterfaceType *OIT) {
 }
 
 void JSONNodeDumper::VisitPackExpansionType(const PackExpansionType *PET) {
-  if (std::optional<unsigned> N = PET->getNumExpansions())
+  if (UnsignedOrNone N = PET->getNumExpansions())
     JOS.attribute("numExpansions", *N);
 }
 
@@ -1363,6 +1363,7 @@ void JSONNodeDumper::VisitOpenACCAsteriskSizeExpr(
     const OpenACCAsteriskSizeExpr *E) {}
 
 void JSONNodeDumper::VisitOpenACCDeclareDecl(const OpenACCDeclareDecl *D) {}
+void JSONNodeDumper::VisitOpenACCRoutineDecl(const OpenACCRoutineDecl *D) {}
 
 void JSONNodeDumper::VisitPredefinedExpr(const PredefinedExpr *PE) {
   JOS.attribute("name", PredefinedExpr::getIdentKindName(PE->getIdentKind()));
@@ -1723,6 +1724,8 @@ void JSONNodeDumper::VisitTemplateExpansionTemplateArgument(
 void JSONNodeDumper::VisitExpressionTemplateArgument(
     const TemplateArgument &TA) {
   JOS.attribute("isExpr", true);
+  if (TA.isCanonicalExpr())
+    JOS.attribute("isCanonical", true);
 }
 void JSONNodeDumper::VisitPackTemplateArgument(const TemplateArgument &TA) {
   JOS.attribute("isPack", true);

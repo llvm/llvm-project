@@ -150,8 +150,7 @@ define <8 x i32> @xor_undef_elts_alt(<4 x i32> %x) {
 ; AVX-LABEL: xor_undef_elts_alt:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
-; AVX-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
-; AVX-NEXT:    vmovaps {{.*#+}} ymm1 = [6,1,5,4,3,2,0,7]
+; AVX-NEXT:    vmovaps {{.*#+}} ymm1 = [2,1,1,0,3,2,0,3]
 ; AVX-NEXT:    vpermps %ymm0, %ymm1, %ymm0
 ; AVX-NEXT:    vxorps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; AVX-NEXT:    retq

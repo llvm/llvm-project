@@ -369,10 +369,14 @@ void MemorySection::writeBody() {
     flags |= WASM_LIMITS_FLAG_IS_SHARED;
   if (ctx.arg.is64.value_or(false))
     flags |= WASM_LIMITS_FLAG_IS_64;
+  if (ctx.arg.pageSize != WasmDefaultPageSize)
+    flags |= WASM_LIMITS_FLAG_HAS_PAGE_SIZE;
   writeUleb128(os, flags, "memory limits flags");
   writeUleb128(os, numMemoryPages, "initial pages");
   if (hasMax)
     writeUleb128(os, maxMemoryPages, "max pages");
+  if (ctx.arg.pageSize != WasmDefaultPageSize)
+    writeUleb128(os, llvm::Log2_64(ctx.arg.pageSize), "page size");
 }
 
 void TagSection::writeBody() {

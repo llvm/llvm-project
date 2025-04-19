@@ -37,6 +37,12 @@ static cl::opt<unsigned> SLPMaxVF(
         "exclusively by SLP vectorizer."),
     cl::Hidden);
 
+static cl::opt<unsigned>
+    RVVMinTripCount("riscv-v-min-trip-count",
+                    cl::desc("Set the lower bound of a trip count to decide on "
+                             "vectorization while tail-folding."),
+                    cl::init(5), cl::Hidden);
+
 InstructionCost
 RISCVTTIImpl::getRISCVInstructionCost(ArrayRef<unsigned> OpCodes, MVT VT,
                                       TTI::TargetCostKind CostKind) {
@@ -395,17 +401,17 @@ costShuffleViaVRegSplitting(RISCVTTIImpl &TTI, MVT LegalVT,
                             std::optional<unsigned> VLen, VectorType *Tp,
                             ArrayRef<int> Mask, TTI::TargetCostKind CostKind) {
   assert(LegalVT.isFixedLengthVector());
-  InstructionCost NumOfDests = InstructionCost::getInvalid();
-  if (VLen && !Mask.empty()) {
-    MVT ElemVT = LegalVT.getVectorElementType();
-    unsigned ElemsPerVReg = *VLen / ElemVT.getFixedSizeInBits();
-    LegalVT = TTI.getTypeLegalizationCost(
-                     FixedVectorType::get(Tp->getElementType(), ElemsPerVReg))
-                  .second;
-    // Number of destination vectors after legalization:
-    NumOfDests = divideCeil(Mask.size(), LegalVT.getVectorNumElements());
-  }
-  if (!NumOfDests.isValid() || NumOfDests <= 1 ||
+  if (!VLen || Mask.empty())
+    return InstructionCost::getInvalid();
+  MVT ElemVT = LegalVT.getVectorElementType();
+  unsigned ElemsPerVReg = *VLen / ElemVT.getFixedSizeInBits();
+  LegalVT = TTI.getTypeLegalizationCost(
+                   FixedVectorType::get(Tp->getElementType(), ElemsPerVReg))
+                .second;
+  // Number of destination vectors after legalization:
+  InstructionCost NumOfDests =
+      divideCeil(Mask.size(), LegalVT.getVectorNumElements());
+  if (NumOfDests <= 1 ||
       LegalVT.getVectorElementType().getSizeInBits() !=
           Tp->getElementType()->getPrimitiveSizeInBits() ||
       LegalVT.getVectorNumElements() >= Tp->getElementCount().getFixedValue())
@@ -429,38 +435,21 @@ costShuffleViaVRegSplitting(RISCVTTIImpl &TTI, MVT LegalVT,
          "Normalized mask expected to be not shorter than original mask.");
   copy(Mask, NormalizedMask.begin());
   InstructionCost Cost = 0;
-  SmallBitVector ExtractedRegs(2 * NumOfSrcRegs);
   int NumShuffles = 0;
+  SmallDenseSet<std::pair<ArrayRef<int>, unsigned>> ReusedSingleSrcShuffles;
   processShuffleMasks(
       NormalizedMask, NumOfSrcRegs, NumOfDestRegs, NumOfDestRegs, []() {},
       [&](ArrayRef<int> RegMask, unsigned SrcReg, unsigned DestReg) {
-        if (ExtractedRegs.test(SrcReg)) {
-          Cost += TTI.getShuffleCost(TTI::SK_ExtractSubvector, Tp, {}, CostKind,
-                                     (SrcReg % NumOfSrcRegs) *
-                                         SingleOpTy->getNumElements(),
-                                     SingleOpTy);
-          ExtractedRegs.set(SrcReg);
-        }
-        if (!ShuffleVectorInst::isIdentityMask(RegMask, RegMask.size())) {
-          ++NumShuffles;
-          Cost += TTI.getShuffleCost(TTI::SK_PermuteSingleSrc, SingleOpTy,
-                                     RegMask, CostKind, 0, nullptr);
+        if (ShuffleVectorInst::isIdentityMask(RegMask, RegMask.size()))
           return;
-        }
+        if (!ReusedSingleSrcShuffles.insert(std::make_pair(RegMask, SrcReg))
+                 .second)
+          return;
+        ++NumShuffles;
+        Cost += TTI.getShuffleCost(TTI::SK_PermuteSingleSrc, SingleOpTy,
+                                   RegMask, CostKind, 0, nullptr);
       },
       [&](ArrayRef<int> RegMask, unsigned Idx1, unsigned Idx2, bool NewReg) {
-        if (ExtractedRegs.test(Idx1)) {
-          Cost += TTI.getShuffleCost(
-              TTI::SK_ExtractSubvector, Tp, {}, CostKind,
-              (Idx1 % NumOfSrcRegs) * SingleOpTy->getNumElements(), SingleOpTy);
-          ExtractedRegs.set(Idx1);
-        }
-        if (ExtractedRegs.test(Idx2)) {
-          Cost += TTI.getShuffleCost(
-              TTI::SK_ExtractSubvector, Tp, {}, CostKind,
-              (Idx2 % NumOfSrcRegs) * SingleOpTy->getNumElements(), SingleOpTy);
-          ExtractedRegs.set(Idx2);
-        }
         Cost += TTI.getShuffleCost(TTI::SK_PermuteTwoSrc, SingleOpTy, RegMask,
                                    CostKind, 0, nullptr);
         NumShuffles += 2;
@@ -721,11 +710,9 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
     // TODO: Extend for scalable subvector types
     if (std::pair<InstructionCost, MVT> SubLT = getTypeLegalizationCost(SubTp);
         SubLT.second.isValid() && SubLT.second.isFixedLengthVector()) {
-      const unsigned MinVLen = ST->getRealMinVLen();
-      const unsigned MaxVLen = ST->getRealMaxVLen();
-      if (MinVLen == MaxVLen &&
-          SubLT.second.getScalarSizeInBits() * Index % MinVLen == 0 &&
-          SubLT.second.getSizeInBits() <= MinVLen)
+      if (std::optional<unsigned> VLen = ST->getRealVLen();
+          VLen && SubLT.second.getScalarSizeInBits() * Index % *VLen == 0 &&
+          SubLT.second.getSizeInBits() <= *VLen)
         return TTI::TCC_Free;
     }
 
@@ -1912,7 +1899,7 @@ RISCVTTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,
 
 InstructionCost RISCVTTIImpl::getExtendedReductionCost(
     unsigned Opcode, bool IsUnsigned, Type *ResTy, VectorType *ValTy,
-    FastMathFlags FMF, TTI::TargetCostKind CostKind) {
+    std::optional<FastMathFlags> FMF, TTI::TargetCostKind CostKind) {
   if (isa<FixedVectorType>(ValTy) && !ST->useRVVForFixedLengthVectors())
     return BaseT::getExtendedReductionCost(Opcode, IsUnsigned, ResTy, ValTy,
                                            FMF, CostKind);
@@ -2621,6 +2608,10 @@ unsigned RISCVTTIImpl::getMaximumVF(unsigned ElemWidth, unsigned Opcode) const {
   return std::max<unsigned>(1U, RegWidth.getFixedValue() / ElemWidth);
 }
 
+unsigned RISCVTTIImpl::getMinTripCountTailFoldingThreshold() const {
+  return RVVMinTripCount;
+}
+
 TTI::AddressingModeKind
 RISCVTTIImpl::getPreferredAddressingMode(const Loop *L,
                                          ScalarEvolution *SE) const {
@@ -2801,6 +2792,39 @@ bool RISCVTTIImpl::canSplatOperand(Instruction *I, int Operand) const {
 bool RISCVTTIImpl::isProfitableToSinkOperands(
     Instruction *I, SmallVectorImpl<Use *> &Ops) const {
   using namespace llvm::PatternMatch;
+
+  if (I->isBitwiseLogicOp()) {
+    if (!I->getType()->isVectorTy()) {
+      if (ST->hasStdExtZbb() || ST->hasStdExtZbkb()) {
+        for (auto &Op : I->operands()) {
+          // (and/or/xor X, (not Y)) -> (andn/orn/xnor X, Y)
+          if (match(Op.get(), m_Not(m_Value()))) {
+            Ops.push_back(&Op);
+            return true;
+          }
+        }
+      }
+    } else if (I->getOpcode() == Instruction::And && ST->hasStdExtZvkb()) {
+      for (auto &Op : I->operands()) {
+        // (and X, (not Y)) -> (vandn.vv X, Y)
+        if (match(Op.get(), m_Not(m_Value()))) {
+          Ops.push_back(&Op);
+          return true;
+        }
+        // (and X, (splat (not Y))) -> (vandn.vx X, Y)
+        if (match(Op.get(), m_Shuffle(m_InsertElt(m_Value(), m_Not(m_Value()),
+                                                  m_ZeroInt()),
+                                      m_Value(), m_ZeroMask()))) {
+          Use &InsertElt = cast<Instruction>(Op)->getOperandUse(0);
+          Use &Not = cast<Instruction>(InsertElt)->getOperandUse(1);
+          Ops.push_back(&Not);
+          Ops.push_back(&InsertElt);
+          Ops.push_back(&Op);
+          return true;
+        }
+      }
+    }
+  }
 
   if (!I->getType()->isVectorTy() || !ST->hasVInstructions())
     return false;

@@ -1521,25 +1521,19 @@ void IntegerRelation::addLocalFloorDiv(ArrayRef<DynamicAPInt> dividend,
       getDivUpperBound(dividendCopy, divisor, dividendCopy.size() - 2));
 }
 
-/// Finds an equality that equates the specified variable to a constant.
-/// Returns the position of the equality row. If 'symbolic' is set to true,
-/// symbols are also treated like a constant, i.e., an affine function of the
-/// symbols is also treated like a constant. Returns -1 if such an equality
-/// could not be found.
-static int findEqualityToConstant(const IntegerRelation &cst, unsigned pos,
-                                  bool symbolic = false) {
-  assert(pos < cst.getNumVars() && "invalid position");
-  for (unsigned r = 0, e = cst.getNumEqualities(); r < e; r++) {
-    DynamicAPInt v = cst.atEq(r, pos);
+int IntegerRelation::findEqualityToConstant(unsigned pos, bool symbolic) const {
+  assert(pos < getNumVars() && "invalid position");
+  for (unsigned r = 0, e = getNumEqualities(); r < e; r++) {
+    DynamicAPInt v = atEq(r, pos);
     if (v * v != 1)
       continue;
     unsigned c;
-    unsigned f = symbolic ? cst.getNumDimVars() : cst.getNumVars();
+    unsigned f = symbolic ? getNumDimVars() : getNumVars();
     // This checks for zeros in all positions other than 'pos' in [0, f)
     for (c = 0; c < f; c++) {
       if (c == pos)
         continue;
-      if (cst.atEq(r, c) != 0) {
+      if (atEq(r, c) != 0) {
         // Dependent on another variable.
         break;
       }
@@ -1554,7 +1548,7 @@ static int findEqualityToConstant(const IntegerRelation &cst, unsigned pos,
 LogicalResult IntegerRelation::constantFoldVar(unsigned pos) {
   assert(pos < getNumVars() && "invalid position");
   int rowIdx;
-  if ((rowIdx = findEqualityToConstant(*this, pos)) == -1)
+  if ((rowIdx = findEqualityToConstant(pos)) == -1)
     return failure();
 
   // atEq(rowIdx, pos) is either -1 or 1.
@@ -1593,12 +1587,13 @@ std::optional<DynamicAPInt> IntegerRelation::getConstantBoundOnDimSize(
 
   // Find an equality for 'pos'^th variable that equates it to some function
   // of the symbolic variables (+ constant).
-  int eqPos = findEqualityToConstant(*this, pos, /*symbolic=*/true);
+  int eqPos = findEqualityToConstant(pos, /*symbolic=*/true);
   if (eqPos != -1) {
     auto eq = getEquality(eqPos);
-    // If the equality involves a local var, punt for now.
-    // TODO: this can be handled in the future by using the explicit
-    // representation of the local vars.
+    // If the equality involves a local var, we do not handle it.
+    // FlatLinearConstraints can instead be used to detect the local variable as
+    // an affine function (potentially div/mod) of other variables and use
+    // affine expressions/maps to represent output.
     if (!std::all_of(eq.begin() + getNumDimAndSymbolVars(), eq.end() - 1,
                      [](const DynamicAPInt &coeff) { return coeff == 0; }))
       return std::nullopt;
@@ -1719,7 +1714,7 @@ IntegerRelation::computeConstantLowerOrUpperBound(unsigned pos) {
   projectOut(0, pos);
   projectOut(1, getNumVars() - 1);
   // Check if there's an equality equating the '0'^th variable to a constant.
-  int eqRowIdx = findEqualityToConstant(*this, 0, /*symbolic=*/false);
+  int eqRowIdx = findEqualityToConstant(/*pos=*/0, /*symbolic=*/false);
   if (eqRowIdx != -1)
     // atEq(rowIdx, 0) is either -1 or 1.
     return -atEq(eqRowIdx, getNumCols() - 1) / atEq(eqRowIdx, 0);

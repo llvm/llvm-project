@@ -20,11 +20,11 @@
 #include "src/math/generic/range_reduction_double_common.h"
 #include "src/math/generic/sincos_eval.h"
 
-#ifdef LIBC_TARGET_CPU_HAS_FMA
+#ifdef LIBC_TARGET_CPU_HAS_FMA_DOUBLE
 #include "range_reduction_double_fma.h"
 #else
 #include "range_reduction_double_nofma.h"
-#endif // LIBC_TARGET_CPU_HAS_FMA
+#endif // LIBC_TARGET_CPU_HAS_FMA_DOUBLE
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -65,7 +65,11 @@ LLVM_LIBC_FUNCTION(double, cos, (double x)) {
   } else {
     // Inf or NaN
     if (LIBC_UNLIKELY(x_e > 2 * FPBits::EXP_BIAS)) {
-      // sin(+-Inf) = NaN
+      if (xbits.is_signaling_nan()) {
+        fputil::raise_except_if_required(FE_INVALID);
+        return FPBits::quiet_nan().get_val();
+      }
+      // cos(+-Inf) = NaN
       if (xbits.get_mantissa() == 0) {
         fputil::set_errno_if_required(EDOM);
         fputil::raise_except_if_required(FE_INVALID);

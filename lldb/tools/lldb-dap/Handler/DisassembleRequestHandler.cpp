@@ -93,7 +93,8 @@ void DisassembleRequestHandler::operator()(
   FillResponse(request, response);
   auto *arguments = request.getObject("arguments");
 
-  llvm::StringRef memoryReference = GetString(arguments, "memoryReference");
+  llvm::StringRef memoryReference =
+      GetString(arguments, "memoryReference").value_or("");
   auto addr_opt = DecodeMemoryReference(memoryReference);
   if (!addr_opt.has_value()) {
     response["success"] = false;
@@ -104,7 +105,7 @@ void DisassembleRequestHandler::operator()(
   }
   lldb::addr_t addr_ptr = *addr_opt;
 
-  addr_ptr += GetSigned(arguments, "instructionOffset", 0);
+  addr_ptr += GetInteger<int64_t>(arguments, "instructionOffset").value_or(0);
   lldb::SBAddress addr(addr_ptr, dap.target);
   if (!addr.IsValid()) {
     response["success"] = false;
@@ -113,7 +114,8 @@ void DisassembleRequestHandler::operator()(
     return;
   }
 
-  const auto inst_count = GetUnsigned(arguments, "instructionCount", 0);
+  const auto inst_count =
+      GetInteger<int64_t>(arguments, "instructionCount").value_or(0);
   lldb::SBInstructionList insts = dap.target.ReadInstructions(addr, inst_count);
 
   if (!insts.IsValid()) {
@@ -123,7 +125,8 @@ void DisassembleRequestHandler::operator()(
     return;
   }
 
-  const bool resolveSymbols = GetBoolean(arguments, "resolveSymbols", false);
+  const bool resolveSymbols =
+      GetBoolean(arguments, "resolveSymbols").value_or(false);
   llvm::json::Array instructions;
   const auto num_insts = insts.GetSize();
   for (size_t i = 0; i < num_insts; ++i) {

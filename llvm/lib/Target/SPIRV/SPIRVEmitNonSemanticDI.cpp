@@ -27,12 +27,14 @@
 
 #define DEBUG_TYPE "spirv-nonsemantic-debug-info"
 
-namespace llvm {
+using namespace llvm;
+
+namespace {
 struct SPIRVEmitNonSemanticDI : public MachineFunctionPass {
   static char ID;
   SPIRVTargetMachine *TM;
-  SPIRVEmitNonSemanticDI(SPIRVTargetMachine *TM);
-  SPIRVEmitNonSemanticDI();
+  SPIRVEmitNonSemanticDI(SPIRVTargetMachine *TM = nullptr)
+      : MachineFunctionPass(ID), TM(TM) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
@@ -40,9 +42,7 @@ private:
   bool IsGlobalDIEmitted = false;
   bool emitGlobalDI(MachineFunction &MF);
 };
-} // namespace llvm
-
-using namespace llvm;
+} // anonymous namespace
 
 INITIALIZE_PASS(SPIRVEmitNonSemanticDI, DEBUG_TYPE,
                 "SPIRV NonSemantic.Shader.DebugInfo.100 emitter", false, false)
@@ -52,15 +52,6 @@ char SPIRVEmitNonSemanticDI::ID = 0;
 MachineFunctionPass *
 llvm::createSPIRVEmitNonSemanticDIPass(SPIRVTargetMachine *TM) {
   return new SPIRVEmitNonSemanticDI(TM);
-}
-
-SPIRVEmitNonSemanticDI::SPIRVEmitNonSemanticDI(SPIRVTargetMachine *TM)
-    : MachineFunctionPass(ID), TM(TM) {
-  initializeSPIRVEmitNonSemanticDIPass(*PassRegistry::getPassRegistry());
-}
-
-SPIRVEmitNonSemanticDI::SPIRVEmitNonSemanticDI() : MachineFunctionPass(ID) {
-  initializeSPIRVEmitNonSemanticDIPass(*PassRegistry::getPassRegistry());
 }
 
 enum BaseTypeAttributeEncoding {
@@ -158,9 +149,9 @@ bool SPIRVEmitNonSemanticDI::emitGlobalDI(MachineFunction &MF) {
                 // pointed on from other DI types
                 // DerivedType->getBaseType is null when pointer
                 // is representing a void type
-                if (DerivedType->getBaseType())
-                  BasicTypes.insert(
-                      cast<DIBasicType>(DerivedType->getBaseType()));
+                if (auto *BT = dyn_cast_or_null<DIBasicType>(
+                        DerivedType->getBaseType()))
+                  BasicTypes.insert(BT);
               }
             }
           }
@@ -330,7 +321,7 @@ bool SPIRVEmitNonSemanticDI::emitGlobalDI(MachineFunction &MF) {
         // If the Pointer is representing a void type it's getBaseType
         // is a nullptr
         const auto *MaybeNestedBasicType =
-            cast_or_null<DIBasicType>(PointerDerivedType->getBaseType());
+            dyn_cast_or_null<DIBasicType>(PointerDerivedType->getBaseType());
         if (MaybeNestedBasicType) {
           for (const auto &BasicTypeRegPair : BasicTypeRegPairs) {
             const auto &[DefinedBasicType, BasicTypeReg] = BasicTypeRegPair;

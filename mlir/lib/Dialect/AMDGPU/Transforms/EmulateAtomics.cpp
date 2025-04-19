@@ -189,6 +189,15 @@ void mlir::amdgpu::populateAmdgpuEmulateAtomicsPatterns(
     } else {
       target.addIllegalOp<RawBufferAtomicFmaxOp>();
     }
+    // TODO(https://github.com/llvm/llvm-project/issues/129206): Refactor
+    // this to avoid hardcoding ISA version: gfx950 has bf16 atomics.
+    if (chipset < Chipset(9, 5, 0)) {
+      target.addDynamicallyLegalOp<RawBufferAtomicFaddOp>(
+          [](RawBufferAtomicFaddOp op) -> bool {
+            Type elemType = getElementTypeOrSelf(op.getValue().getType());
+            return !isa<BFloat16Type>(elemType);
+          });
+    }
   }
   patterns.add<
       RawBufferAtomicByCasPattern<RawBufferAtomicFaddOp, arith::AddFOp>,

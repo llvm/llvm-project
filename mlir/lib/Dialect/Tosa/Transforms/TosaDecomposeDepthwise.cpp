@@ -48,6 +48,31 @@ struct DepthwiseConv2DIsMul : public OpRewritePattern<tosa::DepthwiseConv2DOp> {
       return failure();
     }
 
+    Type inputETy = inputType.getElementType();
+    Type weightETy = weightType.getElementType();
+    if (!inputETy.isIntOrFloat() || !weightETy.isIntOrFloat())
+      return rewriter.notifyMatchFailure(op, "unsupported type");
+
+    // Get and verify zero points.
+    FailureOr<int64_t> maybeIZp = op.getInputZeroPoint();
+    if (failed(maybeIZp))
+      return rewriter.notifyMatchFailure(
+          op, "input zero point cannot be statically determined");
+
+    FailureOr<int64_t> maybeWZp = op.getWeightZeroPoint();
+    if (failed(maybeWZp))
+      return rewriter.notifyMatchFailure(
+          op, "weight zero point cannot be statically determined");
+
+    int64_t iZp = *maybeIZp;
+    int64_t wZp = *maybeWZp;
+    if (op.verifyInputZeroPoint(iZp).failed())
+      return rewriter.notifyMatchFailure(
+          op, "input zero point must be zero for non-int8 integer types");
+    if (op.verifyWeightZeroPoint(wZp).failed())
+      return rewriter.notifyMatchFailure(
+          op, "weight zero point must be zero for non-int8 integer types");
+
     // Reshape input to [N, H, W, C] -> [N, H, W, C, 1].
     ArrayRef<int64_t> inputShape = inputType.getShape();
     llvm::SmallVector<int64_t, 2> revisedInputShape{
@@ -62,8 +87,6 @@ struct DepthwiseConv2DIsMul : public OpRewritePattern<tosa::DepthwiseConv2DOp> {
                                          revisedInputShapeValue)
                 .getResult();
 
-    Type inputETy = inputType.getElementType();
-    Type weightETy = weightType.getElementType();
     Type resultETy = resultType.getElementType();
 
     if (inputETy != resultETy) {
@@ -75,20 +98,6 @@ struct DepthwiseConv2DIsMul : public OpRewritePattern<tosa::DepthwiseConv2DOp> {
       weightType = weightType.clone(resultETy);
       weight = rewriter.create<tosa::CastOp>(op.getLoc(), weightType, weight);
     }
-
-    // Get and verify zero points.
-    int64_t iZp;
-    int64_t wZp;
-
-    if (op.getInputZeroPoint(iZp).failed() ||
-        op.getWeightZeroPoint(wZp).failed())
-      return rewriter.notifyMatchFailure(
-          op, "bail out if zero points cannot statically be determined");
-
-    if (op.verifyInputZeroPoint(iZp).failed() ||
-        op.verifyWeightZeroPoint(wZp).failed())
-      return rewriter.notifyMatchFailure(
-          op, "zero point must be zero for non-int8 integer types");
 
     if (iZp != 0 || wZp != 0) {
 

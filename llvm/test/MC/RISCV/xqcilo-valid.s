@@ -1,5 +1,5 @@
 # Xqcilo - Qualcomm uC Large Offset Load Store extension
-# RUN: llvm-mc %s -triple=riscv32 -mattr=+experimental-xqcilo -riscv-no-aliases -show-encoding \
+# RUN: llvm-mc %s -triple=riscv32 -mattr=+experimental-xqcilo -M no-aliases -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-ENC,CHECK-INST %s
 # RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+experimental-xqcilo < %s \
 # RUN:     | llvm-objdump --mattr=+experimental-xqcilo -M no-aliases --no-print-imm-hex -d - \

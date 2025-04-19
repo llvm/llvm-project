@@ -150,13 +150,13 @@ public:
 private:
   void addProfiledCall(FunctionId CallerName, FunctionId CalleeName,
                        uint64_t Weight = 0) {
-    assert(ProfiledFunctions.count(CallerName));
     auto CalleeIt = ProfiledFunctions.find(CalleeName);
     if (CalleeIt == ProfiledFunctions.end())
       return;
-    ProfiledCallGraphEdge Edge(ProfiledFunctions[CallerName],
-                               CalleeIt->second, Weight);
-    auto &Edges = ProfiledFunctions[CallerName]->Edges;
+    auto CallerIt = ProfiledFunctions.find(CallerName);
+    assert(CallerIt != ProfiledFunctions.end());
+    ProfiledCallGraphEdge Edge(CallerIt->second, CalleeIt->second, Weight);
+    auto &Edges = CallerIt->second->Edges;
     auto [EdgeIt, Inserted] = Edges.insert(Edge);
     if (!Inserted) {
       // Accumulate weight to the existing edge.

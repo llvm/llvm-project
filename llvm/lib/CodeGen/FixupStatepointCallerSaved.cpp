@@ -20,6 +20,7 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "llvm/CodeGen/FixupStatepointCallerSaved.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -58,14 +59,18 @@ static cl::opt<unsigned> MaxStatepointsWithRegs(
 
 namespace {
 
-class FixupStatepointCallerSaved : public MachineFunctionPass {
+struct FixupStatepointCallerSavedImpl {
+  bool run(MachineFunction &MF);
+};
+
+class FixupStatepointCallerSavedLegacy : public MachineFunctionPass {
 public:
   static char ID;
 
-  FixupStatepointCallerSaved() : MachineFunctionPass(ID) {
-    initializeFixupStatepointCallerSavedPass(*PassRegistry::getPassRegistry());
+  FixupStatepointCallerSavedLegacy() : MachineFunctionPass(ID) {
+    initializeFixupStatepointCallerSavedLegacyPass(
+        *PassRegistry::getPassRegistry());
   }
-
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
     MachineFunctionPass::getAnalysisUsage(AU);
@@ -80,12 +85,12 @@ public:
 
 } // End anonymous namespace.
 
-char FixupStatepointCallerSaved::ID = 0;
-char &llvm::FixupStatepointCallerSavedID = FixupStatepointCallerSaved::ID;
+char FixupStatepointCallerSavedLegacy::ID = 0;
+char &llvm::FixupStatepointCallerSavedID = FixupStatepointCallerSavedLegacy::ID;
 
-INITIALIZE_PASS_BEGIN(FixupStatepointCallerSaved, DEBUG_TYPE,
+INITIALIZE_PASS_BEGIN(FixupStatepointCallerSavedLegacy, DEBUG_TYPE,
                       "Fixup Statepoint Caller Saved", false, false)
-INITIALIZE_PASS_END(FixupStatepointCallerSaved, DEBUG_TYPE,
+INITIALIZE_PASS_END(FixupStatepointCallerSavedLegacy, DEBUG_TYPE,
                     "Fixup Statepoint Caller Saved", false, false)
 
 // Utility function to get size of the register.
@@ -237,8 +242,7 @@ public:
     ReservedSlots.clear();
     if (EHPad)
       if (auto It = GlobalIndices.find(EHPad); It != GlobalIndices.end())
-        for (auto &RSP : It->second)
-          ReservedSlots.insert(RSP.second);
+        ReservedSlots.insert_range(llvm::make_second_range(It->second));
   }
 
   // Get frame index to spill the register.
@@ -420,7 +424,7 @@ public:
     }
   }
 
-  void insertReloadBefore(unsigned Reg, MachineBasicBlock::iterator It,
+  void insertReloadBefore(Register Reg, MachineBasicBlock::iterator It,
                           MachineBasicBlock *MBB) {
     const TargetRegisterClass *RC = TRI.getMinimalPhysRegClass(Reg);
     int FI = RegToSlotIdx[Reg];
@@ -590,10 +594,7 @@ public:
 };
 } // namespace
 
-bool FixupStatepointCallerSaved::runOnMachineFunction(MachineFunction &MF) {
-  if (skipFunction(MF.getFunction()))
-    return false;
-
+bool FixupStatepointCallerSavedImpl::run(MachineFunction &MF) {
   const Function &F = MF.getFunction();
   if (!F.hasGC())
     return false;
@@ -619,4 +620,24 @@ bool FixupStatepointCallerSaved::runOnMachineFunction(MachineFunction &MF) {
     Changed |= SPP.process(*I, AllowGCPtrInCSR);
   }
   return Changed;
+}
+
+bool FixupStatepointCallerSavedLegacy::runOnMachineFunction(
+    MachineFunction &MF) {
+  if (skipFunction(MF.getFunction()))
+    return false;
+
+  return FixupStatepointCallerSavedImpl().run(MF);
+}
+
+PreservedAnalyses
+FixupStatepointCallerSavedPass::run(MachineFunction &MF,
+                                    MachineFunctionAnalysisManager &MFAM) {
+
+  if (!FixupStatepointCallerSavedImpl().run(MF))
+    return PreservedAnalyses::all();
+
+  auto PA = getMachineFunctionPassPreservedAnalyses();
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
 }

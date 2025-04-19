@@ -134,6 +134,8 @@ static_library("LLVMRISCVCodeGen") {
     "RISCVInsertWriteVXRM.cpp",
     "RISCVInstrInfo.cpp",
     "RISCVLandingPadSetup.cpp",
+    "RISCVLateBranchOpt.cpp",
+    "RISCVLoadStoreOptimizer.cpp",
     "RISCVMachineFunctionInfo.cpp",
     "RISCVMakeCompressible.cpp",
     "RISCVMergeBaseOffset.cpp",

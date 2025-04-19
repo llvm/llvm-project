@@ -2645,7 +2645,8 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
       !Builder.GetInsertBlock()->getParent()->hasFnAttribute(
           Attribute::NoImplicitFloat)) {
     Type *EltTy = CastOp->getType()->getScalarType();
-    if (EltTy->isFloatingPointTy() && EltTy->isIEEE()) {
+    if (EltTy->isFloatingPointTy() &&
+        APFloat::hasSignBitInMSB(EltTy->getFltSemantics())) {
       Value *FAbs = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, CastOp);
       return new BitCastInst(FAbs, I.getType());
     }
@@ -3119,6 +3120,18 @@ static Value *matchOrConcat(Instruction &Or, InstCombiner::BuilderTy &Builder) {
       match(UpperSrc, m_BitReverse(m_Value(UpperBRev))))
     return ConcatIntrinsicCalls(Intrinsic::bitreverse, UpperBRev, LowerBRev);
 
+  // iX ext split: extending or(zext(x),shl(zext(y),bw/2) pattern
+  // to consume sext/ashr:
+  // or(zext(sext(x)),shl(zext(sext(ashr(x,xbw-1))),bw/2)
+  // or(zext(x),shl(zext(ashr(x,xbw-1)),bw/2)
+  Value *X;
+  if (match(LowerSrc, m_SExtOrSelf(m_Value(X))) &&
+      match(UpperSrc,
+            m_SExtOrSelf(m_AShr(
+                m_Specific(X),
+                m_SpecificInt(X->getType()->getScalarSizeInBits() - 1)))))
+    return Builder.CreateSExt(X, Ty);
+
   return nullptr;
 }
 
@@ -3335,12 +3348,6 @@ Value *InstCombinerImpl::foldAndOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
     }
   }
 
-  // handle (roughly):
-  // (icmp ne (A & B), C) | (icmp ne (A & D), E)
-  // (icmp eq (A & B), C) & (icmp eq (A & D), E)
-  if (Value *V = foldLogOpOfMaskedICmps(LHS, RHS, IsAnd, IsLogical, Builder, Q))
-    return V;
-
   if (Value *V =
           foldAndOrOfICmpEqConstantAndICmp(LHS, RHS, IsAnd, IsLogical, Builder))
     return V;
@@ -3514,6 +3521,13 @@ Value *InstCombinerImpl::foldBooleanAndOr(Value *LHS, Value *RHS,
                                           bool IsLogical) {
   if (!LHS->getType()->isIntOrIntVectorTy(1))
     return nullptr;
+
+  // handle (roughly):
+  // (icmp ne (A & B), C) | (icmp ne (A & D), E)
+  // (icmp eq (A & B), C) & (icmp eq (A & D), E)
+  if (Value *V = foldLogOpOfMaskedICmps(LHS, RHS, IsAnd, IsLogical, Builder,
+                                        SQ.getWithInstruction(&I)))
+    return V;
 
   if (auto *LHSCmp = dyn_cast<ICmpInst>(LHS))
     if (auto *RHSCmp = dyn_cast<ICmpInst>(RHS))
@@ -4045,7 +4059,8 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
       !Builder.GetInsertBlock()->getParent()->hasFnAttribute(
           Attribute::NoImplicitFloat)) {
     Type *EltTy = CastOp->getType()->getScalarType();
-    if (EltTy->isFloatingPointTy() && EltTy->isIEEE()) {
+    if (EltTy->isFloatingPointTy() &&
+        APFloat::hasSignBitInMSB(EltTy->getFltSemantics())) {
       Value *FAbs = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, CastOp);
       Value *FNegFAbs = Builder.CreateFNeg(FAbs);
       return new BitCastInst(FNegFAbs, I.getType());
@@ -4847,7 +4862,8 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
         !Builder.GetInsertBlock()->getParent()->hasFnAttribute(
             Attribute::NoImplicitFloat)) {
       Type *EltTy = CastOp->getType()->getScalarType();
-      if (EltTy->isFloatingPointTy() && EltTy->isIEEE()) {
+      if (EltTy->isFloatingPointTy() &&
+          APFloat::hasSignBitInMSB(EltTy->getFltSemantics())) {
         Value *FNeg = Builder.CreateFNeg(CastOp);
         return new BitCastInst(FNeg, I.getType());
       }

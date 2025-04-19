@@ -98,3 +98,16 @@ define void @f3_2() "patchable-function-entry"="1" "patchable-function-prefix"="
   %frame = alloca i8, i32 16
   ret void
 }
+
+define void @s1() "patchable-function-entry"="1" "patchable-function-entry-section"=".entries" {
+; CHECK-LABEL: s1:
+; CHECK-NEXT: .Lfunc_begin6:
+; CHECK:       nop
+; CHECK-NEXT:  ret
+; CHECK:       .section .entries,"awo",@progbits,s1{{$}}
+; X86:          .p2align 2
+; X86-NEXT:     .long .Lfunc_begin6
+; X64:          .p2align 3
+; X64-NEXT:     .quad .Lfunc_begin6
+  ret void
+}

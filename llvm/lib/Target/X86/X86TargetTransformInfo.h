@@ -132,7 +132,7 @@ public:
   /// @{
 
   unsigned getNumberOfRegisters(unsigned ClassID) const;
-  bool hasConditionalLoadStoreForType(Type *Ty = nullptr) const;
+  bool hasConditionalLoadStoreForType(Type *Ty, bool IsStore) const;
   TypeSize getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const;
   unsigned getLoadStoreVecRegBitWidth(unsigned AS) const;
   unsigned getMaxInterleaveFactor(ElementCount VF);
@@ -254,7 +254,7 @@ public:
   /// mode represented by AM for this target, for a load/store
   /// of the specified type.
   /// If the AM is supported, the return value must be >= 0.
-  /// If the AM is not supported, it returns a negative value.
+  /// If the AM is not supported, it returns an invalid cost.
   InstructionCost getScalingFactorCost(Type *Ty, GlobalValue *BaseGV,
                                        StackOffset BaseOffset, bool HasBaseReg,
                                        int64_t Scale, unsigned AddrSpace) const;
@@ -262,8 +262,10 @@ public:
   bool isLSRCostLess(const TargetTransformInfo::LSRCost &C1,
                      const TargetTransformInfo::LSRCost &C2);
   bool canMacroFuseCmp();
-  bool isLegalMaskedLoad(Type *DataType, Align Alignment);
-  bool isLegalMaskedStore(Type *DataType, Align Alignment);
+  bool isLegalMaskedLoad(Type *DataType, Align Alignment,
+                         unsigned AddressSpace);
+  bool isLegalMaskedStore(Type *DataType, Align Alignment,
+                          unsigned AddressSpace);
   bool isLegalNTLoad(Type *DataType, Align Alignment);
   bool isLegalNTStore(Type *DataType, Align Alignment);
   bool isLegalBroadcastLoad(Type *ElementTy, ElementCount NumElements) const;
@@ -292,6 +294,7 @@ public:
 
   TTI::MemCmpExpansionOptions enableMemCmpExpansion(bool OptSize,
                                                     bool IsZeroCmp) const;
+  bool preferAlternateOpcodeVectorization() const { return false; }
   bool prefersVectorizedAddressing() const;
   bool supportsEfficientVectorElementLoadStore() const;
   bool enableInterleavedAccessVectorization();

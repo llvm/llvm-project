@@ -125,6 +125,14 @@ llvm.func @convert_float_to_tf32_no_rnd_mode(%src : f32) -> i32 {
 
 // -----
 
+llvm.func @nvvm_st_bulk_initval_nonzero(%addr : !llvm.ptr, %size : i64) {
+  // expected-error @below {{only 0 is supported for initVal, got 1}}
+  nvvm.st.bulk %addr, size =  %size, init =  1 : !llvm.ptr
+  llvm.return
+}
+
+// -----
+
 llvm.func @nvvm_tcgen05_cp_128x256b_mc(%taddr : !llvm.ptr<6>, %smem_desc : i64) {
   // expected-error @below {{Invalid multicast type for tcgen05.cp Op}}
   nvvm.tcgen05.cp %taddr, %smem_desc {shape = #nvvm.tcgen05_cp_shape<shape_128x256b>, multicast = #nvvm.tcgen05_cp_multicast<warpx2_02_13>}
@@ -150,5 +158,21 @@ llvm.func @nvvm_tcgen05_cp_64x128b(%taddr : !llvm.ptr<6>, %smem_desc : i64) {
     shape = #nvvm.tcgen05_cp_shape<shape_64x128b>,
     multicast = #nvvm.tcgen05_cp_multicast<warpx4>
   }
+  llvm.return
+}
+
+// -----
+
+llvm.func @nvvm_match_sync_all(%val32: i32, %thread_mask: i32) {
+  // expected-error @below {{match.sync 'all' returns a two element struct with first element as i32 and second element as i1}}
+  %0 = nvvm.match.sync all %thread_mask, %val32 : i32 -> !llvm.struct<(i32, i8)>
+  llvm.return
+}
+
+// -----
+
+llvm.func @nvvm_match_sync_any(%val32: i32, %thread_mask: i32) {
+  // expected-error @below {{match.sync 'any' returns an i32}}
+  %0 = nvvm.match.sync any %thread_mask, %val32 : i32 -> !llvm.struct<(i32, i1)>
   llvm.return
 }

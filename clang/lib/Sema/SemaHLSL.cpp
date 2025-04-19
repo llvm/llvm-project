@@ -162,10 +162,7 @@ Decl *SemaHLSL::ActOnStartBuffer(Scope *BufferScope, bool CBuffer,
   // if CBuffer is false, then it's a TBuffer
   auto RC = CBuffer ? llvm::hlsl::ResourceClass::CBuffer
                     : llvm::hlsl::ResourceClass::SRV;
-  auto RK = CBuffer ? llvm::hlsl::ResourceKind::CBuffer
-                    : llvm::hlsl::ResourceKind::TBuffer;
   Result->addAttr(HLSLResourceClassAttr::CreateImplicit(getASTContext(), RC));
-  Result->addAttr(HLSLResourceAttr::CreateImplicit(getASTContext(), RK));
 
   SemaRef.PushOnScopeChains(Result, BufferScope);
   SemaRef.PushDeclContext(BufferScope, Result);
@@ -306,6 +303,10 @@ static bool isResourceRecordTypeOrArrayOf(const Type *Ty) {
   while (const ConstantArrayType *CAT = dyn_cast<ConstantArrayType>(Ty))
     Ty = CAT->getArrayElementTypeNoTypeQual();
   return HLSLAttributedResourceType::findHandleTypeOnResource(Ty) != nullptr;
+}
+
+static bool isResourceRecordTypeOrArrayOf(VarDecl *VD) {
+  return isResourceRecordTypeOrArrayOf(VD->getType().getTypePtr());
 }
 
 // Returns true if the type is a leaf element type that is not valid to be
@@ -544,6 +545,10 @@ void SemaHLSL::ActOnFinishBuffer(Decl *Dcl, SourceLocation RBrace) {
   // create buffer layout struct
   createHostLayoutStructForBuffer(SemaRef, BufDecl);
 
+  if (std::none_of(Dcl->attr_begin(), Dcl->attr_end(),
+                   [](Attr *A) { return isa<HLSLResourceBindingAttr>(A); }))
+    SemaRef.Diag(Dcl->getLocation(), diag::warn_hlsl_implicit_binding);
+
   SemaRef.PopDeclContext();
 }
 
@@ -752,7 +757,7 @@ void SemaHLSL::DiagnoseAttrStageMismatch(
                         HLSLShaderAttr::ConvertEnvironmentTypeToStr(ST));
                   });
   Diag(A->getLoc(), diag::err_hlsl_attr_unsupported_in_stage)
-      << A << llvm::Triple::getEnvironmentTypeName(Stage)
+      << A->getAttrName() << llvm::Triple::getEnvironmentTypeName(Stage)
       << (AllowedStages.size() != 1) << join(StageStrings, ", ");
 }
 
@@ -1277,8 +1282,8 @@ bool SemaHLSL::handleResourceTypeAttr(QualType T, const ParsedAttr &AL) {
     }
 
     IdentifierLoc *Loc = AL.getArgAsIdent(0);
-    StringRef Identifier = Loc->Ident->getName();
-    SourceLocation ArgLoc = Loc->Loc;
+    StringRef Identifier = Loc->getIdentifierInfo()->getName();
+    SourceLocation ArgLoc = Loc->getLoc();
 
     // Validate resource class value
     ResourceClass RC;
@@ -1537,8 +1542,8 @@ void SemaHLSL::handleResourceBindingAttr(Decl *TheDecl, const ParsedAttr &AL) {
   }
 
   IdentifierLoc *Loc = AL.getArgAsIdent(0);
-  StringRef Str = Loc->Ident->getName();
-  SourceLocation ArgLoc = Loc->Loc;
+  StringRef Str = Loc->getIdentifierInfo()->getName();
+  SourceLocation ArgLoc = Loc->getLoc();
 
   SourceLocation SpaceArgLoc;
   bool SpecifiedSpace = false;
@@ -1552,8 +1557,8 @@ void SemaHLSL::handleResourceBindingAttr(Decl *TheDecl, const ParsedAttr &AL) {
     }
 
     IdentifierLoc *Loc = AL.getArgAsIdent(1);
-    Space = Loc->Ident->getName();
-    SpaceArgLoc = Loc->Loc;
+    Space = Loc->getIdentifierInfo()->getName();
+    SpaceArgLoc = Loc->getLoc();
   } else {
     Slot = Str;
   }
@@ -1961,6 +1966,17 @@ void SemaHLSL::ActOnEndOfTranslationUnit(TranslationUnitDecl *TU) {
     SemaRef.getCurLexicalContext()->addDecl(DefaultCBuffer);
     createHostLayoutStructForBuffer(SemaRef, DefaultCBuffer);
 
+    // Set HasValidPackoffset if any of the decls has a register(c#) annotation;
+    for (const Decl *VD : DefaultCBufferDecls) {
+      const HLSLResourceBindingAttr *RBA =
+          VD->getAttr<HLSLResourceBindingAttr>();
+      if (RBA &&
+          RBA->getRegisterType() == HLSLResourceBindingAttr::RegisterType::C) {
+        DefaultCBuffer->setHasValidPackoffset(true);
+        break;
+      }
+    }
+
     DeclGroupRef DG(DefaultCBuffer);
     SemaRef.Consumer.HandleTopLevelDecl(DG);
   }
@@ -2007,7 +2023,8 @@ static bool CheckVectorElementCallArgs(Sema *S, CallExpr *TheCall) {
     }
     if (VecTyA && VecTyB) {
       bool retValue = false;
-      if (VecTyA->getElementType() != VecTyB->getElementType()) {
+      if (!S->Context.hasSameUnqualifiedType(VecTyA->getElementType(),
+                                             VecTyB->getElementType())) {
         // Note: type promotion is intended to be handeled via the intrinsics
         //  and not the builtin itself.
         S->Diag(TheCall->getBeginLoc(),
@@ -2037,6 +2054,23 @@ static bool CheckVectorElementCallArgs(Sema *S, CallExpr *TheCall) {
         << TheCall->getDirectCallee() << /*useAllTerminology*/ true
         << SourceRange(A.get()->getBeginLoc(), A.get()->getEndLoc());
     return true;
+  }
+  return false;
+}
+
+static bool CheckAllArgsHaveSameType(Sema *S, CallExpr *TheCall) {
+  assert(TheCall->getNumArgs() > 1);
+  QualType ArgTy0 = TheCall->getArg(0)->getType();
+
+  for (unsigned I = 1, N = TheCall->getNumArgs(); I < N; ++I) {
+    if (!S->getASTContext().hasSameUnqualifiedType(
+            ArgTy0, TheCall->getArg(I)->getType())) {
+      S->Diag(TheCall->getBeginLoc(), diag::err_vec_builtin_incompatible_vector)
+          << TheCall->getDirectCallee() << /*useAllTerminology*/ true
+          << SourceRange(TheCall->getArg(0)->getBeginLoc(),
+                         TheCall->getArg(N - 1)->getEndLoc());
+      return true;
+    }
   }
   return false;
 }
@@ -2084,6 +2118,18 @@ static bool CheckAllArgsHaveFloatRepresentation(Sema *S, CallExpr *TheCall) {
   };
   return CheckAllArgTypesAreCorrect(S, TheCall, S->Context.FloatTy,
                                     checkAllFloatTypes);
+}
+
+static bool CheckUnsignedIntRepresentations(Sema *S, CallExpr *TheCall) {
+  auto checkUnsignedInteger = [](clang::QualType PassedType) -> bool {
+    clang::QualType BaseType =
+        PassedType->isVectorType()
+            ? PassedType->getAs<clang::VectorType>()->getElementType()
+            : PassedType;
+    return !BaseType->isUnsignedIntegerType();
+  };
+  return CheckAllArgTypesAreCorrect(S, TheCall, S->Context.UnsignedIntTy,
+                                    checkUnsignedInteger);
 }
 
 static bool CheckFloatOrHalfRepresentations(Sema *S, CallExpr *TheCall) {
@@ -2213,40 +2259,48 @@ static bool CheckBoolSelect(Sema *S, CallExpr *TheCall) {
 static bool CheckVectorSelect(Sema *S, CallExpr *TheCall) {
   assert(TheCall->getNumArgs() == 3);
   Expr *Arg1 = TheCall->getArg(1);
+  QualType Arg1Ty = Arg1->getType();
   Expr *Arg2 = TheCall->getArg(2);
-  if (!Arg1->getType()->isVectorType()) {
-    S->Diag(Arg1->getBeginLoc(), diag::err_builtin_non_vector_type)
-        << "Second" << TheCall->getDirectCallee() << Arg1->getType()
+  QualType Arg2Ty = Arg2->getType();
+
+  QualType Arg1ScalarTy = Arg1Ty;
+  if (auto VTy = Arg1ScalarTy->getAs<VectorType>())
+    Arg1ScalarTy = VTy->getElementType();
+
+  QualType Arg2ScalarTy = Arg2Ty;
+  if (auto VTy = Arg2ScalarTy->getAs<VectorType>())
+    Arg2ScalarTy = VTy->getElementType();
+
+  if (!S->Context.hasSameUnqualifiedType(Arg1ScalarTy, Arg2ScalarTy))
+    S->Diag(Arg1->getBeginLoc(), diag::err_hlsl_builtin_scalar_vector_mismatch)
+        << /* second and third */ 1 << TheCall->getCallee() << Arg1Ty << Arg2Ty;
+
+  QualType Arg0Ty = TheCall->getArg(0)->getType();
+  unsigned Arg0Length = Arg0Ty->getAs<VectorType>()->getNumElements();
+  unsigned Arg1Length = Arg1Ty->isVectorType()
+                            ? Arg1Ty->getAs<VectorType>()->getNumElements()
+                            : 0;
+  unsigned Arg2Length = Arg2Ty->isVectorType()
+                            ? Arg2Ty->getAs<VectorType>()->getNumElements()
+                            : 0;
+  if (Arg1Length > 0 && Arg0Length != Arg1Length) {
+    S->Diag(TheCall->getBeginLoc(),
+            diag::err_typecheck_vector_lengths_not_equal)
+        << Arg0Ty << Arg1Ty << TheCall->getArg(0)->getSourceRange()
         << Arg1->getSourceRange();
     return true;
   }
 
-  if (!Arg2->getType()->isVectorType()) {
-    S->Diag(Arg2->getBeginLoc(), diag::err_builtin_non_vector_type)
-        << "Third" << TheCall->getDirectCallee() << Arg2->getType()
-        << Arg2->getSourceRange();
-    return true;
-  }
-
-  if (!S->Context.hasSameUnqualifiedType(Arg1->getType(), Arg2->getType())) {
-    S->Diag(TheCall->getBeginLoc(),
-            diag::err_typecheck_call_different_arg_types)
-        << Arg1->getType() << Arg2->getType() << Arg1->getSourceRange()
-        << Arg2->getSourceRange();
-    return true;
-  }
-
-  // caller has checked that Arg0 is a vector.
-  // check all three args have the same length.
-  if (TheCall->getArg(0)->getType()->getAs<VectorType>()->getNumElements() !=
-      Arg1->getType()->getAs<VectorType>()->getNumElements()) {
+  if (Arg2Length > 0 && Arg0Length != Arg2Length) {
     S->Diag(TheCall->getBeginLoc(),
             diag::err_typecheck_vector_lengths_not_equal)
-        << TheCall->getArg(0)->getType() << Arg1->getType()
-        << TheCall->getArg(0)->getSourceRange() << Arg1->getSourceRange();
+        << Arg0Ty << Arg2Ty << TheCall->getArg(0)->getSourceRange()
+        << Arg2->getSourceRange();
     return true;
   }
-  TheCall->setType(Arg1->getType());
+
+  TheCall->setType(
+      S->getASTContext().getExtVectorType(Arg1ScalarTy, Arg0Length));
   return false;
 }
 
@@ -2277,6 +2331,52 @@ static bool CheckResourceHandle(
 // returning an ExprError
 bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
   switch (BuiltinID) {
+  case Builtin::BI__builtin_hlsl_adduint64: {
+    if (SemaRef.checkArgCount(TheCall, 2))
+      return true;
+    if (CheckVectorElementCallArgs(&SemaRef, TheCall))
+      return true;
+    if (CheckUnsignedIntRepresentations(&SemaRef, TheCall))
+      return true;
+
+    // CheckVectorElementCallArgs(...) guarantees both args are the same type.
+    assert(TheCall->getArg(0)->getType() == TheCall->getArg(1)->getType() &&
+           "Both args must be of the same type");
+
+    // ensure both args are vectors
+    auto *VTy = TheCall->getArg(0)->getType()->getAs<VectorType>();
+    if (!VTy) {
+      SemaRef.Diag(TheCall->getBeginLoc(), diag::err_vec_builtin_non_vector)
+          << TheCall->getDirectCallee() << /*all*/ 1;
+      return true;
+    }
+
+    // ensure arg integers are 32-bits
+    uint64_t ElementBitCount = getASTContext()
+                                   .getTypeSizeInChars(VTy->getElementType())
+                                   .getQuantity() *
+                               8;
+    if (ElementBitCount != 32) {
+      SemaRef.Diag(TheCall->getBeginLoc(),
+                   diag::err_integer_incorrect_bit_count)
+          << 32 << ElementBitCount;
+      return true;
+    }
+
+    // ensure both args are vectors of total bit size of a multiple of 64
+    int NumElementsArg = VTy->getNumElements();
+    if (NumElementsArg != 2 && NumElementsArg != 4) {
+      SemaRef.Diag(TheCall->getBeginLoc(), diag::err_vector_incorrect_bit_count)
+          << 1 /*a multiple of*/ << 64 << NumElementsArg * ElementBitCount;
+      return true;
+    }
+
+    ExprResult A = TheCall->getArg(0);
+    QualType ArgTyA = A.get()->getType();
+    // return type is the same as the input type
+    TheCall->setType(ArgTyA);
+    break;
+  }
   case Builtin::BI__builtin_hlsl_resource_getpointer: {
     if (SemaRef.checkArgCount(TheCall, 2) ||
         CheckResourceHandle(&SemaRef, TheCall, 0) ||
@@ -2326,11 +2426,14 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
   case Builtin::BI__builtin_hlsl_elementwise_clamp: {
     if (SemaRef.checkArgCount(TheCall, 3))
       return true;
-    if (CheckVectorElementCallArgs(&SemaRef, TheCall))
+    if (CheckAnyScalarOrVector(&SemaRef, TheCall, 0) ||
+        CheckAllArgsHaveSameType(&SemaRef, TheCall))
       return true;
     if (SemaRef.BuiltinElementwiseTernaryMath(
-            TheCall, /*CheckForFloatArgs*/
-            TheCall->getArg(0)->getType()->hasFloatingRepresentation()))
+            TheCall, /*ArgTyRestr=*/
+            TheCall->getArg(0)->getType()->hasFloatingRepresentation()
+                ? Sema::EltwiseBuiltinArgTyRestriction::FloatTy
+                : Sema::EltwiseBuiltinArgTyRestriction::None))
       return true;
     break;
   }
@@ -2399,7 +2502,8 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
 
     if (!EltTy->isIntegerType()) {
       Diag(Arg->getBeginLoc(), diag::err_builtin_invalid_arg_type)
-          << 1 << /* integer ty */ 6 << ArgTy;
+          << 1 << /* scalar or vector of */ 5 << /* integer ty */ 1
+          << /* no fp */ 0 << ArgTy;
       return true;
     }
 
@@ -2463,8 +2567,10 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     if (CheckVectorElementCallArgs(&SemaRef, TheCall))
       return true;
     if (SemaRef.BuiltinElementwiseTernaryMath(
-            TheCall, /*CheckForFloatArgs*/
-            TheCall->getArg(0)->getType()->hasFloatingRepresentation()))
+            TheCall, /*ArgTyRestr=*/
+            TheCall->getArg(0)->getType()->hasFloatingRepresentation()
+                ? Sema::EltwiseBuiltinArgTyRestriction::FloatTy
+                : Sema::EltwiseBuiltinArgTyRestriction::None))
       return true;
     break;
   }
@@ -2583,6 +2689,7 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
   case Builtin::BI__builtin_elementwise_cosh:
   case Builtin::BI__builtin_elementwise_exp:
   case Builtin::BI__builtin_elementwise_exp2:
+  case Builtin::BI__builtin_elementwise_exp10:
   case Builtin::BI__builtin_elementwise_floor:
   case Builtin::BI__builtin_elementwise_fmod:
   case Builtin::BI__builtin_elementwise_log:
@@ -2642,7 +2749,7 @@ static void BuildFlattenedTypeList(QualType BaseTy,
       BuildFlattenedTypeList(AT->getElementType(), ElementFields);
       // Repeat the element's field list n times.
       for (uint64_t Ct = 0; Ct < AT->getZExtSize(); ++Ct)
-        List.insert(List.end(), ElementFields.begin(), ElementFields.end());
+        llvm::append_range(List, ElementFields);
       continue;
     }
     // Vectors can only have element types that are builtin types, so this can
@@ -2670,7 +2777,7 @@ static void BuildFlattenedTypeList(QualType BaseTy,
         FieldTypes.push_back(FD->getType());
       // Reverse the newly added sub-range.
       std::reverse(FieldTypes.begin(), FieldTypes.end());
-      WorkList.insert(WorkList.end(), FieldTypes.begin(), FieldTypes.end());
+      llvm::append_range(WorkList, FieldTypes);
 
       // If this wasn't a standard layout type we may also have some base
       // classes to deal with.
@@ -2679,7 +2786,7 @@ static void BuildFlattenedTypeList(QualType BaseTy,
         for (const auto &Base : RD->bases())
           FieldTypes.push_back(Base.getType());
         std::reverse(FieldTypes.begin(), FieldTypes.end());
-        WorkList.insert(WorkList.end(), FieldTypes.begin(), FieldTypes.end());
+        llvm::append_range(WorkList, FieldTypes);
       }
       continue;
     }
@@ -3039,6 +3146,32 @@ static bool IsDefaultBufferConstantDecl(VarDecl *VD) {
          !isInvalidConstantBufferLeafElementType(QT.getTypePtr());
 }
 
+void SemaHLSL::deduceAddressSpace(VarDecl *Decl) {
+  // The variable already has an address space (groupshared for ex).
+  if (Decl->getType().hasAddressSpace())
+    return;
+
+  if (Decl->getType()->isDependentType())
+    return;
+
+  QualType Type = Decl->getType();
+  if (Type->isSamplerT() || Type->isVoidType())
+    return;
+
+  // Resource handles.
+  if (isResourceRecordTypeOrArrayOf(Type->getUnqualifiedDesugaredType()))
+    return;
+
+  // Only static globals belong to the Private address space.
+  // Non-static globals belongs to the cbuffer.
+  if (Decl->getStorageClass() != SC_Static && !Decl->isStaticDataMember())
+    return;
+
+  LangAS ImplAS = LangAS::hlsl_private;
+  Type = SemaRef.getASTContext().getAddrSpaceQualType(Type, ImplAS);
+  Decl->setType(Type);
+}
+
 void SemaHLSL::ActOnVariableDeclarator(VarDecl *VD) {
   if (VD->hasGlobalStorage()) {
     // make sure the declaration has a complete type
@@ -3047,6 +3180,7 @@ void SemaHLSL::ActOnVariableDeclarator(VarDecl *VD) {
             SemaRef.getASTContext().getBaseElementType(VD->getType()),
             diag::err_typecheck_decl_incomplete_type)) {
       VD->setInvalidDecl();
+      deduceAddressSpace(VD);
       return;
     }
 
@@ -3065,9 +3199,21 @@ void SemaHLSL::ActOnVariableDeclarator(VarDecl *VD) {
     if (VD->getType()->isHLSLIntangibleType())
       collectResourceBindingsOnVarDecl(VD);
 
+    const Type *VarType = VD->getType().getTypePtr();
+    while (VarType->isArrayType())
+      VarType = VarType->getArrayElementTypeNoTypeQual();
+    if (VarType->isHLSLResourceRecord()) {
+      // Make the variable for resources static. The global externally visible
+      // storage is accessed through the handle, which is a member. The variable
+      // itself is not externally visible.
+      VD->setStorageClass(StorageClass::SC_Static);
+    }
+
     // process explicit bindings
     processExplicitBindingsOnDecl(VD);
   }
+
+  deduceAddressSpace(VD);
 }
 
 // Walks though the global variable declaration, collects all resource binding
@@ -3110,10 +3256,12 @@ void SemaHLSL::collectResourceBindingsOnVarDecl(VarDecl *VD) {
 void SemaHLSL::processExplicitBindingsOnDecl(VarDecl *VD) {
   assert(VD->hasGlobalStorage() && "expected global variable");
 
+  bool HasBinding = false;
   for (Attr *A : VD->attrs()) {
     HLSLResourceBindingAttr *RBA = dyn_cast<HLSLResourceBindingAttr>(A);
     if (!RBA)
       continue;
+    HasBinding = true;
 
     RegisterType RT = RBA->getRegisterType();
     assert(RT != RegisterType::I && "invalid or obsolete register type should "
@@ -3140,6 +3288,9 @@ void SemaHLSL::processExplicitBindingsOnDecl(VarDecl *VD) {
           << static_cast<int>(RT);
     }
   }
+
+  if (!HasBinding && isResourceRecordTypeOrArrayOf(VD))
+    SemaRef.Diag(VD->getLocation(), diag::warn_hlsl_implicit_binding);
 }
 
 static bool CastInitializer(Sema &S, ASTContext &Ctx, Expr *E,
@@ -3224,8 +3375,7 @@ static bool BuildInitializerList(Sema &S, ASTContext &Ctx, Expr *E,
       RecordTypes.push_back(D->bases_begin()->getType()->getAs<RecordType>());
     }
     while (!RecordTypes.empty()) {
-      const RecordType *RT = RecordTypes.back();
-      RecordTypes.pop_back();
+      const RecordType *RT = RecordTypes.pop_back_val();
       for (auto *FD : RT->getDecl()->fields()) {
         DeclAccessPair Found = DeclAccessPair::make(FD, FD->getAccess());
         DeclarationNameInfo NameInfo(FD->getDeclName(), E->getBeginLoc());
@@ -3273,8 +3423,7 @@ static Expr *GenerateInitLists(ASTContext &Ctx, QualType Ty,
       RecordTypes.push_back(D->bases_begin()->getType()->getAs<RecordType>());
     }
     while (!RecordTypes.empty()) {
-      const RecordType *RT = RecordTypes.back();
-      RecordTypes.pop_back();
+      const RecordType *RT = RecordTypes.pop_back_val();
       for (auto *FD : RT->getDecl()->fields()) {
         Inits.push_back(GenerateInitLists(Ctx, FD->getType(), It));
       }

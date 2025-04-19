@@ -679,7 +679,7 @@ private:
   /// label that was emitted and which provides correspondence to the
   /// source line list.
   void recordSourceLine(unsigned Line, unsigned Col, const MDNode *Scope,
-                        unsigned Flags);
+                        unsigned Flags, StringRef Location = {});
 
   /// Populate LexicalScope entries with variables' info.
   void collectEntityInfo(DwarfCompileUnit &TheCU, const DISubprogram *SP,

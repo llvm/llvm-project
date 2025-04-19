@@ -15,7 +15,6 @@
 #include <__cxx03/__functional/identity.h>
 #include <__cxx03/__type_traits/is_callable.h>
 #include <__cxx03/__utility/pair.h>
-#include <__cxx03/initializer_list>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

@@ -846,6 +846,11 @@ def cond_as_i32imm: SDNodeXForm<cond, [{
 }]>;
 
 // Copied from the AArch64 backend:
+def bitcast_fpimm_to_i16 : SDNodeXForm<fpimm, [{
+return CurDAG->getTargetConstant(
+  N->getValueAPF().bitcastToAPInt().getZExtValue(), SDLoc(N), MVT::i16);
+}]>;
+
 def bitcast_fpimm_to_i32 : SDNodeXForm<fpimm, [{
 return CurDAG->getTargetConstant(
   N->getValueAPF().bitcastToAPInt().getZExtValue(), SDLoc(N), MVT::i32);

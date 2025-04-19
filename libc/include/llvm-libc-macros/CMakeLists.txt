@@ -343,3 +343,10 @@ add_macro_header(
   HDR
     EFIAPI-macros.h
 )
+
+add_macro_header(
+  sysexits_macros
+  HDR
+    sysexits-macros.h
+)
+

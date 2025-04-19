@@ -100,6 +100,15 @@ function (gen_rst_file_from_td output_file td_option source docs_target)
   list(APPEND LLVM_TABLEGEN_FLAGS "-I${CMAKE_CURRENT_SOURCE_DIR}/../../clang/include/clang/Driver/")
   clang_tablegen(Source/${output_file} ${td_option} SOURCE ${source} TARGET "gen-${output_file}")
   add_dependencies(${docs_target} "gen-${output_file}")
+
+  # clang_tablegen() does not create the output directory automatically,
+  # so we have to create it explicitly. Note that copy-flang-src-docs below
+  # does create the output directory, but it is not necessarily run
+  # before RST generation.
+  add_custom_target(create-flang-rst-output-dir
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/Source
+  )
+  add_dependencies("gen-${output_file}" create-flang-rst-output-dir)
 endfunction()
 
 if (LLVM_ENABLE_SPHINX)

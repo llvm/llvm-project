@@ -73,6 +73,8 @@ public:
 
   void Enter(const parser::OpenMPConstruct &);
   void Leave(const parser::OpenMPConstruct &);
+  void Enter(const parser::OpenMPInteropConstruct &);
+  void Leave(const parser::OpenMPInteropConstruct &);
   void Enter(const parser::OpenMPDeclarativeConstruct &);
   void Leave(const parser::OpenMPDeclarativeConstruct &);
 
@@ -102,6 +104,8 @@ public:
   void Leave(const parser::OpenMPDeclarativeAllocate &);
   void Enter(const parser::OpenMPDeclareMapperConstruct &);
   void Leave(const parser::OpenMPDeclareMapperConstruct &);
+  void Enter(const parser::OpenMPDeclareReductionConstruct &);
+  void Leave(const parser::OpenMPDeclareReductionConstruct &);
   void Enter(const parser::OpenMPDeclareTargetConstruct &);
   void Leave(const parser::OpenMPDeclareTargetConstruct &);
   void Enter(const parser::OpenMPDepobjConstruct &);
@@ -223,6 +227,7 @@ private:
   std::optional<IterTy> FindDuplicate(RangeTy &&);
 
   const Symbol *GetObjectSymbol(const parser::OmpObject &object);
+  const Symbol *GetArgumentSymbol(const parser::OmpArgument &argument);
   std::optional<parser::CharBlock> GetObjectSource(
       const parser::OmpObject &object);
   void CheckDependList(const parser::DataRef &);
@@ -273,8 +278,11 @@ private:
   void CheckTargetUpdate();
   void CheckDependenceType(const parser::OmpDependenceType::Value &x);
   void CheckTaskDependenceType(const parser::OmpTaskDependenceType::Value &x);
+  std::optional<llvm::omp::Directive> GetCancelType(
+      llvm::omp::Directive cancelDir, const parser::CharBlock &cancelSource,
+      const std::optional<parser::OmpClauseList> &maybeClauses);
   void CheckCancellationNest(
-      const parser::CharBlock &source, const parser::OmpCancelType::Type &type);
+      const parser::CharBlock &source, llvm::omp::Directive type);
   std::int64_t GetOrdCollapseLevel(const parser::OpenMPLoopConstruct &x);
   void CheckReductionObjects(
       const parser::OmpObjectList &objects, llvm::omp::Clause clauseId);
@@ -283,6 +291,7 @@ private:
   void CheckReductionObjectTypes(const parser::OmpObjectList &objects,
       const parser::OmpReductionIdentifier &ident);
   void CheckReductionModifier(const parser::OmpReductionModifier &);
+  void CheckLastprivateModifier(const parser::OmpLastprivateModifier &);
   void CheckMasterNesting(const parser::OpenMPBlockConstruct &x);
   void ChecksOnOrderedAsBlock();
   void CheckBarrierNesting(const parser::OpenMPSimpleStandaloneConstruct &x);
@@ -309,6 +318,8 @@ private:
 
   void CheckAlignValue(const parser::OmpClause &);
 
+  void AddEndDirectiveClauses(const parser::OmpClauseList &clauses);
+
   void EnterDirectiveNest(const int index) { directiveNest_[index]++; }
   void ExitDirectiveNest(const int index) { directiveNest_[index]--; }
   int GetDirectiveNest(const int index) { return directiveNest_[index]; }
@@ -324,7 +335,8 @@ private:
     TargetNest,
     DeclarativeNest,
     ContextSelectorNest,
-    LastType = ContextSelectorNest,
+    MetadirectiveNest,
+    LastType = MetadirectiveNest,
   };
   int directiveNest_[LastType + 1] = {0};
 

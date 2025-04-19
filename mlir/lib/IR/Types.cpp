@@ -42,6 +42,15 @@ bool Type::isF64() const { return llvm::isa<Float64Type>(*this); }
 bool Type::isF80() const { return llvm::isa<Float80Type>(*this); }
 bool Type::isF128() const { return llvm::isa<Float128Type>(*this); }
 
+bool Type::isFloat() const { return llvm::isa<FloatType>(*this); }
+
+/// Return true if this is a float type with the specified width.
+bool Type::isFloat(unsigned width) const {
+  if (auto fltTy = llvm::dyn_cast<FloatType>(*this))
+    return fltTy.getWidth() == width;
+  return false;
+}
+
 bool Type::isIndex() const { return llvm::isa<IndexType>(*this); }
 
 bool Type::isInteger() const { return llvm::isa<IntegerType>(*this); }
