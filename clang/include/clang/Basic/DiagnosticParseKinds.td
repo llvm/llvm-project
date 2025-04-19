@@ -1721,6 +1721,9 @@ def warn_pragma_unroll_cuda_value_in_parens : Warning<
   "argument to '#pragma unroll' should not be in parentheses in CUDA C/C++">,
   InGroup<CudaCompat>;
 
+def err_ptrauth_qualifier_bad_arg_count : Error<
+  "'__ptrauth' qualifier must take between 1 and 3 arguments">;
+
 def warn_cuda_attr_lambda_position : Warning<
   "nvcc does not allow '__%0__' to appear after the parameter list in lambdas">,
   InGroup<CudaCompat>;

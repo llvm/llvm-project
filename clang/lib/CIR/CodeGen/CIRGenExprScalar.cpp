@@ -116,6 +116,8 @@ public:
     return {};
   }
 
+  mlir::Value VisitParenExpr(ParenExpr *pe) { return Visit(pe->getSubExpr()); }
+
   /// Emits the address of the l-value, then loads and returns the result.
   mlir::Value emitLoadOfLValue(const Expr *e) {
     LValue lv = cgf.emitLValue(e);
@@ -1519,11 +1521,8 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *ce) {
 }
 
 mlir::Value ScalarExprEmitter::VisitCallExpr(const CallExpr *e) {
-  if (e->getCallReturnType(cgf.getContext())->isReferenceType()) {
-    cgf.getCIRGenModule().errorNYI(
-        e->getSourceRange(), "call to function with non-void return type");
-    return {};
-  }
+  if (e->getCallReturnType(cgf.getContext())->isReferenceType())
+    return emitLoadOfLValue(e);
 
   auto v = cgf.emitCallExpr(e).getScalarVal();
   assert(!cir::MissingFeatures::emitLValueAlignmentAssumption());
