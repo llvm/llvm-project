@@ -2387,28 +2387,28 @@ def INT_PTX_LDG_G_v4i32_ELE : VLDG_G_ELE_V4<"u32", Int32Regs>;
 def INT_PTX_LDG_G_v4f32_ELE : VLDG_G_ELE_V4<"f32", Float32Regs>;
 
 
-multiclass NG_TO_G<string Str, list<Predicate> Preds = []> {
-   def "" : NVPTXInst<(outs Int32Regs:$result), (ins Int32Regs:$src),
-          "cvta." # Str # ".u32 \t$result, $src;", []>, Requires<Preds>;
-   def _64 : NVPTXInst<(outs Int64Regs:$result), (ins Int64Regs:$src),
-          "cvta." # Str # ".u64 \t$result, $src;", []>, Requires<Preds>;
+multiclass NG_TO_G<string Str, bit Supports32 = 1, list<Predicate> Preds = []> {
+  foreach bitwidth = !if(Supports32, ["32", "64"], ["64"]) in {
+    if !eq(bitwidth, "32") then {
+      def "" : NVPTXInst<(outs Int32Regs:$result), (ins Int32Regs:$src),
+               "cvta." # Str # ".u32 \t$result, $src;", []>, Requires<Preds>;
+    } else if !eq(bitwidth, "64") then {
+      def _64 : NVPTXInst<(outs Int64Regs:$result), (ins Int64Regs:$src),
+                "cvta." # Str # ".u64 \t$result, $src;", []>, Requires<Preds>;
+    }
+  }
 }
 
-multiclass NG_TO_G_64<string Str, list<Predicate> Preds = []> {
-   def _64 : NVPTXInst<(outs Int64Regs:$result), (ins Int64Regs:$src),
-          "cvta." # Str # ".u64 \t$result, $src;", []>, Requires<Preds>;
-}
-
-multiclass G_TO_NG<string Str, list<Predicate> Preds = []> {
-   def "" : NVPTXInst<(outs Int32Regs:$result), (ins Int32Regs:$src),
-          "cvta.to." # Str # ".u32 \t$result, $src;", []>, Requires<Preds>;
-   def _64 : NVPTXInst<(outs Int64Regs:$result), (ins Int64Regs:$src),
-          "cvta.to." # Str # ".u64 \t$result, $src;", []>, Requires<Preds>;
-}
-
-multiclass G_TO_NG_64<string Str, list<Predicate> Preds = []> {
-   def _64 : NVPTXInst<(outs Int64Regs:$result), (ins Int64Regs:$src),
-          "cvta.to." # Str # ".u64 \t$result, $src;", []>, Requires<Preds>;
+multiclass G_TO_NG<string Str, bit Supports32 = 1, list<Predicate> Preds = []> {
+  foreach bitwidth = !if(Supports32, ["32", "64"], ["64"]) in {
+    if !eq(bitwidth, "32") then {
+      def "" : NVPTXInst<(outs Int32Regs:$result), (ins Int32Regs:$src),
+              "cvta.to." # Str # ".u32 \t$result, $src;", []>, Requires<Preds>;
+    } else if !eq(bitwidth, "64") then {
+      def _64 : NVPTXInst<(outs Int64Regs:$result), (ins Int64Regs:$src),
+                "cvta.to." # Str # ".u64 \t$result, $src;", []>, Requires<Preds>;
+    }
+  }
 }
 
 foreach space = ["local", "shared", "global", "const", "param"] in {
@@ -2417,8 +2417,8 @@ foreach space = ["local", "shared", "global", "const", "param"] in {
 }
 
 foreach space = ["shared::cluster"] in {
-  defm cvta_#space : NG_TO_G<space>;
-  defm cvta_to_#space : G_TO_NG<space>;
+  defm cvta_#space : NG_TO_G<space, false, [hasclusters]>;
+  defm cvta_to_#space : G_TO_NG<space, false, [hasclusters]>;
 }
 
 def : Pat<(int_nvvm_ptr_param_to_gen i32:$src),

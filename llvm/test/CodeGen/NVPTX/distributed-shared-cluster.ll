@@ -4,14 +4,6 @@
 
 target triple = "nvptx64-nvidia-cuda"
 
-@llvm.used = appending global [5 x ptr] [
-  ptr @test_distributed_shared_cluster_common,
-  ptr @test_distributed_shared_cluster_float_atomic,
-  ptr @test_distributed_shared_cluster_int_atomic,
-  ptr @test_distributed_shared_cluster_bitwise_atomic,
-  ptr @test_distributed_shared_cluster_cmpxchg
-], section "llvm.metadata"
-
 declare ptr addrspace(7) @llvm.nvvm.mapa.shared.cluster(ptr addrspace(3), i32)
 declare i1 @llvm.nvvm.isspacep.shared.cluster(ptr)
 declare i32 @llvm.nvvm.read.ptx.sreg.ctaid.x()

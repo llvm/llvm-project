@@ -108,6 +108,7 @@ The NVPTX back-end uses the following address space mapping:
    3             Shared
    4             Constant
    5             Local
+   7             Shared Cluster
    ============= ======================
 
 Every global variable and pointer type is assigned to one of these address
@@ -298,6 +299,32 @@ Overview:
 
 The '``llvm.nvvm.isspacep.*``' intrinsics determine whether the provided generic
 pointer references memory which falls within a particular address space.
+
+Semantics:
+""""""""""
+
+If the given pointer in the generic address space refers to memory which falls
+within the state space of the intrinsic (and therefore could be safely address
+space casted to this space), 1 is returned, otherwise 0 is returned.
+
+'``llvm.nvvm.mapa.*``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+    declare ptr @llvm.nvvm.mapa(ptr %p, i32 %rank)
+    declare ptr addrspace(7) @llvm.nvvm.mapa.shared.cluster(ptr addrspace(3) %p, i32 %rank)
+
+Overview:
+"""""""""
+
+The '``llvm.nvvm.mapa.*``' intrinsics map a shared memory pointer ``p`` of another CTA with ``%rank`` to the current CTA.
+The ``llvm.nvvm.mapa`` form expects a generic pointer to shared memory and returns a generic pointer to shared cluster memory.
+The ``llvm.nvvm.mapa.shared.cluster`` form expects a pointer to shared memory and returns a pointer to shared cluster memory.
+They corresponds directly to the ``mapa`` and ``mapa.shared.cluster`` PTX instructions.
 
 Semantics:
 """"""""""
