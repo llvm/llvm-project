@@ -237,12 +237,11 @@ UseGnuStack("use-gnu-stack",
   cl::ZeroOrMore,
   cl::cat(BoltCategory));
 
-static cl::opt<uint64_t>
-CustomAllocationVMA("custom-allocation-vma",
-           cl::desc("use a custom address at which new code will be put, "
-                    "bypassing BOLT's logic to detect where to put code"),
-  cl::ZeroOrMore,
-  cl::cat(BoltCategory));
+static cl::opt<uint64_t> CustomAllocationVMA(
+    "custom-allocation-vma",
+    cl::desc("use a custom address at which new code will be put, "
+             "bypassing BOLT's logic to detect where to put code"),
+    cl::ZeroOrMore, cl::cat(BoltCategory));
 
 static cl::opt<bool>
 SequentialDisassembly("sequential-disassembly",
@@ -607,14 +606,14 @@ Error RewriteInstance::discoverStorage() {
     // seems off.
     for (const ELF64LE::Phdr &Phdr : PHs) {
       switch (Phdr.p_type) {
-        case ELF::PT_LOAD:
-          if (NextAvailableAddress >= Phdr.p_vaddr &&
-              NextAvailableAddress < Phdr.p_vaddr + Phdr.p_memsz) {
-            BC->errs() << "BOLT-WARNING: user-supplied allocation vma 0x"
-                       << Twine::utohexstr(NextAvailableAddress)
-                       << " conflicts with ELF segment at 0x"
-                       << Twine::utohexstr(Phdr.p_vaddr) << "\n";
-          }
+      case ELF::PT_LOAD:
+        if (NextAvailableAddress >= Phdr.p_vaddr &&
+            NextAvailableAddress < Phdr.p_vaddr + Phdr.p_memsz) {
+          BC->errs() << "BOLT-WARNING: user-supplied allocation vma 0x"
+                     << Twine::utohexstr(NextAvailableAddress)
+                     << " conflicts with ELF segment at 0x"
+                     << Twine::utohexstr(Phdr.p_vaddr) << "\n";
+        }
       }
     }
   }
