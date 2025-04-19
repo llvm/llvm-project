@@ -854,8 +854,7 @@ void TwoAddressInstructionImpl::scanUses(Register DstReg) {
   }
 
   if (!VirtRegPairs.empty()) {
-    Register ToReg = VirtRegPairs.back();
-    VirtRegPairs.pop_back();
+    Register ToReg = VirtRegPairs.pop_back_val();
     while (!VirtRegPairs.empty()) {
       Register FromReg = VirtRegPairs.pop_back_val();
       bool isNew = DstRegMap.insert(std::make_pair(FromReg, ToReg)).second;
