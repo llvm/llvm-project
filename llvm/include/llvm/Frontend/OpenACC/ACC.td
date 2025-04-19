@@ -68,12 +68,14 @@ def ACCC_Copy : Clause<"copy"> {
 // 2.7.7
 def ACCC_Copyin : Clause<"copyin"> {
   let flangClass = "AccObjectListWithModifier";
+  let clangAccSpelling = "CopyIn";
   let aliases = ["present_or_copyin", "pcopyin"];
 }
 
 // 2.7.8
 def ACCC_Copyout : Clause<"copyout"> {
   let flangClass = "AccObjectListWithModifier";
+  let clangAccSpelling = "CopyOut";
   let aliases = ["present_or_copyout", "pcopyout"];
 }
 
@@ -124,6 +126,7 @@ def ACCC_DeviceNum : Clause<"device_num">  {
 // 2.7.4
 def ACCC_DevicePtr : Clause<"deviceptr"> {
   let flangClass = "AccObjectList";
+  let clangAccSpelling = "DevicePtr";
 }
 
 // 2.13.1
@@ -144,6 +147,7 @@ def ACCC_Finalize : Clause<"finalize"> {}
 // 2.5.14
 def ACCC_FirstPrivate : Clause<"firstprivate"> {
   let flangClass = "AccObjectList";
+  let clangAccSpelling = "FirstPrivate";
 }
 
 // 2.9.2
@@ -179,7 +183,9 @@ def ACCC_NoCreate : Clause<"no_create"> {
 }
 
 // 2.15.1
-def ACCC_NoHost : Clause<"nohost"> {}
+def ACCC_NoHost : Clause<"nohost"> { 
+  let clangAccSpelling = "NoHost"; 
+}
 
 // 2.5.10
 def ACCC_NumGangs : Clause<"num_gangs"> {

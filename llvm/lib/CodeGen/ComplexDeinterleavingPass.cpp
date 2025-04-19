@@ -1168,7 +1168,7 @@ ComplexDeinterleavingGraph::identifyReassocNodes(Instruction *Real,
       // the latter case, we will attempt to separately identify the complex
       // operation from here in order to create a shared
       // ComplexDeinterleavingCompositeNode.
-      if (I != Insn && I->getNumUses() > 1) {
+      if (I != Insn && I->hasNUsesOrMore(2)) {
         LLVM_DEBUG(dbgs() << "Found potential sub-expression: " << *I << "\n");
         Addends.emplace_back(I, IsPositive);
         continue;
