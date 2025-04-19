@@ -1302,7 +1302,7 @@ std::optional<HoverInfo> getHover(ParsedAST &AST, Position Pos,
       continue;
     HoverCountMetric.record(1, "include");
     HoverInfo HI;
-    HI.Name = std::string(llvm::sys::path::filename(Inc.Resolved));
+    HI.Name = Inc.Resolved.ref().filename().str();
     // FIXME: We don't have a fitting value for Kind.
     HI.Definition =
         URIForFile::canonicalize(Inc.Resolved, AST.tuPath()).file().str();

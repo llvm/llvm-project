@@ -36,10 +36,10 @@ namespace {
 // TODO: Move these module fils out of the temporary directory if the module
 // files are persistent.
 llvm::SmallString<256> getUniqueModuleFilesPath(PathRef MainFile) {
-  llvm::SmallString<128> HashedPrefix = llvm::sys::path::filename(MainFile);
+  llvm::SmallString<128> HashedPrefix = MainFile.filename();
   // There might be multiple files with the same name in a project. So appending
   // the hash value of the full path to make sure they won't conflict.
-  HashedPrefix += std::to_string(llvm::hash_value(MainFile));
+  HashedPrefix += std::to_string(hash_value(MainFile));
 
   llvm::SmallString<256> ResultPattern;
 
@@ -64,7 +64,7 @@ llvm::SmallString<256> getUniqueModuleFilesPath(PathRef MainFile) {
 // Get a unique module file path under \param ModuleFilesPrefix.
 std::string getModuleFilePath(llvm::StringRef ModuleName,
                               PathRef ModuleFilesPrefix) {
-  llvm::SmallString<256> ModuleFilePath(ModuleFilesPrefix);
+  llvm::SmallString<256> ModuleFilePath(ModuleFilesPrefix.raw());
   auto [PrimaryModuleName, PartitionName] = ModuleName.split(':');
   llvm::sys::path::append(ModuleFilePath, PrimaryModuleName);
   if (!PartitionName.empty()) {
@@ -97,7 +97,7 @@ public:
 
 struct ModuleFile {
   ModuleFile(StringRef ModuleName, PathRef ModuleFilePath)
-      : ModuleName(ModuleName.str()), ModuleFilePath(ModuleFilePath.str()) {}
+      : ModuleName(ModuleName.str()), ModuleFilePath(ModuleFilePath.raw()) {}
 
   ModuleFile() = delete;
 
@@ -216,7 +216,7 @@ bool IsModuleFileUpToDate(PathRef ModuleFilePath,
   // listener.
   Reader.setListener(nullptr);
 
-  if (Reader.ReadAST(ModuleFilePath, serialization::MK_MainFile,
+  if (Reader.ReadAST(ModuleFilePath.raw(), serialization::MK_MainFile,
                      SourceLocation(),
                      ASTReader::ARR_None) != ASTReader::Success)
     return false;
@@ -308,7 +308,7 @@ bool ReusablePrerequisiteModules::canReuse(
   if (RequiredModules.empty())
     return true;
 
-  llvm::SmallVector<llvm::StringRef> BMIPaths;
+  llvm::SmallVector<PathRef> BMIPaths;
   for (auto &MF : RequiredModules)
     BMIPaths.push_back(MF->getModuleFilePath());
   return IsModuleFilesUpToDate(BMIPaths, *this, VFS);
@@ -370,7 +370,7 @@ public:
 
   void addEntry(llvm::StringRef ModuleName, PathRef Source) {
     std::lock_guard<std::mutex> Lock(CacheMutex);
-    ModuleNameToSourceCache[ModuleName] = Source.str();
+    ModuleNameToSourceCache[ModuleName] = Source.raw();
   }
 
   void eraseEntry(llvm::StringRef ModuleName) {
