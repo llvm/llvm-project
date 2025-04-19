@@ -54,8 +54,7 @@ void *AttributeFactory::allocate(size_t size) {
   // Check for a previously reclaimed attribute.
   size_t index = getFreeListIndexForSize(size);
   if (index < FreeLists.size() && !FreeLists[index].empty()) {
-    ParsedAttr *attr = FreeLists[index].back();
-    FreeLists[index].pop_back();
+    ParsedAttr *attr = FreeLists[index].pop_back_val();
     return attr;
   }
 

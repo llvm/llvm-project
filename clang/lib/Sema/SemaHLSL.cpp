@@ -3375,8 +3375,7 @@ static bool BuildInitializerList(Sema &S, ASTContext &Ctx, Expr *E,
       RecordTypes.push_back(D->bases_begin()->getType()->getAs<RecordType>());
     }
     while (!RecordTypes.empty()) {
-      const RecordType *RT = RecordTypes.back();
-      RecordTypes.pop_back();
+      const RecordType *RT = RecordTypes.pop_back_val();
       for (auto *FD : RT->getDecl()->fields()) {
         DeclAccessPair Found = DeclAccessPair::make(FD, FD->getAccess());
         DeclarationNameInfo NameInfo(FD->getDeclName(), E->getBeginLoc());
@@ -3424,8 +3423,7 @@ static Expr *GenerateInitLists(ASTContext &Ctx, QualType Ty,
       RecordTypes.push_back(D->bases_begin()->getType()->getAs<RecordType>());
     }
     while (!RecordTypes.empty()) {
-      const RecordType *RT = RecordTypes.back();
-      RecordTypes.pop_back();
+      const RecordType *RT = RecordTypes.pop_back_val();
       for (auto *FD : RT->getDecl()->fields()) {
         Inits.push_back(GenerateInitLists(Ctx, FD->getType(), It));
       }
