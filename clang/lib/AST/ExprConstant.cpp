@@ -67,8 +67,6 @@
 #include <functional>
 #include <optional>
 
-#define DEBUG_TYPE "exprconstant"
-
 using namespace clang;
 using llvm::APFixedPoint;
 using llvm::APInt;
