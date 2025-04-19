@@ -164,9 +164,11 @@ int main(int argc, char **argv) {
   MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
 
   auto PA = MPM.run(*M, MAM);
-  auto PAC = PA.getChecker<VerifierAnalysis>();
-  if (!PAC.preserved())
-    return 1;
+  {
+    auto PAC = PA.getChecker<VerifierAnalysis>();
+    if (!PAC.preserved())
+      return 1;
+  }
 
   return 0;
 }
