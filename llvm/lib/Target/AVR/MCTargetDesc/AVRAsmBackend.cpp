@@ -373,7 +373,7 @@ void AVRAsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                                MutableArrayRef<char> Data, uint64_t Value,
                                bool IsResolved,
                                const MCSubtargetInfo *STI) const {
-  if (Fixup.getKind() >= FirstLiteralRelocationKind)
+  if (mc::isRelocation(Fixup.getKind()))
     return;
   adjustFixupValue(Fixup, Target, Value, &Asm.getContext());
   if (Value == 0)
@@ -475,7 +475,7 @@ MCFixupKindInfo const &AVRAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
 
   // Fixup kinds from .reloc directive are like R_AVR_NONE. They do not require
   // any extra processing.
-  if (Kind >= FirstLiteralRelocationKind)
+  if (mc::isRelocation(Kind))
     return MCAsmBackend::getFixupKindInfo(FK_NONE);
 
   if (Kind < FirstTargetFixupKind)
