@@ -903,8 +903,7 @@ bool Prescanner::HandleExponent(TokenSequence &tokens) {
         EmitCharAndAdvance(possible, *at_);
       }
       possible.CloseToken();
-      tokens.CloseToken();
-      tokens.Put(possible);
+      tokens.AppendRange(possible, 0); // appends to current token
       return true;
     }
     // Not an exponent; backtrack
@@ -937,9 +936,9 @@ bool Prescanner::HandleKindSuffix(TokenSequence &tokens) {
       preprocessor_.IsNameDefined(separate.TokenAt(1)) &&
       !preprocessor_.IsNameDefined(withUnderscore.ToCharBlock())) {
     // "_foo" is not defined, but "foo" is
-    tokens.Put(separate); // '_' "foo"
+    tokens.CopyAll(separate); // '_' "foo"
   } else {
-    tokens.Put(withUnderscore); // "_foo"
+    tokens.CopyAll(withUnderscore); // "_foo"
   }
   return true;
 }
@@ -1016,7 +1015,7 @@ void Prescanner::QuotedCharacterLiteral(
             ppTokens.Put(id, GetProvenance(idStart));
             if (auto replaced{
                     preprocessor_.MacroReplacement(ppTokens, *this)}) {
-              tokens.Put(*replaced);
+              tokens.CopyAll(*replaced);
               at_ = &idStart[idLen - 1];
               NextLine();
               continue; // try again on the next line
@@ -1836,7 +1835,7 @@ bool Prescanner::CompilerDirectiveContinuation(
   }
   if (ok) {
     tokens.pop_back(); // delete original '&'
-    tokens.Put(followingTokens, startAt, following - startAt);
+    tokens.AppendRange(followingTokens, startAt, following - startAt);
     tokens.RemoveRedundantBlanks();
   } else {
     nextLine_ = origNextLine;
@@ -1866,7 +1865,7 @@ bool Prescanner::SourceLineContinuation(TokenSequence &tokens) {
       }
       followingTokens.RemoveRedundantBlanks();
       tokens.pop_back(); // delete original '&'
-      tokens.Put(followingTokens);
+      tokens.CopyAll(followingTokens);
       return true;
     }
   }
