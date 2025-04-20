@@ -1767,28 +1767,49 @@ bool CodeGenPrepare::combineToUSubWithOverflow(CmpInst *Cmp,
 bool CodeGenPrepare::unfoldPow2Test(CmpInst *Cmp) {
   CmpPredicate Pred;
   Value *X;
-  uint64_t C;
+  const APInt *C;
 
+  // (icmp (ctpop x), c)
   if (!match(Cmp, m_ICmp(Pred, m_Intrinsic<Intrinsic::ctpop>(m_Value(X)),
-                         m_ConstantInt(C))))
+                         m_APIntAllowPoison(C))))
     return false;
 
-  Type *Ty = X->getType();
-  if (Ty->isVectorTy() || TTI->getPopcntSupport(Ty->getIntegerBitWidth()) ==
-                              TargetTransformInfo::PSK_FastHardware)
+  // This transformation increases the number of instructions, don't do it if
+  // ctpop is fast.
+  Type *OpTy = X->getType();
+  if (TLI->isCtpopFast(TLI->getValueType(*DL, OpTy)))
     return false;
 
-  // (ctpop x) u< 2 -> (x & (x - 1)) == 0
-  // (ctpop x) u> 1 -> (x & (x - 1)) != 0
-  if ((Pred == CmpInst::ICMP_ULT && C == 2) ||
-      (Pred == CmpInst::ICMP_UGT && C == 1)) {
+  // ctpop(x) u< 2 -> (x & (x - 1)) == 0
+  // ctpop(x) u> 1 -> (x & (x - 1)) != 0
+  // Also handles ctpop(x) == 1 and ctpop(x) != 1 if ctpop(x) is known non-zero.
+  if ((Pred == CmpInst::ICMP_ULT && *C == 2) ||
+      (Pred == CmpInst::ICMP_UGT && *C == 1) ||
+      (ICmpInst::isEquality(Pred) && *C == 1 &&
+       isKnownNonZero(Cmp->getOperand(0), *DL))) {
     IRBuilder<> Builder(Cmp);
-    Value *Sub = Builder.CreateAdd(X, Constant::getAllOnesValue(Ty));
+    Value *Sub = Builder.CreateAdd(X, Constant::getAllOnesValue(OpTy));
     Value *And = Builder.CreateAnd(X, Sub);
     CmpInst::Predicate NewPred =
-        Pred == CmpInst::ICMP_ULT ? CmpInst::ICMP_EQ : CmpInst::ICMP_NE;
+        (Pred == CmpInst::ICMP_ULT || Pred == CmpInst::ICMP_EQ)
+            ? CmpInst::ICMP_EQ
+            : CmpInst::ICMP_NE;
     Value *NewCmp =
-        Builder.CreateICmp(NewPred, And, ConstantInt::getNullValue(Ty));
+        Builder.CreateICmp(NewPred, And, ConstantInt::getNullValue(OpTy));
+    Cmp->replaceAllUsesWith(NewCmp);
+    RecursivelyDeleteTriviallyDeadInstructions(Cmp);
+    return true;
+  }
+
+  // ctpop(x) == 1 -> (x ^ (x - 1)) u> (x - 1)
+  // ctpop(x) != 1 -> (x ^ (x - 1)) u<= (x - 1)
+  if (ICmpInst::isEquality(Pred) && *C == 1) {
+    IRBuilder<> Builder(Cmp);
+    Value *Sub = Builder.CreateAdd(X, Constant::getAllOnesValue(OpTy));
+    Value *Xor = Builder.CreateXor(X, Sub);
+    CmpInst::Predicate NewPred =
+        Pred == CmpInst::ICMP_EQ ? CmpInst::ICMP_UGT : CmpInst::ICMP_ULE;
+    Value *NewCmp = Builder.CreateICmp(NewPred, Xor, Sub);
     Cmp->replaceAllUsesWith(NewCmp);
     RecursivelyDeleteTriviallyDeadInstructions(Cmp);
     return true;
