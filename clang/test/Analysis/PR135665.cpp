@@ -13,7 +13,7 @@ overload(F&&...) -> overload<F...>;
 
 int main()
 {
-  const auto l = overload([](const int* i) {});
+  const auto l = overload([](const int* i) {}); // no-crash
 
   return 0;
 }
