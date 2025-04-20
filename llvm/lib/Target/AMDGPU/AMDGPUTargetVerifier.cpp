@@ -14,9 +14,6 @@
 
 using namespace llvm;
 
-//static cl::opt<bool>
-//MarkUniform("mark-uniform", cl::desc("Mark instructions as uniform"), cl::init(false));
-
 // Check - We know that cond should be true, if not print an error message.
 #define Check(C, ...)                                                          \
   do {                                                                         \
@@ -25,60 +22,6 @@ using namespace llvm;
       return;                                                                  \
     }                                                                          \
   } while (false)
-
-static bool isMFMA(unsigned IID) {
-  switch (IID) {
-    case Intrinsic::amdgcn_mfma_f32_4x4x1f32:
-    case Intrinsic::amdgcn_mfma_f32_4x4x4f16:
-    case Intrinsic::amdgcn_mfma_i32_4x4x4i8:
-    case Intrinsic::amdgcn_mfma_f32_4x4x2bf16:
-
-    case Intrinsic::amdgcn_mfma_f32_16x16x1f32:
-    case Intrinsic::amdgcn_mfma_f32_16x16x4f32:
-    case Intrinsic::amdgcn_mfma_f32_16x16x4f16:
-    case Intrinsic::amdgcn_mfma_f32_16x16x16f16:
-    case Intrinsic::amdgcn_mfma_i32_16x16x4i8:
-    case Intrinsic::amdgcn_mfma_i32_16x16x16i8:
-    case Intrinsic::amdgcn_mfma_f32_16x16x2bf16:
-    case Intrinsic::amdgcn_mfma_f32_16x16x8bf16:
-
-    case Intrinsic::amdgcn_mfma_f32_32x32x1f32:
-    case Intrinsic::amdgcn_mfma_f32_32x32x2f32:
-    case Intrinsic::amdgcn_mfma_f32_32x32x4f16:
-    case Intrinsic::amdgcn_mfma_f32_32x32x8f16:
-    case Intrinsic::amdgcn_mfma_i32_32x32x4i8:
-    case Intrinsic::amdgcn_mfma_i32_32x32x8i8:
-    case Intrinsic::amdgcn_mfma_f32_32x32x2bf16:
-    case Intrinsic::amdgcn_mfma_f32_32x32x4bf16:
-
-    case Intrinsic::amdgcn_mfma_f32_4x4x4bf16_1k:
-    case Intrinsic::amdgcn_mfma_f32_16x16x4bf16_1k:
-    case Intrinsic::amdgcn_mfma_f32_16x16x16bf16_1k:
-    case Intrinsic::amdgcn_mfma_f32_32x32x4bf16_1k:
-    case Intrinsic::amdgcn_mfma_f32_32x32x8bf16_1k:
-
-    case Intrinsic::amdgcn_mfma_f64_16x16x4f64:
-    case Intrinsic::amdgcn_mfma_f64_4x4x4f64:
-
-    case Intrinsic::amdgcn_mfma_i32_16x16x32_i8:
-    case Intrinsic::amdgcn_mfma_i32_32x32x16_i8:
-    case Intrinsic::amdgcn_mfma_f32_16x16x8_xf32:
-    case Intrinsic::amdgcn_mfma_f32_32x32x4_xf32:
-
-    case Intrinsic::amdgcn_mfma_f32_16x16x32_bf8_bf8:
-    case Intrinsic::amdgcn_mfma_f32_16x16x32_bf8_fp8:
-    case Intrinsic::amdgcn_mfma_f32_16x16x32_fp8_bf8:
-    case Intrinsic::amdgcn_mfma_f32_16x16x32_fp8_fp8:
-
-    case Intrinsic::amdgcn_mfma_f32_32x32x16_bf8_bf8:
-    case Intrinsic::amdgcn_mfma_f32_32x32x16_bf8_fp8:
-    case Intrinsic::amdgcn_mfma_f32_32x32x16_fp8_bf8:
-    case Intrinsic::amdgcn_mfma_f32_32x32x16_fp8_fp8:
-      return true;
-    default:
-      return false;
-  }
-}
 
 namespace llvm {
 /*class AMDGPUTargetVerify : public TargetVerify {
@@ -129,8 +72,6 @@ void AMDGPUTargetVerify::run(Function &F) {
   for (auto &BB : F) {
 
     for (auto &I : BB) {
-      //if (MarkUniform)
-        //outs() << UA->isUniform(&I) << ' ' << I << '\n';
 
       // Ensure integral types are valid: i8, i16, i32, i64, i128
       if (I.getType()->isIntegerTy())
@@ -155,36 +96,6 @@ void AMDGPUTargetVerify::run(Function &F) {
         if (CI->getIntrinsicID() == Intrinsic::amdgcn_cs_chain)
           Check(isa_and_present<UnreachableInst>(CI->getNextNode()),
             "llvm.amdgcn.cs.chain must be followed by unreachable", CI);
-      }
-
-      // Ensure MFMA is not in control flow with diverging operands
-      if (auto *II = dyn_cast<IntrinsicInst>(&I)) {
-        if (isMFMA(II->getIntrinsicID())) {
-          bool InControlFlow = false;
-          for (const auto &P : predecessors(&BB))
-            if (!PDT->dominates(&BB, P)) {
-              InControlFlow = true;
-              break;
-            }
-          for (const auto &S : successors(&BB))
-            if (!DT->dominates(&BB, S)) {
-              InControlFlow = true;
-              break;
-            }
-          if (InControlFlow) {
-            // If operands to MFMA are not uniform, MFMA cannot be in control flow
-            bool hasUniformOperands = true;
-            for (unsigned i = 0; i < II->getNumOperands(); i++) {
-              if (!UA->isUniform(II->getOperand(i))) {
-                dbgs() << "Not uniform: " << *II->getOperand(i) << '\n';
-                hasUniformOperands = false;
-              }
-            }
-            if (!hasUniformOperands) Check(false, "MFMA in control flow", II);
-            //else Check(false, "MFMA in control flow (uniform operands)", II);
-          }
-          //else Check(false, "MFMA not in control flow", II);
-        }
       }
     }
   }
