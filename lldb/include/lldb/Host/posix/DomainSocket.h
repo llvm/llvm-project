@@ -33,6 +33,7 @@ public:
 
 protected:
   DomainSocket(SocketProtocol protocol);
+  DomainSocket(SocketProtocol protocol, NativeSocket socket, bool should_close);
 
   virtual size_t GetNameOffset() const;
   virtual void DeleteSocketFile(llvm::StringRef name);

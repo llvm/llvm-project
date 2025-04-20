@@ -39,10 +39,18 @@
 #if LLDB_ENABLE_POSIX
 #include "lldb/Host/posix/DomainSocket.h"
 #endif
+#ifdef __linux__
+#include "lldb/Host/linux/AbstractSocket.h"
+#endif
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/UriParser.h"
+
+#if LLDB_ENABLE_POSIX
+#include <sys/socket.h>
+#include <sys/un.h>
+#endif
 
 using namespace lldb;
 using namespace lldb_private;
@@ -455,14 +463,28 @@ int main_platform(int argc, char *argv[]) {
   lldb_private::Args inferior_arguments;
   inferior_arguments.SetArguments(argc, const_cast<const char **>(argv));
 
+  Log *log = GetLog(LLDBLog::Platform);
   Socket::SocketProtocol protocol = Socket::ProtocolUnixDomain;
 
   if (fd != SharedSocket::kInvalidFD) {
     // Child process will handle the connection and exit.
-    if (gdbserver_port)
+    if (gdbserver_port) {
       protocol = Socket::ProtocolTcp;
+    } else {
+#ifdef LLDB_ENABLE_POSIX
+      // Check if fd represents domain socket or abstract socket.
+      struct sockaddr_un addr;
+      socklen_t addr_len = sizeof(addr);
+      if (getsockname(fd, (struct sockaddr *)&addr, &addr_len) == -1) {
+        LLDB_LOGF(log, "lldb-platform child: not a socket or error occurred");
+        return socket_error;
+      }
 
-    Log *log = GetLog(LLDBLog::Platform);
+      if (addr.sun_family == AF_UNIX && addr.sun_path[0] == '\0') {
+        protocol = Socket::ProtocolUnixAbstract;
+      }
+#endif
+    }
 
     NativeSocket sockfd;
     error = SharedSocket::GetNativeSocket(fd, sockfd);
@@ -473,9 +495,9 @@ int main_platform(int argc, char *argv[]) {
 
     GDBRemoteCommunicationServerPlatform platform(protocol, gdbserver_port);
     Socket *socket;
-    if (protocol == Socket::ProtocolTcp)
+    if (protocol == Socket::ProtocolTcp) {
       socket = new TCPSocket(sockfd, /*should_close=*/true);
-    else {
+    } else if (protocol == Socket::ProtocolUnixDomain) {
 #if LLDB_ENABLE_POSIX
       socket = new DomainSocket(sockfd, /*should_close=*/true);
 #else
@@ -483,7 +505,17 @@ int main_platform(int argc, char *argv[]) {
                             "supported on this platform.";
       return socket_error;
 #endif
+    } else {
+#ifdef __linux__
+      socket = new AbstractSocket(sockfd, /*should_close=*/true);
+#else
+      WithColor::error()
+          << "lldb-platform child: Abstract domain sockets are not "
+             "supported on this platform.";
+      return socket_error;
+#endif
     }
+
     platform.SetConnection(
         std::unique_ptr<Connection>(new ConnectionFileDescriptor(socket)));
     client_handle(platform, inferior_arguments);

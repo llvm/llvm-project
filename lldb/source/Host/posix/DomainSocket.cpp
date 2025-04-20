@@ -67,6 +67,12 @@ DomainSocket::DomainSocket(NativeSocket socket,
   m_socket = socket;
 }
 
+DomainSocket::DomainSocket(SocketProtocol protocol, NativeSocket socket,
+                           bool should_close)
+    : Socket(protocol, should_close) {
+  m_socket = socket;
+}
+
 Status DomainSocket::Connect(llvm::StringRef name) {
   sockaddr_un saddr_un;
   socklen_t saddr_un_len;
