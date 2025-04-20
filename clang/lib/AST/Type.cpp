@@ -279,10 +279,8 @@ QualType ArrayParameterType::getConstantArrayType(const ASTContext &Ctx) const {
 
 DependentSizedArrayType::DependentSizedArrayType(QualType et, QualType can,
                                                  Expr *e, ArraySizeModifier sm,
-                                                 unsigned tq,
-                                                 SourceRange brackets)
-    : ArrayType(DependentSizedArray, et, can, sm, tq, e), SizeExpr((Stmt *)e),
-      Brackets(brackets) {}
+                                                 unsigned tq)
+    : ArrayType(DependentSizedArray, et, can, sm, tq, e), SizeExpr((Stmt *)e) {}
 
 void DependentSizedArrayType::Profile(llvm::FoldingSetNodeID &ID,
                                       const ASTContext &Context,
@@ -1099,8 +1097,7 @@ public:
 
     return Ctx.getVariableArrayType(elementType, T->getSizeExpr(),
                                     T->getSizeModifier(),
-                                    T->getIndexTypeCVRQualifiers(),
-                                    T->getBracketsRange());
+                                    T->getIndexTypeCVRQualifiers());
   }
 
   QualType VisitIncompleteArrayType(const IncompleteArrayType *T) {
@@ -1941,6 +1938,14 @@ TagDecl *Type::getAsTagDecl() const {
   return nullptr;
 }
 
+const TemplateSpecializationType *
+Type::getAsNonAliasTemplateSpecializationType() const {
+  const auto *TST = getAs<TemplateSpecializationType>();
+  while (TST && TST->isTypeAlias())
+    TST = TST->desugar()->getAs<TemplateSpecializationType>();
+  return TST;
+}
+
 bool Type::hasAttr(attr::Kind AK) const {
   const Type *Cur = this;
   while (const auto *AT = Cur->getAs<AttributedType>()) {
@@ -2492,6 +2497,22 @@ bool Type::isIncompleteType(NamedDecl **Def) const {
     return !Interface->hasDefinition();
   }
   }
+}
+
+bool Type::isAlwaysIncompleteType() const {
+  if (!isIncompleteType())
+    return false;
+
+  // Forward declarations of structs, classes, enums, and unions could be later
+  // completed in a compilation unit by providing a type definition.
+  if (getAsTagDecl())
+    return false;
+
+  // Other types are incompletable.
+  //
+  // E.g. `char[]` and `void`. The type is incomplete and no future
+  // type declarations can make the type complete.
+  return true;
 }
 
 bool Type::isSizelessBuiltinType() const {
@@ -3935,6 +3956,31 @@ CountAttributedType::CountAttributedType(
     DeclSlot[i] = CoupledDecls[i];
 }
 
+StringRef CountAttributedType::getAttributeName(bool WithMacroPrefix) const {
+// TODO: This method isn't really ideal because it doesn't return the spelling
+// of the attribute that was used in the user's code. This method is used for
+// diagnostics so the fact it doesn't use the spelling of the attribute in
+// the user's code could be confusing (#113585).
+#define ENUMERATE_ATTRS(PREFIX)                                                \
+  do {                                                                         \
+    if (isCountInBytes()) {                                                    \
+      if (isOrNull())                                                          \
+        return PREFIX "sized_by_or_null";                                      \
+      return PREFIX "sized_by";                                                \
+    }                                                                          \
+    if (isOrNull())                                                            \
+      return PREFIX "counted_by_or_null";                                      \
+    return PREFIX "counted_by";                                                \
+  } while (0)
+
+  if (WithMacroPrefix)
+    ENUMERATE_ATTRS("__");
+  else
+    ENUMERATE_ATTRS("");
+
+#undef ENUMERATE_ATTRS
+}
+
 TypedefType::TypedefType(TypeClass tc, const TypedefNameDecl *D,
                          QualType Underlying, QualType can)
     : Type(tc, can, toSemanticDependence(can->getDependence())),
@@ -4055,8 +4101,8 @@ QualType DecltypeType::desugar() const {
   return QualType(this, 0);
 }
 
-DependentDecltypeType::DependentDecltypeType(Expr *E, QualType UnderlyingType)
-    : DecltypeType(E, UnderlyingType) {}
+DependentDecltypeType::DependentDecltypeType(Expr *E)
+    : DecltypeType(E, QualType()) {}
 
 void DependentDecltypeType::Profile(llvm::FoldingSetNodeID &ID,
                                     const ASTContext &Context, Expr *E) {
@@ -4126,11 +4172,6 @@ UnaryTransformType::UnaryTransformType(QualType BaseType,
                                        QualType CanonicalType)
     : Type(UnaryTransform, CanonicalType, BaseType->getDependence()),
       BaseType(BaseType), UnderlyingType(UnderlyingType), UKind(UKind) {}
-
-DependentUnaryTransformType::DependentUnaryTransformType(const ASTContext &C,
-                                                         QualType BaseType,
-                                                         UTTKind UKind)
-     : UnaryTransformType(BaseType, C.DependentTy, UKind, QualType()) {}
 
 TagType::TagType(TypeClass TC, const TagDecl *D, QualType can)
     : Type(TC, can,
@@ -4409,7 +4450,8 @@ TemplateSpecializationType::TemplateSpecializationType(
           T.getKind() == TemplateName::SubstTemplateTemplateParmPack ||
           T.getKind() == TemplateName::UsingTemplate ||
           T.getKind() == TemplateName::QualifiedTemplate ||
-          T.getKind() == TemplateName::DeducedTemplate) &&
+          T.getKind() == TemplateName::DeducedTemplate ||
+          T.getKind() == TemplateName::AssumedTemplate) &&
          "Unexpected template name for TemplateSpecializationType");
 
   auto *TemplateArgs =

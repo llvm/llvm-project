@@ -95,7 +95,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeNVPTXTarget() {
   PassRegistry &PR = *PassRegistry::getPassRegistry();
   // FIXME: This pass is really intended to be invoked during IR optimization,
   // but it's very NVPTX-specific.
-  initializeNVVMReflectPass(PR);
+  initializeNVVMReflectLegacyPassPass(PR);
   initializeNVVMIntrRangePass(PR);
   initializeGenericToNVVMLegacyPassPass(PR);
   initializeNVPTXAllocaHoistingPass(PR);
@@ -240,11 +240,12 @@ void NVPTXTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
 
   PB.registerPipelineStartEPCallback(
       [this](ModulePassManager &PM, OptimizationLevel Level) {
-        FunctionPassManager FPM;
         // We do not want to fold out calls to nvvm.reflect early if the user
         // has not provided a target architecture just yet.
         if (Subtarget.hasTargetName())
-          FPM.addPass(NVVMReflectPass(Subtarget.getSmVersion()));
+          PM.addPass(NVVMReflectPass(Subtarget.getSmVersion()));
+
+        FunctionPassManager FPM;
         // Note: NVVMIntrRangePass was causing numerical discrepancies at one
         // point, if issues crop up, consider disabling.
         FPM.addPass(NVVMIntrRangePass());

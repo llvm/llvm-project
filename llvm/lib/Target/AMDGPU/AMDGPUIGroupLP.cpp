@@ -588,12 +588,8 @@ void PipelineSolver::populateReadyList(
       ReadyList.push_back(std::pair(*I, -1));
   }
 
-  if (UseCostHeur) {
-    std::sort(ReadyList.begin(), ReadyList.end(),
-              [](std::pair<int, int> A, std::pair<int, int> B) {
-                return A.second < B.second;
-              });
-  }
+  if (UseCostHeur)
+    llvm::sort(ReadyList, llvm::less_second());
 
   assert(ReadyList.size() == CurrSU.second.size());
 }
@@ -1491,12 +1487,10 @@ bool MFMAExpInterleaveOpt::analyzeDAG(const SIInstrInfo *TII) {
                       return isBitPack(Opc);
                     });
 
-  auto *PackPred =
-      std::find_if((*TempMFMA)->Preds.begin(), (*TempMFMA)->Preds.end(),
-                   [&isBitPack](SDep &Pred) {
-                     auto Opc = Pred.getSUnit()->getInstr()->getOpcode();
-                     return isBitPack(Opc);
-                   });
+  auto *PackPred = llvm::find_if((*TempMFMA)->Preds, [&isBitPack](SDep &Pred) {
+    auto Opc = Pred.getSUnit()->getInstr()->getOpcode();
+    return isBitPack(Opc);
+  });
 
   if (PackPred == (*TempMFMA)->Preds.end())
     return false;

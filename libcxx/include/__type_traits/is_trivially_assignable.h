@@ -31,7 +31,7 @@ _LIBCPP_NO_SPECIALIZATIONS inline constexpr bool is_trivially_assignable_v = __i
 
 template <class _Tp>
 struct _LIBCPP_NO_SPECIALIZATIONS is_trivially_copy_assignable
-    : public integral_constant<
+    : integral_constant<
           bool,
           __is_trivially_assignable(__add_lvalue_reference_t<_Tp>, __add_lvalue_reference_t<const _Tp>)> {};
 
@@ -43,9 +43,8 @@ _LIBCPP_NO_SPECIALIZATIONS inline constexpr bool is_trivially_copy_assignable_v 
 
 template <class _Tp>
 struct _LIBCPP_NO_SPECIALIZATIONS is_trivially_move_assignable
-    : public integral_constant<
-          bool,
-          __is_trivially_assignable(__add_lvalue_reference_t<_Tp>, __add_rvalue_reference_t<_Tp>)> {};
+    : integral_constant<bool, __is_trivially_assignable(__add_lvalue_reference_t<_Tp>, __add_rvalue_reference_t<_Tp>)> {
+};
 
 #if _LIBCPP_STD_VER >= 17
 template <class _Tp>

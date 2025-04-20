@@ -118,7 +118,7 @@ RT_API_ATTRS void NotifyOtherImagesOfErrorTermination();
 
 #if defined(RT_DEVICE_COMPILATION)
 /// Trap the execution on the device.
-[[noreturn]] void RT_API_ATTRS DeviceTrap() {
+[[noreturn]] static inline void RT_API_ATTRS DeviceTrap() {
 #if defined(__CUDACC__)
   // NVCC supports __trap().
   __trap();

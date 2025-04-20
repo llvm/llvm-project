@@ -95,23 +95,23 @@ define zeroext i8 @select_cmov_i8(i1 zeroext %cond, i8 zeroext %a, i8 zeroext %b
 ;
 ; GISEL-X86-LABEL: select_cmov_i8:
 ; GISEL-X86:       ## %bb.0:
-; GISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; GISEL-X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; GISEL-X86-NEXT:    testl %eax, %eax
 ; GISEL-X86-NEXT:    je LBB0_1
 ; GISEL-X86-NEXT:  ## %bb.2:
-; GISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; GISEL-X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; GISEL-X86-NEXT:    ## kill: def $al killed $al killed $eax
 ; GISEL-X86-NEXT:    retl
 ; GISEL-X86-NEXT:  LBB0_1:
-; GISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; GISEL-X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; GISEL-X86-NEXT:    ## kill: def $al killed $al killed $eax
 ; GISEL-X86-NEXT:    retl
 ;
 ; GISEL-X86-CMOV-LABEL: select_cmov_i8:
 ; GISEL-X86-CMOV:       ## %bb.0:
-; GISEL-X86-CMOV-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; GISEL-X86-CMOV-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; GISEL-X86-CMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; GISEL-X86-CMOV-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; GISEL-X86-CMOV-NEXT:    movzbl {{[0-9]+}}(%esp), %edx
+; GISEL-X86-CMOV-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; GISEL-X86-CMOV-NEXT:    testl %ecx, %ecx
 ; GISEL-X86-CMOV-NEXT:    cmovnew %dx, %ax
 ; GISEL-X86-CMOV-NEXT:    ## kill: def $al killed $al killed $eax
@@ -198,23 +198,23 @@ define zeroext i16 @select_cmov_i16(i1 zeroext %cond, i16 zeroext %a, i16 zeroex
 ;
 ; GISEL-X86-LABEL: select_cmov_i16:
 ; GISEL-X86:       ## %bb.0:
-; GISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; GISEL-X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; GISEL-X86-NEXT:    testl %eax, %eax
 ; GISEL-X86-NEXT:    je LBB1_1
 ; GISEL-X86-NEXT:  ## %bb.2:
-; GISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; GISEL-X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; GISEL-X86-NEXT:    ## kill: def $ax killed $ax killed $eax
 ; GISEL-X86-NEXT:    retl
 ; GISEL-X86-NEXT:  LBB1_1:
-; GISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; GISEL-X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; GISEL-X86-NEXT:    ## kill: def $ax killed $ax killed $eax
 ; GISEL-X86-NEXT:    retl
 ;
 ; GISEL-X86-CMOV-LABEL: select_cmov_i16:
 ; GISEL-X86-CMOV:       ## %bb.0:
-; GISEL-X86-CMOV-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; GISEL-X86-CMOV-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; GISEL-X86-CMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; GISEL-X86-CMOV-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; GISEL-X86-CMOV-NEXT:    movzwl {{[0-9]+}}(%esp), %edx
+; GISEL-X86-CMOV-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; GISEL-X86-CMOV-NEXT:    testl %ecx, %ecx
 ; GISEL-X86-CMOV-NEXT:    cmovnew %dx, %ax
 ; GISEL-X86-CMOV-NEXT:    ## kill: def $ax killed $ax killed $eax
@@ -300,8 +300,8 @@ define zeroext i16 @select_cmp_cmov_i16(i16 zeroext %a, i16 zeroext %b) {
 ;
 ; GISEL-X86-LABEL: select_cmp_cmov_i16:
 ; GISEL-X86:       ## %bb.0:
-; GISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; GISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; GISEL-X86-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
+; GISEL-X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; GISEL-X86-NEXT:    xorl %edx, %edx
 ; GISEL-X86-NEXT:    cmpw %ax, %cx
 ; GISEL-X86-NEXT:    setb %dl
@@ -315,8 +315,8 @@ define zeroext i16 @select_cmp_cmov_i16(i16 zeroext %a, i16 zeroext %b) {
 ;
 ; GISEL-X86-CMOV-LABEL: select_cmp_cmov_i16:
 ; GISEL-X86-CMOV:       ## %bb.0:
-; GISEL-X86-CMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; GISEL-X86-CMOV-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; GISEL-X86-CMOV-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; GISEL-X86-CMOV-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
 ; GISEL-X86-CMOV-NEXT:    xorl %edx, %edx
 ; GISEL-X86-CMOV-NEXT:    cmpw %cx, %ax
 ; GISEL-X86-CMOV-NEXT:    setb %dl
@@ -400,7 +400,7 @@ define i32 @select_cmov_i32(i1 zeroext %cond, i32 %a, i32 %b) {
 ;
 ; GISEL-X86-LABEL: select_cmov_i32:
 ; GISEL-X86:       ## %bb.0:
-; GISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; GISEL-X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; GISEL-X86-NEXT:    testl %eax, %eax
 ; GISEL-X86-NEXT:    je LBB3_1
 ; GISEL-X86-NEXT:  ## %bb.2:
@@ -412,7 +412,7 @@ define i32 @select_cmov_i32(i1 zeroext %cond, i32 %a, i32 %b) {
 ;
 ; GISEL-X86-CMOV-LABEL: select_cmov_i32:
 ; GISEL-X86-CMOV:       ## %bb.0:
-; GISEL-X86-CMOV-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; GISEL-X86-CMOV-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; GISEL-X86-CMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; GISEL-X86-CMOV-NEXT:    testl %ecx, %ecx
 ; GISEL-X86-CMOV-NEXT:    cmovnel {{[0-9]+}}(%esp), %eax
@@ -595,7 +595,7 @@ define i64 @select_cmov_i64(i1 zeroext %cond, i64 %a, i64 %b) {
 ;
 ; GISEL-X86-LABEL: select_cmov_i64:
 ; GISEL-X86:       ## %bb.0:
-; GISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; GISEL-X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; GISEL-X86-NEXT:    testl %ecx, %ecx
 ; GISEL-X86-NEXT:    je LBB5_1
 ; GISEL-X86-NEXT:  ## %bb.2:
@@ -615,7 +615,7 @@ define i64 @select_cmov_i64(i1 zeroext %cond, i64 %a, i64 %b) {
 ;
 ; GISEL-X86-CMOV-LABEL: select_cmov_i64:
 ; GISEL-X86-CMOV:       ## %bb.0:
-; GISEL-X86-CMOV-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; GISEL-X86-CMOV-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; GISEL-X86-CMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; GISEL-X86-CMOV-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; GISEL-X86-CMOV-NEXT:    testl %ecx, %ecx

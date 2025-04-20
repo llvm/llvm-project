@@ -2,8 +2,8 @@
 
 // CHECK-LABEL: func @vector_transfer_ops_0d_memref(
 //  CHECK-SAME:   %[[MEM:.*]]: memref<f32>
-//  CHECK-SAME:   %[[VEC:.*]]: vector<1x1x1xf32>
-func.func @vector_transfer_ops_0d_memref(%mem: memref<f32>, %vec: vector<1x1x1xf32>) {
+//  CHECK-SAME:   %[[VEC:.*]]: vector<f32>
+func.func @vector_transfer_ops_0d_memref(%mem: memref<f32>, %vec: vector<f32>) {
     %f0 = arith.constant 0.0 : f32
 
 //  CHECK-NEXT:   %[[S:.*]] = vector.load %[[MEM]][] : memref<f32>, vector<f32>
@@ -12,8 +12,8 @@ func.func @vector_transfer_ops_0d_memref(%mem: memref<f32>, %vec: vector<1x1x1xf
 //  CHECK-NEXT:   vector.store %[[S]], %[[MEM]][] : memref<f32>, vector<f32>
     vector.transfer_write %0, %mem[] : vector<f32>, memref<f32>
 
-//  CHECK-NEXT:   vector.store %[[VEC]], %[[MEM]][] : memref<f32>, vector<1x1x1xf32>
-    vector.store %vec, %mem[] : memref<f32>, vector<1x1x1xf32>
+//  CHECK-NEXT:   vector.store %[[VEC]], %[[MEM]][] : memref<f32>, vector<f32>
+    vector.store %vec, %mem[] : memref<f32>, vector<f32>
 
     return
 }
