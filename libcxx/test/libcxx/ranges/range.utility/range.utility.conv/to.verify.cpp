@@ -21,6 +21,7 @@ void test() {
   using member_func_ptr = decltype(&C::f);
   using member_ptr      = decltype(&C::member);
   using func_ptr        = decltype(&ff);
+  using func_t          = decltype(ff);
 
   struct R {
     int* begin() const { return nullptr; };
