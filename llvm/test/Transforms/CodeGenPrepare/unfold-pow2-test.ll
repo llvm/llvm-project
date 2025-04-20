@@ -3,97 +3,121 @@
 ; RUN:   | FileCheck %s --check-prefix=SLOW
 ; RUN: opt -p 'require<profile-summary>,function(codegenprepare)' -S --mattr=+zbb %s \
 ; RUN:   | FileCheck %s --check-prefix=FAST
-; REQUIRES: riscv64-registered-target
+; REQUIRES: riscv-registered-target
 
 target datalayout = "e-m:e-p:64:64-i64:64-i128:128-n32:64-S128"
 target triple = "riscv64"
 
-define i64 @test_ult_2(i64 %x, i64 %y, i64 %a, i64 %b) {
-; SLOW-LABEL: define i64 @test_ult_2(
-; SLOW-SAME: i64 [[X:%.*]], i64 [[Y:%.*]], i64 [[A:%.*]], i64 [[B:%.*]]) {
-; SLOW-NEXT:  [[ENTRY:.*]]:
+define i1 @test_ult_2(i64 %x) {
+; SLOW-LABEL: define i1 @test_ult_2(
+; SLOW-SAME: i64 [[X:%.*]]) {
 ; SLOW-NEXT:    [[TMP0:%.*]] = add i64 [[X]], -1
 ; SLOW-NEXT:    [[TMP1:%.*]] = and i64 [[X]], [[TMP0]]
-; SLOW-NEXT:    [[CMP1:%.*]] = icmp ne i64 [[TMP1]], 0
-; SLOW-NEXT:    [[CMP2:%.*]] = icmp sgt i64 [[Y]], 0
-; SLOW-NEXT:    [[CMP:%.*]] = or i1 [[CMP2]], [[CMP1]]
-; SLOW-NEXT:    br i1 [[CMP]], label %[[IF_THEN:.*]], label %[[IF_END:.*]]
-; SLOW:       [[IF_THEN]]:
-; SLOW-NEXT:    br label %[[IF_END]]
-; SLOW:       [[IF_END]]:
-; SLOW-NEXT:    [[RES:%.*]] = phi i64 [ [[A]], %[[IF_THEN]] ], [ [[B]], %[[ENTRY]] ]
-; SLOW-NEXT:    ret i64 [[RES]]
+; SLOW-NEXT:    [[CMP1:%.*]] = icmp eq i64 [[TMP1]], 0
+; SLOW-NEXT:    ret i1 [[CMP1]]
 ;
-; FAST-LABEL: define i64 @test_ult_2(
-; FAST-SAME: i64 [[X:%.*]], i64 [[Y:%.*]], i64 [[A:%.*]], i64 [[B:%.*]]) #[[ATTR0:[0-9]+]] {
-; FAST-NEXT:  [[ENTRY:.*]]:
+; FAST-LABEL: define i1 @test_ult_2(
+; FAST-SAME: i64 [[X:%.*]]) #[[ATTR0:[0-9]+]] {
 ; FAST-NEXT:    [[CTPOP:%.*]] = call i64 @llvm.ctpop.i64(i64 [[X]])
-; FAST-NEXT:    [[CMP1:%.*]] = icmp ugt i64 [[CTPOP]], 1
-; FAST-NEXT:    [[CMP2:%.*]] = icmp sgt i64 [[Y]], 0
-; FAST-NEXT:    [[CMP:%.*]] = or i1 [[CMP2]], [[CMP1]]
-; FAST-NEXT:    br i1 [[CMP]], label %[[IF_THEN:.*]], label %[[IF_END:.*]]
-; FAST:       [[IF_THEN]]:
-; FAST-NEXT:    br label %[[IF_END]]
-; FAST:       [[IF_END]]:
-; FAST-NEXT:    [[RES:%.*]] = phi i64 [ [[A]], %[[IF_THEN]] ], [ [[B]], %[[ENTRY]] ]
-; FAST-NEXT:    ret i64 [[RES]]
+; FAST-NEXT:    [[CMP1:%.*]] = icmp ult i64 [[CTPOP]], 2
+; FAST-NEXT:    ret i1 [[CMP1]]
 ;
-entry:
-  %ctpop = call i64 @llvm.ctpop.i64(i64 %x)
-  %cmp1 = icmp ugt i64 %ctpop, 1
-  %cmp2 = icmp sgt i64 %y, 0
-  %cmp = or i1 %cmp2, %cmp1
-  br i1 %cmp, label %if.then, label %if.end
-
-if.then:
-  br label %if.end
-
-if.end:
-  %res = phi i64 [ %a, %if.then ], [ %b, %entry ]
-  ret i64 %res
+  %ctpop = call i64 @llvm.ctpop(i64 %x)
+  %cmp = icmp ult i64 %ctpop, 2
+  ret i1 %cmp
 }
 
-define i64 @test_ugt_1(i64 %x, i64 %y, i64 %a, i64 %b) {
-; SLOW-LABEL: define i64 @test_ugt_1(
-; SLOW-SAME: i64 [[X:%.*]], i64 [[Y:%.*]], i64 [[A:%.*]], i64 [[B:%.*]]) {
-; SLOW-NEXT:  [[ENTRY:.*]]:
+define i1 @test_ugt_1(i64 %x) {
+; SLOW-LABEL: define i1 @test_ugt_1(
+; SLOW-SAME: i64 [[X:%.*]]) {
 ; SLOW-NEXT:    [[TMP0:%.*]] = add i64 [[X]], -1
 ; SLOW-NEXT:    [[TMP1:%.*]] = and i64 [[X]], [[TMP0]]
 ; SLOW-NEXT:    [[CMP1:%.*]] = icmp ne i64 [[TMP1]], 0
-; SLOW-NEXT:    [[CMP2:%.*]] = icmp sgt i64 [[Y]], 0
-; SLOW-NEXT:    [[CMP:%.*]] = or i1 [[CMP2]], [[CMP1]]
-; SLOW-NEXT:    br i1 [[CMP]], label %[[IF_THEN:.*]], label %[[IF_END:.*]]
-; SLOW:       [[IF_THEN]]:
-; SLOW-NEXT:    br label %[[IF_END]]
-; SLOW:       [[IF_END]]:
-; SLOW-NEXT:    [[RES:%.*]] = phi i64 [ [[A]], %[[IF_THEN]] ], [ [[B]], %[[ENTRY]] ]
-; SLOW-NEXT:    ret i64 [[RES]]
+; SLOW-NEXT:    ret i1 [[CMP1]]
 ;
-; FAST-LABEL: define i64 @test_ugt_1(
-; FAST-SAME: i64 [[X:%.*]], i64 [[Y:%.*]], i64 [[A:%.*]], i64 [[B:%.*]]) #[[ATTR0]] {
-; FAST-NEXT:  [[ENTRY:.*]]:
+; FAST-LABEL: define i1 @test_ugt_1(
+; FAST-SAME: i64 [[X:%.*]]) #[[ATTR0]] {
 ; FAST-NEXT:    [[CTPOP:%.*]] = call i64 @llvm.ctpop.i64(i64 [[X]])
 ; FAST-NEXT:    [[CMP1:%.*]] = icmp ugt i64 [[CTPOP]], 1
-; FAST-NEXT:    [[CMP2:%.*]] = icmp sgt i64 [[Y]], 0
-; FAST-NEXT:    [[CMP:%.*]] = or i1 [[CMP2]], [[CMP1]]
-; FAST-NEXT:    br i1 [[CMP]], label %[[IF_THEN:.*]], label %[[IF_END:.*]]
-; FAST:       [[IF_THEN]]:
-; FAST-NEXT:    br label %[[IF_END]]
-; FAST:       [[IF_END]]:
-; FAST-NEXT:    [[RES:%.*]] = phi i64 [ [[A]], %[[IF_THEN]] ], [ [[B]], %[[ENTRY]] ]
-; FAST-NEXT:    ret i64 [[RES]]
+; FAST-NEXT:    ret i1 [[CMP1]]
 ;
-entry:
-  %ctpop = call i64 @llvm.ctpop.i64(i64 %x)
-  %cmp1 = icmp ugt i64 %ctpop, 1
-  %cmp2 = icmp sgt i64 %y, 0
-  %cmp = or i1 %cmp2, %cmp1
-  br i1 %cmp, label %if.then, label %if.end
+  %ctpop = call i64 @llvm.ctpop(i64 %x)
+  %cmp = icmp ugt i64 %ctpop, 1
+  ret i1 %cmp
+}
 
-if.then:
-  br label %if.end
+define i1 @test_eq_1_nz(i64 %x) {
+; SLOW-LABEL: define i1 @test_eq_1_nz(
+; SLOW-SAME: i64 [[X:%.*]]) {
+; SLOW-NEXT:    [[TMP0:%.*]] = add i64 [[X]], -1
+; SLOW-NEXT:    [[TMP1:%.*]] = and i64 [[X]], [[TMP0]]
+; SLOW-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 0
+; SLOW-NEXT:    ret i1 [[TMP2]]
+;
+; FAST-LABEL: define i1 @test_eq_1_nz(
+; FAST-SAME: i64 [[X:%.*]]) #[[ATTR0]] {
+; FAST-NEXT:    [[CTPOP:%.*]] = call range(i64 1, 33) i64 @llvm.ctpop.i64(i64 [[X]])
+; FAST-NEXT:    [[CMP1:%.*]] = icmp ult i64 [[CTPOP]], 2
+; FAST-NEXT:    ret i1 [[CMP1]]
+;
+  %ctpop = call range(i64 1, 33) i64 @llvm.ctpop(i64 %x)
+  %cmp = icmp eq i64 %ctpop, 1
+  ret i1 %cmp
+}
 
-if.end:
-  %res = phi i64 [ %a, %if.then ], [ %b, %entry ]
-  ret i64 %res
+define i1 @test_ne_1_nz(i64 %x) {
+; SLOW-LABEL: define i1 @test_ne_1_nz(
+; SLOW-SAME: i64 [[X:%.*]]) {
+; SLOW-NEXT:    [[TMP0:%.*]] = add i64 [[X]], -1
+; SLOW-NEXT:    [[TMP1:%.*]] = and i64 [[X]], [[TMP0]]
+; SLOW-NEXT:    [[TMP2:%.*]] = icmp ne i64 [[TMP1]], 0
+; SLOW-NEXT:    ret i1 [[TMP2]]
+;
+; FAST-LABEL: define i1 @test_ne_1_nz(
+; FAST-SAME: i64 [[X:%.*]]) #[[ATTR0]] {
+; FAST-NEXT:    [[CTPOP:%.*]] = call range(i64 1, 33) i64 @llvm.ctpop.i64(i64 [[X]])
+; FAST-NEXT:    [[CMP1:%.*]] = icmp ugt i64 [[CTPOP]], 1
+; FAST-NEXT:    ret i1 [[CMP1]]
+;
+  %ctpop = call range(i64 1, 33) i64 @llvm.ctpop(i64 %x)
+  %cmp = icmp ne i64 %ctpop, 1
+  ret i1 %cmp
+}
+
+define i1 @test_eq_1(i64 %x) {
+; SLOW-LABEL: define i1 @test_eq_1(
+; SLOW-SAME: i64 [[X:%.*]]) {
+; SLOW-NEXT:    [[TMP0:%.*]] = add i64 [[X]], -1
+; SLOW-NEXT:    [[TMP1:%.*]] = xor i64 [[X]], [[TMP0]]
+; SLOW-NEXT:    [[TMP2:%.*]] = icmp ugt i64 [[TMP1]], [[TMP0]]
+; SLOW-NEXT:    ret i1 [[TMP2]]
+;
+; FAST-LABEL: define i1 @test_eq_1(
+; FAST-SAME: i64 [[X:%.*]]) #[[ATTR0]] {
+; FAST-NEXT:    [[CTPOP:%.*]] = call i64 @llvm.ctpop.i64(i64 [[X]])
+; FAST-NEXT:    [[CMP1:%.*]] = icmp eq i64 [[CTPOP]], 1
+; FAST-NEXT:    ret i1 [[CMP1]]
+;
+  %ctpop = call i64 @llvm.ctpop(i64 %x)
+  %cmp = icmp eq i64 %ctpop, 1
+  ret i1 %cmp
+}
+
+define i1 @test_ne_1(i64 %x) {
+; SLOW-LABEL: define i1 @test_ne_1(
+; SLOW-SAME: i64 [[X:%.*]]) {
+; SLOW-NEXT:    [[TMP0:%.*]] = add i64 [[X]], -1
+; SLOW-NEXT:    [[TMP1:%.*]] = xor i64 [[X]], [[TMP0]]
+; SLOW-NEXT:    [[TMP2:%.*]] = icmp ule i64 [[TMP1]], [[TMP0]]
+; SLOW-NEXT:    ret i1 [[TMP2]]
+;
+; FAST-LABEL: define i1 @test_ne_1(
+; FAST-SAME: i64 [[X:%.*]]) #[[ATTR0]] {
+; FAST-NEXT:    [[CTPOP:%.*]] = call i64 @llvm.ctpop.i64(i64 [[X]])
+; FAST-NEXT:    [[CMP1:%.*]] = icmp ne i64 [[CTPOP]], 1
+; FAST-NEXT:    ret i1 [[CMP1]]
+;
+  %ctpop = call i64 @llvm.ctpop(i64 %x)
+  %cmp = icmp ne i64 %ctpop, 1
+  ret i1 %cmp
 }
