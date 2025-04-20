@@ -530,7 +530,7 @@ public:
   ProgramStateManager(ASTContext &Ctx,
                  StoreManagerCreator CreateStoreManager,
                  ConstraintManagerCreator CreateConstraintManager,
-                 llvm::BumpPtrAllocator& alloc,
+                 std::array<llvm::BumpPtrAllocator, 7> &Allocators,
                  ExprEngine *expreng);
 
   ~ProgramStateManager();

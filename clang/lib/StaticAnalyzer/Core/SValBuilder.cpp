@@ -49,13 +49,16 @@ using namespace ento;
 
 void SValBuilder::anchor() {}
 
-SValBuilder::SValBuilder(llvm::BumpPtrAllocator &alloc, ASTContext &context,
+SValBuilder::SValBuilder(llvm::BumpPtrAllocator &BasicValueFactoryAllocator,
+                         llvm::BumpPtrAllocator &SymbolManagerAllocator,
+                         llvm::BumpPtrAllocator &MemRegionManagerAllocator,
+                         ASTContext &context,
                          ProgramStateManager &stateMgr)
-    : Context(context), BasicVals(context, alloc),
-      SymMgr(context, BasicVals, alloc), MemMgr(context, alloc),
+    : Context(context), BasicVals(context, BasicValueFactoryAllocator),
+      SymMgr(context, BasicVals, SymbolManagerAllocator),
+      MemMgr(context, MemRegionManagerAllocator),
       StateMgr(stateMgr),
-      AnOpts(
-          stateMgr.getOwningEngine().getAnalysisManager().getAnalyzerOptions()),
+      AnOpts(stateMgr.getOwningEngine().getAnalysisManager().getAnalyzerOptions()),
       ArrayIndexTy(context.LongLongTy),
       ArrayIndexWidth(context.getTypeSize(ArrayIndexTy)) {}
 

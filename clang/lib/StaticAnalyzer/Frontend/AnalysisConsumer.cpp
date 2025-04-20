@@ -752,7 +752,10 @@ void AnalysisConsumer::RunPathSensitiveChecks(Decl *D,
   if (!Mgr->getAnalysisDeclContext(D)->getAnalysis<RelaxedLiveVariables>())
     return;
 
-  ExprEngine Eng(CTU, *Mgr, VisitedCallees, &FunctionSummaries, IMode);
+  std::array<llvm::BumpPtrAllocator, 7> ProgramStateManagerAllocators;
+  llvm::BumpPtrAllocator BlockCounterFactoryAllocator;
+
+  ExprEngine Eng(CTU, *Mgr, VisitedCallees, &FunctionSummaries, IMode, ProgramStateManagerAllocators, BlockCounterFactoryAllocator);
 
   // Execute the worklist algorithm.
   llvm::TimeRecord ExprEngineStartTime;

@@ -181,7 +181,9 @@ private:
 public:
   ExprEngine(cross_tu::CrossTranslationUnitContext &CTU, AnalysisManager &mgr,
              SetOfConstDecls *VisitedCalleesIn,
-             FunctionSummariesTy *FS, InliningModes HowToInlineIn);
+             FunctionSummariesTy *FS, InliningModes HowToInlineIn,
+             std::array<llvm::BumpPtrAllocator, 7> &ProgramStateAllocators,
+             llvm::BumpPtrAllocator &BlockCounterFactoryAllocator);
 
   virtual ~ExprEngine() = default;
 

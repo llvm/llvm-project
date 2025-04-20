@@ -75,10 +75,10 @@ static std::unique_ptr<WorkList> generateWorkList(AnalyzerOptions &Opts) {
 }
 
 CoreEngine::CoreEngine(ExprEngine &exprengine, FunctionSummariesTy *FS,
-                       AnalyzerOptions &Opts)
+                       AnalyzerOptions &Opts, llvm::BumpPtrAllocator &BlockCounterFactoryAllocator)
     : ExprEng(exprengine), WList(generateWorkList(Opts)),
       CTUWList(Opts.IsNaiveCTUEnabled ? generateWorkList(Opts) : nullptr),
-      BCounterFactory(G.getAllocator()), FunctionSummaries(FS) {}
+      BCounterFactory(BlockCounterFactoryAllocator), FunctionSummaries(FS) {}
 
 void CoreEngine::setBlockCounter(BlockCounter C) {
   WList->setBlockCounter(C);
