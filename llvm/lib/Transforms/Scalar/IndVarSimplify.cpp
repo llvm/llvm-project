@@ -406,9 +406,7 @@ bool IndVarSimplify::rewriteNonIntegerIVs(Loop *L) {
   // the SCEV routines.
   BasicBlock *Header = L->getHeader();
 
-  SmallVector<WeakTrackingVH, 8> PHIs;
-  for (PHINode &PN : Header->phis())
-    PHIs.push_back(&PN);
+  SmallVector<WeakTrackingVH, 8> PHIs(llvm::make_pointer_range(Header->phis()));
 
   bool Changed = false;
   for (WeakTrackingVH &PHI : PHIs)
