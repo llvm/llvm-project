@@ -41,7 +41,7 @@ define <2 x i12> @ret_v2i12(i12 %v1, i12 %v2) {
   ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s12) = G_TRUNC [[COPY]](s32)
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
   ; CHECK-NEXT:   [[TRUNC1:%[0-9]+]]:_(s12) = G_TRUNC [[COPY1]](s32)
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(<2 x s12>) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(<2 x s12>) = G_POISON
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
   ; CHECK-NEXT:   [[IVEC:%[0-9]+]]:_(<2 x s12>) = G_INSERT_VECTOR_ELT [[DEF]], [[TRUNC]](s12), [[C]](s64)
@@ -63,7 +63,7 @@ define <3 x i12> @ret_v3i12(i12 %v1, i12 %v2) {
   ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s12) = G_TRUNC [[COPY]](s32)
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
   ; CHECK-NEXT:   [[TRUNC1:%[0-9]+]]:_(s12) = G_TRUNC [[COPY1]](s32)
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(<3 x s12>) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(<3 x s12>) = G_POISON
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
   ; CHECK-NEXT:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
@@ -93,7 +93,7 @@ define <4 x i12> @ret_v4i12(i12 %v1, i12 %v2) {
   ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s12) = G_TRUNC [[COPY]](s32)
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
   ; CHECK-NEXT:   [[TRUNC1:%[0-9]+]]:_(s12) = G_TRUNC [[COPY1]](s32)
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(<4 x s12>) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(<4 x s12>) = G_POISON
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
   ; CHECK-NEXT:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
@@ -121,7 +121,7 @@ define <5 x i12> @ret_v5i12(i12 %v1, i12 %v2) {
   ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s12) = G_TRUNC [[COPY]](s32)
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
   ; CHECK-NEXT:   [[TRUNC1:%[0-9]+]]:_(s12) = G_TRUNC [[COPY1]](s32)
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(<5 x s12>) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(<5 x s12>) = G_POISON
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
   ; CHECK-NEXT:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
@@ -161,7 +161,7 @@ define <6 x i12> @ret_v6i12(i12 %v1, i12 %v2) {
   ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s12) = G_TRUNC [[COPY]](s32)
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
   ; CHECK-NEXT:   [[TRUNC1:%[0-9]+]]:_(s12) = G_TRUNC [[COPY1]](s32)
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(<6 x s12>) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(<6 x s12>) = G_POISON
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
   ; CHECK-NEXT:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
@@ -206,7 +206,7 @@ define <7 x i12> @ret_v7i12(i12 %v1, i12 %v2) {
   ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s12) = G_TRUNC [[COPY]](s32)
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
   ; CHECK-NEXT:   [[TRUNC1:%[0-9]+]]:_(s12) = G_TRUNC [[COPY1]](s32)
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(<7 x s12>) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(<7 x s12>) = G_POISON
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
   ; CHECK-NEXT:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
@@ -256,7 +256,7 @@ define <8 x i12> @ret_v8i12(i12 %v1, i12 %v2) {
   ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s12) = G_TRUNC [[COPY]](s32)
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
   ; CHECK-NEXT:   [[TRUNC1:%[0-9]+]]:_(s12) = G_TRUNC [[COPY1]](s32)
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(<8 x s12>) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(<8 x s12>) = G_POISON
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
   ; CHECK-NEXT:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
@@ -297,7 +297,7 @@ define <12 x i12> @ret_v12i12(i12 %v1, i12 %v2) {
   ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s12) = G_TRUNC [[COPY1]](s32)
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $w1
   ; CHECK-NEXT:   [[TRUNC1:%[0-9]+]]:_(s12) = G_TRUNC [[COPY2]](s32)
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(<12 x s12>) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(<12 x s12>) = G_POISON
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
   ; CHECK-NEXT:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
@@ -375,7 +375,7 @@ define <2 x i100> @ret_v2i100(i100 %v1, i100 %v2) {
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(s64) = COPY $x3
   ; CHECK-NEXT:   [[MV1:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[COPY2]](s64), [[COPY3]](s64)
   ; CHECK-NEXT:   [[TRUNC1:%[0-9]+]]:_(s100) = G_TRUNC [[MV1]](s128)
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(<2 x s100>) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(<2 x s100>) = G_POISON
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
   ; CHECK-NEXT:   [[IVEC:%[0-9]+]]:_(<2 x s100>) = G_INSERT_VECTOR_ELT [[DEF]], [[TRUNC]](s100), [[C]](s64)
@@ -405,7 +405,7 @@ define <3 x i100> @ret_v3i100(i100 %v1, i100 %v2) {
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(s64) = COPY $x3
   ; CHECK-NEXT:   [[MV1:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[COPY2]](s64), [[COPY3]](s64)
   ; CHECK-NEXT:   [[TRUNC1:%[0-9]+]]:_(s100) = G_TRUNC [[MV1]](s128)
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(<3 x s100>) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(<3 x s100>) = G_POISON
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
   ; CHECK-NEXT:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
@@ -440,7 +440,7 @@ define <4 x i100> @ret_v4i100(i100 %v1, i100 %v2) {
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(s64) = COPY $x3
   ; CHECK-NEXT:   [[MV1:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[COPY2]](s64), [[COPY3]](s64)
   ; CHECK-NEXT:   [[TRUNC1:%[0-9]+]]:_(s100) = G_TRUNC [[MV1]](s128)
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(<4 x s100>) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(<4 x s100>) = G_POISON
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
   ; CHECK-NEXT:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 2

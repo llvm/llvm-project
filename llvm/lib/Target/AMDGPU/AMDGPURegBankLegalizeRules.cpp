@@ -450,9 +450,11 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Uni(S64, {{Sgpr64}, {Sgpr64, Sgpr32}})
       .Div(S64, {{Vgpr64}, {Vgpr64, Vgpr32}});
 
-  // Note: we only write S1 rules for G_IMPLICIT_DEF, G_CONSTANT, G_FCONSTANT
+  // Note: we only write S1 rules for G_IMPLICIT_DEF, G_POISON,
+  //                                  G_CONSTANT, G_FCONSTANT
   // and G_FREEZE here, rest is trivially regbankselected earlier
-  addRulesForGOpcs({G_IMPLICIT_DEF}).Any({{UniS1}, {{Sgpr32Trunc}, {}}});
+  addRulesForGOpcs({G_IMPLICIT_DEF, G_POISON})
+      .Any({{UniS1}, {{Sgpr32Trunc}, {}}});
   addRulesForGOpcs({G_CONSTANT})
       .Any({{UniS1, _}, {{Sgpr32Trunc}, {None}, UniCstExt}});
   addRulesForGOpcs({G_FREEZE}).Any({{DivS1}, {{Vcc}, {Vcc}}});

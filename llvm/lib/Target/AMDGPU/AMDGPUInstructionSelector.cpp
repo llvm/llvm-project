@@ -785,7 +785,8 @@ bool AMDGPUInstructionSelector::selectG_BUILD_VECTOR(MachineInstr &MI) const {
   // TODO: This should probably be a combine somewhere
   // (build_vector $src0, undef) -> copy $src0
   MachineInstr *Src1Def = getDefIgnoringCopies(Src1, *MRI);
-  if (Src1Def->getOpcode() == AMDGPU::G_IMPLICIT_DEF) {
+  if (Src1Def->getOpcode() == AMDGPU::G_IMPLICIT_DEF ||
+      Src1Def->getOpcode() == AMDGPU::G_POISON) {
     MI.setDesc(TII.get(AMDGPU::COPY));
     MI.removeOperand(2);
     const auto &RC =
@@ -4955,6 +4956,7 @@ AMDGPUInstructionSelector::selectGlobalSAddr(MachineOperand &Root) const {
   // FIXME: We should probably have folded COPY (G_IMPLICIT_DEF) earlier, and
   // drop this.
   if (AddrDef->MI->getOpcode() == AMDGPU::G_IMPLICIT_DEF ||
+      AddrDef->MI->getOpcode() == AMDGPU::G_POISON ||
       AddrDef->MI->getOpcode() == AMDGPU::G_CONSTANT || !isSGPR(AddrDef->Reg))
     return std::nullopt;
 

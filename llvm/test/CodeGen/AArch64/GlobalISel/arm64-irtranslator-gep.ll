@@ -59,7 +59,7 @@ define void @ossfuzz65052() {
   ; O0: bb.1 (%ir-block.0):
   ; O0-NEXT:   successors: %bb.2(0x80000000)
   ; O0-NEXT: {{  $}}
-  ; O0-NEXT:   [[DEF:%[0-9]+]]:_(p0) = G_IMPLICIT_DEF
+  ; O0-NEXT:   [[DEF:%[0-9]+]]:_(p0) = G_POISON
   ; O0-NEXT:   [[C:%[0-9]+]]:_(s128) = G_CONSTANT i128 -170141183460469231731687303715884105728
   ; O0-NEXT:   [[TRUNC:%[0-9]+]]:_(s64) = G_TRUNC [[C]](s128)
   ; O0-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
@@ -77,7 +77,7 @@ define void @ossfuzz65052() {
   ; O3: bb.1 (%ir-block.0):
   ; O3-NEXT:   successors: %bb.2(0x80000000)
   ; O3-NEXT: {{  $}}
-  ; O3-NEXT:   [[DEF:%[0-9]+]]:_(p0) = G_IMPLICIT_DEF
+  ; O3-NEXT:   [[DEF:%[0-9]+]]:_(p0) = G_POISON
   ; O3-NEXT:   [[C:%[0-9]+]]:_(s128) = G_CONSTANT i128 -170141183460469231731687303715884105728
   ; O3-NEXT:   [[TRUNC:%[0-9]+]]:_(s64) = G_TRUNC [[C]](s128)
   ; O3-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 16

@@ -2211,7 +2211,8 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
   MachineRegisterInfo &MRI = OpdMapper.getMRI();
   switch (Opc) {
   case AMDGPU::G_CONSTANT:
-  case AMDGPU::G_IMPLICIT_DEF: {
+  case AMDGPU::G_IMPLICIT_DEF:
+  case AMDGPU::G_POISON: {
     Register DstReg = MI.getOperand(0).getReg();
     LLT DstTy = MRI.getType(DstReg);
     if (DstTy != LLT::scalar(1))
@@ -2231,7 +2232,7 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
     LLVMContext &Ctx = B.getMF().getFunction().getContext();
 
     MI.getOperand(0).setReg(NewDstReg);
-    if (Opc != AMDGPU::G_IMPLICIT_DEF) {
+    if (Opc != AMDGPU::G_IMPLICIT_DEF && Opc != AMDGPU::G_POISON) {
       uint64_t ConstVal = MI.getOperand(1).getCImm()->getZExtValue();
       MI.getOperand(1).setCImm(
           ConstantInt::get(IntegerType::getInt32Ty(Ctx), ConstVal));
@@ -4124,7 +4125,8 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     OpdsMapping[4] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, 64);
     break;
   }
-  case AMDGPU::G_IMPLICIT_DEF: {
+  case AMDGPU::G_IMPLICIT_DEF:
+  case AMDGPU::G_POISON: {
     unsigned Size = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
     OpdsMapping[0] = AMDGPU::getValueMapping(AMDGPU::SGPRRegBankID, Size);
     break;
