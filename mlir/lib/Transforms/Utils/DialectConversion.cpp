@@ -106,7 +106,7 @@ struct ValueVectorMapInfo {
   static ValueVector getEmptyKey() { return ValueVector{Value()}; }
   static ValueVector getTombstoneKey() { return ValueVector{Value(), Value()}; }
   static ::llvm::hash_code getHashValue(const ValueVector &val) {
-    return ::llvm::hash_combine_range(val.begin(), val.end());
+    return ::llvm::hash_combine_range(val);
   }
   static bool isEqual(const ValueVector &LHS, const ValueVector &RHS) {
     return LHS == RHS;
