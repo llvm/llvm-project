@@ -8,7 +8,6 @@ define i32 @stest_f64i32(double %x) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    ucomisd %xmm0, %xmm0
-; CHECK-NEXT:    maxsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    minsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    cvttsd2si %xmm0, %ecx
 ; CHECK-NEXT:    cmovnpl %ecx, %eax
@@ -621,7 +620,6 @@ define i32 @stest_f64i32_mm(double %x) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    ucomisd %xmm0, %xmm0
-; CHECK-NEXT:    maxsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    minsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    cvttsd2si %xmm0, %ecx
 ; CHECK-NEXT:    cmovnpl %ecx, %eax
