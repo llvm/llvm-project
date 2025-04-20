@@ -736,8 +736,7 @@ static llvm::Triple computeTargetTriple(const Driver &D,
       if (D.IsFlangMode() && !Target.isOSAIX()) {
         D.Diag(diag::err_drv_unsupported_opt_for_target)
             << A->getAsString(Args) << Target.str();
-      }
-      else {
+      } else {
         AT = Target.get32BitArchVariant().getArch();
         if (Target.getEnvironment() == llvm::Triple::GNUX32)
           Target.setEnvironment(llvm::Triple::GNU);
