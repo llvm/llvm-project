@@ -1291,7 +1291,7 @@ struct UniquifierDenseMapInfo {
   }
 
   static unsigned getHashValue(const SmallVector<const SCEV *, 4> &V) {
-    return static_cast<unsigned>(hash_combine_range(V.begin(), V.end()));
+    return static_cast<unsigned>(hash_combine_range(V));
   }
 
   static bool isEqual(const SmallVector<const SCEV *, 4> &LHS,

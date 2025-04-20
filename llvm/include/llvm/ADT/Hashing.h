@@ -649,7 +649,7 @@ template <typename... Ts> hash_code hash_value(const std::tuple<Ts...> &arg) {
 // infrastructure is available.
 template <typename T>
 hash_code hash_value(const std::basic_string<T> &arg) {
-  return hash_combine_range(arg.begin(), arg.end());
+  return hash_combine_range(arg);
 }
 
 template <typename T> hash_code hash_value(const std::optional<T> &arg) {

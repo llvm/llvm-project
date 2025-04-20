@@ -506,7 +506,7 @@ using SampleContextFrames = ArrayRef<SampleContextFrame>;
 
 struct SampleContextFrameHash {
   uint64_t operator()(const SampleContextFrameVector &S) const {
-    return hash_combine_range(S.begin(), S.end());
+    return hash_combine_range(S);
   }
 };
 

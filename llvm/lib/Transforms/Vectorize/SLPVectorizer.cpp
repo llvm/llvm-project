@@ -5085,7 +5085,7 @@ private:
     }
 
     static unsigned getHashValue(const OrdersType &V) {
-      return static_cast<unsigned>(hash_combine_range(V.begin(), V.end()));
+      return static_cast<unsigned>(hash_combine_range(V));
     }
 
     static bool isEqual(const OrdersType &LHS, const OrdersType &RHS) {
