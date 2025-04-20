@@ -1139,6 +1139,8 @@ void State::addInfoFor(BasicBlock &BB) {
       // when simplifying uses of the min/max intrinsics.
       [[fallthrough]];
     case Intrinsic::abs:
+    case Intrinsic::uadd_sat:
+    case Intrinsic::usub_sat:
       if (!isGuaranteedNotToBePoison(&I))
         break;
       WorkList.push_back(FactOrCheck::getInstFact(DT.getNode(&BB), &I));
@@ -1894,6 +1896,20 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
         Pred = ICmpInst::getNonStrictPredicate(MinMax->getPredicate());
         AddFact(Pred, MinMax, MinMax->getLHS());
         AddFact(Pred, MinMax, MinMax->getRHS());
+        continue;
+      }
+      if (auto *USatI = dyn_cast<SaturatingInst>(CB.Inst)) {
+        switch (USatI->getIntrinsicID()) {
+        default:
+          llvm_unreachable("Unexpected intrinsic.");
+        case Intrinsic::uadd_sat:
+          AddFact(ICmpInst::ICMP_UGE, USatI, USatI->getLHS());
+          AddFact(ICmpInst::ICMP_UGE, USatI, USatI->getRHS());
+          break;
+        case Intrinsic::usub_sat:
+          AddFact(ICmpInst::ICMP_ULE, USatI, USatI->getLHS());
+          break;
+        }
         continue;
       }
     }
