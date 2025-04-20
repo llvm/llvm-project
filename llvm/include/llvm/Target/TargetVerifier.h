@@ -73,7 +73,7 @@ public:
   bool IsValid = true;
 
   TargetVerify(Module *Mod)
-      : Mod(Mod), TT(Triple::normalize(Mod->getTargetTriple())),
+      : Mod(Mod), TT(Mod->getTargetTriple()),
         MessagesStr(Messages) {}
 
   void run(Function &F) {};
