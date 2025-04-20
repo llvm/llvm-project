@@ -4047,6 +4047,7 @@ bool AMDGPUInstructionSelector::select(MachineInstr &I) {
   case TargetOpcode::G_BUILD_VECTOR_TRUNC:
     return selectG_BUILD_VECTOR(I);
   case TargetOpcode::G_IMPLICIT_DEF:
+  case TargetOpcode::G_POISON:
     return selectG_IMPLICIT_DEF(I);
   case TargetOpcode::G_INSERT:
     return selectG_INSERT(I);

@@ -255,7 +255,7 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
   // TODO: transform illegal vector types into legal vector type
   // TODO: Merge with G_FREEZE?
   getActionDefinitionsBuilder(
-      {G_IMPLICIT_DEF, G_CONSTANT_FOLD_BARRIER})
+      {G_IMPLICIT_DEF, G_POISON, G_CONSTANT_FOLD_BARRIER})
       .legalFor({s32, sXLen, p0})
       .legalIf(typeIsLegalBoolVec(0, BoolVecTys, ST))
       .legalIf(typeIsLegalIntOrFPVec(0, IntOrFPVecTys, ST))
@@ -1172,7 +1172,8 @@ bool RISCVLegalizerInfo::legalizeInsertSubvector(MachineInstr &MI,
   LLT LitTy = MRI.getType(LitVec);
 
   if (Idx == 0 ||
-      MRI.getVRegDef(BigVec)->getOpcode() == TargetOpcode::G_IMPLICIT_DEF)
+      MRI.getVRegDef(BigVec)->getOpcode() == TargetOpcode::G_IMPLICIT_DEF ||
+      MRI.getVRegDef(BigVec)->getOpcode() == TargetOpcode::G_POISON)
     return true;
 
   // We don't have the ability to slide mask vectors up indexed by their i1

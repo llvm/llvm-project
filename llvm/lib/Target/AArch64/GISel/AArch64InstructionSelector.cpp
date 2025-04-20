@@ -3594,7 +3594,8 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
     return selectIntrinsic(I, MRI);
   case TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS:
     return selectIntrinsicWithSideEffects(I, MRI);
-  case TargetOpcode::G_IMPLICIT_DEF: {
+  case TargetOpcode::G_IMPLICIT_DEF:
+  case TargetOpcode::G_POISON: {
     I.setDesc(TII.get(TargetOpcode::IMPLICIT_DEF));
     const LLT DstTy = MRI.getType(I.getOperand(0).getReg());
     const Register DstReg = I.getOperand(0).getReg();
@@ -5860,8 +5861,13 @@ bool AArch64InstructionSelector::tryOptBuildVecToSubregToReg(
   const RegisterBank &DstRB = *RBI.getRegBank(Dst, MRI, TRI);
   if (EltRB != DstRB)
     return false;
-  if (any_of(drop_begin(I.operands(), 2), [&MRI](const MachineOperand &Op) {
-        return !getOpcodeDef(TargetOpcode::G_IMPLICIT_DEF, Op.getReg(), MRI);
+  if (any_of(drop_begin(I.operands(), 2),
+             [&MRI](const MachineOperand &Op) {
+               return !getOpcodeDef(TargetOpcode::G_IMPLICIT_DEF, Op.getReg(),
+                                    MRI);
+             }) &&
+      any_of(drop_begin(I.operands(), 2), [&MRI](const MachineOperand &Op) {
+        return !getOpcodeDef(TargetOpcode::G_POISON, Op.getReg(), MRI);
       }))
     return false;
   unsigned SubReg;

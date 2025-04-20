@@ -548,7 +548,8 @@ bool SPIRVInstructionSelector::select(MachineInstr &I) {
   Register ResVReg = HasDefs ? I.getOperand(0).getReg() : Register(0);
   SPIRVType *ResType = HasDefs ? GR.getSPIRVTypeForVReg(ResVReg) : nullptr;
   assert(!HasDefs || ResType || I.getOpcode() == TargetOpcode::G_GLOBAL_VALUE ||
-         I.getOpcode() == TargetOpcode::G_IMPLICIT_DEF);
+         I.getOpcode() == TargetOpcode::G_IMPLICIT_DEF ||
+         I.getOpcode() == TargetOpcode::G_POISON);
   if (spvSelect(ResVReg, ResType, I)) {
     if (HasDefs) // Make all vregs 64 bits (for SPIR-V IDs).
       for (unsigned i = 0; i < I.getNumDefs(); ++i)
@@ -598,6 +599,7 @@ bool SPIRVInstructionSelector::spvSelect(Register ResVReg,
   case TargetOpcode::G_GLOBAL_VALUE:
     return selectGlobalValue(ResVReg, I);
   case TargetOpcode::G_IMPLICIT_DEF:
+  case TargetOpcode::G_POISON:
     return selectOpUndef(ResVReg, ResType, I);
   case TargetOpcode::G_FREEZE:
     return selectFreeze(ResVReg, ResType, I);
@@ -2326,7 +2328,8 @@ bool SPIRVInstructionSelector::selectFreeze(Register ResVReg,
     case SPIRV::ASSIGN_TYPE:
       if (MachineInstr *AssignToDef =
               MRI->getVRegDef(Def->getOperand(1).getReg())) {
-        if (AssignToDef->getOpcode() == TargetOpcode::G_IMPLICIT_DEF)
+        if (AssignToDef->getOpcode() == TargetOpcode::G_IMPLICIT_DEF ||
+            AssignToDef->getOpcode() == TargetOpcode::G_POISON)
           Reg = Def->getOperand(2).getReg();
       }
       break;

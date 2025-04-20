@@ -477,7 +477,8 @@ AMDGPURegisterBankInfo::getInstrAlternativeMappings(
   InstructionMappings AltMappings;
   switch (MI.getOpcode()) {
   case TargetOpcode::G_CONSTANT:
-  case TargetOpcode::G_IMPLICIT_DEF: {
+  case TargetOpcode::G_IMPLICIT_DEF:
+  case TargetOpcode::G_POISON: {
     unsigned Size = getSizeInBits(MI.getOperand(0).getReg(), MRI, *TRI);
     if (Size == 1) {
       static const OpRegBankEntry<1> Table[3] = {
