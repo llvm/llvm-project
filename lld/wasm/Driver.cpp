@@ -969,6 +969,8 @@ static void createSyntheticSymbols() {
   } else {
     // For non-PIC code
     WasmSym::stackPointer = createGlobalVariable("__stack_pointer", true);
+    WasmSym::definedMemoryBase = symtab->addOptionalDataSymbol("__memory_base");
+    WasmSym::definedTableBase = symtab->addOptionalDataSymbol("__table_base");
     WasmSym::stackPointer->markLive();
   }
 
@@ -990,18 +992,23 @@ static void createOptionalSymbols() {
 
   WasmSym::dsoHandle = symtab->addOptionalDataSymbol("__dso_handle");
 
-  if (!ctx.arg.shared)
-    WasmSym::dataEnd = symtab->addOptionalDataSymbol("__data_end");
+  auto addDataLayoutSymbol = [&](StringRef s) -> DefinedData * {
+    // Data layout symbols are either defined by the lld, or (in the case
+    // of PIC code) defined by the dynamic linker / embedder.
+    if (ctx.isPic) {
+      ctx.arg.allowUndefinedSymbols.insert(s);
+      return nullptr;
+    } else {
+      return symtab->addOptionalDataSymbol(s);
+    }
+  };
 
-  if (!ctx.isPic) {
-    WasmSym::stackLow = symtab->addOptionalDataSymbol("__stack_low");
-    WasmSym::stackHigh = symtab->addOptionalDataSymbol("__stack_high");
-    WasmSym::globalBase = symtab->addOptionalDataSymbol("__global_base");
-    WasmSym::heapBase = symtab->addOptionalDataSymbol("__heap_base");
-    WasmSym::heapEnd = symtab->addOptionalDataSymbol("__heap_end");
-    WasmSym::definedMemoryBase = symtab->addOptionalDataSymbol("__memory_base");
-    WasmSym::definedTableBase = symtab->addOptionalDataSymbol("__table_base");
-  }
+  WasmSym::dataEnd = addDataLayoutSymbol("__data_end");
+  WasmSym::stackLow = addDataLayoutSymbol("__stack_low");
+  WasmSym::stackHigh = addDataLayoutSymbol("__stack_high");
+  WasmSym::globalBase = addDataLayoutSymbol("__global_base");
+  WasmSym::heapBase = addDataLayoutSymbol("__heap_base");
+  WasmSym::heapEnd = addDataLayoutSymbol("__heap_end");
 
   WasmSym::firstPageEnd =
       symtab->addOptionalDataSymbol("__wasm_first_page_end");
