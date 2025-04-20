@@ -99,6 +99,11 @@ public:
   const NoteTag *createBuiltinOverflowNoteTag(CheckerContext &C,
                                               bool BothFeasible, SVal Arg1,
                                               SVal Arg2, SVal Result) const;
+  ProgramStateRef initStateAftetBuiltinOverflow(CheckerContext &C,
+                                                ProgramStateRef State,
+                                                const CallEvent &Call,
+                                                SVal RetCal,
+                                                bool IsOverflow) const;
   std::pair<bool, bool> checkOverflow(CheckerContext &C, SVal RetVal,
                                       QualType Res) const;
 
@@ -167,6 +172,29 @@ BuiltinFunctionChecker::checkOverflow(CheckerContext &C, SVal RetVal,
   return {MayOverflow || MayUnderflow, MayNotOverflow && MayNotUnderflow};
 }
 
+ProgramStateRef BuiltinFunctionChecker::initStateAftetBuiltinOverflow(
+    CheckerContext &C, ProgramStateRef State, const CallEvent &Call,
+    SVal RetVal, bool IsOverflow) const {
+  SValBuilder &SVB = C.getSValBuilder();
+  SVal Arg1 = Call.getArgSVal(0);
+  SVal Arg2 = Call.getArgSVal(1);
+  auto BoolTy = C.getASTContext().BoolTy;
+
+  ProgramStateRef NewState =
+      State->BindExpr(Call.getOriginExpr(), C.getLocationContext(),
+                      SVB.makeTruthVal(IsOverflow, BoolTy));
+
+  if (auto L = Call.getArgSVal(2).getAs<Loc>()) {
+    NewState = NewState->bindLoc(*L, RetVal, C.getLocationContext());
+
+    // Propagate taint if any of the arguments were tainted
+    if (isTainted(State, Arg1) || isTainted(State, Arg2))
+      NewState = addTaint(NewState, *L);
+  }
+
+  return NewState;
+}
+
 void BuiltinFunctionChecker::handleOverflowBuiltin(const CallEvent &Call,
                                                    CheckerContext &C,
                                                    BinaryOperator::Opcode Op,
@@ -176,8 +204,6 @@ void BuiltinFunctionChecker::handleOverflowBuiltin(const CallEvent &Call,
 
   ProgramStateRef State = C.getState();
   SValBuilder &SVB = C.getSValBuilder();
-  const Expr *CE = Call.getOriginExpr();
-  auto BoolTy = C.getASTContext().BoolTy;
 
   SVal Arg1 = Call.getArgSVal(0);
   SVal Arg2 = Call.getArgSVal(1);
@@ -187,28 +213,21 @@ void BuiltinFunctionChecker::handleOverflowBuiltin(const CallEvent &Call,
   SVal RetVal = SVB.evalBinOp(State, Op, Arg1, Arg2, ResultType);
 
   auto [Overflow, NotOverflow] = checkOverflow(C, RetValMax, ResultType);
-  auto initializeState = [&](bool isOverflow) {
-    ProgramStateRef NewState = State->BindExpr(
-        CE, C.getLocationContext(), SVB.makeTruthVal(isOverflow, BoolTy));
 
-    if (auto L = Call.getArgSVal(2).getAs<Loc>()) {
-      NewState = NewState->bindLoc(*L, RetVal, C.getLocationContext());
+  if (NotOverflow) {
+    auto NewState =
+        initStateAftetBuiltinOverflow(C, State, Call, RetVal, false);
 
-      // Propagate taint if any of the arguments were tainted
-      if (isTainted(State, Arg1) || isTainted(State, Arg2))
-        NewState = addTaint(NewState, *L);
-    }
+    C.addTransition(NewState, createBuiltinOverflowNoteTag(
+                                  C, /*overflow=*/false, Arg1, Arg2, RetVal));
+  }
 
-    C.addTransition(NewState,
-                    createBuiltinOverflowNoteTag(C, /*overflow=*/isOverflow,
-                                                 Arg1, Arg2, RetVal));
-  };
+  if (Overflow) {
+    auto NewState = initStateAftetBuiltinOverflow(C, State, Call, RetVal, true);
 
-  if (NotOverflow)
-    initializeState(false);
-
-  if (Overflow)
-    initializeState(true);
+    C.addTransition(NewState, createBuiltinOverflowNoteTag(C, /*overflow=*/true,
+                                                           Arg1, Arg2, RetVal));
+  }
 }
 
 bool BuiltinFunctionChecker::isBuiltinLikeFunction(
