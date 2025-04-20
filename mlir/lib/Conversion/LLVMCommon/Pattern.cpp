@@ -278,12 +278,12 @@ LogicalResult ConvertToLLVMPattern::copyUnrankedDescriptors(
   auto module = builder.getInsertionPoint()->getParentOfType<ModuleOp>();
   FailureOr<LLVM::LLVMFuncOp> freeFunc, mallocFunc;
   if (toDynamic) {
-    mallocFunc = LLVM::lookupOrCreateMallocFn(module, indexType);
+    mallocFunc = LLVM::lookupOrCreateMallocFn(builder, module, indexType);
     if (failed(mallocFunc))
       return failure();
   }
   if (!toDynamic) {
-    freeFunc = LLVM::lookupOrCreateFreeFn(module);
+    freeFunc = LLVM::lookupOrCreateFreeFn(builder, module);
     if (failed(freeFunc))
       return failure();
   }
