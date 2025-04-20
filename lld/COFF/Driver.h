@@ -22,6 +22,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/TarWriter.h"
 #include "llvm/WindowsDriver/MSVCPaths.h"
+#include <future>
 #include <memory>
 #include <optional>
 #include <set>
@@ -80,7 +81,7 @@ public:
 
   void linkerMain(llvm::ArrayRef<const char *> args);
 
-  void addFile(InputFile *file);
+  void addFile(InputFile *file, CmdLineArchive *inCmdLineArchive = nullptr);
 
   void addClangLibSearchPaths(const std::string &argv0);
 
@@ -88,18 +89,23 @@ public:
   void enqueueArchiveMember(const Archive::Child &c, const Archive::Symbol &sym,
                             StringRef parentName);
 
-  void enqueuePDB(StringRef Path) { enqueuePath(Path, false, false); }
+  void enqueuePDB(StringRef Path) { enqueuePath(Path); }
 
   MemoryBufferRef takeBuffer(std::unique_ptr<MemoryBuffer> mb);
 
-  void enqueuePath(StringRef path, bool wholeArchive, bool lazy);
+  // Schedule a input file for reading.
+  void enqueuePath(StringRef path, bool wholeArchive = false,
+                   std::optional<std::shared_future<CmdLineArchive *>>
+                       inCmdLineArchive = std::nullopt);
+
+  void pullArm64ECIcallHelper();
 
   // Returns a list of chunks of selected symbols.
   std::vector<Chunk *> getChunks() const;
 
   std::unique_ptr<llvm::TarWriter> tar; // for /linkrepro
 
-  void pullArm64ECIcallHelper();
+  bool ltoCompilationDone = false;
 
 private:
   // Searches a file from search paths.
@@ -170,7 +176,7 @@ private:
   std::set<std::string> visitedLibs;
 
   void addBuffer(std::unique_ptr<MemoryBuffer> mb, bool wholeArchive,
-                 bool lazy);
+                 CmdLineArchive *inCmdLineArchive = nullptr);
   void addArchiveBuffer(MemoryBufferRef mbref, StringRef symName,
                         StringRef parentName, uint64_t offsetInArchive);
 
@@ -258,8 +264,6 @@ private:
   // Create export thunks for exported and patchable Arm64EC function symbols.
   void createECExportThunks();
   void maybeCreateECExportThunk(StringRef name, Symbol *&sym);
-
-  bool ltoCompilationDone = false;
 };
 
 // Create enum with OPT_xxx values for each option in Options.td

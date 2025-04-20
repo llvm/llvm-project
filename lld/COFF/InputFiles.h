@@ -71,6 +71,7 @@ class InputFile {
 public:
   enum Kind {
     ArchiveKind,
+    CmdLineArchiveKind,
     ObjectKind,
     PDBKind,
     ImportKind,
@@ -83,12 +84,17 @@ public:
   // Returns the filename.
   StringRef getName() const { return mb.getBufferIdentifier(); }
 
-  // Reads a file (the constructor doesn't do that).
-  virtual void parse() = 0;
-
   // Returns the CPU type this file was compiled to.
   virtual MachineTypes getMachineType() const {
     return IMAGE_FILE_MACHINE_UNKNOWN;
+  }
+
+  // Parse the file if it wasn't already parsed.
+  void maybeParse() {
+    if (parsed)
+      return;
+    parsed = true;
+    parse();
   }
 
   MemoryBufferRef mb;
@@ -102,17 +108,18 @@ public:
   SymbolTable &symtab;
 
 protected:
-  InputFile(SymbolTable &s, Kind k, MemoryBufferRef m, bool lazy = false)
-      : mb(m), symtab(s), fileKind(k), lazy(lazy) {}
+  InputFile(SymbolTable &s, Kind k, MemoryBufferRef m)
+      : mb(m), symtab(s), fileKind(k) {}
+
+  // Reads a file (the constructor doesn't do that).
+  virtual void parse() = 0;
 
   StringRef directives;
 
+  bool parsed = false;
+
 private:
   const Kind fileKind;
-
-public:
-  // True if this is a lazy ObjFile or BitcodeFile.
-  bool lazy = false;
 };
 
 // .lib or .a file.
@@ -132,16 +139,30 @@ private:
   llvm::DenseSet<uint64_t> seen;
 };
 
+// A synthetic --start-lib/--end-lib archive.
+class CmdLineArchive : public InputFile {
+public:
+  explicit CmdLineArchive(SymbolTable &s, MemoryBufferRef m)
+      : InputFile(s, CmdLineArchiveKind, m) {}
+  static bool classof(const InputFile *f) {
+    return f->kind() == CmdLineArchiveKind;
+  }
+  void parse() override;
+  void addInputFile(InputFile *f);
+
+private:
+  std::vector<InputFile *> files;
+};
+
 // .obj or .o file. This may be a member of an archive file.
 class ObjFile : public InputFile {
 public:
   static ObjFile *create(COFFLinkerContext &ctx, MemoryBufferRef mb,
                          bool lazy = false);
-  explicit ObjFile(SymbolTable &symtab, COFFObjectFile *coffObj, bool lazy);
+  explicit ObjFile(SymbolTable &symtab, COFFObjectFile *coffObj);
 
   static bool classof(const InputFile *f) { return f->kind() == ObjectKind; }
   void parse() override;
-  void parseLazy();
   MachineTypes getMachineType() const override;
   ArrayRef<Chunk *> getChunks() { return chunks; }
   ArrayRef<SectionChunk *> getDebugChunks() { return debugChunks; }
@@ -190,6 +211,9 @@ public:
 
   // True if this file was compiled with /guard:ehcont.
   bool hasGuardEHCont() { return feat00Flags & 0x4000; }
+
+  // Add lazy references to the symbols in this file.
+  void parseLazy();
 
   // Pointer to the PDB module descriptor builder. Various debug info records
   // will reference object files by "module index", which is here. Things like
@@ -391,24 +415,24 @@ public:
 class BitcodeFile : public InputFile {
 public:
   explicit BitcodeFile(SymbolTable &symtab, MemoryBufferRef mb,
-                       std::unique_ptr<llvm::lto::InputFile> &obj, bool lazy);
+                       std::unique_ptr<llvm::lto::InputFile> &obj);
   ~BitcodeFile();
 
   static BitcodeFile *create(COFFLinkerContext &ctx, MemoryBufferRef mb,
-                             StringRef archiveName, uint64_t offsetInArchive,
-                             bool lazy);
+                             StringRef archiveName, uint64_t offsetInArchive);
   static bool classof(const InputFile *f) { return f->kind() == BitcodeKind; }
   ArrayRef<Symbol *> getSymbols() { return symbols; }
   MachineTypes getMachineType() const override {
     return getMachineType(obj.get());
   }
   static MachineTypes getMachineType(const llvm::lto::InputFile *obj);
-  void parseLazy();
+  void parse() override;
   std::unique_ptr<llvm::lto::InputFile> obj;
 
-private:
-  void parse() override;
+  // Add lazy references to the symbols in this file.
+  void parseLazy();
 
+private:
   std::vector<Symbol *> symbols;
 };
 
