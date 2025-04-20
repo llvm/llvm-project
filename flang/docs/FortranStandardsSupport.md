@@ -17,13 +17,17 @@ local:
 This document summarizes Fortran standards support in Flang. The information is only provided as a guideline. The
 TODOs/Not Yet Implemented messages emitted by the compiler for unimplemented features should be treated as authoritative.
 
-The standards support information is provided as a table with three columns that are self explanatory. The Status column uses
+The standards support information is provided as a table with three columns that are self explanatory. No distinction is
+made between the support in the Parser/Semantics and MLIR or Lowering support. The Status column uses
 the letters **P**, **Y**, **N** for the implementation status:
 - **P** : When the implementation is incomplete for a few cases
 - **Y** : When the implementation is complete
 - **N** : When the implementation is absent
 
-Note : No distinction is made between the support in the Parser/Semantics and MLIR or Lowering support.
+There is no distinction made between support in the Parser/Semantics and the MLIR or Lowering stages.
+
+Note: The two major missing features in Flang at present are coarrays and parameterized derived types (PDTs) with length type parameters.
+
 
 ## Fortran 2023
 See [document](F202X.md) for a brief discussion about the new features in Fortran 2023. The following table summarizes the
@@ -64,26 +68,26 @@ the multi-image execution. The table entries are based on the document [The new 
 | Feature                                                    | Status | Comments                                                |
 |------------------------------------------------------------|--------|---------------------------------------------------------|
 | Asynchronous communication                                 | P      | Syntax is accepted |
-| Teams                                                      | N      | |
-| Image failure                                              | P      | stat_failed_image is added |
-| Form team statement                                        | N      | |
-| Change team construct                                      | N      | |
-| Coarrays allocated in teams                                | N      | |
-| Critical construct                                         | N      | |
-| Lock and unlock statements                                 | N      | |
-| Events                                                     | N      | |
-| Sync team construct                                        | N      | |
-| Image selectors                                            | N      | |
-| Intrinsic functions get_team 	and team_number              | N      | |
-| Intrinsic function image_index                             | N      | |
-| Intrinsic function num_images                              | N      | |
-| Intrinsic function this_image                              | N      | |
-| Intrinsic move_alloc extensions                            | P      | |
-| Detecting failed and stopped images                        | N      | |
-| Collective subroutines                                     | N      | |
-| New and enhanced atomic subroutines                        | N      | |
-| Failed images and stat= specifiers                         | N      | |
-| Intrinsic function coshape                                 | N      | |
+| Teams                                                      | N      | Multi-image/Coarray feature |
+| Image failure                                              | P      | Multi-image/Coarray feature. stat_failed_image is added |
+| Form team statement                                        | N      | Multi-image/Coarray feature |
+| Change team construct                                      | N      | Multi-image/Coarray feature |
+| Coarrays allocated in teams                                | N      | Multi-image/Coarray feature |
+| Critical construct                                         | N      | Multi-image/Coarray feature |
+| Lock and unlock statements                                 | N      | Multi-image/Coarray feature |
+| Events                                                     | N      | Multi-image/Coarray feature |
+| Sync team construct                                        | N      | Multi-image/Coarray feature |
+| Image selectors                                            | N      | Multi-image/Coarray feature |
+| Intrinsic functions get_team 	and team_number              | N      | Multi-image/Coarray feature |
+| Intrinsic function image_index                             | N      | Multi-image/Coarray feature |
+| Intrinsic function num_images                              | N      | Multi-image/Coarray feature |
+| Intrinsic function this_image                              | N      | Multi-image/Coarray feature |
+| Intrinsic move_alloc extensions                            | P      | Multi-image/Coarray feature |
+| Detecting failed and stopped images                        | N      | Multi-image/Coarray feature |
+| Collective subroutines                                     | N      | Multi-image/Coarray feature |
+| New and enhanced atomic subroutines                        | N      | Multi-image/Coarray feature |
+| Failed images and stat= specifiers                         | N      | Multi-image/Coarray feature |
+| Intrinsic function coshape                                 | N      | Multi-image/Coarray feature |
 
 ## Fortran 2008
 All features except those listed in the following table are supported.
