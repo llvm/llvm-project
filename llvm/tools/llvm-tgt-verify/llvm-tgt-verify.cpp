@@ -123,7 +123,7 @@ int main(int argc, char **argv) {
     return 1;
   }
   auto S = Triple::normalize(TargetTriple);
-  M->setTargetTriple(S);
+  M->setTargetTriple(Triple(S));
 
   PassInstrumentationCallbacks PIC;
   StandardInstrumentations SI(Context, false/*debug PM*/,
@@ -153,7 +153,7 @@ int main(int argc, char **argv) {
 
   Triple TT(M->getTargetTriple());
   if (!NoLint)
-    FPM.addPass(LintPass());
+    FPM.addPass(LintPass(false));
   if (!NoVerify)
     MPM.addPass(VerifierPass());
   if (TT.isAMDGPU())
