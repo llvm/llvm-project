@@ -2196,6 +2196,53 @@ static unsigned computeFullDescSize(const ASTContext &ASTCtx,
   return 0;
 }
 
+static unsigned computePointerOffset(const ASTContext &ASTCtx,
+                                     const Pointer &Ptr) {
+  unsigned Result = 0;
+
+  Pointer P = Ptr;
+  while (P.isArrayElement() || P.isField()) {
+    P = P.expand();
+    const Descriptor *D = P.getFieldDesc();
+
+    if (P.isArrayElement()) {
+      unsigned ElemSize =
+          ASTCtx.getTypeSizeInChars(D->getElemQualType()).getQuantity();
+      if (P.isOnePastEnd())
+        Result += ElemSize * P.getNumElems();
+      else
+        Result += ElemSize * P.getIndex();
+      P = P.expand().getArray();
+    } else if (P.isBaseClass()) {
+
+      const auto *RD = cast<CXXRecordDecl>(D->asDecl());
+      bool IsVirtual = Ptr.isVirtualBaseClass();
+      P = P.getBase();
+      const Record *BaseRecord = P.getRecord();
+
+      const ASTRecordLayout &Layout =
+          ASTCtx.getASTRecordLayout(cast<CXXRecordDecl>(BaseRecord->getDecl()));
+      if (IsVirtual)
+        Result += Layout.getVBaseClassOffset(RD).getQuantity();
+      else
+        Result += Layout.getBaseClassOffset(RD).getQuantity();
+    } else if (P.isField()) {
+      const FieldDecl *FD = P.getField();
+      const ASTRecordLayout &Layout =
+          ASTCtx.getASTRecordLayout(FD->getParent());
+      unsigned FieldIndex = FD->getFieldIndex();
+      uint64_t FieldOffset =
+          ASTCtx.toCharUnitsFromBits(Layout.getFieldOffset(FieldIndex))
+              .getQuantity();
+      Result += FieldOffset;
+      P = P.getBase();
+    } else
+      llvm_unreachable("Unhandled descriptor type");
+  }
+
+  return Result;
+}
+
 static bool interp__builtin_object_size(InterpState &S, CodePtr OpPC,
                                         const InterpFrame *Frame,
                                         const Function *Func,
@@ -2217,7 +2264,7 @@ static bool interp__builtin_object_size(InterpState &S, CodePtr OpPC,
 
   const ASTContext &ASTCtx = S.getASTContext();
 
-  unsigned ByteOffset = 0;
+  unsigned ByteOffset = computePointerOffset(ASTCtx, Ptr);
   unsigned FullSize = computeFullDescSize(ASTCtx, DeclDesc);
 
   pushInteger(S, FullSize - ByteOffset, Call->getType());
