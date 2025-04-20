@@ -10,6 +10,7 @@
 // RUN: %clang_cc1 -verify=NORMAL23,BOTH23,ALLNORMAL,ALL -std=c++23 %s -fcolor-diagnostics
 // RUN: %clang_cc1 -verify=IMPLICIT23,BOTH23,ALLIMPLICIT,ALL -fimplicit-constexpr -std=c++23 %s -fcolor-diagnostics
 
+// ALLIMPLICIT-no-diagnostics
 
 // =============================================
 // 1) simple member function
@@ -66,7 +67,7 @@ constexpr bool result_template_template_type = template_template_type<int>{}.tem
 // 3) explicit "this" function
 
 struct explicit_this {
-  template <typename Self> bool test(this const Self & self) const {
+  template <typename Self> bool test(this const Self & self) {
     // ALLNORMAL-note@-1 {{declared here}}
     return self.ok;
   }
@@ -78,6 +79,6 @@ struct child: explicit_this {
 
 constexpr bool result_explicit_this = child{}.test();
 // ALLNORMAL-error@-1 {{constexpr variable 'result_explicit_this' must be initialized by a constant expression}}
-// ALLNORMAL-note@-2 {{non-constexpr function 'test' cannot be used in a constant expression}}
+// ALLNORMAL-note@-2 {{non-constexpr function 'test<child>' cannot be used in a constant expression}}
 
 #endif
