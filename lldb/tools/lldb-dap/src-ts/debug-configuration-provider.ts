@@ -32,11 +32,11 @@ export class LLDBDapConfigurationProvider
   ): Promise<vscode.DebugConfiguration | null | undefined> {
     try {
       if (
-        "debugAdapterHost" in debugConfiguration &&
+        "debugAdapterHostname" in debugConfiguration &&
         !("debugAdapterPort" in debugConfiguration)
       ) {
         throw new ErrorWithNotification(
-          "A debugAdapterPort must be provided when debugAdapterHost is set. Please update your launch configuration.",
+          "A debugAdapterPort must be provided when debugAdapterHostname is set. Please update your launch configuration.",
           new ConfigureButton(),
         );
       }
@@ -83,7 +83,7 @@ export class LLDBDapConfigurationProvider
           // and list of arguments.
           delete debugConfiguration.debugAdapterExecutable;
           delete debugConfiguration.debugAdapterArgs;
-          debugConfiguration.debugAdapterHost = serverInfo.host;
+          debugConfiguration.debugAdapterHostname = serverInfo.host;
           debugConfiguration.debugAdapterPort = serverInfo.port;
         }
       }
