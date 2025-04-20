@@ -12,6 +12,7 @@
 include "mlir/Dialect/Ptr/IR/PtrDialect.td"
 include "mlir/Dialect/Ptr/IR/MemorySpaceInterfaces.td"
 include "mlir/IR/AttrTypeBase.td"
+include "mlir/IR/BuiltinAttributeInterfaces.td"
 
 // All of the attributes will extend this class.
 class Ptr_Attr<string name, string attrMnemonic,
@@ -22,35 +23,28 @@ class Ptr_Attr<string name, string attrMnemonic,
 }
 
 //===----------------------------------------------------------------------===//
-// IAddressSpaceAttr
+// GenericSpaceAttr
 //===----------------------------------------------------------------------===//
 
-def Ptr_IAddressSpaceAttr :
-    Ptr_Attr<"IAddressSpace", "int_space", [
+def Ptr_GenericSpaceAttr :
+    Ptr_Attr<"GenericSpace", "generic_space", [
       DeclareAttrInterfaceMethods<MemorySpaceAttrInterface>
     ]> {
-  let summary = "Int memory space";
+  let summary = "Generic memory space";
   let description = [{
-    The `int_as` attribute defines a memory space attribute with the following
-    properties:
+    The `generic_space` attribute defines a memory space attribute with the
+    following properties:
     - Load and store operations are always valid, regardless of the type.
     - Atomic operations are always valid, regardless of the type.
-    - Cast operations are valid between pointers with `int_space` memory space,
-    or between non-scalable `vector` of pointers with `int_space` memory space.
-
-    The default address spaces is 0.
-
+    - Cast operations to `generic_space` are always valid.
+  
     Example:
 
     ```mlir
-    // Default address space: 0.
-    #ptr.int_space
-    // Address space 3.
-    #ptr.int_space<3>
+    #ptr.generic_space
     ```
   }];
-  let parameters = (ins DefaultValuedParameter<"int64_t", "0">:$value);
-  let assemblyFormat = "(`<` $value^ `>`)?";
+  let assemblyFormat = "";
 }
 
 //===----------------------------------------------------------------------===//

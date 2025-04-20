@@ -13,7 +13,10 @@
 #ifndef MLIR_DIALECT_PTR_IR_PTRATTRS_H
 #define MLIR_DIALECT_PTR_IR_PTRATTRS_H
 
+#include "mlir/IR/BuiltinAttributeInterfaces.h"
 #include "mlir/IR/OpImplementation.h"
+#include "mlir/Interfaces/DataLayoutInterfaces.h"
+#include "llvm/Support/TypeSize.h"
 
 #include "mlir/Dialect/Ptr/IR/MemorySpaceInterfaces.h"
 

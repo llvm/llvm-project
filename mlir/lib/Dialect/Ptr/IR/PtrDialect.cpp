@@ -55,15 +55,9 @@ OpFoldResult PtrAddOp::fold(FoldAdaptor adaptor) {
   return nullptr;
 }
 
-Value PtrAddOp::getViewSource() { return getBase(); }
-
 //===----------------------------------------------------------------------===//
 // TypeOffsetOp
 //===----------------------------------------------------------------------===//
-
-OpFoldResult TypeOffsetOp::fold(FoldAdaptor adaptor) {
-  return TypeAttr::get(getElementType());
-}
 
 llvm::TypeSize TypeOffsetOp::getTypeSize(std::optional<DataLayout> layout) {
   if (layout)

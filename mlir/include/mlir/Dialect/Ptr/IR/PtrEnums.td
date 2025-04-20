@@ -70,7 +70,7 @@ def AtomicOrdering : I64EnumAttr<
 // Ptr add flags enum attr.
 //===----------------------------------------------------------------------===//
 
-def Ptr_PtrAddFlags : I32EnumAttr<"PtrAddFlags", "Pointer add flags", [
+def Ptr_PtrAddFlags : I32Enum<"PtrAddFlags", "Pointer add flags", [
     I32EnumAttrCase<"none", 0>, I32EnumAttrCase<"nusw", 1>,
     I32EnumAttrCase<"nuw", 2>, I32EnumAttrCase<"inbounds", 3>
   ]> {
