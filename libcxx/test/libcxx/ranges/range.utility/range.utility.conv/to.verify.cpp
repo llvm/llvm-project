@@ -21,7 +21,6 @@ void test() {
   using member_func_ptr = decltype(&C::f);
   using member_ptr      = decltype(&C::member);
   using func_ptr        = decltype(&ff);
-  using func_t          = decltype(ff);
 
   struct R {
     int* begin() const { return nullptr; };
@@ -30,7 +29,6 @@ void test() {
     operator int() const { return 0; }
     operator int*() const { return nullptr; }
     operator func_ptr() const { return nullptr; }
-    operator void() const {}
     operator member_func_ptr() const { return nullptr; }
     operator member_ptr() const { return nullptr; }
     operator color() const { return color::red; }
@@ -49,31 +47,25 @@ void test() {
          std::ranges::to<
              func_ptr>()); //expected-error-re@*:* {{static assertion failed{{.*}}The target must be a class type}}
 
-  (void)std::ranges::to<void>(
-      R{}); //expected-error-re@*:* {{static assertion failed{{.*}}The target must be a class type}}
-  (void)(R{} | std::ranges::to<
-                   void>()); //expected-error-re@*:* {{static assertion failed{{.*}}The target must be a class type}}
   (void)std::ranges::to<member_ptr>(
       R{}); //expected-error-re@*:* {{static assertion failed{{.*}}The target must be a class type}}
   (void)(R{} |
          std::ranges::to<
              member_ptr>()); //expected-error-re@*:* {{static assertion failed{{.*}}The target must be a class type}}
-  (void)std::ranges::to<member_func_ptr>(
-      R{}); //expected-error-re@*:* {{static assertion failed{{.*}}The target must be a class type}}
-  (void)(R{} |
-         std::ranges::to<
-             member_func_ptr>()); //expected-error-re@*:* {{static assertion failed{{.*}}The target must be a class type}}
-  (void)std::ranges::to<func_ptr>(
-      R{}); //expected-error-re@*:* {{static assertion failed{{.*}}The target must be a class type}}
-  (void)(R{} |
-         std::ranges::to<
-             func_ptr>()); //expected-error-re@*:* {{static assertion failed{{.*}}The target must be a class type}}
-  (void)std::ranges::to<color>(
-      R{}); //expected-error-re@*:* {{static assertion failed{{.*}}The target must be a class type}}
-  (void)(R{} | std::ranges::to<
-                   color>()); //expected-error-re@*:* {{static assertion failed{{.*}}The target must be a class type}}
+
   (void)std::ranges::to<func_t>(
       R{}); //expected-error-re@*:* {{static assertion failed{{.*}}The target must be a class type}}
   (void)(R{} | std::ranges::to<
                    func_t>()); //expected-error-re@*:* {{static assertion failed{{.*}}The target must be a class type}}
+
+  (void)std::ranges::to<void>(
+      R{}); //expected-error-re@*:* {{static assertion failed{{.*}}The target must be a class type}}
+  (void)(R{} | std::ranges::to<
+                   void>()); //expected-error-re@*:* {{static assertion failed{{.*}}The target must be a class type}}
+  //expected-error-re@*:* {{static assertion failed{{.*}}ranges::to: unable to convert to the given container type.}}
+
+  (void)std::ranges::to<color>(
+      R{}); //expected-error-re@*:* {{static assertion failed{{.*}}The target must be a class type}}
+  (void)(R{} | std::ranges::to<
+                   color>()); //expected-error-re@*:* {{static assertion failed{{.*}}The target must be a class type}}
 }
