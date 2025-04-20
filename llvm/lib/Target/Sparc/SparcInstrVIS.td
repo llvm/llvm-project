@@ -295,6 +295,16 @@ def : Pat<(f32 fpnegimm0), (FNEGS (FZEROS))>;
 let Predicates = [HasVIS3] in {
 def : Pat<(i64 (adde i64:$lhs, i64:$rhs)), (ADDXCCC $lhs, $rhs)>;
 
+def : Pat<(i64 (mulhu i64:$lhs, i64:$rhs)), (UMULXHI $lhs, $rhs)>;
+// Signed "MULXHI".
+// Based on the formula presented in OSA2011 §7.140, but with bitops to select
+// the values to be added.
+// TODO: This expansion should probably be moved to DAG legalization phase.
+def : Pat<(i64 (mulhs i64:$lhs, i64:$rhs)),
+      (SUBrr (UMULXHI $lhs, $rhs),
+             (ADDrr (ANDrr (SRAXri $lhs, 63), $rhs),
+                    (ANDrr (SRAXri $rhs, 63), $lhs)))>;
+
 def : Pat<(i64 (ctlz i64:$src)), (LZCNT $src)>;
 def : Pat<(i64 (ctlz_zero_undef i64:$src)), (LZCNT $src)>;
 // 32-bit LZCNT.
