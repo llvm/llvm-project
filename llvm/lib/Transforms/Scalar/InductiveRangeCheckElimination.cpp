@@ -265,8 +265,13 @@ bool InductiveRangeCheck::parseRangeCheckICmp(Loop *L, ICmpInst *ICI,
                                               ScalarEvolution &SE,
                                               const SCEVAddRecExpr *&Index,
                                               const SCEV *&End) {
-  auto IsLoopInvariant = [&SE, L](Value *V) {
-    return SE.isLoopInvariant(SE.getSCEV(V), L);
+  auto IsLoopInvariantAndNotUndef = [&SE, L](Value *V) {
+    const SCEV *S = SE.getSCEV(V);
+
+    if (isa<SCEVCouldNotCompute>(S))
+      return false;
+
+    return SE.isLoopInvariant(SE.getSCEV(V), L) && !SE.containsUndefs(S);
   };
 
   ICmpInst::Predicate Pred = ICI->getPredicate();
@@ -277,10 +282,10 @@ bool InductiveRangeCheck::parseRangeCheckICmp(Loop *L, ICmpInst *ICI,
     return false;
 
   // Canonicalize to the `Index Pred Invariant` comparison
-  if (IsLoopInvariant(LHS)) {
+  if (IsLoopInvariantAndNotUndef(LHS)) {
     std::swap(LHS, RHS);
     Pred = CmpInst::getSwappedPredicate(Pred);
-  } else if (!IsLoopInvariant(RHS))
+  } else if (!IsLoopInvariantAndNotUndef(RHS))
     // Both LHS and RHS are loop variant
     return false;
 
