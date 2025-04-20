@@ -6,8 +6,6 @@
 ; RUN: llc < %s -mtriple=sparcv9 -mattr=popc | FileCheck %s -check-prefix=SPARC64-POPC
 ; RUN: llc < %s -mtriple=sparcv9 -mattr=vis3 | FileCheck %s -check-prefix=SPARC64-VIS3
 
-;; FIXME the extensionless versions should be a libcall.
-
 define i32 @i32_nopoison(i32 %x) nounwind {
 ; SPARC-LABEL: i32_nopoison:
 ; SPARC:       ! %bb.0:

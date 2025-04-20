@@ -214,6 +214,12 @@ cir::RecordType::RecordKind RecordType::getKind() const {
   return getImpl()->kind;
 }
 
+void RecordType::complete(ArrayRef<Type> members, bool packed, bool padded) {
+  assert(!cir::MissingFeatures::astRecordDeclAttr());
+  if (mutate(members, packed, padded).failed())
+    llvm_unreachable("failed to complete record");
+}
+
 //===----------------------------------------------------------------------===//
 // Data Layout information for types
 //===----------------------------------------------------------------------===//

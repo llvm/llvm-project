@@ -2016,7 +2016,8 @@ SparcTargetLowering::SparcTargetLowering(const TargetMachine &TM,
                        Subtarget->is64Bit() ? Promote : LibCall);
     setOperationAction(ISD::CTLZ_ZERO_UNDEF, MVT::i64, LibCall);
 
-    // FIXME make these LibCalls.
+    // FIXME here we don't have any ISA extensions that could help us, so to
+    // prevent large expansions those should be made into LibCalls.
     setOperationAction(ISD::CTTZ, MVT::i32, Expand);
     setOperationAction(ISD::CTTZ, MVT::i64, Expand);
     setOperationAction(ISD::CTTZ_ZERO_UNDEF, MVT::i32, Expand);

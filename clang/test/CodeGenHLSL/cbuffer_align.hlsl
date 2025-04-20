@@ -1,6 +1,4 @@
-// RUN: %clang_cc1 -std=hlsl2021 -finclude-default-header -x hlsl -triple \
-// RUN:   dxil-pc-shadermodel6.3-library %s -fnative-half-type \
-// RUN:   -fsyntax-only -verify -verify-ignore-unexpected=warning
+// RUN: %clang_cc1 -Wno-hlsl-implicit-binding -std=hlsl2021 -finclude-default-header -x hlsl -triple dxil-pc-shadermodel6.3-library %s -fnative-half-type -fsyntax-only -verify -verify-ignore-unexpected=warning
 
 struct S0 {
   half a;
