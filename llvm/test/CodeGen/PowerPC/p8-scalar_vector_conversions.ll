@@ -2458,7 +2458,7 @@ define double @getveld(<2 x double> %vd, i32 signext %i) {
 ; CHECK-NEXT:    sldi r3, r3, 3
 ; CHECK-NEXT:    lvsl v3, 0, r3
 ; CHECK-NEXT:    vperm v2, v2, v2, v3
-; CHECK-NEXT:    xxlor vs1, v2, v2
+; CHECK-NEXT:    xxlor f1, v2, v2
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-LE-LABEL: getveld:
@@ -2469,7 +2469,7 @@ define double @getveld(<2 x double> %vd, i32 signext %i) {
 ; CHECK-LE-NEXT:    sldi r3, r3, 3
 ; CHECK-LE-NEXT:    lvsl v3, 0, r3
 ; CHECK-LE-NEXT:    vperm v2, v2, v2, v3
-; CHECK-LE-NEXT:    xxlor vs1, v2, v2
+; CHECK-LE-NEXT:    xxlor f1, v2, v2
 ; CHECK-LE-NEXT:    blr
 ;
 ; CHECK-AIX-LABEL: getveld:
