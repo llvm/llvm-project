@@ -1932,7 +1932,7 @@ inline bool CastMemberPtrPtr(InterpState &S, CodePtr OpPC) {
     S.Stk.push<Pointer>(*Ptr);
     return true;
   }
-  return false;
+  return Invalid(S, OpPC);
 }
 
 //===----------------------------------------------------------------------===//
@@ -2845,6 +2845,15 @@ inline bool EndSpeculation(InterpState &S, CodePtr OpPC) {
     S.getEvalStatus().Diag = S.PrevDiags;
     S.PrevDiags = nullptr;
   }
+  return true;
+}
+
+inline bool PushCC(InterpState &S, CodePtr OpPC, bool Value) {
+  S.ConstantContextOverride = Value;
+  return true;
+}
+inline bool PopCC(InterpState &S, CodePtr OpPC) {
+  S.ConstantContextOverride = std::nullopt;
   return true;
 }
 

@@ -13,6 +13,10 @@ declare float @llvm.nvvm.h2f(i16)
 declare i32 @llvm.nvvm.abs.i(i32)
 declare i64 @llvm.nvvm.abs.ll(i64)
 
+declare float @llvm.nvvm.fabs.f(float)
+declare float @llvm.nvvm.fabs.ftz.f(float)
+declare double @llvm.nvvm.fabs.d(double)
+
 declare i16 @llvm.nvvm.max.s(i16, i16)
 declare i32 @llvm.nvvm.max.i(i32, i32)
 declare i64 @llvm.nvvm.max.ll(i64, i64)
@@ -94,6 +98,17 @@ define void @abs(i32 %a, i64 %b) {
 ; CHECK: select i1 [[cmpll]], i64 %b, i64 [[negll]]
   %r2 = call i64 @llvm.nvvm.abs.ll(i64 %b)
 
+  ret void
+}
+
+; CHECK-LABEL: @fabs
+define void @fabs(float %a, double %b) {
+; CHECK: call float @llvm.nvvm.fabs.f32(float %a)
+; CHECK: call float @llvm.nvvm.fabs.ftz.f32(float %a)
+; CHECK: call double @llvm.nvvm.fabs.f64(double %b)
+  %r1 = call float @llvm.nvvm.fabs.f(float %a)
+  %r2 = call float @llvm.nvvm.fabs.ftz.f(float %a)
+  %r3 = call double @llvm.nvvm.fabs.d(double %b)
   ret void
 }
 
