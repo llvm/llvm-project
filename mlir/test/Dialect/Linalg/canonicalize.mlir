@@ -1894,9 +1894,7 @@ func.func @fold_cast_unpack_dynamic_tile_size(
     return %unpack : tensor<7x?xi32>
 }
 
-//===----------------------------------------------------------------------===//
-// linalg.unpack + linalg.pack
-//===----------------------------------------------------------------------===//
+// -----
 
 // CHECK-LABEL: func.func @fold_pack_unpack_tensor
 // CHECK-SAME:  (%[[ARG0:.*]]: tensor<2x3xf32>) -> tensor<2x3xf32>

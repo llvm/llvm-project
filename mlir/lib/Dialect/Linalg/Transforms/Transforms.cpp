@@ -268,7 +268,7 @@ FailureOr<LowerPackResult> linalg::lowerPack(RewriterBase &rewriter,
     highs[pos] = affine::makeComposedFoldedAffineApply(
         rewriter, loc, map, {outerSize, origSize, innerSize});
   }
-  // TODO: Need memref.pad operation to support memref operands
+
   RankedTensorType collapsed = tensor::CollapseShapeOp::inferCollapsedType(
       RankedTensorType::Builder(packedTensorType).setShape(stripMinedShape),
       packingMetadata.reassociations);
@@ -1030,9 +1030,6 @@ LogicalResult ExtractSliceOfPadTensorSwapPattern::matchAndRewrite(
 static Value getPackOpSourceOrPaddedSource(OpBuilder &builder,
                                            linalg::PackOp packOp) {
   Value input = packOp.getSource();
-  // TODO: Support Memref PackOp. Temporarily return just Op Source.
-  if (!packOp.hasPureTensorSemantics())
-    return input;
 
   if (!packOp.getPaddingValue()) {
     return input;

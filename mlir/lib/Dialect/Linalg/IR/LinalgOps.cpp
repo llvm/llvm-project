@@ -5006,7 +5006,8 @@ LogicalResult PackOp::canonicalize(PackOp packOp, PatternRewriter &rewriter) {
 
   // Insert tensor.cast ops if static shape inference is available..
   SmallVector<int64_t> srcShape, destShape;
-  if (inferStaticShape(packOp, srcShape, destShape)) {
+  if (inferStaticShape(packOp, srcShape, destShape) &&
+      packOp.hasPureTensorSemantics()) {
     Location loc = packOp.getLoc();
     Value source = packOp.getSource();
     if (srcShape != packOp.getSourceType().getShape()) {
@@ -5030,20 +5031,11 @@ LogicalResult PackOp::canonicalize(PackOp packOp, PatternRewriter &rewriter) {
     // Insert a cast if needed
     if (needUpdateDestType) {
       rewriter.setInsertionPointAfter(packOp);
-      Operation *castOp;
-      bool hasTensorSemantics = packOp.hasPureTensorSemantics();
-      if (hasTensorSemantics) {
-        castOp =
-            rewriter.create<tensor::CastOp>(loc, originalResultType, packOp);
-      } else {
-        castOp =
-            rewriter.create<memref::CastOp>(loc, originalResultType, packOp);
-      }
-      rewriter.replaceAllUsesExcept(packOp, castOp->getResult(0), castOp);
-    } else {
-      // TODO: support memref.cast if static shape inference is available.
-      return failure();
+      auto castOp =
+          rewriter.create<tensor::CastOp>(loc, originalResultType, packOp);
+      rewriter.replaceAllUsesExcept(packOp, castOp, castOp);
     }
+
     return success();
   }
 
@@ -5424,7 +5416,7 @@ struct FoldTensorCastUnPackOp : public OpRewritePattern<UnPackOp> {
     if (!tensor::hasFoldableTensorCastOperand(op))
       return failure();
 
-    // TODO: Support Memref PackOp. Temporarily return failure.
+    // TODO: Support Memref UnPackOp. Temporarily return failure.
     if (!op.hasPureTensorSemantics())
       return failure();
 

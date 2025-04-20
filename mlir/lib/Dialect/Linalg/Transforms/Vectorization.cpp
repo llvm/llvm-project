@@ -1889,9 +1889,8 @@ static LogicalResult
 vectorizeUnPackOpPrecondition(linalg::UnPackOp unpackOp,
                               ArrayRef<int64_t> inputVectorSizes) {
   // TODO: Support Memref PackOp. Temporarily return failure.
-  if (!unpackOp.hasPureTensorSemantics()) {
+  if (!unpackOp.hasPureTensorSemantics())
     return failure();
-  }
 
   if (llvm::any_of(unpackOp.getInnerTiles(), [](OpFoldResult res) {
         return !getConstantIntValue(res).has_value();
