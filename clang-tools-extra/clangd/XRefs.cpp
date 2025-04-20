@@ -909,13 +909,13 @@ public:
       return std::tie(LTok, L.Role) < std::tie(RTok, R.Role);
     });
     // We sometimes see duplicates when parts of the AST get traversed twice.
-    References.erase(std::unique(References.begin(), References.end(),
-                                 [](const Reference &L, const Reference &R) {
-                                   auto LTok = L.SpelledTok.location();
-                                   auto RTok = R.SpelledTok.location();
-                                   return std::tie(LTok, L.Role) ==
-                                          std::tie(RTok, R.Role);
-                                 }),
+    References.erase(llvm::unique(References,
+                                  [](const Reference &L, const Reference &R) {
+                                    auto LTok = L.SpelledTok.location();
+                                    auto RTok = R.SpelledTok.location();
+                                    return std::tie(LTok, L.Role) ==
+                                           std::tie(RTok, R.Role);
+                                  }),
                      References.end());
     return std::move(References);
   }
@@ -1502,12 +1502,12 @@ ReferencesResult findReferences(ParsedAST &AST, Position Pos, uint32_t Limit,
     // We may get multiple refs with the same location and different Roles, as
     // cross-reference is only interested in locations, we deduplicate them
     // by the location to avoid emitting duplicated locations.
-    MainFileRefs.erase(std::unique(MainFileRefs.begin(), MainFileRefs.end(),
-                                   [](const ReferenceFinder::Reference &L,
-                                      const ReferenceFinder::Reference &R) {
-                                     return L.SpelledTok.location() ==
-                                            R.SpelledTok.location();
-                                   }),
+    MainFileRefs.erase(llvm::unique(MainFileRefs,
+                                    [](const ReferenceFinder::Reference &L,
+                                       const ReferenceFinder::Reference &R) {
+                                      return L.SpelledTok.location() ==
+                                             R.SpelledTok.location();
+                                    }),
                        MainFileRefs.end());
     for (const auto &Ref : MainFileRefs) {
       ReferencesResult::Reference Result;
