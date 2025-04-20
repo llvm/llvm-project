@@ -395,6 +395,14 @@ Improvements to Clang's diagnostics
   constructors to initialize their non-modifiable members. The diagnostic is
   not new; being controlled via a warning group is what's new. Fixes #GH41104
 
+- Improved bit-field diagnostics to consider the type specified by the
+  ``preferred_type`` attribute. These diagnostics are controlled by the flags
+  ``-Wpreferred-type-bitfield-enum-conversion`` and
+  ``-Wpreferred-type-bitfield-width``. These warnings are on by default as they
+  they're only triggered if the authors are already making the choice to use
+  ``preferred_type`` attribute.
+
+
 Improvements to Clang's time-trace
 ----------------------------------
 
