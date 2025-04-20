@@ -55,6 +55,8 @@ OpFoldResult PtrAddOp::fold(FoldAdaptor adaptor) {
   return nullptr;
 }
 
+Value PtrAddOp::getViewSource() { return getBase(); }
+
 //===----------------------------------------------------------------------===//
 // TypeOffsetOp
 //===----------------------------------------------------------------------===//

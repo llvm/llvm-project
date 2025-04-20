@@ -11,8 +11,10 @@
 
 include "mlir/Dialect/Ptr/IR/PtrDialect.td"
 include "mlir/Dialect/Ptr/IR/PtrAttrDefs.td"
+include "mlir/Dialect/Ptr/IR/PtrEnums.td"
 include "mlir/Dialect/Ptr/IR/MemorySpaceInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
+include "mlir/Interfaces/ViewLikeInterface.td"
 include "mlir/IR/OpAsmInterface.td"
 
 //===----------------------------------------------------------------------===//
@@ -20,7 +22,8 @@ include "mlir/IR/OpAsmInterface.td"
 //===----------------------------------------------------------------------===//
 
 def Ptr_PtrAddOp : Pointer_Op<"ptradd", [
-    Pure, AllTypesMatch<["base", "result"]>
+    Pure, AllTypesMatch<["base", "result"]>,
+    DeclareOpInterfaceMethods<ViewLikeOpInterface>
   ]> {
   let summary = "Pointer add operation";
   let description = [{
@@ -30,14 +33,19 @@ def Ptr_PtrAddOp : Pointer_Op<"ptradd", [
     Example:
 
     ```mlir
-    %x_off = ptr.ptradd %x, %off : !ptr.ptr<0>, i32
+    %x_off  = ptr.ptradd %x, %off : !ptr.ptr<0>, i32
+    %x_off0 = ptr.ptradd nusw %x, %off : !ptr.ptr<0>, i32
     ```
   }];
 
-  let arguments = (ins Ptr_PtrType:$base, AnySignlessIntegerOrIndex:$offset);
+  let arguments = (ins
+    Ptr_PtrType:$base,
+    AnySignlessIntegerOrIndex:$offset,
+    DefaultValuedAttr<Ptr_PtrAddFlags,
+        "::mlir::ptr::PtrAddFlags::none">:$flags);
   let results = (outs Ptr_PtrType:$result);
   let assemblyFormat = [{
-    $base `,` $offset attr-dict `:` type($base) `,` type($offset)
+    ($flags^)? $base `,` $offset attr-dict `:` type($base) `,` type($offset)
   }];
   let hasFolder = 1;
 }
