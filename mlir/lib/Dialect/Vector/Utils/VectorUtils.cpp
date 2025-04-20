@@ -141,8 +141,14 @@ static AffineMap makePermutationMap(
     unsigned countInvariantIndices = 0;
     for (unsigned dim = 0; dim < numIndices; ++dim) {
       if (!invariants.count(indices[dim])) {
-        assert(perm[kvp.second] == getAffineConstantExpr(0, context) &&
-               "permutationMap already has an entry along dim");
+        if (perm[kvp.second] != getAffineConstantExpr(0, context)) {
+          auto loopOp = cast<affine::AffineForOp>(kvp.first);
+          loopOp->emitError(
+              "loop induction variable is used in multiple indices, which is "
+              "unsupported for vectorization. Consider using nested loops "
+              "instead of a single loop with affine.apply.");
+          return AffineMap();
+        }
         perm[kvp.second] = getAffineDimExpr(dim, context);
       } else {
         ++countInvariantIndices;
