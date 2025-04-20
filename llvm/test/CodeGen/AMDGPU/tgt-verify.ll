@@ -58,3 +58,13 @@ entry:
   %tmp2 = ashr i65 %x, 64
   ret i65 %tmp2
 }
+
+declare void @llvm.amdgcn.cs.chain.v3i32(ptr, i32, <3 x i32>, <3 x i32>, i32, ...)
+declare amdgpu_cs_chain void @chain_callee(<3 x i32> inreg, <3 x i32>)
+
+define amdgpu_cs void @no_unreachable(<3 x i32> inreg %a, <3 x i32> %b) {
+; CHECK: llvm.amdgcn.cs.chain must be followed by unreachable
+; CHECK-NEXT: call void (ptr, i32, <3 x i32>, <3 x i32>, i32, ...) @llvm.amdgcn.cs.chain.p0.i32.v3i32.v3i32(ptr @chain_callee, i32 -1, <3 x i32> inreg %a, <3 x i32> %b, i32 0)
+  call void(ptr, i32, <3 x i32>, <3 x i32>, i32, ...) @llvm.amdgcn.cs.chain.v3i32(ptr @chain_callee, i32 -1, <3 x i32> inreg %a, <3 x i32> %b, i32 0)
+  ret void
+}

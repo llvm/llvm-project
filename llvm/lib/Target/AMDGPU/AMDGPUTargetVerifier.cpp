@@ -142,6 +142,7 @@ void AMDGPUTargetVerify::run(Function &F) {
 
       if (auto *CI = dyn_cast<CallInst>(&I))
       {
+        // Ensure no kernel to kernel calls.
         CallingConv::ID CalleeCC = CI->getCallingConv();
         if (CalleeCC == CallingConv::AMDGPU_KERNEL)
         {
@@ -149,6 +150,11 @@ void AMDGPUTargetVerify::run(Function &F) {
           Check(CallerCC != CallingConv::AMDGPU_KERNEL,
             "A kernel may not call a kernel", CI->getParent()->getParent());
         }
+
+        // Ensure chain intrinsics are followed by unreachables.
+        if (CI->getIntrinsicID() == Intrinsic::amdgcn_cs_chain)
+          Check(isa_and_present<UnreachableInst>(CI->getNextNode()),
+            "llvm.amdgcn.cs.chain must be followed by unreachable", CI);
       }
 
       // Ensure MFMA is not in control flow with diverging operands
