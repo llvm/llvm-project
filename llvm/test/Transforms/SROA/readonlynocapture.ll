@@ -501,6 +501,8 @@ define i32 @twoalloc_with_lifetimes() {
 
 declare void @use.i32(i32)
 
+; We can promote the %i load, even though there is an unknown offset load
+; in the loop. It is sufficient that we know all stores.
 define void @load_dyn_offset(ptr %ary) {
 ; CHECK-LABEL: @load_dyn_offset(
 ; CHECK-NEXT:    [[A:%.*]] = alloca { i64, [4 x i32] }, align 8
@@ -509,8 +511,8 @@ define void @load_dyn_offset(ptr %ary) {
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[GEP]], ptr [[ARY:%.*]], i64 16, i1 false)
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[I:%.*]] = load i64, ptr [[A]], align 4
-; CHECK-NEXT:    [[I_NEXT:%.*]] = add i64 [[I]], 1
+; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], [[LOOP]] ], [ 0, [[TMP0:%.*]] ]
+; CHECK-NEXT:    [[I_NEXT]] = add i64 [[I]], 1
 ; CHECK-NEXT:    store i64 [[I_NEXT]], ptr [[A]], align 4
 ; CHECK-NEXT:    [[GEP_I:%.*]] = getelementptr i32, ptr [[GEP]], i64 [[I]]
 ; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr [[GEP_I]], align 4
@@ -540,6 +542,8 @@ exit:
   ret void
 }
 
+; Same as previous test, but with an unknown-offset store. We can't promote in
+; that case.
 define void @store_dyn_offset(ptr %ary) {
 ; CHECK-LABEL: @store_dyn_offset(
 ; CHECK-NEXT:    [[A:%.*]] = alloca { i64, [4 x i32] }, align 8

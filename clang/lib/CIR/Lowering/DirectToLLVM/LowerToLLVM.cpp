@@ -1337,6 +1337,35 @@ static void prepareTypeConverter(mlir::LLVMTypeConverter &converter,
   converter.addConversion([&](cir::BF16Type type) -> mlir::Type {
     return mlir::BFloat16Type::get(type.getContext());
   });
+  converter.addConversion([&](cir::RecordType type) -> mlir::Type {
+    // Convert struct members.
+    llvm::SmallVector<mlir::Type> llvmMembers;
+    switch (type.getKind()) {
+    case cir::RecordType::Struct:
+      for (mlir::Type ty : type.getMembers())
+        llvmMembers.push_back(convertTypeForMemory(converter, dataLayout, ty));
+      break;
+    // Unions are lowered as only the largest member.
+    case cir::RecordType::Union:
+      llvm_unreachable("Lowering of unions is NYI");
+      break;
+    }
+
+    // Record has a name: lower as an identified record.
+    mlir::LLVM::LLVMStructType llvmStruct;
+    if (type.getName()) {
+      llvmStruct = mlir::LLVM::LLVMStructType::getIdentified(
+          type.getContext(), type.getPrefixedName());
+      assert(!cir::MissingFeatures::packedRecords());
+      if (llvmStruct.setBody(llvmMembers, /*isPacked=*/true).failed())
+        llvm_unreachable("Failed to set body of record");
+    } else { // Record has no name: lower as literal record.
+      llvmStruct = mlir::LLVM::LLVMStructType::getLiteral(
+          type.getContext(), llvmMembers, /*isPacked=*/true);
+    }
+
+    return llvmStruct;
+  });
 }
 
 // The applyPartialConversion function traverses blocks in the dominance order,
