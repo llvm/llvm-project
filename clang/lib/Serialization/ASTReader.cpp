@@ -11256,6 +11256,9 @@ OMPClause *OMPClauseReader::readClause() {
   case llvm::omp::OMPC_mergeable:
     C = new (Context) OMPMergeableClause();
     break;
+  case llvm::omp::OMPC_threadset:
+    C = new (Context) OMPThreadsetClause();
+    break;
   case llvm::omp::OMPC_read:
     C = new (Context) OMPReadClause();
     break;

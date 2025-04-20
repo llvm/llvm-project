@@ -103,11 +103,9 @@ T tmain(T argc, T *argv) {
   a = 2;
 #pragma omp task default(none), private(argc, b) firstprivate(argv) shared(d) if (argc > 0) final(S<T>::TS > 0) priority(argc) affinity(argc, argv[b:argc], arr[:], ([argc][sizeof(T)])argv)
   foo();
-#ifndef OMP60
-#pragma omp taskgroup task_reduction(-: argc)
-#pragma omp task if (C) mergeable priority(C) in_reduction(-: argc)
+#pragma omp taskgroup task_reduction(+: argc)
+#pragma omp task if (C) mergeable priority(C) in_reduction(+: argc)
   foo();
-#endif
   return 0;
 }
 
@@ -123,8 +121,8 @@ T tmain(T argc, T *argv) {
 // CHECK-NEXT: a = 2;
 // CHECK-NEXT: #pragma omp task default(none) private(argc,b) firstprivate(argv) shared(d) if(argc > 0) final(S<T>::TS > 0) priority(argc) affinity(argc,argv[b:argc],arr[:],([argc][sizeof(T)])argv)
 // CHECK-NEXT: foo()
-// CHECK-NEXT: #pragma omp taskgroup task_reduction(-: argc)
-// CHECK-NEXT: #pragma omp task if(C) mergeable priority(C) in_reduction(-: argc)
+// CHECK-NEXT: #pragma omp taskgroup task_reduction(+: argc)
+// CHECK-NEXT: #pragma omp task if(C) mergeable priority(C) in_reduction(+: argc)
 // CHECK-NEXT: foo()
 // CHECK: template<> int tmain<int, 5>(int argc, int *argv) {
 // CHECK-NEXT: int b = argc, c, d, e, f, g;
@@ -138,8 +136,8 @@ T tmain(T argc, T *argv) {
 // CHECK-NEXT: a = 2;
 // CHECK-NEXT: #pragma omp task default(none) private(argc,b) firstprivate(argv) shared(d) if(argc > 0) final(S<int>::TS > 0) priority(argc) affinity(argc,argv[b:argc],arr[:],([argc][sizeof(int)])argv)
 // CHECK-NEXT: foo()
-// CHECK-NEXT: #pragma omp taskgroup task_reduction(-: argc)
-// CHECK-NEXT: #pragma omp task if(5) mergeable priority(5) in_reduction(-: argc)
+// CHECK-NEXT: #pragma omp taskgroup task_reduction(+: argc)
+// CHECK-NEXT: #pragma omp task if(5) mergeable priority(5) in_reduction(+: argc)
 // CHECK-NEXT: foo()
 // CHECK: template<> long tmain<long, 1>(long argc, long *argv) {
 // CHECK-NEXT: long b = argc, c, d, e, f, g;
@@ -153,8 +151,8 @@ T tmain(T argc, T *argv) {
 // CHECK-NEXT: a = 2;
 // CHECK-NEXT: #pragma omp task default(none) private(argc,b) firstprivate(argv) shared(d) if(argc > 0) final(S<long>::TS > 0) priority(argc) affinity(argc,argv[b:argc],arr[:],([argc][sizeof(long)])argv)
 // CHECK-NEXT: foo()
-// CHECK-NEXT: #pragma omp taskgroup task_reduction(-: argc)
-// CHECK-NEXT: #pragma omp task if(1) mergeable priority(1) in_reduction(-: argc)
+// CHECK-NEXT: #pragma omp taskgroup task_reduction(+: argc)
+// CHECK-NEXT: #pragma omp task if(1) mergeable priority(1) in_reduction(+: argc)
 // CHECK-NEXT: foo()
 
 enum Enum {};
