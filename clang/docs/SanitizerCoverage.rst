@@ -314,7 +314,7 @@ will not be instrumented.
   void __sanitizer_cov_trace_div4(uint32_t Val);
   void __sanitizer_cov_trace_div8(uint64_t Val);
 
-  // Called before a GetElemementPtr (GEP) instruction
+  // Called before a GetElementPtr (GEP) instruction
   // for every non-constant array index.
   void __sanitizer_cov_trace_gep(uintptr_t Idx);
 
@@ -385,6 +385,20 @@ Users need to implement a single function to capture the CF table at startup:
     // the collected control flow.
   }
 
+Gated Trace Callbacks
+=====================
+
+Gate the invocation of the tracing callbacks with
+``-sanitizer-coverage-gated-trace-callbacks``.
+
+When this option is enabled, the instrumentation will not call into the
+runtime-provided callbacks for tracing, thus only incurring in a trivial
+branch without going through a function call.
+
+It is up to the runtime to toggle the value of the global variable in order to
+enable tracing.
+
+This option is only supported for trace-pc-guard and trace-cmp.
 
 Disabling instrumentation with ``__attribute__((no_sanitize("coverage")))``
 ===========================================================================

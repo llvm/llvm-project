@@ -1,9 +1,9 @@
-# RUN: llvm-mc -triple=riscv64 -mattr=+c -riscv-no-aliases < %s \
+# RUN: llvm-mc -triple=riscv64 -mattr=+c -M no-aliases < %s \
 # RUN:     | FileCheck -check-prefixes=CHECK-EXPAND,CHECK-INST %s
 # RUN: llvm-mc -filetype=obj -triple riscv64 -mattr=+c < %s \
 # RUN:     | llvm-objdump --no-print-imm-hex -d -M no-aliases - \
 # RUN:     | FileCheck -check-prefixes=CHECK-EXPAND,CHECK-INST %s
-# RUN: llvm-mc -triple=riscv64 -mattr=+zca -riscv-no-aliases < %s \
+# RUN: llvm-mc -triple=riscv64 -mattr=+zca -M no-aliases < %s \
 # RUN:     | FileCheck -check-prefixes=CHECK-EXPAND,CHECK-INST %s
 # RUN: llvm-mc -filetype=obj -triple riscv64 -mattr=+zca < %s \
 # RUN:     | llvm-objdump --no-print-imm-hex --mattr=+zca -d -M no-aliases - \
@@ -112,3 +112,5 @@ c.sdsp x8, (x2)
 c.ldsp x18, (x2)
 # CHECK-EXPAND: c.sdsp s2, 0(sp)
 c.sdsp x18, (x2)
+# CHECK-EXPAND: c.sdsp zero, 0(sp)
+c.sdsp x0, (x2)

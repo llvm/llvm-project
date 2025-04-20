@@ -21,10 +21,16 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
+#include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
 using namespace llvm;
+
+cl::opt<bool> NoKernelInfoEndLTO(
+    "no-kernel-info-end-lto",
+    cl::desc("remove the kernel-info pass at the end of the full LTO pipeline"),
+    cl::init(false), cl::Hidden);
 
 //---------------------------------------------------------------------------
 // TargetMachine Class
@@ -39,6 +45,13 @@ TargetMachine::TargetMachine(const Target &T, StringRef DataLayoutString,
       O0WantsFastISel(false), Options(Options) {}
 
 TargetMachine::~TargetMachine() = default;
+
+Expected<std::unique_ptr<MCStreamer>>
+TargetMachine::createMCStreamer(raw_pwrite_stream &Out,
+                                raw_pwrite_stream *DwoOut,
+                                CodeGenFileType FileType, MCContext &Ctx) {
+  return nullptr;
+}
 
 bool TargetMachine::isLargeGlobalValue(const GlobalValue *GVal) const {
   if (getTargetTriple().getArch() != Triple::x86_64)
@@ -204,7 +217,7 @@ bool TargetMachine::shouldAssumeDSOLocal(const GlobalValue *GV) const {
     // don't assume the variables to be DSO local unless we actually know
     // that for sure. This only has to be done for variables; for functions
     // the linker can insert thunks for calling functions from another DLL.
-    if (TT.isWindowsGNUEnvironment() && GV->isDeclarationForLinker() &&
+    if (TT.isOSCygMing() && GV->isDeclarationForLinker() &&
         isa<GlobalVariable>(GV))
       return false;
 
@@ -261,11 +274,6 @@ TLSModel::Model TargetMachine::getTLSModel(const GlobalValue *GV) const {
 
   return Model;
 }
-
-/// Returns the optimization level: None, Less, Default, or Aggressive.
-CodeGenOptLevel TargetMachine::getOptLevel() const { return OptLevel; }
-
-void TargetMachine::setOptLevel(CodeGenOptLevel Level) { OptLevel = Level; }
 
 TargetTransformInfo
 TargetMachine::getTargetTransformInfo(const Function &F) const {

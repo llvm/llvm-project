@@ -233,7 +233,7 @@ public:
   /// Notify the external source that a lambda was assigned a mangling number.
   /// This enables the external source to track the correspondence between
   /// lambdas and mangling numbers if necessary.
-  virtual void AssignedLambdaNumbering(const CXXRecordDecl *Lambda) {}
+  virtual void AssignedLambdaNumbering(CXXRecordDecl *Lambda) {}
 
   /// LLVM-style RTTI.
   /// \{

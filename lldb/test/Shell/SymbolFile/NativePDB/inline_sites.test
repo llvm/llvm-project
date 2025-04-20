@@ -3,7 +3,7 @@
 
 # RUN: llvm-mc -triple=x86_64-windows-msvc --filetype=obj %p/Inputs/inline_sites.s > %t.obj
 # RUN: lld-link -debug:full -nodefaultlib -entry:main -base:0x140000000 %t.obj -out:%t.exe
-# RUN: env LLDB_USE_NATIVE_PDB_READER=1 %lldb -f %t.exe -s \
+# RUN: %lldb -f %t.exe -s \
 # RUN:     %p/Inputs/inline_sites.lldbinit 2>&1 | FileCheck %s
 
 # CHECK:      (lldb) image dump line-table a.cpp -v

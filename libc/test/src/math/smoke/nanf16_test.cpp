@@ -6,14 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/signal_macros.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/macros/sanitizer.h"
 #include "src/math/nanf16.h"
 #include "test/UnitTest/FEnvSafeTest.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
-
-#include <signal.h>
 
 class LlvmLibcNanf16Test : public LIBC_NAMESPACE::testing::FEnvSafeTest {
 public:
@@ -24,7 +23,7 @@ public:
     auto actual_fp = LIBC_NAMESPACE::fputil::FPBits<float16>(result);
     auto expected_fp = LIBC_NAMESPACE::fputil::FPBits<float16>(bits);
     EXPECT_EQ(actual_fp.uintval(), expected_fp.uintval());
-  };
+  }
 };
 
 TEST_F(LlvmLibcNanf16Test, NCharSeq) {
@@ -44,8 +43,8 @@ TEST_F(LlvmLibcNanf16Test, RandomString) {
   run_test("123 ", 0x7e00);
 }
 
-#if !defined(LIBC_HAVE_ADDRESS_SANITIZER) && defined(LIBC_TARGET_OS_IS_LINUX)
+#if defined(LIBC_ADD_NULL_CHECKS) && !defined(LIBC_HAS_SANITIZER)
 TEST_F(LlvmLibcNanf16Test, InvalidInput) {
-  EXPECT_DEATH([] { LIBC_NAMESPACE::nanf16(nullptr); }, WITH_SIGNAL(SIGSEGV));
+  EXPECT_DEATH([] { LIBC_NAMESPACE::nanf16(nullptr); });
 }
-#endif // LIBC_HAVE_ADDRESS_SANITIZER
+#endif // LIBC_HAS_ADDRESS_SANITIZER

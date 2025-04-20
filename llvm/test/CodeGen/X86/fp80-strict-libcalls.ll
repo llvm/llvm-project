@@ -629,6 +629,35 @@ entry:
   ret x86_fp80 %atan
 }
 
+define x86_fp80 @atan2(x86_fp80 %x, x86_fp80 %y) nounwind strictfp {
+; X86-LABEL: atan2:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    subl $24, %esp
+; X86-NEXT:    fldt {{[0-9]+}}(%esp)
+; X86-NEXT:    fldt {{[0-9]+}}(%esp)
+; X86-NEXT:    fstpt {{[0-9]+}}(%esp)
+; X86-NEXT:    fstpt (%esp)
+; X86-NEXT:    wait
+; X86-NEXT:    calll atan2l
+; X86-NEXT:    addl $24, %esp
+; X86-NEXT:    retl
+;
+; X64-LABEL: atan2:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    subq $40, %rsp
+; X64-NEXT:    fldt {{[0-9]+}}(%rsp)
+; X64-NEXT:    fldt {{[0-9]+}}(%rsp)
+; X64-NEXT:    fstpt {{[0-9]+}}(%rsp)
+; X64-NEXT:    fstpt (%rsp)
+; X64-NEXT:    wait
+; X64-NEXT:    callq atan2l@PLT
+; X64-NEXT:    addq $40, %rsp
+; X64-NEXT:    retq
+entry:
+  %atan2 = call x86_fp80 @llvm.experimental.constrained.atan2.f80(x86_fp80 %x, x86_fp80 %y, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
+  ret x86_fp80 %atan2
+}
+
 define x86_fp80 @tan(x86_fp80 %x) nounwind strictfp {
 ; X86-LABEL: tan:
 ; X86:       # %bb.0: # %entry
@@ -809,7 +838,9 @@ attributes #0 = { strictfp }
 declare x86_fp80 @llvm.experimental.constrained.fma.f80(x86_fp80, x86_fp80, x86_fp80, metadata, metadata)
 declare x86_fp80 @llvm.experimental.constrained.frem.f80(x86_fp80, x86_fp80, metadata, metadata)
 declare x86_fp80 @llvm.experimental.constrained.ceil.f80(x86_fp80, metadata)
+declare x86_fp80 @llvm.experimental.constrained.acos.f80(x86_fp80, metadata, metadata)
 declare x86_fp80 @llvm.experimental.constrained.cos.f80(x86_fp80, metadata, metadata)
+declare x86_fp80 @llvm.experimental.constrained.cosh.f80(x86_fp80, metadata, metadata)
 declare x86_fp80 @llvm.experimental.constrained.exp.f80(x86_fp80, metadata, metadata)
 declare x86_fp80 @llvm.experimental.constrained.exp2.f80(x86_fp80, metadata, metadata)
 declare x86_fp80 @llvm.experimental.constrained.floor.f80(x86_fp80, metadata)
@@ -824,8 +855,13 @@ declare x86_fp80 @llvm.experimental.constrained.powi.f80(x86_fp80, i32, metadata
 declare x86_fp80 @llvm.experimental.constrained.rint.f80(x86_fp80, metadata, metadata)
 declare x86_fp80 @llvm.experimental.constrained.round.f80(x86_fp80, metadata)
 declare x86_fp80 @llvm.experimental.constrained.roundeven.f80(x86_fp80, metadata)
+declare x86_fp80 @llvm.experimental.constrained.asin.f80(x86_fp80, metadata, metadata)
 declare x86_fp80 @llvm.experimental.constrained.sin.f80(x86_fp80, metadata, metadata)
+declare x86_fp80 @llvm.experimental.constrained.sinh.f80(x86_fp80, metadata, metadata)
+declare x86_fp80 @llvm.experimental.constrained.atan.f80(x86_fp80, metadata, metadata)
+declare x86_fp80 @llvm.experimental.constrained.atan2.f80(x86_fp80, x86_fp80, metadata, metadata)
 declare x86_fp80 @llvm.experimental.constrained.tan.f80(x86_fp80, metadata, metadata)
+declare x86_fp80 @llvm.experimental.constrained.tanh.f80(x86_fp80, metadata, metadata)
 declare x86_fp80 @llvm.experimental.constrained.trunc.f80(x86_fp80, metadata)
 declare i32 @llvm.experimental.constrained.lrint.i32.f80(x86_fp80, metadata, metadata)
 declare i64 @llvm.experimental.constrained.llrint.i64.f80(x86_fp80, metadata, metadata)

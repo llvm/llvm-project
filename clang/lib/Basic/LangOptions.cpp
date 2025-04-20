@@ -159,6 +159,8 @@ void LangOptions::setLangDefaults(LangOptions &Opts, Language Lang,
     Opts.HLSLVersion = (unsigned)LangOptions::HLSL_2021;
   else if (LangStd == LangStandard::lang_hlsl202x)
     Opts.HLSLVersion = (unsigned)LangOptions::HLSL_202x;
+  else if (LangStd == LangStandard::lang_hlsl202y)
+    Opts.HLSLVersion = (unsigned)LangOptions::HLSL_202y;
 
   // OpenCL has some additional defaults.
   if (Opts.OpenCL) {
@@ -201,13 +203,13 @@ void LangOptions::setLangDefaults(LangOptions &Opts, Language Lang,
     Opts.setDefaultFPContractMode(LangOptions::FPM_Fast);
   }
 
-  Opts.RenderScript = Lang == Language::RenderScript;
-
   // OpenCL, C++ and C23 have bool, true, false keywords.
   Opts.Bool = Opts.OpenCL || Opts.CPlusPlus || Opts.C23;
 
   // OpenCL and HLSL have half keyword
   Opts.Half = Opts.OpenCL || Opts.HLSL;
+
+  Opts.PreserveVec3Type = Opts.HLSL;
 }
 
 FPOptions FPOptions::defaultWithoutTrailingStorage(const LangOptions &LO) {

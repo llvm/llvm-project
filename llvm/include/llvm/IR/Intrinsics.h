@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // This file defines a set of enums which allow processing of intrinsic
-// functions.  Values of these enum types are returned by
+// functions. Values of these enum types are returned by
 // Function::getIntrinsicID.
 //
 //===----------------------------------------------------------------------===//
@@ -28,6 +28,7 @@ class Function;
 class LLVMContext;
 class Module;
 class AttributeList;
+class AttributeSet;
 
 /// This namespace contains an enum with a value for every intrinsic/builtin
 /// function known by LLVM. The enum values are returned by
@@ -73,37 +74,53 @@ namespace Intrinsic {
   std::string getNameNoUnnamedTypes(ID Id, ArrayRef<Type *> Tys);
 
   /// Return the function type for an intrinsic.
-  FunctionType *getType(LLVMContext &Context, ID id,
-                        ArrayRef<Type *> Tys = std::nullopt);
+  FunctionType *getType(LLVMContext &Context, ID id, ArrayRef<Type *> Tys = {});
 
   /// Returns true if the intrinsic can be overloaded.
   bool isOverloaded(ID id);
 
-  /// Return the attributes for an intrinsic.
-  AttributeList getAttributes(LLVMContext &C, ID id);
+  /// isTargetIntrinsic - Returns true if IID is an intrinsic specific to a
+  /// certain target. If it is a generic intrinsic false is returned.
+  bool isTargetIntrinsic(ID IID);
 
-  /// Create or insert an LLVM Function declaration for an intrinsic, and return
-  /// it.
+  ID lookupIntrinsicID(StringRef Name);
+
+  /// Return the attributes for an intrinsic.
+  AttributeList getAttributes(LLVMContext &C, ID id, FunctionType *FT);
+
+  /// Return the function attributes for an intrinsic.
+  AttributeSet getFnAttributes(LLVMContext &C, ID id);
+
+  /// Look up the Function declaration of the intrinsic \p id in the Module
+  /// \p M. If it does not exist, add a declaration and return it. Otherwise,
+  /// return the existing declaration.
   ///
-  /// The Tys parameter is for intrinsics with overloaded types (e.g., those
-  /// using iAny, fAny, vAny, or iPTRAny).  For a declaration of an overloaded
+  /// The \p Tys parameter is for intrinsics with overloaded types (e.g., those
+  /// using iAny, fAny, vAny, or pAny).  For a declaration of an overloaded
   /// intrinsic, Tys must provide exactly one type for each overloaded type in
   /// the intrinsic.
-  Function *getDeclaration(Module *M, ID id,
-                           ArrayRef<Type *> Tys = std::nullopt);
+  Function *getOrInsertDeclaration(Module *M, ID id, ArrayRef<Type *> Tys = {});
 
-  /// Looks up Name in NameTable via binary search. NameTable must be sorted
-  /// and all entries must start with "llvm.".  If NameTable contains an exact
-  /// match for Name or a prefix of Name followed by a dot, its index in
-  /// NameTable is returned. Otherwise, -1 is returned.
-  int lookupLLVMIntrinsicByName(ArrayRef<const char *> NameTable,
-                                StringRef Name);
+  LLVM_DEPRECATED("Use getOrInsertDeclaration instead",
+                  "getOrInsertDeclaration")
+  inline Function *getDeclaration(Module *M, ID id, ArrayRef<Type *> Tys = {}) {
+    return getOrInsertDeclaration(M, id, Tys);
+  }
+
+  /// Look up the Function declaration of the intrinsic \p id in the Module
+  /// \p M and return it if it exists. Otherwise, return nullptr. This version
+  /// supports non-overloaded intrinsics.
+  Function *getDeclarationIfExists(const Module *M, ID id);
+
+  /// This version supports overloaded intrinsics.
+  Function *getDeclarationIfExists(Module *M, ID id, ArrayRef<Type *> Tys,
+                                   FunctionType *FT = nullptr);
 
   /// Map a Clang builtin name to an intrinsic ID.
-  ID getIntrinsicForClangBuiltin(const char *Prefix, StringRef BuiltinName);
+  ID getIntrinsicForClangBuiltin(StringRef TargetPrefix, StringRef BuiltinName);
 
   /// Map a MS builtin name to an intrinsic ID.
-  ID getIntrinsicForMSBuiltin(const char *Prefix, StringRef BuiltinName);
+  ID getIntrinsicForMSBuiltin(StringRef TargetPrefix, StringRef BuiltinName);
 
   /// Returns true if the intrinsic ID is for one of the "Constrained
   /// Floating-Point Intrinsics".
@@ -135,6 +152,9 @@ namespace Intrinsic {
       ExtendArgument,
       TruncArgument,
       HalfVecArgument,
+      OneThirdVecArgument,
+      OneFifthVecArgument,
+      OneSeventhVecArgument,
       SameVecWidthArgument,
       VecOfAnyPtrsToElt,
       VecElementArgument,
@@ -146,6 +166,9 @@ namespace Intrinsic {
       AArch64Svcount,
     } Kind;
 
+    // These three have to be contiguous.
+    static_assert(OneFifthVecArgument == OneThirdVecArgument + 1 &&
+                  OneSeventhVecArgument == OneFifthVecArgument + 1);
     union {
       unsigned Integer_Width;
       unsigned Float_Width;
@@ -165,15 +188,17 @@ namespace Intrinsic {
     unsigned getArgumentNumber() const {
       assert(Kind == Argument || Kind == ExtendArgument ||
              Kind == TruncArgument || Kind == HalfVecArgument ||
-             Kind == SameVecWidthArgument || Kind == VecElementArgument ||
-             Kind == Subdivide2Argument || Kind == Subdivide4Argument ||
-             Kind == VecOfBitcastsToInt);
+             Kind == OneThirdVecArgument || Kind == OneFifthVecArgument ||
+             Kind == OneSeventhVecArgument || Kind == SameVecWidthArgument ||
+             Kind == VecElementArgument || Kind == Subdivide2Argument ||
+             Kind == Subdivide4Argument || Kind == VecOfBitcastsToInt);
       return Argument_Info >> 3;
     }
     ArgKind getArgumentKind() const {
       assert(Kind == Argument || Kind == ExtendArgument ||
              Kind == TruncArgument || Kind == HalfVecArgument ||
-             Kind == SameVecWidthArgument ||
+             Kind == OneThirdVecArgument || Kind == OneFifthVecArgument ||
+             Kind == OneSeventhVecArgument || Kind == SameVecWidthArgument ||
              Kind == VecElementArgument || Kind == Subdivide2Argument ||
              Kind == Subdivide4Argument || Kind == VecOfBitcastsToInt);
       return (ArgKind)(Argument_Info & 7);

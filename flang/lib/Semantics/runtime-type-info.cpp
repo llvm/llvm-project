@@ -12,6 +12,7 @@
 #include "flang/Evaluate/fold.h"
 #include "flang/Evaluate/tools.h"
 #include "flang/Evaluate/type.h"
+#include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Semantics/scope.h"
 #include "flang/Semantics/tools.h"
 #include <functional>
@@ -57,7 +58,7 @@ public:
   void DescribeTypes(Scope &scope, bool inSchemata);
 
 private:
-  const Symbol *DescribeType(Scope &);
+  const Symbol *DescribeType(Scope &, bool wantUninstantiatedPDT);
   const Symbol &GetSchemaSymbol(const char *) const;
   const DeclTypeSpec &GetSchema(const char *) const;
   SomeExpr GetEnumValue(const char *) const;
@@ -237,7 +238,7 @@ void RuntimeTableBuilder::DescribeTypes(Scope &scope, bool inSchemata) {
   inSchemata |= ignoreScopes_.find(&scope) != ignoreScopes_.end();
   if (scope.IsDerivedType()) {
     if (!inSchemata) { // don't loop trying to describe a schema
-      DescribeType(scope);
+      DescribeType(scope, /*wantUninstantiatedPDT=*/false);
     }
   } else {
     scope.InstantiateDerivedTypes();
@@ -309,10 +310,10 @@ static SomeExpr StructureExpr(evaluate::StructureConstructor &&x) {
   return SomeExpr{evaluate::Expr<evaluate::SomeDerived>{std::move(x)}};
 }
 
-static int GetIntegerKind(const Symbol &symbol) {
+static int GetIntegerKind(const Symbol &symbol, bool canBeUninstantiated) {
   auto dyType{evaluate::DynamicType::From(symbol)};
   CHECK((dyType && dyType->category() == TypeCategory::Integer) ||
-      symbol.owner().context().HasError(symbol));
+      symbol.owner().context().HasError(symbol) || canBeUninstantiated);
   return dyType && dyType->category() == TypeCategory::Integer
       ? dyType->kind()
       : symbol.owner().context().GetDefaultKind(TypeCategory::Integer);
@@ -377,9 +378,12 @@ static std::optional<std::string> GetSuffixIfTypeKindParameters(
           if (pv->GetExplicit()) {
             if (auto instantiatedValue{evaluate::ToInt64(*pv->GetExplicit())}) {
               if (suffix.has_value()) {
-                *suffix += "."s + std::to_string(*instantiatedValue);
+                *suffix +=
+                    (fir::kNameSeparator + llvm::Twine(*instantiatedValue))
+                        .str();
               } else {
-                suffix = "."s + std::to_string(*instantiatedValue);
+                suffix = (fir::kNameSeparator + llvm::Twine(*instantiatedValue))
+                             .str();
               }
             }
           }
@@ -391,7 +395,8 @@ static std::optional<std::string> GetSuffixIfTypeKindParameters(
   return std::nullopt;
 }
 
-const Symbol *RuntimeTableBuilder::DescribeType(Scope &dtScope) {
+const Symbol *RuntimeTableBuilder::DescribeType(
+    Scope &dtScope, bool wantUninstantiatedPDT) {
   if (const Symbol * info{dtScope.runtimeDerivedTypeDescription()}) {
     return info;
   }
@@ -445,10 +450,10 @@ const Symbol *RuntimeTableBuilder::DescribeType(Scope &dtScope) {
             GetSuffixIfTypeKindParameters(*derivedTypeSpec, parameters)}) {
       distinctName += *suffix;
     }
-  } else if (isPDTDefinitionWithKindParameters) {
+  } else if (isPDTDefinitionWithKindParameters && !wantUninstantiatedPDT) {
     return nullptr;
   }
-  std::string dtDescName{".dt."s + distinctName};
+  std::string dtDescName{(fir::kTypeDescriptorSeparator + distinctName).str()};
   Scope *dtSymbolScope{const_cast<Scope *>(dtSymbol->scope())};
   Scope &scope{
       GetContainingNonDerivedScope(dtSymbolScope ? *dtSymbolScope : dtScope)};
@@ -476,7 +481,8 @@ const Symbol *RuntimeTableBuilder::DescribeType(Scope &dtScope) {
   }
   if (const Symbol *
       uninstDescObject{isPDTInstantiation
-              ? DescribeType(DEREF(const_cast<Scope *>(dtSymbol->scope())))
+              ? DescribeType(DEREF(const_cast<Scope *>(dtSymbol->scope())),
+                    /*wantUninstantiatedPDT=*/true)
               : nullptr}) {
     AddValue(dtValues, derivedTypeSchema_, "uninstantiated"s,
         evaluate::AsGenericExpr(evaluate::Expr<evaluate::SomeDerived>{
@@ -512,17 +518,20 @@ const Symbol *RuntimeTableBuilder::DescribeType(Scope &dtScope) {
           }
           kinds.emplace_back(value);
         } else { // LEN= parameter
-          lenKinds.emplace_back(GetIntegerKind(*inst));
+          lenKinds.emplace_back(
+              GetIntegerKind(*inst, isPDTDefinitionWithKindParameters));
         }
       }
     }
   }
   AddValue(dtValues, derivedTypeSchema_, "kindparameter"s,
-      SaveNumericPointerTarget<Int8>(
-          scope, SaveObjectName(".kp."s + distinctName), std::move(kinds)));
+      SaveNumericPointerTarget<Int8>(scope,
+          SaveObjectName((fir::kKindParameterSeparator + distinctName).str()),
+          std::move(kinds)));
   AddValue(dtValues, derivedTypeSchema_, "lenparameterkind"s,
-      SaveNumericPointerTarget<Int1>(
-          scope, SaveObjectName(".lpk."s + distinctName), std::move(lenKinds)));
+      SaveNumericPointerTarget<Int1>(scope,
+          SaveObjectName((fir::kLenKindSeparator + distinctName).str()),
+          std::move(lenKinds)));
   // Traverse the components of the derived type
   if (!isPDTDefinitionWithKindParameters) {
     std::vector<const Symbol *> dataComponentSymbols;
@@ -570,13 +579,15 @@ const Symbol *RuntimeTableBuilder::DescribeType(Scope &dtScope) {
               dtScope, distinctName, parameters));
     }
     AddValue(dtValues, derivedTypeSchema_, "component"s,
-        SaveDerivedPointerTarget(scope, SaveObjectName(".c."s + distinctName),
+        SaveDerivedPointerTarget(scope,
+            SaveObjectName((fir::kComponentSeparator + distinctName).str()),
             std::move(dataComponents),
             evaluate::ConstantSubscripts{
                 static_cast<evaluate::ConstantSubscript>(
                     dataComponents.size())}));
     AddValue(dtValues, derivedTypeSchema_, "procptr"s,
-        SaveDerivedPointerTarget(scope, SaveObjectName(".p."s + distinctName),
+        SaveDerivedPointerTarget(scope,
+            SaveObjectName((fir::kProcPtrSeparator + distinctName).str()),
             std::move(procPtrComponents),
             evaluate::ConstantSubscripts{
                 static_cast<evaluate::ConstantSubscript>(
@@ -587,7 +598,9 @@ const Symbol *RuntimeTableBuilder::DescribeType(Scope &dtScope) {
       std::vector<evaluate::StructureConstructor> bindings{
           DescribeBindings(dtScope, scope)};
       AddValue(dtValues, derivedTypeSchema_, bindingDescCompName,
-          SaveDerivedPointerTarget(scope, SaveObjectName(".v."s + distinctName),
+          SaveDerivedPointerTarget(scope,
+              SaveObjectName(
+                  (fir::kBindingTableSeparator + distinctName).str()),
               std::move(bindings),
               evaluate::ConstantSubscripts{
                   static_cast<evaluate::ConstantSubscript>(bindings.size())}));
@@ -623,7 +636,9 @@ const Symbol *RuntimeTableBuilder::DescribeType(Scope &dtScope) {
         sortedSpecials.emplace_back(std::move(pair.second));
       }
       AddValue(dtValues, derivedTypeSchema_, "special"s,
-          SaveDerivedPointerTarget(scope, SaveObjectName(".s."s + distinctName),
+          SaveDerivedPointerTarget(scope,
+              SaveObjectName(
+                  (fir::kSpecialBindingSeparator + distinctName).str()),
               std::move(sortedSpecials),
               evaluate::ConstantSubscripts{
                   static_cast<evaluate::ConstantSubscript>(specials.size())}));
@@ -730,10 +745,12 @@ SomeExpr RuntimeTableBuilder::SaveNameAsPointerTarget(
   using evaluate::Ascii;
   using AsciiExpr = evaluate::Expr<Ascii>;
   object.set_init(evaluate::AsGenericExpr(AsciiExpr{name}));
-  Symbol &symbol{*scope
-                      .try_emplace(SaveObjectName(".n."s + name),
-                          Attrs{Attr::TARGET, Attr::SAVE}, std::move(object))
-                      .first->second};
+  Symbol &symbol{
+      *scope
+           .try_emplace(
+               SaveObjectName((fir::kNameStringSeparator + name).str()),
+               Attrs{Attr::TARGET, Attr::SAVE}, std::move(object))
+           .first->second};
   SetReadOnlyCompilerCreatedFlags(symbol);
   return evaluate::AsGenericExpr(
       AsciiExpr{evaluate::Designator<Ascii>{symbol}});
@@ -790,7 +807,9 @@ evaluate::StructureConstructor RuntimeTableBuilder::DescribeComponent(
     const DerivedTypeSpec &spec{dyType.GetDerivedTypeSpec()};
     Scope *derivedScope{const_cast<Scope *>(
         spec.scope() ? spec.scope() : spec.typeSymbol().scope())};
-    if (const Symbol * derivedDescription{DescribeType(DEREF(derivedScope))}) {
+    if (const Symbol *
+        derivedDescription{DescribeType(
+            DEREF(derivedScope), /*wantUninstantiatedPDT=*/false)}) {
       AddValue(values, componentSchema_, "derived"s,
           evaluate::AsGenericExpr(evaluate::Expr<evaluate::SomeDerived>{
               evaluate::Designator<evaluate::SomeDerived>{
@@ -821,8 +840,9 @@ evaluate::StructureConstructor RuntimeTableBuilder::DescribeComponent(
   if (!lenParams.empty()) {
     AddValue(values, componentSchema_, "lenvalue"s,
         SaveDerivedPointerTarget(scope,
-            SaveObjectName(
-                ".lv."s + distinctName + "."s + symbol.name().ToString()),
+            SaveObjectName((fir::kLenParameterSeparator + distinctName +
+                fir::kNameSeparator + symbol.name().ToString())
+                               .str()),
             std::move(lenParams),
             evaluate::ConstantSubscripts{
                 static_cast<evaluate::ConstantSubscript>(lenParams.size())}));
@@ -845,8 +865,9 @@ evaluate::StructureConstructor RuntimeTableBuilder::DescribeComponent(
     }
     AddValue(values, componentSchema_, "bounds"s,
         SaveDerivedPointerTarget(scope,
-            SaveObjectName(
-                ".b."s + distinctName + "."s + symbol.name().ToString()),
+            SaveObjectName((fir::kBoundsSeparator + distinctName +
+                fir::kNameSeparator + symbol.name().ToString())
+                               .str()),
             std::move(bounds), evaluate::ConstantSubscripts{2, rank}));
   } else {
     AddValue(
@@ -868,8 +889,9 @@ evaluate::StructureConstructor RuntimeTableBuilder::DescribeComponent(
     if (hasDataInit) {
       AddValue(values, componentSchema_, "initialization"s,
           SaveObjectInit(scope,
-              SaveObjectName(
-                  ".di."s + distinctName + "."s + symbol.name().ToString()),
+              SaveObjectName((fir::kComponentInitSeparator + distinctName +
+                  fir::kNameSeparator + symbol.name().ToString())
+                                 .str()),
               object));
     }
   }
@@ -918,8 +940,9 @@ bool RuntimeTableBuilder::InitializeDataPointer(
     const ObjectEntityDetails &object, Scope &scope, Scope &dtScope,
     const std::string &distinctName) {
   if (object.init().has_value()) {
-    SourceName ptrDtName{SaveObjectName(
-        ".dp."s + distinctName + "."s + symbol.name().ToString())};
+    SourceName ptrDtName{SaveObjectName((fir::kDataPtrInitSeparator +
+        distinctName + fir::kNameSeparator + symbol.name().ToString())
+                                            .str())};
     Symbol &ptrDtSym{
         *scope.try_emplace(ptrDtName, Attrs{}, UnknownDetails{}).first->second};
     SetReadOnlyCompilerCreatedFlags(ptrDtSym);
@@ -952,8 +975,9 @@ bool RuntimeTableBuilder::InitializeDataPointer(
         Structure(ptrDtDeclType, std::move(ptrInitValues))));
     AddValue(values, componentSchema_, "initialization"s,
         SaveObjectInit(scope,
-            SaveObjectName(
-                ".di."s + distinctName + "."s + symbol.name().ToString()),
+            SaveObjectName((fir::kComponentInitSeparator + distinctName +
+                fir::kNameSeparator + symbol.name().ToString())
+                               .str()),
             ptrInitObj));
     return true;
   } else {

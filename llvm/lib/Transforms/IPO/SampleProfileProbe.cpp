@@ -16,7 +16,6 @@
 #include "llvm/Analysis/EHUtils.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/BasicBlock.h"
-#include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/IRBuilder.h"
@@ -29,7 +28,7 @@
 #include "llvm/Support/CRC.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Target/TargetMachine.h"
-#include "llvm/Transforms/Instrumentation.h"
+#include "llvm/Transforms/Utils/Instrumentation.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 #include <unordered_set>
 #include <vector>
@@ -149,8 +148,9 @@ void PseudoProbeVerifier::verifyProbeFactors(
   auto &PrevProbeFactors = FunctionProbeFactors[F->getName()];
   for (const auto &I : ProbeFactors) {
     float CurProbeFactor = I.second;
-    if (PrevProbeFactors.count(I.first)) {
-      float PrevProbeFactor = PrevProbeFactors[I.first];
+    auto [It, Inserted] = PrevProbeFactors.try_emplace(I.first);
+    if (!Inserted) {
+      float PrevProbeFactor = It->second;
       if (std::abs(CurProbeFactor - PrevProbeFactor) >
           DistributionFactorVariance) {
         if (!BannerPrinted) {
@@ -164,13 +164,11 @@ void PseudoProbeVerifier::verifyProbeFactors(
     }
 
     // Update
-    PrevProbeFactors[I.first] = I.second;
+    It->second = I.second;
   }
 }
 
-SampleProfileProber::SampleProfileProber(Function &Func,
-                                         const std::string &CurModuleUniqueId)
-    : F(&Func), CurModuleUniqueId(CurModuleUniqueId) {
+SampleProfileProber::SampleProfileProber(Function &Func) : F(&Func) {
   BlockProbeIds.clear();
   CallProbeIds.clear();
   LastProbeId = (uint32_t)PseudoProbeReservedId::Last;
@@ -199,8 +197,7 @@ void SampleProfileProber::computeBlocksToIgnore(
   computeEHOnlyBlocks(*F, BlocksAndCallsToIgnore);
   findUnreachableBlocks(BlocksAndCallsToIgnore);
 
-  BlocksToIgnore.insert(BlocksAndCallsToIgnore.begin(),
-                        BlocksAndCallsToIgnore.end());
+  BlocksToIgnore.insert_range(BlocksAndCallsToIgnore);
 
   // Handle the call-to-invoke conversion case: make sure that the probe id and
   // callsite id are consistent before and after the block split. For block
@@ -401,7 +398,7 @@ void SampleProfileProber::instrumentOneFunc(Function &F, TargetMachine *TM) {
     assert(Builder.GetInsertPoint() != BB->end() &&
            "Cannot get the probing point");
     Function *ProbeFn =
-        llvm::Intrinsic::getDeclaration(M, Intrinsic::pseudoprobe);
+        llvm::Intrinsic::getOrInsertDeclaration(M, Intrinsic::pseudoprobe);
     Value *Args[] = {Builder.getInt64(Guid), Builder.getInt64(Index),
                      Builder.getInt32(0),
                      Builder.getInt64(PseudoProbeFullDistributionFactor)};
@@ -453,7 +450,6 @@ void SampleProfileProber::instrumentOneFunc(Function &F, TargetMachine *TM) {
 
 PreservedAnalyses SampleProfileProbePass::run(Module &M,
                                               ModuleAnalysisManager &AM) {
-  auto ModuleId = getUniqueModuleId(&M);
   // Create the pseudo probe desc metadata beforehand.
   // Note that modules with only data but no functions will require this to
   // be set up so that they will be known as probed later.
@@ -462,7 +458,7 @@ PreservedAnalyses SampleProfileProbePass::run(Module &M,
   for (auto &F : M) {
     if (F.isDeclaration())
       continue;
-    SampleProfileProber ProbeManager(F, ModuleId);
+    SampleProfileProber ProbeManager(F);
     ProbeManager.instrumentOneFunc(F, TM);
   }
 

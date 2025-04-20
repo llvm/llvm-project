@@ -16,7 +16,6 @@
 
 #include "lldb/Breakpoint/Watchpoint.h"
 #include "lldb/Breakpoint/WatchpointList.h"
-#include "lldb/Core/ValueObject.h"
 #include "lldb/Host/OptionParser.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandOptionArgumentTable.h"
@@ -27,6 +26,7 @@
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/StreamString.h"
+#include "lldb/ValueObject/ValueObject.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -559,8 +559,8 @@ public:
       switch (short_option) {
       case 'i':
         if (option_arg.getAsInteger(0, m_ignore_count))
-          error.SetErrorStringWithFormat("invalid ignore count '%s'",
-                                         option_arg.str().c_str());
+          error = Status::FromErrorStringWithFormat("invalid ignore count '%s'",
+                                                    option_arg.str().c_str());
         break;
       default:
         llvm_unreachable("Unimplemented option");
@@ -867,9 +867,10 @@ protected:
       if (addr_type == eAddressTypeLoad) {
         // We're in business.
         // Find out the size of this variable.
-        size = m_option_watchpoint.watch_size.GetCurrentValue() == 0
-                   ? valobj_sp->GetByteSize().value_or(0)
-                   : m_option_watchpoint.watch_size.GetCurrentValue();
+        size =
+            m_option_watchpoint.watch_size.GetCurrentValue() == 0
+                ? llvm::expectedToOptional(valobj_sp->GetByteSize()).value_or(0)
+                : m_option_watchpoint.watch_size.GetCurrentValue();
       }
       compiler_type = valobj_sp->GetCompilerType();
     } else {
@@ -1080,7 +1081,8 @@ protected:
     /// of the expression, so convert to that if we found a valid type.
     CompilerType compiler_type(valobj_sp->GetCompilerType());
 
-    std::optional<uint64_t> valobj_size = valobj_sp->GetByteSize();
+    std::optional<uint64_t> valobj_size =
+        llvm::expectedToOptional(valobj_sp->GetByteSize());
     // Set the type as a uint8_t array if the size being watched is
     // larger than the ValueObject's size (which is probably the size
     // of a pointer).

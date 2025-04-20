@@ -17,13 +17,11 @@
 #include "ARMMachineFunctionInfo.h"
 #include "ARMTargetMachine.h"
 #include "ARMTargetObjectFile.h"
-#include "MCTargetDesc/ARMAddressingModes.h"
 #include "MCTargetDesc/ARMInstPrinter.h"
 #include "MCTargetDesc/ARMMCExpr.h"
 #include "TargetInfo/ARMTargetInfo.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/BinaryFormat/COFF.h"
-#include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/MachineModuleInfoImpls.h"
 #include "llvm/IR/Constants.h"
@@ -65,9 +63,11 @@ void ARMAsmPrinter::emitFunctionBodyEnd() {
 }
 
 void ARMAsmPrinter::emitFunctionEntryLabel() {
+  auto &TS =
+      static_cast<ARMTargetStreamer &>(*OutStreamer->getTargetStreamer());
   if (AFI->isThumbFunction()) {
     OutStreamer->emitAssemblerFlag(MCAF_Code16);
-    OutStreamer->emitThumbFunc(CurrentFnSym);
+    TS.emitThumbFunc(CurrentFnSym);
   } else {
     OutStreamer->emitAssemblerFlag(MCAF_Code32);
   }
@@ -90,12 +90,10 @@ void ARMAsmPrinter::emitXXStructor(const DataLayout &DL, const Constant *CV) {
   const GlobalValue *GV = dyn_cast<GlobalValue>(CV->stripPointerCasts());
   assert(GV && "C++ constructor pointer was not a GlobalValue!");
 
-  const MCExpr *E = MCSymbolRefExpr::create(GetARMGVSymbol(GV,
-                                                           ARMII::MO_NO_FLAG),
-                                            (Subtarget->isTargetELF()
-                                             ? MCSymbolRefExpr::VK_ARM_TARGET1
-                                             : MCSymbolRefExpr::VK_None),
-                                            OutContext);
+  const MCExpr *E = MCSymbolRefExpr::create(
+      GetARMGVSymbol(GV, ARMII::MO_NO_FLAG),
+      (Subtarget->isTargetELF() ? ARMMCExpr::VK_TARGET1 : ARMMCExpr::VK_None),
+      OutContext);
 
   OutStreamer->emitValue(E, Size);
 }
@@ -122,8 +120,7 @@ bool ARMAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   // Collect all globals that had their storage promoted to a constant pool.
   // Functions are emitted before variables, so this accumulates promoted
   // globals from all functions in PromotedGlobals.
-  for (const auto *GV : AFI->getGlobalsPromotedToConstantPool())
-    PromotedGlobals.insert(GV);
+  PromotedGlobals.insert_range(AFI->getGlobalsPromotedToConstantPool());
 
   // Calculate this function's optimization goal.
   unsigned OptimizationGoal;
@@ -835,21 +832,20 @@ static MCSymbol *getPICLabel(StringRef Prefix, unsigned FunctionNumber,
   return Label;
 }
 
-static MCSymbolRefExpr::VariantKind
-getModifierVariantKind(ARMCP::ARMCPModifier Modifier) {
+static uint8_t getModifierSpecifier(ARMCP::ARMCPModifier Modifier) {
   switch (Modifier) {
   case ARMCP::no_modifier:
-    return MCSymbolRefExpr::VK_None;
+    return ARMMCExpr::VK_None;
   case ARMCP::TLSGD:
-    return MCSymbolRefExpr::VK_TLSGD;
+    return ARMMCExpr::VK_TLSGD;
   case ARMCP::TPOFF:
-    return MCSymbolRefExpr::VK_TPOFF;
+    return ARMMCExpr::VK_TPOFF;
   case ARMCP::GOTTPOFF:
-    return MCSymbolRefExpr::VK_GOTTPOFF;
+    return ARMMCExpr::VK_GOTTPOFF;
   case ARMCP::SBREL:
-    return MCSymbolRefExpr::VK_ARM_SBREL;
+    return ARMMCExpr::VK_SBREL;
   case ARMCP::GOT_PREL:
-    return MCSymbolRefExpr::VK_ARM_GOT_PREL;
+    return ARMMCExpr::VK_GOT_PREL;
   case ARMCP::SECREL:
     return MCSymbolRefExpr::VK_SECREL;
   }
@@ -964,9 +960,8 @@ void ARMAsmPrinter::emitMachineConstantPoolValue(
   }
 
   // Create an MCSymbol for the reference.
-  const MCExpr *Expr =
-    MCSymbolRefExpr::create(MCSym, getModifierVariantKind(ACPV->getModifier()),
-                            OutContext);
+  const MCExpr *Expr = MCSymbolRefExpr::create(
+      MCSym, getModifierSpecifier(ACPV->getModifier()), OutContext);
 
   if (ACPV->getPCAdjustment()) {
     MCSymbol *PCLabel =
@@ -1219,7 +1214,7 @@ void ARMAsmPrinter::EmitUnwindingInstruction(const MachineInstr *MI) {
     assert(DstReg == ARM::SP &&
            "Only stack pointer as a destination reg is supported");
 
-    SmallVector<unsigned, 4> RegList;
+    SmallVector<MCRegister, 4> RegList;
     // Skip src & dst reg, and pred ops.
     unsigned StartOp = 2 + 2;
     // Use all the operands.
@@ -1311,6 +1306,10 @@ void ARMAsmPrinter::EmitUnwindingInstruction(const MachineInstr *MI) {
       default:
         MI->print(errs());
         llvm_unreachable("Unsupported opcode for unwinding information");
+      case ARM::tLDRspi:
+        // Used to restore LR in a prologue which uses it as a temporary, has
+        // no effect on unwind tables.
+        return;
       case ARM::MOVr:
       case ARM::tMOVr:
         Offset = 0;
@@ -2410,12 +2409,6 @@ void ARMAsmPrinter::emitInstruction(const MachineInstr *MI) {
 
   case ARM::SEH_EpilogEnd:
     ATS.emitARMWinCFIEpilogEnd();
-    return;
-
-  case ARM::PseudoARMInitUndefMQPR:
-  case ARM::PseudoARMInitUndefSPR:
-  case ARM::PseudoARMInitUndefDPR_VFP2:
-  case ARM::PseudoARMInitUndefGPR:
     return;
   }
 

@@ -23,6 +23,7 @@ include "flang/Optimizer/Dialect/FIRTypes.td"
 include "flang/Optimizer/Dialect/FIRAttr.td"
 include "flang/Optimizer/Dialect/FortranVariableInterface.td"
 include "flang/Optimizer/Dialect/FirAliasTagOpInterface.td"
+include "flang/Optimizer/Dialect/SafeTempArrayCopyAttrInterface.td"
 include "mlir/IR/BuiltinAttributes.td"
 
 // Base class for FIR operations.
@@ -67,6 +68,12 @@ def IsBoxAddressOrValueTypePred
         : CPred<"::fir::isBoxAddressOrValue($_self)">;
 def fir_BoxAddressOrValueType : Type<IsBoxAddressOrValueTypePred,
     "fir.box or fir.class type or reference">;
+
+def RefOfConstantSizeAggregateTypePred
+        : CPred<"::fir::isRefOfConstantSizeAggregateType($_self)">;
+def AnyRefOfConstantSizeAggregateType : TypeConstraint<
+      RefOfConstantSizeAggregateTypePred,
+      "a reference type to a constant size fir.array, fir.char, or fir.type">;
 
 //===----------------------------------------------------------------------===//
 // Memory SSA operations
@@ -280,7 +287,8 @@ def fir_FreeMemOp : fir_Op<"freemem", [MemoryEffects<[MemFree]>]> {
   let assemblyFormat = "$heapref attr-dict `:` qualified(type($heapref))";
 }
 
-def fir_LoadOp : fir_OneResultOp<"load", [FirAliasTagOpInterface]> {
+def fir_LoadOp : fir_OneResultOp<"load", [FirAliasTagOpInterface,
+                                          DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
   let summary = "load a value from a memory reference";
   let description = [{
     Load a value from a memory reference into an ssa-value (virtual register).
@@ -296,7 +304,7 @@ def fir_LoadOp : fir_OneResultOp<"load", [FirAliasTagOpInterface]> {
     or null.
   }];
 
-  let arguments = (ins Arg<AnyReferenceLike, "", [MemRead]>:$memref,
+  let arguments = (ins AnyReferenceLike:$memref,
                   OptionalAttr<LLVM_TBAATagArrayAttr>:$tbaa);
 
   let builders = [OpBuilder<(ins "mlir::Value":$refVal)>,
@@ -309,7 +317,8 @@ def fir_LoadOp : fir_OneResultOp<"load", [FirAliasTagOpInterface]> {
   }];
 }
 
-def fir_StoreOp : fir_Op<"store", [FirAliasTagOpInterface]> {
+def fir_StoreOp : fir_Op<"store", [FirAliasTagOpInterface,
+                                   DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
   let summary = "store an SSA-value to a memory location";
 
   let description = [{
@@ -329,7 +338,7 @@ def fir_StoreOp : fir_Op<"store", [FirAliasTagOpInterface]> {
   }];
 
   let arguments = (ins AnyType:$value,
-                   Arg<AnyReferenceLike, "", [MemWrite]>:$memref,
+                   AnyReferenceLike:$memref,
                    OptionalAttr<LLVM_TBAATagArrayAttr>:$tbaa);
 
   let builders = [OpBuilder<(ins "mlir::Value":$value, "mlir::Value":$memref)>];
@@ -341,6 +350,44 @@ def fir_StoreOp : fir_Op<"store", [FirAliasTagOpInterface]> {
     static mlir::Type elementType(mlir::Type refType);
   }];
 }
+
+def fir_CopyOp : fir_Op<"copy", [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
+  let summary = "copy constant size memory";
+
+  let description = [{
+    Copy the memory from a source with compile time constant size to
+    a destination of the same type.
+
+    This is meant to be used for aggregate types where load and store
+    are not appropriate to make a copy because LLVM is not meant to
+    handle load and store of "big" aggregates.
+
+    Its "no_overlap" attribute allows indicating that the source and destination
+    are known to not overlap at compile time.
+
+    ```
+      !t =!fir.type<t{x:!fir.array<1000xi32>}>
+      fir.copy %x to %y : !fir.ref<!t>, !fir.ref<!t>
+    ```
+    TODO: add FirAliasTagOpInterface to carry TBAA.
+  }];
+
+  let arguments = (ins AnyRefOfConstantSizeAggregateType:$source,
+                       AnyRefOfConstantSizeAggregateType:$destination,
+                       OptionalAttr<UnitAttr>:$no_overlap);
+
+  let builders = [OpBuilder<(ins "mlir::Value":$source,
+                                 "mlir::Value":$destination,
+                                  CArg<"bool", "false">:$no_overlap)>];
+
+  let assemblyFormat = [{
+    $source `to` $destination (`no_overlap` $no_overlap^)?
+    attr-dict `:` type(operands)
+  }];
+
+  let hasVerifier = 1;
+}
+
 
 def fir_SaveResultOp : fir_Op<"save_result", [AttrSizedOperandSegments]> {
   let summary = [{
@@ -1329,7 +1376,8 @@ def fir_BoxTypeDescOp : fir_SimpleOneResultOp<"box_tdesc", [NoMemoryEffect]> {
 //   !- Merge the new and old values into the memory for "A"
 //   array_merge_store <updated A> to <A's address>
 
-def fir_ArrayLoadOp : fir_Op<"array_load", [AttrSizedOperandSegments]> {
+def fir_ArrayLoadOp : fir_Op<"array_load", [AttrSizedOperandSegments,
+                                            DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
 
   let summary = "Load an array as a value.";
 
@@ -1368,7 +1416,7 @@ def fir_ArrayLoadOp : fir_Op<"array_load", [AttrSizedOperandSegments]> {
   }];
 
   let arguments = (ins
-    Arg<AnyRefOrBox, "", [MemRead]>:$memref,
+    AnyRefOrBox:$memref,
     Optional<AnyShapeOrShiftType>:$shape,
     Optional<fir_SliceType>:$slice,
     Variadic<AnyIntegerType>:$typeparams
@@ -1580,7 +1628,7 @@ def fir_ArrayAccessOp : fir_Op<"array_access", [AttrSizedOperandSegments,
 
     It is only possible to use `array_access` on an `array_load` result value or
     a value that can be trace back transitively to an `array_load` as the
-    dominating source. Other array operation such as `array_amend` can be in
+    dominating source. Other array operations such as `array_amend` can be in
     between.
 
     TODO: The above restriction is not enforced. The design of the operation
@@ -1641,7 +1689,7 @@ def fir_ArrayAmendOp : fir_Op<"array_amend", [NoMemoryEffect]> {
 }
 
 def fir_ArrayMergeStoreOp : fir_Op<"array_merge_store",
-    [AttrSizedOperandSegments]> {
+    [AttrSizedOperandSegments, DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
 
   let summary = "Store merged array value to memory.";
 
@@ -1670,7 +1718,7 @@ def fir_ArrayMergeStoreOp : fir_Op<"array_merge_store",
   let arguments = (ins
     fir_SequenceType:$original,
     fir_SequenceType:$sequence,
-    Arg<AnyRefOrBox, "", [MemWrite]>:$memref,
+    AnyRefOrBox:$memref,
     Optional<fir_SliceType>:$slice,
     Variadic<AnyIntegerType>:$typeparams
   );
@@ -1748,10 +1796,16 @@ def fir_CoordinateOp : fir_Op<"coordinate_of", [NoMemoryEffect]> {
     Unlike LLVM's GEP instruction, one cannot stride over the outermost
     reference; therefore, the leading 0 index must be omitted.
 
+    This operation can be used to index derived type fields, in which case
+    the operand is the name of the index field.
+
     ```
       %i = ... : index
       %h = ... : !fir.heap<!fir.array<100 x f32>>
       %p = fir.coordinate_of %h, %i : (!fir.heap<!fir.array<100 x f32>>, index) -> !fir.ref<f32>
+
+      %d = ... : !fir.ref<!fir.type<t{field1:i32, field2:f32}>>
+      %f = fir.coordinate_of %d, field2 : (!fir.ref<!fir.type<t{field1:i32, field2:f32}>>) -> !fir.ref<f32>
     ```
 
     In the example, `%p` will be a pointer to the `%i`-th f32 value in the
@@ -1761,7 +1815,8 @@ def fir_CoordinateOp : fir_Op<"coordinate_of", [NoMemoryEffect]> {
   let arguments = (ins
     AnyRefOrBox:$ref,
     Variadic<AnyCoordinateType>:$coor,
-    TypeAttr:$baseType
+    TypeAttr:$baseType,
+    OptionalAttr<DenseI32ArrayAttr>:$field_indices
   );
 
   let results = (outs RefOrLLVMPtr);
@@ -1771,10 +1826,14 @@ def fir_CoordinateOp : fir_Op<"coordinate_of", [NoMemoryEffect]> {
 
   let builders = [
     OpBuilder<(ins "mlir::Type":$resultType,
-      "mlir::Value":$ref, "mlir::ValueRange":$coor),
-    [{ return build($_builder, $_state, resultType, ref, coor,
-           mlir::TypeAttr::get(ref.getType())); }]>,
+      "mlir::Value":$ref, "mlir::ValueRange":$coor)>,
+    OpBuilder<(ins "mlir::Type":$resultType,
+      "mlir::Value":$ref, "llvm::ArrayRef<fir::IntOrValue>":$coor)>
   ];
+  let extraClassDeclaration = [{
+    constexpr static int32_t kDynamicIndex = std::numeric_limits<int32_t>::min();
+    CoordinateIndicesAdaptor getIndices();
+  }];
 }
 
 def fir_ExtractValueOp : fir_OneResultOp<"extract_value", [NoMemoryEffect]> {
@@ -2432,9 +2491,11 @@ def fir_CallOp : fir_Op<"call",
   let arguments = (ins
     OptionalAttr<SymbolRefAttr>:$callee,
     Variadic<AnyType>:$args,
+    OptionalAttr<DictArrayAttr>:$arg_attrs,
+    OptionalAttr<DictArrayAttr>:$res_attrs,
+    OptionalAttr<fir_FortranProcedureFlagsAttr>:$procedure_attrs,
     DefaultValuedAttr<Arith_FastMathAttr,
-                      "::mlir::arith::FastMathFlags::none">:$fastmath,
-    UnitAttr:$is_bind_c
+                      "::mlir::arith::FastMathFlags::none">:$fastmath
   );
   let results = (outs Variadic<AnyType>);
 
@@ -2488,8 +2549,9 @@ def fir_CallOp : fir_Op<"call",
     void setCalleeFromCallable(mlir::CallInterfaceCallable callee) {
       if (auto calling =
           (*this)->getAttrOfType<mlir::SymbolRefAttr>(getCalleeAttrName()))
-        (*this)->setAttr(getCalleeAttrName(), callee.get<mlir::SymbolRefAttr>());
-      setOperand(0, callee.get<mlir::Value>());
+        (*this)->setAttr(getCalleeAttrName(),
+                         llvm::cast<mlir::SymbolRefAttr>(callee));
+      setOperand(0, llvm::cast<mlir::Value>(callee));
     }
   }];
 }
@@ -2516,7 +2578,10 @@ def fir_DispatchOp : fir_Op<"dispatch", []> {
     StrAttr:$method,
     fir_ClassType:$object,
     Variadic<AnyType>:$args,
-    OptionalAttr<I32Attr>:$pass_arg_pos
+    OptionalAttr<I32Attr>:$pass_arg_pos,
+    OptionalAttr<DictArrayAttr>:$arg_attrs,
+    OptionalAttr<DictArrayAttr>:$res_attrs,
+    OptionalAttr<fir_FortranProcedureFlagsAttr>:$procedure_attrs
   );
 
   let results = (outs Variadic<AnyType>:$results);
@@ -2525,7 +2590,8 @@ def fir_DispatchOp : fir_Op<"dispatch", []> {
 
   let assemblyFormat = [{
     $method `(` $object `:` qualified(type($object)) `)`
-    ( `(` $args^ `:` type($args) `)` )? (`->` type($results)^)? attr-dict
+    ( `(` $args^ `:` type($args) `)` )? (`->` type($results)^)?
+    (`proc_attrs` $procedure_attrs^)? attr-dict
   }];
 
   let extraClassDeclaration = [{
@@ -2609,38 +2675,15 @@ class fir_UnaryArithmeticOp<string mnemonic, list<Trait> traits = []> :
   let assemblyFormat = "operands attr-dict `:` type($result)";
 }
 
-def fir_ConstcOp : fir_Op<"constc", [NoMemoryEffect]> {
-  let summary = "create a complex constant";
-
-  let description = [{
-    A complex constant. Similar to the standard dialect complex type, but this
-    extension allows constants with APFloat values that are not supported in
-    the standard dialect.
-  }];
-
-  let results = (outs fir_ComplexType);
-
-  let hasCustomAssemblyFormat = 1;
-  let hasVerifier = 1;
-
-  let extraClassDeclaration = [{
-    static constexpr llvm::StringRef getRealAttrName() { return "real"; }
-    static constexpr llvm::StringRef getImagAttrName() { return "imaginary"; }
-
-    mlir::Attribute getReal() { return (*this)->getAttr(getRealAttrName()); }
-    mlir::Attribute getImaginary() { return (*this)->getAttr(getImagAttrName()); }
-  }];
-}
-
 class ComplexUnaryArithmeticOp<string mnemonic, list<Trait> traits = []> :
       fir_UnaryArithmeticOp<mnemonic, traits>,
-      Arguments<(ins fir_ComplexType:$operand)>;
+      Arguments<(ins AnyFirComplex:$operand)>;
 
 def fir_NegcOp : ComplexUnaryArithmeticOp<"negc">;
 
 class ComplexArithmeticOp<string mnemonic, list<Trait> traits = []> :
       fir_ArithmeticOp<mnemonic, traits>,
-      Arguments<(ins fir_ComplexType:$lhs, fir_ComplexType:$rhs,
+      Arguments<(ins AnyFirComplex:$lhs, AnyFirComplex:$rhs,
           DefaultValuedAttr<Arith_FastMathAttr,
                             "::mlir::arith::FastMathFlags::none">:$fastmath)>;
 
@@ -2664,8 +2707,8 @@ def fir_CmpcOp : fir_Op<"cmpc",
   }];
 
   let arguments = (ins
-      fir_ComplexType:$lhs,
-      fir_ComplexType:$rhs,
+      AnyFirComplex:$lhs,
+      AnyFirComplex:$rhs,
       DefaultValuedAttr<Arith_FastMathAttr, "::mlir::arith::FastMathFlags::none">:$fastmath);
 
   let results = (outs AnyLogicalLike);
@@ -2713,7 +2756,23 @@ def fir_AddrOfOp : fir_OneResultOp<"address_of", [NoMemoryEffect]> {
   let assemblyFormat = "`(` $symbol `)` attr-dict `:` type($resTy)";
 }
 
-def fir_ConvertOp : fir_OneResultOp<"convert", [NoMemoryEffect]> {
+def fir_VolatileCastOp : fir_SimpleOneResultOp<"volatile_cast", [NoMemoryEffect]> {
+  let summary = "cast between volatile and non-volatile types";
+  let description = [{
+    Cast between volatile and non-volatile types. The types must be otherwise
+    identical. A value's volatility cannot be changed by a fir.convert operation.
+    Reinterpreting a value as volatile must be done explicitly using this operation.
+  }];
+  let arguments = (ins AnyRefOrBox:$value);
+  let results = (outs AnyRefOrBox:$res);
+  let assemblyFormat = [{
+    $value attr-dict `:` functional-type($value, results)
+  }];
+  let hasVerifier = 1;
+  let hasFolder = 1;
+}
+
+def fir_ConvertOp : fir_SimpleOneResultOp<"convert", [NoMemoryEffect]> {
   let summary = "encapsulates all Fortran entity type conversions";
 
   let description = [{
@@ -2721,6 +2780,9 @@ def fir_ConvertOp : fir_OneResultOp<"convert", [NoMemoryEffect]> {
     Not all pairs of types have conversions. When types T and U are the same
     type, this instruction is a NOP and may be folded away. This also supports
     integer to pointer conversion and pointer to integer conversion.
+
+    This operation also allows limited interaction between FIR and LLVM
+    dialects by allowing conversion between FIR pointer types and llvm.ptr type.
 
     ```
       %v = ... : i64
@@ -2731,6 +2793,7 @@ def fir_ConvertOp : fir_OneResultOp<"convert", [NoMemoryEffect]> {
   }];
 
   let arguments = (ins AnyType:$value);
+  let results = (outs AnyType:$res);
 
   let assemblyFormat = [{
     $value attr-dict `:` functional-type($value, results)
@@ -2752,8 +2815,9 @@ def fir_ConvertOp : fir_OneResultOp<"convert", [NoMemoryEffect]> {
 }
 
 def FortranTypeAttr : Attr<And<[CPred<"mlir::isa<mlir::TypeAttr>($_self)">,
-    Or<[CPred<"mlir::isa<fir::CharacterType, fir::ComplexType, "
-              "fir::IntegerType, fir::LogicalType, fir::RealType, "
+    Or<[CPred<"mlir::isa<fir::CharacterType, fir::IntegerType, "
+              "fir::UnsignedType, fir::LogicalType, mlir::FloatType, "
+              "mlir::ComplexType, "
               "fir::RecordType>(mlir::cast<mlir::TypeAttr>($_self).getValue())"
     >]>]>, "Fortran surface type"> {
   let storageType = [{ ::mlir::TypeAttr }];
@@ -3095,7 +3159,7 @@ def fir_IsPresentOp : fir_SimpleOp<"is_present", [NoMemoryEffect]> {
 // debug information so we would like to keep this around even if the value
 // is not used.
 def fir_DeclareOp : fir_Op<"declare", [AttrSizedOperandSegments,
-    MemoryEffects<[MemWrite<DebuggingResource>]>,
+    MemoryEffects<[MemAlloc<DebuggingResource>]>,
     DeclareOpInterfaceMethods<fir_FortranVariableOpInterface>]> {
   let summary = "declare a variable";
 
@@ -3274,6 +3338,258 @@ def fir_DummyScopeOp : fir_Op<"dummy_scope",
 
   let results = (outs fir_DummyScopeType);
   let assemblyFormat = "attr-dict `:` type(results)";
+}
+
+def fir_PackArrayOp
+    : fir_Op<"pack_array", [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
+                            AllTypesMatch<["array", "result"]>]> {
+  let summary = "Pack non-contiguous array into a temporary";
+
+  let description = [{
+    The operation creates a new !fir.box/class<!fir.array<>> value
+    to represent either the original array or a newly allocated
+    temporary array, maybe identical to the original array by value.
+
+    Arguments:
+      - array is the original array.
+        It must have !fir.box/class<!fir.array<>> type.
+      - stack/heap attribute indicates where the temporary array
+        needs to be allocated.
+      - innermost/whole attribute identifies the contiguity mode.
+        innermost means that the repacking has to be done iff the original
+        array is not contiguous in the leading dimension.
+        whole means that the repacking has to be done iff the original
+        array is not contiguous in any dimension.
+        innermost is disallowed for 1D arrays in favor of whole.
+      - no_copy attribute indicates that the original array
+        is not copied into the temporary.
+      - typeparams specify the length parameters of the original array.
+        Even though the array is fully represented with a box, the explicit
+        length parameters might be specified to simplify computing
+        the size of the array's element in compilation time (e.g. constant
+        length parameters might be propagated after MLIR inlining).
+      - optional constraints attributes:
+        * max_size is an unsigned integer attribute specifying the maximum
+          byte size of an array that is eligible for repacking.
+        * max_element_size is an unsigned integer attribute specifying
+          the maximum byte element-size of an array that is eligible
+          for repacking.
+        * min_stride is an unsigned integer attribute specifying
+          the minimum byte stride of the innermost dimension of an array
+          that is eligible for repacking.
+      - heuristics attribute specifies conditions when the array repacking
+        may be optimized.
+      - is_safe is an optional non-empty array of SafeTempArrayCopyAttr
+        attributes. Each attribute implements SafeTempArrayCopyAttrInterface
+        that is used to generate a dynamic predicate value identifying
+        whether the creation of the temporary array copy is safe.
+        For example, if omp.fortran_safe_temp_array_copy attribute
+        is attached, its implementation may generate special code
+        to check if fir.pack_array may be executed by multiple
+        threads, and disallow repacking in this case.
+  }];
+
+  let arguments = (ins AnyBoxedArray:$array, UnitAttr:$stack,
+      UnitAttr:$innermost, UnitAttr:$no_copy, OptionalAttr<UI64Attr>:$max_size,
+      OptionalAttr<UI64Attr>:$max_element_size,
+      OptionalAttr<UI64Attr>:$min_stride,
+      DefaultValuedAttr<fir_PackArrayHeuristicsAttr,
+                        "::fir::PackArrayHeuristics::None">:$heuristics,
+      Variadic<AnyIntegerType>:$typeparams,
+      OptionalAttr<NonEmptySafeTempArrayCopyArrayAttr>:$is_safe);
+
+  let results = (outs AnyBoxedArray:$result);
+  let assemblyFormat = [{
+    $array (`stack` $stack^):(`heap`)?
+    (`innermost` $innermost^):(`whole`)?
+    (`no_copy` $no_copy^)?
+    (`constraints` custom<PackArrayConstraints>($max_size, $max_element_size, $min_stride)^)?
+    (`heuristics` $heuristics^)?
+    (`typeparams` $typeparams^)? (`is_safe` $is_safe^)?
+    attr-dict `:` functional-type(operands, results)
+  }];
+
+  let hasVerifier = 1;
+}
+
+def fir_UnpackArrayOp
+    : fir_Op<"unpack_array", [SameTypeOperands,
+                              DeclareOpInterfaceMethods<
+                                  MemoryEffectsOpInterface>]> {
+  let summary = "Unpack values from temporary array into original array";
+
+  let description = [{
+    The operation is either a no-op or deallocates the temporary array,
+    and maybe copies the temporary array into the original array.
+
+    Arguments:
+      - temp is a fir.box/fir.class value produced by fir.pack_array.
+        It describes either the original array or the temporary array.
+      - original is the original array descriptor.
+      - stack/heap attribute indicates where the temporary array
+        was allocated.
+      - no_copy attribute indicates that the temporary array
+        is not copied into the original temporary array.
+      - is_safe is an optional non-empty array of SafeTempArrayCopyAttr
+        attributes. Each attribute implements SafeTempArrayCopyAttrInterface
+        that is used to generate extra code before any copy-out or
+        deallocation of the temporary happens.
+        For example, if acc.fortran_safe_temp_array_copy attribute
+        is attached, its implementation may generate special code
+        to check if the temporary has been transferred to OpenACC device
+        data environment, and issue a runtime error that the temporary
+        is present on the device while it is about to be deallocated
+        on the host.
+  }];
+
+  let arguments = (ins AnyBoxedArray:$temp, AnyBoxedArray:$original,
+      UnitAttr:$stack, UnitAttr:$no_copy,
+      OptionalAttr<NonEmptySafeTempArrayCopyArrayAttr>:$is_safe);
+
+  let assemblyFormat = [{
+    $temp `to` $original
+    (`stack` $stack^):(`heap`)?
+    (`no_copy` $no_copy^)? (`is_safe` $is_safe^)?
+    attr-dict `:` type($original)
+  }];
+
+  let hasVerifier = 1;
+}
+
+def fir_IsContiguousBoxOp : fir_Op<"is_contiguous_box", [NoMemoryEffect]> {
+  let summary = "Returns true if the boxed entity is contiguous";
+  let description = [{
+    Returns true iff the boxed entity is contiguous:
+      * in the leading dimension (if `innermost` attribute is set),
+      * in all dimensions (if `innermost` attribute is not set).
+
+    The input box cannot be absent.
+  }];
+  let arguments = (ins AnyBoxLike:$box, UnitAttr:$innermost);
+  let results = (outs I1);
+
+  let assemblyFormat = [{
+    $box (`innermost` $innermost^):(`whole`)? attr-dict `:` functional-type(operands, results)
+  }];
+  let hasCanonicalizer = 1;
+}
+
+def fir_BoxTotalElementsOp
+    : fir_SimpleOneResultOp<"box_total_elements", [NoMemoryEffect]> {
+  let summary = "Returns the boxed entity's total size in elements";
+  let description = [{
+    Returns the boxed entity's total size in elements.
+    The input box cannot be absent.
+  }];
+  let arguments = (ins AnyBoxLike:$box);
+  let results = (outs AnyIntegerLike);
+  let hasCanonicalizer = 1;
+}
+
+def fir_DoConcurrentOp : fir_Op<"do_concurrent",
+    [SingleBlock, AutomaticAllocationScope]> {
+  let summary = "do concurrent loop wrapper";
+
+  let description = [{
+    A wrapper operation for the actual op modeling `do concurrent` loops:
+    `fir.do_concurrent.loop` (see op declaration below for more info about it).
+
+    The `fir.do_concurrent` wrapper op consists of one single-block region with
+    the following properties:
+    - The first ops in the region are responsible for allocating storage for the
+      loop's iteration variables. This is property is **not** enforced by the op
+      verifier, but expected to be respected when building the op.
+    - The terminator of the region is an instance of `fir.do_concurrent.loop`.
+
+    For example, a 2D loop nest would be represented as follows:
+    ```
+    fir.do_concurrent {
+      %i = fir.alloca i32
+      %j = fir.alloca i32
+      fir.do_concurrent.loop ...
+    }
+    ```
+  }];
+
+  let regions = (region SizedRegion<1>:$region);
+
+  let assemblyFormat = "$region attr-dict";
+  let hasVerifier = 1;
+}
+
+def fir_DoConcurrentLoopOp : fir_Op<"do_concurrent.loop",
+    [AttrSizedOperandSegments, DeclareOpInterfaceMethods<LoopLikeOpInterface,
+                                                         ["getLoopInductionVars"]>,
+     Terminator, NoTerminator, SingleBlock, ParentOneOf<["DoConcurrentOp"]>]> {
+  let summary = "do concurrent loop";
+
+  let description = [{
+    An operation that models a Fortran `do concurrent` loop's header and block.
+    This is a single-region single-block terminator op that is expected to
+    terminate the region of a `omp.do_concurrent` wrapper op.
+
+    This op borrows from both `scf.parallel` and `fir.do_loop` ops. Similar to
+    `scf.parallel`, a loop nest takes 3 groups of SSA values as operands that
+    represent the lower bounds, upper bounds, and steps. Similar to `fir.do_loop`
+    the op takes one additional group of SSA values to represent reductions.
+
+    The body region **does not** have a terminator.
+
+    For example, a 2D loop nest with 2 reductions (sum and max) would be
+    represented as follows:
+    ```
+    // The wrapper of the loop
+    fir.do_concurrent {
+      %i = fir.alloca i32
+      %j = fir.alloca i32
+
+      // The actual `do concurrent` loop
+      fir.do_concurrent.loop
+        (%i_iv, %j_iv) = (%i_lb, %j_lb) to (%i_ub, %j_ub) step (%i_st, %j_st)
+        reduce(#fir.reduce_attr<add> -> %sum : !fir.ref<i32>,
+               #fir.reduce_attr<max> -> %max : !fir.ref<f32>) {
+
+        %0 = fir.convert %i_iv : (index) -> i32
+        fir.store %0 to %i : !fir.ref<i32>
+
+        %1 = fir.convert %j_iv : (index) -> i32
+        fir.store %1 to %j : !fir.ref<i32>
+
+        // ... loop body goes here ...
+      }
+    }
+    ```
+
+    Description of arguments:
+    - `lowerBound`: The group of SSA values for the nest's lower bounds.
+    - `upperBound`: The group of SSA values for the nest's upper bounds.
+    - `step`: The group of SSA values for the nest's steps.
+    - `reduceOperands`: The reduction SSA values, if any.
+    - `reduceAttrs`: Attributes to store reduction operations, if any.
+    - `loopAnnotation`: Loop metadata to be passed down the compiler pipeline to
+      LLVM.
+  }];
+
+  let arguments = (ins
+    Variadic<Index>:$lowerBound,
+    Variadic<Index>:$upperBound,
+    Variadic<Index>:$step,
+    Variadic<AnyType>:$reduceOperands,
+    OptionalAttr<ArrayAttr>:$reduceAttrs,
+    OptionalAttr<LoopAnnotationAttr>:$loopAnnotation
+  );
+
+  let regions = (region SizedRegion<1>:$region);
+
+  let hasCustomAssemblyFormat = 1;
+  let hasVerifier = 1;
+
+  let extraClassDeclaration = [{
+    // Get Number of reduction operands
+    unsigned getNumReduceOperands() {
+      return getReduceOperands().size();
+    }
+  }];
 }
 
 #endif

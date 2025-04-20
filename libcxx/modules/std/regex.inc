@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 export namespace std {
-#ifndef _LIBCPP_HAS_NO_LOCALIZATION
+#if _LIBCPP_HAS_LOCALIZATION
   // [re.const], regex constants
   namespace regex_constants {
     using std::regex_constants::error_type;
@@ -37,7 +37,7 @@ export namespace std {
   using std::basic_regex;
 
   using std::regex;
-#  ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#  if _LIBCPP_HAS_WIDE_CHARACTERS
   using std::wregex;
 #  endif
 
@@ -49,7 +49,7 @@ export namespace std {
 
   using std::csub_match;
   using std::ssub_match;
-#  ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#  if _LIBCPP_HAS_WIDE_CHARACTERS
   using std::wcsub_match;
   using std::wssub_match;
 #  endif
@@ -65,7 +65,7 @@ export namespace std {
 
   using std::cmatch;
   using std::smatch;
-#  ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#  if _LIBCPP_HAS_WIDE_CHARACTERS
   using std::wcmatch;
   using std::wsmatch;
 #  endif
@@ -88,7 +88,7 @@ export namespace std {
 
   using std::cregex_iterator;
   using std::sregex_iterator;
-#  ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#  if _LIBCPP_HAS_WIDE_CHARACTERS
   using std::wcregex_iterator;
   using std::wsregex_iterator;
 #  endif
@@ -98,7 +98,7 @@ export namespace std {
 
   using std::cregex_token_iterator;
   using std::sregex_token_iterator;
-#  ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#  if _LIBCPP_HAS_WIDE_CHARACTERS
   using std::wcregex_token_iterator;
   using std::wsregex_token_iterator;
 #  endif
@@ -108,10 +108,10 @@ export namespace std {
 
     using std::pmr::cmatch;
     using std::pmr::smatch;
-#  ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#  if _LIBCPP_HAS_WIDE_CHARACTERS
     using std::pmr::wcmatch;
     using std::pmr::wsmatch;
 #  endif
   }    // namespace pmr
-#endif // _LIBCPP_HAS_NO_LOCALIZATION
+#endif // _LIBCPP_HAS_LOCALIZATION
 } // namespace std

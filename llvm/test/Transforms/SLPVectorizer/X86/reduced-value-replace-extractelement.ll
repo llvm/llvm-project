@@ -4,6 +4,7 @@
 define void @test() {
 ; CHECK-LABEL: define void @test() {
 ; CHECK-NEXT:  [[BB:.*]]:
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i64 0 to i32
 ; CHECK-NEXT:    br label %[[BB1:.*]]
 ; CHECK:       [[BB1]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = phi <2 x i32> [ zeroinitializer, %[[BB]] ], [ [[TMP4:%.*]], %[[BB1]] ]
@@ -11,7 +12,7 @@ define void @test() {
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i8 @llvm.vector.reduce.mul.v4i8(<4 x i8> zeroinitializer)
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i8 [[TMP2]] to i32
 ; CHECK-NEXT:    [[OP_RDX:%.*]] = mul i32 [[TMP3]], [[TMP1]]
-; CHECK-NEXT:    [[OP_RDX1:%.*]] = mul i32 [[OP_RDX]], 0
+; CHECK-NEXT:    [[OP_RDX1:%.*]] = mul i32 [[OP_RDX]], [[TRUNC]]
 ; CHECK-NEXT:    [[TMP4]] = insertelement <2 x i32> <i32 0, i32 poison>, i32 [[OP_RDX1]], i32 1
 ; CHECK-NEXT:    br label %[[BB1]]
 ;

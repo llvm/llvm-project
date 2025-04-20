@@ -18,15 +18,15 @@ entry:
 }
 
 ; POWR8-LABEL: name:            vssr
-; POWR8:       - { id: 0, class: vssrc, preferred-register: '' }
-; POWR8:       - { id: 1, class: vssrc, preferred-register: '' }
-; POWR8:       - { id: 2, class: vssrc, preferred-register: '' }
-; POWR8:       - { id: 3, class: vssrc, preferred-register: '' }
-; POWR8:       - { id: 4, class: vssrc, preferred-register: '' }
-; POWR8:       - { id: 5, class: vssrc, preferred-register: '' }
-; POWR8:       - { id: 6, class: vssrc, preferred-register: '' }
-; POWR8:       - { id: 7, class: vssrc, preferred-register: '' }
-; POWR8:       - { id: 8, class: vssrc, preferred-register: '' }
+; POWR8:       - { id: 0, class: vssrc, preferred-register: '', flags: [  ] }
+; POWR8:       - { id: 1, class: vssrc, preferred-register: '', flags: [  ] }
+; POWR8:       - { id: 2, class: vssrc, preferred-register: '', flags: [  ] }
+; POWR8:       - { id: 3, class: vssrc, preferred-register: '', flags: [  ] }
+; POWR8:       - { id: 4, class: vssrc, preferred-register: '', flags: [  ] }
+; POWR8:       - { id: 5, class: vssrc, preferred-register: '', flags: [  ] }
+; POWR8:       - { id: 6, class: vssrc, preferred-register: '', flags: [  ] }
+; POWR8:       - { id: 7, class: vssrc, preferred-register: '', flags: [  ] }
+; POWR8:       - { id: 8, class: vssrc, preferred-register: '', flags: [  ] }
 ; POWR8:       %4:vssrc = COPY $f5
 ; POWR8:       %3:vssrc = COPY $f4
 ; POWR8:       %2:vssrc = COPY $f3
@@ -40,15 +40,15 @@ entry:
 
 ; NOP8V-LABEL: name:            vssr
 ; NOP8V:       registers:
-; NOP8V:       - { id: 0, class: f4rc, preferred-register: '' }
-; NOP8V:       - { id: 1, class: f4rc, preferred-register: '' }
-; NOP8V:       - { id: 2, class: f4rc, preferred-register: '' }
-; NOP8V:       - { id: 3, class: f4rc, preferred-register: '' }
-; NOP8V:       - { id: 4, class: f4rc, preferred-register: '' }
-; NOP8V:       - { id: 5, class: f4rc, preferred-register: '' }
-; NOP8V:       - { id: 6, class: f4rc, preferred-register: '' }
-; NOP8V:       - { id: 7, class: f4rc, preferred-register: '' }
-; NOP8V:       - { id: 8, class: f4rc, preferred-register: '' }
+; NOP8V:       - { id: 0, class: f4rc, preferred-register: '', flags: [  ] }
+; NOP8V:       - { id: 1, class: f4rc, preferred-register: '', flags: [  ] }
+; NOP8V:       - { id: 2, class: f4rc, preferred-register: '', flags: [  ] }
+; NOP8V:       - { id: 3, class: f4rc, preferred-register: '', flags: [  ] }
+; NOP8V:       - { id: 4, class: f4rc, preferred-register: '', flags: [  ] }
+; NOP8V:       - { id: 5, class: f4rc, preferred-register: '', flags: [  ] }
+; NOP8V:       - { id: 6, class: f4rc, preferred-register: '', flags: [  ] }
+; NOP8V:       - { id: 7, class: f4rc, preferred-register: '', flags: [  ] }
+; NOP8V:       - { id: 8, class: f4rc, preferred-register: '', flags: [  ] }
 ; NOP8V:        %4:f4rc = COPY $f5
 ; NOP8V:        %3:f4rc = COPY $f4
 ; NOP8V:        %2:f4rc = COPY $f3
@@ -71,15 +71,15 @@ entry:
 
 ; VSX-LABEL:   vsfr
 ; VSX:         registers:
-; VSX:          - { id: 0, class: vsfrc, preferred-register: '' }
-; VSX:          - { id: 1, class: vsfrc, preferred-register: '' }
-; VSX:          - { id: 2, class: vsfrc, preferred-register: '' }
-; VSX:          - { id: 3, class: vsfrc, preferred-register: '' }
-; VSX:          - { id: 4, class: vsfrc, preferred-register: '' }
-; VSX:          - { id: 5, class: vsfrc, preferred-register: '' }
-; VSX:          - { id: 6, class: vsfrc, preferred-register: '' }
-; VSX:          - { id: 7, class: vsfrc, preferred-register: '' }
-; VSX:          - { id: 8, class: vsfrc, preferred-register: '' }
+; VSX:          - { id: 0, class: vsfrc, preferred-register: '', flags: [  ] }
+; VSX:          - { id: 1, class: vsfrc, preferred-register: '', flags: [  ] }
+; VSX:          - { id: 2, class: vsfrc, preferred-register: '', flags: [  ] }
+; VSX:          - { id: 3, class: vsfrc, preferred-register: '', flags: [  ] }
+; VSX:          - { id: 4, class: vsfrc, preferred-register: '', flags: [  ] }
+; VSX:          - { id: 5, class: vsfrc, preferred-register: '', flags: [  ] }
+; VSX:          - { id: 6, class: vsfrc, preferred-register: '', flags: [  ] }
+; VSX:          - { id: 7, class: vsfrc, preferred-register: '', flags: [  ] }
+; VSX:          - { id: 8, class: vsfrc, preferred-register: '', flags: [  ] }
 ; VSX:          %4:vsfrc = COPY $f5
 ; VSX:          %3:vsfrc = COPY $f4
 ; VSX:          %2:vsfrc = COPY $f3
@@ -93,15 +93,15 @@ entry:
 
 ; NOVSX-LABEL:  vsfr
 ; NOVSX:        registers:
-; NOVSX:        - { id: 0, class: f8rc, preferred-register: '' }
-; NOVSX:        - { id: 1, class: f8rc, preferred-register: '' }
-; NOVSX:        - { id: 2, class: f8rc, preferred-register: '' }
-; NOVSX:        - { id: 3, class: f8rc, preferred-register: '' }
-; NOVSX:        - { id: 4, class: f8rc, preferred-register: '' }
-; NOVSX:        - { id: 5, class: f8rc, preferred-register: '' }
-; NOVSX:        - { id: 6, class: f8rc, preferred-register: '' }
-; NOVSX:        - { id: 7, class: f8rc, preferred-register: '' }
-; NOVSX:        - { id: 8, class: f8rc, preferred-register: '' }
+; NOVSX:        - { id: 0, class: f8rc, preferred-register: '', flags: [  ] }
+; NOVSX:        - { id: 1, class: f8rc, preferred-register: '', flags: [  ] }
+; NOVSX:        - { id: 2, class: f8rc, preferred-register: '', flags: [  ] }
+; NOVSX:        - { id: 3, class: f8rc, preferred-register: '', flags: [  ] }
+; NOVSX:        - { id: 4, class: f8rc, preferred-register: '', flags: [  ] }
+; NOVSX:        - { id: 5, class: f8rc, preferred-register: '', flags: [  ] }
+; NOVSX:        - { id: 6, class: f8rc, preferred-register: '', flags: [  ] }
+; NOVSX:        - { id: 7, class: f8rc, preferred-register: '', flags: [  ] }
+; NOVSX:        - { id: 8, class: f8rc, preferred-register: '', flags: [  ] }
 ; NOVSX:        %4:f8rc = COPY $f5
 ; NOVSX:        %3:f8rc = COPY $f4
 ; NOVSX:        %2:f8rc = COPY $f3

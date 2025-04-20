@@ -19,6 +19,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/KnownBits.h"
+#include "llvm/Support/KnownFPClass.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "gtest/gtest.h"
@@ -52,7 +53,7 @@ protected:
     std::string errMsg;
     raw_string_ostream os(errMsg);
     Error.print("", os);
-    EXPECT_TRUE(M) << os.str();
+    EXPECT_TRUE(M) << errMsg;
 
     return M;
   }
@@ -2481,8 +2482,8 @@ TEST_F(ComputeKnownBitsTest, ComputeKnownBitsAddWithRange) {
 TEST_F(ComputeKnownBitsTest, ComputeKnownBitsUnknownVScale) {
   Module M("", Context);
   IRBuilder<> Builder(Context);
-  Function *TheFn =
-      Intrinsic::getDeclaration(&M, Intrinsic::vscale, {Builder.getInt32Ty()});
+  Function *TheFn = Intrinsic::getOrInsertDeclaration(&M, Intrinsic::vscale,
+                                                      {Builder.getInt32Ty()});
   CallInst *CI = Builder.CreateCall(TheFn, {}, {}, "");
 
   KnownBits Known = computeKnownBits(CI, M.getDataLayout(), /* Depth */ 0);
@@ -2679,6 +2680,41 @@ TEST_F(ComputeKnownBitsTest, ComputeKnownBitsAbsoluteSymbol) {
   EXPECT_EQ(0u, Known_0_256_Align8.countMinTrailingOnes());
 }
 
+TEST_F(ComputeKnownBitsTest, ComputeKnownBitsGEPExtendBeforeMul) {
+  // The index should be extended before multiplying with the scale.
+  parseAssembly(R"(
+    target datalayout = "p:16:16:16"
+
+    define void @test(i16 %arg) {
+      %and = and i16 %arg, u0x8000
+      %base = inttoptr i16 %and to ptr
+      %A = getelementptr i32, ptr %base, i8 80
+      ret void
+    }
+    )");
+  KnownBits Known = computeKnownBits(A, M->getDataLayout());
+  EXPECT_EQ(~320 & 0x7fff, Known.Zero);
+  EXPECT_EQ(320, Known.One);
+}
+
+TEST_F(ComputeKnownBitsTest, ComputeKnownBitsGEPOnlyIndexBits) {
+  // GEP should only affect the index width.
+  parseAssembly(R"(
+    target datalayout = "p:16:16:16:8"
+
+    define void @test(i16 %arg) {
+      %and = and i16 %arg, u0x8000
+      %or = or i16 %and, u0x00ff
+      %base = inttoptr i16 %or to ptr
+      %A = getelementptr i8, ptr %base, i8 1
+      ret void
+    }
+    )");
+  KnownBits Known = computeKnownBits(A, M->getDataLayout());
+  EXPECT_EQ(0x7fff, Known.Zero);
+  EXPECT_EQ(0, Known.One);
+}
+
 TEST_F(ValueTrackingTest, HaveNoCommonBitsSet) {
   {
     // Check for an inverted mask: (X & ~M) op (Y & M).
@@ -2766,11 +2802,11 @@ protected:
 const std::pair<const char *, const char *> IsBytewiseValueTests[] = {
     {
         "i8 0",
-        "i48* null",
+        "ptr null",
     },
     {
         "i8 undef",
-        "i48* undef",
+        "ptr undef",
     },
     {
         "i8 0",
@@ -2849,31 +2885,27 @@ const std::pair<const char *, const char *> IsBytewiseValueTests[] = {
         "double 0xF1F1F1F1F1F1F1F1",
     },
     {
-        "i8 undef",
-        "i16* undef",
-    },
-    {
         "i8 0",
-        "i16* inttoptr (i64 0 to i16*)",
+        "ptr inttoptr (i64 0 to ptr)",
     },
     {
         "i8 -1",
-        "i16* inttoptr (i64 -1 to i16*)",
+        "ptr inttoptr (i64 -1 to ptr)",
     },
     {
         "i8 -86",
-        "i16* inttoptr (i64 -6148914691236517206 to i16*)",
+        "ptr inttoptr (i64 -6148914691236517206 to ptr)",
     },
     {
         "",
-        "i16* inttoptr (i48 -1 to i16*)",
+        "ptr inttoptr (i48 -1 to ptr)",
     },
     {
         "i8 -1",
-        "i16* inttoptr (i96 -1 to i16*)",
+        "ptr inttoptr (i96 -1 to ptr)",
     },
     {
-        "i8 undef",
+        "i8 poison",
         "[0 x i8] zeroinitializer",
     },
     {
@@ -2881,7 +2913,7 @@ const std::pair<const char *, const char *> IsBytewiseValueTests[] = {
         "[0 x i8] undef",
     },
     {
-        "i8 undef",
+        "i8 poison",
         "[5 x [0 x i8]] zeroinitializer",
     },
     {
@@ -2963,7 +2995,7 @@ const std::pair<const char *, const char *> IsBytewiseValueTests[] = {
         "[2 x i16] [i16 -21836, i16 -21846]]",
     },
     {
-        "i8 undef",
+        "i8 poison",
         "{ } zeroinitializer",
     },
     {
@@ -2971,7 +3003,7 @@ const std::pair<const char *, const char *> IsBytewiseValueTests[] = {
         "{ } undef",
     },
     {
-        "i8 undef",
+        "i8 poison",
         "{ {}, {} } zeroinitializer",
     },
     {
@@ -2980,19 +3012,19 @@ const std::pair<const char *, const char *> IsBytewiseValueTests[] = {
     },
     {
         "i8 0",
-        "{i8, i64, i16*} zeroinitializer",
+        "{i8, i64, ptr} zeroinitializer",
     },
     {
         "i8 undef",
-        "{i8, i64, i16*} undef",
+        "{i8, i64, ptr} undef",
     },
     {
         "i8 -86",
-        "{i8, i64, i16*} {i8 -86, i64 -6148914691236517206, i16* undef}",
+        "{i8, i64, ptr} {i8 -86, i64 -6148914691236517206, ptr undef}",
     },
     {
         "",
-        "{i8, i64, i16*} {i8 86, i64 -6148914691236517206, i16* undef}",
+        "{i8, i64, ptr} {i8 86, i64 -6148914691236517206, ptr undef}",
     },
 };
 
@@ -3007,7 +3039,7 @@ TEST_P(IsBytewiseValueTest, IsBytewiseValue) {
   raw_string_ostream S(Buff);
   if (Actual)
     S << *Actual;
-  EXPECT_EQ(GetParam().first, S.str());
+  EXPECT_EQ(GetParam().first, Buff);
 }
 
 TEST_F(ValueTrackingTest, ComputeConstantRange) {

@@ -10,18 +10,112 @@
 #define SCUDO_LIST_H_
 
 #include "internal_defs.h"
+#include "type_traits.h"
 
 namespace scudo {
 
 // Intrusive POD singly and doubly linked list.
 // An object with all zero fields should represent a valid empty list. clear()
 // should be called on all non-zero-initialized objects before using.
+//
+// The intrusive list requires the member `Next` (and `Prev` if doubly linked
+// list)` defined in the node type. The type of `Next`/`Prev` can be a pointer
+// or an index to an array. For example, if the storage of the nodes is an
+// array, instead of using a pointer type, linking with an index type can save
+// some space.
+//
+// There are two things to be noticed while using an index type,
+//   1. Call init() to set up the base address of the array.
+//   2. Define `EndOfListVal` as the nil of the list.
 
-template <class T> class IteratorBase {
+template <class T, bool LinkWithPtr = isPointer<decltype(T::Next)>::value>
+class LinkOp {
 public:
-  explicit IteratorBase(T *CurrentT) : Current(CurrentT) {}
+  LinkOp() = default;
+  LinkOp(UNUSED T *BaseT, UNUSED uptr BaseSize) {}
+  void init(UNUSED T *LinkBase, UNUSED uptr Size) {}
+  T *getBase() const { return nullptr; }
+  uptr getSize() const { return 0; }
+
+  T *getNext(T *X) const { return X->Next; }
+  void setNext(T *X, T *Next) const { X->Next = Next; }
+
+  T *getPrev(T *X) const { return X->Prev; }
+  void setPrev(T *X, T *Prev) const { X->Prev = Prev; }
+
+  T *getEndOfListVal() const { return nullptr; }
+};
+
+template <class T> class LinkOp<T, /*LinkWithPtr=*/false> {
+public:
+  using LinkTy = typename assertSameType<
+      typename removeConst<decltype(T::Next)>::type,
+      typename removeConst<decltype(T::EndOfListVal)>::type>::type;
+
+  LinkOp() = default;
+  LinkOp(T *BaseT, uptr BaseSize)
+      : Base(BaseT), Size(static_cast<LinkTy>(BaseSize)) {}
+  void init(T *LinkBase, uptr BaseSize) {
+    Base = LinkBase;
+    Size = static_cast<LinkTy>(BaseSize);
+  }
+  T *getBase() const { return Base; }
+  LinkTy getSize() const { return Size; }
+
+  T *getNext(T *X) const {
+    DCHECK_NE(getBase(), nullptr);
+    if (X->Next == getEndOfListVal())
+      return nullptr;
+    DCHECK_LT(X->Next, Size);
+    return &Base[X->Next];
+  }
+  // Set `X->Next` to `Next`.
+  void setNext(T *X, T *Next) const {
+    if (Next == nullptr) {
+      X->Next = getEndOfListVal();
+    } else {
+      assertElementInRange(Next);
+      X->Next = static_cast<LinkTy>(Next - Base);
+    }
+  }
+
+  T *getPrev(T *X) const {
+    DCHECK_NE(getBase(), nullptr);
+    if (X->Prev == getEndOfListVal())
+      return nullptr;
+    DCHECK_LT(X->Prev, Size);
+    return &Base[X->Prev];
+  }
+  // Set `X->Prev` to `Prev`.
+  void setPrev(T *X, T *Prev) const {
+    if (Prev == nullptr) {
+      X->Prev = getEndOfListVal();
+    } else {
+      assertElementInRange(Prev);
+      X->Prev = static_cast<LinkTy>(Prev - Base);
+    }
+  }
+
+  LinkTy getEndOfListVal() const { return T::EndOfListVal; }
+
+private:
+  void assertElementInRange(T *X) const {
+    DCHECK_GE(reinterpret_cast<uptr>(X), reinterpret_cast<uptr>(Base));
+    DCHECK_LE(static_cast<LinkTy>(X - Base), Size);
+  }
+
+protected:
+  T *Base = nullptr;
+  LinkTy Size = 0;
+};
+
+template <class T> class IteratorBase : public LinkOp<T> {
+public:
+  IteratorBase(const LinkOp<T> &Link, T *CurrentT)
+      : LinkOp<T>(Link), Current(CurrentT) {}
+
   IteratorBase &operator++() {
-    Current = Current->Next;
+    Current = this->getNext(Current);
     return *this;
   }
   bool operator!=(IteratorBase Other) const { return Current != Other.Current; }
@@ -31,7 +125,10 @@ private:
   T *Current;
 };
 
-template <class T> struct IntrusiveList {
+template <class T> struct IntrusiveList : public LinkOp<T> {
+  IntrusiveList() = default;
+  void init(T *Base, uptr BaseSize) { LinkOp<T>::init(Base, BaseSize); }
+
   bool empty() const { return Size == 0; }
   uptr size() const { return Size; }
 
@@ -48,11 +145,21 @@ template <class T> struct IntrusiveList {
   typedef IteratorBase<T> Iterator;
   typedef IteratorBase<const T> ConstIterator;
 
-  Iterator begin() { return Iterator(First); }
-  Iterator end() { return Iterator(nullptr); }
+  Iterator begin() {
+    return Iterator(LinkOp<T>(this->getBase(), this->getSize()), First);
+  }
+  Iterator end() {
+    return Iterator(LinkOp<T>(this->getBase(), this->getSize()), nullptr);
+  }
 
-  ConstIterator begin() const { return ConstIterator(First); }
-  ConstIterator end() const { return ConstIterator(nullptr); }
+  ConstIterator begin() const {
+    return ConstIterator(LinkOp<const T>(this->getBase(), this->getSize()),
+                         First);
+  }
+  ConstIterator end() const {
+    return ConstIterator(LinkOp<const T>(this->getBase(), this->getSize()),
+                         nullptr);
+  }
 
   void checkConsistency() const;
 
@@ -68,13 +175,13 @@ template <class T> void IntrusiveList<T>::checkConsistency() const {
     CHECK_EQ(Last, nullptr);
   } else {
     uptr Count = 0;
-    for (T *I = First;; I = I->Next) {
+    for (T *I = First;; I = this->getNext(I)) {
       Count++;
       if (I == Last)
         break;
     }
     CHECK_EQ(this->size(), Count);
-    CHECK_EQ(Last->Next, nullptr);
+    CHECK_EQ(this->getNext(Last), nullptr);
   }
 }
 
@@ -83,13 +190,16 @@ template <class T> struct SinglyLinkedList : public IntrusiveList<T> {
   using IntrusiveList<T>::Last;
   using IntrusiveList<T>::Size;
   using IntrusiveList<T>::empty;
+  using IntrusiveList<T>::setNext;
+  using IntrusiveList<T>::getNext;
+  using IntrusiveList<T>::getEndOfListVal;
 
   void push_back(T *X) {
-    X->Next = nullptr;
+    setNext(X, nullptr);
     if (empty())
       First = X;
     else
-      Last->Next = X;
+      setNext(Last, X);
     Last = X;
     Size++;
   }
@@ -97,14 +207,14 @@ template <class T> struct SinglyLinkedList : public IntrusiveList<T> {
   void push_front(T *X) {
     if (empty())
       Last = X;
-    X->Next = First;
+    setNext(X, First);
     First = X;
     Size++;
   }
 
   void pop_front() {
     DCHECK(!empty());
-    First = First->Next;
+    First = getNext(First);
     if (!First)
       Last = nullptr;
     Size--;
@@ -115,8 +225,8 @@ template <class T> struct SinglyLinkedList : public IntrusiveList<T> {
     DCHECK(!empty());
     DCHECK_NE(Prev, nullptr);
     DCHECK_NE(X, nullptr);
-    X->Next = Prev->Next;
-    Prev->Next = X;
+    setNext(X, getNext(Prev));
+    setNext(Prev, X);
     if (Last == Prev)
       Last = X;
     ++Size;
@@ -126,8 +236,8 @@ template <class T> struct SinglyLinkedList : public IntrusiveList<T> {
     DCHECK(!empty());
     DCHECK_NE(Prev, nullptr);
     DCHECK_NE(X, nullptr);
-    DCHECK_EQ(Prev->Next, X);
-    Prev->Next = X->Next;
+    DCHECK_EQ(getNext(Prev), X);
+    setNext(Prev, getNext(X));
     if (Last == X)
       Last = Prev;
     Size--;
@@ -140,7 +250,7 @@ template <class T> struct SinglyLinkedList : public IntrusiveList<T> {
     if (empty()) {
       *this = *L;
     } else {
-      Last->Next = L->First;
+      setNext(Last, L->First);
       Last = L->Last;
       Size += L->size();
     }
@@ -153,16 +263,21 @@ template <class T> struct DoublyLinkedList : IntrusiveList<T> {
   using IntrusiveList<T>::Last;
   using IntrusiveList<T>::Size;
   using IntrusiveList<T>::empty;
+  using IntrusiveList<T>::setNext;
+  using IntrusiveList<T>::getNext;
+  using IntrusiveList<T>::setPrev;
+  using IntrusiveList<T>::getPrev;
+  using IntrusiveList<T>::getEndOfListVal;
 
   void push_front(T *X) {
-    X->Prev = nullptr;
+    setPrev(X, nullptr);
     if (empty()) {
       Last = X;
     } else {
-      DCHECK_EQ(First->Prev, nullptr);
-      First->Prev = X;
+      DCHECK_EQ(getPrev(First), nullptr);
+      setPrev(First, X);
     }
-    X->Next = First;
+    setNext(X, First);
     First = X;
     Size++;
   }
@@ -171,37 +286,37 @@ template <class T> struct DoublyLinkedList : IntrusiveList<T> {
   void insert(T *X, T *Y) {
     if (Y == First)
       return push_front(X);
-    T *Prev = Y->Prev;
+    T *Prev = getPrev(Y);
     // This is a hard CHECK to ensure consistency in the event of an intentional
     // corruption of Y->Prev, to prevent a potential write-{4,8}.
-    CHECK_EQ(Prev->Next, Y);
-    Prev->Next = X;
-    X->Prev = Prev;
-    X->Next = Y;
-    Y->Prev = X;
+    CHECK_EQ(getNext(Prev), Y);
+    setNext(Prev, X);
+    setPrev(X, Prev);
+    setNext(X, Y);
+    setPrev(Y, X);
     Size++;
   }
 
   void push_back(T *X) {
-    X->Next = nullptr;
+    setNext(X, nullptr);
     if (empty()) {
       First = X;
     } else {
-      DCHECK_EQ(Last->Next, nullptr);
-      Last->Next = X;
+      DCHECK_EQ(getNext(Last), nullptr);
+      setNext(Last, X);
     }
-    X->Prev = Last;
+    setPrev(X, Last);
     Last = X;
     Size++;
   }
 
   void pop_front() {
     DCHECK(!empty());
-    First = First->Next;
+    First = getNext(First);
     if (!First)
       Last = nullptr;
     else
-      First->Prev = nullptr;
+      setPrev(First, nullptr);
     Size--;
   }
 
@@ -209,15 +324,15 @@ template <class T> struct DoublyLinkedList : IntrusiveList<T> {
   // catch potential corruption attempts, that could yield a mirrored
   // write-{4,8} primitive. nullptr checks are deemed less vital.
   void remove(T *X) {
-    T *Prev = X->Prev;
-    T *Next = X->Next;
+    T *Prev = getPrev(X);
+    T *Next = getNext(X);
     if (Prev) {
-      CHECK_EQ(Prev->Next, X);
-      Prev->Next = Next;
+      CHECK_EQ(getNext(Prev), X);
+      setNext(Prev, Next);
     }
     if (Next) {
-      CHECK_EQ(Next->Prev, X);
-      Next->Prev = Prev;
+      CHECK_EQ(getPrev(Next), X);
+      setPrev(Next, Prev);
     }
     if (First == X) {
       DCHECK_EQ(Prev, nullptr);

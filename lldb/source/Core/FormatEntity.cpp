@@ -13,8 +13,6 @@
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/DumpRegisterValue.h"
 #include "lldb/Core/Module.h"
-#include "lldb/Core/ValueObject.h"
-#include "lldb/Core/ValueObjectVariable.h"
 #include "lldb/DataFormatters/DataVisualization.h"
 #include "lldb/DataFormatters/FormatClasses.h"
 #include "lldb/DataFormatters/FormatManager.h"
@@ -52,6 +50,8 @@
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/StringList.h"
 #include "lldb/Utility/StructuredData.h"
+#include "lldb/ValueObject/ValueObject.h"
+#include "lldb/ValueObject/ValueObjectVariable.h"
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-forward.h"
 #include "llvm/ADT/STLExtras.h"
@@ -162,7 +162,13 @@ constexpr Definition g_thread_child_entries[] = {
     Definition("completed-expression", EntryType::ThreadCompletedExpression)};
 
 constexpr Definition g_target_child_entries[] = {
-    Definition("arch", EntryType::TargetArch)};
+    Definition("arch", EntryType::TargetArch),
+    Entry::DefinitionWithChildren("file", EntryType::TargetFile,
+                                  g_file_child_entries)};
+
+constexpr Definition g_progress_child_entries[] = {
+    Definition("count", EntryType::ProgressCount),
+    Definition("message", EntryType::ProgressMessage)};
 
 #define _TO_STR2(_val) #_val
 #define _TO_STR(_val) _TO_STR2(_val)
@@ -257,7 +263,10 @@ constexpr Definition g_top_level_entries[] = {
     Entry::DefinitionWithChildren("target", EntryType::Invalid,
                                   g_target_child_entries),
     Entry::DefinitionWithChildren("var", EntryType::Variable,
-                                  g_var_child_entries, true)};
+                                  g_var_child_entries, true),
+    Entry::DefinitionWithChildren("progress", EntryType::Invalid,
+                                  g_progress_child_entries),
+};
 
 constexpr Definition g_root = Entry::DefinitionWithChildren(
     "<root>", EntryType::Root, g_top_level_entries);
@@ -322,6 +331,7 @@ const char *FormatEntity::Entry::TypeToCString(Type t) {
     ENUM_TO_CSTR(ScriptThread);
     ENUM_TO_CSTR(ThreadInfo);
     ENUM_TO_CSTR(TargetArch);
+    ENUM_TO_CSTR(TargetFile);
     ENUM_TO_CSTR(ScriptTarget);
     ENUM_TO_CSTR(ModuleFile);
     ENUM_TO_CSTR(File);
@@ -355,6 +365,8 @@ const char *FormatEntity::Entry::TypeToCString(Type t) {
     ENUM_TO_CSTR(LineEntryStartAddress);
     ENUM_TO_CSTR(LineEntryEndAddress);
     ENUM_TO_CSTR(CurrentPCArrow);
+    ENUM_TO_CSTR(ProgressCount);
+    ENUM_TO_CSTR(ProgressMessage);
   }
   return "???";
 }
@@ -410,31 +422,31 @@ static bool DumpAddressAndContent(Stream &s, const SymbolContext *sc,
                                   const Address &addr,
                                   bool print_file_addr_or_load_addr) {
   Target *target = Target::GetTargetFromContexts(exe_ctx, sc);
+
   addr_t vaddr = LLDB_INVALID_ADDRESS;
-  if (exe_ctx && !target->GetSectionLoadList().IsEmpty())
+  if (target && target->HasLoadedSections())
     vaddr = addr.GetLoadAddress(target);
   if (vaddr == LLDB_INVALID_ADDRESS)
     vaddr = addr.GetFileAddress();
+  if (vaddr == LLDB_INVALID_ADDRESS)
+    return false;
 
-  if (vaddr != LLDB_INVALID_ADDRESS) {
-    int addr_width = 0;
-    if (exe_ctx && target) {
-      addr_width = target->GetArchitecture().GetAddressByteSize() * 2;
-    }
-    if (addr_width == 0)
-      addr_width = 16;
-    if (print_file_addr_or_load_addr) {
-      ExecutionContextScope *exe_scope = nullptr;
-      if (exe_ctx)
-        exe_scope = exe_ctx->GetBestExecutionContextScope();
-      addr.Dump(&s, exe_scope, Address::DumpStyleLoadAddress,
-                Address::DumpStyleModuleWithFileAddress, 0);
-    } else {
-      s.Printf("0x%*.*" PRIx64, addr_width, addr_width, vaddr);
-    }
-    return true;
+  int addr_width = 0;
+  if (target)
+    addr_width = target->GetArchitecture().GetAddressByteSize() * 2;
+  if (addr_width == 0)
+    addr_width = 16;
+
+  if (print_file_addr_or_load_addr) {
+    ExecutionContextScope *exe_scope =
+        exe_ctx ? exe_ctx->GetBestExecutionContextScope() : nullptr;
+    addr.Dump(&s, exe_scope, Address::DumpStyleLoadAddress,
+              Address::DumpStyleModuleWithFileAddress, 0);
+  } else {
+    s.Printf("0x%*.*" PRIx64, addr_width, addr_width, vaddr);
   }
-  return false;
+
+  return true;
 }
 
 static bool DumpAddressOffsetFromFunction(Stream &s, const SymbolContext *sc,
@@ -447,7 +459,7 @@ static bool DumpAddressOffsetFromFunction(Stream &s, const SymbolContext *sc,
 
     if (sc) {
       if (sc->function) {
-        func_addr = sc->function->GetAddressRange().GetBaseAddress();
+        func_addr = sc->function->GetAddress();
         if (sc->block && !concrete_only) {
           // Check to make sure we aren't in an inline function. If we are, use
           // the inline block range that contains "format_addr" since blocks
@@ -465,7 +477,7 @@ static bool DumpAddressOffsetFromFunction(Stream &s, const SymbolContext *sc,
     if (func_addr.IsValid()) {
       const char *addr_offset_padding = no_padding ? "" : " ";
 
-      if (func_addr.GetSection() == format_addr.GetSection()) {
+      if (func_addr.GetModule() == format_addr.GetModule()) {
         addr_t func_file_addr = func_addr.GetFileAddress();
         addr_t addr_file_addr = format_addr.GetFileAddress();
         if (addr_file_addr > func_file_addr ||
@@ -1135,17 +1147,75 @@ static void PrettyPrintFunctionNameWithArgs(Stream &out_stream,
     out_stream.PutChar(')');
 }
 
-static void FormatInlinedBlock(Stream &out_stream, Block *block) {
-  if (!block)
-    return;
-  Block *inline_block = block->GetContainingInlinedBlock();
-  if (inline_block) {
-    if (const InlineFunctionInfo *inline_info =
-            inline_block->GetInlinedFunctionInfo()) {
-      out_stream.PutCString(" [inlined] ");
-      inline_info->GetName().Dump(&out_stream);
-    }
+static VariableListSP GetFunctionVariableList(const SymbolContext &sc) {
+  assert(sc.function);
+
+  if (sc.block)
+    if (Block *inline_block = sc.block->GetContainingInlinedBlock())
+      return inline_block->GetBlockVariableList(true);
+
+  return sc.function->GetBlock(true).GetBlockVariableList(true);
+}
+
+static bool PrintFunctionNameWithArgs(Stream &s,
+                                      const ExecutionContext *exe_ctx,
+                                      const SymbolContext &sc) {
+  assert(sc.function);
+
+  ExecutionContextScope *exe_scope =
+      exe_ctx ? exe_ctx->GetBestExecutionContextScope() : nullptr;
+
+  const char *cstr =
+      sc.GetPossiblyInlinedFunctionName(Mangled::ePreferDemangled);
+  if (!cstr)
+    return false;
+
+  VariableList args;
+  if (auto variable_list_sp = GetFunctionVariableList(sc))
+    variable_list_sp->AppendVariablesWithScope(eValueTypeVariableArgument,
+                                               args);
+
+  if (args.GetSize() > 0) {
+    PrettyPrintFunctionNameWithArgs(s, cstr, exe_scope, args);
+  } else {
+    s.PutCString(cstr);
   }
+
+  return true;
+}
+
+static bool HandleFunctionNameWithArgs(Stream &s,const ExecutionContext *exe_ctx,
+                                       const SymbolContext &sc) {
+  Language *language_plugin = nullptr;
+  bool language_plugin_handled = false;
+  StreamString ss;
+  if (sc.function)
+    language_plugin = Language::FindPlugin(sc.function->GetLanguage());
+  else if (sc.symbol)
+    language_plugin = Language::FindPlugin(sc.symbol->GetLanguage());
+
+  if (language_plugin)
+    language_plugin_handled = language_plugin->GetFunctionDisplayName(
+        sc, exe_ctx, Language::FunctionNameRepresentation::eNameWithArgs, ss);
+
+  if (language_plugin_handled) {
+    s << ss.GetString();
+    return true;
+  }
+
+  if (sc.function)
+    return PrintFunctionNameWithArgs(s, exe_ctx, sc);
+
+  if (!sc.symbol)
+    return false;
+
+  const char *cstr = sc.symbol->GetName().AsCString(nullptr);
+  if (!cstr)
+    return false;
+
+  s.PutCString(cstr);
+
+  return true;
 }
 
 bool FormatEntity::FormatStringRef(const llvm::StringRef &format_str, Stream &s,
@@ -1156,23 +1226,6 @@ bool FormatEntity::FormatStringRef(const llvm::StringRef &format_str, Stream &s,
                                    bool initial_function) {
   if (!format_str.empty()) {
     FormatEntity::Entry root;
-    Status error = FormatEntity::Parse(format_str, root);
-    if (error.Success()) {
-      return FormatEntity::Format(root, s, sc, exe_ctx, addr, valobj,
-                                  function_changed, initial_function);
-    }
-  }
-  return false;
-}
-
-bool FormatEntity::FormatCString(const char *format, Stream &s,
-                                 const SymbolContext *sc,
-                                 const ExecutionContext *exe_ctx,
-                                 const Address *addr, ValueObject *valobj,
-                                 bool function_changed, bool initial_function) {
-  if (format && format[0]) {
-    FormatEntity::Entry root;
-    llvm::StringRef format_str(format);
     Status error = FormatEntity::Parse(format_str, root);
     if (error.Success()) {
       return FormatEntity::Format(root, s, sc, exe_ctx, addr, valobj,
@@ -1195,12 +1248,10 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
                                   // FormatEntity::Entry::Definition encoding
     return false;
   case Entry::Type::EscapeCode:
-    if (exe_ctx) {
-      if (Target *target = exe_ctx->GetTargetPtr()) {
-        Debugger &debugger = target->GetDebugger();
-        if (debugger.GetUseColor()) {
-          s.PutCString(entry.string);
-        }
+    if (Target *target = Target::GetTargetFromContexts(exe_ctx, sc)) {
+      Debugger &debugger = target->GetDebugger();
+      if (debugger.GetUseColor()) {
+        s.PutCString(entry.string);
       }
     }
     // Always return true, so colors being disabled is transparent.
@@ -1469,6 +1520,17 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
     }
     return false;
 
+  case Entry::Type::TargetFile:
+    if (exe_ctx) {
+      if (Target *target = exe_ctx->GetTargetPtr()) {
+        if (Module *exe_module = target->GetExecutableModulePointer()) {
+          if (DumpFile(s, exe_module->GetFileSpec(), (FileKind)entry.number))
+            return true;
+        }
+      }
+    }
+    return false;
+
   case Entry::Type::ScriptTarget:
     if (exe_ctx) {
       Target *target = exe_ctx->GetTargetPtr();
@@ -1640,26 +1702,22 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
 
     if (language_plugin)
       language_plugin_handled = language_plugin->GetFunctionDisplayName(
-          sc, exe_ctx, Language::FunctionNameRepresentation::eName, ss);
+          *sc, exe_ctx, Language::FunctionNameRepresentation::eName, ss);
 
     if (language_plugin_handled) {
       s << ss.GetString();
       return true;
-    } else {
-      const char *name = nullptr;
-      if (sc->function)
-        name = sc->function->GetName().AsCString(nullptr);
-      else if (sc->symbol)
-        name = sc->symbol->GetName().AsCString(nullptr);
-
-      if (name) {
-        s.PutCString(name);
-        FormatInlinedBlock(s, sc->block);
-        return true;
-      }
     }
+
+    const char *name = sc->GetPossiblyInlinedFunctionName(
+        Mangled::NamePreference::ePreferDemangled);
+    if (!name)
+      return false;
+
+    s.PutCString(name);
+
+    return true;
   }
-    return false;
 
   case Entry::Type::FunctionNameNoArgs: {
     if (!sc)
@@ -1675,117 +1733,42 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
 
     if (language_plugin)
       language_plugin_handled = language_plugin->GetFunctionDisplayName(
-          sc, exe_ctx, Language::FunctionNameRepresentation::eNameWithNoArgs,
+          *sc, exe_ctx, Language::FunctionNameRepresentation::eNameWithNoArgs,
           ss);
 
     if (language_plugin_handled) {
       s << ss.GetString();
       return true;
-    } else {
-      ConstString name;
-      if (sc->function)
-        name = sc->function->GetNameNoArguments();
-      else if (sc->symbol)
-        name = sc->symbol->GetNameNoArguments();
-      if (name) {
-        s.PutCString(name.GetCString());
-        FormatInlinedBlock(s, sc->block);
-        return true;
-      }
     }
+
+    const char *name = sc->GetPossiblyInlinedFunctionName(
+        Mangled::NamePreference::ePreferDemangledWithoutArguments);
+    if (!name)
+      return false;
+
+    s.PutCString(name);
+
+    return true;
   }
-    return false;
 
   case Entry::Type::FunctionNameWithArgs: {
     if (!sc)
       return false;
 
-    Language *language_plugin = nullptr;
-    bool language_plugin_handled = false;
-    StreamString ss;
-    if (sc->function)
-      language_plugin = Language::FindPlugin(sc->function->GetLanguage());
-    else if (sc->symbol)
-      language_plugin = Language::FindPlugin(sc->symbol->GetLanguage());
-
-    if (language_plugin)
-      language_plugin_handled = language_plugin->GetFunctionDisplayName(
-          sc, exe_ctx, Language::FunctionNameRepresentation::eNameWithArgs, ss);
-
-    if (language_plugin_handled) {
-      s << ss.GetString();
-      return true;
-    } else {
-      // Print the function name with arguments in it
-      if (sc->function) {
-        ExecutionContextScope *exe_scope =
-            exe_ctx ? exe_ctx->GetBestExecutionContextScope() : nullptr;
-        const char *cstr = sc->function->GetName().AsCString(nullptr);
-        if (cstr) {
-          const InlineFunctionInfo *inline_info = nullptr;
-          VariableListSP variable_list_sp;
-          bool get_function_vars = true;
-          if (sc->block) {
-            Block *inline_block = sc->block->GetContainingInlinedBlock();
-
-            if (inline_block) {
-              get_function_vars = false;
-              inline_info = inline_block->GetInlinedFunctionInfo();
-              if (inline_info)
-                variable_list_sp = inline_block->GetBlockVariableList(true);
-            }
-          }
-
-          if (get_function_vars) {
-            variable_list_sp =
-                sc->function->GetBlock(true).GetBlockVariableList(true);
-          }
-
-          if (inline_info) {
-            s.PutCString(cstr);
-            s.PutCString(" [inlined] ");
-            cstr = inline_info->GetName().GetCString();
-          }
-
-          VariableList args;
-          if (variable_list_sp)
-            variable_list_sp->AppendVariablesWithScope(
-                eValueTypeVariableArgument, args);
-          if (args.GetSize() > 0) {
-            PrettyPrintFunctionNameWithArgs(s, cstr, exe_scope, args);
-          } else {
-            s.PutCString(cstr);
-          }
-          return true;
-        }
-      } else if (sc->symbol) {
-        const char *cstr = sc->symbol->GetName().AsCString(nullptr);
-        if (cstr) {
-          s.PutCString(cstr);
-          return true;
-        }
-      }
-    }
+    return HandleFunctionNameWithArgs(s, exe_ctx, *sc);
   }
-    return false;
 
   case Entry::Type::FunctionMangledName: {
     if (!sc)
       return false;
 
-    const char *name = nullptr;
-    if (sc->symbol)
-      name =
-          sc->symbol->GetMangled().GetName(Mangled::ePreferMangled).AsCString();
-    else if (sc->function)
-      name = sc->function->GetMangled()
-                 .GetName(Mangled::ePreferMangled)
-                 .AsCString();
-
+    const char *name = sc->GetPossiblyInlinedFunctionName(
+        Mangled::NamePreference::ePreferMangled);
     if (!name)
       return false;
+
     s.PutCString(name);
-    FormatInlinedBlock(s, sc->block);
+
     return true;
   }
   case Entry::Type::FunctionAddrOffset:
@@ -1898,7 +1881,28 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
       return true;
     }
     return false;
+
+  case Entry::Type::ProgressCount:
+    if (Target *target = Target::GetTargetFromContexts(exe_ctx, sc)) {
+      if (auto progress = target->GetDebugger().GetCurrentProgressReport()) {
+        if (progress->total != UINT64_MAX) {
+          s.Format("[{0}/{1}]", progress->completed, progress->total);
+          return true;
+        }
+      }
+    }
+    return false;
+
+  case Entry::Type::ProgressMessage:
+    if (Target *target = Target::GetTargetFromContexts(exe_ctx, sc)) {
+      if (auto progress = target->GetDebugger().GetCurrentProgressReport()) {
+        s.PutCString(progress->message);
+        return true;
+      }
+    }
+    return false;
   }
+
   return false;
 }
 
@@ -1960,14 +1964,16 @@ static Status ParseEntry(const llvm::StringRef &format_str,
                               "access one of its children: ",
                               entry_def->name);
             DumpCommaSeparatedChildEntryNames(error_strm, entry_def);
-            error.SetErrorStringWithFormat("%s", error_strm.GetData());
+            error =
+                Status::FromErrorStringWithFormat("%s", error_strm.GetData());
           } else if (sep_char == ':') {
             // Any value whose separator is a with a ':' means this value has a
             // string argument that needs to be stored in the entry (like
             // "${script.var:}"). In this case the string value is the empty
             // string which is ok.
           } else {
-            error.SetErrorStringWithFormat("%s", "invalid entry definitions");
+            error = Status::FromErrorStringWithFormat(
+                "%s", "invalid entry definitions");
           }
         }
       } else {
@@ -1979,7 +1985,7 @@ static Status ParseEntry(const llvm::StringRef &format_str,
           // "${script.var:modulename.function}")
           entry.string = value.str();
         } else {
-          error.SetErrorStringWithFormat(
+          error = Status::FromErrorStringWithFormat(
               "'%s' followed by '%s' but it has no children", key.str().c_str(),
               value.str().c_str());
         }
@@ -1996,7 +2002,7 @@ static Status ParseEntry(const llvm::StringRef &format_str,
     error_strm.Printf("invalid member '%s' in '%s'. Valid members are: ",
                       key.str().c_str(), parent->name);
   DumpCommaSeparatedChildEntryNames(error_strm, parent);
-  error.SetErrorStringWithFormat("%s", error_strm.GetData());
+  error = Status::FromErrorStringWithFormat("%s", error_strm.GetData());
   return error;
 }
 
@@ -2064,7 +2070,7 @@ static Status ParseInternal(llvm::StringRef &format, Entry &parent_entry,
 
     case '}':
       if (depth == 0)
-        error.SetErrorString("unmatched '}' character");
+        error = Status::FromErrorString("unmatched '}' character");
       else
         format =
             format
@@ -2074,7 +2080,7 @@ static Status ParseInternal(llvm::StringRef &format, Entry &parent_entry,
     case '\\': {
       format = format.drop_front(); // Skip the '\' character
       if (format.empty()) {
-        error.SetErrorString(
+        error = Status::FromErrorString(
             "'\\' character was not followed by another character");
         return error;
       }
@@ -2128,7 +2134,8 @@ static Status ParseInternal(llvm::StringRef &format, Entry &parent_entry,
           if (octal_value <= UINT8_MAX) {
             parent_entry.AppendChar((char)octal_value);
           } else {
-            error.SetErrorString("octal number is larger than a single byte");
+            error = Status::FromErrorString(
+                "octal number is larger than a single byte");
             return error;
           }
         }
@@ -2153,7 +2160,8 @@ static Status ParseInternal(llvm::StringRef &format, Entry &parent_entry,
           if (hex_value <= UINT8_MAX) {
             parent_entry.AppendChar((char)hex_value);
           } else {
-            error.SetErrorString("hex number is larger than a single byte");
+            error = Status::FromErrorString(
+                "hex number is larger than a single byte");
             return error;
           }
         } else {
@@ -2249,8 +2257,8 @@ static Status ParseInternal(llvm::StringRef &format, Entry &parent_entry,
               } else if (entry.printf_format == "tid") {
                 verify_is_thread_id = true;
               } else {
-                error.SetErrorStringWithFormat("invalid format: '%s'",
-                                               entry.printf_format.c_str());
+                error = Status::FromErrorStringWithFormat(
+                    "invalid format: '%s'", entry.printf_format.c_str());
                 return error;
               }
             }
@@ -2276,8 +2284,8 @@ static Status ParseInternal(llvm::StringRef &format, Entry &parent_entry,
         if (entry_string.contains(':')) {
           auto [_, llvm_format] = entry_string.split(':');
           if (!llvm_format.empty() && !LLVMFormatPattern.match(llvm_format)) {
-            error.SetErrorStringWithFormat("invalid llvm format: '%s'",
-                                           llvm_format.data());
+            error = Status::FromErrorStringWithFormat(
+                "invalid llvm format: '%s'", llvm_format.data());
             return error;
           }
         }
@@ -2285,8 +2293,9 @@ static Status ParseInternal(llvm::StringRef &format, Entry &parent_entry,
         if (verify_is_thread_id) {
           if (entry.type != Entry::Type::ThreadID &&
               entry.type != Entry::Type::ThreadProtocolID) {
-            error.SetErrorString("the 'tid' format can only be used on "
-                                 "${thread.id} and ${thread.protocol_id}");
+            error = Status::FromErrorString(
+                "the 'tid' format can only be used on "
+                "${thread.id} and ${thread.protocol_id}");
           }
         }
 
@@ -2305,7 +2314,7 @@ static Status ParseInternal(llvm::StringRef &format, Entry &parent_entry,
           // Make sure someone didn't try to dereference anything but ${var}
           // or ${svar}
           if (entry.deref) {
-            error.SetErrorStringWithFormat(
+            error = Status::FromErrorStringWithFormat(
                 "${%s} can't be dereferenced, only ${var} and ${svar} can.",
                 variable.str().c_str());
             return error;
@@ -2342,7 +2351,7 @@ Status FormatEntity::ExtractVariableInfo(llvm::StringRef &format_str,
     // Strip off elements and the formatting and the trailing '}'
     format_str = format_str.substr(paren_pos + 1);
   } else {
-    error.SetErrorStringWithFormat(
+    error = Status::FromErrorStringWithFormat(
         "missing terminating '}' character for '${%s'",
         format_str.str().c_str());
   }

@@ -44,7 +44,6 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/RandomNumberGenerator.h"
 #include "llvm/Support/VersionTuple.h"
-#include <algorithm>
 #include <cassert>
 #include <cstdint>
 #include <memory>
@@ -73,9 +72,44 @@ template class llvm::SymbolTableListTraits<GlobalIFunc>;
 
 Module::Module(StringRef MID, LLVMContext &C)
     : Context(C), ValSymTab(std::make_unique<ValueSymbolTable>(-1)),
-      ModuleID(std::string(MID)), SourceFileName(std::string(MID)), DL(""),
+      ModuleID(std::string(MID)), SourceFileName(std::string(MID)),
       IsNewDbgInfoFormat(UseNewDbgInfoFormat) {
   Context.addModule(this);
+}
+
+Module &Module::operator=(Module &&Other) {
+  assert(&Context == &Other.Context && "Module must be in the same Context");
+
+  dropAllReferences();
+
+  ModuleID = std::move(Other.ModuleID);
+  SourceFileName = std::move(Other.SourceFileName);
+  IsNewDbgInfoFormat = std::move(Other.IsNewDbgInfoFormat);
+
+  GlobalList.clear();
+  GlobalList.splice(GlobalList.begin(), Other.GlobalList);
+
+  FunctionList.clear();
+  FunctionList.splice(FunctionList.begin(), Other.FunctionList);
+
+  AliasList.clear();
+  AliasList.splice(AliasList.begin(), Other.AliasList);
+
+  IFuncList.clear();
+  IFuncList.splice(IFuncList.begin(), Other.IFuncList);
+
+  NamedMDList.clear();
+  NamedMDList.splice(NamedMDList.begin(), Other.NamedMDList);
+  GlobalScopeAsm = std::move(Other.GlobalScopeAsm);
+  OwnedMemoryBuffer = std::move(Other.OwnedMemoryBuffer);
+  Materializer = std::move(Other.Materializer);
+  TargetTriple = std::move(Other.TargetTriple);
+  DL = std::move(Other.DL);
+  CurrentIntrinsicIds = std::move(Other.CurrentIntrinsicIds);
+  UniquedIntrinsicNames = std::move(Other.UniquedIntrinsicNames);
+  ModuleFlags = std::move(Other.ModuleFlags);
+  Context.addModule(this);
+  return *this;
 }
 
 Module::~Module() {
@@ -89,21 +123,22 @@ Module::~Module() {
 
 void Module::removeDebugIntrinsicDeclarations() {
   auto *DeclareIntrinsicFn =
-      Intrinsic::getDeclaration(this, Intrinsic::dbg_declare);
+      Intrinsic::getOrInsertDeclaration(this, Intrinsic::dbg_declare);
   assert((!isMaterialized() || DeclareIntrinsicFn->hasZeroLiveUses()) &&
          "Debug declare intrinsic should have had uses removed.");
   DeclareIntrinsicFn->eraseFromParent();
   auto *ValueIntrinsicFn =
-      Intrinsic::getDeclaration(this, Intrinsic::dbg_value);
+      Intrinsic::getOrInsertDeclaration(this, Intrinsic::dbg_value);
   assert((!isMaterialized() || ValueIntrinsicFn->hasZeroLiveUses()) &&
          "Debug value intrinsic should have had uses removed.");
   ValueIntrinsicFn->eraseFromParent();
   auto *AssignIntrinsicFn =
-      Intrinsic::getDeclaration(this, Intrinsic::dbg_assign);
+      Intrinsic::getOrInsertDeclaration(this, Intrinsic::dbg_assign);
   assert((!isMaterialized() || AssignIntrinsicFn->hasZeroLiveUses()) &&
          "Debug assign intrinsic should have had uses removed.");
   AssignIntrinsicFn->eraseFromParent();
-  auto *LabelntrinsicFn = Intrinsic::getDeclaration(this, Intrinsic::dbg_label);
+  auto *LabelntrinsicFn =
+      Intrinsic::getOrInsertDeclaration(this, Intrinsic::dbg_label);
   assert((!isMaterialized() || LabelntrinsicFn->hasZeroLiveUses()) &&
          "Debug label intrinsic should have had uses removed.");
   LabelntrinsicFn->eraseFromParent();
@@ -272,6 +307,8 @@ NamedMDNode *Module::getOrInsertNamedMetadata(StringRef Name) {
     NMD = new NamedMDNode(Name);
     NMD->setParent(this);
     insertNamedMDNode(NMD);
+    if (Name == "llvm.module.flags")
+      ModuleFlags = NMD;
   }
   return NMD;
 }
@@ -280,6 +317,8 @@ NamedMDNode *Module::getOrInsertNamedMetadata(StringRef Name) {
 /// delete it.
 void Module::eraseNamedMetadata(NamedMDNode *NMD) {
   NamedMDSymTab.erase(NMD->getName());
+  if (NMD == ModuleFlags)
+    ModuleFlags = nullptr;
   eraseNamedMDNode(NMD);
 }
 
@@ -323,17 +362,12 @@ Metadata *Module::getModuleFlag(StringRef Key) const {
   return nullptr;
 }
 
-/// getModuleFlagsMetadata - Returns the NamedMDNode in the module that
-/// represents module-level flags. This method returns null if there are no
-/// module-level flags.
-NamedMDNode *Module::getModuleFlagsMetadata() const {
-  return getNamedMetadata("llvm.module.flags");
-}
-
 /// getOrInsertModuleFlagsMetadata - Returns the NamedMDNode in the module that
 /// represents module-level flags. If module-level flags aren't found, it
 /// creates the named metadata that contains them.
 NamedMDNode *Module::getOrInsertModuleFlagsMetadata() {
+  if (ModuleFlags)
+    return ModuleFlags;
   return getOrInsertNamedMetadata("llvm.module.flags");
 }
 
@@ -388,9 +422,7 @@ void Module::setModuleFlag(ModFlagBehavior Behavior, StringRef Key,
   setModuleFlag(Behavior, Key, ConstantInt::get(Int32Ty, Val));
 }
 
-void Module::setDataLayout(StringRef Desc) {
-  DL.reset(Desc);
-}
+void Module::setDataLayout(StringRef Desc) { DL = DataLayout(Desc); }
 
 void Module::setDataLayout(const DataLayout &Other) { DL = Other; }
 
@@ -882,4 +914,12 @@ VersionTuple Module::getDarwinTargetVariantSDKVersion() const {
 
 void Module::setDarwinTargetVariantSDKVersion(VersionTuple Version) {
   addSDKVersionMD(Version, *this, "darwin.target_variant.SDK Version");
+}
+
+StringRef Module::getTargetABIFromMD() {
+  StringRef TargetABI;
+  if (auto *TargetABIMD =
+          dyn_cast_or_null<MDString>(getModuleFlag("target-abi")))
+    TargetABI = TargetABIMD->getString();
+  return TargetABI;
 }

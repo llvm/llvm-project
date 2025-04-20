@@ -12,6 +12,7 @@
 #include "mlir/Pass/PassManager.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -185,41 +186,83 @@ const PassPipelineInfo *mlir::PassPipelineInfo::lookup(StringRef pipelineArg) {
 // PassOptions
 //===----------------------------------------------------------------------===//
 
+/// Attempt to find the next occurance of character 'c' in the string starting
+/// from the `index`-th position , omitting any occurances that appear within
+/// intervening ranges or literals.
+static size_t findChar(StringRef str, size_t index, char c) {
+  for (size_t i = index, e = str.size(); i < e; ++i) {
+    if (str[i] == c)
+      return i;
+    // Check for various range characters.
+    if (str[i] == '{')
+      i = findChar(str, i + 1, '}');
+    else if (str[i] == '(')
+      i = findChar(str, i + 1, ')');
+    else if (str[i] == '[')
+      i = findChar(str, i + 1, ']');
+    else if (str[i] == '\"')
+      i = str.find_first_of('\"', i + 1);
+    else if (str[i] == '\'')
+      i = str.find_first_of('\'', i + 1);
+    if (i == StringRef::npos)
+      return StringRef::npos;
+  }
+  return StringRef::npos;
+}
+
+/// Extract an argument from 'options' and update it to point after the arg.
+/// Returns the cleaned argument string.
+static StringRef extractArgAndUpdateOptions(StringRef &options,
+                                            size_t argSize) {
+  StringRef str = options.take_front(argSize).trim();
+  options = options.drop_front(argSize).ltrim();
+
+  // Early exit if there's no escape sequence.
+  if (str.size() <= 1)
+    return str;
+
+  const auto escapePairs = {std::make_pair('\'', '\''),
+                            std::make_pair('"', '"')};
+  for (const auto &escape : escapePairs) {
+    if (str.front() == escape.first && str.back() == escape.second) {
+      // Drop the escape characters and trim.
+      // Don't process additional escape sequences.
+      return str.drop_front().drop_back().trim();
+    }
+  }
+
+  // Arguments may be wrapped in `{...}`. Unlike the quotation markers that
+  // denote literals, we respect scoping here. The outer `{...}` should not
+  // be stripped in cases such as "arg={...},{...}", which can be used to denote
+  // lists of nested option structs.
+  if (str.front() == '{') {
+    unsigned match = findChar(str, 1, '}');
+    if (match == str.size() - 1)
+      str = str.drop_front().drop_back().trim();
+  }
+
+  return str;
+}
+
 LogicalResult detail::pass_options::parseCommaSeparatedList(
     llvm::cl::Option &opt, StringRef argName, StringRef optionStr,
     function_ref<LogicalResult(StringRef)> elementParseFn) {
-  // Functor used for finding a character in a string, and skipping over
-  // various "range" characters.
-  llvm::unique_function<size_t(StringRef, size_t, char)> findChar =
-      [&](StringRef str, size_t index, char c) -> size_t {
-    for (size_t i = index, e = str.size(); i < e; ++i) {
-      if (str[i] == c)
-        return i;
-      // Check for various range characters.
-      if (str[i] == '{')
-        i = findChar(str, i + 1, '}');
-      else if (str[i] == '(')
-        i = findChar(str, i + 1, ')');
-      else if (str[i] == '[')
-        i = findChar(str, i + 1, ']');
-      else if (str[i] == '\"')
-        i = str.find_first_of('\"', i + 1);
-      else if (str[i] == '\'')
-        i = str.find_first_of('\'', i + 1);
-    }
-    return StringRef::npos;
-  };
+  if (optionStr.empty())
+    return success();
 
   size_t nextElePos = findChar(optionStr, 0, ',');
   while (nextElePos != StringRef::npos) {
     // Process the portion before the comma.
-    if (failed(elementParseFn(optionStr.substr(0, nextElePos))))
+    if (failed(
+            elementParseFn(extractArgAndUpdateOptions(optionStr, nextElePos))))
       return failure();
 
-    optionStr = optionStr.substr(nextElePos + 1);
+    // Drop the leading ','
+    optionStr = optionStr.drop_front();
     nextElePos = findChar(optionStr, 0, ',');
   }
-  return elementParseFn(optionStr.substr(0, nextElePos));
+  return elementParseFn(
+      extractArgAndUpdateOptions(optionStr, optionStr.size()));
 }
 
 /// Out of line virtual function to provide home for the class.
@@ -239,27 +282,6 @@ void detail::PassOptions::copyOptionValuesFrom(const PassOptions &other) {
 /// `options` string pointing after the parsed option].
 static std::tuple<StringRef, StringRef, StringRef>
 parseNextArg(StringRef options) {
-  // Functor used to extract an argument from 'options' and update it to point
-  // after the arg.
-  auto extractArgAndUpdateOptions = [&](size_t argSize) {
-    StringRef str = options.take_front(argSize).trim();
-    options = options.drop_front(argSize).ltrim();
-    // Handle escape sequences
-    if (str.size() > 2) {
-      const auto escapePairs = {std::make_pair('\'', '\''),
-                                std::make_pair('"', '"'),
-                                std::make_pair('{', '}')};
-      for (const auto &escape : escapePairs) {
-        if (str.front() == escape.first && str.back() == escape.second) {
-          // Drop the escape characters and trim.
-          str = str.drop_front().drop_back().trim();
-          // Don't process additional escape sequences.
-          break;
-        }
-      }
-    }
-    return str;
-  };
   // Try to process the given punctuation, properly escaping any contained
   // characters.
   auto tryProcessPunct = [&](size_t &currentPos, char punct) {
@@ -276,13 +298,13 @@ parseNextArg(StringRef options) {
   for (size_t argEndIt = 0, optionsE = options.size();; ++argEndIt) {
     // Check for the end of the full option.
     if (argEndIt == optionsE || options[argEndIt] == ' ') {
-      argName = extractArgAndUpdateOptions(argEndIt);
+      argName = extractArgAndUpdateOptions(options, argEndIt);
       return std::make_tuple(argName, StringRef(), options);
     }
 
     // Check for the end of the name and the start of the value.
     if (options[argEndIt] == '=') {
-      argName = extractArgAndUpdateOptions(argEndIt);
+      argName = extractArgAndUpdateOptions(options, argEndIt);
       options = options.drop_front();
       break;
     }
@@ -292,7 +314,7 @@ parseNextArg(StringRef options) {
   for (size_t argEndIt = 0, optionsE = options.size();; ++argEndIt) {
     // Handle the end of the options string.
     if (argEndIt == optionsE || options[argEndIt] == ' ') {
-      StringRef value = extractArgAndUpdateOptions(argEndIt);
+      StringRef value = extractArgAndUpdateOptions(options, argEndIt);
       return std::make_tuple(argName, value, options);
     }
 
@@ -344,7 +366,7 @@ LogicalResult detail::PassOptions::parseFromString(StringRef options,
 
 /// Print the options held by this struct in a form that can be parsed via
 /// 'parseFromString'.
-void detail::PassOptions::print(raw_ostream &os) {
+void detail::PassOptions::print(raw_ostream &os) const {
   // If there are no options, there is nothing left to do.
   if (OptionsMap.empty())
     return;
@@ -396,6 +418,7 @@ size_t detail::PassOptions::getOptionWidth() const {
 
 //===----------------------------------------------------------------------===//
 // OpPassManager: OptionValue
+//===----------------------------------------------------------------------===//
 
 llvm::cl::OptionValue<OpPassManager>::OptionValue() = default;
 llvm::cl::OptionValue<OpPassManager>::OptionValue(
@@ -448,6 +471,7 @@ void llvm::cl::OptionValue<OpPassManager>::anchor() {}
 
 //===----------------------------------------------------------------------===//
 // OpPassManager: Parser
+//===----------------------------------------------------------------------===//
 
 namespace llvm {
 namespace cl {
@@ -1006,6 +1030,7 @@ LogicalResult PassPipelineCLParser::addToPipeline(
 
 //===----------------------------------------------------------------------===//
 // PassNameCLParser
+//===----------------------------------------------------------------------===//
 
 /// Construct a pass pipeline parser with the given command line description.
 PassNameCLParser::PassNameCLParser(StringRef arg, StringRef description)

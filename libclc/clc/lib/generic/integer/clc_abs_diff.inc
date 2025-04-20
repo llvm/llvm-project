@@ -1,0 +1,14 @@
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+_CLC_OVERLOAD _CLC_DEF __CLC_U_GENTYPE __clc_abs_diff(__CLC_GENTYPE x,
+                                                      __CLC_GENTYPE y) {
+  __CLC_U_GENTYPE ux = __builtin_astype(x, __CLC_U_GENTYPE);
+  __CLC_U_GENTYPE uy = __builtin_astype(y, __CLC_U_GENTYPE);
+  return x > y ? ux - uy : uy - ux;
+}

@@ -68,3 +68,73 @@ void f() {
 }
 
 }
+
+namespace GH61460 {
+
+template<typename... Ts>
+void f1(Ts... ts);
+
+template <typename... Ts> void g(Ts... p1s) {
+  (void)[&](auto... p2s) {
+    (
+        [&] {
+          p1s;
+          f1(p1s);
+          sizeof(p1s);
+          p2s;
+        },
+        ...);
+  };
+}
+
+template <typename... Ts> void g2(Ts... p1s) {
+  (void)[&](auto... p2s) { [&] { p1s; p2s; }; }; // expected-error {{unexpanded parameter pack 'p2s'}}
+}
+
+void f1() { g(); }
+
+} // namespace GH61460
+
+namespace GH112352 {
+
+template <class>
+constexpr bool foo = false;
+
+template <int>
+constexpr bool bar = false;
+
+template <template<class> class>
+constexpr bool baz = false;
+
+struct S {
+  template <typename... Types, int... Values> void foldExpr1() {
+    (void)[]<int... Is> {
+      ([] {
+        Is;
+        // Propagate up the flag ContainsUnexpandedParameterPack from VarDecl.
+        S var(foo<Types>);
+        foo<Types>;
+        bar<Values>;
+        int a = Values;
+      } &&
+       ...);
+    };
+  }
+
+  template <template<class> class... TTPs> void foldExpr2() {
+    (void)[]<int... Is> {
+      ([] {
+        Is;
+        baz<TTPs>;
+        TTPs<int> D;
+      } && ...);
+    };
+  }
+};
+
+void use() {
+  S().foldExpr1();
+  S().foldExpr2();
+}
+
+} // namespace GH112352

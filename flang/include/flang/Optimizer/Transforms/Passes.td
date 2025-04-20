@@ -153,7 +153,7 @@ def CFGConversion : Pass<"cfg-conversion"> {
            /*default=*/"false",
            "force the body of a loop to execute at least once">,
     Option<"setNSW", "set-nsw", "bool",
-           /*default=*/"false",
+           /*default=*/"true",
            "set nsw on loop variable increment">
   ];
 }
@@ -168,6 +168,24 @@ def ExternalNameConversion : Pass<"external-name-interop", "mlir::ModuleOp"> {
            "bool", /*default=*/"true",
            "Append trailing underscore to external names.">
   ];
+}
+
+def CompilerGeneratedNamesConversion : Pass<"compiler-generated-names",
+    "mlir::ModuleOp"> {
+  let summary = "Convert names of compiler generated globals";
+  let description = [{
+    Transforms names of compiler generated globals to avoid
+    characters that might be unsupported by some target toolchains.
+    All special symbols are replaced with a predefined 'X' character.
+    This is only done for uniqued names that are not externally facing.
+    The uniqued names always use '_Q' prefix, and the user entity names
+    are always lower cased, so using 'X' instead of the special symbols
+    will guarantee that the converted name will not conflict with the user
+    space. This pass does not affect the externally facing names,
+    because the expectation is that the compiler will not generate
+    externally facing names on its own, and these names cannot use
+    special symbols.
+  }];
 }
 
 def MemRefDataFlowOpt : Pass<"fir-memref-dataflow-opt", "::mlir::func::FuncOp"> {
@@ -260,7 +278,7 @@ def ConstantArgumentGlobalisationOpt : Pass<"constant-argument-globalisation-opt
   let dependentDialects = [ "fir::FIROpsDialect" ];
 }
 
-def StackArrays : Pass<"stack-arrays", "mlir::ModuleOp"> {
+def StackArrays : Pass<"stack-arrays", "mlir::func::FuncOp"> {
   let summary = "Move local array allocations from heap memory into stack memory";
   let description = [{
     Convert heap allocations for arrays, even those of unknown size, into stack
@@ -340,32 +358,6 @@ def LoopVersioning : Pass<"loop-versioning", "mlir::func::FuncOp"> {
   let dependentDialects = [ "fir::FIROpsDialect" ];
 }
 
-def OMPMapInfoFinalizationPass
-    : Pass<"omp-map-info-finalization"> {
-  let summary = "expands OpenMP MapInfo operations containing descriptors";
-  let description = [{
-    Expands MapInfo operations containing descriptor types into multiple 
-    MapInfo's for each pointer element in the descriptor that requires 
-    explicit individual mapping by the OpenMP runtime.
-  }];
-  let dependentDialects = ["mlir::omp::OpenMPDialect"];
-}
-
-def OMPMarkDeclareTargetPass
-    : Pass<"omp-mark-declare-target", "mlir::ModuleOp"> {
-  let summary = "Marks all functions called by an OpenMP declare target function as declare target";
-  let dependentDialects = ["mlir::omp::OpenMPDialect"];
-}
-
-def OMPFunctionFiltering : Pass<"omp-function-filtering"> {
-  let summary = "Filters out functions intended for the host when compiling "
-                "for the target device.";
-  let dependentDialects = [
-    "mlir::func::FuncDialect",
-    "fir::FIROpsDialect"
-  ];
-}
-
 def VScaleAttr : Pass<"vscale-attr", "mlir::func::FuncOp"> {
   let summary = "Add vscale_range attribute to functions";
   let description = [{
@@ -391,30 +383,33 @@ def FunctionAttr : Pass<"function-attr", "mlir::func::FuncOp"> {
      freeing up an additional register in numerous functions. However, this
      approach can make debugging unfeasible on certain machines.
   }];
-  let options = [
-    Option<"framePointerKind", "frame-pointer",
-           "mlir::LLVM::framePointerKind::FramePointerKind", 
-           /*default=*/"mlir::LLVM::framePointerKind::FramePointerKind{}",
-           "frame pointer">,
-    Option<"noInfsFPMath", "no-infs-fp-math",
-           "bool", /*default=*/"false",
-           "Set the no-infs-fp-math attribute on functions in the module.">,
-    Option<"noNaNsFPMath", "no-nans-fp-math",
-           "bool", /*default=*/"false",
-           "Set the no-nans-fp-math attribute on functions in the module.">,
-    Option<"approxFuncFPMath", "approx-func-fp-math",
-           "bool", /*default=*/"false",
+  let options =
+      [Option<"framePointerKind", "frame-pointer",
+              "mlir::LLVM::framePointerKind::FramePointerKind",
+              /*default=*/"mlir::LLVM::framePointerKind::FramePointerKind{}",
+              "frame pointer", [{::llvm::cl::values(
+            clEnumValN(mlir::LLVM::framePointerKind::FramePointerKind::None, "None", ""),
+            clEnumValN(mlir::LLVM::framePointerKind::FramePointerKind::NonLeaf, "NonLeaf", ""),
+            clEnumValN(mlir::LLVM::framePointerKind::FramePointerKind::All, "All", ""),
+            clEnumValN(mlir::LLVM::framePointerKind::FramePointerKind::Reserved, "Reserved", "")
+          )}]>,
+       Option<"noInfsFPMath", "no-infs-fp-math", "bool", /*default=*/"false",
+              "Set the no-infs-fp-math attribute on functions in the module.">,
+       Option<"noNaNsFPMath", "no-nans-fp-math", "bool", /*default=*/"false",
+              "Set the no-nans-fp-math attribute on functions in the module.">,
+       Option<
+           "approxFuncFPMath", "approx-func-fp-math", "bool",
+           /*default=*/"false",
            "Set the approx-func-fp-math attribute on functions in the module.">,
-    Option<"noSignedZerosFPMath", "no-signed-zeros-fp-math",
-           "bool", /*default=*/"false",
-           "Set the no-signed-zeros-fp-math attribute on functions in the module.">,
-    Option<"unsafeFPMath", "unsafe-fp-math",
-           "bool", /*default=*/"false",
-           "Set the unsafe-fp-math attribute on functions in the module.">,
-    Option<"tuneCPU", "tune-cpu",
-           "llvm::StringRef", /*default=*/"llvm::StringRef{}",
-           "Set the tune-cpu attribute on functions in the module.">,
-];
+       Option<"noSignedZerosFPMath", "no-signed-zeros-fp-math", "bool",
+              /*default=*/"false",
+              "Set the no-signed-zeros-fp-math attribute on functions in the "
+              "module.">,
+       Option<"unsafeFPMath", "unsafe-fp-math", "bool", /*default=*/"false",
+              "Set the unsafe-fp-math attribute on functions in the module.">,
+       Option<"tuneCPU", "tune-cpu", "std::string", /*default=*/"",
+              "Set the tune-cpu attribute on functions in the module.">,
+  ];
 }
 
 def AssumedRankOpConversion : Pass<"fir-assumed-rank-op", "mlir::ModuleOp"> {
@@ -429,11 +424,93 @@ def AssumedRankOpConversion : Pass<"fir-assumed-rank-op", "mlir::ModuleOp"> {
   ];
 }
 
-def CufOpConversion : Pass<"cuf-convert", "mlir::ModuleOp"> {
+def CUFOpConversion : Pass<"cuf-convert", "mlir::ModuleOp"> {
   let summary = "Convert some CUF operations to runtime calls";
   let dependentDialects = [
-    "fir::FIROpsDialect"
+    "fir::FIROpsDialect", "mlir::gpu::GPUDialect"
   ];
+}
+
+def CUFDeviceGlobal :
+    Pass<"cuf-device-global", "mlir::ModuleOp"> {
+  let summary = "Flag globals used in device function with data attribute";
+  let dependentDialects = [
+    "cuf::CUFDialect", "mlir::gpu::GPUDialect", "mlir::NVVM::NVVMDialect"
+  ];
+}
+
+def CUFAddConstructor : Pass<"cuf-add-constructor", "mlir::ModuleOp"> {
+  let summary = "Add constructor to register CUDA Fortran allocators";
+  let dependentDialects = [
+    "cuf::CUFDialect", "mlir::func::FuncDialect"
+  ];
+}
+
+def CUFGPUToLLVMConversion : Pass<"cuf-gpu-convert-to-llvm", "mlir::ModuleOp"> {
+  let summary = "Convert some GPU operations lowered from CUF to runtime calls";
+  let dependentDialects = [
+    "mlir::LLVM::LLVMDialect"
+  ];
+}
+
+def CUFComputeSharedMemoryOffsetsAndSize
+    : Pass<"cuf-compute-shared-memory", "mlir::ModuleOp"> {
+  let summary = "Create the shared memory global variable and set offsets";
+
+  let description = [{
+    Compute the size and alignment of the shared memory global and materialize
+    it. Compute the offset of each cuf.shared_memory operation according to
+    the global and set it.
+  }];
+
+  let dependentDialects = ["cuf::CUFDialect", "fir::FIROpsDialect"];
+}
+
+def SetRuntimeCallAttributes
+    : Pass<"set-runtime-call-attrs", "mlir::func::FuncOp"> {
+  let summary = "Set Fortran runtime fir.call attributes targeting LLVM IR";
+  let description = [{
+    This pass sets different attributes for Fortran runtime calls
+    that enable more optimizations in LLVM backend.
+    For the time being, the meaning of these attributes is not
+    strictly defined for HLFIR/FIR.
+  }];
+  let dependentDialects = ["fir::FIROpsDialect", "mlir::LLVM::LLVMDialect"];
+}
+
+def GenRuntimeCallsForTest
+    : Pass<"gen-runtime-calls-for-test", "mlir::ModuleOp"> {
+  let summary =
+      "Print FIR containing declarations/calls of Fortran runtime functions";
+  let description = [{
+    This pass is only for developers to be able to print FIR
+    that declares and calls Fortran runtime functions.
+    It helps producing/updating tests for passes that modify
+    the func/call operations based on some knowledge of
+    Fortran runtime.
+  }];
+  let options =
+      [Option<"doGenerateCalls", "do-generate-calls", "bool",
+              /*default=*/"false",
+              "Generate thin wrapper functions that call Fortran runtime "
+              "functions. If it is set to false, then only the declarations "
+              "are generated.">,
+  ];
+  let dependentDialects = ["fir::FIROpsDialect", "mlir::func::FuncDialect"];
+}
+
+def SimplifyFIROperations : Pass<"simplify-fir-operations", "mlir::ModuleOp"> {
+  let summary = "Simplifies complex FIR operations";
+  let description = [{
+    Expands complex FIR operations into their equivalent using
+    FIR, SCF and other usual dialects. It may also generate calls
+    to Fortran runtime.
+  }];
+
+  let options = [Option<
+      "preferInlineImplementation", "prefer-inline-implementation", "bool",
+      /*default=*/"false",
+      "Prefer expanding without using Fortran runtime calls.">];
 }
 
 #endif // FLANG_OPTIMIZER_TRANSFORMS_PASSES

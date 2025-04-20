@@ -24,6 +24,7 @@
 #include "llvm/DebugInfo/DWARF/DWARFLocationExpression.h"
 #include "llvm/DebugInfo/DWARF/DWARFObject.h"
 #include "llvm/DebugInfo/DWARF/DWARFSection.h"
+#include "llvm/DebugInfo/DWARF/DWARFTypeUnit.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
 #include "llvm/Object/Error.h"
 #include "llvm/Support/DJB.h"
@@ -32,6 +33,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/JSON.h"
+#include "llvm/Support/Parallel.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 #include <map>
@@ -51,6 +53,11 @@ DWARFVerifier::DieRangeInfo::insert(const DWARFAddressRange &R) {
   auto Begin = Ranges.begin();
   auto End = Ranges.end();
   auto Pos = std::lower_bound(Begin, End, R);
+
+  // Check for exact duplicates which is an allowed special case
+  if (Pos != End && *Pos == R) {
+    return std::nullopt;
+  }
 
   if (Pos != End) {
     DWARFAddressRange Range(*Pos);
@@ -112,8 +119,11 @@ bool DWARFVerifier::DieRangeInfo::intersects(const DieRangeInfo &RHS) const {
   auto I1 = Ranges.begin(), E1 = Ranges.end();
   auto I2 = RHS.Ranges.begin(), E2 = RHS.Ranges.end();
   while (I1 != E1 && I2 != E2) {
-    if (I1->intersects(*I2))
-      return true;
+    if (I1->intersects(*I2)) {
+      // Exact duplicates are allowed
+      if (!(*I1 == *I2))
+        return true;
+    }
     if (I1->LowPC < I2->LowPC)
       ++I1;
     else
@@ -958,21 +968,20 @@ void DWARFVerifier::verifyDebugLineStmtOffsets() {
       // here because we validate this in the .debug_info verifier.
       continue;
     }
-    auto Iter = StmtListToDie.find(LineTableOffset);
-    if (Iter != StmtListToDie.end()) {
+    auto [Iter, Inserted] = StmtListToDie.try_emplace(LineTableOffset, Die);
+    if (!Inserted) {
       ++NumDebugLineErrors;
+      const auto &OldDie = Iter->second;
       ErrorCategory.Report("Identical DW_AT_stmt_list section offset", [&]() {
         error() << "two compile unit DIEs, "
-                << format("0x%08" PRIx64, Iter->second.getOffset()) << " and "
+                << format("0x%08" PRIx64, OldDie.getOffset()) << " and "
                 << format("0x%08" PRIx64, Die.getOffset())
                 << ", have the same DW_AT_stmt_list section offset:\n";
-        dump(Iter->second);
+        dump(OldDie);
         dump(Die) << '\n';
       });
       // Already verified this line table before, no need to do it again.
-      continue;
     }
-    StmtListToDie[LineTableOffset] = Die;
   }
 }
 
@@ -1014,10 +1023,8 @@ void DWARFVerifier::verifyDebugLineRows() {
           DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath, FullPath);
       assert(HasFullPath && "Invalid index?");
       (void)HasFullPath;
-      auto It = FullPathMap.find(FullPath);
-      if (It == FullPathMap.end())
-        FullPathMap[FullPath] = FileIndex;
-      else if (It->second != FileIndex && DumpOpts.Verbose) {
+      auto [It, Inserted] = FullPathMap.try_emplace(FullPath, FileIndex);
+      if (!Inserted && It->second != FileIndex && DumpOpts.Verbose) {
         warn() << ".debug_line["
                << format("0x%08" PRIx64,
                          *toSectionOffset(Die.find(DW_AT_stmt_list)))
@@ -1100,10 +1107,9 @@ bool DWARFVerifier::handleDebugLine() {
   return NumDebugLineErrors == 0;
 }
 
-unsigned DWARFVerifier::verifyAppleAccelTable(const DWARFSection *AccelSection,
-                                              DataExtractor *StrData,
-                                              const char *SectionName) {
-  unsigned NumErrors = 0;
+void DWARFVerifier::verifyAppleAccelTable(const DWARFSection *AccelSection,
+                                          DataExtractor *StrData,
+                                          const char *SectionName) {
   DWARFDataExtractor AccelSectionData(DCtx.getDWARFObj(), *AccelSection,
                                       DCtx.isLittleEndian(), 0);
   AppleAcceleratorTable AccelTable(AccelSectionData, *StrData);
@@ -1115,7 +1121,7 @@ unsigned DWARFVerifier::verifyAppleAccelTable(const DWARFSection *AccelSection,
     ErrorCategory.Report("Section is too small to fit a section header", [&]() {
       error() << "Section is too small to fit a section header.\n";
     });
-    return 1;
+    return;
   }
 
   // Verify that the section is not too short.
@@ -1123,7 +1129,7 @@ unsigned DWARFVerifier::verifyAppleAccelTable(const DWARFSection *AccelSection,
     std::string Msg = toString(std::move(E));
     ErrorCategory.Report("Section is too small to fit a section header",
                          [&]() { error() << Msg << '\n'; });
-    return 1;
+    return;
   }
 
   // Verify that all buckets have a valid hash index or are empty.
@@ -1141,7 +1147,6 @@ unsigned DWARFVerifier::verifyAppleAccelTable(const DWARFSection *AccelSection,
         error() << format("Bucket[%d] has invalid hash index: %u.\n", BucketIdx,
                           HashIdx);
       });
-      ++NumErrors;
     }
   }
   uint32_t NumAtoms = AccelTable.getAtomsDesc().size();
@@ -1149,13 +1154,13 @@ unsigned DWARFVerifier::verifyAppleAccelTable(const DWARFSection *AccelSection,
     ErrorCategory.Report("No atoms", [&]() {
       error() << "No atoms: failed to read HashData.\n";
     });
-    return 1;
+    return;
   }
   if (!AccelTable.validateForms()) {
     ErrorCategory.Report("Unsupported form", [&]() {
       error() << "Unsupported form: failed to read HashData.\n";
     });
-    return 1;
+    return;
   }
 
   for (uint32_t HashIdx = 0; HashIdx < NumHashes; ++HashIdx) {
@@ -1170,7 +1175,6 @@ unsigned DWARFVerifier::verifyAppleAccelTable(const DWARFSection *AccelSection,
                           "0x%08" PRIx64 ".\n",
                           HashIdx, HashDataOffset);
       });
-      ++NumErrors;
     }
 
     uint64_t StrpOffset;
@@ -1201,8 +1205,6 @@ unsigned DWARFVerifier::verifyAppleAccelTable(const DWARFSection *AccelSection,
                 SectionName, BucketIdx, HashIdx, Hash, StringCount, StrpOffset,
                 HashDataIdx, Offset, Name);
           });
-
-          ++NumErrors;
           continue;
         }
         if ((Tag != dwarf::DW_TAG_null) && (Die.getTag() != Tag)) {
@@ -1212,74 +1214,70 @@ unsigned DWARFVerifier::verifyAppleAccelTable(const DWARFSection *AccelSection,
                     << dwarf::TagString(Die.getTag()) << " of DIE["
                     << HashDataIdx << "].\n";
           });
-          ++NumErrors;
         }
       }
-      ++StringCount;
     }
   }
-  return NumErrors;
 }
 
-unsigned
-DWARFVerifier::verifyDebugNamesCULists(const DWARFDebugNames &AccelTable) {
+void DWARFVerifier::verifyDebugNamesCULists(const DWARFDebugNames &AccelTable) {
   // A map from CU offset to the (first) Name Index offset which claims to index
   // this CU.
   DenseMap<uint64_t, uint64_t> CUMap;
-  const uint64_t NotIndexed = std::numeric_limits<uint64_t>::max();
-
   CUMap.reserve(DCtx.getNumCompileUnits());
-  for (const auto &CU : DCtx.compile_units())
-    CUMap[CU->getOffset()] = NotIndexed;
 
-  unsigned NumErrors = 0;
-  for (const DWARFDebugNames::NameIndex &NI : AccelTable) {
+  DenseSet<uint64_t> CUOffsets;
+  for (const auto &CU : DCtx.compile_units())
+    CUOffsets.insert(CU->getOffset());
+
+  parallelForEach(AccelTable, [&](const DWARFDebugNames::NameIndex &NI) {
     if (NI.getCUCount() == 0) {
       ErrorCategory.Report("Name Index doesn't index any CU", [&]() {
         error() << formatv("Name Index @ {0:x} does not index any CU\n",
                            NI.getUnitOffset());
       });
-      ++NumErrors;
-      continue;
+      return;
     }
     for (uint32_t CU = 0, End = NI.getCUCount(); CU < End; ++CU) {
       uint64_t Offset = NI.getCUOffset(CU);
-      auto Iter = CUMap.find(Offset);
-
-      if (Iter == CUMap.end()) {
+      if (!CUOffsets.count(Offset)) {
         ErrorCategory.Report("Name Index references non-existing CU", [&]() {
           error() << formatv(
               "Name Index @ {0:x} references a non-existing CU @ {1:x}\n",
               NI.getUnitOffset(), Offset);
         });
-        ++NumErrors;
         continue;
       }
-
-      if (Iter->second != NotIndexed) {
+      uint64_t DuplicateCUOffset = 0;
+      {
+        std::lock_guard<std::mutex> Lock(AccessMutex);
+        auto Iter = CUMap.find(Offset);
+        if (Iter != CUMap.end())
+          DuplicateCUOffset = Iter->second;
+        else
+          CUMap[Offset] = NI.getUnitOffset();
+      }
+      if (DuplicateCUOffset) {
         ErrorCategory.Report("Duplicate Name Index", [&]() {
           error() << formatv(
               "Name Index @ {0:x} references a CU @ {1:x}, but "
               "this CU is already indexed by Name Index @ {2:x}\n",
-              NI.getUnitOffset(), Offset, Iter->second);
+              NI.getUnitOffset(), Offset, DuplicateCUOffset);
         });
         continue;
       }
-      Iter->second = NI.getUnitOffset();
     }
-  }
+  });
 
-  for (const auto &KV : CUMap) {
-    if (KV.second == NotIndexed)
-      warn() << formatv("CU @ {0:x} not covered by any Name Index\n", KV.first);
+  for (const auto &CU : DCtx.compile_units()) {
+    if (CUMap.count(CU->getOffset()) == 0)
+      warn() << formatv("CU @ {0:x} not covered by any Name Index\n",
+                        CU->getOffset());
   }
-
-  return NumErrors;
 }
 
-unsigned
-DWARFVerifier::verifyNameIndexBuckets(const DWARFDebugNames::NameIndex &NI,
-                                      const DataExtractor &StrData) {
+void DWARFVerifier::verifyNameIndexBuckets(const DWARFDebugNames::NameIndex &NI,
+                                           const DataExtractor &StrData) {
   struct BucketInfo {
     uint32_t Bucket;
     uint32_t Index;
@@ -1289,17 +1287,17 @@ DWARFVerifier::verifyNameIndexBuckets(const DWARFDebugNames::NameIndex &NI,
     bool operator<(const BucketInfo &RHS) const { return Index < RHS.Index; }
   };
 
-  uint32_t NumErrors = 0;
   if (NI.getBucketCount() == 0) {
     warn() << formatv("Name Index @ {0:x} does not contain a hash table.\n",
                       NI.getUnitOffset());
-    return NumErrors;
+    return;
   }
 
   // Build up a list of (Bucket, Index) pairs. We use this later to verify that
   // each Name is reachable from the appropriate bucket.
   std::vector<BucketInfo> BucketStarts;
   BucketStarts.reserve(NI.getBucketCount() + 1);
+  const uint64_t OrigNumberOfErrors = ErrorCategory.GetNumErrors();
   for (uint32_t Bucket = 0, End = NI.getBucketCount(); Bucket < End; ++Bucket) {
     uint32_t Index = NI.getBucketArrayEntry(Bucket);
     if (Index > NI.getNameCount()) {
@@ -1309,7 +1307,6 @@ DWARFVerifier::verifyNameIndexBuckets(const DWARFDebugNames::NameIndex &NI,
                            Bucket, NI.getUnitOffset(), Index,
                            NI.getNameCount());
       });
-      ++NumErrors;
       continue;
     }
     if (Index > 0)
@@ -1319,8 +1316,8 @@ DWARFVerifier::verifyNameIndexBuckets(const DWARFDebugNames::NameIndex &NI,
   // If there were any buckets with invalid values, skip further checks as they
   // will likely produce many errors which will only confuse the actual root
   // problem.
-  if (NumErrors > 0)
-    return NumErrors;
+  if (OrigNumberOfErrors != ErrorCategory.GetNumErrors())
+    return;
 
   // Sort the list in the order of increasing "Index" entries.
   array_pod_sort(BucketStarts.begin(), BucketStarts.end());
@@ -1346,7 +1343,6 @@ DWARFVerifier::verifyNameIndexBuckets(const DWARFDebugNames::NameIndex &NI,
                            "are not covered by the hash table.\n",
                            NI.getUnitOffset(), NextUncovered, B.Index - 1);
       });
-      ++NumErrors;
     }
     uint32_t Idx = B.Index;
 
@@ -1368,7 +1364,6 @@ DWARFVerifier::verifyNameIndexBuckets(const DWARFDebugNames::NameIndex &NI,
             NI.getUnitOffset(), B.Bucket, FirstHash,
             FirstHash % NI.getBucketCount());
       });
-      ++NumErrors;
     }
 
     // This find the end of this bucket and also verifies that all the hashes in
@@ -1389,17 +1384,15 @@ DWARFVerifier::verifyNameIndexBuckets(const DWARFDebugNames::NameIndex &NI,
                   "the Name Index hash is {4:x}\n",
                   NI.getUnitOffset(), Str, Idx, caseFoldingDjbHash(Str), Hash);
             });
-        ++NumErrors;
       }
-
       ++Idx;
     }
     NextUncovered = std::max(NextUncovered, Idx);
   }
-  return NumErrors;
+  return;
 }
 
-unsigned DWARFVerifier::verifyNameIndexAttribute(
+void DWARFVerifier::verifyNameIndexAttribute(
     const DWARFDebugNames::NameIndex &NI, const DWARFDebugNames::Abbrev &Abbr,
     DWARFDebugNames::AttributeEncoding AttrEnc) {
   StringRef FormName = dwarf::FormEncodingString(AttrEnc.Form);
@@ -1410,7 +1403,7 @@ unsigned DWARFVerifier::verifyNameIndexAttribute(
                          NI.getUnitOffset(), Abbr.Code, AttrEnc.Index,
                          AttrEnc.Form);
     });
-    return 1;
+    return;
   }
 
   if (AttrEnc.Index == DW_IDX_type_hash) {
@@ -1421,9 +1414,9 @@ unsigned DWARFVerifier::verifyNameIndexAttribute(
             "uses an unexpected form {2} (should be {3}).\n",
             NI.getUnitOffset(), Abbr.Code, AttrEnc.Form, dwarf::DW_FORM_data8);
       });
-      return 1;
+      return;
     }
-    return 0;
+    return;
   }
 
   if (AttrEnc.Index == dwarf::DW_IDX_parent) {
@@ -1437,9 +1430,9 @@ unsigned DWARFVerifier::verifyNameIndexAttribute(
             "DW_FORM_ref4 or DW_FORM_flag_present).\n",
             NI.getUnitOffset(), Abbr.Code, AttrEnc.Form);
       });
-      return 1;
+      return;
     }
-    return 0;
+    return;
   }
 
   // A list of known index attributes and their expected form classes.
@@ -1464,7 +1457,7 @@ unsigned DWARFVerifier::verifyNameIndexAttribute(
     warn() << formatv("NameIndex @ {0:x}: Abbreviation {1:x} contains an "
                       "unknown index attribute: {2}.\n",
                       NI.getUnitOffset(), Abbr.Code, AttrEnc.Index);
-    return 0;
+    return;
   }
 
   if (!DWARFFormValue(AttrEnc.Form).isFormClass(Iter->Class)) {
@@ -1474,21 +1467,13 @@ unsigned DWARFVerifier::verifyNameIndexAttribute(
                          NI.getUnitOffset(), Abbr.Code, AttrEnc.Index,
                          AttrEnc.Form, Iter->ClassName);
     });
-    return 1;
+    return;
   }
-  return 0;
+  return;
 }
 
-unsigned
-DWARFVerifier::verifyNameIndexAbbrevs(const DWARFDebugNames::NameIndex &NI) {
-  if (NI.getForeignTUCount() > 0) {
-    warn() << formatv("Name Index @ {0:x}: Verifying indexes of foreign type "
-                      "units is not currently supported.\n",
-                      NI.getUnitOffset());
-    return 0;
-  }
-
-  unsigned NumErrors = 0;
+void DWARFVerifier::verifyNameIndexAbbrevs(
+    const DWARFDebugNames::NameIndex &NI) {
   for (const auto &Abbrev : NI.getAbbrevs()) {
     StringRef TagName = dwarf::TagString(Abbrev.Tag);
     if (TagName.empty()) {
@@ -1506,10 +1491,9 @@ DWARFVerifier::verifyNameIndexAbbrevs(const DWARFDebugNames::NameIndex &NI) {
                   "multiple {2} attributes.\n",
                   NI.getUnitOffset(), Abbrev.Code, AttrEnc.Index);
             });
-        ++NumErrors;
         continue;
       }
-      NumErrors += verifyNameIndexAttribute(NI, Abbrev, AttrEnc);
+      verifyNameIndexAttribute(NI, Abbrev, AttrEnc);
     }
 
     if (NI.getCUCount() > 1 && !Attributes.count(dwarf::DW_IDX_compile_unit) &&
@@ -1518,10 +1502,8 @@ DWARFVerifier::verifyNameIndexAbbrevs(const DWARFDebugNames::NameIndex &NI) {
         error() << formatv("NameIndex @ {0:x}: Indexing multiple compile units "
                            "and abbreviation {1:x} has no DW_IDX_compile_unit "
                            "or DW_IDX_type_unit attribute.\n",
-                           NI.getUnitOffset(), Abbrev.Code,
-                           dwarf::DW_IDX_compile_unit);
+                           NI.getUnitOffset(), Abbrev.Code);
       });
-      ++NumErrors;
     }
     if (!Attributes.count(dwarf::DW_IDX_die_offset)) {
       ErrorCategory.Report("Abbreviate in NameIndex missing attribute", [&]() {
@@ -1529,12 +1511,12 @@ DWARFVerifier::verifyNameIndexAbbrevs(const DWARFDebugNames::NameIndex &NI) {
             "NameIndex @ {0:x}: Abbreviation {1:x} has no {2} attribute.\n",
             NI.getUnitOffset(), Abbrev.Code, dwarf::DW_IDX_die_offset);
       });
-      ++NumErrors;
     }
   }
-  return NumErrors;
 }
 
+/// Constructs a full name for a DIE. Potentially it does recursive lookup on
+/// DIEs. This can lead to extraction of DIEs in a different CU or TU.
 static SmallVector<std::string, 3> getNames(const DWARFDie &DIE,
                                             bool IncludeStrippedTemplateNames,
                                             bool IncludeObjCNames = true,
@@ -1573,13 +1555,10 @@ static SmallVector<std::string, 3> getNames(const DWARFDie &DIE,
   return Result;
 }
 
-unsigned DWARFVerifier::verifyNameIndexEntries(
+void DWARFVerifier::verifyNameIndexEntries(
     const DWARFDebugNames::NameIndex &NI,
-    const DWARFDebugNames::NameTableEntry &NTE) {
-  // Verifying foreign type unit indexes not supported.
-  if (NI.getForeignTUCount() > 0)
-    return 0;
-
+    const DWARFDebugNames::NameTableEntry &NTE,
+    const DenseMap<uint64_t, DWARFUnit *> &CUOffsetsToDUMap) {
   const char *CStr = NTE.getString();
   if (!CStr) {
     ErrorCategory.Report("Unable to get string associated with name", [&]() {
@@ -1587,11 +1566,9 @@ unsigned DWARFVerifier::verifyNameIndexEntries(
                          "with name {1}.\n",
                          NI.getUnitOffset(), NTE.getIndex());
     });
-    return 1;
+    return;
   }
   StringRef Str(CStr);
-
-  unsigned NumErrors = 0;
   unsigned NumEntries = 0;
   uint64_t EntryID = NTE.getEntryOffset();
   uint64_t NextEntryID = EntryID;
@@ -1599,45 +1576,168 @@ unsigned DWARFVerifier::verifyNameIndexEntries(
   for (; EntryOr; ++NumEntries, EntryID = NextEntryID,
                                 EntryOr = NI.getEntry(&NextEntryID)) {
 
-    std::optional<uint64_t> CUIndex = EntryOr->getCUIndex();
-    std::optional<uint64_t> TUIndex = EntryOr->getLocalTUIndex();
+    std::optional<uint64_t> CUIndex = EntryOr->getRelatedCUIndex();
+    std::optional<uint64_t> TUIndex = EntryOr->getTUIndex();
     if (CUIndex && *CUIndex >= NI.getCUCount()) {
       ErrorCategory.Report("Name Index entry contains invalid CU index", [&]() {
         error() << formatv("Name Index @ {0:x}: Entry @ {1:x} contains an "
                            "invalid CU index ({2}).\n",
                            NI.getUnitOffset(), EntryID, *CUIndex);
       });
-      ++NumErrors;
       continue;
     }
-    if (TUIndex && *TUIndex >= NI.getLocalTUCount()) {
+    const uint32_t NumLocalTUs = NI.getLocalTUCount();
+    const uint32_t NumForeignTUs = NI.getForeignTUCount();
+    if (TUIndex && *TUIndex >= (NumLocalTUs + NumForeignTUs)) {
       ErrorCategory.Report("Name Index entry contains invalid TU index", [&]() {
         error() << formatv("Name Index @ {0:x}: Entry @ {1:x} contains an "
                            "invalid TU index ({2}).\n",
                            NI.getUnitOffset(), EntryID, *TUIndex);
       });
-      ++NumErrors;
       continue;
     }
     std::optional<uint64_t> UnitOffset;
-    if (TUIndex)
-      UnitOffset = NI.getLocalTUOffset(*TUIndex);
-    else if (CUIndex)
+    if (TUIndex) {
+      // We have a local or foreign type unit.
+      if (*TUIndex >= NumLocalTUs) {
+        // This is a foreign type unit, we will find the right type unit by
+        // type unit signature later in this function.
+
+        // Foreign type units must have a valid CU index, either from a
+        // DW_IDX_comp_unit attribute value or from the .debug_names table only
+        // having a single compile unit. We need the originating compile unit
+        // because foreign type units can come from any .dwo file, yet only one
+        // copy of the type unit will end up in the .dwp file.
+        if (CUIndex) {
+          // We need the local skeleton unit offset for the code below.
+          UnitOffset = NI.getCUOffset(*CUIndex);
+        } else {
+          ErrorCategory.Report(
+              "Name Index entry contains foreign TU index with invalid CU "
+              "index",
+              [&]() {
+                error() << formatv(
+                    "Name Index @ {0:x}: Entry @ {1:x} contains an "
+                    "foreign TU index ({2}) with no CU index.\n",
+                    NI.getUnitOffset(), EntryID, *TUIndex);
+              });
+          continue;
+        }
+      } else {
+        // Local type unit, get the DWARF unit offset for the type unit.
+        UnitOffset = NI.getLocalTUOffset(*TUIndex);
+      }
+    } else if (CUIndex) {
+      // Local CU entry, get the DWARF unit offset for the CU.
       UnitOffset = NI.getCUOffset(*CUIndex);
-    if (!UnitOffset)
+    }
+
+    // Watch for tombstoned type unit entries.
+    if (!UnitOffset || UnitOffset == UINT32_MAX)
       continue;
-    uint64_t DIEOffset = *UnitOffset + *EntryOr->getDIEUnitOffset();
-    DWARFDie DIE = DCtx.getDIEForOffset(DIEOffset);
+    // For split DWARF entries we need to make sure we find the non skeleton
+    // DWARF unit that is needed and use that's DWARF unit offset as the
+    // DIE offset to add the DW_IDX_die_offset to.
+    DWARFUnit *DU = DCtx.getUnitForOffset(*UnitOffset);
+    if (DU == nullptr || DU->getOffset() != *UnitOffset) {
+      // If we didn't find a DWARF Unit from the UnitOffset, or if the offset
+      // of the unit doesn't match exactly, report an error.
+      ErrorCategory.Report(
+          "Name Index entry contains invalid CU or TU offset", [&]() {
+            error() << formatv("Name Index @ {0:x}: Entry @ {1:x} contains an "
+                               "invalid CU or TU offset {2:x}.\n",
+                               NI.getUnitOffset(), EntryID, *UnitOffset);
+          });
+      continue;
+    }
+    // This function will try to get the non skeleton unit DIE, but if it is
+    // unable to load the .dwo file from the .dwo or .dwp, it will return the
+    // unit DIE of the DWARFUnit in "DU". So we need to check if the DWARFUnit
+    // has a .dwo file, but we couldn't load it.
+
+    // FIXME: Need a follow up patch to fix usage of
+    // DWARFUnit::getNonSkeletonUnitDIE() so that it returns an empty DWARFDie
+    // if the .dwo file isn't available and clean up other uses of this function
+    // call to properly deal with it. It isn't clear that getNonSkeletonUnitDIE
+    // will return the unit DIE of DU if we aren't able to get the .dwo file,
+    // but that is what the function currently does.
+    DWARFUnit *NonSkeletonUnit = nullptr;
+    if (DU->getDWOId()) {
+      auto Iter = CUOffsetsToDUMap.find(DU->getOffset());
+      NonSkeletonUnit = Iter->second;
+    } else {
+      NonSkeletonUnit = DU;
+    }
+    DWARFDie UnitDie = DU->getUnitDIE();
+    if (DU->getDWOId() && !NonSkeletonUnit->isDWOUnit()) {
+      ErrorCategory.Report("Unable to get load .dwo file", [&]() {
+        error() << formatv(
+            "Name Index @ {0:x}: Entry @ {1:x} unable to load "
+            ".dwo file \"{2}\" for DWARF unit @ {3:x}.\n",
+            NI.getUnitOffset(), EntryID,
+            dwarf::toString(UnitDie.find({DW_AT_dwo_name, DW_AT_GNU_dwo_name})),
+            *UnitOffset);
+      });
+      continue;
+    }
+
+    if (TUIndex && *TUIndex >= NumLocalTUs) {
+      // We have a foreign TU index, which either means we have a .dwo file
+      // that has one or more type units, or we have a .dwp file with one or
+      // more type units. We need to get the type unit from the DWARFContext
+      // of the .dwo. We got the NonSkeletonUnitDie above that has the .dwo
+      // or .dwp DWARF context, so we have to get the type unit from that file.
+      // We have also verified that NonSkeletonUnitDie points to a DWO file
+      // above, so we know we have the right file.
+      const uint32_t ForeignTUIdx = *TUIndex - NumLocalTUs;
+      const uint64_t TypeSig = NI.getForeignTUSignature(ForeignTUIdx);
+      llvm::DWARFContext &NonSkeletonDCtx = NonSkeletonUnit->getContext();
+      // Now find the type unit from the type signature and then update the
+      // NonSkeletonUnitDie to point to the actual type unit in the .dwo/.dwp.
+      NonSkeletonUnit =
+          NonSkeletonDCtx.getTypeUnitForHash(TypeSig, /*IsDWO=*/true);
+      // If we have foreign type unit in a DWP file, then we need to ignore
+      // any entries from type units that don't match the one that made it into
+      // the .dwp file.
+      if (NonSkeletonDCtx.isDWP()) {
+        DWARFDie NonSkeletonUnitDie = NonSkeletonUnit->getUnitDIE(true);
+        StringRef DUDwoName = dwarf::toStringRef(
+            UnitDie.find({DW_AT_dwo_name, DW_AT_GNU_dwo_name}));
+        StringRef TUDwoName = dwarf::toStringRef(
+            NonSkeletonUnitDie.find({DW_AT_dwo_name, DW_AT_GNU_dwo_name}));
+        if (DUDwoName != TUDwoName)
+          continue; // Skip this TU, it isn't the one in the .dwp file.
+      }
+    }
+    uint64_t DIEOffset =
+        NonSkeletonUnit->getOffset() + *EntryOr->getDIEUnitOffset();
+    const uint64_t NextUnitOffset = NonSkeletonUnit->getNextUnitOffset();
+    // DIE offsets are relative to the specified CU or TU. Make sure the DIE
+    // offsets is a valid relative offset.
+    if (DIEOffset >= NextUnitOffset) {
+      ErrorCategory.Report("NameIndex relative DIE offset too large", [&]() {
+        error() << formatv("Name Index @ {0:x}: Entry @ {1:x} references a "
+                           "DIE @ {2:x} when CU or TU ends at {3:x}.\n",
+                           NI.getUnitOffset(), EntryID, DIEOffset,
+                           NextUnitOffset);
+      });
+      continue;
+    }
+    DWARFDie DIE = NonSkeletonUnit->getDIEForOffset(DIEOffset);
     if (!DIE) {
       ErrorCategory.Report("NameIndex references nonexistent DIE", [&]() {
         error() << formatv("Name Index @ {0:x}: Entry @ {1:x} references a "
                            "non-existing DIE @ {2:x}.\n",
                            NI.getUnitOffset(), EntryID, DIEOffset);
       });
-      ++NumErrors;
       continue;
     }
-    if (DIE.getDwarfUnit()->getOffset() != *UnitOffset) {
+    // Only compare the DIE we found's DWARFUnit offset if the DIE lives in
+    // the DWARFUnit from the DW_IDX_comp_unit or DW_IDX_type_unit. If we are
+    // using split DWARF, then the DIE's DWARFUnit doesn't need to match the
+    // skeleton unit.
+    if (DIE.getDwarfUnit() == DU &&
+        DIE.getDwarfUnit()->getOffset() != *UnitOffset) {
       ErrorCategory.Report("Name index contains mismatched CU of DIE", [&]() {
         error() << formatv(
             "Name Index @ {0:x}: Entry @ {1:x}: mismatched CU of "
@@ -1645,7 +1745,6 @@ unsigned DWARFVerifier::verifyNameIndexEntries(
             NI.getUnitOffset(), EntryID, DIEOffset, *UnitOffset,
             DIE.getDwarfUnit()->getOffset());
       });
-      ++NumErrors;
     }
     if (DIE.getTag() != EntryOr->tag()) {
       ErrorCategory.Report("Name Index contains mismatched Tag of DIE", [&]() {
@@ -1655,7 +1754,6 @@ unsigned DWARFVerifier::verifyNameIndexEntries(
             NI.getUnitOffset(), EntryID, DIEOffset, EntryOr->tag(),
             DIE.getTag());
       });
-      ++NumErrors;
     }
 
     // We allow an extra name for functions: their name without any template
@@ -1671,7 +1769,6 @@ unsigned DWARFVerifier::verifyNameIndexEntries(
                            NI.getUnitOffset(), EntryID, DIEOffset, Str,
                            make_range(EntryNames.begin(), EntryNames.end()));
       });
-      ++NumErrors;
     }
   }
   handleAllErrors(
@@ -1685,7 +1782,6 @@ unsigned DWARFVerifier::verifyNameIndexEntries(
                                  "not associated with any entries.\n",
                                  NI.getUnitOffset(), NTE.getIndex(), Str);
             });
-        ++NumErrors;
       },
       [&](const ErrorInfoBase &Info) {
         ErrorCategory.Report("Uncategorized NameIndex error", [&]() {
@@ -1693,9 +1789,7 @@ unsigned DWARFVerifier::verifyNameIndexEntries(
                              NI.getUnitOffset(), NTE.getIndex(), Str,
                              Info.message());
         });
-        ++NumErrors;
       });
-  return NumErrors;
 }
 
 static bool isVariableIndexable(const DWARFDie &Die, DWARFContext &DCtx) {
@@ -1723,8 +1817,9 @@ static bool isVariableIndexable(const DWARFDie &Die, DWARFContext &DCtx) {
   return false;
 }
 
-unsigned DWARFVerifier::verifyNameIndexCompleteness(
-    const DWARFDie &Die, const DWARFDebugNames::NameIndex &NI) {
+void DWARFVerifier::verifyNameIndexCompleteness(
+    const DWARFDie &Die, const DWARFDebugNames::NameIndex &NI,
+    const StringMap<DenseSet<uint64_t>> &NamesToDieOffsets) {
 
   // First check, if the Die should be indexed. The code follows the DWARF v5
   // wording as closely as possible.
@@ -1732,7 +1827,7 @@ unsigned DWARFVerifier::verifyNameIndexCompleteness(
   // "All non-defining declarations (that is, debugging information entries
   // with a DW_AT_declaration attribute) are excluded."
   if (Die.find(DW_AT_declaration))
-    return 0;
+    return;
 
   // "DW_TAG_namespace debugging information entries without a DW_AT_name
   // attribute are included with the name “(anonymous namespace)”.
@@ -1750,7 +1845,7 @@ unsigned DWARFVerifier::verifyNameIndexCompleteness(
   auto EntryNames = getNames(Die, IncludeStrippedTemplateNames,
                              IncludeObjCNames, IncludeLinkageName);
   if (EntryNames.empty())
-    return 0;
+    return;
 
   // We deviate from the specification here, which says:
   // "The name index must contain an entry for each debugging information entry
@@ -1761,7 +1856,7 @@ unsigned DWARFVerifier::verifyNameIndexCompleteness(
   // Compile units and modules have names but shouldn't be indexed.
   case DW_TAG_compile_unit:
   case DW_TAG_module:
-    return 0;
+    return;
 
   // Function and template parameters are not globally visible, so we shouldn't
   // index them.
@@ -1770,22 +1865,22 @@ unsigned DWARFVerifier::verifyNameIndexCompleteness(
   case DW_TAG_template_type_parameter:
   case DW_TAG_GNU_template_parameter_pack:
   case DW_TAG_GNU_template_template_param:
-    return 0;
+    return;
 
   // Object members aren't globally visible.
   case DW_TAG_member:
-    return 0;
+    return;
 
   // According to a strict reading of the specification, enumerators should not
   // be indexed (and LLVM currently does not do that). However, this causes
   // problems for the debuggers, so we may need to reconsider this.
   case DW_TAG_enumerator:
-    return 0;
+    return;
 
   // Imported declarations should not be indexed according to the specification
   // and LLVM currently does not do that.
   case DW_TAG_imported_declaration:
-    return 0;
+    return;
 
   // "DW_TAG_subprogram, DW_TAG_inlined_subroutine, and DW_TAG_label debugging
   // information entries without an address attribute (DW_AT_low_pc,
@@ -1796,7 +1891,7 @@ unsigned DWARFVerifier::verifyNameIndexCompleteness(
     if (Die.findRecursively(
             {DW_AT_low_pc, DW_AT_high_pc, DW_AT_ranges, DW_AT_entry_pc}))
       break;
-    return 0;
+    return;
 
   // "DW_TAG_variable debugging information entries with a DW_AT_location
   // attribute that includes a DW_OP_addr or DW_OP_form_tls_address operator are
@@ -1806,7 +1901,7 @@ unsigned DWARFVerifier::verifyNameIndexCompleteness(
   case DW_TAG_variable:
     if (isVariableIndexable(Die, DCtx))
       break;
-    return 0;
+    return;
 
   default:
     break;
@@ -1814,27 +1909,59 @@ unsigned DWARFVerifier::verifyNameIndexCompleteness(
 
   // Now we know that our Die should be present in the Index. Let's check if
   // that's the case.
-  unsigned NumErrors = 0;
   uint64_t DieUnitOffset = Die.getOffset() - Die.getDwarfUnit()->getOffset();
   for (StringRef Name : EntryNames) {
-    if (none_of(NI.equal_range(Name), [&](const DWARFDebugNames::Entry &E) {
-          return E.getDIEUnitOffset() == DieUnitOffset;
-        })) {
-      ErrorCategory.Report("Name Index DIE entry missing name", [&]() {
-        error() << formatv(
-            "Name Index @ {0:x}: Entry for DIE @ {1:x} ({2}) with "
-            "name {3} missing.\n",
-            NI.getUnitOffset(), Die.getOffset(), Die.getTag(), Name);
-      });
-      ++NumErrors;
+    auto iter = NamesToDieOffsets.find(Name);
+    if (iter == NamesToDieOffsets.end() || !iter->second.count(DieUnitOffset)) {
+      ErrorCategory.Report(
+          "Name Index DIE entry missing name",
+          llvm::dwarf::TagString(Die.getTag()), [&]() {
+            error() << formatv(
+                "Name Index @ {0:x}: Entry for DIE @ {1:x} ({2}) with "
+                "name {3} missing.\n",
+                NI.getUnitOffset(), Die.getOffset(), Die.getTag(), Name);
+          });
     }
   }
-  return NumErrors;
 }
 
-unsigned DWARFVerifier::verifyDebugNames(const DWARFSection &AccelSection,
-                                         const DataExtractor &StrData) {
-  unsigned NumErrors = 0;
+/// Extracts all the data for CU/TUs so we can access it in parallel without
+/// locks.
+static void extractCUsTus(DWARFContext &DCtx) {
+  // Abbrev DeclSet is shared beween the units.
+  for (auto &CUTU : DCtx.normal_units()) {
+    CUTU->getUnitDIE();
+    CUTU->getBaseAddress();
+  }
+  parallelForEach(DCtx.normal_units(), [&](const auto &CUTU) {
+    if (Error E = CUTU->tryExtractDIEsIfNeeded(false))
+      DCtx.getRecoverableErrorHandler()(std::move(E));
+  });
+
+  // Invoking getNonSkeletonUnitDIE() sets up all the base pointers for DWO
+  // Units. This is needed for getBaseAddress().
+  for (const auto &CU : DCtx.compile_units()) {
+    if (!CU->getDWOId())
+      continue;
+    DWARFContext &NonSkeletonContext =
+        CU->getNonSkeletonUnitDIE().getDwarfUnit()->getContext();
+    // Iterates over CUs and TUs.
+    for (auto &CUTU : NonSkeletonContext.dwo_units()) {
+      CUTU->getUnitDIE();
+      CUTU->getBaseAddress();
+    }
+    parallelForEach(NonSkeletonContext.dwo_units(), [&](const auto &CUTU) {
+      if (Error E = CUTU->tryExtractDIEsIfNeeded(false))
+        DCtx.getRecoverableErrorHandler()(std::move(E));
+    });
+    // If context is for DWP we only need to extract once.
+    if (NonSkeletonContext.isDWP())
+      break;
+  }
+}
+
+void DWARFVerifier::verifyDebugNames(const DWARFSection &AccelSection,
+                                     const DataExtractor &StrData) {
   DWARFDataExtractor AccelSectionData(DCtx.getDWARFObj(), AccelSection,
                                       DCtx.isLittleEndian(), 0);
   DWARFDebugNames AccelTable(AccelSectionData, StrData);
@@ -1847,56 +1974,119 @@ unsigned DWARFVerifier::verifyDebugNames(const DWARFSection &AccelSection,
     std::string Msg = toString(std::move(E));
     ErrorCategory.Report("Accelerator Table Error",
                          [&]() { error() << Msg << '\n'; });
-    return 1;
+    return;
   }
-
-  NumErrors += verifyDebugNamesCULists(AccelTable);
+  const uint64_t OriginalNumErrors = ErrorCategory.GetNumErrors();
+  verifyDebugNamesCULists(AccelTable);
   for (const auto &NI : AccelTable)
-    NumErrors += verifyNameIndexBuckets(NI, StrData);
-  for (const auto &NI : AccelTable)
-    NumErrors += verifyNameIndexAbbrevs(NI);
+    verifyNameIndexBuckets(NI, StrData);
+  parallelForEach(AccelTable, [&](const DWARFDebugNames::NameIndex &NI) {
+    verifyNameIndexAbbrevs(NI);
+  });
 
   // Don't attempt Entry validation if any of the previous checks found errors
-  if (NumErrors > 0)
-    return NumErrors;
-  for (const auto &NI : AccelTable)
-    for (const DWARFDebugNames::NameTableEntry &NTE : NI)
-      NumErrors += verifyNameIndexEntries(NI, NTE);
+  if (OriginalNumErrors != ErrorCategory.GetNumErrors())
+    return;
+  DenseMap<uint64_t, DWARFUnit *> CUOffsetsToDUMap;
+  for (const auto &CU : DCtx.compile_units()) {
+    if (!(CU->getVersion() >= 5 && CU->getDWOId()))
+      continue;
+    CUOffsetsToDUMap[CU->getOffset()] =
+        CU->getNonSkeletonUnitDIE().getDwarfUnit();
+  }
+  extractCUsTus(DCtx);
+  for (const DWARFDebugNames::NameIndex &NI : AccelTable) {
+    parallelForEach(NI, [&](DWARFDebugNames::NameTableEntry NTE) {
+      verifyNameIndexEntries(NI, NTE, CUOffsetsToDUMap);
+    });
+  }
 
-  if (NumErrors > 0)
-    return NumErrors;
-
-  for (const std::unique_ptr<DWARFUnit> &U : DCtx.compile_units()) {
-    if (const DWARFDebugNames::NameIndex *NI =
-            AccelTable.getCUNameIndex(U->getOffset())) {
-      auto *CU = cast<DWARFCompileUnit>(U.get());
-      for (const DWARFDebugInfoEntry &Die : CU->dies())
-        NumErrors += verifyNameIndexCompleteness(DWARFDie(CU, &Die), *NI);
+  auto populateNameToOffset =
+      [&](const DWARFDebugNames::NameIndex &NI,
+          StringMap<DenseSet<uint64_t>> &NamesToDieOffsets) {
+        for (const DWARFDebugNames::NameTableEntry &NTE : NI) {
+          const char *tName = NTE.getString();
+          const std::string Name = tName ? std::string(tName) : "";
+          uint64_t EntryID = NTE.getEntryOffset();
+          Expected<DWARFDebugNames::Entry> EntryOr = NI.getEntry(&EntryID);
+          auto Iter = NamesToDieOffsets.insert({Name, DenseSet<uint64_t>(3)});
+          for (; EntryOr; EntryOr = NI.getEntry(&EntryID)) {
+            if (std::optional<uint64_t> DieOffset = EntryOr->getDIEUnitOffset())
+              Iter.first->second.insert(*DieOffset);
+          }
+          handleAllErrors(
+              EntryOr.takeError(),
+              [&](const DWARFDebugNames::SentinelError &) {
+                if (!NamesToDieOffsets.empty())
+                  return;
+                ErrorCategory.Report(
+                    "NameIndex Name is not associated with any entries", [&]() {
+                      error()
+                          << formatv("Name Index @ {0:x}: Name {1} ({2}) is "
+                                     "not associated with any entries.\n",
+                                     NI.getUnitOffset(), NTE.getIndex(), Name);
+                    });
+              },
+              [&](const ErrorInfoBase &Info) {
+                ErrorCategory.Report("Uncategorized NameIndex error", [&]() {
+                  error() << formatv(
+                      "Name Index @ {0:x}: Name {1} ({2}): {3}\n",
+                      NI.getUnitOffset(), NTE.getIndex(), Name, Info.message());
+                });
+              });
+        }
+      };
+  // NameIndex can have multiple CUs. For example if it was created by BOLT.
+  // So better to iterate over NI, and then over CUs in it.
+  for (const DWARFDebugNames::NameIndex &NI : AccelTable) {
+    StringMap<DenseSet<uint64_t>> NamesToDieOffsets(NI.getNameCount());
+    populateNameToOffset(NI, NamesToDieOffsets);
+    for (uint32_t i = 0, iEnd = NI.getCUCount(); i < iEnd; ++i) {
+      const uint64_t CUOffset = NI.getCUOffset(i);
+      DWARFUnit *U = DCtx.getUnitForOffset(CUOffset);
+      DWARFCompileUnit *CU = dyn_cast<DWARFCompileUnit>(U);
+      if (CU) {
+        if (CU->getDWOId()) {
+          DWARFDie CUDie = CU->getUnitDIE(true);
+          DWARFDie NonSkeletonUnitDie =
+              CUDie.getDwarfUnit()->getNonSkeletonUnitDIE(false);
+          if (CUDie != NonSkeletonUnitDie) {
+            parallelForEach(
+                NonSkeletonUnitDie.getDwarfUnit()->dies(),
+                [&](const DWARFDebugInfoEntry &Die) {
+                  verifyNameIndexCompleteness(
+                      DWARFDie(NonSkeletonUnitDie.getDwarfUnit(), &Die), NI,
+                      NamesToDieOffsets);
+                });
+          }
+        } else {
+          parallelForEach(CU->dies(), [&](const DWARFDebugInfoEntry &Die) {
+            verifyNameIndexCompleteness(DWARFDie(CU, &Die), NI,
+                                        NamesToDieOffsets);
+          });
+        }
+      }
     }
   }
-  return NumErrors;
+  return;
 }
 
 bool DWARFVerifier::handleAccelTables() {
   const DWARFObject &D = DCtx.getDWARFObj();
   DataExtractor StrData(D.getStrSection(), DCtx.isLittleEndian(), 0);
-  unsigned NumErrors = 0;
   if (!D.getAppleNamesSection().Data.empty())
-    NumErrors += verifyAppleAccelTable(&D.getAppleNamesSection(), &StrData,
-                                       ".apple_names");
+    verifyAppleAccelTable(&D.getAppleNamesSection(), &StrData, ".apple_names");
   if (!D.getAppleTypesSection().Data.empty())
-    NumErrors += verifyAppleAccelTable(&D.getAppleTypesSection(), &StrData,
-                                       ".apple_types");
+    verifyAppleAccelTable(&D.getAppleTypesSection(), &StrData, ".apple_types");
   if (!D.getAppleNamespacesSection().Data.empty())
-    NumErrors += verifyAppleAccelTable(&D.getAppleNamespacesSection(), &StrData,
-                                       ".apple_namespaces");
+    verifyAppleAccelTable(&D.getAppleNamespacesSection(), &StrData,
+                          ".apple_namespaces");
   if (!D.getAppleObjCSection().Data.empty())
-    NumErrors += verifyAppleAccelTable(&D.getAppleObjCSection(), &StrData,
-                                       ".apple_objc");
+    verifyAppleAccelTable(&D.getAppleObjCSection(), &StrData, ".apple_objc");
 
   if (!D.getNamesSection().Data.empty())
-    NumErrors += verifyDebugNames(D.getNamesSection(), StrData);
-  return NumErrors == 0;
+    verifyDebugNames(D.getNamesSection(), StrData);
+  return ErrorCategory.GetNumErrors() == 0;
 }
 
 bool DWARFVerifier::handleDebugStrOffsets() {
@@ -2036,15 +2226,37 @@ bool DWARFVerifier::verifyDebugStrOffsets(
 
 void OutputCategoryAggregator::Report(
     StringRef s, std::function<void(void)> detailCallback) {
-  Aggregation[std::string(s)]++;
+  this->Report(s, "", detailCallback);
+}
+
+void OutputCategoryAggregator::Report(
+    StringRef category, StringRef sub_category,
+    std::function<void(void)> detailCallback) {
+  std::lock_guard<std::mutex> Lock(WriteMutex);
+  ++NumErrors;
+  std::string category_str = std::string(category);
+  AggregationData &Agg = Aggregation[category_str];
+  Agg.OverallCount++;
+  if (!sub_category.empty()) {
+    Agg.DetailedCounts[std::string(sub_category)]++;
+  }
   if (IncludeDetail)
     detailCallback();
 }
 
 void OutputCategoryAggregator::EnumerateResults(
     std::function<void(StringRef, unsigned)> handleCounts) {
-  for (auto &&[name, count] : Aggregation) {
-    handleCounts(name, count);
+  for (const auto &[name, aggData] : Aggregation) {
+    handleCounts(name, aggData.OverallCount);
+  }
+}
+void OutputCategoryAggregator::EnumerateDetailedResultsFor(
+    StringRef category, std::function<void(StringRef, unsigned)> handleCounts) {
+  const auto Agg = Aggregation.find(category);
+  if (Agg != Aggregation.end()) {
+    for (const auto &[name, aggData] : Agg->second.DetailedCounts) {
+      handleCounts(name, aggData);
+    }
   }
 }
 
@@ -2071,6 +2283,12 @@ void DWARFVerifier::summarize() {
     ErrorCategory.EnumerateResults([&](StringRef Category, unsigned Count) {
       llvm::json::Object Val;
       Val.try_emplace("count", Count);
+      llvm::json::Object Details;
+      ErrorCategory.EnumerateDetailedResultsFor(
+          Category, [&](StringRef SubCategory, unsigned SubCount) {
+            Details.try_emplace(SubCategory, SubCount);
+          });
+      Val.try_emplace("details", std::move(Details));
       Categories.try_emplace(Category, std::move(Val));
       ErrorCount += Count;
     });

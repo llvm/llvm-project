@@ -32,6 +32,9 @@ def LLVM_Dialect : Dialect {
     static StringRef getNoAliasScopesAttrName() { return "noalias_scopes"; }
     static StringRef getAliasScopesAttrName() { return "alias_scopes"; }
     static StringRef getAccessGroupsAttrName() { return "access_groups"; }
+    static StringRef getIdentAttrName() { return "llvm.ident"; }
+    static StringRef getModuleFlags() { return "llvm.module.flags"; }
+    static StringRef getCommandlineAttrName() { return "llvm.commandline"; }
 
     /// Names of llvm parameter attributes.
     static StringRef getAlignAttrName() { return "llvm.align"; }
@@ -42,6 +45,7 @@ def LLVM_Dialect : Dialect {
     static StringRef getNoUndefAttrName() { return "llvm.noundef"; }
     static StringRef getDereferenceableAttrName() { return "llvm.dereferenceable"; }
     static StringRef getDereferenceableOrNullAttrName() { return "llvm.dereferenceable_or_null"; }
+    static StringRef getElementTypeAttrName() { return "llvm.elementtype"; }
     static StringRef getInAllocaAttrName() { return "llvm.inalloca"; }
     static StringRef getInRegAttrName() { return "llvm.inreg"; }
     static StringRef getNestAttrName() { return "llvm.nest"; }
@@ -50,6 +54,7 @@ def LLVM_Dialect : Dialect {
     static StringRef getNoFreeAttrName() { return "llvm.nofree"; }
     static StringRef getNonNullAttrName() { return "llvm.nonnull"; }
     static StringRef getPreallocatedAttrName() { return "llvm.preallocated"; }
+    static StringRef getRangeAttrName() { return "llvm.range"; }
     static StringRef getReadonlyAttrName() { return "llvm.readonly"; }
     static StringRef getReturnedAttrName() { return "llvm.returned"; }
     static StringRef getSExtAttrName() { return "llvm.signext"; }
@@ -57,6 +62,8 @@ def LLVM_Dialect : Dialect {
     static StringRef getStructRetAttrName() { return "llvm.sret"; }
     static StringRef getWriteOnlyAttrName() { return "llvm.writeonly"; }
     static StringRef getZExtAttrName() { return "llvm.zeroext"; }
+    static StringRef getOpBundleSizesAttrName() { return "op_bundle_sizes"; }
+    static StringRef getOpBundleTagsAttrName() { return "op_bundle_tags"; }
     // TODO Restrict the usage of this to parameter attributes once there is an
     // alternative way of modeling memory effects on FunctionOpInterface.
     /// Name of the attribute that will cause the creation of a readnone memory
@@ -74,6 +81,11 @@ def LLVM_Dialect : Dialect {
     /// Name of the C wrapper emission attribute.
     static StringRef getEmitCWrapperAttrName() {
       return "llvm.emit_c_interface";
+    }
+
+    /// Name of the dependent libraries attribute.
+    static StringRef getDependentLibrariesAttrName() {
+      return "llvm.dependent_libraries";
     }
 
     /// Returns `true` if the given type is compatible with the LLVM dialect.

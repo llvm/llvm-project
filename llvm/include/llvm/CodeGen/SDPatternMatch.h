@@ -14,7 +14,9 @@
 #define LLVM_CODEGEN_SDPATTERNMATCH_H
 
 #include "llvm/ADT/APInt.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallBitVector.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/TargetLowering.h"
@@ -47,6 +49,8 @@ public:
   bool match(SDValue N, unsigned Opcode) const {
     return N->getOpcode() == Opcode;
   }
+
+  unsigned getNumOperands(SDValue N) const { return N->getNumOperands(); }
 };
 
 template <typename Pattern, typename MatchContext>
@@ -135,6 +139,8 @@ struct Opcode_match {
 };
 
 inline Opcode_match m_Opc(unsigned Opcode) { return Opcode_match(Opcode); }
+
+inline Opcode_match m_Undef() { return Opcode_match(ISD::UNDEF); }
 
 template <unsigned NumUses, typename Pattern> struct NUses_match {
   Pattern P;
@@ -390,7 +396,8 @@ template <unsigned OpIdx, typename... OpndPreds> struct Operands_match {
   template <typename MatchContext>
   bool match(const MatchContext &Ctx, SDValue N) {
     // Returns false if there are more operands than predicates;
-    return N->getNumOperands() == OpIdx;
+    // Ignores the last two operands if both the Context and the Node are VP
+    return Ctx.getNumOperands(N) == OpIdx;
   }
 };
 
@@ -424,8 +431,9 @@ template <bool ExcludeChain> struct EffectiveOperands {
   unsigned Size = 0;
   unsigned FirstIndex = 0;
 
-  explicit EffectiveOperands(SDValue N) {
-    const unsigned TotalNumOps = N->getNumOperands();
+  template <typename MatchContext>
+  explicit EffectiveOperands(SDValue N, const MatchContext &Ctx) {
+    const unsigned TotalNumOps = Ctx.getNumOperands(N);
     FirstIndex = TotalNumOps;
     for (unsigned I = 0; I < TotalNumOps; ++I) {
       // Count the number of non-chain and non-glue nodes (we ignore chain
@@ -444,7 +452,9 @@ template <> struct EffectiveOperands<false> {
   unsigned Size = 0;
   unsigned FirstIndex = 0;
 
-  explicit EffectiveOperands(SDValue N) : Size(N->getNumOperands()) {}
+  template <typename MatchContext>
+  explicit EffectiveOperands(SDValue N, const MatchContext &Ctx)
+      : Size(Ctx.getNumOperands(N)) {}
 };
 
 // === Ternary operations ===
@@ -463,7 +473,7 @@ struct TernaryOpc_match {
   template <typename MatchContext>
   bool match(const MatchContext &Ctx, SDValue N) {
     if (sd_context_match(N, Ctx, m_Opc(Opcode))) {
-      EffectiveOperands<ExcludeChain> EO(N);
+      EffectiveOperands<ExcludeChain> EO(N, Ctx);
       assert(EO.Size == 3);
       return ((Op0.match(Ctx, N->getOperand(EO.FirstIndex)) &&
                Op1.match(Ctx, N->getOperand(EO.FirstIndex + 1))) ||
@@ -501,6 +511,19 @@ m_VSelect(const T0_P &Cond, const T1_P &T, const T2_P &F) {
   return TernaryOpc_match<T0_P, T1_P, T2_P>(ISD::VSELECT, Cond, T, F);
 }
 
+template <typename T0_P, typename T1_P, typename T2_P>
+inline TernaryOpc_match<T0_P, T1_P, T2_P>
+m_InsertElt(const T0_P &Vec, const T1_P &Val, const T2_P &Idx) {
+  return TernaryOpc_match<T0_P, T1_P, T2_P>(ISD::INSERT_VECTOR_ELT, Vec, Val,
+                                            Idx);
+}
+
+template <typename LHS, typename RHS, typename IDX>
+inline TernaryOpc_match<LHS, RHS, IDX>
+m_InsertSubvector(const LHS &Base, const RHS &Sub, const IDX &Idx) {
+  return TernaryOpc_match<LHS, RHS, IDX>(ISD::INSERT_SUBVECTOR, Base, Sub, Idx);
+}
+
 // === Binary operations ===
 template <typename LHS_P, typename RHS_P, bool Commutable = false,
           bool ExcludeChain = false>
@@ -508,22 +531,137 @@ struct BinaryOpc_match {
   unsigned Opcode;
   LHS_P LHS;
   RHS_P RHS;
-
-  BinaryOpc_match(unsigned Opc, const LHS_P &L, const RHS_P &R)
-      : Opcode(Opc), LHS(L), RHS(R) {}
+  std::optional<SDNodeFlags> Flags;
+  BinaryOpc_match(unsigned Opc, const LHS_P &L, const RHS_P &R,
+                  std::optional<SDNodeFlags> Flgs = std::nullopt)
+      : Opcode(Opc), LHS(L), RHS(R), Flags(Flgs) {}
 
   template <typename MatchContext>
   bool match(const MatchContext &Ctx, SDValue N) {
     if (sd_context_match(N, Ctx, m_Opc(Opcode))) {
-      EffectiveOperands<ExcludeChain> EO(N);
+      EffectiveOperands<ExcludeChain> EO(N, Ctx);
       assert(EO.Size == 2);
-      return (LHS.match(Ctx, N->getOperand(EO.FirstIndex)) &&
-              RHS.match(Ctx, N->getOperand(EO.FirstIndex + 1))) ||
-             (Commutable && LHS.match(Ctx, N->getOperand(EO.FirstIndex + 1)) &&
-              RHS.match(Ctx, N->getOperand(EO.FirstIndex)));
+      if (!((LHS.match(Ctx, N->getOperand(EO.FirstIndex)) &&
+             RHS.match(Ctx, N->getOperand(EO.FirstIndex + 1))) ||
+            (Commutable && LHS.match(Ctx, N->getOperand(EO.FirstIndex + 1)) &&
+             RHS.match(Ctx, N->getOperand(EO.FirstIndex)))))
+        return false;
+
+      if (!Flags.has_value())
+        return true;
+
+      return (*Flags & N->getFlags()) == *Flags;
     }
 
     return false;
+  }
+};
+
+/// Matching while capturing mask
+template <typename T0, typename T1, typename T2> struct SDShuffle_match {
+  T0 Op1;
+  T1 Op2;
+  T2 Mask;
+
+  SDShuffle_match(const T0 &Op1, const T1 &Op2, const T2 &Mask)
+      : Op1(Op1), Op2(Op2), Mask(Mask) {}
+
+  template <typename MatchContext>
+  bool match(const MatchContext &Ctx, SDValue N) {
+    if (auto *I = dyn_cast<ShuffleVectorSDNode>(N)) {
+      return Op1.match(Ctx, I->getOperand(0)) &&
+             Op2.match(Ctx, I->getOperand(1)) && Mask.match(I->getMask());
+    }
+    return false;
+  }
+};
+struct m_Mask {
+  ArrayRef<int> &MaskRef;
+  m_Mask(ArrayRef<int> &MaskRef) : MaskRef(MaskRef) {}
+  bool match(ArrayRef<int> Mask) {
+    MaskRef = Mask;
+    return true;
+  }
+};
+
+struct m_SpecificMask {
+  ArrayRef<int> MaskRef;
+  m_SpecificMask(ArrayRef<int> MaskRef) : MaskRef(MaskRef) {}
+  bool match(ArrayRef<int> Mask) { return MaskRef == Mask; }
+};
+
+template <typename LHS_P, typename RHS_P, typename Pred_t,
+          bool Commutable = false, bool ExcludeChain = false>
+struct MaxMin_match {
+  using PredType = Pred_t;
+  LHS_P LHS;
+  RHS_P RHS;
+
+  MaxMin_match(const LHS_P &L, const RHS_P &R) : LHS(L), RHS(R) {}
+
+  template <typename MatchContext>
+  bool match(const MatchContext &Ctx, SDValue N) {
+    if (sd_context_match(N, Ctx, m_Opc(ISD::SELECT)) ||
+        sd_context_match(N, Ctx, m_Opc(ISD::VSELECT))) {
+      EffectiveOperands<ExcludeChain> EO_SELECT(N, Ctx);
+      assert(EO_SELECT.Size == 3);
+      SDValue Cond = N->getOperand(EO_SELECT.FirstIndex);
+      SDValue TrueValue = N->getOperand(EO_SELECT.FirstIndex + 1);
+      SDValue FalseValue = N->getOperand(EO_SELECT.FirstIndex + 2);
+
+      if (sd_context_match(Cond, Ctx, m_Opc(ISD::SETCC))) {
+        EffectiveOperands<ExcludeChain> EO_SETCC(Cond, Ctx);
+        assert(EO_SETCC.Size == 3);
+        SDValue L = Cond->getOperand(EO_SETCC.FirstIndex);
+        SDValue R = Cond->getOperand(EO_SETCC.FirstIndex + 1);
+        auto *CondNode =
+            cast<CondCodeSDNode>(Cond->getOperand(EO_SETCC.FirstIndex + 2));
+
+        if ((TrueValue != L || FalseValue != R) &&
+            (TrueValue != R || FalseValue != L)) {
+          return false;
+        }
+
+        ISD::CondCode Cond =
+            TrueValue == L ? CondNode->get()
+                           : getSetCCInverse(CondNode->get(), L.getValueType());
+        if (!Pred_t::match(Cond)) {
+          return false;
+        }
+        return (LHS.match(Ctx, L) && RHS.match(Ctx, R)) ||
+               (Commutable && LHS.match(Ctx, R) && RHS.match(Ctx, L));
+      }
+    }
+
+    return false;
+  }
+};
+
+// Helper class for identifying signed max predicates.
+struct smax_pred_ty {
+  static bool match(ISD::CondCode Cond) {
+    return Cond == ISD::CondCode::SETGT || Cond == ISD::CondCode::SETGE;
+  }
+};
+
+// Helper class for identifying unsigned max predicates.
+struct umax_pred_ty {
+  static bool match(ISD::CondCode Cond) {
+    return Cond == ISD::CondCode::SETUGT || Cond == ISD::CondCode::SETUGE;
+  }
+};
+
+// Helper class for identifying signed min predicates.
+struct smin_pred_ty {
+  static bool match(ISD::CondCode Cond) {
+    return Cond == ISD::CondCode::SETLT || Cond == ISD::CondCode::SETLE;
+  }
+};
+
+// Helper class for identifying unsigned min predicates.
+struct umin_pred_ty {
+  static bool match(ISD::CondCode Cond) {
+    return Cond == ISD::CondCode::SETULT || Cond == ISD::CondCode::SETULE;
   }
 };
 
@@ -576,6 +714,17 @@ inline BinaryOpc_match<LHS, RHS, true> m_Or(const LHS &L, const RHS &R) {
 }
 
 template <typename LHS, typename RHS>
+inline BinaryOpc_match<LHS, RHS, true> m_DisjointOr(const LHS &L,
+                                                    const RHS &R) {
+  return BinaryOpc_match<LHS, RHS, true>(ISD::OR, L, R, SDNodeFlags::Disjoint);
+}
+
+template <typename LHS, typename RHS>
+inline auto m_AddLike(const LHS &L, const RHS &R) {
+  return m_AnyOf(m_Add(L, R), m_DisjointOr(L, R));
+}
+
+template <typename LHS, typename RHS>
 inline BinaryOpc_match<LHS, RHS, true> m_Xor(const LHS &L, const RHS &R) {
   return BinaryOpc_match<LHS, RHS, true>(ISD::XOR, L, R);
 }
@@ -586,8 +735,20 @@ inline BinaryOpc_match<LHS, RHS, true> m_SMin(const LHS &L, const RHS &R) {
 }
 
 template <typename LHS, typename RHS>
+inline auto m_SMinLike(const LHS &L, const RHS &R) {
+  return m_AnyOf(BinaryOpc_match<LHS, RHS, true>(ISD::SMIN, L, R),
+                 MaxMin_match<LHS, RHS, smin_pred_ty, true>(L, R));
+}
+
+template <typename LHS, typename RHS>
 inline BinaryOpc_match<LHS, RHS, true> m_SMax(const LHS &L, const RHS &R) {
   return BinaryOpc_match<LHS, RHS, true>(ISD::SMAX, L, R);
+}
+
+template <typename LHS, typename RHS>
+inline auto m_SMaxLike(const LHS &L, const RHS &R) {
+  return m_AnyOf(BinaryOpc_match<LHS, RHS, true>(ISD::SMAX, L, R),
+                 MaxMin_match<LHS, RHS, smax_pred_ty, true>(L, R));
 }
 
 template <typename LHS, typename RHS>
@@ -596,8 +757,20 @@ inline BinaryOpc_match<LHS, RHS, true> m_UMin(const LHS &L, const RHS &R) {
 }
 
 template <typename LHS, typename RHS>
+inline auto m_UMinLike(const LHS &L, const RHS &R) {
+  return m_AnyOf(BinaryOpc_match<LHS, RHS, true>(ISD::UMIN, L, R),
+                 MaxMin_match<LHS, RHS, umin_pred_ty, true>(L, R));
+}
+
+template <typename LHS, typename RHS>
 inline BinaryOpc_match<LHS, RHS, true> m_UMax(const LHS &L, const RHS &R) {
   return BinaryOpc_match<LHS, RHS, true>(ISD::UMAX, L, R);
+}
+
+template <typename LHS, typename RHS>
+inline auto m_UMaxLike(const LHS &L, const RHS &R) {
+  return m_AnyOf(BinaryOpc_match<LHS, RHS, true>(ISD::UMAX, L, R),
+                 MaxMin_match<LHS, RHS, umax_pred_ty, true>(L, R));
 }
 
 template <typename LHS, typename RHS>
@@ -633,6 +806,16 @@ inline BinaryOpc_match<LHS, RHS> m_Srl(const LHS &L, const RHS &R) {
 }
 
 template <typename LHS, typename RHS>
+inline BinaryOpc_match<LHS, RHS> m_Rotl(const LHS &L, const RHS &R) {
+  return BinaryOpc_match<LHS, RHS>(ISD::ROTL, L, R);
+}
+
+template <typename LHS, typename RHS>
+inline BinaryOpc_match<LHS, RHS> m_Rotr(const LHS &L, const RHS &R) {
+  return BinaryOpc_match<LHS, RHS>(ISD::ROTR, L, R);
+}
+
+template <typename LHS, typename RHS>
 inline BinaryOpc_match<LHS, RHS, true> m_FAdd(const LHS &L, const RHS &R) {
   return BinaryOpc_match<LHS, RHS, true>(ISD::FADD, L, R);
 }
@@ -657,19 +840,48 @@ inline BinaryOpc_match<LHS, RHS> m_FRem(const LHS &L, const RHS &R) {
   return BinaryOpc_match<LHS, RHS>(ISD::FREM, L, R);
 }
 
+template <typename V1_t, typename V2_t>
+inline BinaryOpc_match<V1_t, V2_t> m_Shuffle(const V1_t &v1, const V2_t &v2) {
+  return BinaryOpc_match<V1_t, V2_t>(ISD::VECTOR_SHUFFLE, v1, v2);
+}
+
+template <typename V1_t, typename V2_t, typename Mask_t>
+inline SDShuffle_match<V1_t, V2_t, Mask_t>
+m_Shuffle(const V1_t &v1, const V2_t &v2, const Mask_t &mask) {
+  return SDShuffle_match<V1_t, V2_t, Mask_t>(v1, v2, mask);
+}
+
+template <typename LHS, typename RHS>
+inline BinaryOpc_match<LHS, RHS> m_ExtractElt(const LHS &Vec, const RHS &Idx) {
+  return BinaryOpc_match<LHS, RHS>(ISD::EXTRACT_VECTOR_ELT, Vec, Idx);
+}
+
+template <typename LHS, typename RHS>
+inline BinaryOpc_match<LHS, RHS> m_ExtractSubvector(const LHS &Vec,
+                                                    const RHS &Idx) {
+  return BinaryOpc_match<LHS, RHS>(ISD::EXTRACT_SUBVECTOR, Vec, Idx);
+}
+
 // === Unary operations ===
 template <typename Opnd_P, bool ExcludeChain = false> struct UnaryOpc_match {
   unsigned Opcode;
   Opnd_P Opnd;
-
-  UnaryOpc_match(unsigned Opc, const Opnd_P &Op) : Opcode(Opc), Opnd(Op) {}
+  std::optional<SDNodeFlags> Flags;
+  UnaryOpc_match(unsigned Opc, const Opnd_P &Op,
+                 std::optional<SDNodeFlags> Flgs = std::nullopt)
+      : Opcode(Opc), Opnd(Op), Flags(Flgs) {}
 
   template <typename MatchContext>
   bool match(const MatchContext &Ctx, SDValue N) {
     if (sd_context_match(N, Ctx, m_Opc(Opcode))) {
-      EffectiveOperands<ExcludeChain> EO(N);
+      EffectiveOperands<ExcludeChain> EO(N, Ctx);
       assert(EO.Size == 1);
-      return Opnd.match(Ctx, N->getOperand(EO.FirstIndex));
+      if (!Opnd.match(Ctx, N->getOperand(EO.FirstIndex)))
+        return false;
+      if (!Flags.has_value())
+        return true;
+
+      return (*Flags & N->getFlags()) == *Flags;
     }
 
     return false;
@@ -686,6 +898,15 @@ inline UnaryOpc_match<Opnd, true> m_ChainedUnaryOp(unsigned Opc,
   return UnaryOpc_match<Opnd, true>(Opc, Op);
 }
 
+template <typename Opnd> inline UnaryOpc_match<Opnd> m_BitCast(const Opnd &Op) {
+  return UnaryOpc_match<Opnd>(ISD::BITCAST, Op);
+}
+
+template <typename Opnd>
+inline UnaryOpc_match<Opnd> m_BSwap(const Opnd &Op) {
+  return UnaryOpc_match<Opnd>(ISD::BSWAP, Op);
+}
+
 template <typename Opnd>
 inline UnaryOpc_match<Opnd> m_BitReverse(const Opnd &Op) {
   return UnaryOpc_match<Opnd>(ISD::BITREVERSE, Op);
@@ -693,6 +914,11 @@ inline UnaryOpc_match<Opnd> m_BitReverse(const Opnd &Op) {
 
 template <typename Opnd> inline UnaryOpc_match<Opnd> m_ZExt(const Opnd &Op) {
   return UnaryOpc_match<Opnd>(ISD::ZERO_EXTEND, Op);
+}
+
+template <typename Opnd>
+inline UnaryOpc_match<Opnd> m_NNegZExt(const Opnd &Op) {
+  return UnaryOpc_match<Opnd>(ISD::ZERO_EXTEND, Op, SDNodeFlags::NonNeg);
 }
 
 template <typename Opnd> inline auto m_SExt(const Opnd &Op) {
@@ -719,6 +945,10 @@ template <typename Opnd> inline auto m_SExtOrSelf(const Opnd &Op) {
   return m_AnyOf(m_SExt(Op), Op);
 }
 
+template <typename Opnd> inline auto m_SExtLike(const Opnd &Op) {
+  return m_AnyOf(m_SExt(Op), m_NNegZExt(Op));
+}
+
 /// Match a aext or identity
 /// Allows to peek through optional extensions
 template <typename Opnd>
@@ -735,6 +965,26 @@ inline Or<UnaryOpc_match<Opnd>, Opnd> m_TruncOrSelf(const Opnd &Op) {
 
 template <typename Opnd> inline UnaryOpc_match<Opnd> m_VScale(const Opnd &Op) {
   return UnaryOpc_match<Opnd>(ISD::VSCALE, Op);
+}
+
+template <typename Opnd> inline UnaryOpc_match<Opnd> m_FPToUI(const Opnd &Op) {
+  return UnaryOpc_match<Opnd>(ISD::FP_TO_UINT, Op);
+}
+
+template <typename Opnd> inline UnaryOpc_match<Opnd> m_FPToSI(const Opnd &Op) {
+  return UnaryOpc_match<Opnd>(ISD::FP_TO_SINT, Op);
+}
+
+template <typename Opnd> inline UnaryOpc_match<Opnd> m_Ctpop(const Opnd &Op) {
+  return UnaryOpc_match<Opnd>(ISD::CTPOP, Op);
+}
+
+template <typename Opnd> inline UnaryOpc_match<Opnd> m_Ctlz(const Opnd &Op) {
+  return UnaryOpc_match<Opnd>(ISD::CTLZ, Op);
+}
+
+template <typename Opnd> inline UnaryOpc_match<Opnd> m_Cttz(const Opnd &Op) {
+  return UnaryOpc_match<Opnd>(ISD::CTTZ, Op);
 }
 
 // === Constants ===
@@ -884,6 +1134,88 @@ inline BinaryOpc_match<SpecificInt_match, ValTy> m_Neg(const ValTy &V) {
 template <typename ValTy>
 inline BinaryOpc_match<ValTy, AllOnes_match, true> m_Not(const ValTy &V) {
   return m_Xor(V, m_AllOnes());
+}
+
+template <typename... PatternTs> struct ReassociatableOpc_match {
+  unsigned Opcode;
+  std::tuple<PatternTs...> Patterns;
+
+  ReassociatableOpc_match(unsigned Opcode, const PatternTs &...Patterns)
+      : Opcode(Opcode), Patterns(Patterns...) {}
+
+  template <typename MatchContext>
+  bool match(const MatchContext &Ctx, SDValue N) {
+    constexpr size_t NumPatterns = std::tuple_size_v<std::tuple<PatternTs...>>;
+
+    SmallVector<SDValue> Leaves;
+    collectLeaves(N, Leaves);
+    if (Leaves.size() != NumPatterns)
+      return false;
+
+    // Matches[I][J] == true iff sd_context_match(Leaves[I], Ctx,
+    // std::get<J>(Patterns)) == true
+    std::array<SmallBitVector, NumPatterns> Matches;
+    for (size_t I = 0; I != NumPatterns; I++) {
+      SmallVector<bool> MatchResults;
+      std::apply(
+          [&](auto &...P) {
+            (Matches[I].push_back(sd_context_match(Leaves[I], Ctx, P)), ...);
+          },
+          Patterns);
+    }
+
+    SmallBitVector Used(NumPatterns);
+    return reassociatableMatchHelper(Matches, Used);
+  }
+
+  void collectLeaves(SDValue V, SmallVector<SDValue> &Leaves) {
+    if (V->getOpcode() == Opcode) {
+      for (size_t I = 0, N = V->getNumOperands(); I < N; I++)
+        collectLeaves(V->getOperand(I), Leaves);
+    } else {
+      Leaves.emplace_back(V);
+    }
+  }
+
+  [[nodiscard]] inline bool
+  reassociatableMatchHelper(const ArrayRef<SmallBitVector> Matches,
+                            SmallBitVector &Used, size_t Curr = 0) {
+    if (Curr == Matches.size())
+      return true;
+    for (size_t Match = 0, N = Matches[Curr].size(); Match < N; Match++) {
+      if (!Matches[Curr][Match] || Used[Match])
+        continue;
+      Used[Match] = true;
+      if (reassociatableMatchHelper(Matches, Used, Curr + 1))
+        return true;
+      Used[Match] = false;
+    }
+    return false;
+  }
+};
+
+template <typename... PatternTs>
+inline ReassociatableOpc_match<PatternTs...>
+m_ReassociatableAdd(const PatternTs &...Patterns) {
+  return ReassociatableOpc_match<PatternTs...>(ISD::ADD, Patterns...);
+}
+
+template <typename... PatternTs>
+inline ReassociatableOpc_match<PatternTs...>
+m_ReassociatableOr(const PatternTs &...Patterns) {
+  return ReassociatableOpc_match<PatternTs...>(ISD::OR, Patterns...);
+}
+
+template <typename... PatternTs>
+inline ReassociatableOpc_match<PatternTs...>
+m_ReassociatableAnd(const PatternTs &...Patterns) {
+  return ReassociatableOpc_match<PatternTs...>(ISD::AND, Patterns...);
+}
+
+template <typename... PatternTs>
+inline ReassociatableOpc_match<PatternTs...>
+m_ReassociatableMul(const PatternTs &...Patterns) {
+  return ReassociatableOpc_match<PatternTs...>(ISD::MUL, Patterns...);
 }
 
 } // namespace SDPatternMatch

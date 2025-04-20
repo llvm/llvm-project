@@ -43,7 +43,7 @@ static cl::opt<ActionType> Action(
                clEnumValN(GenPropertyEnumDefs, "gen-lldb-property-enum-defs",
                           "Generate lldb property enum definitions")));
 
-static bool LLDBTableGenMain(raw_ostream &OS, RecordKeeper &Records) {
+static bool LLDBTableGenMain(raw_ostream &OS, const RecordKeeper &Records) {
   switch (Action) {
   case PrintRecords:
     OS << Records; // No argument, dump all contents

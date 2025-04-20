@@ -103,6 +103,13 @@ public:
     /// representation is that of bitcasting the floating-point value to an
     /// integer type.
     TK_Float = 0x0001,
+    /// An _BitInt(N) type. Lowest bit is 1 for a signed value, 0 for an
+    /// unsigned value. Remaining bits are log_2(bit_width). The value
+    /// representation is the integer itself if it fits into a ValueHandle, and
+    /// a pointer to the integer otherwise. TypeName contains the true width
+    /// of the type for the signed _BitInt(N) type stored after zero bit after
+    /// TypeName as 32-bit unsigned integer.
+    TK_BitInt = 0x0002,
     /// Any other type. The value representation is unspecified.
     TK_Unknown = 0xffff
   };
@@ -113,16 +120,43 @@ public:
     return static_cast<Kind>(TypeKind);
   }
 
-  bool isIntegerTy() const { return getKind() == TK_Integer; }
+  bool isIntegerTy() const {
+    return getKind() == TK_Integer || getKind() == TK_BitInt;
+  }
+  bool isBitIntTy() const { return getKind() == TK_BitInt; }
+
   bool isSignedIntegerTy() const {
     return isIntegerTy() && (TypeInfo & 1);
   }
+  bool isSignedBitIntTy() const { return isBitIntTy() && (TypeInfo & 1); }
   bool isUnsignedIntegerTy() const {
     return isIntegerTy() && !(TypeInfo & 1);
   }
   unsigned getIntegerBitWidth() const {
     CHECK(isIntegerTy());
     return 1 << (TypeInfo >> 1);
+  }
+
+  const char *getBitIntBitCountPointer() const {
+    DCHECK(isBitIntTy());
+    DCHECK(isSignedBitIntTy());
+    // Scan Name for zero and return the next address
+    const char *p = getTypeName();
+    while (*p != '\0')
+      ++p;
+    // Return the next address
+    return p + 1;
+  }
+
+  unsigned getIntegerBitCount() const {
+    DCHECK(isIntegerTy());
+    if (isSignedBitIntTy()) {
+      u32 BitCountValue;
+      internal_memcpy(&BitCountValue, getBitIntBitCountPointer(),
+                      sizeof(BitCountValue));
+      return BitCountValue;
+    } else
+      return getIntegerBitWidth();
   }
 
   bool isFloatTy() const { return getKind() == TK_Float; }

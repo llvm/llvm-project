@@ -200,9 +200,7 @@ public:
 
   /// canRematerializeAt - Determine if ParentVNI can be rematerialized at
   /// UseIdx. It is assumed that parent_.getVNINfoAt(UseIdx) == ParentVNI.
-  /// When cheapAsAMove is set, only cheap remats are allowed.
-  bool canRematerializeAt(Remat &RM, VNInfo *OrigVNI, SlotIndex UseIdx,
-                          bool cheapAsAMove);
+  bool canRematerializeAt(Remat &RM, VNInfo *OrigVNI, SlotIndex UseIdx);
 
   /// rematerializeAt - Rematerialize RM.ParentVNI into DestReg by inserting an
   /// instruction into MBB before MI. The new instruction is mapped, but
@@ -237,7 +235,7 @@ public:
   /// allocator.  These registers should not be split into new intervals
   /// as currently those new intervals are not guaranteed to spill.
   void eliminateDeadDefs(SmallVectorImpl<MachineInstr *> &Dead,
-                         ArrayRef<Register> RegsBeingSpilled = std::nullopt);
+                         ArrayRef<Register> RegsBeingSpilled = {});
 
   /// calculateRegClassAndHint - Recompute register class and hint for each new
   /// register.

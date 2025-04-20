@@ -83,7 +83,11 @@ ModuleSP DynamicLoader::GetTargetExecutable() {
       ModuleSpec module_spec(executable->GetFileSpec(),
                              executable->GetArchitecture());
       auto module_sp = std::make_shared<Module>(module_spec);
-
+      // If we're a coredump and we already have a main executable, we don't
+      // need to reload the module list that target already has
+      if (!m_process->IsLiveDebugSession()) {
+        return executable;
+      }
       // Check if the executable has changed and set it to the target
       // executable if they differ.
       if (module_sp && module_sp->GetUUID().IsValid() &&
@@ -153,6 +157,10 @@ DynamicLoader::GetSectionListFromModule(const ModuleSP module) const {
 ModuleSP DynamicLoader::FindModuleViaTarget(const FileSpec &file) {
   Target &target = m_process->GetTarget();
   ModuleSpec module_spec(file, target.GetArchitecture());
+  if (UUID uuid = m_process->FindModuleUUID(file.GetPath())) {
+    // Process may be able to augment the module_spec with UUID, e.g. ELF core.
+    module_spec.GetUUID() = uuid;
+  }
 
   if (ModuleSP module_sp = target.GetImages().FindFirstModule(module_spec))
     return module_sp;
@@ -255,7 +263,7 @@ ModuleSP DynamicLoader::LoadBinaryWithUUIDAndAddress(
         module_sp = std::make_shared<Module>(module_spec);
       } else if (force_symbol_search && error.AsCString("") &&
                  error.AsCString("")[0] != '\0') {
-        target.GetDebugger().GetErrorStream() << error.AsCString();
+        *target.GetDebugger().GetAsyncErrorStream() << error.AsCString();
       }
     }
 
@@ -320,19 +328,19 @@ ModuleSP DynamicLoader::LoadBinaryWithUUIDAndAddress(
     }
   } else {
     if (force_symbol_search) {
-      Stream &s = target.GetDebugger().GetErrorStream();
-      s.Printf("Unable to find file");
+      lldb::StreamUP s = target.GetDebugger().GetAsyncErrorStream();
+      s->Printf("Unable to find file");
       if (!name.empty())
-        s.Printf(" %s", name.str().c_str());
+        s->Printf(" %s", name.str().c_str());
       if (uuid.IsValid())
-        s.Printf(" with UUID %s", uuid.GetAsString().c_str());
+        s->Printf(" with UUID %s", uuid.GetAsString().c_str());
       if (value != LLDB_INVALID_ADDRESS) {
         if (value_is_offset)
-          s.Printf(" with slide 0x%" PRIx64, value);
+          s->Printf(" with slide 0x%" PRIx64, value);
         else
-          s.Printf(" at address 0x%" PRIx64, value);
+          s->Printf(" at address 0x%" PRIx64, value);
       }
-      s.Printf("\n");
+      s->Printf("\n");
     }
     LLDB_LOGF(log,
               "Unable to find binary %s with UUID %s and load it at "
@@ -369,4 +377,3 @@ void DynamicLoader::LoadOperatingSystemPlugin(bool flush)
     if (m_process)
         m_process->LoadOperatingSystemPlugin(flush);
 }
-

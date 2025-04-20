@@ -27,7 +27,6 @@
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
-#include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/Expression/ExpressionSourceCode.h"
 #include "lldb/Expression/IRExecutionUnit.h"
 #include "lldb/Expression/IRInterpreter.h"
@@ -51,6 +50,7 @@
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
+#include "lldb/ValueObject/ValueObjectConstResult.h"
 
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
@@ -161,7 +161,7 @@ void ClangUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
                                       "generic context";
 
         if (!variable_list_sp) {
-          err.SetErrorString(thisErrorString);
+          err = Status::FromErrorString(thisErrorString);
           return;
         }
 
@@ -170,7 +170,7 @@ void ClangUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
 
         if (!this_var_sp || !this_var_sp->IsInScope(frame) ||
             !this_var_sp->LocationIsValidForFrame(frame)) {
-          err.SetErrorString(thisErrorString);
+          err = Status::FromErrorString(thisErrorString);
           return;
         }
       }
@@ -191,7 +191,7 @@ void ClangUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
                                       "are in a generic context";
 
         if (!variable_list_sp) {
-          err.SetErrorString(selfErrorString);
+          err = Status::FromErrorString(selfErrorString);
           return;
         }
 
@@ -200,7 +200,7 @@ void ClangUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
 
         if (!self_variable_sp || !self_variable_sp->IsInScope(frame) ||
             !self_variable_sp->LocationIsValidForFrame(frame)) {
-          err.SetErrorString(selfErrorString);
+          err = Status::FromErrorString(selfErrorString);
           return;
         }
       }
@@ -235,7 +235,7 @@ void ClangUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
                                         "are in a generic context";
 
           if (!variable_list_sp) {
-            err.SetErrorString(thisErrorString);
+            err = Status::FromErrorString(thisErrorString);
             return;
           }
 
@@ -244,7 +244,7 @@ void ClangUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
 
           if (!this_var_sp || !this_var_sp->IsInScope(frame) ||
               !this_var_sp->LocationIsValidForFrame(frame)) {
-            err.SetErrorString(thisErrorString);
+            err = Status::FromErrorString(thisErrorString);
             return;
           }
         }
@@ -262,7 +262,7 @@ void ClangUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
               "generic context";
 
           if (!variable_list_sp) {
-            err.SetErrorString(selfErrorString);
+            err = Status::FromErrorString(selfErrorString);
             return;
           }
 
@@ -271,21 +271,21 @@ void ClangUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
 
           if (!self_variable_sp || !self_variable_sp->IsInScope(frame) ||
               !self_variable_sp->LocationIsValidForFrame(frame)) {
-            err.SetErrorString(selfErrorString);
+            err = Status::FromErrorString(selfErrorString);
             return;
           }
 
           Type *self_type = self_variable_sp->GetType();
 
           if (!self_type) {
-            err.SetErrorString(selfErrorString);
+            err = Status::FromErrorString(selfErrorString);
             return;
           }
 
           CompilerType self_clang_type = self_type->GetForwardCompilerType();
 
           if (!self_clang_type) {
-            err.SetErrorString(selfErrorString);
+            err = Status::FromErrorString(selfErrorString);
             return;
           }
 
@@ -296,7 +296,7 @@ void ClangUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
             m_in_objectivec_method = true;
             m_needs_object_ptr = true;
           } else {
-            err.SetErrorString(selfErrorString);
+            err = Status::FromErrorString(selfErrorString);
             return;
           }
         } else {
@@ -861,7 +861,7 @@ lldb::addr_t ClangUserExpression::GetCppObjectPointer(
   lldb::addr_t ret = valobj_sp->GetValueAsUnsigned(LLDB_INVALID_ADDRESS);
 
   if (ret == LLDB_INVALID_ADDRESS) {
-    err.SetErrorStringWithFormatv(
+    err = Status::FromErrorStringWithFormatv(
         "Couldn't load '{0}' because its value couldn't be evaluated",
         object_name);
     return LLDB_INVALID_ADDRESS;
@@ -901,8 +901,8 @@ bool ClangUserExpression::AddArguments(ExecutionContext &exe_ctx,
       object_ptr = m_ctx_obj->GetAddressOf(false, &address_type);
       if (object_ptr == LLDB_INVALID_ADDRESS ||
           address_type != eAddressTypeLoad)
-        object_ptr_error.SetErrorString("Can't get context object's "
-                                        "debuggee address");
+        object_ptr_error = Status::FromErrorString("Can't get context object's "
+                                                   "debuggee address");
     } else {
       if (m_in_cplusplus_method) {
         object_ptr =

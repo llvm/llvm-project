@@ -67,7 +67,7 @@ AllocaInst *RandomIRBuilder::createStackMemory(Function *F, Type *Ty,
                                                Value *Init) {
   /// TODO: For all Allocas, maybe allocate an array.
   BasicBlock *EntryBB = &F->getEntryBlock();
-  DataLayout DL(F->getParent());
+  const DataLayout &DL = F->getDataLayout();
   AllocaInst *Alloca = new AllocaInst(Ty, DL.getAllocaAddrSpace(), "A",
                                       EntryBB->getFirstInsertionPt());
   if (Init)
@@ -81,13 +81,11 @@ RandomIRBuilder::findOrCreateGlobalVariable(Module *M, ArrayRef<Value *> Srcs,
   auto MatchesPred = [&Srcs, &Pred](GlobalVariable *GV) {
     // Can't directly compare GV's type, as it would be a pointer to the actual
     // type.
-    return Pred.matches(Srcs, UndefValue::get(GV->getValueType()));
+    return Pred.matches(Srcs, PoisonValue::get(GV->getValueType()));
   };
   bool DidCreate = false;
-  SmallVector<GlobalVariable *, 4> GlobalVars;
-  for (GlobalVariable &GV : M->globals()) {
-    GlobalVars.push_back(&GV);
-  }
+  SmallVector<GlobalVariable *, 4> GlobalVars(
+      llvm::make_pointer_range(M->globals()));
   auto RS = makeSampler(Rand, make_filter_range(GlobalVars, MatchesPred));
   RS.sample(nullptr, 1);
   GlobalVariable *GV = RS.getSelection();
@@ -146,10 +144,8 @@ Value *RandomIRBuilder::findOrCreateSource(BasicBlock &BB,
       auto Dominators = getDominators(&BB);
       std::shuffle(Dominators.begin(), Dominators.end(), Rand);
       for (BasicBlock *Dom : Dominators) {
-        SmallVector<Instruction *, 16> Instructions;
-        for (Instruction &I : *Dom) {
-          Instructions.push_back(&I);
-        }
+        SmallVector<Instruction *, 16> Instructions(
+            llvm::make_pointer_range(*Dom));
         auto RS =
             makeSampler(Rand, make_filter_range(Instructions, MatchesPred));
         // Also consider choosing no source, meaning we want a new one.
@@ -368,9 +364,9 @@ Instruction *RandomIRBuilder::newSink(BasicBlock &BB,
   if (!Ptr) {
     if (uniform(Rand, 0, 1)) {
       Type *Ty = V->getType();
-      Ptr = createStackMemory(BB.getParent(), Ty, UndefValue::get(Ty));
+      Ptr = createStackMemory(BB.getParent(), Ty, PoisonValue::get(Ty));
     } else {
-      Ptr = UndefValue::get(PointerType::get(V->getType(), 0));
+      Ptr = PoisonValue::get(PointerType::get(V->getContext(), 0));
     }
   }
 
@@ -423,7 +419,7 @@ Function *RandomIRBuilder::createFunctionDefinition(Module &M,
   // TODO: Some arguments and a return value would probably be more
   // interesting.
   LLVMContext &Context = M.getContext();
-  DataLayout DL(&M);
+  const DataLayout &DL = M.getDataLayout();
   BasicBlock *BB = BasicBlock::Create(Context, "BB", F);
   Type *RetTy = F->getReturnType();
   if (RetTy != Type::getVoidTy(Context)) {

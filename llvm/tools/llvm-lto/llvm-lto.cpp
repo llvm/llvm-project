@@ -109,7 +109,7 @@ enum ThinLTOModes {
   THINALL
 };
 
-cl::opt<ThinLTOModes> ThinLTOMode(
+static cl::opt<ThinLTOModes> ThinLTOMode(
     "thinlto-action", cl::desc("Perform a single ThinLTO stage:"),
     cl::values(
         clEnumValN(
@@ -264,15 +264,6 @@ static cl::opt<bool>
     LTOSaveBeforeOpt("lto-save-before-opt", cl::init(false),
                      cl::desc("Save the IR before running optimizations"));
 
-static cl::opt<bool> TryUseNewDbgInfoFormat(
-    "try-experimental-debuginfo-iterators",
-    cl::desc("Enable debuginfo iterator positions, if they're built in"),
-    cl::init(false), cl::Hidden);
-
-extern cl::opt<bool> UseNewDbgInfoFormat;
-extern cl::opt<cl::boolOrDefault> LoadBitcodeIntoNewDbgInfoFormat;
-extern cl::opt<cl::boolOrDefault> PreserveInputDbgFormat;
-
 namespace {
 
 struct ModuleInfo {
@@ -407,6 +398,64 @@ static void printIndexStats() {
   }
 }
 
+/// Print the lto symbol attributes.
+static void printLTOSymbolAttributes(lto_symbol_attributes Attrs) {
+  outs() << "{ ";
+  unsigned Permission = Attrs & LTO_SYMBOL_PERMISSIONS_MASK;
+  switch (Permission) {
+  case LTO_SYMBOL_PERMISSIONS_CODE:
+    outs() << "function ";
+    break;
+  case LTO_SYMBOL_PERMISSIONS_DATA:
+    outs() << "data ";
+    break;
+  case LTO_SYMBOL_PERMISSIONS_RODATA:
+    outs() << "constant ";
+    break;
+  }
+  unsigned Definition = Attrs & LTO_SYMBOL_DEFINITION_MASK;
+  switch (Definition) {
+  case LTO_SYMBOL_DEFINITION_REGULAR:
+    outs() << "defined ";
+    break;
+  case LTO_SYMBOL_DEFINITION_TENTATIVE:
+    outs() << "common ";
+    break;
+  case LTO_SYMBOL_DEFINITION_WEAK:
+    outs() << "weak ";
+    break;
+  case LTO_SYMBOL_DEFINITION_UNDEFINED:
+    outs() << "extern ";
+    break;
+  case LTO_SYMBOL_DEFINITION_WEAKUNDEF:
+    outs() << "extern-weak ";
+    break;
+  }
+  unsigned Scope = Attrs & LTO_SYMBOL_SCOPE_MASK;
+  switch (Scope) {
+  case LTO_SYMBOL_SCOPE_INTERNAL:
+    outs() << "internal ";
+    break;
+  case LTO_SYMBOL_SCOPE_HIDDEN:
+    outs() << "hidden ";
+    break;
+  case LTO_SYMBOL_SCOPE_PROTECTED:
+    outs() << "protected ";
+    break;
+  case LTO_SYMBOL_SCOPE_DEFAULT:
+    outs() << "default ";
+    break;
+  case LTO_SYMBOL_SCOPE_DEFAULT_CAN_BE_HIDDEN:
+    outs() << "omitted ";
+    break;
+  }
+  if (Attrs & LTO_SYMBOL_COMDAT)
+    outs() << "comdat ";
+  if (Attrs & LTO_SYMBOL_ALIAS)
+    outs() << "alias ";
+  outs() << "}";
+}
+
 /// Load each IR file and dump certain information based on active flags.
 ///
 /// The main point here is to provide lit-testable coverage for the LTOModule
@@ -421,8 +470,11 @@ static void testLTOModule(const TargetOptions &Options) {
     if (ListSymbolsOnly) {
       // List the symbols.
       outs() << Filename << ":\n";
-      for (int I = 0, E = Module->getSymbolCount(); I != E; ++I)
-        outs() << Module->getSymbolName(I) << "\n";
+      for (int I = 0, E = Module->getSymbolCount(); I != E; ++I) {
+        outs() << Module->getSymbolName(I) << "    ";
+        printLTOSymbolAttributes(Module->getSymbolAttributes(I));
+        outs() << "\n";
+      }
     }
     if (QueryHasCtorDtor)
       outs() << Filename
@@ -691,7 +743,7 @@ private:
 
       // Build a map of module to the GUIDs and summary objects that should
       // be written to its index.
-      std::map<std::string, GVSummaryMapTy> ModuleToSummariesForIndex;
+      ModuleToSummariesForIndexTy ModuleToSummariesForIndex;
       GVSummaryPtrSet DecSummaries;
       ThinGenerator.gatherImportedSummariesForModule(
           *TheModule, *Index, ModuleToSummariesForIndex, DecSummaries, *Input);
@@ -946,20 +998,6 @@ int main(int argc, char **argv) {
   InitLLVM X(argc, argv);
   cl::HideUnrelatedOptions({&LTOCategory, &getColorCategory()});
   cl::ParseCommandLineOptions(argc, argv, "llvm LTO linker\n");
-  // Load bitcode into the new debug info format by default.
-  if (LoadBitcodeIntoNewDbgInfoFormat == cl::boolOrDefault::BOU_UNSET)
-    LoadBitcodeIntoNewDbgInfoFormat = cl::boolOrDefault::BOU_TRUE;
-
-  // RemoveDIs debug-info transition: tests may request that we /try/ to use the
-  // new debug-info format.
-  if (TryUseNewDbgInfoFormat) {
-    // Turn the new debug-info format on.
-    UseNewDbgInfoFormat = true;
-  }
-  // Since llvm-lto collects multiple IR modules together, for simplicity's sake
-  // we disable the "PreserveInputDbgFormat" flag to enforce a single debug info
-  // format.
-  PreserveInputDbgFormat = cl::boolOrDefault::BOU_FALSE;
 
   if (OptLevel < '0' || OptLevel > '3')
     error("optimization level must be between 0 and 3");
@@ -1041,9 +1079,7 @@ int main(int argc, char **argv) {
   CodeGen.setTargetOptions(Options);
   CodeGen.setShouldRestoreGlobalsLinkage(RestoreGlobalsLinkage);
 
-  StringSet<MallocAllocator> DSOSymbolsSet;
-  for (unsigned i = 0; i < DSOSymbols.size(); ++i)
-    DSOSymbolsSet.insert(DSOSymbols[i]);
+  StringSet<MallocAllocator> DSOSymbolsSet(llvm::from_range, DSOSymbols);
 
   std::vector<std::string> KeptDSOSyms;
 

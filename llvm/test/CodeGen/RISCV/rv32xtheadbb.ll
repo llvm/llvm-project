@@ -224,6 +224,37 @@ define i64 @cttz_i64(i64 %a) nounwind {
   ret i64 %1
 }
 
+define i32 @sexti1_i32(i32 %a) nounwind {
+; RV32I-LABEL: sexti1_i32:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    slli a0, a0, 31
+; RV32I-NEXT:    srai a0, a0, 31
+; RV32I-NEXT:    ret
+;
+; RV32XTHEADBB-LABEL: sexti1_i32:
+; RV32XTHEADBB:       # %bb.0:
+; RV32XTHEADBB-NEXT:    th.ext a0, a0, 0, 0
+; RV32XTHEADBB-NEXT:    ret
+  %shl = shl i32 %a, 31
+  %shr = ashr exact i32 %shl, 31
+  ret i32 %shr
+}
+
+define i32 @sexti1_i32_2(i1 %a) nounwind {
+; RV32I-LABEL: sexti1_i32_2:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    slli a0, a0, 31
+; RV32I-NEXT:    srai a0, a0, 31
+; RV32I-NEXT:    ret
+;
+; RV32XTHEADBB-LABEL: sexti1_i32_2:
+; RV32XTHEADBB:       # %bb.0:
+; RV32XTHEADBB-NEXT:    th.ext a0, a0, 0, 0
+; RV32XTHEADBB-NEXT:    ret
+  %sext = sext i1 %a to i32
+  ret i32 %sext
+}
+
 define i32 @sextb_i32(i32 %a) nounwind {
 ; RV32I-LABEL: sextb_i32:
 ; RV32I:       # %bb.0:
@@ -367,11 +398,11 @@ define i32 @bswap_i32(i32 %a) nounwind {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    srli a1, a0, 8
 ; RV32I-NEXT:    lui a2, 16
+; RV32I-NEXT:    srli a3, a0, 24
 ; RV32I-NEXT:    addi a2, a2, -256
 ; RV32I-NEXT:    and a1, a1, a2
-; RV32I-NEXT:    srli a3, a0, 24
-; RV32I-NEXT:    or a1, a1, a3
 ; RV32I-NEXT:    and a2, a0, a2
+; RV32I-NEXT:    or a1, a1, a3
 ; RV32I-NEXT:    slli a2, a2, 8
 ; RV32I-NEXT:    slli a0, a0, 24
 ; RV32I-NEXT:    or a0, a0, a2
@@ -393,25 +424,24 @@ define i64 @bswap_i64(i64 %a) {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    srli a2, a1, 8
 ; RV32I-NEXT:    lui a3, 16
+; RV32I-NEXT:    srli a4, a1, 24
+; RV32I-NEXT:    srli a5, a0, 8
 ; RV32I-NEXT:    addi a3, a3, -256
 ; RV32I-NEXT:    and a2, a2, a3
-; RV32I-NEXT:    srli a4, a1, 24
 ; RV32I-NEXT:    or a2, a2, a4
-; RV32I-NEXT:    and a4, a1, a3
-; RV32I-NEXT:    slli a4, a4, 8
-; RV32I-NEXT:    slli a1, a1, 24
-; RV32I-NEXT:    or a1, a1, a4
-; RV32I-NEXT:    or a2, a1, a2
-; RV32I-NEXT:    srli a1, a0, 8
-; RV32I-NEXT:    and a1, a1, a3
 ; RV32I-NEXT:    srli a4, a0, 24
-; RV32I-NEXT:    or a1, a1, a4
+; RV32I-NEXT:    and a5, a5, a3
+; RV32I-NEXT:    or a4, a5, a4
+; RV32I-NEXT:    slli a5, a1, 24
+; RV32I-NEXT:    and a1, a1, a3
+; RV32I-NEXT:    slli a1, a1, 8
+; RV32I-NEXT:    or a1, a5, a1
 ; RV32I-NEXT:    and a3, a0, a3
-; RV32I-NEXT:    slli a3, a3, 8
 ; RV32I-NEXT:    slli a0, a0, 24
-; RV32I-NEXT:    or a0, a0, a3
-; RV32I-NEXT:    or a1, a0, a1
-; RV32I-NEXT:    mv a0, a2
+; RV32I-NEXT:    slli a3, a3, 8
+; RV32I-NEXT:    or a3, a0, a3
+; RV32I-NEXT:    or a0, a1, a2
+; RV32I-NEXT:    or a1, a3, a4
 ; RV32I-NEXT:    ret
 ;
 ; RV32XTHEADBB-LABEL: bswap_i64:

@@ -17,6 +17,9 @@ extern "C" int main(int argc, char **argv, char **envp);
 
 namespace LIBC_NAMESPACE_DECL {
 
+// FIXME: Factor this out into common logic so we don't need to stub it here.
+void teardown_main_tls() {}
+
 DataEnvironment app;
 
 extern "C" uintptr_t __init_array_start[];
@@ -41,7 +44,9 @@ static void call_fini_array_callbacks() {
 
 } // namespace LIBC_NAMESPACE_DECL
 
-extern "C" [[gnu::visibility("protected"), clang::amdgpu_kernel]] void
+extern "C" [[gnu::visibility("protected"), clang::amdgpu_kernel,
+             clang::amdgpu_flat_work_group_size(1, 1),
+             clang::amdgpu_max_num_work_groups(1)]] void
 _begin(int argc, char **argv, char **env) {
   __atomic_store_n(&LIBC_NAMESPACE::app.env_ptr,
                    reinterpret_cast<uintptr_t *>(env), __ATOMIC_RELAXED);
@@ -60,7 +65,9 @@ _start(int argc, char **argv, char **envp, int *ret) {
   __atomic_fetch_or(ret, main(argc, argv, envp), __ATOMIC_RELAXED);
 }
 
-extern "C" [[gnu::visibility("protected"), clang::amdgpu_kernel]] void
+extern "C" [[gnu::visibility("protected"), clang::amdgpu_kernel,
+             clang::amdgpu_flat_work_group_size(1, 1),
+             clang::amdgpu_max_num_work_groups(1)]] void
 _end(int retval) {
   // Only a single thread should call `exit` here, the rest should gracefully
   // return from the kernel. This is so only one thread calls the destructors

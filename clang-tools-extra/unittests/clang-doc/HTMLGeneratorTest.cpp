@@ -28,9 +28,11 @@ std::unique_ptr<Generator> getHTMLGenerator() {
 
 ClangDocContext
 getClangDocContext(std::vector<std::string> UserStylesheets = {},
-                   StringRef RepositoryUrl = "") {
+                   StringRef RepositoryUrl = "",
+                   StringRef RepositoryLinePrefix = "", StringRef Base = "") {
   ClangDocContext CDCtx{
-      {}, "test-project", {}, {}, {}, RepositoryUrl, UserStylesheets};
+      {},   "test-project", {}, {}, {}, RepositoryUrl, RepositoryLinePrefix,
+      Base, UserStylesheets};
   CDCtx.UserStylesheets.insert(
       CDCtx.UserStylesheets.begin(),
       "../share/clang/clang-doc-default-stylesheet.css");
@@ -92,7 +94,13 @@ TEST(HTMLGeneratorTest, emitNamespaceHTML) {
     </div>
     <h2 id="Enums">Enums</h2>
     <div>
-      <h3 id="0000000000000000000000000000000000000000">enum OneEnum</h3>
+      <table id="0000000000000000000000000000000000000000">
+        <thead>
+          <tr>
+            <th colspan="2">enum OneEnum</th>
+          </tr>
+        </thead>
+      </table>
     </div>
   </div>
   <div id="sidebar-right" class="col-xs-6 col-sm-6 col-md-2 sidebar sidebar-offcanvas-right">
@@ -197,7 +205,9 @@ TEST(HTMLGeneratorTest, emitRecordHTML) {
     </p>
     <h2 id="Members">Members</h2>
     <ul>
-      <li>private int X</li>
+      <li>
+        <div>private int X</div>
+      </li>
     </ul>
     <h2 id="Records">Records</h2>
     <ul>
@@ -212,7 +222,13 @@ TEST(HTMLGeneratorTest, emitRecordHTML) {
     </div>
     <h2 id="Enums">Enums</h2>
     <div>
-      <h3 id="0000000000000000000000000000000000000000">enum OneEnum</h3>
+      <table id="0000000000000000000000000000000000000000">
+        <thead>
+          <tr>
+            <th colspan="2">enum OneEnum</th>
+          </tr>
+        </thead>
+      </table>
     </div>
   </div>
   <div id="sidebar-right" class="col-xs-6 col-sm-6 col-md-2 sidebar sidebar-offcanvas-right">
@@ -305,7 +321,12 @@ TEST(HTMLGeneratorTest, emitFunctionHTML) {
       <a href="path/to/int.html">int</a>
        P)
     </p>
-    <p>Defined at line 10 of file dir/test.cpp</p>
+    <p>
+      Defined at line 
+      <a href="https://www.repository.com/dir/test.cpp#10">10</a>
+       of file 
+      <a href="https://www.repository.com/dir/test.cpp">test.cpp</a>
+    </p>
   </div>
   <div id="sidebar-right" class="col-xs-6 col-sm-6 col-md-2 sidebar sidebar-offcanvas-right"></div>
 </main>
@@ -346,10 +367,19 @@ TEST(HTMLGeneratorTest, emitEnumHTML) {
 <main>
   <div id="sidebar-left" path="" class="col-xs-6 col-sm-3 col-md-2 sidebar sidebar-offcanvas-left"></div>
   <div id="main-content" class="col-xs-12 col-sm-9 col-md-8 main-content">
-    <h3 id="0000000000000000000000000000000000000000">enum class e</h3>
-    <ul>
-      <li>X</li>
-    </ul>
+    <table id="0000000000000000000000000000000000000000">
+      <thead>
+        <tr>
+          <th colspan="2">enum class e</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>X</td>
+          <td>0</td>
+        </tr>
+      </tbody>
+    </table>
     <p>
       Defined at line 
       <a href="https://www.repository.com/test.cpp#10">10</a>

@@ -175,18 +175,18 @@ public:
   static dwarf::Form BestForm(bool IsSigned, uint64_t Int) {
     if (IsSigned) {
       const int64_t SignedInt = Int;
-      if ((char)Int == SignedInt)
+      if ((int8_t)Int == SignedInt)
         return dwarf::DW_FORM_data1;
-      if ((short)Int == SignedInt)
+      if ((int16_t)Int == SignedInt)
         return dwarf::DW_FORM_data2;
-      if ((int)Int == SignedInt)
+      if ((int32_t)Int == SignedInt)
         return dwarf::DW_FORM_data4;
     } else {
-      if ((unsigned char)Int == Int)
+      if ((uint8_t)Int == Int)
         return dwarf::DW_FORM_data1;
-      if ((unsigned short)Int == Int)
+      if ((uint16_t)Int == Int)
         return dwarf::DW_FORM_data2;
-      if ((unsigned int)Int == Int)
+      if ((uint32_t)Int == Int)
         return dwarf::DW_FORM_data4;
     }
     return dwarf::DW_FORM_data8;
@@ -1025,11 +1025,11 @@ public:
     if (DwarfVersion > 3)
       return dwarf::DW_FORM_exprloc;
     // Pre-DWARF4 location expressions were blocks and not exprloc.
-    if ((unsigned char)Size == Size)
+    if ((uint8_t)Size == Size)
       return dwarf::DW_FORM_block1;
-    if ((unsigned short)Size == Size)
+    if ((uint16_t)Size == Size)
       return dwarf::DW_FORM_block2;
-    if ((unsigned int)Size == Size)
+    if ((uint32_t)Size == Size)
       return dwarf::DW_FORM_block4;
     return dwarf::DW_FORM_block;
   }
@@ -1058,11 +1058,11 @@ public:
   /// BestForm - Choose the best form for data.
   ///
   dwarf::Form BestForm() const {
-    if ((unsigned char)Size == Size)
+    if ((uint8_t)Size == Size)
       return dwarf::DW_FORM_block1;
-    if ((unsigned short)Size == Size)
+    if ((uint16_t)Size == Size)
       return dwarf::DW_FORM_block2;
-    if ((unsigned int)Size == Size)
+    if ((uint32_t)Size == Size)
       return dwarf::DW_FORM_block4;
     return dwarf::DW_FORM_block;
   }

@@ -9,20 +9,9 @@
 #ifndef FORTRAN_RUNTIME_CUDA_ALLOCATOR_H_
 #define FORTRAN_RUNTIME_CUDA_ALLOCATOR_H_
 
-#include "flang/Runtime/descriptor.h"
+#include "common.h"
+#include "flang/Runtime/descriptor-consts.h"
 #include "flang/Runtime/entry-names.h"
-
-#define CUDA_REPORT_IF_ERROR(expr) \
-  [](CUresult result) { \
-    if (!result) \
-      return; \
-    const char *name = nullptr; \
-    cuGetErrorName(result, &name); \
-    if (!name) \
-      name = "<unknown>"; \
-    Terminator terminator{__FILE__, __LINE__}; \
-    terminator.Crash("'%s' failed with '%s'", #expr, name); \
-  }(expr)
 
 namespace Fortran::runtime::cuda {
 
@@ -31,16 +20,16 @@ extern "C" {
 void RTDECL(CUFRegisterAllocator)();
 }
 
-void *CUFAllocPinned(std::size_t);
+void *CUFAllocPinned(std::size_t, std::int64_t);
 void CUFFreePinned(void *);
 
-void *CUFAllocDevice(std::size_t);
+void *CUFAllocDevice(std::size_t, std::int64_t);
 void CUFFreeDevice(void *);
 
-void *CUFAllocManaged(std::size_t);
+void *CUFAllocManaged(std::size_t, std::int64_t);
 void CUFFreeManaged(void *);
 
-void *CUFAllocUnified(std::size_t);
+void *CUFAllocUnified(std::size_t, std::int64_t);
 void CUFFreeUnified(void *);
 
 } // namespace Fortran::runtime::cuda

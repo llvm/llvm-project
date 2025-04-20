@@ -1,5 +1,5 @@
 """
-Test lldb-dap setBreakpoints request
+Test lldb-dap attach request
 """
 
 
@@ -39,13 +39,12 @@ class TestDAP_attach(lldbdap_testcase.DAPTestCaseBase):
         if continueToExit:
             self.continue_to_exit()
 
-    @skipIfWindows
     @skipIfNetBSD  # Hangs on NetBSD as well
     def test_by_pid(self):
         """
         Tests attaching to a process by process ID.
         """
-        self.build_and_create_debug_adaptor()
+        self.build_and_create_debug_adapter()
         program = self.getBuildArtifact("a.out")
         self.process = subprocess.Popen(
             [program],
@@ -56,13 +55,12 @@ class TestDAP_attach(lldbdap_testcase.DAPTestCaseBase):
         self.attach(pid=self.process.pid)
         self.set_and_hit_breakpoint(continueToExit=True)
 
-    @skipIfWindows
     @skipIfNetBSD  # Hangs on NetBSD as well
     def test_by_name(self):
         """
         Tests attaching to a process by process name.
         """
-        self.build_and_create_debug_adaptor()
+        self.build_and_create_debug_adapter()
         orig_program = self.getBuildArtifact("a.out")
         # Since we are going to attach by process name, we need a unique
         # process name that has minimal chance to match a process that is
@@ -103,7 +101,7 @@ class TestDAP_attach(lldbdap_testcase.DAPTestCaseBase):
         next instance of a process to be launched, ingoring all current
         ones.
         """
-        self.build_and_create_debug_adaptor()
+        self.build_and_create_debug_adapter()
         program = self.getBuildArtifact("a.out")
         self.spawn_thread = threading.Thread(
             target=spawn_and_wait,
@@ -116,12 +114,8 @@ class TestDAP_attach(lldbdap_testcase.DAPTestCaseBase):
         self.attach(program=program, waitFor=True)
         self.set_and_hit_breakpoint(continueToExit=True)
 
-    @skipIfWindows
     @skipIfDarwin
     @skipIfNetBSD  # Hangs on NetBSD as well
-    @skipIf(
-        archs=["arm", "aarch64"]
-    )  # Example of a flaky run http://lab.llvm.org:8011/builders/lldb-aarch64-ubuntu/builds/5527/steps/test/logs/stdio
     def test_commands(self):
         """
         Tests the "initCommands", "preRunCommands", "stopCommands",
@@ -143,7 +137,7 @@ class TestDAP_attach(lldbdap_testcase.DAPTestCaseBase):
         "terminateCommands" are a list of LLDB commands that get executed when
         the debugger session terminates.
         """
-        self.build_and_create_debug_adaptor()
+        self.build_and_create_debug_adapter()
         program = self.getBuildArtifact("a.out")
         # Here we just create a target and launch the process as a way to test
         # if we are able to use attach commands to create any kind of a target
@@ -155,7 +149,7 @@ class TestDAP_attach(lldbdap_testcase.DAPTestCaseBase):
         initCommands = ["target list", "platform list"]
         preRunCommands = ["image list a.out", "image dump sections a.out"]
         postRunCommands = ["help trace", "help process trace"]
-        stopCommands = ["frame variable", "bt"]
+        stopCommands = ["frame variable", "thread backtrace"]
         exitCommands = ["expr 2+3", "expr 3+4"]
         terminateCommands = ["expr 4+2"]
         self.attach(
@@ -182,7 +176,7 @@ class TestDAP_attach(lldbdap_testcase.DAPTestCaseBase):
         breakpoint_ids = self.set_function_breakpoints(functions)
         self.assertEqual(len(breakpoint_ids), len(functions), "expect one breakpoint")
         self.continue_to_breakpoints(breakpoint_ids)
-        output = self.get_console(timeout=1.0)
+        output = self.collect_console(timeout_secs=10, pattern=stopCommands[-1])
         self.verify_commands("stopCommands", output, stopCommands)
 
         # Continue after launch and hit the "pause()" call and stop the target.
@@ -192,7 +186,7 @@ class TestDAP_attach(lldbdap_testcase.DAPTestCaseBase):
         time.sleep(0.5)
         self.dap_server.request_pause()
         self.dap_server.wait_for_stopped()
-        output = self.get_console(timeout=1.0)
+        output = self.collect_console(timeout_secs=10, pattern=stopCommands[-1])
         self.verify_commands("stopCommands", output, stopCommands)
 
         # Continue until the program exits
@@ -201,13 +195,12 @@ class TestDAP_attach(lldbdap_testcase.DAPTestCaseBase):
         # "exitCommands" that were run after the second breakpoint was hit
         # and the "terminateCommands" due to the debugging session ending
         output = self.collect_console(
-            timeout_secs=1.0,
+            timeout_secs=10.0,
             pattern=terminateCommands[0],
         )
         self.verify_commands("exitCommands", output, exitCommands)
         self.verify_commands("terminateCommands", output, terminateCommands)
 
-    @skipIfWindows
     @skipIfDarwin
     @skipIfNetBSD  # Hangs on NetBSD as well
     @skipIf(
@@ -218,7 +211,7 @@ class TestDAP_attach(lldbdap_testcase.DAPTestCaseBase):
         Tests that the "terminateCommands", that can be passed during
         attach, are run when the debugger is disconnected.
         """
-        self.build_and_create_debug_adaptor()
+        self.build_and_create_debug_adapter()
         program = self.getBuildArtifact("a.out")
         # Here we just create a target and launch the process as a way to test
         # if we are able to use attach commands to create any kind of a target

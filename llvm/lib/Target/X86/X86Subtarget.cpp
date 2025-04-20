@@ -283,8 +283,8 @@ void X86Subtarget::initSubtargetFeatures(StringRef CPU, StringRef TuneCPU,
   SmallVector<StringRef, 9> FeaturesIn64BitOnly = {
       "egpr", "push2pop2", "ppx", "ndd", "ccmp", "nf", "cf", "zu", "uintr"};
   if (FullFS.find("-64bit-mode") != std::string::npos)
-    llvm::for_each(FeaturesIn64BitOnly,
-                   [&](StringRef F) { FullFS += ",-" + F.str(); });
+    for (StringRef F : FeaturesIn64BitOnly)
+      FullFS += ",-" + F.str();
 
   // Parse features string and set the CPU.
   ParseSubtargetFeatures(CPU, TuneCPU, FullFS);
@@ -360,6 +360,9 @@ X86Subtarget::X86Subtarget(const Triple &TT, StringRef CPU, StringRef TuneCPU,
   RegBankInfo.reset(RBI);
   InstSelector.reset(createX86InstructionSelector(TM, *this, *RBI));
 }
+
+// Define the virtual destructor out-of-line for build efficiency.
+X86Subtarget::~X86Subtarget() = default;
 
 const CallLowering *X86Subtarget::getCallLowering() const {
   return CallLoweringInfo.get();

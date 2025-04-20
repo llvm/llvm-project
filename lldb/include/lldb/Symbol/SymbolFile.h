@@ -212,13 +212,13 @@ public:
   struct ArrayInfo {
     int64_t first_index = 0;
 
-    ///< Each entry belongs to a distinct DW_TAG_subrange_type.
-    ///< For multi-dimensional DW_TAG_array_types we would have
-    ///< an entry for each dimension. An entry represents the
-    ///< optional element count of the subrange.
+    /// Each entry belongs to a distinct DW_TAG_subrange_type.
+    /// For multi-dimensional DW_TAG_array_types we would have
+    /// an entry for each dimension. An entry represents the
+    /// optional element count of the subrange.
     ///
-    ///< The order of entries follows the order of the DW_TAG_subrange_type
-    ///< children of this DW_TAG_array_type.
+    /// The order of entries follows the order of the DW_TAG_subrange_type
+    /// children of this DW_TAG_array_type.
     llvm::SmallVector<std::optional<uint64_t>, 1> element_orders;
     uint32_t byte_stride = 0;
     uint32_t bit_stride = 0;
@@ -422,6 +422,9 @@ public:
   /// hasn't been indexed yet, or a valid duration if it has.
   virtual StatsDuration::Duration GetDebugInfoIndexTime() { return {}; }
 
+  /// Reset the statistics for the symbol file.
+  virtual void ResetStatistics() {}
+
   /// Get the additional modules that this symbol file uses to parse debug info.
   ///
   /// Some debug info is stored in stand alone object files that are represented
@@ -487,6 +490,8 @@ public:
     GetCompileOptions(args);
     return args;
   }
+
+  std::string GetObjectName() const;
 
 protected:
   void AssertModuleLock();

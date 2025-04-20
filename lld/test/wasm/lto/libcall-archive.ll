@@ -5,16 +5,18 @@
 ; RUN: wasm-ld -o %t %t.o %t.a
 ; RUN: obj2yaml %t | FileCheck %s
 
-target datalayout = "e-m:e-p:32:32-p10:8:8-p20:8:8-i64:64-n32:64-S128"
+target datalayout = "e-m:e-p:32:32-p10:8:8-p20:8:8-i64:64-n32:64-S128-ni:1:10:20"
 target triple = "wasm32-unknown-unknown"
 
-define void @_start(ptr %a, ptr %b) {
+define void @_start(ptr %a, ptr %b) #0 {
 entry:
   call void @llvm.memcpy.p0.p0.i64(ptr %a, ptr %b, i64 1024, i1 false)
   ret void
 }
 
 declare void @llvm.memcpy.p0.p0.i64(ptr nocapture, ptr nocapture, i64, i1)
+
+attributes #0 = { "target-features"="-bulk-memory,-bulk-memory-opt" }
 
 ; CHECK:       - Type:            CUSTOM
 ; CHECK-NEXT:    Name:            name

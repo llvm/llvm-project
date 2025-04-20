@@ -38,16 +38,10 @@ public:
   typename StopPointSite::SiteID Add(const StopPointSiteSP &site_sp) {
     lldb::addr_t site_load_addr = site_sp->GetLoadAddress();
     std::lock_guard<std::recursive_mutex> guard(m_mutex);
-    typename collection::iterator iter = m_site_list.find(site_load_addr);
-
     // Add site to the list.  However, if the element already exists in
     // the list, then we don't add it, and return InvalidSiteID.
-    if (iter == m_site_list.end()) {
-      m_site_list[site_load_addr] = site_sp;
-      return site_sp->GetID();
-    } else {
-      return UINT32_MAX;
-    }
+    bool inserted = m_site_list.try_emplace(site_load_addr, site_sp).second;
+    return inserted ? site_sp->GetID() : UINT32_MAX;
   }
 
   /// Standard Dump routine, doesn't do anything at present.

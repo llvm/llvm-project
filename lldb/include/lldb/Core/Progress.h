@@ -9,7 +9,7 @@
 #ifndef LLDB_CORE_PROGRESS_H
 #define LLDB_CORE_PROGRESS_H
 
-#include "lldb/Host/Alarm.h"
+#include "lldb/Utility/Timeout.h"
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-types.h"
 #include "llvm/ADT/StringMap.h"
@@ -17,6 +17,7 @@
 #include <cstdint>
 #include <mutex>
 #include <optional>
+#include <string>
 
 namespace lldb_private {
 
@@ -58,6 +59,12 @@ namespace lldb_private {
 
 class Progress {
 public:
+  /// Enum to indicate the origin of a progress event, internal or external.
+  enum class Origin : uint8_t {
+    eInternal = 0,
+    eExternal = 1,
+  };
+
   /// Construct a progress object that will report information.
   ///
   /// The constructor will create a unique progress reporting object and
@@ -81,7 +88,9 @@ public:
   /// progress is to be reported only to specific debuggers.
   Progress(std::string title, std::string details = {},
            std::optional<uint64_t> total = std::nullopt,
-           lldb_private::Debugger *debugger = nullptr);
+           lldb_private::Debugger *debugger = nullptr,
+           Timeout<std::nano> minimum_report_time = std::nullopt,
+           Origin origin = Origin::eInternal);
 
   /// Destroy the progress object.
   ///
@@ -106,90 +115,49 @@ public:
   /// Used to indicate a non-deterministic progress report
   static constexpr uint64_t kNonDeterministicTotal = UINT64_MAX;
 
-  /// Data belonging to this Progress event that is used for bookkeeping by
-  /// ProgressManager.
-  struct ProgressData {
-    /// The title of the progress activity, also used as a category.
-    std::string title;
-    /// A unique integer identifier for progress reporting.
-    uint64_t progress_id;
-    /// The optional debugger ID to report progress to. If this has no value
-    /// then all debuggers will receive this event.
-    std::optional<lldb::user_id_t> debugger_id;
-  };
+  /// The default report time for high frequency progress reports.
+  static constexpr std::chrono::milliseconds kDefaultHighFrequencyReportTime =
+      std::chrono::milliseconds(20);
 
 private:
   void ReportProgress();
   static std::atomic<uint64_t> g_id;
+
+  /// Total amount of work, use a std::nullopt in the constructor for non
+  /// deterministic progress.
+  const uint64_t m_total;
+
+  // Minimum amount of time between two progress reports.
+  const Timeout<std::nano> m_minimum_report_time;
+
+  /// The title of the progress activity, also used as a category.
+  const std::string m_title;
+
+  /// A unique integer identifier for progress reporting.
+  const uint64_t m_progress_id;
+
+  /// The optional debugger ID to report progress to. If this has no value
+  /// then all debuggers will receive this event.
+  const std::optional<lldb::user_id_t> m_debugger_id;
+
+  /// The origin of the progress event, whether it is internal or external.
+  const Origin m_origin;
+
+  /// How much work ([0...m_total]) that has been completed.
+  std::atomic<uint64_t> m_completed = 0;
+
+  /// Time (in nanoseconds since epoch) of the last progress report.
+  std::atomic<uint64_t> m_last_report_time_ns;
+
+  /// Guards non-const non-atomic members of the class.
+  std::mutex m_mutex;
+
   /// More specific information about the current file being displayed in the
   /// report.
   std::string m_details;
-  /// How much work ([0...m_total]) that has been completed.
-  uint64_t m_completed;
-  /// Total amount of work, use a std::nullopt in the constructor for non
-  /// deterministic progress.
-  uint64_t m_total;
-  std::mutex m_mutex;
-  /// Set to true when progress has been reported where m_completed == m_total
-  /// to ensure that we don't send progress updates after progress has
-  /// completed.
-  bool m_complete = false;
-  /// Data needed by the debugger to broadcast a progress event.
-  ProgressData m_progress_data;
-};
 
-/// A class used to group progress reports by category. This is done by using a
-/// map that maintains a refcount of each category of progress reports that have
-/// come in. Keeping track of progress reports this way will be done if a
-/// debugger is listening to the eBroadcastBitProgressByCategory broadcast bit.
-class ProgressManager {
-public:
-  ProgressManager();
-  ~ProgressManager();
-
-  /// Control the refcount of the progress report category as needed.
-  void Increment(const Progress::ProgressData &);
-  void Decrement(const Progress::ProgressData &);
-
-  static void Initialize();
-  static void Terminate();
-  static bool Enabled();
-  static ProgressManager &Instance();
-
-protected:
-  enum class EventType {
-    Begin,
-    End,
-  };
-  static void ReportProgress(const Progress::ProgressData &progress_data,
-                             EventType type);
-
-  static std::optional<ProgressManager> &InstanceImpl();
-
-  /// Helper function for reporting progress when the alarm in the corresponding
-  /// entry in the map expires.
-  void Expire(llvm::StringRef key);
-
-  /// Entry used for bookkeeping.
-  struct Entry {
-    /// Reference count used for overlapping events.
-    uint64_t refcount = 0;
-
-    /// Data used to emit progress events.
-    Progress::ProgressData data;
-
-    /// Alarm handle used when the refcount reaches zero.
-    Alarm::Handle handle = Alarm::INVALID_HANDLE;
-  };
-
-  /// Map used for bookkeeping.
-  llvm::StringMap<Entry> m_entries;
-
-  /// Mutex to provide the map.
-  std::mutex m_entries_mutex;
-
-  /// Alarm instance to coalesce progress events.
-  Alarm m_alarm;
+  /// The "completed" value of the last reported event.
+  std::optional<uint64_t> m_prev_completed;
 };
 
 } // namespace lldb_private

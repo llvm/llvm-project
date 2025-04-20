@@ -9,40 +9,224 @@
 #ifndef LLVM_ANALYSIS_DXILRESOURCE_H
 #define LLVM_ANALYSIS_DXILRESOURCE_H
 
-#include "llvm/IR/Value.h"
+#include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/GlobalVariable.h"
+#include "llvm/IR/PassManager.h"
+#include "llvm/Pass.h"
+#include "llvm/Support/Alignment.h"
 #include "llvm/Support/DXILABI.h"
 
 namespace llvm {
+class CallInst;
+class DataLayout;
+class LLVMContext;
 class MDTuple;
+class Value;
+
+class DXILResourceTypeMap;
 
 namespace dxil {
 
-class ResourceInfo {
-  struct ResourceBinding {
-    uint32_t UniqueID;
-    uint32_t Space;
-    uint32_t LowerBound;
-    uint32_t Size;
+/// The dx.RawBuffer target extension type
+///
+/// `target("dx.RawBuffer", Type, IsWriteable, IsROV)`
+class RawBufferExtType : public TargetExtType {
+public:
+  RawBufferExtType() = delete;
+  RawBufferExtType(const RawBufferExtType &) = delete;
+  RawBufferExtType &operator=(const RawBufferExtType &) = delete;
 
-    bool operator==(const ResourceBinding &RHS) const {
-      return std::tie(UniqueID, Space, LowerBound, Size) ==
-             std::tie(RHS.UniqueID, RHS.Space, RHS.LowerBound, RHS.Size);
-    }
-    bool operator!=(const ResourceBinding &RHS) const {
-      return !(*this == RHS);
-    }
-  };
+  bool isStructured() const {
+    // TODO: We need to be more prescriptive here, but since there's some debate
+    // over whether byte address buffer should have a void type or an i8 type,
+    // accept either for now.
+    Type *Ty = getTypeParameter(0);
+    return !Ty->isVoidTy() && !Ty->isIntegerTy(8);
+  }
 
+  Type *getResourceType() const {
+    return isStructured() ? getTypeParameter(0) : nullptr;
+  }
+  bool isWriteable() const { return getIntParameter(0); }
+  bool isROV() const { return getIntParameter(1); }
+
+  static bool classof(const TargetExtType *T) {
+    return T->getName() == "dx.RawBuffer";
+  }
+  static bool classof(const Type *T) {
+    return isa<TargetExtType>(T) && classof(cast<TargetExtType>(T));
+  }
+};
+
+/// The dx.TypedBuffer target extension type
+///
+/// `target("dx.TypedBuffer", Type, IsWriteable, IsROV, IsSigned)`
+class TypedBufferExtType : public TargetExtType {
+public:
+  TypedBufferExtType() = delete;
+  TypedBufferExtType(const TypedBufferExtType &) = delete;
+  TypedBufferExtType &operator=(const TypedBufferExtType &) = delete;
+
+  Type *getResourceType() const { return getTypeParameter(0); }
+  bool isWriteable() const { return getIntParameter(0); }
+  bool isROV() const { return getIntParameter(1); }
+  bool isSigned() const { return getIntParameter(2); }
+
+  static bool classof(const TargetExtType *T) {
+    return T->getName() == "dx.TypedBuffer";
+  }
+  static bool classof(const Type *T) {
+    return isa<TargetExtType>(T) && classof(cast<TargetExtType>(T));
+  }
+};
+
+/// The dx.Texture target extension type
+///
+/// `target("dx.Texture", Type, IsWriteable, IsROV, IsSigned, Dimension)`
+class TextureExtType : public TargetExtType {
+public:
+  TextureExtType() = delete;
+  TextureExtType(const TextureExtType &) = delete;
+  TextureExtType &operator=(const TextureExtType &) = delete;
+
+  Type *getResourceType() const { return getTypeParameter(0); }
+  bool isWriteable() const { return getIntParameter(0); }
+  bool isROV() const { return getIntParameter(1); }
+  bool isSigned() const { return getIntParameter(2); }
+  dxil::ResourceKind getDimension() const {
+    return static_cast<dxil::ResourceKind>(getIntParameter(3));
+  }
+
+  static bool classof(const TargetExtType *T) {
+    return T->getName() == "dx.Texture";
+  }
+  static bool classof(const Type *T) {
+    return isa<TargetExtType>(T) && classof(cast<TargetExtType>(T));
+  }
+};
+
+/// The dx.MSTexture target extension type
+///
+/// `target("dx.MSTexture", Type, IsWriteable, Samples, IsSigned, Dimension)`
+class MSTextureExtType : public TargetExtType {
+public:
+  MSTextureExtType() = delete;
+  MSTextureExtType(const MSTextureExtType &) = delete;
+  MSTextureExtType &operator=(const MSTextureExtType &) = delete;
+
+  Type *getResourceType() const { return getTypeParameter(0); }
+  bool isWriteable() const { return getIntParameter(0); }
+  uint32_t getSampleCount() const { return getIntParameter(1); }
+  bool isSigned() const { return getIntParameter(2); }
+  dxil::ResourceKind getDimension() const {
+    return static_cast<dxil::ResourceKind>(getIntParameter(3));
+  }
+
+  static bool classof(const TargetExtType *T) {
+    return T->getName() == "dx.MSTexture";
+  }
+  static bool classof(const Type *T) {
+    return isa<TargetExtType>(T) && classof(cast<TargetExtType>(T));
+  }
+};
+
+/// The dx.FeedbackTexture target extension type
+///
+/// `target("dx.FeedbackTexture", FeedbackType, Dimension)`
+class FeedbackTextureExtType : public TargetExtType {
+public:
+  FeedbackTextureExtType() = delete;
+  FeedbackTextureExtType(const FeedbackTextureExtType &) = delete;
+  FeedbackTextureExtType &operator=(const FeedbackTextureExtType &) = delete;
+
+  dxil::SamplerFeedbackType getFeedbackType() const {
+    return static_cast<dxil::SamplerFeedbackType>(getIntParameter(0));
+  }
+  dxil::ResourceKind getDimension() const {
+    return static_cast<dxil::ResourceKind>(getIntParameter(1));
+  }
+
+  static bool classof(const TargetExtType *T) {
+    return T->getName() == "dx.FeedbackTexture";
+  }
+  static bool classof(const Type *T) {
+    return isa<TargetExtType>(T) && classof(cast<TargetExtType>(T));
+  }
+};
+
+/// The dx.CBuffer target extension type
+///
+/// `target("dx.CBuffer", <Type>, ...)`
+class CBufferExtType : public TargetExtType {
+public:
+  CBufferExtType() = delete;
+  CBufferExtType(const CBufferExtType &) = delete;
+  CBufferExtType &operator=(const CBufferExtType &) = delete;
+
+  Type *getResourceType() const { return getTypeParameter(0); }
+
+  static bool classof(const TargetExtType *T) {
+    return T->getName() == "dx.CBuffer";
+  }
+  static bool classof(const Type *T) {
+    return isa<TargetExtType>(T) && classof(cast<TargetExtType>(T));
+  }
+};
+
+/// The dx.Sampler target extension type
+///
+/// `target("dx.Sampler", SamplerType)`
+class SamplerExtType : public TargetExtType {
+public:
+  SamplerExtType() = delete;
+  SamplerExtType(const SamplerExtType &) = delete;
+  SamplerExtType &operator=(const SamplerExtType &) = delete;
+
+  dxil::SamplerType getSamplerType() const {
+    return static_cast<dxil::SamplerType>(getIntParameter(0));
+  }
+
+  static bool classof(const TargetExtType *T) {
+    return T->getName() == "dx.Sampler";
+  }
+  static bool classof(const Type *T) {
+    return isa<TargetExtType>(T) && classof(cast<TargetExtType>(T));
+  }
+};
+
+/// The dx.Layout target extension type
+///
+/// `target("dx.Layout", <Type>, <size>, [offsets...])`
+class LayoutExtType : public TargetExtType {
+public:
+  LayoutExtType() = delete;
+  LayoutExtType(const LayoutExtType &) = delete;
+  LayoutExtType &operator=(const LayoutExtType &) = delete;
+
+  Type *getWrappedType() const { return getTypeParameter(0); }
+  uint32_t getSize() const { return getIntParameter(0); }
+  uint32_t getOffsetOfElement(int I) const { return getIntParameter(I + 1); }
+
+  static bool classof(const TargetExtType *T) {
+    return T->getName() == "dx.Layout";
+  }
+  static bool classof(const Type *T) {
+    return isa<TargetExtType>(T) && classof(cast<TargetExtType>(T));
+  }
+};
+
+//===----------------------------------------------------------------------===//
+
+class ResourceTypeInfo {
+public:
   struct UAVInfo {
-    bool GloballyCoherent;
-    bool HasCounter;
     bool IsROV;
 
-    bool operator==(const UAVInfo &RHS) const {
-      return std::tie(GloballyCoherent, HasCounter, IsROV) ==
-             std::tie(RHS.GloballyCoherent, RHS.HasCounter, RHS.IsROV);
-    }
+    bool operator==(const UAVInfo &RHS) const { return IsROV == RHS.IsROV; }
     bool operator!=(const UAVInfo &RHS) const { return !(*this == RHS); }
+    bool operator<(const UAVInfo &RHS) const { return IsROV < RHS.IsROV; }
   };
 
   struct StructInfo {
@@ -57,6 +241,9 @@ class ResourceInfo {
       return std::tie(Stride, AlignLog2) == std::tie(RHS.Stride, RHS.AlignLog2);
     }
     bool operator!=(const StructInfo &RHS) const { return !(*this == RHS); }
+    bool operator<(const StructInfo &RHS) const {
+      return std::tie(Stride, AlignLog2) < std::tie(RHS.Stride, RHS.AlignLog2);
+    }
   };
 
   struct TypedInfo {
@@ -68,54 +255,28 @@ class ResourceInfo {
              std::tie(RHS.ElementTy, RHS.ElementCount);
     }
     bool operator!=(const TypedInfo &RHS) const { return !(*this == RHS); }
+    bool operator<(const TypedInfo &RHS) const {
+      return std::tie(ElementTy, ElementCount) <
+             std::tie(RHS.ElementTy, RHS.ElementCount);
+    }
   };
 
-  struct MSInfo {
-    uint32_t Count;
-
-    bool operator==(const MSInfo &RHS) const { return Count == RHS.Count; }
-    bool operator!=(const MSInfo &RHS) const { return !(*this == RHS); }
-  };
-
-  struct FeedbackInfo {
-    dxil::SamplerFeedbackType Type;
-
-    bool operator==(const FeedbackInfo &RHS) const { return Type == RHS.Type; }
-    bool operator!=(const FeedbackInfo &RHS) const { return !(*this == RHS); }
-  };
-
-  // Universal properties.
-  Value *Symbol;
-  StringRef Name;
+private:
+  TargetExtType *HandleTy;
 
   dxil::ResourceClass RC;
   dxil::ResourceKind Kind;
 
-  ResourceBinding Binding = {};
-
-  // Resource class dependent properties.
-  // CBuffer, Sampler, and RawBuffer end here.
-  union {
-    UAVInfo UAVFlags;            // UAV
-    uint32_t CBufferSize;        // CBuffer
-    dxil::SamplerType SamplerTy; // Sampler
-  };
-
-  // Resource kind dependent properties.
-  union {
-    StructInfo Struct;     // StructuredBuffer
-    TypedInfo Typed;       // All SRV/UAV except Raw/StructuredBuffer
-    FeedbackInfo Feedback; // FeedbackTexture
-  };
-
-  MSInfo MultiSample;
-
 public:
-  ResourceInfo(dxil::ResourceClass RC, dxil::ResourceKind Kind, Value *Symbol,
-               StringRef Name)
-      : Symbol(Symbol), Name(Name), RC(RC), Kind(Kind) {}
+  ResourceTypeInfo(TargetExtType *HandleTy, const dxil::ResourceClass RC,
+                   const dxil::ResourceKind Kind);
+  ResourceTypeInfo(TargetExtType *HandleTy)
+      : ResourceTypeInfo(HandleTy, {}, dxil::ResourceKind::Invalid) {}
 
-  // Conditions to check before accessing union members.
+  TargetExtType *getHandleTy() const { return HandleTy; }
+  StructType *createElementStruct();
+
+  // Conditions to check before accessing specific views.
   bool isUAV() const;
   bool isCBuffer() const;
   bool isSampler() const;
@@ -124,96 +285,285 @@ public:
   bool isFeedback() const;
   bool isMultiSample() const;
 
-  void bind(uint32_t UniqueID, uint32_t Space, uint32_t LowerBound,
-            uint32_t Size) {
-    Binding.UniqueID = UniqueID;
-    Binding.Space = Space;
-    Binding.LowerBound = LowerBound;
-    Binding.Size = Size;
-  }
-  void setUAV(bool GloballyCoherent, bool HasCounter, bool IsROV) {
-    assert(isUAV() && "Not a UAV");
-    UAVFlags.GloballyCoherent = GloballyCoherent;
-    UAVFlags.HasCounter = HasCounter;
-    UAVFlags.IsROV = IsROV;
-  }
-  void setCBuffer(uint32_t Size) {
-    assert(isCBuffer() && "Not a CBuffer");
-    CBufferSize = Size;
-  }
-  void setSampler(dxil::SamplerType Ty) { SamplerTy = Ty; }
-  void setStruct(uint32_t Stride, MaybeAlign Alignment) {
-    assert(isStruct() && "Not a Struct");
-    Struct.Stride = Stride;
-    Struct.AlignLog2 = Alignment ? Log2(*Alignment) : 0;
-  }
-  void setTyped(dxil::ElementType ElementTy, uint32_t ElementCount) {
-    assert(isTyped() && "Not Typed");
-    Typed.ElementTy = ElementTy;
-    Typed.ElementCount = ElementCount;
-  }
-  void setFeedback(dxil::SamplerFeedbackType Type) {
-    assert(isFeedback() && "Not Feedback");
-    Feedback.Type = Type;
-  }
-  void setMultiSample(uint32_t Count) {
-    assert(isMultiSample() && "Not MultiSampled");
-    MultiSample.Count = Count;
+  // Views into the type.
+  UAVInfo getUAV() const;
+  uint32_t getCBufferSize(const DataLayout &DL) const;
+  dxil::SamplerType getSamplerType() const;
+  StructInfo getStruct(const DataLayout &DL) const;
+  TypedInfo getTyped() const;
+  dxil::SamplerFeedbackType getFeedbackType() const;
+  uint32_t getMultiSampleCount() const;
+
+  dxil::ResourceClass getResourceClass() const { return RC; }
+  dxil::ResourceKind getResourceKind() const { return Kind; }
+
+  bool operator==(const ResourceTypeInfo &RHS) const;
+  bool operator!=(const ResourceTypeInfo &RHS) const { return !(*this == RHS); }
+  bool operator<(const ResourceTypeInfo &RHS) const;
+
+  void print(raw_ostream &OS, const DataLayout &DL) const;
+};
+
+//===----------------------------------------------------------------------===//
+
+enum class ResourceCounterDirection {
+  Increment,
+  Decrement,
+  Unknown,
+  Invalid,
+};
+
+class ResourceInfo {
+public:
+  struct ResourceBinding {
+    uint32_t RecordID;
+    uint32_t Space;
+    uint32_t LowerBound;
+    uint32_t Size;
+
+    bool operator==(const ResourceBinding &RHS) const {
+      return std::tie(RecordID, Space, LowerBound, Size) ==
+             std::tie(RHS.RecordID, RHS.Space, RHS.LowerBound, RHS.Size);
+    }
+    bool operator!=(const ResourceBinding &RHS) const {
+      return !(*this == RHS);
+    }
+    bool operator<(const ResourceBinding &RHS) const {
+      return std::tie(RecordID, Space, LowerBound, Size) <
+             std::tie(RHS.RecordID, RHS.Space, RHS.LowerBound, RHS.Size);
+    }
+  };
+
+private:
+  ResourceBinding Binding;
+  TargetExtType *HandleTy;
+  GlobalVariable *Symbol = nullptr;
+
+public:
+  bool GloballyCoherent = false;
+  ResourceCounterDirection CounterDirection = ResourceCounterDirection::Unknown;
+
+  ResourceInfo(uint32_t RecordID, uint32_t Space, uint32_t LowerBound,
+               uint32_t Size, TargetExtType *HandleTy,
+               GlobalVariable *Symbol = nullptr)
+      : Binding{RecordID, Space, LowerBound, Size}, HandleTy(HandleTy),
+        Symbol(Symbol) {}
+
+  void setBindingID(unsigned ID) { Binding.RecordID = ID; }
+
+  bool hasCounter() const {
+    return CounterDirection != ResourceCounterDirection::Unknown;
   }
 
-  bool operator==(const ResourceInfo &RHS) const;
+  const ResourceBinding &getBinding() const { return Binding; }
+  TargetExtType *getHandleTy() const { return HandleTy; }
+  const StringRef getName() const { return Symbol ? Symbol->getName() : ""; }
 
-  static ResourceInfo SRV(Value *Symbol, StringRef Name,
-                          dxil::ElementType ElementTy, uint32_t ElementCount,
-                          dxil::ResourceKind Kind);
-  static ResourceInfo RawBuffer(Value *Symbol, StringRef Name);
-  static ResourceInfo StructuredBuffer(Value *Symbol, StringRef Name,
-                                       uint32_t Stride, MaybeAlign Alignment);
-  static ResourceInfo Texture2DMS(Value *Symbol, StringRef Name,
-                                  dxil::ElementType ElementTy,
-                                  uint32_t ElementCount, uint32_t SampleCount);
-  static ResourceInfo Texture2DMSArray(Value *Symbol, StringRef Name,
-                                       dxil::ElementType ElementTy,
-                                       uint32_t ElementCount,
-                                       uint32_t SampleCount);
+  bool hasSymbol() const { return Symbol; }
+  GlobalVariable *createSymbol(Module &M, StructType *Ty, StringRef Name = "");
+  MDTuple *getAsMetadata(Module &M, dxil::ResourceTypeInfo &RTI) const;
 
-  static ResourceInfo UAV(Value *Symbol, StringRef Name,
-                          dxil::ElementType ElementTy, uint32_t ElementCount,
-                          bool GloballyCoherent, bool IsROV,
-                          dxil::ResourceKind Kind);
-  static ResourceInfo RWRawBuffer(Value *Symbol, StringRef Name,
-                                  bool GloballyCoherent, bool IsROV);
-  static ResourceInfo RWStructuredBuffer(Value *Symbol, StringRef Name,
-                                         uint32_t Stride, MaybeAlign Alignment,
-                                         bool GloballyCoherent, bool IsROV,
-                                         bool HasCounter);
-  static ResourceInfo RWTexture2DMS(Value *Symbol, StringRef Name,
-                                    dxil::ElementType ElementTy,
-                                    uint32_t ElementCount, uint32_t SampleCount,
-                                    bool GloballyCoherent);
-  static ResourceInfo RWTexture2DMSArray(Value *Symbol, StringRef Name,
-                                         dxil::ElementType ElementTy,
-                                         uint32_t ElementCount,
-                                         uint32_t SampleCount,
-                                         bool GloballyCoherent);
-  static ResourceInfo FeedbackTexture2D(Value *Symbol, StringRef Name,
-                                        dxil::SamplerFeedbackType FeedbackTy);
-  static ResourceInfo
-  FeedbackTexture2DArray(Value *Symbol, StringRef Name,
-                         dxil::SamplerFeedbackType FeedbackTy);
+  std::pair<uint32_t, uint32_t>
+  getAnnotateProps(Module &M, dxil::ResourceTypeInfo &RTI) const;
 
-  static ResourceInfo CBuffer(Value *Symbol, StringRef Name, uint32_t Size);
+  bool operator==(const ResourceInfo &RHS) const {
+    return std::tie(Binding, HandleTy, Symbol) ==
+           std::tie(RHS.Binding, RHS.HandleTy, RHS.Symbol);
+  }
+  bool operator!=(const ResourceInfo &RHS) const { return !(*this == RHS); }
+  bool operator<(const ResourceInfo &RHS) const {
+    return Binding < RHS.Binding;
+  }
 
-  static ResourceInfo Sampler(Value *Symbol, StringRef Name,
-                              dxil::SamplerType SamplerTy);
-
-  MDTuple *getAsMetadata(LLVMContext &Ctx) const;
-
-  ResourceBinding getBinding() const { return Binding; }
-  std::pair<uint32_t, uint32_t> getAnnotateProps() const;
+  void print(raw_ostream &OS, dxil::ResourceTypeInfo &RTI,
+             const DataLayout &DL) const;
 };
 
 } // namespace dxil
+
+//===----------------------------------------------------------------------===//
+
+class DXILResourceTypeMap {
+  DenseMap<TargetExtType *, dxil::ResourceTypeInfo> Infos;
+
+public:
+  bool invalidate(Module &M, const PreservedAnalyses &PA,
+                  ModuleAnalysisManager::Invalidator &Inv);
+
+  dxil::ResourceTypeInfo &operator[](TargetExtType *Ty) {
+    auto It = Infos.find(Ty);
+    if (It != Infos.end())
+      return It->second;
+    auto [NewIt, Inserted] = Infos.try_emplace(Ty, Ty);
+    return NewIt->second;
+  }
+};
+
+class DXILResourceTypeAnalysis
+    : public AnalysisInfoMixin<DXILResourceTypeAnalysis> {
+  friend AnalysisInfoMixin<DXILResourceTypeAnalysis>;
+
+  static AnalysisKey Key;
+
+public:
+  using Result = DXILResourceTypeMap;
+
+  DXILResourceTypeMap run(Module &M, ModuleAnalysisManager &AM) {
+    // Running the pass just generates an empty map, which will be filled when
+    // users of the pass query the results.
+    return Result();
+  }
+};
+
+class DXILResourceTypeWrapperPass : public ImmutablePass {
+  DXILResourceTypeMap DRTM;
+
+  virtual void anchor();
+
+public:
+  static char ID;
+  DXILResourceTypeWrapperPass();
+
+  DXILResourceTypeMap &getResourceTypeMap() { return DRTM; }
+  const DXILResourceTypeMap &getResourceTypeMap() const { return DRTM; }
+};
+
+ModulePass *createDXILResourceTypeWrapperPassPass();
+
+//===----------------------------------------------------------------------===//
+
+class DXILResourceMap {
+  SmallVector<dxil::ResourceInfo> Infos;
+  DenseMap<CallInst *, unsigned> CallMap;
+  unsigned FirstUAV = 0;
+  unsigned FirstCBuffer = 0;
+  unsigned FirstSampler = 0;
+
+  /// Populate the map given the resource binding calls in the given module.
+  void populate(Module &M, DXILResourceTypeMap &DRTM);
+
+public:
+  using iterator = SmallVector<dxil::ResourceInfo>::iterator;
+  using const_iterator = SmallVector<dxil::ResourceInfo>::const_iterator;
+
+  iterator begin() { return Infos.begin(); }
+  const_iterator begin() const { return Infos.begin(); }
+  iterator end() { return Infos.end(); }
+  const_iterator end() const { return Infos.end(); }
+
+  bool empty() const { return Infos.empty(); }
+
+  iterator find(const CallInst *Key) {
+    auto Pos = CallMap.find(Key);
+    return Pos == CallMap.end() ? Infos.end() : (Infos.begin() + Pos->second);
+  }
+
+  /// Resolves a resource handle into a vector of ResourceInfos that
+  /// represent the possible unique creations of the handle. Certain cases are
+  /// ambiguous so multiple creation instructions may be returned. The resulting
+  /// ResourceInfo can be used to depuplicate unique handles that
+  /// reference the same resource
+  SmallVector<dxil::ResourceInfo> findByUse(const Value *Key) const;
+
+  const_iterator find(const CallInst *Key) const {
+    auto Pos = CallMap.find(Key);
+    return Pos == CallMap.end() ? Infos.end() : (Infos.begin() + Pos->second);
+  }
+
+  iterator srv_begin() { return begin(); }
+  const_iterator srv_begin() const { return begin(); }
+  iterator srv_end() { return begin() + FirstUAV; }
+  const_iterator srv_end() const { return begin() + FirstUAV; }
+  iterator_range<iterator> srvs() { return make_range(srv_begin(), srv_end()); }
+  iterator_range<const_iterator> srvs() const {
+    return make_range(srv_begin(), srv_end());
+  }
+
+  iterator uav_begin() { return begin() + FirstUAV; }
+  const_iterator uav_begin() const { return begin() + FirstUAV; }
+  iterator uav_end() { return begin() + FirstCBuffer; }
+  const_iterator uav_end() const { return begin() + FirstCBuffer; }
+  iterator_range<iterator> uavs() { return make_range(uav_begin(), uav_end()); }
+  iterator_range<const_iterator> uavs() const {
+    return make_range(uav_begin(), uav_end());
+  }
+
+  iterator cbuffer_begin() { return begin() + FirstCBuffer; }
+  const_iterator cbuffer_begin() const { return begin() + FirstCBuffer; }
+  iterator cbuffer_end() { return begin() + FirstSampler; }
+  const_iterator cbuffer_end() const { return begin() + FirstSampler; }
+  iterator_range<iterator> cbuffers() {
+    return make_range(cbuffer_begin(), cbuffer_end());
+  }
+  iterator_range<const_iterator> cbuffers() const {
+    return make_range(cbuffer_begin(), cbuffer_end());
+  }
+
+  iterator sampler_begin() { return begin() + FirstSampler; }
+  const_iterator sampler_begin() const { return begin() + FirstSampler; }
+  iterator sampler_end() { return end(); }
+  const_iterator sampler_end() const { return end(); }
+  iterator_range<iterator> samplers() {
+    return make_range(sampler_begin(), sampler_end());
+  }
+  iterator_range<const_iterator> samplers() const {
+    return make_range(sampler_begin(), sampler_end());
+  }
+
+  void print(raw_ostream &OS, DXILResourceTypeMap &DRTM,
+             const DataLayout &DL) const;
+
+  friend class DXILResourceAnalysis;
+  friend class DXILResourceWrapperPass;
+};
+
+class DXILResourceAnalysis : public AnalysisInfoMixin<DXILResourceAnalysis> {
+  friend AnalysisInfoMixin<DXILResourceAnalysis>;
+
+  static AnalysisKey Key;
+
+public:
+  using Result = DXILResourceMap;
+
+  /// Gather resource info for the module \c M.
+  DXILResourceMap run(Module &M, ModuleAnalysisManager &AM);
+};
+
+/// Printer pass for the \c DXILResourceAnalysis results.
+class DXILResourcePrinterPass : public PassInfoMixin<DXILResourcePrinterPass> {
+  raw_ostream &OS;
+
+public:
+  explicit DXILResourcePrinterPass(raw_ostream &OS) : OS(OS) {}
+
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+
+  static bool isRequired() { return true; }
+};
+
+class DXILResourceWrapperPass : public ModulePass {
+  std::unique_ptr<DXILResourceMap> Map;
+  DXILResourceTypeMap *DRTM;
+
+public:
+  static char ID; // Class identification, replacement for typeinfo
+
+  DXILResourceWrapperPass();
+  ~DXILResourceWrapperPass() override;
+
+  const DXILResourceMap &getBindingMap() const { return *Map; }
+  DXILResourceMap &getBindingMap() { return *Map; }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override;
+  bool runOnModule(Module &M) override;
+  void releaseMemory() override;
+
+  void print(raw_ostream &OS, const Module *M) const override;
+  void dump() const;
+};
+
+ModulePass *createDXILResourceWrapperPassPass();
+
 } // namespace llvm
 
 #endif // LLVM_ANALYSIS_DXILRESOURCE_H

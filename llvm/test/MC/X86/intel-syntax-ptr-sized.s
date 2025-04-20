@@ -6,6 +6,8 @@ push [eax]
 // CHECK: pushl (%eax)
 call [eax]
 // CHECK: calll *(%eax)
+pop [eax]
+// CHECK: popl (%eax)
 jmp [eax]
 // CHECK: jmpl *(%eax)
 
@@ -25,6 +27,8 @@ push [eax]
 // CHECK: pushw (%eax)
 call [eax]
 // CHECK: callw *(%eax)
+pop [eax]
+// CHECK: popw (%eax)
 jmp [eax]
 // CHECK: jmpw *(%eax)
 

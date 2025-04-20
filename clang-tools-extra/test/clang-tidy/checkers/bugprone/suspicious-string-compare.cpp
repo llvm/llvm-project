@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s bugprone-suspicious-string-compare %t -- \
+// RUN: %check_clang_tidy --match-partial-fixes %s bugprone-suspicious-string-compare %t -- \
 // RUN: -config='{CheckOptions: \
 // RUN:  {bugprone-suspicious-string-compare.WarnOnImplicitComparison: true, \
 // RUN:   bugprone-suspicious-string-compare.WarnOnLogicalNotComparison: true}}' \
@@ -89,6 +89,8 @@ int test_warning_patterns() {
   if (strcmp(A, "a") < 0.)
     return 0;
   // CHECK-MESSAGES: [[@LINE-2]]:7: warning: function 'strcmp' has suspicious implicit cast
+
+  return 1;
 }
 
 int test_valid_patterns() {

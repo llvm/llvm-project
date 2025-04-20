@@ -4,6 +4,9 @@ let Definition = "target_experimental" in {
   def InjectLocalVars : Property<"inject-local-vars", "Boolean">,
     Global, DefaultTrue,
     Desc<"If true, inject local variables explicitly into the expression text. This will fix symbol resolution when there are name collisions between ivars and local variables. But it can make expressions run much more slowly.">;
+  def UseDIL : Property<"use-DIL", "Boolean">,
+    Global, DefaultFalse,
+    Desc<"If true, use the alternative DIL implementation for frame variable evaluation.">;
 }
 
 let Definition = "target" in {
@@ -92,7 +95,7 @@ let Definition = "target" in {
   def MaxZeroPaddingInFloatFormat: Property<"max-zero-padding-in-float-format", "UInt64">,
     DefaultUnsignedValue<6>,
     Desc<"The maximum number of zeroes to insert when displaying a very small float before falling back to scientific notation.">;
-  def MaxChildrenCount: Property<"max-children-count", "SInt64">,
+  def MaxChildrenCount: Property<"max-children-count", "UInt64">,
     DefaultUnsignedValue<256>,
     Desc<"Maximum number of children to expand in any level of depth.">;
   def MaxChildrenDepth: Property<"max-children-depth", "UInt64">,
@@ -101,8 +104,8 @@ let Definition = "target" in {
   def MaxSummaryLength: Property<"max-string-summary-length", "UInt64">,
     DefaultUnsignedValue<1024>,
     Desc<"Maximum number of characters to show when using %s in summary strings.">;
-  def MaxMemReadSize: Property<"max-memory-read-size", "SInt64">,
-    DefaultUnsignedValue<1024>,
+  def MaxMemReadSize: Property<"max-memory-read-size", "UInt64">,
+    DefaultUnsignedValue<0xffffffff>,
     Desc<"Maximum number of bytes that 'memory read' will fetch before --force must be specified.">;
   def BreakpointUseAvoidList: Property<"breakpoints-use-platform-avoid-list", "Boolean">,
     DefaultTrue,
@@ -150,10 +153,19 @@ let Definition = "target" in {
     DefaultEnumValue<"eInlineBreakpointsAlways">,
     EnumValues<"OptionEnumValues(g_inline_breakpoint_enums)">,
     Desc<"The strategy to use when settings breakpoints by file and line. Breakpoint locations can end up being inlined by the compiler, so that a compile unit 'a.c' might contain an inlined function from another source file. Usually this is limited to breakpoint locations from inlined functions from header or other include files, or more accurately non-implementation source files. Sometimes code might #include implementation files and cause inlined breakpoint locations in inlined implementation files. Always checking for inlined breakpoint locations can be expensive (memory and time), so if you have a project with many headers and find that setting breakpoints is slow, then you can change this setting to headers. This setting allows you to control exactly which strategy is used when setting file and line breakpoints.">;
+  def SourceRealpathPrefixes: Property<"source-realpath-prefixes", "FileSpecList">,
+    DefaultStringValue<"">,
+    Desc<"Realpath any source paths that start with one of these prefixes. If the debug info contains symlinks which match the original source file's basename but don't match its location that the user will use to set breakpoints, then this setting can help resolve breakpoints correctly. This handles both symlinked files and directories. Wild card prefixes: An empty string matches all paths. A forward slash matches absolute paths.">;
   def DisassemblyFlavor: Property<"x86-disassembly-flavor", "Enum">,
     DefaultEnumValue<"eX86DisFlavorDefault">,
     EnumValues<"OptionEnumValues(g_x86_dis_flavor_value_types)">,
     Desc<"The default disassembly flavor to use for x86 or x86-64 targets.">;
+  def DisassemblyCPU: Property<"disassembly-cpu", "String">,
+    DefaultStringValue<"">,
+    Desc<"Override the CPU for disassembling. Takes the same values as the -mcpu clang flag.">;
+  def DisassemblyFeatures: Property<"disassembly-features", "String">,
+    DefaultStringValue<"">,
+    Desc<"Specify additional CPU features for disassembling.">;
   def UseHexImmediates: Property<"use-hex-immediates", "Boolean">,
     DefaultTrue,
     Desc<"Show immediates in disassembly as hexadecimal.">;
@@ -198,13 +210,23 @@ let Definition = "target" in {
   def DebugUtilityExpression: Property<"debug-utility-expression", "Boolean">,
     DefaultFalse,
     Desc<"Enable debugging of LLDB-internal utility expressions.">;
+  def LaunchWorkingDir: Property<"launch-working-dir", "String">,
+    DefaultStringValue<"">,
+    Desc<"A default value for the working directory to use when launching processes. "
+         "It is ignored when empty. This setting is only used when the target is "
+         "launched. If you change this setting, the new value will only apply to "
+         "subsequent launches. Commands that take an explicit working directory "
+         "will override this setting.">;
+  def ParallelModuleLoad: Property<"parallel-module-load", "Boolean">,
+    DefaultTrue,
+    Desc<"Enable loading of modules in parallel for the dynamic loader.">;
 }
 
 let Definition = "process_experimental" in {
   def OSPluginReportsAllThreads: Property<"os-plugin-reports-all-threads", "Boolean">,
     Global,
     DefaultTrue,
-    Desc<"Set to False if your OS Plugins doesn't report all threads on each stop.">;
+    Desc<"Set to False if your Python OS Plugin doesn't report all threads on each stop.">;
 }
 
 let Definition = "process" in {
@@ -232,7 +254,7 @@ let Definition = "process" in {
   def DisableLangRuntimeUnwindPlans: Property<"disable-language-runtime-unwindplans", "Boolean">,
     Global,
     DefaultFalse,
-    Desc<"If true, language runtime augmented/overidden backtraces will not be used when printing a stack trace.">;
+    Desc<"If true, language runtime augmented/overridden backtraces will not be used when printing a stack trace.">;
   def DetachKeepsStopped: Property<"detach-keeps-stopped", "Boolean">,
     Global,
     DefaultFalse,

@@ -1,6 +1,6 @@
 add_custom_target(libc-support-tests)
 
-if(NOT LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
+if(NOT LIBC_TARGET_OS_IS_GPU)
   add_libc_test(
     block_test
     SUITE
@@ -24,11 +24,40 @@ if(NOT LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
     DEPENDS
       libc.src.__support.CPP.array
       libc.src.__support.CPP.span
+      libc.src.__support.block
       libc.src.__support.freelist
+  )
+
+  add_libc_test(
+    freetrie_test
+    SUITE
+      libc-support-tests
+    SRCS
+      freetrie_test.cpp
+    DEPENDS
+      libc.src.__support.CPP.optional
+      libc.src.__support.block
+      libc.src.__support.freetrie
+  )
+
+  add_libc_test(
+    freestore_test
+    SUITE
+      libc-support-tests
+    SRCS
+      freestore_test.cpp
+    DEPENDS
+      libc.src.__support.CPP.optional
+      libc.src.__support.block
+      libc.src.__support.freelist
+      libc.src.__support.freestore
+      libc.src.__support.freetrie
   )
 endif()
 
-if(LLVM_LIBC_FULL_BUILD)
+# TODO: FreeListHeap uses the _end symbol which conflicts with the _end symbol
+# defined by GPU start.cpp files so for now we exclude this test on GPU.
+if(LLVM_LIBC_FULL_BUILD AND NOT LIBC_TARGET_OS_IS_GPU)
   add_libc_test(
     freelist_heap_test
     SUITE
@@ -36,11 +65,9 @@ if(LLVM_LIBC_FULL_BUILD)
     SRCS
       fake_heap.s
       freelist_heap_test.cpp
-      freelist_malloc_test.cpp
     DEPENDS
       libc.src.__support.CPP.span
       libc.src.__support.freelist_heap
-      libc.src.stdlib.freelist_malloc
       libc.src.string.memcmp
       libc.src.string.memcpy
   )
@@ -57,11 +84,11 @@ add_libc_test(
 )
 
 add_libc_test(
-  endian_test
+  endian_internal_test
   SUITE
     libc-support-tests
   SRCS
-    endian_test.cpp
+    endian_internal_test.cpp
   DEPENDS
     libc.src.__support.common
 )
@@ -140,9 +167,14 @@ add_libc_test(
     arg_list_test.cpp
   DEPENDS
     libc.src.__support.arg_list
+    libc.src.__support.macros.properties.os
 )
 
-if(NOT LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
+# TODO: clang-cl generates calls into runtime library functions to
+# handle 128-bit integer arithmetics and conversions which are not yet
+# available on Windows. Re-enable 128-bit integer support on Windows once
+# these functions are ready.
+if(NOT LIBC_TARGET_ARCHITECTURE_IS_NVPTX AND NOT LIBC_TARGET_OS_IS_WINDOWS)
   add_libc_test(
     big_int_test
     SUITE
@@ -202,7 +234,7 @@ add_libc_test(
     libc.src.stdlib.srand
     libc.src.string.memset
   COMPILE_OPTIONS
-    -O3
+    ${libc_opt_high_flag}
   UNIT_TEST_ONLY
     # Aligned Allocation is not supported in hermetic builds.
 )
@@ -217,33 +249,25 @@ add_libc_test(
     libc.src.__support.memory_size
 )
 
-# FIXME: We shouldn't have regular executables created because we could be
-#        cross-compiling the tests and running through an emulator.
-if(NOT LIBC_TARGET_OS_IS_GPU)
-  add_executable(
-    libc_str_to_float_comparison_test
+add_libc_test(
+  str_to_float_comparison_test
+  NO_RUN_POSTBUILD
+  SUITE
+    libc-support-tests
+  SRCS
     str_to_float_comparison_test.cpp
-  )
-
-  target_link_libraries(libc_str_to_float_comparison_test
-    PRIVATE
-      "${LIBC_TARGET}"
-  )
-
-  add_executable(
-    libc_system_str_to_float_comparison_test
-    str_to_float_comparison_test.cpp
-  )
-
-  set(float_test_file ${CMAKE_CURRENT_SOURCE_DIR}/str_to_float_comparison_data.txt)
-
-  add_custom_command(TARGET libc_str_to_float_comparison_test
-                     POST_BUILD
-                     COMMAND ${CMAKE_CROSSCOMPILING_EMULATOR} $<TARGET_FILE:libc_str_to_float_comparison_test> ${float_test_file}
-                     DEPENDS ${float_test_file}
-                     COMMENT "Test the strtof and strtod implementations against precomputed results."
-                     VERBATIM)
-endif()
+  DEPENDS
+    libc.src.stdio.printf
+    libc.src.stdio.fopen
+    libc.src.stdio.fclose
+    libc.src.stdio.fgets
+    libc.src.stdlib.strtof
+    libc.src.stdlib.strtod
+    libc.src.stdlib.getenv
+    libc.src.string.strtok
+    libc.src.string.strdup
+    libc.src.__support.CPP.bit
+)
 
 add_subdirectory(CPP)
 add_subdirectory(File)

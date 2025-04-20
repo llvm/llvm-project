@@ -42,7 +42,7 @@ add_libc_unittest(
   SRCS
     openat_test.cpp
   DEPENDS
-    libc.include.fcntl
+    libc.hdr.fcntl_macros
     libc.src.errno.errno
     libc.src.fcntl.open
     libc.src.fcntl.openat

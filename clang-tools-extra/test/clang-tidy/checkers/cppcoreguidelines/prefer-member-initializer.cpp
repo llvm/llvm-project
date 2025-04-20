@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s cppcoreguidelines-prefer-member-initializer %t -- -- -fcxx-exceptions
+// RUN: %check_clang_tidy --match-partial-fixes %s cppcoreguidelines-prefer-member-initializer %t -- -- -fcxx-exceptions
 
 extern void __assert_fail (__const char *__assertion, __const char *__file,
     unsigned int __line, __const char *__function)
@@ -639,3 +639,14 @@ struct S3 {
   T M;
 };
 }
+
+namespace GH82970 {
+struct InitFromBindingDecl {
+  int m;
+  InitFromBindingDecl() {
+    struct { int i; } a;
+    auto [n] = a;
+    m = n;
+  }
+};
+} // namespace GH82970

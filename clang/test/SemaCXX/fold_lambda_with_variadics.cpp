@@ -7,6 +7,8 @@ struct identity {
   using type = T;
 };
 
+template <class> using ElementType = int;
+
 template <class = void> void f() {
 
   static_assert([]<class... Is>(Is... x) {
@@ -46,6 +48,10 @@ template <class = void> void f() {
       using T = identity<Is>::type;
     }(), ...);
   }(1, 2);
+
+  []<class... Is>(Is...) {
+    ([] { using T = ElementType<Is>; }(), ...);
+  }(1);
 
   [](auto ...y) {
     ([y] { }(), ...);
@@ -179,3 +185,113 @@ void foo() {
 }
 
 } // namespace GH99877
+
+namespace GH101754 {
+
+template <typename... Ts> struct Overloaded : Ts... {
+  using Ts::operator()...;
+};
+
+template <typename... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
+
+template <class T, class U>
+concept same_as = __is_same(T, U);  // #same_as
+
+template <typename... Ts> constexpr auto foo() {
+  return Overloaded{[](same_as<Ts> auto value) { return value; }...}; // #lambda
+}
+
+static_assert(foo<int, double>()(123) == 123);
+static_assert(foo<int, double>()(2.718) == 2.718);
+
+static_assert(foo<int, double>()('c'));
+// expected-error@-1 {{no matching function}}
+
+// expected-note@#lambda {{constraints not satisfied}}
+// expected-note@#lambda {{'same_as<char, int>' evaluated to false}}
+// expected-note@#same_as {{evaluated to false}}
+
+// expected-note@#lambda {{constraints not satisfied}}
+// expected-note@#lambda {{'same_as<char, double>' evaluated to false}}
+// expected-note@#same_as {{evaluated to false}}
+
+template <class T, class U, class V>
+concept C = same_as<T, U> && same_as<U, V>; // #C
+
+template <typename... Ts> constexpr auto bar() {
+  return ([]<class Up>() {
+    return Overloaded{[](C<Up, Ts> auto value) { // #bar
+      return value;
+    }...};
+  }.template operator()<Ts>(), ...);
+}
+static_assert(bar<int, float>()(3.14f)); // OK, bar() returns the last overload i.e. <float>.
+
+static_assert(bar<int, float>()(123));
+// expected-error@-1 {{no matching function}}
+// expected-note@#bar {{constraints not satisfied}}
+// expected-note@#bar {{'C<int, float, int>' evaluated to false}}
+// expected-note@#C {{evaluated to false}}
+
+// expected-note@#bar {{constraints not satisfied}}
+// expected-note@#bar {{'C<int, float, float>' evaluated to false}}
+// expected-note@#C {{evaluated to false}}
+// expected-note@#same_as 2{{evaluated to false}}
+
+template <class T, auto U>
+concept same_as_v = __is_same(T, decltype(U));  // #same_as_v
+
+template <auto... Vs> constexpr auto baz() {
+  return Overloaded{[](same_as_v<Vs> auto value) { return value; }...}; // #baz
+}
+
+static_assert(baz<1, 1.>()(123) == 123);
+static_assert(baz<1, 1.>()(2.718) == 2.718);
+
+static_assert(baz<1, 1.>()('c'));
+// expected-error@-1 {{no matching function}}
+
+// expected-note@#baz {{constraints not satisfied}}
+// expected-note@#baz {{'same_as_v<char, 1>' evaluated to false}}
+// expected-note@#same_as_v {{evaluated to false}}
+
+// expected-note@#baz {{constraints not satisfied}}
+// expected-note@#baz {{'same_as_v<char, 1.>' evaluated to false}}
+// expected-note@#same_as_v {{evaluated to false}}
+
+template <auto... Ts> constexpr auto bazz() {
+  return Overloaded{[](same_as_v<Ts> auto value) { return Ts; }...}; // #bazz
+}
+
+static_assert(bazz<1, 2>()(1));
+// expected-error@-1 {{is ambiguous}}
+// expected-note@#bazz 2{{candidate function [with value:auto = int]}}
+
+template <class T> concept C2 = sizeof(T) >= sizeof(int);
+template <class... Ts> static constexpr auto trailing() {
+  return Overloaded{[](auto) requires (C2<Ts> && C2<int>) { return 0; }...}; // #trailing
+}
+static_assert(trailing<int, long>()(0));
+// expected-error@-1 {{is ambiguous}}
+// expected-note@#trailing 2{{candidate function [with auto:1 = int]}}
+
+
+} // namespace GH101754
+
+namespace GH131798 {
+  template <class T0>
+  struct tuple { T0 elem0; };
+
+  template <class, class>
+  concept C = true;
+
+  template <int>
+  struct Foo {};
+
+  template <int... Vals>
+  constexpr tuple fs{[] (C<Foo<Vals>> auto) {}...};
+
+  int main() {
+    fs<0>.elem0(1);
+  }
+} // namspace GH131798

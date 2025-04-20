@@ -135,6 +135,9 @@ FLAGS_ENUM(LaunchFlags){
 /// Thread Run Modes.
 enum RunMode { eOnlyThisThread, eAllThreads, eOnlyDuringStepping };
 
+/// Execution directions
+enum RunDirection { eRunForward, eRunReverse };
+
 /// Byte ordering definitions.
 enum ByteOrder {
   eByteOrderInvalid = 0,
@@ -254,6 +257,9 @@ enum StopReason {
   eStopReasonVFork,
   eStopReasonVForkDone,
   eStopReasonInterrupt, ///< Thread requested interrupt
+  // Indicates that execution stopped because the debugger backend relies
+  // on recorded data and we reached the end of that data.
+  eStopReasonHistoryBoundary,
 };
 
 /// Command Return Status Types.
@@ -655,6 +661,8 @@ enum CommandArgumentType {
   eArgTypeRemotePath,
   eArgTypeRemoteFilename,
   eArgTypeModule,
+  eArgTypeCPUName,
+  eArgTypeCPUFeatures,
   eArgTypeLastArg // Always keep this entry as the last entry in this
                   // enumeration!!
 };
@@ -761,6 +769,8 @@ enum SectionType {
   eSectionTypeDWARFDebugLocListsDwo,
   eSectionTypeDWARFDebugTuIndex,
   eSectionTypeCTF,
+  eSectionTypeLLDBTypeSummaries,
+  eSectionTypeLLDBFormatters,
   eSectionTypeSwiftModules,
 };
 
@@ -1222,6 +1232,7 @@ enum SaveCoreStyle {
   eSaveCoreFull = 1,
   eSaveCoreDirtyOnly = 2,
   eSaveCoreStackOnly = 3,
+  eSaveCoreCustomOnly = 4,
 };
 
 /// Events that might happen during a trace session.
@@ -1351,7 +1362,9 @@ enum DebuggerBroadcastBit {
   eBroadcastBitWarning = (1 << 1),
   eBroadcastBitError = (1 << 2),
   eBroadcastSymbolChange = (1 << 3),
-  eBroadcastBitProgressCategory = (1 << 4),
+  eBroadcastBitProgressCategory = (1 << 4), ///< Deprecated
+  eBroadcastBitExternalProgress = (1 << 5),
+  eBroadcastBitExternalProgressCategory = (1 << 6), ///< Deprecated
 };
 
 /// Used for expressing severity in logs and diagnostics.
@@ -1359,6 +1372,15 @@ enum Severity {
   eSeverityError,
   eSeverityWarning,
   eSeverityInfo, // Equivalent to Remark used in clang.
+};
+
+/// Callback return value, indicating whether it handled printing the
+/// CommandReturnObject or deferred doing so to the CommandInterpreter.
+enum CommandReturnObjectCallbackResult {
+  /// The callback deferred printing the command return object.
+  eCommandReturnObjectPrintCallbackSkipped = 0,
+  /// The callback handled printing the command return object.
+  eCommandReturnObjectPrintCallbackHandled = 1,
 };
 
 } // namespace lldb

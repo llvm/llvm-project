@@ -12,8 +12,8 @@ define i16 @foo(i16 %in1, i16 %in2) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x i16> [[TMP2]], <2 x i16> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP5:%.*]] = zext <2 x i16> [[TMP3]] to <2 x i64>
 ; CHECK-NEXT:    [[TMP9:%.*]] = mul nuw nsw <2 x i64> [[TMP5]], [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = and <2 x i64> [[TMP9]], <i64 65535, i64 65535>
-; CHECK-NEXT:    [[TMP7:%.*]] = icmp ne <2 x i64> [[TMP6]], <i64 65533, i64 65533>
+; CHECK-NEXT:    [[TMP12:%.*]] = and <2 x i64> [[TMP9]], splat (i64 65535)
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp ne <2 x i64> [[TMP12]], splat (i64 65533)
 ; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x i1> [[TMP7]], i32 1
 ; CHECK-NEXT:    [[ZEXT3_1:%.*]] = zext i1 [[TMP8]] to i16
 ; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x i64> [[TMP9]], i32 1

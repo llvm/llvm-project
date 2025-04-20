@@ -16,30 +16,24 @@ define void @test_scalar_iv_steps_used_by_replicate_and_first_lane_only_vpinst(p
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE6:.*]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[INDEX]], 2
-; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[INDEX]], 3
-; CHECK-NEXT:    [[TMP4:%.*]] = mul nsw i64 [[TMP0]], 4
-; CHECK-NEXT:    [[TMP5:%.*]] = mul nsw i64 [[TMP1]], 4
-; CHECK-NEXT:    [[TMP6:%.*]] = mul nsw i64 [[TMP2]], 4
-; CHECK-NEXT:    [[TMP7:%.*]] = mul nsw i64 [[TMP3]], 4
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i8, ptr [[SRC_1]], i64 [[TMP4]]
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i8, ptr [[SRC_1]], i64 [[TMP5]]
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i8, ptr [[SRC_1]], i64 [[TMP6]]
-; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i8, ptr [[SRC_1]], i64 [[TMP7]]
+; CHECK-NEXT:    [[TMP3:%.*]] = mul nsw i64 0, 4
+; CHECK-NEXT:    [[TMP4:%.*]] = mul nsw i64 1, 4
+; CHECK-NEXT:    [[TMP2:%.*]] = mul nsw i64 2, 4
+; CHECK-NEXT:    [[TMP15:%.*]] = mul nsw i64 3, 4
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i8, ptr [[SRC_1]], i64 [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr [[SRC_1]], i64 [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i8, ptr [[SRC_1]], i64 [[TMP2]]
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i8, ptr [[SRC_1]], i64 [[TMP15]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = load i8, ptr [[TMP8]], align 1
-; CHECK-NEXT:    [[TMP13:%.*]] = load i8, ptr [[TMP9]], align 1
-; CHECK-NEXT:    [[TMP14:%.*]] = load i8, ptr [[TMP10]], align 1
-; CHECK-NEXT:    [[TMP15:%.*]] = load i8, ptr [[TMP11]], align 1
+; CHECK-NEXT:    [[TMP9:%.*]] = load i8, ptr [[TMP5]], align 1
+; CHECK-NEXT:    [[TMP10:%.*]] = load i8, ptr [[TMP6]], align 1
+; CHECK-NEXT:    [[TMP11:%.*]] = load i8, ptr [[TMP7]], align 1
 ; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <4 x i8> poison, i8 [[TMP12]], i32 0
-; CHECK-NEXT:    [[TMP17:%.*]] = insertelement <4 x i8> [[TMP16]], i8 [[TMP13]], i32 1
-; CHECK-NEXT:    [[TMP18:%.*]] = insertelement <4 x i8> [[TMP17]], i8 [[TMP14]], i32 2
-; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <4 x i8> [[TMP18]], i8 [[TMP15]], i32 3
+; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <4 x i8> [[TMP16]], i8 [[TMP9]], i32 1
+; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <4 x i8> [[TMP13]], i8 [[TMP10]], i32 2
+; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <4 x i8> [[TMP14]], i8 [[TMP11]], i32 3
 ; CHECK-NEXT:    [[TMP20:%.*]] = icmp eq <4 x i8> [[TMP19]], zeroinitializer
-; CHECK-NEXT:    [[TMP21:%.*]] = add i64 [[TMP0]], 4
-; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr [8 x i32], ptr @src, i64 0, i64 [[TMP21]]
+; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr [8 x i32], ptr @src, i64 0, i64 4
 ; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr i32, ptr [[TMP22]], i32 0
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP23]], align 4
 ; CHECK-NEXT:    [[TMP24:%.*]] = extractelement <4 x i1> [[TMP20]], i32 0
@@ -64,14 +58,13 @@ define void @test_scalar_iv_steps_used_by_replicate_and_first_lane_only_vpinst(p
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE4]]
 ; CHECK:       [[PRED_STORE_CONTINUE4]]:
 ; CHECK-NEXT:    [[TMP30:%.*]] = extractelement <4 x i1> [[TMP20]], i32 3
-; CHECK-NEXT:    br i1 [[TMP30]], label %[[PRED_STORE_IF5:.*]], label %[[PRED_STORE_CONTINUE6]]
+; CHECK-NEXT:    br i1 [[TMP30]], label %[[PRED_STORE_IF5:.*]], label %[[PRED_STORE_CONTINUE6:.*]]
 ; CHECK:       [[PRED_STORE_IF5]]:
 ; CHECK-NEXT:    [[TMP31:%.*]] = extractelement <4 x i32> [[WIDE_LOAD]], i32 3
 ; CHECK-NEXT:    store i32 [[TMP31]], ptr [[DST]], align 4
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE6]]
 ; CHECK:       [[PRED_STORE_CONTINUE6]]:
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; CHECK-NEXT:    br i1 true, label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
@@ -93,7 +86,7 @@ define void @test_scalar_iv_steps_used_by_replicate_and_first_lane_only_vpinst(p
 ; CHECK:       [[LOOP_LATCH]]:
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], 4
-; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP_HEADER]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP_HEADER]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -125,7 +118,6 @@ exit:
 }
 ;.
 ; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
-; CHECK: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
-; CHECK: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
-; CHECK: [[LOOP3]] = distinct !{[[LOOP3]], [[META2]], [[META1]]}
+; CHECK: [[META1]] = !{!"llvm.loop.unroll.runtime.disable"}
+; CHECK: [[META2]] = !{!"llvm.loop.isvectorized", i32 1}
 ;.

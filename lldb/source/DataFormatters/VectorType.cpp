@@ -8,12 +8,12 @@
 
 #include "lldb/DataFormatters/VectorType.h"
 
-#include "lldb/Core/ValueObject.h"
-#include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Symbol/TypeSystem.h"
 #include "lldb/Target/Target.h"
+#include "lldb/ValueObject/ValueObject.h"
+#include "lldb/ValueObject/ValueObjectConstResult.h"
 
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/Log.h"
@@ -197,15 +197,15 @@ static lldb::Format GetItemFormatForFormat(lldb::Format format,
 static std::optional<size_t>
 CalculateNumChildren(CompilerType container_elem_type, uint64_t num_elements,
                      CompilerType element_type) {
-  std::optional<uint64_t> container_elem_size =
-      container_elem_type.GetByteSize(/* exe_scope */ nullptr);
+  std::optional<uint64_t> container_elem_size = llvm::expectedToOptional(
+      container_elem_type.GetByteSize(/* exe_scope */ nullptr));
   if (!container_elem_size)
     return {};
 
   auto container_size = *container_elem_size * num_elements;
 
-  std::optional<uint64_t> element_size =
-      element_type.GetByteSize(/* exe_scope */ nullptr);
+  std::optional<uint64_t> element_size = llvm::expectedToOptional(
+      element_type.GetByteSize(/* exe_scope */ nullptr));
   if (!element_size || !*element_size)
     return {};
 
@@ -233,13 +233,14 @@ public:
     auto num_children_or_err = CalculateNumChildren();
     if (!num_children_or_err)
       return ValueObjectConstResult::Create(
-          nullptr, Status(num_children_or_err.takeError()));
+          nullptr, Status::FromError(num_children_or_err.takeError()));
     if (idx >= *num_children_or_err)
       return {};
-    std::optional<uint64_t> size = m_child_type.GetByteSize(nullptr);
-    if (!size)
-      return {};
-    auto offset = idx * *size;
+    auto size_or_err = m_child_type.GetByteSize(nullptr);
+    if (!size_or_err)
+      return ValueObjectConstResult::Create(
+          nullptr, Status::FromError(size_or_err.takeError()));
+    auto offset = idx * *size_or_err;
     StreamString idx_name;
     idx_name.Printf("[%" PRIu64 "]", (uint64_t)idx);
     ValueObjectSP child_sp(m_backend.GetSyntheticChildAtOffset(
@@ -267,8 +268,6 @@ public:
     m_item_format = GetItemFormatForFormat(m_parent_format, m_child_type);
     return lldb::ChildCacheState::eRefetch;
   }
-
-  bool MightHaveChildren() override { return true; }
 
   size_t GetIndexOfChildWithName(ConstString name) override {
     const char *item_name = name.GetCString();

@@ -81,6 +81,9 @@ public:
 
   ~ClangTidyContext();
 
+  ClangTidyContext(const ClangTidyContext &) = delete;
+  ClangTidyContext &operator=(const ClangTidyContext &) = delete;
+
   /// Report any errors detected using this method.
   ///
   /// This is still under heavy development and will likely change towards using
@@ -298,6 +301,10 @@ private:
   /// Returns the \c HeaderFilter constructed for the options set in the
   /// context.
   llvm::Regex *getHeaderFilter();
+
+  /// Returns the \c ExcludeHeaderFilter constructed for the options set in the
+  /// context.
+  llvm::Regex *getExcludeHeaderFilter();
 
   /// Updates \c LastErrorRelatesToUserCode and LastErrorPassesLineFilter
   /// according to the diagnostic \p Location.

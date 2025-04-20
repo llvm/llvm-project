@@ -133,13 +133,13 @@ TEST_F(ScalarEvolutionsTest, SimplifiedPHI) {
   BasicBlock *LoopBB = BasicBlock::Create(Context, "loop", F);
   BasicBlock *ExitBB = BasicBlock::Create(Context, "exit", F);
   BranchInst::Create(LoopBB, EntryBB);
-  BranchInst::Create(LoopBB, ExitBB, UndefValue::get(Type::getInt1Ty(Context)),
+  BranchInst::Create(LoopBB, ExitBB, PoisonValue::get(Type::getInt1Ty(Context)),
                      LoopBB);
   ReturnInst::Create(Context, nullptr, ExitBB);
   auto *Ty = Type::getInt32Ty(Context);
   auto *PN = PHINode::Create(Ty, 2, "", LoopBB->begin());
   PN->addIncoming(Constant::getNullValue(Ty), EntryBB);
-  PN->addIncoming(UndefValue::get(Ty), LoopBB);
+  PN->addIncoming(PoisonValue::get(Ty), LoopBB);
   ScalarEvolution SE = buildSE(*F);
   const SCEV *S1 = SE.getSCEV(PN);
   const SCEV *S2 = SE.getSCEV(PN);
@@ -328,11 +328,11 @@ TEST_F(ScalarEvolutionsTest, CompareSCEVComplexity) {
   for (int i = 0; i < 8; i++) {
     PHINode *Phi = cast<PHINode>(&*II++);
     Phi->addIncoming(Acc[i], LoopBB);
-    Phi->addIncoming(UndefValue::get(Ty), EntryBB);
+    Phi->addIncoming(PoisonValue::get(Ty), EntryBB);
   }
 
   BasicBlock *ExitBB = BasicBlock::Create(Context, "bb2", F);
-  BranchInst::Create(LoopBB, ExitBB, UndefValue::get(Type::getInt1Ty(Context)),
+  BranchInst::Create(LoopBB, ExitBB, PoisonValue::get(Type::getInt1Ty(Context)),
                      LoopBB);
 
   Acc[0] = BinaryOperator::CreateAdd(Acc[0], Acc[1], "", ExitBB);
@@ -491,7 +491,7 @@ TEST_F(ScalarEvolutionsTest, SCEVNormalization) {
       "  %iv1 = phi i32 [ %iv1.inc, %loop ], [ -2147483648, %loop.ph ] "
       "  %iv0.inc = add i32 %iv0, 1 "
       "  %iv1.inc = add i32 %iv1, 3 "
-      "  br i1 undef, label %for.end.loopexit, label %loop "
+      "  br i1 poison, label %for.end.loopexit, label %loop "
       " "
       "for.end.loopexit: "
       "  ret void "
@@ -503,19 +503,18 @@ TEST_F(ScalarEvolutionsTest, SCEVNormalization) {
       "  br label %loop_0 "
       " "
       "loop_0: "
-      "  br i1 undef, label %loop_0, label %loop_1 "
+      "  br i1 poison, label %loop_0, label %loop_1 "
       " "
       "loop_1: "
-      "  br i1 undef, label %loop_2, label %loop_1 "
+      "  br i1 poison, label %loop_2, label %loop_1 "
       " "
       " "
       "loop_2: "
-      "  br i1 undef, label %end, label %loop_2 "
+      "  br i1 poison, label %end, label %loop_2 "
       " "
       "end: "
       "  ret void "
-      "} "
-      ,
+      "} ",
       Err, C);
 
   assert(M && "Could not parse module?");
@@ -914,7 +913,7 @@ TEST_F(ScalarEvolutionsTest, SCEVAddRecFromPHIwithLargeConstants) {
      %1 = shl i64 %0, 32
      %2 = ashr exact i64 %1, 32
      %3 = add i64 %2, -9223372036854775808
-     br i1 undef, label %exit, label %loop
+     br i1 poison, label %exit, label %loop
     exit:
      ret void
    */
@@ -929,7 +928,7 @@ TEST_F(ScalarEvolutionsTest, SCEVAddRecFromPHIwithLargeConstants) {
       ConstantInt::get(Context, APInt(64, 0x8000000000000000U, true));
   auto *Int64_32 = ConstantInt::get(Context, APInt(64, 32));
   auto *Br = BranchInst::Create(
-      LoopBB, ExitBB, UndefValue::get(Type::getInt1Ty(Context)), LoopBB);
+      LoopBB, ExitBB, PoisonValue::get(Type::getInt1Ty(Context)), LoopBB);
   auto *Phi =
       PHINode::Create(Type::getInt64Ty(Context), 2, "", Br->getIterator());
   auto *Shl = BinaryOperator::CreateShl(Phi, Int64_32, "", Br->getIterator());
@@ -973,7 +972,7 @@ TEST_F(ScalarEvolutionsTest, SCEVAddRecFromPHIwithLargeConstantAccum) {
      %2 = shl i32 %1, 16
      %3 = ashr exact i32 %2, 16
      %4 = add i32 %3, -2147483648
-     br i1 undef, label %exit, label %loop
+     br i1 poison, label %exit, label %loop
     exit:
      ret void
    */
@@ -984,10 +983,10 @@ TEST_F(ScalarEvolutionsTest, SCEVAddRecFromPHIwithLargeConstantAccum) {
   // entry:
   BranchInst::Create(LoopBB, EntryBB);
   // loop:
-  auto *MinInt32 = ConstantInt::get(Context, APInt(32, 0x80000000U, true));
+  auto *MinInt32 = ConstantInt::get(Context, APInt(32, 0x80000000U));
   auto *Int32_16 = ConstantInt::get(Context, APInt(32, 16));
   auto *Br = BranchInst::Create(
-      LoopBB, ExitBB, UndefValue::get(Type::getInt1Ty(Context)), LoopBB);
+      LoopBB, ExitBB, PoisonValue::get(Type::getInt1Ty(Context)), LoopBB);
   auto *Phi = PHINode::Create(Int32Ty, 2, "", Br->getIterator());
   auto *Shl = BinaryOperator::CreateShl(Phi, Int32_16, "", Br->getIterator());
   auto *AShr =
@@ -1142,6 +1141,8 @@ TEST_F(ScalarEvolutionsTest, SCEVComputeConstantDifference) {
         %var = load i32, ptr %ptr
         %iv2pvar = add i32 %iv2, %var
         %iv2pvarp3 = add i32 %iv2pvar, 3
+        %iv2pvarm3 = mul i32 %iv2pvar, 3
+        %iv2pvarp3m3 = mul i32 %iv2pvarp3, 3
         %cmp2 = icmp sle i32 %iv2.next, %sz
         br i1 %cmp2, label %loop2.body, label %exit
       exit:
@@ -1178,6 +1179,12 @@ TEST_F(ScalarEvolutionsTest, SCEVComputeConstantDifference) {
     // %var + {{3,+,1},+,1}
     const SCEV *ScevIV2PVarP3 =
         SE.getSCEV(getInstructionByName(F, "iv2pvarp3"));
+    // 3 * (%var + {{0,+,1},+,1})
+    const SCEV *ScevIV2PVarM3 =
+        SE.getSCEV(getInstructionByName(F, "iv2pvarm3"));
+    // 3 * (%var + {{3,+,1},+,1})
+    const SCEV *ScevIV2PVarP3M3 =
+        SE.getSCEV(getInstructionByName(F, "iv2pvarp3m3"));
 
     auto diff = [&SE](const SCEV *LHS, const SCEV *RHS) -> std::optional<int> {
       auto ConstantDiffOrNone = computeConstantDifference(SE, LHS, RHS);
@@ -1202,8 +1209,9 @@ TEST_F(ScalarEvolutionsTest, SCEVComputeConstantDifference) {
     EXPECT_EQ(diff(ScevIV, ScevIVNext), -1);
     EXPECT_EQ(diff(ScevIVNext, ScevIV), 1);
     EXPECT_EQ(diff(ScevIVNext, ScevIVNext), 0);
-    EXPECT_EQ(diff(ScevIV2P3, ScevIV2), std::nullopt); // TODO
-    EXPECT_EQ(diff(ScevIV2PVar, ScevIV2PVarP3), std::nullopt); // TODO
+    EXPECT_EQ(diff(ScevIV2P3, ScevIV2), 3);
+    EXPECT_EQ(diff(ScevIV2PVar, ScevIV2PVarP3), -3);
+    EXPECT_EQ(diff(ScevIV2PVarP3M3, ScevIV2PVarM3), 9);
     EXPECT_EQ(diff(ScevV0, ScevIV), std::nullopt);
     EXPECT_EQ(diff(ScevIVNext, ScevV3), std::nullopt);
     EXPECT_EQ(diff(ScevYY, ScevV3), std::nullopt);
@@ -1696,6 +1704,37 @@ TEST_F(ScalarEvolutionsTest, ComplexityComparatorIsStrictWeakOrdering) {
     // crash if the comparator has the specific caching bug.
     SE.getSCEV(F.getEntryBlock().getTerminator()->getOperand(0));
   });
+}
+
+TEST_F(ScalarEvolutionsTest, ComplexityComparatorIsStrictWeakOrdering2) {
+  // Regression test for a case where caching of equivalent values caused the
+  // comparator to get inconsistent.
+
+  Type *Int64Ty = Type::getInt64Ty(Context);
+  Type *PtrTy = PointerType::get(Context, 0);
+  FunctionType *FTy = FunctionType::get(Type::getVoidTy(Context),
+                                        {PtrTy, PtrTy, PtrTy, Int64Ty}, false);
+  Function *F = Function::Create(FTy, Function::ExternalLinkage, "f", M);
+  BasicBlock *BB = BasicBlock::Create(Context, "entry", F);
+  ReturnInst::Create(Context, nullptr, BB);
+
+  ScalarEvolution SE = buildSE(*F);
+
+  const SCEV *S0 = SE.getSCEV(F->getArg(0));
+  const SCEV *S1 = SE.getSCEV(F->getArg(1));
+  const SCEV *S2 = SE.getSCEV(F->getArg(2));
+
+  const SCEV *P0 = SE.getPtrToIntExpr(S0, Int64Ty);
+  const SCEV *P1 = SE.getPtrToIntExpr(S1, Int64Ty);
+  const SCEV *P2 = SE.getPtrToIntExpr(S2, Int64Ty);
+
+  const SCEV *M0 = SE.getNegativeSCEV(P0);
+  const SCEV *M2 = SE.getNegativeSCEV(P2);
+
+  SmallVector<const SCEV *, 6> Ops = {M2, P0, M0, P1, P2};
+  // When _LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_DEBUG, this will
+  // crash if the comparator has the specific caching bug.
+  SE.getAddExpr(Ops);
 }
 
 }  // end namespace llvm

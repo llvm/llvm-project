@@ -35,7 +35,10 @@ define i64 @trivial_patchpoint_codegen(i64 %p1, i64 %p2, i64 %p3, i64 %p4) {
 ; CHECK-NEXT:    mv a0, s1
 ; CHECK-NEXT:    ld s0, 8(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld s1, 0(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    .cfi_restore s0
+; CHECK-NEXT:    .cfi_restore s1
 ; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
 entry:
   %resolveCall2 = inttoptr i64 244837814094590 to i8*
@@ -49,7 +52,6 @@ entry:
 define void @small_patchpoint_codegen(i64 %p1, i64 %p2, i64 %p3, i64 %p4) {
 ; CHECK-LABEL: small_patchpoint_codegen:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:  .Ltmp2:
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    nop

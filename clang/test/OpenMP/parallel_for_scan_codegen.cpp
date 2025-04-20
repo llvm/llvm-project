@@ -28,9 +28,9 @@ void baz(int n) {
 
   // CHECK: call void (ptr, i32, ptr, ...) @__kmpc_fork_call(
   // CHECK: [[LAST:%.+]] = mul nsw i64 9, %
-  // CHECK: [[LAST_REF:%.+]] = getelementptr inbounds float, ptr [[A_BUF]], i64 [[LAST]]
+  // CHECK: [[LAST_REF:%.+]] = getelementptr inbounds nuw float, ptr [[A_BUF]], i64 [[LAST]]
   // CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 16 @_ZZ3baziE1a, ptr align 4 [[LAST_REF]], i64 %{{.+}}, i1 false)
-  // CHECK: [[LAST_REF_B:%.+]] = getelementptr inbounds double, ptr [[B_BUF]], i64 9
+  // CHECK: [[LAST_REF_B:%.+]] = getelementptr inbounds nuw double, ptr [[B_BUF]], i64 9
   // CHECK: [[LAST_VAL:%.+]] = load double, ptr [[LAST_REF_B]],
   // CHECK: store double [[LAST_VAL]], ptr @_ZZ3baziE1b,
 
@@ -58,13 +58,13 @@ void baz(int n) {
     // CHECK: [[BASE_IDX_I:%.+]] = load i32, ptr [[IV_ADDR:%.+]],
     // CHECK: [[BASE_IDX:%.+]] = zext i32 [[BASE_IDX_I]] to i64
     // CHECK: [[IDX:%.+]] = mul nsw i64 [[BASE_IDX]], [[NUM_ELEMS:%.+]]
-    // CHECK: [[A_BUF_IDX:%.+]] = getelementptr inbounds float, ptr [[A_BUF:%.+]], i64 [[IDX]]
-    // CHECK: [[A_PRIV:%.+]] = getelementptr inbounds [10 x float], ptr [[A_PRIV_ADDR:%.+]], i64 0, i64 0
+    // CHECK: [[A_BUF_IDX:%.+]] = getelementptr inbounds nuw float, ptr [[A_BUF:%.+]], i64 [[IDX]]
+    // CHECK: [[A_PRIV:%.+]] = getelementptr inbounds nuw [10 x float], ptr [[A_PRIV_ADDR:%.+]], i64 0, i64 0
     // CHECK: [[BYTES:%.+]] = mul nuw i64 [[NUM_ELEMS:%.+]], 4
     // CHECK: call void @llvm.memcpy.p0.p0.i64(ptr {{.*}}[[A_BUF_IDX]], ptr {{.*}}[[A_PRIV]], i64 [[BYTES]], i1 false)
 
     // b_buffer[i] = b_priv;
-    // CHECK: [[B_BUF_IDX:%.+]] = getelementptr inbounds double, ptr [[B_BUF:%.+]], i64 [[BASE_IDX]]
+    // CHECK: [[B_BUF_IDX:%.+]] = getelementptr inbounds nuw double, ptr [[B_BUF:%.+]], i64 [[BASE_IDX]]
     // CHECK: [[B_PRIV:%.+]] = load double, ptr [[B_PRIV_ADDR]],
     // CHECK: store double [[B_PRIV]], ptr [[B_BUF_IDX]],
     // CHECK: br label %[[LOOP_CONTINUE:.+]]
@@ -91,13 +91,13 @@ void baz(int n) {
 
     // a_buffer[i] += a_buffer[i-pow(2, k)];
     // CHECK: [[IDX:%.+]] = mul nsw i64 [[I]], [[NUM_ELEMS]]
-    // CHECK: [[A_BUF_IDX:%.+]] = getelementptr inbounds float, ptr [[A_BUF]], i64 [[IDX]]
+    // CHECK: [[A_BUF_IDX:%.+]] = getelementptr inbounds nuw float, ptr [[A_BUF]], i64 [[IDX]]
     // CHECK: [[IDX_SUB_K2POW:%.+]] = sub nuw i64 [[I]], [[K2POW]]
     // CHECK: [[IDX:%.+]] = mul nsw i64 [[IDX_SUB_K2POW]], [[NUM_ELEMS]]
-    // CHECK: [[A_BUF_IDX_SUB_K2POW:%.+]] = getelementptr inbounds float, ptr [[A_BUF]], i64 [[IDX]]
-    // CHECK: [[B_BUF_IDX:%.+]] = getelementptr inbounds double, ptr [[B_BUF]], i64 [[I]]
+    // CHECK: [[A_BUF_IDX_SUB_K2POW:%.+]] = getelementptr inbounds nuw float, ptr [[A_BUF]], i64 [[IDX]]
+    // CHECK: [[B_BUF_IDX:%.+]] = getelementptr inbounds nuw double, ptr [[B_BUF]], i64 [[I]]
     // CHECK: [[IDX_SUB_K2POW:%.+]] = sub nuw i64 [[I]], [[K2POW]]
-    // CHECK: [[B_BUF_IDX_SUB_K2POW:%.+]] = getelementptr inbounds double, ptr [[B_BUF]], i64 [[IDX_SUB_K2POW]]
+    // CHECK: [[B_BUF_IDX_SUB_K2POW:%.+]] = getelementptr inbounds nuw double, ptr [[B_BUF]], i64 [[IDX_SUB_K2POW]]
     // CHECK: [[A_BUF_END:%.+]] = getelementptr float, ptr [[A_BUF_IDX]], i64 [[NUM_ELEMS]]
     // CHECK: [[ISEMPTY:%.+]] = icmp eq ptr [[A_BUF_IDX]], [[A_BUF_END]]
     // CHECK: br i1 [[ISEMPTY]], label %[[RED_DONE:[^,]+]], label %[[RED_BODY:[^,]+]]
@@ -151,13 +151,13 @@ void baz(int n) {
     // CHECK: [[BASE_IDX_I:%.+]] = load i32, ptr [[IV_ADDR:%.+]],
     // CHECK: [[BASE_IDX:%.+]] = zext i32 [[BASE_IDX_I]] to i64
     // CHECK: [[IDX:%.+]] = mul nsw i64 [[BASE_IDX]], [[NUM_ELEMS]]
-    // CHECK: [[A_BUF_IDX:%.+]] = getelementptr inbounds float, ptr [[A_BUF]], i64 [[IDX]]
-    // CHECK: [[A_PRIV:%.+]] = getelementptr inbounds [10 x float], ptr [[A_PRIV_ADDR:%.+]], i64 0, i64 0
+    // CHECK: [[A_BUF_IDX:%.+]] = getelementptr inbounds nuw float, ptr [[A_BUF]], i64 [[IDX]]
+    // CHECK: [[A_PRIV:%.+]] = getelementptr inbounds nuw [10 x float], ptr [[A_PRIV_ADDR:%.+]], i64 0, i64 0
     // CHECK: [[BYTES:%.+]] = mul nuw i64 [[NUM_ELEMS:%.+]], 4
     // CHECK: call void @llvm.memcpy.p0.p0.i64(ptr {{.*}}[[A_PRIV]], ptr {{.*}}[[A_BUF_IDX]], i64 [[BYTES]], i1 false)
 
     // b_priv = b_buffer[i];
-    // CHECK: [[B_BUF_IDX:%.+]] = getelementptr inbounds double, ptr [[B_BUF]], i64 [[BASE_IDX]]
+    // CHECK: [[B_BUF_IDX:%.+]] = getelementptr inbounds nuw double, ptr [[B_BUF]], i64 [[BASE_IDX]]
     // CHECK: [[B_BUF_IDX_VAL:%.+]] = load double, ptr [[B_BUF_IDX]],
     // CHECK: store double [[B_BUF_IDX_VAL]], ptr [[B_PRIV_ADDR]],
     // CHECK: br label %[[SCAN_PHASE:[^,]+]]
@@ -188,13 +188,13 @@ void baz(int n) {
     // CHECK: [[BASE_IDX_I:%.+]] = load i32, ptr [[IV_ADDR:%.+]],
     // CHECK: [[BASE_IDX:%.+]] = zext i32 [[BASE_IDX_I]] to i64
     // CHECK: [[IDX:%.+]] = mul nsw i64 [[BASE_IDX]], [[NUM_ELEMS:%.+]]
-    // CHECK: [[A_BUF_IDX:%.+]] = getelementptr inbounds float, ptr [[A_BUF:%.+]], i64 [[IDX]]
-    // CHECK: [[A_PRIV:%.+]] = getelementptr inbounds [10 x float], ptr [[A_PRIV_ADDR:%.+]], i64 0, i64 0
+    // CHECK: [[A_BUF_IDX:%.+]] = getelementptr inbounds nuw float, ptr [[A_BUF:%.+]], i64 [[IDX]]
+    // CHECK: [[A_PRIV:%.+]] = getelementptr inbounds nuw [10 x float], ptr [[A_PRIV_ADDR:%.+]], i64 0, i64 0
     // CHECK: [[BYTES:%.+]] = mul nuw i64 [[NUM_ELEMS:%.+]], 4
     // CHECK: call void @llvm.memcpy.p0.p0.i64(ptr {{.*}}[[A_BUF_IDX]], ptr {{.*}}[[A_PRIV]], i64 [[BYTES]], i1 false)
 
     // b_buffer[i] = b_priv;
-    // CHECK: [[B_BUF_IDX:%.+]] = getelementptr inbounds double, ptr [[B_BUF:%.+]], i64 [[BASE_IDX]]
+    // CHECK: [[B_BUF_IDX:%.+]] = getelementptr inbounds nuw double, ptr [[B_BUF:%.+]], i64 [[BASE_IDX]]
     // CHECK: [[B_PRIV:%.+]] = load double, ptr [[B_PRIV_ADDR]],
     // CHECK: store double [[B_PRIV]], ptr [[B_BUF_IDX]],
     // CHECK: br label %[[LOOP_CONTINUE:[^,]+]]
@@ -226,13 +226,13 @@ void baz(int n) {
 
     // a_buffer[i] += a_buffer[i-pow(2, k)];
     // CHECK: [[IDX:%.+]] = mul nsw i64 [[I]], [[NUM_ELEMS]]
-    // CHECK: [[A_BUF_IDX:%.+]] = getelementptr inbounds float, ptr [[A_BUF]], i64 [[IDX]]
+    // CHECK: [[A_BUF_IDX:%.+]] = getelementptr inbounds nuw float, ptr [[A_BUF]], i64 [[IDX]]
     // CHECK: [[IDX_SUB_K2POW:%.+]] = sub nuw i64 [[I]], [[K2POW]]
     // CHECK: [[IDX:%.+]] = mul nsw i64 [[IDX_SUB_K2POW]], [[NUM_ELEMS]]
-    // CHECK: [[A_BUF_IDX_SUB_K2POW:%.+]] = getelementptr inbounds float, ptr [[A_BUF]], i64 [[IDX]]
-    // CHECK: [[B_BUF_IDX:%.+]] = getelementptr inbounds double, ptr [[B_BUF]], i64 [[I]]
+    // CHECK: [[A_BUF_IDX_SUB_K2POW:%.+]] = getelementptr inbounds nuw float, ptr [[A_BUF]], i64 [[IDX]]
+    // CHECK: [[B_BUF_IDX:%.+]] = getelementptr inbounds nuw double, ptr [[B_BUF]], i64 [[I]]
     // CHECK: [[IDX_SUB_K2POW:%.+]] = sub nuw i64 [[I]], [[K2POW]]
-    // CHECK: [[B_BUF_IDX_SUB_K2POW:%.+]] = getelementptr inbounds double, ptr [[B_BUF]], i64 [[IDX_SUB_K2POW]]
+    // CHECK: [[B_BUF_IDX_SUB_K2POW:%.+]] = getelementptr inbounds nuw double, ptr [[B_BUF]], i64 [[IDX_SUB_K2POW]]
     // CHECK: [[A_BUF_END:%.+]] = getelementptr float, ptr [[A_BUF_IDX]], i64 [[NUM_ELEMS]]
     // CHECK: [[ISEMPTY:%.+]] = icmp eq ptr [[A_BUF_IDX]], [[A_BUF_END]]
     // CHECK: br i1 [[ISEMPTY]], label %[[RED_DONE:[^,]+]], label %[[RED_BODY:[^,]+]]
@@ -289,13 +289,13 @@ void baz(int n) {
     // CHECK: [[IF_THEN]]:
     // CHECK: [[BASE_IDX_SUB_1:%.+]] = sub nuw i64 [[BASE_IDX]], 1
     // CHECK: [[IDX:%.+]] = mul nsw i64 [[BASE_IDX_SUB_1]], [[NUM_ELEMS]]
-    // CHECK: [[A_BUF_IDX:%.+]] = getelementptr inbounds float, ptr [[A_BUF]], i64 [[IDX]]
-    // CHECK: [[A_PRIV:%.+]] = getelementptr inbounds [10 x float], ptr [[A_PRIV_ADDR:%.+]], i64 0, i64 0
+    // CHECK: [[A_BUF_IDX:%.+]] = getelementptr inbounds nuw float, ptr [[A_BUF]], i64 [[IDX]]
+    // CHECK: [[A_PRIV:%.+]] = getelementptr inbounds nuw [10 x float], ptr [[A_PRIV_ADDR:%.+]], i64 0, i64 0
     // CHECK: [[BYTES:%.+]] = mul nuw i64 [[NUM_ELEMS:%.+]], 4
     // CHECK: call void @llvm.memcpy.p0.p0.i64(ptr {{.*}}[[A_PRIV]], ptr {{.*}}[[A_BUF_IDX]], i64 [[BYTES]], i1 false)
 
     // b_priv = b_buffer[i];
-    // CHECK: [[B_BUF_IDX:%.+]] = getelementptr inbounds double, ptr [[B_BUF]], i64 [[BASE_IDX_SUB_1]]
+    // CHECK: [[B_BUF_IDX:%.+]] = getelementptr inbounds nuw double, ptr [[B_BUF]], i64 [[BASE_IDX_SUB_1]]
     // CHECK: [[B_BUF_IDX_VAL:%.+]] = load double, ptr [[B_BUF_IDX]],
     // CHECK: store double [[B_BUF_IDX_VAL]], ptr [[B_PRIV_ADDR]],
     // CHECK: br label %[[SCAN_PHASE]]

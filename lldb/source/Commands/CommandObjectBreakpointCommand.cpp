@@ -193,10 +193,12 @@ are no syntax errors may indicate that a function was declared but never called.
   Options *GetOptions() override { return &m_all_options; }
 
   void IOHandlerActivated(IOHandler &io_handler, bool interactive) override {
-    StreamFileSP output_sp(io_handler.GetOutputStreamFileSP());
-    if (output_sp && interactive) {
-      output_sp->PutCString(g_reader_instructions);
-      output_sp->Flush();
+    if (interactive) {
+      if (lldb::LockableStreamFileSP output_sp =
+              io_handler.GetOutputStreamFileSP()) {
+        LockedStreamFile locked_stream = output_sp->Lock();
+        locked_stream.PutCString(g_reader_instructions);
+      }
     }
   }
 
@@ -278,9 +280,8 @@ are no syntax errors may indicate that a function was declared but never called.
         m_stop_on_error =
             OptionArgParser::ToBoolean(option_arg, false, &success);
         if (!success)
-          error.SetErrorStringWithFormat(
-              "invalid value for stop-on-error: \"%s\"",
-              option_arg.str().c_str());
+          return Status::FromErrorStringWithFormatv(
+              "invalid value for stop-on-error: \"{0}\"", option_arg);
       } break;
 
       case 'D':
@@ -390,7 +391,7 @@ protected:
               m_bp_options_vec, result);
         }
         if (!error.Success())
-          result.SetError(error);
+          result.SetError(std::move(error));
       } else {
         // Special handling for one-liner specified inline.
         if (m_options.m_use_one_liner)

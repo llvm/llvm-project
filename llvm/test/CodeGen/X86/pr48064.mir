@@ -1,4 +1,5 @@
 # RUN: llc -mtriple="i386-pc-windows-msvc" -run-pass=stack-coloring %s -o - | FileCheck %s
+# RUN: llc -mtriple="i386-pc-windows-msvc" -passes=stack-coloring %s -o - | FileCheck %s
 
 # There is a problem with the exception handler, we found in windows, when set
 # LifetimeStartOnFirstUse=true for stack-coloring in default. Take the following

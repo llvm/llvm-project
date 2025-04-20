@@ -1291,7 +1291,7 @@ static CIE parseCIE(const InputSection *isec, const EhReader &reader,
     const auto *personalityReloc = isec->getRelocAt(personalityAddrOff);
     if (!personalityReloc)
       reader.failOn(off, "Failed to locate relocation for personality symbol");
-    cie.personalitySymbol = personalityReloc->referent.get<macho::Symbol *>();
+    cie.personalitySymbol = cast<macho::Symbol *>(personalityReloc->referent);
   }
   return cie;
 }
@@ -1338,12 +1338,12 @@ targetSymFromCanonicalSubtractor(const InputSection *isec,
   assert(target->hasAttr(minuend.type, RelocAttrBits::UNSIGNED));
   // Note: pcSym may *not* be exactly at the PC; there's usually a non-zero
   // addend.
-  auto *pcSym = cast<Defined>(subtrahend.referent.get<macho::Symbol *>());
+  auto *pcSym = cast<Defined>(cast<macho::Symbol *>(subtrahend.referent));
   Defined *target =
       cast_or_null<Defined>(minuend.referent.dyn_cast<macho::Symbol *>());
   if (!pcSym) {
     auto *targetIsec =
-        cast<ConcatInputSection>(minuend.referent.get<InputSection *>());
+        cast<ConcatInputSection>(cast<InputSection *>(minuend.referent));
     target = findSymbolAtOffset(targetIsec, minuend.addend);
   }
   if (Invert)
@@ -1730,6 +1730,14 @@ DylibFile::DylibFile(MemoryBufferRef mb, DylibFile *umbrella,
                       ? this
                       : this->umbrella;
 
+  if (!canBeImplicitlyLinked) {
+    for (auto *cmd : findCommands<sub_client_command>(hdr, LC_SUB_CLIENT)) {
+      StringRef allowableClient{reinterpret_cast<const char *>(cmd) +
+                                cmd->client};
+      allowableClients.push_back(allowableClient);
+    }
+  }
+
   const auto *dyldInfo = findCommand<dyld_info_command>(hdr, LC_DYLD_INFO_ONLY);
   const auto *exportsTrie =
       findCommand<linkedit_data_command>(hdr, LC_DYLD_EXPORTS_TRIE);
@@ -1871,6 +1879,9 @@ DylibFile::DylibFile(const InterfaceFile &interface, DylibFile *umbrella,
   installName = saver().save(interface.getInstallName());
   compatibilityVersion = interface.getCompatibilityVersion().rawValue();
   currentVersion = interface.getCurrentVersion().rawValue();
+  for (const auto &rpath : interface.rpaths())
+    if (rpath.first == config->platformInfo.target)
+      rpaths.push_back(saver().save(rpath.second));
 
   if (config->printEachFile)
     message(toString(this));
@@ -1891,6 +1902,12 @@ DylibFile::DylibFile(const InterfaceFile &interface, DylibFile *umbrella,
   exportingFile = (canBeImplicitlyLinked && isImplicitlyLinked(installName))
                       ? this
                       : umbrella;
+
+  if (!canBeImplicitlyLinked)
+    for (const auto &allowableClient : interface.allowableClients())
+      allowableClients.push_back(
+          *make<std::string>(allowableClient.getInstallName().data()));
+
   auto addSymbol = [&](const llvm::MachO::Symbol &symbol,
                        const Twine &name) -> void {
     StringRef savedName = saver().save(name);
@@ -2142,8 +2159,30 @@ ArchiveFile::ArchiveFile(std::unique_ptr<object::Archive> &&f, bool forceHidden)
 void ArchiveFile::addLazySymbols() {
   // Avoid calling getMemoryBufferRef() on zero-symbol archive
   // since that crashes.
-  if (file->isEmpty() || file->getNumberOfSymbols() == 0)
+  if (file->isEmpty() ||
+      (file->hasSymbolTable() && file->getNumberOfSymbols() == 0))
     return;
+
+  if (!file->hasSymbolTable()) {
+    // No index, treat each child as a lazy object file.
+    Error e = Error::success();
+    for (const object::Archive::Child &c : file->children(e)) {
+      // Check `seen` but don't insert so a future eager load can still happen.
+      if (seen.contains(c.getChildOffset()))
+        continue;
+      if (!seenLazy.insert(c.getChildOffset()).second)
+        continue;
+      auto file = childToObjectFile(c, /*lazy=*/true);
+      if (!file)
+        error(toString(this) +
+              ": couldn't process child: " + toString(file.takeError()));
+      inputFiles.insert(*file);
+    }
+    if (e)
+      error(toString(this) +
+            ": Archive::children failed: " + toString(std::move(e)));
+    return;
+  }
 
   Error err = Error::success();
   auto child = file->child_begin(err);
@@ -2174,16 +2213,17 @@ void ArchiveFile::addLazySymbols() {
 
 static Expected<InputFile *>
 loadArchiveMember(MemoryBufferRef mb, uint32_t modTime, StringRef archiveName,
-                  uint64_t offsetInArchive, bool forceHidden, bool compatArch) {
+                  uint64_t offsetInArchive, bool forceHidden, bool compatArch,
+                  bool lazy) {
   if (config->zeroModTime)
     modTime = 0;
 
   switch (identify_magic(mb.getBuffer())) {
   case file_magic::macho_object:
-    return make<ObjFile>(mb, modTime, archiveName, /*lazy=*/false, forceHidden,
+    return make<ObjFile>(mb, modTime, archiveName, lazy, forceHidden,
                          compatArch);
   case file_magic::bitcode:
-    return make<BitcodeFile>(mb, archiveName, offsetInArchive, /*lazy=*/false,
+    return make<BitcodeFile>(mb, archiveName, offsetInArchive, lazy,
                              forceHidden, compatArch);
   default:
     return createStringError(inconvertibleErrorCode(),
@@ -2195,19 +2235,7 @@ loadArchiveMember(MemoryBufferRef mb, uint32_t modTime, StringRef archiveName,
 Error ArchiveFile::fetch(const object::Archive::Child &c, StringRef reason) {
   if (!seen.insert(c.getChildOffset()).second)
     return Error::success();
-
-  Expected<MemoryBufferRef> mb = c.getMemoryBufferRef();
-  if (!mb)
-    return mb.takeError();
-
-  Expected<TimePoint<std::chrono::seconds>> modTime = c.getLastModified();
-  if (!modTime)
-    return modTime.takeError();
-
-  Expected<InputFile *> file =
-      loadArchiveMember(*mb, toTimeT(*modTime), getName(), c.getChildOffset(),
-                        forceHidden, compatArch);
-
+  auto file = childToObjectFile(c, /*lazy=*/false);
   if (!file)
     return file.takeError();
 
@@ -2232,6 +2260,21 @@ void ArchiveFile::fetch(const object::Archive::Symbol &sym) {
   if (Error e = fetch(c, symCopy.getName()))
     error(toString(this) + ": could not get the member defining symbol " +
           toMachOString(symCopy) + ": " + toString(std::move(e)));
+}
+
+Expected<InputFile *>
+ArchiveFile::childToObjectFile(const llvm::object::Archive::Child &c,
+                               bool lazy) {
+  Expected<MemoryBufferRef> mb = c.getMemoryBufferRef();
+  if (!mb)
+    return mb.takeError();
+
+  Expected<TimePoint<std::chrono::seconds>> modTime = c.getLastModified();
+  if (!modTime)
+    return modTime.takeError();
+
+  return loadArchiveMember(*mb, toTimeT(*modTime), getName(),
+                           c.getChildOffset(), forceHidden, compatArch, lazy);
 }
 
 static macho::Symbol *createBitcodeSymbol(const lto::InputFile::Symbol &objSym,

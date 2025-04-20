@@ -15,6 +15,7 @@
 #include <__memory/pointer_traits.h>
 #include <__memory/shared_ptr.h>
 #include <__memory/unique_ptr.h>
+#include <__type_traits/is_pointer.h>
 #include <__type_traits/is_same.h>
 #include <__type_traits/is_specialization.h>
 #include <__type_traits/is_void.h>
@@ -34,7 +35,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 #if _LIBCPP_STD_VER >= 23
 
 template <class _Smart, class _Pointer, class... _Args>
-class _LIBCPP_TEMPLATE_VIS inout_ptr_t {
+class inout_ptr_t {
   static_assert(!__is_specialization_v<_Smart, shared_ptr>, "std::shared_ptr<> is not supported with std::inout_ptr.");
 
 public:
@@ -63,17 +64,17 @@ public:
       }
     }
 
-    using _SP = __pointer_of_or_t<_Smart, _Pointer>;
+    using _SmartPtr = __pointer_of_or_t<_Smart, _Pointer>;
     if constexpr (is_pointer_v<_Smart>) {
-      std::apply([&](auto&&... __args) { __s_ = _Smart(static_cast<_SP>(__p_), std::forward<_Args>(__args)...); },
+      std::apply([&](auto&&... __args) { __s_ = _Smart(static_cast<_SmartPtr>(__p_), std::forward<_Args>(__args)...); },
                  std::move(__a_));
     } else if constexpr (__resettable_smart_pointer_with_args<_Smart, _Pointer, _Args...>) {
-      std::apply([&](auto&&... __args) { __s_.reset(static_cast<_SP>(__p_), std::forward<_Args>(__args)...); },
+      std::apply([&](auto&&... __args) { __s_.reset(static_cast<_SmartPtr>(__p_), std::forward<_Args>(__args)...); },
                  std::move(__a_));
     } else {
-      static_assert(is_constructible_v<_Smart, _SP, _Args...>,
+      static_assert(is_constructible_v<_Smart, _SmartPtr, _Args...>,
                     "The smart pointer must be constructible from arguments of types _Smart, _Pointer, _Args...");
-      std::apply([&](auto&&... __args) { __s_ = _Smart(static_cast<_SP>(__p_), std::forward<_Args>(__args)...); },
+      std::apply([&](auto&&... __args) { __s_ = _Smart(static_cast<_SmartPtr>(__p_), std::forward<_Args>(__args)...); },
                  std::move(__a_));
     }
   }

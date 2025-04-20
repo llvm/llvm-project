@@ -3,15 +3,15 @@
 %struct.hoge = type { i32, %struct.widget }
 %struct.widget = type { i64 }
 
-define hidden void @quux(ptr %f) align 2 {
+define hidden void @quux(ptr %f, i1 %arg) align 2 {
   %tmp = getelementptr inbounds %struct.hoge, ptr %f, i64 0, i32 1, i32 0
   %tmp24 = getelementptr inbounds %struct.hoge, ptr %f, i64 0, i32 1
   br label %bb26
 
 bb26:                                             ; preds = %bb77, %0
 ; CHECK:  3 = MemoryPhi({%0,liveOnEntry},{bb77,2})
-; CHECK-NEXT:   br i1 undef, label %bb68, label %bb77
-  br i1 undef, label %bb68, label %bb77
+; CHECK-NEXT:   br i1 %arg, label %bb68, label %bb77
+  br i1 %arg, label %bb68, label %bb77
 
 bb68:                                             ; preds = %bb26
 ; CHECK:  MemoryUse(liveOnEntry)
@@ -31,7 +31,7 @@ bb77:                                             ; preds = %bb68, %bb26
   br label %bb26
 }
 
-define hidden void @quux_no_null_opt(ptr %f) align 2 #0 {
+define hidden void @quux_no_null_opt(ptr %f, i1 %arg) align 2 #0 {
 ; CHECK-LABEL: quux_no_null_opt(
   %tmp = getelementptr inbounds %struct.hoge, ptr %f, i64 0, i32 1, i32 0
   %tmp24 = getelementptr inbounds %struct.hoge, ptr %f, i64 0, i32 1
@@ -39,8 +39,8 @@ define hidden void @quux_no_null_opt(ptr %f) align 2 #0 {
 
 bb26:                                             ; preds = %bb77, %0
 ; CHECK:  3 = MemoryPhi({%0,liveOnEntry},{bb77,2})
-; CHECK-NEXT:   br i1 undef, label %bb68, label %bb77
-  br i1 undef, label %bb68, label %bb77
+; CHECK-NEXT:   br i1 %arg, label %bb68, label %bb77
+  br i1 %arg, label %bb68, label %bb77
 
 bb68:                                             ; preds = %bb26
 ; CHECK:  MemoryUse(3)
@@ -61,15 +61,15 @@ bb77:                                             ; preds = %bb68, %bb26
 }
 
 ; CHECK-LABEL: define void @quux_skip
-define void @quux_skip(ptr noalias %f, ptr noalias %g) align 2 {
+define void @quux_skip(ptr noalias %f, ptr noalias %g, i1 %arg) align 2 {
   %tmp = getelementptr inbounds %struct.hoge, ptr %f, i64 0, i32 1, i32 0
   %tmp24 = getelementptr inbounds %struct.hoge, ptr %f, i64 0, i32 1
   br label %bb26
 
 bb26:                                             ; preds = %bb77, %0
 ; CHECK: 3 = MemoryPhi({%0,liveOnEntry},{bb77,2})
-; CHECK-NEXT: br i1 undef, label %bb68, label %bb77
-  br i1 undef, label %bb68, label %bb77
+; CHECK-NEXT: br i1 %arg, label %bb68, label %bb77
+  br i1 %arg, label %bb68, label %bb77
 
 bb68:                                             ; preds = %bb26
 ; CHECK: MemoryUse(3)
@@ -89,7 +89,7 @@ bb77:                                             ; preds = %bb68, %bb26
 }
 
 ; CHECK-LABEL: define void @quux_dominated
-define void @quux_dominated(ptr noalias %f, ptr noalias %g) align 2 {
+define void @quux_dominated(ptr noalias %f, ptr noalias %g, i1 %arg) align 2 {
   %tmp = getelementptr inbounds %struct.hoge, ptr %f, i64 0, i32 1, i32 0
   %tmp24 = getelementptr inbounds %struct.hoge, ptr %f, i64 0, i32 1
   br label %bb26
@@ -99,7 +99,7 @@ bb26:                                             ; preds = %bb77, %0
 ; CHECK: MemoryUse(3)
 ; CHECK-NEXT: load ptr, ptr %tmp24, align 8
   load ptr, ptr %tmp24, align 8
-  br i1 undef, label %bb68, label %bb77
+  br i1 %arg, label %bb68, label %bb77
 
 bb68:                                             ; preds = %bb26
 ; CHECK: MemoryUse(3)
@@ -119,7 +119,7 @@ bb77:                                             ; preds = %bb68, %bb26
 }
 
 ; CHECK-LABEL: define void @quux_nodominate
-define void @quux_nodominate(ptr noalias %f, ptr noalias %g) align 2 {
+define void @quux_nodominate(ptr noalias %f, ptr noalias %g, i1 %arg) align 2 {
   %tmp = getelementptr inbounds %struct.hoge, ptr %f, i64 0, i32 1, i32 0
   %tmp24 = getelementptr inbounds %struct.hoge, ptr %f, i64 0, i32 1
   br label %bb26
@@ -129,7 +129,7 @@ bb26:                                             ; preds = %bb77, %0
 ; CHECK: MemoryUse(liveOnEntry)
 ; CHECK-NEXT: load ptr, ptr %tmp24, align 8
   load ptr, ptr %tmp24, align 8
-  br i1 undef, label %bb68, label %bb77
+  br i1 %arg, label %bb68, label %bb77
 
 bb68:                                             ; preds = %bb26
 ; CHECK: MemoryUse(3)

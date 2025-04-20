@@ -4,11 +4,14 @@ include_directories(..)
 
 set(NSAN_SOURCES
   nsan.cpp
+  nsan_allocator.cpp
   nsan_flags.cpp
   nsan_interceptors.cpp
   nsan_malloc_linux.cpp
+  nsan_new_delete.cpp
   nsan_stats.cpp
   nsan_suppressions.cpp
+  nsan_thread.cpp
 )
 
 set(NSAN_PREINIT_SOURCES

@@ -12,7 +12,7 @@
 
 #include "clang/AST/Attr.h"
 #include "clang/Basic/AttributeCommonInfo.h"
-#include "clang/Parse/ParseDiagnostic.h"
+#include "clang/Basic/DiagnosticParse.h"
 #include "clang/Parse/Parser.h"
 #include "clang/Parse/RAIIObjectsForParser.h"
 #include "clang/Sema/SemaHLSL.h"
@@ -27,10 +27,10 @@ static bool validateDeclsInsideHLSLBuffer(Parser::DeclGroupPtrTy DG,
     return false;
   DeclGroupRef Decls = DG.get();
   bool IsValid = true;
-  // Only allow function, variable, record decls inside HLSLBuffer.
+  // Only allow function, variable, record, and empty decls inside HLSLBuffer.
   for (DeclGroupRef::iterator I = Decls.begin(), E = Decls.end(); I != E; ++I) {
     Decl *D = *I;
-    if (isa<CXXRecordDecl, RecordDecl, FunctionDecl, VarDecl>(D))
+    if (isa<CXXRecordDecl, RecordDecl, FunctionDecl, VarDecl, EmptyDecl>(D))
       continue;
 
     // FIXME: support nested HLSLBuffer and namespace inside HLSLBuffer.
@@ -75,6 +75,7 @@ Decl *Parser::ParseHLSLBuffer(SourceLocation &DeclEnd) {
   Decl *D = Actions.HLSL().ActOnStartBuffer(getCurScope(), IsCBuffer, BufferLoc,
                                             Identifier, IdentifierLoc,
                                             T.getOpenLocation());
+  Actions.ProcessDeclAttributeList(Actions.CurScope, D, Attrs);
 
   while (Tok.isNot(tok::r_brace) && Tok.isNot(tok::eof)) {
     // FIXME: support attribute on constants inside cbuffer/tbuffer.
@@ -98,7 +99,6 @@ Decl *Parser::ParseHLSLBuffer(SourceLocation &DeclEnd) {
   BufferScope.Exit();
   Actions.HLSL().ActOnFinishBuffer(D, DeclEnd);
 
-  Actions.ProcessDeclAttributeList(Actions.CurScope, D, Attrs);
   return D;
 }
 
@@ -115,7 +115,7 @@ static void fixSeparateAttrArgAndNumber(StringRef ArgStr, SourceLocation ArgLoc,
       << FixedArg
       << FixItHint::CreateReplacement(SourceRange(ArgLoc, EndNumLoc), FixedArg);
   ArgsUnion &Slot = ArgExprs.back();
-  Slot = IdentifierLoc::create(Ctx, ArgLoc, PP.getIdentifierInfo(FixedArg));
+  Slot = new (Ctx) IdentifierLoc(ArgLoc, PP.getIdentifierInfo(FixedArg));
 }
 
 void Parser::ParseHLSLAnnotations(ParsedAttributes &Attrs,
@@ -280,6 +280,8 @@ void Parser::ParseHLSLAnnotations(ParsedAttributes &Attrs,
   case ParsedAttr::UnknownAttribute:
     Diag(Loc, diag::err_unknown_hlsl_semantic) << II;
     return;
+  case ParsedAttr::AT_HLSLSV_GroupThreadID:
+  case ParsedAttr::AT_HLSLSV_GroupID:
   case ParsedAttr::AT_HLSLSV_GroupIndex:
   case ParsedAttr::AT_HLSLSV_DispatchThreadID:
     break;

@@ -81,9 +81,14 @@ public:
   enum BinaryType {
     eBinaryTypeInvalid = 0,
     eBinaryTypeUnknown,
-    eBinaryTypeKernel,    /// kernel binary
-    eBinaryTypeUser,      /// user process binary
-    eBinaryTypeStandalone /// standalone binary / firmware
+    /// kernel binary
+    eBinaryTypeKernel,
+    /// user process binary, dyld addr
+    eBinaryTypeUser,
+    /// user process binary, dyld_all_image_infos addr
+    eBinaryTypeUserAllImageInfos,
+    /// standalone binary / firmware
+    eBinaryTypeStandalone
   };
 
   struct LoadableData {
@@ -656,8 +661,9 @@ public:
   // When an object file is in memory, subclasses should try and lock the
   // process weak pointer. If the process weak pointer produces a valid
   // ProcessSP, then subclasses can call this function to read memory.
-  static lldb::DataBufferSP ReadMemory(const lldb::ProcessSP &process_sp,
-                                       lldb::addr_t addr, size_t byte_size);
+  static lldb::WritableDataBufferSP
+  ReadMemory(const lldb::ProcessSP &process_sp, lldb::addr_t addr,
+             size_t byte_size);
 
   // This function returns raw file contents. Do not use it if you want
   // transparent decompression of section contents.
@@ -742,6 +748,7 @@ public:
 
   static lldb::DataBufferSP MapFileData(const FileSpec &file, uint64_t Size,
                                         uint64_t Offset);
+  std::string GetObjectName() const;
 
 protected:
   // Member variables.

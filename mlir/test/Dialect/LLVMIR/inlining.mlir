@@ -18,7 +18,7 @@ func.func @inner_func_inlinable(%ptr : !llvm.ptr) -> i32 {
   "llvm.intr.memset"(%ptr, %byte, %0) <{isVolatile = true}> : (!llvm.ptr, i8, i32) -> ()
   "llvm.intr.memmove"(%ptr, %ptr, %0) <{isVolatile = true}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
   "llvm.intr.memcpy"(%ptr, %ptr, %0) <{isVolatile = true}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
-  "llvm.intr.assume"(%true) : (i1) -> ()
+  llvm.intr.assume %true : i1
   llvm.fence release
   %2 = llvm.atomicrmw add %ptr, %0 monotonic : !llvm.ptr, i32
   %3 = llvm.cmpxchg %ptr, %0, %1 acq_rel monotonic : !llvm.ptr, i32
@@ -44,7 +44,7 @@ func.func @inner_func_inlinable(%ptr : !llvm.ptr) -> i32 {
 // CHECK: "llvm.intr.memset"(%[[PTR]]
 // CHECK: "llvm.intr.memmove"(%[[PTR]], %[[PTR]]
 // CHECK: "llvm.intr.memcpy"(%[[PTR]], %[[PTR]]
-// CHECK: "llvm.intr.assume"
+// CHECK: llvm.intr.assume
 // CHECK: llvm.fence release
 // CHECK: llvm.atomicrmw add %[[PTR]], %[[CST]] monotonic
 // CHECK: llvm.cmpxchg %[[PTR]], %[[CST]], %[[RES]] acq_rel monotonic
@@ -95,7 +95,7 @@ llvm.func @foo() -> (i32) attributes { no_inline } {
   llvm.return %0 : i32
 }
 
-llvm.func @bar() -> (i32) attributes { no_inline } {
+llvm.func @bar() -> (i32) {
   %0 = llvm.mlir.constant(1 : i32) : i32
   llvm.return %0 : i32
 }
@@ -106,7 +106,7 @@ llvm.func @callee_with_multiple_blocks(%cond: i1) -> (i32) {
   %0 = llvm.call @foo() : () -> (i32)
   llvm.br ^bb3(%0: i32)
 ^bb2:
-  %1 = llvm.call @bar() : () -> (i32)
+  %1 = llvm.call @bar() { no_inline } : () -> (i32)
   llvm.br ^bb3(%1: i32)
 ^bb3(%arg: i32):
   llvm.return %arg : i32
@@ -662,4 +662,50 @@ llvm.func @caller() {
   // CHECK-NEXT: llvm.call @vararg_intrinrics()
   llvm.call @vararg_intrinrics() : () -> ()
   llvm.return
+}
+
+// -----
+
+llvm.func @private_func(%a : i32) -> i32 attributes {sym_visibility = "private"} {
+  llvm.return %a : i32
+}
+
+// CHECK-LABEL: func @caller
+llvm.func @caller(%x : i32) -> i32 {
+  // CHECK-NOT: llvm.call @private_func
+  %z = llvm.call @private_func(%x) : (i32) -> (i32)
+  llvm.return %z : i32
+}
+
+// -----
+
+llvm.func @unreachable_func(%a : i32) -> i32 {
+  "llvm.intr.trap"() : () -> ()
+  llvm.unreachable
+}
+
+// CHECK-LABEL: func @caller
+llvm.func @caller(%x : i32) -> i32 {
+  // CHECK-NOT: llvm.call @unreachable_func
+  // CHECK: llvm.intr.trap
+  // CHECK: llvm.unreachable
+  %z = llvm.call @unreachable_func(%x) : (i32) -> (i32)
+  llvm.return %z : i32
+}
+
+// -----
+// Check that @func is not inlined because of llvm.blocktag
+
+func.func @func(%arg0 : i32) -> i32  {
+  llvm.blocktag <id = 1>
+  llvm.return %arg0 : i32
+}
+
+// CHECK-LABEL: @llvm_ret
+func.func @llvm_ret(%arg0 : i32) -> i32 {
+  // CHECK-NOT: llvm.blocktag
+  // CHECK: %[[R:.*]] = call
+  %res = call @func(%arg0) : (i32) -> (i32)
+  // CHECK: return %[[R]]
+  return %res : i32
 }

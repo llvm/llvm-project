@@ -254,6 +254,9 @@ public:
   /// Returns whether the physical register is FP or NEON.
   static bool isFpOrNEON(Register Reg);
 
+  /// Returns the shift amount operator of a load/store.
+  static const MachineOperand &getLdStAmountOp(const MachineInstr &MI);
+
   /// Returns whether the instruction is FP or NEON.
   static bool isFpOrNEON(const MachineInstr &MI);
 
@@ -336,25 +339,25 @@ public:
                         MCRegister SrcReg, bool KillSrc, unsigned Opcode,
                         llvm::ArrayRef<unsigned> Indices) const;
   void copyGPRRegTuple(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
-                       DebugLoc DL, unsigned DestReg, unsigned SrcReg,
+                       const DebugLoc &DL, MCRegister DestReg, MCRegister SrcReg,
                        bool KillSrc, unsigned Opcode, unsigned ZeroReg,
                        llvm::ArrayRef<unsigned> Indices) const;
   void copyPhysReg(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
-                   const DebugLoc &DL, MCRegister DestReg, MCRegister SrcReg,
-                   bool KillSrc) const override;
+                   const DebugLoc &DL, Register DestReg, Register SrcReg,
+                   bool KillSrc, bool RenamableDest = false,
+                   bool RenamableSrc = false) const override;
 
-  void storeRegToStackSlot(MachineBasicBlock &MBB,
-                           MachineBasicBlock::iterator MBBI, Register SrcReg,
-                           bool isKill, int FrameIndex,
-                           const TargetRegisterClass *RC,
-                           const TargetRegisterInfo *TRI,
-                           Register VReg) const override;
+  void storeRegToStackSlot(
+      MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI, Register SrcReg,
+      bool isKill, int FrameIndex, const TargetRegisterClass *RC,
+      const TargetRegisterInfo *TRI, Register VReg,
+      MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
 
-  void loadRegFromStackSlot(MachineBasicBlock &MBB,
-                            MachineBasicBlock::iterator MBBI, Register DestReg,
-                            int FrameIndex, const TargetRegisterClass *RC,
-                            const TargetRegisterInfo *TRI,
-                            Register VReg) const override;
+  void loadRegFromStackSlot(
+      MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
+      Register DestReg, int FrameIndex, const TargetRegisterClass *RC,
+      const TargetRegisterInfo *TRI, Register VReg,
+      MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
 
   // This tells target independent code that it is okay to pass instructions
   // with subreg operands to foldMemoryOperandImpl.
@@ -445,13 +448,25 @@ public:
   /// be checked.
   bool isAssociativeAndCommutative(const MachineInstr &Inst,
                                    bool Invert) const override;
-  /// When getMachineCombinerPatterns() finds patterns, this function generates
-  /// the instructions that could replace the original code sequence
+
+  /// Returns true if \P Opcode is an instruction which performs accumulation
+  /// into a destination register.
+  bool isAccumulationOpcode(unsigned Opcode) const override;
+
+  /// Returns an opcode which defines the accumulator used by \P Opcode.
+  unsigned getAccumulationStartOpcode(unsigned Opcode) const override;
+
+  unsigned
+  getReduceOpcodeForAccumulator(unsigned int AccumulatorOpCode) const override;
+
+  /// When getMachineCombinerPatterns() finds patterns, this function
+  /// generates the instructions that could replace the original code
+  /// sequence
   void genAlternativeCodeSequence(
       MachineInstr &Root, unsigned Pattern,
       SmallVectorImpl<MachineInstr *> &InsInstrs,
       SmallVectorImpl<MachineInstr *> &DelInstrs,
-      DenseMap<unsigned, unsigned> &InstrIdxForVirtReg) const override;
+      DenseMap<Register, unsigned> &InstrIdxForVirtReg) const override;
   /// AArch64 supports MachineCombiner.
   bool useMachineCombiner() const override;
 
@@ -468,9 +483,11 @@ public:
 
   bool isFunctionSafeToOutlineFrom(MachineFunction &MF,
                                    bool OutlineFromLinkOnceODRs) const override;
-  std::optional<outliner::OutlinedFunction> getOutliningCandidateInfo(
+  std::optional<std::unique_ptr<outliner::OutlinedFunction>>
+  getOutliningCandidateInfo(
       const MachineModuleInfo &MMI,
-      std::vector<outliner::Candidate> &RepeatedSequenceLocs) const override;
+      std::vector<outliner::Candidate> &RepeatedSequenceLocs,
+      unsigned MinRepeats) const override;
   void mergeOutliningCandidateAttributes(
       Function &F, std::vector<outliner::Candidate> &Candidates) const override;
   outliner::InstrType getOutliningTypeImpl(const MachineModuleInfo &MMI,
@@ -583,6 +600,10 @@ private:
   std::optional<unsigned>
   canRemovePTestInstr(MachineInstr *PTest, MachineInstr *Mask,
                       MachineInstr *Pred, const MachineRegisterInfo *MRI) const;
+
+  /// verifyInstruction - Perform target specific instruction verification.
+  bool verifyInstruction(const MachineInstr &MI,
+                         StringRef &ErrInfo) const override;
 };
 
 struct UsedNZCV {
@@ -683,6 +704,10 @@ static inline bool isCondBranchOpcode(int Opc) {
   case AArch64::TBZX:
   case AArch64::TBNZW:
   case AArch64::TBNZX:
+  case AArch64::CBWPri:
+  case AArch64::CBXPri:
+  case AArch64::CBWPrr:
+  case AArch64::CBXPrr:
     return true;
   default:
     return false;
@@ -699,6 +724,19 @@ static inline bool isIndirectBranchOpcode(int Opc) {
     return true;
   }
   return false;
+}
+
+static inline bool isIndirectCallOpcode(unsigned Opc) {
+  switch (Opc) {
+  case AArch64::BLR:
+  case AArch64::BLRAA:
+  case AArch64::BLRAB:
+  case AArch64::BLRAAZ:
+  case AArch64::BLRABZ:
+    return true;
+  default:
+    return false;
+  }
 }
 
 static inline bool isPTrueOpcode(unsigned Opc) {

@@ -37,19 +37,14 @@ struct ELFRelocationEntry {
   const MCSymbolELF *Symbol; // The symbol to relocate with.
   unsigned Type;   // The type of the relocation.
   uint64_t Addend; // The addend to use.
-  const MCSymbolELF *OriginalSymbol; // The original value of Symbol if we changed it.
-  uint64_t OriginalAddend; // The original value of addend.
 
   ELFRelocationEntry(uint64_t Offset, const MCSymbolELF *Symbol, unsigned Type,
-                     uint64_t Addend, const MCSymbolELF *OriginalSymbol,
-                     uint64_t OriginalAddend)
-      : Offset(Offset), Symbol(Symbol), Type(Type), Addend(Addend),
-        OriginalSymbol(OriginalSymbol), OriginalAddend(OriginalAddend) {}
+                     uint64_t Addend)
+      : Offset(Offset), Symbol(Symbol), Type(Type), Addend(Addend) {}
 
   void print(raw_ostream &Out) const {
     Out << "Off=" << Offset << ", Sym=" << Symbol << ", Type=" << Type
-        << ", Addend=" << Addend << ", OriginalSymbol=" << OriginalSymbol
-        << ", OriginalAddend=" << OriginalAddend;
+        << ", Addend=" << Addend;
   }
 
   LLVM_DUMP_METHOD void dump() const { print(errs()); }
@@ -142,14 +137,6 @@ public:
   unsigned setRSsym(unsigned Value, unsigned Type) const {
     return (Type & R_SSYM_MASK) | ((Value & 0xff) << R_SSYM_SHIFT);
   }
-
-  // On AArch64, return a new section to be added to the ELF object that
-  // contains relocations used to describe every symbol that should have memory
-  // tags applied. Returns nullptr if no such section is necessary (i.e. there's
-  // no tagged globals).
-  virtual MCSectionELF *getMemtagRelocsSection(MCContext &Ctx) const {
-    return nullptr;
-  }
 };
 
 class ELFObjectWriter final : public MCObjectWriter {
@@ -195,9 +182,9 @@ public:
   bool hasRelocationAddend() const;
   bool usesRela(const MCTargetOptions *TO, const MCSectionELF &Sec) const;
 
-  bool shouldRelocateWithSymbol(const MCAssembler &Asm, const MCValue &Val,
-                                const MCSymbolELF *Sym, uint64_t C,
-                                unsigned Type) const;
+  bool useSectionSymbol(const MCAssembler &Asm, const MCValue &Val,
+                        const MCSymbolELF *Sym, uint64_t C,
+                        unsigned Type) const;
 
   bool checkRelocation(MCContext &Ctx, SMLoc Loc, const MCSectionELF *From,
                        const MCSectionELF *To);

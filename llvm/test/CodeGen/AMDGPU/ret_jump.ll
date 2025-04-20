@@ -50,7 +50,7 @@ unreachable.bb:                                           ; preds = %else
   unreachable
 
 ret.bb:                                          ; preds = %else, %main_body
-  ret <{ i32, i32, i32, i32, i32, i32, i32, i32, i32, float, float, float, float, float, float, float, float, float, float, float, float, float, float }> undef
+  ret <{ i32, i32, i32, i32, i32, i32, i32, i32, i32, float, float, float, float, float, float, float, float, float, float, float, float, float, float }> poison
 }
 
 ; GCN-LABEL: {{^}}uniform_br_nontrivial_ret_divergent_br_nontrivial_unreachable:
@@ -65,7 +65,6 @@ ret.bb:                                          ; preds = %else, %main_body
 
 ; GCN: .LBB{{[0-9]+_[0-9]+}}: ; %else
 ; GCN: s_and_saveexec_b64 [[SAVE_EXEC:s\[[0-9]+:[0-9]+\]]], vcc
-; GCN-NEXT: s_cbranch_execz .LBB1_{{[0-9]+}}
 
 ; GCN-NEXT:  ; %unreachable.bb
 ; GCN: ds_write_b32
@@ -99,12 +98,12 @@ else:                                             ; preds = %main_body
   br i1 %divergent.cond, label %ret.bb, label %unreachable.bb
 
 unreachable.bb:                                           ; preds = %else
-  store volatile i32 8, ptr addrspace(3) undef
+  store volatile i32 8, ptr addrspace(3) poison
   unreachable
 
 ret.bb:                                          ; preds = %else, %main_body
-  store volatile i32 11, ptr addrspace(1) undef
-  ret <{ i32, i32, i32, i32, i32, i32, i32, i32, i32, float, float, float, float, float, float, float, float, float, float, float, float, float, float }> undef
+  store volatile i32 11, ptr addrspace(1) poison
+  ret <{ i32, i32, i32, i32, i32, i32, i32, i32, i32, float, float, float, float, float, float, float, float, float, float, float, float, float, float }> poison
 }
 
 ; Function Attrs: nounwind readnone

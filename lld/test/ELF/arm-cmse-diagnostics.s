@@ -7,11 +7,11 @@
 // RUN: llvm-mc -arm-add-build-attributes -filetype=obj --triple=thumbv8m.base lib -o lib.o
 // RUN: llvm-mc -arm-add-build-attributes -filetype=obj --triple=thumbv8m.base app -I %S/Inputs -o app.o
 // RUN: llvm-objcopy --redefine-sym=entry7_duplicate=entry6_duplicate lib.o
-// RUN: not ld.lld --cmse-implib --in-implib=lib.o app.o -o /dev/null 2>&1 | FileCheck %s --check-prefixes=ERR_IMPLIB
-// RUN: not ld.lld --cmse-implib --in-implib=lib.o --in-implib=lib.o app.o -o /dev/null 2>&1 | FileCheck %s --check-prefixes=ERR_MULT_INIMPLIB
-// RUN: not ld.lld --in-implib=lib.o app.o -o /dev/null 2>&1 | FileCheck %s --check-prefixes=ERR_IN_IMPLIB
-// RUN: not ld.lld --out-implib=out.lib app.o -o /dev/null 2>&1 | FileCheck %s --check-prefixes=ERR_OUT_IMPLIB
-// RUN: not ld.lld --out-implib=out.lib --in-implib=lib.o app.o -o /dev/null 2>&1 | FileCheck %s --check-prefixes=ERR_IN_IMPLIB,ERR_OUT_IMPLIB
+// RUN: not ld.lld --cmse-implib --in-implib=lib.o app.o 2>&1 | FileCheck %s --check-prefixes=ERR_IMPLIB
+// RUN: not ld.lld --cmse-implib --in-implib=lib.o --in-implib=lib.o app.o 2>&1 | FileCheck %s --check-prefixes=ERR_MULT_INIMPLIB
+// RUN: not ld.lld --in-implib=lib.o app.o 2>&1 | FileCheck %s --check-prefixes=ERR_IN_IMPLIB
+// RUN: not ld.lld --out-implib=out.lib app.o 2>&1 | FileCheck %s --check-prefixes=ERR_OUT_IMPLIB
+// RUN: not ld.lld --out-implib=out.lib --in-implib=lib.o app.o 2>&1 | FileCheck %s --check-prefixes=ERR_IN_IMPLIB,ERR_OUT_IMPLIB
 
 // ERR_IMPLIB: error: CMSE symbol 'entry_not_external' in import library '{{.*}}' is not global
 // ERR_IMPLIB: error: CMSE symbol 'entry_not_absolute' in import library '{{.*}}' is not absolute
@@ -91,7 +91,7 @@
 /// Test diagnostics emitted during symbol attribute checks.
 
 // RUN: llvm-mc -arm-add-build-attributes -filetype=obj -I %S/Inputs --triple=thumbv8m.base symattr -o symattr.o
-// RUN: not ld.lld --cmse-implib symattr.o -o /dev/null 2>&1 | FileCheck %s --check-prefixes=ERR_SYMATTR
+// RUN: not ld.lld --cmse-implib symattr.o 2>&1 | FileCheck %s --check-prefixes=ERR_SYMATTR
 
 // ERR_SYMATTR-NOT: __acle_se_valid_{{.*}}
 // ERR_SYMATTR: error: {{.*}}: cmse special symbol '__acle_se_invalid_1' is not a Thumb function definition
@@ -110,9 +110,9 @@
 /// Test diagnostics emitted when a symbol is removed from a later version of the import library.
 // RUN: llvm-mc -arm-add-build-attributes -filetype=obj -I %S/Inputs --triple=thumbv8m.base libv1 -o libv1.o
 // RUN: llvm-mc -arm-add-build-attributes -filetype=obj -I %S/Inputs --triple=thumbv8m.base libv2 -o libv2.o
-// RUN: ld.lld -Ttext=0x8000 --section-start .gnu.sgstubs=0x20000 --cmse-implib libv1.o --out-implib=libv1.lib -o /dev/null
-// RUN: ld.lld -Ttext=0x8000 --section-start .gnu.sgstubs=0x20000 --cmse-implib libv2.o --in-implib=libv1.lib --out-implib=libv2.lib -o /dev/null 2>&1 | FileCheck %s --check-prefixes=WARN_MISSING
-// RUN: ld.lld -Ttext=0x8000 --section-start .gnu.sgstubs=0x20000 --cmse-implib libv1.o --in-implib=libv2.lib -o /dev/null 2>&1 | FileCheck %s --check-prefixes=WARN_NEWENTRY
+// RUN: ld.lld -Ttext=0x8000 --section-start .gnu.sgstubs=0x20000 --cmse-implib libv1.o --out-implib=libv1.lib
+// RUN: ld.lld -Ttext=0x8000 --section-start .gnu.sgstubs=0x20000 --cmse-implib libv2.o --in-implib=libv1.lib --out-implib=libv2.lib 2>&1 | FileCheck %s --check-prefixes=WARN_MISSING
+// RUN: ld.lld -Ttext=0x8000 --section-start .gnu.sgstubs=0x20000 --cmse-implib libv1.o --in-implib=libv2.lib 2>&1 | FileCheck %s --check-prefixes=WARN_NEWENTRY
 
 // WARN_MISSING: warning: entry function 'bar' from CMSE import library is not present in secure application
 // WARN_NEWENTRY: warning: new entry function 'bar' introduced but no output import library specified

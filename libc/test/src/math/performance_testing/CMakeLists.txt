@@ -341,6 +341,18 @@ add_perf_binary(
 )
 
 add_perf_binary(
+  hypotf16_perf
+  SRCS
+    hypotf16_perf.cpp
+  DEPENDS
+    .binary_op_single_output_diff
+    libc.src.math.hypotf16
+    libc.src.__support.FPUtil.fp_bits
+  COMPILE_OPTIONS
+    -fno-builtin
+)
+
+add_perf_binary(
   hypotf_perf
   SRCS
     hypotf_perf.cpp
@@ -475,4 +487,37 @@ add_perf_binary(
     libc.src.math.fminimum_numf16
   COMPILE_OPTIONS
     -fno-builtin
+)
+
+add_perf_binary(
+  fmul_perf
+  SRCS
+    fmul_perf.cpp
+  DEPENDS
+    .binary_op_single_output_diff
+    libc.src.math.fmul
+    libc.src.__support.FPUtil.generic.mul
+    libc.src.__support.FPUtil.fp_bits
+  COMPILE_OPTIONS
+    -fno-builtin
+)
+
+add_perf_binary(
+  fmull_perf
+  SRCS
+    fmull_perf.cpp
+  DEPENDS
+    .binary_op_single_output_diff
+    libc.src.math.fmull
+  COMPILE_OPTIONS
+    -fno-builtin
+)
+
+add_perf_binary(
+  sqrtf128_perf
+  SRCS
+    sqrtf128_perf.cpp
+  DEPENDS
+    .single_input_single_output_diff
+    libc.src.math.sqrtf128
 )

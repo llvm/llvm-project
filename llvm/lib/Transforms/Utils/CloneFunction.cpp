@@ -12,7 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
@@ -24,6 +23,7 @@
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/LLVMContext.h"
@@ -40,24 +40,55 @@ using namespace llvm;
 
 #define DEBUG_TYPE "clone-function"
 
+namespace {
+void collectDebugInfoFromInstructions(const Function &F,
+                                      DebugInfoFinder &DIFinder) {
+  const Module *M = F.getParent();
+  if (M) {
+    // Inspect instructions to process e.g. DILexicalBlocks of inlined functions
+    for (const auto &I : instructions(F))
+      DIFinder.processInstruction(*M, I);
+  }
+}
+
+// Create a predicate that matches the metadata that should be identity mapped
+// during function cloning.
+MetadataPredicate createIdentityMDPredicate(const Function &F,
+                                            CloneFunctionChangeType Changes) {
+  if (Changes >= CloneFunctionChangeType::DifferentModule)
+    return [](const Metadata *MD) { return false; };
+
+  DISubprogram *SPClonedWithinModule = F.getSubprogram();
+  return [=](const Metadata *MD) {
+    // Avoid cloning types, compile units, and (other) subprograms.
+    if (isa<DICompileUnit>(MD) || isa<DIType>(MD))
+      return true;
+
+    if (auto *SP = dyn_cast<DISubprogram>(MD))
+      return SP != SPClonedWithinModule;
+
+    // If a subprogram isn't going to be cloned skip its lexical blocks as well.
+    if (auto *LScope = dyn_cast<DILocalScope>(MD))
+      return LScope->getSubprogram() != SPClonedWithinModule;
+
+    return false;
+  };
+}
+} // namespace
+
 /// See comments in Cloning.h.
 BasicBlock *llvm::CloneBasicBlock(const BasicBlock *BB, ValueToValueMapTy &VMap,
                                   const Twine &NameSuffix, Function *F,
-                                  ClonedCodeInfo *CodeInfo,
-                                  DebugInfoFinder *DIFinder) {
+                                  ClonedCodeInfo *CodeInfo) {
   BasicBlock *NewBB = BasicBlock::Create(BB->getContext(), "", F);
   NewBB->IsNewDbgInfoFormat = BB->IsNewDbgInfoFormat;
   if (BB->hasName())
     NewBB->setName(BB->getName() + NameSuffix);
 
   bool hasCalls = false, hasDynamicAllocas = false, hasMemProfMetadata = false;
-  Module *TheModule = F ? F->getParent() : nullptr;
 
   // Loop over all instructions, and copy them over.
   for (const Instruction &I : *BB) {
-    if (DIFinder && TheModule)
-      DIFinder->processInstruction(*TheModule, I);
-
     Instruction *NewInst = I.clone();
     if (I.hasName())
       NewInst->setName(I.getName() + NameSuffix);
@@ -70,6 +101,7 @@ BasicBlock *llvm::CloneBasicBlock(const BasicBlock *BB, ValueToValueMapTy &VMap,
     if (isa<CallInst>(I) && !I.isDebugOrPseudoInst()) {
       hasCalls = true;
       hasMemProfMetadata |= I.hasMetadata(LLVMContext::MD_memprof);
+      hasMemProfMetadata |= I.hasMetadata(LLVMContext::MD_callsite);
     }
     if (const AllocaInst *AI = dyn_cast<AllocaInst>(&I)) {
       if (!AI->isStaticAlloca()) {
@@ -86,28 +118,14 @@ BasicBlock *llvm::CloneBasicBlock(const BasicBlock *BB, ValueToValueMapTy &VMap,
   return NewBB;
 }
 
-// Clone OldFunc into NewFunc, transforming the old arguments into references to
-// VMap values.
-//
-void llvm::CloneFunctionInto(Function *NewFunc, const Function *OldFunc,
-                             ValueToValueMapTy &VMap,
-                             CloneFunctionChangeType Changes,
-                             SmallVectorImpl<ReturnInst *> &Returns,
-                             const char *NameSuffix, ClonedCodeInfo *CodeInfo,
-                             ValueMapTypeRemapper *TypeMapper,
-                             ValueMaterializer *Materializer) {
-  NewFunc->setIsNewDbgInfoFormat(OldFunc->IsNewDbgInfoFormat);
-  assert(NameSuffix && "NameSuffix cannot be null!");
-
-#ifndef NDEBUG
-  for (const Argument &I : OldFunc->args())
-    assert(VMap.count(&I) && "No mapping from source argument specified!");
-#endif
-
-  bool ModuleLevelChanges = Changes > CloneFunctionChangeType::LocalChangesOnly;
-
-  // Copy all attributes other than those stored in the AttributeList.  We need
-  // to remap the parameter indices of the AttributeList.
+void llvm::CloneFunctionAttributesInto(Function *NewFunc,
+                                       const Function *OldFunc,
+                                       ValueToValueMapTy &VMap,
+                                       bool ModuleLevelChanges,
+                                       ValueMapTypeRemapper *TypeMapper,
+                                       ValueMaterializer *Materializer) {
+  // Copy all attributes other than those stored in Function's AttributeList
+  // which holds e.g. parameters and return value attributes.
   AttributeList NewAttrs = NewFunc->getAttributes();
   NewFunc->copyAttributesFrom(OldFunc);
   NewFunc->setAttributes(NewAttrs);
@@ -139,6 +157,7 @@ void llvm::CloneFunctionInto(Function *NewFunc, const Function *OldFunc,
   // Clone any argument attributes that are present in the VMap.
   for (const Argument &OldArg : OldFunc->args()) {
     if (Argument *NewArg = dyn_cast<Argument>(VMap[&OldArg])) {
+      // Remap the parameter indices.
       NewArgAttrs[NewArg->getArgNo()] =
           OldAttrs.getParamAttrs(OldArg.getArgNo());
     }
@@ -147,55 +166,42 @@ void llvm::CloneFunctionInto(Function *NewFunc, const Function *OldFunc,
   NewFunc->setAttributes(
       AttributeList::get(NewFunc->getContext(), OldAttrs.getFnAttrs(),
                          OldAttrs.getRetAttrs(), NewArgAttrs));
+}
 
-  // Everything else beyond this point deals with function instructions,
-  // so if we are dealing with a function declaration, we're done.
-  if (OldFunc->isDeclaration())
-    return;
-
-  // When we remap instructions within the same module, we want to avoid
-  // duplicating inlined DISubprograms, so record all subprograms we find as we
-  // duplicate instructions and then freeze them in the MD map. We also record
-  // information about dbg.value and dbg.declare to avoid duplicating the
-  // types.
-  std::optional<DebugInfoFinder> DIFinder;
-
-  // Track the subprogram attachment that needs to be cloned to fine-tune the
-  // mapping within the same module.
-  DISubprogram *SPClonedWithinModule = nullptr;
-  if (Changes < CloneFunctionChangeType::DifferentModule) {
-    assert((NewFunc->getParent() == nullptr ||
-            NewFunc->getParent() == OldFunc->getParent()) &&
-           "Expected NewFunc to have the same parent, or no parent");
-
-    // Need to find subprograms, types, and compile units.
-    DIFinder.emplace();
-
-    SPClonedWithinModule = OldFunc->getSubprogram();
-    if (SPClonedWithinModule)
-      DIFinder->processSubprogram(SPClonedWithinModule);
-  } else {
-    assert((NewFunc->getParent() == nullptr ||
-            NewFunc->getParent() != OldFunc->getParent()) &&
-           "Expected NewFunc to have different parents, or no parent");
-
-    if (Changes == CloneFunctionChangeType::DifferentModule) {
-      assert(NewFunc->getParent() &&
-             "Need parent of new function to maintain debug info invariants");
-
-      // Need to find all the compile units.
-      DIFinder.emplace();
-    }
+void llvm::CloneFunctionMetadataInto(Function &NewFunc, const Function &OldFunc,
+                                     ValueToValueMapTy &VMap,
+                                     RemapFlags RemapFlag,
+                                     ValueMapTypeRemapper *TypeMapper,
+                                     ValueMaterializer *Materializer,
+                                     const MetadataPredicate *IdentityMD) {
+  SmallVector<std::pair<unsigned, MDNode *>, 1> MDs;
+  OldFunc.getAllMetadata(MDs);
+  for (auto MD : MDs) {
+    NewFunc.addMetadata(MD.first,
+                        *MapMetadata(MD.second, VMap, RemapFlag, TypeMapper,
+                                     Materializer, IdentityMD));
   }
+}
+
+void llvm::CloneFunctionBodyInto(Function &NewFunc, const Function &OldFunc,
+                                 ValueToValueMapTy &VMap, RemapFlags RemapFlag,
+                                 SmallVectorImpl<ReturnInst *> &Returns,
+                                 const char *NameSuffix,
+                                 ClonedCodeInfo *CodeInfo,
+                                 ValueMapTypeRemapper *TypeMapper,
+                                 ValueMaterializer *Materializer,
+                                 const MetadataPredicate *IdentityMD) {
+  if (OldFunc.isDeclaration())
+    return;
 
   // Loop over all of the basic blocks in the function, cloning them as
   // appropriate.  Note that we save BE this way in order to handle cloning of
   // recursive functions into themselves.
-  for (const BasicBlock &BB : *OldFunc) {
+  for (const BasicBlock &BB : OldFunc) {
 
     // Create a new basic block and copy instructions into it!
-    BasicBlock *CBB = CloneBasicBlock(&BB, VMap, NameSuffix, NewFunc, CodeInfo,
-                                      DIFinder ? &*DIFinder : nullptr);
+    BasicBlock *CBB =
+        CloneBasicBlock(&BB, VMap, NameSuffix, &NewFunc, CodeInfo);
 
     // Add basic block mapping.
     VMap[&BB] = CBB;
@@ -207,9 +213,9 @@ void llvm::CloneFunctionInto(Function *NewFunc, const Function *OldFunc,
     // implementation, which generates an invalid blockaddress when
     // cloning a function.)
     if (BB.hasAddressTaken()) {
-      Constant *OldBBAddr = BlockAddress::get(const_cast<Function *>(OldFunc),
+      Constant *OldBBAddr = BlockAddress::get(const_cast<Function *>(&OldFunc),
                                               const_cast<BasicBlock *>(&BB));
-      VMap[OldBBAddr] = BlockAddress::get(NewFunc, CBB);
+      VMap[OldBBAddr] = BlockAddress::get(&NewFunc, CBB);
     }
 
     // Note return instructions for the caller.
@@ -217,70 +223,76 @@ void llvm::CloneFunctionInto(Function *NewFunc, const Function *OldFunc,
       Returns.push_back(RI);
   }
 
-  if (Changes < CloneFunctionChangeType::DifferentModule &&
-      DIFinder->subprogram_count() > 0) {
-    // Turn on module-level changes, since we need to clone (some of) the
-    // debug info metadata.
-    //
-    // FIXME: Metadata effectively owned by a function should be made
-    // local, and only that local metadata should be cloned.
-    ModuleLevelChanges = true;
-
-    auto mapToSelfIfNew = [&VMap](MDNode *N) {
-      // Avoid clobbering an existing mapping.
-      (void)VMap.MD().try_emplace(N, N);
-    };
-
-    // Avoid cloning types, compile units, and (other) subprograms.
-    SmallPtrSet<const DISubprogram *, 16> MappedToSelfSPs;
-    for (DISubprogram *ISP : DIFinder->subprograms()) {
-      if (ISP != SPClonedWithinModule) {
-        mapToSelfIfNew(ISP);
-        MappedToSelfSPs.insert(ISP);
-      }
-    }
-
-    // If a subprogram isn't going to be cloned skip its lexical blocks as well.
-    for (DIScope *S : DIFinder->scopes()) {
-      auto *LScope = dyn_cast<DILocalScope>(S);
-      if (LScope && MappedToSelfSPs.count(LScope->getSubprogram()))
-        mapToSelfIfNew(S);
-    }
-
-    for (DICompileUnit *CU : DIFinder->compile_units())
-      mapToSelfIfNew(CU);
-
-    for (DIType *Type : DIFinder->types())
-      mapToSelfIfNew(Type);
-  } else {
-    assert(!SPClonedWithinModule &&
-           "Subprogram should be in DIFinder->subprogram_count()...");
-  }
-
-  const auto RemapFlag = ModuleLevelChanges ? RF_None : RF_NoModuleLevelChanges;
-  // Duplicate the metadata that is attached to the cloned function.
-  // Subprograms/CUs/types that were already mapped to themselves won't be
-  // duplicated.
-  SmallVector<std::pair<unsigned, MDNode *>, 1> MDs;
-  OldFunc->getAllMetadata(MDs);
-  for (auto MD : MDs) {
-    NewFunc->addMetadata(MD.first, *MapMetadata(MD.second, VMap, RemapFlag,
-                                                TypeMapper, Materializer));
-  }
-
   // Loop over all of the instructions in the new function, fixing up operand
   // references as we go. This uses VMap to do all the hard work.
   for (Function::iterator
-           BB = cast<BasicBlock>(VMap[&OldFunc->front()])->getIterator(),
-           BE = NewFunc->end();
+           BB = cast<BasicBlock>(VMap[&OldFunc.front()])->getIterator(),
+           BE = NewFunc.end();
        BB != BE; ++BB)
     // Loop over all instructions, fixing each one as we find it, and any
     // attached debug-info records.
     for (Instruction &II : *BB) {
-      RemapInstruction(&II, VMap, RemapFlag, TypeMapper, Materializer);
+      RemapInstruction(&II, VMap, RemapFlag, TypeMapper, Materializer,
+                       IdentityMD);
       RemapDbgRecordRange(II.getModule(), II.getDbgRecordRange(), VMap,
-                          RemapFlag, TypeMapper, Materializer);
+                          RemapFlag, TypeMapper, Materializer, IdentityMD);
     }
+}
+
+// Clone OldFunc into NewFunc, transforming the old arguments into references to
+// VMap values.
+void llvm::CloneFunctionInto(Function *NewFunc, const Function *OldFunc,
+                             ValueToValueMapTy &VMap,
+                             CloneFunctionChangeType Changes,
+                             SmallVectorImpl<ReturnInst *> &Returns,
+                             const char *NameSuffix, ClonedCodeInfo *CodeInfo,
+                             ValueMapTypeRemapper *TypeMapper,
+                             ValueMaterializer *Materializer) {
+  NewFunc->setIsNewDbgInfoFormat(OldFunc->IsNewDbgInfoFormat);
+  assert(NameSuffix && "NameSuffix cannot be null!");
+
+#ifndef NDEBUG
+  for (const Argument &I : OldFunc->args())
+    assert(VMap.count(&I) && "No mapping from source argument specified!");
+#endif
+
+  bool ModuleLevelChanges = Changes > CloneFunctionChangeType::LocalChangesOnly;
+
+  CloneFunctionAttributesInto(NewFunc, OldFunc, VMap, ModuleLevelChanges,
+                              TypeMapper, Materializer);
+
+  // Everything else beyond this point deals with function instructions,
+  // so if we are dealing with a function declaration, we're done.
+  if (OldFunc->isDeclaration())
+    return;
+
+  if (Changes < CloneFunctionChangeType::DifferentModule) {
+    assert((NewFunc->getParent() == nullptr ||
+            NewFunc->getParent() == OldFunc->getParent()) &&
+           "Expected NewFunc to have the same parent, or no parent");
+  } else {
+    assert((NewFunc->getParent() == nullptr ||
+            NewFunc->getParent() != OldFunc->getParent()) &&
+           "Expected NewFunc to have different parents, or no parent");
+
+    if (Changes == CloneFunctionChangeType::DifferentModule) {
+      assert(NewFunc->getParent() &&
+             "Need parent of new function to maintain debug info invariants");
+    }
+  }
+
+  MetadataPredicate IdentityMD = createIdentityMDPredicate(*OldFunc, Changes);
+
+  // Cloning is always a Module level operation, since Metadata needs to be
+  // cloned.
+  const auto RemapFlag = RF_None;
+
+  CloneFunctionMetadataInto(*NewFunc, *OldFunc, VMap, RemapFlag, TypeMapper,
+                            Materializer, &IdentityMD);
+
+  CloneFunctionBodyInto(*NewFunc, *OldFunc, VMap, RemapFlag, Returns,
+                        NameSuffix, CodeInfo, TypeMapper, Materializer,
+                        &IdentityMD);
 
   // Only update !llvm.dbg.cu for DifferentModule (not CloneModule). In the
   // same module, the compile unit will already be listed (or not). When
@@ -301,10 +313,13 @@ void llvm::CloneFunctionInto(Function *NewFunc, const Function *OldFunc,
   auto *NewModule = NewFunc->getParent();
   auto *NMD = NewModule->getOrInsertNamedMetadata("llvm.dbg.cu");
   // Avoid multiple insertions of the same DICompileUnit to NMD.
-  SmallPtrSet<const void *, 8> Visited;
-  for (auto *Operand : NMD->operands())
-    Visited.insert(Operand);
-  for (auto *Unit : DIFinder->compile_units()) {
+  SmallPtrSet<const void *, 8> Visited(llvm::from_range, NMD->operands());
+
+  // Collect and clone all the compile units referenced from the instructions in
+  // the function (e.g. as instructions' scope).
+  DebugInfoFinder DIFinder;
+  collectDebugInfoFromInstructions(*OldFunc, DIFinder);
+  for (auto *Unit : DIFinder.compile_units()) {
     MDNode *MappedUnit =
         MapMetadata(Unit, VMap, RF_None, TypeMapper, Materializer);
     if (Visited.insert(MappedUnit).second)
@@ -424,8 +439,8 @@ PruningFunctionCloner::cloneInstruction(BasicBlock::const_iterator II) {
 
       // Create intrinsic call.
       LLVMContext &Ctx = NewFunc->getContext();
-      Function *IFn =
-          Intrinsic::getDeclaration(NewFunc->getParent(), CIID, TParams);
+      Function *IFn = Intrinsic::getOrInsertDeclaration(NewFunc->getParent(),
+                                                        CIID, TParams);
       SmallVector<Value *, 4> Args;
       unsigned NumOperands = OldInst.getNumOperands();
       if (isa<CallInst>(OldInst))
@@ -513,6 +528,12 @@ void PruningFunctionCloner::CloneBlock(
   for (BasicBlock::const_iterator II = StartingInst, IE = --BB->end(); II != IE;
        ++II) {
 
+    // Don't clone fake_use as it may suppress many optimizations
+    // due to inlining, especially SROA.
+    if (auto *IntrInst = dyn_cast<IntrinsicInst>(II))
+      if (IntrInst->getIntrinsicID() == Intrinsic::fake_use)
+        continue;
+
     Instruction *NewInst = cloneInstruction(II);
     NewInst->insertInto(NewBB, NewBB->end());
 
@@ -550,6 +571,7 @@ void PruningFunctionCloner::CloneBlock(
     if (isa<CallInst>(II) && !II->isDebugOrPseudoInst()) {
       hasCalls = true;
       hasMemProfMetadata |= II->hasMetadata(LLVMContext::MD_memprof);
+      hasMemProfMetadata |= II->hasMetadata(LLVMContext::MD_callsite);
     }
 
     CloneDbgRecordsToHere(NewInst, II);
@@ -585,7 +607,9 @@ void PruningFunctionCloner::CloneBlock(
       // Constant fold to uncond branch!
       if (Cond) {
         BasicBlock *Dest = BI->getSuccessor(!Cond->getZExtValue());
-        VMap[OldTI] = BranchInst::Create(Dest, NewBB);
+        auto *NewBI = BranchInst::Create(Dest, NewBB);
+        NewBI->setDebugLoc(BI->getDebugLoc());
+        VMap[OldTI] = NewBI;
         ToClone.push_back(Dest);
         TerminatorDone = true;
       }
@@ -600,7 +624,9 @@ void PruningFunctionCloner::CloneBlock(
     if (Cond) { // Constant fold to uncond branch!
       SwitchInst::ConstCaseHandle Case = *SI->findCaseValue(Cond);
       BasicBlock *Dest = const_cast<BasicBlock *>(Case.getCaseSuccessor());
-      VMap[OldTI] = BranchInst::Create(Dest, NewBB);
+      auto *NewBI = BranchInst::Create(Dest, NewBB);
+      NewBI->setDebugLoc(SI->getDebugLoc());
+      VMap[OldTI] = NewBI;
       ToClone.push_back(Dest);
       TerminatorDone = true;
     }
@@ -811,9 +837,9 @@ void llvm::CloneAndPruneIntoFromInst(Function *NewFunc, const Function *OldFunc,
   // Drop all incompatible return attributes that cannot be applied to NewFunc
   // during cloning, so as to allow instruction simplification to reason on the
   // old state of the function. The original attributes are restored later.
-  AttributeMask IncompatibleAttrs =
-      AttributeFuncs::typeIncompatible(OldFunc->getReturnType());
   AttributeList Attrs = NewFunc->getAttributes();
+  AttributeMask IncompatibleAttrs = AttributeFuncs::typeIncompatible(
+      OldFunc->getReturnType(), Attrs.getRetAttrs());
   NewFunc->removeRetAttrs(IncompatibleAttrs);
 
   // As phi-nodes have been now remapped, allow incremental simplification of
@@ -906,7 +932,7 @@ void llvm::CloneAndPruneIntoFromInst(Function *NewFunc, const Function *OldFunc,
     }
 
     BasicBlock *Dest = BI->getSuccessor(0);
-    if (!Dest->getSinglePredecessor()) {
+    if (!Dest->getSinglePredecessor() || Dest->hasAddressTaken()) {
       ++I;
       continue;
     }
@@ -1090,7 +1116,7 @@ BasicBlock *llvm::DuplicateInstructionsInSplitBetween(
   for (; StopAt != &*BI && BB->getTerminator() != &*BI; ++BI) {
     Instruction *New = BI->clone();
     New->setName(BI->getName());
-    New->insertBefore(NewTerm);
+    New->insertBefore(NewTerm->getIterator());
     New->cloneDebugInfoFrom(&*BI);
     ValueMapping[&*BI] = New;
 

@@ -50,12 +50,16 @@ Error backend(const Config &C, AddStreamFn AddStream,
 /// already been mapped to memory and the corresponding BitcodeModule objects
 /// are saved in the ModuleMap. If \p ModuleMap is nullptr, module files will
 /// be mapped to memory on demand and at any given time during importing, only
-/// one source module will be kept open at the most.
+/// one source module will be kept open at the most. If \p CodeGenOnly is true,
+/// the backend will skip optimization and only perform code generation. If
+/// \p IRAddStream is not nullptr, it will be called just before code generation
+/// to serialize the optimized IR.
 Error thinBackend(const Config &C, unsigned Task, AddStreamFn AddStream,
                   Module &M, const ModuleSummaryIndex &CombinedIndex,
                   const FunctionImporter::ImportMapTy &ImportList,
                   const GVSummaryMapTy &DefinedGlobals,
                   MapVector<StringRef, BitcodeModule> *ModuleMap,
+                  bool CodeGenOnly, AddStreamFn IRAddStream = nullptr,
                   const std::vector<uint8_t> &CmdArgs = std::vector<uint8_t>());
 
 Error finalizeOptimizationRemarks(

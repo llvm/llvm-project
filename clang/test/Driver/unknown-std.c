@@ -4,7 +4,6 @@
 
 // RUN: not %clang %s -std=foobar -c 2>&1 | FileCheck --match-full-lines %s
 // RUN: not %clang -x objective-c %s -std=foobar -c 2>&1 | FileCheck --match-full-lines %s
-// RUN: not %clang -x renderscript %s -std=foobar -c 2>&1 | FileCheck --match-full-lines %s
 
 // CHECK: error: invalid value 'foobar' in '-std=foobar'
 // CHECK-NEXT: note: use 'c89', 'c90', or 'iso9899:1990' for 'ISO C 1990' standard

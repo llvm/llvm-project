@@ -105,7 +105,6 @@
 #include "BPFCORE.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/IR/Argument.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
@@ -163,7 +162,7 @@ static CallInst *makeIntrinsicCall(Module *M,
                                    ArrayRef<Type *> Types,
                                    ArrayRef<Value *> Args) {
 
-  Function *Fn = Intrinsic::getDeclaration(M, Intrinsic, Types);
+  Function *Fn = Intrinsic::getOrInsertDeclaration(M, Intrinsic, Types);
   return CallInst::Create(Fn, Args);
 }
 
@@ -346,8 +345,7 @@ static bool foldGEPChainAsStructAccess(SmallVector<GetElementPtrInst *> &GEPs,
   Info.Indices.append(First->idx_begin(), First->idx_end());
   Info.Members.push_back(First);
 
-  for (auto *Iter = GEPs.begin() + 1; Iter != GEPs.end(); ++Iter) {
-    GetElementPtrInst *GEP = *Iter;
+  for (GetElementPtrInst *GEP : drop_begin(GEPs)) {
     if (!isZero(*GEP->idx_begin())) {
       Info.reset();
       return false;
@@ -422,12 +420,12 @@ static bool tryToReplaceWithGEPBuiltin(Instruction *LoadOrStoreTemplate,
   Module *M = InsnToReplace->getModule();
   if (auto *Load = dyn_cast<LoadInst>(LoadOrStoreTemplate)) {
     Instruction *Replacement = makeGEPAndLoad(M, GEPChain, Load);
-    Replacement->insertBefore(InsnToReplace);
+    Replacement->insertBefore(InsnToReplace->getIterator());
     InsnToReplace->replaceAllUsesWith(Replacement);
   }
   if (auto *Store = dyn_cast<StoreInst>(LoadOrStoreTemplate)) {
     Instruction *Replacement = makeGEPAndStore(M, GEPChain, Store);
-    Replacement->insertBefore(InsnToReplace);
+    Replacement->insertBefore(InsnToReplace->getIterator());
   }
   return true;
 }

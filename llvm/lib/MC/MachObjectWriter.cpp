@@ -8,7 +8,6 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Twine.h"
-#include "llvm/ADT/iterator_range.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAsmInfoDarwin.h"
@@ -30,7 +29,6 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/LEB128.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
@@ -84,8 +82,7 @@ MachSymbolData::operator<(const MachSymbolData &RHS) const {
 }
 
 bool MachObjectWriter::isFixupKindPCRel(const MCAssembler &Asm, unsigned Kind) {
-  const MCFixupKindInfo &FKI = Asm.getBackend().getFixupKindInfo(
-    (MCFixupKind) Kind);
+  MCFixupKindInfo FKI = Asm.getBackend().getFixupKindInfo((MCFixupKind)Kind);
 
   return FKI.Flags & MCFixupKindInfo::FKF_IsPCRel;
 }
@@ -106,23 +103,23 @@ uint64_t MachObjectWriter::getSymbolAddress(const MCSymbol &S,
       return C->getValue();
 
     MCValue Target;
-    if (!S.getVariableValue()->evaluateAsRelocatable(Target, &Asm, nullptr))
+    if (!S.getVariableValue()->evaluateAsRelocatable(Target, &Asm))
       report_fatal_error("unable to evaluate offset for variable '" +
                          S.getName() + "'");
 
     // Verify that any used symbols are defined.
-    if (Target.getSymA() && Target.getSymA()->getSymbol().isUndefined())
+    if (Target.getAddSym() && Target.getAddSym()->isUndefined())
       report_fatal_error("unable to evaluate offset to undefined symbol '" +
-                         Target.getSymA()->getSymbol().getName() + "'");
-    if (Target.getSymB() && Target.getSymB()->getSymbol().isUndefined())
+                         Target.getAddSym()->getName() + "'");
+    if (Target.getSubSym() && Target.getSubSym()->isUndefined())
       report_fatal_error("unable to evaluate offset to undefined symbol '" +
-                         Target.getSymB()->getSymbol().getName() + "'");
+                         Target.getSubSym()->getName() + "'");
 
     uint64_t Address = Target.getConstant();
-    if (Target.getSymA())
-      Address += getSymbolAddress(Target.getSymA()->getSymbol(), Asm);
-    if (Target.getSymB())
-      Address += getSymbolAddress(Target.getSymB()->getSymbol(), Asm);
+    if (Target.getAddSym())
+      Address += getSymbolAddress(*Target.getAddSym(), Asm);
+    if (Target.getSubSym())
+      Address -= getSymbolAddress(*Target.getSubSym(), Asm);
     return Address;
   }
 
@@ -191,7 +188,18 @@ void MachObjectWriter::writeHeader(MachO::HeaderFileType Type,
   W.write<uint32_t>(is64Bit() ? MachO::MH_MAGIC_64 : MachO::MH_MAGIC);
 
   W.write<uint32_t>(TargetObjectWriter->getCPUType());
-  W.write<uint32_t>(TargetObjectWriter->getCPUSubtype());
+
+  uint32_t Cpusubtype = TargetObjectWriter->getCPUSubtype();
+
+  // Promote arm64e subtypes to always be ptrauth-ABI-versioned, at version 0.
+  // We never need to emit unversioned binaries.
+  // And we don't support arbitrary ABI versions (or the kernel flag) yet.
+  if (TargetObjectWriter->getCPUType() == MachO::CPU_TYPE_ARM64 &&
+      Cpusubtype == MachO::CPU_SUBTYPE_ARM64E)
+    Cpusubtype = MachO::CPU_SUBTYPE_ARM64E_WITH_PTRAUTH_VERSION(
+        /*PtrAuthABIVersion=*/0, /*PtrAuthKernelABIVersion=*/false);
+
+  W.write<uint32_t>(Cpusubtype);
 
   W.write<uint32_t>(Type);
   W.write<uint32_t>(NumLoadCommands);
@@ -498,7 +506,7 @@ void MachObjectWriter::writeLinkerOptionsLoadCommand(
 static bool isFixupTargetValid(const MCValue &Target) {
   // Target is (LHS - RHS + cst).
   // We don't support the form where LHS is null: -RHS + cst
-  if (!Target.getSymA() && Target.getSymB())
+  if (!Target.getAddSym() && Target.getSubSym())
     return false;
   return true;
 }

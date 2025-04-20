@@ -34,7 +34,7 @@ define <2 x i8> @trunc_shl_trunc(<2 x i64> %a) {
 
 define <2 x i8> @trunc_lshr_trunc_uniform(<2 x i64> %a) {
 ; CHECK-LABEL: @trunc_lshr_trunc_uniform(
-; CHECK-NEXT:    [[C1:%.*]] = lshr <2 x i64> [[A:%.*]], <i64 8, i64 8>
+; CHECK-NEXT:    [[C1:%.*]] = lshr <2 x i64> [[A:%.*]], splat (i64 8)
 ; CHECK-NEXT:    [[D:%.*]] = trunc <2 x i64> [[C1]] to <2 x i8>
 ; CHECK-NEXT:    ret <2 x i8> [[D]]
 ;
@@ -120,7 +120,7 @@ define i8 @trunc_ashr_trunc_exact(i64 %a) {
 
 define <2 x i8> @trunc_ashr_trunc_uniform(<2 x i64> %a) {
 ; CHECK-LABEL: @trunc_ashr_trunc_uniform(
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr <2 x i64> [[A:%.*]], <i64 8, i64 8>
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr <2 x i64> [[A:%.*]], splat (i64 8)
 ; CHECK-NEXT:    [[D:%.*]] = trunc <2 x i64> [[TMP1]] to <2 x i8>
 ; CHECK-NEXT:    ret <2 x i8> [[D]]
 ;

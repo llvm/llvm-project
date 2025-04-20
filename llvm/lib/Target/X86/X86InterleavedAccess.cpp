@@ -19,20 +19,17 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/CodeGenTypes/MachineValueType.h"
-#include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
 #include <algorithm>
 #include <cassert>
 #include <cmath>
-#include <cstdint>
 
 using namespace llvm;
 
@@ -832,10 +829,8 @@ bool X86TargetLowering::lowerInterleavedStore(StoreInst *SI,
 
   // Holds the indices of SVI that correspond to the starting index of each
   // interleaved shuffle.
-  SmallVector<unsigned, 4> Indices;
   auto Mask = SVI->getShuffleMask();
-  for (unsigned i = 0; i < Factor; i++)
-    Indices.push_back(Mask[i]);
+  SmallVector<unsigned, 4> Indices(Mask.take_front(Factor));
 
   ArrayRef<ShuffleVectorInst *> Shuffles = ArrayRef(SVI);
 

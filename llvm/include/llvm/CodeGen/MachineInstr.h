@@ -42,9 +42,11 @@ class DILabel;
 class Instruction;
 class MDNode;
 class AAResults;
+class BatchAAResults;
 template <typename T> class ArrayRef;
 class DIExpression;
 class DILocalVariable;
+class LiveRegUnits;
 class MachineBasicBlock;
 class MachineFunction;
 class MachineRegisterInfo;
@@ -119,6 +121,7 @@ public:
     Disjoint = 1 << 19,      // Each bit is zero in at least one of the inputs.
     NoUSWrap = 1 << 20,      // Instruction supports geps
                              // no unsigned signed wrap.
+    SameSign = 1 << 21       // Both operands have the same sign.
   };
 
 private:
@@ -554,13 +557,18 @@ public:
   /// will be dropped.
   void dropDebugNumber() { DebugInstrNum = 0; }
 
-  /// Emit an error referring to the source location of this instruction.
-  /// This should only be used for inline assembly that is somehow
-  /// impossible to compile. Other errors should have been handled much
-  /// earlier.
-  ///
-  /// If this method returns, the caller should try to recover from the error.
-  void emitError(StringRef Msg) const;
+  /// For inline asm, get the !srcloc metadata node if we have it, and decode
+  /// the loc cookie from it.
+  const MDNode *getLocCookieMD() const;
+
+  /// Emit an error referring to the source location of this instruction. This
+  /// should only be used for inline assembly that is somehow impossible to
+  /// compile. Other errors should have been handled much earlier.
+  void emitInlineAsmError(const Twine &ErrMsg) const;
+
+  // Emit an error in the LLVMContext referring to the source location of this
+  // instruction, if available.
+  void emitGenericError(const Twine &ErrMsg) const;
 
   /// Returns the target instruction descriptor of this MachineInstr.
   const MCInstrDesc &getDesc() const { return *MCID; }
@@ -604,26 +612,12 @@ public:
 
   /// Returns a range of all of the operands that correspond to a debug use of
   /// \p Reg.
-  template <typename Operand, typename Instruction>
-  static iterator_range<
-      filter_iterator<Operand *, std::function<bool(Operand &Op)>>>
-  getDebugOperandsForReg(Instruction *MI, Register Reg) {
-    std::function<bool(Operand & Op)> OpUsesReg(
-        [Reg](Operand &Op) { return Op.isReg() && Op.getReg() == Reg; });
-    return make_filter_range(MI->debug_operands(), OpUsesReg);
-  }
   iterator_range<filter_iterator<const MachineOperand *,
                                  std::function<bool(const MachineOperand &Op)>>>
-  getDebugOperandsForReg(Register Reg) const {
-    return MachineInstr::getDebugOperandsForReg<const MachineOperand,
-                                                const MachineInstr>(this, Reg);
-  }
+  getDebugOperandsForReg(Register Reg) const;
   iterator_range<filter_iterator<MachineOperand *,
                                  std::function<bool(MachineOperand &Op)>>>
-  getDebugOperandsForReg(Register Reg) {
-    return MachineInstr::getDebugOperandsForReg<MachineOperand, MachineInstr>(
-        this, Reg);
-  }
+  getDebugOperandsForReg(Register Reg);
 
   bool isDebugOperand(const MachineOperand *Op) const {
     return Op >= adl_begin(debug_operands()) && Op <= adl_end(debug_operands());
@@ -642,7 +636,7 @@ public:
   /// Returns true if the instruction has implicit definition.
   bool hasImplicitDef() const {
     for (const MachineOperand &MO : implicit_operands())
-      if (MO.isDef() && MO.isImplicit())
+      if (MO.isDef())
         return true;
     return false;
   }
@@ -728,7 +722,7 @@ public:
     return make_range(operands_begin(),
                       operands_begin() + getNumExplicitDefs());
   }
-  /// Returns a range that includes all operands that are register uses.
+  /// Returns a range that includes all operands which may be register uses.
   /// This may include unrelated operands which are not register uses.
   iterator_range<mop_iterator> uses() {
     return make_range(operands_begin() + getNumExplicitDefs(), operands_end());
@@ -951,13 +945,14 @@ public:
     return hasProperty(MCID::Call, Type);
   }
 
-  /// Return true if this is a call instruction that may have an associated
-  /// call site entry in the debug info.
-  bool isCandidateForCallSiteEntry(QueryType Type = IgnoreBundle) const;
+  /// Return true if this is a call instruction that may have an additional
+  /// information associated with it.
+  bool isCandidateForAdditionalCallInfo(QueryType Type = IgnoreBundle) const;
+
   /// Return true if copying, moving, or erasing this instruction requires
-  /// updating Call Site Info (see \ref copyCallSiteInfo, \ref moveCallSiteInfo,
-  /// \ref eraseCallSiteInfo).
-  bool shouldUpdateCallSiteInfo() const;
+  /// updating additional call info (see \ref copyCallInfo, \ref moveCallInfo,
+  /// \ref eraseCallInfo).
+  bool shouldUpdateAdditionalCallInfo() const;
 
   /// Returns true if the specified instruction stops control flow
   /// from executing the instruction immediately following it.  Examples include
@@ -1323,6 +1318,11 @@ public:
     return getOpcode() == TargetOpcode::ANNOTATION_LABEL;
   }
 
+  bool isLifetimeMarker() const {
+    return getOpcode() == TargetOpcode::LIFETIME_START ||
+           getOpcode() == TargetOpcode::LIFETIME_END;
+  }
+
   /// Returns true if the MachineInstr represents a label.
   bool isLabel() const {
     return isEHLabel() || isGCLabel() || isAnnotationLabel();
@@ -1434,6 +1434,8 @@ public:
   bool isExtractSubreg() const {
     return getOpcode() == TargetOpcode::EXTRACT_SUBREG;
   }
+
+  bool isFakeUse() const { return getOpcode() == TargetOpcode::FAKE_USE; }
 
   /// Return true if the instruction behaves like a copy.
   /// This does not include native copy instructions.
@@ -1725,6 +1727,22 @@ public:
   /// the instruction's location and its intended destination.
   bool isSafeToMove(bool &SawStore) const;
 
+  /// Return true if this instruction would be trivially dead if all of its
+  /// defined registers were dead.
+  bool wouldBeTriviallyDead() const;
+
+  /// Check whether an MI is dead. If \p LivePhysRegs is provided, it is assumed
+  /// to be at the position of MI and will be used to check the Liveness of
+  /// physical register defs. If \p LivePhysRegs is not provided, this will
+  /// pessimistically assume any PhysReg def is live.
+  /// For trivially dead instructions (i.e. those without hard to model effects
+  /// / wouldBeTriviallyDead), this checks deadness by analyzing defs of the
+  /// MachineInstr. If the instruction wouldBeTriviallyDead, and  all the defs
+  /// either have dead flags or have no uses, then the instruction is said to be
+  /// dead.
+  bool isDead(const MachineRegisterInfo &MRI,
+              LiveRegUnits *LivePhysRegs = nullptr) const;
+
   /// Returns true if this instruction's memory access aliases the memory
   /// access of Other.
   //
@@ -1735,6 +1753,8 @@ public:
   /// @param AA Optional alias analysis, used to compare memory operands.
   /// @param Other MachineInstr to check aliasing against.
   /// @param UseTBAA Whether to pass TBAA information to alias analysis.
+  bool mayAlias(BatchAAResults *AA, const MachineInstr &Other,
+                bool UseTBAA) const;
   bool mayAlias(AAResults *AA, const MachineInstr &Other, bool UseTBAA) const;
 
   /// Return true if this instruction may have an ordered
@@ -1753,8 +1773,8 @@ public:
   bool isDereferenceableInvariantLoad() const;
 
   /// If the specified instruction is a PHI that always merges together the
-  /// same virtual register, return the register, otherwise return 0.
-  unsigned isConstantValuePHI() const;
+  /// same virtual register, return the register, otherwise return Register().
+  Register isConstantValuePHI() const;
 
   /// Return true if this instruction has side effects that are not modeled
   /// by mayLoad / mayStore, etc.

@@ -20,6 +20,7 @@
 #include "X86InstrInfo.h"
 #include "X86MachineFunctionInfo.h"
 #include "X86Subtarget.h"
+#include "llvm/Analysis/StaticDataProfileInfo.h"
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
@@ -61,6 +62,11 @@ X86AsmPrinter::X86AsmPrinter(TargetMachine &TM,
 /// runOnMachineFunction - Emit the function body.
 ///
 bool X86AsmPrinter::runOnMachineFunction(MachineFunction &MF) {
+  if (auto *PSIW = getAnalysisIfAvailable<ProfileSummaryInfoWrapperPass>())
+    PSI = &PSIW->getPSI();
+  if (auto *SDPIW = getAnalysisIfAvailable<StaticDataProfileInfoWrapperPass>())
+    SDPI = &SDPIW->getStaticDataProfileInfo();
+
   Subtarget = &MF.getSubtarget<X86Subtarget>();
 
   SMShadowTracker.startFunction(MF);
@@ -181,8 +187,29 @@ void X86AsmPrinter::emitKCFITypeId(const MachineFunction &MF) {
   // Embed the type hash in the X86::MOV32ri instruction to avoid special
   // casing object file parsers.
   EmitKCFITypePadding(MF);
+  unsigned DestReg = X86::EAX;
+
+  if (F.getParent()->getModuleFlag("kcfi-arity")) {
+    // The ArityToRegMap assumes the 64-bit Linux kernel ABI
+    [[maybe_unused]] const auto &Triple = MF.getTarget().getTargetTriple();
+    assert(Triple.isArch64Bit() && Triple.isOSLinux());
+
+    // Determine the function's arity (i.e., the number of arguments) at the ABI
+    // level by counting the number of parameters that are passed
+    // as registers, such as pointers and 64-bit (or smaller) integers. The
+    // Linux x86-64 ABI allows up to 6 parameters to be passed in GPRs.
+    // Additional parameters or parameters larger than 64 bits may be passed on
+    // the stack, in which case the arity is denoted as 7.
+    const unsigned ArityToRegMap[8] = {X86::EAX, X86::ECX, X86::EDX, X86::EBX,
+                                       X86::ESP, X86::EBP, X86::ESI, X86::EDI};
+    int Arity = MF.getInfo<X86MachineFunctionInfo>()->getArgumentStackSize() > 0
+                    ? 7
+                    : MF.getRegInfo().liveins().size();
+    DestReg = ArityToRegMap[Arity];
+  }
+
   EmitAndCountInstruction(MCInstBuilder(X86::MOV32ri)
-                              .addReg(X86::EAX)
+                              .addReg(DestReg)
                               .addImm(MaskKCFIType(Type->getZExtValue())));
 
   if (MAI->hasDotTypeDotSizeDirective()) {
@@ -335,17 +362,18 @@ void X86AsmPrinter::PrintOperand(const MachineInstr *MI, unsigned OpNo,
 /// deferring to PrintOperand() if no modifier was supplied or if operand is not
 /// a register.
 void X86AsmPrinter::PrintModifiedOperand(const MachineInstr *MI, unsigned OpNo,
-                                         raw_ostream &O, const char *Modifier) {
+                                         raw_ostream &O, StringRef Modifier) {
   const MachineOperand &MO = MI->getOperand(OpNo);
-  if (!Modifier || !MO.isReg())
+  if (Modifier.empty() || !MO.isReg())
     return PrintOperand(MI, OpNo, O);
   if (MI->getInlineAsmDialect() == InlineAsm::AD_ATT)
     O << '%';
   Register Reg = MO.getReg();
-  if (strncmp(Modifier, "subreg", strlen("subreg")) == 0) {
-    unsigned Size = (strcmp(Modifier+6,"64") == 0) ? 64 :
-        (strcmp(Modifier+6,"32") == 0) ? 32 :
-        (strcmp(Modifier+6,"16") == 0) ? 16 : 8;
+  if (Modifier.consume_front("subreg")) {
+    unsigned Size = (Modifier == "64")   ? 64
+                    : (Modifier == "32") ? 32
+                    : (Modifier == "16") ? 16
+                                         : 8;
     Reg = getX86SubSuperRegister(Reg, Size);
   }
   O << X86ATTInstPrinter::getRegisterName(Reg);
@@ -373,15 +401,14 @@ void X86AsmPrinter::PrintPCRelImm(const MachineInstr *MI, unsigned OpNo,
 }
 
 void X86AsmPrinter::PrintLeaMemReference(const MachineInstr *MI, unsigned OpNo,
-                                         raw_ostream &O, const char *Modifier) {
+                                         raw_ostream &O, StringRef Modifier) {
   const MachineOperand &BaseReg = MI->getOperand(OpNo + X86::AddrBaseReg);
   const MachineOperand &IndexReg = MI->getOperand(OpNo + X86::AddrIndexReg);
   const MachineOperand &DispSpec = MI->getOperand(OpNo + X86::AddrDisp);
 
   // If we really don't want to print out (rip), don't.
   bool HasBaseReg = BaseReg.getReg() != 0;
-  if (HasBaseReg && Modifier && !strcmp(Modifier, "no-rip") &&
-      BaseReg.getReg() == X86::RIP)
+  if (HasBaseReg && Modifier == "no-rip" && BaseReg.getReg() == X86::RIP)
     HasBaseReg = false;
 
   // HasParenPart - True if we will print out the () part of the mem ref.
@@ -402,7 +429,7 @@ void X86AsmPrinter::PrintLeaMemReference(const MachineInstr *MI, unsigned OpNo,
     break;
   }
 
-  if (Modifier && strcmp(Modifier, "H") == 0)
+  if (Modifier == "H")
     O << "+8";
 
   if (HasParenPart) {
@@ -456,7 +483,7 @@ void X86AsmPrinter::emitBasicBlockEnd(const MachineBasicBlock &MBB) {
 }
 
 void X86AsmPrinter::PrintMemReference(const MachineInstr *MI, unsigned OpNo,
-                                      raw_ostream &O, const char *Modifier) {
+                                      raw_ostream &O, StringRef Modifier) {
   assert(isMem(*MI, OpNo) && "Invalid memory reference!");
   const MachineOperand &Segment = MI->getOperand(OpNo + X86::AddrSegmentReg);
   if (Segment.getReg()) {
@@ -466,10 +493,9 @@ void X86AsmPrinter::PrintMemReference(const MachineInstr *MI, unsigned OpNo,
   PrintLeaMemReference(MI, OpNo, O, Modifier);
 }
 
-
 void X86AsmPrinter::PrintIntelMemReference(const MachineInstr *MI,
                                            unsigned OpNo, raw_ostream &O,
-                                           const char *Modifier) {
+                                           StringRef Modifier) {
   const MachineOperand &BaseReg = MI->getOperand(OpNo + X86::AddrBaseReg);
   unsigned ScaleVal = MI->getOperand(OpNo + X86::AddrScaleAmt).getImm();
   const MachineOperand &IndexReg = MI->getOperand(OpNo + X86::AddrIndexReg);
@@ -478,13 +504,11 @@ void X86AsmPrinter::PrintIntelMemReference(const MachineInstr *MI,
 
   // If we really don't want to print out (rip), don't.
   bool HasBaseReg = BaseReg.getReg() != 0;
-  if (HasBaseReg && Modifier && !strcmp(Modifier, "no-rip") &&
-      BaseReg.getReg() == X86::RIP)
+  if (HasBaseReg && Modifier == "no-rip" && BaseReg.getReg() == X86::RIP)
     HasBaseReg = false;
 
   // If we really just want to print out displacement.
-  if (Modifier && (DispSpec.isGlobal() || DispSpec.isSymbol()) &&
-      !strcmp(Modifier, "disp-only")) {
+  if ((DispSpec.isGlobal() || DispSpec.isSymbol()) && Modifier == "disp-only") {
     HasBaseReg = false;
   }
 
@@ -836,9 +860,9 @@ bool X86AsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
     }
   }
   if (MI->getInlineAsmDialect() == InlineAsm::AD_Intel) {
-    PrintIntelMemReference(MI, OpNo, O, nullptr);
+    PrintIntelMemReference(MI, OpNo, O);
   } else {
-    PrintMemReference(MI, OpNo, O, nullptr);
+    PrintMemReference(MI, OpNo, O);
   }
   return false;
 }
@@ -1067,7 +1091,7 @@ void X86AsmPrinter::emitEndOfAsmFile(Module &M) {
 //===----------------------------------------------------------------------===//
 
 // Force static initialization.
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeX86AsmPrinter() {
+extern "C" LLVM_C_ABI void LLVMInitializeX86AsmPrinter() {
   RegisterAsmPrinter<X86AsmPrinter> X(getTheX86_32Target());
   RegisterAsmPrinter<X86AsmPrinter> Y(getTheX86_64Target());
 }

@@ -60,8 +60,7 @@ class User;
 class BranchProbabilityInfo;
 class BlockFrequencyInfo;
 
-class LLVM_EXTERNAL_VISIBILITY Function : public GlobalObject,
-                                          public ilist_node<Function> {
+class LLVM_ABI Function : public GlobalObject, public ilist_node<Function> {
 public:
   using BasicBlockListType = SymbolTableList<BasicBlock>;
 
@@ -73,6 +72,8 @@ public:
   using const_arg_iterator = const Argument *;
 
 private:
+  constexpr static HungOffOperandsAllocMarker AllocMarker{};
+
   // Important things that make up a function!
   BasicBlockListType BasicBlocks;         ///< The basic blocks
 
@@ -172,13 +173,14 @@ public:
   static Function *Create(FunctionType *Ty, LinkageTypes Linkage,
                           unsigned AddrSpace, const Twine &N = "",
                           Module *M = nullptr) {
-    return new Function(Ty, Linkage, AddrSpace, N, M);
+    return new (AllocMarker) Function(Ty, Linkage, AddrSpace, N, M);
   }
 
   // TODO: remove this once all users have been updated to pass an AddrSpace
   static Function *Create(FunctionType *Ty, LinkageTypes Linkage,
                           const Twine &N = "", Module *M = nullptr) {
-    return new Function(Ty, Linkage, static_cast<unsigned>(-1), N, M);
+    return new (AllocMarker)
+        Function(Ty, Linkage, static_cast<unsigned>(-1), N, M);
   }
 
   /// Creates a new function and attaches it to a module.
@@ -253,10 +255,6 @@ public:
   /// returns Intrinsic::not_intrinsic!
   bool isIntrinsic() const { return HasLLVMReservedName; }
 
-  /// isTargetIntrinsic - Returns true if IID is an intrinsic specific to a
-  /// certain target. If it is a generic intrinsic false is returned.
-  static bool isTargetIntrinsic(Intrinsic::ID IID);
-
   /// isTargetIntrinsic - Returns true if this function is an intrinsic and the
   /// intrinsic is specific to a certain target. If this is not an intrinsic
   /// or a generic intrinsic, false is returned.
@@ -266,8 +264,6 @@ public:
   /// Intrinsics". Returns false if not, and returns false when
   /// getIntrinsicID() returns Intrinsic::not_intrinsic.
   bool isConstrainedFPIntrinsic() const;
-
-  static Intrinsic::ID lookupIntrinsicID(StringRef Name);
 
   /// Update internal caches that depend on the function name (such as the
   /// intrinsic ID and libcall cache).
@@ -286,6 +282,18 @@ public:
     auto ID = static_cast<unsigned>(CC);
     assert(!(ID & ~CallingConv::MaxID) && "Unsupported calling convention");
     setValueSubclassData((getSubclassDataFromValue() & 0xc00f) | (ID << 4));
+  }
+
+  /// Does it have a kernel calling convention?
+  bool hasKernelCallingConv() const {
+    switch (getCallingConv()) {
+    default:
+      return false;
+    case CallingConv::PTX_Kernel:
+    case CallingConv::AMDGPU_KERNEL:
+    case CallingConv::SPIR_KERNEL:
+      return true;
+    }
   }
 
   enum ProfileCountType { PCT_Real, PCT_Synthetic };
@@ -337,12 +345,6 @@ public:
   /// Returns the set of GUIDs that needs to be imported to the function for
   /// sample PGO, to enable the same inlines as the profiled optimized binary.
   DenseSet<GlobalValue::GUID> getImportGUIDs() const;
-
-  /// Set the section prefix for this function.
-  void setSectionPrefix(StringRef Prefix);
-
-  /// Get the section prefix for this function.
-  std::optional<StringRef> getSectionPrefix() const;
 
   /// hasGC/getGC/setGC/clearGC - The name of the garbage collection algorithm
   ///                             to use during code generation.
@@ -437,11 +439,17 @@ public:
   /// check if an attributes is in the list of attributes.
   bool hasParamAttribute(unsigned ArgNo, Attribute::AttrKind Kind) const;
 
+  /// Check if an attribute is in the list of attributes.
+  bool hasParamAttribute(unsigned ArgNo, StringRef Kind) const;
+
   /// gets the attribute from the list of attributes.
   Attribute getAttributeAtIndex(unsigned i, Attribute::AttrKind Kind) const;
 
   /// gets the attribute from the list of attributes.
   Attribute getAttributeAtIndex(unsigned i, StringRef Kind) const;
+
+  /// Check if attribute of the given kind is set at the given index.
+  bool hasAttributeAtIndex(unsigned Idx, Attribute::AttrKind Kind) const;
 
   /// Return the attribute for the given attribute kind.
   Attribute getFnAttribute(Attribute::AttrKind Kind) const;
@@ -563,7 +571,7 @@ public:
   bool onlyWritesMemory() const;
   void setOnlyWritesMemory();
 
-  /// Determine if the call can access memmory only using pointers based
+  /// Determine if the call can access memory only using pointers based
   /// on its arguments.
   bool onlyAccessesArgMemory() const;
   void setOnlyAccessesArgMemory();
@@ -940,9 +948,14 @@ public:
   ///
   void viewCFG() const;
 
+  /// viewCFG - This function is meant for use from the debugger. It works just
+  /// like viewCFG(), but generates the dot file with the given file name.
+  void viewCFG(const char *OutputFileName) const;
+
   /// Extended form to print edge weights.
   void viewCFG(bool ViewCFGOnly, const BlockFrequencyInfo *BFI,
-               const BranchProbabilityInfo *BPI) const;
+               const BranchProbabilityInfo *BPI,
+               const char *OutputFileName = nullptr) const;
 
   /// viewCFGOnly - This function is meant for use from the debugger.  It works
   /// just like viewCFG, but it does not include the contents of basic blocks
@@ -950,6 +963,10 @@ public:
   /// this can make the graph smaller.
   ///
   void viewCFGOnly() const;
+
+  /// viewCFG - This function is meant for use from the debugger. It works just
+  /// like viewCFGOnly(), but generates the dot file with the given file name.
+  void viewCFGOnly(const char *OutputFileName) const;
 
   /// Extended form to print edge weights.
   void viewCFGOnly(const BlockFrequencyInfo *BFI,
@@ -1038,8 +1055,7 @@ private:
 /// Return value: true =>  null pointer dereference is not undefined.
 bool NullPointerIsDefined(const Function *F, unsigned AS = 0);
 
-template <>
-struct OperandTraits<Function> : public HungoffOperandTraits<3> {};
+template <> struct OperandTraits<Function> : public HungoffOperandTraits {};
 
 DEFINE_TRANSPARENT_OPERAND_ACCESSORS(Function, Value)
 

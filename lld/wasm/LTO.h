@@ -20,9 +20,11 @@
 #ifndef LLD_WASM_LTO_H
 #define LLD_WASM_LTO_H
 
-#include "lld/Common/LLVM.h"
-#include "llvm/ADT/SmallString.h"
 #include "Writer.h"
+#include "lld/Common/LLVM.h"
+#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/SmallString.h"
+#include "llvm/Support/raw_ostream.h"
 #include <memory>
 #include <vector>
 
@@ -47,8 +49,11 @@ public:
 
 private:
   std::unique_ptr<llvm::lto::LTO> ltoObj;
-  std::vector<SmallString<0>> buf;
+  // An array of (module name, native relocatable file content) pairs.
+  SmallVector<std::pair<std::string, SmallString<0>>, 0> buf;
   std::vector<std::unique_ptr<MemoryBuffer>> files;
+  std::unique_ptr<llvm::raw_fd_ostream> indexFile;
+  llvm::DenseSet<StringRef> thinIndices;
 };
 } // namespace lld::wasm
 

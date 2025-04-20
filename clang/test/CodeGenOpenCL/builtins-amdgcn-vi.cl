@@ -102,18 +102,143 @@ void test_s_dcache_wb()
   __builtin_amdgcn_s_dcache_wb();
 }
 
-// CHECK-LABEL: @test_mov_dpp
+// CHECK-LABEL: @test_mov_dpp_int
 // CHECK: {{.*}}call{{.*}} i32 @llvm.amdgcn.update.dpp.i32(i32 poison, i32 %src, i32 0, i32 0, i32 0, i1 false)
-void test_mov_dpp(global int* out, int src)
+void test_mov_dpp_int(global int* out, int src)
 {
   *out = __builtin_amdgcn_mov_dpp(src, 0, 0, 0, false);
 }
 
-// CHECK-LABEL: @test_update_dpp
+// CHECK-LABEL: @test_mov_dpp_long
+// CHECK:      %0 = tail call{{.*}} i64 @llvm.amdgcn.update.dpp.i64(i64 poison, i64 %x, i32 257, i32 15, i32 15, i1 false)
+// CHECK-NEXT: store i64 %0,
+void test_mov_dpp_long(long x, global long *p) {
+  *p = __builtin_amdgcn_mov_dpp(x, 0x101, 0xf, 0xf, 0);
+}
+
+// CHECK-LABEL: @test_mov_dpp_float
+// CHECK:      %0 = bitcast float %x to i32
+// CHECK-NEXT: %1 = tail call{{.*}} i32 @llvm.amdgcn.update.dpp.i32(i32 poison, i32 %0, i32 257, i32 15, i32 15, i1 false)
+// CHECK-NEXT: store i32 %1,
+void test_mov_dpp_float(float x, global float *p) {
+  *p = __builtin_amdgcn_mov_dpp(x, 0x101, 0xf, 0xf, 0);
+}
+
+// CHECK-LABEL: @test_mov_dpp_double
+// CHECK:      %0 = bitcast double %x to i64
+// CHECK-NEXT: %1 = tail call{{.*}} i64 @llvm.amdgcn.update.dpp.i64(i64 poison, i64 %0, i32 257, i32 15, i32 15, i1 false)
+// CHECK-NEXT: store i64 %1,
+void test_mov_dpp_double(double x, global double *p) {
+  *p = __builtin_amdgcn_mov_dpp(x, 0x101, 0xf, 0xf, 0);
+}
+
+// CHECK-LABEL: @test_mov_dpp_short
+// CHECK:      %0 = zext i16 %x to i32
+// CHECK-NEXT: %1 = tail call{{.*}} i32 @llvm.amdgcn.update.dpp.i32(i32 poison, i32 %0, i32 257, i32 15, i32 15, i1 false)
+// CHECK-NEXT: %2 = trunc i32 %1 to i16
+// CHECK-NEXT: store i16 %2,
+void test_mov_dpp_short(short x, global short *p) {
+  *p = __builtin_amdgcn_mov_dpp(x, 0x101, 0xf, 0xf, 0);
+}
+
+// CHECK-LABEL: @test_mov_dpp_char
+// CHECK:      %0 = zext i8 %x to i32
+// CHECK-NEXT: %1 = tail call{{.*}} i32 @llvm.amdgcn.update.dpp.i32(i32 poison, i32 %0, i32 257, i32 15, i32 15, i1 false)
+// CHECK-NEXT: %2 = trunc i32 %1 to i8
+// CHECK-NEXT: store i8 %2,
+void test_mov_dpp_char(char x, global char *p) {
+  *p = __builtin_amdgcn_mov_dpp(x, 0x101, 0xf, 0xf, 0);
+}
+
+// CHECK-LABEL: @test_mov_dpp_half
+// CHECK:      %0 = load i16,
+// CHECK:      %1 = zext i16 %0 to i32
+// CHECK-NEXT: %2 = tail call{{.*}} i32 @llvm.amdgcn.update.dpp.i32(i32 poison, i32 %1, i32 257, i32 15, i32 15, i1 false)
+// CHECK-NEXT: %3 = trunc i32 %2 to i16
+// CHECK-NEXT: store i16 %3,
+void test_mov_dpp_half(half *x, global half *p) {
+  *p = __builtin_amdgcn_mov_dpp(*x, 0x101, 0xf, 0xf, 0);
+}
+
+// CHECK-LABEL: @test_update_dpp_int
 // CHECK: {{.*}}call{{.*}} i32 @llvm.amdgcn.update.dpp.i32(i32 %arg1, i32 %arg2, i32 0, i32 0, i32 0, i1 false)
-void test_update_dpp(global int* out, int arg1, int arg2)
+void test_update_dpp_int(global int* out, int arg1, int arg2)
 {
   *out = __builtin_amdgcn_update_dpp(arg1, arg2, 0, 0, 0, false);
+}
+
+// CHECK-LABEL: @test_update_dpp_long
+// CHECK:      %0 = tail call{{.*}} i64 @llvm.amdgcn.update.dpp.i64(i64 %x, i64 %x, i32 257, i32 15, i32 15, i1 false)
+// CHECk-NEXT: store i64 %0,
+void test_update_dpp_long(long x, global long *p) {
+  *p = __builtin_amdgcn_update_dpp(x, x, 0x101, 0xf, 0xf, 0);
+}
+
+// CHECK-LABEL: @test_update_dpp_float
+// CHECK:      %0 = bitcast float %x to i32
+// CHECK-NEXT: %1 = tail call{{.*}} i32 @llvm.amdgcn.update.dpp.i32(i32 %0, i32 %0, i32 257, i32 15, i32 15, i1 false)
+// CHECK-NEXT: store i32 %1,
+void test_update_dpp_float(float x, global float *p) {
+  *p = __builtin_amdgcn_update_dpp(x, x, 0x101, 0xf, 0xf, 0);
+}
+
+// CHECK-LABEL: @test_update_dpp_double
+// CHECK:      %0 = bitcast double %x to i64
+// CHECK-NEXT: %1 = tail call{{.*}} i64 @llvm.amdgcn.update.dpp.i64(i64 %0, i64 %0, i32 257, i32 15, i32 15, i1 false)
+// CHECK-NEXT: store i64 %1,
+void test_update_dpp_double(double x, global double *p) {
+  *p = __builtin_amdgcn_update_dpp(x, x, 0x101, 0xf, 0xf, 0);
+}
+
+// CHECK-LABEL: @test_update_dpp_short
+// CHECK:      %0 = zext i16 %x to i32
+// CHECK-NEXT: %1 = tail call{{.*}} i32 @llvm.amdgcn.update.dpp.i32(i32 %0, i32 %0, i32 257, i32 15, i32 15, i1 false)
+// CHECK-NEXT: %2 = trunc i32 %1 to i16
+// CHECK-NEXT: store i16 %2,
+void test_update_dpp_short(short x, global short *p) {
+  *p = __builtin_amdgcn_update_dpp(x, x, 0x101, 0xf, 0xf, 0);
+}
+
+// CHECK-LABEL: @test_update_dpp_char
+// CHECK:      %0 = zext i8 %x to i32
+// CHECK-NEXT: %1 = tail call{{.*}} i32 @llvm.amdgcn.update.dpp.i32(i32 %0, i32 %0, i32 257, i32 15, i32 15, i1 false)
+// CHECK-NEXT: %2 = trunc i32 %1 to i8
+// CHECK-NEXT: store i8 %2,
+void test_update_dpp_char(char x, global char *p) {
+  *p = __builtin_amdgcn_update_dpp(x, x, 0x101, 0xf, 0xf, 0);
+}
+
+// CHECK-LABEL: @test_update_dpp_half
+// CHECK:      %0 = load i16,
+// CHECK:      %1 = zext i16 %0 to i32
+// CHECK-NEXT: %2 = tail call{{.*}} i32 @llvm.amdgcn.update.dpp.i32(i32 %1, i32 %1, i32 257, i32 15, i32 15, i1 false)
+// CHECK-NEXT: %3 = trunc i32 %2 to i16
+// CHECK-NEXT: store i16 %3,
+void test_update_dpp_half(half *x, global half *p) {
+  *p = __builtin_amdgcn_update_dpp(*x, *x, 0x101, 0xf, 0xf, 0);
+}
+
+// CHECK-LABEL: @test_update_dpp_int_uint
+// CHECK: {{.*}}call{{.*}} i32 @llvm.amdgcn.update.dpp.i32(i32 %arg1, i32 %arg2, i32 0, i32 0, i32 0, i1 false)
+void test_update_dpp_int_uint(global int* out, int arg1, unsigned int arg2)
+{
+  *out = __builtin_amdgcn_update_dpp(arg1, arg2, 0, 0, 0, false);
+}
+
+// CHECK-LABEL: @test_update_dpp_lit_int
+// CHECK: {{.*}}call{{.*}} i32 @llvm.amdgcn.update.dpp.i32(i32 5, i32 %arg1, i32 0, i32 0, i32 0, i1 false)
+void test_update_dpp_lit_int(global int* out, int arg1)
+{
+  *out = __builtin_amdgcn_update_dpp(5, arg1, 0, 0, 0, false);
+}
+
+__constant int gi = 5;
+
+// CHECK-LABEL: @test_update_dpp_const_int
+// CHECK: {{.*}}call{{.*}} i32 @llvm.amdgcn.update.dpp.i32(i32 5, i32 %arg1, i32 0, i32 0, i32 0, i1 false)
+void test_update_dpp_const_int(global int* out, int arg1)
+{
+  *out = __builtin_amdgcn_update_dpp(gi, arg1, 0, 0, 0, false);
 }
 
 // CHECK-LABEL: @test_ds_fadd

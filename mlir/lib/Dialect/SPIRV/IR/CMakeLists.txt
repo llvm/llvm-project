@@ -8,9 +8,10 @@ add_mlir_dialect_library(MLIRSPIRVDialect
   ControlFlowOps.cpp
   CooperativeMatrixOps.cpp
   GroupOps.cpp
+  ImageOps.cpp
   IntegerDotProductOps.cpp
-  JointMatrixOps.cpp
   MemoryOps.cpp
+  MeshOps.cpp
   SPIRVAttributes.cpp
   SPIRVCanonicalization.cpp
   SPIRVGLCanonicalization.cpp
@@ -34,6 +35,7 @@ add_mlir_dialect_library(MLIRSPIRVDialect
   MLIRSPIRVCanonicalizationIncGen
   MLIRSPIRVEnumAvailabilityIncGen
   MLIRSPIRVEnumsIncGen
+  MLIRSPIRVImageInterfacesIncGen
   MLIRSPIRVOpsIncGen
 
   LINK_LIBS PUBLIC
@@ -42,6 +44,7 @@ add_mlir_dialect_library(MLIRSPIRVDialect
   MLIRIR
   MLIRParser
   MLIRSideEffectInterfaces
+  MLIRSPIRVImageInterfaces
   MLIRSupport
   MLIRTransforms
   MLIRUBDialect

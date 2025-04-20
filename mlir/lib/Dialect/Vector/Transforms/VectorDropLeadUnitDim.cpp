@@ -8,7 +8,6 @@
 
 #include <numeric>
 
-#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Transforms/VectorRewritePatterns.h"
@@ -122,7 +121,7 @@ struct CastAwayInsertStridedSliceLeadingOneDim
     Location loc = insertOp.getLoc();
 
     Value newSrcVector = rewriter.create<vector::ExtractOp>(
-        loc, insertOp.getSource(), splatZero(srcDropCount));
+        loc, insertOp.getValueToStore(), splatZero(srcDropCount));
     Value newDstVector = rewriter.create<vector::ExtractOp>(
         loc, insertOp.getDest(), splatZero(dstDropCount));
 
@@ -148,7 +147,7 @@ struct CastAwayInsertLeadingOneDim : public OpRewritePattern<vector::InsertOp> {
 
   LogicalResult matchAndRewrite(vector::InsertOp insertOp,
                                 PatternRewriter &rewriter) const override {
-    Type oldSrcType = insertOp.getSourceType();
+    Type oldSrcType = insertOp.getValueToStoreType();
     Type newSrcType = oldSrcType;
     int64_t oldSrcRank = 0, newSrcRank = 0;
     if (auto type = dyn_cast<VectorType>(oldSrcType)) {
@@ -168,10 +167,10 @@ struct CastAwayInsertLeadingOneDim : public OpRewritePattern<vector::InsertOp> {
     // Trim leading one dimensions from both operands.
     Location loc = insertOp.getLoc();
 
-    Value newSrcVector = insertOp.getSource();
+    Value newSrcVector = insertOp.getValueToStore();
     if (oldSrcRank != 0) {
       newSrcVector = rewriter.create<vector::ExtractOp>(
-          loc, insertOp.getSource(), splatZero(srcDropCount));
+          loc, insertOp.getValueToStore(), splatZero(srcDropCount));
     }
     Value newDstVector = rewriter.create<vector::ExtractOp>(
         loc, insertOp.getDest(), splatZero(dstDropCount));
@@ -377,18 +376,18 @@ mlir::vector::castAwayContractionLeadingOneDim(vector::ContractionOp contractOp,
     int64_t orginalZeroDim = it.value().getDimPosition(0);
     if (orginalZeroDim != dimToDrop) {
       // There are two reasons to be in this path, 1. We need to
-      // tranpose the operand to make the dim to be dropped
+      // transpose the operand to make the dim to be dropped
       // leading. 2. The dim to be dropped does not exist and in
-      // that case we dont want to add a unit tranpose but we must
+      // that case we dont want to add a unit transpose but we must
       // check all the indices to make sure this is the case.
-      bool tranposeNeeded = false;
+      bool transposeNeeded = false;
       SmallVector<int64_t> perm;
       SmallVector<AffineExpr> transposeResults;
 
       for (int64_t i = 0, e = map.getNumResults(); i < e; ++i) {
         int64_t currDim = map.getDimPosition(i);
         if (currDim == dimToDrop) {
-          tranposeNeeded = true;
+          transposeNeeded = true;
           perm.insert(perm.begin(), i);
           auto targetExpr = rewriter.getAffineDimExpr(currDim);
           transposeResults.insert(transposeResults.begin(), targetExpr);
@@ -413,9 +412,9 @@ mlir::vector::castAwayContractionLeadingOneDim(vector::ContractionOp contractOp,
         }
       }
 
-      // Do the tranpose now if needed so that we can drop the
+      // Do the transpose now if needed so that we can drop the
       // correct dim using extract later.
-      if (tranposeNeeded) {
+      if (transposeNeeded) {
         map = AffineMap::get(map.getNumDims(), 0, transposeResults,
                              contractOp.getContext());
         if (transposeNonOuterUnitDims) {
@@ -474,7 +473,7 @@ namespace {
 
 /// Turns vector.contract on vector with leading 1 dimensions into
 /// vector.extract followed by vector.contract on vector without leading
-/// 1 dimensions. Also performs tranpose of lhs and rhs operands if required
+/// 1 dimensions. Also performs transpose of lhs and rhs operands if required
 /// prior to extract.
 struct CastAwayContractionLeadingOneDim
     : public MaskableOpRewritePattern<vector::ContractionOp> {
@@ -557,7 +556,7 @@ struct CastAwayConstantMaskLeadingOneDim
     int64_t flatLeadingSize =
         std::accumulate(dimSizes.begin(), dimSizes.begin() + dropDim + 1,
                         static_cast<int64_t>(1), std::multiplies<int64_t>());
-    SmallVector<int64_t> newDimSizes({flatLeadingSize});
+    SmallVector<int64_t> newDimSizes = {flatLeadingSize};
     newDimSizes.append(dimSizes.begin() + dropDim + 1, dimSizes.end());
 
     auto newMask = rewriter.create<vector::ConstantMaskOp>(
@@ -577,5 +576,4 @@ void mlir::vector::populateCastAwayVectorLeadingOneDimPatterns(
            CastAwayConstantMaskLeadingOneDim, CastAwayTransferReadLeadingOneDim,
            CastAwayTransferWriteLeadingOneDim, CastAwayElementwiseLeadingOneDim,
            CastAwayContractionLeadingOneDim>(patterns.getContext(), benefit);
-  populateShapeCastFoldingPatterns(patterns, benefit);
 }

@@ -11,7 +11,7 @@
 
 #include <string.h>
 
-char kChars[] = { 'f', 'o', 'o' };
+char kChars[] = {'f', 'o', 'o'};
 
 int main(int argc, char **argv) {
   char *copy = strndup(kChars, 3);
