@@ -159,6 +159,15 @@ uint32_t GetLLDBFrameID(uint64_t dap_frame_id);
 lldb::SBEnvironment
 GetEnvironmentFromArguments(const llvm::json::Object &arguments);
 
+/// Get the stop-disassembly-display settings
+///
+/// \param[in] debugger
+///     The debugger that will execute the lldb commands.
+///
+/// \return
+///     The value of the stop-disassembly-display setting
+lldb::StopDisassemblyType GetStopDisassemblyDisplay(lldb::SBDebugger &debugger);
+
 /// Take ownership of the stored error.
 llvm::Error ToError(const lldb::SBError &error);
 

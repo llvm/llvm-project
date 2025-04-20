@@ -9,7 +9,9 @@
 #include "DAP.h"
 #include "EventHelper.h"
 #include "JSONUtils.h"
+#include "LLDBUtils.h"
 #include "RequestHandler.h"
+#include "lldb/lldb-enumerations.h"
 
 namespace lldb_dap {
 
@@ -53,6 +55,8 @@ static bool FillStackFrames(DAP &dap, lldb::SBThread &thread,
                             llvm::json::Array &stack_frames, int64_t &offset,
                             const int64_t start_frame, const int64_t levels,
                             const bool include_all) {
+  lldb::StopDisassemblyType stop_disassembly_display =
+      GetStopDisassemblyDisplay(dap.debugger);
   bool reached_end_of_stack = false;
   for (int64_t i = start_frame;
        static_cast<int64_t>(stack_frames.size()) < levels; i++) {
@@ -69,7 +73,8 @@ static bool FillStackFrames(DAP &dap, lldb::SBThread &thread,
       break;
     }
 
-    stack_frames.emplace_back(CreateStackFrame(frame, frame_format));
+    stack_frames.emplace_back(
+        CreateStackFrame(frame, frame_format, stop_disassembly_display));
   }
 
   if (include_all && reached_end_of_stack) {
