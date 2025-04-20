@@ -662,6 +662,71 @@ TEST_F(IRBuilderTest, FPBundlesStrict) {
   }
 }
 
+TEST_F(IRBuilderTest, FPBundlesConstrained) {
+  F->addFnAttr(Attribute::StrictFP);
+
+  IRBuilder<> Builder(BB);
+  LLVMContext &Context = Builder.getContext();
+  Builder.setDefaultConstrainedExcept(fp::ebStrict);
+  Builder.setDefaultConstrainedRounding(RoundingMode::TowardZero);
+  Builder.setIsFPConstrained(true);
+
+  GlobalVariable *GVDouble = new GlobalVariable(
+      *M, Type::getDoubleTy(Ctx), true, GlobalValue::ExternalLinkage, nullptr);
+  Value *FnArg = Builder.CreateLoad(GVDouble->getValueType(), GVDouble);
+  Function *Fn = Intrinsic::getOrInsertDeclaration(
+      M.get(), Intrinsic::experimental_constrained_fadd,
+      {Type::getDoubleTy(Ctx)});
+
+  const auto createConstrainedRounding = [&](RoundingMode RM) {
+    std::optional<StringRef> RoundingStr = convertRoundingModeToStr(RM);
+    assert(RoundingStr);
+    auto *RoundingMDS = MDString::get(Context, *RoundingStr);
+    return MetadataAsValue::get(Context, RoundingMDS);
+  };
+  const auto createConstrainedExcept = [&](fp::ExceptionBehavior EB) {
+    std::optional<StringRef> ExceptStr = convertExceptionBehaviorToStr(EB);
+    assert(ExceptStr);
+    auto *ExceptMDS = MDString::get(Context, *ExceptStr);
+    return MetadataAsValue::get(Context, ExceptMDS);
+  };
+
+  // Constrained function call without bundles.
+  {
+    Value *V = Builder.CreateFAdd(FnArg, FnArg);
+    auto *I = cast<IntrinsicInst>(V);
+    EXPECT_FALSE(I->getOperandBundle(LLVMContext::OB_fp_control).has_value());
+    EXPECT_FALSE(I->getOperandBundle(LLVMContext::OB_fp_except).has_value());
+    EXPECT_EQ(Intrinsic::experimental_constrained_fadd, I->getIntrinsicID());
+    EXPECT_EQ(RoundingMode::TowardZero, I->getRoundingMode());
+    EXPECT_EQ(fp::ebStrict, I->getExceptionBehavior());
+    MemoryEffects ME = I->getMemoryEffects();
+    EXPECT_TRUE(ME.doesAccessInaccessibleMem());
+  }
+
+  // Operand bundles have precedence over constrained intrinsic metadata
+  // arguments.
+  {
+    SmallVector<OperandBundleDef, 1> Bundles;
+    llvm::addFPRoundingBundle(Ctx, Bundles, RoundingMode::TowardNegative);
+    llvm::addFPExceptionBundle(Ctx, Bundles, fp::ebIgnore);
+    Value *V = Builder.CreateCall(
+        Fn,
+        {FnArg, FnArg, createConstrainedRounding(RoundingMode::TowardZero),
+         createConstrainedExcept(fp::ebStrict)},
+        Bundles);
+
+    auto *I = cast<IntrinsicInst>(V);
+    EXPECT_TRUE(I->getOperandBundle(LLVMContext::OB_fp_control).has_value());
+    EXPECT_TRUE(I->getOperandBundle(LLVMContext::OB_fp_except).has_value());
+    EXPECT_EQ(Intrinsic::experimental_constrained_fadd, I->getIntrinsicID());
+    EXPECT_EQ(RoundingMode::TowardNegative, I->getRoundingMode());
+    EXPECT_EQ(fp::ebIgnore, I->getExceptionBehavior());
+    MemoryEffects ME = I->getMemoryEffects();
+    EXPECT_TRUE(ME.doesAccessInaccessibleMem());
+  }
+}
+
 TEST_F(IRBuilderTest, Lifetime) {
   IRBuilder<> Builder(BB);
   AllocaInst *Var1 = Builder.CreateAlloca(Builder.getInt8Ty());
