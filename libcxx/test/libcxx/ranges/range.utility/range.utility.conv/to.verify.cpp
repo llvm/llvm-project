@@ -68,4 +68,5 @@ void test() {
       R{}); //expected-error-re@*:* {{static assertion failed{{.*}}The target must be a class type}}
   (void)(R{} | std::ranges::to<
                    color>()); //expected-error-re@*:* {{static assertion failed{{.*}}The target must be a class type}}
+                   
 }
