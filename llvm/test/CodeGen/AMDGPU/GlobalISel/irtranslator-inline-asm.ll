@@ -281,7 +281,7 @@ define void @test_many_matching_constraints(i32 %a, i32 %b, i32 %c) nounwind {
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY [[COPY2]](s32)
   ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY [[COPY]](s32)
   ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY [[COPY1]](s32)

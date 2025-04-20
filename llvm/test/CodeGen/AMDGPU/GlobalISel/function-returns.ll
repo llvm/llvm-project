@@ -6,7 +6,7 @@
 define i1 @i1_func_void() #0 {
   ; CHECK-LABEL: name: i1_func_void
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s1) = G_LOAD [[DEF]](p1) :: (load (s1) from `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[LOAD]](s1)
   ; CHECK-NEXT:   $vgpr0 = COPY [[ANYEXT]](s32)
@@ -18,7 +18,7 @@ define i1 @i1_func_void() #0 {
 define zeroext i1 @i1_zeroext_func_void() #0 {
   ; CHECK-LABEL: name: i1_zeroext_func_void
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s1) = G_LOAD [[DEF]](p1) :: (load (s1) from `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[LOAD]](s1)
   ; CHECK-NEXT:   $vgpr0 = COPY [[ZEXT]](s32)
@@ -30,7 +30,7 @@ define zeroext i1 @i1_zeroext_func_void() #0 {
 define signext i1 @i1_signext_func_void() #0 {
   ; CHECK-LABEL: name: i1_signext_func_void
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s1) = G_LOAD [[DEF]](p1) :: (load (s1) from `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   [[SEXT:%[0-9]+]]:_(s32) = G_SEXT [[LOAD]](s1)
   ; CHECK-NEXT:   $vgpr0 = COPY [[SEXT]](s32)
@@ -42,7 +42,7 @@ define signext i1 @i1_signext_func_void() #0 {
 define i7 @i7_func_void() #0 {
   ; CHECK-LABEL: name: i7_func_void
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s7) = G_LOAD [[DEF]](p1) :: (load (s7) from `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[LOAD]](s7)
   ; CHECK-NEXT:   $vgpr0 = COPY [[ANYEXT]](s32)
@@ -54,7 +54,7 @@ define i7 @i7_func_void() #0 {
 define zeroext i7 @i7_zeroext_func_void() #0 {
   ; CHECK-LABEL: name: i7_zeroext_func_void
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s7) = G_LOAD [[DEF]](p1) :: (load (s7) from `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[LOAD]](s7)
   ; CHECK-NEXT:   $vgpr0 = COPY [[ZEXT]](s32)
@@ -66,7 +66,7 @@ define zeroext i7 @i7_zeroext_func_void() #0 {
 define signext i7 @i7_signext_func_void() #0 {
   ; CHECK-LABEL: name: i7_signext_func_void
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s7) = G_LOAD [[DEF]](p1) :: (load (s7) from `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   [[SEXT:%[0-9]+]]:_(s32) = G_SEXT [[LOAD]](s7)
   ; CHECK-NEXT:   $vgpr0 = COPY [[SEXT]](s32)
@@ -78,7 +78,7 @@ define signext i7 @i7_signext_func_void() #0 {
 define i8 @i8_func_void() #0 {
   ; CHECK-LABEL: name: i8_func_void
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s8) = G_LOAD [[DEF]](p1) :: (load (s8) from `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[LOAD]](s8)
   ; CHECK-NEXT:   $vgpr0 = COPY [[ANYEXT]](s32)
@@ -90,7 +90,7 @@ define i8 @i8_func_void() #0 {
 define zeroext i8 @i8_zeroext_func_void() #0 {
   ; CHECK-LABEL: name: i8_zeroext_func_void
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s8) = G_LOAD [[DEF]](p1) :: (load (s8) from `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[LOAD]](s8)
   ; CHECK-NEXT:   $vgpr0 = COPY [[ZEXT]](s32)
@@ -102,7 +102,7 @@ define zeroext i8 @i8_zeroext_func_void() #0 {
 define signext i8 @i8_signext_func_void() #0 {
   ; CHECK-LABEL: name: i8_signext_func_void
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s8) = G_LOAD [[DEF]](p1) :: (load (s8) from `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   [[SEXT:%[0-9]+]]:_(s32) = G_SEXT [[LOAD]](s8)
   ; CHECK-NEXT:   $vgpr0 = COPY [[SEXT]](s32)
@@ -114,7 +114,7 @@ define signext i8 @i8_signext_func_void() #0 {
 define i16 @i16_func_void() #0 {
   ; CHECK-LABEL: name: i16_func_void
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s16) = G_LOAD [[DEF]](p1) :: (load (s16) from `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[LOAD]](s16)
   ; CHECK-NEXT:   $vgpr0 = COPY [[ANYEXT]](s32)
@@ -126,7 +126,7 @@ define i16 @i16_func_void() #0 {
 define zeroext i16 @i16_zeroext_func_void() #0 {
   ; CHECK-LABEL: name: i16_zeroext_func_void
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s16) = G_LOAD [[DEF]](p1) :: (load (s16) from `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[LOAD]](s16)
   ; CHECK-NEXT:   $vgpr0 = COPY [[ZEXT]](s32)
@@ -138,7 +138,7 @@ define zeroext i16 @i16_zeroext_func_void() #0 {
 define signext i16 @i16_signext_func_void() #0 {
   ; CHECK-LABEL: name: i16_signext_func_void
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s16) = G_LOAD [[DEF]](p1) :: (load (s16) from `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   [[SEXT:%[0-9]+]]:_(s32) = G_SEXT [[LOAD]](s16)
   ; CHECK-NEXT:   $vgpr0 = COPY [[SEXT]](s32)
@@ -150,7 +150,7 @@ define signext i16 @i16_signext_func_void() #0 {
 define half @f16_func_void() #0 {
   ; CHECK-LABEL: name: f16_func_void
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s16) = G_LOAD [[DEF]](p1) :: (load (s16) from `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[LOAD]](s16)
   ; CHECK-NEXT:   $vgpr0 = COPY [[ANYEXT]](s32)
@@ -162,7 +162,7 @@ define half @f16_func_void() #0 {
 define i24 @i24_func_void() #0 {
   ; CHECK-LABEL: name: i24_func_void
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s24) = G_LOAD [[DEF]](p1) :: (load (s24) from `ptr addrspace(1) poison`, align 4, addrspace 1)
   ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[LOAD]](s24)
   ; CHECK-NEXT:   $vgpr0 = COPY [[ANYEXT]](s32)
@@ -174,7 +174,7 @@ define i24 @i24_func_void() #0 {
 define zeroext i24 @i24_zeroext_func_void() #0 {
   ; CHECK-LABEL: name: i24_zeroext_func_void
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s24) = G_LOAD [[DEF]](p1) :: (load (s24) from `ptr addrspace(1) poison`, align 4, addrspace 1)
   ; CHECK-NEXT:   [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[LOAD]](s24)
   ; CHECK-NEXT:   $vgpr0 = COPY [[ZEXT]](s32)
@@ -186,7 +186,7 @@ define zeroext i24 @i24_zeroext_func_void() #0 {
 define signext i24 @i24_signext_func_void() #0 {
   ; CHECK-LABEL: name: i24_signext_func_void
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s24) = G_LOAD [[DEF]](p1) :: (load (s24) from `ptr addrspace(1) poison`, align 4, addrspace 1)
   ; CHECK-NEXT:   [[SEXT:%[0-9]+]]:_(s32) = G_SEXT [[LOAD]](s24)
   ; CHECK-NEXT:   $vgpr0 = COPY [[SEXT]](s32)
@@ -198,7 +198,7 @@ define signext i24 @i24_signext_func_void() #0 {
 define <2 x i24> @v2i24_func_void() #0 {
   ; CHECK-LABEL: name: v2i24_func_void
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(<2 x s24>) = G_LOAD [[DEF]](p1) :: (load (<2 x s24>) from `ptr addrspace(1) poison`, align 8, addrspace 1)
   ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(s24), [[UV1:%[0-9]+]]:_(s24) = G_UNMERGE_VALUES [[LOAD]](<2 x s24>)
   ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[UV]](s24)
@@ -213,7 +213,7 @@ define <2 x i24> @v2i24_func_void() #0 {
 define <3 x i24> @v3i24_func_void() #0 {
   ; CHECK-LABEL: name: v3i24_func_void
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(<3 x s24>) = G_LOAD [[DEF]](p1) :: (load (<3 x s24>) from `ptr addrspace(1) poison`, align 16, addrspace 1)
   ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(s24), [[UV1:%[0-9]+]]:_(s24), [[UV2:%[0-9]+]]:_(s24) = G_UNMERGE_VALUES [[LOAD]](<3 x s24>)
   ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[UV]](s24)
@@ -230,7 +230,7 @@ define <3 x i24> @v3i24_func_void() #0 {
 define i32 @i32_func_void() #0 {
   ; CHECK-LABEL: name: i32_func_void
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[DEF]](p1) :: (load (s32) from `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   $vgpr0 = COPY [[LOAD]](s32)
   ; CHECK-NEXT:   SI_RETURN implicit $vgpr0
@@ -241,7 +241,7 @@ define i32 @i32_func_void() #0 {
 define i48 @i48_func_void() #0 {
   ; CHECK-LABEL: name: i48_func_void
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s48) = G_LOAD [[DEF]](p1) :: (load (s48) from `ptr addrspace(1) poison`, align 8, addrspace 1)
   ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[LOAD]](s48)
   ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[ANYEXT]](s64)
@@ -255,7 +255,7 @@ define i48 @i48_func_void() #0 {
 define signext i48 @i48_signext_func_void() #0 {
   ; CHECK-LABEL: name: i48_signext_func_void
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s48) = G_LOAD [[DEF]](p1) :: (load (s48) from `ptr addrspace(1) poison`, align 8, addrspace 1)
   ; CHECK-NEXT:   [[SEXT:%[0-9]+]]:_(s64) = G_SEXT [[LOAD]](s48)
   ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[SEXT]](s64)
@@ -269,7 +269,7 @@ define signext i48 @i48_signext_func_void() #0 {
 define zeroext i48 @i48_zeroext_func_void() #0 {
   ; CHECK-LABEL: name: i48_zeroext_func_void
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s48) = G_LOAD [[DEF]](p1) :: (load (s48) from `ptr addrspace(1) poison`, align 8, addrspace 1)
   ; CHECK-NEXT:   [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[LOAD]](s48)
   ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[ZEXT]](s64)
@@ -283,7 +283,7 @@ define zeroext i48 @i48_zeroext_func_void() #0 {
 define i64 @i64_func_void() #0 {
   ; CHECK-LABEL: name: i64_func_void
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[DEF]](p1) :: (load (s64) from `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[LOAD]](s64)
   ; CHECK-NEXT:   $vgpr0 = COPY [[UV]](s32)
@@ -296,7 +296,7 @@ define i64 @i64_func_void() #0 {
 define i65 @i65_func_void() #0 {
   ; CHECK-LABEL: name: i65_func_void
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s65) = G_LOAD [[DEF]](p1) :: (load (s65) from `ptr addrspace(1) poison`, align 8, addrspace 1)
   ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:_(s96) = G_ANYEXT [[LOAD]](s65)
   ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[ANYEXT]](s96)
@@ -311,7 +311,7 @@ define i65 @i65_func_void() #0 {
 define signext i65 @i65_signext_func_void() #0 {
   ; CHECK-LABEL: name: i65_signext_func_void
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s65) = G_LOAD [[DEF]](p1) :: (load (s65) from `ptr addrspace(1) poison`, align 8, addrspace 1)
   ; CHECK-NEXT:   [[SEXT:%[0-9]+]]:_(s96) = G_SEXT [[LOAD]](s65)
   ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[SEXT]](s96)
@@ -326,7 +326,7 @@ define signext i65 @i65_signext_func_void() #0 {
 define zeroext i65 @i65_zeroext_func_void() #0 {
   ; CHECK-LABEL: name: i65_zeroext_func_void
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s65) = G_LOAD [[DEF]](p1) :: (load (s65) from `ptr addrspace(1) poison`, align 8, addrspace 1)
   ; CHECK-NEXT:   [[ZEXT:%[0-9]+]]:_(s96) = G_ZEXT [[LOAD]](s65)
   ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[ZEXT]](s96)
@@ -341,7 +341,7 @@ define zeroext i65 @i65_zeroext_func_void() #0 {
 define float @f32_func_void() #0 {
   ; CHECK-LABEL: name: f32_func_void
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[DEF]](p1) :: (load (s32) from `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   $vgpr0 = COPY [[LOAD]](s32)
   ; CHECK-NEXT:   SI_RETURN implicit $vgpr0
@@ -352,7 +352,7 @@ define float @f32_func_void() #0 {
 define double @f64_func_void() #0 {
   ; CHECK-LABEL: name: f64_func_void
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[DEF]](p1) :: (load (s64) from `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[LOAD]](s64)
   ; CHECK-NEXT:   $vgpr0 = COPY [[UV]](s32)
@@ -365,7 +365,7 @@ define double @f64_func_void() #0 {
 define <2 x double> @v2f64_func_void() #0 {
   ; CHECK-LABEL: name: v2f64_func_void
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(<2 x s64>) = G_LOAD [[DEF]](p1) :: (load (<2 x s64>) from `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[LOAD]](<2 x s64>)
   ; CHECK-NEXT:   $vgpr0 = COPY [[UV]](s32)
@@ -380,7 +380,7 @@ define <2 x double> @v2f64_func_void() #0 {
 define <2 x i32> @v2i32_func_void() #0 {
   ; CHECK-LABEL: name: v2i32_func_void
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(<2 x s32>) = G_LOAD [[DEF]](p1) :: (load (<2 x s32>) from `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[LOAD]](<2 x s32>)
   ; CHECK-NEXT:   $vgpr0 = COPY [[UV]](s32)
@@ -393,7 +393,7 @@ define <2 x i32> @v2i32_func_void() #0 {
 define <3 x i32> @v3i32_func_void() #0 {
   ; CHECK-LABEL: name: v3i32_func_void
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(<3 x s32>) = G_LOAD [[DEF]](p1) :: (load (<3 x s32>) from `ptr addrspace(1) poison`, align 16, addrspace 1)
   ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[LOAD]](<3 x s32>)
   ; CHECK-NEXT:   $vgpr0 = COPY [[UV]](s32)
@@ -407,7 +407,7 @@ define <3 x i32> @v3i32_func_void() #0 {
 define <4 x i32> @v4i32_func_void() #0 {
   ; CHECK-LABEL: name: v4i32_func_void
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(<4 x s32>) = G_LOAD [[DEF]](p1) :: (load (<4 x s32>) from `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[LOAD]](<4 x s32>)
   ; CHECK-NEXT:   $vgpr0 = COPY [[UV]](s32)
@@ -422,7 +422,7 @@ define <4 x i32> @v4i32_func_void() #0 {
 define <5 x i32> @v5i32_func_void() #0 {
   ; CHECK-LABEL: name: v5i32_func_void
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(<5 x s32>) = G_LOAD [[DEF]](p1) :: (volatile load (<5 x s32>) from `ptr addrspace(1) poison`, align 32, addrspace 1)
   ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[LOAD]](<5 x s32>)
   ; CHECK-NEXT:   $vgpr0 = COPY [[UV]](s32)
@@ -438,7 +438,7 @@ define <5 x i32> @v5i32_func_void() #0 {
 define <8 x i32> @v8i32_func_void() #0 {
   ; CHECK-LABEL: name: v8i32_func_void
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p4) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p4) = G_POISON
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (volatile invariant load (p1) from `ptr addrspace(4) poison`, addrspace 4)
   ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(<8 x s32>) = G_LOAD [[LOAD]](p1) :: (load (<8 x s32>) from %ir.ptr, addrspace 1)
   ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32), [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[LOAD1]](<8 x s32>)
@@ -459,7 +459,7 @@ define <8 x i32> @v8i32_func_void() #0 {
 define <16 x i32> @v16i32_func_void() #0 {
   ; CHECK-LABEL: name: v16i32_func_void
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p4) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p4) = G_POISON
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (volatile invariant load (p1) from `ptr addrspace(4) poison`, addrspace 4)
   ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(<16 x s32>) = G_LOAD [[LOAD]](p1) :: (load (<16 x s32>) from %ir.ptr, addrspace 1)
   ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32), [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32), [[UV8:%[0-9]+]]:_(s32), [[UV9:%[0-9]+]]:_(s32), [[UV10:%[0-9]+]]:_(s32), [[UV11:%[0-9]+]]:_(s32), [[UV12:%[0-9]+]]:_(s32), [[UV13:%[0-9]+]]:_(s32), [[UV14:%[0-9]+]]:_(s32), [[UV15:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[LOAD1]](<16 x s32>)
@@ -488,7 +488,7 @@ define <16 x i32> @v16i32_func_void() #0 {
 define <32 x i32> @v32i32_func_void() #0 {
   ; CHECK-LABEL: name: v32i32_func_void
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p4) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p4) = G_POISON
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (volatile invariant load (p1) from `ptr addrspace(4) poison`, addrspace 4)
   ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(<32 x s32>) = G_LOAD [[LOAD]](p1) :: (load (<32 x s32>) from %ir.ptr, addrspace 1)
   ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32), [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32), [[UV8:%[0-9]+]]:_(s32), [[UV9:%[0-9]+]]:_(s32), [[UV10:%[0-9]+]]:_(s32), [[UV11:%[0-9]+]]:_(s32), [[UV12:%[0-9]+]]:_(s32), [[UV13:%[0-9]+]]:_(s32), [[UV14:%[0-9]+]]:_(s32), [[UV15:%[0-9]+]]:_(s32), [[UV16:%[0-9]+]]:_(s32), [[UV17:%[0-9]+]]:_(s32), [[UV18:%[0-9]+]]:_(s32), [[UV19:%[0-9]+]]:_(s32), [[UV20:%[0-9]+]]:_(s32), [[UV21:%[0-9]+]]:_(s32), [[UV22:%[0-9]+]]:_(s32), [[UV23:%[0-9]+]]:_(s32), [[UV24:%[0-9]+]]:_(s32), [[UV25:%[0-9]+]]:_(s32), [[UV26:%[0-9]+]]:_(s32), [[UV27:%[0-9]+]]:_(s32), [[UV28:%[0-9]+]]:_(s32), [[UV29:%[0-9]+]]:_(s32), [[UV30:%[0-9]+]]:_(s32), [[UV31:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[LOAD1]](<32 x s32>)
@@ -533,7 +533,7 @@ define <32 x i32> @v32i32_func_void() #0 {
 define <2 x i64> @v2i64_func_void() #0 {
   ; CHECK-LABEL: name: v2i64_func_void
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(<2 x s64>) = G_LOAD [[DEF]](p1) :: (load (<2 x s64>) from `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[LOAD]](<2 x s64>)
   ; CHECK-NEXT:   $vgpr0 = COPY [[UV]](s32)
@@ -548,7 +548,7 @@ define <2 x i64> @v2i64_func_void() #0 {
 define <3 x i64> @v3i64_func_void() #0 {
   ; CHECK-LABEL: name: v3i64_func_void
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p4) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p4) = G_POISON
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (volatile invariant load (p1) from `ptr addrspace(4) poison`, addrspace 4)
   ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(<3 x s64>) = G_LOAD [[LOAD]](p1) :: (load (<3 x s64>) from %ir.ptr, align 32, addrspace 1)
   ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[LOAD1]](<3 x s64>)
@@ -567,7 +567,7 @@ define <3 x i64> @v3i64_func_void() #0 {
 define <4 x i64> @v4i64_func_void() #0 {
   ; CHECK-LABEL: name: v4i64_func_void
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p4) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p4) = G_POISON
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (volatile invariant load (p1) from `ptr addrspace(4) poison`, addrspace 4)
   ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(<4 x s64>) = G_LOAD [[LOAD]](p1) :: (load (<4 x s64>) from %ir.ptr, addrspace 1)
   ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32), [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[LOAD1]](<4 x s64>)
@@ -588,7 +588,7 @@ define <4 x i64> @v4i64_func_void() #0 {
 define <5 x i64> @v5i64_func_void() #0 {
   ; CHECK-LABEL: name: v5i64_func_void
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p4) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p4) = G_POISON
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (volatile invariant load (p1) from `ptr addrspace(4) poison`, addrspace 4)
   ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(<5 x s64>) = G_LOAD [[LOAD]](p1) :: (load (<5 x s64>) from %ir.ptr, align 64, addrspace 1)
   ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32), [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32), [[UV8:%[0-9]+]]:_(s32), [[UV9:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[LOAD1]](<5 x s64>)
@@ -611,7 +611,7 @@ define <5 x i64> @v5i64_func_void() #0 {
 define <8 x i64> @v8i64_func_void() #0 {
   ; CHECK-LABEL: name: v8i64_func_void
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p4) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p4) = G_POISON
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (volatile invariant load (p1) from `ptr addrspace(4) poison`, addrspace 4)
   ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(<8 x s64>) = G_LOAD [[LOAD]](p1) :: (load (<8 x s64>) from %ir.ptr, addrspace 1)
   ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32), [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32), [[UV8:%[0-9]+]]:_(s32), [[UV9:%[0-9]+]]:_(s32), [[UV10:%[0-9]+]]:_(s32), [[UV11:%[0-9]+]]:_(s32), [[UV12:%[0-9]+]]:_(s32), [[UV13:%[0-9]+]]:_(s32), [[UV14:%[0-9]+]]:_(s32), [[UV15:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[LOAD1]](<8 x s64>)
@@ -640,7 +640,7 @@ define <8 x i64> @v8i64_func_void() #0 {
 define <16 x i64> @v16i64_func_void() #0 {
   ; CHECK-LABEL: name: v16i64_func_void
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p4) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p4) = G_POISON
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (volatile invariant load (p1) from `ptr addrspace(4) poison`, addrspace 4)
   ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(<16 x s64>) = G_LOAD [[LOAD]](p1) :: (load (<16 x s64>) from %ir.ptr, addrspace 1)
   ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32), [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32), [[UV8:%[0-9]+]]:_(s32), [[UV9:%[0-9]+]]:_(s32), [[UV10:%[0-9]+]]:_(s32), [[UV11:%[0-9]+]]:_(s32), [[UV12:%[0-9]+]]:_(s32), [[UV13:%[0-9]+]]:_(s32), [[UV14:%[0-9]+]]:_(s32), [[UV15:%[0-9]+]]:_(s32), [[UV16:%[0-9]+]]:_(s32), [[UV17:%[0-9]+]]:_(s32), [[UV18:%[0-9]+]]:_(s32), [[UV19:%[0-9]+]]:_(s32), [[UV20:%[0-9]+]]:_(s32), [[UV21:%[0-9]+]]:_(s32), [[UV22:%[0-9]+]]:_(s32), [[UV23:%[0-9]+]]:_(s32), [[UV24:%[0-9]+]]:_(s32), [[UV25:%[0-9]+]]:_(s32), [[UV26:%[0-9]+]]:_(s32), [[UV27:%[0-9]+]]:_(s32), [[UV28:%[0-9]+]]:_(s32), [[UV29:%[0-9]+]]:_(s32), [[UV30:%[0-9]+]]:_(s32), [[UV31:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[LOAD1]](<16 x s64>)
@@ -685,7 +685,7 @@ define <16 x i64> @v16i64_func_void() #0 {
 define <2 x i16> @v2i16_func_void() #0 {
   ; CHECK-LABEL: name: v2i16_func_void
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(<2 x s16>) = G_LOAD [[DEF]](p1) :: (load (<2 x s16>) from `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   $vgpr0 = COPY [[LOAD]](<2 x s16>)
   ; CHECK-NEXT:   SI_RETURN implicit $vgpr0
@@ -696,7 +696,7 @@ define <2 x i16> @v2i16_func_void() #0 {
 define <2 x half> @v2f16_func_void() #0 {
   ; CHECK-LABEL: name: v2f16_func_void
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(<2 x s16>) = G_LOAD [[DEF]](p1) :: (load (<2 x s16>) from `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   $vgpr0 = COPY [[LOAD]](<2 x s16>)
   ; CHECK-NEXT:   SI_RETURN implicit $vgpr0
@@ -707,10 +707,10 @@ define <2 x half> @v2f16_func_void() #0 {
 define <3 x i16> @v3i16_func_void() #0 {
   ; CHECK-LABEL: name: v3i16_func_void
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(<3 x s16>) = G_LOAD [[DEF]](p1) :: (load (<3 x s16>) from `ptr addrspace(1) poison`, align 8, addrspace 1)
   ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(s16), [[UV1:%[0-9]+]]:_(s16), [[UV2:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[LOAD]](<3 x s16>)
-  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(s16) = G_POISON
   ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s16>) = G_BUILD_VECTOR [[UV]](s16), [[UV1]](s16), [[UV2]](s16), [[DEF1]](s16)
   ; CHECK-NEXT:   [[UV3:%[0-9]+]]:_(<2 x s16>), [[UV4:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[BUILD_VECTOR]](<4 x s16>)
   ; CHECK-NEXT:   $vgpr0 = COPY [[UV3]](<2 x s16>)
@@ -723,7 +723,7 @@ define <3 x i16> @v3i16_func_void() #0 {
 define <4 x i16> @v4i16_func_void() #0 {
   ; CHECK-LABEL: name: v4i16_func_void
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(<4 x s16>) = G_LOAD [[DEF]](p1) :: (load (<4 x s16>) from `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(<2 x s16>), [[UV1:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[LOAD]](<4 x s16>)
   ; CHECK-NEXT:   $vgpr0 = COPY [[UV]](<2 x s16>)
@@ -736,7 +736,7 @@ define <4 x i16> @v4i16_func_void() #0 {
 define <4 x half> @v4f16_func_void() #0 {
   ; CHECK-LABEL: name: v4f16_func_void
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(<4 x s16>) = G_LOAD [[DEF]](p1) :: (load (<4 x s16>) from `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(<2 x s16>), [[UV1:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[LOAD]](<4 x s16>)
   ; CHECK-NEXT:   $vgpr0 = COPY [[UV]](<2 x s16>)
@@ -749,11 +749,11 @@ define <4 x half> @v4f16_func_void() #0 {
 define <5 x i16> @v5i16_func_void() #0 {
   ; CHECK-LABEL: name: v5i16_func_void
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p4) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p4) = G_POISON
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (volatile invariant load (p1) from `ptr addrspace(4) poison`, addrspace 4)
   ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(<5 x s16>) = G_LOAD [[LOAD]](p1) :: (load (<5 x s16>) from %ir.ptr, align 16, addrspace 1)
   ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(s16), [[UV1:%[0-9]+]]:_(s16), [[UV2:%[0-9]+]]:_(s16), [[UV3:%[0-9]+]]:_(s16), [[UV4:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[LOAD1]](<5 x s16>)
-  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(s16) = G_POISON
   ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<6 x s16>) = G_BUILD_VECTOR [[UV]](s16), [[UV1]](s16), [[UV2]](s16), [[UV3]](s16), [[UV4]](s16), [[DEF1]](s16)
   ; CHECK-NEXT:   [[UV5:%[0-9]+]]:_(<2 x s16>), [[UV6:%[0-9]+]]:_(<2 x s16>), [[UV7:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[BUILD_VECTOR]](<6 x s16>)
   ; CHECK-NEXT:   $vgpr0 = COPY [[UV5]](<2 x s16>)
@@ -768,7 +768,7 @@ define <5 x i16> @v5i16_func_void() #0 {
 define <8 x i16> @v8i16_func_void() #0 {
   ; CHECK-LABEL: name: v8i16_func_void
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p4) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p4) = G_POISON
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (volatile invariant load (p1) from `ptr addrspace(4) poison`, addrspace 4)
   ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(<8 x s16>) = G_LOAD [[LOAD]](p1) :: (load (<8 x s16>) from %ir.ptr, addrspace 1)
   ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(<2 x s16>), [[UV1:%[0-9]+]]:_(<2 x s16>), [[UV2:%[0-9]+]]:_(<2 x s16>), [[UV3:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[LOAD1]](<8 x s16>)
@@ -785,7 +785,7 @@ define <8 x i16> @v8i16_func_void() #0 {
 define <16 x i16> @v16i16_func_void() #0 {
   ; CHECK-LABEL: name: v16i16_func_void
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p4) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p4) = G_POISON
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (volatile invariant load (p1) from `ptr addrspace(4) poison`, addrspace 4)
   ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(<16 x s16>) = G_LOAD [[LOAD]](p1) :: (load (<16 x s16>) from %ir.ptr, addrspace 1)
   ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(<2 x s16>), [[UV1:%[0-9]+]]:_(<2 x s16>), [[UV2:%[0-9]+]]:_(<2 x s16>), [[UV3:%[0-9]+]]:_(<2 x s16>), [[UV4:%[0-9]+]]:_(<2 x s16>), [[UV5:%[0-9]+]]:_(<2 x s16>), [[UV6:%[0-9]+]]:_(<2 x s16>), [[UV7:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[LOAD1]](<16 x s16>)
@@ -806,7 +806,7 @@ define <16 x i16> @v16i16_func_void() #0 {
 define <16 x i8> @v16i8_func_void() #0 {
   ; CHECK-LABEL: name: v16i8_func_void
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p4) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p4) = G_POISON
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (volatile invariant load (p1) from `ptr addrspace(4) poison`, addrspace 4)
   ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(<16 x s8>) = G_LOAD [[LOAD]](p1) :: (load (<16 x s8>) from %ir.ptr, addrspace 1)
   ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(s8), [[UV1:%[0-9]+]]:_(s8), [[UV2:%[0-9]+]]:_(s8), [[UV3:%[0-9]+]]:_(s8), [[UV4:%[0-9]+]]:_(s8), [[UV5:%[0-9]+]]:_(s8), [[UV6:%[0-9]+]]:_(s8), [[UV7:%[0-9]+]]:_(s8), [[UV8:%[0-9]+]]:_(s8), [[UV9:%[0-9]+]]:_(s8), [[UV10:%[0-9]+]]:_(s8), [[UV11:%[0-9]+]]:_(s8), [[UV12:%[0-9]+]]:_(s8), [[UV13:%[0-9]+]]:_(s8), [[UV14:%[0-9]+]]:_(s8), [[UV15:%[0-9]+]]:_(s8) = G_UNMERGE_VALUES [[LOAD1]](<16 x s8>)
@@ -867,7 +867,7 @@ define <16 x i8> @v16i8_func_void() #0 {
 define <2 x i8> @v2i8_func_void() #0 {
   ; CHECK-LABEL: name: v2i8_func_void
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(<2 x s8>) = G_LOAD [[DEF]](p1) :: (load (<2 x s8>) from `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(s8), [[UV1:%[0-9]+]]:_(s8) = G_UNMERGE_VALUES [[LOAD]](<2 x s8>)
   ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:_(s16) = G_ANYEXT [[UV]](s8)
@@ -884,7 +884,7 @@ define <2 x i8> @v2i8_func_void() #0 {
 define <3 x i8> @v3i8_func_void() #0 {
   ; CHECK-LABEL: name: v3i8_func_void
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(<3 x s8>) = G_LOAD [[DEF]](p1) :: (load (<3 x s8>) from `ptr addrspace(1) poison`, align 4, addrspace 1)
   ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(s8), [[UV1:%[0-9]+]]:_(s8), [[UV2:%[0-9]+]]:_(s8) = G_UNMERGE_VALUES [[LOAD]](<3 x s8>)
   ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:_(s16) = G_ANYEXT [[UV]](s8)
@@ -904,7 +904,7 @@ define <3 x i8> @v3i8_func_void() #0 {
 define <4  x i8> @v4i8_func_void() #0 {
   ; CHECK-LABEL: name: v4i8_func_void
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p4) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p4) = G_POISON
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (volatile invariant load (p1) from `ptr addrspace(4) poison`, addrspace 4)
   ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(<4 x s8>) = G_LOAD [[LOAD]](p1) :: (load (<4 x s8>) from %ir.ptr, addrspace 1)
   ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(s8), [[UV1:%[0-9]+]]:_(s8), [[UV2:%[0-9]+]]:_(s8), [[UV3:%[0-9]+]]:_(s8) = G_UNMERGE_VALUES [[LOAD1]](<4 x s8>)
@@ -929,7 +929,7 @@ define <4  x i8> @v4i8_func_void() #0 {
 define {i8, i32} @struct_i8_i32_func_void() #0 {
   ; CHECK-LABEL: name: struct_i8_i32_func_void
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s8) = G_LOAD [[DEF]](p1) :: (load (s8) from `ptr addrspace(1) poison`, align 4, addrspace 1)
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
   ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p1) = G_PTR_ADD [[DEF]], [[C]](s64)
@@ -948,7 +948,7 @@ define void @void_func_sret_struct_i8_i32(ptr addrspace(5) sret({ i8, i32 }) %ar
   ; CHECK-NEXT:   liveins: $vgpr0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p5) = COPY $vgpr0
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s8) = G_LOAD [[DEF]](p1) :: (volatile load (s8) from `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[DEF]](p1) :: (volatile load (s32) from `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
@@ -975,7 +975,7 @@ define <33 x i32> @v33i32_func_void() #0 {
   ; CHECK-NEXT:   liveins: $vgpr0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p5) = COPY $vgpr0
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p4) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p4) = G_POISON
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (volatile invariant load (p1) from `ptr addrspace(4) poison`, addrspace 4)
   ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(<33 x s32>) = G_LOAD [[LOAD]](p1) :: (load (<33 x s32>) from %ir.ptr, align 256, addrspace 1)
   ; CHECK-NEXT:   G_STORE [[LOAD1]](<33 x s32>), [[COPY]](p5) :: (store (<33 x s32>), align 256, addrspace 5)
@@ -1014,7 +1014,7 @@ define { <32 x i32>, i32 } @struct_v32i32_i32_func_void() #0 {
   ; CHECK-NEXT:   liveins: $vgpr0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p5) = COPY $vgpr0
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p4) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p4) = G_POISON
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (volatile invariant load (p1) from `ptr addrspace(4) poison`, addrspace 4)
   ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(<32 x s32>) = G_LOAD [[LOAD]](p1) :: (load (<32 x s32>) from %ir.ptr, addrspace 1)
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 128
@@ -1036,7 +1036,7 @@ define { i32, <32 x i32> } @struct_i32_v32i32_func_void() #0 {
   ; CHECK-NEXT:   liveins: $vgpr0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p5) = COPY $vgpr0
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p4) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p4) = G_POISON
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (volatile invariant load (p1) from `ptr addrspace(4) poison`, addrspace 4)
   ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[LOAD]](p1) :: (load (s32) from %ir.ptr, align 128, addrspace 1)
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 128
@@ -1056,12 +1056,12 @@ define { i32, <32 x i32> } @struct_i32_v32i32_func_void() #0 {
 define { <3 x i32>, i32 } @v3i32_struct_func_void_wasted_reg() #0 {
   ; CHECK-LABEL: name: v3i32_struct_func_void_wasted_reg
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p3) = G_IMPLICIT_DEF
-  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(<3 x s32>) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p3) = G_POISON
+  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(<3 x s32>) = G_POISON
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
   ; CHECK-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 2
-  ; CHECK-NEXT:   [[DEF2:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF2:%[0-9]+]]:_(s32) = G_POISON
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[DEF]](p3) :: (volatile load (s32) from `ptr addrspace(3) poison`, addrspace 3)
   ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[DEF]](p3) :: (volatile load (s32) from `ptr addrspace(3) poison`, addrspace 3)
   ; CHECK-NEXT:   [[LOAD2:%[0-9]+]]:_(s32) = G_LOAD [[DEF]](p3) :: (volatile load (s32) from `ptr addrspace(3) poison`, addrspace 3)
@@ -1091,12 +1091,12 @@ define { <3 x i32>, i32 } @v3i32_struct_func_void_wasted_reg() #0 {
 define { <3 x float>, i32 } @v3f32_struct_func_void_wasted_reg() #0 {
   ; CHECK-LABEL: name: v3f32_struct_func_void_wasted_reg
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p3) = G_IMPLICIT_DEF
-  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(<3 x s32>) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p3) = G_POISON
+  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(<3 x s32>) = G_POISON
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
   ; CHECK-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 2
-  ; CHECK-NEXT:   [[DEF2:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF2:%[0-9]+]]:_(s32) = G_POISON
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[DEF]](p3) :: (volatile load (s32) from `ptr addrspace(3) poison`, addrspace 3)
   ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[DEF]](p3) :: (volatile load (s32) from `ptr addrspace(3) poison`, addrspace 3)
   ; CHECK-NEXT:   [[LOAD2:%[0-9]+]]:_(s32) = G_LOAD [[DEF]](p3) :: (volatile load (s32) from `ptr addrspace(3) poison`, addrspace 3)
@@ -1132,7 +1132,7 @@ define void @void_func_sret_max_known_zero_bits(ptr addrspace(5) sret(i8) %arg0)
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 17
   ; CHECK-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 18
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p3) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p3) = G_POISON
   ; CHECK-NEXT:   [[PTRTOINT:%[0-9]+]]:_(s32) = G_PTRTOINT [[COPY]](p5)
   ; CHECK-NEXT:   [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[PTRTOINT]], [[C]](s32)
   ; CHECK-NEXT:   [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[PTRTOINT]], [[C1]](s32)
@@ -1156,7 +1156,7 @@ define void @void_func_sret_max_known_zero_bits(ptr addrspace(5) sret(i8) %arg0)
 define i1022 @i1022_func_void() #0 {
   ; CHECK-LABEL: name: i1022_func_void
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s1022) = G_LOAD [[DEF]](p1) :: (load (s1022) from `ptr addrspace(1) poison`, align 8, addrspace 1)
   ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:_(s1024) = G_ANYEXT [[LOAD]](s1022)
   ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32), [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32), [[UV8:%[0-9]+]]:_(s32), [[UV9:%[0-9]+]]:_(s32), [[UV10:%[0-9]+]]:_(s32), [[UV11:%[0-9]+]]:_(s32), [[UV12:%[0-9]+]]:_(s32), [[UV13:%[0-9]+]]:_(s32), [[UV14:%[0-9]+]]:_(s32), [[UV15:%[0-9]+]]:_(s32), [[UV16:%[0-9]+]]:_(s32), [[UV17:%[0-9]+]]:_(s32), [[UV18:%[0-9]+]]:_(s32), [[UV19:%[0-9]+]]:_(s32), [[UV20:%[0-9]+]]:_(s32), [[UV21:%[0-9]+]]:_(s32), [[UV22:%[0-9]+]]:_(s32), [[UV23:%[0-9]+]]:_(s32), [[UV24:%[0-9]+]]:_(s32), [[UV25:%[0-9]+]]:_(s32), [[UV26:%[0-9]+]]:_(s32), [[UV27:%[0-9]+]]:_(s32), [[UV28:%[0-9]+]]:_(s32), [[UV29:%[0-9]+]]:_(s32), [[UV30:%[0-9]+]]:_(s32), [[UV31:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[ANYEXT]](s1024)
@@ -1200,7 +1200,7 @@ define i1022 @i1022_func_void() #0 {
 define signext i1022 @i1022_signext_func_void() #0 {
   ; CHECK-LABEL: name: i1022_signext_func_void
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s1022) = G_LOAD [[DEF]](p1) :: (load (s1022) from `ptr addrspace(1) poison`, align 8, addrspace 1)
   ; CHECK-NEXT:   [[SEXT:%[0-9]+]]:_(s1024) = G_SEXT [[LOAD]](s1022)
   ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32), [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32), [[UV8:%[0-9]+]]:_(s32), [[UV9:%[0-9]+]]:_(s32), [[UV10:%[0-9]+]]:_(s32), [[UV11:%[0-9]+]]:_(s32), [[UV12:%[0-9]+]]:_(s32), [[UV13:%[0-9]+]]:_(s32), [[UV14:%[0-9]+]]:_(s32), [[UV15:%[0-9]+]]:_(s32), [[UV16:%[0-9]+]]:_(s32), [[UV17:%[0-9]+]]:_(s32), [[UV18:%[0-9]+]]:_(s32), [[UV19:%[0-9]+]]:_(s32), [[UV20:%[0-9]+]]:_(s32), [[UV21:%[0-9]+]]:_(s32), [[UV22:%[0-9]+]]:_(s32), [[UV23:%[0-9]+]]:_(s32), [[UV24:%[0-9]+]]:_(s32), [[UV25:%[0-9]+]]:_(s32), [[UV26:%[0-9]+]]:_(s32), [[UV27:%[0-9]+]]:_(s32), [[UV28:%[0-9]+]]:_(s32), [[UV29:%[0-9]+]]:_(s32), [[UV30:%[0-9]+]]:_(s32), [[UV31:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[SEXT]](s1024)
@@ -1244,7 +1244,7 @@ define signext i1022 @i1022_signext_func_void() #0 {
 define zeroext i1022 @i1022_zeroext_func_void() #0 {
   ; CHECK-LABEL: name: i1022_zeroext_func_void
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s1022) = G_LOAD [[DEF]](p1) :: (load (s1022) from `ptr addrspace(1) poison`, align 8, addrspace 1)
   ; CHECK-NEXT:   [[ZEXT:%[0-9]+]]:_(s1024) = G_ZEXT [[LOAD]](s1022)
   ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32), [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32), [[UV8:%[0-9]+]]:_(s32), [[UV9:%[0-9]+]]:_(s32), [[UV10:%[0-9]+]]:_(s32), [[UV11:%[0-9]+]]:_(s32), [[UV12:%[0-9]+]]:_(s32), [[UV13:%[0-9]+]]:_(s32), [[UV14:%[0-9]+]]:_(s32), [[UV15:%[0-9]+]]:_(s32), [[UV16:%[0-9]+]]:_(s32), [[UV17:%[0-9]+]]:_(s32), [[UV18:%[0-9]+]]:_(s32), [[UV19:%[0-9]+]]:_(s32), [[UV20:%[0-9]+]]:_(s32), [[UV21:%[0-9]+]]:_(s32), [[UV22:%[0-9]+]]:_(s32), [[UV23:%[0-9]+]]:_(s32), [[UV24:%[0-9]+]]:_(s32), [[UV25:%[0-9]+]]:_(s32), [[UV26:%[0-9]+]]:_(s32), [[UV27:%[0-9]+]]:_(s32), [[UV28:%[0-9]+]]:_(s32), [[UV29:%[0-9]+]]:_(s32), [[UV30:%[0-9]+]]:_(s32), [[UV31:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[ZEXT]](s1024)
@@ -1293,7 +1293,7 @@ define %struct.with.ptrs @ptr_in_struct_func_void() #0 {
   ; CHECK-NEXT:   liveins: $vgpr0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p5) = COPY $vgpr0
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(<32 x s32>) = G_LOAD [[DEF]](p1) :: (volatile load (<32 x s32>) from `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 128
   ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p1) = G_PTR_ADD [[DEF]], [[C]](s64)

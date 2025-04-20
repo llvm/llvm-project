@@ -648,7 +648,7 @@ define amdgpu_ps void @s_buffer_load_i96_vgpr_offset(<4 x i32> inreg %rsrc, i32 
   ; GFX7-NEXT:   [[COPY3:%[0-9]+]]:sgpr(s32) = COPY $sgpr5
   ; GFX7-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:sgpr(<4 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32)
   ; GFX7-NEXT:   [[COPY4:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-  ; GFX7-NEXT:   [[DEF:%[0-9]+]]:sgpr(p1) = G_IMPLICIT_DEF
+  ; GFX7-NEXT:   [[DEF:%[0-9]+]]:sgpr(p1) = G_POISON
   ; GFX7-NEXT:   [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 0
   ; GFX7-NEXT:   [[C1:%[0-9]+]]:vgpr(s32) = G_CONSTANT i32 0
   ; GFX7-NEXT:   [[AMDGPU_BUFFER_LOAD:%[0-9]+]]:vgpr(s128) = G_AMDGPU_BUFFER_LOAD [[BUILD_VECTOR]](<4 x s32>), [[C1]](s32), [[COPY4]], [[C]], 0, 0, 0 :: (dereferenceable invariant load (s128), align 4)
@@ -666,7 +666,7 @@ define amdgpu_ps void @s_buffer_load_i96_vgpr_offset(<4 x i32> inreg %rsrc, i32 
   ; GFX12-NEXT:   [[COPY3:%[0-9]+]]:sgpr(s32) = COPY $sgpr5
   ; GFX12-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:sgpr(<4 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32)
   ; GFX12-NEXT:   [[COPY4:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-  ; GFX12-NEXT:   [[DEF:%[0-9]+]]:sgpr(p1) = G_IMPLICIT_DEF
+  ; GFX12-NEXT:   [[DEF:%[0-9]+]]:sgpr(p1) = G_POISON
   ; GFX12-NEXT:   [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 0
   ; GFX12-NEXT:   [[C1:%[0-9]+]]:vgpr(s32) = G_CONSTANT i32 0
   ; GFX12-NEXT:   [[AMDGPU_BUFFER_LOAD:%[0-9]+]]:vgpr(s96) = G_AMDGPU_BUFFER_LOAD [[BUILD_VECTOR]](<4 x s32>), [[C1]](s32), [[COPY4]], [[C]], 0, 0, 0 :: (dereferenceable invariant load (s96), align 4)
@@ -690,7 +690,7 @@ define amdgpu_ps void @s_buffer_load_i256_vgpr_offset(<4 x i32> inreg %rsrc, i32
   ; GFX7-NEXT:   [[COPY3:%[0-9]+]]:sgpr(s32) = COPY $sgpr5
   ; GFX7-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:sgpr(<4 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32)
   ; GFX7-NEXT:   [[COPY4:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-  ; GFX7-NEXT:   [[DEF:%[0-9]+]]:sgpr(p1) = G_IMPLICIT_DEF
+  ; GFX7-NEXT:   [[DEF:%[0-9]+]]:sgpr(p1) = G_POISON
   ; GFX7-NEXT:   [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 0
   ; GFX7-NEXT:   [[C1:%[0-9]+]]:vgpr(s32) = G_CONSTANT i32 0
   ; GFX7-NEXT:   [[AMDGPU_BUFFER_LOAD:%[0-9]+]]:vgpr(s128) = G_AMDGPU_BUFFER_LOAD [[BUILD_VECTOR]](<4 x s32>), [[C1]](s32), [[COPY4]], [[C]], 0, 0, 0 :: (dereferenceable invariant load (s128), align 4)
@@ -713,7 +713,7 @@ define amdgpu_ps void @s_buffer_load_i256_vgpr_offset(<4 x i32> inreg %rsrc, i32
   ; GFX12-NEXT:   [[COPY3:%[0-9]+]]:sgpr(s32) = COPY $sgpr5
   ; GFX12-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:sgpr(<4 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32)
   ; GFX12-NEXT:   [[COPY4:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-  ; GFX12-NEXT:   [[DEF:%[0-9]+]]:sgpr(p1) = G_IMPLICIT_DEF
+  ; GFX12-NEXT:   [[DEF:%[0-9]+]]:sgpr(p1) = G_POISON
   ; GFX12-NEXT:   [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 0
   ; GFX12-NEXT:   [[C1:%[0-9]+]]:vgpr(s32) = G_CONSTANT i32 0
   ; GFX12-NEXT:   [[AMDGPU_BUFFER_LOAD:%[0-9]+]]:vgpr(s128) = G_AMDGPU_BUFFER_LOAD [[BUILD_VECTOR]](<4 x s32>), [[C1]](s32), [[COPY4]], [[C]], 0, 0, 0 :: (dereferenceable invariant load (s128), align 4)
@@ -744,7 +744,7 @@ define amdgpu_ps void @s_buffer_load_i512_vgpr_offset(<4 x i32> inreg %rsrc, i32
   ; GFX7-NEXT:   [[COPY3:%[0-9]+]]:sgpr(s32) = COPY $sgpr5
   ; GFX7-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:sgpr(<4 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32)
   ; GFX7-NEXT:   [[COPY4:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-  ; GFX7-NEXT:   [[DEF:%[0-9]+]]:sgpr(p1) = G_IMPLICIT_DEF
+  ; GFX7-NEXT:   [[DEF:%[0-9]+]]:sgpr(p1) = G_POISON
   ; GFX7-NEXT:   [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 0
   ; GFX7-NEXT:   [[C1:%[0-9]+]]:vgpr(s32) = G_CONSTANT i32 0
   ; GFX7-NEXT:   [[AMDGPU_BUFFER_LOAD:%[0-9]+]]:vgpr(s128) = G_AMDGPU_BUFFER_LOAD [[BUILD_VECTOR]](<4 x s32>), [[C1]](s32), [[COPY4]], [[C]], 0, 0, 0 :: (dereferenceable invariant load (s128), align 4)
@@ -775,7 +775,7 @@ define amdgpu_ps void @s_buffer_load_i512_vgpr_offset(<4 x i32> inreg %rsrc, i32
   ; GFX12-NEXT:   [[COPY3:%[0-9]+]]:sgpr(s32) = COPY $sgpr5
   ; GFX12-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:sgpr(<4 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32)
   ; GFX12-NEXT:   [[COPY4:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-  ; GFX12-NEXT:   [[DEF:%[0-9]+]]:sgpr(p1) = G_IMPLICIT_DEF
+  ; GFX12-NEXT:   [[DEF:%[0-9]+]]:sgpr(p1) = G_POISON
   ; GFX12-NEXT:   [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 0
   ; GFX12-NEXT:   [[C1:%[0-9]+]]:vgpr(s32) = G_CONSTANT i32 0
   ; GFX12-NEXT:   [[AMDGPU_BUFFER_LOAD:%[0-9]+]]:vgpr(s128) = G_AMDGPU_BUFFER_LOAD [[BUILD_VECTOR]](<4 x s32>), [[C1]](s32), [[COPY4]], [[C]], 0, 0, 0 :: (dereferenceable invariant load (s128), align 4)
@@ -816,7 +816,7 @@ define amdgpu_ps void @s_buffer_load_v16i16_vgpr_offset(<4 x i32> inreg %rsrc, i
   ; GFX7-NEXT:   [[COPY3:%[0-9]+]]:sgpr(s32) = COPY $sgpr5
   ; GFX7-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:sgpr(<4 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32)
   ; GFX7-NEXT:   [[COPY4:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-  ; GFX7-NEXT:   [[DEF:%[0-9]+]]:sgpr(p1) = G_IMPLICIT_DEF
+  ; GFX7-NEXT:   [[DEF:%[0-9]+]]:sgpr(p1) = G_POISON
   ; GFX7-NEXT:   [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 0
   ; GFX7-NEXT:   [[C1:%[0-9]+]]:vgpr(s32) = G_CONSTANT i32 0
   ; GFX7-NEXT:   [[AMDGPU_BUFFER_LOAD:%[0-9]+]]:vgpr(<8 x s16>) = G_AMDGPU_BUFFER_LOAD [[BUILD_VECTOR]](<4 x s32>), [[C1]](s32), [[COPY4]], [[C]], 0, 0, 0 :: (dereferenceable invariant load (s128), align 4)
@@ -839,7 +839,7 @@ define amdgpu_ps void @s_buffer_load_v16i16_vgpr_offset(<4 x i32> inreg %rsrc, i
   ; GFX12-NEXT:   [[COPY3:%[0-9]+]]:sgpr(s32) = COPY $sgpr5
   ; GFX12-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:sgpr(<4 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32)
   ; GFX12-NEXT:   [[COPY4:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-  ; GFX12-NEXT:   [[DEF:%[0-9]+]]:sgpr(p1) = G_IMPLICIT_DEF
+  ; GFX12-NEXT:   [[DEF:%[0-9]+]]:sgpr(p1) = G_POISON
   ; GFX12-NEXT:   [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 0
   ; GFX12-NEXT:   [[C1:%[0-9]+]]:vgpr(s32) = G_CONSTANT i32 0
   ; GFX12-NEXT:   [[AMDGPU_BUFFER_LOAD:%[0-9]+]]:vgpr(<8 x s16>) = G_AMDGPU_BUFFER_LOAD [[BUILD_VECTOR]](<4 x s32>), [[C1]](s32), [[COPY4]], [[C]], 0, 0, 0 :: (dereferenceable invariant load (s128), align 4)
@@ -870,7 +870,7 @@ define amdgpu_ps void @s_buffer_load_v32i16_vgpr_offset(<4 x i32> inreg %rsrc, i
   ; GFX7-NEXT:   [[COPY3:%[0-9]+]]:sgpr(s32) = COPY $sgpr5
   ; GFX7-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:sgpr(<4 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32)
   ; GFX7-NEXT:   [[COPY4:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-  ; GFX7-NEXT:   [[DEF:%[0-9]+]]:sgpr(p1) = G_IMPLICIT_DEF
+  ; GFX7-NEXT:   [[DEF:%[0-9]+]]:sgpr(p1) = G_POISON
   ; GFX7-NEXT:   [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 0
   ; GFX7-NEXT:   [[C1:%[0-9]+]]:vgpr(s32) = G_CONSTANT i32 0
   ; GFX7-NEXT:   [[AMDGPU_BUFFER_LOAD:%[0-9]+]]:vgpr(<8 x s16>) = G_AMDGPU_BUFFER_LOAD [[BUILD_VECTOR]](<4 x s32>), [[C1]](s32), [[COPY4]], [[C]], 0, 0, 0 :: (dereferenceable invariant load (s128), align 4)
@@ -901,7 +901,7 @@ define amdgpu_ps void @s_buffer_load_v32i16_vgpr_offset(<4 x i32> inreg %rsrc, i
   ; GFX12-NEXT:   [[COPY3:%[0-9]+]]:sgpr(s32) = COPY $sgpr5
   ; GFX12-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:sgpr(<4 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32)
   ; GFX12-NEXT:   [[COPY4:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-  ; GFX12-NEXT:   [[DEF:%[0-9]+]]:sgpr(p1) = G_IMPLICIT_DEF
+  ; GFX12-NEXT:   [[DEF:%[0-9]+]]:sgpr(p1) = G_POISON
   ; GFX12-NEXT:   [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 0
   ; GFX12-NEXT:   [[C1:%[0-9]+]]:vgpr(s32) = G_CONSTANT i32 0
   ; GFX12-NEXT:   [[AMDGPU_BUFFER_LOAD:%[0-9]+]]:vgpr(<8 x s16>) = G_AMDGPU_BUFFER_LOAD [[BUILD_VECTOR]](<4 x s32>), [[C1]](s32), [[COPY4]], [[C]], 0, 0, 0 :: (dereferenceable invariant load (s128), align 4)
@@ -942,7 +942,7 @@ define amdgpu_ps void @s_buffer_load_v4i64_vgpr_offset(<4 x i32> inreg %rsrc, i3
   ; GFX7-NEXT:   [[COPY3:%[0-9]+]]:sgpr(s32) = COPY $sgpr5
   ; GFX7-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:sgpr(<4 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32)
   ; GFX7-NEXT:   [[COPY4:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-  ; GFX7-NEXT:   [[DEF:%[0-9]+]]:sgpr(p1) = G_IMPLICIT_DEF
+  ; GFX7-NEXT:   [[DEF:%[0-9]+]]:sgpr(p1) = G_POISON
   ; GFX7-NEXT:   [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 0
   ; GFX7-NEXT:   [[C1:%[0-9]+]]:vgpr(s32) = G_CONSTANT i32 0
   ; GFX7-NEXT:   [[AMDGPU_BUFFER_LOAD:%[0-9]+]]:vgpr(<2 x s64>) = G_AMDGPU_BUFFER_LOAD [[BUILD_VECTOR]](<4 x s32>), [[C1]](s32), [[COPY4]], [[C]], 0, 0, 0 :: (dereferenceable invariant load (s128), align 4)
@@ -965,7 +965,7 @@ define amdgpu_ps void @s_buffer_load_v4i64_vgpr_offset(<4 x i32> inreg %rsrc, i3
   ; GFX12-NEXT:   [[COPY3:%[0-9]+]]:sgpr(s32) = COPY $sgpr5
   ; GFX12-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:sgpr(<4 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32)
   ; GFX12-NEXT:   [[COPY4:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-  ; GFX12-NEXT:   [[DEF:%[0-9]+]]:sgpr(p1) = G_IMPLICIT_DEF
+  ; GFX12-NEXT:   [[DEF:%[0-9]+]]:sgpr(p1) = G_POISON
   ; GFX12-NEXT:   [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 0
   ; GFX12-NEXT:   [[C1:%[0-9]+]]:vgpr(s32) = G_CONSTANT i32 0
   ; GFX12-NEXT:   [[AMDGPU_BUFFER_LOAD:%[0-9]+]]:vgpr(<2 x s64>) = G_AMDGPU_BUFFER_LOAD [[BUILD_VECTOR]](<4 x s32>), [[C1]](s32), [[COPY4]], [[C]], 0, 0, 0 :: (dereferenceable invariant load (s128), align 4)
@@ -996,7 +996,7 @@ define amdgpu_ps void @s_buffer_load_v8i64_vgpr_offset(<4 x i32> inreg %rsrc, i3
   ; GFX7-NEXT:   [[COPY3:%[0-9]+]]:sgpr(s32) = COPY $sgpr5
   ; GFX7-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:sgpr(<4 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32)
   ; GFX7-NEXT:   [[COPY4:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-  ; GFX7-NEXT:   [[DEF:%[0-9]+]]:sgpr(p1) = G_IMPLICIT_DEF
+  ; GFX7-NEXT:   [[DEF:%[0-9]+]]:sgpr(p1) = G_POISON
   ; GFX7-NEXT:   [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 0
   ; GFX7-NEXT:   [[C1:%[0-9]+]]:vgpr(s32) = G_CONSTANT i32 0
   ; GFX7-NEXT:   [[AMDGPU_BUFFER_LOAD:%[0-9]+]]:vgpr(<2 x s64>) = G_AMDGPU_BUFFER_LOAD [[BUILD_VECTOR]](<4 x s32>), [[C1]](s32), [[COPY4]], [[C]], 0, 0, 0 :: (dereferenceable invariant load (s128), align 4)
@@ -1027,7 +1027,7 @@ define amdgpu_ps void @s_buffer_load_v8i64_vgpr_offset(<4 x i32> inreg %rsrc, i3
   ; GFX12-NEXT:   [[COPY3:%[0-9]+]]:sgpr(s32) = COPY $sgpr5
   ; GFX12-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:sgpr(<4 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32)
   ; GFX12-NEXT:   [[COPY4:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-  ; GFX12-NEXT:   [[DEF:%[0-9]+]]:sgpr(p1) = G_IMPLICIT_DEF
+  ; GFX12-NEXT:   [[DEF:%[0-9]+]]:sgpr(p1) = G_POISON
   ; GFX12-NEXT:   [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 0
   ; GFX12-NEXT:   [[C1:%[0-9]+]]:vgpr(s32) = G_CONSTANT i32 0
   ; GFX12-NEXT:   [[AMDGPU_BUFFER_LOAD:%[0-9]+]]:vgpr(<2 x s64>) = G_AMDGPU_BUFFER_LOAD [[BUILD_VECTOR]](<4 x s32>), [[C1]](s32), [[COPY4]], [[C]], 0, 0, 0 :: (dereferenceable invariant load (s128), align 4)
@@ -1068,7 +1068,7 @@ define amdgpu_ps void @s_buffer_load_v4p1_vgpr_offset(<4 x i32> inreg %rsrc, i32
   ; GFX7-NEXT:   [[COPY3:%[0-9]+]]:sgpr(s32) = COPY $sgpr5
   ; GFX7-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:sgpr(<4 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32)
   ; GFX7-NEXT:   [[COPY4:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-  ; GFX7-NEXT:   [[DEF:%[0-9]+]]:sgpr(p1) = G_IMPLICIT_DEF
+  ; GFX7-NEXT:   [[DEF:%[0-9]+]]:sgpr(p1) = G_POISON
   ; GFX7-NEXT:   [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 0
   ; GFX7-NEXT:   [[C1:%[0-9]+]]:vgpr(s32) = G_CONSTANT i32 0
   ; GFX7-NEXT:   [[AMDGPU_BUFFER_LOAD:%[0-9]+]]:vgpr(<2 x p1>) = G_AMDGPU_BUFFER_LOAD [[BUILD_VECTOR]](<4 x s32>), [[C1]](s32), [[COPY4]], [[C]], 0, 0, 0 :: (dereferenceable invariant load (s128), align 4)
@@ -1091,7 +1091,7 @@ define amdgpu_ps void @s_buffer_load_v4p1_vgpr_offset(<4 x i32> inreg %rsrc, i32
   ; GFX12-NEXT:   [[COPY3:%[0-9]+]]:sgpr(s32) = COPY $sgpr5
   ; GFX12-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:sgpr(<4 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32)
   ; GFX12-NEXT:   [[COPY4:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-  ; GFX12-NEXT:   [[DEF:%[0-9]+]]:sgpr(p1) = G_IMPLICIT_DEF
+  ; GFX12-NEXT:   [[DEF:%[0-9]+]]:sgpr(p1) = G_POISON
   ; GFX12-NEXT:   [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 0
   ; GFX12-NEXT:   [[C1:%[0-9]+]]:vgpr(s32) = G_CONSTANT i32 0
   ; GFX12-NEXT:   [[AMDGPU_BUFFER_LOAD:%[0-9]+]]:vgpr(<2 x p1>) = G_AMDGPU_BUFFER_LOAD [[BUILD_VECTOR]](<4 x s32>), [[C1]](s32), [[COPY4]], [[C]], 0, 0, 0 :: (dereferenceable invariant load (s128), align 4)
@@ -1122,7 +1122,7 @@ define amdgpu_ps void @s_buffer_load_v8p1_vgpr_offset(<4 x i32> inreg %rsrc, i32
   ; GFX7-NEXT:   [[COPY3:%[0-9]+]]:sgpr(s32) = COPY $sgpr5
   ; GFX7-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:sgpr(<4 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32)
   ; GFX7-NEXT:   [[COPY4:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-  ; GFX7-NEXT:   [[DEF:%[0-9]+]]:sgpr(p1) = G_IMPLICIT_DEF
+  ; GFX7-NEXT:   [[DEF:%[0-9]+]]:sgpr(p1) = G_POISON
   ; GFX7-NEXT:   [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 0
   ; GFX7-NEXT:   [[C1:%[0-9]+]]:vgpr(s32) = G_CONSTANT i32 0
   ; GFX7-NEXT:   [[AMDGPU_BUFFER_LOAD:%[0-9]+]]:vgpr(<2 x p1>) = G_AMDGPU_BUFFER_LOAD [[BUILD_VECTOR]](<4 x s32>), [[C1]](s32), [[COPY4]], [[C]], 0, 0, 0 :: (dereferenceable invariant load (s128), align 4)
@@ -1153,7 +1153,7 @@ define amdgpu_ps void @s_buffer_load_v8p1_vgpr_offset(<4 x i32> inreg %rsrc, i32
   ; GFX12-NEXT:   [[COPY3:%[0-9]+]]:sgpr(s32) = COPY $sgpr5
   ; GFX12-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:sgpr(<4 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32)
   ; GFX12-NEXT:   [[COPY4:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-  ; GFX12-NEXT:   [[DEF:%[0-9]+]]:sgpr(p1) = G_IMPLICIT_DEF
+  ; GFX12-NEXT:   [[DEF:%[0-9]+]]:sgpr(p1) = G_POISON
   ; GFX12-NEXT:   [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 0
   ; GFX12-NEXT:   [[C1:%[0-9]+]]:vgpr(s32) = G_CONSTANT i32 0
   ; GFX12-NEXT:   [[AMDGPU_BUFFER_LOAD:%[0-9]+]]:vgpr(<2 x p1>) = G_AMDGPU_BUFFER_LOAD [[BUILD_VECTOR]](<4 x s32>), [[C1]](s32), [[COPY4]], [[C]], 0, 0, 0 :: (dereferenceable invariant load (s128), align 4)

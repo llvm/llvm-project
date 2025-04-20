@@ -1186,7 +1186,7 @@ define amdgpu_kernel void @empty_struct_arg({} %arg0, i32 %arg1) nounwind {
   ; HSA-VI-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   ; HSA-VI-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY]], [[C]](s64)
   ; HSA-VI-NEXT:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD]](p4) :: (dereferenceable invariant load (s32), align 16, addrspace 4)
-  ; HSA-VI-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; HSA-VI-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; HSA-VI-NEXT:   G_STORE [[LOAD]](s32), [[DEF]](p1) :: (store (s32) into `ptr addrspace(1) poison`, addrspace 1)
   ; HSA-VI-NEXT:   S_ENDPGM 0
   ;
@@ -1198,7 +1198,7 @@ define amdgpu_kernel void @empty_struct_arg({} %arg0, i32 %arg1) nounwind {
   ; LEGACY-MESA-VI-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 36
   ; LEGACY-MESA-VI-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY]], [[C]](s64)
   ; LEGACY-MESA-VI-NEXT:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD]](p4) :: (dereferenceable invariant load (s32), addrspace 4)
-  ; LEGACY-MESA-VI-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; LEGACY-MESA-VI-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; LEGACY-MESA-VI-NEXT:   G_STORE [[LOAD]](s32), [[DEF]](p1) :: (store (s32) into `ptr addrspace(1) poison`, addrspace 1)
   ; LEGACY-MESA-VI-NEXT:   S_ENDPGM 0
   store i32 %arg1, ptr addrspace(1) poison
@@ -1214,7 +1214,7 @@ define amdgpu_kernel void @empty_array_arg([0 x i8] %arg0, i32 %arg1) nounwind {
   ; HSA-VI-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   ; HSA-VI-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY]], [[C]](s64)
   ; HSA-VI-NEXT:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD]](p4) :: (dereferenceable invariant load (s32), align 16, addrspace 4)
-  ; HSA-VI-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; HSA-VI-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; HSA-VI-NEXT:   G_STORE [[LOAD]](s32), [[DEF]](p1) :: (store (s32) into `ptr addrspace(1) poison`, addrspace 1)
   ; HSA-VI-NEXT:   S_ENDPGM 0
   ;
@@ -1226,7 +1226,7 @@ define amdgpu_kernel void @empty_array_arg([0 x i8] %arg0, i32 %arg1) nounwind {
   ; LEGACY-MESA-VI-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 36
   ; LEGACY-MESA-VI-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY]], [[C]](s64)
   ; LEGACY-MESA-VI-NEXT:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD]](p4) :: (dereferenceable invariant load (s32), addrspace 4)
-  ; LEGACY-MESA-VI-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; LEGACY-MESA-VI-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; LEGACY-MESA-VI-NEXT:   G_STORE [[LOAD]](s32), [[DEF]](p1) :: (store (s32) into `ptr addrspace(1) poison`, addrspace 1)
   ; LEGACY-MESA-VI-NEXT:   S_ENDPGM 0
   store i32 %arg1, ptr addrspace(1) poison
@@ -1934,7 +1934,7 @@ define amdgpu_kernel void @byref_constant_i32_arg_offset0(ptr addrspace(4) byref
   ; HSA-VI-NEXT:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
   ; HSA-VI-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   ; HSA-VI-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY]], [[C]](s64)
-  ; HSA-VI-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; HSA-VI-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; HSA-VI-NEXT:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD]](p4) :: (dereferenceable invariant load (s32) from %ir.in.byref, addrspace 4)
   ; HSA-VI-NEXT:   G_STORE [[LOAD]](s32), [[DEF]](p1) :: (store (s32) into `ptr addrspace(1) poison`, addrspace 1)
   ; HSA-VI-NEXT:   S_ENDPGM 0
@@ -1946,7 +1946,7 @@ define amdgpu_kernel void @byref_constant_i32_arg_offset0(ptr addrspace(4) byref
   ; LEGACY-MESA-VI-NEXT:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr4_sgpr5
   ; LEGACY-MESA-VI-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 36
   ; LEGACY-MESA-VI-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY]], [[C]](s64)
-  ; LEGACY-MESA-VI-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; LEGACY-MESA-VI-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; LEGACY-MESA-VI-NEXT:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD]](p4) :: (dereferenceable invariant load (s32) from %ir.in.byref, addrspace 4)
   ; LEGACY-MESA-VI-NEXT:   G_STORE [[LOAD]](s32), [[DEF]](p1) :: (store (s32) into `ptr addrspace(1) poison`, addrspace 1)
   ; LEGACY-MESA-VI-NEXT:   S_ENDPGM 0
@@ -2016,7 +2016,7 @@ define amdgpu_kernel void @v2p1i8_arg(<2 x ptr addrspace(1)> %arg) nounwind {
   ; HSA-VI-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   ; HSA-VI-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY]], [[C]](s64)
   ; HSA-VI-NEXT:   [[LOAD:%[0-9]+]]:_(<2 x p1>) = G_LOAD [[PTR_ADD]](p4) :: (dereferenceable invariant load (<2 x p1>), addrspace 4)
-  ; HSA-VI-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; HSA-VI-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; HSA-VI-NEXT:   G_STORE [[LOAD]](<2 x p1>), [[DEF]](p1) :: (store (<2 x p1>) into `ptr addrspace(1) poison`, addrspace 1)
   ; HSA-VI-NEXT:   S_ENDPGM 0
   ;
@@ -2028,7 +2028,7 @@ define amdgpu_kernel void @v2p1i8_arg(<2 x ptr addrspace(1)> %arg) nounwind {
   ; LEGACY-MESA-VI-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 36
   ; LEGACY-MESA-VI-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY]], [[C]](s64)
   ; LEGACY-MESA-VI-NEXT:   [[LOAD:%[0-9]+]]:_(<2 x p1>) = G_LOAD [[PTR_ADD]](p4) :: (dereferenceable invariant load (<2 x p1>), align 4, addrspace 4)
-  ; LEGACY-MESA-VI-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; LEGACY-MESA-VI-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; LEGACY-MESA-VI-NEXT:   G_STORE [[LOAD]](<2 x p1>), [[DEF]](p1) :: (store (<2 x p1>) into `ptr addrspace(1) poison`, addrspace 1)
   ; LEGACY-MESA-VI-NEXT:   S_ENDPGM 0
   store <2 x ptr addrspace(1)> %arg, ptr addrspace(1) poison
@@ -2044,7 +2044,7 @@ define amdgpu_kernel void @v2p3i8_arg(<2 x ptr addrspace(3)> %arg) nounwind {
   ; HSA-VI-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   ; HSA-VI-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY]], [[C]](s64)
   ; HSA-VI-NEXT:   [[LOAD:%[0-9]+]]:_(<2 x p3>) = G_LOAD [[PTR_ADD]](p4) :: (dereferenceable invariant load (<2 x p3>), align 16, addrspace 4)
-  ; HSA-VI-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; HSA-VI-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; HSA-VI-NEXT:   G_STORE [[LOAD]](<2 x p3>), [[DEF]](p1) :: (store (<2 x p3>) into `ptr addrspace(1) poison`, addrspace 1)
   ; HSA-VI-NEXT:   S_ENDPGM 0
   ;
@@ -2056,7 +2056,7 @@ define amdgpu_kernel void @v2p3i8_arg(<2 x ptr addrspace(3)> %arg) nounwind {
   ; LEGACY-MESA-VI-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 36
   ; LEGACY-MESA-VI-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY]], [[C]](s64)
   ; LEGACY-MESA-VI-NEXT:   [[LOAD:%[0-9]+]]:_(<2 x p3>) = G_LOAD [[PTR_ADD]](p4) :: (dereferenceable invariant load (<2 x p3>), align 4, addrspace 4)
-  ; LEGACY-MESA-VI-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; LEGACY-MESA-VI-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; LEGACY-MESA-VI-NEXT:   G_STORE [[LOAD]](<2 x p3>), [[DEF]](p1) :: (store (<2 x p3>) into `ptr addrspace(1) poison`, addrspace 1)
   ; LEGACY-MESA-VI-NEXT:   S_ENDPGM 0
   store <2 x ptr addrspace(3)> %arg, ptr addrspace(1) poison
@@ -2075,7 +2075,7 @@ define amdgpu_kernel void @v2p1i8_in_struct_arg({ <2 x ptr addrspace(1)>, <2 x p
   ; HSA-VI-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
   ; HSA-VI-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY]], [[C1]](s64)
   ; HSA-VI-NEXT:   [[LOAD1:%[0-9]+]]:_(<2 x p3>) = G_LOAD [[PTR_ADD1]](p4) :: (dereferenceable invariant load (<2 x s32>), align 16, addrspace 4)
-  ; HSA-VI-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; HSA-VI-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; HSA-VI-NEXT:   G_STORE [[LOAD]](<2 x p1>), [[DEF]](p1) :: (store (<2 x p1>) into `ptr addrspace(1) poison`, addrspace 1)
   ; HSA-VI-NEXT:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
   ; HSA-VI-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p1) = G_PTR_ADD [[DEF]], [[C2]](s64)
@@ -2093,7 +2093,7 @@ define amdgpu_kernel void @v2p1i8_in_struct_arg({ <2 x ptr addrspace(1)>, <2 x p
   ; LEGACY-MESA-VI-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 52
   ; LEGACY-MESA-VI-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY]], [[C1]](s64)
   ; LEGACY-MESA-VI-NEXT:   [[LOAD1:%[0-9]+]]:_(<2 x p3>) = G_LOAD [[PTR_ADD1]](p4) :: (dereferenceable invariant load (<2 x s32>), align 4, addrspace 4)
-  ; LEGACY-MESA-VI-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; LEGACY-MESA-VI-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; LEGACY-MESA-VI-NEXT:   G_STORE [[LOAD]](<2 x p1>), [[DEF]](p1) :: (store (<2 x p1>) into `ptr addrspace(1) poison`, addrspace 1)
   ; LEGACY-MESA-VI-NEXT:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
   ; LEGACY-MESA-VI-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p1) = G_PTR_ADD [[DEF]], [[C2]](s64)

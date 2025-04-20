@@ -11,7 +11,7 @@ define void @void_func_empty_arg({} %arg0, i32 %arg1) #0 {
   ; CHECK-NEXT:   liveins: $vgpr0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   G_STORE [[COPY]](s32), [[DEF]](p1) :: (store (s32) into `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   store i32 %arg1, ptr addrspace(1) poison
@@ -24,7 +24,7 @@ define void @void_func_empty_array([0 x i8] %arg0, i32 %arg1) #0 {
   ; CHECK-NEXT:   liveins: $vgpr0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   G_STORE [[COPY]](s32), [[DEF]](p1) :: (store (s32) into `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   store i32 %arg1, ptr addrspace(1) poison
@@ -38,7 +38,7 @@ define void @void_func_i1(i1 %arg0) #0 {
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[COPY]](s32)
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   G_STORE [[TRUNC]](s1), [[DEF]](p1) :: (store (s1) into `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   store i1 %arg0, ptr addrspace(1) poison
@@ -54,7 +54,7 @@ define void @void_func_i1_zeroext(i1 zeroext %arg0) #0 {
   ; CHECK-NEXT:   [[ASSERT_ZEXT:%[0-9]+]]:_(s32) = G_ASSERT_ZEXT [[COPY]], 1
   ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[ASSERT_ZEXT]](s32)
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 12
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[TRUNC]](s1)
   ; CHECK-NEXT:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[ZEXT]], [[C]]
   ; CHECK-NEXT:   G_STORE [[ADD]](s32), [[DEF]](p1) :: (store (s32) into `ptr addrspace(1) poison`, addrspace 1)
@@ -74,7 +74,7 @@ define void @void_func_i1_signext(i1 signext %arg0) #0 {
   ; CHECK-NEXT:   [[ASSERT_SEXT:%[0-9]+]]:_(s32) = G_ASSERT_SEXT [[COPY]], 1
   ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[ASSERT_SEXT]](s32)
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 12
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   [[SEXT:%[0-9]+]]:_(s32) = G_SEXT [[TRUNC]](s1)
   ; CHECK-NEXT:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[SEXT]], [[C]]
   ; CHECK-NEXT:   G_STORE [[ADD]](s32), [[DEF]](p1) :: (store (s32) into `ptr addrspace(1) poison`, addrspace 1)
@@ -95,7 +95,7 @@ define void @i1_arg_i1_use(i1 %arg) #0 {
   ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[COPY]](s32)
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s1) = G_CONSTANT i1 true
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   [[XOR:%[0-9]+]]:_(s1) = G_XOR [[TRUNC]], [[C]]
   ; CHECK-NEXT:   [[INTRINSIC_W_SIDE_EFFECTS:%[0-9]+]]:_(s1), [[INTRINSIC_W_SIDE_EFFECTS1:%[0-9]+]]:_(s64) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.if), [[XOR]](s1)
   ; CHECK-NEXT:   G_BRCOND [[INTRINSIC_W_SIDE_EFFECTS]](s1), %bb.2
@@ -129,7 +129,7 @@ define void @void_func_i8(i8 %arg0) #0 {
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
   ; CHECK-NEXT:   [[TRUNC1:%[0-9]+]]:_(s8) = G_TRUNC [[TRUNC]](s16)
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   G_STORE [[TRUNC1]](s8), [[DEF]](p1) :: (store (s8) into `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   store i8 %arg0, ptr addrspace(1) poison
@@ -145,7 +145,7 @@ define void @void_func_i8_zeroext(i8 zeroext %arg0) #0 {
   ; CHECK-NEXT:   [[ASSERT_ZEXT:%[0-9]+]]:_(s32) = G_ASSERT_ZEXT [[COPY]], 8
   ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[ASSERT_ZEXT]](s32)
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 12
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[TRUNC]](s8)
   ; CHECK-NEXT:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[ZEXT]], [[C]]
   ; CHECK-NEXT:   G_STORE [[ADD]](s32), [[DEF]](p1) :: (store (s32) into `ptr addrspace(1) poison`, addrspace 1)
@@ -165,7 +165,7 @@ define void @void_func_i8_signext(i8 signext %arg0) #0 {
   ; CHECK-NEXT:   [[ASSERT_SEXT:%[0-9]+]]:_(s32) = G_ASSERT_SEXT [[COPY]], 8
   ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[ASSERT_SEXT]](s32)
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 12
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   [[SEXT:%[0-9]+]]:_(s32) = G_SEXT [[TRUNC]](s8)
   ; CHECK-NEXT:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[SEXT]], [[C]]
   ; CHECK-NEXT:   G_STORE [[ADD]](s32), [[DEF]](p1) :: (store (s32) into `ptr addrspace(1) poison`, addrspace 1)
@@ -183,7 +183,7 @@ define void @void_func_i16(i16 %arg0) #0 {
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   G_STORE [[TRUNC]](s16), [[DEF]](p1) :: (store (s16) into `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   store i16 %arg0, ptr addrspace(1) poison
@@ -199,7 +199,7 @@ define void @void_func_i16_zeroext(i16 zeroext %arg0) #0 {
   ; CHECK-NEXT:   [[ASSERT_ZEXT:%[0-9]+]]:_(s32) = G_ASSERT_ZEXT [[COPY]], 16
   ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[ASSERT_ZEXT]](s32)
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 12
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[TRUNC]](s16)
   ; CHECK-NEXT:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[ZEXT]], [[C]]
   ; CHECK-NEXT:   G_STORE [[ADD]](s32), [[DEF]](p1) :: (store (s32) into `ptr addrspace(1) poison`, addrspace 1)
@@ -219,7 +219,7 @@ define void @void_func_i16_signext(i16 signext %arg0) #0 {
   ; CHECK-NEXT:   [[ASSERT_SEXT:%[0-9]+]]:_(s32) = G_ASSERT_SEXT [[COPY]], 16
   ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[ASSERT_SEXT]](s32)
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 12
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   [[SEXT:%[0-9]+]]:_(s32) = G_SEXT [[TRUNC]](s16)
   ; CHECK-NEXT:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[SEXT]], [[C]]
   ; CHECK-NEXT:   G_STORE [[ADD]](s32), [[DEF]](p1) :: (store (s32) into `ptr addrspace(1) poison`, addrspace 1)
@@ -237,7 +237,7 @@ define void @void_func_i24(i24 %arg0) #0 {
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s24) = G_TRUNC [[COPY]](s32)
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   G_STORE [[TRUNC]](s24), [[DEF]](p1) :: (store (s24) into `ptr addrspace(1) poison`, align 4, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   store i24 %arg0, ptr addrspace(1) poison
@@ -252,7 +252,7 @@ define void @void_func_i24_zeroext(i24 zeroext %arg0) #0 {
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; CHECK-NEXT:   [[ASSERT_ZEXT:%[0-9]+]]:_(s32) = G_ASSERT_ZEXT [[COPY]], 24
   ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s24) = G_TRUNC [[ASSERT_ZEXT]](s32)
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   G_STORE [[TRUNC]](s24), [[DEF]](p1) :: (store (s24) into `ptr addrspace(1) poison`, align 4, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   store i24 %arg0, ptr addrspace(1) poison
@@ -267,7 +267,7 @@ define void @void_func_i24_signext(i24 signext %arg0) #0 {
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; CHECK-NEXT:   [[ASSERT_SEXT:%[0-9]+]]:_(s32) = G_ASSERT_SEXT [[COPY]], 24
   ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s24) = G_TRUNC [[ASSERT_SEXT]](s32)
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   G_STORE [[TRUNC]](s24), [[DEF]](p1) :: (store (s24) into `ptr addrspace(1) poison`, align 4, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   store i24 %arg0, ptr addrspace(1) poison
@@ -280,7 +280,7 @@ define void @void_func_i32(i32 %arg0) #0 {
   ; CHECK-NEXT:   liveins: $vgpr0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   G_STORE [[COPY]](s32), [[DEF]](p1) :: (store (s32) into `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   store i32 %arg0, ptr addrspace(1) poison
@@ -294,7 +294,7 @@ define void @void_func_i32_signext(i32 signext %arg0) #0 {
   ; CHECK-NEXT:   liveins: $vgpr0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   G_STORE [[COPY]](s32), [[DEF]](p1) :: (store (s32) into `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   store i32 %arg0, ptr addrspace(1) poison
@@ -308,7 +308,7 @@ define void @void_func_i32_zeroext(i32 zeroext %arg0) #0 {
   ; CHECK-NEXT:   liveins: $vgpr0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   G_STORE [[COPY]](s32), [[DEF]](p1) :: (store (s32) into `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   store i32 %arg0, ptr addrspace(1) poison
@@ -321,7 +321,7 @@ define void @void_func_p3i8(ptr addrspace(3) %arg0) #0 {
   ; CHECK-NEXT:   liveins: $vgpr0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p3) = COPY $vgpr0
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   G_STORE [[COPY]](p3), [[DEF]](p1) :: (store (p3) into `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   store ptr addrspace(3) %arg0, ptr addrspace(1) poison
@@ -337,7 +337,7 @@ define void @void_func_i48(i48 %arg0) #0 {
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
   ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s48) = G_TRUNC [[MV]](s64)
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   G_STORE [[TRUNC]](s48), [[DEF]](p1) :: (store (s48) into `ptr addrspace(1) poison`, align 8, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   store i48 %arg0, ptr addrspace(1) poison
@@ -354,7 +354,7 @@ define void @void_func_i48_zeroext(i48 zeroext %arg0) #0 {
   ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
   ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s48) = G_TRUNC [[MV]](s64)
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 12
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[TRUNC]](s48)
   ; CHECK-NEXT:   [[ADD:%[0-9]+]]:_(s64) = G_ADD [[ZEXT]], [[C]]
   ; CHECK-NEXT:   G_STORE [[ADD]](s64), [[DEF]](p1) :: (store (s64) into `ptr addrspace(1) poison`, addrspace 1)
@@ -375,7 +375,7 @@ define void @void_func_i48_signext(i48 signext %arg0) #0 {
   ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
   ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s48) = G_TRUNC [[MV]](s64)
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 12
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   [[SEXT:%[0-9]+]]:_(s64) = G_SEXT [[TRUNC]](s48)
   ; CHECK-NEXT:   [[ADD:%[0-9]+]]:_(s64) = G_ADD [[SEXT]], [[C]]
   ; CHECK-NEXT:   G_STORE [[ADD]](s64), [[DEF]](p1) :: (store (s64) into `ptr addrspace(1) poison`, addrspace 1)
@@ -394,7 +394,7 @@ define void @void_func_i64(i64 %arg0) #0 {
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   G_STORE [[MV]](s64), [[DEF]](p1) :: (store (s64) into `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   store i64 %arg0, ptr addrspace(1) poison
@@ -411,7 +411,7 @@ define void @void_func_i95(i95 %arg0) #0 {
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
   ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(s96) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32)
   ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s95) = G_TRUNC [[MV]](s96)
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   G_STORE [[TRUNC]](s95), [[DEF]](p1) :: (store (s95) into `ptr addrspace(1) poison`, align 8, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   store i95 %arg0, ptr addrspace(1) poison
@@ -429,7 +429,7 @@ define void @void_func_i95_zeroext(i95 zeroext %arg0) #0 {
   ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(s96) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32)
   ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s95) = G_TRUNC [[MV]](s96)
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s96) = G_CONSTANT i96 12
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   [[ZEXT:%[0-9]+]]:_(s96) = G_ZEXT [[TRUNC]](s95)
   ; CHECK-NEXT:   [[ADD:%[0-9]+]]:_(s96) = G_ADD [[ZEXT]], [[C]]
   ; CHECK-NEXT:   G_STORE [[ADD]](s96), [[DEF]](p1) :: (store (s96) into `ptr addrspace(1) poison`, align 8, addrspace 1)
@@ -451,7 +451,7 @@ define void @void_func_i95_signext(i95 signext %arg0) #0 {
   ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(s96) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32)
   ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s95) = G_TRUNC [[MV]](s96)
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s96) = G_CONSTANT i96 12
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   [[SEXT:%[0-9]+]]:_(s96) = G_SEXT [[TRUNC]](s95)
   ; CHECK-NEXT:   [[ADD:%[0-9]+]]:_(s96) = G_ADD [[SEXT]], [[C]]
   ; CHECK-NEXT:   G_STORE [[ADD]](s96), [[DEF]](p1) :: (store (s96) into `ptr addrspace(1) poison`, align 8, addrspace 1)
@@ -471,7 +471,7 @@ define void @void_func_i96(i96 %arg0) #0 {
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
   ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(s96) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32)
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   G_STORE [[MV]](s96), [[DEF]](p1) :: (store (s96) into `ptr addrspace(1) poison`, align 8, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   store i96 %arg0, ptr addrspace(1) poison
@@ -486,7 +486,7 @@ define void @void_func_p0i8(ptr %arg0) #0 {
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(p0) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   G_STORE [[MV]](p0), [[DEF]](p1) :: (store (p0) into `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   store ptr %arg0, ptr addrspace(1) poison
@@ -501,7 +501,7 @@ define void @void_func_p1i8(ptr addrspace(1) %arg0) #0 {
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(p1) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   G_STORE [[MV]](p1), [[DEF]](p1) :: (store (p1) into `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   store ptr addrspace(1) %arg0, ptr addrspace(1) poison
@@ -515,7 +515,7 @@ define void @void_func_f16(half %arg0) #0 {
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   G_STORE [[TRUNC]](s16), [[DEF]](p1) :: (store (s16) into `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   store half %arg0, ptr addrspace(1) poison
@@ -528,7 +528,7 @@ define void @void_func_f32(float %arg0) #0 {
   ; CHECK-NEXT:   liveins: $vgpr0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   G_STORE [[COPY]](s32), [[DEF]](p1) :: (store (s32) into `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   store float %arg0, ptr addrspace(1) poison
@@ -543,7 +543,7 @@ define void @void_func_f64(double %arg0) #0 {
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   G_STORE [[MV]](s64), [[DEF]](p1) :: (store (s64) into `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   store double %arg0, ptr addrspace(1) poison
@@ -558,7 +558,7 @@ define void @void_func_v2i32(<2 x i32> %arg0) #0 {
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32)
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   G_STORE [[BUILD_VECTOR]](<2 x s32>), [[DEF]](p1) :: (store (<2 x s32>) into `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   store <2 x i32> %arg0, ptr addrspace(1) poison
@@ -574,7 +574,7 @@ define void @void_func_v2i24(<2 x i24> %arg0) #0 {
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32)
   ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(<2 x s24>) = G_TRUNC [[BUILD_VECTOR]](<2 x s32>)
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   G_STORE [[TRUNC]](<2 x s24>), [[DEF]](p1) :: (store (<2 x s24>) into `ptr addrspace(1) poison`, align 8, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   store <2 x i24> %arg0, ptr addrspace(1) poison
@@ -591,7 +591,7 @@ define void @void_func_v3i24(<3 x i24> %arg0) #0 {
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
   ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<3 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32)
   ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(<3 x s24>) = G_TRUNC [[BUILD_VECTOR]](<3 x s32>)
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   G_STORE [[TRUNC]](<3 x s24>), [[DEF]](p1) :: (store (<3 x s24>) into `ptr addrspace(1) poison`, align 16, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   store <3 x i24> %arg0, ptr addrspace(1) poison
@@ -609,7 +609,7 @@ define void @void_func_v2i8(<2 x i8> %arg0) #0 {
   ; CHECK-NEXT:   [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[COPY1]](s32)
   ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC]](s16), [[TRUNC1]](s16)
   ; CHECK-NEXT:   [[TRUNC2:%[0-9]+]]:_(<2 x s8>) = G_TRUNC [[BUILD_VECTOR]](<2 x s16>)
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   G_STORE [[TRUNC2]](<2 x s8>), [[DEF]](p1) :: (store (<2 x s8>) into `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   store <2 x i8> %arg0, ptr addrspace(1) poison
@@ -629,7 +629,7 @@ define void @void_func_v3i8(<3 x i8> %arg0) #0 {
   ; CHECK-NEXT:   [[TRUNC2:%[0-9]+]]:_(s16) = G_TRUNC [[COPY2]](s32)
   ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<3 x s16>) = G_BUILD_VECTOR [[TRUNC]](s16), [[TRUNC1]](s16), [[TRUNC2]](s16)
   ; CHECK-NEXT:   [[TRUNC3:%[0-9]+]]:_(<3 x s8>) = G_TRUNC [[BUILD_VECTOR]](<3 x s16>)
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   G_STORE [[TRUNC3]](<3 x s8>), [[DEF]](p1) :: (store (<3 x s8>) into `ptr addrspace(1) poison`, align 4, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   store <3 x i8> %arg0, ptr addrspace(1) poison
@@ -651,7 +651,7 @@ define void @void_func_v4i8(<4 x i8> %arg0) #0 {
   ; CHECK-NEXT:   [[TRUNC3:%[0-9]+]]:_(s16) = G_TRUNC [[COPY3]](s32)
   ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s16>) = G_BUILD_VECTOR [[TRUNC]](s16), [[TRUNC1]](s16), [[TRUNC2]](s16), [[TRUNC3]](s16)
   ; CHECK-NEXT:   [[TRUNC4:%[0-9]+]]:_(<4 x s8>) = G_TRUNC [[BUILD_VECTOR]](<4 x s16>)
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   G_STORE [[TRUNC4]](<4 x s8>), [[DEF]](p1) :: (store (<4 x s8>) into `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   store <4 x i8> %arg0, ptr addrspace(1) poison
@@ -666,7 +666,7 @@ define void @void_func_v2p3i8(<2 x ptr addrspace(3)> %arg0) #0 {
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p3) = COPY $vgpr0
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(p3) = COPY $vgpr1
   ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<2 x p3>) = G_BUILD_VECTOR [[COPY]](p3), [[COPY1]](p3)
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   G_STORE [[BUILD_VECTOR]](<2 x p3>), [[DEF]](p1) :: (store (<2 x p3>) into `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   store <2 x ptr addrspace(3)> %arg0, ptr addrspace(1) poison
@@ -682,7 +682,7 @@ define void @void_func_v3i32(<3 x i32> %arg0) #0 {
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
   ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<3 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32)
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   G_STORE [[BUILD_VECTOR]](<3 x s32>), [[DEF]](p1) :: (store (<3 x s32>) into `ptr addrspace(1) poison`, align 16, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   store <3 x i32> %arg0, ptr addrspace(1) poison
@@ -699,7 +699,7 @@ define void @void_func_v4i32(<4 x i32> %arg0) #0 {
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
   ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32)
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   G_STORE [[BUILD_VECTOR]](<4 x s32>), [[DEF]](p1) :: (store (<4 x s32>) into `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   store <4 x i32> %arg0, ptr addrspace(1) poison
@@ -717,7 +717,7 @@ define void @void_func_v5i32(<5 x i32> %arg0) #0 {
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
   ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $vgpr4
   ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<5 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32)
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   G_STORE [[BUILD_VECTOR]](<5 x s32>), [[DEF]](p1) :: (store (<5 x s32>) into `ptr addrspace(1) poison`, align 32, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   store <5 x i32> %arg0, ptr addrspace(1) poison
@@ -738,7 +738,7 @@ define void @void_func_v8i32(<8 x i32> %arg0) #0 {
   ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $vgpr6
   ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $vgpr7
   ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   G_STORE [[BUILD_VECTOR]](<8 x s32>), [[DEF]](p1) :: (store (<8 x s32>) into `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   store <8 x i32> %arg0, ptr addrspace(1) poison
@@ -767,7 +767,7 @@ define void @void_func_v16i32(<16 x i32> %arg0) #0 {
   ; CHECK-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr14
   ; CHECK-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY $vgpr15
   ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<16 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32), [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32), [[COPY12]](s32), [[COPY13]](s32), [[COPY14]](s32), [[COPY15]](s32)
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   G_STORE [[BUILD_VECTOR]](<16 x s32>), [[DEF]](p1) :: (store (<16 x s32>) into `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   store <16 x i32> %arg0, ptr addrspace(1) poison
@@ -813,7 +813,7 @@ define void @void_func_v32i32(<32 x i32> %arg0) #0 {
   ; CHECK-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.0
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p5) :: (invariant load (s32) from %fixed-stack.0, align 16, addrspace 5)
   ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<32 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32), [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32), [[COPY12]](s32), [[COPY13]](s32), [[COPY14]](s32), [[COPY15]](s32), [[COPY16]](s32), [[COPY17]](s32), [[COPY18]](s32), [[COPY19]](s32), [[COPY20]](s32), [[COPY21]](s32), [[COPY22]](s32), [[COPY23]](s32), [[COPY24]](s32), [[COPY25]](s32), [[COPY26]](s32), [[COPY27]](s32), [[COPY28]](s32), [[COPY29]](s32), [[COPY30]](s32), [[LOAD]](s32)
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   G_STORE [[BUILD_VECTOR]](<32 x s32>), [[DEF]](p1) :: (store (<32 x s32>) into `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   store <32 x i32> %arg0, ptr addrspace(1) poison
@@ -862,7 +862,7 @@ define void @void_func_v33i32(<33 x i32> %arg0) #0 {
   ; CHECK-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.0
   ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX1]](p5) :: (invariant load (s32) from %fixed-stack.0, addrspace 5)
   ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<33 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32), [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32), [[COPY12]](s32), [[COPY13]](s32), [[COPY14]](s32), [[COPY15]](s32), [[COPY16]](s32), [[COPY17]](s32), [[COPY18]](s32), [[COPY19]](s32), [[COPY20]](s32), [[COPY21]](s32), [[COPY22]](s32), [[COPY23]](s32), [[COPY24]](s32), [[COPY25]](s32), [[COPY26]](s32), [[COPY27]](s32), [[COPY28]](s32), [[COPY29]](s32), [[COPY30]](s32), [[LOAD]](s32), [[LOAD1]](s32)
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   G_STORE [[BUILD_VECTOR]](<33 x s32>), [[DEF]](p1) :: (store (<33 x s32>) into `ptr addrspace(1) poison`, align 256, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   store <33 x i32> %arg0, ptr addrspace(1) poison
@@ -881,7 +881,7 @@ define void @void_func_v2i64(<2 x i64> %arg0) #0 {
   ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
   ; CHECK-NEXT:   [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY2]](s32), [[COPY3]](s32)
   ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[MV]](s64), [[MV1]](s64)
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   G_STORE [[BUILD_VECTOR]](<2 x s64>), [[DEF]](p1) :: (store (<2 x s64>) into `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   store <2 x i64> %arg0, ptr addrspace(1) poison
@@ -900,7 +900,7 @@ define void @void_func_v2p0i8(<2 x ptr> %arg0) #0 {
   ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(p0) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
   ; CHECK-NEXT:   [[MV1:%[0-9]+]]:_(p0) = G_MERGE_VALUES [[COPY2]](s32), [[COPY3]](s32)
   ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<2 x p0>) = G_BUILD_VECTOR [[MV]](p0), [[MV1]](p0)
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   G_STORE [[BUILD_VECTOR]](<2 x p0>), [[DEF]](p1) :: (store (<2 x p0>) into `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   store <2 x ptr> %arg0, ptr addrspace(1) poison
@@ -919,7 +919,7 @@ define void @void_func_v2p1i8(<2 x ptr addrspace(1)> %arg0) #0 {
   ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(p1) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
   ; CHECK-NEXT:   [[MV1:%[0-9]+]]:_(p1) = G_MERGE_VALUES [[COPY2]](s32), [[COPY3]](s32)
   ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<2 x p1>) = G_BUILD_VECTOR [[MV]](p1), [[MV1]](p1)
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   G_STORE [[BUILD_VECTOR]](<2 x p1>), [[DEF]](p1) :: (store (<2 x p1>) into `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   store <2 x ptr addrspace(1)> %arg0, ptr addrspace(1) poison
@@ -941,7 +941,7 @@ define void @void_func_v3i64(<3 x i64> %arg0) #0 {
   ; CHECK-NEXT:   [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY2]](s32), [[COPY3]](s32)
   ; CHECK-NEXT:   [[MV2:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY4]](s32), [[COPY5]](s32)
   ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<3 x s64>) = G_BUILD_VECTOR [[MV]](s64), [[MV1]](s64), [[MV2]](s64)
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   G_STORE [[BUILD_VECTOR]](<3 x s64>), [[DEF]](p1) :: (store (<3 x s64>) into `ptr addrspace(1) poison`, align 32, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   store <3 x i64> %arg0, ptr addrspace(1) poison
@@ -966,7 +966,7 @@ define void @void_func_v4i64(<4 x i64> %arg0) #0 {
   ; CHECK-NEXT:   [[MV2:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY4]](s32), [[COPY5]](s32)
   ; CHECK-NEXT:   [[MV3:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY6]](s32), [[COPY7]](s32)
   ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s64>) = G_BUILD_VECTOR [[MV]](s64), [[MV1]](s64), [[MV2]](s64), [[MV3]](s64)
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   G_STORE [[BUILD_VECTOR]](<4 x s64>), [[DEF]](p1) :: (store (<4 x s64>) into `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   store <4 x i64> %arg0, ptr addrspace(1) poison
@@ -994,7 +994,7 @@ define void @void_func_v5i64(<5 x i64> %arg0) #0 {
   ; CHECK-NEXT:   [[MV3:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY6]](s32), [[COPY7]](s32)
   ; CHECK-NEXT:   [[MV4:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY8]](s32), [[COPY9]](s32)
   ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<5 x s64>) = G_BUILD_VECTOR [[MV]](s64), [[MV1]](s64), [[MV2]](s64), [[MV3]](s64), [[MV4]](s64)
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   G_STORE [[BUILD_VECTOR]](<5 x s64>), [[DEF]](p1) :: (store (<5 x s64>) into `ptr addrspace(1) poison`, align 64, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   store <5 x i64> %arg0, ptr addrspace(1) poison
@@ -1031,7 +1031,7 @@ define void @void_func_v8i64(<8 x i64> %arg0) #0 {
   ; CHECK-NEXT:   [[MV6:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY12]](s32), [[COPY13]](s32)
   ; CHECK-NEXT:   [[MV7:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY14]](s32), [[COPY15]](s32)
   ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s64>) = G_BUILD_VECTOR [[MV]](s64), [[MV1]](s64), [[MV2]](s64), [[MV3]](s64), [[MV4]](s64), [[MV5]](s64), [[MV6]](s64), [[MV7]](s64)
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   G_STORE [[BUILD_VECTOR]](<8 x s64>), [[DEF]](p1) :: (store (<8 x s64>) into `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   store <8 x i64> %arg0, ptr addrspace(1) poison
@@ -1093,7 +1093,7 @@ define void @void_func_v16i64(<16 x i64> %arg0) #0 {
   ; CHECK-NEXT:   [[MV14:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY28]](s32), [[COPY29]](s32)
   ; CHECK-NEXT:   [[MV15:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY30]](s32), [[LOAD]](s32)
   ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<16 x s64>) = G_BUILD_VECTOR [[MV]](s64), [[MV1]](s64), [[MV2]](s64), [[MV3]](s64), [[MV4]](s64), [[MV5]](s64), [[MV6]](s64), [[MV7]](s64), [[MV8]](s64), [[MV9]](s64), [[MV10]](s64), [[MV11]](s64), [[MV12]](s64), [[MV13]](s64), [[MV14]](s64), [[MV15]](s64)
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   G_STORE [[BUILD_VECTOR]](<16 x s64>), [[DEF]](p1) :: (store (<16 x s64>) into `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   store <16 x i64> %arg0, ptr addrspace(1) poison
@@ -1106,7 +1106,7 @@ define void @void_func_v2i16(<2 x i16> %arg0) #0 {
   ; CHECK-NEXT:   liveins: $vgpr0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr0
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   G_STORE [[COPY]](<2 x s16>), [[DEF]](p1) :: (store (<2 x s16>) into `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   store <2 x i16> %arg0, ptr addrspace(1) poison
@@ -1123,7 +1123,7 @@ define void @void_func_v3i16(<3 x i16> %arg0) #0 {
   ; CHECK-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[COPY]](<2 x s16>), [[COPY1]](<2 x s16>)
   ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(s16), [[UV1:%[0-9]+]]:_(s16), [[UV2:%[0-9]+]]:_(s16), [[UV3:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<4 x s16>)
   ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<3 x s16>) = G_BUILD_VECTOR [[UV]](s16), [[UV1]](s16), [[UV2]](s16)
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   G_STORE [[BUILD_VECTOR]](<3 x s16>), [[DEF]](p1) :: (store (<3 x s16>) into `ptr addrspace(1) poison`, align 8, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   store <3 x i16> %arg0, ptr addrspace(1) poison
@@ -1138,7 +1138,7 @@ define void @void_func_v4i16(<4 x i16> %arg0) #0 {
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr0
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr1
   ; CHECK-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[COPY]](<2 x s16>), [[COPY1]](<2 x s16>)
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   G_STORE [[CONCAT_VECTORS]](<4 x s16>), [[DEF]](p1) :: (store (<4 x s16>) into `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   store <4 x i16> %arg0, ptr addrspace(1) poison
@@ -1156,7 +1156,7 @@ define void @void_func_v5i16(<5 x i16> %arg0) #0 {
   ; CHECK-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[COPY]](<2 x s16>), [[COPY1]](<2 x s16>), [[COPY2]](<2 x s16>)
   ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(s16), [[UV1:%[0-9]+]]:_(s16), [[UV2:%[0-9]+]]:_(s16), [[UV3:%[0-9]+]]:_(s16), [[UV4:%[0-9]+]]:_(s16), [[UV5:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<6 x s16>)
   ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<5 x s16>) = G_BUILD_VECTOR [[UV]](s16), [[UV1]](s16), [[UV2]](s16), [[UV3]](s16), [[UV4]](s16)
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   G_STORE [[BUILD_VECTOR]](<5 x s16>), [[DEF]](p1) :: (store (<5 x s16>) into `ptr addrspace(1) poison`, align 16, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   store <5 x i16> %arg0, ptr addrspace(1) poison
@@ -1173,7 +1173,7 @@ define void @void_func_v8i16(<8 x i16> %arg0) #0 {
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr2
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr3
   ; CHECK-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<8 x s16>) = G_CONCAT_VECTORS [[COPY]](<2 x s16>), [[COPY1]](<2 x s16>), [[COPY2]](<2 x s16>), [[COPY3]](<2 x s16>)
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   G_STORE [[CONCAT_VECTORS]](<8 x s16>), [[DEF]](p1) :: (store (<8 x s16>) into `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   store <8 x i16> %arg0, ptr addrspace(1) poison
@@ -1194,7 +1194,7 @@ define void @void_func_v16i16(<16 x i16> %arg0) #0 {
   ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr6
   ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr7
   ; CHECK-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<16 x s16>) = G_CONCAT_VECTORS [[COPY]](<2 x s16>), [[COPY1]](<2 x s16>), [[COPY2]](<2 x s16>), [[COPY3]](<2 x s16>), [[COPY4]](<2 x s16>), [[COPY5]](<2 x s16>), [[COPY6]](<2 x s16>), [[COPY7]](<2 x s16>)
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   G_STORE [[CONCAT_VECTORS]](<16 x s16>), [[DEF]](p1) :: (store (<16 x s16>) into `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   store <16 x i16> %arg0, ptr addrspace(1) poison
@@ -1246,7 +1246,7 @@ define void @void_func_v65i16(<65 x i16> %arg0) #0 {
   ; CHECK-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<66 x s16>) = G_CONCAT_VECTORS [[COPY]](<2 x s16>), [[COPY1]](<2 x s16>), [[COPY2]](<2 x s16>), [[COPY3]](<2 x s16>), [[COPY4]](<2 x s16>), [[COPY5]](<2 x s16>), [[COPY6]](<2 x s16>), [[COPY7]](<2 x s16>), [[COPY8]](<2 x s16>), [[COPY9]](<2 x s16>), [[COPY10]](<2 x s16>), [[COPY11]](<2 x s16>), [[COPY12]](<2 x s16>), [[COPY13]](<2 x s16>), [[COPY14]](<2 x s16>), [[COPY15]](<2 x s16>), [[COPY16]](<2 x s16>), [[COPY17]](<2 x s16>), [[COPY18]](<2 x s16>), [[COPY19]](<2 x s16>), [[COPY20]](<2 x s16>), [[COPY21]](<2 x s16>), [[COPY22]](<2 x s16>), [[COPY23]](<2 x s16>), [[COPY24]](<2 x s16>), [[COPY25]](<2 x s16>), [[COPY26]](<2 x s16>), [[COPY27]](<2 x s16>), [[COPY28]](<2 x s16>), [[COPY29]](<2 x s16>), [[COPY30]](<2 x s16>), [[LOAD]](<2 x s16>), [[LOAD1]](<2 x s16>)
   ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(s16), [[UV1:%[0-9]+]]:_(s16), [[UV2:%[0-9]+]]:_(s16), [[UV3:%[0-9]+]]:_(s16), [[UV4:%[0-9]+]]:_(s16), [[UV5:%[0-9]+]]:_(s16), [[UV6:%[0-9]+]]:_(s16), [[UV7:%[0-9]+]]:_(s16), [[UV8:%[0-9]+]]:_(s16), [[UV9:%[0-9]+]]:_(s16), [[UV10:%[0-9]+]]:_(s16), [[UV11:%[0-9]+]]:_(s16), [[UV12:%[0-9]+]]:_(s16), [[UV13:%[0-9]+]]:_(s16), [[UV14:%[0-9]+]]:_(s16), [[UV15:%[0-9]+]]:_(s16), [[UV16:%[0-9]+]]:_(s16), [[UV17:%[0-9]+]]:_(s16), [[UV18:%[0-9]+]]:_(s16), [[UV19:%[0-9]+]]:_(s16), [[UV20:%[0-9]+]]:_(s16), [[UV21:%[0-9]+]]:_(s16), [[UV22:%[0-9]+]]:_(s16), [[UV23:%[0-9]+]]:_(s16), [[UV24:%[0-9]+]]:_(s16), [[UV25:%[0-9]+]]:_(s16), [[UV26:%[0-9]+]]:_(s16), [[UV27:%[0-9]+]]:_(s16), [[UV28:%[0-9]+]]:_(s16), [[UV29:%[0-9]+]]:_(s16), [[UV30:%[0-9]+]]:_(s16), [[UV31:%[0-9]+]]:_(s16), [[UV32:%[0-9]+]]:_(s16), [[UV33:%[0-9]+]]:_(s16), [[UV34:%[0-9]+]]:_(s16), [[UV35:%[0-9]+]]:_(s16), [[UV36:%[0-9]+]]:_(s16), [[UV37:%[0-9]+]]:_(s16), [[UV38:%[0-9]+]]:_(s16), [[UV39:%[0-9]+]]:_(s16), [[UV40:%[0-9]+]]:_(s16), [[UV41:%[0-9]+]]:_(s16), [[UV42:%[0-9]+]]:_(s16), [[UV43:%[0-9]+]]:_(s16), [[UV44:%[0-9]+]]:_(s16), [[UV45:%[0-9]+]]:_(s16), [[UV46:%[0-9]+]]:_(s16), [[UV47:%[0-9]+]]:_(s16), [[UV48:%[0-9]+]]:_(s16), [[UV49:%[0-9]+]]:_(s16), [[UV50:%[0-9]+]]:_(s16), [[UV51:%[0-9]+]]:_(s16), [[UV52:%[0-9]+]]:_(s16), [[UV53:%[0-9]+]]:_(s16), [[UV54:%[0-9]+]]:_(s16), [[UV55:%[0-9]+]]:_(s16), [[UV56:%[0-9]+]]:_(s16), [[UV57:%[0-9]+]]:_(s16), [[UV58:%[0-9]+]]:_(s16), [[UV59:%[0-9]+]]:_(s16), [[UV60:%[0-9]+]]:_(s16), [[UV61:%[0-9]+]]:_(s16), [[UV62:%[0-9]+]]:_(s16), [[UV63:%[0-9]+]]:_(s16), [[UV64:%[0-9]+]]:_(s16), [[UV65:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<66 x s16>)
   ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<65 x s16>) = G_BUILD_VECTOR [[UV]](s16), [[UV1]](s16), [[UV2]](s16), [[UV3]](s16), [[UV4]](s16), [[UV5]](s16), [[UV6]](s16), [[UV7]](s16), [[UV8]](s16), [[UV9]](s16), [[UV10]](s16), [[UV11]](s16), [[UV12]](s16), [[UV13]](s16), [[UV14]](s16), [[UV15]](s16), [[UV16]](s16), [[UV17]](s16), [[UV18]](s16), [[UV19]](s16), [[UV20]](s16), [[UV21]](s16), [[UV22]](s16), [[UV23]](s16), [[UV24]](s16), [[UV25]](s16), [[UV26]](s16), [[UV27]](s16), [[UV28]](s16), [[UV29]](s16), [[UV30]](s16), [[UV31]](s16), [[UV32]](s16), [[UV33]](s16), [[UV34]](s16), [[UV35]](s16), [[UV36]](s16), [[UV37]](s16), [[UV38]](s16), [[UV39]](s16), [[UV40]](s16), [[UV41]](s16), [[UV42]](s16), [[UV43]](s16), [[UV44]](s16), [[UV45]](s16), [[UV46]](s16), [[UV47]](s16), [[UV48]](s16), [[UV49]](s16), [[UV50]](s16), [[UV51]](s16), [[UV52]](s16), [[UV53]](s16), [[UV54]](s16), [[UV55]](s16), [[UV56]](s16), [[UV57]](s16), [[UV58]](s16), [[UV59]](s16), [[UV60]](s16), [[UV61]](s16), [[UV62]](s16), [[UV63]](s16), [[UV64]](s16)
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   G_STORE [[BUILD_VECTOR]](<65 x s16>), [[DEF]](p1) :: (store (<65 x s16>) into `ptr addrspace(1) poison`, align 256, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   store <65 x i16> %arg0, ptr addrspace(1) poison
@@ -1261,7 +1261,7 @@ define void @void_func_v2f32(<2 x float> %arg0) #0 {
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32)
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   G_STORE [[BUILD_VECTOR]](<2 x s32>), [[DEF]](p1) :: (store (<2 x s32>) into `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   store <2 x float> %arg0, ptr addrspace(1) poison
@@ -1277,7 +1277,7 @@ define void @void_func_v3f32(<3 x float> %arg0) #0 {
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
   ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<3 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32)
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   G_STORE [[BUILD_VECTOR]](<3 x s32>), [[DEF]](p1) :: (store (<3 x s32>) into `ptr addrspace(1) poison`, align 16, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   store <3 x float> %arg0, ptr addrspace(1) poison
@@ -1294,7 +1294,7 @@ define void @void_func_v4f32(<4 x float> %arg0) #0 {
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
   ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32)
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   G_STORE [[BUILD_VECTOR]](<4 x s32>), [[DEF]](p1) :: (store (<4 x s32>) into `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   store <4 x float> %arg0, ptr addrspace(1) poison
@@ -1315,7 +1315,7 @@ define void @void_func_v8f32(<8 x float> %arg0) #0 {
   ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $vgpr6
   ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $vgpr7
   ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   G_STORE [[BUILD_VECTOR]](<8 x s32>), [[DEF]](p1) :: (store (<8 x s32>) into `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   store <8 x float> %arg0, ptr addrspace(1) poison
@@ -1344,7 +1344,7 @@ define void @void_func_v16f32(<16 x float> %arg0) #0 {
   ; CHECK-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr14
   ; CHECK-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY $vgpr15
   ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<16 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32), [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32), [[COPY12]](s32), [[COPY13]](s32), [[COPY14]](s32), [[COPY15]](s32)
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   G_STORE [[BUILD_VECTOR]](<16 x s32>), [[DEF]](p1) :: (store (<16 x s32>) into `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   store <16 x float> %arg0, ptr addrspace(1) poison
@@ -1363,7 +1363,7 @@ define void @void_func_v2f64(<2 x double> %arg0) #0 {
   ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
   ; CHECK-NEXT:   [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY2]](s32), [[COPY3]](s32)
   ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[MV]](s64), [[MV1]](s64)
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   G_STORE [[BUILD_VECTOR]](<2 x s64>), [[DEF]](p1) :: (store (<2 x s64>) into `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   store <2 x double> %arg0, ptr addrspace(1) poison
@@ -1385,7 +1385,7 @@ define void @void_func_v3f64(<3 x double> %arg0) #0 {
   ; CHECK-NEXT:   [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY2]](s32), [[COPY3]](s32)
   ; CHECK-NEXT:   [[MV2:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY4]](s32), [[COPY5]](s32)
   ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<3 x s64>) = G_BUILD_VECTOR [[MV]](s64), [[MV1]](s64), [[MV2]](s64)
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   G_STORE [[BUILD_VECTOR]](<3 x s64>), [[DEF]](p1) :: (store (<3 x s64>) into `ptr addrspace(1) poison`, align 32, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   store <3 x double> %arg0, ptr addrspace(1) poison
@@ -1410,7 +1410,7 @@ define void @void_func_v4f64(<4 x double> %arg0) #0 {
   ; CHECK-NEXT:   [[MV2:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY4]](s32), [[COPY5]](s32)
   ; CHECK-NEXT:   [[MV3:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY6]](s32), [[COPY7]](s32)
   ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s64>) = G_BUILD_VECTOR [[MV]](s64), [[MV1]](s64), [[MV2]](s64), [[MV3]](s64)
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   G_STORE [[BUILD_VECTOR]](<4 x s64>), [[DEF]](p1) :: (store (<4 x s64>) into `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   store <4 x double> %arg0, ptr addrspace(1) poison
@@ -1447,7 +1447,7 @@ define void @void_func_v8f64(<8 x double> %arg0) #0 {
   ; CHECK-NEXT:   [[MV6:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY12]](s32), [[COPY13]](s32)
   ; CHECK-NEXT:   [[MV7:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY14]](s32), [[COPY15]](s32)
   ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s64>) = G_BUILD_VECTOR [[MV]](s64), [[MV1]](s64), [[MV2]](s64), [[MV3]](s64), [[MV4]](s64), [[MV5]](s64), [[MV6]](s64), [[MV7]](s64)
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   G_STORE [[BUILD_VECTOR]](<8 x s64>), [[DEF]](p1) :: (store (<8 x s64>) into `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   store <8 x double> %arg0, ptr addrspace(1) poison
@@ -1509,7 +1509,7 @@ define void @void_func_v16f64(<16 x double> %arg0) #0 {
   ; CHECK-NEXT:   [[MV14:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY28]](s32), [[COPY29]](s32)
   ; CHECK-NEXT:   [[MV15:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY30]](s32), [[LOAD]](s32)
   ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<16 x s64>) = G_BUILD_VECTOR [[MV]](s64), [[MV1]](s64), [[MV2]](s64), [[MV3]](s64), [[MV4]](s64), [[MV5]](s64), [[MV6]](s64), [[MV7]](s64), [[MV8]](s64), [[MV9]](s64), [[MV10]](s64), [[MV11]](s64), [[MV12]](s64), [[MV13]](s64), [[MV14]](s64), [[MV15]](s64)
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   G_STORE [[BUILD_VECTOR]](<16 x s64>), [[DEF]](p1) :: (store (<16 x s64>) into `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   store <16 x double> %arg0, ptr addrspace(1) poison
@@ -1522,7 +1522,7 @@ define void @void_func_v2f16(<2 x half> %arg0) #0 {
   ; CHECK-NEXT:   liveins: $vgpr0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr0
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   G_STORE [[COPY]](<2 x s16>), [[DEF]](p1) :: (store (<2 x s16>) into `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   store <2 x half> %arg0, ptr addrspace(1) poison
@@ -1539,7 +1539,7 @@ define void @void_func_v3f16(<3 x half> %arg0) #0 {
   ; CHECK-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[COPY]](<2 x s16>), [[COPY1]](<2 x s16>)
   ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(s16), [[UV1:%[0-9]+]]:_(s16), [[UV2:%[0-9]+]]:_(s16), [[UV3:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<4 x s16>)
   ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<3 x s16>) = G_BUILD_VECTOR [[UV]](s16), [[UV1]](s16), [[UV2]](s16)
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   G_STORE [[BUILD_VECTOR]](<3 x s16>), [[DEF]](p1) :: (store (<3 x s16>) into `ptr addrspace(1) poison`, align 8, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   store <3 x half> %arg0, ptr addrspace(1) poison
@@ -1554,7 +1554,7 @@ define void @void_func_v4f16(<4 x half> %arg0) #0 {
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr0
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr1
   ; CHECK-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[COPY]](<2 x s16>), [[COPY1]](<2 x s16>)
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   G_STORE [[CONCAT_VECTORS]](<4 x s16>), [[DEF]](p1) :: (store (<4 x s16>) into `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   store <4 x half> %arg0, ptr addrspace(1) poison
@@ -1571,7 +1571,7 @@ define void @void_func_v8f16(<8 x half> %arg0) #0 {
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr2
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr3
   ; CHECK-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<8 x s16>) = G_CONCAT_VECTORS [[COPY]](<2 x s16>), [[COPY1]](<2 x s16>), [[COPY2]](<2 x s16>), [[COPY3]](<2 x s16>)
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   G_STORE [[CONCAT_VECTORS]](<8 x s16>), [[DEF]](p1) :: (store (<8 x s16>) into `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   store <8 x half> %arg0, ptr addrspace(1) poison
@@ -1592,7 +1592,7 @@ define void @void_func_v16f16(<16 x half> %arg0) #0 {
   ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr6
   ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr7
   ; CHECK-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<16 x s16>) = G_CONCAT_VECTORS [[COPY]](<2 x s16>), [[COPY1]](<2 x s16>), [[COPY2]](<2 x s16>), [[COPY3]](<2 x s16>), [[COPY4]](<2 x s16>), [[COPY5]](<2 x s16>), [[COPY6]](<2 x s16>), [[COPY7]](<2 x s16>)
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   G_STORE [[CONCAT_VECTORS]](<16 x s16>), [[DEF]](p1) :: (store (<16 x s16>) into `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   store <16 x half> %arg0, ptr addrspace(1) poison
@@ -1610,7 +1610,7 @@ define void @void_func_i32_i64_i32(i32 %arg0, i64 %arg1, i32 %arg2) #0 {
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
   ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY1]](s32), [[COPY2]](s32)
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   G_STORE [[COPY]](s32), [[DEF]](p1) :: (volatile store (s32) into `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   G_STORE [[MV]](s64), [[DEF]](p1) :: (volatile store (s64) into `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   G_STORE [[COPY3]](s32), [[DEF]](p1) :: (volatile store (s32) into `ptr addrspace(1) poison`, addrspace 1)
@@ -1627,7 +1627,7 @@ define void @void_func_struct_i32({ i32 } %arg0) #0 {
   ; CHECK-NEXT:   liveins: $vgpr0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   G_STORE [[COPY]](s32), [[DEF]](p1) :: (store (s32) into `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   store { i32 } %arg0, ptr addrspace(1) poison
@@ -1643,7 +1643,7 @@ define void @void_func_struct_i8_i32({ i8, i32 } %arg0) #0 {
   ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
   ; CHECK-NEXT:   [[TRUNC1:%[0-9]+]]:_(s8) = G_TRUNC [[TRUNC]](s16)
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   G_STORE [[TRUNC1]](s8), [[DEF]](p1) :: (store (s8) into `ptr addrspace(1) poison`, align 4, addrspace 1)
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
   ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p1) = G_PTR_ADD [[DEF]], [[C]](s64)
@@ -1658,7 +1658,7 @@ define void @void_func_byval_struct_i8_i32(ptr addrspace(5) byval({ i8, i32 }) %
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.0
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p5) = COPY [[FRAME_INDEX]](p5)
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s8) = G_LOAD [[COPY]](p5) :: (load (s8) from %ir.arg0, align 4, addrspace 5)
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
   ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY]], [[C]](s32)
@@ -1683,8 +1683,8 @@ define void @void_func_byval_struct_i8_i32_x2(ptr addrspace(5) byval({ i8, i32 }
   ; CHECK-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.0
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(p5) = COPY [[FRAME_INDEX1]](p5)
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
-  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(p3) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
+  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(p3) = G_POISON
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s8) = G_LOAD [[COPY]](p5) :: (volatile load (s8) from %ir.arg0, align 4, addrspace 5)
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
   ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY]], [[C]](s32)
@@ -1716,7 +1716,7 @@ define void @void_func_byval_i32_byval_i64(ptr addrspace(5) byval(i32) %arg0, pt
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p5) = COPY [[FRAME_INDEX]](p5)
   ; CHECK-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.0
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(p5) = COPY [[FRAME_INDEX1]](p5)
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p5) :: (load (s32) from %ir.arg0, addrspace 5)
   ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(s64) = G_LOAD [[COPY1]](p5) :: (load (s64) from %ir.arg1, addrspace 5)
   ; CHECK-NEXT:   G_STORE [[LOAD]](s32), [[DEF]](p1) :: (store (s32) into `ptr addrspace(1) poison`, addrspace 1)
@@ -1938,7 +1938,7 @@ define void @void_func_v32i32_i32_i64(<32 x i32> %arg0, i32 %arg1, i64 %arg2) #0
   ; CHECK-NEXT:   [[FRAME_INDEX3:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.0
   ; CHECK-NEXT:   [[LOAD3:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX3]](p5) :: (invariant load (s32) from %fixed-stack.0, addrspace 5)
   ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[LOAD2]](s32), [[LOAD3]](s32)
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   G_STORE [[BUILD_VECTOR]](<32 x s32>), [[DEF]](p1) :: (volatile store (<32 x s32>) into `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   G_STORE [[LOAD1]](s32), [[DEF]](p1) :: (volatile store (s32) into `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   G_STORE [[MV]](s64), [[DEF]](p1) :: (volatile store (s64) into `ptr addrspace(1) poison`, addrspace 1)
@@ -1999,7 +1999,7 @@ define void @void_func_v32i32_i1_i8_i16(<32 x i32> %arg0, i1 %arg1, i8 %arg2, i1
   ; CHECK-NEXT:   [[LOAD3:%[0-9]+]]:_(s16) = G_LOAD [[FRAME_INDEX3]](p5) :: (invariant load (s16) from %fixed-stack.1, align 4, addrspace 5)
   ; CHECK-NEXT:   [[FRAME_INDEX4:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.0
   ; CHECK-NEXT:   [[LOAD4:%[0-9]+]]:_(s16) = G_LOAD [[FRAME_INDEX4]](p5) :: (invariant load (s16) from %fixed-stack.0, align 16, addrspace 5)
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   G_STORE [[BUILD_VECTOR]](<32 x s32>), [[DEF]](p1) :: (volatile store (<32 x s32>) into `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   G_STORE [[TRUNC]](s1), [[DEF]](p1) :: (volatile store (s1) into `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   G_STORE [[TRUNC1]](s8), [[DEF]](p1) :: (volatile store (s8) into `ptr addrspace(1) poison`, addrspace 1)
@@ -2057,7 +2057,7 @@ define void @void_func_v32i32_p3_p5_i16(<32 x i32> %arg0, ptr addrspace(3) %arg1
   ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(p3) = G_LOAD [[FRAME_INDEX1]](p5) :: (invariant load (p3) from %fixed-stack.1, addrspace 5)
   ; CHECK-NEXT:   [[FRAME_INDEX2:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.0
   ; CHECK-NEXT:   [[LOAD2:%[0-9]+]]:_(p5) = G_LOAD [[FRAME_INDEX2]](p5) :: (invariant load (p5) from %fixed-stack.0, align 8, addrspace 5)
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   G_STORE [[BUILD_VECTOR]](<32 x s32>), [[DEF]](p1) :: (volatile store (<32 x s32>) into `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   G_STORE [[LOAD1]](p3), [[DEF]](p1) :: (volatile store (p3) into `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   G_STORE [[LOAD2]](p5), [[DEF]](p1) :: (volatile store (p5) into `ptr addrspace(1) poison`, addrspace 1)
@@ -2117,7 +2117,7 @@ define void @void_func_v32i32_v2i32_v2f32(<32 x i32> %arg0, <2 x i32> %arg1, <2 
   ; CHECK-NEXT:   [[FRAME_INDEX4:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.0
   ; CHECK-NEXT:   [[LOAD4:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX4]](p5) :: (invariant load (s32) from %fixed-stack.0, align 16, addrspace 5)
   ; CHECK-NEXT:   [[BUILD_VECTOR2:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[LOAD3]](s32), [[LOAD4]](s32)
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   G_STORE [[BUILD_VECTOR]](<32 x s32>), [[DEF]](p1) :: (volatile store (<32 x s32>) into `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   G_STORE [[BUILD_VECTOR1]](<2 x s32>), [[DEF]](p1) :: (volatile store (<2 x s32>) into `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   G_STORE [[BUILD_VECTOR2]](<2 x s32>), [[DEF]](p1) :: (volatile store (<2 x s32>) into `ptr addrspace(1) poison`, addrspace 1)
@@ -2171,7 +2171,7 @@ define void @void_func_v32i32_v2i16_v2f16(<32 x i32> %arg0, <2 x i16> %arg1, <2 
   ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(<2 x s16>) = G_LOAD [[FRAME_INDEX1]](p5) :: (invariant load (<2 x s16>) from %fixed-stack.1, addrspace 5)
   ; CHECK-NEXT:   [[FRAME_INDEX2:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.0
   ; CHECK-NEXT:   [[LOAD2:%[0-9]+]]:_(<2 x s16>) = G_LOAD [[FRAME_INDEX2]](p5) :: (invariant load (<2 x s16>) from %fixed-stack.0, align 8, addrspace 5)
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   G_STORE [[BUILD_VECTOR]](<32 x s32>), [[DEF]](p1) :: (volatile store (<32 x s32>) into `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   G_STORE [[LOAD1]](<2 x s16>), [[DEF]](p1) :: (volatile store (<2 x s16>) into `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   G_STORE [[LOAD2]](<2 x s16>), [[DEF]](p1) :: (volatile store (<2 x s16>) into `ptr addrspace(1) poison`, addrspace 1)
@@ -2243,7 +2243,7 @@ define void @void_func_v32i32_v2i64_v2f64(<32 x i32> %arg0, <2 x i64> %arg1, <2 
   ; CHECK-NEXT:   [[MV2:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[LOAD5]](s32), [[LOAD6]](s32)
   ; CHECK-NEXT:   [[MV3:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[LOAD7]](s32), [[LOAD8]](s32)
   ; CHECK-NEXT:   [[BUILD_VECTOR2:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[MV2]](s64), [[MV3]](s64)
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   G_STORE [[BUILD_VECTOR]](<32 x s32>), [[DEF]](p1) :: (volatile store (<32 x s32>) into `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   G_STORE [[BUILD_VECTOR1]](<2 x s64>), [[DEF]](p1) :: (volatile store (<2 x s64>) into `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   G_STORE [[BUILD_VECTOR2]](<2 x s64>), [[DEF]](p1) :: (volatile store (<2 x s64>) into `ptr addrspace(1) poison`, addrspace 1)
@@ -2311,7 +2311,7 @@ define void @void_func_v32i32_v4i32_v4f32(<32 x i32> %arg0, <4 x i32> %arg1, <4 
   ; CHECK-NEXT:   [[FRAME_INDEX8:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.0
   ; CHECK-NEXT:   [[LOAD8:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX8]](p5) :: (invariant load (s32) from %fixed-stack.0, align 16, addrspace 5)
   ; CHECK-NEXT:   [[BUILD_VECTOR2:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[LOAD5]](s32), [[LOAD6]](s32), [[LOAD7]](s32), [[LOAD8]](s32)
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   G_STORE [[BUILD_VECTOR]](<32 x s32>), [[DEF]](p1) :: (volatile store (<32 x s32>) into `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   G_STORE [[BUILD_VECTOR1]](<4 x s32>), [[DEF]](p1) :: (volatile store (<4 x s32>) into `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   G_STORE [[BUILD_VECTOR2]](<4 x s32>), [[DEF]](p1) :: (volatile store (<4 x s32>) into `ptr addrspace(1) poison`, addrspace 1)
@@ -2395,7 +2395,7 @@ define void @void_func_v32i32_v8i32_v8f32(<32 x i32> %arg0, <8 x i32> %arg1, <8 
   ; CHECK-NEXT:   [[FRAME_INDEX16:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.0
   ; CHECK-NEXT:   [[LOAD16:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX16]](p5) :: (invariant load (s32) from %fixed-stack.0, align 16, addrspace 5)
   ; CHECK-NEXT:   [[BUILD_VECTOR2:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[LOAD9]](s32), [[LOAD10]](s32), [[LOAD11]](s32), [[LOAD12]](s32), [[LOAD13]](s32), [[LOAD14]](s32), [[LOAD15]](s32), [[LOAD16]](s32)
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   G_STORE [[BUILD_VECTOR]](<32 x s32>), [[DEF]](p1) :: (volatile store (<32 x s32>) into `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   G_STORE [[BUILD_VECTOR1]](<8 x s32>), [[DEF]](p1) :: (volatile store (<8 x s32>) into `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   G_STORE [[BUILD_VECTOR2]](<8 x s32>), [[DEF]](p1) :: (volatile store (<8 x s32>) into `ptr addrspace(1) poison`, addrspace 1)
@@ -2511,7 +2511,7 @@ define void @void_func_v32i32_v16i32_v16f32(<32 x i32> %arg0, <16 x i32> %arg1, 
   ; CHECK-NEXT:   [[FRAME_INDEX32:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.0
   ; CHECK-NEXT:   [[LOAD32:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX32]](p5) :: (invariant load (s32) from %fixed-stack.0, align 16, addrspace 5)
   ; CHECK-NEXT:   [[BUILD_VECTOR2:%[0-9]+]]:_(<16 x s32>) = G_BUILD_VECTOR [[LOAD17]](s32), [[LOAD18]](s32), [[LOAD19]](s32), [[LOAD20]](s32), [[LOAD21]](s32), [[LOAD22]](s32), [[LOAD23]](s32), [[LOAD24]](s32), [[LOAD25]](s32), [[LOAD26]](s32), [[LOAD27]](s32), [[LOAD28]](s32), [[LOAD29]](s32), [[LOAD30]](s32), [[LOAD31]](s32), [[LOAD32]](s32)
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   G_STORE [[BUILD_VECTOR]](<32 x s32>), [[DEF]](p1) :: (volatile store (<32 x s32>) into `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   G_STORE [[BUILD_VECTOR1]](<16 x s32>), [[DEF]](p1) :: (volatile store (<16 x s32>) into `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   G_STORE [[BUILD_VECTOR2]](<16 x s32>), [[DEF]](p1) :: (volatile store (<16 x s32>) into `ptr addrspace(1) poison`, addrspace 1)
@@ -2536,7 +2536,7 @@ define void @void_func_v3f32_wasted_reg(<3 x float> %arg0, i32 %arg1) #0 {
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
   ; CHECK-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 2
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p3) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p3) = G_POISON
   ; CHECK-NEXT:   [[EVEC:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[BUILD_VECTOR]](<3 x s32>), [[C]](s32)
   ; CHECK-NEXT:   [[EVEC1:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[BUILD_VECTOR]](<3 x s32>), [[C1]](s32)
   ; CHECK-NEXT:   [[EVEC2:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[BUILD_VECTOR]](<3 x s32>), [[C2]](s32)
@@ -2568,7 +2568,7 @@ define void @void_func_v3i32_wasted_reg(<3 x i32> %arg0, i32 %arg1) #0 {
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
   ; CHECK-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 2
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p3) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p3) = G_POISON
   ; CHECK-NEXT:   [[EVEC:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[BUILD_VECTOR]](<3 x s32>), [[C]](s32)
   ; CHECK-NEXT:   [[EVEC1:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[BUILD_VECTOR]](<3 x s32>), [[C1]](s32)
   ; CHECK-NEXT:   [[EVEC2:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[BUILD_VECTOR]](<3 x s32>), [[C2]](s32)
@@ -2627,7 +2627,7 @@ define void @void_func_v16i8(<16 x i8> %arg0) #0 {
   ; CHECK-NEXT:   [[TRUNC15:%[0-9]+]]:_(s16) = G_TRUNC [[COPY15]](s32)
   ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<16 x s16>) = G_BUILD_VECTOR [[TRUNC]](s16), [[TRUNC1]](s16), [[TRUNC2]](s16), [[TRUNC3]](s16), [[TRUNC4]](s16), [[TRUNC5]](s16), [[TRUNC6]](s16), [[TRUNC7]](s16), [[TRUNC8]](s16), [[TRUNC9]](s16), [[TRUNC10]](s16), [[TRUNC11]](s16), [[TRUNC12]](s16), [[TRUNC13]](s16), [[TRUNC14]](s16), [[TRUNC15]](s16)
   ; CHECK-NEXT:   [[TRUNC16:%[0-9]+]]:_(<16 x s8>) = G_TRUNC [[BUILD_VECTOR]](<16 x s16>)
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   G_STORE [[TRUNC16]](<16 x s8>), [[DEF]](p1) :: (volatile store (<16 x s8>) into `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   store volatile <16 x i8> %arg0, ptr addrspace(1) poison
@@ -2708,7 +2708,7 @@ define void @void_func_v32i32_v16i8(<32 x i32> %arg0, <16 x i8> %arg1) #0 {
   ; CHECK-NEXT:   [[LOAD16:%[0-9]+]]:_(s16) = G_LOAD [[FRAME_INDEX16]](p5) :: (invariant load (s16) from %fixed-stack.0, align 16, addrspace 5)
   ; CHECK-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<16 x s16>) = G_BUILD_VECTOR [[LOAD1]](s16), [[LOAD2]](s16), [[LOAD3]](s16), [[LOAD4]](s16), [[LOAD5]](s16), [[LOAD6]](s16), [[LOAD7]](s16), [[LOAD8]](s16), [[LOAD9]](s16), [[LOAD10]](s16), [[LOAD11]](s16), [[LOAD12]](s16), [[LOAD13]](s16), [[LOAD14]](s16), [[LOAD15]](s16), [[LOAD16]](s16)
   ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(<16 x s8>) = G_TRUNC [[BUILD_VECTOR1]](<16 x s16>)
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   G_STORE [[BUILD_VECTOR]](<32 x s32>), [[DEF]](p1) :: (volatile store (<32 x s32>) into `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   G_STORE [[TRUNC]](<16 x s8>), [[DEF]](p1) :: (volatile store (<16 x s8>) into `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
@@ -2767,7 +2767,7 @@ define void @vector_ptr_in_struct_arg({ <2 x ptr addrspace(1)>, <2 x ptr addrspa
   ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:_(p3) = COPY $vgpr4
   ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:_(p3) = COPY $vgpr5
   ; CHECK-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x p3>) = G_BUILD_VECTOR [[COPY4]](p3), [[COPY5]](p3)
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   G_STORE [[BUILD_VECTOR]](<2 x p1>), [[DEF]](p1) :: (store (<2 x p1>) into `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
   ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p1) = G_PTR_ADD [[DEF]], [[C]](s64)
@@ -2784,7 +2784,7 @@ define void @void_func_i1_inreg(i1 inreg %arg0) #0 {
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr16
   ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[COPY]](s32)
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   G_STORE [[TRUNC]](s1), [[DEF]](p1) :: (store (s1) into `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   store i1 %arg0, ptr addrspace(1) poison
@@ -2799,7 +2799,7 @@ define void @void_func_i8_inreg(i8 inreg %arg0) #0 {
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr16
   ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
   ; CHECK-NEXT:   [[TRUNC1:%[0-9]+]]:_(s8) = G_TRUNC [[TRUNC]](s16)
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   G_STORE [[TRUNC1]](s8), [[DEF]](p1) :: (store (s8) into `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   store i8 %arg0, ptr addrspace(1) poison
@@ -2813,7 +2813,7 @@ define void @void_func_i16_inreg(i16 inreg %arg0) #0 {
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr16
   ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   G_STORE [[TRUNC]](s16), [[DEF]](p1) :: (store (s16) into `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   store i16 %arg0, ptr addrspace(1) poison
@@ -2826,7 +2826,7 @@ define void @void_func_i32_inreg(i32 inreg %arg0) #0 {
   ; CHECK-NEXT:   liveins: $sgpr16
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr16
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   G_STORE [[COPY]](s32), [[DEF]](p1) :: (store (s32) into `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   store i32 %arg0, ptr addrspace(1) poison
@@ -2842,7 +2842,7 @@ define void @void_func_i48_inreg(i48 inreg %arg0) #0 {
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr17
   ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
   ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s48) = G_TRUNC [[MV]](s64)
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   G_STORE [[TRUNC]](s48), [[DEF]](p1) :: (store (s48) into `ptr addrspace(1) poison`, align 8, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   store i48 %arg0, ptr addrspace(1) poison
@@ -2857,7 +2857,7 @@ define void @void_func_i64_inreg(i64 inreg %arg0) #0 {
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr16
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr17
   ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   G_STORE [[MV]](s64), [[DEF]](p1) :: (store (s64) into `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   store i64 %arg0, ptr addrspace(1) poison
@@ -2873,7 +2873,7 @@ define void @void_func_i96_inreg(i96 inreg %arg0) #0 {
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr17
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr18
   ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(s96) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32)
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   G_STORE [[MV]](s96), [[DEF]](p1) :: (store (s96) into `ptr addrspace(1) poison`, align 8, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   store i96 %arg0, ptr addrspace(1) poison
@@ -2890,7 +2890,7 @@ define void @void_func_i128_inreg(i128 inreg %arg0) #0 {
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr18
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr19
   ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32)
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   G_STORE [[MV]](s128), [[DEF]](p1) :: (store (s128) into `ptr addrspace(1) poison`, align 8, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   store i128 %arg0, ptr addrspace(1) poison
@@ -2904,7 +2904,7 @@ define void @void_func_f16_inreg(half inreg %arg0) #0 {
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr16
   ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   G_STORE [[TRUNC]](s16), [[DEF]](p1) :: (store (s16) into `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   store half %arg0, ptr addrspace(1) poison
@@ -2918,7 +2918,7 @@ define void @void_func_bf16_inreg(bfloat inreg %arg0) #0 {
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr16
   ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   G_STORE [[TRUNC]](s16), [[DEF]](p1) :: (store (s16) into `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   store bfloat %arg0, ptr addrspace(1) poison
@@ -2931,7 +2931,7 @@ define void @void_func_f32_inreg(float inreg %arg0) #0 {
   ; CHECK-NEXT:   liveins: $sgpr16
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr16
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   G_STORE [[COPY]](s32), [[DEF]](p1) :: (store (s32) into `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   store float %arg0, ptr addrspace(1) poison
@@ -2946,7 +2946,7 @@ define void @void_func_f64_inreg(double inreg %arg0) #0 {
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr16
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr17
   ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   G_STORE [[MV]](s64), [[DEF]](p1) :: (store (s64) into `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   store double %arg0, ptr addrspace(1) poison
@@ -2964,7 +2964,7 @@ define void @void_func_v2i1_inreg(<2 x i1> inreg %arg0) #0 {
   ; CHECK-NEXT:   [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[COPY1]](s32)
   ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC]](s16), [[TRUNC1]](s16)
   ; CHECK-NEXT:   [[TRUNC2:%[0-9]+]]:_(<2 x s1>) = G_TRUNC [[BUILD_VECTOR]](<2 x s16>)
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   G_STORE [[TRUNC2]](<2 x s1>), [[DEF]](p1) :: (store (<2 x s1>) into `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   store <2 x i1> %arg0, ptr addrspace(1) poison
@@ -2983,7 +2983,7 @@ define void @void_func_v2i8_inreg(<2 x i8> inreg %arg0) #0 {
   ; CHECK-NEXT:   [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[COPY1]](s32)
   ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC]](s16), [[TRUNC1]](s16)
   ; CHECK-NEXT:   [[TRUNC2:%[0-9]+]]:_(<2 x s8>) = G_TRUNC [[BUILD_VECTOR]](<2 x s16>)
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   G_STORE [[TRUNC2]](<2 x s8>), [[DEF]](p1) :: (store (<2 x s8>) into `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   store <2 x i8> %arg0, ptr addrspace(1) poison
@@ -2996,7 +2996,7 @@ define void @void_func_v2i16_inreg(<2 x i16> inreg %arg0) #0 {
   ; CHECK-NEXT:   liveins: $sgpr16
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $sgpr16
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   G_STORE [[COPY]](<2 x s16>), [[DEF]](p1) :: (store (<2 x s16>) into `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   store <2 x i16> %arg0, ptr addrspace(1) poison
@@ -3009,7 +3009,7 @@ define void @void_func_v2f16_inreg(<2 x half> inreg %arg0) #0 {
   ; CHECK-NEXT:   liveins: $sgpr16
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $sgpr16
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   G_STORE [[COPY]](<2 x s16>), [[DEF]](p1) :: (store (<2 x s16>) into `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   store <2 x half> %arg0, ptr addrspace(1) poison
@@ -3023,7 +3023,7 @@ define void @void_func_v2bf16_inreg(<2 x bfloat> inreg %arg0) #0 {
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr16
   ; CHECK-NEXT:   [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[COPY]](s32)
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   G_STORE [[BITCAST]](<2 x s16>), [[DEF]](p1) :: (store (<2 x s16>) into `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   store <2 x bfloat> %arg0, ptr addrspace(1) poison
@@ -3038,7 +3038,7 @@ define void @void_func_v2i32_inreg(<2 x i32> inreg %arg0) #0 {
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr16
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr17
   ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32)
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   G_STORE [[BUILD_VECTOR]](<2 x s32>), [[DEF]](p1) :: (store (<2 x s32>) into `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   store <2 x i32> %arg0, ptr addrspace(1) poison
@@ -3053,7 +3053,7 @@ define void @void_func_v2f32_inreg(<2 x float> inreg %arg0) #0 {
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr16
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr17
   ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32)
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   G_STORE [[BUILD_VECTOR]](<2 x s32>), [[DEF]](p1) :: (store (<2 x s32>) into `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   store <2 x float> %arg0, ptr addrspace(1) poison
@@ -3072,7 +3072,7 @@ define void @void_func_v2i64_inreg(<2 x i64> inreg %arg0) #0 {
   ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
   ; CHECK-NEXT:   [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY2]](s32), [[COPY3]](s32)
   ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[MV]](s64), [[MV1]](s64)
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   G_STORE [[BUILD_VECTOR]](<2 x s64>), [[DEF]](p1) :: (store (<2 x s64>) into `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   store <2 x i64> %arg0, ptr addrspace(1) poison
@@ -3091,7 +3091,7 @@ define void @void_func_v2f64_inreg(<2 x double> inreg %arg0) #0 {
   ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
   ; CHECK-NEXT:   [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY2]](s32), [[COPY3]](s32)
   ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[MV]](s64), [[MV1]](s64)
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   G_STORE [[BUILD_VECTOR]](<2 x s64>), [[DEF]](p1) :: (store (<2 x s64>) into `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   store <2 x double> %arg0, ptr addrspace(1) poison
@@ -3117,7 +3117,7 @@ define void @void_func_p0_inreg(ptr inreg %arg0) #0 {
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr16
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr17
   ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(p0) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   G_STORE [[MV]](p0), [[DEF]](p1) :: (store (p0) into `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   store ptr %arg0, ptr addrspace(1) poison
@@ -3132,7 +3132,7 @@ define void @void_func_p1_inreg(ptr addrspace(1) inreg %arg0) #0 {
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr16
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr17
   ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(p1) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   G_STORE [[MV]](p1), [[DEF]](p1) :: (store (p1) into `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   store ptr addrspace(1) %arg0, ptr addrspace(1) poison
@@ -3145,7 +3145,7 @@ define void @void_func_p3_inreg(ptr addrspace(3) inreg %arg0) #0 {
   ; CHECK-NEXT:   liveins: $sgpr16
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p3) = COPY $sgpr16
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   G_STORE [[COPY]](p3), [[DEF]](p1) :: (store (p3) into `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   store ptr addrspace(3) %arg0, ptr addrspace(1) poison
@@ -3158,7 +3158,7 @@ define void @void_func_p5_inreg(ptr addrspace(5) inreg %arg0) #0 {
   ; CHECK-NEXT:   liveins: $sgpr16
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p5) = COPY $sgpr16
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   G_STORE [[COPY]](p5), [[DEF]](p1) :: (store (p5) into `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   store ptr addrspace(5) %arg0, ptr addrspace(1) poison
@@ -3173,7 +3173,7 @@ define void @void_func_p999_inreg(ptr addrspace(999) inreg %arg0) #0 {
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr16
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr17
   ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(p999) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   G_STORE [[MV]](p999), [[DEF]](p1) :: (store (p999) into `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   store ptr addrspace(999) %arg0, ptr addrspace(1) poison
@@ -3192,7 +3192,7 @@ define void @void_func_v2p0_inreg(<2 x ptr> inreg %arg0) #0 {
   ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(p0) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
   ; CHECK-NEXT:   [[MV1:%[0-9]+]]:_(p0) = G_MERGE_VALUES [[COPY2]](s32), [[COPY3]](s32)
   ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<2 x p0>) = G_BUILD_VECTOR [[MV]](p0), [[MV1]](p0)
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   G_STORE [[BUILD_VECTOR]](<2 x p0>), [[DEF]](p1) :: (store (<2 x p0>) into `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   store <2 x ptr> %arg0, ptr addrspace(1) poison
@@ -3211,7 +3211,7 @@ define void @void_func_v2p1_inreg(<2 x ptr addrspace(1)> inreg %arg0) #0 {
   ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(p1) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
   ; CHECK-NEXT:   [[MV1:%[0-9]+]]:_(p1) = G_MERGE_VALUES [[COPY2]](s32), [[COPY3]](s32)
   ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<2 x p1>) = G_BUILD_VECTOR [[MV]](p1), [[MV1]](p1)
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   G_STORE [[BUILD_VECTOR]](<2 x p1>), [[DEF]](p1) :: (store (<2 x p1>) into `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   store <2 x ptr addrspace(1)> %arg0, ptr addrspace(1) poison
@@ -3226,7 +3226,7 @@ define void @void_func_v2p3_inreg(<2 x ptr addrspace(3)> inreg %arg0) #0 {
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p3) = COPY $sgpr16
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(p3) = COPY $sgpr17
   ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<2 x p3>) = G_BUILD_VECTOR [[COPY]](p3), [[COPY1]](p3)
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   G_STORE [[BUILD_VECTOR]](<2 x p3>), [[DEF]](p1) :: (store (<2 x p3>) into `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   store <2 x ptr addrspace(3)> %arg0, ptr addrspace(1) poison
