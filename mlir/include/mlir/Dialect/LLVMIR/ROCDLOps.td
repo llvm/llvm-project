@@ -1117,9 +1117,7 @@ def ROCDL_CvtSrFp8F32Op :
 // ROCDL target attribute.
 //===----------------------------------------------------------------------===//
 
-def ROCDL_TargettAttr : ROCDL_Attr<"ROCDLTarget", "target", [
-    DeclareAttrInterfaceMethods<TargetInfoAttrInterface>
-  ]> {
+def ROCDL_TargettAttr : ROCDL_Attr<"ROCDLTarget", "target"> {
   let description = [{
     ROCDL target attribute for controlling compilation of AMDGPU targets. All
     parameters decay into default values if not present.

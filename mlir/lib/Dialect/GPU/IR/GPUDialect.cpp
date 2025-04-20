@@ -1793,6 +1793,32 @@ void GPUModuleOp::setTargets(ArrayRef<TargetAttrInterface> targets) {
   targetsAttr = ArrayAttr::get(getContext(), targetsVector);
 }
 
+DataLayoutSpecInterface GPUModuleOp::getDataLayoutSpec() {
+  return mlir::impl::getDataLayoutSpec(getOperation());
+}
+
+void GPUModuleOp::setDataLayoutSpec(DataLayoutSpecInterface spec) {
+  return mlir::impl::setDataLayoutSpec(getOperation(), spec);
+}
+
+TargetSystemSpecInterface GPUModuleOp::getTargetSystemSpec() {
+  return mlir::impl::getTargetSystemSpec(getOperation());
+}
+
+void GPUModuleOp::setTargetSystemSpec(TargetSystemSpecInterface spec) {
+  return mlir::impl::setTargetSystemSpec(getOperation(), spec);
+}
+
+mlir::TargetAttrInterface GPUModuleOp::getTargetAttr() {
+  if (ArrayAttr targets = getTargetsAttr(); targets && targets.size() == 1)
+    return dyn_cast<mlir::TargetAttrInterface>(targets[0]);
+  return nullptr;
+}
+
+void GPUModuleOp::setTargetAttr(mlir::TargetAttrInterface target) {
+  getProperties().targets = ArrayAttr::get(target.getContext(), {target});
+}
+
 //===----------------------------------------------------------------------===//
 // GPUBinaryOp
 //===----------------------------------------------------------------------===//

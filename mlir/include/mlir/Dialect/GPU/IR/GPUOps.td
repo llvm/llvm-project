@@ -1388,7 +1388,8 @@ def GPU_BarrierOp : GPU_Op<"barrier"> {
 }
 
 def GPU_GPUModuleOp : GPU_Op<"module", [
-      IsolatedFromAbove, DataLayoutOpInterface, HasDefaultDLTIDataLayout,
+      IsolatedFromAbove,
+      DeclareOpInterfaceMethods<DataLayoutOpInterface, ["getTargetAttr", "setTargetAttr"]>,
       NoRegionArguments, SymbolTable, Symbol] # GraphRegionNoTerminator.traits> {
   let summary = "A top level compilation unit containing code to be run on a GPU.";
   let description = [{

@@ -19,6 +19,10 @@ namespace impl {
 LogicalResult verifyHasDefaultDLTIDataLayoutTrait(Operation *op);
 DataLayoutSpecInterface getDataLayoutSpec(Operation *op);
 TargetSystemSpecInterface getTargetSystemSpec(Operation *op);
+TargetAttrInterface getTargetAttr(Operation *op);
+void setDataLayoutSpec(Operation *op, DataLayoutSpecInterface spec);
+void setTargetSystemSpec(Operation *op, TargetSystemSpecInterface spec);
+void setTargetAttr(Operation *op, TargetAttrInterface target);
 } // namespace impl
 
 /// Trait to be used by operations willing to use the implementation of the
@@ -39,10 +43,26 @@ public:
     return impl::getDataLayoutSpec(this->getOperation());
   }
 
+  /// Sets the data layout specification.
+  void setDataLayoutSpec(DataLayoutSpecInterface spec) {
+    impl::setDataLayoutSpec(this->getOperation(), spec);
+  }
   /// Returns the target system description specification as provided by DLTI
   /// dialect
   TargetSystemSpecInterface getTargetSystemSpec() {
     return impl::getTargetSystemSpec(this->getOperation());
+  }
+  /// Sets the target system description specification.
+  void setTargetSystemSpec(TargetSystemSpecInterface spec) {
+    impl::setTargetSystemSpec(this->getOperation(), spec);
+  }
+  /// Returns the target information as provided by DLTI dialect.
+  TargetAttrInterface getTargetAttr() {
+    return impl::getTargetAttr(this->getOperation());
+  }
+  /// Sets the target information.
+  void setTargetAttr(TargetAttrInterface target) {
+    impl::setTargetAttr(this->getOperation(), target);
   }
 };
 } // namespace mlir

@@ -354,27 +354,28 @@ def TargetSystemSpecInterface : AttrInterface<"TargetSystemSpecInterface", [DLTI
   }];
 }
 
-def TargetInfoAttrInterface : AttrInterface<"TargetInfoAttrInterface"> {
+def TargetAttrInterface : AttrInterface<"TargetAttrInterface"> {
   let cppNamespace = "::mlir";
 
   let description = [{
     Attribute interface describing target information.
 
-    Target information attributes provide essential information on the
+    Target information attributes provide essential information on a
     compilation target. This information includes the target triple identifier,
-    the target chip identifier, and a string representation of the target features.
+    the target chip identifier, a string representation of the target features,
+    and the target spec data layout.
   }];
 
   let methods = [
     InterfaceMethod<
       /*description=*/"Returns the target triple identifier.",
-      /*retTy=*/"::mlir::StringRef",
+      /*retTy=*/"::llvm::StringRef",
       /*methodName=*/"getTargetTriple",
       /*args=*/(ins)
     >,
     InterfaceMethod<
       /*description=*/"Returns the target chip identifier.",
-      /*retTy=*/"::mlir::StringRef",
+      /*retTy=*/"::llvm::StringRef",
       /*methodName=*/"getTargetChip",
       /*args=*/(ins)
     >,
@@ -383,6 +384,12 @@ def TargetInfoAttrInterface : AttrInterface<"TargetInfoAttrInterface"> {
       /*retTy=*/"std::string",
       /*methodName=*/"getTargetFeatures",
       /*args=*/(ins)
+    >,
+    InterfaceMethod<
+      /*description=*/"Sets the target spec. Returns failure if there was a problem.",
+      /*retTy=*/"::llvm::LogicalResult",
+      /*methodName=*/"setTargetSpec",
+      /*args=*/(ins "::mlir::TargetSpec&":$spec)
     >
   ];
 }
@@ -421,11 +428,37 @@ def DataLayoutOpInterface : OpInterface<"DataLayoutOpInterface"> {
       /*args=*/(ins)
     >,
     InterfaceMethod<
+      /*description=*/"Sets the data layout specification for this op.",
+      /*retTy=*/"void",
+      /*methodName=*/"setDataLayoutSpec",
+      /*args=*/(ins "::mlir::DataLayoutSpecInterface":$spec)
+    >,
+    InterfaceMethod<
       /*description=*/"Returns the target system desc specification for this "
                       "op, or null if it does not exist.",
       /*retTy=*/"::mlir::TargetSystemSpecInterface",
       /*methodName=*/"getTargetSystemSpec",
       /*args=*/(ins)
+    >,
+    InterfaceMethod<
+      /*description=*/"Sets the target system desc specification for this "
+                      "op.",
+      /*retTy=*/"void",
+      /*methodName=*/"setTargetSystemSpec",
+      /*args=*/(ins "::mlir::TargetSystemSpecInterface":$spec)
+    >,
+    InterfaceMethod<
+      /*description=*/"Returns the target attr for this op, or null if it "
+                      "does not exist.",
+      /*retTy=*/"::mlir::TargetAttrInterface",
+      /*methodName=*/"getTargetAttr",
+      /*args=*/(ins)
+    >,
+    InterfaceMethod<
+      /*description=*/"Sets the target attr for this",
+      /*retTy=*/"void",
+      /*methodName=*/"setTargetAttr",
+      /*args=*/(ins "::mlir::TargetAttrInterface":$target)
     >,
     StaticInterfaceMethod<
       /*description=*/"Returns the size of the given type computed using the "
