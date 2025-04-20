@@ -120,7 +120,15 @@ private:
   //   LastStmt - refers to the last statement in the method body; referencing
   //              LastStmt will remove the statement from the method body since
   //              it will be linked from the new expression being constructed.
-  enum class PlaceHolder { _0, _1, _2, _3, Handle = 128, LastStmt };
+  enum class PlaceHolder {
+    _0,
+    _1,
+    _2,
+    _3,
+    Handle = 128,
+    CounterHandle,
+    LastStmt
+  };
 
   Expr *convertPlaceholder(PlaceHolder PH);
   Expr *convertPlaceholder(Expr *E) { return E; }
@@ -155,6 +163,7 @@ public:
   template <typename T> BuiltinTypeMethodBuilder &dereference(T Ptr);
   BuiltinTypeDeclBuilder &finalize();
   Expr *getResourceHandleExpr();
+  Expr *getResourceCounterHandleExpr();
 
 private:
   void createDecl();
@@ -322,6 +331,8 @@ TemplateParameterListBuilder::finalizeTemplateArgs(ConceptDecl *CD) {
 Expr *BuiltinTypeMethodBuilder::convertPlaceholder(PlaceHolder PH) {
   if (PH == PlaceHolder::Handle)
     return getResourceHandleExpr();
+  if (PH == PlaceHolder::CounterHandle)
+    return getResourceCounterHandleExpr();
 
   if (PH == PlaceHolder::LastStmt) {
     assert(!StmtsList.empty() && "no statements in the list");
@@ -427,6 +438,18 @@ Expr *BuiltinTypeMethodBuilder::getResourceHandleExpr() {
   CXXThisExpr *This = CXXThisExpr::Create(
       AST, SourceLocation(), Method->getFunctionObjectParameterType(), true);
   FieldDecl *HandleField = DeclBuilder.getResourceHandleField();
+  return MemberExpr::CreateImplicit(AST, This, false, HandleField,
+                                    HandleField->getType(), VK_LValue,
+                                    OK_Ordinary);
+}
+
+Expr *BuiltinTypeMethodBuilder::getResourceCounterHandleExpr() {
+  ensureCompleteDecl();
+
+  ASTContext &AST = DeclBuilder.SemaRef.getASTContext();
+  CXXThisExpr *This = CXXThisExpr::Create(
+      AST, SourceLocation(), Method->getFunctionObjectParameterType(), true);
+  FieldDecl *HandleField = DeclBuilder.getResourceCounterHandleField();
   return MemberExpr::CreateImplicit(AST, This, false, HandleField,
                                     HandleField->getType(), VK_LValue,
                                     OK_Ordinary);
@@ -626,6 +649,30 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addHandleMember(
   return *this;
 }
 
+BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addCounterHandleMember(
+    ResourceClass RC, bool IsROV, bool RawBuffer, AccessSpecifier Access) {
+  assert(!Record->isCompleteDefinition() && "record is already complete");
+
+  ASTContext &Ctx = SemaRef.getASTContext();
+  TypeSourceInfo *ElementTypeInfo =
+      Ctx.getTrivialTypeSourceInfo(getHandleElementType(), SourceLocation());
+
+  // add handle member with resource type attributes
+  QualType AttributedResTy = QualType();
+  SmallVector<const Attr *> Attrs = {
+      HLSLResourceClassAttr::CreateImplicit(Ctx, RC),
+      IsROV ? HLSLROVAttr::CreateImplicit(Ctx) : nullptr,
+      RawBuffer ? HLSLRawBufferAttr::CreateImplicit(Ctx) : nullptr,
+      ElementTypeInfo
+          ? HLSLContainedTypeAttr::CreateImplicit(Ctx, ElementTypeInfo)
+          : nullptr,
+      HLSLCounterAttr::CreateImplicit(Ctx)};
+  if (CreateHLSLAttributedResourceType(SemaRef, Ctx.HLSLResourceTy, Attrs,
+                                       AttributedResTy))
+    addMemberVariable("__counter_handle", AttributedResTy, {}, Access);
+  return *this;
+}
+
 // Adds default constructor to the resource class:
 // Resource::Resource()
 BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addDefaultHandleConstructor() {
@@ -665,6 +712,14 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addLoadMethods() {
 
 FieldDecl *BuiltinTypeDeclBuilder::getResourceHandleField() {
   auto I = Fields.find("__handle");
+  assert(I != Fields.end() &&
+         I->second->getType()->isHLSLAttributedResourceType() &&
+         "record does not have resource handle field");
+  return I->second;
+}
+
+FieldDecl *BuiltinTypeDeclBuilder::getResourceCounterHandleField() {
+  auto I = Fields.find("__counter_handle");
   assert(I != Fields.end() &&
          I->second->getType()->isHLSLAttributedResourceType() &&
          "record does not have resource handle field");
@@ -730,7 +785,7 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addIncrementCounterMethod() {
   return BuiltinTypeMethodBuilder(*this, "IncrementCounter",
                                   SemaRef.getASTContext().UnsignedIntTy)
       .callBuiltin("__builtin_hlsl_buffer_update_counter", QualType(),
-                   PH::Handle, getConstantIntExpr(1))
+                   PH::CounterHandle, getConstantIntExpr(1))
       .finalize();
 }
 
@@ -739,7 +794,7 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addDecrementCounterMethod() {
   return BuiltinTypeMethodBuilder(*this, "DecrementCounter",
                                   SemaRef.getASTContext().UnsignedIntTy)
       .callBuiltin("__builtin_hlsl_buffer_update_counter", QualType(),
-                   PH::Handle, getConstantIntExpr(-1))
+                   PH::CounterHandle, getConstantIntExpr(-1))
       .finalize();
 }
 
@@ -774,7 +829,7 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addAppendMethod() {
   return BuiltinTypeMethodBuilder(*this, "Append", AST.VoidTy)
       .addParam("value", ElemTy)
       .callBuiltin("__builtin_hlsl_buffer_update_counter", AST.UnsignedIntTy,
-                   PH::Handle, getConstantIntExpr(1))
+                   PH::CounterHandle, getConstantIntExpr(1))
       .callBuiltin("__builtin_hlsl_resource_getpointer",
                    AST.getPointerType(ElemTy), PH::Handle, PH::LastStmt)
       .dereference(PH::LastStmt)
@@ -788,7 +843,7 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addConsumeMethod() {
   QualType ElemTy = getHandleElementType();
   return BuiltinTypeMethodBuilder(*this, "Consume", ElemTy)
       .callBuiltin("__builtin_hlsl_buffer_update_counter", AST.UnsignedIntTy,
-                   PH::Handle, getConstantIntExpr(-1))
+                   PH::CounterHandle, getConstantIntExpr(-1))
       .callBuiltin("__builtin_hlsl_resource_getpointer",
                    AST.getPointerType(ElemTy), PH::Handle, PH::LastStmt)
       .dereference(PH::LastStmt)

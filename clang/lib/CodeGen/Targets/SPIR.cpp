@@ -403,11 +403,18 @@ llvm::Type *CommonSPIRTargetCodeGenInfo::getHLSLType(
       return getSPIRVImageTypeFromHLSLResource(ResAttrs, ElemType, Ctx);
     }
 
-    llvm::ArrayType *RuntimeArrayType = llvm::ArrayType::get(ElemType, 0);
-    uint32_t StorageClass = /* StorageBuffer storage class */ 12;
+    llvm::Type *BufferType = nullptr;
+    uint32_t StorageClass = 0;
+    if (ResAttrs.Counter) {
+      BufferType = llvm::Type::getInt32Ty(CGM.getLLVMContext());
+      StorageClass = /* Uniform */ 2;
+    } else {
+      BufferType = llvm::ArrayType::get(ElemType, 0);
+      StorageClass = /* StorageBuffer */ 12;
+    }
+
     bool IsWritable = ResAttrs.ResourceClass == llvm::dxil::ResourceClass::UAV;
-    return llvm::TargetExtType::get(Ctx, "spirv.VulkanBuffer",
-                                    {RuntimeArrayType},
+    return llvm::TargetExtType::get(Ctx, "spirv.VulkanBuffer", {BufferType},
                                     {StorageClass, IsWritable});
   }
   case llvm::dxil::ResourceClass::CBuffer:

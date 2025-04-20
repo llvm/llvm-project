@@ -88,6 +88,11 @@ RESOURCE<float> Buffer;
 // CHECK-UAV-SAME{LITERAL}: [[hlsl::resource_class(UAV)]]
 // CHECK-SAME{LITERAL}: [[hlsl::raw_buffer]]
 // CHECK-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
+// CHECK-UAV-NEXT: FieldDecl {{.*}} implicit __counter_handle '__hlsl_resource_t
+// CHECK-UAV-SAME{LITERAL}: [[hlsl::resource_class(UAV)]]
+// CHECK-UAV-SAME{LITERAL}: [[hlsl::raw_buffer]]
+// CHECK-UAV-SAME{LITERAL}: [[hlsl::counter]]
+// CHECK-UAV-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
 
 // CHECK-SUBSCRIPT: CXXMethodDecl {{.*}} operator[] 'const element_type &(unsigned int) const'
 // CHECK-SUBSCRIPT-NEXT: ParmVarDecl {{.*}} Index 'unsigned int'
@@ -147,7 +152,8 @@ RESOURCE<float> Buffer;
 // CHECK-COUNTER-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
 // CHECK-COUNTER-SAME{LITERAL}: [[hlsl::resource_class(UAV)]]
 // CHECK-COUNTER-SAME{LITERAL}: [[hlsl::raw_buffer]]
-// CHECK-COUNTER-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]' lvalue .__handle
+// CHECK-COUNTER-SAME{LITERAL}: [[hlsl::counter]]
+// CHECK-COUNTER-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]' lvalue .__counter_handle
 // CHECK-COUNTER-NEXT: CXXThisExpr {{.*}} 'RWStructuredBuffer<element_type>' lvalue implicit this
 // CHECK-COUNTER-NEXT: IntegerLiteral {{.*}} 'int' 1
 // CHECK-COUNTER-NEXT: AlwaysInlineAttr {{.*}} Implicit always_inline
@@ -160,7 +166,8 @@ RESOURCE<float> Buffer;
 // CHECK-COUNTER-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
 // CHECK-COUNTER-SAME{LITERAL}: [[hlsl::resource_class(UAV)]]
 // CHECK-COUNTER-SAME{LITERAL}: [[hlsl::raw_buffer]]
-// CHECK-COUNTER-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]' lvalue .__handle
+// CHECK-COUNTER-SAME{LITERAL}: [[hlsl::counter]]
+// CHECK-COUNTER-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]' lvalue .__counter_handle
 // CHECK-COUNTER-NEXT: CXXThisExpr {{.*}} 'RWStructuredBuffer<element_type>' lvalue implicit this
 // CHECK-COUNTER-NEXT: IntegerLiteral {{.*}} 'int' -1
 // CHECK-COUNTER-NEXT: AlwaysInlineAttr {{.*}} Implicit always_inline
@@ -182,7 +189,8 @@ RESOURCE<float> Buffer;
 // CHECK-APPEND-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
 // CHECK-APPEND-SAME{LITERAL}: [[hlsl::resource_class(UAV)]]
 // CHECK-APPEND-SAME{LITERAL}: [[hlsl::raw_buffer]]
-// CHECK-APPEND-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]' lvalue .__handle
+// CHECK-APPEND-SAME{LITERAL}: [[hlsl::counter]]
+// CHECK-APPEND-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]' lvalue .__counter_handle
 // CHECK-APPEND-NEXT: CXXThisExpr {{.*}} '[[RESOURCE]]<element_type>' lvalue implicit this
 // CHECK-APPEND-NEXT: IntegerLiteral {{.*}} 'int' 1
 // CHECK-APPEND-NEXT: DeclRefExpr {{.*}} 'element_type' ParmVar {{.*}} 'value' 'element_type'
@@ -203,7 +211,8 @@ RESOURCE<float> Buffer;
 // CHECK-CONSUME-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
 // CHECK-CONSUME-SAME{LITERAL}: [[hlsl::resource_class(UAV)]]
 // CHECK-CONSUME-SAME{LITERAL}: [[hlsl::raw_buffer]]
-// CHECK-CONSUME-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]' lvalue .__handle
+// CHECK-CONSUME-SAME{LITERAL}: [[hlsl::counter]]
+// CHECK-CONSUME-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]' lvalue .__counter_handle
 // CHECK-CONSUME-NEXT: CXXThisExpr {{.*}} '[[RESOURCE]]<element_type>' lvalue implicit this
 // CHECK-CONSUME-NEXT: IntegerLiteral {{.*}} 'int' -1
 
