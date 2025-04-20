@@ -950,7 +950,7 @@ Instruction *InstCombinerImpl::foldFMulReassoc(BinaryOperator &I) {
   // tan(X) * cos(X) -> sin(X)
   if (match(&I,
             m_c_FMul(m_OneUse(m_Intrinsic<Intrinsic::tan>(m_Value(X))),
-                     m_OneUse(m_Intrinsic<Intrinsic::cos>(m_Specific(X)))))) {
+                     m_OneUse(m_Intrinsic<Intrinsic::cos>(m_Deferred(X)))))) {
     Value *Sin = Builder.CreateUnaryIntrinsic(Intrinsic::sin, X, &I);
     return replaceInstUsesWith(I, Sin);
   }
