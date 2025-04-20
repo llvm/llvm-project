@@ -140,14 +140,6 @@ void AMDGPUTargetVerify::run(Function &F) {
           Check(IsValidInt(I.getOperand(i)->getType()),
                 "Int type is invalid.", I.getOperand(i));
 
-      // Ensure no store to const memory
-      if (auto *SI = dyn_cast<StoreInst>(&I))
-      {
-        unsigned AS = SI->getPointerAddressSpace();
-        Check(AS != 4, "Write to const memory", SI);
-      }
-
-      // Ensure no kernel to kernel calls.
       if (auto *CI = dyn_cast<CallInst>(&I))
       {
         CallingConv::ID CalleeCC = CI->getCallingConv();

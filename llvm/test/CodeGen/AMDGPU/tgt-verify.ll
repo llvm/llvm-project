@@ -33,8 +33,6 @@ define amdgpu_cs i32 @shader() {
 define amdgpu_kernel void @store_const(ptr addrspace(4) %out, i32 %a, i32 %b) {
 ; CHECK: Undefined behavior: Write to memory in const addrspace
 ; CHECK-NEXT:   store i32 %r, ptr addrspace(4) %out, align 4
-; CHECK-NEXT: Write to const memory
-; CHECK-NEXT:   store i32 %r, ptr addrspace(4) %out, align 4
   %r = add i32 %a, %b
   store i32 %r, ptr addrspace(4) %out
   ret void
