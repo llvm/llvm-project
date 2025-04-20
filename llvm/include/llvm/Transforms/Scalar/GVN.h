@@ -139,12 +139,7 @@ public:
 
   /// This removes the specified instruction from
   /// our various maps and marks it for deletion.
-  void doInstructionDeletion(Instruction *I) {
-    salvageKnowledge(I, AC);
-    salvageDebugInfo(*I);
-    VN.erase(I);
-    removeInstruction(I);
-  }
+  void doInstructionDeletion(Instruction *I);
 
   DominatorTree &getDominatorTree() const { return *DT; }
   AAResults *getAliasAnalysis() const { return VN.getAliasAnalysis(); }

@@ -727,9 +727,8 @@ void GVNPass::ValueTable::erase(Value *V) {
 /// verifyRemoved - Verify that the value is removed from all internal data
 /// structures.
 void GVNPass::ValueTable::verifyRemoved(const Value *V) const {
-  if (V != nullptr)
-    assert(!ValueNumbering.contains(V) &&
-           "Inst still occurs in value numbering map!");
+  assert(!ValueNumbering.contains(V) &&
+         "Inst still occurs in value numbering map!");
 }
 
 //===----------------------------------------------------------------------===//
@@ -874,6 +873,12 @@ void GVNPass::printPipeline(
   if (Options.AllowMemorySSA != std::nullopt)
     OS << (*Options.AllowMemorySSA ? "" : "no-") << "memoryssa";
   OS << '>';
+}
+
+void GVNPass::doInstructionDeletion(Instruction *I) {
+  salvageKnowledge(I, AC);
+  salvageDebugInfo(*I);
+  removeInstruction(I);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -1555,7 +1560,6 @@ void GVNPass::eliminatePartiallyRedundantLoad(
         replaceValuesPerBlockEntry(ValuesPerBlock, OldLoad, NewLoad);
         if (uint32_t ValNo = VN.lookup(OldLoad, false))
           LeaderTable.erase(ValNo, OldLoad, OldLoad->getParent());
-        VN.erase(OldLoad);
         removeInstruction(OldLoad);
       }
     }
@@ -1994,9 +1998,9 @@ bool GVNPass::processNonLocalLoad(LoadInst *Load) {
         I->setDebugLoc(Load->getDebugLoc());
     if (V->getType()->isPtrOrPtrVectorTy())
       MD->invalidateCachedPointerInfo(V);
-    doInstructionDeletion(Load);
     ++NumGVNLoad;
     reportLoadElim(Load, V, ORE);
+    doInstructionDeletion(Load);
     return true;
   }
 
@@ -2808,7 +2812,6 @@ bool GVNPass::processBlock(BasicBlock *BB) {
   SmallPtrSet<PHINode *, 8> PHINodesToRemove;
   ChangedFunction |= EliminateDuplicatePHINodes(BB, PHINodesToRemove);
   for (PHINode *PN : PHINodesToRemove) {
-    VN.erase(PN);
     removeInstruction(PN);
   }
   for (Instruction &Inst : make_early_inc_range(*BB)) {
@@ -3021,7 +3024,6 @@ bool GVNPass::performScalarPRE(Instruction *CurInst) {
   CurInst->replaceAllUsesWith(Phi);
   if (MD && Phi->getType()->isPtrOrPtrVectorTy())
     MD->invalidateCachedPointerInfo(Phi);
-  VN.erase(CurInst);
   LeaderTable.erase(ValNo, CurInst, CurrentBlock);
 
   LLVM_DEBUG(dbgs() << "GVN PRE removed: " << *CurInst << '\n');
@@ -3121,6 +3123,7 @@ void GVNPass::cleanupGlobalSets() {
 }
 
 void GVNPass::removeInstruction(Instruction *I) {
+  VN.erase(I);
   if (MD) MD->removeInstruction(I);
   if (MSSAU)
     MSSAU->removeMemoryAccess(I);
