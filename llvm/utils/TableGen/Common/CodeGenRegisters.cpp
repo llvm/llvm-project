@@ -1185,6 +1185,7 @@ void CodeGenRegisterClass::extendSuperRegClasses(CodeGenSubRegIndex *SubIdx) {
     return;
 
   SmallVector<CodeGenRegisterClass *> MidRCs;
+  MidRCs.reserve(It->second.size());
   llvm::append_range(MidRCs, It->second);
 
   for (CodeGenRegisterClass *MidRC : MidRCs) {

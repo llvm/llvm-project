@@ -484,6 +484,8 @@ reverse_children::reverse_children(Stmt *S, ASTContext &Ctx) {
   }
 
   // Default case for all other statements.
+  auto R = S->children();
+  childrenBuf.reserve(childrenBuf.size() + std::distance(R.begin(), R.end()));
   llvm::append_range(childrenBuf, S->children());
 
   // This needs to be done *after* childrenBuf has been populated.
