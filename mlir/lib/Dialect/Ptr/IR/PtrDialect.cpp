@@ -45,7 +45,7 @@ void PtrDialect::initialize() {
 // PtrAddOp
 //===----------------------------------------------------------------------===//
 
-/// Fold the op to the base ptr when the offset is 0.
+/// Fold: ptradd ptr + 0 ->  ptr
 OpFoldResult PtrAddOp::fold(FoldAdaptor adaptor) {
   Attribute attr = adaptor.getOffset();
   if (!attr)
