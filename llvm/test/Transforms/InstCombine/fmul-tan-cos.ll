@@ -105,4 +105,32 @@ define fp128 @fmul_tanfp128_cosfp128_reassoc(fp128 %a) {
   ret fp128 %res
 }
 
+; commutativity
+define double @commutativity_cos_tan(double %a) {
+; CHECK-LABEL: define double @commutativity_cos_tan(
+; CHECK-SAME: double [[A:%.*]]) {
+; CHECK-NEXT:    [[RES:%.*]] = call reassoc double @llvm.sin.f64(double [[A]])
+; CHECK-NEXT:    ret double [[RES]]
+;
+  %cos = call reassoc double @llvm.cos.f64(double %a)
+  %tan = call reassoc double @llvm.tan.f64(double %a)
+  %res = fmul reassoc double %cos, %tan
+  ret double %res
+}
+
+; negative test with mismatched value
+define double @tan_cos_value_mismatch(double %a, double %b) {
+; CHECK-LABEL: define double @tan_cos_value_mismatch(
+; CHECK-SAME: double [[A:%.*]], double [[B:%.*]]) {
+; CHECK-NEXT:    [[TAN:%.*]] = call reassoc double @llvm.tan.f64(double [[A]])
+; CHECK-NEXT:    [[COS:%.*]] = call reassoc double @llvm.cos.f64(double [[B]])
+; CHECK-NEXT:    [[RES:%.*]] = fmul reassoc double [[TAN]], [[COS]]
+; CHECK-NEXT:    ret double [[RES]]
+;
+  %tan = call reassoc double @llvm.tan.f64(double %a)
+  %cos = call reassoc double @llvm.cos.f64(double %b)
+  %res = fmul reassoc double %tan, %cos
+  ret double %res
+}
+
 declare void @use(double)
