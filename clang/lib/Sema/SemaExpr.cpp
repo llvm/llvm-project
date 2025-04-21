@@ -4030,11 +4030,11 @@ ExprResult Sema::ActOnNumericConstant(const Token &Tok, Scope *UDLScope) {
             auto SignedSize = Context.getSignedSizeType();
             if (auto PtrDiff = Context.getCGlobalCXXStdNSTypedef(
                     getStdNamespace(), "ptrdiff_t");
-                Context.hasSameType(PtrDiff, SignedSize))
+                !PtrDiff.isNull() && Context.hasSameType(PtrDiff, SignedSize))
               Ty = PtrDiff;
             else if (auto SSize = Context.getCGlobalCXXStdNSTypedef(
                          getStdNamespace(), "ssize_t");
-                     Context.hasSameType(SSize, SignedSize))
+                     !SSize.isNull() && Context.hasSameType(SSize, SignedSize))
               Ty = SSize;
           } else if (AllowUnsigned) {
             Ty = Context.getCGlobalCXXStdNSTypedef(getStdNamespace(), "size_t",
