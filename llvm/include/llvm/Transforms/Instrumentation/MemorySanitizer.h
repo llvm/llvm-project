@@ -21,6 +21,13 @@ class Module;
 class StringRef;
 class raw_ostream;
 
+/// Mode of MSan -embed-faulting-instruction
+enum class MSanEmbedFaultingInstructionMode {
+  None, ///< Do not embed the faulting instruction information
+  Name, ///< Embed the LLVM IR instruction name (excluding operands)
+  Full, ///< Embed the complete LLVM IR instruction (including operands)
+};
+
 struct MemorySanitizerOptions {
   MemorySanitizerOptions() : MemorySanitizerOptions(0, false, false, false){};
   MemorySanitizerOptions(int TrackOrigins, bool Recover, bool Kernel)
