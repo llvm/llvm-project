@@ -1,5 +1,4 @@
 macro(add_offload_test_device_code test_filename test_name)
-    message("Building Offload API device code for test '${test_name}'")
     set(SRC_PATH ${CMAKE_CURRENT_SOURCE_DIR}/${test_filename})
 
     # Build for NVPTX
