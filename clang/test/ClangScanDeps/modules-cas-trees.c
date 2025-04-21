@@ -42,7 +42,7 @@
 // Missing pcm in action cache
 // RUN: not %clang @%t/Left.rsp 2> %t/error.txt
 // RUN: cat %t/error.txt | FileCheck %s -check-prefix=MISSING
-// MISSING: error: CAS cannot load module with key '{{.*}}' from -fmodule-file-cache-key: no such entry in action cache
+// MISSING: error: module file '{{.*}}.pcm' not found: missing module cache key {{.*}}: expected to be produced by:
 
 // Build everything
 // RUN: %clang @%t/Top.rsp 2>&1 | FileCheck %s -check-prefix=CACHE-MISS

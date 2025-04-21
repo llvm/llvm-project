@@ -364,12 +364,7 @@ Error clang::printCompileJobCacheKey(ObjectStore &CAS, const CASID &Key,
   if (!H)
     return H.takeError();
   TreeSchema Schema(CAS);
-  if (!Schema.isNode(*H)) {
-    std::string ErrStr;
-    llvm::raw_string_ostream Err(ErrStr);
-    Err << "expected cache key to be a CAS tree; got ";
-    H->getID().print(Err);
-    return createStringError(inconvertibleErrorCode(), Err.str());
-  }
+  if (!Schema.isNode(*H))
+    return createStringError("unexpected cache key schema");
   return ::printCompileJobCacheKey(CAS, *H, OS);
 }

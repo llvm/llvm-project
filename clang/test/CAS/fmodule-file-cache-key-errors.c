@@ -26,7 +26,7 @@
 // RUN:   -fcache-compile-job -Rcompile-job-cache &> %t/invalid2.txt
 // RUN: FileCheck %s -check-prefix=INVALID2 -input-file=%t/invalid2.txt
 
-// INVALID2: error: CAS cannot load module with key '-fsyntax-only' from -fmodule-file-cache-key
+// INVALID2: error: module file 'INVALID' not found: unloadable module cache key -fsyntax-only: invalid cas-id '-fsyntax-only'
 
 // RUN: not %clang_cc1 -triple x86_64-apple-macos11 \
 // RUN:   -fmodules -fno-implicit-modules \
@@ -46,7 +46,7 @@
 // RUN:   -fcache-compile-job -Rcompile-job-cache &> %t/bad_key.txt
 // RUN: cat %t/bad_key.txt | FileCheck %s -check-prefix=BAD_KEY
 
-// BAD_KEY: error: CAS cannot load module with key 'KEY' from -fmodule-file-cache-key: invalid cas-id 'KEY'
+// BAD_KEY: error: module file 'PATH' not found: unloadable module cache key KEY: invalid cas-id 'KEY'
 
 // RUN: echo -n '-fmodule-file-cache-key PATH ' > %t/bad_key2.rsp
 // RUN: cat %t/casid >> %t/bad_key2.rsp
@@ -59,7 +59,7 @@
 // RUN:   -fcache-compile-job -Rcompile-job-cache &> %t/bad_key2.txt
 // RUN: cat %t/bad_key2.txt | FileCheck %s -check-prefix=BAD_KEY2
 
-// BAD_KEY2: error: CAS cannot load module with key '{{.*}}' from -fmodule-file-cache-key: cas object is not a valid cache key
+// BAD_KEY2: error: module file 'PATH' not found: missing module cache key {{.*}}: module file is not available in the CAS
 
 // == Build A
 
@@ -87,7 +87,7 @@
 // RUN:   -fcache-compile-job -Rcompile-job-cache &> %t/not_in_cache.txt
 // RUN: cat %t/not_in_cache.txt | FileCheck %s -check-prefix=NOT_IN_CACHE -DPREFIX=%/t
 
-// NOT_IN_CACHE: error: CAS cannot load module with key '{{.*}}' from -fmodule-file-cache-key: no such entry in action cache; expected compile:
+// NOT_IN_CACHE: error: module file 'PATH' not found: missing module cache key {{.*}}: expected to be produced by:
 // NOT_IN_CACHE: command-line:
 // NOT_IN_CACHE:   -cc1
 // NOT_IN_CACHE: filesystem:

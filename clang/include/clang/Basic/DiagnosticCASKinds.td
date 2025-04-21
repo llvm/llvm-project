@@ -23,8 +23,10 @@ def err_cas_depscan_daemon_connection: Error<
 def err_cas_depscan_failed: Error<
   "CAS-based dependency scan failed: %0">, DefaultFatal;
 def err_cas_store: Error<"failed to store to CAS: %0">, DefaultFatal;
-def err_cas_cannot_get_module_cache_key : Error<
-  "CAS cannot load module with key '%0' from %1: %2">, DefaultFatal;
+def err_cas_unloadable_module : Error<
+  "module file '%0' not found: unloadable module cache key %1: %2">, DefaultFatal;
+def err_cas_missing_module : Error<
+  "module file '%0' not found: missing module cache key %1: %2">, DefaultFatal;
 def err_cas_missing_root_id : Error<
   "CAS missing expected root-id '%0'">, DefaultFatal;
 def err_cas_cannot_parse_include_tree_id : Error<

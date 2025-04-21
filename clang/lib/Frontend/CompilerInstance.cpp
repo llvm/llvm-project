@@ -2579,31 +2579,36 @@ static bool addCachedModuleFileToInMemoryCache(
 
   auto ID = CAS.parseID(CacheKey);
   if (!ID) {
-    Diags.Report(diag::err_cas_cannot_get_module_cache_key)
-        << CacheKey << Provider << ID.takeError();
+    Diags.Report(diag::err_cas_unloadable_module)
+        << Path << CacheKey << ID.takeError();
     return true;
   }
 
   auto Value = Cache.get(*ID);
-  if (!Value || !*Value) {
-    auto Diag = Diags.Report(diag::err_cas_cannot_get_module_cache_key)
-                << CacheKey << Provider;
-    if (!Value) {
-      Diag << Value.takeError();
-    } else {
-      std::string ErrStr("no such entry in action cache; expected compile:\n");
-      llvm::raw_string_ostream Err(ErrStr);
-      if (auto E = printCompileJobCacheKey(CAS, *ID, Err))
-        Diag << std::move(E);
-      else
-        Diag << Err.str();
-    }
+  if (!Value) {
+    Diags.Report(diag::err_cas_unloadable_module)
+        << Path << CacheKey << Value.takeError();
+    return true;
+  }
+  if (!*Value) {
+    auto Diag = Diags.Report(diag::err_cas_missing_module)
+                << Path << CacheKey;
+    std::string ErrStr("expected to be produced by:\n");
+    llvm::raw_string_ostream Err(ErrStr);
+    if (auto E = printCompileJobCacheKey(CAS, *ID, Err)) {
+      // Ignore the error and skip printing the cache key. The cache key can
+      // be setup by a different compiler that is using an unknown schema.
+      llvm::consumeError(std::move(E));
+      Diag << "module file is not available in the CAS";
+    } else
+      Diag << Err.str();
+
     return true;
   }
   auto ValueRef = CAS.getReference(**Value);
   if (!ValueRef) {
-    Diags.Report(diag::err_cas_cannot_get_module_cache_key)
-        << CacheKey << Provider << "result module doesn't exist in CAS";
+    Diags.Report(diag::err_cas_unloadable_module)
+        << Path << CacheKey << "result module cannot be loaded from CAS";
 
     return true;
   }
@@ -2611,8 +2616,8 @@ static bool addCachedModuleFileToInMemoryCache(
   std::optional<cas::CompileJobCacheResult> Result;
   cas::CompileJobResultSchema Schema(CAS);
   if (llvm::Error E = Schema.load(*ValueRef).moveInto(Result)) {
-    Diags.Report(diag::err_cas_cannot_get_module_cache_key)
-        << CacheKey << Provider << std::move(E);
+    Diags.Report(diag::err_cas_unloadable_module)
+        << Path << CacheKey << std::move(E);
     return true;
   }
   auto Output =
@@ -2625,8 +2630,8 @@ static bool addCachedModuleFileToInMemoryCache(
   // better network utilization.
   auto OutputProxy = CAS.getProxy(Output->Object);
   if (!OutputProxy) {
-    Diags.Report(diag::err_cas_cannot_get_module_cache_key)
-        << CacheKey << Provider << OutputProxy.takeError();
+    Diags.Report(diag::err_cas_unloadable_module)
+        << Path << CacheKey << OutputProxy.takeError();
     return true;
   }
 
