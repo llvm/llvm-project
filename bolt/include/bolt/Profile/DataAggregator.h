@@ -231,6 +231,7 @@ private:
   /// for the source of the branch to avoid counting cold activity twice (one
   /// for source and another for destination).
   uint64_t NumColdSamples{0};
+  uint64_t NumTotalSamples{0};
 
   /// Looks into system PATH for Linux Perf and set up the aggregator to use it
   void findPerfExecutable();
