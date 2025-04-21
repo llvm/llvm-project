@@ -5768,15 +5768,14 @@ bool SelectionDAG::isKnownNeverNaN(SDValue Op, const APInt &DemandedElts,
       APInt DemandedSrcElts = DemandedElts & ~DemandedMask;
       APInt DemandedSubElts = DemandedElts.extractBits(NumSubElts, Idx);
 
-      if (!DemandedSrcElts.isZero() && !DemandedSubElts.isZero())
+      if (!DemandedSrcElts.isZero() && !DemandedSubElts.isZero()) {
         return isKnownNeverNaN(BaseVector, DemandedSrcElts, SNaN, Depth + 1) &&
                isKnownNeverNaN(SubVector, DemandedSubElts, SNaN, Depth + 1);
-      else if (!DemandedSrcElts.isZero())
+      } else if (!DemandedSrcElts.isZero())
         return isKnownNeverNaN(BaseVector, DemandedSrcElts, SNaN, Depth + 1);
       else if (!DemandedSubElts.isZero())
         return isKnownNeverNaN(SubVector, DemandedSubElts, SNaN, Depth + 1);
-      else
-        return true;
+      return true;
     }
     return isKnownNeverNaN(BaseVector, SNaN, Depth + 1) &&
            isKnownNeverNaN(SubVector, SNaN, Depth + 1);
