@@ -1,14 +1,19 @@
-// RUN: %clang_cc1 -verify=ALL_NORMAL,NORMAL14,BOTH14,ALL_PRE20,ALLNORMAL,NORMAL_PRE20,ALL -std=c++14 %s -fcolor-diagnostics
-// RUN: %clang_cc1 -verify=IMPLICIT14,IMPLICIT_PRE20,BOTH14,ALL_PRE20,ALLIMPLICIT,ALL -fimplicit-constexpr -std=c++14 %s -fcolor-diagnostics
 
-// RUN: %clang_cc1 -verify=ALL_NORMAL,NORMAL17,BOTH17,ALL_PRE20,ALLNORMAL,NORMAL_PRE20,ALL -std=c++17 %s -fcolor-diagnostics
-// RUN: %clang_cc1 -verify=IMPLICIT17,IMPLICIT_PRE20,BOTH17,ALL_PRE20,ALLIMPLICIT,ALL -fimplicit-constexpr -std=c++17 %s -fcolor-diagnostics
+// RUN: %clang_cc1 -verify=ALL_NORMAL,NORMAL14,BOTH14,ALL_PRE20,ALLNORMAL,NORMAL_PRE20,ALL -std=c++14 %s
+// RUN: %clang_cc1 -verify=IMPLICIT14,IMPLICIT_PRE20,BOTH14,ALL_PRE20,ALLIMPLICIT,ALLIMPLICITOLD,ALL -fimplicit-constexpr -std=c++14 %s 
+// RUN: %clang_cc1 -verify=IMPLICIT14,IMPLICIT_PRE20,BOTH14,ALL_PRE20,ALLIMPLICIT,ALLIMPLICITNEW,ALL -fimplicit-constexpr -std=c++14 %s -fexperimental-new-constant-interpreter
 
-// RUN: %clang_cc1 -verify=ALL_NORMAL,NORMAL20,BOTH20,ALLNORMAL,ALL -std=c++20 %s -fcolor-diagnostics
-// RUN: %clang_cc1 -verify=IMPLICIT20,BOTH20,ALLIMPLICIT,ALL -fimplicit-constexpr -std=c++20 %s -fcolor-diagnostics
+// RUN: %clang_cc1 -verify=ALL_NORMAL,NORMAL17,BOTH17,ALL_PRE20,ALLNORMAL,NORMAL_PRE20,ALL -std=c++17 %s
+// RUN: %clang_cc1 -verify=IMPLICIT17,IMPLICIT_PRE20,BOTH17,ALL_PRE20,ALLIMPLICIT,ALLIMPLICITOLD,ALL -fimplicit-constexpr -std=c++17 %s 
+// RUN: %clang_cc1 -verify=IMPLICIT17,IMPLICIT_PRE20,BOTH17,ALL_PRE20,ALLIMPLICIT,ALLIMPLICITNEW,ALL -fimplicit-constexpr -std=c++17 %s -fexperimental-new-constant-interpreter
 
-// RUN: %clang_cc1 -verify=ALL_NORMAL,NORMAL23,BOTH23,ALLNORMAL,ALL -std=c++23 %s -fcolor-diagnostics
-// RUN: %clang_cc1 -verify=IMPLICIT23,BOTH23,ALLIMPLICIT,ALL -fimplicit-constexpr -std=c++23 %s -fcolor-diagnostics
+// RUN: %clang_cc1 -verify=ALL_NORMAL,NORMAL20,BOTH20,ALLNORMAL,ALL -std=c++20 %s
+// RUN: %clang_cc1 -verify=IMPLICIT20,BOTH20,ALLIMPLICIT,ALLIMPLICITOLD,ALL -fimplicit-constexpr -std=c++20 %s 
+// RUN: %clang_cc1 -verify=IMPLICIT20,BOTH20,ALLIMPLICIT,ALLIMPLICITNEW,ALL -fimplicit-constexpr -std=c++20 %s -fexperimental-new-constant-interpreter
+
+// RUN: %clang_cc1 -verify=ALL_NORMAL,NORMAL23,BOTH23,ALLNORMAL,ALL -std=c++23 %s
+// RUN: %clang_cc1 -verify=IMPLICIT23,BOTH23,ALLIMPLICIT,ALLIMPLICITOLD,ALL -fimplicit-constexpr -std=c++23 %s 
+// RUN: %clang_cc1 -verify=IMPLICIT23,BOTH23,ALLIMPLICIT,ALLIMPLICITNEW,ALL -fimplicit-constexpr -std=c++23 %s -fexperimental-new-constant-interpreter
 
 
 
@@ -49,8 +54,8 @@ bool noinline_undefined_fnc();
 constexpr bool result_noinline_undefined_fnc = noinline_undefined_fnc();
 // ALL-error@-1 {{constexpr variable 'result_noinline_undefined_fnc' must be initialized by a constant expression}}
 // ALLNORMAL-note@-2 {{non-constexpr function 'noinline_undefined_fnc' cannot be used in a constant expression}}
-// ALLIMPLICIT-note@-3 {{undefined function 'noinline_undefined_fnc' cannot be used in a constant expression}}
-
+// ALLIMPLICITOLD-note@-3 {{undefined function 'noinline_undefined_fnc' cannot be used in a constant expression}}
+// ALLIMPLICITNEW-note@-4 {{non-inline function 'noinline_undefined_fnc' is not implicitly constexpr}}
 
 // =============================================
 // 4) undefined inline function
@@ -61,7 +66,8 @@ inline bool inline_undefined_fnc();
 constexpr bool result_inline_undefined_fnc = inline_undefined_fnc();
 // ALL-error@-1 {{constexpr variable 'result_inline_undefined_fnc' must be initialized by a constant expression}}
 // ALLNORMAL-note@-2 {{non-constexpr function 'inline_undefined_fnc' cannot be used in a constant expression}}
-// ALLIMPLICIT-note@-3 {{undefined function 'inline_undefined_fnc' cannot be used in a constant expression}}
+// ALLIMPLICITOLD-note@-3 {{undefined function 'inline_undefined_fnc' cannot be used in a constant expression}}
+// ALLIMPLICITNEW-note@-4 {{non-inline function 'inline_undefined_fnc' is not implicitly constexpr}}
 
 // =============================================
 // 5) lambda function

@@ -1,14 +1,18 @@
-// RUN: %clang_cc1 -verify=NORMAL14,BOTH14,ALLNORMAL,ALL -std=c++14 %s -fcolor-diagnostics
-// RUN: %clang_cc1 -verify=IMPLICIT14,BOTH14,ALLIMPLICIT,ALL -fimplicit-constexpr -std=c++14 %s -fcolor-diagnostics
+// RUN: %clang_cc1 -verify=NORMAL14,BOTH14,ALLNORMAL,ALL -std=c++14 %s
+// RUN: %clang_cc1 -verify=IMPLICIT14,BOTH14,ALLIMPLICIT,ALL -fimplicit-constexpr -std=c++14 %s
+// RUN: %clang_cc1 -verify=IMPLICIT14,BOTH14,ALLIMPLICIT,ALL -fimplicit-constexpr -std=c++14 %s  -fexperimental-new-constant-interpreter
 
-// RUN: %clang_cc1 -verify=NORMAL17,BOTH20,ALLNORMAL,ALL -std=c++17 %s -fcolor-diagnostics
-// RUN: %clang_cc1 -verify=IMPLICIT17,BOTH20,ALLIMPLICIT,ALL -fimplicit-constexpr -std=c++17 %s -fcolor-diagnostics
+// RUN: %clang_cc1 -verify=NORMAL17,BOTH20,ALLNORMAL,ALL -std=c++17 %s
+// RUN: %clang_cc1 -verify=IMPLICIT17,BOTH20,ALLIMPLICIT,ALL -fimplicit-constexpr -std=c++17 %s
+// RUN: %clang_cc1 -verify=IMPLICIT17,BOTH20,ALLIMPLICIT,ALL -fimplicit-constexpr -std=c++17 %s  -fexperimental-new-constant-interpreter
 
-// RUN: %clang_cc1 -verify=NORMAL20,BOTH20,ALLNORMAL,ALL -std=c++20 %s -fcolor-diagnostics
-// RUN: %clang_cc1 -verify=IMPLICIT20,BOTH20,ALLIMPLICIT,ALL -fimplicit-constexpr -std=c++20 %s -fcolor-diagnostics
+// RUN: %clang_cc1 -verify=NORMAL20,BOTH20,ALLNORMAL,ALL -std=c++20 %s
+// RUN: %clang_cc1 -verify=IMPLICIT20,BOTH20,ALLIMPLICIT,ALL -fimplicit-constexpr -std=c++20 %s
+// RUN: %clang_cc1 -verify=IMPLICIT20,BOTH20,ALLIMPLICIT,ALL -fimplicit-constexpr -std=c++20 %s  -fexperimental-new-constant-interpreter
 
-// RUN: %clang_cc1 -verify=NORMAL23,BOTH23,ALLNORMAL,ALL -std=c++23 %s -fcolor-diagnostics
-// RUN: %clang_cc1 -verify=IMPLICIT23,BOTH23,ALLIMPLICIT,ALL -fimplicit-constexpr -std=c++23 %s -fcolor-diagnostics
+// RUN: %clang_cc1 -verify=NORMAL23,BOTH23,ALLNORMAL,ALL -std=c++23 %s
+// RUN: %clang_cc1 -verify=IMPLICIT23,BOTH23,ALLIMPLICIT,ALL -fimplicit-constexpr -std=c++23 %s
+// RUN: %clang_cc1 -verify=IMPLICIT23,BOTH23,ALLIMPLICIT,ALL -fimplicit-constexpr -std=c++23 %s  -fexperimental-new-constant-interpreter
 
 // ALLIMPLICIT-no-diagnostics
 

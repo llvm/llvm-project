@@ -1,20 +1,26 @@
-// RUN: %clang_cc1 -verify=NORMAL14,NORMAL_ALL -std=c++14 %s -fcolor-diagnostics -fcxx-exceptions -DCONSTEXPR=
-// RUN: %clang_cc1 -verify=NORMAL17,NORMAL_ALL -std=c++17 %s -fcolor-diagnostics -fcxx-exceptions -DCONSTEXPR=
-// RUN: %clang_cc1 -verify=NORMAL20,NORMAL_ALL -std=c++20 %s -fcolor-diagnostics -fcxx-exceptions -DCONSTEXPR=
-// RUN: %clang_cc1 -verify=NORMAL23,NORMAL_ALL -std=c++23 %s -fcolor-diagnostics -fcxx-exceptions -DCONSTEXPR=
-// RUN: %clang_cc1 -verify=NORMAL26,NORMAL_ALL -std=c++26 %s -fcolor-diagnostics -fcxx-exceptions -DCONSTEXPR=
+// RUN: %clang_cc1 -verify=NORMAL14,NORMAL_ALL -std=c++14 %s -fcxx-exceptions -DCONSTEXPR=
+// RUN: %clang_cc1 -verify=NORMAL17,NORMAL_ALL -std=c++17 %s -fcxx-exceptions -DCONSTEXPR=
+// RUN: %clang_cc1 -verify=NORMAL20,NORMAL_ALL -std=c++20 %s -fcxx-exceptions -DCONSTEXPR=
+// RUN: %clang_cc1 -verify=NORMAL23,NORMAL_ALL -std=c++23 %s -fcxx-exceptions -DCONSTEXPR=
+// RUN: %clang_cc1 -verify=NORMAL26,NORMAL_ALL -std=c++26 %s -fcxx-exceptions -DCONSTEXPR=
 
-// RUN: %clang_cc1 -verify=IMPLICIT14,IMPLICIT_ALL -std=c++14 %s -fcolor-diagnostics -fcxx-exceptions -DCONSTEXPR= -fimplicit-constexpr
-// RUN: %clang_cc1 -verify=IMPLICIT17,IMPLICIT_ALL -std=c++17 %s -fcolor-diagnostics -fcxx-exceptions -DCONSTEXPR= -fimplicit-constexpr
-// RUN: %clang_cc1 -verify=IMPLICIT20,IMPLICIT_ALL -std=c++20 %s -fcolor-diagnostics -fcxx-exceptions -DCONSTEXPR= -fimplicit-constexpr
-// RUN: %clang_cc1 -verify=IMPLICIT23,IMPLICIT_ALL -std=c++23 %s -fcolor-diagnostics -fcxx-exceptions -DCONSTEXPR= -fimplicit-constexpr
-// RUN: %clang_cc1 -verify=IMPLICIT26,IMPLICIT_ALL -std=c++26 %s -fcolor-diagnostics -fcxx-exceptions -DCONSTEXPR= -fimplicit-constexpr
+// RUN: %clang_cc1 -verify=IMPLICIT14,IMPLICIT_ALL -std=c++14 %s -fcxx-exceptions -DCONSTEXPR= -fimplicit-constexpr
+// RUN: %clang_cc1 -verify=IMPLICIT17,IMPLICIT_ALL -std=c++17 %s -fcxx-exceptions -DCONSTEXPR= -fimplicit-constexpr
+// RUN: %clang_cc1 -verify=IMPLICIT20,IMPLICIT_ALL -std=c++20 %s -fcxx-exceptions -DCONSTEXPR= -fimplicit-constexpr
+// RUN: %clang_cc1 -verify=IMPLICIT23,IMPLICIT_ALL -std=c++23 %s -fcxx-exceptions -DCONSTEXPR= -fimplicit-constexpr
+// RUN: %clang_cc1 -verify=IMPLICIT26,IMPLICIT_ALL -std=c++26 %s -fcxx-exceptions -DCONSTEXPR= -fimplicit-constexpr
 
-// RUN: %clang_cc1 -verify=CONSTEXPR14,CONSTEXPR_BEFORE23,CONSTEXPR_BEFORE20,CONSTEXPR_ALL -std=c++14 %s -fcolor-diagnostics -fcxx-exceptions -DCONSTEXPR=constexpr
-// RUN: %clang_cc1 -verify=CONSTEXPR17,CONSTEXPR_BEFORE23,CONSTEXPR_BEFORE20,CONSTEXPR_ALL -std=c++17 %s -fcolor-diagnostics -fcxx-exceptions -DCONSTEXPR=constexpr
-// RUN: %clang_cc1 -verify=CONSTEXPR20,CONSTEXPR_BEFORE23,CONSTEXPR_ALL -std=c++20 %s -fcolor-diagnostics -fcxx-exceptions -DCONSTEXPR=constexpr
-// RUN: %clang_cc1 -verify=CONSTEXPR23,CONSTEXPR_ALL -std=c++23 %s -fcolor-diagnostics -fcxx-exceptions -DCONSTEXPR=constexpr
-// RUN: %clang_cc1 -verify=CONSTEXPR26,CONSTEXPR_ALL -std=c++26 %s -fcolor-diagnostics -fcxx-exceptions -DCONSTEXPR=constexpr
+// RUN: %clang_cc1 -verify=IMPLICIT14,IMPLICIT_ALL -std=c++14 %s -fcxx-exceptions -DCONSTEXPR= -fimplicit-constexpr -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -verify=IMPLICIT17,IMPLICIT_ALL -std=c++17 %s -fcxx-exceptions -DCONSTEXPR= -fimplicit-constexpr -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -verify=IMPLICIT20,IMPLICIT_ALL -std=c++20 %s -fcxx-exceptions -DCONSTEXPR= -fimplicit-constexpr -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -verify=IMPLICIT23,IMPLICIT_ALL -std=c++23 %s -fcxx-exceptions -DCONSTEXPR= -fimplicit-constexpr -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -verify=IMPLICIT26,IMPLICIT_ALL -std=c++26 %s -fcxx-exceptions -DCONSTEXPR= -fimplicit-constexpr -fexperimental-new-constant-interpreter
+
+// RUN: %clang_cc1 -verify=CONSTEXPR14,CONSTEXPR_BEFORE23,CONSTEXPR_BEFORE20,CONSTEXPR_ALL -std=c++14 %s -fcxx-exceptions -DCONSTEXPR=constexpr
+// RUN: %clang_cc1 -verify=CONSTEXPR17,CONSTEXPR_BEFORE23,CONSTEXPR_BEFORE20,CONSTEXPR_ALL -std=c++17 %s -fcxx-exceptions -DCONSTEXPR=constexpr
+// RUN: %clang_cc1 -verify=CONSTEXPR20,CONSTEXPR_BEFORE23,CONSTEXPR_ALL -std=c++20 %s -fcxx-exceptions -DCONSTEXPR=constexpr
+// RUN: %clang_cc1 -verify=CONSTEXPR23,CONSTEXPR_ALL -std=c++23 %s -fcxx-exceptions -DCONSTEXPR=constexpr
+// RUN: %clang_cc1 -verify=CONSTEXPR26,CONSTEXPR_ALL -std=c++26 %s -fcxx-exceptions -DCONSTEXPR=constexpr
 
 // Objective is to make sure features like allocation / throwing won't fail code by just adding implicit constexpr
 // in an unevaluated code.

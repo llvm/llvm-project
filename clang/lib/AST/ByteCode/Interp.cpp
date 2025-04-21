@@ -827,7 +827,8 @@ bool CheckCallable(InterpState &S, CodePtr OpPC, const Function *F) {
     return false;
 
   if (F->isConstexpr() && F->hasBody() &&
-      (F->getDecl()->isConstexpr() || F->getDecl()->hasAttr<MSConstexprAttr>()))
+      (F->getDecl()->isConstexprOrImplicitlyCanBe(S.getLangOpts()) ||
+       F->getDecl()->hasAttr<MSConstexprAttr>()))
     return true;
 
   // Implicitly constexpr.
@@ -846,7 +847,7 @@ bool CheckCallable(InterpState &S, CodePtr OpPC, const Function *F) {
     const auto *CD = dyn_cast<CXXConstructorDecl>(DiagDecl);
     if (CD && CD->isInheritingConstructor()) {
       const auto *Inherited = CD->getInheritedConstructor().getConstructor();
-      if (!Inherited->isConstexpr())
+      if (!Inherited->isConstexprOrImplicitlyCanBe(S.getLangOpts()))
         DiagDecl = CD = Inherited;
     }
 
@@ -868,19 +869,28 @@ bool CheckCallable(InterpState &S, CodePtr OpPC, const Function *F) {
       // for a constant expression. It might be defined at the point we're
       // actually calling it.
       bool IsExtern = DiagDecl->getStorageClass() == SC_Extern;
-      if (!DiagDecl->isDefined() && !IsExtern && DiagDecl->isConstexpr() &&
+      if (!DiagDecl->isDefined() && !IsExtern &&
+          DiagDecl->isConstexprOrImplicitlyCanBe(S.getLangOpts()) &&
           S.checkingPotentialConstantExpression())
         return false;
 
       // If the declaration is defined, declared 'constexpr' _and_ has a body,
       // the below diagnostic doesn't add anything useful.
-      if (DiagDecl->isDefined() && DiagDecl->isConstexpr() &&
+      if (DiagDecl->isDefined() &&
+          DiagDecl->isConstexprOrImplicitlyCanBe(S.getLangOpts()) &&
           DiagDecl->hasBody())
         return false;
 
-      S.FFDiag(S.Current->getLocation(OpPC),
-               diag::note_constexpr_invalid_function, 1)
-          << DiagDecl->isConstexpr() << (bool)CD << DiagDecl;
+      if (F->getDecl()->isConstexprOrImplicitlyCanBe(S.getLangOpts(), false)) {
+        S.FFDiag(S.Current->getLocation(OpPC),
+                 diag::note_constexpr_implicit_constexpr_must_be_inlined, 1)
+            << DiagDecl;
+      } else {
+        S.FFDiag(S.Current->getLocation(OpPC),
+                 diag::note_constexpr_invalid_function, 1)
+            << DiagDecl->isConstexprOrImplicitlyCanBe(S.getLangOpts())
+            << (bool)CD << DiagDecl;
+      }
 
       if (DiagDecl->getDefinition())
         S.Note(DiagDecl->getDefinition()->getLocation(),
