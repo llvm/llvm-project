@@ -1711,7 +1711,12 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::
       // edge from the prior node.
       if (PrevNode) {
         auto *PrevEdge = CurNode->findEdgeFromCallee(PrevNode);
-        assert(PrevEdge);
+        // If the sequence contained recursion, we might have already removed
+        // some edges during the connectNewNode calls above.
+        if (!PrevEdge) {
+          PrevNode = CurNode;
+          continue;
+        }
         set_subtract(PrevEdge->getContextIds(), SavedContextIds);
         if (PrevEdge->getContextIds().empty())
           removeEdgeFromGraph(PrevEdge);
@@ -4094,14 +4099,14 @@ bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::assignFunctions() {
         assert(FuncClonesToCallMap.count(FuncClone));
         std::map<CallInfo, CallInfo> &CallMap = FuncClonesToCallMap[FuncClone];
         CallInfo CallClone(Call);
-        if (CallMap.count(Call))
-          CallClone = CallMap[Call];
+        if (auto It = CallMap.find(Call); It != CallMap.end())
+          CallClone = It->second;
         CallsiteClone->setCall(CallClone);
         // Need to do the same for all matching calls.
         for (auto &MatchingCall : Node->MatchingCalls) {
           CallInfo CallClone(MatchingCall);
-          if (CallMap.count(MatchingCall))
-            CallClone = CallMap[MatchingCall];
+          if (auto It = CallMap.find(MatchingCall); It != CallMap.end())
+            CallClone = It->second;
           // Updates the call in the list.
           MatchingCall = CallClone;
         }

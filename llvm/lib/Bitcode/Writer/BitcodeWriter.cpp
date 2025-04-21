@@ -5186,7 +5186,7 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
       return;
     for (GlobalValue::GUID GUID : DefOrUseGUIDs) {
       auto Defs = CfiIndex.forGuid(GUID);
-      Functions.insert(Functions.end(), Defs.begin(), Defs.end());
+      llvm::append_range(Functions, Defs);
     }
     if (Functions.empty())
       return;

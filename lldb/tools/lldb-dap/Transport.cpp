@@ -38,7 +38,7 @@ ReadFull(IOObject &descriptor, size_t length,
   bool timeout_supported = true;
   // FIXME: SelectHelper does not work with NativeFile on Win32.
 #if _WIN32
-  timeout_supported = descriptor.GetFdType() == eFDTypeSocket;
+  timeout_supported = descriptor.GetFdType() == IOObject::eFDTypeSocket;
 #endif
 
   if (timeout && timeout_supported) {

@@ -24,6 +24,7 @@
 #include "AMDGPUISelDAGToDAG.h"
 #include "AMDGPUMacroFusion.h"
 #include "AMDGPUPerfHintAnalysis.h"
+#include "AMDGPUPreloadKernArgProlog.h"
 #include "AMDGPURemoveIncompatibleFunctions.h"
 #include "AMDGPUReserveWWMRegs.h"
 #include "AMDGPUSplitModule.h"
@@ -515,7 +516,6 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPUAlwaysInlinePass(*PR);
   initializeAMDGPUSwLowerLDSLegacyPass(*PR);
   initializeAMDGPUAttributorLegacyPass(*PR);
-  initializeAMDGPUAnnotateKernelFeaturesPass(*PR);
   initializeAMDGPUAnnotateUniformValuesLegacyPass(*PR);
   initializeAMDGPUArgumentUsageInfoPass(*PR);
   initializeAMDGPUAtomicOptimizerPass(*PR);
@@ -810,17 +810,17 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
 #define GET_PASS_REGISTRY "AMDGPUPassRegistry.def"
 #include "llvm/Passes/TargetPassRegistry.inc"
 
-  PB.registerPipelineStartEPCallback(
-      [](ModulePassManager &PM, OptimizationLevel Level) {
-        if (EnableHipStdPar)
-          PM.addPass(HipStdParAcceleratorCodeSelectionPass());
-      });
-
   PB.registerPipelineEarlySimplificationEPCallback(
       [](ModulePassManager &PM, OptimizationLevel Level,
          ThinOrFullLTOPhase Phase) {
-        if (!isLTOPreLink(Phase))
+        if (!isLTOPreLink(Phase)) {
+          // When we are not using -fgpu-rdc, we can run accelerator code
+          // selection relatively early, but still after linking to prevent
+          // eager removal of potentially reachable symbols.
+          if (EnableHipStdPar)
+            PM.addPass(HipStdParAcceleratorCodeSelectionPass());
           PM.addPass(AMDGPUPrintfRuntimeBindingPass());
+        }
 
         if (Level == OptimizationLevel::O0)
           return;
@@ -891,6 +891,12 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
 
   PB.registerFullLinkTimeOptimizationLastEPCallback(
       [this](ModulePassManager &PM, OptimizationLevel Level) {
+        // When we are using -fgpu-rdc, we can only run accelerator code
+        // selection after linking to prevent, otherwise we end up removing
+        // potentially reachable symbols that were exported as external in other
+        // modules.
+        if (EnableHipStdPar)
+          PM.addPass(HipStdParAcceleratorCodeSelectionPass());
         // We want to support the -lto-partitions=N option as "best effort".
         // For that, we need to lower LDS earlier in the pipeline before the
         // module is partitioned for codegen.
@@ -1337,12 +1343,6 @@ void AMDGPUPassConfig::addIRPasses() {
 }
 
 void AMDGPUPassConfig::addCodeGenPrepare() {
-  if (TM->getTargetTriple().isAMDGCN()) {
-    // FIXME: This pass adds 2 hacky attributes that can be replaced with an
-    // analysis, and should be removed.
-    addPass(createAMDGPUAnnotateKernelFeaturesPass());
-  }
-
   if (TM->getTargetTriple().isAMDGCN() && EnableLowerKernelArguments)
     addPass(createAMDGPULowerKernelArgumentsPass());
 
@@ -2107,13 +2107,11 @@ void AMDGPUCodeGenPassBuilder::addCodeGenPrepare(AddIRPass &addPass) const {
 
 void AMDGPUCodeGenPassBuilder::addPreISel(AddIRPass &addPass) const {
 
-  if (TM.getOptLevel() > CodeGenOptLevel::None)
+  if (TM.getOptLevel() > CodeGenOptLevel::None) {
     addPass(FlattenCFGPass());
-
-  if (TM.getOptLevel() > CodeGenOptLevel::None)
     addPass(SinkingPass());
-
-  addPass(AMDGPULateCodeGenPreparePass(TM));
+    addPass(AMDGPULateCodeGenPreparePass(TM));
+  }
 
   // Merge divergent exit nodes. StructurizeCFG won't recognize the multi-exit
   // regions formed by them.

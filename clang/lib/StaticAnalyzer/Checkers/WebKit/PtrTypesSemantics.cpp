@@ -119,7 +119,9 @@ bool isRefType(const std::string &Name) {
          Name == "RefPtr" || Name == "RefPtrAllowingPartiallyDestroyed";
 }
 
-bool isRetainPtr(const std::string &Name) { return Name == "RetainPtr"; }
+bool isRetainPtr(const std::string &Name) {
+  return Name == "RetainPtr" || Name == "RetainPtrArc";
+}
 
 bool isCheckedPtr(const std::string &Name) {
   return Name == "CheckedPtr" || Name == "CheckedRef";
@@ -127,7 +129,7 @@ bool isCheckedPtr(const std::string &Name) {
 
 bool isSmartPtrClass(const std::string &Name) {
   return isRefType(Name) || isCheckedPtr(Name) || isRetainPtr(Name) ||
-         Name == "WeakPtr" || Name == "WeakPtr" || Name == "WeakPtrFactory" ||
+         Name == "WeakPtr" || Name == "WeakPtrFactory" ||
          Name == "WeakPtrFactoryWithBitField" || Name == "WeakPtrImplBase" ||
          Name == "WeakPtrImplBaseSingleThread" || Name == "ThreadSafeWeakPtr" ||
          Name == "ThreadSafeWeakOrStrongPtr" ||
@@ -157,7 +159,8 @@ bool isCtorOfCheckedPtr(const clang::FunctionDecl *F) {
 bool isCtorOfRetainPtr(const clang::FunctionDecl *F) {
   const std::string &FunctionName = safeGetName(F);
   return FunctionName == "RetainPtr" || FunctionName == "adoptNS" ||
-         FunctionName == "adoptCF" || FunctionName == "retainPtr";
+         FunctionName == "adoptCF" || FunctionName == "retainPtr" ||
+         FunctionName == "RetainPtrArc" || FunctionName == "adoptNSArc";
 }
 
 bool isCtorOfSafePtr(const clang::FunctionDecl *F) {
@@ -190,7 +193,7 @@ bool isRefOrCheckedPtrType(const clang::QualType T) {
 }
 
 bool isRetainPtrType(const clang::QualType T) {
-  return isPtrOfType(T, [](auto Name) { return Name == "RetainPtr"; });
+  return isPtrOfType(T, [](auto Name) { return isRetainPtr(Name); });
 }
 
 bool isOwnerPtrType(const clang::QualType T) {
@@ -374,7 +377,7 @@ std::optional<bool> isGetterOfSafePtr(const CXXMethodDecl *M) {
          method == "impl"))
       return true;
 
-    if (className == "RetainPtr" && method == "get")
+    if (isRetainPtr(className) && method == "get")
       return true;
 
     // Ref<T> -> T conversion
@@ -395,7 +398,7 @@ std::optional<bool> isGetterOfSafePtr(const CXXMethodDecl *M) {
       }
     }
 
-    if (className == "RetainPtr") {
+    if (isRetainPtr(className)) {
       if (auto *maybeRefToRawOperator = dyn_cast<CXXConversionDecl>(M)) {
         auto QT = maybeRefToRawOperator->getConversionType();
         auto *T = QT.getTypePtrOrNull();
@@ -429,7 +432,7 @@ bool isCheckedPtr(const CXXRecordDecl *R) {
 bool isRetainPtr(const CXXRecordDecl *R) {
   assert(R);
   if (auto *TmplR = R->getTemplateInstantiationPattern())
-    return safeGetName(TmplR) == "RetainPtr";
+    return isRetainPtr(safeGetName(TmplR));
   return false;
 }
 

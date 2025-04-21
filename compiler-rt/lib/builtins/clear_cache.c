@@ -62,6 +62,8 @@ void __clear_cache(void *start, void *end) {
 #if __i386__ || __x86_64__ || defined(_M_IX86) || defined(_M_X64)
 // Intel processors have a unified instruction and data cache
 // so there is nothing to do
+#elif defined(__s390__)
+// no-op
 #elif defined(_WIN32) && (defined(__arm__) || defined(__aarch64__))
   FlushInstructionCache(GetCurrentProcess(), start, end - start);
 #elif defined(__arm__) && !defined(__APPLE__)

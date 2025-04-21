@@ -3647,9 +3647,8 @@ bool MasmParser::parseFieldInitializer(const FieldInfo &Field,
                           std::to_string(Initializers.size()));
   }
   // Default-initialize all remaining values.
-  Initializers.insert(Initializers.end(),
-                      Contents.Initializers.begin() + Initializers.size(),
-                      Contents.Initializers.end());
+  llvm::append_range(Initializers, llvm::drop_begin(Contents.Initializers,
+                                                    Initializers.size()));
 
   Initializer = FieldInitializer(std::move(Initializers), Contents.Structure);
   return false;

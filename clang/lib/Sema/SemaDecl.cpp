@@ -247,15 +247,15 @@ static ParsedType recoverFromTypeInKnownDependentBase(Sema &S,
     return nullptr;
 
   // We found some types in dependent base classes.  Recover as if the user
-  // wrote 'typename MyClass::II' instead of 'II'.  We'll fully resolve the
-  // lookup during template instantiation.
+  // wrote 'MyClass::II' instead of 'II', and this implicit typename was
+  // allowed.  We'll fully resolve the lookup during template instantiation.
   S.Diag(NameLoc, diag::ext_found_in_dependent_base) << &II;
 
   ASTContext &Context = S.Context;
   auto *NNS = NestedNameSpecifier::Create(
       Context, nullptr, cast<Type>(Context.getRecordType(RD)));
   QualType T =
-      Context.getDependentNameType(ElaboratedTypeKeyword::Typename, NNS, &II);
+      Context.getDependentNameType(ElaboratedTypeKeyword::None, NNS, &II);
 
   CXXScopeSpec SS;
   SS.MakeTrivial(Context, NNS, SourceRange(NameLoc));
@@ -2994,6 +2994,21 @@ static void checkNewAttributesAfterDef(Sema &S, Decl *New, const Decl *Old) {
       continue;
     } else if (isa<UuidAttr>(NewAttribute)) {
       // msvc will allow a subsequent definition to add an uuid to a class
+      ++I;
+      continue;
+    } else if (isa<DeprecatedAttr, WarnUnusedResultAttr, UnusedAttr>(
+                   NewAttribute) &&
+               NewAttribute->isStandardAttributeSyntax()) {
+      // C++14 [dcl.attr.deprecated]p3: A name or entity declared without the
+      // deprecated attribute can later be re-declared with the attribute and
+      // vice-versa.
+      // C++17 [dcl.attr.unused]p4: A name or entity declared without the
+      // maybe_unused attribute can later be redeclared with the attribute and
+      // vice versa.
+      // C++20 [dcl.attr.nodiscard]p2: A name or entity declared without the
+      // nodiscard attribute can later be redeclared with the attribute and
+      // vice-versa.
+      // C23 6.7.13.3p3, 6.7.13.4p3. and 6.7.13.5p5 give the same allowances.
       ++I;
       continue;
     } else if (const AlignedAttr *AA = dyn_cast<AlignedAttr>(NewAttribute)) {
@@ -15439,6 +15454,12 @@ ParmVarDecl *Sema::CheckParameter(DeclContext *DC, SourceLocation StartLoc,
     New->setType(T);
   }
 
+  // __ptrauth is forbidden on parameters.
+  if (T.getPointerAuth()) {
+    Diag(NameLoc, diag::err_ptrauth_qualifier_invalid) << T << 1;
+    New->setInvalidDecl();
+  }
+
   // ISO/IEC TR 18037 S6.7.3: "The type of an object with automatic storage
   // duration shall not be qualified by an address-space qualifier."
   // Since all parameters have automatic store duration, they can not have
@@ -16178,16 +16199,11 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
     // This is meant to pop the context added in ActOnStartOfFunctionDef().
     ExitFunctionBodyRAII ExitRAII(*this, isLambdaCallOperator(FD));
     if (FD) {
-      // If this is called by Parser::ParseFunctionDefinition() after marking
-      // the declaration as deleted, and if the deleted-function-body contains
-      // a message (C++26), then a DefaultedOrDeletedInfo will have already been
-      // added to store that message; do not overwrite it in that case.
-      //
-      // Since this would always set the body to 'nullptr' in that case anyway,
-      // which is already done when the function decl is initially created,
-      // always skipping this irrespective of whether there is a delete message
-      // should not be a problem.
-      if (!FD->isDeletedAsWritten())
+      // The function body and the DefaultedOrDeletedInfo, if present, use
+      // the same storage; don't overwrite the latter if the former is null
+      // (the body is initialised to null anyway, so even if the latter isn't
+      // present, this would still be a no-op).
+      if (Body)
         FD->setBody(Body);
       FD->setWillHaveBody(false);
 
@@ -19441,9 +19457,14 @@ void Sema::ActOnFields(Scope *S, SourceLocation RecLoc, Decl *EnclosingDecl,
             RecordArgPassingKind::CanNeverPassInRegs)
           Record->setArgPassingRestrictions(
               RecordArgPassingKind::CanNeverPassInRegs);
-      } else if (FT.getQualifiers().getObjCLifetime() == Qualifiers::OCL_Weak)
+      } else if (FT.getQualifiers().getObjCLifetime() == Qualifiers::OCL_Weak) {
         Record->setArgPassingRestrictions(
             RecordArgPassingKind::CanNeverPassInRegs);
+      } else if (PointerAuthQualifier Q = FT.getPointerAuth();
+                 Q && Q.isAddressDiscriminated()) {
+        Record->setArgPassingRestrictions(
+            RecordArgPassingKind::CanNeverPassInRegs);
+      }
     }
 
     if (Record && FD->getType().isVolatileQualified())

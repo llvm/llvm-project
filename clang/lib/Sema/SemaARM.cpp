@@ -1109,7 +1109,10 @@ bool SemaARM::CheckAArch64BuiltinFunctionCall(const TargetInfo &TI,
   default: return false;
   case AArch64::BI__builtin_arm_dmb:
   case AArch64::BI__builtin_arm_dsb:
-  case AArch64::BI__builtin_arm_isb: l = 0; u = 15; break;
+  case AArch64::BI__builtin_arm_isb:
+    l = 0;
+    u = 15;
+    break;
   case AArch64::BI__builtin_arm_tcancel: l = 0; u = 65535; break;
   }
 
@@ -1178,7 +1181,7 @@ void SemaARM::handleBuiltinAliasAttr(Decl *D, const ParsedAttr &AL) {
     return;
   }
 
-  IdentifierInfo *Ident = AL.getArgAsIdent(0)->Ident;
+  IdentifierInfo *Ident = AL.getArgAsIdent(0)->getIdentifierInfo();
   unsigned BuiltinID = Ident->getBuiltinID();
   StringRef AliasName = cast<FunctionDecl>(D)->getIdentifier()->getName();
 

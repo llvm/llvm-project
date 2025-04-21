@@ -98,6 +98,11 @@ feature_test_macros = [
             "headers": ["memory"],
         },
         {
+            "name": "__cpp_lib_aligned_accessor",
+            "values": {"c++26": 202411},
+            "headers": ["mdspan"],
+        },
+        {
             "name": "__cpp_lib_allocate_at_least",
             "values": {
                 # Note LWG3887 Version macro for allocate_at_least
@@ -802,6 +807,11 @@ feature_test_macros = [
             "name": "__cpp_lib_is_scoped_enum",
             "values": {"c++23": 202011},
             "headers": ["type_traits"],
+        },
+        {
+            "name": "__cpp_lib_is_sufficiently_aligned",
+            "values": {"c++26": 202411},
+            "headers": ["memory"],
         },
         {
             "name": "__cpp_lib_is_swappable",

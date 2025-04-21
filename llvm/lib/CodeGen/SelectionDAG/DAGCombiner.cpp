@@ -6448,6 +6448,12 @@ static SDValue foldAndOrOfSETCC(SDNode *LogicOp, SelectionDAG &DAG) {
     }
   }
 
+  if (LHS0 == LHS1 && RHS0 == RHS1 && CCL == CCR &&
+      LHS0.getValueType() == RHS0.getValueType() &&
+      ((LogicOp->getOpcode() == ISD::AND && CCL == ISD::SETO) ||
+       (LogicOp->getOpcode() == ISD::OR && CCL == ISD::SETUO)))
+    return DAG.getSetCC(DL, VT, LHS0, RHS0, CCL);
+
   if (TargetPreference == AndOrSETCCFoldKind::None)
     return SDValue();
 
@@ -24743,10 +24749,8 @@ static SDValue combineConcatVectorOfShuffleAndItsOperands(
 
   // We are going to pad the shuffle operands, so any indice, that was picking
   // from the second operand, must be adjusted.
-  SmallVector<int, 16> AdjustedMask;
-  AdjustedMask.reserve(SVN->getMask().size());
+  SmallVector<int, 16> AdjustedMask(SVN->getMask());
   assert(SVN->getOperand(1).isUndef() && "Expected unary shuffle!");
-  append_range(AdjustedMask, SVN->getMask());
 
   // Identity masks for the operands of the (padded) shuffle.
   SmallVector<int, 32> IdentityMask(2 * OpVT.getVectorNumElements());
@@ -25185,7 +25189,7 @@ static SDValue narrowExtractedVectorLoad(SDNode *Extract, SelectionDAG &DAG) {
     return SDValue();
 
   auto *Ld = dyn_cast<LoadSDNode>(Extract->getOperand(0));
-  if (!Ld || Ld->getExtensionType() || !Ld->isSimple())
+  if (!Ld || !ISD::isNormalLoad(Ld) || !Ld->isSimple())
     return SDValue();
 
   // Allow targets to opt-out.

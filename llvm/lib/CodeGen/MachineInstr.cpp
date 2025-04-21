@@ -798,6 +798,28 @@ bool MachineInstr::shouldUpdateAdditionalCallInfo() const {
   return isCandidateForAdditionalCallInfo();
 }
 
+template <typename Operand, typename Instruction>
+static iterator_range<
+    filter_iterator<Operand *, std::function<bool(Operand &Op)>>>
+getDebugOperandsForRegHelper(Instruction *MI, Register Reg) {
+  std::function<bool(Operand & Op)> OpUsesReg(
+      [Reg](Operand &Op) { return Op.isReg() && Op.getReg() == Reg; });
+  return make_filter_range(MI->debug_operands(), OpUsesReg);
+}
+
+iterator_range<filter_iterator<const MachineOperand *,
+                               std::function<bool(const MachineOperand &Op)>>>
+MachineInstr::getDebugOperandsForReg(Register Reg) const {
+  return getDebugOperandsForRegHelper<const MachineOperand, const MachineInstr>(
+      this, Reg);
+}
+
+iterator_range<
+    filter_iterator<MachineOperand *, std::function<bool(MachineOperand &Op)>>>
+MachineInstr::getDebugOperandsForReg(Register Reg) {
+  return getDebugOperandsForRegHelper<MachineOperand, MachineInstr>(this, Reg);
+}
+
 unsigned MachineInstr::getNumExplicitOperands() const {
   unsigned NumOperands = MCID->getNumOperands();
   if (!MCID->isVariadic())
@@ -2288,7 +2310,7 @@ MachineInstrExpressionTrait::getHashValue(const MachineInstr* const &MI) {
 
     HashComponents.push_back(hash_value(MO));
   }
-  return hash_combine_range(HashComponents.begin(), HashComponents.end());
+  return hash_combine_range(HashComponents);
 }
 
 const MDNode *MachineInstr::getLocCookieMD() const {
@@ -2424,9 +2446,8 @@ static const DIExpression *computeExprForSpill(
 static const DIExpression *computeExprForSpill(const MachineInstr &MI,
                                                Register SpillReg) {
   assert(MI.hasDebugOperandForReg(SpillReg) && "Spill Reg is not used in MI.");
-  SmallVector<const MachineOperand *> SpillOperands;
-  for (const MachineOperand &Op : MI.getDebugOperandsForReg(SpillReg))
-    SpillOperands.push_back(&Op);
+  SmallVector<const MachineOperand *> SpillOperands(
+      llvm::make_pointer_range(MI.getDebugOperandsForReg(SpillReg)));
   return computeExprForSpill(MI, SpillOperands);
 }
 

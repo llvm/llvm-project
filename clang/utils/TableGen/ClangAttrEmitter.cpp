@@ -4560,7 +4560,7 @@ static void GenerateTargetRequirements(const Record &Attr,
         std::vector<StringRef> DA =
             I.second->getValueAsDef("Target")->getValueAsListOfStrings(
                 "Arches");
-        Arches.insert(Arches.end(), DA.begin(), DA.end());
+        llvm::append_range(Arches, DA);
       }
     }
   }

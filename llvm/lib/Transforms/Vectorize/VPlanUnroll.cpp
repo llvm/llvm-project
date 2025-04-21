@@ -155,33 +155,13 @@ void UnrollState::unrollWidenInductionByUF(
   if (isa_and_present<FPMathOperator>(ID.getInductionBinOp()))
     FMFs = ID.getInductionBinOp()->getFastMathFlags();
 
-  VPValue *VectorStep = &Plan.getVF();
-  VPBuilder Builder(PH);
-  if (TypeInfo.inferScalarType(VectorStep) != IVTy) {
-    Instruction::CastOps CastOp =
-        IVTy->isFloatingPointTy() ? Instruction::UIToFP : Instruction::Trunc;
-    VectorStep = Builder.createWidenCast(CastOp, VectorStep, IVTy);
-    ToSkip.insert(VectorStep->getDefiningRecipe());
-  }
-
   VPValue *ScalarStep = IV->getStepValue();
-  auto *ConstStep = ScalarStep->isLiveIn()
-                        ? dyn_cast<ConstantInt>(ScalarStep->getLiveInIRValue())
-                        : nullptr;
-  if (!ConstStep || ConstStep->getValue() != 1) {
-    if (TypeInfo.inferScalarType(ScalarStep) != IVTy) {
-      ScalarStep =
-          Builder.createWidenCast(Instruction::Trunc, ScalarStep, IVTy);
-      ToSkip.insert(ScalarStep->getDefiningRecipe());
-    }
+  VPBuilder Builder(PH);
+  VPInstruction *VectorStep = Builder.createNaryOp(
+      VPInstruction::WideIVStep, {&Plan.getVF(), ScalarStep}, IVTy, FMFs,
+      IV->getDebugLoc());
 
-    unsigned MulOpc =
-        IVTy->isFloatingPointTy() ? Instruction::FMul : Instruction::Mul;
-    VPInstruction *Mul = Builder.createNaryOp(MulOpc, {VectorStep, ScalarStep},
-                                              FMFs, IV->getDebugLoc());
-    VectorStep = Mul;
-    ToSkip.insert(Mul);
-  }
+  ToSkip.insert(VectorStep);
 
   // Now create recipes to compute the induction steps for part 1 .. UF. Part 0
   // remains the header phi. Parts > 0 are computed by adding Step to the
