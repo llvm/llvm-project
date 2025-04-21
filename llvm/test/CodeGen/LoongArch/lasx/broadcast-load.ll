@@ -21,8 +21,8 @@ define <4 x i64> @should_not_be_optimized(ptr %ptr, ptr %dst) {
 define <4 x i64> @xvldrepl_d_unaligned_offset(ptr %ptr) {
 ; CHECK-LABEL: xvldrepl_d_unaligned_offset:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    ld.d $a0, $a0, 4
-; CHECK-NEXT:    xvreplgr2vr.d $xr0, $a0
+; CHECK-NEXT:    addi.d $a0, $a0, 4
+; CHECK-NEXT:    xvldrepl.d $xr0, $a0, 0
 ; CHECK-NEXT:    ret
   %p = getelementptr i32, ptr %ptr, i32 1
   %tmp = load i64, ptr %p
@@ -34,8 +34,7 @@ define <4 x i64> @xvldrepl_d_unaligned_offset(ptr %ptr) {
 define <32 x i8> @xvldrepl_b(ptr %ptr) {
 ; CHECK-LABEL: xvldrepl_b:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    ld.b $a0, $a0, 0
-; CHECK-NEXT:    xvreplgr2vr.b $xr0, $a0
+; CHECK-NEXT:    xvldrepl.b $xr0, $a0, 0
 ; CHECK-NEXT:    ret
   %tmp = load i8, ptr %ptr
   %tmp1 = insertelement <32 x i8> zeroinitializer, i8 %tmp, i32 0
@@ -46,8 +45,7 @@ define <32 x i8> @xvldrepl_b(ptr %ptr) {
 define <32 x i8> @xvldrepl_b_offset(ptr %ptr) {
 ; CHECK-LABEL: xvldrepl_b_offset:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    ld.b $a0, $a0, 33
-; CHECK-NEXT:    xvreplgr2vr.b $xr0, $a0
+; CHECK-NEXT:    xvldrepl.b $xr0, $a0, 33
 ; CHECK-NEXT:    ret
   %p = getelementptr i8, ptr %ptr, i64 33
   %tmp = load i8, ptr %p
@@ -60,8 +58,7 @@ define <32 x i8> @xvldrepl_b_offset(ptr %ptr) {
 define <16 x i16> @xvldrepl_h(ptr %ptr) {
 ; CHECK-LABEL: xvldrepl_h:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    ld.h $a0, $a0, 0
-; CHECK-NEXT:    xvreplgr2vr.h $xr0, $a0
+; CHECK-NEXT:    xvldrepl.h $xr0, $a0, 0
 ; CHECK-NEXT:    ret
   %tmp = load i16, ptr %ptr
   %tmp1 = insertelement <16 x i16> zeroinitializer, i16 %tmp, i32 0
@@ -72,8 +69,7 @@ define <16 x i16> @xvldrepl_h(ptr %ptr) {
 define <16 x i16> @xvldrepl_h_offset(ptr %ptr) {
 ; CHECK-LABEL: xvldrepl_h_offset:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    ld.h $a0, $a0, 66
-; CHECK-NEXT:    xvreplgr2vr.h $xr0, $a0
+; CHECK-NEXT:    xvldrepl.h $xr0, $a0, 66
 ; CHECK-NEXT:    ret
   %p = getelementptr i16, ptr %ptr, i64 33
   %tmp = load i16, ptr %p
@@ -85,8 +81,7 @@ define <16 x i16> @xvldrepl_h_offset(ptr %ptr) {
 define <8 x i32> @xvldrepl_w(ptr %ptr) {
 ; CHECK-LABEL: xvldrepl_w:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    ld.w $a0, $a0, 0
-; CHECK-NEXT:    xvreplgr2vr.w $xr0, $a0
+; CHECK-NEXT:    xvldrepl.w $xr0, $a0, 0
 ; CHECK-NEXT:    ret
   %tmp = load i32, ptr %ptr
   %tmp1 = insertelement <8 x i32> zeroinitializer, i32 %tmp, i32 0
@@ -97,8 +92,7 @@ define <8 x i32> @xvldrepl_w(ptr %ptr) {
 define <8 x i32> @xvldrepl_w_offset(ptr %ptr) {
 ; CHECK-LABEL: xvldrepl_w_offset:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    ld.w $a0, $a0, 132
-; CHECK-NEXT:    xvreplgr2vr.w $xr0, $a0
+; CHECK-NEXT:    xvldrepl.w $xr0, $a0, 132
 ; CHECK-NEXT:    ret
   %p = getelementptr i32, ptr %ptr, i64 33
   %tmp = load i32, ptr %p
@@ -111,8 +105,7 @@ define <8 x i32> @xvldrepl_w_offset(ptr %ptr) {
 define <4 x i64> @xvldrepl_d(ptr %ptr) {
 ; CHECK-LABEL: xvldrepl_d:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    ld.d $a0, $a0, 0
-; CHECK-NEXT:    xvreplgr2vr.d $xr0, $a0
+; CHECK-NEXT:    xvldrepl.d $xr0, $a0, 0
 ; CHECK-NEXT:    ret
   %tmp = load i64, ptr %ptr
   %tmp1 = insertelement <4 x i64> zeroinitializer, i64 %tmp, i32 0
@@ -123,8 +116,7 @@ define <4 x i64> @xvldrepl_d(ptr %ptr) {
 define <4 x i64> @xvldrepl_d_offset(ptr %ptr) {
 ; CHECK-LABEL: xvldrepl_d_offset:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    ld.d $a0, $a0, 264
-; CHECK-NEXT:    xvreplgr2vr.d $xr0, $a0
+; CHECK-NEXT:    xvldrepl.d $xr0, $a0, 264
 ; CHECK-NEXT:    ret
   %p = getelementptr i64, ptr %ptr, i64 33
   %tmp = load i64, ptr %p
@@ -136,8 +128,7 @@ define <4 x i64> @xvldrepl_d_offset(ptr %ptr) {
 define <8 x float> @vldrepl_w_flt(ptr %ptr) {
 ; CHECK-LABEL: vldrepl_w_flt:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fld.s $fa0, $a0, 0
-; CHECK-NEXT:    xvreplve0.w $xr0, $xr0
+; CHECK-NEXT:    xvldrepl.w $xr0, $a0, 0
 ; CHECK-NEXT:    ret
   %tmp = load float, ptr %ptr
   %tmp1 = insertelement <8 x float> zeroinitializer, float %tmp, i32 0
@@ -148,8 +139,7 @@ define <8 x float> @vldrepl_w_flt(ptr %ptr) {
 define <8 x float> @vldrepl_w_flt_offset(ptr %ptr) {
 ; CHECK-LABEL: vldrepl_w_flt_offset:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fld.s $fa0, $a0, 264
-; CHECK-NEXT:    xvreplve0.w $xr0, $xr0
+; CHECK-NEXT:    xvldrepl.w $xr0, $a0, 264
 ; CHECK-NEXT:    ret
   %p = getelementptr i64, ptr %ptr, i64 33
   %tmp = load float, ptr %p
@@ -161,8 +151,7 @@ define <8 x float> @vldrepl_w_flt_offset(ptr %ptr) {
 define <4 x double> @vldrepl_d_dbl(ptr %ptr) {
 ; CHECK-LABEL: vldrepl_d_dbl:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fld.d $fa0, $a0, 0
-; CHECK-NEXT:    xvreplve0.d $xr0, $xr0
+; CHECK-NEXT:    xvldrepl.d $xr0, $a0, 0
 ; CHECK-NEXT:    ret
   %tmp = load double, ptr %ptr
   %tmp1 = insertelement <4 x double> zeroinitializer, double %tmp, i32 0
@@ -173,8 +162,7 @@ define <4 x double> @vldrepl_d_dbl(ptr %ptr) {
 define <4 x double> @vldrepl_d_dbl_offset(ptr %ptr) {
 ; CHECK-LABEL: vldrepl_d_dbl_offset:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fld.d $fa0, $a0, 264
-; CHECK-NEXT:    xvreplve0.d $xr0, $xr0
+; CHECK-NEXT:    xvldrepl.d $xr0, $a0, 264
 ; CHECK-NEXT:    ret
   %p = getelementptr i64, ptr %ptr, i64 33
   %tmp = load double, ptr %p
