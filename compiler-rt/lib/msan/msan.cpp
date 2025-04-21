@@ -352,9 +352,19 @@ void __sanitizer::BufferedStackTrace::UnwindImpl(
 
 using namespace __msan;
 
-#define PRINT_FAULTING_INSTRUCTION(instname)                          \
-  Printf("Instruction that failed the shadow check: %s\n", instname); \
-  Printf("\n");
+#define PRINT_FAULTING_INSTRUCTION(instname)                            \
+  if (__msan::flags()->print_faulting_instruction) {                    \
+    Printf("Instruction that failed the shadow check: %s\n", instname); \
+    Printf("\n");                                                       \
+  }
+
+#define CANNOT_PRINT_FAULTING_INSTRUCTION                               \
+  if (__msan::flags()->print_faulting_instruction) {                    \
+    Printf(                                                             \
+        "Error: print_faulting_instruction requested but code was not " \
+        "instrumented with -mllvm -embed-faulting-instruction.\n");     \
+    Printf("\n");                                                       \
+  }
 
 #define MSAN_MAYBE_WARNING_INSTNAME(type, size, instname)                    \
   void __msan_maybe_warning_instname_##size(type s, u32 o, char *instname) { \
@@ -379,6 +389,7 @@ MSAN_MAYBE_WARNING_INSTNAME(u64, 8, instname)
   void __msan_maybe_warning_##size(type s, u32 o) { \
     GET_CALLER_PC_BP;                               \
     if (UNLIKELY(s)) {                              \
+      CANNOT_PRINT_FAULTING_INSTRUCTION;            \
       PrintWarningWithOrigin(pc, bp, o);            \
       if (__msan::flags()->halt_on_error) {         \
         Printf("Exiting\n");                        \
@@ -410,6 +421,7 @@ MSAN_MAYBE_STORE_ORIGIN(u32, 4)
 MSAN_MAYBE_STORE_ORIGIN(u64, 8)
 
 void __msan_warning() {
+  CANNOT_PRINT_FAULTING_INSTRUCTION;
   GET_CALLER_PC_BP;
   PrintWarningWithOrigin(pc, bp, 0);
   if (__msan::flags()->halt_on_error) {
@@ -421,6 +433,7 @@ void __msan_warning() {
 }
 
 void __msan_warning_noreturn() {
+  CANNOT_PRINT_FAULTING_INSTRUCTION;
   GET_CALLER_PC_BP;
   PrintWarningWithOrigin(pc, bp, 0);
   if (__msan::flags()->print_stats)
@@ -430,6 +443,7 @@ void __msan_warning_noreturn() {
 }
 
 void __msan_warning_with_origin(u32 origin) {
+  CANNOT_PRINT_FAULTING_INSTRUCTION;
   GET_CALLER_PC_BP;
   PrintWarningWithOrigin(pc, bp, origin);
   if (__msan::flags()->halt_on_error) {
@@ -441,6 +455,7 @@ void __msan_warning_with_origin(u32 origin) {
 }
 
 void __msan_warning_with_origin_noreturn(u32 origin) {
+  CANNOT_PRINT_FAULTING_INSTRUCTION;
   GET_CALLER_PC_BP;
   PrintWarningWithOrigin(pc, bp, origin);
   if (__msan::flags()->print_stats)

@@ -274,11 +274,12 @@ static cl::opt<bool>
                  cl::desc("propagate shadow through ICmpEQ and ICmpNE"),
                  cl::Hidden, cl::init(true));
 
-static cl::opt<uint> ClPrintFaultingInst(
-    "msan-print-faulting-instruction",
-    cl::desc("If set to 1, print the name of the LLVM IR instruction that "
+static cl::opt<uint> ClEmbedFaultingInst(
+    "msan-embed-faulting-instruction",
+    cl::desc("If set to 1, embed the name of the LLVM IR instruction that "
              "failed the shadow check."
-             "If set to 2, print the full LLVM IR instruction."),
+             "If set to 2, embed the full LLVM IR instruction. "
+             "The runtime can print the embedded instruction."),
     cl::Hidden, cl::init(0));
 
 static cl::opt<bool>
@@ -823,7 +824,7 @@ void MemorySanitizer::createKernelApi(Module &M, const TargetLibraryInfo &TLI) {
   VAArgOriginTLS = nullptr;
   VAArgOverflowSizeTLS = nullptr;
 
-  if (ClPrintFaultingInst)
+  if (ClEmbedFaultingInst)
     WarningFn = M.getOrInsertFunction(
         "__msan_warning_instname", TLI.getAttrList(C, {0}, /*Signed=*/false),
         IRB.getVoidTy(), IRB.getInt32Ty(), IRB.getPtrTy());
@@ -888,7 +889,7 @@ void MemorySanitizer::createUserspaceApi(Module &M,
   // FIXME: this function should have "Cold" calling conv,
   // which is not yet implemented.
   if (TrackOrigins) {
-    if (ClPrintFaultingInst) {
+    if (ClEmbedFaultingInst) {
       StringRef WarningFnName =
           Recover ? "__msan_warning_with_origin_instname"
                   : "__msan_warning_with_origin_noreturn_instname";
@@ -903,7 +904,7 @@ void MemorySanitizer::createUserspaceApi(Module &M,
           IRB.getVoidTy(), IRB.getInt32Ty());
     }
   } else {
-    if (ClPrintFaultingInst) {
+    if (ClEmbedFaultingInst) {
       StringRef WarningFnName = Recover ? "__msan_warning_instname"
                                         : "__msan_warning_noreturn_instname";
       WarningFn =
@@ -945,7 +946,7 @@ void MemorySanitizer::createUserspaceApi(Module &M,
        AccessSizeIndex++) {
     unsigned AccessSize = 1 << AccessSizeIndex;
     std::string FunctionName;
-    if (ClPrintFaultingInst) {
+    if (ClEmbedFaultingInst) {
       FunctionName = "__msan_maybe_warning_instname_" + itostr(AccessSize);
       MaybeWarningFn[AccessSizeIndex] = M.getOrInsertFunction(
           FunctionName, TLI.getAttrList(C, {0, 1}, /*Signed=*/false),
@@ -1449,7 +1450,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       }
     }
 
-    if (ClPrintFaultingInst) {
+    if (ClEmbedFaultingInst) {
       if (MS.CompileKernel || MS.TrackOrigins)
         IRB.CreateCall(MS.WarningFn, {Origin, InstName})->setCannotMerge();
       else
@@ -1478,7 +1479,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       Value *ConvertedShadow2 =
           IRB.CreateZExt(ConvertedShadow, IRB.getIntNTy(8 * (1 << SizeIndex)));
       CallBase *CB;
-      if (ClPrintFaultingInst)
+      if (ClEmbedFaultingInst)
         CB = IRB.CreateCall(
             Fn, {ConvertedShadow2,
                  MS.TrackOrigins && Origin ? Origin : (Value *)IRB.getInt32(0),
@@ -1498,7 +1499,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
           /* Unreachable */ !MS.Recover, MS.ColdCallWeights);
 
       IRB.SetInsertPoint(CheckTerm);
-      // InstName will be ignored by insertWarningFn if ClPrintFaultingInst is
+      // InstName will be ignored by insertWarningFn if ClEmbedFaultingInst is
       // false
       insertWarningFn(IRB, Origin, InstName);
       LLVM_DEBUG(dbgs() << "  CHECK: " << *Cmp << "\n");
@@ -1514,7 +1515,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     Instruction *Instruction = InstructionChecks.front().OrigIns;
 
     Value *InstName = nullptr;
-    if (ClPrintFaultingInst >= 1) {
+    if (ClEmbedFaultingInst >= 1) {
       IRBuilder<> IRB0(Instruction);
       std::string str;
       StringRef InstNameStrRef;
@@ -1522,11 +1523,11 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       // Dumping the full instruction is expensive because the operands etc.
       // likely make the string unique per instruction instance, hence we
       // offer a choice whether to only print the instruction name.
-      if (ClPrintFaultingInst >= 2) {
+      if (ClEmbedFaultingInst >= 2) {
         llvm::raw_string_ostream buf(str);
         Instruction->print(buf);
         InstNameStrRef = StringRef(str);
-      } else if (ClPrintFaultingInst >= 1) {
+      } else if (ClEmbedFaultingInst >= 1) {
         if (CallInst *CI = dyn_cast<CallInst>(Instruction)) {
           if (CI->getCalledFunction()) {
             Twine description = "call " + CI->getCalledFunction()->getName();

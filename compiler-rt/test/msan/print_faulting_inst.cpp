@@ -1,38 +1,38 @@
 // Try parameter '0' (program runs cleanly)
 // -------------------------------------------------------
-// RUN: %clangxx_msan -g %s -o %t && %run %t 0
+// RUN: env MSAN_OPTIONS=print_faulting_instruction=true %clangxx_msan -g %s -o %t && env MSAN_OPTIONS=print_faulting_instruction=true %run %t 0
 
 // Try parameter '1'
 // -------------------------------------------------------
-// RUN: %clangxx_msan -g %s -o %t && not %run %t 1 >%t.out 2>&1
+// RUN: %clangxx_msan -g %s -o %t && not env MSAN_OPTIONS=print_faulting_instruction=true %run %t 1 >%t.out 2>&1
 // RUN: FileCheck --check-prefix STORE-CHECK %s < %t.out
 
-// RUN: %clangxx_msan -mllvm -msan-print-faulting-instruction=1 -g %s -o %t && not %run %t 1 >%t.out 2>&1
+// RUN: %clangxx_msan -mllvm -msan-embed-faulting-instruction=1 -g %s -o %t && not env MSAN_OPTIONS=print_faulting_instruction=true %run %t 1 >%t.out 2>&1
 // RUN: FileCheck --check-prefixes VERBOSE-STORE-CHECK,STORE-CHECK %s < %t.out
 
-// RUN: %clangxx_msan -mllvm -msan-print-faulting-instruction=2 -g %s -o %t && not %run %t 1 >%t.out 2>&1
+// RUN: %clangxx_msan -mllvm -msan-embed-faulting-instruction=2 -g %s -o %t && not env MSAN_OPTIONS=print_faulting_instruction=true %run %t 1 >%t.out 2>&1
 // RUN: FileCheck --check-prefixes VERY-VERBOSE-STORE-CHECK,STORE-CHECK %s < %t.out
 
 // Try parameter '2', with -fsanitize-memory-param-retval
 // -------------------------------------------------------
-// RUN: %clangxx_msan -fsanitize-memory-param-retval -g %s -o %t && not %run %t 2 >%t.out 2>&1
+// RUN: %clangxx_msan -fsanitize-memory-param-retval -g %s -o %t && not env MSAN_OPTIONS=print_faulting_instruction=true %run %t 2 >%t.out 2>&1
 // RUN: FileCheck --check-prefix PARAM-CHECK %s < %t.out
 
-// RUN: %clangxx_msan -fsanitize-memory-param-retval -mllvm -msan-print-faulting-instruction=1 -g %s -o %t && not %run %t 2 >%t.out 2>&1
+// RUN: %clangxx_msan -fsanitize-memory-param-retval -mllvm -msan-embed-faulting-instruction=1 -g %s -o %t && not env MSAN_OPTIONS=print_faulting_instruction=true %run %t 2 >%t.out 2>&1
 // RUN: FileCheck --check-prefixes VERBOSE-PARAM-CHECK,PARAM-CHECK %s < %t.out
 
-// RUN: %clangxx_msan -fsanitize-memory-param-retval -mllvm -msan-print-faulting-instruction=2 -g %s -o %t && not %run %t 2 >%t.out 2>&1
+// RUN: %clangxx_msan -fsanitize-memory-param-retval -mllvm -msan-embed-faulting-instruction=2 -g %s -o %t && not env MSAN_OPTIONS=print_faulting_instruction=true %run %t 2 >%t.out 2>&1
 // RUN: FileCheck --check-prefixes VERY-VERBOSE-PARAM-CHECK,PARAM-CHECK %s < %t.out
 
 // Try parameter '2', with -fno-sanitize-memory-param-retval
 // -------------------------------------------------------
-// RUN: %clangxx_msan -fno-sanitize-memory-param-retval -g %s -o %t && not %run %t 2 >%t.out 2>&1
+// RUN: %clangxx_msan -fno-sanitize-memory-param-retval -g %s -o %t && not env MSAN_OPTIONS=print_faulting_instruction=true %run %t 2 >%t.out 2>&1
 // RUN: FileCheck --check-prefix NO-PARAM-CHECK %s < %t.out
 
-// RUN: %clangxx_msan -fno-sanitize-memory-param-retval -mllvm -msan-print-faulting-instruction=1 -g %s -o %t && not %run %t 2 >%t.out 2>&1
+// RUN: %clangxx_msan -fno-sanitize-memory-param-retval -mllvm -msan-embed-faulting-instruction=1 -g %s -o %t && not env MSAN_OPTIONS=print_faulting_instruction=true %run %t 2 >%t.out 2>&1
 // RUN: FileCheck --check-prefixes VERBOSE-NO-PARAM-CHECK,NO-PARAM-CHECK %s < %t.out
 
-// RUN: %clangxx_msan -fno-sanitize-memory-param-retval -mllvm -msan-print-faulting-instruction=2 -g %s -o %t && not %run %t 2 >%t.out 2>&1
+// RUN: %clangxx_msan -fno-sanitize-memory-param-retval -mllvm -msan-embed-faulting-instruction=2 -g %s -o %t && not env MSAN_OPTIONS=print_faulting_instruction=true %run %t 2 >%t.out 2>&1
 // RUN: FileCheck --check-prefixes VERY-VERBOSE-NO-PARAM-CHECK,NO-PARAM-CHECK %s < %t.out
 
 #include <stdio.h>

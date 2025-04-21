@@ -25,6 +25,10 @@ MSAN_FLAG(bool, poison_stack_with_zeroes, false, "")
 MSAN_FLAG(bool, poison_in_malloc, true, "")
 MSAN_FLAG(bool, poison_in_free, true, "")
 MSAN_FLAG(bool, poison_in_dtor, true, "")
+MSAN_FLAG(bool, print_faulting_instruction, false,
+          "When reporting a UUM, print the name of the faulting instruction. "
+          "Note: requires code to be instrumented with -mllvm "
+          "-msan-embed-faulting-instruction.")
 MSAN_FLAG(bool, report_umrs, true, "")
 MSAN_FLAG(bool, wrap_signals, true, "")
 MSAN_FLAG(bool, print_stats, false, "")
