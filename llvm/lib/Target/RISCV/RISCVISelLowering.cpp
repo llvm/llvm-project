@@ -4573,9 +4573,9 @@ static SDValue lowerScalarInsert(SDValue Scalar, SDValue VL, MVT VT,
 /// vector source, return it.  Note that the source may be larger
 /// than the requested concat_vector (i.e. a extract_subvector
 /// might be required.)
-static SDValue FoldConcatVector(SDValue V1, SDValue V2) {
+static SDValue foldConcatVector(SDValue V1, SDValue V2) {
   EVT VT = V1.getValueType();
-  assert(VT == V1.getValueType() && "precondition");
+  assert(VT == V2.getValueType() && "argument types must match");
   // Both input must be extracts.
   if (V1.getOpcode() != ISD::EXTRACT_SUBVECTOR ||
       V2.getOpcode() != ISD::EXTRACT_SUBVECTOR)
@@ -4604,7 +4604,7 @@ static SDValue getSingleShuffleSrc(MVT VT, SDValue V1, SDValue V2) {
   unsigned NumElts = VT.getVectorNumElements();
   // Src needs to have twice the number of elements.
   // TODO: Update shuffle lowering to add the extract subvector
-  if (SDValue Src = FoldConcatVector(V1, V2);
+  if (SDValue Src = foldConcatVector(V1, V2);
       Src && Src.getValueType().getVectorNumElements() == (NumElts * 2))
     return Src;
 
@@ -11529,7 +11529,7 @@ SDValue RISCVTargetLowering::lowerVECTOR_DEINTERLEAVE(SDValue Op,
 
     // For fractional LMUL, check if we can use a higher LMUL
     // instruction to avoid a vslidedown.
-    if (SDValue Src = FoldConcatVector(V1, V2);
+    if (SDValue Src = foldConcatVector(V1, V2);
         Src && getLMUL1VT(VT).bitsGT(VT)) {
       EVT NewVT = VT.getDoubleNumVectorElementsVT();
       SDValue ZeroIdx = DAG.getVectorIdxConstant(0, DL);
