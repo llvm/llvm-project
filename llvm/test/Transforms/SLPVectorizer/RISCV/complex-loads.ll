@@ -79,8 +79,7 @@ define i32 @test(ptr %pix1, ptr %pix2, i64 %idx.ext, i64 %idx.ext63, ptr %add.pt
 ; CHECK-NEXT:    [[TMP59:%.*]] = add <4 x i32> [[TMP57]], [[TMP58]]
 ; CHECK-NEXT:    [[TMP60:%.*]] = sub <4 x i32> [[TMP57]], [[TMP58]]
 ; CHECK-NEXT:    [[TMP61:%.*]] = shufflevector <4 x i32> [[TMP59]], <4 x i32> [[TMP60]], <4 x i32> <i32 0, i32 1, i32 6, i32 7>
-; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <8 x i8> @llvm.vp.load.v8i8.p0(ptr align 1 null, <8 x i1> <i1 true, i1 false, i1 false, i1 false, i1 true, i1 false, i1 false, i1 false>, i32 5)
-; CHECK-NEXT:    [[TMP62:%.*]] = shufflevector <8 x i8> [[WIDE_MASKED_LOAD]], <8 x i8> poison, <2 x i32> <i32 0, i32 4>
+; CHECK-NEXT:    [[TMP62:%.*]] = call <2 x i8> @llvm.experimental.vp.strided.load.v2i8.p0.i64(ptr align 1 null, i64 4, <2 x i1> splat (i1 true), i32 2)
 ; CHECK-NEXT:    [[TMP63:%.*]] = load <4 x i8>, ptr null, align 1
 ; CHECK-NEXT:    [[TMP64:%.*]] = zext <4 x i8> [[TMP63]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP65:%.*]] = load <4 x i8>, ptr null, align 1
@@ -211,8 +210,7 @@ define i32 @test(ptr %pix1, ptr %pix2, i64 %idx.ext, i64 %idx.ext63, ptr %add.pt
 ; THR15-NEXT:    [[TMP59:%.*]] = add <4 x i32> [[TMP57]], [[TMP58]]
 ; THR15-NEXT:    [[TMP60:%.*]] = sub <4 x i32> [[TMP57]], [[TMP58]]
 ; THR15-NEXT:    [[TMP61:%.*]] = shufflevector <4 x i32> [[TMP59]], <4 x i32> [[TMP60]], <4 x i32> <i32 0, i32 1, i32 6, i32 7>
-; THR15-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <8 x i8> @llvm.vp.load.v8i8.p0(ptr align 1 null, <8 x i1> <i1 true, i1 false, i1 false, i1 false, i1 true, i1 false, i1 false, i1 false>, i32 5)
-; THR15-NEXT:    [[TMP62:%.*]] = shufflevector <8 x i8> [[WIDE_MASKED_LOAD]], <8 x i8> poison, <2 x i32> <i32 0, i32 4>
+; THR15-NEXT:    [[TMP62:%.*]] = call <2 x i8> @llvm.experimental.vp.strided.load.v2i8.p0.i64(ptr align 1 null, i64 4, <2 x i1> splat (i1 true), i32 2)
 ; THR15-NEXT:    [[TMP63:%.*]] = load <4 x i8>, ptr null, align 1
 ; THR15-NEXT:    [[TMP64:%.*]] = zext <4 x i8> [[TMP63]] to <4 x i32>
 ; THR15-NEXT:    [[TMP65:%.*]] = load <4 x i8>, ptr null, align 1

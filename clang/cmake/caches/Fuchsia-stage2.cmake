@@ -18,6 +18,7 @@ set(LLVM_ENABLE_LIBEDIT OFF CACHE BOOL "")
 set(LLVM_ENABLE_LLD ON CACHE BOOL "")
 set(LLVM_ENABLE_LTO ON CACHE BOOL "")
 set(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR ON CACHE BOOL "")
+set(LLVM_ENABLE_PIC OFF CACHE BOOL "")
 set(LLVM_ENABLE_PLUGINS OFF CACHE BOOL "")
 set(LLVM_ENABLE_UNWIND_TABLES OFF CACHE BOOL "")
 set(LLVM_ENABLE_Z3_SOLVER OFF CACHE BOOL "")
@@ -459,6 +460,7 @@ set(LLVM_TOOLCHAIN_TOOLS
   llvm-libtool-darwin
   llvm-lipo
   llvm-ml
+  llvm-mt
   llvm-nm
   llvm-objcopy
   llvm-objdump
@@ -479,10 +481,6 @@ set(LLVM_TOOLCHAIN_TOOLS
   sancov
   scan-build-py
   CACHE STRING "")
-
-if (LLVM_ENABLE_LIBXML2)
-  list(APPEND LLVM_TOOLCHAIN_TOOLS llvm-mt)
-endif()
 
 set(LLVM_Toolchain_DISTRIBUTION_COMPONENTS
   bolt

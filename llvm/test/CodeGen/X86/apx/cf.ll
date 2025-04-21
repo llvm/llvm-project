@@ -158,3 +158,39 @@ entry:
   tail call void @llvm.masked.store.v1i16.p0(<1 x i16> %5, ptr %p, i32 2, <1 x i1> %1)
   ret void
 }
+
+define void @load_zext(i1 %cond, ptr %b, ptr %p) {
+; CHECK-LABEL: load_zext:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    andb $1, %dil
+; CHECK-NEXT:    cfcmovnew (%rsi), %ax
+; CHECK-NEXT:    movzwl %ax, %eax
+; CHECK-NEXT:    cfcmovnel %eax, (%rdx)
+; CHECK-NEXT:    retq
+entry:
+  %0 = bitcast i1 %cond to <1 x i1>
+  %1 = call <1 x i16> @llvm.masked.load.v1i16.p0(ptr %b, i32 2, <1 x i1> %0, <1 x i16> poison)
+  %2 = bitcast <1 x i16> %1 to i16
+  %zext = zext i16 %2 to i32
+  %3 = bitcast i32 %zext to <1 x i32>
+  call void @llvm.masked.store.v1i32.p0(<1 x i32> %3, ptr %p, i32 4, <1 x i1> %0)
+  ret void
+}
+
+define void @load_sext(i1 %cond, ptr %b, ptr %p) {
+; CHECK-LABEL: load_sext:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    andb $1, %dil
+; CHECK-NEXT:    cfcmovnel (%rsi), %eax
+; CHECK-NEXT:    cltq
+; CHECK-NEXT:    cfcmovneq %rax, (%rdx)
+; CHECK-NEXT:    retq
+entry:
+  %0 = bitcast i1 %cond to <1 x i1>
+  %1 = call <1 x i32> @llvm.masked.load.v1i32.p0(ptr %b, i32 2, <1 x i1> %0, <1 x i32> poison)
+  %2 = bitcast <1 x i32> %1 to i32
+  %zext = sext i32 %2 to i64
+  %3 = bitcast i64 %zext to <1 x i64>
+  call void @llvm.masked.store.v1i64.p0(<1 x i64> %3, ptr %p, i32 4, <1 x i1> %0)
+  ret void
+}
