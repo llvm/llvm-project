@@ -12,6 +12,7 @@
 
 #include "mlir/Conversion/TosaToArith/TosaToArith.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/Shape/IR/Shape.h"
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
@@ -33,6 +34,17 @@ public:
   }
 };
 
+class ConstShapeOpConverter : public OpRewritePattern<tosa::ConstShapeOp> {
+  public:
+    using OpRewritePattern<tosa::ConstShapeOp>::OpRewritePattern;
+  
+    LogicalResult matchAndRewrite(tosa::ConstShapeOp op,
+                                  PatternRewriter &rewriter) const final {
+      rewriter.replaceOpWithNewOp<shape::ConstShapeOp>(op, op.getValues());
+      return success();
+    }
+  };
+  
 Type matchContainerType(Type element, Type container) {
   if (auto shapedTy = dyn_cast<ShapedType>(container))
     return shapedTy.clone(element);
@@ -251,6 +263,7 @@ public:
 void mlir::tosa::populateTosaToArithConversionPatterns(
     RewritePatternSet *patterns) {
   patterns->add<ConstOpConverter>(patterns->getContext());
+  patterns->add<ConstShapeOpConverter>(patterns->getContext());
 }
 
 void mlir::tosa::populateTosaRescaleToArithConversionPatterns(

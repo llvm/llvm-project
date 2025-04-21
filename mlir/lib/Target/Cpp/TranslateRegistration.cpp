@@ -9,6 +9,8 @@
 #include "mlir/Dialect/ControlFlow/IR/ControlFlow.h"
 #include "mlir/Dialect/EmitC/IR/EmitC.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/Target/Cpp/CppEmitter.h"
@@ -45,6 +47,8 @@ void registerToCppTranslation() {
         // clang-format off
         registry.insert<cf::ControlFlowDialect,
                         emitc::EmitCDialect,
+                        memref::MemRefDialect,
+                        math::MathDialect,
                         func::FuncDialect>();
         // clang-format on
       });

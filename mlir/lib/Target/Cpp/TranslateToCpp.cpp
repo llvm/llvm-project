@@ -6,9 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir-c/BuiltinAttributes.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/EmitC/IR/EmitC.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"
@@ -1137,8 +1140,46 @@ static LogicalResult printOperation(CppEmitter &emitter,
         "with multiple blocks needs variables declared at top");
   }
 
-  CppEmitter::Scope scope(emitter);
+  CppEmitter::Scope classScope(emitter);
   raw_indented_ostream &os = emitter.ostream();
+  os << "class MyClass final {\n";
+  auto argAttrs = functionOp.getArgAttrs();
+  
+  std::map<std::string, Value> fields;
+  if (argAttrs)
+    for (auto [a,v] : zip(*argAttrs, functionOp.getArguments())) {
+      if (auto da = dyn_cast<mlir::DictionaryAttr>(a)) {
+        auto nv = da.getNamed("tf_saved_model.index_path")->getValue();
+        auto name = cast<mlir::StringAttr>(cast<mlir::ArrayAttr>(nv)[0]).str();
+        fields[name] = v;
+        os << "  ";
+        if (failed(emitter.emitType(functionOp.getLoc(), v.getType())))
+          return failure();
+        os << " " << emitter.getOrCreateName(v) << ";\n";
+      }
+    }
+
+  for (auto & r : functionOp->getRegions())
+    for (auto &b : r.getBlocks())
+      for (auto &opt : b.getOperations())
+        if (auto alloc = dyn_cast<memref::AllocOp>(opt)) {
+          auto name = emitter.getOrCreateName(alloc).str();
+          fields[name] = alloc;
+          if (failed(emitter.emitType(alloc.getLoc(), alloc.getType().getElementType())))
+            return failure();
+          os << " [" << alloc.getType().getNumElements() <<"] ";
+          os << " " << name << ";\n";
+        }
+  os << "  std::map<std::string, char*> _buffer_map {";
+  for (auto &[n,v]:fields)
+    os << "{ \"" << n << "\"" << ", reinterpret_cast<char*>(" << emitter.getOrCreateName(v) << ") },";
+  os << "  };\n";
+  os << "  char* getBufferForName(const std::string& name) const {\n";
+  os << "    auto it = _buffer_map.find(name);\n";
+  os << "    return (it == _buffer_map.end()) ? nullptr : it->second;\n";
+  os << "  }\n";
+  CppEmitter::Scope scope(emitter);
+  
   if (functionOp.getSpecifiers()) {
     for (Attribute specifier : functionOp.getSpecifiersAttr()) {
       os << cast<StringAttr>(specifier).str() << " ";
@@ -1159,13 +1200,13 @@ static LogicalResult printOperation(CppEmitter &emitter,
     os << ");";
     return success();
   }
-  if (failed(printFunctionArgs(emitter, operation, functionOp.getArguments())))
-    return failure();
+  // if (failed(printFunctionArgs(emitter, operation, functionOp.getArguments())))
+  //   return failure();
   os << ") {\n";
   if (failed(printFunctionBody(emitter, operation, functionOp.getBlocks())))
     return failure();
   os << "}\n";
-
+  os << "};\n";
   return success();
 }
 
