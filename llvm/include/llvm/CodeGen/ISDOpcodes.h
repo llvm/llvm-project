@@ -70,7 +70,7 @@ enum NodeType {
   /// AssertNoFPClass - These nodes record if a register contains a float
   /// value that is known to be not some type.
   /// This node takes two operands.  The first is the node that is known
-  /// never to be a float type. and the second is a constant value with
+  /// never to be some float types. and the second is a constant value with
   /// the value of FPClassTest (casted to uint64_t).
   /// NOTE: In case of the source value (or any vector element value) is
   /// poisoned the assertion will not be true for that value.
