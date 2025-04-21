@@ -1420,15 +1420,15 @@ def CallOp : CIR_CallOpBase<"call", [NoRegionArguments]> {
 }
 
 //===----------------------------------------------------------------------===//
-// StackSave & StackRestoreOp
+// StackSaveOp & StackRestoreOp
 //===----------------------------------------------------------------------===//
 
 def StackSaveOp : CIR_Op<"stacksave"> {
   let summary = "remembers the current state of the function stack";
   let description = [{
-    Remembers the current state of the function stack. Returns a pointer
+    Saves current state of the function stack. Returns a pointer to an opaque object
     that later can be passed into cir.stackrestore.
-    Useful for implementing language features like variable length arrays.
+    This is used during the lowering of variable length array allocas.
 
     This operation corresponds to LLVM intrinsic `stacksave`.
 
@@ -1446,7 +1446,7 @@ def StackRestoreOp : CIR_Op<"stackrestore"> {
   let description = [{
     Restore the state of the function stack to the state it was
     in when the corresponding cir.stacksave executed.
-    Useful for implementing language features like variable length arrays.
+    This is used during the lowering of variable length array allocas.
 
     This operation corresponds to LLVM intrinsic `stackrestore`.
 
