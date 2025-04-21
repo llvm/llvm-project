@@ -1199,10 +1199,11 @@ class VPIRMetadata {
 
 protected:
   VPIRMetadata(MDArrayRef Metadata) : Metadata(Metadata) {}
+  VPIRMetadata(Instruction &I) { getMetadataToPropagate(&I, Metadata); }
 
 public:
-  /// Add all metadata to \p V if it is an instruction.
-  void applyMetadata(Value *V) const;
+  /// Add all metadata to \p I.
+  void applyMetadata(Instruction &I) const;
 
   /// Return the IR metadata.
   MDArrayRef getMetadata() const { return Metadata; }
@@ -1337,10 +1338,9 @@ public:
 
   VPWidenIntrinsicRecipe(Intrinsic::ID VectorIntrinsicID,
                          ArrayRef<VPValue *> CallArguments, Type *Ty,
-                         MDArrayRef Metadata, DebugLoc DL = {})
+                         DebugLoc DL = {})
       : VPRecipeWithIRFlags(VPDef::VPWidenIntrinsicSC, CallArguments, DL),
-        VPIRMetadata(Metadata), VectorIntrinsicID(VectorIntrinsicID),
-        ResultTy(Ty) {
+        VPIRMetadata({}), VectorIntrinsicID(VectorIntrinsicID), ResultTy(Ty) {
     LLVMContext &Ctx = Ty->getContext();
     AttributeSet Attrs = Intrinsic::getFnAttributes(Ctx, VectorIntrinsicID);
     MemoryEffects ME = Attrs.getMemoryEffects();
@@ -2651,9 +2651,8 @@ protected:
 
   VPWidenMemoryRecipe(const char unsigned SC, Instruction &I,
                       std::initializer_list<VPValue *> Operands,
-                      bool Consecutive, bool Reverse, MDArrayRef Metadata,
-                      DebugLoc DL)
-      : VPRecipeBase(SC, Operands, DL), VPIRMetadata(Metadata), Ingredient(I),
+                      bool Consecutive, bool Reverse, DebugLoc DL)
+      : VPRecipeBase(SC, Operands, DL), VPIRMetadata(I), Ingredient(I),
         Consecutive(Consecutive), Reverse(Reverse) {
     assert((Consecutive || !Reverse) && "Reverse implies consecutive");
   }
@@ -2711,18 +2710,17 @@ public:
 /// optional mask.
 struct VPWidenLoadRecipe final : public VPWidenMemoryRecipe, public VPValue {
   VPWidenLoadRecipe(LoadInst &Load, VPValue *Addr, VPValue *Mask,
-                    bool Consecutive, bool Reverse, MDArrayRef Metadata,
-                    DebugLoc DL)
+                    bool Consecutive, bool Reverse, DebugLoc DL)
       : VPWidenMemoryRecipe(VPDef::VPWidenLoadSC, Load, {Addr}, Consecutive,
-                            Reverse, Metadata, DL),
+                            Reverse, DL),
         VPValue(this, &Load) {
     setMask(Mask);
   }
 
   VPWidenLoadRecipe *clone() override {
-    auto *Copy = new VPWidenLoadRecipe(cast<LoadInst>(Ingredient), getAddr(),
-                                       getMask(), Consecutive, Reverse,
-                                       getMetadata(), getDebugLoc());
+    auto *Copy =
+        new VPWidenLoadRecipe(cast<LoadInst>(Ingredient), getAddr(), getMask(),
+                              Consecutive, Reverse, getDebugLoc());
     return Copy;
   }
 
@@ -2754,7 +2752,7 @@ struct VPWidenLoadEVLRecipe final : public VPWidenMemoryRecipe, public VPValue {
   VPWidenLoadEVLRecipe(VPWidenLoadRecipe &L, VPValue &EVL, VPValue *Mask)
       : VPWidenMemoryRecipe(VPDef::VPWidenLoadEVLSC, L.getIngredient(),
                             {L.getAddr(), &EVL}, L.isConsecutive(),
-                            L.isReverse(), L.getMetadata(), L.getDebugLoc()),
+                            L.isReverse(), L.getDebugLoc()),
         VPValue(this, &getIngredient()) {
     setMask(Mask);
   }
@@ -2791,17 +2789,16 @@ struct VPWidenLoadEVLRecipe final : public VPWidenMemoryRecipe, public VPValue {
 /// to store to and an optional mask.
 struct VPWidenStoreRecipe final : public VPWidenMemoryRecipe {
   VPWidenStoreRecipe(StoreInst &Store, VPValue *Addr, VPValue *StoredVal,
-                     VPValue *Mask, bool Consecutive, bool Reverse,
-                     MDArrayRef Metadata, DebugLoc DL)
+                     VPValue *Mask, bool Consecutive, bool Reverse, DebugLoc DL)
       : VPWidenMemoryRecipe(VPDef::VPWidenStoreSC, Store, {Addr, StoredVal},
-                            Consecutive, Reverse, Metadata, DL) {
+                            Consecutive, Reverse, DL) {
     setMask(Mask);
   }
 
   VPWidenStoreRecipe *clone() override {
-    auto *Copy = new VPWidenStoreRecipe(
-        cast<StoreInst>(Ingredient), getAddr(), getStoredValue(), getMask(),
-        Consecutive, Reverse, getMetadata(), getDebugLoc());
+    auto *Copy = new VPWidenStoreRecipe(cast<StoreInst>(Ingredient), getAddr(),
+                                        getStoredValue(), getMask(),
+                                        Consecutive, Reverse, getDebugLoc());
     return Copy;
   }
 
@@ -2836,8 +2833,7 @@ struct VPWidenStoreEVLRecipe final : public VPWidenMemoryRecipe {
   VPWidenStoreEVLRecipe(VPWidenStoreRecipe &S, VPValue &EVL, VPValue *Mask)
       : VPWidenMemoryRecipe(VPDef::VPWidenStoreEVLSC, S.getIngredient(),
                             {S.getAddr(), S.getStoredValue(), &EVL},
-                            S.isConsecutive(), S.isReverse(), S.getMetadata(),
-                            S.getDebugLoc()) {
+                            S.isConsecutive(), S.isReverse(), S.getDebugLoc()) {
     setMask(Mask);
   }
 
