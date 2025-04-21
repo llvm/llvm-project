@@ -325,6 +325,9 @@ void createPGONameMetadata(GlobalObject &GO, StringRef PGOName);
 /// the duplicated profile variables for Comdat functions.
 bool needsComdatForCounter(const GlobalObject &GV, const Module &M);
 
+Error readAndDecodeStrings(StringRef NameStrings,
+                           std::function<Error(StringRef)> NameCallback);
+
 /// An enum describing the attributes of an instrumented profile.
 enum class InstrProfKind {
   Unknown = 0x0,

@@ -1282,8 +1282,17 @@ Error IndexedMemProfReader::deserializeV2(const unsigned char *Start,
   return Error::success();
 }
 
-Error IndexedMemProfReader::deserializeV3(const unsigned char *Start,
-                                          const unsigned char *Ptr) {
+Error IndexedMemProfReader::deserializeSymbolizedDataAccessProfiles(
+    const unsigned char *Start, const unsigned char *Ptr) {
+  DataAccessProfileData = std::make_unique<DataAccessProfData>();
+  return DataAccessProfileData->deserialize(Ptr);
+}
+
+Error IndexedMemProfReader::deserializeMemProf(const unsigned char *Start,
+                                               const unsigned char *Ptr,
+                                               uint64_t Version) {
+  assert((Version == memprof::Version3 || Version == memprof::Version4) &&
+         "Only V3 and V4 are supported");
   // The offset in the stream right before invoking
   // CallStackTableGenerator.Emit.
   const uint64_t CallStackPayloadOffset =
@@ -1294,6 +1303,11 @@ Error IndexedMemProfReader::deserializeV3(const unsigned char *Start,
   // The value returned from RecordTableGenerator.Emit.
   const uint64_t RecordTableOffset =
       support::endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
+
+  uint64_t DataAccessProfileOffset = 0;
+  if (Version == memprof::Version4)
+    DataAccessProfileOffset =
+        support::endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
 
   // Read the schema.
   auto SchemaOr = memprof::readMemProfSchema(Ptr);
@@ -1315,6 +1329,10 @@ Error IndexedMemProfReader::deserializeV3(const unsigned char *Start,
       /*Buckets=*/Start + RecordTableOffset,
       /*Payload=*/Start + RecordPayloadOffset,
       /*Base=*/Start, memprof::RecordLookupTrait(memprof::Version3, Schema)));
+
+  if (Version == memprof::Version4)
+    return deserializeSymbolizedDataAccessProfiles(
+        Start, Start + DataAccessProfileOffset);
 
   return Error::success();
 }
@@ -1345,7 +1363,8 @@ Error IndexedMemProfReader::deserialize(const unsigned char *Start,
       return E;
     break;
   case memprof::Version3:
-    if (Error E = deserializeV3(Start, Ptr))
+  case memprof::Version4:
+    if (Error E = deserializeMemProf(Start, Ptr, Version))
       return E;
     break;
   }
@@ -1609,6 +1628,7 @@ IndexedMemProfReader::getMemProfRecord(const uint64_t FuncNameHash) const {
     return getMemProfRecordV2(IndexedRecord, *MemProfFrameTable,
                               *MemProfCallStackTable);
   case memprof::Version3:
+  case memprof::Version4:
     assert(!MemProfFrameTable && "MemProfFrameTable must not be available");
     assert(!MemProfCallStackTable &&
            "MemProfCallStackTable must not be available");

@@ -18,6 +18,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/ProfileSummary.h"
 #include "llvm/Object/BuildID.h"
+#include "llvm/ProfileData/DataAccessProf.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/ProfileData/InstrProfCorrelator.h"
 #include "llvm/ProfileData/MemProf.h"
@@ -697,6 +698,8 @@ private:
   std::unique_ptr<MemProfFrameHashTable> MemProfFrameTable;
   /// MemProf call stack data on-disk indexed via call stack id.
   std::unique_ptr<MemProfCallStackHashTable> MemProfCallStackTable;
+
+  std::unique_ptr<DataAccessProfData> DataAccessProfileData;
   /// The starting address of the frame array.
   const unsigned char *FrameBase = nullptr;
   /// The starting address of the call stack array.
@@ -705,7 +708,11 @@ private:
   unsigned RadixTreeSize = 0;
 
   Error deserializeV2(const unsigned char *Start, const unsigned char *Ptr);
-  Error deserializeV3(const unsigned char *Start, const unsigned char *Ptr);
+  Error deserializeMemProf(const unsigned char *Start, const unsigned char *Ptr,
+                           uint64_t MemProfVersion);
+
+  Error deserializeSymbolizedDataAccessProfiles(const unsigned char *Start,
+                                                const unsigned char *Ptr);
 
 public:
   IndexedMemProfReader() = default;

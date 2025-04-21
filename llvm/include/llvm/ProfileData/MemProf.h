@@ -35,6 +35,9 @@ enum IndexedVersion : uint64_t {
   // Version 3: Added a radix tree for call stacks.  Switched to linear IDs for
   // frames and call stacks.
   Version3 = 3,
+
+  // Version 4: Added symbolized data access profiles.
+  Version4 = 4,
 };
 
 constexpr uint64_t MinimumSupportedVersion = Version2;

@@ -19,6 +19,7 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/Object/BuildID.h"
+#include "llvm/ProfileData/DataAccessProf.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/ProfileData/MemProf.h"
 #include "llvm/Support/Error.h"
@@ -53,6 +54,9 @@ private:
 
   // The MemProf data.
   memprof::IndexedMemProfData MemProfData;
+
+  // The symbolized data access profiles.
+  DataAccessProfData DataAccessProfileData;
 
   // List of binary ids.
   std::vector<llvm::object::BuildID> BinaryIds;
@@ -118,6 +122,10 @@ public:
   /// Add the entire MemProfData \p Incoming to the writer context.
   bool addMemProfData(memprof::IndexedMemProfData Incoming,
                       function_ref<void(Error)> Warn);
+
+  bool addSymbolizedDataAccessProfile(
+      StringRef SymbolName, uint64_t StringContentHash, uint64_t AccessCount,
+      llvm::SmallVector<std::pair<StringRef, uint32_t>> &Locations);
 
   // Add a binary id to the binary ids list.
   void addBinaryIds(ArrayRef<llvm::object::BuildID> BIs);

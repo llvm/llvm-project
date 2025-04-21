@@ -16,6 +16,7 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/ProfileSummary.h"
+#include "llvm/ProfileData/DataAccessProf.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/ProfileData/MemProf.h"
 #include "llvm/ProfileData/ProfileCommon.h"
@@ -212,9 +213,7 @@ void InstrProfWriter::setValueProfDataEndianness(llvm::endianness Endianness) {
   InfoObj->ValueProfDataEndianness = Endianness;
 }
 
-void InstrProfWriter::setOutputSparse(bool Sparse) {
-  this->Sparse = Sparse;
-}
+void InstrProfWriter::setOutputSparse(bool Sparse) { this->Sparse = Sparse; }
 
 void InstrProfWriter::addRecord(NamedInstrProfRecord &&I, uint64_t Weight,
                                 function_ref<void(Error)> Warn) {
@@ -381,6 +380,27 @@ bool InstrProfWriter::addMemProfData(memprof::IndexedMemProfData Incoming,
   else
     for (const auto &[GUID, Record] : Incoming.Records)
       addMemProfRecord(GUID, Record);
+
+  return true;
+}
+
+bool InstrProfWriter::addSymbolizedDataAccessProfile(
+    StringRef SymbolName, uint64_t StringContentHash, uint64_t AccessCount,
+    llvm::SmallVector<std::pair<StringRef, uint32_t>> &Locations) {
+  // TODO: Validate that symbol names are not duplicated.
+  if (SymbolName.empty())
+    return false;
+  const uint64_t SymbolNameIndex =
+      DataAccessProfileData.addSymbolName(SymbolName);
+
+  DataAccessProfRecord &Record = DataAccessProfileData.addRecord(
+      SymbolNameIndex, StringContentHash, AccessCount);
+
+  for (const auto &Location : Locations) {
+    const uint64_t FileNameIndex =
+        DataAccessProfileData.addFileName(Location.first);
+    Record.Locations.push_back({FileNameIndex, Location.second});
+  }
 
   return true;
 }
@@ -705,6 +725,53 @@ static Error writeMemProfV2(ProfOStream &OS,
   return Error::success();
 }
 
+static Error writeStrings(ProfOStream &OS,
+                          const llvm::SmallVector<llvm::StringRef> &Strings) {
+  std::vector<std::string> StringStrs;
+  for (StringRef String : Strings)
+    StringStrs.push_back(String.str());
+  std::string CompressedStrings;
+  if (!Strings.empty())
+    if (Error E = collectGlobalObjectNameStrings(
+            StringStrs, compression::zlib::isAvailable(), CompressedStrings))
+      return E;
+  const uint64_t CompressedStringLen = CompressedStrings.length();
+  // Record the length of compressed string.
+  OS.write(CompressedStringLen);
+  // Write the chars in compressed strings.
+  for (auto &c : CompressedStrings)
+    OS.writeByte(static_cast<uint8_t>(c));
+  // Pad up to a multiple of 8.
+  // InstrProfReader could read bytes according to 'CompressedStringLen'.
+  const uint64_t PaddedLength = alignTo(CompressedStringLen, 8);
+  for (uint64_t K = CompressedStringLen; K < PaddedLength; K++)
+    OS.writeByte(0);
+  return Error::success();
+}
+
+static Error writeDataAccessProf(ProfOStream &OS,
+                                 const DataAccessProfData &DataAccessProfData) {
+  if (Error E = writeStrings(OS, DataAccessProfData.getSymbolNames()))
+    return E;
+
+  if (Error E = writeStrings(OS, DataAccessProfData.getFileNames()))
+    return E;
+
+  OS.write(DataAccessProfData.Records.size());
+  for (const auto &Rec : DataAccessProfData.Records) {
+    OS.write(Rec.SymbolNameIndex);
+    OS.write(Rec.StringContentHash);
+    OS.write(Rec.AccessCount);
+    OS.write(Rec.Locations.size());
+    for (const auto &Loc : Rec.Locations) {
+      OS.write(Loc.FileNameIndex);
+      OS.write(Loc.Line);
+    }
+  }
+
+  return Error::success();
+}
+
 // Write out MemProf Version3 as follows:
 // uint64_t Version
 // uint64_t CallStackPayloadOffset = Offset for the call stack payload
@@ -718,14 +785,19 @@ static Error writeMemProfV2(ProfOStream &OS,
 // Frames serialized one after another
 // Call stacks encoded as a radix tree
 // OnDiskChainedHashTable MemProfRecordData
-static Error writeMemProfV3(ProfOStream &OS,
-                            memprof::IndexedMemProfData &MemProfData,
-                            bool MemProfFullSchema) {
-  OS.write(memprof::Version3);
+static Error
+writeMemProfData(ProfOStream &OS, memprof::IndexedMemProfData &MemProfData,
+                 bool MemProfFullSchema, uint64_t Version,
+                 const DataAccessProfData *DataAccessProfileDataPtr) {
+  assert((Version == memprof::Version3 || Version == memprof::Version4) &&
+         "Only V3 and V4 are supported");
+  OS.write(Version);
   uint64_t HeaderUpdatePos = OS.tell();
   OS.write(0ULL); // Reserve space for the memprof call stack payload offset.
   OS.write(0ULL); // Reserve space for the memprof record payload offset.
   OS.write(0ULL); // Reserve space for the memprof record table offset.
+  if (Version == memprof::Version4)
+    OS.write(0ULL); // Reserve space for the data access profile payload offset.
 
   auto Schema = memprof::getHotColdSchema();
   if (MemProfFullSchema)
@@ -760,12 +832,21 @@ static Error writeMemProfV3(ProfOStream &OS,
              NumElements * sizeof(memprof::LinearFrameId) ==
          RecordPayloadOffset);
 
-  uint64_t Header[] = {
+  const DataAccessProfData &DataAccessProfileData = *DataAccessProfileDataPtr;
+  uint64_t DataAccessProfPayloadOffset = OS.tell();
+  if (Version == memprof::Version4) {
+    if (Error E = writeDataAccessProf(OS, DataAccessProfileData))
+      return E;
+  }
+
+  SmallVector<uint64_t> PatchItemPayload = {
       CallStackPayloadOffset,
       RecordPayloadOffset,
       RecordTableOffset,
   };
-  OS.patch({{HeaderUpdatePos, Header}});
+  if (Version == memprof::Version4)
+    PatchItemPayload.push_back(DataAccessProfPayloadOffset);
+  OS.patch({{HeaderUpdatePos, PatchItemPayload}});
 
   return Error::success();
 }
@@ -773,13 +854,18 @@ static Error writeMemProfV3(ProfOStream &OS,
 // Write out the MemProf data in a requested version.
 static Error writeMemProf(ProfOStream &OS,
                           memprof::IndexedMemProfData &MemProfData,
+                          const DataAccessProfData &DataAccessProfileData,
                           memprof::IndexedVersion MemProfVersionRequested,
                           bool MemProfFullSchema) {
   switch (MemProfVersionRequested) {
   case memprof::Version2:
     return writeMemProfV2(OS, MemProfData, MemProfFullSchema);
   case memprof::Version3:
-    return writeMemProfV3(OS, MemProfData, MemProfFullSchema);
+    return writeMemProfData(OS, MemProfData, MemProfFullSchema,
+                            memprof::Version3, nullptr);
+  case memprof::Version4:
+    return writeMemProfData(OS, MemProfData, MemProfFullSchema,
+                            memprof::Version4, &DataAccessProfileData);
   }
 
   return make_error<InstrProfError>(
@@ -955,8 +1041,8 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
   uint64_t MemProfSectionStart = 0;
   if (static_cast<bool>(ProfileKind & InstrProfKind::MemProf)) {
     MemProfSectionStart = OS.tell();
-    if (auto E = writeMemProf(OS, MemProfData, MemProfVersionRequested,
-                              MemProfFullSchema))
+    if (auto E = writeMemProf(OS, MemProfData, DataAccessProfileData,
+                              MemProfVersionRequested, MemProfFullSchema))
       return E;
   }
 
