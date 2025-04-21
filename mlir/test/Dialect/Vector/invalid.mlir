@@ -1145,19 +1145,6 @@ func.func @shape_cast_wrong_num_elements(%arg0 : vector<5x1x3x2xf32>) {
 
 // -----
 
-func.func @shape_cast_invalid_rank_reduction(%arg0 : vector<5x1x3x2xf32>) {
-  // expected-error@+1 {{invalid shape cast}}
-  %0 = vector.shape_cast %arg0 : vector<5x1x3x2xf32> to vector<2x15xf32>
-}
-
-// -----
-
-func.func @shape_cast_invalid_rank_expansion(%arg0 : vector<15x2xf32>) {
-  // expected-error@+1 {{invalid shape cast}}
-  %0 = vector.shape_cast %arg0 : vector<15x2xf32> to vector<5x2x3x1xf32>
-}
-
-// -----
 
 func.func @shape_cast_scalability_flag_is_dropped(%arg0 : vector<15x[2]xf32>) {
   // expected-error@+1 {{different number of scalable dims at source (1) and result (0)}}

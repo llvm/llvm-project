@@ -543,6 +543,22 @@ func.func @vector_print_on_scalar(%arg0: i64) {
   return
 }
 
+// CHECK-LABEL: @shape_cast_valid_rank_reduction
+func.func @shape_cast_valid_rank_reduction(%arg0 : vector<5x1x3x2xf32>) {
+  // CHECK: vector.shape_cast %{{.*}} : vector<5x1x3x2xf32> to vector<2x15xf32>
+  %0 = vector.shape_cast %arg0 : vector<5x1x3x2xf32> to vector<2x15xf32>
+  return
+}
+
+
+// CHECK-LABEL: @shape_cast_valid_rank_expansion
+func.func @shape_cast_valid_rank_expansion(%arg0 : vector<15x2xf32>) {
+  // CHECK: vector.shape_cast %{{.*}} : vector<15x2xf32> to vector<5x2x3x1xf32>
+  %0 = vector.shape_cast %arg0 : vector<15x2xf32> to vector<5x2x3x1xf32>
+  return
+}
+
+
 // CHECK-LABEL: @shape_cast
 func.func @shape_cast(%arg0 : vector<5x1x3x2xf32>,
                  %arg1 : vector<8x1xf32>,
