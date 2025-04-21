@@ -4886,9 +4886,7 @@ InstructionSelector::ComplexRendererFns
 AMDGPUInstructionSelector::selectVOP3PRetHelper(MachineOperand &Root,
                                                 bool IsDOT) const {
   MachineRegisterInfo &MRI = Root.getParent()->getMF()->getRegInfo();
-  auto Results = selectVOP3PModsImpl(&Root, MRI, IsDOT);
-  const MachineOperand *Op = Results.first;
-  unsigned Mods = Results.second;
+  std::tie(Src, Mods) = selectVOP3PModsImpl(&Root, MRI, IsDOT);
   if (!(Op->isReg()))
     return {{
         [=](MachineInstrBuilder &MIB) { MIB.addImm(getAllKindImm(Op)); },
