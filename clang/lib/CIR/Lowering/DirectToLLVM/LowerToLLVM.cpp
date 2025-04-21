@@ -1394,7 +1394,7 @@ static void prepareTypeConverter(mlir::LLVMTypeConverter &converter,
     return mlir::LLVM::LLVMArrayType::get(ty, type.getSize());
   });
   converter.addConversion([&](cir::VectorType type) -> mlir::Type {
-    const mlir::Type ty = converter.convertType(type.getEltType());
+    const mlir::Type ty = converter.convertType(type.getElementType());
     return mlir::VectorType::get(type.getSize(), ty);
   });
   converter.addConversion([&](cir::BoolType type) -> mlir::Type {

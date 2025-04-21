@@ -674,8 +674,8 @@ ArrayType::getABIAlignment(const ::mlir::DataLayout &dataLayout,
 llvm::TypeSize cir::VectorType::getTypeSizeInBits(
     const ::mlir::DataLayout &dataLayout,
     ::mlir::DataLayoutEntryListRef params) const {
-  return llvm::TypeSize::getFixed(getSize() *
-                                  dataLayout.getTypeSizeInBits(getEltType()));
+  return llvm::TypeSize::getFixed(
+      getSize() * dataLayout.getTypeSizeInBits(getElementType()));
 }
 
 uint64_t
@@ -686,16 +686,17 @@ cir::VectorType::getABIAlignment(const ::mlir::DataLayout &dataLayout,
 
 mlir::LogicalResult cir::VectorType::verify(
     llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
-    mlir::Type eltType, uint64_t size) {
+    mlir::Type elementType, uint64_t size) {
   if (size == 0)
     return emitError() << "the number of vector elements must be non-zero";
 
   // Check if it a valid FixedVectorType
-  if (mlir::isa<cir::PointerType, cir::FP128Type>(eltType))
+  if (mlir::isa<cir::PointerType, cir::FP128Type>(elementType))
     return success();
 
   // Check if it a valid VectorType
-  if (mlir::isa<cir::IntType>(eltType) || isAnyFloatingPointType(eltType))
+  if (mlir::isa<cir::IntType>(elementType) ||
+      isAnyFloatingPointType(elementType))
     return success();
 
   return emitError() << "expected LLVM-compatible fixed-vector type "

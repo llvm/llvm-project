@@ -327,17 +327,17 @@ def CIR_VectorType : CIR_Type<"Vector", "vector",
     ```
   }];
 
-  let parameters = (ins "mlir::Type":$eltType, "uint64_t":$size);
+  let parameters = (ins "mlir::Type":$elementType, "uint64_t":$size);
 
   let assemblyFormat = [{
-    `<` $size `x` $eltType `>`
+    `<` $size `x` $elementType `>`
   }];
 
   let builders = [
     TypeBuilderWithInferredContext<(ins
-      "mlir::Type":$eltType, "uint64_t":$size
+      "mlir::Type":$elementType, "uint64_t":$size
     ), [{
-        return $_get(eltType.getContext(), eltType, size);
+        return $_get(elementType.getContext(), elementType, size);
     }]>,
   ];
 

@@ -84,7 +84,7 @@ public:
       return true;
 
     if (mlir::isa<cir::VectorType>(ty))
-      return isSized(mlir::cast<cir::VectorType>(ty).getEltType());
+      return isSized(mlir::cast<cir::VectorType>(ty).getElementType());
 
     assert(!cir::MissingFeatures::unsizedTypes());
     return false;
