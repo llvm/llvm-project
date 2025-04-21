@@ -220,12 +220,14 @@ struct FieldTypeInfo : public TypeInfo {
 // Info for member types.
 struct MemberTypeInfo : public FieldTypeInfo {
   MemberTypeInfo() = default;
-  MemberTypeInfo(const TypeInfo &TI, StringRef Name, AccessSpecifier Access)
-      : FieldTypeInfo(TI, Name), Access(Access) {}
+  MemberTypeInfo(const TypeInfo &TI, StringRef Name, AccessSpecifier Access,
+                 bool IsStatic = false)
+      : FieldTypeInfo(TI, Name), Access(Access), IsStatic(IsStatic) {}
 
   bool operator==(const MemberTypeInfo &Other) const {
-    return std::tie(Type, Name, Access, Description) ==
-           std::tie(Other.Type, Other.Name, Other.Access, Other.Description);
+    return std::tie(Type, Name, Access, IsStatic, Description) ==
+           std::tie(Other.Type, Other.Name, Other.Access, Other.IsStatic,
+                    Other.Description);
   }
 
   // Access level associated with this info (public, protected, private, none).
@@ -235,6 +237,7 @@ struct MemberTypeInfo : public FieldTypeInfo {
   AccessSpecifier Access = AccessSpecifier::AS_public;
 
   std::vector<CommentInfo> Description; // Comment description of this field.
+  bool IsStatic = false;
 };
 
 struct Location {
@@ -320,9 +323,6 @@ struct SymbolInfo : public Info {
 
   void merge(SymbolInfo &&I);
 
-  std::optional<Location> DefLoc;     // Location where this decl is defined.
-  llvm::SmallVector<Location, 2> Loc; // Locations where this decl is declared.
-
   bool operator<(const SymbolInfo &Other) const {
     // Sort by declaration location since we want the doc to be
     // generated in the order of the source code.
@@ -336,6 +336,10 @@ struct SymbolInfo : public Info {
 
     return extractName() < Other.extractName();
   }
+
+  std::optional<Location> DefLoc;     // Location where this decl is defined.
+  llvm::SmallVector<Location, 2> Loc; // Locations where this decl is declared.
+  bool IsStatic = false;
 };
 
 // TODO: Expand to allow for documenting templating and default args.

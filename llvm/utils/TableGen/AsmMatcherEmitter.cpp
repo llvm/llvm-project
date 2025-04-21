@@ -3934,7 +3934,7 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
           "convert to\n";
     OS << "    // an MCInst, so bail out on this instruction variant now.\n";
     OS << "    if (OperandNearMiss) {\n";
-    OS << "      // If the operand mismatch was the only problem, reprrt it as "
+    OS << "      // If the operand mismatch was the only problem, report it as "
           "a near-miss.\n";
     OS << "      if (NearMisses && !FeaturesNearMiss && "
           "!EarlyPredicateNearMiss) {\n";

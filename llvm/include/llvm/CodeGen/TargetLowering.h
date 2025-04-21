@@ -4283,6 +4283,7 @@ public:
   /// NaN. If \p sNaN is true, returns if \p Op is known to never be a signaling
   /// NaN.
   virtual bool isKnownNeverNaNForTargetNode(SDValue Op,
+                                            const APInt &DemandedElts,
                                             const SelectionDAG &DAG,
                                             bool SNaN = false,
                                             unsigned Depth = 0) const;

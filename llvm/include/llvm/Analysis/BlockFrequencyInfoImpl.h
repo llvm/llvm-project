@@ -1160,7 +1160,7 @@ void BlockFrequencyInfoImpl<BT>::setBlockFreq(const BlockT *BB,
 template <class BT> void BlockFrequencyInfoImpl<BT>::initializeRPOT() {
   const BlockT *Entry = &F->front();
   RPOT.reserve(F->size());
-  llvm::append_range(RPOT, post_order(Entry));
+  std::copy(po_begin(Entry), po_end(Entry), std::back_inserter(RPOT));
   std::reverse(RPOT.begin(), RPOT.end());
 
   assert(RPOT.size() - 1 <= BlockNode::getMaxIndex() &&

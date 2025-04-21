@@ -1356,12 +1356,11 @@ static void prepareTypeConverter(mlir::LLVMTypeConverter &converter,
     if (type.getName()) {
       llvmStruct = mlir::LLVM::LLVMStructType::getIdentified(
           type.getContext(), type.getPrefixedName());
-      assert(!cir::MissingFeatures::packedRecords());
-      if (llvmStruct.setBody(llvmMembers, /*isPacked=*/true).failed())
+      if (llvmStruct.setBody(llvmMembers, type.getPacked()).failed())
         llvm_unreachable("Failed to set body of record");
     } else { // Record has no name: lower as literal record.
       llvmStruct = mlir::LLVM::LLVMStructType::getLiteral(
-          type.getContext(), llvmMembers, /*isPacked=*/true);
+          type.getContext(), llvmMembers, type.getPacked());
     }
 
     return llvmStruct;

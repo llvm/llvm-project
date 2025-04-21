@@ -8895,6 +8895,12 @@ void ClangAs::ConstructJob(Compilation &C, const JobAction &JA,
   CollectArgsForIntegratedAssembler(C, Args, CmdArgs,
                                     getToolChain().getDriver());
 
+  // Forward -Xclangas arguments to -cc1as
+  for (auto Arg : Args.filtered(options::OPT_Xclangas)) {
+    Arg->claim();
+    CmdArgs.push_back(Arg->getValue());
+  }
+
   Args.AddAllArgs(CmdArgs, options::OPT_mllvm);
 
   if (DebugInfoKind > llvm::codegenoptions::NoDebugInfo && Output.isFilename())
@@ -9266,6 +9272,11 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
         else if (ShouldForward(LinkerOptions, A))
           A->render(Args, LinkerArgs);
       }
+
+      // If this is OpenMP the device linker will need `-lompdevice`.
+      if (Kind == Action::OFK_OpenMP && !Args.hasArg(OPT_no_offloadlib) &&
+          (TC->getTriple().isAMDGPU() || TC->getTriple().isNVPTX()))
+        LinkerArgs.emplace_back("-lompdevice");
 
       // Forward all of these to the appropriate toolchain.
       for (StringRef Arg : CompilerArgs)

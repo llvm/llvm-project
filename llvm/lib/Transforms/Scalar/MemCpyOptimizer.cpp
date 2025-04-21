@@ -1528,8 +1528,7 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
     Worklist.reserve(MaxUsesToExplore);
     SmallSet<const Use *, 20> Visited;
     while (!Worklist.empty()) {
-      Instruction *I = Worklist.back();
-      Worklist.pop_back();
+      Instruction *I = Worklist.pop_back_val();
       for (const Use &U : I->uses()) {
         auto *UI = cast<Instruction>(U.getUser());
         // If any use that isn't dominated by SrcAlloca exists, we move src

@@ -72,8 +72,8 @@ unsigned LoongArchELFObjectWriter::getRelocType(MCContext &Ctx,
   }
 
   unsigned Kind = Fixup.getTargetKind();
-  if (Kind >= FirstRelocationKind)
-    return Kind - FirstRelocationKind;
+  if (mc::isRelocation(Fixup.getKind()))
+    return Kind;
   switch (Kind) {
   default:
     Ctx.reportError(Fixup.getLoc(), "Unsupported relocation type");
@@ -102,17 +102,6 @@ unsigned LoongArchELFObjectWriter::getRelocType(MCContext &Ctx,
     return ELF::R_LARCH_ABS64_LO20;
   case LoongArch::fixup_loongarch_abs64_hi12:
     return ELF::R_LARCH_ABS64_HI12;
-  case LoongArch::fixup_loongarch_tls_le_hi20:
-    return ELF::R_LARCH_TLS_LE_HI20;
-  case LoongArch::fixup_loongarch_tls_le_lo12:
-    return ELF::R_LARCH_TLS_LE_LO12;
-  case LoongArch::fixup_loongarch_tls_le64_lo20:
-    return ELF::R_LARCH_TLS_LE64_LO20;
-  case LoongArch::fixup_loongarch_tls_le64_hi12:
-    return ELF::R_LARCH_TLS_LE64_HI12;
-  case LoongArch::fixup_loongarch_call36:
-    return ELF::R_LARCH_CALL36;
-    // TODO: Handle more fixup-kinds.
   }
 }
 

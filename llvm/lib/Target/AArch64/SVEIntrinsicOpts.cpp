@@ -328,9 +328,9 @@ bool SVEIntrinsicOpts::optimizePredicateStore(Instruction *I) {
   Builder.CreateStore(BitCast->getOperand(0), Store->getPointerOperand());
 
   Store->eraseFromParent();
-  if (IntrI->getNumUses() == 0)
+  if (IntrI->use_empty())
     IntrI->eraseFromParent();
-  if (BitCast->getNumUses() == 0)
+  if (BitCast->use_empty())
     BitCast->eraseFromParent();
 
   return true;
@@ -386,9 +386,9 @@ bool SVEIntrinsicOpts::optimizePredicateLoad(Instruction *I) {
 
   BitCast->replaceAllUsesWith(LoadPred);
   BitCast->eraseFromParent();
-  if (IntrI->getNumUses() == 0)
+  if (IntrI->use_empty())
     IntrI->eraseFromParent();
-  if (Load->getNumUses() == 0)
+  if (Load->use_empty())
     Load->eraseFromParent();
 
   return true;

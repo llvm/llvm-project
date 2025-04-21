@@ -20,502 +20,6 @@
 using namespace clang;
 
 namespace {
-bool doesClauseApplyToDirective(OpenACCDirectiveKind DirectiveKind,
-                                OpenACCClauseKind ClauseKind) {
-  switch (ClauseKind) {
-    // FIXME: For each clause as we implement them, we can add the
-    // 'legalization' list here.
-  case OpenACCClauseKind::Default:
-    switch (DirectiveKind) {
-    case OpenACCDirectiveKind::Parallel:
-    case OpenACCDirectiveKind::Serial:
-    case OpenACCDirectiveKind::Kernels:
-    case OpenACCDirectiveKind::ParallelLoop:
-    case OpenACCDirectiveKind::SerialLoop:
-    case OpenACCDirectiveKind::KernelsLoop:
-    case OpenACCDirectiveKind::Data:
-      return true;
-    default:
-      return false;
-    }
-  case OpenACCClauseKind::If:
-    switch (DirectiveKind) {
-    case OpenACCDirectiveKind::Parallel:
-    case OpenACCDirectiveKind::Serial:
-    case OpenACCDirectiveKind::Kernels:
-    case OpenACCDirectiveKind::Data:
-    case OpenACCDirectiveKind::EnterData:
-    case OpenACCDirectiveKind::ExitData:
-    case OpenACCDirectiveKind::HostData:
-    case OpenACCDirectiveKind::Init:
-    case OpenACCDirectiveKind::Shutdown:
-    case OpenACCDirectiveKind::Set:
-    case OpenACCDirectiveKind::Update:
-    case OpenACCDirectiveKind::Wait:
-    case OpenACCDirectiveKind::ParallelLoop:
-    case OpenACCDirectiveKind::SerialLoop:
-    case OpenACCDirectiveKind::KernelsLoop:
-      // OpenACC 3.4(prerelease) PR #511 adds 'if' to atomic.
-    case OpenACCDirectiveKind::Atomic:
-      return true;
-    default:
-      return false;
-    }
-  case OpenACCClauseKind::Self:
-    switch (DirectiveKind) {
-    case OpenACCDirectiveKind::Parallel:
-    case OpenACCDirectiveKind::Serial:
-    case OpenACCDirectiveKind::Kernels:
-    case OpenACCDirectiveKind::Update:
-    case OpenACCDirectiveKind::ParallelLoop:
-    case OpenACCDirectiveKind::SerialLoop:
-    case OpenACCDirectiveKind::KernelsLoop:
-      return true;
-    default:
-      return false;
-    }
-  case OpenACCClauseKind::NumGangs:
-  case OpenACCClauseKind::NumWorkers:
-  case OpenACCClauseKind::VectorLength:
-    switch (DirectiveKind) {
-    case OpenACCDirectiveKind::Parallel:
-    case OpenACCDirectiveKind::Kernels:
-    case OpenACCDirectiveKind::ParallelLoop:
-    case OpenACCDirectiveKind::KernelsLoop:
-      return true;
-    default:
-      return false;
-    }
-  case OpenACCClauseKind::FirstPrivate:
-    switch (DirectiveKind) {
-    case OpenACCDirectiveKind::Parallel:
-    case OpenACCDirectiveKind::Serial:
-    case OpenACCDirectiveKind::ParallelLoop:
-    case OpenACCDirectiveKind::SerialLoop:
-      return true;
-    default:
-      return false;
-    }
-  case OpenACCClauseKind::Private:
-    switch (DirectiveKind) {
-    case OpenACCDirectiveKind::Parallel:
-    case OpenACCDirectiveKind::Serial:
-    case OpenACCDirectiveKind::Loop:
-    case OpenACCDirectiveKind::ParallelLoop:
-    case OpenACCDirectiveKind::SerialLoop:
-    case OpenACCDirectiveKind::KernelsLoop:
-      return true;
-    default:
-      return false;
-    }
-  case OpenACCClauseKind::NoCreate:
-    switch (DirectiveKind) {
-    case OpenACCDirectiveKind::Parallel:
-    case OpenACCDirectiveKind::Serial:
-    case OpenACCDirectiveKind::Kernels:
-    case OpenACCDirectiveKind::Data:
-    case OpenACCDirectiveKind::ParallelLoop:
-    case OpenACCDirectiveKind::SerialLoop:
-    case OpenACCDirectiveKind::KernelsLoop:
-      return true;
-    default:
-      return false;
-    }
-  case OpenACCClauseKind::Present:
-    switch (DirectiveKind) {
-    case OpenACCDirectiveKind::Parallel:
-    case OpenACCDirectiveKind::Serial:
-    case OpenACCDirectiveKind::Kernels:
-    case OpenACCDirectiveKind::Data:
-    case OpenACCDirectiveKind::Declare:
-    case OpenACCDirectiveKind::ParallelLoop:
-    case OpenACCDirectiveKind::SerialLoop:
-    case OpenACCDirectiveKind::KernelsLoop:
-      return true;
-    default:
-      return false;
-    }
-
-  case OpenACCClauseKind::Copy:
-  case OpenACCClauseKind::PCopy:
-  case OpenACCClauseKind::PresentOrCopy:
-    switch (DirectiveKind) {
-    case OpenACCDirectiveKind::Parallel:
-    case OpenACCDirectiveKind::Serial:
-    case OpenACCDirectiveKind::Kernels:
-    case OpenACCDirectiveKind::Data:
-    case OpenACCDirectiveKind::Declare:
-    case OpenACCDirectiveKind::ParallelLoop:
-    case OpenACCDirectiveKind::SerialLoop:
-    case OpenACCDirectiveKind::KernelsLoop:
-      return true;
-    default:
-      return false;
-    }
-  case OpenACCClauseKind::CopyIn:
-  case OpenACCClauseKind::PCopyIn:
-  case OpenACCClauseKind::PresentOrCopyIn:
-    switch (DirectiveKind) {
-    case OpenACCDirectiveKind::Parallel:
-    case OpenACCDirectiveKind::Serial:
-    case OpenACCDirectiveKind::Kernels:
-    case OpenACCDirectiveKind::Data:
-    case OpenACCDirectiveKind::EnterData:
-    case OpenACCDirectiveKind::Declare:
-    case OpenACCDirectiveKind::ParallelLoop:
-    case OpenACCDirectiveKind::SerialLoop:
-    case OpenACCDirectiveKind::KernelsLoop:
-      return true;
-    default:
-      return false;
-    }
-  case OpenACCClauseKind::CopyOut:
-  case OpenACCClauseKind::PCopyOut:
-  case OpenACCClauseKind::PresentOrCopyOut:
-    switch (DirectiveKind) {
-    case OpenACCDirectiveKind::Parallel:
-    case OpenACCDirectiveKind::Serial:
-    case OpenACCDirectiveKind::Kernels:
-    case OpenACCDirectiveKind::Data:
-    case OpenACCDirectiveKind::ExitData:
-    case OpenACCDirectiveKind::Declare:
-    case OpenACCDirectiveKind::ParallelLoop:
-    case OpenACCDirectiveKind::SerialLoop:
-    case OpenACCDirectiveKind::KernelsLoop:
-      return true;
-    default:
-      return false;
-    }
-  case OpenACCClauseKind::Create:
-  case OpenACCClauseKind::PCreate:
-  case OpenACCClauseKind::PresentOrCreate:
-    switch (DirectiveKind) {
-    case OpenACCDirectiveKind::Parallel:
-    case OpenACCDirectiveKind::Serial:
-    case OpenACCDirectiveKind::Kernels:
-    case OpenACCDirectiveKind::Data:
-    case OpenACCDirectiveKind::EnterData:
-    case OpenACCDirectiveKind::Declare:
-    case OpenACCDirectiveKind::ParallelLoop:
-    case OpenACCDirectiveKind::SerialLoop:
-    case OpenACCDirectiveKind::KernelsLoop:
-      return true;
-    default:
-      return false;
-    }
-
-  case OpenACCClauseKind::Attach:
-    switch (DirectiveKind) {
-    case OpenACCDirectiveKind::Parallel:
-    case OpenACCDirectiveKind::Serial:
-    case OpenACCDirectiveKind::Kernels:
-    case OpenACCDirectiveKind::Data:
-    case OpenACCDirectiveKind::EnterData:
-    case OpenACCDirectiveKind::ParallelLoop:
-    case OpenACCDirectiveKind::SerialLoop:
-    case OpenACCDirectiveKind::KernelsLoop:
-      return true;
-    default:
-      return false;
-    }
-  case OpenACCClauseKind::DevicePtr:
-    switch (DirectiveKind) {
-    case OpenACCDirectiveKind::Parallel:
-    case OpenACCDirectiveKind::Serial:
-    case OpenACCDirectiveKind::Kernels:
-    case OpenACCDirectiveKind::Data:
-    case OpenACCDirectiveKind::Declare:
-    case OpenACCDirectiveKind::ParallelLoop:
-    case OpenACCDirectiveKind::SerialLoop:
-    case OpenACCDirectiveKind::KernelsLoop:
-      return true;
-    default:
-      return false;
-    }
-  case OpenACCClauseKind::Async:
-    switch (DirectiveKind) {
-    case OpenACCDirectiveKind::Parallel:
-    case OpenACCDirectiveKind::Serial:
-    case OpenACCDirectiveKind::Kernels:
-    case OpenACCDirectiveKind::Data:
-    case OpenACCDirectiveKind::EnterData:
-    case OpenACCDirectiveKind::ExitData:
-    case OpenACCDirectiveKind::Set:
-    case OpenACCDirectiveKind::Update:
-    case OpenACCDirectiveKind::Wait:
-    case OpenACCDirectiveKind::ParallelLoop:
-    case OpenACCDirectiveKind::SerialLoop:
-    case OpenACCDirectiveKind::KernelsLoop:
-      return true;
-    default:
-      return false;
-    }
-  case OpenACCClauseKind::Wait:
-    switch (DirectiveKind) {
-    case OpenACCDirectiveKind::Parallel:
-    case OpenACCDirectiveKind::Serial:
-    case OpenACCDirectiveKind::Kernels:
-    case OpenACCDirectiveKind::Data:
-    case OpenACCDirectiveKind::EnterData:
-    case OpenACCDirectiveKind::ExitData:
-    case OpenACCDirectiveKind::Update:
-    case OpenACCDirectiveKind::ParallelLoop:
-    case OpenACCDirectiveKind::SerialLoop:
-    case OpenACCDirectiveKind::KernelsLoop:
-      return true;
-    default:
-      return false;
-    }
-
-  case OpenACCClauseKind::Seq:
-    switch (DirectiveKind) {
-    case OpenACCDirectiveKind::Loop:
-    case OpenACCDirectiveKind::Routine:
-    case OpenACCDirectiveKind::ParallelLoop:
-    case OpenACCDirectiveKind::SerialLoop:
-    case OpenACCDirectiveKind::KernelsLoop:
-      return true;
-    default:
-      return false;
-    }
-
-  case OpenACCClauseKind::Independent:
-  case OpenACCClauseKind::Auto:
-    switch (DirectiveKind) {
-    case OpenACCDirectiveKind::Loop:
-    case OpenACCDirectiveKind::ParallelLoop:
-    case OpenACCDirectiveKind::SerialLoop:
-    case OpenACCDirectiveKind::KernelsLoop:
-      return true;
-    default:
-      return false;
-    }
-
-  case OpenACCClauseKind::Reduction:
-    switch (DirectiveKind) {
-    case OpenACCDirectiveKind::Parallel:
-    case OpenACCDirectiveKind::Serial:
-    case OpenACCDirectiveKind::Loop:
-    case OpenACCDirectiveKind::ParallelLoop:
-    case OpenACCDirectiveKind::SerialLoop:
-    case OpenACCDirectiveKind::KernelsLoop:
-      return true;
-    default:
-      return false;
-    }
-
-  case OpenACCClauseKind::DeviceType:
-  case OpenACCClauseKind::DType:
-    switch (DirectiveKind) {
-    case OpenACCDirectiveKind::Parallel:
-    case OpenACCDirectiveKind::Serial:
-    case OpenACCDirectiveKind::Kernels:
-    case OpenACCDirectiveKind::Data:
-    case OpenACCDirectiveKind::Init:
-    case OpenACCDirectiveKind::Shutdown:
-    case OpenACCDirectiveKind::Set:
-    case OpenACCDirectiveKind::Update:
-    case OpenACCDirectiveKind::Loop:
-    case OpenACCDirectiveKind::Routine:
-    case OpenACCDirectiveKind::ParallelLoop:
-    case OpenACCDirectiveKind::SerialLoop:
-    case OpenACCDirectiveKind::KernelsLoop:
-      return true;
-    default:
-      return false;
-    }
-
-  case OpenACCClauseKind::Collapse: {
-    switch (DirectiveKind) {
-    case OpenACCDirectiveKind::Loop:
-    case OpenACCDirectiveKind::ParallelLoop:
-    case OpenACCDirectiveKind::SerialLoop:
-    case OpenACCDirectiveKind::KernelsLoop:
-      return true;
-    default:
-      return false;
-    }
-  }
-  case OpenACCClauseKind::Tile: {
-    switch (DirectiveKind) {
-    case OpenACCDirectiveKind::Loop:
-    case OpenACCDirectiveKind::ParallelLoop:
-    case OpenACCDirectiveKind::SerialLoop:
-    case OpenACCDirectiveKind::KernelsLoop:
-      return true;
-    default:
-      return false;
-    }
-  }
-
-  case OpenACCClauseKind::Gang: {
-    switch (DirectiveKind) {
-    case OpenACCDirectiveKind::Loop:
-    case OpenACCDirectiveKind::ParallelLoop:
-    case OpenACCDirectiveKind::SerialLoop:
-    case OpenACCDirectiveKind::KernelsLoop:
-    case OpenACCDirectiveKind::Routine:
-      return true;
-    default:
-      return false;
-    }
-  case OpenACCClauseKind::Worker: {
-    switch (DirectiveKind) {
-    case OpenACCDirectiveKind::Loop:
-    case OpenACCDirectiveKind::ParallelLoop:
-    case OpenACCDirectiveKind::SerialLoop:
-    case OpenACCDirectiveKind::KernelsLoop:
-    case OpenACCDirectiveKind::Routine:
-      return true;
-    default:
-      return false;
-    }
-  }
-  case OpenACCClauseKind::Vector: {
-    switch (DirectiveKind) {
-    case OpenACCDirectiveKind::Loop:
-    case OpenACCDirectiveKind::ParallelLoop:
-    case OpenACCDirectiveKind::SerialLoop:
-    case OpenACCDirectiveKind::KernelsLoop:
-    case OpenACCDirectiveKind::Routine:
-      return true;
-    default:
-      return false;
-    }
-  }
-  case OpenACCClauseKind::Finalize: {
-    switch (DirectiveKind) {
-    case OpenACCDirectiveKind::ExitData:
-      return true;
-    default:
-      return false;
-    }
-  }
-  case OpenACCClauseKind::IfPresent: {
-    switch (DirectiveKind) {
-    case OpenACCDirectiveKind::HostData:
-    case OpenACCDirectiveKind::Update:
-      return true;
-    default:
-      return false;
-    }
-  }
-  case OpenACCClauseKind::Delete: {
-    switch (DirectiveKind) {
-    case OpenACCDirectiveKind::ExitData:
-      return true;
-    default:
-      return false;
-    }
-  }
-
-  case OpenACCClauseKind::Detach: {
-    switch (DirectiveKind) {
-    case OpenACCDirectiveKind::ExitData:
-      return true;
-    default:
-      return false;
-    }
-  }
-
-  case OpenACCClauseKind::DeviceNum: {
-    switch (DirectiveKind) {
-    case OpenACCDirectiveKind::Init:
-    case OpenACCDirectiveKind::Shutdown:
-    case OpenACCDirectiveKind::Set:
-      return true;
-    default:
-      return false;
-    }
-  }
-  case OpenACCClauseKind::Link: {
-    switch (DirectiveKind) {
-    case OpenACCDirectiveKind::Declare:
-      return true;
-    default:
-      return false;
-    }
-  }
-  case OpenACCClauseKind::DeviceResident: {
-    switch (DirectiveKind) {
-    case OpenACCDirectiveKind::Declare:
-      return true;
-    default:
-      return false;
-    }
-  }
-
-  case OpenACCClauseKind::UseDevice: {
-    switch (DirectiveKind) {
-    case OpenACCDirectiveKind::HostData:
-      return true;
-    default:
-      return false;
-    }
-  }
-  case OpenACCClauseKind::DefaultAsync: {
-    switch (DirectiveKind) {
-    case OpenACCDirectiveKind::Set:
-      return true;
-    default:
-      return false;
-    }
-  }
-  case OpenACCClauseKind::Device: {
-    switch (DirectiveKind) {
-    case OpenACCDirectiveKind::Update:
-      return true;
-    default:
-      return false;
-    }
-  }
-  case OpenACCClauseKind::Host: {
-    switch (DirectiveKind) {
-    case OpenACCDirectiveKind::Update:
-      return true;
-    default:
-      return false;
-    }
-  }
-  case OpenACCClauseKind::NoHost: {
-    switch (DirectiveKind) {
-    case OpenACCDirectiveKind::Routine:
-      return true;
-    default:
-      return false;
-    }
-  }
-  case OpenACCClauseKind::Bind: {
-    switch (DirectiveKind) {
-    case OpenACCDirectiveKind::Routine:
-      return true;
-    default:
-      return false;
-    }
-  }
-  }
-
-  default:
-    // Do nothing so we can go to the 'unimplemented' diagnostic instead.
-    return true;
-  }
-  llvm_unreachable("Invalid clause kind");
-}
-
-bool checkAlreadyHasClauseOfKind(
-    SemaOpenACC &S, ArrayRef<const OpenACCClause *> ExistingClauses,
-    SemaOpenACC::OpenACCParsedClause &Clause) {
-  const auto *Itr = llvm::find_if(ExistingClauses, [&](const OpenACCClause *C) {
-    return C->getClauseKind() == Clause.getClauseKind();
-  });
-  if (Itr != ExistingClauses.end()) {
-    S.Diag(Clause.getBeginLoc(), diag::err_acc_duplicate_clause_disallowed)
-        << Clause.getDirectiveKind() << Clause.getClauseKind();
-    S.Diag((*Itr)->getBeginLoc(), diag::note_acc_previous_clause_here);
-    return true;
-  }
-  return false;
-}
 bool checkValidAfterDeviceType(
     SemaOpenACC &S, const OpenACCDeviceTypeClause &DeviceTypeClause,
     const SemaOpenACC::OpenACCParsedClause &NewClause) {
@@ -627,14 +131,6 @@ bool checkValidAfterDeviceType(
   return true;
 }
 
-// A temporary function that helps implement the 'not implemented' check at the
-// top of each clause checking function. This should only be used in conjunction
-// with the one being currently implemented/only updated after the entire
-// construct has been implemented.
-bool isDirectiveKindImplemented(OpenACCDirectiveKind DK) {
-  return DK != OpenACCDirectiveKind::Routine;
-}
-
 // GCC looks through linkage specs, but not the other transparent declaration
 // contexts for 'declare' restrictions, so this helper function helps get us
 // through that.
@@ -649,28 +145,20 @@ class SemaOpenACCClauseVisitor {
   SemaOpenACC &SemaRef;
   ASTContext &Ctx;
   ArrayRef<const OpenACCClause *> ExistingClauses;
-  bool NotImplemented = false;
-
-  OpenACCClause *isNotImplemented() {
-    NotImplemented = true;
-    return nullptr;
-  }
 
   // OpenACC 3.3 2.9:
-  // A 'gang', 'worker', or 'vector' clause may not appear if a 'seq' clause
-  // appears.
-  // -also-
-  // OpenACC3.3 2.15: (routine)
-  // Exactly one of the 'gang', 'worker', 'vector' or 'seq' clauses must appear.
+  //  A 'gang', 'worker', or 'vector' clause may not appear if a 'seq' clause
+  //  appears.
   bool
   DiagGangWorkerVectorSeqConflict(SemaOpenACC::OpenACCParsedClause &Clause) {
+    if (Clause.getDirectiveKind() != OpenACCDirectiveKind::Loop &&
+        !isOpenACCCombinedDirectiveKind(Clause.getDirectiveKind()))
+      return false;
+    assert(Clause.getClauseKind() == OpenACCClauseKind::Gang ||
+           Clause.getClauseKind() == OpenACCClauseKind::Worker ||
+           Clause.getClauseKind() == OpenACCClauseKind::Vector);
     const auto *Itr =
-        Clause.getDirectiveKind() == OpenACCDirectiveKind::Routine
-            ? llvm::find_if(
-                  ExistingClauses,
-                  llvm::IsaPred<OpenACCSeqClause, OpenACCGangClause,
-                                OpenACCWorkerClause, OpenACCVectorClause>)
-            : llvm::find_if(ExistingClauses, llvm::IsaPred<OpenACCSeqClause>);
+        llvm::find_if(ExistingClauses, llvm::IsaPred<OpenACCSeqClause>);
 
     if (Itr != ExistingClauses.end()) {
       SemaRef.Diag(Clause.getBeginLoc(), diag::err_acc_clause_cannot_combine)
@@ -736,13 +224,165 @@ class SemaOpenACCClauseVisitor {
     llvm_unreachable("didn't return from switch above?");
   }
 
+  // Helper for the 'routine' checks during 'new' clause addition. Precondition
+  // is that we already know the new clause is one of the prohbiited ones.
+  template <typename Pred>
+  bool
+  CheckValidRoutineNewClauseHelper(Pred HasPredicate,
+                                   SemaOpenACC::OpenACCParsedClause &Clause) {
+    if (Clause.getDirectiveKind() != OpenACCDirectiveKind::Routine)
+      return false;
+
+    auto *FirstDeviceType =
+        llvm::find_if(ExistingClauses, llvm::IsaPred<OpenACCDeviceTypeClause>);
+
+    if (FirstDeviceType == ExistingClauses.end()) {
+      // If there isn't a device type yet, ANY duplicate is wrong.
+
+      auto *ExistingProhibitedClause =
+          llvm::find_if(ExistingClauses, HasPredicate);
+
+      if (ExistingProhibitedClause == ExistingClauses.end())
+        return false;
+
+      SemaRef.Diag(Clause.getBeginLoc(), diag::err_acc_clause_cannot_combine)
+          << Clause.getClauseKind()
+          << (*ExistingProhibitedClause)->getClauseKind()
+          << Clause.getDirectiveKind();
+      SemaRef.Diag((*ExistingProhibitedClause)->getBeginLoc(),
+                   diag::note_acc_previous_clause_here);
+      return true;
+    }
+
+    // At this point we know that this is 'after' a device type. So this is an
+    // error if: 1- there is one BEFORE the 'device_type' 2- there is one
+    // between this and the previous 'device_type'.
+
+    auto *BeforeDeviceType =
+        std::find_if(ExistingClauses.begin(), FirstDeviceType, HasPredicate);
+    // If there is one before the device_type (and we know we are after a
+    // device_type), than this is ill-formed.
+    if (BeforeDeviceType != FirstDeviceType) {
+      SemaRef.Diag(
+          Clause.getBeginLoc(),
+          diag::err_acc_clause_routine_cannot_combine_before_device_type)
+          << Clause.getClauseKind() << (*BeforeDeviceType)->getClauseKind();
+      SemaRef.Diag((*BeforeDeviceType)->getBeginLoc(),
+                   diag::note_acc_previous_clause_here);
+      SemaRef.Diag((*FirstDeviceType)->getBeginLoc(),
+                   diag::note_acc_previous_clause_here);
+      return true;
+    }
+
+    auto LastDeviceTypeItr =
+        std::find_if(ExistingClauses.rbegin(), ExistingClauses.rend(),
+                     llvm::IsaPred<OpenACCDeviceTypeClause>);
+
+    // We already know there is one in the list, so it is nonsensical to not
+    // have one.
+    assert(LastDeviceTypeItr != ExistingClauses.rend());
+
+    // Get the device-type from-the-front (not reverse) iterator from the
+    // reverse iterator.
+    auto *LastDeviceType = LastDeviceTypeItr.base() - 1;
+
+    auto *ExistingProhibitedSinceLastDevice =
+        std::find_if(LastDeviceType, ExistingClauses.end(), HasPredicate);
+
+    // No prohibited ones since the last device-type.
+    if (ExistingProhibitedSinceLastDevice == ExistingClauses.end())
+      return false;
+
+    SemaRef.Diag(Clause.getBeginLoc(),
+                 diag::err_acc_clause_routine_cannot_combine_same_device_type)
+        << Clause.getClauseKind()
+        << (*ExistingProhibitedSinceLastDevice)->getClauseKind();
+    SemaRef.Diag((*ExistingProhibitedSinceLastDevice)->getBeginLoc(),
+                 diag::note_acc_previous_clause_here);
+    SemaRef.Diag((*LastDeviceType)->getBeginLoc(),
+                 diag::note_acc_previous_clause_here);
+    return true;
+  }
+
+  // Routine has a pretty complicated set of rules for how device_type and the
+  // gang, worker, vector, and seq clauses work.  So diagnose some of it here.
+  bool CheckValidRoutineGangWorkerVectorSeqNewClause(
+      SemaOpenACC::OpenACCParsedClause &Clause) {
+
+    if (Clause.getClauseKind() != OpenACCClauseKind::Gang &&
+        Clause.getClauseKind() != OpenACCClauseKind::Vector &&
+        Clause.getClauseKind() != OpenACCClauseKind::Worker &&
+        Clause.getClauseKind() != OpenACCClauseKind::Seq)
+      return false;
+    auto ProhibitedPred = llvm::IsaPred<OpenACCGangClause, OpenACCWorkerClause,
+                                        OpenACCVectorClause, OpenACCSeqClause>;
+
+    return CheckValidRoutineNewClauseHelper(ProhibitedPred, Clause);
+  }
+
+  // Bind should have similar rules on a routine as gang/worker/vector/seq,
+  // except there is no 'must have 1' rule, so we can get all the checking done
+  // here.
+  bool
+  CheckValidRoutineBindNewClause(SemaOpenACC::OpenACCParsedClause &Clause) {
+
+    if (Clause.getClauseKind() != OpenACCClauseKind::Bind)
+      return false;
+
+    auto HasBindPred = llvm::IsaPred<OpenACCBindClause>;
+    return CheckValidRoutineNewClauseHelper(HasBindPred, Clause);
+  }
+
+  // For 'tile' and 'collapse', only allow 1 per 'device_type'.
+  // Also applies to num_worker, num_gangs, and vector_length.
+  template <typename TheClauseTy>
+  bool DisallowSinceLastDeviceType(SemaOpenACC::OpenACCParsedClause &Clause) {
+    auto LastDeviceTypeItr =
+        std::find_if(ExistingClauses.rbegin(), ExistingClauses.rend(),
+                     llvm::IsaPred<OpenACCDeviceTypeClause>);
+
+    auto Last = std::find_if(ExistingClauses.rbegin(), LastDeviceTypeItr,
+                             llvm::IsaPred<TheClauseTy>);
+
+    if (Last == LastDeviceTypeItr)
+      return false;
+
+    SemaRef.Diag(Clause.getBeginLoc(),
+                 diag::err_acc_clause_since_last_device_type)
+        << Clause.getClauseKind() << Clause.getDirectiveKind()
+        << (LastDeviceTypeItr != ExistingClauses.rend());
+    SemaRef.Diag((*Last)->getBeginLoc(), diag::note_acc_previous_clause_here);
+
+    if (LastDeviceTypeItr != ExistingClauses.rend())
+      SemaRef.Diag((*LastDeviceTypeItr)->getBeginLoc(),
+                   diag::note_acc_previous_clause_here);
+
+    return true;
+  }
+
 public:
   SemaOpenACCClauseVisitor(SemaOpenACC &S,
                            ArrayRef<const OpenACCClause *> ExistingClauses)
       : SemaRef(S), Ctx(S.getASTContext()), ExistingClauses(ExistingClauses) {}
 
   OpenACCClause *Visit(SemaOpenACC::OpenACCParsedClause &Clause) {
+
+    if (SemaRef.DiagnoseAllowedOnceClauses(
+            Clause.getDirectiveKind(), Clause.getClauseKind(),
+            Clause.getBeginLoc(), ExistingClauses) ||
+        SemaRef.DiagnoseExclusiveClauses(Clause.getDirectiveKind(),
+                                         Clause.getClauseKind(),
+                                         Clause.getBeginLoc(), ExistingClauses))
+      return nullptr;
+    if (CheckValidRoutineGangWorkerVectorSeqNewClause(Clause) ||
+        CheckValidRoutineBindNewClause(Clause))
+      return nullptr;
+
     switch (Clause.getClauseKind()) {
+    case OpenACCClauseKind::Shortloop:
+      llvm_unreachable("Shortloop shouldn't be generated in clang");
+    case OpenACCClauseKind::Invalid:
+      return nullptr;
 #define VISIT_CLAUSE(CLAUSE_NAME)                                              \
   case OpenACCClauseKind::CLAUSE_NAME:                                         \
     return Visit##CLAUSE_NAME##Clause(Clause);
@@ -753,8 +393,6 @@ public:
         << Clause.getClauseKind() << OpenACCClauseKind::CLAUSE_NAME;           \
   return Visit##CLAUSE_NAME##Clause(Clause);
 #include "clang/Basic/OpenACCClauses.def"
-    default:
-      return isNotImplemented();
     }
     llvm_unreachable("Invalid clause kind");
   }
@@ -771,13 +409,6 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitDefaultClause(
   if (Clause.getDefaultClauseKind() == OpenACCDefaultClauseKind::Invalid)
     return nullptr;
 
-  // OpenACC 3.3, Section 2.5.4:
-  // At most one 'default' clause may appear, and it must have a value of
-  // either 'none' or 'present'.
-  // Second half of the sentence is diagnosed during parsing.
-  if (checkAlreadyHasClauseOfKind(SemaRef, ExistingClauses, Clause))
-    return nullptr;
-
   return OpenACCDefaultClause::Create(
       Ctx, Clause.getDefaultClauseKind(), Clause.getBeginLoc(),
       Clause.getLParenLoc(), Clause.getEndLoc());
@@ -786,12 +417,7 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitDefaultClause(
 OpenACCClause *SemaOpenACCClauseVisitor::VisitTileClause(
     SemaOpenACC::OpenACCParsedClause &Clause) {
 
-  // Duplicates here are not really sensible.  We could possible permit
-  // multiples if they all had the same value, but there isn't really a good
-  // reason to do so. Also, this simplifies the suppression of duplicates, in
-  // that we know if we 'find' one after instantiation, that it is the same
-  // clause, which simplifies instantiation/checking/etc.
-  if (checkAlreadyHasClauseOfKind(SemaRef, ExistingClauses, Clause))
+  if (DisallowSinceLastDeviceType<OpenACCTileClause>(Clause))
     return nullptr;
 
   llvm::SmallVector<Expr *> NewSizeExprs;
@@ -813,16 +439,6 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitTileClause(
 
 OpenACCClause *SemaOpenACCClauseVisitor::VisitIfClause(
     SemaOpenACC::OpenACCParsedClause &Clause) {
-  // There is no prose in the standard that says duplicates aren't allowed,
-  // but this diagnostic is present in other compilers, as well as makes
-  // sense. Prose DOES exist for 'data' and 'host_data', 'set', 'enter data' and
-  // 'exit data' both don't, but other implmementations do this.  OpenACC issue
-  // 519 filed for the latter two. Prose also exists for 'update'.
-  // GCC allows this on init/shutdown, presumably for good reason, so we do too.
-  if (Clause.getDirectiveKind() != OpenACCDirectiveKind::Init &&
-      Clause.getDirectiveKind() != OpenACCDirectiveKind::Shutdown &&
-      checkAlreadyHasClauseOfKind(SemaRef, ExistingClauses, Clause))
-    return nullptr;
 
   // The parser has ensured that we have a proper condition expr, so there
   // isn't really much to do here.
@@ -845,11 +461,6 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitIfClause(
 
 OpenACCClause *SemaOpenACCClauseVisitor::VisitSelfClause(
     SemaOpenACC::OpenACCParsedClause &Clause) {
-  // There is no prose in the standard that says duplicates aren't allowed,
-  // but this diagnostic is present in other compilers, as well as makes
-  // sense.
-  if (checkAlreadyHasClauseOfKind(SemaRef, ExistingClauses, Clause))
-    return nullptr;
 
   // If the 'if' clause is true, it makes the 'self' clause have no effect,
   // diagnose that here.  This only applies on compute/combined constructs.
@@ -871,10 +482,8 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitSelfClause(
 
 OpenACCClause *SemaOpenACCClauseVisitor::VisitNumGangsClause(
     SemaOpenACC::OpenACCParsedClause &Clause) {
-  // There is no prose in the standard that says duplicates aren't allowed,
-  // but this diagnostic is present in other compilers, as well as makes
-  // sense.
-  if (checkAlreadyHasClauseOfKind(SemaRef, ExistingClauses, Clause))
+
+  if (DisallowSinceLastDeviceType<OpenACCNumGangsClause>(Clause))
     return nullptr;
 
   // num_gangs requires at least 1 int expr in all forms.  Diagnose here, but
@@ -966,10 +575,8 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitNumGangsClause(
 
 OpenACCClause *SemaOpenACCClauseVisitor::VisitNumWorkersClause(
     SemaOpenACC::OpenACCParsedClause &Clause) {
-  // There is no prose in the standard that says duplicates aren't allowed,
-  // but this diagnostic is present in other compilers, as well as makes
-  // sense.
-  if (checkAlreadyHasClauseOfKind(SemaRef, ExistingClauses, Clause))
+
+  if (DisallowSinceLastDeviceType<OpenACCNumWorkersClause>(Clause))
     return nullptr;
 
   // OpenACC 3.3 Section 2.9.2:
@@ -1000,10 +607,8 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitNumWorkersClause(
 
 OpenACCClause *SemaOpenACCClauseVisitor::VisitVectorLengthClause(
     SemaOpenACC::OpenACCParsedClause &Clause) {
-  // There is no prose in the standard that says duplicates aren't allowed,
-  // but this diagnostic is present in other compilers, as well as makes
-  // sense.
-  if (checkAlreadyHasClauseOfKind(SemaRef, ExistingClauses, Clause))
+
+  if (DisallowSinceLastDeviceType<OpenACCVectorLengthClause>(Clause))
     return nullptr;
 
   // OpenACC 3.3 Section 2.9.4:
@@ -1034,12 +639,6 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitVectorLengthClause(
 
 OpenACCClause *SemaOpenACCClauseVisitor::VisitAsyncClause(
     SemaOpenACC::OpenACCParsedClause &Clause) {
-  // There is no prose in the standard that says duplicates aren't allowed,
-  // but this diagnostic is present in other compilers, as well as makes
-  // sense.
-  if (checkAlreadyHasClauseOfKind(SemaRef, ExistingClauses, Clause))
-    return nullptr;
-
   assert(Clause.getNumIntExprs() < 2 &&
          "Invalid number of expressions for Async");
   return OpenACCAsyncClause::Create(
@@ -1050,17 +649,6 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitAsyncClause(
 
 OpenACCClause *SemaOpenACCClauseVisitor::VisitDeviceNumClause(
     SemaOpenACC::OpenACCParsedClause &Clause) {
-  // Restrictions only properly implemented on certain constructs, so skip/treat
-  // as unimplemented in those cases.
-  if (!isDirectiveKindImplemented(Clause.getDirectiveKind()))
-    return isNotImplemented();
-
-  // OpenACC 3.3 2.14.3: Two instances of the same clause may not appear on the
-  // same directive.
-  if (Clause.getDirectiveKind() == OpenACCDirectiveKind::Set &&
-      checkAlreadyHasClauseOfKind(SemaRef, ExistingClauses, Clause))
-    return nullptr;
-
   assert(Clause.getNumIntExprs() == 1 &&
          "Invalid number of expressions for device_num");
   return OpenACCDeviceNumClause::Create(
@@ -1070,11 +658,6 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitDeviceNumClause(
 
 OpenACCClause *SemaOpenACCClauseVisitor::VisitDefaultAsyncClause(
     SemaOpenACC::OpenACCParsedClause &Clause) {
-  // OpenACC 3.3 2.14.3: Two instances of the same clause may not appear on the
-  // same directive.
-  if (checkAlreadyHasClauseOfKind(SemaRef, ExistingClauses, Clause))
-    return nullptr;
-
   assert(Clause.getNumIntExprs() == 1 &&
          "Invalid number of expressions for default_async");
   return OpenACCDefaultAsyncClause::Create(
@@ -1332,11 +915,6 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitWaitClause(
 
 OpenACCClause *SemaOpenACCClauseVisitor::VisitDeviceTypeClause(
     SemaOpenACC::OpenACCParsedClause &Clause) {
-  // OpenACC 3.3 2.14.3: Two instances of the same clause may not appear on the
-  // same directive.
-  if (Clause.getDirectiveKind() == OpenACCDirectiveKind::Set &&
-      checkAlreadyHasClauseOfKind(SemaRef, ExistingClauses, Clause))
-    return nullptr;
 
   // Based on discussions, having more than 1 'architecture' on a 'set' is
   // nonsensical, so we're going to fix the standard to reflect this.  Implement
@@ -1397,18 +975,6 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitDeviceTypeClause(
 
 OpenACCClause *SemaOpenACCClauseVisitor::VisitAutoClause(
     SemaOpenACC::OpenACCParsedClause &Clause) {
-  // OpenACC 3.3 2.9:
-  // Only one of the seq, independent, and auto clauses may appear.
-  const auto *Itr =
-      llvm::find_if(ExistingClauses,
-                    llvm::IsaPred<OpenACCAutoClause, OpenACCIndependentClause,
-                                  OpenACCSeqClause>);
-  if (Itr != ExistingClauses.end()) {
-    SemaRef.Diag(Clause.getBeginLoc(), diag::err_acc_loop_spec_conflict)
-        << Clause.getClauseKind() << Clause.getDirectiveKind();
-    SemaRef.Diag((*Itr)->getBeginLoc(), diag::note_acc_previous_clause_here);
-    return nullptr;
-  }
 
   return OpenACCAutoClause::Create(Ctx, Clause.getBeginLoc(),
                                    Clause.getEndLoc());
@@ -1422,17 +988,6 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitNoHostClause(
 
 OpenACCClause *SemaOpenACCClauseVisitor::VisitIndependentClause(
     SemaOpenACC::OpenACCParsedClause &Clause) {
-  // OpenACC 3.3 2.9:
-  // Only one of the seq, independent, and auto clauses may appear.
-  const auto *Itr = llvm::find_if(
-      ExistingClauses, llvm::IsaPred<OpenACCIndependentClause,
-                                     OpenACCAutoClause, OpenACCSeqClause>);
-  if (Itr != ExistingClauses.end()) {
-    SemaRef.Diag(Clause.getBeginLoc(), diag::err_acc_loop_spec_conflict)
-        << Clause.getClauseKind() << Clause.getDirectiveKind();
-    SemaRef.Diag((*Itr)->getBeginLoc(), diag::note_acc_previous_clause_here);
-    return nullptr;
-  }
 
   return OpenACCIndependentClause::Create(Ctx, Clause.getBeginLoc(),
                                           Clause.getEndLoc());
@@ -1805,6 +1360,7 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitWorkerClause(
 
 OpenACCClause *SemaOpenACCClauseVisitor::VisitGangClause(
     SemaOpenACC::OpenACCParsedClause &Clause) {
+
   if (DiagGangWorkerVectorSeqConflict(Clause))
     return nullptr;
 
@@ -1944,43 +1500,21 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitIfPresentClause(
 
 OpenACCClause *SemaOpenACCClauseVisitor::VisitSeqClause(
     SemaOpenACC::OpenACCParsedClause &Clause) {
-
-  if (Clause.getDirectiveKind() != OpenACCDirectiveKind::Routine) {
-    // OpenACC 3.3 2.9:
-    // Only one of the seq, independent, and auto clauses may appear.
-    const auto *Itr =
-        llvm::find_if(ExistingClauses,
-                      llvm::IsaPred<OpenACCAutoClause, OpenACCIndependentClause,
-                                    OpenACCSeqClause>);
+  // OpenACC 3.3 2.9:
+  //  A 'gang', 'worker', or 'vector' clause may not appear if a 'seq' clause
+  //  appears.
+  if (Clause.getDirectiveKind() == OpenACCDirectiveKind::Loop ||
+      isOpenACCCombinedDirectiveKind(Clause.getDirectiveKind())) {
+    const auto *Itr = llvm::find_if(
+        ExistingClauses, llvm::IsaPred<OpenACCGangClause, OpenACCVectorClause,
+                                       OpenACCWorkerClause>);
     if (Itr != ExistingClauses.end()) {
-      SemaRef.Diag(Clause.getBeginLoc(), diag::err_acc_loop_spec_conflict)
-          << Clause.getClauseKind() << Clause.getDirectiveKind();
+      SemaRef.Diag(Clause.getBeginLoc(), diag::err_acc_clause_cannot_combine)
+          << Clause.getClauseKind() << (*Itr)->getClauseKind()
+          << Clause.getDirectiveKind();
       SemaRef.Diag((*Itr)->getBeginLoc(), diag::note_acc_previous_clause_here);
       return nullptr;
     }
-  }
-
-  // OpenACC 3.3 2.9:
-  // A 'gang', 'worker', or 'vector' clause may not appear if a 'seq' clause
-  // appears.
-  // -also-
-  // OpenACC3.3 2.15: (routine)
-  // Exactly one of the 'gang', 'worker', 'vector' or 'seq' clauses must appear.
-  const auto *Itr =
-      Clause.getDirectiveKind() == OpenACCDirectiveKind::Routine
-          ? llvm::find_if(ExistingClauses,
-                          llvm::IsaPred<OpenACCGangClause, OpenACCWorkerClause,
-                                        OpenACCVectorClause, OpenACCSeqClause>)
-          : llvm::find_if(ExistingClauses,
-                          llvm::IsaPred<OpenACCGangClause, OpenACCWorkerClause,
-                                        OpenACCVectorClause>);
-
-  if (Itr != ExistingClauses.end()) {
-    SemaRef.Diag(Clause.getBeginLoc(), diag::err_acc_clause_cannot_combine)
-        << Clause.getClauseKind() << (*Itr)->getClauseKind()
-        << Clause.getDirectiveKind();
-    SemaRef.Diag((*Itr)->getBeginLoc(), diag::note_acc_previous_clause_here);
-    return nullptr;
   }
 
   return OpenACCSeqClause::Create(Ctx, Clause.getBeginLoc(),
@@ -2083,12 +1617,8 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitReductionClause(
 
 OpenACCClause *SemaOpenACCClauseVisitor::VisitCollapseClause(
     SemaOpenACC::OpenACCParsedClause &Clause) {
-  // Duplicates here are not really sensible.  We could possible permit
-  // multiples if they all had the same value, but there isn't really a good
-  // reason to do so. Also, this simplifies the suppression of duplicates, in
-  // that we know if we 'find' one after instantiation, that it is the same
-  // clause, which simplifies instantiation/checking/etc.
-  if (checkAlreadyHasClauseOfKind(SemaRef, ExistingClauses, Clause))
+
+  if (DisallowSinceLastDeviceType<OpenACCCollapseClause>(Clause))
     return nullptr;
 
   ExprResult LoopCount = SemaRef.CheckCollapseLoopCount(Clause.getLoopCount());
@@ -2103,8 +1633,6 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitCollapseClause(
 
 OpenACCClause *SemaOpenACCClauseVisitor::VisitBindClause(
     SemaOpenACC::OpenACCParsedClause &Clause) {
-  if (checkAlreadyHasClauseOfKind(SemaRef, ExistingClauses, Clause))
-    return nullptr;
 
   if (std::holds_alternative<StringLiteral *>(Clause.getBindDetails()))
     return OpenACCBindClause::Create(
@@ -2182,13 +1710,16 @@ SemaOpenACC::ActOnClause(ArrayRef<const OpenACCClause *> ExistingClauses,
   if (Clause.getClauseKind() == OpenACCClauseKind::Invalid)
     return nullptr;
 
-  // Diagnose that we don't support this clause on this directive.
-  if (!doesClauseApplyToDirective(Clause.getDirectiveKind(),
-                                  Clause.getClauseKind())) {
-    Diag(Clause.getBeginLoc(), diag::err_acc_clause_appertainment)
-        << Clause.getDirectiveKind() << Clause.getClauseKind();
+  if (DiagnoseAllowedClauses(Clause.getDirectiveKind(), Clause.getClauseKind(),
+                             Clause.getBeginLoc()))
     return nullptr;
-  }
+  //// Diagnose that we don't support this clause on this directive.
+  // if (!doesClauseApplyToDirective(Clause.getDirectiveKind(),
+  //                                 Clause.getClauseKind())) {
+  //   Diag(Clause.getBeginLoc(), diag::err_acc_clause_appertainment)
+  //       << Clause.getDirectiveKind() << Clause.getClauseKind();
+  //   return nullptr;
+  // }
 
   if (const auto *DevTypeClause = llvm::find_if(
           ExistingClauses, llvm::IsaPred<OpenACCDeviceTypeClause>);

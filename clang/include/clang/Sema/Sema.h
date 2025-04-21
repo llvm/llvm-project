@@ -2100,6 +2100,50 @@ public:
   bool CheckCountedByAttrOnField(FieldDecl *FD, Expr *E, bool CountInBytes,
                                  bool OrNull);
 
+  /// Perform Bounds Safety Semantic checks for assigning to a `__counted_by` or
+  /// `__counted_by_or_null` pointer type \param LHSTy.
+  ///
+  /// \param LHSTy The type being assigned to. Checks will only be performed if
+  ///              the type is a `counted_by` or `counted_by_or_null ` pointer.
+  /// \param RHSExpr The expression being assigned from.
+  /// \param Action The type assignment being performed
+  /// \param Loc The SourceLocation to use for error diagnostics
+  /// \param Assignee The ValueDecl being assigned. This is used to compute
+  ///        the name of the assignee. If the assignee isn't known this can
+  ///        be set to nullptr.
+  /// \param ShowFullyQualifiedAssigneeName If set to true when using \p
+  ///        Assignee to compute the name of the assignee use the fully
+  ///        qualified name, otherwise use the unqualified name.
+  ///
+  /// \returns True iff no diagnostic where emitted, false otherwise.
+  bool BoundsSafetyCheckAssignmentToCountAttrPtr(
+      QualType LHSTy, Expr *RHSExpr, AssignmentAction Action,
+      SourceLocation Loc, const ValueDecl *Assignee,
+      bool ShowFullyQualifiedAssigneeName);
+
+  /// Perform Bounds Safety Semantic checks for initializing a Bounds Safety
+  /// pointer.
+  ///
+  /// \param Entity The entity being initialized
+  /// \param Kind The kind of initialization being performed
+  /// \param Action The type assignment being performed
+  /// \param LHSTy The type being assigned to. Checks will only be performed if
+  ///              the type is a `counted_by` or `counted_by_or_null ` pointer.
+  /// \param RHSExpr The expression being used for initialization.
+  ///
+  /// \returns True iff no diagnostic where emitted, false otherwise.
+  bool BoundsSafetyCheckInitialization(const InitializedEntity &Entity,
+                                       const InitializationKind &Kind,
+                                       AssignmentAction Action,
+                                       QualType LHSType, Expr *RHSExpr);
+
+  /// Perform Bounds Safety semantic checks for uses of invalid uses counted_by
+  /// or counted_by_or_null pointers in \param E.
+  ///
+  /// \param E the expression to check
+  ///
+  /// \returns True iff no diagnostic where emitted, false otherwise.
+  bool BoundsSafetyCheckUseOfCountAttrPtr(const Expr *E);
   ///@}
 
   //

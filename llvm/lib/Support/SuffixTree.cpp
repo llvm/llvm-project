@@ -306,8 +306,7 @@ void SuffixTree::RepeatedSubstringIterator::advance() {
   // Continue visiting nodes until we find one which repeats more than once.
   while (!InternalNodesToVisit.empty()) {
     RepeatedSubstringStarts.clear();
-    auto *Curr = InternalNodesToVisit.back();
-    InternalNodesToVisit.pop_back();
+    auto *Curr = InternalNodesToVisit.pop_back_val();
 
     // Keep track of the length of the string associated with the node. If
     // it's too short, we'll quit.

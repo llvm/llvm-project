@@ -2261,11 +2261,10 @@ PtrParts SplitPtrStructs::visitIntrinsicInst(IntrinsicInst &I) {
 
 void SplitPtrStructs::processFunction(Function &F) {
   ST = &TM->getSubtarget<GCNSubtarget>(F);
-  SmallVector<Instruction *, 0> Originals;
+  SmallVector<Instruction *, 0> Originals(
+      llvm::make_pointer_range(instructions(F)));
   LLVM_DEBUG(dbgs() << "Splitting pointer structs in function: " << F.getName()
                     << "\n");
-  for (Instruction &I : instructions(F))
-    Originals.push_back(&I);
   for (Instruction *I : Originals) {
     auto [Rsrc, Off] = visit(I);
     assert(((Rsrc && Off) || (!Rsrc && !Off)) &&

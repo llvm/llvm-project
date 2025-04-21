@@ -156,6 +156,7 @@ static const llvm::IndexedMap<RecordIdDsc, RecordIdToIndexFunctor>
           {FIELD_DEFAULT_VALUE, {"DefaultValue", &StringAbbrev}},
           {MEMBER_TYPE_NAME, {"Name", &StringAbbrev}},
           {MEMBER_TYPE_ACCESS, {"Access", &IntAbbrev}},
+          {MEMBER_TYPE_IS_STATIC, {"IsStatic", &BoolAbbrev}},
           {NAMESPACE_USR, {"USR", &SymbolIDAbbrev}},
           {NAMESPACE_NAME, {"Name", &StringAbbrev}},
           {NAMESPACE_PATH, {"Path", &StringAbbrev}},
@@ -187,6 +188,7 @@ static const llvm::IndexedMap<RecordIdDsc, RecordIdToIndexFunctor>
           {FUNCTION_LOCATION, {"Location", &LocationAbbrev}},
           {FUNCTION_ACCESS, {"Access", &IntAbbrev}},
           {FUNCTION_IS_METHOD, {"IsMethod", &BoolAbbrev}},
+          {FUNCTION_IS_STATIC, {"IsStatic", &BoolAbbrev}},
           {REFERENCE_USR, {"USR", &SymbolIDAbbrev}},
           {REFERENCE_NAME, {"Name", &StringAbbrev}},
           {REFERENCE_QUAL_NAME, {"QualName", &StringAbbrev}},
@@ -222,7 +224,8 @@ static const std::vector<std::pair<BlockId, std::vector<RecordId>>>
         // FieldType Block
         {BI_FIELD_TYPE_BLOCK_ID, {FIELD_TYPE_NAME, FIELD_DEFAULT_VALUE}},
         // MemberType Block
-        {BI_MEMBER_TYPE_BLOCK_ID, {MEMBER_TYPE_NAME, MEMBER_TYPE_ACCESS}},
+        {BI_MEMBER_TYPE_BLOCK_ID,
+         {MEMBER_TYPE_NAME, MEMBER_TYPE_ACCESS, MEMBER_TYPE_IS_STATIC}},
         // Enum Block
         {BI_ENUM_BLOCK_ID,
          {ENUM_USR, ENUM_NAME, ENUM_DEFLOCATION, ENUM_LOCATION, ENUM_SCOPED}},
@@ -247,7 +250,7 @@ static const std::vector<std::pair<BlockId, std::vector<RecordId>>>
         // Function Block
         {BI_FUNCTION_BLOCK_ID,
          {FUNCTION_USR, FUNCTION_NAME, FUNCTION_DEFLOCATION, FUNCTION_LOCATION,
-          FUNCTION_ACCESS, FUNCTION_IS_METHOD}},
+          FUNCTION_ACCESS, FUNCTION_IS_METHOD, FUNCTION_IS_STATIC}},
         // Reference Block
         {BI_REFERENCE_BLOCK_ID,
          {REFERENCE_USR, REFERENCE_NAME, REFERENCE_QUAL_NAME, REFERENCE_TYPE,
@@ -465,6 +468,7 @@ void ClangDocBitcodeWriter::emitBlock(const MemberTypeInfo &T) {
   emitBlock(T.Type, FieldId::F_type);
   emitRecord(T.Name, MEMBER_TYPE_NAME);
   emitRecord(T.Access, MEMBER_TYPE_ACCESS);
+  emitRecord(T.IsStatic, MEMBER_TYPE_IS_STATIC);
   for (const auto &CI : T.Description)
     emitBlock(CI);
 }
@@ -600,6 +604,7 @@ void ClangDocBitcodeWriter::emitBlock(const FunctionInfo &I) {
     emitBlock(CI);
   emitRecord(I.Access, FUNCTION_ACCESS);
   emitRecord(I.IsMethod, FUNCTION_IS_METHOD);
+  emitRecord(I.IsStatic, FUNCTION_IS_STATIC);
   if (I.DefLoc)
     emitRecord(*I.DefLoc, FUNCTION_DEFLOCATION);
   for (const auto &L : I.Loc)

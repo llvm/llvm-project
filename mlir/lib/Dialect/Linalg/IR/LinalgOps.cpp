@@ -47,6 +47,7 @@
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/InterleavedRange.h"
 #include "llvm/Support/LogicalResult.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
@@ -3660,17 +3661,13 @@ ParseResult MatmulOp::parse(OpAsmParser &parser, OperationState &result) {
 }
 
 void MatmulOp::print(OpAsmPrinter &p) {
-  SmallVector<Attribute, 3> indexingMaps = llvm::map_to_vector(
+  SmallVector<Attribute, 3> indexingMaps = llvm::map_to_vector<3>(
       MatmulOp::getDefaultIndexingMaps(getContext()),
       [](AffineMap map) -> Attribute { return AffineMapAttr::get(map); });
-  if (!llvm::equal(getIndexingMaps(), indexingMaps)) {
-    p << " indexing_maps = [";
-    llvm::interleaveComma(getIndexingMaps(), p,
-                          [&](Attribute attr) { p.printAttribute(attr); });
-    p << "]";
-  }
+  if (!llvm::equal(getIndexingMaps(), indexingMaps))
+    p << " indexing_maps = " << llvm::interleaved_array(getIndexingMaps());
 
-  SmallVector<StringRef, 3> elidedAttrs = {
+  std::array<StringRef, 3> elidedAttrs = {
       "operandSegmentSizes", "linalg.memoized_indexing_maps", "indexing_maps"};
   printNamedStructuredOp(p, getOperation(), getInputs(), getOutputs(),
                          elidedAttrs);
@@ -3777,10 +3774,7 @@ ParseResult ContractOp::parse(OpAsmParser &parser, OperationState &result) {
 }
 
 void ContractOp::print(OpAsmPrinter &p) {
-  p << " indexing_maps = [";
-  llvm::interleaveComma(getIndexingMaps(), p,
-                        [&](Attribute attr) { p.printAttribute(attr); });
-  p << "]";
+  p << " indexing_maps = " << llvm::interleaved_array(getIndexingMaps());
   printNamedStructuredOp(
       p, getOperation(), getInputs(), getOutputs(),
       /*elidedAttrs=*/{"indexing_maps", "operandSegmentSizes"});
@@ -4013,17 +4007,13 @@ ParseResult BatchMatmulOp::parse(OpAsmParser &parser, OperationState &result) {
 }
 
 void BatchMatmulOp::print(OpAsmPrinter &p) {
-  SmallVector<Attribute, 3> indexingMaps = llvm::map_to_vector(
+  SmallVector<Attribute, 3> indexingMaps = llvm::map_to_vector<3>(
       BatchMatmulOp::getDefaultIndexingMaps(getContext()),
       [](AffineMap map) -> Attribute { return AffineMapAttr::get(map); });
-  if (!llvm::equal(getIndexingMaps(), indexingMaps)) {
-    p << " indexing_maps = [";
-    llvm::interleaveComma(getIndexingMaps(), p,
-                          [&](Attribute attr) { p.printAttribute(attr); });
-    p << "]";
-  }
+  if (!llvm::equal(getIndexingMaps(), indexingMaps))
+    p << " indexing_maps = " << llvm::interleaved_array(getIndexingMaps());
 
-  SmallVector<StringRef, 3> elidedAttrs = {
+  std::array<StringRef, 3> elidedAttrs = {
       "operandSegmentSizes", "linalg.memoized_indexing_maps", "indexing_maps"};
   ::printNamedStructuredOp(p, getOperation(), getInputs(), getOutputs(),
                            elidedAttrs);
@@ -4204,17 +4194,13 @@ void ElementwiseOp::print(OpAsmPrinter &p) {
       getArityGroupAsUInt(getArityGroupAndKind(getKind()).arityGroup);
   unsigned numDims = getResultRank();
 
-  SmallVector<Attribute, 3> indexingMaps = llvm::map_to_vector(
+  SmallVector<Attribute, 3> indexingMaps = llvm::map_to_vector<3>(
       ElementwiseOp::getDefaultIndexingMaps(arity + 1 /*output*/, numDims,
                                             getContext()),
       [](AffineMap map) -> Attribute { return AffineMapAttr::get(map); });
 
-  if (!llvm::equal(getIndexingMaps(), indexingMaps)) {
-    p << " indexing_maps = [";
-    llvm::interleaveComma(getIndexingMaps(), p,
-                          [&](Attribute attr) { p.printAttribute(attr); });
-    p << "]";
-  }
+  if (!llvm::equal(getIndexingMaps(), indexingMaps))
+    p << " indexing_maps = " << llvm::interleaved_array(getIndexingMaps());
 
   printNamedStructuredOp(p, getOperation(), getInputs(), getOutputs(),
                          elidedAttrs);

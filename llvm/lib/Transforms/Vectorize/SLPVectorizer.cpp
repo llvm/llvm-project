@@ -5085,7 +5085,7 @@ private:
     }
 
     static unsigned getHashValue(const OrdersType &V) {
-      return static_cast<unsigned>(hash_combine_range(V.begin(), V.end()));
+      return static_cast<unsigned>(hash_combine_range(V));
     }
 
     static bool isEqual(const OrdersType &LHS, const OrdersType &RHS) {
@@ -6466,10 +6466,7 @@ static bool clusterSortPtrAccesses(ArrayRef<Value *> VL,
   for (auto &Base : Bases) {
     for (auto &Vec : Base.second) {
       if (Vec.size() > 1) {
-        stable_sort(Vec, [](const std::tuple<Value *, int, unsigned> &X,
-                            const std::tuple<Value *, int, unsigned> &Y) {
-          return std::get<1>(X) < std::get<1>(Y);
-        });
+        stable_sort(Vec, llvm::less_second());
         int InitialOffset = std::get<1>(Vec[0]);
         bool AnyConsecutive =
             all_of(enumerate(Vec), [InitialOffset](const auto &P) {
@@ -6714,6 +6711,8 @@ BoUpSLP::getReorderingData(const TreeEntry &TE, bool TopToBottom,
            "BinaryOperator and CastInst.");
     return TE.ReorderIndices;
   }
+  if (!TE.ReorderIndices.empty())
+    return TE.ReorderIndices;
   if (TE.State == TreeEntry::Vectorize && TE.getOpcode() == Instruction::PHI) {
     if (!TE.ReorderIndices.empty())
       return TE.ReorderIndices;
@@ -6752,7 +6751,7 @@ BoUpSLP::getReorderingData(const TreeEntry &TE, bool TopToBottom,
     auto PHICompare = [&](unsigned I1, unsigned I2) {
       Value *V1 = TE.Scalars[I1];
       Value *V2 = TE.Scalars[I2];
-      if (V1 == V2 || (V1->getNumUses() == 0 && V2->getNumUses() == 0))
+      if (V1 == V2 || (V1->use_empty() && V2->use_empty()))
         return false;
       if (isa<PoisonValue>(V1))
         return true;
@@ -7986,9 +7985,7 @@ bool BoUpSLP::canFormVector(ArrayRef<StoreInst *> StoresVec,
   // Check if the stores are consecutive by checking if their difference is 1.
   if (StoreOffsetVec.size() != StoresVec.size())
     return false;
-  sort(StoreOffsetVec,
-       [](const std::pair<int, unsigned> &L,
-          const std::pair<int, unsigned> &R) { return L.first < R.first; });
+  sort(StoreOffsetVec, llvm::less_first());
   unsigned Idx = 0;
   int PrevDist = 0;
   for (const auto &P : StoreOffsetVec) {

@@ -116,6 +116,8 @@ public:
     return {};
   }
 
+  mlir::Value VisitParenExpr(ParenExpr *pe) { return Visit(pe->getSubExpr()); }
+
   /// Emits the address of the l-value, then loads and returns the result.
   mlir::Value emitLoadOfLValue(const Expr *e) {
     LValue lv = cgf.emitLValue(e);

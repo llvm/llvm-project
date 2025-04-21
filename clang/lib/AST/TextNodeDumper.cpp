@@ -433,6 +433,7 @@ void TextNodeDumper::Visit(const OpenACCClause *C) {
     case OpenACCClauseKind::Vector:
     case OpenACCClauseKind::VectorLength:
     case OpenACCClauseKind::Invalid:
+    case OpenACCClauseKind::Shortloop:
       // The condition expression will be printed as a part of the 'children',
       // but print 'clause' here so it is clear what is happening from the dump.
       OS << " clause";

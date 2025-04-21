@@ -315,7 +315,7 @@ void initializeUniformityInfoWrapperPassPass(PassRegistry &);
 void initializeUnifyLoopExitsLegacyPassPass(PassRegistry &);
 void initializeUnpackMachineBundlesPass(PassRegistry &);
 void initializeUnreachableBlockElimLegacyPassPass(PassRegistry &);
-void initializeUnreachableMachineBlockElimPass(PassRegistry &);
+void initializeUnreachableMachineBlockElimLegacyPass(PassRegistry &);
 void initializeVerifierLegacyPassPass(PassRegistry &);
 void initializeVirtRegMapWrapperLegacyPass(PassRegistry &);
 void initializeVirtRegRewriterPass(PassRegistry &);
