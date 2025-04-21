@@ -371,7 +371,7 @@ bool AArch64TTIImpl::shouldMaximizeVectorBandwidth(
 /// Calculate the cost of materializing a 64-bit value. This helper
 /// method might only calculate a fraction of a larger immediate. Therefore it
 /// is valid to return a cost of ZERO.
-InstructionCost AArch64TTIImpl::getIntImmCost(int64_t Val) {
+InstructionCost AArch64TTIImpl::getIntImmCost(int64_t Val) const {
   // Check if the immediate can be encoded within an instruction.
   if (Val == 0 || AArch64_AM::isLogicalImmediate(Val, 64))
     return 0;
@@ -386,8 +386,9 @@ InstructionCost AArch64TTIImpl::getIntImmCost(int64_t Val) {
 }
 
 /// Calculate the cost of materializing the given constant.
-InstructionCost AArch64TTIImpl::getIntImmCost(const APInt &Imm, Type *Ty,
-                                              TTI::TargetCostKind CostKind) {
+InstructionCost
+AArch64TTIImpl::getIntImmCost(const APInt &Imm, Type *Ty,
+                              TTI::TargetCostKind CostKind) const {
   assert(Ty->isIntegerTy());
 
   unsigned BitSize = Ty->getPrimitiveSizeInBits();
@@ -577,7 +578,7 @@ static InstructionCost getHistogramCost(const IntrinsicCostAttributes &ICA) {
 
 InstructionCost
 AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
-                                      TTI::TargetCostKind CostKind) {
+                                      TTI::TargetCostKind CostKind) const {
   // The code-generator is currently not able to handle scalable vectors
   // of <vscale x 1 x eltty> yet, so return an invalid cost to avoid selecting
   // it. This change will be removed when code-generation for these types is
@@ -2806,7 +2807,7 @@ AArch64TTIImpl::getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const {
 
 bool AArch64TTIImpl::isWideningInstruction(Type *DstTy, unsigned Opcode,
                                            ArrayRef<const Value *> Args,
-                                           Type *SrcOverrideTy) {
+                                           Type *SrcOverrideTy) const {
   // A helper that returns a vector type from the given type. The number of
   // elements in type Ty determines the vector width.
   auto toVectorTy = [&](Type *ArgTy) {
@@ -2903,7 +2904,7 @@ bool AArch64TTIImpl::isWideningInstruction(Type *DstTy, unsigned Opcode,
 //   trunc i16 (lshr (add %x, %y), 1) -> i8
 //
 bool AArch64TTIImpl::isExtPartOfAvgExpr(const Instruction *ExtUser, Type *Dst,
-                                        Type *Src) {
+                                        Type *Src) const {
   // The source should be a legal vector type.
   if (!Src->isVectorTy() || !TLI->isTypeLegal(TLI->getValueType(DL, Src)) ||
       (Src->isScalableTy() && !ST->hasSVE2()))
@@ -2948,7 +2949,7 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
                                                  Type *Src,
                                                  TTI::CastContextHint CCH,
                                                  TTI::TargetCostKind CostKind,
-                                                 const Instruction *I) {
+                                                 const Instruction *I) const {
   int ISD = TLI->InstructionOpcodeToISD(Opcode);
   assert(ISD && "Invalid opcode");
   // If the cast is observable, and it is used by a widening instruction (e.g.,
@@ -3619,7 +3620,7 @@ InstructionCost AArch64TTIImpl::getExtractWithExtendCost(unsigned Opcode,
 
 InstructionCost AArch64TTIImpl::getCFInstrCost(unsigned Opcode,
                                                TTI::TargetCostKind CostKind,
-                                               const Instruction *I) {
+                                               const Instruction *I) const {
   if (CostKind != TTI::TCK_RecipThroughput)
     return Opcode == Instruction::PHI ? 0 : 1;
   assert(CostKind == TTI::TCK_RecipThroughput && "unexpected CostKind");
@@ -3630,7 +3631,7 @@ InstructionCost AArch64TTIImpl::getCFInstrCost(unsigned Opcode,
 InstructionCost AArch64TTIImpl::getVectorInstrCostHelper(
     unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind, unsigned Index,
     bool HasRealUse, const Instruction *I, Value *Scalar,
-    ArrayRef<std::tuple<Value *, User *, int>> ScalarUserAndIdx) {
+    ArrayRef<std::tuple<Value *, User *, int>> ScalarUserAndIdx) const {
   assert(Val->isVectorTy() && "This must be a vector type");
 
   if (Index != -1U) {
@@ -3802,7 +3803,7 @@ InstructionCost AArch64TTIImpl::getVectorInstrCostHelper(
 InstructionCost AArch64TTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
                                                    TTI::TargetCostKind CostKind,
                                                    unsigned Index, Value *Op0,
-                                                   Value *Op1) {
+                                                   Value *Op1) const {
   bool HasRealUse =
       Opcode == Instruction::InsertElement && Op0 && !isa<UndefValue>(Op0);
   return getVectorInstrCostHelper(Opcode, Val, CostKind, Index, HasRealUse);
@@ -3826,7 +3827,7 @@ InstructionCost AArch64TTIImpl::getVectorInstrCost(const Instruction &I,
 
 InstructionCost AArch64TTIImpl::getScalarizationOverhead(
     VectorType *Ty, const APInt &DemandedElts, bool Insert, bool Extract,
-    TTI::TargetCostKind CostKind, ArrayRef<Value *> VL) {
+    TTI::TargetCostKind CostKind, ArrayRef<Value *> VL) const {
   if (isa<ScalableVectorType>(Ty))
     return InstructionCost::getInvalid();
   if (Ty->getElementType()->isFloatingPointTy())
@@ -3840,8 +3841,7 @@ InstructionCost AArch64TTIImpl::getScalarizationOverhead(
 InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
     unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
     TTI::OperandValueInfo Op1Info, TTI::OperandValueInfo Op2Info,
-    ArrayRef<const Value *> Args,
-    const Instruction *CxtI) {
+    ArrayRef<const Value *> Args, const Instruction *CxtI) const {
 
   // The code-generator is currently not able to handle scalable vectors
   // of <vscale x 1 x eltty> yet, so return an invalid cost to avoid selecting
@@ -4171,7 +4171,7 @@ InstructionCost AArch64TTIImpl::getAddressComputationCost(Type *Ty,
 InstructionCost AArch64TTIImpl::getCmpSelInstrCost(
     unsigned Opcode, Type *ValTy, Type *CondTy, CmpInst::Predicate VecPred,
     TTI::TargetCostKind CostKind, TTI::OperandValueInfo Op1Info,
-    TTI::OperandValueInfo Op2Info, const Instruction *I) {
+    TTI::OperandValueInfo Op2Info, const Instruction *I) const {
   // TODO: Handle other cost kinds.
   if (CostKind != TTI::TCK_RecipThroughput)
     return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, VecPred, CostKind,
@@ -4284,7 +4284,7 @@ bool AArch64TTIImpl::prefersVectorizedAddressing() const {
 InstructionCost
 AArch64TTIImpl::getMaskedMemoryOpCost(unsigned Opcode, Type *Src,
                                       Align Alignment, unsigned AddressSpace,
-                                      TTI::TargetCostKind CostKind) {
+                                      TTI::TargetCostKind CostKind) const {
   if (useNeonVector(Src))
     return BaseT::getMaskedMemoryOpCost(Opcode, Src, Alignment, AddressSpace,
                                         CostKind);
@@ -4331,7 +4331,7 @@ static unsigned getSVEGatherScatterOverhead(unsigned Opcode,
 
 InstructionCost AArch64TTIImpl::getGatherScatterOpCost(
     unsigned Opcode, Type *DataTy, const Value *Ptr, bool VariableMask,
-    Align Alignment, TTI::TargetCostKind CostKind, const Instruction *I) {
+    Align Alignment, TTI::TargetCostKind CostKind, const Instruction *I) const {
   if (useNeonVector(DataTy) || !isLegalMaskedGatherScatter(DataTy))
     return BaseT::getGatherScatterOpCost(Opcode, DataTy, Ptr, VariableMask,
                                          Alignment, CostKind, I);
@@ -4371,7 +4371,7 @@ InstructionCost AArch64TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Ty,
                                                 unsigned AddressSpace,
                                                 TTI::TargetCostKind CostKind,
                                                 TTI::OperandValueInfo OpInfo,
-                                                const Instruction *I) {
+                                                const Instruction *I) const {
   EVT VT = TLI->getValueType(DL, Ty, true);
   // Type legalization can't handle structs
   if (VT == MVT::Other)
@@ -4980,7 +4980,7 @@ bool AArch64TTIImpl::isLegalToVectorizeReduction(
 InstructionCost
 AArch64TTIImpl::getMinMaxReductionCost(Intrinsic::ID IID, VectorType *Ty,
                                        FastMathFlags FMF,
-                                       TTI::TargetCostKind CostKind) {
+                                       TTI::TargetCostKind CostKind) const {
   // The code-generator is currently not able to handle scalable vectors
   // of <vscale x 1 x eltty> yet, so return an invalid cost to avoid selecting
   // it. This change will be removed when code-generation for these types is
@@ -5005,7 +5005,7 @@ AArch64TTIImpl::getMinMaxReductionCost(Intrinsic::ID IID, VectorType *Ty,
 }
 
 InstructionCost AArch64TTIImpl::getArithmeticReductionCostSVE(
-    unsigned Opcode, VectorType *ValTy, TTI::TargetCostKind CostKind) {
+    unsigned Opcode, VectorType *ValTy, TTI::TargetCostKind CostKind) const {
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(ValTy);
   InstructionCost LegalizationCost = 0;
   if (LT.first > 1) {
@@ -5032,7 +5032,7 @@ InstructionCost AArch64TTIImpl::getArithmeticReductionCostSVE(
 InstructionCost
 AArch64TTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
                                            std::optional<FastMathFlags> FMF,
-                                           TTI::TargetCostKind CostKind) {
+                                           TTI::TargetCostKind CostKind) const {
   // The code-generator is currently not able to handle scalable vectors
   // of <vscale x 1 x eltty> yet, so return an invalid cost to avoid selecting
   // it. This change will be removed when code-generation for these types is
@@ -5207,8 +5207,9 @@ AArch64TTIImpl::getMulAccReductionCost(bool IsUnsigned, Type *ResTy,
   return BaseT::getMulAccReductionCost(IsUnsigned, ResTy, VecTy, CostKind);
 }
 
-InstructionCost AArch64TTIImpl::getSpliceCost(VectorType *Tp, int Index,
-                                              TTI::TargetCostKind CostKind) {
+InstructionCost
+AArch64TTIImpl::getSpliceCost(VectorType *Tp, int Index,
+                              TTI::TargetCostKind CostKind) const {
   static const CostTblEntry ShuffleTbl[] = {
       { TTI::SK_Splice, MVT::nxv16i8,  1 },
       { TTI::SK_Splice, MVT::nxv8i16,  1 },
@@ -5340,7 +5341,7 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
 InstructionCost AArch64TTIImpl::getShuffleCost(
     TTI::ShuffleKind Kind, VectorType *Tp, ArrayRef<int> Mask,
     TTI::TargetCostKind CostKind, int Index, VectorType *SubTp,
-    ArrayRef<const Value *> Args, const Instruction *CxtI) {
+    ArrayRef<const Value *> Args, const Instruction *CxtI) const {
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Tp);
 
   // If we have a Mask, and the LT is being legalized somehow, split the Mask
