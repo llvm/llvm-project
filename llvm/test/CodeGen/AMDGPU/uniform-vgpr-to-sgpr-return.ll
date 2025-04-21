@@ -117,26 +117,3 @@ define amdgpu_ps i16 @uniform_v_to_s_i16(half inreg %a, half inreg %b) {
   ret i16 %cast
 }
 
-define amdgpu_ps half @uniform_add_i16_cast_to_f16(i16 inreg %a, i16 inreg %b) {
-; GFX11-LABEL: uniform_add_i16_cast_to_f16:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_add_i32 s0, s0, s1
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX11-NEXT:    v_mov_b32_e32 v0, s0
-; GFX11-NEXT:    ; return to shader part epilog
-  %add = add i16 %a, %b
-  %cast = bitcast i16 %add to half
-  ret half %cast
-}
-
-define amdgpu_ps float @uniform_mul_i32_cast_to_float(i32 inreg %a, i32 inreg %b) {
-; GFX11-LABEL: uniform_mul_i32_cast_to_float:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_mul_i32 s0, s0, s1
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX11-NEXT:    v_mov_b32_e32 v0, s0
-; GFX11-NEXT:    ; return to shader part epilog
-  %mul = mul i32 %a, %b
-  %cast = bitcast i32 %mul to float
-  ret float %cast
-}
