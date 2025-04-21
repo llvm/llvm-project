@@ -65,17 +65,18 @@ public:
       unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
       TTI::OperandValueInfo Op1Info = {TTI::OK_AnyValue, TTI::OP_None},
       TTI::OperandValueInfo Op2Info = {TTI::OK_AnyValue, TTI::OP_None},
-      ArrayRef<const Value *> Args = {}, const Instruction *CxtI = nullptr);
+      ArrayRef<const Value *> Args = {},
+      const Instruction *CxtI = nullptr) const;
 
   InstructionCost getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
                                    TTI::CastContextHint CCH,
                                    TTI::TargetCostKind CostKind,
-                                   const Instruction *I = nullptr);
+                                   const Instruction *I = nullptr) const;
   InstructionCost getMemoryOpCost(
       unsigned Opcode, Type *Src, MaybeAlign Alignment, unsigned AddressSpace,
       TTI::TargetCostKind CostKind,
       TTI::OperandValueInfo OpInfo = {TTI::OK_AnyValue, TTI::OP_None},
-      const Instruction *I = nullptr);
+      const Instruction *I = nullptr) const;
   using BaseT::getVectorInstrCost;
   InstructionCost getVectorInstrCost(unsigned Opcode, Type *Val,
                                      TTI::TargetCostKind CostKind,
