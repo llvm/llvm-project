@@ -20,3 +20,10 @@ entry:
   %c = call <4 x float> @llvm.maximumnum.v4f32(<4 x float> %a, <4 x float> %b)
   ret <4 x float> %c
 }
+
+define { float, float } @struct({ float, float } nofpclass(nan) %a) {
+; CHECK-LABEL: struct:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ret
+   ret {float, float} %a
+}
