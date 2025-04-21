@@ -297,9 +297,9 @@ function(runtime_default_target)
                            ${EXTRA_ARGS} ${ARG_EXTRA_ARGS})
 endfunction()
 
-# runtime_register_target(name)
+# runtime_register_target(name target)
 #   Utility function to register external runtime target.
-function(runtime_register_target name)
+function(runtime_register_target name target)
   cmake_parse_arguments(ARG "" "BASE_NAME" "DEPENDS;CMAKE_ARGS;EXTRA_ARGS" ${ARGN})
   include(${LLVM_BINARY_DIR}/runtimes/${name}/Components.cmake OPTIONAL)
   set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${LLVM_BINARY_DIR}/runtimes/${name}/Components.cmake)
@@ -414,7 +414,7 @@ function(runtime_register_target name)
                                       -DCMAKE_Fortran_COMPILER_WORKS=ON
                                       -DCMAKE_ASM_COMPILER_WORKS=ON
                                       -DCOMPILER_RT_DEFAULT_TARGET_ONLY=ON
-                                      -DLLVM_RUNTIMES_TARGET=${name}
+                                      -DLLVM_RUNTIMES_TARGET=${target}
                                       ${COMMON_CMAKE_ARGS}
                                       ${${name}_extra_args}
                            EXTRA_TARGETS ${${name}_extra_targets}
@@ -605,7 +605,7 @@ if(build_runtimes)
 
       check_apple_target(${name} runtime)
 
-      runtime_register_target(${name}
+      runtime_register_target(${name} ${name}
         DEPENDS ${builtins_dep_name} ${extra_deps}
         CMAKE_ARGS -DLLVM_DEFAULT_TARGET_TRIPLE=${name} ${extra_cmake_args}
         EXTRA_ARGS TARGET_TRIPLE ${name} ${extra_args})
@@ -613,7 +613,7 @@ if(build_runtimes)
 
     foreach(multilib ${LLVM_RUNTIME_MULTILIBS})
       foreach(name ${LLVM_RUNTIME_MULTILIB_${multilib}_TARGETS})
-        runtime_register_target(${name}+${multilib}
+        runtime_register_target(${name}+${multilib} ${name}
           DEPENDS runtimes-${name}
           CMAKE_ARGS -DLLVM_DEFAULT_TARGET_TRIPLE=${name}
                      -DLLVM_RUNTIMES_PREFIX=${name}/
