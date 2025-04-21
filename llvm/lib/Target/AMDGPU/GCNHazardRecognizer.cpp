@@ -281,6 +281,12 @@ void GCNHazardRecognizer::processBundle() {
 }
 
 void GCNHazardRecognizer::processBundleBottomUp() {
+  // Walk through the instructions in this bundle in bottom-up order.
+  // We only use this during post-RA scheduling, so hazard recognizer mode
+  // should never be active here (it always runs top-down).
+  assert(!IsHazardRecognizerMode &&
+         "Bottom-up scheduling shouldn't run in hazard recognizer mode");
+
   // Step through each instruction in the bundle in bottom-up order.
   MachineBasicBlock::instr_iterator MI =
       std::next(CurrCycleInstr->getIterator());
