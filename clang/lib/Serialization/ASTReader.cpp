@@ -4372,10 +4372,15 @@ void ASTReader::ReadModuleOffsetMap(ModuleFile &F) const {
     uint16_t Len = endian::readNext<uint16_t, llvm::endianness::little>(Data);
     StringRef Name = StringRef((const char*)Data, Len);
     Data += Len;
-    ModuleFile *OM = (Kind == MK_PrebuiltModule || Kind == MK_ExplicitModule ||
-                              Kind == MK_ImplicitModule
-                          ? ModuleMgr.lookupByModuleName(Name)
-                          : ModuleMgr.lookupByFileName(Name));
+    ModuleFile *OM;
+    if (Kind == MK_PrebuiltModule || Kind == MK_ExplicitModule ||
+        Kind == MK_ImplicitModule) {
+      OM = ModuleMgr.lookupByModuleName(Name);
+    } else {
+      SmallString<128> NormalizedName = Name;
+      llvm::sys::path::make_preferred(NormalizedName);
+      OM = ModuleMgr.lookupByFileName(NormalizedName);
+    }
     if (!OM) {
       std::string Msg = "refers to unknown module, cannot find ";
       Msg.append(std::string(Name));
