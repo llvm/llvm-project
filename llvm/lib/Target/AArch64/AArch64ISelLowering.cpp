@@ -13968,7 +13968,7 @@ SDValue AArch64TargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
       EVT VT = OpLHS.getValueType();
       switch (OpNum) {
       default:
-        llvm_unreachable("Unexpected perfect shuffle opcode\n");
+        llvm_unreachable("Unexpected perfect shuffle opcode");
       case OP_VUZPL:
         return DAG.getNode(AArch64ISD::UZP1, dl, VT, OpLHS, OpRHS);
       case OP_VUZPR:
@@ -13995,10 +13995,10 @@ SDValue AArch64TargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
       }
       SDValue Ext = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl,
                                 ExtSrc.getValueType().getVectorElementType(),
-                                ExtSrc, DAG.getVectorIdxConstant(ExtLane, dl));
+                                ExtSrc, DAG.getConstant(ExtLane, dl, MVT::i64));
       SDValue Ins =
           DAG.getNode(ISD::INSERT_VECTOR_ELT, dl, ExtSrc.getValueType(), InsSrc,
-                      Ext, DAG.getVectorIdxConstant(InsLane, dl));
+                      Ext, DAG.getConstant(InsLane, dl, MVT::i64));
       return DAG.getBitcast(VT, Ins);
     };
     auto BuildExtractInsert32 = [&DAG, &dl](SDValue ExtSrc, unsigned ExtLane,
@@ -14010,10 +14010,10 @@ SDValue AArch64TargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
       }
       SDValue Ext = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl,
                                 ExtSrc.getValueType().getVectorElementType(),
-                                ExtSrc, DAG.getVectorIdxConstant(ExtLane, dl));
+                                ExtSrc, DAG.getConstant(ExtLane, dl, MVT::i64));
       SDValue Ins =
           DAG.getNode(ISD::INSERT_VECTOR_ELT, dl, ExtSrc.getValueType(), InsSrc,
-                      Ext, DAG.getVectorIdxConstant(InsLane, dl));
+                      Ext, DAG.getConstant(InsLane, dl, MVT::i64));
       return DAG.getBitcast(VT, Ins);
     };
     return generatePerfectShuffle<SDValue, MVT>(

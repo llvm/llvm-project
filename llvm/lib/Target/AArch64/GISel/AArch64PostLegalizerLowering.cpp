@@ -593,7 +593,7 @@ void applyPerfectShuffle(MachineInstr &MI, MachineRegisterInfo &MRI,
     LLT Ty = MRI.getType(OpLHS);
     switch (OpNum) {
     default:
-      llvm_unreachable("Unexpected perfect shuffle opcode\n");
+      llvm_unreachable("Unexpected perfect shuffle opcode");
     case OP_VUZPL:
       return MIB.buildInstr(AArch64::G_UZP1, {Ty}, {OpLHS, OpRHS}).getReg(0);
     case OP_VUZPR:
@@ -619,10 +619,12 @@ void applyPerfectShuffle(MachineInstr &MI, MachineRegisterInfo &MRI,
       ExtSrc = MIB.buildBitcast(LLT::fixed_vector(2, 64), ExtSrc).getReg(0);
       InsSrc = MIB.buildBitcast(LLT::fixed_vector(2, 64), InsSrc).getReg(0);
     }
-    auto Ext = MIB.buildExtractVectorElementConstant(
-        MRI.getType(ExtSrc).getElementType(), ExtSrc, ExtLane);
-    auto Ins = MIB.buildInsertVectorElementConstant(MRI.getType(ExtSrc), InsSrc,
-                                                    Ext, InsLane);
+    auto Ext = MIB.buildExtractVectorElement(
+        MRI.getType(ExtSrc).getElementType(), ExtSrc,
+        MIB.buildConstant(LLT::scalar(64), ExtLane));
+    auto Ins = MIB.buildInsertVectorElement(
+        MRI.getType(ExtSrc), InsSrc, Ext,
+        MIB.buildConstant(LLT::scalar(64), InsLane));
     return MIB.buildBitcast(Ty, Ins).getReg(0);
   };
   auto BuildExtractInsert32 = [&MIB, &MRI](Register ExtSrc, unsigned ExtLane,
@@ -632,10 +634,12 @@ void applyPerfectShuffle(MachineInstr &MI, MachineRegisterInfo &MRI,
       ExtSrc = MIB.buildBitcast(LLT::fixed_vector(2, 32), ExtSrc).getReg(0);
       InsSrc = MIB.buildBitcast(LLT::fixed_vector(2, 32), InsSrc).getReg(0);
     }
-    auto Ext = MIB.buildExtractVectorElementConstant(
-        MRI.getType(ExtSrc).getElementType(), ExtSrc, ExtLane);
-    auto Ins = MIB.buildInsertVectorElementConstant(MRI.getType(ExtSrc), InsSrc,
-                                                    Ext, InsLane);
+    auto Ext = MIB.buildExtractVectorElement(
+        MRI.getType(ExtSrc).getElementType(), ExtSrc,
+        MIB.buildConstant(LLT::scalar(64), ExtLane));
+    auto Ins = MIB.buildInsertVectorElement(
+        MRI.getType(ExtSrc), InsSrc, Ext,
+        MIB.buildConstant(LLT::scalar(64), InsLane));
     if (MRI.getType(Ins.getReg(0)) != Ty)
       Ins = MIB.buildBitcast(Ty, Ins);
     return Ins.getReg(0);
