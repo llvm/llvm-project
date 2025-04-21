@@ -820,6 +820,7 @@ struct AllocMatchInfo {
   uint64_t TotalSize = 0;
   AllocationType AllocType = AllocationType::None;
   bool Matched = false;
+  size_t NumFramesMatched = 0;
 };
 
 DenseMap<uint64_t, SmallVector<CallEdgeTy, 0>>
@@ -1152,7 +1153,8 @@ readMemprof(Module &M, Function &F, IndexedInstrProfReader *MemProfReader,
             if (ClPrintMemProfMatchInfo) {
               assert(FullStackId != 0);
               FullStackIdToAllocMatchInfo[FullStackId] = {
-                  AllocInfo->Info.getTotalSize(), AllocType, /*Matched=*/true};
+                  AllocInfo->Info.getTotalSize(), AllocType, /*Matched=*/true,
+                  InlinedCallStack.size()};
             }
           }
         }
@@ -1285,7 +1287,7 @@ PreservedAnalyses MemProfUsePass::run(Module &M, ModuleAnalysisManager &AM) {
       errs() << "MemProf " << getAllocTypeAttributeString(Info.AllocType)
              << " context with id " << Id << " has total profiled size "
              << Info.TotalSize << (Info.Matched ? " is" : " not")
-             << " matched\n";
+             << " matched with " << Info.NumFramesMatched << " frames\n";
 
     for (const auto &CallStack : MatchedCallSites) {
       errs() << "MemProf callsite match for inline call stack";
