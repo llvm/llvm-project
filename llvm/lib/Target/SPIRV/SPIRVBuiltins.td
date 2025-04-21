@@ -66,6 +66,8 @@ def Construct : BuiltinGroup;
 def CoopMatr : BuiltinGroup;
 def ICarryBorrow : BuiltinGroup;
 def ExtendedBitOps : BuiltinGroup;
+def BindlessINTEL : BuiltinGroup;
+def TernaryBitwiseINTEL : BuiltinGroup;
 
 //===----------------------------------------------------------------------===//
 // Class defining a demangled builtin record. The information in the record
@@ -110,11 +112,13 @@ def : DemangledBuiltin<"__spirv_DotAccSat", OpenCL_std, IntegerDot, 3, 3>;
 def : DemangledBuiltin<"read_imagei", OpenCL_std, ReadImage, 2, 4>;
 def : DemangledBuiltin<"read_imageui", OpenCL_std, ReadImage, 2, 4>;
 def : DemangledBuiltin<"read_imagef", OpenCL_std, ReadImage, 2, 4>;
+def : DemangledBuiltin<"__spirv_ImageRead", OpenCL_std, ReadImage, 2, 0>;
 
 def : DemangledBuiltin<"write_imagef", OpenCL_std, WriteImage, 3, 4>;
 def : DemangledBuiltin<"write_imagei", OpenCL_std, WriteImage, 3, 4>;
 def : DemangledBuiltin<"write_imageui", OpenCL_std, WriteImage, 3, 4>;
 def : DemangledBuiltin<"write_imageh", OpenCL_std, WriteImage, 3, 4>;
+def : DemangledBuiltin<"__spirv_ImageWrite", OpenCL_std, WriteImage, 3, 0>;
 
 def : DemangledBuiltin<"__translate_sampler_initializer", OpenCL_std, SampleImage, 1, 1>;
 def : DemangledBuiltin<"__spirv_SampledImage", OpenCL_std, SampleImage, 2, 2>;
@@ -705,6 +709,14 @@ defm : DemangledNativeBuiltin<"__spirv_CooperativeMatrixLoadCheckedINTEL", OpenC
 defm : DemangledNativeBuiltin<"__spirv_CooperativeMatrixStoreCheckedINTEL", OpenCL_std, CoopMatr, 7, 9, OpCooperativeMatrixStoreCheckedINTEL>;
 defm : DemangledNativeBuiltin<"__spirv_CooperativeMatrixConstructCheckedINTEL", OpenCL_std, CoopMatr, 5, 5, OpCooperativeMatrixConstructCheckedINTEL>;
 defm : DemangledNativeBuiltin<"__spirv_CooperativeMatrixGetElementCoordINTEL", OpenCL_std, CoopMatr, 2, 2, OpCooperativeMatrixGetElementCoordINTEL>;
+
+// SPV_INTEL_bindless_images builtin records:
+defm : DemangledNativeBuiltin<"__spirv_ConvertHandleToImageINTEL", OpenCL_std, BindlessINTEL, 1, 1, OpConvertHandleToImageINTEL>;
+defm : DemangledNativeBuiltin<"__spirv_ConvertHandleToSamplerINTEL", OpenCL_std, BindlessINTEL, 1, 1, OpConvertHandleToSamplerINTEL>;
+defm : DemangledNativeBuiltin<"__spirv_ConvertHandleToSampledImageINTEL", OpenCL_std, BindlessINTEL, 1, 1, OpConvertHandleToSampledImageINTEL>;
+
+// SPV_INTEL_ternary_bitwise_function builtin records:
+defm : DemangledNativeBuiltin<"__spirv_BitwiseFunctionINTEL", OpenCL_std, TernaryBitwiseINTEL, 4, 4, OpBitwiseFunctionINTEL>;
 
 //===----------------------------------------------------------------------===//
 // Class defining a work/sub group builtin that should be translated into a
@@ -1323,6 +1335,15 @@ multiclass DemangledGetBuiltin<string name, InstructionSet set, BuiltinGroup gro
 }
 
 // Builtin variable records:
+defm : DemangledGetBuiltin<"get_global_linear_id", OpenCL_std, Variable, GlobalLinearId>;
+defm : DemangledGetBuiltin<"get_local_linear_id", OpenCL_std, Variable, LocalInvocationIndex>;
+defm : DemangledGetBuiltin<"get_work_dim", OpenCL_std, Variable, WorkDim>;
+defm : DemangledGetBuiltin<"get_sub_group_size", OpenCL_std, Variable, SubgroupSize>;
+defm : DemangledGetBuiltin<"get_max_sub_group_size", OpenCL_std, Variable, SubgroupMaxSize>;
+defm : DemangledGetBuiltin<"get_num_sub_groups", OpenCL_std, Variable, NumSubgroups>;
+defm : DemangledGetBuiltin<"get_enqueued_num_sub_groups", OpenCL_std, Variable, NumEnqueuedSubgroups>;
+defm : DemangledGetBuiltin<"get_sub_group_id", OpenCL_std, Variable, SubgroupId>;
+defm : DemangledGetBuiltin<"get_sub_group_local_id", OpenCL_std, Variable, SubgroupLocalInvocationId>;
 defm : DemangledGetBuiltin<"get_sub_group_eq_mask", OpenCL_std, Variable, SubgroupEqMask>;
 defm : DemangledGetBuiltin<"get_sub_group_ge_mask", OpenCL_std, Variable, SubgroupGeMask>;
 defm : DemangledGetBuiltin<"get_sub_group_gt_mask", OpenCL_std, Variable, SubgroupGtMask>;
@@ -1339,6 +1360,7 @@ defm : DemangledGetBuiltin<"get_global_size", OpenCL_std, GetQuery, GlobalSize>;
 defm : DemangledGetBuiltin<"get_group_id", OpenCL_std, GetQuery, WorkgroupId>;
 defm : DemangledGetBuiltin<"get_enqueued_local_size", OpenCL_std, GetQuery, EnqueuedWorkgroupSize>;
 defm : DemangledGetBuiltin<"get_num_groups", OpenCL_std, GetQuery, NumWorkgroups>;
+defm : DemangledGetBuiltin<"get_global_offset", OpenCL_std, GetQuery, GlobalOffset>;
 defm : DemangledGetBuiltin<"__hlsl_wave_get_lane_index", GLSL_std_450, Wave, SubgroupLocalInvocationId>;
 
 //===----------------------------------------------------------------------===//

@@ -92,8 +92,10 @@ static bool parse(LLVMContext *Ctx, mcdxbc::RootSignatureDesc &RSD,
   return HasError;
 }
 
+static bool verifyRootFlag(uint32_t Flags) { return (Flags & ~0xfff) == 0; }
+
 static bool validate(LLVMContext *Ctx, const mcdxbc::RootSignatureDesc &RSD) {
-  if (!dxbc::RootSignatureValidations::isValidRootFlag(RSD.Flags)) {
+  if (!verifyRootFlag(RSD.Flags)) {
     return reportError(Ctx, "Invalid Root Signature flag value");
   }
   return false;
@@ -150,11 +152,17 @@ analyzeModule(Module &M) {
       continue;
     }
 
-    MDNode *RootElementListNode =
-        dyn_cast<MDNode>(RSDefNode->getOperand(1).get());
+    Metadata *RootElementListOperand = RSDefNode->getOperand(1).get();
 
+    if (RootElementListOperand == nullptr) {
+      reportError(Ctx, "Root Element mdnode is null.");
+      continue;
+    }
+
+    MDNode *RootElementListNode = dyn_cast<MDNode>(RootElementListOperand);
     if (RootElementListNode == nullptr) {
-      reportError(Ctx, "Missing Root Element List Metadata node.");
+      reportError(Ctx, "Root Element is not a metadata node.");
+      continue;
     }
 
     mcdxbc::RootSignatureDesc RSD;
@@ -183,6 +191,8 @@ PreservedAnalyses RootSignatureAnalysisPrinter::run(Module &M,
 
   SmallDenseMap<const Function *, mcdxbc::RootSignatureDesc> &RSDMap =
       AM.getResult<RootSignatureAnalysis>(M);
+
+  const size_t RSHSize = sizeof(dxbc::RootSignatureHeader);
   OS << "Root Signature Definitions"
      << "\n";
   uint8_t Space = 0;
@@ -197,12 +207,11 @@ PreservedAnalyses RootSignatureAnalysisPrinter::run(Module &M,
     Space++;
     OS << indent(Space) << "Flags: " << format_hex(RS.Flags, 8) << ":\n";
     OS << indent(Space) << "Version: " << RS.Version << ":\n";
-    OS << indent(Space) << "NumParameters: " << RS.NumParameters << ":\n";
-    OS << indent(Space) << "RootParametersOffset: " << RS.RootParametersOffset
-       << ":\n";
-    OS << indent(Space) << "NumStaticSamplers: " << RS.NumStaticSamplers
-       << ":\n";
-    OS << indent(Space) << "StaticSamplersOffset: " << RS.StaticSamplersOffset
+    OS << indent(Space) << "NumParameters: " << RS.Parameters.size() << ":\n";
+    OS << indent(Space) << "RootParametersOffset: " << RSHSize << ":\n";
+    OS << indent(Space) << "NumStaticSamplers: " << 0 << ":\n";
+    OS << indent(Space)
+       << "StaticSamplersOffset: " << RSHSize + RS.Parameters.size_in_bytes()
        << ":\n";
     Space--;
     // end root signature header

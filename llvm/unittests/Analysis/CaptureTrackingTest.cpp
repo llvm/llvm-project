@@ -56,17 +56,17 @@ TEST(CaptureTracking, MaxUsesToExplore) {
     ASSERT_NE(F, nullptr);
     Value *Arg = &*F->arg_begin();
     ASSERT_NE(Arg, nullptr);
-    ASSERT_FALSE(PointerMayBeCaptured(Arg, true, true, FalseMaxUsesLimit));
-    ASSERT_TRUE(PointerMayBeCaptured(Arg, true, true, TrueMaxUsesLimit));
+    ASSERT_FALSE(PointerMayBeCaptured(Arg, true, FalseMaxUsesLimit));
+    ASSERT_TRUE(PointerMayBeCaptured(Arg, true, TrueMaxUsesLimit));
 
     BasicBlock *EntryBB = &F->getEntryBlock();
     DominatorTree DT(*F);
 
     Instruction *Ret = EntryBB->getTerminator();
     ASSERT_TRUE(isa<ReturnInst>(Ret));
-    ASSERT_FALSE(PointerMayBeCapturedBefore(Arg, true, true, Ret, &DT, false,
+    ASSERT_FALSE(PointerMayBeCapturedBefore(Arg, true, Ret, &DT, false,
                                             FalseMaxUsesLimit));
-    ASSERT_TRUE(PointerMayBeCapturedBefore(Arg, true, true, Ret, &DT, false,
+    ASSERT_TRUE(PointerMayBeCapturedBefore(Arg, true, Ret, &DT, false,
                                            TrueMaxUsesLimit));
   };
 

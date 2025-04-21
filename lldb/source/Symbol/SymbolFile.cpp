@@ -259,3 +259,9 @@ void SymbolFileCommon::Dump(Stream &s) {
   if (Symtab *symtab = GetSymtab())
     symtab->Dump(&s, nullptr, eSortOrderNone);
 }
+
+std::string SymbolFile::GetObjectName() const {
+  if (const ObjectFile *object_file = GetObjectFile())
+    return object_file->GetObjectName();
+  return "";
+}

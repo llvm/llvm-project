@@ -490,8 +490,7 @@ PartialInlinerImpl::computeOutliningColdRegionsInfo(
       // candidate for outlining.  In the future, we may want to look
       // at inner regions because the outer region may have live-exit
       // variables.
-      for (auto *BB : DominateVector)
-        VisitedSet.insert(BB);
+      VisitedSet.insert_range(DominateVector);
 
       // ReturnBlock here means the block after the outline call
       BasicBlock *ReturnBlock = ExitBlock->getSingleSuccessor();
@@ -593,9 +592,7 @@ PartialInlinerImpl::computeOutliningInfo(Function &F) const {
   // {ReturnBlock, NonReturnBlock}
   assert(OutliningInfo->Entries[0] == &F.front() &&
          "Function Entry must be the first in Entries vector");
-  DenseSet<BasicBlock *> Entries;
-  for (BasicBlock *E : OutliningInfo->Entries)
-    Entries.insert(E);
+  DenseSet<BasicBlock *> Entries(llvm::from_range, OutliningInfo->Entries);
 
   // Returns true of BB has Predecessor which is not
   // in Entries set.
@@ -1393,9 +1390,12 @@ bool PartialInlinerImpl::tryPartialInline(FunctionCloner &Cloner) {
     CallerORE.emit(OR);
 
     // Now update the entry count:
-    if (CalleeEntryCountV && CallSiteToProfCountMap.count(User)) {
-      uint64_t CallSiteCount = CallSiteToProfCountMap[User];
-      CalleeEntryCountV -= std::min(CalleeEntryCountV, CallSiteCount);
+    if (CalleeEntryCountV) {
+      if (auto It = CallSiteToProfCountMap.find(User);
+          It != CallSiteToProfCountMap.end()) {
+        uint64_t CallSiteCount = It->second;
+        CalleeEntryCountV -= std::min(CalleeEntryCountV, CallSiteCount);
+      }
     }
 
     AnyInline = true;

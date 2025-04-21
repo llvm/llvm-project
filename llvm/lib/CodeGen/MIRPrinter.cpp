@@ -69,7 +69,7 @@ static cl::opt<bool> SimplifyMIR(
 static cl::opt<bool> PrintLocations("mir-debug-loc", cl::Hidden, cl::init(true),
                                     cl::desc("Print MIR debug-locations"));
 
-extern cl::opt<bool> WriteNewDbgInfoFormat;
+extern cl::opt<bool> UseNewDbgInfoFormat;
 
 namespace {
 
@@ -191,7 +191,7 @@ template <> struct BlockScalarTraits<Module> {
 } // end namespace yaml
 } // end namespace llvm
 
-static void printRegMIR(unsigned Reg, yaml::StringValue &Dest,
+static void printRegMIR(Register Reg, yaml::StringValue &Dest,
                         const TargetRegisterInfo *TRI) {
   raw_string_ostream OS(Dest.Value);
   OS << printReg(Reg, TRI);
@@ -208,7 +208,7 @@ void MIRPrinter::print(const MachineFunction &MF) {
 
   YamlMF.CallsEHReturn = MF.callsEHReturn();
   YamlMF.CallsUnwindInit = MF.callsUnwindInit();
-  YamlMF.HasEHCatchret = MF.hasEHCatchret();
+  YamlMF.HasEHContTarget = MF.hasEHContTarget();
   YamlMF.HasEHScopes = MF.hasEHScopes();
   YamlMF.HasEHFunclets = MF.hasEHFunclets();
   YamlMF.HasFakeUses = MF.hasFakeUses();
@@ -299,7 +299,7 @@ static void printCustomRegMask(const uint32_t *RegMask, raw_ostream &OS,
   OS << ')';
 }
 
-static void printRegClassOrBank(unsigned Reg, yaml::StringValue &Dest,
+static void printRegClassOrBank(Register Reg, yaml::StringValue &Dest,
                                 const MachineRegisterInfo &RegInfo,
                                 const TargetRegisterInfo *TRI) {
   raw_string_ostream OS(Dest.Value);
@@ -1050,7 +1050,7 @@ void MIRFormatter::printIRValue(raw_ostream &OS, const Value &V,
 
 void llvm::printMIR(raw_ostream &OS, const Module &M) {
   ScopedDbgInfoFormatSetter FormatSetter(const_cast<Module &>(M),
-                                         WriteNewDbgInfoFormat);
+                                         UseNewDbgInfoFormat);
 
   yaml::Output Out(OS);
   Out << const_cast<Module &>(M);
@@ -1061,7 +1061,7 @@ void llvm::printMIR(raw_ostream &OS, const MachineModuleInfo &MMI,
   // RemoveDIs: as there's no textual form for DbgRecords yet, print debug-info
   // in dbg.value format.
   ScopedDbgInfoFormatSetter FormatSetter(
-      const_cast<Function &>(MF.getFunction()), WriteNewDbgInfoFormat);
+      const_cast<Function &>(MF.getFunction()), UseNewDbgInfoFormat);
 
   MIRPrinter Printer(OS, MMI);
   Printer.print(MF);

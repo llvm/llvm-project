@@ -588,12 +588,8 @@ void PipelineSolver::populateReadyList(
       ReadyList.push_back(std::pair(*I, -1));
   }
 
-  if (UseCostHeur) {
-    std::sort(ReadyList.begin(), ReadyList.end(),
-              [](std::pair<int, int> A, std::pair<int, int> B) {
-                return A.second < B.second;
-              });
-  }
+  if (UseCostHeur)
+    llvm::sort(ReadyList, llvm::less_second());
 
   assert(ReadyList.size() == CurrSU.second.size());
 }
@@ -1491,12 +1487,10 @@ bool MFMAExpInterleaveOpt::analyzeDAG(const SIInstrInfo *TII) {
                       return isBitPack(Opc);
                     });
 
-  auto *PackPred =
-      std::find_if((*TempMFMA)->Preds.begin(), (*TempMFMA)->Preds.end(),
-                   [&isBitPack](SDep &Pred) {
-                     auto Opc = Pred.getSUnit()->getInstr()->getOpcode();
-                     return isBitPack(Opc);
-                   });
+  auto *PackPred = llvm::find_if((*TempMFMA)->Preds, [&isBitPack](SDep &Pred) {
+    auto Opc = Pred.getSUnit()->getInstr()->getOpcode();
+    return isBitPack(Opc);
+  });
 
   if (PackPred == (*TempMFMA)->Preds.end())
     return false;
@@ -2696,16 +2690,12 @@ bool IGroupLPDAGMutation::initIGLPOpt(SUnit &SU) {
 
 } // namespace
 
-namespace llvm {
-
 /// \p Phase specifes whether or not this is a reentry into the
 /// IGroupLPDAGMutation. Since there may be multiple scheduling passes on the
 /// same scheduling region (e.g. pre and post-RA scheduling / multiple
 /// scheduling "phases"), we can reenter this mutation framework more than once
 /// for a given region.
 std::unique_ptr<ScheduleDAGMutation>
-createIGroupLPDAGMutation(AMDGPU::SchedulingPhase Phase) {
+llvm::createIGroupLPDAGMutation(AMDGPU::SchedulingPhase Phase) {
   return std::make_unique<IGroupLPDAGMutation>(Phase);
 }
-
-} // end namespace llvm

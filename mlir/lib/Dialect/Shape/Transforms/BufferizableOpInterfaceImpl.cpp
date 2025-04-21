@@ -38,7 +38,7 @@ struct AssumingOpInterface
     size_t resultNum = std::distance(op->getOpResults().begin(),
                                      llvm::find(op->getOpResults(), value));
     // TODO: Support multiple blocks.
-    assert(assumingOp.getDoRegion().getBlocks().size() == 1 &&
+    assert(llvm::hasSingleElement(assumingOp.getDoRegion().getBlocks()) &&
            "expected exactly 1 block");
     auto yieldOp = dyn_cast<shape::AssumingYieldOp>(
         assumingOp.getDoRegion().front().getTerminator());
@@ -49,7 +49,7 @@ struct AssumingOpInterface
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
                           const BufferizationOptions &options) const {
     auto assumingOp = cast<shape::AssumingOp>(op);
-    assert(assumingOp.getDoRegion().getBlocks().size() == 1 &&
+    assert(llvm::hasSingleElement(assumingOp.getDoRegion().getBlocks()) &&
            "only 1 block supported");
     auto yieldOp = cast<shape::AssumingYieldOp>(
         assumingOp.getDoRegion().front().getTerminator());

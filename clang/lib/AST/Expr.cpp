@@ -203,7 +203,7 @@ bool Expr::isKnownToHaveBooleanValue(bool Semantic) const {
 }
 
 bool Expr::isFlexibleArrayMemberLike(
-    ASTContext &Ctx,
+    const ASTContext &Ctx,
     LangOptions::StrictFlexArraysLevelKind StrictFlexArraysLevel,
     bool IgnoreTemplateOrMacroSubstitution) const {
   const Expr *E = IgnoreParens();
@@ -596,7 +596,7 @@ std::string SYCLUniqueStableNameExpr::ComputeName(ASTContext &Context) const {
 std::string SYCLUniqueStableNameExpr::ComputeName(ASTContext &Context,
                                                   QualType Ty) {
   auto MangleCallback = [](ASTContext &Ctx,
-                           const NamedDecl *ND) -> std::optional<unsigned> {
+                           const NamedDecl *ND) -> UnsignedOrNone {
     if (const auto *RD = dyn_cast<CXXRecordDecl>(ND))
       return RD->getDeviceLambdaManglingNumber();
     return std::nullopt;
@@ -692,9 +692,9 @@ std::string PredefinedExpr::ComputeName(PredefinedIdentKind IK,
           GD = GlobalDecl(CD, Ctor_Base);
         else if (const CXXDestructorDecl *DD = dyn_cast<CXXDestructorDecl>(ND))
           GD = GlobalDecl(DD, Dtor_Base);
-        else if (ND->hasAttr<CUDAGlobalAttr>())
-          GD = GlobalDecl(cast<FunctionDecl>(ND));
-        else
+        else if (auto FD = dyn_cast<FunctionDecl>(ND)) {
+          GD = FD->isReferenceableKernel() ? GlobalDecl(FD) : GlobalDecl(ND);
+        } else
           GD = GlobalDecl(ND);
         MC->mangleName(GD, Out);
 
@@ -747,7 +747,7 @@ std::string PredefinedExpr::ComputeName(PredefinedIdentKind IK,
     if (const CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(FD)) {
       if (MD->isVirtual() && IK != PredefinedIdentKind::PrettyFunctionNoVirtual)
         Out << "virtual ";
-      if (MD->isStatic())
+      if (MD->isStatic() && !ForceElaboratedPrinting)
         Out << "static ";
     }
 
@@ -1104,6 +1104,7 @@ unsigned StringLiteral::mapCharByteWidth(TargetInfo const &Target,
   switch (SK) {
   case StringLiteralKind::Ordinary:
   case StringLiteralKind::UTF8:
+  case StringLiteralKind::Binary:
     CharByteWidth = Target.getCharWidth();
     break;
   case StringLiteralKind::Wide:
@@ -1216,6 +1217,7 @@ void StringLiteral::outputString(raw_ostream &OS) const {
   switch (getKind()) {
   case StringLiteralKind::Unevaluated:
   case StringLiteralKind::Ordinary:
+  case StringLiteralKind::Binary:
     break; // no prefix.
   case StringLiteralKind::Wide:
     OS << 'L';
@@ -1332,6 +1334,11 @@ StringLiteral::getLocationOfByte(unsigned ByteNo, const SourceManager &SM,
                                  const LangOptions &Features,
                                  const TargetInfo &Target, unsigned *StartToken,
                                  unsigned *StartTokenByteOffset) const {
+  // No source location of bytes for binary literals since they don't come from
+  // source.
+  if (getKind() == StringLiteralKind::Binary)
+    return getStrTokenLoc(0);
+
   assert((getKind() == StringLiteralKind::Ordinary ||
           getKind() == StringLiteralKind::UTF8 ||
           getKind() == StringLiteralKind::Unevaluated) &&
@@ -1509,16 +1516,6 @@ CallExpr *CallExpr::Create(const ASTContext &Ctx, Expr *Fn,
                             RParenLoc, FPFeatures, MinNumArgs, UsesADL);
 }
 
-CallExpr *CallExpr::CreateTemporary(void *Mem, Expr *Fn, QualType Ty,
-                                    ExprValueKind VK, SourceLocation RParenLoc,
-                                    ADLCallKind UsesADL) {
-  assert(!(reinterpret_cast<uintptr_t>(Mem) % alignof(CallExpr)) &&
-         "Misaligned memory in CallExpr::CreateTemporary!");
-  return new (Mem) CallExpr(CallExprClass, Fn, /*PreArgs=*/{}, /*Args=*/{}, Ty,
-                            VK, RParenLoc, FPOptionsOverride(),
-                            /*MinNumArgs=*/0, UsesADL);
-}
-
 CallExpr *CallExpr::CreateEmpty(const ASTContext &Ctx, unsigned NumArgs,
                                 bool HasFPFeatures, EmptyShell Empty) {
   unsigned SizeOfTrailingObjects =
@@ -1656,10 +1653,9 @@ SourceLocation CallExpr::getBeginLoc() const {
     if (const auto *Method =
             dyn_cast_if_present<const CXXMethodDecl>(getCalleeDecl());
         Method && Method->isExplicitObjectMemberFunction()) {
-      bool HasFirstArg = getNumArgs() > 0 && getArg(0);
-      assert(HasFirstArg);
-      if (HasFirstArg)
-        return getArg(0)->getBeginLoc();
+      if (auto FirstArgLoc = getArg(0)->getBeginLoc(); FirstArgLoc.isValid()) {
+        return FirstArgLoc;
+      }
     }
   }
 
@@ -3672,7 +3668,6 @@ bool Expr::HasSideEffects(const ASTContext &Ctx,
   case PackIndexingExprClass:
   case HLSLOutArgExprClass:
   case OpenACCAsteriskSizeExprClass:
-  case ResolvedUnexpandedPackExprClass:
     // These never have a side-effect.
     return false;
 
@@ -3912,6 +3907,8 @@ FPOptions Expr::getFPFeaturesInEffect(const LangOptions &LO) const {
     return BO->getFPFeaturesInEffect(LO);
   if (auto Cast = dyn_cast<CastExpr>(this))
     return Cast->getFPFeaturesInEffect(LO);
+  if (auto ConvertVector = dyn_cast<ConvertVectorExpr>(this))
+    return ConvertVector->getFPFeaturesInEffect(LO);
   return FPOptions::defaultWithoutTrailingStorage(LO);
 }
 
@@ -5451,4 +5448,22 @@ OpenACCAsteriskSizeExpr *OpenACCAsteriskSizeExpr::Create(const ASTContext &C,
 OpenACCAsteriskSizeExpr *
 OpenACCAsteriskSizeExpr::CreateEmpty(const ASTContext &C) {
   return new (C) OpenACCAsteriskSizeExpr({}, C.IntTy);
+}
+
+ConvertVectorExpr *ConvertVectorExpr::CreateEmpty(const ASTContext &C,
+                                                  bool hasFPFeatures) {
+  void *Mem = C.Allocate(totalSizeToAlloc<FPOptionsOverride>(hasFPFeatures),
+                         alignof(ConvertVectorExpr));
+  return new (Mem) ConvertVectorExpr(hasFPFeatures, EmptyShell());
+}
+
+ConvertVectorExpr *ConvertVectorExpr::Create(
+    const ASTContext &C, Expr *SrcExpr, TypeSourceInfo *TI, QualType DstType,
+    ExprValueKind VK, ExprObjectKind OK, SourceLocation BuiltinLoc,
+    SourceLocation RParenLoc, FPOptionsOverride FPFeatures) {
+  bool HasFPFeatures = FPFeatures.requiresTrailingStorage();
+  unsigned Size = totalSizeToAlloc<FPOptionsOverride>(HasFPFeatures);
+  void *Mem = C.Allocate(Size, alignof(ConvertVectorExpr));
+  return new (Mem) ConvertVectorExpr(SrcExpr, TI, DstType, VK, OK, BuiltinLoc,
+                                     RParenLoc, FPFeatures);
 }

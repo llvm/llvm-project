@@ -1288,7 +1288,7 @@ define amdgpu_kernel void @s_div_arcp_2_x_pat_f32_daz(ptr addrspace(1) %out) #0 
 ; CM-NEXT:     MUL_IEEE * T0.X, T0.X, 0.5,
 ; CM-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
 ; CM-NEXT:    2(2.802597e-45), 0(0.000000e+00)
-  %x = load float, ptr addrspace(1) undef
+  %x = load float, ptr addrspace(1) poison
   %rcp = fdiv arcp float %x, 2.0
   store float %rcp, ptr addrspace(1) %out, align 4
   ret void
@@ -1345,7 +1345,7 @@ define amdgpu_kernel void @s_div_arcp_k_x_pat_f32_daz(ptr addrspace(1) %out) #0 
 ; CM-NEXT:    1036831949(1.000000e-01), 0(0.000000e+00)
 ; CM-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
 ; CM-NEXT:    2(2.802597e-45), 0(0.000000e+00)
-  %x = load float, ptr addrspace(1) undef
+  %x = load float, ptr addrspace(1) poison
   %rcp = fdiv arcp float %x, 10.0
   store float %rcp, ptr addrspace(1) %out, align 4
   ret void
@@ -1402,7 +1402,7 @@ define amdgpu_kernel void @s_div_arcp_neg_k_x_pat_f32_daz(ptr addrspace(1) %out)
 ; CM-NEXT:    -1110651699(-1.000000e-01), 0(0.000000e+00)
 ; CM-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
 ; CM-NEXT:    2(2.802597e-45), 0(0.000000e+00)
-  %x = load float, ptr addrspace(1) undef
+  %x = load float, ptr addrspace(1) poison
   %rcp = fdiv arcp float %x, -10.0
   store float %rcp, ptr addrspace(1) %out, align 4
   ret void

@@ -924,18 +924,12 @@ bool Sema::LookupBuiltin(LookupResult &R) {
     IdentifierInfo *II = R.getLookupName().getAsIdentifierInfo();
     if (II) {
       if (getLangOpts().CPlusPlus && NameKind == Sema::LookupOrdinaryName) {
-        if (II == getASTContext().getMakeIntegerSeqName()) {
-          R.addDecl(getASTContext().getMakeIntegerSeqDecl());
-          return true;
-        }
-        if (II == getASTContext().getTypePackElementName()) {
-          R.addDecl(getASTContext().getTypePackElementDecl());
-          return true;
-        }
-        if (II == getASTContext().getBuiltinCommonTypeName()) {
-          R.addDecl(getASTContext().getBuiltinCommonTypeDecl());
-          return true;
-        }
+#define BuiltinTemplate(BIName)                                                \
+  if (II == getASTContext().get##BIName##Name()) {                             \
+    R.addDecl(getASTContext().get##BIName##Decl());                            \
+    return true;                                                               \
+  }
+#include "clang/Basic/BuiltinTemplates.inc"
       }
 
       // Check if this is an OpenCL Builtin, and if so, insert its overloads.
@@ -3216,11 +3210,8 @@ addAssociatedClassesAndNamespaces(AssociatedLookup &Result, QualType Ty) {
     //        X.
     case Type::MemberPointer: {
       const MemberPointerType *MemberPtr = cast<MemberPointerType>(T);
-
-      // Queue up the class type into which this points.
-      Queue.push_back(MemberPtr->getClass());
-
-      // And directly continue with the pointee type.
+      if (CXXRecordDecl *Class = MemberPtr->getMostRecentCXXRecordDecl())
+        addAssociatedClassesAndNamespaces(Result, Class);
       T = MemberPtr->getPointeeType().getTypePtr();
       continue;
     }
@@ -3722,7 +3713,8 @@ Sema::LookupLiteralOperator(Scope *S, LookupResult &R,
         if (StringLit) {
           SFINAETrap Trap(*this);
           CheckTemplateArgumentInfo CTAI;
-          TemplateArgumentLoc Arg(TemplateArgument(StringLit), StringLit);
+          TemplateArgumentLoc Arg(
+              TemplateArgument(StringLit, /*IsCanonical=*/false), StringLit);
           if (CheckTemplateArgument(
                   Params->getParam(0), Arg, FD, R.getNameLoc(), R.getNameLoc(),
                   /*ArgumentPackIndex=*/0, CTAI, CTAK_Specified) ||
@@ -4539,7 +4531,6 @@ static void getNestedNameSpecifierIdentifiers(
     II = NNS->getAsNamespaceAlias()->getIdentifier();
     break;
 
-  case NestedNameSpecifier::TypeSpecWithTemplate:
   case NestedNameSpecifier::TypeSpec:
     II = QualType(NNS->getAsType(), 0).getBaseTypeIdentifier();
     break;
@@ -4904,8 +4895,7 @@ TypoCorrectionConsumer::NamespaceSpecifierSet::buildNestedNameSpecifier(
       NNS = NestedNameSpecifier::Create(Context, NNS, ND);
       ++NumSpecifiers;
     } else if (auto *RD = dyn_cast_or_null<RecordDecl>(C)) {
-      NNS = NestedNameSpecifier::Create(Context, NNS, RD->isTemplateDecl(),
-                                        RD->getTypeForDecl());
+      NNS = NestedNameSpecifier::Create(Context, NNS, RD->getTypeForDecl());
       ++NumSpecifiers;
     }
   }
@@ -5621,7 +5611,7 @@ void Sema::diagnoseMissingImport(SourceLocation Loc, const NamedDecl *Decl,
   llvm::SmallVector<Module*, 8> OwningModules;
   OwningModules.push_back(Owner);
   auto Merged = Context.getModulesWithMergedDefinition(Def);
-  OwningModules.insert(OwningModules.end(), Merged.begin(), Merged.end());
+  llvm::append_range(OwningModules, Merged);
 
   diagnoseMissingImport(Loc, Def, Def->getLocation(), OwningModules, MIK,
                         Recover);

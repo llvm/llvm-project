@@ -339,7 +339,7 @@ define i1 @test12(i32 %x) {
 ; CHECK-NEXT:    [[ZEXT:%.*]] = zext i32 [[X:%.*]] to i64
 ; CHECK-NEXT:    [[MUL:%.*]] = mul nuw nsw i64 [[ZEXT]], 7
 ; CHECK-NEXT:    [[SHR:%.*]] = lshr i64 [[MUL]], 32
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i64 [[SHR]] to i32
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nuw nsw i64 [[SHR]] to i32
 ; CHECK-NEXT:    ret i1 true
 ;
   %zext = zext i32 %x to i64

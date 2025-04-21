@@ -49,6 +49,9 @@ def SingleBitBitFieldConstantConversion :
   DiagGroup<"single-bit-bitfield-constant-conversion">;
 def BitFieldConstantConversion : DiagGroup<"bitfield-constant-conversion",
                                            [SingleBitBitFieldConstantConversion]>;
+def PreferredTypeBitFieldEnumConversion
+    : DiagGroup<"preferred-type-bitfield-enum-conversion">;
+def PreferredTypeBitFieldWidth : DiagGroup<"preferred-type-bitfield-width">;
 def BitFieldEnumConversion : DiagGroup<"bitfield-enum-conversion">;
 def BitFieldWidth : DiagGroup<"bitfield-width">;
 def CompoundTokenSplitByMacro : DiagGroup<"compound-token-split-by-macro">;
@@ -64,8 +67,11 @@ def AlwaysInlineCoroutine :
   DiagGroup<"always-inline-coroutine">;
 def CoroNonAlignedAllocationFunction :
   DiagGroup<"coro-non-aligned-allocation-function">;
+def CoroTypeAwareAllocationFunction :
+  DiagGroup<"coro-type-aware-allocation-function">;
 def Coroutine : DiagGroup<"coroutine", [CoroutineMissingUnhandledException, DeprecatedCoroutine,
-                                        AlwaysInlineCoroutine, CoroNonAlignedAllocationFunction]>;
+                                        AlwaysInlineCoroutine, CoroNonAlignedAllocationFunction,
+                                        CoroTypeAwareAllocationFunction]>;
 def ObjCBoolConstantConversion : DiagGroup<"objc-bool-constant-conversion">;
 def ConstantConversion : DiagGroup<"constant-conversion",
                                    [BitFieldConstantConversion,
@@ -92,6 +98,7 @@ def EnumCompare : DiagGroup<"enum-compare", [EnumCompareSwitch,
 def DeprecatedAnonEnumEnumConversion : DiagGroup<"deprecated-anon-enum-enum-conversion">;
 def DeprecatedEnumEnumConversion : DiagGroup<"deprecated-enum-enum-conversion">;
 def DeprecatedEnumFloatConversion : DiagGroup<"deprecated-enum-float-conversion">;
+def DeprecatedOctalLiterals : DiagGroup<"deprecated-octal-literals">;
 def AnonEnumEnumConversion : DiagGroup<"anon-enum-enum-conversion",
                                    [DeprecatedAnonEnumEnumConversion]>;
 def EnumEnumConversion : DiagGroup<"enum-enum-conversion",
@@ -235,7 +242,8 @@ def Deprecated : DiagGroup<"deprecated", [DeprecatedAnonEnumEnumConversion,
                                           DeprecatedVolatile,
                                           DeprecatedWritableStr,
                                           DeprecatedRedundantConstexprStaticDef,
-                                          DeprecatedMissingCommaVariadicParam
+                                          DeprecatedMissingCommaVariadicParam,
+                                          DeprecatedOctalLiterals
                                           ]>,
                  DiagCategory<"Deprecations">;
 
@@ -372,6 +380,19 @@ def CXX11WarnInconsistentOverrideMethod :
 def CXX11WarnSuggestOverrideDestructor : DiagGroup<"suggest-destructor-override">;
 def CXX11WarnSuggestOverride : DiagGroup<"suggest-override">;
 
+def WarnUnnecessaryVirtualSpecifier : DiagGroup<"unnecessary-virtual-specifier"> {
+  code Documentation = [{
+Warns when a ``final`` class contains a virtual method (including virtual
+destructors). Since ``final`` classes cannot be subclassed, their methods
+cannot be overridden, and hence the ``virtual`` specifier is useless.
+
+The warning also detects virtual methods in classes whose destructor is
+``final``, for the same reason.
+
+The warning does not fire on virtual methods which are also marked ``override``.
+  }];
+}
+
 // Original name of this warning in Clang
 def : DiagGroup<"c++0x-narrowing", [CXX11Narrowing]>;
 
@@ -482,6 +503,7 @@ def GNUImaginaryConstant : DiagGroup<"gnu-imaginary-constant">;
 def IgnoredGCH : DiagGroup<"ignored-gch">;
 def IgnoredReferenceQualifiers : DiagGroup<"ignored-reference-qualifiers">;
 def IgnoredQualifiers : DiagGroup<"ignored-qualifiers", [IgnoredReferenceQualifiers]>;
+def IgnoredBaseClassQualifiers : DiagGroup<"ignored-base-class-qualifiers", [IgnoredQualifiers]>;
 def : DiagGroup<"import">;
 def GNUIncludeNext : DiagGroup<"gnu-include-next">;
 def IncompatibleMSStruct : DiagGroup<"incompatible-ms-struct">;
@@ -791,6 +813,8 @@ def ReservedIdAsMacroAlias : DiagGroup<"reserved-id-macro", [ReservedIdAsMacro]>
 def ReservedAttributeIdentifier : DiagGroup<"reserved-attribute-identifier">;
 def RestrictExpansionMacro : DiagGroup<"restrict-expansion">;
 def FinalMacro : DiagGroup<"final-macro">;
+def UndefinedTrueIdentifier : DiagGroup<"undef-true">;
+def UndefinedIdentifier : DiagGroup<"undef", [UndefinedTrueIdentifier]>;
 
 // Just silence warnings about -Wstrict-aliasing for now.
 def : DiagGroup<"strict-aliasing=0">;
@@ -1156,6 +1180,7 @@ def ThreadSafetyPrecise    : DiagGroup<"thread-safety-precise">;
 def ThreadSafetyReferenceReturn  : DiagGroup<"thread-safety-reference-return">;
 def ThreadSafetyReference  : DiagGroup<"thread-safety-reference",
                                              [ThreadSafetyReferenceReturn]>;
+def ThreadSafetyPointer    : DiagGroup<"thread-safety-pointer">;
 def ThreadSafetyNegative   : DiagGroup<"thread-safety-negative">;
 def ThreadSafety : DiagGroup<"thread-safety",
                              [ThreadSafetyAttributes,
@@ -1589,6 +1614,9 @@ def HLSLExtension : DiagGroup<"hlsl-extensions", [HLSL202y]>;
 
 // Warning for mix packoffset and non-packoffset.
 def HLSLMixPackOffset : DiagGroup<"mix-packoffset">;
+
+// Warning for implicit resource bindings.
+def HLSLImplicitBinding : DiagGroup<"hlsl-implicit-binding">;
 
 // Warnings for DXIL validation
 def DXILValidation : DiagGroup<"dxil-validation">;

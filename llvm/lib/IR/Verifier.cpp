@@ -141,7 +141,7 @@ struct VerifierSupport {
   raw_ostream *OS;
   const Module &M;
   ModuleSlotTracker MST;
-  Triple TT;
+  const Triple &TT;
   const DataLayout &DL;
   LLVMContext &Context;
 
@@ -153,8 +153,8 @@ struct VerifierSupport {
   bool TreatBrokenDebugInfoAsError = true;
 
   explicit VerifierSupport(raw_ostream *OS, const Module &M)
-      : OS(OS), M(M), MST(&M), TT(Triple::normalize(M.getTargetTriple())),
-        DL(M.getDataLayout()), Context(M.getContext()) {}
+      : OS(OS), M(M), MST(&M), TT(M.getTargetTriple()), DL(M.getDataLayout()),
+        Context(M.getContext()) {}
 
 private:
   void Write(const Module *M) {
@@ -720,8 +720,7 @@ static void forEachUser(const Value *User,
   if (!Visited.insert(User).second)
     return;
 
-  SmallVector<const Value *> WorkList;
-  append_range(WorkList, User->materialized_users());
+  SmallVector<const Value *> WorkList(User->materialized_users());
   while (!WorkList.empty()) {
    const Value *Cur = WorkList.pop_back_val();
     if (!Visited.insert(Cur).second)
@@ -807,10 +806,6 @@ void Verifier::visitGlobalValue(const GlobalValue &GV) {
           "GlobalValue with local linkage or non-default "
           "visibility must be dso_local!",
           &GV);
-
-  if (GV.isTagged()) {
-    Check(!GV.hasSection(), "tagged GlobalValue must not be in section.", &GV);
-  }
 
   forEachUser(&GV, GlobalValueVisited, [&](const Value *V) -> bool {
     if (const Instruction *I = dyn_cast<Instruction>(V)) {
@@ -1154,6 +1149,30 @@ void Verifier::visitDIScope(const DIScope &N) {
     CheckDI(isa<DIFile>(F), "invalid file", &N, F);
 }
 
+void Verifier::visitDISubrangeType(const DISubrangeType &N) {
+  CheckDI(N.getTag() == dwarf::DW_TAG_subrange_type, "invalid tag", &N);
+  auto *BaseType = N.getRawBaseType();
+  CheckDI(!BaseType || isType(BaseType), "BaseType must be a type");
+  auto *LBound = N.getRawLowerBound();
+  CheckDI(!LBound || isa<ConstantAsMetadata>(LBound) ||
+              isa<DIVariable>(LBound) || isa<DIExpression>(LBound),
+          "LowerBound must be signed constant or DIVariable or DIExpression",
+          &N);
+  auto *UBound = N.getRawUpperBound();
+  CheckDI(!UBound || isa<ConstantAsMetadata>(UBound) ||
+              isa<DIVariable>(UBound) || isa<DIExpression>(UBound),
+          "UpperBound must be signed constant or DIVariable or DIExpression",
+          &N);
+  auto *Stride = N.getRawStride();
+  CheckDI(!Stride || isa<ConstantAsMetadata>(Stride) ||
+              isa<DIVariable>(Stride) || isa<DIExpression>(Stride),
+          "Stride must be signed constant or DIVariable or DIExpression", &N);
+  auto *Bias = N.getRawBias();
+  CheckDI(!Bias || isa<ConstantAsMetadata>(Bias) || isa<DIVariable>(Bias) ||
+              isa<DIExpression>(Bias),
+          "Bias must be signed constant or DIVariable or DIExpression", &N);
+}
+
 void Verifier::visitDISubrange(const DISubrange &N) {
   CheckDI(N.getTag() == dwarf::DW_TAG_subrange_type, "invalid tag", &N);
   CheckDI(!N.getRawCountNode() || !N.getRawUpperBound(),
@@ -1213,6 +1232,25 @@ void Verifier::visitDIBasicType(const DIBasicType &N) {
               N.getTag() == dwarf::DW_TAG_unspecified_type ||
               N.getTag() == dwarf::DW_TAG_string_type,
           "invalid tag", &N);
+}
+
+void Verifier::visitDIFixedPointType(const DIFixedPointType &N) {
+  visitDIBasicType(N);
+
+  CheckDI(N.getTag() == dwarf::DW_TAG_base_type, "invalid tag", &N);
+  CheckDI(N.getEncoding() == dwarf::DW_ATE_signed_fixed ||
+              N.getEncoding() == dwarf::DW_ATE_unsigned_fixed,
+          "invalid encoding", &N);
+  CheckDI(N.getKind() == DIFixedPointType::FixedPointBinary ||
+              N.getKind() == DIFixedPointType::FixedPointDecimal ||
+              N.getKind() == DIFixedPointType::FixedPointRational,
+          "invalid kind", &N);
+  CheckDI(N.getKind() != DIFixedPointType::FixedPointRational ||
+              N.getFactorRaw() == 0,
+          "factor should be 0 for rationals", &N);
+  CheckDI(N.getKind() == DIFixedPointType::FixedPointRational ||
+              (N.getNumeratorRaw() == 0 && N.getDenominatorRaw() == 0),
+          "numerator and denominator should be 0 for non-rationals", &N);
 }
 
 void Verifier::visitDIStringType(const DIStringType &N) {
@@ -2366,6 +2404,11 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
 
   checkUnsignedBaseTenFuncAttr(Attrs, "patchable-function-prefix", V);
   checkUnsignedBaseTenFuncAttr(Attrs, "patchable-function-entry", V);
+  if (Attrs.hasFnAttr("patchable-function-entry-section"))
+    Check(!Attrs.getFnAttr("patchable-function-entry-section")
+               .getValueAsString()
+               .empty(),
+          "\"patchable-function-entry-section\" must not be empty");
   checkUnsignedBaseTenFuncAttr(Attrs, "warn-stack-size", V);
 
   if (auto A = Attrs.getFnAttr("sign-return-address"); A.isValid()) {
@@ -2581,9 +2624,7 @@ void Verifier::verifyInlineAsmCall(const CallBase &Call) {
 
 /// Verify that statepoint intrinsic is well formed.
 void Verifier::verifyStatepoint(const CallBase &Call) {
-  assert(Call.getCalledFunction() &&
-         Call.getCalledFunction()->getIntrinsicID() ==
-             Intrinsic::experimental_gc_statepoint);
+  assert(Call.getIntrinsicID() == Intrinsic::experimental_gc_statepoint);
 
   Check(!Call.doesNotAccessMemory() && !Call.onlyReadsMemory() &&
             !Call.onlyAccessesArgMemory(),
@@ -2890,6 +2931,8 @@ void Verifier::visitFunction(const Function &F) {
           FT->getParamType(i));
     Check(Arg.getType()->isFirstClassType(),
           "Function arguments must have first-class types!", &Arg);
+    Check(!Arg.getType()->isLabelTy(),
+          "Function argument cannot be of label type!", &Arg, &F);
     if (!IsIntrinsic) {
       Check(!Arg.getType()->isMetadataTy(),
             "Function takes metadata but isn't an intrinsic", &Arg, &F);
@@ -3550,14 +3593,9 @@ void Verifier::visitCallBase(CallBase &Call) {
     Check(Callee->getValueType() == FTy,
           "Intrinsic called with incompatible signature", Call);
 
-  // Disallow calls to functions with the amdgpu_cs_chain[_preserve] calling
-  // convention.
-  auto CC = Call.getCallingConv();
-  Check(CC != CallingConv::AMDGPU_CS_Chain &&
-            CC != CallingConv::AMDGPU_CS_ChainPreserve,
-        "Direct calls to amdgpu_cs_chain/amdgpu_cs_chain_preserve functions "
-        "not allowed. Please use the @llvm.amdgpu.cs.chain intrinsic instead.",
-        Call);
+  // Verify if the calling convention of the callee is callable.
+  Check(isCallableCC(Call.getCallingConv()),
+        "calling convention does not permit calls", Call);
 
   // Disallow passing/returning values with alignment higher than we can
   // represent.
@@ -3587,8 +3625,7 @@ void Verifier::visitCallBase(CallBase &Call) {
   }
 
   if (Attrs.hasFnAttr(Attribute::Preallocated)) {
-    Check(Call.getCalledFunction()->getIntrinsicID() ==
-              Intrinsic::call_preallocated_arg,
+    Check(Call.getIntrinsicID() == Intrinsic::call_preallocated_arg,
           "preallocated as a call site attribute can only be on "
           "llvm.call.preallocated.arg");
   }
@@ -3686,9 +3723,7 @@ void Verifier::visitCallBase(CallBase &Call) {
 
       // Statepoint intrinsic is vararg but the wrapped function may be not.
       // Allow sret here and check the wrapped function in verifyStatepoint.
-      if (!Call.getCalledFunction() ||
-          Call.getCalledFunction()->getIntrinsicID() !=
-              Intrinsic::experimental_gc_statepoint)
+      if (Call.getIntrinsicID() != Intrinsic::experimental_gc_statepoint)
         Check(!ArgAttrs.hasAttribute(Attribute::StructRet),
               "Attribute 'sret' cannot be used for vararg call arguments!",
               Call);
@@ -3717,9 +3752,8 @@ void Verifier::visitCallBase(CallBase &Call) {
           "Return type cannot be x86_amx for indirect call!");
   }
 
-  if (Function *F = Call.getCalledFunction())
-    if (Intrinsic::ID ID = (Intrinsic::ID)F->getIntrinsicID())
-      visitIntrinsicCall(ID, Call);
+  if (Intrinsic::ID ID = Call.getIntrinsicID())
+    visitIntrinsicCall(ID, Call);
 
   // Verify that a callsite has at most one "deopt", at most one "funclet", at
   // most one "gc-transition", at most one "cfguardtarget", at most one
@@ -3932,7 +3966,7 @@ void Verifier::verifyMustTailCall(CallInst &CI) {
   // - The caller and callee prototypes must match.  Pointer types of
   //   parameters or return types may differ in pointee type, but not
   //   address space.
-  if (!CI.getCalledFunction() || !CI.getCalledFunction()->isIntrinsic()) {
+  if (!CI.getIntrinsicID()) {
     Check(CallerTy->getNumParams() == CalleeTy->getNumParams(),
           "cannot guarantee tail call due to mismatched parameter counts", &CI);
     for (unsigned I = 0, E = CallerTy->getNumParams(); I != E; ++I) {
@@ -5203,10 +5237,12 @@ void Verifier::visitInstruction(Instruction &I) {
                 F->getIntrinsicID() == Intrinsic::experimental_patchpoint ||
                 F->getIntrinsicID() == Intrinsic::fake_use ||
                 F->getIntrinsicID() == Intrinsic::experimental_gc_statepoint ||
+                F->getIntrinsicID() == Intrinsic::wasm_throw ||
                 F->getIntrinsicID() == Intrinsic::wasm_rethrow ||
                 IsAttachedCallOperand(F, CBI, i),
             "Cannot invoke an intrinsic other than donothing, patchpoint, "
-            "statepoint, coro_resume, coro_destroy or clang.arc.attachedcall",
+            "statepoint, coro_resume, coro_destroy, clang.arc.attachedcall or "
+            "wasm.(re)throw",
             &I);
       Check(F->getParent() == &M, "Referencing function in another module!", &I,
             &M, F, F->getParent());
@@ -5557,7 +5593,11 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
   case Intrinsic::memmove:
   case Intrinsic::memset:
   case Intrinsic::memset_inline:
+    break;
   case Intrinsic::experimental_memset_pattern: {
+    const auto Memset = cast<MemSetPatternInst>(&Call);
+    Check(Memset->getValue()->getType()->isSized(),
+          "unsized types cannot be used as memset patterns", Call);
     break;
   }
   case Intrinsic::memcpy_element_unordered_atomic:
@@ -5593,8 +5633,8 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
       auto *UseCall = dyn_cast<CallBase>(U);
       Check(UseCall != nullptr,
             "Uses of llvm.call.preallocated.setup must be calls");
-      const Function *Fn = UseCall->getCalledFunction();
-      if (Fn && Fn->getIntrinsicID() == Intrinsic::call_preallocated_arg) {
+      Intrinsic::ID IID = UseCall->getIntrinsicID();
+      if (IID == Intrinsic::call_preallocated_arg) {
         auto *AllocArgIndex = dyn_cast<ConstantInt>(UseCall->getArgOperand(1));
         Check(AllocArgIndex != nullptr,
               "llvm.call.preallocated.alloc arg index must be a constant");
@@ -5604,8 +5644,7 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
               "llvm.call.preallocated.alloc arg index must be between 0 and "
               "corresponding "
               "llvm.call.preallocated.setup's argument count");
-      } else if (Fn && Fn->getIntrinsicID() ==
-                           Intrinsic::call_preallocated_teardown) {
+      } else if (IID == Intrinsic::call_preallocated_teardown) {
         // nothing to do
       } else {
         Check(!FoundCall, "Can have at most one call corresponding to a "
@@ -5646,8 +5685,8 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
   }
   case Intrinsic::call_preallocated_arg: {
     auto *Token = dyn_cast<CallBase>(Call.getArgOperand(0));
-    Check(Token && Token->getCalledFunction()->getIntrinsicID() ==
-                       Intrinsic::call_preallocated_setup,
+    Check(Token &&
+              Token->getIntrinsicID() == Intrinsic::call_preallocated_setup,
           "llvm.call.preallocated.arg token argument must be a "
           "llvm.call.preallocated.setup");
     Check(Call.hasFnAttr(Attribute::Preallocated),
@@ -5657,8 +5696,8 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
   }
   case Intrinsic::call_preallocated_teardown: {
     auto *Token = dyn_cast<CallBase>(Call.getArgOperand(0));
-    Check(Token && Token->getCalledFunction()->getIntrinsicID() ==
-                       Intrinsic::call_preallocated_setup,
+    Check(Token &&
+              Token->getIntrinsicID() == Intrinsic::call_preallocated_setup,
           "llvm.call.preallocated.teardown token argument must be a "
           "llvm.call.preallocated.setup");
     break;
@@ -5750,11 +5789,8 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
 
     // Are we tied to a statepoint properly?
     const auto *StatepointCall = dyn_cast<CallBase>(Statepoint);
-    const Function *StatepointFn =
-        StatepointCall ? StatepointCall->getCalledFunction() : nullptr;
-    Check(StatepointFn && StatepointFn->isDeclaration() &&
-              StatepointFn->getIntrinsicID() ==
-                  Intrinsic::experimental_gc_statepoint,
+    Check(StatepointCall && StatepointCall->getIntrinsicID() ==
+                                Intrinsic::experimental_gc_statepoint,
           "gc.result operand #1 must be from a statepoint", Call,
           Call.getArgOperand(0));
 
@@ -6367,6 +6403,16 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
           "SGPR arguments must have the `inreg` attribute", &Call);
     Check(!Call.paramHasAttr(3, Attribute::InReg),
           "VGPR arguments must not have the `inreg` attribute", &Call);
+    Check(isa_and_present<UnreachableInst>(Call.getNextNode()),
+          "llvm.amdgcn.cs.chain must be followed by unreachable", &Call);
+    break;
+  }
+  case Intrinsic::amdgcn_init_exec_from_input: {
+    const Argument *Arg = dyn_cast<Argument>(Call.getOperand(0));
+    Check(Arg && Arg->hasInRegAttr(),
+          "only inreg arguments to the parent function are valid as inputs to "
+          "this intrinsic",
+          &Call);
     break;
   }
   case Intrinsic::amdgcn_set_inactive_chain_arg: {
@@ -6602,10 +6648,17 @@ void Verifier::visit(DbgVariableRecord &DVR) {
   CheckDI(MD && (isa<ValueAsMetadata>(MD) || isa<DIArgList>(MD) ||
                  (isa<MDNode>(MD) && !cast<MDNode>(MD)->getNumOperands())),
           "invalid #dbg record address/value", &DVR, MD);
-  if (auto *VAM = dyn_cast<ValueAsMetadata>(MD))
+  if (auto *VAM = dyn_cast<ValueAsMetadata>(MD)) {
     visitValueAsMetadata(*VAM, F);
-  else if (auto *AL = dyn_cast<DIArgList>(MD))
+    if (DVR.isDbgDeclare()) {
+      // Allow integers here to support inttoptr salvage.
+      Type *Ty = VAM->getValue()->getType();
+      CheckDI(Ty->isPointerTy() || Ty->isIntegerTy(),
+              "location of #dbg_declare must be a pointer or int", &DVR, MD);
+    }
+  } else if (auto *AL = dyn_cast<DIArgList>(MD)) {
     visitDIArgList(*AL, F);
+  }
 
   CheckDI(isa_and_nonnull<DILocalVariable>(DVR.getRawVariable()),
           "invalid #dbg record variable", &DVR, DVR.getRawVariable());
@@ -7175,7 +7228,7 @@ void Verifier::verifyCompileUnits() {
   auto *CUs = M.getNamedMetadata("llvm.dbg.cu");
   SmallPtrSet<const Metadata *, 2> Listed;
   if (CUs)
-    Listed.insert(CUs->op_begin(), CUs->op_end());
+    Listed.insert_range(CUs->operands());
   for (const auto *CU : CUVisited)
     CheckDI(Listed.count(CU), "DICompileUnit not listed in llvm.dbg.cu", CU);
   CUVisited.clear();

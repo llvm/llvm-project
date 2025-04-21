@@ -25,6 +25,11 @@ endif()
 set(FLANG_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 set(FLANG_RT_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../flang-rt")
 
+# Python is needed for symbol extracting tool
+set(LLVM_MINIMUM_PYTHON_VERSION 3.8)
+find_package(Python3 ${LLVM_MINIMUM_PYTHON_VERSION} REQUIRED
+    COMPONENTS Interpreter)
+
 if (CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR AND NOT MSVC_IDE)
   message(FATAL_ERROR "In-source builds are not allowed. \
           Please create a directory and run cmake from there,\
@@ -81,6 +86,13 @@ if (FLANG_STANDALONE_BUILD)
     mark_as_advanced(LLVM_ENABLE_ASSERTIONS)
   endif()
 
+  # Build with _XOPEN_SOURCE on AIX to avoid errors caused by _ALL_SOURCE.
+  # We need to enable the large-file API as well.
+  if (UNIX AND CMAKE_SYSTEM_NAME MATCHES "AIX")
+    add_compile_definitions(_XOPEN_SOURCE=700)
+    add_compile_definitions(_LARGE_FILE_API)
+  endif()
+
   # If the user specifies a relative path to LLVM_DIR, the calls to include
   # LLVM modules fail. Append the absolute path to LLVM_DIR instead.
   if (LLVM_DIR)
@@ -125,6 +137,10 @@ if (FLANG_STANDALONE_BUILD)
     set(USE_NO_MAYBE_UNINITIALIZED 1)
   endif()
 
+  # The path is needed to locate extract_symbols.py
+  if (NOT DEFINED LLVM_MAIN_SRC_DIR)
+    set(LLVM_MAIN_SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../llvm")
+  endif()
   include(AddLLVM)
   include(HandleLLVMOptions)
   include(VersionFromVCS)
@@ -465,6 +481,17 @@ if (APPLE)
   else()
     message(FATAL_ERROR "${CMAKE_LINKER} failed with status ${HAD_ERROR}")
   endif()
+endif()
+
+# Set up job pools for flang.  Some of the flang sources take a lot of memory to
+# compile, so allow users to limit the number of parallel flang jobs.  This is
+# useful for building flang alongside several other projects since you can use
+# the maximum number of build jobs for the other projects while limiting the
+# number of flang compile jobs.
+set(FLANG_PARALLEL_COMPILE_JOBS CACHE STRING
+  "The maximum number of concurrent compilation jobs for Flang (Ninja only)")
+if (FLANG_PARALLEL_COMPILE_JOBS)
+  set_property(GLOBAL APPEND PROPERTY JOB_POOLS flang_compile_job_pool=${FLANG_PARALLEL_COMPILE_JOBS})
 endif()
 
 include(AddFlang)

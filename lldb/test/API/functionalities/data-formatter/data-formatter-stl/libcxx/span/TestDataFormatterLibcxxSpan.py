@@ -172,4 +172,4 @@ class LibcxxSpanDataFormatterTestCase(TestBase):
 
         # The pointer should just show the right number of elements:
 
-        self.expect("frame variable ptr", patterns=["ptr = 0x.*", " size=5"])
+        self.expect("frame variable ptr", patterns=["ptr = 0x[0-9a-f]+ size=5"])

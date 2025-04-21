@@ -9,14 +9,14 @@
 ; CHECK: .global .surfref surface
 
 ; CHECK: .entry kernel_func_maxntid
-define void @kernel_func_maxntid(ptr %a) {
+define ptx_kernel void @kernel_func_maxntid(ptr %a) "nvvm.maxntid"="10,20,30" {
 ; CHECK: .maxntid 10, 20, 30
 ; CHECK: ret
   ret void
 }
 
 ; CHECK: .entry kernel_func_reqntid
-define void @kernel_func_reqntid(ptr %a) {
+define ptx_kernel void @kernel_func_reqntid(ptr %a) "nvvm.reqntid"="11,22,33" {
 ; CHECK: .reqntid 11, 22, 33
 ; CHECK: ret
   ret void
@@ -36,13 +36,7 @@ define ptx_kernel void @kernel_func_maxnreg() "nvvm.maxnreg"="1234" {
   ret void
 }
 
-!nvvm.annotations = !{!1, !2, !3, !4, !9, !10}
-
-!1 = !{ptr @kernel_func_maxntid, !"kernel", i32 1}
-!2 = !{ptr @kernel_func_maxntid, !"maxntidx", i32 10, !"maxntidy", i32 20, !"maxntidz", i32 30}
-
-!3 = !{ptr @kernel_func_reqntid, !"kernel", i32 1}
-!4 = !{ptr @kernel_func_reqntid, !"reqntidx", i32 11, !"reqntidy", i32 22, !"reqntidz", i32 33}
+!nvvm.annotations = !{!9, !10}
 
 !9 = !{ptr addrspace(1) @texture, !"texture", i32 1}
 !10 = !{ptr addrspace(1) @surface, !"surface", i32 1}

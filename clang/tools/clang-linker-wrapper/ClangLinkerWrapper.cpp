@@ -464,7 +464,8 @@ fatbinary(ArrayRef<std::pair<StringRef, StringRef>> InputFiles,
 } // namespace amdgcn
 
 namespace generic {
-Expected<StringRef> clang(ArrayRef<StringRef> InputFiles, const ArgList &Args) {
+Expected<StringRef> clang(ArrayRef<StringRef> InputFiles, const ArgList &Args,
+                          uint16_t ActiveOffloadKindMask) {
   llvm::TimeTraceScope TimeScope("Clang");
   // Use `clang` to invoke the appropriate device tools.
   Expected<std::string> ClangPath =
@@ -495,6 +496,10 @@ Expected<StringRef> clang(ArrayRef<StringRef> InputFiles, const ArgList &Args) {
     Triple.isAMDGPU() ? CmdArgs.push_back(Args.MakeArgString("-mcpu=" + Arch))
                       : CmdArgs.push_back(Args.MakeArgString("-march=" + Arch));
 
+  // AMDGPU is always in LTO mode currently.
+  if (Triple.isAMDGPU())
+    CmdArgs.push_back("-flto");
+
   // Forward all of the `--offload-opt` and similar options to the device.
   for (auto &Arg : Args.filtered(OPT_offload_opt_eq_minus, OPT_mllvm))
     CmdArgs.append(
@@ -508,7 +513,7 @@ Expected<StringRef> clang(ArrayRef<StringRef> InputFiles, const ArgList &Args) {
     CmdArgs.push_back(InputFile);
 
   // If this is CPU offloading we copy the input libraries.
-  if (!Triple.isAMDGPU() && !Triple.isNVPTX() && !Triple.isSPIRV()) {
+  if (!Triple.isGPU()) {
     CmdArgs.push_back("-Wl,-Bsymbolic");
     CmdArgs.push_back("-shared");
     ArgStringList LinkerArgs;
@@ -536,7 +541,7 @@ Expected<StringRef> clang(ArrayRef<StringRef> InputFiles, const ArgList &Args) {
       else
         Arg->render(Args, LinkerArgs);
     }
-    llvm::copy(LinkerArgs, std::back_inserter(CmdArgs));
+    llvm::append_range(CmdArgs, LinkerArgs);
   }
 
   // Pass on -mllvm options to the linker invocation.
@@ -549,6 +554,17 @@ Expected<StringRef> clang(ArrayRef<StringRef> InputFiles, const ArgList &Args) {
 
   if (Args.hasArg(OPT_embed_bitcode))
     CmdArgs.push_back("-Wl,--lto-emit-llvm");
+
+  // For linking device code with the SYCL offload kind, special handling is
+  // required. Passing --sycl-link to clang results in a call to
+  // clang-sycl-linker. Additional linker flags required by clang-sycl-linker
+  // will be communicated via the -Xlinker option.
+  if (ActiveOffloadKindMask & OFK_SYCL) {
+    CmdArgs.push_back("--sycl-link");
+    CmdArgs.append(
+        {"-Xlinker", Args.MakeArgString("-triple=" + Triple.getTriple())});
+    CmdArgs.append({"-Xlinker", Args.MakeArgString("-arch=" + Arch)});
+  }
 
   for (StringRef Arg : Args.getAllArgValues(OPT_linker_arg_EQ))
     CmdArgs.append({"-Xlinker", Args.MakeArgString(Arg)});
@@ -563,7 +579,8 @@ Expected<StringRef> clang(ArrayRef<StringRef> InputFiles, const ArgList &Args) {
 } // namespace generic
 
 Expected<StringRef> linkDevice(ArrayRef<StringRef> InputFiles,
-                               const ArgList &Args) {
+                               const ArgList &Args,
+                               uint16_t ActiveOffloadKindMask) {
   const llvm::Triple Triple(Args.getLastArgValue(OPT_triple_EQ));
   switch (Triple.getArch()) {
   case Triple::nvptx:
@@ -578,7 +595,7 @@ Expected<StringRef> linkDevice(ArrayRef<StringRef> InputFiles,
   case Triple::spirv64:
   case Triple::systemz:
   case Triple::loongarch64:
-    return generic::clang(InputFiles, Args);
+    return generic::clang(InputFiles, Args, ActiveOffloadKindMask);
   default:
     return createStringError(Triple.getArchName() +
                              " linking is not supported");
@@ -599,9 +616,11 @@ Expected<StringRef> writeOffloadFile(const OffloadFile &File) {
 
   StringRef Prefix =
       sys::path::stem(Binary.getMemoryBufferRef().getBufferIdentifier());
-
-  auto TempFileOrErr = createOutputFile(
-      Prefix + "-" + Binary.getTriple() + "-" + Binary.getArch(), "o");
+  SmallString<128> Filename;
+  (Prefix + "-" + Binary.getTriple() + "-" + Binary.getArch())
+      .toVector(Filename);
+  llvm::replace(Filename, ':', '-');
+  auto TempFileOrErr = createOutputFile(Filename, "o");
   if (!TempFileOrErr)
     return TempFileOrErr.takeError();
 
@@ -627,7 +646,7 @@ Expected<StringRef> compileModule(Module &M, OffloadKind Kind) {
     return createStringError(Msg);
 
   auto Options =
-      codegen::InitTargetOptionsFromCodeGenFlags(Triple(M.getTargetTriple()));
+      codegen::InitTargetOptionsFromCodeGenFlags(M.getTargetTriple());
   StringRef CPU = "";
   StringRef Features = "";
   std::unique_ptr<TargetMachine> TM(
@@ -650,7 +669,7 @@ Expected<StringRef> compileModule(Module &M, OffloadKind Kind) {
   auto OS = std::make_unique<llvm::raw_fd_ostream>(FD, true);
 
   legacy::PassManager CodeGenPasses;
-  TargetLibraryInfoImpl TLII(Triple(M.getTargetTriple()));
+  TargetLibraryInfoImpl TLII(M.getTargetTriple());
   CodeGenPasses.add(new TargetLibraryInfoWrapperPass(TLII));
   if (TM->addPassesToEmitFile(CodeGenPasses, *OS, nullptr,
                               CodeGenFileType::ObjectFile))
@@ -674,8 +693,8 @@ wrapDeviceImages(ArrayRef<std::unique_ptr<MemoryBuffer>> Buffers,
 
   LLVMContext Context;
   Module M("offload.wrapper.module", Context);
-  M.setTargetTriple(
-      Args.getLastArgValue(OPT_host_triple_EQ, sys::getDefaultTargetTriple()));
+  M.setTargetTriple(Triple(
+      Args.getLastArgValue(OPT_host_triple_EQ, sys::getDefaultTargetTriple())));
 
   switch (Kind) {
   case OFK_OpenMP:
@@ -786,6 +805,7 @@ bundleLinkedOutput(ArrayRef<OffloadingImage> Images, const ArgList &Args,
   llvm::TimeTraceScope TimeScope("Bundle linked output");
   switch (Kind) {
   case OFK_OpenMP:
+  case OFK_SYCL:
     return bundleOpenMP(Images);
   case OFK_Cuda:
     return bundleCuda(Images, Args);
@@ -917,10 +937,17 @@ Expected<SmallVector<StringRef>> linkAndWrapDeviceFiles(
         });
     auto LinkerArgs = getLinkerArgs(Input, BaseArgs);
 
-    DenseSet<OffloadKind> ActiveOffloadKinds;
+    uint16_t ActiveOffloadKindMask = 0u;
     for (const auto &File : Input)
-      if (File.getBinary()->getOffloadKind() != OFK_None)
-        ActiveOffloadKinds.insert(File.getBinary()->getOffloadKind());
+      ActiveOffloadKindMask |= File.getBinary()->getOffloadKind();
+
+    // Linking images of SYCL offload kind with images of other kind is not
+    // supported.
+    // TODO: Remove the above limitation.
+    if ((ActiveOffloadKindMask & OFK_SYCL) &&
+        ((ActiveOffloadKindMask ^ OFK_SYCL) != 0))
+      return createStringError("Linking images of SYCL offload kind with "
+                               "images of any other kind is not supported");
 
     // Write any remaining device inputs to an output file.
     SmallVector<StringRef> InputFiles;
@@ -932,12 +959,16 @@ Expected<SmallVector<StringRef>> linkAndWrapDeviceFiles(
     }
 
     // Link the remaining device files using the device linker.
-    auto OutputOrErr = linkDevice(InputFiles, LinkerArgs);
+    auto OutputOrErr =
+        linkDevice(InputFiles, LinkerArgs, ActiveOffloadKindMask);
     if (!OutputOrErr)
       return OutputOrErr.takeError();
 
     // Store the offloading image for each linked output file.
-    for (OffloadKind Kind : ActiveOffloadKinds) {
+    for (OffloadKind Kind = OFK_OpenMP; Kind != OFK_LAST;
+         Kind = static_cast<OffloadKind>((uint16_t)(Kind) << 1)) {
+      if ((ActiveOffloadKindMask & Kind) == 0)
+        continue;
       llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> FileOrErr =
           llvm::MemoryBuffer::getFileOrSTDIN(*OutputOrErr);
       if (std::error_code EC = FileOrErr.getError()) {
@@ -1060,8 +1091,9 @@ Expected<bool> getSymbolsFromBitcode(MemoryBufferRef Buffer, OffloadKind Kind,
       if (Sym.isFormatSpecific() || !Sym.isGlobal())
         continue;
 
-      bool NewSymbol = Syms.count(Sym.getName()) == 0;
-      auto OldSym = NewSymbol ? Sym_None : Syms[Sym.getName()];
+      auto It = Syms.find(Sym.getName());
+      bool NewSymbol = It == Syms.end();
+      auto OldSym = NewSymbol ? Sym_None : It->second;
 
       // We will extract if it defines a currenlty undefined non-weak
       // symbol.
@@ -1092,7 +1124,7 @@ Expected<bool> getSymbolsFromBitcode(MemoryBufferRef Buffer, OffloadKind Kind,
 
   // If the file gets extracted we update the table with the new symbols.
   if (ShouldExtract)
-    Syms.insert(std::begin(TmpSyms), std::end(TmpSyms));
+    Syms.insert_range(TmpSyms);
 
   return ShouldExtract;
 }
@@ -1147,7 +1179,7 @@ Expected<bool> getSymbolsFromObject(const ObjectFile &Obj, OffloadKind Kind,
 
   // If the file gets extracted we update the table with the new symbols.
   if (ShouldExtract)
-    Syms.insert(std::begin(TmpSyms), std::end(TmpSyms));
+    Syms.insert_range(TmpSyms);
 
   return ShouldExtract;
 }

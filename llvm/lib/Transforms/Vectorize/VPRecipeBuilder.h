@@ -178,7 +178,8 @@ public:
   /// Create and return a partial reduction recipe for a reduction instruction
   /// along with binary operation and reduction phi operands.
   VPRecipeBase *tryToCreatePartialReduction(Instruction *Reduction,
-                                            ArrayRef<VPValue *> Operands);
+                                            ArrayRef<VPValue *> Operands,
+                                            unsigned ScaleFactor);
 
   /// Set the recipe created for given ingredient.
   void setRecipe(Instruction *I, VPRecipeBase *R) {
@@ -224,15 +225,6 @@ public:
   VPReplicateRecipe *handleReplication(Instruction *I,
                                        ArrayRef<VPValue *> Operands,
                                        VFRange &Range);
-
-  /// Add the incoming values from the backedge to reduction & first-order
-  /// recurrence cross-iteration phis.
-  void fixHeaderPhis();
-
-  /// Returns a range mapping the values of the range \p Operands to their
-  /// corresponding VPValues.
-  iterator_range<mapped_iterator<Use *, std::function<VPValue *(Value *)>>>
-  mapToVPValues(User::op_range Operands);
 
   VPValue *getVPValueOrAddLiveIn(Value *V) {
     if (auto *I = dyn_cast<Instruction>(V)) {

@@ -45,7 +45,7 @@ inline bool isUniformAfterVectorization(const VPValue *VPV) {
     return true;
   if (auto *Rep = dyn_cast<VPReplicateRecipe>(VPV))
     return Rep->isUniform();
-  if (isa<VPWidenGEPRecipe, VPDerivedIVRecipe>(VPV))
+  if (isa<VPWidenGEPRecipe, VPDerivedIVRecipe, VPBlendRecipe>(VPV))
     return all_of(VPV->getDefiningRecipe()->operands(),
                   isUniformAfterVectorization);
   if (auto *VPI = dyn_cast<VPInstruction>(VPV))
@@ -53,8 +53,6 @@ inline bool isUniformAfterVectorization(const VPValue *VPV) {
            ((Instruction::isBinaryOp(VPI->getOpcode()) ||
              VPI->getOpcode() == VPInstruction::PtrAdd) &&
             all_of(VPI->operands(), isUniformAfterVectorization));
-  if (auto *IV = dyn_cast<VPDerivedIVRecipe>(VPV))
-    return all_of(IV->operands(), isUniformAfterVectorization);
 
   // VPExpandSCEVRecipes must be placed in the entry and are alway uniform.
   return isa<VPExpandSCEVRecipe>(VPV);
@@ -169,16 +167,8 @@ public:
   static void reassociateBlocks(VPBlockBase *Old, VPBlockBase *New) {
     for (auto *Pred : to_vector(Old->getPredecessors()))
       Pred->replaceSuccessor(Old, New);
-    for (auto *Succ : to_vector(Old->getSuccessors())) {
+    for (auto *Succ : to_vector(Old->getSuccessors()))
       Succ->replacePredecessor(Old, New);
-
-      // Replace any references to Old in widened phi incoming blocks.
-      for (auto &R : Succ->getEntryBasicBlock()->phis())
-        if (auto *WidenPhiR = dyn_cast<VPWidenPHIRecipe>(&R))
-          for (unsigned I = 0; I < WidenPhiR->getNumOperands(); I++)
-            if (WidenPhiR->getIncomingBlock(I) == Old)
-              WidenPhiR->setIncomingBlock(I, cast<VPBasicBlock>(New));
-    }
     New->setPredecessors(Old->getPredecessors());
     New->setSuccessors(Old->getSuccessors());
     Old->clearPredecessors();

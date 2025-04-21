@@ -50,8 +50,7 @@ CGCallee CGCXXABI::EmitLoadOfMemberFunctionPointer(
     llvm::Value *MemPtr, const MemberPointerType *MPT) {
   ErrorUnsupportedABI(CGF, "calls through member pointers");
 
-  const auto *RD =
-      cast<CXXRecordDecl>(MPT->getClass()->castAs<RecordType>()->getDecl());
+  const auto *RD = MPT->getMostRecentCXXRecordDecl();
   ThisPtrForCall =
       CGF.getAsNaturalPointerTo(This, CGF.getContext().getRecordType(RD));
   const FunctionProtoType *FPT =
@@ -61,10 +60,9 @@ CGCallee CGCXXABI::EmitLoadOfMemberFunctionPointer(
   return CGCallee::forDirect(FnPtr, FPT);
 }
 
-llvm::Value *
-CGCXXABI::EmitMemberDataPointerAddress(CodeGenFunction &CGF, const Expr *E,
-                                       Address Base, llvm::Value *MemPtr,
-                                       const MemberPointerType *MPT) {
+llvm::Value *CGCXXABI::EmitMemberDataPointerAddress(
+    CodeGenFunction &CGF, const Expr *E, Address Base, llvm::Value *MemPtr,
+    const MemberPointerType *MPT, bool IsInBounds) {
   ErrorUnsupportedABI(CGF, "loads of member pointers");
   llvm::Type *Ty =
       llvm::PointerType::get(CGF.getLLVMContext(), Base.getAddressSpace());
@@ -108,7 +106,7 @@ CGCXXABI::EmitNullMemberPointer(const MemberPointerType *MPT) {
 
 llvm::Constant *CGCXXABI::EmitMemberFunctionPointer(const CXXMethodDecl *MD) {
   return GetBogusMemberPointer(CGM.getContext().getMemberPointerType(
-      MD->getType(), MD->getParent()->getTypeForDecl()));
+      MD->getType(), /*Qualifier=*/nullptr, MD->getParent()));
 }
 
 llvm::Constant *CGCXXABI::EmitMemberDataPointer(const MemberPointerType *MPT,
@@ -294,7 +292,7 @@ llvm::Constant *CGCXXABI::getMemberPointerAdjustment(const CastExpr *E) {
     derivedType = E->getType();
 
   const CXXRecordDecl *derivedClass =
-    derivedType->castAs<MemberPointerType>()->getClass()->getAsCXXRecordDecl();
+      derivedType->castAs<MemberPointerType>()->getMostRecentCXXRecordDecl();
 
   return CGM.GetNonVirtualBaseClassOffset(derivedClass,
                                           E->path_begin(),

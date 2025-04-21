@@ -672,8 +672,7 @@ void StackSafetyDataFlowAnalysis<CalleeTy>::updateOneNode(
                       << (UpdateToFullSet ? ", full-set" : "") << "] " << &FS
                       << "\n");
     // Callers of this function may need updating.
-    for (auto &CallerID : Callers[Callee])
-      WorkList.insert(CallerID);
+    WorkList.insert_range(Callers[Callee]);
 
     ++FS.UpdateCount;
   }
