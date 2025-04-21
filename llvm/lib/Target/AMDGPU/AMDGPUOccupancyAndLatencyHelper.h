@@ -15,8 +15,8 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_AMDGPUOCCUPANCYANDLATENCYHELPER_H
 #define LLVM_LIB_TARGET_AMDGPU_AMDGPUOCCUPANCYANDLATENCYHELPER_H
 
-#include "llvm/MC/MCInstrItineraries.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/MC/MCInstrItineraries.h"
 
 namespace llvm {
 
@@ -76,5 +76,5 @@ SchedScore collectLatency(llvm::MachineFunction &MF,
                           const llvm::GCNSubtarget &ST,
                           const llvm::MachineLoopInfo *MLI = nullptr);
 
-}
+} // namespace llvm
 #endif

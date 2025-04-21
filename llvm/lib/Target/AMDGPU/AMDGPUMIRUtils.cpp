@@ -13,13 +13,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPUMIRUtils.h"
-#include "SIRegisterInfo.h"
 #include "SIInstrInfo.h"
+#include "SIRegisterInfo.h"
 
 #include "llvm/CodeGen/LiveInterval.h"
-#include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/MachinePostDominators.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
+#include "llvm/CodeGen/MachinePostDominators.h"
+#include "llvm/CodeGen/MachineRegisterInfo.h"
 
 #define DEBUG_TYPE "xb-mir-util"
 using namespace llvm;
@@ -101,11 +101,10 @@ bool loopContainsBoth(const MachineLoopInfo *LI, const MachineBasicBlock *BB1,
 
 } // namespace
 
-
 namespace llvm {
 
 bool isSccLiveAt(llvm::MachineBasicBlock *MBB,
-                       llvm::MachineBasicBlock::iterator MI) {
+                 llvm::MachineBasicBlock::iterator MI) {
   const TargetRegisterInfo *TRI =
       MBB->getParent()->getRegInfo().getTargetRegisterInfo();
   for (auto It = MI; It != MBB->end(); ++It) {
@@ -205,9 +204,8 @@ MachineBasicBlock::iterator findOrCreateInsertionPointForSccDef(
 // TouchedMBBSet is used for scheduling where local live interval could cross
 // multiple regions, need to calculate livereg for each region inside touched
 // MBB.
-bool isLocalLiveInterval(
-    const LiveInterval &LI, SlotIndexes *Indexes,
-    SmallDenseSet<MachineBasicBlock *, 2> &TouchedMBBSet) {
+bool isLocalLiveInterval(const LiveInterval &LI, SlotIndexes *Indexes,
+                         SmallDenseSet<MachineBasicBlock *, 2> &TouchedMBBSet) {
   if (LI.hasSubRanges()) {
     for (const auto &S : LI.subranges()) {
       if (!isLocalLiveRange(&S, Indexes, TouchedMBBSet))

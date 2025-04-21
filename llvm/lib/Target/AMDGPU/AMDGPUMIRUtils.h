@@ -86,8 +86,8 @@ bool removeUnusedLanes(llvm::MachineInstr &MI, llvm::MachineRegisterInfo &MRI,
                        llvm::SlotIndexes *SlotIndexes);
 
 unsigned getRegSize(unsigned Reg, llvm::LaneBitmask &Mask,
-  const llvm::MachineRegisterInfo &MRI,
-  const llvm::SIRegisterInfo *SIRI);
+                    const llvm::MachineRegisterInfo &MRI,
+                    const llvm::SIRegisterInfo *SIRI);
 void collectLiveSetPressure(const LiveSet &LiveSet,
                             const llvm::MachineRegisterInfo &MRI,
                             const llvm::SIRegisterInfo *SIRI,
@@ -97,6 +97,6 @@ bool reach_block(llvm::MachineBasicBlock *FromBB,
                  llvm::MachineDominatorTree *DT,
                  llvm::MachinePostDominatorTree *PDT, llvm::MachineLoopInfo *LI,
                  llvm::MachineBasicBlock *ToBB);
-}
+} // namespace llvm
 
 #endif

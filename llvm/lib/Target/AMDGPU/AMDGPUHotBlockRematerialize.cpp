@@ -12,20 +12,20 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "AMDGPU.h"
 #include "AMDGPUMIRUtils.h"
 #include "AMDGPUOccupancyAndLatencyHelper.h"
-#include "AMDGPU.h"
+#include "GCNRegPressure.h"
+#include "SIInstrInfo.h"
+#include "SIMachineFunctionInfo.h"
+#include "SIRegisterInfo.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/CodeGen/LiveInterval.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachinePostDominators.h"
-#include "llvm/ADT/MapVector.h"
 #include "llvm/CodeGen/SlotIndexes.h"
-#include "SIInstrInfo.h"
-#include "SIMachineFunctionInfo.h"
-#include "SIRegisterInfo.h"
-#include "GCNRegPressure.h"
 
 #define DEBUG_TYPE "amdgpu-hot-block-remat"
 
@@ -111,19 +111,18 @@ public:
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
-  void applyCloneRemat(RematNode &Node,
-    std::vector<BlockLiveInfo> &HotBlocks,
-    MachineDominatorTree *DT, MachineRegisterInfo &MRI,
-    SlotIndexes *SlotIndexes, const SIRegisterInfo *SIRI,
-    const SIInstrInfo *SIII, MachineFunction &MF);
+  void applyCloneRemat(RematNode &Node, std::vector<BlockLiveInfo> &HotBlocks,
+                       MachineDominatorTree *DT, MachineRegisterInfo &MRI,
+                       SlotIndexes *SlotIndexes, const SIRegisterInfo *SIRI,
+                       const SIInstrInfo *SIII, MachineFunction &MF);
   void applyRemat(MapVector<Register, RematNode> &RematMap,
-    std::vector<BlockLiveInfo> &HotBlocks, MachineDominatorTree *DT,
-    llvm::SlotIndexes *SlotIndexes, MachineRegisterInfo &MRI,
-    const SIRegisterInfo *SIRI, const SIInstrInfo *SIII,
-    MachineFunction &MF);
+                  std::vector<BlockLiveInfo> &HotBlocks,
+                  MachineDominatorTree *DT, llvm::SlotIndexes *SlotIndexes,
+                  MachineRegisterInfo &MRI, const SIRegisterInfo *SIRI,
+                  const SIInstrInfo *SIII, MachineFunction &MF);
   bool hotBlockRemat(MachineFunction &MF, MachineLoopInfo *MLI,
-    LiveIntervals *LIS, MachineDominatorTree *DT,
-    MachinePostDominatorTree *PDT, bool &IsNearTarget);
+                     LiveIntervals *LIS, MachineDominatorTree *DT,
+                     MachinePostDominatorTree *PDT, bool &IsNearTarget);
 
   StringRef getPassName() const override { return "AMDGPU rematerialize"; }
 
@@ -237,11 +236,11 @@ void updateUsers(unsigned Reg, unsigned NewReg, bool IsSubRegDef,
   }
 }
 
-void AMDGPUHotBlockRematerialize::applyCloneRemat(RematNode &Node,
-                     std::vector<BlockLiveInfo> &HotBlocks,
-                     MachineDominatorTree *DT, MachineRegisterInfo &MRI,
-                     SlotIndexes *SlotIndexes, const SIRegisterInfo *SIRI,
-                     const SIInstrInfo *SIII, MachineFunction &MF) {
+void AMDGPUHotBlockRematerialize::applyCloneRemat(
+    RematNode &Node, std::vector<BlockLiveInfo> &HotBlocks,
+    MachineDominatorTree *DT, MachineRegisterInfo &MRI,
+    SlotIndexes *SlotIndexes, const SIRegisterInfo *SIRI,
+    const SIInstrInfo *SIII, MachineFunction &MF) {
   unsigned Reg = Node.Reg;
 
   MachineInstr *DefMI = MRI.getUniqueVRegDef(Reg);
@@ -359,11 +358,11 @@ void applyOneDefOneUseRemat(RematNode &Node, MachineRegisterInfo &MRI,
   SlotIndexes->insertMachineInstrInMaps(*DefMI);
 }
 
-void AMDGPUHotBlockRematerialize::applyRemat(MapVector<Register, RematNode> &RematMap,
-                std::vector<BlockLiveInfo> &HotBlocks, MachineDominatorTree *DT,
-                llvm::SlotIndexes *SlotIndexes, MachineRegisterInfo &MRI,
-                const SIRegisterInfo *SIRI, const SIInstrInfo *SIII,
-                MachineFunction &MF) {
+void AMDGPUHotBlockRematerialize::applyRemat(
+    MapVector<Register, RematNode> &RematMap,
+    std::vector<BlockLiveInfo> &HotBlocks, MachineDominatorTree *DT,
+    llvm::SlotIndexes *SlotIndexes, MachineRegisterInfo &MRI,
+    const SIRegisterInfo *SIRI, const SIInstrInfo *SIII, MachineFunction &MF) {
   std::vector<RematNode> UpdateList;
   for (auto &It : RematMap) {
     UpdateList.emplace_back(It.second);
@@ -381,8 +380,7 @@ void AMDGPUHotBlockRematerialize::applyRemat(MapVector<Register, RematNode> &Rem
     if (Node.Kind == RematNode::RematKind::OneDefOneUse) {
       applyOneDefOneUseRemat(Node, MRI, SlotIndexes, SIRI, SIII);
     } else if (Node.Kind == RematNode::RematKind::Clone) {
-      applyCloneRemat(Node, HotBlocks, DT, MRI, SlotIndexes, SIRI, SIII,
-                      MF);
+      applyCloneRemat(Node, HotBlocks, DT, MRI, SlotIndexes, SIRI, SIII, MF);
     }
   }
 }
@@ -1234,9 +1232,12 @@ void dumpCandidates(std::vector<RematNode> &RematCandidates, int BlockIndex,
   dbgs() << "Total Size:" << TotalSize << "\n";
 }
 
-bool AMDGPUHotBlockRematerialize::hotBlockRemat(MachineFunction &MF, MachineLoopInfo *MLI,
-                   LiveIntervals *LIS, MachineDominatorTree *DT,
-                   MachinePostDominatorTree *PDT, bool &IsNearTarget) {
+bool AMDGPUHotBlockRematerialize::hotBlockRemat(MachineFunction &MF,
+                                                MachineLoopInfo *MLI,
+                                                LiveIntervals *LIS,
+                                                MachineDominatorTree *DT,
+                                                MachinePostDominatorTree *PDT,
+                                                bool &IsNearTarget) {
   const GCNSubtarget *ST = &MF.getSubtarget<GCNSubtarget>();
 
   const SIInstrInfo *SIII = ST->getInstrInfo();
@@ -1489,8 +1490,7 @@ bool AMDGPUHotBlockRematerialize::hotBlockRemat(MachineFunction &MF, MachineLoop
 
   if (!SRematMap.empty()) {
     IsUpdated = true;
-    applyRemat(SRematMap, HotBlocks, DT, SlotIndexes, MRI, SIRI, SIII,
-               MF);
+    applyRemat(SRematMap, HotBlocks, DT, SlotIndexes, MRI, SIRI, SIII, MF);
     LLVM_DEBUG(llvm::dbgs() << "after hotremat"; MF.print(dbgs()););
   }
 
@@ -1530,4 +1530,3 @@ char &llvm::AMDGPUHotBlockRematerializeID = AMDGPUHotBlockRematerialize::ID;
 FunctionPass *llvm::createAMDGPUHotBlockRematerializePass() {
   return new AMDGPUHotBlockRematerialize();
 }
-

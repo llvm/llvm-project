@@ -16,8 +16,8 @@
 #include "GCNSubtarget.h"
 #include "SIInstrInfo.h"
 
-#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 
 #include <cmath>
@@ -144,7 +144,6 @@ void AMDGPULatencyTracker::scan(const MachineInstr &MI) {
   }
 }
 
-
 SchedScore collectLatency(MachineFunction &MF, const llvm::GCNSubtarget &ST,
                           const llvm::MachineLoopInfo *MLI) {
   SchedScore TotalScore;
@@ -165,5 +164,3 @@ SchedScore collectLatency(MachineFunction &MF, const llvm::GCNSubtarget &ST,
 }
 
 } // namespace llvm
-
-
