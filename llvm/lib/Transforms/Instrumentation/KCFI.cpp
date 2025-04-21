@@ -37,8 +37,7 @@ class DiagnosticInfoKCFI : public DiagnosticInfo {
   StringRef Msg;
 
 public:
-  DiagnosticInfoKCFI(StringRef DiagMsg,
-                     DiagnosticSeverity Severity = DS_Error)
+  DiagnosticInfoKCFI(StringRef DiagMsg, DiagnosticSeverity Severity = DS_Error)
       : DiagnosticInfo(DK_Linker, Severity), Msg(DiagMsg) {}
   void print(DiagnosticPrinter &DP) const override { DP << Msg; }
 };

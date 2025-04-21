@@ -746,7 +746,7 @@ namespace {
 class LTODiagnosticInfo : public DiagnosticInfo {
   StringRef Msg;
 public:
-  LTODiagnosticInfo(StringRef DiagMsg, DiagnosticSeverity Severity=DS_Error)
+  LTODiagnosticInfo(StringRef DiagMsg, DiagnosticSeverity Severity = DS_Error)
       : DiagnosticInfo(DK_Linker, Severity), Msg(DiagMsg) {}
   void print(DiagnosticPrinter &DP) const override { DP << Msg; }
 };
