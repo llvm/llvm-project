@@ -67,12 +67,12 @@ def AtomicOrdering : I64EnumAttr<
 }
 
 //===----------------------------------------------------------------------===//
-// Ptr add flags enum attr.
+// Ptr add flags enum properties.
 //===----------------------------------------------------------------------===//
 
 def Ptr_PtrAddFlags : I32Enum<"PtrAddFlags", "Pointer add flags", [
-    I32EnumAttrCase<"none", 0>, I32EnumAttrCase<"nusw", 1>,
-    I32EnumAttrCase<"nuw", 2>, I32EnumAttrCase<"inbounds", 3>
+    I32EnumCase<"none", 0>, I32EnumCase<"nusw", 1>, I32EnumCase<"nuw", 2>,
+    I32EnumCase<"inbounds", 3>
   ]> {
   let cppNamespace = "::mlir::ptr";
 }

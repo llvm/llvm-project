@@ -1,8 +1,8 @@
 // RUN: mlir-opt %s --verify-roundtrip | FileCheck %s
 
 /// Check op assembly.
-func.func @ops0(%ptr: !ptr.ptr<#ptr.generic_space>) -> !ptr.ptr<#ptr.generic_space> {
-  // CHECK-LABEL: @ops0
+// CHECK-LABEL: @ptr_add_type_offset
+func.func @ptr_add_type_offset(%ptr: !ptr.ptr<#ptr.generic_space>) -> !ptr.ptr<#ptr.generic_space> {
   // CHECK: ptr.type_offset f32 : index
   // CHECK-NEXT: ptr.ptr_add %{{.*}}, %{{.*}} : <#ptr.generic_space>, index
   // CHECK-NEXT: ptr.ptr_add %{{.*}}, %{{.*}} : <#ptr.generic_space>, index

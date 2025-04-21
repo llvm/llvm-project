@@ -82,8 +82,8 @@ def Ptr_TypeOffsetOp : Pointer_Op<"type_offset", [Pure]> {
     $elementType attr-dict `:` type($result)
   }];
   let extraClassDeclaration = [{
-    /// Returns the type offset according to `layout`. If `layout` is
-    /// `nullopt` the nearest layout the op will be used for the computation.
+    /// Returns the type offset according to `layout`. If `layout` is `nullopt`
+    /// the nearest layout the op will be used for the computation.
     llvm::TypeSize getTypeSize(std::optional<DataLayout> layout = std::nullopt);
   }];
 }
