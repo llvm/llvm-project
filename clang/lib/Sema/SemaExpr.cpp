@@ -4715,8 +4715,9 @@ ExprResult Sema::CreateUnaryExprOrTypeTraitExpr(TypeSourceInfo *TInfo,
   // C99 6.5.3.4p4: the type (an unsigned integer type) is size_t.
   return new (Context) UnaryExprOrTypeTraitExpr(
       ExprKind, TInfo,
-      Context.getCGlobalCXXStdNSTypedef(getStdNamespace(), "size_t",
-                                        Context.getSizeType()),
+      Context.getCGlobalCXXStdNSTypedef(
+          getLangOpts().CPlusPlus ? getStdNamespace() : nullptr, "size_t",
+          Context.getSizeType()),
       OpLoc, R.getEnd());
 }
 
@@ -4761,8 +4762,9 @@ Sema::CreateUnaryExprOrTypeTraitExpr(Expr *E, SourceLocation OpLoc,
   // C99 6.5.3.4p4: the type (an unsigned integer type) is size_t.
   return new (Context) UnaryExprOrTypeTraitExpr(
       ExprKind, E,
-      Context.getCGlobalCXXStdNSTypedef(getStdNamespace(), "size_t",
-                                        Context.getSizeType()),
+      Context.getCGlobalCXXStdNSTypedef(
+          getLangOpts().CPlusPlus ? getStdNamespace() : nullptr, "size_t",
+          Context.getSizeType()),
       OpLoc, E->getSourceRange().getEnd());
 }
 
@@ -11373,8 +11375,9 @@ QualType Sema::CheckSubtractionOperands(ExprResult &LHS, ExprResult &RHS,
 
       if (CompLHSTy)
         *CompLHSTy = LHS.get()->getType();
-      return Context.getCGlobalCXXStdNSTypedef(getStdNamespace(), "ptrdiff_t",
-                                               Context.getPointerDiffType());
+      return Context.getCGlobalCXXStdNSTypedef(
+          getLangOpts().CPlusPlus ? getStdNamespace() : nullptr, "ptrdiff_t",
+          Context.getPointerDiffType());
     }
   }
 
