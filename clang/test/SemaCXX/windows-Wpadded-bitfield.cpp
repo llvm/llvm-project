@@ -25,10 +25,10 @@ struct __attribute__((ms_struct)) DifferentUnitSizeBitfield { // expected-warnin
   char i; // expected-warning {{padding struct 'DifferentUnitSizeBitfield' with 31 bits to align 'i'}}
 };
 
-struct __attribute__((ms_struct)) Foo { // expected-warning {{padding size of 'Foo' with 63 bits to alignment boundary}}
+struct __attribute__((ms_struct)) BitfieldBigPadding { // expected-warning {{padding size of 'BitfieldBigPadding' with 63 bits to alignment boundary}}
   long long x;
   char a : 1;
-  long long b : 1; // expected-warning {{padding struct 'Foo' with 63 bits to align 'b'}}
+  long long b : 1; // expected-warning {{padding struct 'BitfieldBigPadding' with 63 bits to align 'b'}}
 };
 
 struct __attribute__((ms_struct)) SameUnitSizeMultiple { // expected-warning {{padding size of 'SameUnitSizeMultiple' with 2 bits to alignment boundary}}
@@ -42,6 +42,6 @@ int main() {
   SevenBitfieldStruct s;
   SameUnitSizeBitfield su;
   DifferentUnitSizeBitfield du;
-  Foo f;
+  BitfieldBigPadding bbp;
   SameUnitSizeMultiple susm;
 }
