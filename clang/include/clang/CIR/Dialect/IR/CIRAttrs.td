@@ -71,6 +71,13 @@ def ZeroAttr : CIR_Attr<"Zero", "zero", [TypedAttrInterface]> {
   }];
 
   let parameters = (ins AttributeSelfTypeParameter<"">:$type);
+
+  let builders = [
+    AttrBuilderWithInferredContext<(ins "mlir::Type":$type), [{
+      return $_get(type.getContext(), type);
+    }]>
+  ];
+
   let assemblyFormat = [{}];
 }
 
