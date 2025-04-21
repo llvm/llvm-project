@@ -463,7 +463,7 @@ Value *VPInstruction::generate(VPTransformState &State) {
     auto *Res =
         Builder.CreateBinOp((Instruction::BinaryOps)getOpcode(), A, B, Name);
     if (auto *I = dyn_cast<Instruction>(Res))
-      setFlags(I);
+      applyFlags(*I);
     return Res;
   }
 
@@ -1235,7 +1235,7 @@ void VPWidenCallRecipe::execute(VPTransformState &State) {
     CI->getOperandBundlesAsDefs(OpBundles);
 
   CallInst *V = State.Builder.CreateCall(Variant, Args, OpBundles);
-  setFlags(V);
+  applyFlags(*V);
   applyMetadata(*V);
 
   if (!V->getType()->isVoidTy())
@@ -1314,7 +1314,7 @@ void VPWidenIntrinsicRecipe::execute(VPTransformState &State) {
 
   CallInst *V = State.Builder.CreateCall(VectorF, Args, OpBundles);
 
-  setFlags(V);
+  applyFlags(*V);
   applyMetadata(*V);
 
   if (!V->getType()->isVoidTy())
@@ -1515,7 +1515,7 @@ void VPWidenSelectRecipe::execute(VPTransformState &State) {
   State.set(this, Sel);
   if (auto *I = dyn_cast<Instruction>(Sel)) {
     if (isa<FPMathOperator>(I))
-      setFlags(I);
+      applyFlags(*I);
     applyMetadata(*I);
   }
 }
@@ -1649,7 +1649,7 @@ void VPWidenRecipe::execute(VPTransformState &State) {
     Value *V = Builder.CreateNAryOp(Opcode, Ops);
 
     if (auto *VecOp = dyn_cast<Instruction>(V)) {
-      setFlags(VecOp);
+      applyFlags(*VecOp);
       applyMetadata(*VecOp);
     }
 
@@ -1805,7 +1805,7 @@ void VPWidenCastRecipe::execute(VPTransformState &State) {
   Value *Cast = Builder.CreateCast(Instruction::CastOps(Opcode), A, DestTy);
   State.set(this, Cast);
   if (auto *CastOp = dyn_cast<Instruction>(Cast)) {
-    setFlags(CastOp);
+    applyFlags(*CastOp);
     applyMetadata(*CastOp);
   }
 }
