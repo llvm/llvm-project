@@ -3,6 +3,14 @@
 # RUN:     | FileCheck %s
 
 # Out of range immediates
+## uimmlog2xlen/uimm6
+nds.bbc t0, 64, 256 # CHECK: :[[@LINE]]:13: error: immediate must be an integer in the range [0, 63]
+nds.bbs t1, 64, 256 # CHECK: :[[@LINE]]:13: error: immediate must be an integer in the range [0, 63]
+
+## uimmlog2xlen/uimm6
+nds.bfos a0, a1, 64, 3 # CHECK: :[[@LINE]]:18: error: immediate must be an integer in the range [0, 63]
+nds.bfoz t0, t1, 6, 64 # CHECK: :[[@LINE]]:21: error: immediate must be an integer in the range [0, 63]
+
 ## simm19_lsb00
 nds.lwugp t0, 0x3fffd # CHECK: :[[@LINE]]:15: error: immediate must be a multiple of 4 bytes in the range [-262144, 262140]
 nds.lwugp t0, 0x7 # CHECK: :[[@LINE]]:15: error: immediate must be a multiple of 4 bytes in the range [-262144, 262140]
