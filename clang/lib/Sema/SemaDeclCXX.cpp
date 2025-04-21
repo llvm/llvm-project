@@ -16715,9 +16715,8 @@ static bool CheckOperatorNewDeclaration(Sema &SemaRef, FunctionDecl *FnDecl) {
   if (CheckOperatorNewDeleteDeclarationScope(SemaRef, FnDecl))
     return true;
 
-  CanQualType SizeTy = SemaRef.Context.getCanonicalType(
-      SemaRef.Context.getCGlobalCXXStdNSTypedef(
-          SemaRef.getStdNamespace(), "size_t", SemaRef.Context.getSizeType()));
+  CanQualType SizeTy =
+      SemaRef.Context.getCanonicalType(SemaRef.Context.getSizeType());
 
   // C++ [basic.stc.dynamic.allocation]p1:
   //  The return type shall be void*. The first parameter shall have type
