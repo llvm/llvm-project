@@ -17,8 +17,6 @@
 #include "State.h"
 #include "gpuintrin.h"
 
-#include "llvm/Frontend/OpenMP/OMPGridValues.h"
-
 using namespace ompx;
 
 static bool isInLastWarp() {

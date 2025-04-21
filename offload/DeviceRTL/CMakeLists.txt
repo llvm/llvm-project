@@ -90,10 +90,6 @@ if(${LIBOMPTARGET_GPU_LIBC_SUPPORT})
   list(APPEND clang_opt_flags -DOMPTARGET_HAS_LIBC)
 endif()
 
-# Prepend -I to each list element
-set (LIBOMPTARGET_LLVM_INCLUDE_DIRS_DEVICERTL "${LIBOMPTARGET_LLVM_INCLUDE_DIRS}")
-list(TRANSFORM LIBOMPTARGET_LLVM_INCLUDE_DIRS_DEVICERTL PREPEND "-I")
-
 # Set flags for LLVM Bitcode compilation.
 set(bc_flags -c -flto -std=c++17 -fvisibility=hidden
              ${clang_opt_flags} -nogpulib -nostdlibinc
@@ -103,7 +99,6 @@ set(bc_flags -c -flto -std=c++17 -fvisibility=hidden
              -I${include_directory}
              -I${devicertl_base_directory}/../include
              -I${devicertl_base_directory}/../../libc
-             ${LIBOMPTARGET_LLVM_INCLUDE_DIRS_DEVICERTL}
 )
 
 if(${LIBOMPTARGET_DEVICE_DEBUG})
@@ -219,7 +214,6 @@ function(compileDeviceRTLLibrary target_name target_triple)
       ${include_directory}
       ${devicertl_base_directory}/../../libc
       ${devicertl_base_directory}/../include
-      ${LIBOMPTARGET_LLVM_INCLUDE_DIRS}
     )
     install(TARGETS ${ide_target_name} EXCLUDE_FROM_ALL)
   endif()
