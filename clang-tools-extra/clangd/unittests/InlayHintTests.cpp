@@ -2339,6 +2339,44 @@ TEST(BlockEndHints, PointerToMemberFunction) {
                       ExpectedHint{" // if ()", "ptrmem"});
 }
 
+TEST(BlockEndHints, MinLineLimit) {
+  assertBlockEndHintsWithOpts(
+      R"cpp(
+    namespace ns {
+      int Var;
+      int func1();
+      int func2(int, int);
+      struct S {
+        int Field;
+        int method1() const;
+        int method2(int, int) const;
+      $struct[[}]];
+    $namespace[[}]]
+    void foo() {
+      int int_a {};
+      while (ns::Var) {
+      $var[[}]]
+
+      while (ns::func1()) {
+      $func1[[}]]
+
+      while (ns::func2(int_a, int_a)) {
+      $func2[[}]]
+
+      while (ns::S{}.Field) {
+      $field[[}]]
+
+      while (ns::S{}.method1()) {
+      $method1[[}]]
+      
+      while (ns::S{}.method2(int_a, int_a)) {
+      $method2[[}]]
+    $foo[[}]]
+  )cpp",
+      InlayHintOptions{10}, ExpectedHint{" // namespace ns", "namespace"},
+      ExpectedHint{" // foo", "foo"});
+}
+
 // FIXME: Low-hanging fruit where we could omit a type hint:
 //  - auto x = TypeName(...);
 //  - auto x = (TypeName) (...);
