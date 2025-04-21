@@ -274,10 +274,8 @@ void createHLFIRToFIRPassPipeline(mlir::PassManager &pm, bool enableOpenMP,
     addNestedPassToAllTopLevelOperations<PassConstructor>(
         pm, hlfir::createInlineHLFIRAssign);
   pm.addPass(hlfir::createConvertHLFIRtoFIR());
-  if (enableOpenMP) {
+  if (enableOpenMP)
     pm.addPass(flangomp::createLowerWorkshare());
-    pm.addPass(flangomp::createLowerNontemporalPass());
-  }
 }
 
 /// Create a pass pipeline for handling certain OpenMP transformations needed
@@ -346,6 +344,10 @@ void createDefaultFIRCodeGenPassPipeline(mlir::PassManager &pm,
       {framePointerKind, config.NoInfsFPMath, config.NoNaNsFPMath,
        config.ApproxFuncFPMath, config.NoSignedZerosFPMath, config.UnsafeFPMath,
        ""}));
+
+  if (config.EnableOpenMP)
+    pm.addNestedPass<mlir::func::FuncOp>(
+        flangomp::createLowerNontemporalPass());
 
   fir::addFIRToLLVMPass(pm, config);
 }

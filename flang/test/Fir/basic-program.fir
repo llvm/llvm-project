@@ -65,8 +65,6 @@ func.func @_QQmain() {
 // PASSES-NEXT:     InlineHLFIRAssign
 // PASSES-NEXT:   ConvertHLFIRtoFIR
 // PASSES-NEXT:   LowerWorkshare
-// PASSES-NEXT:   'func.func' Pipeline
-// PASSES-NEXT:   LowerNontemporalPass
 // PASSES-NEXT:   CSE
 // PASSES-NEXT:   (S) 0 num-cse'd - Number of operations CSE'd
 // PASSES-NEXT:   (S) 0 num-dce'd - Number of operations DCE'd
@@ -151,6 +149,7 @@ func.func @_QQmain() {
 // PASSES-NEXT: CompilerGeneratedNamesConversion
 // PASSES-NEXT: 'func.func' Pipeline
 // PASSES-NEXT:  FunctionAttr
+// PASSES-NEXT:  LowerNontemporalPass
 // PASSES-NEXT: FIRToLLVMLowering
 // PASSES-NEXT: ReconcileUnrealizedCasts
 // PASSES-NEXT: LLVMIRLoweringPass
