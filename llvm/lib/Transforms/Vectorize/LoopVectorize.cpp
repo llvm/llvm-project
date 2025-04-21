@@ -2357,7 +2357,7 @@ void InnerLoopVectorizer::scalarizeInstruction(const Instruction *Instr,
 #endif
   }
 
-  RepRecipe->setFlags(Cloned);
+  RepRecipe->applyFlags(*Cloned);
 
   if (auto DL = RepRecipe->getDebugLoc())
     State.setDebugLocFrom(DL);
