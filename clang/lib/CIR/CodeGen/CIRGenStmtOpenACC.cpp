@@ -134,10 +134,10 @@ public:
 
       // Ensure we keep the existing ones, and in the correct 'new' order.
       if (existingDeviceTypes) {
-        for (mlir::Attribute Attr : *existingDeviceTypes)
+        for (mlir::Attribute attr : *existingDeviceTypes)
           deviceTypes.push_back(mlir::acc::DeviceTypeAttr::get(
               builder.getContext(),
-              cast<mlir::acc::DeviceTypeAttr>(Attr).getValue()));
+              cast<mlir::acc::DeviceTypeAttr>(attr).getValue()));
       }
 
       for (const DeviceTypeArgument &arg : clause.getArchitectures()) {
