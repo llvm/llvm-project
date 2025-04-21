@@ -151,7 +151,9 @@ public:
       std::optional<uint32_t> AtomicCpySize) const;
   unsigned getMaxInterleaveFactor(ElementCount VF);
 
-  bool getTgtMemIntrinsic(IntrinsicInst *Inst, MemIntrinsicInfo &Info) const;
+  bool getTgtMemIntrinsic(
+      IntrinsicInst *Inst, MemIntrinsicInfo &Info,
+      SmallVectorImpl<InterestingMemoryOperand> *Interesting = nullptr) const;
 
   InstructionCost getArithmeticInstrCost(
       unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,

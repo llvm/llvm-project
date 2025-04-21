@@ -4875,8 +4875,9 @@ Value *AArch64TTIImpl::getOrCreateResultFromMemIntrinsic(IntrinsicInst *Inst,
   }
 }
 
-bool AArch64TTIImpl::getTgtMemIntrinsic(IntrinsicInst *Inst,
-                                        MemIntrinsicInfo &Info) {
+bool AArch64TTIImpl::getTgtMemIntrinsic(
+    IntrinsicInst *Inst, MemIntrinsicInfo &Info,
+    SmallVectorImpl<InterestingMemoryOperand> *Interesting) {
   switch (Inst->getIntrinsicID()) {
   default:
     break;

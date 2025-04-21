@@ -904,7 +904,9 @@ public:
     return 0;
   }
 
-  bool getTgtMemIntrinsic(IntrinsicInst *Inst, MemIntrinsicInfo &Info) const {
+  bool getTgtMemIntrinsic(
+      IntrinsicInst *Inst, MemIntrinsicInfo &Info,
+      SmallVectorImpl<InterestingMemoryOperand> *Interesting = nullptr) const {
     return false;
   }
 

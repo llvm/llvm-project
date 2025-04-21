@@ -259,7 +259,9 @@ public:
   Value *getOrCreateResultFromMemIntrinsic(IntrinsicInst *Inst,
                                            Type *ExpectedType);
 
-  bool getTgtMemIntrinsic(IntrinsicInst *Inst, MemIntrinsicInfo &Info);
+  bool getTgtMemIntrinsic(
+      IntrinsicInst *Inst, MemIntrinsicInfo &Info,
+      SmallVectorImpl<InterestingMemoryOperand> *Interesting = nullptr);
 
   bool isElementTypeLegalForScalableVector(Type *Ty) const {
     if (Ty->isPointerTy())
