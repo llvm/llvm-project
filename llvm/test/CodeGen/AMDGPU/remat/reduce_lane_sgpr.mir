@@ -1,0 +1,565 @@
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -amdgpu-remat-enable-hot-block-remat-aggressive -verify-machineinstrs %s -o - -run-pass=amdgpu-hot-block-remat | FileCheck %s
+
+# Check that the buffer loads have been moved to the use and the lanes are reduced
+# correctly.
+#
+# CHECK: bb.2:
+#==========================================================================
+# X4_IMM, Using .x
+# CHECK: %[[#reg0:]]:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_IMM %{{.+}}, 0, 0
+# CHECK: S_BUFFER_STORE_DWORD_IMM %[[#reg0]], %{{.+}}, 0, 0
+# CHECK: S_BUFFER_STORE_DWORD_IMM %[[#reg0]], %{{.+}}, 4, 0
+# X4_IMM, Using .xy
+# CHECK: %[[#reg1:]]:sreg_64_xexec = S_BUFFER_LOAD_DWORDX2_IMM %{{.+}}, 16, 0
+# CHECK: S_BUFFER_STORE_DWORD_IMM %[[#reg1]].sub0, %{{.+}}, 16, 0
+# CHECK: S_BUFFER_STORE_DWORD_IMM %[[#reg1]].sub1, %{{.+}}, 20, 0
+# X4_IMM, Using .xyz
+# CHECK: %[[#reg2:]]:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM %{{.+}}, 32, 0
+# CHECK: S_BUFFER_STORE_DWORD_IMM %[[#reg2]].sub0, %{{.+}}, 32, 0
+# CHECK: S_BUFFER_STORE_DWORD_IMM %[[#reg2]].sub1, %{{.+}}, 36, 0
+# CHECK: S_BUFFER_STORE_DWORD_IMM %[[#reg2]].sub2, %{{.+}}, 40, 0
+# X4_IMM, Using .yz
+# CHECK: %[[#reg3:]]:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM %{{.+}}, 48, 0
+# CHECK: S_BUFFER_STORE_DWORD_IMM %[[#reg3]].sub1, %{{.+}}, 48, 0
+# CHECK: S_BUFFER_STORE_DWORD_IMM %[[#reg3]].sub2, %{{.+}}, 52, 0
+# X4_IMM, Using .yzw
+# CHECK: %[[#reg4:]]:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM %{{.+}}, 64, 0
+# CHECK: S_BUFFER_STORE_DWORD_IMM %[[#reg4]].sub1, %{{.+}}, 64, 0
+# CHECK: S_BUFFER_STORE_DWORD_IMM %[[#reg4]].sub2, %{{.+}}, 68, 0
+# CHECK: S_BUFFER_STORE_DWORD_IMM %[[#reg4]].sub3, %{{.+}}, 72, 0
+#==========================================================================
+# X8_IMM, Using .x
+# CHECK: %[[#reg5:]]:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_IMM %{{.+}}, 80, 0
+# CHECK: S_BUFFER_STORE_DWORD_IMM %[[#reg5]], %{{.+}}, 80, 0
+# CHECK: S_BUFFER_STORE_DWORD_IMM %[[#reg5]], %{{.+}}, 84, 0
+# X8_IMM, Using .xy
+# CHECK: %[[#reg6:]]:sreg_64_xexec = S_BUFFER_LOAD_DWORDX2_IMM %{{.+}}, 96, 0
+# CHECK: S_BUFFER_STORE_DWORD_IMM %[[#reg6]].sub0, %{{.+}}, 96, 0
+# CHECK: S_BUFFER_STORE_DWORD_IMM %[[#reg6]].sub1, %{{.+}}, 100, 0
+# X8_IMM, Using .xyz
+# CHECK: %[[#reg7:]]:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM %{{.+}}, 112, 0
+# CHECK: S_BUFFER_STORE_DWORD_IMM %[[#reg7]].sub0, %{{.+}}, 112, 0
+# CHECK: S_BUFFER_STORE_DWORD_IMM %[[#reg7]].sub1, %{{.+}}, 116, 0
+# CHECK: S_BUFFER_STORE_DWORD_IMM %[[#reg7]].sub2, %{{.+}}, 120, 0
+# X8_IMM, Using .xyzw
+# CHECK: %[[#reg8:]]:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM %{{.+}}, 128, 0
+# CHECK: S_BUFFER_STORE_DWORD_IMM %[[#reg8]].sub0, %{{.+}}, 128, 0
+# CHECK: S_BUFFER_STORE_DWORD_IMM %[[#reg8]].sub1, %{{.+}}, 132, 0
+# CHECK: S_BUFFER_STORE_DWORD_IMM %[[#reg8]].sub2, %{{.+}}, 136, 0
+# CHECK: S_BUFFER_STORE_DWORD_IMM %[[#reg8]].sub3, %{{.+}}, 140, 0
+# X8_IMM, Using .xyzw + 5th dword
+# CHECK: %[[#reg9:]]:sgpr_256 = S_BUFFER_LOAD_DWORDX8_IMM %{{.+}}, 144, 0
+# CHECK: S_BUFFER_STORE_DWORD_IMM %[[#reg9]].sub0, %{{.+}}, 144, 0
+# CHECK: S_BUFFER_STORE_DWORD_IMM %[[#reg9]].sub1, %{{.+}}, 148, 0
+# CHECK: S_BUFFER_STORE_DWORD_IMM %[[#reg9]].sub2, %{{.+}}, 152, 0
+# CHECK: S_BUFFER_STORE_DWORD_IMM %[[#reg9]].sub3, %{{.+}}, 156, 0
+# CHECK: S_BUFFER_STORE_DWORD_IMM %[[#reg9]].sub4, %{{.+}}, 160, 0
+#==========================================================================
+# X16_IMM, Using .xy and .zw
+# CHECK: %[[#reg10:]]:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM %{{.+}}, 160, 0
+# CHECK: S_BUFFER_STORE_DWORDX2_IMM %[[#reg10]].sub0_sub1, %{{.+}}, 160, 0
+# CHECK: S_BUFFER_STORE_DWORDX2_IMM %[[#reg10]].sub2_sub3, %{{.+}}, 164, 0
+#==========================================================================
+# X4_SGPR, Using .x
+# CHECK: %[[#reg11:]]:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_SGPR %{{.+}}, %{{.+}}, 0
+# CHECK: S_BUFFER_STORE_DWORD_IMM %[[#reg11]], %{{.+}}, 176, 0
+# CHECK: S_BUFFER_STORE_DWORD_IMM %[[#reg11]], %{{.+}}, 180, 0
+# X8_SGPR, Using .xy
+# CHECK: %[[#reg12:]]:sreg_64_xexec = S_BUFFER_LOAD_DWORDX2_SGPR %{{.+}}, %{{.+}}, 0
+# CHECK: S_BUFFER_STORE_DWORD_IMM %[[#reg12]].sub0, %{{.+}}, 192, 0
+# CHECK: S_BUFFER_STORE_DWORD_IMM %[[#reg12]].sub1, %{{.+}}, 196, 0
+# X16_SGPR, Using .xy + .zw
+# CHECK: %[[#reg13:]]:sgpr_128 = S_BUFFER_LOAD_DWORDX4_SGPR %{{.+}}, %{{.+}}, 0
+# CHECK: S_BUFFER_STORE_DWORDX2_IMM %[[#reg13]].sub0_sub1, %{{.+}}, 208, 0
+# CHECK: S_BUFFER_STORE_DWORDX2_IMM %[[#reg13]].sub2_sub3, %{{.+}}, 216, 0
+#==========================================================================
+#
+#
+# CHECK: %[[#reg14:]]:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM %{{.+}}, 224, 0
+# CHECK: S_BUFFER_STORE_DWORDX4_IMM %[[#reg14]], %{{.+}}, 224, 0
+# CHECK: %[[#reg15:]]:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM %{{.+}}, 240, 0
+# CHECK: S_BUFFER_STORE_DWORDX4_IMM %[[#reg15]], %{{.+}}, 240, 0
+# CHECK: %[[#reg16:]]:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM %{{.+}}, 256, 0
+# CHECK: S_BUFFER_STORE_DWORDX4_IMM %[[#reg16]], %{{.+}}, 256, 0
+# CHECK: %[[#reg17:]]:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM %{{.+}}, 272, 0
+# CHECK: S_BUFFER_STORE_DWORDX4_IMM %[[#reg17]], %{{.+}}, 272, 0
+# CHECK: %[[#reg18:]]:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM %{{.+}}, 288, 0
+# CHECK: S_BUFFER_STORE_DWORDX4_IMM %[[#reg18]], %{{.+}}, 288, 0
+# CHECK: %[[#reg19:]]:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM %{{.+}}, 304, 0
+# CHECK: S_BUFFER_STORE_DWORDX4_IMM %[[#reg19]], %{{.+}}, 304, 0
+# CHECK: %[[#reg20:]]:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM %{{.+}}, 320, 0
+# CHECK: S_BUFFER_STORE_DWORDX4_IMM %[[#reg20]], %{{.+}}, 320, 0
+# CHECK: %[[#reg21:]]:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM %{{.+}}, 336, 0
+# CHECK: S_BUFFER_STORE_DWORDX4_IMM %[[#reg21]], %{{.+}}, 336, 0
+# CHECK: %[[#reg22:]]:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM %{{.+}}, 352, 0
+# CHECK: S_BUFFER_STORE_DWORDX4_IMM %[[#reg22]], %{{.+}}, 352, 0
+# CHECK: %[[#reg23:]]:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM %{{.+}}, 368, 0
+# CHECK: S_BUFFER_STORE_DWORDX4_IMM %[[#reg23]], %{{.+}}, 368, 0
+# CHECK: %[[#reg24:]]:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM %{{.+}}, 384, 0
+# CHECK: S_BUFFER_STORE_DWORDX4_IMM %[[#reg24]], %{{.+}}, 384, 0
+# CHECK: %[[#reg25:]]:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM %{{.+}}, 400, 0
+# CHECK: S_BUFFER_STORE_DWORDX4_IMM %[[#reg25]], %{{.+}}, 400, 0
+# CHECK: %[[#reg26:]]:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM %{{.+}}, 416, 0
+# CHECK: S_BUFFER_STORE_DWORDX4_IMM %[[#reg26]], %{{.+}}, 416, 0
+# CHECK: %[[#reg27:]]:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM %{{.+}}, 432, 0
+# CHECK: S_BUFFER_STORE_DWORDX4_IMM %[[#reg27]], %{{.+}}, 432, 0
+# CHECK: %[[#reg28:]]:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM %{{.+}}, 448, 0
+# CHECK: S_BUFFER_STORE_DWORDX4_IMM %[[#reg28]], %{{.+}}, 448, 0
+# CHECK: %[[#reg29:]]:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM %{{.+}}, 464, 0
+# CHECK: S_BUFFER_STORE_DWORDX4_IMM %[[#reg29]], %{{.+}}, 464, 0
+# CHECK: %[[#reg30:]]:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM %{{.+}}, 480, 0
+# CHECK: S_BUFFER_STORE_DWORDX4_IMM %[[#reg30]], %{{.+}}, 480, 0
+# CHECK: %[[#reg31:]]:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM %{{.+}}, 496, 0
+# CHECK: S_BUFFER_STORE_DWORDX4_IMM %[[#reg31]], %{{.+}}, 496, 0
+# CHECK: %[[#reg32:]]:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM %{{.+}}, 512, 0
+# CHECK: S_BUFFER_STORE_DWORDX4_IMM %[[#reg32]], %{{.+}}, 512, 0
+# CHECK: %[[#reg33:]]:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM %{{.+}}, 528, 0
+# CHECK: S_BUFFER_STORE_DWORDX4_IMM %[[#reg33]], %{{.+}}, 528, 0
+# CHECK: %[[#reg34:]]:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM %{{.+}}, 544, 0
+# CHECK: S_BUFFER_STORE_DWORDX4_IMM %[[#reg34]], %{{.+}}, 544, 0
+# CHECK: %[[#reg35:]]:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM %{{.+}}, 560, 0
+# CHECK: S_BUFFER_STORE_DWORDX4_IMM %[[#reg35]], %{{.+}}, 560, 0
+# CHECK: %[[#reg36:]]:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM %{{.+}}, 576, 0
+# CHECK: S_BUFFER_STORE_DWORDX4_IMM %[[#reg36]], %{{.+}}, 576, 0
+# CHECK: %[[#reg37:]]:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM %{{.+}}, 592, 0
+# CHECK: S_BUFFER_STORE_DWORDX4_IMM %[[#reg37]], %{{.+}}, 592, 0
+# CHECK: %[[#reg38:]]:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM %{{.+}}, 608, 0
+# CHECK: S_BUFFER_STORE_DWORDX4_IMM %[[#reg38]], %{{.+}}, 608, 0
+# CHECK: %[[#reg39:]]:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM %{{.+}}, 624, 0
+# CHECK: S_BUFFER_STORE_DWORDX4_IMM %[[#reg39]], %{{.+}}, 624, 0
+# CHECK: %[[#reg40:]]:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM %{{.+}}, 640, 0
+# CHECK: S_BUFFER_STORE_DWORDX4_IMM %[[#reg40]], %{{.+}}, 640, 0
+# CHECK: %[[#reg41:]]:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM %{{.+}}, 656, 0
+# CHECK: S_BUFFER_STORE_DWORDX4_IMM %[[#reg41]], %{{.+}}, 656, 0
+# CHECK: %[[#reg42:]]:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM %{{.+}}, 672, 0
+# CHECK: S_BUFFER_STORE_DWORDX4_IMM %[[#reg42]], %{{.+}}, 672, 0
+# CHECK: %[[#reg43:]]:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM %{{.+}}, 688, 0
+# CHECK: S_BUFFER_STORE_DWORDX4_IMM %[[#reg43]], %{{.+}}, 688, 0
+# CHECK: %[[#reg44:]]:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM %{{.+}}, 704, 0
+# CHECK: S_BUFFER_STORE_DWORDX4_IMM %[[#reg44]], %{{.+}}, 704, 0
+# CHECK: %[[#reg45:]]:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM %{{.+}}, 720, 0
+# CHECK: S_BUFFER_STORE_DWORDX4_IMM %[[#reg45]], %{{.+}}, 720, 0
+# CHECK: %[[#reg46:]]:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM %{{.+}}, 736, 0
+# CHECK: S_BUFFER_STORE_DWORDX4_IMM %[[#reg46]], %{{.+}}, 736, 0
+# CHECK: %[[#reg47:]]:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM %{{.+}}, 752, 0
+# CHECK: S_BUFFER_STORE_DWORDX4_IMM %[[#reg47]], %{{.+}}, 752, 0
+# CHECK: %[[#reg48:]]:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM %{{.+}}, 768, 0
+# CHECK: S_BUFFER_STORE_DWORDX4_IMM %[[#reg48]], %{{.+}}, 768, 0
+# CHECK: %[[#reg49:]]:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM %{{.+}}, 784, 0
+# CHECK: S_BUFFER_STORE_DWORDX4_IMM %[[#reg49]], %{{.+}}, 784, 0
+# CHECK: %[[#reg50:]]:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM %{{.+}}, 800, 0
+# CHECK: S_BUFFER_STORE_DWORDX4_IMM %[[#reg50]], %{{.+}}, 800, 0
+# CHECK: %[[#reg51:]]:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM %{{.+}}, 816, 0
+# CHECK: S_BUFFER_STORE_DWORDX4_IMM %[[#reg51]], %{{.+}}, 816, 0
+# CHECK: %[[#reg52:]]:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM %{{.+}}, 832, 0
+# CHECK: S_BUFFER_STORE_DWORDX4_IMM %[[#reg52]], %{{.+}}, 832, 0
+# CHECK: %[[#reg53:]]:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM %{{.+}}, 848, 0
+# CHECK: S_BUFFER_STORE_DWORDX4_IMM %[[#reg53]], %{{.+}}, 848, 0
+# CHECK: %[[#reg54:]]:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM %{{.+}}, 864, 0
+# CHECK: S_BUFFER_STORE_DWORDX4_IMM %[[#reg54]], %{{.+}}, 864, 0
+# CHECK: %[[#reg55:]]:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM %{{.+}}, 880, 0
+# CHECK: S_BUFFER_STORE_DWORDX4_IMM %[[#reg55]], %{{.+}}, 880, 0
+# CHECK: %[[#reg56:]]:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM %{{.+}}, 896, 0
+# CHECK: S_BUFFER_STORE_DWORDX4_IMM %[[#reg56]], %{{.+}}, 896, 0
+# CHECK: %[[#reg57:]]:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM %{{.+}}, 912, 0
+# CHECK: S_BUFFER_STORE_DWORDX4_IMM %[[#reg57]], %{{.+}}, 912, 0
+# CHECK: %[[#reg58:]]:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM %{{.+}}, 928, 0
+# CHECK: S_BUFFER_STORE_DWORDX4_IMM %[[#reg58]], %{{.+}}, 928, 0
+# CHECK: %[[#reg59:]]:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM %{{.+}}, 944, 0
+# CHECK: S_BUFFER_STORE_DWORDX4_IMM %[[#reg59]], %{{.+}}, 944, 0
+# CHECK: %[[#reg60:]]:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM %{{.+}}, 960, 0
+# CHECK: S_BUFFER_STORE_DWORDX4_IMM %[[#reg60]], %{{.+}}, 960, 0
+# CHECK: %[[#reg61:]]:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM %{{.+}}, 976, 0
+# CHECK: S_BUFFER_STORE_DWORDX4_IMM %[[#reg61]], %{{.+}}, 976, 0
+# CHECK: %[[#reg62:]]:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM %{{.+}}, 992, 0
+# CHECK: S_BUFFER_STORE_DWORDX4_IMM %[[#reg62]], %{{.+}}, 992, 0
+# CHECK: %[[#reg63:]]:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM %{{.+}}, 1008, 0
+# CHECK: S_BUFFER_STORE_DWORDX4_IMM %[[#reg63]], %{{.+}}, 1008, 0
+
+
+--- |
+  source_filename = ".\main.ll"
+  define amdgpu_ps void @main() #1 {
+    ret void
+  }
+  attributes #1 = { "target-cpu"="gfx1010" }
+  !llvm.ident = !{!0}
+  !0 = !{!"clang version 3.7 (tags/RELEASE_370/final)"}
+...
+---
+name:            main
+tracksRegLiveness: true
+liveins:
+  - { reg: '$sgpr0' }
+  - { reg: '$sgpr1' }
+  - { reg: '$sgpr2' }
+  - { reg: '$sgpr3' }
+  - { reg: '$sgpr4' }
+  - { reg: '$sgpr5' }
+  - { reg: '$sgpr6' }
+  - { reg: '$sgpr7' }
+  - { reg: '$sgpr8' }
+  - { reg: '$sgpr8' }
+  - { reg: '$vgpr0' }
+  - { reg: '$vgpr1' }
+body:             |
+  bb.0:
+    successors: %bb.1, %bb.2
+    liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $vgpr0, $vgpr1
+
+    %0:sgpr_64 = REG_SEQUENCE $sgpr0, %subreg.sub0, $sgpr1, %subreg.sub1
+    %1:sgpr_128 = REG_SEQUENCE $sgpr4, %subreg.sub0, $sgpr5, %subreg.sub1, $sgpr6, %subreg.sub2, $sgpr7, %subreg.sub3
+    %2:sgpr_128 = REG_SEQUENCE $sgpr8, %subreg.sub0, $sgpr9, %subreg.sub1, $sgpr10, %subreg.sub2, $sgpr11, %subreg.sub3
+
+    ; X4_IMM
+    %3000:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM %2:sgpr_128, 0, 0
+    %3001:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM %2:sgpr_128, 16, 0
+    %3002:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM %2:sgpr_128, 32, 0
+    %3003:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM %2:sgpr_128, 48, 0
+    %3004:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM %2:sgpr_128, 64, 0
+
+    ; X8_IMM
+    %3005:sgpr_256 = S_BUFFER_LOAD_DWORDX8_IMM %2:sgpr_128, 80, 0
+    %3006:sgpr_256 = S_BUFFER_LOAD_DWORDX8_IMM %2:sgpr_128, 96, 0
+    %3007:sgpr_256 = S_BUFFER_LOAD_DWORDX8_IMM %2:sgpr_128, 112, 0
+    %3008:sgpr_256 = S_BUFFER_LOAD_DWORDX8_IMM %2:sgpr_128, 128, 0
+    %3009:sgpr_256 = S_BUFFER_LOAD_DWORDX8_IMM %2:sgpr_128, 144, 0
+
+    ; X16_IMM
+    %30010:sgpr_512 = S_BUFFER_LOAD_DWORDX16_IMM %2:sgpr_128, 160, 0
+
+    ; X4_SGPR
+    %50:sgpr_32 = COPY $sgpr0
+    %30011:sgpr_128 = S_BUFFER_LOAD_DWORDX4_SGPR %2:sgpr_128, %50, 0
+
+    ; X8_SGPR
+    %51:sgpr_32 = COPY $sgpr1
+    %30012:sgpr_256 = S_BUFFER_LOAD_DWORDX8_SGPR %2:sgpr_128, %51, 0
+
+    ; X16_SGPR
+    %52:sgpr_32 = COPY $sgpr2
+    %30013:sgpr_512 = S_BUFFER_LOAD_DWORDX16_SGPR %2:sgpr_128, %52, 0
+
+    %30014:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM %2:sgpr_128, 224, 0
+    %30015:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM %2:sgpr_128, 240, 0
+    %30016:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM %2:sgpr_128, 256, 0
+    %30017:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM %2:sgpr_128, 272, 0
+    %30018:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM %2:sgpr_128, 288, 0
+    %30019:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM %2:sgpr_128, 304, 0
+    %30020:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM %2:sgpr_128, 320, 0
+    %30021:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM %2:sgpr_128, 336, 0
+    %30022:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM %2:sgpr_128, 352, 0
+    %30023:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM %2:sgpr_128, 368, 0
+    %30024:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM %2:sgpr_128, 384, 0
+    %30025:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM %2:sgpr_128, 400, 0
+    %30026:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM %2:sgpr_128, 416, 0
+    %30027:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM %2:sgpr_128, 432, 0
+    %30028:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM %2:sgpr_128, 448, 0
+    %30029:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM %2:sgpr_128, 464, 0
+    %30030:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM %2:sgpr_128, 480, 0
+    %30031:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM %2:sgpr_128, 496, 0
+    %30032:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM %2:sgpr_128, 512, 0
+    %30033:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM %2:sgpr_128, 528, 0
+    %30034:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM %2:sgpr_128, 544, 0
+    %30035:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM %2:sgpr_128, 560, 0
+    %30036:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM %2:sgpr_128, 576, 0
+    %30037:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM %2:sgpr_128, 592, 0
+    %30038:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM %2:sgpr_128, 608, 0
+    %30039:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM %2:sgpr_128, 624, 0
+    %30040:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM %2:sgpr_128, 640, 0
+    %30041:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM %2:sgpr_128, 656, 0
+    %30042:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM %2:sgpr_128, 672, 0
+    %30043:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM %2:sgpr_128, 688, 0
+    %30044:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM %2:sgpr_128, 704, 0
+    %30045:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM %2:sgpr_128, 720, 0
+    %30046:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM %2:sgpr_128, 736, 0
+    %30047:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM %2:sgpr_128, 752, 0
+    %30048:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM %2:sgpr_128, 768, 0
+    %30049:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM %2:sgpr_128, 784, 0
+    %30050:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM %2:sgpr_128, 800, 0
+    %30051:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM %2:sgpr_128, 816, 0
+    %30052:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM %2:sgpr_128, 832, 0
+    %30053:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM %2:sgpr_128, 848, 0
+    %30054:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM %2:sgpr_128, 864, 0
+    %30055:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM %2:sgpr_128, 880, 0
+    %30056:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM %2:sgpr_128, 896, 0
+    %30057:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM %2:sgpr_128, 912, 0
+    %30058:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM %2:sgpr_128, 928, 0
+    %30059:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM %2:sgpr_128, 944, 0
+    %30060:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM %2:sgpr_128, 960, 0
+    %30061:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM %2:sgpr_128, 976, 0
+    %30062:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM %2:sgpr_128, 992, 0
+    %30063:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM %2:sgpr_128, 1008, 0
+
+    %100:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    %101:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    %102:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    %103:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    %104:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    %105:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    %106:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    %107:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    %108:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    %109:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    %1010:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    %1011:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    %1012:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    %1013:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    %1014:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    %1015:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    %1016:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    %1017:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    %1018:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    %1019:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    %1020:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    %1021:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    %1022:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    %1023:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    %1024:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    %1025:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    %1026:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    %1027:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    %1028:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    %1029:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    %1030:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    %1031:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    %1032:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    %1033:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    %1034:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    %1035:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    %1036:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    %1037:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    %1038:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    %1039:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    %1040:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    %1041:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    %1042:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    %1043:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    %1044:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    %1045:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    %1046:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    %1047:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    %1048:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    %1049:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    %1050:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    %1051:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    %1052:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    %1053:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    %1054:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    %1055:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    %1056:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    %1057:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    %1058:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    %1059:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    %1060:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    %1061:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    %1062:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    %1063:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+
+
+    %8000:vgpr_32 = IMPLICIT_DEF
+    %116:sreg_32_xm0 = nnan ninf nsz arcp contract afn reassoc V_CMP_GT_F32_e64 0, 0, 0, %8000, 0, implicit $exec, implicit $mode
+    $exec_lo = S_MOV_B32_term %116:sreg_32_xm0
+    S_CBRANCH_EXECZ %bb.2, implicit $exec
+    S_BRANCH %bb.1
+
+  bb.1:  
+    successors: %bb.2
+    %8001:vgpr_32 = COPY %8000
+    S_BRANCH %bb.2
+
+  bb.2:
+
+    %3:vgpr_32 = IMPLICIT_DEF
+    ;==========================================================================
+    ; X4_IMM, Using .x
+    S_BUFFER_STORE_DWORD_IMM %3000.sub0, %1:sgpr_128, 0, 0
+    S_BUFFER_STORE_DWORD_IMM %3000.sub0, %1:sgpr_128, 4, 0 ; Do it a second time, since the lane reduction triggers on clone, and clone only happens when there are multiple uses.
+
+    ; X4_IMM, Using .xy
+    S_BUFFER_STORE_DWORD_IMM %3001.sub0, %1:sgpr_128, 16, 0
+    S_BUFFER_STORE_DWORD_IMM %3001.sub1, %1:sgpr_128, 20, 0
+
+    ; X4_IMM, Using .xyz
+    S_BUFFER_STORE_DWORD_IMM %3002.sub0, %1:sgpr_128, 32, 0
+    S_BUFFER_STORE_DWORD_IMM %3002.sub1, %1:sgpr_128, 36, 0
+    S_BUFFER_STORE_DWORD_IMM %3002.sub2, %1:sgpr_128, 40, 0
+
+    ; X4_IMM, Using .yz
+    S_BUFFER_STORE_DWORD_IMM %3003.sub1, %1:sgpr_128, 48, 0
+    S_BUFFER_STORE_DWORD_IMM %3003.sub2, %1:sgpr_128, 52, 0
+
+    ; X4_IMM, Using .yzw
+    S_BUFFER_STORE_DWORD_IMM %3004.sub1, %1:sgpr_128, 64, 0
+    S_BUFFER_STORE_DWORD_IMM %3004.sub2, %1:sgpr_128, 68, 0
+    S_BUFFER_STORE_DWORD_IMM %3004.sub3, %1:sgpr_128, 72, 0
+
+    ;==========================================================================
+    ; X8_IMM, Using .x
+    S_BUFFER_STORE_DWORD_IMM %3005.sub0, %1:sgpr_128, 80, 0
+    S_BUFFER_STORE_DWORD_IMM %3005.sub0, %1:sgpr_128, 84, 0
+    
+    ; X8_IMM, Using .xy
+    S_BUFFER_STORE_DWORD_IMM %3006.sub0, %1:sgpr_128, 96, 0
+    S_BUFFER_STORE_DWORD_IMM %3006.sub1, %1:sgpr_128, 100, 0
+
+    ; X8_IMM, Using .xyz
+    S_BUFFER_STORE_DWORD_IMM %3007.sub0, %1:sgpr_128, 112, 0
+    S_BUFFER_STORE_DWORD_IMM %3007.sub1, %1:sgpr_128, 116, 0
+    S_BUFFER_STORE_DWORD_IMM %3007.sub2, %1:sgpr_128, 120, 0
+
+    ; X8_IMM, Using .xyzw
+    S_BUFFER_STORE_DWORD_IMM %3008.sub0, %1:sgpr_128, 128, 0
+    S_BUFFER_STORE_DWORD_IMM %3008.sub1, %1:sgpr_128, 132, 0
+    S_BUFFER_STORE_DWORD_IMM %3008.sub2, %1:sgpr_128, 136, 0
+    S_BUFFER_STORE_DWORD_IMM %3008.sub3, %1:sgpr_128, 140, 0
+    
+    ; X8_IMM, Using .xyzw + 5th dword
+    S_BUFFER_STORE_DWORD_IMM %3009.sub0, %1:sgpr_128, 144, 0
+    S_BUFFER_STORE_DWORD_IMM %3009.sub1, %1:sgpr_128, 148, 0
+    S_BUFFER_STORE_DWORD_IMM %3009.sub2, %1:sgpr_128, 152, 0
+    S_BUFFER_STORE_DWORD_IMM %3009.sub3, %1:sgpr_128, 156, 0
+    S_BUFFER_STORE_DWORD_IMM %3009.sub4, %1:sgpr_128, 160, 0
+
+    ;==========================================================================
+    ; X16_IMM, Using .xy and .zw
+    S_BUFFER_STORE_DWORDX2_IMM %30010.sub0_sub1, %1:sgpr_128, 160, 0
+    S_BUFFER_STORE_DWORDX2_IMM %30010.sub2_sub3, %1:sgpr_128, 164, 0
+
+    ;==========================================================================
+    ; X4_SGPR, Using .x
+    S_BUFFER_STORE_DWORD_IMM %30011.sub0, %1:sgpr_128, 176, 0
+    S_BUFFER_STORE_DWORD_IMM %30011.sub0, %1:sgpr_128, 180, 0
+
+    ; X8_SGPR, Using .xy
+    S_BUFFER_STORE_DWORD_IMM %30012.sub0, %1:sgpr_128, 192, 0
+    S_BUFFER_STORE_DWORD_IMM %30012.sub1, %1:sgpr_128, 196, 0
+
+    ; X16_SGPR, Using .xy + .zw
+    S_BUFFER_STORE_DWORDX2_IMM %30013.sub0_sub1, %1:sgpr_128, 208, 0
+    S_BUFFER_STORE_DWORDX2_IMM %30013.sub2_sub3, %1:sgpr_128, 216, 0
+
+    ;==========================================================================
+    S_BUFFER_STORE_DWORDX4_IMM killed %30014:sgpr_128, %1:sgpr_128, 224, 0
+    S_BUFFER_STORE_DWORDX4_IMM killed %30015:sgpr_128, %1:sgpr_128, 240, 0
+    S_BUFFER_STORE_DWORDX4_IMM killed %30016:sgpr_128, %1:sgpr_128, 256, 0
+    S_BUFFER_STORE_DWORDX4_IMM killed %30017:sgpr_128, %1:sgpr_128, 272, 0
+    S_BUFFER_STORE_DWORDX4_IMM killed %30018:sgpr_128, %1:sgpr_128, 288, 0
+    S_BUFFER_STORE_DWORDX4_IMM killed %30019:sgpr_128, %1:sgpr_128, 304, 0
+    S_BUFFER_STORE_DWORDX4_IMM killed %30020:sgpr_128, %1:sgpr_128, 320, 0
+    S_BUFFER_STORE_DWORDX4_IMM killed %30021:sgpr_128, %1:sgpr_128, 336, 0
+    S_BUFFER_STORE_DWORDX4_IMM killed %30022:sgpr_128, %1:sgpr_128, 352, 0
+    S_BUFFER_STORE_DWORDX4_IMM killed %30023:sgpr_128, %1:sgpr_128, 368, 0
+    S_BUFFER_STORE_DWORDX4_IMM killed %30024:sgpr_128, %1:sgpr_128, 384, 0
+    S_BUFFER_STORE_DWORDX4_IMM killed %30025:sgpr_128, %1:sgpr_128, 400, 0
+    S_BUFFER_STORE_DWORDX4_IMM killed %30026:sgpr_128, %1:sgpr_128, 416, 0
+    S_BUFFER_STORE_DWORDX4_IMM killed %30027:sgpr_128, %1:sgpr_128, 432, 0
+    S_BUFFER_STORE_DWORDX4_IMM killed %30028:sgpr_128, %1:sgpr_128, 448, 0
+    S_BUFFER_STORE_DWORDX4_IMM killed %30029:sgpr_128, %1:sgpr_128, 464, 0
+    S_BUFFER_STORE_DWORDX4_IMM killed %30030:sgpr_128, %1:sgpr_128, 480, 0
+    S_BUFFER_STORE_DWORDX4_IMM killed %30031:sgpr_128, %1:sgpr_128, 496, 0
+    S_BUFFER_STORE_DWORDX4_IMM killed %30032:sgpr_128, %1:sgpr_128, 512, 0
+    S_BUFFER_STORE_DWORDX4_IMM killed %30033:sgpr_128, %1:sgpr_128, 528, 0
+    S_BUFFER_STORE_DWORDX4_IMM killed %30034:sgpr_128, %1:sgpr_128, 544, 0
+    S_BUFFER_STORE_DWORDX4_IMM killed %30035:sgpr_128, %1:sgpr_128, 560, 0
+    S_BUFFER_STORE_DWORDX4_IMM killed %30036:sgpr_128, %1:sgpr_128, 576, 0
+    S_BUFFER_STORE_DWORDX4_IMM killed %30037:sgpr_128, %1:sgpr_128, 592, 0
+    S_BUFFER_STORE_DWORDX4_IMM killed %30038:sgpr_128, %1:sgpr_128, 608, 0
+    S_BUFFER_STORE_DWORDX4_IMM killed %30039:sgpr_128, %1:sgpr_128, 624, 0
+    S_BUFFER_STORE_DWORDX4_IMM killed %30040:sgpr_128, %1:sgpr_128, 640, 0
+    S_BUFFER_STORE_DWORDX4_IMM killed %30041:sgpr_128, %1:sgpr_128, 656, 0
+    S_BUFFER_STORE_DWORDX4_IMM killed %30042:sgpr_128, %1:sgpr_128, 672, 0
+    S_BUFFER_STORE_DWORDX4_IMM killed %30043:sgpr_128, %1:sgpr_128, 688, 0
+    S_BUFFER_STORE_DWORDX4_IMM killed %30044:sgpr_128, %1:sgpr_128, 704, 0
+    S_BUFFER_STORE_DWORDX4_IMM killed %30045:sgpr_128, %1:sgpr_128, 720, 0
+    S_BUFFER_STORE_DWORDX4_IMM killed %30046:sgpr_128, %1:sgpr_128, 736, 0
+    S_BUFFER_STORE_DWORDX4_IMM killed %30047:sgpr_128, %1:sgpr_128, 752, 0
+    S_BUFFER_STORE_DWORDX4_IMM killed %30048:sgpr_128, %1:sgpr_128, 768, 0
+    S_BUFFER_STORE_DWORDX4_IMM killed %30049:sgpr_128, %1:sgpr_128, 784, 0
+    S_BUFFER_STORE_DWORDX4_IMM killed %30050:sgpr_128, %1:sgpr_128, 800, 0
+    S_BUFFER_STORE_DWORDX4_IMM killed %30051:sgpr_128, %1:sgpr_128, 816, 0
+    S_BUFFER_STORE_DWORDX4_IMM killed %30052:sgpr_128, %1:sgpr_128, 832, 0
+    S_BUFFER_STORE_DWORDX4_IMM killed %30053:sgpr_128, %1:sgpr_128, 848, 0
+    S_BUFFER_STORE_DWORDX4_IMM killed %30054:sgpr_128, %1:sgpr_128, 864, 0
+    S_BUFFER_STORE_DWORDX4_IMM killed %30055:sgpr_128, %1:sgpr_128, 880, 0
+    S_BUFFER_STORE_DWORDX4_IMM killed %30056:sgpr_128, %1:sgpr_128, 896, 0
+    S_BUFFER_STORE_DWORDX4_IMM killed %30057:sgpr_128, %1:sgpr_128, 912, 0
+    S_BUFFER_STORE_DWORDX4_IMM killed %30058:sgpr_128, %1:sgpr_128, 928, 0
+    S_BUFFER_STORE_DWORDX4_IMM killed %30059:sgpr_128, %1:sgpr_128, 944, 0
+    S_BUFFER_STORE_DWORDX4_IMM killed %30060:sgpr_128, %1:sgpr_128, 960, 0
+    S_BUFFER_STORE_DWORDX4_IMM killed %30061:sgpr_128, %1:sgpr_128, 976, 0
+    S_BUFFER_STORE_DWORDX4_IMM killed %30062:sgpr_128, %1:sgpr_128, 992, 0
+    S_BUFFER_STORE_DWORDX4_IMM killed %30063:sgpr_128, %1:sgpr_128, 1008, 0
+
+    EXP 0, killed %100, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %101, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %102, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %103, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %104, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %105, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %106, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %107, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %108, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %109, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %1010, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %1011, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %1012, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %1013, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %1014, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %1015, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %1016, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %1017, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %1018, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %1019, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %1020, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %1021, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %1022, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %1023, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %1024, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %1025, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %1026, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %1027, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %1028, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %1029, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %1030, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %1031, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %1032, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %1033, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %1034, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %1035, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %1036, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %1037, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %1038, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %1039, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %1040, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %1041, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %1042, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %1043, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %1044, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %1045, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %1046, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %1047, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %1048, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %1049, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %1050, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %1051, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %1052, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %1053, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %1054, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %1055, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %1056, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %1057, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %1058, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %1059, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %1060, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %1061, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %1062, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, killed %1063, %3, %3, %3, -1, -1, 15, implicit $exec
+
+
+    S_ENDPGM 0
+...
+
+
+
+

@@ -31,6 +31,8 @@
 
 using namespace llvm;
 
+static cl::opt<bool>
+    EnableAggressive("amdgpu-remat-enable-hot-block-remat-aggressive");
 static cl::opt<unsigned> TargetOccupancy("amdgpu-remat-target-occupancy");
 
 namespace {
@@ -723,6 +725,12 @@ int rematGain(MachineInstr *DefMI, unsigned Reg, const MachineRegisterInfo &MRI,
     if (IsSingleDef) {
       // The reg might share with other candidates,  check It here.
       // Count share reg in getReducedSize.
+      if (EnableAggressive) {
+        // In case of aggressive remat, treat multi use reg as shared reg and
+        // ignore size of shared reg.
+        if (!MRI.hasOneNonDBGUse(Reg))
+          continue;
+      }
       const TargetRegisterClass *OpRC = MRI.getRegClass(Reg);
       if (unsigned SubIdx = MO.getSubReg()) {
         if (OpRC)
@@ -1253,6 +1261,9 @@ bool AMDGPUHotBlockRematerialize::hotBlockRemat(MachineFunction &MF, MachineLoop
   unsigned SLimit = Status.TargetSLimit;
 
   int RematSCnt = Status.MaxSPressure - SLimit;
+  // when agressive sgpr remat, reserve some for allocation lost.
+  if (EnableAggressive)
+    RematSCnt += NearTargetRegLimit;
 
   bool IsSGPRSpill = false;
   if (RematSCnt > 0) {
@@ -1367,7 +1378,7 @@ bool AMDGPUHotBlockRematerialize::hotBlockRemat(MachineFunction &MF, MachineLoop
         for (RematNode &Node : SRematList) {
           SRematMap[Node.Reg] = Node;
           RematCnt += Node.Size;
-          if (RematCnt > RematSCnt)
+          if (RematCnt > RematSCnt && !EnableAggressive)
             break;
         }
         NewRematSCnt = 0;
