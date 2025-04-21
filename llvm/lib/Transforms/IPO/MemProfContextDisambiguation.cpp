@@ -4244,7 +4244,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::mergeNodeCalleeClones(
           break;
         auto &CurCalleeAllocNodes = CalleeEdgeToAllocNodes[CalleeEdge.get()];
         // Check each other caller of this callee clone.
-        for (auto CalleeCallerE : CalleeEdge->Callee->CallerEdges) {
+        for (auto &CalleeCallerE : CalleeEdge->Callee->CallerEdges) {
           // Not interested in the callee edge from Node itself.
           if (CalleeCallerE == CalleeEdge)
             continue;
@@ -4328,7 +4328,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::mergeNodeCalleeClones(
         // some of these will be moved off of the OrigCallee and that would mess
         // up the iteration from OrigCallee.
         auto OrigCalleeCallerEdges = OrigCallee->CallerEdges;
-        for (auto CalleeCallerE : OrigCalleeCallerEdges) {
+        for (auto &CalleeCallerE : OrigCalleeCallerEdges) {
           if (CalleeCallerE == CalleeEdge)
             continue;
           if (OtherCallersToSharedCalleeEdgeCount[CalleeCallerE->Caller] !=
