@@ -318,7 +318,7 @@ std::optional<Value *> ARMTTIImpl::simplifyDemandedVectorEltsIntrinsic(
 }
 
 InstructionCost ARMTTIImpl::getIntImmCost(const APInt &Imm, Type *Ty,
-                                          TTI::TargetCostKind CostKind) {
+                                          TTI::TargetCostKind CostKind) const {
   assert(Ty->isIntegerTy());
 
  unsigned Bits = Ty->getPrimitiveSizeInBits();
@@ -482,7 +482,7 @@ InstructionCost ARMTTIImpl::getIntImmCostInst(unsigned Opcode, unsigned Idx,
 
 InstructionCost ARMTTIImpl::getCFInstrCost(unsigned Opcode,
                                            TTI::TargetCostKind CostKind,
-                                           const Instruction *I) {
+                                           const Instruction *I) const {
   if (CostKind == TTI::TCK_RecipThroughput &&
       (ST->hasNEON() || ST->hasMVEIntegerOps())) {
     // FIXME: The vectorizer is highly sensistive to the cost of these
@@ -498,7 +498,7 @@ InstructionCost ARMTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
                                              Type *Src,
                                              TTI::CastContextHint CCH,
                                              TTI::TargetCostKind CostKind,
-                                             const Instruction *I) {
+                                             const Instruction *I) const {
   int ISD = TLI->InstructionOpcodeToISD(Opcode);
   assert(ISD && "Invalid opcode");
 
@@ -901,7 +901,7 @@ InstructionCost ARMTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
 InstructionCost ARMTTIImpl::getVectorInstrCost(unsigned Opcode, Type *ValTy,
                                                TTI::TargetCostKind CostKind,
                                                unsigned Index, Value *Op0,
-                                               Value *Op1) {
+                                               Value *Op1) const {
   // Penalize inserting into an D-subregister. We end up with a three times
   // lower estimated throughput on swift.
   if (ST->hasSlowLoadDSubregister() && Opcode == Instruction::InsertElement &&
@@ -940,7 +940,7 @@ InstructionCost ARMTTIImpl::getVectorInstrCost(unsigned Opcode, Type *ValTy,
 InstructionCost ARMTTIImpl::getCmpSelInstrCost(
     unsigned Opcode, Type *ValTy, Type *CondTy, CmpInst::Predicate VecPred,
     TTI::TargetCostKind CostKind, TTI::OperandValueInfo Op1Info,
-    TTI::OperandValueInfo Op2Info, const Instruction *I) {
+    TTI::OperandValueInfo Op2Info, const Instruction *I) const {
   int ISD = TLI->InstructionOpcodeToISD(Opcode);
 
   // Thumb scalar code size cost for select.
@@ -1123,7 +1123,7 @@ bool ARMTTIImpl::isProfitableLSRChainElement(Instruction *I) {
 }
 
 bool ARMTTIImpl::isLegalMaskedLoad(Type *DataTy, Align Alignment,
-                                   unsigned /*AddressSpace*/) {
+                                   unsigned /*AddressSpace*/) const {
   if (!EnableMaskedLoadStores || !ST->hasMVEIntegerOps())
     return false;
 
@@ -1221,7 +1221,7 @@ int ARMTTIImpl::getNumMemOps(const IntrinsicInst *I) const {
   return -1;
 }
 
-InstructionCost ARMTTIImpl::getMemcpyCost(const Instruction *I) {
+InstructionCost ARMTTIImpl::getMemcpyCost(const Instruction *I) const {
   int NumOps = getNumMemOps(cast<IntrinsicInst>(I));
 
   // To model the cost of a library call, we assume 1 for the call, and
@@ -1236,7 +1236,7 @@ InstructionCost ARMTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
                                            TTI::TargetCostKind CostKind,
                                            int Index, VectorType *SubTp,
                                            ArrayRef<const Value *> Args,
-                                           const Instruction *CxtI) {
+                                           const Instruction *CxtI) const {
   Kind = improveShuffleKindFromMask(Kind, Mask, Tp, Index, SubTp);
   // Treat extractsubvector as single op permutation.
   bool IsExtractSubvector = Kind == TTI::SK_ExtractSubvector;
@@ -1349,8 +1349,7 @@ InstructionCost ARMTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
 InstructionCost ARMTTIImpl::getArithmeticInstrCost(
     unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
     TTI::OperandValueInfo Op1Info, TTI::OperandValueInfo Op2Info,
-    ArrayRef<const Value *> Args,
-    const Instruction *CxtI) {
+    ArrayRef<const Value *> Args, const Instruction *CxtI) const {
   int ISDOpcode = TLI->InstructionOpcodeToISD(Opcode);
   if (ST->isThumb() && CostKind == TTI::TCK_CodeSize && Ty->isIntegerTy(1)) {
     // Make operations on i1 relatively expensive as this often involves
@@ -1549,7 +1548,7 @@ InstructionCost ARMTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
                                             unsigned AddressSpace,
                                             TTI::TargetCostKind CostKind,
                                             TTI::OperandValueInfo OpInfo,
-                                            const Instruction *I) {
+                                            const Instruction *I) const {
   // TODO: Handle other cost kinds.
   if (CostKind != TTI::TCK_RecipThroughput)
     return 1;
@@ -1594,7 +1593,7 @@ InstructionCost ARMTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
 InstructionCost
 ARMTTIImpl::getMaskedMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
                                   unsigned AddressSpace,
-                                  TTI::TargetCostKind CostKind) {
+                                  TTI::TargetCostKind CostKind) const {
   if (ST->hasMVEIntegerOps()) {
     if (Opcode == Instruction::Load &&
         isLegalMaskedLoad(Src, Alignment, AddressSpace))
@@ -1654,7 +1653,7 @@ InstructionCost ARMTTIImpl::getInterleavedMemoryOpCost(
 
 InstructionCost ARMTTIImpl::getGatherScatterOpCost(
     unsigned Opcode, Type *DataTy, const Value *Ptr, bool VariableMask,
-    Align Alignment, TTI::TargetCostKind CostKind, const Instruction *I) {
+    Align Alignment, TTI::TargetCostKind CostKind, const Instruction *I) const {
   using namespace PatternMatch;
   if (!ST->hasMVEIntegerOps() || !EnableMaskedGatherScatters)
     return BaseT::getGatherScatterOpCost(Opcode, DataTy, Ptr, VariableMask,
@@ -1759,7 +1758,7 @@ InstructionCost ARMTTIImpl::getGatherScatterOpCost(
 InstructionCost
 ARMTTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
                                        std::optional<FastMathFlags> FMF,
-                                       TTI::TargetCostKind CostKind) {
+                                       TTI::TargetCostKind CostKind) const {
 
   EVT ValVT = TLI->getValueType(DL, ValTy);
   int ISD = TLI->InstructionOpcodeToISD(Opcode);
@@ -1906,7 +1905,7 @@ ARMTTIImpl::getMulAccReductionCost(bool IsUnsigned, Type *ResTy,
 InstructionCost
 ARMTTIImpl::getMinMaxReductionCost(Intrinsic::ID IID, VectorType *Ty,
                                    FastMathFlags FMF,
-                                   TTI::TargetCostKind CostKind) {
+                                   TTI::TargetCostKind CostKind) const {
   EVT ValVT = TLI->getValueType(DL, Ty);
 
   // In general floating point reductions are a series of elementwise
@@ -1965,7 +1964,7 @@ ARMTTIImpl::getMinMaxReductionCost(Intrinsic::ID IID, VectorType *Ty,
 
 InstructionCost
 ARMTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
-                                  TTI::TargetCostKind CostKind) {
+                                  TTI::TargetCostKind CostKind) const {
   unsigned Opc = ICA.getID();
   switch (Opc) {
   case Intrinsic::get_active_lane_mask:
@@ -2109,7 +2108,7 @@ ARMTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   return BaseT::getIntrinsicInstrCost(ICA, CostKind);
 }
 
-bool ARMTTIImpl::isLoweredToCall(const Function *F) {
+bool ARMTTIImpl::isLoweredToCall(const Function *F) const {
   if (!F->isIntrinsic())
     return BaseT::isLoweredToCall(F);
 
