@@ -5632,9 +5632,6 @@ bool SelectionDAG::isKnownNeverNaN(SDValue Op, const APInt &DemandedElts,
            (SNaN && !C->getValueAPF().isSignaling());
   }
 
-  if (Op.isUndef())
-    return true;
-
   unsigned Opcode = Op.getOpcode();
   switch (Opcode) {
   case ISD::FADD:
@@ -5755,9 +5752,33 @@ bool SelectionDAG::isKnownNeverNaN(SDValue Op, const APInt &DemandedElts,
     }
     return isKnownNeverNaN(Src, SNaN, Depth + 1);
   }
-  case ISD::INSERT_SUBVECTOR:
-    return isKnownNeverNaN(Op.getOperand(0), SNaN, Depth + 1) &&
-           isKnownNeverNaN(Op.getOperand(1), SNaN, Depth + 1);
+  case ISD::INSERT_SUBVECTOR: {
+    SDValue BaseVector = Op.getOperand(0);
+    SDValue SubVector = Op.getOperand(1);
+    EVT BaseVectorVT = BaseVector.getValueType();
+    if (BaseVectorVT.isFixedLengthVector()) {
+      unsigned Idx = Op.getConstantOperandVal(2);
+      unsigned NumBaseVectorElts = BaseVectorVT.getVectorNumElements();
+      unsigned NumSubVectorElts =
+          SubVector.getValueType().getVectorNumElements();
+
+      // Clear the bits at the position where the subvector will be inserted.
+      APInt DemandedMask = APInt::getAllOnes(NumSubVectorElts)
+                               .zext(NumBaseVectorElts)
+                               .shl(Idx)
+                               .reverseBits();
+      APInt DemandedSrcElts = DemandedElts & DemandedMask;
+
+      // If DemandedSrcElts is zero, we only need to check that the subvector is
+      // never NaN.
+      if (DemandedSrcElts.isZero())
+        return isKnownNeverNaN(SubVector, SNaN, Depth + 1);
+      return isKnownNeverNaN(BaseVector, DemandedSrcElts, SNaN, Depth + 1) &&
+             isKnownNeverNaN(SubVector, SNaN, Depth + 1);
+    }
+    return isKnownNeverNaN(BaseVector, SNaN, Depth + 1) &&
+           isKnownNeverNaN(SubVector, SNaN, Depth + 1);
+  }
   case ISD::BUILD_VECTOR: {
     unsigned NumElts = Op.getNumOperands();
     for (unsigned I = 0; I != NumElts; ++I)

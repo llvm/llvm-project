@@ -1057,6 +1057,13 @@ define <3 x half> @v_mad_mix_v3f32_clamp_postcvt(<3 x half> %src0, <3 x half> %s
 ; SDAG-GFX1100-TRUE16-LABEL: v_mad_mix_v3f32_clamp_postcvt:
 ; SDAG-GFX1100-TRUE16:       ; %bb.0:
 ; SDAG-GFX1100-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SDAG-GFX1100-TRUE16-NEXT:    v_fma_mixlo_f16 v1, v1, v3, v5 op_sel_hi:[1,1,1]
+; SDAG-GFX1100-TRUE16-NEXT:    v_mov_b16_e32 v3.l, v0.l
+; SDAG-GFX1100-TRUE16-NEXT:    v_mov_b16_e32 v5.l, v2.l
+; SDAG-GFX1100-TRUE16-NEXT:    v_mov_b16_e32 v6.l, v4.l
+; SDAG-GFX1100-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_2)
+; SDAG-GFX1100-TRUE16-NEXT:    v_pack_b32_f16 v1, v1.l, 0
+; SDAG-GFX1100-TRUE16-NEXT:    v_fma_mixlo_f16 v3, v3, v5, v6 op_sel_hi:[1,1,1] clamp
 ; SDAG-GFX1100-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; SDAG-GFX1100-TRUE16-NEXT:    v_pk_max_f16 v1, v1, v1 clamp
 ; SDAG-GFX1100-TRUE16-NEXT:    v_fma_mixhi_f16 v3, v0, v2, v4 op_sel:[1,1,1] op_sel_hi:[1,1,1] clamp
@@ -1070,6 +1077,34 @@ define <3 x half> @v_mad_mix_v3f32_clamp_postcvt(<3 x half> %src0, <3 x half> %s
 ; SDAG-GFX1100-FAKE16-NEXT:    v_fma_mixlo_f16 v1, v1, v3, v5 op_sel_hi:[1,1,1]
 ; SDAG-GFX1100-FAKE16-NEXT:    v_fma_mixlo_f16 v3, v0, v2, v4 op_sel_hi:[1,1,1] clamp
 ; SDAG-GFX1100-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; SDAG-GFX1100-FAKE16-NEXT:    v_pack_b32_f16 v1, v1, 0
+; SDAG-GFX1100-FAKE16-NEXT:    v_fma_mixhi_f16 v3, v0, v2, v4 op_sel:[1,1,1] op_sel_hi:[1,1,1] clamp
+; SDAG-GFX1100-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; SDAG-GFX1100-FAKE16-NEXT:    v_pk_max_f16 v1, v1, v1 clamp
+; SDAG-GFX1100-FAKE16-NEXT:    v_mov_b32_e32 v0, v3
+; SDAG-GFX1100-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; SDAG-GFX900-LABEL: v_mad_mix_v3f32_clamp_postcvt:
+; SDAG-GFX900:       ; %bb.0:
+; SDAG-GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SDAG-GFX900-NEXT:    v_mad_mixlo_f16 v1, v1, v3, v5 op_sel_hi:[1,1,1]
+; SDAG-GFX900-NEXT:    v_mad_mixlo_f16 v3, v0, v2, v4 op_sel_hi:[1,1,1] clamp
+; SDAG-GFX900-NEXT:    v_pack_b32_f16 v1, v1, 0
+; SDAG-GFX900-NEXT:    v_mad_mixhi_f16 v3, v0, v2, v4 op_sel:[1,1,1] op_sel_hi:[1,1,1] clamp
+; SDAG-GFX900-NEXT:    v_pk_max_f16 v1, v1, v1 clamp
+; SDAG-GFX900-NEXT:    v_mov_b32_e32 v0, v3
+; SDAG-GFX900-NEXT:    s_setpc_b64 s[30:31]
+;
+; SDAG-GFX906-LABEL: v_mad_mix_v3f32_clamp_postcvt:
+; SDAG-GFX906:       ; %bb.0:
+; SDAG-GFX906-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SDAG-GFX906-NEXT:    v_fma_mixlo_f16 v1, v1, v3, v5 op_sel_hi:[1,1,1]
+; SDAG-GFX906-NEXT:    v_fma_mixlo_f16 v3, v0, v2, v4 op_sel_hi:[1,1,1] clamp
+; SDAG-GFX906-NEXT:    v_pack_b32_f16 v1, v1, 0
+; SDAG-GFX906-NEXT:    v_fma_mixhi_f16 v3, v0, v2, v4 op_sel:[1,1,1] op_sel_hi:[1,1,1] clamp
+; SDAG-GFX906-NEXT:    v_pk_max_f16 v1, v1, v1 clamp
+; SDAG-GFX906-NEXT:    v_mov_b32_e32 v0, v3
+; SDAG-GFX906-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; SDAG-VI-LABEL: v_mad_mix_v3f32_clamp_postcvt:
 ; SDAG-VI:       ; %bb.0:
@@ -1142,6 +1177,26 @@ define <3 x half> @v_mad_mix_v3f32_clamp_postcvt(<3 x half> %src0, <3 x half> %s
 ; GISEL-GFX1100-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GISEL-GFX1100-NEXT:    v_mov_b32_e32 v0, v6
 ; GISEL-GFX1100-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-GFX900-LABEL: v_mad_mix_v3f32_clamp_postcvt:
+; GISEL-GFX900:       ; %bb.0:
+; GISEL-GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-GFX900-NEXT:    v_mad_mixlo_f16 v1, v1, v3, v5 op_sel_hi:[1,1,1]
+; GISEL-GFX900-NEXT:    v_mad_mixlo_f16 v3, v0, v2, v4 op_sel_hi:[1,1,1] clamp
+; GISEL-GFX900-NEXT:    v_mad_mixhi_f16 v3, v0, v2, v4 op_sel:[1,1,1] op_sel_hi:[1,1,1] clamp
+; GISEL-GFX900-NEXT:    v_pk_max_f16 v1, v1, v1 clamp
+; GISEL-GFX900-NEXT:    v_mov_b32_e32 v0, v3
+; GISEL-GFX900-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-GFX906-LABEL: v_mad_mix_v3f32_clamp_postcvt:
+; GISEL-GFX906:       ; %bb.0:
+; GISEL-GFX906-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-GFX906-NEXT:    v_fma_mixlo_f16 v1, v1, v3, v5 op_sel_hi:[1,1,1]
+; GISEL-GFX906-NEXT:    v_fma_mixlo_f16 v3, v0, v2, v4 op_sel_hi:[1,1,1] clamp
+; GISEL-GFX906-NEXT:    v_fma_mixhi_f16 v3, v0, v2, v4 op_sel:[1,1,1] op_sel_hi:[1,1,1] clamp
+; GISEL-GFX906-NEXT:    v_pk_max_f16 v1, v1, v1 clamp
+; GISEL-GFX906-NEXT:    v_mov_b32_e32 v0, v3
+; GISEL-GFX906-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-VI-LABEL: v_mad_mix_v3f32_clamp_postcvt:
 ; GISEL-VI:       ; %bb.0:
