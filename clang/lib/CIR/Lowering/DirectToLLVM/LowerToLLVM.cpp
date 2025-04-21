@@ -692,9 +692,7 @@ mlir::LogicalResult CIRToLLVMConstantOpLowering::matchAndRewrite(
     // during a pass as long as they don't live past the end of the pass.
     attr = op.getValue();
   } else if (mlir::isa<cir::BoolType>(op.getType())) {
-    int value = (op.getValue() ==
-                 cir::BoolAttr::get(getContext(),
-                                    cir::BoolType::get(getContext()), true));
+    int value = mlir::cast<cir::BoolAttr>(op.getValue()).getValue();
     attr = rewriter.getIntegerAttr(typeConverter->convertType(op.getType()),
                                    value);
   } else if (mlir::isa<cir::IntType>(op.getType())) {
