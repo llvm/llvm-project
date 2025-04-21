@@ -1,7 +1,9 @@
 #include "llvm/CodeGen/CodeGenTargetMachineImpl.h"
 #include "PESubtarget.h"
 
+
 namespace llvm{
+
 class PETargetMachine : public CodeGenTargetMachineImpl
 {
     std::unique_ptr<TargetLoweringObjectFile> TLOF;
@@ -17,7 +19,11 @@ public:
     const PESubtarget *getSubtargetImpl() const {return &Subtarget;}
     
     const PESubtarget *getSubtargetImpl(const Function &F) const override{return &Subtarget;}
-
+    TargetLoweringObjectFile *getObjFileLowering() const override
+    {
+        return TLOF.get();
+    }
+    TargetPassConfig *createPassConfig(PassManagerBase &PM) override;
 };
 
 }

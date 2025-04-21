@@ -7,6 +7,7 @@ set(LLVM_EXPERIMENTAL_TARGETS_TO_BUILD "PE")
 
 #通过LLVM的TableGen工具，从PE.td生成C++头文件（.inc），用于后续编译
 tablegen(LLVM PEGenAsmWriter.inc -gen-asm-writer)
+tablegen(LLVM PEGenDAGISel.inc -gen-dag-isel)
 tablegen(LLVM PEGenCallingConv.inc -gen-callingconv)
 tablegen(LLVM PEGenInstrInfo.inc -gen-instr-info)
 tablegen(LLVM PEGenRegisterInfo.inc -gen-register-info)
@@ -23,6 +24,9 @@ add_llvm_target(PECodeGen
   PERegisterInfo.cpp
   PESubtarget.cpp
   PETargetMachine.cpp
+  PEISelDAGToDAG.cpp
+  PEAsmPrinter.cpp
+  PE.h
 
   LINK_COMPONENTS
   Analysis

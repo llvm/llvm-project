@@ -34,7 +34,7 @@ SDValue PETargetLowering::LowerFormalArguments(
 SDValue PETargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
                                       bool IsVarArg,
                                       const SmallVectorImpl<ISD::OutputArg> &Outs,
-                                      const SmallVectorImpl<SDValue> &OutVals,
+                                     const SmallVectorImpl<SDValue> &OutVals,
                                       const SDLoc &DL, SelectionDAG &DAG) const {
   // 1. 返回物理寄存器
   SmallVector<CCValAssign, 16> RVLocs;
@@ -58,4 +58,14 @@ SDValue PETargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
     RetOps.push_back(Glue);
   }
     return DAG.getNode(PEISD::RET_GLUE, DL, MVT::Other, RetOps);
+}
+
+const char *llvm::PETargetLowering::getTargetNodeName(unsigned Opcode) const {
+  switch (Opcode) {
+  case PEISD::RET_GLUE:
+    return "PEISD::RET_GLUE";
+  default:
+    return nullptr;
+  }
+  return nullptr;
 }

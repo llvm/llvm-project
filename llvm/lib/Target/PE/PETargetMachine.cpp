@@ -1,11 +1,17 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "TargetInfo/PETargetInfo.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
+#include "llvm/CodeGen/TargetPassConfig.h"
 #include "PETargetMachine.h"
-namespace llvm{
+#include "PE.h"
+
+using namespace llvm;
 
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializePETarget() {
     RegisterTargetMachine<PETargetMachine>X(getPETarget());
+
+    auto *PR = PassRegistry::getPassRegistry();
+    initializePEDAGToDAGISelLegacyPass(*PR);
 }
 
 static StringRef computeDataLayout(const Triple&TT,const TargetOptions &Options){
@@ -57,4 +63,28 @@ TLOF(std::make_unique<TargetLoweringObjectFileELF>()),Subtarget(TT, CPU, FS, *th
     */
     initAsmInfo();
 }
-}//namespace LLVM
+
+namespace {
+class PEPassConfig : public TargetPassConfig {
+public:
+    PEPassConfig(PETargetMachine &TM, PassManagerBase &PM)
+        : TargetPassConfig(TM, PM) {}
+    
+    PETargetMachine &getPETargetMachine() const {
+        return getTM<PETargetMachine>();
+    }
+    const PESubtarget &getPESubtarget() const {
+        return *getPETargetMachine().getSubtargetImpl();
+    }
+    bool addInstSelector() override;
+};
+}
+
+TargetPassConfig *PETargetMachine::createPassConfig(PassManagerBase &PM) {
+    return new PEPassConfig(*this, PM);
+}
+
+bool PEPassConfig::addInstSelector() {
+    addPass(createPEISelDag(getPETargetMachine(), CodeGenOptLevel::None));
+    return false;
+}

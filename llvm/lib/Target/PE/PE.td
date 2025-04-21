@@ -3,7 +3,7 @@ include "llvm/Target/Target.td"//llvm框架层内置的文件
 include "PEInstrInfo.td"
 include "PECallingConv.td"
 
-def : ProcessorModel<"generic", NoSchedModel, []>; // 定义一个处理器模型
+def : ProcessorModel<"PE", NoSchedModel, []>; // 定义一个处理器模型
 
 // 定义 PE 指令集信息
 def PEInstrInfo : InstrInfo;

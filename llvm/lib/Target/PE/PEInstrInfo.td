@@ -13,21 +13,42 @@ include "PERegisterInfo.td"
 def retglue : SDNode <"PEISD::RET_GLUE",SDTNone,
                             [SDNPHasChain,SDNPOptInGlue,SDNPVariadic]>;
 
+def imm12 : Operand<i32>,ImmLeaf<i32,[{return isInt<12>(Imm);}]>;
+// def imm12Pat : ImmLeaf<i32,[{return isInt<12>(Imm);}]>;
+
+//自定义内存操作数
+def mem : Operand<iPTR>{
+    ///指明具体操作数
+    let MIOperandInfo = (ops GPR,imm12);
+
+    ///指明自定义打印函数
+    let PrintMethod = "PrintMemOperand";
+}
+
+//地址约束规则，判断是不是地址
+def memPat : ComplexPattern<iPTR,2,"SelectAddrFI",[frameindex],[SDNPWantParent]>;
+
+def LOAD : PEInst<(outs GPR: $ra),(ins mem: $addr),"lw \t$ta,$addr">;
+def : Pat<(loat memPat:$addr),(LOAD memPat:$addr)>;
+
+def STORE : PEInst<(outs),(ins GPR: $ra,mem: $addr),"sw \t$ta,$addr">;
+def : Pat<(store GPR:$ra memPat:$addr),(STORE GPR:$ra memPat:$addr)>;
+
 //class I 的实例化
 //OPC_ADDI：指令码，GPR:$rd：一个通用寄存器$rd，i32imm:$imm12：一个立即数$imm12
 //"addi $rd,$rs1,$imm12"：汇编字符串
 //[]：模式匹配为空
-def ADDI : I<OPC_ADDI,(outs GPR:$rd),(ins GPR:$rs1,i32imm:$imm12),
+def ADDI : I<(outs GPR:$rd),(ins GPR:$rs1,imm12:$imm12),
                              "addi $rd,$rs1,$imm12",[]>;
 
 //当IR中出现形如i32 (imm:$imm12)的立即数操作时（例如加载一个32位整数到寄存器），TableGen会将其匹配为ADDI X0, imm:$imm12。X0为RISCV中的0寄存器，恒为0
-def : Pat<(i32 (imm:$imm12)),(ADDI X0,imm:$imm12)>;
+def : Pat<(i32 (imm12:$imm12)),(ADDI X0,imm12:$imm12)>;
 
 // JALR x1, x5, 0    # 跳转到x5的值，返回地址保存到x1
 // JALR x0, x10, 8   # 跳转到x10+8，不保存返回地址（用于纯跳转）
 // isCall = 1标识该指令为函数调用指令
 let isCall = 1 in{
-    def JALR : I<OPC_JALR,(outs GPR:$rd),(ins GPR:$rs1,i32imm:$imm12),
+    def JALR : I<(outs GPR:$rd),(ins GPR:$rs1,imm12:$imm12),
     "jalr $rd,$rs1,$imm12",[]>;
 }
 
@@ -41,3 +62,6 @@ let isCall = 1 in{
 let isBarrier = 1,isReturn = 1,isTerminator = 1 in{
     def pseudoRET : PseudoInst<(outs),(ins),[(retglue)]>,PseudoInstExpansion<(JALR X0, X1, 0)>;
 }
+
+def : InstAlias<"ret",(JALR X0, X1, 0)>;
+def : InstAlias<"li $rd,&imm",(ADDI GPR:$rd,X0,imm12:&imm)>;

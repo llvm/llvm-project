@@ -3,6 +3,7 @@
 #include "PEInstrInfo.h"
 #include "PERegisterInfo.h"
 #include "PESubtarget.h"
+#include "PEInstPrinter.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "TargetInfo/PETargetInfo.h"
 
@@ -43,9 +44,16 @@ static MCInstrInfo *createPEMCInstrInfo() {
 }
 static MCSubtargetInfo *createPEMCSubtargetInfo(const Triple &TT,
     StringRef CPU, StringRef FS){
-    if(CPU.empty() || CPU == "generic")
+    if(CPU.empty())
         CPU = "PE";
     return createPEMCSubtargetInfoImpl(TT,CPU,CPU,FS);
+}
+static MCInstPrinter *createPEMCInstPrinter(const Triple &T,
+    unsigned SyntaxVariant,
+    const MCAsmInfo &MAI,
+    const MCInstrInfo &MII,
+    const MCRegisterInfo &MRI) {
+    return new PEInstPrinter(MAI, MII, MRI);
 }
 
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializePETargetMC() {
@@ -53,4 +61,5 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializePETargetMC() {
     TargetRegistry::RegisterMCRegInfo(getPETarget(), createPEMCRegisterInfo);
     TargetRegistry::RegisterMCInstrInfo(getPETarget(), createPEMCInstrInfo);
     TargetRegistry::RegisterMCSubtargetInfo(getPETarget(), createPEMCSubtargetInfo);//子目标信息注册
-}
+    TargetRegistry::RegisterMCInstPrinter(getPETarget(), createPEMCInstPrinter);
+} 
