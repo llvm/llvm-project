@@ -12,7 +12,7 @@ struct S {
 // CHECK: @c3 = external addrspace(2) global [2 x [2 x i32]], align 4
 // CHECK: @c4 = external addrspace(2) global [1 x target("dx.Layout", %S, 8, 0, 4)], align 4
 
-cbuffer CBArrays {
+cbuffer CBArrays : register(b0) {
   float c1[2];
   int4 c2[2];
   int c3[2][2];
