@@ -1152,7 +1152,8 @@ static Language getLanguageFromOptions(const LangOptions &LangOpts) {
 
 std::unique_ptr<CompilerInstance> CompilerInstance::cloneForModuleCompileImpl(
     SourceLocation ImportLoc, StringRef ModuleName, FrontendInputFile Input,
-    StringRef OriginalModuleMapFile, StringRef ModuleFileName) {
+    StringRef OriginalModuleMapFile, StringRef ModuleFileName,
+    IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS) {
   // Construct a compiler invocation for creating this module.
   auto Invocation = std::make_shared<CompilerInvocation>(getInvocation());
 
@@ -1212,19 +1213,21 @@ std::unique_ptr<CompilerInstance> CompilerInstance::cloneForModuleCompileImpl(
   auto &Inv = *Invocation;
   Instance.setInvocation(std::move(Invocation));
 
-  Instance.createDiagnostics(
-      getVirtualFileSystem(),
-      new ForwardingDiagnosticConsumer(getDiagnosticClient()),
-      /*ShouldOwnClient=*/true);
-
-  if (llvm::is_contained(DiagOpts.SystemHeaderWarningsModules, ModuleName))
-    Instance.getDiagnostics().setSuppressSystemWarnings(false);
-
-  if (FrontendOpts.ModulesShareFileManager) {
+  if (VFS) {
+    Instance.createFileManager(std::move(VFS));
+  } else if (FrontendOpts.ModulesShareFileManager) {
     Instance.setFileManager(&getFileManager());
   } else {
     Instance.createFileManager(&getVirtualFileSystem());
   }
+
+  Instance.createDiagnostics(
+      Instance.getVirtualFileSystem(),
+      new ForwardingDiagnosticConsumer(getDiagnosticClient()),
+      /*ShouldOwnClient=*/true);
+  if (llvm::is_contained(DiagOpts.SystemHeaderWarningsModules, ModuleName))
+    Instance.getDiagnostics().setSuppressSystemWarnings(false);
+
   Instance.createSourceManager(Instance.getFileManager());
   SourceManager &SourceMgr = Instance.getSourceManager();
 
@@ -1318,7 +1321,8 @@ static OptionalFileEntryRef getPublicModuleMap(FileEntryRef File,
 }
 
 std::unique_ptr<CompilerInstance> CompilerInstance::cloneForModuleCompile(
-    SourceLocation ImportLoc, Module *Module, StringRef ModuleFileName) {
+    SourceLocation ImportLoc, Module *Module, StringRef ModuleFileName,
+    IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS) {
   StringRef ModuleName = Module->getTopLevelModuleName();
 
   InputKind IK(getLanguageFromOptions(getLangOpts()), InputKind::ModuleMap);
@@ -1363,7 +1367,8 @@ std::unique_ptr<CompilerInstance> CompilerInstance::cloneForModuleCompile(
     return cloneForModuleCompileImpl(
         ImportLoc, ModuleName,
         FrontendInputFile(ModuleMapFilePath, IK, IsSystem),
-        ModMap.getModuleMapFileForUniquing(Module)->getName(), ModuleFileName);
+        ModMap.getModuleMapFileForUniquing(Module)->getName(), ModuleFileName,
+        std::move(VFS));
   }
 
   // FIXME: We only need to fake up an input file here as a way of
@@ -1380,7 +1385,8 @@ std::unique_ptr<CompilerInstance> CompilerInstance::cloneForModuleCompile(
   auto Instance = cloneForModuleCompileImpl(
       ImportLoc, ModuleName,
       FrontendInputFile(FakeModuleMapFile, IK, +Module->IsSystem),
-      ModMap.getModuleMapFileForUniquing(Module)->getName(), ModuleFileName);
+      ModMap.getModuleMapFileForUniquing(Module)->getName(), ModuleFileName,
+      std::move(VFS));
 
   std::unique_ptr<llvm::MemoryBuffer> ModuleMapBuffer =
       llvm::MemoryBuffer::getMemBufferCopy(InferredModuleMapContent);
