@@ -119,8 +119,7 @@ struct AnonStructTypeKeyInfo {
   }
 
   static unsigned getHashValue(const KeyTy &Key) {
-    return hash_combine(
-        hash_combine_range(Key.ETypes.begin(), Key.ETypes.end()), Key.isPacked);
+    return hash_combine(hash_combine_range(Key.ETypes), Key.isPacked);
   }
 
   static unsigned getHashValue(const StructType *ST) {
@@ -171,9 +170,8 @@ struct FunctionTypeKeyInfo {
   }
 
   static unsigned getHashValue(const KeyTy &Key) {
-    return hash_combine(
-        Key.ReturnType,
-        hash_combine_range(Key.Params.begin(), Key.Params.end()), Key.isVarArg);
+    return hash_combine(Key.ReturnType, hash_combine_range(Key.Params),
+                        Key.isVarArg);
   }
 
   static unsigned getHashValue(const FunctionType *FT) {
@@ -219,10 +217,8 @@ struct TargetExtTypeKeyInfo {
   }
 
   static unsigned getHashValue(const KeyTy &Key) {
-    return hash_combine(
-        Key.Name,
-        hash_combine_range(Key.TypeParams.begin(), Key.TypeParams.end()),
-        hash_combine_range(Key.IntParams.begin(), Key.IntParams.end()));
+    return hash_combine(Key.Name, hash_combine_range(Key.TypeParams),
+                        hash_combine_range(Key.IntParams));
   }
 
   static unsigned getHashValue(const TargetExtType *FT) {
@@ -1349,9 +1345,7 @@ template <> struct MDNodeKeyImpl<DIExpr> {
     return Elements == ArrayRef<DIOp::Variant>(RHS->Elements);
   }
 
-  unsigned getHashValue() const {
-    return hash_combine_range(Elements.begin(), Elements.end());
-  }
+  unsigned getHashValue() const { return hash_combine_range(Elements); }
 };
 
 template <> struct MDNodeKeyImpl<DIGlobalVariableExpression> {
@@ -1488,9 +1482,7 @@ struct DIArgListKeyInfo {
 
   bool isKeyOf(const DIArgList *RHS) const { return Args == RHS->getArgs(); }
 
-  unsigned getHashValue() const {
-    return hash_combine_range(Args.begin(), Args.end());
-  }
+  unsigned getHashValue() const { return hash_combine_range(Args); }
 };
 
 /// DenseMapInfo for DIArgList.
