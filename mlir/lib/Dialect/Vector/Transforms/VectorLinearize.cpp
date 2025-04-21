@@ -26,6 +26,9 @@
 
 using namespace mlir;
 
+constexpr unsigned defaultTargetVectorBitWidth =
+    std::numeric_limits<unsigned>::max();
+
 static bool isLessThanTargetBitWidth(Operation *op, unsigned targetBitWidth) {
   // For BW-0, all operations are legal
   if (targetBitWidth == 0)
@@ -86,7 +89,7 @@ struct LinearizeConstantLike final
 
   LinearizeConstantLike(
       const TypeConverter &typeConverter, MLIRContext *context,
-      unsigned targetVectBitWidth = std::numeric_limits<unsigned>::max(),
+      unsigned targetVectBitWidth = defaultTargetVectorBitWidth,
       PatternBenefit benefit = 1)
       : OpTraitConversionPattern(typeConverter, context, benefit),
         targetVectorBitWidth(targetVectBitWidth) {}
@@ -140,7 +143,7 @@ struct LinearizeVectorizable final
 public:
   LinearizeVectorizable(
       const TypeConverter &typeConverter, MLIRContext *context,
-      unsigned targetVectBitWidth = std::numeric_limits<unsigned>::max(),
+      unsigned targetVectBitWidth = defaultTargetVectorBitWidth,
       PatternBenefit benefit = 1)
       : OpTraitConversionPattern(typeConverter, context, benefit),
         targetVectorBitWidth(targetVectBitWidth) {}
@@ -179,7 +182,7 @@ struct LinearizeVectorExtractStridedSlice final
   using OpConversionPattern::OpConversionPattern;
   LinearizeVectorExtractStridedSlice(
       const TypeConverter &typeConverter, MLIRContext *context,
-      unsigned targetVectBitWidth = std::numeric_limits<unsigned>::max(),
+      unsigned targetVectBitWidth = defaultTargetVectorBitWidth,
       PatternBenefit benefit = 1)
       : OpConversionPattern(typeConverter, context, benefit),
         targetVectorBitWidth(targetVectBitWidth) {}
@@ -295,7 +298,7 @@ struct LinearizeVectorInsertStridedSlice final
   using OpConversionPattern<vector::InsertStridedSliceOp>::OpConversionPattern;
   LinearizeVectorInsertStridedSlice(
       const TypeConverter &typeConverter, MLIRContext *context,
-      unsigned targetVectBitWidth = std::numeric_limits<unsigned>::max(),
+      unsigned targetVectBitWidth = defaultTargetVectorBitWidth,
       PatternBenefit benefit = 1)
       : OpConversionPattern(typeConverter, context, benefit),
         targetVectorBitWidth(targetVectBitWidth) {}
@@ -316,11 +319,6 @@ struct LinearizeVectorInsertStridedSlice final
       return rewriter.notifyMatchFailure(
           insertOp,
           "InsertStridedSliceOp linearization only supports 2D source.");
-
-    if (!srcTy.hasStaticShape() || !dstTy.hasStaticShape())
-      return rewriter.notifyMatchFailure(
-          insertOp,
-          "InsertStridedSliceOp linerization only supports static shapes.");
 
     if (srcTy.isScalable() || dstTy.isScalable())
       return rewriter.notifyMatchFailure(insertOp,
@@ -372,7 +370,7 @@ struct LinearizeVectorShuffle final
   using OpConversionPattern::OpConversionPattern;
   LinearizeVectorShuffle(
       const TypeConverter &typeConverter, MLIRContext *context,
-      unsigned targetVectBitWidth = std::numeric_limits<unsigned>::max(),
+      unsigned targetVectBitWidth = defaultTargetVectorBitWidth,
       PatternBenefit benefit = 1)
       : OpConversionPattern(typeConverter, context, benefit),
         targetVectorBitWidth(targetVectBitWidth) {}
@@ -445,7 +443,7 @@ struct LinearizeVectorExtract final
   using OpConversionPattern::OpConversionPattern;
   LinearizeVectorExtract(
       const TypeConverter &typeConverter, MLIRContext *context,
-      unsigned targetVectBitWidth = std::numeric_limits<unsigned>::max(),
+      unsigned targetVectBitWidth = defaultTargetVectorBitWidth,
       PatternBenefit benefit = 1)
       : OpConversionPattern(typeConverter, context, benefit),
         targetVectorBitWidth(targetVectBitWidth) {}
@@ -513,7 +511,7 @@ struct LinearizeVectorInsert final
   using OpConversionPattern::OpConversionPattern;
   LinearizeVectorInsert(
       const TypeConverter &typeConverter, MLIRContext *context,
-      unsigned targetVectBitWidth = std::numeric_limits<unsigned>::max(),
+      unsigned targetVectBitWidth = defaultTargetVectorBitWidth,
       PatternBenefit benefit = 1)
       : OpConversionPattern(typeConverter, context, benefit),
         targetVectorBitWidth(targetVectBitWidth) {}
@@ -593,7 +591,7 @@ struct LinearizeVectorBitCast final
   using OpConversionPattern::OpConversionPattern;
   LinearizeVectorBitCast(
       const TypeConverter &typeConverter, MLIRContext *context,
-      unsigned targetVectBitWidth = std::numeric_limits<unsigned>::max(),
+      unsigned targetVectBitWidth = defaultTargetVectorBitWidth,
       PatternBenefit benefit = 1)
       : OpConversionPattern(typeConverter, context, benefit),
         targetVectorBitWidth(targetVectBitWidth) {}
@@ -618,6 +616,7 @@ private:
   unsigned targetVectorBitWidth;
 };
 
+// clang-format off
 /// This pattern converts the LoadOp to a series of LoadOp & InsertOp
 /// that works on a linearized vector.
 /// Following,
@@ -625,20 +624,19 @@ private:
 /// is converted to :
 ///   %result = arith.constant dense<0.0> : vector<4x4xf32>
 ///   %slice_0 = vector.load %base[%indices] : vector<4xf32>
-///   %result_0 = vector.insert %slice_0, %result[0] : vector<4xf32> into
-///   vector<4x4xf32> %slice_1 = vector.load %base[%indices + 1] : vector<4xf32>
-///   %result_1 = vector.insert %slice_1, %result_0[1] : vector<4xf32> into
-///   vector<4x4xf32>
+///   %result_0 = vector.insert %slice_0, %result[0] : vector<4xf32> into vector<4x4xf32>
+///   %slice_1 = vector.load %base[%indices + 1] : vector<4xf32>
+///   %result_1 = vector.insert %slice_1, %result_0[1] : vector<4xf32> into vector<4x4xf32>
 ///   ...
 /// This unrolls the 2D vector load into multiple 1D vector loads and inserts
 /// them into the result vector. The pattern currently supports only 2D vectors
+// clang-format on
 struct LinearizeVectorLoad final : public OpConversionPattern<vector::LoadOp> {
   using OpConversionPattern<vector::LoadOp>::OpConversionPattern;
 
-  LinearizeVectorLoad(
-      const TypeConverter &typeConverter, MLIRContext *context,
-      unsigned targetVectBitWidth = std::numeric_limits<unsigned>::max(),
-      PatternBenefit benefit = 1)
+  LinearizeVectorLoad(const TypeConverter &typeConverter, MLIRContext *context,
+                      unsigned targetVectBitWidth = defaultTargetVectorBitWidth,
+                      PatternBenefit benefit = 1)
       : OpConversionPattern(typeConverter, context, benefit),
         targetVectorBitWidth(targetVectBitWidth) {}
 
@@ -702,7 +700,7 @@ struct LinearizeVectorStore final
 
   LinearizeVectorStore(
       const TypeConverter &typeConverter, MLIRContext *context,
-      unsigned targetVectBitWidth = std::numeric_limits<unsigned>::max(),
+      unsigned targetVectBitWidth = defaultTargetVectorBitWidth,
       PatternBenefit benefit = 1)
       : OpConversionPattern(typeConverter, context, benefit),
         targetVectorBitWidth(targetVectBitWidth) {}
@@ -758,7 +756,7 @@ struct LinearizeVectorSplat final
 
   LinearizeVectorSplat(
       const TypeConverter &typeConverter, MLIRContext *context,
-      unsigned targetVectBitWidth = std::numeric_limits<unsigned>::max(),
+      unsigned targetVectBitWidth = defaultTargetVectorBitWidth,
       PatternBenefit benefit = 1)
       : OpConversionPattern(typeConverter, context, benefit),
         targetVectorBitWidth(targetVectBitWidth) {}
@@ -794,7 +792,7 @@ struct LinearizeVectorCreateMask final
 
   LinearizeVectorCreateMask(
       const TypeConverter &typeConverter, MLIRContext *context,
-      unsigned targetVectBitWidth = std::numeric_limits<unsigned>::max(),
+      unsigned targetVectBitWidth = defaultTargetVectorBitWidth,
       PatternBenefit benefit = 1)
       : OpConversionPattern(typeConverter, context, benefit),
         targetVectorBitWidth(targetVectBitWidth) {}
@@ -907,8 +905,7 @@ void mlir::vector::populateVectorLinearizeShuffleLikeOpsPatterns(
         if (isLessThanTargetBitWidth(op, targetBitWidth)) {
           auto srcTy = op.getSourceVectorType();
           auto dstTy = op.getDestVectorType();
-          if (!op.hasNonUnitStrides() && srcTy.getRank() == 2 &&
-              srcTy.hasStaticShape() && dstTy.hasStaticShape())
+          if (!op.hasNonUnitStrides() && srcTy.getRank() == 2)
             return false;
         }
         return true;
