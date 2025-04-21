@@ -391,20 +391,17 @@ template <typename T>
 bool IsArrayElement(const Expr<T> &expr, bool intoSubstring = true,
     bool skipComponents = false) {
   if (auto dataRef{ExtractDataRef(expr, intoSubstring)}) {
-    const DataRef *ref{&*dataRef};
-    if (skipComponents) {
-      while (const Component * component{std::get_if<Component>(&ref->u)}) {
-        ref = &component->base();
+    for (const DataRef *ref{&*dataRef}; ref;) {
+      if (const Component * component{std::get_if<Component>(&ref->u)}) {
+        ref = skipComponents ? &component->base() : nullptr;
+      } else if (const auto *coarrayRef{std::get_if<CoarrayRef>(&ref->u)}) {
+        ref = &coarrayRef->base();
+      } else {
+        return std::holds_alternative<ArrayRef>(ref->u);
       }
     }
-    if (const auto *coarrayRef{std::get_if<CoarrayRef>(&ref->u)}) {
-      return !coarrayRef->subscript().empty();
-    } else {
-      return std::holds_alternative<ArrayRef>(ref->u);
-    }
-  } else {
-    return false;
   }
+  return false;
 }
 
 template <typename A>
@@ -417,9 +414,6 @@ std::optional<NamedEntity> ExtractNamedEntity(const A &x) {
             },
             [](Component &&component) -> std::optional<NamedEntity> {
               return NamedEntity{std::move(component)};
-            },
-            [](CoarrayRef &&co) -> std::optional<NamedEntity> {
-              return co.GetBase();
             },
             [](auto &&) { return std::optional<NamedEntity>{}; },
         },
@@ -528,22 +522,14 @@ const Symbol *UnwrapWholeSymbolOrComponentDataRef(const A &x) {
 // If an expression is a whole symbol or a whole component designator,
 // potentially followed by an image selector, extract and return that symbol,
 // else null.
+const Symbol *UnwrapWholeSymbolOrComponentOrCoarrayRef(const DataRef &);
 template <typename A>
 const Symbol *UnwrapWholeSymbolOrComponentOrCoarrayRef(const A &x) {
   if (auto dataRef{ExtractDataRef(x)}) {
-    if (const SymbolRef * p{std::get_if<SymbolRef>(&dataRef->u)}) {
-      return &p->get();
-    } else if (const Component * c{std::get_if<Component>(&dataRef->u)}) {
-      if (c->base().Rank() == 0) {
-        return &c->GetLastSymbol();
-      }
-    } else if (const CoarrayRef * c{std::get_if<CoarrayRef>(&dataRef->u)}) {
-      if (c->subscript().empty()) {
-        return &c->GetLastSymbol();
-      }
-    }
+    return UnwrapWholeSymbolOrComponentOrCoarrayRef(*dataRef);
+  } else {
+    return nullptr;
   }
-  return nullptr;
 }
 
 // GetFirstSymbol(A%B%C[I]%D) -> A
