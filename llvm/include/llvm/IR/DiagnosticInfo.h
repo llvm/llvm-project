@@ -700,13 +700,11 @@ public:
   /// \p Fn is the function where the diagnostic is being emitted. \p Loc is
   /// the location information to use in the diagnostic. If line table
   /// information is available, the diagnostic will include the source code
-  /// location. \p Msg is the message to show. Note that this class does not
-  /// copy this message, so this reference must be valid for the whole life time
-  /// of the diagnostic.
+  /// location. \p Msg is the message to show.
   DiagnosticInfoIROptimization(enum DiagnosticKind Kind,
                                enum DiagnosticSeverity Severity,
                                const char *PassName, const Function &Fn,
-                               const DiagnosticLocation &Loc, StringRef Msg)
+                               const DiagnosticLocation &Loc, const Twine &Msg)
       : DiagnosticInfoOptimizationBase(Kind, Severity, PassName, "", Fn, Loc) {
     *this << Msg.str();
   }
@@ -760,10 +758,8 @@ private:
   /// is being emitted. \p Loc is the location information to use in the
   /// diagnostic. If line table information is available, the diagnostic
   /// will include the source code location. \p Msg is the message to show.
-  /// Note that this class does not copy this message, so this reference
-  /// must be valid for the whole life time of the diagnostic.
   OptimizationRemark(const char *PassName, const Function &Fn,
-                     const DiagnosticLocation &Loc, StringRef Msg)
+                     const DiagnosticLocation &Loc, const Twine &Msg)
       : DiagnosticInfoIROptimization(DK_OptimizationRemark, DS_Remark, PassName,
                                      Fn, Loc, Msg) {}
 };
@@ -806,10 +802,8 @@ private:
   /// is being emitted. \p Loc is the location information to use in the
   /// diagnostic. If line table information is available, the diagnostic
   /// will include the source code location. \p Msg is the message to show.
-  /// Note that this class does not copy this message, so this reference
-  /// must be valid for the whole life time of the diagnostic.
   OptimizationRemarkMissed(const char *PassName, const Function &Fn,
-                           const DiagnosticLocation &Loc, StringRef Msg)
+                           const DiagnosticLocation &Loc, const Twine &Msg)
       : DiagnosticInfoIROptimization(DK_OptimizationRemarkMissed, DS_Remark,
                                      PassName, Fn, Loc, Msg) {}
 };
@@ -862,7 +856,7 @@ public:
 protected:
   OptimizationRemarkAnalysis(enum DiagnosticKind Kind, const char *PassName,
                              const Function &Fn, const DiagnosticLocation &Loc,
-                             StringRef Msg)
+                             const Twine &Msg)
       : DiagnosticInfoIROptimization(Kind, DS_Remark, PassName, Fn, Loc, Msg) {}
 
   OptimizationRemarkAnalysis(enum DiagnosticKind Kind, const char *PassName,
@@ -877,11 +871,9 @@ private:
   /// the diagnostic will be emitted. \p Fn is the function where the diagnostic
   /// is being emitted. \p Loc is the location information to use in the
   /// diagnostic. If line table information is available, the diagnostic will
-  /// include the source code location. \p Msg is the message to show. Note that
-  /// this class does not copy this message, so this reference must be valid for
-  /// the whole life time of the diagnostic.
+  /// include the source code location. \p Msg is the message to show.
   OptimizationRemarkAnalysis(const char *PassName, const Function &Fn,
-                             const DiagnosticLocation &Loc, StringRef Msg)
+                             const DiagnosticLocation &Loc, const Twine &Msg)
       : DiagnosticInfoIROptimization(DK_OptimizationRemarkAnalysis, DS_Remark,
                                      PassName, Fn, Loc, Msg) {}
 };
@@ -918,12 +910,10 @@ private:
   /// diagnostic. If line table information is available, the diagnostic will
   /// include the source code location. \p Msg is the message to show. The
   /// front-end will append its own message related to options that address
-  /// floating-point non-commutativity. Note that this class does not copy this
-  /// message, so this reference must be valid for the whole life time of the
-  /// diagnostic.
+  /// floating-point non-commutativity.
   OptimizationRemarkAnalysisFPCommute(const char *PassName, const Function &Fn,
                                       const DiagnosticLocation &Loc,
-                                      StringRef Msg)
+                                      const Twine &Msg)
       : OptimizationRemarkAnalysis(DK_OptimizationRemarkAnalysisFPCommute,
                                    PassName, Fn, Loc, Msg) {}
 };
@@ -959,12 +949,10 @@ private:
   /// diagnostic. If line table information is available, the diagnostic will
   /// include the source code location. \p Msg is the message to show. The
   /// front-end will append its own message related to options that address
-  /// pointer aliasing legality. Note that this class does not copy this
-  /// message, so this reference must be valid for the whole life time of the
-  /// diagnostic.
+  /// pointer aliasing legality.
   OptimizationRemarkAnalysisAliasing(const char *PassName, const Function &Fn,
                                      const DiagnosticLocation &Loc,
-                                     StringRef Msg)
+                                     const Twine &Msg)
       : OptimizationRemarkAnalysis(DK_OptimizationRemarkAnalysisAliasing,
                                    PassName, Fn, Loc, Msg) {}
 };
@@ -1032,12 +1020,10 @@ public:
   /// \p Fn is the function where the diagnostic is being emitted. \p Loc is
   /// the location information to use in the diagnostic. If line table
   /// information is available, the diagnostic will include the source code
-  /// location. \p Msg is the message to show. Note that this class does not
-  /// copy this message, so this reference must be valid for the whole life time
-  /// of the diagnostic.
+  /// location. \p Msg is the message to show.
   DiagnosticInfoOptimizationFailure(const Function &Fn,
                                     const DiagnosticLocation &Loc,
-                                    StringRef Msg)
+                                    const Twine &Msg = "")
       : DiagnosticInfoIROptimization(DK_OptimizationFailure, DS_Warning,
                                      nullptr, Fn, Loc, Msg) {}
 

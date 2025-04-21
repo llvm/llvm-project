@@ -468,11 +468,12 @@ void AMDGPUAsmPrinter::validateMCResourceInfo(Function &F) {
           F, "amdgpu-waves-per-eu", {0, 0}, true);
 
       if (TryGetMCExprValue(OccupancyExpr, Occupancy) && Occupancy < MinWEU) {
-        SmallString<256> Msg = formatv(
-            "failed to meet occupancy target given by 'amdgpu-waves-per-eu' in "
-            "'{0}': desired occupancy was {1}, final occupancy is {2}",
-            F.getName(), MinWEU, Occupancy);
-        DiagnosticInfoOptimizationFailure Diag(F, F.getSubprogram(), Msg);
+        DiagnosticInfoOptimizationFailure Diag(F, F.getSubprogram());
+        Diag << "failed to meet occupancy target given by "
+                "'amdgpu-waves-per-eu' in '"
+             << F.getName() << "': desired occupancy was "
+             << std::to_string(MinWEU) << ", final occupancy is "
+             << std::to_string(Occupancy);
         F.getContext().diagnose(Diag);
         return;
       }
@@ -1262,12 +1263,13 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
       AMDGPU::getIntegerPairAttribute(F, "amdgpu-waves-per-eu", {0, 0}, true);
   uint64_t Occupancy;
   if (TryGetMCExprValue(ProgInfo.Occupancy, Occupancy) && Occupancy < MinWEU) {
-    SmallString<256> Msg = formatv(
-        "failed to meet occupancy target given by 'amdgpu-waves-per-eu' in "
-        "'{0}'': desired occupancy was {1}, final occupancy is {2}",
-        F.getName(), MinWEU, Occupancy);
-    F.getContext().diagnose(
-        DiagnosticInfoOptimizationFailure(F, F.getSubprogram(), Msg));
+    DiagnosticInfoOptimizationFailure Diag(F, F.getSubprogram());
+    Diag
+        << "failed to meet occupancy target given by 'amdgpu-waves-per-eu' in '"
+        << F.getName(),
+        << "': desired occupancy was " << std::to_string(MinWEU)
+        << ", final occupancy is " << Occupancy;
+    F.getContext().diagnose(Diag);
   }
 
   if (isGFX11Plus(STM)) {
