@@ -500,7 +500,7 @@ define void @masked_load_v2i32_align1(ptr %a, <2 x i32> %m, ptr %res_ptr) nounwi
 ; RV32-SLOW-NEXT:    or a4, a6, a5
 ; RV32-SLOW-NEXT:    or a3, a4, a3
 ; RV32-SLOW-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
-; RV32-SLOW-NEXT:    vmv.v.x v8, a3
+; RV32-SLOW-NEXT:    vmv.s.x v8, a3
 ; RV32-SLOW-NEXT:  .LBB8_2: # %else
 ; RV32-SLOW-NEXT:    andi a2, a2, 2
 ; RV32-SLOW-NEXT:    beqz a2, .LBB8_4
@@ -544,7 +544,7 @@ define void @masked_load_v2i32_align1(ptr %a, <2 x i32> %m, ptr %res_ptr) nounwi
 ; RV64-SLOW-NEXT:    or a4, a6, a5
 ; RV64-SLOW-NEXT:    or a3, a4, a3
 ; RV64-SLOW-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
-; RV64-SLOW-NEXT:    vmv.v.x v8, a3
+; RV64-SLOW-NEXT:    vmv.s.x v8, a3
 ; RV64-SLOW-NEXT:  .LBB8_2: # %else
 ; RV64-SLOW-NEXT:    andi a2, a2, 2
 ; RV64-SLOW-NEXT:    beqz a2, .LBB8_4

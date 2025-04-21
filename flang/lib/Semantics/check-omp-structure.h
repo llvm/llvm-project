@@ -73,6 +73,8 @@ public:
 
   void Enter(const parser::OpenMPConstruct &);
   void Leave(const parser::OpenMPConstruct &);
+  void Enter(const parser::OpenMPInteropConstruct &);
+  void Leave(const parser::OpenMPInteropConstruct &);
   void Enter(const parser::OpenMPDeclarativeConstruct &);
   void Leave(const parser::OpenMPDeclarativeConstruct &);
 
@@ -315,6 +317,8 @@ private:
   bool deviceConstructFound_{false};
 
   void CheckAlignValue(const parser::OmpClause &);
+
+  void AddEndDirectiveClauses(const parser::OmpClauseList &clauses);
 
   void EnterDirectiveNest(const int index) { directiveNest_[index]++; }
   void ExitDirectiveNest(const int index) { directiveNest_[index]--; }

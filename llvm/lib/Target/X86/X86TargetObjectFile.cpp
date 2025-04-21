@@ -54,7 +54,7 @@ const MCExpr *X86_64MachoTargetObjectFile::getIndirectSymViaGOTPCRel(
 }
 
 X86ELFTargetObjectFile::X86ELFTargetObjectFile() {
-  PLTRelativeVariantKind = MCSymbolRefExpr::VariantKind(X86MCExpr::VK_PLT);
+  PLTRelativeSpecifier = X86MCExpr::VK_PLT;
 }
 
 const MCExpr *X86ELFTargetObjectFile::getDebugThreadLocalSymbol(

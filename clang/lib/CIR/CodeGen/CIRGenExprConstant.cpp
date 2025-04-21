@@ -206,8 +206,7 @@ emitArrayConstant(CIRGenModule &cgm, mlir::Type desiredType,
       eles.push_back(element);
 
     return cir::ConstArrayAttr::get(
-        cir::ArrayType::get(builder.getContext(), commonElementType,
-                            arrayBound),
+        cir::ArrayType::get(commonElementType, arrayBound),
         mlir::ArrayAttr::get(builder.getContext(), eles));
   }
 
@@ -411,4 +410,26 @@ mlir::Attribute ConstantEmitter::tryEmitPrivate(const APValue &value,
     return {};
   }
   llvm_unreachable("Unknown APValue kind");
+}
+
+mlir::Value CIRGenModule::emitNullConstant(QualType t, mlir::Location loc) {
+  if (t->getAs<PointerType>()) {
+    return builder.getNullPtr(getTypes().convertTypeForMem(t), loc);
+  }
+
+  if (getTypes().isZeroInitializable(t))
+    return builder.getNullValue(getTypes().convertTypeForMem(t), loc);
+
+  if (getASTContext().getAsConstantArrayType(t)) {
+    errorNYI("CIRGenModule::emitNullConstant ConstantArrayType");
+  }
+
+  if (t->getAs<RecordType>())
+    errorNYI("CIRGenModule::emitNullConstant RecordType");
+
+  assert(t->isMemberDataPointerType() &&
+         "Should only see pointers to data members here!");
+
+  errorNYI("CIRGenModule::emitNullConstant unsupported type");
+  return {};
 }

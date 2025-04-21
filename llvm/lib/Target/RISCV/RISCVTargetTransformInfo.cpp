@@ -37,6 +37,12 @@ static cl::opt<unsigned> SLPMaxVF(
         "exclusively by SLP vectorizer."),
     cl::Hidden);
 
+static cl::opt<unsigned>
+    RVVMinTripCount("riscv-v-min-trip-count",
+                    cl::desc("Set the lower bound of a trip count to decide on "
+                             "vectorization while tail-folding."),
+                    cl::init(5), cl::Hidden);
+
 InstructionCost
 RISCVTTIImpl::getRISCVInstructionCost(ArrayRef<unsigned> OpCodes, MVT VT,
                                       TTI::TargetCostKind CostKind) {
@@ -430,10 +436,14 @@ costShuffleViaVRegSplitting(RISCVTTIImpl &TTI, MVT LegalVT,
   copy(Mask, NormalizedMask.begin());
   InstructionCost Cost = 0;
   int NumShuffles = 0;
+  SmallDenseSet<std::pair<ArrayRef<int>, unsigned>> ReusedSingleSrcShuffles;
   processShuffleMasks(
       NormalizedMask, NumOfSrcRegs, NumOfDestRegs, NumOfDestRegs, []() {},
       [&](ArrayRef<int> RegMask, unsigned SrcReg, unsigned DestReg) {
         if (ShuffleVectorInst::isIdentityMask(RegMask, RegMask.size()))
+          return;
+        if (!ReusedSingleSrcShuffles.insert(std::make_pair(RegMask, SrcReg))
+                 .second)
           return;
         ++NumShuffles;
         Cost += TTI.getShuffleCost(TTI::SK_PermuteSingleSrc, SingleOpTy,
@@ -1864,9 +1874,8 @@ RISCVTTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,
     break;
   case ISD::FADD:
     // We can't promote f16/bf16 fadd reductions.
-    if ((LT.second.getVectorElementType() == MVT::f16 &&
-         !ST->hasVInstructionsF16()) ||
-        LT.second.getVectorElementType() == MVT::bf16)
+    if ((LT.second.getScalarType() == MVT::f16 && !ST->hasVInstructionsF16()) ||
+        LT.second.getScalarType() == MVT::bf16)
       return BaseT::getArithmeticReductionCost(Opcode, Ty, FMF, CostKind);
     if (TTI::requiresOrderedReduction(FMF)) {
       Opcodes.push_back(RISCV::VFMV_S_F);
@@ -2596,6 +2605,10 @@ unsigned RISCVTTIImpl::getMaximumVF(unsigned ElemWidth, unsigned Opcode) const {
   // If no vector registers, or absurd element widths, disable
   // vectorization by returning 1.
   return std::max<unsigned>(1U, RegWidth.getFixedValue() / ElemWidth);
+}
+
+unsigned RISCVTTIImpl::getMinTripCountTailFoldingThreshold() const {
+  return RVVMinTripCount;
 }
 
 TTI::AddressingModeKind

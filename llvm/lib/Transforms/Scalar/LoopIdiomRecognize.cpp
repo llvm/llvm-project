@@ -313,7 +313,8 @@ bool LoopIdiomRecognize::runOnLoop(Loop *L) {
 
   // Disable loop idiom recognition if the function's name is a common idiom.
   StringRef Name = L->getHeader()->getParent()->getName();
-  if (Name == "memset" || Name == "memcpy")
+  if (Name == "memset" || Name == "memcpy" || Name == "strlen" ||
+      Name == "wcslen")
     return false;
 
   // Determine if code size heuristics need to be applied.
@@ -1515,16 +1516,6 @@ bool LoopIdiomRecognize::runOnNoncountableLoop() {
          recognizeShiftUntilLessThan() || recognizeAndInsertStrLen();
 }
 
-/// Check if a Value is either a nullptr or a constant int zero
-static bool isZeroConstant(const Value *Val) {
-  if (isa<ConstantPointerNull>(Val))
-    return true;
-  const ConstantInt *CmpZero = dyn_cast<ConstantInt>(Val);
-  if (!CmpZero || !CmpZero->isZero())
-    return false;
-  return true;
-}
-
 /// Check if the given conditional branch is based on the comparison between
 /// a variable and zero, and if the variable is non-zero or zero (JmpOnZero is
 /// true), the control yields to the loop entry. If the branch matches the
@@ -1540,7 +1531,8 @@ static Value *matchCondition(BranchInst *BI, BasicBlock *LoopEntry,
   if (!Cond)
     return nullptr;
 
-  if (!isZeroConstant(Cond->getOperand(1)))
+  auto *CmpZero = dyn_cast<ConstantInt>(Cond->getOperand(1));
+  if (!CmpZero || !CmpZero->isZero())
     return nullptr;
 
   BasicBlock *TrueSucc = BI->getSuccessor(0);
@@ -1611,11 +1603,7 @@ public:
       return false;
     LoadBaseEv = LoadEv->getStart();
 
-    LLVM_DEBUG({
-      dbgs() << "pointer load scev: ";
-      LoadEv->print(outs());
-      dbgs() << "\n";
-    });
+    LLVM_DEBUG(dbgs() << "pointer load scev: " << *LoadEv << "\n");
 
     const SCEVConstant *Step =
         dyn_cast<SCEVConstant>(LoadEv->getStepRecurrence(*SE));
@@ -1656,11 +1644,7 @@ public:
       if (!Ev)
         return false;
 
-      LLVM_DEBUG({
-        dbgs() << "loop exit phi scev: ";
-        Ev->print(dbgs());
-        dbgs() << "\n";
-      });
+      LLVM_DEBUG(dbgs() << "loop exit phi scev: " << *Ev << "\n");
 
       // Since we verified that the loop trip count will be a valid strlen
       // idiom, we can expand all lcssa phi with {n,+,1} as (n + strlen) and use
@@ -1761,7 +1745,23 @@ bool LoopIdiomRecognize::recognizeAndInsertStrLen() {
     return false;
 
   BasicBlock *Preheader = CurLoop->getLoopPreheader();
+  BasicBlock *LoopBody = *CurLoop->block_begin();
   BasicBlock *LoopExitBB = CurLoop->getExitBlock();
+  BranchInst *LoopTerm = dyn_cast<BranchInst>(LoopBody->getTerminator());
+  assert(Preheader && LoopBody && LoopExitBB && LoopTerm &&
+         "Should be verified to be valid by StrlenVerifier");
+
+  if (Verifier.OpWidth == 8) {
+    if (DisableLIRP::Strlen)
+      return false;
+    if (!isLibFuncEmittable(Preheader->getModule(), TLI, LibFunc_strlen))
+      return false;
+  } else {
+    if (DisableLIRP::Wcslen)
+      return false;
+    if (!isLibFuncEmittable(Preheader->getModule(), TLI, LibFunc_wcslen))
+      return false;
+  }
 
   IRBuilder<> Builder(Preheader->getTerminator());
   SCEVExpander Expander(*SE, Preheader->getModule()->getDataLayout(),
@@ -1772,16 +1772,8 @@ bool LoopIdiomRecognize::recognizeAndInsertStrLen() {
 
   Value *StrLenFunc = nullptr;
   if (Verifier.OpWidth == 8) {
-    if (DisableLIRP::Strlen)
-      return false;
-    if (!isLibFuncEmittable(Preheader->getModule(), TLI, LibFunc_strlen))
-      return false;
     StrLenFunc = emitStrLen(MaterialzedBase, Builder, *DL, TLI);
   } else {
-    if (DisableLIRP::Wcslen)
-      return false;
-    if (!isLibFuncEmittable(Preheader->getModule(), TLI, LibFunc_wcslen))
-      return false;
     StrLenFunc = emitWcsLen(MaterialzedBase, Builder, *DL, TLI);
   }
   assert(StrLenFunc && "Failed to emit strlen function.");
@@ -1816,6 +1808,17 @@ bool LoopIdiomRecognize::recognizeAndInsertStrLen() {
   // up by later passes
   for (PHINode *PN : Cleanup)
     RecursivelyDeleteDeadPHINode(PN);
+
+  // LoopDeletion only delete invariant loops with known trip-count. We can
+  // update the condition so it will reliablely delete the invariant loop
+  assert(LoopTerm->getNumSuccessors() == 2 &&
+         (LoopTerm->getSuccessor(0) == LoopBody ||
+          LoopTerm->getSuccessor(1) == LoopBody) &&
+         "loop body must have a successor that is it self");
+  ConstantInt *NewLoopCond = LoopTerm->getSuccessor(0) == LoopBody
+                                 ? Builder.getFalse()
+                                 : Builder.getTrue();
+  LoopTerm->setCondition(NewLoopCond);
   SE->forgetLoop(CurLoop);
 
   ++NumStrLen;

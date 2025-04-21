@@ -307,7 +307,8 @@ def simm8_lsl # I : Operand<GRLenVT> {
 }
 }
 
-def simm9_lsl3 : Operand<GRLenVT> {
+def simm9_lsl3 : Operand<GRLenVT>,
+                 ImmLeaf<GRLenVT, [{return isShiftedInt<9,3>(Imm);}]> {
   let ParserMatchClass = SImmAsmOperand<9, "lsl3">;
   let EncoderMethod = "getImmOpValueAsr<3>";
   let DecoderMethod = "decodeSImmOperand<9, 3>";
@@ -317,13 +318,15 @@ def simm10 : Operand<GRLenVT> {
   let ParserMatchClass = SImmAsmOperand<10>;
 }
 
-def simm10_lsl2 : Operand<GRLenVT> {
+def simm10_lsl2 : Operand<GRLenVT>,
+                  ImmLeaf<GRLenVT, [{return isShiftedInt<10,2>(Imm);}]> {
   let ParserMatchClass = SImmAsmOperand<10, "lsl2">;
   let EncoderMethod = "getImmOpValueAsr<2>";
   let DecoderMethod = "decodeSImmOperand<10, 2>";
 }
 
-def simm11_lsl1 : Operand<GRLenVT> {
+def simm11_lsl1 : Operand<GRLenVT>,
+                  ImmLeaf<GRLenVT, [{return isShiftedInt<11,1>(Imm);}]> {
   let ParserMatchClass = SImmAsmOperand<11, "lsl1">;
   let EncoderMethod = "getImmOpValueAsr<1>";
   let DecoderMethod = "decodeSImmOperand<11, 1>";
@@ -2294,11 +2297,15 @@ def : InstAlias<"move $dst, $src", (OR GPR:$dst, GPR:$src, R0)>;
 def : InstAlias<"ret", (JIRL R0, R1, 0)>;
 def : InstAlias<"jr $rj", (JIRL R0, GPR:$rj, 0)>;
 
-// Branches implemented with alias.
-// Always output the canonical mnemonic for the pseudo branch instructions.
-// The GNU tools emit the canonical mnemonic for the branch pseudo instructions
-// as well (e.g. "bgt" will be recognised by the assembler but never printed by
-// objdump). Match this behaviour by setting a zero weight.
+// Branches implemented with aliases.
+// Disassemble branch instructions not having a $zero operand to the
+// canonical mnemonics respectively, but disassemble BLT/BGE with a $zero
+// operand to the corresponding pseudo-instruction.
+// GNU Binutils behave like this since 2.41, e.g. "bgt" will be recognised
+// by the assembler but always disassembles as "blt" by objdump, while "bgtz"
+// will come back intact.
+// Match this behaviour by setting a zero weight for the b{gt,le}{,u}
+// patterns only.
 def : InstAlias<"bgt $rj, $rd, $imm16",
                 (BLT GPR:$rd, GPR:$rj, simm16_lsl2_br:$imm16), 0>;
 def : InstAlias<"bgtu $rj, $rd, $imm16",
@@ -2308,13 +2315,13 @@ def : InstAlias<"ble $rj, $rd, $imm16",
 def : InstAlias<"bleu $rj, $rd, $imm16",
                 (BGEU GPR:$rd, GPR:$rj, simm16_lsl2_br:$imm16), 0>;
 def : InstAlias<"bltz $rd, $imm16",
-                (BLT GPR:$rd, R0, simm16_lsl2_br:$imm16), 0>;
+                (BLT GPR:$rd, R0, simm16_lsl2_br:$imm16)>;
 def : InstAlias<"bgtz $rj, $imm16",
-                (BLT R0, GPR:$rj, simm16_lsl2_br:$imm16), 0>;
+                (BLT R0, GPR:$rj, simm16_lsl2_br:$imm16)>;
 def : InstAlias<"blez $rj, $imm16",
-                (BGE R0, GPR:$rj, simm16_lsl2_br:$imm16), 0>;
+                (BGE R0, GPR:$rj, simm16_lsl2_br:$imm16)>;
 def : InstAlias<"bgez $rd, $imm16",
-                (BGE GPR:$rd, R0, simm16_lsl2_br:$imm16), 0>;
+                (BGE GPR:$rd, R0, simm16_lsl2_br:$imm16)>;
 
 // Load immediate.
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0, isCodeGenOnly = 0,

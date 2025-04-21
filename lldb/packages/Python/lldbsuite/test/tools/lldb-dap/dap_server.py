@@ -255,8 +255,6 @@ class DebugCommunication(object):
                 # and 'progressEnd' events. Keep these around in case test
                 # cases want to verify them.
                 self.progress_events.append(packet)
-                # No need to add 'progress' event packets to our packets list.
-                return keepGoing
 
         elif packet_type == "response":
             if packet["command"] == "disconnect":
@@ -345,25 +343,21 @@ class DebugCommunication(object):
                     self.send_packet(
                         {
                             "type": "response",
-                            "seq": 0,
                             "request_seq": response_or_request["seq"],
                             "success": True,
                             "command": "runInTerminal",
                             "body": {},
                         },
-                        set_sequence=False,
                     )
                 elif response_or_request["command"] == "startDebugging":
                     self.send_packet(
                         {
                             "type": "response",
-                            "seq": 0,
                             "request_seq": response_or_request["seq"],
                             "success": True,
                             "command": "startDebugging",
                             "body": {},
                         },
-                        set_sequence=False,
                     )
                 else:
                     desc = 'unknown reverse request "%s"' % (
@@ -651,6 +645,10 @@ class DebugCommunication(object):
         response = self.send_recv(command_dict)
         if response:
             self.configuration_done_sent = True
+            # Client requests the baseline of currently existing threads after
+            # a successful launch or attach.
+            # Kick off the threads request that follows
+            self.request_threads()
         return response
 
     def _process_stopped(self):
@@ -776,7 +774,8 @@ class DebugCommunication(object):
                 "supportsVariablePaging": True,
                 "supportsVariableType": True,
                 "supportsStartDebuggingRequest": True,
-                "sourceInitFile": sourceInitFile,
+                "supportsProgressReporting": True,
+                "$__lldb_sourceInitFile": sourceInitFile,
             },
         }
         response = self.send_recv(command_dict)
@@ -1261,7 +1260,7 @@ class DebugAdapterServer(DebugCommunication):
         expected_prefix = "Listening for: "
         out = process.stdout.readline().decode()
         if not out.startswith(expected_prefix):
-            self.process.kill()
+            process.kill()
             raise ValueError(
                 "lldb-dap failed to print listening address, expected '{}', got '{}'".format(
                     expected_prefix, out

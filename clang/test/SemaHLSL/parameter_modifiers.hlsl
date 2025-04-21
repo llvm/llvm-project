@@ -48,8 +48,8 @@ void callFns() {
   // Call with literal arguments.
   implicitFn(1); // Ok.
   inFn(1); // Ok.
-  inoutFn(1); // expected-error{{cannot bind non-lvalue argument 1 to inout paramemter}}
-  outFn(1); // expected-error{{cannot bind non-lvalue argument 1 to out paramemter}}
+  inoutFn(1); // expected-error{{cannot bind non-lvalue argument '1' to inout paramemter}}
+  outFn(1); // expected-error{{cannot bind non-lvalue argument '1' to out paramemter}}
 
   // Call with variables.
   float f;

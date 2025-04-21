@@ -5314,7 +5314,8 @@ define void @v_fneg_copytoreg_f16(ptr addrspace(1) %out, half %a, half %b, half 
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_lshlrev_b32_e32 v6, 1, v6
 ; GFX11-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v6
-; GFX11-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v1, vcc_lo
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
 ; GFX11-NEXT:    v_cmpx_eq_u32_e32 0, v5
 ; GFX11-NEXT:    s_cbranch_execz .LBB81_2
 ; GFX11-NEXT:  ; %bb.1: ; %if

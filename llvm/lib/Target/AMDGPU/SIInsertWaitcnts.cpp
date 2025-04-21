@@ -33,6 +33,7 @@
 #include "llvm/ADT/Sequence.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/MachinePostDominators.h"
 #include "llvm/Support/DebugCounter.h"
 #include "llvm/TargetParser/TargetParser.h"
@@ -386,8 +387,12 @@ public:
     return LDSDMAStores;
   }
 
-  void print(raw_ostream &);
-  void dump() { print(dbgs()); }
+  bool hasPointSampleAccel(const MachineInstr &MI) const;
+  bool hasPointSamplePendingVmemTypes(const MachineInstr &MI,
+                                      RegInterval Interval) const;
+
+  void print(raw_ostream &) const;
+  void dump() const { print(dbgs()); }
 
 private:
   struct MergeInfo {
@@ -597,7 +602,7 @@ public:
   AMDGPU::Waitcnt getAllZeroWaitcnt(bool IncludeVSCnt) const override;
 };
 
-class SIInsertWaitcnts : public MachineFunctionPass {
+class SIInsertWaitcnts {
 private:
   const GCNSubtarget *ST = nullptr;
   const SIInstrInfo *TII = nullptr;
@@ -636,32 +641,19 @@ private:
   InstCounterType MaxCounter = NUM_NORMAL_INST_CNTS;
 
 public:
-  static char ID;
-
-  SIInsertWaitcnts() : MachineFunctionPass(ID) {
+  SIInsertWaitcnts(MachineLoopInfo *MLI, MachinePostDominatorTree *PDT,
+                   AliasAnalysis *AA)
+      : MLI(MLI), PDT(PDT), AA(AA) {
     (void)ForceExpCounter;
     (void)ForceLgkmCounter;
     (void)ForceVMCounter;
   }
 
-  bool shouldFlushVmCnt(MachineLoop *ML, WaitcntBrackets &Brackets);
+  bool shouldFlushVmCnt(MachineLoop *ML, const WaitcntBrackets &Brackets);
   bool isPreheaderToFlush(MachineBasicBlock &MBB,
-                          WaitcntBrackets &ScoreBrackets);
+                          const WaitcntBrackets &ScoreBrackets);
   bool isVMEMOrFlatVMEM(const MachineInstr &MI) const;
-  bool runOnMachineFunction(MachineFunction &MF) override;
-
-  StringRef getPassName() const override {
-    return "SI insert wait instructions";
-  }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesCFG();
-    AU.addRequired<MachineLoopInfoWrapperPass>();
-    AU.addRequired<MachinePostDominatorTreeWrapperPass>();
-    AU.addUsedIfAvailable<AAResultsWrapperPass>();
-    AU.addPreserved<AAResultsWrapperPass>();
-    MachineFunctionPass::getAnalysisUsage(AU);
-  }
+  bool run(MachineFunction &MF);
 
   bool isForceEmitWaitcnt() const {
     for (auto T : inst_counter_types())
@@ -749,6 +741,27 @@ public:
                             WaitcntBrackets &ScoreBrackets);
 };
 
+class SIInsertWaitcntsLegacy : public MachineFunctionPass {
+public:
+  static char ID;
+  SIInsertWaitcntsLegacy() : MachineFunctionPass(ID) {}
+
+  bool runOnMachineFunction(MachineFunction &MF) override;
+
+  StringRef getPassName() const override {
+    return "SI insert wait instructions";
+  }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesCFG();
+    AU.addRequired<MachineLoopInfoWrapperPass>();
+    AU.addRequired<MachinePostDominatorTreeWrapperPass>();
+    AU.addUsedIfAvailable<AAResultsWrapperPass>();
+    AU.addPreserved<AAResultsWrapperPass>();
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
+};
+
 } // end anonymous namespace
 
 RegInterval WaitcntBrackets::getRegInterval(const MachineInstr *MI,
@@ -815,6 +828,34 @@ void WaitcntBrackets::setScoreByOperand(const MachineInstr *MI,
                                         InstCounterType CntTy, unsigned Score) {
   RegInterval Interval = getRegInterval(MI, MRI, TRI, Op);
   setScoreByInterval(Interval, CntTy, Score);
+}
+
+// Return true if the subtarget is one that enables Point Sample Acceleration
+// and the MachineInstr passed in is one to which it might be applied (the
+// hardware makes this decision based on several factors, but we can't determine
+// this at compile time, so we have to assume it might be applied if the
+// instruction supports it).
+bool WaitcntBrackets::hasPointSampleAccel(const MachineInstr &MI) const {
+  if (!ST->hasPointSampleAccel() || !SIInstrInfo::isMIMG(MI))
+    return false;
+
+  const AMDGPU::MIMGInfo *Info = AMDGPU::getMIMGInfo(MI.getOpcode());
+  const AMDGPU::MIMGBaseOpcodeInfo *BaseInfo =
+      AMDGPU::getMIMGBaseOpcodeInfo(Info->BaseOpcode);
+  return BaseInfo->PointSampleAccel;
+}
+
+// Return true if the subtarget enables Point Sample Acceleration, the supplied
+// MachineInstr is one to which it might be applied and the supplied interval is
+// one that has outstanding writes to vmem-types different than VMEM_NOSAMPLER
+// (this is the type that a point sample accelerated instruction effectively
+// becomes)
+bool WaitcntBrackets::hasPointSamplePendingVmemTypes(
+    const MachineInstr &MI, RegInterval Interval) const {
+  if (!hasPointSampleAccel(MI))
+    return false;
+
+  return hasOtherPendingVmemTypes(Interval, VMEM_NOSAMPLER);
 }
 
 void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
@@ -933,8 +974,13 @@ void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
           // defs. That's required for a sane index into `VgprMemTypes` below
           assert(TRI->isVectorRegister(*MRI, Op.getReg()));
           VmemType V = getVmemType(Inst);
+          unsigned char TypesMask = 1 << V;
+          // If instruction can have Point Sample Accel applied, we have to flag
+          // this with another potential dependency
+          if (hasPointSampleAccel(Inst))
+            TypesMask |= 1 << VMEM_NOSAMPLER;
           for (int RegNo = Interval.first; RegNo < Interval.second; ++RegNo)
-            VgprVmemTypes[RegNo] |= 1 << V;
+            VgprVmemTypes[RegNo] |= TypesMask;
         }
       }
       setScoreByInterval(Interval, T, CurrScore);
@@ -981,7 +1027,7 @@ void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
   }
 }
 
-void WaitcntBrackets::print(raw_ostream &OS) {
+void WaitcntBrackets::print(raw_ostream &OS) const {
   OS << '\n';
   for (auto T : inst_counter_types(MaxCounter)) {
     unsigned SR = getScoreRange(T);
@@ -1133,19 +1179,19 @@ bool WaitcntBrackets::counterOutOfOrder(InstCounterType T) const {
   return hasMixedPendingEvents(T);
 }
 
-INITIALIZE_PASS_BEGIN(SIInsertWaitcnts, DEBUG_TYPE, "SI Insert Waitcnts", false,
-                      false)
+INITIALIZE_PASS_BEGIN(SIInsertWaitcntsLegacy, DEBUG_TYPE, "SI Insert Waitcnts",
+                      false, false)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachinePostDominatorTreeWrapperPass)
-INITIALIZE_PASS_END(SIInsertWaitcnts, DEBUG_TYPE, "SI Insert Waitcnts", false,
-                    false)
+INITIALIZE_PASS_END(SIInsertWaitcntsLegacy, DEBUG_TYPE, "SI Insert Waitcnts",
+                    false, false)
 
-char SIInsertWaitcnts::ID = 0;
+char SIInsertWaitcntsLegacy::ID = 0;
 
-char &llvm::SIInsertWaitcntsID = SIInsertWaitcnts::ID;
+char &llvm::SIInsertWaitcntsID = SIInsertWaitcntsLegacy::ID;
 
 FunctionPass *llvm::createSIInsertWaitcntsPass() {
-  return new SIInsertWaitcnts();
+  return new SIInsertWaitcntsLegacy();
 }
 
 static bool updateOperandIfDifferent(MachineInstr &MI, AMDGPU::OpName OpName,
@@ -1743,10 +1789,12 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
 
       for (const MachineMemOperand *Memop : MI.memoperands()) {
         const Value *Ptr = Memop->getValue();
-        if (Memop->isStore() && SLoadAddresses.count(Ptr)) {
-          addWait(Wait, SmemAccessCounter, 0);
-          if (PDT->dominates(MI.getParent(), SLoadAddresses.find(Ptr)->second))
-            SLoadAddresses.erase(Ptr);
+        if (Memop->isStore()) {
+          if (auto It = SLoadAddresses.find(Ptr); It != SLoadAddresses.end()) {
+            addWait(Wait, SmemAccessCounter, 0);
+            if (PDT->dominates(MI.getParent(), It->second))
+              SLoadAddresses.erase(It);
+          }
         }
         unsigned AS = Memop->getAddrSpace();
         if (AS != AMDGPUAS::LOCAL_ADDRESS && AS != AMDGPUAS::FLAT_ADDRESS)
@@ -1757,7 +1805,6 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
 
         // LOAD_CNT is only relevant to vgpr or LDS.
         unsigned RegNo = SQ_MAX_PGM_VGPRS + EXTRA_VGPR_LDS;
-        bool FoundAliasingStore = false;
         // Only objects with alias scope info were added to LDSDMAScopes array.
         // In the absense of the scope info we will not be able to disambiguate
         // aliasing here. There is no need to try searching for a corresponding
@@ -1767,14 +1814,12 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
         if (Ptr && Memop->getAAInfo() && Memop->getAAInfo().Scope) {
           const auto &LDSDMAStores = ScoreBrackets.getLDSDMAStores();
           for (unsigned I = 0, E = LDSDMAStores.size(); I != E; ++I) {
-            if (MI.mayAlias(AA, *LDSDMAStores[I], true)) {
-              FoundAliasingStore = true;
+            if (MI.mayAlias(AA, *LDSDMAStores[I], true))
               ScoreBrackets.determineWait(LOAD_CNT, RegNo + I + 1, Wait);
-            }
           }
-        }
-        if (!FoundAliasingStore)
+        } else {
           ScoreBrackets.determineWait(LOAD_CNT, RegNo, Wait);
+        }
         if (Memop->isStore()) {
           ScoreBrackets.determineWait(EXP_CNT, RegNo, Wait);
         }
@@ -1805,9 +1850,12 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
           // previous write and this write are the same type of VMEM
           // instruction, in which case they are (in some architectures)
           // guaranteed to write their results in order anyway.
+          // Additionally check instructions where Point Sample Acceleration
+          // might be applied.
           if (Op.isUse() || !updateVMCntOnly(MI) ||
               ScoreBrackets.hasOtherPendingVmemTypes(Interval,
                                                      getVmemType(MI)) ||
+              ScoreBrackets.hasPointSamplePendingVmemTypes(MI, Interval) ||
               !ST->hasVmemWriteVgprInOrder()) {
             ScoreBrackets.determineWait(LOAD_CNT, Interval, Wait);
             ScoreBrackets.determineWait(SAMPLE_CNT, Interval, Wait);
@@ -2382,8 +2430,8 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
 
 // Return true if the given machine basic block is a preheader of a loop in
 // which we want to flush the vmcnt counter, and false otherwise.
-bool SIInsertWaitcnts::isPreheaderToFlush(MachineBasicBlock &MBB,
-                                          WaitcntBrackets &ScoreBrackets) {
+bool SIInsertWaitcnts::isPreheaderToFlush(
+    MachineBasicBlock &MBB, const WaitcntBrackets &ScoreBrackets) {
   auto [Iterator, IsInserted] = PreheadersToFlush.try_emplace(&MBB, false);
   if (!IsInserted)
     return Iterator->second;
@@ -2419,7 +2467,7 @@ bool SIInsertWaitcnts::isVMEMOrFlatVMEM(const MachineInstr &MI) const {
 //    loop, and at least one use of a vgpr containing a value that is loaded
 //    outside of the loop.
 bool SIInsertWaitcnts::shouldFlushVmCnt(MachineLoop *ML,
-                                        WaitcntBrackets &Brackets) {
+                                        const WaitcntBrackets &Brackets) {
   bool HasVMemLoad = false;
   bool HasVMemStore = false;
   bool UsesVgprLoadedOutside = false;
@@ -2479,16 +2527,40 @@ bool SIInsertWaitcnts::shouldFlushVmCnt(MachineLoop *ML,
   return HasVMemLoad && UsesVgprLoadedOutside && ST->hasVmemWriteVgprInOrder();
 }
 
-bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
+bool SIInsertWaitcntsLegacy::runOnMachineFunction(MachineFunction &MF) {
+  auto *MLI = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
+  auto *PDT =
+      &getAnalysis<MachinePostDominatorTreeWrapperPass>().getPostDomTree();
+  AliasAnalysis *AA = nullptr;
+  if (auto *AAR = getAnalysisIfAvailable<AAResultsWrapperPass>())
+    AA = &AAR->getAAResults();
+
+  return SIInsertWaitcnts(MLI, PDT, AA).run(MF);
+}
+
+PreservedAnalyses
+SIInsertWaitcntsPass::run(MachineFunction &MF,
+                          MachineFunctionAnalysisManager &MFAM) {
+  auto *MLI = &MFAM.getResult<MachineLoopAnalysis>(MF);
+  auto *PDT = &MFAM.getResult<MachinePostDominatorTreeAnalysis>(MF);
+  auto *AA = MFAM.getResult<FunctionAnalysisManagerMachineFunctionProxy>(MF)
+                 .getManager()
+                 .getCachedResult<AAManager>(MF.getFunction());
+
+  if (!SIInsertWaitcnts(MLI, PDT, AA).run(MF))
+    return PreservedAnalyses::all();
+
+  return getMachineFunctionPassPreservedAnalyses()
+      .preserveSet<CFGAnalyses>()
+      .preserve<AAManager>();
+}
+
+bool SIInsertWaitcnts::run(MachineFunction &MF) {
   ST = &MF.getSubtarget<GCNSubtarget>();
   TII = ST->getInstrInfo();
   TRI = &TII->getRegisterInfo();
   MRI = &MF.getRegInfo();
   const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
-  MLI = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
-  PDT = &getAnalysis<MachinePostDominatorTreeWrapperPass>().getPostDomTree();
-  if (auto *AAR = getAnalysisIfAvailable<AAResultsWrapperPass>())
-    AA = &AAR->getAAResults();
 
   AMDGPU::IsaVersion IV = AMDGPU::getIsaVersion(ST->getCPU());
 
@@ -2591,12 +2663,17 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
         else
           *Brackets = *BI.Incoming;
       } else {
-        if (!Brackets)
+        if (!Brackets) {
           Brackets = std::make_unique<WaitcntBrackets>(
               ST, MaxCounter, Limits, WaitEventMaskForInst, SmemAccessCounter);
-        else
-          *Brackets = WaitcntBrackets(ST, MaxCounter, Limits,
-                                      WaitEventMaskForInst, SmemAccessCounter);
+        } else {
+          // Reinitialize in-place. N.B. do not do this by assigning from a
+          // temporary because the WaitcntBrackets class is large and it could
+          // cause this function to use an unreasonable amount of stack space.
+          Brackets->~WaitcntBrackets();
+          new (Brackets.get()) WaitcntBrackets(
+              ST, MaxCounter, Limits, WaitEventMaskForInst, SmemAccessCounter);
+        }
       }
 
       Modified |= insertWaitcntInBlock(MF, *MBB, *Brackets);

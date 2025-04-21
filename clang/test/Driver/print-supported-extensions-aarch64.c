@@ -81,6 +81,7 @@
 // CHECK-NEXT:     ssbs                FEAT_SSBS, FEAT_SSBS2                                  Enable Speculative Store Bypass Safe bit
 // CHECK-NEXT:     ssve-aes            FEAT_SSVE_AES                                          Enable Armv9.6-A SVE AES support in streaming SVE mode
 // CHECK-NEXT:     ssve-bitperm        FEAT_SSVE_BitPerm                                      Enable Armv9.6-A SVE BitPerm support in streaming SVE mode
+// CHECK-NEXT:     ssve-fexpa          FEAT_SSVE_FEXPA                                        Enable SVE FEXPA instruction in Streaming SVE mode
 // CHECK-NEXT:     ssve-fp8dot2        FEAT_SSVE_FP8DOT2                                      Enable SVE2 FP8 2-way dot product instructions
 // CHECK-NEXT:     ssve-fp8dot4        FEAT_SSVE_FP8DOT4                                      Enable SVE2 FP8 4-way dot product instructions
 // CHECK-NEXT:     ssve-fp8fma         FEAT_SSVE_FP8FMA                                       Enable SVE2 FP8 multiply-add instructions

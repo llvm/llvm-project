@@ -117,10 +117,6 @@ const fltSemantics &Type::getFltSemantics() const {
   }
 }
 
-bool Type::isIEEE() const {
-  return APFloat::getZero(getFltSemantics()).isIEEE();
-}
-
 bool Type::isScalableTargetExtTy() const {
   if (auto *TT = dyn_cast<TargetExtType>(this))
     return isa<ScalableVectorType>(TT->getLayoutType());
@@ -553,7 +549,7 @@ Error StructType::checkBody(ArrayRef<Type *> Elements) {
     if (Ty == this)
       return createStringError(Twine("identified structure type '") +
                                getName() + "' is recursive");
-    Worklist.insert(Ty->subtype_begin(), Ty->subtype_end());
+    Worklist.insert_range(Ty->subtypes());
   }
   return Error::success();
 }

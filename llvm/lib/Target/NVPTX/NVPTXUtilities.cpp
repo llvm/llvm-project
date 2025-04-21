@@ -327,25 +327,6 @@ std::optional<unsigned> getMaxNReg(const Function &F) {
   return getFnAttrParsedInt(F, "nvvm.maxnreg");
 }
 
-MaybeAlign getAlign(const Function &F, unsigned Index) {
-  // First check the alignstack metadata
-  if (MaybeAlign StackAlign =
-          F.getAttributes().getAttributes(Index).getStackAlignment())
-    return StackAlign;
-
-  // check the legacy nvvm metadata only for the return value since llvm does
-  // not support stackalign attribute for this.
-  if (Index == 0) {
-    std::vector<unsigned> Vs;
-    if (findAllNVVMAnnotation(&F, "align", Vs))
-      for (unsigned V : Vs)
-        if ((V >> 16) == Index)
-          return Align(V & 0xFFFF);
-  }
-
-  return std::nullopt;
-}
-
 MaybeAlign getAlign(const CallInst &I, unsigned Index) {
   // First check the alignstack metadata
   if (MaybeAlign StackAlign =
@@ -389,10 +370,6 @@ bool shouldEmitPTXNoReturn(const Value *V, const TargetMachine &TM) {
   return F->doesNotReturn() &&
          F->getFunctionType()->getReturnType()->isVoidTy() &&
          !isKernelFunction(*F);
-}
-
-bool Isv2x16VT(EVT VT) {
-  return (VT == MVT::v2f16 || VT == MVT::v2bf16 || VT == MVT::v2i16);
 }
 
 } // namespace llvm

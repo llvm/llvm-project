@@ -135,7 +135,8 @@ public:
   CompoundStatementIndenter(UnwrappedLineParser *Parser,
                             const FormatStyle &Style, unsigned &LineLevel)
       : CompoundStatementIndenter(Parser, LineLevel,
-                                  Style.BraceWrapping.AfterControlStatement,
+                                  Style.BraceWrapping.AfterControlStatement ==
+                                      FormatStyle::BWACS_Always,
                                   Style.BraceWrapping.IndentBraces) {}
   CompoundStatementIndenter(UnwrappedLineParser *Parser, unsigned &LineLevel,
                             bool WrapBrace, bool IndentBrace)
@@ -167,9 +168,7 @@ UnwrappedLineParser::UnwrappedLineParser(
                        ? IG_Rejected
                        : IG_Inited),
       IncludeGuardToken(nullptr), FirstStartColumn(FirstStartColumn),
-      Macros(Style.Macros, SourceMgr, Style, Allocator, IdentTable) {
-  assert(IsCpp == (LangOpts.CXXOperatorNames || LangOpts.C17));
-}
+      Macros(Style.Macros, SourceMgr, Style, Allocator, IdentTable) {}
 
 void UnwrappedLineParser::reset() {
   PPBranchLevel = -1;
@@ -272,7 +271,7 @@ void UnwrappedLineParser::parseFile() {
   bool MustBeDeclaration = !Line->InPPDirective && !Style.isJavaScript();
   ScopedDeclarationState DeclarationState(*Line, DeclarationScopeStack,
                                           MustBeDeclaration);
-  if (Style.Language == FormatStyle::LK_TextProto)
+  if (Style.isTextProto())
     parseBracedList();
   else
     parseLevel();
@@ -286,10 +285,8 @@ void UnwrappedLineParser::parseFile() {
   //   // endfile comment
   // do not have a chance to be put on a line of their own until this point.
   // Here we add this newline before end-of-file comments.
-  if (Style.Language == FormatStyle::LK_TextProto &&
-      !CommentsBeforeNextToken.empty()) {
+  if (Style.isTextProto() && !CommentsBeforeNextToken.empty())
     addUnwrappedLine();
-  }
   flushComments(true);
   addUnwrappedLine();
 }
@@ -1424,8 +1421,7 @@ void UnwrappedLineParser::readTokenWithJavaScriptASI() {
 void UnwrappedLineParser::parseStructuralElement(
     const FormatToken *OpeningBrace, IfStmtKind *IfKind,
     FormatToken **IfLeftBrace, bool *HasDoWhile, bool *HasLabel) {
-  if (Style.Language == FormatStyle::LK_TableGen &&
-      FormatTok->is(tok::pp_include)) {
+  if (Style.isTableGen() && FormatTok->is(tok::pp_include)) {
     nextToken();
     if (FormatTok->is(tok::string_literal))
       nextToken();
@@ -1467,12 +1463,10 @@ void UnwrappedLineParser::parseStructuralElement(
 
   // Tokens that only make sense at the beginning of a line.
   if (FormatTok->isAccessSpecifierKeyword()) {
-    if (Style.Language == FormatStyle::LK_Java || Style.isJavaScript() ||
-        Style.isCSharp()) {
+    if (Style.isJava() || Style.isJavaScript() || Style.isCSharp())
       nextToken();
-    } else {
+    else
       parseAccessSpecifier();
-    }
     return;
   }
   switch (FormatTok->Tok.getKind()) {
@@ -1708,6 +1702,7 @@ void UnwrappedLineParser::parseStructuralElement(
     break;
   }
 
+  bool SeenEqual = false;
   for (const bool InRequiresExpression =
            OpeningBrace && OpeningBrace->isOneOf(TT_RequiresExpressionLBrace,
                                                  TT_CompoundRequirementLBrace);
@@ -1720,12 +1715,12 @@ void UnwrappedLineParser::parseStructuralElement(
         nextToken();
         parseBracedList();
         break;
-      } else if (Style.Language == FormatStyle::LK_Java &&
-                 FormatTok->is(Keywords.kw_interface)) {
+      }
+      if (Style.isJava() && FormatTok->is(Keywords.kw_interface)) {
         nextToken();
         break;
       }
-      switch (FormatTok->Tok.getObjCKeywordID()) {
+      switch (bool IsAutoRelease = false; FormatTok->Tok.getObjCKeywordID()) {
       case tok::objc_public:
       case tok::objc_protected:
       case tok::objc_package:
@@ -1746,19 +1741,11 @@ void UnwrappedLineParser::parseStructuralElement(
         addUnwrappedLine();
         return;
       case tok::objc_autoreleasepool:
-        nextToken();
-        if (FormatTok->is(tok::l_brace)) {
-          if (Style.BraceWrapping.AfterControlStatement ==
-              FormatStyle::BWACS_Always) {
-            addUnwrappedLine();
-          }
-          parseBlock();
-        }
-        addUnwrappedLine();
-        return;
+        IsAutoRelease = true;
+        [[fallthrough]];
       case tok::objc_synchronized:
         nextToken();
-        if (FormatTok->is(tok::l_paren)) {
+        if (!IsAutoRelease && FormatTok->is(tok::l_paren)) {
           // Skip synchronization object
           parseParens();
         }
@@ -1782,7 +1769,7 @@ void UnwrappedLineParser::parseStructuralElement(
       break;
     case tok::kw_requires: {
       if (IsCpp) {
-        bool ParsedClause = parseRequires();
+        bool ParsedClause = parseRequires(SeenEqual);
         if (ParsedClause)
           return;
       } else {
@@ -1849,10 +1836,8 @@ void UnwrappedLineParser::parseStructuralElement(
     case tok::period:
       nextToken();
       // In Java, classes have an implicit static member "class".
-      if (Style.Language == FormatStyle::LK_Java && FormatTok &&
-          FormatTok->is(tok::kw_class)) {
+      if (Style.isJava() && FormatTok && FormatTok->is(tok::kw_class))
         nextToken();
-      }
       if (Style.isJavaScript() && FormatTok &&
           FormatTok->Tok.getIdentifierInfo()) {
         // JavaScript only has pseudo keywords, all keywords are allowed to
@@ -1886,8 +1871,11 @@ void UnwrappedLineParser::parseStructuralElement(
       if (FormatTok->isBinaryOperator())
         nextToken();
       break;
-    case tok::caret:
+    case tok::caret: {
+      const auto *Prev = FormatTok->getPreviousNonComment();
       nextToken();
+      if (Prev && Prev->is(tok::identifier))
+        break;
       // Block return type.
       if (FormatTok->Tok.isAnyIdentifier() || FormatTok->isTypeName(LangOpts)) {
         nextToken();
@@ -1902,6 +1890,7 @@ void UnwrappedLineParser::parseStructuralElement(
       if (FormatTok->is(tok::l_brace))
         parseChildBlock();
       break;
+    }
     case tok::l_brace:
       if (InRequiresExpression)
         FormatTok->setFinalizedType(TT_BracedListLBrace);
@@ -1911,7 +1900,7 @@ void UnwrappedLineParser::parseStructuralElement(
         // structural element.
         // FIXME: Figure out cases where this is not true, and add projections
         // for them (the one we know is missing are lambdas).
-        if (Style.Language == FormatStyle::LK_Java &&
+        if (Style.isJava() &&
             Line->Tokens.front().Tok->is(Keywords.kw_synchronized)) {
           // If necessary, we could set the type to something different than
           // TT_FunctionLBrace.
@@ -1967,7 +1956,7 @@ void UnwrappedLineParser::parseStructuralElement(
         tryToParseJSFunction();
         break;
       }
-      if ((Style.isJavaScript() || Style.Language == FormatStyle::LK_Java) &&
+      if ((Style.isJavaScript() || Style.isJava()) &&
           FormatTok->is(Keywords.kw_interface)) {
         if (Style.isJavaScript()) {
           // In JavaScript/TypeScript, "interface" can be used as a standalone
@@ -2062,6 +2051,7 @@ void UnwrappedLineParser::parseStructuralElement(
         break;
       }
 
+      SeenEqual = true;
       nextToken();
       if (FormatTok->is(tok::l_brace)) {
         // Block kind should probably be set to BK_BracedInit for any language.
@@ -2094,7 +2084,7 @@ void UnwrappedLineParser::parseStructuralElement(
       parseNew();
       break;
     case tok::kw_switch:
-      if (Style.Language == FormatStyle::LK_Java)
+      if (Style.isJava())
         parseSwitch(/*IsExpr=*/true);
       else
         nextToken();
@@ -2573,7 +2563,7 @@ bool UnwrappedLineParser::parseParens(TokenType AmpAmpTokenType) {
     case tok::l_paren:
       if (parseParens(AmpAmpTokenType))
         SeenEqual = true;
-      if (Style.Language == FormatStyle::LK_Java && FormatTok->is(tok::l_brace))
+      if (Style.isJava() && FormatTok->is(tok::l_brace))
         parseChildBlock();
       break;
     case tok::r_paren: {
@@ -2678,7 +2668,7 @@ bool UnwrappedLineParser::parseParens(TokenType AmpAmpTokenType) {
         nextToken();
       break;
     case tok::kw_switch:
-      if (Style.Language == FormatStyle::LK_Java)
+      if (Style.isJava())
         parseSwitch(/*IsExpr=*/true);
       else
         nextToken();
@@ -3055,7 +3045,7 @@ void UnwrappedLineParser::parseTryCatch() {
     }
   }
   // Parse try with resource.
-  if (Style.Language == FormatStyle::LK_Java && FormatTok->is(tok::l_paren))
+  if (Style.isJava() && FormatTok->is(tok::l_paren))
     parseParens();
 
   keepAncestorBraces();
@@ -3078,17 +3068,18 @@ void UnwrappedLineParser::parseTryCatch() {
     parseStructuralElement();
     --Line->Level;
   }
-  while (true) {
+  for (bool SeenCatch = false;;) {
     if (FormatTok->is(tok::at))
       nextToken();
     if (!(FormatTok->isOneOf(tok::kw_catch, Keywords.kw___except,
-                             tok::kw___finally) ||
-          ((Style.Language == FormatStyle::LK_Java || Style.isJavaScript()) &&
-           FormatTok->is(Keywords.kw_finally)) ||
-          (FormatTok->isObjCAtKeyword(tok::objc_catch) ||
-           FormatTok->isObjCAtKeyword(tok::objc_finally)))) {
+                             tok::kw___finally, tok::objc_catch,
+                             tok::objc_finally) ||
+          ((Style.isJava() || Style.isJavaScript()) &&
+           FormatTok->is(Keywords.kw_finally)))) {
       break;
     }
+    if (FormatTok->is(tok::kw_catch))
+      SeenCatch = true;
     nextToken();
     while (FormatTok->isNot(tok::l_brace)) {
       if (FormatTok->is(tok::l_paren)) {
@@ -3101,6 +3092,10 @@ void UnwrappedLineParser::parseTryCatch() {
         return;
       }
       nextToken();
+    }
+    if (SeenCatch) {
+      FormatTok->setFinalizedType(TT_ControlStatementLBrace);
+      SeenCatch = false;
     }
     NeedsUnwrappedLine = false;
     Line->MustBeDeclaration = false;
@@ -3201,7 +3196,7 @@ void UnwrappedLineParser::parseNew() {
     } while (!eof());
   }
 
-  if (Style.Language != FormatStyle::LK_Java)
+  if (!Style.isJava())
     return;
 
   // In Java, we can parse everything up to the parens, which aren't optional.
@@ -3363,7 +3358,7 @@ void UnwrappedLineParser::parseCaseLabel() {
       FormatTok->setFinalizedType(TT_CaseLabelColon);
       break;
     }
-    if (Style.Language == FormatStyle::LK_Java && FormatTok->is(tok::arrow)) {
+    if (Style.isJava() && FormatTok->is(tok::arrow)) {
       FormatTok->setFinalizedType(TT_CaseLabelArrow);
       Case->setFinalizedType(TT_SwitchExpressionLabel);
       break;
@@ -3416,7 +3411,7 @@ void UnwrappedLineParser::parseAccessSpecifier() {
 /// \brief Parses a requires, decides if it is a clause or an expression.
 /// \pre The current token has to be the requires keyword.
 /// \returns true if it parsed a clause.
-bool UnwrappedLineParser::parseRequires() {
+bool UnwrappedLineParser::parseRequires(bool SeenEqual) {
   assert(FormatTok->is(tok::kw_requires) && "'requires' expected");
   auto RequiresToken = FormatTok;
 
@@ -3472,7 +3467,7 @@ bool UnwrappedLineParser::parseRequires() {
     // We check the one token before that for a const:
     // void member(...) const && requires (C<T> ...
     auto PrevPrev = PreviousNonComment->getPreviousNonComment();
-    if (PrevPrev && PrevPrev->is(tok::kw_const)) {
+    if ((PrevPrev && PrevPrev->is(tok::kw_const)) || !SeenEqual) {
       parseRequiresClause(RequiresToken);
       return true;
     }
@@ -3815,7 +3810,7 @@ bool UnwrappedLineParser::parseEnum() {
   FormatTok->setFinalizedType(TT_EnumLBrace);
   FormatTok->setBlockKind(BK_Block);
 
-  if (Style.Language == FormatStyle::LK_Java) {
+  if (Style.isJava()) {
     // Java enums are different.
     parseJavaEnumBody();
     return true;
@@ -3856,8 +3851,7 @@ bool UnwrappedLineParser::parseStructLike() {
   // record declaration or definition can start a structural element.
   parseRecord();
   // This does not apply to Java, JavaScript and C#.
-  if (Style.Language == FormatStyle::LK_Java || Style.isJavaScript() ||
-      Style.isCSharp()) {
+  if (Style.isJava() || Style.isJavaScript() || Style.isCSharp()) {
     if (FormatTok->is(tok::semi))
       nextToken();
     addUnwrappedLine();
@@ -3993,7 +3987,7 @@ void UnwrappedLineParser::parseRecord(bool ParseAsExpr) {
   while (FormatTok->isOneOf(tok::identifier, tok::coloncolon, tok::hashhash,
                             tok::kw_alignas, tok::l_square) ||
          FormatTok->isAttribute() ||
-         ((Style.Language == FormatStyle::LK_Java || Style.isJavaScript()) &&
+         ((Style.isJava() || Style.isJavaScript()) &&
           FormatTok->isOneOf(tok::period, tok::comma))) {
     if (Style.isJavaScript() &&
         FormatTok->isOneOf(Keywords.kw_extends, Keywords.kw_implements)) {
@@ -4158,17 +4152,15 @@ void UnwrappedLineParser::parseObjCProtocolList() {
   do {
     nextToken();
     // Early exit in case someone forgot a close angle.
-    if (FormatTok->isOneOf(tok::semi, tok::l_brace) ||
-        FormatTok->isObjCAtKeyword(tok::objc_end)) {
+    if (FormatTok->isOneOf(tok::semi, tok::l_brace, tok::objc_end))
       return;
-    }
   } while (!eof() && FormatTok->isNot(tok::greater));
   nextToken(); // Skip '>'.
 }
 
 void UnwrappedLineParser::parseObjCUntilAtEnd() {
   do {
-    if (FormatTok->isObjCAtKeyword(tok::objc_end)) {
+    if (FormatTok->is(tok::objc_end)) {
       nextToken();
       addUnwrappedLine();
       break;
@@ -4191,8 +4183,7 @@ void UnwrappedLineParser::parseObjCUntilAtEnd() {
 }
 
 void UnwrappedLineParser::parseObjCInterfaceOrImplementation() {
-  assert(FormatTok->Tok.getObjCKeywordID() == tok::objc_interface ||
-         FormatTok->Tok.getObjCKeywordID() == tok::objc_implementation);
+  assert(FormatTok->isOneOf(tok::objc_interface, tok::objc_implementation));
   nextToken();
   nextToken(); // interface name
 
@@ -4240,10 +4231,8 @@ void UnwrappedLineParser::parseObjCLightweightGenerics() {
   do {
     nextToken();
     // Early exit in case someone forgot a close angle.
-    if (FormatTok->isOneOf(tok::semi, tok::l_brace) ||
-        FormatTok->isObjCAtKeyword(tok::objc_end)) {
+    if (FormatTok->isOneOf(tok::semi, tok::l_brace, tok::objc_end))
       break;
-    }
     if (FormatTok->is(tok::less)) {
       ++NumOpenAngles;
     } else if (FormatTok->is(tok::greater)) {
@@ -4257,7 +4246,7 @@ void UnwrappedLineParser::parseObjCLightweightGenerics() {
 // Returns true for the declaration/definition form of @protocol,
 // false for the expression form.
 bool UnwrappedLineParser::parseObjCProtocol() {
-  assert(FormatTok->Tok.getObjCKeywordID() == tok::objc_protocol);
+  assert(FormatTok->is(tok::objc_protocol));
   nextToken();
 
   if (FormatTok->is(tok::l_paren)) {
@@ -4851,9 +4840,16 @@ void UnwrappedLineParser::readToken(int LevelDifference) {
     PreviousWasComment = FormatTok->is(tok::comment);
 
     while (!Line->InPPDirective && FormatTok->is(tok::hash) &&
-           (!Style.isVerilog() ||
-            Keywords.isVerilogPPDirective(*Tokens->peekNextToken())) &&
            FirstNonCommentOnLine) {
+      // In Verilog, the backtick is used for macro invocations. In TableGen,
+      // the single hash is used for the paste operator.
+      const auto *Next = Tokens->peekNextToken();
+      if ((Style.isVerilog() && !Keywords.isVerilogPPDirective(*Next)) ||
+          (Style.isTableGen() &&
+           !Next->isOneOf(tok::kw_else, tok::pp_define, tok::pp_ifdef,
+                          tok::pp_ifndef, tok::pp_endif))) {
+        break;
+      }
       distributeComments(Comments, FormatTok);
       Comments.clear();
       // If there is an unfinished unwrapped line, we flush the preprocessor

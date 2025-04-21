@@ -874,8 +874,7 @@ DataFlowSanitizer::DataFlowSanitizer(
   ABIList.set(
       SpecialCaseList::createOrDie(AllABIListFiles, *vfs::getRealFileSystem()));
 
-  for (StringRef v : ClCombineTaintLookupTables)
-    CombineTaintLookupTableNames.insert(v);
+  CombineTaintLookupTableNames.insert_range(ClCombineTaintLookupTables);
 }
 
 TransformedFunction DataFlowSanitizer::getCustomFunctionType(FunctionType *T) {

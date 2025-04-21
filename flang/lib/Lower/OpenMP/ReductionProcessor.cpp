@@ -337,7 +337,12 @@ static void genBoxCombiner(fir::FirOpBuilder &builder, mlir::Location loc,
     return;
   }
 
-  fir::ShapeShiftOp shapeShift = getShapeShift(builder, loc, lhs);
+  // Get ShapeShift with default lower bounds. This makes it possible to use
+  // unmodified LoopNest's indices with ArrayCoorOp.
+  fir::ShapeShiftOp shapeShift =
+      getShapeShift(builder, loc, lhs,
+                    /*cannotHaveNonDefaultLowerBounds=*/false,
+                    /*useDefaultLowerBounds=*/true);
 
   // Iterate over array elements, applying the equivalent scalar reduction:
 

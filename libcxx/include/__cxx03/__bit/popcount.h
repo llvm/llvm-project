@@ -13,7 +13,6 @@
 #define _LIBCPP___CXX03___BIT_POPCOUNT_H
 
 #include <__cxx03/__bit/rotate.h>
-#include <__cxx03/__concepts/arithmetic.h>
 #include <__cxx03/__config>
 #include <__cxx03/limits>
 

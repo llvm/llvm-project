@@ -262,9 +262,10 @@ Language Selection and Mode Options
 .. option:: -ffreestanding
 
  Indicate that the file should be compiled for a freestanding, not a hosted,
- environment. Note that it is assumed that a freestanding environment will
- additionally provide `memcpy`, `memmove`, `memset` and `memcmp`
- implementations, as these are needed for efficient codegen for many programs.
+ environment. Note that a freestanding build still requires linking against a C
+ Standard Library which supports the freestanding interfaces for the specified
+ language mode and target environment. This includes functions like `memcpy`,
+ `memmove`, and `memset`.
 
 .. option:: -fno-builtin
 
@@ -442,8 +443,11 @@ Code Generation Options
     :option:`-Oz` Like :option:`-Os` (and thus :option:`-O2`), but reduces code
     size further.
 
-    :option:`-Og` Like :option:`-O1`. In future versions, this option might
-    disable different optimizations in order to improve debuggability.
+    :option:`-Og` Similar to :option:`-O1`, but with slightly reduced
+    optimization and better variable visibility. The same optimizations are run
+    as at :option:`-O1`, but the ``-fextend-variable-liveness`` flag is
+    also set, which tries to prevent optimizations from reducing the liveness of
+    user variables, improving their availability when debugging.
 
     :option:`-O` Equivalent to :option:`-O1`.
 

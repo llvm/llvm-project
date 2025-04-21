@@ -231,7 +231,7 @@ def EXIT_STRICT_WQM : SPseudoInstSI <(outs SReg_1:$sdst), (ins SReg_1:$src0)> {
   let mayStore = 0;
 }
 
-let usesCustomInserter = 1 in {
+let usesCustomInserter = 1, hasSideEffects = 0 in {
 let WaveSizePredicate = isWave32 in
 def S_INVERSE_BALLOT_U32 : SPseudoInstSI<
   (outs SReg_32:$sdst), (ins SSrc_b32:$mask),
@@ -243,7 +243,13 @@ def S_INVERSE_BALLOT_U64 : SPseudoInstSI<
   (outs SReg_64:$sdst), (ins SSrc_b64:$mask),
   [(set i1:$sdst, (int_amdgcn_inverse_ballot i64:$mask))]
 >;
-} // End usesCustomInserter = 1
+} // End usesCustomInserter = 1, hasSideEffects = 0
+
+let WaveSizePredicate = isWave32 in
+  def : GCNPat <
+    (i1 (int_amdgcn_inverse_ballot i64:$src)),
+    (S_INVERSE_BALLOT_U32 (i32 (EXTRACT_SUBREG SReg_64:$src, sub0)))
+>;
 
 // Pseudo instructions used for @llvm.fptrunc.round. The final codegen is done
 // in the ModeRegister pass.
@@ -332,21 +338,23 @@ def S_SUB_U64_PSEUDO : SPseudoInstSI <
   [(set SReg_64:$sdst, (UniformBinFrag<sub> i64:$src0, i64:$src1))]
 >;
 
-def S_ADD_CO_PSEUDO : SPseudoInstSI <
-  (outs SReg_32:$sdst, SSrc_i1:$scc_out), (ins SSrc_b32:$src0, SSrc_b32:$src1, SSrc_i1:$scc_in)
->;
+let hasSideEffects = 0 in {
+  def S_ADD_CO_PSEUDO : SPseudoInstSI <
+    (outs SReg_32:$sdst, SSrc_i1:$scc_out), (ins SSrc_b32:$src0, SSrc_b32:$src1, SSrc_i1:$scc_in)
+  >;
 
-def S_SUB_CO_PSEUDO : SPseudoInstSI <
-  (outs SReg_32:$sdst, SSrc_i1:$scc_out), (ins SSrc_b32:$src0, SSrc_b32:$src1, SSrc_i1:$scc_in)
->;
+  def S_SUB_CO_PSEUDO : SPseudoInstSI <
+    (outs SReg_32:$sdst, SSrc_i1:$scc_out), (ins SSrc_b32:$src0, SSrc_b32:$src1, SSrc_i1:$scc_in)
+  >;
 
-def S_UADDO_PSEUDO : SPseudoInstSI <
-  (outs SReg_32:$sdst, SSrc_i1:$scc_out), (ins SSrc_b32:$src0, SSrc_b32:$src1)
->;
+  def S_UADDO_PSEUDO : SPseudoInstSI <
+    (outs SReg_32:$sdst, SSrc_i1:$scc_out), (ins SSrc_b32:$src0, SSrc_b32:$src1)
+  >;
 
-def S_USUBO_PSEUDO : SPseudoInstSI <
-  (outs SReg_32:$sdst, SSrc_i1:$scc_out), (ins SSrc_b32:$src0, SSrc_b32:$src1)
->;
+  def S_USUBO_PSEUDO : SPseudoInstSI <
+    (outs SReg_32:$sdst, SSrc_i1:$scc_out), (ins SSrc_b32:$src0, SSrc_b32:$src1)
+  >;
+}
 
 let OtherPredicates = [HasShaderCyclesHiLoRegisters] in
 def GET_SHADERCYCLESHILO : SPseudoInstSI<
@@ -1888,7 +1896,14 @@ def : BitConvert <v8i64,  v16f32, VReg_512>;
 def : BitConvert <v8f64,  v16f32, VReg_512>;
 def : BitConvert <v16f32, v8i64,  VReg_512>;
 def : BitConvert <v16f32, v8f64,  VReg_512>;
-
+def : BitConvert <v8i64,  v32f16, VReg_512>;
+def : BitConvert <v8i64,  v32i16, VReg_512>;
+def : BitConvert <v8f64,  v32f16, VReg_512>;
+def : BitConvert <v8f64,  v32i16, VReg_512>;
+def : BitConvert <v32f16, v8i64,  VReg_512>;
+def : BitConvert <v32f16, v8f64,  VReg_512>;
+def : BitConvert <v32i16, v8i64,  VReg_512>;
+def : BitConvert <v32i16, v8f64,  VReg_512>;
 
 
 def : BitConvert <v32bf16, v32i16, VReg_512>;
@@ -2411,6 +2426,12 @@ def : GCNPat <(i1 imm:$imm),
               (S_MOV_B32 imm:$imm)> {
   let WaveSizePredicate = isWave32;
 }
+
+let True16Predicate = UseRealTrue16Insts in
+def : GCNPat <
+  (i32 (DivergentBinFrag<srl> VGPR_32:$src, (i32 16))),
+  (REG_SEQUENCE VGPR_32, (i16 (EXTRACT_SUBREG $src, hi16)), lo16, (V_MOV_B16_t16_e64 0, (i16 0x0000), 0), hi16)
+>;
 
 /********** ================== **********/
 /********** Intrinsic Patterns **********/
@@ -3104,6 +3125,17 @@ def IMMBitSelConst : SDNodeXForm<imm, [{
 // v_cmp_ne_u32_e64 $a, 0, $a
 
 // Handle the VALU case.
+def : GCNPat <
+  (i1 (xor (i1 (DivergentUnaryFrag<HasOneUseUnaryOp<trunc>> i32:$a)), -1)),
+  (V_CMP_NE_U32_e64 (V_AND_B32_e64 (i32 1), i32:$a), (i32 1))
+>;
+
+def : GCNPat <
+  (i1 (xor (i1 (DivergentUnaryFrag<HasOneUseUnaryOp<trunc>> i64:$a)), -1)),
+  (V_CMP_NE_U32_e64 (V_AND_B32_e64 (i32 1),
+  (i32 (EXTRACT_SUBREG $a, sub0))), (i32 1))
+>;
+
 def : GCNPat <
   (i1 (DivergentUnaryFrag<trunc> (i32 (srl i32:$a, (i32 imm:$b))))),
   (V_CMP_NE_U32_e64 (V_AND_B32_e64 (i32 (IMMBitSelConst $b)), $a),

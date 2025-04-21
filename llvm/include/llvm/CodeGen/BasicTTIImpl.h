@@ -1384,11 +1384,9 @@ public:
         return InstructionCost::getInvalid();
 
       unsigned Num = cast<FixedVectorType>(ValVTy)->getNumElements();
-      if (CondTy)
-        CondTy = CondTy->getScalarType();
-      InstructionCost Cost =
-          thisT()->getCmpSelInstrCost(Opcode, ValVTy->getScalarType(), CondTy,
-                                      VecPred, CostKind, Op1Info, Op2Info, I);
+      InstructionCost Cost = thisT()->getCmpSelInstrCost(
+          Opcode, ValVTy->getScalarType(), CondTy->getScalarType(), VecPred,
+          CostKind, Op1Info, Op2Info, I);
 
       // Return the cost of multiple scalar invocation plus the cost of
       // inserting and extracting the values.
@@ -2775,6 +2773,27 @@ public:
                                                 CostKind);
       }
       return Cost;
+    }
+    case Intrinsic::maximumnum:
+    case Intrinsic::minimumnum: {
+      // On platform that support FMAXNUM_IEEE/FMINNUM_IEEE, we expand
+      // maximumnum/minimumnum to
+      //    ARG0 = fcanonicalize ARG0, ARG0  // to quiet ARG0
+      //    ARG1 = fcanonicalize ARG1, ARG1  // to quiet ARG1
+      //    RESULT = MAXNUM_IEEE ARG0, ARG1  // or MINNUM_IEEE
+      // FIXME: In LangRef, we claimed FMAXNUM has the same behaviour of
+      //        FMAXNUM_IEEE, while the backend hasn't migrated the code yet.
+      //        Finally, we will remove FMAXNUM_IEEE and FMINNUM_IEEE.
+      int IeeeISD =
+          IID == Intrinsic::maximumnum ? ISD::FMAXNUM_IEEE : ISD::FMINNUM_IEEE;
+      if (TLI->isOperationLegal(IeeeISD, LT.second)) {
+        IntrinsicCostAttributes FCanonicalizeAttrs(Intrinsic::canonicalize,
+                                                   RetTy, Tys[0]);
+        InstructionCost FCanonicalizeCost =
+            thisT()->getIntrinsicInstrCost(FCanonicalizeAttrs, CostKind);
+        return LT.first + FCanonicalizeCost * 2;
+      }
+      break;
     }
     default:
       break;

@@ -91,14 +91,17 @@ Improvements to clang-query
 Improvements to clang-tidy
 --------------------------
 
-- :program:`clang-tidy` no longer processes declarations from system headers
-  by default, greatly improving performance. This behavior is disabled if the
-  `SystemHeaders` option is enabled.
-  Note: this may lead to false negatives; downstream users may need to adjust
-  their checks to preserve existing behavior.
+- Changed the :program:`check_clang_tidy.py` tool to use FileCheck's
+  ``--match-full-lines`` instead of ``strict-whitespace`` for ``CHECK-FIXES``
+  clauses. Added a ``--match-partial-fixes`` option to keep previous behavior on
+  specific tests. This may break tests for users with custom out-of-tree checks
+  who use :program:`check_clang_tidy.py` as-is.
 
 - Improved :program:`clang-tidy-diff.py` script. Add the `-warnings-as-errors`
   argument to treat warnings as errors.
+
+- Fixed bug in :program:`clang-tidy` by which `HeaderFilterRegex` did not take
+  effect when passed via the `.clang-tidy` file.
 
 New checks
 ^^^^^^^^^^
@@ -106,8 +109,9 @@ New checks
 - New :doc:`bugprone-capturing-this-in-member-variable
   <clang-tidy/checks/bugprone/capturing-this-in-member-variable>` check.
 
-  Finds lambda captures that capture the ``this`` pointer and store it as class
-  members without handle the copy and move constructors and the assignments.
+  Finds lambda captures and ``bind`` function calls that capture the ``this``
+  pointer and store it as class members without handle the copy and move
+  constructors and the assignments.
 
 - New :doc:`bugprone-unintended-char-ostream-output
   <clang-tidy/checks/bugprone/unintended-char-ostream-output>` check.
@@ -147,12 +151,17 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/unsafe-functions>` check to allow specifying
   additional C++ member functions to match.
 
+- Improved :doc:`cert-err33-c
+  <clang-tidy/checks/cert/err33-c>` check by fixing false positives when
+  a function name is just prefixed with a targeted function name.
+
 - Improved :doc:`misc-const-correctness
   <clang-tidy/checks/misc/const-correctness>` check by adding the option
   `AllowedTypes`, that excludes specified types from const-correctness
   checking and fixing false positives when modifying variant by ``operator[]``
   with template in parameters and supporting to check pointee mutation by
-  `AnalyzePointers` option.
+  `AnalyzePointers` option and fixing false positives when using const array
+  type.
 
 - Improved :doc:`misc-redundant-expression
   <clang-tidy/checks/misc/redundant-expression>` check by providing additional
@@ -164,7 +173,9 @@ Changes in existing checks
 
 - Improved :doc:`misc-use-internal-linkage
   <clang-tidy/checks/misc/use-internal-linkage>` check by fix false positives
-  for function or variable in header file which contains macro expansion.
+  for function or variable in header file which contains macro expansion and
+  excluding variables with ``thread_local`` storage class specifier from being
+  matched.
 
 - Improved :doc:`modernize-use-default-member-init
   <clang-tidy/checks/modernize/use-default-member-init>` check by matching
@@ -174,6 +185,11 @@ Changes in existing checks
 - Improved :doc:`modernize-use-ranges
   <clang-tidy/checks/modernize/use-ranges>` check by updating suppress 
   warnings logic for ``nullptr`` in ``std::find``.
+
+- Improved :doc:`modernize-use-starts-ends-with
+  <clang-tidy/checks/modernize/use-starts-ends-with>` check by adding more
+  matched scenarios of ``find`` and ``rfind`` methods and fixing false
+  positives when those methods were called with 3 arguments.
 
 - Improved :doc:`modernize-use-std-numbers
   <clang-tidy/checks/modernize/use-std-numbers>` check to support math
