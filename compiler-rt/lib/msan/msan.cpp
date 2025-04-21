@@ -464,13 +464,13 @@ void __msan_warning_with_origin_noreturn(u32 origin) {
   Die();
 }
 
-// We duplicate the non _instname function's body because we don't want to
-// pollute the stack traces with an additional function call.
-//
-// We can't use a simple macro wrapper, because the instrumentation pass
-// expects function symbols.
-// We don't add instname as a parameter everywhere (with a check whether the
-// value is null) to avoid polluting the fastpath.
+// We duplicate the non _instname function's body because:
+// - we don't want to pollute the stack traces with an additional function
+//   call.
+// - we can't use a simple macro wrapper, because the instrumentation pass
+//   expects function symbols.
+// - we don't add instname as a parameter everywhere (with a check whether the
+//   value is null) to avoid polluting the fastpath.
 void __msan_warning_instname(char *instname) {
   PRINT_FAULTING_INSTRUCTION(instname);
   GET_CALLER_PC_BP;
