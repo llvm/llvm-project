@@ -1240,7 +1240,7 @@ void VPHistogramRecipe::execute(VPTransformState &State) {
   assert(isLegalUpdateInstruction(UpdateInst) &&
          "Found Illegal update instruction for histogram");
 
-  State.Builder.CreateIntrinsic(getHistogramOpcode(UpdateInst),
+  State.Builder.CreateIntrinsic(getHistogramIntrinsicID(UpdateInst),
                                 {VTy, IncAmt->getType()},
                                 {Address, IncAmt, Mask});
 }
@@ -1345,7 +1345,7 @@ bool VPHistogramRecipe::isLegalUpdateInstruction(Instruction *I) {
   return false;
 }
 
-unsigned VPHistogramRecipe::getHistogramOpcode(Instruction *I) {
+unsigned VPHistogramRecipe::getHistogramIntrinsicID(Instruction *I) {
   // We only support add and sub instructions and the following list of
   // intrinsics: uadd.sat, umax, umin.
   assert(isLegalUpdateInstruction(I) &&

@@ -1423,7 +1423,7 @@ public:
 
   /// Given update instruction \p I, returns the opcode of the coresponding
   /// histogram instruction.
-  static unsigned getHistogramOpcode(Instruction *I);
+  static unsigned getHistogramIntrinsicID(Instruction *I);
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe
