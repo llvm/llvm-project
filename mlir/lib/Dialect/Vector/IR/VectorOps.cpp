@@ -5511,8 +5511,10 @@ LogicalResult ShapeCastOp::verify() {
   auto resultVectorType =
       llvm::dyn_cast_or_null<VectorType>(getResult().getType());
 
-  if (!sourceVectorType) return failure();
-  if (!resultVectorType) return failure();
+  if (!sourceVectorType)
+    return failure();
+  if (!resultVectorType)
+    return failure();
 
   // Check that element type is the same.
   if (sourceVectorType.getElementType() != resultVectorType.getElementType())
