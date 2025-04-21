@@ -1120,14 +1120,10 @@ void State::addInfoFor(BasicBlock &BB) {
       }
       break;
     }
-    // Enqueue ssub_with_overflow for simplification.
+    // Enqueue intrinsic for simplification.
     case Intrinsic::ssub_with_overflow:
     case Intrinsic::ucmp:
     case Intrinsic::scmp:
-      WorkList.push_back(
-          FactOrCheck::getCheck(DT.getNode(&BB), cast<CallInst>(&I)));
-      break;
-    // Enqueue the intrinsics to add extra info.
     case Intrinsic::umin:
     case Intrinsic::umax:
     case Intrinsic::smin:
@@ -1135,13 +1131,6 @@ void State::addInfoFor(BasicBlock &BB) {
       // TODO: handle llvm.abs as well
       WorkList.push_back(
           FactOrCheck::getCheck(DT.getNode(&BB), cast<CallInst>(&I)));
-      // TODO: Check if it is possible to instead only added the min/max facts
-      // when simplifying uses of the min/max intrinsics.
-      if (!isGuaranteedNotToBePoison(&I))
-        break;
-      [[fallthrough]];
-    case Intrinsic::abs:
-      WorkList.push_back(FactOrCheck::getInstFact(DT.getNode(&BB), &I));
       break;
     }
 
@@ -1385,10 +1374,64 @@ static void generateReproducer(CmpInst *Cond, Module *M,
   assert(!verifyFunction(*F, &dbgs()));
 }
 
+static void addNonPoisonIntrinsicInstFact(
+    IntrinsicInst *II,
+    function_ref<void(CmpPredicate, Value *, Value *)> AddFact) {
+  Intrinsic::ID IID = II->getIntrinsicID();
+  switch (IID) {
+  case Intrinsic::umin:
+  case Intrinsic::umax:
+  case Intrinsic::smin:
+  case Intrinsic::smax: {
+    ICmpInst::Predicate Pred =
+        ICmpInst::getNonStrictPredicate(MinMaxIntrinsic::getPredicate(IID));
+    AddFact(Pred, II, II->getArgOperand(0));
+    AddFact(Pred, II, II->getArgOperand(1));
+    break;
+  }
+  case Intrinsic::abs: {
+    if (cast<ConstantInt>(II->getArgOperand(1))->isOne())
+      AddFact(CmpInst::ICMP_SGE, II, ConstantInt::get(II->getType(), 0));
+    AddFact(CmpInst::ICMP_SGE, II, II->getArgOperand(0));
+    break;
+  }
+  default:
+    break;
+  }
+}
+
+static void
+removeEntryFromStack(const StackEntry &E, ConstraintInfo &Info,
+                     SmallVectorImpl<StackEntry> &DFSInStack,
+                     SmallVectorImpl<ReproducerEntry> *ReproducerCondStack) {
+  Info.popLastConstraint(E.IsSigned);
+  // Remove variables in the system that went out of scope.
+  auto &Mapping = Info.getValue2Index(E.IsSigned);
+  for (Value *V : E.ValuesToRelease)
+    Mapping.erase(V);
+  Info.popLastNVariables(E.IsSigned, E.ValuesToRelease.size());
+  DFSInStack.pop_back();
+  if (ReproducerCondStack)
+    ReproducerCondStack->pop_back();
+}
+
 static std::optional<bool> checkCondition(CmpInst::Predicate Pred, Value *A,
                                           Value *B, Instruction *CheckInst,
                                           ConstraintInfo &Info) {
   LLVM_DEBUG(dbgs() << "Checking " << *CheckInst << "\n");
+  SmallVector<StackEntry, 8> DFSInStack;
+  auto StackRestorer = make_scope_exit([&]() {
+    while (!DFSInStack.empty())
+      removeEntryFromStack(DFSInStack.back(), Info, DFSInStack, nullptr);
+  });
+  auto AddFact = [&](CmpPredicate Pred, Value *A, Value *B) {
+    Info.addFact(Pred, A, B, 0, 0, DFSInStack);
+  };
+
+  if (auto *II = dyn_cast<IntrinsicInst>(A))
+    addNonPoisonIntrinsicInstFact(II, AddFact);
+  if (auto *II = dyn_cast<IntrinsicInst>(B))
+    addNonPoisonIntrinsicInstFact(II, AddFact);
 
   auto R = Info.getConstraintForSolving(Pred, A, B);
   if (R.empty() || !R.isValid(Info)){
@@ -1517,22 +1560,6 @@ static bool checkAndReplaceCmp(CmpIntrinsic *I, ConstraintInfo &Info,
   return false;
 }
 
-static void
-removeEntryFromStack(const StackEntry &E, ConstraintInfo &Info,
-                     Module *ReproducerModule,
-                     SmallVectorImpl<ReproducerEntry> &ReproducerCondStack,
-                     SmallVectorImpl<StackEntry> &DFSInStack) {
-  Info.popLastConstraint(E.IsSigned);
-  // Remove variables in the system that went out of scope.
-  auto &Mapping = Info.getValue2Index(E.IsSigned);
-  for (Value *V : E.ValuesToRelease)
-    Mapping.erase(V);
-  Info.popLastNVariables(E.IsSigned, E.ValuesToRelease.size());
-  DFSInStack.pop_back();
-  if (ReproducerModule)
-    ReproducerCondStack.pop_back();
-}
-
 /// Check if either the first condition of an AND or OR is implied by the
 /// (negated in case of OR) second condition or vice versa.
 static bool checkOrAndOpImpliedByOther(
@@ -1554,8 +1581,8 @@ static bool checkOrAndOpImpliedByOther(
     // Remove entries again.
     while (OldSize < DFSInStack.size()) {
       StackEntry E = DFSInStack.back();
-      removeEntryFromStack(E, Info, ReproducerModule, ReproducerCondStack,
-                           DFSInStack);
+      removeEntryFromStack(E, Info, DFSInStack,
+                           ReproducerModule ? &ReproducerCondStack : nullptr);
     }
   });
   bool IsOr = match(JoinOp, m_LogicalOr());
@@ -1571,6 +1598,14 @@ static bool checkOrAndOpImpliedByOther(
         Pred = CmpInst::getInversePredicate(Pred);
       // Optimistically add fact from the other compares in the AND/OR.
       Info.addFact(Pred, LHS, RHS, CB.NumIn, CB.NumOut, DFSInStack);
+      auto AddFact = [&](CmpPredicate Pred, Value *A, Value *B) {
+        Info.addFact(Pred, A, B, CB.NumIn, CB.NumOut, DFSInStack);
+      };
+
+      if (auto *II = dyn_cast<IntrinsicInst>(LHS))
+        addNonPoisonIntrinsicInstFact(II, AddFact);
+      if (auto *II = dyn_cast<IntrinsicInst>(RHS))
+        addNonPoisonIntrinsicInstFact(II, AddFact);
       continue;
     }
     if (IsOr ? match(Val, m_LogicalOr(m_Value(LHS), m_Value(RHS)))
@@ -1807,8 +1842,8 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
                        Info.getValue2Index(E.IsSigned));
         dbgs() << "\n";
       });
-      removeEntryFromStack(E, Info, ReproducerModule.get(), ReproducerCondStack,
-                           DFSInStack);
+      removeEntryFromStack(E, Info, DFSInStack,
+                           ReproducerModule ? &ReproducerCondStack : nullptr);
     }
 
     // For a block, check if any CmpInsts become known based on the current set
@@ -1879,25 +1914,6 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
     };
 
     CmpPredicate Pred;
-    if (!CB.isConditionFact()) {
-      Value *X;
-      if (match(CB.Inst, m_Intrinsic<Intrinsic::abs>(m_Value(X)))) {
-        // If is_int_min_poison is true then we may assume llvm.abs >= 0.
-        if (cast<ConstantInt>(CB.Inst->getOperand(1))->isOne())
-          AddFact(CmpInst::ICMP_SGE, CB.Inst,
-                  ConstantInt::get(CB.Inst->getType(), 0));
-        AddFact(CmpInst::ICMP_SGE, CB.Inst, X);
-        continue;
-      }
-
-      if (auto *MinMax = dyn_cast<MinMaxIntrinsic>(CB.Inst)) {
-        Pred = ICmpInst::getNonStrictPredicate(MinMax->getPredicate());
-        AddFact(Pred, MinMax, MinMax->getLHS());
-        AddFact(Pred, MinMax, MinMax->getRHS());
-        continue;
-      }
-    }
-
     Value *A = nullptr, *B = nullptr;
     if (CB.isConditionFact()) {
       Pred = CB.Cond.Pred;
@@ -1922,6 +1938,11 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
       assert(Matched && "Must have an assume intrinsic with a icmp operand");
     }
     AddFact(Pred, A, B);
+    // Now both A and B is guaranteed not to be poison.
+    if (auto *II = dyn_cast<IntrinsicInst>(A))
+      addNonPoisonIntrinsicInstFact(II, AddFact);
+    if (auto *II = dyn_cast<IntrinsicInst>(B))
+      addNonPoisonIntrinsicInstFact(II, AddFact);
   }
 
   if (ReproducerModule && !ReproducerModule->functions().empty()) {
