@@ -1815,6 +1815,12 @@ public:
   /// Clear the given bit of a bignum.  Zero-based.
   static void tcClearBit(WordType *, unsigned bit);
 
+  /// Set the bits from loBit (inclusive) to hiBit (exclusive) to 0.
+  /// This function handles "high" bits correctly (i.e. hiBit can be bigger than
+  /// the bit width of the APInt - in which case all bits from loBit to the end
+  /// of the APInt are zeroed).
+  void clearBits(unsigned loBit, unsigned hiBit);
+
   /// Returns the bit number of the least or most significant set bit of a
   /// number.  If the input number has no bits set -1U is returned.
   static unsigned tcLSB(const WordType *, unsigned n);
