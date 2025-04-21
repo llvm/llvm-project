@@ -1049,6 +1049,8 @@ Parser::ParseExternalDeclaration(ParsedAttributes &Attrs,
 
   case tok::kw_extern:
     if (getLangOpts().CPlusPlus && NextToken().is(tok::kw_template)) {
+      ProhibitAttributes(Attrs);
+      ProhibitAttributes(DeclSpecAttrs);
       // Extern templates
       SourceLocation ExternLoc = ConsumeToken();
       SourceLocation TemplateLoc = ConsumeToken();

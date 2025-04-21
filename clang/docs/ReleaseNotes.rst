@@ -301,6 +301,9 @@ related warnings within the method body.
   particularly relevant for AMDGPU targets, where they map to corresponding IR
   metadata.
 
+- Clang now disallows the use of attributes applied before an
+  ``extern template`` declaration (#GH79893).
+
 Improvements to Clang's diagnostics
 -----------------------------------
 
