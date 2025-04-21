@@ -116,7 +116,7 @@ template <typename HandleT> ol_impl_result_t olDestroy(HandleT Handle) {
 }
 
 constexpr ol_platform_backend_t pluginNameToBackend(StringRef Name) {
-  if (Name == "amd") {
+  if (Name == "amdgpu") {
     return OL_PLATFORM_BACKEND_AMDGPU;
   } else if (Name == "cuda") {
     return OL_PLATFORM_BACKEND_CUDA;
