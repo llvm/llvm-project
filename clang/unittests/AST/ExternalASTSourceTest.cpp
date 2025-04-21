@@ -46,16 +46,19 @@ private:
 
 bool testExternalASTSource(ExternalASTSource *Source,
                            StringRef FileContents) {
-  CompilerInstance Compiler;
-  Compiler.createDiagnostics(*llvm::vfs::getRealFileSystem());
 
   auto Invocation = std::make_shared<CompilerInvocation>();
   Invocation->getPreprocessorOpts().addRemappedFile(
       "test.cc", MemoryBuffer::getMemBuffer(FileContents).release());
   const char *Args[] = { "test.cc" };
-  CompilerInvocation::CreateFromArgs(*Invocation, Args,
-                                     Compiler.getDiagnostics());
-  Compiler.setInvocation(std::move(Invocation));
+
+  auto InvocationDiagOpts = llvm::makeIntrusiveRefCnt<DiagnosticOptions>();
+  auto InvocationDiags = CompilerInstance::createDiagnostics(
+      *llvm::vfs::getRealFileSystem(), InvocationDiagOpts.get());
+  CompilerInvocation::CreateFromArgs(*Invocation, Args, *InvocationDiags);
+
+  CompilerInstance Compiler(std::move(Invocation));
+  Compiler.createDiagnostics(*llvm::vfs::getRealFileSystem());
 
   TestFrontendAction Action(Source);
   return Compiler.ExecuteAction(Action);

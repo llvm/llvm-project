@@ -1162,9 +1162,8 @@ bool ASTUnit::Parse(std::shared_ptr<PCHContainerOperations> PCHContainerOps,
   }
 
   // Create the compiler instance to use for building the AST.
-  std::unique_ptr<CompilerInstance> Clang(
-      new CompilerInstance(std::move(PCHContainerOps)));
-  Clang->setInvocation(CCInvocation);
+  auto Clang = std::make_unique<CompilerInstance>(CCInvocation,
+                                                  std::move(PCHContainerOps));
 
   // Clean up on error, disengage it if the function returns successfully.
   auto CleanOnError = llvm::make_scope_exit([&]() {
@@ -1487,7 +1486,6 @@ void ASTUnit::RealizeTopLevelDeclsFromPreamble() {
 void ASTUnit::transferASTDataFromCompilerInstance(CompilerInstance &CI) {
   // Steal the created target, context, and preprocessor if they have been
   // created.
-  assert(CI.hasInvocation() && "missing invocation");
   LangOpts = std::make_unique<LangOptions>(CI.getInvocation().getLangOpts());
   TheSema = CI.takeSema();
   Consumer = CI.takeASTConsumer();
@@ -1601,14 +1599,13 @@ ASTUnit *ASTUnit::LoadFromCompilerInvocationAction(
                         AST->getFileManager().getVirtualFileSystem());
 
   // Create the compiler instance to use for building the AST.
-  std::unique_ptr<CompilerInstance> Clang(
-      new CompilerInstance(std::move(PCHContainerOps)));
+  auto Clang = std::make_unique<CompilerInstance>(std::move(CI),
+                                                  std::move(PCHContainerOps));
 
   // Recover resources if we crash before exiting this method.
   llvm::CrashRecoveryContextCleanupRegistrar<CompilerInstance>
     CICleanup(Clang.get());
 
-  Clang->setInvocation(std::move(CI));
   AST->OriginalSourceFile =
       std::string(Clang->getFrontendOpts().Inputs[0].getFile());
 
@@ -2232,15 +2229,14 @@ void ASTUnit::CodeComplete(
   LangOpts.SpellChecking = false;
   CCInvocation->getDiagnosticOpts().IgnoreWarnings = true;
 
-  std::unique_ptr<CompilerInstance> Clang(
-      new CompilerInstance(PCHContainerOps));
+  auto Clang = std::make_unique<CompilerInstance>(std::move(CCInvocation),
+                                                  PCHContainerOps);
 
   // Recover resources if we crash before exiting this method.
   llvm::CrashRecoveryContextCleanupRegistrar<CompilerInstance>
     CICleanup(Clang.get());
 
-  auto &Inv = *CCInvocation;
-  Clang->setInvocation(std::move(CCInvocation));
+  auto &Inv = Clang->getInvocation();
   OriginalSourceFile =
       std::string(Clang->getFrontendOpts().Inputs[0].getFile());
 
@@ -2254,7 +2250,6 @@ void ASTUnit::CodeComplete(
 
   // Create the target instance.
   if (!Clang->createTarget()) {
-    Clang->setInvocation(nullptr);
     return;
   }
 

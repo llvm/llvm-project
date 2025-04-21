@@ -81,9 +81,8 @@ public:
         createInvocation(Args, CIOpts);
     EXPECT_TRUE(Invocation);
 
-    CompilerInstance Instance;
+    CompilerInstance Instance(std::move(Invocation));
     Instance.setDiagnostics(Diags.get());
-    Instance.setInvocation(Invocation);
     Instance.getFrontendOpts().OutputFile = CacheBMIPath;
     GenerateReducedModuleInterfaceAction Action;
     EXPECT_TRUE(Instance.ExecuteAction(Action));
