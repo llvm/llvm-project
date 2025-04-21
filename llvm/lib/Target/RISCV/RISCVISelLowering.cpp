@@ -6935,7 +6935,7 @@ static bool hasPassthruOp(unsigned Opcode) {
          Opcode <= RISCVISD::LAST_STRICTFP_OPCODE &&
          "not a RISC-V target specific op");
   static_assert(
-      RISCVISD::LAST_VL_VECTOR_OP - RISCVISD::FIRST_VL_VECTOR_OP == 132 &&
+      RISCVISD::LAST_VL_VECTOR_OP - RISCVISD::FIRST_VL_VECTOR_OP == 133 &&
       RISCVISD::LAST_STRICTFP_OPCODE - RISCVISD::FIRST_STRICTFP_OPCODE == 21 &&
       "adding target specific op should update this function");
   if (Opcode >= RISCVISD::ADD_VL && Opcode <= RISCVISD::VFMAX_VL)
@@ -6959,7 +6959,7 @@ static bool hasMaskOp(unsigned Opcode) {
          Opcode <= RISCVISD::LAST_STRICTFP_OPCODE &&
          "not a RISC-V target specific op");
   static_assert(
-      RISCVISD::LAST_VL_VECTOR_OP - RISCVISD::FIRST_VL_VECTOR_OP == 132 &&
+      RISCVISD::LAST_VL_VECTOR_OP - RISCVISD::FIRST_VL_VECTOR_OP == 133 &&
       RISCVISD::LAST_STRICTFP_OPCODE - RISCVISD::FIRST_STRICTFP_OPCODE == 21 &&
       "adding target specific op should update this function");
   if (Opcode >= RISCVISD::TRUNCATE_VECTOR_VL && Opcode <= RISCVISD::SETCC_VL)
@@ -9567,6 +9567,13 @@ getSmallestVTForIndex(MVT VecVT, unsigned MaxIdx, SDLoc DL, SelectionDAG &DAG,
   return SmallerVT;
 }
 
+static bool isValidInsertExtractIndex(SDValue Idx) {
+  auto *IdxC = dyn_cast<ConstantSDNode>(Idx);
+  if (!IdxC || isNullConstant(Idx))
+    return false;
+  return IdxC->getZExtValue() < 32;
+}
+
 // Custom-legalize INSERT_VECTOR_ELT so that the value is inserted into the
 // first position of a vector, and that vector is slid up to the insert index.
 // By limiting the active vector length to index+1 and merging with the
@@ -9677,6 +9684,26 @@ SDValue RISCVTargetLowering::lowerINSERT_VECTOR_ELT(SDValue Op,
         return Vec;
       return convertFromScalableVector(VecVT, Vec, DAG, Subtarget);
     }
+
+    // Use ri.vinsert.v.x if available.
+    if (Subtarget.hasVendorXRivosVisni() && VecVT.isInteger() &&
+        isValidInsertExtractIndex(Idx)) {
+      unsigned Policy = RISCVVType::TAIL_UNDISTURBED_MASK_UNDISTURBED;
+      if (VecVT.isFixedLengthVector() && isa<ConstantSDNode>(Idx) &&
+          Idx->getAsZExtVal() + 1 == VecVT.getVectorNumElements())
+        Policy = RISCVVType::TAIL_AGNOSTIC;
+      SDValue PolicyOp =
+          DAG.getTargetConstant(Policy, DL, Subtarget.getXLenVT());
+      Vec = DAG.getNode(RISCVISD::RI_VINSERT_VL, DL, ContainerVT, Vec, Val, Idx,
+                        VL, PolicyOp);
+      if (AlignedIdx)
+        Vec = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, OrigContainerVT, OrigVec,
+                          Vec, AlignedIdx);
+      if (!VecVT.isFixedLengthVector())
+        return Vec;
+      return convertFromScalableVector(VecVT, Vec, DAG, Subtarget);
+    }
+
     ValInVec = lowerScalarInsert(Val, VL, ContainerVT, DL, DAG, Subtarget);
   } else {
     // On RV32, i64-element vectors must be specially handled to place the
@@ -9874,6 +9901,14 @@ SDValue RISCVTargetLowering::lowerEXTRACT_VECTOR_ELT(SDValue Op,
       Vec = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, ContainerVT, Vec,
                         DAG.getConstant(0, DL, XLenVT));
     }
+  }
+
+  // Use ri.vextract.x.v if available.
+  // TODO: Avoid index 0 and just use the vmv.x.s
+  if (Subtarget.hasVendorXRivosVisni() && EltVT.isInteger() &&
+      isValidInsertExtractIndex(Idx)) {
+    SDValue Elt = DAG.getNode(RISCVISD::RI_VEXTRACT, DL, XLenVT, Vec, Idx);
+    return DAG.getNode(ISD::TRUNCATE, DL, EltVT, Elt);
   }
 
   // If after narrowing, the required slide is still greater than LMUL2,
@@ -22253,11 +22288,13 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(VZEXT_VL)
   NODE_NAME_CASE(VCPOP_VL)
   NODE_NAME_CASE(VFIRST_VL)
+  NODE_NAME_CASE(RI_VINSERT_VL)
   NODE_NAME_CASE(RI_VZIPEVEN_VL)
   NODE_NAME_CASE(RI_VZIPODD_VL)
   NODE_NAME_CASE(RI_VZIP2A_VL)
   NODE_NAME_CASE(RI_VUNZIP2A_VL)
   NODE_NAME_CASE(RI_VUNZIP2B_VL)
+  NODE_NAME_CASE(RI_VEXTRACT)
   NODE_NAME_CASE(READ_CSR)
   NODE_NAME_CASE(WRITE_CSR)
   NODE_NAME_CASE(SWAP_CSR)

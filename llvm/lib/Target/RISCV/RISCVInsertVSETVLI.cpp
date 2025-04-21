@@ -94,6 +94,14 @@ static bool isFloatScalarMoveOrScalarSplatInstr(const MachineInstr &MI) {
   }
 }
 
+static bool isVInsertInstr(const MachineInstr &MI) {
+  return RISCV::getRVVMCOpcode(MI.getOpcode()) ==  RISCV::RI_VINSERT;
+}
+
+static bool isVExtractInstr(const MachineInstr &MI) {
+  return RISCV::getRVVMCOpcode(MI.getOpcode()) == RISCV::RI_VEXTRACT;
+}
+
 static bool isScalarExtractInstr(const MachineInstr &MI) {
   switch (RISCV::getRVVMCOpcode(MI.getOpcode())) {
   default:
@@ -535,6 +543,18 @@ DemandedFields getDemanded(const MachineInstr &MI, const RISCVSubtarget *ST) {
     Res.SEW = DemandedFields::SEWNone;
     Res.SEWLMULRatio = false;
     Res.TailPolicy = false;
+    Res.MaskPolicy = false;
+  }
+
+  if (isVExtractInstr(MI)) {
+    assert(!RISCVII::hasVLOp(TSFlags));
+    // TODO: LMUL can be any larger value (without cost)
+    Res.TailPolicy = false;
+    Res.MaskPolicy = false;
+  }
+
+  if (isVInsertInstr(MI)) {
+    // TODO: LMUL can be any larger value (without cost)
     Res.MaskPolicy = false;
   }
 
@@ -1085,7 +1105,7 @@ RISCVInsertVSETVLI::computeInfoForInstr(const MachineInstr &MI) const {
       InstrInfo.setAVLRegDef(VNI, VLOp.getReg());
     }
   } else {
-    assert(isScalarExtractInstr(MI));
+    assert(isScalarExtractInstr(MI) || isVExtractInstr(MI));
     // Pick a random value for state tracking purposes, will be ignored via
     // the demanded fields mechanism
     InstrInfo.setAVLImm(1);
