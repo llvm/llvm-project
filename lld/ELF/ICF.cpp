@@ -80,6 +80,7 @@
 #include "SymbolTable.h"
 #include "Symbols.h"
 #include "SyntheticSections.h"
+#include "llvm/ADT/EquivalenceClasses.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Object/ELF.h"
 #include "llvm/Support/Parallel.h"
@@ -333,6 +334,28 @@ bool ICF<ELFT>::equalsConstant(const InputSection *a, const InputSection *b) {
              : constantEq(a, ra.relas, b, rb.relas);
 }
 
+template <class RelTy>
+static SmallVector<Symbol *> getReloc(const InputSection *sec,
+                                      Relocs<RelTy> relocs) {
+  SmallVector<Symbol *> syms;
+  for (auto ri = relocs.begin(), re = relocs.end(); ri != re; ++ri) {
+    Symbol &sym = sec->file->getRelocTargetSym(*ri);
+    syms.push_back(&sym);
+  }
+  return syms;
+}
+
+template <class ELFT>
+static SmallVector<Symbol *> getRelocTargetSyms(const InputSection *sec) {
+  const RelsOrRelas<ELFT> rel = sec->template relsOrRelas<ELFT>();
+  if (rel.areRelocsCrel())
+    return getReloc(sec, rel.crels);
+  if (rel.areRelocsRel())
+    return getReloc(sec, rel.rels);
+
+  return getReloc(sec, rel.relas);
+}
+
 // Compare two lists of relocations. Returns true if all pairs of
 // relocations point to the same section in terms of ICF.
 template <class ELFT>
@@ -535,14 +558,28 @@ template <class ELFT> void ICF<ELFT>::run() {
   auto print = [&ctx = ctx]() -> ELFSyncStream {
     return {ctx, ctx.arg.printIcfSections ? DiagLevel::Msg : DiagLevel::None};
   };
+
+  EquivalenceClasses<Symbol *> symbolEquivalence;
   // Merge sections by the equivalence class.
+  // Merge symbols identified as equivalent during ICF.
   forEachClassRange(0, sections.size(), [&](size_t begin, size_t end) {
     if (end - begin == 1)
       return;
     print() << "selected section " << sections[begin];
+    SmallVector<Symbol *> syms = getRelocTargetSyms<ELFT>(sections[begin]);
     for (size_t i = begin + 1; i < end; ++i) {
       print() << "  removing identical section " << sections[i];
       sections[begin]->replace(sections[i]);
+      SmallVector<Symbol *> replacedSyms =
+          getRelocTargetSyms<ELFT>(sections[i]);
+      assert(syms.size() == replacedSyms.size() &&
+             "Should have same number of syms!");
+      for (size_t i = 0; i < syms.size(); i++) {
+        if (syms[i] == replacedSyms[i] || !syms[i]->isGlobal() ||
+            !replacedSyms[i]->isGlobal())
+          continue;
+        symbolEquivalence.unionSets(syms[i], replacedSyms[i]);
+      }
 
       // At this point we know sections merged are fully identical and hence
       // we want to remove duplicate implicit dependencies such as link order
@@ -561,11 +598,26 @@ template <class ELFT> void ICF<ELFT>::run() {
           d->folded = true;
         }
   };
-  for (Symbol *sym : ctx.symtab->getSymbols())
+  for (Symbol *sym : ctx.symtab->getSymbols()) {
     fold(sym);
+    auto it = symbolEquivalence.findLeader(sym);
+    if (it != symbolEquivalence.member_end() && *it != sym) {
+      print() << "redirecting '" << sym->getName() << "' in symtab to '"
+              << (*it)->getName() << "'";
+      ctx.symtab->redirect(sym, *it);
+    }
+  }
   parallelForEach(ctx.objectFiles, [&](ELFFileBase *file) {
     for (Symbol *sym : file->getLocalSymbols())
       fold(sym);
+    for (Symbol *&sym : file->getMutableGlobalSymbols()) {
+      auto it = symbolEquivalence.findLeader(sym);
+      if (it != symbolEquivalence.member_end() && *it != sym) {
+        print() << "redirecting '" << sym->getName() << "' to '"
+                << (*it)->getName() << "'";
+        sym = *it;
+      }
+    }
   });
 
   // InputSectionDescription::sections is populated by processSectionCommands().
