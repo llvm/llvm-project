@@ -236,8 +236,8 @@ genBaseBoundsOps(fir::FirOpBuilder &builder, mlir::Location loc,
           loc, cummulativeExtent, extent);
     }
 
-    mlir::Value bound =
-        builder.create<BoundsOp>(loc, boundTy, lb, ub, extent, stride, false, baseLb);
+    mlir::Value bound = builder.create<BoundsOp>(loc, boundTy, lb, ub, extent,
+                                                 stride, false, baseLb);
     bounds.push_back(bound);
   }
   return bounds;

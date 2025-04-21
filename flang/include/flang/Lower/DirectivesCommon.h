@@ -670,7 +670,8 @@ genBoundsOps(fir::FirOpBuilder &builder, mlir::Location loc,
              const std::vector<Fortran::evaluate::Subscript> &subscripts,
              std::stringstream &asFortran, fir::ExtendedValue &dataExv,
              bool dataExvIsAssumedSize, fir::factory::AddrAndBoundsInfo &info,
-             bool treatIndexAsSection = false, bool strideIncludeLowerExtent = false) {
+             bool treatIndexAsSection = false,
+             bool strideIncludeLowerExtent = false) {
   int dimension = 0;
   mlir::Type idxTy = builder.getIndexType();
   mlir::Type boundTy = builder.getType<BoundsType>();
@@ -1024,7 +1025,8 @@ fir::factory::AddrAndBoundsInfo gatherDataOperandAddrAndBounds(
       if (genDefaultBounds &&
           mlir::isa<fir::SequenceType>(fir::unwrapRefType(info.addr.getType())))
         bounds = fir::factory::genBaseBoundsOps<BoundsOp, BoundsType>(
-            builder, operandLocation, dataExv, dataExvIsAssumedSize, strideIncludeLowerExtent);
+            builder, operandLocation, dataExv, dataExvIsAssumedSize,
+            strideIncludeLowerExtent);
       asFortran << symRef->get().name().ToString();
     } else { // Unsupported
       llvm::report_fatal_error("Unsupported type of OpenACC operand");
