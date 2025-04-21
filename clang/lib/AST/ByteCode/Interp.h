@@ -20,7 +20,6 @@
 #include "FixedPoint.h"
 #include "Floating.h"
 #include "Function.h"
-#include "FunctionPointer.h"
 #include "InterpBuiltinBitCast.h"
 #include "InterpFrame.h"
 #include "InterpStack.h"
@@ -985,26 +984,6 @@ bool CmpHelperEQ(InterpState &S, CodePtr OpPC, CompareFn Fn) {
 }
 
 template <>
-inline bool CmpHelperEQ<FunctionPointer>(InterpState &S, CodePtr OpPC,
-                                         CompareFn Fn) {
-  const auto &RHS = S.Stk.pop<FunctionPointer>();
-  const auto &LHS = S.Stk.pop<FunctionPointer>();
-
-  // We cannot compare against weak declarations at compile time.
-  for (const auto &FP : {LHS, RHS}) {
-    if (FP.isWeak()) {
-      const SourceInfo &Loc = S.Current->getSource(OpPC);
-      S.FFDiag(Loc, diag::note_constexpr_pointer_weak_comparison)
-          << FP.toDiagnosticString(S.getASTContext());
-      return false;
-    }
-  }
-
-  S.Stk.push<Boolean>(Boolean::from(Fn(LHS.compare(RHS))));
-  return true;
-}
-
-template <>
 inline bool CmpHelper<Pointer>(InterpState &S, CodePtr OpPC, CompareFn Fn) {
   using BoolT = PrimConv<PT_Bool>::T;
   const Pointer &RHS = S.Stk.pop<Pointer>();
@@ -1953,7 +1932,7 @@ inline bool CastMemberPtrPtr(InterpState &S, CodePtr OpPC) {
     S.Stk.push<Pointer>(*Ptr);
     return true;
   }
-  return false;
+  return Invalid(S, OpPC);
 }
 
 //===----------------------------------------------------------------------===//
@@ -2866,6 +2845,15 @@ inline bool EndSpeculation(InterpState &S, CodePtr OpPC) {
     S.getEvalStatus().Diag = S.PrevDiags;
     S.PrevDiags = nullptr;
   }
+  return true;
+}
+
+inline bool PushCC(InterpState &S, CodePtr OpPC, bool Value) {
+  S.ConstantContextOverride = Value;
+  return true;
+}
+inline bool PopCC(InterpState &S, CodePtr OpPC) {
+  S.ConstantContextOverride = std::nullopt;
   return true;
 }
 

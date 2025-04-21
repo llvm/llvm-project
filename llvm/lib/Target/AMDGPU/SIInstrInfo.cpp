@@ -382,7 +382,7 @@ bool SIInstrInfo::getMemOperandsWithOffsetWidth(
       DataOpIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::vdst);
       if (DataOpIdx == -1)
         DataOpIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::data0);
-      Width = getOpSize(LdSt, DataOpIdx);
+      Width = LocationSize::precise(getOpSize(LdSt, DataOpIdx));
     } else {
       // The 2 offset instructions use offset0 and offset1 instead. We can treat
       // these as a load with a single offset if the 2 offsets are consecutive.
@@ -418,11 +418,12 @@ bool SIInstrInfo::getMemOperandsWithOffsetWidth(
       DataOpIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::vdst);
       if (DataOpIdx == -1) {
         DataOpIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::data0);
-        Width = getOpSize(LdSt, DataOpIdx);
+        Width = LocationSize::precise(getOpSize(LdSt, DataOpIdx));
         DataOpIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::data1);
-        Width = Width.getValue() + getOpSize(LdSt, DataOpIdx);
+        Width = LocationSize::precise(
+            Width.getValue() + TypeSize::getFixed(getOpSize(LdSt, DataOpIdx)));
       } else {
-        Width = getOpSize(LdSt, DataOpIdx);
+        Width = LocationSize::precise(getOpSize(LdSt, DataOpIdx));
       }
     }
     return true;
@@ -453,7 +454,7 @@ bool SIInstrInfo::getMemOperandsWithOffsetWidth(
       DataOpIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::vdata);
     if (DataOpIdx == -1) // LDS DMA
       return false;
-    Width = getOpSize(LdSt, DataOpIdx);
+    Width = LocationSize::precise(getOpSize(LdSt, DataOpIdx));
     return true;
   }
 
@@ -475,7 +476,7 @@ bool SIInstrInfo::getMemOperandsWithOffsetWidth(
     DataOpIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::vdata);
     if (DataOpIdx == -1)
       return false; // no return sampler
-    Width = getOpSize(LdSt, DataOpIdx);
+    Width = LocationSize::precise(getOpSize(LdSt, DataOpIdx));
     return true;
   }
 
@@ -490,7 +491,7 @@ bool SIInstrInfo::getMemOperandsWithOffsetWidth(
     DataOpIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::sdst);
     if (DataOpIdx == -1)
       return false;
-    Width = getOpSize(LdSt, DataOpIdx);
+    Width = LocationSize::precise(getOpSize(LdSt, DataOpIdx));
     return true;
   }
 
@@ -509,7 +510,7 @@ bool SIInstrInfo::getMemOperandsWithOffsetWidth(
       DataOpIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::vdata);
     if (DataOpIdx == -1) // LDS DMA
       return false;
-    Width = getOpSize(LdSt, DataOpIdx);
+    Width = LocationSize::precise(getOpSize(LdSt, DataOpIdx));
     return true;
   }
 
@@ -3798,7 +3799,8 @@ bool SIInstrInfo::checkInstOffsetsDoNotOverlap(const MachineInstr &MIa,
                                                const MachineInstr &MIb) const {
   SmallVector<const MachineOperand *, 4> BaseOps0, BaseOps1;
   int64_t Offset0, Offset1;
-  LocationSize Dummy0 = 0, Dummy1 = 0;
+  LocationSize Dummy0 = LocationSize::precise(0);
+  LocationSize Dummy1 = LocationSize::precise(0);
   bool Offset0IsScalable, Offset1IsScalable;
   if (!getMemOperandsWithOffsetWidth(MIa, BaseOps0, Offset0, Offset0IsScalable,
                                      Dummy0, &RI) ||

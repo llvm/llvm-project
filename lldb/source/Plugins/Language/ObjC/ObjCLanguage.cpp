@@ -691,6 +691,10 @@ static void LoadObjCFormatters(TypeCategoryImplSP objc_category_sp) {
   AddCXXSummary(
       objc_category_sp, lldb_private::formatters::NSStringSummaryProvider,
       "NSString summary provider", "NSTaggedPointerString", appkit_flags);
+  AddCXXSummary(objc_category_sp,
+                lldb_private::formatters::NSStringSummaryProvider,
+                "NSString summary provider", "NSIndirectTaggedPointerString",
+                appkit_flags);
 
   AddCXXSummary(objc_category_sp,
                 lldb_private::formatters::NSAttributedStringSummaryProvider,

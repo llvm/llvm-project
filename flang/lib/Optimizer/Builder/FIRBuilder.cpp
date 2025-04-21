@@ -280,9 +280,6 @@ mlir::Block *fir::FirOpBuilder::getAllocaBlock() {
   if (auto cufKernelOp = getRegion().getParentOfType<cuf::KernelOp>())
     return &cufKernelOp.getRegion().front();
 
-  if (auto doConcurentOp = getRegion().getParentOfType<fir::DoConcurrentOp>())
-    return doConcurentOp.getBody();
-
   return getEntryBlock();
 }
 
