@@ -931,7 +931,6 @@ void applySwapICmpOperands(MachineInstr &MI, GISelChangeObserver &Observer) {
 
 /// \returns a function which builds a vector floating point compare instruction
 /// for a condition code \p CC.
-/// \param [in] IsZero - True if the comparison is against 0.
 /// \param [in] NoNans - True if the target has NoNansFPMath.
 std::function<Register(MachineIRBuilder &)>
 getVectorFCMP(AArch64CC::CondCode CC, Register LHS, Register RHS, bool NoNans,
