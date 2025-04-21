@@ -639,6 +639,9 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitVectorLengthClause(
 
 OpenACCClause *SemaOpenACCClauseVisitor::VisitAsyncClause(
     SemaOpenACC::OpenACCParsedClause &Clause) {
+  if (DisallowSinceLastDeviceType<OpenACCAsyncClause>(Clause))
+    return nullptr;
+
   assert(Clause.getNumIntExprs() < 2 &&
          "Invalid number of expressions for Async");
   return OpenACCAsyncClause::Create(
