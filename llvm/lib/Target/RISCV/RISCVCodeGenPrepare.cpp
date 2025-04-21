@@ -146,7 +146,7 @@ bool RISCVCodeGenPrepare::widenVPMerge(IntrinsicInst &II) {
     return false;
 
   auto *Phi = dyn_cast<PHINode>(PhiV);
-  if (!Phi || Phi->getNumUses() > 2 || Phi->getNumIncomingValues() != 2 ||
+  if (!Phi || !Phi->hasOneUse() || Phi->getNumIncomingValues() != 2 ||
       !match(Phi->getIncomingValue(0), m_Zero()) ||
       Phi->getIncomingValue(1) != &II)
     return false;
