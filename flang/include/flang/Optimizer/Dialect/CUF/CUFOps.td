@@ -383,7 +383,7 @@ def cuf_StreamCastOp : cuf_Op<"stream_cast", [NoMemoryEffect]> {
     Later in the lowering this will become a no op.
   }];
 
-  let arguments = (ins fir_ReferenceType:$stream);
+  let arguments = (ins AnyTypeOf<[fir_ReferenceType, LLVM_AnyPointer]>:$stream);
 
   let results = (outs GPU_AsyncToken:$token);
 

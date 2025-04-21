@@ -554,9 +554,7 @@ static void handleByValParam(const NVPTXTargetMachine &TM, Argument *Arg) {
   if (ArgUseIsReadOnly && AUC.Conditionals.empty()) {
     // Convert all loads and intermediate operations to use parameter AS and
     // skip creation of a local copy of the argument.
-    SmallVector<Use *, 16> UsesToUpdate;
-    for (Use &U : Arg->uses())
-      UsesToUpdate.push_back(&U);
+    SmallVector<Use *, 16> UsesToUpdate(llvm::make_pointer_range(Arg->uses()));
 
     Value *ArgInParamAS = new AddrSpaceCastInst(
         Arg, PointerType::get(StructType->getContext(), ADDRESS_SPACE_PARAM),
