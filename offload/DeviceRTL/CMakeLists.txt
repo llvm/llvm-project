@@ -137,9 +137,9 @@ function(compileDeviceRTLLibrary target_name target_triple)
     BUILD_RPATH ""
     INSTALL_RPATH ""
     RUNTIME_OUTPUT_NAME libomptarget-${target_name}.bc)
-  target_compile_options(libomptarget-${target_name} PRIVATE "--target=${target_triple}")
+  target_compile_options(libomptarget-${target_name} PRIVATE "--target=${target_triple}" "-march=")
   target_link_options(libomptarget-${target_name} PRIVATE "--target=${target_triple}"
-                      "-r" "-nostdlib" "-flto" "-Wl,--lto-emit-llvm")
+                      "-r" "-nostdlib" "-flto" "-Wl,--lto-emit-llvm" "-march=")
   install(TARGETS libomptarget-${target_name}
           PERMISSIONS OWNER_WRITE OWNER_READ GROUP_READ WORLD_READ
           DESTINATION ${OFFLOAD_INSTALL_LIBDIR})
