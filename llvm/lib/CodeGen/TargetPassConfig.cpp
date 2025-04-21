@@ -707,10 +707,6 @@ void TargetPassConfig::addPass(Pass *P) {
   // and shouldn't reference it.
   AnalysisID PassID = P->getPassID();
 
-  IdentifyingPassPtr TargetID = getPassSubstitution(PassID);
-  if (!overridePass(PassID, TargetID).isValid())
-    return;
-
   if (StartBefore == PassID && StartBeforeCount++ == StartBeforeInstanceNum)
     Started = true;
   if (StopBefore == PassID && StopBeforeCount++ == StopBeforeInstanceNum)
@@ -1518,8 +1514,9 @@ void TargetPassConfig::addMachineLateOptimization() {
   addPass(&MachineLateInstrsCleanupID);
 
   // Branch folding must be run after regalloc and prolog/epilog insertion.
-  addPass(createBranchFolderPass(!TM->requiresStructuredCFG() &&
-                                 getEnableTailMerge()));
+  if(!isPassSubstitutedOrOverridden(&BranchFolderPassID))
+    addPass(createBranchFolderPass(!TM->requiresStructuredCFG() &&
+                                  getEnableTailMerge()));
 
   // Tail duplication.
   // Note that duplicating tail just increases code size and degrades
