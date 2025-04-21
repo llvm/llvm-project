@@ -1083,42 +1083,44 @@ void State::addInfoForInductions(BasicBlock &BB) {
   }
 }
 
-static void addNonPoisonIntrinsicInstFact(
-    IntrinsicInst *II,
-    function_ref<void(CmpPredicate, Value *, Value *)> AddFact) {
-  Intrinsic::ID IID = II->getIntrinsicID();
-  switch (IID) {
-  case Intrinsic::umin:
-  case Intrinsic::umax:
-  case Intrinsic::smin:
-  case Intrinsic::smax: {
-    ICmpInst::Predicate Pred =
-        ICmpInst::getNonStrictPredicate(MinMaxIntrinsic::getPredicate(IID));
-    AddFact(Pred, II, II->getArgOperand(0));
-    AddFact(Pred, II, II->getArgOperand(1));
-    break;
-  }
-  case Intrinsic::abs: {
-    if (cast<ConstantInt>(II->getArgOperand(1))->isOne())
-      AddFact(CmpInst::ICMP_SGE, II, ConstantInt::get(II->getType(), 0));
-    AddFact(CmpInst::ICMP_SGE, II, II->getArgOperand(0));
-    break;
-  }
-  default:
-    break;
-  }
-}
-
 static void addNonPoisonValueFactRecursive(
-    Value *V, function_ref<void(CmpPredicate, Value *, Value *)> AddFact) {
-  if (auto *II = dyn_cast<IntrinsicInst>(V))
-    addNonPoisonIntrinsicInstFact(II, AddFact);
+    Value *V, SmallPtrSet<Value *, 8> &Visited,
+    function_ref<void(CmpPredicate, Value *, Value *)> AddFact) {
+  auto *I = dyn_cast<Instruction>(V);
+  if (!I)
+    return;
 
-  if (auto *I = dyn_cast<Instruction>(V)) {
-    for (auto &Op : I->operands())
-      if (propagatesPoison(Op))
-        addNonPoisonValueFactRecursive(Op.get(), AddFact);
+  if (Visited.contains(I))
+    return;
+  Visited.insert(I);
+
+  if (auto *II = dyn_cast<IntrinsicInst>(V)) {
+    Intrinsic::ID IID = II->getIntrinsicID();
+    switch (IID) {
+    case Intrinsic::umin:
+    case Intrinsic::umax:
+    case Intrinsic::smin:
+    case Intrinsic::smax: {
+      ICmpInst::Predicate Pred =
+          ICmpInst::getNonStrictPredicate(MinMaxIntrinsic::getPredicate(IID));
+      AddFact(Pred, II, II->getArgOperand(0));
+      AddFact(Pred, II, II->getArgOperand(1));
+      break;
+    }
+    case Intrinsic::abs: {
+      if (cast<ConstantInt>(II->getArgOperand(1))->isOne())
+        AddFact(CmpInst::ICMP_SGE, II, ConstantInt::get(II->getType(), 0));
+      AddFact(CmpInst::ICMP_SGE, II, II->getArgOperand(0));
+      break;
+    }
+    default:
+      break;
+    }
   }
+
+  for (auto &Op : I->operands())
+    if (isa<Instruction>(Op) && propagatesPoison(Op))
+      addNonPoisonValueFactRecursive(Op.get(), Visited, AddFact);
 }
 
 void State::addInfoFor(BasicBlock &BB) {
@@ -1126,6 +1128,7 @@ void State::addInfoFor(BasicBlock &BB) {
 
   // True as long as long as the current instruction is guaranteed to execute.
   bool GuaranteedToExecute = true;
+  SmallPtrSet<Value *, 8> Visited;
   // Queue conditions and assumes.
   for (Instruction &I : BB) {
     if (auto *Cmp = dyn_cast<ICmpInst>(&I)) {
@@ -1179,7 +1182,8 @@ void State::addInfoFor(BasicBlock &BB) {
       };
 
       handleGuaranteedWellDefinedOps(&I, [&](const Value *Op) {
-        addNonPoisonValueFactRecursive(const_cast<Value *>(Op), AddFact);
+        addNonPoisonValueFactRecursive(const_cast<Value *>(Op), Visited,
+                                       AddFact);
         return false;
       });
     }
@@ -1444,6 +1448,7 @@ static std::optional<bool> checkCondition(CmpInst::Predicate Pred, Value *A,
                                           ConstraintInfo &Info) {
   LLVM_DEBUG(dbgs() << "Checking " << *CheckInst << "\n");
   SmallVector<StackEntry, 8> DFSInStack;
+  SmallPtrSet<Value *, 8> Visited;
   auto StackRestorer = make_scope_exit([&]() {
     while (!DFSInStack.empty())
       removeEntryFromStack(DFSInStack.back(), Info, DFSInStack, nullptr);
@@ -1454,8 +1459,8 @@ static std::optional<bool> checkCondition(CmpInst::Predicate Pred, Value *A,
       Info.transferToOtherSystem(Pred, A, B, 0, 0, DFSInStack);
   };
 
-  addNonPoisonValueFactRecursive(A, AddFact);
-  addNonPoisonValueFactRecursive(B, AddFact);
+  addNonPoisonValueFactRecursive(A, Visited, AddFact);
+  addNonPoisonValueFactRecursive(B, Visited, AddFact);
 
   auto R = Info.getConstraintForSolving(Pred, A, B);
   if (R.empty() || !R.isValid(Info)){
@@ -1611,6 +1616,7 @@ static bool checkOrAndOpImpliedByOther(
   });
   bool IsOr = match(JoinOp, m_LogicalOr());
   SmallVector<Value *, 4> Worklist({JoinOp->getOperand(OtherOpIdx)});
+  SmallPtrSet<Value *, 8> Visited;
   // Do a traversal of the AND/OR tree to add facts from leaf compares.
   while (!Worklist.empty()) {
     Value *Val = Worklist.pop_back_val();
@@ -1629,8 +1635,8 @@ static bool checkOrAndOpImpliedByOther(
                                      DFSInStack);
       };
 
-      addNonPoisonValueFactRecursive(LHS, AddFact);
-      addNonPoisonValueFactRecursive(RHS, AddFact);
+      addNonPoisonValueFactRecursive(LHS, Visited, AddFact);
+      addNonPoisonValueFactRecursive(RHS, Visited, AddFact);
       continue;
     }
     if (IsOr ? match(Val, m_LogicalOr(m_Value(LHS), m_Value(RHS)))
@@ -1964,8 +1970,9 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
     }
     AddFact(Pred, A, B);
     // Now both A and B is guaranteed not to be poison.
-    addNonPoisonValueFactRecursive(A, AddFact);
-    addNonPoisonValueFactRecursive(B, AddFact);
+    SmallPtrSet<Value *, 8> Visited;
+    addNonPoisonValueFactRecursive(A, Visited, AddFact);
+    addNonPoisonValueFactRecursive(B, Visited, AddFact);
   }
 
   if (ReproducerModule && !ReproducerModule->functions().empty()) {
