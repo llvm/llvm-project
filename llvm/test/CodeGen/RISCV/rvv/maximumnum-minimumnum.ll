@@ -2,22 +2,6 @@
 ; RUN: llc --mtriple=riscv64-linux-gnu --mattr=+v,+zvfh < %s | FileCheck %s --check-prefix=ZVFH
 ; RUN: llc --mtriple=riscv64-linux-gnu --mattr=+v,+zvfhmin,+zfh < %s | FileCheck %s --check-prefix=ZVFHMIN
 
-;;;;;;;;;;;;;;;;  max_f64
-define double @max_f64(double %a, double %b) {
-; ZVFH-LABEL: max_f64:
-; ZVFH:       # %bb.0: # %entry
-; ZVFH-NEXT:    fmax.d fa0, fa0, fa1
-; ZVFH-NEXT:    ret
-;
-; ZVFHMIN-LABEL: max_f64:
-; ZVFHMIN:       # %bb.0: # %entry
-; ZVFHMIN-NEXT:    fmax.d fa0, fa0, fa1
-; ZVFHMIN-NEXT:    ret
-entry:
-  %c = call double @llvm.maximumnum.f64(double %a, double %b)
-  ret double %c
-}
-
 define <2 x double> @max_v2f64(<2 x double> %a, <2 x double> %b) {
 ; ZVFH-LABEL: max_v2f64:
 ; ZVFH:       # %bb.0: # %entry
@@ -67,22 +51,6 @@ define <4 x double> @max_v4f64(<4 x double> %a, <4 x double> %b) {
 entry:
   %c = call <4 x double> @llvm.maximumnum.v4f64(<4 x double> %a, <4 x double> %b)
   ret <4 x double> %c
-}
-
-;;;;;;;;;;;;;;;;;; max_f32
-define float @max_f32(float %a, float %b) {
-; ZVFH-LABEL: max_f32:
-; ZVFH:       # %bb.0: # %entry
-; ZVFH-NEXT:    fmax.s fa0, fa0, fa1
-; ZVFH-NEXT:    ret
-;
-; ZVFHMIN-LABEL: max_f32:
-; ZVFHMIN:       # %bb.0: # %entry
-; ZVFHMIN-NEXT:    fmax.s fa0, fa0, fa1
-; ZVFHMIN-NEXT:    ret
-entry:
-  %c = call float @llvm.maximumnum.f32(float %a, float %b)
-  ret float %c
 }
 
 define <2 x float> @max_v2f32(<2 x float> %a, <2 x float> %b) {
@@ -168,25 +136,6 @@ define <8 x float> @max_v8f32(<8 x float> %a, <8 x float> %b) {
 entry:
   %c = call <8 x float> @llvm.maximumnum.v8f32(<8 x float> %a, <8 x float> %b)
   ret <8 x float> %c
-}
-
-;;;;;;;;;;;;;;;;;; max_f16
-define half @max_f16(half %a, half %b) {
-; ZVFH-LABEL: max_f16:
-; ZVFH:       # %bb.0: # %entry
-; ZVFH-NEXT:    fcvt.s.h fa5, fa1
-; ZVFH-NEXT:    fcvt.s.h fa4, fa0
-; ZVFH-NEXT:    fmax.s fa5, fa4, fa5
-; ZVFH-NEXT:    fcvt.h.s fa0, fa5
-; ZVFH-NEXT:    ret
-;
-; ZVFHMIN-LABEL: max_f16:
-; ZVFHMIN:       # %bb.0: # %entry
-; ZVFHMIN-NEXT:    fmax.h fa0, fa0, fa1
-; ZVFHMIN-NEXT:    ret
-entry:
-  %c = call half @llvm.maximumnum.f16(half %a, half %b)
-  ret half %c
 }
 
 define <2 x half> @max_v2f16(<2 x half> %a, <2 x half> %b) {
@@ -299,22 +248,6 @@ entry:
   ret <16 x half> %c
 }
 
-;;;;;;;;;;;;;;;;  min_f64
-define double @min_f64(double %a, double %b) {
-; ZVFH-LABEL: min_f64:
-; ZVFH:       # %bb.0: # %entry
-; ZVFH-NEXT:    fmin.d fa0, fa0, fa1
-; ZVFH-NEXT:    ret
-;
-; ZVFHMIN-LABEL: min_f64:
-; ZVFHMIN:       # %bb.0: # %entry
-; ZVFHMIN-NEXT:    fmin.d fa0, fa0, fa1
-; ZVFHMIN-NEXT:    ret
-entry:
-  %c = call double @llvm.minimumnum.f64(double %a, double %b)
-  ret double %c
-}
-
 define <2 x double> @min_v2f64(<2 x double> %a, <2 x double> %b) {
 ; ZVFH-LABEL: min_v2f64:
 ; ZVFH:       # %bb.0: # %entry
@@ -364,22 +297,6 @@ define <4 x double> @min_v4f64(<4 x double> %a, <4 x double> %b) {
 entry:
   %c = call <4 x double> @llvm.minimumnum.v4f64(<4 x double> %a, <4 x double> %b)
   ret <4 x double> %c
-}
-
-;;;;;;;;;;;;;;;;;; min_f32
-define float @min_f32(float %a, float %b) {
-; ZVFH-LABEL: min_f32:
-; ZVFH:       # %bb.0: # %entry
-; ZVFH-NEXT:    fmin.s fa0, fa0, fa1
-; ZVFH-NEXT:    ret
-;
-; ZVFHMIN-LABEL: min_f32:
-; ZVFHMIN:       # %bb.0: # %entry
-; ZVFHMIN-NEXT:    fmin.s fa0, fa0, fa1
-; ZVFHMIN-NEXT:    ret
-entry:
-  %c = call float @llvm.minimumnum.f32(float %a, float %b)
-  ret float %c
 }
 
 define <2 x float> @min_v2f32(<2 x float> %a, <2 x float> %b) {
@@ -465,25 +382,6 @@ define <8 x float> @min_v8f32(<8 x float> %a, <8 x float> %b) {
 entry:
   %c = call <8 x float> @llvm.minimumnum.v8f32(<8 x float> %a, <8 x float> %b)
   ret <8 x float> %c
-}
-
-;;;;;;;;;;;;;;;;;; min_f16
-define half @min_f16(half %a, half %b) {
-; ZVFH-LABEL: min_f16:
-; ZVFH:       # %bb.0: # %entry
-; ZVFH-NEXT:    fcvt.s.h fa5, fa1
-; ZVFH-NEXT:    fcvt.s.h fa4, fa0
-; ZVFH-NEXT:    fmin.s fa5, fa4, fa5
-; ZVFH-NEXT:    fcvt.h.s fa0, fa5
-; ZVFH-NEXT:    ret
-;
-; ZVFHMIN-LABEL: min_f16:
-; ZVFHMIN:       # %bb.0: # %entry
-; ZVFHMIN-NEXT:    fmin.h fa0, fa0, fa1
-; ZVFHMIN-NEXT:    ret
-entry:
-  %c = call half @llvm.minimumnum.f16(half %a, half %b)
-  ret half %c
 }
 
 define <2 x half> @min_v2f16(<2 x half> %a, <2 x half> %b) {
