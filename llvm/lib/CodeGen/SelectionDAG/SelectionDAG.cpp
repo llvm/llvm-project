@@ -5767,7 +5767,7 @@ bool SelectionDAG::isKnownNeverNaN(SDValue Op, const APInt &DemandedElts,
       return true;
     if (SNaN && (NoFPClass & fcSNan) == fcSNan)
       return true;
-    return isKnownNeverNaN(Op.getOperand(0), SNaN, Depth + 1);
+    return isKnownNeverNaN(Op.getOperand(0), DemandedElts, SNaN, Depth + 1);
   }
   default:
     if (Opcode >= ISD::BUILTIN_OP_END || Opcode == ISD::INTRINSIC_WO_CHAIN ||
