@@ -2504,7 +2504,7 @@ public:
         return (LT.first * 2);
       else
         return (LT.first * 1);
-    } else if (!TLI->isOperationExpand(ISD, LT.second)) {
+    } else if (TLI->isOperationCustom(ISD, LT.second)) {
       // If the operation is custom lowered then assume
       // that the code is twice as expensive.
       return (LT.first * 2);
