@@ -5752,6 +5752,34 @@ bool SelectionDAG::isKnownNeverNaN(SDValue Op, const APInt &DemandedElts,
     }
     return isKnownNeverNaN(Src, SNaN, Depth + 1);
   }
+  case ISD::INSERT_SUBVECTOR: {
+    SDValue BaseVector = Op.getOperand(0);
+    SDValue SubVector = Op.getOperand(1);
+    EVT BaseVectorVT = BaseVector.getValueType();
+    if (BaseVectorVT.isFixedLengthVector()) {
+      unsigned Idx = Op.getConstantOperandVal(2);
+      unsigned NumBaseElts = BaseVectorVT.getVectorNumElements();
+      unsigned NumSubElts = SubVector.getValueType().getVectorNumElements();
+
+      // Clear/Extract the bits at the position where the subvector will be
+      // inserted.
+      APInt DemandedMask =
+          APInt::getBitsSet(NumBaseElts, Idx, Idx + NumSubElts);
+      APInt DemandedSrcElts = DemandedElts & ~DemandedMask;
+      APInt DemandedSubElts = DemandedElts.extractBits(NumSubElts, Idx);
+
+      bool NeverNaN = true;
+      if (!DemandedSrcElts.isZero())
+        NeverNaN &=
+            isKnownNeverNaN(BaseVector, DemandedSrcElts, SNaN, Depth + 1);
+      if (NeverNaN && !DemandedSubElts.isZero())
+        NeverNaN &=
+            isKnownNeverNaN(SubVector, DemandedSubElts, SNaN, Depth + 1);
+      return NeverNaN;
+    }
+    return isKnownNeverNaN(BaseVector, SNaN, Depth + 1) &&
+           isKnownNeverNaN(SubVector, SNaN, Depth + 1);
+  }
   case ISD::BUILD_VECTOR: {
     unsigned NumElts = Op.getNumOperands();
     for (unsigned I = 0; I != NumElts; ++I)
