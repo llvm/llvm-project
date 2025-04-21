@@ -33,7 +33,7 @@
 #include <cstdint>
 #include <string>
 
-#include "experimental/__stacktrace/detail/entry.h"
+#include <__stacktrace/detail/entry.h>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
