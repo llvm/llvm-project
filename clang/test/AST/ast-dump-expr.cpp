@@ -115,11 +115,11 @@ void Casting(const S *s) {
 template <typename... Ts>
 void UnaryExpressions(int *p) {
   sizeof...(Ts);
-  // CHECK: SizeOfPackExpr 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:15> 'unsigned long' 0x{{[^ ]*}} Ts
+  // CHECK: SizeOfPackExpr 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:15> 'std::size_t' 0x{{[^ ]*}} Ts
 
   noexcept(p - p);
   // CHECK: CXXNoexceptExpr 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:17> 'bool'
-  // CHECK-NEXT: BinaryOperator 0x{{[^ ]*}} <col:12, col:16> 'long' '-'
+  // CHECK-NEXT: BinaryOperator 0x{{[^ ]*}} <col:12, col:16> 'std::ptrdiff_t' '-'
   // CHECK-NEXT: ImplicitCastExpr
   // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:12> 'int *' lvalue ParmVar 0x{{[^ ]*}} 'p' 'int *'
   // CHECK-NEXT: ImplicitCastExpr

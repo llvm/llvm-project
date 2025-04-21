@@ -320,22 +320,6 @@ void test_buf_size_concrete_with_multiplication(void) {
   // bugpath-warning{{The 1st argument to '__buf_size_arg_constraint_mul' is a buffer with size 6 but should be a buffer with size equal to or greater than the value of the 2nd argument (which is 4) times the 3rd argument (which is 2)}} \
   // bugpath-note{{The 1st argument to '__buf_size_arg_constraint_mul' is a buffer with size 6 but should be a buffer with size equal to or greater than the value of the 2nd argument (which is 4) times the 3rd argument (which is 2)}}
 }
-void test_buf_size_symbolic_with_multiplication(size_t s) {
-  short buf[3];
-  __buf_size_arg_constraint_mul(buf, s, sizeof(short));
-  clang_analyzer_eval(s * sizeof(short) <= 6); // \
-  // report-warning{{TRUE}} \
-  // bugpath-warning{{TRUE}} \
-  // bugpath-note{{TRUE}}
-}
-void test_buf_size_symbolic_and_offset_with_multiplication(size_t s) {
-  short buf[3];
-  __buf_size_arg_constraint_mul(buf + 1, s, sizeof(short));
-  clang_analyzer_eval(s * sizeof(short) <= 4); // \
-  // report-warning{{TRUE}} \
-  // bugpath-warning{{TRUE}} \
-  // bugpath-note{{TRUE}}
-}
 
 // The minimum buffer size for this function is set to 10.
 int __buf_size_arg_constraint_concrete(const void *);

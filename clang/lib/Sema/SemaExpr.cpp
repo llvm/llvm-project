@@ -4036,6 +4036,8 @@ ExprResult Sema::ActOnNumericConstant(const Token &Tok, Scope *UDLScope) {
                          getStdNamespace(), "ssize_t");
                      !SSize.isNull() && Context.hasSameType(SSize, SignedSize))
               Ty = SSize;
+              else
+              Ty=SignedSize;
           } else if (AllowUnsigned) {
             Ty = Context.getCGlobalCXXStdNSTypedef(getStdNamespace(), "size_t",
                                                    Context.getSizeType());
