@@ -5758,23 +5758,25 @@ bool SelectionDAG::isKnownNeverNaN(SDValue Op, const APInt &DemandedElts,
     EVT BaseVectorVT = BaseVector.getValueType();
     if (BaseVectorVT.isFixedLengthVector()) {
       unsigned Idx = Op.getConstantOperandVal(2);
-      unsigned NumBaseVectorElts = BaseVectorVT.getVectorNumElements();
-      unsigned NumSubVectorElts =
-          SubVector.getValueType().getVectorNumElements();
+      unsigned NumBaseElts = BaseVectorVT.getVectorNumElements();
+      unsigned NumSubElts = SubVector.getValueType().getVectorNumElements();
 
-      // Clear the bits at the position where the subvector will be inserted.
-      APInt DemandedMask = APInt::getAllOnes(NumSubVectorElts)
-                               .zext(NumBaseVectorElts)
-                               .shl(Idx)
-                               .reverseBits();
-      APInt DemandedSrcElts = DemandedElts & DemandedMask;
+      // Clear/Extract the bits at the position where the subvector will be
+      // inserted.
+      APInt DemandedMask =
+          APInt::getBitsSet(NumBaseElts, Idx, Idx + NumSubElts);
+      APInt DemandedSrcElts = DemandedElts & ~DemandedMask;
+      APInt DemandedSubElts = DemandedElts.extractBits(NumSubElts, Idx);
 
-      // If DemandedSrcElts is zero, we only need to check that the subvector is
-      // never NaN.
-      if (DemandedSrcElts.isZero())
-        return isKnownNeverNaN(SubVector, SNaN, Depth + 1);
-      return isKnownNeverNaN(BaseVector, DemandedSrcElts, SNaN, Depth + 1) &&
-             isKnownNeverNaN(SubVector, SNaN, Depth + 1);
+      if (!DemandedSrcElts.isZero() && !DemandedSubElts.isZero())
+        return isKnownNeverNaN(BaseVector, DemandedSrcElts, SNaN, Depth + 1) &&
+               isKnownNeverNaN(SubVector, DemandedSubElts, SNaN, Depth + 1);
+      else if (!DemandedSrcElts.isZero())
+        return isKnownNeverNaN(BaseVector, DemandedSrcElts, SNaN, Depth + 1);
+      else if (!DemandedSubElts.isZero())
+        return isKnownNeverNaN(SubVector, DemandedSubElts, SNaN, Depth + 1);
+      else
+        return true;
     }
     return isKnownNeverNaN(BaseVector, SNaN, Depth + 1) &&
            isKnownNeverNaN(SubVector, SNaN, Depth + 1);
