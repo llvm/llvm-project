@@ -99,9 +99,9 @@ public:
   /// @{
 
   using BaseT::getIntImmCost;
-  InstructionCost getIntImmCost(int64_t Val);
+  InstructionCost getIntImmCost(int64_t Val) const;
   InstructionCost getIntImmCost(const APInt &Imm, Type *Ty,
-                                TTI::TargetCostKind CostKind);
+                                TTI::TargetCostKind CostKind) const;
   InstructionCost getIntImmCostInst(unsigned Opcode, unsigned Idx,
                                     const APInt &Imm, Type *Ty,
                                     TTI::TargetCostKind CostKind,

@@ -182,10 +182,9 @@ InstructionCost WebAssemblyTTIImpl::getMemoryOpCost(
   return BaseT::getMemoryOpCost(Opcode, Ty, Alignment, AddressSpace, CostKind);
 }
 
-InstructionCost
-WebAssemblyTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
-                                       TTI::TargetCostKind CostKind,
-                                       unsigned Index, Value *Op0, Value *Op1) {
+InstructionCost WebAssemblyTTIImpl::getVectorInstrCost(
+    unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind, unsigned Index,
+    Value *Op0, Value *Op1) const {
   InstructionCost Cost = BasicTTIImplBase::getVectorInstrCost(
       Opcode, Val, CostKind, Index, Op0, Op1);
 
