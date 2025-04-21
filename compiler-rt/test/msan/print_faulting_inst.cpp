@@ -38,7 +38,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define THRICE(o,t) twice(o,t)
+#define THRICE(o, t) twice(o, t)
 
 __attribute__((noinline)) extern "C" int twice(int o, int t) {
   return o + t < 3;
@@ -57,7 +57,8 @@ int main(int argc, char *argv[]) {
   int index = atoi(argv[1]);
   int val = buf[index];
 
-  printf("index %d, abs(val) %d, THRICE(val,5) %d\n", index, abs(val), THRICE(val,5));
+  printf("index %d, abs(val) %d, THRICE(val,5) %d\n", index, abs(val),
+         THRICE(val, 5));
   // VERY-VERBOSE-PARAM-CHECK: Instruction that failed the shadow check: %{{.*}} = call noundef i32 @twice(i32 noundef %{{.*}}, i32 noundef 5)
   // VERBOSE-PARAM-CHECK: Instruction that failed the shadow check: call twice
   // PARAM-CHECK: WARNING: MemorySanitizer: use-of-uninitialized-value
@@ -73,7 +74,7 @@ int main(int argc, char *argv[]) {
     printf("Variable is zero\n");
 
   int nextval = buf[index + 1];
-  buf[nextval + abs(index)] = twice(index,6);
+  buf[nextval + abs(index)] = twice(index, 6);
   // VERY-VERBOSE-STORE-CHECK: Instruction that failed the shadow check: store i32 %{{.*}}, ptr %{{.*}}
   // VERBOSE-STORE-CHECK: Instruction that failed the shadow check: store
   // STORE-CHECK: WARNING: MemorySanitizer: use-of-uninitialized-value
