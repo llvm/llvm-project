@@ -398,6 +398,13 @@ Improvements to Clang's diagnostics
 - Analysis-based diagnostics (like ``-Wconsumed`` or ``-Wunreachable-code``)
   can now be correctly controlled by ``#pragma clang diagnostic``. #GH42199
 
+- Improved bit-field diagnostics to consider the type specified by the
+  ``preferred_type`` attribute. These diagnostics are controlled by the flags
+  ``-Wpreferred-type-bitfield-enum-conversion`` and
+  ``-Wpreferred-type-bitfield-width``. These warnings are on by default as they
+  they're only triggered if the authors are already making the choice to use
+  ``preferred_type`` attribute.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -680,6 +687,8 @@ Code Completion
 
 Static Analyzer
 ---------------
+- Fixed a crash when C++20 parenthesized initializer lists are used. This issue
+  was causing a crash in clang-tidy. (#GH136041)
 
 New features
 ^^^^^^^^^^^^

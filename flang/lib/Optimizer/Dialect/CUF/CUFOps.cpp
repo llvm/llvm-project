@@ -147,9 +147,9 @@ template <typename OpTy>
 static llvm::LogicalResult checkStreamType(OpTy op) {
   if (!op.getStream())
     return mlir::success();
-  auto refTy = mlir::dyn_cast<fir::ReferenceType>(op.getStream().getType());
-  if (!refTy.getEleTy().isInteger(64))
-    return op.emitOpError("stream is expected to be a i64 reference");
+  if (auto refTy = mlir::dyn_cast<fir::ReferenceType>(op.getStream().getType()))
+    if (!refTy.getEleTy().isInteger(64))
+      return op.emitOpError("stream is expected to be an i64 reference");
   return mlir::success();
 }
 
