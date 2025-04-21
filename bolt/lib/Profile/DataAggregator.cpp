@@ -1422,9 +1422,8 @@ std::error_code DataAggregator::printLBRHeatMap() {
   return std::error_code();
 }
 
-uint64_t DataAggregator::parseLBRSample(const PerfBranchSample &Sample,
-                                        bool NeedsSkylakeFix) {
-  uint64_t NumTraces{0};
+void DataAggregator::parseLBRSample(const PerfBranchSample &Sample,
+                                    bool NeedsSkylakeFix) {
   // LBRs are stored in reverse execution order. NextLBR refers to the next
   // executed branch record.
   const LBREntry *NextLBR = nullptr;
@@ -1487,10 +1486,9 @@ uint64_t DataAggregator::parseLBRSample(const PerfBranchSample &Sample,
     ++Info.TakenCount;
     Info.MispredCount += LBR.Mispred;
   }
-  return NumTraces;
 }
 
-static void printColdSamplesDiagnostic() {
+void DataAggregator::printColdSamplesDiagnostic() const {
   if (NumColdSamples > 0) {
     const float ColdSamples = NumColdSamples * 100.0f / NumTotalSamples;
     outs() << "PERF2BOLT: " << NumColdSamples
@@ -1504,7 +1502,7 @@ static void printColdSamplesDiagnostic() {
   }
 }
 
-static void printLongRangeTracesDiagnostic() {
+void DataAggregator::printLongRangeTracesDiagnostic() const {
   outs() << "PERF2BOLT: out of range traces involving unknown regions: "
          << NumLongRangeTraces;
   if (NumTraces > 0)
@@ -1532,10 +1530,10 @@ static float printColoredPct(uint64_t Numerator, uint64_t Denominator, float T1,
   if (outs().has_colors())
     outs().resetColor();
   outs() << ")\n";
-  return Perc;
+  return Percent;
 }
 
-static void printBranchSamplesDiagnostics() {
+void DataAggregator::printBranchSamplesDiagnostics() const {
   outs() << "PERF2BOLT: traces mismatching disassembled function contents: "
          << NumInvalidTraces;
   if (printColoredPct(NumInvalidTraces, NumTraces, 5, 10) > 10)
@@ -1547,7 +1545,8 @@ static void printBranchSamplesDiagnostics() {
   printColdSamplesDiagnostic();
 }
 
-static void printBasicSamplesDiagnostics(uint64_t OutOfRangeSamples) {
+void DataAggregator::printBasicSamplesDiagnostics(
+    uint64_t OutOfRangeSamples) const {
   outs() << "PERF2BOLT: out of range samples recorded in unknown regions: "
          << OutOfRangeSamples;
   if (printColoredPct(OutOfRangeSamples, NumTotalSamples, 40, 60) > 80)
@@ -1558,7 +1557,8 @@ static void printBasicSamplesDiagnostics(uint64_t OutOfRangeSamples) {
   printColdSamplesDiagnostic();
 }
 
-static void printBranchStacksDiagnostics(uint64_t IgnoredSamples) {
+void DataAggregator::printBranchStacksDiagnostics(
+    uint64_t IgnoredSamples) const {
   outs() << "PERF2BOLT: ignored samples: " << IgnoredSamples;
   if (printColoredPct(IgnoredSamples, NumTotalSamples, 20, 50) > 50)
     errs() << "PERF2BOLT-WARNING: less than 50% of all recorded samples "
@@ -1573,7 +1573,6 @@ std::error_code DataAggregator::parseBranchEvents() {
   uint64_t NumEntries = 0;
   uint64_t NumSamples = 0;
   uint64_t NumSamplesNoLBR = 0;
-  uint64_t NumTraces = 0;
   bool NeedsSkylakeFix = false;
 
   while (hasData() && NumTotalSamples < opts::MaxSamples) {
@@ -1600,7 +1599,7 @@ std::error_code DataAggregator::parseBranchEvents() {
       NeedsSkylakeFix = true;
     }
 
-    NumTraces += parseLBRSample(Sample, NeedsSkylakeFix);
+    parseLBRSample(Sample, NeedsSkylakeFix);
   }
 
   for (const Trace &Trace : llvm::make_first_range(BranchLBRs))
@@ -1691,7 +1690,7 @@ void DataAggregator::processBasicEvents() {
 
     doSample(*Func, PC, HitCount);
   }
-  outs() << "PERF2BOLT: read " << NumSamples << " samples\n";
+  outs() << "PERF2BOLT: read " << NumTotalSamples << " samples\n";
 
   printBasicSamplesDiagnostics(OutOfRangeSamples);
 }
@@ -1771,7 +1770,6 @@ void DataAggregator::processPreAggregated() {
   NamedRegionTimer T("processAggregated", "Processing aggregated branch events",
                      TimerGroupName, TimerGroupDesc, opts::TimeAggregator);
 
-  uint64_t NumTraces = 0;
   for (const AggregatedLBREntry &AggrEntry : AggregatedLBRs) {
     switch (AggrEntry.EntryType) {
     case AggregatedLBREntry::BRANCH:
