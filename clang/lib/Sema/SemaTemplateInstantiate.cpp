@@ -4247,6 +4247,7 @@ Sema::InstantiateClassMembers(SourceLocation PointOfInstantiation,
         continue;
 
       if (Context.getTargetInfo().getTriple().isOSWindows() &&
+          !Context.getTargetInfo().getTriple().isOSCygMing() &&
           TSK == TSK_ExplicitInstantiationDeclaration) {
         // On Windows, explicit instantiation decl of the outer class doesn't
         // affect the inner class. Typically extern template declarations are
