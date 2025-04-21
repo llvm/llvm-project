@@ -1349,8 +1349,8 @@ static bool runImpl(Module &M, AnalysisGetter &AG, TargetMachine &TM,
        &AAPotentialValues::ID, &AAAMDFlatWorkGroupSize::ID,
        &AAAMDMaxNumWorkgroups::ID, &AAAMDWavesPerEU::ID, &AAAMDGPUNoAGPR::ID,
        &AACallEdges::ID, &AAPointerInfo::ID, &AAPotentialConstantValues::ID,
-       &AAUnderlyingObjects::ID, &AAAddressSpace::ID, &AAIndirectCallInfo::ID,
-       &AAInstanceInfo::ID});
+       &AAUnderlyingObjects::ID, &AANoAliasAddrSpace::ID, &AAAddressSpace::ID,
+       &AAIndirectCallInfo::ID, &AAInstanceInfo::ID});
 
   AttributorConfig AC(CGUpdater);
   AC.IsClosedWorldModule = Options.IsClosedWorld;
@@ -1372,7 +1372,7 @@ static bool runImpl(Module &M, AnalysisGetter &AG, TargetMachine &TM,
   LLVM_DEBUG(dbgs() << "[AMDGPUAttributor] Module " << M.getName() << " is "
                     << (AC.IsClosedWorldModule ? "" : "not ")
                     << "assumed to be a closed world.\n");
-
+  uint32_t AddrSpaceMask = (1 << AMDGPUAS::MAX_AMDGPU_ADDRESS + 1) - 1;
   for (auto *F : Functions) {
     A.getOrCreateAAFor<AAAMDAttributes>(IRPosition::function(*F));
     A.getOrCreateAAFor<AAUniformWorkGroupSize>(IRPosition::function(*F));
@@ -1390,9 +1390,17 @@ static bool runImpl(Module &M, AnalysisGetter &AG, TargetMachine &TM,
       if (auto *LI = dyn_cast<LoadInst>(&I)) {
         A.getOrCreateAAFor<AAAddressSpace>(
             IRPosition::value(*LI->getPointerOperand()));
+        const_cast<AANoAliasAddrSpace *>(
+            A.getOrCreateAAFor<AANoAliasAddrSpace>(
+                IRPosition::value(*LI->getPointerOperand())))
+            ->setMask(AddrSpaceMask);
       } else if (auto *SI = dyn_cast<StoreInst>(&I)) {
         A.getOrCreateAAFor<AAAddressSpace>(
             IRPosition::value(*SI->getPointerOperand()));
+        const_cast<AANoAliasAddrSpace *>(
+            A.getOrCreateAAFor<AANoAliasAddrSpace>(
+                IRPosition::value(*SI->getPointerOperand())))
+            ->setMask(AddrSpaceMask);
       } else if (auto *RMW = dyn_cast<AtomicRMWInst>(&I)) {
         A.getOrCreateAAFor<AAAddressSpace>(
             IRPosition::value(*RMW->getPointerOperand()));

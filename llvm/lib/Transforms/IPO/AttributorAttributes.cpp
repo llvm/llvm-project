@@ -191,6 +191,7 @@ PIPE_OPERATOR(AAPointerInfo)
 PIPE_OPERATOR(AAAssumptionInfo)
 PIPE_OPERATOR(AAUnderlyingObjects)
 PIPE_OPERATOR(AAAddressSpace)
+PIPE_OPERATOR(AANoAliasAddrSpace)
 PIPE_OPERATOR(AAAllocationInfo)
 PIPE_OPERATOR(AAIndirectCallInfo)
 PIPE_OPERATOR(AAGlobalValueInfo)
@@ -12784,6 +12785,172 @@ struct AAAddressSpaceCallSiteArgument final : AAAddressSpaceImpl {
 };
 } // namespace
 
+/// ------------------------ No Alias Address Space  ---------------------------
+namespace {
+struct AANoAliasAddrSpaceImpl : public AANoAliasAddrSpace {
+  AANoAliasAddrSpaceImpl(const IRPosition &IRP, Attributor &A)
+      : AANoAliasAddrSpace(IRP, A) {}
+
+  void initialize(Attributor &A) override {
+    assert(getAssociatedType()->isPtrOrPtrVectorTy() &&
+           "Associated value is not a pointer");
+
+    if (!A.getInfoCache().getFlatAddressSpace().has_value()) {
+      indicatePessimisticFixpoint();
+      return;
+    }
+
+    unsigned FlatAS = A.getInfoCache().getFlatAddressSpace().value();
+    unsigned AS = getAssociatedType()->getPointerAddressSpace();
+    if (AS != FlatAS) {
+      removeAssumedBits(1 << AS);
+      indicateOptimisticFixpoint();
+    }
+  }
+
+  ChangeStatus updateImpl(Attributor &A) override {
+    unsigned FlatAS = A.getInfoCache().getFlatAddressSpace().value();
+    uint32_t OrigAssumed = getAssumed();
+
+    auto CheckAddressSpace = [&](Value &Obj) {
+      if (isa<UndefValue>(&Obj))
+        return true;
+      // Handle argument in flat address space only has addrspace cast uses
+      if (auto *Arg = dyn_cast<Argument>(&Obj)) {
+        if (Arg->getType()->getPointerAddressSpace() == FlatAS) {
+          for (auto *U : Arg->users()) {
+            auto *ASCI = dyn_cast<AddrSpaceCastInst>(U);
+            if (!ASCI)
+              return false;
+            if (ASCI->getDestAddressSpace() == FlatAS)
+              return false;
+            removeAssumedBits(1 << ASCI->getDestAddressSpace());
+          }
+        }
+      }
+      removeAssumedBits(1 << Obj.getType()->getPointerAddressSpace());
+      return true;
+    };
+
+    auto *AUO = A.getOrCreateAAFor<AAUnderlyingObjects>(getIRPosition(), this,
+                                                        DepClassTy::REQUIRED);
+    if (!AUO->forallUnderlyingObjects(CheckAddressSpace))
+      return indicatePessimisticFixpoint();
+
+    return OrigAssumed == getAssumed() ? ChangeStatus::UNCHANGED
+                                       : ChangeStatus::CHANGED;
+  }
+
+  /// See AbstractAttribute::manifest(...).
+  ChangeStatus manifest(Attributor &A) override {
+    if (!A.getInfoCache().getFlatAddressSpace().has_value())
+      return ChangeStatus::UNCHANGED;
+
+    unsigned FlatAS = A.getInfoCache().getFlatAddressSpace().value();
+    unsigned AS = getAssociatedType()->getPointerAddressSpace();
+    if (AS != FlatAS)
+      return ChangeStatus::UNCHANGED;
+
+    LLVMContext &Ctx = getAssociatedValue().getContext();
+    llvm::MDNode *NoAliasASNode = nullptr;
+    MDBuilder MDB(Ctx);
+    for (unsigned int i = 1; i < 32; i++) {
+      if (i != FlatAS && isAssumed(1 << i)) {
+        if (NoAliasASNode == nullptr) {
+          NoAliasASNode = MDB.createRange(APInt(32, i), APInt(32, i + 1));
+        } else {
+          llvm::MDNode *ASRange =
+              MDB.createRange(APInt(32, i), APInt(32, i + 1));
+          NoAliasASNode = MDNode::getMostGenericRange(NoAliasASNode, ASRange);
+        }
+      }
+    }
+
+    if (!NoAliasASNode || NoAliasASNode->getNumOperands() == 0)
+      return ChangeStatus::UNCHANGED;
+
+    Value *AssociatedValue = &getAssociatedValue();
+    bool Changed = false;
+
+    auto Pred = [&](const Use &U, bool &) {
+      if (U.get() != AssociatedValue)
+        return true;
+      auto *Inst = dyn_cast<Instruction>(U.getUser());
+      if (!Inst)
+        return true;
+      if (!A.isRunOn(Inst->getFunction()))
+        return true;
+      if (isa<LoadInst>(Inst) || isa<StoreInst>(Inst)) {
+        Inst->setMetadata(LLVMContext::MD_noalias_addrspace, NoAliasASNode);
+        Changed = true;
+      }
+      return true;
+    };
+    (void)A.checkForAllUses(Pred, *this, getAssociatedValue(),
+                            /* CheckBBLivenessOnly */ true);
+    return Changed ? ChangeStatus::CHANGED : ChangeStatus::UNCHANGED;
+  }
+
+  /// See AbstractAttribute::getAsStr().
+  const std::string getAsStr(Attributor *A) const override {
+    if (!isValidState())
+      return "noaliasaddrspace(<invalid>)";
+    std::string Str;
+    raw_string_ostream OS(Str);
+    OS << "noaliasaddrspace(";
+    for (unsigned int i = 1; i < 32; i++)
+      if (isAssumed(1 << i))
+        OS << ' ' << i;
+    OS << " )";
+    return OS.str();
+  }
+};
+
+struct AANoAliasAddrSpaceFloating final : AANoAliasAddrSpaceImpl {
+  AANoAliasAddrSpaceFloating(const IRPosition &IRP, Attributor &A)
+      : AANoAliasAddrSpaceImpl(IRP, A) {}
+
+  void trackStatistics() const override {
+    STATS_DECLTRACK_FLOATING_ATTR(noaliasaddrspace);
+  }
+};
+
+struct AANoAliasAddrSpaceReturned final : AANoAliasAddrSpaceImpl {
+  AANoAliasAddrSpaceReturned(const IRPosition &IRP, Attributor &A)
+      : AANoAliasAddrSpaceImpl(IRP, A) {}
+
+  void trackStatistics() const override {
+    STATS_DECLTRACK_FNRET_ATTR(noaliasaddrspace);
+  }
+};
+
+struct AANoAliasAddrSpaceCallSiteReturned final : AANoAliasAddrSpaceImpl {
+  AANoAliasAddrSpaceCallSiteReturned(const IRPosition &IRP, Attributor &A)
+      : AANoAliasAddrSpaceImpl(IRP, A) {}
+
+  void trackStatistics() const override {
+    STATS_DECLTRACK_CSRET_ATTR(noaliasaddrspace);
+  }
+};
+
+struct AANoAliasAddrSpaceArgument final : AANoAliasAddrSpaceImpl {
+  AANoAliasAddrSpaceArgument(const IRPosition &IRP, Attributor &A)
+      : AANoAliasAddrSpaceImpl(IRP, A) {}
+
+  void trackStatistics() const override {
+    STATS_DECLTRACK_ARG_ATTR(noaliasaddrspace);
+  }
+};
+
+struct AANoAliasAddrSpaceCallSiteArgument final : AANoAliasAddrSpaceImpl {
+  AANoAliasAddrSpaceCallSiteArgument(const IRPosition &IRP, Attributor &A)
+      : AANoAliasAddrSpaceImpl(IRP, A) {}
+
+  void trackStatistics() const override {
+    STATS_DECLTRACK_CSARG_ATTR(noaliasaddrspace);
+  }
+};
+} // namespace
 /// ----------- Allocation Info ----------
 namespace {
 struct AAAllocationInfoImpl : public AAAllocationInfo {
@@ -13037,6 +13204,7 @@ const char AAPointerInfo::ID = 0;
 const char AAAssumptionInfo::ID = 0;
 const char AAUnderlyingObjects::ID = 0;
 const char AAAddressSpace::ID = 0;
+const char AANoAliasAddrSpace::ID = 0;
 const char AAAllocationInfo::ID = 0;
 const char AAIndirectCallInfo::ID = 0;
 const char AAGlobalValueInfo::ID = 0;
@@ -13171,6 +13339,7 @@ CREATE_VALUE_ABSTRACT_ATTRIBUTE_FOR_POSITION(AANoUndef)
 CREATE_VALUE_ABSTRACT_ATTRIBUTE_FOR_POSITION(AANoFPClass)
 CREATE_VALUE_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAPointerInfo)
 CREATE_VALUE_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAAddressSpace)
+CREATE_VALUE_ABSTRACT_ATTRIBUTE_FOR_POSITION(AANoAliasAddrSpace)
 CREATE_VALUE_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAAllocationInfo)
 
 CREATE_ALL_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAValueSimplify)

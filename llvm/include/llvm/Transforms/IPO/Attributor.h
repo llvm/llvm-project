@@ -6336,6 +6336,46 @@ protected:
   static const uint32_t InvalidAddressSpace = ~0U;
 };
 
+/// An abstract interface for potential address space information.
+struct AANoAliasAddrSpace
+    : public StateWrapper<BitIntegerState<uint32_t>, AbstractAttribute> {
+  using Base = StateWrapper<BitIntegerState<uint32_t>, AbstractAttribute>;
+  AANoAliasAddrSpace(const IRPosition &IRP, Attributor &A) : Base(IRP) {}
+
+  /// See AbstractAttribute::isValidIRPositionForInit
+  static bool isValidIRPositionForInit(Attributor &A, const IRPosition &IRP) {
+    if (!IRP.getAssociatedType()->isPtrOrPtrVectorTy())
+      return false;
+    return AbstractAttribute::isValidIRPositionForInit(A, IRP);
+  }
+
+  /// See AbstractAttribute::requiresCallersForArgOrFunction
+  static bool requiresCallersForArgOrFunction() { return true; }
+
+  /// Create an abstract attribute view for the position \p IRP.
+  static AANoAliasAddrSpace &createForPosition(const IRPosition &IRP,
+                                               Attributor &A);
+  /// See AbstractAttribute::getName()
+  const std::string getName() const override { return "AANoAliasAddrSpace"; }
+
+  /// See AbstractAttribute::getIdAddr()
+  const char *getIdAddr() const override { return &ID; }
+
+  /// This function should return true if the type of the \p AA is
+  /// AAAssumptionInfo
+  static bool classof(const AbstractAttribute *AA) {
+    return (AA->getIdAddr() == &ID);
+  }
+
+  void setMask(uint32_t mask) {
+    removeKnownBits(~mask);
+    removeAssumedBits(~mask);
+  }
+
+  /// Unique ID (due to the unique address)
+  static const char ID;
+};
+
 struct AAAllocationInfo : public StateWrapper<BooleanState, AbstractAttribute> {
   AAAllocationInfo(const IRPosition &IRP, Attributor &A)
       : StateWrapper<BooleanState, AbstractAttribute>(IRP) {}
