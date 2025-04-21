@@ -450,7 +450,7 @@ struct LinearizeVectorBitCast final
 } // namespace
 
 /// If `type` is VectorType with trailing dimension of (bit) size greater than
-/// or equal to `targetBitWidth`, its defining op is considered legal. 
+/// or equal to `targetBitWidth`, its defining op is considered legal.
 static bool legalBecauseOfBitwidth(Type type, unsigned targetBitWidth) {
 
   VectorType vecType = dyn_cast<VectorType>(type);
