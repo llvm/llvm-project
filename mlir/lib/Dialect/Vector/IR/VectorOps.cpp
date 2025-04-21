@@ -2019,8 +2019,9 @@ static Value extractInsertFoldConstantOp(OpType op, AdaptorType adaptor,
     Value position = dynamicPosition[index++];
     if (auto attr = mlir::dyn_cast_if_present<IntegerAttr>(positionAttr)) {
       int64_t value = attr.getInt();
-      // Do not fold if the value is out of bounds.
-      if (value >= 0 && value < vectorShape[i]) {
+      // Do not fold if the value is out of bounds (-1 signifies a poison
+      // value rather than OOB index).
+      if (value >= -1 && value < vectorShape[i]) {
         staticPosition[i] = attr.getInt();
         opChange = true;
         continue;
