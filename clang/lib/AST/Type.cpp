@@ -2328,6 +2328,17 @@ bool Type::isRealType() const {
   return isBitIntType();
 }
 
+bool Type::isFPAtomicCompatibleType() const {
+  if (isa<ComplexType>(CanonicalType))
+    return false;
+  if (const auto *CVT = dyn_cast<VectorType>(CanonicalType)) {
+    if (CVT->isSizelessVectorType())
+      return false;
+    return CVT->getElementType()->isFPAtomicCompatibleType();
+  }
+  return isFloatingType();
+}
+
 bool Type::isArithmeticType() const {
   if (const auto *BT = dyn_cast<BuiltinType>(CanonicalType))
     return BT->getKind() >= BuiltinType::Bool &&

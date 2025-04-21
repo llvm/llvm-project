@@ -3785,7 +3785,7 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
   enum ArithOpExtraValueType {
     AOEVT_None = 0,
     AOEVT_Pointer = 1,
-    AOEVT_FP = 2,
+    AOEVT_FPorFPVec = 2,
   };
   unsigned ArithAllows = AOEVT_None;
 
@@ -3831,7 +3831,7 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
   case AtomicExpr::AO__opencl_atomic_fetch_sub:
   case AtomicExpr::AO__hip_atomic_fetch_add:
   case AtomicExpr::AO__hip_atomic_fetch_sub:
-    ArithAllows = AOEVT_Pointer | AOEVT_FP;
+    ArithAllows = AOEVT_Pointer | AOEVT_FPorFPVec;
     Form = Arithmetic;
     break;
   case AtomicExpr::AO__atomic_fetch_max:
@@ -3848,7 +3848,7 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
   case AtomicExpr::AO__opencl_atomic_fetch_min:
   case AtomicExpr::AO__hip_atomic_fetch_max:
   case AtomicExpr::AO__hip_atomic_fetch_min:
-    ArithAllows = AOEVT_FP;
+    ArithAllows = AOEVT_FPorFPVec;
     Form = Arithmetic;
     break;
   case AtomicExpr::AO__c11_atomic_fetch_and:
@@ -4017,7 +4017,8 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
         return true;
       if (ValType->isPointerType())
         return AllowedType & AOEVT_Pointer;
-      if (!(ValType->isFloatingType() && (AllowedType & AOEVT_FP)))
+      if (!(ValType->isFPAtomicCompatibleType() &&
+            (AllowedType & AOEVT_FPorFPVec)))
         return false;
       // LLVM Parser does not allow atomicrmw with x86_fp80 type.
       if (ValType->isSpecificBuiltinType(BuiltinType::LongDouble) &&
@@ -4027,7 +4028,7 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
       return true;
     };
     if (!IsAllowedValueType(ValType, ArithAllows)) {
-      auto DID = ArithAllows & AOEVT_FP
+      auto DID = ArithAllows & AOEVT_FPorFPVec
                      ? (ArithAllows & AOEVT_Pointer
                             ? diag::err_atomic_op_needs_atomic_int_ptr_or_fp
                             : diag::err_atomic_op_needs_atomic_int_or_fp)
