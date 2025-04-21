@@ -52,6 +52,12 @@ static llvm::cl::opt<bool> generateDefaultBounds(
     llvm::cl::desc("Whether to generate default bounds for arrays."),
     llvm::cl::init(false));
 
+static llvm::cl::opt<bool> strideIncludeLowerExtent(
+    "openacc-stride-include-lower-extent",
+    llvm::cl::desc(
+        "Whether to include the lower dimensions extents in the stride."),
+    llvm::cl::init(true));
+
 // Special value for * passed in device_type or gang clauses.
 static constexpr std::int64_t starCst = -1;
 
@@ -396,7 +402,8 @@ genDataOperandOperations(const Fortran::parser::AccObjectList &objectList,
             converter, builder, semanticsContext, stmtCtx, symbol, designator,
             operandLocation, asFortran, bounds,
             /*treatIndexAsSection=*/true, /*unwrapFirBox=*/unwrapFirBox,
-            /*genDefaultBounds=*/generateDefaultBounds);
+            /*genDefaultBounds=*/generateDefaultBounds,
+            /*strideIncludeLowerExtent=*/strideIncludeLowerExtent);
     LLVM_DEBUG(llvm::dbgs() << __func__ << "\n"; info.dump(llvm::dbgs()));
 
     // If the input value is optional and is not a descriptor, we use the
@@ -437,7 +444,8 @@ static void genDeclareDataOperandOperations(
             converter, builder, semanticsContext, stmtCtx, symbol, designator,
             operandLocation, asFortran, bounds,
             /*treatIndexAsSection=*/true, /*unwrapFirBox=*/unwrapFirBox,
-            /*genDefaultBounds=*/generateDefaultBounds);
+            /*genDefaultBounds=*/generateDefaultBounds,
+            /*strideIncludeLowerExtent=*/strideIncludeLowerExtent);
     LLVM_DEBUG(llvm::dbgs() << __func__ << "\n"; info.dump(llvm::dbgs()));
     EntryOp op = createDataEntryOp<EntryOp>(
         builder, operandLocation, info.addr, asFortran, bounds, structured,
@@ -914,7 +922,8 @@ genPrivatizations(const Fortran::parser::AccObjectList &objectList,
             converter, builder, semanticsContext, stmtCtx, symbol, designator,
             operandLocation, asFortran, bounds,
             /*treatIndexAsSection=*/true, /*unwrapFirBox=*/unwrapFirBox,
-            /*genDefaultBounds=*/generateDefaultBounds);
+            /*genDefaultBounds=*/generateDefaultBounds,
+            /*strideIncludeLowerExtent=*/strideIncludeLowerExtent);
     LLVM_DEBUG(llvm::dbgs() << __func__ << "\n"; info.dump(llvm::dbgs()));
 
     RecipeOp recipe;
@@ -1545,7 +1554,8 @@ genReductions(const Fortran::parser::AccObjectListWithReduction &objectList,
             converter, builder, semanticsContext, stmtCtx, symbol, designator,
             operandLocation, asFortran, bounds,
             /*treatIndexAsSection=*/true, /*unwrapFirBox=*/unwrapFirBox,
-            /*genDefaultBounds=*/generateDefaultBounds);
+            /*genDefaultBounds=*/generateDefaultBounds,
+            /*strideIncludeLowerExtent=*/strideIncludeLowerExtent);
     LLVM_DEBUG(llvm::dbgs() << __func__ << "\n"; info.dump(llvm::dbgs()));
 
     mlir::Type reductionTy = fir::unwrapRefType(info.addr.getType());

@@ -670,7 +670,8 @@ genBoundsOps(fir::FirOpBuilder &builder, mlir::Location loc,
              const std::vector<Fortran::evaluate::Subscript> &subscripts,
              std::stringstream &asFortran, fir::ExtendedValue &dataExv,
              bool dataExvIsAssumedSize, fir::factory::AddrAndBoundsInfo &info,
-             bool treatIndexAsSection = false) {
+             bool treatIndexAsSection = false,
+             bool strideIncludeLowerExtent = false) {
   int dimension = 0;
   mlir::Type idxTy = builder.getIndexType();
   mlir::Type boundTy = builder.getType<BoundsType>();
@@ -679,6 +680,7 @@ genBoundsOps(fir::FirOpBuilder &builder, mlir::Location loc,
   mlir::Value zero = builder.createIntegerConstant(loc, idxTy, 0);
   mlir::Value one = builder.createIntegerConstant(loc, idxTy, 1);
   const int dataExvRank = static_cast<int>(dataExv.rank());
+  mlir::Value cumulativeExtent = one;
   for (const auto &subscript : subscripts) {
     const auto *triplet{std::get_if<Fortran::evaluate::Triplet>(&subscript.u)};
     if (triplet || treatIndexAsSection) {
@@ -847,6 +849,15 @@ genBoundsOps(fir::FirOpBuilder &builder, mlir::Location loc,
           ubound = builder.create<mlir::arith::SubIOp>(loc, extent, one);
         }
       }
+
+      // When the strideInBytes is true, it means the stride is from descriptor
+      // and this already includes the lower extents.
+      if (strideIncludeLowerExtent && !strideInBytes) {
+        stride = cumulativeExtent;
+        cumulativeExtent = builder.createOrFold<mlir::arith::MulIOp>(
+            loc, cumulativeExtent, extent);
+      }
+
       mlir::Value bound = builder.create<BoundsOp>(
           loc, boundTy, lbound, ubound, extent, stride, strideInBytes, baseLb);
       bounds.push_back(bound);
@@ -882,7 +893,8 @@ fir::factory::AddrAndBoundsInfo gatherDataOperandAddrAndBounds(
     const Fortran::semantics::MaybeExpr &maybeDesignator,
     mlir::Location operandLocation, std::stringstream &asFortran,
     llvm::SmallVector<mlir::Value> &bounds, bool treatIndexAsSection = false,
-    bool unwrapFirBox = true, bool genDefaultBounds = true) {
+    bool unwrapFirBox = true, bool genDefaultBounds = true,
+    bool strideIncludeLowerExtent = false) {
   using namespace Fortran;
 
   fir::factory::AddrAndBoundsInfo info;
@@ -943,7 +955,8 @@ fir::factory::AddrAndBoundsInfo gatherDataOperandAddrAndBounds(
       asFortran << '(';
       bounds = genBoundsOps<BoundsOp, BoundsType>(
           builder, operandLocation, converter, stmtCtx, arrayRef->subscript(),
-          asFortran, dataExv, dataExvIsAssumedSize, info, treatIndexAsSection);
+          asFortran, dataExv, dataExvIsAssumedSize, info, treatIndexAsSection,
+          strideIncludeLowerExtent);
     }
     asFortran << ')';
   } else if (auto compRef = detail::getRef<evaluate::Component>(designator)) {
@@ -955,7 +968,7 @@ fir::factory::AddrAndBoundsInfo gatherDataOperandAddrAndBounds(
         mlir::isa<fir::SequenceType>(fir::unwrapRefType(info.addr.getType())))
       bounds = fir::factory::genBaseBoundsOps<BoundsOp, BoundsType>(
           builder, operandLocation, compExv,
-          /*isAssumedSize=*/false);
+          /*isAssumedSize=*/false, strideIncludeLowerExtent);
     asFortran << designator.AsFortran();
 
     if (semantics::IsOptional(compRef->GetLastSymbol())) {
@@ -1012,7 +1025,8 @@ fir::factory::AddrAndBoundsInfo gatherDataOperandAddrAndBounds(
       if (genDefaultBounds &&
           mlir::isa<fir::SequenceType>(fir::unwrapRefType(info.addr.getType())))
         bounds = fir::factory::genBaseBoundsOps<BoundsOp, BoundsType>(
-            builder, operandLocation, dataExv, dataExvIsAssumedSize);
+            builder, operandLocation, dataExv, dataExvIsAssumedSize,
+            strideIncludeLowerExtent);
       asFortran << symRef->get().name().ToString();
     } else { // Unsupported
       llvm::report_fatal_error("Unsupported type of OpenACC operand");
