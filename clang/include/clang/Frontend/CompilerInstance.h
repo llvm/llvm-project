@@ -848,10 +848,13 @@ private:
   ///
   /// Explicitly-specified \c VFS takes precedence over the VFS of this instance
   /// when creating the clone and also prevents \c FileManager sharing.
+  /// Explicitly-specified \c DiagConsumer takes precedence over forwarding to
+  /// this instance.
   std::unique_ptr<CompilerInstance> cloneForModuleCompileImpl(
       SourceLocation ImportLoc, StringRef ModuleName, FrontendInputFile Input,
       StringRef OriginalModuleMapFile, StringRef ModuleFileName,
-      IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS = nullptr);
+      IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS = nullptr,
+      DiagnosticConsumer *DiagConsumer = nullptr);
 
 public:
   /// Creates a new \c CompilerInstance for compiling a module.
@@ -861,9 +864,13 @@ public:
   ///
   /// Explicitly-specified \c VFS takes precedence over the VFS of this instance
   /// when creating the clone and also prevents \c FileManager sharing.
-  std::unique_ptr<CompilerInstance> cloneForModuleCompile(
-      SourceLocation ImportLoc, Module *Module, StringRef ModuleFileName,
-      IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS = nullptr);
+  /// Explicitly-specified \c DiagConsumer takes precedence over forwarding to
+  /// this instance.
+  std::unique_ptr<CompilerInstance>
+  cloneForModuleCompile(SourceLocation ImportLoc, Module *Module,
+                        StringRef ModuleFileName,
+                        IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS = nullptr,
+                        DiagnosticConsumer *DiagConsumer = nullptr);
 
   /// Compile a module file for the given module, using the options
   /// provided by the importing compiler instance. Returns true if the module

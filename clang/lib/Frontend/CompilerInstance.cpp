@@ -1153,7 +1153,8 @@ static Language getLanguageFromOptions(const LangOptions &LangOpts) {
 std::unique_ptr<CompilerInstance> CompilerInstance::cloneForModuleCompileImpl(
     SourceLocation ImportLoc, StringRef ModuleName, FrontendInputFile Input,
     StringRef OriginalModuleMapFile, StringRef ModuleFileName,
-    IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS) {
+    IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
+    DiagnosticConsumer *DiagConsumer) {
   // Construct a compiler invocation for creating this module.
   auto Invocation = std::make_shared<CompilerInvocation>(getInvocation());
 
@@ -1221,10 +1222,15 @@ std::unique_ptr<CompilerInstance> CompilerInstance::cloneForModuleCompileImpl(
     Instance.createFileManager(&getVirtualFileSystem());
   }
 
-  Instance.createDiagnostics(
-      Instance.getVirtualFileSystem(),
-      new ForwardingDiagnosticConsumer(getDiagnosticClient()),
-      /*ShouldOwnClient=*/true);
+  if (DiagConsumer) {
+    Instance.createDiagnostics(Instance.getVirtualFileSystem(), DiagConsumer,
+                               /*ShouldOwnClient=*/false);
+  } else {
+    Instance.createDiagnostics(
+        Instance.getVirtualFileSystem(),
+        new ForwardingDiagnosticConsumer(getDiagnosticClient()),
+        /*ShouldOwnClient=*/true);
+  }
   if (llvm::is_contained(DiagOpts.SystemHeaderWarningsModules, ModuleName))
     Instance.getDiagnostics().setSuppressSystemWarnings(false);
 
@@ -1322,7 +1328,8 @@ static OptionalFileEntryRef getPublicModuleMap(FileEntryRef File,
 
 std::unique_ptr<CompilerInstance> CompilerInstance::cloneForModuleCompile(
     SourceLocation ImportLoc, Module *Module, StringRef ModuleFileName,
-    IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS) {
+    IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
+    DiagnosticConsumer *DiagConsumer) {
   StringRef ModuleName = Module->getTopLevelModuleName();
 
   InputKind IK(getLanguageFromOptions(getLangOpts()), InputKind::ModuleMap);
@@ -1368,7 +1375,7 @@ std::unique_ptr<CompilerInstance> CompilerInstance::cloneForModuleCompile(
         ImportLoc, ModuleName,
         FrontendInputFile(ModuleMapFilePath, IK, IsSystem),
         ModMap.getModuleMapFileForUniquing(Module)->getName(), ModuleFileName,
-        std::move(VFS));
+        std::move(VFS), DiagConsumer);
   }
 
   // FIXME: We only need to fake up an input file here as a way of
@@ -1386,7 +1393,7 @@ std::unique_ptr<CompilerInstance> CompilerInstance::cloneForModuleCompile(
       ImportLoc, ModuleName,
       FrontendInputFile(FakeModuleMapFile, IK, +Module->IsSystem),
       ModMap.getModuleMapFileForUniquing(Module)->getName(), ModuleFileName,
-      std::move(VFS));
+      std::move(VFS), DiagConsumer);
 
   std::unique_ptr<llvm::MemoryBuffer> ModuleMapBuffer =
       llvm::MemoryBuffer::getMemBufferCopy(InferredModuleMapContent);
