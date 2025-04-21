@@ -267,11 +267,7 @@ bool InductiveRangeCheck::parseRangeCheckICmp(Loop *L, ICmpInst *ICI,
                                               const SCEV *&End) {
   auto IsLoopInvariantAndNotUndef = [&SE, L](Value *V) {
     const SCEV *S = SE.getSCEV(V);
-
-    if (isa<SCEVCouldNotCompute>(S))
-      return false;
-
-    return SE.isLoopInvariant(SE.getSCEV(V), L) && !SE.containsUndefs(S);
+    return SE.isLoopInvariant(S, L) && !SE.containsUndefs(S);
   };
 
   ICmpInst::Predicate Pred = ICI->getPredicate();
