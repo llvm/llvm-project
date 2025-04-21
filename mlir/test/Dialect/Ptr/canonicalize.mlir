@@ -2,9 +2,9 @@
 
 /// Check `ptr_add` canonicalizer patterns.
 
-// CHECK-LABEL: @ops0
-func.func @ops0(%ptr: !ptr.ptr<#ptr.generic_space>) -> !ptr.ptr<#ptr.generic_space> {
-  // CHECK: (%[[PTR_0:.*]]: !ptr.ptr<#ptr.generic_space>)
+// CHECK-LABEL: @zero_offset
+// CHECK-SAME: (%[[PTR_0:.*]]: !ptr.ptr<#ptr.generic_space>)
+func.func @zero_offset(%ptr: !ptr.ptr<#ptr.generic_space>) -> !ptr.ptr<#ptr.generic_space> {
   // CHECK-NOT: index.constant
   // CHECK-NOT: ptr.ptr_add
   // CHECK: return %[[PTR_0]] : !ptr.ptr<#ptr.generic_space>
