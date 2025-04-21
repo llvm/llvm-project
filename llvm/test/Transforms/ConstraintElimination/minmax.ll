@@ -222,8 +222,7 @@ define i1 @umax_uge_ugt_with_add_nuw(i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i32 [[Y]], [[SUM]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF:%.*]], label [[END:%.*]]
 ; CHECK:       if:
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ugt i32 [[Y]], [[X]]
-; CHECK-NEXT:    ret i1 [[CMP2]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       end:
 ; CHECK-NEXT:    ret i1 false
 ;

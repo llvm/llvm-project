@@ -1083,6 +1083,44 @@ void State::addInfoForInductions(BasicBlock &BB) {
   }
 }
 
+static void addNonPoisonIntrinsicInstFact(
+    IntrinsicInst *II,
+    function_ref<void(CmpPredicate, Value *, Value *)> AddFact) {
+  Intrinsic::ID IID = II->getIntrinsicID();
+  switch (IID) {
+  case Intrinsic::umin:
+  case Intrinsic::umax:
+  case Intrinsic::smin:
+  case Intrinsic::smax: {
+    ICmpInst::Predicate Pred =
+        ICmpInst::getNonStrictPredicate(MinMaxIntrinsic::getPredicate(IID));
+    AddFact(Pred, II, II->getArgOperand(0));
+    AddFact(Pred, II, II->getArgOperand(1));
+    break;
+  }
+  case Intrinsic::abs: {
+    if (cast<ConstantInt>(II->getArgOperand(1))->isOne())
+      AddFact(CmpInst::ICMP_SGE, II, ConstantInt::get(II->getType(), 0));
+    AddFact(CmpInst::ICMP_SGE, II, II->getArgOperand(0));
+    break;
+  }
+  default:
+    break;
+  }
+}
+
+static void addNonPoisonValueFactRecursive(
+    Value *V, function_ref<void(CmpPredicate, Value *, Value *)> AddFact) {
+  if (auto *II = dyn_cast<IntrinsicInst>(V))
+    addNonPoisonIntrinsicInstFact(II, AddFact);
+
+  if (auto *I = dyn_cast<Instruction>(V)) {
+    for (auto &Op : I->operands())
+      if (propagatesPoison(Op))
+        addNonPoisonValueFactRecursive(Op.get(), AddFact);
+  }
+}
+
 void State::addInfoFor(BasicBlock &BB) {
   addInfoForInductions(BB);
 
@@ -1132,6 +1170,18 @@ void State::addInfoFor(BasicBlock &BB) {
       WorkList.push_back(
           FactOrCheck::getCheck(DT.getNode(&BB), cast<CallInst>(&I)));
       break;
+    }
+
+    if (GuaranteedToExecute) {
+      auto AddFact = [&](CmpPredicate Pred, Value *A, Value *B) {
+        WorkList.emplace_back(
+            FactOrCheck::getConditionFact(DT.getNode(&BB), Pred, A, B));
+      };
+
+      handleGuaranteedWellDefinedOps(&I, [&](const Value *Op) {
+        addNonPoisonValueFactRecursive(const_cast<Value *>(Op), AddFact);
+        return false;
+      });
     }
 
     GuaranteedToExecute &= isGuaranteedToTransferExecutionToSuccessor(&I);
@@ -1374,32 +1424,6 @@ static void generateReproducer(CmpInst *Cond, Module *M,
   assert(!verifyFunction(*F, &dbgs()));
 }
 
-static void addNonPoisonIntrinsicInstFact(
-    IntrinsicInst *II,
-    function_ref<void(CmpPredicate, Value *, Value *)> AddFact) {
-  Intrinsic::ID IID = II->getIntrinsicID();
-  switch (IID) {
-  case Intrinsic::umin:
-  case Intrinsic::umax:
-  case Intrinsic::smin:
-  case Intrinsic::smax: {
-    ICmpInst::Predicate Pred =
-        ICmpInst::getNonStrictPredicate(MinMaxIntrinsic::getPredicate(IID));
-    AddFact(Pred, II, II->getArgOperand(0));
-    AddFact(Pred, II, II->getArgOperand(1));
-    break;
-  }
-  case Intrinsic::abs: {
-    if (cast<ConstantInt>(II->getArgOperand(1))->isOne())
-      AddFact(CmpInst::ICMP_SGE, II, ConstantInt::get(II->getType(), 0));
-    AddFact(CmpInst::ICMP_SGE, II, II->getArgOperand(0));
-    break;
-  }
-  default:
-    break;
-  }
-}
-
 static void
 removeEntryFromStack(const StackEntry &E, ConstraintInfo &Info,
                      SmallVectorImpl<StackEntry> &DFSInStack,
@@ -1426,12 +1450,12 @@ static std::optional<bool> checkCondition(CmpInst::Predicate Pred, Value *A,
   });
   auto AddFact = [&](CmpPredicate Pred, Value *A, Value *B) {
     Info.addFact(Pred, A, B, 0, 0, DFSInStack);
+    if (ICmpInst::isRelational(Pred))
+      Info.transferToOtherSystem(Pred, A, B, 0, 0, DFSInStack);
   };
 
-  if (auto *II = dyn_cast<IntrinsicInst>(A))
-    addNonPoisonIntrinsicInstFact(II, AddFact);
-  if (auto *II = dyn_cast<IntrinsicInst>(B))
-    addNonPoisonIntrinsicInstFact(II, AddFact);
+  addNonPoisonValueFactRecursive(A, AddFact);
+  addNonPoisonValueFactRecursive(B, AddFact);
 
   auto R = Info.getConstraintForSolving(Pred, A, B);
   if (R.empty() || !R.isValid(Info)){
@@ -1600,12 +1624,13 @@ static bool checkOrAndOpImpliedByOther(
       Info.addFact(Pred, LHS, RHS, CB.NumIn, CB.NumOut, DFSInStack);
       auto AddFact = [&](CmpPredicate Pred, Value *A, Value *B) {
         Info.addFact(Pred, A, B, CB.NumIn, CB.NumOut, DFSInStack);
+        if (ICmpInst::isRelational(Pred))
+          Info.transferToOtherSystem(Pred, A, B, CB.NumIn, CB.NumOut,
+                                     DFSInStack);
       };
 
-      if (auto *II = dyn_cast<IntrinsicInst>(LHS))
-        addNonPoisonIntrinsicInstFact(II, AddFact);
-      if (auto *II = dyn_cast<IntrinsicInst>(RHS))
-        addNonPoisonIntrinsicInstFact(II, AddFact);
+      addNonPoisonValueFactRecursive(LHS, AddFact);
+      addNonPoisonValueFactRecursive(RHS, AddFact);
       continue;
     }
     if (IsOr ? match(Val, m_LogicalOr(m_Value(LHS), m_Value(RHS)))
@@ -1939,10 +1964,8 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
     }
     AddFact(Pred, A, B);
     // Now both A and B is guaranteed not to be poison.
-    if (auto *II = dyn_cast<IntrinsicInst>(A))
-      addNonPoisonIntrinsicInstFact(II, AddFact);
-    if (auto *II = dyn_cast<IntrinsicInst>(B))
-      addNonPoisonIntrinsicInstFact(II, AddFact);
+    addNonPoisonValueFactRecursive(A, AddFact);
+    addNonPoisonValueFactRecursive(B, AddFact);
   }
 
   if (ReproducerModule && !ReproducerModule->functions().empty()) {
