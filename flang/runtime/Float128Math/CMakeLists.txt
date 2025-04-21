@@ -68,6 +68,7 @@ set(sources
   y1.cpp
   yn.cpp
   )
+runtime_source_files(sources SUBDIR "quadmath")
 
 include_directories(AFTER "${CMAKE_CURRENT_SOURCE_DIR}/..")
 add_library(FortranFloat128MathILib INTERFACE)

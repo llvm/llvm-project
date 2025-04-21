@@ -1,9 +1,11 @@
+// REQUIRES: x86-registered-target, amdgpu-registered-target
+
 // Fail on invalid ROCm Path.
-// RUN:   not %clang -no-canonical-prefixes -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp --offload-arch=gfx908:xnack+ -fsanitize=address -fgpu-sanitize -nogpuinc --rocm-path=%S/Inputs/rocm-invalid  %s 2>&1 \
+// RUN:   not %clang -no-canonical-prefixes -### -mcode-object-version=5 --target=x86_64-unknown-linux-gnu -fopenmp=libomp --offload-arch=gfx908:xnack+ -fsanitize=address -fgpu-sanitize -nogpuinc --rocm-path=%S/Inputs/rocm-invalid  %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=FAIL %s
 
 // Enable multiple sanitizer's apart from ASan with invalid rocm-path.
-// RUN:   not %clang -no-canonical-prefixes -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp --offload-arch=gfx908:xnack+ -fsanitize=address -fsanitize=leak -fgpu-sanitize --rocm-path=%S/Inputs/rocm-invalid -nogpuinc  %s 2>&1 \
+// RUN:   not %clang -no-canonical-prefixes -### -mcode-object-version=5 --target=x86_64-unknown-linux-gnu -fopenmp=libomp --offload-arch=gfx908:xnack+ -fsanitize=address -fsanitize=leak -fgpu-sanitize --rocm-path=%S/Inputs/rocm-invalid -nogpuinc  %s 2>&1 \
 // RUN:   | FileCheck --check-prefixes=NOTSUPPORTED,FAIL %s
 
 // Memory, Leak, UndefinedBehaviour and Thread Sanitizer are not supported on AMDGPU.

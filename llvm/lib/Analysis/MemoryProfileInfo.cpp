@@ -54,7 +54,7 @@ cl::opt<bool> MemProfReportHintedSizes(
 // This is useful if we have enabled reporting of hinted sizes, and want to get
 // information from the indexing step for all contexts (especially for testing),
 // or have specified a value less than 100% for -memprof-cloning-cold-threshold.
-cl::opt<bool> MemProfKeepAllNotColdContexts(
+static cl::opt<bool> MemProfKeepAllNotColdContexts(
     "memprof-keep-all-not-cold-contexts", cl::init(false), cl::Hidden,
     cl::desc("Keep all non-cold contexts (increases cloning overheads)"));
 
@@ -164,8 +164,8 @@ void CallStackTrie::addCallStack(
     }
     // Update existing caller node if it exists.
     CallStackTrieNode *Prev = nullptr;
-    auto Next = Curr->Callers.find(StackId);
-    if (Next != Curr->Callers.end()) {
+    auto [Next, Inserted] = Curr->Callers.try_emplace(StackId);
+    if (!Inserted) {
       Prev = Curr;
       Curr = Next->second;
       Curr->addAllocType(AllocType);
@@ -177,12 +177,11 @@ void CallStackTrie::addCallStack(
     }
     // Otherwise add a new caller node.
     auto *New = new CallStackTrieNode(AllocType);
-    Curr->Callers[StackId] = New;
+    Next->second = New;
     Curr = New;
   }
   assert(Curr);
-  Curr->ContextSizeInfo.insert(Curr->ContextSizeInfo.end(),
-                               ContextSizeInfo.begin(), ContextSizeInfo.end());
+  llvm::append_range(Curr->ContextSizeInfo, ContextSizeInfo);
 }
 
 void CallStackTrie::addCallStack(MDNode *MIB) {
@@ -235,8 +234,7 @@ static MDNode *createMIBNode(LLVMContext &Ctx, ArrayRef<uint64_t> MIBCallStack,
 
 void CallStackTrie::collectContextSizeInfo(
     CallStackTrieNode *Node, std::vector<ContextTotalSize> &ContextSizeInfo) {
-  ContextSizeInfo.insert(ContextSizeInfo.end(), Node->ContextSizeInfo.begin(),
-                         Node->ContextSizeInfo.end());
+  llvm::append_range(ContextSizeInfo, Node->ContextSizeInfo);
   for (auto &Caller : Node->Callers)
     collectContextSizeInfo(Caller.second, ContextSizeInfo);
 }

@@ -29,7 +29,6 @@ def IntAP : Type;
 def IntAPS : Type;
 def Float : Type;
 def Ptr : Type;
-def FnPtr : Type;
 def MemberPtr : Type;
 def FixedPoint : Type;
 
@@ -58,7 +57,7 @@ def ArgRecordField : ArgType { let Name = "const Record::Field *"; }
 def ArgFltSemantics : ArgType { let Name = "const llvm::fltSemantics *"; }
 def ArgRoundingMode : ArgType { let Name = "llvm::RoundingMode"; }
 def ArgLETD: ArgType { let Name = "const LifetimeExtendedTemporaryDecl *"; }
-def ArgCastKind : ArgType { let Name = "CastKind"; }
+def ArgCastKind : ArgType { let Name = "interp::CastKind"; }
 def ArgCallExpr : ArgType { let Name = "const CallExpr *"; }
 def ArgExpr : ArgType { let Name = "const Expr *"; }
 def ArgOffsetOfExpr : ArgType { let Name = "const OffsetOfExpr *"; }
@@ -106,9 +105,7 @@ def AluTypeClass : TypeClass {
   let Types = !listconcat(IntegerTypeClass.Types, [Bool], [FixedPoint]);
 }
 
-def PtrTypeClass : TypeClass {
-  let Types = [Ptr, FnPtr, MemberPtr];
-}
+def PtrTypeClass : TypeClass { let Types = [Ptr, MemberPtr]; }
 
 def NonPtrTypeClass : TypeClass {
   let Types = !listconcat(IntegerTypeClass.Types, [Bool], [Float], [FixedPoint]);
@@ -119,7 +116,7 @@ def AllTypeClass : TypeClass {
 }
 
 def ComparableTypeClass : TypeClass {
-  let Types = !listconcat(AluTypeClass.Types, [Ptr], [Float], [FnPtr]);
+  let Types = !listconcat(AluTypeClass.Types, [Ptr], [Float]);
 }
 
 class SingletonTypeClass<Type Ty> : TypeClass {
@@ -171,6 +168,14 @@ def Jmp : JumpOpcode;
 def Jt : JumpOpcode;
 // [Bool] -> [], jumps if false.
 def Jf : JumpOpcode;
+
+def StartSpeculation : Opcode;
+def EndSpeculation : Opcode;
+def BCP : Opcode {
+  let ChangesPC = 1;
+  let HasCustomEval = 1;
+  let Args = [ArgSint32, ArgPrimType];
+}
 
 //===----------------------------------------------------------------------===//
 // Returns
@@ -312,7 +317,7 @@ def GetPtrThisField : OffsetOpcode;
 // [Pointer] -> [Pointer]
 def GetPtrBase : OffsetOpcode;
 // [Pointer] -> [Pointer]
-def GetPtrBasePop : OffsetOpcode;
+def GetPtrBasePop : OffsetOpcode { let Args = [ArgUint32, ArgBool]; }
 def GetMemberPtrBasePop : Opcode {
   // Offset of field, which is a base.
   let Args = [ArgSint32];
@@ -322,9 +327,7 @@ def GetMemberPtrBasePop : Opcode {
 def FinishInitPop : Opcode;
 def FinishInit    : Opcode;
 
-def GetPtrDerivedPop : Opcode {
-  let Args = [ArgUint32];
-}
+def GetPtrDerivedPop : Opcode { let Args = [ArgUint32, ArgBool]; }
 
 // [Pointer] -> [Pointer]
 def GetPtrVirtBasePop : Opcode {
@@ -587,10 +590,18 @@ def Shr : Opcode {
 def Inv: Opcode;
 
 // Increment and decrement.
-def Inc: AluOpcode;
-def IncPop : AluOpcode;
-def Dec: AluOpcode;
-def DecPop: AluOpcode;
+class OverflowOpcode : Opcode {
+  let Types = [AluTypeClass];
+  let Args = [ArgBool];
+  let HasGroup = 1;
+}
+
+def Inc : OverflowOpcode;
+def IncPop : OverflowOpcode;
+def PreInc : OverflowOpcode;
+def Dec : OverflowOpcode;
+def DecPop : OverflowOpcode;
+def PreDec : OverflowOpcode;
 
 // Float increment and decrement.
 def Incf: FloatOpcode;
@@ -859,3 +870,8 @@ def BitCast : Opcode;
 def GetTypeid : Opcode { let Args = [ArgTypePtr, ArgTypePtr]; }
 def GetTypeidPtr : Opcode { let Args = [ArgTypePtr]; }
 def DiagTypeid : Opcode;
+
+def CheckDestruction : Opcode;
+
+def PushCC : Opcode { let Args = [ArgBool]; }
+def PopCC : Opcode;

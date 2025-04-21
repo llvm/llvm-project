@@ -68,7 +68,7 @@ public:
   // a false return value from this call if it returns true, then
   // CalculateNumChildren() can return any number >= 0 (0 being valid) it
   // should if at all possible be more efficient than CalculateNumChildren()
-  virtual bool MightHaveChildren() = 0;
+  virtual bool MightHaveChildren() { return true; }
 
   // if this function returns a non-null ValueObject, then the returned
   // ValueObject will stand for this ValueObject whenever a "value" request is

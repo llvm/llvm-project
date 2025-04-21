@@ -30,7 +30,7 @@ func.func @_QPTestAllocatableArray() {
   %8 = arith.subi %7#1, %c1 : index
   %9 = omp.map.bounds lower_bound(%c0_1 : index) upper_bound(%8 : index) extent(%7#1 : index) stride(%7#2 : index) start_idx(%6#0 : index) {stride_in_bytes = true}
   %10 = fir.box_offset %1#1 base_addr : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>) -> !fir.llvm_ptr<!fir.ref<!fir.array<?xf64>>>
-  %11 = omp.map.info var_ptr(%1#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>, !fir.array<?xf64>) var_ptr_ptr(%10 : !fir.llvm_ptr<!fir.ref<!fir.array<?xf64>>>) map_clauses(implicit, tofrom) capture(ByRef) bounds(%9) -> !fir.llvm_ptr<!fir.ref<!fir.array<?xf64>>> {name = ""}
+  %11 = omp.map.info var_ptr(%1#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>, !fir.array<?xf64>) map_clauses(implicit, tofrom) capture(ByRef) var_ptr_ptr(%10 : !fir.llvm_ptr<!fir.ref<!fir.array<?xf64>>>) bounds(%9) -> !fir.llvm_ptr<!fir.ref<!fir.array<?xf64>>> {name = ""}
   %12 = omp.map.info var_ptr(%1#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>, !fir.box<!fir.heap<!fir.array<?xf64>>>) map_clauses(implicit, tofrom) capture(ByRef) members(%11 : [0] : !fir.llvm_ptr<!fir.ref<!fir.array<?xf64>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>> {name = "a"}
   %13 = fir.load %3#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>
   %c1_2 = arith.constant 1 : index
@@ -43,7 +43,7 @@ func.func @_QPTestAllocatableArray() {
   %17 = arith.subi %16#1, %c1_2 : index
   %18 = omp.map.bounds lower_bound(%c0_5 : index) upper_bound(%17 : index) extent(%16#1 : index) stride(%16#2 : index) start_idx(%15#0 : index) {stride_in_bytes = true}
   %19 = fir.box_offset %3#1 base_addr : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>) -> !fir.llvm_ptr<!fir.ref<!fir.array<?xf64>>>
-  %20 = omp.map.info var_ptr(%3#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>, !fir.array<?xf64>) var_ptr_ptr(%19 : !fir.llvm_ptr<!fir.ref<!fir.array<?xf64>>>) map_clauses(implicit, tofrom) capture(ByRef) bounds(%18) -> !fir.llvm_ptr<!fir.ref<!fir.array<?xf64>>> {name = ""}
+  %20 = omp.map.info var_ptr(%3#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>, !fir.array<?xf64>) map_clauses(implicit, tofrom) capture(ByRef) var_ptr_ptr(%19 : !fir.llvm_ptr<!fir.ref<!fir.array<?xf64>>>) bounds(%18) -> !fir.llvm_ptr<!fir.ref<!fir.array<?xf64>>> {name = ""}
   %21 = omp.map.info var_ptr(%3#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>, !fir.box<!fir.heap<!fir.array<?xf64>>>) map_clauses(implicit, tofrom) capture(ByRef) members(%20 : [0] : !fir.llvm_ptr<!fir.ref<!fir.array<?xf64>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>> {name = "b"}
   omp.target map_entries(%11 -> %arg0, %12 -> %arg1, %20 -> %arg2, %21 -> %arg3 : !fir.llvm_ptr<!fir.ref<!fir.array<?xf64>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>, !fir.llvm_ptr<!fir.ref<!fir.array<?xf64>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>) {
     %22:2 = hlfir.declare %arg1 {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFEa"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>)

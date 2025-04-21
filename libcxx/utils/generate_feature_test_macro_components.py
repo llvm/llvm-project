@@ -13,6 +13,7 @@ from typing import (
 )
 import functools
 import json
+from libcxx.header_information import module_c_headers, module_headers, header_restrictions, headers_not_available, libcxx_root
 
 
 def get_libcxx_paths():
@@ -97,6 +98,11 @@ feature_test_macros = [
             "headers": ["memory"],
         },
         {
+            "name": "__cpp_lib_aligned_accessor",
+            "values": {"c++26": 202411},
+            "headers": ["mdspan"],
+        },
+        {
             "name": "__cpp_lib_allocate_at_least",
             "values": {
                 # Note LWG3887 Version macro for allocate_at_least
@@ -169,7 +175,6 @@ feature_test_macros = [
             "name": "__cpp_lib_atomic_float",
             "values": {"c++20": 201711},
             "headers": ["atomic"],
-            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_atomic_is_always_lock_free",
@@ -321,7 +326,7 @@ feature_test_macros = [
             "name": "__cpp_lib_constexpr_algorithms",
             "values": {
                 "c++20": 201806,
-                # "c++26": 202306, # P2562R1 constexpr Stable Sorting
+                "c++26": 202306,
             },
             "headers": ["algorithm", "utility"],
         },
@@ -521,7 +526,6 @@ feature_test_macros = [
             "name": "__cpp_lib_flat_set",
             "values": {"c++23": 202207},
             "headers": ["flat_set"],
-            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_format",
@@ -536,6 +540,11 @@ feature_test_macros = [
             # 202305 P2757R3 Type-checking format args
             # 202306 P2637R3 Member Visit
             "headers": ["format"],
+            # Trying to use `std::format` where to_chars floating-point is not
+            # available causes compilation errors, even with non floating-point types.
+            # https://github.com/llvm/llvm-project/issues/125353
+            "test_suite_guard": "!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_TO_CHARS_FLOATING_POINT",
+            "libcxx_guard": "_LIBCPP_AVAILABILITY_HAS_TO_CHARS_FLOATING_POINT",
         },
         {
             "name": "__cpp_lib_format_path",
@@ -800,6 +809,11 @@ feature_test_macros = [
             "headers": ["type_traits"],
         },
         {
+            "name": "__cpp_lib_is_sufficiently_aligned",
+            "values": {"c++26": 202411},
+            "headers": ["memory"],
+        },
+        {
             "name": "__cpp_lib_is_swappable",
             "values": {"c++17": 201603},
             "headers": ["type_traits"],
@@ -1011,6 +1025,11 @@ feature_test_macros = [
                 # "c++26": 202406, # P3235R3 std::print more types faster with less memory
             },
             "headers": ["ostream", "print"],
+            # Trying to use `std::print` where to_chars floating-point is not
+            # available causes compilation errors, even with non floating-point types.
+            # https://github.com/llvm/llvm-project/issues/125353
+            "test_suite_guard": "!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_TO_CHARS_FLOATING_POINT",
+            "libcxx_guard": "_LIBCPP_AVAILABILITY_HAS_TO_CHARS_FLOATING_POINT",
         },
         {
             "name": "__cpp_lib_quoted_string_io",
@@ -1072,7 +1091,6 @@ feature_test_macros = [
             "name": "__cpp_lib_ranges_iota",
             "values": {"c++23": 202202},
             "headers": ["numeric"],
-            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_ranges_join_with",
@@ -1185,7 +1203,7 @@ feature_test_macros = [
             "name": "__cpp_lib_shared_mutex",
             "values": {"c++17": 201505},
             "headers": ["shared_mutex"],
-            "test_suite_guard": "_LIBCPP_HAS_THREADS",
+            "test_suite_guard": "!defined(_LIBCPP_VERSION) || _LIBCPP_HAS_THREADS",
             "libcxx_guard": "_LIBCPP_HAS_THREADS",
         },
         {
@@ -1202,7 +1220,7 @@ feature_test_macros = [
             "name": "__cpp_lib_shared_timed_mutex",
             "values": {"c++14": 201402},
             "headers": ["shared_mutex"],
-            "test_suite_guard": "_LIBCPP_HAS_THREADS",
+            "test_suite_guard": "!defined(_LIBCPP_VERSION) || _LIBCPP_HAS_THREADS",
             "libcxx_guard": "_LIBCPP_HAS_THREADS",
         },
         {
@@ -1682,45 +1700,45 @@ def produce_version_header():
 
 test_types = {
     "undefined": """
-# ifdef {name}
-#   error "{name} should not be defined before {std_first}"
-# endif
+#  ifdef {name}
+#    error "{name} should not be defined before {std_first}"
+#  endif
 """,
     "test_suite_guard": """
-# if {test_suite_guard}
-#   ifndef {name}
-#     error "{name} should be defined in {std}"
-#   endif
-#   if {name} != {value}
-#     error "{name} should have the value {value} in {std}"
-#   endif
-# else
-#   ifdef {name}
-#     error "{name} should not be defined when the requirement '{test_suite_guard}' is not met!"
-#   endif
-# endif
+#  if {test_suite_guard}
+#    ifndef {name}
+#      error "{name} should be defined in {std}"
+#    endif
+#    if {name} != {value}
+#      error "{name} should have the value {value} in {std}"
+#    endif
+#  else
+#    ifdef {name}
+#      error "{name} should not be defined when the requirement '{test_suite_guard}' is not met!"
+#    endif
+#  endif
 """,
     "unimplemented": """
-# if !defined(_LIBCPP_VERSION)
-#   ifndef {name}
-#     error "{name} should be defined in {std}"
-#   endif
-#   if {name} != {value}
-#     error "{name} should have the value {value} in {std}"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef {name}
-#     error "{name} should not be defined because it is unimplemented in libc++!"
-#   endif
-# endif
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef {name}
+#      error "{name} should be defined in {std}"
+#    endif
+#    if {name} != {value}
+#      error "{name} should have the value {value} in {std}"
+#    endif
+#  else
+#    ifdef {name}
+#      error "{name} should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
 """,
     "defined": """
-# ifndef {name}
-#   error "{name} should be defined in {std}"
-# endif
-# if {name} != {value}
-#   error "{name} should have the value {value} in {std}"
-# endif
+#  ifndef {name}
+#    error "{name} should be defined in {std}"
+#  endif
+#  if {name} != {value}
+#    error "{name} should have the value {value} in {std}"
+#  endif
 """,
 }
 
@@ -1820,28 +1838,27 @@ def produce_tests():
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
+
 // WARNING: This test was generated by {script_name}
 // and should not be edited manually.
-//
-// clang-format off
 {markup}
 // <{header}>
 
 // Test the feature test macros defined by <{header}>
 
-{synopsis}
+// clang-format off
 
 #include <{header}>
 #include "test_macros.h"
 
 {cxx_tests}
 
+// clang-format on
+
 """.format(
             script_name=script_name,
             header=h,
             markup=("\n{}\n".format(markup) if markup else ""),
-            synopsis=generate_synopsis(test_list),
             cxx_tests=generate_std_tests(test_list),
         )
         test_name = "{header}.version.compile.pass.cpp".format(header=h)
@@ -1957,7 +1974,7 @@ Value = NewType("Value", str)  # The value of a feature test macro including the
 
 @dataclass
 class Metadata:
-    headers: list[str] = None
+    headers: List[str] = None
     test_suite_guard: str = None
     libcxx_guard: str = None
 
@@ -2003,7 +2020,8 @@ def get_ftms(
                         else:
                             break
 
-                entry[std] = last
+                if last:
+                    entry[std] = last
         result[feature["name"]] = entry
 
     return result
@@ -2199,6 +2217,18 @@ class FeatureTestMacros:
 
         return get_ftms(self.__data, self.std_dialects, True)
 
+    def is_implemented(self, ftm: Ftm, std: Std) -> bool:
+        """Has the FTM `ftm` been implemented in the dialect `std`?"""
+
+        # When a paper for C++20 has not been implemented in libc++, then there will be no
+        # FTM entry in implemented_ftms for C++23 and later. Similarly, a paper like <format>
+        # has no entry in standard_ftms for e.g. C++11.
+        if not std in self.implemented_ftms[ftm].keys() or not std in self.standard_ftms[ftm].keys():
+            return False
+
+        return self.implemented_ftms[ftm][std] == self.standard_ftms[ftm][std]
+
+
     @functools.cached_property
     def ftm_metadata(self) -> Dict[Ftm, Metadata]:
         """Returns the metadata of the FTMs defined in the Standard.
@@ -2232,7 +2262,7 @@ class FeatureTestMacros:
                     continue
                 last_value = value
 
-                implemented = self.implemented_ftms[ftm][std] == self.standard_ftms[ftm][std]
+                implemented = self.is_implemented(ftm, std)
                 entry = VersionHeader(
                     value,
                     implemented,

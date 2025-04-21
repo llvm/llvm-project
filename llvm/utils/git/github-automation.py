@@ -259,7 +259,7 @@ class CommitRequestGreeter:
         # Post greeter comment:
         comment = textwrap.dedent(
             f"""
-            @{self.issue.user.login} thank you for apply for commit access.  Please  review the project's [code review policy](https://llvm.org/docs/CodeReview.html).
+            @{self.issue.user.login} thank you for applying for commit access.  Please  review the project's [code review policy](https://llvm.org/docs/CodeReview.html).
         """
         )
         self.issue.create_comment(comment)

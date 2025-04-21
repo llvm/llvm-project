@@ -2448,7 +2448,7 @@ define <8 x i64> @zext_8i6_to_8i64(i32 %x) nounwind uwtable readnone ssp {
 ; SSE2:       # %bb.0: # %entry
 ; SSE2-NEXT:    movd %edi, %xmm0
 ; SSE2-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
-; SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[0,0,0,0]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[0,1,0,1]
 ; SSE2-NEXT:    paddw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm3[0,0,0,0]
 ; SSE2-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,5,5,5,5]
@@ -2469,7 +2469,7 @@ define <8 x i64> @zext_8i6_to_8i64(i32 %x) nounwind uwtable readnone ssp {
 ; SSSE3:       # %bb.0: # %entry
 ; SSSE3-NEXT:    movd %edi, %xmm0
 ; SSSE3-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
-; SSSE3-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[0,0,0,0]
+; SSSE3-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[0,1,0,1]
 ; SSSE3-NEXT:    paddw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3
 ; SSSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm3[0,0,0,0]
 ; SSSE3-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,5,5,5,5]
@@ -2490,7 +2490,7 @@ define <8 x i64> @zext_8i6_to_8i64(i32 %x) nounwind uwtable readnone ssp {
 ; SSE41:       # %bb.0: # %entry
 ; SSE41-NEXT:    movd %edi, %xmm0
 ; SSE41-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
-; SSE41-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[0,0,0,0]
+; SSE41-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[0,1,0,1]
 ; SSE41-NEXT:    paddw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3
 ; SSE41-NEXT:    pmovzxwq {{.*#+}} xmm0 = xmm3[0],zero,zero,zero,xmm3[1],zero,zero,zero
 ; SSE41-NEXT:    pmovsxbq {{.*#+}} xmm4 = [63,63]
@@ -2510,7 +2510,7 @@ define <8 x i64> @zext_8i6_to_8i64(i32 %x) nounwind uwtable readnone ssp {
 ; AVX1:       # %bb.0: # %entry
 ; AVX1-NEXT:    vmovd %edi, %xmm0
 ; AVX1-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
 ; AVX1-NEXT:    vpaddw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
 ; AVX1-NEXT:    vpmovzxwq {{.*#+}} xmm0 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero
@@ -2696,9 +2696,8 @@ define <16 x i16> @splatshuf_zext_v16i16(<16 x i8> %x) {
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    punpckhbw {{.*#+}} xmm0 = xmm0[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
 ; SSE2-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,6,6,6,6]
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,2,2,2]
 ; SSE2-NEXT:    pxor %xmm1, %xmm1
-; SSE2-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3],xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7]
+; SSE2-NEXT:    punpckhbw {{.*#+}} xmm0 = xmm0[8],xmm1[8],xmm0[9],xmm1[9],xmm0[10],xmm1[10],xmm0[11],xmm1[11],xmm0[12],xmm1[12],xmm0[13],xmm1[13],xmm0[14],xmm1[14],xmm0[15],xmm1[15]
 ; SSE2-NEXT:    movdqa %xmm0, %xmm1
 ; SSE2-NEXT:    retq
 ;

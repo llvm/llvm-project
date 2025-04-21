@@ -96,7 +96,7 @@ define <vscale x 2 x double> @dup_f64(<vscale x 2 x double> %a, <vscale x 2 x i1
 define <vscale x 8 x bfloat> @test_svdup_n_bf16_z(<vscale x 8 x i1> %pg, bfloat %op) #0 {
 ; CHECK-LABEL: test_svdup_n_bf16_z:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z1.h, #0 // =0x0
+; CHECK-NEXT:    movi v1.2d, #0000000000000000
 ; CHECK-NEXT:    mov z1.h, p0/m, h0
 ; CHECK-NEXT:    mov z0.d, z1.d
 ; CHECK-NEXT:    ret
@@ -119,7 +119,7 @@ define <vscale x 8 x bfloat> @test_svdup_n_bf16_x(<vscale x 8 x i1> %pg, bfloat 
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov z0.h, p0/m, h0
 ; CHECK-NEXT:    ret
-  %out = call <vscale x 8 x bfloat> @llvm.aarch64.sve.dup.nxv8bf16(<vscale x 8 x bfloat> undef, <vscale x 8 x i1> %pg, bfloat %op)
+  %out = call <vscale x 8 x bfloat> @llvm.aarch64.sve.dup.nxv8bf16(<vscale x 8 x bfloat> poison, <vscale x 8 x i1> %pg, bfloat %op)
   ret <vscale x 8 x bfloat> %out
 }
 

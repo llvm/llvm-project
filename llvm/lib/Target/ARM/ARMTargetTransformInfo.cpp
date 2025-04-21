@@ -318,7 +318,7 @@ std::optional<Value *> ARMTTIImpl::simplifyDemandedVectorEltsIntrinsic(
 }
 
 InstructionCost ARMTTIImpl::getIntImmCost(const APInt &Imm, Type *Ty,
-                                          TTI::TargetCostKind CostKind) {
+                                          TTI::TargetCostKind CostKind) const {
   assert(Ty->isIntegerTy());
 
  unsigned Bits = Ty->getPrimitiveSizeInBits();
@@ -482,7 +482,7 @@ InstructionCost ARMTTIImpl::getIntImmCostInst(unsigned Opcode, unsigned Idx,
 
 InstructionCost ARMTTIImpl::getCFInstrCost(unsigned Opcode,
                                            TTI::TargetCostKind CostKind,
-                                           const Instruction *I) {
+                                           const Instruction *I) const {
   if (CostKind == TTI::TCK_RecipThroughput &&
       (ST->hasNEON() || ST->hasMVEIntegerOps())) {
     // FIXME: The vectorizer is highly sensistive to the cost of these
@@ -498,7 +498,7 @@ InstructionCost ARMTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
                                              Type *Src,
                                              TTI::CastContextHint CCH,
                                              TTI::TargetCostKind CostKind,
-                                             const Instruction *I) {
+                                             const Instruction *I) const {
   int ISD = TLI->InstructionOpcodeToISD(Opcode);
   assert(ISD && "Invalid opcode");
 
@@ -901,7 +901,7 @@ InstructionCost ARMTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
 InstructionCost ARMTTIImpl::getVectorInstrCost(unsigned Opcode, Type *ValTy,
                                                TTI::TargetCostKind CostKind,
                                                unsigned Index, Value *Op0,
-                                               Value *Op1) {
+                                               Value *Op1) const {
   // Penalize inserting into an D-subregister. We end up with a three times
   // lower estimated throughput on swift.
   if (ST->hasSlowLoadDSubregister() && Opcode == Instruction::InsertElement &&
@@ -940,7 +940,7 @@ InstructionCost ARMTTIImpl::getVectorInstrCost(unsigned Opcode, Type *ValTy,
 InstructionCost ARMTTIImpl::getCmpSelInstrCost(
     unsigned Opcode, Type *ValTy, Type *CondTy, CmpInst::Predicate VecPred,
     TTI::TargetCostKind CostKind, TTI::OperandValueInfo Op1Info,
-    TTI::OperandValueInfo Op2Info, const Instruction *I) {
+    TTI::OperandValueInfo Op2Info, const Instruction *I) const {
   int ISD = TLI->InstructionOpcodeToISD(Opcode);
 
   // Thumb scalar code size cost for select.
@@ -1122,7 +1122,8 @@ bool ARMTTIImpl::isProfitableLSRChainElement(Instruction *I) {
   return false;
 }
 
-bool ARMTTIImpl::isLegalMaskedLoad(Type *DataTy, Align Alignment) {
+bool ARMTTIImpl::isLegalMaskedLoad(Type *DataTy, Align Alignment,
+                                   unsigned /*AddressSpace*/) const {
   if (!EnableMaskedLoadStores || !ST->hasMVEIntegerOps())
     return false;
 
@@ -1220,7 +1221,7 @@ int ARMTTIImpl::getNumMemOps(const IntrinsicInst *I) const {
   return -1;
 }
 
-InstructionCost ARMTTIImpl::getMemcpyCost(const Instruction *I) {
+InstructionCost ARMTTIImpl::getMemcpyCost(const Instruction *I) const {
   int NumOps = getNumMemOps(cast<IntrinsicInst>(I));
 
   // To model the cost of a library call, we assume 1 for the call, and
@@ -1235,7 +1236,7 @@ InstructionCost ARMTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
                                            TTI::TargetCostKind CostKind,
                                            int Index, VectorType *SubTp,
                                            ArrayRef<const Value *> Args,
-                                           const Instruction *CxtI) {
+                                           const Instruction *CxtI) const {
   Kind = improveShuffleKindFromMask(Kind, Mask, Tp, Index, SubTp);
   // Treat extractsubvector as single op permutation.
   bool IsExtractSubvector = Kind == TTI::SK_ExtractSubvector;
@@ -1348,8 +1349,7 @@ InstructionCost ARMTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
 InstructionCost ARMTTIImpl::getArithmeticInstrCost(
     unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
     TTI::OperandValueInfo Op1Info, TTI::OperandValueInfo Op2Info,
-    ArrayRef<const Value *> Args,
-    const Instruction *CxtI) {
+    ArrayRef<const Value *> Args, const Instruction *CxtI) const {
   int ISDOpcode = TLI->InstructionOpcodeToISD(Opcode);
   if (ST->isThumb() && CostKind == TTI::TCK_CodeSize && Ty->isIntegerTy(1)) {
     // Make operations on i1 relatively expensive as this often involves
@@ -1458,16 +1458,73 @@ InstructionCost ARMTTIImpl::getArithmeticInstrCost(
   if (LooksLikeAFreeShift())
     return 0;
 
+  // When targets have both DSP and MVE we find that the
+  // the compiler will attempt to vectorize as well as using
+  // scalar (S/U)MLAL operations. This is in cases where we have
+  // the pattern ext(mul(ext(i16), ext(i16))) we find
+  // that codegen performs better when only using (S/U)MLAL scalar
+  // ops instead of trying to mix vector ops with (S/U)MLAL ops. We therefore
+  // check if a mul instruction is used in a (U/S)MLAL pattern.
+  auto MulInDSPMLALPattern = [&](const Instruction *I, unsigned Opcode,
+                                 Type *Ty) -> bool {
+    if (!ST->hasDSP())
+      return false;
+
+    if (!I)
+      return false;
+
+    if (Opcode != Instruction::Mul)
+      return false;
+
+    if (Ty->isVectorTy())
+      return false;
+
+    auto ValueOpcodesEqual = [](const Value *LHS, const Value *RHS) -> bool {
+      return cast<Instruction>(LHS)->getOpcode() ==
+             cast<Instruction>(RHS)->getOpcode();
+    };
+    auto IsExtInst = [](const Value *V) -> bool {
+      return isa<ZExtInst>(V) || isa<SExtInst>(V);
+    };
+    auto IsExtensionFromHalf = [](const Value *V) -> bool {
+      return cast<Instruction>(V)->getOperand(0)->getType()->isIntegerTy(16);
+    };
+
+    // We check the arguments of the instruction to see if they're extends
+    auto *BinOp = dyn_cast<BinaryOperator>(I);
+    if (!BinOp)
+      return false;
+    Value *Op0 = BinOp->getOperand(0);
+    Value *Op1 = BinOp->getOperand(1);
+    if (IsExtInst(Op0) && IsExtInst(Op1) && ValueOpcodesEqual(Op0, Op1)) {
+      // We're interested in an ext of an i16
+      if (!I->getType()->isIntegerTy(32) || !IsExtensionFromHalf(Op0) ||
+          !IsExtensionFromHalf(Op1))
+        return false;
+      // We need to check if this result will be further extended to i64
+      // and that all these uses are SExt
+      for (auto *U : I->users())
+        if (!IsExtInst(U))
+          return false;
+      return true;
+    }
+
+    return false;
+  };
+
+  if (MulInDSPMLALPattern(CxtI, Opcode, Ty))
+    return 0;
+
   // Default to cheap (throughput/size of 1 instruction) but adjust throughput
   // for "multiple beats" potentially needed by MVE instructions.
   int BaseCost = 1;
   if (ST->hasMVEIntegerOps() && Ty->isVectorTy())
     BaseCost = ST->getMVEVectorCostFactor(CostKind);
 
-  // The rest of this mostly follows what is done in BaseT::getArithmeticInstrCost,
-  // without treating floats as more expensive that scalars or increasing the
-  // costs for custom operations. The results is also multiplied by the
-  // MVEVectorCostFactor where appropriate.
+  // The rest of this mostly follows what is done in
+  // BaseT::getArithmeticInstrCost, without treating floats as more expensive
+  // that scalars or increasing the costs for custom operations. The results is
+  // also multiplied by the MVEVectorCostFactor where appropriate.
   if (TLI->isOperationLegalOrCustomOrPromote(ISDOpcode, LT.second))
     return LT.first * BaseCost;
 
@@ -1491,7 +1548,7 @@ InstructionCost ARMTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
                                             unsigned AddressSpace,
                                             TTI::TargetCostKind CostKind,
                                             TTI::OperandValueInfo OpInfo,
-                                            const Instruction *I) {
+                                            const Instruction *I) const {
   // TODO: Handle other cost kinds.
   if (CostKind != TTI::TCK_RecipThroughput)
     return 1;
@@ -1536,11 +1593,13 @@ InstructionCost ARMTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
 InstructionCost
 ARMTTIImpl::getMaskedMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
                                   unsigned AddressSpace,
-                                  TTI::TargetCostKind CostKind) {
+                                  TTI::TargetCostKind CostKind) const {
   if (ST->hasMVEIntegerOps()) {
-    if (Opcode == Instruction::Load && isLegalMaskedLoad(Src, Alignment))
+    if (Opcode == Instruction::Load &&
+        isLegalMaskedLoad(Src, Alignment, AddressSpace))
       return ST->getMVEVectorCostFactor(CostKind);
-    if (Opcode == Instruction::Store && isLegalMaskedStore(Src, Alignment))
+    if (Opcode == Instruction::Store &&
+        isLegalMaskedStore(Src, Alignment, AddressSpace))
       return ST->getMVEVectorCostFactor(CostKind);
   }
   if (!isa<FixedVectorType>(Src))
@@ -1594,7 +1653,7 @@ InstructionCost ARMTTIImpl::getInterleavedMemoryOpCost(
 
 InstructionCost ARMTTIImpl::getGatherScatterOpCost(
     unsigned Opcode, Type *DataTy, const Value *Ptr, bool VariableMask,
-    Align Alignment, TTI::TargetCostKind CostKind, const Instruction *I) {
+    Align Alignment, TTI::TargetCostKind CostKind, const Instruction *I) const {
   using namespace PatternMatch;
   if (!ST->hasMVEIntegerOps() || !EnableMaskedGatherScatters)
     return BaseT::getGatherScatterOpCost(Opcode, DataTy, Ptr, VariableMask,
@@ -1699,7 +1758,7 @@ InstructionCost ARMTTIImpl::getGatherScatterOpCost(
 InstructionCost
 ARMTTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
                                        std::optional<FastMathFlags> FMF,
-                                       TTI::TargetCostKind CostKind) {
+                                       TTI::TargetCostKind CostKind) const {
 
   EVT ValVT = TLI->getValueType(DL, ValTy);
   int ISD = TLI->InstructionOpcodeToISD(Opcode);
@@ -1784,7 +1843,7 @@ ARMTTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
 
 InstructionCost ARMTTIImpl::getExtendedReductionCost(
     unsigned Opcode, bool IsUnsigned, Type *ResTy, VectorType *ValTy,
-    FastMathFlags FMF, TTI::TargetCostKind CostKind) {
+    std::optional<FastMathFlags> FMF, TTI::TargetCostKind CostKind) {
   EVT ValVT = TLI->getValueType(DL, ValTy);
   EVT ResVT = TLI->getValueType(DL, ResTy);
 
@@ -1846,7 +1905,7 @@ ARMTTIImpl::getMulAccReductionCost(bool IsUnsigned, Type *ResTy,
 InstructionCost
 ARMTTIImpl::getMinMaxReductionCost(Intrinsic::ID IID, VectorType *Ty,
                                    FastMathFlags FMF,
-                                   TTI::TargetCostKind CostKind) {
+                                   TTI::TargetCostKind CostKind) const {
   EVT ValVT = TLI->getValueType(DL, Ty);
 
   // In general floating point reductions are a series of elementwise
@@ -1905,7 +1964,7 @@ ARMTTIImpl::getMinMaxReductionCost(Intrinsic::ID IID, VectorType *Ty,
 
 InstructionCost
 ARMTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
-                                  TTI::TargetCostKind CostKind) {
+                                  TTI::TargetCostKind CostKind) const {
   unsigned Opc = ICA.getID();
   switch (Opc) {
   case Intrinsic::get_active_lane_mask:
@@ -2049,7 +2108,7 @@ ARMTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   return BaseT::getIntrinsicInstrCost(ICA, CostKind);
 }
 
-bool ARMTTIImpl::isLoweredToCall(const Function *F) {
+bool ARMTTIImpl::isLoweredToCall(const Function *F) const {
   if (!F->isIntrinsic())
     return BaseT::isLoweredToCall(F);
 
@@ -2633,22 +2692,21 @@ void ARMTTIImpl::getPeelingPreferences(Loop *L, ScalarEvolution &SE,
   BaseT::getPeelingPreferences(L, SE, PP);
 }
 
-bool ARMTTIImpl::preferInLoopReduction(unsigned Opcode, Type *Ty,
-                                       TTI::ReductionFlags Flags) const {
+bool ARMTTIImpl::preferInLoopReduction(RecurKind Kind, Type *Ty) const {
   if (!ST->hasMVEIntegerOps())
     return false;
 
   unsigned ScalarBits = Ty->getScalarSizeInBits();
-  switch (Opcode) {
-  case Instruction::Add:
+  switch (Kind) {
+  case RecurKind::Add:
     return ScalarBits <= 64;
   default:
     return false;
   }
 }
 
-bool ARMTTIImpl::preferPredicatedReductionSelect(
-    unsigned Opcode, Type *Ty, TTI::ReductionFlags Flags) const {
+bool ARMTTIImpl::preferPredicatedReductionSelect(unsigned Opcode,
+                                                 Type *Ty) const {
   if (!ST->hasMVEIntegerOps())
     return false;
   return true;
@@ -2669,7 +2727,7 @@ InstructionCost ARMTTIImpl::getScalingFactorCost(Type *Ty, GlobalValue *BaseGV,
       return AM.Scale < 0 ? 1 : 0; // positive offsets execute faster
     return 0;
   }
-  return -1;
+  return InstructionCost::getInvalid();
 }
 
 bool ARMTTIImpl::hasArmWideBranch(bool Thumb) const {

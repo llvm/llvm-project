@@ -213,7 +213,7 @@ body:             |
     %9:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
     %10:vgpr_32 = V_MBCNT_LO_U32_B32_e64 %8.sub0:sreg_64, 0, implicit $exec
     %11:vgpr_32 = V_MOV_B32_dpp %9:vgpr_32, %10:vgpr_32, 312, 15, 15, 0, implicit $exec
-    %12:sreg_32 = V_READLANE_B32 %11:vgpr_32, 63
+    %12:sreg_32_xm0 = V_READLANE_B32 %11:vgpr_32, 63
     early-clobber %13:vgpr_32 = STRICT_WWM %9:vgpr_32, implicit $exec
 
     BUFFER_STORE_DWORD_OFFSET_exact killed %13, %4, %5, 4, 0, 0, implicit $exec

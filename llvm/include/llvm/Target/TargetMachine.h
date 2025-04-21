@@ -16,7 +16,6 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/PassManager.h"
-#include "llvm/MC/MCStreamer.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/CommandLine.h"
@@ -45,6 +44,7 @@ class MCAsmInfo;
 class MCContext;
 class MCInstrInfo;
 class MCRegisterInfo;
+class MCStreamer;
 class MCSubtargetInfo;
 class MCSymbol;
 class raw_pwrite_stream;
@@ -55,7 +55,6 @@ class ScheduleDAGInstrs;
 class SMDiagnostic;
 class SMRange;
 class Target;
-class TargetIntrinsicInfo;
 class TargetIRAnalysis;
 class TargetTransformInfo;
 class TargetLoweringObjectFile;
@@ -241,11 +240,6 @@ public:
   const MCRegisterInfo *getMCRegisterInfo() const { return MRI.get(); }
   const MCInstrInfo *getMCInstrInfo() const { return MII.get(); }
   const MCSubtargetInfo *getMCSubtargetInfo() const { return STI.get(); }
-
-  /// If intrinsic information is available, return it.  If not, return null.
-  virtual const TargetIntrinsicInfo *getIntrinsicInfo() const {
-    return nullptr;
-  }
 
   bool requiresStructuredCFG() const { return RequireStructuredCFG; }
   void setRequiresStructuredCFG(bool Value) { RequireStructuredCFG = Value; }
@@ -496,9 +490,7 @@ public:
 
   virtual Expected<std::unique_ptr<MCStreamer>>
   createMCStreamer(raw_pwrite_stream &Out, raw_pwrite_stream *DwoOut,
-                   CodeGenFileType FileType, MCContext &Ctx) {
-    return nullptr;
-  }
+                   CodeGenFileType FileType, MCContext &Ctx);
 
   /// True if the target uses physical regs (as nearly all targets do). False
   /// for stack machines such as WebAssembly and other virtual-register

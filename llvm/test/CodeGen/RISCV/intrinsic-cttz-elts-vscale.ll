@@ -64,7 +64,7 @@ define i64 @ctz_nxv8i1_no_range(<vscale x 8 x i16> %a) {
 ; RV32-NEXT:    sub sp, sp, a0
 ; RV32-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x30, 0x22, 0x11, 0x02, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 48 + 2 * vlenb
 ; RV32-NEXT:    addi a0, sp, 32
-; RV32-NEXT:    vs2r.v v8, (a0) # Unknown-size Folded Spill
+; RV32-NEXT:    vs2r.v v8, (a0) # vscale x 16-byte Folded Spill
 ; RV32-NEXT:    csrr a0, vlenb
 ; RV32-NEXT:    srli a0, a0, 3
 ; RV32-NEXT:    li a2, 8
@@ -79,7 +79,7 @@ define i64 @ctz_nxv8i1_no_range(<vscale x 8 x i16> %a) {
 ; RV32-NEXT:    vid.v v8
 ; RV32-NEXT:    li a2, -1
 ; RV32-NEXT:    addi a3, sp, 32
-; RV32-NEXT:    vl2r.v v24, (a3) # Unknown-size Folded Reload
+; RV32-NEXT:    vl2r.v v24, (a3) # vscale x 16-byte Folded Reload
 ; RV32-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
 ; RV32-NEXT:    vmsne.vi v0, v24, 0
 ; RV32-NEXT:    vsetvli zero, zero, e64, m8, ta, ma

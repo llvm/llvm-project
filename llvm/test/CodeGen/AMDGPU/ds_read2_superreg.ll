@@ -1,11 +1,11 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=bonaire -verify-machineinstrs -mattr=+load-store-opt,-enable-ds128 < %s | FileCheck --check-prefix=CI %s
 
-@lds = addrspace(3) global [512 x float] undef, align 4
-@lds.v2 = addrspace(3) global [512 x <2 x float>] undef, align 4
-@lds.v3 = addrspace(3) global [512 x <3 x float>] undef, align 4
-@lds.v4 = addrspace(3) global [512 x <4 x float>] undef, align 4
-@lds.v8 = addrspace(3) global [512 x <8 x float>] undef, align 4
-@lds.v16 = addrspace(3) global [512 x <16 x float>] undef, align 4
+@lds = addrspace(3) global [512 x float] poison, align 4
+@lds.v2 = addrspace(3) global [512 x <2 x float>] poison, align 4
+@lds.v3 = addrspace(3) global [512 x <3 x float>] poison, align 4
+@lds.v4 = addrspace(3) global [512 x <4 x float>] poison, align 4
+@lds.v8 = addrspace(3) global [512 x <8 x float>] poison, align 4
+@lds.v16 = addrspace(3) global [512 x <16 x float>] poison, align 4
 
 ; CI-LABEL: {{^}}simple_read2_v2f32_superreg_align4:
 ; CI: ds_read2_b32 [[RESULT:v\[[0-9]+:[0-9]+\]]], v{{[0-9]+}} offset1:1{{$}}
@@ -161,7 +161,7 @@ define amdgpu_kernel void @simple_read2_v2f32_superreg_scalar_loads_align4(ptr a
   %val0 = load float, ptr addrspace(3) %arrayidx0
   %val1 = load float, ptr addrspace(3) %arrayidx1
 
-  %vec.0 = insertelement <2 x float> undef, float %val0, i32 0
+  %vec.0 = insertelement <2 x float> poison, float %val0, i32 0
   %vec.1 = insertelement <2 x float> %vec.0, float %val1, i32 1
 
   %out.gep = getelementptr inbounds <2 x float>, ptr addrspace(1) %out, i32 %x.i
@@ -188,7 +188,7 @@ define amdgpu_kernel void @simple_read2_v4f32_superreg_scalar_loads_align4(ptr a
   %val2 = load float, ptr addrspace(3) %arrayidx2
   %val3 = load float, ptr addrspace(3) %arrayidx3
 
-  %vec.0 = insertelement <4 x float> undef, float %val0, i32 0
+  %vec.0 = insertelement <4 x float> poison, float %val0, i32 0
   %vec.1 = insertelement <4 x float> %vec.0, float %val1, i32 1
   %vec.2 = insertelement <4 x float> %vec.1, float %val2, i32 2
   %vec.3 = insertelement <4 x float> %vec.2, float %val3, i32 3

@@ -48,8 +48,8 @@ FROM $BASE_IMAGE AS builder-base
 ENV DEBIAN_FRONTEND=noninteractive
 
 # populated in the docker-compose file
-ARG GCC_LATEST_VERSION
-ENV GCC_LATEST_VERSION=${GCC_LATEST_VERSION}
+ARG GCC_HEAD_VERSION
+ENV GCC_HEAD_VERSION=${GCC_HEAD_VERSION}
 
 # populated in the docker-compose file
 ARG LLVM_HEAD_VERSION
@@ -147,12 +147,18 @@ RUN <<EOF
   set -e
   sudo git clone https://github.com/compiler-explorer/infra.git /tmp/ce-infra
   (cd /tmp/ce-infra && sudo make ce)
-  sudo /tmp/ce-infra/bin/ce_install install compilers/c++/x86/gcc $GCC_LATEST_VERSION.1.0
-  sudo /tmp/ce-infra/bin/ce_install install compilers/c++/x86/gcc $((GCC_LATEST_VERSION - 1)).1.0
-  sudo ln -s /opt/compiler-explorer/gcc-$GCC_LATEST_VERSION.1.0/bin/gcc /usr/bin/gcc-$GCC_LATEST_VERSION
-  sudo ln -s /opt/compiler-explorer/gcc-$GCC_LATEST_VERSION.1.0/bin/g++ /usr/bin/g++-$GCC_LATEST_VERSION
-  sudo ln -s /opt/compiler-explorer/gcc-$((GCC_LATEST_VERSION - 1)).1.0/bin/gcc /usr/bin/gcc-$((GCC_LATEST_VERSION - 1))
-  sudo ln -s /opt/compiler-explorer/gcc-$((GCC_LATEST_VERSION - 1)).1.0/bin/g++ /usr/bin/g++-$((GCC_LATEST_VERSION - 1))
+  # Current ToT, we do not guarantee any support in our support matrix.
+  sudo /tmp/ce-infra/bin/ce_install --enable nightly install compilers/c++/nightly/gcc trunk
+  sudo ln -s /opt/compiler-explorer/gcc-snapshot/bin/gcc /usr/bin/gcc-$GCC_HEAD_VERSION
+  sudo ln -s /opt/compiler-explorer/gcc-snapshot/bin/g++ /usr/bin/g++-$GCC_HEAD_VERSION
+  # The latest release.
+  sudo /tmp/ce-infra/bin/ce_install install compilers/c++/x86/gcc $((GCC_HEAD_VERSION - 1)).1.0
+  sudo ln -s /opt/compiler-explorer/gcc-$((GCC_HEAD_VERSION - 1)).1.0/bin/gcc /usr/bin/gcc-$((GCC_HEAD_VERSION - 1))
+  sudo ln -s /opt/compiler-explorer/gcc-$((GCC_HEAD_VERSION - 1)).1.0/bin/g++ /usr/bin/g++-$((GCC_HEAD_VERSION - 1))
+  # For CI transitions.
+  sudo /tmp/ce-infra/bin/ce_install install compilers/c++/x86/gcc $((GCC_HEAD_VERSION - 2)).1.0
+  sudo ln -s /opt/compiler-explorer/gcc-$((GCC_HEAD_VERSION - 2)).1.0/bin/gcc /usr/bin/gcc-$((GCC_HEAD_VERSION - 2))
+  sudo ln -s /opt/compiler-explorer/gcc-$((GCC_HEAD_VERSION - 2)).1.0/bin/g++ /usr/bin/g++-$((GCC_HEAD_VERSION - 2))
   sudo rm -rf /tmp/ce-infra
 EOF
 

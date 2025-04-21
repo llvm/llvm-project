@@ -20,6 +20,8 @@
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Target/TargetMachine.h"
 
+#define DEBUG_TYPE "amdgpu-mc-resource-usage"
+
 using namespace llvm;
 
 MCSymbol *MCResourceInfo::getSymbol(StringRef FuncName, ResourceInfoKind RIK,
@@ -106,6 +108,8 @@ void MCResourceInfo::assignResourceInfoExpr(
       MCConstantExpr::create(LocalValue, OutContext);
   const MCExpr *SymVal = LocalConstExpr;
   MCSymbol *Sym = getSymbol(FnSym->getName(), RIK, OutContext, IsLocal);
+  LLVM_DEBUG(dbgs() << "MCResUse:   " << Sym->getName() << ": Adding "
+                    << LocalValue << " as function local usage\n");
   if (!Callees.empty()) {
     SmallVector<const MCExpr *, 8> ArgExprs;
     SmallPtrSet<const Function *, 8> Seen;
@@ -125,8 +129,13 @@ void MCResourceInfo::assignResourceInfoExpr(
       if (!CalleeValSym->isVariable() ||
           !CalleeValSym->getVariableValue(/*isUsed=*/false)
                ->isSymbolUsedInExpression(Sym)) {
+        LLVM_DEBUG(dbgs() << "MCResUse:   " << Sym->getName() << ": Adding "
+                          << CalleeValSym->getName() << " as callee\n");
         ArgExprs.push_back(MCSymbolRefExpr::create(CalleeValSym, OutContext));
       } else {
+        LLVM_DEBUG(
+            dbgs() << "MCResUse:   " << Sym->getName()
+                   << ": Recursion found, falling back to module maximum\n");
         // In case of recursion: make sure to use conservative register counts
         // (i.e., specifically for VGPR/SGPR/AGPR).
         switch (RIK) {
@@ -172,6 +181,18 @@ void MCResourceInfo::gatherResourceInfo(
   const TargetMachine &TM = MF.getTarget();
   MCSymbol *FnSym = TM.getSymbol(&MF.getFunction());
 
+  LLVM_DEBUG(dbgs() << "MCResUse: Gathering resource information for "
+                    << FnSym->getName() << '\n');
+  LLVM_DEBUG({
+    if (!FRI.Callees.empty()) {
+      dbgs() << "MCResUse: Callees:\n";
+      for (const Function *Callee : FRI.Callees) {
+        MCSymbol *CalleeFnSym = TM.getSymbol(&Callee->getFunction());
+        dbgs() << "MCResUse:   " << CalleeFnSym->getName() << '\n';
+      }
+    }
+  });
+
   auto SetMaxReg = [&](MCSymbol *MaxSym, int32_t numRegs,
                        ResourceInfoKind RIK) {
     if (!FRI.HasIndirectCall) {
@@ -184,9 +205,12 @@ void MCResourceInfo::gatherResourceInfo(
       const MCExpr *MaxWithLocal = AMDGPUMCExpr::createMax(
           {MCConstantExpr::create(numRegs, OutContext), SymRef}, OutContext);
       LocalNumSym->setVariableValue(MaxWithLocal);
+      LLVM_DEBUG(dbgs() << "MCResUse:   " << LocalNumSym->getName()
+                        << ": Indirect callee within, using module maximum\n");
     }
   };
 
+  LLVM_DEBUG(dbgs() << "MCResUse: " << FnSym->getName() << '\n');
   SetMaxReg(MaxVGPRSym, FRI.NumVGPR, RIK_NumVGPR);
   SetMaxReg(MaxAGPRSym, FRI.NumAGPR, RIK_NumAGPR);
   SetMaxReg(MaxSGPRSym, FRI.NumExplicitSGPR, RIK_NumSGPR);
@@ -197,9 +221,13 @@ void MCResourceInfo::gatherResourceInfo(
     SmallVector<const MCExpr *, 8> ArgExprs;
     MCSymbol *Sym =
         getSymbol(FnSym->getName(), RIK_PrivateSegSize, OutContext, IsLocal);
-    if (FRI.CalleeSegmentSize)
+    if (FRI.CalleeSegmentSize) {
+      LLVM_DEBUG(dbgs() << "MCResUse:   " << Sym->getName() << ": Adding "
+                        << FRI.CalleeSegmentSize
+                        << " for indirect/recursive callees within\n");
       ArgExprs.push_back(
           MCConstantExpr::create(FRI.CalleeSegmentSize, OutContext));
+    }
 
     SmallPtrSet<const Function *, 8> Seen;
     Seen.insert(&MF.getFunction());
@@ -218,12 +246,17 @@ void MCResourceInfo::gatherResourceInfo(
         if (!CalleeValSym->isVariable() ||
             !CalleeValSym->getVariableValue(/*isUsed=*/false)
                  ->isSymbolUsedInExpression(Sym)) {
+          LLVM_DEBUG(dbgs() << "MCResUse:   " << Sym->getName() << ": Adding "
+                            << CalleeValSym->getName() << " as callee\n");
           ArgExprs.push_back(MCSymbolRefExpr::create(CalleeValSym, OutContext));
         }
       }
     }
     const MCExpr *localConstExpr =
         MCConstantExpr::create(FRI.PrivateSegmentSize, OutContext);
+    LLVM_DEBUG(dbgs() << "MCResUse:   " << Sym->getName() << ": Adding "
+                      << FRI.PrivateSegmentSize
+                      << " as function local usage\n");
     if (!ArgExprs.empty()) {
       const AMDGPUMCExpr *transitiveExpr =
           AMDGPUMCExpr::createMax(ArgExprs, OutContext);
@@ -235,6 +268,9 @@ void MCResourceInfo::gatherResourceInfo(
 
   auto SetToLocal = [&](int64_t LocalValue, ResourceInfoKind RIK) {
     MCSymbol *Sym = getSymbol(FnSym->getName(), RIK, OutContext, IsLocal);
+    LLVM_DEBUG(
+        dbgs() << "MCResUse:   " << Sym->getName() << ": Adding " << LocalValue
+               << ", no further propagation as indirect callee found within\n");
     Sym->setVariableValue(MCConstantExpr::create(LocalValue, OutContext));
   };
 

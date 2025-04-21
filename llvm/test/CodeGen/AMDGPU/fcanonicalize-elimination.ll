@@ -671,7 +671,7 @@ define amdgpu_kernel void @test_fold_canonicalize_select_value_f32(ptr addrspace
   %gep = getelementptr inbounds float, ptr addrspace(1) %arg, i32 %id
   %load0 = load volatile float, ptr addrspace(1) %gep, align 4
   %load1 = load volatile float, ptr addrspace(1) %gep, align 4
-  %load2 = load volatile i32, ptr addrspace(1) undef, align 4
+  %load2 = load volatile i32, ptr addrspace(1) poison, align 4
   %v0 = fadd float %load0, 15.0
   %v1 = fadd float %load1, 32.0
   %cond = icmp eq i32 %load2, 0
@@ -740,7 +740,7 @@ define <2 x half> @v_test_canonicalize_build_vector_v2f16(<2 x half> %vec) {
   %hi = extractelement <2 x half> %vec, i32 1
   %lo.op = fadd half %lo, 1.0
   %hi.op = fmul half %lo, 4.0
-  %ins0 = insertelement <2 x half> undef, half %lo.op, i32 0
+  %ins0 = insertelement <2 x half> poison, half %lo.op, i32 0
   %ins1 = insertelement <2 x half> %ins0, half %hi.op, i32 1
   %canonicalized = call <2 x half> @llvm.canonicalize.v2f16(<2 x half> %ins1)
   ret <2 x half> %canonicalized

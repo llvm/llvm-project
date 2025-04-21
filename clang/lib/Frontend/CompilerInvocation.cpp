@@ -2078,7 +2078,7 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
     A->render(Args, ASL);
     for (const auto &arg : ASL) {
       StringRef ArgStr(arg);
-      Opts.CmdArgs.insert(Opts.CmdArgs.end(), ArgStr.begin(), ArgStr.end());
+      llvm::append_range(Opts.CmdArgs, ArgStr);
       // using \00 to separate each commandline options.
       Opts.CmdArgs.push_back('\0');
     }
@@ -3105,6 +3105,14 @@ static bool ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
   if (Args.hasArg(OPT_fclangir) || Args.hasArg(OPT_emit_cir))
     Opts.UseClangIRPipeline = true;
 
+#if CLANG_ENABLE_CIR
+  if (Args.hasArg(OPT_clangir_disable_passes))
+    Opts.ClangIRDisablePasses = true;
+
+  if (Args.hasArg(OPT_clangir_disable_verifier))
+    Opts.ClangIRDisableCIRVerifier = true;
+#endif // CLANG_ENABLE_CIR
+
   if (Args.hasArg(OPT_aux_target_cpu))
     Opts.AuxTargetCPU = std::string(Args.getLastArgValue(OPT_aux_target_cpu));
   if (Args.hasArg(OPT_aux_target_feature))
@@ -4048,8 +4056,13 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
 
   if (const Arg *A = Args.getLastArg(OPT_fcf_protection_EQ)) {
     StringRef Name = A->getValue();
-    if (Name == "full" || Name == "branch") {
+    if (Name == "full") {
       Opts.CFProtectionBranch = 1;
+      Opts.CFProtectionReturn = 1;
+    } else if (Name == "branch") {
+      Opts.CFProtectionBranch = 1;
+    } else if (Name == "return") {
+      Opts.CFProtectionReturn = 1;
     }
   }
 
@@ -4178,8 +4191,7 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
   Opts.Blocks = Args.hasArg(OPT_fblocks) || (Opts.OpenCL
     && Opts.OpenCLVersion == 200);
 
-  bool HasConvergentOperations = Opts.OpenMPIsTargetDevice || Opts.OpenCL ||
-                                 Opts.CUDAIsDevice || Opts.SYCLIsDevice ||
+  bool HasConvergentOperations = Opts.isTargetDevice() || Opts.OpenCL ||
                                  Opts.HLSL || T.isAMDGPU() || T.isNVPTX();
   Opts.ConvergentFunctions =
       Args.hasFlag(OPT_fconvergent_functions, OPT_fno_convergent_functions,
@@ -4317,8 +4329,7 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
             TT.getArch() == llvm::Triple::systemz ||
             TT.getArch() == llvm::Triple::loongarch64 ||
             TT.getArch() == llvm::Triple::nvptx ||
-            TT.getArch() == llvm::Triple::nvptx64 ||
-            TT.getArch() == llvm::Triple::amdgcn ||
+            TT.getArch() == llvm::Triple::nvptx64 || TT.isAMDGCN() ||
             TT.getArch() == llvm::Triple::x86 ||
             TT.getArch() == llvm::Triple::x86_64))
         Diags.Report(diag::err_drv_invalid_omp_target) << A->getValue(i);
@@ -4663,6 +4674,51 @@ static bool isStrictlyPreprocessorAction(frontend::ActionKind Action) {
   llvm_unreachable("invalid frontend action");
 }
 
+static bool isCodeGenAction(frontend::ActionKind Action) {
+  switch (Action) {
+  case frontend::EmitAssembly:
+  case frontend::EmitBC:
+  case frontend::EmitCIR:
+  case frontend::EmitHTML:
+  case frontend::EmitLLVM:
+  case frontend::EmitLLVMOnly:
+  case frontend::EmitCodeGenOnly:
+  case frontend::EmitObj:
+  case frontend::GenerateModule:
+  case frontend::GenerateModuleInterface:
+  case frontend::GenerateReducedModuleInterface:
+  case frontend::GenerateHeaderUnit:
+  case frontend::GeneratePCH:
+  case frontend::GenerateInterfaceStubs:
+    return true;
+  case frontend::ASTDeclList:
+  case frontend::ASTDump:
+  case frontend::ASTPrint:
+  case frontend::ASTView:
+  case frontend::ExtractAPI:
+  case frontend::FixIt:
+  case frontend::ParseSyntaxOnly:
+  case frontend::ModuleFileInfo:
+  case frontend::VerifyPCH:
+  case frontend::PluginAction:
+  case frontend::RewriteObjC:
+  case frontend::RewriteTest:
+  case frontend::RunAnalysis:
+  case frontend::TemplightDump:
+  case frontend::DumpCompilerOptions:
+  case frontend::DumpRawTokens:
+  case frontend::DumpTokens:
+  case frontend::InitOnly:
+  case frontend::PrintPreamble:
+  case frontend::PrintPreprocessedInput:
+  case frontend::RewriteMacros:
+  case frontend::RunPreprocessorOnly:
+  case frontend::PrintDependencyDirectivesSourceMinimizerOutput:
+    return false;
+  }
+  llvm_unreachable("invalid frontend action");
+}
+
 static void GeneratePreprocessorArgs(const PreprocessorOptions &Opts,
                                      ArgumentConsumer Consumer,
                                      const LangOptions &LangOpts,
@@ -4769,17 +4825,6 @@ static bool ParsePreprocessorArgs(PreprocessorOptions &Opts, ArgList &Args,
       Opts.PrecompiledPreambleBytes.first = Bytes;
       Opts.PrecompiledPreambleBytes.second = (EndOfLine != 0);
     }
-  }
-
-  // Add the __CET__ macro if a CFProtection option is set.
-  if (const Arg *A = Args.getLastArg(OPT_fcf_protection_EQ)) {
-    StringRef Name = A->getValue();
-    if (Name == "branch")
-      Opts.addMacroDef("__CET__=1");
-    else if (Name == "return")
-      Opts.addMacroDef("__CET__=2");
-    else if (Name == "full")
-      Opts.addMacroDef("__CET__=3");
   }
 
   // Add macros from the command line.
@@ -4970,6 +5015,14 @@ bool CompilerInvocation::CreateFromArgsImpl(
   llvm::Triple T(Res.getTargetOpts().Triple);
   ParseHeaderSearchArgs(Res.getHeaderSearchOpts(), Args, Diags,
                         Res.getFileSystemOpts().WorkingDir);
+  if (Res.getFrontendOpts().GenReducedBMI ||
+      Res.getFrontendOpts().ProgramAction ==
+          frontend::GenerateReducedModuleInterface ||
+      Res.getFrontendOpts().ProgramAction ==
+          frontend::GenerateModuleInterface) {
+    Res.getHeaderSearchOpts().ModulesSkipDiagnosticOptions = true;
+    Res.getHeaderSearchOpts().ModulesSkipHeaderSearchPaths = true;
+  }
   ParseAPINotesArgs(Res.getAPINotesOpts(), Args, Diags);
 
   ParsePointerAuthArgs(LangOpts, Args, Diags);
@@ -4992,6 +5045,10 @@ bool CompilerInvocation::CreateFromArgsImpl(
     if (LangOpts.CUDAIsDevice)
       Res.getTargetOpts().HostTriple = Res.getFrontendOpts().AuxTriple;
   }
+
+  if (LangOpts.OpenACC && !Res.getFrontendOpts().UseClangIRPipeline &&
+      isCodeGenAction(Res.getFrontendOpts().ProgramAction))
+    Diags.Report(diag::warn_drv_openacc_without_cir);
 
   // Set the triple of the host for OpenMP device compile.
   if (LangOpts.OpenMPIsTargetDevice)

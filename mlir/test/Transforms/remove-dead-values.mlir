@@ -408,6 +408,22 @@ func.func @main(%arg3 : i32, %arg4 : i1) {
 
 // -----
 
+// The scf.if operation represents an if-then-else construct for conditionally
+// executing two regions of code. The 'the' region has exactly 1 block, and
+// the 'else' region may have 0 or 1 block. This case is to ensure 'else' region
+// with 0 block not crash.
+
+// CHECK-LABEL: func.func @clean_region_branch_op_with_empty_region
+func.func @clean_region_branch_op_with_empty_region(%arg0: i1, %arg1: memref<f32>) {
+  %cst = arith.constant 1.000000e+00 : f32
+  scf.if %arg0 {
+    memref.store %cst, %arg1[] : memref<f32>
+  }
+  return
+}
+
+// -----
+
 #map = affine_map<(d0)[s0, s1] -> (d0 * s0 + s1)>
 func.func @kernel(%arg0: memref<18xf32>) {
   %c1 = arith.constant 1 : index
@@ -429,6 +445,21 @@ func.func @kernel(%arg0: memref<18xf32>) {
 // CHECK-NEXT: gpu.terminator
 
 // -----
+
+
+// CHECK-LABEL: llvm_unreachable
+// CHECK-LABEL: @fn_with_llvm_unreachable
+// CHECK-LABEL: @main
+// CHECK: llvm.return
+module @llvm_unreachable {
+  func.func private @fn_with_llvm_unreachable(%arg0: tensor<4x4xf32>) -> tensor<4x4xi1> {
+    llvm.unreachable
+  }
+  func.func private @main(%arg0: tensor<4x4xf32>) {
+    %0 = call @fn_with_llvm_unreachable(%arg0) : (tensor<4x4xf32>) -> tensor<4x4xi1>
+    llvm.return
+  }
+}
 
 // CHECK: func.func private @no_block_func_declaration()
 func.func private @no_block_func_declaration() -> ()

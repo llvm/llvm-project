@@ -112,8 +112,8 @@ PPCTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
 
       // Check that all of the elements are integer constants or undefs.
       bool AllEltsOk = true;
-      for (unsigned i = 0; i != 16; ++i) {
-        Constant *Elt = Mask->getAggregateElement(i);
+      for (unsigned I = 0; I != 16; ++I) {
+        Constant *Elt = Mask->getAggregateElement(I);
         if (!Elt || !(isa<ConstantInt>(Elt) || isa<UndefValue>(Elt))) {
           AllEltsOk = false;
           break;
@@ -126,17 +126,17 @@ PPCTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
             IC.Builder.CreateBitCast(II.getArgOperand(0), Mask->getType());
         Value *Op1 =
             IC.Builder.CreateBitCast(II.getArgOperand(1), Mask->getType());
-        Value *Result = UndefValue::get(Op0->getType());
+        Value *Result = PoisonValue::get(Op0->getType());
 
         // Only extract each element once.
         Value *ExtractedElts[32];
         memset(ExtractedElts, 0, sizeof(ExtractedElts));
 
-        for (unsigned i = 0; i != 16; ++i) {
-          if (isa<UndefValue>(Mask->getAggregateElement(i)))
+        for (unsigned I = 0; I != 16; ++I) {
+          if (isa<UndefValue>(Mask->getAggregateElement(I)))
             continue;
           unsigned Idx =
-              cast<ConstantInt>(Mask->getAggregateElement(i))->getZExtValue();
+              cast<ConstantInt>(Mask->getAggregateElement(I))->getZExtValue();
           Idx &= 31; // Match the hardware behavior.
           if (DL.isLittleEndian())
             Idx = 31 - Idx;
@@ -150,7 +150,7 @@ PPCTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
 
           // Insert this value into the result vector.
           Result = IC.Builder.CreateInsertElement(Result, ExtractedElts[Idx],
-                                                  IC.Builder.getInt32(i));
+                                                  IC.Builder.getInt32(I));
         }
         return CastInst::Create(Instruction::BitCast, Result, II.getType());
       }
@@ -161,7 +161,7 @@ PPCTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
 }
 
 InstructionCost PPCTTIImpl::getIntImmCost(const APInt &Imm, Type *Ty,
-                                          TTI::TargetCostKind CostKind) {
+                                          TTI::TargetCostKind CostKind) const {
   if (DisablePPCConstHoist)
     return BaseT::getIntImmCost(Imm, Ty, CostKind);
 
@@ -457,16 +457,15 @@ unsigned PPCTTIImpl::getNumberOfRegisters(unsigned ClassID) const {
 unsigned PPCTTIImpl::getRegisterClassForType(bool Vector, Type *Ty) const {
   if (Vector)
     return ST->hasVSX() ? VSXRC : VRRC;
-  else if (Ty && (Ty->getScalarType()->isFloatTy() ||
-                  Ty->getScalarType()->isDoubleTy()))
+  if (Ty &&
+      (Ty->getScalarType()->isFloatTy() || Ty->getScalarType()->isDoubleTy()))
     return ST->hasVSX() ? VSXRC : FPRRC;
-  else if (Ty && (Ty->getScalarType()->isFP128Ty() ||
-                  Ty->getScalarType()->isPPC_FP128Ty()))
+  if (Ty && (Ty->getScalarType()->isFP128Ty() ||
+             Ty->getScalarType()->isPPC_FP128Ty()))
     return VRRC;
-  else if (Ty && Ty->getScalarType()->isHalfTy())
+  if (Ty && Ty->getScalarType()->isHalfTy())
     return VSXRC;
-  else
-    return GPRRC;
+  return GPRRC;
 }
 
 const char* PPCTTIImpl::getRegisterClassName(unsigned ClassID) const {
@@ -549,7 +548,8 @@ unsigned PPCTTIImpl::getMaxInterleaveFactor(ElementCount VF) {
 // thereby reducing the overall throughput of vector code wrt. scalar code.
 // An invalid instruction cost is returned if the type is an MMA vector type.
 InstructionCost PPCTTIImpl::vectorCostAdjustmentFactor(unsigned Opcode,
-                                                       Type *Ty1, Type *Ty2) {
+                                                       Type *Ty1,
+                                                       Type *Ty2) const {
   // If the vector type is of an MMA type (v256i1, v512i1), an invalid
   // instruction cost is returned. This is to signify to other cost computing
   // functions to return the maximum instruction cost in order to prevent any
@@ -582,8 +582,7 @@ InstructionCost PPCTTIImpl::vectorCostAdjustmentFactor(unsigned Opcode,
 InstructionCost PPCTTIImpl::getArithmeticInstrCost(
     unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
     TTI::OperandValueInfo Op1Info, TTI::OperandValueInfo Op2Info,
-    ArrayRef<const Value *> Args,
-    const Instruction *CxtI) {
+    ArrayRef<const Value *> Args, const Instruction *CxtI) const {
   assert(TLI->InstructionOpcodeToISD(Opcode) && "Invalid opcode");
 
   InstructionCost CostFactor = vectorCostAdjustmentFactor(Opcode, Ty, nullptr);
@@ -606,7 +605,7 @@ InstructionCost PPCTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, Type *Tp,
                                            TTI::TargetCostKind CostKind,
                                            int Index, Type *SubTp,
                                            ArrayRef<const Value *> Args,
-                                           const Instruction *CxtI) {
+                                           const Instruction *CxtI) const {
 
   InstructionCost CostFactor =
       vectorCostAdjustmentFactor(Instruction::ShuffleVector, Tp, nullptr);
@@ -626,7 +625,7 @@ InstructionCost PPCTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, Type *Tp,
 
 InstructionCost PPCTTIImpl::getCFInstrCost(unsigned Opcode,
                                            TTI::TargetCostKind CostKind,
-                                           const Instruction *I) {
+                                           const Instruction *I) const {
   if (CostKind != TTI::TCK_RecipThroughput)
     return Opcode == Instruction::PHI ? 0 : 1;
   // Branches are assumed to be predicted.
@@ -637,7 +636,7 @@ InstructionCost PPCTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
                                              Type *Src,
                                              TTI::CastContextHint CCH,
                                              TTI::TargetCostKind CostKind,
-                                             const Instruction *I) {
+                                             const Instruction *I) const {
   assert(TLI->InstructionOpcodeToISD(Opcode) && "Invalid opcode");
 
   InstructionCost CostFactor = vectorCostAdjustmentFactor(Opcode, Dst, Src);
@@ -656,7 +655,7 @@ InstructionCost PPCTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
 InstructionCost PPCTTIImpl::getCmpSelInstrCost(
     unsigned Opcode, Type *ValTy, Type *CondTy, CmpInst::Predicate VecPred,
     TTI::TargetCostKind CostKind, TTI::OperandValueInfo Op1Info,
-    TTI::OperandValueInfo Op2Info, const Instruction *I) {
+    TTI::OperandValueInfo Op2Info, const Instruction *I) const {
   InstructionCost CostFactor =
       vectorCostAdjustmentFactor(Opcode, ValTy, nullptr);
   if (!CostFactor.isValid())
@@ -673,7 +672,7 @@ InstructionCost PPCTTIImpl::getCmpSelInstrCost(
 InstructionCost PPCTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
                                                TTI::TargetCostKind CostKind,
                                                unsigned Index, Value *Op0,
-                                               Value *Op1) {
+                                               Value *Op1) const {
   assert(Val->isVectorTy() && "This must be a vector type");
 
   int ISD = TLI->InstructionOpcodeToISD(Opcode);
@@ -694,8 +693,8 @@ InstructionCost PPCTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
       return 0;
 
     return Cost;
-
-  } else if (Val->getScalarType()->isIntegerTy()) {
+  }
+  if (Val->getScalarType()->isIntegerTy()) {
     unsigned EltSize = Val->getScalarSizeInBits();
     // Computing on 1 bit values requires extra mask or compare operations.
     unsigned MaskCostForOneBitSize = (VecMaskCost && EltSize == 1) ? 1 : 0;
@@ -709,7 +708,7 @@ InstructionCost PPCTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
       if (ISD == ISD::INSERT_VECTOR_ELT) {
         if (ST->hasP10Vector())
           return CostFactor + MaskCostForIdx;
-        else if (Index != -1U)
+        if (Index != -1U)
           return 2 * CostFactor;
       } else if (ISD == ISD::EXTRACT_VECTOR_ELT) {
         // It's an extract.  Maybe we can do a cheap move-from VSR.
@@ -717,7 +716,7 @@ InstructionCost PPCTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
         // P9 has both mfvsrd and mfvsrld for 64 bit integer.
         if (EltSize == 64 && Index != -1U)
           return 1;
-        else if (EltSize == 32) {
+        if (EltSize == 32) {
           unsigned MfvsrwzIndex = ST->isLittleEndian() ? 2 : 1;
           if (Index == MfvsrwzIndex)
             return 1;
@@ -765,7 +764,7 @@ InstructionCost PPCTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
                                             unsigned AddressSpace,
                                             TTI::TargetCostKind CostKind,
                                             TTI::OperandValueInfo OpInfo,
-                                            const Instruction *I) {
+                                            const Instruction *I) const {
 
   InstructionCost CostFactor = vectorCostAdjustmentFactor(Opcode, Src, nullptr);
   if (!CostFactor.isValid())
@@ -847,9 +846,9 @@ InstructionCost PPCTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
   // stores, loads are expanded using the vector-load + permutation sequence,
   // which is much less expensive).
   if (Src->isVectorTy() && Opcode == Instruction::Store)
-    for (int i = 0, e = cast<FixedVectorType>(Src)->getNumElements(); i < e;
-         ++i)
-      Cost += getVectorInstrCost(Instruction::ExtractElement, Src, CostKind, i,
+    for (int I = 0, E = cast<FixedVectorType>(Src)->getNumElements(); I < E;
+         ++I)
+      Cost += getVectorInstrCost(Instruction::ExtractElement, Src, CostKind, I,
                                  nullptr, nullptr);
 
   return Cost;
@@ -891,8 +890,22 @@ InstructionCost PPCTTIImpl::getInterleavedMemoryOpCost(
 
 InstructionCost
 PPCTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
-                                  TTI::TargetCostKind CostKind) {
+                                  TTI::TargetCostKind CostKind) const {
   return BaseT::getIntrinsicInstrCost(ICA, CostKind);
+}
+
+bool PPCTTIImpl::areInlineCompatible(const Function *Caller,
+                                     const Function *Callee) const {
+  const TargetMachine &TM = getTLI()->getTargetMachine();
+
+  const FeatureBitset &CallerBits =
+      TM.getSubtargetImpl(*Caller)->getFeatureBits();
+  const FeatureBitset &CalleeBits =
+      TM.getSubtargetImpl(*Callee)->getFeatureBits();
+
+  // Check that targets features are exactly the same. We can revisit to see if
+  // we can improve this.
+  return CallerBits == CalleeBits;
 }
 
 bool PPCTTIImpl::areTypesABICompatible(const Function *Caller,
@@ -946,8 +959,7 @@ bool PPCTTIImpl::isLSRCostLess(const TargetTransformInfo::LSRCost &C1,
                     C1.NumBaseAdds, C1.ScaleCost, C1.ImmCost, C1.SetupCost) <
            std::tie(C2.Insns, C2.NumRegs, C2.AddRecCost, C2.NumIVMuls,
                     C2.NumBaseAdds, C2.ScaleCost, C2.ImmCost, C2.SetupCost);
-  else
-    return TargetTransformInfoImplBase::isLSRCostLess(C1, C2);
+  return TargetTransformInfoImplBase::isLSRCostLess(C1, C2);
 }
 
 bool PPCTTIImpl::isNumRegsMajorCostOfLSR() {

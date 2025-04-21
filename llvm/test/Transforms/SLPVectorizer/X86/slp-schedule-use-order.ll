@@ -9,9 +9,9 @@ define void @test() {
 ; CHECK-NEXT:    [[TMP0:%.*]] = phi <2 x i1> [ [[TMP6:%.*]], [[TMP1:%.*]] ], [ zeroinitializer, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[TMP1]]
 ; CHECK:       1:
-; CHECK-NEXT:    [[TMP2:%.*]] = zext <2 x i1> [[TMP0]] to <2 x i8>
-; CHECK-NEXT:    [[TMP3:%.*]] = and <2 x i8> zeroinitializer, [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = or <2 x i8> [[TMP3]], zeroinitializer
+; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i1> zeroinitializer, [[TMP0]]
+; CHECK-NEXT:    [[TMP3:%.*]] = or <2 x i1> [[TMP2]], zeroinitializer
+; CHECK-NEXT:    [[TMP4:%.*]] = zext <2 x i1> [[TMP3]] to <2 x i8>
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp ne <2 x i8> [[TMP4]], zeroinitializer
 ; CHECK-NEXT:    [[TMP6]] = and <2 x i1> [[TMP5]], zeroinitializer
 ; CHECK-NEXT:    br label [[FOR_BODY]]

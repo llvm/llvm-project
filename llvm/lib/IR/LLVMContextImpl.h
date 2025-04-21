@@ -119,8 +119,7 @@ struct AnonStructTypeKeyInfo {
   }
 
   static unsigned getHashValue(const KeyTy &Key) {
-    return hash_combine(
-        hash_combine_range(Key.ETypes.begin(), Key.ETypes.end()), Key.isPacked);
+    return hash_combine(hash_combine_range(Key.ETypes), Key.isPacked);
   }
 
   static unsigned getHashValue(const StructType *ST) {
@@ -171,9 +170,8 @@ struct FunctionTypeKeyInfo {
   }
 
   static unsigned getHashValue(const KeyTy &Key) {
-    return hash_combine(
-        Key.ReturnType,
-        hash_combine_range(Key.Params.begin(), Key.Params.end()), Key.isVarArg);
+    return hash_combine(Key.ReturnType, hash_combine_range(Key.Params),
+                        Key.isVarArg);
   }
 
   static unsigned getHashValue(const FunctionType *FT) {
@@ -219,10 +217,8 @@ struct TargetExtTypeKeyInfo {
   }
 
   static unsigned getHashValue(const KeyTy &Key) {
-    return hash_combine(
-        Key.Name,
-        hash_combine_range(Key.TypeParams.begin(), Key.TypeParams.end()),
-        hash_combine_range(Key.IntParams.begin(), Key.IntParams.end()));
+    return hash_combine(Key.Name, hash_combine_range(Key.TypeParams),
+                        hash_combine_range(Key.IntParams));
   }
 
   static unsigned getHashValue(const TargetExtType *FT) {
@@ -494,6 +490,43 @@ template <> struct MDNodeKeyImpl<DIBasicType> {
   }
 };
 
+template <> struct MDNodeKeyImpl<DIFixedPointType> {
+  unsigned Tag;
+  MDString *Name;
+  uint64_t SizeInBits;
+  uint32_t AlignInBits;
+  unsigned Encoding;
+  unsigned Flags;
+  unsigned Kind;
+  int Factor;
+  APInt Numerator;
+  APInt Denominator;
+
+  MDNodeKeyImpl(unsigned Tag, MDString *Name, uint64_t SizeInBits,
+                uint32_t AlignInBits, unsigned Encoding, unsigned Flags,
+                unsigned Kind, int Factor, APInt Numerator, APInt Denominator)
+      : Tag(Tag), Name(Name), SizeInBits(SizeInBits), AlignInBits(AlignInBits),
+        Encoding(Encoding), Flags(Flags), Kind(Kind), Factor(Factor),
+        Numerator(Numerator), Denominator(Denominator) {}
+  MDNodeKeyImpl(const DIFixedPointType *N)
+      : Tag(N->getTag()), Name(N->getRawName()), SizeInBits(N->getSizeInBits()),
+        AlignInBits(N->getAlignInBits()), Encoding(N->getEncoding()),
+        Flags(N->getFlags()), Kind(N->getKind()), Factor(N->getFactorRaw()),
+        Numerator(N->getNumeratorRaw()), Denominator(N->getDenominatorRaw()) {}
+
+  bool isKeyOf(const DIFixedPointType *RHS) const {
+    return Name == RHS->getRawName() && SizeInBits == RHS->getSizeInBits() &&
+           AlignInBits == RHS->getAlignInBits() && Kind == RHS->getKind() &&
+           (RHS->isRational() ? (Numerator == RHS->getNumerator() &&
+                                 Denominator == RHS->getDenominator())
+                              : Factor == RHS->getFactor());
+  }
+
+  unsigned getHashValue() const {
+    return hash_combine(Name, Flags, Kind, Factor, Numerator, Denominator);
+  }
+};
+
 template <> struct MDNodeKeyImpl<DIStringType> {
   unsigned Tag;
   MDString *Name;
@@ -602,6 +635,84 @@ template <> struct MDNodeKeyImpl<DIDerivedType> {
   }
 };
 
+template <> struct MDNodeKeyImpl<DISubrangeType> {
+  MDString *Name;
+  Metadata *File;
+  unsigned Line;
+  Metadata *Scope;
+  uint64_t SizeInBits;
+  uint32_t AlignInBits;
+  unsigned Flags;
+  Metadata *BaseType;
+  Metadata *LowerBound;
+  Metadata *UpperBound;
+  Metadata *Stride;
+  Metadata *Bias;
+
+  MDNodeKeyImpl(MDString *Name, Metadata *File, unsigned Line, Metadata *Scope,
+                uint64_t SizeInBits, uint32_t AlignInBits, unsigned Flags,
+                Metadata *BaseType, Metadata *LowerBound, Metadata *UpperBound,
+                Metadata *Stride, Metadata *Bias)
+      : Name(Name), File(File), Line(Line), Scope(Scope),
+        SizeInBits(SizeInBits), AlignInBits(AlignInBits), Flags(Flags),
+        BaseType(BaseType), LowerBound(LowerBound), UpperBound(UpperBound),
+        Stride(Stride), Bias(Bias) {}
+  MDNodeKeyImpl(const DISubrangeType *N)
+      : Name(N->getRawName()), File(N->getRawFile()), Line(N->getLine()),
+        Scope(N->getRawScope()), SizeInBits(N->getSizeInBits()),
+        AlignInBits(N->getAlignInBits()), Flags(N->getFlags()),
+        BaseType(N->getRawBaseType()), LowerBound(N->getRawLowerBound()),
+        UpperBound(N->getRawUpperBound()), Stride(N->getRawStride()),
+        Bias(N->getRawBias()) {}
+
+  bool isKeyOf(const DISubrangeType *RHS) const {
+    auto BoundsEqual = [=](Metadata *Node1, Metadata *Node2) -> bool {
+      if (Node1 == Node2)
+        return true;
+
+      ConstantAsMetadata *MD1 = dyn_cast_or_null<ConstantAsMetadata>(Node1);
+      ConstantAsMetadata *MD2 = dyn_cast_or_null<ConstantAsMetadata>(Node2);
+      if (MD1 && MD2) {
+        ConstantInt *CV1 = cast<ConstantInt>(MD1->getValue());
+        ConstantInt *CV2 = cast<ConstantInt>(MD2->getValue());
+        if (CV1->getSExtValue() == CV2->getSExtValue())
+          return true;
+      }
+      return false;
+    };
+
+    return Name == RHS->getRawName() && File == RHS->getRawFile() &&
+           Line == RHS->getLine() && Scope == RHS->getRawScope() &&
+           SizeInBits == RHS->getSizeInBits() &&
+           AlignInBits == RHS->getAlignInBits() && Flags == RHS->getFlags() &&
+           BaseType == RHS->getRawBaseType() &&
+           BoundsEqual(LowerBound, RHS->getRawLowerBound()) &&
+           BoundsEqual(UpperBound, RHS->getRawUpperBound()) &&
+           BoundsEqual(Stride, RHS->getRawStride()) &&
+           BoundsEqual(Bias, RHS->getRawBias());
+  }
+
+  unsigned getHashValue() const {
+    unsigned val = 0;
+    auto HashBound = [&](Metadata *Node) -> void {
+      ConstantAsMetadata *MD = dyn_cast_or_null<ConstantAsMetadata>(Node);
+      if (MD) {
+        ConstantInt *CV = cast<ConstantInt>(MD->getValue());
+        val = hash_combine(val, CV->getSExtValue());
+      } else {
+        val = hash_combine(val, Node);
+      }
+    };
+
+    HashBound(LowerBound);
+    HashBound(UpperBound);
+    HashBound(Stride);
+    HashBound(Bias);
+
+    return hash_combine(val, Name, File, Line, Scope, BaseType, Flags);
+  }
+};
+
 template <> struct MDNodeSubsetEqualImpl<DIDerivedType> {
   using KeyTy = MDNodeKeyImpl<DIDerivedType>;
 
@@ -657,6 +768,7 @@ template <> struct MDNodeKeyImpl<DICompositeType> {
   Metadata *Annotations;
   Metadata *Specification;
   uint32_t NumExtraInhabitants;
+  Metadata *BitStride;
 
   MDNodeKeyImpl(unsigned Tag, MDString *Name, Metadata *File, unsigned Line,
                 Metadata *Scope, Metadata *BaseType, uint64_t SizeInBits,
@@ -666,7 +778,8 @@ template <> struct MDNodeKeyImpl<DICompositeType> {
                 MDString *Identifier, Metadata *Discriminator,
                 Metadata *DataLocation, Metadata *Associated,
                 Metadata *Allocated, Metadata *Rank, Metadata *Annotations,
-                Metadata *Specification, uint32_t NumExtraInhabitants)
+                Metadata *Specification, uint32_t NumExtraInhabitants,
+                Metadata *BitStride)
       : Tag(Tag), Name(Name), File(File), Line(Line), Scope(Scope),
         BaseType(BaseType), SizeInBits(SizeInBits), OffsetInBits(OffsetInBits),
         AlignInBits(AlignInBits), Flags(Flags), Elements(Elements),
@@ -675,7 +788,7 @@ template <> struct MDNodeKeyImpl<DICompositeType> {
         Discriminator(Discriminator), DataLocation(DataLocation),
         Associated(Associated), Allocated(Allocated), Rank(Rank),
         Annotations(Annotations), Specification(Specification),
-        NumExtraInhabitants(NumExtraInhabitants) {}
+        NumExtraInhabitants(NumExtraInhabitants), BitStride(BitStride) {}
   MDNodeKeyImpl(const DICompositeType *N)
       : Tag(N->getTag()), Name(N->getRawName()), File(N->getRawFile()),
         Line(N->getLine()), Scope(N->getRawScope()),
@@ -690,7 +803,8 @@ template <> struct MDNodeKeyImpl<DICompositeType> {
         Associated(N->getRawAssociated()), Allocated(N->getRawAllocated()),
         Rank(N->getRawRank()), Annotations(N->getRawAnnotations()),
         Specification(N->getSpecification()),
-        NumExtraInhabitants(N->getNumExtraInhabitants()) {}
+        NumExtraInhabitants(N->getNumExtraInhabitants()),
+        BitStride(N->getRawBitStride()) {}
 
   bool isKeyOf(const DICompositeType *RHS) const {
     return Tag == RHS->getTag() && Name == RHS->getRawName() &&
@@ -710,7 +824,8 @@ template <> struct MDNodeKeyImpl<DICompositeType> {
            Allocated == RHS->getRawAllocated() && Rank == RHS->getRawRank() &&
            Annotations == RHS->getRawAnnotations() &&
            Specification == RHS->getSpecification() &&
-           NumExtraInhabitants == RHS->getNumExtraInhabitants();
+           NumExtraInhabitants == RHS->getNumExtraInhabitants() &&
+           BitStride == RHS->getRawBitStride();
   }
 
   unsigned getHashValue() const {
@@ -1205,9 +1320,7 @@ template <> struct MDNodeKeyImpl<DIExpression> {
     return Elements == RHS->getElements();
   }
 
-  unsigned getHashValue() const {
-    return hash_combine_range(Elements.begin(), Elements.end());
-  }
+  unsigned getHashValue() const { return hash_combine_range(Elements); }
 };
 
 template <> struct MDNodeKeyImpl<DIGlobalVariableExpression> {
@@ -1344,9 +1457,7 @@ struct DIArgListKeyInfo {
 
   bool isKeyOf(const DIArgList *RHS) const { return Args == RHS->getArgs(); }
 
-  unsigned getHashValue() const {
-    return hash_combine_range(Args.begin(), Args.end());
-  }
+  unsigned getHashValue() const { return hash_combine_range(Args); }
 };
 
 /// DenseMapInfo for DIArgList.

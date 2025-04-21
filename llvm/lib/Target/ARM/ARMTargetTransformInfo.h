@@ -135,7 +135,7 @@ public:
 
   using BaseT::getIntImmCost;
   InstructionCost getIntImmCost(const APInt &Imm, Type *Ty,
-                                TTI::TargetCostKind CostKind);
+                                TTI::TargetCostKind CostKind) const;
 
   InstructionCost getIntImmCostInst(unsigned Opcode, unsigned Idx,
                                     const APInt &Imm, Type *Ty,
@@ -184,10 +184,12 @@ public:
 
   bool isProfitableLSRChainElement(Instruction *I);
 
-  bool isLegalMaskedLoad(Type *DataTy, Align Alignment);
+  bool isLegalMaskedLoad(Type *DataTy, Align Alignment,
+                         unsigned AddressSpace) const;
 
-  bool isLegalMaskedStore(Type *DataTy, Align Alignment) {
-    return isLegalMaskedLoad(DataTy, Alignment);
+  bool isLegalMaskedStore(Type *DataTy, Align Alignment,
+                          unsigned AddressSpace) const {
+    return isLegalMaskedLoad(DataTy, Alignment, AddressSpace);
   }
 
   bool forceScalarizeMaskedGather(VectorType *VTy, Align Alignment) {
@@ -208,7 +210,7 @@ public:
     return isLegalMaskedGather(Ty, Alignment);
   }
 
-  InstructionCost getMemcpyCost(const Instruction *I);
+  InstructionCost getMemcpyCost(const Instruction *I) const;
 
   uint64_t getMaxMemIntrinsicInlineSizeThreshold() const {
     return ST->getMaxInlineSizeThreshold();
@@ -221,35 +223,34 @@ public:
                                  TTI::TargetCostKind CostKind, int Index,
                                  VectorType *SubTp,
                                  ArrayRef<const Value *> Args = {},
-                                 const Instruction *CxtI = nullptr);
+                                 const Instruction *CxtI = nullptr) const;
 
-  bool preferInLoopReduction(unsigned Opcode, Type *Ty,
-                             TTI::ReductionFlags Flags) const;
+  bool preferInLoopReduction(RecurKind Kind, Type *Ty) const;
 
-  bool preferPredicatedReductionSelect(unsigned Opcode, Type *Ty,
-                                       TTI::ReductionFlags Flags) const;
+  bool preferPredicatedReductionSelect(unsigned Opcode, Type *Ty) const;
 
   bool shouldExpandReduction(const IntrinsicInst *II) const { return false; }
 
   InstructionCost getCFInstrCost(unsigned Opcode, TTI::TargetCostKind CostKind,
-                                 const Instruction *I = nullptr);
+                                 const Instruction *I = nullptr) const;
 
   InstructionCost getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
                                    TTI::CastContextHint CCH,
                                    TTI::TargetCostKind CostKind,
-                                   const Instruction *I = nullptr);
+                                   const Instruction *I = nullptr) const;
 
   InstructionCost getCmpSelInstrCost(
       unsigned Opcode, Type *ValTy, Type *CondTy, CmpInst::Predicate VecPred,
       TTI::TargetCostKind CostKind,
       TTI::OperandValueInfo Op1Info = {TTI::OK_AnyValue, TTI::OP_None},
       TTI::OperandValueInfo Op2Info = {TTI::OK_AnyValue, TTI::OP_None},
-      const Instruction *I = nullptr);
+      const Instruction *I = nullptr) const;
 
   using BaseT::getVectorInstrCost;
   InstructionCost getVectorInstrCost(unsigned Opcode, Type *Val,
                                      TTI::TargetCostKind CostKind,
-                                     unsigned Index, Value *Op0, Value *Op1);
+                                     unsigned Index, Value *Op0,
+                                     Value *Op1) const;
 
   InstructionCost getAddressComputationCost(Type *Val, ScalarEvolution *SE,
                                             const SCEV *Ptr);
@@ -258,17 +259,18 @@ public:
       unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
       TTI::OperandValueInfo Op1Info = {TTI::OK_AnyValue, TTI::OP_None},
       TTI::OperandValueInfo Op2Info = {TTI::OK_AnyValue, TTI::OP_None},
-      ArrayRef<const Value *> Args = {}, const Instruction *CxtI = nullptr);
+      ArrayRef<const Value *> Args = {},
+      const Instruction *CxtI = nullptr) const;
 
-  InstructionCost
-  getMemoryOpCost(unsigned Opcode, Type *Src, MaybeAlign Alignment,
-                  unsigned AddressSpace, TTI::TargetCostKind CostKind,
-                  TTI::OperandValueInfo OpInfo = {TTI::OK_AnyValue, TTI::OP_None},
-                  const Instruction *I = nullptr);
+  InstructionCost getMemoryOpCost(
+      unsigned Opcode, Type *Src, MaybeAlign Alignment, unsigned AddressSpace,
+      TTI::TargetCostKind CostKind,
+      TTI::OperandValueInfo OpInfo = {TTI::OK_AnyValue, TTI::OP_None},
+      const Instruction *I = nullptr) const;
 
   InstructionCost getMaskedMemoryOpCost(unsigned Opcode, Type *Src,
                                         Align Alignment, unsigned AddressSpace,
-                                        TTI::TargetCostKind CostKind);
+                                        TTI::TargetCostKind CostKind) const;
 
   InstructionCost getInterleavedMemoryOpCost(
       unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
@@ -279,14 +281,15 @@ public:
                                          const Value *Ptr, bool VariableMask,
                                          Align Alignment,
                                          TTI::TargetCostKind CostKind,
-                                         const Instruction *I = nullptr);
+                                         const Instruction *I = nullptr) const;
 
-  InstructionCost getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
-                                             std::optional<FastMathFlags> FMF,
-                                             TTI::TargetCostKind CostKind);
+  InstructionCost
+  getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
+                             std::optional<FastMathFlags> FMF,
+                             TTI::TargetCostKind CostKind) const;
   InstructionCost getExtendedReductionCost(unsigned Opcode, bool IsUnsigned,
                                            Type *ResTy, VectorType *ValTy,
-                                           FastMathFlags FMF,
+                                           std::optional<FastMathFlags> FMF,
                                            TTI::TargetCostKind CostKind);
   InstructionCost getMulAccReductionCost(bool IsUnsigned, Type *ResTy,
                                          VectorType *ValTy,
@@ -294,21 +297,21 @@ public:
 
   InstructionCost getMinMaxReductionCost(Intrinsic::ID IID, VectorType *Ty,
                                          FastMathFlags FMF,
-                                         TTI::TargetCostKind CostKind);
+                                         TTI::TargetCostKind CostKind) const;
 
   InstructionCost getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
-                                        TTI::TargetCostKind CostKind);
+                                        TTI::TargetCostKind CostKind) const;
 
   /// getScalingFactorCost - Return the cost of the scaling used in
   /// addressing mode represented by AM.
   /// If the AM is supported, the return value must be >= 0.
-  /// If the AM is not supported, the return value must be negative.
+  /// If the AM is not supported, the return value is an invalid cost.
   InstructionCost getScalingFactorCost(Type *Ty, GlobalValue *BaseGV,
                                        StackOffset BaseOffset, bool HasBaseReg,
                                        int64_t Scale, unsigned AddrSpace) const;
 
   bool maybeLoweredToCall(Instruction &I);
-  bool isLoweredToCall(const Function *F);
+  bool isLoweredToCall(const Function *F) const;
   bool isHardwareLoopProfitable(Loop *L, ScalarEvolution &SE,
                                 AssumptionCache &AC,
                                 TargetLibraryInfo *LibInfo,

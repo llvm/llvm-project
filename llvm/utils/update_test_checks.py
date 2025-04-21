@@ -153,7 +153,9 @@ def main():
             # now, we just ignore all but the last.
             prefix_list.append((check_prefixes, tool_cmd_args, preprocess_cmd))
 
-        ginfo = common.make_ir_generalizer(ti.args.version)
+        ginfo = common.make_ir_generalizer(
+            ti.args.version, ti.args.check_globals == "none"
+        )
         global_vars_seen_dict = {}
         builder = common.FunctionTestBuilder(
             run_list=prefix_list,
