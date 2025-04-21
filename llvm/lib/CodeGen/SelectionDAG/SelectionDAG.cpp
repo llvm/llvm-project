@@ -4406,14 +4406,19 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
   case ISD::ATOMIC_LOAD_UMIN:
   case ISD::ATOMIC_LOAD_UMAX:
   case ISD::ATOMIC_LOAD: {
-    unsigned MemBits =
-        cast<AtomicSDNode>(Op)->getMemoryVT().getScalarSizeInBits();
     // If we are looking at the loaded value.
     if (Op.getResNo() == 0) {
-      if (TLI->getExtendForAtomicOps() == ISD::ZERO_EXTEND)
-        Known.Zero.setBitsFrom(MemBits);
-      else if (Op->getOpcode() == ISD::ATOMIC_LOAD &&
-               cast<AtomicSDNode>(Op)->getExtensionType() == ISD::ZEXTLOAD)
+      auto *AT = cast<AtomicSDNode>(Op);
+      unsigned MemBits = AT->getMemoryVT().getScalarSizeInBits();
+
+      // For atomic_load, prefer to use the extension type.
+      if (Op->getOpcode() == ISD::ATOMIC_LOAD) {
+        if (AT->getExtensionType() == ISD::ZEXTLOAD)
+          Known.Zero.setBitsFrom(MemBits);
+        else if (AT->getExtensionType() != ISD::SEXTLOAD &&
+                 TLI->getExtendForAtomicOps() == ISD::ZERO_EXTEND)
+          Known.Zero.setBitsFrom(MemBits);
+      } else if (TLI->getExtendForAtomicOps() == ISD::ZERO_EXTEND)
         Known.Zero.setBitsFrom(MemBits);
     }
     break;
@@ -5252,22 +5257,29 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
   case ISD::ATOMIC_LOAD_UMIN:
   case ISD::ATOMIC_LOAD_UMAX:
   case ISD::ATOMIC_LOAD: {
-    Tmp = cast<AtomicSDNode>(Op)->getMemoryVT().getScalarSizeInBits();
+    auto *AT = cast<AtomicSDNode>(Op);
     // If we are looking at the loaded value.
     if (Op.getResNo() == 0) {
+      Tmp = AT->getMemoryVT().getScalarSizeInBits();
       if (Tmp == VTBits)
         return 1; // early-out
+
+      // For atomic_load, prefer to use the extension type.
+      if (Op->getOpcode() == ISD::ATOMIC_LOAD) {
+        switch (AT->getExtensionType()) {
+        default:
+          break;
+        case ISD::SEXTLOAD:
+          return VTBits - Tmp + 1;
+        case ISD::ZEXTLOAD:
+          return VTBits - Tmp;
+        }
+      }
+
       if (TLI->getExtendForAtomicOps() == ISD::SIGN_EXTEND)
         return VTBits - Tmp + 1;
       if (TLI->getExtendForAtomicOps() == ISD::ZERO_EXTEND)
         return VTBits - Tmp;
-      if (Op->getOpcode() == ISD::ATOMIC_LOAD) {
-        ISD::LoadExtType ETy = cast<AtomicSDNode>(Op)->getExtensionType();
-        if (ETy == ISD::SEXTLOAD)
-          return VTBits - Tmp + 1;
-        if (ETy == ISD::ZEXTLOAD)
-          return VTBits - Tmp;
-      }
     }
     break;
   }
