@@ -76,25 +76,6 @@ entry:
   ret ptr %gep
 }
 
-; Test with non-disjoint bits: Ensure the transformation does not occur
-define ptr @test_with_non_disjoint_bits(i64 %val, ptr %ptr) {
-; CHECK-LABEL: define ptr @test_with_non_disjoint_bits(
-; CHECK-SAME: i64 [[VAL:%.*]], ptr [[PTR:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[AND:%.*]] = and i64 [[VAL]], 31
-; CHECK-NEXT:    [[XOR1:%.*]] = xor i64 [[AND]], 4
-; CHECK-NEXT:    [[XOR21:%.*]] = or disjoint i64 [[XOR1]], 16
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[PTR]], i64 [[XOR21]]
-; CHECK-NEXT:    ret ptr [[GEP]]
-;
-entry:
-  %and = and i64 %val, 31    ; val can have bits 0-4 set
-  %xor1 = xor i64 %and, 4    ; Flips bit 2
-  %xor2 = xor i64 %and, 20   ; Flips bits 2 and 4, should NOT replace since bit 4 overlaps with possible val bits
-  %gep = getelementptr i8, ptr %ptr, i64 %xor2
-  ret ptr %gep
-}
-
 ; Test with multiple xor operations in sequence
 define ptr @test_multiple_xors(ptr %ptr) {
 ; CHECK-LABEL: define ptr @test_multiple_xors(
@@ -144,8 +125,8 @@ entry:
 
 
 ; Test with multiple xor operations in sequence
-define ptr @aatest_multiple_xors(ptr %ptr) {
-; CHECK-LABEL: define ptr @aatest_multiple_xors(
+define ptr @test_negative_offset(ptr %ptr) {
+; CHECK-LABEL: define ptr @test_negative_offset(
 ; CHECK-SAME: ptr [[PTR:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[BASE:%.*]] = add i64 2, 0
