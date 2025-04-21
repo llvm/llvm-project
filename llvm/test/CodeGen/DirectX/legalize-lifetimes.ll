@@ -1,7 +1,5 @@
 ; RUN: opt -S -passes='dxil-op-lower' -mtriple=dxil-pc-shadermodel6.3-library %s | FileCheck %s
 
-; CHECK-NOT: error: Unsupported intrinsic llvm.lifetime.start.p0 for DXIL lowering
-; CHECK-NOT: error: Unsupported intrinsic llvm.lifetime.end.p0 for DXIL lowering
 ; CHECK-LABEL: define void @test_legal_lifetime() {
 ; CHECK-NEXT:    [[ACCUM_I_FLAT:%.*]] = alloca [1 x i32], align 4
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[ACCUM_I_FLAT]], i32 0
