@@ -1266,9 +1266,8 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
     DiagnosticInfoOptimizationFailure Diag(F, F.getSubprogram());
     Diag
         << "failed to meet occupancy target given by 'amdgpu-waves-per-eu' in '"
-        << F.getName(),
-        << "': desired occupancy was " << std::to_string(MinWEU)
-        << ", final occupancy is " << Occupancy;
+        << F.getName() << "': desired occupancy was " << std::to_string(MinWEU)
+        << ", final occupancy is " << std::to_string(Occupancy);
     F.getContext().diagnose(Diag);
   }
 
