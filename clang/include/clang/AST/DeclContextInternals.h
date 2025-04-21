@@ -244,8 +244,6 @@ public:
 
     // FIXME: Move the assert before the single decl case when we fix the
     // duplication coming from the ASTReader reading builtin types.
-    if(auto* T = dyn_cast<TypeDecl>(D);T!=nullptr&&T->getTypeForDecl()->isBuiltinType())
-    return;
     assert(!llvm::is_contained(getLookupResult(), D) && "Already exists!");
     // Determine if this declaration is actually a redeclaration.
     for (DeclListNode *N = getAsList(); /*return in loop*/;
