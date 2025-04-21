@@ -9370,8 +9370,7 @@ static void addScalarResumePhis(VPRecipeBuilder &Builder, VPlan &Plan,
   }
 }
 
-// Collect VPIRInstructions for phis in the exit blocks that are modeled
-// in VPlan and add the exiting VPValue as operand.
+// Collect VPIRInstructions for phis in the exit block from the latch only.
 static SetVector<VPIRInstruction *>
 collectUsersInExitBlocks(Loop *OrigLoop, VPRecipeBuilder &Builder,
                          VPlan &Plan) {
@@ -9392,6 +9391,7 @@ collectUsersInExitBlocks(Loop *OrigLoop, VPRecipeBuilder &Builder,
         continue;
       }
 
+      assert(ExitIRI->getNumOperands() == 1 && "must have a single operand");
       VPValue *V = ExitIRI->getOperand(0);
       if (V->isLiveIn())
         continue;
