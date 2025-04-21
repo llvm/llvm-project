@@ -1,0 +1,607 @@
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1030 -mattr=+wavefrontsize32 -verify-machineinstrs %s  -amdgpu-remat-enable-hot-block-remat-aggressive  -run-pass=amdgpu-hot-block-remat -o - | FileCheck %s
+
+# This test simply checks that GCNDownwardRPTracker does not crash when PHIs are
+# present.
+
+# CHECK: S_ENDPGM
+
+--- |
+  source_filename = ".\main.ll"
+  define amdgpu_ps void @main() #1 {
+    ret void
+  }
+  attributes #1 = { "target-cpu"="gfx1010" }
+  !llvm.ident = !{!0}
+  !0 = !{!"clang version 3.7 (tags/RELEASE_370/final)"}
+...
+---
+name:            main
+tracksRegLiveness: true
+liveins:
+  - { reg: '$sgpr0' }
+  - { reg: '$sgpr1' }
+  - { reg: '$sgpr2' }
+  - { reg: '$sgpr3' }
+  - { reg: '$sgpr4' }
+  - { reg: '$sgpr5' }
+  - { reg: '$sgpr6' }
+  - { reg: '$sgpr7' }
+  - { reg: '$sgpr8' }
+  - { reg: '$sgpr8' }
+  - { reg: '$vgpr0' }
+  - { reg: '$vgpr1' }
+body:             |
+  bb.0:
+    successors: %bb.1, %bb.2
+    liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $vgpr0, $vgpr1
+
+    %0:sgpr_64 = REG_SEQUENCE $sgpr0, %subreg.sub0, $sgpr1, %subreg.sub1
+    ; undef %0.sub0:sgpr_64 = COPY $sgpr0
+    ; undef %0.sub1:sgpr_64 = COPY $sgpr1
+
+    %1:sgpr_128 = REG_SEQUENCE $sgpr4, %subreg.sub0, $sgpr5, %subreg.sub1, $sgpr6, %subreg.sub2, $sgpr7, %subreg.sub3
+    ; undef %1.sub0:sgpr_128 = COPY $sgpr4
+    ; undef %1.sub1:sgpr_128 = COPY $sgpr5
+    ; undef %1.sub2:sgpr_128 = COPY $sgpr6
+    ; undef %1.sub3:sgpr_128 = COPY $sgpr7
+
+
+    %2000:vgpr_32 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    %2001:vgpr_32 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    %2002:vgpr_32 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    %2003:vgpr_32 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    %2004:vgpr_32 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    %2005:vgpr_32 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    %2006:vgpr_32 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    %2007:vgpr_32 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    %2008:vgpr_32 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    %2009:vgpr_32 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    %2010:vgpr_32 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    %2011:vgpr_32 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    %2012:vgpr_32 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    %2013:vgpr_32 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    %2014:vgpr_32 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    %2015:vgpr_32 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    %2016:vgpr_32 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    %2017:vgpr_32 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    %2018:vgpr_32 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    %2019:vgpr_32 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    %2020:vgpr_32 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    %2021:vgpr_32 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    %2022:vgpr_32 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    %2023:vgpr_32 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    %2024:vgpr_32 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    %2025:vgpr_32 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    %2026:vgpr_32 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    %2027:vgpr_32 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    %2028:vgpr_32 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    %2029:vgpr_32 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    %2030:vgpr_32 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    %2031:vgpr_32 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    %2032:vgpr_32 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    %2033:vgpr_32 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    %2034:vgpr_32 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    %2035:vgpr_32 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    %2036:vgpr_32 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    %2037:vgpr_32 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    %2038:vgpr_32 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    %2039:vgpr_32 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    %2040:vgpr_32 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    %2041:vgpr_32 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    %2042:vgpr_32 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    %2043:vgpr_32 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    %2044:vgpr_32 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    %2045:vgpr_32 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    %2046:vgpr_32 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    %2047:vgpr_32 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    %2048:vgpr_32 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    %2049:vgpr_32 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    %2050:vgpr_32 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    %2051:vgpr_32 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    %2052:vgpr_32 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    %2053:vgpr_32 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    %2054:vgpr_32 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    %2055:vgpr_32 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    %2056:vgpr_32 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    %2057:vgpr_32 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    %2058:vgpr_32 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    %2059:vgpr_32 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    %2060:vgpr_32 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    %2061:vgpr_32 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    %2062:vgpr_32 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    %2063:vgpr_32 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    %2064:vgpr_32 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    %2065:vgpr_32 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    %2066:vgpr_32 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    %2067:vgpr_32 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    %2068:vgpr_32 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    %2069:vgpr_32 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    %2070:vgpr_32 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    %2071:vgpr_32 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    %2072:vgpr_32 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    %2073:vgpr_32 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    %2074:vgpr_32 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    %2075:vgpr_32 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    %2076:vgpr_32 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    %2077:vgpr_32 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    %2078:vgpr_32 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    %2079:vgpr_32 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    %2080:vgpr_32 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    %2081:vgpr_32 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    %2082:vgpr_32 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    %2083:vgpr_32 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    %2084:vgpr_32 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    %2085:vgpr_32 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    %2086:vgpr_32 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    %2087:vgpr_32 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    %2088:vgpr_32 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    %2089:vgpr_32 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    %2090:vgpr_32 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    %2091:vgpr_32 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    %2092:vgpr_32 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    %2093:vgpr_32 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    %2094:vgpr_32 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    %2095:vgpr_32 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    %2096:vgpr_32 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    %2097:vgpr_32 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    %2098:vgpr_32 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    %2099:vgpr_32 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    %3000:sgpr_32 = S_MOV_B32 0
+    %3001:sgpr_32 = S_MOV_B32 1
+    %3002:sgpr_32 = S_MOV_B32 2
+    %3003:sgpr_32 = S_MOV_B32 3
+    %3004:sgpr_32 = S_MOV_B32 4
+    %3005:sgpr_32 = S_MOV_B32 5
+    %3006:sgpr_32 = S_MOV_B32 6
+    %3007:sgpr_32 = S_MOV_B32 7
+    %3008:sgpr_32 = S_MOV_B32 8
+    %3009:sgpr_32 = S_MOV_B32 9
+    %3010:sgpr_32 = S_MOV_B32 10
+    %3011:sgpr_32 = S_MOV_B32 11
+    %3012:sgpr_32 = S_MOV_B32 12
+    %3013:sgpr_32 = S_MOV_B32 13
+    %3014:sgpr_32 = S_MOV_B32 14
+    %3015:sgpr_32 = S_MOV_B32 15
+    %3016:sgpr_32 = S_MOV_B32 16
+    %3017:sgpr_32 = S_MOV_B32 17
+    %3018:sgpr_32 = S_MOV_B32 18
+    %3019:sgpr_32 = S_MOV_B32 19
+    %3020:sgpr_32 = S_MOV_B32 20
+    %3021:sgpr_32 = S_MOV_B32 21
+    %3022:sgpr_32 = S_MOV_B32 22
+    %3023:sgpr_32 = S_MOV_B32 23
+    %3024:sgpr_32 = S_MOV_B32 24
+    %3025:sgpr_32 = S_MOV_B32 25
+    %3026:sgpr_32 = S_MOV_B32 26
+    %3027:sgpr_32 = S_MOV_B32 27
+    %3028:sgpr_32 = S_MOV_B32 28
+    %3029:sgpr_32 = S_MOV_B32 29
+    %3030:sgpr_32 = S_MOV_B32 30
+    %3031:sgpr_32 = S_MOV_B32 31
+    %3032:sgpr_32 = S_MOV_B32 32
+    %3033:sgpr_32 = S_MOV_B32 33
+    %3034:sgpr_32 = S_MOV_B32 34
+    %3035:sgpr_32 = S_MOV_B32 35
+    %3036:sgpr_32 = S_MOV_B32 36
+    %3037:sgpr_32 = S_MOV_B32 37
+    %3038:sgpr_32 = S_MOV_B32 38
+    %3039:sgpr_32 = S_MOV_B32 39
+    %3040:sgpr_32 = S_MOV_B32 40
+    %3041:sgpr_32 = S_MOV_B32 41
+    %3042:sgpr_32 = S_MOV_B32 42
+    %3043:sgpr_32 = S_MOV_B32 43
+    %3044:sgpr_32 = S_MOV_B32 44
+    %3045:sgpr_32 = S_MOV_B32 45
+    %3046:sgpr_32 = S_MOV_B32 46
+    %3047:sgpr_32 = S_MOV_B32 47
+    %3048:sgpr_32 = S_MOV_B32 48
+    %3049:sgpr_32 = S_MOV_B32 49
+    %3050:sgpr_32 = S_MOV_B32 50
+    %3051:sgpr_32 = S_MOV_B32 51
+    %3052:sgpr_32 = S_MOV_B32 52
+    %3053:sgpr_32 = S_MOV_B32 53
+    %3054:sgpr_32 = S_MOV_B32 54
+    %3055:sgpr_32 = S_MOV_B32 55
+    %3056:sgpr_32 = S_MOV_B32 56
+    %3057:sgpr_32 = S_MOV_B32 57
+    %3058:sgpr_32 = S_MOV_B32 58
+    %3059:sgpr_32 = S_MOV_B32 59
+    %3060:sgpr_32 = S_MOV_B32 60
+    %3061:sgpr_32 = S_MOV_B32 61
+    %3062:sgpr_32 = S_MOV_B32 62
+    %3063:sgpr_32 = S_MOV_B32 63
+    %3064:sgpr_32 = S_MOV_B32 64
+    %3065:sgpr_32 = S_MOV_B32 65
+    %3066:sgpr_32 = S_MOV_B32 66
+    %3067:sgpr_32 = S_MOV_B32 67
+    %3068:sgpr_32 = S_MOV_B32 68
+    %3069:sgpr_32 = S_MOV_B32 69
+    %3070:sgpr_32 = S_MOV_B32 70
+    %3071:sgpr_32 = S_MOV_B32 71
+    %3072:sgpr_32 = S_MOV_B32 72
+    %3073:sgpr_32 = S_MOV_B32 73
+    %3074:sgpr_32 = S_MOV_B32 74
+    %3075:sgpr_32 = S_MOV_B32 75
+    %3076:sgpr_32 = S_MOV_B32 76
+    %3077:sgpr_32 = S_MOV_B32 77
+    %3078:sgpr_32 = S_MOV_B32 78
+    %3079:sgpr_32 = S_MOV_B32 79
+    %3080:sgpr_32 = S_MOV_B32 80
+    %3081:sgpr_32 = S_MOV_B32 81
+    %3082:sgpr_32 = S_MOV_B32 82
+    %3083:sgpr_32 = S_MOV_B32 83
+    %3084:sgpr_32 = S_MOV_B32 84
+    %3085:sgpr_32 = S_MOV_B32 85
+    %3086:sgpr_32 = S_MOV_B32 86
+    %3087:sgpr_32 = S_MOV_B32 87
+    %3088:sgpr_32 = S_MOV_B32 88
+    %3089:sgpr_32 = S_MOV_B32 89
+    %3090:sgpr_32 = S_MOV_B32 90
+    %3091:sgpr_32 = S_MOV_B32 91
+    %3092:sgpr_32 = S_MOV_B32 92
+    %3093:sgpr_32 = S_MOV_B32 93
+    %3094:sgpr_32 = S_MOV_B32 94
+    %3095:sgpr_32 = S_MOV_B32 95
+    %3096:sgpr_32 = S_MOV_B32 96
+    %3097:sgpr_32 = S_MOV_B32 97
+    %3098:sgpr_32 = S_MOV_B32 98
+    %3099:sgpr_32 = S_MOV_B32 99
+
+
+    %8000:vgpr_32 = IMPLICIT_DEF
+    %116:sreg_32_xm0 = nnan ninf nsz arcp contract afn reassoc V_CMP_GT_F32_e64 0, 0, 0, %8000, 0, implicit $exec, implicit $mode
+    $exec_lo = S_MOV_B32_term %116:sreg_32_xm0
+    S_CBRANCH_EXECZ %bb.2, implicit $exec
+    S_BRANCH %bb.1
+
+  bb.1:  
+    successors: %bb.2
+
+    %8001:vgpr_32 = COPY %8000
+    %8002:vgpr_32 = COPY %8000
+    %8003:vgpr_32 = COPY %8000
+    %8004:vgpr_32 = COPY %8000
+    %8005:vgpr_32 = COPY %8000
+    %8006:vgpr_32 = COPY %8000
+    %8007:vgpr_32 = COPY %8000
+    %8008:vgpr_32 = COPY %8000
+    %8009:vgpr_32 = COPY %8000
+    %8010:vgpr_32 = COPY %8000
+    %8011:vgpr_32 = COPY %8000
+    %8012:vgpr_32 = COPY %8000
+    %8013:vgpr_32 = COPY %8000
+    %8014:vgpr_32 = COPY %8000
+    %8015:vgpr_32 = COPY %8000
+    %8016:vgpr_32 = COPY %8000
+    %8017:vgpr_32 = COPY %8000
+
+    %9001:vgpr_32 = COPY %8001
+    %9002:vgpr_32 = COPY %8002
+    %9003:vgpr_32 = COPY %8003
+    %9004:vgpr_32 = COPY %8004
+    %9005:vgpr_32 = COPY %8005
+    %9006:vgpr_32 = COPY %8006
+    %9007:vgpr_32 = COPY %8007
+    %9008:vgpr_32 = COPY %8008
+    %9009:vgpr_32 = COPY %8009
+    %9010:vgpr_32 = COPY %8010
+    %9011:vgpr_32 = COPY %8011
+    %9012:vgpr_32 = COPY %8012
+    %9013:vgpr_32 = COPY %8013
+    %9014:vgpr_32 = COPY %8014
+    %9015:vgpr_32 = COPY %8015
+    %9016:vgpr_32 = COPY %8016
+    %9017:vgpr_32 = COPY %8017
+
+    S_BRANCH %bb.2
+
+  bb.2:
+    %5000:sgpr_32 = PHI %3000, %bb.0, %8001, %bb.1
+    %5001:sgpr_32 = PHI %3001, %bb.0, %8001, %bb.1
+    %5002:sgpr_32 = PHI %3002, %bb.0, %8001, %bb.1
+    %5003:sgpr_32 = PHI %3003, %bb.0, %8001, %bb.1
+    %5004:sgpr_32 = PHI %3004, %bb.0, %8001, %bb.1
+    %5005:sgpr_32 = PHI %3005, %bb.0, %8001, %bb.1
+    %5006:sgpr_32 = PHI %3006, %bb.0, %8001, %bb.1
+    %5007:sgpr_32 = PHI %3007, %bb.0, %8001, %bb.1
+    %5008:sgpr_32 = PHI %3008, %bb.0, %8001, %bb.1
+    %5009:sgpr_32 = PHI %3009, %bb.0, %8001, %bb.1
+    %5010:sgpr_32 = PHI %3010, %bb.0, %8001, %bb.1
+    %5011:sgpr_32 = PHI %3011, %bb.0, %8001, %bb.1
+    %5012:sgpr_32 = PHI %3012, %bb.0, %8001, %bb.1
+    %5013:sgpr_32 = PHI %3013, %bb.0, %8001, %bb.1
+    %5014:sgpr_32 = PHI %3014, %bb.0, %8001, %bb.1
+    %5015:sgpr_32 = PHI %3015, %bb.0, %8001, %bb.1
+    %5016:sgpr_32 = PHI %3016, %bb.0, %8001, %bb.1
+    %5017:sgpr_32 = PHI %3017, %bb.0, %8001, %bb.1
+    %5018:sgpr_32 = PHI %3018, %bb.0, %8001, %bb.1
+    %5019:sgpr_32 = PHI %3019, %bb.0, %8001, %bb.1
+    %5020:sgpr_32 = PHI %3020, %bb.0, %8001, %bb.1
+    %5021:sgpr_32 = PHI %3021, %bb.0, %8001, %bb.1
+    %5022:sgpr_32 = PHI %3022, %bb.0, %8001, %bb.1
+    %5023:sgpr_32 = PHI %3023, %bb.0, %8001, %bb.1
+    %5024:sgpr_32 = PHI %3024, %bb.0, %8001, %bb.1
+    %5025:sgpr_32 = PHI %3025, %bb.0, %8001, %bb.1
+    %5026:sgpr_32 = PHI %3026, %bb.0, %8001, %bb.1
+    %5027:sgpr_32 = PHI %3027, %bb.0, %8001, %bb.1
+    %5028:sgpr_32 = PHI %3028, %bb.0, %8001, %bb.1
+    %5029:sgpr_32 = PHI %3029, %bb.0, %8001, %bb.1
+    %5030:sgpr_32 = PHI %3030, %bb.0, %8001, %bb.1
+    %5031:sgpr_32 = PHI %3031, %bb.0, %8001, %bb.1
+    %5032:sgpr_32 = PHI %3032, %bb.0, %8001, %bb.1
+    %5033:sgpr_32 = PHI %3033, %bb.0, %8001, %bb.1
+    %5034:sgpr_32 = PHI %3034, %bb.0, %8001, %bb.1
+    %5035:sgpr_32 = PHI %3035, %bb.0, %8001, %bb.1
+    %5036:sgpr_32 = PHI %3036, %bb.0, %8001, %bb.1
+    %5037:sgpr_32 = PHI %3037, %bb.0, %8001, %bb.1
+    %5038:sgpr_32 = PHI %3038, %bb.0, %8001, %bb.1
+    %5039:sgpr_32 = PHI %3039, %bb.0, %8001, %bb.1
+    %5040:sgpr_32 = PHI %3040, %bb.0, %8001, %bb.1
+    %5041:sgpr_32 = PHI %3041, %bb.0, %8001, %bb.1
+    %5042:sgpr_32 = PHI %3042, %bb.0, %8001, %bb.1
+    %5043:sgpr_32 = PHI %3043, %bb.0, %8001, %bb.1
+    %5044:sgpr_32 = PHI %3044, %bb.0, %8001, %bb.1
+    %5045:sgpr_32 = PHI %3045, %bb.0, %8001, %bb.1
+    %5046:sgpr_32 = PHI %3046, %bb.0, %8001, %bb.1
+    %5047:sgpr_32 = PHI %3047, %bb.0, %8001, %bb.1
+    %5048:sgpr_32 = PHI %3048, %bb.0, %8001, %bb.1
+    %5049:sgpr_32 = PHI %3049, %bb.0, %8001, %bb.1
+    %5050:sgpr_32 = PHI %3050, %bb.0, %8001, %bb.1
+    %5051:sgpr_32 = PHI %3051, %bb.0, %8001, %bb.1
+    %5052:sgpr_32 = PHI %3052, %bb.0, %8001, %bb.1
+    %5053:sgpr_32 = PHI %3053, %bb.0, %8001, %bb.1
+    %5054:sgpr_32 = PHI %3054, %bb.0, %8001, %bb.1
+    %5055:sgpr_32 = PHI %3055, %bb.0, %8001, %bb.1
+    %5056:sgpr_32 = PHI %3056, %bb.0, %8001, %bb.1
+    %5057:sgpr_32 = PHI %3057, %bb.0, %8001, %bb.1
+    %5058:sgpr_32 = PHI %3058, %bb.0, %8001, %bb.1
+    %5059:sgpr_32 = PHI %3059, %bb.0, %8001, %bb.1
+    %5060:sgpr_32 = PHI %3060, %bb.0, %8001, %bb.1
+    %5061:sgpr_32 = PHI %3061, %bb.0, %8001, %bb.1
+    %5062:sgpr_32 = PHI %3062, %bb.0, %8001, %bb.1
+    %5063:sgpr_32 = PHI %3063, %bb.0, %8001, %bb.1
+    %5064:sgpr_32 = PHI %3064, %bb.0, %8001, %bb.1
+    %5065:sgpr_32 = PHI %3065, %bb.0, %8001, %bb.1
+    %5066:sgpr_32 = PHI %3066, %bb.0, %8001, %bb.1
+    %5067:sgpr_32 = PHI %3067, %bb.0, %8001, %bb.1
+    %5068:sgpr_32 = PHI %3068, %bb.0, %8001, %bb.1
+    %5069:sgpr_32 = PHI %3069, %bb.0, %8001, %bb.1
+    %5070:sgpr_32 = PHI %3070, %bb.0, %8001, %bb.1
+    %5071:sgpr_32 = PHI %3071, %bb.0, %8001, %bb.1
+    %5072:sgpr_32 = PHI %3072, %bb.0, %8001, %bb.1
+    %5073:sgpr_32 = PHI %3073, %bb.0, %8001, %bb.1
+    %5074:sgpr_32 = PHI %3074, %bb.0, %8001, %bb.1
+    %5075:sgpr_32 = PHI %3075, %bb.0, %8001, %bb.1
+    %5076:sgpr_32 = PHI %3076, %bb.0, %8001, %bb.1
+    %5077:sgpr_32 = PHI %3077, %bb.0, %8001, %bb.1
+    %5078:sgpr_32 = PHI %3078, %bb.0, %8001, %bb.1
+    %5079:sgpr_32 = PHI %3079, %bb.0, %8001, %bb.1
+    %5080:sgpr_32 = PHI %3080, %bb.0, %8001, %bb.1
+    %5081:sgpr_32 = PHI %3081, %bb.0, %8001, %bb.1
+    %5082:sgpr_32 = PHI %3082, %bb.0, %8001, %bb.1
+    %5083:sgpr_32 = PHI %3083, %bb.0, %8001, %bb.1
+    %5084:sgpr_32 = PHI %3084, %bb.0, %8001, %bb.1
+    %5085:sgpr_32 = PHI %3085, %bb.0, %8001, %bb.1
+    %5086:sgpr_32 = PHI %3086, %bb.0, %8001, %bb.1
+    %5087:sgpr_32 = PHI %3087, %bb.0, %8001, %bb.1
+    %5088:sgpr_32 = PHI %3088, %bb.0, %8001, %bb.1
+    %5089:sgpr_32 = PHI %3089, %bb.0, %8001, %bb.1
+    %5090:sgpr_32 = PHI %3090, %bb.0, %8001, %bb.1
+    %5091:sgpr_32 = PHI %3091, %bb.0, %8001, %bb.1
+    %5092:sgpr_32 = PHI %3092, %bb.0, %8001, %bb.1
+    %5093:sgpr_32 = PHI %3093, %bb.0, %8001, %bb.1
+    %5094:sgpr_32 = PHI %3094, %bb.0, %8001, %bb.1
+    %5095:sgpr_32 = PHI %3095, %bb.0, %8001, %bb.1
+    %5096:sgpr_32 = PHI %3096, %bb.0, %8001, %bb.1
+    %5097:sgpr_32 = PHI %3097, %bb.0, %8001, %bb.1
+    %5098:sgpr_32 = PHI %3098, %bb.0, %8001, %bb.1
+    %5099:sgpr_32 = PHI %3099, %bb.0, %8001, %bb.1
+
+
+    %3:vgpr_32 = IMPLICIT_DEF
+
+    %6000:vgpr_32 = V_MOV_B32_e32 %5000, implicit $exec
+    %6001:vgpr_32 = V_MOV_B32_e32 %5001, implicit $exec
+    %6002:vgpr_32 = V_MOV_B32_e32 %5002, implicit $exec
+    %6003:vgpr_32 = V_MOV_B32_e32 %5003, implicit $exec
+    %6004:vgpr_32 = V_MOV_B32_e32 %5004, implicit $exec
+    %6005:vgpr_32 = V_MOV_B32_e32 %5005, implicit $exec
+    %6006:vgpr_32 = V_MOV_B32_e32 %5006, implicit $exec
+    %6007:vgpr_32 = V_MOV_B32_e32 %5007, implicit $exec
+    %6008:vgpr_32 = V_MOV_B32_e32 %5008, implicit $exec
+    %6009:vgpr_32 = V_MOV_B32_e32 %5009, implicit $exec
+    %6010:vgpr_32 = V_MOV_B32_e32 %5010, implicit $exec
+    %6011:vgpr_32 = V_MOV_B32_e32 %5011, implicit $exec
+    %6012:vgpr_32 = V_MOV_B32_e32 %5012, implicit $exec
+    %6013:vgpr_32 = V_MOV_B32_e32 %5013, implicit $exec
+    %6014:vgpr_32 = V_MOV_B32_e32 %5014, implicit $exec
+    %6015:vgpr_32 = V_MOV_B32_e32 %5015, implicit $exec
+    %6016:vgpr_32 = V_MOV_B32_e32 %5016, implicit $exec
+    %6017:vgpr_32 = V_MOV_B32_e32 %5017, implicit $exec
+    %6018:vgpr_32 = V_MOV_B32_e32 %5018, implicit $exec
+    %6019:vgpr_32 = V_MOV_B32_e32 %5019, implicit $exec
+    %6020:vgpr_32 = V_MOV_B32_e32 %5020, implicit $exec
+    %6021:vgpr_32 = V_MOV_B32_e32 %5021, implicit $exec
+    %6022:vgpr_32 = V_MOV_B32_e32 %5022, implicit $exec
+    %6023:vgpr_32 = V_MOV_B32_e32 %5023, implicit $exec
+    %6024:vgpr_32 = V_MOV_B32_e32 %5024, implicit $exec
+    %6025:vgpr_32 = V_MOV_B32_e32 %5025, implicit $exec
+    %6026:vgpr_32 = V_MOV_B32_e32 %5026, implicit $exec
+    %6027:vgpr_32 = V_MOV_B32_e32 %5027, implicit $exec
+    %6028:vgpr_32 = V_MOV_B32_e32 %5028, implicit $exec
+    %6029:vgpr_32 = V_MOV_B32_e32 %5029, implicit $exec
+    %6030:vgpr_32 = V_MOV_B32_e32 %5030, implicit $exec
+    %6031:vgpr_32 = V_MOV_B32_e32 %5031, implicit $exec
+    %6032:vgpr_32 = V_MOV_B32_e32 %5032, implicit $exec
+    %6033:vgpr_32 = V_MOV_B32_e32 %5033, implicit $exec
+    %6034:vgpr_32 = V_MOV_B32_e32 %5034, implicit $exec
+    %6035:vgpr_32 = V_MOV_B32_e32 %5035, implicit $exec
+    %6036:vgpr_32 = V_MOV_B32_e32 %5036, implicit $exec
+    %6037:vgpr_32 = V_MOV_B32_e32 %5037, implicit $exec
+    %6038:vgpr_32 = V_MOV_B32_e32 %5038, implicit $exec
+    %6039:vgpr_32 = V_MOV_B32_e32 %5039, implicit $exec
+    %6040:vgpr_32 = V_MOV_B32_e32 %5040, implicit $exec
+    %6041:vgpr_32 = V_MOV_B32_e32 %5041, implicit $exec
+    %6042:vgpr_32 = V_MOV_B32_e32 %5042, implicit $exec
+    %6043:vgpr_32 = V_MOV_B32_e32 %5043, implicit $exec
+    %6044:vgpr_32 = V_MOV_B32_e32 %5044, implicit $exec
+    %6045:vgpr_32 = V_MOV_B32_e32 %5045, implicit $exec
+    %6046:vgpr_32 = V_MOV_B32_e32 %5046, implicit $exec
+    %6047:vgpr_32 = V_MOV_B32_e32 %5047, implicit $exec
+    %6048:vgpr_32 = V_MOV_B32_e32 %5048, implicit $exec
+    %6049:vgpr_32 = V_MOV_B32_e32 %5049, implicit $exec
+    %6050:vgpr_32 = V_MOV_B32_e32 %5050, implicit $exec
+    %6051:vgpr_32 = V_MOV_B32_e32 %5051, implicit $exec
+    %6052:vgpr_32 = V_MOV_B32_e32 %5052, implicit $exec
+    %6053:vgpr_32 = V_MOV_B32_e32 %5053, implicit $exec
+    %6054:vgpr_32 = V_MOV_B32_e32 %5054, implicit $exec
+    %6055:vgpr_32 = V_MOV_B32_e32 %5055, implicit $exec
+    %6056:vgpr_32 = V_MOV_B32_e32 %5056, implicit $exec
+    %6057:vgpr_32 = V_MOV_B32_e32 %5057, implicit $exec
+    %6058:vgpr_32 = V_MOV_B32_e32 %5058, implicit $exec
+    %6059:vgpr_32 = V_MOV_B32_e32 %5059, implicit $exec
+    %6060:vgpr_32 = V_MOV_B32_e32 %5060, implicit $exec
+    %6061:vgpr_32 = V_MOV_B32_e32 %5061, implicit $exec
+    %6062:vgpr_32 = V_MOV_B32_e32 %5062, implicit $exec
+    %6063:vgpr_32 = V_MOV_B32_e32 %5063, implicit $exec
+    %6064:vgpr_32 = V_MOV_B32_e32 %5064, implicit $exec
+    %6065:vgpr_32 = V_MOV_B32_e32 %5065, implicit $exec
+    %6066:vgpr_32 = V_MOV_B32_e32 %5066, implicit $exec
+    %6067:vgpr_32 = V_MOV_B32_e32 %5067, implicit $exec
+    %6068:vgpr_32 = V_MOV_B32_e32 %5068, implicit $exec
+    %6069:vgpr_32 = V_MOV_B32_e32 %5069, implicit $exec
+    %6070:vgpr_32 = V_MOV_B32_e32 %5070, implicit $exec
+    %6071:vgpr_32 = V_MOV_B32_e32 %5071, implicit $exec
+    %6072:vgpr_32 = V_MOV_B32_e32 %5072, implicit $exec
+    %6073:vgpr_32 = V_MOV_B32_e32 %5073, implicit $exec
+    %6074:vgpr_32 = V_MOV_B32_e32 %5074, implicit $exec
+    %6075:vgpr_32 = V_MOV_B32_e32 %5075, implicit $exec
+    %6076:vgpr_32 = V_MOV_B32_e32 %5076, implicit $exec
+    %6077:vgpr_32 = V_MOV_B32_e32 %5077, implicit $exec
+    %6078:vgpr_32 = V_MOV_B32_e32 %5078, implicit $exec
+    %6079:vgpr_32 = V_MOV_B32_e32 %5079, implicit $exec
+    %6080:vgpr_32 = V_MOV_B32_e32 %5080, implicit $exec
+    %6081:vgpr_32 = V_MOV_B32_e32 %5081, implicit $exec
+    %6082:vgpr_32 = V_MOV_B32_e32 %5082, implicit $exec
+    %6083:vgpr_32 = V_MOV_B32_e32 %5083, implicit $exec
+    %6084:vgpr_32 = V_MOV_B32_e32 %5084, implicit $exec
+    %6085:vgpr_32 = V_MOV_B32_e32 %5085, implicit $exec
+    %6086:vgpr_32 = V_MOV_B32_e32 %5086, implicit $exec
+    %6087:vgpr_32 = V_MOV_B32_e32 %5087, implicit $exec
+    %6088:vgpr_32 = V_MOV_B32_e32 %5088, implicit $exec
+    %6089:vgpr_32 = V_MOV_B32_e32 %5089, implicit $exec
+    %6090:vgpr_32 = V_MOV_B32_e32 %5090, implicit $exec
+    %6091:vgpr_32 = V_MOV_B32_e32 %5091, implicit $exec
+    %6092:vgpr_32 = V_MOV_B32_e32 %5092, implicit $exec
+    %6093:vgpr_32 = V_MOV_B32_e32 %5093, implicit $exec
+    %6094:vgpr_32 = V_MOV_B32_e32 %5094, implicit $exec
+    %6095:vgpr_32 = V_MOV_B32_e32 %5095, implicit $exec
+    %6096:vgpr_32 = V_MOV_B32_e32 %5096, implicit $exec
+    %6097:vgpr_32 = V_MOV_B32_e32 %5097, implicit $exec
+    %6098:vgpr_32 = V_MOV_B32_e32 %5098, implicit $exec
+    %6099:vgpr_32 = V_MOV_B32_e32 %5099, implicit $exec
+    EXP 0, %6000, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %6001, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %6002, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %6003, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %6004, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %6005, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %6006, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %6007, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %6008, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %6009, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %6010, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %6011, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %6012, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %6013, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %6014, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %6015, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %6016, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %6017, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %6018, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %6019, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %6020, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %6021, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %6022, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %6023, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %6024, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %6025, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %6026, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %6027, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %6028, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %6029, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %6030, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %6031, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %6032, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %6033, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %6034, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %6035, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %6036, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %6037, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %6038, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %6039, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %6040, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %6041, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %6042, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %6043, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %6044, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %6045, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %6046, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %6047, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %6048, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %6049, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %6050, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %6051, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %6052, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %6053, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %6054, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %6055, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %6056, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %6057, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %6058, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %6059, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %6060, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %6061, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %6062, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %6063, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %6064, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %6065, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %6066, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %6067, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %6068, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %6069, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %6070, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %6071, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %6072, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %6073, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %6074, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %6075, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %6076, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %6077, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %6078, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %6079, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %6080, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %6081, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %6082, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %6083, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %6084, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %6085, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %6086, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %6087, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %6088, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %6089, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %6090, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %6091, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %6092, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %6093, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %6094, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %6095, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %6096, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %6097, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %6098, %3, %3, %3, -1, -1, 15, implicit $exec
+    EXP 0, %6099, %3, %3, %3, -1, -1, 15, implicit $exec
+
+
+    S_ENDPGM 0
+...
+    
