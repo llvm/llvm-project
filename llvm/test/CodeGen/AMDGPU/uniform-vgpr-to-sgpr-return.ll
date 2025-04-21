@@ -145,3 +145,31 @@ define amdgpu_ps float @uniform_v_to_s_f32(float inreg %a, float inreg %b) {
   %max0 = call float @llvm.maximum.f32(float %a, float %b)
   ret float %max0
 }
+
+define amdgpu_ps <2 x i16> @uniform_v_to_s_2_i16(float inreg %a, float inreg %b) {
+; GFX11-LABEL: uniform_v_to_s_2_i16:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    v_max_f32_e64 v0, s0, s1
+; GFX11-NEXT:    v_cmp_o_f32_e64 vcc_lo, s0, s1
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    v_cndmask_b32_e32 v0, 0x7fc00000, v0, vcc_lo
+; GFX11-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX11-NEXT:    ; return to shader part epilog
+  %max0 = call float @llvm.maximum.f32(float %a, float %b)
+  %cast = bitcast float %max0 to <2 x i16>
+  ret <2 x i16> %cast
+}
+
+define amdgpu_ps i16 @uniform_v_to_s_i16(half inreg %a, half inreg %b) {
+; GFX11-LABEL: uniform_v_to_s_i16:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    v_max_f16_e64 v0, s0, s1
+; GFX11-NEXT:    v_cmp_o_f16_e64 vcc_lo, s0, s1
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    v_cndmask_b32_e32 v0, 0x7e00, v0, vcc_lo
+; GFX11-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX11-NEXT:    ; return to shader part epilog
+  %max = call half @llvm.maximum.f16(half %a, half %b)
+  %cast = bitcast half %max to i16
+  ret i16 %cast
+}
