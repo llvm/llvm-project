@@ -193,9 +193,16 @@ public:
   /// recursion in the calculation of the ASAP, ALAP, etc functions.
   bool ignoreDependence(bool IgnoreAnti) const;
 
+  /// Retruns true if this edge is assumed to be used only for validation of a
+  /// schedule. That is, this edge would not be considered when computing a
+  /// schedule.
   bool isValidationOnly() const { return IsValidationOnly; }
 };
 
+/// Represents loop-carried dependencies. Because SwingSchedulerDAG doesn't
+/// assume cycle dependencies as the name suggests, such dependencies must be
+/// handled separately. After DAG construction is finished, these dependencies
+/// are added to SwingSchedulerDDG.
 struct LoopCarriedEdges {
   using OutputDep = SmallDenseMap<Register, SmallSetVector<SUnit *, 4>>;
   using OrderDep = SmallSetVector<SUnit *, 8>;
@@ -206,6 +213,7 @@ struct LoopCarriedEdges {
   OrderDepsType OrderDeps;
 
 private:
+  /// Backedges that should be used when searching a schedule.
   DenseMap<const SUnit *, SmallPtrSet<const SUnit *, 4>> BackEdges;
 
 public:
@@ -223,16 +231,15 @@ public:
     return &Ite->second;
   }
 
-  bool shouldAddBackEdge(const SUnit *From, const SUnit *To) const {
-    if (From->NodeNum < To->NodeNum)
-      return false;
-    auto Ite = BackEdges.find(From);
-    if (Ite == BackEdges.end())
-      return false;
-    return Ite->second.contains(To);
-  }
+  /// Retruns true if the edge from \p From to \p To is a back-edge that should
+  /// be used when scheduling.
+  bool shouldUseWhenScheduling(const SUnit *From, const SUnit *To) const;
 
-  void modifySUnits(std::vector<SUnit> &SUnits);
+  /// Adds some edges to the original DAG that correspond to loop-carried
+  /// dependencies. Historically, loop-carried edges are represented by using
+  /// non-loop-carried edges in the original DAG. This function appends such
+  /// edges to preserve the previous behavior.
+  void modifySUnits(std::vector<SUnit> &SUnits, const TargetInstrInfo *TII);
 
   void dump(SUnit *SU, const TargetRegisterInfo *TRI,
             const MachineRegisterInfo *MRI) const;
@@ -240,23 +247,23 @@ public:
 
 /// Represents dependencies between instructions. This class is a wrapper of
 /// `SUnits` and its dependencies to manipulate back-edges in a natural way.
-/// Currently it only supports back-edges via PHI, which are expressed as
-/// anti-dependencies in the original DAG.
-/// FIXME: Support any other loop-carried dependencies
 class SwingSchedulerDDG {
   class EdgesType {
-    SmallVector<SwingSchedulerDDGEdge, 4> Underlying;
+    /// The number of loop-carried edges in Underlying.
     unsigned LoopCarriedOrderDepsCount = 0;
 
+    /// Hold edges. There is a restriction on the order of the edges. Let N be
+    /// the number of edges, then
+    /// - The first #(N - LoopCarriedOrderDepsCount) edges are not
+    ///   loop-carried.
+    /// - The last #LoopCarriedOrderDepsCount edges are loop-carried.
+    SmallVector<SwingSchedulerDDGEdge, 4> Underlying;
+
   public:
-    void append(const SwingSchedulerDDGEdge &Edge) {
-      bool LoopCarriedOrderDep = Edge.isOrderDep() && Edge.getDistance() != 0;
-      assert(!(LoopCarriedOrderDepsCount != 0 && !LoopCarriedOrderDep) &&
-             "Loop-carried edges should not be added to the underlying edges");
-      Underlying.push_back(Edge);
-      if (LoopCarriedOrderDep)
-        ++LoopCarriedOrderDepsCount;
-    }
+    /// Add an \p Edge. To satisfy the order restriction on Underlying, once a
+    /// loop-carried edge is added, an edge that is not loop-carried one must
+    /// not be added.
+    void append(const SwingSchedulerDDGEdge &Edge);
 
     ArrayRef<SwingSchedulerDDGEdge> get(bool UseLoopCarriedEdges) const {
       ArrayRef<SwingSchedulerDDGEdge> Res = Underlying;
@@ -292,14 +299,21 @@ public:
   SwingSchedulerDDG(std::vector<SUnit> &SUnits, SUnit *EntrySU, SUnit *ExitSU,
                     const LoopCarriedEdges &LCE);
 
+  /// Get in-edges for \p SU.
   ArrayRef<SwingSchedulerDDGEdge> getInEdges(const SUnit *SU) const;
 
+  /// Get out-edges for \p SU.
   ArrayRef<SwingSchedulerDDGEdge> getOutEdges(const SUnit *SU) const;
 
+  /// Returns true if \p Schedule doesn't violate the validation-only
+  /// dependencies.
   bool isValidSchedule(std::vector<SUnit> &SUnits,
                        const SMSchedule &Schedule) const;
 
+  /// Include loop-carried edeges to the result of getInEdges/getOutEdges.
   void applyLoopCarriedEdges() { UseLoopCarriedEdges = true; }
+
+  /// Exclude loop-carried edeges from the result of getInEdges/getOutEdges.
   void removeLoopCarriedEdges() { UseLoopCarriedEdges = false; }
 };
 
@@ -357,7 +371,7 @@ class SwingSchedulerDAG : public ScheduleDAGInstrs {
   std::vector<std::unique_ptr<ScheduleDAGMutation>> Mutations;
 
   /// Helper class to implement Johnson's circuit finding algorithm.
-  struct Circuits {
+  class Circuits {
     std::vector<SUnit> &SUnits;
     SetVector<SUnit *> Stack;
     BitVector Blocked;
@@ -366,6 +380,7 @@ class SwingSchedulerDAG : public ScheduleDAGInstrs {
     // Node to Index from ScheduleDAGTopologicalSort
     std::vector<int> *Node2Idx;
     unsigned NumPaths = 0u;
+    static unsigned MaxPaths;
 
   public:
     Circuits(std::vector<SUnit> &SUs, ScheduleDAGTopologicalSort &Topo)
