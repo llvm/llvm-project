@@ -2693,13 +2693,13 @@ void ARMTTIImpl::getPeelingPreferences(Loop *L, ScalarEvolution &SE,
   BaseT::getPeelingPreferences(L, SE, PP);
 }
 
-bool ARMTTIImpl::preferInLoopReduction(unsigned Opcode, Type *Ty) const {
+bool ARMTTIImpl::preferInLoopReduction(RecurKind Kind, Type *Ty) const {
   if (!ST->hasMVEIntegerOps())
     return false;
 
   unsigned ScalarBits = Ty->getScalarSizeInBits();
-  switch (Opcode) {
-  case Instruction::Add:
+  switch (Kind) {
+  case RecurKind::Add:
     return ScalarBits <= 64;
   default:
     return false;

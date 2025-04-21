@@ -12,7 +12,6 @@
 #include "MCTargetDesc/AArch64AddressingModes.h"
 #include "Utils/AArch64SMEAttributes.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/BasicTTIImpl.h"
@@ -1112,6 +1111,19 @@ struct SVEIntrinsicInfo {
     return *this;
   }
 
+  bool hasMatchingIROpode() const { return IROpcode != 0; }
+
+  unsigned getMatchingIROpode() const {
+    assert(hasMatchingIROpode() && "Propery not set!");
+    return IROpcode;
+  }
+
+  SVEIntrinsicInfo &setMatchingIROpcode(unsigned Opcode) {
+    assert(!hasMatchingIROpode() && "Cannot set property twice!");
+    IROpcode = Opcode;
+    return *this;
+  }
+
   //
   // Properties relating to the result of inactive lanes.
   //
@@ -1187,6 +1199,7 @@ private:
   unsigned GoverningPredicateIdx = std::numeric_limits<unsigned>::max();
 
   Intrinsic::ID UndefIntrinsic = Intrinsic::not_intrinsic;
+  unsigned IROpcode = 0;
 
   enum PredicationStyle {
     Uninitialized,
@@ -1270,7 +1283,8 @@ static SVEIntrinsicInfo constructSVEIntrinsicInfo(IntrinsicInst &II) {
   case Intrinsic::aarch64_sve_fmls:
     return SVEIntrinsicInfo::defaultMergingOp(Intrinsic::aarch64_sve_fmls_u);
   case Intrinsic::aarch64_sve_fmul:
-    return SVEIntrinsicInfo::defaultMergingOp(Intrinsic::aarch64_sve_fmul_u);
+    return SVEIntrinsicInfo::defaultMergingOp(Intrinsic::aarch64_sve_fmul_u)
+        .setMatchingIROpcode(Instruction::FMul);
   case Intrinsic::aarch64_sve_fmulx:
     return SVEIntrinsicInfo::defaultMergingOp(Intrinsic::aarch64_sve_fmulx_u);
   case Intrinsic::aarch64_sve_fnmla:
@@ -1286,7 +1300,8 @@ static SVEIntrinsicInfo constructSVEIntrinsicInfo(IntrinsicInst &II) {
   case Intrinsic::aarch64_sve_mls:
     return SVEIntrinsicInfo::defaultMergingOp(Intrinsic::aarch64_sve_mls_u);
   case Intrinsic::aarch64_sve_mul:
-    return SVEIntrinsicInfo::defaultMergingOp(Intrinsic::aarch64_sve_mul_u);
+    return SVEIntrinsicInfo::defaultMergingOp(Intrinsic::aarch64_sve_mul_u)
+        .setMatchingIROpcode(Instruction::Mul);
   case Intrinsic::aarch64_sve_sabd:
     return SVEIntrinsicInfo::defaultMergingOp(Intrinsic::aarch64_sve_sabd_u);
   case Intrinsic::aarch64_sve_smax:
@@ -1323,6 +1338,13 @@ static SVEIntrinsicInfo constructSVEIntrinsicInfo(IntrinsicInst &II) {
     return SVEIntrinsicInfo::defaultMergingOp(Intrinsic::aarch64_sve_sqsub_u);
   case Intrinsic::aarch64_sve_uqsub:
     return SVEIntrinsicInfo::defaultMergingOp(Intrinsic::aarch64_sve_uqsub_u);
+
+  case Intrinsic::aarch64_sve_fmul_u:
+    return SVEIntrinsicInfo::defaultUndefOp().setMatchingIROpcode(
+        Instruction::FMul);
+  case Intrinsic::aarch64_sve_mul_u:
+    return SVEIntrinsicInfo::defaultUndefOp().setMatchingIROpcode(
+        Instruction::Mul);
 
   case Intrinsic::aarch64_sve_addqv:
   case Intrinsic::aarch64_sve_and_z:
@@ -1470,9 +1492,8 @@ static bool isAllActivePredicate(Value *Pred) {
     if (cast<ScalableVectorType>(Pred->getType())->getMinNumElements() <=
         cast<ScalableVectorType>(UncastedPred->getType())->getMinNumElements())
       Pred = UncastedPred;
-
-  return match(Pred, m_Intrinsic<Intrinsic::aarch64_sve_ptrue>(
-                         m_ConstantInt<AArch64SVEPredPattern::all>()));
+  auto *C = dyn_cast<Constant>(Pred);
+  return (C && C->isAllOnesValue());
 }
 
 // Use SVE intrinsic info to eliminate redundant operands and/or canonicalise
@@ -1679,14 +1700,7 @@ static std::optional<Instruction *> instCombineSVECmpNE(InstCombiner &IC,
                                                         IntrinsicInst &II) {
   LLVMContext &Ctx = II.getContext();
 
-  // Check that the predicate is all active
-  auto *Pg = dyn_cast<IntrinsicInst>(II.getArgOperand(0));
-  if (!Pg || Pg->getIntrinsicID() != Intrinsic::aarch64_sve_ptrue)
-    return std::nullopt;
-
-  const auto PTruePattern =
-      cast<ConstantInt>(Pg->getOperand(0))->getZExtValue();
-  if (PTruePattern != AArch64SVEPredPattern::all)
+  if (!isAllActivePredicate(II.getArgOperand(0)))
     return std::nullopt;
 
   // Check that we have a compare of zero..
@@ -2096,8 +2110,7 @@ instCombineSVEVectorBinOp(InstCombiner &IC, IntrinsicInst &II) {
   auto *OpPredicate = II.getOperand(0);
   auto BinOpCode = intrinsicIDToBinOpCode(II.getIntrinsicID());
   if (BinOpCode == Instruction::BinaryOpsEnd ||
-      !match(OpPredicate, m_Intrinsic<Intrinsic::aarch64_sve_ptrue>(
-                              m_ConstantInt<AArch64SVEPredPattern::all>())))
+      !isAllActivePredicate(OpPredicate))
     return std::nullopt;
   auto BinOp = IC.Builder.CreateBinOpFMF(
       BinOpCode, II.getOperand(1), II.getOperand(2), II.getFastMathFlags());
@@ -2206,45 +2219,63 @@ static std::optional<Instruction *> instCombineSVEVectorSub(InstCombiner &IC,
   return std::nullopt;
 }
 
-static std::optional<Instruction *> instCombineSVEVectorMul(InstCombiner &IC,
-                                                            IntrinsicInst &II) {
-  auto *OpPredicate = II.getOperand(0);
-  auto *OpMultiplicand = II.getOperand(1);
-  auto *OpMultiplier = II.getOperand(2);
+// Simplify `V` by only considering the operations that affect active lanes.
+// This function should only return existing Values or newly created Constants.
+static Value *stripInactiveLanes(Value *V, const Value *Pg) {
+  auto *Dup = dyn_cast<IntrinsicInst>(V);
+  if (Dup && Dup->getIntrinsicID() == Intrinsic::aarch64_sve_dup &&
+      Dup->getOperand(1) == Pg && isa<Constant>(Dup->getOperand(2)))
+    return ConstantVector::getSplat(
+        cast<VectorType>(V->getType())->getElementCount(),
+        cast<Constant>(Dup->getOperand(2)));
 
-  // Return true if a given instruction is a unit splat value, false otherwise.
-  auto IsUnitSplat = [](auto *I) {
-    auto *SplatValue = getSplatValue(I);
-    if (!SplatValue)
-      return false;
-    return match(SplatValue, m_FPOne()) || match(SplatValue, m_One());
-  };
+  return V;
+}
 
-  // Return true if a given instruction is an aarch64_sve_dup intrinsic call
-  // with a unit splat value, false otherwise.
-  auto IsUnitDup = [](auto *I) {
-    auto *IntrI = dyn_cast<IntrinsicInst>(I);
-    if (!IntrI || IntrI->getIntrinsicID() != Intrinsic::aarch64_sve_dup)
-      return false;
+static std::optional<Instruction *>
+instCombineSVEVectorMul(InstCombiner &IC, IntrinsicInst &II,
+                        const SVEIntrinsicInfo &IInfo) {
+  const unsigned Opc = IInfo.getMatchingIROpode();
+  if (!Instruction::isBinaryOp(Opc))
+    return std::nullopt;
 
-    auto *SplatValue = IntrI->getOperand(2);
-    return match(SplatValue, m_FPOne()) || match(SplatValue, m_One());
-  };
+  Value *Pg = II.getOperand(0);
+  Value *Op1 = II.getOperand(1);
+  Value *Op2 = II.getOperand(2);
+  const DataLayout &DL = II.getDataLayout();
 
-  if (IsUnitSplat(OpMultiplier)) {
-    // [f]mul pg %n, (dupx 1) => %n
-    OpMultiplicand->takeName(&II);
-    return IC.replaceInstUsesWith(II, OpMultiplicand);
-  } else if (IsUnitDup(OpMultiplier)) {
-    // [f]mul pg %n, (dup pg 1) => %n
-    auto *DupInst = cast<IntrinsicInst>(OpMultiplier);
-    auto *DupPg = DupInst->getOperand(1);
-    // TODO: this is naive. The optimization is still valid if DupPg
-    // 'encompasses' OpPredicate, not only if they're the same predicate.
-    if (OpPredicate == DupPg) {
-      OpMultiplicand->takeName(&II);
-      return IC.replaceInstUsesWith(II, OpMultiplicand);
-    }
+  // Canonicalise constants to the RHS.
+  if (Instruction::isCommutative(Opc) && IInfo.inactiveLanesAreNotDefined() &&
+      isa<Constant>(Op1) && !isa<Constant>(Op2)) {
+    IC.replaceOperand(II, 1, Op2);
+    IC.replaceOperand(II, 2, Op1);
+    return &II;
+  }
+
+  // Only active lanes matter when simplifying the operation.
+  Op1 = stripInactiveLanes(Op1, Pg);
+  Op2 = stripInactiveLanes(Op2, Pg);
+
+  Value *SimpleII;
+  if (auto FII = dyn_cast<FPMathOperator>(&II))
+    SimpleII = simplifyBinOp(Opc, Op1, Op2, FII->getFastMathFlags(), DL);
+  else
+    SimpleII = simplifyBinOp(Opc, Op1, Op2, DL);
+
+  if (SimpleII) {
+    if (IInfo.inactiveLanesAreNotDefined())
+      return IC.replaceInstUsesWith(II, SimpleII);
+
+    Value *Inactive =
+        II.getOperand(IInfo.getOperandIdxInactiveLanesTakenFrom());
+
+    // The intrinsic does nothing (e.g. sve.mul(pg, A, 1.0)).
+    if (SimpleII == Inactive)
+      return IC.replaceInstUsesWith(II, SimpleII);
+
+    // Inactive lanes must be preserved.
+    SimpleII = IC.Builder.CreateSelect(Pg, SimpleII, Inactive);
+    return IC.replaceInstUsesWith(II, SimpleII);
   }
 
   return instCombineSVEVectorBinOp(IC, II);
@@ -2601,6 +2632,13 @@ static std::optional<Instruction *> instCombineDMB(InstCombiner &IC,
   return std::nullopt;
 }
 
+static std::optional<Instruction *> instCombinePTrue(InstCombiner &IC,
+                                                     IntrinsicInst &II) {
+  if (match(II.getOperand(0), m_ConstantInt<AArch64SVEPredPattern::all>()))
+    return IC.replaceInstUsesWith(II, Constant::getAllOnesValue(II.getType()));
+  return std::nullopt;
+}
+
 std::optional<Instruction *>
 AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
                                      IntrinsicInst &II) const {
@@ -2651,9 +2689,9 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
   case Intrinsic::aarch64_sve_fadd_u:
     return instCombineSVEVectorFAddU(IC, II);
   case Intrinsic::aarch64_sve_fmul:
-    return instCombineSVEVectorMul(IC, II);
+    return instCombineSVEVectorMul(IC, II, IInfo);
   case Intrinsic::aarch64_sve_fmul_u:
-    return instCombineSVEVectorMul(IC, II);
+    return instCombineSVEVectorMul(IC, II, IInfo);
   case Intrinsic::aarch64_sve_fsub:
     return instCombineSVEVectorFSub(IC, II);
   case Intrinsic::aarch64_sve_fsub_u:
@@ -2665,9 +2703,9 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
                                              Intrinsic::aarch64_sve_mla_u>(
         IC, II, true);
   case Intrinsic::aarch64_sve_mul:
-    return instCombineSVEVectorMul(IC, II);
+    return instCombineSVEVectorMul(IC, II, IInfo);
   case Intrinsic::aarch64_sve_mul_u:
-    return instCombineSVEVectorMul(IC, II);
+    return instCombineSVEVectorMul(IC, II, IInfo);
   case Intrinsic::aarch64_sve_sub:
     return instCombineSVEVectorSub(IC, II);
   case Intrinsic::aarch64_sve_sub_u:
@@ -2704,6 +2742,8 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
     return instCombineSVEDupqLane(IC, II);
   case Intrinsic::aarch64_sve_insr:
     return instCombineSVEInsr(IC, II);
+  case Intrinsic::aarch64_sve_ptrue:
+    return instCombinePTrue(IC, II);
   }
 
   return std::nullopt;
@@ -3792,8 +3832,9 @@ InstructionCost AArch64TTIImpl::getScalarizationOverhead(
   if (Ty->getElementType()->isFloatingPointTy())
     return BaseT::getScalarizationOverhead(Ty, DemandedElts, Insert, Extract,
                                            CostKind);
-  return DemandedElts.popcount() * (Insert + Extract) *
-         ST->getVectorInsertExtractBaseCost();
+  unsigned VecInstCost =
+      CostKind == TTI::TCK_CodeSize ? 1 : ST->getVectorInsertExtractBaseCost();
+  return DemandedElts.popcount() * (Insert + Extract) * VecInstCost;
 }
 
 InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
@@ -4528,6 +4569,71 @@ getFalkorUnrollingPreferences(Loop *L, ScalarEvolution &SE,
   }
 }
 
+// This function returns true if the loop:
+//  1. Has a valid cost, and
+//  2. Has a cost within the supplied budget.
+// Otherwise it returns false.
+static bool isLoopSizeWithinBudget(Loop *L, AArch64TTIImpl &TTI,
+                                   InstructionCost Budget,
+                                   unsigned *FinalSize) {
+  // Estimate the size of the loop.
+  InstructionCost LoopCost = 0;
+
+  for (auto *BB : L->getBlocks()) {
+    for (auto &I : *BB) {
+      SmallVector<const Value *, 4> Operands(I.operand_values());
+      InstructionCost Cost =
+          TTI.getInstructionCost(&I, Operands, TTI::TCK_CodeSize);
+      // This can happen with intrinsics that don't currently have a cost model
+      // or for some operations that require SVE.
+      if (!Cost.isValid())
+        return false;
+
+      LoopCost += Cost;
+      if (LoopCost > Budget)
+        return false;
+    }
+  }
+
+  if (FinalSize)
+    *FinalSize = *LoopCost.getValue();
+  return true;
+}
+
+static bool shouldUnrollMultiExitLoop(Loop *L, ScalarEvolution &SE,
+                                      AArch64TTIImpl &TTI) {
+  // Only consider loops with unknown trip counts for which we can determine
+  // a symbolic expression. Multi-exit loops with small known trip counts will
+  // likely be unrolled anyway.
+  const SCEV *BTC = SE.getSymbolicMaxBackedgeTakenCount(L);
+  if (isa<SCEVConstant>(BTC) || isa<SCEVCouldNotCompute>(BTC))
+    return false;
+
+  // It might not be worth unrolling loops with low max trip counts. Restrict
+  // this to max trip counts > 32 for now.
+  unsigned MaxTC = SE.getSmallConstantMaxTripCount(L);
+  if (MaxTC > 0 && MaxTC <= 32)
+    return false;
+
+  // Make sure the loop size is <= 5.
+  if (!isLoopSizeWithinBudget(L, TTI, 5, nullptr))
+    return false;
+
+  // Small search loops with multiple exits can be highly beneficial to unroll.
+  // We only care about loops with exactly two exiting blocks, although each
+  // block could jump to the same exit block.
+  ArrayRef<BasicBlock *> Blocks = L->getBlocks();
+  if (Blocks.size() != 2)
+    return false;
+
+  if (any_of(Blocks, [](BasicBlock *BB) {
+        return !isa<BranchInst>(BB->getTerminator());
+      }))
+    return false;
+
+  return true;
+}
+
 /// For Apple CPUs, we want to runtime-unroll loops to make better use if the
 /// OOO engine's wide instruction window and various predictors.
 static void
@@ -4542,43 +4648,18 @@ getAppleRuntimeUnrollPreferences(Loop *L, ScalarEvolution &SE,
   if (!L->isInnermost() || L->getNumBlocks() > 8)
     return;
 
+  // Loops with multiple exits are handled by common code.
+  if (!L->getExitBlock())
+    return;
+
   const SCEV *BTC = SE.getSymbolicMaxBackedgeTakenCount(L);
   if (isa<SCEVConstant>(BTC) || isa<SCEVCouldNotCompute>(BTC) ||
       (SE.getSmallConstantMaxTripCount(L) > 0 &&
        SE.getSmallConstantMaxTripCount(L) <= 32))
     return;
+
   if (findStringMetadataForLoop(L, "llvm.loop.isvectorized"))
     return;
-
-  int64_t Size = 0;
-  for (auto *BB : L->getBlocks()) {
-    for (auto &I : *BB) {
-      if (!isa<IntrinsicInst>(&I) && isa<CallBase>(&I))
-        return;
-      SmallVector<const Value *, 4> Operands(I.operand_values());
-      Size +=
-          *TTI.getInstructionCost(&I, Operands, TTI::TCK_CodeSize).getValue();
-    }
-  }
-
-  // Small search loops with multiple exits can be highly beneficial to unroll.
-  if (!L->getExitBlock()) {
-    if (L->getNumBlocks() == 2 && Size < 6 &&
-        all_of(
-            L->getBlocks(),
-            [](BasicBlock *BB) {
-              return isa<BranchInst>(BB->getTerminator());
-            })) {
-      UP.RuntimeUnrollMultiExit = true;
-      UP.Runtime = true;
-      // Limit unroll count.
-      UP.DefaultUnrollRuntimeCount = 4;
-      // Allow slightly more costly trip-count expansion to catch search loops
-      // with pointer inductions.
-      UP.SCEVExpansionBudget = 5;
-    }
-    return;
-  }
 
   if (SE.getSymbolicMaxBackedgeTakenCount(L) != SE.getBackedgeTakenCount(L))
     return;
@@ -4590,7 +4671,9 @@ getAppleRuntimeUnrollPreferences(Loop *L, ScalarEvolution &SE,
   // dependencies, to expose more parallel memory access streams.
   BasicBlock *Header = L->getHeader();
   if (Header == L->getLoopLatch()) {
-    if (Size > 8)
+    // Estimate the size of the loop.
+    unsigned Size;
+    if (!isLoopSizeWithinBudget(L, TTI, 8, &Size))
       return;
 
     SmallPtrSet<Value *, 8> LoadedValues;
@@ -4687,6 +4770,25 @@ void AArch64TTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
   // Disable partial & runtime unrolling on -Os.
   UP.PartialOptSizeThreshold = 0;
 
+  // Scan the loop: don't unroll loops with calls as this could prevent
+  // inlining. Don't unroll vector loops either, as they don't benefit much from
+  // unrolling.
+  for (auto *BB : L->getBlocks()) {
+    for (auto &I : *BB) {
+      // Don't unroll vectorised loop.
+      if (I.getType()->isVectorTy())
+        return;
+
+      if (isa<CallBase>(I)) {
+        if (isa<CallInst>(I) || isa<InvokeInst>(I))
+          if (const Function *F = cast<CallBase>(I).getCalledFunction())
+            if (!isLoweredToCall(F))
+              continue;
+        return;
+      }
+    }
+  }
+
   // Apply subtarget-specific unrolling preferences.
   switch (ST->getProcFamily()) {
   case AArch64Subtarget::AppleA14:
@@ -4703,23 +4805,17 @@ void AArch64TTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
     break;
   }
 
-  // Scan the loop: don't unroll loops with calls as this could prevent
-  // inlining. Don't unroll vector loops either, as they don't benefit much from
-  // unrolling.
-  for (auto *BB : L->getBlocks()) {
-    for (auto &I : *BB) {
-      // Don't unroll vectorised loop.
-      if (I.getType()->isVectorTy())
-        return;
-
-      if (isa<CallInst>(I) || isa<InvokeInst>(I)) {
-        if (const Function *F = cast<CallBase>(I).getCalledFunction()) {
-          if (!isLoweredToCall(F))
-            continue;
-        }
-        return;
-      }
-    }
+  // If this is a small, multi-exit loop similar to something like std::find,
+  // then there is typically a performance improvement achieved by unrolling.
+  if (!L->getExitBlock() && shouldUnrollMultiExitLoop(L, SE, *this)) {
+    UP.RuntimeUnrollMultiExit = true;
+    UP.Runtime = true;
+    // Limit unroll count.
+    UP.DefaultUnrollRuntimeCount = 4;
+    // Allow slightly more costly trip-count expansion to catch search loops
+    // with pointer inductions.
+    UP.SCEVExpansionBudget = 5;
+    return;
   }
 
   // Enable runtime unrolling for in-order models
@@ -5111,7 +5207,8 @@ AArch64TTIImpl::getMulAccReductionCost(bool IsUnsigned, Type *ResTy,
   return BaseT::getMulAccReductionCost(IsUnsigned, ResTy, VecTy, CostKind);
 }
 
-InstructionCost AArch64TTIImpl::getSpliceCost(VectorType *Tp, int Index) {
+InstructionCost AArch64TTIImpl::getSpliceCost(VectorType *Tp, int Index,
+                                              TTI::TargetCostKind CostKind) {
   static const CostTblEntry ShuffleTbl[] = {
       { TTI::SK_Splice, MVT::nxv16i8,  1 },
       { TTI::SK_Splice, MVT::nxv8i16,  1 },
@@ -5137,7 +5234,6 @@ InstructionCost AArch64TTIImpl::getSpliceCost(VectorType *Tp, int Index) {
 
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Tp);
   Type *LegalVTy = EVT(LT.second).getTypeForEVT(Tp->getContext());
-  TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
   EVT PromotedVT = LT.second.getScalarType() == MVT::i1
                        ? TLI->getPromotedVTForPredicate(EVT(LT.second))
                        : LT.second;
@@ -5520,7 +5616,7 @@ InstructionCost AArch64TTIImpl::getShuffleCost(
   }
 
   if (Kind == TTI::SK_Splice && isa<ScalableVectorType>(Tp))
-    return getSpliceCost(Tp, Index);
+    return getSpliceCost(Tp, Index, CostKind);
 
   // Inserting a subvector can often be done with either a D, S or H register
   // move, so long as the inserted vector is "aligned".

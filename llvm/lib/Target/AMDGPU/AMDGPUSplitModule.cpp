@@ -1021,9 +1021,8 @@ void RecursiveSearchSplitting::setupWorkList() {
       continue;
 
     BitVector Cluster = SG.createNodesBitVector();
-    for (auto MI = NodeEC.member_begin(*Node); MI != NodeEC.member_end();
-         ++MI) {
-      const SplitGraph::Node &N = SG.getNode(*MI);
+    for (unsigned M : NodeEC.members(*Node)) {
+      const SplitGraph::Node &N = SG.getNode(M);
       if (N.isGraphEntryPoint())
         N.getDependencies(Cluster);
     }

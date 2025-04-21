@@ -170,6 +170,12 @@ class SPIRVLegalizePointerCast : public FunctionPass {
           DeadInstructions.push_back(Intrin);
           continue;
         }
+
+        if (Intrin->getIntrinsicID() == Intrinsic::spv_gep) {
+          GR->replaceAllUsesWith(CastedOperand, OriginalOperand,
+                                 /* DeleteOld= */ false);
+          continue;
+        }
       }
 
       llvm_unreachable("Unsupported ptrcast user. Please fix.");

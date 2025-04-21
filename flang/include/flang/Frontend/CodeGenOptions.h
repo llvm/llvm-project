@@ -95,7 +95,7 @@ public:
 
   /// \brief Code object version for AMDGPU.
   llvm::CodeObjectVersionKind CodeObjectVersion =
-      llvm::CodeObjectVersionKind::COV_5;
+      llvm::CodeObjectVersionKind::COV_None;
 
   /// Optimization remark with an optional regular expression pattern.
   struct OptRemark {

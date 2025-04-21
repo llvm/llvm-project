@@ -420,6 +420,9 @@ void Flang::AddAMDGPUTargetArgs(const ArgList &Args,
   if (Arg *A = Args.getLastArg(options::OPT_mcode_object_version_EQ)) {
     StringRef Val = A->getValue();
     CmdArgs.push_back(Args.MakeArgString("-mcode-object-version=" + Val));
+    CmdArgs.push_back(Args.MakeArgString("-mllvm"));
+    CmdArgs.push_back(
+        Args.MakeArgString("--amdhsa-code-object-version=" + Val));
   }
 
   const ToolChain &TC = getToolChain();

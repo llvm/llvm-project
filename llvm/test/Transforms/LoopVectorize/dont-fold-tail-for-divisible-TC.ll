@@ -200,9 +200,9 @@ define dso_local void @cannotProveAlignedTC(ptr noalias nocapture %A, i32 %p, i3
 ; CHECK-NEXT:    [[TMP13:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP13]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br i1 true, label [[EXIT_LOOPEXIT:%.*]], label [[SCALAR_PH]]
+; CHECK-NEXT:    br label [[EXIT_LOOPEXIT:%.*]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[LOOP_PREHEADER]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 0, [[LOOP_PREHEADER]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[RIV:%.*]] = phi i32 [ [[RIVPLUS1:%.*]], [[LOOP]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]

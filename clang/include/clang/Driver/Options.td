@@ -624,6 +624,7 @@ defvar cpp14 = LangOpts<"CPlusPlus14">;
 defvar cpp17 = LangOpts<"CPlusPlus17">;
 defvar cpp20 = LangOpts<"CPlusPlus20">;
 defvar cpp23 = LangOpts<"CPlusPlus23">;
+defvar cpp26 = LangOpts<"CPlusPlus26">;
 defvar c99 = LangOpts<"C99">;
 defvar c23 = LangOpts<"C23">;
 defvar lang_std = LangOpts<"LangStd">;
@@ -957,10 +958,18 @@ def Xclang : Separate<["-"], "Xclang">,
   HelpText<"Pass <arg> to clang -cc1">, MetaVarName<"<arg>">,
   Flags<[NoXarchOption]>, Visibility<[ClangOption, CLOption, DXCOption]>,
   Group<CompileOnly_Group>;
+def Xclangas : Separate<["-"], "Xclangas">,
+  HelpText<"Pass <arg> to clang -cc1as">, MetaVarName<"<arg>">,
+  Flags<[NoXarchOption]>, Visibility<[ClangOption, CLOption, DXCOption]>,
+  Group<CompileOnly_Group>;
 def : Joined<["-"], "Xclang=">, Group<CompileOnly_Group>,
   Flags<[NoXarchOption]>, Visibility<[ClangOption, CLOption, DXCOption]>,
   Alias<Xclang>,
   HelpText<"Alias for -Xclang">, MetaVarName<"<arg>">;
+def : Joined<["-"], "Xclangas=">, Group<CompileOnly_Group>,
+  Flags<[NoXarchOption]>, Visibility<[ClangOption, CLOption, DXCOption]>,
+  Alias<Xclangas>,
+  HelpText<"Alias for -Xclangas">, MetaVarName<"<arg>">;
 def Xcuda_fatbinary : Separate<["-"], "Xcuda-fatbinary">,
   HelpText<"Pass <arg> to fatbinary invocation">, MetaVarName<"<arg>">;
 def Xcuda_ptxas : Separate<["-"], "Xcuda-ptxas">,
@@ -1233,6 +1242,10 @@ def offload_compression_level_EQ : Joined<["--"], "offload-compression-level=">,
   Flags<[HelpHidden]>,
   HelpText<"Compression level for offload device binaries (HIP only)">;
 
+def offload_jobs_EQ : Joined<["--"], "offload-jobs=">,
+  HelpText<"Specify the number of threads to use for device offloading tasks"
+           " during compilation.">;
+
 defm offload_via_llvm : BoolFOption<"offload-via-llvm",
   LangOpts<"OffloadViaLLVM">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option], "Use">,
@@ -1340,8 +1353,8 @@ def hipstdpar_prim_path_EQ : Joined<["--"], "hipstdpar-prim-path=">,
   HelpText<
     "rocPrim path, required by the HIP Standard Parallel Algorithm "
     "Acceleration library, used to implicitly include the rocPrim library">;
-def rocm_device_lib_path_EQ : Joined<["--"], "rocm-device-lib-path=">, Group<hip_Group>,
-  HelpText<"ROCm device library path. Alternative to rocm-path.">;
+def rocm_device_lib_path_EQ : Joined<["--"], "rocm-device-lib-path=">, Visibility<[FlangOption]>,
+  Group<hip_Group>, HelpText<"ROCm device library path. Alternative to rocm-path.">;
 def : Joined<["--"], "hip-device-lib-path=">, Alias<rocm_device_lib_path_EQ>;
 def hip_device_lib_EQ : Joined<["--"], "hip-device-lib=">, Group<hip_Group>,
   HelpText<"HIP device library">;
@@ -3508,12 +3521,6 @@ defm application_extension : BoolFOption<"application-extension",
   PosFlag<SetTrue, [], [ClangOption, CC1Option],
           "Restrict code to those available for App Extensions">,
   NegFlag<SetFalse>>;
-defm retain_subst_template_type_parm_type_ast_nodes : BoolFOption<"retain-subst-template-type-parm-type-ast-nodes",
-  LangOpts<"RetainSubstTemplateTypeParmTypeAstNodes">, DefaultFalse,
-  PosFlag<SetTrue, [], [CC1Option], "Enable">,
-  NegFlag<SetFalse, [], [], "Disable">,
-  BothFlags<[], [], " retain SubstTemplateTypeParmType nodes in the AST's representation"
-  " of alias template specializations">>;
 defm sized_deallocation : BoolFOption<"sized-deallocation",
   LangOpts<"SizedDeallocation">, Default<cpp14.KeyPath>,
   PosFlag<SetTrue, [], [], "Enable C++14 sized global deallocation functions">,
@@ -4141,6 +4148,13 @@ def ftrigraphs : Flag<["-"], "ftrigraphs">, Group<f_Group>,
 def fno_trigraphs : Flag<["-"], "fno-trigraphs">, Group<f_Group>,
   HelpText<"Do not process trigraph sequences">,
   Visibility<[ClangOption, CC1Option]>;
+defm unique_source_file_names: BoolOption<"f", "unique-source-file-names",
+  CodeGenOpts<"UniqueSourceFileNames">, DefaultFalse,
+  PosFlag<SetTrue, [], [CC1Option], "Allow">,
+  NegFlag<SetFalse, [], [], "Do not allow">,
+  BothFlags<[], [ClangOption], " the compiler to assume that each translation unit has a unique "
+                               "source file name at link time">>,
+  Group<f_clang_Group>;
 def funsigned_bitfields : Flag<["-"], "funsigned-bitfields">, Group<f_Group>;
 def funsigned_char : Flag<["-"], "funsigned-char">, Group<f_Group>;
 def fno_unsigned_char : Flag<["-"], "fno-unsigned-char">;
@@ -6880,6 +6894,13 @@ let Flags = [TargetSpecific] in {
 defm android_pad_segment : BooleanFFlag<"android-pad-segment">, Group<f_Group>;
 } // let Flags = [TargetSpecific]
 
+def shared_libflangrt : Flag<["-"], "shared-libflangrt">,
+  HelpText<"Link the flang-rt shared library">, Group<Link_Group>,
+  Visibility<[FlangOption]>, Flags<[NoArgumentUnused]>;
+def static_libflangrt : Flag<["-"], "static-libflangrt">, 
+  HelpText<"Link the flang-rt static library">, Group<Link_Group>,
+  Visibility<[FlangOption]>, Flags<[NoArgumentUnused]>;
+
 //===----------------------------------------------------------------------===//
 // FLangOption + NoXarchOption
 //===----------------------------------------------------------------------===//
@@ -7876,9 +7897,13 @@ def code_completion_with_fixits : Flag<["-"], "code-completion-with-fixits">,
 def skip_function_bodies : Flag<["-"], "skip-function-bodies">,
   HelpText<"Skip function bodies when possible">,
   MarshallingInfoFlag<FrontendOpts<"SkipFunctionBodies">>;
-def disable_free : Flag<["-"], "disable-free">,
-  HelpText<"Disable freeing of memory on exit">,
-  MarshallingInfoFlag<FrontendOpts<"DisableFree">>;
+defm disable_free : BoolOption<"",
+  "disable-free",
+  FrontendOpts<"DisableFree">,
+  DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption], "Disable">,
+  NegFlag<SetFalse, [], [ClangOption], "Don't disable">,
+  BothFlags<[], [ClangOption], " freeing of memory on exit">>;
 defm clear_ast_before_backend : BoolOption<"",
   "clear-ast-before-backend",
   CodeGenOpts<"ClearASTBeforeBackend">,
@@ -8044,6 +8069,10 @@ def print_dependency_directives_minimized_source : Flag<["-"],
   "print-dependency-directives-minimized-source">,
   HelpText<"Print the output of the dependency directives source minimizer">;
 }
+def dump_minimization_hints : Joined<["-"],
+  "dump-minimization-hints=">,
+  HelpText<"Dump ranges of deserialized declarations to use as bug minimization hints">,
+  MarshallingInfoString<FrontendOpts<"DumpMinimizationHintsPath">>;
 
 defm emit_llvm_uselists : BoolOption<"", "emit-llvm-uselists",
   CodeGenOpts<"EmitLLVMUseLists">, DefaultFalse,
@@ -9131,6 +9160,11 @@ def dxil_validator_version : Option<["/", "-"], "validator-version", KIND_SEPARA
   HelpText<"Override validator version for module. Format: <major.minor>;"
            "Default: DXIL.dll version or current internal version">,
   MarshallingInfoString<TargetOpts<"DxilValidatorVersion">, "\"1.8\"">;
+def res_may_alias : Option<["/", "-"], "res-may-alias", KIND_FLAG>,
+  Group<dxc_Group>, Flags<[HelpHidden]>,
+  Visibility<[DXCOption, ClangOption, CC1Option]>,
+  HelpText<"Assume that UAVs/SRVs may alias">,
+  MarshallingInfoFlag<CodeGenOpts<"ResMayAlias">>;
 def target_profile : DXCJoinedOrSeparate<"T">, MetaVarName<"<profile>">,
   HelpText<"Set target profile">,
   Values<"ps_6_0, ps_6_1, ps_6_2, ps_6_3, ps_6_4, ps_6_5, ps_6_6, ps_6_7,"

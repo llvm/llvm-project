@@ -11814,11 +11814,11 @@ SDValue PPCTargetLowering::LowerDMFVectorLoad(SDValue Op,
   }
 
   SDValue TF = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, LoadChains);
-  SDValue Lo(DAG.getMachineNode(PPC::DMXXINSTFDMR512, dl, MVT::v512i1, Loads[0],
+  SDValue Lo(DAG.getMachineNode(PPC::DMXXINSTDMR512, dl, MVT::v512i1, Loads[0],
                                 Loads[1]),
              0);
   SDValue LoSub = DAG.getTargetConstant(PPC::sub_wacc_lo, dl, MVT::i32);
-  SDValue Hi(DAG.getMachineNode(PPC::DMXXINSTFDMR512_HI, dl, MVT::v512i1,
+  SDValue Hi(DAG.getMachineNode(PPC::DMXXINSTDMR512_HI, dl, MVT::v512i1,
                                 Loads[2], Loads[3]),
              0);
   SDValue HiSub = DAG.getTargetConstant(PPC::sub_wacc_hi, dl, MVT::i32);

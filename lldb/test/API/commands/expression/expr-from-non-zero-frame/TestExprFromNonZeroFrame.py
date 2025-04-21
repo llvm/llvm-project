@@ -7,6 +7,8 @@ from lldbsuite.test import lldbutil
 class ExprFromNonZeroFrame(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
+    # Requires DWARF debug information.
+    @skipIfWindows
     def test(self):
         """
         Tests that we can use SBFrame::EvaluateExpression on a frame

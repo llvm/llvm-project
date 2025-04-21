@@ -304,3 +304,15 @@ namespace NonLiteralDtorInParam {
                               // expected23-note {{non-constexpr function '~NonLiteral' cannot be used in a constant expression}}
   }
 }
+
+namespace ZeroSizedArray {
+  struct S {
+    constexpr ~S() {
+    }
+  };
+  constexpr int foo() {
+    S s[0];
+    return 1;
+  }
+  static_assert(foo() == 1);
+}

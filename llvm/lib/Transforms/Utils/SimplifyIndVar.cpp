@@ -350,6 +350,7 @@ void SimplifyIndvar::replaceRemWithNumeratorOrZero(BinaryOperator *Rem) {
   auto *T = Rem->getType();
   auto *N = Rem->getOperand(0), *D = Rem->getOperand(1);
   ICmpInst *ICmp = new ICmpInst(Rem->getIterator(), ICmpInst::ICMP_EQ, N, D);
+  ICmp->setDebugLoc(Rem->getDebugLoc());
   SelectInst *Sel =
       SelectInst::Create(ICmp, ConstantInt::get(T, 0), N, "iv.rem", Rem->getIterator());
   Rem->replaceAllUsesWith(Sel);
@@ -1742,6 +1743,9 @@ bool WidenIV::widenWithVariantUse(WidenIV::NarrowIVDefUse DU) {
     const SCEV *RHS = SE->getSCEV(OBO->getOperand(1));
     // TODO: Support case for NarrowDef = NarrowUse->getOperand(1).
     if (NarrowUse->getOperand(0) != NarrowDef)
+      return false;
+    // We cannot use a different extend kind for the same operand.
+    if (NarrowUse->getOperand(1) == NarrowDef)
       return false;
     if (!SE->isKnownNegative(RHS))
       return false;

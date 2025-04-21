@@ -526,9 +526,8 @@ void RuntimePointerChecking::groupChecks(
     // iteration order within an equivalence class member is only dependent on
     // the order in which unions and insertions are performed on the
     // equivalence class, the iteration order is deterministic.
-    for (auto MI = DepCands.findLeader(Access), ME = DepCands.member_end();
-         MI != ME; ++MI) {
-      auto PointerI = PositionMap.find(MI->getPointer());
+    for (auto M : DepCands.members(Access)) {
+      auto PointerI = PositionMap.find(M.getPointer());
       assert(PointerI != PositionMap.end() &&
              "pointer in equivalence class not found in PositionMap");
       for (unsigned Pointer : PointerI->second) {
@@ -564,7 +563,7 @@ void RuntimePointerChecking::groupChecks(
 
     // We've computed the grouped checks for this partition.
     // Save the results and continue with the next one.
-    llvm::copy(Groups, std::back_inserter(CheckingGroups));
+    llvm::append_range(CheckingGroups, Groups);
   }
 }
 
@@ -1782,7 +1781,8 @@ bool MemoryDepChecker::couldPreventStoreLoadForward(uint64_t Distance,
           MaxStoreLoadForwardSafeDistanceInBits &&
       MaxVFWithoutSLForwardIssuesPowerOf2 !=
           VectorizerParams::MaxVectorWidth * TypeByteSize) {
-    uint64_t MaxVF = MaxVFWithoutSLForwardIssuesPowerOf2 / CommonStride;
+    uint64_t MaxVF =
+        bit_floor(MaxVFWithoutSLForwardIssuesPowerOf2 / CommonStride);
     uint64_t MaxVFInBits = MaxVF * TypeByteSize * 8;
     MaxStoreLoadForwardSafeDistanceInBits =
         std::min(MaxStoreLoadForwardSafeDistanceInBits, MaxVFInBits);

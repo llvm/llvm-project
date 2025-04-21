@@ -972,9 +972,8 @@ void SIFoldOperandsImpl::foldOperand(
     unsigned RegSeqDstSubReg = UseMI->getOperand(UseOpIdx + 1).getImm();
 
     // Grab the use operands first
-    SmallVector<MachineOperand *, 4> UsesToProcess;
-    for (auto &Use : MRI->use_nodbg_operands(RegSeqDstReg))
-      UsesToProcess.push_back(&Use);
+    SmallVector<MachineOperand *, 4> UsesToProcess(
+        llvm::make_pointer_range(MRI->use_nodbg_operands(RegSeqDstReg)));
     for (auto *RSUse : UsesToProcess) {
       MachineInstr *RSUseMI = RSUse->getParent();
 
@@ -1552,9 +1551,8 @@ bool SIFoldOperandsImpl::foldInstOperand(MachineInstr &MI,
     }
   }
 
-  SmallVector<MachineOperand *, 4> UsesToProcess;
-  for (auto &Use : MRI->use_nodbg_operands(Dst.getReg()))
-    UsesToProcess.push_back(&Use);
+  SmallVector<MachineOperand *, 4> UsesToProcess(
+      llvm::make_pointer_range(MRI->use_nodbg_operands(Dst.getReg())));
   for (auto *U : UsesToProcess) {
     MachineInstr *UseMI = U->getParent();
     foldOperand(OpToFold, UseMI, UseMI->getOperandNo(U), FoldList,
@@ -2380,10 +2378,9 @@ bool SIFoldOperandsImpl::tryFoldLoad(MachineInstr &MI) {
   if (DefReg.isPhysical() || !TRI->isVGPR(*MRI, DefReg))
     return false;
 
-  SmallVector<const MachineInstr*, 8> Users;
+  SmallVector<const MachineInstr *, 8> Users(
+      llvm::make_pointer_range(MRI->use_nodbg_instructions(DefReg)));
   SmallVector<Register, 8> MoveRegs;
-  for (const MachineInstr &I : MRI->use_nodbg_instructions(DefReg))
-    Users.push_back(&I);
 
   if (Users.empty())
     return false;

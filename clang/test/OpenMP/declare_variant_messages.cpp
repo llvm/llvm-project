@@ -39,7 +39,7 @@ T foofoo();
 #pragma omp declare variant(foofoo <int>) match(implementation={vendor(score ibm)}) // expected-error {{expected '(' after 'score'}} expected-warning {{expected '':'' after the score expression; '':'' assumed}}
 #pragma omp declare variant(foofoo <int>) match(implementation={vendor(score( ibm)}) // expected-error {{use of undeclared identifier 'ibm'}} expected-error {{expected ')'}} expected-warning {{expected '':'' after the score expression; '':'' assumed}} expected-warning {{expected identifier or string literal describing a context property; property skipped}} expected-note {{context property options are: 'amd' 'arm' 'bsc' 'cray' 'fujitsu' 'gnu' 'ibm' 'intel' 'llvm' 'nec' 'nvidia' 'pgi' 'ti' 'unknown'}} expected-note {{to match this '('}}
 #pragma omp declare variant(foofoo <int>) match(implementation={vendor(score(2 ibm)}) // expected-error {{expected ')'}} expected-error {{expected ')'}} expected-warning {{expected '':'' after the score expression; '':'' assumed}} expected-warning {{expected identifier or string literal describing a context property; property skipped}} expected-note {{to match this '('}} expected-note {{context property options are: 'amd' 'arm' 'bsc' 'cray' 'fujitsu' 'gnu' 'ibm' 'intel' 'llvm' 'nec' 'nvidia' 'pgi' 'ti' 'unknown'}} expected-note {{to match this '('}}
-#pragma omp declare variant(foofoo <int>) match(implementation={vendor(score(foofoo <int>()) ibm)}) // expected-warning {{expected '':'' after the score expression; '':'' assumed}} expected-warning {{score expressions in the OpenMP context selector need to be constant; foofoo<int>() is not and will be ignored}}
+#pragma omp declare variant(foofoo <int>) match(implementation={vendor(score(foofoo <int>()) ibm)}) // expected-warning {{expected '':'' after the score expression; '':'' assumed}} expected-warning {{score expressions in the OpenMP context selector need to be constant; 'foofoo<int>()' is not and will be ignored}}
 #pragma omp declare variant(foofoo <int>) match(implementation={vendor(score(5): ibm), vendor(llvm)}) // expected-warning {{the context selector 'vendor' was used already in the same 'omp declare variant' directive; selector ignored}} expected-note {{the previous context selector 'vendor' used here}} expected-note {{the ignored selector spans until here}}
 #pragma omp declare variant(foofoo <int>) match(implementation={vendor(score(5): ibm), kind(cpu)}) // expected-warning {{the context selector 'kind' is not valid for the context set 'implementation'; selector ignored}} expected-note {{the context selector 'kind' can be nested in the context set 'device'; try 'match(device={kind(property)})'}} expected-note {{the ignored selector spans until here}}
 #pragma omp declare variant(foofoo <int>) match(device={xxx}) // expected-warning {{'xxx' is not a valid context selector for the context set 'device'; selector ignored}} expected-note {{context selector options are: 'kind' 'arch' 'isa'}} expected-note {{the ignored selector spans until here}}
@@ -95,11 +95,11 @@ int bar();
 template <typename T, int C>
 T barbar();
 
-#pragma omp declare variant(foo) match(implementation = {vendor(score(foo) :llvm)}) // expected-warning {{score expressions in the OpenMP context selector need to be constant; foo is not and will be ignored}}
-#pragma omp declare variant(foo) match(implementation = {vendor(score(foo()) :llvm)}) // expected-warning {{score expressions in the OpenMP context selector need to be constant; foo() is not and will be ignored}}
+#pragma omp declare variant(foo) match(implementation = {vendor(score(foo) :llvm)}) // expected-warning {{score expressions in the OpenMP context selector need to be constant; 'foo' is not and will be ignored}}
+#pragma omp declare variant(foo) match(implementation = {vendor(score(foo()) :llvm)}) // expected-warning {{score expressions in the OpenMP context selector need to be constant; 'foo()' is not and will be ignored}}
 #pragma omp declare variant(foo) match(implementation = {vendor(score(<expr>) :llvm)}) // expected-error {{expected expression}} expected-error {{use of undeclared identifier 'expr'}} expected-error {{expected expression}}
-#pragma omp declare variant(foo) match(user = {condition(foo)}) // expected-error {{the user condition in the OpenMP context selector needs to be constant; foo is not}}
-#pragma omp declare variant(foo) match(user = {condition(foo())}) // expected-error {{the user condition in the OpenMP context selector needs to be constant; foo() is not}}
+#pragma omp declare variant(foo) match(user = {condition(foo)}) // expected-error {{the user condition in the OpenMP context selector needs to be constant; 'foo' is not}}
+#pragma omp declare variant(foo) match(user = {condition(foo())}) // expected-error {{the user condition in the OpenMP context selector needs to be constant; 'foo()' is not}}
 #pragma omp declare variant(foo) match(user = {condition(<expr>)}) // expected-error {{expected expression}} expected-error {{use of undeclared identifier 'expr'}} expected-error {{expected expression}} expected-note {{the ignored selector spans until here}}
 int score_and_cond_non_const();
 
@@ -112,11 +112,11 @@ int score_and_cond_non_const();
 template<int C>
 int score_and_cond_non_const_no_inst();
 
-#pragma omp declare variant(foo) match(implementation = {vendor(score(foo) :llvm)}) // expected-warning {{score expressions in the OpenMP context selector need to be constant; foo is not and will be ignored}}
-#pragma omp declare variant(foo) match(implementation = {vendor(score(foo()) :llvm)}) // expected-warning {{score expressions in the OpenMP context selector need to be constant; foo() is not and will be ignored}}
+#pragma omp declare variant(foo) match(implementation = {vendor(score(foo) :llvm)}) // expected-warning {{score expressions in the OpenMP context selector need to be constant; 'foo' is not and will be ignored}}
+#pragma omp declare variant(foo) match(implementation = {vendor(score(foo()) :llvm)}) // expected-warning {{score expressions in the OpenMP context selector need to be constant; 'foo()' is not and will be ignored}}
 #pragma omp declare variant(foo) match(implementation = {vendor(score(<expr>) :llvm)}) // expected-error {{expected expression}} expected-error {{use of undeclared identifier 'expr'}} expected-error {{expected expression}}
-#pragma omp declare variant(foo) match(user = {condition(foo)}) // expected-error {{the user condition in the OpenMP context selector needs to be constant; foo is not}}
-#pragma omp declare variant(foo) match(user = {condition(foo())}) // expected-error {{the user condition in the OpenMP context selector needs to be constant; foo() is not}}
+#pragma omp declare variant(foo) match(user = {condition(foo)}) // expected-error {{the user condition in the OpenMP context selector needs to be constant; 'foo' is not}}
+#pragma omp declare variant(foo) match(user = {condition(foo())}) // expected-error {{the user condition in the OpenMP context selector needs to be constant; 'foo()' is not}}
 #pragma omp declare variant(foo) match(user = {condition(<C>)}) // expected-error {{expected expression}} expected-error {{expected expression}} expected-note {{the ignored selector spans until here}}
 template<int C>
 int score_and_cond_non_const_inst();

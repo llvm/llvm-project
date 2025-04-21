@@ -49,6 +49,9 @@ def SingleBitBitFieldConstantConversion :
   DiagGroup<"single-bit-bitfield-constant-conversion">;
 def BitFieldConstantConversion : DiagGroup<"bitfield-constant-conversion",
                                            [SingleBitBitFieldConstantConversion]>;
+def PreferredTypeBitFieldEnumConversion
+    : DiagGroup<"preferred-type-bitfield-enum-conversion">;
+def PreferredTypeBitFieldWidth : DiagGroup<"preferred-type-bitfield-width">;
 def BitFieldEnumConversion : DiagGroup<"bitfield-enum-conversion">;
 def BitFieldWidth : DiagGroup<"bitfield-width">;
 def CompoundTokenSplitByMacro : DiagGroup<"compound-token-split-by-macro">;
@@ -64,8 +67,11 @@ def AlwaysInlineCoroutine :
   DiagGroup<"always-inline-coroutine">;
 def CoroNonAlignedAllocationFunction :
   DiagGroup<"coro-non-aligned-allocation-function">;
+def CoroTypeAwareAllocationFunction :
+  DiagGroup<"coro-type-aware-allocation-function">;
 def Coroutine : DiagGroup<"coroutine", [CoroutineMissingUnhandledException, DeprecatedCoroutine,
-                                        AlwaysInlineCoroutine, CoroNonAlignedAllocationFunction]>;
+                                        AlwaysInlineCoroutine, CoroNonAlignedAllocationFunction,
+                                        CoroTypeAwareAllocationFunction]>;
 def ObjCBoolConstantConversion : DiagGroup<"objc-bool-constant-conversion">;
 def ConstantConversion : DiagGroup<"constant-conversion",
                                    [BitFieldConstantConversion,
@@ -1608,6 +1614,9 @@ def HLSLExtension : DiagGroup<"hlsl-extensions", [HLSL202y]>;
 
 // Warning for mix packoffset and non-packoffset.
 def HLSLMixPackOffset : DiagGroup<"mix-packoffset">;
+
+// Warning for implicit resource bindings.
+def HLSLImplicitBinding : DiagGroup<"hlsl-implicit-binding">;
 
 // Warnings for DXIL validation
 def DXILValidation : DiagGroup<"dxil-validation">;

@@ -1799,6 +1799,17 @@ void addInstrRequirements(const MachineInstr &MI,
     Reqs.addCapability(SPIRV::Capability::LongCompositesINTEL);
     break;
   }
+  case SPIRV::OpBitwiseFunctionINTEL: {
+    if (!ST.canUseExtension(
+            SPIRV::Extension::SPV_INTEL_ternary_bitwise_function))
+      report_fatal_error(
+          "OpBitwiseFunctionINTEL instruction requires the following SPIR-V "
+          "extension: SPV_INTEL_ternary_bitwise_function",
+          false);
+    Reqs.addExtension(SPIRV::Extension::SPV_INTEL_ternary_bitwise_function);
+    Reqs.addCapability(SPIRV::Capability::TernaryBitwiseFunctionINTEL);
+    break;
+  }
 
   default:
     break;

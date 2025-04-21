@@ -31,9 +31,9 @@ define i32 @foo_optsize() #0 {
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[INDEX_NEXT]], 256
 ; CHECK-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
+; CHECK-NEXT:    br label [[FOR_END:%.*]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 256, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[I_08:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INC:%.*]], [[FOR_BODY]] ]
@@ -69,9 +69,9 @@ define i32 @foo_optsize() #0 {
 ; AUTOVF-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[INDEX_NEXT]], 224
 ; AUTOVF-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; AUTOVF:       middle.block:
-; AUTOVF-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
+; AUTOVF-NEXT:    br label [[FOR_END:%.*]]
 ; AUTOVF:       scalar.ph:
-; AUTOVF-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 224, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
+; AUTOVF-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ]
 ; AUTOVF-NEXT:    br label [[FOR_BODY:%.*]]
 ; AUTOVF:       for.body:
 ; AUTOVF-NEXT:    [[I_08:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INC:%.*]], [[FOR_BODY]] ]
@@ -129,9 +129,9 @@ define i32 @foo_minsize() #1 {
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[INDEX_NEXT]], 256
 ; CHECK-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
+; CHECK-NEXT:    br label [[FOR_END:%.*]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 256, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[I_08:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INC:%.*]], [[FOR_BODY]] ]
@@ -167,9 +167,9 @@ define i32 @foo_minsize() #1 {
 ; AUTOVF-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[INDEX_NEXT]], 224
 ; AUTOVF-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; AUTOVF:       middle.block:
-; AUTOVF-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
+; AUTOVF-NEXT:    br label [[FOR_END:%.*]]
 ; AUTOVF:       scalar.ph:
-; AUTOVF-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 224, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
+; AUTOVF-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ]
 ; AUTOVF-NEXT:    br label [[FOR_BODY:%.*]]
 ; AUTOVF:       for.body:
 ; AUTOVF-NEXT:    [[I_08:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INC:%.*]], [[FOR_BODY]] ]
@@ -363,8 +363,6 @@ define void @tail_folded_store_avx512(ptr %start, ptr %end) #3 {
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N_RND_UP]], 64
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[N_RND_UP]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i32 [[TMP3]], 1
-; CHECK-NEXT:    [[TMP4:%.*]] = mul i32 [[N_VEC]], -72
-; CHECK-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr [[START]], i32 [[TMP4]]
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <64 x i32> poison, i32 [[TRIP_COUNT_MINUS_1]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT4:%.*]] = shufflevector <64 x i32> [[BROADCAST_SPLATINSERT3]], <64 x i32> poison, <64 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -382,9 +380,9 @@ define void @tail_folded_store_avx512(ptr %start, ptr %end) #3 {
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
+; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi ptr [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ [[START]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi ptr [ [[START]], [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[PTR_IV:%.*]] = phi ptr [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[PTR_IV_NEXT:%.*]], [[LOOP]] ]
@@ -409,8 +407,6 @@ define void @tail_folded_store_avx512(ptr %start, ptr %end) #3 {
 ; AUTOVF-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N_RND_UP]], 8
 ; AUTOVF-NEXT:    [[N_VEC:%.*]] = sub i32 [[N_RND_UP]], [[N_MOD_VF]]
 ; AUTOVF-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i32 [[TMP3]], 1
-; AUTOVF-NEXT:    [[TMP4:%.*]] = mul i32 [[N_VEC]], -72
-; AUTOVF-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr [[START]], i32 [[TMP4]]
 ; AUTOVF-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <8 x i32> poison, i32 [[TRIP_COUNT_MINUS_1]], i64 0
 ; AUTOVF-NEXT:    [[BROADCAST_SPLAT4:%.*]] = shufflevector <8 x i32> [[BROADCAST_SPLATINSERT3]], <8 x i32> poison, <8 x i32> zeroinitializer
 ; AUTOVF-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -428,9 +424,9 @@ define void @tail_folded_store_avx512(ptr %start, ptr %end) #3 {
 ; AUTOVF-NEXT:    [[TMP7:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; AUTOVF-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; AUTOVF:       middle.block:
-; AUTOVF-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
+; AUTOVF-NEXT:    br label [[EXIT:%.*]]
 ; AUTOVF:       scalar.ph:
-; AUTOVF-NEXT:    [[BC_RESUME_VAL:%.*]] = phi ptr [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ [[START]], [[ENTRY:%.*]] ]
+; AUTOVF-NEXT:    [[BC_RESUME_VAL:%.*]] = phi ptr [ [[START]], [[ENTRY:%.*]] ]
 ; AUTOVF-NEXT:    br label [[LOOP:%.*]]
 ; AUTOVF:       loop:
 ; AUTOVF-NEXT:    [[PTR_IV:%.*]] = phi ptr [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[PTR_IV_NEXT:%.*]], [[LOOP]] ]

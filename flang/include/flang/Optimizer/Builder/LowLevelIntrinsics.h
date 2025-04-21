@@ -24,9 +24,6 @@ class FirOpBuilder;
 
 namespace fir::factory {
 
-/// Get the LLVM intrinsic for `memmove`. Use the 64 bit version.
-mlir::func::FuncOp getLlvmMemmove(FirOpBuilder &builder);
-
 /// Get the LLVM intrinsic for `memset`. Use the 64 bit version.
 mlir::func::FuncOp getLlvmMemset(FirOpBuilder &builder);
 

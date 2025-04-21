@@ -389,6 +389,12 @@ TEST_F(TokenAnnotatorTest, UnderstandsUsesOfStarAndAmp) {
   EXPECT_TOKEN(Tokens[19], tok::l_brace, TT_RequiresExpressionLBrace);
   EXPECT_TOKEN(Tokens[20], tok::l_brace, TT_CompoundRequirementLBrace);
   EXPECT_TOKEN(Tokens[22], tok::star, TT_BinaryOperator);
+
+  Tokens = annotate("return s.operator int *();");
+  ASSERT_EQ(Tokens.size(), 10u) << Tokens;
+  EXPECT_TOKEN(Tokens[3], tok::kw_operator, TT_FunctionDeclarationName);
+  EXPECT_TOKEN(Tokens[5], tok::star, TT_PointerOrReference);
+  EXPECT_TOKEN(Tokens[6], tok::l_paren, TT_FunctionDeclarationLParen);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsUsesOfPlusAndMinus) {
@@ -2836,6 +2842,28 @@ TEST_F(TokenAnnotatorTest, UnderstandTableGenTokens) {
   Tokens = Annotate("!cond");
   EXPECT_TOKEN(Tokens[0], tok::identifier, TT_TableGenCondOperator);
 
+  // The paste operator should not be treated as a preprocessor directive even
+  // if it is on a separate line.
+  Tokens = Annotate("def x\n"
+                    "#embed {}");
+  ASSERT_EQ(Tokens.size(), 7u) << Tokens;
+  EXPECT_TOKEN(Tokens[1], tok::identifier, TT_StartOfName);
+  EXPECT_EQ(Tokens[1]->Next, Tokens[2]);
+  Tokens = Annotate("def x\n"
+                    "#define x\n"
+                    "#embed {}");
+  ASSERT_EQ(Tokens.size(), 10u) << Tokens;
+  EXPECT_TOKEN(Tokens[1], tok::identifier, TT_StartOfName);
+  EXPECT_EQ(Tokens[1]->Next, Tokens[5]);
+  Tokens = Annotate("def x\n"
+                    "#ifdef x\n"
+                    "#else\n"
+                    "#endif\n"
+                    "#embed {}");
+  ASSERT_EQ(Tokens.size(), 14u) << Tokens;
+  EXPECT_TOKEN(Tokens[1], tok::identifier, TT_StartOfName);
+  EXPECT_EQ(Tokens[1]->Next, Tokens[9]);
+
   auto AnnotateValue = [this, &Style](StringRef Code) {
     // Values are annotated only in specific context.
     auto Result = annotate(("def X { let V = " + Code + "; }").str(), Style);
@@ -3933,6 +3961,18 @@ TEST_F(TokenAnnotatorTest, UserDefinedConversionFunction) {
   ASSERT_EQ(Tokens.size(), 9u) << Tokens;
   EXPECT_TOKEN(Tokens[3], tok::kw_operator, TT_FunctionDeclarationName);
   EXPECT_TOKEN(Tokens[5], tok::l_paren, TT_FunctionDeclarationLParen);
+}
+
+TEST_F(TokenAnnotatorTest, UTF8StringLiteral) {
+  auto Tokens = annotate("return u8\"foo\";", getLLVMStyle(FormatStyle::LK_C));
+  ASSERT_EQ(Tokens.size(), 4u) << Tokens;
+  EXPECT_TOKEN(Tokens[1], tok::utf8_string_literal, TT_Unknown);
+}
+
+TEST_F(TokenAnnotatorTest, IdentifierPackage) {
+  auto Tokens = annotate("auto package;");
+  ASSERT_EQ(Tokens.size(), 4u) << Tokens;
+  EXPECT_FALSE(Tokens[0]->isObjCAccessSpecifier());
 }
 
 } // namespace

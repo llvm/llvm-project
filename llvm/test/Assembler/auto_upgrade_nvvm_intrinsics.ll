@@ -13,6 +13,10 @@ declare float @llvm.nvvm.h2f(i16)
 declare i32 @llvm.nvvm.abs.i(i32)
 declare i64 @llvm.nvvm.abs.ll(i64)
 
+declare float @llvm.nvvm.fabs.f(float)
+declare float @llvm.nvvm.fabs.ftz.f(float)
+declare double @llvm.nvvm.fabs.d(double)
+
 declare i16 @llvm.nvvm.max.s(i16, i16)
 declare i32 @llvm.nvvm.max.i(i32, i32)
 declare i64 @llvm.nvvm.max.ll(i64, i64)
@@ -51,6 +55,9 @@ declare float @llvm.nvvm.ldg.global.f.f32.p1(ptr addrspace(1), i32)
 declare i32 @llvm.nvvm.ldg.global.i.i32.p0(ptr, i32)
 declare ptr @llvm.nvvm.ldg.global.p.p0(ptr, i32)
 declare float @llvm.nvvm.ldg.global.f.f32.p0(ptr, i32)
+
+declare i32 @llvm.nvvm.atomic.load.inc.32(ptr, i32)
+declare i32 @llvm.nvvm.atomic.load.dec.32(ptr, i32)
 
 ; CHECK-LABEL: @simple_upgrade
 define void @simple_upgrade(i32 %a, i64 %b, i16 %c) {
@@ -91,6 +98,17 @@ define void @abs(i32 %a, i64 %b) {
 ; CHECK: select i1 [[cmpll]], i64 %b, i64 [[negll]]
   %r2 = call i64 @llvm.nvvm.abs.ll(i64 %b)
 
+  ret void
+}
+
+; CHECK-LABEL: @fabs
+define void @fabs(float %a, double %b) {
+; CHECK: call float @llvm.nvvm.fabs.f32(float %a)
+; CHECK: call float @llvm.nvvm.fabs.ftz.f32(float %a)
+; CHECK: call double @llvm.nvvm.fabs.f64(double %b)
+  %r1 = call float @llvm.nvvm.fabs.f(float %a)
+  %r2 = call float @llvm.nvvm.fabs.ftz.f(float %a)
+  %r3 = call double @llvm.nvvm.fabs.d(double %b)
   ret void
 }
 
@@ -225,3 +243,14 @@ define void @ldg(ptr %p0, ptr addrspace(1) %p1) {
 
   ret void
 }
+
+; CHECK-LABEL: @atomics
+define i32 @atomics(ptr %p0, i32 %a) {
+; CHECK: %1 = atomicrmw uinc_wrap ptr %p0, i32 %a seq_cst
+; CHECK: %2 = atomicrmw udec_wrap ptr %p0, i32 %a seq_cst
+
+  %r1 = call i32 @llvm.nvvm.atomic.load.inc.32(ptr %p0, i32 %a)
+  %r2 = call i32 @llvm.nvvm.atomic.load.dec.32(ptr %p0, i32 %a)
+  ret i32 %r2
+}
+

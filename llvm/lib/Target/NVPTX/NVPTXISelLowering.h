@@ -282,6 +282,9 @@ public:
   Instruction *emitTrailingFence(IRBuilderBase &Builder, Instruction *Inst,
                                  AtomicOrdering Ord) const override;
 
+  unsigned getPreferredFPToIntOpcode(unsigned Op, EVT FromVT,
+                                     EVT ToVT) const override;
+
 private:
   const NVPTXSubtarget &STI; // cache the subtarget here
   mutable unsigned GlobalUniqueCallSite;
@@ -320,8 +323,6 @@ private:
 
   SDValue LowerShiftRightParts(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerShiftLeftParts(SDValue Op, SelectionDAG &DAG) const;
-
-  SDValue LowerSelect(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue LowerBR_JT(SDValue Op, SelectionDAG &DAG) const;
 

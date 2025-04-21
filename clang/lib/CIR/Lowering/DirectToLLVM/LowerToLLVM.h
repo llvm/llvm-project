@@ -140,6 +140,16 @@ public:
                   mlir::ConversionPatternRewriter &) const override;
 };
 
+class CIRToLLVMGetGlobalOpLowering
+    : public mlir::OpConversionPattern<cir::GetGlobalOp> {
+public:
+  using mlir::OpConversionPattern<cir::GetGlobalOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::GetGlobalOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
 class CIRToLLVMGlobalOpLowering
     : public mlir::OpConversionPattern<cir::GlobalOp> {
   const mlir::DataLayout &dataLayout;
@@ -183,6 +193,19 @@ public:
 
   mlir::LogicalResult
   matchAndRewrite(cir::BinOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
+class CIRToLLVMCmpOpLowering : public mlir::OpConversionPattern<cir::CmpOp> {
+public:
+  CIRToLLVMCmpOpLowering(const mlir::TypeConverter &typeConverter,
+                         mlir::MLIRContext *context)
+      : OpConversionPattern(typeConverter, context) {
+    setHasBoundedRewriteRecursion();
+  }
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::CmpOp op, OpAdaptor,
                   mlir::ConversionPatternRewriter &) const override;
 };
 

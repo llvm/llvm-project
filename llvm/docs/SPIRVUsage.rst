@@ -209,6 +209,8 @@ list of supported SPIR-V extensions, sorted alphabetically by their extension na
      - Adds the ability to declare extended instruction sets that have no semantic impact and can be safely removed from a module.
    * - ``SPV_INTEL_fp_max_error``
      - Adds the ability to specify the maximum error for floating-point operations.
+   * - ``SPV_INTEL_ternary_bitwise_function``
+     - Adds a bitwise instruction on three operands and a look-up table index for specifying the bitwise operation to perform. 
 
 To enable multiple extensions, list them separated by comma. For example, to enable support for atomic operations on floating-point numbers and arbitrary precision integers, use:
 

@@ -57,6 +57,7 @@ class CIRBaseBuilderTy : public mlir::OpBuilder {
 public:
   CIRBaseBuilderTy(mlir::MLIRContext &mlirContext)
       : mlir::OpBuilder(&mlirContext) {}
+  CIRBaseBuilderTy(mlir::OpBuilder &builder) : mlir::OpBuilder(builder) {}
 
   mlir::Value getConstAPInt(mlir::Location loc, mlir::Type typ,
                             const llvm::APInt &val) {
@@ -95,14 +96,16 @@ public:
       return getZeroAttr(arrTy);
     if (auto ptrTy = mlir::dyn_cast<cir::PointerType>(ty))
       return getConstNullPtrAttr(ptrTy);
+    if (auto recordTy = mlir::dyn_cast<cir::RecordType>(ty))
+      return getZeroAttr(recordTy);
     if (mlir::isa<cir::BoolType>(ty)) {
-      return getCIRBoolAttr(false);
+      return getFalseAttr();
     }
     llvm_unreachable("Zero initializer for given type is NYI");
   }
 
   cir::ConstantOp getBool(bool state, mlir::Location loc) {
-    return create<cir::ConstantOp>(loc, getBoolTy(), getCIRBoolAttr(state));
+    return create<cir::ConstantOp>(loc, getCIRBoolAttr(state));
   }
   cir::ConstantOp getFalse(mlir::Location loc) { return getBool(false, loc); }
   cir::ConstantOp getTrue(mlir::Location loc) { return getBool(true, loc); }
@@ -118,7 +121,15 @@ public:
   }
 
   cir::BoolAttr getCIRBoolAttr(bool state) {
-    return cir::BoolAttr::get(getContext(), getBoolTy(), state);
+    return cir::BoolAttr::get(getContext(), state);
+  }
+
+  cir::BoolAttr getTrueAttr() { return getCIRBoolAttr(true); }
+  cir::BoolAttr getFalseAttr() { return getCIRBoolAttr(false); }
+
+  mlir::Value createNot(mlir::Value value) {
+    return create<cir::UnaryOp>(value.getLoc(), value.getType(),
+                                cir::UnaryOpKind::Not, value);
   }
 
   /// Create a do-while operation.
@@ -144,6 +155,16 @@ public:
       llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)> bodyBuilder,
       llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)> stepBuilder) {
     return create<cir::ForOp>(loc, condBuilder, bodyBuilder, stepBuilder);
+  }
+
+  /// Create a break operation.
+  cir::BreakOp createBreak(mlir::Location loc) {
+    return create<cir::BreakOp>(loc);
+  }
+
+  /// Create a continue operation.
+  cir::ContinueOp createContinue(mlir::Location loc) {
+    return create<cir::ContinueOp>(loc);
   }
 
   mlir::TypedAttr getConstPtrAttr(mlir::Type type, int64_t value) {
@@ -184,6 +205,21 @@ public:
   cir::PtrStrideOp createPtrStride(mlir::Location loc, mlir::Value base,
                                    mlir::Value stride) {
     return create<cir::PtrStrideOp>(loc, base.getType(), base, stride);
+  }
+
+  //===--------------------------------------------------------------------===//
+  // Call operators
+  //===--------------------------------------------------------------------===//
+
+  cir::CallOp createCallOp(mlir::Location loc, mlir::SymbolRefAttr callee,
+                           mlir::Type returnType) {
+    auto op = create<cir::CallOp>(loc, callee, returnType);
+    return op;
+  }
+
+  cir::CallOp createCallOp(mlir::Location loc, cir::FuncOp callee) {
+    return createCallOp(loc, mlir::SymbolRefAttr::get(callee),
+                        callee.getFunctionType().getReturnType());
   }
 
   //===--------------------------------------------------------------------===//
@@ -318,6 +354,11 @@ public:
   mlir::Value createNUWAdd(mlir::Location loc, mlir::Value lhs,
                            mlir::Value rhs) {
     return createAdd(loc, lhs, rhs, OverflowBehavior::NoUnsignedWrap);
+  }
+
+  cir::CmpOp createCompare(mlir::Location loc, cir::CmpOpKind kind,
+                           mlir::Value lhs, mlir::Value rhs) {
+    return create<cir::CmpOp>(loc, getBoolTy(), kind, lhs, rhs);
   }
 
   //
