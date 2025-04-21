@@ -214,7 +214,7 @@ genBaseBoundsOps(fir::FirOpBuilder &builder, mlir::Location loc,
 
   mlir::Value one = builder.createIntegerConstant(loc, idxTy, 1);
   const unsigned rank = dataExv.rank();
-  mlir::Value cummulativeExtent = one;
+  mlir::Value cumulativeExtent = one;
   for (unsigned dim = 0; dim < rank; ++dim) {
     mlir::Value baseLb =
         fir::factory::readLowerBound(builder, loc, dataExv, dim, one);
@@ -231,9 +231,9 @@ genBaseBoundsOps(fir::FirOpBuilder &builder, mlir::Location loc,
     }
     mlir::Value stride = one;
     if (strideIncludeLowerExtent) {
-      stride = cummulativeExtent;
-      cummulativeExtent = builder.createOrFold<mlir::arith::MulIOp>(
-          loc, cummulativeExtent, extent);
+      stride = cumulativeExtent;
+      cumulativeExtent = builder.createOrFold<mlir::arith::MulIOp>(
+          loc, cumulativeExtent, extent);
     }
 
     mlir::Value bound = builder.create<BoundsOp>(loc, boundTy, lb, ub, extent,

@@ -680,7 +680,7 @@ genBoundsOps(fir::FirOpBuilder &builder, mlir::Location loc,
   mlir::Value zero = builder.createIntegerConstant(loc, idxTy, 0);
   mlir::Value one = builder.createIntegerConstant(loc, idxTy, 1);
   const int dataExvRank = static_cast<int>(dataExv.rank());
-  mlir::Value cummulativeExtent = one;
+  mlir::Value cumulativeExtent = one;
   for (const auto &subscript : subscripts) {
     const auto *triplet{std::get_if<Fortran::evaluate::Triplet>(&subscript.u)};
     if (triplet || treatIndexAsSection) {
@@ -853,9 +853,9 @@ genBoundsOps(fir::FirOpBuilder &builder, mlir::Location loc,
       // When the strideInBytes is true, it means the stride is from descriptor
       // and this already includes the lower extents.
       if (strideIncludeLowerExtent && !strideInBytes) {
-        stride = cummulativeExtent;
-        cummulativeExtent = builder.createOrFold<mlir::arith::MulIOp>(
-            loc, cummulativeExtent, extent);
+        stride = cumulativeExtent;
+        cumulativeExtent = builder.createOrFold<mlir::arith::MulIOp>(
+            loc, cumulativeExtent, extent);
       }
 
       mlir::Value bound = builder.create<BoundsOp>(
