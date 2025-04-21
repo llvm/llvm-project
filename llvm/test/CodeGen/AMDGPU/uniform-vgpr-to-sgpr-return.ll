@@ -73,51 +73,6 @@ define amdgpu_ps ptr @uniform_v_to_s_ptr(ptr inreg %x) {
   ret ptr %ptr
 }
 
-define amdgpu_ps half @uniform_v_to_s_f16(half inreg %a, half inreg %b) {
-; GFX11-LABEL: uniform_v_to_s_f16:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_max_f16_e64 v0, s0, s1
-; GFX11-NEXT:    v_cmp_o_f16_e64 vcc_lo, s0, s1
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX11-NEXT:    v_cndmask_b32_e32 v0, 0x7e00, v0, vcc_lo
-; GFX11-NEXT:    ; return to shader part epilog
-  %max = call half @llvm.maximum.f16(half %a, half %b)
-  ret half %max
-}
-
-define amdgpu_ps float @uniform_v_to_s_v2f16(<2 x half> inreg %a, <2 x half> inreg %b) {
-; GFX11-LABEL: uniform_v_to_s_v2f16:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_pk_max_f16 v0, s0, s1
-; GFX11-NEXT:    v_cmp_o_f16_e64 vcc_lo, s0, s1
-; GFX11-NEXT:    s_lshr_b32 s2, s1, 16
-; GFX11-NEXT:    s_lshr_b32 s0, s0, 16
-; GFX11-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; GFX11-NEXT:    v_cndmask_b32_e32 v0, 0x7e00, v0, vcc_lo
-; GFX11-NEXT:    v_cmp_o_f16_e64 vcc_lo, s0, s2
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_4)
-; GFX11-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX11-NEXT:    v_cndmask_b32_e32 v1, 0x7e00, v1, vcc_lo
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NEXT:    v_lshl_or_b32 v0, v1, 16, v0
-; GFX11-NEXT:    ; return to shader part epilog
-  %max = call <2 x half> @llvm.maximum.f16(<2 x half> %a, <2 x half> %b)
-  %cast = bitcast <2 x half> %max to float
-  ret float %cast
-}
-
-define amdgpu_ps float @uniform_v_s_float(i32 inreg %a, i32 inreg %b) {
-; GFX11-LABEL: uniform_v_s_float:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_and_b32 s0, s0, s1
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX11-NEXT:    v_mov_b32_e32 v0, s0
-; GFX11-NEXT:    ; return to shader part epilog
-  %and = and i32 %a, %b
-  %cast = bitcast i32 %and to float
-  ret float %cast
-}
-
 define amdgpu_ps double @uniform_v_to_s_double(double inreg %a, double inreg %b) {
 ; GFX11-LABEL: uniform_v_to_s_double:
 ; GFX11:       ; %bb.0:
@@ -132,18 +87,6 @@ define amdgpu_ps double @uniform_v_to_s_double(double inreg %a, double inreg %b)
 ; GFX11-NEXT:    ; return to shader part epilog
   %max0 = call double @llvm.maximum.f64(double %a, double %b)
   ret double %max0
-}
-
-define amdgpu_ps float @uniform_v_to_s_f32(float inreg %a, float inreg %b) {
-; GFX11-LABEL: uniform_v_to_s_f32:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_max_f32_e64 v0, s0, s1
-; GFX11-NEXT:    v_cmp_o_f32_e64 vcc_lo, s0, s1
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX11-NEXT:    v_cndmask_b32_e32 v0, 0x7fc00000, v0, vcc_lo
-; GFX11-NEXT:    ; return to shader part epilog
-  %max0 = call float @llvm.maximum.f32(float %a, float %b)
-  ret float %max0
 }
 
 define amdgpu_ps <2 x i16> @uniform_v_to_s_2_i16(float inreg %a, float inreg %b) {
@@ -172,4 +115,28 @@ define amdgpu_ps i16 @uniform_v_to_s_i16(half inreg %a, half inreg %b) {
   %max = call half @llvm.maximum.f16(half %a, half %b)
   %cast = bitcast half %max to i16
   ret i16 %cast
+}
+
+define amdgpu_ps half @uniform_add_i16_cast_to_f16(i16 inreg %a, i16 inreg %b) {
+; GFX11-LABEL: uniform_add_i16_cast_to_f16:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_add_i32 s0, s0, s1
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    v_mov_b32_e32 v0, s0
+; GFX11-NEXT:    ; return to shader part epilog
+  %add = add i16 %a, %b
+  %cast = bitcast i16 %add to half
+  ret half %cast
+}
+
+define amdgpu_ps float @uniform_mul_i32_cast_to_float(i32 inreg %a, i32 inreg %b) {
+; GFX11-LABEL: uniform_mul_i32_cast_to_float:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_mul_i32 s0, s0, s1
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    v_mov_b32_e32 v0, s0
+; GFX11-NEXT:    ; return to shader part epilog
+  %mul = mul i32 %a, %b
+  %cast = bitcast i32 %mul to float
+  ret float %cast
 }
