@@ -153,10 +153,6 @@ bool BranchFolderLegacy::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
 
-  // TailMerge can create jump into if branches that make CFG irreducible for
-  // HW that requires structurized CFG.
-  bool EnableTailMerge =
-      !MF.getTarget().requiresStructuredCFG() && this->EnableTailMerge;
   MBFIWrapper MBBFreqInfo(
       getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI());
   BranchFolder Folder(
