@@ -225,6 +225,12 @@ Modified Compiler Flags
 
 - `-Wpadded` option implemented for the `x86_64-windows-msvc` target. Fixes #61702
 
+- The ``-mexecute-only`` and ``-mpure-code`` flags are now accepted for AArch64 targets. (#GH125688)
+
+- The ``-Og`` optimization flag now sets ``-fextend-variable-liveness``,
+  reducing performance slightly while reducing the number of optimized-out
+  variables.
+
 Removed Compiler Flags
 -------------------------
 
@@ -385,6 +391,18 @@ Improvements to Clang's diagnostics
 
   Fixes #GH131127
 
+- ``-Wuninitialized`` now diagnoses when a class does not declare any
+  constructors to initialize their non-modifiable members. The diagnostic is
+  not new; being controlled via a warning group is what's new. Fixes #GH41104
+
+- Improved bit-field diagnostics to consider the type specified by the
+  ``preferred_type`` attribute. These diagnostics are controlled by the flags
+  ``-Wpreferred-type-bitfield-enum-conversion`` and
+  ``-Wpreferred-type-bitfield-width``. These warnings are on by default as they
+  they're only triggered if the authors are already making the choice to use
+  ``preferred_type`` attribute.
+
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -432,6 +450,9 @@ Bug Fixes in This Version
   using C++23 "deducing this" did not have a diagnostic location (#GH135522)
 
 - Fixed a crash when a ``friend`` function is redefined as deleted. (#GH135506)
+- Fixed a crash when ``#embed`` appears as a part of a failed constant
+  evaluation. The crashes were happening during diagnostics emission due to
+  unimplemented statement printer. (#GH132641)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -572,6 +593,9 @@ Arm and AArch64 Support
 
 -  Support for __ptrauth type qualifier has been added.
 
+- For AArch64, added support for generating executable-only code sections by using the
+  ``-mexecute-only`` or ``-mpure-code`` compiler flags. (#GH125688)
+
 Android Support
 ^^^^^^^^^^^^^^^
 
@@ -661,6 +685,8 @@ Code Completion
 
 Static Analyzer
 ---------------
+- Fixed a crash when C++20 parenthesized initializer lists are used. This issue
+  was causing a crash in clang-tidy. (#GH136041)
 
 New features
 ^^^^^^^^^^^^
