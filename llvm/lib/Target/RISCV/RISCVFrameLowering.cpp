@@ -1272,7 +1272,7 @@ RISCVFrameLowering::getFrameIndexReference(const MachineFunction &MF, int FI,
     // |--------------------------|
     // | VarSize objects          |
     // |--------------------------| <-- SP
-    if (MFI.getStackID(FI) == TargetStackID::ScalableVector) {
+    if (StackID == TargetStackID::ScalableVector) {
       assert(!RI->hasStackRealignment(MF) &&
              "Can't index across variable sized realign");
       // We don't expect any extra RVV alignment padding, as the stack size
