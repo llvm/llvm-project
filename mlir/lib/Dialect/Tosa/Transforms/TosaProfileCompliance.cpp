@@ -552,8 +552,7 @@ SmallVector<StringRef> TosaProfileCompliance::stringifyProfile(
 
   for (const auto &profiles : profileSet) {
     auto tempStrings = stringifyProfile<T>(profiles);
-    debugStrings.insert(debugStrings.end(), tempStrings.begin(),
-                        tempStrings.end());
+    llvm::append_range(debugStrings, tempStrings);
   }
 
   return debugStrings;

@@ -440,21 +440,13 @@ define <2 x float> @v_mad_mix_v2f32_shuffle(<2 x half> %src0, <2 x half> %src1, 
 ; GISEL-CI-LABEL: v_mad_mix_v2f32_shuffle:
 ; GISEL-CI:       ; %bb.0:
 ; GISEL-CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-CI-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
-; GISEL-CI-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GISEL-CI-NEXT:    v_or_b32_e32 v0, v1, v0
-; GISEL-CI-NEXT:    v_lshlrev_b32_e32 v1, 16, v5
-; GISEL-CI-NEXT:    v_and_b32_e32 v4, 0xffff, v4
-; GISEL-CI-NEXT:    v_or_b32_e32 v1, v1, v4
-; GISEL-CI-NEXT:    v_lshrrev_b32_e32 v4, 16, v0
-; GISEL-CI-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
-; GISEL-CI-NEXT:    v_cvt_f32_f16_e32 v4, v4
-; GISEL-CI-NEXT:    v_cvt_f32_f16_e32 v5, v0
+; GISEL-CI-NEXT:    v_cvt_f32_f16_e32 v4, v1
+; GISEL-CI-NEXT:    v_cvt_f32_f16_e32 v6, v0
 ; GISEL-CI-NEXT:    v_cvt_f32_f16_e32 v0, v2
-; GISEL-CI-NEXT:    v_cvt_f32_f16_e32 v1, v1
+; GISEL-CI-NEXT:    v_cvt_f32_f16_e32 v1, v5
 ; GISEL-CI-NEXT:    v_cvt_f32_f16_e32 v2, v3
 ; GISEL-CI-NEXT:    v_mad_f32 v0, v4, v0, v1
-; GISEL-CI-NEXT:    v_mac_f32_e32 v1, v5, v2
+; GISEL-CI-NEXT:    v_mac_f32_e32 v1, v6, v2
 ; GISEL-CI-NEXT:    s_setpc_b64 s[30:31]
   %src0.shuf = shufflevector <2 x half> %src0, <2 x half> poison, <2 x i32> <i32 1, i32 0>
   %src1.shuf = shufflevector <2 x half> %src1, <2 x half> poison, <2 x i32> <i32 0, i32 1>

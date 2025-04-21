@@ -130,7 +130,6 @@ static cl::opt<bool> IgnoreNonBitcode(
     cl::Hidden);
 
 extern cl::opt<bool> UseNewDbgInfoFormat;
-extern cl::opt<cl::boolOrDefault> PreserveInputDbgFormat;
 
 static ExitOnError ExitOnErr;
 
@@ -478,11 +477,6 @@ int main(int argc, char **argv) {
 
   cl::HideUnrelatedOptions({&LinkCategory, &getColorCategory()});
   cl::ParseCommandLineOptions(argc, argv, "llvm linker\n");
-
-  // Since llvm-link collects multiple IR modules together, for simplicity's
-  // sake we disable the "PreserveInputDbgFormat" flag to enforce a single
-  // debug info format.
-  PreserveInputDbgFormat = cl::boolOrDefault::BOU_FALSE;
 
   LLVMContext Context;
   Context.setDiagnosticHandler(std::make_unique<LLVMLinkDiagnosticHandler>(),

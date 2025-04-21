@@ -106,7 +106,7 @@ struct ValueVectorMapInfo {
   static ValueVector getEmptyKey() { return ValueVector{Value()}; }
   static ValueVector getTombstoneKey() { return ValueVector{Value(), Value()}; }
   static ::llvm::hash_code getHashValue(const ValueVector &val) {
-    return ::llvm::hash_combine_range(val.begin(), val.end());
+    return ::llvm::hash_combine_range(val);
   }
   static bool isEqual(const ValueVector &LHS, const ValueVector &RHS) {
     return LHS == RHS;
@@ -2929,17 +2929,6 @@ TypeConverter::convertSignatureArgs(TypeRange types,
     if (failed(convertSignatureArg(origInputOffset + i, types[i], result)))
       return failure();
   return success();
-}
-
-Value TypeConverter::materializeArgumentConversion(OpBuilder &builder,
-                                                   Location loc,
-                                                   Type resultType,
-                                                   ValueRange inputs) const {
-  for (const MaterializationCallbackFn &fn :
-       llvm::reverse(argumentMaterializations))
-    if (Value result = fn(builder, resultType, inputs, loc))
-      return result;
-  return nullptr;
 }
 
 Value TypeConverter::materializeSourceConversion(OpBuilder &builder,

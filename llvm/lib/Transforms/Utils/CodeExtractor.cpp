@@ -91,10 +91,7 @@ static bool isBlockValidForExtraction(const BasicBlock &BB,
   // don't hoist code that uses another basicblock address, as it's likely to
   // lead to unexpected behavior, like cross-function jumps
   SmallPtrSet<User const *, 16> Visited;
-  SmallVector<User const *, 16> ToVisit;
-
-  for (Instruction const &Inst : BB)
-    ToVisit.push_back(&Inst);
+  SmallVector<User const *, 16> ToVisit(llvm::make_pointer_range(BB));
 
   while (!ToVisit.empty()) {
     User const *Curr = ToVisit.pop_back_val();
@@ -246,6 +243,21 @@ buildExtractionBlockSet(ArrayRef<BasicBlock *> BBs, DominatorTree *DT,
   }
 
   return Result;
+}
+
+/// isAlignmentPreservedForAddrCast - Return true if the cast operation
+/// for specified target preserves original alignment
+static bool isAlignmentPreservedForAddrCast(const Triple &TargetTriple) {
+  switch (TargetTriple.getArch()) {
+  case Triple::ArchType::amdgcn:
+  case Triple::ArchType::r600:
+    return true;
+  // TODO: Add other architectures for which we are certain that alignment
+  // is preserved during address space cast operations.
+  default:
+    return false;
+  }
+  return false;
 }
 
 CodeExtractor::CodeExtractor(ArrayRef<BasicBlock *> BBs, DominatorTree *DT,
@@ -1612,8 +1624,42 @@ void CodeExtractor::emitFunctionBody(
       Idx[1] = ConstantInt::get(Type::getInt32Ty(header->getContext()), aggIdx);
       GetElementPtrInst *GEP = GetElementPtrInst::Create(
           StructArgTy, AggArg, Idx, "gep_" + inputs[i]->getName(), newFuncRoot);
-      RewriteVal = new LoadInst(StructArgTy->getElementType(aggIdx), GEP,
-                                "loadgep_" + inputs[i]->getName(), newFuncRoot);
+      LoadInst *LoadGEP =
+          new LoadInst(StructArgTy->getElementType(aggIdx), GEP,
+                       "loadgep_" + inputs[i]->getName(), newFuncRoot);
+      // If we load pointer, we can add optional !align metadata
+      // The existence of the !align metadata on the instruction tells
+      // the optimizer that the value loaded is known to be aligned to
+      // a boundary specified by the integer value in the metadata node.
+      // Example:
+      // %res = load ptr, ptr %input, align 8, !align !align_md_node
+      //                                 ^         ^
+      //                                 |         |
+      //            alignment of %input address    |
+      //                                           |
+      //                                     alignment of %res object
+      if (StructArgTy->getElementType(aggIdx)->isPointerTy()) {
+        unsigned AlignmentValue;
+        const Triple &TargetTriple =
+            newFunction->getParent()->getTargetTriple();
+        const DataLayout &DL = header->getDataLayout();
+        // Pointers without casting can provide more information about
+        // alignment. Use pointers without casts if given target preserves
+        // alignment information for cast the operation.
+        if (isAlignmentPreservedForAddrCast(TargetTriple))
+          AlignmentValue =
+              inputs[i]->stripPointerCasts()->getPointerAlignment(DL).value();
+        else
+          AlignmentValue = inputs[i]->getPointerAlignment(DL).value();
+        MDBuilder MDB(header->getContext());
+        LoadGEP->setMetadata(
+            LLVMContext::MD_align,
+            MDNode::get(
+                header->getContext(),
+                MDB.createConstant(ConstantInt::get(
+                    Type::getInt64Ty(header->getContext()), AlignmentValue))));
+      }
+      RewriteVal = LoadGEP;
       ++aggIdx;
     } else
       RewriteVal = &*ScalarAI++;

@@ -1233,24 +1233,6 @@ const MCExpr *TargetLoweringObjectFileELF::lowerSymbolDifference(
   return Res;
 }
 
-const MCExpr *TargetLoweringObjectFileELF::lowerRelativeReference(
-    const GlobalValue *LHS, const GlobalValue *RHS, int64_t Addend,
-    std::optional<int64_t> PCRelativeOffset, const TargetMachine &TM) const {
-  // We may only use a PLT-relative relocation to refer to unnamed_addr
-  // functions.
-  if (!LHS->hasGlobalUnnamedAddr() || !LHS->getValueType()->isFunctionTy())
-    return nullptr;
-
-  // Basic correctness checks.
-  if (LHS->getType()->getPointerAddressSpace() != 0 ||
-      RHS->getType()->getPointerAddressSpace() != 0 || LHS->isThreadLocal() ||
-      RHS->isThreadLocal())
-    return nullptr;
-
-  return lowerSymbolDifference(TM.getSymbol(LHS), TM.getSymbol(RHS), Addend,
-                               PCRelativeOffset);
-}
-
 // Reference the PLT entry of a function, optionally with a subtrahend (`RHS`).
 const MCExpr *TargetLoweringObjectFileELF::lowerDSOLocalEquivalent(
     const MCSymbol *LHS, const MCSymbol *RHS, int64_t Addend,

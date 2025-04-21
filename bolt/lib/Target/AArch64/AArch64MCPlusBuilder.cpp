@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "AArch64InstrInfo.h"
 #include "AArch64MCSymbolizer.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
 #include "MCTargetDesc/AArch64FixupKinds.h"
@@ -277,15 +278,14 @@ public:
     }
   }
 
-  MCPhysReg
-  getRegUsedAsCallDest(const MCInst &Inst,
-                       bool &IsAuthenticatedInternally) const override {
-    assert(isCall(Inst) || isBranch(Inst));
-    IsAuthenticatedInternally = false;
+  MCPhysReg getRegUsedAsIndirectBranchDest(
+      const MCInst &Inst, bool &IsAuthenticatedInternally) const override {
+    assert(isIndirectCall(Inst) || isIndirectBranch(Inst));
 
     switch (Inst.getOpcode()) {
     case AArch64::BR:
     case AArch64::BLR:
+      IsAuthenticatedInternally = false;
       return Inst.getOperand(0).getReg();
     case AArch64::BRAA:
     case AArch64::BRAB:
@@ -298,9 +298,7 @@ public:
       IsAuthenticatedInternally = true;
       return Inst.getOperand(0).getReg();
     default:
-      if (isIndirectCall(Inst) || isIndirectBranch(Inst))
-        llvm_unreachable("Unhandled indirect branch");
-      return getNoRegister();
+      llvm_unreachable("Unhandled indirect branch or call");
     }
   }
 
@@ -699,7 +697,7 @@ public:
   }
 
   bool isIndirectCall(const MCInst &Inst) const override {
-    return Inst.getOpcode() == AArch64::BLR;
+    return isIndirectCallOpcode(Inst.getOpcode());
   }
 
   MCPhysReg getSpRegister(int Size) const {
@@ -2338,7 +2336,7 @@ public:
   std::optional<Relocation>
   createRelocation(const MCFixup &Fixup,
                    const MCAsmBackend &MAB) const override {
-    const MCFixupKindInfo &FKI = MAB.getFixupKindInfo(Fixup.getKind());
+    MCFixupKindInfo FKI = MAB.getFixupKindInfo(Fixup.getKind());
 
     assert(FKI.TargetOffset == 0 && "0-bit relocation offset expected");
     const uint64_t RelOffset = Fixup.getOffset();
