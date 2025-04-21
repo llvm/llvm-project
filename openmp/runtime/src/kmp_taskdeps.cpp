@@ -698,9 +698,9 @@ kmp_int32 __kmpc_omp_task_with_deps(ident_t *loc_ref, kmp_int32 gtid,
       __kmp_tdg_is_recording(new_taskdata->tdg->tdg_status)) {
     kmp_tdg_info_t *tdg = new_taskdata->tdg;
     // extend record_map if needed
-    if (new_taskdata->td_task_id >= tdg->map_size) {
+    if (new_taskdata->td_tdg_task_id >= tdg->map_size) {
       __kmp_acquire_bootstrap_lock(&tdg->graph_lock);
-      if (new_taskdata->td_task_id >= tdg->map_size) {
+      if (new_taskdata->td_tdg_task_id >= tdg->map_size) {
         kmp_uint old_size = tdg->map_size;
         kmp_uint new_size = old_size * 2;
         kmp_node_info_t *old_record = tdg->record_map;
