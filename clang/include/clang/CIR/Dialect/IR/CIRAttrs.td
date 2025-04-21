@@ -49,6 +49,12 @@ def CIR_BoolAttr : CIR_Attr<"Bool", "bool", [TypedAttrInterface]> {
                         "", "cir::BoolType">:$type,
                     "bool":$value);
 
+  let builders = [
+    AttrBuilder<(ins "bool":$value), [{
+      return $_get($_ctxt, cir::BoolType::get($_ctxt), value);
+    }]>,
+  ];
+
   let assemblyFormat = [{
     `<` $value `>`
   }];
