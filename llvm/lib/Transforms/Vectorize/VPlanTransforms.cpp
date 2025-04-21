@@ -177,6 +177,8 @@ static bool sinkScalarOperands(VPlan &Plan) {
         continue;
       VPSingleDefRecipe *Clone;
       if (isa<VPReplicateRecipe>(SinkCandidate)) {
+        // TODO: Handle converting to uniform recipes as separate transform,
+        // then cloning should be sufficient here.
         Instruction *I = SinkCandidate->getUnderlyingInstr();
         Clone = new VPReplicateRecipe(I, SinkCandidate->operands(), true);
         // TODO: add ".cloned" suffix to name of Clone's VPValue.
