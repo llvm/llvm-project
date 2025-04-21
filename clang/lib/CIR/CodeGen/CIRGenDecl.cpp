@@ -260,6 +260,9 @@ void CIRGenFunction::emitExprAsInit(const Expr *init, const ValueDecl *d,
 
 void CIRGenFunction::emitDecl(const Decl &d) {
   switch (d.getKind()) {
+  case Decl::Record: // struct/union/class X;
+    assert(!cir::MissingFeatures::generateDebugInfo());
+    return;
   case Decl::Var: {
     const VarDecl &vd = cast<VarDecl>(d);
     assert(vd.isLocalVarDecl() &&
@@ -273,8 +276,18 @@ void CIRGenFunction::emitDecl(const Decl &d) {
   case Decl::OpenACCRoutine:
     emitOpenACCRoutine(cast<OpenACCRoutineDecl>(d));
     return;
+  case Decl::Typedef:     // typedef int X;
+  case Decl::TypeAlias: { // using X = int; [C++0x]
+    QualType ty = cast<TypedefNameDecl>(d).getUnderlyingType();
+    assert(!cir::MissingFeatures::generateDebugInfo());
+    if (ty->isVariablyModifiedType())
+      cgm.errorNYI(d.getSourceRange(), "emitDecl: variably modified type");
+    return;
+  }
   default:
-    cgm.errorNYI(d.getSourceRange(), "emitDecl: unhandled decl type");
+    cgm.errorNYI(d.getSourceRange(),
+                 std::string("emitDecl: unhandled decl type: ") +
+                     d.getDeclKindName());
   }
 }
 

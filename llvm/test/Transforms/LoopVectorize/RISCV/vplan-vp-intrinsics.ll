@@ -110,8 +110,8 @@ define void @safe_dep(ptr %p) {
 ; IF-EVL-NEXT:    EMIT vp<[[IV:%[0-9]+]]> = CANONICAL-INDUCTION ir<0>, vp<[[IV_NEXT:%.+]]>
 ; IF-EVL-NEXT:    EXPLICIT-VECTOR-LENGTH-BASED-IV-PHI vp<[[EVL_PHI:%[0-9]+]]> = phi ir<0>, vp<[[EVL_NEXT:%.+]]>
 ; IF-EVL-NEXT:    EMIT vp<[[AVL:%.+]]> = sub ir<512>, vp<[[EVL_PHI]]>
-; IF-EVL-NEXT:    EMIT vp<[[CMP:%[0-9]+]]> = icmp ult vp<[[AVL]]>, ir<100>
-; IF-EVL-NEXT:    EMIT vp<[[SAFE_AVL:%.+]]> = select vp<[[CMP]]>, vp<[[AVL]]>, ir<100>
+; IF-EVL-NEXT:    EMIT vp<[[CMP:%[0-9]+]]> = icmp ult vp<[[AVL]]>, ir<50>
+; IF-EVL-NEXT:    EMIT vp<[[SAFE_AVL:%.+]]> = select vp<[[CMP]]>, vp<[[AVL]]>, ir<50>
 ; IF-EVL-NEXT:    EMIT vp<[[EVL:%[0-9]+]]> = EXPLICIT-VECTOR-LENGTH vp<[[SAFE_AVL]]>
 ; IF-EVL-NEXT:    vp<[[ST:%[0-9]+]]>    = SCALAR-STEPS vp<[[EVL_PHI]]>, ir<1>, vp<[[VF]]>
 ; IF-EVL-NEXT:    CLONE ir<[[GEP1:%.+]]> = getelementptr ir<%p>, vp<[[ST]]>

@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -Wdocumentation -ast-dump=json -x hlsl -triple dxil-pc-shadermodel6.3-library %s | FileCheck %s --check-prefix=JSON
-// RUN: %clang_cc1 -Wdocumentation -ast-dump -x hlsl -triple dxil-pc-shadermodel6.3-library %s | FileCheck %s --check-prefix=AST
+// RUN: %clang_cc1 -Wno-hlsl-implicit-binding -Wdocumentation -ast-dump=json -x hlsl -triple dxil-pc-shadermodel6.3-library %s | FileCheck %s --check-prefix=JSON
+// RUN: %clang_cc1 -Wno-hlsl-implicit-binding -Wdocumentation -ast-dump -x hlsl -triple dxil-pc-shadermodel6.3-library %s | FileCheck %s --check-prefix=AST
 
 // JSON:"kind": "HLSLBufferDecl",
 // JSON:"name": "A",

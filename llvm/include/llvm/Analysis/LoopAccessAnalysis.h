@@ -33,8 +33,6 @@ class TargetTransformInfo;
 struct VectorizerParams {
   /// Maximum SIMD width.
   static const unsigned MaxVectorWidth;
-  /// Maximum non-power-of-2 vector width.
-  static constexpr unsigned MaxNonPowerOf2VectorWidth = 512;
 
   /// VF as overridden by the user.
   static unsigned VectorizationFactor;

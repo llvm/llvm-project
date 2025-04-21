@@ -27,6 +27,7 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         lines = output.splitlines()
         self.assertIn(program, lines[0], "make sure program path is in first argument")
 
+    @skipIfWindows
     def test_termination(self):
         """
         Tests the correct termination of lldb-dap upon a 'disconnect'

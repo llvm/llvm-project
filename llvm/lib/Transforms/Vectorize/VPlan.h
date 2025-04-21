@@ -57,6 +57,7 @@ class SCEV;
 class Type;
 class VPBasicBlock;
 class VPBuilder;
+class VPDominatorTree;
 class VPRegionBlock;
 class VPlan;
 class VPLane;
@@ -302,6 +303,13 @@ public:
 
   /// Remove all the successors of this block.
   void clearSuccessors() { Successors.clear(); }
+
+  /// Swap predecessors of the block. The block must have exactly 2
+  /// predecessors.
+  void swapPredecessors() {
+    assert(Predecessors.size() == 2 && "must have 2 predecessors to swap");
+    std::swap(Predecessors[0], Predecessors[1]);
+  }
 
   /// Swap successors of the block. The block must have exactly 2 successors.
   // TODO: This should be part of introducing conditional branch recipes rather
@@ -756,33 +764,33 @@ public:
     }
   }
 
-  /// Set the IR flags for \p I.
-  void setFlags(Instruction *I) const {
+  /// Apply the IR flags to \p I.
+  void applyFlags(Instruction &I) const {
     switch (OpType) {
     case OperationType::OverflowingBinOp:
-      I->setHasNoUnsignedWrap(WrapFlags.HasNUW);
-      I->setHasNoSignedWrap(WrapFlags.HasNSW);
+      I.setHasNoUnsignedWrap(WrapFlags.HasNUW);
+      I.setHasNoSignedWrap(WrapFlags.HasNSW);
       break;
     case OperationType::DisjointOp:
-      cast<PossiblyDisjointInst>(I)->setIsDisjoint(DisjointFlags.IsDisjoint);
+      cast<PossiblyDisjointInst>(&I)->setIsDisjoint(DisjointFlags.IsDisjoint);
       break;
     case OperationType::PossiblyExactOp:
-      I->setIsExact(ExactFlags.IsExact);
+      I.setIsExact(ExactFlags.IsExact);
       break;
     case OperationType::GEPOp:
-      cast<GetElementPtrInst>(I)->setNoWrapFlags(GEPFlags);
+      cast<GetElementPtrInst>(&I)->setNoWrapFlags(GEPFlags);
       break;
     case OperationType::FPMathOp:
-      I->setHasAllowReassoc(FMFs.AllowReassoc);
-      I->setHasNoNaNs(FMFs.NoNaNs);
-      I->setHasNoInfs(FMFs.NoInfs);
-      I->setHasNoSignedZeros(FMFs.NoSignedZeros);
-      I->setHasAllowReciprocal(FMFs.AllowReciprocal);
-      I->setHasAllowContract(FMFs.AllowContract);
-      I->setHasApproxFunc(FMFs.ApproxFunc);
+      I.setHasAllowReassoc(FMFs.AllowReassoc);
+      I.setHasNoNaNs(FMFs.NoNaNs);
+      I.setHasNoInfs(FMFs.NoInfs);
+      I.setHasNoSignedZeros(FMFs.NoSignedZeros);
+      I.setHasAllowReciprocal(FMFs.AllowReciprocal);
+      I.setHasAllowContract(FMFs.AllowContract);
+      I.setHasApproxFunc(FMFs.ApproxFunc);
       break;
     case OperationType::NonNegOp:
-      I->setNonNeg(NonNegFlags.NonNeg);
+      I.setNonNeg(NonNegFlags.NonNeg);
       break;
     case OperationType::Cmp:
     case OperationType::Other:
@@ -884,6 +892,13 @@ public:
     AnyOf,
     // Calculates the first active lane index of the vector predicate operand.
     FirstActiveLane,
+
+    // The opcodes below are used for VPInstructionWithType.
+    //
+    /// Scale the first operand (vector step) by the second operand
+    /// (scalar-step).  Casts both operands to the result type if needed.
+    WideIVStep,
+
   };
 
 private:
@@ -1041,11 +1056,19 @@ public:
   VPInstructionWithType(unsigned Opcode, ArrayRef<VPValue *> Operands,
                         Type *ResultTy, DebugLoc DL, const Twine &Name = "")
       : VPInstruction(Opcode, Operands, DL, Name), ResultTy(ResultTy) {}
+  VPInstructionWithType(unsigned Opcode,
+                        std::initializer_list<VPValue *> Operands,
+                        Type *ResultTy, FastMathFlags FMFs, DebugLoc DL = {},
+                        const Twine &Name = "")
+      : VPInstruction(Opcode, Operands, FMFs, DL, Name), ResultTy(ResultTy) {}
 
   static inline bool classof(const VPRecipeBase *R) {
     // VPInstructionWithType are VPInstructions with specific opcodes requiring
     // type information.
-    return R->isScalarCast();
+    if (R->isScalarCast())
+      return true;
+    auto *VPI = dyn_cast<VPInstruction>(R);
+    return VPI && VPI->getOpcode() == VPInstruction::WideIVStep;
   }
 
   static inline bool classof(const VPUser *R) {

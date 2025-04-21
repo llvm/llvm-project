@@ -1295,12 +1295,11 @@ ASTNodeImporter::VisitVariableArrayType(const VariableArrayType *T) {
   Error Err = Error::success();
   QualType ToElementType = importChecked(Err, T->getElementType());
   Expr *ToSizeExpr = importChecked(Err, T->getSizeExpr());
-  SourceRange ToBracketsRange = importChecked(Err, T->getBracketsRange());
   if (Err)
     return std::move(Err);
   return Importer.getToContext().getVariableArrayType(
       ToElementType, ToSizeExpr, T->getSizeModifier(),
-      T->getIndexTypeCVRQualifiers(), ToBracketsRange);
+      T->getIndexTypeCVRQualifiers());
 }
 
 ExpectedType ASTNodeImporter::VisitDependentSizedArrayType(
@@ -1308,7 +1307,6 @@ ExpectedType ASTNodeImporter::VisitDependentSizedArrayType(
   Error Err = Error::success();
   QualType ToElementType = importChecked(Err, T->getElementType());
   Expr *ToSizeExpr = importChecked(Err, T->getSizeExpr());
-  SourceRange ToBracketsRange = importChecked(Err, T->getBracketsRange());
   if (Err)
     return std::move(Err);
   // SizeExpr may be null if size is not specified directly.
@@ -1316,7 +1314,7 @@ ExpectedType ASTNodeImporter::VisitDependentSizedArrayType(
 
   return Importer.getToContext().getDependentSizedArrayType(
       ToElementType, ToSizeExpr, T->getSizeModifier(),
-      T->getIndexTypeCVRQualifiers(), ToBracketsRange);
+      T->getIndexTypeCVRQualifiers());
 }
 
 ExpectedType ASTNodeImporter::VisitDependentSizedExtVectorType(
@@ -9423,34 +9421,6 @@ Expected<Attr *> ASTImporter::Import(const Attr *FromAttr) {
   case attr::AcquiredBefore: {
     const auto *From = cast<AcquiredBeforeAttr>(FromAttr);
     AI.importAttr(From,
-                  AI.importArrayArg(From->args(), From->args_size()).value(),
-                  From->args_size());
-    break;
-  }
-  case attr::AssertExclusiveLock: {
-    const auto *From = cast<AssertExclusiveLockAttr>(FromAttr);
-    AI.importAttr(From,
-                  AI.importArrayArg(From->args(), From->args_size()).value(),
-                  From->args_size());
-    break;
-  }
-  case attr::AssertSharedLock: {
-    const auto *From = cast<AssertSharedLockAttr>(FromAttr);
-    AI.importAttr(From,
-                  AI.importArrayArg(From->args(), From->args_size()).value(),
-                  From->args_size());
-    break;
-  }
-  case attr::ExclusiveTrylockFunction: {
-    const auto *From = cast<ExclusiveTrylockFunctionAttr>(FromAttr);
-    AI.importAttr(From, AI.importArg(From->getSuccessValue()).value(),
-                  AI.importArrayArg(From->args(), From->args_size()).value(),
-                  From->args_size());
-    break;
-  }
-  case attr::SharedTrylockFunction: {
-    const auto *From = cast<SharedTrylockFunctionAttr>(FromAttr);
-    AI.importAttr(From, AI.importArg(From->getSuccessValue()).value(),
                   AI.importArrayArg(From->args(), From->args_size()).value(),
                   From->args_size());
     break;

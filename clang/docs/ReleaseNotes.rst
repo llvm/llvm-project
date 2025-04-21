@@ -96,6 +96,12 @@ C++ Language Changes
       asm((std::string_view("nop")) ::: (std::string_view("memory")));
     }
 
+- Clang now implements the changes to overload resolution proposed by section 1 and 2 of
+  `P3606 <https://wg21.link/P3606R0>`_. If a non-template candidate exists in an overload set that is
+  a perfect match (all conversion sequences are identity conversions) template candidates are not instantiated.
+  Diagnostics that would have resulted from the instantiation of these template candidates are no longer
+  produced. This aligns Clang closer to the behavior of GCC, and fixes (#GH62096), (#GH74581), and (#GH74581).
+
 C++2c Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
@@ -217,6 +223,14 @@ Modified Compiler Flags
 
 - The compiler flag `-fbracket-depth` default value is increased from 256 to 2048. (#GH94728)
 
+- `-Wpadded` option implemented for the `x86_64-windows-msvc` target. Fixes #61702
+
+- The ``-mexecute-only`` and ``-mpure-code`` flags are now accepted for AArch64 targets. (#GH125688)
+
+- The ``-Og`` optimization flag now sets ``-fextend-variable-liveness``,
+  reducing performance slightly while reducing the number of optimized-out
+  variables.
+
 Removed Compiler Flags
 -------------------------
 
@@ -287,6 +301,9 @@ related warnings within the method body.
   particularly relevant for AMDGPU targets, where they map to corresponding IR
   metadata.
 
+- Clang now disallows the use of attributes applied before an
+  ``extern template`` declaration (#GH79893).
+
 Improvements to Clang's diagnostics
 -----------------------------------
 
@@ -312,6 +329,7 @@ Improvements to Clang's diagnostics
 - Clang now respects the current language mode when printing expressions in
   diagnostics. This fixes a bunch of `bool` being printed as `_Bool`, and also
   a bunch of HLSL types being printed as their C++ equivalents.
+- Clang now consistently quotes expressions in diagnostics.
 - When printing types for diagnostics, clang now doesn't suppress the scopes of
   template arguments contained within nested names.
 - The ``-Wshift-bool`` warning has been added to warn about shifting a boolean. (#GH28334)
@@ -355,6 +373,38 @@ Improvements to Clang's diagnostics
 
 - Now correctly diagnose a tentative definition of an array with static
   storage duration in pedantic mode in C. (#GH50661)
+- No longer diagnosing idiomatic function pointer casts on Windows under
+  ``-Wcast-function-type-mismatch`` (which is enabled by ``-Wextra``). Clang
+  would previously warn on this construct, but will no longer do so on Windows:
+
+  .. code-block:: c
+
+    typedef void (WINAPI *PGNSI)(LPSYSTEM_INFO);
+    HMODULE Lib = LoadLibrary("kernel32");
+    PGNSI FnPtr = (PGNSI)GetProcAddress(Lib, "GetNativeSystemInfo");
+
+
+- An error is now emitted when a ``musttail`` call is made to a function marked with the ``not_tail_called`` attribute. (#GH133509).
+
+- ``-Whigher-precisision-for-complex-divison`` warns when:
+
+  -	The divisor is complex.
+  -	When the complex division happens in a higher precision type due to arithmetic promotion.
+  -	When using the divide and assign operator (``/=``).
+
+  Fixes #GH131127
+
+- ``-Wuninitialized`` now diagnoses when a class does not declare any
+  constructors to initialize their non-modifiable members. The diagnostic is
+  not new; being controlled via a warning group is what's new. Fixes #GH41104
+
+- Improved bit-field diagnostics to consider the type specified by the
+  ``preferred_type`` attribute. These diagnostics are controlled by the flags
+  ``-Wpreferred-type-bitfield-enum-conversion`` and
+  ``-Wpreferred-type-bitfield-width``. These warnings are on by default as they
+  they're only triggered if the authors are already making the choice to use
+  ``preferred_type`` attribute.
+
 
 Improvements to Clang's time-trace
 ----------------------------------
@@ -385,6 +435,9 @@ Bug Fixes in This Version
 - Defining an integer literal suffix (e.g., ``LL``) before including
   ``<stdint.h>`` in a freestanding build no longer causes invalid token pasting
   when using the ``INTn_C`` macros. (#GH85995)
+- Fixed an assertion failure in the expansion of builtin macros like ``__has_embed()`` with line breaks before the
+  closing paren. (#GH133574)
+- Fixed a crash in error recovery for expressions resolving to templates. (#GH135621)
 - Clang no longer accepts invalid integer constants which are too large to fit
   into any (standard or extended) integer type when the constant is unevaluated.
   Merely forming the token is sufficient to render the program invalid. Code
@@ -393,6 +446,16 @@ Bug Fixes in This Version
 
     #if 1 ? 1 : 999999999999999999999
     #endif
+- ``#embed`` directive now diagnoses use of a non-character file (device file)
+  such as ``/dev/urandom`` as an error. This restriction may be relaxed in the
+  future. See (#GH126629).
+- Fixed a clang 20 regression where diagnostics attached to some calls to member functions
+  using C++23 "deducing this" did not have a diagnostic location (#GH135522)
+
+- Fixed a crash when a ``friend`` function is redefined as deleted. (#GH135506)
+- Fixed a crash when ``#embed`` appears as a part of a failed constant
+  evaluation. The crashes were happening during diagnostics emission due to
+  unimplemented statement printer. (#GH132641)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -419,6 +482,11 @@ Bug Fixes to Attribute Support
 - No longer crashing on ``__attribute__((align_value(N)))`` during template
   instantiation when the function parameter type is not a pointer or reference.
   (#GH26612)
+- Now allowing the ``[[deprecated]]``, ``[[maybe_unused]]``, and
+  ``[[nodiscard]]`` to be applied to a redeclaration after a definition in both
+  C and C++ mode for the standard spellings (other spellings, such as
+  ``__attribute__((unused))`` are still ignored after the definition, though
+  this behavior may be relaxed in the future). (#GH135481)
 
 Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -430,9 +498,11 @@ Bug Fixes to C++ Support
   by template argument deduction.
 - Clang is now better at instantiating the function definition after its use inside
   of a constexpr lambda. (#GH125747)
+- Fixed a local class member function instantiation bug inside dependent lambdas. (#GH59734), (#GH132208)
 - Clang no longer crashes when trying to unify the types of arrays with
   certain differences in qualifiers (this could happen during template argument
   deduction or when building a ternary operator). (#GH97005)
+- Fixed type alias CTAD issues involving default template arguments. (#GH134471)
 - The initialization kind of elements of structured bindings
   direct-list-initialized from an array is corrected to direct-initialization.
 - Clang no longer crashes when a coroutine is declared ``[[noreturn]]``. (#GH127327)
@@ -448,6 +518,10 @@ Bug Fixes to C++ Support
 - Fixes matching of nested template template parameters. (#GH130362)
 - Correctly diagnoses template template paramters which have a pack parameter
   not in the last position.
+- Disallow overloading on struct vs class on dependent types, which is IFNDR, as
+  this makes the problem diagnosable.
+- Improved preservation of the presence or abscence of typename specifier when
+  printing types in diagnostics.
 - Clang now correctly parses ``if constexpr`` expressions in immediate function context. (#GH123524)
 - Fixed an assertion failure affecting code that uses C++23 "deducing this". (#GH130272)
 - Clang now properly instantiates destructors for initialized members within non-delegating constructors. (#GH93251)
@@ -516,6 +590,14 @@ X86 Support
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
 - For ARM targets, cc1as now considers the FPU's features for the selected CPU or Architecture.
+- The ``+nosimd`` attribute is now fully supported for ARM. Previously, this had no effect when being used with
+  ARM targets, however this will now disable NEON instructions being generated. The ``simd`` option is
+  also now printed when the ``--print-supported-extensions`` option is used.
+
+-  Support for __ptrauth type qualifier has been added.
+
+- For AArch64, added support for generating executable-only code sections by using the
+  ``-mexecute-only`` or ``-mpure-code`` compiler flags. (#GH125688)
 
 Android Support
 ^^^^^^^^^^^^^^^
@@ -530,7 +612,6 @@ Windows Support
 - Clang now can process the `i128` and `ui128` integeral suffixes when MSVC
   extensions are enabled. This allows for properly processing ``intsafe.h`` in
   the Windows SDK.
-- Clang now supports MSVC vector deleting destructors (GH19772).
 
 LoongArch Support
 ^^^^^^^^^^^^^^^^^
@@ -596,6 +677,8 @@ libclang
 --------
 - Added ``clang_visitCXXMethods``, which allows visiting the methods
   of a class.
+- Added ``clang_getFullyQualifiedName``, which provides fully qualified type names as
+  instructed by a PrintingPolicy.
 
 - Fixed a buffer overflow in ``CXString`` implementation. The fix may result in
   increased memory allocation.
@@ -605,6 +688,8 @@ Code Completion
 
 Static Analyzer
 ---------------
+- Fixed a crash when C++20 parenthesized initializer lists are used. This issue
+  was causing a crash in clang-tidy. (#GH136041)
 
 New features
 ^^^^^^^^^^^^
@@ -650,6 +735,8 @@ Python Binding Changes
   the cursor is a specialization of.
 - Added ``Type.get_methods``, a binding for ``clang_visitCXXMethods``, which
   allows visiting the methods of a class.
+- Added ``Type.get_fully_qualified_name``, which provides fully qualified type names as
+  instructed by a PrintingPolicy.
 
 OpenMP Support
 --------------

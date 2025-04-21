@@ -6,9 +6,11 @@ add_flang_library(FIRCodeGenDialect
 
   LINK_LIBS
   FIRDialect
-  MLIRIR
 
   LINK_COMPONENTS
   AsmParser
   AsmPrinter
+
+  MLIR_LIBS
+  MLIRIR
   )

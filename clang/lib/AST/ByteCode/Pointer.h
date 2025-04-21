@@ -129,12 +129,17 @@ public:
       return false;
     if (isIntegralPointer())
       return P.asIntPointer().Value == asIntPointer().Value &&
-             Offset == P.Offset;
+             P.asIntPointer().Desc == asIntPointer().Desc && P.Offset == Offset;
+
+    if (isFunctionPointer())
+      return P.asFunctionPointer().getFunction() ==
+                 asFunctionPointer().getFunction() &&
+             P.Offset == Offset;
 
     assert(isBlockPointer());
     return P.asBlockPointer().Pointee == asBlockPointer().Pointee &&
            P.asBlockPointer().Base == asBlockPointer().Base &&
-           Offset == P.Offset;
+           P.Offset == Offset;
   }
 
   bool operator!=(const Pointer &P) const { return !(P == *this); }

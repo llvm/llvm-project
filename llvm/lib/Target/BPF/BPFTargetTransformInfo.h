@@ -49,7 +49,7 @@ public:
       TTI::TargetCostKind CostKind,
       TTI::OperandValueInfo Op1Info = {TTI::OK_AnyValue, TTI::OP_None},
       TTI::OperandValueInfo Op2Info = {TTI::OK_AnyValue, TTI::OP_None},
-      const llvm::Instruction *I = nullptr) {
+      const llvm::Instruction *I = nullptr) const {
     if (Opcode == Instruction::Select)
       return SCEVCheapExpansionBudget.getValue();
 
@@ -61,7 +61,8 @@ public:
       unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
       TTI::OperandValueInfo Op1Info = {TTI::OK_AnyValue, TTI::OP_None},
       TTI::OperandValueInfo Op2Info = {TTI::OK_AnyValue, TTI::OP_None},
-      ArrayRef<const Value *> Args = {}, const Instruction *CxtI = nullptr) {
+      ArrayRef<const Value *> Args = {},
+      const Instruction *CxtI = nullptr) const {
     int ISD = TLI->InstructionOpcodeToISD(Opcode);
     if (ISD == ISD::ADD && CostKind == TTI::TCK_RecipThroughput)
       return SCEVCheapExpansionBudget.getValue() + 1;

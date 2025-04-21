@@ -563,7 +563,7 @@ void RuntimePointerChecking::groupChecks(
 
     // We've computed the grouped checks for this partition.
     // Save the results and continue with the next one.
-    llvm::copy(Groups, std::back_inserter(CheckingGroups));
+    llvm::append_range(CheckingGroups, Groups);
   }
 }
 
@@ -1775,7 +1775,7 @@ bool MemoryDepChecker::couldPreventStoreLoadForward(uint64_t Distance,
   // than 8 (NumItersForStoreLoadThroughMemory).
   if (AllowNonPow2Deps) {
     MaxVFWithoutSLForwardIssuesNonPowerOf2 =
-        std::min(VectorizerParams::MaxNonPowerOf2VectorWidth * TypeByteSize,
+        std::min(VectorizerParams::MaxVectorWidth * TypeByteSize,
                  MaxNonPowerOf2StoreLoadForwardSafeDistanceInBits);
 
     for (uint64_t VF = MaxVFWithoutSLForwardIssuesNonPowerOf2;
@@ -1807,7 +1807,7 @@ bool MemoryDepChecker::couldPreventStoreLoadForward(uint64_t Distance,
       MaxVFWithoutSLForwardIssuesNonPowerOf2 <
           MaxNonPowerOf2StoreLoadForwardSafeDistanceInBits &&
       MaxVFWithoutSLForwardIssuesNonPowerOf2 !=
-          VectorizerParams::MaxNonPowerOf2VectorWidth * TypeByteSize) {
+          VectorizerParams::MaxVectorWidth * TypeByteSize) {
     uint64_t MaxVF = MaxVFWithoutSLForwardIssuesNonPowerOf2 / CommonStride;
     uint64_t MaxVFInBits = MaxVF * TypeByteSize * 8;
     MaxNonPowerOf2StoreLoadForwardSafeDistanceInBits =

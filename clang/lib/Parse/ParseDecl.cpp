@@ -432,9 +432,8 @@ static bool attributeParsedArgsUnevaluated(const IdentifierInfo &II,
 
 IdentifierLoc *Parser::ParseIdentifierLoc() {
   assert(Tok.is(tok::identifier) && "expected an identifier");
-  IdentifierLoc *IL = IdentifierLoc::create(Actions.Context,
-                                            Tok.getLocation(),
-                                            Tok.getIdentifierInfo());
+  IdentifierLoc *IL = new (Actions.Context)
+      IdentifierLoc(Tok.getLocation(), Tok.getIdentifierInfo());
   ConsumeToken();
   return IL;
 }
@@ -674,7 +673,7 @@ unsigned Parser::ParseAttributeArgsCommon(
         }
       }
 
-      ArgExprs.insert(ArgExprs.end(), ParsedExprs.begin(), ParsedExprs.end());
+      llvm::append_range(ArgExprs, ParsedExprs);
     }
   }
 
@@ -1353,20 +1352,21 @@ void Parser::ParseAvailabilityAttribute(
     return;
   }
   IdentifierLoc *Platform = ParseIdentifierLoc();
-  if (const IdentifierInfo *const Ident = Platform->Ident) {
+  if (const IdentifierInfo *const Ident = Platform->getIdentifierInfo()) {
     // Disallow xrOS for availability attributes.
     if (Ident->getName().contains("xrOS") || Ident->getName().contains("xros"))
-      Diag(Platform->Loc, diag::warn_availability_unknown_platform) << Ident;
+      Diag(Platform->getLoc(), diag::warn_availability_unknown_platform)
+          << Ident;
     // Canonicalize platform name from "macosx" to "macos".
     else if (Ident->getName() == "macosx")
-      Platform->Ident = PP.getIdentifierInfo("macos");
+      Platform->setIdentifierInfo(PP.getIdentifierInfo("macos"));
     // Canonicalize platform name from "macosx_app_extension" to
     // "macos_app_extension".
     else if (Ident->getName() == "macosx_app_extension")
-      Platform->Ident = PP.getIdentifierInfo("macos_app_extension");
+      Platform->setIdentifierInfo(PP.getIdentifierInfo("macos_app_extension"));
     else
-      Platform->Ident = PP.getIdentifierInfo(
-          AvailabilityAttr::canonicalizePlatformName(Ident->getName()));
+      Platform->setIdentifierInfo(PP.getIdentifierInfo(
+          AvailabilityAttr::canonicalizePlatformName(Ident->getName())));
   }
 
   // Parse the ',' following the platform name.
@@ -1418,8 +1418,8 @@ void Parser::ParseAvailabilityAttribute(
       continue;
     }
 
-    if (Keyword == Ident_deprecated && Platform->Ident &&
-        Platform->Ident->isStr("swift")) {
+    if (Keyword == Ident_deprecated && Platform->getIdentifierInfo() &&
+        Platform->getIdentifierInfo()->isStr("swift")) {
       // For swift, we deprecate for all versions.
       if (Changes[Deprecated].KeywordLoc.isValid()) {
         Diag(KeywordLoc, diag::err_availability_redundant)
@@ -1436,7 +1436,7 @@ void Parser::ParseAvailabilityAttribute(
     if (Keyword == Ident_environment) {
       if (EnvironmentLoc != nullptr) {
         Diag(KeywordLoc, diag::err_availability_redundant)
-            << Keyword << SourceRange(EnvironmentLoc->Loc);
+            << Keyword << SourceRange(EnvironmentLoc->getLoc());
       }
     }
 
@@ -1792,8 +1792,8 @@ void Parser::ParseSwiftNewTypeAttribute(
     return;
   }
 
-  auto *SwiftType = IdentifierLoc::create(Actions.Context, Tok.getLocation(),
-                                          Tok.getIdentifierInfo());
+  auto *SwiftType = new (Actions.Context)
+      IdentifierLoc(Tok.getLocation(), Tok.getIdentifierInfo());
   ConsumeToken();
 
   // Closing ')'
@@ -3400,6 +3400,45 @@ void Parser::DistributeCLateParsedAttrs(Decl *Dcl,
   }
 }
 
+/// type-qualifier:
+///    ('__ptrauth') '(' constant-expression
+///                   (',' constant-expression)[opt]
+///                   (',' constant-expression)[opt] ')'
+void Parser::ParsePtrauthQualifier(ParsedAttributes &Attrs) {
+  assert(Tok.is(tok::kw___ptrauth));
+
+  IdentifierInfo *KwName = Tok.getIdentifierInfo();
+  SourceLocation KwLoc = ConsumeToken();
+
+  BalancedDelimiterTracker T(*this, tok::l_paren);
+  if (T.expectAndConsume())
+    return;
+
+  ArgsVector ArgExprs;
+  do {
+    ExprResult ER = ParseAssignmentExpression();
+    if (ER.isInvalid()) {
+      T.skipToEnd();
+      return;
+    }
+    ArgExprs.push_back(ER.get());
+  } while (TryConsumeToken(tok::comma));
+
+  T.consumeClose();
+  SourceLocation EndLoc = T.getCloseLocation();
+
+  if (ArgExprs.empty() || ArgExprs.size() > 3) {
+    Diag(KwLoc, diag::err_ptrauth_qualifier_bad_arg_count);
+    return;
+  }
+
+  Attrs.addNew(KwName, SourceRange(KwLoc, EndLoc),
+               /*scope*/ nullptr, SourceLocation(), ArgExprs.data(),
+               ArgExprs.size(),
+               ParsedAttr::Form::Keyword(/*IsAlignAs=*/false,
+                                         /*IsRegularKeywordAttribute=*/false));
+}
+
 /// Bounds attributes (e.g., counted_by):
 ///   AttrName '(' expression ')'
 void Parser::ParseBoundsAttribute(IdentifierInfo &AttrName,
@@ -4266,6 +4305,11 @@ void Parser::ParseDeclarationSpecifiers(
       isInvalid = DS.SetTypeQual(DeclSpec::TQ_unaligned, Loc, PrevSpec, DiagID,
                                  getLangOpts());
       break;
+
+    // __ptrauth qualifier.
+    case tok::kw___ptrauth:
+      ParsePtrauthQualifier(DS.getAttributes());
+      continue;
 
     case tok::kw___sptr:
     case tok::kw___uptr:
@@ -5980,6 +6024,7 @@ bool Parser::isTypeSpecifierQualifier() {
   case tok::kw___ptr32:
   case tok::kw___pascal:
   case tok::kw___unaligned:
+  case tok::kw___ptrauth:
 
   case tok::kw__Nonnull:
   case tok::kw__Nullable:
@@ -6269,6 +6314,7 @@ bool Parser::isDeclarationSpecifier(
   case tok::kw___forceinline:
   case tok::kw___pascal:
   case tok::kw___unaligned:
+  case tok::kw___ptrauth:
 
   case tok::kw__Nonnull:
   case tok::kw__Nullable:
@@ -6531,6 +6577,12 @@ void Parser::ParseTypeQualifierListOpt(
     case tok::kw_out:
       // NOTE: ParseHLSLQualifiers will consume the qualifier token.
       ParseHLSLQualifiers(DS.getAttributes());
+      continue;
+
+    // __ptrauth qualifier.
+    case tok::kw___ptrauth:
+      ParsePtrauthQualifier(DS.getAttributes());
+      EndLoc = PrevTokLocation;
       continue;
 
     case tok::kw___unaligned:

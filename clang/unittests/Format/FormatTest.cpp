@@ -2866,19 +2866,21 @@ TEST_F(FormatTest, ShortEnums) {
 }
 
 TEST_F(FormatTest, ShortCompoundRequirement) {
+  constexpr StringRef Code("template <typename T>\n"
+                           "concept c = requires(T x) {\n"
+                           "  { x + 1 } -> std::same_as<int>;\n"
+                           "};");
+
   FormatStyle Style = getLLVMStyle();
   EXPECT_TRUE(Style.AllowShortCompoundRequirementOnASingleLine);
-  verifyFormat("template <typename T>\n"
-               "concept c = requires(T x) {\n"
-               "  { x + 1 } -> std::same_as<int>;\n"
-               "};",
-               Style);
+  verifyFormat(Code, Style);
   verifyFormat("template <typename T>\n"
                "concept c = requires(T x) {\n"
                "  { x + 1 } -> std::same_as<int>;\n"
                "  { x + 2 } -> std::same_as<int>;\n"
                "};",
                Style);
+
   Style.AllowShortCompoundRequirementOnASingleLine = false;
   verifyFormat("template <typename T>\n"
                "concept c = requires(T x) {\n"
@@ -2886,7 +2888,7 @@ TEST_F(FormatTest, ShortCompoundRequirement) {
                "    x + 1\n"
                "  } -> std::same_as<int>;\n"
                "};",
-               Style);
+               Code, Style);
   verifyFormat("template <typename T>\n"
                "concept c = requires(T x) {\n"
                "  {\n"
@@ -2897,6 +2899,11 @@ TEST_F(FormatTest, ShortCompoundRequirement) {
                "  } -> std::same_as<int>;\n"
                "};",
                Style);
+
+  Style.AllowShortCompoundRequirementOnASingleLine = true;
+  Style.BreakBeforeBraces = FormatStyle::BS_Custom;
+  Style.BraceWrapping.AfterControlStatement = FormatStyle::BWACS_MultiLine;
+  verifyFormat(Code, Style);
 }
 
 TEST_F(FormatTest, ShortCaseLabels) {
@@ -3419,6 +3426,17 @@ TEST_F(FormatTest, MultiLineControlStatements) {
                "{\n"
                "};",
                Style);
+
+  Style = getLLVMStyle();
+  Style.AllowShortBlocksOnASingleLine = FormatStyle::SBS_Always;
+  Style.AllowShortIfStatementsOnASingleLine = FormatStyle::SIS_WithoutElse;
+  Style.AllowShortLoopsOnASingleLine = true;
+  Style.BreakBeforeBraces = FormatStyle::BS_Custom;
+  Style.BraceWrapping.AfterControlStatement = FormatStyle::BWACS_MultiLine;
+  verifyFormat("if (true) { return; }", Style);
+  verifyFormat("while (true) { return; }", Style);
+  // Failing test in https://reviews.llvm.org/D114521#3151727
+  verifyFormat("for (;;) { bar(); }", Style);
 }
 
 TEST_F(FormatTest, BeforeWhile) {
@@ -27981,6 +27999,33 @@ TEST_F(FormatTest, EnumTrailingComma) {
                "};\n"
                "enum Color { red, green, blue /**/ };",
                Code, Style);
+
+  EXPECT_TRUE(Style.AllowShortEnumsOnASingleLine);
+  Style.AllowShortEnumsOnASingleLine = false;
+
+  constexpr StringRef Input("enum {\n"
+                            "  //\n"
+                            "  a,\n"
+                            "  /**/\n"
+                            "  b,\n"
+                            "};");
+  verifyFormat(Input, Input, Style, {tooling::Range(12, 3)}); // line 3
+  verifyFormat("enum {\n"
+               "  //\n"
+               "  a,\n"
+               "  /**/\n"
+               "  b\n"
+               "};",
+               Input, Style, {tooling::Range(24, 3)}); // line 5
+
+  Style.EnumTrailingComma = FormatStyle::ETC_Insert;
+  verifyFormat("enum class MyEnum_E {\n"
+               "  MY_ENUM = 0U,\n"
+               "};",
+               "enum class MyEnum_E {\n"
+               "  MY_ENUM = 0U\n"
+               "};",
+               Style);
 }
 
 TEST_F(FormatTest, BreakAfterAttributes) {

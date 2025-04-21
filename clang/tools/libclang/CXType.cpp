@@ -19,6 +19,7 @@
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Expr.h"
+#include "clang/AST/QualTypeNames.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/AddressSpaces.h"
@@ -326,6 +327,22 @@ CXString clang_getTypePrettyPrinted(CXType CT, CXPrintingPolicy cxPolicy) {
   T.print(OS, *UserPolicy);
 
   return cxstring::createDup(OS.str());
+}
+
+CXString clang_getFullyQualifiedName(CXType CT, CXPrintingPolicy cxPolicy,
+                                     unsigned int WithGlobalNsPrefix) {
+  const QualType T = GetQualType(CT);
+  if (T.isNull())
+    return cxstring::createEmpty();
+  const CXTranslationUnit TU = GetTU(CT);
+  const ASTContext &Ctx = cxtu::getASTUnit(TU)->getASTContext();
+  const PrintingPolicy *UserPolicy = static_cast<PrintingPolicy *>(cxPolicy);
+  const bool WithGlobalNs = (WithGlobalNsPrefix != 0);
+
+  const std::string Str =
+      TypeName::getFullyQualifiedName(T, Ctx, *UserPolicy, WithGlobalNs);
+
+  return cxstring::createDup(Str);
 }
 
 CXType clang_getTypedefDeclUnderlyingType(CXCursor C) {

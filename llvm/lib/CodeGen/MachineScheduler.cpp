@@ -2106,7 +2106,7 @@ void BaseMemOpClusterMutation::collectMemOpRecords(
     SmallVector<const MachineOperand *, 4> BaseOps;
     int64_t Offset;
     bool OffsetIsScalable;
-    LocationSize Width = 0;
+    LocationSize Width = LocationSize::precise(0);
     if (TII->getMemOperandsWithOffsetWidth(MI, BaseOps, Offset,
                                            OffsetIsScalable, Width, TRI)) {
       if (!Width.hasValue())

@@ -1235,23 +1235,6 @@ bool FormatEntity::FormatStringRef(const llvm::StringRef &format_str, Stream &s,
   return false;
 }
 
-bool FormatEntity::FormatCString(const char *format, Stream &s,
-                                 const SymbolContext *sc,
-                                 const ExecutionContext *exe_ctx,
-                                 const Address *addr, ValueObject *valobj,
-                                 bool function_changed, bool initial_function) {
-  if (format && format[0]) {
-    FormatEntity::Entry root;
-    llvm::StringRef format_str(format);
-    Status error = FormatEntity::Parse(format_str, root);
-    if (error.Success()) {
-      return FormatEntity::Format(root, s, sc, exe_ctx, addr, valobj,
-                                  function_changed, initial_function);
-    }
-  }
-  return false;
-}
-
 bool FormatEntity::Format(const Entry &entry, Stream &s,
                           const SymbolContext *sc,
                           const ExecutionContext *exe_ctx, const Address *addr,

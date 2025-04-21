@@ -115,8 +115,8 @@ define void @test_may_clobber1(ptr %p) {
 ; IF-EVL-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; IF-EVL-NEXT:    [[TMP3:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_EVL_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; IF-EVL-NEXT:    [[AVL:%.*]] = sub i64 200, [[TMP3]]
-; IF-EVL-NEXT:    [[TMP12:%.*]] = icmp ult i64 [[AVL]], 100
-; IF-EVL-NEXT:    [[SAFE_AVL:%.*]] = select i1 [[TMP12]], i64 [[AVL]], i64 100
+; IF-EVL-NEXT:    [[TMP12:%.*]] = icmp ult i64 [[AVL]], 50
+; IF-EVL-NEXT:    [[SAFE_AVL:%.*]] = select i1 [[TMP12]], i64 [[AVL]], i64 50
 ; IF-EVL-NEXT:    [[TMP6:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[SAFE_AVL]], i32 2, i1 true)
 ; IF-EVL-NEXT:    [[TMP4:%.*]] = getelementptr i64, ptr [[P:%.*]], i64 [[TMP3]]
 ; IF-EVL-NEXT:    [[TMP5:%.*]] = getelementptr i64, ptr [[TMP4]], i32 0

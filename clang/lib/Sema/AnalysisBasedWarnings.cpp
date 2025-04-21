@@ -313,8 +313,7 @@ static bool throwEscapes(Sema &S, const CXXThrowExpr *E, CFGBlock &ThrowBlock,
   Queued[ThrowBlock.getBlockID()] = true;
 
   while (!Stack.empty()) {
-    CFGBlock &UnwindBlock = *Stack.back();
-    Stack.pop_back();
+    CFGBlock &UnwindBlock = *Stack.pop_back_val();
 
     for (auto &Succ : UnwindBlock.succs()) {
       if (!Succ.isReachable() || Queued[Succ->getBlockID()])
@@ -2532,12 +2531,23 @@ static void flushDiagnostics(Sema &S, const sema::FunctionScopeInfo *fscope) {
 class CallableVisitor : public DynamicRecursiveASTVisitor {
 private:
   llvm::function_ref<void(const Decl *)> Callback;
+  const Module *const TUModule;
 
 public:
-  CallableVisitor(llvm::function_ref<void(const Decl *)> Callback)
-      : Callback(Callback) {
+  CallableVisitor(llvm::function_ref<void(const Decl *)> Callback,
+                  const Module *const TUModule)
+      : Callback(Callback), TUModule(TUModule) {
     ShouldVisitTemplateInstantiations = true;
     ShouldVisitImplicitCode = false;
+  }
+
+  bool TraverseDecl(Decl *Node) override {
+    // For performance reasons, only validate the current translation unit's
+    // module, and not modules it depends on.
+    // See https://issues.chromium.org/issues/351909443 for details.
+    if (Node && Node->getOwningModule() == TUModule)
+      return DynamicRecursiveASTVisitor::TraverseDecl(Node);
+    return true;
   }
 
   bool VisitFunctionDecl(FunctionDecl *Node) override {
@@ -2622,7 +2632,8 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
                        SourceLocation()) ||
       (!Diags.isIgnored(diag::warn_unsafe_buffer_libc_call, SourceLocation()) &&
        S.getLangOpts().CPlusPlus /* only warn about libc calls in C++ */)) {
-    CallableVisitor(CallAnalyzers).TraverseTranslationUnitDecl(TU);
+    CallableVisitor(CallAnalyzers, TU->getOwningModule())
+        .TraverseTranslationUnitDecl(TU);
   }
 }
 
