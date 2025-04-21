@@ -323,10 +323,8 @@ uint64_t RecordType::getElementOffset(const ::mlir::DataLayout &dataLayout,
 
   unsigned offset = 0;
 
-  for (unsigned i = 0, e = idx; i != e; ++i) {
-    mlir::Type ty = members[i];
-
-    // This matches LLVM since it uses the ABI instead of preferred alignment.
+  for (mlir::Type ty : llvm::make_range(members.begin(), std::next(members.begin(), idx))) {
+     // This matches LLVM since it uses the ABI instead of preferred alignment.
     const llvm::Align tyAlign =
         llvm::Align(getPacked() ? 1 : dataLayout.getTypeABIAlignment(ty));
 

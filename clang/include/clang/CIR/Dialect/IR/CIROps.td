@@ -1397,7 +1397,7 @@ def GetMemberOp : CIR_Op<"get_member"> {
     ```mlir
     // Suppose we have a record with multiple members.
     !s32i = !cir.int<s, 32>
-    !s8i = !cir.int<s, 32>
+    !s8i = !cir.int<s, 8>
     !ty_B = !cir.record<"struct.B" {!s32i, !s8i}>
 
     // Get the address of the member at index 1.
