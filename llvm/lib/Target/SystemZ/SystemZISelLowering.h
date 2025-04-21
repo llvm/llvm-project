@@ -768,11 +768,8 @@ private:
   SDValue combineINT_TO_FP(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineBSWAP(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineBR_CCMASK(SDNode *N, DAGCombinerInfo &DCI) const;
-  std::optional<SDValue> combineBR_CCJoinIPMMask(SDNode *N,
-                                                 DAGCombinerInfo &DCI) const;
   SDValue combineSELECT_CCMASK(SDNode *N, DAGCombinerInfo &DCI) const;
-  std::optional<SDValue> combineSELECT_CC_CCIPMMask(SDNode *N,
-                                                    DAGCombinerInfo &DCI) const;
+  SDValue combineSELECT_CC_CCIPMMask(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineGET_CCMASK(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineIntDIVREM(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineINTRINSIC(SDNode *N, DAGCombinerInfo &DCI) const;

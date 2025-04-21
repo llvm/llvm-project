@@ -12117,13 +12117,12 @@ void SelectionDAGBuilder::lowerWorkItem(SwitchWorkListItem W, Value *Cond,
         SDValue CondLHS = getValue(Cond);
         EVT VT = CondLHS.getValueType();
         SDLoc DL = getCurSDLoc();
-        SDValue Cond;
 
         SDValue Or = DAG.getNode(ISD::OR, DL, VT, CondLHS,
                                  DAG.getConstant(CommonBit, DL, VT));
-        Cond = DAG.getSetCC(DL, MVT::i1, Or,
-                            DAG.getConstant(BigValue | SmallValue, DL, VT),
-                            ISD::SETEQ);
+        SDValue Cond = DAG.getSetCC(
+            DL, MVT::i1, Or, DAG.getConstant(BigValue | SmallValue, DL, VT),
+            ISD::SETEQ);
 
         // Update successor info.
         // Both Small and Big will jump to Small.BB, so we sum up the
