@@ -801,6 +801,12 @@ private:
   void mergeNodeCalleeClones(
       ContextNode *Node, DenseSet<const ContextNode *> &Visited,
       DenseMap<uint32_t, ContextNode *> &ContextIdToAllocationNode);
+  /// Helper to find other callers of the given set of callee edges that can
+  /// share the same callee merge node.
+  void findOtherCallersToShareMerge(
+      ContextNode *Node, std::vector<std::shared_ptr<ContextEdge>> &CalleeEdges,
+      DenseMap<uint32_t, ContextNode *> &ContextIdToAllocationNode,
+      DenseSet<ContextNode *> &OtherCallersToShareMerge);
 
   /// Recursively perform cloning on the graph for the given Node and its
   /// callers, in order to uniquely identify the allocation behavior of an
@@ -4178,98 +4184,12 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::mergeNodeCalleeClones(
     std::stable_sort(CalleeEdges.begin(), CalleeEdges.end(),
                      CalleeCallerEdgeLessThan);
 
-    // Next look for other nodes that have edges to the same set of callee
-    // clones as the current Node. Those can share the eventual merge node
-    // (reducing cloning and binary size overhead) iff:
-    // - they have edges to the same set of callee clones
-    // - each callee edge reaches a subset of the same allocations as Node's
-    //   corresponding edge to the same callee clone.
-    // The second requirement is to ensure that we don't undo any of the
-    // necessary cloning to distinguish contexts with different allocation
-    // behavior.
-    // FIXME: This is somewhat conservative, as we really just need to ensure
-    // that they don't reach the same allocations as contexts on edges from Node
-    // going to any of the *other* callee clones being merged. However, that
-    // requires more tracking and checking to get right.
-    //
-    // This map counts how many edges to the same callee clone exist for other
-    // caller nodes of each callee clone.
-    DenseMap<ContextNode *, unsigned> OtherCallersToSharedCalleeEdgeCount;
-    // Counts the number of other caller nodes that have edges to all callee
-    // clones that don't violate the allocation context checking.
-    unsigned PossibleOtherCallerNodes = 0;
-    // We only need to look at other Caller nodes if the first callee edge has
-    // multiple callers (recall they are sorted in ascending order above).
-    if (CalleeEdges[0]->Callee->CallerEdges.size() > 1) {
-      // For each callee edge:
-      // - Collect the count of other caller nodes calling the same callees.
-      // - Collect the alloc nodes reached by contexts on each callee edge.
-      DenseMap<ContextEdge *, DenseSet<ContextNode *>> CalleeEdgeToAllocNodes;
-      for (auto CalleeEdge : CalleeEdges) {
-        assert(CalleeEdge->Callee->CallerEdges.size() > 1);
-        // For each other caller of the same callee, increment the count of
-        // edges reaching the same callee clone.
-        for (auto CalleeCallerEdges : CalleeEdge->Callee->CallerEdges) {
-          if (CalleeCallerEdges->Caller == Node) {
-            assert(CalleeCallerEdges == CalleeEdge);
-            continue;
-          }
-          OtherCallersToSharedCalleeEdgeCount[CalleeCallerEdges->Caller]++;
-          // If this caller edge now reaches all of the same callee clones,
-          // increment the count of candidate other caller nodes.
-          if (OtherCallersToSharedCalleeEdgeCount[CalleeCallerEdges->Caller] ==
-              NumCalleeClones)
-            PossibleOtherCallerNodes++;
-        }
-        // Collect the alloc nodes reached by contexts on each callee edge, for
-        // later analysis.
-        for (auto Id : CalleeEdge->getContextIds()) {
-          auto *Alloc = ContextIdToAllocationNode.lookup(Id);
-          if (!Alloc) {
-            // FIXME: unclear why this happens occasionally, presumably
-            // imperfect graph updates possibly with recursion.
-            MissingAllocForContextId++;
-            continue;
-          }
-          CalleeEdgeToAllocNodes[CalleeEdge.get()].insert(Alloc);
-        }
-      }
-      // Now walk the callee edges again, and make sure that for each candidate
-      // caller node all of its edges to the callees reach the same allocs (or
-      // a subset) as those along the corresponding callee edge from Node.
-      for (auto CalleeEdge : CalleeEdges) {
-        assert(CalleeEdge->Callee->CallerEdges.size() > 1);
-        // Stop if we do not have any (more) candidate other caller nodes.
-        if (!PossibleOtherCallerNodes)
-          break;
-        auto &CurCalleeAllocNodes = CalleeEdgeToAllocNodes[CalleeEdge.get()];
-        // Check each other caller of this callee clone.
-        for (auto &CalleeCallerE : CalleeEdge->Callee->CallerEdges) {
-          // Not interested in the callee edge from Node itself.
-          if (CalleeCallerE == CalleeEdge)
-            continue;
-          // Skip any callers that didn't have callee edges to all the same
-          // callee clones.
-          if (OtherCallersToSharedCalleeEdgeCount[CalleeCallerE->Caller] !=
-              NumCalleeClones)
-            continue;
-          // Make sure that each context along edge from candidate caller node
-          // reaches an allocation also reached by this callee edge from Node.
-          for (auto Id : CalleeCallerE->getContextIds()) {
-            auto *Alloc = ContextIdToAllocationNode.lookup(Id);
-            if (!Alloc)
-              continue;
-            // If not, simply reset the map entry to 0 so caller is ignored, and
-            // reduce the count of candidate other caller nodes.
-            if (!CurCalleeAllocNodes.contains(Alloc)) {
-              OtherCallersToSharedCalleeEdgeCount[CalleeCallerE->Caller] = 0;
-              PossibleOtherCallerNodes--;
-              break;
-            }
-          }
-        }
-      }
-    }
+    /// Find other callers of the given set of callee edges that can
+    /// share the same callee merge node. See the comments at this method
+    /// definition for details.
+    DenseSet<ContextNode *> OtherCallersToShareMerge;
+    findOtherCallersToShareMerge(Node, CalleeEdges, ContextIdToAllocationNode,
+                                 OtherCallersToShareMerge);
 
     // Now do the actual merging. Identify existing or create a new MergeNode
     // during the first iteration. Move each callee over, along with edges from
@@ -4292,13 +4212,12 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::mergeNodeCalleeClones(
         // the merge node with Node, see if all of OrigCallee's callers are
         // going to share the same merge node. In that case we can use callee
         // (since all of its callers would move to the new merge node).
-        if (PossibleOtherCallerNodes) {
+        if (!OtherCallersToShareMerge.empty()) {
           bool MoveAllCallerEdges = true;
           for (auto CalleeCallerE : OrigCallee->CallerEdges) {
             if (CalleeCallerE == CalleeEdge)
               continue;
-            if (OtherCallersToSharedCalleeEdgeCount[CalleeCallerE->Caller] !=
-                NumCalleeClones) {
+            if (!OtherCallersToShareMerge.contains(CalleeCallerE->Caller)) {
               MoveAllCallerEdges = false;
               break;
             }
@@ -4323,7 +4242,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::mergeNodeCalleeClones(
       }
       // Now move all identified edges from other callers over to the merge node
       // as well.
-      if (PossibleOtherCallerNodes) {
+      if (!OtherCallersToShareMerge.empty()) {
         // Make and iterate over a copy of OrigCallee's caller edges because
         // some of these will be moved off of the OrigCallee and that would mess
         // up the iteration from OrigCallee.
@@ -4331,8 +4250,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::mergeNodeCalleeClones(
         for (auto &CalleeCallerE : OrigCalleeCallerEdges) {
           if (CalleeCallerE == CalleeEdge)
             continue;
-          if (OtherCallersToSharedCalleeEdgeCount[CalleeCallerE->Caller] !=
-              NumCalleeClones)
+          if (!OtherCallersToShareMerge.contains(CalleeCallerE->Caller))
             continue;
           CallerToMoveCount[CalleeCallerE->Caller]++;
           moveEdgeToExistingCalleeClone(CalleeCallerE, MergeNode,
@@ -4342,6 +4260,121 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::mergeNodeCalleeClones(
       removeNoneTypeCalleeEdges(OrigCallee);
       removeNoneTypeCalleeEdges(MergeNode);
     }
+  }
+}
+
+// Look for other nodes that have edges to the same set of callee
+// clones as the current Node. Those can share the eventual merge node
+// (reducing cloning and binary size overhead) iff:
+// - they have edges to the same set of callee clones
+// - each callee edge reaches a subset of the same allocations as Node's
+//   corresponding edge to the same callee clone.
+// The second requirement is to ensure that we don't undo any of the
+// necessary cloning to distinguish contexts with different allocation
+// behavior.
+// FIXME: This is somewhat conservative, as we really just need to ensure
+// that they don't reach the same allocations as contexts on edges from Node
+// going to any of the *other* callee clones being merged. However, that
+// requires more tracking and checking to get right.
+template <typename DerivedCCG, typename FuncTy, typename CallTy>
+void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::
+    findOtherCallersToShareMerge(
+        ContextNode *Node,
+        std::vector<std::shared_ptr<ContextEdge>> &CalleeEdges,
+        DenseMap<uint32_t, ContextNode *> &ContextIdToAllocationNode,
+        DenseSet<ContextNode *> &OtherCallersToShareMerge) {
+  auto NumCalleeClones = CalleeEdges.size();
+  // This map counts how many edges to the same callee clone exist for other
+  // caller nodes of each callee clone.
+  DenseMap<ContextNode *, unsigned> OtherCallersToSharedCalleeEdgeCount;
+  // Counts the number of other caller nodes that have edges to all callee
+  // clones that don't violate the allocation context checking.
+  unsigned PossibleOtherCallerNodes = 0;
+
+  // We only need to look at other Caller nodes if the first callee edge has
+  // multiple callers (recall they are sorted in ascending order above).
+  if (CalleeEdges[0]->Callee->CallerEdges.size() < 2)
+    return;
+
+  // For each callee edge:
+  // - Collect the count of other caller nodes calling the same callees.
+  // - Collect the alloc nodes reached by contexts on each callee edge.
+  DenseMap<ContextEdge *, DenseSet<ContextNode *>> CalleeEdgeToAllocNodes;
+  for (auto CalleeEdge : CalleeEdges) {
+    assert(CalleeEdge->Callee->CallerEdges.size() > 1);
+    // For each other caller of the same callee, increment the count of
+    // edges reaching the same callee clone.
+    for (auto CalleeCallerEdges : CalleeEdge->Callee->CallerEdges) {
+      if (CalleeCallerEdges->Caller == Node) {
+        assert(CalleeCallerEdges == CalleeEdge);
+        continue;
+      }
+      OtherCallersToSharedCalleeEdgeCount[CalleeCallerEdges->Caller]++;
+      // If this caller edge now reaches all of the same callee clones,
+      // increment the count of candidate other caller nodes.
+      if (OtherCallersToSharedCalleeEdgeCount[CalleeCallerEdges->Caller] ==
+          NumCalleeClones)
+        PossibleOtherCallerNodes++;
+    }
+    // Collect the alloc nodes reached by contexts on each callee edge, for
+    // later analysis.
+    for (auto Id : CalleeEdge->getContextIds()) {
+      auto *Alloc = ContextIdToAllocationNode.lookup(Id);
+      if (!Alloc) {
+        // FIXME: unclear why this happens occasionally, presumably
+        // imperfect graph updates possibly with recursion.
+        MissingAllocForContextId++;
+        continue;
+      }
+      CalleeEdgeToAllocNodes[CalleeEdge.get()].insert(Alloc);
+    }
+  }
+
+  // Now walk the callee edges again, and make sure that for each candidate
+  // caller node all of its edges to the callees reach the same allocs (or
+  // a subset) as those along the corresponding callee edge from Node.
+  for (auto CalleeEdge : CalleeEdges) {
+    assert(CalleeEdge->Callee->CallerEdges.size() > 1);
+    // Stop if we do not have any (more) candidate other caller nodes.
+    if (!PossibleOtherCallerNodes)
+      break;
+    auto &CurCalleeAllocNodes = CalleeEdgeToAllocNodes[CalleeEdge.get()];
+    // Check each other caller of this callee clone.
+    for (auto &CalleeCallerE : CalleeEdge->Callee->CallerEdges) {
+      // Not interested in the callee edge from Node itself.
+      if (CalleeCallerE == CalleeEdge)
+        continue;
+      // Skip any callers that didn't have callee edges to all the same
+      // callee clones.
+      if (OtherCallersToSharedCalleeEdgeCount[CalleeCallerE->Caller] !=
+          NumCalleeClones)
+        continue;
+      // Make sure that each context along edge from candidate caller node
+      // reaches an allocation also reached by this callee edge from Node.
+      for (auto Id : CalleeCallerE->getContextIds()) {
+        auto *Alloc = ContextIdToAllocationNode.lookup(Id);
+        if (!Alloc)
+          continue;
+        // If not, simply reset the map entry to 0 so caller is ignored, and
+        // reduce the count of candidate other caller nodes.
+        if (!CurCalleeAllocNodes.contains(Alloc)) {
+          OtherCallersToSharedCalleeEdgeCount[CalleeCallerE->Caller] = 0;
+          PossibleOtherCallerNodes--;
+          break;
+        }
+      }
+    }
+  }
+
+  if (!PossibleOtherCallerNodes)
+    return;
+
+  // Build the set of other caller nodes that can use the same callee merge
+  // node.
+  for (auto &[OtherCaller, Count] : OtherCallersToSharedCalleeEdgeCount) {
+    if (Count != NumCalleeClones)
+      continue;
+    OtherCallersToShareMerge.insert(OtherCaller);
   }
 }
 
