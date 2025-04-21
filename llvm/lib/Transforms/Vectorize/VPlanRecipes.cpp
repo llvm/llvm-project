@@ -1765,10 +1765,10 @@ InstructionCost VPWidenRecipe::computeCost(ElementCount VF,
   case Instruction::FCmp: {
     Instruction *CtxI = dyn_cast_or_null<Instruction>(getUnderlyingValue());
     Type *VectorTy = toVectorTy(Ctx.Types.inferScalarType(getOperand(0)), VF);
-    return Ctx.TTI.getCmpSelInstrCost(Opcode, VectorTy, nullptr, getPredicate(),
-                                      Ctx.CostKind,
-                                      {TTI::OK_AnyValue, TTI::OP_None},
-                                      {TTI::OK_AnyValue, TTI::OP_None}, CtxI);
+    return Ctx.TTI.getCmpSelInstrCost(
+        Opcode, VectorTy, CmpInst::makeCmpResultType(VectorTy), getPredicate(),
+        Ctx.CostKind, {TTI::OK_AnyValue, TTI::OP_None},
+        {TTI::OK_AnyValue, TTI::OP_None}, CtxI);
   }
   default:
     llvm_unreachable("Unsupported opcode for instruction");

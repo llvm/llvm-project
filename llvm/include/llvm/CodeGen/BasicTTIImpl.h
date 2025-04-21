@@ -1384,11 +1384,9 @@ public:
         return InstructionCost::getInvalid();
 
       unsigned Num = cast<FixedVectorType>(ValVTy)->getNumElements();
-      if (CondTy)
-        CondTy = CondTy->getScalarType();
-      InstructionCost Cost =
-          thisT()->getCmpSelInstrCost(Opcode, ValVTy->getScalarType(), CondTy,
-                                      VecPred, CostKind, Op1Info, Op2Info, I);
+      InstructionCost Cost = thisT()->getCmpSelInstrCost(
+          Opcode, ValVTy->getScalarType(), CondTy->getScalarType(), VecPred,
+          CostKind, Op1Info, Op2Info, I);
 
       // Return the cost of multiple scalar invocation plus the cost of
       // inserting and extracting the values.
