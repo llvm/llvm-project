@@ -247,6 +247,7 @@ class CIRToLLVMStackSaveOpLowering
     : public mlir::OpConversionPattern<cir::StackSaveOp> {
 public:
   using mlir::OpConversionPattern<cir::StackSaveOp>::OpConversionPattern;
+
   mlir::LogicalResult
   matchAndRewrite(cir::StackSaveOp op, OpAdaptor,
                   mlir::ConversionPatternRewriter &) const override;

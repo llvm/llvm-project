@@ -1430,6 +1430,8 @@ def StackSaveOp : CIR_Op<"stack_save"> {
     that later can be passed into cir.stack_restore.
     Useful for implementing language features like variable length arrays.
 
+    This operation is correspond to LLVM intrinsic `stacksave`.
+
     ```mlir
     %0 = cir.stack_save : <!u8i>
     ```
@@ -1446,6 +1448,8 @@ def StackRestoreOp : CIR_Op<"stack_restore"> {
     in when the corresponding cir.stack_save executed.
     Useful for implementing language features like variable length arrays.
 
+    This operation is correspond to LLVM intrinsic `stackrestore`.
+
     ```mlir
     %0 = cir.alloca !cir.ptr<!u8i>, !cir.ptr<!cir.ptr<!u8i>>, ["saved_stack"] {alignment = 8 : i64}
     %1 = cir.stack_save : <!u8i>
@@ -1457,8 +1461,6 @@ def StackRestoreOp : CIR_Op<"stack_restore"> {
 
   let arguments = (ins CIR_PointerType:$ptr);
   let assemblyFormat = "$ptr attr-dict `:` qualified(type($ptr))";
-
-  let llvmOp = "StackRestoreOp";
 }
 
 //===----------------------------------------------------------------------===//

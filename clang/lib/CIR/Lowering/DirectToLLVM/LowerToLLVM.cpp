@@ -1525,8 +1525,7 @@ mlir::LogicalResult CIRToLLVMStackSaveOpLowering::matchAndRewrite(
 mlir::LogicalResult CIRToLLVMStackRestoreOpLowering::matchAndRewrite(
     cir::StackRestoreOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
-  rewriter.replaceOpWithNewOp<mlir::LLVM::StackRestoreOp>(
-      op, adaptor.getOperands().front());
+  rewriter.replaceOpWithNewOp<mlir::LLVM::StackRestoreOp>(op, adaptor.getPtr());
   return mlir::success();
 }
 
