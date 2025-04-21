@@ -1888,7 +1888,7 @@ static SDValue lowerBUILD_VECTORAsBroadCastLoad(BuildVectorSDNode *BVOp,
   MVT VT = BVOp->getSimpleValueType(0);
   int NumOps = BVOp->getNumOperands();
 
-  assert((VT.is128BitVector() || VT.is256BitVector() || VT.is512BitVector()) &&
+  assert((VT.is128BitVector() || VT.is256BitVector()) &&
          "Unsupported vector type for broadcast.");
 
   SDValue IdentitySrc;
