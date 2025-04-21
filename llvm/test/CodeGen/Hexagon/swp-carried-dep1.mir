@@ -3,19 +3,24 @@
 
 # Test that the loop carried dependence check correctly identifies a recurrence.
 
-# CHECK: Overlap check:
-# CHECK-NEXT:   BaseMI:   S2_storerh_io %{{[0-9]+}}:intregs, 0, %{{[0-9]+}}:intregs :: (store (s16) into %ir.lsr.iv24)
+# CHECK:      Overlap check:
+# CHECK-NEXT:   BaseMI:   S2_storerh_io %12:intregs, 0, %18:intregs :: (store (s16) into %ir.lsr.iv24)
 # CHECK-NEXT:     Base + 0 + I * 4, Len: 2
-# CHECK-NEXT:   OtherMI:   %{{[0-9]+}}:intregs = L2_loadrh_io %{{[0-9]+}}:intregs, -8 :: (load (s16) from %ir.cgep10)
+# CHECK-NEXT:   OtherMI:   %17:intregs = L2_loadrh_io %12:intregs, -8 :: (load (s16) from %ir.cgep10)
 # CHECK-NEXT:     Base + -8 + I * 4, Len: 2
 # CHECK-NEXT:   Result: Overlap
+# CHECK-NEXT: Overlap check:
+# CHECK-NEXT:   BaseMI:   %17:intregs = L2_loadrh_io %12:intregs, -8 :: (load (s16) from %ir.cgep10)
+# CHECK-NEXT:     Base + -8 + I * 4, Len: 2
+# CHECK-NEXT:   OtherMI:   S2_storerh_io %12:intregs, 0, %18:intregs :: (store (s16) into %ir.lsr.iv24)
+# CHECK-NEXT:     Base + 0 + I * 4, Len: 2
+# CHECK-NEXT:   Result: No overlap
 
-# CHECK: Rec NodeSet
-# CHECK: Rec NodeSet
-# CHECK: Rec NodeSet
-# CHECK: Rec NodeSet
-# CHECK-NEXT: SU(4)
-# CHECK-NEXT: SU(6)
+# CHECK: Loop Carried Edges:
+# CHECK-NEXT:   Loop carried edges from SU(6)
+# CHECK-NEXT:     Order
+# CHECK-NEXT:       SU(4)
+# CHECK-NEXT: calculateResMII:
 
 --- |
 
