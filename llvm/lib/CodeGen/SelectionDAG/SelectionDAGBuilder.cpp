@@ -11852,7 +11852,7 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
     if (NoFPClass != fcNone) {
       SDValue SDNoFPClass =
           DAG.getTargetConstant(static_cast<uint64_t>(NoFPClass), dl,
-                                TLI->getPointerTy(DAG.getDataLayout()));
+                                EVT::getIntegerVT(*DAG.getContext(), 32));
       Res = DAG.getNode(ISD::AssertNoFPClass, dl, Res.getValueType(), Res,
                         SDNoFPClass);
     }
