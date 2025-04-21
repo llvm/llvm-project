@@ -1732,6 +1732,20 @@ let TargetPrefix = "ppc" in {
                             [llvm_v1024i1_ty, llvm_v256i1_ty, llvm_v16i8_ty,
                              llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
                             [IntrNoMem]>;
+  def int_ppc_mma_dmsha2hash :
+      DefaultAttrsIntrinsic<[llvm_v1024i1_ty], [llvm_v1024i1_ty,
+                             llvm_v1024i1_ty, llvm_i32_ty],
+                            [IntrNoMem, ImmArg<ArgIndex<2>>]>;
+
+  def int_ppc_mma_dmsha3hash :
+      DefaultAttrsIntrinsic<[llvm_v2048i1_ty], [llvm_v2048i1_ty,
+                             llvm_i32_ty], [IntrNoMem, ImmArg<ArgIndex<1>>]>;
+
+  def int_ppc_mma_dmxxshapad :
+      DefaultAttrsIntrinsic<[llvm_v1024i1_ty], [llvm_v1024i1_ty,
+                             llvm_v16i8_ty, llvm_i32_ty, llvm_i32_ty,
+                             llvm_i32_ty], [IntrNoMem, ImmArg<ArgIndex<2>>,
+                             ImmArg<ArgIndex<3>>, ImmArg<ArgIndex<4>>]>;
 }
 
 // XL Compat intrinsics.

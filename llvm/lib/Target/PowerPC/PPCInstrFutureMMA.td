@@ -159,6 +159,63 @@ multiclass DMR_UM_M448_XOEO<bits<6> opcode, bits<8> xo, dag IOL, string asmbase,
   }
 }
 
+class XForm_AT3_T1_AB3<bits<6> opcode, bits<5> o, bits<10> xo, dag OOL, dag IOL,
+                       string asmstr, list<dag> pattern>
+  : I <opcode, OOL, IOL, asmstr, NoItinerary> {
+  bits<3> AT;
+  bits<3> AB;
+  bits<1> T;
+
+  let Pattern = pattern;
+
+  let Inst{6-8} = AT{2-0};
+  let Inst{9} = 0;
+  let Inst{10} = T;
+  let Inst{11-15} = o;
+  let Inst{16-18} = AB{2-0};
+  let Inst{19-20} = 0;
+  let Inst{21-30} = xo;
+  let Inst{31} = 0;
+}
+
+class XForm_ATp2_SR5<bits<6> opcode, bits<5> o, bits<10> xo, dag OOL, dag IOL,
+                     string asmstr, list<dag> pattern>
+  : I <opcode, OOL, IOL, asmstr, NoItinerary> {
+  bits<2> ATp;
+  bits<5> SR;
+
+  let Pattern = pattern;
+
+  let Inst{6-7} = ATp{1-0};
+  let Inst{8-10} = 0;
+  let Inst{11-15} = o;
+  let Inst{16-20} = SR{4-0};
+  let Inst{21-30} = xo;
+  let Inst{31} = 0;
+}
+
+class XX2Form_AT3_XB6_ID2_E1_BL2<bits<6> opcode, bits<9> xo, dag OOL, dag IOL,
+                          string asmstr, list<dag> pattern>
+  : I<opcode, OOL, IOL, asmstr, NoItinerary> {
+  bits<3> AT;
+  bits<6> XB;
+  bits<2> ID;
+  bits<1> E;
+  bits<2> BL;
+
+  let Pattern = pattern;
+
+  let Inst{6-8} = AT{2-0};
+  let Inst{9-10} = 0;
+  let Inst{11-12} = ID{1-0};
+  let Inst{13} = E;
+  let Inst{14-15} = BL{1-0};
+  let Inst{16-20} = XB{4-0};
+  let Inst{21-29} = xo;
+  let Inst{30} = XB{5};
+  let Inst{31} = 0;
+}
+
 let Predicates = [IsISAFuture] in {
   def DMXXEXTFDMR512 : XX3Form_AT3_XABp5_P1<60, 226,
                                             (outs vsrprc:$XAp, vsrprc:$XBp),
@@ -231,6 +288,25 @@ let Predicates = [MMA, PrefixInstrs, IsISAFuture] in {
     RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
 }
 
+// DMF cryptography [support] Instructions
+let Predicates = [IsISAFuture] in {
+  def DMSHA2HASH :
+    XForm_AT3_T1_AB3<31, 14, 177, (outs dmr:$AT), (ins dmr:$ATi, dmr:$AB, u1imm:$T),
+                      "dmsha2hash $AT, $AB, $T", []>,
+    RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+
+  def DMSHA3HASH :
+    XForm_ATp2_SR5<31, 15, 177, (outs dmrprc:$ATp), (ins dmrprc:$ATpi , u5imm:$SR),
+                   "dmsha3hash $ATp, $SR", []>,
+    RegConstraint<"$ATpi = $ATp">, NoEncode<"$ATpi">;
+
+  def DMXXSHAPAD :
+    XX2Form_AT3_XB6_ID2_E1_BL2<60, 421, (outs dmr:$AT),
+                               (ins dmr:$ATi, vsrc:$XB, u2imm:$ID, u1imm:$E, u2imm:$BL),
+                                "dmxxshapad $AT, $XB, $ID, $E, $BL", []>,
+    RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+}
+
 // MMA+ Intrinsics
 let Predicates = [MMA, IsISAFuture] in {
   def : Pat<(v1024i1 (int_ppc_mma_dmxvi8gerx4 v256i1:$XAp, v16i8:$XB)),
@@ -259,4 +335,55 @@ let Predicates = [MMA, PrefixInstrs, IsISAFuture] in {
                                                Msk4Imm:$PMSK)),
             (PMDMXVI8GERX4SPP $ATi, $XAp, RCCp.BToVSRC, Msk8Imm:$XMSK,
                            Msk4Imm:$YMSK, Msk4Imm:$PMSK)>;
+}
+
+// cryptography Intrinsics
+let Predicates = [IsISAFuture] in {
+  def : Pat<(v1024i1 (int_ppc_mma_dmsha2hash v1024i1:$ATi, v1024i1:$AB, timm:$T)),
+             (DMSHA2HASH $ATi, $AB, $T)>;
+
+  def : Pat<(v2048i1 (int_ppc_mma_dmsha3hash v2048i1:$ATpi, timm:$SR)),
+             (DMSHA3HASH $ATpi, $SR)>;
+
+  def : Pat<(v1024i1 (int_ppc_mma_dmxxshapad v1024i1:$ATi, v16i8:$XB, timm:$ID,
+                      timm:$E, timm:$BL)), (DMXXSHAPAD $ATi, RCCp.BToVSRC, $ID, $E, $BL)>;
+}
+
+// MMA+ Instruction aliases
+let Predicates = [IsISAFuture] in {
+  def : InstAlias<"dmsha256hash $AT, $AB",
+                  (DMSHA2HASH dmr:$AT, dmr:$AB, 0)>;
+
+  def : InstAlias<"dmsha512hash $AT, $AB",
+                  (DMSHA2HASH dmr:$AT, dmr:$AB, 1)>;
+
+  def : InstAlias<"dmsha3dw $ATp",
+                  (DMSHA3HASH dmrprc:$ATp, 0)>;
+
+  def : InstAlias<"dmcryshash $ATp",
+                  (DMSHA3HASH dmrprc:$ATp, 12)>;
+
+  def : InstAlias<"dmxxsha3512pad $AT, $XB, $E",
+                  (DMXXSHAPAD dmr:$AT, vsrc:$XB, 0, u1imm:$E, 0)>;
+
+  def : InstAlias<"dmxxsha3384pad $AT, $XB, $E",
+                  (DMXXSHAPAD dmr:$AT, vsrc:$XB, 0, u1imm:$E, 1)>;
+
+  def : InstAlias<"dmxxsha3256pad $AT, $XB, $E",
+                  (DMXXSHAPAD dmr:$AT, vsrc:$XB, 0, u1imm:$E, 2)>;
+
+  def : InstAlias<"dmxxsha3224pad $AT, $XB, $E",
+                  (DMXXSHAPAD dmr:$AT, vsrc:$XB, 0, u1imm:$E, 3)>;
+
+  def : InstAlias<"dmxxshake256pad $AT, $XB, $E",
+                  (DMXXSHAPAD dmr:$AT, vsrc:$XB, 1, u1imm:$E, 0)>;
+
+  def : InstAlias<"dmxxshake128pad $AT, $XB, $E",
+                  (DMXXSHAPAD dmr:$AT, vsrc:$XB, 1, u1imm:$E, 1)>;
+
+  def : InstAlias<"dmxxsha384512pad $AT, $XB",
+                  (DMXXSHAPAD dmr:$AT, vsrc:$XB, 2, 0, 0)>;
+
+  def : InstAlias<"dmxxsha224256pad $AT, $XB",
+                  (DMXXSHAPAD dmr:$AT, vsrc:$XB, 3, 0, 0)>;
 }
