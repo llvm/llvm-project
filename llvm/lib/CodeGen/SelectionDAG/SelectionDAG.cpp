@@ -5761,13 +5761,11 @@ bool SelectionDAG::isKnownNeverNaN(SDValue Op, const APInt &DemandedElts,
     return true;
   }
   case ISD::AssertNoFPClass: {
-    SDValue SDNoFPClass = Op.getOperand(1);
-    assert(isa<ConstantSDNode>(SDNoFPClass) && "NoFPClass is not Constant");
-    FPClassTest NoFPClass = static_cast<FPClassTest>(
-        dyn_cast<ConstantSDNode>(SDNoFPClass)->getZExtValue());
-    if (NoFPClass & fcNan)
+    FPClassTest NoFPClass =
+        static_cast<FPClassTest>(Op.getConstantOperandVal(1));
+    if ((NoFPClass & fcNan) == fcNan)
       return true;
-    if (SNaN && (NoFPClass & fcSNan))
+    if (SNaN && (NoFPClass & fcSNan) == fcSNan)
       return true;
     return isKnownNeverNaN(Op.getOperand(0), SNaN, Depth + 1);
   }
@@ -7421,8 +7419,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     assert(N1.getValueType().isFloatingPoint() &&
            "AssertNoFPClass is used for a non-floating type");
     assert(isa<ConstantSDNode>(N2) && "NoFPClass is not Constant");
-    FPClassTest NoFPClass =
-        static_cast<FPClassTest>(dyn_cast<ConstantSDNode>(N2)->getZExtValue());
+    FPClassTest NoFPClass = static_cast<FPClassTest>(N2->getAsZExtVal());
     assert(llvm::to_underlying(NoFPClass) <=
                BitmaskEnumDetail::Mask<FPClassTest>() &&
            "FPClassTest value too large");

@@ -11850,12 +11850,11 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
 
     FPClassTest NoFPClass = Arg.getNoFPClass();
     if (NoFPClass != fcNone) {
-      EVT I64EVT = EVT::getIntegerVT(*DAG.getContext(), 64);
       SDValue SDNoFPClass =
-          DAG.getConstant(static_cast<uint64_t>(NoFPClass), dl, I64EVT);
-      SDNodeFlags ResFlags = Res->getFlags();
+          DAG.getTargetConstant(static_cast<uint64_t>(NoFPClass), dl,
+                                TLI->getPointerTy(DAG.getDataLayout()));
       Res = DAG.getNode(ISD::AssertNoFPClass, dl, Res.getValueType(), Res,
-                        SDNoFPClass, ResFlags);
+                        SDNoFPClass);
     }
 
     SDB->setValue(&Arg, Res);
