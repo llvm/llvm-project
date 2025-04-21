@@ -17312,7 +17312,7 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
                   Vec, V);
               // Shuffle required?
               if (count(BVMask, PoisonMaskElem) <
-                      static_cast<int>(BVMask.size() - 1)) {
+                  static_cast<int>(BVMask.size() - 1)) {
                 SmallVector<int> NewMask(Mask.begin(), Mask.end());
                 for (auto [Idx, I] : enumerate(BVMask))
                   if (I != PoisonMaskElem)
@@ -17329,7 +17329,8 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
               Vec = ShuffleBuilder.gather(NonConstants, Mask.size(), Vec);
             } else {
               Value *V = *find_if_not(NonConstants, IsaPred<UndefValue>);
-              SmallVector<Value *> Values(NonConstants.size(), PoisonValue::get(ScalarTy));
+              SmallVector<Value *> Values(NonConstants.size(),
+                                          PoisonValue::get(ScalarTy));
               Values[0] = V;
               Value *BV = ShuffleBuilder.gather(Values, BVMask.size());
               SmallVector<int> SplatMask(BVMask.size(), PoisonMaskElem);
