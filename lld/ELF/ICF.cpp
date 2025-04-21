@@ -432,8 +432,10 @@ void ICF<ELFT>::forEachClassRange(size_t begin, size_t end,
 }
 
 // Call Fn on each equivalence class.
+
 template <class ELFT>
-void ICF<ELFT>::parallelForEachClass(llvm::function_ref<void(size_t, size_t)> fn) {
+void ICF<ELFT>::parallelForEachClass(
+    llvm::function_ref<void(size_t, size_t)> fn) {
   // If threading is disabled or the number of sections are
   // too small to use threading, call Fn sequentially.
   if (parallel::strategy.ThreadsRequested == 1 || sections.size() < 1024) {
