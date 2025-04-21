@@ -298,7 +298,15 @@ public:
     fir::LLVMTypeConverter typeConverter(module, /*applyTBAA=*/false,
                                          /*forceUnifiedTBAATree=*/false, *dl);
     cuf::populateCUFGPUToLLVMConversionPatterns(typeConverter, patterns);
-    target.addIllegalOp<mlir::gpu::LaunchFuncOp>();
+    
+    target.addDynamicallyLegalOp<mlir::gpu::LaunchFuncOp>([&](mlir::gpu::LaunchFuncOp op) {
+      if (op.getOperation()->getAttrOfType<cuf::ProcAttributeAttr>(
+        cuf::getProcAttrName()))
+        return false;
+      return true;
+    });
+
+
     target.addIllegalOp<cuf::SharedMemoryOp>();
     target.addLegalDialect<mlir::LLVM::LLVMDialect>();
     if (mlir::failed(mlir::applyPartialConversion(getOperation(), target,

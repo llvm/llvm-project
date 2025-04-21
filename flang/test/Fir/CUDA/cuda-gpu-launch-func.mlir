@@ -180,7 +180,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<!llvm.ptr<272>, d
     %2 = llvm.mlir.constant(0 : i32) : i32
     %3 = llvm.mlir.constant(10 : index) : i64
     %token = cuf.stream_cast %stream : !llvm.ptr
-    gpu.launch_func [%token] @cuda_device_mod::@_QMmod1Psub1 blocks in (%3, %3, %0) threads in (%3, %3, %0) : i64 dynamic_shared_memory_size %2
+    gpu.launch_func [%token] @cuda_device_mod::@_QMmod1Psub1 blocks in (%3, %3, %0) threads in (%3, %3, %0) : i64 dynamic_shared_memory_size %2 {cuf.proc_attr = #cuf.cuda_proc<global>}
     llvm.return
   }
   gpu.binary @cuda_device_mod  [#gpu.object<#nvvm.target, "">]
