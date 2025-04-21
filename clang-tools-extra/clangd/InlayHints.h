@@ -23,8 +23,9 @@ namespace clangd {
 class ParsedAST;
 
 struct InlayHintOptions {
-  // Minimum lines for BlockEnd inlay-hints to be shown
-  int HintMinLineLimit{2};
+  // Minimum height of a code block in lines for a BlockEnd hint to be shown
+  // Includes the lines containing the braces
+  int HintMinLineLimit = 10;
 };
 
 /// Compute and return inlay hints for a file.
