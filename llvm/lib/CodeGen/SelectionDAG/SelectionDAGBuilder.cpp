@@ -11848,6 +11848,16 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
     SDValue Res = DAG.getMergeValues(ArrayRef(ArgValues.data(), NumValues),
                                      SDB->getCurSDLoc());
 
+    FPClassTest NoFPClass = Arg.getNoFPClass();
+    if (NoFPClass != fcNone) {
+      EVT I64EVT = EVT::getIntegerVT(*DAG.getContext(), 64);
+      SDValue SDNoFPClass =
+          DAG.getConstant(static_cast<uint64_t>(NoFPClass), dl, I64EVT);
+      SDNodeFlags ResFlags = Res->getFlags();
+      Res = DAG.getNode(ISD::AssertNoFPClass, dl, Res.getValueType(), Res,
+                        SDNoFPClass, ResFlags);
+    }
+
     SDB->setValue(&Arg, Res);
     if (!TM.Options.EnableFastISel && Res.getOpcode() == ISD::BUILD_PAIR) {
       // We want to associate the argument with the frame index, among

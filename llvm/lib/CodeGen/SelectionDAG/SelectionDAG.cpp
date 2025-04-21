@@ -5760,6 +5760,17 @@ bool SelectionDAG::isKnownNeverNaN(SDValue Op, const APInt &DemandedElts,
         return false;
     return true;
   }
+  case ISD::AssertNoFPClass: {
+    SDValue SDNoFPClass = Op.getOperand(1);
+    assert(isa<ConstantSDNode>(SDNoFPClass) && "NoFPClass is not Constant");
+    FPClassTest NoFPClass = static_cast<FPClassTest>(
+        dyn_cast<ConstantSDNode>(SDNoFPClass)->getZExtValue());
+    if (NoFPClass & fcNan)
+      return true;
+    if (SNaN && (NoFPClass & fcSNan))
+      return true;
+    return isKnownNeverNaN(Op.getOperand(0), SNaN, Depth + 1);
+  }
   default:
     if (Opcode >= ISD::BUILTIN_OP_END || Opcode == ISD::INTRINSIC_WO_CHAIN ||
         Opcode == ISD::INTRINSIC_W_CHAIN || Opcode == ISD::INTRINSIC_VOID) {
@@ -7409,7 +7420,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
   case ISD::AssertNoFPClass:
     assert(N1.getValueType().isFloatingPoint() &&
            "AssertNoFPClass is used for a non-floating type");
-    return N1;
+    break;
   case ISD::AssertSext:
   case ISD::AssertZext: {
     EVT EVT = cast<VTSDNode>(N2)->getVT();
