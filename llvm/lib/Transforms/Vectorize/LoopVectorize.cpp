@@ -9417,7 +9417,7 @@ addUsersInExitBlocks(VPlan &Plan,
            ExitIRI->getParent()->getSinglePredecessor() == MiddleVPBB &&
            "exit values from early exits must be fixed when branch to "
            "early-exit is added");
-    ExitIRI->extractLastLaneOfOperand(B);
+    ExitIRI->extractLastLaneOfFirstOperand(B);
   }
 }
 

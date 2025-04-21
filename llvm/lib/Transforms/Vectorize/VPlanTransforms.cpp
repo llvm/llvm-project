@@ -2503,23 +2503,26 @@ void VPlanTransforms::handleUncountableEarlyExit(
   // Update the exit phis in the early exit block.
   VPBuilder MiddleBuilder(NewMiddle);
   VPBuilder EarlyExitB(VectorEarlyExitVPBB);
-  for (VPRecipeBase &R : *VPEarlyExitBlock->phis()) {
+  for (VPRecipeBase &R : VPEarlyExitBlock->phis()) {
     auto *ExitIRI = cast<VPIRPhi>(&R);
+    // By default, assume early exit operand is first, e.g., when the two exit
+    // blocks are distinct - VPEarlyExitBlock has a single predecessor.
     unsigned EarlyExitIdx = 0;
     if (OrigLoop->getUniqueExitBlock()) {
-      // After the transform, the first incoming value is coming from the
-      // orignial loop latch, while the second operand is from the early exit.
-      // Sawp the phi operands, if the first predecessor in the original IR is
-      // not the loop latch.
+      // The incoming values currently correspond to the original IR
+      // predecessors. After the transform, the first incoming value is coming
+      // from the original loop latch, while the second operand is from the
+      // early exit. Swap the phi operands, if the first predecessor in the
+      // original IR is not the loop latch.
       if (*pred_begin(VPEarlyExitBlock->getIRBasicBlock()) !=
           OrigLoop->getLoopLatch())
         ExitIRI->swapOperands();
 
       EarlyExitIdx = 1;
       // If there's a unique exit block, VPEarlyExitBlock has 2 predecessors
-      // (MiddleVPBB and NewMiddle). Add the incoming value from MiddleVPBB
-      // which is coming from the original latch.
-      ExitIRI->extractLastLaneOfOperand(MiddleBuilder);
+      // (MiddleVPBB and NewMiddle). Extract the last lane of the incoming value
+      // from MiddleVPBB which is coming from the original latch.
+      ExitIRI->extractLastLaneOfFirstOperand(MiddleBuilder);
     }
 
     VPValue *IncomingFromEarlyExit = ExitIRI->getOperand(EarlyExitIdx);
@@ -2530,15 +2533,14 @@ void VPlanTransforms::handleUncountableEarlyExit(
     // and vector VFs.
     if (!IncomingFromEarlyExit->isLiveIn() &&
         LoopVectorizationPlanner::getDecisionAndClampRange(IsVector, Range)) {
-      // Add the incoming value from the early exit.
+      // Update the incoming value from the early exit.
       VPValue *FirstActiveLane = EarlyExitB.createNaryOp(
           VPInstruction::FirstActiveLane, {EarlyExitTakenCond}, nullptr,
           "first.active.lane");
-      ExitIRI->setOperand(
-          EarlyExitIdx,
-          EarlyExitB.createNaryOp(Instruction::ExtractElement,
-                                  {IncomingFromEarlyExit, FirstActiveLane},
-                                  nullptr, "early.exit.value"));
+      IncomingFromEarlyExit = EarlyExitB.createNaryOp(
+          Instruction::ExtractElement, {IncomingFromEarlyExit, FirstActiveLane},
+          nullptr, "early.exit.value");
+      ExitIRI->setOperand(EarlyExitIdx, IncomingFromEarlyExit);
     }
   }
   MiddleBuilder.createNaryOp(VPInstruction::BranchOnCond, {IsEarlyExitTaken});
