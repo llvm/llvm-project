@@ -1394,8 +1394,9 @@ bool AMDGPULibCalls::fold_sincos(FPMathOperator *FPOp, IRBuilder<> &B,
                        fInfo);
   const std::string PairName = PartnerInfo.mangle();
 
-  StringRef SinName = isSin ? CI->getCalledFunction()->getName() : PairName;
-  StringRef CosName = isSin ? PairName : CI->getCalledFunction()->getName();
+  const std::optional<StringRef> CalleeName = CI->getCalledFunctionName();
+  StringRef SinName = isSin ? *CalleeName : PairName;
+  StringRef CosName = isSin ? PairName : *CalleeName;
   const std::string SinCosPrivateName = SinCosLibFuncPrivate.mangle();
   const std::string SinCosGenericName = SinCosLibFuncGeneric.mangle();
 

@@ -2311,7 +2311,7 @@ public:
       if (!CI->getCalledFunction())
         write("<no called fn>");
       else {
-        StringRef Name = CI->getCalledFunction()->getName();
+        StringRef Name = *CI->getCalledFunctionName();
         if (!Name.starts_with("llvm.matrix")) {
           write(Name);
           return;

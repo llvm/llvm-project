@@ -77,22 +77,23 @@ static void addMappingsFromTLI(const TargetLibraryInfo &TLI, CallInst &CI) {
   // bitcast (i32 (...)* @goo to i32 (i32*, ...)*)(i32* nonnull %i)`,
   // as such calls make the `isFunctionVectorizable` raise an
   // exception.
-  if (CI.isNoBuiltin() || !CI.getCalledFunction())
+  if (CI.isNoBuiltin())
     return;
 
-  StringRef ScalarName = CI.getCalledFunction()->getName();
+  const std::optional<StringRef> ScalarName = CI.getCalledFunctionName();
 
   // Nothing to be done if the TLI thinks the function is not
   // vectorizable.
-  if (!TLI.isFunctionVectorizable(ScalarName))
+  if (!ScalarName.has_value() || !TLI.isFunctionVectorizable(*ScalarName))
     return;
+
   SmallVector<std::string, 8> Mappings;
   VFABI::getVectorVariantNames(CI, Mappings);
   Module *M = CI.getModule();
   const SetVector<StringRef> OriginalSetOfMappings(llvm::from_range, Mappings);
 
   auto AddVariantDecl = [&](const ElementCount &VF, bool Predicate) {
-    const VecDesc *VD = TLI.getVectorMappingInfo(ScalarName, VF, Predicate);
+    const VecDesc *VD = TLI.getVectorMappingInfo(*ScalarName, VF, Predicate);
     if (VD && !VD->getVectorFnName().empty()) {
       std::string MangledName = VD->getVectorFunctionABIVariantString();
       if (!OriginalSetOfMappings.count(MangledName)) {
@@ -107,7 +108,7 @@ static void addMappingsFromTLI(const TargetLibraryInfo &TLI, CallInst &CI) {
 
   //  All VFs in the TLI are powers of 2.
   ElementCount WidestFixedVF, WidestScalableVF;
-  TLI.getWidestVF(ScalarName, WidestFixedVF, WidestScalableVF);
+  TLI.getWidestVF(*ScalarName, WidestFixedVF, WidestScalableVF);
 
   for (bool Predicated : {false, true}) {
     for (ElementCount VF = ElementCount::getFixed(2);

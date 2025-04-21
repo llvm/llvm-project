@@ -9116,12 +9116,15 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
   auto DescribeCallsite =
       [&](OptimizationRemarkAnalysis &R) -> OptimizationRemarkAnalysis & {
     R << "call from '" << ore::NV("Caller", MF.getName()) << "' to '";
-    if (auto *ES = dyn_cast<ExternalSymbolSDNode>(CLI.Callee))
+    if (auto *ES = dyn_cast<ExternalSymbolSDNode>(CLI.Callee)) {
       R << ore::NV("Callee", ES->getSymbol());
-    else if (CLI.CB && CLI.CB->getCalledFunction())
-      R << ore::NV("Callee", CLI.CB->getCalledFunction()->getName());
-    else
+    } else if (CLI.CB) {
+      const std::optional<StringRef> CalleeName =
+          CLI.CB->getCalledFunctionName();
+      R << ore::NV("Callee", CalleeName.value_or("unknown callee"));
+    } else {
       R << "unknown callee";
+    }
     R << "'";
     return R;
   };

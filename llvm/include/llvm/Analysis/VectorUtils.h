@@ -41,10 +41,9 @@ class VFDatabase {
   /// a vector Function ABI.
   static void getVFABIMappings(const CallInst &CI,
                                SmallVectorImpl<VFInfo> &Mappings) {
-    if (!CI.getCalledFunction())
+    const std::optional<StringRef> ScalarName = CI.getCalledFunctionName();
+    if (!ScalarName.has_value())
       return;
-
-    const StringRef ScalarName = CI.getCalledFunction()->getName();
 
     SmallVector<std::string, 8> ListOfStrings;
     // The check for the vector-function-abi-variant attribute is done when
@@ -59,7 +58,7 @@ class VFDatabase {
       // ensuring that the variant described in the attribute has a
       // corresponding definition or declaration of the vector
       // function in the Module M.
-      if (Shape && (Shape->ScalarName == ScalarName)) {
+      if (Shape && (Shape->ScalarName == *ScalarName)) {
         assert(CI.getModule()->getFunction(Shape->VectorName) &&
                "Vector function is missing.");
         Mappings.push_back(*Shape);

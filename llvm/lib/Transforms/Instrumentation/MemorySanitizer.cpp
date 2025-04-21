@@ -5703,7 +5703,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
   void dumpInst(Instruction &I) {
     if (CallInst *CI = dyn_cast<CallInst>(&I)) {
-      errs() << "ZZZ call " << CI->getCalledFunction()->getName() << "\n";
+      errs() << "ZZZ call " << *CI->getCalledFunctionName() << "\n";
     } else {
       errs() << "ZZZ " << I.getOpcodeName() << "\n";
     }

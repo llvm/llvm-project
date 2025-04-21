@@ -388,14 +388,14 @@ TEST_F(OpenMPIRBuilderTest, CreateBarrier) {
   CallInst *GTID = dyn_cast<CallInst>(&BB->front());
   EXPECT_NE(GTID, nullptr);
   EXPECT_EQ(GTID->arg_size(), 1U);
-  EXPECT_EQ(GTID->getCalledFunction()->getName(), "__kmpc_global_thread_num");
+  EXPECT_EQ(*GTID->getCalledFunctionName(), "__kmpc_global_thread_num");
   EXPECT_FALSE(GTID->getCalledFunction()->doesNotAccessMemory());
   EXPECT_FALSE(GTID->getCalledFunction()->doesNotFreeMemory());
 
   CallInst *Barrier = dyn_cast<CallInst>(GTID->getNextNode());
   EXPECT_NE(Barrier, nullptr);
   EXPECT_EQ(Barrier->arg_size(), 2U);
-  EXPECT_EQ(Barrier->getCalledFunction()->getName(), "__kmpc_barrier");
+  EXPECT_EQ(*Barrier->getCalledFunctionName(), "__kmpc_barrier");
   EXPECT_FALSE(Barrier->getCalledFunction()->doesNotAccessMemory());
   EXPECT_FALSE(Barrier->getCalledFunction()->doesNotFreeMemory());
 
@@ -433,14 +433,14 @@ TEST_F(OpenMPIRBuilderTest, CreateCancel) {
   CallInst *GTID = dyn_cast<CallInst>(&BB->front());
   EXPECT_NE(GTID, nullptr);
   EXPECT_EQ(GTID->arg_size(), 1U);
-  EXPECT_EQ(GTID->getCalledFunction()->getName(), "__kmpc_global_thread_num");
+  EXPECT_EQ(*GTID->getCalledFunctionName(), "__kmpc_global_thread_num");
   EXPECT_FALSE(GTID->getCalledFunction()->doesNotAccessMemory());
   EXPECT_FALSE(GTID->getCalledFunction()->doesNotFreeMemory());
 
   CallInst *Cancel = dyn_cast<CallInst>(GTID->getNextNode());
   EXPECT_NE(Cancel, nullptr);
   EXPECT_EQ(Cancel->arg_size(), 3U);
-  EXPECT_EQ(Cancel->getCalledFunction()->getName(), "__kmpc_cancel");
+  EXPECT_EQ(*Cancel->getCalledFunctionName(), "__kmpc_cancel");
   EXPECT_FALSE(Cancel->getCalledFunction()->doesNotAccessMemory());
   EXPECT_FALSE(Cancel->getCalledFunction()->doesNotFreeMemory());
   EXPECT_TRUE(Cancel->hasOneUse());
@@ -451,13 +451,13 @@ TEST_F(OpenMPIRBuilderTest, CreateCancel) {
   CallInst *GTID1 = dyn_cast<CallInst>(&CancelBBTI->getSuccessor(1)->front());
   EXPECT_NE(GTID1, nullptr);
   EXPECT_EQ(GTID1->arg_size(), 1U);
-  EXPECT_EQ(GTID1->getCalledFunction()->getName(), "__kmpc_global_thread_num");
+  EXPECT_EQ(*GTID1->getCalledFunctionName(), "__kmpc_global_thread_num");
   EXPECT_FALSE(GTID1->getCalledFunction()->doesNotAccessMemory());
   EXPECT_FALSE(GTID1->getCalledFunction()->doesNotFreeMemory());
   CallInst *Barrier = dyn_cast<CallInst>(GTID1->getNextNode());
   EXPECT_NE(Barrier, nullptr);
   EXPECT_EQ(Barrier->arg_size(), 2U);
-  EXPECT_EQ(Barrier->getCalledFunction()->getName(), "__kmpc_cancel_barrier");
+  EXPECT_EQ(*Barrier->getCalledFunctionName(), "__kmpc_cancel_barrier");
   EXPECT_FALSE(Barrier->getCalledFunction()->doesNotAccessMemory());
   EXPECT_FALSE(Barrier->getCalledFunction()->doesNotFreeMemory());
   EXPECT_TRUE(Barrier->use_empty());
@@ -506,14 +506,14 @@ TEST_F(OpenMPIRBuilderTest, CreateCancelIfCond) {
   CallInst *GTID = dyn_cast<CallInst>(&BB->front());
   EXPECT_NE(GTID, nullptr);
   EXPECT_EQ(GTID->arg_size(), 1U);
-  EXPECT_EQ(GTID->getCalledFunction()->getName(), "__kmpc_global_thread_num");
+  EXPECT_EQ(*GTID->getCalledFunctionName(), "__kmpc_global_thread_num");
   EXPECT_FALSE(GTID->getCalledFunction()->doesNotAccessMemory());
   EXPECT_FALSE(GTID->getCalledFunction()->doesNotFreeMemory());
 
   CallInst *Cancel = dyn_cast<CallInst>(GTID->getNextNode());
   EXPECT_NE(Cancel, nullptr);
   EXPECT_EQ(Cancel->arg_size(), 3U);
-  EXPECT_EQ(Cancel->getCalledFunction()->getName(), "__kmpc_cancel");
+  EXPECT_EQ(*Cancel->getCalledFunctionName(), "__kmpc_cancel");
   EXPECT_FALSE(Cancel->getCalledFunction()->doesNotAccessMemory());
   EXPECT_FALSE(Cancel->getCalledFunction()->doesNotFreeMemory());
   EXPECT_TRUE(Cancel->hasOneUse());
@@ -526,13 +526,13 @@ TEST_F(OpenMPIRBuilderTest, CreateCancelIfCond) {
   CallInst *GTID1 = dyn_cast<CallInst>(&CancelBBTI->getSuccessor(1)->front());
   EXPECT_NE(GTID1, nullptr);
   EXPECT_EQ(GTID1->arg_size(), 1U);
-  EXPECT_EQ(GTID1->getCalledFunction()->getName(), "__kmpc_global_thread_num");
+  EXPECT_EQ(*GTID1->getCalledFunctionName(), "__kmpc_global_thread_num");
   EXPECT_FALSE(GTID1->getCalledFunction()->doesNotAccessMemory());
   EXPECT_FALSE(GTID1->getCalledFunction()->doesNotFreeMemory());
   CallInst *Barrier = dyn_cast<CallInst>(GTID1->getNextNode());
   EXPECT_NE(Barrier, nullptr);
   EXPECT_EQ(Barrier->arg_size(), 2U);
-  EXPECT_EQ(Barrier->getCalledFunction()->getName(), "__kmpc_cancel_barrier");
+  EXPECT_EQ(*Barrier->getCalledFunctionName(), "__kmpc_cancel_barrier");
   EXPECT_FALSE(Barrier->getCalledFunction()->doesNotAccessMemory());
   EXPECT_FALSE(Barrier->getCalledFunction()->doesNotFreeMemory());
   EXPECT_TRUE(Barrier->use_empty());
@@ -576,14 +576,14 @@ TEST_F(OpenMPIRBuilderTest, CreateCancelBarrier) {
   CallInst *GTID = dyn_cast<CallInst>(&BB->front());
   EXPECT_NE(GTID, nullptr);
   EXPECT_EQ(GTID->arg_size(), 1U);
-  EXPECT_EQ(GTID->getCalledFunction()->getName(), "__kmpc_global_thread_num");
+  EXPECT_EQ(*GTID->getCalledFunctionName(), "__kmpc_global_thread_num");
   EXPECT_FALSE(GTID->getCalledFunction()->doesNotAccessMemory());
   EXPECT_FALSE(GTID->getCalledFunction()->doesNotFreeMemory());
 
   CallInst *Barrier = dyn_cast<CallInst>(GTID->getNextNode());
   EXPECT_NE(Barrier, nullptr);
   EXPECT_EQ(Barrier->arg_size(), 2U);
-  EXPECT_EQ(Barrier->getCalledFunction()->getName(), "__kmpc_cancel_barrier");
+  EXPECT_EQ(*Barrier->getCalledFunctionName(), "__kmpc_cancel_barrier");
   EXPECT_FALSE(Barrier->getCalledFunction()->doesNotAccessMemory());
   EXPECT_FALSE(Barrier->getCalledFunction()->doesNotFreeMemory());
   EXPECT_TRUE(Barrier->hasOneUse());
@@ -747,7 +747,7 @@ TEST_F(OpenMPIRBuilderTest, ParallelSimpleGPU) {
   CallInst *Parallel51CI = dyn_cast<CallInst>(Usr);
   ASSERT_NE(Parallel51CI, nullptr);
 
-  EXPECT_EQ(Parallel51CI->getCalledFunction()->getName(), "__kmpc_parallel_51");
+  EXPECT_EQ(*Parallel51CI->getCalledFunctionName(), "__kmpc_parallel_51");
   EXPECT_EQ(Parallel51CI->arg_size(), 9U);
   EXPECT_EQ(Parallel51CI->getArgOperand(5), OutlinedFn);
   EXPECT_TRUE(
@@ -855,7 +855,7 @@ TEST_F(OpenMPIRBuilderTest, ParallelSimple) {
   CallInst *ForkCI = dyn_cast<CallInst>(Usr);
   ASSERT_NE(ForkCI, nullptr);
 
-  EXPECT_EQ(ForkCI->getCalledFunction()->getName(), "__kmpc_fork_call");
+  EXPECT_EQ(*ForkCI->getCalledFunctionName(), "__kmpc_fork_call");
   EXPECT_EQ(ForkCI->arg_size(), 4U);
   EXPECT_TRUE(isa<GlobalVariable>(ForkCI->getArgOperand(0)));
   EXPECT_EQ(ForkCI->getArgOperand(1),
@@ -958,7 +958,7 @@ TEST_F(OpenMPIRBuilderTest, ParallelNested) {
     CallInst *ForkCI = dyn_cast<CallInst>(Usr);
     ASSERT_NE(ForkCI, nullptr);
 
-    EXPECT_EQ(ForkCI->getCalledFunction()->getName(), "__kmpc_fork_call");
+    EXPECT_EQ(*ForkCI->getCalledFunctionName(), "__kmpc_fork_call");
     EXPECT_EQ(ForkCI->arg_size(), 3U);
     EXPECT_TRUE(isa<GlobalVariable>(ForkCI->getArgOperand(0)));
     EXPECT_EQ(ForkCI->getArgOperand(1),
@@ -1077,7 +1077,7 @@ TEST_F(OpenMPIRBuilderTest, ParallelNested2Inner) {
     CallInst *ForkCI = dyn_cast<CallInst>(Usr);
     ASSERT_NE(ForkCI, nullptr);
 
-    EXPECT_EQ(ForkCI->getCalledFunction()->getName(), "__kmpc_fork_call");
+    EXPECT_EQ(*ForkCI->getCalledFunctionName(), "__kmpc_fork_call");
     EXPECT_EQ(ForkCI->arg_size(), 3U);
     EXPECT_TRUE(isa<GlobalVariable>(ForkCI->getArgOperand(0)));
     EXPECT_EQ(ForkCI->getArgOperand(1),
@@ -1186,7 +1186,7 @@ TEST_F(OpenMPIRBuilderTest, ParallelIfCond) {
     ForkCI = cast<CallInst>(Usr);
   }
 
-  EXPECT_EQ(ForkCI->getCalledFunction()->getName(), "__kmpc_fork_call_if");
+  EXPECT_EQ(*ForkCI->getCalledFunctionName(), "__kmpc_fork_call_if");
   EXPECT_EQ(ForkCI->arg_size(), 5U);
   EXPECT_TRUE(isa<GlobalVariable>(ForkCI->getArgOperand(0)));
   EXPECT_EQ(ForkCI->getArgOperand(1),
@@ -2395,7 +2395,7 @@ TEST_F(OpenMPIRBuilderTest, StaticWorkshareLoopTarget) {
     if (!Call->getCalledFunction())
       continue;
 
-    if (Call->getCalledFunction()->getName() == "__kmpc_for_static_loop_4u") {
+    if (*Call->getCalledFunctionName() == "__kmpc_for_static_loop_4u") {
       WorkshareLoopRuntimeCall = Call;
       WorkshareLoopRuntimeCallCnt++;
     }
@@ -2688,14 +2688,12 @@ TEST_P(OpenMPIRBuilderTestWithParams, DynamicWorkShareLoop) {
 
   CallInst *ThreadIdCall = dyn_cast<CallInst>(&*(PreheaderIter++));
   ASSERT_NE(ThreadIdCall, nullptr);
-  EXPECT_EQ(ThreadIdCall->getCalledFunction()->getName(),
-            "__kmpc_global_thread_num");
+  EXPECT_EQ(*ThreadIdCall->getCalledFunctionName(), "__kmpc_global_thread_num");
 
   CallInst *InitCall = dyn_cast<CallInst>(&*PreheaderIter);
 
   ASSERT_NE(InitCall, nullptr);
-  EXPECT_EQ(InitCall->getCalledFunction()->getName(),
-            "__kmpc_dispatch_init_4u");
+  EXPECT_EQ(*InitCall->getCalledFunctionName(), "__kmpc_dispatch_init_4u");
   EXPECT_EQ(InitCall->arg_size(), 7U);
   EXPECT_EQ(InitCall->getArgOperand(6), ConstantInt::get(LCTy, ChunkSize));
   ConstantInt *SchedVal = cast<ConstantInt>(InitCall->getArgOperand(2));
@@ -2817,7 +2815,7 @@ TEST_F(OpenMPIRBuilderTest, DynamicWorkShareLoopOrdered) {
     Instruction *Cur = &EI;
     if (isa<CallInst>(Cur)) {
       InitCall = cast<CallInst>(Cur);
-      if (InitCall->getCalledFunction()->getName() == "__kmpc_dispatch_init_4u")
+      if (*InitCall->getCalledFunctionName() == "__kmpc_dispatch_init_4u")
         break;
       InitCall = nullptr;
     }
@@ -2831,8 +2829,7 @@ TEST_F(OpenMPIRBuilderTest, DynamicWorkShareLoopOrdered) {
   CallInst *FiniCall = dyn_cast<CallInst>(
       &*(LatchBlock->getTerminator()->getPrevNonDebugInstruction(true)));
   ASSERT_NE(FiniCall, nullptr);
-  EXPECT_EQ(FiniCall->getCalledFunction()->getName(),
-            "__kmpc_dispatch_fini_4u");
+  EXPECT_EQ(*FiniCall->getCalledFunctionName(), "__kmpc_dispatch_fini_4u");
   EXPECT_EQ(FiniCall->arg_size(), 2U);
   EXPECT_EQ(InitCall->getArgOperand(0), FiniCall->getArgOperand(0));
   EXPECT_EQ(InitCall->getArgOperand(1), FiniCall->getArgOperand(1));
@@ -2910,7 +2907,7 @@ TEST_F(OpenMPIRBuilderTest, MasterDirective) {
 
   CallInst *MasterEntryCI = cast<CallInst>(CondInst->getOperand(0));
   EXPECT_EQ(MasterEntryCI->arg_size(), 2U);
-  EXPECT_EQ(MasterEntryCI->getCalledFunction()->getName(), "__kmpc_master");
+  EXPECT_EQ(*MasterEntryCI->getCalledFunctionName(), "__kmpc_master");
   EXPECT_TRUE(isa<GlobalVariable>(MasterEntryCI->getArgOperand(0)));
 
   CallInst *MasterEndCI = nullptr;
@@ -2918,7 +2915,7 @@ TEST_F(OpenMPIRBuilderTest, MasterDirective) {
     Instruction *cur = &FI;
     if (isa<CallInst>(cur)) {
       MasterEndCI = cast<CallInst>(cur);
-      if (MasterEndCI->getCalledFunction()->getName() == "__kmpc_end_master")
+      if (*MasterEndCI->getCalledFunctionName() == "__kmpc_end_master")
         break;
       MasterEndCI = nullptr;
     }
@@ -2992,7 +2989,7 @@ TEST_F(OpenMPIRBuilderTest, MaskedDirective) {
 
   CallInst *MaskedEntryCI = cast<CallInst>(CondInst->getOperand(0));
   EXPECT_EQ(MaskedEntryCI->arg_size(), 3U);
-  EXPECT_EQ(MaskedEntryCI->getCalledFunction()->getName(), "__kmpc_masked");
+  EXPECT_EQ(*MaskedEntryCI->getCalledFunctionName(), "__kmpc_masked");
   EXPECT_TRUE(isa<GlobalVariable>(MaskedEntryCI->getArgOperand(0)));
 
   CallInst *MaskedEndCI = nullptr;
@@ -3000,7 +2997,7 @@ TEST_F(OpenMPIRBuilderTest, MaskedDirective) {
     Instruction *cur = &FI;
     if (isa<CallInst>(cur)) {
       MaskedEndCI = cast<CallInst>(cur);
-      if (MaskedEndCI->getCalledFunction()->getName() == "__kmpc_end_masked")
+      if (*MaskedEndCI->getCalledFunctionName() == "__kmpc_end_masked")
         break;
       MaskedEndCI = nullptr;
     }
@@ -3053,14 +3050,14 @@ TEST_F(OpenMPIRBuilderTest, CriticalDirective) {
     Instruction *cur = &EI;
     if (isa<CallInst>(cur)) {
       CriticalEntryCI = cast<CallInst>(cur);
-      if (CriticalEntryCI->getCalledFunction()->getName() == "__kmpc_critical")
+      if (*CriticalEntryCI->getCalledFunctionName() == "__kmpc_critical")
         break;
       CriticalEntryCI = nullptr;
     }
   }
   EXPECT_NE(CriticalEntryCI, nullptr);
   EXPECT_EQ(CriticalEntryCI->arg_size(), 3U);
-  EXPECT_EQ(CriticalEntryCI->getCalledFunction()->getName(), "__kmpc_critical");
+  EXPECT_EQ(*CriticalEntryCI->getCalledFunctionName(), "__kmpc_critical");
   EXPECT_TRUE(isa<GlobalVariable>(CriticalEntryCI->getArgOperand(0)));
 
   CallInst *CriticalEndCI = nullptr;
@@ -3068,8 +3065,7 @@ TEST_F(OpenMPIRBuilderTest, CriticalDirective) {
     Instruction *cur = &FI;
     if (isa<CallInst>(cur)) {
       CriticalEndCI = cast<CallInst>(cur);
-      if (CriticalEndCI->getCalledFunction()->getName() ==
-          "__kmpc_end_critical")
+      if (*CriticalEndCI->getCalledFunctionName() == "__kmpc_end_critical")
         break;
       CriticalEndCI = nullptr;
     }
@@ -3163,14 +3159,14 @@ TEST_F(OpenMPIRBuilderTest, OrderedDirectiveDependSource) {
   CallInst *GTID = dyn_cast<CallInst>(DependBaseAddrGEP->getNextNode());
   ASSERT_NE(GTID, nullptr);
   EXPECT_EQ(GTID->arg_size(), 1U);
-  EXPECT_EQ(GTID->getCalledFunction()->getName(), "__kmpc_global_thread_num");
+  EXPECT_EQ(*GTID->getCalledFunctionName(), "__kmpc_global_thread_num");
   EXPECT_FALSE(GTID->getCalledFunction()->doesNotAccessMemory());
   EXPECT_FALSE(GTID->getCalledFunction()->doesNotFreeMemory());
 
   CallInst *Depend = dyn_cast<CallInst>(GTID->getNextNode());
   ASSERT_NE(Depend, nullptr);
   EXPECT_EQ(Depend->arg_size(), 3U);
-  EXPECT_EQ(Depend->getCalledFunction()->getName(), "__kmpc_doacross_post");
+  EXPECT_EQ(*Depend->getCalledFunctionName(), "__kmpc_doacross_post");
   EXPECT_TRUE(isa<GlobalVariable>(Depend->getArgOperand(0)));
   EXPECT_EQ(Depend->getArgOperand(1), GTID);
   EXPECT_EQ(Depend->getArgOperand(2), DependBaseAddrGEP);
@@ -3248,14 +3244,14 @@ TEST_F(OpenMPIRBuilderTest, OrderedDirectiveDependSink) {
   CallInst *GTID = dyn_cast<CallInst>(DependBaseAddrGEP->getNextNode());
   ASSERT_NE(GTID, nullptr);
   EXPECT_EQ(GTID->arg_size(), 1U);
-  EXPECT_EQ(GTID->getCalledFunction()->getName(), "__kmpc_global_thread_num");
+  EXPECT_EQ(*GTID->getCalledFunctionName(), "__kmpc_global_thread_num");
   EXPECT_FALSE(GTID->getCalledFunction()->doesNotAccessMemory());
   EXPECT_FALSE(GTID->getCalledFunction()->doesNotFreeMemory());
 
   CallInst *Depend = dyn_cast<CallInst>(GTID->getNextNode());
   ASSERT_NE(Depend, nullptr);
   EXPECT_EQ(Depend->arg_size(), 3U);
-  EXPECT_EQ(Depend->getCalledFunction()->getName(), "__kmpc_doacross_wait");
+  EXPECT_EQ(*Depend->getCalledFunctionName(), "__kmpc_doacross_wait");
   EXPECT_TRUE(isa<GlobalVariable>(Depend->getArgOperand(0)));
   EXPECT_EQ(Depend->getArgOperand(1), GTID);
   EXPECT_EQ(Depend->getArgOperand(2), DependBaseAddrGEP);
@@ -3309,14 +3305,14 @@ TEST_F(OpenMPIRBuilderTest, OrderedDirectiveThreads) {
     Instruction *Cur = &EI;
     if (isa<CallInst>(Cur)) {
       OrderedEntryCI = cast<CallInst>(Cur);
-      if (OrderedEntryCI->getCalledFunction()->getName() == "__kmpc_ordered")
+      if (*OrderedEntryCI->getCalledFunctionName() == "__kmpc_ordered")
         break;
       OrderedEntryCI = nullptr;
     }
   }
   EXPECT_NE(OrderedEntryCI, nullptr);
   EXPECT_EQ(OrderedEntryCI->arg_size(), 2U);
-  EXPECT_EQ(OrderedEntryCI->getCalledFunction()->getName(), "__kmpc_ordered");
+  EXPECT_EQ(*OrderedEntryCI->getCalledFunctionName(), "__kmpc_ordered");
   EXPECT_TRUE(isa<GlobalVariable>(OrderedEntryCI->getArgOperand(0)));
 
   CallInst *OrderedEndCI = nullptr;
@@ -3324,7 +3320,7 @@ TEST_F(OpenMPIRBuilderTest, OrderedDirectiveThreads) {
     Instruction *Cur = &FI;
     if (isa<CallInst>(Cur)) {
       OrderedEndCI = cast<CallInst>(Cur);
-      if (OrderedEndCI->getCalledFunction()->getName() == "__kmpc_end_ordered")
+      if (*OrderedEndCI->getCalledFunctionName() == "__kmpc_end_ordered")
         break;
       OrderedEndCI = nullptr;
     }
@@ -3383,7 +3379,7 @@ TEST_F(OpenMPIRBuilderTest, OrderedDirectiveSimd) {
     Instruction *Cur = &EI;
     if (isa<CallInst>(Cur)) {
       OrderedEntryCI = cast<CallInst>(Cur);
-      if (OrderedEntryCI->getCalledFunction()->getName() == "__kmpc_ordered")
+      if (*OrderedEntryCI->getCalledFunctionName() == "__kmpc_ordered")
         break;
       OrderedEntryCI = nullptr;
     }
@@ -3395,7 +3391,7 @@ TEST_F(OpenMPIRBuilderTest, OrderedDirectiveSimd) {
     Instruction *Cur = &FI;
     if (isa<CallInst>(Cur)) {
       OrderedEndCI = cast<CallInst>(Cur);
-      if (OrderedEndCI->getCalledFunction()->getName() == "__kmpc_end_ordered")
+      if (*OrderedEndCI->getCalledFunctionName() == "__kmpc_end_ordered")
         break;
       OrderedEndCI = nullptr;
     }
@@ -3502,7 +3498,7 @@ TEST_F(OpenMPIRBuilderTest, SingleDirective) {
 
   CallInst *SingleEntryCI = cast<CallInst>(CondInst->getOperand(0));
   EXPECT_EQ(SingleEntryCI->arg_size(), 2U);
-  EXPECT_EQ(SingleEntryCI->getCalledFunction()->getName(), "__kmpc_single");
+  EXPECT_EQ(*SingleEntryCI->getCalledFunctionName(), "__kmpc_single");
   EXPECT_TRUE(isa<GlobalVariable>(SingleEntryCI->getArgOperand(0)));
 
   CallInst *SingleEndCI = nullptr;
@@ -3510,7 +3506,7 @@ TEST_F(OpenMPIRBuilderTest, SingleDirective) {
     Instruction *cur = &FI;
     if (isa<CallInst>(cur)) {
       SingleEndCI = cast<CallInst>(cur);
-      if (SingleEndCI->getCalledFunction()->getName() == "__kmpc_end_single")
+      if (*SingleEndCI->getCalledFunctionName() == "__kmpc_end_single")
         break;
       SingleEndCI = nullptr;
     }
@@ -3524,7 +3520,7 @@ TEST_F(OpenMPIRBuilderTest, SingleDirective) {
   for (auto &FI : *ExitBB) {
     Instruction *cur = &FI;
     if (auto CI = dyn_cast<CallInst>(cur)) {
-      if (CI->getCalledFunction()->getName() == "__kmpc_barrier") {
+      if (*CI->getCalledFunctionName() == "__kmpc_barrier") {
         FoundBarrier = true;
         break;
       }
@@ -3595,7 +3591,7 @@ TEST_F(OpenMPIRBuilderTest, SingleDirectiveNowait) {
 
   CallInst *SingleEntryCI = cast<CallInst>(CondInst->getOperand(0));
   EXPECT_EQ(SingleEntryCI->arg_size(), 2U);
-  EXPECT_EQ(SingleEntryCI->getCalledFunction()->getName(), "__kmpc_single");
+  EXPECT_EQ(*SingleEntryCI->getCalledFunctionName(), "__kmpc_single");
   EXPECT_TRUE(isa<GlobalVariable>(SingleEntryCI->getArgOperand(0)));
 
   CallInst *SingleEndCI = nullptr;
@@ -3603,7 +3599,7 @@ TEST_F(OpenMPIRBuilderTest, SingleDirectiveNowait) {
     Instruction *cur = &FI;
     if (isa<CallInst>(cur)) {
       SingleEndCI = cast<CallInst>(cur);
-      if (SingleEndCI->getCalledFunction()->getName() == "__kmpc_end_single")
+      if (*SingleEndCI->getCalledFunctionName() == "__kmpc_end_single")
         break;
       SingleEndCI = nullptr;
     }
@@ -3617,7 +3613,7 @@ TEST_F(OpenMPIRBuilderTest, SingleDirectiveNowait) {
   for (auto &FI : *ExitBB) {
     Instruction *cur = &FI;
     if (auto CI = dyn_cast<CallInst>(cur)) {
-      if (CI->getCalledFunction()->getName() == "__kmpc_barrier") {
+      if (*CI->getCalledFunctionName() == "__kmpc_barrier") {
         ExitBarrier = CI;
         break;
       }
@@ -3718,7 +3714,7 @@ TEST_F(OpenMPIRBuilderTest, SingleDirectiveCopyPrivate) {
 
   CallInst *SingleEntryCI = cast<CallInst>(CondInst->getOperand(0));
   EXPECT_EQ(SingleEntryCI->arg_size(), 2U);
-  EXPECT_EQ(SingleEntryCI->getCalledFunction()->getName(), "__kmpc_single");
+  EXPECT_EQ(*SingleEntryCI->getCalledFunctionName(), "__kmpc_single");
   EXPECT_TRUE(isa<GlobalVariable>(SingleEntryCI->getArgOperand(0)));
 
   // check ThenBB
@@ -3738,7 +3734,7 @@ TEST_F(OpenMPIRBuilderTest, SingleDirectiveCopyPrivate) {
   // call __kmpc_end_single
   auto *SingleEndCI = ThenBBI.next<CallInst>();
   EXPECT_NE(SingleEndCI, nullptr);
-  EXPECT_EQ(SingleEndCI->getCalledFunction()->getName(), "__kmpc_end_single");
+  EXPECT_EQ(*SingleEndCI->getCalledFunctionName(), "__kmpc_end_single");
   EXPECT_EQ(SingleEndCI->arg_size(), 2U);
   EXPECT_TRUE(isa<GlobalVariable>(SingleEndCI->getArgOperand(0)));
   EXPECT_EQ(SingleEndCI->getArgOperand(1), SingleEntryCI->getArgOperand(1));
@@ -3754,8 +3750,7 @@ TEST_F(OpenMPIRBuilderTest, SingleDirectiveCopyPrivate) {
   // call __kmpc_global_thread_num
   auto *ThreadNumCI = ExitBBI.next<CallInst>();
   EXPECT_NE(ThreadNumCI, nullptr);
-  EXPECT_EQ(ThreadNumCI->getCalledFunction()->getName(),
-            "__kmpc_global_thread_num");
+  EXPECT_EQ(*ThreadNumCI->getCalledFunctionName(), "__kmpc_global_thread_num");
   // load DidIt
   auto *DidItLI = ExitBBI.next<LoadInst>();
   EXPECT_NE(DidItLI, nullptr);
@@ -5643,7 +5638,7 @@ TEST_F(OpenMPIRBuilderTest, CreateSections) {
   bool FoundForInit = false;
   for (Instruction &Inst : *LoopPreheaderBB) {
     if (isa<CallInst>(Inst)) {
-      if (cast<CallInst>(&Inst)->getCalledFunction()->getName() ==
+      if (*cast<CallInst>(&Inst)->getCalledFunctionName() ==
           "__kmpc_for_static_init_4u") {
         FoundForInit = true;
       }
@@ -5655,12 +5650,11 @@ TEST_F(OpenMPIRBuilderTest, CreateSections) {
   bool FoundBarrier = false;
   for (Instruction &Inst : *ForExitBB) {
     if (isa<CallInst>(Inst)) {
-      if (cast<CallInst>(&Inst)->getCalledFunction()->getName() ==
+      if (*cast<CallInst>(&Inst)->getCalledFunctionName() ==
           "__kmpc_for_static_fini") {
         FoundForExit = true;
       }
-      if (cast<CallInst>(&Inst)->getCalledFunction()->getName() ==
-          "__kmpc_barrier") {
+      if (*cast<CallInst>(&Inst)->getCalledFunctionName() == "__kmpc_barrier") {
         FoundBarrier = true;
       }
       if (FoundForExit && FoundBarrier)
@@ -5714,7 +5708,7 @@ TEST_F(OpenMPIRBuilderTest, CreateSectionsNoWait) {
   Builder.CreateRetVoid(); // Required at the end of the function
   for (auto &Inst : instructions(*F)) {
     EXPECT_FALSE(isa<CallInst>(Inst) &&
-                 cast<CallInst>(&Inst)->getCalledFunction()->getName() ==
+                 *cast<CallInst>(&Inst)->getCalledFunctionName() ==
                      "__kmpc_barrier" &&
                  "call to function __kmpc_barrier found with nowait");
   }
@@ -5878,7 +5872,7 @@ TEST_F(OpenMPIRBuilderTest, EmitMapperCall) {
   CallInst *MapperCall = dyn_cast<CallInst>(&BB->back());
   EXPECT_NE(MapperCall, nullptr);
   EXPECT_EQ(MapperCall->arg_size(), 9U);
-  EXPECT_EQ(MapperCall->getCalledFunction()->getName(),
+  EXPECT_EQ(*MapperCall->getCalledFunctionName(),
             "__tgt_target_data_begin_mapper");
   EXPECT_EQ(MapperCall->getOperand(0), SrcLocInfo);
   EXPECT_TRUE(MapperCall->getOperand(1)->getType()->isIntegerTy(64));
@@ -5942,7 +5936,7 @@ TEST_F(OpenMPIRBuilderTest, TargetEnterData) {
   CallInst *TargetDataCall = dyn_cast<CallInst>(&BB->back());
   EXPECT_NE(TargetDataCall, nullptr);
   EXPECT_EQ(TargetDataCall->arg_size(), 9U);
-  EXPECT_EQ(TargetDataCall->getCalledFunction()->getName(),
+  EXPECT_EQ(*TargetDataCall->getCalledFunctionName(),
             "__tgt_target_data_begin_mapper");
   EXPECT_TRUE(TargetDataCall->getOperand(1)->getType()->isIntegerTy(64));
   EXPECT_TRUE(TargetDataCall->getOperand(2)->getType()->isIntegerTy(32));
@@ -6005,7 +5999,7 @@ TEST_F(OpenMPIRBuilderTest, TargetExitData) {
   CallInst *TargetDataCall = dyn_cast<CallInst>(&BB->back());
   EXPECT_NE(TargetDataCall, nullptr);
   EXPECT_EQ(TargetDataCall->arg_size(), 9U);
-  EXPECT_EQ(TargetDataCall->getCalledFunction()->getName(),
+  EXPECT_EQ(*TargetDataCall->getCalledFunctionName(),
             "__tgt_target_data_end_mapper");
   EXPECT_TRUE(TargetDataCall->getOperand(1)->getType()->isIntegerTy(64));
   EXPECT_TRUE(TargetDataCall->getOperand(2)->getType()->isIntegerTy(32));
@@ -6088,7 +6082,7 @@ TEST_F(OpenMPIRBuilderTest, TargetDataRegion) {
           dyn_cast<CallInst>(BB->back().getPrevNode()->getPrevNode());
       EXPECT_NE(TargetDataCall, nullptr);
       EXPECT_EQ(TargetDataCall->arg_size(), 9U);
-      EXPECT_EQ(TargetDataCall->getCalledFunction()->getName(),
+      EXPECT_EQ(*TargetDataCall->getCalledFunctionName(),
                 "__tgt_target_data_begin_mapper");
       EXPECT_TRUE(TargetDataCall->getOperand(1)->getType()->isIntegerTy(64));
       EXPECT_TRUE(TargetDataCall->getOperand(2)->getType()->isIntegerTy(32));
@@ -6118,7 +6112,7 @@ TEST_F(OpenMPIRBuilderTest, TargetDataRegion) {
   CallInst *TargetDataCall = dyn_cast<CallInst>(&BB->back());
   EXPECT_NE(TargetDataCall, nullptr);
   EXPECT_EQ(TargetDataCall->arg_size(), 9U);
-  EXPECT_EQ(TargetDataCall->getCalledFunction()->getName(),
+  EXPECT_EQ(*TargetDataCall->getCalledFunctionName(),
             "__tgt_target_data_end_mapper");
   EXPECT_TRUE(TargetDataCall->getOperand(1)->getType()->isIntegerTy(64));
   EXPECT_TRUE(TargetDataCall->getOperand(2)->getType()->isIntegerTy(32));
@@ -6479,7 +6473,7 @@ TEST_F(OpenMPIRBuilderTest, TargetRegionDevice) {
 
   auto *InitCall = dyn_cast<CallInst>(Store2->getNextNode());
   EXPECT_NE(InitCall, nullptr);
-  EXPECT_EQ(InitCall->getCalledFunction()->getName(), "__kmpc_target_init");
+  EXPECT_EQ(*InitCall->getCalledFunctionName(), "__kmpc_target_init");
   EXPECT_EQ(InitCall->arg_size(), 2U);
   EXPECT_TRUE(isa<GlobalVariable>(InitCall->getArgOperand(0)));
   auto *KernelEnvGV = cast<GlobalVariable>(InitCall->getArgOperand(0));
@@ -6520,7 +6514,7 @@ TEST_F(OpenMPIRBuilderTest, TargetRegionDevice) {
 
   auto *DeinitCall = dyn_cast<CallInst>(Deinit);
   EXPECT_NE(DeinitCall, nullptr);
-  EXPECT_EQ(DeinitCall->getCalledFunction()->getName(), "__kmpc_target_deinit");
+  EXPECT_EQ(*DeinitCall->getCalledFunctionName(), "__kmpc_target_deinit");
   EXPECT_EQ(DeinitCall->arg_size(), 0U);
 
   EXPECT_TRUE(isa<ReturnInst>(DeinitCall->getNextNode()));
@@ -6870,7 +6864,7 @@ TEST_F(OpenMPIRBuilderTest, ConstantAllocaRaise) {
 
   auto *InitCall = dyn_cast<CallInst>(Store2->getNextNode());
   EXPECT_NE(InitCall, nullptr);
-  EXPECT_EQ(InitCall->getCalledFunction()->getName(), "__kmpc_target_init");
+  EXPECT_EQ(*InitCall->getCalledFunctionName(), "__kmpc_target_init");
   EXPECT_EQ(InitCall->arg_size(), 2U);
   EXPECT_TRUE(isa<GlobalVariable>(InitCall->getArgOperand(0)));
   auto *KernelEnvGV = cast<GlobalVariable>(InitCall->getArgOperand(0));
@@ -6910,7 +6904,7 @@ TEST_F(OpenMPIRBuilderTest, ConstantAllocaRaise) {
 
   auto *DeinitCall = dyn_cast<CallInst>(Deinit);
   EXPECT_NE(DeinitCall, nullptr);
-  EXPECT_EQ(DeinitCall->getCalledFunction()->getName(), "__kmpc_target_deinit");
+  EXPECT_EQ(*DeinitCall->getCalledFunctionName(), "__kmpc_target_deinit");
   EXPECT_EQ(DeinitCall->arg_size(), 0U);
 
   EXPECT_TRUE(isa<ReturnInst>(DeinitCall->getNextNode()));
@@ -6990,7 +6984,7 @@ TEST_F(OpenMPIRBuilderTest, CreateTask) {
   CallInst *GTID = dyn_cast<CallInst>(TaskAllocCall->getArgOperand(1));
   ASSERT_NE(GTID, nullptr);
   EXPECT_EQ(GTID->arg_size(), 1U);
-  EXPECT_EQ(GTID->getCalledFunction()->getName(), "__kmpc_global_thread_num");
+  EXPECT_EQ(*GTID->getCalledFunctionName(), "__kmpc_global_thread_num");
 
   // Verify the flags
   // TODO: Check for others flags. Currently testing only for tiedness.

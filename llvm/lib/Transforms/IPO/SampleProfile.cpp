@@ -1038,8 +1038,7 @@ void SampleProfileLoader::findExternalInlineCandidate(
     // Samples may not exist for replayed function, if so
     // just add the direct GUID and move on
     if (!Samples) {
-      InlinedGUIDs.insert(
-          Function::getGUID(CB->getCalledFunction()->getName()));
+      InlinedGUIDs.insert(Function::getGUID(*CB->getCalledFunctionName()));
       return;
     }
     // Otherwise, drop the threshold to import everything that we can

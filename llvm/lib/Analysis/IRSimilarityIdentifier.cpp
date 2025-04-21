@@ -152,7 +152,7 @@ void IRInstructionData::setCalleeName(bool MatchByName) {
   }
 
   if (!CI->isIndirectCall() && MatchByName)
-    CalleeName = CI->getCalledFunction()->getName().str();
+    CalleeName = CI->getCalledFunctionName()->str();
 }
 
 void IRInstructionData::setPHIPredecessors(

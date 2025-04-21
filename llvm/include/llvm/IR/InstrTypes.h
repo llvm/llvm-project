@@ -1345,6 +1345,16 @@ public:
     return nullptr;
   }
 
+  /// Shortcut to retrieving the name of the called function.
+  /// Returns std::nullopt, if the function cannot be found.
+  std::optional<StringRef> getCalledFunctionName() const {
+    Function *F = getCalledFunction();
+    if (F)
+      return F->getName();
+
+    return std::nullopt;
+  }
+
   /// Return true if the callsite is an indirect call.
   bool isIndirectCall() const;
 

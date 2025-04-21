@@ -155,17 +155,16 @@ TEST_F(IRBuilderTest, IntrinsicMangling) {
 
   // Mangled return type, no arguments.
   Call = Builder.CreateIntrinsic(Int64Ty, Intrinsic::coro_size, {});
-  EXPECT_EQ(Call->getCalledFunction()->getName(), "llvm.coro.size.i64");
+  EXPECT_EQ(*Call->getCalledFunctionName(), "llvm.coro.size.i64");
 
   // Void return type, mangled argument type.
   Call =
       Builder.CreateIntrinsic(VoidTy, Intrinsic::set_loop_iterations, Int64Val);
-  EXPECT_EQ(Call->getCalledFunction()->getName(),
-            "llvm.set.loop.iterations.i64");
+  EXPECT_EQ(*Call->getCalledFunctionName(), "llvm.set.loop.iterations.i64");
 
   // Mangled return type and argument type.
   Call = Builder.CreateIntrinsic(Int64Ty, Intrinsic::lround, DoubleVal);
-  EXPECT_EQ(Call->getCalledFunction()->getName(), "llvm.lround.i64.f64");
+  EXPECT_EQ(*Call->getCalledFunctionName(), "llvm.lround.i64.f64");
 }
 
 TEST_F(IRBuilderTest, IntrinsicsWithScalableVectors) {

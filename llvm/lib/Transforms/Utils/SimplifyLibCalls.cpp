@@ -4050,11 +4050,11 @@ Value *LibCallSimplifier::optimizeFloatingPointLibCall(CallInst *CI,
   case LibFunc_cos:
   case LibFunc_sin:
   case LibFunc_tanh:
-    if (UnsafeFPShrink && hasFloatVersion(M, CI->getCalledFunction()->getName()))
+    if (UnsafeFPShrink && hasFloatVersion(M, *CI->getCalledFunctionName()))
       return optimizeUnaryDoubleFP(CI, Builder, TLI, true);
     return nullptr;
   case LibFunc_copysign:
-    if (hasFloatVersion(M, CI->getCalledFunction()->getName()))
+    if (hasFloatVersion(M, *CI->getCalledFunctionName()))
       return optimizeBinaryDoubleFP(CI, Builder, TLI);
     return nullptr;
   case LibFunc_fdim:

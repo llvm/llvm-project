@@ -4430,7 +4430,7 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
     if (CI->getFunctionType() == NewFn->getFunctionType()) {
       // Handle generic mangling change.
       assert(
-          (CI->getCalledFunction()->getName() != NewFn->getName()) &&
+          (CI->getCalledFunctionName().value_or("") != NewFn->getName()) &&
           "Unknown function for CallBase upgrade and isn't just a name change");
       CI->setCalledFunction(NewFn);
       return;

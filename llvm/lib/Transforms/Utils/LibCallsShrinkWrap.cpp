@@ -58,8 +58,11 @@ public:
   bool perform() {
     bool Changed = false;
     for (auto &CI : WorkList) {
-      LLVM_DEBUG(dbgs() << "CDCE calls: " << CI->getCalledFunction()->getName()
-                        << "\n");
+      std::optional<StringRef> CalleeName = CI->getCalledFunctionName();
+      assert(CalleeName.has_value() &&
+             "perform() should apply to a non-empty callee");
+
+      LLVM_DEBUG(dbgs() << "CDCE calls: " << *CalleeName << "\n");
       if (perform(CI)) {
         Changed = true;
         LLVM_DEBUG(dbgs() << "Transformed\n");
@@ -487,7 +490,6 @@ void LibCallsShrinkWrap::shrinkWrapCI(CallInst *CI, Value *Cond) {
 bool LibCallsShrinkWrap::perform(CallInst *CI) {
   LibFunc Func;
   Function *Callee = CI->getCalledFunction();
-  assert(Callee && "perform() should apply to a non-empty callee");
   TLI.getLibFunc(*Callee, Func);
   assert(Func && "perform() is not expecting an empty function");
 

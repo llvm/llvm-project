@@ -132,8 +132,8 @@ struct MemOp {
   }
   StringRef getFuncName() {
     if (auto MI = asMI())
-      return MI->getCalledFunction()->getName();
-    return asCI()->getCalledFunction()->getName();
+      return *MI->getCalledFunctionName();
+    return *asCI()->getCalledFunctionName();
   }
   bool isMemmove() {
     if (auto MI = asMI())

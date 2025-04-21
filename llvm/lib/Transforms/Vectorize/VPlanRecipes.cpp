@@ -2580,7 +2580,7 @@ void VPReplicateRecipe::print(raw_ostream &O, const Twine &Indent,
   if (auto *CB = dyn_cast<CallBase>(getUnderlyingInstr())) {
     O << "call";
     printFlags(O);
-    O << "@" << CB->getCalledFunction()->getName() << "(";
+    O << "@" << *CB->getCalledFunctionName() << "(";
     interleaveComma(make_range(op_begin(), op_begin() + (getNumOperands() - 1)),
                     O, [&O, &SlotTracker](VPValue *Op) {
                       Op->printAsOperand(O, SlotTracker);
