@@ -6966,10 +6966,10 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I,
     }
 
     VectorTy = toVectorTy(ValTy, VF);
-    return TTI.getCmpSelInstrCost(I->getOpcode(), VectorTy, nullptr,
-                                  cast<CmpInst>(I)->getPredicate(), CostKind,
-                                  {TTI::OK_AnyValue, TTI::OP_None},
-                                  {TTI::OK_AnyValue, TTI::OP_None}, I);
+    return TTI.getCmpSelInstrCost(
+        I->getOpcode(), VectorTy, CmpInst::makeCmpResultType(VectorTy),
+        cast<CmpInst>(I)->getPredicate(), CostKind,
+        {TTI::OK_AnyValue, TTI::OP_None}, {TTI::OK_AnyValue, TTI::OP_None}, I);
   }
   case Instruction::Store:
   case Instruction::Load: {
