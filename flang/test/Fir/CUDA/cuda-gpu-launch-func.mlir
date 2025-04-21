@@ -54,7 +54,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<i1, dense<8> : ve
     llvm.br ^bb1(%44 : i64)
   ^bb3:  // pred: ^bb1
     %45 = llvm.call @_FortranACUFDataTransferPtrPtr(%14, %25, %2, %11, %13, %5) : (!llvm.ptr, !llvm.ptr, i64, i32, !llvm.ptr, i32) -> !llvm.struct<()>
-    gpu.launch_func  @cuda_device_mod::@_QMmod1Psub1 blocks in (%7, %7, %7) threads in (%12, %7, %7) : i64 dynamic_shared_memory_size %11 args(%14 : !llvm.ptr)
+    gpu.launch_func  @cuda_device_mod::@_QMmod1Psub1 blocks in (%7, %7, %7) threads in (%12, %7, %7) : i64 dynamic_shared_memory_size %11 args(%14 : !llvm.ptr) {cuf.proc_attr = #cuf.cuda_proc<global>}
     %46 = llvm.call @_FortranACUFDataTransferPtrPtr(%25, %14, %2, %10, %13, %4) : (!llvm.ptr, !llvm.ptr, i64, i32, !llvm.ptr, i32) -> !llvm.struct<()>
     %47 = llvm.call @_FortranAioBeginExternalListOutput(%9, %13, %8) {fastmathFlags = #llvm.fastmath<contract>} : (i32, !llvm.ptr, i32) -> !llvm.ptr
     %48 = llvm.mlir.constant(9 : i32) : i32
@@ -122,7 +122,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<!llvm.ptr<272>, d
     %1 = llvm.mlir.constant(2 : index) : i64
     %2 = llvm.mlir.constant(0 : i32) : i32
     %3 = llvm.mlir.constant(10 : index) : i64
-    gpu.launch_func  @cuda_device_mod::@_QMmod1Psub1 clusters in (%1, %1, %0) blocks in (%3, %3, %0) threads in (%3, %3, %0) : i64 dynamic_shared_memory_size %2
+    gpu.launch_func  @cuda_device_mod::@_QMmod1Psub1 clusters in (%1, %1, %0) blocks in (%3, %3, %0) threads in (%3, %3, %0) : i64 dynamic_shared_memory_size %2  {cuf.proc_attr = #cuf.cuda_proc<global>}
     llvm.return
   }
   gpu.binary @cuda_device_mod  [#gpu.object<#nvvm.target, "">]
@@ -180,7 +180,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<!llvm.ptr<272>, d
     %2 = llvm.mlir.constant(0 : i32) : i32
     %3 = llvm.mlir.constant(10 : index) : i64
     %token = cuf.stream_cast %stream : !llvm.ptr
-    gpu.launch_func [%token] @cuda_device_mod::@_QMmod1Psub1 blocks in (%3, %3, %0) threads in (%3, %3, %0) : i64 dynamic_shared_memory_size %2
+    gpu.launch_func [%token] @cuda_device_mod::@_QMmod1Psub1 blocks in (%3, %3, %0) threads in (%3, %3, %0) : i64 dynamic_shared_memory_size %2 {cuf.proc_attr = #cuf.cuda_proc<global>}
     llvm.return
   }
   gpu.binary @cuda_device_mod  [#gpu.object<#nvvm.target, "">]
