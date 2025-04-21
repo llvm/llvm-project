@@ -13,10 +13,10 @@
 
 namespace llvm {
 class LinkDiagnosticInfo : public DiagnosticInfo {
-  const Twine &Msg;
+  StringRef Msg;
 
 public:
-  LinkDiagnosticInfo(DiagnosticSeverity Severity, const Twine &Msg);
+  LinkDiagnosticInfo(DiagnosticSeverity Severity, StringRef Msg);
   void print(DiagnosticPrinter &DP) const override;
 };
 }

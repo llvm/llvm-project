@@ -1376,15 +1376,15 @@ SDValue AMDGPUTargetLowering::lowerUnhandledCall(CallLoweringInfo &CLI,
 
   const Function &Fn = DAG.getMachineFunction().getFunction();
 
-  StringRef FuncName("<unknown>");
-
+  SmallString<128> Msg = Reason;
   if (const ExternalSymbolSDNode *G = dyn_cast<ExternalSymbolSDNode>(Callee))
-    FuncName = G->getSymbol();
+    Msg.append(G->getSymbol());
   else if (const GlobalAddressSDNode *G = dyn_cast<GlobalAddressSDNode>(Callee))
-    FuncName = G->getGlobal()->getName();
+    Msg.append(G->getGlobal()->getName());
+  else
+    Msg.append("<unknown>");
 
-  DiagnosticInfoUnsupported NoCalls(
-    Fn, Reason + FuncName, CLI.DL.getDebugLoc());
+  DiagnosticInfoUnsupported NoCalls(Fn, Msg, CLI.DL.getDebugLoc());
   DAG.getContext()->diagnose(NoCalls);
 
   if (!CLI.IsTailCall) {

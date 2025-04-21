@@ -393,15 +393,14 @@ static bool foldGEPChainAsU8Access(SmallVector<GetElementPtrInst *> &GEPs,
 }
 
 static void reportNonStaticGEPChain(Instruction *Insn) {
-  auto Msg = DiagnosticInfoUnsupported(
-      *Insn->getFunction(),
-      Twine("Non-constant offset in access to a field of a type marked "
-            "with preserve_static_offset might be rejected by BPF verifier")
-          .concat(Insn->getDebugLoc()
-                      ? ""
-                      : " (pass -g option to get exact location)"),
-      Insn->getDebugLoc(), DS_Warning);
-  Insn->getContext().diagnose(Msg);
+  SmallString<256> Msg(
+      "Non-constant offset in access to a field of a type marked with "
+      "preserve_static_offset might be rejected by BPF verifier");
+  if (Insn->getDebugLoc())
+    Msg.append(" (pass -g option to get exact location)");
+
+  Insn->getContext().diagnose(DiagnosticInfoUnsupported(
+      *Insn->getFunction(), Msg, Insn->getDebugLoc(), DS_Warning));
 }
 
 static bool allZeroIndices(SmallVector<GetElementPtrInst *> &GEPs) {

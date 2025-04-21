@@ -13,6 +13,7 @@
 #include "LinkDiagnosticInfo.h"
 #include "llvm-c/Linker.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/IR/Comdat.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/LLVMContext.h"
@@ -58,7 +59,9 @@ class ModuleLinker {
 
   /// Should we have mover and linker error diag info?
   bool emitError(const Twine &Message) {
-    SrcM->getContext().diagnose(LinkDiagnosticInfo(DS_Error, Message));
+    SmallString<128> Storage;
+    SrcM->getContext().diagnose(
+        LinkDiagnosticInfo(DS_Error, Message.toStringRef(Storage)));
     return true;
   }
 

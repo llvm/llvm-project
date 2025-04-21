@@ -47,8 +47,9 @@ static const std::array<unsigned, 17> SubRegFromChannelTableWidthMap = {
 
 static void emitUnsupportedError(const Function &Fn, const MachineInstr &MI,
                                  const Twine &ErrMsg) {
-  Fn.getContext().diagnose(
-      DiagnosticInfoUnsupported(Fn, ErrMsg, MI.getDebugLoc()));
+  SmallString<128> Storage;
+  Fn.getContext().diagnose(DiagnosticInfoUnsupported(
+      Fn, ErrMsg.toStringRef(Storage), MI.getDebugLoc()));
 }
 
 namespace llvm {

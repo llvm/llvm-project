@@ -744,9 +744,9 @@ LTOCodeGenerator::setDiagnosticHandler(lto_diagnostic_handler_t DiagHandler,
 
 namespace {
 class LTODiagnosticInfo : public DiagnosticInfo {
-  const Twine &Msg;
+  StringRef Msg;
 public:
-  LTODiagnosticInfo(const Twine &DiagMsg, DiagnosticSeverity Severity=DS_Error)
+  LTODiagnosticInfo(StringRef DiagMsg, DiagnosticSeverity Severity=DS_Error)
       : DiagnosticInfo(DK_Linker, Severity), Msg(DiagMsg) {}
   void print(DiagnosticPrinter &DP) const override { DP << Msg; }
 };

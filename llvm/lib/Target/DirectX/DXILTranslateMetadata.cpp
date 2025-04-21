@@ -1,3 +1,5 @@
+
+
 //===- DXILTranslateMetadata.cpp - Pass to emit DXIL metadata -------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -9,6 +11,7 @@
 #include "DXILTranslateMetadata.h"
 #include "DXILShaderFlags.h"
 #include "DirectX.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/DXILMetadataAnalysis.h"
@@ -26,6 +29,7 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/VersionTuple.h"
 #include "llvm/TargetParser/Triple.h"
 #include <cstdint>
@@ -38,14 +42,14 @@ namespace {
 /// for TranslateMetadata pass
 class DiagnosticInfoTranslateMD : public DiagnosticInfo {
 private:
-  const Twine &Msg;
+  StringRef Msg;
   const Module &Mod;
 
 public:
   /// \p M is the module for which the diagnostic is being emitted. \p Msg is
   /// the message to show. Note that this class does not copy this message, so
   /// this reference must be valid for the whole life time of the diagnostic.
-  DiagnosticInfoTranslateMD(const Module &M, const Twine &Msg,
+  DiagnosticInfoTranslateMD(const Module &M, StringRef Msg,
                             DiagnosticSeverity Severity = DS_Error)
       : DiagnosticInfo(DK_Unsupported, Severity), Msg(Msg), Mod(M) {}
 
@@ -358,14 +362,13 @@ static void translateMetadata(Module &M, DXILResourceMap &DRM,
     if (MMDI.ShaderProfile != Triple::EnvironmentType::Library) {
       EntryShaderFlags = EntrySFMask;
       if (EntryProp.ShaderStage != MMDI.ShaderProfile) {
-        M.getContext().diagnose(DiagnosticInfoTranslateMD(
-            M,
-            "Shader stage '" +
-                Twine(getShortShaderStage(EntryProp.ShaderStage) +
-                      "' for entry '" + Twine(EntryProp.Entry->getName()) +
-                      "' different from specified target profile '" +
-                      Twine(Triple::getEnvironmentTypeName(MMDI.ShaderProfile) +
-                            "'"))));
+        SmallString<256> Msg =
+            formatv("Shader stage '{0}' for entry '{1}' different from "
+                    "specified target profile '{2}'",
+                    getShortShaderStage(EntryProp.ShaderStage),
+                    EntryProp.Entry->getName(),
+                    Triple::getEnvironmentTypeName(MMDI.ShaderProfile));
+        M.getContext().diagnose(DiagnosticInfoTranslateMD(M, Msg));
       }
     }
     EntryFnMDNodes.emplace_back(emitEntryMD(EntryProp, Signatures, ResourceMD,

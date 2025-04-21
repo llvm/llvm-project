@@ -165,9 +165,9 @@ static void promoteModule(Module &TheModule, const ModuleSummaryIndex &Index,
 
 namespace {
 class ThinLTODiagnosticInfo : public DiagnosticInfo {
-  const Twine &Msg;
+  StringRef Msg;
 public:
-  ThinLTODiagnosticInfo(const Twine &DiagMsg,
+  ThinLTODiagnosticInfo(StringRef DiagMsg,
                         DiagnosticSeverity Severity = DS_Error)
       : DiagnosticInfo(DK_Linker, Severity), Msg(DiagMsg) {}
   void print(DiagnosticPrinter &DP) const override { DP << Msg; }

@@ -64,6 +64,7 @@
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/TargetParser/Triple.h"
@@ -706,10 +707,10 @@ getELFSectionNameForGlobal(const GlobalObject *GO, SectionKind Kind,
 
 namespace {
 class LoweringDiagnosticInfo : public DiagnosticInfo {
-  const Twine &Msg;
+  StringRef Msg;
 
 public:
-  LoweringDiagnosticInfo(const Twine &DiagMsg,
+  LoweringDiagnosticInfo(StringRef DiagMsg,
                          DiagnosticSeverity Severity = DS_Error)
       : DiagnosticInfo(DK_Lowering, Severity), Msg(DiagMsg) {}
   void print(DiagnosticPrinter &DP) const override { DP << Msg; }
@@ -869,15 +870,17 @@ static MCSection *selectExplicitSectionGlobal(const GlobalObject *GO,
     // been placed in an incompatible mergeable section. Emit an error if this
     // is the case to avoid creating broken output.
     if ((Section->getFlags() & ELF::SHF_MERGE) &&
-        (Section->getEntrySize() != getEntrySizeForKind(Kind)))
-      GO->getContext().diagnose(LoweringDiagnosticInfo(
-          "Symbol '" + GO->getName() + "' from module '" +
-          (GO->getParent() ? GO->getParent()->getSourceFileName() : "unknown") +
-          "' required a section with entry-size=" +
-          Twine(getEntrySizeForKind(Kind)) + " but was placed in section '" +
-          SectionName + "' with entry-size=" + Twine(Section->getEntrySize()) +
-          ": Explicit assignment by pragma or attribute of an incompatible "
-          "symbol to this section?"));
+        (Section->getEntrySize() != getEntrySizeForKind(Kind))) {
+      SmallString<128> Msg = formatv(
+          "Symbol '{0}' from module '{1}' required a section with "
+          "entry-size={2} but was placed in section '{3}' with entry-size={4}: "
+          "Explicit assignment by pragma or attribute of an incompatible "
+          "symbol to this section?",
+          GO->getName(),
+          GO->getParent() ? GO->getParent()->getSourceFileName() : "unknown",
+          getEntrySizeForKind(Kind), SectionName, Section->getEntrySize());
+      GO->getContext().diagnose(LoweringDiagnosticInfo(Msg));
+    }
   }
 
   return Section;

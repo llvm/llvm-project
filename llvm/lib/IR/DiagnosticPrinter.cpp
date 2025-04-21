@@ -90,11 +90,6 @@ DiagnosticPrinter &DiagnosticPrinterRawOStream::operator<<(double N) {
   return *this;
 }
 
-DiagnosticPrinter &DiagnosticPrinterRawOStream::operator<<(const Twine &Str) {
-  Str.print(Stream);
-  return *this;
-}
-
 // IR related types.
 DiagnosticPrinter &DiagnosticPrinterRawOStream::operator<<(const Value &V) {
   // Avoid printing '@' prefix for named functions.

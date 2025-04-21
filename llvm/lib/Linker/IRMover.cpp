@@ -340,7 +340,7 @@ Type *TypeMapTy::get(Type *Ty, SmallPtrSet<StructType *, 8> &Visited) {
 }
 
 LinkDiagnosticInfo::LinkDiagnosticInfo(DiagnosticSeverity Severity,
-                                       const Twine &Msg)
+                                       StringRef Msg)
     : DiagnosticInfo(DK_Linker, Severity), Msg(Msg) {}
 void LinkDiagnosticInfo::print(DiagnosticPrinter &DP) const { DP << Msg; }
 
@@ -438,7 +438,9 @@ class IRLinker {
   GlobalValue *copyGlobalValueProto(const GlobalValue *SGV, bool ForDefinition);
 
   void emitWarning(const Twine &Message) {
-    SrcM->getContext().diagnose(LinkDiagnosticInfo(DS_Warning, Message));
+    SmallString<128> Storage;
+    SrcM->getContext().diagnose(
+        LinkDiagnosticInfo(DS_Warning, Message.toStringRef(Storage)));
   }
 
   /// Given a global in the source module, return the global in the

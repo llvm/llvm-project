@@ -31,6 +31,7 @@
 #include "Utils/AMDGPUBaseInfo.h"
 #include "Utils/AMDKernelCodeTUtils.h"
 #include "Utils/SIDefinesUtils.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -43,6 +44,7 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/AMDHSAKernelDescriptor.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/TargetParser/TargetParser.h"
@@ -466,12 +468,11 @@ void AMDGPUAsmPrinter::validateMCResourceInfo(Function &F) {
           F, "amdgpu-waves-per-eu", {0, 0}, true);
 
       if (TryGetMCExprValue(OccupancyExpr, Occupancy) && Occupancy < MinWEU) {
-        DiagnosticInfoOptimizationFailure Diag(
-            F, F.getSubprogram(),
+        SmallString<256> Msg = formatv(
             "failed to meet occupancy target given by 'amdgpu-waves-per-eu' in "
-            "'" +
-                F.getName() + "': desired occupancy was " + Twine(MinWEU) +
-                ", final occupancy is " + Twine(Occupancy));
+            "'{0}': desired occupancy was {1}, final occupancy is {2}",
+            F.getName(), MinWEU, Occupancy);
+        DiagnosticInfoOptimizationFailure Diag(F, F.getSubprogram(), Msg);
         F.getContext().diagnose(Diag);
         return;
       }
@@ -1261,13 +1262,12 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
       AMDGPU::getIntegerPairAttribute(F, "amdgpu-waves-per-eu", {0, 0}, true);
   uint64_t Occupancy;
   if (TryGetMCExprValue(ProgInfo.Occupancy, Occupancy) && Occupancy < MinWEU) {
-    DiagnosticInfoOptimizationFailure Diag(
-        F, F.getSubprogram(),
+    SmallString<256> Msg = formatv(
         "failed to meet occupancy target given by 'amdgpu-waves-per-eu' in "
-        "'" +
-            F.getName() + "': desired occupancy was " + Twine(MinWEU) +
-            ", final occupancy is " + Twine(Occupancy));
-    F.getContext().diagnose(Diag);
+        "'{0}'': desired occupancy was {1}, final occupancy is {2}",
+        F.getName(), MinWEU, Occupancy);
+    F.getContext().diagnose(
+        DiagnosticInfoOptimizationFailure(F, F.getSubprogram(), Msg));
   }
 
   if (isGFX11Plus(STM)) {

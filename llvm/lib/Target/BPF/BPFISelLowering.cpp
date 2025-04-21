@@ -38,15 +38,16 @@ static cl::opt<bool> BPFExpandMemcpyInOrder("bpf-expand-memcpy-in-order",
 
 static void fail(const SDLoc &DL, SelectionDAG &DAG, const Twine &Msg,
                  SDValue Val = {}) {
-  std::string Str;
+  SmallString<128> FullMsg;
   if (Val) {
-    raw_string_ostream OS(Str);
+    raw_svector_ostream OS(FullMsg);
     Val->print(OS);
     OS << ' ';
   }
+  Msg.toVector(FullMsg);
   MachineFunction &MF = DAG.getMachineFunction();
-  DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
-      MF.getFunction(), Twine(Str).concat(Msg), DL.getDebugLoc()));
+  DAG.getContext()->diagnose(
+      DiagnosticInfoUnsupported(MF.getFunction(), FullMsg, DL.getDebugLoc()));
 }
 
 BPFTargetLowering::BPFTargetLowering(const TargetMachine &TM,

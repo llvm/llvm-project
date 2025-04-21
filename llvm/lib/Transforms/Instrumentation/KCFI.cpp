@@ -34,10 +34,10 @@ STATISTIC(NumKCFIChecks, "Number of kcfi operands transformed into checks");
 
 namespace {
 class DiagnosticInfoKCFI : public DiagnosticInfo {
-  const Twine &Msg;
+  StringRef Msg;
 
 public:
-  DiagnosticInfoKCFI(const Twine &DiagMsg,
+  DiagnosticInfoKCFI(StringRef DiagMsg,
                      DiagnosticSeverity Severity = DS_Error)
       : DiagnosticInfo(DK_Linker, Severity), Msg(DiagMsg) {}
   void print(DiagnosticPrinter &DP) const override { DP << Msg; }

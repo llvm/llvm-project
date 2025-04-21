@@ -24,7 +24,6 @@ class Module;
 class raw_ostream;
 class SMDiagnostic;
 class StringRef;
-class Twine;
 class Value;
 
 /// Interface for custom diagnostic printing.
@@ -47,7 +46,6 @@ public:
   virtual DiagnosticPrinter &operator<<(unsigned int N) = 0;
   virtual DiagnosticPrinter &operator<<(int N) = 0;
   virtual DiagnosticPrinter &operator<<(double N) = 0;
-  virtual DiagnosticPrinter &operator<<(const Twine &Str) = 0;
 
   // IR related types.
   virtual DiagnosticPrinter &operator<<(const Value &V) = 0;
@@ -80,7 +78,6 @@ public:
   DiagnosticPrinter &operator<<(unsigned int N) override;
   DiagnosticPrinter &operator<<(int N) override;
   DiagnosticPrinter &operator<<(double N) override;
-  DiagnosticPrinter &operator<<(const Twine &Str) override;
 
   // IR related types.
   DiagnosticPrinter &operator<<(const Value &V) override;
