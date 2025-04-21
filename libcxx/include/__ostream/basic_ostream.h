@@ -570,7 +570,7 @@ _LIBCPP_HIDE_FROM_ABI _Stream&& operator<<(_Stream&& __os, const _Tp& __x) {
 }
 
 template <class _CharT, class _Traits, class _Allocator>
-_LIBCPP_HIDE_FROM_ABI basic_ostream<_CharT, _Traits>&
+basic_ostream<_CharT, _Traits>&
 operator<<(basic_ostream<_CharT, _Traits>& __os, const basic_string<_CharT, _Traits, _Allocator>& __str) {
   return std::__put_character_sequence(__os, __str.data(), __str.size());
 }
