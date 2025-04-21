@@ -832,6 +832,6 @@ DWARF:
   ASSERT_NE(symtab, nullptr);
 
   // And we should be able to get it again once it has been created.
-  symtab = symbol_file->GetSymtab(/*can_create=*/false);
-  ASSERT_NE(symtab, nullptr);
+  Symtab *cached_symtab = symbol_file->GetSymtab(/*can_create=*/false);
+  ASSERT_EQ(symtab, cached_symtab);
 }
