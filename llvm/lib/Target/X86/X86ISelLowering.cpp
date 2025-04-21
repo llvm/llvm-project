@@ -45281,6 +45281,55 @@ bool X86TargetLowering::SimplifyDemandedBitsForTargetNode(
     Known.Zero |= Known2.One;
     break;
   }
+  case X86ISD::FAND: {
+    KnownBits Known2;
+    SDValue Op0 = Op.getOperand(0);
+    SDValue Op1 = Op.getOperand(1);
+
+    if (SimplifyDemandedBits(Op1, OriginalDemandedBits, OriginalDemandedElts,
+                             Known, TLO, Depth + 1))
+      return true;
+
+    if (SimplifyDemandedBits(Op0, ~Known.Zero & OriginalDemandedBits,
+                             OriginalDemandedElts, Known2, TLO, Depth + 1))
+      return true;
+
+    // If all of the demanded bits are known one on one side, return the other.
+    // These bits cannot contribute to the result of the 'and'.
+    if (OriginalDemandedBits.isSubsetOf(Known2.Zero | Known.One))
+      return TLO.CombineTo(Op, Op0);
+    if (OriginalDemandedBits.isSubsetOf(Known.Zero | Known2.One))
+      return TLO.CombineTo(Op, Op1);
+    // If all of the demanded bits in the inputs are known zeros, return zero.
+    if (OriginalDemandedBits.isSubsetOf(Known.Zero | Known2.Zero))
+      return TLO.CombineTo(Op, TLO.DAG.getConstantFP(0.0, SDLoc(Op), VT));
+
+    Known &= Known2;
+    break;
+  }
+  case X86ISD::FOR: {
+    KnownBits Known2;
+    SDValue Op0 = Op.getOperand(0);
+    SDValue Op1 = Op.getOperand(1);
+
+    if (SimplifyDemandedBits(Op1, OriginalDemandedBits, OriginalDemandedElts,
+                             Known, TLO, Depth + 1))
+      return true;
+
+    if (SimplifyDemandedBits(Op0, ~Known.One & OriginalDemandedBits,
+                             OriginalDemandedElts, Known2, TLO, Depth + 1))
+      return true;
+
+    // If all of the demanded bits are known zero on one side, return the other.
+    // These bits cannot contribute to the result of the 'or'.
+    if (OriginalDemandedBits.isSubsetOf(Known2.One | Known.Zero))
+      return TLO.CombineTo(Op, Op0);
+    if (OriginalDemandedBits.isSubsetOf(Known.One | Known2.Zero))
+      return TLO.CombineTo(Op, Op1);
+
+    Known |= Known2;
+    break;
+  }
   case X86ISD::VSHLI: {
     SDValue Op0 = Op.getOperand(0);
     SDValue Op1 = Op.getOperand(1);
