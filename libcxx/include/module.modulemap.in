@@ -1985,6 +1985,17 @@ module std [system] {
     export *
   }
 
+  module stacktrace {
+    module basic_stacktrace { header "__stacktrace/basic_stacktrace.h" }
+    module alloc { header "__stacktrace/detail/alloc.h" }
+    module context { header "__stacktrace/detail/context.h" }
+    module entry { header "__stacktrace/detail/entry.h" }
+    module to_string { header "__stacktrace/detail/to_string.h" }
+    module stacktrace_entry { header "__stacktrace/stacktrace_entry.h" }
+    header "stacktrace"
+    export *
+  }
+
   module stdexcept {
     header "stdexcept"
     export *
@@ -2223,16 +2234,6 @@ module std [system] {
       private header "experimental/__simd/utility.h"
       private header "experimental/__simd/vec_ext.h"
       header "experimental/simd"
-      export *
-    }
-    module stacktrace {
-      private header "experimental/__stacktrace/basic_stacktrace.h"
-      private header "experimental/__stacktrace/detail/alloc.h"
-      private header "experimental/__stacktrace/detail/context.h"
-      private header "experimental/__stacktrace/detail/entry.h"
-      private header "experimental/__stacktrace/detail/to_string.h"
-      private header "experimental/__stacktrace/stacktrace_entry.h"
-      header "experimental/stacktrace"
       export *
     }
   }

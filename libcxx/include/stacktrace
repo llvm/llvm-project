@@ -180,8 +180,8 @@ namespace std {
 _LIBCPP_PUSH_MACROS
 #    include <__undef_macros>
 
-#    include "experimental/__stacktrace/basic_stacktrace.h"
-#    include "experimental/__stacktrace/stacktrace_entry.h"
+#    include <__stacktrace/basic_stacktrace.h>
+#    include <__stacktrace/stacktrace_entry.h>
 
 _LIBCPP_POP_MACROS
 
