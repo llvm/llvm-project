@@ -1651,6 +1651,41 @@ static bool interp__builtin_operator_delete(InterpState &S, CodePtr OpPC,
   const Expr *Source = nullptr;
   const Block *BlockToDelete = nullptr;
 
+  if (S.checkingPotentialConstantExpression())
+    return false;
+
+  // This is permitted only within a call to std::allocator<T>::deallocate.
+  bool DeallocateFrameFound = false;
+  for (const InterpFrame *F = Frame; F; F = F->Caller) {
+    const Function *Func = F->getFunction();
+    if (!Func)
+      continue;
+    const auto *MD = dyn_cast_if_present<CXXMethodDecl>(Func->getDecl());
+    if (!MD)
+      continue;
+    const IdentifierInfo *FnII = MD->getIdentifier();
+    if (!FnII || !FnII->isStr("deallocate"))
+      continue;
+
+    const auto *CTSD =
+        dyn_cast<ClassTemplateSpecializationDecl>(MD->getParent());
+    if (!CTSD)
+      continue;
+
+    const IdentifierInfo *ClassII = CTSD->getIdentifier();
+    const TemplateArgumentList &TAL = CTSD->getTemplateArgs();
+    if (CTSD->isInStdNamespace() && ClassII && ClassII->isStr("allocator") &&
+        TAL.size() >= 1 && TAL[0].getKind() == TemplateArgument::Type) {
+      DeallocateFrameFound = true;
+      break;
+    }
+  }
+
+  if (!DeallocateFrameFound) {
+    S.FFDiag(Call);
+    return true;
+  }
+
   {
     const Pointer &Ptr = S.Stk.peek<Pointer>();
 
@@ -1872,7 +1907,23 @@ static bool interp__builtin_memcpy(InterpState &S, CodePtr OpPC,
     return false;
   }
 
-  // Check if we have enough elements to read from and write to/
+  if (DestElemType->isIncompleteType() ||
+      DestPtr.getType()->isIncompleteType()) {
+    QualType DiagType =
+        DestElemType->isIncompleteType() ? DestElemType : DestPtr.getType();
+    S.FFDiag(S.Current->getSource(OpPC),
+             diag::note_constexpr_memcpy_incomplete_type)
+        << Move << DiagType;
+    return false;
+  }
+
+  if (!DestElemType.isTriviallyCopyableType(ASTCtx)) {
+    S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_memcpy_nontrivial)
+        << Move << DestElemType;
+    return false;
+  }
+
+  // Check if we have enough elements to read from and write to.
   size_t RemainingDestBytes = RemainingDestElems * DestElemSize;
   size_t RemainingSrcBytes = RemainingSrcElems * SrcElemSize;
   if (Size.ugt(RemainingDestBytes) || Size.ugt(RemainingSrcBytes)) {
@@ -2125,6 +2176,99 @@ static bool interp__builtin_memchr(InterpState &S, CodePtr OpPC,
   }
 
   S.Stk.push<Pointer>();
+  return true;
+}
+
+static unsigned computeFullDescSize(const ASTContext &ASTCtx,
+                                    const Descriptor *Desc) {
+
+  if (Desc->isPrimitive())
+    return ASTCtx.getTypeSizeInChars(Desc->getType()).getQuantity();
+
+  if (Desc->isArray())
+    return ASTCtx.getTypeSizeInChars(Desc->getElemQualType()).getQuantity() *
+           Desc->getNumElems();
+
+  if (Desc->isRecord())
+    return ASTCtx.getTypeSizeInChars(Desc->getType()).getQuantity();
+
+  llvm_unreachable("Unhandled descriptor type");
+  return 0;
+}
+
+static unsigned computePointerOffset(const ASTContext &ASTCtx,
+                                     const Pointer &Ptr) {
+  unsigned Result = 0;
+
+  Pointer P = Ptr;
+  while (P.isArrayElement() || P.isField()) {
+    P = P.expand();
+    const Descriptor *D = P.getFieldDesc();
+
+    if (P.isArrayElement()) {
+      unsigned ElemSize =
+          ASTCtx.getTypeSizeInChars(D->getElemQualType()).getQuantity();
+      if (P.isOnePastEnd())
+        Result += ElemSize * P.getNumElems();
+      else
+        Result += ElemSize * P.getIndex();
+      P = P.expand().getArray();
+    } else if (P.isBaseClass()) {
+
+      const auto *RD = cast<CXXRecordDecl>(D->asDecl());
+      bool IsVirtual = Ptr.isVirtualBaseClass();
+      P = P.getBase();
+      const Record *BaseRecord = P.getRecord();
+
+      const ASTRecordLayout &Layout =
+          ASTCtx.getASTRecordLayout(cast<CXXRecordDecl>(BaseRecord->getDecl()));
+      if (IsVirtual)
+        Result += Layout.getVBaseClassOffset(RD).getQuantity();
+      else
+        Result += Layout.getBaseClassOffset(RD).getQuantity();
+    } else if (P.isField()) {
+      const FieldDecl *FD = P.getField();
+      const ASTRecordLayout &Layout =
+          ASTCtx.getASTRecordLayout(FD->getParent());
+      unsigned FieldIndex = FD->getFieldIndex();
+      uint64_t FieldOffset =
+          ASTCtx.toCharUnitsFromBits(Layout.getFieldOffset(FieldIndex))
+              .getQuantity();
+      Result += FieldOffset;
+      P = P.getBase();
+    } else
+      llvm_unreachable("Unhandled descriptor type");
+  }
+
+  return Result;
+}
+
+static bool interp__builtin_object_size(InterpState &S, CodePtr OpPC,
+                                        const InterpFrame *Frame,
+                                        const Function *Func,
+                                        const CallExpr *Call) {
+  PrimType KindT = *S.getContext().classify(Call->getArg(1));
+  [[maybe_unused]] unsigned Kind = peekToAPSInt(S.Stk, KindT).getZExtValue();
+
+  assert(Kind <= 3 && "unexpected kind");
+
+  const Pointer &Ptr =
+      S.Stk.peek<Pointer>(align(primSize(KindT)) + align(primSize(PT_Ptr)));
+
+  if (Ptr.isZero())
+    return false;
+
+  const Descriptor *DeclDesc = Ptr.getDeclDesc();
+  if (!DeclDesc)
+    return false;
+
+  const ASTContext &ASTCtx = S.getASTContext();
+
+  unsigned ByteOffset = computePointerOffset(ASTCtx, Ptr);
+  unsigned FullSize = computeFullDescSize(ASTCtx, DeclDesc);
+
+  pushInteger(S, FullSize - ByteOffset, Call->getType());
+
   return true;
 }
 
@@ -2627,6 +2771,12 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
   case Builtin::BI__builtin_wcschr:
   case Builtin::BI__builtin_char_memchr:
     if (!interp__builtin_memchr(S, OpPC, Frame, F, Call))
+      return false;
+    break;
+
+  case Builtin::BI__builtin_object_size:
+  case Builtin::BI__builtin_dynamic_object_size:
+    if (!interp__builtin_object_size(S, OpPC, Frame, F, Call))
       return false;
     break;
 

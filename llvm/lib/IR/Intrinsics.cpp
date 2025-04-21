@@ -13,6 +13,7 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringTable.h"
+#include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IntrinsicsAArch64.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"

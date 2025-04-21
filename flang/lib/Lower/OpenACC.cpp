@@ -1804,27 +1804,38 @@ static void privatizeIv(Fortran::lower::AbstractConverter &converter,
     builder.restoreInsertionPoint(insPt);
   }
 
-  std::string recipeName =
-      fir::getTypeAsString(ivValue.getType(), converter.getKindMap(),
-                           Fortran::lower::privatizationRecipePrefix);
-  auto recipe = Fortran::lower::createOrGetPrivateRecipe(
-      builder, recipeName, loc, ivValue.getType());
+  mlir::Operation *privateOp = nullptr;
+  for (auto privateVal : privateOperands) {
+    if (mlir::acc::getVar(privateVal.getDefiningOp()) == ivValue) {
+      privateOp = privateVal.getDefiningOp();
+      break;
+    }
+  }
 
-  std::stringstream asFortran;
-  asFortran << Fortran::lower::mangle::demangleName(toStringRef(sym.name()));
-  auto op = createDataEntryOp<mlir::acc::PrivateOp>(
-      builder, loc, ivValue, asFortran, {}, true, /*implicit=*/true,
-      mlir::acc::DataClause::acc_private, ivValue.getType(),
-      /*async=*/{}, /*asyncDeviceTypes=*/{}, /*asyncOnlyDeviceTypes=*/{});
+  if (privateOp == nullptr) {
+    std::string recipeName =
+        fir::getTypeAsString(ivValue.getType(), converter.getKindMap(),
+                             Fortran::lower::privatizationRecipePrefix);
+    auto recipe = Fortran::lower::createOrGetPrivateRecipe(
+        builder, recipeName, loc, ivValue.getType());
 
-  privateOperands.push_back(op.getAccVar());
-  privatizations.push_back(mlir::SymbolRefAttr::get(builder.getContext(),
-                                                    recipe.getSymName().str()));
+    std::stringstream asFortran;
+    asFortran << Fortran::lower::mangle::demangleName(toStringRef(sym.name()));
+    auto op = createDataEntryOp<mlir::acc::PrivateOp>(
+        builder, loc, ivValue, asFortran, {}, true, /*implicit=*/true,
+        mlir::acc::DataClause::acc_private, ivValue.getType(),
+        /*async=*/{}, /*asyncDeviceTypes=*/{}, /*asyncOnlyDeviceTypes=*/{});
+    privateOp = op.getOperation();
+
+    privateOperands.push_back(op.getAccVar());
+    privatizations.push_back(mlir::SymbolRefAttr::get(
+        builder.getContext(), recipe.getSymName().str()));
+  }
 
   // Map the new private iv to its symbol for the scope of the loop. bindSymbol
   // might create a hlfir.declare op, if so, we map its result in order to
   // use the sym value in the scope.
-  converter.bindSymbol(sym, op.getAccVar());
+  converter.bindSymbol(sym, mlir::acc::getAccVar(privateOp));
   auto privateValue = converter.getSymbolAddress(sym);
   if (auto declareOp =
           mlir::dyn_cast<hlfir::DeclareOp>(privateValue.getDefiningOp()))
@@ -1862,92 +1873,6 @@ static mlir::acc::LoopOp createLoopOp(
   llvm::SmallVector<mlir::Attribute> crtDeviceTypes;
   crtDeviceTypes.push_back(mlir::acc::DeviceTypeAttr::get(
       builder.getContext(), mlir::acc::DeviceType::None));
-
-  llvm::SmallVector<mlir::Type> ivTypes;
-  llvm::SmallVector<mlir::Location> ivLocs;
-  llvm::SmallVector<bool> inclusiveBounds;
-
-  llvm::SmallVector<mlir::Location> locs;
-  locs.push_back(currentLocation); // Location of the directive
-  Fortran::lower::pft::Evaluation *crtEval = &eval.getFirstNestedEvaluation();
-  bool isDoConcurrent = outerDoConstruct.IsDoConcurrent();
-  if (isDoConcurrent) {
-    locs.push_back(converter.genLocation(
-        Fortran::parser::FindSourceLocation(outerDoConstruct)));
-    const Fortran::parser::LoopControl *loopControl =
-        &*outerDoConstruct.GetLoopControl();
-    const auto &concurrent =
-        std::get<Fortran::parser::LoopControl::Concurrent>(loopControl->u);
-    if (!std::get<std::list<Fortran::parser::LocalitySpec>>(concurrent.t)
-             .empty())
-      TODO(currentLocation, "DO CONCURRENT with locality spec");
-
-    const auto &concurrentHeader =
-        std::get<Fortran::parser::ConcurrentHeader>(concurrent.t);
-    const auto &controls =
-        std::get<std::list<Fortran::parser::ConcurrentControl>>(
-            concurrentHeader.t);
-    for (const auto &control : controls) {
-      lowerbounds.push_back(fir::getBase(converter.genExprValue(
-          *Fortran::semantics::GetExpr(std::get<1>(control.t)), stmtCtx)));
-      upperbounds.push_back(fir::getBase(converter.genExprValue(
-          *Fortran::semantics::GetExpr(std::get<2>(control.t)), stmtCtx)));
-      if (const auto &expr =
-              std::get<std::optional<Fortran::parser::ScalarIntExpr>>(
-                  control.t))
-        steps.push_back(fir::getBase(converter.genExprValue(
-            *Fortran::semantics::GetExpr(*expr), stmtCtx)));
-      else // If `step` is not present, assume it is `1`.
-        steps.push_back(builder.createIntegerConstant(
-            currentLocation, upperbounds[upperbounds.size() - 1].getType(), 1));
-
-      const auto &name = std::get<Fortran::parser::Name>(control.t);
-      privatizeIv(converter, *name.symbol, currentLocation, ivTypes, ivLocs,
-                  privateOperands, ivPrivate, privatizations, isDoConcurrent);
-
-      inclusiveBounds.push_back(true);
-    }
-  } else {
-    int64_t collapseValue = Fortran::lower::getCollapseValue(accClauseList);
-    for (unsigned i = 0; i < collapseValue; ++i) {
-      const Fortran::parser::LoopControl *loopControl;
-      if (i == 0) {
-        loopControl = &*outerDoConstruct.GetLoopControl();
-        locs.push_back(converter.genLocation(
-            Fortran::parser::FindSourceLocation(outerDoConstruct)));
-      } else {
-        auto *doCons = crtEval->getIf<Fortran::parser::DoConstruct>();
-        assert(doCons && "expect do construct");
-        loopControl = &*doCons->GetLoopControl();
-        locs.push_back(converter.genLocation(
-            Fortran::parser::FindSourceLocation(*doCons)));
-      }
-
-      const Fortran::parser::LoopControl::Bounds *bounds =
-          std::get_if<Fortran::parser::LoopControl::Bounds>(&loopControl->u);
-      assert(bounds && "Expected bounds on the loop construct");
-      lowerbounds.push_back(fir::getBase(converter.genExprValue(
-          *Fortran::semantics::GetExpr(bounds->lower), stmtCtx)));
-      upperbounds.push_back(fir::getBase(converter.genExprValue(
-          *Fortran::semantics::GetExpr(bounds->upper), stmtCtx)));
-      if (bounds->step)
-        steps.push_back(fir::getBase(converter.genExprValue(
-            *Fortran::semantics::GetExpr(bounds->step), stmtCtx)));
-      else // If `step` is not present, assume it is `1`.
-        steps.push_back(builder.createIntegerConstant(
-            currentLocation, upperbounds[upperbounds.size() - 1].getType(), 1));
-
-      Fortran::semantics::Symbol &ivSym =
-          bounds->name.thing.symbol->GetUltimate();
-      privatizeIv(converter, ivSym, currentLocation, ivTypes, ivLocs,
-                  privateOperands, ivPrivate, privatizations);
-
-      inclusiveBounds.push_back(true);
-
-      if (i < collapseValue - 1)
-        crtEval = &*std::next(crtEval->getNestedEvaluations().begin());
-    }
-  }
 
   for (const Fortran::parser::AccClause &clause : accClauseList.v) {
     mlir::Location clauseLocation = converter.genLocation(clause.source);
@@ -2098,6 +2023,91 @@ static mlir::acc::LoopOp createLoopOp(
         collapseValues.push_back(*collapseValue);
         collapseDeviceTypes.push_back(crtDeviceTypeAttr);
       }
+    }
+  }
+
+  llvm::SmallVector<mlir::Type> ivTypes;
+  llvm::SmallVector<mlir::Location> ivLocs;
+  llvm::SmallVector<bool> inclusiveBounds;
+  llvm::SmallVector<mlir::Location> locs;
+  locs.push_back(currentLocation); // Location of the directive
+  Fortran::lower::pft::Evaluation *crtEval = &eval.getFirstNestedEvaluation();
+  bool isDoConcurrent = outerDoConstruct.IsDoConcurrent();
+  if (isDoConcurrent) {
+    locs.push_back(converter.genLocation(
+        Fortran::parser::FindSourceLocation(outerDoConstruct)));
+    const Fortran::parser::LoopControl *loopControl =
+        &*outerDoConstruct.GetLoopControl();
+    const auto &concurrent =
+        std::get<Fortran::parser::LoopControl::Concurrent>(loopControl->u);
+    if (!std::get<std::list<Fortran::parser::LocalitySpec>>(concurrent.t)
+             .empty())
+      TODO(currentLocation, "DO CONCURRENT with locality spec");
+
+    const auto &concurrentHeader =
+        std::get<Fortran::parser::ConcurrentHeader>(concurrent.t);
+    const auto &controls =
+        std::get<std::list<Fortran::parser::ConcurrentControl>>(
+            concurrentHeader.t);
+    for (const auto &control : controls) {
+      lowerbounds.push_back(fir::getBase(converter.genExprValue(
+          *Fortran::semantics::GetExpr(std::get<1>(control.t)), stmtCtx)));
+      upperbounds.push_back(fir::getBase(converter.genExprValue(
+          *Fortran::semantics::GetExpr(std::get<2>(control.t)), stmtCtx)));
+      if (const auto &expr =
+              std::get<std::optional<Fortran::parser::ScalarIntExpr>>(
+                  control.t))
+        steps.push_back(fir::getBase(converter.genExprValue(
+            *Fortran::semantics::GetExpr(*expr), stmtCtx)));
+      else // If `step` is not present, assume it is `1`.
+        steps.push_back(builder.createIntegerConstant(
+            currentLocation, upperbounds[upperbounds.size() - 1].getType(), 1));
+
+      const auto &name = std::get<Fortran::parser::Name>(control.t);
+      privatizeIv(converter, *name.symbol, currentLocation, ivTypes, ivLocs,
+                  privateOperands, ivPrivate, privatizations, isDoConcurrent);
+
+      inclusiveBounds.push_back(true);
+    }
+  } else {
+    int64_t collapseValue = Fortran::lower::getCollapseValue(accClauseList);
+    for (unsigned i = 0; i < collapseValue; ++i) {
+      const Fortran::parser::LoopControl *loopControl;
+      if (i == 0) {
+        loopControl = &*outerDoConstruct.GetLoopControl();
+        locs.push_back(converter.genLocation(
+            Fortran::parser::FindSourceLocation(outerDoConstruct)));
+      } else {
+        auto *doCons = crtEval->getIf<Fortran::parser::DoConstruct>();
+        assert(doCons && "expect do construct");
+        loopControl = &*doCons->GetLoopControl();
+        locs.push_back(converter.genLocation(
+            Fortran::parser::FindSourceLocation(*doCons)));
+      }
+
+      const Fortran::parser::LoopControl::Bounds *bounds =
+          std::get_if<Fortran::parser::LoopControl::Bounds>(&loopControl->u);
+      assert(bounds && "Expected bounds on the loop construct");
+      lowerbounds.push_back(fir::getBase(converter.genExprValue(
+          *Fortran::semantics::GetExpr(bounds->lower), stmtCtx)));
+      upperbounds.push_back(fir::getBase(converter.genExprValue(
+          *Fortran::semantics::GetExpr(bounds->upper), stmtCtx)));
+      if (bounds->step)
+        steps.push_back(fir::getBase(converter.genExprValue(
+            *Fortran::semantics::GetExpr(bounds->step), stmtCtx)));
+      else // If `step` is not present, assume it is `1`.
+        steps.push_back(builder.createIntegerConstant(
+            currentLocation, upperbounds[upperbounds.size() - 1].getType(), 1));
+
+      Fortran::semantics::Symbol &ivSym =
+          bounds->name.thing.symbol->GetUltimate();
+      privatizeIv(converter, ivSym, currentLocation, ivTypes, ivLocs,
+                  privateOperands, ivPrivate, privatizations);
+
+      inclusiveBounds.push_back(true);
+
+      if (i < collapseValue - 1)
+        crtEval = &*std::next(crtEval->getNestedEvaluations().begin());
     }
   }
 

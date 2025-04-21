@@ -1084,7 +1084,7 @@ bool X86LowerAMXCast::combineCastStore(IntrinsicInst *Cast, StoreInst *ST) {
   assert(Tile->getType()->isX86_AMXTy() && "Not Tile Operand!");
 
   // TODO: Specially handle the multi-use case.
-  if (Tile->getNumUses() != 1)
+  if (!Tile->hasOneUse())
     return false;
 
   // We don't fetch shape from tilestore, we only get shape from tiledef,

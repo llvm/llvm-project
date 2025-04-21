@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -x hlsl -o - -fsyntax-only %s -verify
+// RUN: %clang_cc1 -Wno-hlsl-implicit-binding -triple dxil-pc-shadermodel6.3-library -x hlsl -o - -fsyntax-only %s -verify
 
 template<typename T>
 struct MyTemplatedSRV {
@@ -58,7 +58,7 @@ void bar(MyTemplatedSRV<float> U : register(u3)) {
 
 }
 
-struct S {  
+struct S {
   // expected-error@+1 {{'register' attribute only applies to cbuffer/tbuffer and external global variables}}
   MyTemplatedSRV<float> U : register(u3);
 };

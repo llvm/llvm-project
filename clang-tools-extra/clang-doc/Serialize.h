@@ -53,6 +53,10 @@ emitInfo(const FunctionDecl *D, const FullComment *FC, int LineNumber,
          StringRef File, bool IsFileInRootDir, bool PublicOnly);
 
 std::pair<std::unique_ptr<Info>, std::unique_ptr<Info>>
+emitInfo(const VarDecl *D, const FullComment *FC, int LineNumber,
+         StringRef File, bool IsFileInRootDir, bool PublicOnly);
+
+std::pair<std::unique_ptr<Info>, std::unique_ptr<Info>>
 emitInfo(const CXXMethodDecl *D, const FullComment *FC, int LineNumber,
          StringRef File, bool IsFileInRootDir, bool PublicOnly);
 

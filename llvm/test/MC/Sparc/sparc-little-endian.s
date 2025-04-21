@@ -13,6 +13,5 @@
         ! ...and that fixups are applied to the correct bytes.
 
         ! CHECK: ba .BB0      ! encoding: [A,A,0b10AAAAAA,0x10]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br22
         ! CHECK-OBJ: 4: ff ff bf 10  ba 4194303
         ba .BB0

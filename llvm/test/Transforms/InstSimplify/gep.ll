@@ -386,3 +386,62 @@ define i64 @gep_array_of_scalable_vectors_ptrdiff(ptr %ptr) {
   %diff = sub i64 %c2.int, %c1.int
   ret i64 %diff
 }
+
+define ptr @gep_null_inbounds(i64 %idx) {
+; CHECK-LABEL: @gep_null_inbounds(
+; CHECK-NEXT:    ret ptr null
+;
+  %gep = getelementptr inbounds i8, ptr null, i64 %idx
+  ret ptr %gep
+}
+
+define ptr @gep_null_not_inbounds(i64 %idx) {
+; CHECK-LABEL: @gep_null_not_inbounds(
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr null, i64 [[IDX:%.*]]
+; CHECK-NEXT:    ret ptr [[GEP]]
+;
+  %gep = getelementptr i8, ptr null, i64 %idx
+  ret ptr %gep
+}
+
+define ptr @gep_null_defined(i64 %idx) null_pointer_is_valid {
+; CHECK-LABEL: @gep_null_defined(
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr null, i64 [[IDX:%.*]]
+; CHECK-NEXT:    ret ptr [[GEP]]
+;
+  %gep = getelementptr inbounds i8, ptr null, i64 %idx
+  ret ptr %gep
+}
+
+define ptr @gep_null_inbounds_different_type(i64 %idx1, i64 %idx2) {
+; CHECK-LABEL: @gep_null_inbounds_different_type(
+; CHECK-NEXT:    ret ptr null
+;
+  %gep = getelementptr inbounds [0 x i8], ptr null, i64 %idx1, i64 %idx2
+  ret ptr %gep
+}
+
+define <2 x ptr> @gep_inbounds_null_vec(i64 %idx) {
+; CHECK-LABEL: @gep_inbounds_null_vec(
+; CHECK-NEXT:    ret <2 x ptr> zeroinitializer
+;
+  %p = getelementptr inbounds i8, <2 x ptr> zeroinitializer, i64 %idx
+  ret <2 x ptr> %p
+}
+
+define <2 x ptr> @gep_inbounds_null_vec_broadcast(<2 x i64> %idx) {
+; CHECK-LABEL: @gep_inbounds_null_vec_broadcast(
+; CHECK-NEXT:    ret <2 x ptr> zeroinitializer
+;
+  %p = getelementptr inbounds i8, ptr null, <2 x i64> %idx
+  ret <2 x ptr> %p
+}
+
+define ptr @gep_noinbounds_null(i64 %idx) {
+; CHECK-LABEL: @gep_noinbounds_null(
+; CHECK-NEXT:    [[P:%.*]] = getelementptr i8, ptr null, i64 [[IDX:%.*]]
+; CHECK-NEXT:    ret ptr [[P]]
+;
+  %p = getelementptr i8, ptr null, i64 %idx
+  ret ptr %p
+}

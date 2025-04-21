@@ -127,7 +127,6 @@ private:
   SourceMapper *M;
   /// Allocator used for dynamic allocations performed via the program.
   DynamicAllocator Alloc;
-  std::optional<bool> ConstantContextOverride;
 
 public:
   /// Reference to the module containing all bytecode.
@@ -147,6 +146,7 @@ public:
   /// Things needed to do speculative execution.
   SmallVectorImpl<PartialDiagnosticAt> *PrevDiags = nullptr;
   unsigned SpeculationDepth = 0;
+  std::optional<bool> ConstantContextOverride;
 
   llvm::SmallVector<
       std::pair<const Expr *, const LifetimeExtendedTemporaryDecl *>>

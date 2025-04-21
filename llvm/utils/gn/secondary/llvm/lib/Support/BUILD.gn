@@ -109,6 +109,7 @@ static_library("Support") {
     "LockFileManager.cpp",
     "MD5.cpp",
     "MSP430AttributeParser.cpp",
+    "Mustache.cpp",
     "MSP430Attributes.cpp",
     "ManagedStatic.cpp",
     "MathExtras.cpp",

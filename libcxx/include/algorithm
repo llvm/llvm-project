@@ -2061,6 +2061,7 @@ template <class BidirectionalIterator, class Compare>
 #    include <cstring>
 #    include <iterator>
 #    include <memory>
+#    include <optional>
 #    include <stdexcept>
 #    include <type_traits>
 #    include <utility>

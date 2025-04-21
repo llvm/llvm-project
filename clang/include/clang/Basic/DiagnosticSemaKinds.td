@@ -2266,7 +2266,8 @@ def err_constructor_byvalue_arg : Error<
   "copy constructor must pass its first argument by reference">;
 def warn_no_constructor_for_refconst : Warning<
   "%select{struct|interface|union|class|enum}0 %1 does not declare any "
-  "constructor to initialize its non-modifiable members">;
+  "constructor to initialize its non-modifiable members">,
+  InGroup<Uninitialized>;
 def note_refconst_member_not_initialized : Note<
   "%select{const|reference}0 member %1 will never be initialized">;
 def ext_ms_explicit_constructor_call : ExtWarn<
@@ -6491,8 +6492,25 @@ def warn_signed_bitfield_enum_conversion : Warning<
   "signed bit-field %0 needs an extra bit to represent the largest positive "
   "enumerators of %1">,
   InGroup<BitFieldEnumConversion>, DefaultIgnore;
+def warn_preferred_type_bitfield_too_small_for_enum
+    : Warning<"bit-field %0 is not wide enough to store all enumerators of "
+              "preferred type %1">,
+      InGroup<PreferredTypeBitFieldEnumConversion>;
+def warn_preferred_type_unsigned_bitfield_assigned_signed_enum
+    : Warning<"assigning value of preferred signed enum type %1 to unsigned "
+              "bit-field %0; "
+              "negative enumerators of enum %1 will be converted to positive "
+              "values">,
+      InGroup<PreferredTypeBitFieldEnumConversion>;
+def warn_preferred_type_signed_bitfield_enum_conversion
+    : Warning<"signed bit-field %0 needs an extra bit to represent the largest "
+              "positive "
+              "enumerators of preferred type %1">,
+      InGroup<PreferredTypeBitFieldEnumConversion>;
 def note_change_bitfield_sign : Note<
   "consider making the bit-field type %select{unsigned|signed}0">;
+def note_bitfield_preferred_type
+    : Note<"preferred type for bit-field %0 specified here">;
 
 def warn_missing_braces : Warning<
   "suggest braces around initialization of subobject">,
@@ -6737,6 +6755,30 @@ def err_counted_by_attr_pointee_unknown_size : Error<
     "%select{|. This will be an error in a future compiler version}3"
     ""
   "}2">;
+def err_counted_by_on_incomplete_type_on_assign : Error <
+  "cannot %select{"
+    "assign to %select{object|'%1'}2 with|" // AA_Assigning,
+    "pass argument to %select{parameter|parameter '%1'}2 with|" // AA_Passing,
+    "return|" // AA_Returning,
+    "convert to|" // AA_Converting (UNUSED)
+    "%select{|implicitly }3initialize %select{object|'%1'}2 with|" // AA_Initializing,
+    "pass argument to parameter with|" // AA_Sending (UNUSED)
+    "cast to|" // AA_Casting (UNUSED)
+    "pass argument to parameter with" // AA_Passing_CFAudited (UNUSED)
+  "}0 '%5' attributed type %4 because the pointee type %6 is incomplete">;
+
+def err_counted_by_on_incomplete_type_on_use : Error <
+  "cannot %select{"
+    "use '%1' with '%4' attributed|" // Generic expr
+    "call '%1' with '%4' attributed return" // CallExpr
+  "}0 type %2 because the pointee type %3 is incomplete">;
+
+def note_counted_by_consider_completing_pointee_ty : Note<
+  "consider providing a complete definition for %0">;
+  
+def note_counted_by_consider_using_sized_by : Note<
+  "consider using '__sized_by%select{|_or_null}0' instead of "
+  "'__counted_by%select{|_or_null}0'">;
 
 def warn_counted_by_attr_elt_type_unknown_size :
   Warning<err_counted_by_attr_pointee_unknown_size.Summary>,
@@ -12734,6 +12776,7 @@ def warn_hlsl_deprecated_register_type_i: Warning<"binding type 'i' ignored. The
 def err_hlsl_unsupported_register_number : Error<"register number should be an integer">;
 def err_hlsl_expected_space : Error<"invalid space specifier '%0' used; expected 'space' followed by an integer, like space1">;
 def err_hlsl_space_on_global_constant : Error<"register space cannot be specified on global constants">;
+def warn_hlsl_implicit_binding : Warning<"resource has implicit register binding">, InGroup<HLSLImplicitBinding>, DefaultError;
 def warn_hlsl_packoffset_mix : Warning<"cannot mix packoffset elements with nonpackoffset elements in a cbuffer">,
     InGroup<HLSLMixPackOffset>;
 def err_hlsl_packoffset_overlap : Error<"packoffset overlap between %0, %1">;
@@ -12959,6 +13002,19 @@ def err_acc_clause_after_device_type
 def err_acc_clause_cannot_combine
     : Error<"OpenACC clause '%0' may not appear on the same construct as a "
             "'%1' clause on a '%2' construct">;
+def err_acc_clause_routine_cannot_combine_before_device_type
+    : Error<"OpenACC clause '%0' after 'device_type' clause on a 'routine' "
+              "conflicts with the '%1' clause before the first 'device_type'">;
+def err_acc_clause_routine_cannot_combine_same_device_type
+    : Error<"OpenACC clause '%0' on a 'routine' directive conflicts with the "
+            "'%1' clause applying to the same 'device_type'">;
+def err_acc_clause_routine_one_of_in_region
+    : Error<"OpenACC 'routine' construct must have at least one 'gang', 'seq', "
+            "'vector', or 'worker' clause that applies to each 'device_type'">;
+def err_acc_clause_since_last_device_type
+    : Error<"OpenACC '%0' clause cannot appear more than once%select{| in a "
+            "'device_type' region}2 on a '%1' directive">;
+
 def err_acc_reduction_num_gangs_conflict
     : Error<"OpenACC '%1' clause %select{|with more than 1 argument }0may not "
             "appear on a '%2' construct "
@@ -12976,9 +13032,6 @@ def note_acc_reduction_composite_member_loc : Note<"invalid field is here">;
 def err_acc_loop_not_for_loop
     : Error<"OpenACC '%0' construct can only be applied to a 'for' loop">;
 def note_acc_construct_here : Note<"'%0' construct is here">;
-def err_acc_loop_spec_conflict
-    : Error<"OpenACC clause '%0' on '%1' construct conflicts with previous "
-            "data dependence clause">;
 def err_acc_collapse_loop_count
     : Error<"OpenACC 'collapse' clause loop count must be a %select{constant "
             "expression|positive integer value, evaluated to %1}0">;
@@ -13030,9 +13083,10 @@ def err_acc_gang_reduction_numgangs_conflict
             "'%1' clause %select{inside a compute construct with a|and a}3 "
             "'num_gangs' clause with more than one argument">;
 
-    def err_reduction_op_mismatch
+def err_reduction_op_mismatch
     : Error<"OpenACC 'reduction' variable must have the same operator in all "
             "nested constructs (%0 vs %1)">;
+
 def err_acc_loop_variable_type
     : Error<"loop variable of loop associated with an OpenACC '%0' construct "
             "must be of integer, pointer, or random-access-iterator type (is "

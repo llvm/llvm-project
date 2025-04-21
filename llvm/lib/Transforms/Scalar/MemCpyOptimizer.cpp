@@ -1519,12 +1519,6 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
   SmallSet<Instruction *, 4> AAMetadataInstrs;
   bool SrcNotDom = false;
 
-  // Recursively track the user and check whether modified alias exist.
-  auto IsDereferenceableOrNull = [](Value *V, const DataLayout &DL) -> bool {
-    bool CanBeNull, CanBeFreed;
-    return V->getPointerDereferenceableBytes(DL, CanBeNull, CanBeFreed);
-  };
-
   auto CaptureTrackingWithModRef =
       [&](Instruction *AI,
           function_ref<bool(Instruction *)> ModRefCallback) -> bool {
@@ -1534,8 +1528,7 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
     Worklist.reserve(MaxUsesToExplore);
     SmallSet<const Use *, 20> Visited;
     while (!Worklist.empty()) {
-      Instruction *I = Worklist.back();
-      Worklist.pop_back();
+      Instruction *I = Worklist.pop_back_val();
       for (const Use &U : I->uses()) {
         auto *UI = cast<Instruction>(U.getUser());
         // If any use that isn't dominated by SrcAlloca exists, we move src
@@ -1551,8 +1544,7 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
         }
         if (!Visited.insert(&U).second)
           continue;
-        UseCaptureInfo CI =
-            DetermineUseCaptureKind(U, AI, IsDereferenceableOrNull);
+        UseCaptureInfo CI = DetermineUseCaptureKind(U, AI);
         // TODO(captures): Make this more precise.
         if (capturesAnything(CI.UseCC))
           return false;

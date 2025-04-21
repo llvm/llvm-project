@@ -14,9 +14,13 @@ using namespace clang::CIRGen;
 
 CIRGenTypes::CIRGenTypes(CIRGenModule &genModule)
     : cgm(genModule), astContext(genModule.getASTContext()),
-      builder(cgm.getBuilder()) {}
+      builder(cgm.getBuilder()),
+      theABIInfo(cgm.getTargetCIRGenInfo().getABIInfo()) {}
 
-CIRGenTypes::~CIRGenTypes() {}
+CIRGenTypes::~CIRGenTypes() {
+  for (auto i = functionInfos.begin(), e = functionInfos.end(); i != e;)
+    delete &*i++;
+}
 
 mlir::MLIRContext &CIRGenTypes::getMLIRContext() const {
   return *builder.getContext();
@@ -112,6 +116,95 @@ std::string CIRGenTypes::getRecordTypeName(const clang::RecordDecl *recordDecl,
   return builder.getUniqueRecordName(std::string(typeName));
 }
 
+/// Return true if the specified type is already completely laid out.
+bool CIRGenTypes::isRecordLayoutComplete(const Type *ty) const {
+  const auto it = recordDeclTypes.find(ty);
+  return it != recordDeclTypes.end() && it->second.isComplete();
+}
+
+// We have multiple forms of this function that call each other, so we need to
+// declare one in advance.
+static bool
+isSafeToConvert(QualType qt, CIRGenTypes &cgt,
+                llvm::SmallPtrSetImpl<const RecordDecl *> &alreadyChecked);
+
+/// Return true if it is safe to convert the specified record decl to CIR and
+/// lay it out, false if doing so would cause us to get into a recursive
+/// compilation mess.
+static bool
+isSafeToConvert(const RecordDecl *rd, CIRGenTypes &cgt,
+                llvm::SmallPtrSetImpl<const RecordDecl *> &alreadyChecked) {
+  // If we have already checked this type (maybe the same type is used by-value
+  // multiple times in multiple record fields, don't check again.
+  if (!alreadyChecked.insert(rd).second)
+    return true;
+
+  const Type *key = cgt.getASTContext().getTagDeclType(rd).getTypePtr();
+
+  // If this type is already laid out, converting it is a noop.
+  if (cgt.isRecordLayoutComplete(key))
+    return true;
+
+  // If this type is currently being laid out, we can't recursively compile it.
+  if (cgt.isRecordBeingLaidOut(key))
+    return false;
+
+  // If this type would require laying out bases that are currently being laid
+  // out, don't do it.  This includes virtual base classes which get laid out
+  // when a class is translated, even though they aren't embedded by-value into
+  // the class.
+  if (const CXXRecordDecl *crd = dyn_cast<CXXRecordDecl>(rd)) {
+    assert(!cir::MissingFeatures::cxxSupport());
+    cgt.getCGModule().errorNYI(rd->getSourceRange(),
+                               "isSafeToConvert: CXXRecordDecl");
+    return false;
+  }
+
+  // If this type would require laying out members that are currently being laid
+  // out, don't do it.
+  for (const FieldDecl *field : rd->fields())
+    if (!isSafeToConvert(field->getType(), cgt, alreadyChecked))
+      return false;
+
+  // If there are no problems, lets do it.
+  return true;
+}
+
+/// Return true if it is safe to convert this field type, which requires the
+/// record elements contained by-value to all be recursively safe to convert.
+static bool
+isSafeToConvert(QualType qt, CIRGenTypes &cgt,
+                llvm::SmallPtrSetImpl<const RecordDecl *> &alreadyChecked) {
+  // Strip off atomic type sugar.
+  if (const auto *at = qt->getAs<AtomicType>())
+    qt = at->getValueType();
+
+  // If this is a record, check it.
+  if (const auto *rt = qt->getAs<RecordType>())
+    return isSafeToConvert(rt->getDecl(), cgt, alreadyChecked);
+
+  // If this is an array, check the elements, which are embedded inline.
+  if (const auto *at = cgt.getASTContext().getAsArrayType(qt))
+    return isSafeToConvert(at->getElementType(), cgt, alreadyChecked);
+
+  // Otherwise, there is no concern about transforming this. We only care about
+  // things that are contained by-value in a record that can have another
+  // record as a member.
+  return true;
+}
+
+// Return true if it is safe to convert the specified record decl to CIR and lay
+// it out, false if doing so would cause us to get into a recursive compilation
+// mess.
+static bool isSafeToConvert(const RecordDecl *rd, CIRGenTypes &cgt) {
+  // If no records are being laid out, we can certainly do this one.
+  if (cgt.noRecordsBeingLaidOut())
+    return true;
+
+  llvm::SmallPtrSet<const RecordDecl *, 16> alreadyChecked;
+  return isSafeToConvert(rd, cgt, alreadyChecked);
+}
+
 /// Lay out a tagged decl type like struct or union.
 mlir::Type CIRGenTypes::convertRecordDeclType(const clang::RecordDecl *rd) {
   // TagDecl's are not necessarily unique, instead use the (clang) type
@@ -132,7 +225,40 @@ mlir::Type CIRGenTypes::convertRecordDeclType(const clang::RecordDecl *rd) {
   if (!rd || !rd->isCompleteDefinition() || entry.isComplete())
     return entry;
 
-  cgm.errorNYI(rd->getSourceRange(), "Complete record type");
+  // If converting this type would cause us to infinitely loop, don't do it!
+  if (!isSafeToConvert(rd, *this)) {
+    cgm.errorNYI(rd->getSourceRange(), "recursive record layout");
+    return entry;
+  }
+
+  // Okay, this is a definition of a type. Compile the implementation now.
+  bool insertResult = recordsBeingLaidOut.insert(key).second;
+  (void)insertResult;
+  assert(insertResult && "isSafeToCovert() should have caught this.");
+
+  // Force conversion of non-virtual base classes recursively.
+  if (const auto *cxxRecordDecl = dyn_cast<CXXRecordDecl>(rd)) {
+    cgm.errorNYI(rd->getSourceRange(), "CXXRecordDecl");
+  }
+
+  // Layout fields.
+  std::unique_ptr<CIRGenRecordLayout> layout = computeRecordLayout(rd, &entry);
+  recordDeclTypes[key] = entry;
+  cirGenRecordLayouts[key] = std::move(layout);
+
+  // We're done laying out this record.
+  bool eraseResult = recordsBeingLaidOut.erase(key);
+  (void)eraseResult;
+  assert(eraseResult && "record not in RecordsBeingLaidOut set?");
+
+  // If this record blocked a FunctionType conversion, then recompute whatever
+  // was derived from that.
+  assert(!cir::MissingFeatures::skippedLayout());
+
+  // If we're done converting the outer-most record, then convert any deferred
+  // records as well.
+  assert(!cir::MissingFeatures::recursiveRecordLayout());
+
   return entry;
 }
 
@@ -269,8 +395,7 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
   case Type::ConstantArray: {
     const ConstantArrayType *arrTy = cast<ConstantArrayType>(ty);
     mlir::Type elemTy = convertTypeForMem(arrTy->getElementType());
-    resultType = cir::ArrayType::get(builder.getContext(), elemTy,
-                                     arrTy->getSize().getZExtValue());
+    resultType = cir::ArrayType::get(elemTy, arrTy->getSize().getZExtValue());
     break;
   }
 
@@ -347,10 +472,11 @@ bool CIRGenTypes::isZeroInitializable(clang::QualType t) {
   return true;
 }
 
-const CIRGenFunctionInfo &CIRGenTypes::arrangeCIRFunctionInfo() {
+const CIRGenFunctionInfo &
+CIRGenTypes::arrangeCIRFunctionInfo(CanQualType returnType) {
   // Lookup or create unique function info.
   llvm::FoldingSetNodeID id;
-  CIRGenFunctionInfo::Profile(id);
+  CIRGenFunctionInfo::Profile(id, returnType);
 
   void *insertPos = nullptr;
   CIRGenFunctionInfo *fi = functionInfos.FindNodeOrInsertPos(id, insertPos);
@@ -360,7 +486,7 @@ const CIRGenFunctionInfo &CIRGenTypes::arrangeCIRFunctionInfo() {
   assert(!cir::MissingFeatures::opCallCallConv());
 
   // Construction the function info. We co-allocate the ArgInfos.
-  fi = CIRGenFunctionInfo::create();
+  fi = CIRGenFunctionInfo::create(returnType);
   functionInfos.InsertNode(fi, insertPos);
 
   bool inserted = functionsBeingProcessed.insert(fi).second;
@@ -368,6 +494,15 @@ const CIRGenFunctionInfo &CIRGenTypes::arrangeCIRFunctionInfo() {
   assert(inserted && "Are functions being processed recursively?");
 
   assert(!cir::MissingFeatures::opCallCallConv());
+  getABIInfo().computeInfo(*fi);
+
+  // Loop over all of the computed argument and return value info. If any of
+  // them are direct or extend without a specified coerce type, specify the
+  // default now.
+  cir::ABIArgInfo &retInfo = fi->getReturnInfo();
+  if (retInfo.canHaveCoerceToType() && retInfo.getCoerceToType() == nullptr)
+    retInfo.setCoerceToType(convertType(fi->getReturnType()));
+
   assert(!cir::MissingFeatures::opCallArgs());
 
   bool erased = functionsBeingProcessed.erase(fi);

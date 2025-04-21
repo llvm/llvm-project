@@ -424,8 +424,7 @@ SmallVector<Metadata *, 4> LoopInfo::createMetadata(
     LoopProperties.push_back(MDNode::get(Ctx, Vals));
   }
 
-  LoopProperties.insert(LoopProperties.end(), AdditionalLoopProperties.begin(),
-                        AdditionalLoopProperties.end());
+  llvm::append_range(LoopProperties, AdditionalLoopProperties);
   return createFullUnrollMetadata(Attrs, LoopProperties, HasUserTransforms);
 }
 

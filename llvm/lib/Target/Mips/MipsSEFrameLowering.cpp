@@ -443,9 +443,9 @@ void MipsSEFrameLowering::emitPrologue(MachineFunction &MF,
   std::advance(MBBI, CSI.size());
   CFIBuilder.setInsertPoint(MBBI);
 
-  // Iterate over list of callee-saved registers and emit .cfi_offset
-  // directives.
   if (NeedsDwarfCFI) {
+    // Iterate over list of callee-saved registers and emit .cfi_offset
+    // directives.
     for (const CalleeSavedInfo &I : CSI) {
       int64_t Offset = MFI.getObjectOffset(I.getFrameIdx());
       MCRegister Reg = I.getReg();
@@ -487,8 +487,8 @@ void MipsSEFrameLowering::emitPrologue(MachineFunction &MF,
                               Register());
     }
 
-    // Emit .cfi_offset directives for eh data registers.
     if (NeedsDwarfCFI) {
+      // Emit .cfi_offset directives for eh data registers.
       for (int I = 0; I < 4; ++I) {
         int64_t Offset = MFI.getObjectOffset(MipsFI->getEhDataRegFI(I));
         CFIBuilder.buildOffset(ABI.GetEhDataReg(I), Offset);

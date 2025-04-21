@@ -120,6 +120,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/CodeGen/CFIInstBuilder.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -140,10 +141,7 @@
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Function.h"
 #include "llvm/MC/MCAsmInfo.h"
-#include "llvm/MC/MCContext.h"
-#include "llvm/MC/MCDwarf.h"
 #include "llvm/MC/MCInstrDesc.h"
-#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
@@ -760,21 +758,16 @@ struct StackAdjustingInsts {
     Info->SPAdjust += ExtraBytes;
   }
 
-  void emitDefCFAOffsets(MachineBasicBlock &MBB, const DebugLoc &dl,
-                         const ARMBaseInstrInfo &TII, bool HasFP) {
-    MachineFunction &MF = *MBB.getParent();
+  void emitDefCFAOffsets(MachineBasicBlock &MBB, bool HasFP) {
+    CFIInstBuilder CFIBuilder(MBB, MBB.end(), MachineInstr::FrameSetup);
     unsigned CFAOffset = 0;
     for (auto &Info : Insts) {
       if (HasFP && !Info.BeforeFPSet)
         return;
 
       CFAOffset += Info.SPAdjust;
-      unsigned CFIIndex = MF.addFrameInst(
-          MCCFIInstruction::cfiDefCfaOffset(nullptr, CFAOffset));
-      BuildMI(MBB, std::next(Info.I), dl,
-              TII.get(TargetOpcode::CFI_INSTRUCTION))
-              .addCFIIndex(CFIIndex)
-              .setMIFlags(MachineInstr::FrameSetup);
+      CFIBuilder.setInsertPoint(std::next(Info.I));
+      CFIBuilder.buildDefCFAOffset(CFAOffset);
     }
   }
 
@@ -890,9 +883,7 @@ void ARMFrameLowering::emitPrologue(MachineFunction &MF,
   MachineBasicBlock::iterator MBBI = MBB.begin();
   MachineFrameInfo  &MFI = MF.getFrameInfo();
   ARMFunctionInfo *AFI = MF.getInfo<ARMFunctionInfo>();
-  MCContext &Context = MF.getContext();
   const TargetMachine &TM = MF.getTarget();
-  const MCRegisterInfo *MRI = Context.getRegisterInfo();
   const ARMBaseRegisterInfo *RegInfo = STI.getRegisterInfo();
   const ARMBaseInstrInfo &TII = *STI.getInstrInfo();
   assert(!AFI->isThumb1OnlyFunction() &&
@@ -938,7 +929,7 @@ void ARMFrameLowering::emitPrologue(MachineFunction &MF,
       DefCFAOffsetCandidates.addInst(std::prev(MBBI), NumBytes, true);
     }
     if (!NeedsWinCFI)
-      DefCFAOffsetCandidates.emitDefCFAOffsets(MBB, dl, TII, HasFP);
+      DefCFAOffsetCandidates.emitDefCFAOffsets(MBB, HasFP);
     if (NeedsWinCFI && MBBI != MBB.begin()) {
       insertSEHRange(MBB, {}, MBBI, TII, MachineInstr::FrameSetup);
       BuildMI(MBB, MBBI, dl, TII.get(ARM::SEH_PrologEnd))
@@ -1245,21 +1236,11 @@ void ARMFrameLowering::emitPrologue(MachineFunction &MF,
     if (!NeedsWinCFI) {
       // Emit DWARF info to find the CFA using the frame pointer from this
       // point onward.
-      if (FPOffsetAfterPush != 0) {
-        unsigned CFIIndex = MF.addFrameInst(MCCFIInstruction::cfiDefCfa(
-            nullptr, MRI->getDwarfRegNum(FramePtr, true),
-            -MFI.getObjectOffset(FramePtrSpillFI)));
-        BuildMI(MBB, AfterPush, dl, TII.get(TargetOpcode::CFI_INSTRUCTION))
-            .addCFIIndex(CFIIndex)
-            .setMIFlags(MachineInstr::FrameSetup);
-      } else {
-        unsigned CFIIndex =
-            MF.addFrameInst(MCCFIInstruction::createDefCfaRegister(
-                nullptr, MRI->getDwarfRegNum(FramePtr, true)));
-        BuildMI(MBB, AfterPush, dl, TII.get(TargetOpcode::CFI_INSTRUCTION))
-            .addCFIIndex(CFIIndex)
-            .setMIFlags(MachineInstr::FrameSetup);
-      }
+      CFIInstBuilder CFIBuilder(MBB, AfterPush, MachineInstr::FrameSetup);
+      if (FPOffsetAfterPush != 0)
+        CFIBuilder.buildDefCFA(FramePtr, -MFI.getObjectOffset(FramePtrSpillFI));
+      else
+        CFIBuilder.buildDefCFARegister(FramePtr);
     }
   }
 
@@ -1304,14 +1285,9 @@ void ARMFrameLowering::emitPrologue(MachineFunction &MF,
       }
 
       if (CFIPos.isValid()) {
-        int CFIIndex = MF.addFrameInst(MCCFIInstruction::createOffset(
-            nullptr,
-            MRI->getDwarfRegNum(Reg == ARM::R12 ? ARM::RA_AUTH_CODE : Reg,
-                                true),
-            MFI.getObjectOffset(FI)));
-        BuildMI(MBB, CFIPos, dl, TII.get(TargetOpcode::CFI_INSTRUCTION))
-            .addCFIIndex(CFIIndex)
-            .setMIFlags(MachineInstr::FrameSetup);
+        CFIInstBuilder(MBB, CFIPos, MachineInstr::FrameSetup)
+            .buildOffset(Reg == ARM::R12 ? ARM::RA_AUTH_CODE : Reg,
+                         MFI.getObjectOffset(FI));
       }
     }
   }
@@ -1322,7 +1298,7 @@ void ARMFrameLowering::emitPrologue(MachineFunction &MF,
   // actually get emitted.
   if (!NeedsWinCFI) {
     LLVM_DEBUG(DefCFAOffsetCandidates.dump());
-    DefCFAOffsetCandidates.emitDefCFAOffsets(MBB, dl, TII, HasFP);
+    DefCFAOffsetCandidates.emitDefCFAOffsets(MBB, HasFP);
   }
 
   if (STI.isTargetELF() && hasFP(MF))
@@ -3155,7 +3131,6 @@ static const uint64_t kSplitStackAvailable = 256;
 void ARMFrameLowering::adjustForSegmentedStacks(
     MachineFunction &MF, MachineBasicBlock &PrologueMBB) const {
   unsigned Opcode;
-  unsigned CFIIndex;
   const ARMSubtarget *ST = &MF.getSubtarget<ARMSubtarget>();
   bool Thumb = ST->isThumb();
   bool Thumb2 = ST->isThumb2();
@@ -3168,8 +3143,6 @@ void ARMFrameLowering::adjustForSegmentedStacks(
     report_fatal_error("Segmented stacks not supported on this platform.");
 
   MachineFrameInfo &MFI = MF.getFrameInfo();
-  MCContext &Context = MF.getContext();
-  const MCRegisterInfo *MRI = Context.getRegisterInfo();
   const ARMBaseInstrInfo &TII =
       *static_cast<const ARMBaseInstrInfo *>(MF.getSubtarget().getInstrInfo());
   ARMFunctionInfo *ARMFI = MF.getInfo<ARMFunctionInfo>();
@@ -3267,17 +3240,10 @@ void ARMFrameLowering::adjustForSegmentedStacks(
   // Emit the relevant DWARF information about the change in stack pointer as
   // well as where to find both r4 and r5 (the callee-save registers)
   if (!MF.getTarget().getMCAsmInfo()->usesWindowsCFI()) {
-    CFIIndex = MF.addFrameInst(MCCFIInstruction::cfiDefCfaOffset(nullptr, 8));
-    BuildMI(PrevStackMBB, DL, TII.get(TargetOpcode::CFI_INSTRUCTION))
-        .addCFIIndex(CFIIndex);
-    CFIIndex = MF.addFrameInst(MCCFIInstruction::createOffset(
-        nullptr, MRI->getDwarfRegNum(ScratchReg1, true), -4));
-    BuildMI(PrevStackMBB, DL, TII.get(TargetOpcode::CFI_INSTRUCTION))
-        .addCFIIndex(CFIIndex);
-    CFIIndex = MF.addFrameInst(MCCFIInstruction::createOffset(
-        nullptr, MRI->getDwarfRegNum(ScratchReg0, true), -8));
-    BuildMI(PrevStackMBB, DL, TII.get(TargetOpcode::CFI_INSTRUCTION))
-        .addCFIIndex(CFIIndex);
+    CFIInstBuilder CFIBuilder(PrevStackMBB, MachineInstr::NoFlags);
+    CFIBuilder.buildDefCFAOffset(8);
+    CFIBuilder.buildOffset(ScratchReg1, -4);
+    CFIBuilder.buildOffset(ScratchReg0, -8);
   }
 
   // mov SR1, sp
@@ -3486,13 +3452,9 @@ void ARMFrameLowering::adjustForSegmentedStacks(
   // Emit the DWARF info about the change in stack as well as where to find the
   // previous link register
   if (!MF.getTarget().getMCAsmInfo()->usesWindowsCFI()) {
-    CFIIndex = MF.addFrameInst(MCCFIInstruction::cfiDefCfaOffset(nullptr, 12));
-    BuildMI(AllocMBB, DL, TII.get(TargetOpcode::CFI_INSTRUCTION))
-        .addCFIIndex(CFIIndex);
-    CFIIndex = MF.addFrameInst(MCCFIInstruction::createOffset(
-        nullptr, MRI->getDwarfRegNum(ARM::LR, true), -12));
-    BuildMI(AllocMBB, DL, TII.get(TargetOpcode::CFI_INSTRUCTION))
-        .addCFIIndex(CFIIndex);
+    CFIInstBuilder CFIBuilder(AllocMBB, MachineInstr::NoFlags);
+    CFIBuilder.buildDefCFAOffset(12);
+    CFIBuilder.buildOffset(ARM::LR, -12);
   }
 
   // Call __morestack().
@@ -3549,11 +3511,8 @@ void ARMFrameLowering::adjustForSegmentedStacks(
   }
 
   // Update the CFA offset now that we've popped
-  if (!MF.getTarget().getMCAsmInfo()->usesWindowsCFI()) {
-    CFIIndex = MF.addFrameInst(MCCFIInstruction::cfiDefCfaOffset(nullptr, 0));
-    BuildMI(AllocMBB, DL, TII.get(TargetOpcode::CFI_INSTRUCTION))
-        .addCFIIndex(CFIIndex);
-  }
+  if (!MF.getTarget().getMCAsmInfo()->usesWindowsCFI())
+    CFIInstBuilder(AllocMBB, MachineInstr::NoFlags).buildDefCFAOffset(0);
 
   // Return from this function.
   BuildMI(AllocMBB, DL, TII.get(ST->getReturnOpcode())).add(predOps(ARMCC::AL));
@@ -3576,20 +3535,13 @@ void ARMFrameLowering::adjustForSegmentedStacks(
 
   // Update the CFA offset now that we've popped
   if (!MF.getTarget().getMCAsmInfo()->usesWindowsCFI()) {
-    CFIIndex = MF.addFrameInst(MCCFIInstruction::cfiDefCfaOffset(nullptr, 0));
-    BuildMI(PostStackMBB, DL, TII.get(TargetOpcode::CFI_INSTRUCTION))
-        .addCFIIndex(CFIIndex);
+    CFIInstBuilder CFIBuilder(PostStackMBB, MachineInstr::NoFlags);
+    CFIBuilder.buildDefCFAOffset(0);
 
     // Tell debuggers that r4 and r5 are now the same as they were in the
     // previous function, that they're the "Same Value".
-    CFIIndex = MF.addFrameInst(MCCFIInstruction::createSameValue(
-        nullptr, MRI->getDwarfRegNum(ScratchReg0, true)));
-    BuildMI(PostStackMBB, DL, TII.get(TargetOpcode::CFI_INSTRUCTION))
-        .addCFIIndex(CFIIndex);
-    CFIIndex = MF.addFrameInst(MCCFIInstruction::createSameValue(
-        nullptr, MRI->getDwarfRegNum(ScratchReg1, true)));
-    BuildMI(PostStackMBB, DL, TII.get(TargetOpcode::CFI_INSTRUCTION))
-        .addCFIIndex(CFIIndex);
+    CFIBuilder.buildSameValue(ScratchReg0);
+    CFIBuilder.buildSameValue(ScratchReg1);
   }
 
   // Organizing MBB lists

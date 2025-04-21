@@ -872,3 +872,6 @@ def GetTypeidPtr : Opcode { let Args = [ArgTypePtr]; }
 def DiagTypeid : Opcode;
 
 def CheckDestruction : Opcode;
+
+def PushCC : Opcode { let Args = [ArgBool]; }
+def PopCC : Opcode;

@@ -359,10 +359,10 @@ inline _LIBCPP_HIDE_FROM_ABI void __swap_bitmap_pos(
   // Swap one pair on each iteration as long as both bitsets have at least one
   // element for swapping.
   while (__left_bitset != 0 && __right_bitset != 0) {
-    difference_type __tz_left  = __libcpp_ctz(__left_bitset);
-    __left_bitset              = __libcpp_blsr(__left_bitset);
-    difference_type __tz_right = __libcpp_ctz(__right_bitset);
-    __right_bitset             = __libcpp_blsr(__right_bitset);
+    difference_type __tz_left  = std::__countr_zero(__left_bitset);
+    __left_bitset              = std::__libcpp_blsr(__left_bitset);
+    difference_type __tz_right = std::__countr_zero(__right_bitset);
+    __right_bitset             = std::__libcpp_blsr(__right_bitset);
     _Ops::iter_swap(__first + __tz_left, __last - __tz_right);
   }
 }
@@ -458,7 +458,7 @@ inline _LIBCPP_HIDE_FROM_ABI void __swap_bitmap_pos_within(
     // Swap within the left side.  Need to find set positions in the reverse
     // order.
     while (__left_bitset != 0) {
-      difference_type __tz_left = __detail::__block_size - 1 - __libcpp_clz(__left_bitset);
+      difference_type __tz_left = __detail::__block_size - 1 - std::__countl_zero(__left_bitset);
       __left_bitset &= (static_cast<uint64_t>(1) << __tz_left) - 1;
       _RandomAccessIterator __it = __first + __tz_left;
       if (__it != __lm1) {
@@ -471,7 +471,7 @@ inline _LIBCPP_HIDE_FROM_ABI void __swap_bitmap_pos_within(
     // Swap within the right side.  Need to find set positions in the reverse
     // order.
     while (__right_bitset != 0) {
-      difference_type __tz_right = __detail::__block_size - 1 - __libcpp_clz(__right_bitset);
+      difference_type __tz_right = __detail::__block_size - 1 - std::__countl_zero(__right_bitset);
       __right_bitset &= (static_cast<uint64_t>(1) << __tz_right) - 1;
       _RandomAccessIterator __it = __lm1 - __tz_right;
       if (__it != __first) {

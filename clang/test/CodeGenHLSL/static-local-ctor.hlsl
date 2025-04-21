@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute -emit-llvm -o - -disable-llvm-passes %s | FileCheck %s
+// RUN: %clang_cc1 -Wno-hlsl-implicit-binding -triple dxil-pc-shadermodel6.0-compute -emit-llvm -o - -disable-llvm-passes %s | FileCheck %s
 
 // Verify that no per variable _Init_thread instructions are emitted for non-trivial static locals
 // These would normally be emitted by the MicrosoftCXXABI, but the DirectX backend should exlude them
@@ -34,4 +34,3 @@ void main() {
   mybuf = buf[0];
   InitBuf(mybuf);
 }
-

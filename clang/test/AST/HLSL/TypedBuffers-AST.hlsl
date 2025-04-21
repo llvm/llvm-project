@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -ast-dump -DEMPTY \
+// RUN: %clang_cc1 -Wno-hlsl-implicit-binding -triple dxil-pc-shadermodel6.0-library -x hlsl -ast-dump -DEMPTY \
 // RUN:   -DRESOURCE=RWBuffer %s | FileCheck -DRESOURCE=RWBuffer -check-prefix=EMPTY %s
 //
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -ast-dump \
+// RUN: %clang_cc1 -Wno-hlsl-implicit-binding -triple dxil-pc-shadermodel6.0-library -x hlsl -ast-dump \
 // RUN:   -DRESOURCE=RWBuffer %s | FileCheck -DRESOURCE=RWBuffer \
 // RUN:   -check-prefixes=CHECK,CHECK-UAV %s
 
@@ -66,7 +66,7 @@ RESOURCE<float> Buffer;
 // CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
 // CHECK-SAME{LITERAL}: [[hlsl::resource_class(UAV)]]
 // CHECK-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
-// CHECK-SAME: ' lvalue .__handle {{.*}} 
+// CHECK-SAME: ' lvalue .__handle {{.*}}
 // CHECK-NEXT: CXXThisExpr {{.*}} 'const [[RESOURCE]]<element_type>' lvalue implicit this
 // CHECK-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}}  'Index' 'unsigned int'
 // CHECK-NEXT: AlwaysInlineAttr {{.*}} Implicit always_inline
@@ -81,7 +81,7 @@ RESOURCE<float> Buffer;
 // CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
 // CHECK-SAME{LITERAL}: [[hlsl::resource_class(UAV)]]
 // CHECK-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
-// CHECK-SAME: ' lvalue .__handle {{.*}} 
+// CHECK-SAME: ' lvalue .__handle {{.*}}
 // CHECK-NEXT: CXXThisExpr {{.*}} '[[RESOURCE]]<element_type>' lvalue implicit this
 // CHECK-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}}  'Index' 'unsigned int'
 // CHECK-NEXT: AlwaysInlineAttr {{.*}} Implicit always_inline
@@ -96,7 +96,7 @@ RESOURCE<float> Buffer;
 // CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
 // CHECK-SAME{LITERAL}: [[hlsl::resource_class(UAV)]]
 // CHECK-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
-// CHECK-SAME: ' lvalue .__handle {{.*}} 
+// CHECK-SAME: ' lvalue .__handle {{.*}}
 // CHECK-NEXT: CXXThisExpr {{.*}} '[[RESOURCE]]<element_type>' lvalue implicit this
 // CHECK-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}}  'Index' 'unsigned int'
 // CHECK-NEXT: AlwaysInlineAttr {{.*}} Implicit always_inline

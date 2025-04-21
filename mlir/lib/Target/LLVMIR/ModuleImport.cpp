@@ -2075,6 +2075,7 @@ static constexpr std::array kExplicitAttributes{
     StringLiteral("target-features"),
     StringLiteral("tune-cpu"),
     StringLiteral("unsafe-fp-math"),
+    StringLiteral("uwtable"),
     StringLiteral("vscale_range"),
     StringLiteral("willreturn"),
 };
@@ -2237,6 +2238,12 @@ void ModuleImport::processFunctionAttributes(llvm::Function *func,
   if (llvm::Attribute attr = func->getFnAttribute("fp-contract");
       attr.isStringAttribute())
     funcOp.setFpContractAttr(StringAttr::get(context, attr.getValueAsString()));
+
+  if (func->hasUWTable()) {
+    ::llvm::UWTableKind uwtableKind = func->getUWTableKind();
+    funcOp.setUwtableKindAttr(LLVM::UWTableKindAttr::get(
+        funcOp.getContext(), convertUWTableKindFromLLVM(uwtableKind)));
+  }
 }
 
 DictionaryAttr

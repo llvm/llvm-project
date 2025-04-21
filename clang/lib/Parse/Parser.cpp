@@ -2541,17 +2541,17 @@ Parser::ParseModuleDecl(Sema::ModuleImportState &ImportState) {
     return Actions.ActOnPrivateModuleFragmentDecl(ModuleLoc, PrivateLoc);
   }
 
-  SmallVector<std::pair<IdentifierInfo *, SourceLocation>, 2> Path;
+  SmallVector<IdentifierLoc, 2> Path;
   if (ParseModuleName(ModuleLoc, Path, /*IsImport*/ false))
     return nullptr;
 
   // Parse the optional module-partition.
-  SmallVector<std::pair<IdentifierInfo *, SourceLocation>, 2> Partition;
+  SmallVector<IdentifierLoc, 2> Partition;
   if (Tok.is(tok::colon)) {
     SourceLocation ColonLoc = ConsumeToken();
     if (!getLangOpts().CPlusPlusModules)
       Diag(ColonLoc, diag::err_unsupported_module_partition)
-          << SourceRange(ColonLoc, Partition.back().second);
+          << SourceRange(ColonLoc, Partition.back().getLoc());
     // Recover by ignoring the partition name.
     else if (ParseModuleName(ModuleLoc, Partition, /*IsImport*/ false))
       return nullptr;
@@ -2600,7 +2600,7 @@ Decl *Parser::ParseModuleImport(SourceLocation AtLoc,
   SourceLocation ImportLoc = ConsumeToken();
 
   // For C++20 modules, we can have "name" or ":Partition name" as valid input.
-  SmallVector<std::pair<IdentifierInfo *, SourceLocation>, 2> Path;
+  SmallVector<IdentifierLoc, 2> Path;
   bool IsPartition = false;
   Module *HeaderUnit = nullptr;
   if (Tok.is(tok::header_name)) {
@@ -2616,7 +2616,7 @@ Decl *Parser::ParseModuleImport(SourceLocation AtLoc,
     SourceLocation ColonLoc = ConsumeToken();
     if (!getLangOpts().CPlusPlusModules)
       Diag(ColonLoc, diag::err_unsupported_module_partition)
-          << SourceRange(ColonLoc, Path.back().second);
+          << SourceRange(ColonLoc, Path.back().getLoc());
     // Recover by leaving partition empty.
     else if (ParseModuleName(ColonLoc, Path, /*IsImport*/ true))
       return nullptr;
@@ -2718,10 +2718,9 @@ Decl *Parser::ParseModuleImport(SourceLocation AtLoc,
 ///           module-name-qualifier[opt] identifier
 ///         module-name-qualifier:
 ///           module-name-qualifier[opt] identifier '.'
-bool Parser::ParseModuleName(
-    SourceLocation UseLoc,
-    SmallVectorImpl<std::pair<IdentifierInfo *, SourceLocation>> &Path,
-    bool IsImport) {
+bool Parser::ParseModuleName(SourceLocation UseLoc,
+                             SmallVectorImpl<IdentifierLoc> &Path,
+                             bool IsImport) {
   // Parse the module path.
   while (true) {
     if (!Tok.is(tok::identifier)) {
@@ -2737,7 +2736,7 @@ bool Parser::ParseModuleName(
     }
 
     // Record this part of the module path.
-    Path.push_back(std::make_pair(Tok.getIdentifierInfo(), Tok.getLocation()));
+    Path.emplace_back(Tok.getLocation(), Tok.getIdentifierInfo());
     ConsumeToken();
 
     if (Tok.isNot(tok::period))

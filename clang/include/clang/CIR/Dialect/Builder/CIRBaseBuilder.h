@@ -95,6 +95,8 @@ public:
       return getZeroAttr(arrTy);
     if (auto ptrTy = mlir::dyn_cast<cir::PointerType>(ty))
       return getConstNullPtrAttr(ptrTy);
+    if (auto recordTy = mlir::dyn_cast<cir::RecordType>(ty))
+      return getZeroAttr(recordTy);
     if (mlir::isa<cir::BoolType>(ty)) {
       return getCIRBoolAttr(false);
     }
@@ -205,13 +207,15 @@ public:
   // Call operators
   //===--------------------------------------------------------------------===//
 
-  cir::CallOp createCallOp(mlir::Location loc, mlir::SymbolRefAttr callee) {
-    auto op = create<cir::CallOp>(loc, callee);
+  cir::CallOp createCallOp(mlir::Location loc, mlir::SymbolRefAttr callee,
+                           mlir::Type returnType) {
+    auto op = create<cir::CallOp>(loc, callee, returnType);
     return op;
   }
 
   cir::CallOp createCallOp(mlir::Location loc, cir::FuncOp callee) {
-    return createCallOp(loc, mlir::SymbolRefAttr::get(callee));
+    return createCallOp(loc, mlir::SymbolRefAttr::get(callee),
+                        callee.getFunctionType().getReturnType());
   }
 
   //===--------------------------------------------------------------------===//

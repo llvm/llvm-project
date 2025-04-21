@@ -1141,8 +1141,6 @@ void State::addInfoFor(BasicBlock &BB) {
         break;
       [[fallthrough]];
     case Intrinsic::abs:
-    case Intrinsic::uadd_sat:
-    case Intrinsic::usub_sat:
       WorkList.push_back(FactOrCheck::getInstFact(DT.getNode(&BB), &I));
       break;
     }
@@ -1740,9 +1738,7 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
                                  OptimizationRemarkEmitter &ORE) {
   bool Changed = false;
   DT.updateDFSNumbers();
-  SmallVector<Value *> FunctionArgs;
-  for (Value &Arg : F.args())
-    FunctionArgs.push_back(&Arg);
+  SmallVector<Value *> FunctionArgs(llvm::make_pointer_range(F.args()));
   ConstraintInfo Info(F.getDataLayout(), FunctionArgs);
   State S(DT, LI, SE);
   std::unique_ptr<Module> ReproducerModule(
@@ -1893,24 +1889,11 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
         AddFact(CmpInst::ICMP_SGE, CB.Inst, X);
         continue;
       }
+
       if (auto *MinMax = dyn_cast<MinMaxIntrinsic>(CB.Inst)) {
         Pred = ICmpInst::getNonStrictPredicate(MinMax->getPredicate());
         AddFact(Pred, MinMax, MinMax->getLHS());
         AddFact(Pred, MinMax, MinMax->getRHS());
-        continue;
-      }
-      if (auto *USatI = dyn_cast<SaturatingInst>(CB.Inst)) {
-        switch (USatI->getIntrinsicID()) {
-        default:
-          llvm_unreachable("Unexpected intrinsic.");
-        case Intrinsic::uadd_sat:
-          AddFact(ICmpInst::ICMP_UGE, USatI, USatI->getLHS());
-          AddFact(ICmpInst::ICMP_UGE, USatI, USatI->getRHS());
-          break;
-        case Intrinsic::usub_sat:
-          AddFact(ICmpInst::ICMP_ULE, USatI, USatI->getLHS());
-          break;
-        }
         continue;
       }
     }

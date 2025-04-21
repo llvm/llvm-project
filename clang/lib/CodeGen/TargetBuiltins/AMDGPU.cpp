@@ -171,16 +171,6 @@ static Value *emitFPIntBuiltin(CodeGenFunction &CGF,
   return CGF.Builder.CreateCall(F, {Src0, Src1});
 }
 
-static Value *emitRangedBuiltin(CodeGenFunction &CGF, unsigned IntrinsicID,
-                                int low, int high) {
-  Function *F = CGF.CGM.getIntrinsic(IntrinsicID, {});
-  llvm::CallInst *Call = CGF.Builder.CreateCall(F);
-  llvm::ConstantRange CR(APInt(32, low), APInt(32, high));
-  Call->addRangeRetAttr(CR);
-  Call->addRetAttr(llvm::Attribute::AttrKind::NoUndef);
-  return Call;
-}
-
 // For processing memory ordering and memory scope arguments of various
 // amdgcn builtins.
 // \p Order takes a C++11 comptabile memory-ordering specifier and converts
@@ -934,15 +924,6 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     Function *F = CGM.getIntrinsic(BuiltinWMMAOp, ArgTypes);
     return Builder.CreateCall(F, Args);
   }
-
-  // amdgcn workitem
-  case AMDGPU::BI__builtin_amdgcn_workitem_id_x:
-    return emitRangedBuiltin(*this, Intrinsic::amdgcn_workitem_id_x, 0, 1024);
-  case AMDGPU::BI__builtin_amdgcn_workitem_id_y:
-    return emitRangedBuiltin(*this, Intrinsic::amdgcn_workitem_id_y, 0, 1024);
-  case AMDGPU::BI__builtin_amdgcn_workitem_id_z:
-    return emitRangedBuiltin(*this, Intrinsic::amdgcn_workitem_id_z, 0, 1024);
-
   // amdgcn workgroup size
   case AMDGPU::BI__builtin_amdgcn_workgroup_size_x:
     return EmitAMDGPUWorkGroupSize(*this, 0);
@@ -964,12 +945,6 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
   case AMDGPU::BI__builtin_r600_recipsqrt_ieeef:
     return emitBuiltinWithOneOverloadedType<1>(*this, E,
                                                Intrinsic::r600_recipsqrt_ieee);
-  case AMDGPU::BI__builtin_r600_read_tidig_x:
-    return emitRangedBuiltin(*this, Intrinsic::r600_read_tidig_x, 0, 1024);
-  case AMDGPU::BI__builtin_r600_read_tidig_y:
-    return emitRangedBuiltin(*this, Intrinsic::r600_read_tidig_y, 0, 1024);
-  case AMDGPU::BI__builtin_r600_read_tidig_z:
-    return emitRangedBuiltin(*this, Intrinsic::r600_read_tidig_z, 0, 1024);
   case AMDGPU::BI__builtin_amdgcn_alignbit: {
     llvm::Value *Src0 = EmitScalarExpr(E->getArg(0));
     llvm::Value *Src1 = EmitScalarExpr(E->getArg(1));

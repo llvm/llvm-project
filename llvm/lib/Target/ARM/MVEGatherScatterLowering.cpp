@@ -808,7 +808,7 @@ Instruction *MVEGatherScatterLowering::tryCreateIncrementingWBGatScat(
   // by a constant, thus we're looking for an add of a phi and a constant
   PHINode *Phi = dyn_cast<PHINode>(Offsets);
   if (Phi == nullptr || Phi->getNumIncomingValues() != 2 ||
-      Phi->getParent() != L->getHeader() || Phi->getNumUses() != 2)
+      Phi->getParent() != L->getHeader() || !Phi->hasNUses(2))
     // No phi means no IV to write back to; if there is a phi, we expect it
     // to have exactly two incoming values; the only phis we are interested in
     // will be loop IV's and have exactly two uses, one in their increment and
@@ -1051,10 +1051,10 @@ bool MVEGatherScatterLowering::optimiseOffsets(Value *Offsets, BasicBlock *BB,
   // If the phi is not used by anything else, we can just adapt it when
   // replacing the instruction; if it is, we'll have to duplicate it
   PHINode *NewPhi;
-  if (Phi->getNumUses() == 2) {
+  if (Phi->hasNUses(2)) {
     // No other users -> reuse existing phi (One user is the instruction
     // we're looking at, the other is the phi increment)
-    if (IncInstruction->getNumUses() != 1) {
+    if (!IncInstruction->hasOneUse()) {
       // If the incrementing instruction does have more users than
       // our phi, we need to copy it
       IncInstruction = BinaryOperator::Create(

@@ -2434,7 +2434,7 @@ RegionStoreManager::getInterestingValues(nonloc::LazyCompoundVal LCV) {
 
     if (auto InnerLCV = V.getAs<nonloc::LazyCompoundVal>()) {
       const SValListTy &InnerList = getInterestingValues(*InnerLCV);
-      List.insert(List.end(), InnerList.begin(), InnerList.end());
+      llvm::append_range(List, InnerList);
     }
 
     List.push_back(V);

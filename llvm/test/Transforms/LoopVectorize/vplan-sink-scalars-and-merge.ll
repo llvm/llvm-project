@@ -1035,32 +1035,32 @@ exit:
 
 ; Test case with a dead GEP between the load and store regions. Dead recipes
 ; need to be removed before merging.
-define void @merge_with_dead_gep_between_regions(i32 %n, ptr noalias %src, ptr noalias %dst) optsize {
+define void @merge_with_dead_gep_between_regions(i32 %n, i32 %k, ptr noalias %src, ptr noalias %dst) {
 ; CHECK-LABEL: LV: Checking a loop in 'merge_with_dead_gep_between_regions'
 ; CHECK:      VPlan 'Initial VPlan for VF={2},UF>=1' {
 ; CHECK-NEXT: Live-in vp<[[VF:%.+]]> = VF
 ; CHECK-NEXT: Live-in vp<[[VFxUF:%.+]]> = VF * UF
 ; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
-; CHECK-NEXT: Live-in vp<[[BTC:%.+]]> = backedge-taken count
 ; CHECK-NEXT: Live-in ir<%n> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<entry>:
 ; CHECK-NEXT: Successor(s): vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.ph:
+; CHECK-NEXT:   vp<[[END:%.+]]> = DERIVED-IV ir<%n> + vp<[[VEC_TC]]> * ir<-1>
 ; CHECK-NEXT: Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <x1> vector loop: {
 ; CHECK-NEXT:   vector.body:
 ; CHECK-NEXT:     EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
+; CHECK-NEXT:     ir<%iv> = WIDEN-INDUCTION ir<%n>, ir<-1>, vp<[[VF]]>
 ; CHECK-NEXT:     vp<[[DERIVED_IV:%.+]]> = DERIVED-IV ir<%n> + vp<[[CAN_IV]]> * ir<-1>
-; CHECK-NEXT:     EMIT vp<[[WIDE_IV:%.+]]> = WIDEN-CANONICAL-INDUCTION vp<[[CAN_IV]]>
-; CHECK-NEXT:     EMIT vp<[[MASK:%.+]]> = icmp ule vp<[[WIDE_IV]]>, vp<[[BTC]]>
+; CHECK-NEXT:     WIDEN ir<%cond> = icmp ult ir<%iv>, ir<%k>
 ; CHECK-NEXT:   Successor(s): pred.store
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   <xVFxUF> pred.store: {
 ; CHECK-NEXT:     pred.store.entry:
-; CHECK-NEXT:       BRANCH-ON-MASK vp<[[MASK]]>
+; CHECK-NEXT:       BRANCH-ON-MASK ir<%cond>
 ; CHECK-NEXT:     Successor(s): pred.store.if, pred.store.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:     pred.store.if:
@@ -1074,19 +1074,31 @@ define void @merge_with_dead_gep_between_regions(i32 %n, ptr noalias %src, ptr n
 ; CHECK-NEXT:     pred.store.continue:
 ; CHECK-NEXT:     No successors
 ; CHECK-NEXT:   }
-; CHECK-NEXT:   Successor(s): loop.1
+; CHECK-NEXT:   Successor(s): loop.then.1
 ; CHECK-EMPTY:
-; CHECK-NEXT:   loop.1:
-; CHECK-NEXT:     EMIT vp<[[CAN_IV_NEXT:%.+]]> = add vp<[[CAN_IV]]>, vp<[[VFxUF]]>
+; CHECK-NEXT:   loop.then.1:
+; CHECK-NEXT:     EMIT vp<[[CAN_IV_NEXT:%.+]]> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
 ; CHECK-NEXT:     EMIT branch-on-count  vp<[[CAN_IV_NEXT]]>, vp<[[VEC_TC]]>
 ; CHECK-NEXT:   No successors
 ; CHECK-NEXT: }
 ; CHECK-NEXT: Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT: middle.block:
-; CHECK-NEXT: Successor(s): ir-bb<exit>
+; CHECK-NEXT:   EMIT vp<[[CMP:%.+]]> = icmp eq ir<%n>, vp<[[VEC_TC]]>
+; CHECK-NEXT:   EMIT branch-on-cond vp<[[CMP]]>
+; CHECK-NEXT: Successor(s): ir-bb<exit>, scalar.ph
 ; CHECK-EMPTY:
-; CHECK-NEXT: ir-bb<exit>
+; CHECK-NEXT: scalar.ph:
+; CHECK-NEXT:   EMIT vp<[[RESUME:%.+]]> = resume-phi vp<[[END]]>, ir<%n>
+; CHECK-NEXT: Successor(s): ir-bb<loop>
+; CHECK-EMPTY:
+; CHECK-NEXT: ir-bb<loop>:
+; CHECK-NEXT:   IR   %iv = phi i32 [ %n, %entry ], [ %iv.next, %loop.latch ] (extra operand: vp<[[RESUME]]> from scalar.ph)
+; CHECK-NEXT:   IR   %iv.next = add nsw i32 %iv, -1
+; CHECK-NEXT:   IR   %cond = icmp ult i32 %iv, %k
+; CHECK-NEXT: No successors
+; CHECK-EMPTY:
+; CHECK-NEXT: ir-bb<exit>:
 ; CHECK-NEXT: No successors
 ; CHECK-NEXT: }
 ;
@@ -1094,13 +1106,20 @@ entry:
   br label %loop
 
 loop:
-  %iv = phi i32[ %n, %entry ], [ %iv.next, %loop ]
+  %iv = phi i32[ %n, %entry ], [ %iv.next, %loop.latch ]
   %iv.next = add nsw i32 %iv, -1
+  %cond = icmp ult i32 %iv, %k
+  br i1 %cond, label %loop.then, label %loop.latch
+
+loop.then:
   %gep.src = getelementptr inbounds i32, ptr %src, i32 %iv
   %l = load i32, ptr %gep.src, align 16
   %dead_gep = getelementptr inbounds i32, ptr %dst, i64 1
   %gep.dst = getelementptr inbounds i32, ptr %dst, i32 %iv
   store i32 %l, ptr %gep.dst, align 16
+  br label %loop.latch
+
+loop.latch:
   %ec = icmp eq i32 %iv.next, 0
   br i1 %ec, label %exit, label %loop
 

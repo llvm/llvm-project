@@ -416,3 +416,20 @@ namespace unresolved_template_specialization_type {
   template enable_if<true> raw_hash_set<int>::AbslHashValue<HashStateBase>();
   // CHECH: @_ZN39unresolved_template_specialization_type12raw_hash_setIiE13AbslHashValueINS_13HashStateBaseEEENS_9enable_ifIXsrNT_11is_hashableIiEE5valueEEEv
 } // namespace unresolved_template_specialization_type
+
+namespace GH133610 {
+  template <class T> struct A {
+    template <class V> struct B { int MEM; };
+  };
+
+  struct D {};
+  struct C: public A<int>::B<D> {};
+
+  template <class T, class U, class V>
+  auto k(T t, U u, V v) -> decltype (t.U::template B<V>::MEM) { return {}; }
+
+  void t() {
+    k( C(), A<int>(), D() );
+  }
+  // CHECK: @_ZN8GH1336101kINS_1CENS_1AIiEENS_1DEEEDtdtfp_sr1U1BIT1_EE3MEMET_T0_S5_
+} // namespace GH133610

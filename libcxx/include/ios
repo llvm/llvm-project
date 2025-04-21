@@ -887,6 +887,7 @@ _LIBCPP_POP_MACROS
 #    include <limits>
 #    include <mutex>
 #    include <new>
+#    include <optional>
 #    include <stdexcept>
 #    include <system_error>
 #    include <type_traits>

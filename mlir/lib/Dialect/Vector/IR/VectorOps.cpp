@@ -1997,6 +1997,11 @@ static Value extractInsertFoldConstantOp(OpType op, AdaptorType adaptor,
   std::vector<int64_t> staticPosition = op.getStaticPosition().vec();
   OperandRange dynamicPosition = op.getDynamicPosition();
   ArrayRef<Attribute> dynamicPositionAttr = adaptor.getDynamicPosition();
+  ArrayRef<int64_t> vectorShape;
+  if constexpr (std::is_same_v<OpType, ExtractOp>)
+    vectorShape = op.getSourceVectorType().getShape();
+  else
+    vectorShape = op.getDestVectorType().getShape();
 
   // If the dynamic operands is empty, it is returned directly.
   if (!dynamicPosition.size())
@@ -2013,9 +2018,13 @@ static Value extractInsertFoldConstantOp(OpType op, AdaptorType adaptor,
     Attribute positionAttr = dynamicPositionAttr[index];
     Value position = dynamicPosition[index++];
     if (auto attr = mlir::dyn_cast_if_present<IntegerAttr>(positionAttr)) {
-      staticPosition[i] = attr.getInt();
-      opChange = true;
-      continue;
+      int64_t value = attr.getInt();
+      // Do not fold if the value is out of bounds.
+      if (value >= 0 && value < vectorShape[i]) {
+        staticPosition[i] = attr.getInt();
+        opChange = true;
+        continue;
+      }
     }
     operands.push_back(position);
   }
@@ -2590,6 +2599,8 @@ OpFoldResult BroadcastOp::fold(FoldAdaptor adaptor) {
   }
   if (auto attr = llvm::dyn_cast<SplatElementsAttr>(adaptor.getSource()))
     return DenseElementsAttr::get(vectorType, attr.getSplatValue<Attribute>());
+  if (llvm::dyn_cast<ub::PoisonAttr>(adaptor.getSource()))
+    return ub::PoisonAttr::get(getContext());
   return {};
 }
 
@@ -3712,12 +3723,67 @@ foldExtractStridedOpFromInsertChain(ExtractStridedSliceOp op) {
   return failure();
 }
 
+// ExtractStridedSliceOp(non-splat ConstantOp) -> ConstantOp.
+static OpFoldResult
+foldExtractStridedSliceNonSplatConstant(ExtractStridedSliceOp op,
+                                        Attribute foldInput) {
+
+  auto dense = llvm::dyn_cast_if_present<DenseElementsAttr>(foldInput);
+  if (!dense)
+    return {};
+
+  // TODO: Handle non-unit strides when they become available.
+  if (op.hasNonUnitStrides())
+    return {};
+
+  VectorType sourceVecTy = op.getSourceVectorType();
+  ArrayRef<int64_t> sourceShape = sourceVecTy.getShape();
+  SmallVector<int64_t, 4> sourceStrides = computeStrides(sourceShape);
+
+  VectorType sliceVecTy = op.getType();
+  ArrayRef<int64_t> sliceShape = sliceVecTy.getShape();
+  int64_t rank = sliceVecTy.getRank();
+
+  // Expand offsets and sizes to match the vector rank.
+  SmallVector<int64_t, 4> offsets(rank, 0);
+  copy(getI64SubArray(op.getOffsets()), offsets.begin());
+
+  SmallVector<int64_t, 4> sizes(sourceShape);
+  copy(getI64SubArray(op.getSizes()), sizes.begin());
+
+  // Calculate the slice elements by enumerating all slice positions and
+  // linearizing them. The enumeration order is lexicographic which yields a
+  // sequence of monotonically increasing linearized position indices.
+  const auto denseValuesBegin = dense.value_begin<Attribute>();
+  SmallVector<Attribute> sliceValues;
+  sliceValues.reserve(sliceVecTy.getNumElements());
+  SmallVector<int64_t> currSlicePosition(offsets.begin(), offsets.end());
+  do {
+    int64_t linearizedPosition = linearize(currSlicePosition, sourceStrides);
+    assert(linearizedPosition < sourceVecTy.getNumElements() &&
+           "Invalid index");
+    sliceValues.push_back(*(denseValuesBegin + linearizedPosition));
+  } while (succeeded(incSlicePosition(currSlicePosition, sliceShape, offsets)));
+
+  assert(static_cast<int64_t>(sliceValues.size()) ==
+             sliceVecTy.getNumElements() &&
+         "Invalid number of slice elements");
+  return DenseElementsAttr::get(sliceVecTy, sliceValues);
+}
+
 OpFoldResult ExtractStridedSliceOp::fold(FoldAdaptor adaptor) {
   if (getSourceVectorType() == getResult().getType())
     return getVector();
   if (succeeded(foldExtractStridedOpFromInsertChain(*this)))
     return getResult();
-  return {};
+
+  // ExtractStridedSliceOp(splat ConstantOp) -> ConstantOp.
+  if (auto splat =
+          llvm::dyn_cast_if_present<SplatElementsAttr>(adaptor.getVector()))
+    DenseElementsAttr::get(getType(), splat.getSplatValue<Attribute>());
+
+  // ExtractStridedSliceOp(non-splat ConstantOp) -> ConstantOp.
+  return foldExtractStridedSliceNonSplatConstant(*this, adaptor.getVector());
 }
 
 void ExtractStridedSliceOp::getOffsets(SmallVectorImpl<int64_t> &results) {
@@ -3777,98 +3843,6 @@ public:
     rewriter.replaceOpWithNewOp<ConstantMaskOp>(
         extractStridedSliceOp, extractStridedSliceOp.getResult().getType(),
         sliceMaskDimSizes);
-    return success();
-  }
-};
-
-// Pattern to rewrite a ExtractStridedSliceOp(splat ConstantOp) -> ConstantOp.
-class StridedSliceSplatConstantFolder final
-    : public OpRewritePattern<ExtractStridedSliceOp> {
-public:
-  using OpRewritePattern::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(ExtractStridedSliceOp extractStridedSliceOp,
-                                PatternRewriter &rewriter) const override {
-    // Return if 'ExtractStridedSliceOp' operand is not defined by a splat
-    // ConstantOp.
-    Value sourceVector = extractStridedSliceOp.getVector();
-    Attribute vectorCst;
-    if (!matchPattern(sourceVector, m_Constant(&vectorCst)))
-      return failure();
-
-    auto splat = llvm::dyn_cast<SplatElementsAttr>(vectorCst);
-    if (!splat)
-      return failure();
-
-    auto newAttr = SplatElementsAttr::get(extractStridedSliceOp.getType(),
-                                          splat.getSplatValue<Attribute>());
-    rewriter.replaceOpWithNewOp<arith::ConstantOp>(extractStridedSliceOp,
-                                                   newAttr);
-    return success();
-  }
-};
-
-// Pattern to rewrite a ExtractStridedSliceOp(non-splat ConstantOp) ->
-// ConstantOp.
-class StridedSliceNonSplatConstantFolder final
-    : public OpRewritePattern<ExtractStridedSliceOp> {
-public:
-  using OpRewritePattern::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(ExtractStridedSliceOp extractStridedSliceOp,
-                                PatternRewriter &rewriter) const override {
-    // Return if 'ExtractStridedSliceOp' operand is not defined by a non-splat
-    // ConstantOp.
-    Value sourceVector = extractStridedSliceOp.getVector();
-    Attribute vectorCst;
-    if (!matchPattern(sourceVector, m_Constant(&vectorCst)))
-      return failure();
-
-    // The splat case is handled by `StridedSliceSplatConstantFolder`.
-    auto dense = llvm::dyn_cast<DenseElementsAttr>(vectorCst);
-    if (!dense || dense.isSplat())
-      return failure();
-
-    // TODO: Handle non-unit strides when they become available.
-    if (extractStridedSliceOp.hasNonUnitStrides())
-      return failure();
-
-    auto sourceVecTy = llvm::cast<VectorType>(sourceVector.getType());
-    ArrayRef<int64_t> sourceShape = sourceVecTy.getShape();
-    SmallVector<int64_t, 4> sourceStrides = computeStrides(sourceShape);
-
-    VectorType sliceVecTy = extractStridedSliceOp.getType();
-    ArrayRef<int64_t> sliceShape = sliceVecTy.getShape();
-    int64_t sliceRank = sliceVecTy.getRank();
-
-    // Expand offsets and sizes to match the vector rank.
-    SmallVector<int64_t, 4> offsets(sliceRank, 0);
-    copy(getI64SubArray(extractStridedSliceOp.getOffsets()), offsets.begin());
-
-    SmallVector<int64_t, 4> sizes(sourceShape);
-    copy(getI64SubArray(extractStridedSliceOp.getSizes()), sizes.begin());
-
-    // Calculate the slice elements by enumerating all slice positions and
-    // linearizing them. The enumeration order is lexicographic which yields a
-    // sequence of monotonically increasing linearized position indices.
-    auto denseValuesBegin = dense.value_begin<Attribute>();
-    SmallVector<Attribute> sliceValues;
-    sliceValues.reserve(sliceVecTy.getNumElements());
-    SmallVector<int64_t> currSlicePosition(offsets.begin(), offsets.end());
-    do {
-      int64_t linearizedPosition = linearize(currSlicePosition, sourceStrides);
-      assert(linearizedPosition < sourceVecTy.getNumElements() &&
-             "Invalid index");
-      sliceValues.push_back(*(denseValuesBegin + linearizedPosition));
-    } while (
-        succeeded(incSlicePosition(currSlicePosition, sliceShape, offsets)));
-
-    assert(static_cast<int64_t>(sliceValues.size()) ==
-               sliceVecTy.getNumElements() &&
-           "Invalid number of slice elements");
-    auto newAttr = DenseElementsAttr::get(sliceVecTy, sliceValues);
-    rewriter.replaceOpWithNewOp<arith::ConstantOp>(extractStridedSliceOp,
-                                                   newAttr);
     return success();
   }
 };
@@ -4016,8 +3990,7 @@ void ExtractStridedSliceOp::getCanonicalizationPatterns(
     RewritePatternSet &results, MLIRContext *context) {
   // Pattern to rewrite a ExtractStridedSliceOp(ConstantMaskOp) ->
   // ConstantMaskOp and ExtractStridedSliceOp(ConstantOp) -> ConstantOp.
-  results.add<StridedSliceConstantMaskFolder, StridedSliceSplatConstantFolder,
-              StridedSliceNonSplatConstantFolder, StridedSliceBroadcast,
+  results.add<StridedSliceConstantMaskFolder, StridedSliceBroadcast,
               StridedSliceSplat, ContiguousExtractStridedSliceToExtract>(
       context);
 }
@@ -5657,10 +5630,8 @@ OpFoldResult ShapeCastOp::fold(FoldAdaptor adaptor) {
 
   // shape_cast(constant) -> constant
   if (auto splatAttr =
-          llvm::dyn_cast_if_present<SplatElementsAttr>(adaptor.getSource())) {
-    return DenseElementsAttr::get(resultType,
-                                  splatAttr.getSplatValue<Attribute>());
-  }
+          llvm::dyn_cast_if_present<SplatElementsAttr>(adaptor.getSource()))
+    return splatAttr.reshape(getType());
 
   // shape_cast(poison) -> poison
   if (llvm::dyn_cast_if_present<ub::PoisonAttr>(adaptor.getSource())) {
@@ -6004,10 +5975,13 @@ void vector::TransposeOp::build(OpBuilder &builder, OperationState &result,
 
 OpFoldResult vector::TransposeOp::fold(FoldAdaptor adaptor) {
   // Eliminate splat constant transpose ops.
-  if (auto attr =
-          llvm::dyn_cast_if_present<DenseElementsAttr>(adaptor.getVector()))
-    if (attr.isSplat())
-      return attr.reshape(getResultVectorType());
+  if (auto splat =
+          llvm::dyn_cast_if_present<SplatElementsAttr>(adaptor.getVector()))
+    return splat.reshape(getResultVectorType());
+
+  // Eliminate poison transpose ops.
+  if (llvm::dyn_cast_if_present<ub::PoisonAttr>(adaptor.getVector()))
+    return ub::PoisonAttr::get(getContext());
 
   // Eliminate identity transpose ops. This happens when the dimensions of the
   // input vector remain in their original order after the transpose operation.
@@ -6085,28 +6059,6 @@ public:
   }
 };
 
-// Folds transpose(broadcast(<scalar>)) into broadcast(<scalar>).
-struct FoldTransposedScalarBroadcast final
-    : public OpRewritePattern<vector::TransposeOp> {
-  using OpRewritePattern::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(vector::TransposeOp transposeOp,
-                                PatternRewriter &rewriter) const override {
-    auto bcastOp = transposeOp.getVector().getDefiningOp<vector::BroadcastOp>();
-    if (!bcastOp)
-      return failure();
-
-    auto srcVectorType = llvm::dyn_cast<VectorType>(bcastOp.getSourceType());
-    if (!srcVectorType || srcVectorType.getNumElements() == 1) {
-      rewriter.replaceOpWithNewOp<vector::BroadcastOp>(
-          transposeOp, transposeOp.getResultVectorType(), bcastOp.getSource());
-      return success();
-    }
-
-    return failure();
-  }
-};
-
 // Folds transpose(splat x : src_type) : res_type into splat x : res_type.
 class FoldTransposeSplat final : public OpRewritePattern<TransposeOp> {
 public:
@@ -6161,12 +6113,106 @@ public:
   }
 };
 
+/// Folds transpose(broadcast(x)) to broadcast(x) if the transpose is
+/// 'order preserving', where 'order preserving' means the flattened
+/// inputs and outputs of the transpose have identical (numerical) values.
+///
+/// Example:
+/// ```
+///  %0 = vector.broadcast %input : vector<1x1xi32> to vector<1x8xi32>
+///  %1 = vector.transpose %0, [1, 0] : vector<1x8xi32>
+///                                                 to vector<8x1xi32>
+/// ```
+/// can be rewritten as the equivalent
+/// ```
+///  %0 = vector.broadcast %input : vector<1x1xi32> to vector<8x1xi32>.
+/// ```
+/// The algorithm works by partitioning dimensions into groups that can be
+/// locally permuted while preserving order, and checks that the transpose
+/// only permutes within these groups.
+///
+/// Groups are either contiguous sequences of 1s, or non-1s (1-element groups).
+/// Consider broadcasting 4x1x1x7 to 2x3x4x5x6x7. This is equivalent to
+/// broadcasting from 1x1x4x1x1x7.
+///                   ^^^ ^ ^^^ ^
+///          groups:   0  1  2  3
+/// Order preserving permutations for this example are ones that only permute
+/// within the groups [0,1] and [3,4], like (1 0 2 4 3 5 6).
+class FoldTransposeBroadcast : public OpRewritePattern<vector::TransposeOp> {
+public:
+  using OpRewritePattern::OpRewritePattern;
+  FoldTransposeBroadcast(MLIRContext *context, PatternBenefit benefit = 1)
+      : OpRewritePattern<vector::TransposeOp>(context, benefit) {}
+
+  LogicalResult matchAndRewrite(vector::TransposeOp transpose,
+                                PatternRewriter &rewriter) const override {
+
+    vector::BroadcastOp broadcast =
+        transpose.getVector().getDefiningOp<vector::BroadcastOp>();
+    if (!broadcast) {
+      return rewriter.notifyMatchFailure(transpose,
+                                         "not preceded by a broadcast");
+    }
+
+    auto inputType = dyn_cast<VectorType>(broadcast.getSourceType());
+    VectorType outputType = transpose.getResultVectorType();
+
+    // transpose(broadcast(scalar)) -> broadcast(scalar) is always valid
+    bool inputIsScalar = !inputType;
+    if (inputIsScalar) {
+      rewriter.replaceOpWithNewOp<vector::BroadcastOp>(transpose, outputType,
+                                                       transpose.getVector());
+      return success();
+    }
+
+    ArrayRef<int64_t> permutation = transpose.getPermutation();
+    ArrayRef<int64_t> inputShape = inputType.getShape();
+    int64_t inputRank = inputType.getRank();
+    int64_t outputRank = transpose.getType().getRank();
+    int64_t deltaRank = outputRank - inputRank;
+
+    int low = 0;
+    for (int inputIndex = 0; inputIndex < inputRank; ++inputIndex) {
+      bool notOne = inputShape[inputIndex] != 1;
+      bool prevNotOne = (inputIndex != 0 && inputShape[inputIndex - 1] != 1);
+      bool groupEndFound = notOne || prevNotOne;
+      if (groupEndFound) {
+        int high = inputIndex + deltaRank;
+        // Return failure if not all permutation destinations for indices in
+        // [low, high) are in [low, high), i.e. the permutation is not local to
+        // the group.
+        for (int i = low; i < high; ++i) {
+          if (permutation[i] < low || permutation[i] >= high) {
+            return rewriter.notifyMatchFailure(
+                transpose, "permutation not local to group");
+          }
+        }
+      }
+    }
+
+    // We don't need to check the final group [low, outputRank) because if it is
+    // not locally bound, there must be a preceding group that already failed
+    // the check (impossible to have just 1 non-locally bound group).
+
+    // The preceding logic also ensures that at this point, the output of the
+    // transpose is definitely broadcastable from the input shape, assert so:
+    assert(vector::isBroadcastableTo(inputType, outputType) ==
+               vector::BroadcastableToResult::Success &&
+           "not broadcastable directly to transpose output");
+
+    rewriter.replaceOpWithNewOp<vector::BroadcastOp>(transpose, outputType,
+                                                     transpose.getVector());
+
+    return success();
+  }
+};
+
 } // namespace
 
 void vector::TransposeOp::getCanonicalizationPatterns(
     RewritePatternSet &results, MLIRContext *context) {
-  results.add<FoldTransposeCreateMask, FoldTransposedScalarBroadcast,
-              TransposeFolder, FoldTransposeSplat>(context);
+  results.add<FoldTransposeCreateMask, TransposeFolder, FoldTransposeSplat,
+              FoldTransposeBroadcast>(context);
 }
 
 //===----------------------------------------------------------------------===//

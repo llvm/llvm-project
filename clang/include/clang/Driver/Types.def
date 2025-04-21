@@ -88,8 +88,8 @@ TYPE("assembler-with-cpp",       Asm,          PP_Asm,          "S",      phases
 // modules when Flang needs to emit pre-processed files. Therefore, the
 // `PP_TYPE` is set to `PP_Fortran` so that the driver is fine with
 // "pre-processing a pre-processed file".
-TYPE("f95",                      PP_Fortran,   PP_Fortran,      "i",      phases::Preprocess, phases::Compile, phases::Backend, phases::Assemble, phases::Link)
-TYPE("f95-cpp-input",            Fortran,      PP_Fortran,      nullptr,  phases::Preprocess, phases::Compile, phases::Backend, phases::Assemble, phases::Link)
+TYPE("f95",                      Fortran,      PP_Fortran,      nullptr,  phases::Preprocess, phases::Compile, phases::Backend, phases::Assemble, phases::Link)
+TYPE("f95-cpp-input",            PP_Fortran,   PP_Fortran,      "i",      phases::Preprocess, phases::Compile, phases::Backend, phases::Assemble, phases::Link)
 TYPE("java",                     Java,         INVALID,         nullptr,  phases::Compile, phases::Backend, phases::Assemble, phases::Link)
 
 // LLVM IR/LTO types. We define separate types for IR and LTO because LTO

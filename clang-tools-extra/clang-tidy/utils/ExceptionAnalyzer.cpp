@@ -209,12 +209,14 @@ bool isQualificationConvertiblePointer(QualType From, QualType To,
   // cv-decomposition of T, that is, cv_1, cv_2, ... , cv_n, is called the
   // cv-qualification signature of T.
 
-  auto isValidP_i = [](QualType P) {
+  // NOLINTNEXTLINE (readability-identifier-naming): Preserve original notation
+  auto IsValidP_i = [](QualType P) {
     return P->isPointerType() || P->isMemberPointerType() ||
            P->isConstantArrayType() || P->isIncompleteArrayType();
   };
 
-  auto isSameP_i = [](QualType P1, QualType P2) {
+  // NOLINTNEXTLINE (readability-identifier-naming): Preserve original notation
+  auto IsSameP_i = [](QualType P1, QualType P2) {
     if (P1->isPointerType())
       return P2->isPointerType();
 
@@ -273,7 +275,7 @@ bool isQualificationConvertiblePointer(QualType From, QualType To,
     return true;
   };
 
-  while (isValidP_i(From) && isValidP_i(To)) {
+  while (IsValidP_i(From) && IsValidP_i(To)) {
     // Remove every sugar.
     From = From.getCanonicalType();
     To = To.getCanonicalType();
@@ -281,7 +283,7 @@ bool isQualificationConvertiblePointer(QualType From, QualType To,
     if (!SatisfiesCVRules(From, To))
       return false;
 
-    if (!isSameP_i(From, To)) {
+    if (!IsSameP_i(From, To)) {
       if (LangOpts.CPlusPlus20) {
         if (From->isConstantArrayType() && !To->isIncompleteArrayType())
           return false;
@@ -309,7 +311,7 @@ bool isQualificationConvertiblePointer(QualType From, QualType To,
   }
 
   // In this case the length (n) of From and To are not the same.
-  if (isValidP_i(From) || isValidP_i(To))
+  if (IsValidP_i(From) || IsValidP_i(To))
     return false;
 
   // We hit U.
@@ -337,7 +339,7 @@ static bool canThrow(const FunctionDecl *Func) {
   case CT_Dependent: {
     const Expr *NoexceptExpr = FunProto->getNoexceptExpr();
     if (!NoexceptExpr)
-      return true; // no noexept - can throw
+      return true; // no noexcept - can throw
 
     if (NoexceptExpr->isValueDependent())
       return true; // depend on template - some instance can throw
@@ -569,7 +571,7 @@ ExceptionAnalyzer::ExceptionInfo ExceptionAnalyzer::throwsException(
     Results.merge(throwsException(Coro->getExceptionHandler(),
                                   Excs.getExceptionTypes(), CallStack));
     for (const Type *Throwable : Excs.getExceptionTypes()) {
-      if (const auto ThrowableRec = Throwable->getAsCXXRecordDecl()) {
+      if (const auto *ThrowableRec = Throwable->getAsCXXRecordDecl()) {
         ExceptionInfo DestructorExcs =
             throwsException(ThrowableRec->getDestructor(), Caught, CallStack);
         Results.merge(DestructorExcs);

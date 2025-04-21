@@ -2441,7 +2441,7 @@ public:
   std::optional<Relocation>
   createRelocation(const MCFixup &Fixup,
                    const MCAsmBackend &MAB) const override {
-    const MCFixupKindInfo &FKI = MAB.getFixupKindInfo(Fixup.getKind());
+    MCFixupKindInfo FKI = MAB.getFixupKindInfo(Fixup.getKind());
 
     assert(FKI.TargetOffset == 0 && "0-bit relocation offset expected");
     const uint64_t RelOffset = Fixup.getOffset();

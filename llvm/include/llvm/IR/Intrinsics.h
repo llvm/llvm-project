@@ -86,7 +86,7 @@ namespace Intrinsic {
   ID lookupIntrinsicID(StringRef Name);
 
   /// Return the attributes for an intrinsic.
-  AttributeList getAttributes(LLVMContext &C, ID id);
+  AttributeList getAttributes(LLVMContext &C, ID id, FunctionType *FT);
 
   /// Return the function attributes for an intrinsic.
   AttributeSet getFnAttributes(LLVMContext &C, ID id);

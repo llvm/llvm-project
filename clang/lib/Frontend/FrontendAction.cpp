@@ -312,7 +312,7 @@ FrontendAction::CreateWrappedASTConsumer(CompilerInstance &CI,
     std::error_code ErrorCode;
     auto FileStream = std::make_unique<llvm::raw_fd_ostream>(
         DumpDeserializedDeclarationRangesPath, ErrorCode,
-        llvm::sys::fs::OF_None);
+        llvm::sys::fs::OF_TextWithCRLF);
     if (!ErrorCode) {
       Consumers.push_back(std::make_unique<DeserializedDeclsSourceRangePrinter>(
           CI.getSourceManager(), std::move(FileStream)));
