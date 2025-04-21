@@ -7417,10 +7417,17 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
            N2.getOpcode() == ISD::TargetConstant && "Invalid FP_ROUND!");
     if (N1.getValueType() == VT) return N1;  // noop conversion.
     break;
-  case ISD::AssertNoFPClass:
+  case ISD::AssertNoFPClass: {
     assert(N1.getValueType().isFloatingPoint() &&
            "AssertNoFPClass is used for a non-floating type");
+    assert(isa<ConstantSDNode>(N2) && "NoFPClass is not Constant");
+    FPClassTest NoFPClass =
+        static_cast<FPClassTest>(dyn_cast<ConstantSDNode>(N2)->getZExtValue());
+    assert(llvm::to_underlying(NoFPClass) <=
+               BitmaskEnumDetail::Mask<FPClassTest>() &&
+           "FPClassTest value too large");
     break;
+  }
   case ISD::AssertSext:
   case ISD::AssertZext: {
     EVT EVT = cast<VTSDNode>(N2)->getVT();
