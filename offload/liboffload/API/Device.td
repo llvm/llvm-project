@@ -36,7 +36,7 @@ def : Enum {
 
 def : FptrTypedef {
   let name = "ol_device_iterate_cb_t";
-  let desc = "User-provided function called for each available device.";
+  let desc = "User-provided function to be used with `olIterateDevices`";
   let params = [
     Param<"ol_device_handle_t", "Device", "the device handle of the current iteration", PARAM_IN>,
     Param<"void*", "UserData", "optional user data", PARAM_IN_OPTIONAL>
@@ -46,12 +46,17 @@ def : FptrTypedef {
 
 def : Function {
   let name = "olIterateDevices";
-  let desc = "";
+  let desc = "Iterates over all available devices, calling the callback for each device.";
+  let details = [
+    "If the user-provided callback returns `false`, the iteration is stopped."
+  ];
   let params = [
     Param<"ol_device_iterate_cb_t", "Callback", "User-provided function called for each available device", PARAM_IN>,
     Param<"void*", "UserData", "Optional user data to pass to the callback", PARAM_IN_OPTIONAL>
   ];
-  let returns = [];
+  let returns = [
+    Return<"OL_ERRC_INVALID_DEVICE">
+  ];
 }
 
 def : Function {

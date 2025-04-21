@@ -333,7 +333,7 @@ typedef enum ol_device_info_t {
 } ol_device_info_t;
 
 ///////////////////////////////////////////////////////////////////////////////
-/// @brief User-provided function called for each available device.
+/// @brief User-provided function to be used with `olIterateDevices`
 typedef bool (*ol_device_iterate_cb_t)(
     // the device handle of the current iteration
     ol_device_handle_t Device,
@@ -341,14 +341,18 @@ typedef bool (*ol_device_iterate_cb_t)(
     void *UserData);
 
 ///////////////////////////////////////////////////////////////////////////////
-/// @brief
+/// @brief Iterates over all available devices, calling the callback for each
+/// device.
 ///
 /// @details
+///    - If the user-provided callback returns `false`, the iteration is
+///    stopped.
 ///
 /// @returns
 ///     - ::OL_RESULT_SUCCESS
 ///     - ::OL_ERRC_UNINITIALIZED
 ///     - ::OL_ERRC_DEVICE_LOST
+///     - ::OL_ERRC_INVALID_DEVICE
 ///     - ::OL_ERRC_INVALID_NULL_HANDLE
 ///     - ::OL_ERRC_INVALID_NULL_POINTER
 OL_APIEXPORT ol_result_t OL_APICALL olIterateDevices(

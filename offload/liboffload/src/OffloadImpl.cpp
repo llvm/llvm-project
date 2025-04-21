@@ -291,11 +291,6 @@ ol_impl_result_t olIterateDevices_impl(ol_device_iterate_cb_t Callback,
   return OL_SUCCESS;
 }
 
-ol_impl_result_t olGetHostDevice_impl(ol_device_handle_t *Device) {
-  *Device = HostDevice();
-  return OL_SUCCESS;
-}
-
 TargetAllocTy convertOlToPluginAllocTy(ol_alloc_type_t Type) {
   switch (Type) {
   case OL_ALLOC_TYPE_DEVICE:
