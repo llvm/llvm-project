@@ -277,26 +277,6 @@ void emitMemset(IRBuilder<> &Builder, Value *Dst, Value *Val,
   }
 }
 
-void removeLifetimesForMemset(CallInst *Memset,
-                              SmallVectorImpl<Instruction *> &ToRemove) {
-  assert(Memset->getCalledFunction()->getIntrinsicID() == Intrinsic::memset &&
-         "Expected a memset intrinsic");
-
-  Value *DstPtr = Memset->getArgOperand(0);
-  DstPtr = DstPtr->stripPointerCasts();
-
-  for (User *U : DstPtr->users()) {
-    if (auto *CI = dyn_cast<CallInst>(U)) {
-      switch (CI->getIntrinsicID()) {
-      case Intrinsic::lifetime_start:
-      case Intrinsic::lifetime_end:
-        ToRemove.push_back(CI);
-        break;
-      }
-    }
-  }
-}
-
 static void removeMemSet(Instruction &I,
                          SmallVectorImpl<Instruction *> &ToRemove,
                          DenseMap<Value *, Value *>) {
@@ -310,7 +290,6 @@ static void removeMemSet(Instruction &I,
           dyn_cast<ConstantInt>(CI->getArgOperand(2));
       assert(Size && "Expected Size to be a ConstantInt");
       emitMemset(Builder, Dst, Val, Size);
-      removeLifetimesForMemset(CI, ToRemove);
       ToRemove.push_back(CI);
     }
   }
