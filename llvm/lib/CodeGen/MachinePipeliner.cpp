@@ -1641,10 +1641,6 @@ void LoopCarriedOrderDepsTracker::initAdjMatrix() {
         SUnit *SSU = Succ.getSUnit();
         if (SSU->isBoundaryNode())
           continue;
-        // `updatePhiDependences` may add barrier-dependencies between PHIs,
-        // which don't make sense in this case.
-        if (SSU->getInstr()->isPHI())
-          continue;
         int J = SSU->NodeNum;
         AdjMatrix[I].set(J);
       }
