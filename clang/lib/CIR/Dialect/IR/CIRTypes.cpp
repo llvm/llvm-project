@@ -14,6 +14,8 @@
 
 #include "mlir/IR/DialectImplementation.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
+#include "clang/CIR/Dialect/IR/CIRTypesDetails.h"
+#include "clang/CIR/MissingFeatures.h"
 #include "llvm/ADT/TypeSwitch.h"
 
 //===----------------------------------------------------------------------===//
@@ -52,9 +54,13 @@ Type CIRDialect::parseType(DialectAsmParser &parser) const {
   if (parseResult.has_value())
     return genType;
 
-  // TODO(CIR) Attempt to parse as a raw C++ type.
-  parser.emitError(typeLoc) << "unknown CIR type: " << mnemonic;
-  return Type();
+  // Type is not tablegen'd: try to parse as a raw C++ type.
+  return StringSwitch<function_ref<Type()>>(mnemonic)
+      .Case("record", [&] { return RecordType::parse(parser); })
+      .Default([&] {
+        parser.emitError(typeLoc) << "unknown CIR type: " << mnemonic;
+        return Type();
+      })();
 }
 
 void CIRDialect::printType(Type type, DialectAsmPrinter &os) const {
@@ -64,6 +70,243 @@ void CIRDialect::printType(Type type, DialectAsmPrinter &os) const {
 
   // TODO(CIR) Attempt to print as a raw C++ type.
   llvm::report_fatal_error("printer is missing a handler for this type");
+}
+
+//===----------------------------------------------------------------------===//
+// RecordType Definitions
+//===----------------------------------------------------------------------===//
+
+Type RecordType::parse(mlir::AsmParser &parser) {
+  FailureOr<AsmParser::CyclicParseReset> cyclicParseGuard;
+  const llvm::SMLoc loc = parser.getCurrentLocation();
+  const mlir::Location eLoc = parser.getEncodedSourceLoc(loc);
+  RecordKind kind;
+  mlir::MLIRContext *context = parser.getContext();
+
+  if (parser.parseLess())
+    return {};
+
+  // TODO(cir): in the future we should probably separate types for different
+  // source language declarations such as cir.record and cir.union
+  if (parser.parseOptionalKeyword("struct").succeeded())
+    kind = RecordKind::Struct;
+  else if (parser.parseOptionalKeyword("union").succeeded())
+    kind = RecordKind::Union;
+  else {
+    parser.emitError(loc, "unknown record type");
+    return {};
+  }
+
+  mlir::StringAttr name;
+  parser.parseOptionalAttribute(name);
+
+  // Is a self reference: ensure referenced type was parsed.
+  if (name && parser.parseOptionalGreater().succeeded()) {
+    RecordType type = getChecked(eLoc, context, name, kind);
+    if (succeeded(parser.tryStartCyclicParse(type))) {
+      parser.emitError(loc, "invalid self-reference within record");
+      return {};
+    }
+    return type;
+  }
+
+  // Is a named record definition: ensure name has not been parsed yet.
+  if (name) {
+    RecordType type = getChecked(eLoc, context, name, kind);
+    cyclicParseGuard = parser.tryStartCyclicParse(type);
+    if (failed(cyclicParseGuard)) {
+      parser.emitError(loc, "record already defined");
+      return {};
+    }
+  }
+
+  // Parse record members or lack thereof.
+  bool incomplete = true;
+  llvm::SmallVector<mlir::Type> members;
+  if (parser.parseOptionalKeyword("incomplete").failed()) {
+    incomplete = false;
+    const auto delimiter = AsmParser::Delimiter::Braces;
+    const auto parseElementFn = [&parser, &members]() {
+      return parser.parseType(members.emplace_back());
+    };
+    if (parser.parseCommaSeparatedList(delimiter, parseElementFn).failed())
+      return {};
+  }
+
+  if (parser.parseGreater())
+    return {};
+
+  // Try to create the proper record type.
+  ArrayRef<mlir::Type> membersRef(members); // Needed for template deduction.
+  mlir::Type type = {};
+  if (name && incomplete) { // Identified & incomplete
+    type = getChecked(eLoc, context, name, kind);
+  } else if (!incomplete) { // complete
+    parser.emitError(loc, "complete records are not yet supported");
+  } else { // anonymous & incomplete
+    parser.emitError(loc, "anonymous records must be complete");
+    return {};
+  }
+
+  return type;
+}
+
+void RecordType::print(mlir::AsmPrinter &printer) const {
+  FailureOr<AsmPrinter::CyclicPrintReset> cyclicPrintGuard;
+  printer << '<';
+
+  switch (getKind()) {
+  case RecordKind::Struct:
+    printer << "struct ";
+    break;
+  case RecordKind::Union:
+    printer << "union ";
+    break;
+  }
+
+  if (getName())
+    printer << getName();
+
+  // Current type has already been printed: print as self reference.
+  cyclicPrintGuard = printer.tryStartCyclicPrint(*this);
+  if (failed(cyclicPrintGuard)) {
+    printer << '>';
+    return;
+  }
+
+  // Type not yet printed: continue printing the entire record.
+  printer << ' ';
+
+  if (getPacked())
+    printer << "packed ";
+
+  if (getPadded())
+    printer << "padded ";
+
+  if (isIncomplete()) {
+    printer << "incomplete";
+  } else {
+    printer << "{";
+    llvm::interleaveComma(getMembers(), printer);
+    printer << "}";
+  }
+
+  printer << '>';
+}
+
+mlir::LogicalResult
+RecordType::verify(function_ref<mlir::InFlightDiagnostic()> emitError,
+                   llvm::ArrayRef<mlir::Type> members, mlir::StringAttr name,
+                   bool incomplete, bool packed, bool padded,
+                   RecordType::RecordKind kind) {
+  if (name && name.getValue().empty()) {
+    emitError() << "identified records cannot have an empty name";
+    return mlir::failure();
+  }
+  return mlir::success();
+}
+
+::llvm::ArrayRef<mlir::Type> RecordType::getMembers() const {
+  return getImpl()->members;
+}
+
+bool RecordType::isIncomplete() const { return getImpl()->incomplete; }
+
+mlir::StringAttr RecordType::getName() const { return getImpl()->name; }
+
+bool RecordType::getIncomplete() const { return getImpl()->incomplete; }
+
+bool RecordType::getPacked() const { return getImpl()->packed; }
+
+bool RecordType::getPadded() const { return getImpl()->padded; }
+
+cir::RecordType::RecordKind RecordType::getKind() const {
+  return getImpl()->kind;
+}
+
+void RecordType::complete(ArrayRef<Type> members, bool packed, bool padded) {
+  assert(!cir::MissingFeatures::astRecordDeclAttr());
+  if (mutate(members, packed, padded).failed())
+    llvm_unreachable("failed to complete record");
+}
+
+//===----------------------------------------------------------------------===//
+// Data Layout information for types
+//===----------------------------------------------------------------------===//
+
+llvm::TypeSize
+RecordType::getTypeSizeInBits(const mlir::DataLayout &dataLayout,
+                              mlir::DataLayoutEntryListRef params) const {
+  if (isUnion()) {
+    // TODO(CIR): Implement union layout.
+    return llvm::TypeSize::getFixed(8);
+  }
+
+  unsigned recordSize = computeStructSize(dataLayout);
+  return llvm::TypeSize::getFixed(recordSize * 8);
+}
+
+uint64_t
+RecordType::getABIAlignment(const ::mlir::DataLayout &dataLayout,
+                            ::mlir::DataLayoutEntryListRef params) const {
+  if (isUnion()) {
+    // TODO(CIR): Implement union layout.
+    return 8;
+  }
+
+  // Packed structures always have an ABI alignment of 1.
+  if (getPacked())
+    return 1;
+  return computeStructAlignment(dataLayout);
+}
+
+unsigned
+RecordType::computeStructSize(const mlir::DataLayout &dataLayout) const {
+  assert(isComplete() && "Cannot get layout of incomplete records");
+
+  // This is a similar algorithm to LLVM's StructLayout.
+  unsigned recordSize = 0;
+  uint64_t recordAlignment = 1;
+
+  // We can't use a range-based for loop here because we might be ignoring the
+  // last element.
+  for (mlir::Type ty : getMembers()) {
+    // This assumes that we're calculating size based on the ABI alignment, not
+    // the preferred alignment for each type.
+    const uint64_t tyAlign =
+        (getPacked() ? 1 : dataLayout.getTypeABIAlignment(ty));
+
+    // Add padding to the struct size to align it to the abi alignment of the
+    // element type before than adding the size of the element.
+    recordSize = llvm::alignTo(recordSize, tyAlign);
+    recordSize += dataLayout.getTypeSize(ty);
+
+    // The alignment requirement of a struct is equal to the strictest alignment
+    // requirement of its elements.
+    recordAlignment = std::max(tyAlign, recordAlignment);
+  }
+
+  // At the end, add padding to the struct to satisfy its own alignment
+  // requirement. Otherwise structs inside of arrays would be misaligned.
+  recordSize = llvm::alignTo(recordSize, recordAlignment);
+  return recordSize;
+}
+
+// We also compute the alignment as part of computeStructSize, but this is more
+// efficient. Ideally, we'd like to compute both at once and cache the result,
+// but that's implemented yet.
+// TODO(CIR): Implement a way to cache the result.
+uint64_t
+RecordType::computeStructAlignment(const mlir::DataLayout &dataLayout) const {
+  assert(isComplete() && "Cannot get layout of incomplete records");
+
+  // This is a similar algorithm to LLVM's StructLayout.
+  uint64_t recordAlignment = 1;
+  for (mlir::Type ty : getMembers())
+    recordAlignment =
+        std::max(dataLayout.getTypeABIAlignment(ty), recordAlignment);
+
+  return recordAlignment;
 }
 
 //===----------------------------------------------------------------------===//
@@ -275,6 +518,15 @@ bool cir::isAnyFloatingPointType(mlir::Type t) {
 }
 
 //===----------------------------------------------------------------------===//
+// Floating-point and Float-point Vector type helpers
+//===----------------------------------------------------------------------===//
+
+bool cir::isFPOrFPVectorTy(mlir::Type t) {
+  assert(!cir::MissingFeatures::vectorType());
+  return isAnyFloatingPointType(t);
+}
+
+//===----------------------------------------------------------------------===//
 // FuncType Definitions
 //===----------------------------------------------------------------------===//
 
@@ -422,5 +674,5 @@ void CIRDialect::registerTypes() {
       >();
 
   // Register raw C++ types.
-  // TODO(CIR) addTypes<StructType>();
+  // TODO(CIR) addTypes<RecordType>();
 }

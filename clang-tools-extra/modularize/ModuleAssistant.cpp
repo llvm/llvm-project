@@ -129,8 +129,8 @@ Module *Module::findSubModule(llvm::StringRef SubName) {
 // Implementation functions:
 
 // Reserved keywords in module.modulemap syntax.
-// Keep in sync with keywords in module map parser in Lex/ModuleMap.cpp,
-// such as in ModuleMapParser::consumeToken().
+// Keep in sync with keywords in module map parser in Lex/ModuleMapFile.cpp,
+// such as in ModuleMapFileParser::consumeToken().
 static const char *const ReservedNames[] = {
   "config_macros", "export",   "module", "conflict", "framework",
   "requires",      "exclude",  "header", "private",  "explicit",

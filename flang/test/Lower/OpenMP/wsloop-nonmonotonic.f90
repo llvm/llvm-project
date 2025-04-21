@@ -18,7 +18,7 @@ program wsloop_dynamic
 !CHECK:     omp.wsloop nowait schedule(dynamic, nonmonotonic) private(@{{.*}} %{{.*}}#0 -> %[[I_REF:.*]] : !fir.ref<i32>) {
 !CHECK-NEXT:  omp.loop_nest (%[[I:.*]]) : i32 = (%[[WS_LB]]) to (%[[WS_UB]]) inclusive step (%[[WS_STEP]]) {
 !CHECK:         %[[ALLOCA_IV:.*]]:2 = hlfir.declare %[[I_REF]] {uniq_name = "_QFEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-!CHECK:         hlfir.assign %[[I]] to %[[ALLOCA_IV]]#1 : i32, !fir.ref<i32>
+!CHECK:         hlfir.assign %[[I]] to %[[ALLOCA_IV]]#0 : i32, !fir.ref<i32>
 
   do i=1, 9
     print*, i

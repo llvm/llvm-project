@@ -43,6 +43,7 @@
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Statepoint.h"
 #include "llvm/Support/KnownBits.h"
+#include "llvm/Support/KnownFPClass.h"
 #include <algorithm>
 #include <optional>
 using namespace llvm;
@@ -5040,6 +5041,14 @@ static Value *simplifyGEPInst(Type *SrcTy, Value *Ptr,
   // getelementptr undef, idx -> undef
   if (Q.isUndefValue(Ptr))
     return UndefValue::get(GEPTy);
+
+  // getelementptr inbounds null, idx -> null
+  if (NW.isInBounds() && Q.IIQ.UseInstrInfo && Q.CxtI) {
+    if (auto *BaseC = dyn_cast<Constant>(Ptr))
+      if (BaseC->isNullValue() &&
+          !NullPointerIsDefined(Q.CxtI->getFunction(), AS))
+        return Constant::getNullValue(GEPTy);
+  }
 
   bool IsScalableVec =
       SrcTy->isScalableTy() || any_of(Indices, [](const Value *V) {

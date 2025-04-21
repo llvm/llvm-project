@@ -29,6 +29,7 @@
 #include "mlir/IR/AffineExprVisitor.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/Attributes.h"
+#include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypeInterfaces.h"
 #include "mlir/IR/Matchers.h"
@@ -46,6 +47,7 @@
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/InterleavedRange.h"
 #include "llvm/Support/LogicalResult.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
@@ -1087,7 +1089,7 @@ void GenericOp::print(OpAsmPrinter &p) {
   auto genericAttrNames = linalgTraitAttrNames();
 
   llvm::StringSet<> genericAttrNamesSet;
-  genericAttrNamesSet.insert(genericAttrNames.begin(), genericAttrNames.end());
+  genericAttrNamesSet.insert_range(genericAttrNames);
   SmallVector<NamedAttribute, 8> genericAttrs;
   for (auto attr : (*this)->getAttrs()) {
     if (attr.getName() == getIteratorTypesAttrName()) {
@@ -2539,7 +2541,8 @@ static void createNewOperandWithStaticSizes(
     newShape.push_back(affineExprToSize[dimExpr]);
     newOperandNeeded = true;
   }
-  resultType = RankedTensorType::get(newShape, sourceType.getElementType());
+  resultType = RankedTensorType::get(newShape, sourceType.getElementType(),
+                                     sourceType.getEncoding());
   if (newOperandNeeded) {
     changeNeeded = true;
     // Get the new operand value given its size and element type by
@@ -3596,7 +3599,7 @@ void MatmulOp::regionBuilder(ImplicitLocOpBuilder &b, Block &block,
   SmallVector<Value> yields;
 
   TypeFn castVal = TypeFn::cast_signed;
-  auto castIter = llvm::find_if(attrs, [&](const NamedAttribute &attr) {
+  const auto *castIter = llvm::find_if(attrs, [&](const NamedAttribute &attr) {
     return attr.getName() == "cast";
   });
   if (castIter != attrs.end()) {
@@ -3658,17 +3661,13 @@ ParseResult MatmulOp::parse(OpAsmParser &parser, OperationState &result) {
 }
 
 void MatmulOp::print(OpAsmPrinter &p) {
-  SmallVector<Attribute, 3> indexingMaps = llvm::map_to_vector(
+  SmallVector<Attribute, 3> indexingMaps = llvm::map_to_vector<3>(
       MatmulOp::getDefaultIndexingMaps(getContext()),
       [](AffineMap map) -> Attribute { return AffineMapAttr::get(map); });
-  if (!llvm::equal(getIndexingMaps(), indexingMaps)) {
-    p << " indexing_maps = [";
-    llvm::interleaveComma(getIndexingMaps(), p,
-                          [&](Attribute attr) { p.printAttribute(attr); });
-    p << "]";
-  }
+  if (!llvm::equal(getIndexingMaps(), indexingMaps))
+    p << " indexing_maps = " << llvm::interleaved_array(getIndexingMaps());
 
-  SmallVector<StringRef, 3> elidedAttrs = {
+  std::array<StringRef, 3> elidedAttrs = {
       "operandSegmentSizes", "linalg.memoized_indexing_maps", "indexing_maps"};
   printNamedStructuredOp(p, getOperation(), getInputs(), getOutputs(),
                          elidedAttrs);
@@ -3775,10 +3774,7 @@ ParseResult ContractOp::parse(OpAsmParser &parser, OperationState &result) {
 }
 
 void ContractOp::print(OpAsmPrinter &p) {
-  p << " indexing_maps = [";
-  llvm::interleaveComma(getIndexingMaps(), p,
-                        [&](Attribute attr) { p.printAttribute(attr); });
-  p << "]";
+  p << " indexing_maps = " << llvm::interleaved_array(getIndexingMaps());
   printNamedStructuredOp(
       p, getOperation(), getInputs(), getOutputs(),
       /*elidedAttrs=*/{"indexing_maps", "operandSegmentSizes"});
@@ -4011,17 +4007,13 @@ ParseResult BatchMatmulOp::parse(OpAsmParser &parser, OperationState &result) {
 }
 
 void BatchMatmulOp::print(OpAsmPrinter &p) {
-  SmallVector<Attribute, 3> indexingMaps = llvm::map_to_vector(
+  SmallVector<Attribute, 3> indexingMaps = llvm::map_to_vector<3>(
       BatchMatmulOp::getDefaultIndexingMaps(getContext()),
       [](AffineMap map) -> Attribute { return AffineMapAttr::get(map); });
-  if (!llvm::equal(getIndexingMaps(), indexingMaps)) {
-    p << " indexing_maps = [";
-    llvm::interleaveComma(getIndexingMaps(), p,
-                          [&](Attribute attr) { p.printAttribute(attr); });
-    p << "]";
-  }
+  if (!llvm::equal(getIndexingMaps(), indexingMaps))
+    p << " indexing_maps = " << llvm::interleaved_array(getIndexingMaps());
 
-  SmallVector<StringRef, 3> elidedAttrs = {
+  std::array<StringRef, 3> elidedAttrs = {
       "operandSegmentSizes", "linalg.memoized_indexing_maps", "indexing_maps"};
   ::printNamedStructuredOp(p, getOperation(), getInputs(), getOutputs(),
                            elidedAttrs);
@@ -4202,17 +4194,13 @@ void ElementwiseOp::print(OpAsmPrinter &p) {
       getArityGroupAsUInt(getArityGroupAndKind(getKind()).arityGroup);
   unsigned numDims = getResultRank();
 
-  SmallVector<Attribute, 3> indexingMaps = llvm::map_to_vector(
+  SmallVector<Attribute, 3> indexingMaps = llvm::map_to_vector<3>(
       ElementwiseOp::getDefaultIndexingMaps(arity + 1 /*output*/, numDims,
                                             getContext()),
       [](AffineMap map) -> Attribute { return AffineMapAttr::get(map); });
 
-  if (!llvm::equal(getIndexingMaps(), indexingMaps)) {
-    p << " indexing_maps = [";
-    llvm::interleaveComma(getIndexingMaps(), p,
-                          [&](Attribute attr) { p.printAttribute(attr); });
-    p << "]";
-  }
+  if (!llvm::equal(getIndexingMaps(), indexingMaps))
+    p << " indexing_maps = " << llvm::interleaved_array(getIndexingMaps());
 
   printNamedStructuredOp(p, getOperation(), getInputs(), getOutputs(),
                          elidedAttrs);
@@ -4389,9 +4377,7 @@ static bool isInvalidPackingPosSpecification(ArrayRef<int64_t> dimsPos,
   size_t dimsPosSize = dimsPos.size();
   if (dimsPosSize > rank)
     return true;
-  DenseSet<int64_t> uniqued;
-  for (int64_t dim : dimsPos)
-    uniqued.insert(dim);
+  DenseSet<int64_t> uniqued(llvm::from_range, dimsPos);
   if (dimsPosSize != uniqued.size())
     return true;
   return llvm::any_of(dimsPos, [rank](int64_t dimPos) {
@@ -4884,8 +4870,7 @@ static bool inferStaticShape(PackOp packOp, SmallVectorImpl<int64_t> &srcShape,
   destShape.assign(packOp.getDestType().getShape().begin(),
                    packOp.getDestType().getShape().end());
   llvm::SmallSetVector<int64_t, 4> innerDims;
-  innerDims.insert(packOp.getInnerDimsPos().begin(),
-                   packOp.getInnerDimsPos().end());
+  innerDims.insert_range(packOp.getInnerDimsPos());
   SmallVector<int64_t> inverseOuterDimsPerm;
   if (!packOp.getOuterDimsPerm().empty())
     inverseOuterDimsPerm = invertPermutationVector(packOp.getOuterDimsPerm());
@@ -5197,7 +5182,7 @@ static bool inferStaticShape(UnPackOp op, SmallVectorImpl<int64_t> &srcShape,
   destShape.assign(op.getDestType().getShape().begin(),
                    op.getDestType().getShape().end());
   llvm::SmallSetVector<int64_t, 4> innerDims;
-  innerDims.insert(op.getInnerDimsPos().begin(), op.getInnerDimsPos().end());
+  innerDims.insert_range(op.getInnerDimsPos());
   SmallVector<int64_t> inverseOuterDimsPerm;
   if (!op.getOuterDimsPerm().empty())
     inverseOuterDimsPerm = invertPermutationVector(op.getOuterDimsPerm());
@@ -5244,6 +5229,29 @@ LogicalResult UnPackOp::canonicalize(UnPackOp unPackOp,
     rewriter.modifyOpInPlace(unPackOp,
                              [&]() { unPackOp.setDpsInitOperand(0, newDest); });
     return success();
+  }
+  /// extract_slice(unpack(x into y)) -> unpack(x into extract_slice(y))
+  if (unPackOp->hasOneUse()) {
+    auto extractSliceUser =
+        dyn_cast<tensor::ExtractSliceOp>(*unPackOp->getUsers().begin());
+    if (extractSliceUser &&
+        areAllConstantIntValue(extractSliceUser.getMixedOffsets(), 0) &&
+        areAllConstantIntValue(extractSliceUser.getMixedStrides(), 1) &&
+        extractSliceUser.getSourceType().getRank() ==
+            extractSliceUser.getResultType().getRank()) {
+      OpBuilder::InsertionGuard g(rewriter);
+      rewriter.setInsertionPoint(unPackOp);
+      auto newDest = rewriter.create<tensor::ExtractSliceOp>(
+          unPackOp->getLoc(), unPackOp.getDest(),
+          extractSliceUser.getMixedOffsets(), extractSliceUser.getMixedSizes(),
+          extractSliceUser.getMixedStrides());
+      rewriter.modifyOpInPlace(unPackOp, [&]() {
+        unPackOp.setDpsInitOperand(0, newDest);
+        unPackOp.getResult().setType(newDest.getType());
+      });
+      rewriter.replaceOp(extractSliceUser, unPackOp);
+      return success();
+    }
   }
 
   // Insert tensor.cast ops if static shape inference is available..

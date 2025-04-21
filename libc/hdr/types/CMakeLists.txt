@@ -191,6 +191,15 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  struct_itimerval
+  HDRS
+    struct_itimerval.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.struct_itimerval
+    libc.include.sys_time
+)
+
+add_proxy_header_library(
   pid_t
   HDRS
     pid_t.h
@@ -356,4 +365,12 @@ add_proxy_header_library(
     struct_pollfd.h
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.struct_pollfd
+)
+
+add_proxy_header_library(
+  cpu_set_t
+  HDRS
+    cpu_set_t.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.cpu_set_t
 )

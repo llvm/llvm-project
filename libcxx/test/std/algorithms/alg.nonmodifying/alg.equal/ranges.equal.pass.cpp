@@ -31,6 +31,7 @@
 #include <vector>
 
 #include "almost_satisfies_types.h"
+#include "sized_allocator.h"
 #include "test_iterators.h"
 #include "test_macros.h"
 
@@ -432,15 +433,123 @@ constexpr bool test() {
         assert(projCount == 6);
       }
     }
+  }
 
-    { // Test vector<bool>::iterator optimization
-      test_vector_bool<8>();
-      test_vector_bool<19>();
-      test_vector_bool<32>();
-      test_vector_bool<49>();
-      test_vector_bool<64>();
-      test_vector_bool<199>();
-      test_vector_bool<256>();
+  { // Test vector<bool>::iterator optimization
+    test_vector_bool<8>();
+    test_vector_bool<19>();
+    test_vector_bool<32>();
+    test_vector_bool<49>();
+    test_vector_bool<64>();
+    test_vector_bool<199>();
+    test_vector_bool<256>();
+  }
+
+  // Make sure std::equal behaves properly with std::vector<bool> iterators with custom size types.
+  // See issue: https://github.com/llvm/llvm-project/issues/126369.
+  {
+    //// Tests for std::equal with aligned bits
+
+    { // Test the first (partial) word for uint8_t
+      using Alloc = sized_allocator<bool, std::uint8_t, std::int8_t>;
+      std::vector<bool, Alloc> in(6, true, Alloc(1));
+      std::vector<bool, Alloc> expected(8, true, Alloc(1));
+      auto a = std::ranges::subrange(in.begin() + 4, in.end());
+      auto b = std::ranges::subrange(expected.begin() + 4, expected.begin() + 4 + a.size());
+      assert(std::ranges::equal(a, b));
+    }
+    { // Test the last word for uint8_t
+      using Alloc = sized_allocator<bool, std::uint8_t, std::int8_t>;
+      std::vector<bool, Alloc> in(12, true, Alloc(1));
+      std::vector<bool, Alloc> expected(16, true, Alloc(1));
+      auto a = std::ranges::subrange(in.begin(), in.end());
+      auto b = std::ranges::subrange(expected.begin(), expected.begin() + a.size());
+      assert(std::ranges::equal(a, b));
+    }
+    { // Test middle words for uint8_t
+      using Alloc = sized_allocator<bool, std::uint8_t, std::int8_t>;
+      std::vector<bool, Alloc> in(24, true, Alloc(1));
+      std::vector<bool, Alloc> expected(29, true, Alloc(1));
+      auto a = std::ranges::subrange(in.begin(), in.end());
+      auto b = std::ranges::subrange(expected.begin(), expected.begin() + a.size());
+      assert(std::ranges::equal(a, b));
+    }
+
+    { // Test the first (partial) word for uint16_t
+      using Alloc = sized_allocator<bool, std::uint16_t, std::int16_t>;
+      std::vector<bool, Alloc> in(12, true, Alloc(1));
+      std::vector<bool, Alloc> expected(16, true, Alloc(1));
+      auto a = std::ranges::subrange(in.begin() + 4, in.end());
+      auto b = std::ranges::subrange(expected.begin() + 4, expected.begin() + 4 + a.size());
+      assert(std::ranges::equal(a, b));
+    }
+    { // Test the last word for uint16_t
+      using Alloc = sized_allocator<bool, std::uint16_t, std::int16_t>;
+      std::vector<bool, Alloc> in(24, true, Alloc(1));
+      std::vector<bool, Alloc> expected(32, true, Alloc(1));
+      auto a = std::ranges::subrange(in.begin(), in.end());
+      auto b = std::ranges::subrange(expected.begin(), expected.begin() + a.size());
+      assert(std::ranges::equal(a, b));
+    }
+    { // Test middle words for uint16_t
+      using Alloc = sized_allocator<bool, std::uint16_t, std::int16_t>;
+      std::vector<bool, Alloc> in(48, true, Alloc(1));
+      std::vector<bool, Alloc> expected(55, true, Alloc(1));
+      auto a = std::ranges::subrange(in.begin(), in.end());
+      auto b = std::ranges::subrange(expected.begin(), expected.begin() + a.size());
+      assert(std::ranges::equal(a, b));
+    }
+
+    //// Tests for std::equal with unaligned bits
+
+    { // Test the first (partial) word for uint8_t
+      using Alloc = sized_allocator<bool, std::uint8_t, std::int8_t>;
+      std::vector<bool, Alloc> in(6, true, Alloc(1));
+      std::vector<bool, Alloc> expected(8, true, Alloc(1));
+      auto a = std::ranges::subrange(in.begin() + 4, in.end());
+      auto b = std::ranges::subrange(expected.begin(), expected.begin() + a.size());
+      assert(std::ranges::equal(a, b));
+    }
+    { // Test the last word for uint8_t
+      using Alloc = sized_allocator<bool, std::uint8_t, std::int8_t>;
+      std::vector<bool, Alloc> in(4, true, Alloc(1));
+      std::vector<bool, Alloc> expected(8, true, Alloc(1));
+      auto a = std::ranges::subrange(in.begin(), in.end());
+      auto b = std::ranges::subrange(expected.begin() + 3, expected.begin() + 3 + a.size());
+      assert(std::ranges::equal(a, b));
+    }
+    { // Test middle words for uint8_t
+      using Alloc = sized_allocator<bool, std::uint8_t, std::int8_t>;
+      std::vector<bool, Alloc> in(16, true, Alloc(1));
+      std::vector<bool, Alloc> expected(24, true, Alloc(1));
+      auto a = std::ranges::subrange(in.begin(), in.end());
+      auto b = std::ranges::subrange(expected.begin() + 4, expected.begin() + 4 + a.size());
+      assert(std::ranges::equal(a, b));
+    }
+
+    { // Test the first (partial) word for uint16_t
+      using Alloc = sized_allocator<bool, std::uint16_t, std::int16_t>;
+      std::vector<bool, Alloc> in(12, true, Alloc(1));
+      std::vector<bool, Alloc> expected(16, true, Alloc(1));
+      auto a = std::ranges::subrange(in.begin() + 4, in.end());
+      auto b = std::ranges::subrange(expected.begin(), expected.begin() + a.size());
+      assert(std::ranges::equal(a, b));
+    }
+    { // Test the last word for uint16_t
+      using Alloc = sized_allocator<bool, std::uint16_t, std::int16_t>;
+      std::vector<bool, Alloc> in(12, true, Alloc(1));
+      std::vector<bool, Alloc> expected(16, true, Alloc(1));
+      auto a = std::ranges::subrange(in.begin(), in.end());
+      auto b = std::ranges::subrange(expected.begin() + 3, expected.begin() + 3 + a.size());
+      assert(std::ranges::equal(a, b));
+    }
+    { // Test the middle words for uint16_t
+      using Alloc = sized_allocator<bool, std::uint16_t, std::int16_t>;
+      std::vector<bool, Alloc> in(32, true, Alloc(1));
+      std::vector<bool, Alloc> expected(64, true, Alloc(1));
+      auto a = std::ranges::subrange(in.begin(), in.end());
+      auto b = std::ranges::subrange(expected.begin() + 4, expected.begin() + 4 + a.size());
+      assert(std::ranges::equal(a, b));
     }
   }
 

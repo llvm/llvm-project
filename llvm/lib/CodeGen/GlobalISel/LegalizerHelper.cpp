@@ -15,7 +15,7 @@
 #include "llvm/CodeGen/GlobalISel/LegalizerHelper.h"
 #include "llvm/CodeGen/GlobalISel/CallLowering.h"
 #include "llvm/CodeGen/GlobalISel/GISelChangeObserver.h"
-#include "llvm/CodeGen/GlobalISel/GISelKnownBits.h"
+#include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
 #include "llvm/CodeGen/GlobalISel/LostDebugLocObserver.h"
@@ -107,13 +107,13 @@ LegalizerHelper::LegalizerHelper(MachineFunction &MF,
                                  MachineIRBuilder &Builder)
     : MIRBuilder(Builder), Observer(Observer), MRI(MF.getRegInfo()),
       LI(*MF.getSubtarget().getLegalizerInfo()),
-      TLI(*MF.getSubtarget().getTargetLowering()), KB(nullptr) {}
+      TLI(*MF.getSubtarget().getTargetLowering()), VT(nullptr) {}
 
 LegalizerHelper::LegalizerHelper(MachineFunction &MF, const LegalizerInfo &LI,
                                  GISelChangeObserver &Observer,
-                                 MachineIRBuilder &B, GISelKnownBits *KB)
+                                 MachineIRBuilder &B, GISelValueTracking *VT)
     : MIRBuilder(B), Observer(Observer), MRI(MF.getRegInfo()), LI(LI),
-      TLI(*MF.getSubtarget().getTargetLowering()), KB(KB) {}
+      TLI(*MF.getSubtarget().getTargetLowering()), VT(VT) {}
 
 LegalizerHelper::LegalizeResult
 LegalizerHelper::legalizeInstrStep(MachineInstr &MI,
@@ -183,7 +183,7 @@ void LegalizerHelper::insertParts(Register DstReg,
   // Merge sub-vectors with different number of elements and insert into DstReg.
   if (ResultTy.isVector()) {
     assert(LeftoverRegs.size() == 1 && "Expected one leftover register");
-    SmallVector<Register, 8> AllRegs(PartRegs.begin(), PartRegs.end());
+    SmallVector<Register, 8> AllRegs(PartRegs);
     AllRegs.append(LeftoverRegs.begin(), LeftoverRegs.end());
     return mergeMixedSubvectors(DstReg, AllRegs);
   }
@@ -592,7 +592,7 @@ llvm::createLibcall(MachineIRBuilder &MIRBuilder, const char *Name,
         isLibCallInTailPosition(Result, *MI, MIRBuilder.getTII(),
                                 *MIRBuilder.getMRI());
 
-  std::copy(Args.begin(), Args.end(), std::back_inserter(Info.OrigArgs));
+  llvm::append_range(Info.OrigArgs, Args);
   if (!CLI.lowerCall(MIRBuilder, Info))
     return LegalizerHelper::UnableToLegalize;
 
@@ -708,7 +708,7 @@ llvm::createMemLibcall(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI,
       MI.getOperand(MI.getNumOperands() - 1).getImm() &&
       isLibCallInTailPosition(Info.OrigRet, MI, MIRBuilder.getTII(), MRI);
 
-  std::copy(Args.begin(), Args.end(), std::back_inserter(Info.OrigArgs));
+  llvm::append_range(Info.OrigArgs, Args);
   if (!CLI.lowerCall(MIRBuilder, Info))
     return LegalizerHelper::UnableToLegalize;
 
@@ -855,7 +855,7 @@ createAtomicLibcall(MachineIRBuilder &MIRBuilder, MachineInstr &MI) {
   Info.Callee = MachineOperand::CreateES(Name);
   Info.OrigRet = CallLowering::ArgInfo(RetRegs, RetTy, 0);
 
-  std::copy(Args.begin(), Args.end(), std::back_inserter(Info.OrigArgs));
+  llvm::append_range(Info.OrigArgs, Args);
   if (!CLI.lowerCall(MIRBuilder, Info))
     return LegalizerHelper::UnableToLegalize;
 
@@ -1765,7 +1765,7 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
         LLT GCDTy = extractGCDType(WidenedXors, NarrowTy, LeftoverTy, Xor);
         buildLCMMergePieces(LeftoverTy, NarrowTy, GCDTy, WidenedXors,
                             /* PadStrategy = */ TargetOpcode::G_ZEXT);
-        Xors.insert(Xors.end(), WidenedXors.begin(), WidenedXors.end());
+        llvm::append_range(Xors, WidenedXors);
       }
 
       // Now, for each part we broke up, we know if they are equal/not equal
@@ -4906,8 +4906,7 @@ LegalizerHelper::fewerElementsVectorMultiEltType(
       SmallVector<Register, 8> SplitPieces;
       extractVectorParts(MI.getReg(UseIdx), NumElts, SplitPieces, MIRBuilder,
                          MRI);
-      for (auto Reg : SplitPieces)
-        InputOpsPieces[UseNo].push_back(Reg);
+      llvm::append_range(InputOpsPieces[UseNo], SplitPieces);
     }
   }
 
@@ -6139,6 +6138,8 @@ LegalizerHelper::moreElementsVector(MachineInstr &MI, unsigned TypeIdx,
   case TargetOpcode::G_FCANONICALIZE:
   case TargetOpcode::G_SEXT_INREG:
   case TargetOpcode::G_ABS:
+  case TargetOpcode::G_CTLZ:
+  case TargetOpcode::G_CTPOP:
     if (TypeIdx != 0)
       return UnableToLegalize;
     Observer.changingInstr(MI);

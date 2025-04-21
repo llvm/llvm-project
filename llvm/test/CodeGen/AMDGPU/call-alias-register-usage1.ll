@@ -10,7 +10,7 @@
 
 ; CHECK-LABEL: {{^}}kernel1:
 ; CHECK:      .amdhsa_next_free_vgpr max(totalnumvgprs(kernel1.num_agpr, kernel1.num_vgpr), 1, 0)
-; CHECK-NEXT: .amdhsa_next_free_sgpr (max(kernel1.numbered_sgpr+(extrasgprs(kernel1.uses_vcc, kernel1.uses_flat_scratch, 1)), 1, 0))-(extrasgprs(kernel1.uses_vcc, kernel1.uses_flat_scratch, 1))
+; CHECK-NEXT: .amdhsa_next_free_sgpr max(kernel1.numbered_sgpr+extrasgprs(kernel1.uses_vcc, kernel1.uses_flat_scratch, 1), 1, 0)-extrasgprs(kernel1.uses_vcc, kernel1.uses_flat_scratch, 1)
 
 ; CHECK:      .set kernel1.num_vgpr, max(42, .Laliasee_vgpr32_sgpr76.num_vgpr)
 ; CHECK-NEXT: .set kernel1.num_agpr, max(0, .Laliasee_vgpr32_sgpr76.num_agpr)

@@ -73,8 +73,8 @@ class AArch64TTIImpl : public BasicTTIImplBase<AArch64TTIImpl> {
   /// of the extract(nullptr if user is not known before vectorization) and
   /// 'Idx' being the extract lane.
   InstructionCost getVectorInstrCostHelper(
-      unsigned Opcode, Type *Val, unsigned Index, bool HasRealUse,
-      const Instruction *I = nullptr, Value *Scalar = nullptr,
+      unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind, unsigned Index,
+      bool HasRealUse, const Instruction *I = nullptr, Value *Scalar = nullptr,
       ArrayRef<std::tuple<Value *, User *, int>> ScalarUserAndIdx = {});
 
 public:
@@ -219,7 +219,8 @@ public:
                                                 VectorType *ValTy,
                                                 TTI::TargetCostKind CostKind);
 
-  InstructionCost getSpliceCost(VectorType *Tp, int Index);
+  InstructionCost getSpliceCost(VectorType *Tp, int Index,
+                                TTI::TargetCostKind CostKind);
 
   InstructionCost getArithmeticInstrCost(
       unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
@@ -290,11 +291,13 @@ public:
     return isElementTypeLegalForScalableVector(DataType->getScalarType());
   }
 
-  bool isLegalMaskedLoad(Type *DataType, Align Alignment) {
+  bool isLegalMaskedLoad(Type *DataType, Align Alignment,
+                         unsigned /*AddressSpace*/) {
     return isLegalMaskedLoadStore(DataType, Alignment);
   }
 
-  bool isLegalMaskedStore(Type *DataType, Align Alignment) {
+  bool isLegalMaskedStore(Type *DataType, Align Alignment,
+                          unsigned /*AddressSpace*/) {
     return isLegalMaskedLoadStore(DataType, Alignment);
   }
 
@@ -426,7 +429,7 @@ public:
 
   InstructionCost getExtendedReductionCost(unsigned Opcode, bool IsUnsigned,
                                            Type *ResTy, VectorType *ValTy,
-                                           FastMathFlags FMF,
+                                           std::optional<FastMathFlags> FMF,
                                            TTI::TargetCostKind CostKind);
 
   InstructionCost getMulAccReductionCost(

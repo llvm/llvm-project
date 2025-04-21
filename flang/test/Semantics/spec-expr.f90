@@ -28,6 +28,19 @@ subroutine s2(inArg, inoutArg, outArg, optArg)
   real, dimension(optArg) :: realVar4
 
   outArg = 3
+  block
+    !PORTABILITY: specification expression refers to host-associated INTENT(OUT) dummy argument 'outarg'
+    real a(outArg)
+    !ERROR: Invalid specification expression: reference to OPTIONAL dummy argument 'optarg'
+    real b(optArg)
+  end block
+ contains
+  subroutine s2inner
+    !PORTABILITY: specification expression refers to host-associated INTENT(OUT) dummy argument 'outarg'
+    real a(outArg)
+    !ERROR: Invalid specification expression: reference to OPTIONAL dummy argument 'optarg'
+    real b(optArg)
+  end
 end subroutine s2
 
 ! an object designator with a base object that is in a common block,

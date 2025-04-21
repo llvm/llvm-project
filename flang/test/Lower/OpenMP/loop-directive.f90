@@ -15,7 +15,7 @@ subroutine test_no_clauses()
   ! CHECK: omp.simd private(@[[I_PRIV]] %{{.*}}#0 -> %[[ARG:.*]] : !fir.ref<i32>) {
   ! CHECK-NEXT:   omp.loop_nest (%[[IV:.*]]) : i32 = (%{{.*}}) to (%{{.*}}) {{.*}} {
   ! CHECK:          %[[ARG_DECL:.*]]:2 = hlfir.declare %[[ARG]]
-  ! CHECK:          hlfir.assign %[[IV]] to %[[ARG_DECL]]#1 : i32, !fir.ref<i32>
+  ! CHECK:          hlfir.assign %[[IV]] to %[[ARG_DECL]]#0 : i32, !fir.ref<i32>
   ! CHECK:        }
   ! CHECK: }
   !$omp loop
@@ -318,12 +318,12 @@ end subroutine
 subroutine loop_teams_loop_reduction
   implicit none
   integer :: x, i
-  ! CHECK: omp.teams {
+  ! CHECK: omp.teams reduction(@add_reduction_i32 %{{.*}}#0 -> %[[TEAMS_RED_ARG:.*]] : !fir.ref<i32>) {
   ! CHECK:   omp.parallel
   ! CHECK-SAME: private(@{{[^[:space:]]+}} %{{[^[:space:]]+}}#0 -> %[[PRIV_ARG:[^[:space:]]+]] : !fir.ref<i32>) {
   ! CHECK:      omp.distribute {
   ! CHECK:        omp.wsloop
-  ! CHECK-SAME:     reduction(@add_reduction_i32 %{{.*}}#0 -> %[[RED_ARG:.*]] : !fir.ref<i32>) {
+  ! CHECK-SAME:     reduction(@add_reduction_i32 %[[TEAMS_RED_ARG]] -> %[[RED_ARG:.*]] : !fir.ref<i32>) {
   ! CHECK-NEXT:     omp.loop_nest {{.*}} {
   ! CHECK-NEXT:       hlfir.declare %[[PRIV_ARG]] {uniq_name = "_QF{{.*}}Ei"}
   ! CHECK-NEXT:       hlfir.declare %[[RED_ARG]] {uniq_name = "_QF{{.*}}Ex"}
@@ -335,5 +335,63 @@ subroutine loop_teams_loop_reduction
   !$omp teams loop reduction(+: x)
   do i = 0, 10
     x = x + i
+  end do
+end subroutine
+
+
+! Tests a regression when the pass encounters a multi-block `teams` region.
+subroutine multi_block_teams
+  implicit none
+  integer :: i
+
+  ! CHECK: omp.target {{.*}} {
+  ! CHECK:   omp.teams {
+  ! CHECK:   ^bb1:
+  ! CHECK:     cf.br ^bb2
+  ! CHECK:   ^bb2:
+  ! CHECK:     omp.terminator
+  ! CHECK:   }
+  ! CHECK: }
+  !$omp target teams
+  select case (i)
+  case(1)
+  end select
+  !$omp end target teams
+end subroutine
+
+
+! Verifies that reductions are hoisted to the parent `teams` directive and removed
+! from the `loop` directive when `loop` is mapped to `distribute`.
+
+! CHECK-LABEL: func.func @_QPteams_loop_cannot_be_parallel_for_with_reductions
+subroutine teams_loop_cannot_be_parallel_for_with_reductions
+  implicit none
+  integer :: x, y, i, p
+
+  ! CHECK: %[[ADD_RED:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QF{{.*}}Ex"}
+  ! CHECK: %[[MUL_RED:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QF{{.*}}Ey"}
+  ! CHECK: omp.teams reduction(
+  ! CHECK-SAME:  @add_reduction_i32 %[[ADD_RED]]#0 -> %[[ADD_RED_ARG:[^[:space:]]*]], 
+  ! CHECK-SAME:  @multiply_reduction_i32 %[[MUL_RED]]#0 -> %[[MUL_RED_ARG:.*]] : {{.*}}) {
+
+  ! CHECK:       omp.distribute private(@{{.*}} %{{.*}} -> %{{.*}}, @{{.*}} %{{.*}} -> %{{.*}} : {{.*}}) {
+  ! CHECK:         %[[ADD_RED_DECL:.*]]:2 = hlfir.declare %[[ADD_RED_ARG]] {uniq_name = "_QF{{.*}}Ex"}
+  ! CHECK:         %[[MUL_RED_DECL:.*]]:2 = hlfir.declare %[[MUL_RED_ARG]] {uniq_name = "_QF{{.*}}Ey"}
+
+  ! CHECK:         %[[ADD_RES:.*]] = arith.addi %{{.*}}, %{{.*}} : i32
+  ! CHECK:         hlfir.assign %[[ADD_RES]] to %[[ADD_RED_DECL]]#0 : i32, !fir.ref<i32>
+
+  ! CHECK:         %[[MUL_RES:.*]] = arith.muli %{{.*}}, %{{.*}} : i32
+  ! CHECK:         hlfir.assign %[[MUL_RES]] to %[[MUL_RED_DECL]]#0 : i32, !fir.ref<i32>
+  ! CHECK:         omp.yield
+  ! CHECK:       }
+  ! CHECK:       omp.terminator
+  ! CHECK: }
+  !$omp teams loop reduction(+: x) reduction(*: y) private(p)
+  do i = 1, 5
+    call foo()
+    x = x + i
+    y = y * i
+    p = 42
   end do
 end subroutine

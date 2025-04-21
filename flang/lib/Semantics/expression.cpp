@@ -12,6 +12,7 @@
 #include "resolve-names-utils.h"
 #include "resolve-names.h"
 #include "flang/Common/idioms.h"
+#include "flang/Common/type-kinds.h"
 #include "flang/Evaluate/common.h"
 #include "flang/Evaluate/fold.h"
 #include "flang/Evaluate/tools.h"
@@ -1058,7 +1059,8 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::Name &n) {
           if (const semantics::IntrinsicTypeSpec *
               intrinType{typeSpec->AsIntrinsic()}) {
             if (auto k{ToInt64(Fold(semantics::KindExpr{intrinType->kind()}))};
-                k && IsValidKindOfIntrinsicType(TypeCategory::Integer, *k)) {
+                k &&
+                common::IsValidKindOfIntrinsicType(TypeCategory::Integer, *k)) {
               kind = *k;
             }
           }
@@ -1077,17 +1079,21 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::Name &n) {
           n.symbol->attrs().reset(semantics::Attr::VOLATILE);
         }
       }
-      if (!isWholeAssumedSizeArrayOk_ &&
-          semantics::IsAssumedSizeArray(
-              ResolveAssociations(*n.symbol))) { // C1002, C1014, C1231
-        AttachDeclaration(
-            SayAt(n,
-                "Whole assumed-size array '%s' may not appear here without subscripts"_err_en_US,
-                n.source),
-            *n.symbol);
-      }
+      CheckForWholeAssumedSizeArray(n.source, n.symbol);
       return Designate(DataRef{*n.symbol});
     }
+  }
+}
+
+void ExpressionAnalyzer::CheckForWholeAssumedSizeArray(
+    parser::CharBlock at, const Symbol *symbol) {
+  if (!isWholeAssumedSizeArrayOk_ && symbol &&
+      semantics::IsAssumedSizeArray(ResolveAssociations(*symbol))) {
+    AttachDeclaration(
+        SayAt(at,
+            "Whole assumed-size array '%s' may not appear here without subscripts"_err_en_US,
+            symbol->name()),
+        *symbol);
   }
 }
 
@@ -1915,7 +1921,9 @@ void ArrayConstructorContext::Add(const parser::AcValue::Triplet &triplet) {
 }
 
 void ArrayConstructorContext::Add(const parser::Expr &expr) {
-  auto restorer{exprAnalyzer_.GetContextualMessages().SetLocation(expr.source)};
+  auto restorer1{
+      exprAnalyzer_.GetContextualMessages().SetLocation(expr.source)};
+  auto restorer2{exprAnalyzer_.AllowWholeAssumedSizeArray(false)};
   Push(exprAnalyzer_.Analyze(expr));
 }
 
@@ -2263,14 +2271,22 @@ MaybeExpr ExpressionAnalyzer::Analyze(
         } else if (IsNullAllocatable(&*value) && IsAllocatable(*symbol)) {
           result.Add(*symbol, Expr<SomeType>{NullPointer{}});
           continue;
-        } else if (const Symbol * pointer{FindPointerComponent(*symbol)};
-            pointer && pureContext) { // C1594(4)
-          if (const Symbol *
-              visible{semantics::FindExternallyVisibleObject(
-                  *value, *pureContext)}) {
-            Say(expr.source,
-                "The externally visible object '%s' may not be used in a pure procedure as the value for component '%s' which has the pointer component '%s'"_err_en_US,
-                visible->name(), symbol->name(), pointer->name());
+        } else if (auto *derived{evaluate::GetDerivedTypeSpec(
+                       evaluate::DynamicType::From(*symbol))}) {
+          if (auto iter{FindPointerPotentialComponent(*derived)};
+              iter && pureContext) { // F'2023 C15104(4)
+            if (const Symbol *
+                visible{semantics::FindExternallyVisibleObject(
+                    *value, *pureContext)}) {
+              Say(expr.source,
+                  "The externally visible object '%s' may not be used in a pure procedure as the value for component '%s' which has the pointer component '%s'"_err_en_US,
+                  visible->name(), symbol->name(),
+                  iter.BuildResultDesignatorName());
+            } else if (ExtractCoarrayRef(*value)) {
+              Say(expr.source,
+                  "A coindexed object may not be used in a pure procedure as the value for component '%s' which has the pointer component '%s'"_err_en_US,
+                  symbol->name(), iter.BuildResultDesignatorName());
+            }
           }
         }
         // Make implicit conversion explicit to allow folding of the structure
@@ -3260,7 +3276,7 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::FunctionReference &funcRef,
       const auto &designator{std::get<parser::ProcedureDesignator>(call.t)};
       if (const auto *name{std::get_if<parser::Name>(&designator.u)}) {
         semantics::Scope &scope{context_.FindScope(name->source)};
-        semantics::DerivedTypeSpec dtSpec{name->source, symbol.GetUltimate()};
+        semantics::DerivedTypeSpec dtSpec{name->source, symbol};
         if (!CheckIsValidForwardReference(dtSpec)) {
           return std::nullopt;
         }
@@ -3352,7 +3368,8 @@ const Assignment *ExpressionAnalyzer::Analyze(const parser::AssignmentStmt &x) {
     ArgumentAnalyzer analyzer{*this};
     const auto &variable{std::get<parser::Variable>(x.t)};
     analyzer.Analyze(variable);
-    analyzer.Analyze(std::get<parser::Expr>(x.t));
+    const auto &rhsExpr{std::get<parser::Expr>(x.t)};
+    analyzer.Analyze(rhsExpr);
     std::optional<Assignment> assignment;
     if (!analyzer.fatalErrors()) {
       auto restorer{GetContextualMessages().SetLocation(variable.GetSource())};
@@ -3382,6 +3399,8 @@ const Assignment *ExpressionAnalyzer::Analyze(const parser::AssignmentStmt &x) {
             }
           }
         }
+        CheckForWholeAssumedSizeArray(
+            rhsExpr.source, UnwrapWholeSymbolDataRef(analyzer.GetExpr(1)));
       }
       assignment.emplace(analyzer.MoveExpr(0), analyzer.MoveExpr(1));
       if (procRef) {

@@ -49,6 +49,12 @@ def CIR_BoolAttr : CIR_Attr<"Bool", "bool", [TypedAttrInterface]> {
                         "", "cir::BoolType">:$type,
                     "bool":$value);
 
+  let builders = [
+    AttrBuilder<(ins "bool":$value), [{
+      return $_get($_ctxt, cir::BoolType::get($_ctxt), value);
+    }]>,
+  ];
+
   let assemblyFormat = [{
     `<` $value `>`
   }];
@@ -151,6 +157,48 @@ def FPAttr : CIR_Attr<"FP", "fp", [TypedAttrInterface]> {
 
   let assemblyFormat = [{
     `<` custom<FloatLiteral>($value, ref($type)) `>`
+  }];
+}
+
+
+//===----------------------------------------------------------------------===//
+// ConstArrayAttr
+//===----------------------------------------------------------------------===//
+
+def ConstArrayAttr : CIR_Attr<"ConstArray", "const_array", [TypedAttrInterface]> {
+  let summary = "A constant array from ArrayAttr or StringRefAttr";
+  let description = [{
+    An CIR array attribute is an array of literals of the specified attr types.
+  }];
+
+  let parameters = (ins AttributeSelfTypeParameter<"">:$type,
+                        "mlir::Attribute":$elts,
+                        "int":$trailingZerosNum);
+
+  // Define a custom builder for the type; that removes the need to pass
+  // in an MLIRContext instance, as it can be infered from the `type`.
+  let builders = [
+    AttrBuilderWithInferredContext<(ins "cir::ArrayType":$type,
+                                        "mlir::Attribute":$elts), [{
+      int zeros = 0;
+      auto typeSize = mlir::cast<cir::ArrayType>(type).getSize();
+      if (auto str = mlir::dyn_cast<mlir::StringAttr>(elts))
+        zeros = typeSize - str.size();
+      else
+        zeros = typeSize - mlir::cast<mlir::ArrayAttr>(elts).size();
+
+      return $_get(type.getContext(), type, elts, zeros);
+    }]>
+  ];
+
+  // Printing and parsing available in CIRDialect.cpp
+  let hasCustomAssemblyFormat = 1;
+
+  // Enable verifier.
+  let genVerifyDecl = 1;
+
+  let extraClassDeclaration = [{
+    bool hasTrailingZeros() const { return getTrailingZerosNum() != 0; };
   }];
 }
 

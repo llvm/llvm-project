@@ -237,6 +237,23 @@ static bool CompressEVEXImpl(MachineInstr &MI, const X86Subtarget &ST) {
       return 0;
     return I->NewOpc;
   };
+
+  // Redundant NDD ops cannot be safely compressed if either:
+  // - the legacy op would introduce a partial write that BreakFalseDeps
+  // identified as a potential stall, or
+  // - the op is writing to a subregister of a live register, i.e. the
+  // full (zeroed) result is used.
+  // Both cases are indicated by an implicit def of the superregister.
+  if (IsRedundantNDD) {
+    Register Dst = MI.getOperand(0).getReg();
+    if (Dst &&
+        (X86::GR16RegClass.contains(Dst) || X86::GR8RegClass.contains(Dst))) {
+      Register Super = getX86SubSuperRegister(Dst, 64);
+      if (MI.definesRegister(Super, /*TRI=*/nullptr))
+        IsRedundantNDD = false;
+    }
+  }
+
   // NonNF -> NF only if it's not a compressible NDD instruction and eflags is
   // dead.
   unsigned NewOpc = IsRedundantNDD

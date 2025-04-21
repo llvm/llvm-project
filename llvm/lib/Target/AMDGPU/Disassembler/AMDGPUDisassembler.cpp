@@ -268,6 +268,7 @@ DECODE_OPERAND_REG_8(VReg_128)
 DECODE_OPERAND_REG_8(VReg_192)
 DECODE_OPERAND_REG_8(VReg_256)
 DECODE_OPERAND_REG_8(VReg_288)
+DECODE_OPERAND_REG_8(VReg_320)
 DECODE_OPERAND_REG_8(VReg_352)
 DECODE_OPERAND_REG_8(VReg_384)
 DECODE_OPERAND_REG_8(VReg_512)
@@ -485,6 +486,46 @@ static DecodeStatus decodeVersionImm(MCInst &Inst, unsigned Imm,
 //===----------------------------------------------------------------------===//
 //
 //===----------------------------------------------------------------------===//
+
+template <typename InsnType>
+DecodeStatus AMDGPUDisassembler::tryDecodeInst(const uint8_t *Table, MCInst &MI,
+                                               InsnType Inst, uint64_t Address,
+                                               raw_ostream &Comments) const {
+  assert(MI.getOpcode() == 0);
+  assert(MI.getNumOperands() == 0);
+  MCInst TmpInst;
+  HasLiteral = false;
+  const auto SavedBytes = Bytes;
+
+  SmallString<64> LocalComments;
+  raw_svector_ostream LocalCommentStream(LocalComments);
+  CommentStream = &LocalCommentStream;
+
+  DecodeStatus Res =
+      decodeInstruction(Table, TmpInst, Inst, Address, this, STI);
+
+  CommentStream = nullptr;
+
+  if (Res != MCDisassembler::Fail) {
+    MI = TmpInst;
+    Comments << LocalComments;
+    return MCDisassembler::Success;
+  }
+  Bytes = SavedBytes;
+  return MCDisassembler::Fail;
+}
+
+template <typename InsnType>
+DecodeStatus
+AMDGPUDisassembler::tryDecodeInst(const uint8_t *Table1, const uint8_t *Table2,
+                                  MCInst &MI, InsnType Inst, uint64_t Address,
+                                  raw_ostream &Comments) const {
+  for (const uint8_t *T : {Table1, Table2}) {
+    if (DecodeStatus Res = tryDecodeInst(T, MI, Inst, Address, Comments))
+      return Res;
+  }
+  return MCDisassembler::Fail;
+}
 
 template <typename T> static inline T eatBytes(ArrayRef<uint8_t>& Bytes) {
   assert(Bytes.size() >= sizeof(T));

@@ -106,6 +106,7 @@ static StringInitFailureKind IsStringInit(Expr *Init, const ArrayType *AT,
       return SIF_None;
     [[fallthrough]];
   case StringLiteralKind::Ordinary:
+  case StringLiteralKind::Binary:
     // char array can be initialized with a narrow string.
     // Only allow char x[] = "foo";  not char x[] = L"foo";
     if (ElemTy->isCharType())
@@ -4633,6 +4634,59 @@ static void TryConstructorInitialization(Sema &S,
       IsListInit | IsInitListCopy, AsInitializerList);
 }
 
+static void TryOrBuildParenListInitialization(
+    Sema &S, const InitializedEntity &Entity, const InitializationKind &Kind,
+    ArrayRef<Expr *> Args, InitializationSequence &Sequence, bool VerifyOnly,
+    ExprResult *Result = nullptr);
+
+/// Attempt to initialize an object of a class type either by
+/// direct-initialization, or by copy-initialization from an
+/// expression of the same or derived class type. This corresponds
+/// to the first two sub-bullets of C++2c [dcl.init.general] p16.6.
+///
+/// \param IsAggrListInit Is this non-list-initialization being done as
+///                       part of a list-initialization of an aggregate
+///                       from a single expression of the same or
+///                       derived class type (C++2c [dcl.init.list] p3.2)?
+static void TryConstructorOrParenListInitialization(
+    Sema &S, const InitializedEntity &Entity, const InitializationKind &Kind,
+    MultiExprArg Args, QualType DestType, InitializationSequence &Sequence,
+    bool IsAggrListInit) {
+  // C++2c [dcl.init.general] p16.6:
+  //   * Otherwise, if the destination type is a class type:
+  //     * If the initializer expression is a prvalue and
+  //       the cv-unqualified version of the source type is the same
+  //       as the destination type, the initializer expression is used
+  //       to initialize the destination object.
+  //     * Otherwise, if the initialization is direct-initialization,
+  //       or if it is copy-initialization where the cv-unqualified
+  //       version of the source type is the same as or is derived from
+  //       the class of the destination type, constructors are considered.
+  //       The applicable constructors are enumerated, and the best one
+  //       is chosen through overload resolution. Then:
+  //       * If overload resolution is successful, the selected
+  //         constructor is called to initialize the object, with
+  //         the initializer expression or expression-list as its
+  //         argument(s).
+  TryConstructorInitialization(S, Entity, Kind, Args, DestType, DestType,
+                               Sequence, /*IsListInit=*/false, IsAggrListInit);
+
+  //       * Otherwise, if no constructor is viable, the destination type
+  //         is an aggregate class, and the initializer is a parenthesized
+  //         expression-list, the object is initialized as follows. [...]
+  // Parenthesized initialization of aggregates is a C++20 feature.
+  if (S.getLangOpts().CPlusPlus20 &&
+      Kind.getKind() == InitializationKind::IK_Direct && Sequence.Failed() &&
+      Sequence.getFailureKind() ==
+          InitializationSequence::FK_ConstructorOverloadFailed &&
+      Sequence.getFailedOverloadResult() == OR_No_Viable_Function &&
+      (IsAggrListInit || DestType->isAggregateType()))
+    TryOrBuildParenListInitialization(S, Entity, Kind, Args, Sequence,
+                                      /*VerifyOnly=*/true);
+
+  //       * Otherwise, the initialization is ill-formed.
+}
+
 static bool
 ResolveOverloadedFunctionForReferenceBinding(Sema &S,
                                              Expr *Initializer,
@@ -4846,11 +4900,16 @@ static void TryListInitialization(Sema &S,
       QualType InitType = InitList->getInit(0)->getType();
       if (S.Context.hasSameUnqualifiedType(InitType, DestType) ||
           S.IsDerivedFrom(InitList->getBeginLoc(), InitType, DestType)) {
+        InitializationKind SubKind =
+            Kind.getKind() == InitializationKind::IK_DirectList
+                ? InitializationKind::CreateDirect(Kind.getLocation(),
+                                                   InitList->getLBraceLoc(),
+                                                   InitList->getRBraceLoc())
+                : Kind;
         Expr *InitListAsExpr = InitList;
-        TryConstructorInitialization(S, Entity, Kind, InitListAsExpr, DestType,
-                                     DestType, Sequence,
-                                     /*InitListSyntax*/false,
-                                     /*IsInitListCopy*/true);
+        TryConstructorOrParenListInitialization(
+            S, Entity, SubKind, InitListAsExpr, DestType, Sequence,
+            /*IsAggrListInit=*/true);
         return;
       }
     }
@@ -5172,7 +5231,7 @@ static OverloadingResult TryRefInitWithConversionFunction(
 
   // Add the final conversion sequence, if necessary.
   if (NewRefRelationship == Sema::Ref_Incompatible) {
-    assert(!isa<CXXConstructorDecl>(Function) &&
+    assert(Best->HasFinalConversion && !isa<CXXConstructorDecl>(Function) &&
            "should not have conversion after constructor");
 
     ImplicitConversionSequence ICS;
@@ -5709,7 +5768,7 @@ static void TryDefaultInitialization(Sema &S,
 static void TryOrBuildParenListInitialization(
     Sema &S, const InitializedEntity &Entity, const InitializationKind &Kind,
     ArrayRef<Expr *> Args, InitializationSequence &Sequence, bool VerifyOnly,
-    ExprResult *Result = nullptr) {
+    ExprResult *Result) {
   unsigned EntityIndexToProcess = 0;
   SmallVector<Expr *, 4> InitExprs;
   QualType ResultType;
@@ -6141,6 +6200,7 @@ static void TryUserDefinedConversion(Sema &S,
 
   // If the conversion following the call to the conversion function
   // is interesting, add it as a separate step.
+  assert(Best->HasFinalConversion);
   if (Best->FinalConversion.First || Best->FinalConversion.Second ||
       Best->FinalConversion.Third) {
     ImplicitConversionSequence ICS;
@@ -6688,42 +6748,8 @@ void InitializationSequence::InitializeFrom(Sema &S,
          (Context.hasSameUnqualifiedType(SourceType, DestType) ||
           (Initializer && S.IsDerivedFrom(Initializer->getBeginLoc(),
                                           SourceType, DestType))))) {
-      TryConstructorInitialization(S, Entity, Kind, Args, DestType, DestType,
-                                   *this);
-
-      // We fall back to the "no matching constructor" path if the
-      // failed candidate set has functions other than the three default
-      // constructors. For example, conversion function.
-      if (const auto *RD =
-              dyn_cast<CXXRecordDecl>(DestType->getAs<RecordType>()->getDecl());
-          // In general, we should call isCompleteType for RD to check its
-          // completeness, we don't call it here as it was already called in the
-          // above TryConstructorInitialization.
-          S.getLangOpts().CPlusPlus20 && RD && RD->hasDefinition() &&
-          RD->isAggregate() && Failed() &&
-          getFailureKind() == FK_ConstructorOverloadFailed) {
-        // Do not attempt paren list initialization if overload resolution
-        // resolves to a deleted function .
-        //
-        // We may reach this condition if we have a union wrapping a class with
-        // a non-trivial copy or move constructor and we call one of those two
-        // constructors. The union is an aggregate, but the matched constructor
-        // is implicitly deleted, so we need to prevent aggregate initialization
-        // (otherwise, it'll attempt aggregate initialization by initializing
-        // the first element with a reference to the union).
-        OverloadCandidateSet::iterator Best;
-        OverloadingResult OR = getFailedCandidateSet().BestViableFunction(
-            S, Kind.getLocation(), Best);
-        if (OR != OverloadingResult::OR_Deleted) {
-          // C++20 [dcl.init] 17.6.2.2:
-          //   - Otherwise, if no constructor is viable, the destination type is
-          //   an
-          //      aggregate class, and the initializer is a parenthesized
-          //      expression-list.
-          TryOrBuildParenListInitialization(S, Entity, Kind, Args, *this,
-                                            /*VerifyOnly=*/true);
-        }
-      }
+      TryConstructorOrParenListInitialization(S, Entity, Kind, Args, DestType,
+                                              *this, /*IsAggrListInit=*/false);
     } else {
       //     - Otherwise (i.e., for the remaining copy-initialization cases),
       //       user-defined conversion sequences that can convert from the
@@ -7625,11 +7651,14 @@ Sema::CreateMaterializeTemporaryExpr(QualType T, Expr *Temporary,
 }
 
 ExprResult Sema::TemporaryMaterializationConversion(Expr *E) {
-  // In C++98, we don't want to implicitly create an xvalue.
+  // In C++98, we don't want to implicitly create an xvalue. C11 added the
+  // same rule, but C99 is broken without this behavior and so we treat the
+  // change as applying to all C language modes.
   // FIXME: This means that AST consumers need to deal with "prvalues" that
   // denote materialized temporaries. Maybe we should add another ValueKind
   // for "xvalue pretending to be a prvalue" for C++98 support.
-  if (!E->isPRValue() || !getLangOpts().CPlusPlus11)
+  if (!E->isPRValue() ||
+      (!getLangOpts().CPlusPlus11 && getLangOpts().CPlusPlus))
     return E;
 
   // C++1z [conv.rval]/1: T shall be a complete type.
@@ -7712,27 +7741,11 @@ ExprResult InitializationSequence::Perform(Sema &S,
         // introduced and such).  So, we fall back to making the array
         // type a dependently-sized array type with no specified
         // bound.
-        if (isa<InitListExpr>((Expr *)Args[0])) {
-          SourceRange Brackets;
-
-          // Scavange the location of the brackets from the entity, if we can.
-          if (auto *DD = dyn_cast_or_null<DeclaratorDecl>(Entity.getDecl())) {
-            if (TypeSourceInfo *TInfo = DD->getTypeSourceInfo()) {
-              TypeLoc TL = TInfo->getTypeLoc();
-              if (IncompleteArrayTypeLoc ArrayLoc =
-                      TL.getAs<IncompleteArrayTypeLoc>())
-                Brackets = ArrayLoc.getBracketsRange();
-            }
-          }
-
-          *ResultType
-            = S.Context.getDependentSizedArrayType(ArrayT->getElementType(),
-                                                   /*NumElts=*/nullptr,
-                                                   ArrayT->getSizeModifier(),
-                                       ArrayT->getIndexTypeCVRQualifiers(),
-                                                   Brackets);
-        }
-
+        if (isa<InitListExpr>((Expr *)Args[0]))
+          *ResultType = S.Context.getDependentSizedArrayType(
+              ArrayT->getElementType(),
+              /*NumElts=*/nullptr, ArrayT->getSizeModifier(),
+              ArrayT->getIndexTypeCVRQualifiers());
       }
     }
     if (Kind.getKind() == InitializationKind::IK_Direct &&
@@ -8289,6 +8302,12 @@ ExprResult InitializationSequence::Perform(Sema &S,
             Kind.getRange().getEnd());
       } else {
         CurInit = new (S.Context) ImplicitValueInitExpr(Step->Type);
+        // Note the return value isn't used to return a ExprError() when
+        // initialization fails . For struct initialization allows all field
+        // assignments to be checked rather than bailing on the first error.
+        S.BoundsSafetyCheckInitialization(Entity, Kind,
+                                          AssignmentAction::Initializing,
+                                          Step->Type, CurInit.get());
       }
       break;
     }
@@ -8334,6 +8353,13 @@ ExprResult InitializationSequence::Perform(Sema &S,
           S.Diag(Kind.getLocation(), diag::err_c23_constexpr_pointer_not_null);
         }
       }
+
+      // Note the return value isn't used to return a ExprError() when
+      // initialization fails. For struct initialization this allows all field
+      // assignments to be checked rather than bailing on the first error.
+      S.BoundsSafetyCheckInitialization(Entity, Kind,
+                                        getAssignmentAction(Entity, true),
+                                        Step->Type, InitialCurInit.get());
 
       bool Complained;
       if (S.DiagnoseAssignmentResult(ConvTy, Kind.getLocation(),
@@ -9885,7 +9911,7 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
 
   auto TemplateName = DeducedTST->getTemplateName();
   if (TemplateName.isDependent())
-    return SubstAutoTypeDependent(TSInfo->getType());
+    return SubstAutoTypeSourceInfoDependent(TSInfo)->getType();
 
   // We can only perform deduction for class templates or alias templates.
   auto *Template =
@@ -9894,8 +9920,7 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
   if (!Template) {
     if (auto *AliasTemplate = dyn_cast_or_null<TypeAliasTemplateDecl>(
             TemplateName.getAsTemplateDecl())) {
-      Diag(Kind.getLocation(),
-           diag::warn_cxx17_compat_ctad_for_alias_templates);
+      DiagCompat(Kind.getLocation(), diag_compat::ctad_for_alias_templates);
       LookupTemplateDecl = AliasTemplate;
       auto UnderlyingType = AliasTemplate->getTemplatedDecl()
                                 ->getUnderlyingType()
@@ -9931,7 +9956,7 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
     Diag(TSInfo->getTypeLoc().getBeginLoc(),
          diag::warn_cxx14_compat_class_template_argument_deduction)
         << TSInfo->getTypeLoc().getSourceRange() << 0;
-    return SubstAutoTypeDependent(TSInfo->getType());
+    return SubstAutoTypeSourceInfoDependent(TSInfo)->getType();
   }
 
   // FIXME: Perform "exact type" matching first, per CWG discussion?
@@ -10018,12 +10043,19 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
     //   When [...] the constructor [...] is a candidate by
     //    - [over.match.copy] (in all cases)
     if (TD) {
-      SmallVector<Expr *, 8> TmpInits;
-      for (Expr *E : Inits)
+
+      // As template candidates are not deduced immediately,
+      // persist the array in the overload set.
+      MutableArrayRef<Expr *> TmpInits =
+          Candidates.getPersistentArgsArray(Inits.size());
+
+      for (auto [I, E] : llvm::enumerate(Inits)) {
         if (auto *DI = dyn_cast<DesignatedInitExpr>(E))
-          TmpInits.push_back(DI->getInit());
+          TmpInits[I] = DI->getInit();
         else
-          TmpInits.push_back(E);
+          TmpInits[I] = E;
+      }
+
       AddTemplateOverloadCandidate(
           TD, FoundDecl, /*ExplicitArgs=*/nullptr, TmpInits, Candidates,
           /*SuppressUserConversions=*/false,
@@ -10242,7 +10274,8 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
   //  The placeholder is replaced by the return type of the function selected
   //  by overload resolution for class template deduction.
   QualType DeducedType =
-      SubstAutoType(TSInfo->getType(), Best->Function->getReturnType());
+      SubstAutoTypeSourceInfo(TSInfo, Best->Function->getReturnType())
+          ->getType();
   Diag(TSInfo->getTypeLoc().getBeginLoc(),
        diag::warn_cxx14_compat_class_template_argument_deduction)
       << TSInfo->getTypeLoc().getSourceRange() << 1 << DeducedType;

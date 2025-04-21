@@ -20,7 +20,6 @@
 #include "FixedPoint.h"
 #include "Floating.h"
 #include "Function.h"
-#include "FunctionPointer.h"
 #include "InterpBuiltinBitCast.h"
 #include "InterpFrame.h"
 #include "InterpStack.h"
@@ -172,6 +171,8 @@ static bool handleOverflow(InterpState &S, CodePtr OpPC, const T &SrcValue) {
 }
 bool handleFixedPointOverflow(InterpState &S, CodePtr OpPC,
                               const FixedPoint &FP);
+
+bool isConstexprUnknown(const Pointer &P);
 
 enum class ShiftDir { Left, Right };
 
@@ -765,8 +766,14 @@ enum class IncDecOp {
 };
 
 template <typename T, IncDecOp Op, PushVal DoPush>
-bool IncDecHelper(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
+bool IncDecHelper(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
+                  bool CanOverflow) {
   assert(!Ptr.isDummy());
+
+  if (!S.inConstantContext()) {
+    if (isConstexprUnknown(Ptr))
+      return false;
+  }
 
   if constexpr (std::is_same_v<T, Boolean>) {
     if (!S.getLangOpts().CPlusPlus14)
@@ -780,16 +787,17 @@ bool IncDecHelper(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
     S.Stk.push<T>(Value);
 
   if constexpr (Op == IncDecOp::Inc) {
-    if (!T::increment(Value, &Result)) {
+    if (!T::increment(Value, &Result) || !CanOverflow) {
       Ptr.deref<T>() = Result;
       return true;
     }
   } else {
-    if (!T::decrement(Value, &Result)) {
+    if (!T::decrement(Value, &Result) || !CanOverflow) {
       Ptr.deref<T>() = Result;
       return true;
     }
   }
+  assert(CanOverflow);
 
   // Something went wrong with the previous operation. Compute the
   // result with another bit of precision.
@@ -812,7 +820,6 @@ bool IncDecHelper(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
         << Trunc << Type << E->getSourceRange();
     return true;
   }
-
   return handleOverflow(S, OpPC, APResult);
 }
 
@@ -821,24 +828,34 @@ bool IncDecHelper(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
 /// 3) Writes the value increased by one back to the pointer
 /// 4) Pushes the original (pre-inc) value on the stack.
 template <PrimType Name, class T = typename PrimConv<Name>::T>
-bool Inc(InterpState &S, CodePtr OpPC) {
+bool Inc(InterpState &S, CodePtr OpPC, bool CanOverflow) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
   if (!CheckLoad(S, OpPC, Ptr, AK_Increment))
     return false;
 
-  return IncDecHelper<T, IncDecOp::Inc, PushVal::Yes>(S, OpPC, Ptr);
+  return IncDecHelper<T, IncDecOp::Inc, PushVal::Yes>(S, OpPC, Ptr,
+                                                      CanOverflow);
 }
 
 /// 1) Pops a pointer from the stack
 /// 2) Load the value from the pointer
 /// 3) Writes the value increased by one back to the pointer
 template <PrimType Name, class T = typename PrimConv<Name>::T>
-bool IncPop(InterpState &S, CodePtr OpPC) {
+bool IncPop(InterpState &S, CodePtr OpPC, bool CanOverflow) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
   if (!CheckLoad(S, OpPC, Ptr, AK_Increment))
     return false;
 
-  return IncDecHelper<T, IncDecOp::Inc, PushVal::No>(S, OpPC, Ptr);
+  return IncDecHelper<T, IncDecOp::Inc, PushVal::No>(S, OpPC, Ptr, CanOverflow);
+}
+
+template <PrimType Name, class T = typename PrimConv<Name>::T>
+bool PreInc(InterpState &S, CodePtr OpPC, bool CanOverflow) {
+  const Pointer &Ptr = S.Stk.peek<Pointer>();
+  if (!CheckLoad(S, OpPC, Ptr, AK_Increment))
+    return false;
+
+  return IncDecHelper<T, IncDecOp::Inc, PushVal::No>(S, OpPC, Ptr, CanOverflow);
 }
 
 /// 1) Pops a pointer from the stack
@@ -846,24 +863,34 @@ bool IncPop(InterpState &S, CodePtr OpPC) {
 /// 3) Writes the value decreased by one back to the pointer
 /// 4) Pushes the original (pre-dec) value on the stack.
 template <PrimType Name, class T = typename PrimConv<Name>::T>
-bool Dec(InterpState &S, CodePtr OpPC) {
+bool Dec(InterpState &S, CodePtr OpPC, bool CanOverflow) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
   if (!CheckLoad(S, OpPC, Ptr, AK_Decrement))
     return false;
 
-  return IncDecHelper<T, IncDecOp::Dec, PushVal::Yes>(S, OpPC, Ptr);
+  return IncDecHelper<T, IncDecOp::Dec, PushVal::Yes>(S, OpPC, Ptr,
+                                                      CanOverflow);
 }
 
 /// 1) Pops a pointer from the stack
 /// 2) Load the value from the pointer
 /// 3) Writes the value decreased by one back to the pointer
 template <PrimType Name, class T = typename PrimConv<Name>::T>
-bool DecPop(InterpState &S, CodePtr OpPC) {
+bool DecPop(InterpState &S, CodePtr OpPC, bool CanOverflow) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
   if (!CheckLoad(S, OpPC, Ptr, AK_Decrement))
     return false;
 
-  return IncDecHelper<T, IncDecOp::Dec, PushVal::No>(S, OpPC, Ptr);
+  return IncDecHelper<T, IncDecOp::Dec, PushVal::No>(S, OpPC, Ptr, CanOverflow);
+}
+
+template <PrimType Name, class T = typename PrimConv<Name>::T>
+bool PreDec(InterpState &S, CodePtr OpPC, bool CanOverflow) {
+  const Pointer &Ptr = S.Stk.peek<Pointer>();
+  if (!CheckLoad(S, OpPC, Ptr, AK_Decrement))
+    return false;
+
+  return IncDecHelper<T, IncDecOp::Dec, PushVal::No>(S, OpPC, Ptr, CanOverflow);
 }
 
 template <IncDecOp Op, PushVal DoPush>
@@ -956,45 +983,21 @@ bool CmpHelperEQ(InterpState &S, CodePtr OpPC, CompareFn Fn) {
   return CmpHelper<T>(S, OpPC, Fn);
 }
 
-/// Function pointers cannot be compared in an ordered way.
-template <>
-inline bool CmpHelper<FunctionPointer>(InterpState &S, CodePtr OpPC,
-                                       CompareFn Fn) {
-  const auto &RHS = S.Stk.pop<FunctionPointer>();
-  const auto &LHS = S.Stk.pop<FunctionPointer>();
-
-  const SourceInfo &Loc = S.Current->getSource(OpPC);
-  S.FFDiag(Loc, diag::note_constexpr_pointer_comparison_unspecified)
-      << LHS.toDiagnosticString(S.getASTContext())
-      << RHS.toDiagnosticString(S.getASTContext());
-  return false;
-}
-
-template <>
-inline bool CmpHelperEQ<FunctionPointer>(InterpState &S, CodePtr OpPC,
-                                         CompareFn Fn) {
-  const auto &RHS = S.Stk.pop<FunctionPointer>();
-  const auto &LHS = S.Stk.pop<FunctionPointer>();
-
-  // We cannot compare against weak declarations at compile time.
-  for (const auto &FP : {LHS, RHS}) {
-    if (FP.isWeak()) {
-      const SourceInfo &Loc = S.Current->getSource(OpPC);
-      S.FFDiag(Loc, diag::note_constexpr_pointer_weak_comparison)
-          << FP.toDiagnosticString(S.getASTContext());
-      return false;
-    }
-  }
-
-  S.Stk.push<Boolean>(Boolean::from(Fn(LHS.compare(RHS))));
-  return true;
-}
-
 template <>
 inline bool CmpHelper<Pointer>(InterpState &S, CodePtr OpPC, CompareFn Fn) {
   using BoolT = PrimConv<PT_Bool>::T;
   const Pointer &RHS = S.Stk.pop<Pointer>();
   const Pointer &LHS = S.Stk.pop<Pointer>();
+
+  // Function pointers cannot be compared in an ordered way.
+  if (LHS.isFunctionPointer() || RHS.isFunctionPointer() ||
+      LHS.isTypeidPointer() || RHS.isTypeidPointer()) {
+    const SourceInfo &Loc = S.Current->getSource(OpPC);
+    S.FFDiag(Loc, diag::note_constexpr_pointer_comparison_unspecified)
+        << LHS.toDiagnosticString(S.getASTContext())
+        << RHS.toDiagnosticString(S.getASTContext());
+    return false;
+  }
 
   if (!Pointer::hasSameBase(LHS, RHS)) {
     const SourceInfo &Loc = S.Current->getSource(OpPC);
@@ -1002,12 +1005,12 @@ inline bool CmpHelper<Pointer>(InterpState &S, CodePtr OpPC, CompareFn Fn) {
         << LHS.toDiagnosticString(S.getASTContext())
         << RHS.toDiagnosticString(S.getASTContext());
     return false;
-  } else {
-    unsigned VL = LHS.getByteOffset();
-    unsigned VR = RHS.getByteOffset();
-    S.Stk.push<BoolT>(BoolT::from(Fn(Compare(VL, VR))));
-    return true;
   }
+
+  unsigned VL = LHS.getByteOffset();
+  unsigned VR = RHS.getByteOffset();
+  S.Stk.push<BoolT>(BoolT::from(Fn(Compare(VL, VR))));
+  return true;
 }
 
 static inline bool IsOpaqueConstantCall(const CallExpr *E) {
@@ -1041,10 +1044,30 @@ inline bool CmpHelperEQ<Pointer>(InterpState &S, CodePtr OpPC, CompareFn Fn) {
     }
   }
 
+  if (!S.inConstantContext()) {
+    if (isConstexprUnknown(LHS) || isConstexprUnknown(RHS))
+      return false;
+  }
+
+  if (LHS.isFunctionPointer() && RHS.isFunctionPointer()) {
+    S.Stk.push<BoolT>(BoolT::from(Fn(Compare(LHS.getIntegerRepresentation(),
+                                             RHS.getIntegerRepresentation()))));
+    return true;
+  }
+
   if (Pointer::hasSameBase(LHS, RHS)) {
+    if (LHS.inUnion() && RHS.inUnion()) {
+      // If the pointers point into a union, things are a little more
+      // complicated since the offset we save in interp::Pointer can't be used
+      // to compare the pointers directly.
+      size_t A = LHS.computeOffsetForComparison();
+      size_t B = RHS.computeOffsetForComparison();
+      S.Stk.push<BoolT>(BoolT::from(Fn(Compare(A, B))));
+      return true;
+    }
+
     unsigned VL = LHS.getByteOffset();
     unsigned VR = RHS.getByteOffset();
-
     // In our Pointer class, a pointer to an array and a pointer to the first
     // element in the same array are NOT equal. They have the same Base value,
     // but a different Offset. This is a pretty rare case, so we fix this here
@@ -1909,7 +1932,7 @@ inline bool CastMemberPtrPtr(InterpState &S, CodePtr OpPC) {
     S.Stk.push<Pointer>(*Ptr);
     return true;
   }
-  return false;
+  return Invalid(S, OpPC);
 }
 
 //===----------------------------------------------------------------------===//
@@ -2022,8 +2045,11 @@ bool OffsetHelper(InterpState &S, CodePtr OpPC, const T &Offset,
   // useful thing we can do. Any other index has been diagnosed before and
   // we don't get here.
   if (Result == 0 && Ptr.isOnePastEnd()) {
-    S.Stk.push<Pointer>(Ptr.asBlockPointer().Pointee,
-                        Ptr.asBlockPointer().Base);
+    if (Ptr.getFieldDesc()->isArray())
+      S.Stk.push<Pointer>(Ptr.atIndex(0));
+    else
+      S.Stk.push<Pointer>(Ptr.asBlockPointer().Pointee,
+                          Ptr.asBlockPointer().Base);
     return true;
   }
 
@@ -2094,11 +2120,24 @@ static inline bool DecPtr(InterpState &S, CodePtr OpPC) {
 
 /// 1) Pops a Pointer from the stack.
 /// 2) Pops another Pointer from the stack.
-/// 3) Pushes the different of the indices of the two pointers on the stack.
+/// 3) Pushes the difference of the indices of the two pointers on the stack.
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 inline bool SubPtr(InterpState &S, CodePtr OpPC) {
   const Pointer &LHS = S.Stk.pop<Pointer>();
   const Pointer &RHS = S.Stk.pop<Pointer>();
+
+  if (!Pointer::hasSameBase(LHS, RHS) && S.getLangOpts().CPlusPlus) {
+    S.FFDiag(S.Current->getSource(OpPC),
+             diag::note_constexpr_pointer_arith_unspecified)
+        << LHS.toDiagnosticString(S.getASTContext())
+        << RHS.toDiagnosticString(S.getASTContext());
+    return false;
+  }
+
+  if (LHS == RHS) {
+    S.Stk.push<T>();
+    return true;
+  }
 
   for (const Pointer &P : {LHS, RHS}) {
     if (P.isZeroSizeArray()) {
@@ -2114,21 +2153,6 @@ inline bool SubPtr(InterpState &S, CodePtr OpPC) {
 
       return false;
     }
-  }
-
-  if (RHS.isZero()) {
-    S.Stk.push<T>(T::from(LHS.getIndex()));
-    return true;
-  }
-
-  if (!Pointer::hasSameBase(LHS, RHS) && S.getLangOpts().CPlusPlus) {
-    // TODO: Diagnose.
-    return false;
-  }
-
-  if (LHS.isZero() && RHS.isZero()) {
-    S.Stk.push<T>();
-    return true;
   }
 
   T A = LHS.isBlockPointer()
@@ -2369,12 +2393,14 @@ static inline bool PtrPtrCast(InterpState &S, CodePtr OpPC, bool SrcIsVoidPtr) {
     } else if (!S.getLangOpts().CPlusPlus26) {
       const SourceInfo &E = S.Current->getSource(OpPC);
       S.CCEDiag(E, diag::note_constexpr_invalid_cast)
-          << 3 << "'void *'" << S.Current->getRange(OpPC);
+          << diag::ConstexprInvalidCastKind::CastFrom << "'void *'"
+          << S.Current->getRange(OpPC);
     }
   } else {
     const SourceInfo &E = S.Current->getSource(OpPC);
     S.CCEDiag(E, diag::note_constexpr_invalid_cast)
-        << 2 << S.getLangOpts().CPlusPlus << S.Current->getRange(OpPC);
+        << diag::ConstexprInvalidCastKind::ThisConversionOrReinterpret
+        << S.getLangOpts().CPlusPlus << S.Current->getRange(OpPC);
   }
 
   return true;
@@ -2435,13 +2461,15 @@ inline bool This(InterpState &S, CodePtr OpPC) {
   // Ensure the This pointer has been cast to the correct base.
   if (!This.isDummy()) {
     assert(isa<CXXMethodDecl>(S.Current->getFunction()->getDecl()));
-    [[maybe_unused]] const Record *R = This.getRecord();
-    if (!R)
-      R = This.narrow().getRecord();
-    assert(R);
-    assert(
-        R->getDecl() ==
-        cast<CXXMethodDecl>(S.Current->getFunction()->getDecl())->getParent());
+    if (!This.isTypeidPointer()) {
+      [[maybe_unused]] const Record *R = This.getRecord();
+      if (!R)
+        R = This.narrow().getRecord();
+      assert(R);
+      assert(R->getDecl() ==
+             cast<CXXMethodDecl>(S.Current->getFunction()->getDecl())
+                 ->getParent());
+    }
   }
 
   S.Stk.push<Pointer>(This);
@@ -2638,8 +2666,16 @@ inline bool ArrayElemPtr(InterpState &S, CodePtr OpPC) {
       return false;
   }
 
-  if (!OffsetHelper<T, ArithOp::Add>(S, OpPC, Offset, Ptr))
-    return false;
+  if (Offset.isZero()) {
+    if (Ptr.getFieldDesc()->isArray() && Ptr.getIndex() == 0) {
+      S.Stk.push<Pointer>(Ptr.atIndex(0));
+    } else {
+      S.Stk.push<Pointer>(Ptr);
+    }
+  } else {
+    if (!OffsetHelper<T, ArithOp::Add>(S, OpPC, Offset, Ptr))
+      return false;
+  }
 
   return NarrowPtr(S, OpPC);
 }
@@ -2654,8 +2690,16 @@ inline bool ArrayElemPtrPop(InterpState &S, CodePtr OpPC) {
       return false;
   }
 
-  if (!OffsetHelper<T, ArithOp::Add>(S, OpPC, Offset, Ptr))
-    return false;
+  if (Offset.isZero()) {
+    if (Ptr.getFieldDesc()->isArray() && Ptr.getIndex() == 0) {
+      S.Stk.push<Pointer>(Ptr.atIndex(0));
+    } else {
+      S.Stk.push<Pointer>(Ptr);
+    }
+  } else {
+    if (!OffsetHelper<T, ArithOp::Add>(S, OpPC, Offset, Ptr))
+      return false;
+  }
 
   return NarrowPtr(S, OpPC);
 }
@@ -2729,7 +2773,7 @@ inline bool ArrayDecay(InterpState &S, CodePtr OpPC) {
 
 inline bool GetFnPtr(InterpState &S, CodePtr OpPC, const Function *Func) {
   assert(Func);
-  S.Stk.push<FunctionPointer>(Func);
+  S.Stk.push<Pointer>(Func);
   return true;
 }
 
@@ -2739,7 +2783,8 @@ inline bool GetIntPtr(InterpState &S, CodePtr OpPC, const Descriptor *Desc) {
 
   if (Desc)
     S.CCEDiag(S.Current->getSource(OpPC), diag::note_constexpr_invalid_cast)
-        << 2 << S.getLangOpts().CPlusPlus;
+        << diag::ConstexprInvalidCastKind::ThisConversionOrReinterpret
+        << S.getLangOpts().CPlusPlus;
 
   S.Stk.push<Pointer>(static_cast<uint64_t>(IntVal), Desc);
   return true;
@@ -2763,7 +2808,7 @@ inline bool GetMemberPtrDecl(InterpState &S, CodePtr OpPC) {
   const auto *FD = cast<FunctionDecl>(MP.getDecl());
   const auto *Func = S.getContext().getOrCreateFunction(FD);
 
-  S.Stk.push<FunctionPointer>(Func);
+  S.Stk.push<Pointer>(Func);
   return true;
 }
 
@@ -2800,6 +2845,15 @@ inline bool EndSpeculation(InterpState &S, CodePtr OpPC) {
     S.getEvalStatus().Diag = S.PrevDiags;
     S.PrevDiags = nullptr;
   }
+  return true;
+}
+
+inline bool PushCC(InterpState &S, CodePtr OpPC, bool Value) {
+  S.ConstantContextOverride = Value;
+  return true;
+}
+inline bool PopCC(InterpState &S, CodePtr OpPC) {
+  S.ConstantContextOverride = std::nullopt;
   return true;
 }
 

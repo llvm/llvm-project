@@ -17,6 +17,7 @@
 
 #include "llvm/ADT/ADL.h"
 #include "llvm/ADT/EpochTracker.h"
+#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/ReverseIteration.h"
 #include "llvm/Support/type_traits.h"
@@ -555,6 +556,10 @@ public:
   SmallPtrSet(It I, It E) : BaseT(SmallStorage, SmallSizePowTwo) {
     this->insert(I, E);
   }
+
+  template <typename Range>
+  SmallPtrSet(llvm::from_range_t, Range &&R)
+      : SmallPtrSet(adl_begin(R), adl_end(R)) {}
 
   SmallPtrSet(std::initializer_list<PtrType> IL)
       : BaseT(SmallStorage, SmallSizePowTwo) {

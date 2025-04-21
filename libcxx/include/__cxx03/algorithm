@@ -1904,126 +1904,7 @@ template <class BidirectionalIterator, class Compare>
 #include <__cxx03/__algorithm/unique_copy.h>
 #include <__cxx03/__algorithm/upper_bound.h>
 
-#if _LIBCPP_STD_VER >= 17
-#  include <__cxx03/__algorithm/clamp.h>
-#  include <__cxx03/__algorithm/for_each_n.h>
-#  include <__cxx03/__algorithm/pstl.h>
-#  include <__cxx03/__algorithm/sample.h>
-#endif // _LIBCPP_STD_VER >= 17
-
-#if _LIBCPP_STD_VER >= 20
-#  include <__cxx03/__algorithm/in_found_result.h>
-#  include <__cxx03/__algorithm/in_fun_result.h>
-#  include <__cxx03/__algorithm/in_in_out_result.h>
-#  include <__cxx03/__algorithm/in_in_result.h>
-#  include <__cxx03/__algorithm/in_out_out_result.h>
-#  include <__cxx03/__algorithm/in_out_result.h>
-#  include <__cxx03/__algorithm/lexicographical_compare_three_way.h>
-#  include <__cxx03/__algorithm/min_max_result.h>
-#  include <__cxx03/__algorithm/ranges_adjacent_find.h>
-#  include <__cxx03/__algorithm/ranges_all_of.h>
-#  include <__cxx03/__algorithm/ranges_any_of.h>
-#  include <__cxx03/__algorithm/ranges_binary_search.h>
-#  include <__cxx03/__algorithm/ranges_clamp.h>
-#  include <__cxx03/__algorithm/ranges_contains.h>
-#  include <__cxx03/__algorithm/ranges_copy.h>
-#  include <__cxx03/__algorithm/ranges_copy_backward.h>
-#  include <__cxx03/__algorithm/ranges_copy_if.h>
-#  include <__cxx03/__algorithm/ranges_copy_n.h>
-#  include <__cxx03/__algorithm/ranges_count.h>
-#  include <__cxx03/__algorithm/ranges_count_if.h>
-#  include <__cxx03/__algorithm/ranges_equal.h>
-#  include <__cxx03/__algorithm/ranges_equal_range.h>
-#  include <__cxx03/__algorithm/ranges_fill.h>
-#  include <__cxx03/__algorithm/ranges_fill_n.h>
-#  include <__cxx03/__algorithm/ranges_find.h>
-#  include <__cxx03/__algorithm/ranges_find_end.h>
-#  include <__cxx03/__algorithm/ranges_find_first_of.h>
-#  include <__cxx03/__algorithm/ranges_find_if.h>
-#  include <__cxx03/__algorithm/ranges_find_if_not.h>
-#  include <__cxx03/__algorithm/ranges_for_each.h>
-#  include <__cxx03/__algorithm/ranges_for_each_n.h>
-#  include <__cxx03/__algorithm/ranges_generate.h>
-#  include <__cxx03/__algorithm/ranges_generate_n.h>
-#  include <__cxx03/__algorithm/ranges_includes.h>
-#  include <__cxx03/__algorithm/ranges_inplace_merge.h>
-#  include <__cxx03/__algorithm/ranges_is_heap.h>
-#  include <__cxx03/__algorithm/ranges_is_heap_until.h>
-#  include <__cxx03/__algorithm/ranges_is_partitioned.h>
-#  include <__cxx03/__algorithm/ranges_is_permutation.h>
-#  include <__cxx03/__algorithm/ranges_is_sorted.h>
-#  include <__cxx03/__algorithm/ranges_is_sorted_until.h>
-#  include <__cxx03/__algorithm/ranges_lexicographical_compare.h>
-#  include <__cxx03/__algorithm/ranges_lower_bound.h>
-#  include <__cxx03/__algorithm/ranges_make_heap.h>
-#  include <__cxx03/__algorithm/ranges_max.h>
-#  include <__cxx03/__algorithm/ranges_max_element.h>
-#  include <__cxx03/__algorithm/ranges_merge.h>
-#  include <__cxx03/__algorithm/ranges_min.h>
-#  include <__cxx03/__algorithm/ranges_min_element.h>
-#  include <__cxx03/__algorithm/ranges_minmax.h>
-#  include <__cxx03/__algorithm/ranges_minmax_element.h>
-#  include <__cxx03/__algorithm/ranges_mismatch.h>
-#  include <__cxx03/__algorithm/ranges_move.h>
-#  include <__cxx03/__algorithm/ranges_move_backward.h>
-#  include <__cxx03/__algorithm/ranges_next_permutation.h>
-#  include <__cxx03/__algorithm/ranges_none_of.h>
-#  include <__cxx03/__algorithm/ranges_nth_element.h>
-#  include <__cxx03/__algorithm/ranges_partial_sort.h>
-#  include <__cxx03/__algorithm/ranges_partial_sort_copy.h>
-#  include <__cxx03/__algorithm/ranges_partition.h>
-#  include <__cxx03/__algorithm/ranges_partition_copy.h>
-#  include <__cxx03/__algorithm/ranges_partition_point.h>
-#  include <__cxx03/__algorithm/ranges_pop_heap.h>
-#  include <__cxx03/__algorithm/ranges_prev_permutation.h>
-#  include <__cxx03/__algorithm/ranges_push_heap.h>
-#  include <__cxx03/__algorithm/ranges_remove.h>
-#  include <__cxx03/__algorithm/ranges_remove_copy.h>
-#  include <__cxx03/__algorithm/ranges_remove_copy_if.h>
-#  include <__cxx03/__algorithm/ranges_remove_if.h>
-#  include <__cxx03/__algorithm/ranges_replace.h>
-#  include <__cxx03/__algorithm/ranges_replace_copy.h>
-#  include <__cxx03/__algorithm/ranges_replace_copy_if.h>
-#  include <__cxx03/__algorithm/ranges_replace_if.h>
-#  include <__cxx03/__algorithm/ranges_reverse.h>
-#  include <__cxx03/__algorithm/ranges_reverse_copy.h>
-#  include <__cxx03/__algorithm/ranges_rotate.h>
-#  include <__cxx03/__algorithm/ranges_rotate_copy.h>
-#  include <__cxx03/__algorithm/ranges_sample.h>
-#  include <__cxx03/__algorithm/ranges_search.h>
-#  include <__cxx03/__algorithm/ranges_search_n.h>
-#  include <__cxx03/__algorithm/ranges_set_difference.h>
-#  include <__cxx03/__algorithm/ranges_set_intersection.h>
-#  include <__cxx03/__algorithm/ranges_set_symmetric_difference.h>
-#  include <__cxx03/__algorithm/ranges_set_union.h>
-#  include <__cxx03/__algorithm/ranges_shuffle.h>
-#  include <__cxx03/__algorithm/ranges_sort.h>
-#  include <__cxx03/__algorithm/ranges_sort_heap.h>
-#  include <__cxx03/__algorithm/ranges_stable_partition.h>
-#  include <__cxx03/__algorithm/ranges_stable_sort.h>
-#  include <__cxx03/__algorithm/ranges_swap_ranges.h>
-#  include <__cxx03/__algorithm/ranges_transform.h>
-#  include <__cxx03/__algorithm/ranges_unique.h>
-#  include <__cxx03/__algorithm/ranges_unique_copy.h>
-#  include <__cxx03/__algorithm/ranges_upper_bound.h>
-#  include <__cxx03/__algorithm/shift_left.h>
-#  include <__cxx03/__algorithm/shift_right.h>
-#endif
-
-#if _LIBCPP_STD_VER >= 23
-#  include <__cxx03/__algorithm/fold.h>
-#  include <__cxx03/__algorithm/ranges_contains_subrange.h>
-#  include <__cxx03/__algorithm/ranges_ends_with.h>
-#  include <__cxx03/__algorithm/ranges_find_last.h>
-#  include <__cxx03/__algorithm/ranges_starts_with.h>
-#endif // _LIBCPP_STD_VER >= 23
-
 #include <__cxx03/version>
-
-// standard-mandated includes
-
-// [algorithm.syn]
-#include <__cxx03/initializer_list>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -2035,8 +1916,6 @@ template <class BidirectionalIterator, class Compare>
 
 #if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
 #  include <__cxx03/atomic>
-#  include <__cxx03/bit>
-#  include <__cxx03/concepts>
 #  include <__cxx03/cstdlib>
 #  include <__cxx03/cstring>
 #  include <__cxx03/iterator>

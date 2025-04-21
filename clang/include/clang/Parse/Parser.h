@@ -91,6 +91,8 @@ class Parser : public CodeCompletionHandler {
 
   DiagnosticsEngine &Diags;
 
+  StackExhaustionHandler StackHandler;
+
   /// ScopeCache - Cache scopes to reduce malloc traffic.
   enum { ScopeCacheSize = 16 };
   unsigned NumCachedScopes;
@@ -518,7 +520,7 @@ public:
   typedef Sema::FullExprArg FullExprArg;
 
   /// A SmallVector of statements.
-  typedef SmallVector<Stmt *, 32> StmtVector;
+  typedef SmallVector<Stmt *, 24> StmtVector;
 
   // Parsing methods.
 
@@ -1261,6 +1263,12 @@ public:
     return Diag(Tok, DiagID);
   }
 
+  DiagnosticBuilder DiagCompat(SourceLocation Loc, unsigned CompatDiagId);
+  DiagnosticBuilder DiagCompat(const Token &Tok, unsigned CompatDiagId);
+  DiagnosticBuilder DiagCompat(unsigned CompatDiagId) {
+    return DiagCompat(Tok, CompatDiagId);
+  }
+
 private:
   void SuggestParentheses(SourceLocation Loc, unsigned DK,
                           SourceRange ParenRange);
@@ -1717,8 +1725,8 @@ private:
   ObjCTypeParamList *parseObjCTypeParamList();
   ObjCTypeParamList *parseObjCTypeParamListOrProtocolRefs(
       ObjCTypeParamListScope &Scope, SourceLocation &lAngleLoc,
-      SmallVectorImpl<IdentifierLocPair> &protocolIdents,
-      SourceLocation &rAngleLoc, bool mayBeProtocolList = true);
+      SmallVectorImpl<IdentifierLoc> &protocolIdents, SourceLocation &rAngleLoc,
+      bool mayBeProtocolList = true);
 
   void HelperActionsForIvarDeclarations(ObjCContainerDecl *interfaceDecl,
                                         SourceLocation atLoc,
@@ -3161,6 +3169,8 @@ private:
                                SourceLocation *endLoc = nullptr);
   ExprResult ParseExtIntegerArgument();
 
+  void ParsePtrauthQualifier(ParsedAttributes &Attrs);
+
   VirtSpecifiers::Specifier isCXX11VirtSpecifier(const Token &Tok) const;
   VirtSpecifiers::Specifier isCXX11VirtSpecifier() const {
     return isCXX11VirtSpecifier(Tok);
@@ -3695,7 +3705,10 @@ public:
   /// diagnostic. Eventually will be split into a few functions to parse
   /// different situations.
 public:
-  DeclGroupPtrTy ParseOpenACCDirectiveDecl();
+  DeclGroupPtrTy ParseOpenACCDirectiveDecl(AccessSpecifier &AS,
+                                           ParsedAttributes &Attrs,
+                                           DeclSpec::TST TagType,
+                                           Decl *TagDecl);
   StmtResult ParseOpenACCDirectiveStmt();
 
 private:
@@ -3726,7 +3739,7 @@ private:
     SmallVector<Expr *> getAllExprs() {
       SmallVector<Expr *> Out;
       Out.push_back(DevNumExpr);
-      Out.insert(Out.end(), QueueIdExprs.begin(), QueueIdExprs.end());
+      llvm::append_range(Out, QueueIdExprs);
       return Out;
     }
   };
@@ -3758,6 +3771,8 @@ private:
   ExprResult ParseOpenACCIDExpression();
   /// Parses the variable list for the `cache` construct.
   OpenACCCacheParseInfo ParseOpenACCCacheVarList();
+  /// Parses the 'modifier-list' for copy, copyin, copyout, create.
+  OpenACCModifierKind tryParseModifierList(OpenACCClauseKind CK);
 
   using OpenACCVarParseResult = std::pair<ExprResult, OpenACCParseCanContinue>;
   /// Parses a single variable in a variable list for OpenACC.
@@ -3803,8 +3818,7 @@ private:
                                SourceLocation Loc,
                                llvm::SmallVectorImpl<Expr *> &IntExprs);
   /// Parses the 'device-type-list', which is a list of identifiers.
-  bool ParseOpenACCDeviceTypeList(
-      llvm::SmallVector<std::pair<IdentifierInfo *, SourceLocation>> &Archs);
+  bool ParseOpenACCDeviceTypeList(llvm::SmallVector<IdentifierLoc> &Archs);
   /// Parses the 'async-argument', which is an integral value with two
   /// 'special' values that are likely negative (but come from Macros).
   OpenACCIntExprParseResult ParseOpenACCAsyncArgument(OpenACCDirectiveKind DK,
@@ -3829,6 +3843,11 @@ private:
   OpenACCGangArgRes ParseOpenACCGangArg(SourceLocation GangLoc);
   /// Parses a 'condition' expr, ensuring it results in a
   ExprResult ParseOpenACCConditionExpr();
+  DeclGroupPtrTy
+  ParseOpenACCAfterRoutineDecl(AccessSpecifier &AS, ParsedAttributes &Attrs,
+                               DeclSpec::TST TagType, Decl *TagDecl,
+                               OpenACCDirectiveParseInfo &DirInfo);
+  StmtResult ParseOpenACCAfterRoutineStmt(OpenACCDirectiveParseInfo &DirInfo);
 
 private:
   //===--------------------------------------------------------------------===//
@@ -3842,6 +3861,8 @@ private:
   DeclGroupPtrTy ParseTemplateDeclarationOrSpecialization(
       DeclaratorContext Context, SourceLocation &DeclEnd,
       ParsedAttributes &AccessAttrs, AccessSpecifier AS);
+  clang::Parser::DeclGroupPtrTy ParseTemplateDeclarationOrSpecialization(
+      DeclaratorContext Context, SourceLocation &DeclEnd, AccessSpecifier AS);
   DeclGroupPtrTy ParseDeclarationAfterTemplate(
       DeclaratorContext Context, ParsedTemplateInfo &TemplateInfo,
       ParsingDeclRAIIObject &DiagsFromParams, SourceLocation &DeclEnd,
@@ -3929,10 +3950,8 @@ private:
     return false;
   }
 
-  bool ParseModuleName(
-      SourceLocation UseLoc,
-      SmallVectorImpl<std::pair<IdentifierInfo *, SourceLocation>> &Path,
-      bool IsImport);
+  bool ParseModuleName(SourceLocation UseLoc,
+                       SmallVectorImpl<IdentifierLoc> &Path, bool IsImport);
 
   //===--------------------------------------------------------------------===//
   // C++11/G++: Type Traits [Type-Traits.html in the GCC manual]

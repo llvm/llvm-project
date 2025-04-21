@@ -511,6 +511,7 @@ SIRegisterInfo::getLargestLegalSuperClass(const TargetRegisterClass *RC,
 Register SIRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
   const SIFrameLowering *TFI = ST.getFrameLowering();
   const SIMachineFunctionInfo *FuncInfo = MF.getInfo<SIMachineFunctionInfo>();
+
   // During ISel lowering we always reserve the stack pointer in entry and chain
   // functions, but never actually want to reference it when accessing our own
   // frame. If we need a frame pointer we use it, but otherwise we can just use

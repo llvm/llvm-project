@@ -171,12 +171,12 @@ mlir::getSlice(Operation *op, const BackwardSliceOptions &backwardSliceOptions,
     // Compute and insert the backwardSlice starting from currentOp.
     backwardSlice.clear();
     getBackwardSlice(currentOp, &backwardSlice, backwardSliceOptions);
-    slice.insert(backwardSlice.begin(), backwardSlice.end());
+    slice.insert_range(backwardSlice);
 
     // Compute and insert the forwardSlice starting from currentOp.
     forwardSlice.clear();
     getForwardSlice(currentOp, &forwardSlice, forwardSliceOptions);
-    slice.insert(forwardSlice.begin(), forwardSlice.end());
+    slice.insert_range(forwardSlice);
     ++currentIndex;
   }
   return topologicalSort(slice);

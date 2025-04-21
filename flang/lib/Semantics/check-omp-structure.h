@@ -73,6 +73,8 @@ public:
 
   void Enter(const parser::OpenMPConstruct &);
   void Leave(const parser::OpenMPConstruct &);
+  void Enter(const parser::OpenMPInteropConstruct &);
+  void Leave(const parser::OpenMPInteropConstruct &);
   void Enter(const parser::OpenMPDeclarativeConstruct &);
   void Leave(const parser::OpenMPDeclarativeConstruct &);
 
@@ -225,6 +227,7 @@ private:
   std::optional<IterTy> FindDuplicate(RangeTy &&);
 
   const Symbol *GetObjectSymbol(const parser::OmpObject &object);
+  const Symbol *GetArgumentSymbol(const parser::OmpArgument &argument);
   std::optional<parser::CharBlock> GetObjectSource(
       const parser::OmpObject &object);
   void CheckDependList(const parser::DataRef &);
@@ -277,7 +280,7 @@ private:
   void CheckTaskDependenceType(const parser::OmpTaskDependenceType::Value &x);
   std::optional<llvm::omp::Directive> GetCancelType(
       llvm::omp::Directive cancelDir, const parser::CharBlock &cancelSource,
-      const parser::OmpClauseList &clauses);
+      const std::optional<parser::OmpClauseList> &maybeClauses);
   void CheckCancellationNest(
       const parser::CharBlock &source, llvm::omp::Directive type);
   std::int64_t GetOrdCollapseLevel(const parser::OpenMPLoopConstruct &x);
@@ -314,6 +317,8 @@ private:
   bool deviceConstructFound_{false};
 
   void CheckAlignValue(const parser::OmpClause &);
+
+  void AddEndDirectiveClauses(const parser::OmpClauseList &clauses);
 
   void EnterDirectiveNest(const int index) { directiveNest_[index]++; }
   void ExitDirectiveNest(const int index) { directiveNest_[index]--; }

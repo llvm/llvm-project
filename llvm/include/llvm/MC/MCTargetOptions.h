@@ -105,6 +105,9 @@ public:
   /// integrated assembler.
   std::vector<std::string> IASSearchPaths;
 
+  // InstPrinter options.
+  std::vector<std::string> InstPrinterOptions;
+
   // Whether to emit compact-unwind for non-canonical personality
   // functions on Darwins.
   bool EmitCompactUnwindNonCanonical : 1;

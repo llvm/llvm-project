@@ -16,7 +16,6 @@
 #include <__cxx03/__iterator/iterator_traits.h>
 #include <__cxx03/__type_traits/is_unsigned.h>
 #include <__cxx03/cstdint>
-#include <__cxx03/initializer_list>
 #include <__cxx03/vector>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

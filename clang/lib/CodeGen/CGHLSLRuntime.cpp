@@ -31,7 +31,6 @@
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Alignment.h"
-
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
 
@@ -245,12 +244,12 @@ void CGHLSLRuntime::addBuffer(const HLSLBufferDecl *BufDecl) {
   llvm::TargetExtType *TargetTy =
       cast<llvm::TargetExtType>(convertHLSLSpecificType(
           ResHandleTy, BufDecl->hasValidPackoffset() ? &Layout : nullptr));
-  llvm::GlobalVariable *BufGV =
-      new GlobalVariable(TargetTy, /*isConstant*/ true,
-                         GlobalValue::LinkageTypes::ExternalLinkage, nullptr,
-                         llvm::formatv("{0}{1}", BufDecl->getName(),
-                                       BufDecl->isCBuffer() ? ".cb" : ".tb"),
-                         GlobalValue::NotThreadLocal);
+  llvm::GlobalVariable *BufGV = new GlobalVariable(
+      TargetTy, /*isConstant*/ false,
+      GlobalValue::LinkageTypes::ExternalLinkage, PoisonValue::get(TargetTy),
+      llvm::formatv("{0}{1}", BufDecl->getName(),
+                    BufDecl->isCBuffer() ? ".cb" : ".tb"),
+      GlobalValue::NotThreadLocal);
   CGM.getModule().insertGlobalVariable(BufGV);
 
   // Add globals for constant buffer elements and create metadata nodes
@@ -283,10 +282,21 @@ void CGHLSLRuntime::addHLSLBufferLayoutType(const RecordType *StructType,
 
 void CGHLSLRuntime::finishCodeGen() {
   auto &TargetOpts = CGM.getTarget().getTargetOpts();
+  auto &CodeGenOpts = CGM.getCodeGenOpts();
+  auto &LangOpts = CGM.getLangOpts();
   llvm::Module &M = CGM.getModule();
   Triple T(M.getTargetTriple());
   if (T.getArch() == Triple::ArchType::dxil)
     addDxilValVersion(TargetOpts.DxilValidatorVersion, M);
+  if (CodeGenOpts.ResMayAlias)
+    M.setModuleFlag(llvm::Module::ModFlagBehavior::Error, "dx.resmayalias", 1);
+
+  // NativeHalfType corresponds to the -fnative-half-type clang option which is
+  // aliased by clang-dxc's -enable-16bit-types option. This option is used to
+  // set the UseNativeLowPrecision DXIL module flag in the DirectX backend
+  if (LangOpts.NativeHalfType)
+    M.setModuleFlag(llvm::Module::ModFlagBehavior::Error, "dx.nativelowprec",
+                    1);
 
   generateGlobalCtorDtorCalls();
 }
@@ -339,9 +349,9 @@ llvm::Value *CGHLSLRuntime::emitInputSemantic(IRBuilder<> &B,
                                               llvm::Type *Ty) {
   assert(D.hasAttrs() && "Entry parameter missing annotation attribute!");
   if (D.hasAttr<HLSLSV_GroupIndexAttr>()) {
-    llvm::Function *DxGroupIndex =
-        CGM.getIntrinsic(Intrinsic::dx_flattened_thread_id_in_group);
-    return B.CreateCall(FunctionCallee(DxGroupIndex));
+    llvm::Function *GroupIndex =
+        CGM.getIntrinsic(getFlattenedThreadIdInGroupIntrinsic());
+    return B.CreateCall(FunctionCallee(GroupIndex));
   }
   if (D.hasAttr<HLSLSV_DispatchThreadIDAttr>()) {
     llvm::Function *ThreadIDIntrinsic =
@@ -386,8 +396,8 @@ void CGHLSLRuntime::emitEntryFunction(const FunctionDecl *FD,
   SmallVector<OperandBundleDef, 1> OB;
   if (CGM.shouldEmitConvergenceTokens()) {
     assert(EntryFn->isConvergent());
-    llvm::Value *I = B.CreateIntrinsic(
-        llvm::Intrinsic::experimental_convergence_entry, {}, {});
+    llvm::Value *I =
+        B.CreateIntrinsic(llvm::Intrinsic::experimental_convergence_entry, {});
     llvm::Value *bundleArgs[] = {I};
     OB.emplace_back("convergencectrl", bundleArgs);
   }

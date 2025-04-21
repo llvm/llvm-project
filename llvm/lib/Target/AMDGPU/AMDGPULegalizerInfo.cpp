@@ -1054,8 +1054,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
   auto &FPTruncActions = getActionDefinitionsBuilder(G_FPTRUNC);
   if (ST.hasCvtPkF16F32Inst())
-    FPTruncActions.legalFor(
-        {{S32, S64}, {S16, S32}, {V2S16, V2S32}, {V2S16, V2S64}});
+    FPTruncActions.legalFor({{S32, S64}, {S16, S32}, {V2S16, V2S32}});
   else
     FPTruncActions.legalFor({{S32, S64}, {S16, S32}});
   FPTruncActions.scalarize(0).lower();
@@ -3919,7 +3918,7 @@ void AMDGPULegalizerInfo::buildMultiply(LegalizerHelper &Helper,
   using Carry = SmallVector<Register, 2>;
 
   MachineIRBuilder &B = Helper.MIRBuilder;
-  GISelKnownBits &KB = *Helper.getKnownBits();
+  GISelValueTracking &VT = *Helper.getValueTracking();
 
   const LLT S1 = LLT::scalar(1);
   const LLT S32 = LLT::scalar(32);
@@ -3941,8 +3940,8 @@ void AMDGPULegalizerInfo::buildMultiply(LegalizerHelper &Helper,
 
   SmallVector<bool, 2> Src0KnownZeros, Src1KnownZeros;
   for (unsigned i = 0; i < Src0.size(); ++i) {
-    Src0KnownZeros.push_back(KB.getKnownBits(Src0[i]).isZero());
-    Src1KnownZeros.push_back(KB.getKnownBits(Src1[i]).isZero());
+    Src0KnownZeros.push_back(VT.getKnownBits(Src0[i]).isZero());
+    Src1KnownZeros.push_back(VT.getKnownBits(Src1[i]).isZero());
   }
 
   // Merge the given carries into the 32-bit LocalAccum, which is modified
@@ -4014,7 +4013,7 @@ void AMDGPULegalizerInfo::buildMultiply(LegalizerHelper &Helper,
               continue;
             }
             auto Mul = B.buildMul(S32, Src0[j0], Src1[j1]);
-            if (!LocalAccum[0] || KB.getKnownBits(LocalAccum[0]).isZero()) {
+            if (!LocalAccum[0] || VT.getKnownBits(LocalAccum[0]).isZero()) {
               LocalAccum[0] = Mul.getReg(0);
             } else {
               if (CarryIn.empty()) {
@@ -5580,6 +5579,7 @@ bool AMDGPULegalizerInfo::legalizeLaneOp(LegalizerHelper &Helper,
     return false;
 
   LLT PartialResTy = LLT::scalar(SplitSize);
+  bool NeedsBitcast = false;
   if (Ty.isVector()) {
     LLT EltTy = Ty.getElementType();
     unsigned EltSize = EltTy.getSizeInBits();
@@ -5588,8 +5588,10 @@ bool AMDGPULegalizerInfo::legalizeLaneOp(LegalizerHelper &Helper,
     } else if (EltSize == 16 || EltSize == 32) {
       unsigned NElem = SplitSize / EltSize;
       PartialResTy = Ty.changeElementCount(ElementCount::getFixed(NElem));
+    } else {
+      // Handle all other cases via S32/S64 pieces
+      NeedsBitcast = true;
     }
-    // Handle all other cases via S32/S64 pieces;
   }
 
   SmallVector<Register, 4> PartialRes;
@@ -5615,7 +5617,12 @@ bool AMDGPULegalizerInfo::legalizeLaneOp(LegalizerHelper &Helper,
     PartialRes.push_back(createLaneOp(Src0, Src1, Src2, PartialResTy));
   }
 
-  B.buildMergeLikeInstr(DstReg, PartialRes);
+  if (NeedsBitcast)
+    B.buildBitcast(DstReg, B.buildMergeLikeInstr(
+                               LLT::scalar(Ty.getSizeInBits()), PartialRes));
+  else
+    B.buildMergeLikeInstr(DstReg, PartialRes);
+
   MI.eraseFromParent();
   return true;
 }
@@ -7198,6 +7205,61 @@ bool AMDGPULegalizerInfo::legalizeBVHIntersectRayIntrinsic(
   return true;
 }
 
+bool AMDGPULegalizerInfo::legalizeBVHDualOrBVH8IntersectRayIntrinsic(
+    MachineInstr &MI, MachineIRBuilder &B) const {
+  const LLT S32 = LLT::scalar(32);
+  const LLT V2S32 = LLT::fixed_vector(2, 32);
+
+  Register DstReg = MI.getOperand(0).getReg();
+  Register DstOrigin = MI.getOperand(1).getReg();
+  Register DstDir = MI.getOperand(2).getReg();
+  Register NodePtr = MI.getOperand(4).getReg();
+  Register RayExtent = MI.getOperand(5).getReg();
+  Register InstanceMask = MI.getOperand(6).getReg();
+  Register RayOrigin = MI.getOperand(7).getReg();
+  Register RayDir = MI.getOperand(8).getReg();
+  Register Offsets = MI.getOperand(9).getReg();
+  Register TDescr = MI.getOperand(10).getReg();
+
+  if (!ST.hasBVHDualAndBVH8Insts()) {
+    DiagnosticInfoUnsupported BadIntrin(B.getMF().getFunction(),
+                                        "intrinsic not supported on subtarget",
+                                        MI.getDebugLoc());
+    B.getMF().getFunction().getContext().diagnose(BadIntrin);
+    return false;
+  }
+
+  bool IsBVH8 = cast<GIntrinsic>(MI).getIntrinsicID() ==
+                Intrinsic::amdgcn_image_bvh8_intersect_ray;
+  const unsigned NumVDataDwords = 10;
+  const unsigned NumVAddrDwords = IsBVH8 ? 11 : 12;
+  int Opcode = AMDGPU::getMIMGOpcode(
+      IsBVH8 ? AMDGPU::IMAGE_BVH8_INTERSECT_RAY
+             : AMDGPU::IMAGE_BVH_DUAL_INTERSECT_RAY,
+      AMDGPU::MIMGEncGfx12, NumVDataDwords, NumVAddrDwords);
+  assert(Opcode != -1);
+
+  auto RayExtentInstanceMaskVec = B.buildMergeLikeInstr(
+      V2S32, {RayExtent, B.buildAnyExt(S32, InstanceMask)});
+
+  B.buildInstr(IsBVH8 ? AMDGPU::G_AMDGPU_BVH8_INTERSECT_RAY
+                      : AMDGPU::G_AMDGPU_BVH_DUAL_INTERSECT_RAY)
+      .addDef(DstReg)
+      .addDef(DstOrigin)
+      .addDef(DstDir)
+      .addImm(Opcode)
+      .addUse(NodePtr)
+      .addUse(RayExtentInstanceMaskVec.getReg(0))
+      .addUse(RayOrigin)
+      .addUse(RayDir)
+      .addUse(Offsets)
+      .addUse(TDescr)
+      .cloneMemRefs(MI);
+
+  MI.eraseFromParent();
+  return true;
+}
+
 bool AMDGPULegalizerInfo::legalizeStackSave(MachineInstr &MI,
                                             MachineIRBuilder &B) const {
   const SITargetLowering *TLI = ST.getTargetLowering();
@@ -7546,6 +7608,9 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     return legalizeRsqClampIntrinsic(MI, MRI, B);
   case Intrinsic::amdgcn_image_bvh_intersect_ray:
     return legalizeBVHIntersectRayIntrinsic(MI, B);
+  case Intrinsic::amdgcn_image_bvh_dual_intersect_ray:
+  case Intrinsic::amdgcn_image_bvh8_intersect_ray:
+    return legalizeBVHDualOrBVH8IntersectRayIntrinsic(MI, B);
   case Intrinsic::amdgcn_swmmac_f16_16x16x32_f16:
   case Intrinsic::amdgcn_swmmac_bf16_16x16x32_bf16:
   case Intrinsic::amdgcn_swmmac_f32_16x16x32_bf16:
