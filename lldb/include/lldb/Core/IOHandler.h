@@ -101,7 +101,7 @@ public:
   }
 
   virtual bool SetUseColor(bool use_color) {
-    // Use color isn't mandatory
+    // Color support isn't mandatory.
     return false;
   };
 
