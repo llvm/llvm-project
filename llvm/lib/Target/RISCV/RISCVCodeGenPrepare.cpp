@@ -121,7 +121,7 @@ bool RISCVCodeGenPrepare::visitAnd(BinaryOperator &BO) {
 // llvm/test/CodeGen/RISCV/rvv/vpmerge-sdnode.ll.
 //
 // To avoid that this widens the i1 vp.merge to an i8 vp.merge, which will
-// usually be folded into a masked vor.vv.
+// generate a single vmerge.vim:
 //
 // loop:
 //   %phi = phi <vscale x 4 x i8> [ zeroinitializer, %entry ], [ %rec, %loop ]
