@@ -87,17 +87,37 @@ ComparisonCategoryInfo::ValueInfo *ComparisonCategoryInfo::lookupValueInfo(
   return &Objects.back();
 }
 
+static const NamespaceDecl *lookupStdNamespace(const ASTContext &Ctx,
+                                               NamespaceDecl *&StdNS) {
+  if (!StdNS) {
+    DeclContextLookupResult Lookup =
+        Ctx.getTranslationUnitDecl()->lookup(&Ctx.Idents.get("std"));
+    if (!Lookup.empty())
+      StdNS = dyn_cast<NamespaceDecl>(Lookup.front());
+  }
+  return StdNS;
+}
+
+static const CXXRecordDecl *lookupCXXRecordDecl(const ASTContext &Ctx,
+                                                const NamespaceDecl *StdNS,
+                                                ComparisonCategoryType Kind) {
+  StringRef Name = ComparisonCategories::getCategoryString(Kind);
+  DeclContextLookupResult Lookup = StdNS->lookup(&Ctx.Idents.get(Name));
+  if (!Lookup.empty())
+    if (const CXXRecordDecl *RD = dyn_cast<CXXRecordDecl>(Lookup.front()))
+      return RD;
+  return nullptr;
+}
+
 const ComparisonCategoryInfo *
 ComparisonCategories::lookupInfo(ComparisonCategoryType Kind) const {
   auto It = Data.find(static_cast<char>(Kind));
   if (It != Data.end())
     return &It->second;
-  if (auto QT = Ctx.getCGlobalCXXStdNSTypedef(
-          nullptr, ComparisonCategories::getCategoryString(Kind));
-      !QT.isNull()) {
-    if (const auto *RD = QT->getAsCXXRecordDecl())
+
+  if (const NamespaceDecl *NS = lookupStdNamespace(Ctx, StdNS))
+    if (const CXXRecordDecl *RD = lookupCXXRecordDecl(Ctx, NS, Kind))
       return &Data.try_emplace((char)Kind, Ctx, RD, Kind).first->second;
-  }
 
   return nullptr;
 }
