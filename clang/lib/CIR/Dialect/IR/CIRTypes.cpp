@@ -684,6 +684,25 @@ cir::VectorType::getABIAlignment(const ::mlir::DataLayout &dataLayout,
   return llvm::NextPowerOf2(dataLayout.getTypeSizeInBits(*this));
 }
 
+mlir::LogicalResult cir::VectorType::verify(
+    llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
+    mlir::Type eltType, uint64_t size) {
+  if (size == 0)
+    return emitError() << "the number of vector elements must be positive";
+
+  // Check if it a valid FixedVectorType
+  if (mlir::isa<cir::PointerType, cir::FP128Type>(eltType))
+    return success();
+
+  // Check if it a valid VectorType
+  if (mlir::isa<cir::IntType>(eltType) || isAnyFloatingPointType(eltType))
+    return success();
+
+  eltType.dump();
+  return emitError() << "expected LLVM-compatible fixed-vector type "
+                        "to be either builtin or LLVM dialect type";
+}
+
 //===----------------------------------------------------------------------===//
 // PointerType Definitions
 //===----------------------------------------------------------------------===//

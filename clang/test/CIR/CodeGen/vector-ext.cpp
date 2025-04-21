@@ -11,21 +11,21 @@ typedef int vi2 __attribute__((ext_vector_type(2)));
 typedef double vd2 __attribute__((ext_vector_type(2)));
 
 vi4 vec_a;
-// CIR: cir.global external @[[VEC_A:.*]] = #cir.zero : !cir.vector<!s32i x 4>
+// CIR: cir.global external @[[VEC_A:.*]] = #cir.zero : !cir.vector<4 x !s32i>
 
 // LLVM: @[[VEC_A:.*]] = dso_local global <4 x i32> zeroinitializer
 
 // OGCG: @[[VEC_A:.*]] = global <4 x i32> zeroinitializer
 
 vi3 vec_b;
-// CIR: cir.global external @[[VEC_B:.*]] = #cir.zero : !cir.vector<!s32i x 3>
+// CIR: cir.global external @[[VEC_B:.*]] = #cir.zero : !cir.vector<3 x !s32i>
 
 // LLVM: @[[VEC_B:.*]] = dso_local global <3 x i32> zeroinitializer
 
 // OGCG: @[[VEC_B:.*]] = global <3 x i32> zeroinitializer
 
 vi2 vec_c;
-// CIR: cir.global external @[[VEC_C:.*]] = #cir.zero : !cir.vector<!s32i x 2>
+// CIR: cir.global external @[[VEC_C:.*]] = #cir.zero : !cir.vector<2 x !s32i>
 
 // LLVM: @[[VEC_C:.*]] = dso_local global <2 x i32> zeroinitializer
 
@@ -33,7 +33,7 @@ vi2 vec_c;
 
 vd2 d;
 
-// CIR: cir.global external @[[VEC_D:.*]] = #cir.zero : !cir.vector<!cir.double x 2>
+// CIR: cir.global external @[[VEC_D:.*]] = #cir.zero : !cir.vector<2 x !cir.double>
 
 // LLVM: @[[VEC_D:.*]] = dso_local global <2 x double> zeroinitialize
 
@@ -46,10 +46,10 @@ void foo() {
   vd2 d;
 }
 
-// CIR: %[[VEC_A:.*]] = cir.alloca !cir.vector<!s32i x 4>, !cir.ptr<!cir.vector<!s32i x 4>>, ["a"]
-// CIR: %[[VEC_B:.*]] = cir.alloca !cir.vector<!s32i x 3>, !cir.ptr<!cir.vector<!s32i x 3>>, ["b"]
-// CIR: %[[VEC_C:.*]] = cir.alloca !cir.vector<!s32i x 2>, !cir.ptr<!cir.vector<!s32i x 2>>, ["c"]
-// CIR: %[[VEC_D:.*]] = cir.alloca !cir.vector<!cir.double x 2>, !cir.ptr<!cir.vector<!cir.double x 2>>, ["d"]
+// CIR: %[[VEC_A:.*]] = cir.alloca !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>, ["a"]
+// CIR: %[[VEC_B:.*]] = cir.alloca !cir.vector<3 x !s32i>, !cir.ptr<!cir.vector<3 x !s32i>>, ["b"]
+// CIR: %[[VEC_C:.*]] = cir.alloca !cir.vector<2 x !s32i>, !cir.ptr<!cir.vector<2 x !s32i>>, ["c"]
+// CIR: %[[VEC_D:.*]] = cir.alloca !cir.vector<2 x !cir.double>, !cir.ptr<!cir.vector<2 x !cir.double>>, ["d"]
 
 // LLVM: %[[VEC_A:.*]] = alloca <4 x i32>, i64 1, align 16
 // LLVM: %[[VEC_B:.*]] = alloca <3 x i32>, i64 1, align 16
@@ -63,8 +63,8 @@ void foo() {
 
 void foo2(vi4 p) {}
 
-// CIR: %[[VEC_A:.*]] = cir.alloca !cir.vector<!s32i x 4>, !cir.ptr<!cir.vector<!s32i x 4>>, ["p", init]
-// CIR: cir.store %{{.*}}, %[[VEC_A]] : !cir.vector<!s32i x 4>, !cir.ptr<!cir.vector<!s32i x 4>>
+// CIR: %[[VEC_A:.*]] = cir.alloca !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>, ["p", init]
+// CIR: cir.store %{{.*}}, %[[VEC_A]] : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
 
 // LLVM: %[[VEC_A:.*]] = alloca <4 x i32>, i64 1, align 16
 // LLVM: store <4 x i32> %{{.*}}, ptr %[[VEC_A]], align 16

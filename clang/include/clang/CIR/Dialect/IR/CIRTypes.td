@@ -316,15 +316,32 @@ def CIR_VectorType : CIR_Type<"Vector", "vector",
 
   let summary = "CIR vector type";
   let description = [{
-    `cir.vector' represents fixed-size vector types.  The parameters are the
-    element type and the number of elements.
+   `!cir.vector' represents fixed-size vector types, parameterized
+    by the element type and the number of elements.
+
+    Example:
+
+    ```mlir
+    !cir.vector<!u64i x 2>
+    !cir.vector<!cir.float x 4>
+    ```
   }];
 
   let parameters = (ins "mlir::Type":$eltType, "uint64_t":$size);
 
   let assemblyFormat = [{
-    `<` $eltType `x` $size `>`
+    `<` $size `x` $eltType `>`
   }];
+
+  let builders = [
+    TypeBuilderWithInferredContext<(ins
+      "mlir::Type":$eltType, "uint64_t":$size
+    ), [{
+        return $_get(eltType.getContext(), eltType, size);
+    }]>,
+  ];
+
+  let genVerifyDecl = 1;
 }
 
 //===----------------------------------------------------------------------===//
