@@ -658,6 +658,16 @@ TEST(ParseArchString, RejectsConflictingExtensions) {
               "'xwchc' and 'zcb' extensions are incompatible");
   }
 
+  for (StringRef Input : {"rv64i_zilsd"}) {
+    EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
+              "'zilsd' is only supported for 'rv32'");
+  }
+
+  for (StringRef Input : {"rv64i_zclsd"}) {
+    EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
+              "'zclsd' is only supported for 'rv32'");
+  }
+
   for (StringRef Input : {"rv32i_zcf_zclsd"}) {
     EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
               "'zclsd' and 'zcf' extensions are incompatible");
