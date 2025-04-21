@@ -24,8 +24,8 @@ define i32 @addsat(i32 %a, i32 %b) {
 ; RV32IXQCIA:       # %bb.0:
 ; RV32IXQCIA-NEXT:    qc.addsat a0, a0, a1
 ; RV32IXQCIA-NEXT:    ret
- %addai = tail call i32 @llvm.sadd.sat.i32(i32 %a,i32 %b)
- ret i32 %addai
+ %saddsat = tail call i32 @llvm.sadd.sat.i32(i32 %a,i32 %b)
+ ret i32 %saddsat
 }
 
 define i32 @addusat(i32 %a, i32 %b) {
@@ -41,8 +41,8 @@ define i32 @addusat(i32 %a, i32 %b) {
 ; RV32IXQCIA:       # %bb.0:
 ; RV32IXQCIA-NEXT:    qc.addusat a0, a0, a1
 ; RV32IXQCIA-NEXT:    ret
- %addai = tail call i32 @llvm.uadd.sat.i32(i32 %a,i32 %b)
- ret i32 %addai
+ %uaddsat = tail call i32 @llvm.uadd.sat.i32(i32 %a,i32 %b)
+ ret i32 %uaddsat
 }
 
 define i32 @subsat(i32 %a, i32 %b) {
@@ -64,8 +64,8 @@ define i32 @subsat(i32 %a, i32 %b) {
 ; RV32IXQCIA:       # %bb.0:
 ; RV32IXQCIA-NEXT:    qc.subsat a0, a0, a1
 ; RV32IXQCIA-NEXT:    ret
- %addai = tail call i32 @llvm.ssub.sat.i32(i32 %a,i32 %b)
- ret i32 %addai
+ %ssubsat = tail call i32 @llvm.ssub.sat.i32(i32 %a,i32 %b)
+ ret i32 %ssubsat
 }
 
 define i32 @subusat(i32 %a, i32 %b) {
@@ -81,8 +81,8 @@ define i32 @subusat(i32 %a, i32 %b) {
 ; RV32IXQCIA:       # %bb.0:
 ; RV32IXQCIA-NEXT:    qc.subusat a0, a0, a1
 ; RV32IXQCIA-NEXT:    ret
- %addai = tail call i32 @llvm.usub.sat.i32(i32 %a,i32 %b)
- ret i32 %addai
+ %usubsat = tail call i32 @llvm.usub.sat.i32(i32 %a,i32 %b)
+ ret i32 %usubsat
 }
 
 define i32 @shlusat(i32 %a, i32 %b) {
@@ -100,8 +100,8 @@ define i32 @shlusat(i32 %a, i32 %b) {
 ; RV32IXQCIA:       # %bb.0:
 ; RV32IXQCIA-NEXT:    qc.shlusat a0, a0, a1
 ; RV32IXQCIA-NEXT:    ret
- %addai = tail call i32 @llvm.ushl.sat.i32(i32 %a,i32 %b)
- ret i32 %addai
+ %ushlsat = tail call i32 @llvm.ushl.sat.i32(i32 %a,i32 %b)
+ ret i32 %ushlsat
 }
 
 define i32 @shlsat(i32 %a, i32 %b) {
@@ -123,6 +123,6 @@ define i32 @shlsat(i32 %a, i32 %b) {
 ; RV32IXQCIA:       # %bb.0:
 ; RV32IXQCIA-NEXT:    qc.shlsat a0, a0, a1
 ; RV32IXQCIA-NEXT:    ret
- %addai = tail call i32 @llvm.sshl.sat.i32(i32 %a,i32 %b)
- ret i32 %addai
+ %sshlsat = tail call i32 @llvm.sshl.sat.i32(i32 %a,i32 %b)
+ ret i32 %sshlsat
 }
