@@ -68,8 +68,9 @@ define void @memcpy_fp80_padding() {
 
 define void @memset_fp80_padding() {
 ; CHECK-LABEL: @memset_fp80_padding(
-; CHECK-NEXT:    [[X_SROA_0_16_VEC_EXTRACT:%.*]] = extractelement <4 x i64> splat (i64 -1), i32 2
-; CHECK-NEXT:    store i64 [[X_SROA_0_16_VEC_EXTRACT]], ptr @i64_sink, align 4
+; CHECK-NEXT:    [[X_SROA_0:%.*]] = alloca x86_fp80, align 16
+; CHECK-NEXT:    call void @llvm.memset.p0.i32(ptr align 16 [[X_SROA_0]], i8 -1, i32 16, i1 false)
+; CHECK-NEXT:    store i64 -1, ptr @i64_sink, align 4
 ; CHECK-NEXT:    ret void
 ;
   %x = alloca %union.Foo
