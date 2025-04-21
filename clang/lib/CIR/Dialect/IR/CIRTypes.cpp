@@ -688,7 +688,7 @@ mlir::LogicalResult cir::VectorType::verify(
     llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
     mlir::Type eltType, uint64_t size) {
   if (size == 0)
-    return emitError() << "the number of vector elements must be positive";
+    return emitError() << "the number of vector elements must be non-zero";
 
   // Check if it a valid FixedVectorType
   if (mlir::isa<cir::PointerType, cir::FP128Type>(eltType))
@@ -698,7 +698,6 @@ mlir::LogicalResult cir::VectorType::verify(
   if (mlir::isa<cir::IntType>(eltType) || isAnyFloatingPointType(eltType))
     return success();
 
-  eltType.dump();
   return emitError() << "expected LLVM-compatible fixed-vector type "
                         "to be either builtin or LLVM dialect type";
 }
