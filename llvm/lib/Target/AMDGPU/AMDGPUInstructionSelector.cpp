@@ -4884,8 +4884,7 @@ getLegalRegBank(const MachineOperand *NewOp, const MachineOperand *RootOp,
 InstructionSelector::ComplexRendererFns
 AMDGPUInstructionSelector::selectVOP3PRetHelper(MachineOperand &Root,
                                                 bool IsDOT) const {
-  MachineRegisterInfo &MRI =
-      Root.getParent()->getParent()->getParent()->getRegInfo();
+  MachineRegisterInfo &MRI = Root.getParent()->getMF()->getRegInfo();
   auto Results = selectVOP3PModsImpl(&Root, MRI, IsDOT);
   const MachineOperand *Op = Results.first;
   unsigned Mods = Results.second;
