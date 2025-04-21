@@ -51,9 +51,7 @@ using namespace PatternMatch;
 static const unsigned MaxProcessedPerValue = 500;
 
 char LazyValueInfoWrapperPass::ID = 0;
-LazyValueInfoWrapperPass::LazyValueInfoWrapperPass() : FunctionPass(ID) {
-  initializeLazyValueInfoWrapperPassPass(*PassRegistry::getPassRegistry());
-}
+LazyValueInfoWrapperPass::LazyValueInfoWrapperPass() : FunctionPass(ID) {}
 INITIALIZE_PASS_BEGIN(LazyValueInfoWrapperPass, "lazy-value-info",
                 "Lazy Value Information Analysis", false, true)
 INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)

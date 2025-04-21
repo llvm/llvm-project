@@ -145,6 +145,7 @@ void initializeJMCInstrumenterPass(PassRegistry &);
 void initializeKCFIPass(PassRegistry &);
 void initializeLCSSAVerificationPassPass(PassRegistry &);
 void initializeLCSSAWrapperPassPass(PassRegistry &);
+void initializeLazyBFIPassPass(PassRegistry &);
 void initializeLazyBlockFrequencyInfoPassPass(PassRegistry &);
 void initializeLazyBranchProbabilityInfoPassPass(PassRegistry &);
 void initializeLazyMachineBlockFrequencyInfoPassPass(PassRegistry &);
