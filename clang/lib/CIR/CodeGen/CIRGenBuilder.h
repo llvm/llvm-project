@@ -63,6 +63,7 @@ public:
     case clang::TagTypeKind::Enum:
       llvm_unreachable("enums are not records");
     }
+    llvm_unreachable("Unsupported record kind");
   }
 
   /// Get an incomplete CIR struct type. If we have a complete record
