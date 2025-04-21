@@ -82,6 +82,56 @@ class OpenACCClauseCIREmitter final
     return conversionOp.getResult(0);
   }
 
+  mlir::acc::DeviceType decodeDeviceType(const IdentifierInfo *ii) {
+    // '*' case leaves no identifier-info, just a nullptr.
+    if (!ii)
+      return mlir::acc::DeviceType::Star;
+    return llvm::StringSwitch<mlir::acc::DeviceType>(ii->getName())
+        .CaseLower("default", mlir::acc::DeviceType::Default)
+        .CaseLower("host", mlir::acc::DeviceType::Host)
+        .CaseLower("multicore", mlir::acc::DeviceType::Multicore)
+        .CasesLower("nvidia", "acc_device_nvidia",
+                    mlir::acc::DeviceType::Nvidia)
+        .CaseLower("radeon", mlir::acc::DeviceType::Radeon);
+  }
+
+  // Handle a clause affected by the 'device-type' to the point that they need
+  // to have the attributes added in the correct/corresponding order, such as
+  // 'num_workers' or 'vector_length' on a compute construct.
+  mlir::ArrayAttr
+  handleDeviceTypeAffectedClause(mlir::ArrayAttr existingDeviceTypes,
+                                 mlir::Value argument,
+                                 mlir::MutableOperandRange &argCollection) {
+    llvm::SmallVector<mlir::Attribute> deviceTypes;
+
+    // Collect the 'existing' device-type attributes so we can re-create them
+    // and insert them.
+    if (existingDeviceTypes) {
+      for (const mlir::Attribute &Attr : existingDeviceTypes)
+        deviceTypes.push_back(mlir::acc::DeviceTypeAttr::get(
+            builder.getContext(),
+            cast<mlir::acc::DeviceTypeAttr>(Attr).getValue()));
+    }
+
+    // Insert 1 version of the 'expr' to the NumWorkers list per-current
+    // device type.
+    if (lastDeviceTypeClause) {
+      for (const DeviceTypeArgument &arch :
+           lastDeviceTypeClause->getArchitectures()) {
+        deviceTypes.push_back(mlir::acc::DeviceTypeAttr::get(
+            builder.getContext(), decodeDeviceType(arch.getIdentifierInfo())));
+        argCollection.append(argument);
+      }
+    } else {
+      // Else, we just add a single for 'none'.
+      deviceTypes.push_back(mlir::acc::DeviceTypeAttr::get(
+          builder.getContext(), mlir::acc::DeviceType::None));
+      argCollection.append(argument);
+    }
+
+    return mlir::ArrayAttr::get(builder.getContext(), deviceTypes);
+  }
+
 public:
   OpenACCClauseCIREmitter(OpTy &operation, CIRGenFunction &cgf,
                           CIRGenBuilderTy &builder,
@@ -110,19 +160,6 @@ public:
     } else {
       return clauseNotImplemented(clause);
     }
-  }
-
-  mlir::acc::DeviceType decodeDeviceType(const IdentifierInfo *ii) {
-    // '*' case leaves no identifier-info, just a nullptr.
-    if (!ii)
-      return mlir::acc::DeviceType::Star;
-    return llvm::StringSwitch<mlir::acc::DeviceType>(ii->getName())
-        .CaseLower("default", mlir::acc::DeviceType::Default)
-        .CaseLower("host", mlir::acc::DeviceType::Host)
-        .CaseLower("multicore", mlir::acc::DeviceType::Multicore)
-        .CasesLower("nvidia", "acc_device_nvidia",
-                    mlir::acc::DeviceType::Nvidia)
-        .CaseLower("radeon", mlir::acc::DeviceType::Radeon);
   }
 
   void VisitDeviceTypeClause(const OpenACCDeviceTypeClause &clause) {
@@ -165,40 +202,25 @@ public:
 
   void VisitNumWorkersClause(const OpenACCNumWorkersClause &clause) {
     if constexpr (isOneOfTypes<OpTy, ParallelOp, KernelsOp>) {
-      // Collect the 'existing' device-type attributes so we can re-create them
-      // and insert them.
-      llvm::SmallVector<mlir::Attribute> deviceTypes;
-      mlir::ArrayAttr existingDeviceTypes =
-          operation.getNumWorkersDeviceTypeAttr();
-
-      if (existingDeviceTypes) {
-        for (mlir::Attribute Attr : existingDeviceTypes)
-          deviceTypes.push_back(mlir::acc::DeviceTypeAttr::get(
-              builder.getContext(),
-              cast<mlir::acc::DeviceTypeAttr>(Attr).getValue()));
-      }
-
-      // Insert 1 version of the 'int-expr' to the NumWorkers list per-current
-      // device type.
-      mlir::Value intExpr = createIntExpr(clause.getIntExpr());
-      if (lastDeviceTypeClause) {
-        for (const DeviceTypeArgument &arg :
-             lastDeviceTypeClause->getArchitectures()) {
-          deviceTypes.push_back(mlir::acc::DeviceTypeAttr::get(
-              builder.getContext(), decodeDeviceType(arg.getIdentifierInfo())));
-          operation.getNumWorkersMutable().append(intExpr);
-        }
-      } else {
-        // Else, we just add a single for 'none'.
-        deviceTypes.push_back(mlir::acc::DeviceTypeAttr::get(
-            builder.getContext(), mlir::acc::DeviceType::None));
-        operation.getNumWorkersMutable().append(intExpr);
-      }
-
-      operation.setNumWorkersDeviceTypeAttr(
-          mlir::ArrayAttr::get(builder.getContext(), deviceTypes));
+      mlir::MutableOperandRange range = operation.getNumWorkersMutable();
+      operation.setNumWorkersDeviceTypeAttr(handleDeviceTypeAffectedClause(
+          operation.getNumWorkersDeviceTypeAttr(),
+          createIntExpr(clause.getIntExpr()), range));
     } else if constexpr (isOneOfTypes<OpTy, SerialOp>) {
       llvm_unreachable("num_workers not valid on serial");
+    } else {
+      return clauseNotImplemented(clause);
+    }
+  }
+
+  void VisitVectorLengthClause(const OpenACCVectorLengthClause &clause) {
+    if constexpr (isOneOfTypes<OpTy, ParallelOp, KernelsOp>) {
+      mlir::MutableOperandRange range = operation.getVectorLengthMutable();
+      operation.setVectorLengthDeviceTypeAttr(handleDeviceTypeAffectedClause(
+          operation.getVectorLengthDeviceTypeAttr(),
+          createIntExpr(clause.getIntExpr()), range));
+    } else if constexpr (isOneOfTypes<OpTy, SerialOp>) {
+      llvm_unreachable("vector_length not valid on serial");
     } else {
       return clauseNotImplemented(clause);
     }
