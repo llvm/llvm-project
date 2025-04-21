@@ -46,8 +46,25 @@ class OpenACCClauseCIREmitter final
   // diagnostics are gone.
   SourceLocation dirLoc;
 
+  const OpenACCDeviceTypeClause *lastDeviceTypeClause = nullptr;
+
   void clauseNotImplemented(const OpenACCClause &c) {
     cgf.cgm.errorNYI(c.getSourceRange(), "OpenACC Clause", c.getClauseKind());
+  }
+
+  mlir::Value createIntExpr(const Expr *intExpr) {
+    mlir::Value expr = cgf.emitScalarExpr(intExpr);
+    mlir::Location exprLoc = cgf.cgm.getLoc(intExpr->getBeginLoc());
+
+    mlir::IntegerType targetType = mlir::IntegerType::get(
+        &cgf.getMLIRContext(), cgf.getContext().getIntWidth(intExpr->getType()),
+        intExpr->getType()->isSignedIntegerOrEnumerationType()
+            ? mlir::IntegerType::SignednessSemantics::Signed
+            : mlir::IntegerType::SignednessSemantics::Unsigned);
+
+    auto conversionOp = builder.create<mlir::UnrealizedConversionCastOp>(
+        exprLoc, targetType, expr);
+    return conversionOp.getResult(0);
   }
 
   // 'condition' as an OpenACC grammar production is used for 'if' and (some
@@ -109,6 +126,7 @@ public:
   }
 
   void VisitDeviceTypeClause(const OpenACCDeviceTypeClause &clause) {
+    lastDeviceTypeClause = &clause;
     if constexpr (isOneOfTypes<OpTy, InitOp, ShutdownOp>) {
       llvm::SmallVector<mlir::Attribute> deviceTypes;
       std::optional<mlir::ArrayAttr> existingDeviceTypes =
@@ -116,7 +134,7 @@ public:
 
       // Ensure we keep the existing ones, and in the correct 'new' order.
       if (existingDeviceTypes) {
-        for (const mlir::Attribute &Attr : *existingDeviceTypes)
+        for (mlir::Attribute Attr : *existingDeviceTypes)
           deviceTypes.push_back(mlir::acc::DeviceTypeAttr::get(
               builder.getContext(),
               cast<mlir::acc::DeviceTypeAttr>(Attr).getValue()));
@@ -136,6 +154,51 @@ public:
       if (!clause.getArchitectures().empty())
         operation.setDeviceType(
             decodeDeviceType(clause.getArchitectures()[0].getIdentifierInfo()));
+    } else if constexpr (isOneOfTypes<OpTy, ParallelOp, SerialOp, KernelsOp>) {
+      // Nothing to do here, these constructs don't have any IR for these, as
+      // they just modify the other clauses IR.  So setting of `lastDeviceType`
+      // (done above) is all we need.
+    } else {
+      return clauseNotImplemented(clause);
+    }
+  }
+
+  void VisitNumWorkersClause(const OpenACCNumWorkersClause &clause) {
+    if constexpr (isOneOfTypes<OpTy, ParallelOp, KernelsOp>) {
+      // Collect the 'existing' device-type attributes so we can re-create them
+      // and insert them.
+      llvm::SmallVector<mlir::Attribute> deviceTypes;
+      mlir::ArrayAttr existingDeviceTypes =
+          operation.getNumWorkersDeviceTypeAttr();
+
+      if (existingDeviceTypes) {
+        for (mlir::Attribute Attr : existingDeviceTypes)
+          deviceTypes.push_back(mlir::acc::DeviceTypeAttr::get(
+              builder.getContext(),
+              cast<mlir::acc::DeviceTypeAttr>(Attr).getValue()));
+      }
+
+      // Insert 1 version of the 'int-expr' to the NumWorkers list per-current
+      // device type.
+      mlir::Value intExpr = createIntExpr(clause.getIntExpr());
+      if (lastDeviceTypeClause) {
+        for (const DeviceTypeArgument &arg :
+             lastDeviceTypeClause->getArchitectures()) {
+          deviceTypes.push_back(mlir::acc::DeviceTypeAttr::get(
+              builder.getContext(), decodeDeviceType(arg.getIdentifierInfo())));
+          operation.getNumWorkersMutable().append(intExpr);
+        }
+      } else {
+        // Else, we just add a single for 'none'.
+        deviceTypes.push_back(mlir::acc::DeviceTypeAttr::get(
+            builder.getContext(), mlir::acc::DeviceType::None));
+        operation.getNumWorkersMutable().append(intExpr);
+      }
+
+      operation.setNumWorkersDeviceTypeAttr(
+          mlir::ArrayAttr::get(builder.getContext(), deviceTypes));
+    } else if constexpr (isOneOfTypes<OpTy, SerialOp>) {
+      llvm_unreachable("num_workers not valid on serial");
     } else {
       return clauseNotImplemented(clause);
     }
