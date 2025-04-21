@@ -219,7 +219,8 @@ public:
                                                 VectorType *ValTy,
                                                 TTI::TargetCostKind CostKind);
 
-  InstructionCost getSpliceCost(VectorType *Tp, int Index);
+  InstructionCost getSpliceCost(VectorType *Tp, int Index,
+                                TTI::TargetCostKind CostKind);
 
   InstructionCost getArithmeticInstrCost(
       unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
@@ -290,11 +291,13 @@ public:
     return isElementTypeLegalForScalableVector(DataType->getScalarType());
   }
 
-  bool isLegalMaskedLoad(Type *DataType, Align Alignment) {
+  bool isLegalMaskedLoad(Type *DataType, Align Alignment,
+                         unsigned /*AddressSpace*/) {
     return isLegalMaskedLoadStore(DataType, Alignment);
   }
 
-  bool isLegalMaskedStore(Type *DataType, Align Alignment) {
+  bool isLegalMaskedStore(Type *DataType, Align Alignment,
+                          unsigned /*AddressSpace*/) {
     return isLegalMaskedLoadStore(DataType, Alignment);
   }
 

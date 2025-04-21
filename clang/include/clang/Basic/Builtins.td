@@ -920,7 +920,7 @@ def FrameAddress : Builtin {
 def ClearCache : Builtin {
   let Spellings = ["__builtin___clear_cache"];
   let Attributes = [NoThrow];
-  let Prototype = "void(char*, char*)";
+  let Prototype = "void(void*, void*)";
 }
 
 def BuiltinSetjmp : Builtin {
@@ -1300,6 +1300,18 @@ def ElementwiseMax : Builtin {
 
 def ElementwiseMin : Builtin {
   let Spellings = ["__builtin_elementwise_min"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def ElementwiseMaxNum : Builtin {
+  let Spellings = ["__builtin_elementwise_maxnum"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def ElementwiseMinNum : Builtin {
+  let Spellings = ["__builtin_elementwise_minnum"];
   let Attributes = [NoThrow, Const, CustomTypeChecking];
   let Prototype = "void(...)";
 }

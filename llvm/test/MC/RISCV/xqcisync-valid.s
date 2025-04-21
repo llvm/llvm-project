@@ -1,5 +1,5 @@
 # Xqcisync - Qualcomm uC Sync Delay Extension
-# RUN: llvm-mc %s -triple=riscv32 -mattr=+experimental-xqcisync -riscv-no-aliases -show-encoding \
+# RUN: llvm-mc %s -triple=riscv32 -mattr=+experimental-xqcisync -M no-aliases -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-ENC,CHECK-INST %s
 # RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+experimental-xqcisync < %s \
 # RUN:     | llvm-objdump --mattr=+experimental-xqcisync -M no-aliases --no-print-imm-hex -d - \

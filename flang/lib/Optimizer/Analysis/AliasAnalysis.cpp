@@ -542,6 +542,14 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
           v = op->getOperand(0);
           defOp = v.getDefiningOp();
         })
+        .Case<fir::PackArrayOp>([&](auto op) {
+          // The packed array is not distinguishable from the original
+          // array, so skip PackArrayOp and track further through
+          // the array operand.
+          v = op.getArray();
+          defOp = v.getDefiningOp();
+          approximateSource = true;
+        })
         .Case<fir::BoxAddrOp>([&](auto op) {
           v = op->getOperand(0);
           defOp = v.getDefiningOp();

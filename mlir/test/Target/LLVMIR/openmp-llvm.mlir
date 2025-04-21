@@ -1368,6 +1368,7 @@ llvm.func @omp_atomic_read(%arg0 : !llvm.ptr, %arg1 : !llvm.ptr) -> () {
 
 // CHECK-LABEL: @omp_atomic_read_implicit_cast
 llvm.func @omp_atomic_read_implicit_cast () {
+//CHECK: %[[ATOMIC_LOAD_TEMP:.*]] = alloca { float, float }, align 8
 //CHECK: %[[Z:.*]] = alloca float, i64 1, align 4
 //CHECK: %[[Y:.*]] = alloca double, i64 1, align 8
 //CHECK: %[[X:.*]] = alloca [2 x { float, float }], i64 1, align 8
@@ -1392,7 +1393,7 @@ llvm.func @omp_atomic_read_implicit_cast () {
   %16 = llvm.mul %10, %9 overflow<nsw> : i64
   %17 = llvm.getelementptr %5[%15] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.struct<(f32, f32)>
 
-//CHECK: %[[ATOMIC_LOAD_TEMP:.*]] = alloca { float, float }, align 8
+
 //CHECK: call void @__atomic_load(i64 8, ptr %[[X_ELEMENT]], ptr %[[ATOMIC_LOAD_TEMP]], i32 0)
 //CHECK: %[[LOAD:.*]] = load { float, float }, ptr %[[ATOMIC_LOAD_TEMP]], align 8
 //CHECK: %[[EXT:.*]] = extractvalue { float, float } %[[LOAD]], 0
@@ -1480,6 +1481,7 @@ llvm.func @omp_atomic_update(%x:!llvm.ptr, %expr: i32, %xbool: !llvm.ptr, %exprb
 
 // -----
 
+//CHECK: %[[ATOMIC_TEMP_LOAD:.*]] = alloca { float, float }, align 8
 //CHECK: %[[X_NEW_VAL:.*]] = alloca { float, float }, align 8
 //CHECK: {{.*}} = alloca { float, float }, i64 1, align 8
 //CHECK: %[[ORIG_VAL:.*]] = alloca { float, float }, i64 1, align 8
@@ -1487,7 +1489,6 @@ llvm.func @omp_atomic_update(%x:!llvm.ptr, %expr: i32, %xbool: !llvm.ptr, %exprb
 //CHECK: br label %entry
 
 //CHECK: entry:
-//CHECK: %[[ATOMIC_TEMP_LOAD:.*]] = alloca { float, float }, align 8
 //CHECK: call void @__atomic_load(i64 8, ptr %[[ORIG_VAL]], ptr %[[ATOMIC_TEMP_LOAD]], i32 0)
 //CHECK: %[[PHI_NODE_ENTRY_1:.*]] = load { float, float }, ptr %[[ATOMIC_TEMP_LOAD]], align 8
 //CHECK: br label %.atomic.cont
@@ -1532,6 +1533,7 @@ llvm.func @_QPomp_atomic_update_complex() {
 
 // -----
 
+//CHECK: %[[ATOMIC_TEMP_LOAD:.*]] = alloca { float, float }, align 8
 //CHECK: %[[X_NEW_VAL:.*]] = alloca { float, float }, align 8
 //CHECK: %[[VAL_1:.*]] = alloca { float, float }, i64 1, align 8
 //CHECK: %[[ORIG_VAL:.*]] = alloca { float, float }, i64 1, align 8
@@ -1539,7 +1541,6 @@ llvm.func @_QPomp_atomic_update_complex() {
 //CHECK: br label %entry
 
 //CHECK: entry:							; preds = %0
-//CHECK: %[[ATOMIC_TEMP_LOAD:.*]] = alloca { float, float }, align 8
 //CHECK: call void @__atomic_load(i64 8, ptr %[[ORIG_VAL]], ptr %[[ATOMIC_TEMP_LOAD]], i32 0)
 //CHECK: %[[PHI_NODE_ENTRY_1:.*]] = load { float, float }, ptr %[[ATOMIC_TEMP_LOAD]], align 8
 //CHECK: br label %.atomic.cont
@@ -1597,9 +1598,9 @@ llvm.func @_QPomp_atomic_capture_complex() {
 // CHECK-LABEL: define void @omp_atomic_read_complex() {
 llvm.func @omp_atomic_read_complex(){
 
+// CHECK: %[[ATOMIC_TEMP_LOAD:.*]] = alloca { float, float }, align 8
 // CHECK: %[[a:.*]] = alloca { float, float }, i64 1, align 8
 // CHECK: %[[b:.*]] = alloca { float, float }, i64 1, align 8
-// CHECK: %[[ATOMIC_TEMP_LOAD:.*]] = alloca { float, float }, align 8
 // CHECK: call void @__atomic_load(i64 8, ptr %[[b]], ptr %[[ATOMIC_TEMP_LOAD]], i32 0)
 // CHECK: %[[LOADED_VAL:.*]] = load { float, float }, ptr %[[ATOMIC_TEMP_LOAD]], align 8
 // CHECK: store { float, float } %[[LOADED_VAL]], ptr %[[a]], align 4

@@ -288,6 +288,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sys.statvfs.fstatvfs
     libc.src.sys.statvfs.statvfs
 
+    # sys/utimes.h entrypoints
+    libc.src.sys.time.utimes
+
     # sys/utsname.h entrypoints
     libc.src.sys.utsname.uname
 
@@ -365,6 +368,10 @@ set(TARGET_LIBC_ENTRYPOINTS
     # sys/uio.h entrypoints
     libc.src.sys.uio.writev
     libc.src.sys.uio.readv
+
+    # sys/time.h entrypoints
+    libc.src.sys.time.setitimer
+    libc.src.sys.time.getitimer
 )
 
 if(LLVM_LIBC_INCLUDE_SCUDO)

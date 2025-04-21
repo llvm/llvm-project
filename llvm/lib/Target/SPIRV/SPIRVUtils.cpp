@@ -146,6 +146,30 @@ void buildOpDecorate(Register Reg, MachineInstr &I, const SPIRVInstrInfo &TII,
   finishBuildOpDecorate(MIB, DecArgs, StrImm);
 }
 
+void buildOpMemberDecorate(Register Reg, MachineIRBuilder &MIRBuilder,
+                           SPIRV::Decoration::Decoration Dec, uint32_t Member,
+                           const std::vector<uint32_t> &DecArgs,
+                           StringRef StrImm) {
+  auto MIB = MIRBuilder.buildInstr(SPIRV::OpMemberDecorate)
+                 .addUse(Reg)
+                 .addImm(Member)
+                 .addImm(static_cast<uint32_t>(Dec));
+  finishBuildOpDecorate(MIB, DecArgs, StrImm);
+}
+
+void buildOpMemberDecorate(Register Reg, MachineInstr &I,
+                           const SPIRVInstrInfo &TII,
+                           SPIRV::Decoration::Decoration Dec, uint32_t Member,
+                           const std::vector<uint32_t> &DecArgs,
+                           StringRef StrImm) {
+  MachineBasicBlock &MBB = *I.getParent();
+  auto MIB = BuildMI(MBB, I, I.getDebugLoc(), TII.get(SPIRV::OpMemberDecorate))
+                 .addUse(Reg)
+                 .addImm(Member)
+                 .addImm(static_cast<uint32_t>(Dec));
+  finishBuildOpDecorate(MIB, DecArgs, StrImm);
+}
+
 void buildOpSpirvDecorations(Register Reg, MachineIRBuilder &MIRBuilder,
                              const MDNode *GVarMD) {
   for (unsigned I = 0, E = GVarMD->getNumOperands(); I != E; ++I) {
@@ -236,6 +260,8 @@ addressSpaceToStorageClass(unsigned AddrSpace, const SPIRVSubtarget &STI) {
     return SPIRV::StorageClass::CodeSectionINTEL;
   case 10:
     return SPIRV::StorageClass::Private;
+  case 11:
+    return SPIRV::StorageClass::StorageBuffer;
   default:
     report_fatal_error("Unknown address space");
   }

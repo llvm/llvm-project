@@ -26,8 +26,8 @@ extractOperandsFromModule(Oracle &O, ReducerWorkItem &WorkItem,
     for (auto &I : instructions(&F)) {
       if (PHINode *Phi = dyn_cast<PHINode>(&I)) {
         for (auto &Op : Phi->incoming_values()) {
-          if (!O.shouldKeep()) {
-            if (Value *Reduced = ReduceValue(Op))
+          if (Value *Reduced = ReduceValue(Op)) {
+            if (!O.shouldKeep())
               Phi->setIncomingValueForBlock(Phi->getIncomingBlock(Op), Reduced);
           }
         }
@@ -125,6 +125,11 @@ void llvm::reduceOperandsZeroDeltaPass(Oracle &O, ReducerWorkItem &WorkItem) {
   auto ReduceValue = [](Use &Op) -> Value * {
     if (!shouldReduceOperand(Op))
       return nullptr;
+
+    // Avoid introducing 0-sized allocations.
+    if (isa<AllocaInst>(Op.getUser()))
+      return nullptr;
+
     // Don't duplicate an existing switch case.
     if (auto *IntTy = dyn_cast<IntegerType>(Op->getType()))
       if (switchCaseExists(Op, ConstantInt::get(IntTy, 0)))
@@ -135,8 +140,6 @@ void llvm::reduceOperandsZeroDeltaPass(Oracle &O, ReducerWorkItem &WorkItem) {
         return nullptr;
       if (TET->hasProperty(TargetExtType::HasZeroInit))
         return ConstantTargetNone::get(TET);
-
-      // TODO: Poison reduction for this case
       return nullptr;
     }
 
@@ -166,5 +169,20 @@ void llvm::reduceOperandsNaNDeltaPass(Oracle &O, ReducerWorkItem &WorkItem) {
 
     return ConstantFP::getQNaN(Ty);
   };
+  extractOperandsFromModule(O, WorkItem, ReduceValue);
+}
+
+void llvm::reduceOperandsPoisonDeltaPass(Oracle &O, ReducerWorkItem &WorkItem) {
+  auto ReduceValue = [](Use &Op) -> Value * {
+    Type *Ty = Op->getType();
+    if (auto *TET = dyn_cast<TargetExtType>(Ty)) {
+      if (isa<ConstantTargetNone, PoisonValue>(Op))
+        return nullptr;
+      return PoisonValue::get(TET);
+    }
+
+    return nullptr;
+  };
+
   extractOperandsFromModule(O, WorkItem, ReduceValue);
 }

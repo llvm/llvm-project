@@ -2253,8 +2253,10 @@ bool RecursiveASTVisitor<Derived>::TraverseFunctionHelper(FunctionDecl *D) {
   }
 
   // Visit the trailing requires clause, if any.
-  if (Expr *TrailingRequiresClause = D->getTrailingRequiresClause()) {
-    TRY_TO(TraverseStmt(TrailingRequiresClause));
+  if (const AssociatedConstraint &TrailingRequiresClause =
+          D->getTrailingRequiresClause()) {
+    TRY_TO(TraverseStmt(
+        const_cast<Expr *>(TrailingRequiresClause.ConstraintExpr)));
   }
 
   if (CXXConstructorDecl *Ctor = dyn_cast<CXXConstructorDecl>(D)) {
@@ -2768,7 +2770,8 @@ DEF_TRAVERSE_STMT(LambdaExpr, {
 
     if (S->hasExplicitResultType())
       TRY_TO(TraverseTypeLoc(Proto.getReturnLoc()));
-    TRY_TO_TRAVERSE_OR_ENQUEUE_STMT(S->getTrailingRequiresClause());
+    TRY_TO_TRAVERSE_OR_ENQUEUE_STMT(
+        const_cast<Expr *>(S->getTrailingRequiresClause().ConstraintExpr));
 
     TRY_TO_TRAVERSE_OR_ENQUEUE_STMT(S->getBody());
   }

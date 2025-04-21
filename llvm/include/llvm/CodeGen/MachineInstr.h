@@ -612,26 +612,12 @@ public:
 
   /// Returns a range of all of the operands that correspond to a debug use of
   /// \p Reg.
-  template <typename Operand, typename Instruction>
-  static iterator_range<
-      filter_iterator<Operand *, std::function<bool(Operand &Op)>>>
-  getDebugOperandsForReg(Instruction *MI, Register Reg) {
-    std::function<bool(Operand & Op)> OpUsesReg(
-        [Reg](Operand &Op) { return Op.isReg() && Op.getReg() == Reg; });
-    return make_filter_range(MI->debug_operands(), OpUsesReg);
-  }
   iterator_range<filter_iterator<const MachineOperand *,
                                  std::function<bool(const MachineOperand &Op)>>>
-  getDebugOperandsForReg(Register Reg) const {
-    return MachineInstr::getDebugOperandsForReg<const MachineOperand,
-                                                const MachineInstr>(this, Reg);
-  }
+  getDebugOperandsForReg(Register Reg) const;
   iterator_range<filter_iterator<MachineOperand *,
                                  std::function<bool(MachineOperand &Op)>>>
-  getDebugOperandsForReg(Register Reg) {
-    return MachineInstr::getDebugOperandsForReg<MachineOperand, MachineInstr>(
-        this, Reg);
-  }
+  getDebugOperandsForReg(Register Reg);
 
   bool isDebugOperand(const MachineOperand *Op) const {
     return Op >= adl_begin(debug_operands()) && Op <= adl_end(debug_operands());
@@ -2079,9 +2065,6 @@ private:
                     MCSymbol *PreInstrSymbol, MCSymbol *PostInstrSymbol,
                     MDNode *HeapAllocMarker, MDNode *PCSections,
                     uint32_t CFIType, MDNode *MMRAs);
-
-  /// Returns true if all successors are IRBlockAddressTaken.
-  bool jumpToIRBlockAddressTaken() const;
 };
 
 /// Special DenseMapInfo traits to compare MachineInstr* by *value* of the

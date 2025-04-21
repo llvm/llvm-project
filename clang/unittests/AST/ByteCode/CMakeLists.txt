@@ -11,4 +11,8 @@ add_clang_unittest(InterpTests
   clangTooling
   LINK_LIBS
   clangTesting
+  LLVM_COMPONENTS
+  FrontendOpenMP
+  Support
+  TargetParser
   )

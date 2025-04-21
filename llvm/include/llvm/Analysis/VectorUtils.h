@@ -353,6 +353,14 @@ MDNode *uniteAccessGroups(MDNode *AccGroups1, MDNode *AccGroups2);
 MDNode *intersectAccessGroups(const Instruction *Inst1,
                               const Instruction *Inst2);
 
+/// Add metadata from \p Inst to \p Metadata, if it can be preserved after
+/// vectorization. It can be preserved after vectorization if the kind is one of
+/// [MD_tbaa, MD_alias_scope, MD_noalias, MD_fpmath, MD_nontemporal,
+/// MD_access_group, MD_mmra].
+void getMetadataToPropagate(
+    Instruction *Inst,
+    SmallVectorImpl<std::pair<unsigned, MDNode *>> &Metadata);
+
 /// Specifically, let Kinds = [MD_tbaa, MD_alias_scope, MD_noalias, MD_fpmath,
 /// MD_nontemporal, MD_access_group, MD_mmra].
 /// For K in Kinds, we get the MDNode for K from each of the

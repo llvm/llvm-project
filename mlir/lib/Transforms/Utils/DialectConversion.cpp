@@ -106,7 +106,7 @@ struct ValueVectorMapInfo {
   static ValueVector getEmptyKey() { return ValueVector{Value()}; }
   static ValueVector getTombstoneKey() { return ValueVector{Value(), Value()}; }
   static ::llvm::hash_code getHashValue(const ValueVector &val) {
-    return ::llvm::hash_combine_range(val.begin(), val.end());
+    return ::llvm::hash_combine_range(val);
   }
   static bool isEqual(const ValueVector &LHS, const ValueVector &RHS) {
     return LHS == RHS;
@@ -1391,7 +1391,7 @@ Block *ConversionPatternRewriterImpl::applySignatureConversion(
           MaterializationKind::Source,
           OpBuilder::InsertPoint(newBlock, newBlock->begin()), origArg.getLoc(),
           /*valuesToMap=*/{origArg}, /*inputs=*/ValueRange(),
-          /*outputType=*/origArgType, /*originalType=*/Type(), converter);
+          /*outputTypes=*/origArgType, /*originalType=*/Type(), converter);
       appendRewrite<ReplaceBlockArgRewrite>(block, origArg, converter);
       continue;
     }
@@ -1496,7 +1496,7 @@ Value ConversionPatternRewriterImpl::findOrBuildReplacementValue(
       buildUnresolvedMaterialization(MaterializationKind::Source,
                                      computeInsertPoint(repl), value.getLoc(),
                                      /*valuesToMap=*/repl, /*inputs=*/repl,
-                                     /*outputType=*/value.getType(),
+                                     /*outputTypes=*/value.getType(),
                                      /*originalType=*/Type(), converter)
           .front();
   return castValue;
@@ -1552,7 +1552,7 @@ void ConversionPatternRewriterImpl::notifyOpReplaced(
       buildUnresolvedMaterialization(
           MaterializationKind::Source, computeInsertPoint(result),
           result.getLoc(), /*valuesToMap=*/{result}, /*inputs=*/ValueRange(),
-          /*outputType=*/result.getType(), /*originalType=*/Type(),
+          /*outputTypes=*/result.getType(), /*originalType=*/Type(),
           currentTypeConverter);
       continue;
     } else {
@@ -2109,9 +2109,6 @@ OperationLegalizer::legalizeWithFold(Operation *op,
   if (replacementValues.empty())
     return legalize(op, rewriter);
 
-  // Insert a replacement for 'op' with the folded replacement values.
-  rewriter.replaceOp(op, replacementValues);
-
   // Recursively legalize any new constant operations.
   for (unsigned i = curState.numRewrites, e = rewriterImpl.rewrites.size();
        i != e; ++i) {
@@ -2127,6 +2124,9 @@ OperationLegalizer::legalizeWithFold(Operation *op,
       return failure();
     }
   }
+
+  // Insert a replacement for 'op' with the folded replacement values.
+  rewriter.replaceOp(op, replacementValues);
 
   LLVM_DEBUG(logSuccess(rewriterImpl.logger, ""));
   return success();
@@ -2929,17 +2929,6 @@ TypeConverter::convertSignatureArgs(TypeRange types,
     if (failed(convertSignatureArg(origInputOffset + i, types[i], result)))
       return failure();
   return success();
-}
-
-Value TypeConverter::materializeArgumentConversion(OpBuilder &builder,
-                                                   Location loc,
-                                                   Type resultType,
-                                                   ValueRange inputs) const {
-  for (const MaterializationCallbackFn &fn :
-       llvm::reverse(argumentMaterializations))
-    if (Value result = fn(builder, resultType, inputs, loc))
-      return result;
-  return nullptr;
 }
 
 Value TypeConverter::materializeSourceConversion(OpBuilder &builder,

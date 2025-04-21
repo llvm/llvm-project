@@ -161,10 +161,6 @@
 
 using namespace llvm;
 
-namespace llvm {
-void initializeNVPTXLowerArgsLegacyPassPass(PassRegistry &);
-}
-
 namespace {
 class NVPTXLowerArgsLegacyPass : public FunctionPass {
   bool runOnFunction(Function &F) override;
@@ -558,9 +554,7 @@ static void handleByValParam(const NVPTXTargetMachine &TM, Argument *Arg) {
   if (ArgUseIsReadOnly && AUC.Conditionals.empty()) {
     // Convert all loads and intermediate operations to use parameter AS and
     // skip creation of a local copy of the argument.
-    SmallVector<Use *, 16> UsesToUpdate;
-    for (Use &U : Arg->uses())
-      UsesToUpdate.push_back(&U);
+    SmallVector<Use *, 16> UsesToUpdate(llvm::make_pointer_range(Arg->uses()));
 
     Value *ArgInParamAS = new AddrSpaceCastInst(
         Arg, PointerType::get(StructType->getContext(), ADDRESS_SPACE_PARAM),
@@ -678,11 +672,8 @@ static bool runOnKernelFunction(const NVPTXTargetMachine &TM, Function &F) {
 
   LLVM_DEBUG(dbgs() << "Lowering kernel args of " << F.getName() << "\n");
   for (Argument &Arg : F.args()) {
-    if (Arg.getType()->isPointerTy()) {
-      if (Arg.hasByValAttr())
-        handleByValParam(TM, &Arg);
-      else if (TM.getDrvInterface() == NVPTX::CUDA)
-        markPointerAsGlobal(&Arg);
+    if (Arg.getType()->isPointerTy() && Arg.hasByValAttr()) {
+      handleByValParam(TM, &Arg);
     } else if (Arg.getType()->isIntegerTy() &&
                TM.getDrvInterface() == NVPTX::CUDA) {
       HandleIntToPtr(Arg);
@@ -699,10 +690,9 @@ static bool runOnDeviceFunction(const NVPTXTargetMachine &TM, Function &F) {
       cast<NVPTXTargetLowering>(TM.getSubtargetImpl()->getTargetLowering());
 
   for (Argument &Arg : F.args())
-    if (Arg.getType()->isPointerTy() && Arg.hasByValAttr()) {
-      markPointerAsAS(&Arg, ADDRESS_SPACE_LOCAL);
+    if (Arg.getType()->isPointerTy() && Arg.hasByValAttr())
       adjustByValArgAlignment(&Arg, &Arg, TLI);
-    }
+
   return true;
 }
 

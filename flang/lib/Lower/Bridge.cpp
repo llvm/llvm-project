@@ -2268,6 +2268,23 @@ private:
                 uja = genLoopUnrollAndJamAttr(u.v);
                 has_attrs = true;
               },
+              [&](const Fortran::parser::CompilerDirective::NoVector &u) {
+                mlir::BoolAttr trueAttr =
+                    mlir::BoolAttr::get(builder->getContext(), true);
+                va = mlir::LLVM::LoopVectorizeAttr::get(builder->getContext(),
+                                                        /*disable=*/trueAttr,
+                                                        {}, {}, {}, {}, {}, {});
+                has_attrs = true;
+              },
+              [&](const Fortran::parser::CompilerDirective::NoUnroll &u) {
+                ua = genLoopUnrollAttr(/*unrollingFactor=*/0);
+                has_attrs = true;
+              },
+              [&](const Fortran::parser::CompilerDirective::NoUnrollAndJam &u) {
+                uja = genLoopUnrollAndJamAttr(/*unrollingFactor=*/0);
+                has_attrs = true;
+              },
+
               [&](const auto &) {}},
           dir->u);
     }
@@ -2932,6 +2949,15 @@ private:
             [&](const Fortran::parser::CompilerDirective::UnrollAndJam &) {
               attachDirectiveToLoop(dir, &eval);
             },
+            [&](const Fortran::parser::CompilerDirective::NoVector &) {
+              attachDirectiveToLoop(dir, &eval);
+            },
+            [&](const Fortran::parser::CompilerDirective::NoUnroll &) {
+              attachDirectiveToLoop(dir, &eval);
+            },
+            [&](const Fortran::parser::CompilerDirective::NoUnrollAndJam &) {
+              attachDirectiveToLoop(dir, &eval);
+            },
             [&](const auto &) {}},
         dir.u);
   }
@@ -3183,13 +3209,11 @@ private:
           builder->restoreInsertionPoint(insPt);
         }
 
-        // Create the hlfir.declare operation using the symbol's name
-        auto declareOp = builder->create<hlfir::DeclareOp>(
-            loc, ivValue, toStringRef(name.symbol->name()));
-        ivValue = declareOp.getResult(0);
-
         // Bind the symbol to the declared variable
         bindSymbol(*name.symbol, ivValue);
+        Fortran::lower::SymbolBox hsb = localSymbols.lookupSymbol(*name.symbol);
+        fir::ExtendedValue extIvValue = symBoxToExtendedValue(hsb);
+        ivValue = fir::getBase(extIvValue);
         ivValues.push_back(ivValue);
         ivTypes.push_back(idxTy);
         ivLocs.push_back(loc);
@@ -5484,7 +5508,10 @@ private:
     for (const Fortran::lower::CalleeInterface::PassedEntity &arg :
          callee.getPassedArguments())
       mapPassedEntity(arg);
-    if (lowerToHighLevelFIR() && !callee.getPassedArguments().empty()) {
+
+    // Always generate fir.dummy_scope even if there are no arguments.
+    // It is currently used to create proper TBAA forest.
+    if (lowerToHighLevelFIR()) {
       mlir::Value scopeOp = builder->create<fir::DummyScopeOp>(toLocation());
       setDummyArgsScope(scopeOp);
     }
