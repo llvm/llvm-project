@@ -231,6 +231,7 @@ private:
   /// for the source of the branch to avoid counting cold activity twice (one
   /// for source and another for destination).
   uint64_t NumColdSamples{0};
+  uint64_t NumTotalSamples{0};
 
   /// Looks into system PATH for Linux Perf and set up the aggregator to use it
   void findPerfExecutable();
@@ -283,8 +284,8 @@ private:
   /// everything
   bool hasData() const { return !ParsingBuf.empty(); }
 
-  /// Print heat map based on LBR samples.
-  std::error_code printLBRHeatMap();
+  /// Print heat map based on collected samples.
+  std::error_code printHeatMap();
 
   /// Parse a single perf sample containing a PID associated with a sequence of
   /// LBR entries. If the PID does not correspond to the binary we are looking
