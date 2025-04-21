@@ -176,7 +176,8 @@ define void @print_replicate_predicated_phi(i64 %n, ptr %x) {
 ; CHECK-NEXT:   Successor(s): pred.udiv.if, pred.udiv.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   pred.udiv.if:
-; CHECK-NEXT:     REPLICATE ir<%tmp4> = udiv ir<%n>, vp<[[STEPS]]> (S->V)
+; CHECK-NEXT:     vp<[[STEPS2:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
+; CHECK-NEXT:     REPLICATE ir<%tmp4> = udiv ir<%n>, vp<[[STEPS2]]> (S->V)
 ; CHECK-NEXT:   Successor(s): pred.udiv.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   pred.udiv.continue:

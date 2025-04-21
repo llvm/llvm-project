@@ -1045,12 +1045,12 @@ define void @uniform_store_of_loop_varying(ptr noalias nocapture %a, ptr noalias
 ; TF-FIXEDLEN-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; TF-FIXEDLEN:       [[VECTOR_BODY]]:
 ; TF-FIXEDLEN-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE6:.*]] ]
-; TF-FIXEDLEN-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; TF-FIXEDLEN-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i64(i64 [[TMP0]], i64 1025)
-; TF-FIXEDLEN-NEXT:    [[TMP1:%.*]] = extractelement <4 x i1> [[ACTIVE_LANE_MASK]], i32 0
-; TF-FIXEDLEN-NEXT:    br i1 [[TMP1]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
+; TF-FIXEDLEN-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i64(i64 [[INDEX]], i64 1025)
+; TF-FIXEDLEN-NEXT:    [[TMP0:%.*]] = extractelement <4 x i1> [[ACTIVE_LANE_MASK]], i32 0
+; TF-FIXEDLEN-NEXT:    br i1 [[TMP0]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; TF-FIXEDLEN:       [[PRED_STORE_IF]]:
-; TF-FIXEDLEN-NEXT:    store i64 [[TMP0]], ptr [[B]], align 8
+; TF-FIXEDLEN-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 0
+; TF-FIXEDLEN-NEXT:    store i64 [[TMP1]], ptr [[B]], align 8
 ; TF-FIXEDLEN-NEXT:    br label %[[PRED_STORE_CONTINUE]]
 ; TF-FIXEDLEN:       [[PRED_STORE_CONTINUE]]:
 ; TF-FIXEDLEN-NEXT:    [[TMP2:%.*]] = extractelement <4 x i1> [[ACTIVE_LANE_MASK]], i32 1
@@ -1074,7 +1074,7 @@ define void @uniform_store_of_loop_varying(ptr noalias nocapture %a, ptr noalias
 ; TF-FIXEDLEN-NEXT:    store i64 [[TMP7]], ptr [[B]], align 8
 ; TF-FIXEDLEN-NEXT:    br label %[[PRED_STORE_CONTINUE6]]
 ; TF-FIXEDLEN:       [[PRED_STORE_CONTINUE6]]:
-; TF-FIXEDLEN-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP0]]
+; TF-FIXEDLEN-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[INDEX]]
 ; TF-FIXEDLEN-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i64, ptr [[TMP8]], i32 0
 ; TF-FIXEDLEN-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> [[BROADCAST_SPLAT]], ptr [[TMP9]], i32 8, <4 x i1> [[ACTIVE_LANE_MASK]])
 ; TF-FIXEDLEN-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
