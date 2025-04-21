@@ -1014,6 +1014,8 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
                      {MVT::v2i32, MVT::v4i32, MVT::v8i32, MVT::v16i32,
                       MVT::v32i32, MVT::v64i32, MVT::v128i32},
                      Custom);
+
+  setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::Other, Custom);
 }
 
 const char *NVPTXTargetLowering::getTargetNodeName(unsigned Opcode) const {
@@ -1426,6 +1428,17 @@ static MachinePointerInfo refinePtrAS(SDValue &Ptr, SelectionDAG &DAG,
 
     return MachinePointerInfo(ADDRESS_SPACE_LOCAL);
   }
+
+  // Peel of an addrspacecast to generic and load directly from the specific
+  // address space.
+  if (Ptr->getOpcode() == ISD::ADDRSPACECAST) {
+    const auto *ASC = cast<AddrSpaceCastSDNode>(Ptr);
+    if (ASC->getDestAddressSpace() == ADDRESS_SPACE_GENERIC) {
+      Ptr = ASC->getOperand(0);
+      return MachinePointerInfo(ASC->getSrcAddressSpace());
+    }
+  }
+
   return MachinePointerInfo();
 }
 
@@ -2746,6 +2759,15 @@ static SDValue LowerIntrinsicVoid(SDValue Op, SelectionDAG &DAG) {
   return Op;
 }
 
+static SDValue lowerIntrinsicWOChain(SDValue Op, SelectionDAG &DAG) {
+  switch (Op->getConstantOperandVal(0)) {
+  default:
+    return Op;
+  case Intrinsic::nvvm_internal_addrspace_wrap:
+    return Op.getOperand(1);
+  }
+}
+
 // In PTX 64-bit CTLZ and CTPOP are supported, but they return a 32-bit value.
 // Lower these into a node returning the correct type which is zero-extended
 // back to the correct size.
@@ -2889,6 +2911,8 @@ NVPTXTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return LowerGlobalAddress(Op, DAG);
   case ISD::INTRINSIC_W_CHAIN:
     return Op;
+  case ISD::INTRINSIC_WO_CHAIN:
+    return lowerIntrinsicWOChain(Op, DAG);
   case ISD::INTRINSIC_VOID:
     return LowerIntrinsicVoid(Op, DAG);
   case ISD::BUILD_VECTOR:
