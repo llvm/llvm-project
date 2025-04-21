@@ -124,7 +124,7 @@ public:
       Info.setAllowsRegister();
       return true;
     case 'I': // 6-bit positive integer constant
-      Info.setRequiresImmediate(0, 63);
+      Info.setRequiresImmediate(0, 64);
       return true;
     case 'J': // 6-bit negative integer constant
       Info.setRequiresImmediate(-63, 0);
