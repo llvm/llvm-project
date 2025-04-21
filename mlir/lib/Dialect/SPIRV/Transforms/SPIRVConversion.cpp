@@ -1353,9 +1353,9 @@ LogicalResult mlir::spirv::unrollVectorsInSignatures(Operation *op) {
   // We only want to apply signature conversion once to the existing func ops.
   // Without specifying strictMode, the greedy pattern rewriter will keep
   // looking for newly created func ops.
-  return applyPatternsGreedily(op, std::move(patterns),
-                               GreedyRewriteConfig().setStrictness(
-                                   GreedyRewriteStrictness::ExistingOps));
+  GreedyRewriteConfig config;
+  config.strictMode = GreedyRewriteStrictness::ExistingOps;
+  return applyPatternsGreedily(op, std::move(patterns), config);
 }
 
 LogicalResult mlir::spirv::unrollVectorsInFuncBodies(Operation *op) {

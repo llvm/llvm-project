@@ -224,9 +224,8 @@ TEST(BasicBlockDbgInfoTest, MarkerOperations) {
   EXPECT_EQ(BB.size(), 1u);
   EXPECT_EQ(Marker2->StoredDbgRecords.size(), 2u);
   // They should also be in the correct order.
-  SmallVector<DbgRecord *, 2> DVRs;
-  for (DbgRecord &DVR : Marker2->getDbgRecordRange())
-    DVRs.push_back(&DVR);
+  SmallVector<DbgRecord *, 2> DVRs(
+      llvm::make_pointer_range(Marker2->getDbgRecordRange()));
   EXPECT_EQ(DVRs[0], DVR1);
   EXPECT_EQ(DVRs[1], DVR2);
 
@@ -577,9 +576,8 @@ protected:
 
   bool CheckDVROrder(Instruction *I,
                      SmallVector<DbgVariableRecord *> CheckVals) {
-    SmallVector<DbgRecord *> Vals;
-    for (DbgRecord &D : I->getDbgRecordRange())
-      Vals.push_back(&D);
+    SmallVector<DbgRecord *> Vals(
+        llvm::make_pointer_range(I->getDbgRecordRange()));
 
     EXPECT_EQ(Vals.size(), CheckVals.size());
     if (Vals.size() != CheckVals.size())

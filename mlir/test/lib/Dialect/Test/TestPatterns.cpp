@@ -386,26 +386,26 @@ struct TestGreedyPatternDriver
     patterns.insert<IncrementIntAttribute<3>>(&getContext());
 
     GreedyRewriteConfig config;
-    config.setUseTopDownTraversal(useTopDownTraversal)
-        .setMaxIterations(this->maxIterations)
-        .enableFolding(this->fold)
-        .enableConstantCSE(this->cseConstants);
+    config.useTopDownTraversal = this->useTopDownTraversal;
+    config.maxIterations = this->maxIterations;
+    config.fold = this->fold;
+    config.cseConstants = this->cseConstants;
     (void)applyPatternsGreedily(getOperation(), std::move(patterns), config);
   }
 
   Option<bool> useTopDownTraversal{
       *this, "top-down",
       llvm::cl::desc("Seed the worklist in general top-down order"),
-      llvm::cl::init(GreedyRewriteConfig().getUseTopDownTraversal())};
+      llvm::cl::init(GreedyRewriteConfig().useTopDownTraversal)};
   Option<int> maxIterations{
       *this, "max-iterations",
       llvm::cl::desc("Max. iterations in the GreedyRewriteConfig"),
-      llvm::cl::init(GreedyRewriteConfig().getMaxIterations())};
+      llvm::cl::init(GreedyRewriteConfig().maxIterations)};
   Option<bool> fold{*this, "fold", llvm::cl::desc("Whether to fold"),
-                    llvm::cl::init(GreedyRewriteConfig().isFoldingEnabled())};
-  Option<bool> cseConstants{
-      *this, "cse-constants", llvm::cl::desc("Whether to CSE constants"),
-      llvm::cl::init(GreedyRewriteConfig().isConstantCSEEnabled())};
+                    llvm::cl::init(GreedyRewriteConfig().fold)};
+  Option<bool> cseConstants{*this, "cse-constants",
+                            llvm::cl::desc("Whether to CSE constants"),
+                            llvm::cl::init(GreedyRewriteConfig().cseConstants)};
 };
 
 struct DumpNotifications : public RewriterBase::Listener {
@@ -501,13 +501,13 @@ public:
 
     DumpNotifications dumpNotifications;
     GreedyRewriteConfig config;
-    config.setListener(&dumpNotifications);
+    config.listener = &dumpNotifications;
     if (strictMode == "AnyOp") {
-      config.setStrictness(GreedyRewriteStrictness::AnyOp);
+      config.strictMode = GreedyRewriteStrictness::AnyOp;
     } else if (strictMode == "ExistingAndNewOps") {
-      config.setStrictness(GreedyRewriteStrictness::ExistingAndNewOps);
+      config.strictMode = GreedyRewriteStrictness::ExistingAndNewOps;
     } else if (strictMode == "ExistingOps") {
-      config.setStrictness(GreedyRewriteStrictness::ExistingOps);
+      config.strictMode = GreedyRewriteStrictness::ExistingOps;
     } else {
       llvm_unreachable("invalid strictness option");
     }

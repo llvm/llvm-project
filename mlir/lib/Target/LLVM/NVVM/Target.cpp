@@ -27,7 +27,7 @@
 #include "mlir/Target/LLVMIR/Export.h"
 
 #include "llvm/ADT/ScopeExit.h"
-#include "llvm/Config/llvm-config.h"
+#include "llvm/Config/Targets.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/FormatVariadic.h"

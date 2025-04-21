@@ -761,3 +761,13 @@ namespace PointerSubscript {
   struct S{};
   static_assert((foo<S>(), true));
 }
+
+namespace OnePastEndDiag {
+
+  constexpr int a(const int *b) {
+    return *b; // both-note {{read of dereferenced one-past-the-end pointer}}
+  }
+  constexpr int foo[] = {1,2};
+  constexpr int k = a(foo + 2); // both-error {{must be initialized by a constant expression}} \
+                                // both-note {{in call to 'a(&foo[2])'}}
+}

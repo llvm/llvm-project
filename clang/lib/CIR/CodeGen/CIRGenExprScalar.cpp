@@ -116,6 +116,8 @@ public:
     return {};
   }
 
+  mlir::Value VisitParenExpr(ParenExpr *pe) { return Visit(pe->getSubExpr()); }
+
   /// Emits the address of the l-value, then loads and returns the result.
   mlir::Value emitLoadOfLValue(const Expr *e) {
     LValue lv = cgf.emitLValue(e);
@@ -150,10 +152,7 @@ public:
   }
 
   mlir::Value VisitCXXBoolLiteralExpr(const CXXBoolLiteralExpr *e) {
-    mlir::Type type = cgf.convertType(e->getType());
-    return builder.create<cir::ConstantOp>(
-        cgf.getLoc(e->getExprLoc()), type,
-        builder.getCIRBoolAttr(e->getValue()));
+    return builder.getBool(e->getValue(), cgf.getLoc(e->getExprLoc()));
   }
 
   mlir::Value VisitCastExpr(CastExpr *e);
@@ -213,9 +212,7 @@ public:
 
     if (llvm::isa<MemberPointerType>(srcType)) {
       cgf.getCIRGenModule().errorNYI(loc, "member pointer to bool conversion");
-      mlir::Type boolType = builder.getBoolTy();
-      return builder.create<cir::ConstantOp>(loc, boolType,
-                                             builder.getCIRBoolAttr(false));
+      return builder.getFalse(loc);
     }
 
     if (srcType->isIntegerType())
@@ -352,9 +349,7 @@ public:
     // An interesting aspect of this is that increment is always true.
     // Decrement does not have this property.
     if (isInc && type->isBooleanType()) {
-      value = builder.create<cir::ConstantOp>(cgf.getLoc(e->getExprLoc()),
-                                              cgf.convertType(type),
-                                              builder.getCIRBoolAttr(true));
+      value = builder.getTrue(cgf.getLoc(e->getExprLoc()));
     } else if (type->isIntegerType()) {
       QualType promotedType;
       bool canPerformLossyDemotionCheck = false;

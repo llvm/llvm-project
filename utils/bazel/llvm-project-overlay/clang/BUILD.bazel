@@ -962,7 +962,9 @@ cc_library(
     srcs = glob([
         "lib/Sema/*.cpp",
         "lib/Sema/*.h",
-    ]),
+    ]) + [
+        "//llvm:include/llvm/Frontend/OpenACC/ACC.inc",
+    ],
     hdrs = glob([
         "include/clang/Sema/*.h",
         "include/clang-c/*.h",

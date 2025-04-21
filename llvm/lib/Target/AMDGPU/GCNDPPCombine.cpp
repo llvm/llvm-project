@@ -629,11 +629,8 @@ bool GCNDPPCombine::combineDPPMov(MachineInstr &MovMI) const {
 
   OrigMIs.push_back(&MovMI);
   bool Rollback = true;
-  SmallVector<MachineOperand*, 16> Uses;
-
-  for (auto &Use : MRI->use_nodbg_operands(DPPMovReg)) {
-    Uses.push_back(&Use);
-  }
+  SmallVector<MachineOperand *, 16> Uses(
+      llvm::make_pointer_range(MRI->use_nodbg_operands(DPPMovReg)));
 
   while (!Uses.empty()) {
     MachineOperand *Use = Uses.pop_back_val();

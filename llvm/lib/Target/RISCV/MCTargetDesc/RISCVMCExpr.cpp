@@ -68,14 +68,14 @@ const MCFixup *RISCVMCExpr::getPCRelHiFixup(const MCFragment **DFOut) const {
     if (F.getOffset() != Offset)
       continue;
     auto Kind = F.getTargetKind();
-    if (Kind < FirstRelocationKind) {
+    if (!mc::isRelocation(F.getKind())) {
       if (Kind == RISCV::fixup_riscv_pcrel_hi20) {
         *DFOut = DF;
         return &F;
       }
       break;
     }
-    switch (Kind - FirstRelocationKind) {
+    switch (Kind) {
     case ELF::R_RISCV_GOT_HI20:
     case ELF::R_RISCV_TLS_GOT_HI20:
     case ELF::R_RISCV_TLS_GD_HI20:

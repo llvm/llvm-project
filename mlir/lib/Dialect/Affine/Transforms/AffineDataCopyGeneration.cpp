@@ -237,8 +237,7 @@ void AffineDataCopyGeneration::runOnOperation() {
   AffineLoadOp::getCanonicalizationPatterns(patterns, &getContext());
   AffineStoreOp::getCanonicalizationPatterns(patterns, &getContext());
   FrozenRewritePatternSet frozenPatterns(std::move(patterns));
-  (void)applyOpPatternsGreedily(
-      copyOps, frozenPatterns,
-      GreedyRewriteConfig().setStrictness(
-          GreedyRewriteStrictness::ExistingAndNewOps));
+  GreedyRewriteConfig config;
+  config.strictMode = GreedyRewriteStrictness::ExistingAndNewOps;
+  (void)applyOpPatternsGreedily(copyOps, frozenPatterns, config);
 }

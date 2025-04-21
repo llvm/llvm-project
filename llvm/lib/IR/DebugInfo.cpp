@@ -976,9 +976,9 @@ void Instruction::mergeDIAssignID(
     return; // No DIAssignID tags to process.
 
   DIAssignID *MergeID = IDs[0];
-  for (auto It = std::next(IDs.begin()), End = IDs.end(); It != End; ++It) {
-    if (*It != MergeID)
-      at::RAUW(*It, MergeID);
+  for (DIAssignID *AssignID : drop_begin(IDs)) {
+    if (AssignID != MergeID)
+      at::RAUW(AssignID, MergeID);
   }
   setMetadata(LLVMContext::MD_DIAssignID, MergeID);
 }

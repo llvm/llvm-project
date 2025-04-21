@@ -121,7 +121,7 @@ struct GPULaunchKernelConversion
           voidTy,
           {ptrTy, llvmIntPtrType, llvmIntPtrType, llvmIntPtrType,
            llvmIntPtrType, llvmIntPtrType, llvmIntPtrType, llvmIntPtrType,
-           llvmIntPtrType, llvmIntPtrType, llvmIntPtrType, i32Ty, ptrTy, ptrTy},
+           llvmIntPtrType, llvmIntPtrType, ptrTy, i32Ty, ptrTy, ptrTy},
           /*isVarArg=*/false);
       auto cufLaunchClusterKernel = mlir::SymbolRefAttr::get(
           mod.getContext(), RTNAME_STRING(CUFLaunchClusterKernel));
@@ -133,10 +133,15 @@ struct GPULaunchKernelConversion
         launchKernelFuncOp.setVisibility(
             mlir::SymbolTable::Visibility::Private);
       }
-      mlir::Value stream = adaptor.getAsyncObject();
-      if (!stream)
-        stream = rewriter.create<mlir::LLVM::ConstantOp>(
-            loc, llvmIntPtrType, rewriter.getIntegerAttr(llvmIntPtrType, -1));
+
+      mlir::Value stream = nullPtr;
+      if (!adaptor.getAsyncDependencies().empty()) {
+        if (adaptor.getAsyncDependencies().size() != 1)
+          return rewriter.notifyMatchFailure(
+              op, "Can only convert with exactly one stream dependency.");
+        stream = adaptor.getAsyncDependencies().front();
+      }
+
       rewriter.replaceOpWithNewOp<mlir::LLVM::CallOp>(
           op, funcTy, cufLaunchClusterKernel,
           mlir::ValueRange{kernelPtr, adaptor.getClusterSizeX(),
@@ -157,8 +162,8 @@ struct GPULaunchKernelConversion
       auto funcTy = mlir::LLVM::LLVMFunctionType::get(
           voidTy,
           {ptrTy, llvmIntPtrType, llvmIntPtrType, llvmIntPtrType,
-           llvmIntPtrType, llvmIntPtrType, llvmIntPtrType, llvmIntPtrType,
-           i32Ty, ptrTy, ptrTy},
+           llvmIntPtrType, llvmIntPtrType, llvmIntPtrType, ptrTy, i32Ty, ptrTy,
+           ptrTy},
           /*isVarArg=*/false);
       auto cufLaunchKernel =
           mlir::SymbolRefAttr::get(mod.getContext(), fctName);
@@ -171,10 +176,13 @@ struct GPULaunchKernelConversion
             mlir::SymbolTable::Visibility::Private);
       }
 
-      mlir::Value stream = adaptor.getAsyncObject();
-      if (!stream)
-        stream = rewriter.create<mlir::LLVM::ConstantOp>(
-            loc, llvmIntPtrType, rewriter.getIntegerAttr(llvmIntPtrType, -1));
+      mlir::Value stream = nullPtr;
+      if (!adaptor.getAsyncDependencies().empty()) {
+        if (adaptor.getAsyncDependencies().size() != 1)
+          return rewriter.notifyMatchFailure(
+              op, "Can only convert with exactly one stream dependency.");
+        stream = adaptor.getAsyncDependencies().front();
+      }
 
       rewriter.replaceOpWithNewOp<mlir::LLVM::CallOp>(
           op, funcTy, cufLaunchKernel,
@@ -251,6 +259,22 @@ struct CUFSharedMemoryOpConversion
   }
 };
 
+struct CUFStreamCastConversion
+    : public mlir::ConvertOpToLLVMPattern<cuf::StreamCastOp> {
+  explicit CUFStreamCastConversion(const fir::LLVMTypeConverter &typeConverter,
+                                   mlir::PatternBenefit benefit)
+      : mlir::ConvertOpToLLVMPattern<cuf::StreamCastOp>(typeConverter,
+                                                        benefit) {}
+  using OpAdaptor = typename cuf::StreamCastOp::Adaptor;
+
+  mlir::LogicalResult
+  matchAndRewrite(cuf::StreamCastOp op, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    rewriter.replaceOp(op, adaptor.getStream());
+    return mlir::success();
+  }
+};
+
 class CUFGPUToLLVMConversion
     : public fir::impl::CUFGPUToLLVMConversionBase<CUFGPUToLLVMConversion> {
 public:
@@ -283,8 +307,11 @@ public:
 } // namespace
 
 void cuf::populateCUFGPUToLLVMConversionPatterns(
-    const fir::LLVMTypeConverter &converter, mlir::RewritePatternSet &patterns,
+    fir::LLVMTypeConverter &converter, mlir::RewritePatternSet &patterns,
     mlir::PatternBenefit benefit) {
-  patterns.add<CUFSharedMemoryOpConversion, GPULaunchKernelConversion>(
-      converter, benefit);
+  converter.addConversion([&converter](mlir::gpu::AsyncTokenType) -> Type {
+    return mlir::LLVM::LLVMPointerType::get(&converter.getContext());
+  });
+  patterns.add<CUFSharedMemoryOpConversion, GPULaunchKernelConversion,
+               CUFStreamCastConversion>(converter, benefit);
 }

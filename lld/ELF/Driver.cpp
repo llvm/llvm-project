@@ -2638,6 +2638,18 @@ void LinkerDriver::compileBitcodeFiles(bool skipLinkedOutput) {
     auto *obj = cast<ObjFile<ELFT>>(file.get());
     obj->parse(/*ignoreComdats=*/true);
 
+    // This is only needed for AArch64 PAuth to set correct key in AUTH GOT
+    // entry based on symbol type (STT_FUNC or not).
+    // TODO: check if PAuth is actually used.
+    if (ctx.arg.emachine == EM_AARCH64) {
+      for (typename ELFT::Sym elfSym : obj->template getGlobalELFSyms<ELFT>()) {
+        StringRef elfSymName = check(elfSym.getName(obj->getStringTable()));
+        if (Symbol *sym = ctx.symtab->find(elfSymName))
+          if (sym->type == STT_NOTYPE)
+            sym->type = elfSym.getType();
+      }
+    }
+
     // For defined symbols in non-relocatable output,
     // compute isExported and parse '@'.
     if (!ctx.arg.relocatable)

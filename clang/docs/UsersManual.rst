@@ -5146,6 +5146,7 @@ Execute ``clang-cl /?`` to see a list of supported options:
       -v                      Show commands to run and use verbose output
       -W<warning>             Enable the specified warning
       -Xclang <arg>           Pass <arg> to the clang compiler
+      -Xclangas <arg>         Pass <arg> to the clang assembler
 
 The /clang: Option
 ^^^^^^^^^^^^^^^^^^

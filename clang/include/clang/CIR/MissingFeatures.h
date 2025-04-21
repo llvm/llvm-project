@@ -102,13 +102,10 @@ struct MissingFeatures {
   static bool shouldReverseUnaryCondOnBoolExpr() { return false; }
 
   // RecordType
-  static bool recordTypeLayoutInfo() { return false; }
   static bool recursiveRecordLayout() { return false; }
   static bool skippedLayout() { return false; }
   static bool astRecordDeclAttr() { return false; }
   static bool cxxSupport() { return false; }
-  static bool packedRecords() { return false; }
-  static bool recordPadding() { return false; }
   static bool recordZeroInit() { return false; }
   static bool zeroSizeRecordMembers() { return false; }
 

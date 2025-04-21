@@ -1874,9 +1874,8 @@ RISCVTTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,
     break;
   case ISD::FADD:
     // We can't promote f16/bf16 fadd reductions.
-    if ((LT.second.getVectorElementType() == MVT::f16 &&
-         !ST->hasVInstructionsF16()) ||
-        LT.second.getVectorElementType() == MVT::bf16)
+    if ((LT.second.getScalarType() == MVT::f16 && !ST->hasVInstructionsF16()) ||
+        LT.second.getScalarType() == MVT::bf16)
       return BaseT::getArithmeticReductionCost(Opcode, Ty, FMF, CostKind);
     if (TTI::requiresOrderedReduction(FMF)) {
       Opcodes.push_back(RISCV::VFMV_S_F);

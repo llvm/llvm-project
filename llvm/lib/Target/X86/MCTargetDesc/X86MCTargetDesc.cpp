@@ -444,7 +444,7 @@ static MCAsmInfo *createX86MCAsmInfo(const MCRegisterInfo &MRI,
     // Force the use of an ELF container.
     MAI = new X86ELFMCAsmInfo(TheTriple);
   } else if (TheTriple.isWindowsMSVCEnvironment() ||
-             TheTriple.isWindowsCoreCLREnvironment()) {
+             TheTriple.isWindowsCoreCLREnvironment() || TheTriple.isUEFI()) {
     if (Options.getAssemblyLanguage().equals_insensitive("masm"))
       MAI = new X86MCAsmInfoMicrosoftMASM(TheTriple);
     else

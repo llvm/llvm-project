@@ -834,9 +834,8 @@ bool CodeGenPrepare::eliminateFallThrough(Function &F, DominatorTree *DT) {
   // Scan all of the blocks in the function, except for the entry block.
   // Use a temporary array to avoid iterator being invalidated when
   // deleting blocks.
-  SmallVector<WeakTrackingVH, 16> Blocks;
-  for (auto &Block : llvm::drop_begin(F))
-    Blocks.push_back(&Block);
+  SmallVector<WeakTrackingVH, 16> Blocks(
+      llvm::make_pointer_range(llvm::drop_begin(F)));
 
   SmallSet<WeakTrackingVH, 16> Preds;
   for (auto &Block : Blocks) {
@@ -4195,7 +4194,7 @@ private:
   /// `CommonValue` may be a placeholder inserted by us.
   /// If the placeholder is not used, we should remove this dead instruction.
   void eraseCommonValueIfDead() {
-    if (CommonValue && CommonValue->getNumUses() == 0)
+    if (CommonValue && CommonValue->use_empty())
       if (Instruction *CommonInst = dyn_cast<Instruction>(CommonValue))
         CommonInst->eraseFromParent();
   }

@@ -692,9 +692,7 @@ mlir::LogicalResult CIRToLLVMConstantOpLowering::matchAndRewrite(
     // during a pass as long as they don't live past the end of the pass.
     attr = op.getValue();
   } else if (mlir::isa<cir::BoolType>(op.getType())) {
-    int value = (op.getValue() ==
-                 cir::BoolAttr::get(getContext(),
-                                    cir::BoolType::get(getContext()), true));
+    int value = mlir::cast<cir::BoolAttr>(op.getValue()).getValue();
     attr = rewriter.getIntegerAttr(typeConverter->convertType(op.getType()),
                                    value);
   } else if (mlir::isa<cir::IntType>(op.getType())) {
@@ -1356,12 +1354,11 @@ static void prepareTypeConverter(mlir::LLVMTypeConverter &converter,
     if (type.getName()) {
       llvmStruct = mlir::LLVM::LLVMStructType::getIdentified(
           type.getContext(), type.getPrefixedName());
-      assert(!cir::MissingFeatures::packedRecords());
-      if (llvmStruct.setBody(llvmMembers, /*isPacked=*/true).failed())
+      if (llvmStruct.setBody(llvmMembers, type.getPacked()).failed())
         llvm_unreachable("Failed to set body of record");
     } else { // Record has no name: lower as literal record.
       llvmStruct = mlir::LLVM::LLVMStructType::getLiteral(
-          type.getContext(), llvmMembers, /*isPacked=*/true);
+          type.getContext(), llvmMembers, type.getPacked());
     }
 
     return llvmStruct;
