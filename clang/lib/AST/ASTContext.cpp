@@ -12556,6 +12556,35 @@ QualType ASTContext::GetBuiltinType(unsigned Id,
   return getFunctionType(ResType, ArgTypes, EPI);
 }
 
+QualType ASTContext::getCGlobalCXXStdNSTypedef(const NamespaceDecl *StdNS,
+                                               StringRef DefName,
+                                               QualType FallBack) const {
+  DeclContextLookupResult Lookup;
+  if (getLangOpts().C99) {
+    Lookup = getTranslationUnitDecl()->lookup(&Idents.get(DefName));
+  } else if (getLangOpts().CPlusPlus) {
+    if (StdNS == nullptr) {
+      auto LookupStdNS = getTranslationUnitDecl()->lookup(&Idents.get("std"));
+      if (!LookupStdNS.empty()) {
+        StdNS = dyn_cast<NamespaceDecl>(LookupStdNS.front());
+      }
+    }
+    if (StdNS) {
+      Lookup = StdNS->lookup(&Idents.get(DefName));
+    } else {
+      Lookup = getTranslationUnitDecl()->lookup(&Idents.get(DefName));
+    }
+  }
+  if (!Lookup.empty()) {
+    if (auto *TD = dyn_cast<TypedefNameDecl>(Lookup.front())) {
+      if (auto Result = getTypeDeclType(TD); !Result.isNull()) {
+        return Result;
+      }
+    }
+  }
+  return FallBack;
+}
+
 static GVALinkage basicGVALinkageForFunction(const ASTContext &Context,
                                              const FunctionDecl *FD) {
   if (!FD->isExternallyVisible())

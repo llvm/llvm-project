@@ -2442,6 +2442,10 @@ public:
   QualType GetBuiltinType(unsigned ID, GetBuiltinTypeError &Error,
                           unsigned *IntegerConstantArgs = nullptr) const;
 
+  QualType getCGlobalCXXStdNSTypedef(const NamespaceDecl *StdNS,
+                                     StringRef DefName,
+                                     QualType FallBack = {}) const;
+
   /// Types and expressions required to build C++2a three-way comparisons
   /// using operator<=>, including the values return by builtin <=> operators.
   ComparisonCategories CompCategories;

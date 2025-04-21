@@ -4026,10 +4026,20 @@ ExprResult Sema::ActOnNumericConstant(const Token &Tok, Scope *UDLScope) {
         // Does it fit in size_t?
         if (ResultVal.isIntN(SizeTSize)) {
           // Does it fit in ssize_t?
-          if (!Literal.isUnsigned && ResultVal[SizeTSize - 1] == 0)
-            Ty = Context.getSignedSizeType();
-          else if (AllowUnsigned)
-            Ty = Context.getSizeType();
+          if (!Literal.isUnsigned && ResultVal[SizeTSize - 1] == 0) {
+            auto SignedSize = Context.getSignedSizeType();
+            if (auto PtrDiff = Context.getCGlobalCXXStdNSTypedef(
+                    getStdNamespace(), "ptrdiff_t");
+                Context.hasSameType(PtrDiff, SignedSize))
+              Ty = PtrDiff;
+            else if (auto SSize = Context.getCGlobalCXXStdNSTypedef(
+                         getStdNamespace(), "ssize_t");
+                     Context.hasSameType(SSize, SignedSize))
+              Ty = SSize;
+          } else if (AllowUnsigned) {
+            Ty = Context.getCGlobalCXXStdNSTypedef(getStdNamespace(), "size_t",
+                                                   Context.getSizeType());
+          }
           Width = SizeTSize;
         }
       }
@@ -4702,7 +4712,10 @@ ExprResult Sema::CreateUnaryExprOrTypeTraitExpr(TypeSourceInfo *TInfo,
 
   // C99 6.5.3.4p4: the type (an unsigned integer type) is size_t.
   return new (Context) UnaryExprOrTypeTraitExpr(
-      ExprKind, TInfo, Context.getSizeType(), OpLoc, R.getEnd());
+      ExprKind, TInfo,
+      Context.getCGlobalCXXStdNSTypedef(getStdNamespace(), "size_t",
+                                        Context.getSizeType()),
+      OpLoc, R.getEnd());
 }
 
 ExprResult
@@ -4745,7 +4758,10 @@ Sema::CreateUnaryExprOrTypeTraitExpr(Expr *E, SourceLocation OpLoc,
 
   // C99 6.5.3.4p4: the type (an unsigned integer type) is size_t.
   return new (Context) UnaryExprOrTypeTraitExpr(
-      ExprKind, E, Context.getSizeType(), OpLoc, E->getSourceRange().getEnd());
+      ExprKind, E,
+      Context.getCGlobalCXXStdNSTypedef(getStdNamespace(), "size_t",
+                                        Context.getSizeType()),
+      OpLoc, E->getSourceRange().getEnd());
 }
 
 ExprResult
@@ -11353,8 +11369,10 @@ QualType Sema::CheckSubtractionOperands(ExprResult &LHS, ExprResult &RHS,
         }
       }
 
-      if (CompLHSTy) *CompLHSTy = LHS.get()->getType();
-      return Context.getPointerDiffType();
+      if (CompLHSTy)
+        *CompLHSTy = LHS.get()->getType();
+      return Context.getCGlobalCXXStdNSTypedef(getStdNamespace(), "ptrdiff_t",
+                                               Context.getPointerDiffType());
     }
   }
 
