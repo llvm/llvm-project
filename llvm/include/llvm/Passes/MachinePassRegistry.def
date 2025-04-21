@@ -194,6 +194,8 @@ MACHINE_FUNCTION_PASS("stack-slot-coloring", StackSlotColoringPass())
 MACHINE_FUNCTION_PASS("tailduplication", TailDuplicatePass())
 MACHINE_FUNCTION_PASS("trigger-verifier-error", TriggerVerifierErrorPass())
 MACHINE_FUNCTION_PASS("two-address-instruction", TwoAddressInstructionPass())
+MACHINE_FUNCTION_PASS("unreachable-mbb-elimination", 
+                      UnreachableMachineBlockElimPass())
 MACHINE_FUNCTION_PASS("verify", MachineVerifierPass())
 MACHINE_FUNCTION_PASS("verify<machine-trace-metrics>", MachineTraceMetricsVerifierPass())
 MACHINE_FUNCTION_PASS("xray-instrumentation", XRayInstrumentationPass())
