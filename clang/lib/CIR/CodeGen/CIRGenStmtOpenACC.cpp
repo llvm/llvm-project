@@ -134,7 +134,7 @@ public:
 
       // Ensure we keep the existing ones, and in the correct 'new' order.
       if (existingDeviceTypes) {
-        for (const mlir::Attribute &Attr : *existingDeviceTypes)
+        for (mlir::Attribute Attr : *existingDeviceTypes)
           deviceTypes.push_back(mlir::acc::DeviceTypeAttr::get(
               builder.getContext(),
               cast<mlir::acc::DeviceTypeAttr>(Attr).getValue()));
@@ -172,7 +172,7 @@ public:
           operation.getNumWorkersDeviceTypeAttr();
 
       if (existingDeviceTypes) {
-        for (const mlir::Attribute &Attr : existingDeviceTypes)
+        for (mlir::Attribute Attr : existingDeviceTypes)
           deviceTypes.push_back(mlir::acc::DeviceTypeAttr::get(
               builder.getContext(),
               cast<mlir::acc::DeviceTypeAttr>(Attr).getValue()));
