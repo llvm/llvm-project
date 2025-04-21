@@ -2416,10 +2416,8 @@ foreach space = ["local", "shared", "global", "const", "param"] in {
   defm cvta_to_#space : G_TO_NG<space>;
 }
 
-foreach space = ["shared::cluster"] in {
-  defm cvta_#space : NG_TO_G<space, false, [hasclusters]>;
-  defm cvta_to_#space : G_TO_NG<space, false, [hasclusters]>;
-}
+defm cvta_shared_cluster : NG_TO_G<"shared::cluster", false, [hasClusters]>;
+defm cvta_to_shared_cluster : G_TO_NG<"shared::cluster", false, [hasClusters]>;
 
 def : Pat<(int_nvvm_ptr_param_to_gen i32:$src),
           (cvta_param $src)>;
