@@ -125,7 +125,7 @@ public:
       return true;
     case 'I': // 6-bit positive integer constant
       // Due to issue https://github.com/llvm/llvm-project/issues/51513, we
-      // allow value 64 in the frontend and let it be dinied in the backend.
+      // allow value 64 in the frontend and let it be denied in the backend.
       Info.setRequiresImmediate(0, 64);
       return true;
     case 'J': // 6-bit negative integer constant
