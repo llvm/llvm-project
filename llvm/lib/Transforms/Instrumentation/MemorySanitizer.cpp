@@ -1516,13 +1516,13 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     Value *InstName = nullptr;
     if (ClEmbedFaultingInst != MSanEmbedFaultingInstructionMode::None) {
       IRBuilder<> IRB0(Instruction);
-      std::string str;
       StringRef InstNameStrRef;
 
       // Dumping the full instruction is expensive because the operands etc.
       // likely make the string unique per instruction instance, hence we
       // offer a choice whether to only print the instruction name.
       if (ClEmbedFaultingInst == MSanEmbedFaultingInstructionMode::Full) {
+        std::string str;
         llvm::raw_string_ostream buf(str);
         Instruction->print(buf);
         InstNameStrRef = StringRef(str);
