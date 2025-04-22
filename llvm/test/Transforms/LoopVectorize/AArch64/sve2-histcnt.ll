@@ -753,6 +753,29 @@ for.exit:
   ret void
 }
 
+; The histogram operation generates vectors. This example used to crash
+; due to a missing entry in a switch statement.
+define void @histogram_generates_vectors_crash(ptr %data_array) {
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %gep.indices = getelementptr [1048576 x i32], ptr null, i64 %iv
+  %l.idx = load i32, ptr %gep.indices, align 4
+  %idxprom5 = sext i32 %l.idx to i64
+  %gep.bucket = getelementptr [1048576 x i32], ptr %data_array, i64 %idxprom5
+  %l.bucket = load i32, ptr %gep.bucket, align 4
+  %inc = add i32 %l.bucket, 0
+  store i32 %inc, ptr %gep.bucket, align 4
+  %iv.next = add i64 %iv, 1
+  %exitcond = icmp eq i64 %iv, 1
+  br i1 %exitcond, label %for.exit, label %for.body
+
+for.exit:
+  ret void
+}
+
 attributes #0 = { "target-features"="+sve2" vscale_range(1,16) }
 
 !0 = distinct !{!0, !1}
