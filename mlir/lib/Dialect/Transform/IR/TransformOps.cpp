@@ -41,6 +41,7 @@
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/InterleavedRange.h"
 #include <optional>
 
 #define DEBUG_TYPE "transform-dialect"
@@ -393,16 +394,16 @@ DiagnosedSilenceableFailure transform::ApplyPatternsOp::applyToOne(
 
   // Configure the GreedyPatternRewriteDriver.
   GreedyRewriteConfig config;
-  config.setListener(
-      static_cast<RewriterBase::Listener *>(rewriter.getListener()));
+  config.listener =
+      static_cast<RewriterBase::Listener *>(rewriter.getListener());
   FrozenRewritePatternSet frozenPatterns(std::move(patterns));
 
-  config.setMaxIterations(getMaxIterations() == static_cast<uint64_t>(-1)
+  config.maxIterations = getMaxIterations() == static_cast<uint64_t>(-1)
+                             ? GreedyRewriteConfig::kNoLimit
+                             : getMaxIterations();
+  config.maxNumRewrites = getMaxNumRewrites() == static_cast<uint64_t>(-1)
                               ? GreedyRewriteConfig::kNoLimit
-                              : getMaxIterations());
-  config.setMaxNumRewrites(getMaxNumRewrites() == static_cast<uint64_t>(-1)
-                               ? GreedyRewriteConfig::kNoLimit
-                               : getMaxNumRewrites());
+                              : getMaxNumRewrites();
 
   // Apply patterns and CSE repetitively until a fixpoint is reached. If no CSE
   // was requested, apply the greedy pattern rewrite only once. (The greedy
@@ -2630,11 +2631,8 @@ static void printSequenceOpOperands(OpAsmPrinter &printer, Operation *op,
     printer << "(";
 
   printer << rootType;
-  if (hasExtras) {
-    printer << ", ";
-    llvm::interleaveComma(extraBindingTypes, printer.getStream());
-    printer << ")";
-  }
+  if (hasExtras)
+    printer << ", " << llvm::interleaved(extraBindingTypes) << ')';
 }
 
 /// Returns `true` if the given op operand may be consuming the handle value in

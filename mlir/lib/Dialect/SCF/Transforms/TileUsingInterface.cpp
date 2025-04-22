@@ -1438,10 +1438,10 @@ SliceTrackingListener::insertAndApplyPatterns(ArrayRef<Operation *> ops) {
   if (!patterns)
     return success();
 
-  return applyOpPatternsGreedily(
-      ops, patterns.value(),
-      GreedyRewriteConfig().setListener(this).setStrictness(
-          GreedyRewriteStrictness::ExistingAndNewOps));
+  GreedyRewriteConfig config;
+  config.listener = this;
+  config.strictMode = GreedyRewriteStrictness::ExistingAndNewOps;
+  return applyOpPatternsGreedily(ops, patterns.value(), config);
 }
 
 void SliceTrackingListener::notifyOperationInserted(

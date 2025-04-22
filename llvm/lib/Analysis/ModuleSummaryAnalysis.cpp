@@ -1156,9 +1156,7 @@ ModulePass *llvm::createModuleSummaryIndexWrapperPass() {
 }
 
 ModuleSummaryIndexWrapperPass::ModuleSummaryIndexWrapperPass()
-    : ModulePass(ID) {
-  initializeModuleSummaryIndexWrapperPassPass(*PassRegistry::getPassRegistry());
-}
+    : ModulePass(ID) {}
 
 bool ModuleSummaryIndexWrapperPass::runOnModule(Module &M) {
   auto *PSI = &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
@@ -1196,10 +1194,7 @@ char ImmutableModuleSummaryIndexWrapperPass::ID = 0;
 
 ImmutableModuleSummaryIndexWrapperPass::ImmutableModuleSummaryIndexWrapperPass(
     const ModuleSummaryIndex *Index)
-    : ImmutablePass(ID), Index(Index) {
-  initializeImmutableModuleSummaryIndexWrapperPassPass(
-      *PassRegistry::getPassRegistry());
-}
+    : ImmutablePass(ID), Index(Index) {}
 
 void ImmutableModuleSummaryIndexWrapperPass::getAnalysisUsage(
     AnalysisUsage &AU) const {
