@@ -113,6 +113,14 @@ else()
   set(CMAKE_CXX_EXTENSIONS NO)
 endif()
 
+# Emit a warning for people who haven't updated their build.
+if(NOT "openmp" IN_LIST RUNTIMES_amdgcn-amd-amdhsa_LLVM_ENABLE_RUNTIMES AND
+   NOT "openmp" IN_LIST RUNTIMES_nvptx64-nvidia-cuda_LLVM_ENABLE_RUNTIMES)
+  message(WARNING "Building the offloading runtime with no device library. See "
+                  "https://openmp.llvm.org/SupportAndFAQ.html#q-how-to-build-an-openmp-gpu-offload-capable-compiler.html "
+                  "for more information.")
+endif()
+
 # Set the path of all resulting libraries to a unified location so that it can
 # be used for testing.
 set(LIBOMPTARGET_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
@@ -373,7 +381,6 @@ set(LIBOMPTARGET_LLVM_LIBRARY_INTDIR "${LIBOMPTARGET_INTDIR}" CACHE STRING
 
 # Build offloading plugins and device RTLs if they are available.
 add_subdirectory(plugins-nextgen)
-add_subdirectory(DeviceRTL)
 add_subdirectory(tools)
 
 # Build target agnostic offloading library.
