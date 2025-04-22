@@ -945,7 +945,7 @@ struct TestVectorBitWidthLinearize final
     ConversionTarget target(*context);
 
     populateWithBitWidthConstraints(typeConverter, target,
-                                                      targetVectorBitwidth);
+                                    targetVectorBitwidth);
 
     vector::populateVectorLinearizeBasePatterns(typeConverter, target,
                                                 patterns);
