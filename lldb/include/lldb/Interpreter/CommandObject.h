@@ -40,13 +40,13 @@ int AddNamesMatchingPartialString(
     StringList *descriptions = nullptr) {
   int number_added = 0;
 
-  for (const auto &iter : in_map) {
-    llvm::StringRef full_cmd = iter.first;
-    if (full_cmd.starts_with(cmd_str)) {
+  for (const auto &[name, cmd] : in_map) {
+    llvm::StringRef cmd_name = name;
+    if (cmd_name.starts_with(cmd_str)) {
       ++number_added;
-      matches.AppendString(iter.first);
+      matches.AppendString(name);
       if (descriptions)
-        descriptions->AppendString(iter.second->GetHelp());
+        descriptions->AppendString(cmd->GetHelp());
     }
   }
 
