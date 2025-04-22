@@ -39,7 +39,7 @@ struct DescriptorTable {
 using ClauseType = llvm::dxil::ResourceClass;
 struct DescriptorTableClause {
   ClauseType Type;
-  Register Register;
+  Register Reg;
   uint32_t Space = 0;
 };
 

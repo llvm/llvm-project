@@ -123,13 +123,13 @@ bool RootSignatureParser::parseDescriptorTableClause() {
     return true;
 
   // Check mandatory parameters were provided
-  if (!Params->Register.has_value()) {
+  if (!Params->Reg.has_value()) {
     getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_missing_param)
         << ExpectedReg;
     return true;
   }
 
-  Clause.Register = Params->Register.value();
+  Clause.Reg = Params->Reg.value();
 
   // Fill in optional values
   if (Params->Space.has_value())
@@ -156,7 +156,7 @@ RootSignatureParser::parseDescriptorTableClauseParams(TokenKind RegType) {
   do {
     // ( `b` | `t` | `u` | `s`) POS_INT
     if (tryConsumeExpectedToken(RegType)) {
-      if (Params.Register.has_value()) {
+      if (Params.Reg.has_value()) {
         getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_repeat_param)
             << CurToken.TokKind;
         return std::nullopt;
@@ -164,7 +164,7 @@ RootSignatureParser::parseDescriptorTableClauseParams(TokenKind RegType) {
       auto Reg = parseRegister();
       if (!Reg.has_value())
         return std::nullopt;
-      Params.Register = Reg;
+      Params.Reg = Reg;
     }
 
     // `space` `=` POS_INT
@@ -205,21 +205,21 @@ std::optional<Register> RootSignatureParser::parseRegister() {
           CurToken.TokKind == TokenKind::sReg) &&
          "Expects to only be invoked starting at given keyword");
 
-  Register Register;
+  Register Reg;
   switch (CurToken.TokKind) {
   default:
     llvm_unreachable("Switch for consumed token was not provided");
   case TokenKind::bReg:
-    Register.ViewType = RegisterType::BReg;
+    Reg.ViewType = RegisterType::BReg;
     break;
   case TokenKind::tReg:
-    Register.ViewType = RegisterType::TReg;
+    Reg.ViewType = RegisterType::TReg;
     break;
   case TokenKind::uReg:
-    Register.ViewType = RegisterType::UReg;
+    Reg.ViewType = RegisterType::UReg;
     break;
   case TokenKind::sReg:
-    Register.ViewType = RegisterType::SReg;
+    Reg.ViewType = RegisterType::SReg;
     break;
   }
 
@@ -227,8 +227,8 @@ std::optional<Register> RootSignatureParser::parseRegister() {
   if (!Number.has_value())
     return std::nullopt; // propogate NumericLiteralParser error
 
-  Register.Number = *Number;
-  return Register;
+  Reg.Number = *Number;
+  return Reg;
 }
 
 std::optional<uint32_t> RootSignatureParser::handleUIntLiteral() {

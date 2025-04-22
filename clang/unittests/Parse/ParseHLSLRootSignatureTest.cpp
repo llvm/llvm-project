@@ -154,33 +154,33 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseDTClausesTest) {
   RootElement Elem = Elements[0];
   ASSERT_TRUE(std::holds_alternative<DescriptorTableClause>(Elem));
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Type, ClauseType::CBuffer);
-  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Register.ViewType,
+  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Reg.ViewType,
             RegisterType::BReg);
-  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Register.Number, 0u);
+  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Reg.Number, 0u);
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Space, 0u);
 
   Elem = Elements[1];
   ASSERT_TRUE(std::holds_alternative<DescriptorTableClause>(Elem));
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Type, ClauseType::SRV);
-  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Register.ViewType,
+  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Reg.ViewType,
             RegisterType::TReg);
-  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Register.Number, 42u);
+  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Reg.Number, 42u);
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Space, 3u);
 
   Elem = Elements[2];
   ASSERT_TRUE(std::holds_alternative<DescriptorTableClause>(Elem));
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Type, ClauseType::Sampler);
-  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Register.ViewType,
+  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Reg.ViewType,
             RegisterType::SReg);
-  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Register.Number, 987u);
+  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Reg.Number, 987u);
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Space, 2u);
 
   Elem = Elements[3];
   ASSERT_TRUE(std::holds_alternative<DescriptorTableClause>(Elem));
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Type, ClauseType::UAV);
-  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Register.ViewType,
+  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Reg.ViewType,
             RegisterType::UReg);
-  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Register.Number, 4294967294u);
+  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Reg.Number, 4294967294u);
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Space, 0u);
 
   Elem = Elements[4];

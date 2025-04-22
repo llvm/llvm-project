@@ -78,7 +78,7 @@ private:
   /// order and only exactly once. `ParsedClauseParams` denotes the current
   /// state of parsed params
   struct ParsedClauseParams {
-    std::optional<llvm::hlsl::rootsig::Register> Register;
+    std::optional<llvm::hlsl::rootsig::Register> Reg;
     std::optional<uint32_t> Space;
   };
   std::optional<ParsedClauseParams>
