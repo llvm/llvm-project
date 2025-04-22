@@ -909,7 +909,7 @@ static void handleNoBuiltinAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 
   // Repeating the same attribute is fine.
   llvm::sort(Names);
-  Names.erase(std::unique(Names.begin(), Names.end()), Names.end());
+  Names.erase(llvm::unique(Names), Names.end());
 
   // Empty no_builtin must be on its own.
   if (HasWildcard && Names.size() > 1)
@@ -5495,12 +5495,12 @@ bool Sema::CheckCallingConvAttr(const ParsedAttr &Attrs, CallingConv &CC,
 
   TargetInfo::CallingConvCheckResult A = TargetInfo::CCCR_OK;
   const TargetInfo &TI = Context.getTargetInfo();
+  auto *Aux = Context.getAuxTargetInfo();
   // CUDA functions may have host and/or device attributes which indicate
   // their targeted execution environment, therefore the calling convention
   // of functions in CUDA should be checked against the target deduced based
   // on their host/device attributes.
   if (LangOpts.CUDA) {
-    auto *Aux = Context.getAuxTargetInfo();
     assert(FD || CFT != CUDAFunctionTarget::InvalidTarget);
     auto CudaTarget = FD ? CUDA().IdentifyTarget(FD) : CFT;
     bool CheckHost = false, CheckDevice = false;
@@ -5525,6 +5525,15 @@ bool Sema::CheckCallingConvAttr(const ParsedAttr &Attrs, CallingConv &CC,
       A = HostTI->checkCallingConvention(CC);
     if (A == TargetInfo::CCCR_OK && CheckDevice && DeviceTI)
       A = DeviceTI->checkCallingConvention(CC);
+  } else if (LangOpts.SYCLIsDevice && TI.getTriple().isAMDGPU() &&
+             CC == CC_X86VectorCall) {
+    // Assuming SYCL Device AMDGPU CC_X86VectorCall functions are always to be
+    // emitted on the host. The MSVC STL has CC-based specializations so we
+    // cannot change the CC to be the default as that will cause a clash with
+    // another specialization.
+    A = TI.checkCallingConvention(CC);
+    if (Aux && A != TargetInfo::CCCR_OK)
+      A = Aux->checkCallingConvention(CC);
   } else {
     A = TI.checkCallingConvention(CC);
   }
@@ -6028,7 +6037,7 @@ static void handleAbiTagAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 
   // Store tags sorted and without duplicates.
   llvm::sort(Tags);
-  Tags.erase(std::unique(Tags.begin(), Tags.end()), Tags.end());
+  Tags.erase(llvm::unique(Tags), Tags.end());
 
   D->addAttr(::new (S.Context)
                  AbiTagAttr(S.Context, AL, Tags.data(), Tags.size()));

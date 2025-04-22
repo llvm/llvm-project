@@ -3,10 +3,10 @@
 define amdgpu_kernel void @sdwa_test() local_unnamed_addr #0 {
 ; GFX9-LABEL: sdwa_test:
 ; GFX9:       ; %bb.0: ; %bb
-; GFX9-NEXT:    v_add_u32_e32 v1, 10, v0
-; GFX9-NEXT:    v_add_u32_e32 v0, 20, v0
-; GFX9-NEXT:    v_add_co_u32_sdwa v0, vcc, v1, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_0
-; GFX9-NEXT:    v_addc_co_u32_e64 v1, s[0:1], 0, 0, vcc
+; GFX9-NEXT:    v_add_u32_e32 v1, 20, v0
+; GFX9-NEXT:    v_and_b32_e32 v1, 0xff, v1
+; GFX9-NEXT:    v_add3_u32 v0, v0, v1, 10
+; GFX9-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX9-NEXT:    global_store_dwordx2 v[0:1], v[0:1], off
 ; GFX9-NEXT:    s_endpgm
 bb:

@@ -562,7 +562,7 @@ namespace llvm {
   /// @}
 
   template <typename T> hash_code hash_value(ArrayRef<T> S) {
-    return hash_combine_range(S.begin(), S.end());
+    return hash_combine_range(S);
   }
 
   // Provide DenseMapInfo for ArrayRefs.
