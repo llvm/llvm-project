@@ -2793,7 +2793,11 @@ static Instruction *foldSelectWithFCmpToFabs(SelectInst &SI,
 
     // fold (X <= +/-0.0) ? (0.0 - X) : X to fabs(X), when 'Swap' is false
     // fold (X >  +/-0.0) ? X : (0.0 - X) to fabs(X), when 'Swap' is true
-    if (match(TrueVal, m_FSub(m_PosZeroFP(), m_Specific(X)))) {
+    // Note: We require "nnan" for this fold because fcmp ignores the signbit
+    //       of NAN, but IEEE-754 specifies the signbit of NAN values with
+    //       fneg/fabs operations.
+    if (cast<FPMathOperator>(CondVal)->hasNoNaNs() &&
+        match(TrueVal, m_FSub(m_PosZeroFP(), m_Specific(X)))) {
       if (!Swap && (Pred == FCmpInst::FCMP_OLE || Pred == FCmpInst::FCMP_ULE)) {
         Value *Fabs = IC.Builder.CreateUnaryIntrinsic(Intrinsic::fabs, X, &SI);
         return IC.replaceInstUsesWith(SI, Fabs);
