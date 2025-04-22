@@ -56522,11 +56522,10 @@ static SDValue combineGatherScatter(SDNode *N, SelectionDAG &DAG,
   if (DCI.isBeforeLegalize()) {
     // Attempt to move shifted index into the address scale, allows further
     // index truncation below.
-    // TODO
     if (Index.getOpcode() == ISD::SHL && isa<ConstantSDNode>(Scale)) {
       uint64_t ScaleAmt = Scale->getAsZExtVal();
       if (auto MinShAmt = DAG.getValidMinimumShiftAmount(Index)) {
-        if (*MinShAmt >= 1 && ScaleAmt < 8 &&
+        if (*MinShAmt >= 1 && (*MinShAmt + Log2_64(ScaleAmt)) < 4 &&
             DAG.ComputeNumSignBits(Index.getOperand(0)) > 1) {
           SDValue ShAmt = Index.getOperand(1);
           SDValue NewShAmt =
@@ -56546,7 +56545,16 @@ static SDValue combineGatherScatter(SDNode *N, SelectionDAG &DAG,
     // Only do this before legalize types since v2i64 could become v2i32.
     // FIXME: We could check that the type is legal if we're after legalize
     // types, but then we would need to construct test cases where that happens.
-    if (IndexWidth > 32 && DAG.ComputeNumSignBits(Index) > (IndexWidth - 32)) {
+    unsigned ComputeNumSignBits = DAG.ComputeNumSignBits(Index);
+    if (Index.getOpcode() == ISD::SHL) {
+      if (auto MinShAmt = DAG.getValidMinimumShiftAmount(Index)) {
+        if (DAG.ComputeNumSignBits(Index.getOperand(0)) > 1) {
+          ComputeNumSignBits += *MinShAmt;
+        }
+      }
+    }
+
+    if (IndexWidth > 32 && ComputeNumSignBits > (IndexWidth - 32)) {
       EVT NewVT = IndexVT.changeVectorElementType(MVT::i32);
 
       // FIXME: We could support more than just constant vectors, but we need to
