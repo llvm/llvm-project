@@ -1517,9 +1517,10 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     if (ClEmbedFaultingInst != MSanEmbedFaultingInstructionMode::None) {
       IRBuilder<> IRB0(Instruction);
       StringRef InstNameStrRef;
-      // Keep str at this scope level because it is indirectly needed by
-      // CreateGlobalString
+      // Keep str and maybeBuf at this scope level because they may be
+      // indirectly needed by CreateGlobalString
       std::string str;
+      SmallVector<char> maybeBuf;
 
       // Dumping the full instruction is expensive because the operands etc.
       // likely make the string unique per instruction instance, hence we
@@ -1533,7 +1534,6 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
         if (CallInst *CI = dyn_cast<CallInst>(Instruction)) {
           if (CI->getCalledFunction()) {
             Twine description = "call " + CI->getCalledFunction()->getName();
-            SmallVector<char> maybeBuf;
             InstNameStrRef = description.toStringRef(maybeBuf);
           } else {
             InstNameStrRef = StringRef("Unknown call");
