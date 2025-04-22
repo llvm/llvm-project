@@ -1024,6 +1024,9 @@ mlir::OpTrait::impl::verifySameFirstOperandAndResultType(Operation *op) {
 // been implemented yet.
 mlir::LogicalResult cir::FuncOp::verify() { return success(); }
 
+//===----------------------------------------------------------------------===//
+// BinOp
+//===----------------------------------------------------------------------===//
 LogicalResult cir::BinOp::verify() {
   bool noWrap = getNoUnsignedWrap() || getNoSignedWrap();
   bool saturated = getSaturated();
@@ -1052,6 +1055,24 @@ LogicalResult cir::BinOp::verify() {
   assert(!cir::MissingFeatures::complexType());
   // TODO(cir): verify for complex binops
 
+  return mlir::success();
+}
+
+//===----------------------------------------------------------------------===//
+// ShiftOp
+//===----------------------------------------------------------------------===//
+LogicalResult cir::ShiftOp::verify() {
+  mlir::Operation *op = getOperation();
+  mlir::Type resType = getResult().getType();
+  assert(!cir::MissingFeatures::vectorType());
+  bool isOp0Vec = false;
+  bool isOp1Vec = false;
+  if (isOp0Vec != isOp1Vec)
+    return emitOpError() << "input types cannot be one vector and one scalar";
+  if (isOp1Vec && op->getOperand(1).getType() != resType) {
+    return emitOpError() << "shift amount must have the type of the result "
+                         << "if it is vector shift";
+  }
   return mlir::success();
 }
 

@@ -209,6 +209,26 @@ public:
                   mlir::ConversionPatternRewriter &) const override;
 };
 
+class CIRToLLVMShiftOpLowering
+    : public mlir::OpConversionPattern<cir::ShiftOp> {
+public:
+  using mlir::OpConversionPattern<cir::ShiftOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::ShiftOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
+class CIRToLLVMSelectOpLowering
+    : public mlir::OpConversionPattern<cir::SelectOp> {
+public:
+  using mlir::OpConversionPattern<cir::SelectOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::SelectOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
 class CIRToLLVMBrOpLowering : public mlir::OpConversionPattern<cir::BrOp> {
 public:
   using mlir::OpConversionPattern<cir::BrOp>::OpConversionPattern;
