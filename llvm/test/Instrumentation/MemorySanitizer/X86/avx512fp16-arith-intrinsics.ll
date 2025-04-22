@@ -4,8 +4,6 @@
 ; Forked from llvm/test/CodeGen/X86/avx512fp16-arith-intrinsics.ll
 ;
 ; Handled suboptimally (visitInstruction):
-; - llvm.x86.avx512fp16.add.ph.512
-; - llvm.x86.avx512fp16.div.ph.512
 ; - llvm.x86.avx512fp16.mask.vcvtpd2ph.512
 ; - llvm.x86.avx512fp16.mask.vcvtph2pd.512
 ; - llvm.x86.avx512fp16.mask.vcvtph2psx.512
@@ -14,10 +12,6 @@
 ; - llvm.x86.avx512fp16.mask.vcvtsh2sd.round
 ; - llvm.x86.avx512fp16.mask.vcvtsh2ss.round
 ; - llvm.x86.avx512fp16.mask.vcvtss2sh.round
-; - llvm.x86.avx512fp16.max.ph.512
-; - llvm.x86.avx512fp16.min.ph.512
-; - llvm.x86.avx512fp16.mul.ph.512
-; - llvm.x86.avx512fp16.sub.ph.512
 
 target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
@@ -30,18 +24,10 @@ define <32 x half> @test_int_x86_avx512fp16_add_ph_512(<32 x half> %x1, <32 x ha
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <32 x i16>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <32 x i16>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 64) to ptr), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <32 x i16> [[TMP1]] to i512
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i512 [[TMP3]], 0
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <32 x i16> [[TMP2]] to i512
-; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i512 [[TMP4]], 0
-; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
-; CHECK-NEXT:    br i1 [[_MSOR]], label %[[BB5:.*]], label %[[BB6:.*]], !prof [[PROF1:![0-9]+]]
-; CHECK:       [[BB5]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4:[0-9]+]]
-; CHECK-NEXT:    unreachable
-; CHECK:       [[BB6]]:
+; CHECK-NEXT:    [[_MSPROP:%.*]] = or <32 x i16> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[_MSPROP1:%.*]] = or <32 x i16> [[_MSPROP]], zeroinitializer
 ; CHECK-NEXT:    [[RES:%.*]] = call <32 x half> @llvm.x86.avx512fp16.add.ph.512(<32 x half> [[X1]], <32 x half> [[X2]], i32 4)
-; CHECK-NEXT:    store <32 x i16> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <32 x i16> [[_MSPROP1]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <32 x half> [[RES]]
 ;
   %res = call <32 x half> @llvm.x86.avx512fp16.add.ph.512(<32 x half> %x1, <32 x half> %x2, i32 4)
@@ -58,22 +44,14 @@ define <32 x half> @test_int_x86_avx512fp16_mask_add_ph_512(<32 x half> %src, <3
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i32 [[TMP1]] to <32 x i1>
 ; CHECK-NEXT:    [[MASK:%.*]] = bitcast i32 [[MSK]] to <32 x i1>
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <32 x i16> [[TMP2]] to i512
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i512 [[TMP6]], 0
-; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <32 x i16> [[TMP3]] to i512
-; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i512 [[TMP7]], 0
-; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
-; CHECK-NEXT:    br i1 [[_MSOR]], label %[[BB8:.*]], label %[[BB9:.*]], !prof [[PROF1]]
-; CHECK:       [[BB8]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
-; CHECK-NEXT:    unreachable
-; CHECK:       [[BB9]]:
+; CHECK-NEXT:    [[_MSPROP:%.*]] = or <32 x i16> [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[_MSPROP1:%.*]] = or <32 x i16> [[_MSPROP]], zeroinitializer
 ; CHECK-NEXT:    [[RES0:%.*]] = call <32 x half> @llvm.x86.avx512fp16.add.ph.512(<32 x half> [[X1]], <32 x half> [[X2]], i32 4)
-; CHECK-NEXT:    [[TMP10:%.*]] = select <32 x i1> [[MASK]], <32 x i16> zeroinitializer, <32 x i16> [[TMP4]]
+; CHECK-NEXT:    [[TMP10:%.*]] = select <32 x i1> [[MASK]], <32 x i16> [[_MSPROP1]], <32 x i16> [[TMP4]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = bitcast <32 x half> [[RES0]] to <32 x i16>
 ; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <32 x half> [[SRC]] to <32 x i16>
 ; CHECK-NEXT:    [[TMP13:%.*]] = xor <32 x i16> [[TMP11]], [[TMP12]]
-; CHECK-NEXT:    [[TMP14:%.*]] = or <32 x i16> [[TMP13]], zeroinitializer
+; CHECK-NEXT:    [[TMP14:%.*]] = or <32 x i16> [[TMP13]], [[_MSPROP1]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = or <32 x i16> [[TMP14]], [[TMP4]]
 ; CHECK-NEXT:    [[_MSPROP_SELECT:%.*]] = select <32 x i1> [[TMP5]], <32 x i16> [[TMP15]], <32 x i16> [[TMP10]]
 ; CHECK-NEXT:    [[RES:%.*]] = select <32 x i1> [[MASK]], <32 x half> [[RES0]], <32 x half> [[SRC]]
@@ -97,9 +75,9 @@ define <32 x half> @test_int_x86_avx512fp16_maskz_add_ph_512(<32 x half> %src, <
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i32 [[TMP1]] to <32 x i1>
 ; CHECK-NEXT:    [[MASK:%.*]] = bitcast i32 [[MSK]] to <32 x i1>
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB6:.*]], label %[[BB7:.*]], !prof [[PROF1]]
+; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB6:.*]], label %[[BB7:.*]], !prof [[PROF1:![0-9]+]]
 ; CHECK:       [[BB6]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4:[0-9]+]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB7]]:
 ; CHECK-NEXT:    [[VAL:%.*]] = load <32 x half>, ptr [[PTR]], align 64
@@ -107,39 +85,23 @@ define <32 x half> @test_int_x86_avx512fp16_maskz_add_ph_512(<32 x half> %src, <
 ; CHECK-NEXT:    [[TMP9:%.*]] = xor i64 [[TMP8]], 87960930222080
 ; CHECK-NEXT:    [[TMP10:%.*]] = inttoptr i64 [[TMP9]] to ptr
 ; CHECK-NEXT:    [[_MSLD:%.*]] = load <32 x i16>, ptr [[TMP10]], align 64
-; CHECK-NEXT:    [[TMP11:%.*]] = bitcast <32 x i16> [[TMP3]] to i512
-; CHECK-NEXT:    [[_MSCMP2:%.*]] = icmp ne i512 [[TMP11]], 0
-; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <32 x i16> [[TMP4]] to i512
-; CHECK-NEXT:    [[_MSCMP3:%.*]] = icmp ne i512 [[TMP12]], 0
-; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP2]], [[_MSCMP3]]
-; CHECK-NEXT:    br i1 [[_MSOR]], label %[[BB13:.*]], label %[[BB14:.*]], !prof [[PROF1]]
-; CHECK:       [[BB13]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
-; CHECK-NEXT:    unreachable
-; CHECK:       [[BB14]]:
+; CHECK-NEXT:    [[_MSPROP4:%.*]] = or <32 x i16> [[TMP3]], [[TMP4]]
+; CHECK-NEXT:    [[_MSPROP1:%.*]] = or <32 x i16> [[_MSPROP4]], zeroinitializer
 ; CHECK-NEXT:    [[RES0:%.*]] = call <32 x half> @llvm.x86.avx512fp16.add.ph.512(<32 x half> [[X1]], <32 x half> [[X2]], i32 4)
-; CHECK-NEXT:    [[TMP15:%.*]] = select <32 x i1> [[MASK]], <32 x i16> zeroinitializer, <32 x i16> zeroinitializer
+; CHECK-NEXT:    [[TMP15:%.*]] = select <32 x i1> [[MASK]], <32 x i16> [[_MSPROP1]], <32 x i16> zeroinitializer
 ; CHECK-NEXT:    [[TMP16:%.*]] = bitcast <32 x half> [[RES0]] to <32 x i16>
 ; CHECK-NEXT:    [[TMP17:%.*]] = xor <32 x i16> [[TMP16]], zeroinitializer
-; CHECK-NEXT:    [[TMP18:%.*]] = or <32 x i16> [[TMP17]], zeroinitializer
+; CHECK-NEXT:    [[TMP18:%.*]] = or <32 x i16> [[TMP17]], [[_MSPROP1]]
 ; CHECK-NEXT:    [[TMP19:%.*]] = or <32 x i16> [[TMP18]], zeroinitializer
 ; CHECK-NEXT:    [[_MSPROP_SELECT:%.*]] = select <32 x i1> [[TMP5]], <32 x i16> [[TMP19]], <32 x i16> [[TMP15]]
 ; CHECK-NEXT:    [[RES1:%.*]] = select <32 x i1> [[MASK]], <32 x half> [[RES0]], <32 x half> zeroinitializer
-; CHECK-NEXT:    [[TMP20:%.*]] = bitcast <32 x i16> [[TMP3]] to i512
-; CHECK-NEXT:    [[_MSCMP4:%.*]] = icmp ne i512 [[TMP20]], 0
-; CHECK-NEXT:    [[TMP21:%.*]] = bitcast <32 x i16> [[_MSLD]] to i512
-; CHECK-NEXT:    [[_MSCMP5:%.*]] = icmp ne i512 [[TMP21]], 0
-; CHECK-NEXT:    [[_MSOR6:%.*]] = or i1 [[_MSCMP4]], [[_MSCMP5]]
-; CHECK-NEXT:    br i1 [[_MSOR6]], label %[[BB22:.*]], label %[[BB23:.*]], !prof [[PROF1]]
-; CHECK:       [[BB22]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
-; CHECK-NEXT:    unreachable
-; CHECK:       [[BB23]]:
+; CHECK-NEXT:    [[_MSPROP2:%.*]] = or <32 x i16> [[TMP3]], [[_MSLD]]
+; CHECK-NEXT:    [[_MSPROP3:%.*]] = or <32 x i16> [[_MSPROP2]], zeroinitializer
 ; CHECK-NEXT:    [[T2:%.*]] = call <32 x half> @llvm.x86.avx512fp16.add.ph.512(<32 x half> [[X1]], <32 x half> [[VAL]], i32 4)
-; CHECK-NEXT:    [[TMP24:%.*]] = select <32 x i1> [[MASK]], <32 x i16> zeroinitializer, <32 x i16> zeroinitializer
+; CHECK-NEXT:    [[TMP24:%.*]] = select <32 x i1> [[MASK]], <32 x i16> [[_MSPROP3]], <32 x i16> zeroinitializer
 ; CHECK-NEXT:    [[TMP25:%.*]] = bitcast <32 x half> [[T2]] to <32 x i16>
 ; CHECK-NEXT:    [[TMP26:%.*]] = xor <32 x i16> [[TMP25]], zeroinitializer
-; CHECK-NEXT:    [[TMP27:%.*]] = or <32 x i16> [[TMP26]], zeroinitializer
+; CHECK-NEXT:    [[TMP27:%.*]] = or <32 x i16> [[TMP26]], [[_MSPROP3]]
 ; CHECK-NEXT:    [[TMP28:%.*]] = or <32 x i16> [[TMP27]], zeroinitializer
 ; CHECK-NEXT:    [[_MSPROP_SELECT1:%.*]] = select <32 x i1> [[TMP5]], <32 x i16> [[TMP28]], <32 x i16> [[TMP24]]
 ; CHECK-NEXT:    [[RES2:%.*]] = select <32 x i1> [[MASK]], <32 x half> [[T2]], <32 x half> zeroinitializer
@@ -168,22 +130,14 @@ define <32 x half> @test_int_x86_avx512fp16_add_ph_512_round(<32 x half> %x1, <3
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i32 [[TMP1]] to <32 x i1>
 ; CHECK-NEXT:    [[MASK:%.*]] = bitcast i32 [[MSK]] to <32 x i1>
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <32 x i16> [[TMP2]] to i512
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i512 [[TMP6]], 0
-; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <32 x i16> [[TMP3]] to i512
-; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i512 [[TMP7]], 0
-; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
-; CHECK-NEXT:    br i1 [[_MSOR]], label %[[BB8:.*]], label %[[BB9:.*]], !prof [[PROF1]]
-; CHECK:       [[BB8]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
-; CHECK-NEXT:    unreachable
-; CHECK:       [[BB9]]:
+; CHECK-NEXT:    [[_MSPROP:%.*]] = or <32 x i16> [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[_MSPROP1:%.*]] = or <32 x i16> [[_MSPROP]], zeroinitializer
 ; CHECK-NEXT:    [[T1:%.*]] = call <32 x half> @llvm.x86.avx512fp16.add.ph.512(<32 x half> [[X1]], <32 x half> [[X2]], i32 10)
-; CHECK-NEXT:    [[TMP10:%.*]] = select <32 x i1> [[MASK]], <32 x i16> zeroinitializer, <32 x i16> [[TMP4]]
+; CHECK-NEXT:    [[TMP10:%.*]] = select <32 x i1> [[MASK]], <32 x i16> [[_MSPROP1]], <32 x i16> [[TMP4]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = bitcast <32 x half> [[T1]] to <32 x i16>
 ; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <32 x half> [[SRC]] to <32 x i16>
 ; CHECK-NEXT:    [[TMP13:%.*]] = xor <32 x i16> [[TMP11]], [[TMP12]]
-; CHECK-NEXT:    [[TMP14:%.*]] = or <32 x i16> [[TMP13]], zeroinitializer
+; CHECK-NEXT:    [[TMP14:%.*]] = or <32 x i16> [[TMP13]], [[_MSPROP1]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = or <32 x i16> [[TMP14]], [[TMP4]]
 ; CHECK-NEXT:    [[_MSPROP_SELECT:%.*]] = select <32 x i1> [[TMP5]], <32 x i16> [[TMP15]], <32 x i16> [[TMP10]]
 ; CHECK-NEXT:    [[RES:%.*]] = select <32 x i1> [[MASK]], <32 x half> [[T1]], <32 x half> [[SRC]]
@@ -204,18 +158,10 @@ define <32 x half> @test_int_x86_avx512fp16_sub_ph_512(<32 x half> %x1, <32 x ha
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <32 x i16>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <32 x i16>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 64) to ptr), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <32 x i16> [[TMP1]] to i512
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i512 [[TMP3]], 0
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <32 x i16> [[TMP2]] to i512
-; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i512 [[TMP4]], 0
-; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
-; CHECK-NEXT:    br i1 [[_MSOR]], label %[[BB5:.*]], label %[[BB6:.*]], !prof [[PROF1]]
-; CHECK:       [[BB5]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
-; CHECK-NEXT:    unreachable
-; CHECK:       [[BB6]]:
+; CHECK-NEXT:    [[_MSPROP:%.*]] = or <32 x i16> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[_MSPROP1:%.*]] = or <32 x i16> [[_MSPROP]], zeroinitializer
 ; CHECK-NEXT:    [[RES:%.*]] = call <32 x half> @llvm.x86.avx512fp16.sub.ph.512(<32 x half> [[X1]], <32 x half> [[X2]], i32 4)
-; CHECK-NEXT:    store <32 x i16> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <32 x i16> [[_MSPROP1]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <32 x half> [[RES]]
 ;
   %res = call <32 x half> @llvm.x86.avx512fp16.sub.ph.512(<32 x half> %x1, <32 x half> %x2, i32 4)
@@ -232,22 +178,14 @@ define <32 x half> @test_int_x86_avx512fp16_mask_sub_ph_512(<32 x half> %src, <3
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i32 [[TMP1]] to <32 x i1>
 ; CHECK-NEXT:    [[MASK:%.*]] = bitcast i32 [[MSK]] to <32 x i1>
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <32 x i16> [[TMP2]] to i512
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i512 [[TMP6]], 0
-; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <32 x i16> [[TMP3]] to i512
-; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i512 [[TMP7]], 0
-; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
-; CHECK-NEXT:    br i1 [[_MSOR]], label %[[BB8:.*]], label %[[BB9:.*]], !prof [[PROF1]]
-; CHECK:       [[BB8]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
-; CHECK-NEXT:    unreachable
-; CHECK:       [[BB9]]:
+; CHECK-NEXT:    [[_MSPROP:%.*]] = or <32 x i16> [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[_MSPROP1:%.*]] = or <32 x i16> [[_MSPROP]], zeroinitializer
 ; CHECK-NEXT:    [[RES0:%.*]] = call <32 x half> @llvm.x86.avx512fp16.sub.ph.512(<32 x half> [[X1]], <32 x half> [[X2]], i32 4)
-; CHECK-NEXT:    [[TMP10:%.*]] = select <32 x i1> [[MASK]], <32 x i16> zeroinitializer, <32 x i16> [[TMP4]]
+; CHECK-NEXT:    [[TMP10:%.*]] = select <32 x i1> [[MASK]], <32 x i16> [[_MSPROP1]], <32 x i16> [[TMP4]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = bitcast <32 x half> [[RES0]] to <32 x i16>
 ; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <32 x half> [[SRC]] to <32 x i16>
 ; CHECK-NEXT:    [[TMP13:%.*]] = xor <32 x i16> [[TMP11]], [[TMP12]]
-; CHECK-NEXT:    [[TMP14:%.*]] = or <32 x i16> [[TMP13]], zeroinitializer
+; CHECK-NEXT:    [[TMP14:%.*]] = or <32 x i16> [[TMP13]], [[_MSPROP1]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = or <32 x i16> [[TMP14]], [[TMP4]]
 ; CHECK-NEXT:    [[_MSPROP_SELECT:%.*]] = select <32 x i1> [[TMP5]], <32 x i16> [[TMP15]], <32 x i16> [[TMP10]]
 ; CHECK-NEXT:    [[RES:%.*]] = select <32 x i1> [[MASK]], <32 x half> [[RES0]], <32 x half> [[SRC]]
@@ -281,39 +219,23 @@ define <32 x half> @test_int_x86_avx512fp16_maskz_sub_ph_512(<32 x half> %src, <
 ; CHECK-NEXT:    [[TMP9:%.*]] = xor i64 [[TMP8]], 87960930222080
 ; CHECK-NEXT:    [[TMP10:%.*]] = inttoptr i64 [[TMP9]] to ptr
 ; CHECK-NEXT:    [[_MSLD:%.*]] = load <32 x i16>, ptr [[TMP10]], align 64
-; CHECK-NEXT:    [[TMP11:%.*]] = bitcast <32 x i16> [[TMP3]] to i512
-; CHECK-NEXT:    [[_MSCMP2:%.*]] = icmp ne i512 [[TMP11]], 0
-; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <32 x i16> [[TMP4]] to i512
-; CHECK-NEXT:    [[_MSCMP3:%.*]] = icmp ne i512 [[TMP12]], 0
-; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP2]], [[_MSCMP3]]
-; CHECK-NEXT:    br i1 [[_MSOR]], label %[[BB13:.*]], label %[[BB14:.*]], !prof [[PROF1]]
-; CHECK:       [[BB13]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
-; CHECK-NEXT:    unreachable
-; CHECK:       [[BB14]]:
+; CHECK-NEXT:    [[_MSPROP4:%.*]] = or <32 x i16> [[TMP3]], [[TMP4]]
+; CHECK-NEXT:    [[_MSPROP1:%.*]] = or <32 x i16> [[_MSPROP4]], zeroinitializer
 ; CHECK-NEXT:    [[RES0:%.*]] = call <32 x half> @llvm.x86.avx512fp16.sub.ph.512(<32 x half> [[X1]], <32 x half> [[X2]], i32 4)
-; CHECK-NEXT:    [[TMP15:%.*]] = select <32 x i1> [[MASK]], <32 x i16> zeroinitializer, <32 x i16> zeroinitializer
+; CHECK-NEXT:    [[TMP15:%.*]] = select <32 x i1> [[MASK]], <32 x i16> [[_MSPROP1]], <32 x i16> zeroinitializer
 ; CHECK-NEXT:    [[TMP16:%.*]] = bitcast <32 x half> [[RES0]] to <32 x i16>
 ; CHECK-NEXT:    [[TMP17:%.*]] = xor <32 x i16> [[TMP16]], zeroinitializer
-; CHECK-NEXT:    [[TMP18:%.*]] = or <32 x i16> [[TMP17]], zeroinitializer
+; CHECK-NEXT:    [[TMP18:%.*]] = or <32 x i16> [[TMP17]], [[_MSPROP1]]
 ; CHECK-NEXT:    [[TMP19:%.*]] = or <32 x i16> [[TMP18]], zeroinitializer
 ; CHECK-NEXT:    [[_MSPROP_SELECT:%.*]] = select <32 x i1> [[TMP5]], <32 x i16> [[TMP19]], <32 x i16> [[TMP15]]
 ; CHECK-NEXT:    [[RES1:%.*]] = select <32 x i1> [[MASK]], <32 x half> [[RES0]], <32 x half> zeroinitializer
-; CHECK-NEXT:    [[TMP20:%.*]] = bitcast <32 x i16> [[TMP3]] to i512
-; CHECK-NEXT:    [[_MSCMP4:%.*]] = icmp ne i512 [[TMP20]], 0
-; CHECK-NEXT:    [[TMP21:%.*]] = bitcast <32 x i16> [[_MSLD]] to i512
-; CHECK-NEXT:    [[_MSCMP5:%.*]] = icmp ne i512 [[TMP21]], 0
-; CHECK-NEXT:    [[_MSOR6:%.*]] = or i1 [[_MSCMP4]], [[_MSCMP5]]
-; CHECK-NEXT:    br i1 [[_MSOR6]], label %[[BB22:.*]], label %[[BB23:.*]], !prof [[PROF1]]
-; CHECK:       [[BB22]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
-; CHECK-NEXT:    unreachable
-; CHECK:       [[BB23]]:
+; CHECK-NEXT:    [[_MSPROP2:%.*]] = or <32 x i16> [[TMP3]], [[_MSLD]]
+; CHECK-NEXT:    [[_MSPROP3:%.*]] = or <32 x i16> [[_MSPROP2]], zeroinitializer
 ; CHECK-NEXT:    [[T2:%.*]] = call <32 x half> @llvm.x86.avx512fp16.sub.ph.512(<32 x half> [[X1]], <32 x half> [[VAL]], i32 4)
-; CHECK-NEXT:    [[TMP24:%.*]] = select <32 x i1> [[MASK]], <32 x i16> zeroinitializer, <32 x i16> zeroinitializer
+; CHECK-NEXT:    [[TMP24:%.*]] = select <32 x i1> [[MASK]], <32 x i16> [[_MSPROP3]], <32 x i16> zeroinitializer
 ; CHECK-NEXT:    [[TMP25:%.*]] = bitcast <32 x half> [[T2]] to <32 x i16>
 ; CHECK-NEXT:    [[TMP26:%.*]] = xor <32 x i16> [[TMP25]], zeroinitializer
-; CHECK-NEXT:    [[TMP27:%.*]] = or <32 x i16> [[TMP26]], zeroinitializer
+; CHECK-NEXT:    [[TMP27:%.*]] = or <32 x i16> [[TMP26]], [[_MSPROP3]]
 ; CHECK-NEXT:    [[TMP28:%.*]] = or <32 x i16> [[TMP27]], zeroinitializer
 ; CHECK-NEXT:    [[_MSPROP_SELECT1:%.*]] = select <32 x i1> [[TMP5]], <32 x i16> [[TMP28]], <32 x i16> [[TMP24]]
 ; CHECK-NEXT:    [[RES2:%.*]] = select <32 x i1> [[MASK]], <32 x half> [[T2]], <32 x half> zeroinitializer
@@ -342,22 +264,14 @@ define <32 x half> @test_int_x86_avx512fp16_sub_ph_512_round(<32 x half> %x1, <3
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i32 [[TMP1]] to <32 x i1>
 ; CHECK-NEXT:    [[MASK:%.*]] = bitcast i32 [[MSK]] to <32 x i1>
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <32 x i16> [[TMP2]] to i512
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i512 [[TMP6]], 0
-; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <32 x i16> [[TMP3]] to i512
-; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i512 [[TMP7]], 0
-; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
-; CHECK-NEXT:    br i1 [[_MSOR]], label %[[BB8:.*]], label %[[BB9:.*]], !prof [[PROF1]]
-; CHECK:       [[BB8]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
-; CHECK-NEXT:    unreachable
-; CHECK:       [[BB9]]:
+; CHECK-NEXT:    [[_MSPROP:%.*]] = or <32 x i16> [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[_MSPROP1:%.*]] = or <32 x i16> [[_MSPROP]], zeroinitializer
 ; CHECK-NEXT:    [[T1:%.*]] = call <32 x half> @llvm.x86.avx512fp16.sub.ph.512(<32 x half> [[X1]], <32 x half> [[X2]], i32 10)
-; CHECK-NEXT:    [[TMP10:%.*]] = select <32 x i1> [[MASK]], <32 x i16> zeroinitializer, <32 x i16> [[TMP4]]
+; CHECK-NEXT:    [[TMP10:%.*]] = select <32 x i1> [[MASK]], <32 x i16> [[_MSPROP1]], <32 x i16> [[TMP4]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = bitcast <32 x half> [[T1]] to <32 x i16>
 ; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <32 x half> [[SRC]] to <32 x i16>
 ; CHECK-NEXT:    [[TMP13:%.*]] = xor <32 x i16> [[TMP11]], [[TMP12]]
-; CHECK-NEXT:    [[TMP14:%.*]] = or <32 x i16> [[TMP13]], zeroinitializer
+; CHECK-NEXT:    [[TMP14:%.*]] = or <32 x i16> [[TMP13]], [[_MSPROP1]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = or <32 x i16> [[TMP14]], [[TMP4]]
 ; CHECK-NEXT:    [[_MSPROP_SELECT:%.*]] = select <32 x i1> [[TMP5]], <32 x i16> [[TMP15]], <32 x i16> [[TMP10]]
 ; CHECK-NEXT:    [[RES:%.*]] = select <32 x i1> [[MASK]], <32 x half> [[T1]], <32 x half> [[SRC]]
@@ -378,18 +292,10 @@ define <32 x half> @test_int_x86_avx512fp16_mul_ph_512(<32 x half> %x1, <32 x ha
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <32 x i16>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <32 x i16>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 64) to ptr), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <32 x i16> [[TMP1]] to i512
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i512 [[TMP3]], 0
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <32 x i16> [[TMP2]] to i512
-; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i512 [[TMP4]], 0
-; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
-; CHECK-NEXT:    br i1 [[_MSOR]], label %[[BB5:.*]], label %[[BB6:.*]], !prof [[PROF1]]
-; CHECK:       [[BB5]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
-; CHECK-NEXT:    unreachable
-; CHECK:       [[BB6]]:
+; CHECK-NEXT:    [[_MSPROP:%.*]] = or <32 x i16> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[_MSPROP1:%.*]] = or <32 x i16> [[_MSPROP]], zeroinitializer
 ; CHECK-NEXT:    [[RES:%.*]] = call <32 x half> @llvm.x86.avx512fp16.mul.ph.512(<32 x half> [[X1]], <32 x half> [[X2]], i32 4)
-; CHECK-NEXT:    store <32 x i16> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <32 x i16> [[_MSPROP1]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <32 x half> [[RES]]
 ;
   %res = call <32 x half> @llvm.x86.avx512fp16.mul.ph.512(<32 x half> %x1, <32 x half> %x2, i32 4)
@@ -406,22 +312,14 @@ define <32 x half> @test_int_x86_avx512fp16_mask_mul_ph_512(<32 x half> %src, <3
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i32 [[TMP1]] to <32 x i1>
 ; CHECK-NEXT:    [[MASK:%.*]] = bitcast i32 [[MSK]] to <32 x i1>
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <32 x i16> [[TMP2]] to i512
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i512 [[TMP6]], 0
-; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <32 x i16> [[TMP3]] to i512
-; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i512 [[TMP7]], 0
-; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
-; CHECK-NEXT:    br i1 [[_MSOR]], label %[[BB8:.*]], label %[[BB9:.*]], !prof [[PROF1]]
-; CHECK:       [[BB8]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
-; CHECK-NEXT:    unreachable
-; CHECK:       [[BB9]]:
+; CHECK-NEXT:    [[_MSPROP:%.*]] = or <32 x i16> [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[_MSPROP1:%.*]] = or <32 x i16> [[_MSPROP]], zeroinitializer
 ; CHECK-NEXT:    [[RES0:%.*]] = call <32 x half> @llvm.x86.avx512fp16.mul.ph.512(<32 x half> [[X1]], <32 x half> [[X2]], i32 4)
-; CHECK-NEXT:    [[TMP10:%.*]] = select <32 x i1> [[MASK]], <32 x i16> zeroinitializer, <32 x i16> [[TMP4]]
+; CHECK-NEXT:    [[TMP10:%.*]] = select <32 x i1> [[MASK]], <32 x i16> [[_MSPROP1]], <32 x i16> [[TMP4]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = bitcast <32 x half> [[RES0]] to <32 x i16>
 ; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <32 x half> [[SRC]] to <32 x i16>
 ; CHECK-NEXT:    [[TMP13:%.*]] = xor <32 x i16> [[TMP11]], [[TMP12]]
-; CHECK-NEXT:    [[TMP14:%.*]] = or <32 x i16> [[TMP13]], zeroinitializer
+; CHECK-NEXT:    [[TMP14:%.*]] = or <32 x i16> [[TMP13]], [[_MSPROP1]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = or <32 x i16> [[TMP14]], [[TMP4]]
 ; CHECK-NEXT:    [[_MSPROP_SELECT:%.*]] = select <32 x i1> [[TMP5]], <32 x i16> [[TMP15]], <32 x i16> [[TMP10]]
 ; CHECK-NEXT:    [[RES:%.*]] = select <32 x i1> [[MASK]], <32 x half> [[RES0]], <32 x half> [[SRC]]
@@ -455,39 +353,23 @@ define <32 x half> @test_int_x86_avx512fp16_maskz_mul_ph_512(<32 x half> %src, <
 ; CHECK-NEXT:    [[TMP9:%.*]] = xor i64 [[TMP8]], 87960930222080
 ; CHECK-NEXT:    [[TMP10:%.*]] = inttoptr i64 [[TMP9]] to ptr
 ; CHECK-NEXT:    [[_MSLD:%.*]] = load <32 x i16>, ptr [[TMP10]], align 64
-; CHECK-NEXT:    [[TMP11:%.*]] = bitcast <32 x i16> [[TMP3]] to i512
-; CHECK-NEXT:    [[_MSCMP2:%.*]] = icmp ne i512 [[TMP11]], 0
-; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <32 x i16> [[TMP4]] to i512
-; CHECK-NEXT:    [[_MSCMP3:%.*]] = icmp ne i512 [[TMP12]], 0
-; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP2]], [[_MSCMP3]]
-; CHECK-NEXT:    br i1 [[_MSOR]], label %[[BB13:.*]], label %[[BB14:.*]], !prof [[PROF1]]
-; CHECK:       [[BB13]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
-; CHECK-NEXT:    unreachable
-; CHECK:       [[BB14]]:
+; CHECK-NEXT:    [[_MSPROP4:%.*]] = or <32 x i16> [[TMP3]], [[TMP4]]
+; CHECK-NEXT:    [[_MSPROP1:%.*]] = or <32 x i16> [[_MSPROP4]], zeroinitializer
 ; CHECK-NEXT:    [[RES0:%.*]] = call <32 x half> @llvm.x86.avx512fp16.mul.ph.512(<32 x half> [[X1]], <32 x half> [[X2]], i32 4)
-; CHECK-NEXT:    [[TMP15:%.*]] = select <32 x i1> [[MASK]], <32 x i16> zeroinitializer, <32 x i16> zeroinitializer
+; CHECK-NEXT:    [[TMP15:%.*]] = select <32 x i1> [[MASK]], <32 x i16> [[_MSPROP1]], <32 x i16> zeroinitializer
 ; CHECK-NEXT:    [[TMP16:%.*]] = bitcast <32 x half> [[RES0]] to <32 x i16>
 ; CHECK-NEXT:    [[TMP17:%.*]] = xor <32 x i16> [[TMP16]], zeroinitializer
-; CHECK-NEXT:    [[TMP18:%.*]] = or <32 x i16> [[TMP17]], zeroinitializer
+; CHECK-NEXT:    [[TMP18:%.*]] = or <32 x i16> [[TMP17]], [[_MSPROP1]]
 ; CHECK-NEXT:    [[TMP19:%.*]] = or <32 x i16> [[TMP18]], zeroinitializer
 ; CHECK-NEXT:    [[_MSPROP_SELECT:%.*]] = select <32 x i1> [[TMP5]], <32 x i16> [[TMP19]], <32 x i16> [[TMP15]]
 ; CHECK-NEXT:    [[RES1:%.*]] = select <32 x i1> [[MASK]], <32 x half> [[RES0]], <32 x half> zeroinitializer
-; CHECK-NEXT:    [[TMP20:%.*]] = bitcast <32 x i16> [[TMP3]] to i512
-; CHECK-NEXT:    [[_MSCMP4:%.*]] = icmp ne i512 [[TMP20]], 0
-; CHECK-NEXT:    [[TMP21:%.*]] = bitcast <32 x i16> [[_MSLD]] to i512
-; CHECK-NEXT:    [[_MSCMP5:%.*]] = icmp ne i512 [[TMP21]], 0
-; CHECK-NEXT:    [[_MSOR6:%.*]] = or i1 [[_MSCMP4]], [[_MSCMP5]]
-; CHECK-NEXT:    br i1 [[_MSOR6]], label %[[BB22:.*]], label %[[BB23:.*]], !prof [[PROF1]]
-; CHECK:       [[BB22]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
-; CHECK-NEXT:    unreachable
-; CHECK:       [[BB23]]:
+; CHECK-NEXT:    [[_MSPROP2:%.*]] = or <32 x i16> [[TMP3]], [[_MSLD]]
+; CHECK-NEXT:    [[_MSPROP3:%.*]] = or <32 x i16> [[_MSPROP2]], zeroinitializer
 ; CHECK-NEXT:    [[T2:%.*]] = call <32 x half> @llvm.x86.avx512fp16.mul.ph.512(<32 x half> [[X1]], <32 x half> [[VAL]], i32 4)
-; CHECK-NEXT:    [[TMP24:%.*]] = select <32 x i1> [[MASK]], <32 x i16> zeroinitializer, <32 x i16> zeroinitializer
+; CHECK-NEXT:    [[TMP24:%.*]] = select <32 x i1> [[MASK]], <32 x i16> [[_MSPROP3]], <32 x i16> zeroinitializer
 ; CHECK-NEXT:    [[TMP25:%.*]] = bitcast <32 x half> [[T2]] to <32 x i16>
 ; CHECK-NEXT:    [[TMP26:%.*]] = xor <32 x i16> [[TMP25]], zeroinitializer
-; CHECK-NEXT:    [[TMP27:%.*]] = or <32 x i16> [[TMP26]], zeroinitializer
+; CHECK-NEXT:    [[TMP27:%.*]] = or <32 x i16> [[TMP26]], [[_MSPROP3]]
 ; CHECK-NEXT:    [[TMP28:%.*]] = or <32 x i16> [[TMP27]], zeroinitializer
 ; CHECK-NEXT:    [[_MSPROP_SELECT1:%.*]] = select <32 x i1> [[TMP5]], <32 x i16> [[TMP28]], <32 x i16> [[TMP24]]
 ; CHECK-NEXT:    [[RES2:%.*]] = select <32 x i1> [[MASK]], <32 x half> [[T2]], <32 x half> zeroinitializer
@@ -516,22 +398,14 @@ define <32 x half> @test_int_x86_avx512fp16_mul_ph_512_round(<32 x half> %x1, <3
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i32 [[TMP1]] to <32 x i1>
 ; CHECK-NEXT:    [[MASK:%.*]] = bitcast i32 [[MSK]] to <32 x i1>
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <32 x i16> [[TMP2]] to i512
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i512 [[TMP6]], 0
-; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <32 x i16> [[TMP3]] to i512
-; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i512 [[TMP7]], 0
-; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
-; CHECK-NEXT:    br i1 [[_MSOR]], label %[[BB8:.*]], label %[[BB9:.*]], !prof [[PROF1]]
-; CHECK:       [[BB8]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
-; CHECK-NEXT:    unreachable
-; CHECK:       [[BB9]]:
+; CHECK-NEXT:    [[_MSPROP:%.*]] = or <32 x i16> [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[_MSPROP1:%.*]] = or <32 x i16> [[_MSPROP]], zeroinitializer
 ; CHECK-NEXT:    [[T1:%.*]] = call <32 x half> @llvm.x86.avx512fp16.mul.ph.512(<32 x half> [[X1]], <32 x half> [[X2]], i32 10)
-; CHECK-NEXT:    [[TMP10:%.*]] = select <32 x i1> [[MASK]], <32 x i16> zeroinitializer, <32 x i16> [[TMP4]]
+; CHECK-NEXT:    [[TMP10:%.*]] = select <32 x i1> [[MASK]], <32 x i16> [[_MSPROP1]], <32 x i16> [[TMP4]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = bitcast <32 x half> [[T1]] to <32 x i16>
 ; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <32 x half> [[SRC]] to <32 x i16>
 ; CHECK-NEXT:    [[TMP13:%.*]] = xor <32 x i16> [[TMP11]], [[TMP12]]
-; CHECK-NEXT:    [[TMP14:%.*]] = or <32 x i16> [[TMP13]], zeroinitializer
+; CHECK-NEXT:    [[TMP14:%.*]] = or <32 x i16> [[TMP13]], [[_MSPROP1]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = or <32 x i16> [[TMP14]], [[TMP4]]
 ; CHECK-NEXT:    [[_MSPROP_SELECT:%.*]] = select <32 x i1> [[TMP5]], <32 x i16> [[TMP15]], <32 x i16> [[TMP10]]
 ; CHECK-NEXT:    [[RES:%.*]] = select <32 x i1> [[MASK]], <32 x half> [[T1]], <32 x half> [[SRC]]
@@ -552,18 +426,10 @@ define <32 x half> @test_int_x86_avx512fp16_div_ph_512(<32 x half> %x1, <32 x ha
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <32 x i16>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <32 x i16>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 64) to ptr), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <32 x i16> [[TMP1]] to i512
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i512 [[TMP3]], 0
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <32 x i16> [[TMP2]] to i512
-; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i512 [[TMP4]], 0
-; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
-; CHECK-NEXT:    br i1 [[_MSOR]], label %[[BB5:.*]], label %[[BB6:.*]], !prof [[PROF1]]
-; CHECK:       [[BB5]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
-; CHECK-NEXT:    unreachable
-; CHECK:       [[BB6]]:
+; CHECK-NEXT:    [[_MSPROP:%.*]] = or <32 x i16> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[_MSPROP1:%.*]] = or <32 x i16> [[_MSPROP]], zeroinitializer
 ; CHECK-NEXT:    [[RES:%.*]] = call <32 x half> @llvm.x86.avx512fp16.div.ph.512(<32 x half> [[X1]], <32 x half> [[X2]], i32 4)
-; CHECK-NEXT:    store <32 x i16> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <32 x i16> [[_MSPROP1]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <32 x half> [[RES]]
 ;
   %res = call <32 x half> @llvm.x86.avx512fp16.div.ph.512(<32 x half> %x1, <32 x half> %x2, i32 4)
@@ -580,22 +446,14 @@ define <32 x half> @test_int_x86_avx512fp16_mask_div_ph_512(<32 x half> %src, <3
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i32 [[TMP1]] to <32 x i1>
 ; CHECK-NEXT:    [[MASK:%.*]] = bitcast i32 [[MSK]] to <32 x i1>
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <32 x i16> [[TMP2]] to i512
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i512 [[TMP6]], 0
-; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <32 x i16> [[TMP3]] to i512
-; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i512 [[TMP7]], 0
-; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
-; CHECK-NEXT:    br i1 [[_MSOR]], label %[[BB8:.*]], label %[[BB9:.*]], !prof [[PROF1]]
-; CHECK:       [[BB8]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
-; CHECK-NEXT:    unreachable
-; CHECK:       [[BB9]]:
+; CHECK-NEXT:    [[_MSPROP:%.*]] = or <32 x i16> [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[_MSPROP1:%.*]] = or <32 x i16> [[_MSPROP]], zeroinitializer
 ; CHECK-NEXT:    [[RES0:%.*]] = call <32 x half> @llvm.x86.avx512fp16.div.ph.512(<32 x half> [[X1]], <32 x half> [[X2]], i32 4)
-; CHECK-NEXT:    [[TMP10:%.*]] = select <32 x i1> [[MASK]], <32 x i16> zeroinitializer, <32 x i16> [[TMP4]]
+; CHECK-NEXT:    [[TMP10:%.*]] = select <32 x i1> [[MASK]], <32 x i16> [[_MSPROP1]], <32 x i16> [[TMP4]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = bitcast <32 x half> [[RES0]] to <32 x i16>
 ; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <32 x half> [[SRC]] to <32 x i16>
 ; CHECK-NEXT:    [[TMP13:%.*]] = xor <32 x i16> [[TMP11]], [[TMP12]]
-; CHECK-NEXT:    [[TMP14:%.*]] = or <32 x i16> [[TMP13]], zeroinitializer
+; CHECK-NEXT:    [[TMP14:%.*]] = or <32 x i16> [[TMP13]], [[_MSPROP1]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = or <32 x i16> [[TMP14]], [[TMP4]]
 ; CHECK-NEXT:    [[_MSPROP_SELECT:%.*]] = select <32 x i1> [[TMP5]], <32 x i16> [[TMP15]], <32 x i16> [[TMP10]]
 ; CHECK-NEXT:    [[RES:%.*]] = select <32 x i1> [[MASK]], <32 x half> [[RES0]], <32 x half> [[SRC]]
@@ -629,39 +487,23 @@ define <32 x half> @test_int_x86_avx512fp16_maskz_div_ph_512(<32 x half> %src, <
 ; CHECK-NEXT:    [[TMP9:%.*]] = xor i64 [[TMP8]], 87960930222080
 ; CHECK-NEXT:    [[TMP10:%.*]] = inttoptr i64 [[TMP9]] to ptr
 ; CHECK-NEXT:    [[_MSLD:%.*]] = load <32 x i16>, ptr [[TMP10]], align 64
-; CHECK-NEXT:    [[TMP11:%.*]] = bitcast <32 x i16> [[TMP3]] to i512
-; CHECK-NEXT:    [[_MSCMP2:%.*]] = icmp ne i512 [[TMP11]], 0
-; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <32 x i16> [[TMP4]] to i512
-; CHECK-NEXT:    [[_MSCMP3:%.*]] = icmp ne i512 [[TMP12]], 0
-; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP2]], [[_MSCMP3]]
-; CHECK-NEXT:    br i1 [[_MSOR]], label %[[BB13:.*]], label %[[BB14:.*]], !prof [[PROF1]]
-; CHECK:       [[BB13]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
-; CHECK-NEXT:    unreachable
-; CHECK:       [[BB14]]:
+; CHECK-NEXT:    [[_MSPROP4:%.*]] = or <32 x i16> [[TMP3]], [[TMP4]]
+; CHECK-NEXT:    [[_MSPROP1:%.*]] = or <32 x i16> [[_MSPROP4]], zeroinitializer
 ; CHECK-NEXT:    [[RES0:%.*]] = call <32 x half> @llvm.x86.avx512fp16.div.ph.512(<32 x half> [[X1]], <32 x half> [[X2]], i32 4)
-; CHECK-NEXT:    [[TMP15:%.*]] = select <32 x i1> [[MASK]], <32 x i16> zeroinitializer, <32 x i16> zeroinitializer
+; CHECK-NEXT:    [[TMP15:%.*]] = select <32 x i1> [[MASK]], <32 x i16> [[_MSPROP1]], <32 x i16> zeroinitializer
 ; CHECK-NEXT:    [[TMP16:%.*]] = bitcast <32 x half> [[RES0]] to <32 x i16>
 ; CHECK-NEXT:    [[TMP17:%.*]] = xor <32 x i16> [[TMP16]], zeroinitializer
-; CHECK-NEXT:    [[TMP18:%.*]] = or <32 x i16> [[TMP17]], zeroinitializer
+; CHECK-NEXT:    [[TMP18:%.*]] = or <32 x i16> [[TMP17]], [[_MSPROP1]]
 ; CHECK-NEXT:    [[TMP19:%.*]] = or <32 x i16> [[TMP18]], zeroinitializer
 ; CHECK-NEXT:    [[_MSPROP_SELECT:%.*]] = select <32 x i1> [[TMP5]], <32 x i16> [[TMP19]], <32 x i16> [[TMP15]]
 ; CHECK-NEXT:    [[RES1:%.*]] = select <32 x i1> [[MASK]], <32 x half> [[RES0]], <32 x half> zeroinitializer
-; CHECK-NEXT:    [[TMP20:%.*]] = bitcast <32 x i16> [[TMP3]] to i512
-; CHECK-NEXT:    [[_MSCMP4:%.*]] = icmp ne i512 [[TMP20]], 0
-; CHECK-NEXT:    [[TMP21:%.*]] = bitcast <32 x i16> [[_MSLD]] to i512
-; CHECK-NEXT:    [[_MSCMP5:%.*]] = icmp ne i512 [[TMP21]], 0
-; CHECK-NEXT:    [[_MSOR6:%.*]] = or i1 [[_MSCMP4]], [[_MSCMP5]]
-; CHECK-NEXT:    br i1 [[_MSOR6]], label %[[BB22:.*]], label %[[BB23:.*]], !prof [[PROF1]]
-; CHECK:       [[BB22]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
-; CHECK-NEXT:    unreachable
-; CHECK:       [[BB23]]:
+; CHECK-NEXT:    [[_MSPROP2:%.*]] = or <32 x i16> [[TMP3]], [[_MSLD]]
+; CHECK-NEXT:    [[_MSPROP3:%.*]] = or <32 x i16> [[_MSPROP2]], zeroinitializer
 ; CHECK-NEXT:    [[T2:%.*]] = call <32 x half> @llvm.x86.avx512fp16.div.ph.512(<32 x half> [[X1]], <32 x half> [[VAL]], i32 4)
-; CHECK-NEXT:    [[TMP24:%.*]] = select <32 x i1> [[MASK]], <32 x i16> zeroinitializer, <32 x i16> zeroinitializer
+; CHECK-NEXT:    [[TMP24:%.*]] = select <32 x i1> [[MASK]], <32 x i16> [[_MSPROP3]], <32 x i16> zeroinitializer
 ; CHECK-NEXT:    [[TMP25:%.*]] = bitcast <32 x half> [[T2]] to <32 x i16>
 ; CHECK-NEXT:    [[TMP26:%.*]] = xor <32 x i16> [[TMP25]], zeroinitializer
-; CHECK-NEXT:    [[TMP27:%.*]] = or <32 x i16> [[TMP26]], zeroinitializer
+; CHECK-NEXT:    [[TMP27:%.*]] = or <32 x i16> [[TMP26]], [[_MSPROP3]]
 ; CHECK-NEXT:    [[TMP28:%.*]] = or <32 x i16> [[TMP27]], zeroinitializer
 ; CHECK-NEXT:    [[_MSPROP_SELECT1:%.*]] = select <32 x i1> [[TMP5]], <32 x i16> [[TMP28]], <32 x i16> [[TMP24]]
 ; CHECK-NEXT:    [[RES2:%.*]] = select <32 x i1> [[MASK]], <32 x half> [[T2]], <32 x half> zeroinitializer
@@ -690,22 +532,14 @@ define <32 x half> @test_int_x86_avx512fp16_div_ph_512_round(<32 x half> %x1, <3
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i32 [[TMP1]] to <32 x i1>
 ; CHECK-NEXT:    [[MASK:%.*]] = bitcast i32 [[MSK]] to <32 x i1>
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <32 x i16> [[TMP2]] to i512
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i512 [[TMP6]], 0
-; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <32 x i16> [[TMP3]] to i512
-; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i512 [[TMP7]], 0
-; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
-; CHECK-NEXT:    br i1 [[_MSOR]], label %[[BB8:.*]], label %[[BB9:.*]], !prof [[PROF1]]
-; CHECK:       [[BB8]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
-; CHECK-NEXT:    unreachable
-; CHECK:       [[BB9]]:
+; CHECK-NEXT:    [[_MSPROP:%.*]] = or <32 x i16> [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[_MSPROP1:%.*]] = or <32 x i16> [[_MSPROP]], zeroinitializer
 ; CHECK-NEXT:    [[T1:%.*]] = call <32 x half> @llvm.x86.avx512fp16.div.ph.512(<32 x half> [[X1]], <32 x half> [[X2]], i32 10)
-; CHECK-NEXT:    [[TMP10:%.*]] = select <32 x i1> [[MASK]], <32 x i16> zeroinitializer, <32 x i16> [[TMP4]]
+; CHECK-NEXT:    [[TMP10:%.*]] = select <32 x i1> [[MASK]], <32 x i16> [[_MSPROP1]], <32 x i16> [[TMP4]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = bitcast <32 x half> [[T1]] to <32 x i16>
 ; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <32 x half> [[SRC]] to <32 x i16>
 ; CHECK-NEXT:    [[TMP13:%.*]] = xor <32 x i16> [[TMP11]], [[TMP12]]
-; CHECK-NEXT:    [[TMP14:%.*]] = or <32 x i16> [[TMP13]], zeroinitializer
+; CHECK-NEXT:    [[TMP14:%.*]] = or <32 x i16> [[TMP13]], [[_MSPROP1]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = or <32 x i16> [[TMP14]], [[TMP4]]
 ; CHECK-NEXT:    [[_MSPROP_SELECT:%.*]] = select <32 x i1> [[TMP5]], <32 x i16> [[TMP15]], <32 x i16> [[TMP10]]
 ; CHECK-NEXT:    [[RES:%.*]] = select <32 x i1> [[MASK]], <32 x half> [[T1]], <32 x half> [[SRC]]
@@ -751,18 +585,10 @@ define <32 x half> @test_int_x86_avx512fp16_min_ph_512_sae(<32 x half> %x1, <32 
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <32 x i16>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <32 x i16>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 64) to ptr), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <32 x i16> [[TMP1]] to i512
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i512 [[TMP3]], 0
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <32 x i16> [[TMP2]] to i512
-; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i512 [[TMP4]], 0
-; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
-; CHECK-NEXT:    br i1 [[_MSOR]], label %[[BB5:.*]], label %[[BB6:.*]], !prof [[PROF1]]
-; CHECK:       [[BB5]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
-; CHECK-NEXT:    unreachable
-; CHECK:       [[BB6]]:
+; CHECK-NEXT:    [[_MSPROP:%.*]] = or <32 x i16> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[_MSPROP1:%.*]] = or <32 x i16> [[_MSPROP]], zeroinitializer
 ; CHECK-NEXT:    [[RES0:%.*]] = call <32 x half> @llvm.x86.avx512fp16.min.ph.512(<32 x half> [[X1]], <32 x half> [[X2]], i32 8)
-; CHECK-NEXT:    store <32 x i16> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <32 x i16> [[_MSPROP1]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <32 x half> [[RES0]]
 ;
   %res0 = call <32 x half> @llvm.x86.avx512fp16.min.ph.512(<32 x half> %x1, <32 x half> %x2, i32 8)
@@ -778,21 +604,13 @@ define <32 x half> @test_int_x86_avx512fp16_maskz_min_ph_512_sae(<32 x half> %x1
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast i32 [[TMP1]] to <32 x i1>
 ; CHECK-NEXT:    [[MASK:%.*]] = bitcast i32 [[MSK]] to <32 x i1>
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <32 x i16> [[TMP2]] to i512
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i512 [[TMP5]], 0
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <32 x i16> [[TMP3]] to i512
-; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i512 [[TMP6]], 0
-; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
-; CHECK-NEXT:    br i1 [[_MSOR]], label %[[BB7:.*]], label %[[BB8:.*]], !prof [[PROF1]]
-; CHECK:       [[BB7]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
-; CHECK-NEXT:    unreachable
-; CHECK:       [[BB8]]:
+; CHECK-NEXT:    [[_MSPROP:%.*]] = or <32 x i16> [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[_MSPROP1:%.*]] = or <32 x i16> [[_MSPROP]], zeroinitializer
 ; CHECK-NEXT:    [[RES0:%.*]] = call <32 x half> @llvm.x86.avx512fp16.min.ph.512(<32 x half> [[X1]], <32 x half> [[X2]], i32 8)
-; CHECK-NEXT:    [[TMP9:%.*]] = select <32 x i1> [[MASK]], <32 x i16> zeroinitializer, <32 x i16> zeroinitializer
+; CHECK-NEXT:    [[TMP9:%.*]] = select <32 x i1> [[MASK]], <32 x i16> [[_MSPROP1]], <32 x i16> zeroinitializer
 ; CHECK-NEXT:    [[TMP10:%.*]] = bitcast <32 x half> [[RES0]] to <32 x i16>
 ; CHECK-NEXT:    [[TMP11:%.*]] = xor <32 x i16> [[TMP10]], zeroinitializer
-; CHECK-NEXT:    [[TMP12:%.*]] = or <32 x i16> [[TMP11]], zeroinitializer
+; CHECK-NEXT:    [[TMP12:%.*]] = or <32 x i16> [[TMP11]], [[_MSPROP1]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = or <32 x i16> [[TMP12]], zeroinitializer
 ; CHECK-NEXT:    [[_MSPROP_SELECT:%.*]] = select <32 x i1> [[TMP4]], <32 x i16> [[TMP13]], <32 x i16> [[TMP9]]
 ; CHECK-NEXT:    [[RES1:%.*]] = select <32 x i1> [[MASK]], <32 x half> [[RES0]], <32 x half> zeroinitializer
@@ -838,18 +656,10 @@ define <32 x half> @test_int_x86_avx512fp16_max_ph_512_sae(<32 x half> %x1, <32 
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <32 x i16>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <32 x i16>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 64) to ptr), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <32 x i16> [[TMP1]] to i512
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i512 [[TMP3]], 0
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <32 x i16> [[TMP2]] to i512
-; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i512 [[TMP4]], 0
-; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
-; CHECK-NEXT:    br i1 [[_MSOR]], label %[[BB5:.*]], label %[[BB6:.*]], !prof [[PROF1]]
-; CHECK:       [[BB5]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
-; CHECK-NEXT:    unreachable
-; CHECK:       [[BB6]]:
+; CHECK-NEXT:    [[_MSPROP:%.*]] = or <32 x i16> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[_MSPROP1:%.*]] = or <32 x i16> [[_MSPROP]], zeroinitializer
 ; CHECK-NEXT:    [[RES0:%.*]] = call <32 x half> @llvm.x86.avx512fp16.max.ph.512(<32 x half> [[X1]], <32 x half> [[X2]], i32 8)
-; CHECK-NEXT:    store <32 x i16> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <32 x i16> [[_MSPROP1]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <32 x half> [[RES0]]
 ;
   %res0 = call <32 x half> @llvm.x86.avx512fp16.max.ph.512(<32 x half> %x1, <32 x half> %x2, i32 8)
@@ -865,21 +675,13 @@ define <32 x half> @test_int_x86_avx512fp16_maskz_max_ph_512_sae(<32 x half> %x1
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast i32 [[TMP1]] to <32 x i1>
 ; CHECK-NEXT:    [[MASK:%.*]] = bitcast i32 [[MSK]] to <32 x i1>
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <32 x i16> [[TMP2]] to i512
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i512 [[TMP5]], 0
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <32 x i16> [[TMP3]] to i512
-; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i512 [[TMP6]], 0
-; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
-; CHECK-NEXT:    br i1 [[_MSOR]], label %[[BB7:.*]], label %[[BB8:.*]], !prof [[PROF1]]
-; CHECK:       [[BB7]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
-; CHECK-NEXT:    unreachable
-; CHECK:       [[BB8]]:
+; CHECK-NEXT:    [[_MSPROP:%.*]] = or <32 x i16> [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[_MSPROP1:%.*]] = or <32 x i16> [[_MSPROP]], zeroinitializer
 ; CHECK-NEXT:    [[RES0:%.*]] = call <32 x half> @llvm.x86.avx512fp16.max.ph.512(<32 x half> [[X1]], <32 x half> [[X2]], i32 8)
-; CHECK-NEXT:    [[TMP9:%.*]] = select <32 x i1> [[MASK]], <32 x i16> zeroinitializer, <32 x i16> zeroinitializer
+; CHECK-NEXT:    [[TMP9:%.*]] = select <32 x i1> [[MASK]], <32 x i16> [[_MSPROP1]], <32 x i16> zeroinitializer
 ; CHECK-NEXT:    [[TMP10:%.*]] = bitcast <32 x half> [[RES0]] to <32 x i16>
 ; CHECK-NEXT:    [[TMP11:%.*]] = xor <32 x i16> [[TMP10]], zeroinitializer
-; CHECK-NEXT:    [[TMP12:%.*]] = or <32 x i16> [[TMP11]], zeroinitializer
+; CHECK-NEXT:    [[TMP12:%.*]] = or <32 x i16> [[TMP11]], [[_MSPROP1]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = or <32 x i16> [[TMP12]], zeroinitializer
 ; CHECK-NEXT:    [[_MSPROP_SELECT:%.*]] = select <32 x i1> [[TMP4]], <32 x i16> [[TMP13]], <32 x i16> [[TMP9]]
 ; CHECK-NEXT:    [[RES1:%.*]] = select <32 x i1> [[MASK]], <32 x half> [[RES0]], <32 x half> zeroinitializer
