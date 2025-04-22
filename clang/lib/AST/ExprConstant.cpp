@@ -1920,9 +1920,17 @@ static bool EvaluateComplex(const Expr *E, ComplexValue &Res, EvalInfo &Info);
 static bool EvaluateAtomic(const Expr *E, const LValue *This, APValue &Result,
                            EvalInfo &Info);
 static bool EvaluateAsRValue(EvalInfo &Info, const Expr *E, APValue &Result);
+static bool EvaluateStringAsLValue(EvalInfo &Info, const Expr *E,
+                                   QualType &CharTy, LValue &String);
+static const StringLiteral *StringLValueIsLiteral(EvalInfo &Info,
+                                                  LValue &String,
+                                                  QualType CharTy,
+                                                  uint64_t &Offset);
+template <typename CharAction>
+static bool IterateStringLValue(EvalInfo &Info, const Expr *E, QualType CharTy,
+                                LValue &String, CharAction &&Action);
 static bool EvaluateBuiltinStrLen(const Expr *E, uint64_t &Result,
-                                  EvalInfo &Info,
-                                  std::string *StringResult = nullptr);
+                                  EvalInfo &Info);
 
 /// Evaluate an integer or fixed point expression into an APResult.
 static bool EvaluateFixedPointOrInteger(const Expr *E, APFixedPoint &Result,
@@ -17950,14 +17958,12 @@ bool Expr::tryEvaluateObjectSize(uint64_t &Result, ASTContext &Ctx,
   return tryEvaluateBuiltinObjectSize(this, Type, Info, Result);
 }
 
-static bool EvaluateBuiltinStrLen(const Expr *E, uint64_t &Result,
-                                  EvalInfo &Info, std::string *StringResult) {
+static bool EvaluateStringAsLValue(EvalInfo &Info, const Expr *E,
+                                   QualType &CharTy, LValue &String) {
   QualType Ty = E->getType();
   if (!E->isPRValue())
     return false;
 
-  LValue String;
-  QualType CharTy;
   if (Ty->canDecayToPointerType()) {
     if (E->isGLValue()) {
       if (!EvaluateLValue(E, String, Info))
@@ -17982,8 +17988,13 @@ static bool EvaluateBuiltinStrLen(const Expr *E, uint64_t &Result,
   } else {
     return false;
   }
+  return true;
+}
 
-  // Fast path: if it's a string literal, search the string value.
+static const StringLiteral *StringLValueIsLiteral(EvalInfo &Info,
+                                                  LValue &String,
+                                                  QualType CharTy,
+                                                  uint64_t &Offset) {
   if (const StringLiteral *S = dyn_cast_or_null<StringLiteral>(
           String.getLValueBase().dyn_cast<const Expr *>())) {
     StringRef Str = S->getBytes();
@@ -17992,49 +18003,111 @@ static bool EvaluateBuiltinStrLen(const Expr *E, uint64_t &Result,
         S->getCharByteWidth() == 1 &&
         // FIXME: Add fast-path for wchar_t too.
         Info.Ctx.hasSameUnqualifiedType(CharTy, Info.Ctx.CharTy)) {
-      Str = Str.substr(Off);
-
-      StringRef::size_type Pos = Str.find(0);
-      if (Pos != StringRef::npos)
-        Str = Str.substr(0, Pos);
-
-      Result = Str.size();
-      if (StringResult)
-        *StringResult = Str;
-      return true;
+      Offset = static_cast<uint64_t>(Off);
+      return S;
     }
-
-    // Fall through to slow path.
   }
+  return nullptr;
+}
 
-  // Slow path: scan the bytes of the string looking for the terminating 0.
-  for (uint64_t Strlen = 0; /**/; ++Strlen) {
+template <typename CharAction>
+static bool IterateStringLValue(EvalInfo &Info, const Expr *E, QualType CharTy,
+                                LValue &String, CharAction &&Action) {
+  while (true) {
     APValue Char;
     if (!handleLValueToRValueConversion(Info, E, CharTy, String, Char) ||
         !Char.isInt())
       return false;
-    if (!Char.getInt()) {
-      Result = Strlen;
+    if (!Action(Char.getInt().getExtValue()))
       return true;
-    } else if (StringResult)
-      StringResult->push_back(Char.getInt().getExtValue());
     if (!HandleLValueArrayAdjustment(Info, E, String, CharTy, 1))
       return false;
   }
 }
 
-bool Expr::tryEvaluateString(ASTContext &Ctx, std::string &StringResult) const {
-  Expr::EvalStatus Status;
-  EvalInfo Info(Ctx, Status, EvalInfo::EM_ConstantFold);
-  uint64_t Result;
-  return EvaluateBuiltinStrLen(this, Result, Info, &StringResult);
+static bool EvaluateBuiltinStrLen(const Expr *E, uint64_t &Result,
+                                  EvalInfo &Info) {
+  LValue String;
+  QualType CharTy;
+  if (!EvaluateStringAsLValue(Info, E, CharTy, String))
+    return false;
+
+  // Fast path: if it's a string literal, search the string value.
+  uint64_t Off;
+  if (const auto *S = StringLValueIsLiteral(Info, String, CharTy, Off)) {
+    StringRef Str = S->getBytes().substr(Off);
+
+    StringRef::size_type Pos = Str.find(0);
+    if (Pos != StringRef::npos)
+      Str = Str.substr(0, Pos);
+
+    Result = Str.size();
+    return true;
+  }
+
+  // Slow path: scan the bytes of the string looking for the terminating 0.
+  Result = 0;
+  return IterateStringLValue(Info, E, CharTy, String, [&](int Char) {
+    if (Char) {
+      Result++;
+      return true;
+    } else
+      return false;
+  });
 }
 
-std::optional<std::string> Expr::tryEvaluateString(ASTContext &Ctx) const {
-  std::string StringResult;
-  if (tryEvaluateString(Ctx, StringResult))
-    return StringResult;
-  return {};
+Expr::StringEvalResult::StringEvalResult(const StringLiteral *SL,
+                                         uint64_t Offset)
+    : SL(SL), Offset(Offset) {}
+
+Expr::StringEvalResult::StringEvalResult(std::string Contents)
+    : Storage(std::move(Contents)), SL(nullptr), Offset(0) {}
+
+llvm::StringRef Expr::StringEvalResult::getString() const {
+  return SL ? SL->getBytes().substr(Offset) : Storage;
+}
+
+bool Expr::StringEvalResult::getStringLiteral(const StringLiteral *&SL,
+                                              uint64_t &Offset) const {
+  if (this->SL) {
+    SL = this->SL;
+    Offset = this->Offset;
+    return true;
+  }
+  return false;
+}
+
+std::optional<Expr::StringEvalResult>
+Expr::tryEvaluateString(ASTContext &Ctx, bool *NullTerminated) const {
+  if (NullTerminated)
+    *NullTerminated = false;
+
+  Expr::EvalStatus Status;
+  EvalInfo Info(Ctx, Status, EvalInfo::EM_ConstantFold);
+  LValue String;
+  QualType CharTy;
+  if (!EvaluateStringAsLValue(Info, this, CharTy, String))
+    return {};
+
+  uint64_t Off;
+  if (const auto *S = StringLValueIsLiteral(Info, String, CharTy, Off)) {
+    if (NullTerminated)
+      *NullTerminated = true;
+    return StringEvalResult(S, Off);
+  }
+
+  std::string Result;
+  bool NTFound = IterateStringLValue(Info, this, CharTy, String, [&](int Char) {
+    if (Char) {
+      Result.push_back(Char);
+      return true;
+    } else
+      return false;
+  });
+
+  if (NullTerminated)
+    *NullTerminated = NTFound;
+  return StringEvalResult(Result);
 }
 
 template <typename T>

@@ -181,12 +181,14 @@ static bool checkBuiltinVerboseTrap(CallExpr *Call, Sema &S) {
     if (Arg->isValueDependent())
       continue;
 
-    std::optional<std::string> ArgString = Arg->tryEvaluateString(S.Context);
+    // Arguments must be pointers to constant strings, must be NUL-terminated,
+    // and cannot contain '$'.
+    bool HasNulTerminator;
+    auto ArgString = Arg->tryEvaluateString(S.Context, &HasNulTerminator);
     int DiagMsgKind = -1;
-    // Arguments must be pointers to constant strings and cannot use '$'.
-    if (!ArgString.has_value())
+    if (!(ArgString && HasNulTerminator))
       DiagMsgKind = 0;
-    else if (ArgString->find('$') != std::string::npos)
+    else if (ArgString->getString().find('$') != llvm::StringRef::npos)
       DiagMsgKind = 1;
 
     if (DiagMsgKind >= 0) {
@@ -6055,7 +6057,8 @@ enum StringLiteralConstEvalResult {
 };
 
 static StringLiteralConstEvalResult
-constEvalStringAsLiteral(Sema &S, const Expr *E, const StringLiteral *&SL);
+constEvalStringAsLiteral(Sema &S, const Expr *E, const StringLiteral *&SL,
+                         uint64_t &Offset);
 
 // Determine if an expression is a string literal or constant string.
 // If this function returns false on the arguments to a function expecting a
@@ -6442,8 +6445,9 @@ tryAgain:
     break;
   }
 
+  uint64_t EvalOffset = 0;
   const StringLiteral *FakeLiteral = nullptr;
-  switch (constEvalStringAsLiteral(S, E, FakeLiteral)) {
+  switch (constEvalStringAsLiteral(S, E, FakeLiteral, EvalOffset)) {
   case SLCER_NotEvaluated:
     return SLCT_NotALiteral;
 
@@ -6460,51 +6464,49 @@ tryAgain:
   case SLCER_Evaluated:
     InFunctionCall = false;
     E = FakeLiteral;
+    Offset = EvalOffset;
     goto tryAgain;
   }
 }
 
 static StringLiteralConstEvalResult
-constEvalStringAsLiteral(Sema &S, const Expr *E, const StringLiteral *&SL) {
-  // As a last resort, try to constant-evaluate the format string. If it
-  // evaluates to a string literal in the first place, we can point to that
-  // string literal in source and use that.
-  Expr::EvalResult Result;
-  if (E->EvaluateAsRValue(Result, S.Context) && Result.Val.isLValue()) {
-    const auto *LVE = Result.Val.getLValueBase().dyn_cast<const Expr *>();
-    if (auto *BaseSL = dyn_cast_or_null<StringLiteral>(LVE)) {
-      SL = BaseSL;
-      return SLCER_Evaluated;
-    }
-  }
+constEvalStringAsLiteral(Sema &S, const Expr *E, const StringLiteral *&SL,
+                         uint64_t &Offset) {
+  // As a last resort, try to constant-evaluate the format string.
+  bool HasNul;
+  auto SER = E->tryEvaluateString(S.Context, &HasNul);
+  if (!SER)
+    return SLCER_NotEvaluated;
+  if (!HasNul)
+    return SLCER_NotNullTerminated;
 
-  // Otherwise, try to evaluate the expression as a string constant.
-  std::string FormatString;
-  if (!E->tryEvaluateString(S.Context, FormatString)) {
-    return FormatString.empty() ? SLCER_NotEvaluated : SLCER_NotNullTerminated;
-  }
+  // If it evaluates to a string literal in the first place, we can point to
+  // that string literal in source and use that.
+  if (SER->getStringLiteral(SL, Offset))
+    return SLCER_Evaluated;
 
+  // Otherwise, lop that string into a scratch buffer, create a string literal
+  // and then go with that.
   std::unique_ptr<llvm::MemoryBuffer> MemBuf;
   {
     llvm::SmallString<80> EscapedString;
     {
       llvm::raw_svector_ostream OS(EscapedString);
       OS << '"';
-      OS.write_escaped(FormatString);
+      OS.write_escaped(SER->getString());
       OS << '"';
     }
     MemBuf.reset(new llvm::SmallVectorMemoryBuffer(std::move(EscapedString),
                                                    "<scratch space>", true));
   }
 
-  // Plop that string into a scratch buffer, create a string literal and then
-  // go with that.
   auto ScratchFile = S.getSourceManager().createFileID(std::move(MemBuf));
   SourceLocation Begin = S.getSourceManager().getLocForStartOfFile(ScratchFile);
-  QualType SLType = S.Context.getStringLiteralArrayType(S.Context.CharTy,
-                                                        FormatString.length());
-  SL = StringLiteral::Create(S.Context, FormatString,
+  QualType SLType = S.Context.getStringLiteralArrayType(
+      S.Context.CharTy, SER->getString().size());
+  SL = StringLiteral::Create(S.Context, SER->getString(),
                              StringLiteralKind::Ordinary, false, SLType, Begin);
+  Offset = 0;
   return SLCER_Evaluated;
 }
 
@@ -6594,6 +6596,11 @@ bool Sema::CheckFormatArguments(ArrayRef<const Expr *> Args,
                                 VariadicCallType CallType, SourceLocation Loc,
                                 SourceRange Range,
                                 llvm::SmallBitVector &CheckedVarArgs) {
+  // As a last resort, Clang attempts to evaluate the format string as a
+  // constant, which is expensive. Before we go down that route, check that
+  // the warnings are at least enabled at Loc, which in the common case points
+  // at the opening parenthesis of the function call.
+
   // CHECK: printf/scanf-like function is called with no format string.
   if (format_idx >= Args.size()) {
     Diag(Loc, diag::warn_missing_format_string) << Range;
@@ -6606,14 +6613,9 @@ bool Sema::CheckFormatArguments(ArrayRef<const Expr *> Args,
   //
   // Dynamically generated format strings are difficult to
   // automatically vet at compile time.  Requiring that format strings
-  // are string literals: (1) permits the checking of format strings by
-  // the compiler and thereby (2) can practically remove the source of
-  // many format string exploits.
-
-  // Format string can be either ObjC string (e.g. @"%d") or
-  // C string (e.g. "%d")
-  // ObjC string uses the same format specifiers as C string, so we can use
-  // the same format string checking logic for both ObjC and C strings.
+  // can evaluate to constant strings: (1) permits the checking of format
+  // strings by the compiler and thereby (2) can practically remove the source
+  // of many format string exploits.
   UncoveredArgHandler UncoveredArg;
   StringLiteralCheckType CT = checkFormatStringExpr(
       *this, ReferenceFormatString, OrigFormatExpr, Args, APK, format_idx,
