@@ -78,14 +78,14 @@ HexagonTTIImpl::getPopcntSupport(unsigned IntTyWidthInBit) const {
 }
 
 // The Hexagon target can unroll loops with run-time trip counts.
-void HexagonTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
-                                             TTI::UnrollingPreferences &UP,
-                                             OptimizationRemarkEmitter *ORE) {
+void HexagonTTIImpl::getUnrollingPreferences(
+    Loop *L, ScalarEvolution &SE, TTI::UnrollingPreferences &UP,
+    OptimizationRemarkEmitter *ORE) const {
   UP.Runtime = UP.Partial = true;
 }
 
 void HexagonTTIImpl::getPeelingPreferences(Loop *L, ScalarEvolution &SE,
-                                           TTI::PeelingPreferences &PP) {
+                                           TTI::PeelingPreferences &PP) const {
   BaseT::getPeelingPreferences(L, SE, PP);
   // Only try to peel innermost loops with small runtime trip counts.
   if (L && L->isInnermost() && canPeel(L) &&
@@ -110,7 +110,7 @@ unsigned HexagonTTIImpl::getNumberOfRegisters(bool Vector) const {
   return 32;
 }
 
-unsigned HexagonTTIImpl::getMaxInterleaveFactor(ElementCount VF) {
+unsigned HexagonTTIImpl::getMaxInterleaveFactor(ElementCount VF) const {
   return useHVX() ? 2 : 1;
 }
 
@@ -157,7 +157,7 @@ HexagonTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
 
 InstructionCost HexagonTTIImpl::getAddressComputationCost(Type *Tp,
                                                           ScalarEvolution *SE,
-                                                          const SCEV *S) {
+                                                          const SCEV *S) const {
   return 0;
 }
 
@@ -245,7 +245,7 @@ InstructionCost HexagonTTIImpl::getGatherScatterOpCost(
 InstructionCost HexagonTTIImpl::getInterleavedMemoryOpCost(
     unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
     Align Alignment, unsigned AddressSpace, TTI::TargetCostKind CostKind,
-    bool UseMaskForCond, bool UseMaskForGaps) {
+    bool UseMaskForCond, bool UseMaskForGaps) const {
   if (Indices.size() != Factor || UseMaskForCond || UseMaskForGaps)
     return BaseT::getInterleavedMemoryOpCost(Opcode, VecTy, Factor, Indices,
                                              Alignment, AddressSpace,
@@ -340,14 +340,14 @@ InstructionCost HexagonTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
 }
 
 bool HexagonTTIImpl::isLegalMaskedStore(Type *DataType, Align /*Alignment*/,
-                                        unsigned /*AddressSpace*/) {
+                                        unsigned /*AddressSpace*/) const {
   // This function is called from scalarize-masked-mem-intrin, which runs
   // in pre-isel. Use ST directly instead of calling isHVXVectorType.
   return HexagonMaskedVMem && ST.isTypeForHVX(DataType);
 }
 
 bool HexagonTTIImpl::isLegalMaskedLoad(Type *DataType, Align /*Alignment*/,
-                                       unsigned /*AddressSpace*/) {
+                                       unsigned /*AddressSpace*/) const {
   // This function is called from scalarize-masked-mem-intrin, which runs
   // in pre-isel. Use ST directly instead of calling isHVXVectorType.
   return HexagonMaskedVMem && ST.isTypeForHVX(DataType);
@@ -366,7 +366,7 @@ unsigned HexagonTTIImpl::getCacheLineSize() const {
 InstructionCost
 HexagonTTIImpl::getInstructionCost(const User *U,
                                    ArrayRef<const Value *> Operands,
-                                   TTI::TargetCostKind CostKind) {
+                                   TTI::TargetCostKind CostKind) const {
   auto isCastFoldedIntoLoad = [this](const CastInst *CI) -> bool {
     if (!CI->isIntegerCast())
       return false;

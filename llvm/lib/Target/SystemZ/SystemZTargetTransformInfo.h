@@ -43,27 +43,27 @@ public:
   unsigned adjustInliningThreshold(const CallBase *CB) const;
 
   InstructionCost getIntImmCost(const APInt &Imm, Type *Ty,
-                                TTI::TargetCostKind CostKind);
+                                TTI::TargetCostKind CostKind) const;
 
   InstructionCost getIntImmCostInst(unsigned Opcode, unsigned Idx,
                                     const APInt &Imm, Type *Ty,
                                     TTI::TargetCostKind CostKind,
-                                    Instruction *Inst = nullptr);
+                                    Instruction *Inst = nullptr) const;
   InstructionCost getIntImmCostIntrin(Intrinsic::ID IID, unsigned Idx,
                                       const APInt &Imm, Type *Ty,
-                                      TTI::TargetCostKind CostKind);
+                                      TTI::TargetCostKind CostKind) const;
 
-  TTI::PopcntSupportKind getPopcntSupport(unsigned TyWidth);
+  TTI::PopcntSupportKind getPopcntSupport(unsigned TyWidth) const;
 
   void getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
                                TTI::UnrollingPreferences &UP,
-                               OptimizationRemarkEmitter *ORE);
+                               OptimizationRemarkEmitter *ORE) const;
 
   void getPeelingPreferences(Loop *L, ScalarEvolution &SE,
-                             TTI::PeelingPreferences &PP);
+                             TTI::PeelingPreferences &PP) const;
 
   bool isLSRCostLess(const TargetTransformInfo::LSRCost &C1,
-                     const TargetTransformInfo::LSRCost &C2);
+                     const TargetTransformInfo::LSRCost &C2) const;
 
   bool areInlineCompatible(const Function *Caller,
                            const Function *Callee) const;
@@ -84,16 +84,16 @@ public:
                                 bool HasCall) const override;
   bool enableWritePrefetching() const override { return true; }
 
-  bool hasDivRemOp(Type *DataType, bool IsSigned);
-  bool prefersVectorizedAddressing() { return false; }
-  bool LSRWithInstrQueries() { return true; }
+  bool hasDivRemOp(Type *DataType, bool IsSigned) const;
+  bool prefersVectorizedAddressing() const { return false; }
+  bool LSRWithInstrQueries() const { return true; }
   InstructionCost getScalarizationOverhead(VectorType *Ty,
                                            const APInt &DemandedElts,
                                            bool Insert, bool Extract,
                                            TTI::TargetCostKind CostKind,
                                            ArrayRef<Value *> VL = {}) const;
-  bool supportsEfficientVectorElementLoadStore() { return true; }
-  bool enableInterleavedAccessVectorization() { return true; }
+  bool supportsEfficientVectorElementLoadStore() const { return true; }
+  bool enableInterleavedAccessVectorization() const { return true; }
 
   InstructionCost getArithmeticInstrCost(
       unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
@@ -137,7 +137,7 @@ public:
   InstructionCost getInterleavedMemoryOpCost(
       unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
       Align Alignment, unsigned AddressSpace, TTI::TargetCostKind CostKind,
-      bool UseMaskForCond = false, bool UseMaskForGaps = false);
+      bool UseMaskForCond = false, bool UseMaskForGaps = false) const;
 
   InstructionCost
   getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,
