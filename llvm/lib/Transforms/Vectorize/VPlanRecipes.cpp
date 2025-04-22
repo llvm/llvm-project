@@ -159,6 +159,7 @@ bool VPRecipeBase::mayHaveSideEffects() const {
   case VPWidenIntrinsicSC:
     return cast<VPWidenIntrinsicRecipe>(this)->mayHaveSideEffects();
   case VPBlendSC:
+  case VPPartialReductionSC:
   case VPReductionEVLSC:
   case VPReductionSC:
   case VPScalarIVStepsSC:

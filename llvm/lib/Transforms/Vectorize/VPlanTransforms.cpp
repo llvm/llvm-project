@@ -2461,7 +2461,6 @@ tryToCreateAbstractPartialReductionRecipe(VPPartialReductionRecipe *PRed) {
                                                        Ext0->getResultType());
   AbstractR->insertBefore(PRed);
   PRed->replaceAllUsesWith(AbstractR);
-  PRed->eraseFromParent();
 }
 
 void VPlanTransforms::convertToAbstractRecipes(VPlan &Plan, VPCostContext &Ctx,
