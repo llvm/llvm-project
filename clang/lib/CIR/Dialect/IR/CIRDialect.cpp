@@ -1118,6 +1118,24 @@ OpFoldResult cir::UnaryOp::fold(FoldAdaptor adaptor) {
 }
 
 //===----------------------------------------------------------------------===//
+// GetMemberOp Definitions
+//===----------------------------------------------------------------------===//
+
+LogicalResult cir::GetMemberOp::verify() {
+  const auto recordTy = dyn_cast<RecordType>(getAddrTy().getPointee());
+  if (!recordTy)
+    return emitError() << "expected pointer to a record type";
+
+  if (recordTy.getMembers().size() <= getIndex())
+    return emitError() << "member index out of bounds";
+
+  if (recordTy.getMembers()[getIndex()] != getResultTy().getPointee())
+    return emitError() << "member type mismatch";
+
+  return mlir::success();
+}
+
+//===----------------------------------------------------------------------===//
 // TableGen'd op method definitions
 //===----------------------------------------------------------------------===//
 
