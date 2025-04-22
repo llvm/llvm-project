@@ -63,7 +63,7 @@ inline bool isKernelFunction(const Function &F) {
   return F.getCallingConv() == CallingConv::PTX_Kernel;
 }
 
-bool isParamGridConstant(const Value &);
+bool isParamGridConstant(const Argument &);
 
 inline MaybeAlign getAlign(const Function &F, unsigned Index) {
   return F.getAttributes().getAttributes(Index).getStackAlignment();

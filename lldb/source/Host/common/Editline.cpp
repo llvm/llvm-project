@@ -1113,6 +1113,8 @@ void Editline::DisplayCompletions(
   }
 }
 
+void Editline::UseColor(bool use_color) { m_color = use_color; }
+
 unsigned char Editline::TabCommand(int ch) {
   if (!m_completion_callback)
     return CC_ERROR;
