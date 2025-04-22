@@ -148,33 +148,6 @@ LIBC_INLINE struct tm *localtime_internal(const time_t *timer, struct tm *buf) {
   return buf;
 }
 
-// for windows only, implemented on gnu/linux for compatibility reasons
-LIBC_INLINE int localtime_s_internal(const time_t *t_ptr, struct tm *input) {
-  if (input == NULL)
-    return -1;
-
-  if ((*t_ptr < 0 || *t_ptr > cpp::numeric_limits<int64_t>::max()) &&
-      input != NULL) {
-    // setting values to -1 for compatibility reasons
-    // https://learn.microsoft.com/en-us/cpp/c-runtime-library/reference/localtime-s-localtime32-s-localtime64-s
-    input->tm_sec = -1;
-    input->tm_min = -1;
-    input->tm_hour = -1;
-    input->tm_mday = -1;
-    input->tm_mon = -1;
-    input->tm_year = -1;
-    input->tm_wday = -1;
-    input->tm_yday = -1;
-    input->tm_isdst = -1;
-
-    return -1;
-  }
-
-  localtime_internal(t_ptr, input);
-
-  return 0;
-}
-
 // Returns number of years from (1, year).
 LIBC_INLINE constexpr int64_t get_num_of_leap_years_before(int64_t year) {
   return (year / 4) - (year / 100) + (year / 400);

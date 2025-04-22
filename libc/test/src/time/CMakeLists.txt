@@ -103,21 +103,6 @@ add_libc_unittest(
     libc.src.time.localtime_r
 )
 
-add_libc_unittest(
-  localtime_s_test
-  SUITE
-    libc_time_unittests
-  SRCS
-    localtime_s_test.cpp
-  HDRS
-    TmHelper.h
-    TmMatcher.h
-  CXX_STANDARD
-    20
-  DEPENDS
-    libc.src.time.localtime_s
-)
-
 add_libc_test(
   clock_gettime_test
   SUITE
