@@ -40,6 +40,24 @@ set(LIBCXX_SOURCES
   ryu/d2fixed.cpp
   ryu/d2s.cpp
   ryu/f2s.cpp
+  stacktrace/alloc.cpp
+  stacktrace/common/debug.cpp
+  stacktrace/common/fd.cpp
+  stacktrace/context.cpp
+  stacktrace/linux/linux-dl.cpp
+  stacktrace/linux/linux-elf.cpp
+  stacktrace/linux/linux-sym.cpp
+  stacktrace/osx/osx.cpp
+  stacktrace/stacktrace.cpp
+  stacktrace/tools/addr2line.cpp
+  stacktrace/tools/atos.cpp
+  stacktrace/tools/llvm_symbolizer.cpp
+  stacktrace/tools/toolspawner.cpp
+  stacktrace/unwind/unwind.cpp
+  stacktrace/windows/dbghelp_dll.cpp
+  stacktrace/windows/dll.cpp
+  stacktrace/windows/psapi_dll.cpp
+  stacktrace/windows/win_impl.cpp
   stdexcept.cpp
   string.cpp
   support/runtime/exception_fallback.ipp
@@ -309,24 +327,6 @@ add_custom_target(cxx DEPENDS ${LIBCXX_BUILD_TARGETS})
 # Build the experimental static library
 set(LIBCXX_EXPERIMENTAL_SOURCES
   experimental/keep.cpp
-  experimental/stacktrace/alloc.cpp
-  experimental/stacktrace/common/debug.cpp
-  experimental/stacktrace/common/fd.cpp
-  experimental/stacktrace/context.cpp
-  experimental/stacktrace/linux/linux-dl.cpp
-  experimental/stacktrace/linux/linux-elf.cpp
-  experimental/stacktrace/linux/linux-sym.cpp
-  experimental/stacktrace/osx/osx.cpp
-  experimental/stacktrace/stacktrace.cpp
-  experimental/stacktrace/tools/addr2line.cpp
-  experimental/stacktrace/tools/atos.cpp
-  experimental/stacktrace/tools/llvm_symbolizer.cpp
-  experimental/stacktrace/tools/toolspawner.cpp
-  experimental/stacktrace/unwind/unwind.cpp
-  experimental/stacktrace/windows/dbghelp_dll.cpp
-  experimental/stacktrace/windows/dll.cpp
-  experimental/stacktrace/windows/psapi_dll.cpp
-  experimental/stacktrace/windows/win_impl.cpp
   )
 
 if (LIBCXX_PSTL_BACKEND STREQUAL "libdispatch")

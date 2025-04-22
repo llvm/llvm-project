@@ -1987,10 +1987,10 @@ module std [system] {
 
   module stacktrace {
     module basic_stacktrace { header "__stacktrace/basic_stacktrace.h" }
-    module alloc { header "__stacktrace/detail/alloc.h" }
-    module context { header "__stacktrace/detail/context.h" }
-    module entry { header "__stacktrace/detail/entry.h" }
-    module to_string { header "__stacktrace/detail/to_string.h" }
+    module alloc { header "__stacktrace/alloc.h" }
+    module context { header "__stacktrace/context.h" }
+    module entry { header "__stacktrace/entry.h" }
+    module to_string { header "__stacktrace/to_string.h" }
     module stacktrace_entry { header "__stacktrace/stacktrace_entry.h" }
     header "stacktrace"
     export *
