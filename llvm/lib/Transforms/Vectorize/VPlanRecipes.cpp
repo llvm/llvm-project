@@ -2686,6 +2686,9 @@ InstructionCost VPWidenMemoryRecipe::computeCost(ElementCount VF,
       getLoadStoreAlignment(const_cast<Instruction *>(&Ingredient));
   unsigned AS = cast<PointerType>(Ctx.Types.inferScalarType(getAddr()))
                     ->getAddressSpace();
+  unsigned Opcode = isa<VPWidenLoadRecipe, VPWidenLoadEVLRecipe>(this)
+                        ? Instruction::Load
+                        : Instruction::Store;
 
   if (!Consecutive) {
     // TODO: Using the original IR may not be accurate.
@@ -2695,20 +2698,19 @@ InstructionCost VPWidenMemoryRecipe::computeCost(ElementCount VF,
     assert(!Reverse &&
            "Inconsecutive memory access should not have the order.");
     return Ctx.TTI.getAddressComputationCost(Ty) +
-           Ctx.TTI.getGatherScatterOpCost(Ingredient.getOpcode(), Ty, Ptr,
-                                          IsMasked, Alignment, Ctx.CostKind,
-                                          &Ingredient);
+           Ctx.TTI.getGatherScatterOpCost(Opcode, Ty, Ptr, IsMasked, Alignment,
+                                          Ctx.CostKind, &Ingredient);
   }
 
   InstructionCost Cost = 0;
   if (IsMasked) {
-    Cost += Ctx.TTI.getMaskedMemoryOpCost(Ingredient.getOpcode(), Ty, Alignment,
-                                          AS, Ctx.CostKind);
+    Cost +=
+        Ctx.TTI.getMaskedMemoryOpCost(Opcode, Ty, Alignment, AS, Ctx.CostKind);
   } else {
     TTI::OperandValueInfo OpInfo =
         Ctx.TTI.getOperandInfo(Ingredient.getOperand(0));
-    Cost += Ctx.TTI.getMemoryOpCost(Ingredient.getOpcode(), Ty, Alignment, AS,
-                                    Ctx.CostKind, OpInfo, &Ingredient);
+    Cost += Ctx.TTI.getMemoryOpCost(Opcode, Ty, Alignment, AS, Ctx.CostKind,
+                                    OpInfo, &Ingredient);
   }
   if (!Reverse)
     return Cost;
