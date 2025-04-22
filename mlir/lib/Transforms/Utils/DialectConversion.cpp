@@ -2097,7 +2097,7 @@ OperationLegalizer::legalizeWithFold(Operation *op,
 
   // Try to fold the operation.
   SmallVector<Value, 2> replacementValues;
-  SmallVector<Operation *> newOps;
+  SmallVector<Operation *, 2> newOps;
   rewriter.setInsertionPoint(op);
   if (failed(rewriter.tryFold(op, replacementValues, &newOps))) {
     LLVM_DEBUG(logFailure(rewriterImpl.logger, "unable to fold"));

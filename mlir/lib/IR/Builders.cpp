@@ -467,7 +467,7 @@ Operation *OpBuilder::create(Location loc, StringAttr opName,
 
 LogicalResult
 OpBuilder::tryFold(Operation *op, SmallVectorImpl<Value> &results,
-                   SmallVector<Operation *> *materializedConstants) {
+                   SmallVectorImpl<Operation *> *materializedConstants) {
   assert(results.empty() && "expected empty results");
   ResultRange opResults = op->getResults();
 

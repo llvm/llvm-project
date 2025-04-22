@@ -570,7 +570,7 @@ public:
   /// Note: This function does not erase the operation on a successful fold.
   LogicalResult
   tryFold(Operation *op, SmallVectorImpl<Value> &results,
-          SmallVector<Operation *> *materializedConstants = nullptr);
+          SmallVectorImpl<Operation *> *materializedConstants = nullptr);
 
   /// Creates a deep copy of the specified operation, remapping any operands
   /// that use values outside of the operation using the map that is provided
