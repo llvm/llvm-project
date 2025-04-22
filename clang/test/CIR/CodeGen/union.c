@@ -7,7 +7,7 @@
 
 union IncompleteU *p;
 
-// CIR: cir.global external @p = #cir.ptr<null> : !cir.ptr<!ty_IncompleteU>
+// CIR: cir.global external @p = #cir.ptr<null> : !cir.ptr<!rec_IncompleteU>
 // LLVM: @p = dso_local global ptr null
 // OGCG: @p = global ptr null, align 8
 
@@ -16,7 +16,7 @@ void f(void) {
 }
 
 // CIR: cir.func @f()
-// CIR-NEXT: cir.alloca !cir.ptr<!ty_IncompleteU>, !cir.ptr<!cir.ptr<!ty_IncompleteU>>, ["p"]
+// CIR-NEXT: cir.alloca !cir.ptr<!rec_IncompleteU>, !cir.ptr<!cir.ptr<!rec_IncompleteU>>, ["p"]
 // CIR-NEXT: cir.return
 
 // LLVM:      define void @f()

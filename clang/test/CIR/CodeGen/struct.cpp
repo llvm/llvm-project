@@ -8,7 +8,7 @@
 struct IncompleteS;
 IncompleteS *p;
 
-// CIR: cir.global external @p = #cir.ptr<null> : !cir.ptr<!ty_IncompleteS>
+// CIR: cir.global external @p = #cir.ptr<null> : !cir.ptr<!rec_IncompleteS>
 // LLVM: @p = dso_local global ptr null
 // OGCG: @p = global ptr null, align 8
 
@@ -17,7 +17,7 @@ void f(void) {
 }
 
 // CIR:      cir.func @f()
-// CIR-NEXT:   cir.alloca !cir.ptr<!ty_IncompleteS>, !cir.ptr<!cir.ptr<!ty_IncompleteS>>, ["p"]
+// CIR-NEXT:   cir.alloca !cir.ptr<!rec_IncompleteS>, !cir.ptr<!cir.ptr<!rec_IncompleteS>>, ["p"]
 // CIR-NEXT:   cir.return
 
 // LLVM:      define void @f()

@@ -36,9 +36,9 @@ struct CIROpAsmDialectInterface : public OpAsmDialectInterface {
     if (auto recordType = dyn_cast<cir::RecordType>(type)) {
       StringAttr nameAttr = recordType.getName();
       if (!nameAttr)
-        os << "ty_anon_" << recordType.getKindAsStr();
+        os << "rec_anon_" << recordType.getKindAsStr();
       else
-        os << "ty_" << nameAttr.getValue();
+        os << "rec_" << nameAttr.getValue();
       return AliasResult::OverridableAlias;
     }
     if (auto intType = dyn_cast<cir::IntType>(type)) {

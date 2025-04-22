@@ -7,12 +7,12 @@
 
 // For LLVM IR checks, the structs are defined before the variables, so these
 // checks are at the top.
-// CIR-DAG: !ty_IncompleteS = !cir.record<struct "IncompleteS" incomplete>
-// CIR-DAG: !ty_CompleteS = !cir.record<struct "CompleteS" {!s32i, !s8i}>
-// CIR-DAG: !ty_OuterS = !cir.record<struct "OuterS" {!ty_InnerS, !s32i}>  
-// CIR-DAG: !ty_InnerS = !cir.record<struct "InnerS" {!s32i, !s8i}>
-// CIR-DAG: !ty_PackedS = !cir.record<struct "PackedS" packed {!s32i, !s8i}>
-// CIR-DAG: !ty_PackedAndPaddedS = !cir.record<struct "PackedAndPaddedS" packed padded {!s32i, !s8i, !u8i}>
+// CIR-DAG: !rec_IncompleteS = !cir.record<struct "IncompleteS" incomplete>
+// CIR-DAG: !rec_CompleteS = !cir.record<struct "CompleteS" {!s32i, !s8i}>
+// CIR-DAG: !rec_OuterS = !cir.record<struct "OuterS" {!ty_InnerS, !s32i}>  
+// CIR-DAG: !rec_InnerS = !cir.record<struct "InnerS" {!s32i, !s8i}>
+// CIR-DAG: !rec_PackedS = !cir.record<struct "PackedS" packed {!s32i, !s8i}>
+// CIR-DAG: !rec_PackedAndPaddedS = !cir.record<struct "PackedAndPaddedS" packed padded {!s32i, !s8i, !u8i}>
 // LLVM-DAG: %struct.CompleteS = type { i32, i8 }
 // LLVM-DAG: %struct.OuterS = type { %struct.InnerS, i32 }
 // LLVM-DAG: %struct.InnerS = type { i32, i8 }
@@ -36,7 +36,7 @@ struct CompleteS {
   char b;
 } cs;
 
-// CIR:       cir.global external @cs = #cir.zero : !ty_CompleteS
+// CIR:       cir.global external @cs = #cir.zero : !rec_CompleteS
 // LLVM-DAG:  @cs = dso_local global %struct.CompleteS zeroinitializer
 // OGCG-DAG:  @cs = global %struct.CompleteS zeroinitializer, align 4
 
@@ -52,7 +52,7 @@ struct OuterS {
 
 struct OuterS os;
 
-// CIR:       cir.global external @os = #cir.zero : !ty_OuterS
+// CIR:       cir.global external @os = #cir.zero : !rec_OuterS
 // LLVM-DAG:  @os = dso_local global %struct.OuterS zeroinitializer
 // OGCG-DAG:  @os = global %struct.OuterS zeroinitializer, align 4
 
@@ -64,7 +64,7 @@ struct PackedS {
   char a1;
 } ps;
 
-// CIR:       cir.global external @ps = #cir.zero : !ty_PackedS
+// CIR:       cir.global external @ps = #cir.zero : !rec_PackedS
 // LLVM-DAG:  @ps = dso_local global %struct.PackedS zeroinitializer
 // OGCG-DAG:  @ps = global %struct.PackedS zeroinitializer, align 1
 
@@ -73,7 +73,7 @@ struct PackedAndPaddedS {
   char b1;
 } __attribute__((aligned(2))) pps;
 
-// CIR:       cir.global external @pps = #cir.zero : !ty_PackedAndPaddedS
+// CIR:       cir.global external @pps = #cir.zero : !rec_PackedAndPaddedS
 // LLVM-DAG:  @pps = dso_local global %struct.PackedAndPaddedS zeroinitializer
 // OGCG-DAG:  @pps = global %struct.PackedAndPaddedS zeroinitializer, align 2
 
@@ -84,7 +84,7 @@ void f(void) {
 }
 
 // CIR:      cir.func @f()
-// CIR-NEXT:   cir.alloca !cir.ptr<!ty_IncompleteS>, !cir.ptr<!cir.ptr<!ty_IncompleteS>>, ["p"] {alignment = 8 : i64}
+// CIR-NEXT:   cir.alloca !cir.ptr<!rec_IncompleteS>, !cir.ptr<!cir.ptr<!rec_IncompleteS>>, ["p"] {alignment = 8 : i64}
 // CIR-NEXT:   cir.return
 
 // LLVM:      define void @f()
@@ -101,7 +101,7 @@ void f2(void) {
 }
 
 // CIR:      cir.func @f2()
-// CIR-NEXT:   cir.alloca !ty_CompleteS, !cir.ptr<!ty_CompleteS>, ["s"] {alignment = 4 : i64}
+// CIR-NEXT:   cir.alloca !rec_CompleteS, !cir.ptr<!rec_CompleteS>, ["s"] {alignment = 4 : i64}
 // CIR-NEXT:   cir.return
 
 // LLVM:      define void @f2()
