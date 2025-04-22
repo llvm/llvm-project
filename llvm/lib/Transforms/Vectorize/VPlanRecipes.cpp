@@ -725,10 +725,9 @@ Value *VPInstruction::generate(VPTransformState &State) {
 
     return ReducedPartRdx;
   }
-  case VPInstruction::ExtractFromEnd: {
-    auto *CI = cast<ConstantInt>(getOperand(1)->getLiveInIRValue());
-    unsigned Offset = CI->getZExtValue();
-    assert(Offset > 0 && "Offset from end must be positive");
+  case VPInstruction::ExtractLastLane:
+  case VPInstruction::ExtractPenultimateLane: {
+    unsigned Offset = getOpcode() == VPInstruction::ExtractLastLane ? 1 : 2;
     Value *Res;
     if (State.VF.isVector()) {
       assert(Offset <= State.VF.getKnownMinValue() &&
@@ -854,7 +853,8 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
 }
 
 bool VPInstruction::isVectorToScalar() const {
-  return getOpcode() == VPInstruction::ExtractFromEnd ||
+  return getOpcode() == VPInstruction::ExtractLastLane ||
+         getOpcode() == VPInstruction::ExtractPenultimateLane ||
          getOpcode() == Instruction::ExtractElement ||
          getOpcode() == VPInstruction::FirstActiveLane ||
          getOpcode() == VPInstruction::ComputeFindLastIVResult ||
@@ -924,7 +924,8 @@ bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
   case VPInstruction::AnyOf:
   case VPInstruction::CalculateTripCountMinusVF:
   case VPInstruction::CanonicalIVIncrementForPart:
-  case VPInstruction::ExtractFromEnd:
+  case VPInstruction::ExtractLastLane:
+  case VPInstruction::ExtractPenultimateLane:
   case VPInstruction::FirstActiveLane:
   case VPInstruction::FirstOrderRecurrenceSplice:
   case VPInstruction::LogicalAnd:
@@ -1042,8 +1043,11 @@ void VPInstruction::print(raw_ostream &O, const Twine &Indent,
   case VPInstruction::Broadcast:
     O << "broadcast";
     break;
-  case VPInstruction::ExtractFromEnd:
-    O << "extract-from-end";
+  case VPInstruction::ExtractLastLane:
+    O << "extract-last-lane";
+    break;
+  case VPInstruction::ExtractPenultimateLane:
+    O << "extract-penultimate-lane";
     break;
   case VPInstruction::ComputeFindLastIVResult:
     O << "compute-find-last-iv-result";
@@ -1143,12 +1147,7 @@ void VPIRInstruction::extractLastLaneOfOperand(VPBuilder &Builder) {
   assert(getNumOperands() == 1 && "must have a single operand");
   VPValue *Exiting = getOperand(0);
   if (!Exiting->isLiveIn()) {
-    LLVMContext &Ctx = getInstruction().getContext();
-    auto &Plan = *getParent()->getPlan();
-    Exiting = Builder.createNaryOp(
-        VPInstruction::ExtractFromEnd,
-        {Exiting,
-         Plan.getOrAddLiveIn(ConstantInt::get(IntegerType::get(Ctx, 32), 1))});
+    Exiting = Builder.createNaryOp(VPInstruction::ExtractLastLane, {Exiting});
   }
   setOperand(0, Exiting);
 }
