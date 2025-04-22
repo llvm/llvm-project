@@ -123,6 +123,7 @@
 // CHECK-NEXT:     shvstvecd            1.0       'Shvstvecd' (vstvec supports Direct mode)
 // CHECK-NEXT:     smaia                1.0       'Smaia' (Advanced Interrupt Architecture Machine Level)
 // CHECK-NEXT:     smcdeleg             1.0       'Smcdeleg' (Counter Delegation Machine Level)
+// CHECK-NEXT:     smcntrpmf            1.0       'Smcntrpmf' (Cycle and Instret Privilege Mode Filtering)
 // CHECK-NEXT:     smcsrind             1.0       'Smcsrind' (Indirect CSR Access Machine Level)
 // CHECK-NEXT:     smdbltrp             1.0       'Smdbltrp' (Double Trap Machine Level)
 // CHECK-NEXT:     smepmp               1.0       'Smepmp' (Enhanced Physical Memory Protection)
