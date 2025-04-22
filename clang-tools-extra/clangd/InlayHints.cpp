@@ -1194,7 +1194,7 @@ std::vector<InlayHint> inlayHints(ParsedAST &AST,
   // De-duplicate hints. Duplicates can sometimes occur due to e.g. explicit
   // template instantiations.
   llvm::sort(Results);
-  Results.erase(std::unique(Results.begin(), Results.end()), Results.end());
+  Results.erase(llvm::unique(Results), Results.end());
 
   return Results;
 }

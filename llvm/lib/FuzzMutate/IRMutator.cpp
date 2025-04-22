@@ -122,9 +122,8 @@ getInsertionRange(BasicBlock &BB) {
 }
 
 void InjectorIRStrategy::mutate(BasicBlock &BB, RandomIRBuilder &IB) {
-  SmallVector<Instruction *, 32> Insts;
-  for (Instruction &I : getInsertionRange(BB))
-    Insts.push_back(&I);
+  SmallVector<Instruction *, 32> Insts(
+      llvm::make_pointer_range(getInsertionRange(BB)));
   if (Insts.size() < 1)
     return;
 
@@ -395,9 +394,8 @@ void InsertFunctionStrategy::mutate(BasicBlock &BB, RandomIRBuilder &IB) {
     return isRetVoid ? nullptr : Call;
   };
 
-  SmallVector<Instruction *, 32> Insts;
-  for (Instruction &I : getInsertionRange(BB))
-    Insts.push_back(&I);
+  SmallVector<Instruction *, 32> Insts(
+      llvm::make_pointer_range(getInsertionRange(BB)));
   if (Insts.size() < 1)
     return;
 
@@ -421,9 +419,8 @@ void InsertFunctionStrategy::mutate(BasicBlock &BB, RandomIRBuilder &IB) {
 }
 
 void InsertCFGStrategy::mutate(BasicBlock &BB, RandomIRBuilder &IB) {
-  SmallVector<Instruction *, 32> Insts;
-  for (Instruction &I : getInsertionRange(BB))
-    Insts.push_back(&I);
+  SmallVector<Instruction *, 32> Insts(
+      llvm::make_pointer_range(getInsertionRange(BB)));
   if (Insts.size() < 1)
     return;
 
@@ -561,9 +558,8 @@ void InsertPHIStrategy::mutate(BasicBlock &BB, RandomIRBuilder &IB) {
     }
     PHI->addIncoming(Src, Pred);
   }
-  SmallVector<Instruction *, 32> InstsAfter;
-  for (Instruction &I : getInsertionRange(BB))
-    InstsAfter.push_back(&I);
+  SmallVector<Instruction *, 32> InstsAfter(
+      llvm::make_pointer_range(getInsertionRange(BB)));
   IB.connectToSink(BB, InstsAfter, PHI);
 }
 
@@ -573,9 +569,8 @@ void SinkInstructionStrategy::mutate(Function &F, RandomIRBuilder &IB) {
   }
 }
 void SinkInstructionStrategy::mutate(BasicBlock &BB, RandomIRBuilder &IB) {
-  SmallVector<Instruction *, 32> Insts;
-  for (Instruction &I : getInsertionRange(BB))
-    Insts.push_back(&I);
+  SmallVector<Instruction *, 32> Insts(
+      llvm::make_pointer_range(getInsertionRange(BB)));
   if (Insts.size() < 1)
     return;
   // Choose an Instruction to mutate.

@@ -958,10 +958,18 @@ def Xclang : Separate<["-"], "Xclang">,
   HelpText<"Pass <arg> to clang -cc1">, MetaVarName<"<arg>">,
   Flags<[NoXarchOption]>, Visibility<[ClangOption, CLOption, DXCOption]>,
   Group<CompileOnly_Group>;
+def Xclangas : Separate<["-"], "Xclangas">,
+  HelpText<"Pass <arg> to clang -cc1as">, MetaVarName<"<arg>">,
+  Flags<[NoXarchOption]>, Visibility<[ClangOption, CLOption, DXCOption]>,
+  Group<CompileOnly_Group>;
 def : Joined<["-"], "Xclang=">, Group<CompileOnly_Group>,
   Flags<[NoXarchOption]>, Visibility<[ClangOption, CLOption, DXCOption]>,
   Alias<Xclang>,
   HelpText<"Alias for -Xclang">, MetaVarName<"<arg>">;
+def : Joined<["-"], "Xclangas=">, Group<CompileOnly_Group>,
+  Flags<[NoXarchOption]>, Visibility<[ClangOption, CLOption, DXCOption]>,
+  Alias<Xclangas>,
+  HelpText<"Alias for -Xclangas">, MetaVarName<"<arg>">;
 def Xcuda_fatbinary : Separate<["-"], "Xcuda-fatbinary">,
   HelpText<"Pass <arg> to fatbinary invocation">, MetaVarName<"<arg>">;
 def Xcuda_ptxas : Separate<["-"], "Xcuda-ptxas">,
@@ -4694,15 +4702,17 @@ def EB : Flag<["-"], "EB">, Alias<mbig_endian>;
 def m16 : Flag<["-"], "m16">, Group<m_Group>, Flags<[NoXarchOption]>,
   Visibility<[ClangOption, CLOption, DXCOption]>;
 def m32 : Flag<["-"], "m32">, Group<m_Group>, Flags<[NoXarchOption]>,
-  Visibility<[ClangOption, CLOption, DXCOption]>;
-def maix32 : Flag<["-"], "maix32">, Group<m_Group>, Flags<[NoXarchOption]>;
+  Visibility<[ClangOption, CLOption, DXCOption, FlangOption]>;
+def maix32 : Flag<["-"], "maix32">, Group<m_Group>, Flags<[NoXarchOption]>,
+  Visibility<[FlangOption]>;
 def mqdsp6_compat : Flag<["-"], "mqdsp6-compat">, Group<m_Group>,
   Flags<[NoXarchOption]>, Visibility<[ClangOption, CC1Option]>,
   HelpText<"Enable hexagon-qdsp6 backward compatibility">,
   MarshallingInfoFlag<LangOpts<"HexagonQdsp6Compat">>;
 def m64 : Flag<["-"], "m64">, Group<m_Group>, Flags<[NoXarchOption]>,
   Visibility<[ClangOption, CLOption, DXCOption, FlangOption]>;
-def maix64 : Flag<["-"], "maix64">, Group<m_Group>, Flags<[NoXarchOption]>;
+def maix64 : Flag<["-"], "maix64">, Group<m_Group>, Flags<[NoXarchOption]>,
+  Visibility<[FlangOption]>;
 def mx32 : Flag<["-"], "mx32">, Group<m_Group>, Flags<[NoXarchOption]>,
   Visibility<[ClangOption, CLOption, DXCOption]>;
 def miamcu : Flag<["-"], "miamcu">, Group<m_Group>, Flags<[NoXarchOption]>,
@@ -7889,9 +7899,13 @@ def code_completion_with_fixits : Flag<["-"], "code-completion-with-fixits">,
 def skip_function_bodies : Flag<["-"], "skip-function-bodies">,
   HelpText<"Skip function bodies when possible">,
   MarshallingInfoFlag<FrontendOpts<"SkipFunctionBodies">>;
-def disable_free : Flag<["-"], "disable-free">,
-  HelpText<"Disable freeing of memory on exit">,
-  MarshallingInfoFlag<FrontendOpts<"DisableFree">>;
+defm disable_free : BoolOption<"",
+  "disable-free",
+  FrontendOpts<"DisableFree">,
+  DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption], "Disable">,
+  NegFlag<SetFalse, [], [ClangOption], "Don't disable">,
+  BothFlags<[], [ClangOption], " freeing of memory on exit">>;
 defm clear_ast_before_backend : BoolOption<"",
   "clear-ast-before-backend",
   CodeGenOpts<"ClearASTBeforeBackend">,
@@ -9065,6 +9079,7 @@ def _SLASH_clr : CLJoined<"clr">;
 def _SLASH_d1 : CLJoined<"d1">;
 def _SLASH_d2 : CLJoined<"d2">;
 def _SLASH_doc : CLJoined<"doc">;
+def _SLASH_dynamicdeopt : CLJoined<"dynamicdeopt">;
 def _SLASH_experimental : CLJoined<"experimental:">;
 def _SLASH_exportHeader : CLFlag<"exportHeader">;
 def _SLASH_external : CLJoined<"external:">;
