@@ -255,6 +255,16 @@ void ModuleShaderFlags::initialize(Module &M, DXILResourceTypeMap &DRTM,
         EntryFunProps.Entry->getContext().diagnose(DiagnosticInfoUnsupported(
             *(EntryFunProps.Entry), "Inconsistent optnone attribute "));
   }
+
+  // Set the Max64UAVs flag if the number of UAVs is > 8
+  uint32_t NumUAVs = 0;
+  for (auto &UAV : DRM.uavs())
+    if (MMDI.DXILVersion < VersionTuple(1, 6))
+      NumUAVs++;
+    else // MMDI.DXILVersion >= VersionTuple(1, 6)
+      NumUAVs += UAV.getBinding().Size;
+  if (NumUAVs > 8)
+    CombinedSFMask.Max64UAVs = true;
 }
 
 void ComputedShaderFlags::print(raw_ostream &OS) const {
