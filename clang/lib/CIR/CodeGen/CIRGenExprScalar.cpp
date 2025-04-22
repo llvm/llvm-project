@@ -138,7 +138,7 @@ public:
   mlir::Value VisitIntegerLiteral(const IntegerLiteral *e) {
     mlir::Type type = cgf.convertType(e->getType());
     return builder.create<cir::ConstantOp>(
-        cgf.getLoc(e->getExprLoc()), type,
+        cgf.getLoc(e->getExprLoc()),
         builder.getAttr<cir::IntAttr>(type, e->getValue()));
   }
 
@@ -147,7 +147,7 @@ public:
     assert(mlir::isa<cir::CIRFPTypeInterface>(type) &&
            "expect floating-point type");
     return builder.create<cir::ConstantOp>(
-        cgf.getLoc(e->getExprLoc()), type,
+        cgf.getLoc(e->getExprLoc()),
         builder.getAttr<cir::FPAttr>(type, e->getValue()));
   }
 

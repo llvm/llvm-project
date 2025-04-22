@@ -61,11 +61,11 @@ public:
 
   mlir::Value getConstAPInt(mlir::Location loc, mlir::Type typ,
                             const llvm::APInt &val) {
-    return create<cir::ConstantOp>(loc, typ, getAttr<cir::IntAttr>(typ, val));
+    return create<cir::ConstantOp>(loc, getAttr<cir::IntAttr>(typ, val));
   }
 
   cir::ConstantOp getConstant(mlir::Location loc, mlir::TypedAttr attr) {
-    return create<cir::ConstantOp>(loc, attr.getType(), attr);
+    return create<cir::ConstantOp>(loc, attr);
   }
 
   cir::ConstantOp getConstantInt(mlir::Location loc, mlir::Type ty,
