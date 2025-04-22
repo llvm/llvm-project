@@ -300,7 +300,8 @@ def main():
         type=bool,
         default=False,
         help="Set to true to use stricter regex for CHECK-SAME directives. "
-        "Use when Greedy matching causes issues with the generic '.*'")
+        "Use when Greedy matching causes issues with the generic '.*'",
+    )
 
     args = parser.parse_args()
 
