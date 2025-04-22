@@ -313,7 +313,7 @@ bool GCNTTIImpl::hasBranchDivergence(const Function *F) const {
   return !F || !ST->isSingleLaneExecution(*F);
 }
 
-unsigned GCNTTIImpl::getNumberOfParts(Type *Tp) {
+unsigned GCNTTIImpl::getNumberOfParts(Type *Tp) const {
   // For certain 8 bit ops, we can pack a v4i8 into a single part
   // (e.g. v4i8 shufflevectors -> v_perm v4i8, v4i8). Thus, we
   // do not limit the numberOfParts for 8 bit vectors to the
