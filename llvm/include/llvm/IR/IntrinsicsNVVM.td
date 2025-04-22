@@ -1306,6 +1306,48 @@ let TargetPrefix = "nvvm" in {
       DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty, llvm_double_ty],
         [IntrNoMem, IntrSpeculatable, Commutative]>;
 
+  // Mixed-precision add intrinsics for half and bfloat16 to float
+  foreach rnd = ["rn", "rz", "rm", "rp"] in {
+    foreach sat = ["", "_sat"] in {
+      // Half-precision to float
+      def int_nvvm_add_#rnd#sat#_h_f
+          : ClangBuiltin<"__nvvm_add_"#rnd#sat#"_h_f">,
+            DefaultAttrsIntrinsic<[llvm_float_ty],
+                                  [llvm_half_ty, llvm_float_ty],
+                                  [IntrNoMem, IntrSpeculatable]>;
+
+      // BFloat16 to float
+      def int_nvvm_add_#rnd#sat#_bf_f
+          : ClangBuiltin<"__nvvm_add_"#rnd#sat#"_bf_f">,
+            DefaultAttrsIntrinsic<[llvm_float_ty],
+                                  [llvm_bfloat_ty, llvm_float_ty],
+                                  [IntrNoMem, IntrSpeculatable]>;
+    }
+  }
+
+  //
+  // Sub
+  //
+
+  // Mixed-precision subtraction intrinsics for half and bfloat16 to float
+  foreach rnd = ["rn", "rz", "rm", "rp"] in {
+    foreach sat = ["", "_sat"] in {
+      // Half-precision to float
+      def int_nvvm_sub_#rnd#sat#_h_f
+          : ClangBuiltin<"__nvvm_sub_"#rnd#sat#"_h_f">,
+            DefaultAttrsIntrinsic<[llvm_float_ty],
+                                  [llvm_half_ty, llvm_float_ty],
+                                  [IntrNoMem, IntrSpeculatable]>;
+
+      // BFloat16 to float
+      def int_nvvm_sub_#rnd#sat#_bf_f
+          : ClangBuiltin<"__nvvm_sub_"#rnd#sat#"_bf_f">,
+            DefaultAttrsIntrinsic<[llvm_float_ty],
+                                  [llvm_bfloat_ty, llvm_float_ty],
+                                  [IntrNoMem, IntrSpeculatable]>;
+    }
+  }
+
 //
 // Dot Product
 //

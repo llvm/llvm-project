@@ -1656,6 +1656,51 @@ def INT_NVVM_ADD_RM_D : F_MATH_2<"add.rm.f64 \t$dst, $src0, $src1;",
 def INT_NVVM_ADD_RP_D : F_MATH_2<"add.rp.f64 \t$dst, $src0, $src1;",
   Float64Regs, Float64Regs, Float64Regs, int_nvvm_add_rp_d>;
 
+// Define mixed-precision add instructions for half and bfloat16 to float
+foreach rnd = ["rn", "rz", "rm", "rp"] in {
+  foreach sat = ["", "_sat"] in {
+    // Half-precision to float
+    def INT_NVVM_ADD_#!toupper(rnd#sat)#_H_F
+        : F_MATH_2<"add."#rnd#!subst("_", ".",
+                                     sat)#".f32.f16 \t$dst, $src0, $src1;",
+                   Float32Regs, Int16Regs, Float32Regs,
+                   !cast<Intrinsic>("int_nvvm_add_"#rnd#sat#"_h_f"),
+                   [hasPTX<86>, hasSM<100>]>;
+
+    // BFloat16 to float
+    def INT_NVVM_ADD_#!toupper(rnd#sat)#_BF_F
+        : F_MATH_2<"add."#rnd#!subst("_", ".",
+                                     sat)#".f32.bf16 \t$dst, $src0, $src1;",
+                   Float32Regs, Int16Regs, Float32Regs,
+                   !cast<Intrinsic>("int_nvvm_add_"#rnd#sat#"_bf_f"),
+                   [hasPTX<86>, hasSM<100>]>;
+  }
+}
+
+//
+// Sub
+//
+// Define mixed-precision sub instructions for half and bfloat16 to float
+foreach rnd = ["rn", "rz", "rm", "rp"] in {
+  foreach sat = ["", "_sat"] in {
+    // Half-precision to float
+    def INT_NVVM_SUB_#!toupper(rnd#sat)#_H_F
+        : F_MATH_2<"sub."#rnd#!subst("_", ".",
+                                     sat)#".f32.f16 \t$dst, $src0, $src1;",
+                   Float32Regs, Int16Regs, Float32Regs,
+                   !cast<Intrinsic>("int_nvvm_sub_"#rnd#sat#"_h_f"),
+                   [hasPTX<86>, hasSM<100>]>;
+
+    // BFloat16 to float
+    def INT_NVVM_SUB_#!toupper(rnd#sat)#_BF_F
+        : F_MATH_2<"sub."#rnd#!subst("_", ".",
+                                     sat)#".f32.bf16 \t$dst, $src0, $src1;",
+                   Float32Regs, Int16Regs, Float32Regs,
+                   !cast<Intrinsic>("int_nvvm_sub_"#rnd#sat#"_bf_f"),
+                   [hasPTX<86>, hasSM<100>]>;
+  }
+}
+
 //
 // BFIND
 //
