@@ -107,7 +107,7 @@ public:
   bool areInlineCompatible(const Function *Caller,
                            const Function *Callee) const;
 
-  bool enableInterleavedAccessVectorization() { return true; }
+  bool enableInterleavedAccessVectorization() const { return true; }
 
   TTI::AddressingModeKind
     getPreferredAddressingMode(const Loop *L, ScalarEvolution *SE) const;
@@ -115,7 +115,7 @@ public:
   /// Floating-point computation using ARMv8 AArch32 Advanced
   /// SIMD instructions remains unchanged from ARMv7. Only AArch64 SIMD
   /// and Arm MVE are IEEE-754 compliant.
-  bool isFPVectorizationPotentiallyUnsafe() {
+  bool isFPVectorizationPotentiallyUnsafe() const {
     return !ST->isTargetDarwin() && !ST->hasMVEFloatOps();
   }
 
@@ -131,7 +131,7 @@ public:
   /// @{
 
   InstructionCost getIntImmCodeSizeCost(unsigned Opcode, unsigned Idx,
-                                        const APInt &Imm, Type *Ty);
+                                        const APInt &Imm, Type *Ty) const;
 
   using BaseT::getIntImmCost;
   InstructionCost getIntImmCost(const APInt &Imm, Type *Ty,
@@ -140,7 +140,7 @@ public:
   InstructionCost getIntImmCostInst(unsigned Opcode, unsigned Idx,
                                     const APInt &Imm, Type *Ty,
                                     TTI::TargetCostKind CostKind,
-                                    Instruction *Inst = nullptr);
+                                    Instruction *Inst = nullptr) const;
 
   /// @}
 
@@ -178,11 +178,11 @@ public:
     llvm_unreachable("Unsupported register kind");
   }
 
-  unsigned getMaxInterleaveFactor(ElementCount VF) {
+  unsigned getMaxInterleaveFactor(ElementCount VF) const {
     return ST->getMaxInterleaveFactor();
   }
 
-  bool isProfitableLSRChainElement(Instruction *I);
+  bool isProfitableLSRChainElement(Instruction *I) const;
 
   bool isLegalMaskedLoad(Type *DataTy, Align Alignment,
                          unsigned AddressSpace) const;
@@ -192,7 +192,7 @@ public:
     return isLegalMaskedLoad(DataTy, Alignment, AddressSpace);
   }
 
-  bool forceScalarizeMaskedGather(VectorType *VTy, Align Alignment) {
+  bool forceScalarizeMaskedGather(VectorType *VTy, Align Alignment) const {
     // For MVE, we have a custom lowering pass that will already have custom
     // legalised any gathers that we can lower to MVE intrinsics, and want to
     // expand all the rest. The pass runs before the masked intrinsic lowering
@@ -200,13 +200,13 @@ public:
     return true;
   }
 
-  bool forceScalarizeMaskedScatter(VectorType *VTy, Align Alignment) {
+  bool forceScalarizeMaskedScatter(VectorType *VTy, Align Alignment) const {
     return forceScalarizeMaskedGather(VTy, Alignment);
   }
 
-  bool isLegalMaskedGather(Type *Ty, Align Alignment);
+  bool isLegalMaskedGather(Type *Ty, Align Alignment) const;
 
-  bool isLegalMaskedScatter(Type *Ty, Align Alignment) {
+  bool isLegalMaskedScatter(Type *Ty, Align Alignment) const {
     return isLegalMaskedGather(Ty, Alignment);
   }
 
@@ -253,7 +253,7 @@ public:
                                      Value *Op1) const;
 
   InstructionCost getAddressComputationCost(Type *Val, ScalarEvolution *SE,
-                                            const SCEV *Ptr);
+                                            const SCEV *Ptr) const;
 
   InstructionCost getArithmeticInstrCost(
       unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
@@ -275,7 +275,7 @@ public:
   InstructionCost getInterleavedMemoryOpCost(
       unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
       Align Alignment, unsigned AddressSpace, TTI::TargetCostKind CostKind,
-      bool UseMaskForCond = false, bool UseMaskForGaps = false);
+      bool UseMaskForCond = false, bool UseMaskForGaps = false) const;
 
   InstructionCost getGatherScatterOpCost(unsigned Opcode, Type *DataTy,
                                          const Value *Ptr, bool VariableMask,
@@ -290,10 +290,10 @@ public:
   InstructionCost getExtendedReductionCost(unsigned Opcode, bool IsUnsigned,
                                            Type *ResTy, VectorType *ValTy,
                                            std::optional<FastMathFlags> FMF,
-                                           TTI::TargetCostKind CostKind);
+                                           TTI::TargetCostKind CostKind) const;
   InstructionCost getMulAccReductionCost(bool IsUnsigned, Type *ResTy,
                                          VectorType *ValTy,
-                                         TTI::TargetCostKind CostKind);
+                                         TTI::TargetCostKind CostKind) const;
 
   InstructionCost getMinMaxReductionCost(Intrinsic::ID IID, VectorType *Ty,
                                          FastMathFlags FMF,
@@ -310,22 +310,21 @@ public:
                                        StackOffset BaseOffset, bool HasBaseReg,
                                        int64_t Scale, unsigned AddrSpace) const;
 
-  bool maybeLoweredToCall(Instruction &I);
+  bool maybeLoweredToCall(Instruction &I) const;
   bool isLoweredToCall(const Function *F) const;
   bool isHardwareLoopProfitable(Loop *L, ScalarEvolution &SE,
-                                AssumptionCache &AC,
-                                TargetLibraryInfo *LibInfo,
-                                HardwareLoopInfo &HWLoopInfo);
-  bool preferPredicateOverEpilogue(TailFoldingInfo *TFI);
+                                AssumptionCache &AC, TargetLibraryInfo *LibInfo,
+                                HardwareLoopInfo &HWLoopInfo) const;
+  bool preferPredicateOverEpilogue(TailFoldingInfo *TFI) const;
   void getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
                                TTI::UnrollingPreferences &UP,
-                               OptimizationRemarkEmitter *ORE);
+                               OptimizationRemarkEmitter *ORE) const;
 
   TailFoldingStyle
   getPreferredTailFoldingStyle(bool IVUpdateMayOverflow = true) const;
 
   void getPeelingPreferences(Loop *L, ScalarEvolution &SE,
-                             TTI::PeelingPreferences &PP);
+                             TTI::PeelingPreferences &PP) const;
   bool shouldBuildLookupTablesForConstant(Constant *C) const {
     // In the ROPI and RWPI relocation models we can't have pointers to global
     // variables or functions in constant data, so don't convert switches to

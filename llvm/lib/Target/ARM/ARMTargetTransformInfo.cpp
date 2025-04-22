@@ -353,7 +353,8 @@ InstructionCost ARMTTIImpl::getIntImmCost(const APInt &Imm, Type *Ty,
 // Constants smaller than 256 fit in the immediate field of
 // Thumb1 instructions so we return a zero cost and 1 otherwise.
 InstructionCost ARMTTIImpl::getIntImmCodeSizeCost(unsigned Opcode, unsigned Idx,
-                                                  const APInt &Imm, Type *Ty) {
+                                                  const APInt &Imm,
+                                                  Type *Ty) const {
   if (Imm.isNonNegative() && Imm.getLimitedValue() < 256)
     return 0;
 
@@ -412,7 +413,7 @@ static bool isFPSatMinMaxPattern(Instruction *Inst, const APInt &Imm) {
 InstructionCost ARMTTIImpl::getIntImmCostInst(unsigned Opcode, unsigned Idx,
                                               const APInt &Imm, Type *Ty,
                                               TTI::TargetCostKind CostKind,
-                                              Instruction *Inst) {
+                                              Instruction *Inst) const {
   // Division by a constant can be turned into multiplication, but only if we
   // know it's constant. So it's not so much that the immediate is cheap (it's
   // not), but that the alternative is worse.
@@ -1085,7 +1086,7 @@ InstructionCost ARMTTIImpl::getCmpSelInstrCost(
 
 InstructionCost ARMTTIImpl::getAddressComputationCost(Type *Ty,
                                                       ScalarEvolution *SE,
-                                                      const SCEV *Ptr) {
+                                                      const SCEV *Ptr) const {
   // Address computations in vectorized code with non-consecutive addresses will
   // likely result in more instructions compared to scalar code where the
   // computation can more often be merged into the index mode. The resulting
@@ -1105,7 +1106,7 @@ InstructionCost ARMTTIImpl::getAddressComputationCost(Type *Ty,
   return BaseT::getAddressComputationCost(Ty, SE, Ptr);
 }
 
-bool ARMTTIImpl::isProfitableLSRChainElement(Instruction *I) {
+bool ARMTTIImpl::isProfitableLSRChainElement(Instruction *I) const {
   if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
     // If a VCTP is part of a chain, it's already profitable and shouldn't be
     // optimized, else LSR may block tail-predication.
@@ -1143,7 +1144,7 @@ bool ARMTTIImpl::isLegalMaskedLoad(Type *DataTy, Align Alignment,
          (EltWidth == 16 && Alignment >= 2) || (EltWidth == 8);
 }
 
-bool ARMTTIImpl::isLegalMaskedGather(Type *Ty, Align Alignment) {
+bool ARMTTIImpl::isLegalMaskedGather(Type *Ty, Align Alignment) const {
   if (!EnableMaskedGatherScatters || !ST->hasMVEIntegerOps())
     return false;
 
@@ -1613,7 +1614,7 @@ ARMTTIImpl::getMaskedMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
 InstructionCost ARMTTIImpl::getInterleavedMemoryOpCost(
     unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
     Align Alignment, unsigned AddressSpace, TTI::TargetCostKind CostKind,
-    bool UseMaskForCond, bool UseMaskForGaps) {
+    bool UseMaskForCond, bool UseMaskForGaps) const {
   assert(Factor >= 2 && "Invalid interleave factor");
   assert(isa<VectorType>(VecTy) && "Expect a vector type");
 
@@ -1843,7 +1844,7 @@ ARMTTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
 
 InstructionCost ARMTTIImpl::getExtendedReductionCost(
     unsigned Opcode, bool IsUnsigned, Type *ResTy, VectorType *ValTy,
-    std::optional<FastMathFlags> FMF, TTI::TargetCostKind CostKind) {
+    std::optional<FastMathFlags> FMF, TTI::TargetCostKind CostKind) const {
   EVT ValVT = TLI->getValueType(DL, ValTy);
   EVT ResVT = TLI->getValueType(DL, ResTy);
 
@@ -1878,7 +1879,7 @@ InstructionCost ARMTTIImpl::getExtendedReductionCost(
 InstructionCost
 ARMTTIImpl::getMulAccReductionCost(bool IsUnsigned, Type *ResTy,
                                    VectorType *ValTy,
-                                   TTI::TargetCostKind CostKind) {
+                                   TTI::TargetCostKind CostKind) const {
   EVT ValVT = TLI->getValueType(DL, ValTy);
   EVT ResVT = TLI->getValueType(DL, ResTy);
 
@@ -2170,7 +2171,7 @@ bool ARMTTIImpl::isLoweredToCall(const Function *F) const {
   return BaseT::isLoweredToCall(F);
 }
 
-bool ARMTTIImpl::maybeLoweredToCall(Instruction &I) {
+bool ARMTTIImpl::maybeLoweredToCall(Instruction &I) const {
   unsigned ISD = TLI->InstructionOpcodeToISD(I.getOpcode());
   EVT VT = TLI->getValueType(DL, I.getType(), true);
   if (TLI->getOperationAction(ISD, VT) == TargetLowering::LibCall)
@@ -2260,7 +2261,7 @@ bool ARMTTIImpl::maybeLoweredToCall(Instruction &I) {
 bool ARMTTIImpl::isHardwareLoopProfitable(Loop *L, ScalarEvolution &SE,
                                           AssumptionCache &AC,
                                           TargetLibraryInfo *LibInfo,
-                                          HardwareLoopInfo &HWLoopInfo) {
+                                          HardwareLoopInfo &HWLoopInfo) const {
   // Low-overhead branches are only supported in the 'low-overhead branch'
   // extension of v8.1-m.
   if (!ST->hasLOB() || DisableLowOverheadLoops) {
@@ -2493,7 +2494,7 @@ static bool canTailPredicateLoop(Loop *L, LoopInfo *LI, ScalarEvolution &SE,
   return true;
 }
 
-bool ARMTTIImpl::preferPredicateOverEpilogue(TailFoldingInfo *TFI) {
+bool ARMTTIImpl::preferPredicateOverEpilogue(TailFoldingInfo *TFI) const {
   if (!EnableTailPredication) {
     LLVM_DEBUG(dbgs() << "Tail-predication not enabled.\n");
     return false;
@@ -2559,7 +2560,7 @@ ARMTTIImpl::getPreferredTailFoldingStyle(bool IVUpdateMayOverflow) const {
 }
 void ARMTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
                                          TTI::UnrollingPreferences &UP,
-                                         OptimizationRemarkEmitter *ORE) {
+                                         OptimizationRemarkEmitter *ORE) const {
   // Enable Upper bound unrolling universally, providing that we do not see an
   // active lane mask, which will be better kept as a loop to become tail
   // predicated than to be conditionally unrolled.
@@ -2688,7 +2689,7 @@ void ARMTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
 }
 
 void ARMTTIImpl::getPeelingPreferences(Loop *L, ScalarEvolution &SE,
-                                       TTI::PeelingPreferences &PP) {
+                                       TTI::PeelingPreferences &PP) const {
   BaseT::getPeelingPreferences(L, SE, PP);
 }
 
