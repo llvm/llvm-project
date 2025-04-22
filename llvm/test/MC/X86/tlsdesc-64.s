@@ -1,8 +1,11 @@
 # RUN: llvm-mc -triple x86_64-pc-linux-musl %s | FileCheck --check-prefix=PRINT %s
 
-# RUN: llvm-mc -filetype=obj -triple x86_64-pc-linux-musl %s -o %t
+# RUN: llvm-mc -filetype=obj -triple x86_64-pc-linux-musl %s -o %t -x86-apx-relax-relocations=true
 # RUN: llvm-readelf -s %t | FileCheck --check-prefix=SYM %s
 # RUN: llvm-objdump -d -r --no-show-raw-insn %t | FileCheck --match-full-lines %s
+
+# RUN: llvm-mc -filetype=obj -triple x86_64-pc-linux-musl %s -o %t
+# RUN: llvm-objdump -d -r --no-show-raw-insn %t | FileCheck --match-full-lines %s --check-prefixes=NOAPXRELAX
 
 # PRINT:      leaq a@tlsdesc(%rip), %rax
 # PRINT-NEXT: callq *a@tlscall(%rax)
@@ -25,6 +28,9 @@ addq %fs:0, %rax
 # CHECK-NEXT:   0000000000000016: R_X86_64_CODE_4_GOTPC32_TLSDESC a-0x4
 # CHECK-NEXT: 1a: callq *(%r16)
 # CHECK-NEXT:   000000000000001a: R_X86_64_TLSDESC_CALL a
+
+# NOAPXRELAX:      12: leaq (%rip), %r16  # 0x1a <{{.*}}>
+# NOAPXRELAX-NEXT:   0000000000000016: R_X86_64_GOTPC32_TLSDESC a-0x4
 
 leaq a@tlsdesc(%rip), %r16
 call *a@tlscall(%r16)

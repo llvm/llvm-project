@@ -70,6 +70,8 @@ public:
   // ELF.
   bool X86RelaxRelocations = true;
 
+  bool X86APXRelaxRelocations = false;
+
   bool X86Sse2Avx = false;
 
   std::optional<unsigned> OutputAsmVariant;

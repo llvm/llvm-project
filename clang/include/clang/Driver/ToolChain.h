@@ -473,6 +473,9 @@ public:
   /// Check whether to enable x86 relax relocations by default.
   virtual bool useRelaxRelocations() const;
 
+  /// Check whether to enable x86 APX relax relocations by default.
+  virtual bool useAPXRelaxRelocations() const;
+
   /// Check whether use IEEE binary128 as long double format by default.
   bool defaultToIEEELongDouble() const;
 

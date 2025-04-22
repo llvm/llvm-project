@@ -57,6 +57,8 @@ bool getImplicitMapSyms();
 
 bool getX86RelaxRelocations();
 
+bool getX86APXRelaxRelocations();
+
 bool getX86Sse2Avx();
 
 std::string getABIName();

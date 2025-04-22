@@ -2602,6 +2602,8 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
   bool Crel = false, ExperimentalCrel = false;
   bool ImplicitMapSyms = false;
   bool UseRelaxRelocations = C.getDefaultToolChain().useRelaxRelocations();
+  bool UseAPXRelaxRelocations =
+      C.getDefaultToolChain().useAPXRelaxRelocations();
   bool UseNoExecStack = false;
   bool Msa = false;
   const char *MipsTargetFeature = nullptr;
@@ -2660,6 +2662,12 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
         if (Equal.first == "-mrelax-relocations" ||
             Equal.first == "--mrelax-relocations") {
           UseRelaxRelocations = Equal.second == "yes";
+          checkArg(IsELF, {"yes", "no"});
+          continue;
+        }
+        if (Equal.first == "-mapx-relax-relocations" ||
+            Equal.first == "--mapx-relax-relocations") {
+          UseAPXRelaxRelocations = Equal.second == "yes";
           checkArg(IsELF, {"yes", "no"});
           continue;
         }
@@ -2874,6 +2882,8 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
     CmdArgs.push_back("-mmsa");
   if (!UseRelaxRelocations)
     CmdArgs.push_back("-mrelax-relocations=no");
+  if (UseAPXRelaxRelocations)
+    CmdArgs.push_back("-mapx-relax-relocations=yes");
   if (UseNoExecStack)
     CmdArgs.push_back("-mnoexecstack");
   if (MipsTargetFeature != nullptr) {

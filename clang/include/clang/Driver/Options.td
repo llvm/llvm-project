@@ -7442,6 +7442,9 @@ def mmapsyms_implicit : Flag<["-"], "mmapsyms=implicit">,
 def mrelax_relocations_no : Flag<["-"], "mrelax-relocations=no">,
     HelpText<"Disable x86 relax relocations">,
     MarshallingInfoNegativeFlag<CodeGenOpts<"X86RelaxRelocations">>;
+def mapx_relax_relocations_yes : Flag<["-"], "mapx-relax-relocations=yes">,
+    HelpText<"Enable x86 APX relax relocations">,
+    MarshallingInfoNegativeFlag<CodeGenOpts<"X86APXRelaxRelocations">>;
 def msave_temp_labels : Flag<["-"], "msave-temp-labels">,
   HelpText<"Save temporary labels in the symbol table. "
            "Note this may change .s semantics and shouldn't generally be used "

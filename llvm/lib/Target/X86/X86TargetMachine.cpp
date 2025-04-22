@@ -567,6 +567,8 @@ void X86PassConfig::addPreRegAlloc() {
     addPass(createX86PreTileConfigPass());
   else
     addPass(createX86FastPreTileConfigPass());
+
+  addPass(createX86SuppressEGPRAndNDDForRelocPass());
 }
 
 void X86PassConfig::addMachineSSAOptimization() {

@@ -885,6 +885,8 @@ static std::unique_ptr<LTO> createLTO(IndexWriteCallback OnIndexWrite,
   // FIXME: Check the gold version or add a new option to enable them.
   Conf.Options.MCOptions.X86RelaxRelocations = false;
 
+  Conf.Options.MCOptions.X86APXRelaxRelocations = false;
+
   // Toggle function/data sections.
   if (!codegen::getExplicitFunctionSections())
     Conf.Options.FunctionSections = SplitSections;

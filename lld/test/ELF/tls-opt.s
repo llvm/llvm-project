@@ -1,44 +1,84 @@
 // REQUIRES: x86
-// RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t.o
+// RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t.o -x86-apx-relax-relocations=true
 // RUN: ld.lld %t.o -o %t1
 // RUN: llvm-readobj -r %t1 | FileCheck --check-prefix=NORELOC %s
-// RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t1 | FileCheck --check-prefix=DISASM %s
+// RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t1 | FileCheck --check-prefixes=DISASM,APXRELAX %s
+
+// RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t.o
+// RUN: ld.lld %t.o -o %t1 --no-relax
+// RUN: llvm-readobj -r %t1 | FileCheck --check-prefix=NORELOC %s
+// RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t1 | FileCheck --check-prefixes=DISASM,NOAPXRELAX %s
 
 // NORELOC:      Relocations [
 // NORELOC-NEXT: ]
 
 // DISASM:      <_start>:
-// DISASM-NEXT:   movq $-8, %rax
-// DISASM-NEXT:   movq $-8, %r15
-// DISASM-NEXT:   leaq -8(%rax), %rax
-// DISASM-NEXT:   leaq -8(%r15), %r15
-// DISASM-NEXT:   addq $-8, %rsp
-// DISASM-NEXT:   addq $-8, %r12
-// DISASM-NEXT:   movq $-4, %rax
-// DISASM-NEXT:   movq $-4, %r15
-// DISASM-NEXT:   leaq -4(%rax), %rax
-// DISASM-NEXT:   leaq -4(%r15), %r15
-// DISASM-NEXT:   addq $-4, %rsp
-// DISASM-NEXT:   addq $-4, %r12
+// APXRELAX-NEXT:   movq $-8, %rax
+// APXRELAX-NEXT:   movq $-8, %r15
+// APXRELAX-NEXT:   leaq -8(%rax), %rax
+// APXRELAX-NEXT:   leaq -8(%r15), %r15
+// APXRELAX-NEXT:   addq $-8, %rsp
+// APXRELAX-NEXT:   addq $-8, %r12
+// APXRELAX-NEXT:   movq $-4, %rax
+// APXRELAX-NEXT:   movq $-4, %r15
+// APXRELAX-NEXT:   leaq -4(%rax), %rax
+// APXRELAX-NEXT:   leaq -4(%r15), %r15
+// APXRELAX-NEXT:   addq $-4, %rsp
+// APXRELAX-NEXT:   addq $-4, %r12
+
+// NOAPXRELAX-NEXT:   movq -12(%rip), %rax
+// NOAPXRELAX-NEXT:   movq -12(%rip), %r15
+// NOAPXRELAX-NEXT:   addq -12(%rip), %rax
+// NOAPXRELAX-NEXT:   addq -12(%rip), %r15
+// NOAPXRELAX-NEXT:   addq -12(%rip), %rsp
+// NOAPXRELAX-NEXT:   addq -12(%rip), %r12
+// NOAPXRELAX-NEXT:   movq -8(%rip), %rax
+// NOAPXRELAX-NEXT:   movq -8(%rip), %r15
+// NOAPXRELAX-NEXT:   addq -8(%rip), %rax
+// NOAPXRELAX-NEXT:   addq -8(%rip), %r15
+// NOAPXRELAX-NEXT:   addq -8(%rip), %rsp
+// NOAPXRELAX-NEXT:   addq -8(%rip), %r12
+
 # EGPR
-// DISASM-NEXT:   movq $-8, %r16
-// DISASM-NEXT:   movq $-8, %r20
-// DISASM-NEXT:   movq $-4, %r16
-// DISASM-NEXT:   addq $-8, %r16
-// DISASM-NEXT:   addq $-8, %r28
-// DISASM-NEXT:   addq $-4, %r16
+// APXRELAX-NEXT:   movq $-8, %r16
+// APXRELAX-NEXT:   movq $-8, %r20
+// APXRELAX-NEXT:   movq $-4, %r16
+// APXRELAX-NEXT:   addq $-8, %r16
+// APXRELAX-NEXT:   addq $-8, %r28
+// APXRELAX-NEXT:   addq $-4, %r16
+
+// NOAPXRELAX-NEXT: movq -12(%rip), %r16
+// NOAPXRELAX-NEXT: movq -12(%rip), %r20
+// NOAPXRELAX-NEXT: movq -8(%rip), %r16
+// NOAPXRELAX-NEXT: addq -12(%rip), %r16
+// NOAPXRELAX-NEXT: addq -12(%rip), %r28
+// NOAPXRELAX-NEXT: addq -8(%rip), %r16
+
 # NDD
-// DISASM-NEXT:   addq $-8, %r16, %r16
-// DISASM-NEXT:   addq $-8, %r16, %r20
-// DISASM-NEXT:   addq $-8, %r16, %rax
-// DISASM-NEXT:   addq $-8, %rax, %r16
-// DISASM-NEXT:   addq $-8, %r8, %r16
-// DISASM-NEXT:   addq $-8, %rax, %r12
+// APXRELAX-NEXT:   addq $-8, %r16, %r16
+// APXRELAX-NEXT:   addq $-8, %r16, %r20
+// APXRELAX-NEXT:   addq $-8, %r16, %rax
+// APXRELAX-NEXT:   addq $-8, %rax, %r16
+// APXRELAX-NEXT:   addq $-8, %r8, %r16
+// APXRELAX-NEXT:   addq $-8, %rax, %r12
+
+// NOAPXRELAX-NEXT:   addq -12(%rip), %r16, %r16
+// NOAPXRELAX-NEXT:   addq -12(%rip), %r16, %r20
+// NOAPXRELAX-NEXT:   addq -12(%rip), %r16, %rax
+// NOAPXRELAX-NEXT:   addq -12(%rip), %rax, %r16
+// NOAPXRELAX-NEXT:   addq %r8, -12(%rip), %r16
+// NOAPXRELAX-NEXT:   addq -12(%rip), %rax, %r12
+
 # NDD + NF
-// DISASM-NEXT:   {nf} addq $-8, %r8, %r16
-// DISASM-NEXT:   {nf} addq $-8, %rax, %r12
+// APXRELAX-NEXT:   {nf} addq $-8, %r8, %r16
+// APXRELAX-NEXT:   {nf} addq $-8, %rax, %r12
+
+// NOAPXRELAX-NEXT:   {nf} addq %r8, -12(%rip), %r16
+// NOAPXRELAX-NEXT:   {nf} addq -12(%rip), %rax, %r12
+
 # NF
-// DISASM-NEXT:   {nf} addq $-8, %r12
+// APXRELAX-NEXT:   {nf} addq $-8, %r12
+// NOAPXRELAX-NEXT:   {nf} addq -12(%rip), %r12
 
 // LD to LE:
 // DISASM-NEXT:   movq %fs:0, %rax
@@ -47,10 +87,15 @@
 // DISASM-NEXT:   leaq -4(%rax), %rcx
 
 // GD to LE:
-// DISASM-NEXT:   movq %fs:0, %rax
-// DISASM-NEXT:   leaq -8(%rax), %rax
-// DISASM-NEXT:   movq %fs:0, %rax
-// DISASM-NEXT:   leaq -4(%rax), %rax
+// APXRELAX-NEXT:   movq %fs:0, %rax
+// APXRELAX-NEXT:   leaq -8(%rax), %rax
+// APXRELAX-NEXT:   movq %fs:0, %rax
+// APXRELAX-NEXT:   leaq -4(%rax), %rax
+
+// NOAPXRELAX-NEXT:   leaq -12(%rip), %rdi
+// NOAPXRELAX-NEXT:   callq 0x20126c
+// NOAPXRELAX-NEXT:   leaq -8(%rip), %rdi
+// NOAPXRELAX-NEXT:   callq 0x20127c
 
 // LD to LE:
 // DISASM:     <_DTPOFF64_1>:

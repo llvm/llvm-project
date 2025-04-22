@@ -171,6 +171,8 @@ struct AssemblerInvocation {
   LLVM_PREFERRED_TYPE(bool)
   unsigned X86RelaxRelocations : 1;
   LLVM_PREFERRED_TYPE(bool)
+  unsigned X86APXRelaxRelocations : 1;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned X86Sse2Avx : 1;
 
   /// The name of the relocation model to use.
@@ -216,6 +218,7 @@ public:
     Crel = false;
     ImplicitMapsyms = 0;
     X86RelaxRelocations = 0;
+    X86APXRelaxRelocations = 0;
     X86Sse2Avx = 0;
   }
 
@@ -388,6 +391,7 @@ bool AssemblerInvocation::CreateFromArgs(AssemblerInvocation &Opts,
   Opts.Crel = Args.hasArg(OPT_crel);
   Opts.ImplicitMapsyms = Args.hasArg(OPT_mmapsyms_implicit);
   Opts.X86RelaxRelocations = !Args.hasArg(OPT_mrelax_relocations_no);
+  Opts.X86APXRelaxRelocations = Args.hasArg(OPT_mapx_relax_relocations_yes);
   Opts.X86Sse2Avx = Args.hasArg(OPT_msse2avx);
 
   Opts.AsSecureLogFile = Args.getLastArgValue(OPT_as_secure_log_file);
@@ -449,6 +453,7 @@ static bool ExecuteAssemblerImpl(AssemblerInvocation &Opts,
   MCOptions.Crel = Opts.Crel;
   MCOptions.ImplicitMapSyms = Opts.ImplicitMapsyms;
   MCOptions.X86RelaxRelocations = Opts.X86RelaxRelocations;
+  MCOptions.X86APXRelaxRelocations = Opts.X86APXRelaxRelocations;
   MCOptions.X86Sse2Avx = Opts.X86Sse2Avx;
   MCOptions.CompressDebugSections = Opts.CompressDebugSections;
   MCOptions.AsSecureLogFile = Opts.AsSecureLogFile;

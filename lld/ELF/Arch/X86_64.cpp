@@ -912,9 +912,9 @@ void X86_64::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   case R_X86_64_CODE_4_GOTPC32_TLSDESC:
   case R_X86_64_TLSDESC_CALL:
   case R_X86_64_TLSGD:
-    if (rel.expr == R_RELAX_TLS_GD_TO_LE) {
+    if (rel.expr == R_RELAX_TLS_GD_TO_LE && ctx.arg.relax) {
       relaxTlsGdToLe(loc, rel, val);
-    } else if (rel.expr == R_RELAX_TLS_GD_TO_IE) {
+    } else if (rel.expr == R_RELAX_TLS_GD_TO_IE && ctx.arg.relax) {
       relaxTlsGdToIe(loc, rel, val);
     } else {
       checkInt(ctx, loc, val, 32, rel);
@@ -932,7 +932,7 @@ void X86_64::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   case R_X86_64_GOTTPOFF:
   case R_X86_64_CODE_4_GOTTPOFF:
   case R_X86_64_CODE_6_GOTTPOFF:
-    if (rel.expr == R_RELAX_TLS_IE_TO_LE) {
+    if (rel.expr == R_RELAX_TLS_IE_TO_LE && ctx.arg.relax) {
       relaxTlsIeToLe(loc, rel, val);
     } else {
       checkInt(ctx, loc, val, 32, rel);

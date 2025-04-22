@@ -50,6 +50,7 @@ MCOPT(bool, SaveTempLabels)
 MCOPT(bool, Crel)
 MCOPT(bool, ImplicitMapSyms)
 MCOPT(bool, X86RelaxRelocations)
+MCOPT(bool, X86APXRelaxRelocations)
 MCOPT(bool, X86Sse2Avx)
 MCOPT(std::string, ABIName)
 MCOPT(std::string, AsSecureLogFile)
@@ -150,6 +151,14 @@ llvm::mc::RegisterMCTargetOptionsFlags::RegisterMCTargetOptionsFlags() {
       cl::init(true));
   MCBINDOPT(X86RelaxRelocations);
 
+  static cl::opt<bool> X86APXRelaxRelocations(
+      "x86-apx-relax-relocations",
+      cl::desc("Emit APX relocation types on x86-64 ELF, including "
+               "CODE_4_GOTPCRELX/CODE_4_GOTPC32_TLSDESC/CODE_4_GOTTPOFF/"
+               "CODE_6_GOTTPOFF"),
+      cl::init(false));
+  MCBINDOPT(X86APXRelaxRelocations);
+
   static cl::opt<bool> X86Sse2Avx(
       "x86-sse2avx", cl::desc("Specify that the assembler should encode SSE "
                               "instructions with VEX prefix"));
@@ -185,6 +194,7 @@ MCTargetOptions llvm::mc::InitMCTargetOptionsFromFlags() {
   Options.Crel = getCrel();
   Options.ImplicitMapSyms = getImplicitMapSyms();
   Options.X86RelaxRelocations = getX86RelaxRelocations();
+  Options.X86APXRelaxRelocations = getX86APXRelaxRelocations();
   Options.X86Sse2Avx = getX86Sse2Avx();
   Options.EmitDwarfUnwind = getEmitDwarfUnwind();
   Options.EmitCompactUnwindNonCanonical = getEmitCompactUnwindNonCanonical();

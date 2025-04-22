@@ -1,5 +1,9 @@
-# RUN: llvm-mc -filetype=obj -triple x86_64 %s -o %t
+# RUN: llvm-mc -filetype=obj -triple x86_64 %s -o %t -x86-apx-relax-relocations=true
 # RUN: llvm-objdump --no-print-imm-hex -dr %t | FileCheck %s
+# RUN: llvm-readelf -s %t | FileCheck %s --check-prefix=SYM
+
+# RUN: llvm-mc -filetype=obj -triple x86_64 %s -o %t
+# RUN: llvm-objdump --no-print-imm-hex -dr %t | FileCheck %s --check-prefix=NOAPXREL
 # RUN: llvm-readelf -s %t | FileCheck %s --check-prefix=SYM
 
 # RUN: not llvm-mc -filetype=obj -triple x86_64 --defsym ERR=1 %s 2>&1 | FileCheck %s --check-prefix=ERR
@@ -18,6 +22,8 @@ movabsq $memcpy+2, %rax
 # CHECK-NEXT:   R_X86_64_REX_GOTPCRELX  abs-0x4
 # CHECK:      movq (%rip), %r16
 # CHECK-NEXT:   R_X86_64_CODE_4_GOTPCRELX abs-0x4
+# NOAPXREL:      movq (%rip), %r16
+# NOAPXREL-NEXT:   R_X86_64_GOTPCREL abs-0x4
 movq abs@GOTPCREL(%rip), %rax
 movq abs@GOTPCREL(%rip), %r16
 abs = 42

@@ -142,6 +142,7 @@ std::string llvm::computeLTOCacheKey(
   // X86RelaxRelocations. The clang driver can also pass FunctionSections,
   // DataSections and DebuggerTuning via command line flags.
   AddUnsigned(Conf.Options.MCOptions.X86RelaxRelocations);
+  AddUnsigned(Conf.Options.MCOptions.X86APXRelaxRelocations);
   AddUnsigned(Conf.Options.FunctionSections);
   AddUnsigned(Conf.Options.DataSections);
   AddUnsigned((unsigned)Conf.Options.DebuggerTuning);

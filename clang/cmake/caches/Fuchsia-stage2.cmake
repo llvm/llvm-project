@@ -49,6 +49,7 @@ set(CLANG_PLUGIN_SUPPORT OFF CACHE BOOL "")
 
 set(ENABLE_LINKER_BUILD_ID ON CACHE BOOL "")
 set(ENABLE_X86_RELAX_RELOCATIONS ON CACHE BOOL "")
+set(ENABLE_X86_APX_RELAX_RELOCATIONS OFF CACHE BOOL "")
 
 # TODO(#67176): relative-vtables doesn't play well with different default
 # visibilities. Making everything hidden visibility causes other complications

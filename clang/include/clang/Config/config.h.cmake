@@ -72,6 +72,9 @@
 /* enable x86 relax relocations by default */
 #cmakedefine01 ENABLE_X86_RELAX_RELOCATIONS
 
+/* enable x86 APX relax relocations by default */
+#cmakedefine01 ENABLE_X86_APX_RELAX_RELOCATIONS
+
 /* Enable IEEE binary128 as default long double format on PowerPC Linux. */
 #cmakedefine01 PPC_LINUX_DEFAULT_IEEELONGDOUBLE
 

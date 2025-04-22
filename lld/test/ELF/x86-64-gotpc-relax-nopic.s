@@ -1,8 +1,13 @@
 # REQUIRES: x86
+# RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t.o -x86-apx-relax-relocations=true
+# RUN: ld.lld %t.o -o %t1
+# RUN: llvm-readobj --symbols -r %t1 | FileCheck --check-prefix=SYMRELOC %s
+# RUN: llvm-objdump -d --no-show-raw-insn --print-imm-hex %t1 | FileCheck --check-prefixes=DISASM,APXRELAX %s
+
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t.o
 # RUN: ld.lld %t.o -o %t1
 # RUN: llvm-readobj --symbols -r %t1 | FileCheck --check-prefix=SYMRELOC %s
-# RUN: llvm-objdump -d --no-show-raw-insn --print-imm-hex %t1 | FileCheck --check-prefix=DISASM %s
+# RUN: llvm-objdump -d --no-show-raw-insn --print-imm-hex %t1 | FileCheck --check-prefixes=DISASM,NOAPXRELAX %s
 
 ## There is no relocations.
 # SYMRELOC:      Relocations [
@@ -34,15 +39,25 @@
 # DISASM-NEXT:                 subq  $0x203290, %rbp
 # DISASM-NEXT:                 xorq  $0x203290, %r8
 # DISASM-NEXT:                 testq $0x203290, %r15
-# DISASM-NEXT:   20123f:       adcq  $0x203290, %r16
-# DISASM-NEXT:                 addq  $0x203290, %r17
-# DISASM-NEXT:                 andq  $0x203290, %r18
-# DISASM-NEXT:                 cmpq  $0x203290, %r19
-# DISASM-NEXT:                 orq   $0x203290, %r20
-# DISASM-NEXT:                 sbbq  $0x203290, %r21
-# DISASM-NEXT:                 subq  $0x203290, %r22
-# DISASM-NEXT:                 xorq  $0x203290, %r23
-# DISASM-NEXT:                 testq $0x203290, %r24
+# APXRELAX-NEXT:   20123f:       adcq  $0x203290, %r16
+# APXRELAX-NEXT:                 addq  $0x203290, %r17
+# APXRELAX-NEXT:                 andq  $0x203290, %r18
+# APXRELAX-NEXT:                 cmpq  $0x203290, %r19
+# APXRELAX-NEXT:                 orq   $0x203290, %r20
+# APXRELAX-NEXT:                 sbbq  $0x203290, %r21
+# APXRELAX-NEXT:                 subq  $0x203290, %r22
+# APXRELAX-NEXT:                 xorq  $0x203290, %r23
+# APXRELAX-NEXT:                 testq $0x203290, %r24
+
+# NOAPXRELAX-NEXT:   20123f:       adcq  0x1041(%rip), %r16
+# NOAPXRELAX-NEXT:                 addq  0x1039(%rip), %r17
+# NOAPXRELAX-NEXT:                 andq  0x1031(%rip), %r18
+# NOAPXRELAX-NEXT:                 cmpq  0x1029(%rip), %r19
+# NOAPXRELAX-NEXT:                 orq   0x1021(%rip), %r20
+# NOAPXRELAX-NEXT:                 sbbq  0x1019(%rip), %r21
+# NOAPXRELAX-NEXT:                 subq  0x1011(%rip), %r22
+# NOAPXRELAX-NEXT:                 xorq  0x1009(%rip), %r23
+# NOAPXRELAX-NEXT:                 testq  %r24, 0x1001(%rip)
 
 # RUN: ld.lld --hash-style=sysv -shared %t.o -o %t2
 # RUN: llvm-readobj -S -r -d %t2 | FileCheck --check-prefix=SEC-PIC    %s

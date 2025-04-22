@@ -1,5 +1,5 @@
 # REQUIRES: x86
-# RUN: llvm-mc -filetype=obj -triple=x86_64 %s -o %t.o
+# RUN: llvm-mc -filetype=obj -triple=x86_64 %s -o %t.o -x86-apx-relax-relocations=true
 # RUN: echo '.tbss; .globl c; c: .zero 4' | llvm-mc -filetype=obj -triple=x86_64 - -o %t1.o
 # RUN: ld.lld -shared -soname=t1.so %t1.o -o %t1.so
 
@@ -17,6 +17,28 @@
 # RUN: ld.lld %t.o %t1.so -o %t
 # RUN: llvm-readobj -r %t | FileCheck --check-prefix=IE-REL %s
 # RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t | FileCheck --check-prefix=IE %s
+
+
+# RUN: llvm-mc -filetype=obj -triple=x86_64 %s -o %t.o
+# RUN: echo '.tbss; .globl c; c: .zero 4' | llvm-mc -filetype=obj -triple=x86_64 - -o %t1.o
+# RUN: ld.lld -shared -soname=t1.so %t1.o -o %t1.so
+
+# RUN: ld.lld -shared %t.o %t1.o -o %t.so
+# RUN: llvm-readobj -r -x .got %t.so | FileCheck --check-prefix=GD-RELA %s
+# RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t.so | FileCheck --check-prefix=GD %s
+
+# RUN: ld.lld -shared %t.o %t1.o -o %t-rel.so -z rel
+# RUN: llvm-readobj -r -x .got %t-rel.so | FileCheck --check-prefix=GD-REL %s
+
+# RUN: ld.lld %t.o %t1.o -o %t
+# --no-relax
+# RUN: llvm-readelf -r %t | FileCheck --check-prefix=NOREL %s
+# RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t | FileCheck --check-prefix=LE_NOAPXRELAX %s
+
+# RUN: ld.lld %t.o %t1.so -o %t
+# RUN: llvm-readobj -r %t | FileCheck --check-prefix=IE-REL %s
+# RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t | FileCheck --check-prefix=IE %s
+
 
 # GD-RELA:      .rela.dyn {
 # GD-RELA-NEXT:   0x23E0 R_X86_64_TLSDESC - 0xB
@@ -78,10 +100,15 @@
 # LE-NEXT: nop
 # LE-NEXT: movl %fs:(%rax), %eax
 ## tpoff(c) = st_value(c) - tls_size = -4
-# LE:      movq $-4, %r16
-# LE-NEXT: movq %r16, %rax
-# LE-NEXT: nop
-# LE-NEXT: movl %fs:(%rax), %eax
+# LE_APXRELAX:      movq $-4, %r16
+# LE_APXRELAX-NEXT: movq %r16, %rax
+# LE_APXRELAX-NEXT: nop
+# LE_APXRELAX-NEXT: movl %fs:(%rax), %eax
+
+# LE_NOAPXRELAX:      movq $-4, %rax
+# LE_NOAPXRELAX-NEXT: movq %r16, %rax
+# LE_NOAPXRELAX-NEXT: nop
+# LE_NOAPXRELAX-NEXT: movl %fs:(%rax), %eax
 
 # IE-REL:      .rela.dyn {
 # IE-REL-NEXT:   0x202388 R_X86_64_TPOFF64 c 0x0

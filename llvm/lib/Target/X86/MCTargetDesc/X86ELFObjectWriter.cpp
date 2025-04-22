@@ -190,7 +190,8 @@ static unsigned getRelocType64(MCContext &Ctx, SMLoc Loc,
   case X86MCExpr::VK_TLSCALL:
     return ELF::R_X86_64_TLSDESC_CALL;
   case X86MCExpr::VK_TLSDESC:
-    return ((unsigned)Kind == X86::reloc_riprel_4byte_relax_rex2)
+    return ((unsigned)Kind == X86::reloc_riprel_4byte_relax_rex2 &&
+            Ctx.getTargetOptions()->X86APXRelaxRelocations)
                ? ELF::R_X86_64_CODE_4_GOTPC32_TLSDESC
                : ELF::R_X86_64_GOTPC32_TLSDESC;
   case X86MCExpr::VK_TLSGD:
@@ -198,11 +199,13 @@ static unsigned getRelocType64(MCContext &Ctx, SMLoc Loc,
     return ELF::R_X86_64_TLSGD;
   case X86MCExpr::VK_GOTTPOFF:
     checkIs32(Ctx, Loc, Type);
-    if ((unsigned)Kind == X86::reloc_riprel_4byte_movq_load_rex2 ||
-        (unsigned)Kind == X86::reloc_riprel_4byte_relax_rex2)
-      return ELF::R_X86_64_CODE_4_GOTTPOFF;
-    else if ((unsigned)Kind == X86::reloc_riprel_4byte_relax_evex)
-      return ELF::R_X86_64_CODE_6_GOTTPOFF;
+    if (Ctx.getTargetOptions()->X86APXRelaxRelocations) {
+      if ((unsigned)Kind == X86::reloc_riprel_4byte_movq_load_rex2 ||
+          (unsigned)Kind == X86::reloc_riprel_4byte_relax_rex2)
+        return ELF::R_X86_64_CODE_4_GOTTPOFF;
+      else if ((unsigned)Kind == X86::reloc_riprel_4byte_relax_evex)
+        return ELF::R_X86_64_CODE_6_GOTTPOFF;
+    }
     return ELF::R_X86_64_GOTTPOFF;
   case X86MCExpr::VK_TLSLD:
     checkIs32(Ctx, Loc, Type);
@@ -227,7 +230,10 @@ static unsigned getRelocType64(MCContext &Ctx, SMLoc Loc,
       return ELF::R_X86_64_REX_GOTPCRELX;
     case X86::reloc_riprel_4byte_relax_rex2:
     case X86::reloc_riprel_4byte_movq_load_rex2:
-      return ELF::R_X86_64_CODE_4_GOTPCRELX;
+      if (Ctx.getTargetOptions()->X86APXRelaxRelocations)
+        return ELF::R_X86_64_CODE_4_GOTPCRELX;
+      else
+        return ELF::R_X86_64_GOTPCREL;
     }
     llvm_unreachable("unexpected relocation type!");
   case X86MCExpr::VK_GOTPCREL_NORELAX:

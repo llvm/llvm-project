@@ -17,6 +17,8 @@
 #define LLVM_LIB_TARGET_X86_MCTARGETDESC_X86BASEINFO_H
 
 #include "X86MCTargetDesc.h"
+#include "X86RegisterInfo.h"
+#include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -1255,6 +1257,26 @@ inline bool isX86_64ExtendedReg(MCRegister Reg) {
     return true;
   }
   return false;
+}
+
+inline const TargetRegisterClass *
+constrainRegClassToNonRex2(const TargetRegisterClass *RC) {
+  switch (RC->getID()) {
+  default:
+    return RC;
+  case X86::GR8RegClassID:
+    return &X86::GR8_NOREX2RegClass;
+  case X86::GR16RegClassID:
+    return &X86::GR16_NOREX2RegClass;
+  case X86::GR32RegClassID:
+    return &X86::GR32_NOREX2RegClass;
+  case X86::GR64RegClassID:
+    return &X86::GR64_NOREX2RegClass;
+  case X86::GR32_NOSPRegClassID:
+    return &X86::GR32_NOREX2_NOSPRegClass;
+  case X86::GR64_NOSPRegClassID:
+    return &X86::GR64_NOREX2_NOSPRegClass;
+  }
 }
 
 inline bool canUseApxExtendedReg(const MCInstrDesc &Desc) {
