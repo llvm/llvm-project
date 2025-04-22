@@ -366,6 +366,8 @@ BUILTIN(__builtin_r600_read_tidig_z, "Ui", "nc")
 BUILTIN(__builtin_r600_recipsqrt_ieee, "dd", "nc")
 BUILTIN(__builtin_r600_recipsqrt_ieeef, "ff", "nc")
 
+BUILTIN(__builtin_amdgcn_wave_reduce_wrt_divergent_mask_max_i32, "iiii", "nc")
+
 //===----------------------------------------------------------------------===//
 // MFMA builtins.
 //===----------------------------------------------------------------------===//
