@@ -642,7 +642,7 @@ void Symtab::SortSymbolIndexesByValue(std::vector<uint32_t> &indexes,
 
   // Remove any duplicates if requested
   if (remove_duplicates) {
-    auto last = std::unique(indexes.begin(), indexes.end());
+    auto last = llvm::unique(indexes);
     indexes.erase(last, indexes.end());
   }
 }
@@ -1151,9 +1151,7 @@ void Symtab::FindFunctionSymbols(ConstString name, uint32_t name_type_mask,
 
   if (!symbol_indexes.empty()) {
     llvm::sort(symbol_indexes);
-    symbol_indexes.erase(
-        std::unique(symbol_indexes.begin(), symbol_indexes.end()),
-        symbol_indexes.end());
+    symbol_indexes.erase(llvm::unique(symbol_indexes), symbol_indexes.end());
     SymbolIndicesToSymbolContextList(symbol_indexes, sc_list);
   }
 }
