@@ -142,6 +142,13 @@ NamedDecl *Parser::ParseCXXInlineMethodDef(
       SkipUntil(tok::semi);
     }
 
+    Decl *PrevDecl = FnD->getPreviousDecl();
+    if (PrevDecl && isa<FunctionDecl>(PrevDecl) &&
+        PrevDecl->getLexicalDeclContext() == FnD->getLexicalDeclContext()) {
+      Actions.CheckForFunctionRedefinition(FnD->getAsFunction(),
+                                           cast<FunctionDecl>(PrevDecl));
+    }
+
     return FnD;
   }
 

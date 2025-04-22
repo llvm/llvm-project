@@ -274,26 +274,22 @@ void operators() {
 
 namespace gh135506 {
 struct a {
-  // FIXME: We currently don't diagnose these invalid redeclarations if the
-  // second declaration is defaulted or deleted. This probably needs to be
-  // handled in ParseCXXInlineMethodDef() after parsing the defaulted/deleted
-  // body.
-  friend consteval int f() { return 3; }
-  friend consteval int f() = delete("foo");
+  friend consteval int f() { return 3; }    // expected-note {{previous definition is here}}
+  friend consteval int f() = delete("foo"); // expected-error {{redefinition of 'f'}}
 
-  friend consteval int g() { return 3; }
-  friend consteval int g() = delete;
+  friend consteval int g() { return 3; } // expected-note {{previous definition is here}}
+  friend consteval int g() = delete;     // expected-error {{redefinition of 'g'}}
 
-  friend int h() { return 3; }
-  friend int h() = delete;
+  friend int h() { return 3; } // expected-note {{previous definition is here}}
+  friend int h() = delete;     // expected-error {{redefinition of 'h'}}
 
-  friend consteval int i() = delete; // expected-note {{previous definition is here}}
+  friend consteval int i() = delete;     // expected-note {{previous definition is here}}
   friend consteval int i() { return 3; } // expected-error {{redefinition of 'i'}}
 };
 
 struct b {
-  friend consteval bool operator==(b, b) { return true; } // expected-note {{previous declaration is here}}
-  friend consteval bool operator==(b, b) = default; // expected-error {{defaulting this equality comparison operator is not allowed because it was already declared outside the class}}
+  friend consteval bool operator==(b, b) { return true; } // expected-note {{previous definition is here}}
+  friend consteval bool operator==(b, b) = default;       // expected-error {{redefinition of 'operator=='}}
 };
 
 struct c {
