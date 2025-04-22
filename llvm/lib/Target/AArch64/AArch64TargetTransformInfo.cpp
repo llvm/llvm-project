@@ -4923,9 +4923,7 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
         return Invalid;
       break;
     case 16:
-      if (AccumEVT == MVT::i64)
-        Cost *= 2;
-      else if (AccumEVT != MVT::i32)
+      if (AccumEVT != MVT::i32)
         return Invalid;
       break;
     }
