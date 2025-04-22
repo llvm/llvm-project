@@ -274,7 +274,8 @@ InstructionCost VPRecipeBase::computeCost(ElementCount VF,
 bool VPRecipeBase::isPhi() const {
   return (getVPDefID() >= VPFirstPHISC && getVPDefID() <= VPLastPHISC) ||
          (isa<VPInstruction>(this) &&
-          cast<VPInstruction>(this)->getOpcode() == Instruction::PHI);
+          cast<VPInstruction>(this)->getOpcode() == Instruction::PHI) ||
+         isa<VPIRPhi>(this);
 }
 
 bool VPRecipeBase::isScalarCast() const {
@@ -1211,6 +1212,7 @@ void VPIRMetadata::applyMetadata(Instruction &I) const {
 
 void VPWidenCallRecipe::execute(VPTransformState &State) {
   assert(State.VF.isVector() && "not widening");
+  assert(Variant != nullptr && "Can't create vector function.");
 
   FunctionType *VFTy = Variant->getFunctionType();
   // Add return type if intrinsic is overloaded on it.
@@ -1227,8 +1229,6 @@ void VPWidenCallRecipe::execute(VPTransformState &State) {
     Args.push_back(Arg);
   }
 
-  assert(Variant != nullptr && "Can't create vector function.");
-
   auto *CI = cast_or_null<CallInst>(getUnderlyingValue());
   SmallVector<OperandBundleDef, 1> OpBundles;
   if (CI)
@@ -1237,6 +1237,7 @@ void VPWidenCallRecipe::execute(VPTransformState &State) {
   CallInst *V = State.Builder.CreateCall(Variant, Args, OpBundles);
   applyFlags(*V);
   applyMetadata(*V);
+  V->setCallingConv(Variant->getCallingConv());
 
   if (!V->getType()->isVoidTy())
     State.set(this, V);

@@ -3221,7 +3221,6 @@ SITargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
                               const SDLoc &DL, SelectionDAG &DAG) const {
   MachineFunction &MF = DAG.getMachineFunction();
   SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
-  const SIRegisterInfo *TRI = getSubtarget()->getRegisterInfo();
 
   if (AMDGPU::isKernel(CallConv)) {
     return AMDGPUTargetLowering::LowerReturn(Chain, CallConv, isVarArg, Outs,
@@ -3248,8 +3247,6 @@ SITargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
   SmallVector<SDValue, 48> RetOps;
   RetOps.push_back(Chain); // Operand #0 = Chain (updated below)
 
-  SDValue ReadFirstLane =
-      DAG.getTargetConstant(Intrinsic::amdgcn_readfirstlane, DL, MVT::i32);
   // Copy the result values into the output registers.
   for (unsigned I = 0, RealRVLocIdx = 0, E = RVLocs.size(); I != E;
        ++I, ++RealRVLocIdx) {
@@ -3277,9 +3274,7 @@ SITargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
     default:
       llvm_unreachable("Unknown loc info!");
     }
-    if (TRI->isSGPRPhysReg(VA.getLocReg()))
-      Arg = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, Arg.getValueType(),
-                        ReadFirstLane, Arg);
+
     Chain = DAG.getCopyToReg(Chain, DL, VA.getLocReg(), Arg, Glue);
     Glue = Chain.getValue(1);
     RetOps.push_back(DAG.getRegister(VA.getLocReg(), VA.getLocVT()));
