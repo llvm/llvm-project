@@ -699,8 +699,7 @@ mlir::LogicalResult cir::VectorType::verify(
       isAnyFloatingPointType(elementType))
     return success();
 
-  return emitError() << "expected LLVM-compatible fixed-vector type "
-                        "to be either builtin or LLVM dialect type";
+  return emitError() << "unsupported element type for CIR vector";
 }
 
 //===----------------------------------------------------------------------===//

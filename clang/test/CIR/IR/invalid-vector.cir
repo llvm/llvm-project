@@ -4,7 +4,7 @@
 
 module  {
 
-// expected-error @below {{expected LLVM-compatible fixed-vector type}}
+// expected-error @below {{unsupported element type for CIR vector}}
 cir.global external @vec_b = #cir.zero : !cir.vector<4 x !cir.array<!s32i x 10>>
 
 }
