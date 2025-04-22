@@ -107,7 +107,8 @@ CXString createCXString(CXStringBuf *buf) {
   return Str;
 }
 
-CXStringSet *createSet(const std::vector<std::string> &Strings) {
+template <typename StringTy>
+static CXStringSet *createSetImpl(const std::vector<StringTy> &Strings) {
   CXStringSet *Set = new CXStringSet;
   Set->Count = Strings.size();
   Set->Strings = new CXString[Set->Count];
@@ -116,6 +117,13 @@ CXStringSet *createSet(const std::vector<std::string> &Strings) {
   return Set;
 }
 
+CXStringSet *createSet(const std::vector<std::string> &Strings) {
+  return createSetImpl(Strings);
+}
+
+CXStringSet *createSet(const std::vector<StringRef> &Strings) {
+  return createSetImpl(Strings);
+}
 
 //===----------------------------------------------------------------------===//
 // String pools.
