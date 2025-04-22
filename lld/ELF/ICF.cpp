@@ -375,6 +375,18 @@ bool ICF<ELFT>::variableEq(const InputSection *secA, Relocs<RelTy> ra,
     auto *da = cast<Defined>(&sa);
     auto *db = cast<Defined>(&sb);
 
+    // Merging sections here also means that we would mark corresponding
+    // relocation target symbols as equivalent, done later in ICF during section
+    // folding. To preserve correctness for such symbol equivalence (see
+    // GH#129122 for details), we also have to disable section merging here:
+    // 1. We don't merge local symbols into global symbols, or vice-versa. There
+    // are post-icf passes that assert on this behavior.
+    // 2. We also don't merge two local symbols together. There are post-icf
+    // passes that expect to see no duplicates when iterating over local
+    // symbols.
+    if (!da->isGlobal() || !db->isGlobal())
+      return false;
+
     // We already dealt with absolute and non-InputSection symbols in
     // constantEq, and for InputSections we have already checked everything
     // except the equivalence class.
