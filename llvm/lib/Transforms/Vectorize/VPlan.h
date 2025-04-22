@@ -1322,8 +1322,8 @@ public:
     LLVMContext &Ctx = Ty->getContext();
     AttributeSet Attrs = Intrinsic::getFnAttributes(Ctx, VectorIntrinsicID);
     MemoryEffects ME = Attrs.getMemoryEffects();
-    MayReadFromMemory = ME.onlyWritesMemory();
-    MayWriteToMemory = ME.onlyReadsMemory();
+    MayReadFromMemory = !ME.onlyWritesMemory();
+    MayWriteToMemory = !ME.onlyReadsMemory();
     MayHaveSideEffects = MayWriteToMemory ||
                          !Attrs.hasAttribute(Attribute::NoUnwind) ||
                          !Attrs.hasAttribute(Attribute::WillReturn);
