@@ -66,8 +66,7 @@ inline bool inline_undefined_fnc();
 constexpr bool result_inline_undefined_fnc = inline_undefined_fnc();
 // ALL-error@-1 {{constexpr variable 'result_inline_undefined_fnc' must be initialized by a constant expression}}
 // ALLNORMAL-note@-2 {{non-constexpr function 'inline_undefined_fnc' cannot be used in a constant expression}}
-// ALLIMPLICITOLD-note@-3 {{undefined function 'inline_undefined_fnc' cannot be used in a constant expression}}
-// ALLIMPLICITNEW-note@-4 {{non-inline function 'inline_undefined_fnc' is not implicitly constexpr}}
+// ALLIMPLICIT-note@-3 {{undefined function 'inline_undefined_fnc' cannot be used in a constant expression}}
 
 // =============================================
 // 5) lambda function
