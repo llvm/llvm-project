@@ -160,7 +160,7 @@ namespace {
       return static_cast<MCFixupKind>(FirstLiteralRelocationKind + Type);
     }
 
-    const MCFixupKindInfo &getFixupKindInfo(MCFixupKind Kind) const override {
+    MCFixupKindInfo getFixupKindInfo(MCFixupKind Kind) const override {
       const static MCFixupKindInfo InfosBE[Sparc::NumTargetFixupKinds] = {
         // name                    offset bits  flags
         { "fixup_sparc_call30",     2,     30,  MCFixupKindInfo::FKF_IsPCRel },
