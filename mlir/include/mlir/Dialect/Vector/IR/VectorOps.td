@@ -2259,7 +2259,9 @@ def Vector_ShapeCastOp :
 
     ```mlir
     %1 = vector.shape_cast %0 : vector<4x3xf32> to vector<3x2x2xf32>
-    %2 = vector.shape_cast %0 : vector<[2]x3x[4]xi8> to vector<3x[1]x[8]xi8>
+
+    // with 2 scalable dimensions (number of which must be preserved).
+    %3 = vector.shape_cast %2 : vector<[2]x3x[4]xi8> to vector<3x[1]x[8]xi8>
     ```
   }];
   let extraClassDeclaration = [{
