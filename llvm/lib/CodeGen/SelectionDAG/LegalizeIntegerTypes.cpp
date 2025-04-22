@@ -398,10 +398,9 @@ SDValue DAGTypeLegalizer::PromoteIntRes_Atomic0(AtomicSDNode *N) {
     }
   }
 
-  SDValue Res = DAG.getAtomicLoad(ExtType, SDLoc(N),
-                                  N->getMemoryVT(), ResVT,
-                                  N->getChain(), N->getBasePtr(),
-                                  N->getMemOperand());
+  SDValue Res =
+      DAG.getAtomicLoad(ExtType, SDLoc(N), N->getMemoryVT(), ResVT,
+                        N->getChain(), N->getBasePtr(), N->getMemOperand());
 
   // Legalize the chain result - switch anything that used the old chain to
   // use the new one.

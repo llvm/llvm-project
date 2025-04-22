@@ -1548,7 +1548,7 @@ class AtomicSDNode : public MemSDNode {
 public:
   AtomicSDNode(unsigned Order, const DebugLoc &dl, unsigned Opc, SDVTList VTL,
                EVT MemVT, MachineMemOperand *MMO, ISD::LoadExtType ETy)
-    : MemSDNode(Opc, Order, dl, VTL, MemVT, MMO) {
+      : MemSDNode(Opc, Order, dl, VTL, MemVT, MMO) {
     assert(((Opc != ISD::ATOMIC_LOAD && Opc != ISD::ATOMIC_STORE) ||
             MMO->isAtomic()) && "then why are we using an AtomicSDNode?");
     assert((Opc == ISD::ATOMIC_LOAD || ETy == ISD::NON_EXTLOAD) &&

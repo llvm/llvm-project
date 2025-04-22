@@ -1329,7 +1329,8 @@ public:
   /// operands.
   SDValue getAtomic(unsigned Opcode, const SDLoc &dl, EVT MemVT,
                     SDVTList VTList, ArrayRef<SDValue> Ops,
-                    MachineMemOperand *MMO, ISD::LoadExtType ExtType = ISD::NON_EXTLOAD);
+                    MachineMemOperand *MMO,
+                    ISD::LoadExtType ExtType = ISD::NON_EXTLOAD);
 
   SDValue getAtomicLoad(ISD::LoadExtType ExtType, const SDLoc &dl, EVT MemVT,
                         EVT VT, SDValue Chain, SDValue Ptr,

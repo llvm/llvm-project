@@ -6923,8 +6923,8 @@ SDValue SystemZTargetLowering::lowerLoadF16(SDValue Op,
   if (auto *AtomicLd = dyn_cast<AtomicSDNode>(Op.getNode())) {
     assert(EVT(RegVT) == AtomicLd->getMemoryVT() && "Unhandled f16 load");
     NewLd = DAG.getAtomicLoad(ISD::EXTLOAD, DL, MVT::i16, MVT::i64,
-                          AtomicLd->getChain(), AtomicLd->getBasePtr(),
-                          AtomicLd->getMemOperand());
+                              AtomicLd->getChain(), AtomicLd->getBasePtr(),
+                              AtomicLd->getMemOperand());
   } else {
     LoadSDNode *Ld = cast<LoadSDNode>(Op.getNode());
     assert(EVT(RegVT) == Ld->getMemoryVT() && "Unhandled f16 load");
