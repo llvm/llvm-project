@@ -561,7 +561,7 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
             "Coindexed scalar actual argument must be associated with a scalar %s"_err_en_US,
             dummyName);
       }
-      bool actualIsArrayElement{IsArrayElement(actual)};
+      bool actualIsArrayElement{IsArrayElement(actual) != nullptr};
       bool actualIsCKindCharacter{
           actualType.type().category() == TypeCategory::Character &&
           actualType.type().kind() == 1};
