@@ -2380,6 +2380,51 @@ static Value *optimizeIntegerToVectorInsertions(BitCastInst &CI,
   return Result;
 }
 
+/// If the input is (extractelement (bitcast X), Idx) and the source and
+/// destination types are vectors, we are performing a vector extract from X. We
+/// can replace the extractelement+bitcast with a shufflevector, avoiding the
+/// final scalar->vector bitcast. This pattern is usually handled better by the
+/// backend.
+///
+/// Example:
+///   %bc = bitcast <8 x i32> %X to <2 x i128>
+///   %ext = extractelement <2 x i128> %bc1, i64 1
+///   bitcast i128 %ext to <2 x i64>
+///   --->
+///   %bc = bitcast <8 x i32> %X to <4 x i64>
+///   shufflevector <4 x i64> %bc, <4 x i64> poison, <2 x i32> <i32 2, i32 3>
+static Instruction *foldBitCastExtElt(BitCastInst &BitCast,
+                                      InstCombiner::BuilderTy &Builder) {
+  Value *X;
+  uint64_t Index;
+  if (!match(
+          BitCast.getOperand(0),
+          m_OneUse(m_ExtractElt(m_BitCast(m_Value(X)), m_ConstantInt(Index)))))
+    return nullptr;
+
+  auto *SrcTy = dyn_cast<FixedVectorType>(X->getType());
+  auto *DstTy = dyn_cast<FixedVectorType>(BitCast.getType());
+  if (!SrcTy || !DstTy)
+    return nullptr;
+
+  // Check if the mask indices would overflow.
+  unsigned NumElts = DstTy->getNumElements();
+  if (Index > INT32_MAX || NumElts > INT32_MAX ||
+      (Index + 1) * NumElts - 1 > INT32_MAX)
+    return nullptr;
+
+  unsigned DstEltWidth = DstTy->getScalarSizeInBits();
+  unsigned SrcVecWidth = SrcTy->getPrimitiveSizeInBits();
+  assert((SrcVecWidth % DstEltWidth == 0) && "Invalid types.");
+  auto *NewVecTy =
+      FixedVectorType::get(DstTy->getElementType(), SrcVecWidth / DstEltWidth);
+  auto *NewBC = Builder.CreateBitCast(X, NewVecTy, "bc");
+
+  unsigned StartIdx = Index * NumElts;
+  auto Mask = llvm::to_vector<16>(llvm::seq<int>(StartIdx, StartIdx + NumElts));
+  return new ShuffleVectorInst(NewBC, Mask);
+}
+
 /// Canonicalize scalar bitcasts of extracted elements into a bitcast of the
 /// vector followed by extract element. The backend tends to handle bitcasts of
 /// vectors better than bitcasts of scalars because vector registers are
@@ -2864,6 +2909,9 @@ Instruction *InstCombinerImpl::visitBitCast(BitCastInst &CI) {
       return I;
 
   if (Instruction *I = canonicalizeBitCastExtElt(CI, *this))
+    return I;
+
+  if (Instruction *I = foldBitCastExtElt(CI, Builder))
     return I;
 
   if (Instruction *I = foldBitCastBitwiseLogic(CI, Builder))

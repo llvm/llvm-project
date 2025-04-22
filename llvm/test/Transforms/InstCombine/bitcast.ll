@@ -484,9 +484,8 @@ define double @bitcast_extelt8(<1 x i64> %A) {
 
 define <2 x i64> @bitcast_extelt9(<8 x i32> %A) {
 ; CHECK-LABEL: @bitcast_extelt9(
-; CHECK-NEXT:    [[BC1:%.*]] = bitcast <8 x i32> [[A:%.*]] to <2 x i128>
-; CHECK-NEXT:    [[EXT:%.*]] = extractelement <2 x i128> [[BC1]], i64 1
-; CHECK-NEXT:    [[BC2:%.*]] = bitcast i128 [[EXT]] to <2 x i64>
+; CHECK-NEXT:    [[BC:%.*]] = bitcast <8 x i32> [[A:%.*]] to <4 x i64>
+; CHECK-NEXT:    [[BC2:%.*]] = shufflevector <4 x i64> [[BC]], <4 x i64> poison, <2 x i32> <i32 2, i32 3>
 ; CHECK-NEXT:    ret <2 x i64> [[BC2]]
 ;
   %bc1 = bitcast <8 x i32> %A to <2 x i128>
@@ -499,9 +498,8 @@ define <2 x i64> @bitcast_extelt9(<8 x i32> %A) {
 
 define <2 x i8> @bitcast_extelt10(<8 x i32> %A) {
 ; CHECK-LABEL: @bitcast_extelt10(
-; CHECK-NEXT:    [[BC1:%.*]] = bitcast <8 x i32> [[A:%.*]] to <16 x i16>
-; CHECK-NEXT:    [[EXT:%.*]] = extractelement <16 x i16> [[BC1]], i64 3
-; CHECK-NEXT:    [[BC2:%.*]] = bitcast i16 [[EXT]] to <2 x i8>
+; CHECK-NEXT:    [[BC:%.*]] = bitcast <8 x i32> [[A:%.*]] to <32 x i8>
+; CHECK-NEXT:    [[BC2:%.*]] = shufflevector <32 x i8> [[BC]], <32 x i8> poison, <2 x i32> <i32 6, i32 7>
 ; CHECK-NEXT:    ret <2 x i8> [[BC2]]
 ;
   %bc1 = bitcast <8 x i32> %A to <16 x i16>
