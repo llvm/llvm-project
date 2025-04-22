@@ -3807,7 +3807,7 @@ private:
     SmallVector<Expr *> getAllExprs() {
       SmallVector<Expr *> Out;
       Out.push_back(DevNumExpr);
-      Out.insert(Out.end(), QueueIdExprs.begin(), QueueIdExprs.end());
+      llvm::append_range(Out, QueueIdExprs);
       return Out;
     }
   };
