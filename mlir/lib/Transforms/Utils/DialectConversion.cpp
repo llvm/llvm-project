@@ -861,8 +861,10 @@ struct ConversionPatternRewriterImpl : public RewriterBase::Listener {
   /// conversion process succeeds.
   void applyRewrites();
 
-  /// Reset the state of the rewriter to a previously saved point.
-  void resetState(RewriterState state);
+  /// Reset the state of the rewriter to a previously saved point. Optionally,
+  /// the name of the pattern that triggered the rollback can specified for
+  /// debugging purposes.
+  void resetState(RewriterState state, StringRef patternName = "");
 
   /// Append a rewrite. Rewrites are committed upon success and rolled back upon
   /// failure.
@@ -873,8 +875,9 @@ struct ConversionPatternRewriterImpl : public RewriterBase::Listener {
   }
 
   /// Undo the rewrites (motions, splits) one by one in reverse order until
-  /// "numRewritesToKeep" rewrites remains.
-  void undoRewrites(unsigned numRewritesToKeep = 0);
+  /// "numRewritesToKeep" rewrites remains. Optionally, the name of the pattern
+  /// that triggered the rollback can specified for debugging purposes.
+  void undoRewrites(unsigned numRewritesToKeep = 0, StringRef patternName = "");
 
   /// Remap the given values to those with potentially different types. Returns
   /// success if the values could be remapped, failure otherwise. `valueDiagTag`
@@ -1204,9 +1207,10 @@ RewriterState ConversionPatternRewriterImpl::getCurrentState() {
   return RewriterState(rewrites.size(), ignoredOps.size(), replacedOps.size());
 }
 
-void ConversionPatternRewriterImpl::resetState(RewriterState state) {
+void ConversionPatternRewriterImpl::resetState(RewriterState state,
+                                               StringRef patternName) {
   // Undo any rewrites.
-  undoRewrites(state.numRewrites);
+  undoRewrites(state.numRewrites, patternName);
 
   // Pop all of the recorded ignored operations that are no longer valid.
   while (ignoredOps.size() != state.numIgnoredOperations)
@@ -1216,10 +1220,18 @@ void ConversionPatternRewriterImpl::resetState(RewriterState state) {
     replacedOps.pop_back();
 }
 
-void ConversionPatternRewriterImpl::undoRewrites(unsigned numRewritesToKeep) {
+void ConversionPatternRewriterImpl::undoRewrites(unsigned numRewritesToKeep,
+                                                 StringRef patternName) {
   for (auto &rewrite :
-       llvm::reverse(llvm::drop_begin(rewrites, numRewritesToKeep)))
+       llvm::reverse(llvm::drop_begin(rewrites, numRewritesToKeep))) {
+    if (!config.allowPatternRollback &&
+        !isa<UnresolvedMaterializationRewrite>(rewrite)) {
+      // Unresolved materializations can always be rolled back (erased).
+      llvm::report_fatal_error("pattern '" + patternName +
+                               "' rollback of IR modifications requested");
+    }
     rewrite->rollback();
+  }
   rewrites.resize(numRewritesToKeep);
 }
 
@@ -2158,7 +2170,7 @@ OperationLegalizer::legalizeWithPattern(Operation *op,
     });
     if (config.listener)
       config.listener->notifyPatternEnd(pattern, failure());
-    rewriterImpl.resetState(curState);
+    rewriterImpl.resetState(curState, pattern.getDebugName());
     appliedPatterns.erase(&pattern);
   };
 
@@ -2168,8 +2180,13 @@ OperationLegalizer::legalizeWithPattern(Operation *op,
     assert(rewriterImpl.pendingRootUpdates.empty() && "dangling root updates");
     auto result = legalizePatternResult(op, pattern, rewriter, curState);
     appliedPatterns.erase(&pattern);
-    if (failed(result))
-      rewriterImpl.resetState(curState);
+    if (failed(result)) {
+      if (!rewriterImpl.config.allowPatternRollback)
+        op->emitError("pattern '")
+            << pattern.getDebugName()
+            << "' produced IR that could not be legalized";
+      rewriterImpl.resetState(curState, pattern.getDebugName());
+    }
     if (config.listener)
       config.listener->notifyPatternEnd(pattern, result);
     return result;
@@ -2674,9 +2691,20 @@ LogicalResult OperationConverter::convertOperations(ArrayRef<Operation *> ops) {
   ConversionPatternRewriter rewriter(ops.front()->getContext(), config);
   ConversionPatternRewriterImpl &rewriterImpl = rewriter.getImpl();
 
-  for (auto *op : toConvert)
-    if (failed(convert(rewriter, op)))
-      return rewriterImpl.undoRewrites(), failure();
+  for (auto *op : toConvert) {
+    if (failed(convert(rewriter, op))) {
+      // Dialect conversion failed.
+      if (rewriterImpl.config.allowPatternRollback) {
+        // Rollback is allowed: restore the original IR.
+        rewriterImpl.undoRewrites();
+      } else {
+        // Rollback is not allowed: apply all modifications that have been
+        // performed so far.
+        rewriterImpl.applyRewrites();
+      }
+      return failure();
+    }
+  }
 
   // After a successful conversion, apply rewrites.
   rewriterImpl.applyRewrites();
