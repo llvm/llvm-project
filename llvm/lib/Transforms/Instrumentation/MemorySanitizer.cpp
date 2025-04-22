@@ -286,7 +286,7 @@ static cl::opt<MSanEmbedFaultingInstructionMode> ClEmbedFaultingInst(
         clEnumValN(
             MSanEmbedFaultingInstructionMode::Full, "full",
             "Embed the complete LLVM IR instruction (including operands).")),
-    cl::Hidden, cl::init(MSanEmbedFaultingInstructionMode::None));
+    cl::Hidden, cl::init(MSanEmbedFaultingInstructionMode::Name));
 
 static cl::opt<bool>
     ClHandleICmpExact("msan-handle-icmp-exact",
