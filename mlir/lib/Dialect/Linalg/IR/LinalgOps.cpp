@@ -2289,7 +2289,7 @@ OpFoldResult IndexOp::fold(FoldAdaptor adaptor) {
   // Index of unit dims is always 0.
   SmallVector<int64_t, 4> loopBounds = linalgOp.getStaticLoopRanges();
   uint64_t dim = getDim();
-  assert(dim < loopBounds.size());
+  assert(dim < loopBounds.size() && "Dim is out of bounds");
   if (loopBounds[dim] == 1)
     return IntegerAttr::get(IndexType::get(getContext()), 0);
 
