@@ -2801,6 +2801,10 @@ static bool isTriviallyCopyableTypeImpl(const QualType &type,
   if (type.hasNonTrivialObjCLifetime())
     return false;
 
+  QualType::PrimitiveCopyKind PCK = type.isNonTrivialToPrimitiveCopy();
+  if (PCK != QualType::PCK_Trivial && PCK != QualType::PCK_VolatileTrivial)
+    return false;
+
   // C++11 [basic.types]p9 - See Core 2094
   //   Scalar types, trivially copyable class types, arrays of such types, and
   //   cv-qualified versions of these types are collectively
@@ -2968,6 +2972,8 @@ QualType::PrimitiveCopyKind QualType::isNonTrivialToPrimitiveCopy() const {
   case Qualifiers::OCL_Weak:
     return PCK_ARCWeak;
   default:
+    if (hasAddressDiscriminatedPointerAuth())
+      return PCK_PtrAuth;
     return Qs.hasVolatile() ? PCK_VolatileTrivial : PCK_Trivial;
   }
 }

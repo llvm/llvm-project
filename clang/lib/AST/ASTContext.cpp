@@ -8372,6 +8372,9 @@ bool ASTContext::BlockRequiresCopying(QualType Ty,
     return true;
   }
 
+  if (Ty.hasAddressDiscriminatedPointerAuth())
+    return true;
+
   // The block needs copy/destroy helpers if Ty is non-trivial to destructively
   // move or destroy.
   if (Ty.isNonTrivialToPrimitiveDestructiveMove() || Ty.isDestructedType())

@@ -13395,6 +13395,12 @@ struct DiagNonTrivalCUnionCopyVisitor
         asDerived().visit(FD->getType(), FD, InNonTrivialUnion);
   }
 
+  void visitPtrAuth(QualType QT, const FieldDecl *FD, bool InNonTrivialUnion) {
+    if (InNonTrivialUnion)
+      S.Diag(FD->getLocation(), diag::note_non_trivial_c_union)
+          << 1 << 2 << QT << FD->getName();
+  }
+
   void preVisit(QualType::PrimitiveCopyKind PCK, QualType QT,
                 const FieldDecl *FD, bool InNonTrivialUnion) {}
   void visitTrivial(QualType QT, const FieldDecl *FD, bool InNonTrivialUnion) {}

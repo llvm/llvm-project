@@ -1507,6 +1507,9 @@ public:
     /// with the ARC __weak qualifier.
     PCK_ARCWeak,
 
+    /// The type is an address-discriminated signed pointer type.
+    PCK_PtrAuth,
+
     /// The type is a struct containing a field whose type is neither
     /// PCK_Trivial nor PCK_VolatileTrivial.
     /// Note that a C++ struct type does not necessarily match this; C++ copying
