@@ -107,7 +107,6 @@ declare ptr @bar(ptr) uwtable optsize noinline ssp
 define hidden ptr @thingWithValue(ptr %self) uwtable ssp {
 ; CHECK-LABEL: thingWithValue:
 ; CHECK:       ## %bb.0: ## %entry
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    je _bar ## TAILCALL
 ; CHECK-NEXT:  ## %bb.1: ## %someThingWithValue.exit
