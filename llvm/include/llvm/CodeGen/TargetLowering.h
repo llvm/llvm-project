@@ -1823,6 +1823,8 @@ public:
   virtual bool ShouldShrinkFPConstant(EVT) const { return true; }
 
   /// Return true if it is profitable to reduce a load to a smaller type.
+  /// \p ByteOffset is only set if we know the pointer offset at compile time
+  /// otherwise we should assume that additional pointer math is required.
   /// Example: (i16 (trunc (i32 (load x))) -> i16 load x
   /// Example: (i16 (trunc (srl (i32 (load x)), 16)) -> i16 load x+2
   virtual bool shouldReduceLoadWidth(
