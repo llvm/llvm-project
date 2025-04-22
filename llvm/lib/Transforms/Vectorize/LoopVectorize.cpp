@@ -4341,11 +4341,11 @@ static bool hasReplicatorRegion(VPlan &Plan) {
                 [](auto *VPRB) { return VPRB->isReplicator(); });
 }
 
+#ifndef NDEBUG
 /// Estimate the register usage for \p Plan and vectorization factors in \p VFs
 /// by calculating the highest number of values that are live at a single
 /// location as a rough estimate. Returns the register usage for each VF in \p
 /// VFs.
-#ifndef NDEBUG
 static SmallVector<LoopVectorizationCostModel::RegisterUsage, 8>
 calculateRegisterUsage(VPlan &Plan, ArrayRef<ElementCount> VFs,
                        const TargetTransformInfo &TTI,
