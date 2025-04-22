@@ -863,8 +863,12 @@ bool Compiler<Emitter>::VisitBinaryOperator(const BinaryOperator *BO) {
       return this->VisitPointerArithBinOp(BO);
   }
 
-  // Assignmentes require us to evalute the RHS first.
+  // Assignments require us to evalute the RHS first.
   if (BO->getOpcode() == BO_Assign) {
+    // We don't support assignments in C.
+    if (!Ctx.getLangOpts().CPlusPlus)
+      return this->emitInvalid(BO);
+
     if (!visit(RHS) || !visit(LHS))
       return false;
     if (!this->emitFlip(*LT, *RT, BO))
@@ -4057,7 +4061,7 @@ template <class Emitter> bool Compiler<Emitter>::visitBool(const Expr *E) {
     return true;
 
   // Convert pointers to bool.
-  if (T == PT_Ptr || T == PT_FnPtr) {
+  if (T == PT_Ptr) {
     if (!this->emitNull(*T, 0, nullptr, E))
       return false;
     return this->emitNE(*T, E);
@@ -4103,8 +4107,6 @@ bool Compiler<Emitter>::visitZeroInitializer(PrimType T, QualType QT,
   case PT_Ptr:
     return this->emitNullPtr(Ctx.getASTContext().getTargetNullPointerValue(QT),
                              nullptr, E);
-  case PT_FnPtr:
-    return this->emitNullFnPtr(0, nullptr, E);
   case PT_MemberPtr:
     return this->emitNullMemberPtr(0, nullptr, E);
   case PT_Float:
@@ -4255,7 +4257,6 @@ bool Compiler<Emitter>::emitConst(T Value, PrimType Ty, const Expr *E) {
   case PT_Bool:
     return this->emitConstBool(Value, E);
   case PT_Ptr:
-  case PT_FnPtr:
   case PT_MemberPtr:
   case PT_Float:
   case PT_IntAP:
@@ -4956,7 +4957,7 @@ bool Compiler<Emitter>::VisitCallExpr(const CallExpr *E) {
     // If we know the callee already, check the known parametrs for nullability.
     if (FuncDecl && NonNullArgs[ArgIndex]) {
       PrimType ArgT = classify(Arg).value_or(PT_Ptr);
-      if (ArgT == PT_Ptr || ArgT == PT_FnPtr) {
+      if (ArgT == PT_Ptr) {
         if (!this->emitCheckNonNullArg(ArgT, Arg))
           return false;
       }
@@ -5997,7 +5998,7 @@ bool Compiler<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
     if (!this->visit(SubExpr))
       return false;
 
-    if (T == PT_Ptr || T == PT_FnPtr) {
+    if (T == PT_Ptr) {
       if (!this->emitIncPtr(E))
         return false;
 
@@ -6021,7 +6022,7 @@ bool Compiler<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
     if (!this->visit(SubExpr))
       return false;
 
-    if (T == PT_Ptr || T == PT_FnPtr) {
+    if (T == PT_Ptr) {
       if (!this->emitDecPtr(E))
         return false;
 
@@ -6045,7 +6046,7 @@ bool Compiler<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
     if (!this->visit(SubExpr))
       return false;
 
-    if (T == PT_Ptr || T == PT_FnPtr) {
+    if (T == PT_Ptr) {
       if (!this->emitLoadPtr(E))
         return false;
       if (!this->emitConstUint8(1, E))
@@ -6088,7 +6089,7 @@ bool Compiler<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
     if (!this->visit(SubExpr))
       return false;
 
-    if (T == PT_Ptr || T == PT_FnPtr) {
+    if (T == PT_Ptr) {
       if (!this->emitLoadPtr(E))
         return false;
       if (!this->emitConstUint8(1, E))
@@ -6469,7 +6470,12 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
 
   // In case we need to re-visit a declaration.
   auto revisit = [&](const VarDecl *VD) -> bool {
+    if (!this->emitPushCC(VD->hasConstantInitialization(), E))
+      return false;
     auto VarState = this->visitDecl(VD, /*IsConstexprUnknown=*/true);
+
+    if (!this->emitPopCC(E))
+      return false;
 
     if (VarState.notCreated())
       return true;
