@@ -11,6 +11,7 @@
 
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Support/InterleavedRange.h"
 #include <algorithm>
 #include <cassert>
 #include <functional>
@@ -111,12 +112,7 @@ inline hash_code hash_value(const Vector &V) {
 template <typename OStream>
 OStream& operator<<(OStream &OS, const Vector &V) {
   assert((V.getLength() != 0) && "Zero-length vector badness.");
-
-  OS << "[ " << V[0];
-  for (unsigned i = 1; i < V.getLength(); ++i)
-    OS << ", " << V[i];
-  OS << " ]";
-
+  OS << "[ " << llvm::interleaved(V) << " ]";
   return OS;
 }
 
