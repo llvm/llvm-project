@@ -26,7 +26,7 @@ define void @acos_f64(ptr noalias %in.ptr, ptr %out.ptr) {
 ;
 ; ARMPL-NEON-LABEL: define void @acos_f64
 ; ARMPL-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr [[OUT_PTR:%.*]]) #[[ATTR1:[0-9]+]] {
-; ARMPL-NEON:    [[TMP2:%.*]] = call <2 x double> @armpl_vacosq_f64(<2 x double> [[WIDE_LOAD:%.*]])
+; ARMPL-NEON:    [[TMP2:%.*]] = call aarch64_vector_pcs <2 x double> @armpl_vacosq_f64(<2 x double> [[WIDE_LOAD:%.*]])
 ;
 ; ARMPL-SVE-LABEL: define void @acos_f64
 ; ARMPL-SVE-SAME: (ptr noalias [[IN_PTR:%.*]], ptr [[OUT_PTR:%.*]]) #[[ATTR1:[0-9]+]] {
@@ -61,7 +61,7 @@ define void @acos_f32(ptr noalias %in.ptr, ptr %out.ptr) {
 ;
 ; ARMPL-NEON-LABEL: define void @acos_f32
 ; ARMPL-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr [[OUT_PTR:%.*]]) #[[ATTR1]] {
-; ARMPL-NEON:    [[TMP2:%.*]] = call <4 x float> @armpl_vacosq_f32(<4 x float> [[WIDE_LOAD:%.*]])
+; ARMPL-NEON:    [[TMP2:%.*]] = call aarch64_vector_pcs <4 x float> @armpl_vacosq_f32(<4 x float> [[WIDE_LOAD:%.*]])
 ;
 ; ARMPL-SVE-LABEL: define void @acos_f32
 ; ARMPL-SVE-SAME: (ptr noalias [[IN_PTR:%.*]], ptr [[OUT_PTR:%.*]]) #[[ATTR1]] {
@@ -99,7 +99,7 @@ define void @asin_f64(ptr noalias %in.ptr, ptr %out.ptr) {
 ;
 ; ARMPL-NEON-LABEL: define void @asin_f64
 ; ARMPL-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr [[OUT_PTR:%.*]]) #[[ATTR1]] {
-; ARMPL-NEON:    [[TMP2:%.*]] = call <2 x double> @armpl_vasinq_f64(<2 x double> [[WIDE_LOAD:%.*]])
+; ARMPL-NEON:    [[TMP2:%.*]] = call aarch64_vector_pcs <2 x double> @armpl_vasinq_f64(<2 x double> [[WIDE_LOAD:%.*]])
 ;
 ; ARMPL-SVE-LABEL: define void @asin_f64
 ; ARMPL-SVE-SAME: (ptr noalias [[IN_PTR:%.*]], ptr [[OUT_PTR:%.*]]) #[[ATTR1]] {
@@ -134,7 +134,7 @@ define void @asin_f32(ptr noalias %in.ptr, ptr %out.ptr) {
 ;
 ; ARMPL-NEON-LABEL: define void @asin_f32
 ; ARMPL-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr [[OUT_PTR:%.*]]) #[[ATTR1]] {
-; ARMPL-NEON:    [[TMP2:%.*]] = call <4 x float> @armpl_vasinq_f32(<4 x float> [[WIDE_LOAD:%.*]])
+; ARMPL-NEON:    [[TMP2:%.*]] = call aarch64_vector_pcs <4 x float> @armpl_vasinq_f32(<4 x float> [[WIDE_LOAD:%.*]])
 ;
 ; ARMPL-SVE-LABEL: define void @asin_f32
 ; ARMPL-SVE-SAME: (ptr noalias [[IN_PTR:%.*]], ptr [[OUT_PTR:%.*]]) #[[ATTR1]] {
@@ -172,7 +172,7 @@ define void @atan_f64(ptr noalias %in.ptr, ptr %out.ptr) {
 ;
 ; ARMPL-NEON-LABEL: define void @atan_f64
 ; ARMPL-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr [[OUT_PTR:%.*]]) #[[ATTR1]] {
-; ARMPL-NEON:    [[TMP2:%.*]] = call <2 x double> @armpl_vatanq_f64(<2 x double> [[WIDE_LOAD:%.*]])
+; ARMPL-NEON:    [[TMP2:%.*]] = call aarch64_vector_pcs <2 x double> @armpl_vatanq_f64(<2 x double> [[WIDE_LOAD:%.*]])
 ;
 ; ARMPL-SVE-LABEL: define void @atan_f64
 ; ARMPL-SVE-SAME: (ptr noalias [[IN_PTR:%.*]], ptr [[OUT_PTR:%.*]]) #[[ATTR1]] {
@@ -207,7 +207,7 @@ define void @atan_f32(ptr noalias %in.ptr, ptr %out.ptr) {
 ;
 ; ARMPL-NEON-LABEL: define void @atan_f32
 ; ARMPL-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr [[OUT_PTR:%.*]]) #[[ATTR1]] {
-; ARMPL-NEON:    [[TMP2:%.*]] = call <4 x float> @armpl_vatanq_f32(<4 x float> [[WIDE_LOAD:%.*]])
+; ARMPL-NEON:    [[TMP2:%.*]] = call aarch64_vector_pcs <4 x float> @armpl_vatanq_f32(<4 x float> [[WIDE_LOAD:%.*]])
 ;
 ; ARMPL-SVE-LABEL: define void @atan_f32
 ; ARMPL-SVE-SAME: (ptr noalias [[IN_PTR:%.*]], ptr [[OUT_PTR:%.*]]) #[[ATTR1]] {
@@ -245,7 +245,7 @@ define void @atan2_f64(ptr noalias %in.ptr, ptr %out.ptr) {
 ;
 ; ARMPL-NEON-LABEL: define void @atan2_f64
 ; ARMPL-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr [[OUT_PTR:%.*]]) #[[ATTR1]] {
-; ARMPL-NEON:    [[TMP2:%.*]] = call <2 x double> @armpl_vatan2q_f64(<2 x double> [[WIDE_LOAD:%.*]], <2 x double> [[WIDE_LOAD]])
+; ARMPL-NEON:    [[TMP2:%.*]] = call aarch64_vector_pcs <2 x double> @armpl_vatan2q_f64(<2 x double> [[WIDE_LOAD:%.*]], <2 x double> [[WIDE_LOAD]])
 ;
 ; ARMPL-SVE-LABEL: define void @atan2_f64
 ; ARMPL-SVE-SAME: (ptr noalias [[IN_PTR:%.*]], ptr [[OUT_PTR:%.*]]) #[[ATTR1]] {
@@ -280,7 +280,7 @@ define void @atan2_f32(ptr noalias %in.ptr, ptr %out.ptr) {
 ;
 ; ARMPL-NEON-LABEL: define void @atan2_f32
 ; ARMPL-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr [[OUT_PTR:%.*]]) #[[ATTR1]] {
-; ARMPL-NEON:    [[TMP2:%.*]] = call <4 x float> @armpl_vatan2q_f32(<4 x float> [[WIDE_LOAD:%.*]], <4 x float> [[WIDE_LOAD]])
+; ARMPL-NEON:    [[TMP2:%.*]] = call aarch64_vector_pcs <4 x float> @armpl_vatan2q_f32(<4 x float> [[WIDE_LOAD:%.*]], <4 x float> [[WIDE_LOAD]])
 ;
 ; ARMPL-SVE-LABEL: define void @atan2_f32
 ; ARMPL-SVE-SAME: (ptr noalias [[IN_PTR:%.*]], ptr [[OUT_PTR:%.*]]) #[[ATTR1]] {
@@ -464,7 +464,7 @@ define void @cos_f64(ptr noalias %in.ptr, ptr %out.ptr) {
 ;
 ; ARMPL-NEON-LABEL: define void @cos_f64
 ; ARMPL-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr [[OUT_PTR:%.*]]) #[[ATTR1]] {
-; ARMPL-NEON:    [[TMP2:%.*]] = call <2 x double> @armpl_vcosq_f64(<2 x double> [[WIDE_LOAD:%.*]])
+; ARMPL-NEON:    [[TMP2:%.*]] = call aarch64_vector_pcs <2 x double> @armpl_vcosq_f64(<2 x double> [[WIDE_LOAD:%.*]])
 ;
 ; ARMPL-SVE-LABEL: define void @cos_f64
 ; ARMPL-SVE-SAME: (ptr noalias [[IN_PTR:%.*]], ptr [[OUT_PTR:%.*]]) #[[ATTR1]] {
@@ -499,7 +499,7 @@ define void @cos_f32(ptr noalias %in.ptr, ptr %out.ptr) {
 ;
 ; ARMPL-NEON-LABEL: define void @cos_f32
 ; ARMPL-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr [[OUT_PTR:%.*]]) #[[ATTR1]] {
-; ARMPL-NEON:    [[TMP2:%.*]] = call <4 x float> @armpl_vcosq_f32(<4 x float> [[WIDE_LOAD:%.*]])
+; ARMPL-NEON:    [[TMP2:%.*]] = call aarch64_vector_pcs <4 x float> @armpl_vcosq_f32(<4 x float> [[WIDE_LOAD:%.*]])
 ;
 ; ARMPL-SVE-LABEL: define void @cos_f32
 ; ARMPL-SVE-SAME: (ptr noalias [[IN_PTR:%.*]], ptr [[OUT_PTR:%.*]]) #[[ATTR1]] {
@@ -537,7 +537,7 @@ define void @cosh_f64(ptr noalias %in.ptr, ptr %out.ptr) {
 ;
 ; ARMPL-NEON-LABEL: define void @cosh_f64
 ; ARMPL-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr [[OUT_PTR:%.*]]) #[[ATTR1]] {
-; ARMPL-NEON:    [[TMP2:%.*]] = call <2 x double> @armpl_vcoshq_f64(<2 x double> [[WIDE_LOAD:%.*]])
+; ARMPL-NEON:    [[TMP2:%.*]] = call aarch64_vector_pcs <2 x double> @armpl_vcoshq_f64(<2 x double> [[WIDE_LOAD:%.*]])
 ;
 ; ARMPL-SVE-LABEL: define void @cosh_f64
 ; ARMPL-SVE-SAME: (ptr noalias [[IN_PTR:%.*]], ptr [[OUT_PTR:%.*]]) #[[ATTR1]] {
@@ -572,7 +572,7 @@ define void @cosh_f32(ptr noalias %in.ptr, ptr %out.ptr) {
 ;
 ; ARMPL-NEON-LABEL: define void @cosh_f32
 ; ARMPL-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr [[OUT_PTR:%.*]]) #[[ATTR1]] {
-; ARMPL-NEON:    [[TMP2:%.*]] = call <4 x float> @armpl_vcoshq_f32(<4 x float> [[WIDE_LOAD:%.*]])
+; ARMPL-NEON:    [[TMP2:%.*]] = call aarch64_vector_pcs <4 x float> @armpl_vcoshq_f32(<4 x float> [[WIDE_LOAD:%.*]])
 ;
 ; ARMPL-SVE-LABEL: define void @cosh_f32
 ; ARMPL-SVE-SAME: (ptr noalias [[IN_PTR:%.*]], ptr [[OUT_PTR:%.*]]) #[[ATTR1]] {
@@ -610,7 +610,7 @@ define void @exp_f64(ptr noalias %in.ptr, ptr %out.ptr) {
 ;
 ; ARMPL-NEON-LABEL: define void @exp_f64
 ; ARMPL-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr [[OUT_PTR:%.*]]) #[[ATTR1]] {
-; ARMPL-NEON:    [[TMP2:%.*]] = call <2 x double> @armpl_vexpq_f64(<2 x double> [[WIDE_LOAD:%.*]])
+; ARMPL-NEON:    [[TMP2:%.*]] = call aarch64_vector_pcs <2 x double> @armpl_vexpq_f64(<2 x double> [[WIDE_LOAD:%.*]])
 ;
 ; ARMPL-SVE-LABEL: define void @exp_f64
 ; ARMPL-SVE-SAME: (ptr noalias [[IN_PTR:%.*]], ptr [[OUT_PTR:%.*]]) #[[ATTR1]] {
@@ -645,7 +645,7 @@ define void @exp_f32(ptr noalias %in.ptr, ptr %out.ptr) {
 ;
 ; ARMPL-NEON-LABEL: define void @exp_f32
 ; ARMPL-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr [[OUT_PTR:%.*]]) #[[ATTR1]] {
-; ARMPL-NEON:    [[TMP2:%.*]] = call <4 x float> @armpl_vexpq_f32(<4 x float> [[WIDE_LOAD:%.*]])
+; ARMPL-NEON:    [[TMP2:%.*]] = call aarch64_vector_pcs <4 x float> @armpl_vexpq_f32(<4 x float> [[WIDE_LOAD:%.*]])
 ;
 ; ARMPL-SVE-LABEL: define void @exp_f32
 ; ARMPL-SVE-SAME: (ptr noalias [[IN_PTR:%.*]], ptr [[OUT_PTR:%.*]]) #[[ATTR1]] {
@@ -683,7 +683,7 @@ define void @exp10_f64(ptr noalias %in.ptr, ptr %out.ptr) {
 ;
 ; ARMPL-NEON-LABEL: define void @exp10_f64
 ; ARMPL-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr [[OUT_PTR:%.*]]) #[[ATTR1]] {
-; ARMPL-NEON:    [[TMP2:%.*]] = call <2 x double> @armpl_vexp10q_f64(<2 x double> [[WIDE_LOAD:%.*]])
+; ARMPL-NEON:    [[TMP2:%.*]] = call aarch64_vector_pcs <2 x double> @armpl_vexp10q_f64(<2 x double> [[WIDE_LOAD:%.*]])
 ;
 ; ARMPL-SVE-LABEL: define void @exp10_f64
 ; ARMPL-SVE-SAME: (ptr noalias [[IN_PTR:%.*]], ptr [[OUT_PTR:%.*]]) #[[ATTR1]] {
@@ -718,7 +718,7 @@ define void @exp10_f32(ptr noalias %in.ptr, ptr %out.ptr) {
 ;
 ; ARMPL-NEON-LABEL: define void @exp10_f32
 ; ARMPL-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr [[OUT_PTR:%.*]]) #[[ATTR1]] {
-; ARMPL-NEON:    [[TMP2:%.*]] = call <4 x float> @armpl_vexp10q_f32(<4 x float> [[WIDE_LOAD:%.*]])
+; ARMPL-NEON:    [[TMP2:%.*]] = call aarch64_vector_pcs <4 x float> @armpl_vexp10q_f32(<4 x float> [[WIDE_LOAD:%.*]])
 ;
 ; ARMPL-SVE-LABEL: define void @exp10_f32
 ; ARMPL-SVE-SAME: (ptr noalias [[IN_PTR:%.*]], ptr [[OUT_PTR:%.*]]) #[[ATTR1]] {
@@ -756,7 +756,7 @@ define void @exp2_f64(ptr noalias %in.ptr, ptr %out.ptr) {
 ;
 ; ARMPL-NEON-LABEL: define void @exp2_f64
 ; ARMPL-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr [[OUT_PTR:%.*]]) #[[ATTR1]] {
-; ARMPL-NEON:    [[TMP2:%.*]] = call <2 x double> @armpl_vexp2q_f64(<2 x double> [[WIDE_LOAD:%.*]])
+; ARMPL-NEON:    [[TMP2:%.*]] = call aarch64_vector_pcs <2 x double> @armpl_vexp2q_f64(<2 x double> [[WIDE_LOAD:%.*]])
 ;
 ; ARMPL-SVE-LABEL: define void @exp2_f64
 ; ARMPL-SVE-SAME: (ptr noalias [[IN_PTR:%.*]], ptr [[OUT_PTR:%.*]]) #[[ATTR1]] {
@@ -791,7 +791,7 @@ define void @exp2_f32(ptr noalias %in.ptr, ptr %out.ptr) {
 ;
 ; ARMPL-NEON-LABEL: define void @exp2_f32
 ; ARMPL-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr [[OUT_PTR:%.*]]) #[[ATTR1]] {
-; ARMPL-NEON:    [[TMP2:%.*]] = call <4 x float> @armpl_vexp2q_f32(<4 x float> [[WIDE_LOAD:%.*]])
+; ARMPL-NEON:    [[TMP2:%.*]] = call aarch64_vector_pcs <4 x float> @armpl_vexp2q_f32(<4 x float> [[WIDE_LOAD:%.*]])
 ;
 ; ARMPL-SVE-LABEL: define void @exp2_f32
 ; ARMPL-SVE-SAME: (ptr noalias [[IN_PTR:%.*]], ptr [[OUT_PTR:%.*]]) #[[ATTR1]] {
@@ -1048,7 +1048,7 @@ define void @log_f64(ptr noalias %in.ptr, ptr %out.ptr) {
 ;
 ; ARMPL-NEON-LABEL: define void @log_f64
 ; ARMPL-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr [[OUT_PTR:%.*]]) #[[ATTR1]] {
-; ARMPL-NEON:    [[TMP2:%.*]] = call <2 x double> @armpl_vlogq_f64(<2 x double> [[WIDE_LOAD:%.*]])
+; ARMPL-NEON:    [[TMP2:%.*]] = call aarch64_vector_pcs <2 x double> @armpl_vlogq_f64(<2 x double> [[WIDE_LOAD:%.*]])
 ;
 ; ARMPL-SVE-LABEL: define void @log_f64
 ; ARMPL-SVE-SAME: (ptr noalias [[IN_PTR:%.*]], ptr [[OUT_PTR:%.*]]) #[[ATTR1]] {
@@ -1083,7 +1083,7 @@ define void @log_f32(ptr noalias %in.ptr, ptr %out.ptr) {
 ;
 ; ARMPL-NEON-LABEL: define void @log_f32
 ; ARMPL-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr [[OUT_PTR:%.*]]) #[[ATTR1]] {
-; ARMPL-NEON:    [[TMP2:%.*]] = call <4 x float> @armpl_vlogq_f32(<4 x float> [[WIDE_LOAD:%.*]])
+; ARMPL-NEON:    [[TMP2:%.*]] = call aarch64_vector_pcs <4 x float> @armpl_vlogq_f32(<4 x float> [[WIDE_LOAD:%.*]])
 ;
 ; ARMPL-SVE-LABEL: define void @log_f32
 ; ARMPL-SVE-SAME: (ptr noalias [[IN_PTR:%.*]], ptr [[OUT_PTR:%.*]]) #[[ATTR1]] {
@@ -1121,7 +1121,7 @@ define void @log10_f64(ptr noalias %in.ptr, ptr %out.ptr) {
 ;
 ; ARMPL-NEON-LABEL: define void @log10_f64
 ; ARMPL-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr [[OUT_PTR:%.*]]) #[[ATTR1]] {
-; ARMPL-NEON:    [[TMP2:%.*]] = call <2 x double> @armpl_vlog10q_f64(<2 x double> [[WIDE_LOAD:%.*]])
+; ARMPL-NEON:    [[TMP2:%.*]] = call aarch64_vector_pcs <2 x double> @armpl_vlog10q_f64(<2 x double> [[WIDE_LOAD:%.*]])
 ;
 ; ARMPL-SVE-LABEL: define void @log10_f64
 ; ARMPL-SVE-SAME: (ptr noalias [[IN_PTR:%.*]], ptr [[OUT_PTR:%.*]]) #[[ATTR1]] {
@@ -1156,7 +1156,7 @@ define void @log10_f32(ptr noalias %in.ptr, ptr %out.ptr) {
 ;
 ; ARMPL-NEON-LABEL: define void @log10_f32
 ; ARMPL-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr [[OUT_PTR:%.*]]) #[[ATTR1]] {
-; ARMPL-NEON:    [[TMP2:%.*]] = call <4 x float> @armpl_vlog10q_f32(<4 x float> [[WIDE_LOAD:%.*]])
+; ARMPL-NEON:    [[TMP2:%.*]] = call aarch64_vector_pcs <4 x float> @armpl_vlog10q_f32(<4 x float> [[WIDE_LOAD:%.*]])
 ;
 ; ARMPL-SVE-LABEL: define void @log10_f32
 ; ARMPL-SVE-SAME: (ptr noalias [[IN_PTR:%.*]], ptr [[OUT_PTR:%.*]]) #[[ATTR1]] {
@@ -1194,7 +1194,7 @@ define void @log2_f64(ptr noalias %in.ptr, ptr %out.ptr) {
 ;
 ; ARMPL-NEON-LABEL: define void @log2_f64
 ; ARMPL-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr [[OUT_PTR:%.*]]) #[[ATTR1]] {
-; ARMPL-NEON:    [[TMP2:%.*]] = call <2 x double> @armpl_vlog2q_f64(<2 x double> [[WIDE_LOAD:%.*]])
+; ARMPL-NEON:    [[TMP2:%.*]] = call aarch64_vector_pcs <2 x double> @armpl_vlog2q_f64(<2 x double> [[WIDE_LOAD:%.*]])
 ;
 ; ARMPL-SVE-LABEL: define void @log2_f64
 ; ARMPL-SVE-SAME: (ptr noalias [[IN_PTR:%.*]], ptr [[OUT_PTR:%.*]]) #[[ATTR1]] {
@@ -1229,7 +1229,7 @@ define void @log2_f32(ptr noalias %in.ptr, ptr %out.ptr) {
 ;
 ; ARMPL-NEON-LABEL: define void @log2_f32
 ; ARMPL-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr [[OUT_PTR:%.*]]) #[[ATTR1]] {
-; ARMPL-NEON:    [[TMP2:%.*]] = call <4 x float> @armpl_vlog2q_f32(<4 x float> [[WIDE_LOAD:%.*]])
+; ARMPL-NEON:    [[TMP2:%.*]] = call aarch64_vector_pcs <4 x float> @armpl_vlog2q_f32(<4 x float> [[WIDE_LOAD:%.*]])
 ;
 ; ARMPL-SVE-LABEL: define void @log2_f32
 ; ARMPL-SVE-SAME: (ptr noalias [[IN_PTR:%.*]], ptr [[OUT_PTR:%.*]]) #[[ATTR1]] {
@@ -1486,7 +1486,7 @@ define void @pow_f64(ptr noalias %in.ptr, ptr %out.ptr) {
 ;
 ; ARMPL-NEON-LABEL: define void @pow_f64
 ; ARMPL-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr [[OUT_PTR:%.*]]) #[[ATTR1]] {
-; ARMPL-NEON:    [[TMP2:%.*]] = call <2 x double> @armpl_vpowq_f64(<2 x double> [[WIDE_LOAD:%.*]], <2 x double> [[WIDE_LOAD]])
+; ARMPL-NEON:    [[TMP2:%.*]] = call aarch64_vector_pcs <2 x double> @armpl_vpowq_f64(<2 x double> [[WIDE_LOAD:%.*]], <2 x double> [[WIDE_LOAD]])
 ;
 ; ARMPL-SVE-LABEL: define void @pow_f64
 ; ARMPL-SVE-SAME: (ptr noalias [[IN_PTR:%.*]], ptr [[OUT_PTR:%.*]]) #[[ATTR1]] {
@@ -1521,7 +1521,7 @@ define void @pow_f32(ptr noalias %in.ptr, ptr %out.ptr) {
 ;
 ; ARMPL-NEON-LABEL: define void @pow_f32
 ; ARMPL-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr [[OUT_PTR:%.*]]) #[[ATTR1]] {
-; ARMPL-NEON:    [[TMP2:%.*]] = call <4 x float> @armpl_vpowq_f32(<4 x float> [[WIDE_LOAD:%.*]], <4 x float> [[WIDE_LOAD]])
+; ARMPL-NEON:    [[TMP2:%.*]] = call aarch64_vector_pcs <4 x float> @armpl_vpowq_f32(<4 x float> [[WIDE_LOAD:%.*]], <4 x float> [[WIDE_LOAD]])
 ;
 ; ARMPL-SVE-LABEL: define void @pow_f32
 ; ARMPL-SVE-SAME: (ptr noalias [[IN_PTR:%.*]], ptr [[OUT_PTR:%.*]]) #[[ATTR1]] {
@@ -1705,7 +1705,7 @@ define void @sin_f64(ptr noalias %in.ptr, ptr %out.ptr) {
 ;
 ; ARMPL-NEON-LABEL: define void @sin_f64
 ; ARMPL-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr [[OUT_PTR:%.*]]) #[[ATTR1]] {
-; ARMPL-NEON:    [[TMP2:%.*]] = call <2 x double> @armpl_vsinq_f64(<2 x double> [[WIDE_LOAD:%.*]])
+; ARMPL-NEON:    [[TMP2:%.*]] = call aarch64_vector_pcs <2 x double> @armpl_vsinq_f64(<2 x double> [[WIDE_LOAD:%.*]])
 ;
 ; ARMPL-SVE-LABEL: define void @sin_f64
 ; ARMPL-SVE-SAME: (ptr noalias [[IN_PTR:%.*]], ptr [[OUT_PTR:%.*]]) #[[ATTR1]] {
@@ -1740,7 +1740,7 @@ define void @sin_f32(ptr noalias %in.ptr, ptr %out.ptr) {
 ;
 ; ARMPL-NEON-LABEL: define void @sin_f32
 ; ARMPL-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr [[OUT_PTR:%.*]]) #[[ATTR1]] {
-; ARMPL-NEON:    [[TMP2:%.*]] = call <4 x float> @armpl_vsinq_f32(<4 x float> [[WIDE_LOAD:%.*]])
+; ARMPL-NEON:    [[TMP2:%.*]] = call aarch64_vector_pcs <4 x float> @armpl_vsinq_f32(<4 x float> [[WIDE_LOAD:%.*]])
 ;
 ; ARMPL-SVE-LABEL: define void @sin_f32
 ; ARMPL-SVE-SAME: (ptr noalias [[IN_PTR:%.*]], ptr [[OUT_PTR:%.*]]) #[[ATTR1]] {
@@ -1778,7 +1778,7 @@ define void @sinh_f64(ptr noalias %in.ptr, ptr %out.ptr) {
 ;
 ; ARMPL-NEON-LABEL: define void @sinh_f64
 ; ARMPL-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr [[OUT_PTR:%.*]]) #[[ATTR1]] {
-; ARMPL-NEON:    [[TMP2:%.*]] = call <2 x double> @armpl_vsinhq_f64(<2 x double> [[WIDE_LOAD:%.*]])
+; ARMPL-NEON:    [[TMP2:%.*]] = call aarch64_vector_pcs <2 x double> @armpl_vsinhq_f64(<2 x double> [[WIDE_LOAD:%.*]])
 ;
 ; ARMPL-SVE-LABEL: define void @sinh_f64
 ; ARMPL-SVE-SAME: (ptr noalias [[IN_PTR:%.*]], ptr [[OUT_PTR:%.*]]) #[[ATTR1]] {
@@ -1813,7 +1813,7 @@ define void @sinh_f32(ptr noalias %in.ptr, ptr %out.ptr) {
 ;
 ; ARMPL-NEON-LABEL: define void @sinh_f32
 ; ARMPL-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr [[OUT_PTR:%.*]]) #[[ATTR1]] {
-; ARMPL-NEON:    [[TMP2:%.*]] = call <4 x float> @armpl_vsinhq_f32(<4 x float> [[WIDE_LOAD:%.*]])
+; ARMPL-NEON:    [[TMP2:%.*]] = call aarch64_vector_pcs <4 x float> @armpl_vsinhq_f32(<4 x float> [[WIDE_LOAD:%.*]])
 ;
 ; ARMPL-SVE-LABEL: define void @sinh_f32
 ; ARMPL-SVE-SAME: (ptr noalias [[IN_PTR:%.*]], ptr [[OUT_PTR:%.*]]) #[[ATTR1]] {
@@ -1924,7 +1924,7 @@ define void @tan_f64(ptr noalias %in.ptr, ptr %out.ptr) {
 ;
 ; ARMPL-NEON-LABEL: define void @tan_f64
 ; ARMPL-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr [[OUT_PTR:%.*]]) #[[ATTR1]] {
-; ARMPL-NEON:    [[TMP2:%.*]] = call <2 x double> @armpl_vtanq_f64(<2 x double> [[WIDE_LOAD:%.*]])
+; ARMPL-NEON:    [[TMP2:%.*]] = call aarch64_vector_pcs <2 x double> @armpl_vtanq_f64(<2 x double> [[WIDE_LOAD:%.*]])
 ;
 ; ARMPL-SVE-LABEL: define void @tan_f64
 ; ARMPL-SVE-SAME: (ptr noalias [[IN_PTR:%.*]], ptr [[OUT_PTR:%.*]]) #[[ATTR1]] {
@@ -1959,7 +1959,7 @@ define void @tan_f32(ptr noalias %in.ptr, ptr %out.ptr) {
 ;
 ; ARMPL-NEON-LABEL: define void @tan_f32
 ; ARMPL-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr [[OUT_PTR:%.*]]) #[[ATTR1]] {
-; ARMPL-NEON:    [[TMP2:%.*]] = call <4 x float> @armpl_vtanq_f32(<4 x float> [[WIDE_LOAD:%.*]])
+; ARMPL-NEON:    [[TMP2:%.*]] = call aarch64_vector_pcs <4 x float> @armpl_vtanq_f32(<4 x float> [[WIDE_LOAD:%.*]])
 ;
 ; ARMPL-SVE-LABEL: define void @tan_f32
 ; ARMPL-SVE-SAME: (ptr noalias [[IN_PTR:%.*]], ptr [[OUT_PTR:%.*]]) #[[ATTR1]] {
@@ -1997,7 +1997,7 @@ define void @tanh_f64(ptr noalias %in.ptr, ptr %out.ptr) {
 ;
 ; ARMPL-NEON-LABEL: define void @tanh_f64
 ; ARMPL-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr [[OUT_PTR:%.*]]) #[[ATTR1]] {
-; ARMPL-NEON:    [[TMP2:%.*]] = call <2 x double> @armpl_vtanhq_f64(<2 x double> [[WIDE_LOAD:%.*]])
+; ARMPL-NEON:    [[TMP2:%.*]] = call aarch64_vector_pcs <2 x double> @armpl_vtanhq_f64(<2 x double> [[WIDE_LOAD:%.*]])
 ;
 ; ARMPL-SVE-LABEL: define void @tanh_f64
 ; ARMPL-SVE-SAME: (ptr noalias [[IN_PTR:%.*]], ptr [[OUT_PTR:%.*]]) #[[ATTR1]] {
@@ -2032,7 +2032,7 @@ define void @tanh_f32(ptr noalias %in.ptr, ptr %out.ptr) {
 ;
 ; ARMPL-NEON-LABEL: define void @tanh_f32
 ; ARMPL-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr [[OUT_PTR:%.*]]) #[[ATTR1]] {
-; ARMPL-NEON:    [[TMP2:%.*]] = call <4 x float> @armpl_vtanhq_f32(<4 x float> [[WIDE_LOAD:%.*]])
+; ARMPL-NEON:    [[TMP2:%.*]] = call aarch64_vector_pcs <4 x float> @armpl_vtanhq_f32(<4 x float> [[WIDE_LOAD:%.*]])
 ;
 ; ARMPL-SVE-LABEL: define void @tanh_f32
 ; ARMPL-SVE-SAME: (ptr noalias [[IN_PTR:%.*]], ptr [[OUT_PTR:%.*]]) #[[ATTR1]] {
