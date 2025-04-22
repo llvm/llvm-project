@@ -2505,23 +2505,25 @@ void VPlanTransforms::handleUncountableEarlyExit(
   VPBuilder EarlyExitB(VectorEarlyExitVPBB);
   for (VPRecipeBase &R : VPEarlyExitBlock->phis()) {
     auto *ExitIRI = cast<VPIRPhi>(&R);
-    // By default, assume early exit operand is first, e.g., when the two exit
-    // blocks are distinct - VPEarlyExitBlock has a single predecessor.
-    unsigned EarlyExitIdx = 0;
+    // Early exit operand should always be last, i.e., 0 if VPEarlyExitBlock has
+    // a single predecessor and 1 if it has two.
+    unsigned EarlyExitIdx = ExitIRI->getNumOperands() - 1;
     if (OrigLoop->getUniqueExitBlock()) {
-      // The incoming values currently correspond to the original IR
-      // predecessors. After the transform, the first incoming value is coming
-      // from the original loop latch, while the second operand is from the
-      // early exit. Swap the phi operands, if the first predecessor in the
-      // original IR is not the loop latch.
-      if (*pred_begin(VPEarlyExitBlock->getIRBasicBlock()) !=
-          OrigLoop->getLoopLatch())
+      // If VPEarlyExitBlock has two predecessors, they are already ordered such
+      // that early exit is second (and latch exit is first), by construction.
+      // But its underlying IRBB (EarlyExitIRBB) may have its predecessors
+      // ordered the other way around, and it is the order of the latter which
+      // corresponds to the order of operands of VPEarlyExitBlock's phi recipes.
+      // Therefore, if early exit (UncountableExitingBlock) is the first
+      // predecessor of EarlyExitIRBB, we swap the operands of phi recipes,
+      // thereby bringing them to match VPEarlyExitBlock's predecessor order,
+      // with early exit being last (second). Otherwise they already match.
+      if (*pred_begin(VPEarlyExitBlock->getIRBasicBlock()) ==
+          UncountableExitingBlock)
         ExitIRI->swapOperands();
 
-      EarlyExitIdx = 1;
-      // If there's a unique exit block, VPEarlyExitBlock has 2 predecessors
-      // (MiddleVPBB and NewMiddle). Extract the last lane of the incoming value
-      // from MiddleVPBB which is coming from the original latch.
+      // The first of two operands corresponds to the latch exit, via MiddleVPBB
+      // predecessor. Extract its last lane.
       ExitIRI->extractLastLaneOfFirstOperand(MiddleBuilder);
     }
 
