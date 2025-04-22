@@ -4853,18 +4853,18 @@ calculateRegisterUsage(VPlan &Plan, ArrayRef<ElementCount> VFs,
         if (isa<VPVectorPointerRecipe, VPVectorEndPointerRecipe,
                 VPBranchOnMaskRecipe>(R))
           continue;
-        /// In-loop reductions don't carry their output across iterations.
-        if (auto *Phi = dyn_cast<VPReductionPHIRecipe>(R);
-            Phi && Phi->isInLoop())
-          continue;
 
         if (VFs[J].isScalar() ||
             isa<VPCanonicalIVPHIRecipe, VPReplicateRecipe, VPDerivedIVRecipe,
                 VPScalarIVStepsRecipe>(R) ||
             (isa<VPInstruction>(R) &&
-             all_of(cast<VPSingleDefRecipe>(R)->users(), [&](VPUser *U) {
-               return cast<VPRecipeBase>(U)->usesScalars(R->getVPSingleValue());
-             }))) {
+             all_of(cast<VPSingleDefRecipe>(R)->users(),
+                    [&](VPUser *U) {
+                      return cast<VPRecipeBase>(U)->usesScalars(
+                          R->getVPSingleValue());
+                    })) ||
+            (isa<VPReductionPHIRecipe>(R) &&
+             (cast<VPReductionPHIRecipe>(R))->isInLoop())) {
           unsigned ClassID = TTI.getRegisterClassForType(
               false, TypeInfo.inferScalarType(R->getVPSingleValue()));
           // FIXME: The target might use more than one register for the type
