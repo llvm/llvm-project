@@ -1966,7 +1966,8 @@ void VPWidenIntOrFpInductionRecipe::execute(VPTransformState &State) {
 
   Value *SplatStart = Builder.CreateVectorSplat(State.VF, Start);
   assert(cast<VPInstruction>(getStepVector())->getOpcode() ==
-         VPInstruction::StepVector);
+             VPInstruction::StepVector &&
+         "step vector operand must be a StepVector");
   Value *SteppedStart =
       ::getStepVector(SplatStart, Step, State.get(getStepVector()),
                       ID.getInductionOpcode(), State.VF, State.Builder);

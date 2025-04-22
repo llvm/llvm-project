@@ -2419,10 +2419,10 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan,
           Ty = Trunc->getType();
         if (Ty->isFloatingPointTy())
           Ty = IntegerType::get(Ty->getContext(), Ty->getScalarSizeInBits());
-        VPInstruction *StepVector = new VPInstructionWithType(
-            VPInstruction::StepVector, {}, Ty, R.getDebugLoc());
 
-        Plan.getVectorPreheader()->appendRecipe(StepVector);
+        VPBuilder Builder(Plan.getVectorPreheader());
+        VPInstruction *StepVector = Builder.createNaryOp(
+            VPInstruction::StepVector, {}, Ty, {}, R.getDebugLoc());
         IVR->setStepVector(StepVector);
         continue;
       }

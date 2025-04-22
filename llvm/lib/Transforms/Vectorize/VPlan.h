@@ -898,7 +898,7 @@ public:
     /// Scale the first operand (vector step) by the second operand
     /// (scalar-step).  Casts both operands to the result type if needed.
     WideIVStep,
-    // Creates a step vector starting from 0 with a step of 1.
+    // Creates a step vector starting from 0 to VF with a step of 1.
     StepVector,
 
   };
@@ -1065,15 +1065,20 @@ public:
       : VPInstruction(Opcode, Operands, FMFs, DL, Name), ResultTy(ResultTy) {}
 
   static inline bool classof(const VPRecipeBase *R) {
-    if (isa<VPInstruction>(R) &&
-        cast<VPInstruction>(R)->getOpcode() == VPInstruction::StepVector)
-      return true;
     // VPInstructionWithType are VPInstructions with specific opcodes requiring
     // type information.
     if (R->isScalarCast())
       return true;
     auto *VPI = dyn_cast<VPInstruction>(R);
-    return VPI && VPI->getOpcode() == VPInstruction::WideIVStep;
+    if (!VPI)
+      return false;
+    switch (VPI->getOpcode()) {
+    case VPInstruction::WideIVStep:
+    case VPInstruction::StepVector:
+      return true;
+    default:
+      return false;
+    }
   }
 
   static inline bool classof(const VPUser *R) {
@@ -1833,6 +1838,8 @@ public:
 class VPWidenIntOrFpInductionRecipe : public VPWidenInductionRecipe {
   TruncInst *Trunc;
 
+  bool isUnrolled() const { return getNumOperands() == 6; }
+
 public:
   VPWidenIntOrFpInductionRecipe(PHINode *IV, VPValue *Start, VPValue *Step,
                                 VPValue *VF, const InductionDescriptor &IndDesc,
@@ -1913,9 +1920,6 @@ public:
   VPValue *getLastUnrolledPartOperand() {
     return isUnrolled() ? getOperand(getNumOperands() - 1) : this;
   }
-
-private:
-  bool isUnrolled() const { return getNumOperands() == 6; }
 };
 
 class VPWidenPointerInductionRecipe : public VPWidenInductionRecipe,
