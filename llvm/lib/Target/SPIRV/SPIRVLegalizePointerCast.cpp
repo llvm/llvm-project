@@ -81,8 +81,9 @@ class SPIRVLegalizePointerCast : public FunctionPass {
     LoadInst *NewLoad = B.CreateLoad(SourceType, Source);
     buildAssignType(B, SourceType, NewLoad);
 
-    SmallVector<int> Mask(/* Size= */ TargetType->getNumElements(),
-                          /* Value= */ 0);
+    SmallVector<int> Mask(/* Size= */ TargetType->getNumElements());
+    for (unsigned I = 0; I < TargetType->getNumElements(); ++I)
+      Mask[I] = I;
     Value *Output = B.CreateShuffleVector(NewLoad, NewLoad, Mask);
     buildAssignType(B, TargetType, Output);
     return Output;
