@@ -2283,6 +2283,35 @@ LogicalResult IndexOp::verify() {
   return success();
 }
 
+OpFoldResult IndexOp::fold(FoldAdaptor adaptor) {
+  auto linalgOp = cast<LinalgOp>((*this)->getParentOp());
+  int64_t flatDimPos =
+      cast<AffineDimExpr>(linalgOp.getShapesToLoopsMap().getResult(getDim()))
+          .getPosition();
+
+  // Find the flat dimension position among the operands.
+  int64_t flatPosOffset = 0;
+  for (Value operand : linalgOp->getOperands()) {
+    assert(flatDimPos >= flatPosOffset && "invalid position");
+    auto shapedType = dyn_cast<ShapedType>(operand.getType());
+    if (!shapedType)
+      break;
+
+    int64_t rank = shapedType.getRank();
+    if (flatDimPos < flatPosOffset + rank) {
+      // Found the dimension within this shape. Now we can either fold if the
+      // dim size is 1, or bail out otherwise.
+      int64_t pos = flatDimPos - flatPosOffset;
+      if (shapedType.getDimSize(pos) != 1)
+        break;
+
+      return IntegerAttr::get(IndexType::get(getContext()), 0);
+    }
+    flatPosOffset += rank;
+  }
+  return OpFoldResult{};
+}
+
 /////// Operations corresponding to library calls defined with Tablegen ////////
 
 #include "mlir/Dialect/Linalg/IR/LinalgNamedStructuredOps.yamlgen.cpp.inc"
