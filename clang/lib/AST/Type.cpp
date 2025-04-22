@@ -94,10 +94,12 @@ bool Qualifiers::isTargetAddressSpaceSupersetOf(LangAS A, LangAS B,
          (A == LangAS::Default &&
           (B == LangAS::cuda_constant || B == LangAS::cuda_device ||
            B == LangAS::cuda_shared)) ||
-         // `this` overloading depending on address space is not ready,
-         // so this is a hack to allow generating addrspacecasts.
-         // IR legalization will be required when this address space is used.
+         // In HLSL, the this pointer for member functions points to the default
+         // address space. This causes a problem if the structure is in
+         // a different address space. We want to allow casting from these
+         // address spaces to default to work around this problem.
          (A == LangAS::Default && B == LangAS::hlsl_private) ||
+         (A == LangAS::Default && B == LangAS::hlsl_device) ||
          // Conversions from target specific address spaces may be legal
          // depending on the target information.
          Ctx.getTargetInfo().isAddressSpaceSupersetOf(A, B);
