@@ -106,5 +106,51 @@ void acc_serial(int cond) {
   // CHECK-NEXT: acc.yield
   // CHECK-NEXT: } loc
 
+#pragma acc serial async
+  {}
+  // CHECK-NEXT: acc.serial {
+  // CHECK-NEXT: acc.yield
+  // CHECK-NEXT: } attributes {asyncOnly = [#acc.device_type<none>]}
+
+#pragma acc serial async(cond)
+  {}
+  // CHECK-NEXT: %[[COND_LOAD:.*]] = cir.load %[[COND]] : !cir.ptr<!s32i>, !s32i
+  // CHECK-NEXT: %[[CONV_CAST:.*]] = builtin.unrealized_conversion_cast %[[COND_LOAD]] : !s32i to si32
+  // CHECK-NEXT: acc.serial async(%[[CONV_CAST]] : si32) {
+  // CHECK-NEXT: acc.yield
+  // CHECK-NEXT: } loc
+
+#pragma acc serial async device_type(nvidia, radeon) async
+  {}
+  // CHECK-NEXT: acc.serial {
+  // CHECK-NEXT: acc.yield
+  // CHECK-NEXT: } attributes {asyncOnly = [#acc.device_type<none>, #acc.device_type<nvidia>, #acc.device_type<radeon>]}
+
+#pragma acc serial async(3) device_type(nvidia, radeon) async(cond)
+  {}
+  // CHECK-NEXT: %[[THREE_LITERAL:.*]] = cir.const #cir.int<3> : !s32i
+  // CHECK-NEXT: %[[THREE_CAST:.*]] = builtin.unrealized_conversion_cast %[[THREE_LITERAL]] : !s32i to si32
+  // CHECK-NEXT: %[[COND_LOAD:.*]] = cir.load %[[COND]] : !cir.ptr<!s32i>, !s32i
+  // CHECK-NEXT: %[[CONV_CAST:.*]] = builtin.unrealized_conversion_cast %[[COND_LOAD]] : !s32i to si32
+  // CHECK-NEXT: acc.serial async(%[[THREE_CAST]] : si32, %[[CONV_CAST]] : si32 [#acc.device_type<nvidia>], %[[CONV_CAST]] : si32 [#acc.device_type<radeon>]) {
+  // CHECK-NEXT: acc.yield
+  // CHECK-NEXT: } loc
+
+#pragma acc serial async device_type(nvidia, radeon) async(cond)
+  {}
+  // CHECK-NEXT: %[[COND_LOAD:.*]] = cir.load %[[COND]] : !cir.ptr<!s32i>, !s32i
+  // CHECK-NEXT: %[[CONV_CAST:.*]] = builtin.unrealized_conversion_cast %[[COND_LOAD]] : !s32i to si32
+  // CHECK-NEXT: acc.serial async(%[[CONV_CAST]] : si32 [#acc.device_type<nvidia>], %[[CONV_CAST]] : si32 [#acc.device_type<radeon>]) {
+  // CHECK-NEXT: acc.yield
+  // CHECK-NEXT: } attributes {asyncOnly = [#acc.device_type<none>]}
+
+#pragma acc serial async(3) device_type(nvidia, radeon) async
+  {}
+  // CHECK-NEXT: %[[THREE_LITERAL:.*]] = cir.const #cir.int<3> : !s32i
+  // CHECK-NEXT: %[[THREE_CAST:.*]] = builtin.unrealized_conversion_cast %[[THREE_LITERAL]] : !s32i to si32
+  // CHECK-NEXT: acc.serial async(%[[THREE_CAST]] : si32) {
+  // CHECK-NEXT: acc.yield
+  // CHECK-NEXT: } attributes {asyncOnly = [#acc.device_type<nvidia>, #acc.device_type<radeon>]}
+
   // CHECK-NEXT: cir.return
 }

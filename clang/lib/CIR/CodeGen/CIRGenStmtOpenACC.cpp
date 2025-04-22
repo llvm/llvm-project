@@ -97,11 +97,17 @@ class OpenACCClauseCIREmitter final
 
   // Handle a clause affected by the 'device-type' to the point that they need
   // to have the attributes added in the correct/corresponding order, such as
-  // 'num_workers' or 'vector_length' on a compute construct.
-  mlir::ArrayAttr
-  handleDeviceTypeAffectedClause(mlir::ArrayAttr existingDeviceTypes,
-                                 mlir::Value argument,
-                                 mlir::MutableOperandRange &argCollection) {
+  // 'num_workers' or 'vector_length' on a compute construct. For cases where we
+  // don't have an expression 'argument' that needs to be added to an operand
+  // and only care about the 'device-type' list, we can use this with 'argument'
+  // as 'std::nullopt'.   If 'argument' is NOT 'std::nullopt' (that is, has a
+  // value), argCollection must also be non-null. For cases where we don't have
+  // an argument that needs to be added to an additional one (such as asyncOnly)
+  // we can use this with 'argument' as std::nullopt.
+  mlir::ArrayAttr handleDeviceTypeAffectedClause(
+      mlir::ArrayAttr existingDeviceTypes,
+      std::optional<mlir::Value> argument = std::nullopt,
+      mlir::MutableOperandRange *argCollection = nullptr) {
     llvm::SmallVector<mlir::Attribute> deviceTypes;
 
     // Collect the 'existing' device-type attributes so we can re-create them
@@ -120,13 +126,19 @@ class OpenACCClauseCIREmitter final
            lastDeviceTypeClause->getArchitectures()) {
         deviceTypes.push_back(mlir::acc::DeviceTypeAttr::get(
             builder.getContext(), decodeDeviceType(arch.getIdentifierInfo())));
-        argCollection.append(argument);
+        if (argument) {
+          assert(argCollection);
+          argCollection->append(*argument);
+        }
       }
     } else {
       // Else, we just add a single for 'none'.
       deviceTypes.push_back(mlir::acc::DeviceTypeAttr::get(
           builder.getContext(), mlir::acc::DeviceType::None));
-      argCollection.append(argument);
+      if (argument) {
+        assert(argCollection);
+        argCollection->append(*argument);
+      }
     }
 
     return mlir::ArrayAttr::get(builder.getContext(), deviceTypes);
@@ -205,7 +217,7 @@ public:
       mlir::MutableOperandRange range = operation.getNumWorkersMutable();
       operation.setNumWorkersDeviceTypeAttr(handleDeviceTypeAffectedClause(
           operation.getNumWorkersDeviceTypeAttr(),
-          createIntExpr(clause.getIntExpr()), range));
+          createIntExpr(clause.getIntExpr()), &range));
     } else if constexpr (isOneOfTypes<OpTy, SerialOp>) {
       llvm_unreachable("num_workers not valid on serial");
     } else {
@@ -218,9 +230,25 @@ public:
       mlir::MutableOperandRange range = operation.getVectorLengthMutable();
       operation.setVectorLengthDeviceTypeAttr(handleDeviceTypeAffectedClause(
           operation.getVectorLengthDeviceTypeAttr(),
-          createIntExpr(clause.getIntExpr()), range));
+          createIntExpr(clause.getIntExpr()), &range));
     } else if constexpr (isOneOfTypes<OpTy, SerialOp>) {
       llvm_unreachable("vector_length not valid on serial");
+    } else {
+      return clauseNotImplemented(clause);
+    }
+  }
+
+  void VisitAsyncClause(const OpenACCAsyncClause &clause) {
+    if constexpr (isOneOfTypes<OpTy, ParallelOp, SerialOp, KernelsOp>) {
+      if (!clause.hasIntExpr()) {
+        operation.setAsyncOnlyAttr(
+            handleDeviceTypeAffectedClause(operation.getAsyncOnlyAttr()));
+      } else {
+        mlir::MutableOperandRange range = operation.getAsyncOperandsMutable();
+        operation.setAsyncOperandsDeviceTypeAttr(handleDeviceTypeAffectedClause(
+            operation.getAsyncOperandsDeviceTypeAttr(),
+            createIntExpr(clause.getIntExpr()), &range));
+      }
     } else {
       return clauseNotImplemented(clause);
     }
