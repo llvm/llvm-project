@@ -372,8 +372,8 @@ void SystemZTTIImpl::getUnrollingPreferences(
       }
       if (isa<StoreInst>(&I)) {
         Type *MemAccessTy = I.getOperand(0)->getType();
-        NumStores += getMemoryOpCost(Instruction::Store, MemAccessTy,
-                                     std::nullopt, 0, TTI::TCK_RecipThroughput);
+        NumStores += getMemoryOpCost(Instruction::Store, MemAccessTy, Align(),
+                                     0, TTI::TCK_RecipThroughput);
       }
     }
 
@@ -1298,7 +1298,7 @@ static bool isBswapIntrinsicCall(const Value *V) {
 }
 
 InstructionCost SystemZTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
-                                                MaybeAlign Alignment,
+                                                Align Alignment,
                                                 unsigned AddressSpace,
                                                 TTI::TargetCostKind CostKind,
                                                 TTI::OperandValueInfo OpInfo,
