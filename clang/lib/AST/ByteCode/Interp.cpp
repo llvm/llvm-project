@@ -881,7 +881,7 @@ bool CheckCallable(InterpState &S, CodePtr OpPC, const Function *F) {
           DiagDecl->hasBody())
         return false;
 
-      if (F->getDecl()->isConstexprOrImplicitlyCanBe(S.getLangOpts(), false)) {
+      if (S.getLangOpts().ImplicitConstexpr && !F->getDecl()->isInlined()) {
         S.FFDiag(S.Current->getLocation(OpPC),
                  diag::note_constexpr_implicit_constexpr_must_be_inlined, 1)
             << DiagDecl;
