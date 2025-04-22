@@ -57,7 +57,8 @@ struct NoTTIImpl : TargetTransformInfoImplCRTPBase<NoTTIImpl> {
 };
 } // namespace
 
-TargetTransformInfo::TargetTransformInfo(std::unique_ptr<Concept> Impl)
+TargetTransformInfo::TargetTransformInfo(
+    std::unique_ptr<const TargetTransformInfoImplBase> Impl)
     : TTIImpl(std::move(Impl)) {}
 
 bool HardwareLoopInfo::canAnalyze(LoopInfo &LI) {
@@ -1474,7 +1475,7 @@ void TargetTransformInfo::collectKernelLaunchBounds(
   return TTIImpl->collectKernelLaunchBounds(F, LB);
 }
 
-TargetTransformInfo::Concept::~Concept() = default;
+TargetTransformInfoImplBase::~TargetTransformInfoImplBase() = default;
 
 TargetIRAnalysis::TargetIRAnalysis() : TTICallback(&getDefaultTTI) {}
 
