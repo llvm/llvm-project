@@ -539,7 +539,7 @@ You can use special comments on issues or pull requests to make backport
 requests for the release branches.  To do this, after your pull request has been
 merged:
 
-1. Edit "Milestone" at the right side of the isssue or pull request
+1. Edit "Milestone" at the right side of the issue or pull request
    to say "LLVM X.Y Release"
 
 2. Add a comment to it in the following format:
