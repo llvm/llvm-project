@@ -389,7 +389,7 @@ MSAN_MAYBE_WARNING_INSTNAME(u64, 8, instname)
   void __msan_maybe_warning_##size(type s, u32 o) { \
     GET_CALLER_PC_BP;                               \
     if (UNLIKELY(s)) {                              \
-      CANNOT_PRINT_FAULTING_INSTRUCTION;            \
+      WARN_IF_PRINT_FAULTING_INSTRUCTION_REQUESTED; \
       PrintWarningWithOrigin(pc, bp, o);            \
       if (__msan::flags()->halt_on_error) {         \
         Printf("Exiting\n");                        \
