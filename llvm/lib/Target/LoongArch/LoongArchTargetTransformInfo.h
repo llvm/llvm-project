@@ -40,12 +40,14 @@ public:
       : BaseT(TM, F.getDataLayout()), ST(TM->getSubtargetImpl(F)),
         TLI(ST->getTargetLowering()) {}
 
-  TypeSize getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const;
-  unsigned getNumberOfRegisters(unsigned ClassID) const;
-  unsigned getRegisterClassForType(bool Vector, Type *Ty = nullptr) const;
-  unsigned getMaxInterleaveFactor(ElementCount VF) const;
-  const char *getRegisterClassName(unsigned ClassID) const;
-  TTI::PopcntSupportKind getPopcntSupport(unsigned TyWidth) const;
+  TypeSize
+  getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const override;
+  unsigned getNumberOfRegisters(unsigned ClassID) const override;
+  unsigned getRegisterClassForType(bool Vector,
+                                   Type *Ty = nullptr) const override;
+  unsigned getMaxInterleaveFactor(ElementCount VF) const override;
+  const char *getRegisterClassName(unsigned ClassID) const override;
+  TTI::PopcntSupportKind getPopcntSupport(unsigned TyWidth) const override;
 
   unsigned getCacheLineSize() const override;
   unsigned getPrefetchDistance() const override;
