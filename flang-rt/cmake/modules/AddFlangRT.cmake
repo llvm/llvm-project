@@ -234,11 +234,11 @@ function (add_flangrt_library name)
     endif ()
 
     # Add target specific options if necessary.
-    if ("${LLVM_RUNTIMES_TARGET}" MATCHES "^amdgcn")
+    if ("${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^amdgcn")
       target_compile_options(${tgtname} PRIVATE
           $<$<COMPILE_LANGUAGE:CXX>:-nogpulib -flto -fvisibility=hidden>
         )
-    elseif ("${LLVM_RUNTIMES_TARGET}" MATCHES "^nvptx")
+    elseif ("${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^nvptx")
       target_compile_options(${tgtname} PRIVATE
           $<$<COMPILE_LANGUAGE:CXX>:-nogpulib -flto -fvisibility=hidden -Wno-unknown-cuda-version --cuda-feature=+ptx63>
         )

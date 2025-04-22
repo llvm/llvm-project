@@ -100,12 +100,12 @@ targeting a GPU architecture.
   $> TARGET_C_COMPILER=</path/to/clang>
   $> TARGET_CXX_COMPILER=</path/to/clang++>
   $> cmake ../runtimes \ # Point to the runtimes build
-     -G Ninja                                  \
-     -DLLVM_ENABLE_RUNTIMES=libc               \
-     -DCMAKE_C_COMPILER=$TARGET_C_COMPILER     \
-     -DCMAKE_CXX_COMPILER=$TARGET_CXX_COMPILER \
-     -DLLVM_LIBC_FULL_BUILD=ON                 \
-     -DLLVM_RUNTIMES_TARGET=$TARGET_TRIPLE     \
+     -G Ninja                                    \
+     -DLLVM_ENABLE_RUNTIMES=libc                 \
+     -DCMAKE_C_COMPILER=$TARGET_C_COMPILER       \
+     -DCMAKE_CXX_COMPILER=$TARGET_CXX_COMPILER   \
+     -DLLVM_LIBC_FULL_BUILD=ON                   \
+     -DLLVM_DEFAULT_TARGET_TRIPLE=$TARGET_TRIPLE \
      -DCMAKE_BUILD_TYPE=Release
   $> ninja install
 
