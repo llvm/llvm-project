@@ -6030,6 +6030,28 @@ static Expr *getNewTraitsOrDirectCall(const ASTContext &Context,
   return FinalCall;
 }
 
+// Add Attribute NoContextAttr or NoVariantsAttr
+// to the CapturedDecl.
+static void addAttr(const ASTContext &Context, Expr *AssocExpr,
+                    SemaOpenMP *SemaPtr, bool NoContext, CapturedDecl *CDecl) {
+  llvm::SmallVector<Expr *, 4> Args;
+  Expr *NewCallExpr = nullptr;
+
+  if (NoContext) {
+    NewCallExpr = getNewTraitsOrDirectCall(Context, AssocExpr, SemaPtr, true);
+    Args.push_back(NewCallExpr);
+    CDecl->addAttr(AnnotateAttr::CreateImplicit(
+        const_cast<ASTContext &>(Context), "NoContextAttr", Args.data(),
+        Args.size()));
+  } else {
+    NewCallExpr = getNewTraitsOrDirectCall(Context, AssocExpr, SemaPtr, false);
+    Args.push_back(NewCallExpr);
+    CDecl->addAttr(AnnotateAttr::CreateImplicit(
+        const_cast<ASTContext &>(Context), "NoVariantsAttr", Args.data(),
+        Args.size()));
+  }
+}
+
 /// annotateAStmt() function is used by ActOnOpenMPExecutableDirective()
 /// for the dispatch directive (nocontext or invariant clauses).
 /// An annotation "NoContextInvariant" is added to the Captured Decl
@@ -6049,24 +6071,20 @@ void SemaOpenMP::annotateAStmt(const ASTContext &Context, Stmt *StmtP,
     Stmt *AssocExprStmt = AssocStmt->getCapturedStmt();
     CapturedDecl *CDecl = AssocStmt->getCapturedDecl();
     auto *AssocExpr = dyn_cast<Expr>(AssocExprStmt);
-    bool NoContext = false;
 
     if (OMPExecutableDirective::getSingleClause<OMPNovariantsClause>(Clauses)) {
-
-      if (OMPExecutableDirective::getSingleClause<OMPNocontextClause>(Clauses))
-        Diag(StartLoc, diag::warn_omp_dispatch_clause_novariants_nocontext);
+      addAttr(const_cast<ASTContext &>(Context), AssocExpr, SemaPtr, false,
+              CDecl);
+      if (OMPExecutableDirective::getSingleClause<OMPNocontextClause>(
+              Clauses)) {
+        addAttr(const_cast<ASTContext &>(Context), AssocExpr, SemaPtr, true,
+                CDecl);
+      }
     } else if (OMPExecutableDirective::getSingleClause<OMPNocontextClause>(
-                   Clauses))
-      NoContext = true;
-
-    Expr *NewCallExpr =
-        getNewTraitsOrDirectCall(Context, AssocExpr, SemaPtr, NoContext);
-    // Annotate "NoContextInvariant" to CDecl of the AssocStmt
-    llvm::SmallVector<Expr *, 4> Args;
-    Args.push_back(NewCallExpr);
-    CDecl->addAttr(AnnotateAttr::CreateImplicit(
-        const_cast<ASTContext &>(Context), "NoContextInvariant", Args.data(),
-        Args.size()));
+                   Clauses)) {
+      addAttr(const_cast<ASTContext &>(Context), AssocExpr, SemaPtr, true,
+              CDecl);
+    }
   }
 }
 

@@ -89,6 +89,9 @@ void checkDepend()
 
   #pragma omp dispatch depend(out:x) nocontext(cond_false)
   foo(x,y);
+
+  #pragma omp dispatch depend(out:x) novariants(cond_false) nocontext(cond_true)
+  output = foo(x,y);
 }
 
 int bar_variant(int x) {
@@ -163,16 +166,16 @@ void checkNoContext_withoutVariant() {
 // CHECK-LABEL: {{.+}}checkNoVariants{{.+}}
 // CHECK-LABEL: entry:
 //  #pragma omp dispatch novariants(cond_false)
-// CHECK-LABEL: if.else{{.+}}
-// CHECK: call {{.+}}captured_stmt.1{{.+}}
 // CHECK-LABEL: if.then{{.+}}
+// CHECK: call {{.+}}captured_stmt.1{{.+}}
+// CHECK-LABEL: if.else{{.+}}
 // CHECK: call {{.+}}captured_stmt.2{{.+}}
 // CHECK-LABEL: if.end{{.+}}
 //
 //  #pragma omp dispatch novariants(cond_true)
-// CHECK-LABEL: if.else{{.+}}
-// CHECK: call {{.+}}captured_stmt.3{{.+}}
 // CHECK-LABEL: if.then{{.+}}
+// CHECK: call {{.+}}captured_stmt.3{{.+}}
+// CHECK-LABEL: if.else{{.+}}
 // CHECK: call {{.+}}captured_stmt.4{{.+}}
 // CHECK-LABEL: if.end{{.+}}
 //
@@ -180,16 +183,16 @@ void checkNoContext_withoutVariant() {
 // CHECK-LABEL: entry:
 //
 //  #pragma omp dispatch nocontext(cond_false)
-// CHECK-LABEL: if.else{{.+}}
-// CHECK: call {{.+}}captured_stmt.5{{.+}}
 // CHECK-LABEL: if.then{{.+}}
+// CHECK: call {{.+}}captured_stmt.5{{.+}}
+// CHECK-LABEL: if.else{{.+}}
 // CHECK: call {{.+}}captured_stmt.6{{.+}}
 // CHECK-LABEL: if.end{{.+}}
 //
 //  #pragma omp dispatch nocontext(cond_true)
-// CHECK-LABEL: if.else{{.+}}
-// CHECK: call {{.+}}captured_stmt.7{{.+}}
 // CHECK-LABEL: if.then{{.+}}
+// CHECK: call {{.+}}captured_stmt.7{{.+}}
+// CHECK-LABEL: if.else{{.+}}
 // CHECK: call {{.+}}captured_stmt.8{{.+}}
 // CHECK-LABEL: if.end{{.+}}
 //
@@ -204,67 +207,79 @@ void checkNoContext_withoutVariant() {
 //
 //  #pragma omp dispatch depend(out:x) novariants(cond_false)
 // CHECK: call {{.+}}kmpc_omp_taskwait_deps{{.+}}
-// CHECK-LABEL: if.else{{.+}}
-// CHECK: call {{.+}}captured_stmt.9{{.+}}
 // CHECK-LABEL: if.then{{.+}}
+// CHECK: call {{.+}}captured_stmt.9{{.+}}
+// CHECK-LABEL: if.else{{.+}}
 // CHECK: call {{.+}}captured_stmt.10{{.+}}
 // CHECK-LABEL: if.end{{.+}}
 //
 //  #pragma omp dispatch depend(out:x) nocontext(cond_false)
 // CHECK: call {{.+}}kmpc_omp_taskwait_deps{{.+}}
-// CHECK-LABEL: if.else{{.+}}
-// CHECK: call {{.+}}captured_stmt.11{{.+}}
 // CHECK-LABEL: if.then{{.+}}
+// CHECK: call {{.+}}captured_stmt.11{{.+}}
+// CHECK-LABEL: if.else{{.+}}
 // CHECK: call {{.+}}captured_stmt.12{{.+}}
 // CHECK-LABEL: if.end{{.+}}
 // CHECK: ret void
 //
 // CHECK-LABEL: define {{.+}}__captured_stmt.1{{.+}}
-// CHECK: call {{.+}}foo_variant_dispatch{{.+}}
+// CHECK: call {{.+}}foo{{.+}}
 // CHECK: ret void
 //
 // CHECK-LABEL: define {{.+}}__captured_stmt.2{{.+}}
-// CHECK: call {{.+}}foo{{.+}}
+// CHECK: call {{.+}}foo_variant_dispatch{{.+}}
 // CHECK: ret void
 //
 // CHECK-LABEL: define {{.+}}__captured_stmt.3{{.+}}
-// CHECK: call {{.+}}foo_variant_dispatch{{.+}}
+// CHECK: call {{.+}}foo{{.+}}
 // CHECK: ret void
 //
 // CHECK-LABEL: define {{.+}}__captured_stmt.4{{.+}}
-// CHECK: call {{.+}}foo{{.+}}
+// CHECK: call {{.+}}foo_variant_dispatch{{.+}}
 // CHECK: ret void
 //
 // CHECK-LABEL: define {{.+}}__captured_stmt.5{{.+}}
-// CHECK: call {{.+}}foo_variant_dispatch{{.+}}
+// CHECK: call {{.+}}foo_variant_allCond{{.+}}
 // CHECK: ret void
 //
 // CHECK-LABEL: define {{.+}}__captured_stmt.6{{.+}}
-// CHECK: call {{.+}}foo_variant_allCond{{.+}}
+// CHECK: call {{.+}}foo_variant_dispatch{{.+}}
 // CHECK: ret void
 //
 // CHECK-LABEL: define {{.+}}__captured_stmt.7{{.+}}
-// CHECK: call {{.+}}foo_variant_dispatch{{.+}}
+// CHECK: call {{.+}}foo_variant_allCond{{.+}}
 // CHECK: ret void
 //
 // CHECK-LABEL: define {{.+}}__captured_stmt.8{{.+}}
-// CHECK: call {{.+}}foo_variant_allCond{{.+}}
+// CHECK: call {{.+}}foo_variant_dispatch{{.+}}
 // CHECK: ret void
 //
 // CHECK-LABEL: define {{.+}}__captured_stmt.9{{.+}}
-// CHECK: call {{.+}}foo_variant_dispatch{{.+}}
-// CHECK: ret void
-//
-// CHECK-LABEL: define {{.+}}__captured_stmt.10{{.+}}
 // CHECK: call {{.+}}foo{{.+}}
 // CHECK: ret void
 //
-// CHECK-LABEL: define {{.+}}__captured_stmt.11{{.+}}
+// CHECK-LABEL: define {{.+}}__captured_stmt.10{{.+}}
 // CHECK: call {{.+}}foo_variant_dispatch{{.+}}
 // CHECK: ret void
 //
-// CHECK-LABEL: define {{.+}}__captured_stmt.12{{.+}}
+// CHECK-LABEL: define {{.+}}__captured_stmt.11{{.+}}
 // CHECK: call {{.+}}foo_variant_allCond{{.+}}
+// CHECK: ret void
+//
+// CHECK-LABEL: define {{.+}}__captured_stmt.12{{.+}}
+// CHECK: call {{.+}}foo_variant_dispatch{{.+}}
+// CHECK: ret void
+//
+// CHECK-LABEL: define {{.+}}__captured_stmt.13{{.+}}
+// CHECK: call {{.+}}foo{{.+}}
+// CHECK: ret void
+//
+// CHECK-LABEL: define {{.+}}__captured_stmt.14{{.+}}
+// CHECK: call {{.+}}foo_variant_allCond{{.+}}
+// CHECK: ret void
+//
+// CHECK-LABEL: define {{.+}}__captured_stmt.15{{.+}}
+// CHECK: call {{.+}}foo_variant_dispatch{{.+}}
 // CHECK: ret void
 //
 // CHECK-LABEL: define {{.+}}bar_variant{{.+}}
@@ -278,72 +293,72 @@ void checkNoContext_withoutVariant() {
 // CHECK-LABEL: define {{.+}}without_declareVariant{{.+}}
 // CHECK-LABEL: entry:
 // CHECK: call {{.+}}bar{{.+}}
-// CHECK: call {{.+}}captured_stmt.13{{.+}}
+// CHECK: call {{.+}}captured_stmt.16{{.+}}
 // CHECK-NEXT: call {{.+}}checkNoVariants_withoutVariant{{.+}}
 // CHECK-NEXT: call {{.+}}checkNoContext_withoutVariant{{.+}}
 // CHECK-NEXT: ret{{.+}}
 //
 //  #pragma omp dispatch
-// CHECK-LABEL: define {{.+}}__captured_stmt.13{{.+}}
+// CHECK-LABEL: define {{.+}}__captured_stmt.16{{.+}}
 // CHECK: call {{.+}}bar{{.+}}
 // CHECK: ret void
 //
 // CHECK-LABEL: define {{.+}}checkNoVariants_withoutVariant{{.+}}
 // CHECK-LABEL: entry:
-// CHECK-LABEL: if.else{{.+}}
-// CHECK: call {{.+}}captured_stmt.14{{.+}}
-// CHECK-LABEL: if.then{{.+}}
-// CHECK: call {{.+}}captured_stmt.15{{.+}}
-// CHECK-LABEL: if.end{{.+}}
-// CHECK-LABEL: if.else{{.+}}
-// CHECK: call {{.+}}captured_stmt.16{{.+}}
 // CHECK-LABEL: if.then{{.+}}
 // CHECK: call {{.+}}captured_stmt.17{{.+}}
+// CHECK-LABEL: if.else{{.+}}
+// CHECK: call {{.+}}captured_stmt.18{{.+}}
+// CHECK-LABEL: if.end{{.+}}
+// CHECK-LABEL: if.then{{.+}}
+// CHECK: call {{.+}}captured_stmt.19{{.+}}
+// CHECK-LABEL: if.else{{.+}}
+// CHECK: call {{.+}}captured_stmt.20{{.+}}
 // CHECK-LABEL: if.end{{.+}}
 // CHECK: ret{{.+}}
 //
 // CHECK-LABEL: define {{.+}}checkNoContext_withoutVariant{{.+}}
 // CHECK-LABEL: entry:
-// CHECK-LABEL: if.else{{.+}}
-// CHECK: call {{.+}}captured_stmt.18{{.+}}
-// CHECK-LABEL: if.then{{.+}}
-// CHECK: call {{.+}}captured_stmt.19{{.+}}
-// CHECK-LABEL: if.end{{.+}}
-// CHECK-LABEL: if.else{{.+}}
-// CHECK: call {{.+}}captured_stmt.20{{.+}}
 // CHECK-LABEL: if.then{{.+}}
 // CHECK: call {{.+}}captured_stmt.21{{.+}}
+// CHECK-LABEL: if.else{{.+}}
+// CHECK: call {{.+}}captured_stmt.22{{.+}}
+// CHECK-LABEL: if.end{{.+}}
+// CHECK-LABEL: if.then{{.+}}
+// CHECK: call {{.+}}captured_stmt.23{{.+}}
+// CHECK-LABEL: if.else{{.+}}
+// CHECK: call {{.+}}captured_stmt.24{{.+}}
 // CHECK-LABEL: if.end{{.+}}
 // CHECK: ret{{.+}} 
 //
 // #pragma omp dispatch novariants(cond_true)
-// CHECK-LABEL: define {{.+}}__captured_stmt.14{{.+}}
+// CHECK-LABEL: define {{.+}}__captured_stmt.17{{.+}}
 // CHECK: call {{.+}}bar{{.+}}
 // CHECK: ret void
-// CHECK-LABEL: define {{.+}}__captured_stmt.15{{.+}}
+// CHECK-LABEL: define {{.+}}__captured_stmt.18{{.+}}
 // CHECK: call {{.+}}bar{{.+}}
 // CHECK: ret void
 //
 // #pragma omp dispatch novariants(cond_false)
-// CHECK-LABEL: define {{.+}}__captured_stmt.16{{.+}}
+// CHECK-LABEL: define {{.+}}__captured_stmt.19{{.+}}
 // CHECK: call {{.+}}bar{{.+}}
 // CHECK: ret void
-// CHECK-LABEL: define {{.+}}__captured_stmt.17{{.+}}
+// CHECK-LABEL: define {{.+}}__captured_stmt.20{{.+}}
 // CHECK: call {{.+}}bar{{.+}}
 // CHECK: ret void
 //
 // #pragma omp dispatch nocontext(cond_true)
-// CHECK-LABEL: define {{.+}}__captured_stmt.18{{.+}}
+// CHECK-LABEL: define {{.+}}__captured_stmt.21{{.+}}
 // CHECK: call {{.+}}bar{{.+}}
 // CHECK: ret void
-// CHECK-LABEL: define {{.+}}__captured_stmt.19{{.+}}
+// CHECK-LABEL: define {{.+}}__captured_stmt.22{{.+}}
 // CHECK: call {{.+}}bar{{.+}}
 // CHECK: ret void
 //
 // #pragma omp dispatch nocontext(cond_false)
-// CHECK-LABEL: define {{.+}}__captured_stmt.20{{.+}}
+// CHECK-LABEL: define {{.+}}__captured_stmt.23{{.+}}
 // CHECK: call {{.+}}bar{{.+}}
 // CHECK: ret void
-// CHECK-LABEL: define {{.+}}__captured_stmt.21{{.+}}
+// CHECK-LABEL: define {{.+}}__captured_stmt.24{{.+}}
 // CHECK: call {{.+}}bar{{.+}}
 // CHECK: ret void

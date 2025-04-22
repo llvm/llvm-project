@@ -4529,59 +4529,144 @@ void CodeGenFunction::EmitOMPMasterDirective(const OMPMasterDirective &S) {
   emitMaster(*this, S);
 }
 
-static Expr *replaceWithNewTraitsOrDirectCall(Stmt *AssocExpr,
-                                              CallExpr *ReplacementFunction) {
-  Expr *FinalCall = ReplacementFunction;
+static Expr *replaceWithNewTraitsOrDirectCall(CapturedDecl *CDecl,
+                                              Expr *NewExpr) {
+  Expr *CurrentCallExpr = nullptr;
+  Stmt *CallExprStmt = CDecl->getBody();
 
-  if (BinaryOperator *BinaryCopyOpr = dyn_cast<BinaryOperator>(AssocExpr)) {
-    BinaryCopyOpr->setRHS(FinalCall);
-    return BinaryCopyOpr;
+  if (BinaryOperator *BinaryCopyOpr = dyn_cast<BinaryOperator>(CallExprStmt)) {
+    CurrentCallExpr = BinaryCopyOpr->getRHS();
+    BinaryCopyOpr->setRHS(NewExpr);
+  } else {
+    CurrentCallExpr = dyn_cast<Expr>(CallExprStmt);
+    CDecl->setBody(NewExpr);
   }
 
-  return FinalCall;
+  return CurrentCallExpr;
 }
 
-static void transformCallInStmt(Stmt *StmtP) {
-  if (auto *AssocStmt = dyn_cast<CapturedStmt>(StmtP)) {
-    CapturedDecl *CDecl = AssocStmt->getCapturedDecl();
+static Expr *transformCallInStmt(Stmt *StmtP, bool NoContext = false) {
+  Expr *CurrentExpr = nullptr;
+  if (auto *CptStmt = dyn_cast<CapturedStmt>(StmtP)) {
+    CapturedDecl *CDecl = CptStmt->getCapturedDecl();
 
-    // Access AnnotateAttr
     CallExpr *NewCallExpr = nullptr;
     for (const auto *attr : CDecl->attrs()) {
-      if (const auto *annotateAttr = llvm::dyn_cast<clang::AnnotateAttr>(attr);
-          annotateAttr &&
-          annotateAttr->getAnnotation() == "NoContextInvariant") {
-        NewCallExpr = llvm::dyn_cast<CallExpr>(*annotateAttr->args_begin());
+      if (NoContext) {
+        if (const auto *annotateAttr =
+                llvm::dyn_cast<clang::AnnotateAttr>(attr);
+            annotateAttr && annotateAttr->getAnnotation() == "NoContextAttr") {
+          NewCallExpr = llvm::dyn_cast<CallExpr>(*annotateAttr->args_begin());
+        }
+      } else {
+        if (const auto *annotateAttr =
+                llvm::dyn_cast<clang::AnnotateAttr>(attr);
+            annotateAttr && annotateAttr->getAnnotation() == "NoVariantsAttr") {
+          NewCallExpr = llvm::dyn_cast<CallExpr>(*annotateAttr->args_begin());
+        }
       }
     }
 
-    Stmt *CallExprStmt = CDecl->getBody();
-    Stmt *NewCallExprStmt =
-        replaceWithNewTraitsOrDirectCall(CallExprStmt, NewCallExpr);
-    CDecl->setBody(NewCallExprStmt);
+    CurrentExpr = replaceWithNewTraitsOrDirectCall(CDecl, NewCallExpr);
   }
+  return CurrentExpr;
 }
 
-static void emitIfElse(CodeGenFunction *CGF, Expr *Condition,
-                       Stmt *AssociatedStmt) {
+// emitIfElse is used for the following conditions:
+//
+// NoVariants = 0 && NoContext = 1
+//   if (Condition_NoContext) {
+//     foo_variant2(); // Present in AnnotationAttr
+//   } else {
+//     foo_variant();
+//   }
+//
+// NoVariants = 1 && NoContext = 0
+//   if (Condition_NoVariants) {
+//     foo();
+//   } else {
+//     foo_variant();
+//   }
+//
+// NoVariants = 1 && NoContext = 1
+//   if (Condition_NoVariants) {   // ==> label if.then.NoVariants
+//     foo();
+//   } else {  // ==> label else.NoVariants
+//     if (Condition_NoContext) {   // ==> label if.then.NoContext
+//       foo_variant2(); // Present in AnnotationAttr
+//     } else {   // ==> label else
+//       foo_variant();
+//     }
+//   }
+//
+static void emitIfElse(CodeGenFunction *CGF, Stmt *AssociatedStmt,
+                       Expr *Condition_NoVariants, Expr *Condition_NoContext) {
   llvm::BasicBlock *ThenBlock = CGF->createBasicBlock("if.then");
   llvm::BasicBlock *ElseBlock = CGF->createBasicBlock("if.else");
   llvm::BasicBlock *MergeBlock = CGF->createBasicBlock("if.end");
+  llvm::BasicBlock *ThenNoVariantsBlock = nullptr;
+  llvm::BasicBlock *ElseNoVariantsBlock = nullptr;
+  llvm::BasicBlock *ThenNoContextBlock = nullptr;
+  Expr *ElseCall = nullptr;
 
-  CGF->EmitBranchOnBoolExpr(Condition, ThenBlock, ElseBlock, 0);
+  if (Condition_NoVariants && Condition_NoContext) {
+    ThenNoVariantsBlock = CGF->createBasicBlock("if.then.NoVariants");
+    ElseNoVariantsBlock = CGF->createBasicBlock("else.NoVariants");
+    ThenNoContextBlock = CGF->createBasicBlock("if.then.NoContext");
+
+    CGF->EmitBranchOnBoolExpr(Condition_NoVariants, ThenNoVariantsBlock,
+                              ElseNoVariantsBlock, 0);
+
+  } else if (Condition_NoVariants)
+    CGF->EmitBranchOnBoolExpr(Condition_NoVariants, ThenBlock, ElseBlock, 0);
+  else
+    CGF->EmitBranchOnBoolExpr(Condition_NoContext, ThenBlock, ElseBlock, 0);
+
+  if (Condition_NoVariants && Condition_NoContext) {
+    // Emit the NoVariants (if then, for the NoVariants)  block.
+    CGF->EmitBlock(ThenNoVariantsBlock);
+    Stmt *ThenStmt = AssociatedStmt;
+    ElseCall = transformCallInStmt(ThenStmt, false);
+    CGF->EmitStmt(ThenStmt);
+    CGF->Builder.CreateBr(MergeBlock);
+
+    CGF->EmitBlock(ElseNoVariantsBlock);
+    CGF->EmitBranchOnBoolExpr(Condition_NoVariants, ThenNoContextBlock,
+                              ElseBlock, 0);
+    // Emit the NoContext (else if, for the NoContext) block.
+    CGF->EmitBlock(ThenNoContextBlock);
+    Stmt *ThenNoContextStmt = AssociatedStmt;
+    transformCallInStmt(ThenNoContextStmt, true);
+    CGF->EmitStmt(ThenNoContextStmt);
+    CGF->Builder.CreateBr(MergeBlock);
+
+  } else if (Condition_NoVariants) {
+    // Emit the NoVariants (then) block.
+    CGF->EmitBlock(ThenBlock);
+    Stmt *ThenStmt = AssociatedStmt;
+    ElseCall = transformCallInStmt(ThenStmt, false);
+    CGF->EmitStmt(ThenStmt);
+    CGF->Builder.CreateBr(MergeBlock);
+
+  } else if (Condition_NoContext) {
+    // Emit the NoContext (then) block.
+    CGF->EmitBlock(ThenBlock);
+    Stmt *ThenStmt = AssociatedStmt;
+    ElseCall = transformCallInStmt(ThenStmt, true);
+    CGF->EmitStmt(ThenStmt);
+    CGF->Builder.CreateBr(MergeBlock);
+  }
 
   // Emit the else block.
-  Stmt *ElseStmt = AssociatedStmt;
   CGF->EmitBlock(ElseBlock);
+  Stmt *ElseStmt = AssociatedStmt;
+  if (auto *CaptStmt = dyn_cast<CapturedStmt>(ElseStmt)) {
+    CapturedDecl *CDecl = CaptStmt->getCapturedDecl();
+    replaceWithNewTraitsOrDirectCall(CDecl, ElseCall);
+  }
   CGF->EmitStmt(ElseStmt);
   CGF->Builder.CreateBr(MergeBlock);
 
-  // Emit the then block.
-  Stmt *ThenStmt = AssociatedStmt;
-  transformCallInStmt(ThenStmt);
-  CGF->EmitBlock(ThenBlock);
-  CGF->EmitStmt(ThenStmt);
-  CGF->Builder.CreateBr(MergeBlock);
   CGF->EmitBlock(MergeBlock);
 }
 
@@ -4598,25 +4683,32 @@ void CodeGenFunction::EmitOMPDispatchDirective(const OMPDispatchDirective &S) {
   if (!CapturedStmtInfo)
     CapturedStmtInfo = &CapStmtInfo;
 
+  Expr *NoVariantsCondition = nullptr;
+  Expr *NoContextCondition = nullptr;
   if (!Clauses.empty()) {
     if (S.hasClausesOfKind<OMPDependClause>())
       EmitOMPDispatchToTaskwaitDirective(S);
 
     if (S.hasClausesOfKind<OMPNovariantsClause>() ||
         S.hasClausesOfKind<OMPNocontextClause>()) {
-      Expr *Condition = nullptr;
       if (const OMPNovariantsClause *NoVariantsC =
               OMPExecutableDirective::getSingleClause<OMPNovariantsClause>(
                   Clauses)) {
-        Condition = NoVariantsC->getCondition();
+        NoVariantsCondition = NoVariantsC->getCondition();
+        if (const OMPNocontextClause *NoContextC =
+                OMPExecutableDirective::getSingleClause<OMPNocontextClause>(
+                    Clauses)) {
+          NoContextCondition = NoContextC->getCondition();
+        }
       } else {
         const OMPNocontextClause *NoContextC =
             OMPExecutableDirective::getSingleClause<OMPNocontextClause>(
                 Clauses);
-        Condition = NoContextC->getCondition();
+        NoContextCondition = NoContextC->getCondition();
       }
+
       OMPLexicalScope Scope(*this, S, OMPD_dispatch);
-      emitIfElse(this, Condition, AssociatedStmt);
+      emitIfElse(this, AssociatedStmt, NoVariantsCondition, NoContextCondition);
     }
   } else
     EmitStmt(AssociatedStmt);
