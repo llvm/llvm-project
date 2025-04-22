@@ -107,10 +107,11 @@ The `CMAKE_Fortran_COMPILER_WORKS` parameter must be set because otherwise CMake
 will test whether the Fortran compiler can compile and link programs which will
 obviously fail without a runtime library available yet.
 
-Building Flang-RT for cross-compilation triple, the target triple can be
-selected using `LLVM_DEFAULT_TARGET_TRIPLE`. Of course, Flang-RT can be built
-multiple times with different build configurations, but have to be located
-manually when using with the Flang driver using the `-L` option.
+Building Flang-RT for cross-compilation triple, the target triple can
+be selected using `LLVM_DEFAULT_TARGET_TRIPLE` AND `LLVM_RUNTIMES_TARGET`.
+Of course, Flang-RT can be built multiple times with different build
+configurations, but have to be located manually when using with the Flang
+driver using the `-L` option.
 
 After configuration, build, test, and install the runtime via
 

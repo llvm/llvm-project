@@ -223,9 +223,9 @@ endif()
 
 # The GPU targets require a few mandatory arguments to make the standard CMake
 # check flags happy.
-if ("${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^amdgcn")
+if ("${LLVM_RUNTIMES_TARGET}" MATCHES "^amdgcn")
   set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -nogpulib")
-elseif ("${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^nvptx")
+elseif ("${LLVM_RUNTIMES_TARGET}" MATCHES "^nvptx")
   set(CMAKE_REQUIRED_FLAGS
       "${CMAKE_REQUIRED_FLAGS} -flto -c -Wno-unused-command-line-argument")
 endif()
