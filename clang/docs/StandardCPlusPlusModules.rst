@@ -305,17 +305,17 @@ Therefore, none of the following names are valid by default:
 Using a reserved module name is strongly discouraged, but
 ``-Wno-reserved-module-identifier`` can be used to suppress the warning.
 
-Specifying dependent BMIs
-~~~~~~~~~~~~~~~~~~~~~~~~~
+Specifying BMI dependencies
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-There are 3 ways to specify a dependent BMI:
+There are 3 ways to specify a BMI dependency:
 
 1. ``-fprebuilt-module-path=<path/to/directory>``.
 2. ``-fmodule-file=<path/to/BMI>`` (Deprecated).
 3. ``-fmodule-file=<module-name>=<path/to/BMI>``.
 
 The ``-fprebuilt-module-path`` option specifies the path to search for
-dependent BMIs. Multiple paths may be specified, similar to using ``-I`` to
+BMI dependencies. Multiple paths may be specified, similar to using ``-I`` to
 specify a search path for header files. When importing a module ``M``, the
 compiler looks for ``M.pcm`` in the directories specified by
 ``-fprebuilt-module-path``. Similarly, when importing a partition module unit
@@ -337,9 +337,8 @@ When these options are specified in the same invocation of the compiler, the
 ``-fmodule-file=<module-name>=<path/to/BMI>``, which takes precedence over
 ``-fprebuilt-module-path=<path/to/directory>``.
 
-Note: all dependant BMIs must be specified explicitly, either directly or
-indirectly dependent BMIs explicitly. See
-https://github.com/llvm/llvm-project/issues/62707 for details.
+Note: all BMI dependencies must be specified explicitly, either directly or
+indirectly. See https://github.com/llvm/llvm-project/issues/62707 for details.
 
 When compiling a ``module implementation unit``, the BMI of the corresponding
 ``primary module interface unit`` must be specified because a module
@@ -1192,14 +1191,14 @@ them to ``your_library_imported.h`` too.
 Importing modules
 ~~~~~~~~~~~~~~~~~
 
-When there are dependent libraries providing modules, they should be imported
-in your module as well. Many existing libraries will fall into this category
-once the ``std`` module is more widely available.
+When there are library dependencies providing modules, the module dependencies
+should be imported in your module as well. Many existing libraries will fall
+into this category once the ``std`` module is more widely available.
 
-All dependent libraries providing modules
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+All library dependencies providing modules
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Of course, most of the complexity disappears if all the dependent libraries
+Of course, most of the complexity disappears if all the library dependencies
 provide modules.
 
 Headers need to be converted to include third-party headers conditionally. Then,
@@ -1260,8 +1259,8 @@ Non-exported ``using`` declarations are unnecessary if using implementation
 module units. Instead, third-party modules can be imported directly in
 implementation module units.
 
-Partial dependent libraries providing modules
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Partial library dependencies providing modules
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 If the library has to mix the use of ``include`` and ``import`` in its module,
 the primary goal is still the removal of duplicated declarations in translation
@@ -1562,11 +1561,11 @@ file as a header. For example:
   $ clang++ -std=c++20 -fmodule-header=system -xc++-header iostream -o iostream.pcm
   $ clang++ -std=c++20 -fmodule-file=iostream.pcm use.cpp
 
-How to specify dependent BMIs
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+How to specify BMI dependencies
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-``-fmodule-file`` can be used to specify a dependent BMI (or multiple times for
-more than one dependent BMI).
+``-fmodule-file`` can be used to specify a BMI dependency (or multiple times for
+more than one BMI dependency).
 
 With the existing implementation, ``-fprebuilt-module-path`` cannot be used for
 header units (because they are nominally anonymous). For header units, use
