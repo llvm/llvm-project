@@ -1154,9 +1154,9 @@ using PHINodeData = std::pair<ArgLocWithBBCanon, CanonList>;
 /// \param PND - The data to hash.
 /// \returns The hash code of \p PND.
 static hash_code encodePHINodeData(PHINodeData &PND) {
-  return llvm::hash_combine(
-      llvm::hash_value(PND.first.first), llvm::hash_value(PND.first.second),
-      llvm::hash_combine_range(PND.second.begin(), PND.second.end()));
+  return llvm::hash_combine(llvm::hash_value(PND.first.first),
+                            llvm::hash_value(PND.first.second),
+                            llvm::hash_combine_range(PND.second));
 }
 
 /// Create a special GVN for PHINodes that will be used outside of
