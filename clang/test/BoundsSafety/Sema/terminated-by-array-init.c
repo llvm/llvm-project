@@ -37,39 +37,39 @@ void explicit_const_init(void) {
   // ok
   int a1[__null_terminated 3] = {1, 2, 0};
 
-  // expected-error@+1{{array 'a2' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: 0; got 3)}}
+  // expected-error@+1{{array 'a2' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: '0'; got '3')}}
   int a2[__null_terminated 3] = {1, 2, 3};
 
   // ok
   int a3[__terminated_by(42) 3] = {1, 2, 42};
 
-  // expected-error@+1{{array 'a4' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: 42; got 0)}}
+  // expected-error@+1{{array 'a4' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: '42'; got '0')}}
   int a4[__terminated_by(42) 3] = {1, 2, 0};
 
   // ok
   char s1[__null_terminated 3] = "HI";
 
-  // expected-error@+1{{array 's2' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: 'X'; got 0)}}
+  // expected-error@+1{{array 's2' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: ''X''; got '0')}}
   char s2[__terminated_by('X') 3] = "HI";
 
   // ok
   struct Foo foo1 = {{1, 0}, {2, 42}};
 
-  // expected-error@+1{{array 'foo2.a' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: 0; got 1)}}
+  // expected-error@+1{{array 'foo2.a' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: '0'; got '1')}}
   struct Foo foo2 = {{1, 1}, {2, 42}};
 
-  // expected-error@+2{{array 'foo3.a' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: 0; got 1)}}
-  // expected-error@+1{{array 'foo3.b' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: 42; got 2)}}
+  // expected-error@+2{{array 'foo3.a' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: '0'; got '1')}}
+  // expected-error@+1{{array 'foo3.b' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: '42'; got '2')}}
   struct Foo foo3 = {{1, 1}, {2, 2}};
 
   // ok
   struct Qux qux1 = {{{1, 0}, {2, 42}}, {{1, 0}}, {{'Z', 'Y', 'X'}, "HI"}};
 
-  // expected-error@+5{{array 'qux2.foo.a' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: 0; got 1)}}
-  // expected-error@+4{{array 'qux2.foo.b' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: 42; got 2)}}
-  // expected-error@+3{{array 'qux2.bar.a' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: 0; got 3)}}
-  // expected-error@+2{{array 'qux2.baz.a' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: 'X'; got 0)}}
-  // expected-error@+1{{array 'qux2.baz.b' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: 0; got 'X')}}
+  // expected-error@+5{{array 'qux2.foo.a' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: '0'; got '1')}}
+  // expected-error@+4{{array 'qux2.foo.b' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: '42'; got '2')}}
+  // expected-error@+3{{array 'qux2.bar.a' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: '0'; got '3')}}
+  // expected-error@+2{{array 'qux2.baz.a' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: ''X''; got '0')}}
+  // expected-error@+1{{array 'qux2.baz.b' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: '0'; got ''X'')}}
   struct Qux qux2 = {{{1, 1}, {2, 2}}, {{1, 3}}, {"HI", {'Z', 'Y', 'X'}}};
 }
 
@@ -78,27 +78,27 @@ void explicit_const_init_excess(void) {
   int a1[__null_terminated 3] = {1, 2, 0, 4};
 
   // expected-warning@+2{{excess elements in array initializer}}
-  // expected-error@+1{{array 'a2' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: 0; got 3)}}
+  // expected-error@+1{{array 'a2' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: '0'; got '3')}}
   int a2[__null_terminated 3] = {1, 2, 3, 4};
 
   // expected-warning@+1{{excess elements in array initializer}}
   int a3[__terminated_by(42) 3] = {1, 2, 42, 4};
 
   // expected-warning@+2{{excess elements in array initializer}}
-  // expected-error@+1{{array 'a4' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: 42; got 0)}}
+  // expected-error@+1{{array 'a4' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: '42'; got '0')}}
   int a4[__terminated_by(42) 3] = {1, 2, 0, 42};
 
   // ok
   char s1[__null_terminated 3] = "HI\0";
 
-  // expected-error@+1{{array 's2' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: 'X'; got 'J')}}
+  // expected-error@+1{{array 's2' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: ''X''; got ''J'')}}
   char s2[__terminated_by('X') 3] = "HEJ";
 
   // expected-warning@+1{{initializer-string for char array is too long}}
   char s3[__null_terminated 3] = "HI\0HI";
 
   // expected-warning@+2{{initializer-string for char array is too long}}
-  // expected-error@+1{{array 's4' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: 'X'; got 'C')}}
+  // expected-error@+1{{array 's4' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: ''X''; got ''C'')}}
   char s4[__terminated_by('X') 3] = "ABCD";
 
   // expected-warning@+2{{excess elements in array initializer}}
@@ -106,13 +106,13 @@ void explicit_const_init_excess(void) {
   struct Foo foo1 = {{1, 0, 1}, {2, 42, 0}};
 
   // expected-warning@+2{{excess elements in array initializer}}
-  // expected-error@+1{{array 'foo2.a' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: 0; got 1)}}
+  // expected-error@+1{{array 'foo2.a' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: '0'; got '1')}}
   struct Foo foo2 = {{1, 1, 0}, {2, 42}};
 
   // expected-warning@+4{{excess elements in array initializer}}
   // expected-warning@+3{{excess elements in array initializer}}
-  // expected-error@+2{{array 'foo3.a' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: 0; got 1)}}
-  // expected-error@+1{{array 'foo3.b' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: 42; got 2)}}
+  // expected-error@+2{{array 'foo3.a' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: '0'; got '1')}}
+  // expected-error@+1{{array 'foo3.b' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: '42'; got '2')}}
   struct Foo foo3 = {{1, 1, 0}, {2, 2, 42}};
 
   // ok
@@ -124,8 +124,8 @@ void explicit_const_init_excess(void) {
 
   // expected-warning@+4{{initializer-string for char array is too long}}
   // expected-warning@+3{{initializer-string for char array is too long}}
-  // expected-error@+2{{array 'baz3.a' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: 'X'; got 'C')}}
-  // expected-error@+1{{array 'baz3.b' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: 0; got 'X')}}
+  // expected-error@+2{{array 'baz3.a' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: ''X''; got ''C'')}}
+  // expected-error@+1{{array 'baz3.b' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: '0'; got ''X'')}}
   struct Baz baz3 = {"ABCD", "ZYXW"};
 
   // expected-warning@+4{{excess elements in array initializer}}
@@ -137,11 +137,11 @@ void explicit_const_init_excess(void) {
   // expected-warning@+8{{excess elements in array initializer}}
   // expected-warning@+7{{excess elements in array initializer}}
   // expected-warning@+6{{excess elements in array initializer}}
-  // expected-error@+5{{array 'qux2.foo.a' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: 0; got 1)}}
-  // expected-error@+4{{array 'qux2.foo.b' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: 42; got 2)}}
-  // expected-error@+3{{array 'qux2.bar.a' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: 0; got 3)}}
-  // expected-error@+2{{array 'qux2.baz.a' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: 'X'; got 'A')}}
-  // expected-error@+1{{array 'qux2.baz.b' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: 0; got 'J')}}
+  // expected-error@+5{{array 'qux2.foo.a' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: '0'; got '1')}}
+  // expected-error@+4{{array 'qux2.foo.b' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: '42'; got '2')}}
+  // expected-error@+3{{array 'qux2.bar.a' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: '0'; got '3')}}
+  // expected-error@+2{{array 'qux2.baz.a' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: ''X''; got ''A'')}}
+  // expected-error@+1{{array 'qux2.baz.b' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: '0'; got ''J'')}}
   struct Qux qux2 = {{{1, 1, 0}, {2, 2}}, {{1, 3, 0}}, {{'Z', 'Y', 'A', 'W'}, "HEJ"}};
 }
 
@@ -152,10 +152,10 @@ void implicit_init(void) {
   // ok
   int a2[__null_terminated 3] = {1, 2};
 
-  // expected-error@+1{{array 'a3' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: 42; got 0)}}
+  // expected-error@+1{{array 'a3' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: '42'; got '0')}}
   int a3[__terminated_by(42) 3] = {};
 
-  // expected-error@+1{{array 'a4' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: 42; got 0)}}
+  // expected-error@+1{{array 'a4' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: '42'; got '0')}}
   int a4[__terminated_by(42) 3] = {1, 2};
 
   // ok
@@ -164,13 +164,13 @@ void implicit_init(void) {
   // ok
   char s2[__null_terminated 3] = "X";
 
-  // expected-error@+1{{array 'foo1.b' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: 42; got 0)}}
+  // expected-error@+1{{array 'foo1.b' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: '42'; got '0')}}
   struct Foo foo1 = {};
 
-  // expected-error@+1{{array 'foo2.b' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: 42; got 0)}}
+  // expected-error@+1{{array 'foo2.b' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: '42'; got '0')}}
   struct Foo foo2 = {{}};
 
-  // expected-error@+1{{array 'foo3.b' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: 42; got 0)}}
+  // expected-error@+1{{array 'foo3.b' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: '42'; got '0')}}
   struct Foo foo3 = {{}, {}};
 
   // ok
@@ -185,28 +185,28 @@ void implicit_init(void) {
   // ok
   struct Bar bar2 = {{}};
 
-  // expected-error@+1{{array 'baz1.a' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: 'X'; got 0)}}
+  // expected-error@+1{{array 'baz1.a' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: ''X''; got '0')}}
   struct Baz baz1 = {};
 
-  // expected-error@+1{{array 'baz2.a' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: 'X'; got 0)}}
+  // expected-error@+1{{array 'baz2.a' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: ''X''; got '0')}}
   struct Baz baz2 = {{}};
 
-  // expected-error@+1{{array 'baz3.a' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: 'X'; got 0)}}
+  // expected-error@+1{{array 'baz3.a' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: ''X''; got '0')}}
   struct Baz baz3 = {{}, {}};
 
   // ok
   struct Baz baz4 = {"ZYX"};
 
-  // expected-error@+2{{array 'qux1.foo.b' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: 42; got 0)}}
-  // expected-error@+1{{array 'qux1.baz.a' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: 'X'; got 0)}}
+  // expected-error@+2{{array 'qux1.foo.b' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: '42'; got '0')}}
+  // expected-error@+1{{array 'qux1.baz.a' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: ''X''; got '0')}}
   struct Qux qux1 = {};
 
-  // expected-error@+2{{array 'qux2.foo.b' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: 42; got 0)}}
-  // expected-error@+1{{array 'qux2.baz.a' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: 'X'; got 0)}}
+  // expected-error@+2{{array 'qux2.foo.b' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: '42'; got '0')}}
+  // expected-error@+1{{array 'qux2.baz.a' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: ''X''; got '0')}}
   struct Qux qux2 = {{}, {}, {}};
 
-  // expected-error@+2{{array 'qux3.foo.b' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: 42; got 0)}}
-  // expected-error@+1{{array 'qux3.baz.a' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: 'X'; got 0)}}
+  // expected-error@+2{{array 'qux3.foo.b' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: '42'; got '0')}}
+  // expected-error@+1{{array 'qux3.baz.a' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: ''X''; got '0')}}
   struct Qux qux3 = {{{}, {}}, {{}}, {{}, {}}};
 
   // ok
@@ -238,19 +238,19 @@ void incomplete_array_init(void) {
   // ok
   int a1[__null_terminated] = {1, 2, 0};
 
-  // expected-error@+1{{array 'a2' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: 0; got 3)}}
+  // expected-error@+1{{array 'a2' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: '0'; got '3')}}
   int a2[__null_terminated] = {1, 2, 3};
 
   // ok
   int a3[__null_terminated] = (int[3]){1, 2, 0};
 
-  // expected-error@+1{{array 'a4' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: 0; got 3)}}
+  // expected-error@+1{{array 'a4' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: '0'; got '3')}}
   int a4[__null_terminated] = (int[3]){1, 2, 3};
 
   // ok
   char s1[__null_terminated] = "HI";
 
-  // expected-error@+1{{array 's2' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: 'X'; got 0)}}
+  // expected-error@+1{{array 's2' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: ''X''; got '0')}}
   char s2[__terminated_by('X')] = "HI";
 }
 
@@ -279,16 +279,16 @@ void string_literal_init(void) {
   // ok
   char32_t s8[__terminated_by(U'X') 3] = U"ZYX";
 
-  // expected-error@+1{{array 's9' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: 'X'; got 'C')}}
+  // expected-error@+1{{array 's9' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: ''X''; got ''C'')}}
   char s9[__terminated_by('X') 3] = "ABC";
 
-  // expected-error@+1{{array 's10' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: L'X'; got L'C')}}
+  // expected-error@+1{{array 's10' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: 'L'X''; got 'L'C'')}}
   wchar_t s10[__terminated_by(L'X') 3] = L"ABC";
 
-  // expected-error@+1{{array 's11' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: u'X'; got u'C')}}
+  // expected-error@+1{{array 's11' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: 'u'X''; got 'u'C'')}}
   char16_t s11[__terminated_by(u'X') 3] = u"ABC";
 
-  // expected-error@+1{{array 's12' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: U'X'; got U'C')}}
+  // expected-error@+1{{array 's12' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: 'U'X''; got 'U'C'')}}
   char32_t s12[__terminated_by(U'X') 3] = U"ABC";
 
   // ok
@@ -346,11 +346,11 @@ void bar_as_param(struct Bar bar);
 void quux_as_param(struct Quux quux);
 
 void as_param(void) {
-  // expected-error@+1{{array 'foo.b' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: 42; got 0)}}
+  // expected-error@+1{{array 'foo.b' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: '42'; got '0')}}
   foo_as_param((struct Foo){});
 
-  // expected-error@+2{{array 'foo.a' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: 0; got 2)}}
-  // expected-error@+1{{array 'foo.b' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: 42; got 4)}}
+  // expected-error@+2{{array 'foo.a' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: '0'; got '2')}}
+  // expected-error@+1{{array 'foo.b' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: '42'; got '4')}}
   foo_as_param((struct Foo){{1, 2}, {3, 4}});
 
   // ok
@@ -359,7 +359,7 @@ void as_param(void) {
   // ok
   bar_as_param((struct Bar){});
 
-  // expected-error@+1{{array 'bar.a' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: 0; got 2)}}
+  // expected-error@+1{{array 'bar.a' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: '0'; got '2')}}
   bar_as_param((struct Bar){{1, 2}});
 
   // ok
@@ -367,11 +367,11 @@ void as_param(void) {
 }
 
 struct Foo foo_as_ret(void) {
-  // expected-error@+1{{array '.b' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: 42; got 0)}}
+  // expected-error@+1{{array '.b' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: '42'; got '0')}}
   return (struct Foo){};
 
-  // expected-error@+2{{array '.a' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: 0; got 2)}}
-  // expected-error@+1{{array '.b' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: 42; got 4)}}
+  // expected-error@+2{{array '.a' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: '0'; got '2')}}
+  // expected-error@+1{{array '.b' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: '42'; got '4')}}
   return (struct Foo){{1, 2}, {3, 4}};
 
   // ok
@@ -382,7 +382,7 @@ struct Bar bar_as_ret(void) {
   // ok
   return (struct Bar){};
 
-  // expected-error@+1{{array '.a' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: 0; got 2)}}
+  // expected-error@+1{{array '.a' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: '0'; got '2')}}
   return (struct Bar){{1, 2}};
 
   // ok
@@ -403,7 +403,7 @@ struct Foo copy_init(void) {
   // ok
   struct Qux qux2 = { .foo = foo1, /* .bar = ... */ .baz = baz1 };
 
-  // expected-error@+1{{array 'qux3.baz.a' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: 'X'; got 0}}
+  // expected-error@+1{{array 'qux3.baz.a' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: ''X''; got '0'}}
   struct Qux qux3 = { .foo = foo1, .bar = bar1 /* .baz = ... */ };
 
   // ok

@@ -119,7 +119,7 @@ int main() {
 
   foo(&s.len, &s.buf);
   foo(&local_len, &s.buf); // expected-error{{incompatible dynamic count pointer argument to parameter of type}}
-  foo(&t.len, &t.buf);     // expected-error{{incompatible count expression (*out_len) vs. (len + 1) in argument to function}}
+  foo(&t.len, &t.buf);     // expected-error{{incompatible count expression '*out_len' vs. 'len + 1' in argument to function}}
   foo(&u.len, &u.buf);
   // expected-error@-1{{passing address of 'len' as an indirect parameter; must also pass 'buf2' or its address because the type of 'buf2', 'int *__single __counted_by(len)' (aka 'int *__single'), refers to 'len'}}
   bar(&s.len, &s.buf); // expected-error{{passing address of 'len' referred to by '__counted_by' to a parameter that is not referred to by the same attribute}}
@@ -146,14 +146,14 @@ int main() {
 
   foo(&s_n.len, &s_n.buf);
   foo(&local_len, &s_n.buf); // expected-error{{incompatible dynamic count pointer argument to parameter of type}}
-  foo(&t_n.len, &t_n.buf);     // expected-error{{incompatible count expression (*out_len) vs. (len + 1) in argument to function}}
+  foo(&t_n.len, &t_n.buf);     // expected-error{{incompatible count expression '*out_len' vs. 'len + 1' in argument to function}}
   foo(&u_n.len, &u_n.buf);
   // expected-error@-1{{passing address of 'len' as an indirect parameter; must also pass 'buf2' or its address because the type of 'buf2', 'int *__single __counted_by_or_null(len)' (aka 'int *__single'), refers to 'len'}}
   bar(&s_n.len, &s_n.buf); // expected-error{{passing address of 'len' referred to by '__counted_by_or_null' to a parameter that is not referred to by the same attribute}}
 
   foo_nullable(&s.len, &s.buf);
   foo_nullable(&local_len, &s.buf); // expected-error{{incompatible dynamic count pointer argument to parameter of type}}
-  foo_nullable(&t.len, &t.buf);     // expected-error{{incompatible count expression (*out_len) vs. (len + 1) in argument to function}}
+  foo_nullable(&t.len, &t.buf);     // expected-error{{incompatible count expression '*out_len' vs. 'len + 1' in argument to function}}
   foo_nullable(&u.len, &u.buf);
   // expected-error@-1{{passing address of 'len' as an indirect parameter; must also pass 'buf2' or its address because the type of 'buf2', 'int *__single __counted_by(len)' (aka 'int *__single'), refers to 'len'}}
   bar_nullable(&s.len, &s.buf); // expected-error{{passing address of 'len' referred to by '__counted_by' to a parameter that is not referred to by the same attribute}}
@@ -180,7 +180,7 @@ int main() {
 
   foo_nullable(&s_n.len, &s_n.buf);
   foo_nullable(&local_len, &s_n.buf); // expected-error{{incompatible dynamic count pointer argument to parameter of type}}
-  foo_nullable(&t_n.len, &t_n.buf);     // expected-error{{incompatible count expression (*out_len) vs. (len + 1) in argument to function}}
+  foo_nullable(&t_n.len, &t_n.buf);     // expected-error{{incompatible count expression '*out_len' vs. 'len + 1' in argument to function}}
   foo_nullable(&u_n.len, &u_n.buf);
   // expected-error@-1{{passing address of 'len' as an indirect parameter; must also pass 'buf2' or its address because the type of 'buf2', 'int *__single __counted_by_or_null(len)' (aka 'int *__single'), refers to 'len'}}
   bar_nullable(&s_n.len, &s_n.buf); // expected-error{{passing address of 'len' referred to by '__counted_by_or_null' to a parameter that is not referred to by the same attribute}}

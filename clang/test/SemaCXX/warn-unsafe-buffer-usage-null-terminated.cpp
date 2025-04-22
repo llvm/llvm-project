@@ -126,7 +126,7 @@ const char * __null_terminated test_return(const char * p, char * q, std::string
 
 void test_array(char * cstr) {
   const char arr[__null_terminated 3] = {'h', 'i', '\0'};
-  // expected-error@+1 {{array 'arr2' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: 0; got 'i')}}
+  // expected-error@+1 {{array 'arr2' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: '0'; got ''i'')}}
   const char arr2[__null_terminated 2] = {'h', 'i'};
   const char * __null_terminated arr3[] = {"hello", "world"};
   // expected-error@+1 {{initializing 'const char * __terminated_by(0)' (aka 'const char *') with an expression of incompatible type 'char *' is an unsafe operation}}

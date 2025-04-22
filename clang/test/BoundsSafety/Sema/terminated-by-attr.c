@@ -15,7 +15,7 @@ void multiple_attrs(void) {
   char a1[__null_terminated __null_terminated] = "";    // expected-warning{{array annotated with __terminated_by multiple times. Annotate only once to remove this warning}}
   char a2[__null_terminated __terminated_by(42)] = ""; // expected-error{{array cannot have more than one terminator attribute}}
                                                        // expected-note@-1{{conflicting arguments for terminator were '0' and '42'}}
-  char a3[__terminated_by(42)] = ""; // expected-error{{array 'a3' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: 42; got 0)}}
+  char a3[__terminated_by(42)] = ""; // expected-error{{array 'a3' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: '42'; got '0')}}
 
   char *__null_terminated __null_terminated p1 = "";    // expected-warning{{pointer annotated with __terminated_by multiple times. Annotate only once to remove this warning}}
   char *__null_terminated __terminated_by(42) p2 = ""; // expected-error{{pointer cannot have more than one terminator attribute}}

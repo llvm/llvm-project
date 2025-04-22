@@ -22,6 +22,6 @@ int main() {
     // expected-error@+1{{passing address of 'n' referred to by '__counted_by' to a parameter that is not referred to by the same attribute}}
     foo(&buf, &n);
 
-    bar(&buf, &n); // expected-error{{incompatible count expression (*out_n) vs. (n + 1) in argument to function}}
+    bar(&buf, &n); // expected-error{{incompatible count expression '*out_n' vs. 'n + 1' in argument to function}}
     return 0;
 }

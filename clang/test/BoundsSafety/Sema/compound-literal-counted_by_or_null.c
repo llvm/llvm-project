@@ -57,32 +57,32 @@ struct cbon_with_other_data field_initializers_with_side_effects(struct cbon_wit
   *s = (struct cbon_with_other_data){
     0,
     0x0,
-    // expected-warning@+1{{initializer side_effect() has a side effect; this may lead to an unexpected result because the evaluation order of initialization list expressions is indeterminate}}
+    // expected-warning@+1{{initializer 'side_effect()' has a side effect; this may lead to an unexpected result because the evaluation order of initialization list expressions is indeterminate}}
     side_effect()
   };
 
   struct cbon_with_other_data s2 = (struct cbon_with_other_data){
     0,
     0x0,
-    // expected-warning@+1{{initializer side_effect() has a side effect; this may lead to an unexpected result because the evaluation order of initialization list expressions is indeterminate}}
+    // expected-warning@+1{{initializer 'side_effect()' has a side effect; this may lead to an unexpected result because the evaluation order of initialization list expressions is indeterminate}}
     side_effect()
   };
 
   consume_cbon_with_other_data((struct cbon_with_other_data){
     0,
     0x0,
-    // expected-warning@+1{{initializer side_effect() has a side effect; this may lead to an unexpected result because the evaluation order of initialization list expressions is indeterminate}}
+    // expected-warning@+1{{initializer 'side_effect()' has a side effect; this may lead to an unexpected result because the evaluation order of initialization list expressions is indeterminate}}
     side_effect()}
   );
   consume_cbon_with_other_data((struct cbon_with_other_data){
-    // expected-warning@+1{{initializer side_effect() has a side effect; this may lead to an unexpected result because the evaluation order of initialization list expressions is indeterminate}} 
+    // expected-warning@+1{{initializer 'side_effect()' has a side effect; this may lead to an unexpected result because the evaluation order of initialization list expressions is indeterminate}}
     .other = side_effect(),
     .buf = 0x0,
     .count = 0}
   );
 
   (void) (struct cbon_with_other_data){
-    // expected-warning@+1{{initializer side_effect() has a side effect; this may lead to an unexpected result because the evaluation order of initialization list expressions is indeterminate}} 
+    // expected-warning@+1{{initializer 'side_effect()' has a side effect; this may lead to an unexpected result because the evaluation order of initialization list expressions is indeterminate}}
     .other = side_effect(),
     .buf = 0x0,
     .count = 0};
@@ -101,7 +101,7 @@ struct cbon_with_other_data field_initializers_with_side_effects(struct cbon_wit
   };
   (void)(struct Contains_cbon_with_other_data) {
     .s = {
-      // expected-warning@+1{{initializer side_effect() has a side effect; this may lead to an unexpected result because the evaluation order of initialization list expressions is indeterminate}} 
+      // expected-warning@+1{{initializer 'side_effect()' has a side effect; this may lead to an unexpected result because the evaluation order of initialization list expressions is indeterminate}}
       .other = side_effect(),
       .buf = 0x0,
       .count = 0
@@ -111,22 +111,22 @@ struct cbon_with_other_data field_initializers_with_side_effects(struct cbon_wit
 
   // Nested CompoundLiteralExpr
   (void)(struct NestedCBON) {
-    // expected-warning@+1{{initializer (struct cbon_with_other_data){.count = 0, .buf = 0, .other = side_effect()} has a side effect; this may lead to an unexpected result because the evaluation order of initialization list expressions is indeterminate}}
+    // expected-warning@+1{{initializer '(struct cbon_with_other_data){.count = 0, .buf = 0, .other = side_effect()}' has a side effect; this may lead to an unexpected result because the evaluation order of initialization list expressions is indeterminate}}
     .inner = (struct cbon_with_other_data) {
       .count = 0,
       .buf = 0x0,
-      // expected-warning@+1{{initializer side_effect() has a side effect; this may lead to an unexpected result because the evaluation order of initialization list expressions is indeterminat}}
+      // expected-warning@+1{{initializer 'side_effect()' has a side effect; this may lead to an unexpected result because the evaluation order of initialization list expressions is indeterminat}}
       .other = side_effect()
     },
     .count = 0,
     .buf = 0x0,
-    // expected-warning@+1{{initializer side_effect() has a side effect; this may lead to an unexpected result because the evaluation order of initialization list expressions is indeterminate}}
+    // expected-warning@+1{{initializer 'side_effect()' has a side effect; this may lead to an unexpected result because the evaluation order of initialization list expressions is indeterminate}}
     .other = side_effect()
   };
 
   // Test array initializer list that initializes structs
   (void)(struct cbon_with_other_data[]){
-    // expected-warning@+1{{initializer side_effect() has a side effect; this may lead to an unexpected result because the evaluation order of initialization list expressions is indeterminate}} 
+    // expected-warning@+1{{initializer 'side_effect()' has a side effect; this may lead to an unexpected result because the evaluation order of initialization list expressions is indeterminate}}
     {0, 0x0, side_effect()},
     {0, 0x0, 0x0}
   };
@@ -138,7 +138,7 @@ struct cbon_with_other_data field_initializers_with_side_effects(struct cbon_wit
 
   (void)(union UnionWith_cbon_with_other_data) {
     {
-      // expected-warning@+1{{initializer side_effect() has a side effect; this may lead to an unexpected result because the evaluation order of initialization list expressions is indeterminate}}
+      // expected-warning@+1{{initializer 'side_effect()' has a side effect; this may lead to an unexpected result because the evaluation order of initialization list expressions is indeterminate}}
       .other = side_effect(),
       .buf = 0x0,
       .count = 0
@@ -150,7 +150,7 @@ struct cbon_with_other_data field_initializers_with_side_effects(struct cbon_wit
     // Test very "untransparent"
     (union TransparentUnion) {.cb = 
       {
-        // expected-warning@+1{{initializer side_effect() has a side effect; this may lead to an unexpected result because the evaluation order of initialization list expressions is indeterminate}}
+        // expected-warning@+1{{initializer 'side_effect()' has a side effect; this may lead to an unexpected result because the evaluation order of initialization list expressions is indeterminate}}
         .other = side_effect(),
         .buf = 0x0,
         .count = 0
@@ -161,14 +161,14 @@ struct cbon_with_other_data field_initializers_with_side_effects(struct cbon_wit
   receive_transparent_union(
     // Transparent
     (struct cbon_with_other_data){
-      // expected-warning@+1{{initializer side_effect() has a side effect; this may lead to an unexpected result because the evaluation order of initialization list expressions is indeterminate}}
+      // expected-warning@+1{{initializer 'side_effect()' has a side effect; this may lead to an unexpected result because the evaluation order of initialization list expressions is indeterminate}}
       .other = side_effect(),
       .buf = 0x0,
       .count = 0
     }
   );
 
-  // expected-warning@+1{{initializer side_effect() has a side effect; this may lead to an unexpected result because the evaluation order of initialization list expressions is indeterminate}}
+  // expected-warning@+1{{initializer 'side_effect()' has a side effect; this may lead to an unexpected result because the evaluation order of initialization list expressions is indeterminate}}
   return (struct cbon_with_other_data) { 0, 0x0, side_effect()};
 }
 
@@ -396,7 +396,7 @@ void var_init_from_compound_literal_with_side_effect(char*__bidi_indexable ptr) 
   // both-error@+1{{cannot initialize array of type 'struct cbon_with_other_data[]' with non-constant array of type 'struct cbon_with_other_data[2]'}}
   struct cbon_with_other_data arr[] = (struct cbon_with_other_data[]){
     {.buf = ptr, .count = 0x0, .other = 0x0},
-    // expected-warning@+1{{initializer get_count() has a side effect; this may lead to an unexpected result because the evaluation order of initialization list expressions is indeterminate}}
+    // expected-warning@+1{{initializer 'get_count()' has a side effect; this may lead to an unexpected result because the evaluation order of initialization list expressions is indeterminate}}
     {.buf = ptr, .count = 0x0, .other = get_count()},
   };
 }
