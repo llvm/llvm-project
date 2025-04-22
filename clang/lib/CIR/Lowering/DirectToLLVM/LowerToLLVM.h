@@ -262,6 +262,27 @@ public:
   matchAndRewrite(cir::PtrStrideOp op, OpAdaptor,
                   mlir::ConversionPatternRewriter &) const override;
 };
+
+class CIRToLLVMStackSaveOpLowering
+    : public mlir::OpConversionPattern<cir::StackSaveOp> {
+public:
+  using mlir::OpConversionPattern<cir::StackSaveOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::StackSaveOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
+class CIRToLLVMStackRestoreOpLowering
+    : public mlir::OpConversionPattern<cir::StackRestoreOp> {
+public:
+  using OpConversionPattern<cir::StackRestoreOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::StackRestoreOp op, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override;
+};
+
 } // namespace direct
 } // namespace cir
 
