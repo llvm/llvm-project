@@ -3,8 +3,8 @@
     "dotnet": "10.0.100-preview.3.25201.16"
   },
   "msbuild-sdks": {
-    "Microsoft.DotNet.Arcade.Sdk": "10.0.0-beta.25212.1",
-    "Microsoft.DotNet.Helix.Sdk": "10.0.0-beta.25212.1",
+    "Microsoft.DotNet.Arcade.Sdk": "10.0.0-beta.25217.1",
+    "Microsoft.DotNet.Helix.Sdk": "10.0.0-beta.25217.1",
     "Microsoft.Build.Traversal": "3.4.0"
   }
 }
