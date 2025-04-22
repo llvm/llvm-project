@@ -101,11 +101,10 @@ void AMDGPULatencyTracker::scan(const MachineInstr &MI) {
     auto GetAluStatus = [](const MachineInstr &MI,
                            const llvm::SIInstrInfo *SIII) {
       AluStatus Status = AluStatus::Nothing;
-      if (SIII->isVALU(MI.getOpcode())) {
+      if (SIII->isVALU(MI.getOpcode()))
         Status = AluStatus::Vector;
-      } else if (SIII->isSALU(MI.getOpcode())) {
+      else if (SIII->isSALU(MI.getOpcode()))
         Status = AluStatus::Scalar;
-      }
       return Status;
     };
     AluStatus Status = GetAluStatus(MI, SIII);
@@ -120,11 +119,10 @@ void AMDGPULatencyTracker::scan(const MachineInstr &MI) {
     case AluStatus::Scalar: {
       Score.Alu += Latency;
       // Ignore mix alu.
-      if (PrevStatus != Status) {
+      if (PrevStatus != Status)
         PrevStatus = AluStatus::Nothing;
-      } else {
+      else
         Score.MixAlu += Latency;
-      }
     } break;
     }
   }
@@ -151,13 +149,11 @@ SchedScore collectLatency(MachineFunction &MF, const llvm::GCNSubtarget &ST,
     MachineBasicBlock &MBB = MFI;
     MachineBasicBlock::iterator Next;
     AMDGPULatencyTracker LatencyTracker(ST);
-    for (auto &MI : MBB) {
+    for (auto &MI : MBB)
       LatencyTracker.scan(MI);
-    }
     unsigned LoopDepth = 0;
-    if (MLI) {
+    if (MLI)
       LoopDepth = MLI->getLoopDepth(&MBB);
-    }
     TotalScore.sum(LatencyTracker.Score, LoopDepth);
   }
   return TotalScore;

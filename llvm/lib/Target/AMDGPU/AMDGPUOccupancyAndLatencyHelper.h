@@ -39,12 +39,7 @@ struct SchedScore {
   unsigned Lds = 0; // Todo: count lds.
   SchedScore() {}
 
-  // Other info which can help compare schedule result.
-  float computeScore() const;
-  float computeScore2() const;
-
   void sum(const SchedScore &S, unsigned LoopDepth = 0);
-  bool isBetter(const SchedScore &S) const;
   bool isMemBound(unsigned TargetOccupancy, unsigned ExtraOcc = 1) const;
   // More latency can be hiden with ExtraOcc.
   unsigned latencyGain(unsigned TargetOccupancy, unsigned ExtraOcc) const;

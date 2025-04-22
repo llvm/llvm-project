@@ -176,21 +176,17 @@ DenseMap<MachineBasicBlock *, BlockSet> reduceClonedMBBs(
     bool IsDomAllHotBlocks = true;
     bool IsDomedByAllHotBlocks = true;
     for (MachineBasicBlock *HotMBB : HotBlockSet) {
-      if (!DT->dominates(MBB, HotMBB)) {
+      if (!DT->dominates(MBB, HotMBB))
         IsDomAllHotBlocks = false;
-      }
-      if (!DT->dominates(HotMBB, MBB)) {
+      if (!DT->dominates(HotMBB, MBB))
         IsDomedByAllHotBlocks = false;
-      }
-      if (!IsDomAllHotBlocks && !IsDomedByAllHotBlocks) {
+      if (!IsDomAllHotBlocks && !IsDomedByAllHotBlocks)
         break;
-      }
     }
-    if (IsDomAllHotBlocks) {
+    if (IsDomAllHotBlocks)
       UserBlocks.erase(MBB);
-    } else if (IsDomedByAllHotBlocks) {
+    else if (IsDomedByAllHotBlocks)
       AfterHotRangeMBBs.insert(MBB);
-    }
   }
 
   // Split after hotRange block set by domtree.
@@ -274,18 +270,16 @@ void AMDGPUHotBlockRematerialize::applyCloneRemat(
   for (auto UseIt : UserMap) {
     MachineBasicBlock *MBB = UseIt.first;
     // Skip same block uses.
-    if (MBB == DefMI->getParent()) {
+    if (MBB == DefMI->getParent())
       continue;
-    }
     // Skip MBB which share clone from other MBBs.
     if (UserMBBSet.count(MBB) == 0)
       continue;
 
     Register NewReg = MRI.createVirtualRegister(RC);
     auto NewDef = BuildMI(MF, DL, Desc).addDef(NewReg);
-    for (unsigned I = 1; I < OpNum; I++) {
+    for (unsigned I = 1; I < OpNum; I++)
       NewDef = NewDef.add(DefMI->getOperand(I));
-    }
 
     MachineInstr *InsertPointMI = UseIt.second.front();
     SlotIndex LastSlot = SlotIndexes->getInstructionIndex(*InsertPointMI);
@@ -364,9 +358,9 @@ void AMDGPUHotBlockRematerialize::applyRemat(
     llvm::SlotIndexes *SlotIndexes, MachineRegisterInfo &MRI,
     const SIRegisterInfo *SIRI, const SIInstrInfo *SIII, MachineFunction &MF) {
   std::vector<RematNode> UpdateList;
-  for (auto &It : RematMap) {
+  for (auto &It : RematMap)
     UpdateList.emplace_back(It.second);
-  }
+
   // Sort update list with slotIndex to make sure def moved before use.
   // If use moved before def, It might not be the first use anymore.
   std::sort(UpdateList.begin(), UpdateList.end(),
@@ -377,11 +371,10 @@ void AMDGPUHotBlockRematerialize::applyRemat(
             });
 
   for (RematNode &Node : UpdateList) {
-    if (Node.Kind == RematNode::RematKind::OneDefOneUse) {
+    if (Node.Kind == RematNode::RematKind::OneDefOneUse)
       applyOneDefOneUseRemat(Node, MRI, SlotIndexes, SIRI, SIII);
-    } else if (Node.Kind == RematNode::RematKind::Clone) {
+    else if (Node.Kind == RematNode::RematKind::Clone)
       applyCloneRemat(Node, HotBlocks, DT, MRI, SlotIndexes, SIRI, SIII, MF);
-    }
   }
 }
 
@@ -410,12 +403,10 @@ unsigned collectMBBPressure(MachineBasicBlock &MBB, LiveIntervals *LIS,
 
   GCNRegPressure RP = RPTracker.getMaxPressureAndReset();
   unsigned SPressure = RP.getMaxSGPR();
-  if (SPressure > MaxSPressure) {
+  if (SPressure > MaxSPressure)
     MaxSPressure = SPressure;
-  }
-  if (RP.getVGPRNum(ST->hasGFX90AInsts()) > MaxVPressure) {
+  if (RP.getVGPRNum(ST->hasGFX90AInsts()) > MaxVPressure)
     MaxVPressure = RP.getVGPRNum(ST->hasGFX90AInsts());
-  }
   Status.MBBPressureMap[&MBB] = RP;
   return RP.getOccupancy(*ST);
 }
@@ -573,9 +564,8 @@ RematStatus getRematStatus(MachineFunction &MF, MachineLoopInfo *MLI,
   unsigned SInputPressure = 0;
   uint64_t Mask = 0xf;
   while (Mask != 0) {
-    if (Mask & SInputMask) {
+    if (Mask & SInputMask)
       SInputPressure += 4;
-    }
     Mask = Mask << 4;
   }
 
@@ -670,9 +660,8 @@ void updateLiveInfo(MapVector<Register, RematNode> &RematMap,
       // still before LiveInfo.BB, It is still live.
       unsigned LiveBBIndex = RPOTIndexMap[CurBB];
       unsigned InsertBBIndex = RPOTIndexMap[InsertBB];
-      if (LiveBBIndex > InsertBBIndex) {
+      if (LiveBBIndex > InsertBBIndex)
         continue;
-      }
     }
     // Already in remat map, don't need to check again, remove from
     // candidate.
@@ -978,11 +967,10 @@ void buildRematCandiates(std::vector<RematNode> &Candidates,
 
     if (IsSafeCandidate) {
       int Gain = rematGain(MI, Reg, MRI, SIRI, IsVGPR);
-      if (Gain > 0) {
+      if (Gain > 0)
         Candidates.emplace_back(RematNode(Reg, MI, Gain >> 5));
-      } else {
+      else
         IsSafeCandidate = false;
-      }
     }
     // Save unsafe reg.
     if (!IsSafeCandidate)
@@ -1056,9 +1044,9 @@ int filterRematCandiates(std::vector<RematNode> &Candidates,
   // Work one def one use first.
   for (auto &Node : Candidates) {
     unsigned Reg = Node.Reg;
-    if (!MRI.hasOneNonDBGUse(Reg)) {
+    if (!MRI.hasOneNonDBGUse(Reg))
       continue;
-    }
+
     MachineInstr *DefMI = Node.DefMI;
     if (!isSafeToMove(DefMI, MRI)) {
       PinnedRegSet.insert(Reg);
@@ -1074,9 +1062,9 @@ int filterRematCandiates(std::vector<RematNode> &Candidates,
     // Try multi use case.
     for (auto &Node : Candidates) {
       unsigned Reg = Node.Reg;
-      if (MRI.hasOneNonDBGUse(Reg)) {
+      if (MRI.hasOneNonDBGUse(Reg))
         continue;
-      }
+
       MachineInstr *DefMI = Node.DefMI;
       if (!isSafeToMove(DefMI, MRI)) {
         PinnedRegSet.insert(Reg);
@@ -1161,10 +1149,9 @@ int getSharedReducedSize(InstSet &ReducedInsts, bool IsVGPR,
       if (!Reg.isVirtual())
         continue;
 
-      if (IsVGPR != SIRI->isVGPR(MRI, MO.getReg())) {
+      if (IsVGPR != SIRI->isVGPR(MRI, MO.getReg()))
         // Not support mix of v and s when remat now.
         continue;
-      }
 
       const TargetRegisterClass *OpRC = MRI.getRegClass(Reg);
       int MOSize = SIRI->getRegSizeInBits(*OpRC) >> 5;
@@ -1245,9 +1232,8 @@ bool AMDGPUHotBlockRematerialize::hotBlockRemat(MachineFunction &MF,
 
   ReversePostOrderTraversal<MachineFunction *> RPOT(&MF);
   DenseMap<MachineBasicBlock *, unsigned> RPOTIndexMap;
-  for (MachineBasicBlock *MBB : RPOT) {
+  for (MachineBasicBlock *MBB : RPOT)
     RPOTIndexMap[MBB] = RPOTIndexMap.size();
-  }
 
   auto &MRI = MF.getRegInfo();
 
@@ -1267,9 +1253,8 @@ bool AMDGPUHotBlockRematerialize::hotBlockRemat(MachineFunction &MF,
     RematSCnt += NearTargetRegLimit;
 
   bool IsSGPRSpill = false;
-  if (RematSCnt > 0) {
+  if (RematSCnt > 0)
     IsSGPRSpill = nearSgprSpill(Status.MaxSPressure, ST, MF);
-  }
 
   const bool IsForceRematSgpr = IsSGPRSpill || Status.NotBalance;
 
@@ -1354,9 +1339,9 @@ bool AMDGPUHotBlockRematerialize::hotBlockRemat(MachineFunction &MF,
     int RematSCnt = MaxSPressure - SReduced - SLimit;
 
     bool IsSGPRSpill = false;
-    if (RematSCnt > 0) {
+    if (RematSCnt > 0)
       IsSGPRSpill = nearSgprSpill(MaxSPressure, ST, MF);
-    }
+
     bool IsForceRematSgpr = IsSGPRSpill || Status.NotBalance;
     // Try to add candidates into remat list.
 
@@ -1393,15 +1378,13 @@ bool AMDGPUHotBlockRematerialize::hotBlockRemat(MachineFunction &MF,
             getSharedReducedSize(SReducedInsts, /*IsVGPR*/ false, MRI, SIRI);
         if (((NewRematSCnt + SharedReducedSize) + (int)NearTargetRegLimit) >=
             RematSCnt) {
-          for (RematNode &Node : SRematList) {
+          for (RematNode &Node : SRematList)
             SRematMap[Node.Reg] = Node;
-          }
         } else {
           if (!IsForceRematSgpr)
             return false;
-          for (RematNode &Node : SRematList) {
+          for (RematNode &Node : SRematList)
             SRematMap[Node.Reg] = Node;
-          }
           // Find local one def one use candidates.
           for (MachineInstr &MI : *MBB) {
             if (MI.isDebugInstr())
@@ -1425,9 +1408,8 @@ bool AMDGPUHotBlockRematerialize::hotBlockRemat(MachineFunction &MF,
                                  /*IsVGPR*/ false);
             if (Gain > 0) {
               // Skip case when DefMI has implicit define which used by UseMI.
-              if (isImplicitDefUse(&MI, &UseMI)) {
+              if (isImplicitDefUse(&MI, &UseMI))
                 continue;
-              }
               RematNode Node = {Reg, &MI, (unsigned)Gain >> 5};
               Node.InsertPointMI = &UseMI;
               Node.Kind = RematNode::RematKind::OneDefOneUse;
@@ -1459,19 +1441,16 @@ bool AMDGPUHotBlockRematerialize::hotBlockRemat(MachineFunction &MF,
     bool IsVRematOK =
         (Status.NotBalance || NewRematVCnt <= 0) && !VRematMap.empty();
     if (NeedSRemat && NeedVRemat) {
-      if (IsVRematOK && IsSRematOK) {
+      if (IsVRematOK && IsSRematOK)
         IsUpdated = true;
-      } else if (IsSGPRSpill) {
+      else if (IsSGPRSpill)
         IsUpdated = true;
-      }
     } else if (NeedSRemat) {
-      if (IsSRematOK) {
+      if (IsSRematOK)
         IsUpdated = true;
-      }
     } else if (NeedVRemat) {
-      if (IsVRematOK) {
+      if (IsVRematOK)
         IsUpdated = true;
-      }
     }
     // TODO: what to do when cannot reach target?
     if (NewRematSCnt > 0) {

@@ -140,9 +140,8 @@ MachineBasicBlock::iterator findOrCreateInsertionPointForSccDef(
     const TargetRegisterInfo *TRI, const SIInstrInfo *TII,
     MachineRegisterInfo *MRI, SccDefInsertPointConstraintFlags Constraints) {
   // If SCC is dead at MI when we can use MI as the insert point.
-  if (!llvm::isSccLiveAt(MBB, MI)) {
+  if (!llvm::isSccLiveAt(MBB, MI))
     return MI;
-  }
 
   const bool CheckForExecWrite =
       Constraints & SccDefInsertPointConstraintFlags::NoExecWrite;
@@ -150,11 +149,10 @@ MachineBasicBlock::iterator findOrCreateInsertionPointForSccDef(
   // Get the starting reverse iterator taking care to handle the MBB->end()
   // case.
   MachineBasicBlock::reverse_iterator Start;
-  if (MI == MBB->end()) {
+  if (MI == MBB->end())
     Start = MBB->rbegin();
-  } else {
+  else
     Start = MI.getReverse();
-  }
 
   // Otherwise, walk backwards through the block looking for a location where
   // SCC is dead.
@@ -164,14 +162,12 @@ MachineBasicBlock::iterator findOrCreateInsertionPointForSccDef(
     // an insertion point (if that is a constraint from the caller).
     // The check for EXEC works for both wave64 and wave32 because
     // it will also catch Writes to the subregisters (e.g. exec_lo).
-    if (CheckForExecWrite && It->modifiesRegister(AMDGPU::EXEC, TRI)) {
+    if (CheckForExecWrite && It->modifiesRegister(AMDGPU::EXEC, TRI))
       break;
-    }
 
     if (It->modifiesRegister(AMDGPU::SCC, TRI) &&
-        !It->readsRegister(AMDGPU::SCC, TRI)) {
+        !It->readsRegister(AMDGPU::SCC, TRI))
       return It->getIterator();
-    }
   }
 
   // If no safe location can be found in the block we can save and restore
@@ -207,20 +203,18 @@ MachineBasicBlock::iterator findOrCreateInsertionPointForSccDef(
 bool isLocalLiveInterval(const LiveInterval &LI, SlotIndexes *Indexes,
                          SmallDenseSet<MachineBasicBlock *, 2> &TouchedMBBSet) {
   if (LI.hasSubRanges()) {
-    for (const auto &S : LI.subranges()) {
+    for (const auto &S : LI.subranges())
       if (!isLocalLiveRange(&S, Indexes, TouchedMBBSet))
         return false;
-    }
   }
   return isLocalLiveRange(&LI, Indexes, TouchedMBBSet);
 }
 
 bool isLocalLiveInterval(const LiveInterval &LI, SlotIndexes *Indexes) {
   if (LI.hasSubRanges()) {
-    for (const auto &S : LI.subranges()) {
+    for (const auto &S : LI.subranges())
       if (!isLocalLiveRange(&S, Indexes))
         return false;
-    }
   }
   return isLocalLiveRange(&LI, Indexes);
 }
@@ -231,9 +225,8 @@ void dumpLiveSet(const LiveSet &LiveSet, const SIRegisterInfo *SIRI) {
   for (auto It : LiveSet) {
     int Reg = It.first;
     dbgs() << printReg(Reg, SIRI);
-    if (It.second.any()) {
+    if (It.second.any())
       dbgs() << " mask:" << It.second.getAsInteger();
-    }
     dbgs() << "\n";
   }
 }
@@ -405,15 +398,13 @@ bool reduceChannel(unsigned Offset, MachineInstr &MI, const MCInstrDesc &Desc,
                    const SIInstrInfo *SIII, SlotIndexes *SlotIndexes) {
   MachineOperand &DstMO = MI.getOperand(0);
   // Skip case when dst subReg not 0.
-  if (DstMO.getSubReg()) {
+  if (DstMO.getSubReg())
     return false;
-  }
   Register Reg = DstMO.getReg();
 
   SmallVector<MachineOperand *, 2> UseMOs;
-  for (MachineOperand &UseMO : MRI.use_nodbg_operands(Reg)) {
+  for (MachineOperand &UseMO : MRI.use_nodbg_operands(Reg))
     UseMOs.emplace_back(&UseMO);
-  }
 
   const llvm::TargetRegisterClass *NewRC =
       SIRI->getRegClass(Desc.operands().front().RegClass);
@@ -441,9 +432,8 @@ bool reduceChannel(unsigned Offset, MachineInstr &MI, const MCInstrDesc &Desc,
         assert(OffsetOp != nullptr);
         int64_t Offset = OffsetOp->getImm();
         Offset += Offset * LaneSize;
-        if (!SIII->isLegalMUBUFImmOffset(Offset)) {
+        if (!SIII->isLegalMUBUFImmOffset(Offset))
           return false;
-        }
         OffsetOp->setImm(Offset);
       } else {
         return false;
@@ -473,14 +463,12 @@ bool reduceChannel(unsigned Offset, MachineInstr &MI, const MCInstrDesc &Desc,
       }
     }
     // Update subReg for users.
-    for (MachineOperand *UseMO : UseMOs) {
+    for (MachineOperand *UseMO : UseMOs)
       updateSubReg(*UseMO, NewRC, Offset, SIRI);
-    }
   } else if (NumLanes == getNumLanesIn32BitReg(Reg, SIRI, MRI)) {
     // Clear subReg when it's a single 32-bit reg.
-    for (MachineOperand *UseMO : UseMOs) {
+    for (MachineOperand *UseMO : UseMOs)
       UseMO->setSubReg(0);
-    }
   }
 
   MI.setDesc(Desc);
@@ -511,9 +499,8 @@ bool removeUnusedLanes(llvm::MachineInstr &MI, MachineRegisterInfo &MRI,
       return false;
     LaneBitmask DstMask = getRegMask(MI.getOperand(0), MRI);
     LaneBitmask UseMask;
-    for (MachineOperand &MO : MRI.use_operands(Reg)) {
+    for (MachineOperand &MO : MRI.use_operands(Reg))
       UseMask |= llvm::getRegMask(MO, MRI);
-    }
 
     const unsigned FullMask = DstMask.getAsInteger();
     unsigned Mask = UseMask.getAsInteger();
@@ -602,11 +589,10 @@ void collectLiveSetPressure(const LiveSet &LiveSet,
   for (auto LiveIt : LiveSet) {
     unsigned Reg = LiveIt.first;
     unsigned Size = getRegSize(Reg, LiveIt.second, MRI, SIRI);
-    if (SIRI->isVGPR(MRI, Reg)) {
+    if (SIRI->isVGPR(MRI, Reg))
       VPressure += Size;
-    } else {
+    else
       SPressure += Size;
-    }
   }
 }
 
@@ -651,21 +637,18 @@ bool isSub0Sub1SingleDef(unsigned Reg, const MachineRegisterInfo &MRI) {
 bool reach_block(MachineBasicBlock *FromBB, MachineDominatorTree *DT,
                  MachinePostDominatorTree *PDT, MachineLoopInfo *LI,
                  MachineBasicBlock *ToBB) {
-  if (FromBB == ToBB) {
+  if (FromBB == ToBB)
     return true;
-  }
 
-  if (DT->dominates(FromBB, ToBB)) {
+  if (DT->dominates(FromBB, ToBB))
     return true;
-  }
 
-  if (PDT->dominates(ToBB, FromBB)) {
+  if (PDT->dominates(ToBB, FromBB))
     return true;
-  }
 
-  if (loopContainsBoth(LI, ToBB, FromBB)) {
+  if (loopContainsBoth(LI, ToBB, FromBB))
     return true;
-  }
+
   // TODO: cover case hotBB in loop,
   //       one block in that loop dom BB or
   //       BB post dom one block in that loop.
