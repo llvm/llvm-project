@@ -186,9 +186,7 @@ public:
 
   uint32_t GetAbilities() override;
 
-  Symtab *GetSymtab(bool can_create = true) override {
-    return m_sym_file_impl->GetSymtab(can_create);
-  }
+  Symtab *GetSymtab() override { return m_sym_file_impl->GetSymtab(); }
 
   ObjectFile *GetObjectFile() override {
     return m_sym_file_impl->GetObjectFile();

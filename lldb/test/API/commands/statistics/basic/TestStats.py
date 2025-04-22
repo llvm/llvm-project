@@ -209,29 +209,6 @@ class TestCase(TestBase):
             )
             self.assertGreater(module_stats["symbolsLoaded"], 0)
 
-    def test_default_no_run_no_preload_symbols(self):
-        """Test "statistics dump" without running the target and without
-        preloading symbols.
-
-        Checks that symbol count are zero.
-        """
-        # Make sure symbols will not be preloaded.
-        self.runCmd("settings set target.preload-symbols false")
-
-        # Build and load the target
-        self.build()
-        target = self.createTestTarget()
-
-        # Get statistics
-        debug_stats = self.get_stats()
-
-        # No symbols should be loaded
-        self.assertEqual(debug_stats["totalSymbolsLoaded"], 0)
-
-        # No symbols should be loaded in each module
-        for module_stats in debug_stats["modules"]:
-            self.assertEqual(module_stats["symbolsLoaded"], 0)
-
     def test_default_with_run(self):
         """Test "statistics dump" when running the target to a breakpoint.
 

@@ -319,7 +319,7 @@ public:
   ///
   /// \return
   ///     The symbol table for this object file.
-  Symtab *GetSymtab(bool can_create = true);
+  Symtab *GetSymtab();
 
   /// Parse the symbol table into the provides symbol table object.
   ///
