@@ -105,20 +105,22 @@ public:
   InstructionCost getIntImmCostInst(unsigned Opcode, unsigned Idx,
                                     const APInt &Imm, Type *Ty,
                                     TTI::TargetCostKind CostKind,
-                                    Instruction *Inst = nullptr);
+                                    Instruction *Inst = nullptr) const;
   InstructionCost getIntImmCostIntrin(Intrinsic::ID IID, unsigned Idx,
                                       const APInt &Imm, Type *Ty,
-                                      TTI::TargetCostKind CostKind);
-  TTI::PopcntSupportKind getPopcntSupport(unsigned TyWidth);
+                                      TTI::TargetCostKind CostKind) const;
+  TTI::PopcntSupportKind getPopcntSupport(unsigned TyWidth) const;
 
   /// @}
 
   /// \name Vector TTI Implementations
   /// @{
 
-  bool enableInterleavedAccessVectorization() { return true; }
+  bool enableInterleavedAccessVectorization() const { return true; }
 
-  bool enableMaskedInterleavedAccessVectorization() { return ST->hasSVE(); }
+  bool enableMaskedInterleavedAccessVectorization() const {
+    return ST->hasSVE();
+  }
 
   unsigned getNumberOfRegisters(unsigned ClassID) const {
     bool Vector = (ClassID == 1);
@@ -167,7 +169,7 @@ public:
     return VF.getKnownMinValue() * ST->getVScaleForTuning();
   }
 
-  unsigned getMaxInterleaveFactor(ElementCount VF);
+  unsigned getMaxInterleaveFactor(ElementCount VF) const;
 
   bool prefersVectorizedAddressing() const;
 
@@ -190,7 +192,8 @@ public:
                                    const Instruction *I = nullptr) const;
 
   InstructionCost getExtractWithExtendCost(unsigned Opcode, Type *Dst,
-                                           VectorType *VecTy, unsigned Index);
+                                           VectorType *VecTy,
+                                           unsigned Index) const;
 
   InstructionCost getCFInstrCost(unsigned Opcode, TTI::TargetCostKind CostKind,
                                  const Instruction *I = nullptr) const;
@@ -207,11 +210,11 @@ public:
   InstructionCost getVectorInstrCost(
       unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind, unsigned Index,
       Value *Scalar,
-      ArrayRef<std::tuple<Value *, User *, int>> ScalarUserAndIdx);
+      ArrayRef<std::tuple<Value *, User *, int>> ScalarUserAndIdx) const;
 
   InstructionCost getVectorInstrCost(const Instruction &I, Type *Val,
                                      TTI::TargetCostKind CostKind,
-                                     unsigned Index);
+                                     unsigned Index) const;
 
   InstructionCost getMinMaxReductionCost(Intrinsic::ID IID, VectorType *Ty,
                                          FastMathFlags FMF,
@@ -232,7 +235,7 @@ public:
       const Instruction *CxtI = nullptr) const;
 
   InstructionCost getAddressComputationCost(Type *Ty, ScalarEvolution *SE,
-                                            const SCEV *Ptr);
+                                            const SCEV *Ptr) const;
 
   InstructionCost getCmpSelInstrCost(
       unsigned Opcode, Type *ValTy, Type *CondTy, CmpInst::Predicate VecPred,
@@ -251,19 +254,19 @@ public:
       TTI::OperandValueInfo OpInfo = {TTI::OK_AnyValue, TTI::OP_None},
       const Instruction *I = nullptr) const;
 
-  InstructionCost getCostOfKeepingLiveOverCall(ArrayRef<Type *> Tys);
+  InstructionCost getCostOfKeepingLiveOverCall(ArrayRef<Type *> Tys) const;
 
   void getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
                                TTI::UnrollingPreferences &UP,
-                               OptimizationRemarkEmitter *ORE);
+                               OptimizationRemarkEmitter *ORE) const;
 
   void getPeelingPreferences(Loop *L, ScalarEvolution &SE,
-                             TTI::PeelingPreferences &PP);
+                             TTI::PeelingPreferences &PP) const;
 
   Value *getOrCreateResultFromMemIntrinsic(IntrinsicInst *Inst,
-                                           Type *ExpectedType);
+                                           Type *ExpectedType) const;
 
-  bool getTgtMemIntrinsic(IntrinsicInst *Inst, MemIntrinsicInfo &Info);
+  bool getTgtMemIntrinsic(IntrinsicInst *Inst, MemIntrinsicInfo &Info) const;
 
   bool isElementTypeLegalForScalableVector(Type *Ty) const {
     if (Ty->isPointerTy())
@@ -282,7 +285,7 @@ public:
     return false;
   }
 
-  bool isLegalMaskedLoadStore(Type *DataType, Align Alignment) {
+  bool isLegalMaskedLoadStore(Type *DataType, Align Alignment) const {
     if (!ST->hasSVE())
       return false;
 
@@ -295,12 +298,12 @@ public:
   }
 
   bool isLegalMaskedLoad(Type *DataType, Align Alignment,
-                         unsigned /*AddressSpace*/) {
+                         unsigned /*AddressSpace*/) const {
     return isLegalMaskedLoadStore(DataType, Alignment);
   }
 
   bool isLegalMaskedStore(Type *DataType, Align Alignment,
-                          unsigned /*AddressSpace*/) {
+                          unsigned /*AddressSpace*/) const {
     return isLegalMaskedLoadStore(DataType, Alignment);
   }
 
@@ -342,7 +345,7 @@ public:
     return false;
   }
 
-  bool isLegalNTStoreLoad(Type *DataType, Align Alignment) {
+  bool isLegalNTStoreLoad(Type *DataType, Align Alignment) const {
     // NOTE: The logic below is mostly geared towards LV, which calls it with
     //       vectors with 2 elements. We might want to improve that, if other
     //       users show up.
@@ -359,11 +362,11 @@ public:
     return BaseT::isLegalNTStore(DataType, Alignment);
   }
 
-  bool isLegalNTStore(Type *DataType, Align Alignment) {
+  bool isLegalNTStore(Type *DataType, Align Alignment) const {
     return isLegalNTStoreLoad(DataType, Alignment);
   }
 
-  bool isLegalNTLoad(Type *DataType, Align Alignment) {
+  bool isLegalNTLoad(Type *DataType, Align Alignment) const {
     // Only supports little-endian targets.
     if (ST->isLittleEndian())
       return isLegalNTStoreLoad(DataType, Alignment);
@@ -382,11 +385,10 @@ public:
   InstructionCost getInterleavedMemoryOpCost(
       unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
       Align Alignment, unsigned AddressSpace, TTI::TargetCostKind CostKind,
-      bool UseMaskForCond = false, bool UseMaskForGaps = false);
+      bool UseMaskForCond = false, bool UseMaskForGaps = false) const;
 
-  bool
-  shouldConsiderAddressTypePromotion(const Instruction &I,
-                                     bool &AllowPromotionWithoutCommonHeader);
+  bool shouldConsiderAddressTypePromotion(
+      const Instruction &I, bool &AllowPromotionWithoutCommonHeader) const;
 
   bool shouldExpandReduction(const IntrinsicInst *II) const { return false; }
 
@@ -411,7 +413,7 @@ public:
 
   unsigned getEpilogueVectorizationMinVF() const;
 
-  bool preferPredicateOverEpilogue(TailFoldingInfo *TFI);
+  bool preferPredicateOverEpilogue(TailFoldingInfo *TFI) const;
 
   bool supportsScalableVectors() const {
     return ST->isSVEorStreamingSVEAvailable();
@@ -434,11 +436,11 @@ public:
   InstructionCost getExtendedReductionCost(unsigned Opcode, bool IsUnsigned,
                                            Type *ResTy, VectorType *ValTy,
                                            std::optional<FastMathFlags> FMF,
-                                           TTI::TargetCostKind CostKind);
+                                           TTI::TargetCostKind CostKind) const;
 
   InstructionCost getMulAccReductionCost(
       bool IsUnsigned, Type *ResTy, VectorType *Ty,
-      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput);
+      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput) const;
 
   InstructionCost getShuffleCost(TTI::ShuffleKind Kind, VectorType *Tp,
                                  ArrayRef<int> Mask,
@@ -462,9 +464,9 @@ public:
                                        StackOffset BaseOffset, bool HasBaseReg,
                                        int64_t Scale, unsigned AddrSpace) const;
 
-  bool enableSelectOptimize() { return ST->enableSelectOptimize(); }
+  bool enableSelectOptimize() const { return ST->enableSelectOptimize(); }
 
-  bool shouldTreatInstructionLikeSelect(const Instruction *I);
+  bool shouldTreatInstructionLikeSelect(const Instruction *I) const;
 
   unsigned getStoreMinimumVF(unsigned VF, Type *ScalarMemTy,
                              Type *ScalarValTy) const {
@@ -478,7 +480,7 @@ public:
   std::optional<unsigned> getMinPageSize() const { return 4096; }
 
   bool isLSRCostLess(const TargetTransformInfo::LSRCost &C1,
-                     const TargetTransformInfo::LSRCost &C2);
+                     const TargetTransformInfo::LSRCost &C2) const;
 
   bool isProfitableToSinkOperands(Instruction *I,
                                   SmallVectorImpl<Use *> &Ops) const;

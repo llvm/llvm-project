@@ -53,7 +53,7 @@ SmallCTRLoopThreshold("min-ctr-loop-threshold", cl::init(4), cl::Hidden,
 //===----------------------------------------------------------------------===//
 
 TargetTransformInfo::PopcntSupportKind
-PPCTTIImpl::getPopcntSupport(unsigned TyWidth) {
+PPCTTIImpl::getPopcntSupport(unsigned TyWidth) const {
   assert(isPowerOf2_32(TyWidth) && "Ty width must be power of 2");
   if (ST->hasPOPCNTD() != PPCSubtarget::POPCNTD_Unavailable && TyWidth <= 64)
     return ST->hasPOPCNTD() == PPCSubtarget::POPCNTD_Slow ?
@@ -190,9 +190,10 @@ InstructionCost PPCTTIImpl::getIntImmCost(const APInt &Imm, Type *Ty,
   return 4 * TTI::TCC_Basic;
 }
 
-InstructionCost PPCTTIImpl::getIntImmCostIntrin(Intrinsic::ID IID, unsigned Idx,
-                                                const APInt &Imm, Type *Ty,
-                                                TTI::TargetCostKind CostKind) {
+InstructionCost
+PPCTTIImpl::getIntImmCostIntrin(Intrinsic::ID IID, unsigned Idx,
+                                const APInt &Imm, Type *Ty,
+                                TTI::TargetCostKind CostKind) const {
   if (DisablePPCConstHoist)
     return BaseT::getIntImmCostIntrin(IID, Idx, Imm, Ty, CostKind);
 
@@ -228,7 +229,7 @@ InstructionCost PPCTTIImpl::getIntImmCostIntrin(Intrinsic::ID IID, unsigned Idx,
 InstructionCost PPCTTIImpl::getIntImmCostInst(unsigned Opcode, unsigned Idx,
                                               const APInt &Imm, Type *Ty,
                                               TTI::TargetCostKind CostKind,
-                                              Instruction *Inst) {
+                                              Instruction *Inst) const {
   if (DisablePPCConstHoist)
     return BaseT::getIntImmCostInst(Opcode, Idx, Imm, Ty, CostKind, Inst);
 
@@ -318,9 +319,9 @@ static bool isMMAType(Type *Ty) {
          (Ty->getPrimitiveSizeInBits() > 128);
 }
 
-InstructionCost PPCTTIImpl::getInstructionCost(const User *U,
-                                               ArrayRef<const Value *> Operands,
-                                               TTI::TargetCostKind CostKind) {
+InstructionCost
+PPCTTIImpl::getInstructionCost(const User *U, ArrayRef<const Value *> Operands,
+                               TTI::TargetCostKind CostKind) const {
   // We already implement getCastInstrCost and getMemoryOpCost where we perform
   // the vector adjustment there.
   if (isa<CastInst>(U) || isa<LoadInst>(U) || isa<StoreInst>(U))
@@ -338,7 +339,7 @@ InstructionCost PPCTTIImpl::getInstructionCost(const User *U,
 bool PPCTTIImpl::isHardwareLoopProfitable(Loop *L, ScalarEvolution &SE,
                                           AssumptionCache &AC,
                                           TargetLibraryInfo *LibInfo,
-                                          HardwareLoopInfo &HWLoopInfo) {
+                                          HardwareLoopInfo &HWLoopInfo) const {
   const PPCTargetMachine &TM = ST->getTargetMachine();
   TargetSchedModel SchedModel;
   SchedModel.init(ST);
@@ -397,7 +398,7 @@ bool PPCTTIImpl::isHardwareLoopProfitable(Loop *L, ScalarEvolution &SE,
 
 void PPCTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
                                          TTI::UnrollingPreferences &UP,
-                                         OptimizationRemarkEmitter *ORE) {
+                                         OptimizationRemarkEmitter *ORE) const {
   if (ST->getCPUDirective() == PPC::DIR_A2) {
     // The A2 is in-order with a deep pipeline, and concatenation unrolling
     // helps expose latency-hiding opportunities to the instruction scheduler.
@@ -412,18 +413,18 @@ void PPCTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
 }
 
 void PPCTTIImpl::getPeelingPreferences(Loop *L, ScalarEvolution &SE,
-                                       TTI::PeelingPreferences &PP) {
+                                       TTI::PeelingPreferences &PP) const {
   BaseT::getPeelingPreferences(L, SE, PP);
 }
 // This function returns true to allow using coldcc calling convention.
 // Returning true results in coldcc being used for functions which are cold at
 // all call sites when the callers of the functions are not calling any other
 // non coldcc functions.
-bool PPCTTIImpl::useColdCCForColdCall(Function &F) {
+bool PPCTTIImpl::useColdCCForColdCall(Function &F) const {
   return EnablePPCColdCC;
 }
 
-bool PPCTTIImpl::enableAggressiveInterleaving(bool LoopHasReductions) {
+bool PPCTTIImpl::enableAggressiveInterleaving(bool LoopHasReductions) const {
   // On the A2, always unroll aggressively.
   if (ST->getCPUDirective() == PPC::DIR_A2)
     return true;
@@ -439,9 +440,7 @@ PPCTTIImpl::enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const {
   return Options;
 }
 
-bool PPCTTIImpl::enableInterleavedAccessVectorization() {
-  return true;
-}
+bool PPCTTIImpl::enableInterleavedAccessVectorization() const { return true; }
 
 unsigned PPCTTIImpl::getNumberOfRegisters(unsigned ClassID) const {
   assert(ClassID == GPRRC || ClassID == FPRRC ||
@@ -512,7 +511,7 @@ unsigned PPCTTIImpl::getPrefetchDistance() const {
   return 300;
 }
 
-unsigned PPCTTIImpl::getMaxInterleaveFactor(ElementCount VF) {
+unsigned PPCTTIImpl::getMaxInterleaveFactor(ElementCount VF) const {
   unsigned Directive = ST->getCPUDirective();
   // The 440 has no SIMD support, but floating-point instructions
   // have a 5-cycle latency, so unroll by 5x for latency hiding.
@@ -857,7 +856,7 @@ InstructionCost PPCTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
 InstructionCost PPCTTIImpl::getInterleavedMemoryOpCost(
     unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
     Align Alignment, unsigned AddressSpace, TTI::TargetCostKind CostKind,
-    bool UseMaskForCond, bool UseMaskForGaps) {
+    bool UseMaskForCond, bool UseMaskForGaps) const {
   InstructionCost CostFactor =
       vectorCostAdjustmentFactor(Opcode, VecTy, nullptr);
   if (!CostFactor.isValid())
@@ -929,7 +928,8 @@ bool PPCTTIImpl::areTypesABICompatible(const Function *Caller,
 
 bool PPCTTIImpl::canSaveCmp(Loop *L, BranchInst **BI, ScalarEvolution *SE,
                             LoopInfo *LI, DominatorTree *DT,
-                            AssumptionCache *AC, TargetLibraryInfo *LibInfo) {
+                            AssumptionCache *AC,
+                            TargetLibraryInfo *LibInfo) const {
   // Process nested loops first.
   for (Loop *I : *L)
     if (canSaveCmp(I, BI, SE, LI, DT, AC, LibInfo))
@@ -951,7 +951,7 @@ bool PPCTTIImpl::canSaveCmp(Loop *L, BranchInst **BI, ScalarEvolution *SE,
 }
 
 bool PPCTTIImpl::isLSRCostLess(const TargetTransformInfo::LSRCost &C1,
-                               const TargetTransformInfo::LSRCost &C2) {
+                               const TargetTransformInfo::LSRCost &C2) const {
   // PowerPC default behaviour here is "instruction number 1st priority".
   // If LsrNoInsnsCost is set, call default implementation.
   if (!LsrNoInsnsCost)
@@ -962,9 +962,7 @@ bool PPCTTIImpl::isLSRCostLess(const TargetTransformInfo::LSRCost &C1,
   return TargetTransformInfoImplBase::isLSRCostLess(C1, C2);
 }
 
-bool PPCTTIImpl::isNumRegsMajorCostOfLSR() {
-  return false;
-}
+bool PPCTTIImpl::isNumRegsMajorCostOfLSR() const { return false; }
 
 bool PPCTTIImpl::shouldBuildRelLookupTables() const {
   const PPCTargetMachine &TM = ST->getTargetMachine();
@@ -975,7 +973,7 @@ bool PPCTTIImpl::shouldBuildRelLookupTables() const {
 }
 
 bool PPCTTIImpl::getTgtMemIntrinsic(IntrinsicInst *Inst,
-                                    MemIntrinsicInfo &Info) {
+                                    MemIntrinsicInfo &Info) const {
   switch (Inst->getIntrinsicID()) {
   case Intrinsic::ppc_altivec_lvx:
   case Intrinsic::ppc_altivec_lvxl:
@@ -1059,7 +1057,7 @@ InstructionCost PPCTTIImpl::getVPMemoryOpCost(unsigned Opcode, Type *Src,
                                               Align Alignment,
                                               unsigned AddressSpace,
                                               TTI::TargetCostKind CostKind,
-                                              const Instruction *I) {
+                                              const Instruction *I) const {
   InstructionCost Cost = BaseT::getVPMemoryOpCost(Opcode, Src, Alignment,
                                                   AddressSpace, CostKind, I);
   if (TLI->getValueType(DL, Src, true) == MVT::Other)

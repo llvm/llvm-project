@@ -42,9 +42,9 @@ public:
       : BaseT(TM, F.getDataLayout()), ST(TM->getSubtargetImpl()),
         TLI(ST->getTargetLowering()) {}
 
-  bool hasBranchDivergence(const Function *F = nullptr) { return true; }
+  bool hasBranchDivergence(const Function *F = nullptr) const { return true; }
 
-  bool isSourceOfDivergence(const Value *V);
+  bool isSourceOfDivergence(const Value *V) const;
 
   unsigned getFlatAddressSpace() const {
     return AddressSpace::ADDRESS_SPACE_GENERIC;
@@ -97,7 +97,7 @@ public:
 
   InstructionCost getInstructionCost(const User *U,
                                      ArrayRef<const Value *> Operands,
-                                     TTI::TargetCostKind CostKind);
+                                     TTI::TargetCostKind CostKind) const;
 
   InstructionCost getArithmeticInstrCost(
       unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
@@ -144,12 +144,12 @@ public:
 
   void getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
                                TTI::UnrollingPreferences &UP,
-                               OptimizationRemarkEmitter *ORE);
+                               OptimizationRemarkEmitter *ORE) const;
 
   void getPeelingPreferences(Loop *L, ScalarEvolution &SE,
-                             TTI::PeelingPreferences &PP);
+                             TTI::PeelingPreferences &PP) const;
 
-  bool hasVolatileVariant(Instruction *I, unsigned AddrSpace) {
+  bool hasVolatileVariant(Instruction *I, unsigned AddrSpace) const {
     // Volatile loads/stores are only supported for shared and global address
     // spaces, or for generic AS that maps to them.
     if (!(AddrSpace == llvm::ADDRESS_SPACE_GENERIC ||
