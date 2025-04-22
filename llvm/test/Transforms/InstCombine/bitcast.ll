@@ -480,6 +480,36 @@ define double @bitcast_extelt8(<1 x i64> %A) {
   ret double %bc
 }
 
+; Extract a subvector from a vector, extracted element wider than source.
+
+define <2 x i64> @bitcast_extelt9(<8 x i32> %A) {
+; CHECK-LABEL: @bitcast_extelt9(
+; CHECK-NEXT:    [[BC1:%.*]] = bitcast <8 x i32> [[A:%.*]] to <2 x i128>
+; CHECK-NEXT:    [[EXT:%.*]] = extractelement <2 x i128> [[BC1]], i64 1
+; CHECK-NEXT:    [[BC2:%.*]] = bitcast i128 [[EXT]] to <2 x i64>
+; CHECK-NEXT:    ret <2 x i64> [[BC2]]
+;
+  %bc1 = bitcast <8 x i32> %A to <2 x i128>
+  %ext = extractelement <2 x i128> %bc1, i64 1
+  %bc2 = bitcast i128 %ext to <2 x i64>
+  ret <2 x i64> %bc2
+}
+
+; Extract a subvector from a vector, extracted element narrower than source.
+
+define <2 x i8> @bitcast_extelt10(<8 x i32> %A) {
+; CHECK-LABEL: @bitcast_extelt10(
+; CHECK-NEXT:    [[BC1:%.*]] = bitcast <8 x i32> [[A:%.*]] to <16 x i16>
+; CHECK-NEXT:    [[EXT:%.*]] = extractelement <16 x i16> [[BC1]], i64 3
+; CHECK-NEXT:    [[BC2:%.*]] = bitcast i16 [[EXT]] to <2 x i8>
+; CHECK-NEXT:    ret <2 x i8> [[BC2]]
+;
+  %bc1 = bitcast <8 x i32> %A to <16 x i16>
+  %ext = extractelement <16 x i16> %bc1, i64 3
+  %bc2 = bitcast i16 %ext to <2 x i8>
+  ret <2 x i8> %bc2
+}
+
 define <2 x i32> @test4(i32 %A, i32 %B){
 ; CHECK-LABEL: @test4(
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> poison, i32 [[A:%.*]], i64 0
