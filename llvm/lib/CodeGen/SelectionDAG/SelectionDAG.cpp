@@ -8994,8 +8994,10 @@ SDValue SelectionDAG::getAtomic(unsigned Opcode, const SDLoc &dl, EVT MemVT,
                                 SDVTList VTList, ArrayRef<SDValue> Ops,
                                 MachineMemOperand *MMO) {
   FoldingSetNodeID ID;
-  ID.AddInteger(MemVT.getRawBits());
   AddNodeIDNode(ID, Opcode, VTList, Ops);
+  ID.AddInteger(MemVT.getRawBits());
+  ID.AddInteger(getSyntheticNodeSubclassData<AtomicSDNode>(
+      Opcode, dl.getIROrder(), VTList, MemVT, MMO));
   ID.AddInteger(MMO->getPointerInfo().getAddrSpace());
   ID.AddInteger(MMO->getFlags());
   void* IP = nullptr;
