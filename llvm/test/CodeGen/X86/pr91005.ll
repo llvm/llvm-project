@@ -4,7 +4,6 @@
 define void @PR91005(ptr %0) minsize {
 ; CHECK-LABEL: PR91005:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    je .LBB0_2
 ; CHECK-NEXT:  # %bb.1:

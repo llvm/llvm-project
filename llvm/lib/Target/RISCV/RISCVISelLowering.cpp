@@ -4578,12 +4578,13 @@ static SDValue lowerScalarInsert(SDValue Scalar, SDValue VL, MVT VT,
                      VL);
 }
 
-// Can this shuffle be performed on exactly one (possibly larger) input?
-static SDValue getSingleShuffleSrc(MVT VT, SDValue V1, SDValue V2) {
-
-  if (V2.isUndef())
-    return V1;
-
+/// If concat_vector(V1,V2) could be folded away to some existing
+/// vector source, return it.  Note that the source may be larger
+/// than the requested concat_vector (i.e. a extract_subvector
+/// might be required.)
+static SDValue foldConcatVector(SDValue V1, SDValue V2) {
+  EVT VT = V1.getValueType();
+  assert(VT == V2.getValueType() && "argument types must match");
   // Both input must be extracts.
   if (V1.getOpcode() != ISD::EXTRACT_SUBVECTOR ||
       V2.getOpcode() != ISD::EXTRACT_SUBVECTOR)
@@ -4591,21 +4592,32 @@ static SDValue getSingleShuffleSrc(MVT VT, SDValue V1, SDValue V2) {
 
   // Extracting from the same source.
   SDValue Src = V1.getOperand(0);
-  if (Src != V2.getOperand(0))
-    return SDValue();
-
-  // Src needs to have twice the number of elements.
-  unsigned NumElts = VT.getVectorNumElements();
-  if (!Src.getValueType().isFixedLengthVector() ||
-      Src.getValueType().getVectorNumElements() != (NumElts * 2))
+  if (Src != V2.getOperand(0) ||
+      VT.isScalableVector() != Src.getValueType().isScalableVector())
     return SDValue();
 
   // The extracts must extract the two halves of the source.
   if (V1.getConstantOperandVal(1) != 0 ||
-      V2.getConstantOperandVal(1) != NumElts)
+      V2.getConstantOperandVal(1) != VT.getVectorMinNumElements())
     return SDValue();
 
   return Src;
+}
+
+// Can this shuffle be performed on exactly one (possibly larger) input?
+static SDValue getSingleShuffleSrc(MVT VT, SDValue V1, SDValue V2) {
+
+  if (V2.isUndef())
+    return V1;
+
+  unsigned NumElts = VT.getVectorNumElements();
+  // Src needs to have twice the number of elements.
+  // TODO: Update shuffle lowering to add the extract subvector
+  if (SDValue Src = foldConcatVector(V1, V2);
+      Src && Src.getValueType().getVectorNumElements() == (NumElts * 2))
+    return Src;
+
+  return SDValue();
 }
 
 /// Is this shuffle interleaving contiguous elements from one vector into the
@@ -11519,12 +11531,27 @@ SDValue RISCVTargetLowering::lowerVECTOR_DEINTERLEAVE(SDValue Op,
     return DAG.getMergeValues(Res, DL);
   }
 
-  // TODO: Remove the e64 restriction once the fractional LMUL lowering
-  // is improved to always beat the vnsrl lowering below.
-  if (Subtarget.hasVendorXRivosVizip() && Factor == 2 &&
-      VecVT.getVectorElementType().getSizeInBits() == 64) {
+  if (Subtarget.hasVendorXRivosVizip() && Factor == 2) {
+    MVT VT = Op->getSimpleValueType(0);
     SDValue V1 = Op->getOperand(0);
     SDValue V2 = Op->getOperand(1);
+
+    // For fractional LMUL, check if we can use a higher LMUL
+    // instruction to avoid a vslidedown.
+    if (SDValue Src = foldConcatVector(V1, V2);
+        Src && getLMUL1VT(VT).bitsGT(VT)) {
+      EVT NewVT = VT.getDoubleNumVectorElementsVT();
+      SDValue ZeroIdx = DAG.getVectorIdxConstant(0, DL);
+      Src = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, NewVT, Src, ZeroIdx);
+      SDValue Even = lowerVZIP(RISCVISD::RI_VUNZIP2A_VL, Src,
+                               DAG.getUNDEF(NewVT), DL, DAG, Subtarget);
+      SDValue Odd = lowerVZIP(RISCVISD::RI_VUNZIP2B_VL, Src,
+                              DAG.getUNDEF(NewVT), DL, DAG, Subtarget);
+      Even = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, Even, ZeroIdx);
+      Odd = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, Odd, ZeroIdx);
+      return DAG.getMergeValues({Even, Odd}, DL);
+    }
+
     SDValue Even =
         lowerVZIP(RISCVISD::RI_VUNZIP2A_VL, V1, V2, DL, DAG, Subtarget);
     SDValue Odd =

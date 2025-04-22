@@ -19,7 +19,8 @@ define void @test() {
 ; CHECK-NEXT:    [[TMP6:%.*]] = load float, ptr [[ARRAYIDX31]], align 4
 ; CHECK-NEXT:    [[TMP14:%.*]] = load <4 x float>, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x float> [[TMP14]], <4 x float> poison, <4 x i32> <i32 poison, i32 0, i32 1, i32 2>
-; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x float> [[TMP4]], float [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x float> poison, float [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <4 x float> [[TMP4]], <4 x float> [[TMP7]], <4 x i32> <i32 4, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP15:%.*]] = fmul fast <4 x float> [[TMP11]], [[TMP14]]
 ; CHECK-NEXT:    store <4 x float> [[TMP15]], ptr [[ARRAYIDX6]], align 4
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 5
