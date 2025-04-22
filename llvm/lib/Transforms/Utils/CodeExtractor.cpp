@@ -1300,10 +1300,9 @@ static void fixupDebugInfoPostExtraction(
     // Iterate the debud users of the Input values. If they are in the extracted
     // function then update their location with the new value. If they are in
     // the parent function then create a similar debug record.
-    for (auto *DVI : DbgUsers) {
+    for (auto *DVI : DbgUsers)
       UpdateOrInsertDebugRecord(DVI, Input, NewVal, Expr,
                                 isa<DbgDeclareInst>(DVI));
-    }
     for (auto *DVR : DPUsers)
       UpdateOrInsertDebugRecord(DVR, Input, NewVal, Expr, DVR->isDbgDeclare());
   }
