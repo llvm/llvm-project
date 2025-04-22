@@ -93,7 +93,7 @@ RESOURCE<float> Buffer;
 // CHECK-SUBSCRIPT-NEXT: ParmVarDecl {{.*}} Index 'unsigned int'
 // CHECK-SUBSCRIPT-NEXT: CompoundStmt
 // CHECK-SUBSCRIPT-NEXT: ReturnStmt
-// CHECK-SUBSCRIPT-NEXT: UnaryOperator {{.*}} {{.*}} 'hlsl_device element_type' prefix '*' cannot overflow
+// CHECK-SUBSCRIPT-NEXT: UnaryOperator {{.*}} 'hlsl_device element_type' prefix '*' cannot overflow
 // CHECK-SUBSCRIPT-NEXT: CallExpr {{.*}} 'hlsl_device element_type *'
 // CHECK-SUBSCRIPT-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_getpointer' 'void (...) noexcept'
 // CHECK-SUBSCRIPT-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
@@ -121,7 +121,7 @@ RESOURCE<float> Buffer;
 // CHECK-SUBSCRIPT-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'Index' 'unsigned int'
 // CHECK-SUBSCRIPT-NEXT: AlwaysInlineAttr {{.*}} Implicit always_inline
 
-// CHECK-NOSUBSCRIPT-NOT: CXXMethodDecl {{.*}} operator[] 'hlsl_device element_type &const (unsigned int) const'
+// CHECK-NOSUBSCRIPT-NOT: CXXMethodDecl {{.*}} operator[] 'const hlsl_device element_type &(unsigned int) const'
 // CHECK-NOSUBSCRIPT-NOT: CXXMethodDecl {{.*}} operator[] 'hlsl_device element_type &(unsigned int)'
 
 // CHECK-LOAD: CXXMethodDecl {{.*}} Load 'element_type (unsigned int)'
