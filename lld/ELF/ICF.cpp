@@ -77,6 +77,7 @@
 #include "InputFiles.h"
 #include "LinkerScript.h"
 #include "OutputSections.h"
+#include "Relocations.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
 #include "SyntheticSections.h"
@@ -356,6 +357,22 @@ static SmallVector<Symbol *> getRelocTargetSyms(const InputSection *sec) {
   return getReloc(sec, rel.relas);
 }
 
+// Checks if relocation has semantics beyond just the offset. We identify
+// such relocations to prevent ICF to preserve correctness.
+static bool isTrivialRelocationType(uint16_t emachine, RelType type) {
+  if (emachine == EM_AARCH64) {
+    switch (type) {
+    case R_AARCH64_GOT_LD_PREL19:
+    case R_AARCH64_LD64_GOTOFF_LO15:
+    case R_AARCH64_ADR_GOT_PAGE:
+    case R_AARCH64_LD64_GOT_LO12_NC:
+    case R_AARCH64_LD64_GOTPAGE_LO15:
+      return false;
+    }
+  }
+  return true;
+}
+
 // Compare two lists of relocations. Returns true if all pairs of
 // relocations point to the same section in terms of ICF.
 template <class ELFT>
@@ -384,7 +401,9 @@ bool ICF<ELFT>::variableEq(const InputSection *secA, Relocs<RelTy> ra,
     // 2. We also don't merge two local symbols together. There are post-icf
     // passes that expect to see no duplicates when iterating over local
     // symbols.
-    if (!da->isGlobal() || !db->isGlobal())
+    if ((da->isGlobal() != db->isGlobal()) &&
+        !isTrivialRelocationType(ctx.arg.emachine,
+                                 rai->getType(ctx.arg.isMips64EL)))
       return false;
 
     // We already dealt with absolute and non-InputSection symbols in
