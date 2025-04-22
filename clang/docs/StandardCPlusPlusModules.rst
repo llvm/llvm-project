@@ -379,7 +379,7 @@ For example, the traditional compilation processes for headers are like:
   hdr2.h  --,                                 |
   src2.cpp -+> clang++ src2.cpp --> src2.o ---'
 
-And the compilation process for module units are like:
+And the compilation processes for module units are like:
 
 .. code-block:: text
 
@@ -434,7 +434,7 @@ non-module-unit uses need to be consistent. Consider the following example:
   $ clang++ -std=c++23 Use.cpp -fprebuilt-module-path=.
 
 Clang rejects the example due to the inconsistent language standard modes. Not
-all compiler options are language dialect options, though. For example:
+all compiler options are language-dialect options, though. For example:
 
 .. code-block:: console
 
@@ -1571,7 +1571,7 @@ With the existing implementation, ``-fprebuilt-module-path`` cannot be used for
 header units (because they are nominally anonymous). For header units, use
 ``-fmodule-file`` to include the relevant PCM file for each header unit.
 
-This is expect to be solved in a future version of Clang either by the compiler
+This is expected to be solved in a future version of Clang either by the compiler
 finding and specifying ``-fmodule-file`` automatically, or by the use of a
 module-mapper that understands how to map the header name to their PCMs.
 
