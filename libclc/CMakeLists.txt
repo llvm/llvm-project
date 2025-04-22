@@ -387,11 +387,7 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
 
     message( STATUS "  device: ${d} ( ${${d}_aliases} )" )
 
-    # 1.2 is Clang's default OpenCL C language standard to compile for.
-    set( opencl_lang_std "CL1.2" )
-
-    if ( DARCH STREQUAL spirv )
-      set( opencl_lang_std "CL3.0" )
+    if ( ARCH STREQUAL spirv OR ARCH STREQUAL spirv64 )
       set( build_flags -O0 -finline-hint-functions -DCLC_SPIRV )
       set( opt_flags )
       set( spvflags --spirv-max-version=1.1 )
@@ -399,27 +395,13 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
       if( ARCH STREQUAL spirv64 )
         set( MACRO_ARCH SPIRV64 )
       endif()
-    elseif( DARCH STREQUAL clspv )
-      # Refer to https://github.com/google/clspv for OpenCL version.
-      set( opencl_lang_std "CL3.0" )
+    elseif( ARCH STREQUAL clspv OR ARCH STREQUAL clspv64 )
       set( build_flags "-Wno-unknown-assumption" -DCLC_CLSPV )
       set( opt_flags -O3 )
       set( MACRO_ARCH CLSPV32 )
       if( ARCH STREQUAL clspv64 )
         set( MACRO_ARCH CLSPV64 )
       endif()
-    elseif( DARCH STREQUAL nvptx )
-      # Refer to https://developer.nvidia.com/opencl for OpenCL version.
-      set( opencl_lang_std "CL3.0" )
-      set( build_flags )
-      set( opt_flags -O3 )
-      set( MACRO_ARCH ${ARCH} )
-    elseif( DARCH STREQUAL amdgcn OR DARCH STREQUAL amdgcn-amdhsa )
-      # Refer to https://github.com/ROCm/clr/tree/develop/opencl for OpenCL version.
-      set( opencl_lang_std "CL2.0" )
-      set( build_flags )
-      set( opt_flags -O3 )
-      set( MACRO_ARCH ${ARCH} )
     else()
       set( build_flags )
       set( opt_flags -O3 )
@@ -429,7 +411,9 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
     set( LIBCLC_ARCH_OBJFILE_DIR "${LIBCLC_OBJFILE_DIR}/${arch_suffix}" )
     file( MAKE_DIRECTORY ${LIBCLC_ARCH_OBJFILE_DIR} )
 
-    list( APPEND build_flags -cl-std=${opencl_lang_std} )
+    # Build for OpenCL 3.0 and enable all extensions and features independently
+    # of the target or device.
+    list( APPEND build_flags -cl-std=CL3.0 -Xclang -cl-ext=+all )
 
     string( TOUPPER "CLC_${MACRO_ARCH}" CLC_TARGET_DEFINE )
 
