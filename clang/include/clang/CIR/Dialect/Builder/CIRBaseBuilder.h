@@ -83,21 +83,17 @@ public:
     return getConstPtrAttr(t, 0);
   }
 
-  mlir::TypedAttr getZeroAttr(mlir::Type t) {
-    return cir::ZeroAttr::get(getContext(), t);
-  }
-
   mlir::TypedAttr getZeroInitAttr(mlir::Type ty) {
     if (mlir::isa<cir::IntType>(ty))
       return cir::IntAttr::get(ty, 0);
     if (cir::isAnyFloatingPointType(ty))
       return cir::FPAttr::getZero(ty);
     if (auto arrTy = mlir::dyn_cast<cir::ArrayType>(ty))
-      return getZeroAttr(arrTy);
+      return cir::ZeroAttr::get(arrTy);
     if (auto ptrTy = mlir::dyn_cast<cir::PointerType>(ty))
       return getConstNullPtrAttr(ptrTy);
     if (auto recordTy = mlir::dyn_cast<cir::RecordType>(ty))
-      return getZeroAttr(recordTy);
+      return cir::ZeroAttr::get(recordTy);
     if (mlir::isa<cir::BoolType>(ty)) {
       return getFalseAttr();
     }
