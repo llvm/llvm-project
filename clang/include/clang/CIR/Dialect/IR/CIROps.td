@@ -1381,6 +1381,70 @@ def GetGlobalOp : CIR_Op<"get_global",
 }
 
 //===----------------------------------------------------------------------===//
+// GetMemberOp
+//===----------------------------------------------------------------------===//
+
+def GetMemberOp : CIR_Op<"get_member"> {
+  let summary = "Get the address of a member of a record";
+  let description = [{
+    The `cir.get_member` operation gets the address of a particular named
+    member from the input record.
+
+    It expects a pointer to the base record as well as the name of the member
+    and its field index.
+
+    Example:
+    ```mlir
+    // Suppose we have a record with multiple members.
+    !s32i = !cir.int<s, 32>
+    !s8i = !cir.int<s, 8>
+    !ty_B = !cir.record<"struct.B" {!s32i, !s8i}>
+
+    // Get the address of the member at index 1.
+    %1 = cir.get_member %0[1] {name = "i"} : (!cir.ptr<!ty_B>) -> !cir.ptr<!s8i>
+    ```
+  }];
+
+  let arguments = (ins
+    Arg<CIR_PointerType, "the address to load from", [MemRead]>:$addr,
+    StrAttr:$name,
+    IndexAttr:$index_attr);
+
+  let results = (outs Res<CIR_PointerType, "">:$result);
+
+  let assemblyFormat = [{
+    $addr `[` $index_attr `]` attr-dict
+    `:` qualified(type($addr)) `->` qualified(type($result))
+  }];
+
+  let builders = [
+    OpBuilder<(ins "mlir::Type":$type,
+                   "mlir::Value":$value,
+                   "llvm::StringRef":$name,
+                   "unsigned":$index),
+    [{
+      mlir::APInt fieldIdx(64, index);
+      build($_builder, $_state, type, value, name, fieldIdx);
+    }]>
+  ];
+
+  let extraClassDeclaration = [{
+    /// Return the index of the record member being accessed.
+    uint64_t getIndex() { return getIndexAttr().getZExtValue(); }
+
+    /// Return the record type pointed by the base pointer.
+    cir::PointerType getAddrTy() { return getAddr().getType(); }
+
+    /// Return the result type.
+    cir::PointerType getResultTy() {
+      return mlir::cast<cir::PointerType>(getResult().getType());
+    }
+  }];
+
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // FuncOp
 //===----------------------------------------------------------------------===//
 

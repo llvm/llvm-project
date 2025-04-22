@@ -1551,6 +1551,7 @@ void ConvertCIRToLLVMPass::runOnOperation() {
                CIRToLLVMConstantOpLowering,
                CIRToLLVMFuncOpLowering,
                CIRToLLVMGetGlobalOpLowering,
+               CIRToLLVMGetMemberOpLowering,
                CIRToLLVMSelectOpLowering,
                CIRToLLVMShiftOpLowering,
                CIRToLLVMStackSaveOpLowering,
@@ -1582,6 +1583,29 @@ mlir::LogicalResult CIRToLLVMBrOpLowering::matchAndRewrite(
   rewriter.replaceOpWithNewOp<mlir::LLVM::BrOp>(op, adaptor.getOperands(),
                                                 op.getDest());
   return mlir::LogicalResult::success();
+}
+
+mlir::LogicalResult CIRToLLVMGetMemberOpLowering::matchAndRewrite(
+    cir::GetMemberOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  mlir::Type llResTy = getTypeConverter()->convertType(op.getType());
+  const auto recordTy =
+      mlir::cast<cir::RecordType>(op.getAddrTy().getPointee());
+  assert(recordTy && "expected record type");
+
+  switch (recordTy.getKind()) {
+  case cir::RecordType::Struct: {
+    // Since the base address is a pointer to an aggregate, the first offset
+    // is always zero. The second offset tell us which member it will access.
+    llvm::SmallVector<mlir::LLVM::GEPArg, 2> offset{0, op.getIndex()};
+    const mlir::Type elementTy = getTypeConverter()->convertType(recordTy);
+    rewriter.replaceOpWithNewOp<mlir::LLVM::GEPOp>(op, llResTy, elementTy,
+                                                   adaptor.getAddr(), offset);
+    return mlir::success();
+  }
+  case cir::RecordType::Union:
+    return op.emitError() << "NYI: union get_member lowering";
+  }
 }
 
 mlir::LogicalResult CIRToLLVMTrapOpLowering::matchAndRewrite(

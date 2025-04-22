@@ -309,6 +309,36 @@ RecordType::computeStructAlignment(const mlir::DataLayout &dataLayout) const {
   return recordAlignment;
 }
 
+uint64_t RecordType::getElementOffset(const ::mlir::DataLayout &dataLayout,
+                                      unsigned idx) const {
+  assert(idx < getMembers().size() && "access not valid");
+
+  // All union elements are at offset zero.
+  if (isUnion() || idx == 0)
+    return 0;
+
+  assert(isComplete() && "Cannot get layout of incomplete records");
+  assert(idx < getNumElements());
+  llvm::ArrayRef<mlir::Type> members = getMembers();
+
+  unsigned offset = 0;
+
+  for (mlir::Type ty :
+       llvm::make_range(members.begin(), std::next(members.begin(), idx))) {
+    // This matches LLVM since it uses the ABI instead of preferred alignment.
+    const llvm::Align tyAlign =
+        llvm::Align(getPacked() ? 1 : dataLayout.getTypeABIAlignment(ty));
+
+    // Add padding if necessary to align the data element properly.
+    offset = llvm::alignTo(offset, tyAlign);
+
+    // Consume space for this data item
+    offset += dataLayout.getTypeSize(ty);
+  }
+
+  return offset;
+}
+
 //===----------------------------------------------------------------------===//
 // IntType Definitions
 //===----------------------------------------------------------------------===//

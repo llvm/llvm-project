@@ -157,6 +157,8 @@ struct MissingFeatures {
   static bool emitCheckedInBoundsGEP() { return false; }
   static bool preservedAccessIndexRegion() { return false; }
   static bool bitfields() { return false; }
+  static bool typeChecks() { return false; }
+  static bool lambdaFieldToName() { return false; }
 
   // Missing types
   static bool dataMemberType() { return false; }

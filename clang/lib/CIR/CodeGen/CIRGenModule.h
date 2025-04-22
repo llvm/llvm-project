@@ -19,6 +19,7 @@
 #include "CIRGenValue.h"
 
 #include "clang/AST/CharUnits.h"
+#include "clang/CIR/Dialect/IR/CIRDataLayout.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 
 #include "TargetInfo.h"
@@ -94,6 +95,12 @@ public:
   CIRGenTypes &getTypes() { return genTypes; }
   const clang::LangOptions &getLangOpts() const { return langOpts; }
   mlir::MLIRContext &getMLIRContext() { return *builder.getContext(); }
+
+  const cir::CIRDataLayout getDataLayout() const {
+    // FIXME(cir): instead of creating a CIRDataLayout every time, set it as an
+    // attribute for the CIRModule class.
+    return cir::CIRDataLayout(theModule);
+  }
 
   /// -------
   /// Handling globals

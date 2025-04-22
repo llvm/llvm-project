@@ -445,6 +445,27 @@ mlir::Type CIRGenTypes::convertTypeForMem(clang::QualType qualType,
   return convertedType;
 }
 
+/// Return record layout info for the given record decl.
+const CIRGenRecordLayout &
+CIRGenTypes::getCIRGenRecordLayout(const RecordDecl *rd) {
+  const auto *key = astContext.getTagDeclType(rd).getTypePtr();
+
+  // If we have already computed the layout, return it.
+  auto it = cirGenRecordLayouts.find(key);
+  if (it != cirGenRecordLayouts.end())
+    return *it->second;
+
+  // Compute the type information.
+  convertRecordDeclType(rd);
+
+  // Now try again.
+  it = cirGenRecordLayouts.find(key);
+
+  assert(it != cirGenRecordLayouts.end() &&
+         "Unable to find record layout information for type");
+  return *it->second;
+}
+
 bool CIRGenTypes::isZeroInitializable(clang::QualType t) {
   if (t->getAs<PointerType>())
     return astContext.getTargetNullPointerValue(t) == 0;
