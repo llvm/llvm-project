@@ -17,7 +17,7 @@
 @global.4 = common dso_local local_unnamed_addr global i32 0, align 4
 
 ; Function Attrs: nofree norecurse nosync nounwind
-define dso_local i32 @wombat(i8 zeroext %arg, i32 %dummy) local_unnamed_addr #0 {
+define dso_local i16 @wombat(i8 zeroext %arg, i16 %dummy) local_unnamed_addr #0 {
 bb:
   %load = load ptr, ptr @global, align 4
   %load1 = load i32, ptr @global.1, align 4
@@ -92,5 +92,5 @@ bb42:                                             ; preds = %bb36
   br label %bb43
 
 bb43:                                             ; preds = %bb42, %bb36
-  ret i32 %dummy
+  ret i16 %dummy
 }
