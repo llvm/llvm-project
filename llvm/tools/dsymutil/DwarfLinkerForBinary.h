@@ -80,9 +80,9 @@ public:
   /// Link the contents of the DebugMap.
   bool link(const DebugMap &);
 
-  void reportWarning(Twine Warning, Twine Context = {},
+  void reportWarning(const Twine &Warning, const Twine &Context = {},
                      const DWARFDie *DIE = nullptr) const;
-  void reportError(Twine Error, Twine Context = {},
+  void reportError(const Twine &Error, const Twine &Context = {},
                    const DWARFDie *DIE = nullptr) const;
 
   /// Returns true if input verification is enabled and verification errors were

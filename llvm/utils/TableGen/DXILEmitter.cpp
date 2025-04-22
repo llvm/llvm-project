@@ -365,7 +365,7 @@ static void emitDXILAttributes(const RecordKeeper &Records, raw_ostream &OS) {
 
 // Helper function to determine if the given Attr is defined in the vector
 // Attrs, by comparing the names
-static bool attrIsDefined(std::vector<const Record *> Attrs,
+static bool attrIsDefined(const std::vector<const Record *> &Attrs,
                           const Record *Attr) {
   for (auto CurAttr : Attrs)
     if (CurAttr->getName() == Attr->getName())

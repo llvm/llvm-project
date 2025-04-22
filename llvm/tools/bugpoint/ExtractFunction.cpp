@@ -126,7 +126,7 @@ BugDriver::deleteInstructionFromProgram(const Instruction *I,
 }
 
 std::unique_ptr<Module>
-BugDriver::performFinalCleanups(std::unique_ptr<Module> M,
+BugDriver::performFinalCleanups(const std::unique_ptr<Module> &M,
                                 bool MayModifySemantics) {
   // Make all functions external, so GlobalDCE doesn't delete them...
   for (Module::iterator I = M->begin(), E = M->end(); I != E; ++I)

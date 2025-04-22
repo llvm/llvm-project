@@ -120,7 +120,7 @@ static void dumpDIE(const DWARFDie *DIE, bool Verbose) {
 
 /// Report a warning to the user, optionally including information about a
 /// specific \p DIE related to the warning.
-void DwarfLinkerForBinary::reportWarning(Twine Warning, Twine Context,
+void DwarfLinkerForBinary::reportWarning(const Twine &Warning, const Twine &Context,
                                          const DWARFDie *DIE) const {
   // FIXME: implement warning logging which does not block other threads.
   if (ErrorHandlerMutex.try_lock()) {
@@ -130,7 +130,7 @@ void DwarfLinkerForBinary::reportWarning(Twine Warning, Twine Context,
   }
 }
 
-void DwarfLinkerForBinary::reportError(Twine Error, Twine Context,
+void DwarfLinkerForBinary::reportError(const Twine &Error, const Twine &Context,
                                        const DWARFDie *DIE) const {
   // FIXME: implement error logging which does not block other threads.
   if (ErrorHandlerMutex.try_lock()) {

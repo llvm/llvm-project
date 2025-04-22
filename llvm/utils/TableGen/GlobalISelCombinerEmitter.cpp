@@ -665,9 +665,9 @@ private:
   std::optional<LLTCodeGenOrTempType>
   getLLTCodeGenOrTempType(const PatternType &PT, RuleMatcher &RM);
 
-  void PrintError(Twine Msg) const { ::PrintError(&RuleDef, Msg); }
-  void PrintWarning(Twine Msg) const { ::PrintWarning(RuleDef.getLoc(), Msg); }
-  void PrintNote(Twine Msg) const { ::PrintNote(RuleDef.getLoc(), Msg); }
+  void PrintError(const Twine &Msg) const { ::PrintError(&RuleDef, Msg); }
+  void PrintWarning(const Twine &Msg) const { ::PrintWarning(RuleDef.getLoc(), Msg); }
+  void PrintNote(const Twine &Msg) const { ::PrintNote(RuleDef.getLoc(), Msg); }
 
   void print(raw_ostream &OS, const PatternAlternatives &Alts) const;
 
@@ -710,7 +710,7 @@ private:
   /// \param AdditionalComment Comment string to be added to the
   ///        `DebugCommentAction`.
   RuleMatcher &addRuleMatcher(const PatternAlternatives &Alts,
-                              Twine AdditionalComment = "");
+                              const Twine &AdditionalComment = "");
   bool addFeaturePredicates(RuleMatcher &M);
 
   bool findRoots();
@@ -1350,7 +1350,7 @@ bool CombineRuleBuilder::checkSemantics() {
 }
 
 RuleMatcher &CombineRuleBuilder::addRuleMatcher(const PatternAlternatives &Alts,
-                                                Twine AdditionalComment) {
+                                                const Twine &AdditionalComment) {
   auto &RM = OutRMs.emplace_back(RuleDef.getLoc());
   addFeaturePredicates(RM);
   RM.setPermanentGISelFlags(GISF_IgnoreCopies);
