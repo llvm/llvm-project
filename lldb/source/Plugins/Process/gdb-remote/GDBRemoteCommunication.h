@@ -214,7 +214,7 @@ private:
   HostThread m_listen_thread;
   std::string m_listen_url;
 
-#if defined(HAVE_LIBCOMPRESSION)
+#if HAVE_LIBCOMPRESSION
   CompressionType m_decompression_scratch_type = CompressionType::None;
   void *m_decompression_scratch = nullptr;
 #endif
