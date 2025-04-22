@@ -1700,10 +1700,8 @@ SizeOfPackExpr *SizeOfPackExpr::Create(ASTContext &Context,
                                        ArrayRef<TemplateArgument> PartialArgs) {
   void *Storage =
       Context.Allocate(totalSizeToAlloc<TemplateArgument>(PartialArgs.size()));
-  return new (Storage) SizeOfPackExpr(
-      Context.getCGlobalCXXStdNSTypedef(nullptr, "size_t",
-                                        Context.getSizeType()),
-      OperatorLoc, Pack, PackLoc, RParenLoc, Length, PartialArgs);
+  return new (Storage) SizeOfPackExpr(Context.getSizeType(), OperatorLoc, Pack,
+                                      PackLoc, RParenLoc, Length, PartialArgs);
 }
 
 SizeOfPackExpr *SizeOfPackExpr::CreateDeserialized(ASTContext &Context,

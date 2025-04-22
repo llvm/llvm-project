@@ -1218,6 +1218,11 @@ public:
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) CanQualType SingletonId;
 #include "clang/Basic/HLSLIntangibleTypes.def"
 
+  // Cache size_t and ptrdiff_t typedefs
+  // (C99 7.17), defined in <stddef.h>.
+  mutable QualType PtrDiffTy;
+  mutable QualType UnsignedSizeTy;
+
   // Types for deductions in C++0x [stmt.ranged]'s desugaring. Built on demand.
   mutable QualType AutoDeductTy;     // Deduction against 'auto'.
   mutable QualType AutoRRefDeductTy; // Deduction against 'auto &&'.
@@ -1941,11 +1946,11 @@ public:
   /// <stddef.h>.
   ///
   /// The sizeof operator requires this (C99 6.5.3.4p4).
-  CanQualType getSizeType() const;
+  QualType getSizeType() const;
 
   /// Return the unique signed counterpart of
   /// the integer type corresponding to size_t.
-  CanQualType getSignedSizeType() const;
+  QualType getSignedSizeType() const;
 
   /// Return the unique type for "intmax_t" (C99 7.18.1.5), defined in
   /// <stdint.h>.
@@ -2441,10 +2446,6 @@ public:
   /// expressions.
   QualType GetBuiltinType(unsigned ID, GetBuiltinTypeError &Error,
                           unsigned *IntegerConstantArgs = nullptr) const;
-
-  QualType getCGlobalCXXStdNSTypedef(const NamespaceDecl *StdNS,
-                                     StringRef DefName,
-                                     QualType FallBack = {}) const;
 
   /// Types and expressions required to build C++2a three-way comparisons
   /// using operator<=>, including the values return by builtin <=> operators.

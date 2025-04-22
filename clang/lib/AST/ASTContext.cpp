@@ -6666,16 +6666,55 @@ QualType ASTContext::getTagDeclType(const TagDecl *Decl) const {
   return getTypeDeclType(const_cast<TagDecl*>(Decl));
 }
 
+static QualType LookupCGlobalCXXStdNSTypedef(const ASTContext &Ctx,
+                                             StringRef DefName,
+                                             CanQualType const &CanType) {
+  DeclContextLookupResult Lookup;
+  if (Ctx.getLangOpts().C99) {
+    Lookup = Ctx.getTranslationUnitDecl()->lookup(&Ctx.Idents.get(DefName));
+  } else if (Ctx.getLangOpts().CPlusPlus) {
+    const NamespaceDecl *StdNS = nullptr;
+    auto LookupStdNS =
+        Ctx.getTranslationUnitDecl()->lookup(&Ctx.Idents.get("std"));
+    if (!LookupStdNS.empty()) {
+      StdNS = dyn_cast<NamespaceDecl>(LookupStdNS.front());
+    }
+    if (StdNS) {
+      Lookup = StdNS->lookup(&Ctx.Idents.get(DefName));
+    } else {
+      Lookup = Ctx.getTranslationUnitDecl()->lookup(&Ctx.Idents.get(DefName));
+    }
+  }
+  if (!Lookup.empty()) {
+    if (auto *TD = dyn_cast<TypedefNameDecl>(Lookup.front())) {
+      auto Result = Ctx.getTypeDeclType(TD);
+      if (!Result.isNull() && Ctx.hasSameType(Result, CanType) &&
+          Ctx.getTypeAlign(Result) == Ctx.getTypeAlign(CanType)) {
+        return Result;
+      }
+    }
+  }
+  return QualType();
+}
+
 /// getSizeType - Return the unique type for "size_t" (C99 7.17), the result
 /// of the sizeof operator (C99 6.5.3.4p4). The value is target dependent and
 /// needs to agree with the definition in <stddef.h>.
-CanQualType ASTContext::getSizeType() const {
-  return getFromTargetType(Target->getSizeType());
+QualType ASTContext::getSizeType() const {
+  if (UnsignedSizeTy.isNull()) {
+    auto CanType = getFromTargetType(Target->getSizeType());
+    if (auto TypeDef = LookupCGlobalCXXStdNSTypedef(*this, "size_t", CanType);
+        TypeDef.isNull())
+      return CanType;
+    else
+      UnsignedSizeTy = TypeDef;
+  }
+  return UnsignedSizeTy;
 }
 
 /// Return the unique signed counterpart of the integer type
 /// corresponding to size_t.
-CanQualType ASTContext::getSignedSizeType() const {
+QualType ASTContext::getSignedSizeType() const {
   return getFromTargetType(Target->getSignedSizeType());
 }
 
@@ -6714,7 +6753,16 @@ QualType ASTContext::getUIntPtrType() const {
 /// getPointerDiffType - Return the unique type for "ptrdiff_t" (C99 7.17)
 /// defined in <stddef.h>. Pointer - pointer requires this (C99 6.5.6p9).
 QualType ASTContext::getPointerDiffType() const {
-  return getFromTargetType(Target->getPtrDiffType(LangAS::Default));
+  if (PtrDiffTy.isNull()) {
+    auto CanType = getFromTargetType(Target->getPtrDiffType(LangAS::Default));
+    if (auto TypeDef =
+            LookupCGlobalCXXStdNSTypedef(*this, "ptrdiff_t", CanType);
+        TypeDef.isNull())
+      return CanType;
+    else
+      PtrDiffTy = TypeDef;
+  }
+  return PtrDiffTy;
 }
 
 /// Return the unique unsigned counterpart of "ptrdiff_t"
@@ -12554,35 +12602,6 @@ QualType ASTContext::GetBuiltinType(unsigned Id,
         getLangOpts().CPlusPlus11 ? EST_BasicNoexcept : EST_DynamicNone;
 
   return getFunctionType(ResType, ArgTypes, EPI);
-}
-
-QualType ASTContext::getCGlobalCXXStdNSTypedef(const NamespaceDecl *StdNS,
-                                               StringRef DefName,
-                                               QualType FallBack) const {
-  DeclContextLookupResult Lookup;
-  if (getLangOpts().C99) {
-    Lookup = getTranslationUnitDecl()->lookup(&Idents.get(DefName));
-  } else if (getLangOpts().CPlusPlus) {
-    if (StdNS == nullptr) {
-      auto LookupStdNS = getTranslationUnitDecl()->lookup(&Idents.get("std"));
-      if (!LookupStdNS.empty()) {
-        StdNS = dyn_cast<NamespaceDecl>(LookupStdNS.front());
-      }
-    }
-    if (StdNS) {
-      Lookup = StdNS->lookup(&Idents.get(DefName));
-    } else {
-      Lookup = getTranslationUnitDecl()->lookup(&Idents.get(DefName));
-    }
-  }
-  if (!Lookup.empty()) {
-    if (auto *TD = dyn_cast<TypedefNameDecl>(Lookup.front())) {
-      if (auto Result = getTypeDeclType(TD); !Result.isNull()) {
-        return Result;
-      }
-    }
-  }
-  return FallBack;
 }
 
 static GVALinkage basicGVALinkageForFunction(const ASTContext &Context,

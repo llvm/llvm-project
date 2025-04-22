@@ -191,8 +191,10 @@ static void appendParameterTypes(const CodeGenTypes &CGT,
   assert(ExtInfos.size() == FPT->getNumParams());
   for (unsigned I = 0, E = FPT->getNumParams(); I != E; ++I) {
     prefix.push_back(FPT->getParamType(I));
-    if (ExtInfos[I].hasPassObjectSize())
-      prefix.push_back(CGT.getContext().getSizeType());
+    if (ExtInfos[I].hasPassObjectSize()) {
+      auto &Ctx = CGT.getContext();
+      prefix.push_back(Ctx.getCanonicalType(Ctx.getSizeType()));
+    }
   }
 
   addExtParameterInfosForCall(paramInfos, FPT.getTypePtr(), PrefixSize,
