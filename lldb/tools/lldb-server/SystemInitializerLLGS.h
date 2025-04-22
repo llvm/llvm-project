@@ -11,10 +11,17 @@
 
 #include "lldb/Initialization/SystemInitializer.h"
 #include "lldb/Initialization/SystemInitializerCommon.h"
+#include "lldb/Utility/FileSpec.h"
 
 class SystemInitializerLLGS : public lldb_private::SystemInitializerCommon {
 public:
-  SystemInitializerLLGS() : SystemInitializerCommon(nullptr) {}
+  SystemInitializerLLGS()
+      : SystemInitializerCommon(
+            // Finding the shared libraries directory on lldb-server is broken
+            // since lldb-server isn't dynamically linked with liblldb.so.
+            // Clearing the filespec here causes GetShlibDir to fail and
+            // GetSupportExeDir to fall-back to using the binary path instead.
+            [](lldb_private::FileSpec &file) { file.Clear(); }) {}
 
   llvm::Error Initialize() override;
   void Terminate() override;
