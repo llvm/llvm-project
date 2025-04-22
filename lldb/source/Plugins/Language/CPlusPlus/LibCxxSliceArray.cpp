@@ -62,7 +62,7 @@ public:
 
   lldb::ChildCacheState Update() override;
 
-  size_t GetIndexOfChildWithName(ConstString name) override;
+  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override;
 
 private:
   /// A non-owning pointer to slice_array.__vp_.
@@ -144,10 +144,12 @@ lldb_private::formatters::LibcxxStdSliceArraySyntheticFrontEnd::Update() {
   return ChildCacheState::eRefetch;
 }
 
-size_t lldb_private::formatters::LibcxxStdSliceArraySyntheticFrontEnd::
+llvm::Expected<size_t>
+lldb_private::formatters::LibcxxStdSliceArraySyntheticFrontEnd::
     GetIndexOfChildWithName(ConstString name) {
   if (!m_start)
-    return std::numeric_limits<size_t>::max();
+    return llvm::createStringError("Cannot find index of child '%s'",
+                                   name.AsCString());
   return ExtractIndexFromString(name.GetCString());
 }
 

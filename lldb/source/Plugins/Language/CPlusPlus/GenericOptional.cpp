@@ -36,7 +36,7 @@ public:
 
   GenericOptionalFrontend(ValueObject &valobj, StdLib stdlib);
 
-  size_t GetIndexOfChildWithName(ConstString name) override {
+  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override {
     if (name == "$$dereference$$")
       return 0;
     return formatters::ExtractIndexFromString(name.GetCString());

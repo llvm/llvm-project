@@ -14,6 +14,7 @@
 #include "llvm/Support/Format.h"
 #include "llvm/Support/FormatProviders.h"
 #include "llvm/Support/FormatVariadicDetails.h"
+#include <lldb/ValueObject/ValueObjectConstResult.h>
 
 using namespace lldb;
 namespace lldb_private {
@@ -489,7 +490,13 @@ llvm::Error Interpret(std::vector<ControlStackElement> &control,
         TYPE_CHECK(Object, String);
         auto name = data.Pop<std::string>();
         POP_VALOBJ(valobj);
-        data.Push((uint64_t)valobj->GetIndexOfChildWithName(name));
+        auto index_or_err = valobj->GetIndexOfChildWithName(name);
+        if (!index_or_err) {
+          data.Push(ValueObjectConstResult::Create(
+              nullptr, Status::FromError(index_or_err.takeError())));
+          break;
+        }
+        data.Push((uint64_t)*index_or_err);
         break;
       }
       case sel_get_type: {

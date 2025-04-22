@@ -32,7 +32,7 @@ public:
 
   lldb::ChildCacheState Update() override;
 
-  size_t GetIndexOfChildWithName(ConstString name) override;
+  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override;
 
 private:
   // The lifetime of a ValueObject and all its derivative ValueObjects
@@ -96,8 +96,8 @@ LibStdcppTupleSyntheticFrontEnd::CalculateNumChildren() {
   return m_members.size();
 }
 
-size_t LibStdcppTupleSyntheticFrontEnd::GetIndexOfChildWithName(
-    ConstString name) {
+llvm::Expected<size_t>
+LibStdcppTupleSyntheticFrontEnd::GetIndexOfChildWithName(ConstString name) {
   return ExtractIndexFromString(name.GetCString());
 }
 

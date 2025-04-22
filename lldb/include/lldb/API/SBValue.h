@@ -13,6 +13,8 @@
 #include "lldb/API/SBDefines.h"
 #include "lldb/API/SBType.h"
 
+#include "lldb/Core/Value.h"
+
 class ValueImpl;
 class ValueLocker;
 

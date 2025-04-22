@@ -40,7 +40,7 @@ public:
 
   lldb::ChildCacheState Update() override;
 
-  size_t GetIndexOfChildWithName(ConstString name) override;
+  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override;
 
 private:
   CompilerType GetNodeType();
@@ -68,7 +68,7 @@ public:
 
   lldb::ChildCacheState Update() override;
 
-  size_t GetIndexOfChildWithName(ConstString name) override;
+  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override;
 
 private:
   lldb::ValueObjectSP m_pair_sp; ///< ValueObject for the key/value pair
@@ -291,7 +291,8 @@ lldb_private::formatters::LibcxxStdUnorderedMapSyntheticFrontEnd::Update() {
   return lldb::ChildCacheState::eRefetch;
 }
 
-size_t lldb_private::formatters::LibcxxStdUnorderedMapSyntheticFrontEnd::
+llvm::Expected<size_t>
+lldb_private::formatters::LibcxxStdUnorderedMapSyntheticFrontEnd::
     GetIndexOfChildWithName(ConstString name) {
   return ExtractIndexFromString(name.GetCString());
 }
@@ -398,13 +399,15 @@ lldb::ValueObjectSP lldb_private::formatters::
   return lldb::ValueObjectSP();
 }
 
-size_t lldb_private::formatters::LibCxxUnorderedMapIteratorSyntheticFrontEnd::
+llvm::Expected<size_t>
+lldb_private::formatters::LibCxxUnorderedMapIteratorSyntheticFrontEnd::
     GetIndexOfChildWithName(ConstString name) {
   if (name == "first")
     return 0;
   if (name == "second")
     return 1;
-  return UINT32_MAX;
+  return llvm::createStringError("Cannot find index of child '%s'",
+                                 name.AsCString());
 }
 
 SyntheticChildrenFrontEnd *

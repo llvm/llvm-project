@@ -269,11 +269,12 @@ public:
     return lldb::ChildCacheState::eRefetch;
   }
 
-  size_t GetIndexOfChildWithName(ConstString name) override {
+  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override {
     const char *item_name = name.GetCString();
     uint32_t idx = ExtractIndexFromString(item_name);
     if (idx < UINT32_MAX && idx >= CalculateNumChildrenIgnoringErrors())
-      return UINT32_MAX;
+      return llvm::createStringError("Cannot find index of child '%s'",
+                                     name.AsCString());
     return idx;
   }
 

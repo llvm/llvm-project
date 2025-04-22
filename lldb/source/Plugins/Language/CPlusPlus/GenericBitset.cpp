@@ -28,7 +28,7 @@ public:
 
   GenericBitsetFrontEnd(ValueObject &valobj, StdLib stdlib);
 
-  size_t GetIndexOfChildWithName(ConstString name) override {
+  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override {
     return formatters::ExtractIndexFromString(name.GetCString());
   }
 

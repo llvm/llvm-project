@@ -106,7 +106,7 @@ private:
 
 class AbstractListFrontEnd : public SyntheticChildrenFrontEnd {
 public:
-  size_t GetIndexOfChildWithName(ConstString name) override {
+  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override {
     return ExtractIndexFromString(name.GetCString());
   }
   lldb::ChildCacheState Update() override;
