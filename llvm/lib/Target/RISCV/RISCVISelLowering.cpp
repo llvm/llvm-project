@@ -5062,9 +5062,27 @@ static SDValue lowerVZIP(unsigned Opc, SDValue Op0, SDValue Op1,
     Op1 = convertToScalableVector(ContainerVT, Op1, DAG, Subtarget);
   }
 
-  auto [Mask, VL] = getDefaultVLOps(IntVT, ContainerVT, DL, DAG, Subtarget);
-  SDValue Passthru = DAG.getUNDEF(ContainerVT);
-  SDValue Res = DAG.getNode(Opc, DL, ContainerVT, Op0, Op1, Passthru, Mask, VL);
+  MVT InnerVT = ContainerVT;
+  auto [Mask, VL] = getDefaultVLOps(IntVT, InnerVT, DL, DAG, Subtarget);
+  if (Op1.isUndef() && ContainerVT.bitsGT(getLMUL1VT(ContainerVT)) &&
+      (RISCVISD::RI_VUNZIP2A_VL == Opc || RISCVISD::RI_VUNZIP2B_VL == Opc)) {
+    InnerVT = ContainerVT.getHalfNumVectorElementsVT();
+    VL = DAG.getConstant(VT.getVectorNumElements() / 2, DL,
+                         Subtarget.getXLenVT());
+    Mask = getAllOnesMask(InnerVT, VL, DL, DAG);
+    unsigned HighIdx = InnerVT.getVectorElementCount().getKnownMinValue();
+    Op1 = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, InnerVT, Op0,
+                      DAG.getVectorIdxConstant(HighIdx, DL));
+    Op0 = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, InnerVT, Op0,
+                      DAG.getVectorIdxConstant(0, DL));
+  }
+
+  SDValue Passthru = DAG.getUNDEF(InnerVT);
+  SDValue Res = DAG.getNode(Opc, DL, InnerVT, Op0, Op1, Passthru, Mask, VL);
+  if (InnerVT.bitsLT(ContainerVT))
+    Res = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, ContainerVT,
+                      DAG.getUNDEF(ContainerVT), Res,
+                      DAG.getVectorIdxConstant(0, DL));
   if (IntVT.isFixedLengthVector())
     Res = convertFromScalableVector(IntVT, Res, DAG, Subtarget);
   Res = DAG.getBitcast(VT, Res);
@@ -5765,6 +5783,26 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
                              DAG.getVectorIdxConstant(0, DL));
         }
       }
+    }
+  }
+
+  // If this is a deinterleave(2), try using vunzip{a,b}.  This mostly catches
+  // e64 which can't match above.
+  unsigned Index = 0;
+  if (Subtarget.hasVendorXRivosVizip() &&
+      ShuffleVectorInst::isDeInterleaveMaskOfFactor(Mask, 2, Index) &&
+      1 < count_if(Mask, [](int Idx) { return Idx != -1; })) {
+    unsigned Opc =
+        Index == 0 ? RISCVISD::RI_VUNZIP2A_VL : RISCVISD::RI_VUNZIP2B_VL;
+    if (V2.isUndef())
+      return lowerVZIP(Opc, V1, V2, DL, DAG, Subtarget);
+    if (SDValue Src = foldConcatVector(V1, V2)) {
+      EVT NewVT = VT.getDoubleNumVectorElementsVT();
+      SDValue ZeroIdx = DAG.getVectorIdxConstant(0, DL);
+      Src = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, NewVT, Src, ZeroIdx);
+      SDValue Res =
+          lowerVZIP(Opc, Src, DAG.getUNDEF(NewVT), DL, DAG, Subtarget);
+      return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, Res, ZeroIdx);
     }
   }
 
