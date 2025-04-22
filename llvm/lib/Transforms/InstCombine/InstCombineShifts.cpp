@@ -994,6 +994,18 @@ static bool setShiftFlags(BinaryOperator &I, const SimplifyQuery &Q) {
       I.setIsExact();
       return true;
     }
+    //Fix #131444
+    if (auto *Cttz = dyn_cast<IntrinsicInst>(I.getOperand(1))) {
+      if (Cttz->getIntrinsicID() == Intrinsic::cttz &&
+          Cttz->getOperand(0) == I.getOperand(0)) {
+        if (auto *Const = dyn_cast<ConstantInt>(Cttz->getOperand(1))) {
+          if (Const->isOne()) {  
+            I.setIsExact();
+            return true;
+          }
+        }
+      }
+    }
   }
 
   // Compute what we know about shift count.
