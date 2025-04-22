@@ -32,7 +32,6 @@ struct BuildAttributeItem {
   unsigned Tag;
   unsigned IntValue;
   std::string StringValue;
-  BuildAttributeItem() {};
   BuildAttributeItem(Types Ty, unsigned Tg, unsigned IV, std::string SV)
       : Type(Ty), Tag(Tg), IntValue(IV), StringValue(std::move(SV)) {}
 };
