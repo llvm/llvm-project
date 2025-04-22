@@ -20,6 +20,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/ErrorOr.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Locale.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
@@ -52,15 +53,18 @@ unsigned SourceMgr::AddIncludeFile(const std::string &Filename,
 ErrorOr<std::unique_ptr<MemoryBuffer>>
 SourceMgr::OpenIncludeFile(const std::string &Filename,
                            std::string &IncludedFile) {
+  SmallString<128> Path{Filename};
+  sys::fs::make_absolute(Path);
   ErrorOr<std::unique_ptr<MemoryBuffer>> NewBufOrErr =
-      MemoryBuffer::getFile(Filename);
+      MemoryBuffer::getFile(Path);
 
-  SmallString<64> Buffer(Filename);
+  SmallString<64> Buffer(Path);
   // If the file didn't exist directly, see if it's in an include path.
   for (unsigned i = 0, e = IncludeDirectories.size(); i != e && !NewBufOrErr;
        ++i) {
     Buffer = IncludeDirectories[i];
     sys::path::append(Buffer, Filename);
+    sys::fs::make_absolute(Buffer);
     NewBufOrErr = MemoryBuffer::getFile(Buffer);
   }
 
