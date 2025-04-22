@@ -5,6 +5,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/Module.h"
@@ -19,7 +20,7 @@ using namespace llvm;
   do {                                                                         \
     if (!(C)) {                                                                \
       TargetVerify::CheckFailed(__VA_ARGS__);                                  \
-      return;                                                                  \
+      return false;                                                                  \
     }                                                                          \
   } while (false)
 
@@ -64,7 +65,7 @@ static bool isShader(CallingConv::ID CC) {
   }
 }
 
-void AMDGPUTargetVerify::run(Function &F) {
+bool AMDGPUTargetVerify::run(Function &F) {
   // Ensure shader calling convention returns void
   if (isShader(F.getCallingConv()))
     Check(F.getReturnType() == Type::getVoidTy(F.getContext()), "Shaders must return void");
@@ -99,6 +100,10 @@ void AMDGPUTargetVerify::run(Function &F) {
       }
     }
   }
+
+  if (!MessagesStr.str().empty())
+    return false;
+  return true;
 }
 
 PreservedAnalyses AMDGPUTargetVerifierPass::run(Function &F, FunctionAnalysisManager &AM) {
@@ -120,4 +125,51 @@ PreservedAnalyses AMDGPUTargetVerifierPass::run(Function &F, FunctionAnalysisMan
 
   return PreservedAnalyses::all();
 }
+
+struct AMDGPUTargetVerifierLegacyPass : public FunctionPass {
+  static char ID;
+
+  std::unique_ptr<AMDGPUTargetVerify> TV;
+  bool FatalErrors = true;
+
+  AMDGPUTargetVerifierLegacyPass() : FunctionPass(ID) {
+    initializeAMDGPUTargetVerifierLegacyPassPass(*PassRegistry::getPassRegistry());
+  }
+  AMDGPUTargetVerifierLegacyPass(bool FatalErrors)
+      : FunctionPass(ID),
+        FatalErrors(FatalErrors) {
+    initializeAMDGPUTargetVerifierLegacyPassPass(*PassRegistry::getPassRegistry());
+  }
+
+  bool doInitialization(Module &M) override {
+    TV = std::make_unique<AMDGPUTargetVerify>(&M);
+    return false;
+  }
+
+  bool runOnFunction(Function &F) override {
+    if (TV->run(F) && FatalErrors) {
+      errs() << "in function " << F.getName() << '\n';
+      report_fatal_error("Broken function found, compilation aborted!");
+    }
+    return false;
+  }
+
+  bool doFinalization(Module &M) override {
+    bool IsValid = true;
+    for (Function &F : M)
+      if (F.isDeclaration())
+        IsValid &= TV->run(F);
+
+    //IsValid &= TV->run();
+    if (FatalErrors && !IsValid)
+      report_fatal_error("Broken module found, compilation aborted!");
+    return false;
+  }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesAll();
+  }
+};
+char AMDGPUTargetVerifierLegacyPass::ID = 0;
 } // namespace llvm
+INITIALIZE_PASS(AMDGPUTargetVerifierLegacyPass, "amdgpu-tgtverify", "AMDGPU Target Verifier", false, false)

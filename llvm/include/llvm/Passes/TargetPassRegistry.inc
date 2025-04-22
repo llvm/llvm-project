@@ -151,6 +151,18 @@ PB.registerPipelineParsingCallback([=](StringRef Name, FunctionPassManager &PM,
   return false;
 });
 
+PB.registerVerifierCallback([](ModulePassManager &PM) {
+#define VERIFIER_MODULE_ANALYSIS(NAME, CREATE_PASS) PM.addPass(CREATE_PASS)
+#include GET_PASS_REGISTRY
+#undef VERIFIER_MODULE_ANALYSIS
+  return false;
+}, [](FunctionPassManager &FPM) {
+#define VERIFIER_FUNCTION_ANALYSIS(NAME, CREATE_PASS) FPM.addPass(CREATE_PASS)
+#include GET_PASS_REGISTRY
+#undef VERIFIER_FUNCTION_ANALYSIS
+  return false;
+});
+
 #undef ADD_PASS
 #undef ADD_PASS_WITH_PARAMS
 

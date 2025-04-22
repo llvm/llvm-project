@@ -317,6 +317,7 @@ void initializeUnpackMachineBundlesPass(PassRegistry &);
 void initializeUnreachableBlockElimLegacyPassPass(PassRegistry &);
 void initializeUnreachableMachineBlockElimLegacyPass(PassRegistry &);
 void initializeVerifierLegacyPassPass(PassRegistry &);
+void initializeAMDGPUTargetVerifierLegacyPassPass(PassRegistry &);
 void initializeVirtRegMapWrapperLegacyPass(PassRegistry &);
 void initializeVirtRegRewriterPass(PassRegistry &);
 void initializeWasmEHPreparePass(PassRegistry &);
