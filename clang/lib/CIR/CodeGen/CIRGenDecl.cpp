@@ -276,6 +276,14 @@ void CIRGenFunction::emitDecl(const Decl &d) {
   case Decl::OpenACCRoutine:
     emitOpenACCRoutine(cast<OpenACCRoutineDecl>(d));
     return;
+  case Decl::Typedef:     // typedef int X;
+  case Decl::TypeAlias: { // using X = int; [C++0x]
+    QualType ty = cast<TypedefNameDecl>(d).getUnderlyingType();
+    assert(!cir::MissingFeatures::generateDebugInfo());
+    if (ty->isVariablyModifiedType())
+      cgm.errorNYI(d.getSourceRange(), "emitDecl: variably modified type");
+    return;
+  }
   default:
     cgm.errorNYI(d.getSourceRange(),
                  std::string("emitDecl: unhandled decl type: ") +
