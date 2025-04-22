@@ -2113,7 +2113,8 @@ void AMDGPUCodeGenPassBuilder::addPreISel(AddIRPass &addPass) const {
 
   // FIXME: Why isn't this queried as required from AMDGPUISelDAGToDAG, and why
   // isn't this in addInstSelector?
-  addPass(RequireAnalysisPass<UniformityInfoAnalysis, Function>());
+  addPass(RequireAnalysisPass<UniformityInfoAnalysis, Function>(),
+          /*Force=*/true);
 }
 
 void AMDGPUCodeGenPassBuilder::addILPOpts(AddMachinePass &addPass) const {

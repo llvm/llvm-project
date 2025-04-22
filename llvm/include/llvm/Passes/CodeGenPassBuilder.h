@@ -213,11 +213,12 @@ protected:
     }
 
     template <typename PassT>
-    void operator()(PassT &&Pass, StringRef Name = PassT::name()) {
+    void operator()(PassT &&Pass, bool Force = false,
+                    StringRef Name = PassT::name()) {
       static_assert((is_detected<is_function_pass_t, PassT>::value ||
                      is_detected<is_module_pass_t, PassT>::value) &&
                     "Only module pass and function pass are supported.");
-      if (!PB.runBeforeAdding(Name))
+      if (!Force && !PB.runBeforeAdding(Name))
         return;
 
       // Add Function Pass
@@ -565,9 +566,12 @@ Error CodeGenPassBuilder<Derived, TargetMachineT>::buildPipeline(
 
   {
     AddIRPass addIRPass(MPM, derived());
-    addIRPass(RequireAnalysisPass<MachineModuleAnalysis, Module>());
-    addIRPass(RequireAnalysisPass<ProfileSummaryAnalysis, Module>());
-    addIRPass(RequireAnalysisPass<CollectorMetadataAnalysis, Module>());
+    addIRPass(RequireAnalysisPass<MachineModuleAnalysis, Module>(),
+              /*Force=*/true);
+    addIRPass(RequireAnalysisPass<ProfileSummaryAnalysis, Module>(),
+              /*Force=*/true);
+    addIRPass(RequireAnalysisPass<CollectorMetadataAnalysis, Module>(),
+              /*Force=*/true);
     addISelPasses(addIRPass);
   }
 
@@ -683,7 +687,7 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::addIRPasses(
   // Before running any passes, run the verifier to determine if the input
   // coming from the front-end and/or optimizer is valid.
   if (!Opt.DisableVerify)
-    addPass(VerifierPass());
+    addPass(VerifierPass(), /*Force=*/true);
 
   // Run loop strength reduction before anything else.
   if (getOptLevel() != CodeGenOptLevel::None && !Opt.DisableLSR) {
@@ -820,7 +824,7 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::addISelPrepare(
   // All passes which modify the LLVM IR are now complete; run the verifier
   // to ensure that the IR is valid.
   if (!Opt.DisableVerify)
-    addPass(VerifierPass());
+    addPass(VerifierPass(), /*Force=*/true);
 }
 
 template <typename Derived, typename TargetMachineT>
