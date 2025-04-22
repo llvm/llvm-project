@@ -1250,7 +1250,7 @@ static void eraseDebugIntrinsicsWithNonLocalRefs(Function &F) {
 /// 4. Remove intrinsics which point to values outside of the new function.
 static void fixupDebugInfoPostExtraction(
     Function &OldFunc, Function &NewFunc, CallInst &TheCall,
-    const SetVector<Value *> &Inputs, const SmallVector<Value *> &NewValues) {
+    const SetVector<Value *> &Inputs, ArrayRef<Value *> NewValues) {
   DISubprogram *OldSP = OldFunc.getSubprogram();
   LLVMContext &Ctx = OldFunc.getContext();
 
