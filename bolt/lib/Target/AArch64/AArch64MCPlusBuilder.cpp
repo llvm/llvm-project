@@ -491,7 +491,22 @@ public:
 
     // If signing oracles are considered, the particular value left in the base
     // register after this instruction is important. This function checks that
-    // if the base register was overwritten, it is due to address write-back.
+    // if the base register was overwritten, it is due to address write-back:
+    //
+    //     ; good:
+    //     autdza  x1           ; x1 is authenticated (may fail)
+    //     ldr     x0, [x1, #8] ; x1 is checked and not changed
+    //     pacdzb  x1
+    //
+    //     ; also good:
+    //     autdza  x1
+    //     ldr     x0, [x1, #8]! ; x1 is checked and incremented by 8
+    //     pacdzb  x1
+    //
+    //     ; bad (the value being signed is not the authenticated one):
+    //     autdza  x1
+    //     ldr     x1, [x1, #8]  ; x1 is overwritten with an unrelated value
+    //     pacdzb  x1
     //
     // Note that this function is not needed for authentication oracles, as the
     // particular value left in the register after a successful memory access

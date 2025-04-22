@@ -340,10 +340,9 @@ protected:
 
   SrcState createEntryState() {
     SrcState S(NumRegs, RegsToTrackInstsFor.getNumTrackedRegisters());
-    for (MCPhysReg Reg : BC.MIB->getTrustedLiveInRegs()) {
+    for (MCPhysReg Reg : BC.MIB->getTrustedLiveInRegs())
       S.TrustedRegs |= BC.MIB->getAliases(Reg, /*OnlySmaller=*/true);
-      S.SafeToDerefRegs = S.TrustedRegs;
-    }
+    S.SafeToDerefRegs = S.TrustedRegs;
     return S;
   }
 
