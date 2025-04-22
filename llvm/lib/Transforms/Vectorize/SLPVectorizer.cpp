@@ -5923,9 +5923,9 @@ static bool isMaskedLoadCompress(
   // Check for very large distances between elements.
   if (*Diff / Sz >= MaxRegSize / 8)
     return false;
-  Align CommonAlignment = computeCommonAlignment<LoadInst>(VL);
   LoadVecTy = getWidenedType(ScalarTy, *Diff + 1);
   auto *LI = cast<LoadInst>(Order.empty() ? VL.front() : VL[Order.front()]);
+  Align CommonAlignment = LI->getAlign();
   IsMasked = !isSafeToLoadUnconditionally(
       Ptr0, LoadVecTy, CommonAlignment, DL,
       cast<LoadInst>(Order.empty() ? VL.back() : VL[Order.back()]), &AC, &DT,
@@ -5964,26 +5964,28 @@ static bool isMaskedLoadCompress(
         TTI.getMaskedMemoryOpCost(Instruction::Load, LoadVecTy, CommonAlignment,
                                   LI->getPointerAddressSpace(), CostKind);
   } else {
-    CommonAlignment = LI->getAlign();
     LoadCost =
         TTI.getMemoryOpCost(Instruction::Load, LoadVecTy, CommonAlignment,
                             LI->getPointerAddressSpace(), CostKind);
   }
-  if (IsStrided) {
+  if (IsStrided && !IsMasked) {
     // Check for potential segmented(interleaved) loads.
-    if (TTI.isLegalInterleavedAccessType(LoadVecTy, CompressMask[1],
+    auto *AlignedLoadVecTy = getWidenedType(
+        ScalarTy, getFullVectorNumberOfElements(TTI, ScalarTy, *Diff + 1));
+    if (TTI.isLegalInterleavedAccessType(AlignedLoadVecTy, CompressMask[1],
                                          CommonAlignment,
                                          LI->getPointerAddressSpace())) {
       InstructionCost InterleavedCost =
           VectorGEPCost + TTI.getInterleavedMemoryOpCost(
-                              Instruction::Load, LoadVecTy, CompressMask[1],
-                              std::nullopt, CommonAlignment,
+                              Instruction::Load, AlignedLoadVecTy,
+                              CompressMask[1], std::nullopt, CommonAlignment,
                               LI->getPointerAddressSpace(), CostKind, IsMasked);
       if (!Mask.empty())
         InterleavedCost += ::getShuffleCost(TTI, TTI::SK_PermuteSingleSrc,
                                             VecTy, Mask, CostKind);
       if (InterleavedCost < GatherCost) {
         InterleaveFactor = CompressMask[1];
+        LoadVecTy = AlignedLoadVecTy;
         return true;
       }
     }
@@ -5999,6 +6001,24 @@ static bool isMaskedLoadCompress(
       TTI, TTI::SK_PermuteSingleSrc, LoadVecTy, CompressMask, CostKind);
   InstructionCost TotalVecCost = VectorGEPCost + LoadCost + CompressCost;
   return TotalVecCost < GatherCost;
+}
+
+/// Checks if the \p VL can be transformed to a (masked)load + compress or
+/// (masked) interleaved load.
+static bool
+isMaskedLoadCompress(ArrayRef<Value *> VL, ArrayRef<Value *> PointerOps,
+                     ArrayRef<unsigned> Order, const TargetTransformInfo &TTI,
+                     const DataLayout &DL, ScalarEvolution &SE,
+                     AssumptionCache &AC, const DominatorTree &DT,
+                     const TargetLibraryInfo &TLI,
+                     const function_ref<bool(Value *)> AreAllUsersVectorized) {
+  bool IsMasked;
+  unsigned InterleaveFactor;
+  SmallVector<int> CompressMask;
+  VectorType *LoadVecTy;
+  return isMaskedLoadCompress(VL, PointerOps, Order, TTI, DL, SE, AC, DT, TLI,
+                              AreAllUsersVectorized, IsMasked, InterleaveFactor,
+                              CompressMask, LoadVecTy);
 }
 
 /// Checks if strided loads can be generated out of \p VL loads with pointers \p
@@ -6137,6 +6157,12 @@ BoUpSLP::canVectorizeLoads(ArrayRef<Value *> VL, const Value *VL0,
     // Check that the sorted loads are consecutive.
     if (static_cast<unsigned>(*Diff) == Sz - 1)
       return LoadsState::Vectorize;
+    if (isMaskedLoadCompress(VL, PointerOps, Order, *TTI, *DL, *SE, *AC, *DT,
+                             *TLI, [&](Value *V) {
+                               return areAllUsersVectorized(
+                                   cast<Instruction>(V), UserIgnoreList);
+                             }))
+      return LoadsState::CompressVectorize;
     // Simple check if not a strided access - clear order.
     bool IsPossibleStrided = *Diff % (Sz - 1) == 0;
     // Try to generate strided load node.
@@ -6150,18 +6176,6 @@ BoUpSLP::canVectorizeLoads(ArrayRef<Value *> VL, const Value *VL0,
         isStridedLoad(VL, PointerOps, Order, *TTI, *DL, *SE,
                       IsAnyPointerUsedOutGraph, *Diff))
       return LoadsState::StridedVectorize;
-    bool IsMasked;
-    unsigned InterleaveFactor;
-    SmallVector<int> CompressMask;
-    VectorType *LoadVecTy;
-    if (isMaskedLoadCompress(
-            VL, PointerOps, Order, *TTI, *DL, *SE, *AC, *DT, *TLI,
-            [&](Value *V) {
-              return areAllUsersVectorized(cast<Instruction>(V),
-                                           UserIgnoreList);
-            },
-            IsMasked, InterleaveFactor, CompressMask, LoadVecTy))
-      return LoadsState::CompressVectorize;
   }
   if (!TTI->isLegalMaskedGather(VecTy, CommonAlignment) ||
       TTI->forceScalarizeMaskedGather(VecTy, CommonAlignment))
@@ -12613,11 +12627,13 @@ public:
   }
   InstructionCost createFreeze(InstructionCost Cost) { return Cost; }
   /// Finalize emission of the shuffles.
-  InstructionCost
-  finalize(ArrayRef<int> ExtMask,
-           ArrayRef<std::pair<const TreeEntry *, unsigned>> SubVectors,
-           ArrayRef<int> SubVectorsMask, unsigned VF = 0,
-           function_ref<void(Value *&, SmallVectorImpl<int> &)> Action = {}) {
+  InstructionCost finalize(
+      ArrayRef<int> ExtMask,
+      ArrayRef<std::pair<const TreeEntry *, unsigned>> SubVectors,
+      ArrayRef<int> SubVectorsMask, unsigned VF = 0,
+      function_ref<void(Value *&, SmallVectorImpl<int> &,
+                        function_ref<Value *(Value *, Value *, ArrayRef<int>)>)>
+          Action = {}) {
     IsFinalized = true;
     if (Action) {
       const PointerUnion<Value *, const TreeEntry *> &Vec = InVectors.front();
@@ -12629,7 +12645,10 @@ public:
       assert(VF > 0 &&
              "Expected vector length for the final value before action.");
       Value *V = cast<Value *>(Vec);
-      Action(V, CommonMask);
+      Action(V, CommonMask, [this](Value *V1, Value *V2, ArrayRef<int> Mask) {
+        Cost += createShuffle(V1, V2, Mask);
+        return V1;
+      });
       InVectors.front() = V;
     }
     if (!SubVectors.empty()) {
@@ -13434,11 +13453,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
         assert(IsVectorized && "Expected to be vectorized");
         CompressEntryToData.try_emplace(E, CompressMask, LoadVecTy,
                                         InterleaveFactor, IsMasked);
-        Align CommonAlignment;
-        if (IsMasked)
-          CommonAlignment = computeCommonAlignment<LoadInst>(VL);
-        else
-          CommonAlignment = LI0->getAlign();
+        Align CommonAlignment = LI0->getAlign();
         if (InterleaveFactor) {
           VecLdCost = TTI->getInterleavedMemoryOpCost(
               Instruction::Load, LoadVecTy, InterleaveFactor, std::nullopt,
@@ -16593,11 +16608,13 @@ public:
   /// Finalize emission of the shuffles.
   /// \param Action the action (if any) to be performed before final applying of
   /// the \p ExtMask mask.
-  Value *
-  finalize(ArrayRef<int> ExtMask,
-           ArrayRef<std::pair<const TreeEntry *, unsigned>> SubVectors,
-           ArrayRef<int> SubVectorsMask, unsigned VF = 0,
-           function_ref<void(Value *&, SmallVectorImpl<int> &)> Action = {}) {
+  Value *finalize(
+      ArrayRef<int> ExtMask,
+      ArrayRef<std::pair<const TreeEntry *, unsigned>> SubVectors,
+      ArrayRef<int> SubVectorsMask, unsigned VF = 0,
+      function_ref<void(Value *&, SmallVectorImpl<int> &,
+                        function_ref<Value *(Value *, Value *, ArrayRef<int>)>)>
+          Action = {}) {
     IsFinalized = true;
     if (Action) {
       Value *Vec = InVectors.front();
@@ -16616,7 +16633,9 @@ public:
         std::iota(ResizeMask.begin(), std::next(ResizeMask.begin(), VecVF), 0);
         Vec = createShuffle(Vec, nullptr, ResizeMask);
       }
-      Action(Vec, CommonMask);
+      Action(Vec, CommonMask, [this](Value *V1, Value *V2, ArrayRef<int> Mask) {
+        return createShuffle(V1, V2, Mask);
+      });
       InVectors.front() = Vec;
     }
     if (!SubVectors.empty()) {
@@ -17278,9 +17297,67 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
     else
       Res = ShuffleBuilder.finalize(
           E->ReuseShuffleIndices, SubVectors, SubVectorsMask, E->Scalars.size(),
-          [&](Value *&Vec, SmallVectorImpl<int> &Mask) {
-            TryPackScalars(NonConstants, Mask, /*IsRootPoison=*/false);
-            Vec = ShuffleBuilder.gather(NonConstants, Mask.size(), Vec);
+          [&](Value *&Vec, SmallVectorImpl<int> &Mask, auto CreateShuffle) {
+            bool IsSplat = isSplat(NonConstants);
+            SmallVector<int> BVMask(Mask.size(), PoisonMaskElem);
+            TryPackScalars(NonConstants, BVMask, /*IsRootPoison=*/false);
+            auto CheckIfSplatIsProfitable = [&]() {
+              // Estimate the cost of splatting + shuffle and compare with
+              // insert + shuffle.
+              constexpr TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
+              Value *V = *find_if_not(NonConstants, IsaPred<UndefValue>);
+              if (isa<ExtractElementInst>(V) || isVectorized(V))
+                return false;
+              InstructionCost SplatCost = TTI->getVectorInstrCost(
+                  Instruction::InsertElement, VecTy, CostKind, /*Index=*/0,
+                  PoisonValue::get(VecTy), V);
+              SmallVector<int> NewMask(Mask.begin(), Mask.end());
+              for (auto [Idx, I] : enumerate(BVMask))
+                if (I != PoisonMaskElem)
+                  NewMask[Idx] = Mask.size();
+              SplatCost += ::getShuffleCost(*TTI, TTI::SK_PermuteTwoSrc, VecTy,
+                                            NewMask, CostKind);
+              InstructionCost BVCost = TTI->getVectorInstrCost(
+                  Instruction::InsertElement, VecTy, CostKind,
+                  *find_if(Mask, [](int I) { return I != PoisonMaskElem; }),
+                  Vec, V);
+              // Shuffle required?
+              if (count(BVMask, PoisonMaskElem) <
+                  static_cast<int>(BVMask.size() - 1)) {
+                SmallVector<int> NewMask(Mask.begin(), Mask.end());
+                for (auto [Idx, I] : enumerate(BVMask))
+                  if (I != PoisonMaskElem)
+                    NewMask[Idx] = I;
+                BVCost += ::getShuffleCost(*TTI, TTI::SK_PermuteSingleSrc,
+                                           VecTy, NewMask, CostKind);
+              }
+              return SplatCost <= BVCost;
+            };
+            if (!IsSplat || Mask.size() <= 2 || !CheckIfSplatIsProfitable()) {
+              for (auto [Idx, I] : enumerate(BVMask))
+                if (I != PoisonMaskElem)
+                  Mask[Idx] = I;
+              Vec = ShuffleBuilder.gather(NonConstants, Mask.size(), Vec);
+            } else {
+              Value *V = *find_if_not(NonConstants, IsaPred<UndefValue>);
+              SmallVector<Value *> Values(NonConstants.size(),
+                                          PoisonValue::get(ScalarTy));
+              Values[0] = V;
+              Value *BV = ShuffleBuilder.gather(Values, BVMask.size());
+              SmallVector<int> SplatMask(BVMask.size(), PoisonMaskElem);
+              transform(BVMask, SplatMask.begin(), [](int I) {
+                return I == PoisonMaskElem ? PoisonMaskElem : 0;
+              });
+              if (!ShuffleVectorInst::isIdentityMask(SplatMask, VF))
+                BV = CreateShuffle(BV, nullptr, SplatMask);
+              for (auto [Idx, I] : enumerate(BVMask))
+                if (I != PoisonMaskElem)
+                  Mask[Idx] = BVMask.size() + Idx;
+              Vec = CreateShuffle(Vec, BV, Mask);
+              for (auto [Idx, I] : enumerate(Mask))
+                if (I != PoisonMaskElem)
+                  Mask[Idx] = Idx;
+            }
           });
   } else if (!allConstant(GatheredScalars)) {
     // Gather unique scalars and all constants.
@@ -17982,14 +18059,11 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
           PointerOps[I] = cast<LoadInst>(V)->getPointerOperand();
         auto [CompressMask, LoadVecTy, InterleaveFactor, IsMasked] =
             CompressEntryToData.at(E);
-        Align CommonAlignment;
-        if (IsMasked)
-          CommonAlignment = computeCommonAlignment<LoadInst>(E->Scalars);
-        else
-          CommonAlignment = LI->getAlign();
+        Align CommonAlignment = LI->getAlign();
         if (IsMasked) {
+          unsigned VF = getNumElements(LoadVecTy);
           SmallVector<Constant *> MaskValues(
-              getNumElements(LoadVecTy) / getNumElements(LI->getType()),
+              VF / getNumElements(LI->getType()),
               ConstantInt::getFalse(VecTy->getContext()));
           for (int I : CompressMask)
             MaskValues[I] = ConstantInt::getTrue(VecTy->getContext());
