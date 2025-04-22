@@ -9,8 +9,8 @@
 // This file implements the linalg dialect Fusion on tensors operations pass.
 //
 //===----------------------------------------------------------------------===//
-
 #include "mlir/Dialect/Linalg/Passes.h"
+#include <iostream>
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
@@ -21,6 +21,7 @@
 #include "mlir/Dialect/Tensor/Transforms/Transforms.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Support/LLVM.h"
@@ -1094,6 +1095,84 @@ public:
     rewriter.replaceOpWithNewOp<tensor::CollapseShapeOp>(
         padOp, padOp.getResultType(), newPadOp.getResult(), reassociations);
 
+    return success();
+  }
+
+private:
+  ControlFusionFn controlFoldingReshapes;
+};
+
+/// Pattern to fold a tensor.expand_shape op with its producer tensor.pad op
+/// by bubbling the expand_shape before the pad.
+struct FoldReshapeWithProducerPadOpByExpansion
+    : public OpRewritePattern<tensor::ExpandShapeOp> {
+
+  FoldReshapeWithProducerPadOpByExpansion(MLIRContext *context,
+                                          ControlFusionFn foldReshapes,
+                                          PatternBenefit benefit = 1)
+      : OpRewritePattern<tensor::ExpandShapeOp>(context, benefit),
+        controlFoldingReshapes(std::move(foldReshapes)) {}
+
+  LogicalResult matchAndRewrite(tensor::ExpandShapeOp expandOp,
+                                PatternRewriter &rewriter) const override {
+    tensor::PadOp padOp = expandOp.getSrc().getDefiningOp<tensor::PadOp>();
+    if (!padOp)
+      return failure();
+
+    if (!padOp->hasOneUse())
+      return failure();
+
+    if (!controlFoldingReshapes(&expandOp.getSrcMutable())) {
+      return rewriter.notifyMatchFailure(expandOp,
+                                         "fusion blocked by control function");
+    }
+
+    // return failure if padOp has *any* dynamic padding
+    if (!padOp.getLow().empty() || !padOp.getHigh().empty()) {
+      return failure();
+    }
+
+    SmallVector<ReassociationIndices> reassociations =
+        expandOp.getReassociationIndices();
+    ArrayRef<int64_t> low = padOp.getStaticLow();
+    ArrayRef<int64_t> high = padOp.getStaticHigh();
+
+    for (auto [reInd, l, h] : llvm::zip_equal(reassociations, low, high)) {
+      if (reInd.size() != 1 && (l != 0 || h != 0))
+        return failure();
+    }
+
+    SmallVector<OpFoldResult> newLow, newHigh;
+    for (auto [idx, reInd] : llvm::enumerate(reassociations)) {
+      for (size_t i = 0; i < reInd.size(); ++i) {
+        newLow.push_back(padOp.getMixedLowPad()[idx]);
+        newHigh.push_back(padOp.getMixedHighPad()[idx]);
+      }
+    }
+
+    // Calculate expanded shape manually
+    auto reshapeType = cast<RankedTensorType>(expandOp.getType());
+    ArrayRef<int64_t> finalShape = reshapeType.getShape();
+    SmallVector<int64_t> expandedShape;
+    for (auto [inDimIdx, outGroup] : llvm::enumerate(reassociations)) {
+      for (auto outDimIdx : outGroup) {
+        int64_t sz = finalShape[outDimIdx] - low[inDimIdx] - high[inDimIdx];
+        expandedShape.push_back(sz);
+      }
+    }
+
+    // Apply the reshape to the pad's source first
+    Location loc = expandOp.getLoc();
+    Value expandedSrc = rewriter.create<tensor::ExpandShapeOp>(
+        loc,
+        RankedTensorType::get(expandedShape,
+                              padOp.getSourceType().getElementType()),
+        padOp.getSource(), reassociations);
+
+    auto newPadOp = rewriter.create<tensor::PadOp>(
+        loc, expandOp.getType(), expandedSrc, newLow, newHigh,
+        padOp.getConstantPaddingValue(), padOp.getNofold());
+    rewriter.replaceOp(expandOp, newPadOp.getResult());
     return success();
   }
 
@@ -2248,6 +2327,8 @@ void mlir::linalg::populateFoldReshapeOpsByExpansionPatterns(
   patterns.add<FoldReshapeWithGenericOpByExpansion>(patterns.getContext(),
                                                     controlFoldingReshapes);
   patterns.add<FoldPadWithProducerReshapeOpByExpansion>(patterns.getContext(),
+                                                        controlFoldingReshapes);
+  patterns.add<FoldReshapeWithProducerPadOpByExpansion>(patterns.getContext(),
                                                         controlFoldingReshapes);
   patterns.add<FoldWithProducerReshapeOpByExpansion>(patterns.getContext(),
                                                      controlFoldingReshapes);
