@@ -166,7 +166,6 @@ QueryRef QueryParser::doParse() {
 
   case ParsedQueryKind::Quit:
     return endQuery(new QuitQuery);
-
   case ParsedQueryKind::Match: {
     if (completionPos) {
       return completeMatcherExpression();
