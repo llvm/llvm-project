@@ -1155,7 +1155,7 @@ bool NVPTXDAGToDAGISel::tryLoad(SDNode *N) {
   return true;
 }
 
-static bool isVectorElementTypeUpsized(EVT EltVT) {
+static bool isSubVectorPackedInI32(EVT EltVT) {
   // Despite vectors like v8i8, v16i8, v8i16 being within the bit-limit for
   // total load/store size, PTX syntax only supports v2/v4. Thus, we can't use
   // vectorized loads/stores with the actual element type for i8/i16 as that
@@ -1213,7 +1213,7 @@ bool NVPTXDAGToDAGISel::tryLoadVector(SDNode *N) {
     return false;
   }
 
-  if (isVectorElementTypeUpsized(EltVT)) {
+  if (isSubVectorPackedInI32(EltVT)) {
     EltVT = MVT::i32;
     FromType = NVPTX::PTXLdStInstCode::Untyped;
   }
@@ -1514,7 +1514,7 @@ bool NVPTXDAGToDAGISel::tryStoreVector(SDNode *N) {
     return false;
   }
 
-  if (isVectorElementTypeUpsized(EltVT)) {
+  if (isSubVectorPackedInI32(EltVT)) {
     EltVT = MVT::i32;
     ToType = NVPTX::PTXLdStInstCode::Untyped;
   }

@@ -3204,16 +3204,15 @@ NVPTXTargetLowering::LowerSTOREVector(SDValue Op, SelectionDAG &DAG) const {
     // Combine individual elements into v2[i,f,bf]16/v4i8 subvectors to be
     // stored as b32s
     const unsigned NumEltsPerSubVector = EltVT.getVectorNumElements();
-    for (const auto I : llvm::seq(NumElts)) {
+    for (const unsigned I : llvm::seq(NumElts)) {
       SmallVector<SDValue, 4> SubVectorElts;
       DAG.ExtractVectorElements(Val, SubVectorElts, I * NumEltsPerSubVector,
                                 NumEltsPerSubVector);
-      SDValue SubVector = DAG.getBuildVector(EltVT, DL, SubVectorElts);
-      Ops.push_back(SubVector);
+      Ops.push_back(DAG.getBuildVector(EltVT, DL, SubVectorElts));
     }
   } else {
     SDValue V = DAG.getBitcast(MVT::getVectorVT(EltVT, NumElts), Val);
-    for (const auto I : llvm::seq(NumElts)) {
+    for (const unsigned I : llvm::seq(NumElts)) {
       SDValue ExtVal = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, EltVT, V,
                                    DAG.getIntPtrConstant(I, DL));
 
@@ -5818,12 +5817,12 @@ static void ReplaceLoadVector(SDNode *N, SelectionDAG &DAG,
            ResVT.getVectorNumElements());
     // Generate EXTRACT_VECTOR_ELTs to split v2[i,f,bf]16/v4i8 subvectors back
     // into individual elements.
-    for (const auto I : llvm::seq(NumElts)) {
+    for (const unsigned I : llvm::seq(NumElts)) {
       SDValue SubVector = NewLD.getValue(I);
       DAG.ExtractVectorElements(SubVector, ScalarRes);
     }
   } else {
-    for (const auto I : llvm::seq(NumElts)) {
+    for (const unsigned I : llvm::seq(NumElts)) {
       SDValue Res = NewLD.getValue(I);
       if (LoadEltVT != EltVT)
         Res = DAG.getNode(ISD::TRUNCATE, DL, EltVT, Res);
