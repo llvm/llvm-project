@@ -53,6 +53,7 @@ define i1 @foo(ptr %p) {
 ; AARCH64-LABEL: define private void @.cfi.jumptable
 ; AARCH64-SAME: () #[[ATTR1:[0-9]+]] align 8 {
 ; AARCH64-NEXT:  entry:
-; AARCH64-NEXT:    call void asm sideeffect "bti c\0Ab $0\0Abti c\0Ab $1\0A", "s,s"(ptr @f.cfi, ptr @g.cfi)
+; AARCH64-NEXT:    call void asm sideeffect "bti c\0Ab $0\0A", "s"(ptr @f.cfi)
+; AARCH64-NEXT:    call void asm sideeffect "bti c\0Ab $0\0A", "s"(ptr @g.cfi)
 ; AARCH64-NEXT:    unreachable
 ;
