@@ -4016,8 +4016,7 @@ ElementCount LoopVectorizationCostModel::getMaximizedVFForTarget(
     auto MaxVectorElementCountMaxBW = ElementCount::get(
         llvm::bit_floor(WidestRegister.getKnownMinValue() / SmallestType),
         ComputeScalableMaxVF);
-    MaxVectorElementCountMaxBW = MinVF(MaxVectorElementCountMaxBW, MaxSafeVF);
-    MaxVF = MaxVectorElementCountMaxBW;
+    MaxVF = MinVF(MaxVectorElementCountMaxBW, MaxSafeVF);
 
     if (ElementCount MinVF =
             TTI.getMinimumVF(SmallestType, ComputeScalableMaxVF)) {
