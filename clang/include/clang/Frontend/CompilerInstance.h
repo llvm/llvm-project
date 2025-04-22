@@ -825,6 +825,23 @@ public:
   bool loadModuleFile(StringRef FileName,
                       serialization::ModuleFile *&LoadedModuleFile);
 
+  /// Configuration object for making the result of \c cloneForModuleCompile()
+  /// thread-safe.
+  class ThreadSafeCloneConfig {
+    IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS;
+    DiagnosticConsumer &DiagConsumer;
+
+  public:
+    ThreadSafeCloneConfig(IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
+                          DiagnosticConsumer &DiagConsumer)
+        : VFS(std::move(VFS)), DiagConsumer(DiagConsumer) {
+      assert(this->VFS && "Clone config requires non-null VFS");
+    }
+
+    IntrusiveRefCntPtr<llvm::vfs::FileSystem> getVFS() const { return VFS; }
+    DiagnosticConsumer &getDiagConsumer() const { return DiagConsumer; }
+  };
+
 private:
   /// Find a module, potentially compiling it, before reading its AST.  This is
   /// the guts of loadModule.
@@ -845,13 +862,10 @@ private:
   /// Creates a \c CompilerInstance for compiling a module.
   ///
   /// This expects a properly initialized \c FrontendInputFile.
-  ///
-  /// Explicitly-specified \c VFS takes precedence over the VFS of this instance
-  /// when creating the clone and also prevents \c FileManager sharing.
   std::unique_ptr<CompilerInstance> cloneForModuleCompileImpl(
       SourceLocation ImportLoc, StringRef ModuleName, FrontendInputFile Input,
       StringRef OriginalModuleMapFile, StringRef ModuleFileName,
-      IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS = nullptr);
+      std::optional<ThreadSafeCloneConfig> ThreadSafeConfig = std::nullopt);
 
 public:
   /// Creates a new \c CompilerInstance for compiling a module.
@@ -859,11 +873,11 @@ public:
   /// This takes care of creating appropriate \c FrontendInputFile for
   /// public/private frameworks, inferred modules and such.
   ///
-  /// Explicitly-specified \c VFS takes precedence over the VFS of this instance
-  /// when creating the clone and also prevents \c FileManager sharing.
+  /// The \c ThreadSafeConfig takes precedence over the \c DiagnosticConsumer
+  /// and \c FileSystem of this instance (and disables \c FileManager sharing).
   std::unique_ptr<CompilerInstance> cloneForModuleCompile(
       SourceLocation ImportLoc, Module *Module, StringRef ModuleFileName,
-      IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS = nullptr);
+      std::optional<ThreadSafeCloneConfig> ThreadSafeConfig = std::nullopt);
 
   /// Compile a module file for the given module, using the options
   /// provided by the importing compiler instance. Returns true if the module
