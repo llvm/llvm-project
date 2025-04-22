@@ -1180,6 +1180,26 @@ let TargetPrefix = "nvvm" in {
         [IntrNoMem, IntrSpeculatable]>;
   }
 
+  // Mixed-precision fma intrinsics for half and bfloat16 to float
+  foreach rnd = ["rn", "rz", "rm", "rp"] in {
+    foreach sat = ["", "_sat"] in {
+      // Half-precision to float
+      def int_nvvm_fma_#rnd#sat#_h_f
+          : ClangBuiltin<"__nvvm_fma_"#rnd#sat#"_h_f">,
+            DefaultAttrsIntrinsic<[llvm_float_ty],
+                                  [llvm_half_ty, llvm_half_ty, llvm_float_ty],
+                                  [IntrNoMem, IntrSpeculatable]>;
+
+      // BFloat16 to float
+      def int_nvvm_fma_#rnd#sat#_bf_f
+          : ClangBuiltin<"__nvvm_fma_"#rnd#sat#"_bf_f">,
+            DefaultAttrsIntrinsic<[llvm_float_ty],
+                                  [llvm_bfloat_ty, llvm_bfloat_ty,
+                                   llvm_float_ty],
+                                  [IntrNoMem, IntrSpeculatable]>;
+    }
+  }
+
 //
 // Rcp
 //

@@ -1510,6 +1510,27 @@ multiclass FMA_INST {
 
 defm INT_NVVM_FMA : FMA_INST;
 
+// Define mixed-precision fma instructions for half and bfloat16 to float
+foreach rnd = ["rn", "rz", "rm", "rp"] in {
+  foreach sat = ["", "_sat"] in {
+    // Half-precision to float
+    def INT_NVVM_FMA_#!toupper(rnd#sat)#_H_F
+        : F_MATH_3<"fma."#rnd#!subst(
+                       "_", ".", sat)#".f32.f16 \t$dst, $src0, $src1, $src2;",
+                   Float32Regs, Int16Regs, Int16Regs, Float32Regs,
+                   !cast<Intrinsic>("int_nvvm_fma_"#rnd#sat#"_h_f"),
+                   [hasPTX<86>, hasSM<100>]>;
+
+    // BFloat16 to float
+    def INT_NVVM_FMA_#!toupper(rnd#sat)#_BF_F
+        : F_MATH_3<"fma."#rnd#!subst(
+                       "_", ".", sat)#".f32.bf16 \t$dst, $src0, $src1, $src2;",
+                   Float32Regs, Int16Regs, Int16Regs, Float32Regs,
+                   !cast<Intrinsic>("int_nvvm_fma_"#rnd#sat#"_bf_f"),
+                   [hasPTX<86>, hasSM<100>]>;
+  }
+}
+
 //
 // Rcp
 //
