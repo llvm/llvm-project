@@ -2470,7 +2470,8 @@ public:
     return R->getVPDefID() == VPRecipeBase::VPReductionSC ||
            R->getVPDefID() == VPRecipeBase::VPReductionEVLSC ||
            R->getVPDefID() == VPRecipeBase::VPExtendedReductionSC ||
-           R->getVPDefID() == VPRecipeBase::VPMulAccumulateReductionSC;
+           R->getVPDefID() == VPRecipeBase::VPMulAccumulateReductionSC ||
+           R->getVPDefID() == VPRecipeBase::VPPartialReductionSC;
   }
 
   static inline bool classof(const VPUser *U) {
