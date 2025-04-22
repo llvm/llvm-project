@@ -2523,6 +2523,20 @@ bool ExprEngine::replayWithoutInlining(ExplodedNode *N,
   return true;
 }
 
+/// Return the innermost location context which is inlined at `Node`, unless
+/// it's the top-level (entry point) location context.
+static const LocationContext *getInlinedLocationContext(ExplodedNode *Node,
+                                                        ExplodedGraph &G) {
+  const LocationContext *CalleeLC = Node->getLocation().getLocationContext();
+  const LocationContext *RootLC =
+      (*G.roots_begin())->getLocation().getLocationContext();
+
+  if (CalleeLC->getStackFrame() == RootLC->getStackFrame())
+    return nullptr;
+
+  return CalleeLC;
+}
+
 /// Block entrance.  (Update counters).
 void ExprEngine::processCFGBlockEntrance(const BlockEdge &L,
                                          NodeBuilderWithSinks &nodeBuilder,
@@ -2570,21 +2584,24 @@ void ExprEngine::processCFGBlockEntrance(const BlockEdge &L,
     const ExplodedNode *Sink =
                    nodeBuilder.generateSink(Pred->getState(), Pred, &tag);
 
-    // Check if we stopped at the top level function or not.
-    // Root node should have the location context of the top most function.
-    const LocationContext *CalleeLC = Pred->getLocation().getLocationContext();
-    const LocationContext *CalleeSF = CalleeLC->getStackFrame();
-    const LocationContext *RootLC =
-                        (*G.roots_begin())->getLocation().getLocationContext();
-    if (RootLC->getStackFrame() != CalleeSF) {
-      Engine.FunctionSummaries->markReachedMaxBlockCount(CalleeSF->getDecl());
+    if (const LocationContext *LC = getInlinedLocationContext(Pred, G)) {
+      // FIXME: This will unconditionally prevent inlining this function (even
+      // from other entrypoints), which is not a reasonable heuristic: even if
+      // we reached max block count on this particular execution path, there
+      // may be other execution paths (especially with other parametrizations)
+      // where the analyzer can reach the end of the function (so there is no
+      // natural reason to avoid inlining it). However, disabling this would
+      // significantly increase the analysis time (because more entrypoints
+      // would exhaust their allocated budget), so it must be compensated by a
+      // different (more reasonable) reduction of analysis scope.
+      Engine.FunctionSummaries->markShouldNotInline(
+          LC->getStackFrame()->getDecl());
 
       // Re-run the call evaluation without inlining it, by storing the
       // no-inlining policy in the state and enqueuing the new work item on
       // the list. Replay should almost never fail. Use the stats to catch it
       // if it does.
-      if ((!AMgr.options.NoRetryExhausted &&
-           replayWithoutInlining(Pred, CalleeLC)))
+      if ((!AMgr.options.NoRetryExhausted && replayWithoutInlining(Pred, LC)))
         return;
       NumMaxBlockCountReachedInInlined++;
     } else
@@ -2856,8 +2873,29 @@ void ExprEngine::processBranch(
       // conflicts with the widen-loop analysis option (which is off by
       // default). If we intend to support and stabilize the loop widening,
       // we must ensure that it 'plays nicely' with this logic.
-      if (!SkipTrueBranch || AMgr.options.ShouldWidenLoops)
+      if (!SkipTrueBranch || AMgr.options.ShouldWidenLoops) {
         Builder.generateNode(StTrue, true, PredN);
+      } else if (AMgr.options.LegacyInliningPrevention) {
+        // FIXME: There is an ancient and very arbitrary heuristic in
+        // `ExprEngine::processCFGBlockEntrance` which prevents all further
+        // inlining of a function if it finds an execution path within that
+        // function which reaches the `MaxBlockVisitOnPath` limit (a/k/a
+        // `analyzer-max-loop`, by default four iterations in a loop). Adding
+        // this "don't assume third iteration" logic significantly increased
+        // the analysis runtime on some inputs because less functions were
+        // arbitrarily excluded from being inlined, so more entrypoints used
+        // up their full allocated budget. As a hacky compensation for this,
+        // here we apply the "should not inline" mark in cases when the loop
+        // could potentially reach the `MaxBlockVisitOnPath` limit without the
+        // "don't assume third iteration" logic. This slightly overcompensates
+        // (activates if the third iteration can be entered, and will not
+        // recognize cases where the fourth iteration would't be completed), but
+        // should be good enough for practical purposes.
+        if (const LocationContext *LC = getInlinedLocationContext(Pred, G)) {
+          Engine.FunctionSummaries->markShouldNotInline(
+              LC->getStackFrame()->getDecl());
+        }
+      }
     }
 
     if (StFalse) {

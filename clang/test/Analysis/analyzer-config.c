@@ -92,6 +92,7 @@
 // CHECK-NEXT: inline-lambdas = true
 // CHECK-NEXT: ipa = dynamic-bifurcate
 // CHECK-NEXT: ipa-always-inline-size = 3
+// CHECK-NEXT: legacy-inlining-prevention = true
 // CHECK-NEXT: max-inlinable-size = 100
 // CHECK-NEXT: max-nodes = 225000
 // CHECK-NEXT: max-symbol-complexity = 35
