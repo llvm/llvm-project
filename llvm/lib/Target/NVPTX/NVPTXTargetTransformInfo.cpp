@@ -74,7 +74,7 @@ static bool isNVVMAtomic(const IntrinsicInst *II) {
   }
 }
 
-bool NVPTXTTIImpl::isSourceOfDivergence(const Value *V) {
+bool NVPTXTTIImpl::isSourceOfDivergence(const Value *V) const {
   // Without inter-procedural analysis, we conservatively assume that arguments
   // to __device__ functions are divergent.
   if (const Argument *Arg = dyn_cast<Argument>(V))
@@ -483,7 +483,7 @@ NVPTXTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
 InstructionCost
 NVPTXTTIImpl::getInstructionCost(const User *U,
                                  ArrayRef<const Value *> Operands,
-                                 TTI::TargetCostKind CostKind) {
+                                 TTI::TargetCostKind CostKind) const {
   if (const auto *CI = dyn_cast<CallInst>(U))
     if (const auto *IA = dyn_cast<InlineAsm>(CI->getCalledOperand())) {
       // Without this implementation getCallCost() would return the number
@@ -538,9 +538,9 @@ InstructionCost NVPTXTTIImpl::getArithmeticInstrCost(
   }
 }
 
-void NVPTXTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
-                                           TTI::UnrollingPreferences &UP,
-                                           OptimizationRemarkEmitter *ORE) {
+void NVPTXTTIImpl::getUnrollingPreferences(
+    Loop *L, ScalarEvolution &SE, TTI::UnrollingPreferences &UP,
+    OptimizationRemarkEmitter *ORE) const {
   BaseT::getUnrollingPreferences(L, SE, UP, ORE);
 
   // Enable partial unrolling and runtime unrolling, but reduce the
@@ -552,7 +552,7 @@ void NVPTXTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
 }
 
 void NVPTXTTIImpl::getPeelingPreferences(Loop *L, ScalarEvolution &SE,
-                                         TTI::PeelingPreferences &PP) {
+                                         TTI::PeelingPreferences &PP) const {
   BaseT::getPeelingPreferences(L, SE, PP);
 }
 

@@ -63,10 +63,10 @@ public:
   // The Hexagon target can unroll loops with run-time trip counts.
   void getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
                                TTI::UnrollingPreferences &UP,
-                               OptimizationRemarkEmitter *ORE);
+                               OptimizationRemarkEmitter *ORE) const;
 
   void getPeelingPreferences(Loop *L, ScalarEvolution &SE,
-                             TTI::PeelingPreferences &PP);
+                             TTI::PeelingPreferences &PP) const;
 
   /// Bias LSR towards creating post-increment opportunities.
   TTI::AddressingModeKind
@@ -82,7 +82,7 @@ public:
   /// @{
 
   unsigned getNumberOfRegisters(bool vector) const;
-  unsigned getMaxInterleaveFactor(ElementCount VF);
+  unsigned getMaxInterleaveFactor(ElementCount VF) const;
   TypeSize getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const;
   unsigned getMinVectorRegisterBitWidth() const;
   ElementCount getMinimumVF(unsigned ElemWidth, bool IsScalable) const;
@@ -91,17 +91,13 @@ public:
   shouldMaximizeVectorBandwidth(TargetTransformInfo::RegisterKind K) const {
     return true;
   }
-  bool supportsEfficientVectorElementLoadStore() { return false; }
-  bool hasBranchDivergence(const Function *F = nullptr) { return false; }
-  bool enableAggressiveInterleaving(bool LoopHasReductions) {
+  bool supportsEfficientVectorElementLoadStore() const { return false; }
+  bool hasBranchDivergence(const Function *F = nullptr) const { return false; }
+  bool enableAggressiveInterleaving(bool LoopHasReductions) const {
     return false;
   }
-  bool prefersVectorizedAddressing() {
-    return false;
-  }
-  bool enableInterleavedAccessVectorization() {
-    return true;
-  }
+  bool prefersVectorizedAddressing() const { return false; }
+  bool enableInterleavedAccessVectorization() const { return true; }
 
   InstructionCost getCallInstrCost(Function *F, Type *RetTy,
                                    ArrayRef<Type *> Tys,
@@ -109,7 +105,7 @@ public:
   InstructionCost getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                                         TTI::TargetCostKind CostKind) const;
   InstructionCost getAddressComputationCost(Type *Tp, ScalarEvolution *SE,
-                                            const SCEV *S);
+                                            const SCEV *S) const;
   InstructionCost getMemoryOpCost(
       unsigned Opcode, Type *Src, MaybeAlign Alignment, unsigned AddressSpace,
       TTI::TargetCostKind CostKind,
@@ -131,7 +127,7 @@ public:
   InstructionCost getInterleavedMemoryOpCost(
       unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
       Align Alignment, unsigned AddressSpace, TTI::TargetCostKind CostKind,
-      bool UseMaskForCond = false, bool UseMaskForGaps = false);
+      bool UseMaskForCond = false, bool UseMaskForGaps = false) const;
   InstructionCost getCmpSelInstrCost(
       unsigned Opcode, Type *ValTy, Type *CondTy, CmpInst::Predicate VecPred,
       TTI::TargetCostKind CostKind,
@@ -160,15 +156,15 @@ public:
   }
 
   bool isLegalMaskedStore(Type *DataType, Align Alignment,
-                          unsigned AddressSpace);
+                          unsigned AddressSpace) const;
   bool isLegalMaskedLoad(Type *DataType, Align Alignment,
-                         unsigned AddressSpace);
+                         unsigned AddressSpace) const;
 
   /// @}
 
   InstructionCost getInstructionCost(const User *U,
                                      ArrayRef<const Value *> Operands,
-                                     TTI::TargetCostKind CostKind);
+                                     TTI::TargetCostKind CostKind) const;
 
   // Hexagon specific decision to generate a lookup table.
   bool shouldBuildLookupTables() const;
