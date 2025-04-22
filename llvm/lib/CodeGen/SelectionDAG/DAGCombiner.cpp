@@ -3868,7 +3868,8 @@ static SDValue foldSubCtlzNot(SDNode *N, SelectionDAG &DAG) {
 }
 
 // Fold sub(x, mul(divrem(x,y)[0], y)) to divrem(x, y)[1]
-static SDValue foldRemainderIdiom(SDNode *N, SelectionDAG &DAG, SDLoc &DL) {
+static SDValue foldRemainderIdiom(SDNode *N, SelectionDAG &DAG,
+                                  const SDLoc &DL) {
   assert(N->getOpcode() == ISD::SUB && "Node must be a SUB");
   SDValue Sub0 = N->getOperand(0);
   SDValue Sub1 = N->getOperand(1);
@@ -3888,12 +3889,10 @@ static SDValue foldRemainderIdiom(SDNode *N, SelectionDAG &DAG, SDLoc &DL) {
     SDValue Mul0 = Sub1.getOperand(0);
     SDValue Mul1 = Sub1.getOperand(1);
 
-    SDValue Res = CheckAndFoldMulCase(Mul0, Mul1);
-    if (Res)
+    if (SDValue Res = CheckAndFoldMulCase(Mul0, Mul1))
       return Res;
 
-    Res = CheckAndFoldMulCase(Mul1, Mul0);
-    if (Res)
+    if (SDValue Res = CheckAndFoldMulCase(Mul1, Mul0))
       return Res;
 
   } else if (Sub1.getOpcode() == ISD::SHL) {
@@ -3909,14 +3908,12 @@ static SDValue foldRemainderIdiom(SDNode *N, SelectionDAG &DAG, SDLoc &DL) {
 
       ConstantSDNode *DivC = isConstOrConstSplat(Divisor);
       ConstantSDNode *ShC = isConstOrConstSplat(Shl1);
-      if (!DivC || !ShC) {
+      if (!DivC || !ShC)
         return SDValue();
-      }
 
       if (DivC->getAPIntValue().isPowerOf2() &&
-          DivC->getAPIntValue().logBase2() == ShC->getAPIntValue()) {
+          DivC->getAPIntValue().logBase2() == ShC->getAPIntValue())
         return SDValue(Shl0.getNode(), 1);
-      }
     }
   }
   return SDValue();
