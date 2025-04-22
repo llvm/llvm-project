@@ -55,6 +55,10 @@ protected:
     if (Triple.isPPC())
       GTEST_SKIP();
 
+    // RISC-V is not supported yet
+    if (Triple.isRISCV())
+      GTEST_SKIP();
+
     auto EPC = SelfExecutorProcessControl::Create();
     if (!EPC) {
       consumeError(EPC.takeError());

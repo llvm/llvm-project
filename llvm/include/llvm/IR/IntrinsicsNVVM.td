@@ -124,6 +124,8 @@
 //   * llvm.nvvm.ldg.global.f        --> ibid.
 //   * llvm.nvvm.ldg.global.p        --> ibid.
 //   * llvm.nvvm.swap.lo.hi.b64      --> llvm.fshl(x, x, 32)
+//   * llvm.nvvm.atomic.load.inc.32  --> atomicrmw uinc_wrap
+//   * llvm.nvvm.atomic.load.dec.32  --> atomicrmw udec_wrap
 
 def llvm_global_ptr_ty  : LLVMQualPointerType<1>;  // (global)ptr
 def llvm_shared_ptr_ty  : LLVMQualPointerType<3>;  // (shared)ptr
@@ -1037,18 +1039,18 @@ let TargetPrefix = "nvvm" in {
 // Abs
 //
 
-  def int_nvvm_fabs_ftz_f : ClangBuiltin<"__nvvm_fabs_ftz_f">,
-      DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
-  def int_nvvm_fabs_f : ClangBuiltin<"__nvvm_fabs_f">,
-      DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
-  def int_nvvm_fabs_d : ClangBuiltin<"__nvvm_fabs_d">,
-      DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty], [IntrNoMem, IntrSpeculatable]>;
+  def int_nvvm_fabs_ftz :
+      DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>],
+                            [IntrNoMem, IntrSpeculatable]>;
 
+  def int_nvvm_fabs :
+      DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>],
+                            [IntrNoMem, IntrSpeculatable]>;
 //
 // Abs, Neg bf16, bf16x2
 //
 
-  foreach unary = ["abs", "neg"] in {
+  foreach unary = ["neg"] in {
     def int_nvvm_ # unary # _bf16 :
       ClangBuiltin<!strconcat("__nvvm_", unary, "_bf16")>,
       DefaultAttrsIntrinsic<[llvm_bfloat_ty], [llvm_bfloat_ty], [IntrNoMem]>;
@@ -1626,20 +1628,43 @@ let TargetPrefix = "nvvm" in {
       Intrinsic<[llvm_v2f16_ty], [llvm_i16_ty], [IntrNoMem, IntrNoCallback]>;
   def int_nvvm_e5m2x2_to_f16x2_rn_relu : ClangBuiltin<"__nvvm_e5m2x2_to_f16x2_rn_relu">,
       Intrinsic<[llvm_v2f16_ty], [llvm_i16_ty], [IntrNoMem, IntrNoCallback]>;
+  
+  class CVT_FF_TO_I16<string type, string suffix> : ClangBuiltin<!strconcat("__nvvm_ff_to_", type, suffix)>,
+      DefaultAttrsIntrinsic<[llvm_i16_ty], [llvm_float_ty, llvm_float_ty], [IntrNoMem, IntrNoCallback]>;
+      
+  class CVT_I16_TO_F16X2<string type, string suffix>
+    : ClangBuiltin<!strconcat("__nvvm_", type, "_to_f16x2", suffix)>,
+      DefaultAttrsIntrinsic<[llvm_v2f16_ty], [llvm_i16_ty], [IntrNoMem, IntrNoCallback]>;
+
+  class CVT_BF16X2_TO_I16<string type, string suffix> : ClangBuiltin<!strconcat("__nvvm_bf16x2_to_", type, suffix)>,
+      DefaultAttrsIntrinsic<[llvm_i16_ty], [llvm_v2bf16_ty], [IntrNoMem, IntrNoCallback]>;
+
+  // FP6 conversions.
+  foreach type = ["e2m3x2", "e3m2x2"] in {
+    foreach relu = ["", "_relu"] in {
+      defvar suffix = !strconcat("_rn", relu);
+      def int_nvvm_ff_to_ # type # suffix # _satfinite : CVT_FF_TO_I16<type, !strconcat(suffix, "_satfinite")>;
+      def int_nvvm_ # type # _to_f16x2 # suffix : CVT_I16_TO_F16X2<type, suffix>;
+    }
+  }
+  
+  // UE8M0x2 conversions.
+  foreach rmode = ["_rz", "_rp"] in {
+    foreach satmode = ["", "_satfinite"] in {
+      defvar suffix = !strconcat(rmode, satmode);
+      def int_nvvm_ff_to_ue8m0x2 # suffix : CVT_FF_TO_I16<"ue8m0x2", suffix>;
+      def int_nvvm_bf16x2_to_ue8m0x2 # suffix : CVT_BF16X2_TO_I16<"ue8m0x2", suffix>;
+    }
+  }
+      
+  def int_nvvm_ue8m0x2_to_bf16x2 : ClangBuiltin<"__nvvm_ue8m0x2_to_bf16x2">,
+      Intrinsic<[llvm_v2bf16_ty], [llvm_i16_ty], [IntrNoMem, IntrNoCallback]>;
 
 // FNS
 
   def int_nvvm_fns : ClangBuiltin<"__nvvm_fns">,
       DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
                 [IntrNoMem]>;
-
-// Atomics not available as llvm intrinsics.
-  def int_nvvm_atomic_load_inc_32 : Intrinsic<[llvm_i32_ty],
-          [llvm_anyptr_ty, llvm_i32_ty],
-                                      [IntrArgMemOnly, IntrNoCallback, NoCapture<ArgIndex<0>>]>;
-  def int_nvvm_atomic_load_dec_32 : Intrinsic<[llvm_i32_ty],
-          [llvm_anyptr_ty, llvm_i32_ty],
-                                      [IntrArgMemOnly, IntrNoCallback, NoCapture<ArgIndex<0>>]>;
 
   class SCOPED_ATOMIC2_impl<LLVMType elty>
         : Intrinsic<[elty],
@@ -1883,6 +1908,22 @@ def int_nvvm_ptr_param_to_gen: DefaultAttrsIntrinsic<[llvm_anyptr_ty],
                                      [llvm_anyptr_ty],
                                    [IntrNoMem, IntrSpeculatable, IntrNoCallback],
                                    "llvm.nvvm.ptr.param.to.gen">;
+
+// Represents an explicit hole in the LLVM IR type system. It may be inserted by
+// the compiler in cases where a pointer is of the wrong type. In the backend
+// this intrinsic will be folded away and not equate to any instruction. It
+// should not be used by any frontend and should only be considered well defined
+// when added in the following cases:
+//
+//  - NVPTXLowerArgs: When wrapping a byval pointer argument to a kernel
+//    function to convert the address space from generic (0) to param (101).
+//    This accounts for the fact that the parameter symbols will occupy this
+//    space when lowered during ISel.
+//
+def int_nvvm_internal_addrspace_wrap :
+  DefaultAttrsIntrinsic<[llvm_anyptr_ty], [llvm_anyptr_ty],
+                        [IntrNoMem, IntrSpeculatable, NoUndef<ArgIndex<0>>,
+                         NoUndef<RetIndex>]>;
 
 // Move intrinsics, used in nvvm internally
 

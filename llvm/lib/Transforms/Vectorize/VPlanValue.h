@@ -194,7 +194,7 @@ public:
 typedef DenseMap<Value *, VPValue *> Value2VPValueTy;
 typedef DenseMap<VPValue *, Value *> VPValue2ValueTy;
 
-raw_ostream &operator<<(raw_ostream &OS, const VPValue &V);
+raw_ostream &operator<<(raw_ostream &OS, const VPRecipeBase &R);
 
 /// This class augments VPValue with operands which provide the inverse def-use
 /// edges from VPValue's users to their defs.
@@ -244,6 +244,12 @@ public:
     Operands[I]->removeUser(*this);
     Operands[I] = New;
     New->addUser(*this);
+  }
+
+  /// Swap operands of the VPUser. It must have exactly 2 operands.
+  void swapOperands() {
+    assert(Operands.size() == 2 && "must have 2 operands to swap");
+    std::swap(Operands[0], Operands[1]);
   }
 
   /// Replaces all uses of \p From in the VPUser with \p To.
@@ -335,7 +341,6 @@ public:
     VPReductionSC,
     VPPartialReductionSC,
     VPReplicateSC,
-    VPScalarCastSC,
     VPScalarIVStepsSC,
     VPVectorPointerSC,
     VPVectorEndPointerSC,

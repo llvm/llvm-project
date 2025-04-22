@@ -79,6 +79,13 @@ gentbl_cc_library(
             ],
             "include/clang/Basic/Diagnostic%sCompatIDs.inc" % c,
         ),
+        (
+            [
+                "-gen-clang-diags-iface",
+                "-clang-component=%s" % c,
+            ],
+            "include/clang/Basic/Diagnostic%sInterface.inc" % c,
+        ),
     ]] + [
         (
             ["-gen-clang-diag-groups"],
@@ -955,7 +962,9 @@ cc_library(
     srcs = glob([
         "lib/Sema/*.cpp",
         "lib/Sema/*.h",
-    ]),
+    ]) + [
+        "//llvm:include/llvm/Frontend/OpenACC/ACC.inc",
+    ],
     hdrs = glob([
         "include/clang/Sema/*.h",
         "include/clang-c/*.h",

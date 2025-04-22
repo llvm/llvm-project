@@ -13,19 +13,19 @@ licenses(["notice"])
 libc_test(
     name = "abs_test",
     srcs = ["abs_test.cpp"],
-    libc_function_deps = ["//libc:abs"],
+    deps = ["//libc:abs"],
 )
 
 libc_test(
     name = "labs_test",
     srcs = ["labs_test.cpp"],
-    libc_function_deps = ["//libc:labs"],
+    deps = ["//libc:labs"],
 )
 
 libc_test(
     name = "llabs_test",
     srcs = ["llabs_test.cpp"],
-    libc_function_deps = ["//libc:llabs"],
+    deps = ["//libc:llabs"],
 )
 
 libc_test_library(
@@ -37,9 +37,9 @@ libc_test_library(
 libc_test(
     name = "div_test",
     srcs = ["div_test.cpp"],
-    libc_function_deps = ["//libc:div"],
     deps = [
         ":div_test_helper",
+        "//libc:div",
         "//libc:types_div_t",
     ],
 )
@@ -47,9 +47,9 @@ libc_test(
 libc_test(
     name = "ldiv_test",
     srcs = ["ldiv_test.cpp"],
-    libc_function_deps = ["//libc:ldiv"],
     deps = [
         ":div_test_helper",
+        "//libc:ldiv",
         "//libc:types_ldiv_t",
     ],
 )
@@ -57,9 +57,9 @@ libc_test(
 libc_test(
     name = "lldiv_test",
     srcs = ["lldiv_test.cpp"],
-    libc_function_deps = ["//libc:lldiv"],
     deps = [
         ":div_test_helper",
+        "//libc:lldiv",
         "//libc:types_lldiv_t",
     ],
 )
@@ -77,36 +77,46 @@ libc_test_library(
 libc_test(
     name = "atoi_test",
     srcs = ["atoi_test.cpp"],
-    libc_function_deps = ["//libc:atoi"],
-    deps = [":atoi_test_helper"],
+    deps = [
+        ":atoi_test_helper",
+        "//libc:atoi",
+    ],
 )
 
 libc_test(
     name = "atol_test",
     srcs = ["atol_test.cpp"],
-    libc_function_deps = ["//libc:atol"],
-    deps = [":atoi_test_helper"],
+    deps = [
+        ":atoi_test_helper",
+        "//libc:atol",
+    ],
 )
 
 libc_test(
     name = "atoll_test",
     srcs = ["atoll_test.cpp"],
-    libc_function_deps = ["//libc:atoll"],
-    deps = [":atoi_test_helper"],
+    deps = [
+        ":atoi_test_helper",
+        "//libc:atoll",
+    ],
 )
 
 libc_test(
     name = "atof_test",
     srcs = ["atof_test.cpp"],
-    libc_function_deps = ["//libc:atof"],
-    deps = ["//libc:__support_fputil_fp_bits"],
+    deps = [
+        "//libc:__support_fputil_fp_bits",
+        "//libc:atof",
+    ],
 )
 
 libc_test(
     name = "bsearch_test",
     srcs = ["bsearch_test.cpp"],
-    libc_function_deps = ["//libc:bsearch"],
-    deps = ["//libc:types_size_t"],
+    deps = [
+        "//libc:bsearch",
+        "//libc:types_size_t",
+    ],
 )
 
 libc_test_library(
@@ -121,9 +131,9 @@ libc_test_library(
 libc_test(
     name = "quick_sort_test",
     srcs = ["quick_sort_test.cpp"],
-    libc_function_deps = ["//libc:qsort"],
     deps = [
         ":qsort_test_helper",
+        "//libc:qsort",
         "//libc:qsort_util",
         "//libc:types_size_t",
     ],
@@ -132,9 +142,9 @@ libc_test(
 libc_test(
     name = "heap_sort_test",
     srcs = ["heap_sort_test.cpp"],
-    libc_function_deps = ["//libc:qsort"],
     deps = [
         ":qsort_test_helper",
+        "//libc:qsort",
         "//libc:qsort_util",
         "//libc:types_size_t",
     ],
@@ -143,8 +153,10 @@ libc_test(
 libc_test(
     name = "qsort_r_test",
     srcs = ["qsort_r_test.cpp"],
-    libc_function_deps = ["//libc:qsort_r"],
-    deps = ["//libc:types_size_t"],
+    deps = [
+        "//libc:qsort_r",
+        "//libc:types_size_t",
+    ],
 )
 
 libc_test_library(
@@ -160,22 +172,28 @@ libc_test_library(
 libc_test(
     name = "strfromf_test",
     srcs = ["strfromf_test.cpp"],
-    libc_function_deps = ["//libc:strfromf"],
-    deps = [":strfrom_test_helper"],
+    deps = [
+        ":strfrom_test_helper",
+        "//libc:strfromf",
+    ],
 )
 
 libc_test(
     name = "strfromd_test",
     srcs = ["strfromd_test.cpp"],
-    libc_function_deps = ["//libc:strfromd"],
-    deps = [":strfrom_test_helper"],
+    deps = [
+        ":strfrom_test_helper",
+        "//libc:strfromd",
+    ],
 )
 
 libc_test(
     name = "strfroml_test",
     srcs = ["strfroml_test.cpp"],
-    libc_function_deps = ["//libc:strfroml"],
-    deps = [":strfrom_test_helper"],
+    deps = [
+        ":strfrom_test_helper",
+        "//libc:strfroml",
+    ],
 )
 
 libc_test_library(
@@ -194,37 +212,45 @@ libc_test_library(
 libc_test(
     name = "strtol_test",
     srcs = ["strtol_test.cpp"],
-    libc_function_deps = ["//libc:strtol"],
-    deps = [":strtol_test_helper"],
+    deps = [
+        ":strtol_test_helper",
+        "//libc:strtol",
+    ],
 )
 
 libc_test(
     name = "strtoll_test",
     srcs = ["strtoll_test.cpp"],
-    libc_function_deps = ["//libc:strtoll"],
-    deps = [":strtol_test_helper"],
+    deps = [
+        ":strtol_test_helper",
+        "//libc:strtoll",
+    ],
 )
 
 libc_test(
     name = "strtoul_test",
     srcs = ["strtoul_test.cpp"],
-    libc_function_deps = ["//libc:strtoul"],
-    deps = [":strtol_test_helper"],
+    deps = [
+        ":strtol_test_helper",
+        "//libc:strtoul",
+    ],
 )
 
 libc_test(
     name = "strtoull_test",
     srcs = ["strtoull_test.cpp"],
-    libc_function_deps = ["//libc:strtoull"],
-    deps = [":strtol_test_helper"],
+    deps = [
+        ":strtol_test_helper",
+        "//libc:strtoull",
+    ],
 )
 
 libc_test(
     name = "strtof_test",
     srcs = ["strtof_test.cpp"],
-    libc_function_deps = ["//libc:strtof"],
     deps = [
         "//libc:__support_fputil_fp_bits",
+        "//libc:strtof",
         "//libc/test/UnitTest:fp_test_helpers",
     ],
 )
@@ -232,9 +258,9 @@ libc_test(
 libc_test(
     name = "strtod_test",
     srcs = ["strtod_test.cpp"],
-    libc_function_deps = ["//libc:strtod"],
     deps = [
         "//libc:__support_fputil_fp_bits",
+        "//libc:strtod",
         "//libc/test/UnitTest:fp_test_helpers",
     ],
 )
@@ -242,9 +268,9 @@ libc_test(
 libc_test(
     name = "strtold_test",
     srcs = ["strtold_test.cpp"],
-    libc_function_deps = ["//libc:strtold"],
     deps = [
         "//libc:__support_fputil_fp_bits",
         "//libc:__support_uint128",
+        "//libc:strtold",
     ],
 )

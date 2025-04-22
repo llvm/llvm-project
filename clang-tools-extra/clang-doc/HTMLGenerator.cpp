@@ -8,6 +8,7 @@
 
 #include "Generators.h"
 #include "Representation.h"
+#include "support/File.h"
 #include "clang/Basic/Version.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -251,47 +252,6 @@ static void appendVector(std::vector<Derived> &&New,
   std::move(New.begin(), New.end(), std::back_inserter(Original));
 }
 
-// Compute the relative path from an Origin directory to a Destination directory
-static SmallString<128> computeRelativePath(StringRef Destination,
-                                            StringRef Origin) {
-  // If Origin is empty, the relative path to the Destination is its complete
-  // path.
-  if (Origin.empty())
-    return Destination;
-
-  // The relative path is an empty path if both directories are the same.
-  if (Destination == Origin)
-    return {};
-
-  // These iterators iterate through each of their parent directories
-  llvm::sys::path::const_iterator FileI = llvm::sys::path::begin(Destination);
-  llvm::sys::path::const_iterator FileE = llvm::sys::path::end(Destination);
-  llvm::sys::path::const_iterator DirI = llvm::sys::path::begin(Origin);
-  llvm::sys::path::const_iterator DirE = llvm::sys::path::end(Origin);
-  // Advance both iterators until the paths differ. Example:
-  //    Destination = A/B/C/D
-  //    Origin      = A/B/E/F
-  // FileI will point to C and DirI to E. The directories behind them is the
-  // directory they share (A/B).
-  while (FileI != FileE && DirI != DirE && *FileI == *DirI) {
-    ++FileI;
-    ++DirI;
-  }
-  SmallString<128> Result; // This will hold the resulting path.
-  // Result has to go up one directory for each of the remaining directories in
-  // Origin
-  while (DirI != DirE) {
-    llvm::sys::path::append(Result, "..");
-    ++DirI;
-  }
-  // Result has to append each of the remaining directories in Destination
-  while (FileI != FileE) {
-    llvm::sys::path::append(Result, *FileI);
-    ++FileI;
-  }
-  return Result;
-}
-
 // HTML generation
 
 static std::vector<std::unique_ptr<TagNode>>
@@ -456,12 +416,14 @@ genRecordMembersBlock(const llvm::SmallVector<MemberTypeInfo, 4> &Members,
   Out.emplace_back(std::make_unique<TagNode>(HTMLTag::TAG_UL));
   auto &ULBody = Out.back();
   for (const auto &M : Members) {
-    std::string Access = getAccessSpelling(M.Access).str();
-    if (Access != "")
-      Access = Access + " ";
+    StringRef Access = getAccessSpelling(M.Access);
     auto LIBody = std::make_unique<TagNode>(HTMLTag::TAG_LI);
     auto MemberDecl = std::make_unique<TagNode>(HTMLTag::TAG_DIV);
-    MemberDecl->Children.emplace_back(std::make_unique<TextNode>(Access));
+    if (!Access.empty())
+      MemberDecl->Children.emplace_back(
+          std::make_unique<TextNode>(Access + " "));
+    if (M.IsStatic)
+      MemberDecl->Children.emplace_back(std::make_unique<TextNode>("static "));
     MemberDecl->Children.emplace_back(genReference(M.Type, ParentInfoDir));
     MemberDecl->Children.emplace_back(std::make_unique<TextNode>(" " + M.Name));
     if (!M.Description.empty())
@@ -756,7 +718,6 @@ genHTML(const EnumInfo &I, const ClangDocContext &CDCtx) {
 
   maybeWriteSourceFileRef(Out, CDCtx, I.DefLoc);
 
-  std::string Description;
   if (!I.Description.empty())
     Out.emplace_back(genHTML(I.Description));
 
@@ -780,6 +741,9 @@ genHTML(const FunctionInfo &I, const ClangDocContext &CDCtx,
   if (Access != "")
     FunctionHeader->Children.emplace_back(
         std::make_unique<TextNode>(Access + " "));
+  if (I.IsStatic)
+    FunctionHeader->Children.emplace_back(
+        std::make_unique<TextNode>("static "));
   if (I.ReturnType.Type.Name != "") {
     FunctionHeader->Children.emplace_back(
         genReference(I.ReturnType.Type, ParentInfoDir));
@@ -799,7 +763,6 @@ genHTML(const FunctionInfo &I, const ClangDocContext &CDCtx,
 
   maybeWriteSourceFileRef(Out, CDCtx, I.DefLoc);
 
-  std::string Description;
   if (!I.Description.empty())
     Out.emplace_back(genHTML(I.Description));
 
@@ -817,7 +780,6 @@ genHTML(const NamespaceInfo &I, Index &InfoIndex, const ClangDocContext &CDCtx,
 
   Out.emplace_back(std::make_unique<TagNode>(HTMLTag::TAG_H1, InfoTitle));
 
-  std::string Description;
   if (!I.Description.empty())
     Out.emplace_back(genHTML(I.Description));
 
@@ -860,7 +822,6 @@ genHTML(const RecordInfo &I, Index &InfoIndex, const ClangDocContext &CDCtx,
 
   maybeWriteSourceFileRef(Out, CDCtx, I.DefLoc);
 
-  std::string Description;
   if (!I.Description.empty())
     Out.emplace_back(genHTML(I.Description));
 
@@ -1135,23 +1096,6 @@ static llvm::Error genIndex(const ClangDocContext &CDCtx) {
 
   F.render(IndexOS);
 
-  return llvm::Error::success();
-}
-
-static llvm::Error copyFile(StringRef FilePath, StringRef OutDirectory) {
-  llvm::SmallString<128> PathWrite;
-  llvm::sys::path::native(OutDirectory, PathWrite);
-  llvm::sys::path::append(PathWrite, llvm::sys::path::filename(FilePath));
-  llvm::SmallString<128> PathRead;
-  llvm::sys::path::native(FilePath, PathRead);
-  std::error_code OK;
-  std::error_code FileErr = llvm::sys::fs::copy_file(PathRead, PathWrite);
-  if (FileErr != OK) {
-    return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                   "error creating file " +
-                                       llvm::sys::path::filename(FilePath) +
-                                       ": " + FileErr.message() + "\n");
-  }
   return llvm::Error::success();
 }
 

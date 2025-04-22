@@ -489,9 +489,10 @@ public:
   public:
     AtomicInfo(IRBuilder<> *Builder, llvm::Type *Ty, uint64_t AtomicSizeInBits,
                uint64_t ValueSizeInBits, llvm::Align AtomicAlign,
-               llvm::Align ValueAlign, bool UseLibcall, llvm::Value *AtomicVar)
+               llvm::Align ValueAlign, bool UseLibcall,
+               IRBuilderBase::InsertPoint AllocaIP, llvm::Value *AtomicVar)
         : llvm::AtomicInfo(Builder, Ty, AtomicSizeInBits, ValueSizeInBits,
-                           AtomicAlign, ValueAlign, UseLibcall),
+                           AtomicAlign, ValueAlign, UseLibcall, AllocaIP),
           AtomicVar(AtomicVar) {}
 
     llvm::Value *getAtomicPointer() const override { return AtomicVar; }
@@ -3270,11 +3271,12 @@ public:
   /// 					    value
   /// \param AO			Atomic ordering of the generated atomic
   /// 					    instructions.
-  ///
+  /// \param AllocaIP           Insert point for allocas
+  //
   /// \return Insertion point after generated atomic read IR.
   InsertPointTy createAtomicRead(const LocationDescription &Loc,
                                  AtomicOpValue &X, AtomicOpValue &V,
-                                 AtomicOrdering AO);
+                                 AtomicOrdering AO, InsertPointTy AllocaIP);
 
   /// Emit atomic write for : X = Expr --- Only Scalar data types.
   ///

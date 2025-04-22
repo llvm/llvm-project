@@ -59,6 +59,55 @@ TEST(EquivalenceClassesTest, SimpleMerge2) {
       EXPECT_TRUE(EqClasses.isEquivalent(i, j));
 }
 
+TEST(EquivalenceClassesTest, SimpleErase1) {
+  EquivalenceClasses<int> EqClasses;
+  // Check that erase head success.
+  // After erase A from (A, B ,C, D), <B, C, D> belong to one set.
+  EqClasses.unionSets(0, 1);
+  EqClasses.unionSets(2, 3);
+  EqClasses.unionSets(0, 2);
+  EXPECT_TRUE(EqClasses.erase(0));
+  for (int i = 1; i < 4; ++i)
+    for (int j = 1; j < 4; ++j)
+      EXPECT_TRUE(EqClasses.isEquivalent(i, j));
+}
+
+TEST(EquivalenceClassesTest, SimpleErase2) {
+  EquivalenceClasses<int> EqClasses;
+  // Check that erase tail success.
+  // After erase D from (A, B ,C, D), <A, B, C> belong to one set.
+  EqClasses.unionSets(0, 1);
+  EqClasses.unionSets(2, 3);
+  EqClasses.unionSets(0, 2);
+  EXPECT_TRUE(EqClasses.erase(3));
+  for (int i = 0; i < 3; ++i)
+    for (int j = 0; j < 3; ++j)
+      EXPECT_TRUE(EqClasses.isEquivalent(i, j));
+}
+
+TEST(EquivalenceClassesTest, SimpleErase3) {
+  EquivalenceClasses<int> EqClasses;
+  // Check that erase a value in the middle success.
+  // After erase B from (A, B ,C, D), <A, C, D> belong to one set.
+  EqClasses.unionSets(0, 1);
+  EqClasses.unionSets(2, 3);
+  EqClasses.unionSets(0, 2);
+  EXPECT_TRUE(EqClasses.erase(1));
+  for (int i = 0; i < 3; ++i)
+    for (int j = 0; j < 3; ++j)
+      EXPECT_TRUE(EqClasses.isEquivalent(i, j) ^ ((i == 1) ^ (j == 1)));
+}
+
+TEST(EquivalenceClassesTest, SimpleErase4) {
+  EquivalenceClasses<int> EqClasses;
+  // Check that erase a single class success.
+  EqClasses.insert(0);
+  EXPECT_TRUE(EqClasses.getNumClasses() == 1);
+  EXPECT_TRUE(EqClasses.erase(0));
+  EXPECT_TRUE(EqClasses.getNumClasses() == 0);
+  EXPECT_FALSE(EqClasses.erase(1));
+}
+
 TEST(EquivalenceClassesTest, TwoSets) {
   EquivalenceClasses<int> EqClasses;
   // Form sets of odd and even numbers, check that we split them into these

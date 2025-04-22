@@ -23,18 +23,20 @@ namespace llvm::sandboxir {
 
 class Context;
 // Forward declare friend classes for MSVC.
-class PointerType;
-class VectorType;
-class FixedVectorType;
-class ScalableVectorType;
-class IntegerType;
-class FunctionType;
 class ArrayType;
+class CallBase;
+class CmpInst;
+class ConstantDataSequential;
+class FixedVectorType;
+class FPMathOperator;
+class FunctionType;
+class IntegerType;
+class Module;
+class PointerType;
+class ScalableVectorType;
 class StructType;
 class TargetExtType;
-class Module;
-class FPMathOperator;
-class ConstantDataSequential;
+class VectorType;
 #define DEF_INSTR(ID, OPCODE, CLASS) class CLASS;
 #define DEF_CONST(ID, CLASS) class CLASS;
 #include "llvm/SandboxIR/Values.def"
@@ -118,8 +120,8 @@ public:
   bool isPPC_FP128Ty() const { return LLVMTy->isPPC_FP128Ty(); }
 
   /// Return true if this is a well-behaved IEEE-like type, which has a IEEE
-  /// compatible layout as defined by APFloat::isIEEE(), and does not have
-  /// non-IEEE values, such as x86_fp80's unnormal values.
+  /// compatible layout, and does not have non-IEEE values, such as x86_fp80's
+  /// unnormal values.
   bool isIEEELikeFPTy() const { return LLVMTy->isIEEELikeFPTy(); }
 
   /// Return true if this is one of the floating-point types
@@ -260,10 +262,6 @@ public:
   /// ppc long double), this method returns -1.
   int getFPMantissaWidth() const { return LLVMTy->getFPMantissaWidth(); }
 
-  /// Return whether the type is IEEE compatible, as defined by the eponymous
-  /// method in APFloat.
-  bool isIEEE() const { return LLVMTy->isIEEE(); }
-
   /// If this is a vector type, return the element type, otherwise return
   /// 'this'.
   Type *getScalarType() const;
@@ -277,6 +275,7 @@ public:
   static Type *getInt1Ty(Context &Ctx);
   static Type *getDoubleTy(Context &Ctx);
   static Type *getFloatTy(Context &Ctx);
+  static Type *getHalfTy(Context &Ctx);
   // TODO: missing get*
 
   /// Get the address space of this pointer or pointer vector type.

@@ -3928,12 +3928,6 @@ struct AANoAliasCallSiteArgument final : AANoAliasImpl {
     // (iii) There is no other pointer argument which could alias with the
     //       value.
 
-    auto IsDereferenceableOrNull = [&](Value *O, const DataLayout &DL) {
-      const auto *DerefAA = A.getAAFor<AADereferenceable>(
-          *this, IRPosition::value(*O), DepClassTy::OPTIONAL);
-      return DerefAA ? DerefAA->getAssumedDereferenceableBytes() : 0;
-    };
-
     const IRPosition &VIRP = IRPosition::value(getAssociatedValue());
     const Function *ScopeFn = VIRP.getAnchorScope();
     // Check whether the value is captured in the scope using AANoCapture.
@@ -3973,8 +3967,7 @@ struct AANoAliasCallSiteArgument final : AANoAliasImpl {
       //       is CGSCC runs. For those we would need to "allow" AANoCapture for
       //       a value in the module slice.
       // TODO(captures): Make this more precise.
-      UseCaptureInfo CI =
-          DetermineUseCaptureKind(U, /*Base=*/nullptr, IsDereferenceableOrNull);
+      UseCaptureInfo CI = DetermineUseCaptureKind(U, /*Base=*/nullptr);
       if (capturesNothing(CI))
         return true;
       if (CI.isPassthrough()) {
@@ -5283,7 +5276,7 @@ struct AAAlignImpl : AAAlign {
 
   /// See AbstractAttribute::manifest(...).
   ChangeStatus manifest(Attributor &A) override {
-    ChangeStatus LoadStoreChanged = ChangeStatus::UNCHANGED;
+    ChangeStatus InstrChanged = ChangeStatus::UNCHANGED;
 
     // Check for users that allow alignment annotations.
     Value &AssociatedValue = getAssociatedValue();
@@ -5297,7 +5290,7 @@ struct AAAlignImpl : AAAlign {
             STATS_DECLTRACK(AAAlign, Store,
                             "Number of times alignment added to a store");
             SI->setAlignment(getAssumedAlign());
-            LoadStoreChanged = ChangeStatus::CHANGED;
+            InstrChanged = ChangeStatus::CHANGED;
           }
       } else if (auto *LI = dyn_cast<LoadInst>(U.getUser())) {
         if (LI->getPointerOperand() == &AssociatedValue)
@@ -5305,8 +5298,27 @@ struct AAAlignImpl : AAAlign {
             LI->setAlignment(getAssumedAlign());
             STATS_DECLTRACK(AAAlign, Load,
                             "Number of times alignment added to a load");
-            LoadStoreChanged = ChangeStatus::CHANGED;
+            InstrChanged = ChangeStatus::CHANGED;
           }
+      } else if (auto *RMW = dyn_cast<AtomicRMWInst>(U.getUser())) {
+        if (RMW->getPointerOperand() == &AssociatedValue) {
+          if (RMW->getAlign() < getAssumedAlign()) {
+            STATS_DECLTRACK(AAAlign, AtomicRMW,
+                            "Number of times alignment added to atomicrmw");
+
+            RMW->setAlignment(getAssumedAlign());
+            InstrChanged = ChangeStatus::CHANGED;
+          }
+        }
+      } else if (auto *CAS = dyn_cast<AtomicCmpXchgInst>(U.getUser())) {
+        if (CAS->getPointerOperand() == &AssociatedValue) {
+          if (CAS->getAlign() < getAssumedAlign()) {
+            STATS_DECLTRACK(AAAlign, AtomicCmpXchg,
+                            "Number of times alignment added to cmpxchg");
+            CAS->setAlignment(getAssumedAlign());
+            InstrChanged = ChangeStatus::CHANGED;
+          }
+        }
       }
     }
 
@@ -5315,8 +5327,8 @@ struct AAAlignImpl : AAAlign {
     Align InheritAlign =
         getAssociatedValue().getPointerAlignment(A.getDataLayout());
     if (InheritAlign >= getAssumedAlign())
-      return LoadStoreChanged;
-    return Changed | LoadStoreChanged;
+      return InstrChanged;
+    return Changed | InstrChanged;
   }
 
   // TODO: Provide a helper to determine the implied ABI alignment and check in
@@ -6016,16 +6028,9 @@ ChangeStatus AANoCaptureImpl::updateImpl(Attributor &A) {
     }
   }
 
-  auto IsDereferenceableOrNull = [&](Value *O, const DataLayout &DL) {
-    const auto *DerefAA = A.getAAFor<AADereferenceable>(
-        *this, IRPosition::value(*O), DepClassTy::OPTIONAL);
-    return DerefAA && DerefAA->getAssumedDereferenceableBytes();
-  };
-
   auto UseCheck = [&](const Use &U, bool &Follow) -> bool {
     // TODO(captures): Make this more precise.
-    UseCaptureInfo CI =
-        DetermineUseCaptureKind(U, /*Base=*/nullptr, IsDereferenceableOrNull);
+    UseCaptureInfo CI = DetermineUseCaptureKind(U, /*Base=*/nullptr);
     if (capturesNothing(CI))
       return true;
     if (CI.isPassthrough()) {
@@ -12158,7 +12163,7 @@ struct AAGlobalValueInfoFloating : public AAGlobalValueInfo {
     auto UsePred = [&](const Use &U, bool &Follow) -> bool {
       Uses.insert(&U);
       // TODO(captures): Make this more precise.
-      UseCaptureInfo CI = DetermineUseCaptureKind(U, /*Base=*/nullptr, nullptr);
+      UseCaptureInfo CI = DetermineUseCaptureKind(U, /*Base=*/nullptr);
       if (CI.isPassthrough()) {
         Follow = true;
         return true;
