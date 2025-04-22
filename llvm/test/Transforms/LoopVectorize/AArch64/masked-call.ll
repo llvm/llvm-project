@@ -996,9 +996,9 @@ define void @test_widen_exp_v2(ptr noalias %p2, ptr noalias %p, i64 %n) #5 {
 ; TFA_INTERLEAVE-NEXT:    [[ACTIVE_LANE_MASK_ENTRY1:%.*]] = icmp ult i64 1, [[TMP0]]
 ; TFA_INTERLEAVE-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; TFA_INTERLEAVE:       [[VECTOR_BODY]]:
-; TFA_INTERLEAVE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[TMP27:%.*]], %[[TMP19:.*]] ]
-; TFA_INTERLEAVE-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi i1 [ [[ACTIVE_LANE_MASK_ENTRY]], %[[ENTRY]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], %[[TMP19]] ]
-; TFA_INTERLEAVE-NEXT:    [[ACTIVE_LANE_MASK2:%.*]] = phi i1 [ [[ACTIVE_LANE_MASK_ENTRY1]], %[[ENTRY]] ], [ [[ACTIVE_LANE_MASK_NEXT6:%.*]], %[[TMP19]] ]
+; TFA_INTERLEAVE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[TMP27:%.*]], %[[PRED_STORE_CONTINUE5:.*]] ]
+; TFA_INTERLEAVE-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi i1 [ [[ACTIVE_LANE_MASK_ENTRY]], %[[ENTRY]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], %[[PRED_STORE_CONTINUE5]] ]
+; TFA_INTERLEAVE-NEXT:    [[ACTIVE_LANE_MASK2:%.*]] = phi i1 [ [[ACTIVE_LANE_MASK_ENTRY1]], %[[ENTRY]] ], [ [[ACTIVE_LANE_MASK_NEXT6:%.*]], %[[PRED_STORE_CONTINUE5]] ]
 ; TFA_INTERLEAVE-NEXT:    [[TMP4:%.*]] = load double, ptr [[P2]], align 8
 ; TFA_INTERLEAVE-NEXT:    [[TMP5:%.*]] = tail call double @llvm.exp.f64(double [[TMP4]]) #[[ATTR7:[0-9]+]]
 ; TFA_INTERLEAVE-NEXT:    [[TMP8:%.*]] = tail call double @llvm.exp.f64(double [[TMP4]]) #[[ATTR7]]
@@ -1016,11 +1016,11 @@ define void @test_widen_exp_v2(ptr noalias %p2, ptr noalias %p, i64 %n) #5 {
 ; TFA_INTERLEAVE-NEXT:    [[TMP15:%.*]] = xor i1 [[TMP13]], true
 ; TFA_INTERLEAVE-NEXT:    [[TMP16:%.*]] = xor i1 [[TMP14]], true
 ; TFA_INTERLEAVE-NEXT:    [[TMP17:%.*]] = or i1 [[TMP15]], [[TMP16]]
-; TFA_INTERLEAVE-NEXT:    br i1 [[TMP17]], label %[[BB18:.*]], label %[[TMP19]]
+; TFA_INTERLEAVE-NEXT:    br i1 [[TMP17]], label %[[BB18:.*]], label %[[PRED_STORE_CONTINUE5]]
 ; TFA_INTERLEAVE:       [[BB18]]:
 ; TFA_INTERLEAVE-NEXT:    store double [[SPEC_SELECT]], ptr [[P]], align 8
-; TFA_INTERLEAVE-NEXT:    br label %[[TMP19]]
-; TFA_INTERLEAVE:       [[TMP19]]:
+; TFA_INTERLEAVE-NEXT:    br label %[[PRED_STORE_CONTINUE5]]
+; TFA_INTERLEAVE:       [[PRED_STORE_CONTINUE5]]:
 ; TFA_INTERLEAVE-NEXT:    [[TMP27]] = add i64 [[INDEX]], 2
 ; TFA_INTERLEAVE-NEXT:    [[TMP11:%.*]] = add i64 [[INDEX]], 1
 ; TFA_INTERLEAVE-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = icmp ult i64 [[INDEX]], [[TMP3]]

@@ -258,6 +258,8 @@ define void @example2(i32 %n, i32 %x) optsize {
 
 ; Loop has no primary induction as its integer IV has step -1 starting at
 ; unknown N, but can still be vectorized.
+; Note: Most scalar pointer induction GEPs could be sunk into the conditional
+;       blocks.
 define void @example3(i32 %n, ptr noalias nocapture %p, ptr noalias nocapture %q) optsize {
 ; CHECK-LABEL: @example3(
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[N:%.*]], 0
@@ -445,6 +447,8 @@ define void @example23b(ptr noalias nocapture %src, ptr noalias nocapture %dst) 
 }
 
 ; We CAN vectorize this example by folding the tail it entails.
+; Note: Most scalar pointer induction GEPs could be sunk into the conditional
+;       blocks.
 define void @example23c(ptr noalias nocapture %src, ptr noalias nocapture %dst) optsize {
 ; CHECK-LABEL: @example23c(
 ; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]

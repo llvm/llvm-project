@@ -82,6 +82,8 @@ for.body:
   br i1 %exitcond, label %for.cond.cleanup, label %for.body
 }
 
+; Note: Most scalar pointer induction GEPs could be sunk into the conditional
+;       blocks.
 define void @VF1-VPWidenCanonicalIVRecipeExe(ptr %ptr1) {
 ; CHECK-LABEL: @VF1-VPWidenCanonicalIVRecipeExe(
 ; CHECK-NEXT:  entry:

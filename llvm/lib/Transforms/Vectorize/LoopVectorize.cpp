@@ -2375,10 +2375,9 @@ void InnerLoopVectorizer::scalarizeInstruction(const Instruction *Instr,
   if (auto *II = dyn_cast<AssumeInst>(Cloned))
     AC->registerAssumption(II);
 
-  // End if-block.
-  VPRegionBlock *Parent = RepRecipe->getParent()->getParent();
   assert(
-      (Parent || !RepRecipe->getParent()->getPlan()->getVectorLoopRegion() ||
+      (RepRecipe->getParent()->getParent() ||
+       !RepRecipe->getParent()->getPlan()->getVectorLoopRegion() ||
        all_of(RepRecipe->operands(),
               [](VPValue *Op) { return Op->isDefinedOutsideLoopRegions(); })) &&
       "Expected a recipe is either within a region or all of its operands "
