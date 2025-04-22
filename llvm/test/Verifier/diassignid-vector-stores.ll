@@ -1,9 +1,13 @@
 ; RUN: llvm-as -disable-output <%s 2>&1 | FileCheck %s --implicit-check-not="attached to unexpected instruction kind"
-;; Check that we allow vector store intrinsics to have !DIAssignID attachments,
-;; but we do not allow non-store intrinsics to have them.
+;; Check that we allow intrinsics to have !DIAssignID attachments, but we do not
+;; allow non-intrinsic calls to have them.
+;; FIXME: Ideally we would also not allow non-store intrinsics, e.g. the
+;; llvm.vp.load intrinsic in this test.
 
 ; CHECK: !DIAssignID attached to unexpected instruction kind
-; CHECK-NEXT: @llvm.vp.load.v2i8.p0
+; CHECK-NEXT: call void @g()
+
+declare void @g()
 
 define void @f() !dbg !5 {
   call void @llvm.vp.store.v2i8.p0(<2 x i8> poison, ptr poison, <2 x i1> poison, i32 poison), !DIAssignID !6
@@ -12,6 +16,7 @@ define void @f() !dbg !5 {
   call void @llvm.masked.store.v2i8.p0(<2 x i8> poison, ptr poison, i32 1, <2 x i1> poison), !DIAssignID !9
   call void @llvm.masked.scatter.v2i8.v2p0(<2 x i8> poison, <2 x ptr> poison, i32 1, <2 x i1> poison), !DIAssignID !10
   %r = call <2 x i8> @llvm.vp.load.v2i8.p0(ptr poison, <2 x i1> poison, i32 poison), !DIAssignID !11
+  call void @g(), !DIAssignID !12
   ret void
 }
 
@@ -31,3 +36,4 @@ define void @f() !dbg !5 {
 !9 = distinct !DIAssignID()
 !10 = distinct !DIAssignID()
 !11 = distinct !DIAssignID()
+!12 = distinct !DIAssignID()
