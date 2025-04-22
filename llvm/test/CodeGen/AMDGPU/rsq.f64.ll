@@ -2296,7 +2296,7 @@ define <2 x double> @v_neg_rsq_v2f64_poisonelt(<2 x double> %x) {
 ; SI-GISEL-NEXT:    v_mul_f64 v[12:13], v[16:17], v[10:11]
 ; SI-GISEL-NEXT:    v_div_fmas_f64 v[4:5], v[18:19], v[4:5], v[8:9]
 ; SI-GISEL-NEXT:    v_fma_f64 v[8:9], -v[6:7], v[12:13], v[16:17]
-; SI-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc, s4, v17
+; SI-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc, s5, v17
 ; SI-GISEL-NEXT:    v_cmp_eq_u32_e64 s[4:5], v3, v7
 ; SI-GISEL-NEXT:    s_xor_b64 vcc, vcc, s[4:5]
 ; SI-GISEL-NEXT:    v_div_fixup_f64 v[0:1], v[4:5], v[0:1], -1.0

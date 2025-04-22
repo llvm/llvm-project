@@ -455,7 +455,7 @@ bool CombinerHelper::matchCombineShuffleConcat(
           return false;
       }
       if (!isLegalOrBeforeLegalizer(
-              {TargetOpcode::G_IMPLICIT_DEF, {ConcatSrcTy}}) ||
+              {TargetOpcode::G_IMPLICIT_DEF, {ConcatSrcTy}}) &&
           !isLegalOrBeforeLegalizer({TargetOpcode::G_POISON, {ConcatSrcTy}}))
         return false;
       Ops.push_back(0);
@@ -2307,7 +2307,8 @@ bool CombinerHelper::matchCombineUnmergeUndef(
       B.buildUndef(DstReg);
     }
   };
-  return isa<GImplicitDef>(MRI.getVRegDef(SrcReg));
+  return isa<GImplicitDef>(MRI.getVRegDef(SrcReg)) ||
+         isa<GPoison>(MRI.getVRegDef(SrcReg));
 }
 
 bool CombinerHelper::matchCombineUnmergeWithDeadLanesToTrunc(
@@ -2733,6 +2734,7 @@ void CombinerHelper::applyCombineTruncOfShift(
 
 bool CombinerHelper::matchAnyExplicitUseIsUndef(MachineInstr &MI) const {
   return any_of(MI.explicit_uses(), [this](const MachineOperand &MO) {
+    // FIXME: Two opcodes should be checked with one call instead.
     return MO.isReg() &&
            (getOpcodeDef(TargetOpcode::G_IMPLICIT_DEF, MO.getReg(), MRI) ||
             getOpcodeDef(TargetOpcode::G_POISON, MO.getReg(), MRI));
@@ -2770,8 +2772,7 @@ bool CombinerHelper::matchUndefStore(MachineInstr &MI) const {
   assert(MI.getOpcode() == TargetOpcode::G_STORE);
   return getOpcodeDef(TargetOpcode::G_IMPLICIT_DEF, MI.getOperand(0).getReg(),
                       MRI) ||
-         getOpcodeDef(TargetOpcode::G_IMPLICIT_DEF, MI.getOperand(0).getReg(),
-                      MRI);
+         getOpcodeDef(TargetOpcode::G_POISON, MI.getOperand(0).getReg(), MRI);
 }
 
 bool CombinerHelper::matchPoisonStore(MachineInstr &MI) const {
@@ -2783,8 +2784,7 @@ bool CombinerHelper::matchUndefSelectCmp(MachineInstr &MI) const {
   assert(MI.getOpcode() == TargetOpcode::G_SELECT);
   return getOpcodeDef(TargetOpcode::G_IMPLICIT_DEF, MI.getOperand(1).getReg(),
                       MRI) ||
-         getOpcodeDef(TargetOpcode::G_IMPLICIT_DEF, MI.getOperand(1).getReg(),
-                      MRI);
+         getOpcodeDef(TargetOpcode::G_POISON, MI.getOperand(1).getReg(), MRI);
 }
 
 bool CombinerHelper::matchInsertExtractVecEltOutOfBounds(

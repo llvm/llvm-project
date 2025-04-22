@@ -1920,6 +1920,7 @@ static bool isGuaranteedNotToBeUndefOrPoison(Register Reg,
   case TargetOpcode::G_FREEZE:
     return true;
   case TargetOpcode::G_POISON:
+    return !includesPoison(Kind);
   case TargetOpcode::G_IMPLICIT_DEF:
     return !includesUndef(Kind);
   case TargetOpcode::G_CONSTANT:
