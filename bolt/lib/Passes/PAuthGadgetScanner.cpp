@@ -91,21 +91,21 @@ class TrackedRegisters {
   const std::vector<MCPhysReg> Registers;
   std::vector<uint16_t> RegToIndexMapping;
 
-  static size_t getMappingSize(const ArrayRef<MCPhysReg> RegsToTrack) {
+  static size_t getMappingSize(ArrayRef<MCPhysReg> RegsToTrack) {
     if (RegsToTrack.empty())
       return 0;
     return 1 + *llvm::max_element(RegsToTrack);
   }
 
 public:
-  TrackedRegisters(const ArrayRef<MCPhysReg> RegsToTrack)
+  TrackedRegisters(ArrayRef<MCPhysReg> RegsToTrack)
       : Registers(RegsToTrack),
         RegToIndexMapping(getMappingSize(RegsToTrack), NoIndex) {
     for (unsigned I = 0; I < RegsToTrack.size(); ++I)
       RegToIndexMapping[RegsToTrack[I]] = I;
   }
 
-  const ArrayRef<MCPhysReg> getRegisters() const { return Registers; }
+  ArrayRef<MCPhysReg> getRegisters() const { return Registers; }
 
   size_t getNumTrackedRegisters() const { return Registers.size(); }
 
@@ -232,9 +232,9 @@ struct SrcState {
   bool operator!=(const SrcState &RHS) const { return !((*this) == RHS); }
 };
 
-static void printLastInsts(
-    raw_ostream &OS,
-    const ArrayRef<SmallPtrSet<const MCInst *, 4>> LastInstWritingReg) {
+static void
+printLastInsts(raw_ostream &OS,
+               ArrayRef<SmallPtrSet<const MCInst *, 4>> LastInstWritingReg) {
   OS << "Insts: ";
   for (unsigned I = 0; I < LastInstWritingReg.size(); ++I) {
     auto &Set = LastInstWritingReg[I];
@@ -294,8 +294,7 @@ void SrcStatePrinter::print(raw_ostream &OS, const SrcState &S) const {
 /// version for functions without reconstructed CFG.
 class SrcSafetyAnalysis {
 public:
-  SrcSafetyAnalysis(BinaryFunction &BF,
-                    const ArrayRef<MCPhysReg> RegsToTrackInstsFor)
+  SrcSafetyAnalysis(BinaryFunction &BF, ArrayRef<MCPhysReg> RegsToTrackInstsFor)
       : BC(BF.getBinaryContext()), NumRegs(BC.MRI->getNumRegs()),
         RegsToTrackInstsFor(RegsToTrackInstsFor) {}
 
@@ -303,7 +302,7 @@ public:
 
   static std::shared_ptr<SrcSafetyAnalysis>
   create(BinaryFunction &BF, MCPlusBuilder::AllocatorIdTy AllocId,
-         const ArrayRef<MCPhysReg> RegsToTrackInstsFor);
+         ArrayRef<MCPhysReg> RegsToTrackInstsFor);
 
   virtual void run() = 0;
   virtual const SrcState &getStateBefore(const MCInst &Inst) const = 0;
@@ -518,7 +517,7 @@ protected:
 public:
   std::vector<MCInstReference>
   getLastClobberingInsts(const MCInst &Inst, BinaryFunction &BF,
-                         const ArrayRef<MCPhysReg> UsedDirtyRegs) const {
+                         ArrayRef<MCPhysReg> UsedDirtyRegs) const {
     if (RegsToTrackInstsFor.empty())
       return {};
     const SrcState &S = getStateBefore(Inst);
@@ -552,7 +551,7 @@ class DataflowSrcSafetyAnalysis
 public:
   DataflowSrcSafetyAnalysis(BinaryFunction &BF,
                             MCPlusBuilder::AllocatorIdTy AllocId,
-                            const ArrayRef<MCPhysReg> RegsToTrackInstsFor)
+                            ArrayRef<MCPhysReg> RegsToTrackInstsFor)
       : SrcSafetyAnalysis(BF, RegsToTrackInstsFor), DFParent(BF, AllocId) {}
 
   const SrcState &getStateBefore(const MCInst &Inst) const override {
@@ -669,7 +668,7 @@ class CFGUnawareSrcSafetyAnalysis : public SrcSafetyAnalysis {
 public:
   CFGUnawareSrcSafetyAnalysis(BinaryFunction &BF,
                               MCPlusBuilder::AllocatorIdTy AllocId,
-                              const ArrayRef<MCPhysReg> RegsToTrackInstsFor)
+                              ArrayRef<MCPhysReg> RegsToTrackInstsFor)
       : SrcSafetyAnalysis(BF, RegsToTrackInstsFor), BF(BF), AllocId(AllocId) {
     StateAnnotationIndex =
         BC.MIB->getOrCreateAnnotationIndex("CFGUnawareSrcSafetyAnalysis");
@@ -713,7 +712,7 @@ public:
 std::shared_ptr<SrcSafetyAnalysis>
 SrcSafetyAnalysis::create(BinaryFunction &BF,
                           MCPlusBuilder::AllocatorIdTy AllocId,
-                          const ArrayRef<MCPhysReg> RegsToTrackInstsFor) {
+                          ArrayRef<MCPhysReg> RegsToTrackInstsFor) {
   if (BF.hasCFG())
     return std::make_shared<DataflowSrcSafetyAnalysis>(BF, AllocId,
                                                        RegsToTrackInstsFor);

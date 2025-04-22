@@ -219,8 +219,8 @@ struct Report {
 
   // The two methods below are called by Analysis::computeDetailedInfo when
   // iterating over the reports.
-  virtual const ArrayRef<MCPhysReg> getAffectedRegisters() const { return {}; }
-  virtual void setOverwritingInstrs(const ArrayRef<MCInstReference> Instrs) {}
+  virtual ArrayRef<MCPhysReg> getAffectedRegisters() const { return {}; }
+  virtual void setOverwritingInstrs(ArrayRef<MCInstReference> Instrs) {}
 
   void printBasicInfo(raw_ostream &OS, const BinaryContext &BC,
                       StringRef IssueKind) const;
@@ -243,11 +243,11 @@ struct GadgetReport : public Report {
 
   void generateReport(raw_ostream &OS, const BinaryContext &BC) const override;
 
-  const ArrayRef<MCPhysReg> getAffectedRegisters() const override {
+  ArrayRef<MCPhysReg> getAffectedRegisters() const override {
     return AffectedRegisters;
   }
 
-  void setOverwritingInstrs(const ArrayRef<MCInstReference> Instrs) override {
+  void setOverwritingInstrs(ArrayRef<MCInstReference> Instrs) override {
     OverwritingInstrs.assign(Instrs.begin(), Instrs.end());
   }
 };
