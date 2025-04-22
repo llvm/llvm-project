@@ -6,12 +6,12 @@
 
 target triple = "nvptx64-nvidia-cuda"
 
-declare void @llvm.nvvm.cp.async.bulk.global.to.shared.cluster(ptr addrspace(3), ptr addrspace(3), ptr addrspace(1), i32, i16, i64, i1, i1)
+declare void @llvm.nvvm.cp.async.bulk.global.to.shared.cluster(ptr addrspace(7), ptr addrspace(3), ptr addrspace(1), i32, i16, i64, i1, i1)
 declare void @llvm.nvvm.cp.async.bulk.shared.cta.to.global(ptr addrspace(1), ptr addrspace(3), i32, i64, i1)
-declare void @llvm.nvvm.cp.async.bulk.shared.cta.to.cluster(ptr addrspace(3), ptr addrspace(3), ptr addrspace(3), i32)
+declare void @llvm.nvvm.cp.async.bulk.shared.cta.to.cluster(ptr addrspace(7), ptr addrspace(3), ptr addrspace(3), i32)
 declare void @llvm.nvvm.cp.async.bulk.prefetch.L2(ptr addrspace(1), i32, i64, i1)
 
-define void @cp_async_bulk_g2s(ptr addrspace(1) %src, ptr addrspace(3) %bar, ptr addrspace(3) %dst, i32 %size, i16 %mc, i64 %ch) {
+define void @cp_async_bulk_g2s(ptr addrspace(1) %src, ptr addrspace(3) %bar, ptr addrspace(7) %dst, i32 %size, i16 %mc, i64 %ch) {
 ; CHECK-PTX64-LABEL: cp_async_bulk_g2s(
 ; CHECK-PTX64:       {
 ; CHECK-PTX64-NEXT:    .reg .b16 %rs<2>;
@@ -49,10 +49,10 @@ define void @cp_async_bulk_g2s(ptr addrspace(1) %src, ptr addrspace(3) %bar, ptr
 ; CHECK-PTX-SHARED32-NEXT:    cp.async.bulk.shared::cluster.global.mbarrier::complete_tx::bytes.multicast::cluster [%r2], [%rd1], %r3, [%r1], %rs1;
 ; CHECK-PTX-SHARED32-NEXT:    cp.async.bulk.shared::cluster.global.mbarrier::complete_tx::bytes.multicast::cluster.L2::cache_hint [%r2], [%rd1], %r3, [%r1], %rs1, %rd2;
 ; CHECK-PTX-SHARED32-NEXT:    ret;
-  tail call void @llvm.nvvm.cp.async.bulk.global.to.shared.cluster(ptr addrspace(3) %dst, ptr addrspace(3) %bar, ptr addrspace(1) %src, i32 %size, i16 0, i64 0, i1 0, i1 0)
-  tail call void @llvm.nvvm.cp.async.bulk.global.to.shared.cluster(ptr addrspace(3) %dst, ptr addrspace(3) %bar, ptr addrspace(1) %src, i32 %size, i16 0, i64 %ch, i1 0, i1 1)
-  tail call void @llvm.nvvm.cp.async.bulk.global.to.shared.cluster(ptr addrspace(3) %dst, ptr addrspace(3) %bar, ptr addrspace(1) %src, i32 %size, i16 %mc, i64 0, i1 1, i1 0)
-  tail call void @llvm.nvvm.cp.async.bulk.global.to.shared.cluster(ptr addrspace(3) %dst, ptr addrspace(3) %bar, ptr addrspace(1) %src, i32 %size, i16 %mc, i64 %ch, i1 1, i1 1)
+  tail call void @llvm.nvvm.cp.async.bulk.global.to.shared.cluster(ptr addrspace(7) %dst, ptr addrspace(3) %bar, ptr addrspace(1) %src, i32 %size, i16 0, i64 0, i1 0, i1 0)
+  tail call void @llvm.nvvm.cp.async.bulk.global.to.shared.cluster(ptr addrspace(7) %dst, ptr addrspace(3) %bar, ptr addrspace(1) %src, i32 %size, i16 0, i64 %ch, i1 0, i1 1)
+  tail call void @llvm.nvvm.cp.async.bulk.global.to.shared.cluster(ptr addrspace(7) %dst, ptr addrspace(3) %bar, ptr addrspace(1) %src, i32 %size, i16 %mc, i64 0, i1 1, i1 0)
+  tail call void @llvm.nvvm.cp.async.bulk.global.to.shared.cluster(ptr addrspace(7) %dst, ptr addrspace(3) %bar, ptr addrspace(1) %src, i32 %size, i16 %mc, i64 %ch, i1 1, i1 1)
   ret void
 }
 
@@ -89,7 +89,7 @@ define void @cp_async_bulk_s2g(ptr addrspace(3) %src, ptr addrspace(1) %dst, i32
   ret void
 }
 
-define void @cp_async_bulk_cta_to_cluster(ptr addrspace(3) %src, ptr addrspace(3) %bar, ptr addrspace(3) %dst, i32 %size) {
+define void @cp_async_bulk_cta_to_cluster(ptr addrspace(3) %src, ptr addrspace(3) %bar, ptr addrspace(7) %dst, i32 %size) {
 ; CHECK-PTX64-LABEL: cp_async_bulk_cta_to_cluster(
 ; CHECK-PTX64:       {
 ; CHECK-PTX64-NEXT:    .reg .b32 %r<2>;
@@ -114,7 +114,7 @@ define void @cp_async_bulk_cta_to_cluster(ptr addrspace(3) %src, ptr addrspace(3
 ; CHECK-PTX-SHARED32-NEXT:    ld.param.u32 %r4, [cp_async_bulk_cta_to_cluster_param_3];
 ; CHECK-PTX-SHARED32-NEXT:    cp.async.bulk.shared::cluster.shared::cta.mbarrier::complete_tx::bytes [%r3], [%r1], %r4, [%r2];
 ; CHECK-PTX-SHARED32-NEXT:    ret;
-  tail call void @llvm.nvvm.cp.async.bulk.shared.cta.to.cluster(ptr addrspace(3) %dst, ptr addrspace(3) %bar, ptr addrspace(3) %src, i32 %size)
+  tail call void @llvm.nvvm.cp.async.bulk.shared.cta.to.cluster(ptr addrspace(7) %dst, ptr addrspace(3) %bar, ptr addrspace(3) %src, i32 %size)
   ret void
 }
 
