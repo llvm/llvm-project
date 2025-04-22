@@ -8,6 +8,9 @@
 
 #include "lldb/Host/posix/DomainSocket.h"
 #include "lldb/Utility/LLDBLog.h"
+#ifdef __linux__
+#include <lldb/Host/linux/AbstractSocket.h>
+#endif
 
 #include "llvm/Support/Errno.h"
 #include "llvm/Support/FileSystem.h"
@@ -187,4 +190,23 @@ std::vector<std::string> DomainSocket::GetListeningConnectionURI() const {
     return {};
 
   return {llvm::formatv("unix-connect://{0}", addr.sun_path)};
+}
+
+Socket *DomainSocket::Create(NativeSocket sockfd, bool should_close,
+                             Status &error) {
+#ifdef __linux__
+  // Check if fd represents domain socket or abstract socket.
+  struct sockaddr_un addr;
+  socklen_t addr_len = sizeof(addr);
+  if (getsockname(sockfd, (struct sockaddr *)&addr, &addr_len) == -1) {
+    error = Status::FromErrorString(
+        "lldb-platform child: not a socket or error occurred");
+    return nullptr;
+  }
+
+  if (addr.sun_family == AF_UNIX && addr.sun_path[0] == '\0') {
+    return new AbstractSocket(sockfd, should_close);
+  }
+#endif
+  return new DomainSocket(sockfd, should_close);
 }
