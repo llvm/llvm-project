@@ -1490,6 +1490,50 @@ def CallOp : CIR_CallOpBase<"call", [NoRegionArguments]> {
 }
 
 //===----------------------------------------------------------------------===//
+// StackSaveOp & StackRestoreOp
+//===----------------------------------------------------------------------===//
+
+def StackSaveOp : CIR_Op<"stacksave"> {
+  let summary = "remembers the current state of the function stack";
+  let description = [{
+    Saves current state of the function stack. Returns a pointer to an opaque object
+    that later can be passed into cir.stackrestore.
+    This is used during the lowering of variable length array allocas.
+
+    This operation corresponds to LLVM intrinsic `stacksave`.
+
+    ```mlir
+    %0 = cir.stacksave : <!u8i>
+    ```
+  }];
+
+  let results = (outs CIR_PointerType:$result);
+  let assemblyFormat = "attr-dict `:` qualified(type($result))";
+}
+
+def StackRestoreOp : CIR_Op<"stackrestore"> {
+  let summary = "restores the state of the function stack";
+  let description = [{
+    Restore the state of the function stack to the state it was
+    in when the corresponding cir.stacksave executed.
+    This is used during the lowering of variable length array allocas.
+
+    This operation corresponds to LLVM intrinsic `stackrestore`.
+
+    ```mlir
+    %0 = cir.alloca !cir.ptr<!u8i>, !cir.ptr<!cir.ptr<!u8i>>, ["saved_stack"] {alignment = 8 : i64}
+    %1 = cir.stacksave : <!u8i>
+    cir.store %1, %0 : !cir.ptr<!u8i>, !cir.ptr<!cir.ptr<!u8i>>
+    %2 = cir.load %0 : !cir.ptr<!cir.ptr<!u8i>>, !cir.ptr<!u8i>
+    cir.stackrestore %2 : !cir.ptr<!u8i>
+    ```
+  }];
+
+  let arguments = (ins CIR_PointerType:$ptr);
+  let assemblyFormat = "$ptr attr-dict `:` qualified(type($ptr))";
+}
+
+//===----------------------------------------------------------------------===//
 // UnreachableOp
 //===----------------------------------------------------------------------===//
 
