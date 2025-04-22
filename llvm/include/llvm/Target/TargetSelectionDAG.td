@@ -1113,10 +1113,6 @@ def not  : PatFrag<(ops node:$in), (xor node:$in, -1)>;
 def vnot : PatFrag<(ops node:$in), (xor node:$in, immAllOnesV)>;
 def ineg : PatFrag<(ops node:$in), (sub 0, node:$in)>;
 
-def or_disjoint : PatFrag<(ops node:$x, node:$y), (or node:$x, node:$y), [{
-  return N->getFlags().hasDisjoint();
-}]>;
-
 def zanyext : PatFrags<(ops node:$op),
                        [(zext node:$op),
                         (anyext node:$op)]>;

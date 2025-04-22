@@ -1443,6 +1443,37 @@ define <vscale x 2 x i32> @vwadd_vv_disjoint_or(<vscale x 2 x i16> %x.i16, <vsca
   ret <vscale x 2 x i32> %or
 }
 
+define <vscale x 2 x i32> @vwaddu_vx_disjoint_or(<vscale x 2 x i16> %x.i16, i16 %y.i16) {
+; CHECK-LABEL: vwaddu_vx_disjoint_or:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a1, zero, e16, mf2, ta, ma
+; CHECK-NEXT:    vwaddu.vx v9, v8, a0
+; CHECK-NEXT:    vmv1r.v v8, v9
+; CHECK-NEXT:    ret
+  %x.i32 = zext <vscale x 2 x i16> %x.i16 to <vscale x 2 x i32>
+  %y.head = insertelement <vscale x 2 x i16> poison, i16 %y.i16, i32 0
+  %y.splat = shufflevector <vscale x 2 x i16> %y.head, <vscale x 2 x i16> poison, <vscale x 2 x i32> zeroinitializer
+  %y.i32 = zext <vscale x 2 x i16> %y.splat to <vscale x 2 x i32>
+  %or = or disjoint <vscale x 2 x i32> %x.i32, %y.i32
+  ret <vscale x 2 x i32> %or
+}
+
+
+define <vscale x 2 x i32> @vwadd_vx_disjoint_or(<vscale x 2 x i16> %x.i16, i16 %y.i16) {
+; CHECK-LABEL: vwadd_vx_disjoint_or:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a1, zero, e16, mf2, ta, ma
+; CHECK-NEXT:    vwadd.vx v9, v8, a0
+; CHECK-NEXT:    vmv1r.v v8, v9
+; CHECK-NEXT:    ret
+  %x.i32 = sext <vscale x 2 x i16> %x.i16 to <vscale x 2 x i32>
+  %y.head = insertelement <vscale x 2 x i16> poison, i16 %y.i16, i32 0
+  %y.splat = shufflevector <vscale x 2 x i16> %y.head, <vscale x 2 x i16> poison, <vscale x 2 x i32> zeroinitializer
+  %y.i32 = sext <vscale x 2 x i16> %y.splat to <vscale x 2 x i32>
+  %or = or disjoint <vscale x 2 x i32> %x.i32, %y.i32
+  ret <vscale x 2 x i32> %or
+}
+
 define <vscale x 2 x i32> @vwaddu_wv_disjoint_or(<vscale x 2 x i32> %x.i32, <vscale x 2 x i16> %y.i16) {
 ; CHECK-LABEL: vwaddu_wv_disjoint_or:
 ; CHECK:       # %bb.0:
