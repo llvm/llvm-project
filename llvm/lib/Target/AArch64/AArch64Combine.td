@@ -131,23 +131,19 @@ def ext: GICombineRule <
   (apply [{ applyEXT(*${root}, ${matchinfo}); }])
 >;
 
-def fullrev: GICombineRule <
-  (defs root:$root, shuffle_matchdata:$matchinfo),
-  (match (G_IMPLICIT_DEF $src2),
-         (G_SHUFFLE_VECTOR $src, $src1, $src2, $mask):$root,
-         [{ return ShuffleVectorInst::isReverseMask(${mask}.getShuffleMask(),
-                                                    ${mask}.getShuffleMask().size()); }]),
-  (apply [{ applyFullRev(*${root}, MRI); }])
->;
+def undef_or_poison_op
+    : GICombinePatFrag<(outs root:$src2), (ins),
+                       !foreach(op, [G_IMPLICIT_DEF, G_POISON],
+                                (pattern(op $src2)))>;
 
-def fullrevpoison: GICombineRule <
-  (defs root:$root, shuffle_matchdata:$matchinfo),
-  (match (G_POISON $src2),
-         (G_SHUFFLE_VECTOR $src, $src1, $src2, $mask):$root,
-         [{ return ShuffleVectorInst::isReverseMask(${mask}.getShuffleMask(),
+def fullrev
+    : GICombineRule<
+          (defs root:$root, shuffle_matchdata:$matchinfo),
+          (match(undef_or_poison_op $src2),
+              (G_SHUFFLE_VECTOR $src, $src1, $src2, $mask):$root,
+              [{ return ShuffleVectorInst::isReverseMask(${mask}.getShuffleMask(),
                                                     ${mask}.getShuffleMask().size()); }]),
-  (apply [{ applyFullRev(*${root}, MRI); }])
->;
+          (apply [{ applyFullRev(*${root}, MRI); }])>;
 
 def insertelt_nonconst: GICombineRule <
   (defs root:$root, shuffle_matchdata:$matchinfo),
@@ -181,9 +177,9 @@ def form_duplane : GICombineRule <
   (apply [{ applyDupLane(*${root}, MRI, B, ${matchinfo}); }])
 >;
 
-def shuffle_vector_lowering : GICombineGroup<[dup, rev, ext, zip, uzp, trn, fullrev,
-                                              fullrevpoison, form_duplane,
-                                              shuf_to_ins]>;
+def shuffle_vector_lowering
+    : GICombineGroup<[dup, rev, ext, zip, uzp, trn, fullrev, form_duplane,
+                      shuf_to_ins]>;
 
 // Turn G_UNMERGE_VALUES -> G_EXTRACT_VECTOR_ELT's
 def vector_unmerge_lowering : GICombineRule <

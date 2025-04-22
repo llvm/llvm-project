@@ -8454,16 +8454,16 @@ LegalizerHelper::lowerVECTOR_COMPRESS(llvm::MachineInstr &MI) {
 
   auto OutPos = MIRBuilder.buildConstant(IdxTy, 0);
 
-  bool HasPassthru =
-      MRI.getVRegDef(Passthru)->getOpcode() != TargetOpcode::G_IMPLICIT_DEF &&
-      MRI.getVRegDef(Passthru)->getOpcode() != TargetOpcode::G_POISON;
+  auto *PassthruMI = MRI.getVRegDef(Passthru);
+  bool HasPassthru = PassthruMI->getOpcode() != TargetOpcode::G_IMPLICIT_DEF &&
+                     PassthruMI->getOpcode() != TargetOpcode::G_POISON;
 
   if (HasPassthru)
     MIRBuilder.buildStore(Passthru, StackPtr, PtrInfo, VecAlign);
 
   Register LastWriteVal;
   std::optional<APInt> PassthruSplatVal =
-      isConstantOrConstantSplatVector(*MRI.getVRegDef(Passthru), MRI);
+      isConstantOrConstantSplatVector(*PassthruMI, MRI);
 
   if (PassthruSplatVal.has_value()) {
     LastWriteVal =

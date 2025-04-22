@@ -710,7 +710,7 @@ define <3 x i16> @v3i16_func_void() #0 {
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(<3 x s16>) = G_LOAD [[DEF]](p1) :: (load (<3 x s16>) from `ptr addrspace(1) poison`, align 8, addrspace 1)
   ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(s16), [[UV1:%[0-9]+]]:_(s16), [[UV2:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[LOAD]](<3 x s16>)
-  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(s16) = G_POISON
+  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s16>) = G_BUILD_VECTOR [[UV]](s16), [[UV1]](s16), [[UV2]](s16), [[DEF1]](s16)
   ; CHECK-NEXT:   [[UV3:%[0-9]+]]:_(<2 x s16>), [[UV4:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[BUILD_VECTOR]](<4 x s16>)
   ; CHECK-NEXT:   $vgpr0 = COPY [[UV3]](<2 x s16>)
@@ -753,7 +753,7 @@ define <5 x i16> @v5i16_func_void() #0 {
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (volatile invariant load (p1) from `ptr addrspace(4) poison`, addrspace 4)
   ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(<5 x s16>) = G_LOAD [[LOAD]](p1) :: (load (<5 x s16>) from %ir.ptr, align 16, addrspace 1)
   ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(s16), [[UV1:%[0-9]+]]:_(s16), [[UV2:%[0-9]+]]:_(s16), [[UV3:%[0-9]+]]:_(s16), [[UV4:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[LOAD1]](<5 x s16>)
-  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(s16) = G_POISON
+  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<6 x s16>) = G_BUILD_VECTOR [[UV]](s16), [[UV1]](s16), [[UV2]](s16), [[UV3]](s16), [[UV4]](s16), [[DEF1]](s16)
   ; CHECK-NEXT:   [[UV5:%[0-9]+]]:_(<2 x s16>), [[UV6:%[0-9]+]]:_(<2 x s16>), [[UV7:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[BUILD_VECTOR]](<6 x s16>)
   ; CHECK-NEXT:   $vgpr0 = COPY [[UV5]](<2 x s16>)

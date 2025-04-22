@@ -138,7 +138,7 @@ define amdgpu_kernel void @test_call_external_void_func_void() #0 {
   ; CHECK-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY [[COPY5]]
   ; CHECK-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; CHECK-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]]
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_POISON
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY [[COPY2]](s32)
   ; CHECK-NEXT:   [[COPY18:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 10
@@ -250,7 +250,7 @@ define amdgpu_kernel void @test_call_external_void_func_empty_struct() #0 {
   ; CHECK-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY [[COPY5]]
   ; CHECK-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; CHECK-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]]
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_POISON
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY [[COPY2]](s32)
   ; CHECK-NEXT:   [[COPY18:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
   ; CHECK-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 10
@@ -306,7 +306,7 @@ define amdgpu_kernel void @test_call_external_void_func_empty_array() #0 {
   ; CHECK-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY [[COPY5]]
   ; CHECK-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; CHECK-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]]
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_POISON
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY [[COPY2]](s32)
   ; CHECK-NEXT:   [[COPY18:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
   ; CHECK-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 10
@@ -362,7 +362,7 @@ define amdgpu_kernel void @test_call_external_void_func_i1_imm() #0 {
   ; CHECK-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY [[COPY5]]
   ; CHECK-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; CHECK-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]]
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_POISON
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY [[COPY2]](s32)
   ; CHECK-NEXT:   [[COPY18:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
   ; CHECK-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 10
@@ -407,7 +407,7 @@ define amdgpu_kernel void @test_call_external_void_func_i1_signext(i32) #0 {
   ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr6_sgpr7
   ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[INT:%[0-9]+]]:_(p4) = G_INTRINSIC intrinsic(@llvm.amdgcn.kernarg.segment.ptr)
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s1) = G_LOAD [[DEF]](p1) :: (volatile "amdgpu-noclobber" load (s1) from `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
@@ -421,7 +421,7 @@ define amdgpu_kernel void @test_call_external_void_func_i1_signext(i32) #0 {
   ; CHECK-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY [[COPY5]]
   ; CHECK-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; CHECK-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]]
-  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_POISON
+  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY [[COPY2]](s32)
   ; CHECK-NEXT:   [[COPY18:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 10
@@ -467,7 +467,7 @@ define amdgpu_kernel void @test_call_external_void_func_i1_zeroext(i32) #0 {
   ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr6_sgpr7
   ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[INT:%[0-9]+]]:_(p4) = G_INTRINSIC intrinsic(@llvm.amdgcn.kernarg.segment.ptr)
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s1) = G_LOAD [[DEF]](p1) :: (volatile "amdgpu-noclobber" load (s1) from `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
@@ -481,7 +481,7 @@ define amdgpu_kernel void @test_call_external_void_func_i1_zeroext(i32) #0 {
   ; CHECK-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY [[COPY5]]
   ; CHECK-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; CHECK-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]]
-  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_POISON
+  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY [[COPY2]](s32)
   ; CHECK-NEXT:   [[COPY18:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 10
@@ -540,7 +540,7 @@ define amdgpu_kernel void @test_call_external_void_func_i8_imm(i32) #0 {
   ; CHECK-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY [[COPY5]]
   ; CHECK-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; CHECK-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]]
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_POISON
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY [[COPY2]](s32)
   ; CHECK-NEXT:   [[COPY18:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
   ; CHECK-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 10
@@ -586,7 +586,7 @@ define amdgpu_kernel void @test_call_external_void_func_i8_signext(i32) #0 {
   ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr6_sgpr7
   ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[INT:%[0-9]+]]:_(p4) = G_INTRINSIC intrinsic(@llvm.amdgcn.kernarg.segment.ptr)
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s8) = G_LOAD [[DEF]](p1) :: (volatile "amdgpu-noclobber" load (s8) from `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
@@ -600,7 +600,7 @@ define amdgpu_kernel void @test_call_external_void_func_i8_signext(i32) #0 {
   ; CHECK-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY [[COPY5]]
   ; CHECK-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; CHECK-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]]
-  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_POISON
+  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY [[COPY2]](s32)
   ; CHECK-NEXT:   [[COPY18:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 10
@@ -647,7 +647,7 @@ define amdgpu_kernel void @test_call_external_void_func_i8_zeroext(i32) #0 {
   ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr6_sgpr7
   ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[INT:%[0-9]+]]:_(p4) = G_INTRINSIC intrinsic(@llvm.amdgcn.kernarg.segment.ptr)
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s8) = G_LOAD [[DEF]](p1) :: (volatile "amdgpu-noclobber" load (s8) from `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
@@ -661,7 +661,7 @@ define amdgpu_kernel void @test_call_external_void_func_i8_zeroext(i32) #0 {
   ; CHECK-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY [[COPY5]]
   ; CHECK-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; CHECK-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]]
-  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_POISON
+  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY [[COPY2]](s32)
   ; CHECK-NEXT:   [[COPY18:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 10
@@ -720,7 +720,7 @@ define amdgpu_kernel void @test_call_external_void_func_i16_imm() #0 {
   ; CHECK-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY [[COPY5]]
   ; CHECK-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; CHECK-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]]
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_POISON
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY [[COPY2]](s32)
   ; CHECK-NEXT:   [[COPY18:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
   ; CHECK-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 10
@@ -765,7 +765,7 @@ define amdgpu_kernel void @test_call_external_void_func_i16_signext(i32) #0 {
   ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr6_sgpr7
   ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[INT:%[0-9]+]]:_(p4) = G_INTRINSIC intrinsic(@llvm.amdgcn.kernarg.segment.ptr)
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s16) = G_LOAD [[DEF]](p1) :: (volatile "amdgpu-noclobber" load (s16) from `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
@@ -779,7 +779,7 @@ define amdgpu_kernel void @test_call_external_void_func_i16_signext(i32) #0 {
   ; CHECK-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY [[COPY5]]
   ; CHECK-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; CHECK-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]]
-  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_POISON
+  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY [[COPY2]](s32)
   ; CHECK-NEXT:   [[COPY18:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 10
@@ -825,7 +825,7 @@ define amdgpu_kernel void @test_call_external_void_func_i16_zeroext(i32) #0 {
   ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr6_sgpr7
   ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[INT:%[0-9]+]]:_(p4) = G_INTRINSIC intrinsic(@llvm.amdgcn.kernarg.segment.ptr)
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s16) = G_LOAD [[DEF]](p1) :: (volatile "amdgpu-noclobber" load (s16) from `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
@@ -839,7 +839,7 @@ define amdgpu_kernel void @test_call_external_void_func_i16_zeroext(i32) #0 {
   ; CHECK-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY [[COPY5]]
   ; CHECK-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; CHECK-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]]
-  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_POISON
+  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY [[COPY2]](s32)
   ; CHECK-NEXT:   [[COPY18:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 10
@@ -898,7 +898,7 @@ define amdgpu_kernel void @test_call_external_void_func_i32_imm(i32) #0 {
   ; CHECK-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY [[COPY5]]
   ; CHECK-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; CHECK-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]]
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_POISON
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY [[COPY2]](s32)
   ; CHECK-NEXT:   [[COPY18:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
   ; CHECK-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 10
@@ -993,7 +993,7 @@ define amdgpu_kernel void @test_call_external_void_func_i64_imm() #0 {
   ; CHECK-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY [[COPY5]]
   ; CHECK-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; CHECK-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]]
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_POISON
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY [[COPY2]](s32)
   ; CHECK-NEXT:   [[COPY18:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
   ; CHECK-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 10
@@ -1052,7 +1052,7 @@ define amdgpu_kernel void @test_call_external_void_func_v2i64() #0 {
   ; CHECK-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY [[COPY5]]
   ; CHECK-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; CHECK-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]]
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_POISON
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY [[COPY2]](s32)
   ; CHECK-NEXT:   [[COPY18:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
   ; CHECK-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 10
@@ -1115,7 +1115,7 @@ define amdgpu_kernel void @test_call_external_void_func_v2i64_imm() #0 {
   ; CHECK-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY [[COPY5]]
   ; CHECK-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; CHECK-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]]
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_POISON
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY [[COPY2]](s32)
   ; CHECK-NEXT:   [[COPY18:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
   ; CHECK-NEXT:   [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 10
@@ -1163,7 +1163,7 @@ define amdgpu_kernel void @test_call_external_void_func_i48(i32) #0 {
   ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr6_sgpr7
   ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[INT:%[0-9]+]]:_(p4) = G_INTRINSIC intrinsic(@llvm.amdgcn.kernarg.segment.ptr)
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s48) = G_LOAD [[DEF]](p1) :: (volatile "amdgpu-noclobber" load (s48) from `ptr addrspace(1) poison`, align 8, addrspace 1)
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
@@ -1177,7 +1177,7 @@ define amdgpu_kernel void @test_call_external_void_func_i48(i32) #0 {
   ; CHECK-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY [[COPY5]]
   ; CHECK-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; CHECK-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]]
-  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_POISON
+  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY [[COPY2]](s32)
   ; CHECK-NEXT:   [[COPY18:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 10
@@ -1225,7 +1225,7 @@ define amdgpu_kernel void @test_call_external_void_func_i48_signext(i32) #0 {
   ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr6_sgpr7
   ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[INT:%[0-9]+]]:_(p4) = G_INTRINSIC intrinsic(@llvm.amdgcn.kernarg.segment.ptr)
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s48) = G_LOAD [[DEF]](p1) :: (volatile "amdgpu-noclobber" load (s48) from `ptr addrspace(1) poison`, align 8, addrspace 1)
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
@@ -1239,7 +1239,7 @@ define amdgpu_kernel void @test_call_external_void_func_i48_signext(i32) #0 {
   ; CHECK-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY [[COPY5]]
   ; CHECK-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; CHECK-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]]
-  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_POISON
+  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY [[COPY2]](s32)
   ; CHECK-NEXT:   [[COPY18:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 10
@@ -1287,7 +1287,7 @@ define amdgpu_kernel void @test_call_external_void_func_i48_zeroext(i32) #0 {
   ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr6_sgpr7
   ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[INT:%[0-9]+]]:_(p4) = G_INTRINSIC intrinsic(@llvm.amdgcn.kernarg.segment.ptr)
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s48) = G_LOAD [[DEF]](p1) :: (volatile "amdgpu-noclobber" load (s48) from `ptr addrspace(1) poison`, align 8, addrspace 1)
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
@@ -1301,7 +1301,7 @@ define amdgpu_kernel void @test_call_external_void_func_i48_zeroext(i32) #0 {
   ; CHECK-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY [[COPY5]]
   ; CHECK-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; CHECK-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]]
-  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_POISON
+  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY [[COPY2]](s32)
   ; CHECK-NEXT:   [[COPY18:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 10
@@ -1362,7 +1362,7 @@ define amdgpu_kernel void @test_call_external_void_func_p0_imm(ptr %arg) #0 {
   ; CHECK-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY [[COPY5]]
   ; CHECK-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; CHECK-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]]
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_POISON
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY [[COPY2]](s32)
   ; CHECK-NEXT:   [[COPY18:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 10
@@ -1421,7 +1421,7 @@ define amdgpu_kernel void @test_call_external_void_func_v2p0() #0 {
   ; CHECK-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY [[COPY5]]
   ; CHECK-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; CHECK-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]]
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_POISON
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY [[COPY2]](s32)
   ; CHECK-NEXT:   [[COPY18:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
   ; CHECK-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 10
@@ -1472,7 +1472,7 @@ define amdgpu_kernel void @test_call_external_void_func_v3i64() #0 {
   ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(p1) = G_CONSTANT i64 0
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 8589934593
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s64) = G_POISON
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s64) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[C1]](s64), [[DEF]](s64)
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(<2 x s64>) = G_LOAD [[C]](p1) :: ("amdgpu-noclobber" load (<2 x s64>) from `ptr addrspace(1) null`, addrspace 1)
   ; CHECK-NEXT:   [[SHUF:%[0-9]+]]:_(<3 x s64>) = G_SHUFFLE_VECTOR [[LOAD]](<2 x s64>), [[BUILD_VECTOR]], shufflemask(0, 1, 2)
@@ -1487,7 +1487,7 @@ define amdgpu_kernel void @test_call_external_void_func_v3i64() #0 {
   ; CHECK-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY [[COPY5]]
   ; CHECK-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; CHECK-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]]
-  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_POISON
+  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY [[COPY2]](s32)
   ; CHECK-NEXT:   [[COPY18:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
   ; CHECK-NEXT:   [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 10
@@ -1557,7 +1557,7 @@ define amdgpu_kernel void @test_call_external_void_func_v4i64() #0 {
   ; CHECK-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY [[COPY5]]
   ; CHECK-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; CHECK-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]]
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_POISON
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY [[COPY2]](s32)
   ; CHECK-NEXT:   [[COPY18:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
   ; CHECK-NEXT:   [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 10
@@ -1623,7 +1623,7 @@ define amdgpu_kernel void @test_call_external_void_func_f16_imm() #0 {
   ; CHECK-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY [[COPY5]]
   ; CHECK-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; CHECK-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]]
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_POISON
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY [[COPY2]](s32)
   ; CHECK-NEXT:   [[COPY18:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
   ; CHECK-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 10
@@ -1680,7 +1680,7 @@ define amdgpu_kernel void @test_call_external_void_func_f32_imm() #0 {
   ; CHECK-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY [[COPY5]]
   ; CHECK-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; CHECK-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]]
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_POISON
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY [[COPY2]](s32)
   ; CHECK-NEXT:   [[COPY18:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
   ; CHECK-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 10
@@ -1738,7 +1738,7 @@ define amdgpu_kernel void @test_call_external_void_func_v2f32_imm() #0 {
   ; CHECK-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY [[COPY5]]
   ; CHECK-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; CHECK-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]]
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_POISON
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY [[COPY2]](s32)
   ; CHECK-NEXT:   [[COPY18:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
   ; CHECK-NEXT:   [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 10
@@ -1799,7 +1799,7 @@ define amdgpu_kernel void @test_call_external_void_func_v3f32_imm() #0 {
   ; CHECK-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY [[COPY5]]
   ; CHECK-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; CHECK-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]]
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_POISON
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY [[COPY2]](s32)
   ; CHECK-NEXT:   [[COPY18:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
   ; CHECK-NEXT:   [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 10
@@ -1863,7 +1863,7 @@ define amdgpu_kernel void @test_call_external_void_func_v5f32_imm() #0 {
   ; CHECK-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY [[COPY5]]
   ; CHECK-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; CHECK-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]]
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_POISON
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY [[COPY2]](s32)
   ; CHECK-NEXT:   [[COPY18:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
   ; CHECK-NEXT:   [[C6:%[0-9]+]]:_(s32) = G_CONSTANT i32 10
@@ -1924,7 +1924,7 @@ define amdgpu_kernel void @test_call_external_void_func_f64_imm() #0 {
   ; CHECK-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY [[COPY5]]
   ; CHECK-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; CHECK-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]]
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_POISON
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY [[COPY2]](s32)
   ; CHECK-NEXT:   [[COPY18:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
   ; CHECK-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 10
@@ -1984,7 +1984,7 @@ define amdgpu_kernel void @test_call_external_void_func_v2f64_imm() #0 {
   ; CHECK-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY [[COPY5]]
   ; CHECK-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; CHECK-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]]
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_POISON
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY [[COPY2]](s32)
   ; CHECK-NEXT:   [[COPY18:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
   ; CHECK-NEXT:   [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 10
@@ -2047,7 +2047,7 @@ define amdgpu_kernel void @test_call_external_void_func_v3f64_imm() #0 {
   ; CHECK-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY [[COPY5]]
   ; CHECK-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; CHECK-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]]
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_POISON
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY [[COPY2]](s32)
   ; CHECK-NEXT:   [[COPY18:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
   ; CHECK-NEXT:   [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 10
@@ -2097,7 +2097,7 @@ define amdgpu_kernel void @test_call_external_void_func_v2i16() #0 {
   ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr6_sgpr7
   ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(<2 x s16>) = G_LOAD [[DEF]](p1) :: ("amdgpu-noclobber" load (<2 x s16>) from `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @external_void_func_v2i16
@@ -2155,7 +2155,7 @@ define amdgpu_kernel void @test_call_external_void_func_v3i16() #0 {
   ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr6_sgpr7
   ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(<3 x s16>) = G_LOAD [[DEF]](p1) :: ("amdgpu-noclobber" load (<3 x s16>) from `ptr addrspace(1) poison`, align 8, addrspace 1)
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @external_void_func_v3i16
@@ -2168,7 +2168,7 @@ define amdgpu_kernel void @test_call_external_void_func_v3i16() #0 {
   ; CHECK-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY [[COPY5]]
   ; CHECK-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; CHECK-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]]
-  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_POISON
+  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY [[COPY2]](s32)
   ; CHECK-NEXT:   [[COPY18:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 10
@@ -2179,7 +2179,7 @@ define amdgpu_kernel void @test_call_external_void_func_v3i16() #0 {
   ; CHECK-NEXT:   [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[COPY19]], [[C2]](s32)
   ; CHECK-NEXT:   [[OR1:%[0-9]+]]:_(s32) = G_OR [[OR]], [[SHL1]]
   ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(s16), [[UV1:%[0-9]+]]:_(s16), [[UV2:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[LOAD]](<3 x s16>)
-  ; CHECK-NEXT:   [[DEF2:%[0-9]+]]:_(s16) = G_POISON
+  ; CHECK-NEXT:   [[DEF2:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s16>) = G_BUILD_VECTOR [[UV]](s16), [[UV1]](s16), [[UV2]](s16), [[DEF2]](s16)
   ; CHECK-NEXT:   [[UV3:%[0-9]+]]:_(<2 x s16>), [[UV4:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[BUILD_VECTOR]](<4 x s16>)
   ; CHECK-NEXT:   $vgpr0 = COPY [[UV3]](<2 x s16>)
@@ -2218,7 +2218,7 @@ define amdgpu_kernel void @test_call_external_void_func_v3f16() #0 {
   ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr6_sgpr7
   ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(<3 x s16>) = G_LOAD [[DEF]](p1) :: ("amdgpu-noclobber" load (<3 x s16>) from `ptr addrspace(1) poison`, align 8, addrspace 1)
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @external_void_func_v3f16
@@ -2231,7 +2231,7 @@ define amdgpu_kernel void @test_call_external_void_func_v3f16() #0 {
   ; CHECK-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY [[COPY5]]
   ; CHECK-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; CHECK-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]]
-  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_POISON
+  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY [[COPY2]](s32)
   ; CHECK-NEXT:   [[COPY18:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 10
@@ -2242,7 +2242,7 @@ define amdgpu_kernel void @test_call_external_void_func_v3f16() #0 {
   ; CHECK-NEXT:   [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[COPY19]], [[C2]](s32)
   ; CHECK-NEXT:   [[OR1:%[0-9]+]]:_(s32) = G_OR [[OR]], [[SHL1]]
   ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(s16), [[UV1:%[0-9]+]]:_(s16), [[UV2:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[LOAD]](<3 x s16>)
-  ; CHECK-NEXT:   [[DEF2:%[0-9]+]]:_(s16) = G_POISON
+  ; CHECK-NEXT:   [[DEF2:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s16>) = G_BUILD_VECTOR [[UV]](s16), [[UV1]](s16), [[UV2]](s16), [[DEF2]](s16)
   ; CHECK-NEXT:   [[UV3:%[0-9]+]]:_(<2 x s16>), [[UV4:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[BUILD_VECTOR]](<4 x s16>)
   ; CHECK-NEXT:   $vgpr0 = COPY [[UV3]](<2 x s16>)
@@ -2281,7 +2281,7 @@ define amdgpu_kernel void @test_call_external_void_func_v4i16() #0 {
   ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr6_sgpr7
   ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(<4 x s16>) = G_LOAD [[DEF]](p1) :: ("amdgpu-noclobber" load (<4 x s16>) from `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @external_void_func_v4i16
@@ -2294,7 +2294,7 @@ define amdgpu_kernel void @test_call_external_void_func_v4i16() #0 {
   ; CHECK-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY [[COPY5]]
   ; CHECK-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; CHECK-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]]
-  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_POISON
+  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY [[COPY2]](s32)
   ; CHECK-NEXT:   [[COPY18:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 10
@@ -2357,7 +2357,7 @@ define amdgpu_kernel void @test_call_external_void_func_v4i16_imm() #0 {
   ; CHECK-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY [[COPY5]]
   ; CHECK-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; CHECK-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]]
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_POISON
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY [[COPY2]](s32)
   ; CHECK-NEXT:   [[COPY18:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
   ; CHECK-NEXT:   [[C5:%[0-9]+]]:_(s32) = G_CONSTANT i32 10
@@ -2403,7 +2403,7 @@ define amdgpu_kernel void @test_call_external_void_func_v5i16() #0 {
   ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr6_sgpr7
   ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(<5 x s16>) = G_LOAD [[DEF]](p1) :: ("amdgpu-noclobber" load (<5 x s16>) from `ptr addrspace(1) poison`, align 16, addrspace 1)
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @external_void_func_v5i16
@@ -2416,7 +2416,7 @@ define amdgpu_kernel void @test_call_external_void_func_v5i16() #0 {
   ; CHECK-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY [[COPY5]]
   ; CHECK-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; CHECK-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]]
-  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_POISON
+  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY [[COPY2]](s32)
   ; CHECK-NEXT:   [[COPY18:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 10
@@ -2427,7 +2427,7 @@ define amdgpu_kernel void @test_call_external_void_func_v5i16() #0 {
   ; CHECK-NEXT:   [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[COPY19]], [[C2]](s32)
   ; CHECK-NEXT:   [[OR1:%[0-9]+]]:_(s32) = G_OR [[OR]], [[SHL1]]
   ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(s16), [[UV1:%[0-9]+]]:_(s16), [[UV2:%[0-9]+]]:_(s16), [[UV3:%[0-9]+]]:_(s16), [[UV4:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[LOAD]](<5 x s16>)
-  ; CHECK-NEXT:   [[DEF2:%[0-9]+]]:_(s16) = G_POISON
+  ; CHECK-NEXT:   [[DEF2:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<6 x s16>) = G_BUILD_VECTOR [[UV]](s16), [[UV1]](s16), [[UV2]](s16), [[UV3]](s16), [[UV4]](s16), [[DEF2]](s16)
   ; CHECK-NEXT:   [[UV5:%[0-9]+]]:_(<2 x s16>), [[UV6:%[0-9]+]]:_(<2 x s16>), [[UV7:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[BUILD_VECTOR]](<6 x s16>)
   ; CHECK-NEXT:   $vgpr0 = COPY [[UV5]](<2 x s16>)
@@ -2467,7 +2467,7 @@ define amdgpu_kernel void @test_call_external_void_func_v7i16() #0 {
   ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr6_sgpr7
   ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(<7 x s16>) = G_LOAD [[DEF]](p1) :: ("amdgpu-noclobber" load (<7 x s16>) from `ptr addrspace(1) poison`, align 16, addrspace 1)
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @external_void_func_v7i16
@@ -2480,7 +2480,7 @@ define amdgpu_kernel void @test_call_external_void_func_v7i16() #0 {
   ; CHECK-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY [[COPY5]]
   ; CHECK-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; CHECK-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]]
-  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_POISON
+  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY [[COPY2]](s32)
   ; CHECK-NEXT:   [[COPY18:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 10
@@ -2491,7 +2491,7 @@ define amdgpu_kernel void @test_call_external_void_func_v7i16() #0 {
   ; CHECK-NEXT:   [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[COPY19]], [[C2]](s32)
   ; CHECK-NEXT:   [[OR1:%[0-9]+]]:_(s32) = G_OR [[OR]], [[SHL1]]
   ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(s16), [[UV1:%[0-9]+]]:_(s16), [[UV2:%[0-9]+]]:_(s16), [[UV3:%[0-9]+]]:_(s16), [[UV4:%[0-9]+]]:_(s16), [[UV5:%[0-9]+]]:_(s16), [[UV6:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[LOAD]](<7 x s16>)
-  ; CHECK-NEXT:   [[DEF2:%[0-9]+]]:_(s16) = G_POISON
+  ; CHECK-NEXT:   [[DEF2:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s16>) = G_BUILD_VECTOR [[UV]](s16), [[UV1]](s16), [[UV2]](s16), [[UV3]](s16), [[UV4]](s16), [[UV5]](s16), [[UV6]](s16), [[DEF2]](s16)
   ; CHECK-NEXT:   [[UV7:%[0-9]+]]:_(<2 x s16>), [[UV8:%[0-9]+]]:_(<2 x s16>), [[UV9:%[0-9]+]]:_(<2 x s16>), [[UV10:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[BUILD_VECTOR]](<8 x s16>)
   ; CHECK-NEXT:   $vgpr0 = COPY [[UV7]](<2 x s16>)
@@ -2532,7 +2532,7 @@ define amdgpu_kernel void @test_call_external_void_func_v63i16() #0 {
   ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr6_sgpr7
   ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(<63 x s16>) = G_LOAD [[DEF]](p1) :: ("amdgpu-noclobber" load (<63 x s16>) from `ptr addrspace(1) poison`, align 128, addrspace 1)
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @external_void_func_v63i16
@@ -2545,7 +2545,7 @@ define amdgpu_kernel void @test_call_external_void_func_v63i16() #0 {
   ; CHECK-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY [[COPY5]]
   ; CHECK-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; CHECK-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]]
-  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_POISON
+  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY [[COPY2]](s32)
   ; CHECK-NEXT:   [[COPY18:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 10
@@ -2556,7 +2556,7 @@ define amdgpu_kernel void @test_call_external_void_func_v63i16() #0 {
   ; CHECK-NEXT:   [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[COPY19]], [[C2]](s32)
   ; CHECK-NEXT:   [[OR1:%[0-9]+]]:_(s32) = G_OR [[OR]], [[SHL1]]
   ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(s16), [[UV1:%[0-9]+]]:_(s16), [[UV2:%[0-9]+]]:_(s16), [[UV3:%[0-9]+]]:_(s16), [[UV4:%[0-9]+]]:_(s16), [[UV5:%[0-9]+]]:_(s16), [[UV6:%[0-9]+]]:_(s16), [[UV7:%[0-9]+]]:_(s16), [[UV8:%[0-9]+]]:_(s16), [[UV9:%[0-9]+]]:_(s16), [[UV10:%[0-9]+]]:_(s16), [[UV11:%[0-9]+]]:_(s16), [[UV12:%[0-9]+]]:_(s16), [[UV13:%[0-9]+]]:_(s16), [[UV14:%[0-9]+]]:_(s16), [[UV15:%[0-9]+]]:_(s16), [[UV16:%[0-9]+]]:_(s16), [[UV17:%[0-9]+]]:_(s16), [[UV18:%[0-9]+]]:_(s16), [[UV19:%[0-9]+]]:_(s16), [[UV20:%[0-9]+]]:_(s16), [[UV21:%[0-9]+]]:_(s16), [[UV22:%[0-9]+]]:_(s16), [[UV23:%[0-9]+]]:_(s16), [[UV24:%[0-9]+]]:_(s16), [[UV25:%[0-9]+]]:_(s16), [[UV26:%[0-9]+]]:_(s16), [[UV27:%[0-9]+]]:_(s16), [[UV28:%[0-9]+]]:_(s16), [[UV29:%[0-9]+]]:_(s16), [[UV30:%[0-9]+]]:_(s16), [[UV31:%[0-9]+]]:_(s16), [[UV32:%[0-9]+]]:_(s16), [[UV33:%[0-9]+]]:_(s16), [[UV34:%[0-9]+]]:_(s16), [[UV35:%[0-9]+]]:_(s16), [[UV36:%[0-9]+]]:_(s16), [[UV37:%[0-9]+]]:_(s16), [[UV38:%[0-9]+]]:_(s16), [[UV39:%[0-9]+]]:_(s16), [[UV40:%[0-9]+]]:_(s16), [[UV41:%[0-9]+]]:_(s16), [[UV42:%[0-9]+]]:_(s16), [[UV43:%[0-9]+]]:_(s16), [[UV44:%[0-9]+]]:_(s16), [[UV45:%[0-9]+]]:_(s16), [[UV46:%[0-9]+]]:_(s16), [[UV47:%[0-9]+]]:_(s16), [[UV48:%[0-9]+]]:_(s16), [[UV49:%[0-9]+]]:_(s16), [[UV50:%[0-9]+]]:_(s16), [[UV51:%[0-9]+]]:_(s16), [[UV52:%[0-9]+]]:_(s16), [[UV53:%[0-9]+]]:_(s16), [[UV54:%[0-9]+]]:_(s16), [[UV55:%[0-9]+]]:_(s16), [[UV56:%[0-9]+]]:_(s16), [[UV57:%[0-9]+]]:_(s16), [[UV58:%[0-9]+]]:_(s16), [[UV59:%[0-9]+]]:_(s16), [[UV60:%[0-9]+]]:_(s16), [[UV61:%[0-9]+]]:_(s16), [[UV62:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[LOAD]](<63 x s16>)
-  ; CHECK-NEXT:   [[DEF2:%[0-9]+]]:_(s16) = G_POISON
+  ; CHECK-NEXT:   [[DEF2:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<64 x s16>) = G_BUILD_VECTOR [[UV]](s16), [[UV1]](s16), [[UV2]](s16), [[UV3]](s16), [[UV4]](s16), [[UV5]](s16), [[UV6]](s16), [[UV7]](s16), [[UV8]](s16), [[UV9]](s16), [[UV10]](s16), [[UV11]](s16), [[UV12]](s16), [[UV13]](s16), [[UV14]](s16), [[UV15]](s16), [[UV16]](s16), [[UV17]](s16), [[UV18]](s16), [[UV19]](s16), [[UV20]](s16), [[UV21]](s16), [[UV22]](s16), [[UV23]](s16), [[UV24]](s16), [[UV25]](s16), [[UV26]](s16), [[UV27]](s16), [[UV28]](s16), [[UV29]](s16), [[UV30]](s16), [[UV31]](s16), [[UV32]](s16), [[UV33]](s16), [[UV34]](s16), [[UV35]](s16), [[UV36]](s16), [[UV37]](s16), [[UV38]](s16), [[UV39]](s16), [[UV40]](s16), [[UV41]](s16), [[UV42]](s16), [[UV43]](s16), [[UV44]](s16), [[UV45]](s16), [[UV46]](s16), [[UV47]](s16), [[UV48]](s16), [[UV49]](s16), [[UV50]](s16), [[UV51]](s16), [[UV52]](s16), [[UV53]](s16), [[UV54]](s16), [[UV55]](s16), [[UV56]](s16), [[UV57]](s16), [[UV58]](s16), [[UV59]](s16), [[UV60]](s16), [[UV61]](s16), [[UV62]](s16), [[DEF2]](s16)
   ; CHECK-NEXT:   [[UV63:%[0-9]+]]:_(<2 x s16>), [[UV64:%[0-9]+]]:_(<2 x s16>), [[UV65:%[0-9]+]]:_(<2 x s16>), [[UV66:%[0-9]+]]:_(<2 x s16>), [[UV67:%[0-9]+]]:_(<2 x s16>), [[UV68:%[0-9]+]]:_(<2 x s16>), [[UV69:%[0-9]+]]:_(<2 x s16>), [[UV70:%[0-9]+]]:_(<2 x s16>), [[UV71:%[0-9]+]]:_(<2 x s16>), [[UV72:%[0-9]+]]:_(<2 x s16>), [[UV73:%[0-9]+]]:_(<2 x s16>), [[UV74:%[0-9]+]]:_(<2 x s16>), [[UV75:%[0-9]+]]:_(<2 x s16>), [[UV76:%[0-9]+]]:_(<2 x s16>), [[UV77:%[0-9]+]]:_(<2 x s16>), [[UV78:%[0-9]+]]:_(<2 x s16>), [[UV79:%[0-9]+]]:_(<2 x s16>), [[UV80:%[0-9]+]]:_(<2 x s16>), [[UV81:%[0-9]+]]:_(<2 x s16>), [[UV82:%[0-9]+]]:_(<2 x s16>), [[UV83:%[0-9]+]]:_(<2 x s16>), [[UV84:%[0-9]+]]:_(<2 x s16>), [[UV85:%[0-9]+]]:_(<2 x s16>), [[UV86:%[0-9]+]]:_(<2 x s16>), [[UV87:%[0-9]+]]:_(<2 x s16>), [[UV88:%[0-9]+]]:_(<2 x s16>), [[UV89:%[0-9]+]]:_(<2 x s16>), [[UV90:%[0-9]+]]:_(<2 x s16>), [[UV91:%[0-9]+]]:_(<2 x s16>), [[UV92:%[0-9]+]]:_(<2 x s16>), [[UV93:%[0-9]+]]:_(<2 x s16>), [[UV94:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[BUILD_VECTOR]](<64 x s16>)
   ; CHECK-NEXT:   [[AMDGPU_WAVE_ADDRESS:%[0-9]+]]:_(p5) = G_AMDGPU_WAVE_ADDRESS $sp_reg
@@ -2628,7 +2628,7 @@ define amdgpu_kernel void @test_call_external_void_func_v65i16() #0 {
   ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr6_sgpr7
   ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(<65 x s16>) = G_LOAD [[DEF]](p1) :: ("amdgpu-noclobber" load (<65 x s16>) from `ptr addrspace(1) poison`, align 256, addrspace 1)
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @external_void_func_v65i16
@@ -2641,7 +2641,7 @@ define amdgpu_kernel void @test_call_external_void_func_v65i16() #0 {
   ; CHECK-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY [[COPY5]]
   ; CHECK-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; CHECK-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]]
-  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_POISON
+  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY [[COPY2]](s32)
   ; CHECK-NEXT:   [[COPY18:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 10
@@ -2652,7 +2652,7 @@ define amdgpu_kernel void @test_call_external_void_func_v65i16() #0 {
   ; CHECK-NEXT:   [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[COPY19]], [[C2]](s32)
   ; CHECK-NEXT:   [[OR1:%[0-9]+]]:_(s32) = G_OR [[OR]], [[SHL1]]
   ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(s16), [[UV1:%[0-9]+]]:_(s16), [[UV2:%[0-9]+]]:_(s16), [[UV3:%[0-9]+]]:_(s16), [[UV4:%[0-9]+]]:_(s16), [[UV5:%[0-9]+]]:_(s16), [[UV6:%[0-9]+]]:_(s16), [[UV7:%[0-9]+]]:_(s16), [[UV8:%[0-9]+]]:_(s16), [[UV9:%[0-9]+]]:_(s16), [[UV10:%[0-9]+]]:_(s16), [[UV11:%[0-9]+]]:_(s16), [[UV12:%[0-9]+]]:_(s16), [[UV13:%[0-9]+]]:_(s16), [[UV14:%[0-9]+]]:_(s16), [[UV15:%[0-9]+]]:_(s16), [[UV16:%[0-9]+]]:_(s16), [[UV17:%[0-9]+]]:_(s16), [[UV18:%[0-9]+]]:_(s16), [[UV19:%[0-9]+]]:_(s16), [[UV20:%[0-9]+]]:_(s16), [[UV21:%[0-9]+]]:_(s16), [[UV22:%[0-9]+]]:_(s16), [[UV23:%[0-9]+]]:_(s16), [[UV24:%[0-9]+]]:_(s16), [[UV25:%[0-9]+]]:_(s16), [[UV26:%[0-9]+]]:_(s16), [[UV27:%[0-9]+]]:_(s16), [[UV28:%[0-9]+]]:_(s16), [[UV29:%[0-9]+]]:_(s16), [[UV30:%[0-9]+]]:_(s16), [[UV31:%[0-9]+]]:_(s16), [[UV32:%[0-9]+]]:_(s16), [[UV33:%[0-9]+]]:_(s16), [[UV34:%[0-9]+]]:_(s16), [[UV35:%[0-9]+]]:_(s16), [[UV36:%[0-9]+]]:_(s16), [[UV37:%[0-9]+]]:_(s16), [[UV38:%[0-9]+]]:_(s16), [[UV39:%[0-9]+]]:_(s16), [[UV40:%[0-9]+]]:_(s16), [[UV41:%[0-9]+]]:_(s16), [[UV42:%[0-9]+]]:_(s16), [[UV43:%[0-9]+]]:_(s16), [[UV44:%[0-9]+]]:_(s16), [[UV45:%[0-9]+]]:_(s16), [[UV46:%[0-9]+]]:_(s16), [[UV47:%[0-9]+]]:_(s16), [[UV48:%[0-9]+]]:_(s16), [[UV49:%[0-9]+]]:_(s16), [[UV50:%[0-9]+]]:_(s16), [[UV51:%[0-9]+]]:_(s16), [[UV52:%[0-9]+]]:_(s16), [[UV53:%[0-9]+]]:_(s16), [[UV54:%[0-9]+]]:_(s16), [[UV55:%[0-9]+]]:_(s16), [[UV56:%[0-9]+]]:_(s16), [[UV57:%[0-9]+]]:_(s16), [[UV58:%[0-9]+]]:_(s16), [[UV59:%[0-9]+]]:_(s16), [[UV60:%[0-9]+]]:_(s16), [[UV61:%[0-9]+]]:_(s16), [[UV62:%[0-9]+]]:_(s16), [[UV63:%[0-9]+]]:_(s16), [[UV64:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[LOAD]](<65 x s16>)
-  ; CHECK-NEXT:   [[DEF2:%[0-9]+]]:_(s16) = G_POISON
+  ; CHECK-NEXT:   [[DEF2:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<66 x s16>) = G_BUILD_VECTOR [[UV]](s16), [[UV1]](s16), [[UV2]](s16), [[UV3]](s16), [[UV4]](s16), [[UV5]](s16), [[UV6]](s16), [[UV7]](s16), [[UV8]](s16), [[UV9]](s16), [[UV10]](s16), [[UV11]](s16), [[UV12]](s16), [[UV13]](s16), [[UV14]](s16), [[UV15]](s16), [[UV16]](s16), [[UV17]](s16), [[UV18]](s16), [[UV19]](s16), [[UV20]](s16), [[UV21]](s16), [[UV22]](s16), [[UV23]](s16), [[UV24]](s16), [[UV25]](s16), [[UV26]](s16), [[UV27]](s16), [[UV28]](s16), [[UV29]](s16), [[UV30]](s16), [[UV31]](s16), [[UV32]](s16), [[UV33]](s16), [[UV34]](s16), [[UV35]](s16), [[UV36]](s16), [[UV37]](s16), [[UV38]](s16), [[UV39]](s16), [[UV40]](s16), [[UV41]](s16), [[UV42]](s16), [[UV43]](s16), [[UV44]](s16), [[UV45]](s16), [[UV46]](s16), [[UV47]](s16), [[UV48]](s16), [[UV49]](s16), [[UV50]](s16), [[UV51]](s16), [[UV52]](s16), [[UV53]](s16), [[UV54]](s16), [[UV55]](s16), [[UV56]](s16), [[UV57]](s16), [[UV58]](s16), [[UV59]](s16), [[UV60]](s16), [[UV61]](s16), [[UV62]](s16), [[UV63]](s16), [[UV64]](s16), [[DEF2]](s16)
   ; CHECK-NEXT:   [[UV65:%[0-9]+]]:_(<2 x s16>), [[UV66:%[0-9]+]]:_(<2 x s16>), [[UV67:%[0-9]+]]:_(<2 x s16>), [[UV68:%[0-9]+]]:_(<2 x s16>), [[UV69:%[0-9]+]]:_(<2 x s16>), [[UV70:%[0-9]+]]:_(<2 x s16>), [[UV71:%[0-9]+]]:_(<2 x s16>), [[UV72:%[0-9]+]]:_(<2 x s16>), [[UV73:%[0-9]+]]:_(<2 x s16>), [[UV74:%[0-9]+]]:_(<2 x s16>), [[UV75:%[0-9]+]]:_(<2 x s16>), [[UV76:%[0-9]+]]:_(<2 x s16>), [[UV77:%[0-9]+]]:_(<2 x s16>), [[UV78:%[0-9]+]]:_(<2 x s16>), [[UV79:%[0-9]+]]:_(<2 x s16>), [[UV80:%[0-9]+]]:_(<2 x s16>), [[UV81:%[0-9]+]]:_(<2 x s16>), [[UV82:%[0-9]+]]:_(<2 x s16>), [[UV83:%[0-9]+]]:_(<2 x s16>), [[UV84:%[0-9]+]]:_(<2 x s16>), [[UV85:%[0-9]+]]:_(<2 x s16>), [[UV86:%[0-9]+]]:_(<2 x s16>), [[UV87:%[0-9]+]]:_(<2 x s16>), [[UV88:%[0-9]+]]:_(<2 x s16>), [[UV89:%[0-9]+]]:_(<2 x s16>), [[UV90:%[0-9]+]]:_(<2 x s16>), [[UV91:%[0-9]+]]:_(<2 x s16>), [[UV92:%[0-9]+]]:_(<2 x s16>), [[UV93:%[0-9]+]]:_(<2 x s16>), [[UV94:%[0-9]+]]:_(<2 x s16>), [[UV95:%[0-9]+]]:_(<2 x s16>), [[UV96:%[0-9]+]]:_(<2 x s16>), [[UV97:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[BUILD_VECTOR]](<66 x s16>)
   ; CHECK-NEXT:   [[AMDGPU_WAVE_ADDRESS:%[0-9]+]]:_(p5) = G_AMDGPU_WAVE_ADDRESS $sp_reg
@@ -2727,7 +2727,7 @@ define amdgpu_kernel void @test_call_external_void_func_v66i16() #0 {
   ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr6_sgpr7
   ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(<66 x s16>) = G_LOAD [[DEF]](p1) :: ("amdgpu-noclobber" load (<66 x s16>) from `ptr addrspace(1) poison`, align 256, addrspace 1)
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @external_void_func_v66i16
@@ -2740,7 +2740,7 @@ define amdgpu_kernel void @test_call_external_void_func_v66i16() #0 {
   ; CHECK-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY [[COPY5]]
   ; CHECK-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; CHECK-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]]
-  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_POISON
+  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY [[COPY2]](s32)
   ; CHECK-NEXT:   [[COPY18:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 10
@@ -2823,7 +2823,7 @@ define amdgpu_kernel void @test_call_external_void_func_v2f16() #0 {
   ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr6_sgpr7
   ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(<2 x s16>) = G_LOAD [[DEF]](p1) :: ("amdgpu-noclobber" load (<2 x s16>) from `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @external_void_func_v2f16
@@ -2836,7 +2836,7 @@ define amdgpu_kernel void @test_call_external_void_func_v2f16() #0 {
   ; CHECK-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY [[COPY5]]
   ; CHECK-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; CHECK-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]]
-  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_POISON
+  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY [[COPY2]](s32)
   ; CHECK-NEXT:   [[COPY18:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 10
@@ -2881,7 +2881,7 @@ define amdgpu_kernel void @test_call_external_void_func_v2i32() #0 {
   ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr6_sgpr7
   ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(<2 x s32>) = G_LOAD [[DEF]](p1) :: ("amdgpu-noclobber" load (<2 x s32>) from `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @external_void_func_v2i32
@@ -2894,7 +2894,7 @@ define amdgpu_kernel void @test_call_external_void_func_v2i32() #0 {
   ; CHECK-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY [[COPY5]]
   ; CHECK-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; CHECK-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]]
-  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_POISON
+  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY [[COPY2]](s32)
   ; CHECK-NEXT:   [[COPY18:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 10
@@ -2955,7 +2955,7 @@ define amdgpu_kernel void @test_call_external_void_func_v2i32_imm() #0 {
   ; CHECK-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY [[COPY5]]
   ; CHECK-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; CHECK-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]]
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_POISON
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY [[COPY2]](s32)
   ; CHECK-NEXT:   [[COPY18:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
   ; CHECK-NEXT:   [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 10
@@ -3017,7 +3017,7 @@ define amdgpu_kernel void @test_call_external_void_func_v3i32_imm(i32) #0 {
   ; CHECK-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY [[COPY5]]
   ; CHECK-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; CHECK-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]]
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_POISON
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY [[COPY2]](s32)
   ; CHECK-NEXT:   [[COPY18:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
   ; CHECK-NEXT:   [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 10
@@ -3081,7 +3081,7 @@ define amdgpu_kernel void @test_call_external_void_func_v3i32_i32(i32) #0 {
   ; CHECK-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY [[COPY5]]
   ; CHECK-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; CHECK-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]]
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_POISON
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY [[COPY2]](s32)
   ; CHECK-NEXT:   [[COPY18:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
   ; CHECK-NEXT:   [[C5:%[0-9]+]]:_(s32) = G_CONSTANT i32 10
@@ -3129,7 +3129,7 @@ define amdgpu_kernel void @test_call_external_void_func_v4i32() #0 {
   ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr6_sgpr7
   ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(<4 x s32>) = G_LOAD [[DEF]](p1) :: ("amdgpu-noclobber" load (<4 x s32>) from `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @external_void_func_v4i32
@@ -3142,7 +3142,7 @@ define amdgpu_kernel void @test_call_external_void_func_v4i32() #0 {
   ; CHECK-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY [[COPY5]]
   ; CHECK-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; CHECK-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]]
-  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_POISON
+  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY [[COPY2]](s32)
   ; CHECK-NEXT:   [[COPY18:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 10
@@ -3207,7 +3207,7 @@ define amdgpu_kernel void @test_call_external_void_func_v4i32_imm() #0 {
   ; CHECK-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY [[COPY5]]
   ; CHECK-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; CHECK-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]]
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_POISON
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY [[COPY2]](s32)
   ; CHECK-NEXT:   [[COPY18:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
   ; CHECK-NEXT:   [[C5:%[0-9]+]]:_(s32) = G_CONSTANT i32 10
@@ -3272,7 +3272,7 @@ define amdgpu_kernel void @test_call_external_void_func_v5i32_imm() #0 {
   ; CHECK-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY [[COPY5]]
   ; CHECK-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; CHECK-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]]
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_POISON
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY [[COPY2]](s32)
   ; CHECK-NEXT:   [[COPY18:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
   ; CHECK-NEXT:   [[C6:%[0-9]+]]:_(s32) = G_CONSTANT i32 10
@@ -3321,7 +3321,7 @@ define amdgpu_kernel void @test_call_external_void_func_v8i32() #0 {
   ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr6_sgpr7
   ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p4) = G_POISON
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p4) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (invariant load (p1) from `ptr addrspace(4) poison`, addrspace 4)
   ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(<8 x s32>) = G_LOAD [[LOAD]](p1) :: ("amdgpu-noclobber" load (<8 x s32>) from %ir.ptr, addrspace 1)
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
@@ -3335,7 +3335,7 @@ define amdgpu_kernel void @test_call_external_void_func_v8i32() #0 {
   ; CHECK-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY [[COPY5]]
   ; CHECK-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; CHECK-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]]
-  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_POISON
+  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY [[COPY2]](s32)
   ; CHECK-NEXT:   [[COPY18:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 10
@@ -3409,7 +3409,7 @@ define amdgpu_kernel void @test_call_external_void_func_v8i32_imm() #0 {
   ; CHECK-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY [[COPY5]]
   ; CHECK-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; CHECK-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]]
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_POISON
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY [[COPY2]](s32)
   ; CHECK-NEXT:   [[COPY18:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
   ; CHECK-NEXT:   [[C9:%[0-9]+]]:_(s32) = G_CONSTANT i32 10
@@ -3461,7 +3461,7 @@ define amdgpu_kernel void @test_call_external_void_func_v16i32() #0 {
   ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr6_sgpr7
   ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p4) = G_POISON
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p4) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (invariant load (p1) from `ptr addrspace(4) poison`, addrspace 4)
   ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(<16 x s32>) = G_LOAD [[LOAD]](p1) :: ("amdgpu-noclobber" load (<16 x s32>) from %ir.ptr, addrspace 1)
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
@@ -3475,7 +3475,7 @@ define amdgpu_kernel void @test_call_external_void_func_v16i32() #0 {
   ; CHECK-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY [[COPY5]]
   ; CHECK-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; CHECK-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]]
-  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_POISON
+  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY [[COPY2]](s32)
   ; CHECK-NEXT:   [[COPY18:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 10
@@ -3537,7 +3537,7 @@ define amdgpu_kernel void @test_call_external_void_func_v32i32() #0 {
   ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr6_sgpr7
   ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p4) = G_POISON
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p4) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (invariant load (p1) from `ptr addrspace(4) poison`, addrspace 4)
   ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(<32 x s32>) = G_LOAD [[LOAD]](p1) :: ("amdgpu-noclobber" load (<32 x s32>) from %ir.ptr, addrspace 1)
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
@@ -3551,7 +3551,7 @@ define amdgpu_kernel void @test_call_external_void_func_v32i32() #0 {
   ; CHECK-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY [[COPY5]]
   ; CHECK-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; CHECK-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]]
-  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_POISON
+  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY [[COPY2]](s32)
   ; CHECK-NEXT:   [[COPY18:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 10
@@ -3632,8 +3632,8 @@ define amdgpu_kernel void @test_call_external_void_func_v32i32_i32(i32) #0 {
   ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr6_sgpr7
   ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p4) = G_POISON
-  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(p1) = G_POISON
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p4) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[INT:%[0-9]+]]:_(p4) = G_INTRINSIC intrinsic(@llvm.amdgcn.kernarg.segment.ptr)
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (invariant load (p1) from `ptr addrspace(4) poison`, addrspace 4)
   ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(<32 x s32>) = G_LOAD [[LOAD]](p1) :: ("amdgpu-noclobber" load (<32 x s32>) from %ir.ptr0, addrspace 1)
@@ -3649,7 +3649,7 @@ define amdgpu_kernel void @test_call_external_void_func_v32i32_i32(i32) #0 {
   ; CHECK-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY [[COPY5]]
   ; CHECK-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; CHECK-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]]
-  ; CHECK-NEXT:   [[DEF2:%[0-9]+]]:_(s32) = G_POISON
+  ; CHECK-NEXT:   [[DEF2:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY [[COPY2]](s32)
   ; CHECK-NEXT:   [[COPY18:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 10
@@ -3734,8 +3734,8 @@ define amdgpu_kernel void @test_call_external_void_func_v32i32_i8_i8_i16() #0 {
   ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr6_sgpr7
   ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p4) = G_POISON
-  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(p1) = G_POISON
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p4) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (invariant load (p1) from `ptr addrspace(4) poison`, addrspace 4)
   ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(<32 x s32>) = G_LOAD [[LOAD]](p1) :: ("amdgpu-noclobber" load (<32 x s32>) from %ir.ptr0, addrspace 1)
   ; CHECK-NEXT:   [[LOAD2:%[0-9]+]]:_(s8) = G_LOAD [[DEF1]](p1) :: ("amdgpu-noclobber" load (s8) from `ptr addrspace(1) poison`, addrspace 1)
@@ -3751,7 +3751,7 @@ define amdgpu_kernel void @test_call_external_void_func_v32i32_i8_i8_i16() #0 {
   ; CHECK-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY [[COPY5]]
   ; CHECK-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; CHECK-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]]
-  ; CHECK-NEXT:   [[DEF2:%[0-9]+]]:_(s32) = G_POISON
+  ; CHECK-NEXT:   [[DEF2:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY [[COPY2]](s32)
   ; CHECK-NEXT:   [[COPY18:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 10
@@ -3846,8 +3846,8 @@ define amdgpu_kernel void @test_call_external_void_func_v32i32_p3_p5() #0 {
   ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr6_sgpr7
   ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p4) = G_POISON
-  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(p1) = G_POISON
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p4) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (invariant load (p1) from `ptr addrspace(4) poison`, addrspace 4)
   ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(<32 x s32>) = G_LOAD [[LOAD]](p1) :: ("amdgpu-noclobber" load (<32 x s32>) from %ir.ptr0, addrspace 1)
   ; CHECK-NEXT:   [[LOAD2:%[0-9]+]]:_(p3) = G_LOAD [[DEF1]](p1) :: ("amdgpu-noclobber" load (p3) from `ptr addrspace(1) poison`, addrspace 1)
@@ -3863,7 +3863,7 @@ define amdgpu_kernel void @test_call_external_void_func_v32i32_p3_p5() #0 {
   ; CHECK-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY [[COPY5]]
   ; CHECK-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; CHECK-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]]
-  ; CHECK-NEXT:   [[DEF2:%[0-9]+]]:_(s32) = G_POISON
+  ; CHECK-NEXT:   [[DEF2:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY [[COPY2]](s32)
   ; CHECK-NEXT:   [[COPY18:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 10
@@ -3952,7 +3952,7 @@ define amdgpu_kernel void @test_call_external_void_func_struct_i8_i32() #0 {
   ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr6_sgpr7
   ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p4) = G_POISON
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p4) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (invariant load (p1) from `ptr addrspace(4) poison`, addrspace 4)
   ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(s8) = G_LOAD [[LOAD]](p1) :: ("amdgpu-noclobber" load (s8) from %ir.ptr0, align 4, addrspace 1)
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
@@ -3969,7 +3969,7 @@ define amdgpu_kernel void @test_call_external_void_func_struct_i8_i32() #0 {
   ; CHECK-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY [[COPY5]]
   ; CHECK-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; CHECK-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]]
-  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_POISON
+  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY [[COPY2]](s32)
   ; CHECK-NEXT:   [[COPY18:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
   ; CHECK-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 10
@@ -4006,7 +4006,7 @@ define amdgpu_kernel void @test_call_external_void_func_struct_i8_i32() #0 {
 define amdgpu_gfx void @test_gfx_call_external_void_func_struct_i8_i32() #0 {
   ; CHECK-LABEL: name: test_gfx_call_external_void_func_struct_i8_i32
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p4) = G_POISON
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p4) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (invariant load (p1) from `ptr addrspace(4) poison`, addrspace 4)
   ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(s8) = G_LOAD [[LOAD]](p1) :: (load (s8) from %ir.ptr0, align 4, addrspace 1)
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
@@ -4032,7 +4032,7 @@ define amdgpu_gfx void @test_gfx_call_external_void_func_struct_i8_i32() #0 {
 define amdgpu_gfx void @test_gfx_call_external_void_func_struct_i8_i32_inreg() #0 {
   ; CHECK-LABEL: name: test_gfx_call_external_void_func_struct_i8_i32_inreg
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p4) = G_POISON
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p4) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (invariant load (p1) from `ptr addrspace(4) poison`, addrspace 4)
   ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(s8) = G_LOAD [[LOAD]](p1) :: (load (s8) from %ir.ptr0, align 4, addrspace 1)
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
@@ -4090,7 +4090,7 @@ define amdgpu_kernel void @test_call_external_void_func_byval_struct_i8_i32() #0
   ; CHECK-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY [[COPY5]]
   ; CHECK-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; CHECK-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]]
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_POISON
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY [[COPY2]](s32)
   ; CHECK-NEXT:   [[COPY18:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
   ; CHECK-NEXT:   [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 10
@@ -4254,7 +4254,7 @@ define amdgpu_kernel void @test_call_external_void_func_v2i8() #0 {
   ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr6_sgpr7
   ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p4) = G_POISON
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p4) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (invariant load (p1) from `ptr addrspace(4) poison`, addrspace 4)
   ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(<2 x s8>) = G_LOAD [[LOAD]](p1) :: ("amdgpu-noclobber" load (<2 x s8>) from %ir.ptr, addrspace 1)
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
@@ -4268,7 +4268,7 @@ define amdgpu_kernel void @test_call_external_void_func_v2i8() #0 {
   ; CHECK-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY [[COPY5]]
   ; CHECK-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; CHECK-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]]
-  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_POISON
+  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY [[COPY2]](s32)
   ; CHECK-NEXT:   [[COPY18:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 10
@@ -4320,7 +4320,7 @@ define amdgpu_kernel void @test_call_external_void_func_v3i8() #0 {
   ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr6_sgpr7
   ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p4) = G_POISON
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p4) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (invariant load (p1) from `ptr addrspace(4) poison`, addrspace 4)
   ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(<3 x s8>) = G_LOAD [[LOAD]](p1) :: ("amdgpu-noclobber" load (<3 x s8>) from %ir.ptr, align 4, addrspace 1)
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
@@ -4334,7 +4334,7 @@ define amdgpu_kernel void @test_call_external_void_func_v3i8() #0 {
   ; CHECK-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY [[COPY5]]
   ; CHECK-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; CHECK-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]]
-  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_POISON
+  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY [[COPY2]](s32)
   ; CHECK-NEXT:   [[COPY18:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 10
@@ -4389,7 +4389,7 @@ define amdgpu_kernel void @test_call_external_void_func_v4i8() #0 {
   ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr6_sgpr7
   ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p4) = G_POISON
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p4) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (invariant load (p1) from `ptr addrspace(4) poison`, addrspace 4)
   ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(<4 x s8>) = G_LOAD [[LOAD]](p1) :: ("amdgpu-noclobber" load (<4 x s8>) from %ir.ptr, addrspace 1)
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
@@ -4403,7 +4403,7 @@ define amdgpu_kernel void @test_call_external_void_func_v4i8() #0 {
   ; CHECK-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY [[COPY5]]
   ; CHECK-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; CHECK-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]]
-  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_POISON
+  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY [[COPY2]](s32)
   ; CHECK-NEXT:   [[COPY18:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 10
@@ -4461,7 +4461,7 @@ define amdgpu_kernel void @test_call_external_void_func_v8i8() #0 {
   ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr6_sgpr7
   ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p4) = G_POISON
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p4) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (invariant load (p1) from `ptr addrspace(4) poison`, addrspace 4)
   ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(<8 x s8>) = G_LOAD [[LOAD]](p1) :: ("amdgpu-noclobber" load (<8 x s8>) from %ir.ptr, addrspace 1)
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
@@ -4475,7 +4475,7 @@ define amdgpu_kernel void @test_call_external_void_func_v8i8() #0 {
   ; CHECK-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY [[COPY5]]
   ; CHECK-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; CHECK-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]]
-  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_POISON
+  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY [[COPY2]](s32)
   ; CHECK-NEXT:   [[COPY18:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 10
@@ -4545,7 +4545,7 @@ define amdgpu_kernel void @test_call_external_void_func_v16i8() #0 {
   ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr6_sgpr7
   ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p4) = G_POISON
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p4) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (invariant load (p1) from `ptr addrspace(4) poison`, addrspace 4)
   ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(<16 x s8>) = G_LOAD [[LOAD]](p1) :: ("amdgpu-noclobber" load (<16 x s8>) from %ir.ptr, addrspace 1)
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
@@ -4559,7 +4559,7 @@ define amdgpu_kernel void @test_call_external_void_func_v16i8() #0 {
   ; CHECK-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY [[COPY5]]
   ; CHECK-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; CHECK-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]]
-  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_POISON
+  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY [[COPY2]](s32)
   ; CHECK-NEXT:   [[COPY18:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 10
@@ -4669,7 +4669,7 @@ define amdgpu_kernel void @stack_passed_arg_alignment_v32i32_f64(<32 x i32> %val
   ; CHECK-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY [[COPY5]]
   ; CHECK-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; CHECK-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]]
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_POISON
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY [[COPY2]](s32)
   ; CHECK-NEXT:   [[COPY18:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
   ; CHECK-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 10
@@ -5318,13 +5318,13 @@ define amdgpu_ps void @amdgpu_ps_call_default_cc() {
   ; CHECK: bb.1.main_body:
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(p0) = G_CONSTANT i64 0
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p4) = G_POISON
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p4) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p4) = COPY [[DEF]](p4)
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(p4) = G_CONSTANT i64 0
   ; CHECK-NEXT:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(p4) = COPY [[C1]](p4)
-  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(s64) = G_POISON
-  ; CHECK-NEXT:   [[DEF2:%[0-9]+]]:_(s32) = G_POISON
+  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(s64) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF2:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY [[DEF2]](s32)
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY [[DEF2]](s32)
   ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY [[DEF2]](s32)
@@ -5781,7 +5781,7 @@ define void @test_call_external_void_func_v3f16_inreg(<3 x half> inreg %arg) #0 
   ; CHECK-NEXT:   [[COPY18:%[0-9]+]]:_(s32) = COPY [[COPY1]]
   ; CHECK-NEXT:   [[COPY19:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
   ; CHECK-NEXT:   [[UV4:%[0-9]+]]:_(s16), [[UV5:%[0-9]+]]:_(s16), [[UV6:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[BUILD_VECTOR]](<3 x s16>)
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s16) = G_POISON
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s16>) = G_BUILD_VECTOR [[UV4]](s16), [[UV5]](s16), [[UV6]](s16), [[DEF]](s16)
   ; CHECK-NEXT:   [[UV7:%[0-9]+]]:_(<2 x s16>), [[UV8:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[BUILD_VECTOR1]](<4 x s16>)
   ; CHECK-NEXT:   [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[UV7]](<2 x s16>)

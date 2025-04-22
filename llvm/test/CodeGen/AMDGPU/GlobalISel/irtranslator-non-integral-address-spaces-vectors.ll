@@ -47,7 +47,7 @@ define <2 x ptr addrspace(7)> @gep_vector_splat(<2 x ptr addrspace(7)> %ptrs, i6
   ; CHECK-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $vgpr10
   ; CHECK-NEXT:   [[COPY11:%[0-9]+]]:_(s32) = COPY $vgpr11
   ; CHECK-NEXT:   [[MV2:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY10]](s32), [[COPY11]](s32)
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(<2 x s64>) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(<2 x s64>) = G_POISON
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; CHECK-NEXT:   [[IVEC:%[0-9]+]]:_(<2 x s64>) = G_INSERT_VECTOR_ELT [[DEF]], [[MV2]](s64), [[C]](s32)
   ; CHECK-NEXT:   [[SHUF:%[0-9]+]]:_(<2 x s64>) = G_SHUFFLE_VECTOR [[IVEC]](<2 x s64>), [[DEF]], shufflemask(0, 0)

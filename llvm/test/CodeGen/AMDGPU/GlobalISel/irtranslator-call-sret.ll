@@ -39,7 +39,7 @@ define amdgpu_kernel void @test_call_external_void_func_sret_struct_i8_i32_byval
   ; GCN-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY [[COPY5]]
   ; GCN-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[COPY4]]
   ; GCN-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY [[COPY3]]
-  ; GCN-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_POISON
+  ; GCN-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
   ; GCN-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY [[COPY2]](s32)
   ; GCN-NEXT:   [[COPY18:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
   ; GCN-NEXT:   [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 10
