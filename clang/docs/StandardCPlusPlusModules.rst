@@ -780,8 +780,8 @@ for the BMI being produced. This ensures that build systems are not required to 
 transitively imported modules when deciding whether to recompile.
 
 What is considered to be a potential contributory BMIs is currently unspecified.
-However, it is a severe bug for a BMI to remain unchanged following an observable change
-that affects its consumers.
+However, it is a severe bug for a BMI to remain unchanged following an
+observable change in the module source files that affects the module consumers.
 
 Build systems may utilize this optimization by doing an update-if-changed operation to the BMI
 that is consumed from the BMI that is output by the compiler.
