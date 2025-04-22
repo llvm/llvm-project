@@ -8383,10 +8383,10 @@ define amdgpu_kernel void @uniform_or_i16(ptr addrspace(1) %result, ptr addrspac
 ; GFX7LESS:       ; %bb.0:
 ; GFX7LESS-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
 ; GFX7LESS-NEXT:    s_load_dword s6, s[4:5], 0xd
-; GFX7LESS-NEXT:    v_mov_b32_e32 v0, 0
-; GFX7LESS-NEXT:    v_mbcnt_lo_u32_b32_e64 v1, exec_lo, 0
-; GFX7LESS-NEXT:    v_mbcnt_hi_u32_b32_e32 v1, exec_hi, v1
-; GFX7LESS-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v1
+; GFX7LESS-NEXT:    v_mbcnt_lo_u32_b32_e64 v0, exec_lo, 0
+; GFX7LESS-NEXT:    v_mbcnt_hi_u32_b32_e32 v0, exec_hi, v0
+; GFX7LESS-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
+; GFX7LESS-NEXT:                       ; implicit-def: $vgpr0
 ; GFX7LESS-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GFX7LESS-NEXT:    s_cbranch_execz .LBB15_2
 ; GFX7LESS-NEXT:  ; %bb.1:
@@ -8731,10 +8731,10 @@ define amdgpu_kernel void @uniform_add_i16(ptr addrspace(1) %result, ptr addrspa
 ; GFX7LESS-NEXT:    s_mov_b64 s[6:7], exec
 ; GFX7LESS-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
 ; GFX7LESS-NEXT:    s_load_dword s10, s[4:5], 0xd
-; GFX7LESS-NEXT:    v_mov_b32_e32 v0, 0
-; GFX7LESS-NEXT:    v_mbcnt_lo_u32_b32_e64 v1, s6, 0
-; GFX7LESS-NEXT:    v_mbcnt_hi_u32_b32_e32 v4, s7, v1
+; GFX7LESS-NEXT:    v_mbcnt_lo_u32_b32_e64 v0, s6, 0
+; GFX7LESS-NEXT:    v_mbcnt_hi_u32_b32_e32 v4, s7, v0
 ; GFX7LESS-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v4
+; GFX7LESS-NEXT:                               ; implicit-def: $vgpr0
 ; GFX7LESS-NEXT:    s_and_saveexec_b64 s[8:9], vcc
 ; GFX7LESS-NEXT:    s_cbranch_execz .LBB16_4
 ; GFX7LESS-NEXT:  ; %bb.1:
