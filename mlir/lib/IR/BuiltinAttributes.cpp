@@ -1306,7 +1306,8 @@ int64_t DenseElementsAttr::getNumElements() const {
 
 /// Utility method to write a range of APInt values to a buffer.
 template <typename APRangeT>
-static void writeAPIntsToBuffer(size_t storageWidth, SmallVector<char> &data,
+static void writeAPIntsToBuffer(size_t storageWidth,
+                                SmallVectorImpl<char> &data,
                                 APRangeT &&values) {
   size_t numValues = llvm::size(values);
   data.resize(llvm::divideCeil(storageWidth * numValues, CHAR_BIT));
