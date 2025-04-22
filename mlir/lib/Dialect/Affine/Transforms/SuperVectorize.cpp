@@ -1217,6 +1217,21 @@ static Operation *vectorizeAffineLoad(AffineLoadOp loadOp,
     indices.append(mapOperands.begin(), mapOperands.end());
   }
 
+  for (auto &kvp : state.vecLoopToVecDim) {
+    AffineForOp forOp = cast<AffineForOp>(kvp.first);
+    auto invariants =
+        affine::getInvariantAccesses(forOp.getInductionVar(), indices);
+    unsigned nonInvariant = 0;
+    for (Value idx : indices)
+      if (!invariants.count(idx))
+        ++nonInvariant;
+    if (nonInvariant > 1) {
+      LLVM_DEBUG(dbgs() << "\n[early-vect] Bail out: loop IV "
+                        << forOp.getInductionVar() << " drives " << nonInvariant
+                        << " indices (must be ≤1)\n");
+      return nullptr;
+    }
+  }
   // Compute permutation map using the information of new vector loops.
   auto permutationMap = makePermutationMap(state.builder.getInsertionBlock(),
                                            indices, state.vecLoopToVecDim);
@@ -1262,6 +1277,21 @@ static Operation *vectorizeAffineStore(AffineStoreOp storeOp,
   else
     indices.append(mapOperands.begin(), mapOperands.end());
 
+  for (auto &kvp : state.vecLoopToVecDim) {
+    AffineForOp forOp = cast<AffineForOp>(kvp.first);
+    auto invariants =
+        affine::getInvariantAccesses(forOp.getInductionVar(), indices);
+    unsigned nonInvariant = 0;
+    for (Value idx : indices)
+      if (!invariants.count(idx))
+        ++nonInvariant;
+    if (nonInvariant > 1) {
+      LLVM_DEBUG(dbgs() << "\n[early-vect] Bail out: loop IV "
+                        << forOp.getInductionVar() << " drives " << nonInvariant
+                        << " indices (must be ≤1)\n");
+      return nullptr;
+    }
+  }
   // Compute permutation map using the information of new vector loops.
   auto permutationMap = makePermutationMap(state.builder.getInsertionBlock(),
                                            indices, state.vecLoopToVecDim);
