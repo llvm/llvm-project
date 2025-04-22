@@ -1190,6 +1190,7 @@ module cxx03_std_private_concepts_constructible         [system] {
 }
 module cxx03_std_private_concepts_convertible_to        [system] { header "__concepts/convertible_to.h" }
 module cxx03_std_private_concepts_copyable              [system] { header "__concepts/copyable.h" }
+module cxx03_std_private_concepts_core_convertible_to   [system] { header "__concepts/core_convertible_to.h" }
 module cxx03_std_private_concepts_derived_from          [system] { header "__concepts/derived_from.h" }
 module cxx03_std_private_concepts_destructible          [system] {
   header "__concepts/destructible.h"

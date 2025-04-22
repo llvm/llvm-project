@@ -1075,6 +1075,7 @@ module std [system] {
     module constructible            { header "__concepts/constructible.h" }
     module convertible_to           { header "__concepts/convertible_to.h" }
     module copyable                 { header "__concepts/copyable.h" }
+    module core_convertible_to      { header "__concepts/core_convertible_to.h" }
     module derived_from             { header "__concepts/derived_from.h" }
     module destructible             { header "__concepts/destructible.h" }
     module different_from           { header "__concepts/different_from.h" }
