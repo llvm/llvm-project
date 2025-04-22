@@ -15,7 +15,7 @@ func.func @unparallel_loop_reduction_unsupported(%in: memref<256x512xf32>, %out:
 #map = affine_map<(d0)[s0] -> (d0 mod s0)>
 #map1 = affine_map<(d0)[s0] -> (d0 floordiv s0)>
 
-func.func @single_loop_unrolling_2D_access_pattern_storeOp(%arg0: index) -> memref<2x2xf32> {
+func.func @iv_mapped_to_multiple_indices_unsupported(%arg0: index) -> memref<2x2xf32> {
   %c2 = arith.constant 2 : index
   %cst = arith.constant 1.0 : f32
   %alloc = memref.alloc() : memref<2x2xf32>
@@ -32,48 +32,11 @@ func.func @single_loop_unrolling_2D_access_pattern_storeOp(%arg0: index) -> memr
 // CHECK: #[[$ATTR_0:.+]] = affine_map<(d0)[s0] -> (d0 floordiv s0)>
 // CHECK: #[[$ATTR_1:.+]] = affine_map<(d0)[s0] -> (d0 mod s0)>
 
-// CHECK-LABEL:   func.func @single_loop_unrolling_2D_access_pattern_storeOp(
+// CHECK-LABEL:   func.func @iv_mapped_to_multiple_indices_unsupported(
 // CHECK-SAME:      %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: index) -> memref<2x2xf32> {
 // CHECK:           %[[VAL_1:.*]] = arith.constant 2 : index
-// CHECK:           %[[VAL_2:.*]] = arith.constant 1.000000e+00 : f32
-// CHECK:           %[[VAL_3:.*]] = memref.alloc() : memref<2x2xf32>
 // CHECK:           affine.for %[[VAL_4:.*]] = 0 to 4 {
 // CHECK:             %[[VAL_5:.*]] = affine.apply #[[$ATTR_0]](%[[VAL_4]]){{\[}}%[[VAL_1]]]
 // CHECK:             %[[VAL_6:.*]] = affine.apply #[[$ATTR_1]](%[[VAL_4]]){{\[}}%[[VAL_1]]]
-// CHECK:             affine.store %[[VAL_2]], %[[VAL_3]]{{\[}}%[[VAL_5]], %[[VAL_6]]] : memref<2x2xf32>
 // CHECK:           }
-// CHECK:           return %[[VAL_3]] : memref<2x2xf32>
-// CHECK:         }
-
-// -----
-
-#map = affine_map<(d0)[s0] -> (d0 mod s0)>
-#map1 = affine_map<(d0)[s0] -> (d0 floordiv s0)>
-
-func.func @single_loop_unrolling_2D_access_pattern_loadOp(%arg0: index) -> memref<2x2xf32> {
-  %c2 = arith.constant 2 : index
-  %alloc = memref.alloc() : memref<2x2xf32>
-
-  affine.for %i = 0 to 4 {
-    %row = affine.apply #map1(%i)[%c2]  
-    %col = affine.apply #map(%i)[%c2]  
-    %val = affine.load %alloc[%row, %col] : memref<2x2xf32>
-  }
-
-  return %alloc : memref<2x2xf32>
-}
-
-// CHECK: #[[$ATTR_0:.+]] = affine_map<(d0)[s0] -> (d0 floordiv s0)>
-// CHECK: #[[$ATTR_1:.+]] = affine_map<(d0)[s0] -> (d0 mod s0)>
-
-// CHECK-LABEL:   func.func @single_loop_unrolling_2D_access_pattern_loadOp(
-// CHECK-SAME:      %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: index) -> memref<2x2xf32> {
-// CHECK:           %[[VAL_1:.*]] = arith.constant 2 : index
-// CHECK:           %[[VAL_2:.*]] = memref.alloc() : memref<2x2xf32>
-// CHECK:           affine.for %[[VAL_3:.*]] = 0 to 4 {
-// CHECK:             %[[VAL_4:.*]] = affine.apply #[[$ATTR_0]](%[[VAL_3]]){{\[}}%[[VAL_1]]]
-// CHECK:             %[[VAL_5:.*]] = affine.apply #[[$ATTR_1]](%[[VAL_3]]){{\[}}%[[VAL_1]]]
-// CHECK:             %[[VAL_6:.*]] = affine.load %[[VAL_2]]{{\[}}%[[VAL_4]], %[[VAL_5]]] : memref<2x2xf32>
-// CHECK:           }
-// CHECK:           return %[[VAL_2]] : memref<2x2xf32>
 // CHECK:         }

@@ -1185,6 +1185,31 @@ static Value vectorizeOperand(Value operand, VectorizationState &state) {
   return nullptr;
 }
 
+/// Returns true if any vectorized loop IV drives more than one index.
+static bool isIVMappedToMultipleIndices(
+    ArrayRef<Value> indices,
+    const DenseMap<Operation *, unsigned> &loopToVectorDim) {
+  for (auto &kvp : loopToVectorDim) {
+    AffineForOp forOp = cast<AffineForOp>(kvp.first);
+    // Find which indices are invariant w.r.t. this loop IV.
+    auto invariants =
+        affine::getInvariantAccesses(forOp.getInductionVar(), indices);
+    // Count how many vary (i.e. are not invariant).
+    unsigned nonInvariant = 0;
+    for (Value idx : indices)
+      if (!invariants.count(idx))
+        ++nonInvariant;
+    // Bail if more than one index varies for this single loop IV.
+    if (nonInvariant > 1) {
+      LLVM_DEBUG(dbgs() << "[early‑vect] Bail out: IV "
+                        << forOp.getInductionVar() << " drives " << nonInvariant
+                        << " indices\n");
+      return true;
+    }
+  }
+  return false;
+}
+
 /// Vectorizes an affine load with the vectorization strategy in 'state' by
 /// generating a 'vector.transfer_read' op with the proper permutation map
 /// inferred from the indices of the load. The new 'vector.transfer_read' is
@@ -1217,21 +1242,9 @@ static Operation *vectorizeAffineLoad(AffineLoadOp loadOp,
     indices.append(mapOperands.begin(), mapOperands.end());
   }
 
-  for (auto &kvp : state.vecLoopToVecDim) {
-    AffineForOp forOp = cast<AffineForOp>(kvp.first);
-    auto invariants =
-        affine::getInvariantAccesses(forOp.getInductionVar(), indices);
-    unsigned nonInvariant = 0;
-    for (Value idx : indices)
-      if (!invariants.count(idx))
-        ++nonInvariant;
-    if (nonInvariant > 1) {
-      LLVM_DEBUG(dbgs() << "\n[early-vect] Bail out: loop IV "
-                        << forOp.getInductionVar() << " drives " << nonInvariant
-                        << " indices (must be ≤1)\n");
-      return nullptr;
-    }
-  }
+  if (isIVMappedToMultipleIndices(indices, state.vecLoopToVecDim))
+    return nullptr;
+
   // Compute permutation map using the information of new vector loops.
   auto permutationMap = makePermutationMap(state.builder.getInsertionBlock(),
                                            indices, state.vecLoopToVecDim);
@@ -1277,21 +1290,9 @@ static Operation *vectorizeAffineStore(AffineStoreOp storeOp,
   else
     indices.append(mapOperands.begin(), mapOperands.end());
 
-  for (auto &kvp : state.vecLoopToVecDim) {
-    AffineForOp forOp = cast<AffineForOp>(kvp.first);
-    auto invariants =
-        affine::getInvariantAccesses(forOp.getInductionVar(), indices);
-    unsigned nonInvariant = 0;
-    for (Value idx : indices)
-      if (!invariants.count(idx))
-        ++nonInvariant;
-    if (nonInvariant > 1) {
-      LLVM_DEBUG(dbgs() << "\n[early-vect] Bail out: loop IV "
-                        << forOp.getInductionVar() << " drives " << nonInvariant
-                        << " indices (must be ≤1)\n");
-      return nullptr;
-    }
-  }
+  if (isIVMappedToMultipleIndices(indices, state.vecLoopToVecDim))
+    return nullptr;
+
   // Compute permutation map using the information of new vector loops.
   auto permutationMap = makePermutationMap(state.builder.getInsertionBlock(),
                                            indices, state.vecLoopToVecDim);
