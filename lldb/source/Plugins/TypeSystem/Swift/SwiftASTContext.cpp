@@ -2555,6 +2555,10 @@ SwiftASTContext::CreateInstance(lldb::LanguageType language, Module &module,
 
   // Apply source path remappings found in the module's dSYM.
   swift_ast_sp->RemapClangImporterOptions(module.GetSourceMappingList());
+
+  // Apply source path remappings found in the target settings.
+  if (target)
+    swift_ast_sp->RemapClangImporterOptions(target->GetSourcePathMap());
   swift_ast_sp->FilterClangImporterOptions(
       swift_ast_sp->GetClangImporterOptions().ExtraArgs, swift_ast_sp.get());
 
