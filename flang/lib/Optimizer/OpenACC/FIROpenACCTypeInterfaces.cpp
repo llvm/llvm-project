@@ -196,13 +196,12 @@ OpenACCMappableModel<fir::SequenceType>::generateAccBounds(
           firBuilder.createIntegerConstant(loc, builder.getIndexType(), 1);
 
       mlir::Value shape;
-      if (auto declareOp = mlir::dyn_cast_if_present<fir::DeclareOp>(
-              varPtr.getDefiningOp())) {
+      if (auto declareOp =
+              mlir::dyn_cast_if_present<fir::DeclareOp>(varPtr.getDefiningOp()))
         shape = declareOp.getShape();
-      } else if (auto declareOp = mlir::dyn_cast_if_present<hlfir::DeclareOp>(
-                     varPtr.getDefiningOp())) {
+      else if (auto declareOp = mlir::dyn_cast_if_present<hlfir::DeclareOp>(
+                   varPtr.getDefiningOp()))
         shape = declareOp.getShape();
-      }
 
       const bool strideIncludeLowerExtent = true;
 
