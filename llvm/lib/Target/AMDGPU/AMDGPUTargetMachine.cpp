@@ -1299,8 +1299,6 @@ void AMDGPUPassConfig::addIRPasses() {
       addPass(createLICMPass());
   }
 
-  //addPass(AMDGPUTargetVerifierPass());
-
   TargetPassConfig::addIRPasses();
 
   // EarlyCSE is not always strong enough to clean up what LSR produces. For
@@ -2043,8 +2041,6 @@ void AMDGPUCodeGenPassBuilder::addIRPasses(AddIRPass &addPass) const {
   // but EarlyCSE can do neither of them.
   if (isPassEnabled(EnableScalarIRPasses))
     addEarlyCSEOrGVNPass(addPass);
-
-  addPass(AMDGPUTargetVerifierPass());
 }
 
 void AMDGPUCodeGenPassBuilder::addCodeGenPrepare(AddIRPass &addPass) const {
