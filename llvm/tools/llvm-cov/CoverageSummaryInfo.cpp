@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CoverageSummaryInfo.h"
+#include "llvm/ProfileData/Coverage/CoverageMapping.h"
 
 using namespace llvm;
 using namespace coverage;
@@ -48,12 +49,13 @@ sumBranchExpansions(const CoverageMapping &CM,
   return BranchCoverage;
 }
 
-auto sumMCDCPairs(const ArrayRef<MCDCRecord> &Records) {
+auto
+sumMCDCPairs(const ArrayRef<MCDCRecord> &Records, const int32_t CountFlags) {
   size_t NumPairs = 0, CoveredPairs = 0;
   for (const auto &Record : Records) {
     const auto NumConditions = Record.getNumConditions();
     for (unsigned C = 0; C < NumConditions; C++) {
-      if (!Record.isCondFolded(C)) {
+      if(Record.getCondResult(C) & CountFlags){
         ++NumPairs;
         if (Record.isConditionIndependencePairCovered(C))
           ++CoveredPairs;
@@ -86,25 +88,27 @@ sumRegions(ArrayRef<CountedRegion> CodeRegions, const CoverageData &CD) {
   }
 
   return {RegionCoverageInfo(CoveredRegions, NumCodeRegions),
+    
           LineCoverageInfo(CoveredLines, NumLines)};
 }
 
 CoverageDataSummary::CoverageDataSummary(const CoverageData &CD,
-                                         ArrayRef<CountedRegion> CodeRegions) {
+                                         ArrayRef<CountedRegion> CodeRegions,const int32_t MCDCCountedFlags) {
   std::tie(RegionCoverage, LineCoverage) = sumRegions(CodeRegions, CD);
   BranchCoverage = sumBranches(CD.getBranches());
-  MCDCCoverage = sumMCDCPairs(CD.getMCDCRecords());
+  MCDCCoverage = sumMCDCPairs(CD.getMCDCRecords(),
+  MCDCCountedFlags);
 }
 
 FunctionCoverageSummary
 FunctionCoverageSummary::get(const CoverageMapping &CM,
-                             const coverage::FunctionRecord &Function) {
+                             const coverage::FunctionRecord &Function,const int32_t MCDCCountedFlags) {
   CoverageData CD = CM.getCoverageForFunction(Function);
 
   auto Summary =
       FunctionCoverageSummary(Function.Name, Function.ExecutionCount);
 
-  Summary += CoverageDataSummary(CD, Function.CountedRegions);
+  Summary += CoverageDataSummary(CD, Function.CountedRegions, MCDCCountedFlags);
 
   // Compute the branch coverage, including branches from expansions.
   Summary.BranchCoverage += sumBranchExpansions(CM, CD.getExpansions());

@@ -3,7 +3,7 @@
 // RUN: llvm-profdata merge %S/Inputs/mcdc-macro.proftext -o %t.profdata
 // RUN: llvm-cov show --show-expansions --show-branches=count --show-mcdc %S/Inputs/mcdc-macro.o -instr-profile %t.profdata --compilation-dir=%S/Inputs | FileCheck %s
 
-// CHECK:  |  |  |  Branch (2:11): [Folded - Ignored]
+// CHECK:  |  |  |  Branch (2:11): [True: 1, Folded]
 // CHECK:  |  |  |  Branch (3:11): [True: 1, False: 0]
 // CHECK:  |  |  |  Branch (3:23): [True: 1, False: 0]
 // CHECK:  |  Branch (9:7): [True: 1, False: 0]
@@ -32,7 +32,7 @@
 // CHECK-NEXT:  |
 // CHECK-NEXT:  ------------------
 
-// CHECK:  |  |  |  Branch (2:11): [Folded - Ignored]
+// CHECK:  |  |  |  Branch (2:11): [True: 1, Folded]
 // CHECK:  |  Branch (11:7): [True: 1, False: 0]
 // CHECK-NEXT:  ------------------
 // CHECK-NEXT:  |---> MC/DC Decision Region (11:7) to (11:13)
@@ -53,7 +53,7 @@
 // CHECK-NEXT:  ------------------
 
 // CHECK:  |  |  |  Branch (1:11): [True: 1, False: 0]
-// CHECK:  |  |  |  Branch (2:11): [Folded - Ignored]
+// CHECK:  |  |  |  Branch (2:11): [True: 0, Folded]
 // CHECK:  |  |  |  |  |  Branch (3:11): [True: 0, False: 0]
 // CHECK:  |  |  |  |  |  Branch (3:23): [True: 0, False: 0]
 // CHECK:  |  Branch (13:7): [True: 1, False: 0]

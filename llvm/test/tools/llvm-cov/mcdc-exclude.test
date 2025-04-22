@@ -1,0 +1,56 @@
+// Test visualization of MC/DC constructs for constant-folded condition masking with different counted states.
+
+// RUN: llvm-profdata merge %S/Inputs/mcdc-exclude.proftext -o %t.profdata
+// RUN: llvm-cov show --show-mcdc %S/Inputs/mcdc-exclude.o -instr-profile %t.profdata -path-equivalence=.,%S/Inputs | FileCheck %s -check-prefix=DEFAULTCASE
+// RUN: llvm-cov report --show-mcdc-summary %S/Inputs/mcdc-exclude.o -instr-profile %t.profdata -show-functions -path-equivalence=.,%S/Inputs %S/Inputs/mcdc-exclude.cpp | FileCheck %s -check-prefix=REPORTDEFAULT
+
+// DEFAULTCASE:  |  MC/DC Coverage for Decision: 25.00%
+
+// REPORTDEFAULT: TOTAL {{.*}} 4       3  25.00%
+
+// RUN: llvm-cov show --show-mcdc --mcdc-exclude=uncoverable %S/Inputs/mcdc-exclude.o -instr-profile %t.profdata -path-equivalence=.,%S/Inputs | FileCheck %s -check-prefix=EXCLUDEUNCOVERABECASE
+// RUN: llvm-cov report --show-mcdc-summary --mcdc-exclude=uncoverable %S/Inputs/mcdc-exclude.o -instr-profile %t.profdata -show-functions -path-equivalence=.,%S/Inputs %S/Inputs/mcdc-exclude.cpp | FileCheck %s -check-prefix=REPORTEXCLUDEUNCOVERABLE
+
+// EXCLUDEUNCOVERABECASE:  |  MC/DC Coverage for Decision: 16.67%
+
+// REPORTEXCLUDEUNCOVERABLE: TOTAL {{.*}} 6       5  16.67%
+
+// RUN: llvm-cov show --show-mcdc --mcdc-exclude=constant %S/Inputs/mcdc-exclude.o -instr-profile %t.profdata -path-equivalence=.,%S/Inputs | FileCheck %s -check-prefix=EXCLUDECONSTANTCASE
+// RUN: llvm-cov report --show-mcdc-summary --mcdc-exclude=constant %S/Inputs/mcdc-exclude.o -instr-profile %t.profdata -show-functions -path-equivalence=.,%S/Inputs %S/Inputs/mcdc-exclude.cpp | FileCheck %s -check-prefix=REPORTEXCLUDECONSTANT
+
+// EXCLUDECONSTANTCASE:  |  MC/DC Coverage for Decision: 25.00%
+
+// REPORTEXCLUDECONSTANT: TOTAL {{.*}} 4       3  25.00%
+
+// RUN: llvm-cov show --show-mcdc --mcdc-exclude=unreachable %S/Inputs/mcdc-exclude.o -instr-profile %t.profdata -path-equivalence=.,%S/Inputs | FileCheck %s -check-prefix=EXCLUDEUNREACHABLECASE
+// RUN: llvm-cov report --show-mcdc-summary --mcdc-exclude=unreachable %S/Inputs/mcdc-exclude.o -instr-profile %t.profdata -show-functions -path-equivalence=.,%S/Inputs %S/Inputs/mcdc-exclude.cpp | FileCheck %s -check-prefix=REPORTEXCLUDEUNREACHABLE
+
+// EXCLUDEUNREACHABLECASE:  |  MC/DC Coverage for Decision: 20.00%
+
+// REPORTEXCLUDEUNREACHABLE: TOTAL {{.*}} 5       4  20.00%
+
+// RUN: llvm-cov show --show-mcdc --mcdc-exclude=none %S/Inputs/mcdc-exclude.o -instr-profile %t.profdata -path-equivalence=.,%S/Inputs | FileCheck %s -check-prefix=INCLUDEALLCASE
+// RUN: llvm-cov report --show-mcdc-summary --mcdc-exclude=none %S/Inputs/mcdc-exclude.o -instr-profile %t.profdata -show-functions -path-equivalence=.,%S/Inputs %S/Inputs/mcdc-exclude.cpp | FileCheck %s -check-prefix=REPORTALL
+
+// INCLUDEALLCASE:  |  MC/DC Coverage for Decision: 14.29%
+
+// REPORTALL: TOTAL {{.*}} 7       6  14.29%
+Instructions for regenerating the test:
+
+cd %S/Inputs # Or copy files into the working directory
+
+clang++ -c -Os \
+    -fcoverage-compilation-dir=. -mllvm -enable-name-compression=false \
+    -fcoverage-mcdc -fprofile-instr-generate -fcoverage-mapping \
+    mcdc-exclude.cpp
+
+# Instructions for regenerating proftext
+
+for x in mcdc-exclude; do (
+  clang++ -fprofile-instr-generate $x.o -o $x
+  find -name '*.profraw' | xargs rm -f
+  export LLVM_PROFILE_FILE=$x-%p.profraw
+  ./$x 0 1
+  llvm-profdata merge --sparse -o $x.profdata $(find -name '*.profraw')
+  llvm-profdata merge --text -o $x.proftext $x.profdata
+); done
