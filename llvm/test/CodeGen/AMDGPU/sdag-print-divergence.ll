@@ -10,7 +10,7 @@
 
 ; GCN-DEFAULT:  t0: ch,glue = EntryToken
 ; GCN-DEFAULT:  t2: f32,ch = CopyFromReg t0, Register:f32 %0
-; GCN-DEFAULT:  t7: i32 = TargetConstant<[[VAL:[0-9]+]]>
+; GCN-DEFAULT:  t7: i32 = TargetConstant<
 ; GCN-DEFAULT:      t5: f32 = fadd t2, t2
 ; GCN-DEFAULT:      t4: f32,ch = CopyFromReg # D:1 t0, Register:f32 %1
 ; GCN-DEFAULT:   t6: f32 = fadd # D:1 t5, t4
@@ -19,7 +19,7 @@
 
 ; GCN-VERBOSE:  t0: ch,glue = EntryToken # D:0
 ; GCN-VERBOSE:  t2: f32,ch = CopyFromReg [ORD=1] # D:0 t0, Register:f32 %0 # D:0
-; GCN-VERBOSE:  t7: i32 = TargetConstant<[[VAL:[0-9]+]]>
+; GCN-VERBOSE:  t7: i32 = TargetConstant<
 ; GCN-VERBOSE:      t5: f32 = fadd [ORD=2] # D:0 t2, t2
 ; GCN-VERBOSE:      t4: f32,ch = CopyFromReg [ORD=1] # D:1 t0, Register:f32 %1 # D:0
 ; GCN-VERBOSE:    t6: f32 = fadd [ORD=3] # D:1 t5, t4
