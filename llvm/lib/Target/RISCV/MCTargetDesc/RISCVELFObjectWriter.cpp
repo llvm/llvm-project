@@ -75,8 +75,8 @@ unsigned RISCVELFObjectWriter::getRelocType(MCContext &Ctx,
 
   // Extract the relocation type from the fixup kind, after applying STT_TLS as
   // needed.
-  if (Kind >= FirstRelocationKind)
-    return Kind - FirstRelocationKind;
+  if (mc::isRelocation(Fixup.getKind()))
+    return Kind;
 
   if (IsPCRel) {
     switch (Kind) {

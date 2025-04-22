@@ -153,7 +153,7 @@ isSafeToConvert(const RecordDecl *rd, CIRGenTypes &cgt,
   // out, don't do it.  This includes virtual base classes which get laid out
   // when a class is translated, even though they aren't embedded by-value into
   // the class.
-  if (const CXXRecordDecl *crd = dyn_cast<CXXRecordDecl>(rd)) {
+  if (isa<CXXRecordDecl>(rd)) {
     assert(!cir::MissingFeatures::cxxSupport());
     cgt.getCGModule().errorNYI(rd->getSourceRange(),
                                "isSafeToConvert: CXXRecordDecl");
@@ -237,7 +237,7 @@ mlir::Type CIRGenTypes::convertRecordDeclType(const clang::RecordDecl *rd) {
   assert(insertResult && "isSafeToCovert() should have caught this.");
 
   // Force conversion of non-virtual base classes recursively.
-  if (const auto *cxxRecordDecl = dyn_cast<CXXRecordDecl>(rd)) {
+  if (isa<CXXRecordDecl>(rd)) {
     cgm.errorNYI(rd->getSourceRange(), "CXXRecordDecl");
   }
 
@@ -395,8 +395,7 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
   case Type::ConstantArray: {
     const ConstantArrayType *arrTy = cast<ConstantArrayType>(ty);
     mlir::Type elemTy = convertTypeForMem(arrTy->getElementType());
-    resultType = cir::ArrayType::get(builder.getContext(), elemTy,
-                                     arrTy->getSize().getZExtValue());
+    resultType = cir::ArrayType::get(elemTy, arrTy->getSize().getZExtValue());
     break;
   }
 

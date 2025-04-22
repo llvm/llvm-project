@@ -153,6 +153,20 @@ public:
                                     ParentDC);
   }
 
+  bool VisitCXXNewExpr(CXXNewExpr *E) {
+    if (E->isGlobalNew() || !E->getOperatorNew())
+      return true;
+    return IndexCtx.handleReference(E->getOperatorNew(), E->getBeginLoc(),
+                                    Parent, ParentDC);
+  }
+
+  bool VisitCXXDeleteExpr(CXXDeleteExpr *E) {
+    if (E->isGlobalDelete() || !E->getOperatorDelete())
+      return true;
+    return IndexCtx.handleReference(E->getOperatorDelete(), E->getBeginLoc(),
+                                    Parent, ParentDC);
+  }
+
   bool VisitLabelStmt(LabelStmt *S) {
     if (IndexCtx.shouldIndexFunctionLocalSymbols())
       return IndexCtx.handleDecl(S->getDecl());
