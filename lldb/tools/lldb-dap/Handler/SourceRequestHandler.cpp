@@ -43,7 +43,7 @@ SourceRequestHandler::Run(const protocol::SourceArguments &args) const {
 
   lldb::SBInstructionList insts = frame.GetSymbol().GetInstructions(dap.target);
   lldb::SBStream stream;
-  insts.GetDescription(stream);
+  insts.GetDescription(stream, frame);
 
   return protocol::SourceResponseBody{/*content=*/stream.GetData(),
                                       /*mimeType=*/"text/x-lldb.disassembly"};

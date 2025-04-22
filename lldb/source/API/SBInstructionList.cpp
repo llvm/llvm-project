@@ -15,8 +15,10 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Host/StreamFile.h"
 #include "lldb/Symbol/SymbolContext.h"
+#include "lldb/Target/ExecutionContext.h"
 #include "lldb/Utility/Instrumentation.h"
 #include "lldb/Utility/Stream.h"
+#include <memory>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -114,7 +116,7 @@ void SBInstructionList::Print(FILE *out) {
   if (out == nullptr)
     return;
   StreamFile stream(out, false);
-  GetDescription(stream);
+  GetDescription(stream, nullptr);
 }
 
 void SBInstructionList::Print(SBFile out) {
@@ -122,7 +124,7 @@ void SBInstructionList::Print(SBFile out) {
   if (!out.IsValid())
     return;
   StreamFile stream(out.m_opaque_sp);
-  GetDescription(stream);
+  GetDescription(stream, nullptr);
 }
 
 void SBInstructionList::Print(FileSP out_sp) {
@@ -130,15 +132,21 @@ void SBInstructionList::Print(FileSP out_sp) {
   if (!out_sp || !out_sp->IsValid())
     return;
   StreamFile stream(out_sp);
-  GetDescription(stream);
+  GetDescription(stream, nullptr);
 }
 
 bool SBInstructionList::GetDescription(lldb::SBStream &stream) {
   LLDB_INSTRUMENT_VA(this, stream);
-  return GetDescription(stream.ref());
+  return GetDescription(stream.ref(), nullptr);
 }
 
-bool SBInstructionList::GetDescription(Stream &sref) {
+bool SBInstructionList::GetDescription(lldb::SBStream &stream,
+                                       lldb::SBFrame &frame) {
+  LLDB_INSTRUMENT_VA(this, stream);
+  return GetDescription(stream.ref(), &frame);
+}
+
+bool SBInstructionList::GetDescription(Stream &sref, lldb::SBFrame *frame) {
 
   if (m_opaque_sp) {
     size_t num_instructions = GetSize();
@@ -148,9 +156,14 @@ bool SBInstructionList::GetDescription(Stream &sref) {
       const uint32_t max_opcode_byte_size =
           m_opaque_sp->GetInstructionList().GetMaxOpcocdeByteSize();
       FormatEntity::Entry format;
-      FormatEntity::Parse("${addr}: ", format);
+      FormatEntity::Parse("${addr-file-or-load}: ", format);
       SymbolContext sc;
       SymbolContext prev_sc;
+
+      std::shared_ptr<ExecutionContext> exec_ctx;
+      if (nullptr != frame) {
+        exec_ctx = std::make_shared<ExecutionContext>(frame->GetFrameSP());
+      }
 
       // Expected address of the next instruction. Used to print an empty line
       // for non-contiguous blocks of insns.
@@ -172,8 +185,8 @@ bool SBInstructionList::GetDescription(Stream &sref) {
         if (next_addr && *next_addr != addr)
           sref.EOL();
         inst->Dump(&sref, max_opcode_byte_size, true, false,
-                   /*show_control_flow_kind=*/false, nullptr, &sc, &prev_sc,
-                   &format, 0);
+                   /*show_control_flow_kind=*/false, exec_ctx.get(), &sc,
+                   &prev_sc, &format, 0);
         sref.EOL();
         next_addr = addr;
         next_addr->Slide(inst->GetOpcode().GetByteSize());
