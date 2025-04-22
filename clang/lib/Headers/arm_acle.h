@@ -34,7 +34,7 @@ void __dmb(unsigned int);
 void __dsb(unsigned int);
 void __isb(unsigned int);
 */
-  
+
 /* 7.4 Hints */
 /*
 void __wfi(void);
