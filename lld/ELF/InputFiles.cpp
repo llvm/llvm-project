@@ -540,15 +540,6 @@ uint32_t ObjFile<ELFT>::getSectionIndex(const Elf_Sym &sym) const {
       this);
 }
 
-// Forward declarations:
-template <typename ELFT>
-static void parseGnuPropertyNote(Ctx &, ELFFileBase &, uint32_t,
-                                 ArrayRef<uint8_t> &, const uint8_t *,
-                                 ArrayRef<uint8_t> * = nullptr);
-template <typename ELFT>
-static gnuPropertiesInfo readGnuProperty(Ctx &, const InputSection &,
-                                         ObjFile<ELFT> &);
-
 template <class ELFT>
 static void
 handleAArch64BAAndGnuProperties(const ELFT &tPointer, Ctx &ctx, bool isBE,
@@ -602,6 +593,11 @@ handleAArch64BAAndGnuProperties(const ELFT &tPointer, Ctx &ctx, bool isBE,
     tPointer->andFeatures = baInfo.AndFeatures;
   }
 }
+
+// Forward declaration:
+template <typename ELFT>
+static gnuPropertiesInfo readGnuProperty(Ctx &, const InputSection &,
+                                         ObjFile<ELFT> &);
 
 template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
   object::ELFFile<ELFT> obj = this->getObj();
@@ -1034,7 +1030,7 @@ template <typename ELFT>
 static void parseGnuPropertyNote(Ctx &ctx, ELFFileBase &f,
                                  uint32_t featureAndType,
                                  ArrayRef<uint8_t> &desc, const uint8_t *base,
-                                 ArrayRef<uint8_t> *data) {
+                                 ArrayRef<uint8_t> *data = nullptr) {
   auto err = [&](const uint8_t *place) -> ELFSyncStream {
     auto diag = Err(ctx);
     diag << &f << ":(" << ".note.gnu.property+0x"
