@@ -187,6 +187,19 @@ good_unknown_overwrite:
         ret
         .size good_unknown_overwrite, .-good_unknown_overwrite
 
+// This is a false positive: when a general-purpose register is written to as
+// a 32-bit register, its top 32 bits are zeroed, but according to LLVM
+// representation, the instruction only overwrites the Wn register.
+        .globl  good_unknown_wreg_overwrite
+        .type   good_unknown_wreg_overwrite,@function
+good_unknown_wreg_overwrite:
+// CHECK-LABEL: GS-PAUTH: authentication oracle found in function good_unknown_wreg_overwrite, basic block {{[^,]+}}, at address
+// CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:      autia   x0, x1
+        autia   x0, x1
+        mul     w0, w1, w2
+        ret
+        .size good_unknown_wreg_overwrite, .-good_unknown_wreg_overwrite
+
         .globl  good_address_arith
         .type   good_address_arith,@function
 good_address_arith:
