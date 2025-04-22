@@ -52,10 +52,10 @@ public:
 
   void getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
                                TTI::UnrollingPreferences &UP,
-                               OptimizationRemarkEmitter *ORE);
+                               OptimizationRemarkEmitter *ORE) const;
 
   void getPeelingPreferences(Loop *L, ScalarEvolution &SE,
-                             TTI::PeelingPreferences &PP);
+                             TTI::PeelingPreferences &PP) const;
 
   int64_t getMaxMemIntrinsicInlineSizeThreshold() const;
 };
@@ -108,12 +108,12 @@ public:
 
   void getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
                                TTI::UnrollingPreferences &UP,
-                               OptimizationRemarkEmitter *ORE);
+                               OptimizationRemarkEmitter *ORE) const;
 
   void getPeelingPreferences(Loop *L, ScalarEvolution &SE,
-                             TTI::PeelingPreferences &PP);
+                             TTI::PeelingPreferences &PP) const;
 
-  TTI::PopcntSupportKind getPopcntSupport(unsigned TyWidth) {
+  TTI::PopcntSupportKind getPopcntSupport(unsigned TyWidth) const {
     assert(isPowerOf2_32(TyWidth) && "Ty width must be power of 2");
     return TTI::PSK_FastHardware;
   }
@@ -149,7 +149,7 @@ public:
       unsigned RemainingBytes, unsigned SrcAddrSpace, unsigned DestAddrSpace,
       Align SrcAlign, Align DestAlign,
       std::optional<uint32_t> AtomicCpySize) const;
-  unsigned getMaxInterleaveFactor(ElementCount VF);
+  unsigned getMaxInterleaveFactor(ElementCount VF) const;
 
   bool getTgtMemIntrinsic(IntrinsicInst *Inst, MemIntrinsicInfo &Info) const;
 
