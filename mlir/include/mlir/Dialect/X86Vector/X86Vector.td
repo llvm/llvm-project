@@ -413,7 +413,7 @@ def DotOp : AVX_LowOp<"dot", [Pure,
 // AVX: Convert packed BF16 even-indexed/odd-indexed elements into packed F32
 //----------------------------------------------------------------------------//
 
-def CvtPackedEvenIndexedBF16ToF32Op : AVX_Op<"cvt.packed.even.indexed.bf16_to_f32", [
+def CvtPackedEvenIndexedBF16ToF32Op : AVX_Op<"cvt.packed.even.indexed.bf16_to_f32", [MemoryEffects<[MemRead]>, 
   DeclareOpInterfaceMethods<OneToOneIntrinsicOpInterface>]> {
   let summary = "AVX: Convert packed BF16 even-indexed elements into packed F32 Data.";
   let description = [{
@@ -449,7 +449,7 @@ def CvtPackedEvenIndexedBF16ToF32Op : AVX_Op<"cvt.packed.even.indexed.bf16_to_f3
   }];
 }
 
-def CvtPackedOddIndexedBF16ToF32Op : AVX_Op<"cvt.packed.odd.indexed.bf16_to_f32", [
+def CvtPackedOddIndexedBF16ToF32Op : AVX_Op<"cvt.packed.odd.indexed.bf16_to_f32", [MemoryEffects<[MemRead]>, 
   DeclareOpInterfaceMethods<OneToOneIntrinsicOpInterface>]> {
   let summary = "AVX: Convert packed BF16 odd-indexed elements into packed F32 Data.";
   let description = [{
@@ -489,7 +489,7 @@ def CvtPackedOddIndexedBF16ToF32Op : AVX_Op<"cvt.packed.odd.indexed.bf16_to_f32"
 // AVX: Convert BF16 to F32 and broadcast into packed F32
 //----------------------------------------------------------------------------//
 
-def BcstBF16ToPackedF32Op : AVX_Op<"bcst.bf16_to_f32.packed", [
+def BcstBF16ToPackedF32Op : AVX_Op<"bcst.bf16_to_f32.packed", [MemoryEffects<[MemRead]>,
   DeclareOpInterfaceMethods<OneToOneIntrinsicOpInterface>]> {
   let summary = "AVX: Broadcasts BF16 into packed F32 Data.";
   let description = [{
