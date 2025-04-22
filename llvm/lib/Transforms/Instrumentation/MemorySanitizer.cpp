@@ -830,14 +830,15 @@ void MemorySanitizer::createKernelApi(Module &M, const TargetLibraryInfo &TLI) {
   VAArgOriginTLS = nullptr;
   VAArgOverflowSizeTLS = nullptr;
 
-  if (ClEmbedFaultingInst != MSanEmbedFaultingInstructionMode::None)
-    WarningFn = M.getOrInsertFunction(
-        "__msan_warning_instname", TLI.getAttrList(C, {0}, /*Signed=*/false),
-        IRB.getVoidTy(), IRB.getInt32Ty(), IRB.getPtrTy());
-  else
-    WarningFn = M.getOrInsertFunction("__msan_warning",
-                                      TLI.getAttrList(C, {0}, /*Signed=*/false),
-                                      IRB.getVoidTy(), IRB.getInt32Ty());
+  SmallVector<Type *, 4> ArgsTy = {IRB.getInt32Ty()};
+  StringRef FnName = "__msan_warning";
+  if (ClEmbedFaultingInst != MSanEmbedFaultingInstructionMode::None) {
+    ArgsTy.push_back(IRB.getPtrTy());
+    FnName = "__msan_warning_instname";
+  }
+  WarningFn = M.getOrInsertFunction(
+      FnName, FunctionType::get(IRB.getVoidTy(), ArgsTy, false),
+      TLI.getAttrList(C, {0}, /*Signed=*/false));
 
   // Requests the per-task context state (kmsan_context_state*) from the
   // runtime library.
@@ -889,37 +890,32 @@ void MemorySanitizer::createUserspaceApi(Module &M,
                                          const TargetLibraryInfo &TLI) {
   IRBuilder<> IRB(*C);
 
-  Type *Int8Ptr = PointerType::getUnqual(*C);
-
   // Create the callback.
   // FIXME: this function should have "Cold" calling conv,
   // which is not yet implemented.
   if (TrackOrigins) {
+    SmallVector<Type *, 4> ArgsTy = {IRB.getInt32Ty()};
+    StringRef WarningFnName = Recover ? "__msan_warning_with_origin"
+                                      : "__msan_warning_with_origin_noreturn";
     if (ClEmbedFaultingInst != MSanEmbedFaultingInstructionMode::None) {
-      StringRef WarningFnName =
-          Recover ? "__msan_warning_with_origin_instname"
-                  : "__msan_warning_with_origin_noreturn_instname";
-      WarningFn = M.getOrInsertFunction(
-          WarningFnName, TLI.getAttrList(C, {0}, /*Signed=*/false),
-          IRB.getVoidTy(), IRB.getInt32Ty(), Int8Ptr);
-    } else {
-      StringRef WarningFnName = Recover ? "__msan_warning_with_origin"
-                                        : "__msan_warning_with_origin_noreturn";
-      WarningFn = M.getOrInsertFunction(
-          WarningFnName, TLI.getAttrList(C, {0}, /*Signed=*/false),
-          IRB.getVoidTy(), IRB.getInt32Ty());
+      ArgsTy.push_back(IRB.getPtrTy());
+      WarningFnName = Recover ? "__msan_warning_with_origin_instname"
+                              : "__msan_warning_with_origin_noreturn_instname";
     }
+    WarningFn = M.getOrInsertFunction(
+        WarningFnName, FunctionType::get(IRB.getVoidTy(), ArgsTy, false),
+        TLI.getAttrList(C, {0}, /*Signed=*/false));
   } else {
+    SmallVector<Type *, 4> ArgsTy = {};
+    StringRef WarningFnName =
+        Recover ? "__msan_warning" : "__msan_warning_noreturn";
     if (ClEmbedFaultingInst != MSanEmbedFaultingInstructionMode::None) {
-      StringRef WarningFnName = Recover ? "__msan_warning_instname"
-                                        : "__msan_warning_noreturn_instname";
-      WarningFn =
-          M.getOrInsertFunction(WarningFnName, IRB.getVoidTy(), Int8Ptr);
-    } else {
-      StringRef WarningFnName =
-          Recover ? "__msan_warning" : "__msan_warning_noreturn";
-      WarningFn = M.getOrInsertFunction(WarningFnName, IRB.getVoidTy());
+      ArgsTy.push_back(IRB.getPtrTy());
+      WarningFnName = Recover ? "__msan_warning_instname"
+                              : "__msan_warning_noreturn_instname";
     }
+    WarningFn = M.getOrInsertFunction(
+        WarningFnName, FunctionType::get(IRB.getVoidTy(), ArgsTy, false));
   }
 
   // Create the global TLS variables.
