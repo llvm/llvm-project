@@ -2244,8 +2244,8 @@ def Vector_ShapeCastOp :
     Results<(outs AnyVectorOfAnyRank:$result)> {
   let summary = "shape_cast casts between vector shapes";
   let description = [{
-    The shape_cast operation casts from a source vector to a target vector,
-    retaining the element type and number of elements.
+    Casts to a vector with the same number of elements, element type, and
+    number of scalable dimensions.
 
     It is currently assumed that this operation does not require moving data,
     and that it will be folded away before lowering vector operations.
@@ -2255,10 +2255,11 @@ def Vector_ShapeCastOp :
     2-D MLIR vector to a 1-D flattened LLVM vector.shape_cast lowering to LLVM
     is supported in that particular case, for now.
 
-    Example:
+    Examples:
 
     ```mlir
     %1 = vector.shape_cast %0 : vector<4x3xf32> to vector<3x2x2xf32>
+    %2 = vector.shape_cast %0 : vector<[2]x3x[4]xi8> to vector<3x[1]x[8]xi8>
     ```
   }];
   let extraClassDeclaration = [{

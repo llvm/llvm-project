@@ -972,6 +972,18 @@ func.func @fold_broadcast_shapecast(%arg0: vector<4xf32>) -> vector<4xf32> {
 
 // -----
 
+// CHECK-LABEL: func @fold_count_preserving_broadcast_shapecast
+//  CHECK-SAME: (%[[V:.+]]: vector<4xf32>)
+//       CHECK:   %[[SHAPECAST:.*]] = vector.shape_cast %[[V]] : vector<4xf32> to vector<2x2xf32>
+//       CHECK:   return %[[SHAPECAST]] : vector<2x2xf32>
+func.func @fold_count_preserving_broadcast_shapecast(%arg0: vector<4xf32>) -> vector<2x2xf32> {
+    %0 = vector.broadcast %arg0 : vector<4xf32> to vector<1x1x4xf32>
+    %1 = vector.shape_cast %0 : vector<1x1x4xf32> to vector<2x2xf32>
+    return %1 : vector<2x2xf32>
+}
+
+// -----
+
 // CHECK-LABEL: func @canonicalize_broadcast_shapecast_scalar
 //       CHECK:   vector.broadcast
 //   CHECK-NOT:   vector.shape_cast

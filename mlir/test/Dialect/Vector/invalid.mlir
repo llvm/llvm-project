@@ -1131,20 +1131,20 @@ func.func @cannot_print_string_with_source_set(%vec: vector<[4]xf32>) {
 
 // -----
 
+
 func.func @shape_cast_wrong_element_type(%arg0 : vector<5x1x3x2xf32>) {
-  // expected-error@+1 {{op source/result vectors must have same element type}}
+  // expected-error@+1 {{'vector.shape_cast' op has different source and result element types}}
   %0 = vector.shape_cast %arg0 : vector<5x1x3x2xf32> to vector<15x2xi32>
 }
 
 // -----
 
 func.func @shape_cast_wrong_num_elements(%arg0 : vector<5x1x3x2xf32>) {
-  // expected-error@+1 {{op source/result number of elements must match}}
+  // expected-error@+1 {{'vector.shape_cast' op has different number of elements at source (30) and result (20)}}
   %0 = vector.shape_cast %arg0 : vector<5x1x3x2xf32> to vector<10x2xf32>
 }
 
 // -----
-
 
 func.func @shape_cast_scalability_flag_is_dropped(%arg0 : vector<15x[2]xf32>) {
   // expected-error@+1 {{different number of scalable dims at source (1) and result (0)}}

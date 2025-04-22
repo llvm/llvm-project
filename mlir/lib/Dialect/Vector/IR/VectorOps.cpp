@@ -5506,54 +5506,46 @@ void ShapeCastOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
 }
 
 LogicalResult ShapeCastOp::verify() {
-  auto sourceVectorType =
-      llvm::dyn_cast_or_null<VectorType>(getSource().getType());
-  auto resultVectorType =
-      llvm::dyn_cast_or_null<VectorType>(getResult().getType());
 
-  if (!sourceVectorType)
-    return failure();
-  if (!resultVectorType)
-    return failure();
+  VectorType sourceType = getSourceVectorType();
+  VectorType resultType = getResultVectorType();
 
-  // Check that element type is the same.
-  if (sourceVectorType.getElementType() != resultVectorType.getElementType())
-    return emitOpError("source/result vectors must have same element type");
-  auto sourceShape = sourceVectorType.getShape();
-  auto resultShape = resultVectorType.getShape();
+  // Check that element type is preserved
+  if (sourceType.getElementType() != resultType.getElementType())
+    return emitOpError("has different source and result element types");
 
-  // Check that product of source dim sizes matches product of result dim sizes.
-  int64_t sourceDimProduct = std::accumulate(
-      sourceShape.begin(), sourceShape.end(), 1LL, std::multiplies<int64_t>{});
-  int64_t resultDimProduct = std::accumulate(
-      resultShape.begin(), resultShape.end(), 1LL, std::multiplies<int64_t>{});
-  if (sourceDimProduct != resultDimProduct)
-    return emitOpError("source/result number of elements must match");
+  // Check that number of elements is preserved
+  int64_t sourceNElms = sourceType.getNumElements();
+  int64_t resultNElms = resultType.getNumElements();
+  if (sourceNElms != resultNElms) {
+    return emitOpError() << "has different number of elements at source ("
+                         << sourceNElms << ") and result (" << resultNElms
+                         << ")";
+  }
 
   // Check that (non-)scalability is preserved
-  int64_t sourceNScalableDims = sourceVectorType.getNumScalableDims();
-  int64_t resultNScalableDims = resultVectorType.getNumScalableDims();
+  int64_t sourceNScalableDims = sourceType.getNumScalableDims();
+  int64_t resultNScalableDims = resultType.getNumScalableDims();
   if (sourceNScalableDims != resultNScalableDims)
-    return emitOpError("different number of scalable dims at source (")
-           << sourceNScalableDims << ") and result (" << resultNScalableDims
-           << ")";
-  sourceVectorType.getNumDynamicDims();
+    return emitOpError() << "has different number of scalable dims at source ("
+                         << sourceNScalableDims << ") and result ("
+                         << resultNScalableDims << ")";
 
   return success();
 }
 
 OpFoldResult ShapeCastOp::fold(FoldAdaptor adaptor) {
 
-  // No-op shape cast.
-  if (getSource().getType() == getType())
-    return getSource();
-
   VectorType resultType = getType();
 
-  // Canceling shape casts.
-  if (auto otherOp = getSource().getDefiningOp<ShapeCastOp>()) {
+  // No-op shape cast.
+  if (getSource().getType() == resultType)
+    return getSource();
 
-    // Only allows valid transitive folding (expand/collapse dimensions).
+  // Y = shape_cast(shape_cast(X)))
+  //      -> X, if X and Y have same type
+  //      -> shape_cast(X) otherwise.
+  if (auto otherOp = getSource().getDefiningOp<ShapeCastOp>()) {
     VectorType srcType = otherOp.getSource().getType();
     if (resultType == srcType)
       return otherOp.getSource();
@@ -5561,10 +5553,19 @@ OpFoldResult ShapeCastOp::fold(FoldAdaptor adaptor) {
     return getResult();
   }
 
-  // Cancelling broadcast and shape cast ops.
+  // Y = shape_cast(broadcast(X))
+  //      -> X, if X and Y have same type, else
+  //      -> shape_cast(X) if X is a vector and the broadcast preserves
+  //         number of elements.
   if (auto bcastOp = getSource().getDefiningOp<BroadcastOp>()) {
     if (bcastOp.getSourceType() == resultType)
       return bcastOp.getSource();
+    if (auto bcastSrcType = dyn_cast<VectorType>(bcastOp.getSourceType())) {
+      if (bcastSrcType.getNumElements() == resultType.getNumElements()) {
+        setOperand(bcastOp.getSource());
+        return getResult();
+      }
+    }
   }
 
   // shape_cast(constant) -> constant
