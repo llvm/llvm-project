@@ -1,0 +1,1710 @@
+/*===- TableGen'erated file -------------------------------------*- C++ -*-===*\
+|*                                                                            *|
+|* List of AST nodes of a particular kind                                     *|
+|*                                                                            *|
+|* Automatically generated file, do not edit!                                 *|
+|* From: StmtNodes.td                                                         *|
+|*                                                                            *|
+\*===----------------------------------------------------------------------===*/
+
+#ifndef ABSTRACT_STMT
+#  define ABSTRACT_STMT(Type) Type
+#endif
+#ifndef STMT_RANGE
+#  define STMT_RANGE(Base, First, Last)
+#endif
+
+#ifndef LAST_STMT_RANGE
+#  define LAST_STMT_RANGE(Base, First, Last) STMT_RANGE(Base, First, Last)
+#endif
+
+#ifndef WHILESTMT
+#  define WHILESTMT(Type, Base) STMT(Type, Base)
+#endif
+WHILESTMT(WhileStmt, Stmt)
+#undef WHILESTMT
+
+#ifndef VALUESTMT
+#  define VALUESTMT(Type, Base) STMT(Type, Base)
+#endif
+ABSTRACT_STMT(VALUESTMT(ValueStmt, Stmt))
+#ifndef LABELSTMT
+#  define LABELSTMT(Type, Base) VALUESTMT(Type, Base)
+#endif
+LABELSTMT(LabelStmt, ValueStmt)
+#undef LABELSTMT
+
+#ifndef EXPR
+#  define EXPR(Type, Base) VALUESTMT(Type, Base)
+#endif
+ABSTRACT_STMT(EXPR(Expr, ValueStmt))
+#ifndef VAARGEXPR
+#  define VAARGEXPR(Type, Base) EXPR(Type, Base)
+#endif
+VAARGEXPR(VAArgExpr, Expr)
+#undef VAARGEXPR
+
+#ifndef UNARYOPERATOR
+#  define UNARYOPERATOR(Type, Base) EXPR(Type, Base)
+#endif
+UNARYOPERATOR(UnaryOperator, Expr)
+#undef UNARYOPERATOR
+
+#ifndef UNARYEXPRORTYPETRAITEXPR
+#  define UNARYEXPRORTYPETRAITEXPR(Type, Base) EXPR(Type, Base)
+#endif
+UNARYEXPRORTYPETRAITEXPR(UnaryExprOrTypeTraitExpr, Expr)
+#undef UNARYEXPRORTYPETRAITEXPR
+
+#ifndef TYPOEXPR
+#  define TYPOEXPR(Type, Base) EXPR(Type, Base)
+#endif
+TYPOEXPR(TypoExpr, Expr)
+#undef TYPOEXPR
+
+#ifndef TYPETRAITEXPR
+#  define TYPETRAITEXPR(Type, Base) EXPR(Type, Base)
+#endif
+TYPETRAITEXPR(TypeTraitExpr, Expr)
+#undef TYPETRAITEXPR
+
+#ifndef SUBSTNONTYPETEMPLATEPARMPACKEXPR
+#  define SUBSTNONTYPETEMPLATEPARMPACKEXPR(Type, Base) EXPR(Type, Base)
+#endif
+SUBSTNONTYPETEMPLATEPARMPACKEXPR(SubstNonTypeTemplateParmPackExpr, Expr)
+#undef SUBSTNONTYPETEMPLATEPARMPACKEXPR
+
+#ifndef SUBSTNONTYPETEMPLATEPARMEXPR
+#  define SUBSTNONTYPETEMPLATEPARMEXPR(Type, Base) EXPR(Type, Base)
+#endif
+SUBSTNONTYPETEMPLATEPARMEXPR(SubstNonTypeTemplateParmExpr, Expr)
+#undef SUBSTNONTYPETEMPLATEPARMEXPR
+
+#ifndef STRINGLITERAL
+#  define STRINGLITERAL(Type, Base) EXPR(Type, Base)
+#endif
+STRINGLITERAL(StringLiteral, Expr)
+#undef STRINGLITERAL
+
+#ifndef STMTEXPR
+#  define STMTEXPR(Type, Base) EXPR(Type, Base)
+#endif
+STMTEXPR(StmtExpr, Expr)
+#undef STMTEXPR
+
+#ifndef SOURCELOCEXPR
+#  define SOURCELOCEXPR(Type, Base) EXPR(Type, Base)
+#endif
+SOURCELOCEXPR(SourceLocExpr, Expr)
+#undef SOURCELOCEXPR
+
+#ifndef SIZEOFPACKEXPR
+#  define SIZEOFPACKEXPR(Type, Base) EXPR(Type, Base)
+#endif
+SIZEOFPACKEXPR(SizeOfPackExpr, Expr)
+#undef SIZEOFPACKEXPR
+
+#ifndef SHUFFLEVECTOREXPR
+#  define SHUFFLEVECTOREXPR(Type, Base) EXPR(Type, Base)
+#endif
+SHUFFLEVECTOREXPR(ShuffleVectorExpr, Expr)
+#undef SHUFFLEVECTOREXPR
+
+#ifndef SYCLUNIQUESTABLENAMEEXPR
+#  define SYCLUNIQUESTABLENAMEEXPR(Type, Base) EXPR(Type, Base)
+#endif
+SYCLUNIQUESTABLENAMEEXPR(SYCLUniqueStableNameExpr, Expr)
+#undef SYCLUNIQUESTABLENAMEEXPR
+
+#ifndef REQUIRESEXPR
+#  define REQUIRESEXPR(Type, Base) EXPR(Type, Base)
+#endif
+REQUIRESEXPR(RequiresExpr, Expr)
+#undef REQUIRESEXPR
+
+#ifndef RECOVERYEXPR
+#  define RECOVERYEXPR(Type, Base) EXPR(Type, Base)
+#endif
+RECOVERYEXPR(RecoveryExpr, Expr)
+#undef RECOVERYEXPR
+
+#ifndef PSEUDOOBJECTEXPR
+#  define PSEUDOOBJECTEXPR(Type, Base) EXPR(Type, Base)
+#endif
+PSEUDOOBJECTEXPR(PseudoObjectExpr, Expr)
+#undef PSEUDOOBJECTEXPR
+
+#ifndef PREDEFINEDEXPR
+#  define PREDEFINEDEXPR(Type, Base) EXPR(Type, Base)
+#endif
+PREDEFINEDEXPR(PredefinedExpr, Expr)
+#undef PREDEFINEDEXPR
+
+#ifndef PARENLISTEXPR
+#  define PARENLISTEXPR(Type, Base) EXPR(Type, Base)
+#endif
+PARENLISTEXPR(ParenListExpr, Expr)
+#undef PARENLISTEXPR
+
+#ifndef PARENEXPR
+#  define PARENEXPR(Type, Base) EXPR(Type, Base)
+#endif
+PARENEXPR(ParenExpr, Expr)
+#undef PARENEXPR
+
+#ifndef PACKINDEXINGEXPR
+#  define PACKINDEXINGEXPR(Type, Base) EXPR(Type, Base)
+#endif
+PACKINDEXINGEXPR(PackIndexingExpr, Expr)
+#undef PACKINDEXINGEXPR
+
+#ifndef PACKEXPANSIONEXPR
+#  define PACKEXPANSIONEXPR(Type, Base) EXPR(Type, Base)
+#endif
+PACKEXPANSIONEXPR(PackExpansionExpr, Expr)
+#undef PACKEXPANSIONEXPR
+
+#ifndef OVERLOADEXPR
+#  define OVERLOADEXPR(Type, Base) EXPR(Type, Base)
+#endif
+ABSTRACT_STMT(OVERLOADEXPR(OverloadExpr, Expr))
+#ifndef UNRESOLVEDMEMBEREXPR
+#  define UNRESOLVEDMEMBEREXPR(Type, Base) OVERLOADEXPR(Type, Base)
+#endif
+UNRESOLVEDMEMBEREXPR(UnresolvedMemberExpr, OverloadExpr)
+#undef UNRESOLVEDMEMBEREXPR
+
+#ifndef UNRESOLVEDLOOKUPEXPR
+#  define UNRESOLVEDLOOKUPEXPR(Type, Base) OVERLOADEXPR(Type, Base)
+#endif
+UNRESOLVEDLOOKUPEXPR(UnresolvedLookupExpr, OverloadExpr)
+#undef UNRESOLVEDLOOKUPEXPR
+
+STMT_RANGE(OverloadExpr, UnresolvedMemberExpr, UnresolvedLookupExpr)
+
+#undef OVERLOADEXPR
+
+#ifndef OPENACCASTERISKSIZEEXPR
+#  define OPENACCASTERISKSIZEEXPR(Type, Base) EXPR(Type, Base)
+#endif
+OPENACCASTERISKSIZEEXPR(OpenACCAsteriskSizeExpr, Expr)
+#undef OPENACCASTERISKSIZEEXPR
+
+#ifndef OPAQUEVALUEEXPR
+#  define OPAQUEVALUEEXPR(Type, Base) EXPR(Type, Base)
+#endif
+OPAQUEVALUEEXPR(OpaqueValueExpr, Expr)
+#undef OPAQUEVALUEEXPR
+
+#ifndef OFFSETOFEXPR
+#  define OFFSETOFEXPR(Type, Base) EXPR(Type, Base)
+#endif
+OFFSETOFEXPR(OffsetOfExpr, Expr)
+#undef OFFSETOFEXPR
+
+#ifndef OBJCSUBSCRIPTREFEXPR
+#  define OBJCSUBSCRIPTREFEXPR(Type, Base) EXPR(Type, Base)
+#endif
+OBJCSUBSCRIPTREFEXPR(ObjCSubscriptRefExpr, Expr)
+#undef OBJCSUBSCRIPTREFEXPR
+
+#ifndef OBJCSTRINGLITERAL
+#  define OBJCSTRINGLITERAL(Type, Base) EXPR(Type, Base)
+#endif
+OBJCSTRINGLITERAL(ObjCStringLiteral, Expr)
+#undef OBJCSTRINGLITERAL
+
+#ifndef OBJCSELECTOREXPR
+#  define OBJCSELECTOREXPR(Type, Base) EXPR(Type, Base)
+#endif
+OBJCSELECTOREXPR(ObjCSelectorExpr, Expr)
+#undef OBJCSELECTOREXPR
+
+#ifndef OBJCPROTOCOLEXPR
+#  define OBJCPROTOCOLEXPR(Type, Base) EXPR(Type, Base)
+#endif
+OBJCPROTOCOLEXPR(ObjCProtocolExpr, Expr)
+#undef OBJCPROTOCOLEXPR
+
+#ifndef OBJCPROPERTYREFEXPR
+#  define OBJCPROPERTYREFEXPR(Type, Base) EXPR(Type, Base)
+#endif
+OBJCPROPERTYREFEXPR(ObjCPropertyRefExpr, Expr)
+#undef OBJCPROPERTYREFEXPR
+
+#ifndef OBJCMESSAGEEXPR
+#  define OBJCMESSAGEEXPR(Type, Base) EXPR(Type, Base)
+#endif
+OBJCMESSAGEEXPR(ObjCMessageExpr, Expr)
+#undef OBJCMESSAGEEXPR
+
+#ifndef OBJCIVARREFEXPR
+#  define OBJCIVARREFEXPR(Type, Base) EXPR(Type, Base)
+#endif
+OBJCIVARREFEXPR(ObjCIvarRefExpr, Expr)
+#undef OBJCIVARREFEXPR
+
+#ifndef OBJCISAEXPR
+#  define OBJCISAEXPR(Type, Base) EXPR(Type, Base)
+#endif
+OBJCISAEXPR(ObjCIsaExpr, Expr)
+#undef OBJCISAEXPR
+
+#ifndef OBJCINDIRECTCOPYRESTOREEXPR
+#  define OBJCINDIRECTCOPYRESTOREEXPR(Type, Base) EXPR(Type, Base)
+#endif
+OBJCINDIRECTCOPYRESTOREEXPR(ObjCIndirectCopyRestoreExpr, Expr)
+#undef OBJCINDIRECTCOPYRESTOREEXPR
+
+#ifndef OBJCENCODEEXPR
+#  define OBJCENCODEEXPR(Type, Base) EXPR(Type, Base)
+#endif
+OBJCENCODEEXPR(ObjCEncodeExpr, Expr)
+#undef OBJCENCODEEXPR
+
+#ifndef OBJCDICTIONARYLITERAL
+#  define OBJCDICTIONARYLITERAL(Type, Base) EXPR(Type, Base)
+#endif
+OBJCDICTIONARYLITERAL(ObjCDictionaryLiteral, Expr)
+#undef OBJCDICTIONARYLITERAL
+
+#ifndef OBJCBOXEDEXPR
+#  define OBJCBOXEDEXPR(Type, Base) EXPR(Type, Base)
+#endif
+OBJCBOXEDEXPR(ObjCBoxedExpr, Expr)
+#undef OBJCBOXEDEXPR
+
+#ifndef OBJCBOOLLITERALEXPR
+#  define OBJCBOOLLITERALEXPR(Type, Base) EXPR(Type, Base)
+#endif
+OBJCBOOLLITERALEXPR(ObjCBoolLiteralExpr, Expr)
+#undef OBJCBOOLLITERALEXPR
+
+#ifndef OBJCAVAILABILITYCHECKEXPR
+#  define OBJCAVAILABILITYCHECKEXPR(Type, Base) EXPR(Type, Base)
+#endif
+OBJCAVAILABILITYCHECKEXPR(ObjCAvailabilityCheckExpr, Expr)
+#undef OBJCAVAILABILITYCHECKEXPR
+
+#ifndef OBJCARRAYLITERAL
+#  define OBJCARRAYLITERAL(Type, Base) EXPR(Type, Base)
+#endif
+OBJCARRAYLITERAL(ObjCArrayLiteral, Expr)
+#undef OBJCARRAYLITERAL
+
+#ifndef OMPITERATOREXPR
+#  define OMPITERATOREXPR(Type, Base) EXPR(Type, Base)
+#endif
+OMPITERATOREXPR(OMPIteratorExpr, Expr)
+#undef OMPITERATOREXPR
+
+#ifndef OMPARRAYSHAPINGEXPR
+#  define OMPARRAYSHAPINGEXPR(Type, Base) EXPR(Type, Base)
+#endif
+OMPARRAYSHAPINGEXPR(OMPArrayShapingExpr, Expr)
+#undef OMPARRAYSHAPINGEXPR
+
+#ifndef NOINITEXPR
+#  define NOINITEXPR(Type, Base) EXPR(Type, Base)
+#endif
+NOINITEXPR(NoInitExpr, Expr)
+#undef NOINITEXPR
+
+#ifndef MEMBEREXPR
+#  define MEMBEREXPR(Type, Base) EXPR(Type, Base)
+#endif
+MEMBEREXPR(MemberExpr, Expr)
+#undef MEMBEREXPR
+
+#ifndef MATRIXSUBSCRIPTEXPR
+#  define MATRIXSUBSCRIPTEXPR(Type, Base) EXPR(Type, Base)
+#endif
+MATRIXSUBSCRIPTEXPR(MatrixSubscriptExpr, Expr)
+#undef MATRIXSUBSCRIPTEXPR
+
+#ifndef MATERIALIZETEMPORARYEXPR
+#  define MATERIALIZETEMPORARYEXPR(Type, Base) EXPR(Type, Base)
+#endif
+MATERIALIZETEMPORARYEXPR(MaterializeTemporaryExpr, Expr)
+#undef MATERIALIZETEMPORARYEXPR
+
+#ifndef MSPROPERTYSUBSCRIPTEXPR
+#  define MSPROPERTYSUBSCRIPTEXPR(Type, Base) EXPR(Type, Base)
+#endif
+MSPROPERTYSUBSCRIPTEXPR(MSPropertySubscriptExpr, Expr)
+#undef MSPROPERTYSUBSCRIPTEXPR
+
+#ifndef MSPROPERTYREFEXPR
+#  define MSPROPERTYREFEXPR(Type, Base) EXPR(Type, Base)
+#endif
+MSPROPERTYREFEXPR(MSPropertyRefExpr, Expr)
+#undef MSPROPERTYREFEXPR
+
+#ifndef LAMBDAEXPR
+#  define LAMBDAEXPR(Type, Base) EXPR(Type, Base)
+#endif
+LAMBDAEXPR(LambdaExpr, Expr)
+#undef LAMBDAEXPR
+
+#ifndef INTEGERLITERAL
+#  define INTEGERLITERAL(Type, Base) EXPR(Type, Base)
+#endif
+INTEGERLITERAL(IntegerLiteral, Expr)
+#undef INTEGERLITERAL
+
+#ifndef INITLISTEXPR
+#  define INITLISTEXPR(Type, Base) EXPR(Type, Base)
+#endif
+INITLISTEXPR(InitListExpr, Expr)
+#undef INITLISTEXPR
+
+#ifndef IMPLICITVALUEINITEXPR
+#  define IMPLICITVALUEINITEXPR(Type, Base) EXPR(Type, Base)
+#endif
+IMPLICITVALUEINITEXPR(ImplicitValueInitExpr, Expr)
+#undef IMPLICITVALUEINITEXPR
+
+#ifndef IMAGINARYLITERAL
+#  define IMAGINARYLITERAL(Type, Base) EXPR(Type, Base)
+#endif
+IMAGINARYLITERAL(ImaginaryLiteral, Expr)
+#undef IMAGINARYLITERAL
+
+#ifndef HLSLOUTARGEXPR
+#  define HLSLOUTARGEXPR(Type, Base) EXPR(Type, Base)
+#endif
+HLSLOUTARGEXPR(HLSLOutArgExpr, Expr)
+#undef HLSLOUTARGEXPR
+
+#ifndef GENERICSELECTIONEXPR
+#  define GENERICSELECTIONEXPR(Type, Base) EXPR(Type, Base)
+#endif
+GENERICSELECTIONEXPR(GenericSelectionExpr, Expr)
+#undef GENERICSELECTIONEXPR
+
+#ifndef GNUNULLEXPR
+#  define GNUNULLEXPR(Type, Base) EXPR(Type, Base)
+#endif
+GNUNULLEXPR(GNUNullExpr, Expr)
+#undef GNUNULLEXPR
+
+#ifndef FUNCTIONPARMPACKEXPR
+#  define FUNCTIONPARMPACKEXPR(Type, Base) EXPR(Type, Base)
+#endif
+FUNCTIONPARMPACKEXPR(FunctionParmPackExpr, Expr)
+#undef FUNCTIONPARMPACKEXPR
+
+#ifndef FULLEXPR
+#  define FULLEXPR(Type, Base) EXPR(Type, Base)
+#endif
+ABSTRACT_STMT(FULLEXPR(FullExpr, Expr))
+#ifndef EXPRWITHCLEANUPS
+#  define EXPRWITHCLEANUPS(Type, Base) FULLEXPR(Type, Base)
+#endif
+EXPRWITHCLEANUPS(ExprWithCleanups, FullExpr)
+#undef EXPRWITHCLEANUPS
+
+#ifndef CONSTANTEXPR
+#  define CONSTANTEXPR(Type, Base) FULLEXPR(Type, Base)
+#endif
+CONSTANTEXPR(ConstantExpr, FullExpr)
+#undef CONSTANTEXPR
+
+STMT_RANGE(FullExpr, ExprWithCleanups, ConstantExpr)
+
+#undef FULLEXPR
+
+#ifndef FLOATINGLITERAL
+#  define FLOATINGLITERAL(Type, Base) EXPR(Type, Base)
+#endif
+FLOATINGLITERAL(FloatingLiteral, Expr)
+#undef FLOATINGLITERAL
+
+#ifndef FIXEDPOINTLITERAL
+#  define FIXEDPOINTLITERAL(Type, Base) EXPR(Type, Base)
+#endif
+FIXEDPOINTLITERAL(FixedPointLiteral, Expr)
+#undef FIXEDPOINTLITERAL
+
+#ifndef EXTVECTORELEMENTEXPR
+#  define EXTVECTORELEMENTEXPR(Type, Base) EXPR(Type, Base)
+#endif
+EXTVECTORELEMENTEXPR(ExtVectorElementExpr, Expr)
+#undef EXTVECTORELEMENTEXPR
+
+#ifndef EXPRESSIONTRAITEXPR
+#  define EXPRESSIONTRAITEXPR(Type, Base) EXPR(Type, Base)
+#endif
+EXPRESSIONTRAITEXPR(ExpressionTraitExpr, Expr)
+#undef EXPRESSIONTRAITEXPR
+
+#ifndef EMBEDEXPR
+#  define EMBEDEXPR(Type, Base) EXPR(Type, Base)
+#endif
+EMBEDEXPR(EmbedExpr, Expr)
+#undef EMBEDEXPR
+
+#ifndef DESIGNATEDINITUPDATEEXPR
+#  define DESIGNATEDINITUPDATEEXPR(Type, Base) EXPR(Type, Base)
+#endif
+DESIGNATEDINITUPDATEEXPR(DesignatedInitUpdateExpr, Expr)
+#undef DESIGNATEDINITUPDATEEXPR
+
+#ifndef DESIGNATEDINITEXPR
+#  define DESIGNATEDINITEXPR(Type, Base) EXPR(Type, Base)
+#endif
+DESIGNATEDINITEXPR(DesignatedInitExpr, Expr)
+#undef DESIGNATEDINITEXPR
+
+#ifndef DEPENDENTSCOPEDECLREFEXPR
+#  define DEPENDENTSCOPEDECLREFEXPR(Type, Base) EXPR(Type, Base)
+#endif
+DEPENDENTSCOPEDECLREFEXPR(DependentScopeDeclRefExpr, Expr)
+#undef DEPENDENTSCOPEDECLREFEXPR
+
+#ifndef DEPENDENTCOAWAITEXPR
+#  define DEPENDENTCOAWAITEXPR(Type, Base) EXPR(Type, Base)
+#endif
+DEPENDENTCOAWAITEXPR(DependentCoawaitExpr, Expr)
+#undef DEPENDENTCOAWAITEXPR
+
+#ifndef DECLREFEXPR
+#  define DECLREFEXPR(Type, Base) EXPR(Type, Base)
+#endif
+DECLREFEXPR(DeclRefExpr, Expr)
+#undef DECLREFEXPR
+
+#ifndef COROUTINESUSPENDEXPR
+#  define COROUTINESUSPENDEXPR(Type, Base) EXPR(Type, Base)
+#endif
+ABSTRACT_STMT(COROUTINESUSPENDEXPR(CoroutineSuspendExpr, Expr))
+#ifndef COYIELDEXPR
+#  define COYIELDEXPR(Type, Base) COROUTINESUSPENDEXPR(Type, Base)
+#endif
+COYIELDEXPR(CoyieldExpr, CoroutineSuspendExpr)
+#undef COYIELDEXPR
+
+#ifndef COAWAITEXPR
+#  define COAWAITEXPR(Type, Base) COROUTINESUSPENDEXPR(Type, Base)
+#endif
+COAWAITEXPR(CoawaitExpr, CoroutineSuspendExpr)
+#undef COAWAITEXPR
+
+STMT_RANGE(CoroutineSuspendExpr, CoyieldExpr, CoawaitExpr)
+
+#undef COROUTINESUSPENDEXPR
+
+#ifndef CONVERTVECTOREXPR
+#  define CONVERTVECTOREXPR(Type, Base) EXPR(Type, Base)
+#endif
+CONVERTVECTOREXPR(ConvertVectorExpr, Expr)
+#undef CONVERTVECTOREXPR
+
+#ifndef CONCEPTSPECIALIZATIONEXPR
+#  define CONCEPTSPECIALIZATIONEXPR(Type, Base) EXPR(Type, Base)
+#endif
+CONCEPTSPECIALIZATIONEXPR(ConceptSpecializationExpr, Expr)
+#undef CONCEPTSPECIALIZATIONEXPR
+
+#ifndef COMPOUNDLITERALEXPR
+#  define COMPOUNDLITERALEXPR(Type, Base) EXPR(Type, Base)
+#endif
+COMPOUNDLITERALEXPR(CompoundLiteralExpr, Expr)
+#undef COMPOUNDLITERALEXPR
+
+#ifndef CHOOSEEXPR
+#  define CHOOSEEXPR(Type, Base) EXPR(Type, Base)
+#endif
+CHOOSEEXPR(ChooseExpr, Expr)
+#undef CHOOSEEXPR
+
+#ifndef CHARACTERLITERAL
+#  define CHARACTERLITERAL(Type, Base) EXPR(Type, Base)
+#endif
+CHARACTERLITERAL(CharacterLiteral, Expr)
+#undef CHARACTERLITERAL
+
+#ifndef CASTEXPR
+#  define CASTEXPR(Type, Base) EXPR(Type, Base)
+#endif
+ABSTRACT_STMT(CASTEXPR(CastExpr, Expr))
+#ifndef IMPLICITCASTEXPR
+#  define IMPLICITCASTEXPR(Type, Base) CASTEXPR(Type, Base)
+#endif
+IMPLICITCASTEXPR(ImplicitCastExpr, CastExpr)
+#undef IMPLICITCASTEXPR
+
+#ifndef EXPLICITCASTEXPR
+#  define EXPLICITCASTEXPR(Type, Base) CASTEXPR(Type, Base)
+#endif
+ABSTRACT_STMT(EXPLICITCASTEXPR(ExplicitCastExpr, CastExpr))
+#ifndef OBJCBRIDGEDCASTEXPR
+#  define OBJCBRIDGEDCASTEXPR(Type, Base) EXPLICITCASTEXPR(Type, Base)
+#endif
+OBJCBRIDGEDCASTEXPR(ObjCBridgedCastExpr, ExplicitCastExpr)
+#undef OBJCBRIDGEDCASTEXPR
+
+#ifndef CXXNAMEDCASTEXPR
+#  define CXXNAMEDCASTEXPR(Type, Base) EXPLICITCASTEXPR(Type, Base)
+#endif
+ABSTRACT_STMT(CXXNAMEDCASTEXPR(CXXNamedCastExpr, ExplicitCastExpr))
+#ifndef CXXSTATICCASTEXPR
+#  define CXXSTATICCASTEXPR(Type, Base) CXXNAMEDCASTEXPR(Type, Base)
+#endif
+CXXSTATICCASTEXPR(CXXStaticCastExpr, CXXNamedCastExpr)
+#undef CXXSTATICCASTEXPR
+
+#ifndef CXXREINTERPRETCASTEXPR
+#  define CXXREINTERPRETCASTEXPR(Type, Base) CXXNAMEDCASTEXPR(Type, Base)
+#endif
+CXXREINTERPRETCASTEXPR(CXXReinterpretCastExpr, CXXNamedCastExpr)
+#undef CXXREINTERPRETCASTEXPR
+
+#ifndef CXXDYNAMICCASTEXPR
+#  define CXXDYNAMICCASTEXPR(Type, Base) CXXNAMEDCASTEXPR(Type, Base)
+#endif
+CXXDYNAMICCASTEXPR(CXXDynamicCastExpr, CXXNamedCastExpr)
+#undef CXXDYNAMICCASTEXPR
+
+#ifndef CXXCONSTCASTEXPR
+#  define CXXCONSTCASTEXPR(Type, Base) CXXNAMEDCASTEXPR(Type, Base)
+#endif
+CXXCONSTCASTEXPR(CXXConstCastExpr, CXXNamedCastExpr)
+#undef CXXCONSTCASTEXPR
+
+#ifndef CXXADDRSPACECASTEXPR
+#  define CXXADDRSPACECASTEXPR(Type, Base) CXXNAMEDCASTEXPR(Type, Base)
+#endif
+CXXADDRSPACECASTEXPR(CXXAddrspaceCastExpr, CXXNamedCastExpr)
+#undef CXXADDRSPACECASTEXPR
+
+STMT_RANGE(CXXNamedCastExpr, CXXStaticCastExpr, CXXAddrspaceCastExpr)
+
+#undef CXXNAMEDCASTEXPR
+
+#ifndef CXXFUNCTIONALCASTEXPR
+#  define CXXFUNCTIONALCASTEXPR(Type, Base) EXPLICITCASTEXPR(Type, Base)
+#endif
+CXXFUNCTIONALCASTEXPR(CXXFunctionalCastExpr, ExplicitCastExpr)
+#undef CXXFUNCTIONALCASTEXPR
+
+#ifndef CSTYLECASTEXPR
+#  define CSTYLECASTEXPR(Type, Base) EXPLICITCASTEXPR(Type, Base)
+#endif
+CSTYLECASTEXPR(CStyleCastExpr, ExplicitCastExpr)
+#undef CSTYLECASTEXPR
+
+#ifndef BUILTINBITCASTEXPR
+#  define BUILTINBITCASTEXPR(Type, Base) EXPLICITCASTEXPR(Type, Base)
+#endif
+BUILTINBITCASTEXPR(BuiltinBitCastExpr, ExplicitCastExpr)
+#undef BUILTINBITCASTEXPR
+
+STMT_RANGE(ExplicitCastExpr, ObjCBridgedCastExpr, BuiltinBitCastExpr)
+
+#undef EXPLICITCASTEXPR
+
+STMT_RANGE(CastExpr, ImplicitCastExpr, BuiltinBitCastExpr)
+
+#undef CASTEXPR
+
+#ifndef CALLEXPR
+#  define CALLEXPR(Type, Base) EXPR(Type, Base)
+#endif
+CALLEXPR(CallExpr, Expr)
+#ifndef USERDEFINEDLITERAL
+#  define USERDEFINEDLITERAL(Type, Base) CALLEXPR(Type, Base)
+#endif
+USERDEFINEDLITERAL(UserDefinedLiteral, CallExpr)
+#undef USERDEFINEDLITERAL
+
+#ifndef CXXOPERATORCALLEXPR
+#  define CXXOPERATORCALLEXPR(Type, Base) CALLEXPR(Type, Base)
+#endif
+CXXOPERATORCALLEXPR(CXXOperatorCallExpr, CallExpr)
+#undef CXXOPERATORCALLEXPR
+
+#ifndef CXXMEMBERCALLEXPR
+#  define CXXMEMBERCALLEXPR(Type, Base) CALLEXPR(Type, Base)
+#endif
+CXXMEMBERCALLEXPR(CXXMemberCallExpr, CallExpr)
+#undef CXXMEMBERCALLEXPR
+
+#ifndef CUDAKERNELCALLEXPR
+#  define CUDAKERNELCALLEXPR(Type, Base) CALLEXPR(Type, Base)
+#endif
+CUDAKERNELCALLEXPR(CUDAKernelCallExpr, CallExpr)
+#undef CUDAKERNELCALLEXPR
+
+STMT_RANGE(CallExpr, CallExpr, CUDAKernelCallExpr)
+
+#undef CALLEXPR
+
+#ifndef CXXUUIDOFEXPR
+#  define CXXUUIDOFEXPR(Type, Base) EXPR(Type, Base)
+#endif
+CXXUUIDOFEXPR(CXXUuidofExpr, Expr)
+#undef CXXUUIDOFEXPR
+
+#ifndef CXXUNRESOLVEDCONSTRUCTEXPR
+#  define CXXUNRESOLVEDCONSTRUCTEXPR(Type, Base) EXPR(Type, Base)
+#endif
+CXXUNRESOLVEDCONSTRUCTEXPR(CXXUnresolvedConstructExpr, Expr)
+#undef CXXUNRESOLVEDCONSTRUCTEXPR
+
+#ifndef CXXTYPEIDEXPR
+#  define CXXTYPEIDEXPR(Type, Base) EXPR(Type, Base)
+#endif
+CXXTYPEIDEXPR(CXXTypeidExpr, Expr)
+#undef CXXTYPEIDEXPR
+
+#ifndef CXXTHROWEXPR
+#  define CXXTHROWEXPR(Type, Base) EXPR(Type, Base)
+#endif
+CXXTHROWEXPR(CXXThrowExpr, Expr)
+#undef CXXTHROWEXPR
+
+#ifndef CXXTHISEXPR
+#  define CXXTHISEXPR(Type, Base) EXPR(Type, Base)
+#endif
+CXXTHISEXPR(CXXThisExpr, Expr)
+#undef CXXTHISEXPR
+
+#ifndef CXXSTDINITIALIZERLISTEXPR
+#  define CXXSTDINITIALIZERLISTEXPR(Type, Base) EXPR(Type, Base)
+#endif
+CXXSTDINITIALIZERLISTEXPR(CXXStdInitializerListExpr, Expr)
+#undef CXXSTDINITIALIZERLISTEXPR
+
+#ifndef CXXSCALARVALUEINITEXPR
+#  define CXXSCALARVALUEINITEXPR(Type, Base) EXPR(Type, Base)
+#endif
+CXXSCALARVALUEINITEXPR(CXXScalarValueInitExpr, Expr)
+#undef CXXSCALARVALUEINITEXPR
+
+#ifndef CXXREWRITTENBINARYOPERATOR
+#  define CXXREWRITTENBINARYOPERATOR(Type, Base) EXPR(Type, Base)
+#endif
+CXXREWRITTENBINARYOPERATOR(CXXRewrittenBinaryOperator, Expr)
+#undef CXXREWRITTENBINARYOPERATOR
+
+#ifndef CXXPSEUDODESTRUCTOREXPR
+#  define CXXPSEUDODESTRUCTOREXPR(Type, Base) EXPR(Type, Base)
+#endif
+CXXPSEUDODESTRUCTOREXPR(CXXPseudoDestructorExpr, Expr)
+#undef CXXPSEUDODESTRUCTOREXPR
+
+#ifndef CXXPARENLISTINITEXPR
+#  define CXXPARENLISTINITEXPR(Type, Base) EXPR(Type, Base)
+#endif
+CXXPARENLISTINITEXPR(CXXParenListInitExpr, Expr)
+#undef CXXPARENLISTINITEXPR
+
+#ifndef CXXNULLPTRLITERALEXPR
+#  define CXXNULLPTRLITERALEXPR(Type, Base) EXPR(Type, Base)
+#endif
+CXXNULLPTRLITERALEXPR(CXXNullPtrLiteralExpr, Expr)
+#undef CXXNULLPTRLITERALEXPR
+
+#ifndef CXXNOEXCEPTEXPR
+#  define CXXNOEXCEPTEXPR(Type, Base) EXPR(Type, Base)
+#endif
+CXXNOEXCEPTEXPR(CXXNoexceptExpr, Expr)
+#undef CXXNOEXCEPTEXPR
+
+#ifndef CXXNEWEXPR
+#  define CXXNEWEXPR(Type, Base) EXPR(Type, Base)
+#endif
+CXXNEWEXPR(CXXNewExpr, Expr)
+#undef CXXNEWEXPR
+
+#ifndef CXXINHERITEDCTORINITEXPR
+#  define CXXINHERITEDCTORINITEXPR(Type, Base) EXPR(Type, Base)
+#endif
+CXXINHERITEDCTORINITEXPR(CXXInheritedCtorInitExpr, Expr)
+#undef CXXINHERITEDCTORINITEXPR
+
+#ifndef CXXFOLDEXPR
+#  define CXXFOLDEXPR(Type, Base) EXPR(Type, Base)
+#endif
+CXXFOLDEXPR(CXXFoldExpr, Expr)
+#undef CXXFOLDEXPR
+
+#ifndef CXXDEPENDENTSCOPEMEMBEREXPR
+#  define CXXDEPENDENTSCOPEMEMBEREXPR(Type, Base) EXPR(Type, Base)
+#endif
+CXXDEPENDENTSCOPEMEMBEREXPR(CXXDependentScopeMemberExpr, Expr)
+#undef CXXDEPENDENTSCOPEMEMBEREXPR
+
+#ifndef CXXDELETEEXPR
+#  define CXXDELETEEXPR(Type, Base) EXPR(Type, Base)
+#endif
+CXXDELETEEXPR(CXXDeleteExpr, Expr)
+#undef CXXDELETEEXPR
+
+#ifndef CXXDEFAULTINITEXPR
+#  define CXXDEFAULTINITEXPR(Type, Base) EXPR(Type, Base)
+#endif
+CXXDEFAULTINITEXPR(CXXDefaultInitExpr, Expr)
+#undef CXXDEFAULTINITEXPR
+
+#ifndef CXXDEFAULTARGEXPR
+#  define CXXDEFAULTARGEXPR(Type, Base) EXPR(Type, Base)
+#endif
+CXXDEFAULTARGEXPR(CXXDefaultArgExpr, Expr)
+#undef CXXDEFAULTARGEXPR
+
+#ifndef CXXCONSTRUCTEXPR
+#  define CXXCONSTRUCTEXPR(Type, Base) EXPR(Type, Base)
+#endif
+CXXCONSTRUCTEXPR(CXXConstructExpr, Expr)
+#ifndef CXXTEMPORARYOBJECTEXPR
+#  define CXXTEMPORARYOBJECTEXPR(Type, Base) CXXCONSTRUCTEXPR(Type, Base)
+#endif
+CXXTEMPORARYOBJECTEXPR(CXXTemporaryObjectExpr, CXXConstructExpr)
+#undef CXXTEMPORARYOBJECTEXPR
+
+STMT_RANGE(CXXConstructExpr, CXXConstructExpr, CXXTemporaryObjectExpr)
+
+#undef CXXCONSTRUCTEXPR
+
+#ifndef CXXBOOLLITERALEXPR
+#  define CXXBOOLLITERALEXPR(Type, Base) EXPR(Type, Base)
+#endif
+CXXBOOLLITERALEXPR(CXXBoolLiteralExpr, Expr)
+#undef CXXBOOLLITERALEXPR
+
+#ifndef CXXBINDTEMPORARYEXPR
+#  define CXXBINDTEMPORARYEXPR(Type, Base) EXPR(Type, Base)
+#endif
+CXXBINDTEMPORARYEXPR(CXXBindTemporaryExpr, Expr)
+#undef CXXBINDTEMPORARYEXPR
+
+#ifndef BLOCKEXPR
+#  define BLOCKEXPR(Type, Base) EXPR(Type, Base)
+#endif
+BLOCKEXPR(BlockExpr, Expr)
+#undef BLOCKEXPR
+
+#ifndef BINARYOPERATOR
+#  define BINARYOPERATOR(Type, Base) EXPR(Type, Base)
+#endif
+BINARYOPERATOR(BinaryOperator, Expr)
+#ifndef COMPOUNDASSIGNOPERATOR
+#  define COMPOUNDASSIGNOPERATOR(Type, Base) BINARYOPERATOR(Type, Base)
+#endif
+COMPOUNDASSIGNOPERATOR(CompoundAssignOperator, BinaryOperator)
+#undef COMPOUNDASSIGNOPERATOR
+
+STMT_RANGE(BinaryOperator, BinaryOperator, CompoundAssignOperator)
+
+#undef BINARYOPERATOR
+
+#ifndef ATOMICEXPR
+#  define ATOMICEXPR(Type, Base) EXPR(Type, Base)
+#endif
+ATOMICEXPR(AtomicExpr, Expr)
+#undef ATOMICEXPR
+
+#ifndef ASTYPEEXPR
+#  define ASTYPEEXPR(Type, Base) EXPR(Type, Base)
+#endif
+ASTYPEEXPR(AsTypeExpr, Expr)
+#undef ASTYPEEXPR
+
+#ifndef ARRAYTYPETRAITEXPR
+#  define ARRAYTYPETRAITEXPR(Type, Base) EXPR(Type, Base)
+#endif
+ARRAYTYPETRAITEXPR(ArrayTypeTraitExpr, Expr)
+#undef ARRAYTYPETRAITEXPR
+
+#ifndef ARRAYSUBSCRIPTEXPR
+#  define ARRAYSUBSCRIPTEXPR(Type, Base) EXPR(Type, Base)
+#endif
+ARRAYSUBSCRIPTEXPR(ArraySubscriptExpr, Expr)
+#undef ARRAYSUBSCRIPTEXPR
+
+#ifndef ARRAYSECTIONEXPR
+#  define ARRAYSECTIONEXPR(Type, Base) EXPR(Type, Base)
+#endif
+ARRAYSECTIONEXPR(ArraySectionExpr, Expr)
+#undef ARRAYSECTIONEXPR
+
+#ifndef ARRAYINITLOOPEXPR
+#  define ARRAYINITLOOPEXPR(Type, Base) EXPR(Type, Base)
+#endif
+ARRAYINITLOOPEXPR(ArrayInitLoopExpr, Expr)
+#undef ARRAYINITLOOPEXPR
+
+#ifndef ARRAYINITINDEXEXPR
+#  define ARRAYINITINDEXEXPR(Type, Base) EXPR(Type, Base)
+#endif
+ARRAYINITINDEXEXPR(ArrayInitIndexExpr, Expr)
+#undef ARRAYINITINDEXEXPR
+
+#ifndef ADDRLABELEXPR
+#  define ADDRLABELEXPR(Type, Base) EXPR(Type, Base)
+#endif
+ADDRLABELEXPR(AddrLabelExpr, Expr)
+#undef ADDRLABELEXPR
+
+#ifndef ABSTRACTCONDITIONALOPERATOR
+#  define ABSTRACTCONDITIONALOPERATOR(Type, Base) EXPR(Type, Base)
+#endif
+ABSTRACT_STMT(ABSTRACTCONDITIONALOPERATOR(AbstractConditionalOperator, Expr))
+#ifndef CONDITIONALOPERATOR
+#  define CONDITIONALOPERATOR(Type, Base) ABSTRACTCONDITIONALOPERATOR(Type, Base)
+#endif
+CONDITIONALOPERATOR(ConditionalOperator, AbstractConditionalOperator)
+#undef CONDITIONALOPERATOR
+
+#ifndef BINARYCONDITIONALOPERATOR
+#  define BINARYCONDITIONALOPERATOR(Type, Base) ABSTRACTCONDITIONALOPERATOR(Type, Base)
+#endif
+BINARYCONDITIONALOPERATOR(BinaryConditionalOperator, AbstractConditionalOperator)
+#undef BINARYCONDITIONALOPERATOR
+
+STMT_RANGE(AbstractConditionalOperator, ConditionalOperator, BinaryConditionalOperator)
+
+#undef ABSTRACTCONDITIONALOPERATOR
+
+STMT_RANGE(Expr, VAArgExpr, BinaryConditionalOperator)
+
+#undef EXPR
+
+#ifndef ATTRIBUTEDSTMT
+#  define ATTRIBUTEDSTMT(Type, Base) VALUESTMT(Type, Base)
+#endif
+ATTRIBUTEDSTMT(AttributedStmt, ValueStmt)
+#undef ATTRIBUTEDSTMT
+
+STMT_RANGE(ValueStmt, LabelStmt, AttributedStmt)
+
+#undef VALUESTMT
+
+#ifndef SWITCHSTMT
+#  define SWITCHSTMT(Type, Base) STMT(Type, Base)
+#endif
+SWITCHSTMT(SwitchStmt, Stmt)
+#undef SWITCHSTMT
+
+#ifndef SWITCHCASE
+#  define SWITCHCASE(Type, Base) STMT(Type, Base)
+#endif
+ABSTRACT_STMT(SWITCHCASE(SwitchCase, Stmt))
+#ifndef DEFAULTSTMT
+#  define DEFAULTSTMT(Type, Base) SWITCHCASE(Type, Base)
+#endif
+DEFAULTSTMT(DefaultStmt, SwitchCase)
+#undef DEFAULTSTMT
+
+#ifndef CASESTMT
+#  define CASESTMT(Type, Base) SWITCHCASE(Type, Base)
+#endif
+CASESTMT(CaseStmt, SwitchCase)
+#undef CASESTMT
+
+STMT_RANGE(SwitchCase, DefaultStmt, CaseStmt)
+
+#undef SWITCHCASE
+
+#ifndef SYCLKERNELCALLSTMT
+#  define SYCLKERNELCALLSTMT(Type, Base) STMT(Type, Base)
+#endif
+SYCLKERNELCALLSTMT(SYCLKernelCallStmt, Stmt)
+#undef SYCLKERNELCALLSTMT
+
+#ifndef SEHTRYSTMT
+#  define SEHTRYSTMT(Type, Base) STMT(Type, Base)
+#endif
+SEHTRYSTMT(SEHTryStmt, Stmt)
+#undef SEHTRYSTMT
+
+#ifndef SEHLEAVESTMT
+#  define SEHLEAVESTMT(Type, Base) STMT(Type, Base)
+#endif
+SEHLEAVESTMT(SEHLeaveStmt, Stmt)
+#undef SEHLEAVESTMT
+
+#ifndef SEHFINALLYSTMT
+#  define SEHFINALLYSTMT(Type, Base) STMT(Type, Base)
+#endif
+SEHFINALLYSTMT(SEHFinallyStmt, Stmt)
+#undef SEHFINALLYSTMT
+
+#ifndef SEHEXCEPTSTMT
+#  define SEHEXCEPTSTMT(Type, Base) STMT(Type, Base)
+#endif
+SEHEXCEPTSTMT(SEHExceptStmt, Stmt)
+#undef SEHEXCEPTSTMT
+
+#ifndef RETURNSTMT
+#  define RETURNSTMT(Type, Base) STMT(Type, Base)
+#endif
+RETURNSTMT(ReturnStmt, Stmt)
+#undef RETURNSTMT
+
+#ifndef OPENACCCONSTRUCTSTMT
+#  define OPENACCCONSTRUCTSTMT(Type, Base) STMT(Type, Base)
+#endif
+ABSTRACT_STMT(OPENACCCONSTRUCTSTMT(OpenACCConstructStmt, Stmt))
+#ifndef OPENACCWAITCONSTRUCT
+#  define OPENACCWAITCONSTRUCT(Type, Base) OPENACCCONSTRUCTSTMT(Type, Base)
+#endif
+OPENACCWAITCONSTRUCT(OpenACCWaitConstruct, OpenACCConstructStmt)
+#undef OPENACCWAITCONSTRUCT
+
+#ifndef OPENACCUPDATECONSTRUCT
+#  define OPENACCUPDATECONSTRUCT(Type, Base) OPENACCCONSTRUCTSTMT(Type, Base)
+#endif
+OPENACCUPDATECONSTRUCT(OpenACCUpdateConstruct, OpenACCConstructStmt)
+#undef OPENACCUPDATECONSTRUCT
+
+#ifndef OPENACCSHUTDOWNCONSTRUCT
+#  define OPENACCSHUTDOWNCONSTRUCT(Type, Base) OPENACCCONSTRUCTSTMT(Type, Base)
+#endif
+OPENACCSHUTDOWNCONSTRUCT(OpenACCShutdownConstruct, OpenACCConstructStmt)
+#undef OPENACCSHUTDOWNCONSTRUCT
+
+#ifndef OPENACCSETCONSTRUCT
+#  define OPENACCSETCONSTRUCT(Type, Base) OPENACCCONSTRUCTSTMT(Type, Base)
+#endif
+OPENACCSETCONSTRUCT(OpenACCSetConstruct, OpenACCConstructStmt)
+#undef OPENACCSETCONSTRUCT
+
+#ifndef OPENACCINITCONSTRUCT
+#  define OPENACCINITCONSTRUCT(Type, Base) OPENACCCONSTRUCTSTMT(Type, Base)
+#endif
+OPENACCINITCONSTRUCT(OpenACCInitConstruct, OpenACCConstructStmt)
+#undef OPENACCINITCONSTRUCT
+
+#ifndef OPENACCEXITDATACONSTRUCT
+#  define OPENACCEXITDATACONSTRUCT(Type, Base) OPENACCCONSTRUCTSTMT(Type, Base)
+#endif
+OPENACCEXITDATACONSTRUCT(OpenACCExitDataConstruct, OpenACCConstructStmt)
+#undef OPENACCEXITDATACONSTRUCT
+
+#ifndef OPENACCENTERDATACONSTRUCT
+#  define OPENACCENTERDATACONSTRUCT(Type, Base) OPENACCCONSTRUCTSTMT(Type, Base)
+#endif
+OPENACCENTERDATACONSTRUCT(OpenACCEnterDataConstruct, OpenACCConstructStmt)
+#undef OPENACCENTERDATACONSTRUCT
+
+#ifndef OPENACCCACHECONSTRUCT
+#  define OPENACCCACHECONSTRUCT(Type, Base) OPENACCCONSTRUCTSTMT(Type, Base)
+#endif
+OPENACCCACHECONSTRUCT(OpenACCCacheConstruct, OpenACCConstructStmt)
+#undef OPENACCCACHECONSTRUCT
+
+#ifndef OPENACCASSOCIATEDSTMTCONSTRUCT
+#  define OPENACCASSOCIATEDSTMTCONSTRUCT(Type, Base) OPENACCCONSTRUCTSTMT(Type, Base)
+#endif
+ABSTRACT_STMT(OPENACCASSOCIATEDSTMTCONSTRUCT(OpenACCAssociatedStmtConstruct, OpenACCConstructStmt))
+#ifndef OPENACCLOOPCONSTRUCT
+#  define OPENACCLOOPCONSTRUCT(Type, Base) OPENACCASSOCIATEDSTMTCONSTRUCT(Type, Base)
+#endif
+OPENACCLOOPCONSTRUCT(OpenACCLoopConstruct, OpenACCAssociatedStmtConstruct)
+#undef OPENACCLOOPCONSTRUCT
+
+#ifndef OPENACCHOSTDATACONSTRUCT
+#  define OPENACCHOSTDATACONSTRUCT(Type, Base) OPENACCASSOCIATEDSTMTCONSTRUCT(Type, Base)
+#endif
+OPENACCHOSTDATACONSTRUCT(OpenACCHostDataConstruct, OpenACCAssociatedStmtConstruct)
+#undef OPENACCHOSTDATACONSTRUCT
+
+#ifndef OPENACCDATACONSTRUCT
+#  define OPENACCDATACONSTRUCT(Type, Base) OPENACCASSOCIATEDSTMTCONSTRUCT(Type, Base)
+#endif
+OPENACCDATACONSTRUCT(OpenACCDataConstruct, OpenACCAssociatedStmtConstruct)
+#undef OPENACCDATACONSTRUCT
+
+#ifndef OPENACCCOMPUTECONSTRUCT
+#  define OPENACCCOMPUTECONSTRUCT(Type, Base) OPENACCASSOCIATEDSTMTCONSTRUCT(Type, Base)
+#endif
+OPENACCCOMPUTECONSTRUCT(OpenACCComputeConstruct, OpenACCAssociatedStmtConstruct)
+#undef OPENACCCOMPUTECONSTRUCT
+
+#ifndef OPENACCCOMBINEDCONSTRUCT
+#  define OPENACCCOMBINEDCONSTRUCT(Type, Base) OPENACCASSOCIATEDSTMTCONSTRUCT(Type, Base)
+#endif
+OPENACCCOMBINEDCONSTRUCT(OpenACCCombinedConstruct, OpenACCAssociatedStmtConstruct)
+#undef OPENACCCOMBINEDCONSTRUCT
+
+#ifndef OPENACCATOMICCONSTRUCT
+#  define OPENACCATOMICCONSTRUCT(Type, Base) OPENACCASSOCIATEDSTMTCONSTRUCT(Type, Base)
+#endif
+OPENACCATOMICCONSTRUCT(OpenACCAtomicConstruct, OpenACCAssociatedStmtConstruct)
+#undef OPENACCATOMICCONSTRUCT
+
+STMT_RANGE(OpenACCAssociatedStmtConstruct, OpenACCLoopConstruct, OpenACCAtomicConstruct)
+
+#undef OPENACCASSOCIATEDSTMTCONSTRUCT
+
+STMT_RANGE(OpenACCConstructStmt, OpenACCWaitConstruct, OpenACCAtomicConstruct)
+
+#undef OPENACCCONSTRUCTSTMT
+
+#ifndef OBJCFORCOLLECTIONSTMT
+#  define OBJCFORCOLLECTIONSTMT(Type, Base) STMT(Type, Base)
+#endif
+OBJCFORCOLLECTIONSTMT(ObjCForCollectionStmt, Stmt)
+#undef OBJCFORCOLLECTIONSTMT
+
+#ifndef OBJCAUTORELEASEPOOLSTMT
+#  define OBJCAUTORELEASEPOOLSTMT(Type, Base) STMT(Type, Base)
+#endif
+OBJCAUTORELEASEPOOLSTMT(ObjCAutoreleasePoolStmt, Stmt)
+#undef OBJCAUTORELEASEPOOLSTMT
+
+#ifndef OBJCATTRYSTMT
+#  define OBJCATTRYSTMT(Type, Base) STMT(Type, Base)
+#endif
+OBJCATTRYSTMT(ObjCAtTryStmt, Stmt)
+#undef OBJCATTRYSTMT
+
+#ifndef OBJCATTHROWSTMT
+#  define OBJCATTHROWSTMT(Type, Base) STMT(Type, Base)
+#endif
+OBJCATTHROWSTMT(ObjCAtThrowStmt, Stmt)
+#undef OBJCATTHROWSTMT
+
+#ifndef OBJCATSYNCHRONIZEDSTMT
+#  define OBJCATSYNCHRONIZEDSTMT(Type, Base) STMT(Type, Base)
+#endif
+OBJCATSYNCHRONIZEDSTMT(ObjCAtSynchronizedStmt, Stmt)
+#undef OBJCATSYNCHRONIZEDSTMT
+
+#ifndef OBJCATFINALLYSTMT
+#  define OBJCATFINALLYSTMT(Type, Base) STMT(Type, Base)
+#endif
+OBJCATFINALLYSTMT(ObjCAtFinallyStmt, Stmt)
+#undef OBJCATFINALLYSTMT
+
+#ifndef OBJCATCATCHSTMT
+#  define OBJCATCATCHSTMT(Type, Base) STMT(Type, Base)
+#endif
+OBJCATCATCHSTMT(ObjCAtCatchStmt, Stmt)
+#undef OBJCATCATCHSTMT
+
+#ifndef OMPEXECUTABLEDIRECTIVE
+#  define OMPEXECUTABLEDIRECTIVE(Type, Base) STMT(Type, Base)
+#endif
+ABSTRACT_STMT(OMPEXECUTABLEDIRECTIVE(OMPExecutableDirective, Stmt))
+#ifndef OMPTEAMSDIRECTIVE
+#  define OMPTEAMSDIRECTIVE(Type, Base) OMPEXECUTABLEDIRECTIVE(Type, Base)
+#endif
+OMPTEAMSDIRECTIVE(OMPTeamsDirective, OMPExecutableDirective)
+#undef OMPTEAMSDIRECTIVE
+
+#ifndef OMPTASKYIELDDIRECTIVE
+#  define OMPTASKYIELDDIRECTIVE(Type, Base) OMPEXECUTABLEDIRECTIVE(Type, Base)
+#endif
+OMPTASKYIELDDIRECTIVE(OMPTaskyieldDirective, OMPExecutableDirective)
+#undef OMPTASKYIELDDIRECTIVE
+
+#ifndef OMPTASKWAITDIRECTIVE
+#  define OMPTASKWAITDIRECTIVE(Type, Base) OMPEXECUTABLEDIRECTIVE(Type, Base)
+#endif
+OMPTASKWAITDIRECTIVE(OMPTaskwaitDirective, OMPExecutableDirective)
+#undef OMPTASKWAITDIRECTIVE
+
+#ifndef OMPTASKGROUPDIRECTIVE
+#  define OMPTASKGROUPDIRECTIVE(Type, Base) OMPEXECUTABLEDIRECTIVE(Type, Base)
+#endif
+OMPTASKGROUPDIRECTIVE(OMPTaskgroupDirective, OMPExecutableDirective)
+#undef OMPTASKGROUPDIRECTIVE
+
+#ifndef OMPTASKDIRECTIVE
+#  define OMPTASKDIRECTIVE(Type, Base) OMPEXECUTABLEDIRECTIVE(Type, Base)
+#endif
+OMPTASKDIRECTIVE(OMPTaskDirective, OMPExecutableDirective)
+#undef OMPTASKDIRECTIVE
+
+#ifndef OMPTARGETUPDATEDIRECTIVE
+#  define OMPTARGETUPDATEDIRECTIVE(Type, Base) OMPEXECUTABLEDIRECTIVE(Type, Base)
+#endif
+OMPTARGETUPDATEDIRECTIVE(OMPTargetUpdateDirective, OMPExecutableDirective)
+#undef OMPTARGETUPDATEDIRECTIVE
+
+#ifndef OMPTARGETTEAMSDIRECTIVE
+#  define OMPTARGETTEAMSDIRECTIVE(Type, Base) OMPEXECUTABLEDIRECTIVE(Type, Base)
+#endif
+OMPTARGETTEAMSDIRECTIVE(OMPTargetTeamsDirective, OMPExecutableDirective)
+#undef OMPTARGETTEAMSDIRECTIVE
+
+#ifndef OMPTARGETPARALLELFORDIRECTIVE
+#  define OMPTARGETPARALLELFORDIRECTIVE(Type, Base) OMPEXECUTABLEDIRECTIVE(Type, Base)
+#endif
+OMPTARGETPARALLELFORDIRECTIVE(OMPTargetParallelForDirective, OMPExecutableDirective)
+#undef OMPTARGETPARALLELFORDIRECTIVE
+
+#ifndef OMPTARGETPARALLELDIRECTIVE
+#  define OMPTARGETPARALLELDIRECTIVE(Type, Base) OMPEXECUTABLEDIRECTIVE(Type, Base)
+#endif
+OMPTARGETPARALLELDIRECTIVE(OMPTargetParallelDirective, OMPExecutableDirective)
+#undef OMPTARGETPARALLELDIRECTIVE
+
+#ifndef OMPTARGETEXITDATADIRECTIVE
+#  define OMPTARGETEXITDATADIRECTIVE(Type, Base) OMPEXECUTABLEDIRECTIVE(Type, Base)
+#endif
+OMPTARGETEXITDATADIRECTIVE(OMPTargetExitDataDirective, OMPExecutableDirective)
+#undef OMPTARGETEXITDATADIRECTIVE
+
+#ifndef OMPTARGETENTERDATADIRECTIVE
+#  define OMPTARGETENTERDATADIRECTIVE(Type, Base) OMPEXECUTABLEDIRECTIVE(Type, Base)
+#endif
+OMPTARGETENTERDATADIRECTIVE(OMPTargetEnterDataDirective, OMPExecutableDirective)
+#undef OMPTARGETENTERDATADIRECTIVE
+
+#ifndef OMPTARGETDIRECTIVE
+#  define OMPTARGETDIRECTIVE(Type, Base) OMPEXECUTABLEDIRECTIVE(Type, Base)
+#endif
+OMPTARGETDIRECTIVE(OMPTargetDirective, OMPExecutableDirective)
+#undef OMPTARGETDIRECTIVE
+
+#ifndef OMPTARGETDATADIRECTIVE
+#  define OMPTARGETDATADIRECTIVE(Type, Base) OMPEXECUTABLEDIRECTIVE(Type, Base)
+#endif
+OMPTARGETDATADIRECTIVE(OMPTargetDataDirective, OMPExecutableDirective)
+#undef OMPTARGETDATADIRECTIVE
+
+#ifndef OMPSINGLEDIRECTIVE
+#  define OMPSINGLEDIRECTIVE(Type, Base) OMPEXECUTABLEDIRECTIVE(Type, Base)
+#endif
+OMPSINGLEDIRECTIVE(OMPSingleDirective, OMPExecutableDirective)
+#undef OMPSINGLEDIRECTIVE
+
+#ifndef OMPSECTIONSDIRECTIVE
+#  define OMPSECTIONSDIRECTIVE(Type, Base) OMPEXECUTABLEDIRECTIVE(Type, Base)
+#endif
+OMPSECTIONSDIRECTIVE(OMPSectionsDirective, OMPExecutableDirective)
+#undef OMPSECTIONSDIRECTIVE
+
+#ifndef OMPSECTIONDIRECTIVE
+#  define OMPSECTIONDIRECTIVE(Type, Base) OMPEXECUTABLEDIRECTIVE(Type, Base)
+#endif
+OMPSECTIONDIRECTIVE(OMPSectionDirective, OMPExecutableDirective)
+#undef OMPSECTIONDIRECTIVE
+
+#ifndef OMPSCOPEDIRECTIVE
+#  define OMPSCOPEDIRECTIVE(Type, Base) OMPEXECUTABLEDIRECTIVE(Type, Base)
+#endif
+OMPSCOPEDIRECTIVE(OMPScopeDirective, OMPExecutableDirective)
+#undef OMPSCOPEDIRECTIVE
+
+#ifndef OMPSCANDIRECTIVE
+#  define OMPSCANDIRECTIVE(Type, Base) OMPEXECUTABLEDIRECTIVE(Type, Base)
+#endif
+OMPSCANDIRECTIVE(OMPScanDirective, OMPExecutableDirective)
+#undef OMPSCANDIRECTIVE
+
+#ifndef OMPPARALLELSECTIONSDIRECTIVE
+#  define OMPPARALLELSECTIONSDIRECTIVE(Type, Base) OMPEXECUTABLEDIRECTIVE(Type, Base)
+#endif
+OMPPARALLELSECTIONSDIRECTIVE(OMPParallelSectionsDirective, OMPExecutableDirective)
+#undef OMPPARALLELSECTIONSDIRECTIVE
+
+#ifndef OMPPARALLELMASTERDIRECTIVE
+#  define OMPPARALLELMASTERDIRECTIVE(Type, Base) OMPEXECUTABLEDIRECTIVE(Type, Base)
+#endif
+OMPPARALLELMASTERDIRECTIVE(OMPParallelMasterDirective, OMPExecutableDirective)
+#undef OMPPARALLELMASTERDIRECTIVE
+
+#ifndef OMPPARALLELMASKEDDIRECTIVE
+#  define OMPPARALLELMASKEDDIRECTIVE(Type, Base) OMPEXECUTABLEDIRECTIVE(Type, Base)
+#endif
+OMPPARALLELMASKEDDIRECTIVE(OMPParallelMaskedDirective, OMPExecutableDirective)
+#undef OMPPARALLELMASKEDDIRECTIVE
+
+#ifndef OMPPARALLELDIRECTIVE
+#  define OMPPARALLELDIRECTIVE(Type, Base) OMPEXECUTABLEDIRECTIVE(Type, Base)
+#endif
+OMPPARALLELDIRECTIVE(OMPParallelDirective, OMPExecutableDirective)
+#undef OMPPARALLELDIRECTIVE
+
+#ifndef OMPORDEREDDIRECTIVE
+#  define OMPORDEREDDIRECTIVE(Type, Base) OMPEXECUTABLEDIRECTIVE(Type, Base)
+#endif
+OMPORDEREDDIRECTIVE(OMPOrderedDirective, OMPExecutableDirective)
+#undef OMPORDEREDDIRECTIVE
+
+#ifndef OMPMETADIRECTIVE
+#  define OMPMETADIRECTIVE(Type, Base) OMPEXECUTABLEDIRECTIVE(Type, Base)
+#endif
+OMPMETADIRECTIVE(OMPMetaDirective, OMPExecutableDirective)
+#undef OMPMETADIRECTIVE
+
+#ifndef OMPMASTERDIRECTIVE
+#  define OMPMASTERDIRECTIVE(Type, Base) OMPEXECUTABLEDIRECTIVE(Type, Base)
+#endif
+OMPMASTERDIRECTIVE(OMPMasterDirective, OMPExecutableDirective)
+#undef OMPMASTERDIRECTIVE
+
+#ifndef OMPMASKEDDIRECTIVE
+#  define OMPMASKEDDIRECTIVE(Type, Base) OMPEXECUTABLEDIRECTIVE(Type, Base)
+#endif
+OMPMASKEDDIRECTIVE(OMPMaskedDirective, OMPExecutableDirective)
+#undef OMPMASKEDDIRECTIVE
+
+#ifndef OMPLOOPBASEDDIRECTIVE
+#  define OMPLOOPBASEDDIRECTIVE(Type, Base) OMPEXECUTABLEDIRECTIVE(Type, Base)
+#endif
+ABSTRACT_STMT(OMPLOOPBASEDDIRECTIVE(OMPLoopBasedDirective, OMPExecutableDirective))
+#ifndef OMPLOOPTRANSFORMATIONDIRECTIVE
+#  define OMPLOOPTRANSFORMATIONDIRECTIVE(Type, Base) OMPLOOPBASEDDIRECTIVE(Type, Base)
+#endif
+ABSTRACT_STMT(OMPLOOPTRANSFORMATIONDIRECTIVE(OMPLoopTransformationDirective, OMPLoopBasedDirective))
+#ifndef OMPUNROLLDIRECTIVE
+#  define OMPUNROLLDIRECTIVE(Type, Base) OMPLOOPTRANSFORMATIONDIRECTIVE(Type, Base)
+#endif
+OMPUNROLLDIRECTIVE(OMPUnrollDirective, OMPLoopTransformationDirective)
+#undef OMPUNROLLDIRECTIVE
+
+#ifndef OMPTILEDIRECTIVE
+#  define OMPTILEDIRECTIVE(Type, Base) OMPLOOPTRANSFORMATIONDIRECTIVE(Type, Base)
+#endif
+OMPTILEDIRECTIVE(OMPTileDirective, OMPLoopTransformationDirective)
+#undef OMPTILEDIRECTIVE
+
+#ifndef OMPSTRIPEDIRECTIVE
+#  define OMPSTRIPEDIRECTIVE(Type, Base) OMPLOOPTRANSFORMATIONDIRECTIVE(Type, Base)
+#endif
+OMPSTRIPEDIRECTIVE(OMPStripeDirective, OMPLoopTransformationDirective)
+#undef OMPSTRIPEDIRECTIVE
+
+#ifndef OMPREVERSEDIRECTIVE
+#  define OMPREVERSEDIRECTIVE(Type, Base) OMPLOOPTRANSFORMATIONDIRECTIVE(Type, Base)
+#endif
+OMPREVERSEDIRECTIVE(OMPReverseDirective, OMPLoopTransformationDirective)
+#undef OMPREVERSEDIRECTIVE
+
+#ifndef OMPINTERCHANGEDIRECTIVE
+#  define OMPINTERCHANGEDIRECTIVE(Type, Base) OMPLOOPTRANSFORMATIONDIRECTIVE(Type, Base)
+#endif
+OMPINTERCHANGEDIRECTIVE(OMPInterchangeDirective, OMPLoopTransformationDirective)
+#undef OMPINTERCHANGEDIRECTIVE
+
+STMT_RANGE(OMPLoopTransformationDirective, OMPUnrollDirective, OMPInterchangeDirective)
+
+#undef OMPLOOPTRANSFORMATIONDIRECTIVE
+
+#ifndef OMPLOOPDIRECTIVE
+#  define OMPLOOPDIRECTIVE(Type, Base) OMPLOOPBASEDDIRECTIVE(Type, Base)
+#endif
+ABSTRACT_STMT(OMPLOOPDIRECTIVE(OMPLoopDirective, OMPLoopBasedDirective))
+#ifndef OMPTEAMSGENERICLOOPDIRECTIVE
+#  define OMPTEAMSGENERICLOOPDIRECTIVE(Type, Base) OMPLOOPDIRECTIVE(Type, Base)
+#endif
+OMPTEAMSGENERICLOOPDIRECTIVE(OMPTeamsGenericLoopDirective, OMPLoopDirective)
+#undef OMPTEAMSGENERICLOOPDIRECTIVE
+
+#ifndef OMPTEAMSDISTRIBUTESIMDDIRECTIVE
+#  define OMPTEAMSDISTRIBUTESIMDDIRECTIVE(Type, Base) OMPLOOPDIRECTIVE(Type, Base)
+#endif
+OMPTEAMSDISTRIBUTESIMDDIRECTIVE(OMPTeamsDistributeSimdDirective, OMPLoopDirective)
+#undef OMPTEAMSDISTRIBUTESIMDDIRECTIVE
+
+#ifndef OMPTEAMSDISTRIBUTEPARALLELFORSIMDDIRECTIVE
+#  define OMPTEAMSDISTRIBUTEPARALLELFORSIMDDIRECTIVE(Type, Base) OMPLOOPDIRECTIVE(Type, Base)
+#endif
+OMPTEAMSDISTRIBUTEPARALLELFORSIMDDIRECTIVE(OMPTeamsDistributeParallelForSimdDirective, OMPLoopDirective)
+#undef OMPTEAMSDISTRIBUTEPARALLELFORSIMDDIRECTIVE
+
+#ifndef OMPTEAMSDISTRIBUTEPARALLELFORDIRECTIVE
+#  define OMPTEAMSDISTRIBUTEPARALLELFORDIRECTIVE(Type, Base) OMPLOOPDIRECTIVE(Type, Base)
+#endif
+OMPTEAMSDISTRIBUTEPARALLELFORDIRECTIVE(OMPTeamsDistributeParallelForDirective, OMPLoopDirective)
+#undef OMPTEAMSDISTRIBUTEPARALLELFORDIRECTIVE
+
+#ifndef OMPTEAMSDISTRIBUTEDIRECTIVE
+#  define OMPTEAMSDISTRIBUTEDIRECTIVE(Type, Base) OMPLOOPDIRECTIVE(Type, Base)
+#endif
+OMPTEAMSDISTRIBUTEDIRECTIVE(OMPTeamsDistributeDirective, OMPLoopDirective)
+#undef OMPTEAMSDISTRIBUTEDIRECTIVE
+
+#ifndef OMPTASKLOOPSIMDDIRECTIVE
+#  define OMPTASKLOOPSIMDDIRECTIVE(Type, Base) OMPLOOPDIRECTIVE(Type, Base)
+#endif
+OMPTASKLOOPSIMDDIRECTIVE(OMPTaskLoopSimdDirective, OMPLoopDirective)
+#undef OMPTASKLOOPSIMDDIRECTIVE
+
+#ifndef OMPTASKLOOPDIRECTIVE
+#  define OMPTASKLOOPDIRECTIVE(Type, Base) OMPLOOPDIRECTIVE(Type, Base)
+#endif
+OMPTASKLOOPDIRECTIVE(OMPTaskLoopDirective, OMPLoopDirective)
+#undef OMPTASKLOOPDIRECTIVE
+
+#ifndef OMPTARGETTEAMSGENERICLOOPDIRECTIVE
+#  define OMPTARGETTEAMSGENERICLOOPDIRECTIVE(Type, Base) OMPLOOPDIRECTIVE(Type, Base)
+#endif
+OMPTARGETTEAMSGENERICLOOPDIRECTIVE(OMPTargetTeamsGenericLoopDirective, OMPLoopDirective)
+#undef OMPTARGETTEAMSGENERICLOOPDIRECTIVE
+
+#ifndef OMPTARGETTEAMSDISTRIBUTESIMDDIRECTIVE
+#  define OMPTARGETTEAMSDISTRIBUTESIMDDIRECTIVE(Type, Base) OMPLOOPDIRECTIVE(Type, Base)
+#endif
+OMPTARGETTEAMSDISTRIBUTESIMDDIRECTIVE(OMPTargetTeamsDistributeSimdDirective, OMPLoopDirective)
+#undef OMPTARGETTEAMSDISTRIBUTESIMDDIRECTIVE
+
+#ifndef OMPTARGETTEAMSDISTRIBUTEPARALLELFORSIMDDIRECTIVE
+#  define OMPTARGETTEAMSDISTRIBUTEPARALLELFORSIMDDIRECTIVE(Type, Base) OMPLOOPDIRECTIVE(Type, Base)
+#endif
+OMPTARGETTEAMSDISTRIBUTEPARALLELFORSIMDDIRECTIVE(OMPTargetTeamsDistributeParallelForSimdDirective, OMPLoopDirective)
+#undef OMPTARGETTEAMSDISTRIBUTEPARALLELFORSIMDDIRECTIVE
+
+#ifndef OMPTARGETTEAMSDISTRIBUTEPARALLELFORDIRECTIVE
+#  define OMPTARGETTEAMSDISTRIBUTEPARALLELFORDIRECTIVE(Type, Base) OMPLOOPDIRECTIVE(Type, Base)
+#endif
+OMPTARGETTEAMSDISTRIBUTEPARALLELFORDIRECTIVE(OMPTargetTeamsDistributeParallelForDirective, OMPLoopDirective)
+#undef OMPTARGETTEAMSDISTRIBUTEPARALLELFORDIRECTIVE
+
+#ifndef OMPTARGETTEAMSDISTRIBUTEDIRECTIVE
+#  define OMPTARGETTEAMSDISTRIBUTEDIRECTIVE(Type, Base) OMPLOOPDIRECTIVE(Type, Base)
+#endif
+OMPTARGETTEAMSDISTRIBUTEDIRECTIVE(OMPTargetTeamsDistributeDirective, OMPLoopDirective)
+#undef OMPTARGETTEAMSDISTRIBUTEDIRECTIVE
+
+#ifndef OMPTARGETSIMDDIRECTIVE
+#  define OMPTARGETSIMDDIRECTIVE(Type, Base) OMPLOOPDIRECTIVE(Type, Base)
+#endif
+OMPTARGETSIMDDIRECTIVE(OMPTargetSimdDirective, OMPLoopDirective)
+#undef OMPTARGETSIMDDIRECTIVE
+
+#ifndef OMPTARGETPARALLELGENERICLOOPDIRECTIVE
+#  define OMPTARGETPARALLELGENERICLOOPDIRECTIVE(Type, Base) OMPLOOPDIRECTIVE(Type, Base)
+#endif
+OMPTARGETPARALLELGENERICLOOPDIRECTIVE(OMPTargetParallelGenericLoopDirective, OMPLoopDirective)
+#undef OMPTARGETPARALLELGENERICLOOPDIRECTIVE
+
+#ifndef OMPTARGETPARALLELFORSIMDDIRECTIVE
+#  define OMPTARGETPARALLELFORSIMDDIRECTIVE(Type, Base) OMPLOOPDIRECTIVE(Type, Base)
+#endif
+OMPTARGETPARALLELFORSIMDDIRECTIVE(OMPTargetParallelForSimdDirective, OMPLoopDirective)
+#undef OMPTARGETPARALLELFORSIMDDIRECTIVE
+
+#ifndef OMPSIMDDIRECTIVE
+#  define OMPSIMDDIRECTIVE(Type, Base) OMPLOOPDIRECTIVE(Type, Base)
+#endif
+OMPSIMDDIRECTIVE(OMPSimdDirective, OMPLoopDirective)
+#undef OMPSIMDDIRECTIVE
+
+#ifndef OMPPARALLELMASTERTASKLOOPSIMDDIRECTIVE
+#  define OMPPARALLELMASTERTASKLOOPSIMDDIRECTIVE(Type, Base) OMPLOOPDIRECTIVE(Type, Base)
+#endif
+OMPPARALLELMASTERTASKLOOPSIMDDIRECTIVE(OMPParallelMasterTaskLoopSimdDirective, OMPLoopDirective)
+#undef OMPPARALLELMASTERTASKLOOPSIMDDIRECTIVE
+
+#ifndef OMPPARALLELMASTERTASKLOOPDIRECTIVE
+#  define OMPPARALLELMASTERTASKLOOPDIRECTIVE(Type, Base) OMPLOOPDIRECTIVE(Type, Base)
+#endif
+OMPPARALLELMASTERTASKLOOPDIRECTIVE(OMPParallelMasterTaskLoopDirective, OMPLoopDirective)
+#undef OMPPARALLELMASTERTASKLOOPDIRECTIVE
+
+#ifndef OMPPARALLELMASKEDTASKLOOPSIMDDIRECTIVE
+#  define OMPPARALLELMASKEDTASKLOOPSIMDDIRECTIVE(Type, Base) OMPLOOPDIRECTIVE(Type, Base)
+#endif
+OMPPARALLELMASKEDTASKLOOPSIMDDIRECTIVE(OMPParallelMaskedTaskLoopSimdDirective, OMPLoopDirective)
+#undef OMPPARALLELMASKEDTASKLOOPSIMDDIRECTIVE
+
+#ifndef OMPPARALLELMASKEDTASKLOOPDIRECTIVE
+#  define OMPPARALLELMASKEDTASKLOOPDIRECTIVE(Type, Base) OMPLOOPDIRECTIVE(Type, Base)
+#endif
+OMPPARALLELMASKEDTASKLOOPDIRECTIVE(OMPParallelMaskedTaskLoopDirective, OMPLoopDirective)
+#undef OMPPARALLELMASKEDTASKLOOPDIRECTIVE
+
+#ifndef OMPPARALLELGENERICLOOPDIRECTIVE
+#  define OMPPARALLELGENERICLOOPDIRECTIVE(Type, Base) OMPLOOPDIRECTIVE(Type, Base)
+#endif
+OMPPARALLELGENERICLOOPDIRECTIVE(OMPParallelGenericLoopDirective, OMPLoopDirective)
+#undef OMPPARALLELGENERICLOOPDIRECTIVE
+
+#ifndef OMPPARALLELFORSIMDDIRECTIVE
+#  define OMPPARALLELFORSIMDDIRECTIVE(Type, Base) OMPLOOPDIRECTIVE(Type, Base)
+#endif
+OMPPARALLELFORSIMDDIRECTIVE(OMPParallelForSimdDirective, OMPLoopDirective)
+#undef OMPPARALLELFORSIMDDIRECTIVE
+
+#ifndef OMPPARALLELFORDIRECTIVE
+#  define OMPPARALLELFORDIRECTIVE(Type, Base) OMPLOOPDIRECTIVE(Type, Base)
+#endif
+OMPPARALLELFORDIRECTIVE(OMPParallelForDirective, OMPLoopDirective)
+#undef OMPPARALLELFORDIRECTIVE
+
+#ifndef OMPMASTERTASKLOOPSIMDDIRECTIVE
+#  define OMPMASTERTASKLOOPSIMDDIRECTIVE(Type, Base) OMPLOOPDIRECTIVE(Type, Base)
+#endif
+OMPMASTERTASKLOOPSIMDDIRECTIVE(OMPMasterTaskLoopSimdDirective, OMPLoopDirective)
+#undef OMPMASTERTASKLOOPSIMDDIRECTIVE
+
+#ifndef OMPMASTERTASKLOOPDIRECTIVE
+#  define OMPMASTERTASKLOOPDIRECTIVE(Type, Base) OMPLOOPDIRECTIVE(Type, Base)
+#endif
+OMPMASTERTASKLOOPDIRECTIVE(OMPMasterTaskLoopDirective, OMPLoopDirective)
+#undef OMPMASTERTASKLOOPDIRECTIVE
+
+#ifndef OMPMASKEDTASKLOOPSIMDDIRECTIVE
+#  define OMPMASKEDTASKLOOPSIMDDIRECTIVE(Type, Base) OMPLOOPDIRECTIVE(Type, Base)
+#endif
+OMPMASKEDTASKLOOPSIMDDIRECTIVE(OMPMaskedTaskLoopSimdDirective, OMPLoopDirective)
+#undef OMPMASKEDTASKLOOPSIMDDIRECTIVE
+
+#ifndef OMPMASKEDTASKLOOPDIRECTIVE
+#  define OMPMASKEDTASKLOOPDIRECTIVE(Type, Base) OMPLOOPDIRECTIVE(Type, Base)
+#endif
+OMPMASKEDTASKLOOPDIRECTIVE(OMPMaskedTaskLoopDirective, OMPLoopDirective)
+#undef OMPMASKEDTASKLOOPDIRECTIVE
+
+#ifndef OMPGENERICLOOPDIRECTIVE
+#  define OMPGENERICLOOPDIRECTIVE(Type, Base) OMPLOOPDIRECTIVE(Type, Base)
+#endif
+OMPGENERICLOOPDIRECTIVE(OMPGenericLoopDirective, OMPLoopDirective)
+#undef OMPGENERICLOOPDIRECTIVE
+
+#ifndef OMPFORSIMDDIRECTIVE
+#  define OMPFORSIMDDIRECTIVE(Type, Base) OMPLOOPDIRECTIVE(Type, Base)
+#endif
+OMPFORSIMDDIRECTIVE(OMPForSimdDirective, OMPLoopDirective)
+#undef OMPFORSIMDDIRECTIVE
+
+#ifndef OMPFORDIRECTIVE
+#  define OMPFORDIRECTIVE(Type, Base) OMPLOOPDIRECTIVE(Type, Base)
+#endif
+OMPFORDIRECTIVE(OMPForDirective, OMPLoopDirective)
+#undef OMPFORDIRECTIVE
+
+#ifndef OMPDISTRIBUTESIMDDIRECTIVE
+#  define OMPDISTRIBUTESIMDDIRECTIVE(Type, Base) OMPLOOPDIRECTIVE(Type, Base)
+#endif
+OMPDISTRIBUTESIMDDIRECTIVE(OMPDistributeSimdDirective, OMPLoopDirective)
+#undef OMPDISTRIBUTESIMDDIRECTIVE
+
+#ifndef OMPDISTRIBUTEPARALLELFORSIMDDIRECTIVE
+#  define OMPDISTRIBUTEPARALLELFORSIMDDIRECTIVE(Type, Base) OMPLOOPDIRECTIVE(Type, Base)
+#endif
+OMPDISTRIBUTEPARALLELFORSIMDDIRECTIVE(OMPDistributeParallelForSimdDirective, OMPLoopDirective)
+#undef OMPDISTRIBUTEPARALLELFORSIMDDIRECTIVE
+
+#ifndef OMPDISTRIBUTEPARALLELFORDIRECTIVE
+#  define OMPDISTRIBUTEPARALLELFORDIRECTIVE(Type, Base) OMPLOOPDIRECTIVE(Type, Base)
+#endif
+OMPDISTRIBUTEPARALLELFORDIRECTIVE(OMPDistributeParallelForDirective, OMPLoopDirective)
+#undef OMPDISTRIBUTEPARALLELFORDIRECTIVE
+
+#ifndef OMPDISTRIBUTEDIRECTIVE
+#  define OMPDISTRIBUTEDIRECTIVE(Type, Base) OMPLOOPDIRECTIVE(Type, Base)
+#endif
+OMPDISTRIBUTEDIRECTIVE(OMPDistributeDirective, OMPLoopDirective)
+#undef OMPDISTRIBUTEDIRECTIVE
+
+STMT_RANGE(OMPLoopDirective, OMPTeamsGenericLoopDirective, OMPDistributeDirective)
+
+#undef OMPLOOPDIRECTIVE
+
+STMT_RANGE(OMPLoopBasedDirective, OMPUnrollDirective, OMPDistributeDirective)
+
+#undef OMPLOOPBASEDDIRECTIVE
+
+#ifndef OMPINTEROPDIRECTIVE
+#  define OMPINTEROPDIRECTIVE(Type, Base) OMPEXECUTABLEDIRECTIVE(Type, Base)
+#endif
+OMPINTEROPDIRECTIVE(OMPInteropDirective, OMPExecutableDirective)
+#undef OMPINTEROPDIRECTIVE
+
+#ifndef OMPFLUSHDIRECTIVE
+#  define OMPFLUSHDIRECTIVE(Type, Base) OMPEXECUTABLEDIRECTIVE(Type, Base)
+#endif
+OMPFLUSHDIRECTIVE(OMPFlushDirective, OMPExecutableDirective)
+#undef OMPFLUSHDIRECTIVE
+
+#ifndef OMPERRORDIRECTIVE
+#  define OMPERRORDIRECTIVE(Type, Base) OMPEXECUTABLEDIRECTIVE(Type, Base)
+#endif
+OMPERRORDIRECTIVE(OMPErrorDirective, OMPExecutableDirective)
+#undef OMPERRORDIRECTIVE
+
+#ifndef OMPDISPATCHDIRECTIVE
+#  define OMPDISPATCHDIRECTIVE(Type, Base) OMPEXECUTABLEDIRECTIVE(Type, Base)
+#endif
+OMPDISPATCHDIRECTIVE(OMPDispatchDirective, OMPExecutableDirective)
+#undef OMPDISPATCHDIRECTIVE
+
+#ifndef OMPDEPOBJDIRECTIVE
+#  define OMPDEPOBJDIRECTIVE(Type, Base) OMPEXECUTABLEDIRECTIVE(Type, Base)
+#endif
+OMPDEPOBJDIRECTIVE(OMPDepobjDirective, OMPExecutableDirective)
+#undef OMPDEPOBJDIRECTIVE
+
+#ifndef OMPCRITICALDIRECTIVE
+#  define OMPCRITICALDIRECTIVE(Type, Base) OMPEXECUTABLEDIRECTIVE(Type, Base)
+#endif
+OMPCRITICALDIRECTIVE(OMPCriticalDirective, OMPExecutableDirective)
+#undef OMPCRITICALDIRECTIVE
+
+#ifndef OMPCANCELLATIONPOINTDIRECTIVE
+#  define OMPCANCELLATIONPOINTDIRECTIVE(Type, Base) OMPEXECUTABLEDIRECTIVE(Type, Base)
+#endif
+OMPCANCELLATIONPOINTDIRECTIVE(OMPCancellationPointDirective, OMPExecutableDirective)
+#undef OMPCANCELLATIONPOINTDIRECTIVE
+
+#ifndef OMPCANCELDIRECTIVE
+#  define OMPCANCELDIRECTIVE(Type, Base) OMPEXECUTABLEDIRECTIVE(Type, Base)
+#endif
+OMPCANCELDIRECTIVE(OMPCancelDirective, OMPExecutableDirective)
+#undef OMPCANCELDIRECTIVE
+
+#ifndef OMPBARRIERDIRECTIVE
+#  define OMPBARRIERDIRECTIVE(Type, Base) OMPEXECUTABLEDIRECTIVE(Type, Base)
+#endif
+OMPBARRIERDIRECTIVE(OMPBarrierDirective, OMPExecutableDirective)
+#undef OMPBARRIERDIRECTIVE
+
+#ifndef OMPATOMICDIRECTIVE
+#  define OMPATOMICDIRECTIVE(Type, Base) OMPEXECUTABLEDIRECTIVE(Type, Base)
+#endif
+OMPATOMICDIRECTIVE(OMPAtomicDirective, OMPExecutableDirective)
+#undef OMPATOMICDIRECTIVE
+
+#ifndef OMPASSUMEDIRECTIVE
+#  define OMPASSUMEDIRECTIVE(Type, Base) OMPEXECUTABLEDIRECTIVE(Type, Base)
+#endif
+OMPASSUMEDIRECTIVE(OMPAssumeDirective, OMPExecutableDirective)
+#undef OMPASSUMEDIRECTIVE
+
+STMT_RANGE(OMPExecutableDirective, OMPTeamsDirective, OMPAssumeDirective)
+
+#undef OMPEXECUTABLEDIRECTIVE
+
+#ifndef OMPCANONICALLOOP
+#  define OMPCANONICALLOOP(Type, Base) STMT(Type, Base)
+#endif
+OMPCANONICALLOOP(OMPCanonicalLoop, Stmt)
+#undef OMPCANONICALLOOP
+
+#ifndef NULLSTMT
+#  define NULLSTMT(Type, Base) STMT(Type, Base)
+#endif
+NULLSTMT(NullStmt, Stmt)
+#undef NULLSTMT
+
+#ifndef MSDEPENDENTEXISTSSTMT
+#  define MSDEPENDENTEXISTSSTMT(Type, Base) STMT(Type, Base)
+#endif
+MSDEPENDENTEXISTSSTMT(MSDependentExistsStmt, Stmt)
+#undef MSDEPENDENTEXISTSSTMT
+
+#ifndef INDIRECTGOTOSTMT
+#  define INDIRECTGOTOSTMT(Type, Base) STMT(Type, Base)
+#endif
+INDIRECTGOTOSTMT(IndirectGotoStmt, Stmt)
+#undef INDIRECTGOTOSTMT
+
+#ifndef IFSTMT
+#  define IFSTMT(Type, Base) STMT(Type, Base)
+#endif
+IFSTMT(IfStmt, Stmt)
+#undef IFSTMT
+
+#ifndef GOTOSTMT
+#  define GOTOSTMT(Type, Base) STMT(Type, Base)
+#endif
+GOTOSTMT(GotoStmt, Stmt)
+#undef GOTOSTMT
+
+#ifndef FORSTMT
+#  define FORSTMT(Type, Base) STMT(Type, Base)
+#endif
+FORSTMT(ForStmt, Stmt)
+#undef FORSTMT
+
+#ifndef DOSTMT
+#  define DOSTMT(Type, Base) STMT(Type, Base)
+#endif
+DOSTMT(DoStmt, Stmt)
+#undef DOSTMT
+
+#ifndef DECLSTMT
+#  define DECLSTMT(Type, Base) STMT(Type, Base)
+#endif
+DECLSTMT(DeclStmt, Stmt)
+#undef DECLSTMT
+
+#ifndef COROUTINEBODYSTMT
+#  define COROUTINEBODYSTMT(Type, Base) STMT(Type, Base)
+#endif
+COROUTINEBODYSTMT(CoroutineBodyStmt, Stmt)
+#undef COROUTINEBODYSTMT
+
+#ifndef CORETURNSTMT
+#  define CORETURNSTMT(Type, Base) STMT(Type, Base)
+#endif
+CORETURNSTMT(CoreturnStmt, Stmt)
+#undef CORETURNSTMT
+
+#ifndef CONTINUESTMT
+#  define CONTINUESTMT(Type, Base) STMT(Type, Base)
+#endif
+CONTINUESTMT(ContinueStmt, Stmt)
+#undef CONTINUESTMT
+
+#ifndef COMPOUNDSTMT
+#  define COMPOUNDSTMT(Type, Base) STMT(Type, Base)
+#endif
+COMPOUNDSTMT(CompoundStmt, Stmt)
+#undef COMPOUNDSTMT
+
+#ifndef CAPTUREDSTMT
+#  define CAPTUREDSTMT(Type, Base) STMT(Type, Base)
+#endif
+CAPTUREDSTMT(CapturedStmt, Stmt)
+#undef CAPTUREDSTMT
+
+#ifndef CXXTRYSTMT
+#  define CXXTRYSTMT(Type, Base) STMT(Type, Base)
+#endif
+CXXTRYSTMT(CXXTryStmt, Stmt)
+#undef CXXTRYSTMT
+
+#ifndef CXXFORRANGESTMT
+#  define CXXFORRANGESTMT(Type, Base) STMT(Type, Base)
+#endif
+CXXFORRANGESTMT(CXXForRangeStmt, Stmt)
+#undef CXXFORRANGESTMT
+
+#ifndef CXXCATCHSTMT
+#  define CXXCATCHSTMT(Type, Base) STMT(Type, Base)
+#endif
+CXXCATCHSTMT(CXXCatchStmt, Stmt)
+#undef CXXCATCHSTMT
+
+#ifndef BREAKSTMT
+#  define BREAKSTMT(Type, Base) STMT(Type, Base)
+#endif
+BREAKSTMT(BreakStmt, Stmt)
+#undef BREAKSTMT
+
+#ifndef ASMSTMT
+#  define ASMSTMT(Type, Base) STMT(Type, Base)
+#endif
+ABSTRACT_STMT(ASMSTMT(AsmStmt, Stmt))
+#ifndef MSASMSTMT
+#  define MSASMSTMT(Type, Base) ASMSTMT(Type, Base)
+#endif
+MSASMSTMT(MSAsmStmt, AsmStmt)
+#undef MSASMSTMT
+
+#ifndef GCCASMSTMT
+#  define GCCASMSTMT(Type, Base) ASMSTMT(Type, Base)
+#endif
+GCCASMSTMT(GCCAsmStmt, AsmStmt)
+#undef GCCASMSTMT
+
+STMT_RANGE(AsmStmt, MSAsmStmt, GCCAsmStmt)
+
+#undef ASMSTMT
+
+LAST_STMT_RANGE(Stmt, WhileStmt, GCCAsmStmt)
+
+#undef STMT
+#undef STMT_RANGE
+#undef LAST_STMT_RANGE
+#undef ABSTRACT_STMT

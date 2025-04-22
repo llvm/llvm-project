@@ -1,0 +1,258 @@
+//===- llvm/Analysis/MemoryProfileInfo.h - memory profile info ---*- C++ -*-==//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This file contains utilities to analyze memory profile information.
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef LLVM_ANALYSIS_MEMORYPROFILEINFO_H
+#define LLVM_ANALYSIS_MEMORYPROFILEINFO_H
+
+#include "llvm/IR/Metadata.h"
+#include "llvm/IR/ModuleSummaryIndex.h"
+#include <map>
+
+namespace llvm {
+namespace memprof {
+
+/// Return the allocation type for a given set of memory profile values.
+AllocationType getAllocType(uint64_t TotalLifetimeAccessDensity,
+                            uint64_t AllocCount, uint64_t TotalLifetime);
+
+/// Build callstack metadata from the provided list of call stack ids. Returns
+/// the resulting metadata node.
+MDNode *buildCallstackMetadata(ArrayRef<uint64_t> CallStack, LLVMContext &Ctx);
+
+/// Build metadata from the provided list of full stack id and profiled size, to
+/// use when reporting of hinted sizes is enabled.
+MDNode *buildContextSizeMetadata(ArrayRef<ContextTotalSize> ContextSizeInfo,
+                                 LLVMContext &Ctx);
+
+/// Returns the stack node from an MIB metadata node.
+MDNode *getMIBStackNode(const MDNode *MIB);
+
+/// Returns the allocation type from an MIB metadata node.
+AllocationType getMIBAllocType(const MDNode *MIB);
+
+/// Returns the string to use in attributes with the given type.
+std::string getAllocTypeAttributeString(AllocationType Type);
+
+/// True if the AllocTypes bitmask contains just a single type.
+bool hasSingleAllocType(uint8_t AllocTypes);
+
+/// Class to build a trie of call stack contexts for a particular profiled
+/// allocation call, along with their associated allocation types.
+/// The allocation will be at the root of the trie, which is then used to
+/// compute the minimum lists of context ids needed to associate a call context
+/// with a single allocation type.
+class CallStackTrie {
+private:
+  struct CallStackTrieNode {
+    // Allocation types for call context sharing the context prefix at this
+    // node.
+    uint8_t AllocTypes;
+    // Updated as we add allocations to note if this is the deepest point in the
+    // trie that has an ambiguous allocation type (both Cold and NotCold). It is
+    // used to prune unneeded NotCold contexts, taking advantage of the fact
+    // that we later will only clone Cold contexts, as NotCold is the allocation
+    // default. We only need to keep as metadata the NotCold contexts that
+    // overlap the longest with Cold allocations, so that we know how deeply we
+    // need to clone. For example, assume we add the following contexts to the
+    // trie:
+    //    1 3 (notcold)
+    //    1 2 4 (cold)
+    //    1 2 5 (notcold)
+    //    1 2 6 (notcold)
+    // the trie looks like:
+    //         1
+    //        / \
+    //       2   3
+    //      /|\
+    //     4 5 6
+    //
+    // It is sufficient to prune all but one not cold contexts (either 1,2,5 or
+    // 1,2,6, we arbitrarily keep the first one we encounter which will be
+    // 1,2,5). We'll initially have DeepestAmbiguousAllocType set false for trie
+    // node 1 after the trie is built, and true for node 2. This indicates that
+    // the not cold context ending in 3 is not needed (its immediate callee has
+    // this value set false). The first notcold context we encounter when
+    // iterating the callers of node 2 will be the context ending in 5 (since
+    // std::map iteration is in sorted order of key), which will see that this
+    // field is true for its callee, so we will keep it. But at that point we
+    // set the callee's flag to false which prevents adding the not cold context
+    // ending in 6 unnecessarily.
+    bool DeepestAmbiguousAllocType = true;
+    // If the user has requested reporting of hinted sizes, keep track of the
+    // associated full stack id and profiled sizes. Can have more than one
+    // after trimming (e.g. when building from metadata). This is only placed on
+    // the last (root-most) trie node for each allocation context.
+    std::vector<ContextTotalSize> ContextSizeInfo;
+    // Map of caller stack id to the corresponding child Trie node.
+    std::map<uint64_t, CallStackTrieNode *> Callers;
+    CallStackTrieNode(AllocationType Type)
+        : AllocTypes(static_cast<uint8_t>(Type)) {}
+    void addAllocType(AllocationType AllocType) {
+      AllocTypes |= static_cast<uint8_t>(AllocType);
+    }
+    void removeAllocType(AllocationType AllocType) {
+      AllocTypes &= ~static_cast<uint8_t>(AllocType);
+    }
+    bool hasAllocType(AllocationType AllocType) const {
+      return AllocTypes & static_cast<uint8_t>(AllocType);
+    }
+  };
+
+  // The node for the allocation at the root.
+  CallStackTrieNode *Alloc = nullptr;
+  // The allocation's leaf stack id.
+  uint64_t AllocStackId = 0;
+
+  void deleteTrieNode(CallStackTrieNode *Node) {
+    if (!Node)
+      return;
+    for (auto C : Node->Callers)
+      deleteTrieNode(C.second);
+    delete Node;
+  }
+
+  // Recursively build up a complete list of context size information from the
+  // trie nodes reached form the given Node, for hint size reporting.
+  void collectContextSizeInfo(CallStackTrieNode *Node,
+                              std::vector<ContextTotalSize> &ContextSizeInfo);
+
+  // Recursively convert hot allocation types to notcold, since we don't
+  // actually do any cloning for hot contexts, to facilitate more aggressive
+  // pruning of contexts.
+  void convertHotToNotCold(CallStackTrieNode *Node);
+
+  // Recursive helper to trim contexts and create metadata nodes.
+  bool buildMIBNodes(CallStackTrieNode *Node, LLVMContext &Ctx,
+                     std::vector<uint64_t> &MIBCallStack,
+                     std::vector<Metadata *> &MIBNodes,
+                     bool CalleeHasAmbiguousCallerContext,
+                     bool &CalleeDeepestAmbiguousAllocType);
+
+public:
+  CallStackTrie() = default;
+  ~CallStackTrie() { deleteTrieNode(Alloc); }
+
+  bool empty() const { return Alloc == nullptr; }
+
+  /// Add a call stack context with the given allocation type to the Trie.
+  /// The context is represented by the list of stack ids (computed during
+  /// matching via a debug location hash), expected to be in order from the
+  /// allocation call down to the bottom of the call stack (i.e. callee to
+  /// caller order).
+  void addCallStack(AllocationType AllocType, ArrayRef<uint64_t> StackIds,
+                    std::vector<ContextTotalSize> ContextSizeInfo = {});
+
+  /// Add the call stack context along with its allocation type from the MIB
+  /// metadata to the Trie.
+  void addCallStack(MDNode *MIB);
+
+  /// Build and attach the minimal necessary MIB metadata. If the alloc has a
+  /// single allocation type, add a function attribute instead. The reason for
+  /// adding an attribute in this case is that it matches how the behavior for
+  /// allocation calls will be communicated to lib call simplification after
+  /// cloning or another optimization to distinguish the allocation types,
+  /// which is lower overhead and more direct than maintaining this metadata.
+  /// Returns true if memprof metadata attached, false if not (attribute added).
+  bool buildAndAttachMIBMetadata(CallBase *CI);
+
+  /// Add an attribute for the given allocation type to the call instruction.
+  /// If hinted by reporting is enabled, a message is emitted with the given
+  /// descriptor used to identify the category of single allocation type.
+  void addSingleAllocTypeAttribute(CallBase *CI, AllocationType AT,
+                                   StringRef Descriptor);
+};
+
+/// Helper class to iterate through stack ids in both metadata (memprof MIB and
+/// callsite) and the corresponding ThinLTO summary data structures
+/// (CallsiteInfo and MIBInfo). This simplifies implementation of client code
+/// which doesn't need to worry about whether we are operating with IR (Regular
+/// LTO), or summary (ThinLTO).
+template <class NodeT, class IteratorT> class CallStack {
+public:
+  CallStack(const NodeT *N = nullptr) : N(N) {}
+
+  // Implement minimum required methods for range-based for loop.
+  // The default implementation assumes we are operating on ThinLTO data
+  // structures, which have a vector of StackIdIndices. There are specialized
+  // versions provided to iterate through metadata.
+  struct CallStackIterator {
+    const NodeT *N = nullptr;
+    IteratorT Iter;
+    CallStackIterator(const NodeT *N, bool End);
+    uint64_t operator*();
+    bool operator==(const CallStackIterator &rhs) { return Iter == rhs.Iter; }
+    bool operator!=(const CallStackIterator &rhs) { return !(*this == rhs); }
+    void operator++() { ++Iter; }
+  };
+
+  bool empty() const { return N == nullptr; }
+
+  CallStackIterator begin() const;
+  CallStackIterator end() const { return CallStackIterator(N, /*End*/ true); }
+  CallStackIterator beginAfterSharedPrefix(CallStack &Other);
+  uint64_t back() const;
+
+private:
+  const NodeT *N = nullptr;
+};
+
+template <class NodeT, class IteratorT>
+CallStack<NodeT, IteratorT>::CallStackIterator::CallStackIterator(
+    const NodeT *N, bool End)
+    : N(N) {
+  if (!N) {
+    Iter = nullptr;
+    return;
+  }
+  Iter = End ? N->StackIdIndices.end() : N->StackIdIndices.begin();
+}
+
+template <class NodeT, class IteratorT>
+uint64_t CallStack<NodeT, IteratorT>::CallStackIterator::operator*() {
+  assert(Iter != N->StackIdIndices.end());
+  return *Iter;
+}
+
+template <class NodeT, class IteratorT>
+uint64_t CallStack<NodeT, IteratorT>::back() const {
+  assert(N);
+  return N->StackIdIndices.back();
+}
+
+template <class NodeT, class IteratorT>
+typename CallStack<NodeT, IteratorT>::CallStackIterator
+CallStack<NodeT, IteratorT>::begin() const {
+  return CallStackIterator(N, /*End*/ false);
+}
+
+template <class NodeT, class IteratorT>
+typename CallStack<NodeT, IteratorT>::CallStackIterator
+CallStack<NodeT, IteratorT>::beginAfterSharedPrefix(CallStack &Other) {
+  CallStackIterator Cur = begin();
+  for (CallStackIterator OtherCur = Other.begin();
+       Cur != end() && OtherCur != Other.end(); ++Cur, ++OtherCur)
+    assert(*Cur == *OtherCur);
+  return Cur;
+}
+
+/// Specializations for iterating through IR metadata stack contexts.
+template <>
+CallStack<MDNode, MDNode::op_iterator>::CallStackIterator::CallStackIterator(
+    const MDNode *N, bool End);
+template <>
+uint64_t CallStack<MDNode, MDNode::op_iterator>::CallStackIterator::operator*();
+template <> uint64_t CallStack<MDNode, MDNode::op_iterator>::back() const;
+
+} // end namespace memprof
+} // end namespace llvm
+
+#endif

@@ -1,0 +1,4 @@
+DIAG_ENUM(ACCModifier)
+DIAG_ENUM_ITEM(0, Unknown)
+DIAG_ENUM_ITEM(1, Duplicate)
+DIAG_ENUM_END()
