@@ -15,7 +15,6 @@
 #ifndef LLVM_OBJECTYAML_DXCONTAINERYAML_H
 #define LLVM_OBJECTYAML_DXCONTAINERYAML_H
 
-#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/Object/DXContainer.h"
@@ -25,7 +24,6 @@
 #include <cstdint>
 #include <optional>
 #include <string>
-#include <variant>
 #include <vector>
 
 namespace llvm {
@@ -88,7 +86,7 @@ struct RootDescriptorYaml {
   uint32_t ShaderRegister;
   uint32_t RegisterSpace;
 
-  uint32_t getEncodedFlags();
+  uint32_t getEncodedFlags() const;
 
 #include "llvm/BinaryFormat/DXContainerConstants.def"
 };

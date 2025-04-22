@@ -14,7 +14,6 @@
 #include "llvm/ObjectYAML/DXContainerYAML.h"
 #include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/ScopeExit.h"
-#include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/Object/DXContainer.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ScopedPrinter.h"
@@ -39,9 +38,8 @@ DXContainerYAML::RootSignatureYamlDesc::create(
     const object::DirectX::RootSignature &Data) {
 
   RootSignatureYamlDesc RootSigDesc;
-  uint32_t V = Data.getVersion();
 
-  RootSigDesc.Version = V;
+  RootSigDesc.Version = Data.getVersion();
   RootSigDesc.NumStaticSamplers = Data.getNumStaticSamplers();
   RootSigDesc.StaticSamplersOffset = Data.getStaticSamplersOffset();
   RootSigDesc.NumRootParameters = Data.getNumRootParameters();
@@ -49,6 +47,7 @@ DXContainerYAML::RootSignatureYamlDesc::create(
 
   uint32_t Flags = Data.getFlags();
   for (const dxbc::RootParameterHeader &PH : Data.param_headers()) {
+
     if (!dxbc::isValidParameterType(PH.ParameterType))
       return createStringError(std::errc::invalid_argument,
                                "Invalid value for parameter type");
@@ -79,33 +78,29 @@ DXContainerYAML::RootSignatureYamlDesc::create(
       NewP.Constants.Num32BitValues = Constants.Num32BitValues;
       NewP.Constants.ShaderRegister = Constants.ShaderRegister;
       NewP.Constants.RegisterSpace = Constants.RegisterSpace;
-    }
+    } else if (auto *RDV = dyn_cast<object::DirectX::RootDescriptorView_V1_0>(
+                   &ParamView)) {
+      llvm::Expected<dxbc::RootDescriptor_V1_0> DescriptorOrErr = RDV->read();
+      if (Error E = DescriptorOrErr.takeError())
+        return std::move(E);
+      auto Descriptor = *DescriptorOrErr;
 
-      if (auto *RDV =
-              dyn_cast<object::DirectX::RootDescriptorView_V1_0>(&ParamView)) {
-        llvm::Expected<dxbc::RootDescriptor_V1_0> DescriptorOrErr = RDV->read();
-        if (Error E = DescriptorOrErr.takeError())
-          return std::move(E);
-        auto Descriptor = *DescriptorOrErr;
-
-        NewP.Descriptor.ShaderRegister = Descriptor.ShaderRegister;
-        NewP.Descriptor.RegisterSpace = Descriptor.RegisterSpace;
-      }
-
-      if (auto *RDV =
-              dyn_cast<object::DirectX::RootDescriptorView_V1_1>(&ParamView)) {
-        llvm::Expected<dxbc::RootDescriptor_V1_1> DescriptorOrErr = RDV->read();
-        if (Error E = DescriptorOrErr.takeError())
-          return std::move(E);
-        auto Descriptor = *DescriptorOrErr;
-        NewP.Descriptor.ShaderRegister = Descriptor.ShaderRegister;
-        NewP.Descriptor.RegisterSpace = Descriptor.RegisterSpace;
+      NewP.Descriptor.ShaderRegister = Descriptor.ShaderRegister;
+      NewP.Descriptor.RegisterSpace = Descriptor.RegisterSpace;
+    } else if (auto *RDV = dyn_cast<object::DirectX::RootDescriptorView_V1_1>(
+                   &ParamView)) {
+      llvm::Expected<dxbc::RootDescriptor_V1_1> DescriptorOrErr = RDV->read();
+      if (Error E = DescriptorOrErr.takeError())
+        return std::move(E);
+      auto Descriptor = *DescriptorOrErr;
+      NewP.Descriptor.ShaderRegister = Descriptor.ShaderRegister;
+      NewP.Descriptor.RegisterSpace = Descriptor.RegisterSpace;
 #define ROOT_DESCRIPTOR_FLAG(Num, Val)                                         \
   NewP.Descriptor.Val =                                                        \
       (Descriptor.Flags &                                                      \
        llvm::to_underlying(dxbc::RootDescriptorFlag::Val)) > 0;
 #include "llvm/BinaryFormat/DXContainerConstants.def"
-      }
+    }
 
     RootSigDesc.Parameters.push_back(NewP);
   }
@@ -116,7 +111,7 @@ DXContainerYAML::RootSignatureYamlDesc::create(
   return RootSigDesc;
 }
 
-uint32_t DXContainerYAML::RootDescriptorYaml::getEncodedFlags() {
+uint32_t DXContainerYAML::RootDescriptorYaml::getEncodedFlags() const {
   uint64_t Flag = 0;
 #define ROOT_DESCRIPTOR_FLAG(Num, Val)                                         \
   if (Val)                                                                     \

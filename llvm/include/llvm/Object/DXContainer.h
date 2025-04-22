@@ -15,7 +15,6 @@
 #ifndef LLVM_OBJECT_DXCONTAINER_H
 #define LLVM_OBJECT_DXCONTAINER_H
 
-#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/DXContainer.h"
@@ -25,7 +24,6 @@
 #include "llvm/TargetParser/Triple.h"
 #include <array>
 #include <cstddef>
-#include <cstdint>
 #include <variant>
 
 namespace llvm {

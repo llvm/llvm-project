@@ -24,7 +24,6 @@ Parts:
         Descriptor:
           ShaderRegister: 31
           RegisterSpace: 32
-          DATA_STATIC_WHILE_SET_AT_EXECUTE: true
       AllowInputAssemblerInputLayout: true
       DenyGeometryShaderRootAccess: true
 

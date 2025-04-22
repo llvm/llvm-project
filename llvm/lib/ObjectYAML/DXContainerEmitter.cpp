@@ -273,7 +273,7 @@ void DXContainerWriter::writeParts(raw_ostream &OS) {
       RS.NumStaticSamplers = P.RootSignature->NumStaticSamplers;
       RS.StaticSamplersOffset = P.RootSignature->StaticSamplersOffset;
 
-      for (auto &Param : P.RootSignature->Parameters) {
+      for (const auto &Param : P.RootSignature->Parameters) {
         mcdxbc::RootParameter NewParam;
         NewParam.Header = dxbc::RootParameterHeader{
             Param.Type, Param.Visibility, Param.Offset};
