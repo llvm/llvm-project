@@ -138,7 +138,7 @@ public:
   mlir::Value VisitIntegerLiteral(const IntegerLiteral *e) {
     mlir::Type type = cgf.convertType(e->getType());
     return builder.create<cir::ConstantOp>(
-        cgf.getLoc(e->getExprLoc()), type,
+        cgf.getLoc(e->getExprLoc()),
         builder.getAttr<cir::IntAttr>(type, e->getValue()));
   }
 
@@ -147,7 +147,7 @@ public:
     assert(mlir::isa<cir::CIRFPTypeInterface>(type) &&
            "expect floating-point type");
     return builder.create<cir::ConstantOp>(
-        cgf.getLoc(e->getExprLoc()), type,
+        cgf.getLoc(e->getExprLoc()),
         builder.getAttr<cir::FPAttr>(type, e->getValue()));
   }
 
@@ -1303,8 +1303,7 @@ mlir::Value ScalarExprEmitter::emitShl(const BinOpInfo &ops) {
            mlir::isa<cir::IntType>(ops.lhs.getType()))
     cgf.cgm.errorNYI("sanitizers");
 
-  cgf.cgm.errorNYI("shift ops");
-  return {};
+  return builder.createShiftLeft(cgf.getLoc(ops.loc), ops.lhs, ops.rhs);
 }
 
 mlir::Value ScalarExprEmitter::emitShr(const BinOpInfo &ops) {
@@ -1328,8 +1327,7 @@ mlir::Value ScalarExprEmitter::emitShr(const BinOpInfo &ops) {
 
   // Note that we don't need to distinguish unsigned treatment at this
   // point since it will be handled later by LLVM lowering.
-  cgf.cgm.errorNYI("shift ops");
-  return {};
+  return builder.createShiftRight(cgf.getLoc(ops.loc), ops.lhs, ops.rhs);
 }
 
 mlir::Value ScalarExprEmitter::emitAnd(const BinOpInfo &ops) {

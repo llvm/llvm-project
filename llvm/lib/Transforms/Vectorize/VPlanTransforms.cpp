@@ -874,10 +874,8 @@ void VPlanTransforms::optimizeInductionExitUsers(
   VPBlockBase *MiddleVPBB = Plan.getMiddleBlock();
   VPTypeAnalysis TypeInfo(Plan.getCanonicalIV()->getScalarType());
   for (VPIRBasicBlock *ExitVPBB : Plan.getExitBlocks()) {
-    for (VPRecipeBase &R : *ExitVPBB) {
-      auto *ExitIRI = dyn_cast<VPIRPhi>(&R);
-      if (!ExitIRI)
-        break;
+    for (VPRecipeBase &R : ExitVPBB->phis()) {
+      auto *ExitIRI = cast<VPIRPhi>(&R);
 
       for (auto [Idx, PredVPBB] : enumerate(ExitVPBB->getPredecessors())) {
         VPValue *Escape = nullptr;
@@ -2505,11 +2503,8 @@ void VPlanTransforms::handleUncountableEarlyExit(
   // Update the exit phis in the early exit block.
   VPBuilder MiddleBuilder(NewMiddle);
   VPBuilder EarlyExitB(VectorEarlyExitVPBB);
-  for (VPRecipeBase &R : *VPEarlyExitBlock) {
-    auto *ExitIRI = dyn_cast<VPIRPhi>(&R);
-    if (!ExitIRI)
-      break;
-
+  for (VPRecipeBase &R : VPEarlyExitBlock->phis()) {
+    auto *ExitIRI = cast<VPIRPhi>(&R);
     PHINode &ExitPhi = ExitIRI->getIRPhi();
     VPValue *IncomingFromEarlyExit = RecipeBuilder.getVPValueOrAddLiveIn(
         ExitPhi.getIncomingValueForBlock(UncountableExitingBlock));
