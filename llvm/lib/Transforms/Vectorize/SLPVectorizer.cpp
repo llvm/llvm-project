@@ -1242,7 +1242,8 @@ static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
 /// \returns
 /// - The first instruction found with matching opcode
 /// - nullptr if no matching instruction is found
-Instruction *findInstructionWithOpcode(ArrayRef<Value *> VL, unsigned Opcode) {
+static Instruction *findInstructionWithOpcode(ArrayRef<Value *> VL,
+                                              unsigned Opcode) {
   for (Value *V : VL) {
     if (isa<PoisonValue>(V))
       continue;
@@ -2071,7 +2072,7 @@ public:
   OptimizationRemarkEmitter *getORE() { return ORE; }
 
   /// This structure holds any data we need about the edges being traversed
-  /// during buildTree_rec(). We keep track of:
+  /// during buildTreeRec(). We keep track of:
   /// (i) the user TreeEntry index, and
   /// (ii) the index of the edge.
   struct EdgeInfo {
@@ -3491,8 +3492,8 @@ private:
                          OrdersType &ReorderIndices) const;
 
   /// This is the recursive part of buildTree.
-  void buildTree_rec(ArrayRef<Value *> Roots, unsigned Depth,
-                     const EdgeInfo &EI, unsigned InterleaveFactor = 0);
+  void buildTreeRec(ArrayRef<Value *> Roots, unsigned Depth, const EdgeInfo &EI,
+                    unsigned InterleaveFactor = 0);
 
   /// \returns true if the ExtractElement/ExtractValue instructions in \p VL can
   /// be vectorized to use the original vector (or aggregate "bitcast" to a
@@ -3810,7 +3811,7 @@ private:
   private:
     /// The operands of each instruction in each lane Operands[op_index][lane].
     /// Note: This helps avoid the replication of the code that performs the
-    /// reordering of operands during buildTree_rec() and vectorizeTree().
+    /// reordering of operands during buildTreeRec() and vectorizeTree().
     SmallVector<ValueList, 2> Operands;
 
     /// MainOp and AltOp are recorded inside. S should be obtained from
@@ -4590,10 +4591,10 @@ private:
   };
 
 #ifndef NDEBUG
-  friend inline raw_ostream &operator<<(raw_ostream &os,
+  friend inline raw_ostream &operator<<(raw_ostream &OS,
                                         const BoUpSLP::ScheduleData &SD) {
-    SD.dump(os);
-    return os;
+    SD.dump(OS);
+    return OS;
   }
 #endif
 
@@ -4694,10 +4695,10 @@ private:
   };
 
 #ifndef NDEBUG
-  friend inline raw_ostream &operator<<(raw_ostream &os,
+  friend inline raw_ostream &operator<<(raw_ostream &OS,
                                         const BoUpSLP::ScheduleBundle &Bundle) {
-    Bundle.dump(os);
-    return os;
+    Bundle.dump(OS);
+    return OS;
   }
 #endif
 
@@ -8070,14 +8071,14 @@ void BoUpSLP::buildTree(ArrayRef<Value *> Roots,
   UserIgnoreList = &UserIgnoreLst;
   if (!allSameType(Roots))
     return;
-  buildTree_rec(Roots, 0, EdgeInfo());
+  buildTreeRec(Roots, 0, EdgeInfo());
 }
 
 void BoUpSLP::buildTree(ArrayRef<Value *> Roots) {
   deleteTree();
   if (!allSameType(Roots))
     return;
-  buildTree_rec(Roots, 0, EdgeInfo());
+  buildTreeRec(Roots, 0, EdgeInfo());
 }
 
 /// Tries to find subvector of loads and builds new vector of only loads if can
@@ -8628,7 +8629,7 @@ void BoUpSLP::tryToVectorizeGatheredLoads(
                            }))
                   continue;
                 unsigned Sz = VectorizableTree.size();
-                buildTree_rec(SubSlice, 0, EdgeInfo(), InterleaveFactor);
+                buildTreeRec(SubSlice, 0, EdgeInfo(), InterleaveFactor);
                 if (Sz == VectorizableTree.size()) {
                   IsVectorized = false;
                   // Try non-interleaved vectorization with smaller vector
@@ -8683,7 +8684,7 @@ void BoUpSLP::tryToVectorizeGatheredLoads(
       inversePermutation(E.ReorderIndices, ReorderMask);
       reorderScalars(GatheredScalars, ReorderMask);
     }
-    buildTree_rec(GatheredScalars, 0, EdgeInfo());
+    buildTreeRec(GatheredScalars, 0, EdgeInfo());
   }
   // If no new entries created, consider it as no gathered loads entries must be
   // handled.
@@ -9977,9 +9978,9 @@ bool BoUpSLP::isLegalToVectorizeScalars(ArrayRef<Value *> VL, unsigned Depth,
   return true;
 }
 
-void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
-                            const EdgeInfo &UserTreeIdx,
-                            unsigned InterleaveFactor) {
+void BoUpSLP::buildTreeRec(ArrayRef<Value *> VL, unsigned Depth,
+                           const EdgeInfo &UserTreeIdx,
+                           unsigned InterleaveFactor) {
   assert((allConstant(VL) || allSameType(VL)) && "Invalid types!");
 
   SmallVector<int> ReuseShuffleIndices;
@@ -10022,7 +10023,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
       } else {
         TE->CombinedEntriesWithIndices.emplace_back(VectorizableTree.size(),
                                                     Idx == 0 ? 0 : Op1.size());
-        buildTree_rec(Op, Depth, {TE, Idx});
+        buildTreeRec(Op, Depth, {TE, Idx});
       }
     };
     AddNode(Op1, 0);
@@ -10115,12 +10116,12 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
         continue;
       InstructionsState S = getSameOpcode(Op, *TLI);
       if ((!S || S.getOpcode() != Instruction::PHI) || S.isAltShuffle())
-        buildTree_rec(Op, Depth + 1, {TE, I});
+        buildTreeRec(Op, Depth + 1, {TE, I});
       else
         PHIOps.push_back(I);
     }
     for (unsigned I : PHIOps)
-      buildTree_rec(Operands[I], Depth + 1, {TE, I});
+      buildTreeRec(Operands[I], Depth + 1, {TE, I});
   };
   switch (ShuffleOrOp) {
     case Instruction::PHI: {
@@ -10164,7 +10165,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
                            "(ExtractValueInst/ExtractElementInst).\n";
                  TE->dump());
       // This is a special case, as it does not gather, but at the same time
-      // we are not extending buildTree_rec() towards the operands.
+      // we are not extending buildTreeRec() towards the operands.
       TE->setOperand(*this);
       return;
     }
@@ -10197,7 +10198,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
                  TE->dump());
 
       TE->setOperand(*this);
-      buildTree_rec(TE->getOperand(1), Depth + 1, {TE, 1});
+      buildTreeRec(TE->getOperand(1), Depth + 1, {TE, 1});
       return;
     }
     case Instruction::Load: {
@@ -10253,7 +10254,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
       }
       TE->setOperand(*this);
       if (State == TreeEntry::ScatterVectorize)
-        buildTree_rec(PointerOps, Depth + 1, {TE, 0});
+        buildTreeRec(PointerOps, Depth + 1, {TE, 0});
       return;
     }
     case Instruction::ZExt:
@@ -10294,7 +10295,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
 
       TE->setOperand(*this);
       for (unsigned I : seq<unsigned>(VL0->getNumOperands()))
-        buildTree_rec(TE->getOperand(I), Depth + 1, {TE, I});
+        buildTreeRec(TE->getOperand(I), Depth + 1, {TE, I});
       if (ShuffleOrOp == Instruction::Trunc) {
         ExtraBitWidthNodes.insert(getOperandEntry(TE, 0)->Idx);
       } else if (ShuffleOrOp == Instruction::SIToFP ||
@@ -10349,8 +10350,8 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
       }
       TE->setOperand(0, Left);
       TE->setOperand(1, Right);
-      buildTree_rec(Left, Depth + 1, {TE, 0});
-      buildTree_rec(Right, Depth + 1, {TE, 1});
+      buildTreeRec(Left, Depth + 1, {TE, 0});
+      buildTreeRec(Right, Depth + 1, {TE, 1});
       if (ShuffleOrOp == Instruction::ICmp) {
         unsigned NumSignBits0 =
             ComputeNumSignBits(VL0->getOperand(0), *DL, 0, AC, nullptr, DT);
@@ -10395,7 +10396,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
 
       TE->setOperand(*this, isa<BinaryOperator>(VL0) && isCommutative(VL0));
       for (unsigned I : seq<unsigned>(VL0->getNumOperands()))
-        buildTree_rec(TE->getOperand(I), Depth + 1, {TE, I});
+        buildTreeRec(TE->getOperand(I), Depth + 1, {TE, I});
       return;
     }
     case Instruction::GetElementPtr: {
@@ -10451,7 +10452,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
       TE->setOperand(IndexIdx, Operands.back());
 
       for (unsigned I = 0, Ops = Operands.size(); I < Ops; ++I)
-        buildTree_rec(Operands[I], Depth + 1, {TE, I});
+        buildTreeRec(Operands[I], Depth + 1, {TE, I});
       return;
     }
     case Instruction::Store: {
@@ -10468,7 +10469,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
             dbgs() << "SLP: added a new TreeEntry (jumbled StoreInst).\n";
             TE->dump());
       TE->setOperand(*this);
-      buildTree_rec(TE->getOperand(0), Depth + 1, {TE, 0});
+      buildTreeRec(TE->getOperand(0), Depth + 1, {TE, 0});
       return;
     }
     case Instruction::Call: {
@@ -10487,7 +10488,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
         // vectorize it.
         if (isVectorIntrinsicWithScalarOpAtArg(ID, I, TTI))
           continue;
-        buildTree_rec(TE->getOperand(I), Depth + 1, {TE, I});
+        buildTreeRec(TE->getOperand(I), Depth + 1, {TE, I});
       }
       return;
     }
@@ -10540,14 +10541,14 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
         }
         TE->setOperand(0, Left);
         TE->setOperand(1, Right);
-        buildTree_rec(Left, Depth + 1, {TE, 0});
-        buildTree_rec(Right, Depth + 1, {TE, 1});
+        buildTreeRec(Left, Depth + 1, {TE, 0});
+        buildTreeRec(Right, Depth + 1, {TE, 1});
         return;
       }
 
       TE->setOperand(*this, isa<BinaryOperator>(VL0) || CI);
       for (unsigned I : seq<unsigned>(VL0->getNumOperands()))
-        buildTree_rec(TE->getOperand(I), Depth + 1, {TE, I});
+        buildTreeRec(TE->getOperand(I), Depth + 1, {TE, I});
       return;
     }
     default:
@@ -11626,7 +11627,7 @@ void BoUpSLP::transformNodes() {
           unsigned PrevSize = VectorizableTree.size();
           [[maybe_unused]] unsigned PrevEntriesSize =
               LoadEntriesToVectorize.size();
-          buildTree_rec(Slice, 0, EdgeInfo(&E, UINT_MAX));
+          buildTreeRec(Slice, 0, EdgeInfo(&E, UINT_MAX));
           if (PrevSize + 1 == VectorizableTree.size() && !SameTE &&
               VectorizableTree[PrevSize]->isGather() &&
               VectorizableTree[PrevSize]->hasState() &&
@@ -15970,7 +15971,7 @@ Instruction &BoUpSLP::getLastInstructionInBundle(const TreeEntry *E) {
 
   // LastInst can still be null at this point if there's either not an entry
   // for BB in BlocksSchedules or there's no ScheduleData available for
-  // VL.back(). This can be the case if buildTree_rec aborts for various
+  // VL.back(). This can be the case if buildTreeRec aborts for various
   // reasons (e.g., the maximum recursion depth is reached, the maximum region
   // size is reached, etc.). ScheduleData is initialized in the scheduling
   // "dry-run".
@@ -15981,10 +15982,10 @@ Instruction &BoUpSLP::getLastInstructionInBundle(const TreeEntry *E) {
   // last instruction in program order, LastInst will be set to Front, and we
   // will visit all the remaining instructions in the block.
   //
-  // One of the reasons we exit early from buildTree_rec is to place an upper
+  // One of the reasons we exit early from buildTreeRec is to place an upper
   // bound on compile-time. Thus, taking an additional compile-time hit here is
   // not ideal. However, this should be exceedingly rare since it requires that
-  // we both exit early from buildTree_rec and that the bundle be out-of-order
+  // we both exit early from buildTreeRec and that the bundle be out-of-order
   // (causing us to iterate all the way to the end of the block).
   if (!Res)
     Res = FindLastInst();
@@ -21436,8 +21437,8 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
       // not be useful.
       R.getORE()->emit([&]() {
         std::string TypeStr;
-        llvm::raw_string_ostream rso(TypeStr);
-        Ty->print(rso);
+        llvm::raw_string_ostream OS(TypeStr);
+        Ty->print(OS);
         return OptimizationRemarkMissed(SV_NAME, "UnsupportedType", I0)
                << "Cannot SLP vectorize list: type "
                << TypeStr + " is unsupported by vectorizer";
@@ -23331,11 +23332,11 @@ static std::optional<unsigned> getAggregateSize(Instruction *InsertInst) {
   } while (true);
 }
 
-static void findBuildAggregate_rec(Instruction *LastInsertInst,
-                                   TargetTransformInfo *TTI,
-                                   SmallVectorImpl<Value *> &BuildVectorOpds,
-                                   SmallVectorImpl<Value *> &InsertElts,
-                                   unsigned OperandOffset, const BoUpSLP &R) {
+static void findBuildAggregateRec(Instruction *LastInsertInst,
+                                  TargetTransformInfo *TTI,
+                                  SmallVectorImpl<Value *> &BuildVectorOpds,
+                                  SmallVectorImpl<Value *> &InsertElts,
+                                  unsigned OperandOffset, const BoUpSLP &R) {
   do {
     Value *InsertedOperand = LastInsertInst->getOperand(1);
     std::optional<unsigned> OperandIndex =
@@ -23343,8 +23344,8 @@ static void findBuildAggregate_rec(Instruction *LastInsertInst,
     if (!OperandIndex || R.isDeleted(LastInsertInst))
       return;
     if (isa<InsertElementInst, InsertValueInst>(InsertedOperand)) {
-      findBuildAggregate_rec(cast<Instruction>(InsertedOperand), TTI,
-                             BuildVectorOpds, InsertElts, *OperandIndex, R);
+      findBuildAggregateRec(cast<Instruction>(InsertedOperand), TTI,
+                            BuildVectorOpds, InsertElts, *OperandIndex, R);
 
     } else {
       BuildVectorOpds[*OperandIndex] = InsertedOperand;
@@ -23389,8 +23390,7 @@ static bool findBuildAggregate(Instruction *LastInsertInst,
   BuildVectorOpds.resize(*AggregateSize);
   InsertElts.resize(*AggregateSize);
 
-  findBuildAggregate_rec(LastInsertInst, TTI, BuildVectorOpds, InsertElts, 0,
-                         R);
+  findBuildAggregateRec(LastInsertInst, TTI, BuildVectorOpds, InsertElts, 0, R);
   llvm::erase(BuildVectorOpds, nullptr);
   llvm::erase(InsertElts, nullptr);
   if (BuildVectorOpds.size() >= 2)
