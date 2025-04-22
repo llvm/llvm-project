@@ -352,7 +352,7 @@ void __sanitizer::BufferedStackTrace::UnwindImpl(
 
 using namespace __msan;
 
-static inline void PrintFaultingInstruction(char *instname) {
+static inline void PrintFaultingInstructionIfRequested(char *instname) {
   if (__msan::flags()->print_faulting_instruction) {
     Printf("Instruction that failed the shadow check: %s\n", instname);
     Printf("\n");
@@ -373,7 +373,7 @@ static inline void WarnIfPrintFaultingInstructionRequested() {
     GET_CALLER_PC_BP;                                                        \
     if (UNLIKELY(s)) {                                                       \
       if (instname)                                                          \
-        PrintFaultingInstruction(instname);                                  \
+        PrintFaultingInstructionIfRequested(instname);                       \
       PrintWarningWithOrigin(pc, bp, o);                                     \
       if (__msan::flags()->halt_on_error) {                                  \
         Printf("Exiting\n");                                                 \
@@ -446,7 +446,7 @@ void __msan_warning() {
 }
 
 void __msan_warning_instname(char *instname) {
-  PrintFaultingInstruction(instname);
+  PrintFaultingInstructionIfRequested(instname);
   __MSAN_WARNING_BODY
 }
 
@@ -464,7 +464,7 @@ void __msan_warning_noreturn() {
 }
 
 void __msan_warning_noreturn_instname(char *instname) {
-  PrintFaultingInstruction(instname);
+  PrintFaultingInstructionIfRequested(instname);
   __MSAN_WARNING_NORETURN_BODY
 }
 
@@ -484,7 +484,7 @@ void __msan_warning_with_origin(u32 origin) {
 }
 
 void __msan_warning_with_origin_instname(u32 origin, char *instname) {
-  PrintFaultingInstruction(instname);
+  PrintFaultingInstructionIfRequested(instname);
   __MSAN_WARNING_WITH_ORIGIN_BODY(origin)
 }
 
@@ -502,7 +502,7 @@ void __msan_warning_with_origin_noreturn(u32 origin) {
 }
 
 void __msan_warning_with_origin_noreturn_instname(u32 origin, char *instname) {
-  PrintFaultingInstruction(instname);
+  PrintFaultingInstructionIfRequested(instname);
   __MSAN_WARNING_WITH_ORIGIN_NORETURN_BODY(origin)
 }
 
