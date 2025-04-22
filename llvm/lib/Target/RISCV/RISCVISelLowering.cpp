@@ -19895,8 +19895,8 @@ bool RISCVTargetLowering::isDesirableToCommuteWithShift(
 
 bool RISCVTargetLowering::isDesirableToHoistLogicOpWithExt(
     const SDNode *LogicOp, unsigned ExtOp) const {
-  if (NodeExtensionHelper::isSupportedRoot(LogicOp, Subtarget) &&
-      (ExtOp == ISD::ZERO_EXTEND || ExtOp == ISD::SIGN_EXTEND))
+  if ((ExtOp == ISD::ZERO_EXTEND || ExtOp == ISD::SIGN_EXTEND) &&
+      NodeExtensionHelper::isSupportedRoot(LogicOp, Subtarget))
     return false;
   return true;
 }
