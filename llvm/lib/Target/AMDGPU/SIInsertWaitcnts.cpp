@@ -2146,8 +2146,9 @@ void SIInsertWaitcnts::updateEventWaitcntAfter(MachineInstr &Inst,
       return;
     }
 
-    int FlatASCount = 0;
     assert(Inst.mayLoadOrStore());
+
+    int FlatASCount = 0;
 
     if (mayAccessVMEMThroughFlat(Inst)) {
       ++FlatASCount;
