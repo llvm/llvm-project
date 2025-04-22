@@ -68,6 +68,12 @@ bool isSaturating(AtomicRMWInst& RMWI) {
     case AtomicRMWInst::FMin:
       // minnum(x, -inf) -> +inf
       return CF->isNegative() && CF->isInfinity();
+    case AtomicRMWInst::FMaximum:
+      // maximum(x, +inf) -> +inf
+      return !CF->isNegative() && CF->isInfinity();
+    case AtomicRMWInst::FMinimum:
+      // minimum(x, -inf) -> +inf
+      return CF->isNegative() && CF->isInfinity();
     case AtomicRMWInst::FAdd:
     case AtomicRMWInst::FSub:
       return CF->isNaN();

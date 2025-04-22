@@ -80,6 +80,18 @@ define void @fp_atomics(ptr %x) {
   ; CHECK: atomicrmw volatile fmin ptr %x, float 1.000000e+00 seq_cst
   atomicrmw volatile fmin ptr %x, float 1.0 seq_cst
 
+  ; CHECK: atomicrmw fmaximum ptr %x, float 1.000000e+00 seq_cst
+  atomicrmw fmaximum ptr %x, float 1.0 seq_cst
+
+  ; CHECK: atomicrmw volatile fmaximum ptr %x, float 1.000000e+00 seq_cst
+  atomicrmw volatile fmaximum ptr %x, float 1.0 seq_cst
+
+  ; CHECK: atomicrmw fminimum ptr %x, float 1.000000e+00 seq_cst
+  atomicrmw fminimum ptr %x, float 1.0 seq_cst
+
+  ; CHECK: atomicrmw volatile fminimum ptr %x, float 1.000000e+00 seq_cst
+  atomicrmw volatile fminimum ptr %x, float 1.0 seq_cst
+
   ret void
 }
 

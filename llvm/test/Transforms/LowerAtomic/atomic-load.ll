@@ -78,3 +78,25 @@ define float @fmin() {
   ret float %j
 ; CHECK: ret float [[INST]]
 }
+
+define float @fmaximum() {
+; CHECK-LABEL: @fmaximum(
+  %i = alloca float
+  %j = atomicrmw fmaximum ptr %i, float 42.0 monotonic
+; CHECK: [[INST:%[a-z0-9]+]] = load
+; CHECK-NEXT: call float @llvm.maximum.f32
+; CHECK-NEXT: store
+  ret float %j
+; CHECK: ret float [[INST]]
+}
+
+define float @fminimum() {
+; CHECK-LABEL: @fminimum(
+  %i = alloca float
+  %j = atomicrmw fminimum ptr %i, float 42.0 monotonic
+; CHECK: [[INST:%[a-z0-9]+]] = load
+; CHECK-NEXT: call float @llvm.minimum.f32
+; CHECK-NEXT: store
+  ret float %j
+; CHECK: ret float [[INST]]
+}
