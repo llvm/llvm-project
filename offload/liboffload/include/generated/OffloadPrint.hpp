@@ -11,31 +11,40 @@
 #pragma once
 
 #include <OffloadAPI.h>
-#include <ostream>
+#include <llvm/Support/raw_ostream.h>
 
 template <typename T>
-inline ol_result_t printPtr(std::ostream &os, const T *ptr);
+inline ol_result_t printPtr(llvm::raw_ostream &os, const T *ptr);
 template <typename T>
-inline void printTagged(std::ostream &os, const void *ptr, T value,
+inline void printTagged(llvm::raw_ostream &os, const void *ptr, T value,
                         size_t size);
 template <typename T> struct is_handle : std::false_type {};
 template <> struct is_handle<ol_platform_handle_t> : std::true_type {};
 template <> struct is_handle<ol_device_handle_t> : std::true_type {};
 template <> struct is_handle<ol_context_handle_t> : std::true_type {};
+template <> struct is_handle<ol_queue_handle_t> : std::true_type {};
+template <> struct is_handle<ol_event_handle_t> : std::true_type {};
+template <> struct is_handle<ol_program_handle_t> : std::true_type {};
 template <typename T> inline constexpr bool is_handle_v = is_handle<T>::value;
 
-inline std::ostream &operator<<(std::ostream &os, enum ol_errc_t value);
-inline std::ostream &operator<<(std::ostream &os,
-                                enum ol_platform_info_t value);
-inline std::ostream &operator<<(std::ostream &os,
-                                enum ol_platform_backend_t value);
-inline std::ostream &operator<<(std::ostream &os, enum ol_device_type_t value);
-inline std::ostream &operator<<(std::ostream &os, enum ol_device_info_t value);
+inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
+                                     enum ol_errc_t value);
+inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
+                                     enum ol_platform_info_t value);
+inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
+                                     enum ol_platform_backend_t value);
+inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
+                                     enum ol_device_type_t value);
+inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
+                                     enum ol_device_info_t value);
+inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
+                                     enum ol_alloc_type_t value);
 
 ///////////////////////////////////////////////////////////////////////////////
 /// @brief Print operator for the ol_errc_t type
-/// @returns std::ostream &
-inline std::ostream &operator<<(std::ostream &os, enum ol_errc_t value) {
+/// @returns llvm::raw_ostream &
+inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
+                                     enum ol_errc_t value) {
   switch (value) {
   case OL_ERRC_SUCCESS:
     os << "OL_ERRC_SUCCESS";
@@ -46,23 +55,20 @@ inline std::ostream &operator<<(std::ostream &os, enum ol_errc_t value) {
   case OL_ERRC_INVALID_PLATFORM:
     os << "OL_ERRC_INVALID_PLATFORM";
     break;
-  case OL_ERRC_DEVICE_NOT_FOUND:
-    os << "OL_ERRC_DEVICE_NOT_FOUND";
-    break;
   case OL_ERRC_INVALID_DEVICE:
     os << "OL_ERRC_INVALID_DEVICE";
     break;
-  case OL_ERRC_DEVICE_LOST:
-    os << "OL_ERRC_DEVICE_LOST";
+  case OL_ERRC_INVALID_QUEUE:
+    os << "OL_ERRC_INVALID_QUEUE";
     break;
-  case OL_ERRC_UNINITIALIZED:
-    os << "OL_ERRC_UNINITIALIZED";
+  case OL_ERRC_INVALID_EVENT:
+    os << "OL_ERRC_INVALID_EVENT";
+    break;
+  case OL_ERRC_INVALID_KERNEL_NAME:
+    os << "OL_ERRC_INVALID_KERNEL_NAME";
     break;
   case OL_ERRC_OUT_OF_RESOURCES:
     os << "OL_ERRC_OUT_OF_RESOURCES";
-    break;
-  case OL_ERRC_UNSUPPORTED_VERSION:
-    os << "OL_ERRC_UNSUPPORTED_VERSION";
     break;
   case OL_ERRC_UNSUPPORTED_FEATURE:
     os << "OL_ERRC_UNSUPPORTED_FEATURE";
@@ -97,9 +103,9 @@ inline std::ostream &operator<<(std::ostream &os, enum ol_errc_t value) {
 
 ///////////////////////////////////////////////////////////////////////////////
 /// @brief Print operator for the ol_platform_info_t type
-/// @returns std::ostream &
-inline std::ostream &operator<<(std::ostream &os,
-                                enum ol_platform_info_t value) {
+/// @returns llvm::raw_ostream &
+inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
+                                     enum ol_platform_info_t value) {
   switch (value) {
   case OL_PLATFORM_INFO_NAME:
     os << "OL_PLATFORM_INFO_NAME";
@@ -122,9 +128,9 @@ inline std::ostream &operator<<(std::ostream &os,
 
 ///////////////////////////////////////////////////////////////////////////////
 /// @brief Print type-tagged ol_platform_info_t enum value
-/// @returns std::ostream &
+/// @returns llvm::raw_ostream &
 template <>
-inline void printTagged(std::ostream &os, const void *ptr,
+inline void printTagged(llvm::raw_ostream &os, const void *ptr,
                         ol_platform_info_t value, size_t size) {
   if (ptr == NULL) {
     printPtr(os, ptr);
@@ -159,9 +165,9 @@ inline void printTagged(std::ostream &os, const void *ptr,
 }
 ///////////////////////////////////////////////////////////////////////////////
 /// @brief Print operator for the ol_platform_backend_t type
-/// @returns std::ostream &
-inline std::ostream &operator<<(std::ostream &os,
-                                enum ol_platform_backend_t value) {
+/// @returns llvm::raw_ostream &
+inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
+                                     enum ol_platform_backend_t value) {
   switch (value) {
   case OL_PLATFORM_BACKEND_UNKNOWN:
     os << "OL_PLATFORM_BACKEND_UNKNOWN";
@@ -172,6 +178,9 @@ inline std::ostream &operator<<(std::ostream &os,
   case OL_PLATFORM_BACKEND_AMDGPU:
     os << "OL_PLATFORM_BACKEND_AMDGPU";
     break;
+  case OL_PLATFORM_BACKEND_HOST:
+    os << "OL_PLATFORM_BACKEND_HOST";
+    break;
   default:
     os << "unknown enumerator";
     break;
@@ -181,8 +190,9 @@ inline std::ostream &operator<<(std::ostream &os,
 
 ///////////////////////////////////////////////////////////////////////////////
 /// @brief Print operator for the ol_device_type_t type
-/// @returns std::ostream &
-inline std::ostream &operator<<(std::ostream &os, enum ol_device_type_t value) {
+/// @returns llvm::raw_ostream &
+inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
+                                     enum ol_device_type_t value) {
   switch (value) {
   case OL_DEVICE_TYPE_DEFAULT:
     os << "OL_DEVICE_TYPE_DEFAULT";
@@ -205,8 +215,9 @@ inline std::ostream &operator<<(std::ostream &os, enum ol_device_type_t value) {
 
 ///////////////////////////////////////////////////////////////////////////////
 /// @brief Print operator for the ol_device_info_t type
-/// @returns std::ostream &
-inline std::ostream &operator<<(std::ostream &os, enum ol_device_info_t value) {
+/// @returns llvm::raw_ostream &
+inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
+                                     enum ol_device_info_t value) {
   switch (value) {
   case OL_DEVICE_INFO_TYPE:
     os << "OL_DEVICE_INFO_TYPE";
@@ -232,9 +243,9 @@ inline std::ostream &operator<<(std::ostream &os, enum ol_device_info_t value) {
 
 ///////////////////////////////////////////////////////////////////////////////
 /// @brief Print type-tagged ol_device_info_t enum value
-/// @returns std::ostream &
+/// @returns llvm::raw_ostream &
 template <>
-inline void printTagged(std::ostream &os, const void *ptr,
+inline void printTagged(llvm::raw_ostream &os, const void *ptr,
                         ol_device_info_t value, size_t size) {
   if (ptr == NULL) {
     printPtr(os, ptr);
@@ -274,9 +285,30 @@ inline void printTagged(std::ostream &os, const void *ptr,
     break;
   }
 }
+///////////////////////////////////////////////////////////////////////////////
+/// @brief Print operator for the ol_alloc_type_t type
+/// @returns llvm::raw_ostream &
+inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
+                                     enum ol_alloc_type_t value) {
+  switch (value) {
+  case OL_ALLOC_TYPE_HOST:
+    os << "OL_ALLOC_TYPE_HOST";
+    break;
+  case OL_ALLOC_TYPE_DEVICE:
+    os << "OL_ALLOC_TYPE_DEVICE";
+    break;
+  case OL_ALLOC_TYPE_MANAGED:
+    os << "OL_ALLOC_TYPE_MANAGED";
+    break;
+  default:
+    os << "unknown enumerator";
+    break;
+  }
+  return os;
+}
 
-inline std::ostream &operator<<(std::ostream &os,
-                                const ol_error_struct_t *Err) {
+inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
+                                     const ol_error_struct_t *Err) {
   if (Err == nullptr) {
     os << "OL_SUCCESS";
   } else {
@@ -284,34 +316,64 @@ inline std::ostream &operator<<(std::ostream &os,
   }
   return os;
 }
+///////////////////////////////////////////////////////////////////////////////
+/// @brief Print operator for the ol_code_location_t type
+/// @returns llvm::raw_ostream &
 
-inline std::ostream &operator<<(std::ostream &os,
-                                const struct ol_get_platform_params_t *params) {
-  os << ".NumEntries = ";
-  os << *params->pNumEntries;
+inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
+                                     const struct ol_code_location_t params) {
+  os << "(struct ol_code_location_t){";
+  os << ".FunctionName = ";
+  printPtr(os, params.FunctionName);
   os << ", ";
-  os << ".Platforms = ";
-  os << "{";
-  for (size_t i = 0; i < *params->pNumEntries; i++) {
-    if (i > 0) {
-      os << ", ";
-    }
-    printPtr(os, (*params->pPlatforms)[i]);
-  }
+  os << ".SourceFile = ";
+  printPtr(os, params.SourceFile);
+  os << ", ";
+  os << ".LineNumber = ";
+  os << params.LineNumber;
+  os << ", ";
+  os << ".ColumnNumber = ";
+  os << params.ColumnNumber;
+  os << "}";
+  return os;
+}
+///////////////////////////////////////////////////////////////////////////////
+/// @brief Print operator for the ol_kernel_launch_size_args_t type
+/// @returns llvm::raw_ostream &
+
+inline llvm::raw_ostream &
+operator<<(llvm::raw_ostream &os,
+           const struct ol_kernel_launch_size_args_t params) {
+  os << "(struct ol_kernel_launch_size_args_t){";
+  os << ".Dimensions = ";
+  os << params.Dimensions;
+  os << ", ";
+  os << ".NumGroupsX = ";
+  os << params.NumGroupsX;
+  os << ", ";
+  os << ".NumGroupsY = ";
+  os << params.NumGroupsY;
+  os << ", ";
+  os << ".NumGroupsZ = ";
+  os << params.NumGroupsZ;
+  os << ", ";
+  os << ".GroupSizeX = ";
+  os << params.GroupSizeX;
+  os << ", ";
+  os << ".GroupSizeY = ";
+  os << params.GroupSizeY;
+  os << ", ";
+  os << ".GroupSizeZ = ";
+  os << params.GroupSizeZ;
+  os << ", ";
+  os << ".DynSharedMemory = ";
+  os << params.DynSharedMemory;
   os << "}";
   return os;
 }
 
-inline std::ostream &
-operator<<(std::ostream &os,
-           const struct ol_get_platform_count_params_t *params) {
-  os << ".NumPlatforms = ";
-  printPtr(os, *params->pNumPlatforms);
-  return os;
-}
-
-inline std::ostream &
-operator<<(std::ostream &os,
+inline llvm::raw_ostream &
+operator<<(llvm::raw_ostream &os,
            const struct ol_get_platform_info_params_t *params) {
   os << ".Platform = ";
   printPtr(os, *params->pPlatform);
@@ -327,8 +389,8 @@ operator<<(std::ostream &os,
   return os;
 }
 
-inline std::ostream &
-operator<<(std::ostream &os,
+inline llvm::raw_ostream &
+operator<<(llvm::raw_ostream &os,
            const struct ol_get_platform_info_size_params_t *params) {
   os << ".Platform = ";
   printPtr(os, *params->pPlatform);
@@ -341,39 +403,20 @@ operator<<(std::ostream &os,
   return os;
 }
 
-inline std::ostream &
-operator<<(std::ostream &os,
-           const struct ol_get_device_count_params_t *params) {
-  os << ".Platform = ";
-  printPtr(os, *params->pPlatform);
+inline llvm::raw_ostream &
+operator<<(llvm::raw_ostream &os,
+           const struct ol_iterate_devices_params_t *params) {
+  os << ".Callback = ";
+  os << reinterpret_cast<void *>(*params->pCallback);
   os << ", ";
-  os << ".NumDevices = ";
-  printPtr(os, *params->pNumDevices);
+  os << ".UserData = ";
+  printPtr(os, *params->pUserData);
   return os;
 }
 
-inline std::ostream &operator<<(std::ostream &os,
-                                const struct ol_get_device_params_t *params) {
-  os << ".Platform = ";
-  printPtr(os, *params->pPlatform);
-  os << ", ";
-  os << ".NumEntries = ";
-  os << *params->pNumEntries;
-  os << ", ";
-  os << ".Devices = ";
-  os << "{";
-  for (size_t i = 0; i < *params->pNumEntries; i++) {
-    if (i > 0) {
-      os << ", ";
-    }
-    printPtr(os, (*params->pDevices)[i]);
-  }
-  os << "}";
-  return os;
-}
-
-inline std::ostream &
-operator<<(std::ostream &os, const struct ol_get_device_info_params_t *params) {
+inline llvm::raw_ostream &
+operator<<(llvm::raw_ostream &os,
+           const struct ol_get_device_info_params_t *params) {
   os << ".Device = ";
   printPtr(os, *params->pDevice);
   os << ", ";
@@ -388,8 +431,8 @@ operator<<(std::ostream &os, const struct ol_get_device_info_params_t *params) {
   return os;
 }
 
-inline std::ostream &
-operator<<(std::ostream &os,
+inline llvm::raw_ostream &
+operator<<(llvm::raw_ostream &os,
            const struct ol_get_device_info_size_params_t *params) {
   os << ".Device = ";
   printPtr(os, *params->pDevice);
@@ -402,10 +445,163 @@ operator<<(std::ostream &os,
   return os;
 }
 
+inline llvm::raw_ostream &
+operator<<(llvm::raw_ostream &os, const struct ol_mem_alloc_params_t *params) {
+  os << ".Device = ";
+  printPtr(os, *params->pDevice);
+  os << ", ";
+  os << ".Type = ";
+  os << *params->pType;
+  os << ", ";
+  os << ".Size = ";
+  os << *params->pSize;
+  os << ", ";
+  os << ".AllocationOut = ";
+  printPtr(os, *params->pAllocationOut);
+  return os;
+}
+
+inline llvm::raw_ostream &
+operator<<(llvm::raw_ostream &os, const struct ol_mem_free_params_t *params) {
+  os << ".Address = ";
+  printPtr(os, *params->pAddress);
+  return os;
+}
+
+inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
+                                     const struct ol_memcpy_params_t *params) {
+  os << ".Queue = ";
+  printPtr(os, *params->pQueue);
+  os << ", ";
+  os << ".DstPtr = ";
+  printPtr(os, *params->pDstPtr);
+  os << ", ";
+  os << ".DstDevice = ";
+  printPtr(os, *params->pDstDevice);
+  os << ", ";
+  os << ".SrcPtr = ";
+  printPtr(os, *params->pSrcPtr);
+  os << ", ";
+  os << ".SrcDevice = ";
+  printPtr(os, *params->pSrcDevice);
+  os << ", ";
+  os << ".Size = ";
+  os << *params->pSize;
+  os << ", ";
+  os << ".EventOut = ";
+  printPtr(os, *params->pEventOut);
+  return os;
+}
+
+inline llvm::raw_ostream &
+operator<<(llvm::raw_ostream &os,
+           const struct ol_create_queue_params_t *params) {
+  os << ".Device = ";
+  printPtr(os, *params->pDevice);
+  os << ", ";
+  os << ".Queue = ";
+  printPtr(os, *params->pQueue);
+  return os;
+}
+
+inline llvm::raw_ostream &
+operator<<(llvm::raw_ostream &os,
+           const struct ol_destroy_queue_params_t *params) {
+  os << ".Queue = ";
+  printPtr(os, *params->pQueue);
+  return os;
+}
+
+inline llvm::raw_ostream &
+operator<<(llvm::raw_ostream &os, const struct ol_wait_queue_params_t *params) {
+  os << ".Queue = ";
+  printPtr(os, *params->pQueue);
+  return os;
+}
+
+inline llvm::raw_ostream &
+operator<<(llvm::raw_ostream &os,
+           const struct ol_destroy_event_params_t *params) {
+  os << ".Event = ";
+  printPtr(os, *params->pEvent);
+  return os;
+}
+
+inline llvm::raw_ostream &
+operator<<(llvm::raw_ostream &os, const struct ol_wait_event_params_t *params) {
+  os << ".Event = ";
+  printPtr(os, *params->pEvent);
+  return os;
+}
+
+inline llvm::raw_ostream &
+operator<<(llvm::raw_ostream &os,
+           const struct ol_create_program_params_t *params) {
+  os << ".Device = ";
+  printPtr(os, *params->pDevice);
+  os << ", ";
+  os << ".ProgData = ";
+  printPtr(os, *params->pProgData);
+  os << ", ";
+  os << ".ProgDataSize = ";
+  os << *params->pProgDataSize;
+  os << ", ";
+  os << ".Program = ";
+  printPtr(os, *params->pProgram);
+  return os;
+}
+
+inline llvm::raw_ostream &
+operator<<(llvm::raw_ostream &os,
+           const struct ol_destroy_program_params_t *params) {
+  os << ".Program = ";
+  printPtr(os, *params->pProgram);
+  return os;
+}
+
+inline llvm::raw_ostream &
+operator<<(llvm::raw_ostream &os, const struct ol_get_kernel_params_t *params) {
+  os << ".Program = ";
+  printPtr(os, *params->pProgram);
+  os << ", ";
+  os << ".KernelName = ";
+  printPtr(os, *params->pKernelName);
+  os << ", ";
+  os << ".Kernel = ";
+  printPtr(os, *params->pKernel);
+  return os;
+}
+
+inline llvm::raw_ostream &
+operator<<(llvm::raw_ostream &os,
+           const struct ol_launch_kernel_params_t *params) {
+  os << ".Queue = ";
+  printPtr(os, *params->pQueue);
+  os << ", ";
+  os << ".Device = ";
+  printPtr(os, *params->pDevice);
+  os << ", ";
+  os << ".Kernel = ";
+  printPtr(os, *params->pKernel);
+  os << ", ";
+  os << ".ArgumentsData = ";
+  printPtr(os, *params->pArgumentsData);
+  os << ", ";
+  os << ".ArgumentsSize = ";
+  os << *params->pArgumentsSize;
+  os << ", ";
+  os << ".LaunchSizeArgs = ";
+  printPtr(os, *params->pLaunchSizeArgs);
+  os << ", ";
+  os << ".EventOut = ";
+  printPtr(os, *params->pEventOut);
+  return os;
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 // @brief Print pointer value
 template <typename T>
-inline ol_result_t printPtr(std::ostream &os, const T *ptr) {
+inline ol_result_t printPtr(llvm::raw_ostream &os, const T *ptr) {
   if (ptr == nullptr) {
     os << "nullptr";
   } else if constexpr (std::is_pointer_v<T>) {

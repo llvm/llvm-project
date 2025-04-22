@@ -12,7 +12,7 @@
 #include "olPlatformInfo.hpp"
 
 struct olGetPlatformInfoSizeTest
-    : offloadPlatformTest,
+    : OffloadPlatformTest,
       ::testing::WithParamInterface<ol_platform_info_t> {};
 
 INSTANTIATE_TEST_SUITE_P(
