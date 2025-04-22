@@ -12,10 +12,10 @@
 #include "olDeviceInfo.hpp"
 
 struct olGetDeviceInfoSizeTest
-    : offloadDeviceTest,
+    : OffloadDeviceTest,
       ::testing::WithParamInterface<ol_device_info_t> {
 
-  void SetUp() override { RETURN_ON_FATAL_FAILURE(offloadDeviceTest::SetUp()); }
+  void SetUp() override { RETURN_ON_FATAL_FAILURE(OffloadDeviceTest::SetUp()); }
 };
 
 // TODO: We could autogenerate the list of enum values
