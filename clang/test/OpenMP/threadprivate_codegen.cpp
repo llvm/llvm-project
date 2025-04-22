@@ -977,13 +977,13 @@ int foobar() {
 // CHECK1-NEXT:    [[DOTADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    store ptr [[TMP0]], ptr [[DOTADDR]], align 8
 // CHECK1-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[DOTADDR]], align 8
-// CHECK1-NEXT:    call void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) [[TMP1]], i32 noundef 5)
+// CHECK1-NEXT:    call void @_ZN2S1C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) [[TMP1]], i32 noundef 5)
 // CHECK1-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[DOTADDR]], align 8
 // CHECK1-NEXT:    ret ptr [[TMP2]]
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@_ZN2S1C1Ei
-// CHECK1-SAME: (ptr noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR1:[0-9]+]] comdat align 2 {
+// CHECK1-SAME: (ptr noalias noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR1:[0-9]+]] comdat align 2 {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
@@ -991,7 +991,7 @@ int foobar() {
 // CHECK1-NEXT:    store i32 [[A]], ptr [[A_ADDR]], align 4
 // CHECK1-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // CHECK1-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4
-// CHECK1-NEXT:    call void @_ZN2S1C2Ei(ptr noundef nonnull align 4 dereferenceable(4) [[THIS1]], i32 noundef [[TMP0]])
+// CHECK1-NEXT:    call void @_ZN2S1C2Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) [[THIS1]], i32 noundef [[TMP0]])
 // CHECK1-NEXT:    ret void
 //
 //
@@ -1036,33 +1036,33 @@ int foobar() {
 // CHECK1-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[DOTADDR]], align 8
 // CHECK1-NEXT:    store ptr [[TMP1]], ptr [[ARRAYINIT_ENDOFINIT]], align 8
 // CHECK1-NEXT:    store ptr [[TMP1]], ptr [[ARRAYINIT_ENDOFINIT1]], align 8
-// CHECK1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) [[TMP1]], i32 noundef 1)
+// CHECK1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) [[TMP1]], i32 noundef 1)
 // CHECK1-NEXT:            to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]]
 // CHECK1:       invoke.cont:
 // CHECK1-NEXT:    [[ARRAYINIT_ELEMENT:%.*]] = getelementptr inbounds [[STRUCT_S1:%.*]], ptr [[TMP1]], i64 1
 // CHECK1-NEXT:    store ptr [[ARRAYINIT_ELEMENT]], ptr [[ARRAYINIT_ENDOFINIT1]], align 8
-// CHECK1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) [[ARRAYINIT_ELEMENT]], i32 noundef 2)
+// CHECK1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) [[ARRAYINIT_ELEMENT]], i32 noundef 2)
 // CHECK1-NEXT:            to label [[INVOKE_CONT2:%.*]] unwind label [[LPAD]]
 // CHECK1:       invoke.cont2:
 // CHECK1-NEXT:    [[ARRAYINIT_ELEMENT3:%.*]] = getelementptr inbounds [[STRUCT_S1]], ptr [[TMP1]], i64 2
 // CHECK1-NEXT:    store ptr [[ARRAYINIT_ELEMENT3]], ptr [[ARRAYINIT_ENDOFINIT1]], align 8
-// CHECK1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) [[ARRAYINIT_ELEMENT3]], i32 noundef 3)
+// CHECK1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) [[ARRAYINIT_ELEMENT3]], i32 noundef 3)
 // CHECK1-NEXT:            to label [[INVOKE_CONT4:%.*]] unwind label [[LPAD]]
 // CHECK1:       invoke.cont4:
 // CHECK1-NEXT:    [[ARRAYINIT_ELEMENT6:%.*]] = getelementptr inbounds [3 x %struct.S1], ptr [[TMP1]], i64 1
 // CHECK1-NEXT:    store ptr [[ARRAYINIT_ELEMENT6]], ptr [[ARRAYINIT_ENDOFINIT]], align 8
 // CHECK1-NEXT:    store ptr [[ARRAYINIT_ELEMENT6]], ptr [[ARRAYINIT_ENDOFINIT7]], align 8
-// CHECK1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) [[ARRAYINIT_ELEMENT6]], i32 noundef 4)
+// CHECK1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) [[ARRAYINIT_ELEMENT6]], i32 noundef 4)
 // CHECK1-NEXT:            to label [[INVOKE_CONT9:%.*]] unwind label [[LPAD8:%.*]]
 // CHECK1:       invoke.cont9:
 // CHECK1-NEXT:    [[ARRAYINIT_ELEMENT10:%.*]] = getelementptr inbounds [[STRUCT_S1]], ptr [[ARRAYINIT_ELEMENT6]], i64 1
 // CHECK1-NEXT:    store ptr [[ARRAYINIT_ELEMENT10]], ptr [[ARRAYINIT_ENDOFINIT7]], align 8
-// CHECK1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) [[ARRAYINIT_ELEMENT10]], i32 noundef 5)
+// CHECK1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) [[ARRAYINIT_ELEMENT10]], i32 noundef 5)
 // CHECK1-NEXT:            to label [[INVOKE_CONT11:%.*]] unwind label [[LPAD8]]
 // CHECK1:       invoke.cont11:
 // CHECK1-NEXT:    [[ARRAYINIT_ELEMENT12:%.*]] = getelementptr inbounds [[STRUCT_S1]], ptr [[ARRAYINIT_ELEMENT6]], i64 2
 // CHECK1-NEXT:    store ptr [[ARRAYINIT_ELEMENT12]], ptr [[ARRAYINIT_ENDOFINIT7]], align 8
-// CHECK1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) [[ARRAYINIT_ELEMENT12]], i32 noundef 6)
+// CHECK1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) [[ARRAYINIT_ELEMENT12]], i32 noundef 6)
 // CHECK1-NEXT:            to label [[INVOKE_CONT13:%.*]] unwind label [[LPAD8]]
 // CHECK1:       invoke.cont13:
 // CHECK1-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[DOTADDR]], align 8
@@ -1154,13 +1154,13 @@ int foobar() {
 // CHECK1-LABEL: define {{[^@]+}}@__cxx_global_var_init
 // CHECK1-SAME: () #[[ATTR0]] {
 // CHECK1-NEXT:  entry:
-// CHECK1-NEXT:    call void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) @_ZL3gs1, i32 noundef 5)
+// CHECK1-NEXT:    call void @_ZN2S1C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) @_ZL3gs1, i32 noundef 5)
 // CHECK1-NEXT:    [[TMP0:%.*]] = call i32 @__cxa_atexit(ptr @_ZN2S1D1Ev, ptr @_ZL3gs1, ptr @__dso_handle) #[[ATTR3]]
 // CHECK1-NEXT:    ret void
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@_ZN2S1C2Ei
-// CHECK1-SAME: (ptr noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR2]] comdat align 2 {
+// CHECK1-SAME: (ptr noalias noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR2]] comdat align 2 {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
@@ -1187,13 +1187,13 @@ int foobar() {
 // CHECK1-LABEL: define {{[^@]+}}@__cxx_global_var_init.4
 // CHECK1-SAME: () #[[ATTR0]] {
 // CHECK1-NEXT:  entry:
-// CHECK1-NEXT:    call void @_ZN2S2C1Ei(ptr noundef nonnull align 8 dereferenceable(16) @_ZL3gs2, i32 noundef 27)
+// CHECK1-NEXT:    call void @_ZN2S2C1Ei(ptr noalias noundef nonnull align 8 dereferenceable(16) @_ZL3gs2, i32 noundef 27)
 // CHECK1-NEXT:    [[TMP0:%.*]] = call i32 @__cxa_atexit(ptr @_ZN2S2D1Ev, ptr @_ZL3gs2, ptr @__dso_handle) #[[ATTR3]]
 // CHECK1-NEXT:    ret void
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@_ZN2S2C1Ei
-// CHECK1-SAME: (ptr noundef nonnull align 8 dereferenceable(16) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR1]] comdat align 2 {
+// CHECK1-SAME: (ptr noalias noundef nonnull align 8 dereferenceable(16) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR1]] comdat align 2 {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
@@ -1201,7 +1201,7 @@ int foobar() {
 // CHECK1-NEXT:    store i32 [[A]], ptr [[A_ADDR]], align 4
 // CHECK1-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // CHECK1-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4
-// CHECK1-NEXT:    call void @_ZN2S2C2Ei(ptr noundef nonnull align 8 dereferenceable(16) [[THIS1]], i32 noundef [[TMP0]])
+// CHECK1-NEXT:    call void @_ZN2S2C2Ei(ptr noalias noundef nonnull align 8 dereferenceable(16) [[THIS1]], i32 noundef [[TMP0]])
 // CHECK1-NEXT:    ret void
 //
 //
@@ -1216,7 +1216,7 @@ int foobar() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@_ZN2S2C2Ei
-// CHECK1-SAME: (ptr noundef nonnull align 8 dereferenceable(16) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR2]] comdat align 2 {
+// CHECK1-SAME: (ptr noalias noundef nonnull align 8 dereferenceable(16) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR2]] comdat align 2 {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
@@ -1250,28 +1250,28 @@ int foobar() {
 // CHECK1-NEXT:    [[ARRAYINIT_ENDOFINIT5:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    store ptr @arr_x, ptr [[ARRAYINIT_ENDOFINIT]], align 8
 // CHECK1-NEXT:    store ptr @arr_x, ptr [[ARRAYINIT_ENDOFINIT1]], align 8
-// CHECK1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) @arr_x, i32 noundef 1)
+// CHECK1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) @arr_x, i32 noundef 1)
 // CHECK1-NEXT:            to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]]
 // CHECK1:       invoke.cont:
 // CHECK1-NEXT:    store ptr getelementptr inbounds ([[STRUCT_S1:%.*]], ptr @arr_x, i64 1), ptr [[ARRAYINIT_ENDOFINIT1]], align 8
-// CHECK1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr @arr_x, i64 1), i32 noundef 2)
+// CHECK1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr @arr_x, i64 1), i32 noundef 2)
 // CHECK1-NEXT:            to label [[INVOKE_CONT2:%.*]] unwind label [[LPAD]]
 // CHECK1:       invoke.cont2:
 // CHECK1-NEXT:    store ptr getelementptr inbounds ([[STRUCT_S1]], ptr @arr_x, i64 2), ptr [[ARRAYINIT_ENDOFINIT1]], align 8
-// CHECK1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr @arr_x, i64 2), i32 noundef 3)
+// CHECK1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr @arr_x, i64 2), i32 noundef 3)
 // CHECK1-NEXT:            to label [[INVOKE_CONT3:%.*]] unwind label [[LPAD]]
 // CHECK1:       invoke.cont3:
 // CHECK1-NEXT:    store ptr getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), ptr [[ARRAYINIT_ENDOFINIT]], align 8
 // CHECK1-NEXT:    store ptr getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), ptr [[ARRAYINIT_ENDOFINIT5]], align 8
-// CHECK1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), i32 noundef 4)
+// CHECK1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), i32 noundef 4)
 // CHECK1-NEXT:            to label [[INVOKE_CONT7:%.*]] unwind label [[LPAD6:%.*]]
 // CHECK1:       invoke.cont7:
 // CHECK1-NEXT:    store ptr getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), i64 1), ptr [[ARRAYINIT_ENDOFINIT5]], align 8
-// CHECK1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), i64 1), i32 noundef 5)
+// CHECK1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), i64 1), i32 noundef 5)
 // CHECK1-NEXT:            to label [[INVOKE_CONT8:%.*]] unwind label [[LPAD6]]
 // CHECK1:       invoke.cont8:
 // CHECK1-NEXT:    store ptr getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), i64 2), ptr [[ARRAYINIT_ENDOFINIT5]], align 8
-// CHECK1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), i64 2), i32 noundef 6)
+// CHECK1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), i64 2), i32 noundef 6)
 // CHECK1-NEXT:            to label [[INVOKE_CONT9:%.*]] unwind label [[LPAD6]]
 // CHECK1:       invoke.cont9:
 // CHECK1-NEXT:    [[TMP0:%.*]] = call i32 @__cxa_atexit(ptr @__cxx_global_array_dtor, ptr null, ptr @__dso_handle) #[[ATTR3]]
@@ -1371,7 +1371,7 @@ int foobar() {
 // CHECK1-NEXT:    [[TMP4:%.*]] = call ptr @__kmpc_threadprivate_cached(ptr @[[GLOB1]], i32 [[TMP0]], ptr @_ZL3gs1, i64 4, ptr @_ZL3gs1.cache.)
 // CHECK1-NEXT:    [[A:%.*]] = getelementptr inbounds nuw [[STRUCT_S1:%.*]], ptr [[TMP4]], i32 0, i32 0
 // CHECK1-NEXT:    [[TMP5:%.*]] = load i32, ptr [[A]], align 4
-// CHECK1-NEXT:    invoke void @_ZZ4mainEN5SmainC1Ei(ptr noundef nonnull align 8 dereferenceable(24) @_ZZ4mainE2sm, i32 noundef [[TMP5]])
+// CHECK1-NEXT:    invoke void @_ZZ4mainEN5SmainC1Ei(ptr noalias noundef nonnull align 8 dereferenceable(24) @_ZZ4mainE2sm, i32 noundef [[TMP5]])
 // CHECK1-NEXT:            to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]]
 // CHECK1:       invoke.cont:
 // CHECK1-NEXT:    [[TMP6:%.*]] = call i32 @__cxa_atexit(ptr @_ZZ4mainEN5SmainD1Ev, ptr @_ZZ4mainE2sm, ptr @__dso_handle) #[[ATTR3]]
@@ -1458,13 +1458,13 @@ int foobar() {
 // CHECK1-NEXT:    [[TMP3:%.*]] = call ptr @__kmpc_threadprivate_cached(ptr @[[GLOB1]], i32 [[TMP1]], ptr @_ZL3gs1, i64 4, ptr @_ZL3gs1.cache.)
 // CHECK1-NEXT:    [[A:%.*]] = getelementptr inbounds nuw [[STRUCT_S1:%.*]], ptr [[TMP3]], i32 0, i32 0
 // CHECK1-NEXT:    [[TMP4:%.*]] = load i32, ptr [[A]], align 4
-// CHECK1-NEXT:    call void @_ZZ4mainEN5SmainC1Ei(ptr noundef nonnull align 8 dereferenceable(24) [[TMP2]], i32 noundef [[TMP4]])
+// CHECK1-NEXT:    call void @_ZZ4mainEN5SmainC1Ei(ptr noalias noundef nonnull align 8 dereferenceable(24) [[TMP2]], i32 noundef [[TMP4]])
 // CHECK1-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[DOTADDR]], align 8
 // CHECK1-NEXT:    ret ptr [[TMP5]]
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@_ZZ4mainEN5SmainC1Ei
-// CHECK1-SAME: (ptr noundef nonnull align 8 dereferenceable(24) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR1]] align 2 {
+// CHECK1-SAME: (ptr noalias noundef nonnull align 8 dereferenceable(24) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR1]] align 2 {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
@@ -1472,7 +1472,7 @@ int foobar() {
 // CHECK1-NEXT:    store i32 [[A]], ptr [[A_ADDR]], align 4
 // CHECK1-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // CHECK1-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4
-// CHECK1-NEXT:    call void @_ZZ4mainEN5SmainC2Ei(ptr noundef nonnull align 8 dereferenceable(24) [[THIS1]], i32 noundef [[TMP0]])
+// CHECK1-NEXT:    call void @_ZZ4mainEN5SmainC2Ei(ptr noalias noundef nonnull align 8 dereferenceable(24) [[THIS1]], i32 noundef [[TMP0]])
 // CHECK1-NEXT:    ret void
 //
 //
@@ -1497,7 +1497,7 @@ int foobar() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@_ZZ4mainEN5SmainC2Ei
-// CHECK1-SAME: (ptr noundef nonnull align 8 dereferenceable(24) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR2]] align 2 {
+// CHECK1-SAME: (ptr noalias noundef nonnull align 8 dereferenceable(24) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR2]] align 2 {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
@@ -1585,7 +1585,7 @@ int foobar() {
 // CHECK1-NEXT:    store i8 1, ptr @_ZGVN2STI2S4E2stE, align 8
 // CHECK1-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
 // CHECK1-NEXT:    call void @__kmpc_threadprivate_register(ptr @[[GLOB1]], ptr @_ZN2STI2S4E2stE, ptr @.__kmpc_global_ctor_..9, ptr null, ptr @.__kmpc_global_dtor_..10)
-// CHECK1-NEXT:    call void @_ZN2S4C1Ei(ptr noundef nonnull align 4 dereferenceable(8) @_ZN2STI2S4E2stE, i32 noundef 23)
+// CHECK1-NEXT:    call void @_ZN2S4C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(8) @_ZN2STI2S4E2stE, i32 noundef 23)
 // CHECK1-NEXT:    [[TMP2:%.*]] = call i32 @__cxa_atexit(ptr @_ZN2S4D1Ev, ptr @_ZN2STI2S4E2stE, ptr @__dso_handle) #[[ATTR3]]
 // CHECK1-NEXT:    br label [[INIT_END]]
 // CHECK1:       init.end:
@@ -1598,13 +1598,13 @@ int foobar() {
 // CHECK1-NEXT:    [[DOTADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    store ptr [[TMP0]], ptr [[DOTADDR]], align 8
 // CHECK1-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[DOTADDR]], align 8
-// CHECK1-NEXT:    call void @_ZN2S4C1Ei(ptr noundef nonnull align 4 dereferenceable(8) [[TMP1]], i32 noundef 23)
+// CHECK1-NEXT:    call void @_ZN2S4C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(8) [[TMP1]], i32 noundef 23)
 // CHECK1-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[DOTADDR]], align 8
 // CHECK1-NEXT:    ret ptr [[TMP2]]
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@_ZN2S4C1Ei
-// CHECK1-SAME: (ptr noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR1]] comdat align 2 {
+// CHECK1-SAME: (ptr noalias noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR1]] comdat align 2 {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
@@ -1612,7 +1612,7 @@ int foobar() {
 // CHECK1-NEXT:    store i32 [[A]], ptr [[A_ADDR]], align 4
 // CHECK1-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // CHECK1-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4
-// CHECK1-NEXT:    call void @_ZN2S4C2Ei(ptr noundef nonnull align 4 dereferenceable(8) [[THIS1]], i32 noundef [[TMP0]])
+// CHECK1-NEXT:    call void @_ZN2S4C2Ei(ptr noalias noundef nonnull align 4 dereferenceable(8) [[THIS1]], i32 noundef [[TMP0]])
 // CHECK1-NEXT:    ret void
 //
 //
@@ -1637,7 +1637,7 @@ int foobar() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@_ZN2S4C2Ei
-// CHECK1-SAME: (ptr noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR2]] comdat align 2 {
+// CHECK1-SAME: (ptr noalias noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR2]] comdat align 2 {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
@@ -1675,13 +1675,13 @@ int foobar() {
 // CHECK2-LABEL: define {{[^@]+}}@__cxx_global_var_init
 // CHECK2-SAME: () #[[ATTR0:[0-9]+]] {
 // CHECK2-NEXT:  entry:
-// CHECK2-NEXT:    call void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) @_ZL3gs1, i32 noundef 5)
+// CHECK2-NEXT:    call void @_ZN2S1C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) @_ZL3gs1, i32 noundef 5)
 // CHECK2-NEXT:    [[TMP0:%.*]] = call i32 @__cxa_atexit(ptr @_ZN2S1D1Ev, ptr @_ZL3gs1, ptr @__dso_handle) #[[ATTR3:[0-9]+]]
 // CHECK2-NEXT:    ret void
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@_ZN2S1C1Ei
-// CHECK2-SAME: (ptr noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR1:[0-9]+]] comdat align 2 {
+// CHECK2-SAME: (ptr noalias noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR1:[0-9]+]] comdat align 2 {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK2-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
@@ -1689,7 +1689,7 @@ int foobar() {
 // CHECK2-NEXT:    store i32 [[A]], ptr [[A_ADDR]], align 4
 // CHECK2-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // CHECK2-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4
-// CHECK2-NEXT:    call void @_ZN2S1C2Ei(ptr noundef nonnull align 4 dereferenceable(4) [[THIS1]], i32 noundef [[TMP0]])
+// CHECK2-NEXT:    call void @_ZN2S1C2Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) [[THIS1]], i32 noundef [[TMP0]])
 // CHECK2-NEXT:    ret void
 //
 //
@@ -1709,7 +1709,7 @@ int foobar() {
 // CHECK2-NEXT:    [[DOTADDR:%.*]] = alloca ptr, align 8
 // CHECK2-NEXT:    store ptr [[TMP0]], ptr [[DOTADDR]], align 8
 // CHECK2-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[DOTADDR]], align 8
-// CHECK2-NEXT:    call void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) [[TMP1]], i32 noundef 5)
+// CHECK2-NEXT:    call void @_ZN2S1C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) [[TMP1]], i32 noundef 5)
 // CHECK2-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[DOTADDR]], align 8
 // CHECK2-NEXT:    ret ptr [[TMP2]]
 //
@@ -1735,13 +1735,13 @@ int foobar() {
 // CHECK2-LABEL: define {{[^@]+}}@__cxx_global_var_init.1
 // CHECK2-SAME: () #[[ATTR0]] {
 // CHECK2-NEXT:  entry:
-// CHECK2-NEXT:    call void @_ZN2S2C1Ei(ptr noundef nonnull align 8 dereferenceable(16) @_ZL3gs2, i32 noundef 27)
+// CHECK2-NEXT:    call void @_ZN2S2C1Ei(ptr noalias noundef nonnull align 8 dereferenceable(16) @_ZL3gs2, i32 noundef 27)
 // CHECK2-NEXT:    [[TMP0:%.*]] = call i32 @__cxa_atexit(ptr @_ZN2S2D1Ev, ptr @_ZL3gs2, ptr @__dso_handle) #[[ATTR3]]
 // CHECK2-NEXT:    ret void
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@_ZN2S2C1Ei
-// CHECK2-SAME: (ptr noundef nonnull align 8 dereferenceable(16) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR1]] comdat align 2 {
+// CHECK2-SAME: (ptr noalias noundef nonnull align 8 dereferenceable(16) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR1]] comdat align 2 {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK2-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
@@ -1749,7 +1749,7 @@ int foobar() {
 // CHECK2-NEXT:    store i32 [[A]], ptr [[A_ADDR]], align 4
 // CHECK2-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // CHECK2-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4
-// CHECK2-NEXT:    call void @_ZN2S2C2Ei(ptr noundef nonnull align 8 dereferenceable(16) [[THIS1]], i32 noundef [[TMP0]])
+// CHECK2-NEXT:    call void @_ZN2S2C2Ei(ptr noalias noundef nonnull align 8 dereferenceable(16) [[THIS1]], i32 noundef [[TMP0]])
 // CHECK2-NEXT:    ret void
 //
 //
@@ -1773,28 +1773,28 @@ int foobar() {
 // CHECK2-NEXT:    [[ARRAYINIT_ENDOFINIT5:%.*]] = alloca ptr, align 8
 // CHECK2-NEXT:    store ptr @arr_x, ptr [[ARRAYINIT_ENDOFINIT]], align 8
 // CHECK2-NEXT:    store ptr @arr_x, ptr [[ARRAYINIT_ENDOFINIT1]], align 8
-// CHECK2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) @arr_x, i32 noundef 1)
+// CHECK2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) @arr_x, i32 noundef 1)
 // CHECK2-NEXT:            to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]]
 // CHECK2:       invoke.cont:
 // CHECK2-NEXT:    store ptr getelementptr inbounds ([[STRUCT_S1:%.*]], ptr @arr_x, i64 1), ptr [[ARRAYINIT_ENDOFINIT1]], align 8
-// CHECK2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr @arr_x, i64 1), i32 noundef 2)
+// CHECK2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr @arr_x, i64 1), i32 noundef 2)
 // CHECK2-NEXT:            to label [[INVOKE_CONT2:%.*]] unwind label [[LPAD]]
 // CHECK2:       invoke.cont2:
 // CHECK2-NEXT:    store ptr getelementptr inbounds ([[STRUCT_S1]], ptr @arr_x, i64 2), ptr [[ARRAYINIT_ENDOFINIT1]], align 8
-// CHECK2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr @arr_x, i64 2), i32 noundef 3)
+// CHECK2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr @arr_x, i64 2), i32 noundef 3)
 // CHECK2-NEXT:            to label [[INVOKE_CONT3:%.*]] unwind label [[LPAD]]
 // CHECK2:       invoke.cont3:
 // CHECK2-NEXT:    store ptr getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), ptr [[ARRAYINIT_ENDOFINIT]], align 8
 // CHECK2-NEXT:    store ptr getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), ptr [[ARRAYINIT_ENDOFINIT5]], align 8
-// CHECK2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), i32 noundef 4)
+// CHECK2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), i32 noundef 4)
 // CHECK2-NEXT:            to label [[INVOKE_CONT7:%.*]] unwind label [[LPAD6:%.*]]
 // CHECK2:       invoke.cont7:
 // CHECK2-NEXT:    store ptr getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), i64 1), ptr [[ARRAYINIT_ENDOFINIT5]], align 8
-// CHECK2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), i64 1), i32 noundef 5)
+// CHECK2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), i64 1), i32 noundef 5)
 // CHECK2-NEXT:            to label [[INVOKE_CONT8:%.*]] unwind label [[LPAD6]]
 // CHECK2:       invoke.cont8:
 // CHECK2-NEXT:    store ptr getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), i64 2), ptr [[ARRAYINIT_ENDOFINIT5]], align 8
-// CHECK2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), i64 2), i32 noundef 6)
+// CHECK2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), i64 2), i32 noundef 6)
 // CHECK2-NEXT:            to label [[INVOKE_CONT9:%.*]] unwind label [[LPAD6]]
 // CHECK2:       invoke.cont9:
 // CHECK2-NEXT:    [[TMP0:%.*]] = call i32 @__cxa_atexit(ptr @__cxx_global_array_dtor, ptr null, ptr @__dso_handle) #[[ATTR3]]
@@ -1885,33 +1885,33 @@ int foobar() {
 // CHECK2-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[DOTADDR]], align 8
 // CHECK2-NEXT:    store ptr [[TMP1]], ptr [[ARRAYINIT_ENDOFINIT]], align 8
 // CHECK2-NEXT:    store ptr [[TMP1]], ptr [[ARRAYINIT_ENDOFINIT1]], align 8
-// CHECK2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) [[TMP1]], i32 noundef 1)
+// CHECK2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) [[TMP1]], i32 noundef 1)
 // CHECK2-NEXT:            to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]]
 // CHECK2:       invoke.cont:
 // CHECK2-NEXT:    [[ARRAYINIT_ELEMENT:%.*]] = getelementptr inbounds [[STRUCT_S1:%.*]], ptr [[TMP1]], i64 1
 // CHECK2-NEXT:    store ptr [[ARRAYINIT_ELEMENT]], ptr [[ARRAYINIT_ENDOFINIT1]], align 8
-// CHECK2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) [[ARRAYINIT_ELEMENT]], i32 noundef 2)
+// CHECK2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) [[ARRAYINIT_ELEMENT]], i32 noundef 2)
 // CHECK2-NEXT:            to label [[INVOKE_CONT2:%.*]] unwind label [[LPAD]]
 // CHECK2:       invoke.cont2:
 // CHECK2-NEXT:    [[ARRAYINIT_ELEMENT3:%.*]] = getelementptr inbounds [[STRUCT_S1]], ptr [[TMP1]], i64 2
 // CHECK2-NEXT:    store ptr [[ARRAYINIT_ELEMENT3]], ptr [[ARRAYINIT_ENDOFINIT1]], align 8
-// CHECK2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) [[ARRAYINIT_ELEMENT3]], i32 noundef 3)
+// CHECK2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) [[ARRAYINIT_ELEMENT3]], i32 noundef 3)
 // CHECK2-NEXT:            to label [[INVOKE_CONT4:%.*]] unwind label [[LPAD]]
 // CHECK2:       invoke.cont4:
 // CHECK2-NEXT:    [[ARRAYINIT_ELEMENT6:%.*]] = getelementptr inbounds [3 x %struct.S1], ptr [[TMP1]], i64 1
 // CHECK2-NEXT:    store ptr [[ARRAYINIT_ELEMENT6]], ptr [[ARRAYINIT_ENDOFINIT]], align 8
 // CHECK2-NEXT:    store ptr [[ARRAYINIT_ELEMENT6]], ptr [[ARRAYINIT_ENDOFINIT7]], align 8
-// CHECK2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) [[ARRAYINIT_ELEMENT6]], i32 noundef 4)
+// CHECK2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) [[ARRAYINIT_ELEMENT6]], i32 noundef 4)
 // CHECK2-NEXT:            to label [[INVOKE_CONT9:%.*]] unwind label [[LPAD8:%.*]]
 // CHECK2:       invoke.cont9:
 // CHECK2-NEXT:    [[ARRAYINIT_ELEMENT10:%.*]] = getelementptr inbounds [[STRUCT_S1]], ptr [[ARRAYINIT_ELEMENT6]], i64 1
 // CHECK2-NEXT:    store ptr [[ARRAYINIT_ELEMENT10]], ptr [[ARRAYINIT_ENDOFINIT7]], align 8
-// CHECK2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) [[ARRAYINIT_ELEMENT10]], i32 noundef 5)
+// CHECK2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) [[ARRAYINIT_ELEMENT10]], i32 noundef 5)
 // CHECK2-NEXT:            to label [[INVOKE_CONT11:%.*]] unwind label [[LPAD8]]
 // CHECK2:       invoke.cont11:
 // CHECK2-NEXT:    [[ARRAYINIT_ELEMENT12:%.*]] = getelementptr inbounds [[STRUCT_S1]], ptr [[ARRAYINIT_ELEMENT6]], i64 2
 // CHECK2-NEXT:    store ptr [[ARRAYINIT_ELEMENT12]], ptr [[ARRAYINIT_ENDOFINIT7]], align 8
-// CHECK2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) [[ARRAYINIT_ELEMENT12]], i32 noundef 6)
+// CHECK2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) [[ARRAYINIT_ELEMENT12]], i32 noundef 6)
 // CHECK2-NEXT:            to label [[INVOKE_CONT13:%.*]] unwind label [[LPAD8]]
 // CHECK2:       invoke.cont13:
 // CHECK2-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[DOTADDR]], align 8
@@ -2022,7 +2022,7 @@ int foobar() {
 // CHECK2-NEXT:    [[TMP4:%.*]] = call ptr @__kmpc_threadprivate_cached(ptr @[[GLOB1]], i32 [[TMP0]], ptr @_ZL3gs1, i64 4, ptr @_ZL3gs1.cache.)
 // CHECK2-NEXT:    [[A:%.*]] = getelementptr inbounds nuw [[STRUCT_S1:%.*]], ptr [[TMP4]], i32 0, i32 0
 // CHECK2-NEXT:    [[TMP5:%.*]] = load i32, ptr [[A]], align 4
-// CHECK2-NEXT:    invoke void @_ZZ4mainEN5SmainC1Ei(ptr noundef nonnull align 8 dereferenceable(24) @_ZZ4mainE2sm, i32 noundef [[TMP5]])
+// CHECK2-NEXT:    invoke void @_ZZ4mainEN5SmainC1Ei(ptr noalias noundef nonnull align 8 dereferenceable(24) @_ZZ4mainE2sm, i32 noundef [[TMP5]])
 // CHECK2-NEXT:            to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]]
 // CHECK2:       invoke.cont:
 // CHECK2-NEXT:    [[TMP6:%.*]] = call i32 @__cxa_atexit(ptr @_ZZ4mainEN5SmainD1Ev, ptr @_ZZ4mainE2sm, ptr @__dso_handle) #[[ATTR3]]
@@ -2109,13 +2109,13 @@ int foobar() {
 // CHECK2-NEXT:    [[TMP3:%.*]] = call ptr @__kmpc_threadprivate_cached(ptr @[[GLOB1]], i32 [[TMP1]], ptr @_ZL3gs1, i64 4, ptr @_ZL3gs1.cache.)
 // CHECK2-NEXT:    [[A:%.*]] = getelementptr inbounds nuw [[STRUCT_S1:%.*]], ptr [[TMP3]], i32 0, i32 0
 // CHECK2-NEXT:    [[TMP4:%.*]] = load i32, ptr [[A]], align 4
-// CHECK2-NEXT:    call void @_ZZ4mainEN5SmainC1Ei(ptr noundef nonnull align 8 dereferenceable(24) [[TMP2]], i32 noundef [[TMP4]])
+// CHECK2-NEXT:    call void @_ZZ4mainEN5SmainC1Ei(ptr noalias noundef nonnull align 8 dereferenceable(24) [[TMP2]], i32 noundef [[TMP4]])
 // CHECK2-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[DOTADDR]], align 8
 // CHECK2-NEXT:    ret ptr [[TMP5]]
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@_ZZ4mainEN5SmainC1Ei
-// CHECK2-SAME: (ptr noundef nonnull align 8 dereferenceable(24) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR1]] align 2 {
+// CHECK2-SAME: (ptr noalias noundef nonnull align 8 dereferenceable(24) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR1]] align 2 {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK2-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
@@ -2123,7 +2123,7 @@ int foobar() {
 // CHECK2-NEXT:    store i32 [[A]], ptr [[A_ADDR]], align 4
 // CHECK2-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // CHECK2-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4
-// CHECK2-NEXT:    call void @_ZZ4mainEN5SmainC2Ei(ptr noundef nonnull align 8 dereferenceable(24) [[THIS1]], i32 noundef [[TMP0]])
+// CHECK2-NEXT:    call void @_ZZ4mainEN5SmainC2Ei(ptr noalias noundef nonnull align 8 dereferenceable(24) [[THIS1]], i32 noundef [[TMP0]])
 // CHECK2-NEXT:    ret void
 //
 //
@@ -2211,7 +2211,7 @@ int foobar() {
 // CHECK2-NEXT:    store i8 1, ptr @_ZGVN2STI2S4E2stE, align 8
 // CHECK2-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
 // CHECK2-NEXT:    call void @__kmpc_threadprivate_register(ptr @[[GLOB1]], ptr @_ZN2STI2S4E2stE, ptr @.__kmpc_global_ctor_..9, ptr null, ptr @.__kmpc_global_dtor_..10)
-// CHECK2-NEXT:    call void @_ZN2S4C1Ei(ptr noundef nonnull align 4 dereferenceable(8) @_ZN2STI2S4E2stE, i32 noundef 23)
+// CHECK2-NEXT:    call void @_ZN2S4C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(8) @_ZN2STI2S4E2stE, i32 noundef 23)
 // CHECK2-NEXT:    [[TMP2:%.*]] = call i32 @__cxa_atexit(ptr @_ZN2S4D1Ev, ptr @_ZN2STI2S4E2stE, ptr @__dso_handle) #[[ATTR3]]
 // CHECK2-NEXT:    br label [[INIT_END]]
 // CHECK2:       init.end:
@@ -2224,13 +2224,13 @@ int foobar() {
 // CHECK2-NEXT:    [[DOTADDR:%.*]] = alloca ptr, align 8
 // CHECK2-NEXT:    store ptr [[TMP0]], ptr [[DOTADDR]], align 8
 // CHECK2-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[DOTADDR]], align 8
-// CHECK2-NEXT:    call void @_ZN2S4C1Ei(ptr noundef nonnull align 4 dereferenceable(8) [[TMP1]], i32 noundef 23)
+// CHECK2-NEXT:    call void @_ZN2S4C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(8) [[TMP1]], i32 noundef 23)
 // CHECK2-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[DOTADDR]], align 8
 // CHECK2-NEXT:    ret ptr [[TMP2]]
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@_ZN2S4C1Ei
-// CHECK2-SAME: (ptr noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR1]] comdat align 2 {
+// CHECK2-SAME: (ptr noalias noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR1]] comdat align 2 {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK2-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
@@ -2238,7 +2238,7 @@ int foobar() {
 // CHECK2-NEXT:    store i32 [[A]], ptr [[A_ADDR]], align 4
 // CHECK2-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // CHECK2-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4
-// CHECK2-NEXT:    call void @_ZN2S4C2Ei(ptr noundef nonnull align 4 dereferenceable(8) [[THIS1]], i32 noundef [[TMP0]])
+// CHECK2-NEXT:    call void @_ZN2S4C2Ei(ptr noalias noundef nonnull align 4 dereferenceable(8) [[THIS1]], i32 noundef [[TMP0]])
 // CHECK2-NEXT:    ret void
 //
 //
@@ -2263,7 +2263,7 @@ int foobar() {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@_ZN2S1C2Ei
-// CHECK2-SAME: (ptr noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR2]] comdat align 2 {
+// CHECK2-SAME: (ptr noalias noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR2]] comdat align 2 {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK2-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
@@ -2288,7 +2288,7 @@ int foobar() {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@_ZN2S2C2Ei
-// CHECK2-SAME: (ptr noundef nonnull align 8 dereferenceable(16) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR2]] comdat align 2 {
+// CHECK2-SAME: (ptr noalias noundef nonnull align 8 dereferenceable(16) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR2]] comdat align 2 {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK2-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
@@ -2313,7 +2313,7 @@ int foobar() {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@_ZZ4mainEN5SmainC2Ei
-// CHECK2-SAME: (ptr noundef nonnull align 8 dereferenceable(24) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR2]] align 2 {
+// CHECK2-SAME: (ptr noalias noundef nonnull align 8 dereferenceable(24) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR2]] align 2 {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK2-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
@@ -2338,7 +2338,7 @@ int foobar() {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@_ZN2S4C2Ei
-// CHECK2-SAME: (ptr noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR2]] comdat align 2 {
+// CHECK2-SAME: (ptr noalias noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR2]] comdat align 2 {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK2-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
@@ -2376,13 +2376,13 @@ int foobar() {
 // SIMD1-LABEL: define {{[^@]+}}@__cxx_global_var_init
 // SIMD1-SAME: () #[[ATTR0:[0-9]+]] {
 // SIMD1-NEXT:  entry:
-// SIMD1-NEXT:    call void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) @_ZL3gs1, i32 noundef 5)
+// SIMD1-NEXT:    call void @_ZN2S1C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) @_ZL3gs1, i32 noundef 5)
 // SIMD1-NEXT:    [[TMP0:%.*]] = call i32 @__cxa_atexit(ptr @_ZN2S1D1Ev, ptr @_ZL3gs1, ptr @__dso_handle) #[[ATTR3:[0-9]+]]
 // SIMD1-NEXT:    ret void
 //
 //
 // SIMD1-LABEL: define {{[^@]+}}@_ZN2S1C1Ei
-// SIMD1-SAME: (ptr noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR1:[0-9]+]] comdat align 2 {
+// SIMD1-SAME: (ptr noalias noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR1:[0-9]+]] comdat align 2 {
 // SIMD1-NEXT:  entry:
 // SIMD1-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // SIMD1-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
@@ -2390,7 +2390,7 @@ int foobar() {
 // SIMD1-NEXT:    store i32 [[A]], ptr [[A_ADDR]], align 4
 // SIMD1-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // SIMD1-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4
-// SIMD1-NEXT:    call void @_ZN2S1C2Ei(ptr noundef nonnull align 4 dereferenceable(4) [[THIS1]], i32 noundef [[TMP0]])
+// SIMD1-NEXT:    call void @_ZN2S1C2Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) [[THIS1]], i32 noundef [[TMP0]])
 // SIMD1-NEXT:    ret void
 //
 //
@@ -2407,13 +2407,13 @@ int foobar() {
 // SIMD1-LABEL: define {{[^@]+}}@__cxx_global_var_init.1
 // SIMD1-SAME: () #[[ATTR0]] {
 // SIMD1-NEXT:  entry:
-// SIMD1-NEXT:    call void @_ZN2S2C1Ei(ptr noundef nonnull align 8 dereferenceable(16) @_ZL3gs2, i32 noundef 27)
+// SIMD1-NEXT:    call void @_ZN2S2C1Ei(ptr noalias noundef nonnull align 8 dereferenceable(16) @_ZL3gs2, i32 noundef 27)
 // SIMD1-NEXT:    [[TMP0:%.*]] = call i32 @__cxa_atexit(ptr @_ZN2S2D1Ev, ptr @_ZL3gs2, ptr @__dso_handle) #[[ATTR3]]
 // SIMD1-NEXT:    ret void
 //
 //
 // SIMD1-LABEL: define {{[^@]+}}@_ZN2S2C1Ei
-// SIMD1-SAME: (ptr noundef nonnull align 8 dereferenceable(16) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR1]] comdat align 2 {
+// SIMD1-SAME: (ptr noalias noundef nonnull align 8 dereferenceable(16) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR1]] comdat align 2 {
 // SIMD1-NEXT:  entry:
 // SIMD1-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // SIMD1-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
@@ -2421,7 +2421,7 @@ int foobar() {
 // SIMD1-NEXT:    store i32 [[A]], ptr [[A_ADDR]], align 4
 // SIMD1-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // SIMD1-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4
-// SIMD1-NEXT:    call void @_ZN2S2C2Ei(ptr noundef nonnull align 8 dereferenceable(16) [[THIS1]], i32 noundef [[TMP0]])
+// SIMD1-NEXT:    call void @_ZN2S2C2Ei(ptr noalias noundef nonnull align 8 dereferenceable(16) [[THIS1]], i32 noundef [[TMP0]])
 // SIMD1-NEXT:    ret void
 //
 //
@@ -2445,28 +2445,28 @@ int foobar() {
 // SIMD1-NEXT:    [[ARRAYINIT_ENDOFINIT5:%.*]] = alloca ptr, align 8
 // SIMD1-NEXT:    store ptr @arr_x, ptr [[ARRAYINIT_ENDOFINIT]], align 8
 // SIMD1-NEXT:    store ptr @arr_x, ptr [[ARRAYINIT_ENDOFINIT1]], align 8
-// SIMD1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) @arr_x, i32 noundef 1)
+// SIMD1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) @arr_x, i32 noundef 1)
 // SIMD1-NEXT:            to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]]
 // SIMD1:       invoke.cont:
 // SIMD1-NEXT:    store ptr getelementptr inbounds ([[STRUCT_S1:%.*]], ptr @arr_x, i64 1), ptr [[ARRAYINIT_ENDOFINIT1]], align 8
-// SIMD1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr @arr_x, i64 1), i32 noundef 2)
+// SIMD1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr @arr_x, i64 1), i32 noundef 2)
 // SIMD1-NEXT:            to label [[INVOKE_CONT2:%.*]] unwind label [[LPAD]]
 // SIMD1:       invoke.cont2:
 // SIMD1-NEXT:    store ptr getelementptr inbounds ([[STRUCT_S1]], ptr @arr_x, i64 2), ptr [[ARRAYINIT_ENDOFINIT1]], align 8
-// SIMD1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr @arr_x, i64 2), i32 noundef 3)
+// SIMD1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr @arr_x, i64 2), i32 noundef 3)
 // SIMD1-NEXT:            to label [[INVOKE_CONT3:%.*]] unwind label [[LPAD]]
 // SIMD1:       invoke.cont3:
 // SIMD1-NEXT:    store ptr getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), ptr [[ARRAYINIT_ENDOFINIT]], align 8
 // SIMD1-NEXT:    store ptr getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), ptr [[ARRAYINIT_ENDOFINIT5]], align 8
-// SIMD1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), i32 noundef 4)
+// SIMD1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), i32 noundef 4)
 // SIMD1-NEXT:            to label [[INVOKE_CONT7:%.*]] unwind label [[LPAD6:%.*]]
 // SIMD1:       invoke.cont7:
 // SIMD1-NEXT:    store ptr getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), i64 1), ptr [[ARRAYINIT_ENDOFINIT5]], align 8
-// SIMD1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), i64 1), i32 noundef 5)
+// SIMD1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), i64 1), i32 noundef 5)
 // SIMD1-NEXT:            to label [[INVOKE_CONT8:%.*]] unwind label [[LPAD6]]
 // SIMD1:       invoke.cont8:
 // SIMD1-NEXT:    store ptr getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), i64 2), ptr [[ARRAYINIT_ENDOFINIT5]], align 8
-// SIMD1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), i64 2), i32 noundef 6)
+// SIMD1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), i64 2), i32 noundef 6)
 // SIMD1-NEXT:            to label [[INVOKE_CONT9:%.*]] unwind label [[LPAD6]]
 // SIMD1:       invoke.cont9:
 // SIMD1-NEXT:    [[TMP0:%.*]] = call i32 @__cxa_atexit(ptr @__cxx_global_array_dtor, ptr null, ptr @__dso_handle) #[[ATTR3]]
@@ -2561,7 +2561,7 @@ int foobar() {
 // SIMD1-NEXT:    br i1 [[TOBOOL]], label [[INIT:%.*]], label [[INIT_END]]
 // SIMD1:       init:
 // SIMD1-NEXT:    [[TMP2:%.*]] = load i32, ptr @_ZL3gs1, align 4
-// SIMD1-NEXT:    invoke void @_ZZ4mainEN5SmainC1Ei(ptr noundef nonnull align 8 dereferenceable(24) @_ZZ4mainE2sm, i32 noundef [[TMP2]])
+// SIMD1-NEXT:    invoke void @_ZZ4mainEN5SmainC1Ei(ptr noalias noundef nonnull align 8 dereferenceable(24) @_ZZ4mainE2sm, i32 noundef [[TMP2]])
 // SIMD1-NEXT:            to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]]
 // SIMD1:       invoke.cont:
 // SIMD1-NEXT:    [[TMP3:%.*]] = call i32 @__cxa_atexit(ptr @_ZZ4mainEN5SmainD1Ev, ptr @_ZZ4mainE2sm, ptr @__dso_handle) #[[ATTR3]]
@@ -2623,7 +2623,7 @@ int foobar() {
 //
 //
 // SIMD1-LABEL: define {{[^@]+}}@_ZZ4mainEN5SmainC1Ei
-// SIMD1-SAME: (ptr noundef nonnull align 8 dereferenceable(24) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR1]] align 2 {
+// SIMD1-SAME: (ptr noalias noundef nonnull align 8 dereferenceable(24) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR1]] align 2 {
 // SIMD1-NEXT:  entry:
 // SIMD1-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // SIMD1-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
@@ -2631,7 +2631,7 @@ int foobar() {
 // SIMD1-NEXT:    store i32 [[A]], ptr [[A_ADDR]], align 4
 // SIMD1-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // SIMD1-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4
-// SIMD1-NEXT:    call void @_ZZ4mainEN5SmainC2Ei(ptr noundef nonnull align 8 dereferenceable(24) [[THIS1]], i32 noundef [[TMP0]])
+// SIMD1-NEXT:    call void @_ZZ4mainEN5SmainC2Ei(ptr noalias noundef nonnull align 8 dereferenceable(24) [[THIS1]], i32 noundef [[TMP0]])
 // SIMD1-NEXT:    ret void
 //
 //
@@ -2692,7 +2692,7 @@ int foobar() {
 // SIMD1-NEXT:    br i1 [[GUARD_UNINITIALIZED]], label [[INIT_CHECK:%.*]], label [[INIT_END:%.*]]
 // SIMD1:       init.check:
 // SIMD1-NEXT:    store i8 1, ptr @_ZGVN2STI2S4E2stE, align 8
-// SIMD1-NEXT:    call void @_ZN2S4C1Ei(ptr noundef nonnull align 4 dereferenceable(8) @_ZN2STI2S4E2stE, i32 noundef 23)
+// SIMD1-NEXT:    call void @_ZN2S4C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(8) @_ZN2STI2S4E2stE, i32 noundef 23)
 // SIMD1-NEXT:    [[TMP1:%.*]] = call i32 @__cxa_atexit(ptr @_ZN2S4D1Ev, ptr @_ZN2STI2S4E2stE, ptr @__dso_handle) #[[ATTR3]]
 // SIMD1-NEXT:    br label [[INIT_END]]
 // SIMD1:       init.end:
@@ -2700,7 +2700,7 @@ int foobar() {
 //
 //
 // SIMD1-LABEL: define {{[^@]+}}@_ZN2S4C1Ei
-// SIMD1-SAME: (ptr noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR1]] comdat align 2 {
+// SIMD1-SAME: (ptr noalias noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR1]] comdat align 2 {
 // SIMD1-NEXT:  entry:
 // SIMD1-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // SIMD1-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
@@ -2708,7 +2708,7 @@ int foobar() {
 // SIMD1-NEXT:    store i32 [[A]], ptr [[A_ADDR]], align 4
 // SIMD1-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // SIMD1-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4
-// SIMD1-NEXT:    call void @_ZN2S4C2Ei(ptr noundef nonnull align 4 dereferenceable(8) [[THIS1]], i32 noundef [[TMP0]])
+// SIMD1-NEXT:    call void @_ZN2S4C2Ei(ptr noalias noundef nonnull align 4 dereferenceable(8) [[THIS1]], i32 noundef [[TMP0]])
 // SIMD1-NEXT:    ret void
 //
 //
@@ -2723,7 +2723,7 @@ int foobar() {
 //
 //
 // SIMD1-LABEL: define {{[^@]+}}@_ZN2S1C2Ei
-// SIMD1-SAME: (ptr noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR2]] comdat align 2 {
+// SIMD1-SAME: (ptr noalias noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR2]] comdat align 2 {
 // SIMD1-NEXT:  entry:
 // SIMD1-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // SIMD1-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
@@ -2748,7 +2748,7 @@ int foobar() {
 //
 //
 // SIMD1-LABEL: define {{[^@]+}}@_ZN2S2C2Ei
-// SIMD1-SAME: (ptr noundef nonnull align 8 dereferenceable(16) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR2]] comdat align 2 {
+// SIMD1-SAME: (ptr noalias noundef nonnull align 8 dereferenceable(16) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR2]] comdat align 2 {
 // SIMD1-NEXT:  entry:
 // SIMD1-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // SIMD1-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
@@ -2773,7 +2773,7 @@ int foobar() {
 //
 //
 // SIMD1-LABEL: define {{[^@]+}}@_ZZ4mainEN5SmainC2Ei
-// SIMD1-SAME: (ptr noundef nonnull align 8 dereferenceable(24) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR2]] align 2 {
+// SIMD1-SAME: (ptr noalias noundef nonnull align 8 dereferenceable(24) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR2]] align 2 {
 // SIMD1-NEXT:  entry:
 // SIMD1-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // SIMD1-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
@@ -2798,7 +2798,7 @@ int foobar() {
 //
 //
 // SIMD1-LABEL: define {{[^@]+}}@_ZN2S4C2Ei
-// SIMD1-SAME: (ptr noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR2]] comdat align 2 {
+// SIMD1-SAME: (ptr noalias noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR2]] comdat align 2 {
 // SIMD1-NEXT:  entry:
 // SIMD1-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // SIMD1-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
@@ -2834,13 +2834,13 @@ int foobar() {
 // SIMD2-LABEL: define {{[^@]+}}@__cxx_global_var_init
 // SIMD2-SAME: () #[[ATTR0:[0-9]+]] !dbg [[DBG115:![0-9]+]] {
 // SIMD2-NEXT:  entry:
-// SIMD2-NEXT:    call void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) @_ZL3gs1, i32 noundef 5), !dbg [[DBG118:![0-9]+]]
+// SIMD2-NEXT:    call void @_ZN2S1C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) @_ZL3gs1, i32 noundef 5), !dbg [[DBG118:![0-9]+]]
 // SIMD2-NEXT:    [[TMP0:%.*]] = call i32 @__cxa_atexit(ptr @_ZN2S1D1Ev, ptr @_ZL3gs1, ptr @__dso_handle) #[[ATTR3:[0-9]+]], !dbg [[DBG120:![0-9]+]]
 // SIMD2-NEXT:    ret void, !dbg [[DBG121:![0-9]+]]
 //
 //
 // SIMD2-LABEL: define {{[^@]+}}@_ZN2S1C1Ei
-// SIMD2-SAME: (ptr noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR1:[0-9]+]] comdat align 2 !dbg [[DBG122:![0-9]+]] {
+// SIMD2-SAME: (ptr noalias noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR1:[0-9]+]] comdat align 2 !dbg [[DBG122:![0-9]+]] {
 // SIMD2-NEXT:  entry:
 // SIMD2-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // SIMD2-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
@@ -2850,7 +2850,7 @@ int foobar() {
 // SIMD2-NEXT:      #dbg_declare(ptr [[A_ADDR]], [[META126:![0-9]+]], !DIExpression(), [[META127:![0-9]+]])
 // SIMD2-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // SIMD2-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4, !dbg [[DBG128:![0-9]+]]
-// SIMD2-NEXT:    call void @_ZN2S1C2Ei(ptr noundef nonnull align 4 dereferenceable(4) [[THIS1]], i32 noundef [[TMP0]]), !dbg [[DBG128]]
+// SIMD2-NEXT:    call void @_ZN2S1C2Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) [[THIS1]], i32 noundef [[TMP0]]), !dbg [[DBG128]]
 // SIMD2-NEXT:    ret void, !dbg [[DBG129:![0-9]+]]
 //
 //
@@ -2868,13 +2868,13 @@ int foobar() {
 // SIMD2-LABEL: define {{[^@]+}}@__cxx_global_var_init.1
 // SIMD2-SAME: () #[[ATTR0]] !dbg [[DBG135:![0-9]+]] {
 // SIMD2-NEXT:  entry:
-// SIMD2-NEXT:    call void @_ZN2S2C1Ei(ptr noundef nonnull align 8 dereferenceable(16) @_ZL3gs2, i32 noundef 27), !dbg [[DBG136:![0-9]+]]
+// SIMD2-NEXT:    call void @_ZN2S2C1Ei(ptr noalias noundef nonnull align 8 dereferenceable(16) @_ZL3gs2, i32 noundef 27), !dbg [[DBG136:![0-9]+]]
 // SIMD2-NEXT:    [[TMP0:%.*]] = call i32 @__cxa_atexit(ptr @_ZN2S2D1Ev, ptr @_ZL3gs2, ptr @__dso_handle) #[[ATTR3]], !dbg [[DBG138:![0-9]+]]
 // SIMD2-NEXT:    ret void, !dbg [[DBG139:![0-9]+]]
 //
 //
 // SIMD2-LABEL: define {{[^@]+}}@_ZN2S2C1Ei
-// SIMD2-SAME: (ptr noundef nonnull align 8 dereferenceable(16) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR1]] comdat align 2 !dbg [[DBG140:![0-9]+]] {
+// SIMD2-SAME: (ptr noalias noundef nonnull align 8 dereferenceable(16) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR1]] comdat align 2 !dbg [[DBG140:![0-9]+]] {
 // SIMD2-NEXT:  entry:
 // SIMD2-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // SIMD2-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
@@ -2884,7 +2884,7 @@ int foobar() {
 // SIMD2-NEXT:      #dbg_declare(ptr [[A_ADDR]], [[META144:![0-9]+]], !DIExpression(), [[META145:![0-9]+]])
 // SIMD2-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // SIMD2-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4, !dbg [[DBG146:![0-9]+]]
-// SIMD2-NEXT:    call void @_ZN2S2C2Ei(ptr noundef nonnull align 8 dereferenceable(16) [[THIS1]], i32 noundef [[TMP0]]), !dbg [[DBG146]]
+// SIMD2-NEXT:    call void @_ZN2S2C2Ei(ptr noalias noundef nonnull align 8 dereferenceable(16) [[THIS1]], i32 noundef [[TMP0]]), !dbg [[DBG146]]
 // SIMD2-NEXT:    ret void, !dbg [[DBG147:![0-9]+]]
 //
 //
@@ -2909,28 +2909,28 @@ int foobar() {
 // SIMD2-NEXT:    [[ARRAYINIT_ENDOFINIT5:%.*]] = alloca ptr, align 8
 // SIMD2-NEXT:    store ptr @arr_x, ptr [[ARRAYINIT_ENDOFINIT]], align 8, !dbg [[DBG154:![0-9]+]]
 // SIMD2-NEXT:    store ptr @arr_x, ptr [[ARRAYINIT_ENDOFINIT1]], align 8, !dbg [[DBG156:![0-9]+]]
-// SIMD2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) @arr_x, i32 noundef 1)
+// SIMD2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) @arr_x, i32 noundef 1)
 // SIMD2-NEXT:            to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]], !dbg [[DBG157:![0-9]+]]
 // SIMD2:       invoke.cont:
 // SIMD2-NEXT:    store ptr getelementptr inbounds ([[STRUCT_S1:%.*]], ptr @arr_x, i64 1), ptr [[ARRAYINIT_ENDOFINIT1]], align 8, !dbg [[DBG156]]
-// SIMD2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr @arr_x, i64 1), i32 noundef 2)
+// SIMD2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr @arr_x, i64 1), i32 noundef 2)
 // SIMD2-NEXT:            to label [[INVOKE_CONT2:%.*]] unwind label [[LPAD]], !dbg [[DBG158:![0-9]+]]
 // SIMD2:       invoke.cont2:
 // SIMD2-NEXT:    store ptr getelementptr inbounds ([[STRUCT_S1]], ptr @arr_x, i64 2), ptr [[ARRAYINIT_ENDOFINIT1]], align 8, !dbg [[DBG156]]
-// SIMD2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr @arr_x, i64 2), i32 noundef 3)
+// SIMD2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr @arr_x, i64 2), i32 noundef 3)
 // SIMD2-NEXT:            to label [[INVOKE_CONT3:%.*]] unwind label [[LPAD]], !dbg [[DBG159:![0-9]+]]
 // SIMD2:       invoke.cont3:
 // SIMD2-NEXT:    store ptr getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), ptr [[ARRAYINIT_ENDOFINIT]], align 8, !dbg [[DBG154]]
 // SIMD2-NEXT:    store ptr getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), ptr [[ARRAYINIT_ENDOFINIT5]], align 8, !dbg [[DBG160:![0-9]+]]
-// SIMD2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), i32 noundef 4)
+// SIMD2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), i32 noundef 4)
 // SIMD2-NEXT:            to label [[INVOKE_CONT7:%.*]] unwind label [[LPAD6:%.*]], !dbg [[DBG161:![0-9]+]]
 // SIMD2:       invoke.cont7:
 // SIMD2-NEXT:    store ptr getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), i64 1), ptr [[ARRAYINIT_ENDOFINIT5]], align 8, !dbg [[DBG160]]
-// SIMD2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), i64 1), i32 noundef 5)
+// SIMD2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), i64 1), i32 noundef 5)
 // SIMD2-NEXT:            to label [[INVOKE_CONT8:%.*]] unwind label [[LPAD6]], !dbg [[DBG162:![0-9]+]]
 // SIMD2:       invoke.cont8:
 // SIMD2-NEXT:    store ptr getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), i64 2), ptr [[ARRAYINIT_ENDOFINIT5]], align 8, !dbg [[DBG160]]
-// SIMD2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), i64 2), i32 noundef 6)
+// SIMD2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), i64 2), i32 noundef 6)
 // SIMD2-NEXT:            to label [[INVOKE_CONT9:%.*]] unwind label [[LPAD6]], !dbg [[DBG163:![0-9]+]]
 // SIMD2:       invoke.cont9:
 // SIMD2-NEXT:    [[TMP0:%.*]] = call i32 @__cxa_atexit(ptr @__cxx_global_array_dtor, ptr null, ptr @__dso_handle) #[[ATTR3]], !dbg [[DBG164:![0-9]+]]
@@ -3027,7 +3027,7 @@ int foobar() {
 // SIMD2-NEXT:    br i1 [[TOBOOL]], label [[INIT:%.*]], label [[INIT_END]], !dbg [[DBG174]]
 // SIMD2:       init:
 // SIMD2-NEXT:    [[TMP2:%.*]] = load i32, ptr @_ZL3gs1, align 4, !dbg [[DBG176:![0-9]+]]
-// SIMD2-NEXT:    invoke void @_ZZ4mainEN5SmainC1Ei(ptr noundef nonnull align 8 dereferenceable(24) @_ZZ4mainE2sm, i32 noundef [[TMP2]])
+// SIMD2-NEXT:    invoke void @_ZZ4mainEN5SmainC1Ei(ptr noalias noundef nonnull align 8 dereferenceable(24) @_ZZ4mainE2sm, i32 noundef [[TMP2]])
 // SIMD2-NEXT:            to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]], !dbg [[DBG177:![0-9]+]]
 // SIMD2:       invoke.cont:
 // SIMD2-NEXT:    [[TMP3:%.*]] = call i32 @__cxa_atexit(ptr @_ZZ4mainEN5SmainD1Ev, ptr @_ZZ4mainE2sm, ptr @__dso_handle) #[[ATTR3]], !dbg [[DBG174]]
@@ -3089,7 +3089,7 @@ int foobar() {
 //
 //
 // SIMD2-LABEL: define {{[^@]+}}@_ZZ4mainEN5SmainC1Ei
-// SIMD2-SAME: (ptr noundef nonnull align 8 dereferenceable(24) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR1]] align 2 !dbg [[DBG199:![0-9]+]] {
+// SIMD2-SAME: (ptr noalias noundef nonnull align 8 dereferenceable(24) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR1]] align 2 !dbg [[DBG199:![0-9]+]] {
 // SIMD2-NEXT:  entry:
 // SIMD2-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // SIMD2-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
@@ -3099,7 +3099,7 @@ int foobar() {
 // SIMD2-NEXT:      #dbg_declare(ptr [[A_ADDR]], [[META203:![0-9]+]], !DIExpression(), [[META204:![0-9]+]])
 // SIMD2-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // SIMD2-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4, !dbg [[DBG205:![0-9]+]]
-// SIMD2-NEXT:    call void @_ZZ4mainEN5SmainC2Ei(ptr noundef nonnull align 8 dereferenceable(24) [[THIS1]], i32 noundef [[TMP0]]), !dbg [[DBG205]]
+// SIMD2-NEXT:    call void @_ZZ4mainEN5SmainC2Ei(ptr noalias noundef nonnull align 8 dereferenceable(24) [[THIS1]], i32 noundef [[TMP0]]), !dbg [[DBG205]]
 // SIMD2-NEXT:    ret void, !dbg [[DBG206:![0-9]+]]
 //
 //
@@ -3162,7 +3162,7 @@ int foobar() {
 // SIMD2-NEXT:    br i1 [[GUARD_UNINITIALIZED]], label [[INIT_CHECK:%.*]], label [[INIT_END:%.*]], !dbg [[DBG234]]
 // SIMD2:       init.check:
 // SIMD2-NEXT:    store i8 1, ptr @_ZGVN2STI2S4E2stE, align 8, !dbg [[DBG234]]
-// SIMD2-NEXT:    call void @_ZN2S4C1Ei(ptr noundef nonnull align 4 dereferenceable(8) @_ZN2STI2S4E2stE, i32 noundef 23), !dbg [[DBG235:![0-9]+]]
+// SIMD2-NEXT:    call void @_ZN2S4C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(8) @_ZN2STI2S4E2stE, i32 noundef 23), !dbg [[DBG235:![0-9]+]]
 // SIMD2-NEXT:    [[TMP1:%.*]] = call i32 @__cxa_atexit(ptr @_ZN2S4D1Ev, ptr @_ZN2STI2S4E2stE, ptr @__dso_handle) #[[ATTR3]], !dbg [[DBG234]]
 // SIMD2-NEXT:    br label [[INIT_END]], !dbg [[DBG234]]
 // SIMD2:       init.end:
@@ -3170,7 +3170,7 @@ int foobar() {
 //
 //
 // SIMD2-LABEL: define {{[^@]+}}@_ZN2S4C1Ei
-// SIMD2-SAME: (ptr noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR1]] comdat align 2 !dbg [[DBG238:![0-9]+]] {
+// SIMD2-SAME: (ptr noalias noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR1]] comdat align 2 !dbg [[DBG238:![0-9]+]] {
 // SIMD2-NEXT:  entry:
 // SIMD2-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // SIMD2-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
@@ -3180,7 +3180,7 @@ int foobar() {
 // SIMD2-NEXT:      #dbg_declare(ptr [[A_ADDR]], [[META242:![0-9]+]], !DIExpression(), [[META243:![0-9]+]])
 // SIMD2-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // SIMD2-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4, !dbg [[DBG244:![0-9]+]]
-// SIMD2-NEXT:    call void @_ZN2S4C2Ei(ptr noundef nonnull align 4 dereferenceable(8) [[THIS1]], i32 noundef [[TMP0]]), !dbg [[DBG244]]
+// SIMD2-NEXT:    call void @_ZN2S4C2Ei(ptr noalias noundef nonnull align 4 dereferenceable(8) [[THIS1]], i32 noundef [[TMP0]]), !dbg [[DBG244]]
 // SIMD2-NEXT:    ret void, !dbg [[DBG245:![0-9]+]]
 //
 //
@@ -3196,7 +3196,7 @@ int foobar() {
 //
 //
 // SIMD2-LABEL: define {{[^@]+}}@_ZN2S1C2Ei
-// SIMD2-SAME: (ptr noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR2]] comdat align 2 !dbg [[DBG251:![0-9]+]] {
+// SIMD2-SAME: (ptr noalias noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR2]] comdat align 2 !dbg [[DBG251:![0-9]+]] {
 // SIMD2-NEXT:  entry:
 // SIMD2-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // SIMD2-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
@@ -3224,7 +3224,7 @@ int foobar() {
 //
 //
 // SIMD2-LABEL: define {{[^@]+}}@_ZN2S2C2Ei
-// SIMD2-SAME: (ptr noundef nonnull align 8 dereferenceable(16) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR2]] comdat align 2 !dbg [[DBG266:![0-9]+]] {
+// SIMD2-SAME: (ptr noalias noundef nonnull align 8 dereferenceable(16) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR2]] comdat align 2 !dbg [[DBG266:![0-9]+]] {
 // SIMD2-NEXT:  entry:
 // SIMD2-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // SIMD2-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
@@ -3252,7 +3252,7 @@ int foobar() {
 //
 //
 // SIMD2-LABEL: define {{[^@]+}}@_ZZ4mainEN5SmainC2Ei
-// SIMD2-SAME: (ptr noundef nonnull align 8 dereferenceable(24) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR2]] align 2 !dbg [[DBG281:![0-9]+]] {
+// SIMD2-SAME: (ptr noalias noundef nonnull align 8 dereferenceable(24) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR2]] align 2 !dbg [[DBG281:![0-9]+]] {
 // SIMD2-NEXT:  entry:
 // SIMD2-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // SIMD2-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
@@ -3280,7 +3280,7 @@ int foobar() {
 //
 //
 // SIMD2-LABEL: define {{[^@]+}}@_ZN2S4C2Ei
-// SIMD2-SAME: (ptr noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR2]] comdat align 2 !dbg [[DBG296:![0-9]+]] {
+// SIMD2-SAME: (ptr noalias noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR2]] comdat align 2 !dbg [[DBG296:![0-9]+]] {
 // SIMD2-NEXT:  entry:
 // SIMD2-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // SIMD2-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
@@ -3319,13 +3319,13 @@ int foobar() {
 // CHECK-TLS1-LABEL: define {{[^@]+}}@__cxx_global_var_init
 // CHECK-TLS1-SAME: () #[[ATTR0:[0-9]+]] {
 // CHECK-TLS1-NEXT:  entry:
-// CHECK-TLS1-NEXT:    call void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) @_ZL3gs1, i32 noundef 5)
+// CHECK-TLS1-NEXT:    call void @_ZN2S1C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) @_ZL3gs1, i32 noundef 5)
 // CHECK-TLS1-NEXT:    [[TMP0:%.*]] = call i32 @__cxa_thread_atexit(ptr @_ZN2S1D1Ev, ptr @_ZL3gs1, ptr @__dso_handle) #[[ATTR3:[0-9]+]]
 // CHECK-TLS1-NEXT:    ret void
 //
 //
 // CHECK-TLS1-LABEL: define {{[^@]+}}@_ZN2S1C1Ei
-// CHECK-TLS1-SAME: (ptr noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR1:[0-9]+]] comdat align 2 {
+// CHECK-TLS1-SAME: (ptr noalias noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR1:[0-9]+]] comdat align 2 {
 // CHECK-TLS1-NEXT:  entry:
 // CHECK-TLS1-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-TLS1-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
@@ -3333,7 +3333,7 @@ int foobar() {
 // CHECK-TLS1-NEXT:    store i32 [[A]], ptr [[A_ADDR]], align 4
 // CHECK-TLS1-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // CHECK-TLS1-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4
-// CHECK-TLS1-NEXT:    call void @_ZN2S1C2Ei(ptr noundef nonnull align 4 dereferenceable(4) [[THIS1]], i32 noundef [[TMP0]])
+// CHECK-TLS1-NEXT:    call void @_ZN2S1C2Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) [[THIS1]], i32 noundef [[TMP0]])
 // CHECK-TLS1-NEXT:    ret void
 //
 //
@@ -3348,7 +3348,7 @@ int foobar() {
 //
 //
 // CHECK-TLS1-LABEL: define {{[^@]+}}@_ZN2S1C2Ei
-// CHECK-TLS1-SAME: (ptr noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR2]] comdat align 2 {
+// CHECK-TLS1-SAME: (ptr noalias noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR2]] comdat align 2 {
 // CHECK-TLS1-NEXT:  entry:
 // CHECK-TLS1-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-TLS1-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
@@ -3375,13 +3375,13 @@ int foobar() {
 // CHECK-TLS1-LABEL: define {{[^@]+}}@__cxx_global_var_init.1
 // CHECK-TLS1-SAME: () #[[ATTR0]] {
 // CHECK-TLS1-NEXT:  entry:
-// CHECK-TLS1-NEXT:    call void @_ZN2S2C1Ei(ptr noundef nonnull align 8 dereferenceable(16) @_ZL3gs2, i32 noundef 27)
+// CHECK-TLS1-NEXT:    call void @_ZN2S2C1Ei(ptr noalias noundef nonnull align 8 dereferenceable(16) @_ZL3gs2, i32 noundef 27)
 // CHECK-TLS1-NEXT:    [[TMP0:%.*]] = call i32 @__cxa_atexit(ptr @_ZN2S2D1Ev, ptr @_ZL3gs2, ptr @__dso_handle) #[[ATTR3]]
 // CHECK-TLS1-NEXT:    ret void
 //
 //
 // CHECK-TLS1-LABEL: define {{[^@]+}}@_ZN2S2C1Ei
-// CHECK-TLS1-SAME: (ptr noundef nonnull align 8 dereferenceable(16) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR1]] comdat align 2 {
+// CHECK-TLS1-SAME: (ptr noalias noundef nonnull align 8 dereferenceable(16) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR1]] comdat align 2 {
 // CHECK-TLS1-NEXT:  entry:
 // CHECK-TLS1-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-TLS1-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
@@ -3389,7 +3389,7 @@ int foobar() {
 // CHECK-TLS1-NEXT:    store i32 [[A]], ptr [[A_ADDR]], align 4
 // CHECK-TLS1-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // CHECK-TLS1-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4
-// CHECK-TLS1-NEXT:    call void @_ZN2S2C2Ei(ptr noundef nonnull align 8 dereferenceable(16) [[THIS1]], i32 noundef [[TMP0]])
+// CHECK-TLS1-NEXT:    call void @_ZN2S2C2Ei(ptr noalias noundef nonnull align 8 dereferenceable(16) [[THIS1]], i32 noundef [[TMP0]])
 // CHECK-TLS1-NEXT:    ret void
 //
 //
@@ -3404,7 +3404,7 @@ int foobar() {
 //
 //
 // CHECK-TLS1-LABEL: define {{[^@]+}}@_ZN2S2C2Ei
-// CHECK-TLS1-SAME: (ptr noundef nonnull align 8 dereferenceable(16) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR2]] comdat align 2 {
+// CHECK-TLS1-SAME: (ptr noalias noundef nonnull align 8 dereferenceable(16) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR2]] comdat align 2 {
 // CHECK-TLS1-NEXT:  entry:
 // CHECK-TLS1-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-TLS1-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
@@ -3438,28 +3438,28 @@ int foobar() {
 // CHECK-TLS1-NEXT:    [[ARRAYINIT_ENDOFINIT5:%.*]] = alloca ptr, align 8
 // CHECK-TLS1-NEXT:    store ptr @arr_x, ptr [[ARRAYINIT_ENDOFINIT]], align 8
 // CHECK-TLS1-NEXT:    store ptr @arr_x, ptr [[ARRAYINIT_ENDOFINIT1]], align 8
-// CHECK-TLS1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) @arr_x, i32 noundef 1)
+// CHECK-TLS1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) @arr_x, i32 noundef 1)
 // CHECK-TLS1-NEXT:            to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]]
 // CHECK-TLS1:       invoke.cont:
 // CHECK-TLS1-NEXT:    store ptr getelementptr inbounds ([[STRUCT_S1:%.*]], ptr @arr_x, i64 1), ptr [[ARRAYINIT_ENDOFINIT1]], align 8
-// CHECK-TLS1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr @arr_x, i64 1), i32 noundef 2)
+// CHECK-TLS1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr @arr_x, i64 1), i32 noundef 2)
 // CHECK-TLS1-NEXT:            to label [[INVOKE_CONT2:%.*]] unwind label [[LPAD]]
 // CHECK-TLS1:       invoke.cont2:
 // CHECK-TLS1-NEXT:    store ptr getelementptr inbounds ([[STRUCT_S1]], ptr @arr_x, i64 2), ptr [[ARRAYINIT_ENDOFINIT1]], align 8
-// CHECK-TLS1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr @arr_x, i64 2), i32 noundef 3)
+// CHECK-TLS1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr @arr_x, i64 2), i32 noundef 3)
 // CHECK-TLS1-NEXT:            to label [[INVOKE_CONT3:%.*]] unwind label [[LPAD]]
 // CHECK-TLS1:       invoke.cont3:
 // CHECK-TLS1-NEXT:    store ptr getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), ptr [[ARRAYINIT_ENDOFINIT]], align 8
 // CHECK-TLS1-NEXT:    store ptr getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), ptr [[ARRAYINIT_ENDOFINIT5]], align 8
-// CHECK-TLS1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), i32 noundef 4)
+// CHECK-TLS1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), i32 noundef 4)
 // CHECK-TLS1-NEXT:            to label [[INVOKE_CONT7:%.*]] unwind label [[LPAD6:%.*]]
 // CHECK-TLS1:       invoke.cont7:
 // CHECK-TLS1-NEXT:    store ptr getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), i64 1), ptr [[ARRAYINIT_ENDOFINIT5]], align 8
-// CHECK-TLS1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), i64 1), i32 noundef 5)
+// CHECK-TLS1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), i64 1), i32 noundef 5)
 // CHECK-TLS1-NEXT:            to label [[INVOKE_CONT8:%.*]] unwind label [[LPAD6]]
 // CHECK-TLS1:       invoke.cont8:
 // CHECK-TLS1-NEXT:    store ptr getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), i64 2), ptr [[ARRAYINIT_ENDOFINIT5]], align 8
-// CHECK-TLS1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), i64 2), i32 noundef 6)
+// CHECK-TLS1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), i64 2), i32 noundef 6)
 // CHECK-TLS1-NEXT:            to label [[INVOKE_CONT9:%.*]] unwind label [[LPAD6]]
 // CHECK-TLS1:       invoke.cont9:
 // CHECK-TLS1-NEXT:    [[TMP0:%.*]] = call i32 @__cxa_thread_atexit(ptr @__cxx_global_array_dtor, ptr null, ptr @__dso_handle) #[[ATTR3]]
@@ -3550,7 +3550,7 @@ int foobar() {
 // CHECK-TLS1-NEXT:    [[TMP1:%.*]] = call ptr @_ZTWL3gs1()
 // CHECK-TLS1-NEXT:    [[A:%.*]] = getelementptr inbounds nuw [[STRUCT_S1:%.*]], ptr [[TMP1]], i32 0, i32 0
 // CHECK-TLS1-NEXT:    [[TMP2:%.*]] = load i32, ptr [[A]], align 4
-// CHECK-TLS1-NEXT:    call void @_ZZ4mainEN5SmainC1Ei(ptr noundef nonnull align 8 dereferenceable(24) @_ZZ4mainE2sm, i32 noundef [[TMP2]])
+// CHECK-TLS1-NEXT:    call void @_ZZ4mainEN5SmainC1Ei(ptr noalias noundef nonnull align 8 dereferenceable(24) @_ZZ4mainE2sm, i32 noundef [[TMP2]])
 // CHECK-TLS1-NEXT:    [[TMP3:%.*]] = call i32 @__cxa_thread_atexit(ptr @_ZZ4mainEN5SmainD1Ev, ptr @_ZZ4mainE2sm, ptr @__dso_handle) #[[ATTR3]]
 // CHECK-TLS1-NEXT:    store i8 1, ptr @_ZGVZ4mainE2sm, align 1
 // CHECK-TLS1-NEXT:    br label [[INIT_END]]
@@ -3618,7 +3618,7 @@ int foobar() {
 //
 //
 // CHECK-TLS1-LABEL: define {{[^@]+}}@_ZZ4mainEN5SmainC1Ei
-// CHECK-TLS1-SAME: (ptr noundef nonnull align 8 dereferenceable(24) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR1]] align 2 {
+// CHECK-TLS1-SAME: (ptr noalias noundef nonnull align 8 dereferenceable(24) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR1]] align 2 {
 // CHECK-TLS1-NEXT:  entry:
 // CHECK-TLS1-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-TLS1-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
@@ -3626,7 +3626,7 @@ int foobar() {
 // CHECK-TLS1-NEXT:    store i32 [[A]], ptr [[A_ADDR]], align 4
 // CHECK-TLS1-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // CHECK-TLS1-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4
-// CHECK-TLS1-NEXT:    call void @_ZZ4mainEN5SmainC2Ei(ptr noundef nonnull align 8 dereferenceable(24) [[THIS1]], i32 noundef [[TMP0]])
+// CHECK-TLS1-NEXT:    call void @_ZZ4mainEN5SmainC2Ei(ptr noalias noundef nonnull align 8 dereferenceable(24) [[THIS1]], i32 noundef [[TMP0]])
 // CHECK-TLS1-NEXT:    ret void
 //
 //
@@ -3679,7 +3679,7 @@ int foobar() {
 //
 //
 // CHECK-TLS1-LABEL: define {{[^@]+}}@_ZZ4mainEN5SmainC2Ei
-// CHECK-TLS1-SAME: (ptr noundef nonnull align 8 dereferenceable(24) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR2]] align 2 {
+// CHECK-TLS1-SAME: (ptr noalias noundef nonnull align 8 dereferenceable(24) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR2]] align 2 {
 // CHECK-TLS1-NEXT:  entry:
 // CHECK-TLS1-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-TLS1-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
@@ -3764,7 +3764,7 @@ int foobar() {
 // CHECK-TLS1-NEXT:    br i1 [[GUARD_UNINITIALIZED]], label [[INIT_CHECK:%.*]], label [[INIT_END:%.*]]
 // CHECK-TLS1:       init.check:
 // CHECK-TLS1-NEXT:    store i8 1, ptr @_ZGVN2STI2S4E2stE, align 8
-// CHECK-TLS1-NEXT:    call void @_ZN2S4C1Ei(ptr noundef nonnull align 4 dereferenceable(8) @_ZN2STI2S4E2stE, i32 noundef 23)
+// CHECK-TLS1-NEXT:    call void @_ZN2S4C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(8) @_ZN2STI2S4E2stE, i32 noundef 23)
 // CHECK-TLS1-NEXT:    [[TMP1:%.*]] = call i32 @__cxa_thread_atexit(ptr @_ZN2S4D1Ev, ptr @_ZN2STI2S4E2stE, ptr @__dso_handle) #[[ATTR3]]
 // CHECK-TLS1-NEXT:    br label [[INIT_END]]
 // CHECK-TLS1:       init.end:
@@ -3772,7 +3772,7 @@ int foobar() {
 //
 //
 // CHECK-TLS1-LABEL: define {{[^@]+}}@_ZN2S4C1Ei
-// CHECK-TLS1-SAME: (ptr noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR1]] comdat align 2 {
+// CHECK-TLS1-SAME: (ptr noalias noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR1]] comdat align 2 {
 // CHECK-TLS1-NEXT:  entry:
 // CHECK-TLS1-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-TLS1-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
@@ -3780,7 +3780,7 @@ int foobar() {
 // CHECK-TLS1-NEXT:    store i32 [[A]], ptr [[A_ADDR]], align 4
 // CHECK-TLS1-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // CHECK-TLS1-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4
-// CHECK-TLS1-NEXT:    call void @_ZN2S4C2Ei(ptr noundef nonnull align 4 dereferenceable(8) [[THIS1]], i32 noundef [[TMP0]])
+// CHECK-TLS1-NEXT:    call void @_ZN2S4C2Ei(ptr noalias noundef nonnull align 4 dereferenceable(8) [[THIS1]], i32 noundef [[TMP0]])
 // CHECK-TLS1-NEXT:    ret void
 //
 //
@@ -3795,7 +3795,7 @@ int foobar() {
 //
 //
 // CHECK-TLS1-LABEL: define {{[^@]+}}@_ZN2S4C2Ei
-// CHECK-TLS1-SAME: (ptr noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR2]] comdat align 2 {
+// CHECK-TLS1-SAME: (ptr noalias noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR2]] comdat align 2 {
 // CHECK-TLS1-NEXT:  entry:
 // CHECK-TLS1-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-TLS1-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
@@ -3854,7 +3854,7 @@ int foobar() {
 // CHECK-TLS2-NEXT:    [[TMP1:%.*]] = call ptr @_ZTWL3gs1()
 // CHECK-TLS2-NEXT:    [[A:%.*]] = getelementptr inbounds nuw [[STRUCT_S1:%.*]], ptr [[TMP1]], i32 0, i32 0
 // CHECK-TLS2-NEXT:    [[TMP2:%.*]] = load i32, ptr [[A]], align 4
-// CHECK-TLS2-NEXT:    call void @_ZZ4mainEN5SmainC1Ei(ptr noundef nonnull align 8 dereferenceable(24) @_ZZ4mainE2sm, i32 noundef [[TMP2]])
+// CHECK-TLS2-NEXT:    call void @_ZZ4mainEN5SmainC1Ei(ptr noalias noundef nonnull align 8 dereferenceable(24) @_ZZ4mainE2sm, i32 noundef [[TMP2]])
 // CHECK-TLS2-NEXT:    [[TMP3:%.*]] = call i32 @__cxa_thread_atexit(ptr @_ZZ4mainEN5SmainD1Ev, ptr @_ZZ4mainE2sm, ptr @__dso_handle) #[[ATTR4:[0-9]+]]
 // CHECK-TLS2-NEXT:    store i8 1, ptr @_ZGVZ4mainE2sm, align 1
 // CHECK-TLS2-NEXT:    br label [[INIT_END]]
@@ -3922,7 +3922,7 @@ int foobar() {
 //
 //
 // CHECK-TLS2-LABEL: define {{[^@]+}}@_ZZ4mainEN5SmainC1Ei
-// CHECK-TLS2-SAME: (ptr noundef nonnull align 8 dereferenceable(24) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR2:[0-9]+]] align 2 {
+// CHECK-TLS2-SAME: (ptr noalias noundef nonnull align 8 dereferenceable(24) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR2:[0-9]+]] align 2 {
 // CHECK-TLS2-NEXT:  entry:
 // CHECK-TLS2-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-TLS2-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
@@ -3930,7 +3930,7 @@ int foobar() {
 // CHECK-TLS2-NEXT:    store i32 [[A]], ptr [[A_ADDR]], align 4
 // CHECK-TLS2-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // CHECK-TLS2-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4
-// CHECK-TLS2-NEXT:    call void @_ZZ4mainEN5SmainC2Ei(ptr noundef nonnull align 8 dereferenceable(24) [[THIS1]], i32 noundef [[TMP0]])
+// CHECK-TLS2-NEXT:    call void @_ZZ4mainEN5SmainC2Ei(ptr noalias noundef nonnull align 8 dereferenceable(24) [[THIS1]], i32 noundef [[TMP0]])
 // CHECK-TLS2-NEXT:    ret void
 //
 //
@@ -4050,13 +4050,13 @@ int foobar() {
 // CHECK-TLS2-LABEL: define {{[^@]+}}@__cxx_global_var_init
 // CHECK-TLS2-SAME: () #[[ATTR6:[0-9]+]] {
 // CHECK-TLS2-NEXT:  entry:
-// CHECK-TLS2-NEXT:    call void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) @_ZL3gs1, i32 noundef 5)
+// CHECK-TLS2-NEXT:    call void @_ZN2S1C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) @_ZL3gs1, i32 noundef 5)
 // CHECK-TLS2-NEXT:    [[TMP0:%.*]] = call i32 @__cxa_thread_atexit(ptr @_ZN2S1D1Ev, ptr @_ZL3gs1, ptr @__dso_handle) #[[ATTR4]]
 // CHECK-TLS2-NEXT:    ret void
 //
 //
 // CHECK-TLS2-LABEL: define {{[^@]+}}@_ZN2S1C1Ei
-// CHECK-TLS2-SAME: (ptr noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR2]] comdat align 2 {
+// CHECK-TLS2-SAME: (ptr noalias noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR2]] comdat align 2 {
 // CHECK-TLS2-NEXT:  entry:
 // CHECK-TLS2-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-TLS2-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
@@ -4064,7 +4064,7 @@ int foobar() {
 // CHECK-TLS2-NEXT:    store i32 [[A]], ptr [[A_ADDR]], align 4
 // CHECK-TLS2-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // CHECK-TLS2-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4
-// CHECK-TLS2-NEXT:    call void @_ZN2S1C2Ei(ptr noundef nonnull align 4 dereferenceable(4) [[THIS1]], i32 noundef [[TMP0]])
+// CHECK-TLS2-NEXT:    call void @_ZN2S1C2Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) [[THIS1]], i32 noundef [[TMP0]])
 // CHECK-TLS2-NEXT:    ret void
 //
 //
@@ -4079,7 +4079,7 @@ int foobar() {
 //
 //
 // CHECK-TLS2-LABEL: define {{[^@]+}}@_ZN2S1C2Ei
-// CHECK-TLS2-SAME: (ptr noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR3]] comdat align 2 {
+// CHECK-TLS2-SAME: (ptr noalias noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR3]] comdat align 2 {
 // CHECK-TLS2-NEXT:  entry:
 // CHECK-TLS2-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-TLS2-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
@@ -4106,13 +4106,13 @@ int foobar() {
 // CHECK-TLS2-LABEL: define {{[^@]+}}@__cxx_global_var_init.1
 // CHECK-TLS2-SAME: () #[[ATTR6]] {
 // CHECK-TLS2-NEXT:  entry:
-// CHECK-TLS2-NEXT:    call void @_ZN2S2C1Ei(ptr noundef nonnull align 8 dereferenceable(16) @_ZL3gs2, i32 noundef 27)
+// CHECK-TLS2-NEXT:    call void @_ZN2S2C1Ei(ptr noalias noundef nonnull align 8 dereferenceable(16) @_ZL3gs2, i32 noundef 27)
 // CHECK-TLS2-NEXT:    [[TMP0:%.*]] = call i32 @__cxa_atexit(ptr @_ZN2S2D1Ev, ptr @_ZL3gs2, ptr @__dso_handle) #[[ATTR4]]
 // CHECK-TLS2-NEXT:    ret void
 //
 //
 // CHECK-TLS2-LABEL: define {{[^@]+}}@_ZN2S2C1Ei
-// CHECK-TLS2-SAME: (ptr noundef nonnull align 8 dereferenceable(16) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR2]] comdat align 2 {
+// CHECK-TLS2-SAME: (ptr noalias noundef nonnull align 8 dereferenceable(16) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR2]] comdat align 2 {
 // CHECK-TLS2-NEXT:  entry:
 // CHECK-TLS2-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-TLS2-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
@@ -4120,7 +4120,7 @@ int foobar() {
 // CHECK-TLS2-NEXT:    store i32 [[A]], ptr [[A_ADDR]], align 4
 // CHECK-TLS2-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // CHECK-TLS2-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4
-// CHECK-TLS2-NEXT:    call void @_ZN2S2C2Ei(ptr noundef nonnull align 8 dereferenceable(16) [[THIS1]], i32 noundef [[TMP0]])
+// CHECK-TLS2-NEXT:    call void @_ZN2S2C2Ei(ptr noalias noundef nonnull align 8 dereferenceable(16) [[THIS1]], i32 noundef [[TMP0]])
 // CHECK-TLS2-NEXT:    ret void
 //
 //
@@ -4135,7 +4135,7 @@ int foobar() {
 //
 //
 // CHECK-TLS2-LABEL: define {{[^@]+}}@_ZN2S2C2Ei
-// CHECK-TLS2-SAME: (ptr noundef nonnull align 8 dereferenceable(16) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR3]] comdat align 2 {
+// CHECK-TLS2-SAME: (ptr noalias noundef nonnull align 8 dereferenceable(16) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR3]] comdat align 2 {
 // CHECK-TLS2-NEXT:  entry:
 // CHECK-TLS2-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-TLS2-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
@@ -4169,28 +4169,28 @@ int foobar() {
 // CHECK-TLS2-NEXT:    [[ARRAYINIT_ENDOFINIT5:%.*]] = alloca ptr, align 8
 // CHECK-TLS2-NEXT:    store ptr @arr_x, ptr [[ARRAYINIT_ENDOFINIT]], align 8
 // CHECK-TLS2-NEXT:    store ptr @arr_x, ptr [[ARRAYINIT_ENDOFINIT1]], align 8
-// CHECK-TLS2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) @arr_x, i32 noundef 1)
+// CHECK-TLS2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) @arr_x, i32 noundef 1)
 // CHECK-TLS2-NEXT:            to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]]
 // CHECK-TLS2:       invoke.cont:
 // CHECK-TLS2-NEXT:    store ptr getelementptr inbounds ([[STRUCT_S1:%.*]], ptr @arr_x, i64 1), ptr [[ARRAYINIT_ENDOFINIT1]], align 8
-// CHECK-TLS2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr @arr_x, i64 1), i32 noundef 2)
+// CHECK-TLS2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr @arr_x, i64 1), i32 noundef 2)
 // CHECK-TLS2-NEXT:            to label [[INVOKE_CONT2:%.*]] unwind label [[LPAD]]
 // CHECK-TLS2:       invoke.cont2:
 // CHECK-TLS2-NEXT:    store ptr getelementptr inbounds ([[STRUCT_S1]], ptr @arr_x, i64 2), ptr [[ARRAYINIT_ENDOFINIT1]], align 8
-// CHECK-TLS2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr @arr_x, i64 2), i32 noundef 3)
+// CHECK-TLS2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr @arr_x, i64 2), i32 noundef 3)
 // CHECK-TLS2-NEXT:            to label [[INVOKE_CONT3:%.*]] unwind label [[LPAD]]
 // CHECK-TLS2:       invoke.cont3:
 // CHECK-TLS2-NEXT:    store ptr getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), ptr [[ARRAYINIT_ENDOFINIT]], align 8
 // CHECK-TLS2-NEXT:    store ptr getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), ptr [[ARRAYINIT_ENDOFINIT5]], align 8
-// CHECK-TLS2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), i32 noundef 4)
+// CHECK-TLS2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), i32 noundef 4)
 // CHECK-TLS2-NEXT:            to label [[INVOKE_CONT7:%.*]] unwind label [[LPAD6:%.*]]
 // CHECK-TLS2:       invoke.cont7:
 // CHECK-TLS2-NEXT:    store ptr getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), i64 1), ptr [[ARRAYINIT_ENDOFINIT5]], align 8
-// CHECK-TLS2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), i64 1), i32 noundef 5)
+// CHECK-TLS2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), i64 1), i32 noundef 5)
 // CHECK-TLS2-NEXT:            to label [[INVOKE_CONT8:%.*]] unwind label [[LPAD6]]
 // CHECK-TLS2:       invoke.cont8:
 // CHECK-TLS2-NEXT:    store ptr getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), i64 2), ptr [[ARRAYINIT_ENDOFINIT5]], align 8
-// CHECK-TLS2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), i64 2), i32 noundef 6)
+// CHECK-TLS2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), i64 2), i32 noundef 6)
 // CHECK-TLS2-NEXT:            to label [[INVOKE_CONT9:%.*]] unwind label [[LPAD6]]
 // CHECK-TLS2:       invoke.cont9:
 // CHECK-TLS2-NEXT:    [[TMP0:%.*]] = call i32 @__cxa_thread_atexit(ptr @__cxx_global_array_dtor, ptr null, ptr @__dso_handle) #[[ATTR4]]
@@ -4269,7 +4269,7 @@ int foobar() {
 //
 //
 // CHECK-TLS2-LABEL: define {{[^@]+}}@_ZZ4mainEN5SmainC2Ei
-// CHECK-TLS2-SAME: (ptr noundef nonnull align 8 dereferenceable(24) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR3]] align 2 {
+// CHECK-TLS2-SAME: (ptr noalias noundef nonnull align 8 dereferenceable(24) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR3]] align 2 {
 // CHECK-TLS2-NEXT:  entry:
 // CHECK-TLS2-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-TLS2-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
@@ -4301,7 +4301,7 @@ int foobar() {
 // CHECK-TLS2-NEXT:    br i1 [[GUARD_UNINITIALIZED]], label [[INIT_CHECK:%.*]], label [[INIT_END:%.*]]
 // CHECK-TLS2:       init.check:
 // CHECK-TLS2-NEXT:    store i8 1, ptr @_ZGVN2STI2S4E2stE, align 8
-// CHECK-TLS2-NEXT:    call void @_ZN2S4C1Ei(ptr noundef nonnull align 4 dereferenceable(8) @_ZN2STI2S4E2stE, i32 noundef 23)
+// CHECK-TLS2-NEXT:    call void @_ZN2S4C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(8) @_ZN2STI2S4E2stE, i32 noundef 23)
 // CHECK-TLS2-NEXT:    [[TMP1:%.*]] = call i32 @__cxa_thread_atexit(ptr @_ZN2S4D1Ev, ptr @_ZN2STI2S4E2stE, ptr @__dso_handle) #[[ATTR4]]
 // CHECK-TLS2-NEXT:    br label [[INIT_END]]
 // CHECK-TLS2:       init.end:
@@ -4309,7 +4309,7 @@ int foobar() {
 //
 //
 // CHECK-TLS2-LABEL: define {{[^@]+}}@_ZN2S4C1Ei
-// CHECK-TLS2-SAME: (ptr noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR2]] comdat align 2 {
+// CHECK-TLS2-SAME: (ptr noalias noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR2]] comdat align 2 {
 // CHECK-TLS2-NEXT:  entry:
 // CHECK-TLS2-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-TLS2-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
@@ -4317,7 +4317,7 @@ int foobar() {
 // CHECK-TLS2-NEXT:    store i32 [[A]], ptr [[A_ADDR]], align 4
 // CHECK-TLS2-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // CHECK-TLS2-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4
-// CHECK-TLS2-NEXT:    call void @_ZN2S4C2Ei(ptr noundef nonnull align 4 dereferenceable(8) [[THIS1]], i32 noundef [[TMP0]])
+// CHECK-TLS2-NEXT:    call void @_ZN2S4C2Ei(ptr noalias noundef nonnull align 4 dereferenceable(8) [[THIS1]], i32 noundef [[TMP0]])
 // CHECK-TLS2-NEXT:    ret void
 //
 //
@@ -4332,7 +4332,7 @@ int foobar() {
 //
 //
 // CHECK-TLS2-LABEL: define {{[^@]+}}@_ZN2S4C2Ei
-// CHECK-TLS2-SAME: (ptr noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR3]] comdat align 2 {
+// CHECK-TLS2-SAME: (ptr noalias noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR3]] comdat align 2 {
 // CHECK-TLS2-NEXT:  entry:
 // CHECK-TLS2-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-TLS2-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
@@ -4381,13 +4381,13 @@ int foobar() {
 // CHECK-TLS3-LABEL: define {{[^@]+}}@__cxx_global_var_init
 // CHECK-TLS3-SAME: () #[[ATTR0:[0-9]+]] !dbg [[DBG116:![0-9]+]] {
 // CHECK-TLS3-NEXT:  entry:
-// CHECK-TLS3-NEXT:    call void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) @_ZL3gs1, i32 noundef 5), !dbg [[DBG119:![0-9]+]]
+// CHECK-TLS3-NEXT:    call void @_ZN2S1C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) @_ZL3gs1, i32 noundef 5), !dbg [[DBG119:![0-9]+]]
 // CHECK-TLS3-NEXT:    [[TMP0:%.*]] = call i32 @__cxa_thread_atexit(ptr @_ZN2S1D1Ev, ptr @_ZL3gs1, ptr @__dso_handle) #[[ATTR3:[0-9]+]], !dbg [[DBG121:![0-9]+]]
 // CHECK-TLS3-NEXT:    ret void, !dbg [[DBG122:![0-9]+]]
 //
 //
 // CHECK-TLS3-LABEL: define {{[^@]+}}@_ZN2S1C1Ei
-// CHECK-TLS3-SAME: (ptr noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR1:[0-9]+]] comdat align 2 !dbg [[DBG123:![0-9]+]] {
+// CHECK-TLS3-SAME: (ptr noalias noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR1:[0-9]+]] comdat align 2 !dbg [[DBG123:![0-9]+]] {
 // CHECK-TLS3-NEXT:  entry:
 // CHECK-TLS3-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-TLS3-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
@@ -4397,7 +4397,7 @@ int foobar() {
 // CHECK-TLS3-NEXT:      #dbg_declare(ptr [[A_ADDR]], [[META127:![0-9]+]], !DIExpression(), [[META128:![0-9]+]])
 // CHECK-TLS3-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // CHECK-TLS3-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4, !dbg [[DBG129:![0-9]+]]
-// CHECK-TLS3-NEXT:    call void @_ZN2S1C2Ei(ptr noundef nonnull align 4 dereferenceable(4) [[THIS1]], i32 noundef [[TMP0]]), !dbg [[DBG129]]
+// CHECK-TLS3-NEXT:    call void @_ZN2S1C2Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) [[THIS1]], i32 noundef [[TMP0]]), !dbg [[DBG129]]
 // CHECK-TLS3-NEXT:    ret void, !dbg [[DBG130:![0-9]+]]
 //
 //
@@ -4413,7 +4413,7 @@ int foobar() {
 //
 //
 // CHECK-TLS3-LABEL: define {{[^@]+}}@_ZN2S1C2Ei
-// CHECK-TLS3-SAME: (ptr noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR2]] comdat align 2 !dbg [[DBG136:![0-9]+]] {
+// CHECK-TLS3-SAME: (ptr noalias noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR2]] comdat align 2 !dbg [[DBG136:![0-9]+]] {
 // CHECK-TLS3-NEXT:  entry:
 // CHECK-TLS3-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-TLS3-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
@@ -4443,13 +4443,13 @@ int foobar() {
 // CHECK-TLS3-LABEL: define {{[^@]+}}@__cxx_global_var_init.1
 // CHECK-TLS3-SAME: () #[[ATTR0]] !dbg [[DBG151:![0-9]+]] {
 // CHECK-TLS3-NEXT:  entry:
-// CHECK-TLS3-NEXT:    call void @_ZN2S2C1Ei(ptr noundef nonnull align 8 dereferenceable(16) @_ZL3gs2, i32 noundef 27), !dbg [[DBG152:![0-9]+]]
+// CHECK-TLS3-NEXT:    call void @_ZN2S2C1Ei(ptr noalias noundef nonnull align 8 dereferenceable(16) @_ZL3gs2, i32 noundef 27), !dbg [[DBG152:![0-9]+]]
 // CHECK-TLS3-NEXT:    [[TMP0:%.*]] = call i32 @__cxa_atexit(ptr @_ZN2S2D1Ev, ptr @_ZL3gs2, ptr @__dso_handle) #[[ATTR3]], !dbg [[DBG154:![0-9]+]]
 // CHECK-TLS3-NEXT:    ret void, !dbg [[DBG155:![0-9]+]]
 //
 //
 // CHECK-TLS3-LABEL: define {{[^@]+}}@_ZN2S2C1Ei
-// CHECK-TLS3-SAME: (ptr noundef nonnull align 8 dereferenceable(16) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR1]] comdat align 2 !dbg [[DBG156:![0-9]+]] {
+// CHECK-TLS3-SAME: (ptr noalias noundef nonnull align 8 dereferenceable(16) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR1]] comdat align 2 !dbg [[DBG156:![0-9]+]] {
 // CHECK-TLS3-NEXT:  entry:
 // CHECK-TLS3-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-TLS3-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
@@ -4459,7 +4459,7 @@ int foobar() {
 // CHECK-TLS3-NEXT:      #dbg_declare(ptr [[A_ADDR]], [[META160:![0-9]+]], !DIExpression(), [[META161:![0-9]+]])
 // CHECK-TLS3-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // CHECK-TLS3-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4, !dbg [[DBG162:![0-9]+]]
-// CHECK-TLS3-NEXT:    call void @_ZN2S2C2Ei(ptr noundef nonnull align 8 dereferenceable(16) [[THIS1]], i32 noundef [[TMP0]]), !dbg [[DBG162]]
+// CHECK-TLS3-NEXT:    call void @_ZN2S2C2Ei(ptr noalias noundef nonnull align 8 dereferenceable(16) [[THIS1]], i32 noundef [[TMP0]]), !dbg [[DBG162]]
 // CHECK-TLS3-NEXT:    ret void, !dbg [[DBG163:![0-9]+]]
 //
 //
@@ -4475,7 +4475,7 @@ int foobar() {
 //
 //
 // CHECK-TLS3-LABEL: define {{[^@]+}}@_ZN2S2C2Ei
-// CHECK-TLS3-SAME: (ptr noundef nonnull align 8 dereferenceable(16) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR2]] comdat align 2 !dbg [[DBG169:![0-9]+]] {
+// CHECK-TLS3-SAME: (ptr noalias noundef nonnull align 8 dereferenceable(16) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR2]] comdat align 2 !dbg [[DBG169:![0-9]+]] {
 // CHECK-TLS3-NEXT:  entry:
 // CHECK-TLS3-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-TLS3-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
@@ -4512,28 +4512,28 @@ int foobar() {
 // CHECK-TLS3-NEXT:    [[ARRAYINIT_ENDOFINIT5:%.*]] = alloca ptr, align 8
 // CHECK-TLS3-NEXT:    store ptr @arr_x, ptr [[ARRAYINIT_ENDOFINIT]], align 8, !dbg [[DBG185:![0-9]+]]
 // CHECK-TLS3-NEXT:    store ptr @arr_x, ptr [[ARRAYINIT_ENDOFINIT1]], align 8, !dbg [[DBG187:![0-9]+]]
-// CHECK-TLS3-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) @arr_x, i32 noundef 1)
+// CHECK-TLS3-NEXT:    invoke void @_ZN2S1C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) @arr_x, i32 noundef 1)
 // CHECK-TLS3-NEXT:            to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]], !dbg [[DBG188:![0-9]+]]
 // CHECK-TLS3:       invoke.cont:
 // CHECK-TLS3-NEXT:    store ptr getelementptr inbounds ([[STRUCT_S1:%.*]], ptr @arr_x, i64 1), ptr [[ARRAYINIT_ENDOFINIT1]], align 8, !dbg [[DBG187]]
-// CHECK-TLS3-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr @arr_x, i64 1), i32 noundef 2)
+// CHECK-TLS3-NEXT:    invoke void @_ZN2S1C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr @arr_x, i64 1), i32 noundef 2)
 // CHECK-TLS3-NEXT:            to label [[INVOKE_CONT2:%.*]] unwind label [[LPAD]], !dbg [[DBG189:![0-9]+]]
 // CHECK-TLS3:       invoke.cont2:
 // CHECK-TLS3-NEXT:    store ptr getelementptr inbounds ([[STRUCT_S1]], ptr @arr_x, i64 2), ptr [[ARRAYINIT_ENDOFINIT1]], align 8, !dbg [[DBG187]]
-// CHECK-TLS3-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr @arr_x, i64 2), i32 noundef 3)
+// CHECK-TLS3-NEXT:    invoke void @_ZN2S1C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr @arr_x, i64 2), i32 noundef 3)
 // CHECK-TLS3-NEXT:            to label [[INVOKE_CONT3:%.*]] unwind label [[LPAD]], !dbg [[DBG190:![0-9]+]]
 // CHECK-TLS3:       invoke.cont3:
 // CHECK-TLS3-NEXT:    store ptr getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), ptr [[ARRAYINIT_ENDOFINIT]], align 8, !dbg [[DBG185]]
 // CHECK-TLS3-NEXT:    store ptr getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), ptr [[ARRAYINIT_ENDOFINIT5]], align 8, !dbg [[DBG191:![0-9]+]]
-// CHECK-TLS3-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), i32 noundef 4)
+// CHECK-TLS3-NEXT:    invoke void @_ZN2S1C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), i32 noundef 4)
 // CHECK-TLS3-NEXT:            to label [[INVOKE_CONT7:%.*]] unwind label [[LPAD6:%.*]], !dbg [[DBG192:![0-9]+]]
 // CHECK-TLS3:       invoke.cont7:
 // CHECK-TLS3-NEXT:    store ptr getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), i64 1), ptr [[ARRAYINIT_ENDOFINIT5]], align 8, !dbg [[DBG191]]
-// CHECK-TLS3-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), i64 1), i32 noundef 5)
+// CHECK-TLS3-NEXT:    invoke void @_ZN2S1C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), i64 1), i32 noundef 5)
 // CHECK-TLS3-NEXT:            to label [[INVOKE_CONT8:%.*]] unwind label [[LPAD6]], !dbg [[DBG193:![0-9]+]]
 // CHECK-TLS3:       invoke.cont8:
 // CHECK-TLS3-NEXT:    store ptr getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), i64 2), ptr [[ARRAYINIT_ENDOFINIT5]], align 8, !dbg [[DBG191]]
-// CHECK-TLS3-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), i64 2), i32 noundef 6)
+// CHECK-TLS3-NEXT:    invoke void @_ZN2S1C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), i64 2), i32 noundef 6)
 // CHECK-TLS3-NEXT:            to label [[INVOKE_CONT9:%.*]] unwind label [[LPAD6]], !dbg [[DBG194:![0-9]+]]
 // CHECK-TLS3:       invoke.cont9:
 // CHECK-TLS3-NEXT:    [[TMP0:%.*]] = call i32 @__cxa_thread_atexit(ptr @__cxx_global_array_dtor, ptr null, ptr @__dso_handle) #[[ATTR3]], !dbg [[DBG195:![0-9]+]]
@@ -4626,7 +4626,7 @@ int foobar() {
 // CHECK-TLS3-NEXT:    [[TMP1:%.*]] = call ptr @_ZTWL3gs1(), !dbg [[DBG207:![0-9]+]]
 // CHECK-TLS3-NEXT:    [[A:%.*]] = getelementptr inbounds nuw [[STRUCT_S1:%.*]], ptr [[TMP1]], i32 0, i32 0, !dbg [[DBG208:![0-9]+]]
 // CHECK-TLS3-NEXT:    [[TMP2:%.*]] = load i32, ptr [[A]], align 4, !dbg [[DBG208]]
-// CHECK-TLS3-NEXT:    call void @_ZZ4mainEN5SmainC1Ei(ptr noundef nonnull align 8 dereferenceable(24) @_ZZ4mainE2sm, i32 noundef [[TMP2]]), !dbg [[DBG209:![0-9]+]]
+// CHECK-TLS3-NEXT:    call void @_ZZ4mainEN5SmainC1Ei(ptr noalias noundef nonnull align 8 dereferenceable(24) @_ZZ4mainE2sm, i32 noundef [[TMP2]]), !dbg [[DBG209:![0-9]+]]
 // CHECK-TLS3-NEXT:    [[TMP3:%.*]] = call i32 @__cxa_thread_atexit(ptr @_ZZ4mainEN5SmainD1Ev, ptr @_ZZ4mainE2sm, ptr @__dso_handle) #[[ATTR3]], !dbg [[DBG205]]
 // CHECK-TLS3-NEXT:    store i8 1, ptr @_ZGVZ4mainE2sm, align 1, !dbg [[DBG205]]
 // CHECK-TLS3-NEXT:    br label [[INIT_END]], !dbg [[DBG205]]
@@ -4694,7 +4694,7 @@ int foobar() {
 //
 //
 // CHECK-TLS3-LABEL: define {{[^@]+}}@_ZZ4mainEN5SmainC1Ei
-// CHECK-TLS3-SAME: (ptr noundef nonnull align 8 dereferenceable(24) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR1]] align 2 !dbg [[DBG236:![0-9]+]] {
+// CHECK-TLS3-SAME: (ptr noalias noundef nonnull align 8 dereferenceable(24) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR1]] align 2 !dbg [[DBG236:![0-9]+]] {
 // CHECK-TLS3-NEXT:  entry:
 // CHECK-TLS3-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-TLS3-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
@@ -4704,7 +4704,7 @@ int foobar() {
 // CHECK-TLS3-NEXT:      #dbg_declare(ptr [[A_ADDR]], [[META240:![0-9]+]], !DIExpression(), [[META241:![0-9]+]])
 // CHECK-TLS3-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // CHECK-TLS3-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4, !dbg [[DBG242:![0-9]+]]
-// CHECK-TLS3-NEXT:    call void @_ZZ4mainEN5SmainC2Ei(ptr noundef nonnull align 8 dereferenceable(24) [[THIS1]], i32 noundef [[TMP0]]), !dbg [[DBG242]]
+// CHECK-TLS3-NEXT:    call void @_ZZ4mainEN5SmainC2Ei(ptr noalias noundef nonnull align 8 dereferenceable(24) [[THIS1]], i32 noundef [[TMP0]]), !dbg [[DBG242]]
 // CHECK-TLS3-NEXT:    ret void, !dbg [[DBG243:![0-9]+]]
 //
 //
@@ -4758,7 +4758,7 @@ int foobar() {
 //
 //
 // CHECK-TLS3-LABEL: define {{[^@]+}}@_ZZ4mainEN5SmainC2Ei
-// CHECK-TLS3-SAME: (ptr noundef nonnull align 8 dereferenceable(24) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR2]] align 2 !dbg [[DBG249:![0-9]+]] {
+// CHECK-TLS3-SAME: (ptr noalias noundef nonnull align 8 dereferenceable(24) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR2]] align 2 !dbg [[DBG249:![0-9]+]] {
 // CHECK-TLS3-NEXT:  entry:
 // CHECK-TLS3-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-TLS3-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
@@ -4847,7 +4847,7 @@ int foobar() {
 // CHECK-TLS3-NEXT:    br i1 [[GUARD_UNINITIALIZED]], label [[INIT_CHECK:%.*]], label [[INIT_END:%.*]], !dbg [[DBG291]]
 // CHECK-TLS3:       init.check:
 // CHECK-TLS3-NEXT:    store i8 1, ptr @_ZGVN2STI2S4E2stE, align 8, !dbg [[DBG291]]
-// CHECK-TLS3-NEXT:    call void @_ZN2S4C1Ei(ptr noundef nonnull align 4 dereferenceable(8) @_ZN2STI2S4E2stE, i32 noundef 23), !dbg [[DBG292:![0-9]+]]
+// CHECK-TLS3-NEXT:    call void @_ZN2S4C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(8) @_ZN2STI2S4E2stE, i32 noundef 23), !dbg [[DBG292:![0-9]+]]
 // CHECK-TLS3-NEXT:    [[TMP1:%.*]] = call i32 @__cxa_thread_atexit(ptr @_ZN2S4D1Ev, ptr @_ZN2STI2S4E2stE, ptr @__dso_handle) #[[ATTR3]], !dbg [[DBG291]]
 // CHECK-TLS3-NEXT:    br label [[INIT_END]], !dbg [[DBG291]]
 // CHECK-TLS3:       init.end:
@@ -4855,7 +4855,7 @@ int foobar() {
 //
 //
 // CHECK-TLS3-LABEL: define {{[^@]+}}@_ZN2S4C1Ei
-// CHECK-TLS3-SAME: (ptr noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR1]] comdat align 2 !dbg [[DBG295:![0-9]+]] {
+// CHECK-TLS3-SAME: (ptr noalias noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR1]] comdat align 2 !dbg [[DBG295:![0-9]+]] {
 // CHECK-TLS3-NEXT:  entry:
 // CHECK-TLS3-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-TLS3-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
@@ -4865,7 +4865,7 @@ int foobar() {
 // CHECK-TLS3-NEXT:      #dbg_declare(ptr [[A_ADDR]], [[META299:![0-9]+]], !DIExpression(), [[META300:![0-9]+]])
 // CHECK-TLS3-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // CHECK-TLS3-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4, !dbg [[DBG301:![0-9]+]]
-// CHECK-TLS3-NEXT:    call void @_ZN2S4C2Ei(ptr noundef nonnull align 4 dereferenceable(8) [[THIS1]], i32 noundef [[TMP0]]), !dbg [[DBG301]]
+// CHECK-TLS3-NEXT:    call void @_ZN2S4C2Ei(ptr noalias noundef nonnull align 4 dereferenceable(8) [[THIS1]], i32 noundef [[TMP0]]), !dbg [[DBG301]]
 // CHECK-TLS3-NEXT:    ret void, !dbg [[DBG302:![0-9]+]]
 //
 //
@@ -4881,7 +4881,7 @@ int foobar() {
 //
 //
 // CHECK-TLS3-LABEL: define {{[^@]+}}@_ZN2S4C2Ei
-// CHECK-TLS3-SAME: (ptr noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR2]] comdat align 2 !dbg [[DBG308:![0-9]+]] {
+// CHECK-TLS3-SAME: (ptr noalias noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR2]] comdat align 2 !dbg [[DBG308:![0-9]+]] {
 // CHECK-TLS3-NEXT:  entry:
 // CHECK-TLS3-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-TLS3-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
@@ -4944,7 +4944,7 @@ int foobar() {
 // CHECK-TLS4-NEXT:    [[TMP1:%.*]] = call ptr @_ZTWL3gs1(), !dbg [[DBG120:![0-9]+]]
 // CHECK-TLS4-NEXT:    [[A:%.*]] = getelementptr inbounds nuw [[STRUCT_S1:%.*]], ptr [[TMP1]], i32 0, i32 0, !dbg [[DBG121:![0-9]+]]
 // CHECK-TLS4-NEXT:    [[TMP2:%.*]] = load i32, ptr [[A]], align 4, !dbg [[DBG121]]
-// CHECK-TLS4-NEXT:    call void @_ZZ4mainEN5SmainC1Ei(ptr noundef nonnull align 8 dereferenceable(24) @_ZZ4mainE2sm, i32 noundef [[TMP2]]), !dbg [[DBG122:![0-9]+]]
+// CHECK-TLS4-NEXT:    call void @_ZZ4mainEN5SmainC1Ei(ptr noalias noundef nonnull align 8 dereferenceable(24) @_ZZ4mainE2sm, i32 noundef [[TMP2]]), !dbg [[DBG122:![0-9]+]]
 // CHECK-TLS4-NEXT:    [[TMP3:%.*]] = call i32 @__cxa_thread_atexit(ptr @_ZZ4mainEN5SmainD1Ev, ptr @_ZZ4mainE2sm, ptr @__dso_handle) #[[ATTR4:[0-9]+]], !dbg [[DBG118]]
 // CHECK-TLS4-NEXT:    store i8 1, ptr @_ZGVZ4mainE2sm, align 1, !dbg [[DBG118]]
 // CHECK-TLS4-NEXT:    br label [[INIT_END]], !dbg [[DBG118]]
@@ -5012,7 +5012,7 @@ int foobar() {
 //
 //
 // CHECK-TLS4-LABEL: define {{[^@]+}}@_ZZ4mainEN5SmainC1Ei
-// CHECK-TLS4-SAME: (ptr noundef nonnull align 8 dereferenceable(24) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR2:[0-9]+]] align 2 !dbg [[DBG149:![0-9]+]] {
+// CHECK-TLS4-SAME: (ptr noalias noundef nonnull align 8 dereferenceable(24) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR2:[0-9]+]] align 2 !dbg [[DBG149:![0-9]+]] {
 // CHECK-TLS4-NEXT:  entry:
 // CHECK-TLS4-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-TLS4-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
@@ -5022,7 +5022,7 @@ int foobar() {
 // CHECK-TLS4-NEXT:      #dbg_declare(ptr [[A_ADDR]], [[META153:![0-9]+]], !DIExpression(), [[META154:![0-9]+]])
 // CHECK-TLS4-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // CHECK-TLS4-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4, !dbg [[DBG155:![0-9]+]]
-// CHECK-TLS4-NEXT:    call void @_ZZ4mainEN5SmainC2Ei(ptr noundef nonnull align 8 dereferenceable(24) [[THIS1]], i32 noundef [[TMP0]]), !dbg [[DBG155]]
+// CHECK-TLS4-NEXT:    call void @_ZZ4mainEN5SmainC2Ei(ptr noalias noundef nonnull align 8 dereferenceable(24) [[THIS1]], i32 noundef [[TMP0]]), !dbg [[DBG155]]
 // CHECK-TLS4-NEXT:    ret void, !dbg [[DBG156:![0-9]+]]
 //
 //
@@ -5144,13 +5144,13 @@ int foobar() {
 // CHECK-TLS4-LABEL: define {{[^@]+}}@__cxx_global_var_init
 // CHECK-TLS4-SAME: () #[[ATTR6:[0-9]+]] !dbg [[DBG188:![0-9]+]] {
 // CHECK-TLS4-NEXT:  entry:
-// CHECK-TLS4-NEXT:    call void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) @_ZL3gs1, i32 noundef 5), !dbg [[DBG191:![0-9]+]]
+// CHECK-TLS4-NEXT:    call void @_ZN2S1C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) @_ZL3gs1, i32 noundef 5), !dbg [[DBG191:![0-9]+]]
 // CHECK-TLS4-NEXT:    [[TMP0:%.*]] = call i32 @__cxa_thread_atexit(ptr @_ZN2S1D1Ev, ptr @_ZL3gs1, ptr @__dso_handle) #[[ATTR4]], !dbg [[DBG193:![0-9]+]]
 // CHECK-TLS4-NEXT:    ret void, !dbg [[DBG194:![0-9]+]]
 //
 //
 // CHECK-TLS4-LABEL: define {{[^@]+}}@_ZN2S1C1Ei
-// CHECK-TLS4-SAME: (ptr noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR2]] comdat align 2 !dbg [[DBG195:![0-9]+]] {
+// CHECK-TLS4-SAME: (ptr noalias noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR2]] comdat align 2 !dbg [[DBG195:![0-9]+]] {
 // CHECK-TLS4-NEXT:  entry:
 // CHECK-TLS4-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-TLS4-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
@@ -5160,7 +5160,7 @@ int foobar() {
 // CHECK-TLS4-NEXT:      #dbg_declare(ptr [[A_ADDR]], [[META199:![0-9]+]], !DIExpression(), [[META200:![0-9]+]])
 // CHECK-TLS4-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // CHECK-TLS4-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4, !dbg [[DBG201:![0-9]+]]
-// CHECK-TLS4-NEXT:    call void @_ZN2S1C2Ei(ptr noundef nonnull align 4 dereferenceable(4) [[THIS1]], i32 noundef [[TMP0]]), !dbg [[DBG201]]
+// CHECK-TLS4-NEXT:    call void @_ZN2S1C2Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) [[THIS1]], i32 noundef [[TMP0]]), !dbg [[DBG201]]
 // CHECK-TLS4-NEXT:    ret void, !dbg [[DBG202:![0-9]+]]
 //
 //
@@ -5176,7 +5176,7 @@ int foobar() {
 //
 //
 // CHECK-TLS4-LABEL: define {{[^@]+}}@_ZN2S1C2Ei
-// CHECK-TLS4-SAME: (ptr noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR3]] comdat align 2 !dbg [[DBG208:![0-9]+]] {
+// CHECK-TLS4-SAME: (ptr noalias noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR3]] comdat align 2 !dbg [[DBG208:![0-9]+]] {
 // CHECK-TLS4-NEXT:  entry:
 // CHECK-TLS4-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-TLS4-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
@@ -5206,13 +5206,13 @@ int foobar() {
 // CHECK-TLS4-LABEL: define {{[^@]+}}@__cxx_global_var_init.1
 // CHECK-TLS4-SAME: () #[[ATTR6]] !dbg [[DBG223:![0-9]+]] {
 // CHECK-TLS4-NEXT:  entry:
-// CHECK-TLS4-NEXT:    call void @_ZN2S2C1Ei(ptr noundef nonnull align 8 dereferenceable(16) @_ZL3gs2, i32 noundef 27), !dbg [[DBG224:![0-9]+]]
+// CHECK-TLS4-NEXT:    call void @_ZN2S2C1Ei(ptr noalias noundef nonnull align 8 dereferenceable(16) @_ZL3gs2, i32 noundef 27), !dbg [[DBG224:![0-9]+]]
 // CHECK-TLS4-NEXT:    [[TMP0:%.*]] = call i32 @__cxa_atexit(ptr @_ZN2S2D1Ev, ptr @_ZL3gs2, ptr @__dso_handle) #[[ATTR4]], !dbg [[DBG226:![0-9]+]]
 // CHECK-TLS4-NEXT:    ret void, !dbg [[DBG227:![0-9]+]]
 //
 //
 // CHECK-TLS4-LABEL: define {{[^@]+}}@_ZN2S2C1Ei
-// CHECK-TLS4-SAME: (ptr noundef nonnull align 8 dereferenceable(16) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR2]] comdat align 2 !dbg [[DBG228:![0-9]+]] {
+// CHECK-TLS4-SAME: (ptr noalias noundef nonnull align 8 dereferenceable(16) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR2]] comdat align 2 !dbg [[DBG228:![0-9]+]] {
 // CHECK-TLS4-NEXT:  entry:
 // CHECK-TLS4-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-TLS4-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
@@ -5222,7 +5222,7 @@ int foobar() {
 // CHECK-TLS4-NEXT:      #dbg_declare(ptr [[A_ADDR]], [[META232:![0-9]+]], !DIExpression(), [[META233:![0-9]+]])
 // CHECK-TLS4-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // CHECK-TLS4-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4, !dbg [[DBG234:![0-9]+]]
-// CHECK-TLS4-NEXT:    call void @_ZN2S2C2Ei(ptr noundef nonnull align 8 dereferenceable(16) [[THIS1]], i32 noundef [[TMP0]]), !dbg [[DBG234]]
+// CHECK-TLS4-NEXT:    call void @_ZN2S2C2Ei(ptr noalias noundef nonnull align 8 dereferenceable(16) [[THIS1]], i32 noundef [[TMP0]]), !dbg [[DBG234]]
 // CHECK-TLS4-NEXT:    ret void, !dbg [[DBG235:![0-9]+]]
 //
 //
@@ -5238,7 +5238,7 @@ int foobar() {
 //
 //
 // CHECK-TLS4-LABEL: define {{[^@]+}}@_ZN2S2C2Ei
-// CHECK-TLS4-SAME: (ptr noundef nonnull align 8 dereferenceable(16) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR3]] comdat align 2 !dbg [[DBG241:![0-9]+]] {
+// CHECK-TLS4-SAME: (ptr noalias noundef nonnull align 8 dereferenceable(16) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR3]] comdat align 2 !dbg [[DBG241:![0-9]+]] {
 // CHECK-TLS4-NEXT:  entry:
 // CHECK-TLS4-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-TLS4-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
@@ -5275,28 +5275,28 @@ int foobar() {
 // CHECK-TLS4-NEXT:    [[ARRAYINIT_ENDOFINIT5:%.*]] = alloca ptr, align 8
 // CHECK-TLS4-NEXT:    store ptr @arr_x, ptr [[ARRAYINIT_ENDOFINIT]], align 8, !dbg [[DBG257:![0-9]+]]
 // CHECK-TLS4-NEXT:    store ptr @arr_x, ptr [[ARRAYINIT_ENDOFINIT1]], align 8, !dbg [[DBG259:![0-9]+]]
-// CHECK-TLS4-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) @arr_x, i32 noundef 1)
+// CHECK-TLS4-NEXT:    invoke void @_ZN2S1C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) @arr_x, i32 noundef 1)
 // CHECK-TLS4-NEXT:            to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]], !dbg [[DBG260:![0-9]+]]
 // CHECK-TLS4:       invoke.cont:
 // CHECK-TLS4-NEXT:    store ptr getelementptr inbounds ([[STRUCT_S1:%.*]], ptr @arr_x, i64 1), ptr [[ARRAYINIT_ENDOFINIT1]], align 8, !dbg [[DBG259]]
-// CHECK-TLS4-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr @arr_x, i64 1), i32 noundef 2)
+// CHECK-TLS4-NEXT:    invoke void @_ZN2S1C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr @arr_x, i64 1), i32 noundef 2)
 // CHECK-TLS4-NEXT:            to label [[INVOKE_CONT2:%.*]] unwind label [[LPAD]], !dbg [[DBG261:![0-9]+]]
 // CHECK-TLS4:       invoke.cont2:
 // CHECK-TLS4-NEXT:    store ptr getelementptr inbounds ([[STRUCT_S1]], ptr @arr_x, i64 2), ptr [[ARRAYINIT_ENDOFINIT1]], align 8, !dbg [[DBG259]]
-// CHECK-TLS4-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr @arr_x, i64 2), i32 noundef 3)
+// CHECK-TLS4-NEXT:    invoke void @_ZN2S1C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr @arr_x, i64 2), i32 noundef 3)
 // CHECK-TLS4-NEXT:            to label [[INVOKE_CONT3:%.*]] unwind label [[LPAD]], !dbg [[DBG262:![0-9]+]]
 // CHECK-TLS4:       invoke.cont3:
 // CHECK-TLS4-NEXT:    store ptr getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), ptr [[ARRAYINIT_ENDOFINIT]], align 8, !dbg [[DBG257]]
 // CHECK-TLS4-NEXT:    store ptr getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), ptr [[ARRAYINIT_ENDOFINIT5]], align 8, !dbg [[DBG263:![0-9]+]]
-// CHECK-TLS4-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), i32 noundef 4)
+// CHECK-TLS4-NEXT:    invoke void @_ZN2S1C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), i32 noundef 4)
 // CHECK-TLS4-NEXT:            to label [[INVOKE_CONT7:%.*]] unwind label [[LPAD6:%.*]], !dbg [[DBG264:![0-9]+]]
 // CHECK-TLS4:       invoke.cont7:
 // CHECK-TLS4-NEXT:    store ptr getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), i64 1), ptr [[ARRAYINIT_ENDOFINIT5]], align 8, !dbg [[DBG263]]
-// CHECK-TLS4-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), i64 1), i32 noundef 5)
+// CHECK-TLS4-NEXT:    invoke void @_ZN2S1C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), i64 1), i32 noundef 5)
 // CHECK-TLS4-NEXT:            to label [[INVOKE_CONT8:%.*]] unwind label [[LPAD6]], !dbg [[DBG265:![0-9]+]]
 // CHECK-TLS4:       invoke.cont8:
 // CHECK-TLS4-NEXT:    store ptr getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), i64 2), ptr [[ARRAYINIT_ENDOFINIT5]], align 8, !dbg [[DBG263]]
-// CHECK-TLS4-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), i64 2), i32 noundef 6)
+// CHECK-TLS4-NEXT:    invoke void @_ZN2S1C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), i64 2), i32 noundef 6)
 // CHECK-TLS4-NEXT:            to label [[INVOKE_CONT9:%.*]] unwind label [[LPAD6]], !dbg [[DBG266:![0-9]+]]
 // CHECK-TLS4:       invoke.cont9:
 // CHECK-TLS4-NEXT:    [[TMP0:%.*]] = call i32 @__cxa_thread_atexit(ptr @__cxx_global_array_dtor, ptr null, ptr @__dso_handle) #[[ATTR4]], !dbg [[DBG267:![0-9]+]]
@@ -5376,7 +5376,7 @@ int foobar() {
 //
 //
 // CHECK-TLS4-LABEL: define {{[^@]+}}@_ZZ4mainEN5SmainC2Ei
-// CHECK-TLS4-SAME: (ptr noundef nonnull align 8 dereferenceable(24) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR3]] align 2 !dbg [[DBG275:![0-9]+]] {
+// CHECK-TLS4-SAME: (ptr noalias noundef nonnull align 8 dereferenceable(24) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR3]] align 2 !dbg [[DBG275:![0-9]+]] {
 // CHECK-TLS4-NEXT:  entry:
 // CHECK-TLS4-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-TLS4-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
@@ -5411,7 +5411,7 @@ int foobar() {
 // CHECK-TLS4-NEXT:    br i1 [[GUARD_UNINITIALIZED]], label [[INIT_CHECK:%.*]], label [[INIT_END:%.*]], !dbg [[DBG291]]
 // CHECK-TLS4:       init.check:
 // CHECK-TLS4-NEXT:    store i8 1, ptr @_ZGVN2STI2S4E2stE, align 8, !dbg [[DBG291]]
-// CHECK-TLS4-NEXT:    call void @_ZN2S4C1Ei(ptr noundef nonnull align 4 dereferenceable(8) @_ZN2STI2S4E2stE, i32 noundef 23), !dbg [[DBG292:![0-9]+]]
+// CHECK-TLS4-NEXT:    call void @_ZN2S4C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(8) @_ZN2STI2S4E2stE, i32 noundef 23), !dbg [[DBG292:![0-9]+]]
 // CHECK-TLS4-NEXT:    [[TMP1:%.*]] = call i32 @__cxa_thread_atexit(ptr @_ZN2S4D1Ev, ptr @_ZN2STI2S4E2stE, ptr @__dso_handle) #[[ATTR4]], !dbg [[DBG291]]
 // CHECK-TLS4-NEXT:    br label [[INIT_END]], !dbg [[DBG291]]
 // CHECK-TLS4:       init.end:
@@ -5419,7 +5419,7 @@ int foobar() {
 //
 //
 // CHECK-TLS4-LABEL: define {{[^@]+}}@_ZN2S4C1Ei
-// CHECK-TLS4-SAME: (ptr noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR2]] comdat align 2 !dbg [[DBG295:![0-9]+]] {
+// CHECK-TLS4-SAME: (ptr noalias noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR2]] comdat align 2 !dbg [[DBG295:![0-9]+]] {
 // CHECK-TLS4-NEXT:  entry:
 // CHECK-TLS4-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-TLS4-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
@@ -5429,7 +5429,7 @@ int foobar() {
 // CHECK-TLS4-NEXT:      #dbg_declare(ptr [[A_ADDR]], [[META299:![0-9]+]], !DIExpression(), [[META300:![0-9]+]])
 // CHECK-TLS4-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // CHECK-TLS4-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4, !dbg [[DBG301:![0-9]+]]
-// CHECK-TLS4-NEXT:    call void @_ZN2S4C2Ei(ptr noundef nonnull align 4 dereferenceable(8) [[THIS1]], i32 noundef [[TMP0]]), !dbg [[DBG301]]
+// CHECK-TLS4-NEXT:    call void @_ZN2S4C2Ei(ptr noalias noundef nonnull align 4 dereferenceable(8) [[THIS1]], i32 noundef [[TMP0]]), !dbg [[DBG301]]
 // CHECK-TLS4-NEXT:    ret void, !dbg [[DBG302:![0-9]+]]
 //
 //
@@ -5445,7 +5445,7 @@ int foobar() {
 //
 //
 // CHECK-TLS4-LABEL: define {{[^@]+}}@_ZN2S4C2Ei
-// CHECK-TLS4-SAME: (ptr noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR3]] comdat align 2 !dbg [[DBG308:![0-9]+]] {
+// CHECK-TLS4-SAME: (ptr noalias noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR3]] comdat align 2 !dbg [[DBG308:![0-9]+]] {
 // CHECK-TLS4-NEXT:  entry:
 // CHECK-TLS4-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-TLS4-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
@@ -5497,13 +5497,13 @@ int foobar() {
 // SIMD3-LABEL: define {{[^@]+}}@__cxx_global_var_init
 // SIMD3-SAME: () #[[ATTR0:[0-9]+]] {
 // SIMD3-NEXT:  entry:
-// SIMD3-NEXT:    call void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) @_ZL3gs1, i32 noundef 5)
+// SIMD3-NEXT:    call void @_ZN2S1C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) @_ZL3gs1, i32 noundef 5)
 // SIMD3-NEXT:    [[TMP0:%.*]] = call i32 @__cxa_atexit(ptr @_ZN2S1D1Ev, ptr @_ZL3gs1, ptr @__dso_handle) #[[ATTR3:[0-9]+]]
 // SIMD3-NEXT:    ret void
 //
 //
 // SIMD3-LABEL: define {{[^@]+}}@_ZN2S1C1Ei
-// SIMD3-SAME: (ptr noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR1:[0-9]+]] comdat align 2 {
+// SIMD3-SAME: (ptr noalias noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR1:[0-9]+]] comdat align 2 {
 // SIMD3-NEXT:  entry:
 // SIMD3-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // SIMD3-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
@@ -5511,7 +5511,7 @@ int foobar() {
 // SIMD3-NEXT:    store i32 [[A]], ptr [[A_ADDR]], align 4
 // SIMD3-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // SIMD3-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4
-// SIMD3-NEXT:    call void @_ZN2S1C2Ei(ptr noundef nonnull align 4 dereferenceable(4) [[THIS1]], i32 noundef [[TMP0]])
+// SIMD3-NEXT:    call void @_ZN2S1C2Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) [[THIS1]], i32 noundef [[TMP0]])
 // SIMD3-NEXT:    ret void
 //
 //
@@ -5528,13 +5528,13 @@ int foobar() {
 // SIMD3-LABEL: define {{[^@]+}}@__cxx_global_var_init.1
 // SIMD3-SAME: () #[[ATTR0]] {
 // SIMD3-NEXT:  entry:
-// SIMD3-NEXT:    call void @_ZN2S2C1Ei(ptr noundef nonnull align 8 dereferenceable(16) @_ZL3gs2, i32 noundef 27)
+// SIMD3-NEXT:    call void @_ZN2S2C1Ei(ptr noalias noundef nonnull align 8 dereferenceable(16) @_ZL3gs2, i32 noundef 27)
 // SIMD3-NEXT:    [[TMP0:%.*]] = call i32 @__cxa_atexit(ptr @_ZN2S2D1Ev, ptr @_ZL3gs2, ptr @__dso_handle) #[[ATTR3]]
 // SIMD3-NEXT:    ret void
 //
 //
 // SIMD3-LABEL: define {{[^@]+}}@_ZN2S2C1Ei
-// SIMD3-SAME: (ptr noundef nonnull align 8 dereferenceable(16) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR1]] comdat align 2 {
+// SIMD3-SAME: (ptr noalias noundef nonnull align 8 dereferenceable(16) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR1]] comdat align 2 {
 // SIMD3-NEXT:  entry:
 // SIMD3-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // SIMD3-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
@@ -5542,7 +5542,7 @@ int foobar() {
 // SIMD3-NEXT:    store i32 [[A]], ptr [[A_ADDR]], align 4
 // SIMD3-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // SIMD3-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4
-// SIMD3-NEXT:    call void @_ZN2S2C2Ei(ptr noundef nonnull align 8 dereferenceable(16) [[THIS1]], i32 noundef [[TMP0]])
+// SIMD3-NEXT:    call void @_ZN2S2C2Ei(ptr noalias noundef nonnull align 8 dereferenceable(16) [[THIS1]], i32 noundef [[TMP0]])
 // SIMD3-NEXT:    ret void
 //
 //
@@ -5566,28 +5566,28 @@ int foobar() {
 // SIMD3-NEXT:    [[ARRAYINIT_ENDOFINIT5:%.*]] = alloca ptr, align 8
 // SIMD3-NEXT:    store ptr @arr_x, ptr [[ARRAYINIT_ENDOFINIT]], align 8
 // SIMD3-NEXT:    store ptr @arr_x, ptr [[ARRAYINIT_ENDOFINIT1]], align 8
-// SIMD3-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) @arr_x, i32 noundef 1)
+// SIMD3-NEXT:    invoke void @_ZN2S1C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) @arr_x, i32 noundef 1)
 // SIMD3-NEXT:            to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]]
 // SIMD3:       invoke.cont:
 // SIMD3-NEXT:    store ptr getelementptr inbounds ([[STRUCT_S1:%.*]], ptr @arr_x, i64 1), ptr [[ARRAYINIT_ENDOFINIT1]], align 8
-// SIMD3-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr @arr_x, i64 1), i32 noundef 2)
+// SIMD3-NEXT:    invoke void @_ZN2S1C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr @arr_x, i64 1), i32 noundef 2)
 // SIMD3-NEXT:            to label [[INVOKE_CONT2:%.*]] unwind label [[LPAD]]
 // SIMD3:       invoke.cont2:
 // SIMD3-NEXT:    store ptr getelementptr inbounds ([[STRUCT_S1]], ptr @arr_x, i64 2), ptr [[ARRAYINIT_ENDOFINIT1]], align 8
-// SIMD3-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr @arr_x, i64 2), i32 noundef 3)
+// SIMD3-NEXT:    invoke void @_ZN2S1C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr @arr_x, i64 2), i32 noundef 3)
 // SIMD3-NEXT:            to label [[INVOKE_CONT3:%.*]] unwind label [[LPAD]]
 // SIMD3:       invoke.cont3:
 // SIMD3-NEXT:    store ptr getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), ptr [[ARRAYINIT_ENDOFINIT]], align 8
 // SIMD3-NEXT:    store ptr getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), ptr [[ARRAYINIT_ENDOFINIT5]], align 8
-// SIMD3-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), i32 noundef 4)
+// SIMD3-NEXT:    invoke void @_ZN2S1C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), i32 noundef 4)
 // SIMD3-NEXT:            to label [[INVOKE_CONT7:%.*]] unwind label [[LPAD6:%.*]]
 // SIMD3:       invoke.cont7:
 // SIMD3-NEXT:    store ptr getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), i64 1), ptr [[ARRAYINIT_ENDOFINIT5]], align 8
-// SIMD3-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), i64 1), i32 noundef 5)
+// SIMD3-NEXT:    invoke void @_ZN2S1C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), i64 1), i32 noundef 5)
 // SIMD3-NEXT:            to label [[INVOKE_CONT8:%.*]] unwind label [[LPAD6]]
 // SIMD3:       invoke.cont8:
 // SIMD3-NEXT:    store ptr getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), i64 2), ptr [[ARRAYINIT_ENDOFINIT5]], align 8
-// SIMD3-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), i64 2), i32 noundef 6)
+// SIMD3-NEXT:    invoke void @_ZN2S1C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), i64 2), i32 noundef 6)
 // SIMD3-NEXT:            to label [[INVOKE_CONT9:%.*]] unwind label [[LPAD6]]
 // SIMD3:       invoke.cont9:
 // SIMD3-NEXT:    [[TMP0:%.*]] = call i32 @__cxa_atexit(ptr @__cxx_global_array_dtor, ptr null, ptr @__dso_handle) #[[ATTR3]]
@@ -5682,7 +5682,7 @@ int foobar() {
 // SIMD3-NEXT:    br i1 [[TOBOOL]], label [[INIT:%.*]], label [[INIT_END]]
 // SIMD3:       init:
 // SIMD3-NEXT:    [[TMP2:%.*]] = load i32, ptr @_ZL3gs1, align 4
-// SIMD3-NEXT:    invoke void @_ZZ4mainEN5SmainC1Ei(ptr noundef nonnull align 8 dereferenceable(24) @_ZZ4mainE2sm, i32 noundef [[TMP2]])
+// SIMD3-NEXT:    invoke void @_ZZ4mainEN5SmainC1Ei(ptr noalias noundef nonnull align 8 dereferenceable(24) @_ZZ4mainE2sm, i32 noundef [[TMP2]])
 // SIMD3-NEXT:            to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]]
 // SIMD3:       invoke.cont:
 // SIMD3-NEXT:    [[TMP3:%.*]] = call i32 @__cxa_atexit(ptr @_ZZ4mainEN5SmainD1Ev, ptr @_ZZ4mainE2sm, ptr @__dso_handle) #[[ATTR3]]
@@ -5744,7 +5744,7 @@ int foobar() {
 //
 //
 // SIMD3-LABEL: define {{[^@]+}}@_ZZ4mainEN5SmainC1Ei
-// SIMD3-SAME: (ptr noundef nonnull align 8 dereferenceable(24) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR1]] align 2 {
+// SIMD3-SAME: (ptr noalias noundef nonnull align 8 dereferenceable(24) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR1]] align 2 {
 // SIMD3-NEXT:  entry:
 // SIMD3-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // SIMD3-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
@@ -5752,7 +5752,7 @@ int foobar() {
 // SIMD3-NEXT:    store i32 [[A]], ptr [[A_ADDR]], align 4
 // SIMD3-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // SIMD3-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4
-// SIMD3-NEXT:    call void @_ZZ4mainEN5SmainC2Ei(ptr noundef nonnull align 8 dereferenceable(24) [[THIS1]], i32 noundef [[TMP0]])
+// SIMD3-NEXT:    call void @_ZZ4mainEN5SmainC2Ei(ptr noalias noundef nonnull align 8 dereferenceable(24) [[THIS1]], i32 noundef [[TMP0]])
 // SIMD3-NEXT:    ret void
 //
 //
@@ -5813,7 +5813,7 @@ int foobar() {
 // SIMD3-NEXT:    br i1 [[GUARD_UNINITIALIZED]], label [[INIT_CHECK:%.*]], label [[INIT_END:%.*]]
 // SIMD3:       init.check:
 // SIMD3-NEXT:    store i8 1, ptr @_ZGVN2STI2S4E2stE, align 8
-// SIMD3-NEXT:    call void @_ZN2S4C1Ei(ptr noundef nonnull align 4 dereferenceable(8) @_ZN2STI2S4E2stE, i32 noundef 23)
+// SIMD3-NEXT:    call void @_ZN2S4C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(8) @_ZN2STI2S4E2stE, i32 noundef 23)
 // SIMD3-NEXT:    [[TMP1:%.*]] = call i32 @__cxa_atexit(ptr @_ZN2S4D1Ev, ptr @_ZN2STI2S4E2stE, ptr @__dso_handle) #[[ATTR3]]
 // SIMD3-NEXT:    br label [[INIT_END]]
 // SIMD3:       init.end:
@@ -5821,7 +5821,7 @@ int foobar() {
 //
 //
 // SIMD3-LABEL: define {{[^@]+}}@_ZN2S4C1Ei
-// SIMD3-SAME: (ptr noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR1]] comdat align 2 {
+// SIMD3-SAME: (ptr noalias noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR1]] comdat align 2 {
 // SIMD3-NEXT:  entry:
 // SIMD3-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // SIMD3-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
@@ -5829,7 +5829,7 @@ int foobar() {
 // SIMD3-NEXT:    store i32 [[A]], ptr [[A_ADDR]], align 4
 // SIMD3-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // SIMD3-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4
-// SIMD3-NEXT:    call void @_ZN2S4C2Ei(ptr noundef nonnull align 4 dereferenceable(8) [[THIS1]], i32 noundef [[TMP0]])
+// SIMD3-NEXT:    call void @_ZN2S4C2Ei(ptr noalias noundef nonnull align 4 dereferenceable(8) [[THIS1]], i32 noundef [[TMP0]])
 // SIMD3-NEXT:    ret void
 //
 //
@@ -5844,7 +5844,7 @@ int foobar() {
 //
 //
 // SIMD3-LABEL: define {{[^@]+}}@_ZN2S1C2Ei
-// SIMD3-SAME: (ptr noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR2]] comdat align 2 {
+// SIMD3-SAME: (ptr noalias noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR2]] comdat align 2 {
 // SIMD3-NEXT:  entry:
 // SIMD3-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // SIMD3-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
@@ -5869,7 +5869,7 @@ int foobar() {
 //
 //
 // SIMD3-LABEL: define {{[^@]+}}@_ZN2S2C2Ei
-// SIMD3-SAME: (ptr noundef nonnull align 8 dereferenceable(16) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR2]] comdat align 2 {
+// SIMD3-SAME: (ptr noalias noundef nonnull align 8 dereferenceable(16) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR2]] comdat align 2 {
 // SIMD3-NEXT:  entry:
 // SIMD3-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // SIMD3-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
@@ -5894,7 +5894,7 @@ int foobar() {
 //
 //
 // SIMD3-LABEL: define {{[^@]+}}@_ZZ4mainEN5SmainC2Ei
-// SIMD3-SAME: (ptr noundef nonnull align 8 dereferenceable(24) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR2]] align 2 {
+// SIMD3-SAME: (ptr noalias noundef nonnull align 8 dereferenceable(24) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR2]] align 2 {
 // SIMD3-NEXT:  entry:
 // SIMD3-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // SIMD3-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
@@ -5919,7 +5919,7 @@ int foobar() {
 //
 //
 // SIMD3-LABEL: define {{[^@]+}}@_ZN2S4C2Ei
-// SIMD3-SAME: (ptr noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR2]] comdat align 2 {
+// SIMD3-SAME: (ptr noalias noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR2]] comdat align 2 {
 // SIMD3-NEXT:  entry:
 // SIMD3-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // SIMD3-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
@@ -5955,13 +5955,13 @@ int foobar() {
 // SIMD4-LABEL: define {{[^@]+}}@__cxx_global_var_init
 // SIMD4-SAME: () #[[ATTR0:[0-9]+]] !dbg [[DBG115:![0-9]+]] {
 // SIMD4-NEXT:  entry:
-// SIMD4-NEXT:    call void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) @_ZL3gs1, i32 noundef 5), !dbg [[DBG118:![0-9]+]]
+// SIMD4-NEXT:    call void @_ZN2S1C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) @_ZL3gs1, i32 noundef 5), !dbg [[DBG118:![0-9]+]]
 // SIMD4-NEXT:    [[TMP0:%.*]] = call i32 @__cxa_atexit(ptr @_ZN2S1D1Ev, ptr @_ZL3gs1, ptr @__dso_handle) #[[ATTR3:[0-9]+]], !dbg [[DBG120:![0-9]+]]
 // SIMD4-NEXT:    ret void, !dbg [[DBG121:![0-9]+]]
 //
 //
 // SIMD4-LABEL: define {{[^@]+}}@_ZN2S1C1Ei
-// SIMD4-SAME: (ptr noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR1:[0-9]+]] comdat align 2 !dbg [[DBG122:![0-9]+]] {
+// SIMD4-SAME: (ptr noalias noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR1:[0-9]+]] comdat align 2 !dbg [[DBG122:![0-9]+]] {
 // SIMD4-NEXT:  entry:
 // SIMD4-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // SIMD4-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
@@ -5971,7 +5971,7 @@ int foobar() {
 // SIMD4-NEXT:      #dbg_declare(ptr [[A_ADDR]], [[META126:![0-9]+]], !DIExpression(), [[META127:![0-9]+]])
 // SIMD4-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // SIMD4-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4, !dbg [[DBG128:![0-9]+]]
-// SIMD4-NEXT:    call void @_ZN2S1C2Ei(ptr noundef nonnull align 4 dereferenceable(4) [[THIS1]], i32 noundef [[TMP0]]), !dbg [[DBG128]]
+// SIMD4-NEXT:    call void @_ZN2S1C2Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) [[THIS1]], i32 noundef [[TMP0]]), !dbg [[DBG128]]
 // SIMD4-NEXT:    ret void, !dbg [[DBG129:![0-9]+]]
 //
 //
@@ -5989,13 +5989,13 @@ int foobar() {
 // SIMD4-LABEL: define {{[^@]+}}@__cxx_global_var_init.1
 // SIMD4-SAME: () #[[ATTR0]] !dbg [[DBG135:![0-9]+]] {
 // SIMD4-NEXT:  entry:
-// SIMD4-NEXT:    call void @_ZN2S2C1Ei(ptr noundef nonnull align 8 dereferenceable(16) @_ZL3gs2, i32 noundef 27), !dbg [[DBG136:![0-9]+]]
+// SIMD4-NEXT:    call void @_ZN2S2C1Ei(ptr noalias noundef nonnull align 8 dereferenceable(16) @_ZL3gs2, i32 noundef 27), !dbg [[DBG136:![0-9]+]]
 // SIMD4-NEXT:    [[TMP0:%.*]] = call i32 @__cxa_atexit(ptr @_ZN2S2D1Ev, ptr @_ZL3gs2, ptr @__dso_handle) #[[ATTR3]], !dbg [[DBG138:![0-9]+]]
 // SIMD4-NEXT:    ret void, !dbg [[DBG139:![0-9]+]]
 //
 //
 // SIMD4-LABEL: define {{[^@]+}}@_ZN2S2C1Ei
-// SIMD4-SAME: (ptr noundef nonnull align 8 dereferenceable(16) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR1]] comdat align 2 !dbg [[DBG140:![0-9]+]] {
+// SIMD4-SAME: (ptr noalias noundef nonnull align 8 dereferenceable(16) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR1]] comdat align 2 !dbg [[DBG140:![0-9]+]] {
 // SIMD4-NEXT:  entry:
 // SIMD4-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // SIMD4-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
@@ -6005,7 +6005,7 @@ int foobar() {
 // SIMD4-NEXT:      #dbg_declare(ptr [[A_ADDR]], [[META144:![0-9]+]], !DIExpression(), [[META145:![0-9]+]])
 // SIMD4-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // SIMD4-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4, !dbg [[DBG146:![0-9]+]]
-// SIMD4-NEXT:    call void @_ZN2S2C2Ei(ptr noundef nonnull align 8 dereferenceable(16) [[THIS1]], i32 noundef [[TMP0]]), !dbg [[DBG146]]
+// SIMD4-NEXT:    call void @_ZN2S2C2Ei(ptr noalias noundef nonnull align 8 dereferenceable(16) [[THIS1]], i32 noundef [[TMP0]]), !dbg [[DBG146]]
 // SIMD4-NEXT:    ret void, !dbg [[DBG147:![0-9]+]]
 //
 //
@@ -6030,28 +6030,28 @@ int foobar() {
 // SIMD4-NEXT:    [[ARRAYINIT_ENDOFINIT5:%.*]] = alloca ptr, align 8
 // SIMD4-NEXT:    store ptr @arr_x, ptr [[ARRAYINIT_ENDOFINIT]], align 8, !dbg [[DBG154:![0-9]+]]
 // SIMD4-NEXT:    store ptr @arr_x, ptr [[ARRAYINIT_ENDOFINIT1]], align 8, !dbg [[DBG156:![0-9]+]]
-// SIMD4-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) @arr_x, i32 noundef 1)
+// SIMD4-NEXT:    invoke void @_ZN2S1C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) @arr_x, i32 noundef 1)
 // SIMD4-NEXT:            to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]], !dbg [[DBG157:![0-9]+]]
 // SIMD4:       invoke.cont:
 // SIMD4-NEXT:    store ptr getelementptr inbounds ([[STRUCT_S1:%.*]], ptr @arr_x, i64 1), ptr [[ARRAYINIT_ENDOFINIT1]], align 8, !dbg [[DBG156]]
-// SIMD4-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr @arr_x, i64 1), i32 noundef 2)
+// SIMD4-NEXT:    invoke void @_ZN2S1C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr @arr_x, i64 1), i32 noundef 2)
 // SIMD4-NEXT:            to label [[INVOKE_CONT2:%.*]] unwind label [[LPAD]], !dbg [[DBG158:![0-9]+]]
 // SIMD4:       invoke.cont2:
 // SIMD4-NEXT:    store ptr getelementptr inbounds ([[STRUCT_S1]], ptr @arr_x, i64 2), ptr [[ARRAYINIT_ENDOFINIT1]], align 8, !dbg [[DBG156]]
-// SIMD4-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr @arr_x, i64 2), i32 noundef 3)
+// SIMD4-NEXT:    invoke void @_ZN2S1C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr @arr_x, i64 2), i32 noundef 3)
 // SIMD4-NEXT:            to label [[INVOKE_CONT3:%.*]] unwind label [[LPAD]], !dbg [[DBG159:![0-9]+]]
 // SIMD4:       invoke.cont3:
 // SIMD4-NEXT:    store ptr getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), ptr [[ARRAYINIT_ENDOFINIT]], align 8, !dbg [[DBG154]]
 // SIMD4-NEXT:    store ptr getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), ptr [[ARRAYINIT_ENDOFINIT5]], align 8, !dbg [[DBG160:![0-9]+]]
-// SIMD4-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), i32 noundef 4)
+// SIMD4-NEXT:    invoke void @_ZN2S1C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), i32 noundef 4)
 // SIMD4-NEXT:            to label [[INVOKE_CONT7:%.*]] unwind label [[LPAD6:%.*]], !dbg [[DBG161:![0-9]+]]
 // SIMD4:       invoke.cont7:
 // SIMD4-NEXT:    store ptr getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), i64 1), ptr [[ARRAYINIT_ENDOFINIT5]], align 8, !dbg [[DBG160]]
-// SIMD4-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), i64 1), i32 noundef 5)
+// SIMD4-NEXT:    invoke void @_ZN2S1C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), i64 1), i32 noundef 5)
 // SIMD4-NEXT:            to label [[INVOKE_CONT8:%.*]] unwind label [[LPAD6]], !dbg [[DBG162:![0-9]+]]
 // SIMD4:       invoke.cont8:
 // SIMD4-NEXT:    store ptr getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), i64 2), ptr [[ARRAYINIT_ENDOFINIT5]], align 8, !dbg [[DBG160]]
-// SIMD4-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), i64 2), i32 noundef 6)
+// SIMD4-NEXT:    invoke void @_ZN2S1C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), i64 2), i32 noundef 6)
 // SIMD4-NEXT:            to label [[INVOKE_CONT9:%.*]] unwind label [[LPAD6]], !dbg [[DBG163:![0-9]+]]
 // SIMD4:       invoke.cont9:
 // SIMD4-NEXT:    [[TMP0:%.*]] = call i32 @__cxa_atexit(ptr @__cxx_global_array_dtor, ptr null, ptr @__dso_handle) #[[ATTR3]], !dbg [[DBG164:![0-9]+]]
@@ -6148,7 +6148,7 @@ int foobar() {
 // SIMD4-NEXT:    br i1 [[TOBOOL]], label [[INIT:%.*]], label [[INIT_END]], !dbg [[DBG174]]
 // SIMD4:       init:
 // SIMD4-NEXT:    [[TMP2:%.*]] = load i32, ptr @_ZL3gs1, align 4, !dbg [[DBG176:![0-9]+]]
-// SIMD4-NEXT:    invoke void @_ZZ4mainEN5SmainC1Ei(ptr noundef nonnull align 8 dereferenceable(24) @_ZZ4mainE2sm, i32 noundef [[TMP2]])
+// SIMD4-NEXT:    invoke void @_ZZ4mainEN5SmainC1Ei(ptr noalias noundef nonnull align 8 dereferenceable(24) @_ZZ4mainE2sm, i32 noundef [[TMP2]])
 // SIMD4-NEXT:            to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]], !dbg [[DBG177:![0-9]+]]
 // SIMD4:       invoke.cont:
 // SIMD4-NEXT:    [[TMP3:%.*]] = call i32 @__cxa_atexit(ptr @_ZZ4mainEN5SmainD1Ev, ptr @_ZZ4mainE2sm, ptr @__dso_handle) #[[ATTR3]], !dbg [[DBG174]]
@@ -6210,7 +6210,7 @@ int foobar() {
 //
 //
 // SIMD4-LABEL: define {{[^@]+}}@_ZZ4mainEN5SmainC1Ei
-// SIMD4-SAME: (ptr noundef nonnull align 8 dereferenceable(24) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR1]] align 2 !dbg [[DBG199:![0-9]+]] {
+// SIMD4-SAME: (ptr noalias noundef nonnull align 8 dereferenceable(24) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR1]] align 2 !dbg [[DBG199:![0-9]+]] {
 // SIMD4-NEXT:  entry:
 // SIMD4-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // SIMD4-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
@@ -6220,7 +6220,7 @@ int foobar() {
 // SIMD4-NEXT:      #dbg_declare(ptr [[A_ADDR]], [[META203:![0-9]+]], !DIExpression(), [[META204:![0-9]+]])
 // SIMD4-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // SIMD4-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4, !dbg [[DBG205:![0-9]+]]
-// SIMD4-NEXT:    call void @_ZZ4mainEN5SmainC2Ei(ptr noundef nonnull align 8 dereferenceable(24) [[THIS1]], i32 noundef [[TMP0]]), !dbg [[DBG205]]
+// SIMD4-NEXT:    call void @_ZZ4mainEN5SmainC2Ei(ptr noalias noundef nonnull align 8 dereferenceable(24) [[THIS1]], i32 noundef [[TMP0]]), !dbg [[DBG205]]
 // SIMD4-NEXT:    ret void, !dbg [[DBG206:![0-9]+]]
 //
 //
@@ -6283,7 +6283,7 @@ int foobar() {
 // SIMD4-NEXT:    br i1 [[GUARD_UNINITIALIZED]], label [[INIT_CHECK:%.*]], label [[INIT_END:%.*]], !dbg [[DBG234]]
 // SIMD4:       init.check:
 // SIMD4-NEXT:    store i8 1, ptr @_ZGVN2STI2S4E2stE, align 8, !dbg [[DBG234]]
-// SIMD4-NEXT:    call void @_ZN2S4C1Ei(ptr noundef nonnull align 4 dereferenceable(8) @_ZN2STI2S4E2stE, i32 noundef 23), !dbg [[DBG235:![0-9]+]]
+// SIMD4-NEXT:    call void @_ZN2S4C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(8) @_ZN2STI2S4E2stE, i32 noundef 23), !dbg [[DBG235:![0-9]+]]
 // SIMD4-NEXT:    [[TMP1:%.*]] = call i32 @__cxa_atexit(ptr @_ZN2S4D1Ev, ptr @_ZN2STI2S4E2stE, ptr @__dso_handle) #[[ATTR3]], !dbg [[DBG234]]
 // SIMD4-NEXT:    br label [[INIT_END]], !dbg [[DBG234]]
 // SIMD4:       init.end:
@@ -6291,7 +6291,7 @@ int foobar() {
 //
 //
 // SIMD4-LABEL: define {{[^@]+}}@_ZN2S4C1Ei
-// SIMD4-SAME: (ptr noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR1]] comdat align 2 !dbg [[DBG238:![0-9]+]] {
+// SIMD4-SAME: (ptr noalias noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR1]] comdat align 2 !dbg [[DBG238:![0-9]+]] {
 // SIMD4-NEXT:  entry:
 // SIMD4-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // SIMD4-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
@@ -6301,7 +6301,7 @@ int foobar() {
 // SIMD4-NEXT:      #dbg_declare(ptr [[A_ADDR]], [[META242:![0-9]+]], !DIExpression(), [[META243:![0-9]+]])
 // SIMD4-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // SIMD4-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4, !dbg [[DBG244:![0-9]+]]
-// SIMD4-NEXT:    call void @_ZN2S4C2Ei(ptr noundef nonnull align 4 dereferenceable(8) [[THIS1]], i32 noundef [[TMP0]]), !dbg [[DBG244]]
+// SIMD4-NEXT:    call void @_ZN2S4C2Ei(ptr noalias noundef nonnull align 4 dereferenceable(8) [[THIS1]], i32 noundef [[TMP0]]), !dbg [[DBG244]]
 // SIMD4-NEXT:    ret void, !dbg [[DBG245:![0-9]+]]
 //
 //
@@ -6317,7 +6317,7 @@ int foobar() {
 //
 //
 // SIMD4-LABEL: define {{[^@]+}}@_ZN2S1C2Ei
-// SIMD4-SAME: (ptr noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR2]] comdat align 2 !dbg [[DBG251:![0-9]+]] {
+// SIMD4-SAME: (ptr noalias noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR2]] comdat align 2 !dbg [[DBG251:![0-9]+]] {
 // SIMD4-NEXT:  entry:
 // SIMD4-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // SIMD4-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
@@ -6345,7 +6345,7 @@ int foobar() {
 //
 //
 // SIMD4-LABEL: define {{[^@]+}}@_ZN2S2C2Ei
-// SIMD4-SAME: (ptr noundef nonnull align 8 dereferenceable(16) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR2]] comdat align 2 !dbg [[DBG266:![0-9]+]] {
+// SIMD4-SAME: (ptr noalias noundef nonnull align 8 dereferenceable(16) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR2]] comdat align 2 !dbg [[DBG266:![0-9]+]] {
 // SIMD4-NEXT:  entry:
 // SIMD4-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // SIMD4-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
@@ -6373,7 +6373,7 @@ int foobar() {
 //
 //
 // SIMD4-LABEL: define {{[^@]+}}@_ZZ4mainEN5SmainC2Ei
-// SIMD4-SAME: (ptr noundef nonnull align 8 dereferenceable(24) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR2]] align 2 !dbg [[DBG281:![0-9]+]] {
+// SIMD4-SAME: (ptr noalias noundef nonnull align 8 dereferenceable(24) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR2]] align 2 !dbg [[DBG281:![0-9]+]] {
 // SIMD4-NEXT:  entry:
 // SIMD4-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // SIMD4-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
@@ -6401,7 +6401,7 @@ int foobar() {
 //
 //
 // SIMD4-LABEL: define {{[^@]+}}@_ZN2S4C2Ei
-// SIMD4-SAME: (ptr noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR2]] comdat align 2 !dbg [[DBG296:![0-9]+]] {
+// SIMD4-SAME: (ptr noalias noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR2]] comdat align 2 !dbg [[DBG296:![0-9]+]] {
 // SIMD4-NEXT:  entry:
 // SIMD4-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // SIMD4-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
@@ -6444,13 +6444,13 @@ int foobar() {
 // DEBUG1-NEXT:    store ptr [[TMP0]], ptr [[DOTADDR]], align 8
 // DEBUG1-NEXT:      #dbg_declare(ptr [[DOTADDR]], [[META118:![0-9]+]], !DIExpression(), [[META120:![0-9]+]])
 // DEBUG1-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[DOTADDR]], align 8, !dbg [[DBG121:![0-9]+]]
-// DEBUG1-NEXT:    call void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) [[TMP1]], i32 noundef 5), !dbg [[DBG122:![0-9]+]]
+// DEBUG1-NEXT:    call void @_ZN2S1C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) [[TMP1]], i32 noundef 5), !dbg [[DBG122:![0-9]+]]
 // DEBUG1-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[DOTADDR]], align 8, !dbg [[DBG121]]
 // DEBUG1-NEXT:    ret ptr [[TMP2]], !dbg [[DBG121]]
 //
 //
 // DEBUG1-LABEL: define {{[^@]+}}@_ZN2S1C1Ei
-// DEBUG1-SAME: (ptr noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR1:[0-9]+]] comdat align 2 !dbg [[DBG123:![0-9]+]] {
+// DEBUG1-SAME: (ptr noalias noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR1:[0-9]+]] comdat align 2 !dbg [[DBG123:![0-9]+]] {
 // DEBUG1-NEXT:  entry:
 // DEBUG1-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // DEBUG1-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
@@ -6460,7 +6460,7 @@ int foobar() {
 // DEBUG1-NEXT:      #dbg_declare(ptr [[A_ADDR]], [[META127:![0-9]+]], !DIExpression(), [[META128:![0-9]+]])
 // DEBUG1-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // DEBUG1-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4, !dbg [[DBG129:![0-9]+]]
-// DEBUG1-NEXT:    call void @_ZN2S1C2Ei(ptr noundef nonnull align 4 dereferenceable(4) [[THIS1]], i32 noundef [[TMP0]]), !dbg [[DBG129]]
+// DEBUG1-NEXT:    call void @_ZN2S1C2Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) [[THIS1]], i32 noundef [[TMP0]]), !dbg [[DBG129]]
 // DEBUG1-NEXT:    ret void, !dbg [[DBG130:![0-9]+]]
 //
 //
@@ -6508,33 +6508,33 @@ int foobar() {
 // DEBUG1-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[DOTADDR]], align 8, !dbg [[DBG145:![0-9]+]]
 // DEBUG1-NEXT:    store ptr [[TMP1]], ptr [[ARRAYINIT_ENDOFINIT]], align 8, !dbg [[DBG146:![0-9]+]]
 // DEBUG1-NEXT:    store ptr [[TMP1]], ptr [[ARRAYINIT_ENDOFINIT1]], align 8, !dbg [[DBG147:![0-9]+]]
-// DEBUG1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) [[TMP1]], i32 noundef 1)
+// DEBUG1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) [[TMP1]], i32 noundef 1)
 // DEBUG1-NEXT:            to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]], !dbg [[DBG148:![0-9]+]]
 // DEBUG1:       invoke.cont:
 // DEBUG1-NEXT:    [[ARRAYINIT_ELEMENT:%.*]] = getelementptr inbounds [[STRUCT_S1:%.*]], ptr [[TMP1]], i64 1, !dbg [[DBG147]]
 // DEBUG1-NEXT:    store ptr [[ARRAYINIT_ELEMENT]], ptr [[ARRAYINIT_ENDOFINIT1]], align 8, !dbg [[DBG147]]
-// DEBUG1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) [[ARRAYINIT_ELEMENT]], i32 noundef 2)
+// DEBUG1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) [[ARRAYINIT_ELEMENT]], i32 noundef 2)
 // DEBUG1-NEXT:            to label [[INVOKE_CONT2:%.*]] unwind label [[LPAD]], !dbg [[DBG149:![0-9]+]]
 // DEBUG1:       invoke.cont2:
 // DEBUG1-NEXT:    [[ARRAYINIT_ELEMENT3:%.*]] = getelementptr inbounds [[STRUCT_S1]], ptr [[TMP1]], i64 2, !dbg [[DBG147]]
 // DEBUG1-NEXT:    store ptr [[ARRAYINIT_ELEMENT3]], ptr [[ARRAYINIT_ENDOFINIT1]], align 8, !dbg [[DBG147]]
-// DEBUG1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) [[ARRAYINIT_ELEMENT3]], i32 noundef 3)
+// DEBUG1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) [[ARRAYINIT_ELEMENT3]], i32 noundef 3)
 // DEBUG1-NEXT:            to label [[INVOKE_CONT4:%.*]] unwind label [[LPAD]], !dbg [[DBG150:![0-9]+]]
 // DEBUG1:       invoke.cont4:
 // DEBUG1-NEXT:    [[ARRAYINIT_ELEMENT6:%.*]] = getelementptr inbounds [3 x %struct.S1], ptr [[TMP1]], i64 1, !dbg [[DBG146]]
 // DEBUG1-NEXT:    store ptr [[ARRAYINIT_ELEMENT6]], ptr [[ARRAYINIT_ENDOFINIT]], align 8, !dbg [[DBG146]]
 // DEBUG1-NEXT:    store ptr [[ARRAYINIT_ELEMENT6]], ptr [[ARRAYINIT_ENDOFINIT7]], align 8, !dbg [[DBG151:![0-9]+]]
-// DEBUG1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) [[ARRAYINIT_ELEMENT6]], i32 noundef 4)
+// DEBUG1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) [[ARRAYINIT_ELEMENT6]], i32 noundef 4)
 // DEBUG1-NEXT:            to label [[INVOKE_CONT9:%.*]] unwind label [[LPAD8:%.*]], !dbg [[DBG152:![0-9]+]]
 // DEBUG1:       invoke.cont9:
 // DEBUG1-NEXT:    [[ARRAYINIT_ELEMENT10:%.*]] = getelementptr inbounds [[STRUCT_S1]], ptr [[ARRAYINIT_ELEMENT6]], i64 1, !dbg [[DBG151]]
 // DEBUG1-NEXT:    store ptr [[ARRAYINIT_ELEMENT10]], ptr [[ARRAYINIT_ENDOFINIT7]], align 8, !dbg [[DBG151]]
-// DEBUG1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) [[ARRAYINIT_ELEMENT10]], i32 noundef 5)
+// DEBUG1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) [[ARRAYINIT_ELEMENT10]], i32 noundef 5)
 // DEBUG1-NEXT:            to label [[INVOKE_CONT11:%.*]] unwind label [[LPAD8]], !dbg [[DBG153:![0-9]+]]
 // DEBUG1:       invoke.cont11:
 // DEBUG1-NEXT:    [[ARRAYINIT_ELEMENT12:%.*]] = getelementptr inbounds [[STRUCT_S1]], ptr [[ARRAYINIT_ELEMENT6]], i64 2, !dbg [[DBG151]]
 // DEBUG1-NEXT:    store ptr [[ARRAYINIT_ELEMENT12]], ptr [[ARRAYINIT_ENDOFINIT7]], align 8, !dbg [[DBG151]]
-// DEBUG1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) [[ARRAYINIT_ELEMENT12]], i32 noundef 6)
+// DEBUG1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) [[ARRAYINIT_ELEMENT12]], i32 noundef 6)
 // DEBUG1-NEXT:            to label [[INVOKE_CONT13:%.*]] unwind label [[LPAD8]], !dbg [[DBG154:![0-9]+]]
 // DEBUG1:       invoke.cont13:
 // DEBUG1-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[DOTADDR]], align 8, !dbg [[DBG145]]
@@ -6627,13 +6627,13 @@ int foobar() {
 // DEBUG1-LABEL: define {{[^@]+}}@__cxx_global_var_init
 // DEBUG1-SAME: () #[[ATTR0]] !dbg [[DBG161:![0-9]+]] {
 // DEBUG1-NEXT:  entry:
-// DEBUG1-NEXT:    call void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) @_ZL3gs1, i32 noundef 5), !dbg [[DBG164:![0-9]+]]
+// DEBUG1-NEXT:    call void @_ZN2S1C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) @_ZL3gs1, i32 noundef 5), !dbg [[DBG164:![0-9]+]]
 // DEBUG1-NEXT:    [[TMP0:%.*]] = call i32 @__cxa_atexit(ptr @_ZN2S1D1Ev, ptr @_ZL3gs1, ptr @__dso_handle) #[[ATTR3]], !dbg [[DBG166:![0-9]+]]
 // DEBUG1-NEXT:    ret void, !dbg [[DBG167:![0-9]+]]
 //
 //
 // DEBUG1-LABEL: define {{[^@]+}}@_ZN2S1C2Ei
-// DEBUG1-SAME: (ptr noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR2]] comdat align 2 !dbg [[DBG168:![0-9]+]] {
+// DEBUG1-SAME: (ptr noalias noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR2]] comdat align 2 !dbg [[DBG168:![0-9]+]] {
 // DEBUG1-NEXT:  entry:
 // DEBUG1-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // DEBUG1-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
@@ -6663,13 +6663,13 @@ int foobar() {
 // DEBUG1-LABEL: define {{[^@]+}}@__cxx_global_var_init.4
 // DEBUG1-SAME: () #[[ATTR0]] !dbg [[DBG183:![0-9]+]] {
 // DEBUG1-NEXT:  entry:
-// DEBUG1-NEXT:    call void @_ZN2S2C1Ei(ptr noundef nonnull align 8 dereferenceable(16) @_ZL3gs2, i32 noundef 27), !dbg [[DBG184:![0-9]+]]
+// DEBUG1-NEXT:    call void @_ZN2S2C1Ei(ptr noalias noundef nonnull align 8 dereferenceable(16) @_ZL3gs2, i32 noundef 27), !dbg [[DBG184:![0-9]+]]
 // DEBUG1-NEXT:    [[TMP0:%.*]] = call i32 @__cxa_atexit(ptr @_ZN2S2D1Ev, ptr @_ZL3gs2, ptr @__dso_handle) #[[ATTR3]], !dbg [[DBG186:![0-9]+]]
 // DEBUG1-NEXT:    ret void, !dbg [[DBG187:![0-9]+]]
 //
 //
 // DEBUG1-LABEL: define {{[^@]+}}@_ZN2S2C1Ei
-// DEBUG1-SAME: (ptr noundef nonnull align 8 dereferenceable(16) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR1]] comdat align 2 !dbg [[DBG188:![0-9]+]] {
+// DEBUG1-SAME: (ptr noalias noundef nonnull align 8 dereferenceable(16) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR1]] comdat align 2 !dbg [[DBG188:![0-9]+]] {
 // DEBUG1-NEXT:  entry:
 // DEBUG1-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // DEBUG1-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
@@ -6679,7 +6679,7 @@ int foobar() {
 // DEBUG1-NEXT:      #dbg_declare(ptr [[A_ADDR]], [[META192:![0-9]+]], !DIExpression(), [[META193:![0-9]+]])
 // DEBUG1-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // DEBUG1-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4, !dbg [[DBG194:![0-9]+]]
-// DEBUG1-NEXT:    call void @_ZN2S2C2Ei(ptr noundef nonnull align 8 dereferenceable(16) [[THIS1]], i32 noundef [[TMP0]]), !dbg [[DBG194]]
+// DEBUG1-NEXT:    call void @_ZN2S2C2Ei(ptr noalias noundef nonnull align 8 dereferenceable(16) [[THIS1]], i32 noundef [[TMP0]]), !dbg [[DBG194]]
 // DEBUG1-NEXT:    ret void, !dbg [[DBG195:![0-9]+]]
 //
 //
@@ -6695,7 +6695,7 @@ int foobar() {
 //
 //
 // DEBUG1-LABEL: define {{[^@]+}}@_ZN2S2C2Ei
-// DEBUG1-SAME: (ptr noundef nonnull align 8 dereferenceable(16) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR2]] comdat align 2 !dbg [[DBG201:![0-9]+]] {
+// DEBUG1-SAME: (ptr noalias noundef nonnull align 8 dereferenceable(16) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR2]] comdat align 2 !dbg [[DBG201:![0-9]+]] {
 // DEBUG1-NEXT:  entry:
 // DEBUG1-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // DEBUG1-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
@@ -6732,28 +6732,28 @@ int foobar() {
 // DEBUG1-NEXT:    [[ARRAYINIT_ENDOFINIT5:%.*]] = alloca ptr, align 8
 // DEBUG1-NEXT:    store ptr @arr_x, ptr [[ARRAYINIT_ENDOFINIT]], align 8, !dbg [[DBG217:![0-9]+]]
 // DEBUG1-NEXT:    store ptr @arr_x, ptr [[ARRAYINIT_ENDOFINIT1]], align 8, !dbg [[DBG219:![0-9]+]]
-// DEBUG1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) @arr_x, i32 noundef 1)
+// DEBUG1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) @arr_x, i32 noundef 1)
 // DEBUG1-NEXT:            to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]], !dbg [[DBG220:![0-9]+]]
 // DEBUG1:       invoke.cont:
 // DEBUG1-NEXT:    store ptr getelementptr inbounds ([[STRUCT_S1:%.*]], ptr @arr_x, i64 1), ptr [[ARRAYINIT_ENDOFINIT1]], align 8, !dbg [[DBG219]]
-// DEBUG1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr @arr_x, i64 1), i32 noundef 2)
+// DEBUG1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr @arr_x, i64 1), i32 noundef 2)
 // DEBUG1-NEXT:            to label [[INVOKE_CONT2:%.*]] unwind label [[LPAD]], !dbg [[DBG221:![0-9]+]]
 // DEBUG1:       invoke.cont2:
 // DEBUG1-NEXT:    store ptr getelementptr inbounds ([[STRUCT_S1]], ptr @arr_x, i64 2), ptr [[ARRAYINIT_ENDOFINIT1]], align 8, !dbg [[DBG219]]
-// DEBUG1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr @arr_x, i64 2), i32 noundef 3)
+// DEBUG1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr @arr_x, i64 2), i32 noundef 3)
 // DEBUG1-NEXT:            to label [[INVOKE_CONT3:%.*]] unwind label [[LPAD]], !dbg [[DBG222:![0-9]+]]
 // DEBUG1:       invoke.cont3:
 // DEBUG1-NEXT:    store ptr getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), ptr [[ARRAYINIT_ENDOFINIT]], align 8, !dbg [[DBG217]]
 // DEBUG1-NEXT:    store ptr getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), ptr [[ARRAYINIT_ENDOFINIT5]], align 8, !dbg [[DBG223:![0-9]+]]
-// DEBUG1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), i32 noundef 4)
+// DEBUG1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), i32 noundef 4)
 // DEBUG1-NEXT:            to label [[INVOKE_CONT7:%.*]] unwind label [[LPAD6:%.*]], !dbg [[DBG224:![0-9]+]]
 // DEBUG1:       invoke.cont7:
 // DEBUG1-NEXT:    store ptr getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), i64 1), ptr [[ARRAYINIT_ENDOFINIT5]], align 8, !dbg [[DBG223]]
-// DEBUG1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), i64 1), i32 noundef 5)
+// DEBUG1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), i64 1), i32 noundef 5)
 // DEBUG1-NEXT:            to label [[INVOKE_CONT8:%.*]] unwind label [[LPAD6]], !dbg [[DBG225:![0-9]+]]
 // DEBUG1:       invoke.cont8:
 // DEBUG1-NEXT:    store ptr getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), i64 2), ptr [[ARRAYINIT_ENDOFINIT5]], align 8, !dbg [[DBG223]]
-// DEBUG1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), i64 2), i32 noundef 6)
+// DEBUG1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), i64 2), i32 noundef 6)
 // DEBUG1-NEXT:            to label [[INVOKE_CONT9:%.*]] unwind label [[LPAD6]], !dbg [[DBG226:![0-9]+]]
 // DEBUG1:       invoke.cont9:
 // DEBUG1-NEXT:    [[TMP0:%.*]] = call i32 @__cxa_atexit(ptr @__cxx_global_array_dtor, ptr null, ptr @__dso_handle) #[[ATTR3]], !dbg [[DBG227:![0-9]+]]
@@ -6855,7 +6855,7 @@ int foobar() {
 // DEBUG1-NEXT:    [[TMP4:%.*]] = call ptr @__kmpc_threadprivate_cached(ptr @[[GLOB9]], i32 [[TMP0]], ptr @_ZL3gs1, i64 4, ptr @_ZL3gs1.cache.), !dbg [[DBG234]]
 // DEBUG1-NEXT:    [[A:%.*]] = getelementptr inbounds nuw [[STRUCT_S1:%.*]], ptr [[TMP4]], i32 0, i32 0, !dbg [[DBG239:![0-9]+]]
 // DEBUG1-NEXT:    [[TMP5:%.*]] = load i32, ptr [[A]], align 4, !dbg [[DBG239]]
-// DEBUG1-NEXT:    invoke void @_ZZ4mainEN5SmainC1Ei(ptr noundef nonnull align 8 dereferenceable(24) @_ZZ4mainE2sm, i32 noundef [[TMP5]])
+// DEBUG1-NEXT:    invoke void @_ZZ4mainEN5SmainC1Ei(ptr noalias noundef nonnull align 8 dereferenceable(24) @_ZZ4mainE2sm, i32 noundef [[TMP5]])
 // DEBUG1-NEXT:            to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]], !dbg [[DBG240:![0-9]+]]
 // DEBUG1:       invoke.cont:
 // DEBUG1-NEXT:    [[TMP6:%.*]] = call i32 @__cxa_atexit(ptr @_ZZ4mainEN5SmainD1Ev, ptr @_ZZ4mainE2sm, ptr @__dso_handle) #[[ATTR3]], !dbg [[DBG237]]
@@ -6943,13 +6943,13 @@ int foobar() {
 // DEBUG1-NEXT:    [[TMP3:%.*]] = call ptr @__kmpc_threadprivate_cached(ptr @[[GLOB5]], i32 [[TMP1]], ptr @_ZL3gs1, i64 4, ptr @_ZL3gs1.cache.), !dbg [[DBG269]]
 // DEBUG1-NEXT:    [[A:%.*]] = getelementptr inbounds nuw [[STRUCT_S1:%.*]], ptr [[TMP3]], i32 0, i32 0, !dbg [[DBG273:![0-9]+]]
 // DEBUG1-NEXT:    [[TMP4:%.*]] = load i32, ptr [[A]], align 4, !dbg [[DBG273]]
-// DEBUG1-NEXT:    call void @_ZZ4mainEN5SmainC1Ei(ptr noundef nonnull align 8 dereferenceable(24) [[TMP2]], i32 noundef [[TMP4]]), !dbg [[DBG274:![0-9]+]]
+// DEBUG1-NEXT:    call void @_ZZ4mainEN5SmainC1Ei(ptr noalias noundef nonnull align 8 dereferenceable(24) [[TMP2]], i32 noundef [[TMP4]]), !dbg [[DBG274:![0-9]+]]
 // DEBUG1-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[DOTADDR]], align 8, !dbg [[DBG272]]
 // DEBUG1-NEXT:    ret ptr [[TMP5]], !dbg [[DBG272]]
 //
 //
 // DEBUG1-LABEL: define {{[^@]+}}@_ZZ4mainEN5SmainC1Ei
-// DEBUG1-SAME: (ptr noundef nonnull align 8 dereferenceable(24) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR1]] align 2 !dbg [[DBG275:![0-9]+]] {
+// DEBUG1-SAME: (ptr noalias noundef nonnull align 8 dereferenceable(24) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR1]] align 2 !dbg [[DBG275:![0-9]+]] {
 // DEBUG1-NEXT:  entry:
 // DEBUG1-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // DEBUG1-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
@@ -6959,7 +6959,7 @@ int foobar() {
 // DEBUG1-NEXT:      #dbg_declare(ptr [[A_ADDR]], [[META279:![0-9]+]], !DIExpression(), [[META280:![0-9]+]])
 // DEBUG1-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // DEBUG1-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4, !dbg [[DBG281:![0-9]+]]
-// DEBUG1-NEXT:    call void @_ZZ4mainEN5SmainC2Ei(ptr noundef nonnull align 8 dereferenceable(24) [[THIS1]], i32 noundef [[TMP0]]), !dbg [[DBG281]]
+// DEBUG1-NEXT:    call void @_ZZ4mainEN5SmainC2Ei(ptr noalias noundef nonnull align 8 dereferenceable(24) [[THIS1]], i32 noundef [[TMP0]]), !dbg [[DBG281]]
 // DEBUG1-NEXT:    ret void, !dbg [[DBG282:![0-9]+]]
 //
 //
@@ -6986,7 +6986,7 @@ int foobar() {
 //
 //
 // DEBUG1-LABEL: define {{[^@]+}}@_ZZ4mainEN5SmainC2Ei
-// DEBUG1-SAME: (ptr noundef nonnull align 8 dereferenceable(24) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR2]] align 2 !dbg [[DBG292:![0-9]+]] {
+// DEBUG1-SAME: (ptr noalias noundef nonnull align 8 dereferenceable(24) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR2]] align 2 !dbg [[DBG292:![0-9]+]] {
 // DEBUG1-NEXT:  entry:
 // DEBUG1-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // DEBUG1-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
@@ -7078,7 +7078,7 @@ int foobar() {
 // DEBUG1-NEXT:    store i8 1, ptr @_ZGVN2STI2S4E2stE, align 8, !dbg [[DBG334]]
 // DEBUG1-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB41:[0-9]+]]), !dbg [[DBG334]]
 // DEBUG1-NEXT:    call void @__kmpc_threadprivate_register(ptr @[[GLOB41]], ptr @_ZN2STI2S4E2stE, ptr @.__kmpc_global_ctor_..9, ptr null, ptr @.__kmpc_global_dtor_..10), !dbg [[DBG334]]
-// DEBUG1-NEXT:    call void @_ZN2S4C1Ei(ptr noundef nonnull align 4 dereferenceable(8) @_ZN2STI2S4E2stE, i32 noundef 23), !dbg [[DBG335:![0-9]+]]
+// DEBUG1-NEXT:    call void @_ZN2S4C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(8) @_ZN2STI2S4E2stE, i32 noundef 23), !dbg [[DBG335:![0-9]+]]
 // DEBUG1-NEXT:    [[TMP2:%.*]] = call i32 @__cxa_atexit(ptr @_ZN2S4D1Ev, ptr @_ZN2STI2S4E2stE, ptr @__dso_handle) #[[ATTR3]], !dbg [[DBG334]]
 // DEBUG1-NEXT:    br label [[INIT_END]], !dbg [[DBG334]]
 // DEBUG1:       init.end:
@@ -7092,13 +7092,13 @@ int foobar() {
 // DEBUG1-NEXT:    store ptr [[TMP0]], ptr [[DOTADDR]], align 8
 // DEBUG1-NEXT:      #dbg_declare(ptr [[DOTADDR]], [[META339:![0-9]+]], !DIExpression(), [[META340:![0-9]+]])
 // DEBUG1-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[DOTADDR]], align 8, !dbg [[DBG341:![0-9]+]]
-// DEBUG1-NEXT:    call void @_ZN2S4C1Ei(ptr noundef nonnull align 4 dereferenceable(8) [[TMP1]], i32 noundef 23), !dbg [[DBG342:![0-9]+]]
+// DEBUG1-NEXT:    call void @_ZN2S4C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(8) [[TMP1]], i32 noundef 23), !dbg [[DBG342:![0-9]+]]
 // DEBUG1-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[DOTADDR]], align 8, !dbg [[DBG341]]
 // DEBUG1-NEXT:    ret ptr [[TMP2]], !dbg [[DBG341]]
 //
 //
 // DEBUG1-LABEL: define {{[^@]+}}@_ZN2S4C1Ei
-// DEBUG1-SAME: (ptr noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR1]] comdat align 2 !dbg [[DBG343:![0-9]+]] {
+// DEBUG1-SAME: (ptr noalias noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR1]] comdat align 2 !dbg [[DBG343:![0-9]+]] {
 // DEBUG1-NEXT:  entry:
 // DEBUG1-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // DEBUG1-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
@@ -7108,7 +7108,7 @@ int foobar() {
 // DEBUG1-NEXT:      #dbg_declare(ptr [[A_ADDR]], [[META347:![0-9]+]], !DIExpression(), [[META348:![0-9]+]])
 // DEBUG1-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // DEBUG1-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4, !dbg [[DBG349:![0-9]+]]
-// DEBUG1-NEXT:    call void @_ZN2S4C2Ei(ptr noundef nonnull align 4 dereferenceable(8) [[THIS1]], i32 noundef [[TMP0]]), !dbg [[DBG349]]
+// DEBUG1-NEXT:    call void @_ZN2S4C2Ei(ptr noalias noundef nonnull align 4 dereferenceable(8) [[THIS1]], i32 noundef [[TMP0]]), !dbg [[DBG349]]
 // DEBUG1-NEXT:    ret void, !dbg [[DBG350:![0-9]+]]
 //
 //
@@ -7135,7 +7135,7 @@ int foobar() {
 //
 //
 // DEBUG1-LABEL: define {{[^@]+}}@_ZN2S4C2Ei
-// DEBUG1-SAME: (ptr noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR2]] comdat align 2 !dbg [[DBG360:![0-9]+]] {
+// DEBUG1-SAME: (ptr noalias noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR2]] comdat align 2 !dbg [[DBG360:![0-9]+]] {
 // DEBUG1-NEXT:  entry:
 // DEBUG1-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // DEBUG1-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
@@ -7178,7 +7178,7 @@ int foobar() {
 // DEBUG2-NEXT:  entry:
 // DEBUG2-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1:[0-9]+]]), !dbg [[DBG119:![0-9]+]]
 // DEBUG2-NEXT:    call void @__kmpc_threadprivate_register(ptr @[[GLOB1]], ptr @_ZL3gs1, ptr @.__kmpc_global_ctor_., ptr null, ptr @.__kmpc_global_dtor_.), !dbg [[DBG119]]
-// DEBUG2-NEXT:    call void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) @_ZL3gs1, i32 noundef 5), !dbg [[DBG120:![0-9]+]]
+// DEBUG2-NEXT:    call void @_ZN2S1C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) @_ZL3gs1, i32 noundef 5), !dbg [[DBG120:![0-9]+]]
 // DEBUG2-NEXT:    [[TMP1:%.*]] = call i32 @__cxa_atexit(ptr @_ZN2S1D1Ev, ptr @_ZL3gs1, ptr @__dso_handle) #[[ATTR3:[0-9]+]], !dbg [[DBG119]]
 // DEBUG2-NEXT:    ret void, !dbg [[DBG122:![0-9]+]]
 //
@@ -7190,13 +7190,13 @@ int foobar() {
 // DEBUG2-NEXT:    store ptr [[TMP0]], ptr [[DOTADDR]], align 8
 // DEBUG2-NEXT:      #dbg_declare(ptr [[DOTADDR]], [[META125:![0-9]+]], !DIExpression(), [[META127:![0-9]+]])
 // DEBUG2-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[DOTADDR]], align 8, !dbg [[DBG128:![0-9]+]]
-// DEBUG2-NEXT:    call void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) [[TMP1]], i32 noundef 5), !dbg [[DBG129:![0-9]+]]
+// DEBUG2-NEXT:    call void @_ZN2S1C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) [[TMP1]], i32 noundef 5), !dbg [[DBG129:![0-9]+]]
 // DEBUG2-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[DOTADDR]], align 8, !dbg [[DBG128]]
 // DEBUG2-NEXT:    ret ptr [[TMP2]], !dbg [[DBG128]]
 //
 //
 // DEBUG2-LABEL: define {{[^@]+}}@_ZN2S1C1Ei
-// DEBUG2-SAME: (ptr noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR1:[0-9]+]] comdat align 2 !dbg [[DBG130:![0-9]+]] {
+// DEBUG2-SAME: (ptr noalias noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR1:[0-9]+]] comdat align 2 !dbg [[DBG130:![0-9]+]] {
 // DEBUG2-NEXT:  entry:
 // DEBUG2-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // DEBUG2-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
@@ -7206,7 +7206,7 @@ int foobar() {
 // DEBUG2-NEXT:      #dbg_declare(ptr [[A_ADDR]], [[META134:![0-9]+]], !DIExpression(), [[META135:![0-9]+]])
 // DEBUG2-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // DEBUG2-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4, !dbg [[DBG136:![0-9]+]]
-// DEBUG2-NEXT:    call void @_ZN2S1C2Ei(ptr noundef nonnull align 4 dereferenceable(4) [[THIS1]], i32 noundef [[TMP0]]), !dbg [[DBG136]]
+// DEBUG2-NEXT:    call void @_ZN2S1C2Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) [[THIS1]], i32 noundef [[TMP0]]), !dbg [[DBG136]]
 // DEBUG2-NEXT:    ret void, !dbg [[DBG137:![0-9]+]]
 //
 //
@@ -7235,13 +7235,13 @@ int foobar() {
 // DEBUG2-LABEL: define {{[^@]+}}@__cxx_global_var_init.1
 // DEBUG2-SAME: () #[[ATTR0]] !dbg [[DBG147:![0-9]+]] {
 // DEBUG2-NEXT:  entry:
-// DEBUG2-NEXT:    call void @_ZN2S2C1Ei(ptr noundef nonnull align 8 dereferenceable(16) @_ZL3gs2, i32 noundef 27), !dbg [[DBG148:![0-9]+]]
+// DEBUG2-NEXT:    call void @_ZN2S2C1Ei(ptr noalias noundef nonnull align 8 dereferenceable(16) @_ZL3gs2, i32 noundef 27), !dbg [[DBG148:![0-9]+]]
 // DEBUG2-NEXT:    [[TMP0:%.*]] = call i32 @__cxa_atexit(ptr @_ZN2S2D1Ev, ptr @_ZL3gs2, ptr @__dso_handle) #[[ATTR3]], !dbg [[DBG150:![0-9]+]]
 // DEBUG2-NEXT:    ret void, !dbg [[DBG151:![0-9]+]]
 //
 //
 // DEBUG2-LABEL: define {{[^@]+}}@_ZN2S2C1Ei
-// DEBUG2-SAME: (ptr noundef nonnull align 8 dereferenceable(16) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR1]] comdat align 2 !dbg [[DBG152:![0-9]+]] {
+// DEBUG2-SAME: (ptr noalias noundef nonnull align 8 dereferenceable(16) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR1]] comdat align 2 !dbg [[DBG152:![0-9]+]] {
 // DEBUG2-NEXT:  entry:
 // DEBUG2-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // DEBUG2-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
@@ -7251,7 +7251,7 @@ int foobar() {
 // DEBUG2-NEXT:      #dbg_declare(ptr [[A_ADDR]], [[META156:![0-9]+]], !DIExpression(), [[META157:![0-9]+]])
 // DEBUG2-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // DEBUG2-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4, !dbg [[DBG158:![0-9]+]]
-// DEBUG2-NEXT:    call void @_ZN2S2C2Ei(ptr noundef nonnull align 8 dereferenceable(16) [[THIS1]], i32 noundef [[TMP0]]), !dbg [[DBG158]]
+// DEBUG2-NEXT:    call void @_ZN2S2C2Ei(ptr noalias noundef nonnull align 8 dereferenceable(16) [[THIS1]], i32 noundef [[TMP0]]), !dbg [[DBG158]]
 // DEBUG2-NEXT:    ret void, !dbg [[DBG159:![0-9]+]]
 //
 //
@@ -7278,28 +7278,28 @@ int foobar() {
 // DEBUG2-NEXT:    call void @__kmpc_threadprivate_register(ptr @[[GLOB3]], ptr @arr_x, ptr @.__kmpc_global_ctor_..3, ptr null, ptr @.__kmpc_global_dtor_..4), !dbg [[DBG166]]
 // DEBUG2-NEXT:    store ptr @arr_x, ptr [[ARRAYINIT_ENDOFINIT]], align 8, !dbg [[DBG167:![0-9]+]]
 // DEBUG2-NEXT:    store ptr @arr_x, ptr [[ARRAYINIT_ENDOFINIT1]], align 8, !dbg [[DBG169:![0-9]+]]
-// DEBUG2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) @arr_x, i32 noundef 1)
+// DEBUG2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) @arr_x, i32 noundef 1)
 // DEBUG2-NEXT:            to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]], !dbg [[DBG170:![0-9]+]]
 // DEBUG2:       invoke.cont:
 // DEBUG2-NEXT:    store ptr getelementptr inbounds ([[STRUCT_S1:%.*]], ptr @arr_x, i64 1), ptr [[ARRAYINIT_ENDOFINIT1]], align 8, !dbg [[DBG169]]
-// DEBUG2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr @arr_x, i64 1), i32 noundef 2)
+// DEBUG2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr @arr_x, i64 1), i32 noundef 2)
 // DEBUG2-NEXT:            to label [[INVOKE_CONT2:%.*]] unwind label [[LPAD]], !dbg [[DBG171:![0-9]+]]
 // DEBUG2:       invoke.cont2:
 // DEBUG2-NEXT:    store ptr getelementptr inbounds ([[STRUCT_S1]], ptr @arr_x, i64 2), ptr [[ARRAYINIT_ENDOFINIT1]], align 8, !dbg [[DBG169]]
-// DEBUG2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr @arr_x, i64 2), i32 noundef 3)
+// DEBUG2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr @arr_x, i64 2), i32 noundef 3)
 // DEBUG2-NEXT:            to label [[INVOKE_CONT3:%.*]] unwind label [[LPAD]], !dbg [[DBG172:![0-9]+]]
 // DEBUG2:       invoke.cont3:
 // DEBUG2-NEXT:    store ptr getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), ptr [[ARRAYINIT_ENDOFINIT]], align 8, !dbg [[DBG167]]
 // DEBUG2-NEXT:    store ptr getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), ptr [[ARRAYINIT_ENDOFINIT5]], align 8, !dbg [[DBG173:![0-9]+]]
-// DEBUG2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), i32 noundef 4)
+// DEBUG2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), i32 noundef 4)
 // DEBUG2-NEXT:            to label [[INVOKE_CONT7:%.*]] unwind label [[LPAD6:%.*]], !dbg [[DBG174:![0-9]+]]
 // DEBUG2:       invoke.cont7:
 // DEBUG2-NEXT:    store ptr getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), i64 1), ptr [[ARRAYINIT_ENDOFINIT5]], align 8, !dbg [[DBG173]]
-// DEBUG2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), i64 1), i32 noundef 5)
+// DEBUG2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), i64 1), i32 noundef 5)
 // DEBUG2-NEXT:            to label [[INVOKE_CONT8:%.*]] unwind label [[LPAD6]], !dbg [[DBG175:![0-9]+]]
 // DEBUG2:       invoke.cont8:
 // DEBUG2-NEXT:    store ptr getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), i64 2), ptr [[ARRAYINIT_ENDOFINIT5]], align 8, !dbg [[DBG173]]
-// DEBUG2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), i64 2), i32 noundef 6)
+// DEBUG2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x %struct.S1], ptr @arr_x, i64 1), i64 2), i32 noundef 6)
 // DEBUG2-NEXT:            to label [[INVOKE_CONT9:%.*]] unwind label [[LPAD6]], !dbg [[DBG176:![0-9]+]]
 // DEBUG2:       invoke.cont9:
 // DEBUG2-NEXT:    [[TMP1:%.*]] = call i32 @__cxa_atexit(ptr @__cxx_global_array_dtor, ptr null, ptr @__dso_handle) #[[ATTR3]], !dbg [[DBG166]]
@@ -7375,33 +7375,33 @@ int foobar() {
 // DEBUG2-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[DOTADDR]], align 8, !dbg [[DBG181:![0-9]+]]
 // DEBUG2-NEXT:    store ptr [[TMP1]], ptr [[ARRAYINIT_ENDOFINIT]], align 8, !dbg [[DBG182:![0-9]+]]
 // DEBUG2-NEXT:    store ptr [[TMP1]], ptr [[ARRAYINIT_ENDOFINIT1]], align 8, !dbg [[DBG183:![0-9]+]]
-// DEBUG2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) [[TMP1]], i32 noundef 1)
+// DEBUG2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) [[TMP1]], i32 noundef 1)
 // DEBUG2-NEXT:            to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]], !dbg [[DBG184:![0-9]+]]
 // DEBUG2:       invoke.cont:
 // DEBUG2-NEXT:    [[ARRAYINIT_ELEMENT:%.*]] = getelementptr inbounds [[STRUCT_S1:%.*]], ptr [[TMP1]], i64 1, !dbg [[DBG183]]
 // DEBUG2-NEXT:    store ptr [[ARRAYINIT_ELEMENT]], ptr [[ARRAYINIT_ENDOFINIT1]], align 8, !dbg [[DBG183]]
-// DEBUG2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) [[ARRAYINIT_ELEMENT]], i32 noundef 2)
+// DEBUG2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) [[ARRAYINIT_ELEMENT]], i32 noundef 2)
 // DEBUG2-NEXT:            to label [[INVOKE_CONT2:%.*]] unwind label [[LPAD]], !dbg [[DBG185:![0-9]+]]
 // DEBUG2:       invoke.cont2:
 // DEBUG2-NEXT:    [[ARRAYINIT_ELEMENT3:%.*]] = getelementptr inbounds [[STRUCT_S1]], ptr [[TMP1]], i64 2, !dbg [[DBG183]]
 // DEBUG2-NEXT:    store ptr [[ARRAYINIT_ELEMENT3]], ptr [[ARRAYINIT_ENDOFINIT1]], align 8, !dbg [[DBG183]]
-// DEBUG2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) [[ARRAYINIT_ELEMENT3]], i32 noundef 3)
+// DEBUG2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) [[ARRAYINIT_ELEMENT3]], i32 noundef 3)
 // DEBUG2-NEXT:            to label [[INVOKE_CONT4:%.*]] unwind label [[LPAD]], !dbg [[DBG186:![0-9]+]]
 // DEBUG2:       invoke.cont4:
 // DEBUG2-NEXT:    [[ARRAYINIT_ELEMENT6:%.*]] = getelementptr inbounds [3 x %struct.S1], ptr [[TMP1]], i64 1, !dbg [[DBG182]]
 // DEBUG2-NEXT:    store ptr [[ARRAYINIT_ELEMENT6]], ptr [[ARRAYINIT_ENDOFINIT]], align 8, !dbg [[DBG182]]
 // DEBUG2-NEXT:    store ptr [[ARRAYINIT_ELEMENT6]], ptr [[ARRAYINIT_ENDOFINIT7]], align 8, !dbg [[DBG187:![0-9]+]]
-// DEBUG2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) [[ARRAYINIT_ELEMENT6]], i32 noundef 4)
+// DEBUG2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) [[ARRAYINIT_ELEMENT6]], i32 noundef 4)
 // DEBUG2-NEXT:            to label [[INVOKE_CONT9:%.*]] unwind label [[LPAD8:%.*]], !dbg [[DBG188:![0-9]+]]
 // DEBUG2:       invoke.cont9:
 // DEBUG2-NEXT:    [[ARRAYINIT_ELEMENT10:%.*]] = getelementptr inbounds [[STRUCT_S1]], ptr [[ARRAYINIT_ELEMENT6]], i64 1, !dbg [[DBG187]]
 // DEBUG2-NEXT:    store ptr [[ARRAYINIT_ELEMENT10]], ptr [[ARRAYINIT_ENDOFINIT7]], align 8, !dbg [[DBG187]]
-// DEBUG2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) [[ARRAYINIT_ELEMENT10]], i32 noundef 5)
+// DEBUG2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) [[ARRAYINIT_ELEMENT10]], i32 noundef 5)
 // DEBUG2-NEXT:            to label [[INVOKE_CONT11:%.*]] unwind label [[LPAD8]], !dbg [[DBG189:![0-9]+]]
 // DEBUG2:       invoke.cont11:
 // DEBUG2-NEXT:    [[ARRAYINIT_ELEMENT12:%.*]] = getelementptr inbounds [[STRUCT_S1]], ptr [[ARRAYINIT_ELEMENT6]], i64 2, !dbg [[DBG187]]
 // DEBUG2-NEXT:    store ptr [[ARRAYINIT_ELEMENT12]], ptr [[ARRAYINIT_ENDOFINIT7]], align 8, !dbg [[DBG187]]
-// DEBUG2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) [[ARRAYINIT_ELEMENT12]], i32 noundef 6)
+// DEBUG2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) [[ARRAYINIT_ELEMENT12]], i32 noundef 6)
 // DEBUG2-NEXT:            to label [[INVOKE_CONT13:%.*]] unwind label [[LPAD8]], !dbg [[DBG190:![0-9]+]]
 // DEBUG2:       invoke.cont13:
 // DEBUG2-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[DOTADDR]], align 8, !dbg [[DBG181]]
@@ -7523,7 +7523,7 @@ int foobar() {
 // DEBUG2-NEXT:    [[TMP4:%.*]] = call ptr @__kmpc_threadprivate_cached(ptr @[[GLOB9]], i32 [[TMP0]], ptr @_ZL3gs1, i64 4, ptr @_ZL3gs1.cache.), !dbg [[DBG200]]
 // DEBUG2-NEXT:    [[A:%.*]] = getelementptr inbounds nuw [[STRUCT_S1:%.*]], ptr [[TMP4]], i32 0, i32 0, !dbg [[DBG205:![0-9]+]]
 // DEBUG2-NEXT:    [[TMP5:%.*]] = load i32, ptr [[A]], align 4, !dbg [[DBG205]]
-// DEBUG2-NEXT:    invoke void @_ZZ4mainEN5SmainC1Ei(ptr noundef nonnull align 8 dereferenceable(24) @_ZZ4mainE2sm, i32 noundef [[TMP5]])
+// DEBUG2-NEXT:    invoke void @_ZZ4mainEN5SmainC1Ei(ptr noalias noundef nonnull align 8 dereferenceable(24) @_ZZ4mainE2sm, i32 noundef [[TMP5]])
 // DEBUG2-NEXT:            to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]], !dbg [[DBG206:![0-9]+]]
 // DEBUG2:       invoke.cont:
 // DEBUG2-NEXT:    [[TMP6:%.*]] = call i32 @__cxa_atexit(ptr @_ZZ4mainEN5SmainD1Ev, ptr @_ZZ4mainE2sm, ptr @__dso_handle) #[[ATTR3]], !dbg [[DBG203]]
@@ -7611,13 +7611,13 @@ int foobar() {
 // DEBUG2-NEXT:    [[TMP3:%.*]] = call ptr @__kmpc_threadprivate_cached(ptr @[[GLOB5]], i32 [[TMP1]], ptr @_ZL3gs1, i64 4, ptr @_ZL3gs1.cache.), !dbg [[DBG235]]
 // DEBUG2-NEXT:    [[A:%.*]] = getelementptr inbounds nuw [[STRUCT_S1:%.*]], ptr [[TMP3]], i32 0, i32 0, !dbg [[DBG239:![0-9]+]]
 // DEBUG2-NEXT:    [[TMP4:%.*]] = load i32, ptr [[A]], align 4, !dbg [[DBG239]]
-// DEBUG2-NEXT:    call void @_ZZ4mainEN5SmainC1Ei(ptr noundef nonnull align 8 dereferenceable(24) [[TMP2]], i32 noundef [[TMP4]]), !dbg [[DBG240:![0-9]+]]
+// DEBUG2-NEXT:    call void @_ZZ4mainEN5SmainC1Ei(ptr noalias noundef nonnull align 8 dereferenceable(24) [[TMP2]], i32 noundef [[TMP4]]), !dbg [[DBG240:![0-9]+]]
 // DEBUG2-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[DOTADDR]], align 8, !dbg [[DBG238]]
 // DEBUG2-NEXT:    ret ptr [[TMP5]], !dbg [[DBG238]]
 //
 //
 // DEBUG2-LABEL: define {{[^@]+}}@_ZZ4mainEN5SmainC1Ei
-// DEBUG2-SAME: (ptr noundef nonnull align 8 dereferenceable(24) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR1]] align 2 !dbg [[DBG241:![0-9]+]] {
+// DEBUG2-SAME: (ptr noalias noundef nonnull align 8 dereferenceable(24) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR1]] align 2 !dbg [[DBG241:![0-9]+]] {
 // DEBUG2-NEXT:  entry:
 // DEBUG2-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // DEBUG2-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
@@ -7627,7 +7627,7 @@ int foobar() {
 // DEBUG2-NEXT:      #dbg_declare(ptr [[A_ADDR]], [[META245:![0-9]+]], !DIExpression(), [[META246:![0-9]+]])
 // DEBUG2-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // DEBUG2-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4, !dbg [[DBG247:![0-9]+]]
-// DEBUG2-NEXT:    call void @_ZZ4mainEN5SmainC2Ei(ptr noundef nonnull align 8 dereferenceable(24) [[THIS1]], i32 noundef [[TMP0]]), !dbg [[DBG247]]
+// DEBUG2-NEXT:    call void @_ZZ4mainEN5SmainC2Ei(ptr noalias noundef nonnull align 8 dereferenceable(24) [[THIS1]], i32 noundef [[TMP0]]), !dbg [[DBG247]]
 // DEBUG2-NEXT:    ret void, !dbg [[DBG248:![0-9]+]]
 //
 //
@@ -7718,7 +7718,7 @@ int foobar() {
 // DEBUG2-NEXT:    store i8 1, ptr @_ZGVN2STI2S4E2stE, align 8, !dbg [[DBG285]]
 // DEBUG2-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB41:[0-9]+]]), !dbg [[DBG285]]
 // DEBUG2-NEXT:    call void @__kmpc_threadprivate_register(ptr @[[GLOB41]], ptr @_ZN2STI2S4E2stE, ptr @.__kmpc_global_ctor_..8, ptr null, ptr @.__kmpc_global_dtor_..9), !dbg [[DBG285]]
-// DEBUG2-NEXT:    call void @_ZN2S4C1Ei(ptr noundef nonnull align 4 dereferenceable(8) @_ZN2STI2S4E2stE, i32 noundef 23), !dbg [[DBG286:![0-9]+]]
+// DEBUG2-NEXT:    call void @_ZN2S4C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(8) @_ZN2STI2S4E2stE, i32 noundef 23), !dbg [[DBG286:![0-9]+]]
 // DEBUG2-NEXT:    [[TMP2:%.*]] = call i32 @__cxa_atexit(ptr @_ZN2S4D1Ev, ptr @_ZN2STI2S4E2stE, ptr @__dso_handle) #[[ATTR3]], !dbg [[DBG285]]
 // DEBUG2-NEXT:    br label [[INIT_END]], !dbg [[DBG285]]
 // DEBUG2:       init.end:
@@ -7732,13 +7732,13 @@ int foobar() {
 // DEBUG2-NEXT:    store ptr [[TMP0]], ptr [[DOTADDR]], align 8
 // DEBUG2-NEXT:      #dbg_declare(ptr [[DOTADDR]], [[META290:![0-9]+]], !DIExpression(), [[META291:![0-9]+]])
 // DEBUG2-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[DOTADDR]], align 8, !dbg [[DBG292:![0-9]+]]
-// DEBUG2-NEXT:    call void @_ZN2S4C1Ei(ptr noundef nonnull align 4 dereferenceable(8) [[TMP1]], i32 noundef 23), !dbg [[DBG293:![0-9]+]]
+// DEBUG2-NEXT:    call void @_ZN2S4C1Ei(ptr noalias noundef nonnull align 4 dereferenceable(8) [[TMP1]], i32 noundef 23), !dbg [[DBG293:![0-9]+]]
 // DEBUG2-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[DOTADDR]], align 8, !dbg [[DBG292]]
 // DEBUG2-NEXT:    ret ptr [[TMP2]], !dbg [[DBG292]]
 //
 //
 // DEBUG2-LABEL: define {{[^@]+}}@_ZN2S4C1Ei
-// DEBUG2-SAME: (ptr noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR1]] comdat align 2 !dbg [[DBG294:![0-9]+]] {
+// DEBUG2-SAME: (ptr noalias noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR1]] comdat align 2 !dbg [[DBG294:![0-9]+]] {
 // DEBUG2-NEXT:  entry:
 // DEBUG2-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // DEBUG2-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
@@ -7748,7 +7748,7 @@ int foobar() {
 // DEBUG2-NEXT:      #dbg_declare(ptr [[A_ADDR]], [[META298:![0-9]+]], !DIExpression(), [[META299:![0-9]+]])
 // DEBUG2-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // DEBUG2-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4, !dbg [[DBG300:![0-9]+]]
-// DEBUG2-NEXT:    call void @_ZN2S4C2Ei(ptr noundef nonnull align 4 dereferenceable(8) [[THIS1]], i32 noundef [[TMP0]]), !dbg [[DBG300]]
+// DEBUG2-NEXT:    call void @_ZN2S4C2Ei(ptr noalias noundef nonnull align 4 dereferenceable(8) [[THIS1]], i32 noundef [[TMP0]]), !dbg [[DBG300]]
 // DEBUG2-NEXT:    ret void, !dbg [[DBG301:![0-9]+]]
 //
 //
@@ -7775,7 +7775,7 @@ int foobar() {
 //
 //
 // DEBUG2-LABEL: define {{[^@]+}}@_ZN2S1C2Ei
-// DEBUG2-SAME: (ptr noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR2]] comdat align 2 !dbg [[DBG311:![0-9]+]] {
+// DEBUG2-SAME: (ptr noalias noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR2]] comdat align 2 !dbg [[DBG311:![0-9]+]] {
 // DEBUG2-NEXT:  entry:
 // DEBUG2-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // DEBUG2-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
@@ -7803,7 +7803,7 @@ int foobar() {
 //
 //
 // DEBUG2-LABEL: define {{[^@]+}}@_ZN2S2C2Ei
-// DEBUG2-SAME: (ptr noundef nonnull align 8 dereferenceable(16) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR2]] comdat align 2 !dbg [[DBG326:![0-9]+]] {
+// DEBUG2-SAME: (ptr noalias noundef nonnull align 8 dereferenceable(16) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR2]] comdat align 2 !dbg [[DBG326:![0-9]+]] {
 // DEBUG2-NEXT:  entry:
 // DEBUG2-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // DEBUG2-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
@@ -7831,7 +7831,7 @@ int foobar() {
 //
 //
 // DEBUG2-LABEL: define {{[^@]+}}@_ZZ4mainEN5SmainC2Ei
-// DEBUG2-SAME: (ptr noundef nonnull align 8 dereferenceable(24) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR2]] align 2 !dbg [[DBG341:![0-9]+]] {
+// DEBUG2-SAME: (ptr noalias noundef nonnull align 8 dereferenceable(24) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR2]] align 2 !dbg [[DBG341:![0-9]+]] {
 // DEBUG2-NEXT:  entry:
 // DEBUG2-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // DEBUG2-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
@@ -7859,7 +7859,7 @@ int foobar() {
 //
 //
 // DEBUG2-LABEL: define {{[^@]+}}@_ZN2S4C2Ei
-// DEBUG2-SAME: (ptr noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR2]] comdat align 2 !dbg [[DBG356:![0-9]+]] {
+// DEBUG2-SAME: (ptr noalias noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]], i32 noundef [[A:%.*]]) unnamed_addr #[[ATTR2]] comdat align 2 !dbg [[DBG356:![0-9]+]] {
 // DEBUG2-NEXT:  entry:
 // DEBUG2-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // DEBUG2-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4

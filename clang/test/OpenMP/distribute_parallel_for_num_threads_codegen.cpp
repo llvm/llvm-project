@@ -110,7 +110,7 @@ int main() {
 // CHECK1-NEXT:    [[_TMP1:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[KERNEL_ARGS2:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS]], align 8
 // CHECK1-NEXT:    store i32 0, ptr [[RETVAL]], align 4
-// CHECK1-NEXT:    call void @_ZN1SC1El(ptr noundef nonnull align 8 dereferenceable(24) [[S]], i64 noundef 0)
+// CHECK1-NEXT:    call void @_ZN1SC1El(ptr noalias noundef nonnull align 8 dereferenceable(24) [[S]], i64 noundef 0)
 // CHECK1-NEXT:    [[CALL:%.*]] = invoke noundef signext i8 @_ZN1ScvcEv(ptr noundef nonnull align 8 dereferenceable(24) [[S]])
 // CHECK1-NEXT:            to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]]
 // CHECK1:       invoke.cont:
@@ -224,7 +224,7 @@ int main() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@_ZN1SC1El
-// CHECK1-SAME: (ptr noundef nonnull align 8 dereferenceable(24) [[THIS:%.*]], i64 noundef [[A:%.*]]) unnamed_addr #[[ATTR1:[0-9]+]] comdat align 2 {
+// CHECK1-SAME: (ptr noalias noundef nonnull align 8 dereferenceable(24) [[THIS:%.*]], i64 noundef [[A:%.*]]) unnamed_addr #[[ATTR1:[0-9]+]] comdat align 2 {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    [[A_ADDR:%.*]] = alloca i64, align 8
@@ -232,7 +232,7 @@ int main() {
 // CHECK1-NEXT:    store i64 [[A]], ptr [[A_ADDR]], align 8
 // CHECK1-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // CHECK1-NEXT:    [[TMP0:%.*]] = load i64, ptr [[A_ADDR]], align 8
-// CHECK1-NEXT:    call void @_ZN1SC2El(ptr noundef nonnull align 8 dereferenceable(24) [[THIS1]], i64 noundef [[TMP0]])
+// CHECK1-NEXT:    call void @_ZN1SC2El(ptr noalias noundef nonnull align 8 dereferenceable(24) [[THIS1]], i64 noundef [[TMP0]])
 // CHECK1-NEXT:    ret void
 //
 //
@@ -720,7 +720,7 @@ int main() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@_ZN1SC2El
-// CHECK1-SAME: (ptr noundef nonnull align 8 dereferenceable(24) [[THIS:%.*]], i64 noundef [[A:%.*]]) unnamed_addr #[[ATTR6]] comdat align 2 {
+// CHECK1-SAME: (ptr noalias noundef nonnull align 8 dereferenceable(24) [[THIS:%.*]], i64 noundef [[A:%.*]]) unnamed_addr #[[ATTR6]] comdat align 2 {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    [[A_ADDR:%.*]] = alloca i64, align 8
@@ -1232,7 +1232,7 @@ int main() {
 // CHECK1-NEXT:    [[CMP1:%.*]] = icmp sle i32 [[TMP5]], [[TMP6]]
 // CHECK1-NEXT:    br i1 [[CMP1]], label [[OMP_INNER_FOR_BODY:%.*]], label [[OMP_INNER_FOR_END:%.*]]
 // CHECK1:       omp.inner.for.body:
-// CHECK1-NEXT:    invoke void @_ZN1SC1El(ptr noundef nonnull align 8 dereferenceable(24) [[REF_TMP]], i64 noundef 23)
+// CHECK1-NEXT:    invoke void @_ZN1SC1El(ptr noalias noundef nonnull align 8 dereferenceable(24) [[REF_TMP]], i64 noundef 23)
 // CHECK1-NEXT:            to label [[INVOKE_CONT:%.*]] unwind label [[TERMINATE_LPAD:%.*]]
 // CHECK1:       invoke.cont:
 // CHECK1-NEXT:    [[CALL:%.*]] = invoke noundef signext i8 @_ZN1ScvcEv(ptr noundef nonnull align 8 dereferenceable(24) [[REF_TMP]])
@@ -1362,7 +1362,7 @@ int main() {
 // CHECK5-NEXT:    [[_TMP1:%.*]] = alloca i32, align 4
 // CHECK5-NEXT:    [[KERNEL_ARGS2:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS]], align 8
 // CHECK5-NEXT:    store i32 0, ptr [[RETVAL]], align 4
-// CHECK5-NEXT:    call void @_ZN1SC1El(ptr noundef nonnull align 8 dereferenceable(24) [[S]], i64 noundef 0)
+// CHECK5-NEXT:    call void @_ZN1SC1El(ptr noalias noundef nonnull align 8 dereferenceable(24) [[S]], i64 noundef 0)
 // CHECK5-NEXT:    [[CALL:%.*]] = invoke noundef signext i8 @_ZN1ScvcEv(ptr noundef nonnull align 8 dereferenceable(24) [[S]])
 // CHECK5-NEXT:            to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]]
 // CHECK5:       invoke.cont:
@@ -1476,7 +1476,7 @@ int main() {
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@_ZN1SC1El
-// CHECK5-SAME: (ptr noundef nonnull align 8 dereferenceable(24) [[THIS:%.*]], i64 noundef [[A:%.*]]) unnamed_addr #[[ATTR1:[0-9]+]] comdat align 2 {
+// CHECK5-SAME: (ptr noalias noundef nonnull align 8 dereferenceable(24) [[THIS:%.*]], i64 noundef [[A:%.*]]) unnamed_addr #[[ATTR1:[0-9]+]] comdat align 2 {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK5-NEXT:    [[A_ADDR:%.*]] = alloca i64, align 8
@@ -1484,7 +1484,7 @@ int main() {
 // CHECK5-NEXT:    store i64 [[A]], ptr [[A_ADDR]], align 8
 // CHECK5-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // CHECK5-NEXT:    [[TMP0:%.*]] = load i64, ptr [[A_ADDR]], align 8
-// CHECK5-NEXT:    call void @_ZN1SC2El(ptr noundef nonnull align 8 dereferenceable(24) [[THIS1]], i64 noundef [[TMP0]])
+// CHECK5-NEXT:    call void @_ZN1SC2El(ptr noalias noundef nonnull align 8 dereferenceable(24) [[THIS1]], i64 noundef [[TMP0]])
 // CHECK5-NEXT:    ret void
 //
 //
@@ -1972,7 +1972,7 @@ int main() {
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@_ZN1SC2El
-// CHECK5-SAME: (ptr noundef nonnull align 8 dereferenceable(24) [[THIS:%.*]], i64 noundef [[A:%.*]]) unnamed_addr #[[ATTR6]] comdat align 2 {
+// CHECK5-SAME: (ptr noalias noundef nonnull align 8 dereferenceable(24) [[THIS:%.*]], i64 noundef [[A:%.*]]) unnamed_addr #[[ATTR6]] comdat align 2 {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK5-NEXT:    [[A_ADDR:%.*]] = alloca i64, align 8
@@ -2475,7 +2475,7 @@ int main() {
 // CHECK5-NEXT:    [[CMP1:%.*]] = icmp sle i32 [[TMP5]], [[TMP6]]
 // CHECK5-NEXT:    br i1 [[CMP1]], label [[OMP_INNER_FOR_BODY:%.*]], label [[OMP_INNER_FOR_END:%.*]]
 // CHECK5:       omp.inner.for.body:
-// CHECK5-NEXT:    invoke void @_ZN1SC1El(ptr noundef nonnull align 8 dereferenceable(24) [[REF_TMP]], i64 noundef 23)
+// CHECK5-NEXT:    invoke void @_ZN1SC1El(ptr noalias noundef nonnull align 8 dereferenceable(24) [[REF_TMP]], i64 noundef 23)
 // CHECK5-NEXT:            to label [[INVOKE_CONT:%.*]] unwind label [[TERMINATE_LPAD:%.*]]
 // CHECK5:       invoke.cont:
 // CHECK5-NEXT:    [[CALL:%.*]] = invoke noundef signext i8 @_ZN1ScvcEv(ptr noundef nonnull align 8 dereferenceable(24) [[REF_TMP]])
@@ -2614,7 +2614,7 @@ int main() {
 // CHECK9-NEXT:    [[_TMP1:%.*]] = alloca i32, align 4
 // CHECK9-NEXT:    [[KERNEL_ARGS2:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS]], align 8
 // CHECK9-NEXT:    store i32 0, ptr [[RETVAL]], align 4
-// CHECK9-NEXT:    call void @_ZN1SC1El(ptr noundef nonnull align 8 dereferenceable(24) [[S]], i64 noundef 0)
+// CHECK9-NEXT:    call void @_ZN1SC1El(ptr noalias noundef nonnull align 8 dereferenceable(24) [[S]], i64 noundef 0)
 // CHECK9-NEXT:    [[CALL:%.*]] = invoke noundef i8 @_ZN1ScvcEv(ptr noundef nonnull align 8 dereferenceable(24) [[S]])
 // CHECK9-NEXT:            to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]]
 // CHECK9:       invoke.cont:
@@ -2728,7 +2728,7 @@ int main() {
 //
 //
 // CHECK9-LABEL: define {{[^@]+}}@_ZN1SC1El
-// CHECK9-SAME: (ptr noundef nonnull align 8 dereferenceable(24) [[THIS:%.*]], i64 noundef [[A:%.*]]) unnamed_addr #[[ATTR1:[0-9]+]] comdat {
+// CHECK9-SAME: (ptr noalias noundef nonnull align 8 dereferenceable(24) [[THIS:%.*]], i64 noundef [[A:%.*]]) unnamed_addr #[[ATTR1:[0-9]+]] comdat {
 // CHECK9-NEXT:  entry:
 // CHECK9-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK9-NEXT:    [[A_ADDR:%.*]] = alloca i64, align 8
@@ -2736,7 +2736,7 @@ int main() {
 // CHECK9-NEXT:    store i64 [[A]], ptr [[A_ADDR]], align 8
 // CHECK9-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // CHECK9-NEXT:    [[TMP0:%.*]] = load i64, ptr [[A_ADDR]], align 8
-// CHECK9-NEXT:    call void @_ZN1SC2El(ptr noundef nonnull align 8 dereferenceable(24) [[THIS1]], i64 noundef [[TMP0]])
+// CHECK9-NEXT:    call void @_ZN1SC2El(ptr noalias noundef nonnull align 8 dereferenceable(24) [[THIS1]], i64 noundef [[TMP0]])
 // CHECK9-NEXT:    ret void
 //
 //
@@ -3224,7 +3224,7 @@ int main() {
 //
 //
 // CHECK9-LABEL: define {{[^@]+}}@_ZN1SC2El
-// CHECK9-SAME: (ptr noundef nonnull align 8 dereferenceable(24) [[THIS:%.*]], i64 noundef [[A:%.*]]) unnamed_addr #[[ATTR6]] comdat {
+// CHECK9-SAME: (ptr noalias noundef nonnull align 8 dereferenceable(24) [[THIS:%.*]], i64 noundef [[A:%.*]]) unnamed_addr #[[ATTR6]] comdat {
 // CHECK9-NEXT:  entry:
 // CHECK9-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK9-NEXT:    [[A_ADDR:%.*]] = alloca i64, align 8
@@ -3736,7 +3736,7 @@ int main() {
 // CHECK9-NEXT:    [[CMP1:%.*]] = icmp sle i32 [[TMP5]], [[TMP6]]
 // CHECK9-NEXT:    br i1 [[CMP1]], label [[OMP_INNER_FOR_BODY:%.*]], label [[OMP_INNER_FOR_END:%.*]]
 // CHECK9:       omp.inner.for.body:
-// CHECK9-NEXT:    invoke void @_ZN1SC1El(ptr noundef nonnull align 8 dereferenceable(24) [[REF_TMP]], i64 noundef 23)
+// CHECK9-NEXT:    invoke void @_ZN1SC1El(ptr noalias noundef nonnull align 8 dereferenceable(24) [[REF_TMP]], i64 noundef 23)
 // CHECK9-NEXT:            to label [[INVOKE_CONT:%.*]] unwind label [[TERMINATE_LPAD:%.*]]
 // CHECK9:       invoke.cont:
 // CHECK9-NEXT:    [[CALL:%.*]] = invoke noundef i8 @_ZN1ScvcEv(ptr noundef nonnull align 8 dereferenceable(24) [[REF_TMP]])
@@ -3866,7 +3866,7 @@ int main() {
 // CHECK13-NEXT:    [[_TMP1:%.*]] = alloca i32, align 4
 // CHECK13-NEXT:    [[KERNEL_ARGS2:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS]], align 8
 // CHECK13-NEXT:    store i32 0, ptr [[RETVAL]], align 4
-// CHECK13-NEXT:    call void @_ZN1SC1El(ptr noundef nonnull align 8 dereferenceable(24) [[S]], i64 noundef 0)
+// CHECK13-NEXT:    call void @_ZN1SC1El(ptr noalias noundef nonnull align 8 dereferenceable(24) [[S]], i64 noundef 0)
 // CHECK13-NEXT:    [[CALL:%.*]] = invoke noundef i8 @_ZN1ScvcEv(ptr noundef nonnull align 8 dereferenceable(24) [[S]])
 // CHECK13-NEXT:            to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]]
 // CHECK13:       invoke.cont:
@@ -3980,7 +3980,7 @@ int main() {
 //
 //
 // CHECK13-LABEL: define {{[^@]+}}@_ZN1SC1El
-// CHECK13-SAME: (ptr noundef nonnull align 8 dereferenceable(24) [[THIS:%.*]], i64 noundef [[A:%.*]]) unnamed_addr #[[ATTR1:[0-9]+]] comdat {
+// CHECK13-SAME: (ptr noalias noundef nonnull align 8 dereferenceable(24) [[THIS:%.*]], i64 noundef [[A:%.*]]) unnamed_addr #[[ATTR1:[0-9]+]] comdat {
 // CHECK13-NEXT:  entry:
 // CHECK13-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK13-NEXT:    [[A_ADDR:%.*]] = alloca i64, align 8
@@ -3988,7 +3988,7 @@ int main() {
 // CHECK13-NEXT:    store i64 [[A]], ptr [[A_ADDR]], align 8
 // CHECK13-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // CHECK13-NEXT:    [[TMP0:%.*]] = load i64, ptr [[A_ADDR]], align 8
-// CHECK13-NEXT:    call void @_ZN1SC2El(ptr noundef nonnull align 8 dereferenceable(24) [[THIS1]], i64 noundef [[TMP0]])
+// CHECK13-NEXT:    call void @_ZN1SC2El(ptr noalias noundef nonnull align 8 dereferenceable(24) [[THIS1]], i64 noundef [[TMP0]])
 // CHECK13-NEXT:    ret void
 //
 //
@@ -4476,7 +4476,7 @@ int main() {
 //
 //
 // CHECK13-LABEL: define {{[^@]+}}@_ZN1SC2El
-// CHECK13-SAME: (ptr noundef nonnull align 8 dereferenceable(24) [[THIS:%.*]], i64 noundef [[A:%.*]]) unnamed_addr #[[ATTR6]] comdat {
+// CHECK13-SAME: (ptr noalias noundef nonnull align 8 dereferenceable(24) [[THIS:%.*]], i64 noundef [[A:%.*]]) unnamed_addr #[[ATTR6]] comdat {
 // CHECK13-NEXT:  entry:
 // CHECK13-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK13-NEXT:    [[A_ADDR:%.*]] = alloca i64, align 8
@@ -4979,7 +4979,7 @@ int main() {
 // CHECK13-NEXT:    [[CMP1:%.*]] = icmp sle i32 [[TMP5]], [[TMP6]]
 // CHECK13-NEXT:    br i1 [[CMP1]], label [[OMP_INNER_FOR_BODY:%.*]], label [[OMP_INNER_FOR_END:%.*]]
 // CHECK13:       omp.inner.for.body:
-// CHECK13-NEXT:    invoke void @_ZN1SC1El(ptr noundef nonnull align 8 dereferenceable(24) [[REF_TMP]], i64 noundef 23)
+// CHECK13-NEXT:    invoke void @_ZN1SC1El(ptr noalias noundef nonnull align 8 dereferenceable(24) [[REF_TMP]], i64 noundef 23)
 // CHECK13-NEXT:            to label [[INVOKE_CONT:%.*]] unwind label [[TERMINATE_LPAD:%.*]]
 // CHECK13:       invoke.cont:
 // CHECK13-NEXT:    [[CALL:%.*]] = invoke noundef i8 @_ZN1ScvcEv(ptr noundef nonnull align 8 dereferenceable(24) [[REF_TMP]])

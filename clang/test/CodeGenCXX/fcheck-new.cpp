@@ -10,7 +10,7 @@ struct A { A(); };
 // CHECK-NEXT:    [[NEW_ISNULL:%.*]] = icmp eq ptr [[CALL]], null
 // CHECK-NEXT:    br i1 [[NEW_ISNULL]], label [[NEW_CONT:%.*]], label [[NEW_NOTNULL:%.*]]
 // CHECK:       new.notnull:
-// CHECK-NEXT:    call void @_ZN1AC1Ev(ptr noundef nonnull align 1 dereferenceable(1) [[CALL]])
+// CHECK-NEXT:    call void @_ZN1AC1Ev(ptr noalias noundef nonnull align 1 dereferenceable(1) [[CALL]])
 // CHECK-NEXT:    br label [[NEW_CONT]]
 // CHECK:       new.cont:
 // CHECK-NEXT:    [[TMP0:%.*]] = phi ptr [ [[CALL]], [[NEW_NOTNULL]] ], [ null, [[ENTRY:%.*]] ]

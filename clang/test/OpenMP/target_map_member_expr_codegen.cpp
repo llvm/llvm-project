@@ -76,14 +76,14 @@ void foo() {
 // CHECK-NEXT:    [[B:%.*]] = alloca [[CLASS_B:%.*]], align 4
 // CHECK-NEXT:    [[C:%.*]] = alloca [[CLASS_C:%.*]], align 1
 // CHECK-NEXT:    [[D:%.*]] = alloca [[STRUCT_DESCRIPTOR:%.*]], align 8
-// CHECK-NEXT:    call void @_ZN1BC1Eii(ptr noundef nonnull align 4 dereferenceable(12) [[B]], i32 noundef 2, i32 noundef 3)
+// CHECK-NEXT:    call void @_ZN1BC1Eii(ptr noalias noundef nonnull align 4 dereferenceable(12) [[B]], i32 noundef 2, i32 noundef 3)
 // CHECK-NEXT:    call void @_ZN1B3runEv(ptr noundef nonnull align 4 dereferenceable(12) [[B]])
 // CHECK-NEXT:    call void @_ZN1C3barER10descriptorIfE(ptr noundef nonnull align 1 dereferenceable(1) [[C]], ptr noundef nonnull align 8 dereferenceable(40) [[D]])
 // CHECK-NEXT:    ret void
 //
 //
 // CHECK-LABEL: define {{[^@]+}}@_ZN1BC1Eii
-// CHECK-SAME: (ptr noundef nonnull align 4 dereferenceable(12) [[THIS:%.*]], i32 noundef [[X:%.*]], i32 noundef [[Y:%.*]]) unnamed_addr #[[ATTR0]] comdat align 2 {
+// CHECK-SAME: (ptr noalias noundef nonnull align 4 dereferenceable(12) [[THIS:%.*]], i32 noundef [[X:%.*]], i32 noundef [[Y:%.*]]) unnamed_addr #[[ATTR0]] comdat align 2 {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[X_ADDR:%.*]] = alloca i32, align 4
@@ -94,7 +94,7 @@ void foo() {
 // CHECK-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[X_ADDR]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[Y_ADDR]], align 4
-// CHECK-NEXT:    call void @_ZN1BC2Eii(ptr noundef nonnull align 4 dereferenceable(12) [[THIS1]], i32 noundef [[TMP0]], i32 noundef [[TMP1]])
+// CHECK-NEXT:    call void @_ZN1BC2Eii(ptr noalias noundef nonnull align 4 dereferenceable(12) [[THIS1]], i32 noundef [[TMP0]], i32 noundef [[TMP1]])
 // CHECK-NEXT:    ret void
 //
 //
@@ -415,7 +415,7 @@ void foo() {
 //
 //
 // CHECK-LABEL: define {{[^@]+}}@_ZN1BC2Eii
-// CHECK-SAME: (ptr noundef nonnull align 4 dereferenceable(12) [[THIS:%.*]], i32 noundef [[X:%.*]], i32 noundef [[Y:%.*]]) unnamed_addr #[[ATTR0]] comdat align 2 {
+// CHECK-SAME: (ptr noalias noundef nonnull align 4 dereferenceable(12) [[THIS:%.*]], i32 noundef [[X:%.*]], i32 noundef [[Y:%.*]]) unnamed_addr #[[ATTR0]] comdat align 2 {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[X_ADDR:%.*]] = alloca i32, align 4
@@ -426,14 +426,14 @@ void foo() {
 // CHECK-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[X_ADDR]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[Y_ADDR]], align 4
-// CHECK-NEXT:    call void @_ZN1AC2Eii(ptr noundef nonnull align 4 dereferenceable(8) [[THIS1]], i32 noundef [[TMP0]], i32 noundef [[TMP1]])
+// CHECK-NEXT:    call void @_ZN1AC2Eii(ptr noalias noundef nonnull align 4 dereferenceable(8) [[THIS1]], i32 noundef [[TMP0]], i32 noundef [[TMP1]])
 // CHECK-NEXT:    [[RES:%.*]] = getelementptr inbounds nuw [[CLASS_B:%.*]], ptr [[THIS1]], i32 0, i32 1
 // CHECK-NEXT:    store i32 0, ptr [[RES]], align 4
 // CHECK-NEXT:    ret void
 //
 //
 // CHECK-LABEL: define {{[^@]+}}@_ZN1AC2Eii
-// CHECK-SAME: (ptr noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]], i32 noundef [[X:%.*]], i32 noundef [[Y:%.*]]) unnamed_addr #[[ATTR0]] comdat align 2 {
+// CHECK-SAME: (ptr noalias noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]], i32 noundef [[X:%.*]], i32 noundef [[Y:%.*]]) unnamed_addr #[[ATTR0]] comdat align 2 {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[X_ADDR:%.*]] = alloca i32, align 4
@@ -521,7 +521,7 @@ void foo() {
 // CHECK-NEXT:    [[TMP6:%.*]] = load i32, ptr [[I]], align 4
 // CHECK-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP6]], 1
 // CHECK-NEXT:    store i32 [[INC]], ptr [[I]], align 4
-// CHECK-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP6:![0-9]+]]
+// CHECK-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP9:![0-9]+]]
 // CHECK:       for.end:
 // CHECK-NEXT:    ret void
 //
@@ -557,7 +557,7 @@ void foo() {
 // CHECK-NEXT:    [[TMP6:%.*]] = load i32, ptr [[I]], align 4
 // CHECK-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP6]], 1
 // CHECK-NEXT:    store i32 [[INC]], ptr [[I]], align 4
-// CHECK-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP10:![0-9]+]]
+// CHECK-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP13:![0-9]+]]
 // CHECK:       for.end:
 // CHECK-NEXT:    ret void
 //
