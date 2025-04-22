@@ -1514,6 +1514,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
   Value *getInstName(Instruction *Instruction) {
     Value *InstName = nullptr;
+
     if (ClEmbedFaultingInst != MSanEmbedFaultingInstructionMode::None) {
       IRBuilder<> IRB(Instruction);
       StringRef InstNameStrRef;
