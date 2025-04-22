@@ -963,7 +963,17 @@ void CheckHelper::CheckObjectEntity(
         "'%s' is a data object and may not be EXTERNAL"_err_en_US,
         symbol.name());
   }
-
+  if (symbol.test(Symbol::Flag::CrayPointee)) {
+    // NB, IsSaved was too smart here.
+    if (details.init()) {
+      messages_.Say(
+          "Cray pointee '%s' may not be initialized"_err_en_US, symbol.name());
+    } else if (symbol.attrs().test(Attr::SAVE) ||
+        symbol.implicitAttrs().test(Attr::SAVE)) {
+      messages_.Say(
+          "Cray pointee '%s' may not be SAVE"_err_en_US, symbol.name());
+    }
+  }
   if (derived) {
     bool isUnsavedLocal{
         isLocalVariable && !IsAllocatable(symbol) && !IsSaved(symbol)};
