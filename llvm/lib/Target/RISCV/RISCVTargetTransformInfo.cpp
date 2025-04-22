@@ -391,7 +391,8 @@ static InstructionCost costShuffleViaSplitting(RISCVTTIImpl &TTI, MVT LegalVT,
                                                VectorType *Tp,
                                                ArrayRef<int> Mask,
                                                TTI::TargetCostKind CostKind) {
-  assert(LegalVT.isFixedLengthVector() && !Mask.empty() && "precondition");
+  assert(LegalVT.isFixedLengthVector() && !Mask.empty() &&
+         "Expected fixed vector type and non-empty mask");
   unsigned LegalNumElts = LegalVT.getVectorNumElements();
   // Number of destination vectors after legalization:
   unsigned NumOfDests = divideCeil(Mask.size(), LegalNumElts);
