@@ -96,8 +96,8 @@ struct OneToOneIntrinsicOpConversion
   LogicalResult matchAndRewrite(x86vector::OneToOneIntrinsicOp op,
                                 PatternRewriter &rewriter) const override {
     return intrinsicRewrite(op, rewriter.getStringAttr(op.getIntrinsicName()),
-                            op.getIntrinsicOperands(rewriter), typeConverter,
-                            rewriter);
+                            op.getIntrinsicOperands(rewriter, typeConverter),
+                            typeConverter, rewriter);
   }
 
 private:

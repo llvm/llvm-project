@@ -83,7 +83,7 @@ def MaskCompressOp : AVX512_Op<"mask.compress", [Pure,
     }
   }];
   let extraClassDeclaration = [{
-    SmallVector<Value> getIntrinsicOperands(::mlir::RewriterBase&);
+    SmallVector<Value> getIntrinsicOperands(::mlir::RewriterBase&, const LLVMTypeConverter&);
   }];
 }
 
@@ -404,7 +404,7 @@ def DotOp : AVX_LowOp<"dot", [Pure,
     }
   }];
   let extraClassDeclaration = [{
-    SmallVector<Value> getIntrinsicOperands(::mlir::RewriterBase&);
+    SmallVector<Value> getIntrinsicOperands(::mlir::RewriterBase&, const LLVMTypeConverter&);
   }];
 }
 
@@ -413,7 +413,7 @@ def DotOp : AVX_LowOp<"dot", [Pure,
 // AVX: Convert packed BF16 even-indexed/odd-indexed elements into packed F32
 //----------------------------------------------------------------------------//
 
-def CvtPackedEvenIndexedBF16ToF32Op : AVX_Op<"cvt.packed.even.indexed.bf16_to_f32", [Pure,
+def CvtPackedEvenIndexedBF16ToF32Op : AVX_Op<"cvt.packed.even.indexed.bf16_to_f32", [
   DeclareOpInterfaceMethods<OneToOneIntrinsicOpInterface>]> {
   let summary = "AVX: Convert packed BF16 even-indexed elements into packed F32 Data.";
   let description = [{
@@ -428,7 +428,7 @@ def CvtPackedEvenIndexedBF16ToF32Op : AVX_Op<"cvt.packed.even.indexed.bf16_to_f3
     %dst = x86vector.avx.cvt.packed.even.indexed.bf16_to_f32 %a : !llvm.ptr -> vector<8xf32>
     ```
   }];
-  let arguments = (ins LLVM_AnyPointer:$a);
+  let arguments = (ins AnyMemRef:$a);
   let results = (outs VectorOfLengthAndType<[4, 8], [F32]>:$dst);
   let assemblyFormat =
     "$a  attr-dict`:` type($a)`->` type($dst)";
@@ -443,9 +443,13 @@ def CvtPackedEvenIndexedBF16ToF32Op : AVX_Op<"cvt.packed.even.indexed.bf16_to_f3
       return intr;
     }
   }];
+
+  let extraClassDeclaration = [{
+        SmallVector<Value> getIntrinsicOperands(::mlir::RewriterBase&, const LLVMTypeConverter&);
+  }];
 }
 
-def CvtPackedOddIndexedBF16ToF32Op : AVX_Op<"cvt.packed.odd.indexed.bf16_to_f32", [Pure,
+def CvtPackedOddIndexedBF16ToF32Op : AVX_Op<"cvt.packed.odd.indexed.bf16_to_f32", [
   DeclareOpInterfaceMethods<OneToOneIntrinsicOpInterface>]> {
   let summary = "AVX: Convert packed BF16 odd-indexed elements into packed F32 Data.";
   let description = [{
@@ -460,7 +464,7 @@ def CvtPackedOddIndexedBF16ToF32Op : AVX_Op<"cvt.packed.odd.indexed.bf16_to_f32"
     %dst = x86vector.avx.cvt.packed.odd.indexed.bf16_to_f32 %a : !llvm.ptr -> vector<8xf32>
     ```
   }];
-  let arguments = (ins LLVM_AnyPointer:$a);
+  let arguments = (ins AnyMemRef:$a);
   let results = (outs VectorOfLengthAndType<[4, 8], [F32]>:$dst);
   let assemblyFormat =
     "$a  attr-dict`:` type($a)`->` type($dst)";
@@ -475,13 +479,17 @@ def CvtPackedOddIndexedBF16ToF32Op : AVX_Op<"cvt.packed.odd.indexed.bf16_to_f32"
       return intr;
     }
   }];
+
+  let extraClassDeclaration = [{
+        SmallVector<Value> getIntrinsicOperands(::mlir::RewriterBase&, const LLVMTypeConverter&);
+  }];
 }
 
 //----------------------------------------------------------------------------//
 // AVX: Convert BF16 to F32 and broadcast into packed F32
 //----------------------------------------------------------------------------//
 
-def BcstBF16ToPackedF32Op : AVX_Op<"bcst.bf16_to_f32.packed", [Pure,
+def BcstBF16ToPackedF32Op : AVX_Op<"bcst.bf16_to_f32.packed", [
   DeclareOpInterfaceMethods<OneToOneIntrinsicOpInterface>]> {
   let summary = "AVX: Broadcasts BF16 into packed F32 Data.";
   let description = [{
@@ -497,7 +505,7 @@ def BcstBF16ToPackedF32Op : AVX_Op<"bcst.bf16_to_f32.packed", [Pure,
     %dst = x86vector.avx.bcst.bf16_to_f32.packed %a : !llvm.ptr -> vector<8xf32>
     ```
   }];
-  let arguments = (ins LLVM_AnyPointer:$a);
+  let arguments = (ins AnyMemRef:$a);
   let results = (outs VectorOfLengthAndType<[4, 8], [F32]>:$dst);
   let assemblyFormat =
     "$a  attr-dict`:` type($a)`->` type($dst)";
@@ -512,6 +520,11 @@ def BcstBF16ToPackedF32Op : AVX_Op<"bcst.bf16_to_f32.packed", [Pure,
       return intr;
     }
   }];
+
+    let extraClassDeclaration = [{
+        SmallVector<Value> getIntrinsicOperands(::mlir::RewriterBase&, const LLVMTypeConverter&);
+  }];
+
 }
 
 #endif // X86VECTOR_OPS
