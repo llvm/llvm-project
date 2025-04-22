@@ -21,9 +21,28 @@ entry:
   ret <4 x float> %c
 }
 
-define { float, float } @struct({ float, float } nofpclass(nan) %a) {
+define { float, float } @struct({ float, float} nofpclass(nan) %a) {
 ; CHECK-LABEL: struct:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ret
    ret {float, float} %a
+}
+
+%struct.f2 = type { float, float }
+define %struct.f2 @m([2 x float] nofpclass(nan) %a0, [2 x float] nofpclass(nan) %a1) {
+; CHECK-LABEL: m:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fmaxnm s1, s1, s3
+; CHECK-NEXT:    fmaxnm s0, s0, s2
+; CHECK-NEXT:    ret
+entry:
+  %a0f0 = extractvalue [2 x float] %a0, 0
+  %a0f1 = extractvalue [2 x float] %a0, 1
+  %a1f0 = extractvalue [2 x float] %a1, 0
+  %a1f1 = extractvalue [2 x float] %a1, 1
+  %max0 = tail call float @llvm.maximumnum.f32(float %a0f0, float %a1f0)
+  %max1 = tail call float @llvm.maximumnum.f32(float %a0f1, float %a1f1)
+  %ret0 = insertvalue %struct.f2 poison, float %max0, 0
+  %ret1 = insertvalue %struct.f2 %ret0, float %max1, 1
+  ret %struct.f2 %ret1
 }
