@@ -225,7 +225,7 @@ add_proxy_header_library(
 
 # offsetof is a macro inside compiler resource header stddef.h
 # defining it directly as a header library
-add_header_library(offsetof-macros HDRS offsetof_macros.h)
+add_header_library(offsetof_macros HDRS offsetof_macros.h)
 
 add_subdirectory(types)
 add_subdirectory(func)
