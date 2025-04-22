@@ -9,14 +9,7 @@
 #ifndef LLVM_LIBC_HDR_OFFSETOF_MACROS_H
 #define LLVM_LIBC_HDR_OFFSETOF_MACROS_H
 
-#undef offsetof
-
-// Simplify the inclusion if builtin function is available.
-#if __has_builtin(__builtin_offsetof)
-#define offsetof(t, d) __builtin_offsetof(t, d)
-#else
 #define __need_offsetof
-#include <stddef.h> // compiler resource header
-#endif
+#include <stddef.h>
 
 #endif // LLVM_LIBC_HDR_OFFSETOF_MACROS_H
