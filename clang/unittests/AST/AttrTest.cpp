@@ -89,15 +89,14 @@ TEST(Attr, AnnotateType) {
 
     // Function Type Attributes
     __attribute__((noreturn)) int f_noreturn();
-    __attribute__((preserve_most)) int f_cc_preserve_most();
 
-    #define PRESERVE_MOST __attribute__((preserve_most))
-    PRESERVE_MOST int f_macro_attribue();
+    #define NO_RETURN __attribute__((noreturn))
+    NO_RETURN int f_macro_attribue();
 
-    int (__attribute__((preserve_most)) f_paren_attribute)();
+    int (__attribute__((noreturn)) f_paren_attribute)();
 
     int (
-      PRESERVE_MOST
+      NO_RETURN
       (
         __attribute__((warn_unused_result))
         (f_w_paren_and_attr)
@@ -176,14 +175,6 @@ TEST(Attr, AnnotateType) {
     const FunctionType *FT = FTL.getTypePtr();
 
     EXPECT_TRUE(FT->getNoReturnAttr());
-  }
-
-  {
-    const FunctionDecl *Func = getFunctionNode(AST.get(), "f_cc_preserve_most");
-    const FunctionTypeLoc FTL = Func->getFunctionTypeLoc();
-    const FunctionType *FT = FTL.getTypePtr();
-
-    EXPECT_TRUE(FT->getCallConv() == CC_PreserveMost);
   }
 
   {

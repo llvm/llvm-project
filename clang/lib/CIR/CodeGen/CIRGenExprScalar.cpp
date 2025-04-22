@@ -138,7 +138,7 @@ public:
   mlir::Value VisitIntegerLiteral(const IntegerLiteral *e) {
     mlir::Type type = cgf.convertType(e->getType());
     return builder.create<cir::ConstantOp>(
-        cgf.getLoc(e->getExprLoc()), type,
+        cgf.getLoc(e->getExprLoc()),
         builder.getAttr<cir::IntAttr>(type, e->getValue()));
   }
 
@@ -147,15 +147,12 @@ public:
     assert(mlir::isa<cir::CIRFPTypeInterface>(type) &&
            "expect floating-point type");
     return builder.create<cir::ConstantOp>(
-        cgf.getLoc(e->getExprLoc()), type,
+        cgf.getLoc(e->getExprLoc()),
         builder.getAttr<cir::FPAttr>(type, e->getValue()));
   }
 
   mlir::Value VisitCXXBoolLiteralExpr(const CXXBoolLiteralExpr *e) {
-    mlir::Type type = cgf.convertType(e->getType());
-    return builder.create<cir::ConstantOp>(
-        cgf.getLoc(e->getExprLoc()), type,
-        builder.getCIRBoolAttr(e->getValue()));
+    return builder.getBool(e->getValue(), cgf.getLoc(e->getExprLoc()));
   }
 
   mlir::Value VisitCastExpr(CastExpr *e);
@@ -215,9 +212,7 @@ public:
 
     if (llvm::isa<MemberPointerType>(srcType)) {
       cgf.getCIRGenModule().errorNYI(loc, "member pointer to bool conversion");
-      mlir::Type boolType = builder.getBoolTy();
-      return builder.create<cir::ConstantOp>(loc, boolType,
-                                             builder.getCIRBoolAttr(false));
+      return builder.getFalse(loc);
     }
 
     if (srcType->isIntegerType())
@@ -354,9 +349,7 @@ public:
     // An interesting aspect of this is that increment is always true.
     // Decrement does not have this property.
     if (isInc && type->isBooleanType()) {
-      value = builder.create<cir::ConstantOp>(cgf.getLoc(e->getExprLoc()),
-                                              cgf.convertType(type),
-                                              builder.getCIRBoolAttr(true));
+      value = builder.getTrue(cgf.getLoc(e->getExprLoc()));
     } else if (type->isIntegerType()) {
       QualType promotedType;
       bool canPerformLossyDemotionCheck = false;
@@ -1310,8 +1303,7 @@ mlir::Value ScalarExprEmitter::emitShl(const BinOpInfo &ops) {
            mlir::isa<cir::IntType>(ops.lhs.getType()))
     cgf.cgm.errorNYI("sanitizers");
 
-  cgf.cgm.errorNYI("shift ops");
-  return {};
+  return builder.createShiftLeft(cgf.getLoc(ops.loc), ops.lhs, ops.rhs);
 }
 
 mlir::Value ScalarExprEmitter::emitShr(const BinOpInfo &ops) {
@@ -1335,8 +1327,7 @@ mlir::Value ScalarExprEmitter::emitShr(const BinOpInfo &ops) {
 
   // Note that we don't need to distinguish unsigned treatment at this
   // point since it will be handled later by LLVM lowering.
-  cgf.cgm.errorNYI("shift ops");
-  return {};
+  return builder.createShiftRight(cgf.getLoc(ops.loc), ops.lhs, ops.rhs);
 }
 
 mlir::Value ScalarExprEmitter::emitAnd(const BinOpInfo &ops) {
