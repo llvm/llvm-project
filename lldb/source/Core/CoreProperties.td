@@ -176,10 +176,19 @@ let Definition = "debugger" in {
     Global,
     DefaultTrue,
     Desc<"Whether to show a statusline at the bottom of the terminal.">;
-  def StatuslineFormat: Property<"statusline-format", "FormatEntity">,
-    Global,
-    DefaultStringValue<"${ansi.negative}{${target.file.basename}}{ | ${line.file.basename}:${line.number}:${line.column}}{ | ${thread.stop-reason}}{ | {${progress.count} }${progress.message}}">,
-    Desc<"The default statusline format string.">;
+  def Separator : Property<"separator", "String">,
+                  Global,
+                  DefaultStringValue<"│ ">,
+                  Desc<"A separator used, e.g., in the status line.">;
+  def StatuslineFormat
+      : Property<"statusline-format", "FormatEntity">,
+        Global,
+        DefaultStringValue<
+            "${ansi.negative}{${target.file.basename}}{ "
+            "${separator}${line.file.basename}:${line.number}:${line.column}}{ "
+            "${separator}${thread.stop-reason}}{ "
+            "${separator}{${progress.count} }${progress.message}}">,
+        Desc<"The default statusline format string.">;
   def UseSourceCache: Property<"use-source-cache", "Boolean">,
     Global,
     DefaultTrue,
