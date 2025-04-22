@@ -1018,6 +1018,26 @@ CommandInterpreter::VerifyUserMultiwordCmdPath(Args &path, bool leaf_is_command,
   return cur_as_multi;
 }
 
+CommandObjectSP CommandInterpreter::GetFrameLanguageCommand() const {
+  if (auto frame_sp = GetExecutionContext().GetFrameSP()) {
+    auto frame_language = Language::GetPrimaryLanguage(
+        frame_sp->GuessLanguage().AsLanguageType());
+
+    auto it = m_command_dict.find("language");
+    if (it != m_command_dict.end()) {
+      // The root "language" command.
+      CommandObjectSP language_cmd_sp = it->second;
+
+      if (auto *plugin = Language::FindPlugin(frame_language)) {
+        // "cplusplus", "objc", etc.
+        auto lang_name = plugin->GetPluginName();
+        return language_cmd_sp->GetSubcommandSPExact(lang_name);
+      }
+    }
+  }
+  return {};
+}
+
 CommandObjectSP
 CommandInterpreter::GetCommandSP(llvm::StringRef cmd_str, bool include_aliases,
                                  bool exact, StringList *matches,
@@ -1050,11 +1070,20 @@ CommandInterpreter::GetCommandSP(llvm::StringRef cmd_str, bool include_aliases,
       command_sp = pos->second;
   }
 
+  // The `language` subcommand ("language objc", "language cplusplus", etc).
+  CommandObjectMultiword *lang_subcmd = nullptr;
+  if (!command_sp) {
+    if (auto subcmd_sp = GetFrameLanguageCommand()) {
+      lang_subcmd = subcmd_sp->GetAsMultiwordCommand();
+      command_sp = subcmd_sp->GetSubcommandSPExact(cmd_str);
+    }
+  }
+
   if (!exact && !command_sp) {
     // We will only get into here if we didn't find any exact matches.
 
     CommandObjectSP user_match_sp, user_mw_match_sp, alias_match_sp,
-        real_match_sp;
+        real_match_sp, lang_match_sp;
 
     StringList local_matches;
     if (matches == nullptr)
@@ -1064,6 +1093,7 @@ CommandInterpreter::GetCommandSP(llvm::StringRef cmd_str, bool include_aliases,
     unsigned int num_alias_matches = 0;
     unsigned int num_user_matches = 0;
     unsigned int num_user_mw_matches = 0;
+    unsigned int num_lang_matches = 0;
 
     // Look through the command dictionaries one by one, and if we get only one
     // match from any of them in toto, then return that, otherwise return an
@@ -1121,11 +1151,28 @@ CommandInterpreter::GetCommandSP(llvm::StringRef cmd_str, bool include_aliases,
         user_mw_match_sp = pos->second;
     }
 
+    if (lang_subcmd) {
+      num_lang_matches =
+          AddNamesMatchingPartialString(lang_subcmd->GetSubcommandDictionary(),
+                                        cmd_str, *matches, descriptions);
+    }
+
+    if (num_lang_matches == 1) {
+      cmd.assign(matches->GetStringAtIndex(num_cmd_matches + num_alias_matches +
+                                           num_user_matches +
+                                           num_user_mw_matches));
+
+      auto &lang_dict = lang_subcmd->GetSubcommandDictionary();
+      auto pos = lang_dict.find(cmd);
+      if (pos != lang_dict.end())
+        lang_match_sp = pos->second;
+    }
+
     // If we got exactly one match, return that, otherwise return the match
     // list.
 
     if (num_user_matches + num_user_mw_matches + num_cmd_matches +
-            num_alias_matches ==
+            num_alias_matches + num_lang_matches ==
         1) {
       if (num_cmd_matches)
         return real_match_sp;
@@ -1133,8 +1180,10 @@ CommandInterpreter::GetCommandSP(llvm::StringRef cmd_str, bool include_aliases,
         return alias_match_sp;
       else if (num_user_mw_matches)
         return user_mw_match_sp;
-      else
+      else if (num_user_matches)
         return user_match_sp;
+      else
+        return lang_match_sp;
     }
   } else if (matches && command_sp) {
     matches->AppendString(cmd_str);
