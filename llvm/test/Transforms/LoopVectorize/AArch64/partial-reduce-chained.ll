@@ -1031,25 +1031,24 @@ for.body:                                         ; preds = %for.body.preheader,
 }
 
 
-define void @chained_partial_reduce_not_known_factor(i32 %a, i32 %b, i32 %N) #0 {
+define i40 @chained_partial_reduce_not_known_factor(i32 %a, i32 %b, i32 %N) {
 entry:
   br label %for.body
 
-for.cond.cleanup:
-  %B.0.lcssa = phi i40 [ %2, %for.body ]
-  ret void
-
 for.body:
-  %B.017 = phi i40 [ 0, %entry ], [ %2, %for.body ]
-  %i.016 = phi i16 [ 0, %entry ], [ %add21, %for.body ]
+  %red = phi i40 [ 0, %entry ], [ %1, %for.body ]
+  %iv = phi i16 [ 0, %entry ], [ %iv.next, %for.body ]
   %resize = sext i32 %a to i40
   %resize4 = sext i32 %b to i40
   %0 = or i40 %resize4, %resize
-  %1 = or i40 %B.017, %0
-  %2 = or i40 %1, 0
-  %add21 = add i16 %i.016, 1
-  %cmp = icmp slt i16 %i.016, 1
-  br i1 %cmp, label %for.body, label %for.cond.cleanup
+  %1 = or i40 %red, %0
+  %iv.next = add i16 %iv, 1
+  %cmp = icmp slt i16 %iv, 1
+  br i1 %cmp, label %for.body, label %exit
+
+exit:
+  %result.lcssa = phi i40 [ %1, %for.body ]
+  ret i40 %result.lcssa
 }
 
 attributes #0 = { vscale_range(1,16) }
