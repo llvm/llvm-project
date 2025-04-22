@@ -255,7 +255,7 @@ namespace {
 
       // Fixup kinds from .reloc directive are like R_SPARC_NONE. They do
       // not require any extra processing.
-      if (Kind >= FirstLiteralRelocationKind)
+      if (mc::isRelocation(Kind))
         return MCAsmBackend::getFixupKindInfo(FK_NONE);
 
       if (Kind < FirstTargetFixupKind)
@@ -335,7 +335,7 @@ namespace {
                     uint64_t Value, bool IsResolved,
                     const MCSubtargetInfo *STI) const override {
 
-      if (Fixup.getKind() >= FirstLiteralRelocationKind)
+      if (mc::isRelocation(Fixup.getKind()))
         return;
       Value = adjustFixupValue(Fixup.getKind(), Value);
       if (!Value) return;           // Doesn't change encoding.
