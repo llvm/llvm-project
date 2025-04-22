@@ -1837,6 +1837,11 @@ public:
     MacroExpansionInDirectivesOverride = true;
   }
 
+  void SetDisableMacroExpansion() {
+    DisableMacroExpansion = true;
+    MacroExpansionInDirectivesOverride = false;
+  }
+
   /// Peeks ahead N tokens and returns that token without consuming any
   /// tokens.
   ///
