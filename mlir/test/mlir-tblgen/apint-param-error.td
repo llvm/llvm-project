@@ -1,4 +1,4 @@
-// RUN: mlir-tblgen -gen-attrdef-decls -I %S/../../include %s 2>&1 | FileCheck %s
+// RUN: not mlir-tblgen -gen-attrdef-decls -I %S/../../include %s 2>&1 | FileCheck %s
 
 include "mlir/IR/AttrTypeBase.td"
 include "mlir/IR/OpBase.td"
@@ -14,4 +14,4 @@ def RawAPIntAttr : AttrDef<Test_Dialect, "RawAPInt"> {
   let hasCustomAssemblyFormat = 1;
 }
 
-// CHECK: apint-param-warn.td:11:5: warning: Using a raw APInt parameter
+// CHECK: apint-param-error.td:11:5: error: Using a raw APInt parameter

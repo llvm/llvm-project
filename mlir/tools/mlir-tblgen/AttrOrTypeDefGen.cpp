@@ -680,7 +680,7 @@ void DefGen::emitStorageClass() {
   storageCls->finalize();
   for (auto &param : params) {
     if (param.getCppType().contains("APInt") && !param.hasCustomComparator()) {
-      PrintWarning(
+      PrintError(
           def.getLoc(),
           "Using a raw APInt parameter without a custom comparator is "
           "not supported because an assert in the equality operator is "
