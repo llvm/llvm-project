@@ -341,3 +341,27 @@ define i16 @umin_umax(i16 %x) {
   %min = call i16 @llvm.umin.i16(i16 %max, i16 255)
   ret i16 %min
 }
+
+define i16 @smin_umax(i16 %x) {
+; CHECK-LABEL: define i16 @smin_umax(
+; CHECK-SAME: i16 [[X:%.*]]) {
+; CHECK-NEXT:    [[MAX:%.*]] = call i16 @llvm.umax.i16(i16 [[X]], i16 127)
+; CHECK-NEXT:    [[MIN:%.*]] = call i16 @llvm.smin.i16(i16 [[MAX]], i16 255)
+; CHECK-NEXT:    ret i16 [[MIN]]
+;
+  %max = call i16 @llvm.umax.i16(i16 %x, i16 127)
+  %min = call i16 @llvm.smin.i16(i16 %max, i16 255)
+  ret i16 %min
+}
+
+define i16 @umin_smax(i16 %x) {
+; CHECK-LABEL: define i16 @umin_smax(
+; CHECK-SAME: i16 [[X:%.*]]) {
+; CHECK-NEXT:    [[MAX:%.*]] = call i16 @llvm.smax.i16(i16 [[X]], i16 -128)
+; CHECK-NEXT:    [[MIN:%.*]] = call i16 @llvm.umin.i16(i16 [[MAX]], i16 127)
+; CHECK-NEXT:    ret i16 [[MIN]]
+;
+  %max = call i16 @llvm.smax.i16(i16 %x, i16 -128)
+  %min = call i16 @llvm.umin.i16(i16 %max, i16 127)
+  ret i16 %min
+}
