@@ -6492,8 +6492,25 @@ def warn_signed_bitfield_enum_conversion : Warning<
   "signed bit-field %0 needs an extra bit to represent the largest positive "
   "enumerators of %1">,
   InGroup<BitFieldEnumConversion>, DefaultIgnore;
+def warn_preferred_type_bitfield_too_small_for_enum
+    : Warning<"bit-field %0 is not wide enough to store all enumerators of "
+              "preferred type %1">,
+      InGroup<PreferredTypeBitFieldEnumConversion>;
+def warn_preferred_type_unsigned_bitfield_assigned_signed_enum
+    : Warning<"assigning value of preferred signed enum type %1 to unsigned "
+              "bit-field %0; "
+              "negative enumerators of enum %1 will be converted to positive "
+              "values">,
+      InGroup<PreferredTypeBitFieldEnumConversion>;
+def warn_preferred_type_signed_bitfield_enum_conversion
+    : Warning<"signed bit-field %0 needs an extra bit to represent the largest "
+              "positive "
+              "enumerators of preferred type %1">,
+      InGroup<PreferredTypeBitFieldEnumConversion>;
 def note_change_bitfield_sign : Note<
   "consider making the bit-field type %select{unsigned|signed}0">;
+def note_bitfield_preferred_type
+    : Note<"preferred type for bit-field %0 specified here">;
 
 def warn_missing_braces : Warning<
   "suggest braces around initialization of subobject">,

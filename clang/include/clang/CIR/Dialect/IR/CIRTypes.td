@@ -294,6 +294,14 @@ def CIR_ArrayType : CIR_Type<"Array", "array",
 
   let parameters = (ins "mlir::Type":$eltType, "uint64_t":$size);
 
+  let builders = [
+    TypeBuilderWithInferredContext<(ins
+      "mlir::Type":$eltType, "uint64_t":$size
+    ), [{
+        return $_get(eltType.getContext(), eltType, size);
+    }]>,
+  ];
+
   let assemblyFormat = [{
     `<` $eltType `x` $size `>`
   }];
