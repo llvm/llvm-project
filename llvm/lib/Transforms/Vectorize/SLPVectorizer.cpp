@@ -5923,9 +5923,9 @@ static bool isMaskedLoadCompress(
   // Check for very large distances between elements.
   if (*Diff / Sz >= MaxRegSize / 8)
     return false;
-  Align CommonAlignment = computeCommonAlignment<LoadInst>(VL);
   LoadVecTy = getWidenedType(ScalarTy, *Diff + 1);
   auto *LI = cast<LoadInst>(Order.empty() ? VL.front() : VL[Order.front()]);
+  Align CommonAlignment = LI->getAlign();
   IsMasked = !isSafeToLoadUnconditionally(
       Ptr0, LoadVecTy, CommonAlignment, DL,
       cast<LoadInst>(Order.empty() ? VL.back() : VL[Order.back()]), &AC, &DT,
@@ -5964,26 +5964,28 @@ static bool isMaskedLoadCompress(
         TTI.getMaskedMemoryOpCost(Instruction::Load, LoadVecTy, CommonAlignment,
                                   LI->getPointerAddressSpace(), CostKind);
   } else {
-    CommonAlignment = LI->getAlign();
     LoadCost =
         TTI.getMemoryOpCost(Instruction::Load, LoadVecTy, CommonAlignment,
                             LI->getPointerAddressSpace(), CostKind);
   }
-  if (IsStrided) {
+  if (IsStrided && !IsMasked) {
     // Check for potential segmented(interleaved) loads.
-    if (TTI.isLegalInterleavedAccessType(LoadVecTy, CompressMask[1],
+    auto *AlignedLoadVecTy = getWidenedType(
+        ScalarTy, getFullVectorNumberOfElements(TTI, ScalarTy, *Diff + 1));
+    if (TTI.isLegalInterleavedAccessType(AlignedLoadVecTy, CompressMask[1],
                                          CommonAlignment,
                                          LI->getPointerAddressSpace())) {
       InstructionCost InterleavedCost =
           VectorGEPCost + TTI.getInterleavedMemoryOpCost(
-                              Instruction::Load, LoadVecTy, CompressMask[1],
-                              std::nullopt, CommonAlignment,
+                              Instruction::Load, AlignedLoadVecTy,
+                              CompressMask[1], std::nullopt, CommonAlignment,
                               LI->getPointerAddressSpace(), CostKind, IsMasked);
       if (!Mask.empty())
         InterleavedCost += ::getShuffleCost(TTI, TTI::SK_PermuteSingleSrc,
                                             VecTy, Mask, CostKind);
       if (InterleavedCost < GatherCost) {
         InterleaveFactor = CompressMask[1];
+        LoadVecTy = AlignedLoadVecTy;
         return true;
       }
     }
@@ -5999,6 +6001,24 @@ static bool isMaskedLoadCompress(
       TTI, TTI::SK_PermuteSingleSrc, LoadVecTy, CompressMask, CostKind);
   InstructionCost TotalVecCost = VectorGEPCost + LoadCost + CompressCost;
   return TotalVecCost < GatherCost;
+}
+
+/// Checks if the \p VL can be transformed to a (masked)load + compress or
+/// (masked) interleaved load.
+static bool
+isMaskedLoadCompress(ArrayRef<Value *> VL, ArrayRef<Value *> PointerOps,
+                     ArrayRef<unsigned> Order, const TargetTransformInfo &TTI,
+                     const DataLayout &DL, ScalarEvolution &SE,
+                     AssumptionCache &AC, const DominatorTree &DT,
+                     const TargetLibraryInfo &TLI,
+                     const function_ref<bool(Value *)> AreAllUsersVectorized) {
+  bool IsMasked;
+  unsigned InterleaveFactor;
+  SmallVector<int> CompressMask;
+  VectorType *LoadVecTy;
+  return isMaskedLoadCompress(VL, PointerOps, Order, TTI, DL, SE, AC, DT, TLI,
+                              AreAllUsersVectorized, IsMasked, InterleaveFactor,
+                              CompressMask, LoadVecTy);
 }
 
 /// Checks if strided loads can be generated out of \p VL loads with pointers \p
@@ -6137,6 +6157,12 @@ BoUpSLP::canVectorizeLoads(ArrayRef<Value *> VL, const Value *VL0,
     // Check that the sorted loads are consecutive.
     if (static_cast<unsigned>(*Diff) == Sz - 1)
       return LoadsState::Vectorize;
+    if (isMaskedLoadCompress(VL, PointerOps, Order, *TTI, *DL, *SE, *AC, *DT,
+                             *TLI, [&](Value *V) {
+                               return areAllUsersVectorized(
+                                   cast<Instruction>(V), UserIgnoreList);
+                             }))
+      return LoadsState::CompressVectorize;
     // Simple check if not a strided access - clear order.
     bool IsPossibleStrided = *Diff % (Sz - 1) == 0;
     // Try to generate strided load node.
@@ -6150,18 +6176,6 @@ BoUpSLP::canVectorizeLoads(ArrayRef<Value *> VL, const Value *VL0,
         isStridedLoad(VL, PointerOps, Order, *TTI, *DL, *SE,
                       IsAnyPointerUsedOutGraph, *Diff))
       return LoadsState::StridedVectorize;
-    bool IsMasked;
-    unsigned InterleaveFactor;
-    SmallVector<int> CompressMask;
-    VectorType *LoadVecTy;
-    if (isMaskedLoadCompress(
-            VL, PointerOps, Order, *TTI, *DL, *SE, *AC, *DT, *TLI,
-            [&](Value *V) {
-              return areAllUsersVectorized(cast<Instruction>(V),
-                                           UserIgnoreList);
-            },
-            IsMasked, InterleaveFactor, CompressMask, LoadVecTy))
-      return LoadsState::CompressVectorize;
   }
   if (!TTI->isLegalMaskedGather(VecTy, CommonAlignment) ||
       TTI->forceScalarizeMaskedGather(VecTy, CommonAlignment))
@@ -13439,11 +13453,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
         assert(IsVectorized && "Expected to be vectorized");
         CompressEntryToData.try_emplace(E, CompressMask, LoadVecTy,
                                         InterleaveFactor, IsMasked);
-        Align CommonAlignment;
-        if (IsMasked)
-          CommonAlignment = computeCommonAlignment<LoadInst>(VL);
-        else
-          CommonAlignment = LI0->getAlign();
+        Align CommonAlignment = LI0->getAlign();
         if (InterleaveFactor) {
           VecLdCost = TTI->getInterleavedMemoryOpCost(
               Instruction::Load, LoadVecTy, InterleaveFactor, std::nullopt,
@@ -18049,14 +18059,11 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
           PointerOps[I] = cast<LoadInst>(V)->getPointerOperand();
         auto [CompressMask, LoadVecTy, InterleaveFactor, IsMasked] =
             CompressEntryToData.at(E);
-        Align CommonAlignment;
-        if (IsMasked)
-          CommonAlignment = computeCommonAlignment<LoadInst>(E->Scalars);
-        else
-          CommonAlignment = LI->getAlign();
+        Align CommonAlignment = LI->getAlign();
         if (IsMasked) {
+          unsigned VF = getNumElements(LoadVecTy);
           SmallVector<Constant *> MaskValues(
-              getNumElements(LoadVecTy) / getNumElements(LI->getType()),
+              VF / getNumElements(LI->getType()),
               ConstantInt::getFalse(VecTy->getContext()));
           for (int I : CompressMask)
             MaskValues[I] = ConstantInt::getTrue(VecTy->getContext());
