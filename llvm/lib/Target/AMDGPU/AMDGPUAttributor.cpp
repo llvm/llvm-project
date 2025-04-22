@@ -1372,7 +1372,7 @@ static bool runImpl(Module &M, AnalysisGetter &AG, TargetMachine &TM,
   LLVM_DEBUG(dbgs() << "[AMDGPUAttributor] Module " << M.getName() << " is "
                     << (AC.IsClosedWorldModule ? "" : "not ")
                     << "assumed to be a closed world.\n");
-  uint32_t AddrSpaceMask = (1 << AMDGPUAS::MAX_AMDGPU_ADDRESS + 1) - 1;
+  uint32_t AddrSpaceMask = (1 << (AMDGPUAS::MAX_AMDGPU_ADDRESS + 1)) - 1;
   for (auto *F : Functions) {
     A.getOrCreateAAFor<AAAMDAttributes>(IRPosition::function(*F));
     A.getOrCreateAAFor<AAUniformWorkGroupSize>(IRPosition::function(*F));
@@ -1388,25 +1388,29 @@ static bool runImpl(Module &M, AnalysisGetter &AG, TargetMachine &TM,
 
     for (auto &I : instructions(F)) {
       if (auto *LI = dyn_cast<LoadInst>(&I)) {
-        A.getOrCreateAAFor<AAAddressSpace>(
-            IRPosition::value(*LI->getPointerOperand()));
+        Value &Ptr = *(LI->getPointerOperand());
+        A.getOrCreateAAFor<AAAddressSpace>(IRPosition::value(Ptr));
         const_cast<AANoAliasAddrSpace *>(
-            A.getOrCreateAAFor<AANoAliasAddrSpace>(
-                IRPosition::value(*LI->getPointerOperand())))
+            A.getOrCreateAAFor<AANoAliasAddrSpace>(IRPosition::value(Ptr)))
             ->setMask(AddrSpaceMask);
       } else if (auto *SI = dyn_cast<StoreInst>(&I)) {
-        A.getOrCreateAAFor<AAAddressSpace>(
-            IRPosition::value(*SI->getPointerOperand()));
+        Value &Ptr = *(SI->getPointerOperand());
+        A.getOrCreateAAFor<AAAddressSpace>(IRPosition::value(Ptr));
         const_cast<AANoAliasAddrSpace *>(
-            A.getOrCreateAAFor<AANoAliasAddrSpace>(
-                IRPosition::value(*SI->getPointerOperand())))
+            A.getOrCreateAAFor<AANoAliasAddrSpace>(IRPosition::value(Ptr)))
             ->setMask(AddrSpaceMask);
       } else if (auto *RMW = dyn_cast<AtomicRMWInst>(&I)) {
-        A.getOrCreateAAFor<AAAddressSpace>(
-            IRPosition::value(*RMW->getPointerOperand()));
+        Value &Ptr = *(RMW->getPointerOperand());
+        A.getOrCreateAAFor<AAAddressSpace>(IRPosition::value(Ptr));
+        const_cast<AANoAliasAddrSpace *>(
+            A.getOrCreateAAFor<AANoAliasAddrSpace>(IRPosition::value(Ptr)))
+            ->setMask(AddrSpaceMask);
       } else if (auto *CmpX = dyn_cast<AtomicCmpXchgInst>(&I)) {
-        A.getOrCreateAAFor<AAAddressSpace>(
-            IRPosition::value(*CmpX->getPointerOperand()));
+        Value &Ptr = *(CmpX->getPointerOperand());
+        A.getOrCreateAAFor<AAAddressSpace>(IRPosition::value(Ptr));
+        const_cast<AANoAliasAddrSpace *>(
+            A.getOrCreateAAFor<AANoAliasAddrSpace>(IRPosition::value(Ptr)))
+            ->setMask(AddrSpaceMask);
       }
     }
   }

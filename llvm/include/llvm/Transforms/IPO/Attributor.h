@@ -6367,9 +6367,9 @@ struct AANoAliasAddrSpace
     return (AA->getIdAddr() == &ID);
   }
 
-  void setMask(uint32_t mask) {
-    removeKnownBits(~mask);
-    removeAssumedBits(~mask);
+  void setMask(uint32_t Mask) {
+    removeKnownBits(~Mask);
+    removeAssumedBits(~Mask);
   }
 
   /// Unique ID (due to the unique address)

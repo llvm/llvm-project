@@ -12813,7 +12813,7 @@ struct AANoAliasAddrSpaceImpl : public AANoAliasAddrSpace {
     uint32_t OrigAssumed = getAssumed();
 
     auto CheckAddressSpace = [&](Value &Obj) {
-      if (isa<UndefValue>(&Obj))
+      if (isa<UndefValue>(&Obj) || isa<PoisonValue>(&Obj))
         return true;
       // Handle argument in flat address space only has addrspace cast uses
       if (auto *Arg = dyn_cast<Argument>(&Obj)) {
@@ -12880,7 +12880,8 @@ struct AANoAliasAddrSpaceImpl : public AANoAliasAddrSpace {
         return true;
       if (!A.isRunOn(Inst->getFunction()))
         return true;
-      if (isa<LoadInst>(Inst) || isa<StoreInst>(Inst)) {
+      if (isa<LoadInst>(Inst) || isa<StoreInst>(Inst) ||
+          isa<AtomicCmpXchgInst>(Inst) || isa<AtomicRMWInst>(Inst)) {
         Inst->setMetadata(LLVMContext::MD_noalias_addrspace, NoAliasASNode);
         Changed = true;
       }
