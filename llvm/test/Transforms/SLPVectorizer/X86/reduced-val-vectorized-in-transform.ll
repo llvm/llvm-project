@@ -11,7 +11,8 @@ define i32 @test(i1 %cond) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = phi <2 x i32> [ [[TMP8:%.*]], %[[BB]] ], [ zeroinitializer, %[[ENTRY]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i32> [[TMP0]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> <i32 poison, i32 poison, i32 0, i32 0>, <4 x i32> <i32 poison, i32 1, i32 6, i32 7>
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i32> [[TMP3]], i32 [[P1]], i32 0
+; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <4 x i32> poison, i32 [[P1]], i32 0
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i32> [[TMP3]], <4 x i32> [[TMP10]], <4 x i32> <i32 4, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP5:%.*]] = or <4 x i32> zeroinitializer, [[TMP4]]
 ; CHECK-NEXT:    [[OR92]] = or i32 1, 0
 ; CHECK-NEXT:    [[TMP6:%.*]] = call i32 @llvm.vector.reduce.xor.v4i32(<4 x i32> [[TMP5]])
