@@ -1101,6 +1101,146 @@ private:
   ControlFusionFn controlFoldingReshapes;
 };
 
+/// Pattern to fold a tensor.expand_shape op with its producer tensor.pad op
+/// by bubbling the expand_shape before the pad.
+struct FoldReshapeWithProducerPadOpByExpansion
+    : public OpRewritePattern<tensor::ExpandShapeOp> {
+
+  FoldReshapeWithProducerPadOpByExpansion(MLIRContext *context,
+                                          ControlFusionFn foldReshapes,
+                                          PatternBenefit benefit = 1)
+      : OpRewritePattern<tensor::ExpandShapeOp>(context, benefit),
+        controlFoldingReshapes(std::move(foldReshapes)) {}
+
+  LogicalResult matchAndRewrite(tensor::ExpandShapeOp expandOp,
+                                PatternRewriter &rewriter) const override {
+    tensor::PadOp padOp = expandOp.getSrc().getDefiningOp<tensor::PadOp>();
+    if (!padOp)
+      return failure();
+
+    if (!padOp->hasOneUse())
+      return failure();
+
+    if (!controlFoldingReshapes(&expandOp.getSrcMutable())) {
+      return rewriter.notifyMatchFailure(expandOp,
+                                         "fusion blocked by control function");
+    }
+
+    SmallVector<ReassociationIndices> reassociations =
+        expandOp.getReassociationIndices();
+    SmallVector<OpFoldResult> low = padOp.getMixedLowPad();
+    SmallVector<OpFoldResult> high = padOp.getMixedHighPad();
+
+    auto isZeroPadding = [](OpFoldResult padValue) -> bool {
+      if (auto attr = dyn_cast<Attribute>(padValue)) {
+        if (auto intAttr = dyn_cast<IntegerAttr>(attr))
+          return intAttr.getInt() == 0;
+      }
+
+      if (auto val = dyn_cast<Value>(padValue)) {
+        if (auto constOp = val.getDefiningOp<arith::ConstantOp>()) {
+          if (auto attr = dyn_cast<IntegerAttr>(constOp.getValue()))
+            return attr.getInt() == 0;
+        }
+      }
+
+      // when padding is dynamic and not constant, we don't know if it's zero or
+      // not. so we return false here.
+      return false;
+    };
+
+    for (auto [idx, reInd] : llvm::enumerate(reassociations)) {
+      OpFoldResult l = low[idx];
+      OpFoldResult h = high[idx];
+      if (reInd.size() != 1 && (!isZeroPadding(l) || !isZeroPadding(h)))
+        return failure();
+    }
+
+    SmallVector<OpFoldResult> newLow, newHigh;
+    for (auto [idx, reInd] : llvm::enumerate(reassociations)) {
+      for (size_t i = 0; i < reInd.size(); ++i) {
+        newLow.push_back(padOp.getMixedLowPad()[idx]);
+        newHigh.push_back(padOp.getMixedHighPad()[idx]);
+      }
+    }
+
+    Location loc = expandOp.getLoc();
+    auto finalType = cast<RankedTensorType>(expandOp.getType());
+    ArrayRef<int64_t> finalShape = finalType.getShape();
+
+    SmallVector<OpFoldResult> expandedShape;
+    for (int64_t dimSize : finalShape) {
+      if (dimSize == ShapedType::kDynamic) {
+        expandedShape.push_back(OpFoldResult{});
+      } else {
+        expandedShape.push_back(rewriter.getI64IntegerAttr(dimSize));
+      }
+    }
+
+    for (auto [inDimIdx, outGroup] : llvm::enumerate(reassociations)) {
+      OpFoldResult l = low[inDimIdx];
+      OpFoldResult h = high[inDimIdx];
+
+      if (!isZeroPadding(l) || !isZeroPadding(h)) {
+        auto srcType = cast<RankedTensorType>(padOp.getSource().getType());
+        int64_t originalSize = srcType.getDimSize(inDimIdx);
+
+        OpFoldResult originalSizeOFR;
+        if (originalSize == ShapedType::kDynamic) {
+          Value orgSizeVal =
+              rewriter.create<tensor::DimOp>(loc, padOp.getSource(), inDimIdx);
+          originalSizeOFR = orgSizeVal;
+        } else {
+          originalSizeOFR = rewriter.getI64IntegerAttr(originalSize);
+        }
+
+        for (auto outDimIdx : outGroup) {
+          expandedShape[outDimIdx] = originalSizeOFR;
+        }
+      }
+    }
+
+    for (auto [outDimIdx, dimSize] : llvm::enumerate(finalShape)) {
+      if (dimSize == ShapedType::kDynamic &&
+          !isa<Value>(expandedShape[outDimIdx]) &&
+          !isa<Attribute>(expandedShape[outDimIdx])) {
+        Value actualSize =
+            rewriter.create<tensor::DimOp>(loc, expandOp.getSrc(), outDimIdx);
+        expandedShape[outDimIdx] = actualSize;
+      }
+    }
+
+    SmallVector<int64_t> staticExpandedShape;
+    for (OpFoldResult dim : expandedShape) {
+      if (auto attr = dyn_cast<Attribute>(dim)) {
+        if (auto intAttr = dyn_cast<IntegerAttr>(attr)) {
+          staticExpandedShape.push_back(intAttr.getInt());
+        } else {
+          staticExpandedShape.push_back(ShapedType::kDynamic);
+        }
+      } else {
+        staticExpandedShape.push_back(ShapedType::kDynamic);
+      }
+    }
+
+    auto newExpandOp = rewriter.create<tensor::ExpandShapeOp>(
+        loc,
+        RankedTensorType::get(staticExpandedShape,
+                              padOp.getSource().getType().getElementType()),
+        padOp.getSource(), reassociations);
+
+    auto newPadOp = rewriter.create<tensor::PadOp>(
+        loc, expandOp.getType(), newExpandOp.getResult(), newLow, newHigh,
+        padOp.getConstantPaddingValue(), padOp.getNofold());
+
+    rewriter.replaceOp(expandOp, newPadOp.getResult());
+    return success();
+  }
+
+private:
+  ControlFusionFn controlFoldingReshapes;
+};
+
 /// Pattern to fold a tensor.expand_shape op with its producer generic op
 /// by expanding the dimensionality of the loop in the producer op.
 struct FoldReshapeWithGenericOpByExpansion
@@ -2248,6 +2388,8 @@ void mlir::linalg::populateFoldReshapeOpsByExpansionPatterns(
   patterns.add<FoldReshapeWithGenericOpByExpansion>(patterns.getContext(),
                                                     controlFoldingReshapes);
   patterns.add<FoldPadWithProducerReshapeOpByExpansion>(patterns.getContext(),
+                                                        controlFoldingReshapes);
+  patterns.add<FoldReshapeWithProducerPadOpByExpansion>(patterns.getContext(),
                                                         controlFoldingReshapes);
   patterns.add<FoldWithProducerReshapeOpByExpansion>(patterns.getContext(),
                                                      controlFoldingReshapes);
