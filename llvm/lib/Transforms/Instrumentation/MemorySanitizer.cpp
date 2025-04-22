@@ -820,12 +820,31 @@ MemorySanitizer::getOrInsertMsanMetadataFunction(Module &M, StringRef Name,
 StringRef getWarningFnName(bool TrackOrigins, bool Recover,
                            bool EmbedFaultingInst) {
   StringRef warningFnName[2][2][2] = {
-      {{"__msan_warning_noreturn", "__msan_warning_noreturn_instname"},
-       {"__msan_warning", "__msan_warning_instname"}},
       {
-          {"__msan_warning_with_origin_noreturn",
-           "__msan_warning_with_origin_noreturn_instname"},
-          {"__msan_warning_with_origin", "__msan_warning_with_origin_instname"},
+          // TrackOrigins=false
+          {
+              // Recover=false
+              "__msan_warning_noreturn",         // EmbedFaultingInst=false
+              "__msan_warning_noreturn_instname" // EmbedFaultingInst=true
+          },
+          {
+              // Recover=true
+              "__msan_warning",         // EmbedFaultingInst=false
+              "__msan_warning_instname" // EmbedFaultingInst=true
+          },
+      },
+      {
+          // TrackOrigins=true
+          {
+              // Recover=false
+              "__msan_warning_with_origin_noreturn", // EmbedFaultingInst=false
+              "__msan_warning_with_origin_noreturn_instname" // EmbedFaultingInst=true
+          },
+          {
+              // Recover=true
+              "__msan_warning_with_origin",         // EmbedFaultingInst=false
+              "__msan_warning_with_origin_instname" // EmbedFaultingInst=true
+          },
       }};
 
   return warningFnName[TrackOrigins][Recover][EmbedFaultingInst];
