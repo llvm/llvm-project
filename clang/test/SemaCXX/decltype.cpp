@@ -80,7 +80,7 @@ namespace D5789 {
   struct P1 { char x[6]; } g1 = { "foo" };
   struct LP1 { struct P1 p1; };
 
-  template<class T> void foo(decltype(T(LP1{ .p1 = g1, .p1.x[1] = 'x' }))) {}
+  template<class T> void foo(decltype(T(LP1{ .p1 = g1, .p1.x[1] = 'x' }))) {} // expected-note {{previous definition is here}}
 
   template<class T>
   void foo(decltype(T(LP1{ .p1 = g1, .p1.x[1] = 'r' }))) {} // okay
