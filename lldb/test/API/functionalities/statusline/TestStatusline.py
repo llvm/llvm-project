@@ -32,6 +32,7 @@ class TestStatusline(PExpectTest):
 
         # Enable the statusline and check for the control character and that we
         # can see the target, the location and the stop reason.
+        self.expect('set set separator "| "')
         self.expect(
             "set set show-statusline true",
             [
@@ -46,10 +47,12 @@ class TestStatusline(PExpectTest):
         self.child.setwinsize(terminal_height, terminal_width)
 
         # Change the format.
+        self.expect('set set separator "S"')
         self.expect(
-            'set set statusline-format "target = {${target.file.basename}}"',
-            ["target = a.out"],
+            'set set statusline-format "target = {${target.file.basename}} ${separator}"',
+            ["target = a.out S"],
         )
+        self.expect('set set separator "| "')
 
         # Hide the statusline and check or the control character.
         self.expect(

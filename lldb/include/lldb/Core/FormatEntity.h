@@ -103,6 +103,7 @@ struct Entry {
     CurrentPCArrow,
     ProgressCount,
     ProgressMessage,
+    Separator,
   };
 
   struct Definition {
