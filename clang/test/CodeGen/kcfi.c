@@ -8,18 +8,25 @@
 /// Must emit __kcfi_typeid symbols for address-taken function declarations
 // CHECK: module asm ".weak __kcfi_typeid_[[F4:[a-zA-Z0-9_]+]]"
 // CHECK: module asm ".set __kcfi_typeid_[[F4]], [[#%d,HASH:]]"
+// CHECK: module asm ".weak __kcfi_typeid_[[F4_ARG:[a-zA-Z0-9_]+]]"
+// CHECK: module asm ".set __kcfi_typeid_[[F4_ARG]], [[#%d,ARG_HASH:]]"
+
 /// Must not __kcfi_typeid symbols for non-address-taken declarations
 // CHECK-NOT: module asm ".weak __kcfi_typeid_{{f6|_Z2f6v}}"
 
 // C: @ifunc1 = ifunc i32 (i32), ptr @resolver1
 // C: @ifunc2 = ifunc i64 (i64), ptr @resolver2
 typedef int (*fn_t)(void);
+typedef int (*fn_u_t)(unsigned int);
 
-// CHECK: define dso_local{{.*}} i32 @{{f1|_Z2f1v}}(){{.*}} !kcfi_type ![[#TYPE:]]
-int f1(void) { return 0; }
+int f1(void);
 
-// CHECK: define dso_local{{.*}} i32 @{{f2|_Z2f2v}}(){{.*}} !kcfi_type ![[#TYPE2:]]
-unsigned int f2(void) { return 2; }
+unsigned int f2(void);
+
+static int f3(void);
+
+extern int f4(void);
+extern int f4_arg(unsigned int);
 
 // CHECK-LABEL: define dso_local{{.*}} i32 @{{__call|_Z6__callPFivE}}(ptr{{.*}} %f)
 int __call(fn_t f) __attribute__((__no_sanitize__("kcfi"))) {
@@ -27,17 +34,45 @@ int __call(fn_t f) __attribute__((__no_sanitize__("kcfi"))) {
   return f();
 }
 
-// CHECK: define dso_local{{.*}} i32 @{{call|_Z4callPFivE}}(ptr{{.*}} %f){{.*}}
+// CHECK-LABEL: define dso_local{{.*}} i32 @{{call|_Z4callPFivE}}(ptr{{.*}} %f)
 int call(fn_t f) {
   // CHECK: call{{.*}} i32 %{{.}}(){{.*}} [ "kcfi"(i32 [[#HASH]]) ]
   return f();
 }
 
-// CHECK-DAG: define internal{{.*}} i32 @{{f3|_ZL2f3v}}(){{.*}} !kcfi_type ![[#TYPE]]
+// CHECK-LABEL: define dso_local{{.*}} i32 @{{call_with_arg|_Z13call_with_argPFijE}}(ptr{{.*}} %f)
+int call_with_arg(fn_u_t f) {
+  // CHECK: call{{.*}} i32 %0(i32 {{.*}}) [ "kcfi"(i32 [[#ARG_HASH]]) ]
+  return f(42);
+}
+
+static int f5(void);
+
+extern int f6(void);
+
+int test(void) {
+  return call(f1) +
+         __call((fn_t)f2) +
+         call(f3) +
+         call(f4) +
+         call_with_arg(f4_arg) +
+         f5() +
+         f6();
+}
+
+// CHECK-LABEL: define dso_local{{.*}} i32 @{{f1|_Z2f1v}}(){{.*}} !kcfi_type ![[#TYPE:]]
+int f1(void) { return 0; }
+
+// CHECK-LABEL: define dso_local{{.*}} i32 @{{f2|_Z2f2v}}(){{.*}} !kcfi_type ![[#TYPE2:]]
+unsigned int f2(void) { return 2; }
+
+// CHECK: define internal{{.*}} i32 @{{f3|_ZL2f3v}}(){{.*}} !kcfi_type ![[#TYPE]]
 static int f3(void) { return 1; }
 
-// CHECK-DAG: declare !kcfi_type ![[#TYPE]]{{.*}} i32 @[[F4]]()
-extern int f4(void);
+// CHECK-LABEL: declare !kcfi_type
+// CHECK-SAME:    ![[#TYPE]]{{.*}} i32 @[[F4]]
+// CHECK-LABEL: declare !kcfi_type
+// CHECK-SAME:    ![[#ARG_TYPE:]]{{.*}} i32 @[[F4_ARG]]
 
 /// Must not emit !kcfi_type for non-address-taken local functions
 // CHECK: define internal{{.*}} i32 @{{f5|_ZL2f5v}}()
@@ -45,8 +80,7 @@ extern int f4(void);
 // CHECK-SAME: {
 static int f5(void) { return 2; }
 
-// CHECK-DAG: declare !kcfi_type ![[#TYPE]]{{.*}} i32 @{{f6|_Z2f6v}}()
-extern int f6(void);
+// CHECK: declare !kcfi_type ![[#TYPE]]{{.*}} i32 @{{f6|_Z2f6v}}()
 
 #ifndef __cplusplus
 // C: define internal ptr @resolver1() #[[#]] !kcfi_type ![[#]] {
@@ -58,30 +92,26 @@ static void *resolver2(void) { return 0; }
 long ifunc2(long) __attribute__((ifunc("resolver2")));
 #endif
 
-int test(void) {
-  return call(f1) +
-         __call((fn_t)f2) +
-         call(f3) +
-         call(f4) +
-         f5() +
-         f6();
-}
-
 #ifdef __cplusplus
 struct A {
-  // MEMBER-DAG: define{{.*}} void @_ZN1A1fEv(ptr{{.*}} %this){{.*}} !kcfi_type ![[#TYPE3:]]
   void f() {}
 };
 
 void test_member_call(void) {
   void (A::* p)() = &A::f;
-  // MEMBER-DAG: call void %[[#]](ptr{{.*}} [ "kcfi"(i32 [[#%d,HASH3:]]) ]
+  // MEMBER: call void %[[#]](ptr{{.*}} [ "kcfi"(i32 [[#%d,HASH3:]]) ]
   (A().*p)();
 }
+
+// MEMBER: define{{.*}} void @_ZN1A1fEv(ptr{{.*}} %this){{.*}} !kcfi_type ![[#TYPE3:]]
 #endif
 
-// CHECK-DAG: ![[#]] = !{i32 4, !"kcfi", i32 1}
-// OFFSET-DAG: ![[#]] = !{i32 4, !"kcfi-offset", i32 3}
-// CHECK-DAG: ![[#TYPE]] = !{i32 [[#HASH]]}
-// CHECK-DAG: ![[#TYPE2]] = !{i32 [[#%d,HASH2:]]}
-// MEMBER-DAG: ![[#TYPE3]] = !{i32 [[#HASH3]]}
+// CHECK: ![[#]] = !{i32 4, !"kcfi", i32 1}
+//
+// OFFSET: ![[#]] = !{i32 4, !"kcfi-offset", i32 3}
+//
+// CHECK: ![[#TYPE]] = !{i32 [[#HASH]]}
+// CHECK: ![[#TYPE2]] = !{i32 [[#%d,HASH2:]]}
+// CHECK: ![[#ARG_TYPE]] = !{i32 [[#ARG_HASH]]}
+//
+// MEMBER: ![[#TYPE3]] = !{i32 [[#HASH3]]}
