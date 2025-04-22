@@ -6176,8 +6176,7 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema *SemaPtr, StringRef isysroot,
 
       // Sort and deduplicate module IDs.
       llvm::sort(Imports, Cmp);
-      Imports.erase(std::unique(Imports.begin(), Imports.end(), Eq),
-                    Imports.end());
+      Imports.erase(llvm::unique(Imports, Eq), Imports.end());
 
       RecordData ImportedModules;
       for (const auto &Import : Imports) {
