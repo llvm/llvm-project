@@ -156,8 +156,10 @@ void printCFGContinuityStats(raw_ostream &OS,
     const size_t NumPosECBBsUnreachableFromEntry =
         NumPosECBBs - NumReachableBBs;
     const size_t SumUnreachableBBEC = SumAllBBEC - SumReachableBBEC;
-    const double FractionECUnreachable =
-        (double)SumUnreachableBBEC / SumAllBBEC;
+
+    double FractionECUnreachable = 0.0;
+    if (SumAllBBEC > 0)
+      FractionECUnreachable = (double)SumUnreachableBBEC / SumAllBBEC;
 
     if (opts::Verbosity >= 2 && FractionECUnreachable >= 0.05) {
       OS << "Non-trivial CFG discontinuity observed in function "
@@ -252,7 +254,9 @@ void printCallGraphFlowConservationStats(
           TotalFlowMap.CallGraphIncomingFlows[Function->getFunctionNumber()];
       const uint64_t Min = std::min(NetEntryOutflow, CallGraphInflow);
       const uint64_t Max = std::max(NetEntryOutflow, CallGraphInflow);
-      const double CallGraphGap = 1 - (double)Min / Max;
+      double CallGraphGap = 0.0;
+      if (Max > 0)
+        CallGraphGap = 1 - (double)Min / Max;
 
       if (opts::Verbosity >= 2 && CallGraphGap >= 0.5) {
         OS << "Non-trivial call graph gap of size "
@@ -334,7 +338,9 @@ void printCFGFlowConservationStats(const BinaryContext &BC, raw_ostream &OS,
 
       const uint64_t Max = MaxCountMaps[BB.getLayoutIndex()];
       const uint64_t Min = MinCountMaps[BB.getLayoutIndex()];
-      const double Gap = 1 - (double)Min / Max;
+      double Gap = 0.0;
+      if (Max > 0)
+        Gap = 1 - (double)Min / Max;
       double Weight = BB.getKnownExecutionCount() * BB.getNumNonPseudos();
       // We use log to prevent the stats from being dominated by extremely hot
       // blocks
@@ -425,8 +431,12 @@ void printExceptionHandlingStats(const BinaryContext &BC, raw_ostream &OS,
       LPCountFractionsOfTotalInvokeEC.push_back(0.0);
       continue;
     }
-    const double FracTotalBBEC = (double)LPECSum / BBECSum;
-    const double FracTotalInvokeEC = (double)LPECSum / InvokeECSum;
+    double FracTotalBBEC = 0.0;
+    if (BBECSum > 0)
+      FracTotalBBEC = (double)LPECSum / BBECSum;
+    double FracTotalInvokeEC = 0.0;
+    if (InvokeECSum > 0)
+      FracTotalInvokeEC = (double)LPECSum / InvokeECSum;
     LPCountFractionsOfTotalBBEC.push_back(FracTotalBBEC);
     LPCountFractionsOfTotalInvokeEC.push_back(FracTotalInvokeEC);
 
