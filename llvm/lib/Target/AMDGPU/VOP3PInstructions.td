@@ -2035,7 +2035,7 @@ let SubtargetPredicate = HasGFX1251GEMMInsts in {
 // Begin Real Encodings
 //===----------------------------------------------------------------------===//
 
-class VOP3P_DPP16<bits<7> op, VOP_DPP_Pseudo ps, int subtarget,
+class VOP3P_DPP16<bits<8> op, VOP_DPP_Pseudo ps, int subtarget,
                   string opName = ps.OpName>
     : VOP3P_DPP<op, opName, ps.Pfl, 1>, SIMCInstr<ps.PseudoInstr, subtarget> {
   let hasSideEffects = ps.hasSideEffects;
@@ -2048,7 +2048,7 @@ class VOP3P_DPP16<bits<7> op, VOP_DPP_Pseudo ps, int subtarget,
   let IsPacked = ps.IsPacked;
 }
 
-class VOP3P_DPP8_Base<bits<7> op, VOP_Pseudo ps, string opName = ps.OpName>
+class VOP3P_DPP8_Base<bits<8> op, VOP_Pseudo ps, string opName = ps.OpName>
     : VOP3P_DPP8<op, opName, ps.Pfl> {
   let hasSideEffects = ps.hasSideEffects;
   let Defs = ps.Defs;
@@ -2063,14 +2063,14 @@ class VOP3P_DPP8_Base<bits<7> op, VOP_Pseudo ps, string opName = ps.OpName>
 // GFX11, GFX12
 //===----------------------------------------------------------------------===//
 
-multiclass VOP3P_Real_Base<GFXGen Gen, bits<7> op, string backing_ps_name = NAME,
+multiclass VOP3P_Real_Base<GFXGen Gen, bits<8> op, string backing_ps_name = NAME,
                       string asmName = !cast<VOP3P_Pseudo>(NAME).Mnemonic> {
   def Gen.Suffix :
     VOP3P_Real_Gen<!cast<VOP3P_Pseudo>(backing_ps_name), Gen, asmName>,
     VOP3Pe_gfx11_gfx12<op, !cast<VOP3P_Pseudo>(backing_ps_name).Pfl>;
 }
 
-class VOP3PeWmma<bits<7> op, VOPProfile P, VOP3PWMMA_Profile WMMAP>
+class VOP3PeWmma<bits<8> op, VOPProfile P, VOP3PWMMA_Profile WMMAP>
     : VOP3Pe_gfx11_gfx12<op, P>{
 
   // opsel
@@ -2099,7 +2099,7 @@ class VOP3PeWmma<bits<7> op, VOPProfile P, VOP3PWMMA_Profile WMMAP>
   let Inst{15} = !if(WMMAP.HasClamp, clamp{0}, 0);
 }
 
-multiclass VOP3P_WMMA_Real_Base<GFXGen Gen, bits<7> op, VOP3PWMMA_Profile WMMAP,
+multiclass VOP3P_WMMA_Real_Base<GFXGen Gen, bits<8> op, VOP3PWMMA_Profile WMMAP,
                                 string backing_ps_name = NAME,
                                 string asmName = !cast<VOP3P_Pseudo>(NAME).Mnemonic> {
   def Gen.Suffix :
@@ -2107,25 +2107,25 @@ multiclass VOP3P_WMMA_Real_Base<GFXGen Gen, bits<7> op, VOP3PWMMA_Profile WMMAP,
     VOP3PeWmma<op, !cast<VOP3P_Pseudo>(backing_ps_name).Pfl, WMMAP>;
 }
 
-multiclass VOP3P_Real_WMMA_gfx12 <bits<7> op, VOP3PWMMA_Profile WMMAP> {
+multiclass VOP3P_Real_WMMA_gfx12 <bits<8> op, VOP3PWMMA_Profile WMMAP> {
   let WaveSizePredicate = isWave32, DecoderNamespace = "GFX12" in {
     defm _twoaddr : VOP3P_WMMA_Real_Base <GFX12Gen, op, WMMAP>;
   }
 }
 
-multiclass VOP3P_Real_WMMA_gfx12w64 <bits<7> op, VOP3PWMMA_Profile WMMAP> {
+multiclass VOP3P_Real_WMMA_gfx12w64 <bits<8> op, VOP3PWMMA_Profile WMMAP> {
   let WaveSizePredicate = isWave64, DecoderNamespace = "GFX12W64" in {
     defm _twoaddr : VOP3P_WMMA_Real_Base <GFX12Gen, op, WMMAP>;
   }
 }
 
-multiclass VOP3P_Real_WMMA_gfx1250 <bits<7> op, VOP3PWMMA_Profile WMMAP> {
+multiclass VOP3P_Real_WMMA_gfx1250 <bits<8> op, VOP3PWMMA_Profile WMMAP> {
   let WaveSizePredicate = isWave32, DecoderNamespace = "GFX12" in {
     defm _twoaddr : VOP3P_WMMA_Real_Base <GFX1250Gen, op, WMMAP>;
   }
 }
 
-multiclass VOP3P_Real_WMMA_F8F6F4_gfx1250<bits<7> op, VOP3PWMMA_Profile WMMAP> {
+multiclass VOP3P_Real_WMMA_F8F6F4_gfx1250<bits<8> op, VOP3PWMMA_Profile WMMAP> {
   defvar PS = !cast<VOP3P_Pseudo>(NAME # "_twoaddr");
   defvar asmName = !substr(PS.Mnemonic, 0, !sub(!size(PS.Mnemonic), !size("_f8_f8_w32")));
   defvar psName = !substr(NAME, 0, !sub(!size(PS.Mnemonic), !size("_f8_f8_w32")));
@@ -2134,7 +2134,7 @@ multiclass VOP3P_Real_WMMA_F8F6F4_gfx1250<bits<7> op, VOP3PWMMA_Profile WMMAP> {
                 MFMA_F8F6F4_WithSizeTable_Helper<PS, psName # "_f8_f8_w32_twoaddr_gfx1250">;
 }
 
-multiclass VOP3P_Real_WMMA_gfx1250_SrcFormats<bits<7> op, string WMMAP> {
+multiclass VOP3P_Real_WMMA_gfx1250_SrcFormats<bits<8> op, string WMMAP> {
   defm _f8_f8_w32 : VOP3P_Real_WMMA_F8F6F4_gfx1250<op, !cast<VOP3PWMMA_Profile>(WMMAP # "_f8_f8_w32")>;
   foreach I = ["f8_f6", "f8_f4", "f6_f8", "f6_f6", "f6_f4", "f4_f8", "f4_f6", "f4_f4"] in {
     let isAsmParserOnly = true in { // Disable ambiguous disassembly.
@@ -2143,7 +2143,7 @@ multiclass VOP3P_Real_WMMA_gfx1250_SrcFormats<bits<7> op, string WMMAP> {
   }
 }
 
-class VOP3PX2e <bits<7> op, bits<8> LdScaleOp, VOP3PWMMA_Profile P> : Enc128, VOP3Pe_Base {
+class VOP3PX2e <bits<8> op, bits<8> LdScaleOp, VOP3PWMMA_Profile P> : Enc128, VOP3Pe_Base {
   bits<9> scale_src0;
   bits<9> scale_src1;
 
@@ -2177,8 +2177,8 @@ class VOP3PX2e <bits<7> op, bits<8> LdScaleOp, VOP3PWMMA_Profile P> : Enc128, VO
   let Inst{78} = matrix_b_fmt{2}; // op_sel_hi(2)
   let Inst{79} = !if(P.HasClamp, clamp{0}, 0);
 
-  let Inst{86-80} = op;
-  let Inst{95-87} = 0x198; //encoding
+  let Inst{87-80} = op;
+  let Inst{95-88} = 0xcc; //encoding
   let Inst{104-96} = !if(P.HasSrc0, src0, 0);
   let Inst{113-105} = !if(P.HasSrc1, src1, 0);
   let Inst{122-114} = !if(P.HasSrc2, src2, 0);
@@ -2191,7 +2191,7 @@ class VOP3PX2e <bits<7> op, bits<8> LdScaleOp, VOP3PWMMA_Profile P> : Enc128, VO
   let Inst{127} = !if(P.NegLo2, src2_modifiers{0}, 0);
 }
 
-multiclass VOP3PX2_Real_ScaledWMMA<bits<7> op, bits<8> LdScaleOp, VOP3PWMMA_Profile WMMAP> {
+multiclass VOP3PX2_Real_ScaledWMMA<bits<8> op, bits<8> LdScaleOp, VOP3PWMMA_Profile WMMAP> {
   defvar PS = !cast<VOP3P_Pseudo>(NAME # "_twoaddr");
   defvar asmName = !substr(PS.Mnemonic, 0, !sub(!size(PS.Mnemonic), !size("_f8_f8_w32")));
   defvar psName = !substr(NAME, 0, !sub(!size(PS.Mnemonic), !size("_f8_f8_w32")));
@@ -2205,7 +2205,7 @@ multiclass VOP3PX2_Real_ScaledWMMA<bits<7> op, bits<8> LdScaleOp, VOP3PWMMA_Prof
   }
 }
 
-multiclass VOP3PX2_Real_ScaledWMMA_SrcFormats<bits<7> op, bits<8> LdScaleOp, string WMMAP> {
+multiclass VOP3PX2_Real_ScaledWMMA_SrcFormats<bits<8> op, bits<8> LdScaleOp, string WMMAP> {
   defm _f8_f8_w32 : VOP3PX2_Real_ScaledWMMA<op, LdScaleOp, !cast<VOP3PWMMA_Profile>(WMMAP # "_f8_f8_w32")>;
   foreach I = ["f8_f6", "f8_f4", "f6_f8", "f6_f6", "f6_f4", "f4_f8", "f4_f6", "f4_f4"] in {
     let isAsmParserOnly = true in { // Disable ambiguous disassembly.
@@ -2300,7 +2300,7 @@ defm V_SWMMAC_F16_16X16X128_BF8_FP8_w32 : VOP3P_Real_WMMA_gfx1250 <0x079, F16_FP
 defm V_SWMMAC_F16_16X16X128_BF8_BF8_w32 : VOP3P_Real_WMMA_gfx1250 <0x07a, F16_FP8BF8X128_SWMMAC_w32>;
 defm V_SWMMAC_I32_16X16X128_IU8_w32     : VOP3P_Real_WMMA_gfx1250 <0x07b, I32_IU8X128_SWMMAC_w32>;
 
-multiclass VOP3P_Real_with_name<GFXGen Gen, bits<7> op,
+multiclass VOP3P_Real_with_name<GFXGen Gen, bits<8> op,
                           string backing_ps_name = NAME,
                           string asmName = !cast<VOP3P_Pseudo>(NAME).Mnemonic> {
   defvar ps = !cast<VOP3P_Pseudo>(backing_ps_name);
@@ -2314,7 +2314,7 @@ multiclass VOP3P_Real_with_name<GFXGen Gen, bits<7> op,
   }
 }
 
-multiclass VOP3P_Real_dpp<GFXGen Gen, bits<7> op, string backing_ps_name = NAME,
+multiclass VOP3P_Real_dpp<GFXGen Gen, bits<8> op, string backing_ps_name = NAME,
                           string asmName = !cast<VOP3P_Pseudo>(NAME).Mnemonic> {
   defvar ps = !cast<VOP3P_Pseudo>(backing_ps_name);
   def _dpp#Gen.Suffix
@@ -2326,7 +2326,7 @@ multiclass VOP3P_Real_dpp<GFXGen Gen, bits<7> op, string backing_ps_name = NAME,
   }
 }
 
-multiclass VOP3P_Real_dpp8<GFXGen Gen, bits<7> op, string backing_ps_name = NAME,
+multiclass VOP3P_Real_dpp8<GFXGen Gen, bits<8> op, string backing_ps_name = NAME,
                            string asmName = !cast<VOP3P_Pseudo>(NAME).Mnemonic> {
   defvar ps = !cast<VOP3P_Pseudo>(backing_ps_name);
   def _dpp8#Gen.Suffix : VOP3P_DPP8_Base<op, ps> {
@@ -2336,7 +2336,7 @@ multiclass VOP3P_Real_dpp8<GFXGen Gen, bits<7> op, string backing_ps_name = NAME
   }
 }
 
-multiclass VOP3P_Realtriple<GFXGen Gen, bits<7> op, string backing_ps_name = NAME,
+multiclass VOP3P_Realtriple<GFXGen Gen, bits<8> op, string backing_ps_name = NAME,
                             string asmName = !cast<VOP3P_Pseudo>(NAME).Mnemonic>
     : VOP3P_Real_Base<Gen, op, backing_ps_name, asmName>,
       VOP3P_Real_dpp<Gen, op, backing_ps_name, asmName>,
@@ -2346,23 +2346,23 @@ multiclass VOP3P_Realtriple<GFXGen Gen, bits<7> op, string backing_ps_name = NAM
 // GFX12, GFX13
 //===----------------------------------------------------------------------===//
 
-multiclass VOP3P_Real_gfx12<bits<7> op> : VOP3P_Real_Base<GFX12Gen, op>;
+multiclass VOP3P_Real_gfx12<bits<8> op> : VOP3P_Real_Base<GFX12Gen, op>;
 
-multiclass VOP3P_Real_gfx12_gfx13<bits<7> op> :
+multiclass VOP3P_Real_gfx12_gfx13<bits<8> op> :
   VOP3P_Real_gfx12<op>, VOP3P_Real_Base<GFX13Gen, op>;
 
-multiclass VOP3P_Real_gfx1250<bits<7> op> : VOP3P_Real_Base<GFX1250Gen, op>;
+multiclass VOP3P_Real_gfx1250<bits<8> op> : VOP3P_Real_Base<GFX1250Gen, op>;
 
-multiclass VOP3P_Real_gfx1250_gfx13<bits<7> op> :
+multiclass VOP3P_Real_gfx1250_gfx13<bits<8> op> :
   VOP3P_Real_gfx1250<op>, VOP3P_Real_Base<GFX13Gen, op>;
 
-multiclass VOP3P_Real_with_name_gfx12_gfx13<bits<7> op,
+multiclass VOP3P_Real_with_name_gfx12_gfx13<bits<8> op,
                           string backing_ps_name = NAME,
                           string asmName = !cast<VOP3P_Pseudo>(NAME).Mnemonic> :
   VOP3P_Real_with_name<GFX12Gen, op, backing_ps_name, asmName>,
   VOP3P_Real_with_name<GFX13Gen, op, backing_ps_name, asmName>;
 
-multiclass VOP3P_Realtriple_gfx1250_gfx13<bits<7> op> :
+multiclass VOP3P_Realtriple_gfx1250_gfx13<bits<8> op> :
   VOP3P_Realtriple<GFX1250Gen, op>, VOP3P_Realtriple<GFX13Gen, op>;
 
 defm V_PK_MIN_NUM_F16 : VOP3P_Real_with_name_gfx12_gfx13<0x1b, "V_PK_MIN_F16", "v_pk_min_num_f16">;
@@ -2412,10 +2412,10 @@ def : AMDGPUMnemonicAlias<"v_fma_mix_f32_f16",  "v_fma_mix_f32">;
 // GFX11, GFX12, GFX13
 //===----------------------------------------------------------------------===//
 
-multiclass VOP3P_Real_gfx11_gfx12<bits<7> op> :
+multiclass VOP3P_Real_gfx11_gfx12<bits<8> op> :
    VOP3P_Real_Base<GFX11Gen, op>, VOP3P_Real_Base<GFX12Gen, op>;
 
-multiclass VOP3P_Real_gfx11_gfx12_gfx13<bits<7> op> :
+multiclass VOP3P_Real_gfx11_gfx12_gfx13<bits<8> op> :
   VOP3P_Real_gfx11_gfx12<op>, VOP3P_Real_Base<GFX13Gen, op>;
 
 defm V_DOT4_I32_IU8  : VOP3P_Real_gfx11_gfx12_gfx13<0x16>;
@@ -2427,7 +2427,7 @@ let AssemblerPredicate = isGFX11Plus in {
   def : AMDGPUMnemonicAlias<"v_dot8_i32_i4", "v_dot8_i32_iu4">;
 }
 
-multiclass VOP3P_Real_WMMA <bits<7> op> {
+multiclass VOP3P_Real_WMMA <bits<8> op> {
   let WaveSizePredicate = isWave32, DecoderNamespace = "GFX11" in {
     defm _twoaddr_w32 : VOP3P_Real_Base <GFX11Gen, op>;
   }
@@ -2449,7 +2449,7 @@ defm V_WMMA_I32_16X16X16_IU4   : VOP3P_Real_WMMA <0x045>;
 
 multiclass VOP3P_Real_vi<bits<7> op> {
   def _vi : VOP3P_Real<!cast<VOP3_Pseudo>(NAME), SIEncodingFamily.VI>,
-            VOP3Pe <op, !cast<VOP3_Pseudo>(NAME).Pfl> {
+            VOP3Pe_vi <op, !cast<VOP3_Pseudo>(NAME).Pfl> {
     let AssemblerPredicate = HasVOP3PInsts;
     let DecoderNamespace = "GFX8";
     let VOP3P = 1;
@@ -2790,24 +2790,24 @@ defm V_PK_MOV_B32 : VOP3P_Real_vi <0x33>;
 //===----------------------------------------------------------------------===//
 
 let AssemblerPredicate = isGFX10Only, DecoderNamespace = "GFX10", VOP3P = 1 in {
-  multiclass VOP3P_Real_gfx10<bits<7> op> {
+  multiclass VOP3P_Real_gfx10<bits<8> op> {
     def _gfx10 : VOP3P_Real<!cast<VOP3P_Pseudo>(NAME), SIEncodingFamily.GFX10>,
                  VOP3Pe_gfx10 <op, !cast<VOP3P_Pseudo>(NAME).Pfl>;
   }
 } // End AssemblerPredicate = isGFX10Only, DecoderNamespace = "GFX10", VOP3P = 1
 
-multiclass VOP3P_Real_gfx10_gfx11<bits<7> op> :
+multiclass VOP3P_Real_gfx10_gfx11<bits<8> op> :
   VOP3P_Real_gfx10<op>, VOP3P_Real_Base<GFX11Gen, op>;
 
-multiclass VOP3P_Real_gfx10_gfx11_gfx12_gfx13<bits<7> op> :
+multiclass VOP3P_Real_gfx10_gfx11_gfx12_gfx13<bits<8> op> :
   VOP3P_Real_gfx10_gfx11<op>, VOP3P_Real_Base<GFX12Gen, op>,
   VOP3P_Real_Base<GFX13Gen, op>;
 
-multiclass VOP3P_Real_gfx10_gfx11_gfx12_Triple<bits<7> op> :
+multiclass VOP3P_Real_gfx10_gfx11_gfx12_Triple<bits<8> op> :
   VOP3P_Real_gfx10<op>, VOP3P_Realtriple<GFX11Gen, op>,
   VOP3P_Realtriple<GFX12Gen, op>;
 
-multiclass VOP3P_Real_gfx10_gfx11_gfx12_gfx13_Triple<bits<7> op> :
+multiclass VOP3P_Real_gfx10_gfx11_gfx12_gfx13_Triple<bits<8> op> :
   VOP3P_Real_gfx10_gfx11_gfx12_Triple<op>,
   VOP3P_Realtriple<GFX13Gen, op>;
 

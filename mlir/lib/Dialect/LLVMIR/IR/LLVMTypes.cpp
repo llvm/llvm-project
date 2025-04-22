@@ -232,7 +232,10 @@ LLVMFunctionType::getChecked(function_ref<InFlightDiagnostic()> emitError,
 
 LLVMFunctionType LLVMFunctionType::clone(TypeRange inputs,
                                          TypeRange results) const {
-  assert(results.size() == 1 && "expected a single result type");
+  if (results.size() != 1 || !isValidResultType(results[0]))
+    return {};
+  if (!llvm::all_of(inputs, isValidArgumentType))
+    return {};
   return get(results[0], llvm::to_vector(inputs), isVarArg());
 }
 

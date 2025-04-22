@@ -65,35 +65,3 @@ body: |
     $vgpr24 = V_EXP_F32_e32 $vgpr24, implicit $exec, implicit $mode
     $vgpr25 = V_ADD_U32_e32 $vgpr25, $vgpr8, implicit $exec
 ...
-
-name: wmma_non_xdl_gfx12_valu
-tracksRegLiveness: true
-body: |
-  bb.0:
-    ; CHECK-LABEL: {{^}}wmma_non_xdl_gfx12_valu:
-    ; CHECK: %bb.0:
-    ; CHECK-NEXT: v_wmma_f16_16x16x16_f16 v[4:7], v[0:3], v[0:3], v[4:7]
-    ; CHECK-NEXT: v_exp_f32_e32 v8, v8
-    ; CHECK-NEXT: s_delay_alu instid0(VALU_DEP_1)
-    ; CHECK-NEXT: v_add_nc_u32_e32 v9, v9, v4
-    liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7, $vgpr8, $vgpr9
-    $vgpr4_vgpr5_vgpr6_vgpr7 = V_WMMA_F16_16X16X16_F16_w32_twoaddr 8, $vgpr0_vgpr1_vgpr2_vgpr3, 8, $vgpr0_vgpr1_vgpr2_vgpr3, 8, $vgpr4_vgpr5_vgpr6_vgpr7, 0, 0, implicit $exec
-    $vgpr8 = V_EXP_F32_e32 $vgpr8, implicit $exec, implicit $mode
-    $vgpr9 = V_ADD_U32_e32 $vgpr9, $vgpr4, implicit $exec
-...
-
-name: swmmac_non_xdl_gfx12_valu
-tracksRegLiveness: true
-body: |
-  bb.0:
-    ; CHECK-LABEL: {{^}}swmmac_non_xdl_gfx12_valu
-    ; CHECK: %bb.0:
-    ; CHECK-NEXT: v_swmmac_i32_16x16x64_iu4 v[6:13], v[0:1], v[2:5], v14
-    ; CHECK-NEXT: v_exp_f32_e32 v14, v14
-    ; CHECK-NEXT: s_delay_alu instid0(VALU_DEP_1)
-    ; CHECK-NEXT: v_add_nc_u32_e32 v15, v15, v6
-    liveins: $vgpr0_vgpr1, $vgpr2_vgpr3_vgpr4_vgpr5, $vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13, $vgpr14, $vgpr15
-    $vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13 = V_SWMMAC_I32_16X16X64_IU4_w32_twoaddr 8, $vgpr0_vgpr1, 8, $vgpr2_vgpr3_vgpr4_vgpr5, $vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13, $vgpr14, 0, 0, implicit $exec
-    $vgpr14 = V_EXP_F32_e32 $vgpr14, implicit $exec, implicit $mode
-    $vgpr15 = V_ADD_U32_e32 $vgpr15, $vgpr6, implicit $exec
-...
