@@ -1,4 +1,4 @@
-//==- X86SuppressEGPRAndNDDForReloc.cpp - Suppress EGPR/NDD for relocations -=//
+//===- X86SuppressAPXForReloc.cpp - Suppress APX features for relocations -===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,12 +7,12 @@
 //===----------------------------------------------------------------------===//
 /// \file
 ///
-/// This pass is added to suppress EGPR and NDD for relocations. It's used
+/// This pass is added to suppress APX features for relocations. It's used
 /// together with disabling emitting APX relocation types for backward
 /// compatibility with old version of linker (like before LD 2.43). It can avoid
 /// the instructions updated incorrectly by old version of linker if the
-/// instructions are with APX EGPR/NDD features + the relocations other than APX
-/// ones (like GOTTPOFF).
+/// instructions are with APX EGPR/NDD/NF features + the relocations other than
+/// APX ones (like GOTTPOFF).
 ///
 //===----------------------------------------------------------------------===//
 
@@ -23,44 +23,52 @@
 #include "X86Subtarget.h"
 
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/Passes.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/Target/TargetMachine.h"
 
 using namespace llvm;
 
-#define DEBUG_TYPE "x86-suppress-egpr-and-ndd-for-relocation"
+#define DEBUG_TYPE "x86-suppress-apx-for-relocation"
 
-static cl::opt<bool> X86SuppressEGPRAndNDDForReloc(
+static cl::opt<bool> X86SuppressAPXForReloc(
     DEBUG_TYPE,
-    cl::desc("Suppress EGPR and NDD for instructions with relocations on "
-             "x86-64 ELF"),
+    cl::desc("Suppress APX features (EGPR, NDD and NF) for instructions with "
+             "relocations on x86-64 ELF"),
     cl::init(true));
 
 namespace {
-class X86SuppressEGPRAndNDDForRelocPass : public MachineFunctionPass {
+class X86SuppressAPXForRelocationPass : public MachineFunctionPass {
 public:
-  X86SuppressEGPRAndNDDForRelocPass() : MachineFunctionPass(ID) {}
+  X86SuppressAPXForRelocationPass() : MachineFunctionPass(ID) {}
 
   StringRef getPassName() const override {
-    return "X86 Suppress EGPR and NDD for relocation";
+    return "X86 Suppress APX features for relocation";
   }
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
-private:
   static char ID;
 };
 } // namespace
 
-char X86SuppressEGPRAndNDDForRelocPass::ID = 0;
+char X86SuppressAPXForRelocationPass::ID = 0;
 
-FunctionPass *llvm::createX86SuppressEGPRAndNDDForRelocPass() {
-  return new X86SuppressEGPRAndNDDForRelocPass();
+INITIALIZE_PASS_BEGIN(X86SuppressAPXForRelocationPass, DEBUG_TYPE,
+                      "X86 Suppress APX features for relocation", false, false)
+INITIALIZE_PASS_END(X86SuppressAPXForRelocationPass, DEBUG_TYPE,
+                    "X86 Suppress APX features for relocation", false, false)
+
+FunctionPass *llvm::createX86SuppressAPXForRelocationPass() {
+  return new X86SuppressAPXForRelocationPass();
 }
 
-static void suppressEGPRRegClass(MachineFunction &MF, MachineInstr &MI) {
+static void suppressEGPRRegClass(MachineFunction &MF, MachineInstr &MI,
+                                 unsigned int OpNum) {
   MachineRegisterInfo *MRI = &MF.getRegInfo();
-  auto Reg = MI.getOperand(0).getReg();
+  auto Reg = MI.getOperand(OpNum).getReg();
   if (!Reg.isVirtual()) {
     assert(!X86II::isApxExtendedReg(Reg) && "APX EGPR is used unexpectedly.");
     return;
@@ -71,10 +79,10 @@ static void suppressEGPRRegClass(MachineFunction &MF, MachineInstr &MI) {
   MRI->setRegClass(Reg, NewRC);
 }
 
-bool X86SuppressEGPRAndNDDForRelocPass::runOnMachineFunction(
+bool X86SuppressAPXForRelocationPass::runOnMachineFunction(
     MachineFunction &MF) {
   if (MF.getTarget().Options.MCOptions.X86APXRelaxRelocations ||
-      !X86SuppressEGPRAndNDDForReloc)
+      !X86SuppressAPXForReloc)
     return false;
   const X86Subtarget &ST = MF.getSubtarget<X86Subtarget>();
   if (!ST.hasEGPR() && !ST.hasNDD() && !ST.hasNF())
@@ -113,28 +121,48 @@ bool X86SuppressEGPRAndNDDForRelocPass::runOnMachineFunction(
       case X86::XOR64rm: {
         for (auto &MO : MI.operands()) {
           if (MO.getTargetFlags() == X86II::MO_GOTTPOFF ||
-              MO.getTargetFlags() == X86II::MO_GOTPCREL)
-            suppressEGPRRegClass(MF, MI);
+              MO.getTargetFlags() == X86II::MO_GOTPCREL) {
+            suppressEGPRRegClass(MF, MI, 0);
+            break;
+          }
         }
         break;
       }
       case X86::MOV64rm: {
-        if (MI.getOperand(4).getTargetFlags() == X86II::MO_GOTTPOFF)
-          suppressEGPRRegClass(MF, MI);
+        for (auto &MO : MI.operands()) {
+          if (MO.getTargetFlags() == X86II::MO_GOTTPOFF) {
+            suppressEGPRRegClass(MF, MI, 0);
+            break;
+          }
+        }
         break;
       }
       case X86::ADD64rm_NF:
       case X86::ADD64rm_ND:
-      case X86::ADD64mr_ND:
-      case X86::ADD64mr_NF_ND:
       case X86::ADD64rm_NF_ND: {
-        // TODO: implement this if there is a case of NDD/NF instructions with
-        // GOTTPOFF relocation (update the instructions to ADD64rm/ADD64mr and
-        // suppress EGPR)
-        for (auto &MO : MI.operands())
+        for (auto &MO : MI.operands()) {
+          if (MO.getTargetFlags() == X86II::MO_GOTTPOFF) {
+            suppressEGPRRegClass(MF, MI, 0);
+            const MCInstrDesc &NewDesc = ST.getInstrInfo()->get(X86::ADD64rm);
+            MI.setDesc(NewDesc);
+            if (Opcode == X86::ADD64rm_ND || Opcode == X86::ADD64rm_NF_ND) {
+              MI.tieOperands(0, 1);
+              MI.getOperand(1).setIsKill(false);
+              suppressEGPRRegClass(MF, MI, 1);
+            }
+            break;
+          }
+        }
+        break;
+      }
+      case X86::ADD64mr_ND:
+      case X86::ADD64mr_NF_ND: {
+        for ([[maybe_unused]] auto &MO : MI.operands()) {
           assert((MO.getTargetFlags() != X86II::MO_GOTTPOFF) &&
-                 "Suppressing NDD/NF instructions with relocation is "
+                 "Suppressing this instruction with relocation is "
                  "unimplemented!");
+          break;
+        }
         break;
       }
       }

@@ -133,7 +133,7 @@
 ; CHECK-NEXT:       MachineDominator Tree Construction
 ; CHECK-NEXT:       Machine Natural Loop Construction
 ; CHECK-NEXT:       Tile Register Pre-configure
-; CHECK-NEXT:       X86 Suppress EGPR and NDD for relocation
+; CHECK-NEXT:       X86 Suppress APX features for relocation
 ; CHECK-NEXT:       Detect Dead Lanes
 ; CHECK-NEXT:       Init Undef Pass
 ; CHECK-NEXT:       Process Implicit Definitions
