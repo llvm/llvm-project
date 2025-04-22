@@ -1194,6 +1194,42 @@ define <2 x i64> @vector_i128_i64(<2 x i64> %x, <2 x i64> %y, ptr %divdst) nounw
   ret <2 x i64> %t2
 }
 
+define i32 @scalar_i32_const_pow2_divisor(i32 %0, ptr %1) minsize nounwind {
+; X86-LABEL: scalar_i32_const_pow2_divisor:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %edi
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl $256, %edi # imm = 0x100
+; X86-NEXT:    movl %ecx, %eax
+; X86-NEXT:    cltd
+; X86-NEXT:    idivl %edi
+; X86-NEXT:    movl %eax, %edx
+; X86-NEXT:    shll $8, %edx
+; X86-NEXT:    subl %edx, %ecx
+; X86-NEXT:    movl %ecx, (%esi)
+; X86-NEXT:    popl %esi
+; X86-NEXT:    popl %edi
+; X86-NEXT:    retl
+;
+; X64-LABEL: scalar_i32_const_pow2_divisor:
+; X64:       # %bb.0:
+; X64-NEXT:    movl $256, %ecx # imm = 0x100
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    cltd
+; X64-NEXT:    idivl %ecx
+; X64-NEXT:    movl %eax, %ecx
+; X64-NEXT:    shll $8, %ecx
+; X64-NEXT:    subl %ecx, %edi
+; X64-NEXT:    movl %edi, (%rsi)
+; X64-NEXT:    retq
+  %3 = srem i32 %0, 256
+  store i32 %3, ptr %1, align 4
+  %4 = sdiv i32 %0, 256
+  ret i32 %4
+}
+
 ; Special tests.
 
 define i32 @scalar_i32_commutative(i32 %x, ptr %ysrc, ptr %divdst) nounwind {
@@ -1296,14 +1332,14 @@ define i32 @multiple_bb(i32 %x, i32 %y, ptr %divdst, i1 zeroext %store_srem, ptr
 ; X86-NEXT:    idivl %esi
 ; X86-NEXT:    movl %eax, (%edi)
 ; X86-NEXT:    testb %bl, %bl
-; X86-NEXT:    je .LBB11_2
+; X86-NEXT:    je .LBB12_2
 ; X86-NEXT:  # %bb.1: # %do_srem
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl %eax, %edi
 ; X86-NEXT:    imull %esi, %edi
 ; X86-NEXT:    subl %edi, %ecx
 ; X86-NEXT:    movl %ecx, (%edx)
-; X86-NEXT:  .LBB11_2: # %end
+; X86-NEXT:  .LBB12_2: # %end
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
 ; X86-NEXT:    popl %ebx
@@ -1317,13 +1353,13 @@ define i32 @multiple_bb(i32 %x, i32 %y, ptr %divdst, i1 zeroext %store_srem, ptr
 ; X64-NEXT:    idivl %esi
 ; X64-NEXT:    movl %eax, (%r9)
 ; X64-NEXT:    testl %ecx, %ecx
-; X64-NEXT:    je .LBB11_2
+; X64-NEXT:    je .LBB12_2
 ; X64-NEXT:  # %bb.1: # %do_srem
 ; X64-NEXT:    movl %eax, %ecx
 ; X64-NEXT:    imull %esi, %ecx
 ; X64-NEXT:    subl %ecx, %edi
 ; X64-NEXT:    movl %edi, (%r8)
-; X64-NEXT:  .LBB11_2: # %end
+; X64-NEXT:  .LBB12_2: # %end
 ; X64-NEXT:    retq
   %div = sdiv i32 %x, %y
   store i32 %div, ptr %divdst, align 4
