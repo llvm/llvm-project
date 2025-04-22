@@ -374,7 +374,7 @@ The following expansions are available for MIR patterns:
 ~~~~~~~~~~~~~~~~~~~~
 
 ``GICombineRule`` also supports a single ``combine`` pattern, which is a shorter way to
-declare patterns that just match one or more instruction, then defer all remaining matching
+declare patterns that just match one or more instructions, then defer all remaining matching
 and rewriting logic to C++ code.
 
 .. code-block:: text

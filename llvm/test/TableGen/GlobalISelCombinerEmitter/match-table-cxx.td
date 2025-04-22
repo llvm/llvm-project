@@ -28,7 +28,7 @@ def NoMatchTwoApply : GICombineRule<
   (match (G_SEXT $a, $y)),
   (apply "APPLY0", "APPLY1")>;
 
-def CopmbineCXXOrder : GICombineRule<
+def CombineCXXOrder : GICombineRule<
   (defs root:$a),
   (combine (G_ZEXT $a, $y), "A0", "return A1")>;
 
@@ -37,7 +37,7 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
   TwoMatchTwoApply,
   TwoMatchNoApply,
   NoMatchTwoApply,
-  CopmbineCXXOrder
+  CombineCXXOrder
 ]>;
 
 // CHECK:      bool GenMyCombiner::testMIPredicate_MI(unsigned PredicateID, const MachineInstr & MI, const MatcherState &State) const {
@@ -133,7 +133,7 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 // CHECK-NEXT:      /* 472 */   // No operand predicates
 // CHECK-NEXT:      /* 472 */   // MIs[0] y
 // CHECK-NEXT:      /* 472 */   // No operand predicates
-// CHECK-NEXT:      /* 472 */   // Combiner Rule #4: CopmbineCXXOrder
+// CHECK-NEXT:      /* 472 */   // Combiner Rule #4: CombineCXXOrder
 // CHECK-NEXT:      /* 472 */   GIR_DoneWithCustomAction, /*Fn*/GIMT_Encode2(GICXXCustomAction_GICombiner3),
 // CHECK-NEXT:      /* 475 */ // Label 8: @475
 // CHECK-NEXT:      /* 475 */ GIM_Reject,
