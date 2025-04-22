@@ -3043,8 +3043,27 @@ SDValue NVPTXTargetLowering::LowerADDRSPACECAST(SDValue Op,
   unsigned SrcAS = N->getSrcAddressSpace();
   unsigned DestAS = N->getDestAddressSpace();
   if (SrcAS != llvm::ADDRESS_SPACE_GENERIC &&
-      DestAS != llvm::ADDRESS_SPACE_GENERIC)
+      DestAS != llvm::ADDRESS_SPACE_GENERIC) {
+    // Shared and SharedCluster can be converted to each other through generic
+    // space
+    if ((SrcAS == llvm::ADDRESS_SPACE_SHARED &&
+         DestAS == llvm::ADDRESS_SPACE_SHARED_CLUSTER) ||
+        (SrcAS == llvm::ADDRESS_SPACE_SHARED_CLUSTER &&
+         DestAS == llvm::ADDRESS_SPACE_SHARED)) {
+      SDLoc DL(Op.getNode());
+      const MVT GenerictVT =
+          getPointerTy(DAG.getDataLayout(), ADDRESS_SPACE_GENERIC);
+      SDValue GenericConversion = DAG.getAddrSpaceCast(
+          DL, GenerictVT, Op.getOperand(0), SrcAS, ADDRESS_SPACE_GENERIC);
+      SDValue SharedClusterConversion =
+          DAG.getAddrSpaceCast(DL, Op.getValueType(), GenericConversion,
+                               ADDRESS_SPACE_GENERIC, DestAS);
+      return SharedClusterConversion;
+    }
+
     return DAG.getUNDEF(Op.getValueType());
+  }
+
   return Op;
 }
 

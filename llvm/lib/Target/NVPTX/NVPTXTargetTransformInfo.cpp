@@ -424,12 +424,13 @@ static std::optional<bool> evaluateIsSpace(Intrinsic::ID IID, unsigned AS) {
   case Intrinsic::nvvm_isspacep_local:
     return AS == NVPTXAS::ADDRESS_SPACE_LOCAL;
   case Intrinsic::nvvm_isspacep_shared:
+    // If shared cluster this can't be evaluated at compile time.
+    if (AS == NVPTXAS::ADDRESS_SPACE_SHARED_CLUSTER)
+      return std::nullopt;
     return AS == NVPTXAS::ADDRESS_SPACE_SHARED;
   case Intrinsic::nvvm_isspacep_shared_cluster:
-    // We can't tell shared from shared_cluster at compile time from AS alone,
-    // but it can't be either is AS is not shared.
-    return AS == NVPTXAS::ADDRESS_SPACE_SHARED ? std::nullopt
-                                               : std::optional{false};
+    return AS == NVPTXAS::ADDRESS_SPACE_SHARED_CLUSTER ||
+           AS == NVPTXAS::ADDRESS_SPACE_SHARED;
   case Intrinsic::nvvm_isspacep_const:
     return AS == NVPTXAS::ADDRESS_SPACE_CONST;
   default:

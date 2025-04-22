@@ -137,6 +137,7 @@ def hasAtomBitwise64 : Predicate<"Subtarget->hasAtomBitwise64()">;
 def hasAtomMinMax64 : Predicate<"Subtarget->hasAtomMinMax64()">;
 def hasVote : Predicate<"Subtarget->hasVote()">;
 def hasDouble : Predicate<"Subtarget->hasDouble()">;
+def hasClusters : Predicate<"Subtarget->hasClusters()">;
 def hasLDG : Predicate<"Subtarget->hasLDG()">;
 def hasLDU : Predicate<"Subtarget->hasLDU()">;
 def hasPTXASUnreachableBug : Predicate<"Subtarget->hasPTXASUnreachableBug()">;
