@@ -29,7 +29,6 @@
 #include "mlir/IR/Value.h"
 #include "mlir/IR/Visitors.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
-#include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/InliningUtils.h"
@@ -300,6 +299,9 @@ private:
   void visitUpdateNdOffsetOp(xegpu::UpdateNdOffsetOp updateNdOffset,
                              ArrayRef<LayoutInfoLattice *> operands,
                              ArrayRef<const LayoutInfoLattice *> results);
+  void visitPrefetchNdOp(xegpu::PrefetchNdOp prefetch,
+                         ArrayRef<LayoutInfoLattice *> operands,
+                         ArrayRef<const LayoutInfoLattice *> results);
 
   void visitVectorMultiReductionOp(vector::MultiDimReductionOp reduction,
                                    ArrayRef<LayoutInfoLattice *> operands,
@@ -352,6 +354,9 @@ LogicalResult LayoutInfoPropagation::visitOperation(
       .Case<xegpu::UpdateNdOffsetOp>([&](auto updateNdOffsetOp) {
         visitUpdateNdOffsetOp(updateNdOffsetOp, operands, results);
       })
+      .Case<xegpu::PrefetchNdOp>([&](auto prefetchNdOp) {
+        visitPrefetchNdOp(prefetchNdOp, operands, results);
+      })
       /// No need to propagate the layout to operands in CreateNdDescOp because
       /// they are scalars (offsets, sizes, etc.).
       .Case<xegpu::CreateNdDescOp>([&](auto createNdDescOp) {})
@@ -398,6 +403,18 @@ void LayoutInfoPropagation::visitVectorMultiReductionOp(
   propagateIfChanged(operands[0], operands[0]->meet(operandLayout));
   /// Accumulator should have the same layout as the result.
   propagateIfChanged(operands[1], operands[1]->meet(resultLayout));
+}
+
+void LayoutInfoPropagation::visitPrefetchNdOp(
+    xegpu::PrefetchNdOp prefetch, ArrayRef<LayoutInfoLattice *> operands,
+    ArrayRef<const LayoutInfoLattice *> results) {
+  /// Here we assign the default layout to the tensor descriptor operand of
+  /// prefetch.
+  auto tdescTy = prefetch.getTensorDescType();
+  auto prefetchLayout = getDefaultLayoutInfo(
+      VectorType::get(tdescTy.getShape(), tdescTy.getElementType()));
+  /// Propagate the layout to the source tensor descriptor.
+  propagateIfChanged(operands[0], operands[0]->meet(prefetchLayout));
 }
 
 /// Propagate the layout of the result tensor to the source tensor descriptor in
@@ -1488,6 +1505,39 @@ struct UpdateNdOffsetDistribution final : public gpu::WarpDistributionPattern {
   }
 };
 
+struct PrefetchNdDistribution final : public gpu::WarpDistributionPattern {
+  using gpu::WarpDistributionPattern::WarpDistributionPattern;
+  LogicalResult matchAndRewrite(gpu::WarpExecuteOnLane0Op subgroupOp,
+                                PatternRewriter &rewriter) const override {
+    auto yield = cast<gpu::YieldOp>(
+        subgroupOp.getBodyRegion().getBlocks().begin()->getTerminator());
+    Operation *lastNode = yield->getPrevNode();
+    auto prefetchOp = dyn_cast_or_null<xegpu::PrefetchNdOp>(lastNode);
+    if (!prefetchOp)
+      return failure();
+    auto layout = prefetchOp.getTensorDescType().getLayoutAttr();
+    if (!layout)
+      return rewriter.notifyMatchFailure(
+          prefetchOp, "the source tensor descriptor lacks layout attribute");
+
+    SmallVector<Value, 1> newYieldValues = {prefetchOp.getTensorDesc()};
+    SmallVector<Type, 1> newYieldTypes = {prefetchOp.getTensorDescType()};
+    SmallVector<size_t> newRetIndices;
+    gpu::WarpExecuteOnLane0Op newWarpOp = moveRegionToNewWarpOpAndAppendReturns(
+        rewriter, subgroupOp, newYieldValues, newYieldTypes, newRetIndices);
+
+    auto newTensorDescTy = dropLayouts(prefetchOp.getTensorDescType());
+    rewriter.setInsertionPointAfter(newWarpOp);
+    SmallVector<Value> newPrefetchOperands = {resolveDistributedTy(
+        newWarpOp.getResult(newRetIndices[0]), newTensorDescTy, rewriter)};
+    rewriter.create<xegpu::PrefetchNdOp>(
+        newWarpOp.getLoc(), TypeRange{}, newPrefetchOperands,
+        removeTemporaryLayoutAttributes(prefetchOp->getAttrs()));
+    rewriter.eraseOp(prefetchOp);
+    return success();
+  }
+};
+
 /// Generic pattern for sinking a GPU index operations feeding into yield op
 /// of an enclosing `gpu.warp_execute_on_lane_0` region. The original index op
 /// becomes dead and an equivalent copy of the index op is created outside the
@@ -1562,9 +1612,9 @@ struct XeGPUSubgroupDistributePass final
 
 void xegpu::populateXeGPUSubgroupDistributePatterns(
     RewritePatternSet &patterns) {
-  patterns
-      .add<CreateNdDescDistribution, StoreNdDistribution, LoadNdDistribution,
-           DpasDistribution, UpdateNdOffsetDistribution>(patterns.getContext());
+  patterns.add<CreateNdDescDistribution, StoreNdDistribution,
+               LoadNdDistribution, DpasDistribution, UpdateNdOffsetDistribution,
+               PrefetchNdDistribution>(patterns.getContext());
   /// TODO: Is this the right place to add these patterns?
   patterns.add<GpuIndexOpDistribution<gpu::BlockIdOp>,
                GpuIndexOpDistribution<gpu::BlockDimOp>,

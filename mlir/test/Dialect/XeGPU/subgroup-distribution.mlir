@@ -179,6 +179,35 @@ gpu.func @test_uddate_nd_offset_2d(%arg0: memref<256x256xf32>){
 }
 
 // -----
+// CHECK-LABEL: gpu.func @test_prefetch_2d
+// CHECK: (%[[ARG0:[0-9a-zA-Z]+]]: memref<256x256xf16>) {
+// CHECK: %[[T0:.*]] = xegpu.create_nd_tdesc %[[ARG0]][%{{.*}}] : memref<256x256xf16> -> !xegpu.tensor_desc<16x16xf16>
+// CHECK: xegpu.prefetch_nd %[[T0]] <{l1_hint = #xegpu.cache_hint<cached>, l2_hint = #xegpu.cache_hint<uncached>}> : !xegpu.tensor_desc<16x16xf16>
+gpu.module @test {
+gpu.func @test_prefetch_2d(%arg0: memref<256x256xf16>){
+  %c0 = arith.constant 0 : index
+  %0 = xegpu.create_nd_tdesc %arg0[%c0, %c0] : memref<256x256xf16> -> !xegpu.tensor_desc<16x16xf16>
+  xegpu.prefetch_nd %0 <{l1_hint = #xegpu.cache_hint<cached>, l2_hint = #xegpu.cache_hint<uncached>}>: !xegpu.tensor_desc<16x16xf16>
+  gpu.return
+}
+}
+
+// -----
+// CHECK-LABEL: gpu.func @test_prefetch_1d
+// CHECK: (%[[ARG0:[0-9a-zA-Z]+]]: memref<256xf16>) {
+// CHECK: %[[T0:.*]] = xegpu.create_nd_tdesc %[[ARG0]][%{{.*}}] : memref<256xf16> -> !xegpu.tensor_desc<16xf16>
+// CHECK: xegpu.prefetch_nd %[[T0]] <{l1_hint = #xegpu.cache_hint<cached>, l2_hint = #xegpu.cache_hint<uncached>}> : !xegpu.tensor_desc<16xf16>
+gpu.module @test {
+gpu.func @test_prefetch_1d(%arg0: memref<256xf16>){
+  %c0 = arith.constant 0 : index
+  %0 = xegpu.create_nd_tdesc %arg0[%c0] : memref<256xf16> -> !xegpu.tensor_desc<16xf16>
+  xegpu.prefetch_nd %0 <{l1_hint = #xegpu.cache_hint<cached>, l2_hint = #xegpu.cache_hint<uncached>}>: !xegpu.tensor_desc<16xf16>
+  gpu.return
+}
+}
+
+
+// -----
 // CHECK-LABEL: gpu.func @test_gemm_loop
 // CHECK: (%[[ARG0:[0-9a-zA-Z]+]]: memref<1024x1024xbf16>, %[[ARG1:[0-9a-zA-Z]+]]: memref<1024x1024xbf16>, %[[ARG2:[0-9a-zA-Z]+]]: memref<1024x1024xf32>) {
 // CHECK: %[[BLOCK_ID_Y:.*]] = gpu.block_id y
