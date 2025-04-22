@@ -185,7 +185,7 @@ public:
   // Creates constant nullptr for pointer type ty.
   cir::ConstantOp getNullPtr(mlir::Type ty, mlir::Location loc) {
     assert(!cir::MissingFeatures::targetCodeGenInfoGetNullPointer());
-    return create<cir::ConstantOp>(loc, ty, getConstPtrAttr(ty, 0));
+    return create<cir::ConstantOp>(loc, getConstPtrAttr(ty, 0));
   }
 
   mlir::Value createNeg(mlir::Value value) {

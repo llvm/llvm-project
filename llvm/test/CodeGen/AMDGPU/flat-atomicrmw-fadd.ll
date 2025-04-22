@@ -24,6 +24,7 @@ define float @flat_agent_atomic_fadd_ret_f32__amdgpu_no_fine_grained_memory__amd
 ; GFX12-NEXT:    flat_atomic_add_f32 v0, v[0:1], v2 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: flat_agent_atomic_fadd_ret_f32__amdgpu_no_fine_grained_memory__amdgpu_ignore_denormal_mode:
@@ -200,6 +201,7 @@ define float @flat_agent_atomic_fadd_ret_f32__offset12b_pos__amdgpu_no_fine_grai
 ; GFX12-NEXT:    flat_atomic_add_f32 v0, v[0:1], v2 offset:2044 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: flat_agent_atomic_fadd_ret_f32__offset12b_pos__amdgpu_no_fine_grained_memory__amdgpu_ignore_denormal_mode:
@@ -386,6 +388,7 @@ define float @flat_agent_atomic_fadd_ret_f32__offset12b_neg__amdgpu_no_fine_grai
 ; GFX12-NEXT:    flat_atomic_add_f32 v0, v[0:1], v2 offset:-2048 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: flat_agent_atomic_fadd_ret_f32__offset12b_neg__amdgpu_no_fine_grained_memory__amdgpu_ignore_denormal_mode:
@@ -581,6 +584,7 @@ define void @flat_agent_atomic_fadd_noret_f32__amdgpu_no_fine_grained_memory__am
 ; GFX12-NEXT:    flat_atomic_add_f32 v[0:1], v2 scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_storecnt_dscnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: flat_agent_atomic_fadd_noret_f32__amdgpu_no_fine_grained_memory__amdgpu_ignore_denormal_mode:
@@ -787,6 +791,7 @@ define void @flat_agent_atomic_fadd_noret_f32__offset12b_pos__amdgpu_no_fine_gra
 ; GFX12-NEXT:    flat_atomic_add_f32 v[0:1], v2 offset:2044 scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_storecnt_dscnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: flat_agent_atomic_fadd_noret_f32__offset12b_pos__amdgpu_no_fine_grained_memory__amdgpu_ignore_denormal_mode:
@@ -1004,6 +1009,7 @@ define void @flat_agent_atomic_fadd_noret_f32__offset12b_neg__amdgpu_no_fine_gra
 ; GFX12-NEXT:    flat_atomic_add_f32 v[0:1], v2 offset:-2048 scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_storecnt_dscnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: flat_agent_atomic_fadd_noret_f32__offset12b_neg__amdgpu_no_fine_grained_memory__amdgpu_ignore_denormal_mode:
@@ -1228,6 +1234,7 @@ define float @flat_system_atomic_fadd_ret_f32__offset12b_pos__amdgpu_no_fine_gra
 ; GFX12-NEXT:    flat_atomic_add_f32 v0, v[0:1], v2 offset:2044 th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: flat_system_atomic_fadd_ret_f32__offset12b_pos__amdgpu_no_fine_grained_memory__amdgpu_ignore_denormal_mode:
@@ -1417,6 +1424,7 @@ define void @flat_system_atomic_fadd_noret_f32__offset12b_pos__amdgpu_no_fine_gr
 ; GFX12-NEXT:    flat_atomic_add_f32 v[0:1], v2 offset:2044 scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_storecnt_dscnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: flat_system_atomic_fadd_noret_f32__offset12b_pos__amdgpu_no_fine_grained_memory__amdgpu_ignore_denormal_mode:
@@ -1636,6 +1644,7 @@ define void @flat_agent_atomic_fadd_noret_f32_maybe_remote(ptr %ptr, float %val)
 ; GFX12-NEXT:    flat_atomic_add_f32 v[0:1], v2 offset:2044 scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_storecnt_dscnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: flat_agent_atomic_fadd_noret_f32_maybe_remote:
@@ -1800,6 +1809,7 @@ define void @flat_agent_atomic_fadd_noret_f32___amdgpu_no_fine_grained_memory(pt
 ; GFX12-NEXT:    flat_atomic_add_f32 v[0:1], v2 offset:2044 scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_storecnt_dscnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: flat_agent_atomic_fadd_noret_f32___amdgpu_no_fine_grained_memory:
@@ -1951,6 +1961,7 @@ define void @flat_agent_atomic_fadd_noret_f32___amdgpu_no_fine_grained_memory__a
 ; GFX12-NEXT:    flat_atomic_add_f32 v[0:1], v2 offset:2044 scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_storecnt_dscnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: flat_agent_atomic_fadd_noret_f32___amdgpu_no_fine_grained_memory__amdgpu_ignore_denormal_mode:
@@ -2168,6 +2179,7 @@ define void @flat_agent_atomic_fadd_noret_f32_amdgpu_ignore_denormal_mode(ptr %p
 ; GFX12-NEXT:    flat_atomic_add_f32 v[0:1], v2 offset:2044 scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_storecnt_dscnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: flat_agent_atomic_fadd_noret_f32_amdgpu_ignore_denormal_mode:
@@ -2336,6 +2348,7 @@ define float @flat_agent_atomic_fadd_ret_f32__ftz__amdgpu_no_fine_grained_memory
 ; GFX12-NEXT:    flat_atomic_add_f32 v0, v[0:1], v2 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: flat_agent_atomic_fadd_ret_f32__ftz__amdgpu_no_fine_grained_memory:
@@ -2512,6 +2525,7 @@ define float @flat_agent_atomic_fadd_ret_f32__offset12b_pos__ftz__amdgpu_no_fine
 ; GFX12-NEXT:    flat_atomic_add_f32 v0, v[0:1], v2 offset:2044 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: flat_agent_atomic_fadd_ret_f32__offset12b_pos__ftz__amdgpu_no_fine_grained_memory:
@@ -2698,6 +2712,7 @@ define float @flat_agent_atomic_fadd_ret_f32__offset12b_neg__ftz__amdgpu_no_fine
 ; GFX12-NEXT:    flat_atomic_add_f32 v0, v[0:1], v2 offset:-2048 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: flat_agent_atomic_fadd_ret_f32__offset12b_neg__ftz__amdgpu_no_fine_grained_memory:
@@ -2893,6 +2908,7 @@ define void @flat_agent_atomic_fadd_noret_f32__ftz__amdgpu_no_fine_grained_memor
 ; GFX12-NEXT:    flat_atomic_add_f32 v[0:1], v2 scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_storecnt_dscnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: flat_agent_atomic_fadd_noret_f32__ftz__amdgpu_no_fine_grained_memory:
@@ -3099,6 +3115,7 @@ define void @flat_agent_atomic_fadd_noret_f32__offset12b_pos__ftz__amdgpu_no_fin
 ; GFX12-NEXT:    flat_atomic_add_f32 v[0:1], v2 offset:2044 scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_storecnt_dscnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: flat_agent_atomic_fadd_noret_f32__offset12b_pos__ftz__amdgpu_no_fine_grained_memory:
@@ -3316,6 +3333,7 @@ define void @flat_agent_atomic_fadd_noret_f32__offset12b_neg__ftz__amdgpu_no_fin
 ; GFX12-NEXT:    flat_atomic_add_f32 v[0:1], v2 offset:-2048 scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_storecnt_dscnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: flat_agent_atomic_fadd_noret_f32__offset12b_neg__ftz__amdgpu_no_fine_grained_memory:
@@ -3540,6 +3558,7 @@ define float @flat_system_atomic_fadd_ret_f32__offset12b_pos__ftz__amdgpu_no_fin
 ; GFX12-NEXT:    flat_atomic_add_f32 v0, v[0:1], v2 offset:2044 th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: flat_system_atomic_fadd_ret_f32__offset12b_pos__ftz__amdgpu_no_fine_grained_memory:
@@ -3729,6 +3748,7 @@ define void @flat_system_atomic_fadd_noret_f32__offset12b_pos__ftz__amdgpu_no_fi
 ; GFX12-NEXT:    flat_atomic_add_f32 v[0:1], v2 offset:2044 scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_storecnt_dscnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: flat_system_atomic_fadd_noret_f32__offset12b_pos__ftz__amdgpu_no_fine_grained_memory:
@@ -3949,6 +3969,7 @@ define float @flat_agent_atomic_fadd_ret_f32__ieee__amdgpu_no_fine_grained_memor
 ; GFX12-NEXT:    flat_atomic_add_f32 v0, v[0:1], v2 offset:2044 th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: flat_agent_atomic_fadd_ret_f32__ieee__amdgpu_no_fine_grained_memory__amdgpu_ignore_denormal_mode:
@@ -4138,6 +4159,7 @@ define void @flat_agent_atomic_fadd_noret_f32__ieee__amdgpu_no_fine_grained_memo
 ; GFX12-NEXT:    flat_atomic_add_f32 v[0:1], v2 offset:2044 scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_storecnt_dscnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: flat_agent_atomic_fadd_noret_f32__ieee__amdgpu_no_fine_grained_memory__amdgpu_ignore_denormal_mode:
@@ -4357,6 +4379,7 @@ define float @flat_agent_atomic_fadd_ret_f32__amdgpu_no_remote_memory__amdgpu_ig
 ; GFX12-NEXT:    flat_atomic_add_f32 v0, v[0:1], v2 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: flat_agent_atomic_fadd_ret_f32__amdgpu_no_remote_memory__amdgpu_ignore_denormal_mode:
@@ -4521,6 +4544,7 @@ define void @flat_agent_atomic_fadd_noret_f32__amdgpu_no_remote_memory__amdgpu_i
 ; GFX12-NEXT:    flat_atomic_add_f32 v[0:1], v2 scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_storecnt_dscnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: flat_agent_atomic_fadd_noret_f32__amdgpu_no_remote_memory__amdgpu_ignore_denormal_mode:
@@ -4678,6 +4702,7 @@ define float @flat_agent_atomic_fadd_ret_f32__amdgpu_no_remote_memory(ptr %ptr, 
 ; GFX12-NEXT:    flat_atomic_add_f32 v0, v[0:1], v2 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: flat_agent_atomic_fadd_ret_f32__amdgpu_no_remote_memory:
@@ -4842,6 +4867,7 @@ define void @flat_agent_atomic_fadd_noret_f32__amdgpu_no_remote_memory(ptr %ptr,
 ; GFX12-NEXT:    flat_atomic_add_f32 v[0:1], v2 scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_storecnt_dscnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: flat_agent_atomic_fadd_noret_f32__amdgpu_no_remote_memory:
@@ -4999,6 +5025,7 @@ define float @flat_agent_atomic_fadd_ret_f32__amdgpu_no_fine_grained_memory_amdg
 ; GFX12-NEXT:    flat_atomic_add_f32 v0, v[0:1], v2 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: flat_agent_atomic_fadd_ret_f32__amdgpu_no_fine_grained_memory_amdgpu_no_remote_memory__amdgpu_ignore_denormal_mode:
@@ -5175,6 +5202,7 @@ define void @flat_agent_atomic_fadd_noret_f32__amdgpu_no_fine_grained_memory_amd
 ; GFX12-NEXT:    flat_atomic_add_f32 v[0:1], v2 scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_storecnt_dscnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: flat_agent_atomic_fadd_noret_f32__amdgpu_no_fine_grained_memory_amdgpu_no_remote_memory__amdgpu_ignore_denormal_mode:
@@ -5381,6 +5409,7 @@ define float @flat_agent_atomic_fadd_ret_f32__amdgpu_no_fine_grained_memory_amdg
 ; GFX12-NEXT:    flat_atomic_add_f32 v0, v[0:1], v2 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: flat_agent_atomic_fadd_ret_f32__amdgpu_no_fine_grained_memory_amdgpu_no_remote_memory:
@@ -5529,6 +5558,7 @@ define void @flat_agent_atomic_fadd_noret_f32__amdgpu_no_fine_grained_memory_amd
 ; GFX12-NEXT:    flat_atomic_add_f32 v[0:1], v2 scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_storecnt_dscnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: flat_agent_atomic_fadd_noret_f32__amdgpu_no_fine_grained_memory_amdgpu_no_remote_memory:
@@ -5719,6 +5749,7 @@ define double @flat_agent_atomic_fadd_ret_f64__amdgpu_no_fine_grained_memory(ptr
 ; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX12-NEXT:    v_dual_mov_b32 v0, v4 :: v_dual_mov_b32 v1, v5
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: flat_agent_atomic_fadd_ret_f64__amdgpu_no_fine_grained_memory:
@@ -6083,6 +6114,7 @@ define double @flat_agent_atomic_fadd_ret_f64__offset12b_pos__amdgpu_no_fine_gra
 ; GFX12-NEXT:  .LBB31_2: ; %atomicrmw.phi
 ; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_or_b32 exec_lo, exec_lo, s0
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ; GFX12-NEXT:  .LBB31_3: ; %atomicrmw.global
 ; GFX12-NEXT:    flat_load_b64 v[0:1], v[4:5]
@@ -6502,6 +6534,7 @@ define double @flat_agent_atomic_fadd_ret_f64__offset12b_neg__amdgpu_no_fine_gra
 ; GFX12-NEXT:  .LBB32_2: ; %atomicrmw.phi
 ; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_or_b32 exec_lo, exec_lo, s0
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ; GFX12-NEXT:  .LBB32_3: ; %atomicrmw.global
 ; GFX12-NEXT:    flat_load_b64 v[0:1], v[4:5]
@@ -6918,6 +6951,7 @@ define void @flat_agent_atomic_fadd_noret_f64__amdgpu_no_fine_grained_memory(ptr
 ; GFX12-NEXT:  .LBB33_2: ; %atomicrmw.phi
 ; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_or_b32 exec_lo, exec_lo, s0
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ; GFX12-NEXT:  .LBB33_3: ; %atomicrmw.global
 ; GFX12-NEXT:    flat_load_b64 v[6:7], v[0:1]
@@ -7311,6 +7345,7 @@ define void @flat_agent_atomic_fadd_noret_f64__offset12b_pos__amdgpu_no_fine_gra
 ; GFX12-NEXT:  .LBB34_2: ; %atomicrmw.phi
 ; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_or_b32 exec_lo, exec_lo, s0
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ; GFX12-NEXT:  .LBB34_3: ; %atomicrmw.global
 ; GFX12-NEXT:    flat_load_b64 v[6:7], v[0:1]
@@ -7720,6 +7755,7 @@ define void @flat_agent_atomic_fadd_noret_f64__offset12b_neg__amdgpu_no_fine_gra
 ; GFX12-NEXT:  .LBB35_2: ; %atomicrmw.phi
 ; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_or_b32 exec_lo, exec_lo, s0
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ; GFX12-NEXT:  .LBB35_3: ; %atomicrmw.global
 ; GFX12-NEXT:    flat_load_b64 v[6:7], v[0:1]
@@ -8153,6 +8189,7 @@ define half @flat_agent_atomic_fadd_ret_f16__amdgpu_no_fine_grained_memory(ptr %
 ; GFX12-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX12-NEXT:    v_lshrrev_b32_e32 v0, v3, v5
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: flat_agent_atomic_fadd_ret_f16__amdgpu_no_fine_grained_memory:
@@ -8442,6 +8479,7 @@ define half @flat_agent_atomic_fadd_ret_f16__offset12b_pos__amdgpu_no_fine_grain
 ; GFX12-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX12-NEXT:    v_lshrrev_b32_e32 v0, v3, v5
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: flat_agent_atomic_fadd_ret_f16__offset12b_pos__amdgpu_no_fine_grained_memory:
@@ -8740,6 +8778,7 @@ define half @flat_agent_atomic_fadd_ret_f16__offset12b_neg__amdgpu_no_fine_grain
 ; GFX12-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX12-NEXT:    v_lshrrev_b32_e32 v0, v3, v5
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: flat_agent_atomic_fadd_ret_f16__offset12b_neg__amdgpu_no_fine_grained_memory:
@@ -9036,6 +9075,7 @@ define void @flat_agent_atomic_fadd_noret_f16__amdgpu_no_fine_grained_memory(ptr
 ; GFX12-NEXT:    s_cbranch_execnz .LBB39_1
 ; GFX12-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-NEXT:    s_or_b32 exec_lo, exec_lo, s0
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: flat_agent_atomic_fadd_noret_f16__amdgpu_no_fine_grained_memory:
@@ -9314,6 +9354,7 @@ define void @flat_agent_atomic_fadd_noret_f16__offset12b_pos__amdgpu_no_fine_gra
 ; GFX12-NEXT:    s_cbranch_execnz .LBB40_1
 ; GFX12-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-NEXT:    s_or_b32 exec_lo, exec_lo, s0
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: flat_agent_atomic_fadd_noret_f16__offset12b_pos__amdgpu_no_fine_grained_memory:
@@ -9601,6 +9642,7 @@ define void @flat_agent_atomic_fadd_noret_f16__offset12b_neg__amdgpu_no_fine_gra
 ; GFX12-NEXT:    s_cbranch_execnz .LBB41_1
 ; GFX12-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-NEXT:    s_or_b32 exec_lo, exec_lo, s0
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: flat_agent_atomic_fadd_noret_f16__offset12b_neg__amdgpu_no_fine_grained_memory:
@@ -9877,6 +9919,7 @@ define void @flat_agent_atomic_fadd_noret_f16__offset12b__align4_pos__amdgpu_no_
 ; GFX12-NEXT:    s_cbranch_execnz .LBB42_1
 ; GFX12-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-NEXT:    s_or_b32 exec_lo, exec_lo, s0
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: flat_agent_atomic_fadd_noret_f16__offset12b__align4_pos__amdgpu_no_fine_grained_memory:
@@ -10093,6 +10136,7 @@ define half @flat_agent_atomic_fadd_ret_f16__offset12b_pos__align4__amdgpu_no_fi
 ; GFX12-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX12-NEXT:    v_mov_b32_e32 v0, v3
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: flat_agent_atomic_fadd_ret_f16__offset12b_pos__align4__amdgpu_no_fine_grained_memory:
@@ -10328,6 +10372,7 @@ define half @flat_system_atomic_fadd_ret_f16__offset12b_pos__amdgpu_no_fine_grai
 ; GFX12-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX12-NEXT:    v_lshrrev_b32_e32 v0, v3, v5
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: flat_system_atomic_fadd_ret_f16__offset12b_pos__amdgpu_no_fine_grained_memory:
@@ -10627,6 +10672,7 @@ define void @flat_system_atomic_fadd_noret_f16__offset12b_pos__amdgpu_no_fine_gr
 ; GFX12-NEXT:    s_cbranch_execnz .LBB45_1
 ; GFX12-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-NEXT:    s_or_b32 exec_lo, exec_lo, s0
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: flat_system_atomic_fadd_noret_f16__offset12b_pos__amdgpu_no_fine_grained_memory:
@@ -10930,6 +10976,7 @@ define bfloat @flat_agent_atomic_fadd_ret_bf16__amdgpu_no_fine_grained_memory(pt
 ; GFX12-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX12-NEXT:    v_lshrrev_b32_e32 v0, v3, v5
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: flat_agent_atomic_fadd_ret_bf16__amdgpu_no_fine_grained_memory:
@@ -11274,6 +11321,7 @@ define bfloat @flat_agent_atomic_fadd_ret_bf16__offset12b_pos__amdgpu_no_fine_gr
 ; GFX12-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX12-NEXT:    v_lshrrev_b32_e32 v0, v3, v5
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: flat_agent_atomic_fadd_ret_bf16__offset12b_pos__amdgpu_no_fine_grained_memory:
@@ -11628,6 +11676,7 @@ define bfloat @flat_agent_atomic_fadd_ret_bf16__offset12b_neg__amdgpu_no_fine_gr
 ; GFX12-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX12-NEXT:    v_lshrrev_b32_e32 v0, v3, v5
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: flat_agent_atomic_fadd_ret_bf16__offset12b_neg__amdgpu_no_fine_grained_memory:
@@ -11981,6 +12030,7 @@ define void @flat_agent_atomic_fadd_noret_bf16__offset12b_pos__amdgpu_no_fine_gr
 ; GFX12-NEXT:    s_cbranch_execnz .LBB49_1
 ; GFX12-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-NEXT:    s_or_b32 exec_lo, exec_lo, s0
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: flat_agent_atomic_fadd_noret_bf16__offset12b_pos__amdgpu_no_fine_grained_memory:
@@ -12324,6 +12374,7 @@ define void @flat_agent_atomic_fadd_noret_bf16__offset12b_neg__amdgpu_no_fine_gr
 ; GFX12-NEXT:    s_cbranch_execnz .LBB50_1
 ; GFX12-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-NEXT:    s_or_b32 exec_lo, exec_lo, s0
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: flat_agent_atomic_fadd_noret_bf16__offset12b_neg__amdgpu_no_fine_grained_memory:
@@ -12658,6 +12709,7 @@ define bfloat @flat_agent_atomic_fadd_ret_bf16__offset12b_pos__align4__amdgpu_no
 ; GFX12-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX12-NEXT:    v_mov_b32_e32 v0, v3
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: flat_agent_atomic_fadd_ret_bf16__offset12b_pos__align4__amdgpu_no_fine_grained_memory:
@@ -12941,6 +12993,7 @@ define void @flat_agent_atomic_fadd_noret_bf16__offset12b__align4_pos__amdgpu_no
 ; GFX12-NEXT:    s_cbranch_execnz .LBB52_1
 ; GFX12-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-NEXT:    s_or_b32 exec_lo, exec_lo, s0
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: flat_agent_atomic_fadd_noret_bf16__offset12b__align4_pos__amdgpu_no_fine_grained_memory:
@@ -13228,6 +13281,7 @@ define void @flat_agent_atomic_fadd_noret_bf16__amdgpu_no_fine_grained_memory(pt
 ; GFX12-NEXT:    s_cbranch_execnz .LBB53_1
 ; GFX12-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-NEXT:    s_or_b32 exec_lo, exec_lo, s0
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: flat_agent_atomic_fadd_noret_bf16__amdgpu_no_fine_grained_memory:
@@ -13564,6 +13618,7 @@ define bfloat @flat_system_atomic_fadd_ret_bf16__offset12b_pos__amdgpu_no_fine_g
 ; GFX12-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX12-NEXT:    v_lshrrev_b32_e32 v0, v3, v5
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: flat_system_atomic_fadd_ret_bf16__offset12b_pos__amdgpu_no_fine_grained_memory:
@@ -13919,6 +13974,7 @@ define void @flat_system_atomic_fadd_noret_bf16__offset12b_pos__amdgpu_no_fine_g
 ; GFX12-NEXT:    s_cbranch_execnz .LBB55_1
 ; GFX12-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-NEXT:    s_or_b32 exec_lo, exec_lo, s0
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: flat_system_atomic_fadd_noret_bf16__offset12b_pos__amdgpu_no_fine_grained_memory:
@@ -14228,6 +14284,7 @@ define <2 x half> @flat_agent_atomic_fadd_ret_v2f16__amdgpu_no_fine_grained_memo
 ; GFX12-NEXT:    flat_atomic_pk_add_f16 v0, v[0:1], v2 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: flat_agent_atomic_fadd_ret_v2f16__amdgpu_no_fine_grained_memory:
@@ -14415,6 +14472,7 @@ define <2 x half> @flat_agent_atomic_fadd_ret_v2f16__offset12b_pos__amdgpu_no_fi
 ; GFX12-NEXT:    flat_atomic_pk_add_f16 v0, v[0:1], v2 offset:2044 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: flat_agent_atomic_fadd_ret_v2f16__offset12b_pos__amdgpu_no_fine_grained_memory:
@@ -14605,6 +14663,7 @@ define <2 x half> @flat_agent_atomic_fadd_ret_v2f16__offset12b_neg__amdgpu_no_fi
 ; GFX12-NEXT:    flat_atomic_pk_add_f16 v0, v[0:1], v2 offset:-2048 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: flat_agent_atomic_fadd_ret_v2f16__offset12b_neg__amdgpu_no_fine_grained_memory:
@@ -14809,6 +14868,7 @@ define void @flat_agent_atomic_fadd_noret_v2f16__amdgpu_no_fine_grained_memory(p
 ; GFX12-NEXT:    flat_atomic_pk_add_f16 v[0:1], v2 scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_storecnt_dscnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: flat_agent_atomic_fadd_noret_v2f16__amdgpu_no_fine_grained_memory:
@@ -14988,6 +15048,7 @@ define void @flat_agent_atomic_fadd_noret_v2f16__offset12b_pos__amdgpu_no_fine_g
 ; GFX12-NEXT:    flat_atomic_pk_add_f16 v[0:1], v2 offset:2044 scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_storecnt_dscnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: flat_agent_atomic_fadd_noret_v2f16__offset12b_pos__amdgpu_no_fine_grained_memory:
@@ -15174,6 +15235,7 @@ define void @flat_agent_atomic_fadd_noret_v2f16__offset12b_neg__amdgpu_no_fine_g
 ; GFX12-NEXT:    flat_atomic_pk_add_f16 v[0:1], v2 offset:-2048 scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_storecnt_dscnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: flat_agent_atomic_fadd_noret_v2f16__offset12b_neg__amdgpu_no_fine_grained_memory:
@@ -15377,6 +15439,7 @@ define <2 x half> @flat_system_atomic_fadd_ret_v2f16__offset12b_pos__amdgpu_no_f
 ; GFX12-NEXT:    flat_atomic_pk_add_f16 v0, v[0:1], v2 offset:2044 th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: flat_system_atomic_fadd_ret_v2f16__offset12b_pos__amdgpu_no_fine_grained_memory:
@@ -15570,6 +15633,7 @@ define void @flat_system_atomic_fadd_noret_v2f16__offset12b_pos__amdgpu_no_fine_
 ; GFX12-NEXT:    flat_atomic_pk_add_f16 v[0:1], v2 offset:2044 scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_storecnt_dscnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: flat_system_atomic_fadd_noret_v2f16__offset12b_pos__amdgpu_no_fine_grained_memory:
@@ -15758,6 +15822,7 @@ define <2 x half> @flat_agent_atomic_fadd_ret_v2f16__amdgpu_no_remote_memory(ptr
 ; GFX12-NEXT:    flat_atomic_pk_add_f16 v0, v[0:1], v2 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: flat_agent_atomic_fadd_ret_v2f16__amdgpu_no_remote_memory:
@@ -15945,6 +16010,7 @@ define void @flat_agent_atomic_fadd_noret_v2f16__amdgpu_no_remote_memory(ptr %pt
 ; GFX12-NEXT:    flat_atomic_pk_add_f16 v[0:1], v2 scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_storecnt_dscnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: flat_agent_atomic_fadd_noret_v2f16__amdgpu_no_remote_memory:
@@ -16124,6 +16190,7 @@ define <2 x half> @flat_agent_atomic_fadd_ret_v2f16__amdgpu_no_fine_grained_memo
 ; GFX12-NEXT:    flat_atomic_pk_add_f16 v0, v[0:1], v2 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: flat_agent_atomic_fadd_ret_v2f16__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory:
@@ -16311,6 +16378,7 @@ define void @flat_agent_atomic_fadd_noret_v2f16__amdgpu_no_fine_grained_memory__
 ; GFX12-NEXT:    flat_atomic_pk_add_f16 v[0:1], v2 scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_storecnt_dscnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: flat_agent_atomic_fadd_noret_v2f16__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory:
@@ -16494,6 +16562,7 @@ define <2 x bfloat> @flat_agent_atomic_fadd_ret_v2bf16__amdgpu_no_fine_grained_m
 ; GFX12-NEXT:    flat_atomic_pk_add_bf16 v0, v[0:1], v2 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: flat_agent_atomic_fadd_ret_v2bf16__amdgpu_no_fine_grained_memory:
@@ -16769,6 +16838,7 @@ define <2 x bfloat> @flat_agent_atomic_fadd_ret_v2bf16__offset12b_pos__amdgpu_no
 ; GFX12-NEXT:    flat_atomic_pk_add_bf16 v0, v[0:1], v2 offset:2044 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: flat_agent_atomic_fadd_ret_v2bf16__offset12b_pos__amdgpu_no_fine_grained_memory:
@@ -17047,6 +17117,7 @@ define <2 x bfloat> @flat_agent_atomic_fadd_ret_v2bf16__offset12b_neg__amdgpu_no
 ; GFX12-NEXT:    flat_atomic_pk_add_bf16 v0, v[0:1], v2 offset:-2048 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: flat_agent_atomic_fadd_ret_v2bf16__offset12b_neg__amdgpu_no_fine_grained_memory:
@@ -17339,6 +17410,7 @@ define void @flat_agent_atomic_fadd_noret_v2bf16__amdgpu_no_fine_grained_memory(
 ; GFX12-NEXT:    flat_atomic_pk_add_bf16 v[0:1], v2 scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_storecnt_dscnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: flat_agent_atomic_fadd_noret_v2bf16__amdgpu_no_fine_grained_memory:
@@ -17606,6 +17678,7 @@ define void @flat_agent_atomic_fadd_noret_v2bf16__offset12b_pos__amdgpu_no_fine_
 ; GFX12-NEXT:    flat_atomic_pk_add_bf16 v[0:1], v2 offset:2044 scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_storecnt_dscnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: flat_agent_atomic_fadd_noret_v2bf16__offset12b_pos__amdgpu_no_fine_grained_memory:
@@ -17880,6 +17953,7 @@ define void @flat_agent_atomic_fadd_noret_v2bf16__offset12b_neg__amdgpu_no_fine_
 ; GFX12-NEXT:    flat_atomic_pk_add_bf16 v[0:1], v2 offset:-2048 scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_storecnt_dscnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: flat_agent_atomic_fadd_noret_v2bf16__offset12b_neg__amdgpu_no_fine_grained_memory:
@@ -18171,6 +18245,7 @@ define <2 x bfloat> @flat_system_atomic_fadd_ret_v2bf16__offset12b_pos__amdgpu_n
 ; GFX12-NEXT:    flat_atomic_pk_add_bf16 v0, v[0:1], v2 offset:2044 th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: flat_system_atomic_fadd_ret_v2bf16__offset12b_pos__amdgpu_no_fine_grained_memory:
@@ -18452,6 +18527,7 @@ define void @flat_system_atomic_fadd_noret_v2bf16__offset12b_pos__amdgpu_no_fine
 ; GFX12-NEXT:    flat_atomic_pk_add_bf16 v[0:1], v2 offset:2044 scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_storecnt_dscnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: flat_system_atomic_fadd_noret_v2bf16__offset12b_pos__amdgpu_no_fine_grained_memory:
@@ -18728,6 +18804,7 @@ define <2 x bfloat> @flat_agent_atomic_fadd_ret_v2bf16__amdgpu_no_remote_memory(
 ; GFX12-NEXT:    flat_atomic_pk_add_bf16 v0, v[0:1], v2 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: flat_agent_atomic_fadd_ret_v2bf16__amdgpu_no_remote_memory:
@@ -19003,6 +19080,7 @@ define void @flat_agent_atomic_fadd_noret_v2bf16__amdgpu_no_remote_memory(ptr %p
 ; GFX12-NEXT:    flat_atomic_pk_add_bf16 v[0:1], v2 scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_storecnt_dscnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: flat_agent_atomic_fadd_noret_v2bf16__amdgpu_no_remote_memory:
@@ -19270,6 +19348,7 @@ define <2 x bfloat> @flat_agent_atomic_fadd_ret_v2bf16__amdgpu_no_fine_grained_m
 ; GFX12-NEXT:    flat_atomic_pk_add_bf16 v0, v[0:1], v2 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: flat_agent_atomic_fadd_ret_v2bf16__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory:
@@ -19545,6 +19624,7 @@ define void @flat_agent_atomic_fadd_noret_v2bf16__amdgpu_no_fine_grained_memory_
 ; GFX12-NEXT:    flat_atomic_pk_add_bf16 v[0:1], v2 scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_storecnt_dscnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: flat_agent_atomic_fadd_noret_v2bf16__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory:
