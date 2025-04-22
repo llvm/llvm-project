@@ -764,33 +764,33 @@ public:
     }
   }
 
-  /// Set the IR flags for \p I.
-  void setFlags(Instruction *I) const {
+  /// Apply the IR flags to \p I.
+  void applyFlags(Instruction &I) const {
     switch (OpType) {
     case OperationType::OverflowingBinOp:
-      I->setHasNoUnsignedWrap(WrapFlags.HasNUW);
-      I->setHasNoSignedWrap(WrapFlags.HasNSW);
+      I.setHasNoUnsignedWrap(WrapFlags.HasNUW);
+      I.setHasNoSignedWrap(WrapFlags.HasNSW);
       break;
     case OperationType::DisjointOp:
-      cast<PossiblyDisjointInst>(I)->setIsDisjoint(DisjointFlags.IsDisjoint);
+      cast<PossiblyDisjointInst>(&I)->setIsDisjoint(DisjointFlags.IsDisjoint);
       break;
     case OperationType::PossiblyExactOp:
-      I->setIsExact(ExactFlags.IsExact);
+      I.setIsExact(ExactFlags.IsExact);
       break;
     case OperationType::GEPOp:
-      cast<GetElementPtrInst>(I)->setNoWrapFlags(GEPFlags);
+      cast<GetElementPtrInst>(&I)->setNoWrapFlags(GEPFlags);
       break;
     case OperationType::FPMathOp:
-      I->setHasAllowReassoc(FMFs.AllowReassoc);
-      I->setHasNoNaNs(FMFs.NoNaNs);
-      I->setHasNoInfs(FMFs.NoInfs);
-      I->setHasNoSignedZeros(FMFs.NoSignedZeros);
-      I->setHasAllowReciprocal(FMFs.AllowReciprocal);
-      I->setHasAllowContract(FMFs.AllowContract);
-      I->setHasApproxFunc(FMFs.ApproxFunc);
+      I.setHasAllowReassoc(FMFs.AllowReassoc);
+      I.setHasNoNaNs(FMFs.NoNaNs);
+      I.setHasNoInfs(FMFs.NoInfs);
+      I.setHasNoSignedZeros(FMFs.NoSignedZeros);
+      I.setHasAllowReciprocal(FMFs.AllowReciprocal);
+      I.setHasAllowContract(FMFs.AllowContract);
+      I.setHasApproxFunc(FMFs.ApproxFunc);
       break;
     case OperationType::NonNegOp:
-      I->setNonNeg(NonNegFlags.NonNeg);
+      I.setNonNeg(NonNegFlags.NonNeg);
       break;
     case OperationType::Cmp:
     case OperationType::Other:

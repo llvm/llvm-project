@@ -83,6 +83,9 @@ class Clause<string c> {
   // Optional class holding value of the clause in flang AST.
   string flangClass = "";
 
+  // If set to true, don't emit flang Unparser.
+  bit skipFlangUnparser = false;
+
   // If set to true, value is optional. Not optional by default.
   bit isValueOptional = false;
 
@@ -113,6 +116,10 @@ class Clause<string c> {
   // Set the prefix as optional.
   // `clause([prefix]: value)`
   bit isPrefixOptional = true;
+
+  // When necessary because it isn't covered by rules, the name used in the
+  // clause in the clang::OpenACCClauseKind enum.
+  string clangAccSpelling = "";
 }
 
 // Hold information about clause validity by version.

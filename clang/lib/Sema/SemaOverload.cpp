@@ -1108,7 +1108,7 @@ bool OverloadCandidateSet::OperatorRewriteInfo::shouldAddReversed(
 }
 
 void OverloadCandidateSet::destroyCandidates() {
-  for (iterator i = begin(), e = end(); i != e; ++i) {
+  for (iterator i = Candidates.begin(), e = Candidates.end(); i != e; ++i) {
     for (auto &C : i->Conversions)
       C.~ImplicitConversionSequence();
     if (!i->Viable && i->FailureKind == ovl_fail_bad_deduction)
@@ -2275,17 +2275,16 @@ static bool IsStandardConversion(Sema &S, Expr* From, QualType ToType,
     // handling here.
     if (ToType->isArrayParameterType()) {
       FromType = S.Context.getArrayParameterType(FromType);
-      SCS.First = ICK_HLSL_Array_RValue;
     } else if (FromType->isArrayParameterType()) {
       const ArrayParameterType *APT = cast<ArrayParameterType>(FromType);
       FromType = APT->getConstantArrayType(S.Context);
-      SCS.First = ICK_HLSL_Array_RValue;
-    } else {
-      SCS.First = ICK_Identity;
     }
 
-    if (S.Context.getCanonicalType(FromType) !=
-        S.Context.getCanonicalType(ToType))
+    SCS.First = ICK_HLSL_Array_RValue;
+
+    // Don't consider qualifiers, which include things like address spaces
+    if (FromType.getCanonicalType().getUnqualifiedType() !=
+        ToType.getCanonicalType().getUnqualifiedType())
       return false;
 
     SCS.setAllToTypes(ToType);
@@ -11237,7 +11236,7 @@ void OverloadCandidateSet::PerfectViableFunction(
     Sema &S, SourceLocation Loc, OverloadCandidateSet::iterator &Best) {
 
   Best = end();
-  for (auto It = begin(); It != end(); ++It) {
+  for (auto It = Candidates.begin(); It != Candidates.end(); ++It) {
 
     if (!It->isPerfectMatch(S.getASTContext()))
       continue;
@@ -11277,7 +11276,8 @@ OverloadingResult OverloadCandidateSet::BestViableFunctionImpl(
 
   llvm::SmallVector<OverloadCandidate *, 16> Candidates;
   Candidates.reserve(this->Candidates.size());
-  std::transform(begin(), end(), std::back_inserter(Candidates),
+  std::transform(this->Candidates.begin(), this->Candidates.end(),
+                 std::back_inserter(Candidates),
                  [](OverloadCandidate &Cand) { return &Cand; });
 
   if (S.getLangOpts().CUDA)
@@ -13050,7 +13050,8 @@ SmallVector<OverloadCandidate *, 32> OverloadCandidateSet::CompleteCandidates(
   // be prohibitive, so we make a set of pointers and sort those.
   SmallVector<OverloadCandidate*, 32> Cands;
   if (OCD == OCD_AllCandidates) Cands.reserve(size());
-  for (iterator Cand = begin(), LastCand = end(); Cand != LastCand; ++Cand) {
+  for (iterator Cand = Candidates.begin(), LastCand = Candidates.end();
+       Cand != LastCand; ++Cand) {
     if (!Filter(*Cand))
       continue;
     switch (OCD) {
@@ -13127,7 +13128,8 @@ void OverloadCandidateSet::NoteCandidates(
     NoteCandidates(S, Args, Cands, Opc, OpLoc);
 
   if (OCD == OCD_AmbiguousCandidates)
-    MaybeDiagnoseAmbiguousConstraints(S, {begin(), end()});
+    MaybeDiagnoseAmbiguousConstraints(S,
+                                      {Candidates.begin(), Candidates.end()});
 }
 
 void OverloadCandidateSet::NoteCandidates(Sema &S, ArrayRef<Expr *> Args,
@@ -16255,7 +16257,8 @@ Sema::BuildCallToObjectOfClassType(Scope *S, Expr *Obj,
   // we filter them out to produce better error diagnostics, ie to avoid
   // showing 2 failed overloads instead of one.
   bool IgnoreSurrogateFunctions = false;
-  if (CandidateSet.size() == 1 && Record->getAsCXXRecordDecl()->isLambda()) {
+  if (CandidateSet.nonDeferredCandidatesCount() == 1 &&
+      Record->getAsCXXRecordDecl()->isLambda()) {
     const OverloadCandidate &Candidate = *CandidateSet.begin();
     if (!Candidate.Viable &&
         Candidate.FailureKind == ovl_fail_constraints_not_satisfied)
