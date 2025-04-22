@@ -1627,7 +1627,7 @@ void CodeExtractor::emitFunctionBody(
     const ValueSet &inputs, const ValueSet &outputs,
     const ValueSet &StructValues, Function *newFunction,
     StructType *StructArgTy, BasicBlock *header, const ValueSet &SinkingCands,
-    SmallVector<Value *> &NewValues) {
+    SmallVectorImpl<Value *> &NewValues) {
   Function *oldFunction = header->getParent();
   LLVMContext &Context = oldFunction->getContext();
 

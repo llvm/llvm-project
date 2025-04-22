@@ -291,7 +291,7 @@ public:
                           const ValueSet &StructValues, Function *newFunction,
                           StructType *StructArgTy, BasicBlock *header,
                           const ValueSet &SinkingCands,
-                          SmallVector<Value *> &NewValues);
+                          SmallVectorImpl<Value *> &NewValues);
 
     /// Generates a Basic Block that calls the extracted function.
     CallInst *emitReplacerCall(const ValueSet &inputs, const ValueSet &outputs,
