@@ -11543,6 +11543,8 @@ SDValue RISCVTargetLowering::lowerVECTOR_DEINTERLEAVE(SDValue Op,
       EVT NewVT = VT.getDoubleNumVectorElementsVT();
       SDValue ZeroIdx = DAG.getVectorIdxConstant(0, DL);
       Src = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, NewVT, Src, ZeroIdx);
+      // Freeze the source so we can increase it's use count.
+      Src = DAG.getFreeze(Src);
       SDValue Even = lowerVZIP(RISCVISD::RI_VUNZIP2A_VL, Src,
                                DAG.getUNDEF(NewVT), DL, DAG, Subtarget);
       SDValue Odd = lowerVZIP(RISCVISD::RI_VUNZIP2B_VL, Src,
@@ -11552,6 +11554,9 @@ SDValue RISCVTargetLowering::lowerVECTOR_DEINTERLEAVE(SDValue Op,
       return DAG.getMergeValues({Even, Odd}, DL);
     }
 
+    // Freeze the sources so we can increase their use count.
+    V1 = DAG.getFreeze(V1);
+    V2 = DAG.getFreeze(V2);
     SDValue Even =
         lowerVZIP(RISCVISD::RI_VUNZIP2A_VL, V1, V2, DL, DAG, Subtarget);
     SDValue Odd =
@@ -11793,8 +11798,9 @@ SDValue RISCVTargetLowering::lowerVECTOR_INTERLEAVE(SDValue Op,
   // TODO: Figure out the best lowering for the spread variants
   if (Subtarget.hasVendorXRivosVizip() && !Op.getOperand(0).isUndef() &&
       !Op.getOperand(1).isUndef()) {
-    SDValue V1 = Op->getOperand(0);
-    SDValue V2 = Op->getOperand(1);
+    // Freeze the sources so we can increase their use count.
+    SDValue V1 = DAG.getFreeze(Op->getOperand(0));
+    SDValue V2 = DAG.getFreeze(Op->getOperand(1));
     SDValue Lo = lowerVZIP(RISCVISD::RI_VZIP2A_VL, V1, V2, DL, DAG, Subtarget);
     SDValue Hi = lowerVZIP(RISCVISD::RI_VZIP2B_VL, V1, V2, DL, DAG, Subtarget);
     return DAG.getMergeValues({Lo, Hi}, DL);
