@@ -591,7 +591,72 @@ class ConstantDataArray final : public ConstantDataSequential {
   friend class Context;
 
 public:
-  // TODO: Add missing functions.
+  static bool classof(const Value *From) {
+    return From->getSubclassID() == ClassID::ConstantDataArray;
+  }
+  /// get() constructor - Return a constant with array type with an element
+  /// count and element type matching the ArrayRef passed in.  Note that this
+  /// can return a ConstantAggregateZero object.
+  template <typename ElementTy>
+  static Constant *get(Context &Ctx, ArrayRef<ElementTy> Elts) {
+    auto *NewLLVMC = llvm::ConstantDataArray::get(Ctx.LLVMCtx, Elts);
+    return Ctx.getOrCreateConstant(NewLLVMC);
+  }
+
+  /// get() constructor - ArrayTy needs to be compatible with
+  /// ArrayRef<ElementTy>.
+  template <typename ArrayTy>
+  static Constant *get(Context &Ctx, ArrayTy &Elts) {
+    return ConstantDataArray::get(Ctx, ArrayRef(Elts));
+  }
+
+  /// getRaw() constructor - Return a constant with array type with an element
+  /// count and element type matching the NumElements and ElementTy parameters
+  /// passed in. Note that this can return a ConstantAggregateZero object.
+  /// ElementTy must be one of i8/i16/i32/i64/half/bfloat/float/double. Data is
+  /// the buffer containing the elements. Be careful to make sure Data uses the
+  /// right endianness, the buffer will be used as-is.
+  static Constant *getRaw(StringRef Data, uint64_t NumElements,
+                          Type *ElementTy) {
+    auto *LLVMC =
+        llvm::ConstantDataArray::getRaw(Data, NumElements, ElementTy->LLVMTy);
+    return ElementTy->getContext().getOrCreateConstant(LLVMC);
+  }
+  /// getFP() constructors - Return a constant of array type with a float
+  /// element type taken from argument `ElementType', and count taken from
+  /// argument `Elts'.  The amount of bits of the contained type must match the
+  /// number of bits of the type contained in the passed in ArrayRef.
+  /// (i.e. half or bfloat for 16bits, float for 32bits, double for 64bits) Note
+  /// that this can return a ConstantAggregateZero object.
+  static Constant *getFP(Type *ElementType, ArrayRef<uint16_t> Elts) {
+    auto *LLVMC = llvm::ConstantDataArray::getFP(ElementType->LLVMTy, Elts);
+    return ElementType->getContext().getOrCreateConstant(LLVMC);
+  }
+  static Constant *getFP(Type *ElementType, ArrayRef<uint32_t> Elts) {
+    auto *LLVMC = llvm::ConstantDataArray::getFP(ElementType->LLVMTy, Elts);
+    return ElementType->getContext().getOrCreateConstant(LLVMC);
+  }
+  static Constant *getFP(Type *ElementType, ArrayRef<uint64_t> Elts) {
+    auto *LLVMC = llvm::ConstantDataArray::getFP(ElementType->LLVMTy, Elts);
+    return ElementType->getContext().getOrCreateConstant(LLVMC);
+  }
+  /// This method constructs a CDS and initializes it with a text string.
+  /// The default behavior (AddNull==true) causes a null terminator to
+  /// be placed at the end of the array (increasing the length of the string by
+  /// one more than the StringRef would normally indicate.  Pass AddNull=false
+  /// to disable this behavior.
+  static Constant *getString(Context &Ctx, StringRef Initializer,
+                             bool AddNull = true) {
+    auto *LLVMC =
+        llvm::ConstantDataArray::getString(Ctx.LLVMCtx, Initializer, AddNull);
+    return Ctx.getOrCreateConstant(LLVMC);
+  }
+
+  /// Specialize the getType() method to always return an ArrayType,
+  /// which reduces the amount of casting needed in parts of the compiler.
+  inline ArrayType *getType() const {
+    return cast<ArrayType>(Value::getType());
+  }
 };
 
 /// A vector constant whose element type is a simple 1/2/4/8-byte integer or
