@@ -37,24 +37,25 @@ bb:
   ret void
 }
 
-define void @bar() {
-; CHECK-LABEL: define void @bar() local_unnamed_addr {
+define void @bar() !dbg !13 {
+; CHECK-LABEL: define void @bar(
+; CHECK-SAME: ) local_unnamed_addr !dbg [[DBG8:![0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    store i1 true, ptr @global.1.init, align 1
+; CHECK-NEXT:    store i1 true, ptr @global.1.init, align 1, !dbg [[DBG9:![0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
   %call = tail call noalias nonnull dereferenceable(48) ptr @_Znwm(i64 48)
-  store ptr %call, ptr @global.1, align 8
+  store ptr %call, ptr @global.1, align 8, !dbg !14
   ret void
 }
 
 define void @pluto() !dbg !10 {
 ; CHECK-LABEL: define void @pluto(
-; CHECK-SAME: ) local_unnamed_addr !dbg [[DBG8:![0-9]+]] {
+; CHECK-SAME: ) local_unnamed_addr !dbg [[DBG10:![0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[GLOBAL_1_INIT_VAL:%.*]] = load i1, ptr @global.1.init, align 1, !dbg [[DBG9:![0-9]+]]
-; CHECK-NEXT:    [[NOTINIT:%.*]] = xor i1 [[GLOBAL_1_INIT_VAL]], true, !dbg [[DBG10:![0-9]+]]
+; CHECK-NEXT:    [[GLOBAL_1_INIT_VAL:%.*]] = load i1, ptr @global.1.init, align 1, !dbg [[DBG11:![0-9]+]]
+; CHECK-NEXT:    [[NOTINIT:%.*]] = xor i1 [[GLOBAL_1_INIT_VAL]], true, !dbg [[DBG12:![0-9]+]]
 ; CHECK-NEXT:    unreachable
 ;
 entry:
@@ -80,6 +81,8 @@ declare ptr @_Znwm(i64)
 !10 = distinct !DISubprogram(name: "pluto", scope: !6, file: !6, line: 20, type: !8, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !2)
 !11 = !DILocation(line: 20, column: 2, scope: !10)
 !12 = !DILocation(line: 21, column: 3, scope: !10)
+!13 = distinct !DISubprogram(name: "bar", scope: !6, file: !6, line: 230, type: !8, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !2)
+!14 = !DILocation(line: 11, column: 4, scope: !13)
 ;.
 ; CHECK: [[META0:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C11, file: [[META1:![0-9]+]], producer: "{{.*}}clang version {{.*}}", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: [[META2:![0-9]+]], retainedTypes: [[META2]], globals: [[META2]], splitDebugInlining: false, nameTableKind: None)
 ; CHECK: [[META1]] = !DIFile(filename: "preserve-load-dbgloc.c", directory: {{.*}})
@@ -88,7 +91,9 @@ declare ptr @_Znwm(i64)
 ; CHECK: [[META5]] = distinct !DISubroutineType(types: [[META2]])
 ; CHECK: [[DBG6]] = !DILocation(line: 10, column: 1, scope: [[META7:![0-9]+]])
 ; CHECK: [[META7]] = distinct !DILexicalBlock(scope: [[DBG4]], file: [[META1]], line: 1524, column: 3)
-; CHECK: [[DBG8]] = distinct !DISubprogram(name: "pluto", scope: [[META1]], file: [[META1]], line: 20, type: [[META5]], flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: [[META0]], retainedNodes: [[META2]])
-; CHECK: [[DBG9]] = !DILocation(line: 20, column: 2, scope: [[DBG8]])
-; CHECK: [[DBG10]] = !DILocation(line: 21, column: 3, scope: [[DBG8]])
+; CHECK: [[DBG8]] = distinct !DISubprogram(name: "bar", scope: [[META1]], file: [[META1]], line: 230, type: [[META5]], flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: [[META0]], retainedNodes: [[META2]])
+; CHECK: [[DBG9]] = !DILocation(line: 11, column: 4, scope: [[DBG8]])
+; CHECK: [[DBG10]] = distinct !DISubprogram(name: "pluto", scope: [[META1]], file: [[META1]], line: 20, type: [[META5]], flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: [[META0]], retainedNodes: [[META2]])
+; CHECK: [[DBG11]] = !DILocation(line: 20, column: 2, scope: [[DBG10]])
+; CHECK: [[DBG12]] = !DILocation(line: 21, column: 3, scope: [[DBG10]])
 ;.

@@ -965,11 +965,12 @@ OptimizeGlobalAddressOfAllocation(GlobalVariable *GV, CallInst *CI,
     if (StoreInst *SI = dyn_cast<StoreInst>(U)) {
       // The global is initialized when the store to it occurs. If the stored
       // value is null value, the global bool is set to false, otherwise true.
-      new StoreInst(ConstantInt::getBool(
-                        GV->getContext(),
-                        !isa<ConstantPointerNull>(SI->getValueOperand())),
-                    InitBool, false, Align(1), SI->getOrdering(),
-                    SI->getSyncScopeID(), SI->getIterator());
+      auto *NewSI = new StoreInst(
+          ConstantInt::getBool(GV->getContext(), !isa<ConstantPointerNull>(
+                                                     SI->getValueOperand())),
+          InitBool, false, Align(1), SI->getOrdering(), SI->getSyncScopeID(),
+          SI->getIterator());
+      NewSI->setDebugLoc(SI->getDebugLoc());
       SI->eraseFromParent();
       continue;
     }
