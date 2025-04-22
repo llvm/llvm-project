@@ -599,10 +599,10 @@ InstructionCost PPCTTIImpl::getArithmeticInstrCost(
   return Cost * CostFactor;
 }
 
-InstructionCost PPCTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, Type *Tp,
-                                           ArrayRef<int> Mask,
+InstructionCost PPCTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
+                                           VectorType *Tp, ArrayRef<int> Mask,
                                            TTI::TargetCostKind CostKind,
-                                           int Index, Type *SubTp,
+                                           int Index, VectorType *SubTp,
                                            ArrayRef<const Value *> Args,
                                            const Instruction *CxtI) const {
 
@@ -759,7 +759,7 @@ InstructionCost PPCTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
 }
 
 InstructionCost PPCTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
-                                            MaybeAlign Alignment,
+                                            Align Alignment,
                                             unsigned AddressSpace,
                                             TTI::TargetCostKind CostKind,
                                             TTI::OperandValueInfo OpInfo,
@@ -803,13 +803,12 @@ InstructionCost PPCTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
       return 1;
 
     // Use lfiwax/xxspltw
-    Align AlignBytes = Alignment ? *Alignment : Align(1);
-    if (Opcode == Instruction::Load && MemBits == 32 && AlignBytes < SrcBytes)
+    if (Opcode == Instruction::Load && MemBits == 32 && Alignment < SrcBytes)
       return 2;
   }
 
   // Aligned loads and stores are easy.
-  if (!SrcBytes || !Alignment || *Alignment >= SrcBytes)
+  if (!SrcBytes || Alignment >= SrcBytes)
     return Cost;
 
   // If we can use the permutation-based load sequence, then this is also
@@ -820,7 +819,7 @@ InstructionCost PPCTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
   // than using the permutation-based load sequence. On the P8, that's no
   // longer true.
   if (Opcode == Instruction::Load && (!ST->hasP8Vector() && IsAltivecType) &&
-      *Alignment >= LT.second.getScalarType().getStoreSize())
+      Alignment >= LT.second.getScalarType().getStoreSize())
     return Cost + LT.first; // Add the cost of the permutations.
 
   // For VSX, we can do unaligned loads and stores on Altivec/VSX types. On the
@@ -838,8 +837,7 @@ InstructionCost PPCTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
   // to be decomposed based on the alignment factor.
 
   // Add the cost of each scalar load or store.
-  assert(Alignment);
-  Cost += LT.first * ((SrcBytes / Alignment->value()) - 1);
+  Cost += LT.first * ((SrcBytes / Alignment.value()) - 1);
 
   // For a vector type, there is also scalarization overhead (only for
   // stores, loads are expanded using the vector-load + permutation sequence,
@@ -874,8 +872,8 @@ InstructionCost PPCTTIImpl::getInterleavedMemoryOpCost(
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(VecTy);
 
   // Firstly, the cost of load/store operation.
-  InstructionCost Cost = getMemoryOpCost(Opcode, VecTy, MaybeAlign(Alignment),
-                                         AddressSpace, CostKind);
+  InstructionCost Cost =
+      getMemoryOpCost(Opcode, VecTy, Alignment, AddressSpace, CostKind);
 
   // PPC, for both Altivec/VSX, support cheap arbitrary permutations
   // (at least in the sense that there need only be one non-loop-invariant

@@ -215,7 +215,7 @@ public:
                                            TTI::TargetCostKind CostKind) const;
 
   InstructionCost getMemoryOpCost(
-      unsigned Opcode, Type *Src, MaybeAlign Alignment, unsigned AddressSpace,
+      unsigned Opcode, Type *Src, Align Alignment, unsigned AddressSpace,
       TTI::TargetCostKind CostKind,
       TTI::OperandValueInfo OpdInfo = {TTI::OK_AnyValue, TTI::OP_None},
       const Instruction *I = nullptr) const;

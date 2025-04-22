@@ -104,7 +104,8 @@ HexagonTTIImpl::getPreferredAddressingMode(const Loop *L,
 
 /// --- Vector TTI begin ---
 
-unsigned HexagonTTIImpl::getNumberOfRegisters(bool Vector) const {
+unsigned HexagonTTIImpl::getNumberOfRegisters(unsigned ClassID) const {
+  bool Vector = ClassID == 1;
   if (Vector)
     return useHVX() ? 32 : 0;
   return 32;
@@ -162,7 +163,7 @@ InstructionCost HexagonTTIImpl::getAddressComputationCost(Type *Tp,
 }
 
 InstructionCost HexagonTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
-                                                MaybeAlign Alignment,
+                                                Align Alignment,
                                                 unsigned AddressSpace,
                                                 TTI::TargetCostKind CostKind,
                                                 TTI::OperandValueInfo OpInfo,
@@ -189,10 +190,9 @@ InstructionCost HexagonTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
         return VecWidth / RegWidth;
       // Cost of constructing HVX vector from scalar loads
       const Align RegAlign(RegWidth / 8);
-      if (!Alignment || *Alignment > RegAlign)
+      if (Alignment > RegAlign)
         Alignment = RegAlign;
-      assert(Alignment);
-      unsigned AlignWidth = 8 * Alignment->value();
+      unsigned AlignWidth = 8 * Alignment.value();
       unsigned NumLoads = alignTo(VecWidth, AlignWidth) / AlignWidth;
       return 3 * NumLoads;
     }
@@ -203,7 +203,7 @@ InstructionCost HexagonTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
         VecTy->getElementType()->isFloatingPointTy() ? FloatFactor : 1;
 
     // At this point unspecified alignment is considered as Align(1).
-    const Align BoundAlignment = std::min(Alignment.valueOrOne(), Align(8));
+    const Align BoundAlignment = std::min(Alignment, Align(8));
     unsigned AlignWidth = 8 * BoundAlignment.value();
     unsigned NumLoads = alignTo(VecWidth, AlignWidth) / AlignWidth;
     if (Alignment == Align(4) || Alignment == Align(8))
@@ -226,12 +226,10 @@ HexagonTTIImpl::getMaskedMemoryOpCost(unsigned Opcode, Type *Src,
                                       CostKind);
 }
 
-InstructionCost HexagonTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, Type *Tp,
-                                               ArrayRef<int> Mask,
-                                               TTI::TargetCostKind CostKind,
-                                               int Index, Type *SubTp,
-                                               ArrayRef<const Value *> Args,
-                                               const Instruction *CxtI) const {
+InstructionCost HexagonTTIImpl::getShuffleCost(
+    TTI::ShuffleKind Kind, VectorType *Tp, ArrayRef<int> Mask,
+    TTI::TargetCostKind CostKind, int Index, VectorType *SubTp,
+    ArrayRef<const Value *> Args, const Instruction *CxtI) const {
   return 1;
 }
 
@@ -251,8 +249,7 @@ InstructionCost HexagonTTIImpl::getInterleavedMemoryOpCost(
                                              Alignment, AddressSpace,
                                              CostKind,
                                              UseMaskForCond, UseMaskForGaps);
-  return getMemoryOpCost(Opcode, VecTy, MaybeAlign(Alignment), AddressSpace,
-                         CostKind);
+  return getMemoryOpCost(Opcode, VecTy, Alignment, AddressSpace, CostKind);
 }
 
 InstructionCost HexagonTTIImpl::getCmpSelInstrCost(

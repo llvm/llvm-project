@@ -37,8 +37,8 @@ public:
       : BaseT(TM, F.getDataLayout()), ST(TM->getSubtargetImpl(F)),
         TLI(ST->getTargetLowering()) {}
 
-  int getIntImmCost(const APInt &Imm, Type *Ty,
-                    TTI::TargetCostKind CostKind) const {
+  InstructionCost getIntImmCost(const APInt &Imm, Type *Ty,
+                                TTI::TargetCostKind CostKind) const {
     if (Imm.getBitWidth() <= 64 && isInt<32>(Imm.getSExtValue()))
       return TTI::TCC_Free;
 

@@ -1952,7 +1952,7 @@ RISCVTTIImpl::getStoreImmCost(Type *Ty, TTI::OperandValueInfo OpInfo,
 }
 
 InstructionCost RISCVTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
-                                              MaybeAlign Alignment,
+                                              Align Alignment,
                                               unsigned AddressSpace,
                                               TTI::TargetCostKind CostKind,
                                               TTI::OperandValueInfo OpInfo,

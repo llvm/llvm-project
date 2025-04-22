@@ -81,7 +81,7 @@ public:
   /// \name Vector TTI Implementations
   /// @{
 
-  unsigned getNumberOfRegisters(bool vector) const;
+  unsigned getNumberOfRegisters(unsigned ClassID) const;
   unsigned getMaxInterleaveFactor(ElementCount VF) const;
   TypeSize getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const;
   unsigned getMinVectorRegisterBitWidth() const;
@@ -107,17 +107,18 @@ public:
   InstructionCost getAddressComputationCost(Type *Tp, ScalarEvolution *SE,
                                             const SCEV *S) const;
   InstructionCost getMemoryOpCost(
-      unsigned Opcode, Type *Src, MaybeAlign Alignment, unsigned AddressSpace,
+      unsigned Opcode, Type *Src, Align Alignment, unsigned AddressSpace,
       TTI::TargetCostKind CostKind,
       TTI::OperandValueInfo OpInfo = {TTI::OK_AnyValue, TTI::OP_None},
       const Instruction *I = nullptr) const;
   InstructionCost getMaskedMemoryOpCost(unsigned Opcode, Type *Src,
                                         Align Alignment, unsigned AddressSpace,
                                         TTI::TargetCostKind CostKind) const;
-  InstructionCost getShuffleCost(TTI::ShuffleKind Kind, Type *Tp,
+  InstructionCost getShuffleCost(TTI::ShuffleKind Kind, VectorType *Tp,
                                  ArrayRef<int> Mask,
                                  TTI::TargetCostKind CostKind, int Index,
-                                 Type *SubTp, ArrayRef<const Value *> Args = {},
+                                 VectorType *SubTp,
+                                 ArrayRef<const Value *> Args = {},
                                  const Instruction *CxtI = nullptr) const;
   InstructionCost getGatherScatterOpCost(unsigned Opcode, Type *DataTy,
                                          const Value *Ptr, bool VariableMask,

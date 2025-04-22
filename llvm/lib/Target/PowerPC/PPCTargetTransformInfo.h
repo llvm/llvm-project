@@ -107,10 +107,11 @@ public:
       TTI::OperandValueInfo Op2Info = {TTI::OK_AnyValue, TTI::OP_None},
       ArrayRef<const Value *> Args = {},
       const Instruction *CxtI = nullptr) const;
-  InstructionCost getShuffleCost(TTI::ShuffleKind Kind, Type *Tp,
+  InstructionCost getShuffleCost(TTI::ShuffleKind Kind, VectorType *Tp,
                                  ArrayRef<int> Mask,
                                  TTI::TargetCostKind CostKind, int Index,
-                                 Type *SubTp, ArrayRef<const Value *> Args = {},
+                                 VectorType *SubTp,
+                                 ArrayRef<const Value *> Args = {},
                                  const Instruction *CxtI = nullptr) const;
   InstructionCost getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
                                    TTI::CastContextHint CCH,
@@ -130,7 +131,7 @@ public:
                                      unsigned Index, Value *Op0,
                                      Value *Op1) const;
   InstructionCost getMemoryOpCost(
-      unsigned Opcode, Type *Src, MaybeAlign Alignment, unsigned AddressSpace,
+      unsigned Opcode, Type *Src, Align Alignment, unsigned AddressSpace,
       TTI::TargetCostKind CostKind,
       TTI::OperandValueInfo OpInfo = {TTI::OK_AnyValue, TTI::OP_None},
       const Instruction *I = nullptr) const;

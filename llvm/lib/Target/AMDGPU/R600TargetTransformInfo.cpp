@@ -32,7 +32,8 @@ unsigned R600TTIImpl::getHardwareNumberOfRegisters(bool Vec) const {
   return 4 * 128; // XXX - 4 channels. Should these count as vector instead?
 }
 
-unsigned R600TTIImpl::getNumberOfRegisters(bool Vec) const {
+unsigned R600TTIImpl::getNumberOfRegisters(unsigned ClassID) const {
+  bool Vec = ClassID == 1;
   return getHardwareNumberOfRegisters(Vec);
 }
 

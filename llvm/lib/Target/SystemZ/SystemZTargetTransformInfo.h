@@ -129,7 +129,7 @@ public:
   bool isFoldableLoad(const LoadInst *Ld,
                       const Instruction *&FoldedValue) const;
   InstructionCost getMemoryOpCost(
-      unsigned Opcode, Type *Src, MaybeAlign Alignment, unsigned AddressSpace,
+      unsigned Opcode, Type *Src, Align Alignment, unsigned AddressSpace,
       TTI::TargetCostKind CostKind,
       TTI::OperandValueInfo OpInfo = {TTI::OK_AnyValue, TTI::OP_None},
       const Instruction *I = nullptr) const;

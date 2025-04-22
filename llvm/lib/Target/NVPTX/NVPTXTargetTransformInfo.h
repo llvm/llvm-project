@@ -74,7 +74,7 @@ public:
   // vectorizers but disables heuristics based on the number of registers.
   // FIXME: Return a more reasonable number, while keeping an eye on
   // LoopVectorizer's unrolling heuristics.
-  unsigned getNumberOfRegisters(bool Vector) const { return 1; }
+  unsigned getNumberOfRegisters(unsigned ClassID) const { return 1; }
 
   // Only <2 x half> should be vectorized, so always return 32 for the vector
   // register size.

@@ -133,18 +133,18 @@ public:
   }
 
   // Load & Store {
-  bool isLegalMaskedLoad(Type *DataType, MaybeAlign Alignment,
+  bool isLegalMaskedLoad(Type *DataType, Align Alignment,
                          unsigned /*AddressSpace*/) const {
     return isVectorLaneType(*getLaneType(DataType));
   }
-  bool isLegalMaskedStore(Type *DataType, MaybeAlign Alignment,
+  bool isLegalMaskedStore(Type *DataType, Align Alignment,
                           unsigned /*AddressSpace*/) const {
     return isVectorLaneType(*getLaneType(DataType));
   }
-  bool isLegalMaskedGather(Type *DataType, MaybeAlign Alignment) const {
+  bool isLegalMaskedGather(Type *DataType, Align Alignment) const {
     return isVectorLaneType(*getLaneType(DataType));
   };
-  bool isLegalMaskedScatter(Type *DataType, MaybeAlign Alignment) const {
+  bool isLegalMaskedScatter(Type *DataType, Align Alignment) const {
     return isVectorLaneType(*getLaneType(DataType));
   }
   // } Load & Store
