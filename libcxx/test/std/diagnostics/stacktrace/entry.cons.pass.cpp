@@ -10,7 +10,7 @@
 // ADDITIONAL_COMPILE_FLAGS: -g
 
 #include <cassert>
-#include <experimental/stacktrace>
+#include <stacktrace>
 #include <type_traits>
 
 /*
