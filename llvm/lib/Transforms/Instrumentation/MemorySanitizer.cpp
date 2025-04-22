@@ -817,18 +817,16 @@ MemorySanitizer::getOrInsertMsanMetadataFunction(Module &M, StringRef Name,
                                std::forward<ArgsTy>(Args)...);
 }
 
-StringRef getWarningFnName(bool TrackOrigins, bool Recover, bool EmbedFaultingInst) {
-  StringRef warningFnName [2][2][2]
-    = {
-       {
-        {"__msan_warning_noreturn", "__msan_warning_noreturn_instname"},
-        {"__msan_warning", "__msan_warning_instname"}
-       },
-       {
-        {"__msan_warning_with_origin_noreturn", "__msan_warning_with_origin_noreturn_instname"},
-        {"__msan_warning_with_origin", "__msan_warning_with_origin_instname"},
-       }
-      };
+StringRef getWarningFnName(bool TrackOrigins, bool Recover,
+                           bool EmbedFaultingInst) {
+  StringRef warningFnName[2][2][2] = {
+      {{"__msan_warning_noreturn", "__msan_warning_noreturn_instname"},
+       {"__msan_warning", "__msan_warning_instname"}},
+      {
+          {"__msan_warning_with_origin_noreturn",
+           "__msan_warning_with_origin_noreturn_instname"},
+          {"__msan_warning_with_origin", "__msan_warning_with_origin_instname"},
+      }};
 
   return warningFnName[TrackOrigins][Recover][EmbedFaultingInst];
 }
@@ -847,7 +845,9 @@ void MemorySanitizer::createKernelApi(Module &M, const TargetLibraryInfo &TLI) {
   VAArgOverflowSizeTLS = nullptr;
 
   SmallVector<Type *, 4> ArgsTy = {IRB.getInt32Ty()};
-  StringRef FnName = getWarningFnName(/*TrackOrigins=*/ false, /*Recover=*/ true, ClEmbedFaultingInst != MSanEmbedFaultingInstructionMode::None);
+  StringRef FnName = getWarningFnName(
+      /*TrackOrigins=*/false, /*Recover=*/true,
+      ClEmbedFaultingInst != MSanEmbedFaultingInstructionMode::None);
   if (ClEmbedFaultingInst != MSanEmbedFaultingInstructionMode::None)
     ArgsTy.push_back(IRB.getPtrTy());
   WarningFn = M.getOrInsertFunction(
@@ -907,10 +907,12 @@ void MemorySanitizer::createUserspaceApi(Module &M,
   // Create the callback.
   // FIXME: this function should have "Cold" calling conv,
   // which is not yet implemented.
-  StringRef WarningFnName = getWarningFnName(TrackOrigins, Recover, ClEmbedFaultingInst != MSanEmbedFaultingInstructionMode::None);
+  StringRef WarningFnName = getWarningFnName(
+      TrackOrigins, Recover,
+      ClEmbedFaultingInst != MSanEmbedFaultingInstructionMode::None);
   SmallVector<Type *, 4> ArgsTy = {};
   if (TrackOrigins) {
-    ArgsTy.push_back (IRB.getInt32Ty());
+    ArgsTy.push_back(IRB.getInt32Ty());
     if (ClEmbedFaultingInst != MSanEmbedFaultingInstructionMode::None)
       ArgsTy.push_back(IRB.getPtrTy());
     WarningFn = M.getOrInsertFunction(
