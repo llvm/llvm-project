@@ -309,10 +309,8 @@ class CXXNameMangler {
             !AdditionalAbiTags &&
             "only function and variables need a list of additional abi tags");
         if (const auto *NS = dyn_cast<NamespaceDecl>(ND)) {
-          if (const auto *AbiTag = NS->getAttr<AbiTagAttr>()) {
-            UsedAbiTags.insert(UsedAbiTags.end(), AbiTag->tags().begin(),
-                               AbiTag->tags().end());
-          }
+          if (const auto *AbiTag = NS->getAttr<AbiTagAttr>())
+            llvm::append_range(UsedAbiTags, AbiTag->tags());
           // Don't emit abi tags for namespaces.
           return;
         }
@@ -320,17 +318,13 @@ class CXXNameMangler {
 
       AbiTagList TagList;
       if (const auto *AbiTag = ND->getAttr<AbiTagAttr>()) {
-        UsedAbiTags.insert(UsedAbiTags.end(), AbiTag->tags().begin(),
-                           AbiTag->tags().end());
-        TagList.insert(TagList.end(), AbiTag->tags().begin(),
-                       AbiTag->tags().end());
+        llvm::append_range(UsedAbiTags, AbiTag->tags());
+        llvm::append_range(TagList, AbiTag->tags());
       }
 
       if (AdditionalAbiTags) {
-        UsedAbiTags.insert(UsedAbiTags.end(), AdditionalAbiTags->begin(),
-                           AdditionalAbiTags->end());
-        TagList.insert(TagList.end(), AdditionalAbiTags->begin(),
-                       AdditionalAbiTags->end());
+        llvm::append_range(UsedAbiTags, *AdditionalAbiTags);
+        llvm::append_range(TagList, *AdditionalAbiTags);
       }
 
       llvm::sort(TagList);

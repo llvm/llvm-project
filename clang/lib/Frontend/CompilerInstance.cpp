@@ -619,8 +619,7 @@ struct ReadModuleNames : ASTReaderListener {
           if (Current->IsUnimportable) continue;
           Current->IsAvailable = true;
           auto SubmodulesRange = Current->submodules();
-          Stack.insert(Stack.end(), SubmodulesRange.begin(),
-                       SubmodulesRange.end());
+          llvm::append_range(Stack, SubmodulesRange);
         }
       }
     }
