@@ -91,6 +91,9 @@ class TestPlatformProcessLaunchGDBServer(TestBase):
 
         connect_url = "connect://[%s]:%s" % (hostname, socket_id)
         self.runCmd("platform connect %s" % connect_url)
+        wd = self.getBuildArtifact("wd")
+        self.assertSuccess(new_platform.MakeDirectory(wd))
+        new_platform.SetWorkingDirectory(wd)
         self.runCmd("target create {}".format(self.getBuildArtifact("a.out")))
         self.runCmd("run")
         self.expect(
