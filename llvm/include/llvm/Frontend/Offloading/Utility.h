@@ -11,6 +11,7 @@
 
 #include <cstdint>
 #include <memory>
+#include <variant>
 
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -159,6 +160,107 @@ namespace intel {
 /// the Intel runtime offload plugin.
 Error containerizeOpenMPSPIRVImage(std::unique_ptr<MemoryBuffer> &Binary);
 } // namespace intel
+
+namespace sycl {
+class PropertySetRegistry;
+
+// A property value. It can be either a 32-bit unsigned integer or a byte array.
+class PropertyValue {
+public:
+  using ByteArrayTy = SmallVector<char, 8>;
+
+  PropertyValue() = default;
+  PropertyValue(uint32_t Val) : Value(Val) {}
+  PropertyValue(StringRef Data)
+      : Value(ByteArrayTy(Data.begin(), Data.end())) {}
+
+  template <typename C, typename T = typename C::value_type>
+  PropertyValue(const C &Data)
+      : PropertyValue({reinterpret_cast<const char *>(Data.data()),
+                       Data.size() * sizeof(T)}) {}
+
+  uint32_t asUint32() const {
+    assert(getType() == PV_UInt32 && "must be UINT32 value");
+    return std::get<uint32_t>(Value);
+  }
+
+  StringRef asByteArray() const {
+    assert(getType() == PV_ByteArray && "must be BYTE_ARRAY value");
+    const auto &ByteArrayRef = std::get<ByteArrayTy>(Value);
+    return {ByteArrayRef.data(), ByteArrayRef.size()};
+  }
+
+  // Note: each enumeration value corresponds one-to-one to the
+  // index of the std::variant.
+  enum Type { PV_None = 0, PV_UInt32 = 1, PV_ByteArray = 2 };
+  Type getType() const { return static_cast<Type>(Value.index()); }
+
+  bool operator==(const PropertyValue &Rhs) const { return Value == Rhs.Value; }
+
+private:
+  std::variant<std::monostate, std::uint32_t, ByteArrayTy> Value = {};
+};
+
+/// A property set is a collection of PropertyValues, each identified by a name.
+/// A property set registry is a collection of property sets, each identified by
+/// a category name. The registry allows for the addition, removal, and
+/// retrieval of property sets and their properties.
+class PropertySetRegistry {
+  using PropertyMapTy = StringMap<unsigned>;
+  /// A property set. Preserves insertion order when iterating elements.
+  using PropertySet = MapVector<SmallString<16>, PropertyValue, PropertyMapTy>;
+  using MapTy = MapVector<SmallString<16>, PropertySet, PropertyMapTy>;
+
+public:
+  /// Function for bulk addition of an entire property set in the given
+  /// \p Category .
+  template <typename MapTy> void add(StringRef Category, const MapTy &Props) {
+    assert(PropSetMap.find(Category) == PropSetMap.end() &&
+           "category already added");
+    auto &PropSet = PropSetMap[Category];
+
+    for (const auto &Prop : Props)
+      PropSet.insert_or_assign(Prop.first, PropertyValue(Prop.second));
+  }
+
+  /// Adds the given \p PropVal with the given \p PropName into the given \p
+  /// Category .
+  template <typename T>
+  void add(StringRef Category, StringRef PropName, const T &PropVal) {
+    auto &PropSet = PropSetMap[Category];
+    PropSet.insert({PropName, PropertyValue(PropVal)});
+  }
+
+  void remove(StringRef Category, StringRef PropName) {
+    auto PropertySetIt = PropSetMap.find(Category);
+    if (PropertySetIt == PropSetMap.end())
+      return;
+    auto &PropertySet = PropertySetIt->second;
+    auto PropIt = PropertySet.find(PropName);
+    if (PropIt == PropertySet.end())
+      return;
+    PropertySet.erase(PropIt);
+  }
+
+  static Expected<PropertySetRegistry> readJSON(MemoryBufferRef Buf);
+
+  /// Dumps the property set registry to the given \p Out stream.
+  void writeJSON(raw_ostream &Out) const;
+  SmallString<0> writeJSON() const;
+
+  MapTy::const_iterator begin() const { return PropSetMap.begin(); }
+  MapTy::const_iterator end() const { return PropSetMap.end(); }
+
+  /// Retrieves a property set with given \p Name .
+  PropertySet &operator[](StringRef Name) { return PropSetMap[Name]; }
+  /// Constant access to the underlying map.
+  const MapTy &getPropSets() const { return PropSetMap; }
+
+private:
+  MapTy PropSetMap;
+};
+
+} // namespace sycl
 } // namespace offloading
 } // namespace llvm
 

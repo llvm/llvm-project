@@ -20,6 +20,7 @@
 #include "llvm/BinaryFormat/Magic.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/CodeGen/CommandFlags.h"
+#include "llvm/Frontend/Offloading/Utility.h"
 #include "llvm/IR/DiagnosticPrinter.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IRReader/IRReader.h"
@@ -54,6 +55,7 @@
 using namespace llvm;
 using namespace llvm::opt;
 using namespace llvm::object;
+using namespace llvm::offloading::sycl;
 
 /// Save intermediary results.
 static bool SaveTemps = false;
@@ -355,18 +357,18 @@ Error runSYCLLink(ArrayRef<std::string> Files, const ArgList &Args) {
   // result in multiple bitcode codes.
   // The following lines are placeholders to represent multiple files and will
   // be refactored once SYCL post link support is available.
-  SmallVector<std::string> SplitModules;
-  SplitModules.emplace_back(*LinkedFile);
+  SmallVector<std::pair<std::string, PropertySetRegistry>> SplitModules;
+  SplitModules.emplace_back(*LinkedFile, PropertySetRegistry{});
 
   // SPIR-V code generation step.
   for (size_t I = 0, E = SplitModules.size(); I != E; ++I) {
     auto Stem = OutputFile.rsplit('.').first;
     std::string SPVFile(Stem);
     SPVFile.append("_" + utostr(I) + ".spv");
-    auto Err = runSPIRVCodeGen(SplitModules[I], Args, SPVFile, C);
+    auto Err = runSPIRVCodeGen(SplitModules[I].first, Args, SPVFile, C);
     if (Err)
       return Err;
-    SplitModules[I] = SPVFile;
+    SplitModules[I].first = SPVFile;
   }
 
   // Write the final output into file.
@@ -376,7 +378,7 @@ Error runSYCLLink(ArrayRef<std::string> Files, const ArgList &Args) {
   llvm::raw_fd_ostream FS(FD, /*shouldClose=*/true);
 
   for (size_t I = 0, E = SplitModules.size(); I != E; ++I) {
-    auto File = SplitModules[I];
+    const auto &[File, Properties] = SplitModules[I];
     llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> FileOrErr =
         llvm::MemoryBuffer::getFileOrSTDIN(File);
     if (std::error_code EC = FileOrErr.getError()) {
@@ -385,6 +387,7 @@ Error runSYCLLink(ArrayRef<std::string> Files, const ArgList &Args) {
       else
         return createFileError(File, EC);
     }
+
     OffloadingImage TheImage{};
     TheImage.TheImageKind = IMG_Object;
     TheImage.TheOffloadKind = OFK_SYCL;
@@ -392,6 +395,7 @@ Error runSYCLLink(ArrayRef<std::string> Files, const ArgList &Args) {
         Args.MakeArgString(Args.getLastArgValue(OPT_triple_EQ));
     TheImage.StringData["arch"] =
         Args.MakeArgString(Args.getLastArgValue(OPT_arch_EQ));
+    TheImage.StringData["sycl_properties"] = Properties.writeJSON();
     TheImage.Image = std::move(*FileOrErr);
 
     llvm::SmallString<0> Buffer = OffloadBinary::write(TheImage);

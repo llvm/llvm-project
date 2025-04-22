@@ -459,3 +459,105 @@ Error offloading::intel::containerizeOpenMPSPIRVImage(
   Img = MemoryBuffer::getMemBufferCopy(YamlFile);
   return Error::success();
 }
+
+namespace llvm::offloading::sycl {
+
+void PropertySetRegistry::writeJSON(raw_ostream &Out) const {
+  json::OStream J(Out);
+  J.object([&] {
+    for (const auto &PropSet : PropSetMap) {
+      // Note: we do not output the property sets as objects,
+      // but as arrays of [name, value] arrays because we have to
+      // preserve the order of insertion of the properties
+      // in the property set (note: this currently only used by the
+      // spec constant metadata). Even if the key-value pairs
+      // of an object are serialized in the order they were inserted,
+      // the order is not guaranteed to be preserved when
+      // deserializing because json::Object uses a DenseMap to store
+      // its key-value pairs.
+      J.attributeArray(PropSet.first, [&] {
+        for (const auto &Props : PropSet.second) {
+          J.array([&] {
+            J.value(Props.first);
+            switch (Props.second.getType()) {
+            case PropertyValue::PV_UInt32:
+              J.value(Props.second.asUint32());
+              break;
+            case PropertyValue::PV_ByteArray: {
+              StringRef ByteArrayRef = Props.second.asByteArray();
+              J.value(json::Array(ByteArrayRef.bytes()));
+              break;
+            }
+            default:
+              llvm_unreachable(("unsupported property type: " +
+                                utostr(Props.second.getType()))
+                                   .c_str());
+            }
+          });
+        }
+      });
+    }
+  });
+}
+
+SmallString<0> PropertySetRegistry::writeJSON() const {
+  SmallString<0> Str;
+  raw_svector_ostream OS(Str);
+  writeJSON(OS);
+  return Str;
+}
+
+Expected<PropertySetRegistry>
+PropertySetRegistry::readJSON(MemoryBufferRef Buf) {
+  PropertySetRegistry Res;
+  Expected<json::Value> V = json::parse(Buf.getBuffer());
+  if (!V)
+    return V.takeError();
+  const json::Object *O = V->getAsObject();
+  if (!O)
+    return createStringError("expected JSON object");
+  for (const auto &[CategoryName, Value] : *O) {
+    const json::Array *PropsArray = Value.getAsArray();
+    if (!PropsArray)
+      return createStringError("expected JSON array for properties");
+    PropertySet &PropSet = Res.PropSetMap[StringRef(CategoryName)];
+    for (const json::Value &PropPair : *PropsArray) {
+      const json::Array *PropArray = PropPair.getAsArray();
+      if (!PropArray || PropArray->size() != 2)
+        return createStringError(
+            "expected property as [PropertyName, PropertyValue] pair");
+
+      const json::Value &PropNameVal = (*PropArray)[0];
+      const json::Value &PropValueVal = (*PropArray)[1];
+
+      std::optional<StringRef> PropName = PropNameVal.getAsString();
+      if (!PropName)
+        return createStringError("expected property name as string");
+
+      PropertyValue Prop;
+      if (std::optional<uint64_t> Val = PropValueVal.getAsUINT64()) {
+        Prop = PropertyValue(static_cast<uint32_t>(*Val));
+      } else if (const json::Array *Val = PropValueVal.getAsArray()) {
+        SmallVector<unsigned char, 8> Vec;
+        for (const json::Value &V : *Val) {
+          std::optional<uint64_t> Byte = V.getAsUINT64();
+          if (!Byte)
+            return createStringError("invalid byte array value");
+          if (*Byte > std::numeric_limits<unsigned char>::max())
+            return createStringError("byte array value out of range");
+          Vec.push_back(static_cast<unsigned char>(*Byte));
+        }
+        Prop = PropertyValue(Vec);
+      } else {
+        return createStringError("unsupported property type");
+      }
+
+      auto [It, Inserted] = PropSet.insert({*PropName, Prop});
+      if (!Inserted)
+        return createStringError("duplicate property name");
+    }
+  }
+  return Res;
+}
+
+} // namespace llvm::offloading::sycl
