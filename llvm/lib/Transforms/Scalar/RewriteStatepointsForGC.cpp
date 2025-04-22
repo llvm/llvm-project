@@ -3311,7 +3311,7 @@ static void computeLiveInValues(DominatorTree &DT, Function &F,
 
     // Compute our new liveout set, then exit early if it hasn't changed despite
     // the contribution of our successor.
-    SetVector<Value *> LiveOut = Data.LiveOut[BB];
+    SetVector<Value *> &LiveOut = Data.LiveOut[BB];
     const auto OldLiveOutSize = LiveOut.size();
     for (BasicBlock *Succ : successors(BB)) {
       assert(Data.LiveIn.count(Succ));
@@ -3324,7 +3324,6 @@ static void computeLiveInValues(DominatorTree &DT, Function &F,
       // hasn't changed.
       continue;
     }
-    Data.LiveOut[BB] = LiveOut;
 
     // Apply the effects of this basic block
     SetVector<Value *> LiveTmp = LiveOut;

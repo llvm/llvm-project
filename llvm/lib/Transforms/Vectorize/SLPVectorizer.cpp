@@ -5085,7 +5085,7 @@ private:
     }
 
     static unsigned getHashValue(const OrdersType &V) {
-      return static_cast<unsigned>(hash_combine_range(V.begin(), V.end()));
+      return static_cast<unsigned>(hash_combine_range(V));
     }
 
     static bool isEqual(const OrdersType &LHS, const OrdersType &RHS) {
@@ -5793,7 +5793,7 @@ static InstructionCost getExtractWithExtendCost(
            TTI.getCastInstrCost(Opcode, Dst, SubTp, TTI::CastContextHint::None,
                                 CostKind);
   }
-  return TTI.getExtractWithExtendCost(Opcode, Dst, VecTy, Index);
+  return TTI.getExtractWithExtendCost(Opcode, Dst, VecTy, Index, CostKind);
 }
 
 /// Correctly creates insert_subvector, checking that the index is multiple of
@@ -6751,7 +6751,7 @@ BoUpSLP::getReorderingData(const TreeEntry &TE, bool TopToBottom,
     auto PHICompare = [&](unsigned I1, unsigned I2) {
       Value *V1 = TE.Scalars[I1];
       Value *V2 = TE.Scalars[I2];
-      if (V1 == V2 || (V1->getNumUses() == 0 && V2->getNumUses() == 0))
+      if (V1 == V2 || (V1->use_empty() && V2->use_empty()))
         return false;
       if (isa<PoisonValue>(V1))
         return true;
@@ -12412,9 +12412,9 @@ public:
               all_of(Ext->users(), IsaPred<GetElementPtrInst>)) {
             // Use getExtractWithExtendCost() to calculate the cost of
             // extractelement/ext pair.
-            Cost -=
-                TTI.getExtractWithExtendCost(Ext->getOpcode(), Ext->getType(),
-                                             EE->getVectorOperandType(), Idx);
+            Cost -= TTI.getExtractWithExtendCost(
+                Ext->getOpcode(), Ext->getType(), EE->getVectorOperandType(),
+                Idx, CostKind);
             // Add back the cost of s|zext which is subtracted separately.
             Cost += TTI.getCastInstrCost(
                 Ext->getOpcode(), Ext->getType(), EE->getType(),
@@ -13035,7 +13035,8 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
           // Use getExtractWithExtendCost() to calculate the cost of
           // extractelement/ext pair.
           InstructionCost Cost = TTI->getExtractWithExtendCost(
-              Ext->getOpcode(), Ext->getType(), SrcVecTy, *getExtractIndex(I));
+              Ext->getOpcode(), Ext->getType(), SrcVecTy, *getExtractIndex(I),
+              CostKind);
           // Subtract the cost of s|zext which is subtracted separately.
           Cost -= TTI->getCastInstrCost(
               Ext->getOpcode(), Ext->getType(), I->getType(),

@@ -2749,7 +2749,7 @@ static void BuildFlattenedTypeList(QualType BaseTy,
       BuildFlattenedTypeList(AT->getElementType(), ElementFields);
       // Repeat the element's field list n times.
       for (uint64_t Ct = 0; Ct < AT->getZExtSize(); ++Ct)
-        List.insert(List.end(), ElementFields.begin(), ElementFields.end());
+        llvm::append_range(List, ElementFields);
       continue;
     }
     // Vectors can only have element types that are builtin types, so this can
@@ -2777,7 +2777,7 @@ static void BuildFlattenedTypeList(QualType BaseTy,
         FieldTypes.push_back(FD->getType());
       // Reverse the newly added sub-range.
       std::reverse(FieldTypes.begin(), FieldTypes.end());
-      WorkList.insert(WorkList.end(), FieldTypes.begin(), FieldTypes.end());
+      llvm::append_range(WorkList, FieldTypes);
 
       // If this wasn't a standard layout type we may also have some base
       // classes to deal with.
@@ -2786,7 +2786,7 @@ static void BuildFlattenedTypeList(QualType BaseTy,
         for (const auto &Base : RD->bases())
           FieldTypes.push_back(Base.getType());
         std::reverse(FieldTypes.begin(), FieldTypes.end());
-        WorkList.insert(WorkList.end(), FieldTypes.begin(), FieldTypes.end());
+        llvm::append_range(WorkList, FieldTypes);
       }
       continue;
     }
@@ -3375,8 +3375,7 @@ static bool BuildInitializerList(Sema &S, ASTContext &Ctx, Expr *E,
       RecordTypes.push_back(D->bases_begin()->getType()->getAs<RecordType>());
     }
     while (!RecordTypes.empty()) {
-      const RecordType *RT = RecordTypes.back();
-      RecordTypes.pop_back();
+      const RecordType *RT = RecordTypes.pop_back_val();
       for (auto *FD : RT->getDecl()->fields()) {
         DeclAccessPair Found = DeclAccessPair::make(FD, FD->getAccess());
         DeclarationNameInfo NameInfo(FD->getDeclName(), E->getBeginLoc());
@@ -3424,8 +3423,7 @@ static Expr *GenerateInitLists(ASTContext &Ctx, QualType Ty,
       RecordTypes.push_back(D->bases_begin()->getType()->getAs<RecordType>());
     }
     while (!RecordTypes.empty()) {
-      const RecordType *RT = RecordTypes.back();
-      RecordTypes.pop_back();
+      const RecordType *RT = RecordTypes.pop_back_val();
       for (auto *FD : RT->getDecl()->fields()) {
         Inits.push_back(GenerateInitLists(Ctx, FD->getType(), It));
       }

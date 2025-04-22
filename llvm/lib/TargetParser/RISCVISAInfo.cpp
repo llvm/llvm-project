@@ -789,6 +789,9 @@ Error RISCVISAInfo::checkDependency() {
       return getIncompatibleError("zclsd", "zcf");
   }
 
+  if (XLen != 32 && Exts.count("zilsd") != 0)
+    return getError("'zilsd' is only supported for 'rv32'");
+
   for (auto Ext : XqciExts)
     if (Exts.count(Ext.str()) && (XLen != 32))
       return getError("'" + Twine(Ext) + "'" + " is only supported for 'rv32'");

@@ -422,6 +422,15 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   else if (!Subtarget.hasVendorXTHeadCondMov())
     setOperationAction(ISD::SELECT, XLenVT, Custom);
 
+  if (Subtarget.hasVendorXqcia() && !Subtarget.is64Bit()) {
+    setOperationAction(ISD::UADDSAT, MVT::i32, Legal);
+    setOperationAction(ISD::SADDSAT, MVT::i32, Legal);
+    setOperationAction(ISD::USUBSAT, MVT::i32, Legal);
+    setOperationAction(ISD::SSUBSAT, MVT::i32, Legal);
+    setOperationAction(ISD::SSHLSAT, MVT::i32, Legal);
+    setOperationAction(ISD::USHLSAT, MVT::i32, Legal);
+  }
+
   static const unsigned FPLegalNodeTypes[] = {
       ISD::FMINNUM,       ISD::FMAXNUM,        ISD::FMINIMUMNUM,
       ISD::FMAXIMUMNUM,   ISD::LRINT,          ISD::LLRINT,
@@ -5018,8 +5027,8 @@ static SDValue lowerVZIP(unsigned Opc, SDValue Op0, SDValue Op1,
                          const SDLoc &DL, SelectionDAG &DAG,
                          const RISCVSubtarget &Subtarget) {
   assert(RISCVISD::RI_VZIPEVEN_VL == Opc || RISCVISD::RI_VZIPODD_VL == Opc ||
-         RISCVISD::RI_VZIP2A_VL == Opc || RISCVISD::RI_VUNZIP2A_VL == Opc ||
-         RISCVISD::RI_VUNZIP2B_VL == Opc);
+         RISCVISD::RI_VZIP2A_VL == Opc || RISCVISD::RI_VZIP2B_VL == Opc ||
+         RISCVISD::RI_VUNZIP2A_VL == Opc || RISCVISD::RI_VUNZIP2B_VL == Opc);
   assert(Op0.getSimpleValueType() == Op1.getSimpleValueType());
 
   MVT VT = Op0.getSimpleValueType();
@@ -11786,6 +11795,17 @@ SDValue RISCVTargetLowering::lowerVECTOR_INTERLEAVE(SDValue Op,
     }
 
     return DAG.getMergeValues(Loads, DL);
+  }
+
+  // Use ri.vzip2{a,b} if available
+  // TODO: Figure out the best lowering for the spread variants
+  if (Subtarget.hasVendorXRivosVizip() && !Op.getOperand(0).isUndef() &&
+      !Op.getOperand(1).isUndef()) {
+    SDValue V1 = Op->getOperand(0);
+    SDValue V2 = Op->getOperand(1);
+    SDValue Lo = lowerVZIP(RISCVISD::RI_VZIP2A_VL, V1, V2, DL, DAG, Subtarget);
+    SDValue Hi = lowerVZIP(RISCVISD::RI_VZIP2B_VL, V1, V2, DL, DAG, Subtarget);
+    return DAG.getMergeValues({Lo, Hi}, DL);
   }
 
   // If the element type is smaller than ELEN, then we can interleave with
@@ -22292,6 +22312,7 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(RI_VZIPEVEN_VL)
   NODE_NAME_CASE(RI_VZIPODD_VL)
   NODE_NAME_CASE(RI_VZIP2A_VL)
+  NODE_NAME_CASE(RI_VZIP2B_VL)
   NODE_NAME_CASE(RI_VUNZIP2A_VL)
   NODE_NAME_CASE(RI_VUNZIP2B_VL)
   NODE_NAME_CASE(RI_VEXTRACT)
