@@ -108,6 +108,8 @@ public:
   std::string getRecordTypeName(const clang::RecordDecl *,
                                 llvm::StringRef suffix);
 
+  const CIRGenRecordLayout &getCIRGenRecordLayout(const clang::RecordDecl *rd);
+
   /// Convert type T into an mlir::Type. This differs from convertType in that
   /// it is used to convert to the memory representation for a type. For
   /// example, the scalar representation for bool is i1, but the memory

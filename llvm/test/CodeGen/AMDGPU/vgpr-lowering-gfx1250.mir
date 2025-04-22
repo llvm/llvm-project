@@ -241,7 +241,7 @@ body:             |
     ; GCN-NEXT: s_set_vgpr_msb 0x55
     ; ASM-SAME:                                         ;  msbs: dst=1 src0=1 src1=1 src2=1
     ; GCN-NEXT: v_wmma_f32_16x16x32_bf16 v[14:21] /*v[270:277]*/, v[26:33] /*v[282:289]*/, v[34:41] /*v[290:297]*/, v[14:21] /*v[270:277]*/
-    early-clobber $vgpr270_vgpr271_vgpr272_vgpr273_vgpr274_vgpr275_vgpr276_vgpr277 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr 8, undef $vgpr282_vgpr283_vgpr284_vgpr285_vgpr286_vgpr287_vgpr288_vgpr289, 8, undef $vgpr290_vgpr291_vgpr292_vgpr293_vgpr294_vgpr295_vgpr296_vgpr297, 8, killed undef $vgpr270_vgpr271_vgpr272_vgpr273_vgpr274_vgpr275_vgpr276_vgpr277, 0, 0, implicit $exec
+    early-clobber $vgpr270_vgpr271_vgpr272_vgpr273_vgpr274_vgpr275_vgpr276_vgpr277 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr 8, undef $vgpr282_vgpr283_vgpr284_vgpr285_vgpr286_vgpr287_vgpr288_vgpr289, 8, undef $vgpr290_vgpr291_vgpr292_vgpr293_vgpr294_vgpr295_vgpr296_vgpr297, 8, killed undef $vgpr270_vgpr271_vgpr272_vgpr273_vgpr274_vgpr275_vgpr276_vgpr277, 0, 0, 0, 0, implicit $exec
 
     ; ASM: NumVgprs: 1024
 
