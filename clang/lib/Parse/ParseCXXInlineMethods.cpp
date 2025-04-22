@@ -142,11 +142,12 @@ NamedDecl *Parser::ParseCXXInlineMethodDef(
       SkipUntil(tok::semi);
     }
 
-    Decl *PrevDecl = FnD->getPreviousDecl();
-    if (isa_and_present<FunctionDecl>(PrevDecl) &&
-        PrevDecl->getLexicalDeclContext() == FnD->getLexicalDeclContext()) {
-      Actions.CheckForFunctionRedefinition(FnD->getAsFunction(),
-                                           cast<FunctionDecl>(PrevDecl));
+    if (FunctionDecl *FD =
+            dyn_cast_if_present<FunctionDecl>(FnD->getPreviousDecl())) {
+      if (isa<CXXRecordDecl>(FD->getLexicalDeclContext()) ||
+          Actions.getDefaultedFunctionKind(FD).asComparison() ==
+              Sema::DefaultedComparisonKind::None)
+        Actions.CheckForFunctionRedefinition(FnD->getAsFunction(), FD);
     }
 
     return FnD;

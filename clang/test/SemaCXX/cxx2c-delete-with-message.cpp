@@ -273,27 +273,34 @@ void operators() {
 };
 
 namespace gh135506 {
-struct a {
-  friend consteval int f() { return 3; }    // expected-note {{previous definition is here}}
-  friend consteval int f() = delete("foo"); // expected-error {{redefinition of 'f'}}
+struct s1 {
+  friend consteval int a() { return 3; }    // expected-note {{previous definition is here}}
+  friend consteval int a() = delete("foo"); // expected-error {{redefinition of 'a'}}
 
-  friend consteval int g() { return 3; } // expected-note {{previous definition is here}}
-  friend consteval int g() = delete;     // expected-error {{redefinition of 'g'}}
+  friend consteval int b() { return 3; } // expected-note {{previous definition is here}}
+  friend consteval int b() = delete;     // expected-error {{redefinition of 'b'}}
 
-  friend int h() { return 3; } // expected-note {{previous definition is here}}
-  friend int h() = delete;     // expected-error {{redefinition of 'h'}}
+  friend int c() { return 3; } // expected-note {{previous definition is here}}
+  friend int c() = delete;     // expected-error {{redefinition of 'c'}}
 
-  friend consteval int i() = delete;     // expected-note {{previous definition is here}}
-  friend consteval int i() { return 3; } // expected-error {{redefinition of 'i'}}
+  friend consteval int d() = delete;     // expected-note {{previous definition is here}}
+  friend consteval int d() { return 3; } // expected-error {{redefinition of 'd'}}
 };
 
-struct b {
-  friend consteval bool operator==(b, b) { return true; } // expected-note {{previous definition is here}}
-  friend consteval bool operator==(b, b) = default;       // expected-error {{redefinition of 'operator=='}}
+struct s2 {
+  friend consteval bool operator==(s2, s2) { return true; } // expected-note {{previous definition is here}}
+  friend consteval bool operator==(s2, s2) = default;       // expected-error {{redefinition of 'operator=='}}
 };
 
-struct c {
-  friend consteval bool operator==(c, c) = default; // expected-note {{previous definition is here}}
-  friend consteval bool operator==(c, c) { return true; } // expected-error {{redefinition of 'operator=='}}
+struct s3 {
+  friend consteval bool operator==(s3, s3) = default;       // expected-note {{previous definition is here}}
+  friend consteval bool operator==(s3, s3) { return true; } // expected-error {{redefinition of 'operator=='}}
 };
+
+void e() {}                              // expected-note {{previous definition is here}}
+struct s4 { friend void e() = delete; }; // expected-error {{redefinition of 'e'}}
+
+struct s5 { friend void f() {} };         // expected-note {{previous definition is here}}
+struct s6 { friend void f() = delete; };  // expected-error {{redefinition of 'f'}}
+
 }
