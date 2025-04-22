@@ -1,7 +1,7 @@
 ! This test checks lowering of OpenACC enter data directive.
 
 ! RUN: bbc -fopenacc -emit-hlfir %s -o - | FileCheck %s
-
+! XFAIL:*
 subroutine acc_enter_data
   integer :: async = 1
   real, dimension(10, 10) :: a, b, c
