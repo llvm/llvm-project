@@ -420,99 +420,88 @@ MSAN_MAYBE_STORE_ORIGIN(u16, 2)
 MSAN_MAYBE_STORE_ORIGIN(u32, 4)
 MSAN_MAYBE_STORE_ORIGIN(u64, 8)
 
+// These macros to reuse the function body are kludgy, but are the better than
+// the alternatives:
+// - call a common function: this pollutes the stack traces
+// - have x_instname() be a simple macro wrapper around x(): the
+//   instrumentation pass expects function symbols
+// - add instname as a parameter everywhere (with a check whether instname is
+//   null): this pollutes the fastpath
+// - duplicate the function body: redundancy is redundant
+#define __MSAN_WARNING_BODY \
+  GET_CALLER_PC_BP; \
+  PrintWarningWithOrigin(pc, bp, 0); \
+  if (__msan::flags()->halt_on_error) { \
+    if (__msan::flags()->print_stats) \
+      ReportStats(); \
+    Printf("Exiting\n"); \
+    Die(); \
+  }
+
 void __msan_warning() {
   WARN_IF_PRINT_FAULTING_INSTRUCTION_REQUESTED;
-  GET_CALLER_PC_BP;
-  PrintWarningWithOrigin(pc, bp, 0);
-  if (__msan::flags()->halt_on_error) {
-    if (__msan::flags()->print_stats)
-      ReportStats();
-    Printf("Exiting\n");
-    Die();
-  }
+  __MSAN_WARNING_BODY
 }
+
+void __msan_warning_instname(char *instname) {
+  PRINT_FAULTING_INSTRUCTION(instname);
+  __MSAN_WARNING_BODY
+}
+
+#define __MSAN_WARNING_NORETURN_BODY \
+  GET_CALLER_PC_BP; \
+  PrintWarningWithOrigin(pc, bp, 0); \
+  if (__msan::flags()->print_stats) \
+    ReportStats(); \
+  Printf("Exiting\n"); \
+  Die();
 
 void __msan_warning_noreturn() {
   WARN_IF_PRINT_FAULTING_INSTRUCTION_REQUESTED;
-  GET_CALLER_PC_BP;
-  PrintWarningWithOrigin(pc, bp, 0);
-  if (__msan::flags()->print_stats)
-    ReportStats();
-  Printf("Exiting\n");
-  Die();
-}
-
-void __msan_warning_with_origin(u32 origin) {
-  WARN_IF_PRINT_FAULTING_INSTRUCTION_REQUESTED;
-  GET_CALLER_PC_BP;
-  PrintWarningWithOrigin(pc, bp, origin);
-  if (__msan::flags()->halt_on_error) {
-    if (__msan::flags()->print_stats)
-      ReportStats();
-    Printf("Exiting\n");
-    Die();
-  }
-}
-
-void __msan_warning_with_origin_noreturn(u32 origin) {
-  WARN_IF_PRINT_FAULTING_INSTRUCTION_REQUESTED;
-  GET_CALLER_PC_BP;
-  PrintWarningWithOrigin(pc, bp, origin);
-  if (__msan::flags()->print_stats)
-    ReportStats();
-  Printf("Exiting\n");
-  Die();
-}
-
-// We duplicate the non _instname function's body because:
-// - we don't want to pollute the stack traces with an additional function
-//   call.
-// - we can't use a simple macro wrapper, because the instrumentation pass
-//   expects function symbols.
-// - we don't add instname as a parameter everywhere (with a check whether the
-//   value is null) to avoid polluting the fastpath.
-void __msan_warning_instname(char *instname) {
-  PRINT_FAULTING_INSTRUCTION(instname);
-  GET_CALLER_PC_BP;
-  PrintWarningWithOrigin(pc, bp, 0);
-  if (__msan::flags()->halt_on_error) {
-    if (__msan::flags()->print_stats)
-      ReportStats();
-    Printf("Exiting\n");
-    Die();
-  }
+  __MSAN_WARNING_NORETURN_BODY
 }
 
 void __msan_warning_noreturn_instname(char *instname) {
   PRINT_FAULTING_INSTRUCTION(instname);
-  GET_CALLER_PC_BP;
-  PrintWarningWithOrigin(pc, bp, 0);
-  if (__msan::flags()->print_stats)
-    ReportStats();
-  Printf("Exiting\n");
-  Die();
+  __MSAN_WARNING_NORETURN_BODY
+}
+
+#define __MSAN_WARNING_WITH_ORIGIN_BODY(origin) \
+  GET_CALLER_PC_BP; \
+  PrintWarningWithOrigin(pc, bp, origin); \
+  if (__msan::flags()->halt_on_error) { \
+    if (__msan::flags()->print_stats) \
+      ReportStats(); \
+    Printf("Exiting\n"); \
+    Die(); \
+  }
+
+void __msan_warning_with_origin(u32 origin) {
+  WARN_IF_PRINT_FAULTING_INSTRUCTION_REQUESTED;
+  __MSAN_WARNING_WITH_ORIGIN_BODY(origin)
 }
 
 void __msan_warning_with_origin_instname(u32 origin, char *instname) {
   PRINT_FAULTING_INSTRUCTION(instname);
-  GET_CALLER_PC_BP;
-  PrintWarningWithOrigin(pc, bp, origin);
-  if (__msan::flags()->halt_on_error) {
-    if (__msan::flags()->print_stats)
-      ReportStats();
-    Printf("Exiting\n");
-    Die();
-  }
+  __MSAN_WARNING_WITH_ORIGIN_BODY(origin)
+}
+
+#define __MSAN_WARNING_WITH_ORIGIN_NORETURN_BODY(origin) \
+  GET_CALLER_PC_BP; \
+  PrintWarningWithOrigin(pc, bp, origin); \
+  if (__msan::flags()->print_stats) \
+    ReportStats(); \
+  Printf("Exiting\n"); \
+  Die();
+
+void __msan_warning_with_origin_noreturn(u32 origin) {
+  WARN_IF_PRINT_FAULTING_INSTRUCTION_REQUESTED;
+  __MSAN_WARNING_WITH_ORIGIN_NORETURN_BODY(origin)
 }
 
 void __msan_warning_with_origin_noreturn_instname(u32 origin, char *instname) {
   PRINT_FAULTING_INSTRUCTION(instname);
-  GET_CALLER_PC_BP;
-  PrintWarningWithOrigin(pc, bp, origin);
-  if (__msan::flags()->print_stats)
-    ReportStats();
-  Printf("Exiting\n");
-  Die();
+  __MSAN_WARNING_WITH_ORIGIN_NORETURN_BODY(origin)
 }
 
 static void OnStackUnwind(const SignalContext &sig, const void *,
