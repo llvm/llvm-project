@@ -106,6 +106,7 @@ def OMPC_CancellationConstructType : Clause<"cancellation_construct_type"> {
     OMP_CANCELLATION_CONSTRUCT_None
   ];
   let flangClass = "OmpCancellationConstructTypeClause";
+  let skipFlangUnparser = true;
 }
 def OMPC_Contains : Clause<"contains"> {
   let clangClass = "OMPContainsClause";
