@@ -747,6 +747,9 @@ public:
   bool isDesirableToCommuteWithShift(const SDNode *N,
                                      CombineLevel Level) const override;
 
+  bool isDesirableToHoistLogicOpWithExt(const SDNode *LogicOp,
+                                        unsigned ExtOp) const override;
+
   /// If a physical register, this returns the register that receives the
   /// exception address on entry to an EH pad.
   Register

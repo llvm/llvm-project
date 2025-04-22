@@ -4462,6 +4462,16 @@ public:
     return false;
   }
 
+  /// Return true if it is profitable to hoist a LogicOp where both operands
+  /// have the same extension op. This transformation may not be desirable if
+  /// it disrupts a particularly auspicious target-specific tree (e.g.
+  /// (or disjoint (zext A), (zext B)) -> vwaddu.wv on RISC-V). By default it
+  /// returns true.
+  virtual bool isDesirableToHoistLogicOpWithExt(const SDNode *LogicOp,
+                                                unsigned ExtOp) const {
+    return true;
+  }
+
   /// Return true if the target supports swifterror attribute. It optimizes
   /// loads and stores to reading and writing a specific register.
   virtual bool supportSwiftError() const {

@@ -19893,6 +19893,14 @@ bool RISCVTargetLowering::isDesirableToCommuteWithShift(
   return true;
 }
 
+bool RISCVTargetLowering::isDesirableToHoistLogicOpWithExt(
+    const SDNode *LogicOp, unsigned ExtOp) const {
+  if (NodeExtensionHelper::isSupportedRoot(LogicOp, Subtarget) &&
+      (ExtOp == ISD::ZERO_EXTEND || ExtOp == ISD::SIGN_EXTEND))
+    return false;
+  return true;
+}
+
 bool RISCVTargetLowering::targetShrinkDemandedConstant(
     SDValue Op, const APInt &DemandedBits, const APInt &DemandedElts,
     TargetLoweringOpt &TLO) const {
