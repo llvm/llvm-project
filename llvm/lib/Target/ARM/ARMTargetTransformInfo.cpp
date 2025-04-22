@@ -1545,7 +1545,7 @@ InstructionCost ARMTTIImpl::getArithmeticInstrCost(
 }
 
 InstructionCost ARMTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
-                                            MaybeAlign Alignment,
+                                            Align Alignment,
                                             unsigned AddressSpace,
                                             TTI::TargetCostKind CostKind,
                                             TTI::OperandValueInfo OpInfo,
@@ -1559,8 +1559,7 @@ InstructionCost ARMTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
     return BaseT::getMemoryOpCost(Opcode, Src, Alignment, AddressSpace,
                                   CostKind);
 
-  if (ST->hasNEON() && Src->isVectorTy() &&
-      (Alignment && *Alignment != Align(16)) &&
+  if (ST->hasNEON() && Src->isVectorTy() && Alignment != Align(16) &&
       cast<VectorType>(Src)->getElementType()->isDoubleTy()) {
     // Unaligned loads/stores are extremely inefficient.
     // We need 4 uops for vst.1/vld.1 vs 1uop for vldr/vstr.
