@@ -63,9 +63,12 @@ inline bool isKernelFunction(const Function &F) {
   return F.getCallingConv() == CallingConv::PTX_Kernel;
 }
 
-bool isParamGridConstant(const Value &);
+bool isParamGridConstant(const Argument &);
 
-MaybeAlign getAlign(const Function &, unsigned);
+inline MaybeAlign getAlign(const Function &F, unsigned Index) {
+  return F.getAttributes().getAttributes(Index).getStackAlignment();
+}
+
 MaybeAlign getAlign(const CallInst &, unsigned);
 Function *getMaybeBitcastedCallee(const CallBase *CB);
 
@@ -81,7 +84,14 @@ inline unsigned promoteScalarArgumentSize(unsigned size) {
 
 bool shouldEmitPTXNoReturn(const Value *V, const TargetMachine &TM);
 
-bool Isv2x16VT(EVT VT);
+inline bool Isv2x16VT(EVT VT) {
+  return (VT == MVT::v2f16 || VT == MVT::v2bf16 || VT == MVT::v2i16);
+}
+
+inline bool shouldPassAsArray(Type *Ty) {
+  return Ty->isAggregateType() || Ty->isVectorTy() ||
+         Ty->getScalarSizeInBits() == 128 || Ty->isHalfTy() || Ty->isBFloatTy();
+}
 
 namespace NVPTX {
 inline std::string getValidPTXIdentifier(StringRef Name) {

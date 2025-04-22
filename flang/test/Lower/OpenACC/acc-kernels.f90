@@ -174,7 +174,7 @@ subroutine acc_kernels
   !$acc kernels self(ifCondition)
   !$acc end kernels
 
-! CHECK:      %[[SELF2:.*]] = fir.convert %[[DECLIFCONDITION]]#1 : (!fir.ref<!fir.logical<4>>) -> i1
+! CHECK:      %[[SELF2:.*]] = fir.convert %[[DECLIFCONDITION]]#0 : (!fir.ref<!fir.logical<4>>) -> i1
 ! CHECK:      acc.kernels self(%[[SELF2]]) {
 ! CHECK:        acc.terminator
 ! CHECK-NEXT: }{{$}}

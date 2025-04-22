@@ -75,6 +75,8 @@ static cl::opt<bool>
 
 extern cl::opt<bool> CodeGenDataThinLTOTwoRounds;
 
+extern cl::opt<bool> ForceImportAll;
+
 namespace llvm {
 /// Enable global value internalization in LTO.
 cl::opt<bool> EnableLTOInternalization(
@@ -406,8 +408,11 @@ static void thinLTOResolvePrevailingGUID(
         Visibility = S->getVisibility();
     }
     // Alias and aliasee can't be turned into available_externally.
+    // When force-import-all is used, it indicates that object linking is not
+    // supported by the target. In this case, we can't change the linkage as
+    // well in case the global is converted to declaration.
     else if (!isa<AliasSummary>(S.get()) &&
-             !GlobalInvolvedWithAlias.count(S.get()))
+             !GlobalInvolvedWithAlias.count(S.get()) && !ForceImportAll)
       S->setLinkage(GlobalValue::AvailableExternallyLinkage);
 
     // For ELF, set visibility to the computed visibility from summaries. We
@@ -1439,9 +1444,9 @@ public:
         AddStream(std::move(AddStream)), Cache(std::move(Cache)),
         ShouldEmitIndexFiles(ShouldEmitIndexFiles) {
     auto &Defs = CombinedIndex.cfiFunctionDefs();
-    CfiFunctionDefs.insert(Defs.guid_begin(), Defs.guid_end());
+    CfiFunctionDefs.insert_range(Defs.guids());
     auto &Decls = CombinedIndex.cfiFunctionDecls();
-    CfiFunctionDecls.insert(Decls.guid_begin(), Decls.guid_end());
+    CfiFunctionDecls.insert_range(Decls.guids());
   }
 
   virtual Error runThinLTOBackendThread(

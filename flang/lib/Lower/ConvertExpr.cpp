@@ -6184,17 +6184,16 @@ private:
 
   /// Get the function signature of the LLVM memcpy intrinsic.
   mlir::FunctionType memcpyType() {
-    return fir::factory::getLlvmMemcpy(builder).getFunctionType();
+    auto ptrTy = mlir::LLVM::LLVMPointerType::get(builder.getContext());
+    llvm::SmallVector<mlir::Type> args = {ptrTy, ptrTy, builder.getI64Type()};
+    return mlir::FunctionType::get(builder.getContext(), args, std::nullopt);
   }
 
   /// Create a call to the LLVM memcpy intrinsic.
-  void createCallMemcpy(llvm::ArrayRef<mlir::Value> args) {
+  void createCallMemcpy(llvm::ArrayRef<mlir::Value> args, bool isVolatile) {
     mlir::Location loc = getLoc();
-    mlir::func::FuncOp memcpyFunc = fir::factory::getLlvmMemcpy(builder);
-    mlir::SymbolRefAttr funcSymAttr =
-        builder.getSymbolRefAttr(memcpyFunc.getName());
-    mlir::FunctionType funcTy = memcpyFunc.getFunctionType();
-    builder.create<fir::CallOp>(loc, funcSymAttr, funcTy.getResults(), args);
+    builder.create<mlir::LLVM::MemcpyOp>(loc, args[0], args[1], args[2],
+                                         isVolatile);
   }
 
   // Construct code to check for a buffer overrun and realloc the buffer when
@@ -6306,9 +6305,8 @@ private:
       auto buff = builder.createConvert(loc, fir::HeapType::get(resTy), mem);
       mlir::Value buffi = computeCoordinate(buff, off);
       llvm::SmallVector<mlir::Value> args = fir::runtime::createArguments(
-          builder, loc, memcpyType(), buffi, v.getAddr(), byteSz,
-          /*volatile=*/builder.createBool(loc, false));
-      createCallMemcpy(args);
+          builder, loc, memcpyType(), buffi, v.getAddr(), byteSz);
+      createCallMemcpy(args, /*isVolatile=*/false);
 
       // Save the incremented buffer position.
       builder.create<fir::StoreOp>(loc, endOff, buffPos);
@@ -6357,9 +6355,8 @@ private:
                 builder.createConvert(loc, fir::HeapType::get(resTy), mem);
             mlir::Value buffi = computeCoordinate(buff, off);
             llvm::SmallVector<mlir::Value> args = fir::runtime::createArguments(
-                builder, loc, memcpyType(), buffi, v.getAddr(), eleSz,
-                /*volatile=*/builder.createBool(loc, false));
-            createCallMemcpy(args);
+                builder, loc, memcpyType(), buffi, v.getAddr(), eleSz);
+            createCallMemcpy(args, /*isVolatile=*/false);
 
             builder.create<fir::StoreOp>(loc, plusOne, buffPos);
           }

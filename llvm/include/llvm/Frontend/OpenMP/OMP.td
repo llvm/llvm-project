@@ -106,6 +106,7 @@ def OMPC_CancellationConstructType : Clause<"cancellation_construct_type"> {
     OMP_CANCELLATION_CONSTRUCT_None
   ];
   let flangClass = "OmpCancellationConstructTypeClause";
+  let skipFlangUnparser = true;
 }
 def OMPC_Contains : Clause<"contains"> {
   let clangClass = "OMPContainsClause";
@@ -244,6 +245,7 @@ def OMPC_Indirect : Clause<"indirect"> {
 }
 def OMPC_Init : Clause<"init"> {
   let clangClass = "OMPInitClause";
+  let flangClass = "OmpInitClause";
 }
 def OMPC_Initializer : Clause<"initializer"> {
   let flangClass = "OmpInitializerClause";
@@ -526,6 +528,7 @@ def OMPC_Update : Clause<"update"> {
 }
 def OMPC_Use : Clause<"use"> {
   let clangClass = "OMPUseClause";
+  let flangClass = "OmpUseClause";
 }
 def OMPC_UsesAllocators : Clause<"uses_allocators"> {
   let clangClass = "OMPUsesAllocatorsClause";

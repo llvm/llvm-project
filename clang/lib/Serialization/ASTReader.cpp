@@ -44,7 +44,6 @@
 #include "clang/Basic/ASTSourceDescriptor.h"
 #include "clang/Basic/CommentOptions.h"
 #include "clang/Basic/Diagnostic.h"
-#include "clang/Basic/DiagnosticError.h"
 #include "clang/Basic/DiagnosticIDs.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/DiagnosticSema.h"
@@ -1132,7 +1131,7 @@ IdentifierInfo *ASTIdentifierLookupTrait::ReadData(const internal_key_type& k,
   bool HasRevertedTokenIDToIdentifier = readBit(Bits);
   bool Poisoned = readBit(Bits);
   bool ExtensionToken = readBit(Bits);
-  bool HadMacroDefinition = readBit(Bits);
+  bool HasMacroDefinition = readBit(Bits);
 
   assert(Bits == 0 && "Extra bits in the identifier?");
   DataLen -= sizeof(uint16_t) * 2;
@@ -1152,14 +1151,17 @@ IdentifierInfo *ASTIdentifierLookupTrait::ReadData(const internal_key_type& k,
          "Incorrect C++ operator keyword flag");
   (void)CPlusPlusOperatorKeyword;
 
-  // If this identifier is a macro, deserialize the macro
-  // definition.
-  if (HadMacroDefinition) {
+  // If this identifier has a macro definition, deserialize it or notify the
+  // visitor the actual definition is in a different module.
+  if (HasMacroDefinition) {
     uint32_t MacroDirectivesOffset =
         endian::readNext<uint32_t, llvm::endianness::little>(d);
     DataLen -= 4;
 
-    Reader.addPendingMacro(II, &F, MacroDirectivesOffset);
+    if (MacroDirectivesOffset)
+      Reader.addPendingMacro(II, &F, MacroDirectivesOffset);
+    else
+      hasMacroDefinitionInDependencies = true;
   }
 
   Reader.SetIdentifierInfo(ID, II);
@@ -1321,7 +1323,7 @@ ModuleLocalNameLookupTrait::internal_key_type
 ModuleLocalNameLookupTrait::GetInternalKey(const external_key_type &Key) {
   DeclarationNameKey Name(Key.first);
 
-  std::optional<unsigned> ModuleHash = getPrimaryModuleHash(Key.second);
+  UnsignedOrNone ModuleHash = getPrimaryModuleHash(Key.second);
   if (!ModuleHash)
     return {Name, 0};
 
@@ -1552,30 +1554,27 @@ void ASTReader::Error(unsigned DiagID, StringRef Arg1, StringRef Arg2,
   Diag(DiagID) << Arg1 << Arg2 << Arg3;
 }
 
-void ASTReader::Error(llvm::Error &&Err) const {
-  llvm::Error RemainingErr =
-      handleErrors(std::move(Err), [this](const DiagnosticError &E) {
-        auto Diag = E.getDiagnostic().second;
+namespace {
+struct AlreadyReportedDiagnosticError
+    : llvm::ErrorInfo<AlreadyReportedDiagnosticError> {
+  static char ID;
 
-        // Ideally we'd just emit it, but have to handle a possible in-flight
-        // diagnostic. Note that the location is currently ignored as well.
-        auto NumArgs = Diag.getStorage()->NumDiagArgs;
-        assert(NumArgs <= 3 && "Can only have up to 3 arguments");
-        StringRef Arg1, Arg2, Arg3;
-        switch (NumArgs) {
-        case 3:
-          Arg3 = Diag.getStringArg(2);
-          [[fallthrough]];
-        case 2:
-          Arg2 = Diag.getStringArg(1);
-          [[fallthrough]];
-        case 1:
-          Arg1 = Diag.getStringArg(0);
-        }
-        Error(Diag.getDiagID(), Arg1, Arg2, Arg3);
-      });
-  if (RemainingErr)
-    Error(toString(std::move(RemainingErr)));
+  void log(raw_ostream &OS) const override {
+    llvm_unreachable("reporting an already-reported diagnostic error");
+  }
+
+  std::error_code convertToErrorCode() const override {
+    return llvm::inconvertibleErrorCode();
+  }
+};
+
+char AlreadyReportedDiagnosticError::ID = 0;
+} // namespace
+
+void ASTReader::Error(llvm::Error &&Err) const {
+  handleAllErrors(
+      std::move(Err), [](AlreadyReportedDiagnosticError &) {},
+      [&](llvm::ErrorInfoBase &E) { return Error(E.message()); });
 }
 
 //===----------------------------------------------------------------------===//
@@ -2423,6 +2422,10 @@ namespace {
       // declarations it needs.
       ++NumIdentifierLookupHits;
       Found = *Pos;
+      if (Trait.hasMoreInformationInDependencies()) {
+        // Look for the identifier in extra modules as they contain more info.
+        return false;
+      }
       return true;
     }
 
@@ -2616,6 +2619,14 @@ bool ASTReader::shouldDisableValidationForFile(
   return false;
 }
 
+static std::pair<StringRef, StringRef>
+getUnresolvedInputFilenames(const ASTReader::RecordData &Record,
+                            const StringRef InputBlob) {
+  uint16_t AsRequestedLength = Record[7];
+  return {InputBlob.substr(0, AsRequestedLength),
+          InputBlob.substr(AsRequestedLength)};
+}
+
 InputFileInfo ASTReader::getInputFileInfo(ModuleFile &F, unsigned ID) {
   // If this ID is bogus, just return an empty input file.
   if (ID == 0 || ID > F.InputFileInfosLoaded.size())
@@ -2659,11 +2670,12 @@ InputFileInfo ASTReader::getInputFileInfo(ModuleFile &F, unsigned ID) {
   R.Transient = static_cast<bool>(Record[4]);
   R.TopLevel = static_cast<bool>(Record[5]);
   R.ModuleMap = static_cast<bool>(Record[6]);
-  uint16_t AsRequestedLength = Record[7];
-  R.UnresolvedImportedFilenameAsRequested = Blob.substr(0, AsRequestedLength);
-  R.UnresolvedImportedFilename = Blob.substr(AsRequestedLength);
-  if (R.UnresolvedImportedFilename.empty())
-    R.UnresolvedImportedFilename = R.UnresolvedImportedFilenameAsRequested;
+  auto [UnresolvedFilenameAsRequested, UnresolvedFilename] =
+      getUnresolvedInputFilenames(Record, Blob);
+  R.UnresolvedImportedFilenameAsRequested = UnresolvedFilenameAsRequested;
+  R.UnresolvedImportedFilename = UnresolvedFilename.empty()
+                                     ? UnresolvedFilenameAsRequested
+                                     : UnresolvedFilename;
 
   Expected<llvm::BitstreamEntry> MaybeEntry = Cursor.advance();
   if (!MaybeEntry) // FIXME this drops errors on the floor.
@@ -3318,6 +3330,18 @@ ASTReader::ReadControlBlock(ModuleFile &F,
                                 Loaded, StoredSize, StoredModTime,
                                 StoredSignature, Capabilities);
 
+      // Check the AST we just read from ImportedFile contains a different
+      // module than we expected (ImportedName). This can occur for C++20
+      // Modules when given a mismatch via -fmodule-file=<name>=<file>
+      if (IsImportingStdCXXModule) {
+        if (const auto *Imported =
+                getModuleManager().lookupByFileName(ImportedFile);
+            Imported != nullptr && Imported->ModuleName != ImportedName) {
+          Diag(diag::err_failed_to_find_module_file) << ImportedName;
+          Result = Missing;
+        }
+      }
+
       // If we diagnosed a problem, produce a backtrace.
       bool recompilingFinalized = Result == OutOfDate &&
                                   (Capabilities & ARR_OutOfDate) &&
@@ -3328,8 +3352,6 @@ ASTReader::ReadControlBlock(ModuleFile &F,
       if (isDiagnosedResult(Result, Capabilities) || recompilingFinalized)
         Diag(diag::note_module_file_imported_by)
             << F.FileName << !F.ModuleName.empty() << F.ModuleName;
-      if (recompilingFinalized)
-        Diag(diag::note_module_file_conflict);
 
       switch (Result) {
       case Failure: return Failure;
@@ -4419,6 +4441,7 @@ ASTReader::ReadModuleMapFileBlock(RecordData &Record, ModuleFile &F,
           // This module was defined by an imported (explicit) module.
           Diag(diag::err_module_file_conflict) << F.ModuleName << F.FileName
                                                << ASTFE->getName();
+          // TODO: Add a note with the module map paths if they differ.
         } else {
           // This module was built with a different module map.
           Diag(diag::err_imported_module_not_found)
@@ -4901,7 +4924,8 @@ ASTReader::ASTReadResult ASTReader::ReadAST(StringRef FileName, ModuleKind Type,
     }
   }
 
-  HeaderSearchOptions &HSOpts = PP.getHeaderSearchInfo().getHeaderSearchOpts();
+  const HeaderSearchOptions &HSOpts =
+      PP.getHeaderSearchInfo().getHeaderSearchOpts();
   if (HSOpts.ModulesValidateOncePerBuildSession) {
     // Now we are certain that the module and all modules it depends on are
     // up-to-date. For implicitly-built module files, ensure the corresponding
@@ -5703,6 +5727,11 @@ bool ASTReader::readASTFileControlBlock(
   bool DoneWithControlBlock = false;
   SmallString<0> PathBuf;
   PathBuf.reserve(256);
+  // Additional path buffer to use when multiple paths need to be resolved.
+  // For example, when deserializing input files that contains a path that was
+  // resolved from a vfs overlay and an external location.
+  SmallString<0> AdditionalPathBuf;
+  AdditionalPathBuf.reserve(256);
   while (!DoneWithControlBlock) {
     Expected<llvm::BitstreamEntry> MaybeEntry = Stream.advance();
     if (!MaybeEntry) {
@@ -5834,9 +5863,21 @@ bool ASTReader::readASTFileControlBlock(
           break;
         case INPUT_FILE:
           bool Overridden = static_cast<bool>(Record[3]);
-          auto Filename = ResolveImportedPath(PathBuf, Blob, ModuleDir);
+          auto [UnresolvedFilenameAsRequested, UnresolvedFilename] =
+              getUnresolvedInputFilenames(Record, Blob);
+          auto FilenameAsRequestedBuf = ResolveImportedPath(
+              PathBuf, UnresolvedFilenameAsRequested, ModuleDir);
+          StringRef Filename;
+          if (UnresolvedFilename.empty())
+            Filename = *FilenameAsRequestedBuf;
+          else {
+            auto FilenameBuf = ResolveImportedPath(
+                AdditionalPathBuf, UnresolvedFilename, ModuleDir);
+            Filename = *FilenameBuf;
+          }
           shouldContinue = Listener.visitInputFile(
-              *Filename, isSystemFile, Overridden, /*IsExplicitModule=*/false);
+              *FilenameAsRequestedBuf, Filename, isSystemFile, Overridden,
+              /*IsExplicitModule=*/false);
           break;
         }
         if (!shouldContinue)
@@ -6066,14 +6107,21 @@ llvm::Error ASTReader::ReadSubmoduleBlock(ModuleFile &F,
         if (OptionalFileEntryRef CurFile = CurrentModule->getASTFile()) {
           // Don't emit module relocation error if we have -fno-validate-pch
           if (!bool(PP.getPreprocessorOpts().DisablePCHOrModuleValidation &
-                    DisableValidationForModuleKind::Module) &&
-              CurFile != F.File) {
-            auto ConflictError =
-                PartialDiagnostic(diag::err_module_file_conflict,
-                                  ContextObj->DiagAllocator)
+                    DisableValidationForModuleKind::Module)) {
+            assert(CurFile != F.File && "ModuleManager did not de-duplicate");
+
+            Diag(diag::err_module_file_conflict)
                 << CurrentModule->getTopLevelModuleName() << CurFile->getName()
                 << F.File.getName();
-            return DiagnosticError::create(CurrentImportLoc, ConflictError);
+
+            auto CurModMapFile =
+                ModMap.getContainingModuleMapFile(CurrentModule);
+            auto ModMapFile = FileMgr.getOptionalFileRef(F.ModuleMapPath);
+            if (CurModMapFile && ModMapFile && CurModMapFile != ModMapFile)
+              Diag(diag::note_module_file_conflict)
+                  << CurModMapFile->getName() << ModMapFile->getName();
+
+            return llvm::make_error<AlreadyReportedDiagnosticError>();
           }
         }
 
@@ -7103,7 +7151,7 @@ void TypeLocReader::VisitRValueReferenceTypeLoc(RValueReferenceTypeLoc TL) {
 
 void TypeLocReader::VisitMemberPointerTypeLoc(MemberPointerTypeLoc TL) {
   TL.setStarLoc(readSourceLocation());
-  TL.setClassTInfo(GetTypeSourceInfo());
+  TL.setQualifierLoc(ReadNestedNameSpecifierLoc());
 }
 
 void TypeLocReader::VisitArrayTypeLoc(ArrayTypeLoc TL) {
@@ -9612,9 +9660,9 @@ ModuleFile *ASTReader::getLocalModuleFile(ModuleFile &M, unsigned ID) const {
     return I == GlobalSubmoduleMap.end() ? nullptr : I->second;
   } else {
     // It's a prefix (preamble, PCH, ...). Look it up by index.
-    unsigned IndexFromEnd = ID >> 1;
+   int IndexFromEnd = static_cast<int>(ID >> 1);
     assert(IndexFromEnd && "got reference to unknown module file");
-    return getModuleManager().pch_modules().end()[-IndexFromEnd];
+    return getModuleManager().pch_modules().end()[-static_cast<int>(IndexFromEnd)];
   }
 }
 
@@ -9632,7 +9680,7 @@ unsigned ASTReader::getModuleFileID(ModuleFile *M) {
   auto PCHModules = getModuleManager().pch_modules();
   auto I = llvm::find(PCHModules, M);
   assert(I != PCHModules.end() && "emitting reference to unknown file");
-  return (I - PCHModules.end()) << 1;
+  return std::distance(I, PCHModules.end()) << 1;
 }
 
 std::optional<ASTSourceDescriptor> ASTReader::getSourceDescriptor(unsigned ID) {
@@ -9658,6 +9706,10 @@ ExternalASTSource::ExtKind ASTReader::hasExternalDefinitions(const Decl *FD) {
   if (I == DefinitionSource.end())
     return EK_ReplyHazy;
   return I->second ? EK_Never : EK_Always;
+}
+
+bool ASTReader::wasThisDeclarationADefinition(const FunctionDecl *FD) {
+  return ThisDeclarationWasADefinitionSet.contains(FD);
 }
 
 Selector ASTReader::getLocalSelector(ModuleFile &M, unsigned LocalID) {
@@ -9913,18 +9965,12 @@ ASTRecordReader::readNestedNameSpecifierLoc() {
       break;
     }
 
-    case NestedNameSpecifier::TypeSpec:
-    case NestedNameSpecifier::TypeSpecWithTemplate: {
-      bool Template = readBool();
+    case NestedNameSpecifier::TypeSpec: {
       TypeSourceInfo *T = readTypeSourceInfo();
       if (!T)
         return NestedNameSpecifierLoc();
       SourceLocation ColonColonLoc = readSourceLocation();
-
-      // FIXME: 'template' keyword location not saved anywhere, so we fake it.
-      Builder.Extend(Context,
-                     Template? T->getTypeLoc().getBeginLoc() : SourceLocation(),
-                     T->getTypeLoc(), ColonColonLoc);
+      Builder.Extend(Context, T->getTypeLoc(), ColonColonLoc);
       break;
     }
 
@@ -11761,7 +11807,7 @@ void OMPClauseReader::VisitOMPReductionClause(OMPReductionClause *C) {
   unsigned NumFlags = Record.readInt();
   SmallVector<bool, 16> Flags;
   Flags.reserve(NumFlags);
-  for (unsigned I : llvm::seq<unsigned>(NumFlags))
+  for ([[maybe_unused]] unsigned I : llvm::seq<unsigned>(NumFlags))
     Flags.push_back(Record.readInt());
   C->setPrivateVariableReductionFlags(Flags);
 }
@@ -12716,36 +12762,37 @@ OpenACCClause *ASTRecordReader::readOpenACCClause() {
   case OpenACCClauseKind::PresentOrCopy:
   case OpenACCClauseKind::Copy: {
     SourceLocation LParenLoc = readSourceLocation();
+    OpenACCModifierKind ModList = readEnum<OpenACCModifierKind>();
     llvm::SmallVector<Expr *> VarList = readOpenACCVarList();
     return OpenACCCopyClause::Create(getContext(), ClauseKind, BeginLoc,
-                                     LParenLoc, VarList, EndLoc);
+                                     LParenLoc, ModList, VarList, EndLoc);
   }
   case OpenACCClauseKind::CopyIn:
   case OpenACCClauseKind::PCopyIn:
   case OpenACCClauseKind::PresentOrCopyIn: {
     SourceLocation LParenLoc = readSourceLocation();
-    bool IsReadOnly = readBool();
+    OpenACCModifierKind ModList = readEnum<OpenACCModifierKind>();
     llvm::SmallVector<Expr *> VarList = readOpenACCVarList();
     return OpenACCCopyInClause::Create(getContext(), ClauseKind, BeginLoc,
-                                       LParenLoc, IsReadOnly, VarList, EndLoc);
+                                       LParenLoc, ModList, VarList, EndLoc);
   }
   case OpenACCClauseKind::CopyOut:
   case OpenACCClauseKind::PCopyOut:
   case OpenACCClauseKind::PresentOrCopyOut: {
     SourceLocation LParenLoc = readSourceLocation();
-    bool IsZero = readBool();
+    OpenACCModifierKind ModList = readEnum<OpenACCModifierKind>();
     llvm::SmallVector<Expr *> VarList = readOpenACCVarList();
     return OpenACCCopyOutClause::Create(getContext(), ClauseKind, BeginLoc,
-                                        LParenLoc, IsZero, VarList, EndLoc);
+                                        LParenLoc, ModList, VarList, EndLoc);
   }
   case OpenACCClauseKind::Create:
   case OpenACCClauseKind::PCreate:
   case OpenACCClauseKind::PresentOrCreate: {
     SourceLocation LParenLoc = readSourceLocation();
-    bool IsZero = readBool();
+    OpenACCModifierKind ModList = readEnum<OpenACCModifierKind>();
     llvm::SmallVector<Expr *> VarList = readOpenACCVarList();
     return OpenACCCreateClause::Create(getContext(), ClauseKind, BeginLoc,
-                                       LParenLoc, IsZero, VarList, EndLoc);
+                                       LParenLoc, ModList, VarList, EndLoc);
   }
   case OpenACCClauseKind::Async: {
     SourceLocation LParenLoc = readSourceLocation();
@@ -12771,7 +12818,7 @@ OpenACCClause *ASTRecordReader::readOpenACCClause() {
     for (unsigned I = 0; I < NumArchs; ++I) {
       IdentifierInfo *Ident = readBool() ? readIdentifier() : nullptr;
       SourceLocation Loc = readSourceLocation();
-      Archs.emplace_back(Ident, Loc);
+      Archs.emplace_back(Loc, Ident);
     }
 
     return OpenACCDeviceTypeClause::Create(getContext(), ClauseKind, BeginLoc,
@@ -12859,6 +12906,7 @@ OpenACCClause *ASTRecordReader::readOpenACCClause() {
     return OpenACCBindClause::Create(getContext(), BeginLoc, LParenLoc,
                                      readIdentifier(), EndLoc);
   }
+  case OpenACCClauseKind::Shortloop:
   case OpenACCClauseKind::Invalid:
     llvm_unreachable("Clause serialization not yet implemented");
   }
@@ -12871,6 +12919,12 @@ void ASTRecordReader::readOpenACCClauseList(
     Clauses[I] = readOpenACCClause();
 }
 
+void ASTRecordReader::readOpenACCRoutineDeclAttr(OpenACCRoutineDeclAttr *A) {
+  unsigned NumVars = readInt();
+  A->Clauses.resize(NumVars);
+  readOpenACCClauseList(A->Clauses);
+}
+
 static unsigned getStableHashForModuleName(StringRef PrimaryModuleName) {
   // TODO: Maybe it is better to check PrimaryModuleName is a valid
   // module name?
@@ -12879,7 +12933,7 @@ static unsigned getStableHashForModuleName(StringRef PrimaryModuleName) {
   return ID.computeStableHash();
 }
 
-std::optional<unsigned> clang::getPrimaryModuleHash(const Module *M) {
+UnsignedOrNone clang::getPrimaryModuleHash(const Module *M) {
   if (!M)
     return std::nullopt;
 

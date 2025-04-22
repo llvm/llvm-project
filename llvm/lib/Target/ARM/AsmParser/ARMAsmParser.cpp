@@ -12437,8 +12437,8 @@ bool ARMAsmParser::parseDirectiveTLSDescSeq(SMLoc L) {
     return TokError("expected variable after '.tlsdescseq' directive");
 
   auto *Sym = getContext().getOrCreateSymbol(Parser.getTok().getIdentifier());
-  const auto *SRE = MCSymbolRefExpr::create(
-      Sym, MCSymbolRefExpr::VK_ARM_TLSDESCSEQ, getContext());
+  const auto *SRE =
+      MCSymbolRefExpr::create(Sym, ARMMCExpr::VK_TLSDESCSEQ, getContext());
   Lex();
 
   if (parseEOL())
@@ -12970,7 +12970,7 @@ bool ARMAsmParser::enableArchExtFeature(StringRef Name, SMLoc &ExtLoc) {
       {ARM::AEK_CRYPTO,
        {Feature_HasV8Bit},
        {ARM::FeatureCrypto, ARM::FeatureNEON, ARM::FeatureFPARMv8}},
-      {(ARM::AEK_DSP | ARM::AEK_SIMD | ARM::AEK_FP),
+      {(ARM::AEK_DSP | ARM::AEK_MVE | ARM::AEK_FP),
        {Feature_HasV8_1MMainlineBit},
        {ARM::HasMVEFloatOps}},
       {ARM::AEK_FP,

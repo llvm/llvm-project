@@ -18,6 +18,7 @@
 #include "NVPTXTargetMachine.h"
 #include "NVPTXTargetObjectFile.h"
 #include "NVPTXUtilities.h"
+#include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
@@ -245,14 +246,11 @@ static void ComputePTXValueVTs(const TargetLowering &TLI, const DataLayout &DL,
   SmallVector<uint64_t, 16> TempOffsets;
 
   // Special case for i128 - decompose to (i64, i64)
-  if (Ty->isIntegerTy(128)) {
-    ValueVTs.push_back(EVT(MVT::i64));
-    ValueVTs.push_back(EVT(MVT::i64));
+  if (Ty->isIntegerTy(128) || Ty->isFP128Ty()) {
+    ValueVTs.append({MVT::i64, MVT::i64});
 
-    if (Offsets) {
-      Offsets->push_back(StartingOffset + 0);
-      Offsets->push_back(StartingOffset + 8);
-    }
+    if (Offsets)
+      Offsets->append({StartingOffset + 0, StartingOffset + 8});
 
     return;
   }
@@ -932,6 +930,7 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
     setOperationAction(Op, MVT::bf16, Promote);
     AddPromotedToType(Op, MVT::bf16, MVT::f32);
   }
+  setOperationAction(ISD::FREM, {MVT::f32, MVT::f64}, Custom);
 
   setOperationAction(ISD::FABS, {MVT::f32, MVT::f64}, Legal);
   if (STI.getPTXVersion() >= 65) {
@@ -992,6 +991,7 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
 
   setOperationAction(ISD::ADDRSPACECAST, {MVT::i32, MVT::i64}, Custom);
 
+  setOperationAction(ISD::ATOMIC_LOAD_SUB, {MVT::i32, MVT::i64}, Expand);
   // No FPOW or FREM in PTX.
 
   // Now deduce the information based on the above mentioned
@@ -1014,6 +1014,8 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
                      {MVT::v2i32, MVT::v4i32, MVT::v8i32, MVT::v16i32,
                       MVT::v32i32, MVT::v64i32, MVT::v128i32},
                      Custom);
+
+  setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::Other, Custom);
 }
 
 const char *NVPTXTargetLowering::getTargetNodeName(unsigned Opcode) const {
@@ -1162,11 +1164,6 @@ NVPTXTargetLowering::LowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const {
   return DAG.getNode(NVPTXISD::Wrapper, dl, PtrVT, Op);
 }
 
-static bool IsTypePassedAsArray(const Type *Ty) {
-  return Ty->isAggregateType() || Ty->isVectorTy() || Ty->isIntegerTy(128) ||
-         Ty->isHalfTy() || Ty->isBFloatTy();
-}
-
 std::string NVPTXTargetLowering::getPrototype(
     const DataLayout &DL, Type *retTy, const ArgListTy &Args,
     const SmallVectorImpl<ISD::OutputArg> &Outs, MaybeAlign retAlignment,
@@ -1183,7 +1180,7 @@ std::string NVPTXTargetLowering::getPrototype(
   } else {
     O << "(";
     if ((retTy->isFloatingPointTy() || retTy->isIntegerTy()) &&
-        !IsTypePassedAsArray(retTy)) {
+        !shouldPassAsArray(retTy)) {
       unsigned size = 0;
       if (auto *ITy = dyn_cast<IntegerType>(retTy)) {
         size = ITy->getBitWidth();
@@ -1200,7 +1197,7 @@ std::string NVPTXTargetLowering::getPrototype(
       O << ".param .b" << size << " _";
     } else if (isa<PointerType>(retTy)) {
       O << ".param .b" << PtrVT.getSizeInBits() << " _";
-    } else if (IsTypePassedAsArray(retTy)) {
+    } else if (shouldPassAsArray(retTy)) {
       O << ".param .align " << (retAlignment ? retAlignment->value() : 0)
         << " .b8 _[" << DL.getTypeAllocSize(retTy) << "]";
     } else {
@@ -1221,7 +1218,7 @@ std::string NVPTXTargetLowering::getPrototype(
     first = false;
 
     if (!Outs[OIdx].Flags.isByVal()) {
-      if (IsTypePassedAsArray(Ty)) {
+      if (shouldPassAsArray(Ty)) {
         Align ParamAlign =
             getArgumentAlignment(&CB, Ty, i + AttributeList::FirstArgIndex, DL);
         O << ".param .align " << ParamAlign.value() << " .b8 ";
@@ -1431,6 +1428,17 @@ static MachinePointerInfo refinePtrAS(SDValue &Ptr, SelectionDAG &DAG,
 
     return MachinePointerInfo(ADDRESS_SPACE_LOCAL);
   }
+
+  // Peel of an addrspacecast to generic and load directly from the specific
+  // address space.
+  if (Ptr->getOpcode() == ISD::ADDRSPACECAST) {
+    const auto *ASC = cast<AddrSpaceCastSDNode>(Ptr);
+    if (ASC->getDestAddressSpace() == ADDRESS_SPACE_GENERIC) {
+      Ptr = ASC->getOperand(0);
+      return MachinePointerInfo(ASC->getSrcAddressSpace());
+    }
+  }
+
   return MachinePointerInfo();
 }
 
@@ -1526,7 +1534,7 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     SDVTList DeclareParamVTs = DAG.getVTList(MVT::Other, MVT::Glue);
 
     bool NeedAlign; // Does argument declaration specify alignment?
-    bool PassAsArray = IsByVal || IsTypePassedAsArray(Ty);
+    const bool PassAsArray = IsByVal || shouldPassAsArray(Ty);
     if (IsVAArg) {
       if (ParamCount == FirstVAArg) {
         SDValue DeclareParamOps[] = {
@@ -1715,7 +1723,7 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     //  .param .align N .b8 retval0[<size-in-bytes>], or
     //  .param .b<size-in-bits> retval0
     unsigned resultsz = DL.getTypeAllocSizeInBits(RetTy);
-    if (!IsTypePassedAsArray(RetTy)) {
+    if (!shouldPassAsArray(RetTy)) {
       resultsz = promoteScalarArgumentSize(resultsz);
       SDVTList DeclareRetVTs = DAG.getVTList(MVT::Other, MVT::Glue);
       SDValue DeclareRetOps[] = { Chain, DAG.getConstant(1, dl, MVT::i32),
@@ -2751,6 +2759,15 @@ static SDValue LowerIntrinsicVoid(SDValue Op, SelectionDAG &DAG) {
   return Op;
 }
 
+static SDValue lowerIntrinsicWOChain(SDValue Op, SelectionDAG &DAG) {
+  switch (Op->getConstantOperandVal(0)) {
+  default:
+    return Op;
+  case Intrinsic::nvvm_internal_addrspace_wrap:
+    return Op.getOperand(1);
+  }
+}
+
 // In PTX 64-bit CTLZ and CTPOP are supported, but they return a 32-bit value.
 // Lower these into a node returning the correct type which is zero-extended
 // back to the correct size.
@@ -2819,6 +2836,68 @@ static SDValue lowerROT(SDValue Op, SelectionDAG &DAG) {
                      SDLoc(Op), Opcode, DAG);
 }
 
+static SDValue lowerFREM(SDValue Op, SelectionDAG &DAG,
+                         bool AllowUnsafeFPMath) {
+  // Lower (frem x, y) into (sub x, (mul (ftrunc (div x, y)) y)),
+  // i.e. "poor man's fmod()". When y is infinite, x is returned. This matches
+  // the semantics of LLVM's frem.
+  SDLoc DL(Op);
+  SDValue X = Op->getOperand(0);
+  SDValue Y = Op->getOperand(1);
+  EVT Ty = Op.getValueType();
+
+  SDValue Div = DAG.getNode(ISD::FDIV, DL, Ty, X, Y);
+  SDValue Trunc = DAG.getNode(ISD::FTRUNC, DL, Ty, Div);
+  SDValue Mul =
+      DAG.getNode(ISD::FMUL, DL, Ty, Trunc, Y, SDNodeFlags::AllowContract);
+  SDValue Sub =
+      DAG.getNode(ISD::FSUB, DL, Ty, X, Mul, SDNodeFlags::AllowContract);
+
+  if (AllowUnsafeFPMath || Op->getFlags().hasNoInfs())
+    return Sub;
+
+  // If Y is infinite, return X
+  SDValue AbsY = DAG.getNode(ISD::FABS, DL, Ty, Y);
+  SDValue Inf =
+      DAG.getConstantFP(APFloat::getInf(Ty.getFltSemantics()), DL, Ty);
+  SDValue IsInf = DAG.getSetCC(DL, MVT::i1, AbsY, Inf, ISD::SETEQ);
+  return DAG.getSelect(DL, Ty, IsInf, X, Sub);
+}
+
+static SDValue lowerSELECT(SDValue Op, SelectionDAG &DAG) {
+  assert(Op.getValueType() == MVT::i1 && "Custom lowering enabled only for i1");
+
+  SDValue Cond = Op->getOperand(0);
+  SDValue TrueVal = Op->getOperand(1);
+  SDValue FalseVal = Op->getOperand(2);
+  SDLoc DL(Op);
+
+  // If both operands are truncated, we push the select through the truncates.
+  if (TrueVal.getOpcode() == ISD::TRUNCATE &&
+      FalseVal.getOpcode() == ISD::TRUNCATE) {
+    TrueVal = TrueVal.getOperand(0);
+    FalseVal = FalseVal.getOperand(0);
+
+    EVT VT = TrueVal.getSimpleValueType().bitsLE(FalseVal.getSimpleValueType())
+                 ? TrueVal.getValueType()
+                 : FalseVal.getValueType();
+    TrueVal = DAG.getAnyExtOrTrunc(TrueVal, DL, VT);
+    FalseVal = DAG.getAnyExtOrTrunc(FalseVal, DL, VT);
+    SDValue Select = DAG.getSelect(DL, VT, Cond, TrueVal, FalseVal);
+    return DAG.getNode(ISD::TRUNCATE, DL, MVT::i1, Select);
+  }
+
+  // Otherwise, expand the select into a series of logical operations. These
+  // often can be folded into other operations either by us or ptxas.
+  TrueVal = DAG.getFreeze(TrueVal);
+  FalseVal = DAG.getFreeze(FalseVal);
+  SDValue And1 = DAG.getNode(ISD::AND, DL, MVT::i1, Cond, TrueVal);
+  SDValue NotCond = DAG.getNOT(DL, Cond, MVT::i1);
+  SDValue And2 = DAG.getNode(ISD::AND, DL, MVT::i1, NotCond, FalseVal);
+  SDValue Or = DAG.getNode(ISD::OR, DL, MVT::i1, And1, And2);
+  return Or;
+}
+
 SDValue
 NVPTXTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   switch (Op.getOpcode()) {
@@ -2832,6 +2911,8 @@ NVPTXTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return LowerGlobalAddress(Op, DAG);
   case ISD::INTRINSIC_W_CHAIN:
     return Op;
+  case ISD::INTRINSIC_WO_CHAIN:
+    return lowerIntrinsicWOChain(Op, DAG);
   case ISD::INTRINSIC_VOID:
     return LowerIntrinsicVoid(Op, DAG);
   case ISD::BUILD_VECTOR:
@@ -2858,7 +2939,7 @@ NVPTXTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::SRL_PARTS:
     return LowerShiftRightParts(Op, DAG);
   case ISD::SELECT:
-    return LowerSelect(Op, DAG);
+    return lowerSELECT(Op, DAG);
   case ISD::FROUND:
     return LowerFROUND(Op, DAG);
   case ISD::FCOPYSIGN:
@@ -2913,6 +2994,8 @@ NVPTXTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::CTPOP:
   case ISD::CTLZ:
     return lowerCTLZCTPOP(Op, DAG);
+  case ISD::FREM:
+    return lowerFREM(Op, DAG, allowUnsafeFPMath(DAG.getMachineFunction()));
 
   default:
     llvm_unreachable("Custom lowering not defined for operation");
@@ -3021,22 +3104,6 @@ SDValue NVPTXTargetLowering::LowerVASTART(SDValue Op, SelectionDAG &DAG) const {
   const Value *SV = cast<SrcValueSDNode>(Op.getOperand(2))->getValue();
   return DAG.getStore(Op.getOperand(0), DL, VAReg, Op.getOperand(1),
                       MachinePointerInfo(SV));
-}
-
-SDValue NVPTXTargetLowering::LowerSelect(SDValue Op, SelectionDAG &DAG) const {
-  SDValue Op0 = Op->getOperand(0);
-  SDValue Op1 = Op->getOperand(1);
-  SDValue Op2 = Op->getOperand(2);
-  SDLoc DL(Op.getNode());
-
-  assert(Op.getValueType() == MVT::i1 && "Custom lowering enabled only for i1");
-
-  Op1 = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i32, Op1);
-  Op2 = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i32, Op2);
-  SDValue Select = DAG.getNode(ISD::SELECT, DL, MVT::i32, Op0, Op1, Op2);
-  SDValue Trunc = DAG.getNode(ISD::TRUNCATE, DL, MVT::i1, Select);
-
-  return Trunc;
 }
 
 SDValue NVPTXTargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
@@ -3311,7 +3378,7 @@ SDValue NVPTXTargetLowering::LowerFormalArguments(
 
     if (theArgs[i]->use_empty()) {
       // argument is dead
-      if (IsTypePassedAsArray(Ty) && !Ty->isVectorTy()) {
+      if (shouldPassAsArray(Ty) && !Ty->isVectorTy()) {
         SmallVector<EVT, 16> vtparts;
 
         ComputePTXValueVTs(*this, DAG.getDataLayout(), Ty, vtparts);
@@ -4033,9 +4100,6 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
     Info.align = Align(16);
     return true;
   }
-
-  case Intrinsic::nvvm_atomic_load_inc_32:
-  case Intrinsic::nvvm_atomic_load_dec_32:
 
   case Intrinsic::nvvm_atomic_add_gen_f_cta:
   case Intrinsic::nvvm_atomic_add_gen_f_sys:
@@ -4950,7 +5014,9 @@ PerformFADDCombineWithOperands(SDNode *N, SDValue N0, SDValue N1,
   if (N0.getOpcode() == ISD::FMUL) {
     const auto *TLI = static_cast<const NVPTXTargetLowering *>(
         &DCI.DAG.getTargetLoweringInfo());
-    if (!TLI->allowFMA(DCI.DAG.getMachineFunction(), OptLevel))
+    if (!(TLI->allowFMA(DCI.DAG.getMachineFunction(), OptLevel) ||
+          (N->getFlags().hasAllowContract() &&
+           N0->getFlags().hasAllowContract())))
       return SDValue();
 
     // For floating point:
@@ -6110,6 +6176,18 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
     default:
       llvm_unreachable("unsupported width encountered");
     }
+  case AtomicRMWInst::BinOp::UIncWrap:
+  case AtomicRMWInst::BinOp::UDecWrap:
+    switch (ITy->getBitWidth()) {
+    case 32:
+      return AtomicExpansionKind::None;
+    case 8:
+    case 16:
+    case 64:
+      return AtomicExpansionKind::CmpXChg;
+    default:
+      llvm_unreachable("unsupported width encountered");
+    }
   }
 
   return AtomicExpansionKind::CmpXChg;
@@ -6177,6 +6255,33 @@ Instruction *NVPTXTargetLowering::emitTrailingFence(IRBuilderBase &Builder,
     return Builder.CreateFence(AtomicOrdering::Acquire);
 
   return nullptr;
+}
+
+// Rather than default to SINT when both UINT and SINT are custom, we only
+// change the opcode when UINT is not legal and SINT is. UINT is preferred when
+// both are custom since unsigned CVT instructions can lead to slightly better
+// SASS code with fewer instructions.
+unsigned NVPTXTargetLowering::getPreferredFPToIntOpcode(unsigned Op, EVT FromVT,
+                                                        EVT ToVT) const {
+  if (isOperationLegal(Op, ToVT))
+    return Op;
+  switch (Op) {
+  case ISD::FP_TO_UINT:
+    if (isOperationLegal(ISD::FP_TO_SINT, ToVT))
+      return ISD::FP_TO_SINT;
+    break;
+  case ISD::STRICT_FP_TO_UINT:
+    if (isOperationLegal(ISD::STRICT_FP_TO_SINT, ToVT))
+      return ISD::STRICT_FP_TO_SINT;
+    break;
+  case ISD::VP_FP_TO_UINT:
+    if (isOperationLegal(ISD::VP_FP_TO_SINT, ToVT))
+      return ISD::VP_FP_TO_SINT;
+    break;
+  default:
+    break;
+  }
+  return Op;
 }
 
 // Pin NVPTXTargetObjectFile's vtables to this file.

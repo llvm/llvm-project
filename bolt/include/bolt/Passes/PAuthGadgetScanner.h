@@ -175,8 +175,8 @@ raw_ostream &operator<<(raw_ostream &OS, const MCInstReference &);
 
 namespace PAuthGadgetScanner {
 
-class PacRetAnalysis;
-struct State;
+class SrcSafetyAnalysis;
+struct SrcState;
 
 /// Description of a gadget kind that can be detected. Intended to be
 /// statically allocated to be attached to reports by reference.
@@ -199,19 +199,39 @@ struct Report {
   virtual void generateReport(raw_ostream &OS,
                               const BinaryContext &BC) const = 0;
 
+  // The two methods below are called by Analysis::computeDetailedInfo when
+  // iterating over the reports.
+  virtual const ArrayRef<MCPhysReg> getAffectedRegisters() const { return {}; }
+  virtual void setOverwritingInstrs(const ArrayRef<MCInstReference> Instrs) {}
+
   void printBasicInfo(raw_ostream &OS, const BinaryContext &BC,
                       StringRef IssueKind) const;
 };
 
 struct GadgetReport : public Report {
+  // The particular kind of gadget that is detected.
   const GadgetKind &Kind;
-  std::vector<MCInstReference> OverwritingInstrs;
+  // The set of registers related to this gadget report (possibly empty).
+  SmallVector<MCPhysReg, 1> AffectedRegisters;
+  // The instructions that clobber the affected registers.
+  // There is no one-to-one correspondence with AffectedRegisters: for example,
+  // the same register can be overwritten by different instructions in different
+  // preceding basic blocks.
+  SmallVector<MCInstReference> OverwritingInstrs;
 
   GadgetReport(const GadgetKind &Kind, MCInstReference Location,
-               std::vector<MCInstReference> OverwritingInstrs)
-      : Report(Location), Kind(Kind), OverwritingInstrs(OverwritingInstrs) {}
+               MCPhysReg AffectedRegister)
+      : Report(Location), Kind(Kind), AffectedRegisters({AffectedRegister}) {}
 
   void generateReport(raw_ostream &OS, const BinaryContext &BC) const override;
+
+  const ArrayRef<MCPhysReg> getAffectedRegisters() const override {
+    return AffectedRegisters;
+  }
+
+  void setOverwritingInstrs(const ArrayRef<MCInstReference> Instrs) override {
+    OverwritingInstrs.assign(Instrs.begin(), Instrs.end());
+  }
 };
 
 /// Report with a free-form message attached.
@@ -224,22 +244,28 @@ struct GenericReport : public Report {
 };
 
 struct FunctionAnalysisResult {
-  SmallSet<MCPhysReg, 1> RegistersAffected;
   std::vector<std::shared_ptr<Report>> Diagnostics;
 };
 
 class Analysis : public BinaryFunctionPass {
+  /// Only search for pac-ret violations.
+  bool PacRetGadgetsOnly;
+
   void runOnFunction(BinaryFunction &Function,
                      MCPlusBuilder::AllocatorIdTy AllocatorId);
-  FunctionAnalysisResult
-  computeDfState(PacRetAnalysis &PRA, BinaryFunction &BF,
-                 MCPlusBuilder::AllocatorIdTy AllocatorId);
+  FunctionAnalysisResult findGadgets(BinaryFunction &BF,
+                                     MCPlusBuilder::AllocatorIdTy AllocatorId);
+
+  void computeDetailedInfo(BinaryFunction &BF,
+                           MCPlusBuilder::AllocatorIdTy AllocatorId,
+                           FunctionAnalysisResult &Result);
 
   std::map<const BinaryFunction *, FunctionAnalysisResult> AnalysisResults;
   std::mutex AnalysisResultsMutex;
 
 public:
-  explicit Analysis() : BinaryFunctionPass(false) {}
+  explicit Analysis(bool PacRetGadgetsOnly)
+      : BinaryFunctionPass(false), PacRetGadgetsOnly(PacRetGadgetsOnly) {}
 
   const char *getName() const override { return "pauth-gadget-scanner"; }
 

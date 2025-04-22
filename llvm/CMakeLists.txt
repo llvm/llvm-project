@@ -1,5 +1,4 @@
 # See docs/CMake.html for instructions about how to build LLVM with CMake.
-
 cmake_minimum_required(VERSION 3.20.0)
 
 include(CMakeDependentOption)
@@ -146,7 +145,8 @@ if ("flang" IN_LIST LLVM_ENABLE_PROJECTS)
   endif()
 
   if (NOT "clang" IN_LIST LLVM_ENABLE_PROJECTS)
-    message(FATAL_ERROR "Clang is not enabled, but is required for the Flang driver")
+    message(STATUS "Enabling clang as a dependency to flang")
+    list(APPEND LLVM_ENABLE_PROJECTS "clang")
   endif()
 endif()
 
@@ -209,10 +209,6 @@ endforeach()
 if("${LIBC_TARGET_TRIPLE}" STREQUAL "amdgcn-amd-amdhsa" OR
    "${LIBC_TARGET_TRIPLE}" STREQUAL "nvptx64-nvidia-cuda")
   set(LLVM_LIBC_GPU_BUILD ON)
-endif()
-if (NOT "libc" IN_LIST LLVM_ENABLE_PROJECTS AND LLVM_LIBC_GPU_BUILD)
-  message(STATUS "Enabling libc project to build libc testing tools")
-  list(APPEND LLVM_ENABLE_PROJECTS "libc")
 endif()
 
 # LLVM_ENABLE_PROJECTS_USED is `ON` if the user has ever used the
@@ -1167,13 +1163,16 @@ if (NOT TENSORFLOW_AOT_PATH STREQUAL "")
 
 endif()
 
-# Configure the three LLVM configuration header files.
+# Configure the LLVM configuration header files.
 configure_file(
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/Config/config.h.cmake
   ${LLVM_INCLUDE_DIR}/llvm/Config/config.h)
 configure_file(
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/Config/llvm-config.h.cmake
   ${LLVM_INCLUDE_DIR}/llvm/Config/llvm-config.h)
+configure_file(
+  ${LLVM_MAIN_INCLUDE_DIR}/llvm/Config/Targets.h.cmake
+  ${LLVM_INCLUDE_DIR}/llvm/Config/Targets.h)
 configure_file(
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/Config/abi-breaking.h.cmake
   ${LLVM_INCLUDE_DIR}/llvm/Config/abi-breaking.h)
@@ -1190,9 +1189,9 @@ endif()
 # Build with _XOPEN_SOURCE on AIX, as stray macros in _ALL_SOURCE mode tend to
 # break things. In this case we need to enable the large-file API as well.
 if (UNIX AND ${CMAKE_SYSTEM_NAME} MATCHES "AIX")
-  add_compile_definitions(_XOPEN_SOURCE=700)
-  add_compile_definitions(_LARGE_FILE_API)
-  add_compile_options(-pthread)
+          add_compile_definitions(_XOPEN_SOURCE=700)
+          add_compile_definitions(_LARGE_FILE_API)
+          add_compile_options(-pthread)
 
   # Modules should be built with -shared -Wl,-G, so we can use runtime linking
   # with plugins.
@@ -1200,13 +1199,6 @@ if (UNIX AND ${CMAKE_SYSTEM_NAME} MATCHES "AIX")
 
   # Also set the correct flags for building shared libraries.
   string(APPEND CMAKE_SHARED_LINKER_FLAGS " -shared")
-
-  # Set LLVM_ENABLE_PER_TARGET_RUNTIME_DIR=OFF as AIX doesn't support it
-  if (LLVM_ENABLE_PER_TARGET_RUNTIME_DIR)
-    message(WARNING
-    "LLVM_ENABLE_PER_TARGET_RUNTIME_DIR=ON is not supported on AIX. LLVM_ENABLE_PER_TARGET_RUNTIME_DIR is set to OFF.")
-    set(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR OFF CACHE BOOL "" FORCE)
-  endif()
 endif()
 
 # Build with _XOPEN_SOURCE on z/OS.

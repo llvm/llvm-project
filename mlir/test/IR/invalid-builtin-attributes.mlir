@@ -63,6 +63,21 @@ func.func @elementsattr_toolarge1() -> () {
 
 // -----
 
+// expected-error@+1 {{parsed 1 elements, but type ('complex<i64>') expected 2 elements}}
+#attr = dense<0> : tensor<2xcomplex<i64>>
+
+// -----
+
+// expected-error@+1 {{parsed 2 elements, but type ('tensor<2xcomplex<i64>>') expected 4 elements}}
+#attr = dense<[0, 1]> : tensor<2xcomplex<i64>>
+
+// -----
+
+// expected-error@+1 {{parsed 3 elements, but type ('tensor<2xcomplex<i64>>') expected 4 elements}}
+#attr = dense<[0, (0, 1)]> : tensor<2xcomplex<i64>>
+
+// -----
+
 func.func @elementsattr_toolarge2() -> () {
   "foo"(){bar = dense<[-777]> : tensor<1xi8>} : () -> () // expected-error {{integer constant out of range}}
 }
@@ -106,6 +121,20 @@ func.func @invalid_tensor_literal() {
 func.func @invalid_tensor_literal() {
   // expected-error @+1 {{sparse index #0 is not contained within the value shape, with index=[1, 1], and type='tensor<1x1xi16>'}}
   "fooi16"(){bar = sparse<1, 10> : tensor<1x1xi16>} : () -> ()
+
+// -----
+
+func.func @invalid_sparse_indices() {
+  // expected-error @+1 {{expected integer elements, but parsed floating-point}}
+  "foo"(){bar = sparse<0.5, 1> : tensor<1xi16>} : () -> ()
+}
+
+// -----
+
+func.func @invalid_sparse_values() {
+  // expected-error @+1 {{expected integer elements, but parsed floating-point}}
+  "foo"(){bar = sparse<0, 1.1> : tensor<1xi16>} : () -> ()
+}
 
 // -----
 

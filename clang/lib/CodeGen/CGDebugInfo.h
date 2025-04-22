@@ -249,9 +249,14 @@ class CGDebugInfo {
   /// to get a method type which includes \c this pointer.
   llvm::DISubroutineType *getOrCreateMethodType(const CXXMethodDecl *Method,
                                                 llvm::DIFile *F);
+
+  llvm::DISubroutineType *
+  getOrCreateMethodTypeForDestructor(const CXXMethodDecl *Method,
+                                     llvm::DIFile *F, QualType FNType);
+
   llvm::DISubroutineType *
   getOrCreateInstanceMethodType(QualType ThisPtr, const FunctionProtoType *Func,
-                                llvm::DIFile *Unit);
+                                llvm::DIFile *Unit, bool SkipFirst = false);
   llvm::DISubroutineType *
   getOrCreateFunctionType(const Decl *D, QualType FnType, llvm::DIFile *F);
   /// \return debug info descriptor for vtable.
@@ -355,12 +360,12 @@ class CGDebugInfo {
       llvm::ArrayRef<llvm::Metadata *> PreviousFieldsDI, const RecordDecl *RD);
 
   /// A cache that maps names of artificial inlined functions to subprograms.
-  llvm::StringMap<llvm::DISubprogram *> InlinedTrapFuncMap;
+  llvm::StringMap<llvm::DISubprogram *> InlinedSubprogramMap;
 
   /// A function that returns the subprogram corresponding to the artificial
   /// inlined function for traps.
-  llvm::DISubprogram *createInlinedTrapSubprogram(StringRef FuncName,
-                                                  llvm::DIFile *FileScope);
+  llvm::DISubprogram *createInlinedSubprogram(StringRef FuncName,
+                                              llvm::DIFile *FileScope);
 
   /// Helpers for collecting fields of a record.
   /// @{
@@ -635,6 +640,13 @@ public:
   llvm::DILocation *CreateTrapFailureMessageFor(llvm::DebugLoc TrapLocation,
                                                 StringRef Category,
                                                 StringRef FailureMsg);
+  /// Create a debug location from `Location` that adds an artificial inline
+  /// frame where the frame name is FuncName
+  ///
+  /// This is used to indiciate instructions that come from compiler
+  /// instrumentation.
+  llvm::DILocation *CreateSyntheticInlineAt(llvm::DebugLoc Location,
+                                            StringRef FuncName);
 
 private:
   /// Emit call to llvm.dbg.declare for a variable declaration.

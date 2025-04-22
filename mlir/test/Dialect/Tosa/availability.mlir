@@ -186,11 +186,11 @@ func.func @test_bitwise_xor(%arg0: tensor<13x21x1xi32>, %arg1: tensor<13x21x3xi3
 }
 
 // -----
-// CHECK-LABEL: int_div
-func.func @test_int_div(%arg0: tensor<13x21x1xi32>, %arg1: tensor<13x21x3xi32>) -> tensor<13x21x3xi32> {
+// CHECK-LABEL: intdiv
+func.func @test_intdiv(%arg0: tensor<13x21x1xi32>, %arg1: tensor<13x21x3xi32>) -> tensor<13x21x3xi32> {
   // CHECK: profiles: [ [pro_int, pro_fp] ]
   // CHECK: extensions: [ ]
-  %0 = tosa.int_div %arg0, %arg1 : (tensor<13x21x1xi32>, tensor<13x21x3xi32>) -> tensor<13x21x3xi32>
+  %0 = tosa.intdiv %arg0, %arg1 : (tensor<13x21x1xi32>, tensor<13x21x3xi32>) -> tensor<13x21x3xi32>
   return %0 : tensor<13x21x3xi32>
 }
 
@@ -507,7 +507,7 @@ func.func @test_reduce_sum(%arg0: tensor<13x21x3xf32>) -> tensor<1x21x3xf32> {
 // CHECK-LABEL: concat
 func.func @test_concat(%arg0: tensor<13x21x3xf32>, %arg1: tensor<13x21x3xf32>) -> tensor<26x21x3xf32> {
   // CHECK: profiles: [ [pro_int, pro_fp] ]
-  // CHECK: extensions: [ [fp8e4m3, fp8e5m2, bf16] ]
+  // CHECK: extensions: [ [fp8e4m3, fp8e5m2, bf16, int16] ]
   %0 = tosa.concat %arg0, %arg1 {axis = 0 : i32} : (tensor<13x21x3xf32>, tensor<13x21x3xf32>) -> tensor<26x21x3xf32>
   return %0 : tensor<26x21x3xf32>
 }
@@ -606,7 +606,7 @@ func.func @test_resize(%arg0: tensor<1x32x32x8xf32>) -> tensor<1x64x64x8xf32> {
 // CHECK-LABEL: cast
 func.func @test_cast1(%arg0: tensor<13x21x3xi32>) -> tensor<13x21x3xf32> {
   // CHECK: profiles: [ [pro_int, pro_fp] ]
-  // CHECK: extensions: [ [int16, fp8e4m3, fp8e5m2, bf16] ]
+  // CHECK: extensions: [ [fp8e4m3, fp8e5m2, bf16] ]
   %0 = tosa.cast %arg0 : (tensor<13x21x3xi32>) -> tensor<13x21x3xf32>
   return %0 : tensor<13x21x3xf32>
 }

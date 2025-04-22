@@ -1,3 +1,11 @@
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
 #include <clc/clcfunc.h>
 #include <clc/clctypes.h>
 #include <clc/utils.h>
@@ -20,6 +28,10 @@
 #define __CLC_USHORTN __CLC_XCONCAT(ushort, __CLC_VECSIZE)
 #define __CLC_UINTN __CLC_XCONCAT(uint, __CLC_VECSIZE)
 #define __CLC_ULONGN __CLC_XCONCAT(ulong, __CLC_VECSIZE)
+
+#define __CLC_AS_HALFN __CLC_XCONCAT(__clc_as_, __CLC_HALFN)
+#define __CLC_AS_FLOATN __CLC_XCONCAT(__clc_as_, __CLC_FLOATN)
+#define __CLC_AS_DOUBLEN __CLC_XCONCAT(__clc_as_, __CLC_DOUBLEN)
 
 #define __CLC_AS_CHARN __CLC_XCONCAT(__clc_as_, __CLC_CHARN)
 #define __CLC_AS_SHORTN __CLC_XCONCAT(__clc_as_, __CLC_SHORTN)
@@ -56,9 +68,11 @@
 #define __CLC_CONVERT_S_GENTYPE __CLC_XCONCAT(__clc_convert_, __CLC_S_GENTYPE)
 #define __CLC_CONVERT_U_GENTYPE __CLC_XCONCAT(__clc_convert_, __CLC_U_GENTYPE)
 
+#if (!defined(__HALF_ONLY) && !defined(__DOUBLE_ONLY))
 #define __CLC_SCALAR_GENTYPE float
 #define __CLC_FPSIZE 32
 #define __CLC_FP_LIT(x) x##F
+#define __CLC_GENTYPE_NAN FLT_NAN
 
 #define __CLC_S_GENTYPE __CLC_XCONCAT(int, __CLC_VECSIZE)
 #define __CLC_U_GENTYPE __CLC_XCONCAT(uint, __CLC_VECSIZE)
@@ -67,11 +81,15 @@
 #define __CLC_BIT_INTN int
 #define __CLC_SCALAR
 #define __CLC_VECSIZE
+#define __CLC_VECSIZE_OR_1 1
 #include __CLC_BODY
+#undef __CLC_VECSIZE_OR_1
 #undef __CLC_VECSIZE
 #undef __CLC_GENTYPE
 #undef __CLC_BIT_INTN
 #undef __CLC_SCALAR
+
+#define __CLC_VECSIZE_OR_1 __CLC_VECSIZE
 
 #define __CLC_GENTYPE float2
 #define __CLC_BIT_INTN int2
@@ -113,32 +131,41 @@
 #undef __CLC_GENTYPE
 #undef __CLC_BIT_INTN
 
+#undef __CLC_VECSIZE_OR_1
 #undef __CLC_U_GENTYPE
 #undef __CLC_S_GENTYPE
+#undef __CLC_GENTYPE_NAN
 #undef __CLC_FP_LIT
 #undef __CLC_FPSIZE
 #undef __CLC_SCALAR_GENTYPE
 
-#ifndef __FLOAT_ONLY
+#endif
+
+#if (!defined(__HALF_ONLY) && !defined(__FLOAT_ONLY))
 #ifdef cl_khr_fp64
 #pragma OPENCL EXTENSION cl_khr_fp64 : enable
 
 #define __CLC_SCALAR_GENTYPE double
 #define __CLC_FPSIZE 64
 #define __CLC_FP_LIT(x) (x)
+#define __CLC_GENTYPE_NAN DBL_NAN
 
 #define __CLC_S_GENTYPE __CLC_XCONCAT(long, __CLC_VECSIZE)
 #define __CLC_U_GENTYPE __CLC_XCONCAT(ulong, __CLC_VECSIZE)
 
 #define __CLC_SCALAR
 #define __CLC_VECSIZE
+#define __CLC_VECSIZE_OR_1 1
 #define __CLC_GENTYPE double
 #define __CLC_BIT_INTN long
 #include __CLC_BODY
+#undef __CLC_VECSIZE_OR_1
 #undef __CLC_GENTYPE
 #undef __CLC_BIT_INTN
 #undef __CLC_VECSIZE
 #undef __CLC_SCALAR
+
+#define __CLC_VECSIZE_OR_1 __CLC_VECSIZE
 
 #define __CLC_GENTYPE double2
 #define __CLC_BIT_INTN long2
@@ -180,34 +207,41 @@
 #undef __CLC_GENTYPE
 #undef __CLC_BIT_INTN
 
+#undef __CLC_VECSIZE_OR_1
 #undef __CLC_U_GENTYPE
 #undef __CLC_S_GENTYPE
+#undef __CLC_GENTYPE_NAN
 #undef __CLC_FP_LIT
 #undef __CLC_FPSIZE
 #undef __CLC_SCALAR_GENTYPE
 #endif
 #endif
 
-#ifndef __FLOAT_ONLY
+#if (!defined(__FLOAT_ONLY) && !defined(__DOUBLE_ONLY))
 #ifdef cl_khr_fp16
 #pragma OPENCL EXTENSION cl_khr_fp16 : enable
 
 #define __CLC_SCALAR_GENTYPE half
 #define __CLC_FPSIZE 16
 #define __CLC_FP_LIT(x) x##H
+#define __CLC_GENTYPE_NAN HALF_NAN
 
 #define __CLC_S_GENTYPE __CLC_XCONCAT(short, __CLC_VECSIZE)
 #define __CLC_U_GENTYPE __CLC_XCONCAT(ushort, __CLC_VECSIZE)
 
 #define __CLC_SCALAR
 #define __CLC_VECSIZE
+#define __CLC_VECSIZE_OR_1 1
 #define __CLC_GENTYPE half
 #define __CLC_BIT_INTN short
 #include __CLC_BODY
 #undef __CLC_GENTYPE
 #undef __CLC_BIT_INTN
+#undef __CLC_VECSIZE_OR_1
 #undef __CLC_VECSIZE
 #undef __CLC_SCALAR
+
+#define __CLC_VECSIZE_OR_1 __CLC_VECSIZE
 
 #define __CLC_GENTYPE half2
 #define __CLC_BIT_INTN short2
@@ -249,8 +283,10 @@
 #undef __CLC_GENTYPE
 #undef __CLC_BIT_INTN
 
+#undef __CLC_VECSIZE_OR_1
 #undef __CLC_U_GENTYPE
 #undef __CLC_S_GENTYPE
+#undef __CLC_GENTYPE_NAN
 #undef __CLC_FP_LIT
 #undef __CLC_FPSIZE
 #undef __CLC_SCALAR_GENTYPE
@@ -269,6 +305,10 @@
 #undef __CLC_AS_SHORTN
 #undef __CLC_AS_INTN
 #undef __CLC_AS_LONGN
+
+#undef __CLC_AS_HALFN
+#undef __CLC_AS_FLOATN
+#undef __CLC_AS_DOUBLEN
 
 #undef __CLC_AS_UCHARN
 #undef __CLC_AS_USHORTN

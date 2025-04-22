@@ -818,7 +818,23 @@ of different sizes and signs is forbidden in binary and ternary builtins.
  T __builtin_elementwise_fmod(T x, T y)         return The floating-point remainder of (x/y) whose sign                floating point types
                                                 matches the sign of x.
  T __builtin_elementwise_max(T x, T y)          return x or y, whichever is larger                                     integer and floating point types
+                                                For floating point types, follows semantics of maxNum
+                                                in IEEE 754-2008. See `LangRef
+                                                <http://llvm.org/docs/LangRef.html#llvm-min-intrinsics-comparation>`_
+                                                for the comparison.
  T __builtin_elementwise_min(T x, T y)          return x or y, whichever is smaller                                    integer and floating point types
+                                                For floating point types, follows semantics of minNum
+                                                in IEEE 754-2008. See `LangRef
+                                                <http://llvm.org/docs/LangRef.html#llvm-min-intrinsics-comparation>`_
+                                                for the comparison.
+ T __builtin_elementwise_maxnum(T x, T y)       return x or y, whichever is larger. Follows IEEE 754-2008              floating point types
+                                                semantics (maxNum) with +0.0>-0.0. See `LangRef
+                                                <http://llvm.org/docs/LangRef.html#llvm-min-intrinsics-comparation>`_
+                                                for the comparison.
+ T __builtin_elementwise_minnum(T x, T y)       return x or y, whichever is smaller. Follows IEEE 754-2008             floating point types
+                                                semantics (minNum) with +0.0>-0.0. See `LangRef
+                                                <http://llvm.org/docs/LangRef.html#llvm-min-intrinsics-comparation>`_
+                                                for the comparison.
  T __builtin_elementwise_add_sat(T x, T y)      return the sum of x and y, clamped to the range of                     integer types
                                                 representable values for the signed/unsigned integer type.
  T __builtin_elementwise_sub_sat(T x, T y)      return the difference of x and y, clamped to the range of              integer types
@@ -984,6 +1000,7 @@ to ``float``; see below for more information on this emulation.
   * SPIR (natively)
   * X86 (if SSE2 is available; natively if AVX512-FP16 is also available)
   * RISC-V (natively if Zfh or Zhinx is available)
+  * SystemZ (emulated)
 
 * ``__bf16`` is supported on the following targets (currently never natively):
 
@@ -1594,6 +1611,22 @@ C11 ``_Thread_local``
 Use ``__has_feature(c_thread_local)`` or ``__has_extension(c_thread_local)``
 to determine if support for ``_Thread_local`` variables is enabled.
 
+C2y
+---
+
+The features listed below are part of the C2y standard.  As a result, all these
+features are enabled with the ``-std=c2y`` or ``-std=gnu2y`` option when
+compiling C code.
+
+C2y ``_Countof``
+^^^^^^^^^^^^^^^^
+
+Use ``__has_feature(c_countof)`` (in C2y or later mode) or
+``__has_extension(c_countof)`` (in C23 or earlier mode) to determine if support
+for the ``_Countof`` operator is enabled. This feature is not available in C++
+mode.
+
+
 Modules
 -------
 
@@ -1653,6 +1686,7 @@ Array & element qualification (N2607)                                          C
 Attributes (N2335)                                                             C23           C89
 ``#embed`` (N3017)                                                             C23           C89, C++
 Octal literals prefixed with ``0o`` or ``0O``                                  C2y           C89, C++
+``_Countof`` (N3369, N3469)                                                    C2y           C89
 ============================================= ================================ ============= =============
 
 Builtin type aliases

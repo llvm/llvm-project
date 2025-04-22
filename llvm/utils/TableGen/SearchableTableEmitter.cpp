@@ -701,8 +701,7 @@ void SearchableTableEmitter::collectTableEntries(
   }
 
   SearchIndex Idx;
-  std::copy(Table.Fields.begin(), Table.Fields.end(),
-            std::back_inserter(Idx.Fields));
+  llvm::append_range(Idx.Fields, Table.Fields);
   llvm::sort(Table.Entries, [&](const Record *LHS, const Record *RHS) {
     return compareBy(LHS, RHS, Idx);
   });

@@ -84,10 +84,17 @@ LLVM_LIBC_FUNCTION(float, acosf, (float x)) {
                           0x1.921fb6p+1f)
                     : /* x == 1.0f */ 0.0f;
 
+    if (xbits.is_signaling_nan()) {
+      fputil::raise_except_if_required(FE_INVALID);
+      return FPBits::quiet_nan().get_val();
+    }
+
+    // |x| <= +/-inf
     if (x_abs <= 0x7f80'0000U) {
       fputil::set_errno_if_required(EDOM);
       fputil::raise_except_if_required(FE_INVALID);
     }
+
     return x + FPBits::quiet_nan().get_val();
   }
 

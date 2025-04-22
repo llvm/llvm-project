@@ -207,6 +207,7 @@ add_llvm_component_library(LLVMSupport
   IntervalMap.cpp
   JSON.cpp
   KnownBits.cpp
+  KnownFPClass.cpp
   LEB128.cpp
   LineIterator.cpp
   Locale.cpp
@@ -220,6 +221,7 @@ add_llvm_component_library(LLVMSupport
   MD5.cpp
   MSP430Attributes.cpp
   MSP430AttributeParser.cpp
+  Mustache.cpp
   NativeFormatting.cpp
   OptimizedStructLayout.cpp
   Optional.cpp
