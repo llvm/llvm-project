@@ -505,7 +505,7 @@ define void @fmin32(ptr noundef readonly captures(none) %input1, ptr noundef rea
 ; ZVFH-NEXT:    and a4, a6, a4
 ; ZVFH-NEXT:    slli a5, a5, 1
 ; ZVFH-NEXT:    vsetvli a6, zero, e32, m2, ta, ma
-; ZVFH-NEXT:  .LBB32_1: # %vector.body
+; ZVFH-NEXT:  .LBB26_1: # %vector.body
 ; ZVFH-NEXT:    # =>This Inner Loop Header: Depth=1
 ; ZVFH-NEXT:    vl2re32.v v8, (a0)
 ; ZVFH-NEXT:    vl2re32.v v10, (a1)
@@ -515,7 +515,7 @@ define void @fmin32(ptr noundef readonly captures(none) %input1, ptr noundef rea
 ; ZVFH-NEXT:    vs2r.v v8, (a2)
 ; ZVFH-NEXT:    add a2, a2, a5
 ; ZVFH-NEXT:    add a0, a0, a5
-; ZVFH-NEXT:    bnez a4, .LBB32_1
+; ZVFH-NEXT:    bnez a4, .LBB26_1
 ; ZVFH-NEXT:  # %bb.2: # %exit
 ; ZVFH-NEXT:    ret
 ;
@@ -528,7 +528,7 @@ define void @fmin32(ptr noundef readonly captures(none) %input1, ptr noundef rea
 ; ZVFHMIN-NEXT:    and a4, a6, a4
 ; ZVFHMIN-NEXT:    slli a5, a5, 1
 ; ZVFHMIN-NEXT:    vsetvli a6, zero, e32, m2, ta, ma
-; ZVFHMIN-NEXT:  .LBB32_1: # %vector.body
+; ZVFHMIN-NEXT:  .LBB26_1: # %vector.body
 ; ZVFHMIN-NEXT:    # =>This Inner Loop Header: Depth=1
 ; ZVFHMIN-NEXT:    vl2re32.v v8, (a0)
 ; ZVFHMIN-NEXT:    vl2re32.v v10, (a1)
@@ -538,7 +538,7 @@ define void @fmin32(ptr noundef readonly captures(none) %input1, ptr noundef rea
 ; ZVFHMIN-NEXT:    vs2r.v v8, (a2)
 ; ZVFHMIN-NEXT:    add a2, a2, a5
 ; ZVFHMIN-NEXT:    add a0, a0, a5
-; ZVFHMIN-NEXT:    bnez a4, .LBB32_1
+; ZVFHMIN-NEXT:    bnez a4, .LBB26_1
 ; ZVFHMIN-NEXT:  # %bb.2: # %exit
 ; ZVFHMIN-NEXT:    ret
 entry:
@@ -586,7 +586,7 @@ define void @fmax32(ptr noundef readonly captures(none) %input1, ptr noundef rea
 ; ZVFH-NEXT:    and a4, a6, a4
 ; ZVFH-NEXT:    slli a5, a5, 1
 ; ZVFH-NEXT:    vsetvli a6, zero, e32, m2, ta, ma
-; ZVFH-NEXT:  .LBB33_1: # %vector.body
+; ZVFH-NEXT:  .LBB27_1: # %vector.body
 ; ZVFH-NEXT:    # =>This Inner Loop Header: Depth=1
 ; ZVFH-NEXT:    vl2re32.v v8, (a0)
 ; ZVFH-NEXT:    vl2re32.v v10, (a1)
@@ -596,7 +596,7 @@ define void @fmax32(ptr noundef readonly captures(none) %input1, ptr noundef rea
 ; ZVFH-NEXT:    vs2r.v v8, (a2)
 ; ZVFH-NEXT:    add a2, a2, a5
 ; ZVFH-NEXT:    add a0, a0, a5
-; ZVFH-NEXT:    bnez a4, .LBB33_1
+; ZVFH-NEXT:    bnez a4, .LBB27_1
 ; ZVFH-NEXT:  # %bb.2: # %exit
 ; ZVFH-NEXT:    ret
 ;
@@ -609,7 +609,7 @@ define void @fmax32(ptr noundef readonly captures(none) %input1, ptr noundef rea
 ; ZVFHMIN-NEXT:    and a4, a6, a4
 ; ZVFHMIN-NEXT:    slli a5, a5, 1
 ; ZVFHMIN-NEXT:    vsetvli a6, zero, e32, m2, ta, ma
-; ZVFHMIN-NEXT:  .LBB33_1: # %vector.body
+; ZVFHMIN-NEXT:  .LBB27_1: # %vector.body
 ; ZVFHMIN-NEXT:    # =>This Inner Loop Header: Depth=1
 ; ZVFHMIN-NEXT:    vl2re32.v v8, (a0)
 ; ZVFHMIN-NEXT:    vl2re32.v v10, (a1)
@@ -619,7 +619,7 @@ define void @fmax32(ptr noundef readonly captures(none) %input1, ptr noundef rea
 ; ZVFHMIN-NEXT:    vs2r.v v8, (a2)
 ; ZVFHMIN-NEXT:    add a2, a2, a5
 ; ZVFHMIN-NEXT:    add a0, a0, a5
-; ZVFHMIN-NEXT:    bnez a4, .LBB33_1
+; ZVFHMIN-NEXT:    bnez a4, .LBB27_1
 ; ZVFHMIN-NEXT:  # %bb.2: # %exit
 ; ZVFHMIN-NEXT:    ret
 entry:
@@ -667,7 +667,7 @@ define void @fmin64(ptr noundef readonly captures(none) %input1, ptr noundef rea
 ; ZVFH-NEXT:    and a4, a6, a4
 ; ZVFH-NEXT:    slli a5, a5, 1
 ; ZVFH-NEXT:    vsetvli a6, zero, e64, m2, ta, ma
-; ZVFH-NEXT:  .LBB34_1: # %vector.body
+; ZVFH-NEXT:  .LBB28_1: # %vector.body
 ; ZVFH-NEXT:    # =>This Inner Loop Header: Depth=1
 ; ZVFH-NEXT:    vl2re64.v v8, (a0)
 ; ZVFH-NEXT:    vl2re64.v v10, (a1)
@@ -677,7 +677,7 @@ define void @fmin64(ptr noundef readonly captures(none) %input1, ptr noundef rea
 ; ZVFH-NEXT:    vs2r.v v8, (a2)
 ; ZVFH-NEXT:    add a2, a2, a5
 ; ZVFH-NEXT:    add a0, a0, a5
-; ZVFH-NEXT:    bnez a4, .LBB34_1
+; ZVFH-NEXT:    bnez a4, .LBB28_1
 ; ZVFH-NEXT:  # %bb.2: # %exit
 ; ZVFH-NEXT:    ret
 ;
@@ -690,7 +690,7 @@ define void @fmin64(ptr noundef readonly captures(none) %input1, ptr noundef rea
 ; ZVFHMIN-NEXT:    and a4, a6, a4
 ; ZVFHMIN-NEXT:    slli a5, a5, 1
 ; ZVFHMIN-NEXT:    vsetvli a6, zero, e64, m2, ta, ma
-; ZVFHMIN-NEXT:  .LBB34_1: # %vector.body
+; ZVFHMIN-NEXT:  .LBB28_1: # %vector.body
 ; ZVFHMIN-NEXT:    # =>This Inner Loop Header: Depth=1
 ; ZVFHMIN-NEXT:    vl2re64.v v8, (a0)
 ; ZVFHMIN-NEXT:    vl2re64.v v10, (a1)
@@ -700,7 +700,7 @@ define void @fmin64(ptr noundef readonly captures(none) %input1, ptr noundef rea
 ; ZVFHMIN-NEXT:    vs2r.v v8, (a2)
 ; ZVFHMIN-NEXT:    add a2, a2, a5
 ; ZVFHMIN-NEXT:    add a0, a0, a5
-; ZVFHMIN-NEXT:    bnez a4, .LBB34_1
+; ZVFHMIN-NEXT:    bnez a4, .LBB28_1
 ; ZVFHMIN-NEXT:  # %bb.2: # %exit
 ; ZVFHMIN-NEXT:    ret
 entry:
@@ -748,7 +748,7 @@ define void @fmax64(ptr noundef readonly captures(none) %input1, ptr noundef rea
 ; ZVFH-NEXT:    and a4, a6, a4
 ; ZVFH-NEXT:    slli a5, a5, 1
 ; ZVFH-NEXT:    vsetvli a6, zero, e64, m2, ta, ma
-; ZVFH-NEXT:  .LBB35_1: # %vector.body
+; ZVFH-NEXT:  .LBB29_1: # %vector.body
 ; ZVFH-NEXT:    # =>This Inner Loop Header: Depth=1
 ; ZVFH-NEXT:    vl2re64.v v8, (a0)
 ; ZVFH-NEXT:    vl2re64.v v10, (a1)
@@ -758,7 +758,7 @@ define void @fmax64(ptr noundef readonly captures(none) %input1, ptr noundef rea
 ; ZVFH-NEXT:    vs2r.v v8, (a2)
 ; ZVFH-NEXT:    add a2, a2, a5
 ; ZVFH-NEXT:    add a0, a0, a5
-; ZVFH-NEXT:    bnez a4, .LBB35_1
+; ZVFH-NEXT:    bnez a4, .LBB29_1
 ; ZVFH-NEXT:  # %bb.2: # %exit
 ; ZVFH-NEXT:    ret
 ;
@@ -771,7 +771,7 @@ define void @fmax64(ptr noundef readonly captures(none) %input1, ptr noundef rea
 ; ZVFHMIN-NEXT:    and a4, a6, a4
 ; ZVFHMIN-NEXT:    slli a5, a5, 1
 ; ZVFHMIN-NEXT:    vsetvli a6, zero, e64, m2, ta, ma
-; ZVFHMIN-NEXT:  .LBB35_1: # %vector.body
+; ZVFHMIN-NEXT:  .LBB29_1: # %vector.body
 ; ZVFHMIN-NEXT:    # =>This Inner Loop Header: Depth=1
 ; ZVFHMIN-NEXT:    vl2re64.v v8, (a0)
 ; ZVFHMIN-NEXT:    vl2re64.v v10, (a1)
@@ -781,7 +781,7 @@ define void @fmax64(ptr noundef readonly captures(none) %input1, ptr noundef rea
 ; ZVFHMIN-NEXT:    vs2r.v v8, (a2)
 ; ZVFHMIN-NEXT:    add a2, a2, a5
 ; ZVFHMIN-NEXT:    add a0, a0, a5
-; ZVFHMIN-NEXT:    bnez a4, .LBB35_1
+; ZVFHMIN-NEXT:    bnez a4, .LBB29_1
 ; ZVFHMIN-NEXT:  # %bb.2: # %exit
 ; ZVFHMIN-NEXT:    ret
 entry:
@@ -828,7 +828,7 @@ define void @fmin16(ptr noundef readonly captures(none) %input1, ptr noundef rea
 ; ZVFH-NEXT:    and a4, a5, a4
 ; ZVFH-NEXT:    slli a5, a3, 1
 ; ZVFH-NEXT:    vsetvli a6, zero, e16, m2, ta, ma
-; ZVFH-NEXT:  .LBB36_1: # %vector.body
+; ZVFH-NEXT:  .LBB30_1: # %vector.body
 ; ZVFH-NEXT:    # =>This Inner Loop Header: Depth=1
 ; ZVFH-NEXT:    vl2re16.v v8, (a0)
 ; ZVFH-NEXT:    vl2re16.v v10, (a1)
@@ -838,7 +838,7 @@ define void @fmin16(ptr noundef readonly captures(none) %input1, ptr noundef rea
 ; ZVFH-NEXT:    vs2r.v v8, (a2)
 ; ZVFH-NEXT:    add a2, a2, a5
 ; ZVFH-NEXT:    add a0, a0, a5
-; ZVFH-NEXT:    bnez a4, .LBB36_1
+; ZVFH-NEXT:    bnez a4, .LBB30_1
 ; ZVFH-NEXT:  # %bb.2: # %exit
 ; ZVFH-NEXT:    ret
 ;
@@ -850,7 +850,7 @@ define void @fmin16(ptr noundef readonly captures(none) %input1, ptr noundef rea
 ; ZVFHMIN-NEXT:    and a4, a5, a4
 ; ZVFHMIN-NEXT:    slli a5, a3, 1
 ; ZVFHMIN-NEXT:    vsetvli a6, zero, e16, m2, ta, ma
-; ZVFHMIN-NEXT:  .LBB36_1: # %vector.body
+; ZVFHMIN-NEXT:  .LBB30_1: # %vector.body
 ; ZVFHMIN-NEXT:    # =>This Inner Loop Header: Depth=1
 ; ZVFHMIN-NEXT:    vl2re16.v v12, (a1)
 ; ZVFHMIN-NEXT:    vl2re16.v v16, (a0)
@@ -865,7 +865,7 @@ define void @fmin16(ptr noundef readonly captures(none) %input1, ptr noundef rea
 ; ZVFHMIN-NEXT:    vs2r.v v12, (a2)
 ; ZVFHMIN-NEXT:    add a2, a2, a5
 ; ZVFHMIN-NEXT:    add a0, a0, a5
-; ZVFHMIN-NEXT:    bnez a4, .LBB36_1
+; ZVFHMIN-NEXT:    bnez a4, .LBB30_1
 ; ZVFHMIN-NEXT:  # %bb.2: # %exit
 ; ZVFHMIN-NEXT:    ret
 entry:
@@ -912,7 +912,7 @@ define void @fmax16(ptr noundef readonly captures(none) %input1, ptr noundef rea
 ; ZVFH-NEXT:    and a4, a5, a4
 ; ZVFH-NEXT:    slli a5, a3, 1
 ; ZVFH-NEXT:    vsetvli a6, zero, e16, m2, ta, ma
-; ZVFH-NEXT:  .LBB37_1: # %vector.body
+; ZVFH-NEXT:  .LBB31_1: # %vector.body
 ; ZVFH-NEXT:    # =>This Inner Loop Header: Depth=1
 ; ZVFH-NEXT:    vl2re16.v v8, (a0)
 ; ZVFH-NEXT:    vl2re16.v v10, (a1)
@@ -922,7 +922,7 @@ define void @fmax16(ptr noundef readonly captures(none) %input1, ptr noundef rea
 ; ZVFH-NEXT:    vs2r.v v8, (a2)
 ; ZVFH-NEXT:    add a2, a2, a5
 ; ZVFH-NEXT:    add a0, a0, a5
-; ZVFH-NEXT:    bnez a4, .LBB37_1
+; ZVFH-NEXT:    bnez a4, .LBB31_1
 ; ZVFH-NEXT:  # %bb.2: # %exit
 ; ZVFH-NEXT:    ret
 ;
@@ -934,7 +934,7 @@ define void @fmax16(ptr noundef readonly captures(none) %input1, ptr noundef rea
 ; ZVFHMIN-NEXT:    and a4, a5, a4
 ; ZVFHMIN-NEXT:    slli a5, a3, 1
 ; ZVFHMIN-NEXT:    vsetvli a6, zero, e16, m2, ta, ma
-; ZVFHMIN-NEXT:  .LBB37_1: # %vector.body
+; ZVFHMIN-NEXT:  .LBB31_1: # %vector.body
 ; ZVFHMIN-NEXT:    # =>This Inner Loop Header: Depth=1
 ; ZVFHMIN-NEXT:    vl2re16.v v12, (a1)
 ; ZVFHMIN-NEXT:    vl2re16.v v16, (a0)
@@ -949,7 +949,7 @@ define void @fmax16(ptr noundef readonly captures(none) %input1, ptr noundef rea
 ; ZVFHMIN-NEXT:    vs2r.v v12, (a2)
 ; ZVFHMIN-NEXT:    add a2, a2, a5
 ; ZVFHMIN-NEXT:    add a0, a0, a5
-; ZVFHMIN-NEXT:    bnez a4, .LBB37_1
+; ZVFHMIN-NEXT:    bnez a4, .LBB31_1
 ; ZVFHMIN-NEXT:  # %bb.2: # %exit
 ; ZVFHMIN-NEXT:    ret
 entry:
