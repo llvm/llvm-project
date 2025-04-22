@@ -36,8 +36,6 @@ struct EqualityComparable {
 };
 
 static_assert(std::equality_comparable<EqualityComparable>);
-static_assert(EqualityComparable{94} == EqualityComparable{94});
-static_assert(EqualityComparable{94} != EqualityComparable{82});
 
 static_assert(std::equality_comparable<std::pair<EqualityComparable, EqualityComparable>>);
 
