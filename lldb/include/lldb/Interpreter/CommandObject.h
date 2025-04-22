@@ -41,12 +41,12 @@ int AddNamesMatchingPartialString(
   int number_added = 0;
 
   for (const auto &iter : in_map) {
-    llvm::StringRef full_cmd = iter->first;
+    llvm::StringRef full_cmd = iter.first;
     if (full_cmd.starts_with(cmd_str)) {
       ++number_added;
-      matches.AppendString(iter->first);
+      matches.AppendString(iter.first);
       if (descriptions)
-        descriptions->AppendString(iter->second->GetHelp());
+        descriptions->AppendString(iter.second->GetHelp());
     }
   }
 
