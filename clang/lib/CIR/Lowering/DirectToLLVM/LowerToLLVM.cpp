@@ -1551,8 +1551,11 @@ void ConvertCIRToLLVMPass::runOnOperation() {
                CIRToLLVMConstantOpLowering,
                CIRToLLVMFuncOpLowering,
                CIRToLLVMGetGlobalOpLowering,
+               CIRToLLVMGetMemberOpLowering,
                CIRToLLVMSelectOpLowering,
                CIRToLLVMShiftOpLowering,
+               CIRToLLVMStackSaveOpLowering,
+               CIRToLLVMStackRestoreOpLowering,
                CIRToLLVMTrapOpLowering,
                CIRToLLVMUnaryOpLowering
       // clang-format on
@@ -1582,6 +1585,29 @@ mlir::LogicalResult CIRToLLVMBrOpLowering::matchAndRewrite(
   return mlir::LogicalResult::success();
 }
 
+mlir::LogicalResult CIRToLLVMGetMemberOpLowering::matchAndRewrite(
+    cir::GetMemberOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  mlir::Type llResTy = getTypeConverter()->convertType(op.getType());
+  const auto recordTy =
+      mlir::cast<cir::RecordType>(op.getAddrTy().getPointee());
+  assert(recordTy && "expected record type");
+
+  switch (recordTy.getKind()) {
+  case cir::RecordType::Struct: {
+    // Since the base address is a pointer to an aggregate, the first offset
+    // is always zero. The second offset tell us which member it will access.
+    llvm::SmallVector<mlir::LLVM::GEPArg, 2> offset{0, op.getIndex()};
+    const mlir::Type elementTy = getTypeConverter()->convertType(recordTy);
+    rewriter.replaceOpWithNewOp<mlir::LLVM::GEPOp>(op, llResTy, elementTy,
+                                                   adaptor.getAddr(), offset);
+    return mlir::success();
+  }
+  case cir::RecordType::Union:
+    return op.emitError() << "NYI: union get_member lowering";
+  }
+}
+
 mlir::LogicalResult CIRToLLVMTrapOpLowering::matchAndRewrite(
     cir::TrapOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
@@ -1595,6 +1621,21 @@ mlir::LogicalResult CIRToLLVMTrapOpLowering::matchAndRewrite(
   // block.
   rewriter.create<mlir::LLVM::UnreachableOp>(loc);
 
+  return mlir::success();
+}
+
+mlir::LogicalResult CIRToLLVMStackSaveOpLowering::matchAndRewrite(
+    cir::StackSaveOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  const mlir::Type ptrTy = getTypeConverter()->convertType(op.getType());
+  rewriter.replaceOpWithNewOp<mlir::LLVM::StackSaveOp>(op, ptrTy);
+  return mlir::success();
+}
+
+mlir::LogicalResult CIRToLLVMStackRestoreOpLowering::matchAndRewrite(
+    cir::StackRestoreOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  rewriter.replaceOpWithNewOp<mlir::LLVM::StackRestoreOp>(op, adaptor.getPtr());
   return mlir::success();
 }
 

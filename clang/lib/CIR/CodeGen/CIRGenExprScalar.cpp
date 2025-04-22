@@ -168,6 +168,8 @@ public:
     return emitLoadOfLValue(e);
   }
 
+  mlir::Value VisitMemberExpr(MemberExpr *e);
+
   mlir::Value VisitExplicitCastExpr(ExplicitCastExpr *e) {
     return VisitCastExpr(e);
   }
@@ -1518,6 +1520,19 @@ mlir::Value ScalarExprEmitter::VisitCallExpr(const CallExpr *e) {
   auto v = cgf.emitCallExpr(e).getScalarVal();
   assert(!cir::MissingFeatures::emitLValueAlignmentAssumption());
   return v;
+}
+
+mlir::Value ScalarExprEmitter::VisitMemberExpr(MemberExpr *e) {
+  // TODO(cir): The classic codegen calls tryEmitAsConstant() here. Folding
+  // constants sound like work for MLIR optimizers, but we'll keep an assertion
+  // for now.
+  assert(!cir::MissingFeatures::tryEmitAsConstant());
+  Expr::EvalResult result;
+  if (e->EvaluateAsInt(result, cgf.getContext(), Expr::SE_AllowSideEffects)) {
+    cgf.cgm.errorNYI(e->getSourceRange(), "Constant interger member expr");
+    // Fall through to emit this as a non-constant access.
+  }
+  return emitLoadOfLValue(e);
 }
 
 mlir::Value CIRGenFunction::emitScalarConversion(mlir::Value src,

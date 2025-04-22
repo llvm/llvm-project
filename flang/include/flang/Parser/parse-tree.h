@@ -4272,6 +4272,11 @@ struct OmpGrainsizeClause {
   std::tuple<MODIFIERS(), ScalarIntExpr> t;
 };
 
+// Ref: [5.0:234-242], [5.1:266-275], [5.2:299], [6.0:472-473]
+struct OmpHintClause {
+  WRAPPER_CLASS_BOILERPLATE(OmpHintClause, ScalarIntConstantExpr);
+};
+
 // Ref: [5.2: 214]
 //
 // holds-clause ->
@@ -4832,7 +4837,7 @@ struct OmpMemoryOrderClause {
 struct OmpAtomicClause {
   UNION_CLASS_BOILERPLATE(OmpAtomicClause);
   CharBlock source;
-  std::variant<OmpMemoryOrderClause, OmpFailClause, OmpClause> u;
+  std::variant<OmpMemoryOrderClause, OmpFailClause, OmpHintClause> u;
 };
 
 // atomic-clause-list -> [atomic-clause, [atomic-clause], ...]
