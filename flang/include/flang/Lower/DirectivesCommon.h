@@ -55,14 +55,11 @@ static inline void genOmpAtomicHintAndMemoryOrderClauses(
     mlir::omp::ClauseMemoryOrderKindAttr &memoryOrder) {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
   for (const Fortran::parser::OmpAtomicClause &clause : clauseList.v) {
-    if (const auto *ompClause =
-            std::get_if<Fortran::parser::OmpClause>(&clause.u)) {
-      if (const auto *hintClause =
-              std::get_if<Fortran::parser::OmpClause::Hint>(&ompClause->u)) {
-        const auto *expr = Fortran::semantics::GetExpr(hintClause->v);
-        uint64_t hintExprValue = *Fortran::evaluate::ToInt64(*expr);
-        hint = firOpBuilder.getI64IntegerAttr(hintExprValue);
-      }
+    if (const auto *hintClause =
+            std::get_if<Fortran::parser::OmpHintClause>(&clause.u)) {
+      const auto *expr = Fortran::semantics::GetExpr(hintClause->v);
+      uint64_t hintExprValue = *Fortran::evaluate::ToInt64(*expr);
+      hint = firOpBuilder.getI64IntegerAttr(hintExprValue);
     } else if (const auto *ompMemoryOrderClause =
                    std::get_if<Fortran::parser::OmpMemoryOrderClause>(
                        &clause.u)) {

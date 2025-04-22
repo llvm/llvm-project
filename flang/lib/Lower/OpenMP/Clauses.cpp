@@ -863,8 +863,8 @@ HasDeviceAddr make(const parser::OmpClause::HasDeviceAddr &inp,
 
 Hint make(const parser::OmpClause::Hint &inp,
           semantics::SemanticsContext &semaCtx) {
-  // inp.v -> parser::ConstantExpr
-  return Hint{/*HintExpr=*/makeExpr(inp.v, semaCtx)};
+  // inp.v -> parser::OmpHintClause
+  return Hint{/*HintExpr=*/makeExpr(inp.v.v, semaCtx)};
 }
 
 Holds make(const parser::OmpClause::Holds &inp,
