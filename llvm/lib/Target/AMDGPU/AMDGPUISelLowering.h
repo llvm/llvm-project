@@ -321,9 +321,8 @@ public:
                                             const MachineRegisterInfo &MRI,
                                             unsigned Depth = 0) const override;
 
-  bool isKnownNeverNaNForTargetNode(SDValue Op,
-                                    const SelectionDAG &DAG,
-                                    bool SNaN = false,
+  bool isKnownNeverNaNForTargetNode(SDValue Op, const APInt &DemandedElts,
+                                    const SelectionDAG &DAG, bool SNaN = false,
                                     unsigned Depth = 0) const override;
 
   bool isReassocProfitable(MachineRegisterInfo &MRI, Register N0,

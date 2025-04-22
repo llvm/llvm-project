@@ -36,9 +36,8 @@ static cl::opt<bool> ULEB128Reloc(
 
 RISCVAsmBackend::RISCVAsmBackend(const MCSubtargetInfo &STI, uint8_t OSABI,
                                  bool Is64Bit, const MCTargetOptions &Options)
-    : MCAsmBackend(llvm::endianness::little,
-                   FirstRelocationKind + ELF::R_RISCV_RELAX),
-      STI(STI), OSABI(OSABI), Is64Bit(Is64Bit), TargetOptions(Options) {
+    : MCAsmBackend(llvm::endianness::little, ELF::R_RISCV_RELAX), STI(STI),
+      OSABI(OSABI), Is64Bit(Is64Bit), TargetOptions(Options) {
   RISCVFeatures::validate(STI.getTargetTriple(), STI.getFeatureBits());
 }
 
@@ -62,8 +61,7 @@ std::optional<MCFixupKind> RISCVAsmBackend::getFixupKind(StringRef Name) const {
   return std::nullopt;
 }
 
-const MCFixupKindInfo &
-RISCVAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
+MCFixupKindInfo RISCVAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   const static MCFixupKindInfo Infos[] = {
       // This table *must* be in the order that the fixup_* kinds are defined in
       // RISCVFixupKinds.h.
@@ -94,9 +92,9 @@ RISCVAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   static_assert((std::size(Infos)) == RISCV::NumTargetFixupKinds,
                 "Not all fixup kinds added to Infos array");
 
-  // Fixup kinds from raw relocation types and .reloc directive are like
-  // R_RISCV_NONE. They do not require any extra processing.
-  if (Kind >= FirstRelocationKind)
+  // Fixup kinds from raw relocation types and .reloc directives force
+  // relocations and do not use these fields.
+  if (mc::isRelocation(Kind))
     return MCAsmBackend::getFixupKindInfo(FK_NONE);
 
   if (Kind < FirstTargetFixupKind)
@@ -659,10 +657,8 @@ bool RISCVAsmBackend::handleAddSubRelocations(const MCAssembler &Asm,
   }
   MCValue A = MCValue::get(Target.getAddSym(), nullptr, Target.getConstant());
   MCValue B = MCValue::get(Target.getSubSym());
-  auto FA =
-      MCFixup::create(Fixup.getOffset(), nullptr, FirstRelocationKind + TA);
-  auto FB =
-      MCFixup::create(Fixup.getOffset(), nullptr, FirstRelocationKind + TB);
+  auto FA = MCFixup::create(Fixup.getOffset(), nullptr, TA);
+  auto FB = MCFixup::create(Fixup.getOffset(), nullptr, TB);
   auto &Assembler = const_cast<MCAssembler &>(Asm);
   Asm.getWriter().recordRelocation(Assembler, &F, FA, A, FixedValueA);
   Asm.getWriter().recordRelocation(Assembler, &F, FB, B, FixedValueB);
@@ -676,7 +672,7 @@ void RISCVAsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                                  bool IsResolved,
                                  const MCSubtargetInfo *STI) const {
   MCFixupKind Kind = Fixup.getKind();
-  if (Kind >= FirstRelocationKind)
+  if (mc::isRelocation(Kind))
     return;
   MCContext &Ctx = Asm.getContext();
   MCFixupKindInfo Info = getFixupKindInfo(Kind);
@@ -744,8 +740,7 @@ bool RISCVAsmBackend::shouldInsertFixupForCodeAlign(MCAssembler &Asm,
   MCContext &Ctx = Asm.getContext();
   const MCExpr *Dummy = MCConstantExpr::create(0, Ctx);
   // Create fixup_riscv_align fixup.
-  MCFixup Fixup = MCFixup::create(
-      0, Dummy, FirstRelocationKind + ELF::R_RISCV_ALIGN, SMLoc());
+  MCFixup Fixup = MCFixup::create(0, Dummy, ELF::R_RISCV_ALIGN, SMLoc());
 
   uint64_t FixedValue = 0;
   MCValue NopBytes = MCValue::get(Count);

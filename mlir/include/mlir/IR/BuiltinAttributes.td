@@ -700,7 +700,7 @@ def Builtin_IntegerAttr : Builtin_Attr<"Integer", "integer",
     false // A bool, i.e. i1, value.
     ```
   }];
-  let parameters = (ins AttributeSelfTypeParameter<"">:$type, "APInt":$value);
+  let parameters = (ins AttributeSelfTypeParameter<"">:$type, APIntParameter<"">:$value);
   let builders = [
     AttrBuilderWithInferredContext<(ins "Type":$type,
                                         "const APInt &":$value), [{

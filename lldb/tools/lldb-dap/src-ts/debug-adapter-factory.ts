@@ -211,7 +211,7 @@ export class LLDBDapDescriptorFactory
     if (session.configuration.debugAdapterPort) {
       return new vscode.DebugAdapterServer(
         session.configuration.debugAdapterPort,
-        session.configuration.debugAdapterHost,
+        session.configuration.debugAdapterHostname,
       );
     }
 

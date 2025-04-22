@@ -1377,6 +1377,39 @@ struct AMDGPUDPPLowering : public ConvertOpToLLVMPattern<DPPOp> {
   }
 };
 
+struct AMDGPUSwizzleBitModeLowering
+    : public ConvertOpToLLVMPattern<SwizzleBitModeOp> {
+  using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(SwizzleBitModeOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Location loc = op.getLoc();
+    Type i32 = rewriter.getI32Type();
+    Value src = adaptor.getSrc();
+    SmallVector<Value> decomposed =
+        LLVM::decomposeValue(rewriter, loc, src, i32);
+    unsigned andMask = op.getAndMask();
+    unsigned orMask = op.getOrMask();
+    unsigned xorMask = op.getXorMask();
+
+    // bit 15 is 0 for the BitMode swizzle.
+    // https://gpuopen.com/learn/amd-gcn-assembly-cross-lane-operations/
+    unsigned mask = andMask | (orMask << 5) | (xorMask << 10);
+    Value maskValue = createI32Constant(rewriter, loc, mask);
+    SmallVector<Value> swizzled;
+    for (Value v : decomposed) {
+      Value res =
+          rewriter.create<ROCDL::DsSwizzleOp>(loc, v.getType(), v, maskValue);
+      swizzled.emplace_back(res);
+    }
+
+    Value result = LLVM::composeValue(rewriter, loc, swizzled, src.getType());
+    rewriter.replaceOp(op, result);
+    return success();
+  }
+};
+
 struct ConvertAMDGPUToROCDLPass
     : public impl::ConvertAMDGPUToROCDLPassBase<ConvertAMDGPUToROCDLPass> {
   using Base::Base;
@@ -1444,4 +1477,5 @@ void mlir::populateAMDGPUToROCDLConversionPatterns(LLVMTypeConverter &converter,
            MFMAOpLowering, WMMAOpLowering, ExtPackedFp8OpLowering,
            PackedTrunc2xFp8OpLowering, PackedStochRoundFp8OpLowering,
            GatherToLDSOpLowering>(converter, chipset);
+  patterns.add<AMDGPUSwizzleBitModeLowering>(converter);
 }

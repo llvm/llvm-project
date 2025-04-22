@@ -6837,7 +6837,7 @@ define amdgpu_kernel void @v_wave_match_vgpr(i32 addrspace(1)* %out) {
 ; CHECK-NEXT:    [[TIDX:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
 ; CHECK-NEXT:    [[TIDY:%.*]] = call i32 @llvm.amdgcn.workitem.id.y()
 ; CHECK-NEXT:    [[V:%.*]] = call i32 @llvm.amdgcn.wave.match.b32(i32 [[TIDX]], i32 [[TIDY]])
-; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[TIDX]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = zext nneg i32 [[TIDX]] to i64
 ; CHECK-NEXT:    [[OUT_PTR:%.*]] = getelementptr i32, ptr addrspace(1) [[OUT:%.*]], i64 [[TMP1]]
 ; CHECK-NEXT:    store i32 [[V]], ptr addrspace(1) [[OUT_PTR]], align 4
 ; CHECK-NEXT:    ret void
@@ -6853,10 +6853,10 @@ define amdgpu_kernel void @v_wave_match_vgpr(i32 addrspace(1)* %out) {
 define amdgpu_kernel void @v_wave_match_vgpr_expression(i32 addrspace(1)* %out) {
 ; CHECK-LABEL: @v_wave_match_vgpr_expression(
 ; CHECK-NEXT:    [[TIDX:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
-; CHECK-NEXT:    [[TID2:%.*]] = add i32 [[TIDX]], 1
+; CHECK-NEXT:    [[TID2:%.*]] = add nuw nsw i32 [[TIDX]], 1
 ; CHECK-NEXT:    [[TIDY:%.*]] = call i32 @llvm.amdgcn.workitem.id.y()
 ; CHECK-NEXT:    [[V:%.*]] = call i32 @llvm.amdgcn.wave.match.b32(i32 [[TID2]], i32 [[TIDY]])
-; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[TIDX]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = zext nneg i32 [[TIDX]] to i64
 ; CHECK-NEXT:    [[OUT_PTR:%.*]] = getelementptr i32, ptr addrspace(1) [[OUT:%.*]], i64 [[TMP1]]
 ; CHECK-NEXT:    store i32 [[V]], ptr addrspace(1) [[OUT_PTR]], align 4
 ; CHECK-NEXT:    ret void
