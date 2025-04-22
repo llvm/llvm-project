@@ -833,7 +833,7 @@ bool CombineRuleBuilder::parseAll() {
       return false;
     }
   } else {
-    PrintError("Expected both a 'match' and 'apply' action in combine rule, "
+    PrintError("expected both a 'match' and 'apply' action in combine rule, "
                "or a single 'combine' action");
     return false;
   }

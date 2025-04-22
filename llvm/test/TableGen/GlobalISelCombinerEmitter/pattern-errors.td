@@ -283,7 +283,7 @@ def matchdata_without_cxx_apply : GICombineRule<
   (match (G_ZEXT $dst, $src):$mi),
   (apply (G_MUL $dst, $src, $src))>;
 
-// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: Expected both a 'match' and 'apply' action in combine rule, or a single 'combine' action
+// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: expected both a 'match' and 'apply' action in combine rule, or a single 'combine' action
 def missing_apply : GICombineRule<
   (defs root:$dst),
   (match (G_ZEXT $dst, $src))>;
@@ -298,13 +298,13 @@ def combineop_missing_mir : GICombineRule<
   (defs root:$d),
   (combine "return APPLY;")>;
 
-// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: Expected both a 'match' and 'apply' action in combine rule, or a single 'combine' action
+// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: expected both a 'match' and 'apply' action in combine rule, or a single 'combine' action
 def mixed_combine_match : GICombineRule<
   (defs root:$d),
   (combine (G_ZEXT $d, $y), "return APPLY;"),
   (match (G_ZEXT $d, $y))>;
 
-// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: Expected both a 'match' and 'apply' action in combine rule, or a single 'combine' action
+// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: expected both a 'match' and 'apply' action in combine rule, or a single 'combine' action
 def mixed_combine_apply : GICombineRule<
   (defs root:$d),
   (combine "return APPLY;"),
