@@ -291,12 +291,7 @@ public:
   }
 
   void VisitDeviceNumClause(const OpenACCDeviceNumClause &clause) {
-    if constexpr (isOneOfTypes<OpTy, InitOp, ShutdownOp>) {
-      operation.getDeviceNumOperandMutable().append(
-          createIntExpr(clause.getIntExpr()));
-    } else if constexpr (isOneOfTypes<OpTy, SetOp>) {
-      // This is only a separate case because the getter name is different in
-      // 'set' for some reason.
+    if constexpr (isOneOfTypes<OpTy, InitOp, ShutdownOp, SetOp>) {
       operation.getDeviceNumMutable().append(
           createIntExpr(clause.getIntExpr()));
     } else {
