@@ -591,22 +591,29 @@ void applyPerfectShuffle(MachineInstr &MI, MachineRegisterInfo &MRI,
   auto BuildZipLike = [&MIB, &MRI](unsigned OpNum, Register OpLHS,
                                    Register OpRHS) {
     LLT Ty = MRI.getType(OpLHS);
+    unsigned Opc = 0;
     switch (OpNum) {
     default:
       llvm_unreachable("Unexpected perfect shuffle opcode");
     case OP_VUZPL:
-      return MIB.buildInstr(AArch64::G_UZP1, {Ty}, {OpLHS, OpRHS}).getReg(0);
+      Opc = AArch64::G_UZP1;
+      break;
     case OP_VUZPR:
-      return MIB.buildInstr(AArch64::G_UZP2, {Ty}, {OpLHS, OpRHS}).getReg(0);
+      Opc = AArch64::G_UZP2;
+      break;
     case OP_VZIPL:
-      return MIB.buildInstr(AArch64::G_ZIP1, {Ty}, {OpLHS, OpRHS}).getReg(0);
+      Opc = AArch64::G_ZIP1;
+      break;
     case OP_VZIPR:
-      return MIB.buildInstr(AArch64::G_ZIP2, {Ty}, {OpLHS, OpRHS}).getReg(0);
+      Opc = AArch64::G_ZIP2;
+      break;
     case OP_VTRNL:
-      return MIB.buildInstr(AArch64::G_TRN1, {Ty}, {OpLHS, OpRHS}).getReg(0);
+      Opc = AArch64::G_TRN1;
+      break;
     case OP_VTRNR:
-      return MIB.buildInstr(AArch64::G_TRN2, {Ty}, {OpLHS, OpRHS}).getReg(0);
+      Opc = AArch64::G_TRN2;
     }
+    return MIB.buildInstr(Opc, {Ty}, {OpLHS, OpRHS}).getReg(0);
   };
   auto BuildExtractInsert64 = [&MIB, &MRI](Register ExtSrc, unsigned ExtLane,
                                            Register InsSrc, unsigned InsLane) {

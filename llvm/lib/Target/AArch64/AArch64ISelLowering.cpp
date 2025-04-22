@@ -13966,22 +13966,29 @@ SDValue AArch64TargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
     auto BuildZipLike = [&DAG, &dl](unsigned OpNum, SDValue OpLHS,
                                     SDValue OpRHS) {
       EVT VT = OpLHS.getValueType();
+      unsigned Opc = 0;
       switch (OpNum) {
       default:
         llvm_unreachable("Unexpected perfect shuffle opcode");
       case OP_VUZPL:
-        return DAG.getNode(AArch64ISD::UZP1, dl, VT, OpLHS, OpRHS);
+        Opc = AArch64ISD::UZP1;
+        break;
       case OP_VUZPR:
-        return DAG.getNode(AArch64ISD::UZP2, dl, VT, OpLHS, OpRHS);
+        Opc = AArch64ISD::UZP2;
+        break;
       case OP_VZIPL:
-        return DAG.getNode(AArch64ISD::ZIP1, dl, VT, OpLHS, OpRHS);
+        Opc = AArch64ISD::ZIP1;
+        break;
       case OP_VZIPR:
-        return DAG.getNode(AArch64ISD::ZIP2, dl, VT, OpLHS, OpRHS);
+        Opc = AArch64ISD::ZIP2;
+        break;
       case OP_VTRNL:
-        return DAG.getNode(AArch64ISD::TRN1, dl, VT, OpLHS, OpRHS);
+        Opc = AArch64ISD::TRN1;
+        break;
       case OP_VTRNR:
-        return DAG.getNode(AArch64ISD::TRN2, dl, VT, OpLHS, OpRHS);
+        Opc = AArch64ISD::TRN2;
       }
+      return DAG.getNode(Opc, dl, VT, OpLHS, OpRHS);
     };
     auto BuildExtractInsert64 = [&DAG, &dl](SDValue ExtSrc, unsigned ExtLane,
                                             SDValue InsSrc, unsigned InsLane) {

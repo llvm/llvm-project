@@ -6802,13 +6802,12 @@ inline Val generatePerfectShuffle(unsigned ID, Val V1, Val V2, unsigned PFEntry,
       ExtLane = MaskElt < 2 ? MaskElt : (MaskElt - 2);
       Input = MaskElt < 2 ? V1 : V2;
       return BuildExtractInsert64(Input, ExtLane, OpLHS, RHSID & 0x3);
-    } else {
-      int MaskElt = getPFIDLane(ID, RHSID);
-      assert(MaskElt >= 0 && "Didn't expect an undef movlane index!");
-      ExtLane = MaskElt < 4 ? MaskElt : (MaskElt - 4);
-      Input = MaskElt < 4 ? V1 : V2;
-      return BuildExtractInsert32(Input, ExtLane, OpLHS, RHSID & 0x3);
     }
+    int MaskElt = getPFIDLane(ID, RHSID);
+    assert(MaskElt >= 0 && "Didn't expect an undef movlane index!");
+    ExtLane = MaskElt < 4 ? MaskElt : (MaskElt - 4);
+    Input = MaskElt < 4 ? V1 : V2;
+    return BuildExtractInsert32(Input, ExtLane, OpLHS, RHSID & 0x3);
   }
 
   Val OpLHS, OpRHS;
