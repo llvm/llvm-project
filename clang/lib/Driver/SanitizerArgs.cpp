@@ -1099,7 +1099,13 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
     }
 
   } else {
-    AsanUseAfterScope = false;
+    if (AllAddedKinds & SanitizerKind::KernelAddress) {
+      AsanUseAfterScope = Args.hasFlag(
+          options::OPT_fsanitize_address_use_after_scope,
+          options::OPT_fno_sanitize_address_use_after_scope, AsanUseAfterScope);
+    } else {
+      AsanUseAfterScope = false;
+    }
     // -fsanitize=pointer-compare/pointer-subtract requires -fsanitize=address.
     SanitizerMask DetectInvalidPointerPairs =
         SanitizerKind::PointerCompare | SanitizerKind::PointerSubtract;
