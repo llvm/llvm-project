@@ -38,7 +38,7 @@ namespace minidump {
 struct Range {
   // Default constructor required for range data vector
   // but unusued.
-  Range() {}
+  Range() = default;
   lldb::addr_t start; // virtual address of the beginning of the range
   // range_ref - absolute pointer to the first byte of the range and size
   llvm::ArrayRef<uint8_t> range_ref;

@@ -20,8 +20,8 @@
 #include <algorithm>
 #include <map>
 #include <optional>
-#include <vector>
 #include <utility>
+#include <vector>
 
 using namespace lldb_private;
 using namespace minidump;
@@ -75,8 +75,7 @@ UUID MinidumpParser::GetModuleUUID(const minidump::Module *module) {
     if (GetArchitecture().GetTriple().isOSBinFormatELF()) {
       if (pdb70_uuid->Age != 0)
         return UUID(pdb70_uuid, sizeof(*pdb70_uuid));
-      return UUID(&pdb70_uuid->Uuid,
-                                    sizeof(pdb70_uuid->Uuid));
+      return UUID(&pdb70_uuid->Uuid, sizeof(pdb70_uuid->Uuid));
     }
     return UUID(*pdb70_uuid);
   } else if (cv_signature == CvSignature::ElfBuildId)
@@ -432,7 +431,8 @@ MinidumpParser::FindMemoryRange(lldb::addr_t addr) {
   if (m_memory_ranges.IsEmpty())
     PopulateMemoryRanges();
 
-  MemoryRangeVector::Entry *entry = m_memory_ranges.FindEntryThatContains(addr);
+  const MemoryRangeVector::Entry *entry =
+      m_memory_ranges.FindEntryThatContains(addr);
   if (!entry)
     return std::nullopt;
 
@@ -610,8 +610,7 @@ std::pair<MemoryRegionInfos, bool> MinidumpParser::BuildMemoryRegions() {
   case StreamType::ST:                                                         \
     return #ST
 
-llvm::StringRef
-MinidumpParser::GetStreamTypeAsString(StreamType stream_type) {
+llvm::StringRef MinidumpParser::GetStreamTypeAsString(StreamType stream_type) {
   switch (stream_type) {
     ENUM_TO_CSTR(Unused);
     ENUM_TO_CSTR(ThreadList);
