@@ -491,11 +491,8 @@ llvm::Error Interpret(std::vector<ControlStackElement> &control,
         auto name = data.Pop<std::string>();
         POP_VALOBJ(valobj);
         auto index_or_err = valobj->GetIndexOfChildWithName(name);
-        if (!index_or_err) {
-          data.Push(ValueObjectConstResult::Create(
-              nullptr, Status::FromError(index_or_err.takeError())));
-          break;
-        }
+        if (!index_or_err)
+          return index_or_err.takeError();
         data.Push((uint64_t)*index_or_err);
         break;
       }

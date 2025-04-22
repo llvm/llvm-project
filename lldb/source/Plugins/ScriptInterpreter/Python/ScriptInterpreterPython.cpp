@@ -2040,17 +2040,23 @@ lldb::ValueObjectSP ScriptInterpreterPythonImpl::GetChildAtIndex(
 llvm::Expected<int> ScriptInterpreterPythonImpl::GetIndexOfChildWithName(
     const StructuredData::ObjectSP &implementor_sp, const char *child_name) {
   if (!implementor_sp)
-    return llvm::createStringError("Cannot find index of child '%s'",
-                                   child_name);
+    return llvm::createStringError(
+        "'SyntheticChildrenFrontEnd::ScriptInterpreterPythonImpl' cannot find "
+        "index of child '%s'",
+        child_name);
 
   StructuredData::Generic *generic = implementor_sp->GetAsGeneric();
   if (!generic)
-    return llvm::createStringError("Cannot find index of child '%s'",
-                                   child_name);
+    return llvm::createStringError(
+        "'SyntheticChildrenFrontEnd::ScriptInterpreterPythonImpl' cannot find "
+        "index of child '%s'",
+        child_name);
   auto *implementor = static_cast<PyObject *>(generic->GetValue());
   if (!implementor)
-    return llvm::createStringError("Cannot find index of child '%s'",
-                                   child_name);
+    return llvm::createStringError(
+        "'SyntheticChildrenFrontEnd::ScriptInterpreterPythonImpl' cannot find "
+        "index of child '%s'",
+        child_name);
 
   int ret_val = INT32_MAX;
 
@@ -2062,8 +2068,10 @@ llvm::Expected<int> ScriptInterpreterPythonImpl::GetIndexOfChildWithName(
   }
 
   if (ret_val == INT32_MAX)
-    return llvm::createStringError("Cannot find index of child '%s'",
-                                   child_name);
+    return llvm::createStringError(
+        "'SyntheticChildrenFrontEnd::ScriptInterpreterPythonImpl' cannot find "
+        "index of child '%s'",
+        child_name);
   return ret_val;
 }
 

@@ -21,10 +21,10 @@ public:
   }
 
   llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override {
-    if (m_container_sp) {
+    if (m_container_sp)
       return m_container_sp->GetIndexOfChildWithName(name);
-    }
-    return llvm::createStringError("Cannot find index of child '%s'",
+    return llvm::createStringError("'SyntheticChildrenFrontend::QueueFrontEnd' "
+                                   "cannot find index of child '%s'",
                                    name.AsCString());
   }
 

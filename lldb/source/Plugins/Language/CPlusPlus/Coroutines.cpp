@@ -203,8 +203,12 @@ llvm::Expected<size_t>
 StdlibCoroutineHandleSyntheticFrontEnd::GetIndexOfChildWithName(
     ConstString name) {
   if (!m_resume_ptr_sp || !m_destroy_ptr_sp)
-    return llvm::createStringError("Cannot find index of child '%s'",
-                                   name.AsCString());
+    return llvm::createStringError(
+        "'SyntheticChildrenFrontend::StdlibCoroutineHandleSyntheticFrontEnd' "
+        "cannot find index of child '%s'. (m_resume_ptr_sp='%p', "
+        "m_destroy_ptr_sp='%p')",
+        name.AsCString(), static_cast<void *>(m_resume_ptr_sp.get()),
+        static_cast<void *>(m_destroy_ptr_sp.get()));
 
   if (name == ConstString("resume"))
     return 0;
@@ -213,8 +217,10 @@ StdlibCoroutineHandleSyntheticFrontEnd::GetIndexOfChildWithName(
   if (name == ConstString("promise_ptr") && m_promise_ptr_sp)
     return 2;
 
-  return llvm::createStringError("Cannot find index of child '%s'",
-                                 name.AsCString());
+  return llvm::createStringError(
+      "'SyntheticChildrenFrontend::StdlibCoroutineHandleSyntheticFrontEnd' "
+      "cannot find index of child '%s'",
+      name.AsCString());
 }
 
 SyntheticChildrenFrontEnd *

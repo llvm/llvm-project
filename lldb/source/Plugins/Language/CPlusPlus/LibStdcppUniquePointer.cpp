@@ -147,8 +147,10 @@ LibStdcppUniquePtrSyntheticFrontEnd::GetIndexOfChildWithName(ConstString name) {
     return 1;
   if (name == "obj" || name == "object" || name == "$$dereference$$")
     return 2;
-  return llvm::createStringError("Cannot find index of child '%s'",
-                                 name.AsCString());
+  return llvm::createStringError(
+      "'SyntheticChildrenFrontEnd::LibStdcppUniquePtrSyntheticFrontEnd' cannot "
+      "find index of child '%s'",
+      name.AsCString());
 }
 
 bool LibStdcppUniquePtrSyntheticFrontEnd::GetSummary(

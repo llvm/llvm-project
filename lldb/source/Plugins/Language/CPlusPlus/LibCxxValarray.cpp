@@ -127,8 +127,10 @@ llvm::Expected<size_t>
 lldb_private::formatters::LibcxxStdValarraySyntheticFrontEnd::
     GetIndexOfChildWithName(ConstString name) {
   if (!m_start || !m_finish)
-    return llvm::createStringError("Cannot find index of child '%s'",
-                                   name.AsCString());
+    return llvm::createStringError(
+        "'SyntheticChildrenFrontEnd::LibcxxStdValarraySyntheticFrontEnd' "
+        "cannot find index of child '%s'",
+        name.AsCString());
   return ExtractIndexFromString(name.GetCString());
 }
 

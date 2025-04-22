@@ -707,12 +707,10 @@ uint32_t SBValue::GetIndexOfChildWithName(const char *name) {
   ValueLocker locker;
   lldb::ValueObjectSP value_sp(GetSP(locker));
   if (value_sp) {
-    auto idx_or_err = value_sp->GetIndexOfChildWithName(name);
-    if (!idx_or_err) {
+    if (auto idx_or_err = value_sp->GetIndexOfChildWithName(name))
+      return *idx_or_err;
+    else
       llvm::consumeError(idx_or_err.takeError());
-      return UINT32_MAX;
-    }
-    return *idx_or_err;
   }
   return UINT32_MAX;
 }

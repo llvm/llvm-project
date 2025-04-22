@@ -406,8 +406,10 @@ lldb_private::formatters::LibCxxUnorderedMapIteratorSyntheticFrontEnd::
     return 0;
   if (name == "second")
     return 1;
-  return llvm::createStringError("Cannot find index of child '%s'",
-                                 name.AsCString());
+  return llvm::createStringError(
+      "'SyntheticChildrenFrontEnd::LibCxxUnorderedMapIteratorSyntheticFrontEnd'"
+      " cannot find index of child '%s'",
+      name.AsCString());
 }
 
 SyntheticChildrenFrontEnd *

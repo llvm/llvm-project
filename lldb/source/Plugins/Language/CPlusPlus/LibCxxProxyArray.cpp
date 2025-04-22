@@ -177,7 +177,10 @@ llvm::Expected<size_t>
 lldb_private::formatters::LibcxxStdProxyArraySyntheticFrontEnd::
     GetIndexOfChildWithName(ConstString name) {
   if (!m_base)
-    return std::numeric_limits<size_t>::max();
+    return llvm::createStringError(
+        "'SyntheticChildrenFrontend::LibcxxStdProxyArraySyntheticFrontEnd' "
+        "cannot find index of child '%s'",
+        name.AsCString());
   return ExtractIndexFromString(name.GetCString());
 }
 

@@ -146,8 +146,10 @@ public:
 
   llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override {
     if (!m_block_struct_type.IsValid())
-      return llvm::createStringError("Cannot find index of child '%s'",
-                                     name.AsCString());
+      return llvm::createStringError(
+          "'SyntheticChildrenFrontend::BlockPointerSyntheticFrontEnd' cannot "
+          "find index of child '%s'",
+          name.AsCString());
 
     const bool omit_empty_base_classes = false;
     return m_block_struct_type.GetIndexOfChildWithName(name.AsCString(),
@@ -177,6 +179,7 @@ bool lldb_private::formatters::BlockPointerSummaryProvider(
       synthetic_children->GetIndexOfChildWithName(s_FuncPtr_name);
 
   if (!index_or_err) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Types), index_or_err.takeError(), "{0}");
     return false;
   }
 

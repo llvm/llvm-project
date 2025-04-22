@@ -1031,7 +1031,8 @@ CompilerType::GetIndexOfChildWithName(llvm::StringRef name,
       return type_system_sp->GetIndexOfChildWithName(m_type, name,
                                                      omit_empty_base_classes);
   }
-  return llvm::createStringError("Cannot find index of child '%s'",
+  return llvm::createStringError("'SyntheticChildrenFrontEnd::CompilerType' "
+                                 "cannot find index of child '%s'",
                                  name.str().c_str());
 }
 

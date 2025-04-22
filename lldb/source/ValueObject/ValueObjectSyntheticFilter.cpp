@@ -321,8 +321,10 @@ ValueObjectSynthetic::GetChildMemberWithName(llvm::StringRef name,
 
   auto index_or_err = GetIndexOfChildWithName(name);
 
-  if (!index_or_err)
+  if (!index_or_err) {
+    llvm::consumeError(index_or_err.takeError());
     return lldb::ValueObjectSP();
+  }
 
   return GetChildAtIndex(*index_or_err, can_create);
 }
@@ -341,19 +343,20 @@ ValueObjectSynthetic::GetIndexOfChildWithName(llvm::StringRef name_ref) {
       found_index = name_to_index->second;
   }
 
-  if (!found_index.has_value() && m_synth_filter_up != nullptr) {
+  if (!found_index && m_synth_filter_up != nullptr) {
     auto index_or_err = m_synth_filter_up->GetIndexOfChildWithName(name);
     if (!index_or_err)
-      return llvm::createStringError("Cannot find index of child '%s'",
-                                     name.AsCString());
+      return index_or_err.takeError();
     std::lock_guard<std::mutex> guard(m_child_mutex);
     m_name_toindex[name.GetCString()] = *index_or_err;
     return *index_or_err;
-  } else if (!found_index.has_value() && m_synth_filter_up == nullptr)
-    return llvm::createStringError("Cannot find index of child '%s'",
-                                   name.AsCString());
+  } else if (!found_index && m_synth_filter_up == nullptr)
+    return llvm::createStringError(
+        "'SyntheticChildrenFrontEnd::ValueObjectSynthetic' cannot find index "
+        "of child '%s'",
+        name.AsCString());
   else /*if (iter != m_name_toindex.end())*/
-    return found_index.value();
+    return *found_index;
 }
 
 bool ValueObjectSynthetic::IsInScope() { return m_parent->IsInScope(); }

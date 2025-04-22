@@ -130,8 +130,10 @@ lldb_private::formatters::LibcxxStdSpanSyntheticFrontEnd::Update() {
 llvm::Expected<size_t> lldb_private::formatters::
     LibcxxStdSpanSyntheticFrontEnd::GetIndexOfChildWithName(ConstString name) {
   if (!m_start)
-    return llvm::createStringError("Cannot find index of child '%s'",
-                                   name.AsCString());
+    return llvm::createStringError(
+        "'SyntheticChildrenFrontEnd::LibcxxStdSpanSyntheticFrontEnd' cannot "
+        "find index of child '%s'",
+        name.AsCString());
   return ExtractIndexFromString(name.GetCString());
 }
 

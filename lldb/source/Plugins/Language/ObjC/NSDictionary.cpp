@@ -590,8 +590,10 @@ llvm::Expected<size_t> lldb_private::formatters::
   const char *item_name = name.GetCString();
   uint32_t idx = ExtractIndexFromString(item_name);
   if (idx < UINT32_MAX && idx >= CalculateNumChildrenIgnoringErrors())
-    return llvm::createStringError("Cannot find index of child '%s'",
-                                   name.AsCString());
+    return llvm::createStringError(
+        "'SyntheticChildrenFrontEnd::NSDictionaryISyntheticFrontEnd' cannot "
+        "find index of child '%s'",
+        name.AsCString());
   return idx;
 }
 
@@ -724,8 +726,10 @@ llvm::Expected<size_t> lldb_private::formatters::
   const char *item_name = name.GetCString();
   const uint32_t idx = ExtractIndexFromString(item_name);
   if (idx < UINT32_MAX && idx >= CalculateNumChildrenIgnoringErrors())
-    return llvm::createStringError("Cannot find index of child '%s'",
-                                   name.AsCString());
+    return llvm::createStringError(
+        "'SyntheticChildrenFrontEnd::NSCFDictionarySyntheticFrontEnd' cannot "
+        "find index of child '%s'",
+        name.AsCString());
   return idx;
 }
 
@@ -857,8 +861,10 @@ lldb_private::formatters::NSConstantDictionarySyntheticFrontEnd::
   const char *item_name = name.GetCString();
   uint32_t idx = ExtractIndexFromString(item_name);
   if (idx < UINT32_MAX && idx >= CalculateNumChildrenIgnoringErrors())
-    return llvm::createStringError("Cannot find index of child '%s'",
-                                   name.AsCString());
+    return llvm::createStringError(
+        "'SyntheticChildrenFrontEnd::NSConstantDictionarySyntheticFrontEnd' "
+        "cannot find index of child '%s'",
+        name.AsCString());
   return idx;
 }
 
@@ -970,8 +976,10 @@ llvm::Expected<size_t> lldb_private::formatters::
   static const ConstString g_zero("[0]");
   if (name == g_zero)
     return 0;
-  return llvm::createStringError("Cannot find index of child '%s'",
-                                 name.AsCString());
+  return llvm::createStringError(
+      "'SyntheticChildrenFrontEnd::NSDictionary1SyntheticFrontEnd' cannot find "
+      "index of child '%s'",
+      name.AsCString());
 }
 
 llvm::Expected<uint32_t> lldb_private::formatters::
@@ -1058,8 +1066,10 @@ lldb_private::formatters::GenericNSDictionaryMSyntheticFrontEnd<
   const char *item_name = name.GetCString();
   uint32_t idx = ExtractIndexFromString(item_name);
   if (idx < UINT32_MAX && idx >= CalculateNumChildrenIgnoringErrors())
-    return llvm::createStringError("Cannot find index of child '%s'",
-                                   name.AsCString());
+    return llvm::createStringError(
+        "'SyntheticChildrenFrontEnd::GenericNSDictionaryMSyntheticFrontEnd' "
+        "cannot find index of child '%s'",
+        name.AsCString());
   return idx;
 }
 
@@ -1216,8 +1226,10 @@ llvm::Expected<size_t> lldb_private::formatters::Foundation1100::
   const char *item_name = name.GetCString();
   uint32_t idx = ExtractIndexFromString(item_name);
   if (idx < UINT32_MAX && idx >= CalculateNumChildrenIgnoringErrors())
-    return llvm::createStringError("Cannot find index of child '%s'",
-                                   name.AsCString());
+    return llvm::createStringError(
+        "'SyntheticChildrenFrontEnd::NSDictionaryMSyntheticFrontEnd' cannot "
+        "find index of child '%s'",
+        name.AsCString());
   return idx;
 }
 

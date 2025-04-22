@@ -316,8 +316,10 @@ lldb_private::formatters::LibcxxSharedPtrSyntheticFrontEnd::
     return 0;
   if (name == "$$dereference$$")
     return 1;
-  return llvm::createStringError("Cannot find index of child '%s'",
-                                 name.AsCString());
+  return llvm::createStringError(
+      "'SyntheticChildrenFrontend::LibcxxSharedPtrSyntheticFrontEnd' cannot "
+      "find index of child '%s'",
+      name.AsCString());
 }
 
 lldb_private::formatters::LibcxxSharedPtrSyntheticFrontEnd::
@@ -418,8 +420,10 @@ lldb_private::formatters::LibcxxUniquePtrSyntheticFrontEnd::
     return 1;
   if (name == "$$dereference$$")
     return 2;
-  return llvm::createStringError("Cannot find index of child '%s'",
-                                 name.AsCString());
+  return llvm::createStringError(
+      "'ScriptedSyntheticChildren::LibcxxUniquePtrSyntheticFrontEnd' cannot "
+      "find index of child '%s'",
+      name.AsCString());
 }
 
 bool lldb_private::formatters::LibcxxContainerSummaryProvider(
@@ -460,9 +464,13 @@ ExtractLibcxxStringInfo(ValueObject &valobj) {
   if (!l)
     return {};
 
-  StringLayout layout = l->GetIndexOfChildWithName("__data_").get() == 0
-                            ? StringLayout::DSC
-                            : StringLayout::CSD;
+  auto index_or_err = l->GetIndexOfChildWithName("__data_");
+  if (!index_or_err)
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Types), index_or_err.takeError(), "{0}");
+  return {};
+
+  StringLayout layout =
+      *index_or_err == 0 ? StringLayout::DSC : StringLayout::CSD;
 
   bool short_mode = false; // this means the string is in short-mode and the
                            // data is stored inline

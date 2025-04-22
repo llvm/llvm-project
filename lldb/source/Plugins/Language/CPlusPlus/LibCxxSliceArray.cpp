@@ -148,8 +148,10 @@ llvm::Expected<size_t>
 lldb_private::formatters::LibcxxStdSliceArraySyntheticFrontEnd::
     GetIndexOfChildWithName(ConstString name) {
   if (!m_start)
-    return llvm::createStringError("Cannot find index of child '%s'",
-                                   name.AsCString());
+    return llvm::createStringError(
+        "'SyntheticChildrenFrontend::LibcxxStdSliceArraySyntheticFrontEnd' "
+        "cannot find index of child '%s'",
+        name.AsCString());
   return ExtractIndexFromString(name.GetCString());
 }
 
