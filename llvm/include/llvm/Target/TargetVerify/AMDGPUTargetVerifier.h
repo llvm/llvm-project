@@ -39,14 +39,17 @@ class AMDGPUTargetVerify : public TargetVerify {
 public:
   Module *Mod;
 
-  DominatorTree *DT;
-  PostDominatorTree *PDT;
-  UniformityInfo *UA;
+  DominatorTree *DT = nullptr;
+  PostDominatorTree *PDT = nullptr;
+  UniformityInfo *UA = nullptr;
+
+  AMDGPUTargetVerify(Module *Mod)
+    : TargetVerify(Mod), Mod(Mod) {}
 
   AMDGPUTargetVerify(Module *Mod, DominatorTree *DT, PostDominatorTree *PDT, UniformityInfo *UA)
     : TargetVerify(Mod), Mod(Mod), DT(DT), PDT(PDT), UA(UA) {}
 
-  void run(Function &F);
+  bool run(Function &F);
 };
 
 } // namespace llvm

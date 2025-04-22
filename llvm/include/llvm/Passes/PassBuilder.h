@@ -173,6 +173,13 @@ public:
   /// additional analyses.
   LLVM_ABI void registerLoopAnalyses(LoopAnalysisManager &LAM);
 
+  /// Registers all available verifier passes.
+  ///
+  /// This is an interface that can be used to populate a
+  /// \c ModuleAnalysisManager with all registered loop analyses. Callers can
+  /// still manually register any additional analyses.
+  void registerVerifierPasses(ModulePassManager &PM, FunctionPassManager &);
+
   /// Registers all available machine function analysis passes.
   ///
   /// This is an interface that can be used to populate a \c
@@ -576,6 +583,15 @@ public:
   }
   /// @}}
 
+  /// Register a callback for parsing an Verifier Name to populate
+  /// the given managers.
+  void registerVerifierCallback(
+      const std::function<bool(ModulePassManager &MPM)> &C,
+      const std::function<bool(FunctionPassManager &MPM)> &CF) {
+    VerifierCallbacks.push_back(C);
+    FnVerifierCallbacks.push_back(CF);
+  }
+
   /// {{@ Register pipeline parsing callbacks with this pass builder instance.
   /// Using these callbacks, callers can parse both a single pass name, as well
   /// as entire sub-pipelines, and populate the PassManager instance
@@ -851,6 +867,11 @@ private:
   // Callbacks to parse `filter` parameter in register allocation passes
   SmallVector<std::function<RegAllocFilterFunc(StringRef)>, 2>
       RegClassFilterParsingCallbacks;
+  // Verifier callbacks
+  SmallVector<std::function<bool(ModulePassManager &)>, 2>
+      VerifierCallbacks;
+  SmallVector<std::function<bool(FunctionPassManager &)>, 2>
+      FnVerifierCallbacks;
 };
 
 /// This utility template takes care of adding require<> and invalidate<>
