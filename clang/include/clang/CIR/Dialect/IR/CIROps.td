@@ -288,10 +288,7 @@ def ConstantOp : CIR_Op<"const",
     ```
   }];
 
-  // The constant operation takes an attribute as the only input.
   let arguments = (ins TypedAttrInterface:$value);
-
-  // The constant operation returns a single value of CIR_AnyType.
   let results = (outs CIR_AnyType:$res);
 
   let assemblyFormat = "attr-dict $value";
@@ -844,7 +841,7 @@ def UnaryOp : CIR_Op<"unary", [Pure, SameOperandsAndResultType]> {
   let assemblyFormat = [{
       `(` $kind `,` $input `)`
       (`nsw` $no_signed_wrap^)?
-      `:` type($input) `,` type($result) attr-dict 
+      `:` type($input) `,` type($result) attr-dict
   }];
 
   let hasVerifier = 1;

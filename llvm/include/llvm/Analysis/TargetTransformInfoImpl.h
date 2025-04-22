@@ -47,6 +47,8 @@ public:
 
   const DataLayout &getDataLayout() const { return DL; }
 
+  // FIXME: It looks like this implementation is dead. All clients appear to
+  //  use the (non-const) version from `TargetTransformInfoImplCRTPBase`.
   InstructionCost getGEPCost(Type *PointeeType, const Value *Ptr,
                              ArrayRef<const Value *> Operands, Type *AccessType,
                              TTI::TargetCostKind CostKind) const {
@@ -339,7 +341,7 @@ public:
   }
 
   bool isLegalInterleavedAccessType(VectorType *VTy, unsigned Factor,
-                                    Align Alignment, unsigned AddrSpace) {
+                                    Align Alignment, unsigned AddrSpace) const {
     return false;
   }
 
@@ -438,7 +440,7 @@ public:
 
   bool enableSelectOptimize() const { return true; }
 
-  bool shouldTreatInstructionLikeSelect(const Instruction *I) {
+  bool shouldTreatInstructionLikeSelect(const Instruction *I) const {
     // A select with two constant operands will usually be better left as a
     // select.
     using namespace llvm::PatternMatch;
@@ -469,7 +471,9 @@ public:
 
   bool haveFastSqrt(Type *Ty) const { return false; }
 
-  bool isExpensiveToSpeculativelyExecute(const Instruction *I) { return true; }
+  bool isExpensiveToSpeculativelyExecute(const Instruction *I) const {
+    return true;
+  }
 
   bool isFCmpOrdCheaperThanFCmpZero(Type *Ty) const { return true; }
 
@@ -743,9 +747,10 @@ public:
     return 1;
   }
 
-  unsigned getReplicationShuffleCost(Type *EltTy, int ReplicationFactor, int VF,
-                                     const APInt &DemandedDstElts,
-                                     TTI::TargetCostKind CostKind) {
+  InstructionCost
+  getReplicationShuffleCost(Type *EltTy, int ReplicationFactor, int VF,
+                            const APInt &DemandedDstElts,
+                            TTI::TargetCostKind CostKind) const {
     return 1;
   }
 
@@ -803,7 +808,7 @@ public:
     return InstructionCost::getInvalid();
   }
 
-  unsigned getInterleavedMemoryOpCost(
+  InstructionCost getInterleavedMemoryOpCost(
       unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
       Align Alignment, unsigned AddressSpace, TTI::TargetCostKind CostKind,
       bool UseMaskForCond, bool UseMaskForGaps) const {
@@ -963,13 +968,11 @@ public:
             Callee->getFnAttribute("target-features"));
   }
 
-  bool isIndexedLoadLegal(TTI::MemIndexedMode Mode, Type *Ty,
-                          const DataLayout &DL) const {
+  bool isIndexedLoadLegal(TTI::MemIndexedMode Mode, Type *Ty) const {
     return false;
   }
 
-  bool isIndexedStoreLegal(TTI::MemIndexedMode Mode, Type *Ty,
-                           const DataLayout &DL) const {
+  bool isIndexedStoreLegal(TTI::MemIndexedMode Mode, Type *Ty) const {
     return false;
   }
 
@@ -1168,7 +1171,7 @@ public:
 
   InstructionCost getGEPCost(Type *PointeeType, const Value *Ptr,
                              ArrayRef<const Value *> Operands, Type *AccessType,
-                             TTI::TargetCostKind CostKind) {
+                             TTI::TargetCostKind CostKind) const {
     assert(PointeeType && Ptr && "can't get GEPCost of nullptr");
     auto *BaseGV = dyn_cast<GlobalValue>(Ptr->stripPointerCasts());
     bool HasBaseReg = (BaseGV == nullptr);
@@ -1232,7 +1235,7 @@ public:
 
     // If the final address of the GEP is a legal addressing mode for the given
     // access type, then we can fold it into its users.
-    if (static_cast<T *>(this)->isLegalAddressingMode(
+    if (static_cast<const T *>(this)->isLegalAddressingMode(
             AccessType, const_cast<GlobalValue *>(BaseGV),
             BaseOffset.sextOrTrunc(64).getSExtValue(), HasBaseReg, Scale,
             Ptr->getType()->getPointerAddressSpace()))
@@ -1248,7 +1251,7 @@ public:
                                        const Value *Base,
                                        const TTI::PointersChainInfo &Info,
                                        Type *AccessTy,
-                                       TTI::TargetCostKind CostKind) {
+                                       TTI::TargetCostKind CostKind) const {
     InstructionCost Cost = TTI::TCC_Free;
     // In the basic model we take into account GEP instructions only
     // (although here can come alloca instruction, a value, constants and/or
@@ -1267,15 +1270,15 @@ public:
       if (Info.isSameBase() && V != Base) {
         if (GEP->hasAllConstantIndices())
           continue;
-        Cost += static_cast<T *>(this)->getArithmeticInstrCost(
+        Cost += static_cast<const T *>(this)->getArithmeticInstrCost(
             Instruction::Add, GEP->getType(), CostKind,
             {TTI::OK_AnyValue, TTI::OP_None}, {TTI::OK_AnyValue, TTI::OP_None},
             {});
       } else {
         SmallVector<const Value *> Indices(GEP->indices());
-        Cost += static_cast<T *>(this)->getGEPCost(GEP->getSourceElementType(),
-                                                   GEP->getPointerOperand(),
-                                                   Indices, AccessTy, CostKind);
+        Cost += static_cast<const T *>(this)->getGEPCost(
+            GEP->getSourceElementType(), GEP->getPointerOperand(), Indices,
+            AccessTy, CostKind);
       }
     }
     return Cost;
@@ -1283,10 +1286,10 @@ public:
 
   InstructionCost getInstructionCost(const User *U,
                                      ArrayRef<const Value *> Operands,
-                                     TTI::TargetCostKind CostKind) {
+                                     TTI::TargetCostKind CostKind) const {
     using namespace llvm::PatternMatch;
 
-    auto *TargetTTI = static_cast<T *>(this);
+    auto *TargetTTI = static_cast<const T *>(this);
     // Handle non-intrinsic calls, invokes, and callbr.
     // FIXME: Unlikely to be true for anything but CodeSize.
     auto *CB = dyn_cast<CallBase>(U);
@@ -1583,8 +1586,8 @@ public:
     return CostKind == TTI::TCK_RecipThroughput ? -1 : TTI::TCC_Basic;
   }
 
-  bool isExpensiveToSpeculativelyExecute(const Instruction *I) {
-    auto *TargetTTI = static_cast<T *>(this);
+  bool isExpensiveToSpeculativelyExecute(const Instruction *I) const {
+    auto *TargetTTI = static_cast<const T *>(this);
     SmallVector<const Value *, 4> Ops(I->operand_values());
     InstructionCost Cost = TargetTTI->getInstructionCost(
         I, Ops, TargetTransformInfo::TCK_SizeAndLatency);
