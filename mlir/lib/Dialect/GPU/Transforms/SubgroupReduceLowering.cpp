@@ -368,7 +368,7 @@ private:
 };
 
 FailureOr<Value>
-createSubgroupDPPReduction(PatternRewriter &rewriter, gpu::SubgroupReduceOp &op,
+createSubgroupDPPReduction(PatternRewriter &rewriter, gpu::SubgroupReduceOp op,
                            Value input, gpu::AllReduceOperation mode,
                            const ClusterInfo &ci, amdgpu::Chipset chipset) {
   Location loc = op.getLoc();
@@ -435,7 +435,7 @@ createSubgroupDPPReduction(PatternRewriter &rewriter, gpu::SubgroupReduceOp &op,
       if (ci.subgroupSize == 32) {
         Value lane0 = rewriter.create<arith::ConstantOp>(
             loc, rewriter.getI32Type(), rewriter.getI32IntegerAttr(0));
-        dpp =
+        res =
             rewriter.create<ROCDL::ReadlaneOp>(loc, res.getType(), res, lane0);
       }
     } else {
