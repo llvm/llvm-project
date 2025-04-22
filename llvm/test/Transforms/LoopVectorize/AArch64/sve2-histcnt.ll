@@ -756,6 +756,16 @@ for.exit:
 ; The histogram operation generates vectors. This example used to crash
 ; due to a missing entry in a switch statement.
 define void @histogram_generates_vectors_crash(ptr %data_array) {
+; CHECK-LABEL: define void @histogram_generates_vectors_crash(
+; CHECK-SAME: ptr [[DATA_ARRAY:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    store i1 true, ptr poison, align 1
+; CHECK-NEXT:    br i1 poison, label [[FOR_EXIT:%.*]], label [[FOR_BODY]]
+; CHECK:       for.exit:
+; CHECK-NEXT:    ret void
+;
 entry:
   br label %for.body
 
