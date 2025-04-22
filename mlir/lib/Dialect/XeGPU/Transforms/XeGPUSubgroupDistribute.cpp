@@ -37,11 +37,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TypeSwitch.h"
-#include "llvm/ADT/bit.h"
-#include "llvm/Support/Casting.h"
-#include "llvm/Support/Format.h"
-#include "llvm/Support/FormatVariadic.h"
-#include "llvm/Support/LogicalResult.h"
+#include "llvm/Support/InterleavedRange.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace mlir {
@@ -87,9 +83,7 @@ struct Layout {
 };
 
 void Layout::print(llvm::raw_ostream &os) const {
-  os << "[";
-  llvm::interleaveComma(layout, os);
-  os << "]";
+  os << llvm::interleaved_array(layout);
 }
 
 int64_t Layout::operator[](size_t idx) const {

@@ -798,7 +798,7 @@ void OpenMPIRBuilder::finalize(Function *Fn) {
       ArtificialEntry.eraseFromParent();
     }
     assert(&OutlinedFn->getEntryBlock() == OI.EntryBB);
-    assert(OutlinedFn && OutlinedFn->getNumUses() == 1);
+    assert(OutlinedFn && OutlinedFn->hasNUses(1));
 
     // Run a user callback, e.g. to add attributes.
     if (OI.PostOutlineCB)
@@ -1926,7 +1926,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTask(
                       Mergeable, Priority, EventHandle, TaskAllocaBB,
                       ToBeDeleted](Function &OutlinedFn) mutable {
     // Replace the Stale CI by appropriate RTL function call.
-    assert(OutlinedFn.getNumUses() == 1 &&
+    assert(OutlinedFn.hasOneUse() &&
            "there must be a single user for the outlined function");
     CallInst *StaleCI = cast<CallInst>(OutlinedFn.user_back());
 
@@ -7365,7 +7365,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::emitTargetTask(
 
   OI.PostOutlineCB = [this, ToBeDeleted, Dependencies, HasNoWait,
                       DeviceID](Function &OutlinedFn) mutable {
-    assert(OutlinedFn.getNumUses() == 1 &&
+    assert(OutlinedFn.hasOneUse() &&
            "there must be a single user for the outlined function");
 
     CallInst *StaleCI = cast<CallInst>(OutlinedFn.user_back());
@@ -9269,7 +9269,7 @@ OpenMPIRBuilder::createTeams(const LocationDescription &Loc,
     // The stale call instruction will be replaced with a new call instruction
     // for runtime call with the outlined function.
 
-    assert(OutlinedFn.getNumUses() == 1 &&
+    assert(OutlinedFn.hasOneUse() &&
            "there must be a single user for the outlined function");
     CallInst *StaleCI = cast<CallInst>(OutlinedFn.user_back());
     ToBeDeleted.push_back(StaleCI);
