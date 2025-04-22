@@ -4367,7 +4367,7 @@ bool AArch64TTIImpl::useNeonVector(const Type *Ty) const {
 }
 
 InstructionCost AArch64TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Ty,
-                                                MaybeAlign Alignment,
+                                                Align Alignment,
                                                 unsigned AddressSpace,
                                                 TTI::TargetCostKind CostKind,
                                                 TTI::OperandValueInfo OpInfo,
@@ -4402,7 +4402,7 @@ InstructionCost AArch64TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Ty,
     return 1;
 
   if (ST->isMisaligned128StoreSlow() && Opcode == Instruction::Store &&
-      LT.second.is128BitVector() && (!Alignment || *Alignment < Align(16))) {
+      LT.second.is128BitVector() && Alignment < Align(16)) {
     // Unaligned stores are extremely inefficient. We don't split all
     // unaligned 128-bit stores because the negative impact that has shown in
     // practice on inlined block copy code.
@@ -4429,8 +4429,7 @@ InstructionCost AArch64TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Ty,
     EVT EltVT = VT.getVectorElementType();
     unsigned EltSize = EltVT.getScalarSizeInBits();
     if (!isPowerOf2_32(EltSize) || EltSize < 8 || EltSize > 64 ||
-        VT.getVectorNumElements() >= (128 / EltSize) || !Alignment ||
-        *Alignment != Align(1))
+        VT.getVectorNumElements() >= (128 / EltSize) || Alignment != Align(1))
       return LT.first;
     // FIXME: v3i8 lowering currently is very inefficient, due to automatic
     // widening to v4i8, which produces suboptimal results.
