@@ -352,26 +352,28 @@ void __sanitizer::BufferedStackTrace::UnwindImpl(
 
 using namespace __msan;
 
-#define PRINT_FAULTING_INSTRUCTION(instname)                            \
-  if (__msan::flags()->print_faulting_instruction) {                    \
-    Printf("Instruction that failed the shadow check: %s\n", instname); \
-    Printf("\n");                                                       \
+static inline void PrintFaultingInstruction(char *instname) {
+  if (__msan::flags()->print_faulting_instruction) {
+    Printf("Instruction that failed the shadow check: %s\n", instname);
+    Printf("\n");
   }
+}
 
-#define WARN_IF_PRINT_FAULTING_INSTRUCTION_REQUESTED                    \
-  if (__msan::flags()->print_faulting_instruction) {                    \
-    Printf(                                                             \
-        "Error: print_faulting_instruction requested but code was not " \
-        "instrumented with -mllvm -embed-faulting-instruction.\n");     \
-    Printf("\n");                                                       \
+static inline void WarnIfPrintFaultingInstructionRequested() {
+  if (__msan::flags()->print_faulting_instruction) {
+    Printf(
+        "Error: print_faulting_instruction requested but code was not "
+        "instrumented with -mllvm -embed-faulting-instruction.\n");
+    Printf("\n");
   }
+}
 
 #define MSAN_MAYBE_WARNING_INSTNAME(type, size, instname)                    \
   void __msan_maybe_warning_instname_##size(type s, u32 o, char *instname) { \
     GET_CALLER_PC_BP;                                                        \
     if (UNLIKELY(s)) {                                                       \
       if (instname)                                                          \
-        PRINT_FAULTING_INSTRUCTION(instname);                                \
+        PrintFaultingInstruction(instname);                                  \
       PrintWarningWithOrigin(pc, bp, o);                                     \
       if (__msan::flags()->halt_on_error) {                                  \
         Printf("Exiting\n");                                                 \
@@ -389,7 +391,7 @@ MSAN_MAYBE_WARNING_INSTNAME(u64, 8, instname)
   void __msan_maybe_warning_##size(type s, u32 o) { \
     GET_CALLER_PC_BP;                               \
     if (UNLIKELY(s)) {                              \
-      WARN_IF_PRINT_FAULTING_INSTRUCTION_REQUESTED; \
+      WarnIfPrintFaultingInstructionRequested();    \
       PrintWarningWithOrigin(pc, bp, o);            \
       if (__msan::flags()->halt_on_error) {         \
         Printf("Exiting\n");                        \
@@ -439,12 +441,12 @@ MSAN_MAYBE_STORE_ORIGIN(u64, 8)
   }
 
 void __msan_warning() {
-  WARN_IF_PRINT_FAULTING_INSTRUCTION_REQUESTED;
+  WarnIfPrintFaultingInstructionRequested();
   __MSAN_WARNING_BODY
 }
 
 void __msan_warning_instname(char *instname) {
-  PRINT_FAULTING_INSTRUCTION(instname);
+  PrintFaultingInstruction(instname);
   __MSAN_WARNING_BODY
 }
 
@@ -457,12 +459,12 @@ void __msan_warning_instname(char *instname) {
   Die();
 
 void __msan_warning_noreturn() {
-  WARN_IF_PRINT_FAULTING_INSTRUCTION_REQUESTED;
+  WarnIfPrintFaultingInstructionRequested();
   __MSAN_WARNING_NORETURN_BODY
 }
 
 void __msan_warning_noreturn_instname(char *instname) {
-  PRINT_FAULTING_INSTRUCTION(instname);
+  PrintFaultingInstruction(instname);
   __MSAN_WARNING_NORETURN_BODY
 }
 
@@ -477,12 +479,12 @@ void __msan_warning_noreturn_instname(char *instname) {
   }
 
 void __msan_warning_with_origin(u32 origin) {
-  WARN_IF_PRINT_FAULTING_INSTRUCTION_REQUESTED;
+  WarnIfPrintFaultingInstructionRequested();
   __MSAN_WARNING_WITH_ORIGIN_BODY(origin)
 }
 
 void __msan_warning_with_origin_instname(u32 origin, char *instname) {
-  PRINT_FAULTING_INSTRUCTION(instname);
+  PrintFaultingInstruction(instname);
   __MSAN_WARNING_WITH_ORIGIN_BODY(origin)
 }
 
@@ -495,12 +497,12 @@ void __msan_warning_with_origin_instname(u32 origin, char *instname) {
   Die();
 
 void __msan_warning_with_origin_noreturn(u32 origin) {
-  WARN_IF_PRINT_FAULTING_INSTRUCTION_REQUESTED;
+  WarnIfPrintFaultingInstructionRequested();
   __MSAN_WARNING_WITH_ORIGIN_NORETURN_BODY(origin)
 }
 
 void __msan_warning_with_origin_noreturn_instname(u32 origin, char *instname) {
-  PRINT_FAULTING_INSTRUCTION(instname);
+  PrintFaultingInstruction(instname);
   __MSAN_WARNING_WITH_ORIGIN_NORETURN_BODY(origin)
 }
 
