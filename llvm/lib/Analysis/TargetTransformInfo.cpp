@@ -57,6 +57,9 @@ struct NoTTIImpl : TargetTransformInfoImplCRTPBase<NoTTIImpl> {
 };
 } // namespace
 
+TargetTransformInfo::TargetTransformInfo(std::unique_ptr<Concept> Impl)
+    : TTIImpl(std::move(Impl)) {}
+
 bool HardwareLoopInfo::canAnalyze(LoopInfo &LI) {
   // If the loop has irreducible control flow, it can not be converted to
   // Hardware loop.
@@ -199,7 +202,7 @@ bool HardwareLoopInfo::isHardwareLoopCandidate(ScalarEvolution &SE,
 }
 
 TargetTransformInfo::TargetTransformInfo(const DataLayout &DL)
-    : TTIImpl(new Model<NoTTIImpl>(NoTTIImpl(DL))) {}
+    : TTIImpl(std::make_unique<NoTTIImpl>(DL)) {}
 
 TargetTransformInfo::~TargetTransformInfo() = default;
 

@@ -1070,7 +1070,7 @@ GCNTargetMachine::getSubtargetImpl(const Function &F) const {
 
 TargetTransformInfo
 GCNTargetMachine::getTargetTransformInfo(const Function &F) const {
-  return TargetTransformInfo(GCNTTIImpl(this, F));
+  return TargetTransformInfo(std::make_unique<GCNTTIImpl>(this, F));
 }
 
 Error GCNTargetMachine::buildCodeGenPipeline(
