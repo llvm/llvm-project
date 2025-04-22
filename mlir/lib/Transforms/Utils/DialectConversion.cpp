@@ -1227,9 +1227,8 @@ void ConversionPatternRewriterImpl::undoRewrites(unsigned numRewritesToKeep,
     if (!config.allowPatternRollback &&
         !isa<UnresolvedMaterializationRewrite>(rewrite)) {
       // Unresolved materializations can always be rolled back (erased).
-      std::string errorMessage = "pattern '" + std::string(patternName) +
-                                 "' rollback of IR modifications requested";
-      llvm_unreachable(errorMessage.c_str());
+      llvm::report_fatal_error("pattern '" + patternName +
+                               "' rollback of IR modifications requested");
     }
     rewrite->rollback();
   }
