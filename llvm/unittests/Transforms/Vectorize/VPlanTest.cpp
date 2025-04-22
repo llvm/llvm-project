@@ -950,7 +950,7 @@ TEST_F(VPRecipeTest, CastVPWidenCallRecipeToVPUserAndVPDef) {
   Args.push_back(Op1);
   Args.push_back(Op2);
   Args.push_back(CalledFn);
-  VPWidenCallRecipe Recipe(Call, Fn, Args, {});
+  VPWidenCallRecipe Recipe(Call, Fn, Args);
   EXPECT_TRUE(isa<VPUser>(&Recipe));
   VPRecipeBase *BaseR = &Recipe;
   EXPECT_TRUE(isa<VPUser>(BaseR));
@@ -1234,7 +1234,7 @@ TEST_F(VPRecipeTest, MayHaveSideEffectsAndMayReadWriteMemory) {
     Args.push_back(Op1);
     Args.push_back(Op2);
     Args.push_back(CalledFn);
-    VPWidenCallRecipe Recipe(Call, Fn, Args, {});
+    VPWidenCallRecipe Recipe(Call, Fn, Args);
     EXPECT_TRUE(Recipe.mayHaveSideEffects());
     EXPECT_TRUE(Recipe.mayReadFromMemory());
     EXPECT_TRUE(Recipe.mayWriteToMemory());

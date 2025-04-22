@@ -288,7 +288,7 @@ struct VPTransformState {
   /// Currently this is used to add the noalias annotations based on the
   /// inserted memchecks.  Use this for instructions that are *cloned* into the
   /// vector loop.
-  void addNewMetadata(Value *To, const Instruction *Orig);
+  void addNewMetadata(Instruction *To, const Instruction *Orig);
 
   /// Set the debug location in the builder using the debug location \p DL.
   void setDebugLocFrom(DebugLoc DL);

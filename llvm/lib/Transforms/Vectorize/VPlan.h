@@ -1191,7 +1191,7 @@ struct VPIRPhi : public VPIRInstruction {
 };
 
 /// Helper to manage IR metadata for recipes. It filters out metadata that
-/// cannot be proagated.
+/// cannot be propagated.
 class VPIRMetadata {
   SmallVector<std::pair<unsigned, MDNode *>> Metadata;
 
