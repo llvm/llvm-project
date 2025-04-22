@@ -1389,7 +1389,7 @@ static void legalizeDemotedDims(MapOrSet &mapOrSet,
 
   unsigned numOperands = operands.size();
 
-  assert(mapOrSet->getNumInputs() == numOperands &&
+  assert(mapOrSet.getNumInputs() == numOperands &&
          "map/set inputs must match number of operands");
 
   auto *context = mapOrSet.getContext();
@@ -1422,7 +1422,7 @@ static void legalizeDemotedDims(MapOrSet &mapOrSet,
   mapOrSet = mapOrSet.replaceDimsAndSymbols(
       /*dimReplacements=*/{}, symRemapping, oldNumDims + nextDim, nextSym);
 
-  assert(mapOrSet->getNumInputs() == operands.size() &&
+  assert(mapOrSet.getNumInputs() == operands.size() &&
          "map/set inputs must match number of operands");
 }
 
