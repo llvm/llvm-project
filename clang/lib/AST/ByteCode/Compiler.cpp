@@ -2990,6 +2990,8 @@ bool Compiler<Emitter>::VisitCXXReinterpretCastExpr(
     if (PointeeToT && PointeeFromT) {
       if (isIntegralType(*PointeeFromT) && isIntegralType(*PointeeToT))
         Fatal = false;
+    } else {
+      Fatal = SubExpr->getType().getTypePtr() != E->getType().getTypePtr();
     }
 
     if (!this->emitInvalidCast(CastKind::Reinterpret, Fatal, E))
