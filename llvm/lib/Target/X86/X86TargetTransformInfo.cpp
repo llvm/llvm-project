@@ -5184,7 +5184,7 @@ X86TTIImpl::getReplicationShuffleCost(Type *EltTy, int ReplicationFactor,
 }
 
 InstructionCost X86TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
-                                            MaybeAlign Alignment,
+                                            Align Alignment,
                                             unsigned AddressSpace,
                                             TTI::TargetCostKind CostKind,
                                             TTI::OperandValueInfo OpInfo,
@@ -5293,8 +5293,7 @@ InstructionCost X86TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
       // Can we use this vector size, as per the remaining element count?
       // Iff the vector is naturally aligned, we can do a wide load regardless.
       if (NumEltRemaining < CurrNumEltPerOp &&
-          (!IsLoad || Alignment.valueOrOne() < CurrOpSizeBytes) &&
-          CurrOpSizeBytes != 1)
+          (!IsLoad || Alignment < CurrOpSizeBytes) && CurrOpSizeBytes != 1)
         break; // Try smalled vector size.
 
       // This isn't exactly right. We're using slow unaligned 32-byte accesses
@@ -5344,7 +5343,7 @@ InstructionCost X86TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
 
       SubVecEltsLeft -= CurrNumEltPerOp;
       NumEltRemaining -= CurrNumEltPerOp;
-      Alignment = commonAlignment(Alignment.valueOrOne(), CurrOpSizeBytes);
+      Alignment = commonAlignment(Alignment, CurrOpSizeBytes);
     }
   }
 
@@ -6183,8 +6182,7 @@ InstructionCost X86TTIImpl::getGSVectorCost(unsigned Opcode,
   const int GSOverhead = (Opcode == Instruction::Load) ? getGatherOverhead()
                                                        : getScatterOverhead();
   return GSOverhead + VF * getMemoryOpCost(Opcode, SrcVTy->getScalarType(),
-                                           MaybeAlign(Alignment), AddressSpace,
-                                           CostKind);
+                                           Alignment, AddressSpace, CostKind);
 }
 
 /// Calculate the cost of Gather / Scatter operation
@@ -6596,8 +6594,8 @@ InstructionCost X86TTIImpl::getInterleavedMemoryOpCostAVX512(
     MemOpCost = getMaskedMemoryOpCost(Opcode, SingleMemOpTy, Alignment,
                                       AddressSpace, CostKind);
   else
-    MemOpCost = getMemoryOpCost(Opcode, SingleMemOpTy, MaybeAlign(Alignment),
-                                AddressSpace, CostKind);
+    MemOpCost = getMemoryOpCost(Opcode, SingleMemOpTy, Alignment, AddressSpace,
+                                CostKind);
 
   unsigned VF = VecTy->getNumElements() / Factor;
   MVT VT =
@@ -6780,8 +6778,8 @@ InstructionCost X86TTIImpl::getInterleavedMemoryOpCost(
 
   // Get the cost of all the memory operations.
   // FIXME: discount dead loads.
-  InstructionCost MemOpCosts = getMemoryOpCost(
-      Opcode, VecTy, MaybeAlign(Alignment), AddressSpace, CostKind);
+  InstructionCost MemOpCosts =
+      getMemoryOpCost(Opcode, VecTy, Alignment, AddressSpace, CostKind);
 
   auto *VT = FixedVectorType::get(ScalarTy, VF);
   EVT ETy = TLI->getValueType(DL, VT);

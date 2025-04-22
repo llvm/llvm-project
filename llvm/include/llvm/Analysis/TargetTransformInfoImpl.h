@@ -471,7 +471,9 @@ public:
 
   bool haveFastSqrt(Type *Ty) const { return false; }
 
-  bool isExpensiveToSpeculativelyExecute(const Instruction *I) { return true; }
+  bool isExpensiveToSpeculativelyExecute(const Instruction *I) const {
+    return true;
+  }
 
   bool isFCmpOrdCheaperThanFCmpZero(Type *Ty) const { return true; }
 
@@ -745,9 +747,10 @@ public:
     return 1;
   }
 
-  unsigned getReplicationShuffleCost(Type *EltTy, int ReplicationFactor, int VF,
-                                     const APInt &DemandedDstElts,
-                                     TTI::TargetCostKind CostKind) const {
+  InstructionCost
+  getReplicationShuffleCost(Type *EltTy, int ReplicationFactor, int VF,
+                            const APInt &DemandedDstElts,
+                            TTI::TargetCostKind CostKind) const {
     return 1;
   }
 
@@ -805,7 +808,7 @@ public:
     return InstructionCost::getInvalid();
   }
 
-  unsigned getInterleavedMemoryOpCost(
+  InstructionCost getInterleavedMemoryOpCost(
       unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
       Align Alignment, unsigned AddressSpace, TTI::TargetCostKind CostKind,
       bool UseMaskForCond, bool UseMaskForGaps) const {
@@ -965,13 +968,11 @@ public:
             Callee->getFnAttribute("target-features"));
   }
 
-  bool isIndexedLoadLegal(TTI::MemIndexedMode Mode, Type *Ty,
-                          const DataLayout &DL) const {
+  bool isIndexedLoadLegal(TTI::MemIndexedMode Mode, Type *Ty) const {
     return false;
   }
 
-  bool isIndexedStoreLegal(TTI::MemIndexedMode Mode, Type *Ty,
-                           const DataLayout &DL) const {
+  bool isIndexedStoreLegal(TTI::MemIndexedMode Mode, Type *Ty) const {
     return false;
   }
 
