@@ -49,6 +49,9 @@ def SingleBitBitFieldConstantConversion :
   DiagGroup<"single-bit-bitfield-constant-conversion">;
 def BitFieldConstantConversion : DiagGroup<"bitfield-constant-conversion",
                                            [SingleBitBitFieldConstantConversion]>;
+def PreferredTypeBitFieldEnumConversion
+    : DiagGroup<"preferred-type-bitfield-enum-conversion">;
+def PreferredTypeBitFieldWidth : DiagGroup<"preferred-type-bitfield-width">;
 def BitFieldEnumConversion : DiagGroup<"bitfield-enum-conversion">;
 def BitFieldWidth : DiagGroup<"bitfield-width">;
 def CompoundTokenSplitByMacro : DiagGroup<"compound-token-split-by-macro">;
