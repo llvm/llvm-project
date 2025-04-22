@@ -320,7 +320,7 @@ static void InsertChild(ScopeChildren &Scope, TypedefInfo Info) {
 // parameter. Since each variant is used once, it's not worth having a more
 // elaborate system to automatically deduce this information.
 template <typename ChildType>
-static std::unique_ptr<Info> MakeAndInsertIntoParent(ChildType Child) {
+static std::unique_ptr<Info> makeAndInsertIntoParent(ChildType Child) {
   if (Child.Namespace.empty()) {
     // Insert into unnamed parent namespace.
     auto ParentNS = std::make_unique<NamespaceInfo>();
@@ -498,7 +498,7 @@ populateParentNamespaces(llvm::SmallVector<Reference, 4> &Namespaces,
 }
 
 static void
-PopulateTemplateParameters(std::optional<TemplateInfo> &TemplateInfo,
+populateTemplateParameters(std::optional<TemplateInfo> &TemplateInfo,
                            const clang::Decl *D) {
   if (const TemplateParameterList *ParamList =
           D->getDescribedTemplateParams()) {
@@ -512,8 +512,8 @@ PopulateTemplateParameters(std::optional<TemplateInfo> &TemplateInfo,
   }
 }
 
-static TemplateParamInfo TemplateArgumentToInfo(const clang::Decl *D,
-                                                const TemplateArgument &Arg) {
+static TemplateParamInfo convertTemplateArgToInfo(const clang::Decl *D,
+                                                  const TemplateArgument &Arg) {
   // The TemplateArgument's pretty printing handles all the normal cases
   // well enough for our requirements.
   std::string Str;
@@ -556,7 +556,7 @@ static void populateFunctionInfo(FunctionInfo &I, const FunctionDecl *D,
   I.ReturnType = getTypeInfoForType(D->getReturnType(), LO);
   parseParameters(I, D);
 
-  PopulateTemplateParameters(I.Template, D);
+  populateTemplateParameters(I.Template, D);
 
   // Handle function template specializations.
   if (const FunctionTemplateSpecializationInfo *FTSI =
@@ -571,7 +571,7 @@ static void populateFunctionInfo(FunctionInfo &I, const FunctionDecl *D,
     // Template parameters to the specialization.
     if (FTSI->TemplateArguments) {
       for (const TemplateArgument &Arg : FTSI->TemplateArguments->asArray()) {
-        Specialization.Params.push_back(TemplateArgumentToInfo(D, Arg));
+        Specialization.Params.push_back(convertTemplateArgToInfo(D, Arg));
       }
     }
   }
@@ -588,9 +588,9 @@ static void populateMemberTypeInfo(MemberTypeInfo &I, const Decl *D) {
     return;
 
   Comment->setAttached();
-  if (comments::FullComment *fc = Comment->parse(Context, nullptr, D)) {
+  if (comments::FullComment *Fc = Comment->parse(Context, nullptr, D)) {
     I.Description.emplace_back();
-    parseFullComment(fc, I.Description.back());
+    parseFullComment(Fc, I.Description.back());
   }
 }
 
@@ -665,55 +665,55 @@ parseBases(RecordInfo &I, const CXXRecordDecl *D, bool IsFileInRootDir,
 std::pair<std::unique_ptr<Info>, std::unique_ptr<Info>>
 emitInfo(const NamespaceDecl *D, const FullComment *FC, int LineNumber,
          llvm::StringRef File, bool IsFileInRootDir, bool PublicOnly) {
-  auto I = std::make_unique<NamespaceInfo>();
+  auto NSI = std::make_unique<NamespaceInfo>();
   bool IsInAnonymousNamespace = false;
-  populateInfo(*I, D, FC, IsInAnonymousNamespace);
+  populateInfo(*NSI, D, FC, IsInAnonymousNamespace);
   if (!shouldSerializeInfo(PublicOnly, IsInAnonymousNamespace, D))
     return {};
 
-  I->Name = D->isAnonymousNamespace()
-                ? llvm::SmallString<16>("@nonymous_namespace")
-                : I->Name;
-  I->Path = getInfoRelativePath(I->Namespace);
-  if (I->Namespace.empty() && I->USR == SymbolID())
-    return {std::unique_ptr<Info>{std::move(I)}, nullptr};
+  NSI->Name = D->isAnonymousNamespace()
+                  ? llvm::SmallString<16>("@nonymous_namespace")
+                  : NSI->Name;
+  NSI->Path = getInfoRelativePath(NSI->Namespace);
+  if (NSI->Namespace.empty() && NSI->USR == SymbolID())
+    return {std::unique_ptr<Info>{std::move(NSI)}, nullptr};
 
   // Namespaces are inserted into the parent by reference, so we need to return
   // both the parent and the record itself.
-  return {std::move(I), MakeAndInsertIntoParent<const NamespaceInfo &>(*I)};
+  return {std::move(NSI), makeAndInsertIntoParent<const NamespaceInfo &>(*NSI)};
 }
 
 std::pair<std::unique_ptr<Info>, std::unique_ptr<Info>>
 emitInfo(const RecordDecl *D, const FullComment *FC, int LineNumber,
          llvm::StringRef File, bool IsFileInRootDir, bool PublicOnly) {
-  auto I = std::make_unique<RecordInfo>();
+  auto RI = std::make_unique<RecordInfo>();
   bool IsInAnonymousNamespace = false;
-  populateSymbolInfo(*I, D, FC, LineNumber, File, IsFileInRootDir,
+  populateSymbolInfo(*RI, D, FC, LineNumber, File, IsFileInRootDir,
                      IsInAnonymousNamespace);
   if (!shouldSerializeInfo(PublicOnly, IsInAnonymousNamespace, D))
     return {};
 
-  I->TagType = D->getTagKind();
-  parseFields(*I, D, PublicOnly);
+  RI->TagType = D->getTagKind();
+  parseFields(*RI, D, PublicOnly);
   if (const auto *C = dyn_cast<CXXRecordDecl>(D)) {
     if (const TypedefNameDecl *TD = C->getTypedefNameForAnonDecl()) {
-      I->Name = TD->getNameAsString();
-      I->IsTypeDef = true;
+      RI->Name = TD->getNameAsString();
+      RI->IsTypeDef = true;
     }
     // TODO: remove first call to parseBases, that function should be deleted
-    parseBases(*I, C);
-    parseBases(*I, C, IsFileInRootDir, PublicOnly, true);
+    parseBases(*RI, C);
+    parseBases(*RI, C, IsFileInRootDir, PublicOnly, true);
   }
-  I->Path = getInfoRelativePath(I->Namespace);
+  RI->Path = getInfoRelativePath(RI->Namespace);
 
-  PopulateTemplateParameters(I->Template, D);
+  populateTemplateParameters(RI->Template, D);
 
   // Full and partial specializations.
   if (auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(D)) {
-    if (!I->Template)
-      I->Template.emplace();
-    I->Template->Specialization.emplace();
-    auto &Specialization = *I->Template->Specialization;
+    if (!RI->Template)
+      RI->Template.emplace();
+    RI->Template->Specialization.emplace();
+    auto &Specialization = *RI->Template->Specialization;
 
     // What this is a specialization of.
     auto SpecOf = CTSD->getSpecializedTemplateOrPartial();
@@ -732,22 +732,22 @@ emitInfo(const RecordDecl *D, const FullComment *FC, int LineNumber,
             dyn_cast<ClassTemplatePartialSpecializationDecl>(D)) {
       if (const ASTTemplateArgumentListInfo *AsWritten =
               CTPSD->getTemplateArgsAsWritten()) {
-        for (unsigned i = 0; i < AsWritten->getNumTemplateArgs(); i++) {
+        for (unsigned Idx = 0; Idx < AsWritten->getNumTemplateArgs(); Idx++) {
           Specialization.Params.emplace_back(
-              getSourceCode(D, (*AsWritten)[i].getSourceRange()));
+              getSourceCode(D, (*AsWritten)[Idx].getSourceRange()));
         }
       }
     } else {
       for (const TemplateArgument &Arg : CTSD->getTemplateArgs().asArray()) {
-        Specialization.Params.push_back(TemplateArgumentToInfo(D, Arg));
+        Specialization.Params.push_back(convertTemplateArgToInfo(D, Arg));
       }
     }
   }
 
   // Records are inserted into the parent by reference, so we need to return
   // both the parent and the record itself.
-  auto Parent = MakeAndInsertIntoParent<const RecordInfo &>(*I);
-  return {std::move(I), std::move(Parent)};
+  auto Parent = makeAndInsertIntoParent<const RecordInfo &>(*RI);
+  return {std::move(RI), std::move(Parent)};
 }
 
 std::pair<std::unique_ptr<Info>, std::unique_ptr<Info>>
@@ -762,7 +762,7 @@ emitInfo(const FunctionDecl *D, const FullComment *FC, int LineNumber,
     return {};
 
   // Info is wrapped in its parent scope so is returned in the second position.
-  return {nullptr, MakeAndInsertIntoParent<FunctionInfo &&>(std::move(Func))};
+  return {nullptr, makeAndInsertIntoParent<FunctionInfo &&>(std::move(Func))};
 }
 
 std::pair<std::unique_ptr<Info>, std::unique_ptr<Info>>
@@ -792,7 +792,7 @@ emitInfo(const CXXMethodDecl *D, const FullComment *FC, int LineNumber,
   Func.Access = D->getAccess();
 
   // Info is wrapped in its parent scope so is returned in the second position.
-  return {nullptr, MakeAndInsertIntoParent<FunctionInfo &&>(std::move(Func))};
+  return {nullptr, makeAndInsertIntoParent<FunctionInfo &&>(std::move(Func))};
 }
 
 std::pair<std::unique_ptr<Info>, std::unique_ptr<Info>>
@@ -817,7 +817,7 @@ emitInfo(const TypedefDecl *D, const FullComment *FC, int LineNumber,
   Info.IsUsing = false;
 
   // Info is wrapped in its parent scope so is returned in the second position.
-  return {nullptr, MakeAndInsertIntoParent<TypedefInfo &&>(std::move(Info))};
+  return {nullptr, makeAndInsertIntoParent<TypedefInfo &&>(std::move(Info))};
 }
 
 // A type alias is a C++ "using" declaration for a type. It gets mapped to a
@@ -838,7 +838,7 @@ emitInfo(const TypeAliasDecl *D, const FullComment *FC, int LineNumber,
   Info.IsUsing = true;
 
   // Info is wrapped in its parent scope so is returned in the second position.
-  return {nullptr, MakeAndInsertIntoParent<TypedefInfo &&>(std::move(Info))};
+  return {nullptr, makeAndInsertIntoParent<TypedefInfo &&>(std::move(Info))};
 }
 
 std::pair<std::unique_ptr<Info>, std::unique_ptr<Info>>
@@ -859,7 +859,7 @@ emitInfo(const EnumDecl *D, const FullComment *FC, int LineNumber,
   parseEnumerators(Enum, D);
 
   // Info is wrapped in its parent scope so is returned in the second position.
-  return {nullptr, MakeAndInsertIntoParent<EnumInfo &&>(std::move(Enum))};
+  return {nullptr, makeAndInsertIntoParent<EnumInfo &&>(std::move(Enum))};
 }
 
 } // namespace serialize
