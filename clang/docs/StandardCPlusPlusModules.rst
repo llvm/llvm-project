@@ -464,7 +464,7 @@ translation units.
 Source Files Consistency
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
-Clang may open the input files\ :sup:`1`` of a BMI during the compilation. This implies that
+Clang may open the input files [1]_ of a BMI during the compilation. This implies that
 when Clang consumes a BMI, all the input files need to be present in the original path
 and with the original contents.
 
@@ -476,21 +476,21 @@ When the ``-fmodules-embed-all-files`` flag are enabled, Clang explicitly emits 
 code into the BMI file, the contents of the BMI file contain a sufficiently verbose
 representation to reproduce the original source file.
 
-:sup:`1`` Input files: The source files which took part in the compilation of the BMI.
-For example:
+.. [1] Input files: The source files which took part in the compilation of the BMI.
+   For example:
 
-.. code-block:: c++
+   .. code-block:: c++
 
-  // M.cppm
-  module;
-  #include "foo.h"
-  export module M;
+     // M.cppm
+     module;
+     #include "foo.h"
+     export module M;
 
-  // foo.h
-  #pragma once
-  #include "bar.h"
+     // foo.h
+     #pragma once
+     #include "bar.h"
 
-The ``M.cppm``, ``foo.h`` and ``bar.h`` are input files for the BMI of ``M.cppm``.
+   The ``M.cppm``, ``foo.h`` and ``bar.h`` are input files for the BMI of ``M.cppm``.
 
 Object definition consistency
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
