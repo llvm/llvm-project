@@ -812,7 +812,7 @@ template <typename T> static void iterateOverInstrs(BinaryFunction &BF, T Fn) {
 }
 
 static SmallVector<MCPhysReg>
-collectRegsToTrack(const ArrayRef<BriefReport<MCPhysReg>> Reports) {
+collectRegsToTrack(ArrayRef<BriefReport<MCPhysReg>> Reports) {
   SmallSet<MCPhysReg, 4> RegsToTrack;
   for (auto Report : Reports)
     if (Report.RequestedDetails)
@@ -856,7 +856,7 @@ void FunctionAnalysis::findUnsafeUses(
 }
 
 void FunctionAnalysis::augmentUnsafeUseReports(
-    const ArrayRef<BriefReport<MCPhysReg>> Reports) {
+    ArrayRef<BriefReport<MCPhysReg>> Reports) {
   SmallVector<MCPhysReg> RegsToTrack = collectRegsToTrack(Reports);
   // Re-compute the analysis with register tracking.
   auto Analysis = SrcSafetyAnalysis::create(BF, AllocatorId, RegsToTrack);
@@ -974,7 +974,7 @@ void GadgetReport::generateReport(raw_ostream &OS,
 }
 
 static void printRelatedInstrs(raw_ostream &OS, const MCInstReference Location,
-                               const ArrayRef<MCInstReference> RelatedInstrs) {
+                               ArrayRef<MCInstReference> RelatedInstrs) {
   const BinaryFunction &BF = *Location.getFunction();
   const BinaryContext &BC = BF.getBinaryContext();
 
