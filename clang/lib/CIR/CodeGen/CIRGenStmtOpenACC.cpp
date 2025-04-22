@@ -98,8 +98,12 @@ class OpenACCClauseCIREmitter final
   // Handle a clause affected by the 'device-type' to the point that they need
   // to have the attributes added in the correct/corresponding order, such as
   // 'num_workers' or 'vector_length' on a compute construct. For cases where we
-  // don't have an argument that needs to be added to an additional one (such as
-  // asyncOnly) we can use this with 'argument' as std::nullopt.
+  // don't have an expression 'argument' that needs to be added to an operand
+  // and only care about the 'device-type' list, we can use this with 'argument'
+  // as 'std::nullopt'.   If 'argument' is NOT 'std::nullopt' (that is, has a
+  // value), argCollection must also be non-null. For cases where we don't have
+  // an argument that needs to be added to an additional one (such as asyncOnly)
+  // we can use this with 'argument' as std::nullopt.
   mlir::ArrayAttr handleDeviceTypeAffectedClause(
       mlir::ArrayAttr existingDeviceTypes,
       std::optional<mlir::Value> argument = std::nullopt,
