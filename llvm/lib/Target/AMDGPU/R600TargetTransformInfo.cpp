@@ -93,7 +93,7 @@ unsigned R600TTIImpl::getMaxInterleaveFactor(ElementCount VF) {
 
 InstructionCost R600TTIImpl::getCFInstrCost(unsigned Opcode,
                                             TTI::TargetCostKind CostKind,
-                                            const Instruction *I) {
+                                            const Instruction *I) const {
   if (CostKind == TTI::TCK_CodeSize || CostKind == TTI::TCK_SizeAndLatency)
     return Opcode == Instruction::PHI ? 0 : 1;
 
@@ -110,7 +110,7 @@ InstructionCost R600TTIImpl::getCFInstrCost(unsigned Opcode,
 InstructionCost R600TTIImpl::getVectorInstrCost(unsigned Opcode, Type *ValTy,
                                                 TTI::TargetCostKind CostKind,
                                                 unsigned Index, Value *Op0,
-                                                Value *Op1) {
+                                                Value *Op1) const {
   switch (Opcode) {
   case Instruction::ExtractElement:
   case Instruction::InsertElement: {

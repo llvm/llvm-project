@@ -157,10 +157,11 @@ public:
       unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
       TTI::OperandValueInfo Op1Info = {TTI::OK_AnyValue, TTI::OP_None},
       TTI::OperandValueInfo Op2Info = {TTI::OK_AnyValue, TTI::OP_None},
-      ArrayRef<const Value *> Args = {}, const Instruction *CxtI = nullptr);
+      ArrayRef<const Value *> Args = {},
+      const Instruction *CxtI = nullptr) const;
 
   InstructionCost getCFInstrCost(unsigned Opcode, TTI::TargetCostKind CostKind,
-                                 const Instruction *I = nullptr);
+                                 const Instruction *I = nullptr) const;
 
   bool isInlineAsmSourceOfDivergence(const CallInst *CI,
                                      ArrayRef<unsigned> Indices = {}) const;
@@ -168,7 +169,8 @@ public:
   using BaseT::getVectorInstrCost;
   InstructionCost getVectorInstrCost(unsigned Opcode, Type *ValTy,
                                      TTI::TargetCostKind CostKind,
-                                     unsigned Index, Value *Op0, Value *Op1);
+                                     unsigned Index, Value *Op0,
+                                     Value *Op1) const;
 
   bool isReadRegisterSourceOfDivergence(const IntrinsicInst *ReadReg) const;
   bool isSourceOfDivergence(const Value *V) const;
@@ -238,14 +240,14 @@ public:
       std::function<void(Instruction *, unsigned, APInt, APInt &)>
           SimplifyAndSetOp) const;
 
-  InstructionCost getVectorSplitCost() { return 0; }
+  InstructionCost getVectorSplitCost() const { return 0; }
 
   InstructionCost getShuffleCost(TTI::ShuffleKind Kind, VectorType *Tp,
                                  ArrayRef<int> Mask,
                                  TTI::TargetCostKind CostKind, int Index,
                                  VectorType *SubTp,
                                  ArrayRef<const Value *> Args = {},
-                                 const Instruction *CxtI = nullptr);
+                                 const Instruction *CxtI = nullptr) const;
 
   bool isProfitableToSinkOperands(Instruction *I,
                                   SmallVectorImpl<Use *> &Ops) const;
@@ -260,15 +262,16 @@ public:
 
   int getInlinerVectorBonusPercent() const { return InlinerVectorBonusPercent; }
 
-  InstructionCost getArithmeticReductionCost(
-      unsigned Opcode, VectorType *Ty, std::optional<FastMathFlags> FMF,
-      TTI::TargetCostKind CostKind);
+  InstructionCost
+  getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,
+                             std::optional<FastMathFlags> FMF,
+                             TTI::TargetCostKind CostKind) const;
 
   InstructionCost getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
-                                        TTI::TargetCostKind CostKind);
+                                        TTI::TargetCostKind CostKind) const;
   InstructionCost getMinMaxReductionCost(Intrinsic::ID IID, VectorType *Ty,
                                          FastMathFlags FMF,
-                                         TTI::TargetCostKind CostKind);
+                                         TTI::TargetCostKind CostKind) const;
 
   /// Data cache line size for LoopDataPrefetch pass. Has no use before GFX12.
   unsigned getCacheLineSize() const override { return 128; }

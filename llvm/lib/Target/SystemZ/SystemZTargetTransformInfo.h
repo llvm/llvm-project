@@ -28,7 +28,9 @@ class SystemZTTIImpl : public BasicTTIImplBase<SystemZTTIImpl> {
 
   unsigned const LIBCALL_COST = 30;
 
-  bool isInt128InVR(Type *Ty) { return Ty->isIntegerTy(128) && ST->hasVector(); }
+  bool isInt128InVR(Type *Ty) const {
+    return Ty->isIntegerTy(128) && ST->hasVector();
+  }
 
 public:
   explicit SystemZTTIImpl(const SystemZTargetMachine *TM, const Function &F)
@@ -89,7 +91,7 @@ public:
                                            const APInt &DemandedElts,
                                            bool Insert, bool Extract,
                                            TTI::TargetCostKind CostKind,
-                                           ArrayRef<Value *> VL = {});
+                                           ArrayRef<Value *> VL = {}) const;
   bool supportsEfficientVectorElementLoadStore() { return true; }
   bool enableInterleavedAccessVectorization() { return true; }
 
@@ -97,52 +99,56 @@ public:
       unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
       TTI::OperandValueInfo Op1Info = {TTI::OK_AnyValue, TTI::OP_None},
       TTI::OperandValueInfo Op2Info = {TTI::OK_AnyValue, TTI::OP_None},
-      ArrayRef<const Value *> Args = {}, const Instruction *CxtI = nullptr);
+      ArrayRef<const Value *> Args = {},
+      const Instruction *CxtI = nullptr) const;
   InstructionCost getShuffleCost(TTI::ShuffleKind Kind, VectorType *Tp,
                                  ArrayRef<int> Mask,
                                  TTI::TargetCostKind CostKind, int Index,
                                  VectorType *SubTp,
                                  ArrayRef<const Value *> Args = {},
-                                 const Instruction *CxtI = nullptr);
-  unsigned getVectorTruncCost(Type *SrcTy, Type *DstTy);
-  unsigned getVectorBitmaskConversionCost(Type *SrcTy, Type *DstTy);
+                                 const Instruction *CxtI = nullptr) const;
+  unsigned getVectorTruncCost(Type *SrcTy, Type *DstTy) const;
+  unsigned getVectorBitmaskConversionCost(Type *SrcTy, Type *DstTy) const;
   unsigned getBoolVecToIntConversionCost(unsigned Opcode, Type *Dst,
-                                         const Instruction *I);
+                                         const Instruction *I) const;
   InstructionCost getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
                                    TTI::CastContextHint CCH,
                                    TTI::TargetCostKind CostKind,
-                                   const Instruction *I = nullptr);
+                                   const Instruction *I = nullptr) const;
   InstructionCost getCmpSelInstrCost(
       unsigned Opcode, Type *ValTy, Type *CondTy, CmpInst::Predicate VecPred,
       TTI::TargetCostKind CostKind,
       TTI::OperandValueInfo Op1Info = {TTI::OK_AnyValue, TTI::OP_None},
       TTI::OperandValueInfo Op2Info = {TTI::OK_AnyValue, TTI::OP_None},
-      const Instruction *I = nullptr);
+      const Instruction *I = nullptr) const;
   using BaseT::getVectorInstrCost;
   InstructionCost getVectorInstrCost(unsigned Opcode, Type *Val,
                                      TTI::TargetCostKind CostKind,
-                                     unsigned Index, Value *Op0, Value *Op1);
-  bool isFoldableLoad(const LoadInst *Ld, const Instruction *&FoldedValue);
-  InstructionCost
-  getMemoryOpCost(unsigned Opcode, Type *Src, MaybeAlign Alignment,
-                  unsigned AddressSpace, TTI::TargetCostKind CostKind,
-                  TTI::OperandValueInfo OpInfo = {TTI::OK_AnyValue, TTI::OP_None},
-                  const Instruction *I = nullptr);
+                                     unsigned Index, Value *Op0,
+                                     Value *Op1) const;
+  bool isFoldableLoad(const LoadInst *Ld,
+                      const Instruction *&FoldedValue) const;
+  InstructionCost getMemoryOpCost(
+      unsigned Opcode, Type *Src, MaybeAlign Alignment, unsigned AddressSpace,
+      TTI::TargetCostKind CostKind,
+      TTI::OperandValueInfo OpInfo = {TTI::OK_AnyValue, TTI::OP_None},
+      const Instruction *I = nullptr) const;
 
   InstructionCost getInterleavedMemoryOpCost(
       unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
       Align Alignment, unsigned AddressSpace, TTI::TargetCostKind CostKind,
       bool UseMaskForCond = false, bool UseMaskForGaps = false);
 
-  InstructionCost getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,
-                                             std::optional<FastMathFlags> FMF,
-                                             TTI::TargetCostKind CostKind);
+  InstructionCost
+  getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,
+                             std::optional<FastMathFlags> FMF,
+                             TTI::TargetCostKind CostKind) const;
   InstructionCost getMinMaxReductionCost(Intrinsic::ID IID, VectorType *Ty,
                                          FastMathFlags FMF,
-                                         TTI::TargetCostKind CostKind);
+                                         TTI::TargetCostKind CostKind) const;
 
   InstructionCost getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
-                                        TTI::TargetCostKind CostKind);
+                                        TTI::TargetCostKind CostKind) const;
 
   bool shouldExpandReduction(const IntrinsicInst *II) const;
   /// @}

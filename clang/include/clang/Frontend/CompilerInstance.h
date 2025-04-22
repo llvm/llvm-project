@@ -845,18 +845,25 @@ private:
   /// Creates a \c CompilerInstance for compiling a module.
   ///
   /// This expects a properly initialized \c FrontendInputFile.
+  ///
+  /// Explicitly-specified \c VFS takes precedence over the VFS of this instance
+  /// when creating the clone and also prevents \c FileManager sharing.
   std::unique_ptr<CompilerInstance> cloneForModuleCompileImpl(
       SourceLocation ImportLoc, StringRef ModuleName, FrontendInputFile Input,
-      StringRef OriginalModuleMapFile, StringRef ModuleFileName);
+      StringRef OriginalModuleMapFile, StringRef ModuleFileName,
+      IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS = nullptr);
 
 public:
   /// Creates a new \c CompilerInstance for compiling a module.
   ///
   /// This takes care of creating appropriate \c FrontendInputFile for
   /// public/private frameworks, inferred modules and such.
-  std::unique_ptr<CompilerInstance>
-  cloneForModuleCompile(SourceLocation ImportLoc, Module *Module,
-                        StringRef ModuleFileName);
+  ///
+  /// Explicitly-specified \c VFS takes precedence over the VFS of this instance
+  /// when creating the clone and also prevents \c FileManager sharing.
+  std::unique_ptr<CompilerInstance> cloneForModuleCompile(
+      SourceLocation ImportLoc, Module *Module, StringRef ModuleFileName,
+      IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS = nullptr);
 
   /// Compile a module file for the given module, using the options
   /// provided by the importing compiler instance. Returns true if the module

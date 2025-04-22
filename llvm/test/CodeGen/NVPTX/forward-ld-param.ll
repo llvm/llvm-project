@@ -65,7 +65,7 @@ define void @test_ld_param_byval(ptr byval(i32) %a) {
 ; CHECK-LABEL: test_ld_param_byval(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<2>;
-; CHECK-NEXT:    .reg .b64 %rd<3>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.u32 %r1, [test_ld_param_byval_param_0];

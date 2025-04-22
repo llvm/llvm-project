@@ -274,7 +274,8 @@ InstructionCost VPRecipeBase::computeCost(ElementCount VF,
 bool VPRecipeBase::isPhi() const {
   return (getVPDefID() >= VPFirstPHISC && getVPDefID() <= VPLastPHISC) ||
          (isa<VPInstruction>(this) &&
-          cast<VPInstruction>(this)->getOpcode() == Instruction::PHI);
+          cast<VPInstruction>(this)->getOpcode() == Instruction::PHI) ||
+         isa<VPIRPhi>(this);
 }
 
 bool VPRecipeBase::isScalarCast() const {
@@ -463,7 +464,7 @@ Value *VPInstruction::generate(VPTransformState &State) {
     auto *Res =
         Builder.CreateBinOp((Instruction::BinaryOps)getOpcode(), A, B, Name);
     if (auto *I = dyn_cast<Instruction>(Res))
-      setFlags(I);
+      applyFlags(*I);
     return Res;
   }
 
@@ -1230,7 +1231,7 @@ void VPWidenCallRecipe::execute(VPTransformState &State) {
     CI->getOperandBundlesAsDefs(OpBundles);
 
   CallInst *V = State.Builder.CreateCall(Variant, Args, OpBundles);
-  setFlags(V);
+  applyFlags(*V);
 
   if (!V->getType()->isVoidTy())
     State.set(this, V);
@@ -1309,7 +1310,7 @@ void VPWidenIntrinsicRecipe::execute(VPTransformState &State) {
 
   CallInst *V = State.Builder.CreateCall(VectorF, Args, OpBundles);
 
-  setFlags(V);
+  applyFlags(*V);
 
   if (!V->getType()->isVoidTy())
     State.set(this, V);
@@ -1509,7 +1510,7 @@ void VPWidenSelectRecipe::execute(VPTransformState &State) {
   Value *Sel = State.Builder.CreateSelect(Cond, Op0, Op1);
   State.set(this, Sel);
   if (isa<FPMathOperator>(Sel))
-    setFlags(cast<Instruction>(Sel));
+    applyFlags(*cast<Instruction>(Sel));
   State.addMetadata(Sel, dyn_cast_or_null<Instruction>(getUnderlyingValue()));
 }
 
@@ -1642,7 +1643,7 @@ void VPWidenRecipe::execute(VPTransformState &State) {
     Value *V = Builder.CreateNAryOp(Opcode, Ops);
 
     if (auto *VecOp = dyn_cast<Instruction>(V))
-      setFlags(VecOp);
+      applyFlags(*VecOp);
 
     // Use this vector value for all users of the original instruction.
     State.set(this, V);
@@ -1765,10 +1766,10 @@ InstructionCost VPWidenRecipe::computeCost(ElementCount VF,
   case Instruction::FCmp: {
     Instruction *CtxI = dyn_cast_or_null<Instruction>(getUnderlyingValue());
     Type *VectorTy = toVectorTy(Ctx.Types.inferScalarType(getOperand(0)), VF);
-    return Ctx.TTI.getCmpSelInstrCost(Opcode, VectorTy, nullptr, getPredicate(),
-                                      Ctx.CostKind,
-                                      {TTI::OK_AnyValue, TTI::OP_None},
-                                      {TTI::OK_AnyValue, TTI::OP_None}, CtxI);
+    return Ctx.TTI.getCmpSelInstrCost(
+        Opcode, VectorTy, CmpInst::makeCmpResultType(VectorTy), getPredicate(),
+        Ctx.CostKind, {TTI::OK_AnyValue, TTI::OP_None},
+        {TTI::OK_AnyValue, TTI::OP_None}, CtxI);
   }
   default:
     llvm_unreachable("Unsupported opcode for instruction");
@@ -1797,7 +1798,7 @@ void VPWidenCastRecipe::execute(VPTransformState &State) {
   State.set(this, Cast);
   State.addMetadata(Cast, cast_or_null<Instruction>(getUnderlyingValue()));
   if (auto *CastOp = dyn_cast<Instruction>(Cast))
-    setFlags(CastOp);
+    applyFlags(*CastOp);
 }
 
 InstructionCost VPWidenCastRecipe::computeCost(ElementCount VF,

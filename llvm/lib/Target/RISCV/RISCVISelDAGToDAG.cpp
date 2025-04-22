@@ -653,7 +653,9 @@ bool RISCVDAGToDAGISel::trySignedBitfieldExtract(SDNode *Node) {
       return false;
 
     const unsigned Msb = ExtSize - 1;
-    const unsigned Lsb = RightShAmt;
+    // If the shift-right amount is greater than Msb, it means that extracts
+    // the X[Msb] bit and sign-extend it.
+    const unsigned Lsb = RightShAmt > Msb ? Msb : RightShAmt;
 
     SDNode *TH_EXT = BitfieldExtract(N0, Msb, Lsb, DL, VT);
     ReplaceNode(Node, TH_EXT);

@@ -47,6 +47,8 @@ public:
 
   const DataLayout &getDataLayout() const { return DL; }
 
+  // FIXME: It looks like this implementation is dead. All clients appear to
+  //  use the (non-const) version from `TargetTransformInfoImplCRTPBase`.
   InstructionCost getGEPCost(Type *PointeeType, const Value *Ptr,
                              ArrayRef<const Value *> Operands, Type *AccessType,
                              TTI::TargetCostKind CostKind) const {

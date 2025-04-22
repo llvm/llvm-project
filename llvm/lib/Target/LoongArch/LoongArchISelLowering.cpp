@@ -1876,6 +1876,51 @@ static bool isConstantOrUndefBUILD_VECTOR(const BuildVectorSDNode *Op) {
   return false;
 }
 
+// Lower BUILD_VECTOR as broadcast load (if possible).
+// For example:
+//   %a = load i8, ptr %ptr
+//   %b = build_vector %a, %a, %a, %a
+// is lowered to :
+//   (VLDREPL_B $a0, 0)
+static SDValue lowerBUILD_VECTORAsBroadCastLoad(BuildVectorSDNode *BVOp,
+                                                const SDLoc &DL,
+                                                SelectionDAG &DAG) {
+  MVT VT = BVOp->getSimpleValueType(0);
+  int NumOps = BVOp->getNumOperands();
+
+  assert((VT.is128BitVector() || VT.is256BitVector()) &&
+         "Unsupported vector type for broadcast.");
+
+  SDValue IdentitySrc;
+  bool IsIdeneity = true;
+
+  for (int i = 0; i != NumOps; i++) {
+    SDValue Op = BVOp->getOperand(i);
+    if (Op.getOpcode() != ISD::LOAD || (IdentitySrc && Op != IdentitySrc)) {
+      IsIdeneity = false;
+      break;
+    }
+    IdentitySrc = BVOp->getOperand(0);
+  }
+
+  // make sure that this load is valid and only has one user.
+  if (!IdentitySrc || !BVOp->isOnlyUserOf(IdentitySrc.getNode()))
+    return SDValue();
+
+  if (IsIdeneity) {
+    auto *LN = cast<LoadSDNode>(IdentitySrc);
+    SDVTList Tys =
+        LN->isIndexed()
+            ? DAG.getVTList(VT, LN->getBasePtr().getValueType(), MVT::Other)
+            : DAG.getVTList(VT, MVT::Other);
+    SDValue Ops[] = {LN->getChain(), LN->getBasePtr(), LN->getOffset()};
+    SDValue BCast = DAG.getNode(LoongArchISD::VLDREPL, DL, Tys, Ops);
+    DAG.ReplaceAllUsesOfValueWith(SDValue(LN, 1), BCast.getValue(1));
+    return BCast;
+  }
+  return SDValue();
+}
+
 SDValue LoongArchTargetLowering::lowerBUILD_VECTOR(SDValue Op,
                                                    SelectionDAG &DAG) const {
   BuildVectorSDNode *Node = cast<BuildVectorSDNode>(Op);
@@ -1890,6 +1935,9 @@ SDValue LoongArchTargetLowering::lowerBUILD_VECTOR(SDValue Op,
   if ((!Subtarget.hasExtLSX() || !Is128Vec) &&
       (!Subtarget.hasExtLASX() || !Is256Vec))
     return SDValue();
+
+  if (SDValue Result = lowerBUILD_VECTORAsBroadCastLoad(Node, DL, DAG))
+    return Result;
 
   if (Node->isConstantSplat(SplatValue, SplatUndef, SplatBitSize, HasAnyUndefs,
                             /*MinSplatBits=*/8) &&
@@ -5326,6 +5374,7 @@ const char *LoongArchTargetLowering::getTargetNodeName(unsigned Opcode) const {
     NODE_NAME_CASE(VSRLI)
     NODE_NAME_CASE(VBSLL)
     NODE_NAME_CASE(VBSRL)
+    NODE_NAME_CASE(VLDREPL)
   }
 #undef NODE_NAME_CASE
   return nullptr;

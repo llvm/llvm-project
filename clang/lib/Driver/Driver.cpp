@@ -733,11 +733,16 @@ static llvm::Triple computeTargetTriple(const Driver &D,
         Target.setEnvironment(llvm::Triple::GNUX32);
     } else if (A->getOption().matches(options::OPT_m32) ||
                A->getOption().matches(options::OPT_maix32)) {
-      AT = Target.get32BitArchVariant().getArch();
-      if (Target.getEnvironment() == llvm::Triple::GNUX32)
-        Target.setEnvironment(llvm::Triple::GNU);
-      else if (Target.getEnvironment() == llvm::Triple::MuslX32)
-        Target.setEnvironment(llvm::Triple::Musl);
+      if (D.IsFlangMode() && !Target.isOSAIX()) {
+        D.Diag(diag::err_drv_unsupported_opt_for_target)
+            << A->getAsString(Args) << Target.str();
+      } else {
+        AT = Target.get32BitArchVariant().getArch();
+        if (Target.getEnvironment() == llvm::Triple::GNUX32)
+          Target.setEnvironment(llvm::Triple::GNU);
+        else if (Target.getEnvironment() == llvm::Triple::MuslX32)
+          Target.setEnvironment(llvm::Triple::Musl);
+      }
     } else if (A->getOption().matches(options::OPT_m16) &&
                Target.get32BitArchVariant().getArch() == llvm::Triple::x86) {
       AT = llvm::Triple::x86;

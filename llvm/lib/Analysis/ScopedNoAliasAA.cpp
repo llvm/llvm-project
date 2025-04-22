@@ -161,9 +161,7 @@ ImmutablePass *llvm::createScopedNoAliasAAWrapperPass() {
   return new ScopedNoAliasAAWrapperPass();
 }
 
-ScopedNoAliasAAWrapperPass::ScopedNoAliasAAWrapperPass() : ImmutablePass(ID) {
-  initializeScopedNoAliasAAWrapperPassPass(*PassRegistry::getPassRegistry());
-}
+ScopedNoAliasAAWrapperPass::ScopedNoAliasAAWrapperPass() : ImmutablePass(ID) {}
 
 bool ScopedNoAliasAAWrapperPass::doInitialization(Module &M) {
   Result.reset(new ScopedNoAliasAAResult());

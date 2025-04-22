@@ -1499,17 +1499,11 @@ char TargetTransformInfoWrapperPass::ID = 0;
 void TargetTransformInfoWrapperPass::anchor() {}
 
 TargetTransformInfoWrapperPass::TargetTransformInfoWrapperPass()
-    : ImmutablePass(ID) {
-  initializeTargetTransformInfoWrapperPassPass(
-      *PassRegistry::getPassRegistry());
-}
+    : ImmutablePass(ID) {}
 
 TargetTransformInfoWrapperPass::TargetTransformInfoWrapperPass(
     TargetIRAnalysis TIRA)
-    : ImmutablePass(ID), TIRA(std::move(TIRA)) {
-  initializeTargetTransformInfoWrapperPassPass(
-      *PassRegistry::getPassRegistry());
-}
+    : ImmutablePass(ID), TIRA(std::move(TIRA)) {}
 
 TargetTransformInfo &TargetTransformInfoWrapperPass::getTTI(const Function &F) {
   FunctionAnalysisManager DummyFAM;

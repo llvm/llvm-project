@@ -2395,18 +2395,10 @@ multiclass G_TO_NG<string Str> {
           "cvta.to." # Str # ".u64 \t$result, $src;", []>;
 }
 
-defm cvta_local  : NG_TO_G<"local">;
-defm cvta_shared : NG_TO_G<"shared">;
-defm cvta_global : NG_TO_G<"global">;
-defm cvta_const  : NG_TO_G<"const">;
-
-defm cvta_to_local  : G_TO_NG<"local">;
-defm cvta_to_shared : G_TO_NG<"shared">;
-defm cvta_to_global : G_TO_NG<"global">;
-defm cvta_to_const  : G_TO_NG<"const">;
-
-// nvvm.ptr.param.to.gen
-defm cvta_param : NG_TO_G<"param">;
+foreach space = ["local", "shared", "global", "const", "param"] in {
+  defm cvta_#space : NG_TO_G<space>;
+  defm cvta_to_#space : G_TO_NG<space>;
+}
 
 def : Pat<(int_nvvm_ptr_param_to_gen i32:$src),
           (cvta_param $src)>;
