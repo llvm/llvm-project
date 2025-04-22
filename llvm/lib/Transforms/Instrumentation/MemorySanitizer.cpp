@@ -947,19 +947,16 @@ void MemorySanitizer::createUserspaceApi(Module &M,
   for (size_t AccessSizeIndex = 0; AccessSizeIndex < kNumberOfAccessSizes;
        AccessSizeIndex++) {
     unsigned AccessSize = 1 << AccessSizeIndex;
-    std::string FunctionName;
+    std::string FunctionName = "__msan_maybe_warning_" + itostr(AccessSize);
+    SmallVector<Type *, 4> ArgsTy = {IRB.getIntNTy(AccessSize * 8),
+                                     IRB.getInt32Ty()};
     if (ClEmbedFaultingInst != MSanEmbedFaultingInstructionMode::None) {
       FunctionName = "__msan_maybe_warning_instname_" + itostr(AccessSize);
-      MaybeWarningFn[AccessSizeIndex] = M.getOrInsertFunction(
-          FunctionName, TLI.getAttrList(C, {0, 1}, /*Signed=*/false),
-          IRB.getVoidTy(), IRB.getIntNTy(AccessSize * 8), IRB.getInt32Ty(),
-          IRB.getPtrTy());
-    } else {
-      FunctionName = "__msan_maybe_warning_" + itostr(AccessSize);
-      MaybeWarningFn[AccessSizeIndex] = M.getOrInsertFunction(
-          FunctionName, TLI.getAttrList(C, {0, 1}, /*Signed=*/false),
-          IRB.getVoidTy(), IRB.getIntNTy(AccessSize * 8), IRB.getInt32Ty());
+      ArgsTy.push_back(IRB.getPtrTy());
     }
+    MaybeWarningFn[AccessSizeIndex] = M.getOrInsertFunction(
+        FunctionName, FunctionType::get(IRB.getVoidTy(), ArgsTy, false),
+        TLI.getAttrList(C, {0, 1}, /*Signed=*/false));
 
     FunctionName = "__msan_maybe_store_origin_" + itostr(AccessSize);
     MaybeStoreOriginFn[AccessSizeIndex] = M.getOrInsertFunction(
@@ -1452,17 +1449,13 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       }
     }
 
-    if (ClEmbedFaultingInst != MSanEmbedFaultingInstructionMode::None) {
-      if (MS.CompileKernel || MS.TrackOrigins)
-        IRB.CreateCall(MS.WarningFn, {Origin, InstName})->setCannotMerge();
-      else
-        IRB.CreateCall(MS.WarningFn, {InstName})->setCannotMerge();
-    } else {
-      if (MS.CompileKernel || MS.TrackOrigins)
-        IRB.CreateCall(MS.WarningFn, Origin)->setCannotMerge();
-      else
-        IRB.CreateCall(MS.WarningFn)->setCannotMerge();
-    }
+    SmallVector<Value *, 4> Args;
+    if (MS.CompileKernel || MS.TrackOrigins)
+      Args.push_back(Origin);
+    if (ClEmbedFaultingInst != MSanEmbedFaultingInstructionMode::None)
+      Args.push_back(InstName);
+    IRB.CreateCall(MS.WarningFn, Args)->setCannotMerge();
+
     // FIXME: Insert UnreachableInst if !MS.Recover?
     // This may invalidate some of the following checks and needs to be done
     // at the very end.
@@ -1480,17 +1473,14 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       ConvertedShadow = convertShadowToScalar(ConvertedShadow, IRB);
       Value *ConvertedShadow2 =
           IRB.CreateZExt(ConvertedShadow, IRB.getIntNTy(8 * (1 << SizeIndex)));
-      CallBase *CB;
+
+      SmallVector<Value *, 4> Args = {
+          ConvertedShadow2,
+          MS.TrackOrigins && Origin ? Origin : (Value *)IRB.getInt32(0)};
       if (ClEmbedFaultingInst != MSanEmbedFaultingInstructionMode::None)
-        CB = IRB.CreateCall(
-            Fn, {ConvertedShadow2,
-                 MS.TrackOrigins && Origin ? Origin : (Value *)IRB.getInt32(0),
-                 InstName});
-      else
-        CB = IRB.CreateCall(Fn,
-                            {ConvertedShadow2, MS.TrackOrigins && Origin
-                                                   ? Origin
-                                                   : (Value *)IRB.getInt32(0)});
+        Args.push_back(InstName);
+
+      CallBase *CB = IRB.CreateCall(Fn, Args);
 
       CB->addParamAttr(0, Attribute::ZExt);
       CB->addParamAttr(1, Attribute::ZExt);
