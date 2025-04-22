@@ -1323,7 +1323,7 @@ bool SymbolFileDWARF::ParseDebugMacros(CompileUnit &comp_unit) {
 
 size_t SymbolFileDWARF::ParseBlocksRecursive(CompileUnit &comp_unit,
                                              Block *parent_block, DWARFDIE die,
-                                             addr_t subprogram_low_pc) {
+                                             addr_t function_file_addr) {
   size_t blocks_added = 0;
   for (; die; die = die.GetSibling()) {
     dw_tag_t tag = die.Tag();
@@ -1347,7 +1347,7 @@ size_t SymbolFileDWARF::ParseBlocksRecursive(CompileUnit &comp_unit,
                                  call_column, nullptr)) {
       for (const llvm::DWARFAddressRange &range : ranges) {
         if (range.valid() && range.LowPC >= m_first_code_address)
-          block->AddRange(Block::Range(range.LowPC - subprogram_low_pc,
+          block->AddRange(Block::Range(range.LowPC - function_file_addr,
                                        range.HighPC - range.LowPC));
       }
       block->FinalizeRanges();
@@ -1376,7 +1376,7 @@ size_t SymbolFileDWARF::ParseBlocksRecursive(CompileUnit &comp_unit,
 
       if (die.HasChildren()) {
         blocks_added += ParseBlocksRecursive(
-            comp_unit, block, die.GetFirstChild(), subprogram_low_pc);
+            comp_unit, block, die.GetFirstChild(), function_file_addr);
       }
     }
   }
