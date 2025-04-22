@@ -1950,7 +1950,7 @@ public:
 
   /// Return the unique signed counterpart of
   /// the integer type corresponding to size_t.
-  QualType getSignedSizeType() const;
+  CanQualType getSignedSizeType() const;
 
   /// Return the unique type for "intmax_t" (C99 7.18.1.5), defined in
   /// <stdint.h>.
