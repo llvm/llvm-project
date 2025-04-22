@@ -23,11 +23,9 @@ define void @load_store(ptr %in, ptr %out) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.u64 %rd1, [load_store_param_0];
-; CHECK-NEXT:    ld.u64 %rd2, [%rd1+8];
-; CHECK-NEXT:    ld.u64 %rd3, [%rd1];
+; CHECK-NEXT:    ld.v2.u64 {%rd2, %rd3}, [%rd1];
 ; CHECK-NEXT:    ld.param.u64 %rd4, [load_store_param_1];
-; CHECK-NEXT:    st.u64 [%rd4], %rd3;
-; CHECK-NEXT:    st.u64 [%rd4+8], %rd2;
+; CHECK-NEXT:    st.v2.u64 [%rd4], {%rd2, %rd3};
 ; CHECK-NEXT:    ret;
   %val = load fp128, ptr %in
   store fp128 %val, ptr %out
