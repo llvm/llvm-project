@@ -1517,12 +1517,14 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     if (ClEmbedFaultingInst != MSanEmbedFaultingInstructionMode::None) {
       IRBuilder<> IRB0(Instruction);
       StringRef InstNameStrRef;
+      // Keep str at this scope level because it is indirectly needed by
+      // CreateGlobalString
+      std::string str;
 
       // Dumping the full instruction is expensive because the operands etc.
       // likely make the string unique per instruction instance, hence we
       // offer a choice whether to only print the instruction name.
       if (ClEmbedFaultingInst == MSanEmbedFaultingInstructionMode::Full) {
-        std::string str;
         llvm::raw_string_ostream buf(str);
         Instruction->print(buf);
         InstNameStrRef = StringRef(str);
