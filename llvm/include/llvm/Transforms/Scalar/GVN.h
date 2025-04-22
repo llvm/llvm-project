@@ -418,7 +418,7 @@ struct llvm::GVNPass::Expression {
   // any additional type needed to disambiguate the expression.
   Type *Ty = nullptr;
   SmallVector<uint32_t, 4> VarArgs;
-  
+
   AttributeList Attrs;
 
   Expression(uint32_t Op = ~2U) : Opcode(Op) {}
@@ -439,9 +439,8 @@ struct llvm::GVNPass::Expression {
   }
 
   friend hash_code hash_value(const Expression &Value) {
-    return hash_combine(
-        Value.Opcode, Value.Ty,
-        hash_combine_range(Value.VarArgs.begin(), Value.VarArgs.end()));
+    return hash_combine(Value.Opcode, Value.Ty,
+                        hash_combine_range(Value.VarArgs));
   }
 };
 
