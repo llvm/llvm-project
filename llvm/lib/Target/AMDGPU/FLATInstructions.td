@@ -3508,8 +3508,9 @@ multiclass VFLAT_Real_Atomics_gfx1250<bits<8> op, string name = get_FLAT_ps<NAME
   VFLAT_Real_RTN_gfx1250<op, name>,
   VFLAT_Real_SADDR_RTN_gfx1250<op, name>;
 
-defm TENSOR_SAVE                      : VFLAT_Real_gfx1250<0x06e>;
-defm TENSOR_STOP                      : VFLAT_Real_gfx1250<0x06f>;
+// OPF_ILLEGAL_INST
+//defm TENSOR_SAVE                      : VFLAT_Real_gfx1250<0x06e>;
+//defm TENSOR_STOP                      : VFLAT_Real_gfx1250<0x06f>;
 
 defm FLAT_PREFETCH_B8                 : VFLAT_Real_AllAddr_gfx1250<0x05d>;
 defm GLOBAL_PREFETCH_B8               : VFLAT_Real_AllAddr_gfx1250<0x05d>;
