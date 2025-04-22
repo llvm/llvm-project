@@ -5793,7 +5793,7 @@ static InstructionCost getExtractWithExtendCost(
            TTI.getCastInstrCost(Opcode, Dst, SubTp, TTI::CastContextHint::None,
                                 CostKind);
   }
-  return TTI.getExtractWithExtendCost(Opcode, Dst, VecTy, Index);
+  return TTI.getExtractWithExtendCost(Opcode, Dst, VecTy, Index, CostKind);
 }
 
 /// Correctly creates insert_subvector, checking that the index is multiple of
@@ -12412,9 +12412,9 @@ public:
               all_of(Ext->users(), IsaPred<GetElementPtrInst>)) {
             // Use getExtractWithExtendCost() to calculate the cost of
             // extractelement/ext pair.
-            Cost -=
-                TTI.getExtractWithExtendCost(Ext->getOpcode(), Ext->getType(),
-                                             EE->getVectorOperandType(), Idx);
+            Cost -= TTI.getExtractWithExtendCost(
+                Ext->getOpcode(), Ext->getType(), EE->getVectorOperandType(),
+                Idx, CostKind);
             // Add back the cost of s|zext which is subtracted separately.
             Cost += TTI.getCastInstrCost(
                 Ext->getOpcode(), Ext->getType(), EE->getType(),
@@ -13035,7 +13035,8 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
           // Use getExtractWithExtendCost() to calculate the cost of
           // extractelement/ext pair.
           InstructionCost Cost = TTI->getExtractWithExtendCost(
-              Ext->getOpcode(), Ext->getType(), SrcVecTy, *getExtractIndex(I));
+              Ext->getOpcode(), Ext->getType(), SrcVecTy, *getExtractIndex(I),
+              CostKind);
           // Subtract the cost of s|zext which is subtracted separately.
           Cost -= TTI->getCastInstrCost(
               Ext->getOpcode(), Ext->getType(), I->getType(),

@@ -192,8 +192,8 @@ public:
                                    const Instruction *I = nullptr) const;
 
   InstructionCost getExtractWithExtendCost(unsigned Opcode, Type *Dst,
-                                           VectorType *VecTy,
-                                           unsigned Index) const;
+                                           VectorType *VecTy, unsigned Index,
+                                           TTI::TargetCostKind CostKind) const;
 
   InstructionCost getCFInstrCost(unsigned Opcode, TTI::TargetCostKind CostKind,
                                  const Instruction *I = nullptr) const;

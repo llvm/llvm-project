@@ -3557,10 +3557,10 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
       BaseT::getCastInstrCost(Opcode, Dst, Src, CCH, CostKind, I));
 }
 
-InstructionCost AArch64TTIImpl::getExtractWithExtendCost(unsigned Opcode,
-                                                         Type *Dst,
-                                                         VectorType *VecTy,
-                                                         unsigned Index) const {
+InstructionCost
+AArch64TTIImpl::getExtractWithExtendCost(unsigned Opcode, Type *Dst,
+                                         VectorType *VecTy, unsigned Index,
+                                         TTI::TargetCostKind CostKind) const {
 
   // Make sure we were given a valid extend opcode.
   assert((Opcode == Instruction::SExt || Opcode == Instruction::ZExt) &&
@@ -3575,7 +3575,6 @@ InstructionCost AArch64TTIImpl::getExtractWithExtendCost(unsigned Opcode,
 
   // Get the cost for the extract. We compute the cost (if any) for the extend
   // below.
-  TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
   InstructionCost Cost = getVectorInstrCost(Instruction::ExtractElement, VecTy,
                                             CostKind, Index, nullptr, nullptr);
 
