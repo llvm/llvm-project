@@ -1832,23 +1832,11 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
 
   // Handle partial reduction operations
   if (EnablePartialReduceNodes) {
-    auto SetPartialReductionMLAActionAsAppropriate = [&](MVT AccVt,
-                                                         MVT InnerVT) -> void {
-      if (!isTypeLegal(AccVt) || !isTypeLegal(InnerVT))
-        setPartialReduceMLAAction(AccVt, InnerVT, Legal);
-    };
-
     if (Subtarget->isSVEorStreamingSVEAvailable()) {
       // Mark known legal pairs as 'Legal' (these will expand to UDOT or SDOT).
       // Other pairs will default to 'Expand'.
       setPartialReduceMLAAction(MVT::nxv2i64, MVT::nxv8i16, Legal);
       setPartialReduceMLAAction(MVT::nxv4i32, MVT::nxv16i8, Legal);
-
-      for (MVT VT : MVT::integer_scalable_vector_valuetypes()) {
-        for (MVT InnerVT : MVT::integer_scalable_vector_valuetypes()) {
-          SetPartialReductionMLAActionAsAppropriate(VT, InnerVT);
-        }
-      }
     }
   }
 

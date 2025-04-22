@@ -1647,9 +1647,7 @@ public:
     PartialReduceActionTypes TypePair = {AccVT.getSimpleVT().SimpleTy,
                                          InputVT.getSimpleVT().SimpleTy};
     auto It = PartialReduceMLAActions.find(TypePair);
-    if (It != PartialReduceMLAActions.end())
-      return It->second;
-    return Expand;
+    return It != PartialReduceMLAActions.end() ? It->second : Expand;
   }
 
   /// Return true if a PARTIAL_REDUCE_U/SMLA node with the specified types is
