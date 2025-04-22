@@ -321,6 +321,102 @@ entry:
   ret void
 }
 
+; Check fixes for:
+; - detection of VMEM_READS which are FLAT loads.
+; - unsigned int underflows in MFMASmallGemmSingleWaveOpt::applyIGLPStrategy.
+; - resetting global static DSWCounters for new runs.
+; (reduced fuzzer-generated test case)
+define amdgpu_kernel void @test_iglp_opt_flat_load(ptr %ptr1, ptr %ptr2, ptr addrspace(3) %ptr3, ptr addrspace(3) %ptr4) {
+; GCN-LABEL: test_iglp_opt_flat_load:
+; GCN:       ; %bb.0: ; %entry
+; GCN-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GCN-NEXT:    s_load_dwordx2 s[12:13], s[4:5], 0x34
+; GCN-NEXT:    s_mov_b32 s8, 0
+; GCN-NEXT:    ; iglp_opt mask(0x00000001)
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    v_mov_b32_e32 v4, s0
+; GCN-NEXT:    v_mov_b32_e32 v5, s1
+; GCN-NEXT:    v_mov_b32_e32 v6, s2
+; GCN-NEXT:    v_mov_b32_e32 v7, s3
+; GCN-NEXT:    flat_load_dwordx4 v[0:3], v[4:5]
+; GCN-NEXT:    flat_load_ubyte v8, v[6:7]
+; GCN-NEXT:    ; kill: killed $vgpr4 killed $vgpr5
+; GCN-NEXT:    v_mov_b32_e32 v4, 0
+; GCN-NEXT:    ; kill: killed $vgpr6 killed $vgpr7
+; GCN-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_cmp_nle_f16_e32 vcc, 0, v3
+; GCN-NEXT:    v_cmp_nge_f16_sdwa s[10:11], v3, v4 src0_sel:WORD_1 src1_sel:DWORD
+; GCN-NEXT:    v_cmp_nge_f16_sdwa s[14:15], v2, v4 src0_sel:WORD_1 src1_sel:DWORD
+; GCN-NEXT:    v_cmp_nge_f16_sdwa s[18:19], v0, v4 src0_sel:WORD_1 src1_sel:DWORD
+; GCN-NEXT:    v_and_b32_e32 v5, 1, v8
+; GCN-NEXT:    v_cmp_nle_f16_e64 s[0:1], 0, v2
+; GCN-NEXT:    v_cmp_nle_f16_e64 s[2:3], 0, v1
+; GCN-NEXT:    v_cmp_nge_f16_sdwa s[16:17], v1, v4 src0_sel:WORD_1 src1_sel:DWORD
+; GCN-NEXT:    v_cmp_nle_f16_e64 s[4:5], 0, v0
+; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; GCN-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s[10:11]
+; GCN-NEXT:    v_cndmask_b32_e64 v2, 0, 1, s[14:15]
+; GCN-NEXT:    v_cndmask_b32_e64 v6, 0, 1, s[18:19]
+; GCN-NEXT:    v_cmp_eq_u32_e64 s[6:7], 1, v5
+; GCN-NEXT:    v_cndmask_b32_e64 v3, 0, 1, s[0:1]
+; GCN-NEXT:    v_cndmask_b32_e64 v4, 0, 1, s[2:3]
+; GCN-NEXT:    v_cndmask_b32_e64 v5, 0, 1, s[16:17]
+; GCN-NEXT:    v_cndmask_b32_e64 v7, 0, 1, s[4:5]
+; GCN-NEXT:    v_lshlrev_b16_e32 v0, 2, v0
+; GCN-NEXT:    v_lshlrev_b16_e32 v1, 3, v1
+; GCN-NEXT:    v_lshlrev_b16_e32 v2, 1, v2
+; GCN-NEXT:    v_lshlrev_b16_e32 v6, 1, v6
+; GCN-NEXT:    v_lshlrev_b16_e32 v4, 2, v4
+; GCN-NEXT:    v_lshlrev_b16_e32 v5, 3, v5
+; GCN-NEXT:    v_or_b32_e32 v0, v1, v0
+; GCN-NEXT:    v_or_b32_e32 v1, v3, v2
+; GCN-NEXT:    v_or_b32_e32 v3, v7, v6
+; GCN-NEXT:    v_or_b32_e32 v2, v5, v4
+; GCN-NEXT:    v_and_b32_e32 v1, 3, v1
+; GCN-NEXT:    v_and_b32_e32 v3, 3, v3
+; GCN-NEXT:    v_or_b32_e32 v0, v1, v0
+; GCN-NEXT:    v_or_b32_e32 v1, v3, v2
+; GCN-NEXT:    v_lshlrev_b16_e32 v0, 4, v0
+; GCN-NEXT:    v_and_b32_e32 v1, 15, v1
+; GCN-NEXT:    s_xor_b64 s[0:1], s[6:7], -1
+; GCN-NEXT:    v_or_b32_e32 v0, v1, v0
+; GCN-NEXT:    v_mov_b32_e32 v1, s12
+; GCN-NEXT:    ds_write_b8 v1, v0
+; GCN-NEXT:    s_and_saveexec_b64 s[2:3], s[0:1]
+; GCN-NEXT:    s_cbranch_execz .LBB4_2
+; GCN-NEXT:  ; %bb.1: ; %F
+; GCN-NEXT:    s_mov_b32 s9, s8
+; GCN-NEXT:    s_mov_b32 s10, s8
+; GCN-NEXT:    s_mov_b32 s11, s8
+; GCN-NEXT:    v_pk_mov_b32 v[0:1], s[8:9], s[8:9] op_sel:[0,1]
+; GCN-NEXT:    v_mov_b32_e32 v4, s13
+; GCN-NEXT:    v_pk_mov_b32 v[2:3], s[10:11], s[10:11] op_sel:[0,1]
+; GCN-NEXT:    ds_write_b128 v4, v[0:3] offset:112
+; GCN-NEXT:    ds_write_b128 v4, v[0:3] offset:96
+; GCN-NEXT:    ds_write_b128 v4, v[0:3] offset:80
+; GCN-NEXT:    ds_write_b128 v4, v[0:3] offset:64
+; GCN-NEXT:    ds_write_b128 v4, v[0:3] offset:48
+; GCN-NEXT:    ds_write_b128 v4, v[0:3] offset:32
+; GCN-NEXT:    ds_write_b128 v4, v[0:3] offset:16
+; GCN-NEXT:    ds_write_b128 v4, v[0:3]
+; GCN-NEXT:  .LBB4_2: ; %common.ret
+; GCN-NEXT:    s_endpgm
+entry:
+  %LGV2 = load <8 x half>, ptr %ptr1, align 16
+  %LGV = load i1, ptr %ptr2, align 1
+  call void @llvm.amdgcn.iglp.opt(i32 1)
+  %C = fcmp ugt <8 x half> zeroinitializer, %LGV2
+  store <8 x i1> %C, ptr addrspace(3) %ptr3, align 1
+  br i1 %LGV, label %common.ret, label %F
+
+common.ret:                                       ; preds = %F, %entry
+  ret void
+
+F:                                                ; preds = %entry
+  store <32 x float> zeroinitializer, ptr addrspace(3) %ptr4, align 128
+  br label %common.ret
+}
+
 declare void @llvm.amdgcn.iglp.opt(i32) #1
 declare i32 @llvm.amdgcn.workitem.id.x() #1
 declare <32 x float> @llvm.amdgcn.mfma.f32.32x32x1f32(float, float, <32 x float>, i32, i32, i32) #1
