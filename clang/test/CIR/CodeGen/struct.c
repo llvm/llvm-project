@@ -9,7 +9,7 @@
 // checks are at the top.
 // CIR-DAG: !rec_IncompleteS = !cir.record<struct "IncompleteS" incomplete>
 // CIR-DAG: !rec_CompleteS = !cir.record<struct "CompleteS" {!s32i, !s8i}>
-// CIR-DAG: !rec_OuterS = !cir.record<struct "OuterS" {!ty_InnerS, !s32i}>  
+// CIR-DAG: !rec_OuterS = !cir.record<struct "OuterS" {!rec_InnerS, !s32i}>  
 // CIR-DAG: !rec_InnerS = !cir.record<struct "InnerS" {!s32i, !s8i}>
 // CIR-DAG: !rec_PackedS = !cir.record<struct "PackedS" packed {!s32i, !s8i}>
 // CIR-DAG: !rec_PackedAndPaddedS = !cir.record<struct "PackedAndPaddedS" packed padded {!s32i, !s8i, !u8i}>
@@ -26,8 +26,7 @@
 
 struct IncompleteS *p;
 
-// CIR:      cir.global external @p = #cir.ptr<null> : !cir.ptr<!cir.record<struct
-// CIR-SAME:     "IncompleteS" incomplete>>
+// CIR:      cir.global external @p = #cir.ptr<null> : !cir.ptr<!rec_IncompleteS>
 // LLVM-DAG: @p = dso_local global ptr null
 // OGCG-DAG: @p = global ptr null, align 8
 
@@ -158,7 +157,7 @@ char f4(int a, struct CompleteS *p) {
   return p->b;
 }
 
-// CIR:      cir.func @f4(%[[ARG_A:.*]]: !s32i {{.*}}, %[[ARG_P:.*]]: !cir.ptr<!cir.record<struct "CompleteS" {!s32i, !s8i}>>
+// CIR:      cir.func @f4(%[[ARG_A:.*]]: !s32i {{.*}}, %[[ARG_P:.*]]: !cir.ptr<!rec_CompleteS>
 // CIR-NEXT:   %[[A_ADDR:.*]] = cir.alloca {{.*}} ["a", init] {alignment = 4 : i64}
 // CIR-NEXT:   %[[P_ADDR:.*]] = cir.alloca {{.*}} ["p", init] {alignment = 8 : i64}
 // CIR-NEXT:   %[[RETVAL_ADDR:.*]] = cir.alloca {{.*}} ["__retval"] {alignment = 1 : i64}
