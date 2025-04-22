@@ -5400,3 +5400,38 @@ define i1 @icmp_samesign_logical_or(i32 %In) {
   %V = select i1 %c1, i1 true, i1 %c2
   ret i1 %V
 }
+
+;===----------------------------------------------------------------------===;
+; Test folding of nested `icmp ule` when inner RHS is boolean-like
+;===----------------------------------------------------------------------===;
+
+define i32 @fold_nested_ule_bool(i32 %u, i1 %b) {
+; CHECK-LABEL: @fold_nested_ule_bool(
+; CHECK-NEXT:  [[CONV:%.*]] = zext i1 [[B:%.*]] to i32
+; CHECK-NEXT:  [[CMP:%.*]] = icmp ule i32 [[U:%.*]], [[CONV]]
+; CHECK-NEXT:  [[CONV1:%.*]] = zext i1 [[CMP]] to i32
+; CHECK-NEXT:  ret i32 [[CONV1]]
+;
+  %conv = zext i1 %b to i32
+  %cmp = icmp ule i32 %u, %conv
+  %conv1 = zext i1 %cmp to i32
+  %cmp2 = icmp ule i32 %u, %conv1
+  %conv3 = zext i1 %cmp2 to i32
+  ret i32 %conv3
+}
+
+define i32 @no_fold_nested_ule(i32 %u, i32 %b) {
+; CHECK-LABEL: @no_fold_nested_ule(
+; CHECK-NEXT:  [[CMP1:%.*]] = icmp ule i32 [[U:%.*]], [[B:%.*]]
+; CHECK-NEXT:  [[Z1:%.*]] = zext i1 [[CMP1]] to i32
+; CHECK-NEXT:  [[CMP2:%.*]] = icmp ule i32 [[U]], [[Z1]]
+; CHECK-NEXT:  [[CONV:%.*]] = zext i1 [[CMP2]] to i32
+; CHECK-NEXT:  ret i32 [[CONV]]
+;
+  %cmp1 = icmp ule i32 %u, %b
+  %z1   = zext i1 %cmp1 to i32
+  %cmp2 = icmp ule i32 %u, %z1
+  %conv = zext i1 %cmp2 to i32
+  ret i32 %conv
+}
+

@@ -7435,6 +7435,32 @@ Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {
   if (Value *V = simplifyICmpInst(I.getCmpPredicate(), Op0, Op1, Q))
     return replaceInstUsesWith(I, V);
 
+  //Try to fold pattern: u <= (u <= b), b is boolean-like.
+  // This fold handles cases where Clang produces code like:
+  //   %cmp1 = icmp ule i32 %u, zext i1 %b to i32
+  //   %zext = zext i1 %cmp1 to i32
+  //   %cmp2 = icmp ule i32 %u, %zext
+  // fold the comparison into: u <= b
+  if (I.getPredicate() == ICmpInst::ICMP_ULE) {
+    if (auto *Z = dyn_cast<ZExtInst>(Op1)) {                                   
+      if (Z->getSrcTy()->isIntegerTy(1)) {                                     
+        if (auto *Inner = dyn_cast<ICmpInst>(Z->getOperand(0))) {              
+          if (Inner->getPredicate() == ICmpInst::ICMP_ULE &&
+              Inner->getOperand(0) == Op0 &&
+              Inner->hasOneUse()) {
+            Value *Bnd = Inner->getOperand(1);
+            bool IsBoolExt = isa<ZExtInst>(Bnd) &&
+                              cast<ZExtInst>(Bnd)->getSrcTy()->isIntegerTy(1);
+            if (match(Bnd, m_ZeroInt()) || match(Bnd, m_One()) || IsBoolExt) {
+              Value *NewCmp = Builder.CreateICmpULE(Op0, Bnd, I.getName());
+              return replaceInstUsesWith(I, NewCmp);
+            }
+          }
+        }
+      }
+    }
+  }
+
   // Comparing -val or val with non-zero is the same as just comparing val
   // ie, abs(val) != 0 -> val != 0
   if (I.getPredicate() == ICmpInst::ICMP_NE && match(Op1, m_Zero())) {
