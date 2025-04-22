@@ -375,3 +375,13 @@ TargetFeaturesAttr TargetFeaturesAttr::featuresAt(Operation *op) {
   return parentFunction.getOperation()->getAttrOfType<TargetFeaturesAttr>(
       getAttributeName());
 }
+
+LogicalResult
+ModuleFlagAttr::verify(function_ref<InFlightDiagnostic()> emitError,
+                       mlir::LLVM::ModFlagBehavior flagBehavior,
+                       mlir::StringAttr key, mlir::Attribute value) {
+  if (!isa<mlir::IntegerAttr, mlir::StringAttr>(value))
+    return emitError()
+           << "only integer and string values are currently supported";
+  return success();
+}
