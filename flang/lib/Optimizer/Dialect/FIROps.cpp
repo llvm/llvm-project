@@ -1529,12 +1529,14 @@ bool fir::ConvertOp::canBeConverted(mlir::Type inType, mlir::Type outType) {
 llvm::LogicalResult fir::ConvertOp::verify() {
   mlir::Type inType = getValue().getType();
   mlir::Type outType = getType();
-  // If we're converting to an LLVM pointer type in code generation, we don't
+  // If we're converting to an LLVM pointer type or an integer, we don't
   // need to check for volatility mismatch - volatility will be handled by the
-  // memory operations themselves at that point.
+  // memory operations themselves in llvm code generation and ptr-to-int can't
+  // represent volatility.
   const bool toLLVMPointer = mlir::isa<mlir::LLVM::LLVMPointerType>(outType);
+  const bool toInteger = fir::isa_integer(outType);
   if (fir::isa_volatile_type(inType) != fir::isa_volatile_type(outType) &&
-      !toLLVMPointer)
+      !toLLVMPointer && !toInteger)
     return emitOpError("cannot convert between volatile and non-volatile "
                        "types, use fir.volatile_cast instead ")
            << inType << " / " << outType;

@@ -4,6 +4,7 @@ program p
   integer,volatile::i,arr(10)
   integer,volatile,target::tgt(10)
   integer,volatile,pointer,dimension(:)::ptr
+  i = loc(i)
   ptr => tgt
   i=0
   arr=1
