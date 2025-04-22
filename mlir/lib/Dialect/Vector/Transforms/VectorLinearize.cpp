@@ -62,12 +62,10 @@ struct LinearizeConstantLike final
     if (op->getNumResults() != 1)
       return rewriter.notifyMatchFailure(loc, "expected 1 result");
 
-    const TypeConverter &converter = *getTypeConverter();
+    const TypeConverter &typeConverter = *getTypeConverter();
     auto resType =
-        converter.convertType<VectorType>(op->getResult(0).getType());
-
-    if (!resType)
-      return rewriter.notifyMatchFailure(loc, "can't convert return type");
+        typeConverter.convertType<VectorType>(op->getResult(0).getType());
+    assert(resType && "expected 1-D vector type");
 
     StringAttr attrName = rewriter.getStringAttr("value");
     Attribute value = op->getAttr(attrName);
@@ -80,7 +78,7 @@ struct LinearizeConstantLike final
       return failure();
 
     FailureOr<Operation *> convertResult =
-        convertOpResultTypes(op, /*operands=*/{}, converter, rewriter);
+        convertOpResultTypes(op, /*operands=*/{}, typeConverter, rewriter);
     if (failed(convertResult))
       return failure();
 
@@ -244,14 +242,6 @@ struct LinearizeVectorShuffle final
     VectorType dstType =
         getTypeConverter()->convertType<VectorType>(shuffleOp.getType());
     assert(dstType && "vector type destination expected.");
-    // The assert is used because vector.shuffle does not support scalable
-    // vectors.
-    bool scalable = shuffleOp.getV1VectorType().isScalable() ||
-                    shuffleOp.getV2VectorType().isScalable() ||
-                    dstType.isScalable();
-    if (scalable)
-      return rewriter.notifyMatchFailure(shuffleOp,
-                                         "scalable vectors are not supported.");
 
     Value vec1 = adaptor.getV1();
     Value vec2 = adaptor.getV2();
@@ -270,7 +260,7 @@ struct LinearizeVectorShuffle final
     }
 
     // For each value in the mask, we generate the indices of the source vectors
-    // that needs to be shuffled to the destination vector. If shuffleSliceLen >
+    // that need to be shuffled to the destination vector. If shuffleSliceLen >
     // 1 we need to shuffle the slices (consecutive shuffleSliceLen number of
     // elements) instead of scalars.
     ArrayRef<int64_t> mask = shuffleOp.getMask();
@@ -309,14 +299,7 @@ struct LinearizeVectorExtract final
   matchAndRewrite(vector::ExtractOp extractOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     Type dstTy = getTypeConverter()->convertType(extractOp.getType());
-    if (!dstTy)
-      return rewriter.notifyMatchFailure(extractOp,
-                                         "expected n-D vector type.");
-
-    if (extractOp.getVector().getType().isScalable() ||
-        cast<VectorType>(dstTy).isScalable())
-      return rewriter.notifyMatchFailure(extractOp,
-                                         "scalable vectors are not supported.");
+    assert(dstTy && "expected 1-D vector type");
 
     // Dynamic position is not supported.
     if (extractOp.hasDynamicPosition())
@@ -367,9 +350,6 @@ struct LinearizeVectorInsert final
     VectorType dstTy = getTypeConverter()->convertType<VectorType>(
         insertOp.getDestVectorType());
     assert(dstTy && "vector type destination expected.");
-    if (insertOp.getDestVectorType().isScalable() || dstTy.isScalable())
-      return rewriter.notifyMatchFailure(insertOp,
-                                         "scalable vectors are not supported.");
 
     // dynamic position is not supported
     if (insertOp.hasDynamicPosition())
@@ -436,11 +416,8 @@ struct LinearizeVectorBitCast final
   LogicalResult
   matchAndRewrite(vector::BitCastOp castOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    Location loc = castOp.getLoc();
     auto resType = getTypeConverter()->convertType(castOp.getType());
-    if (!resType)
-      return rewriter.notifyMatchFailure(loc, "can't convert return type.");
-
+    assert(resType && "expected 1-D vector type");
     rewriter.replaceOpWithNewOp<vector::BitCastOp>(castOp, resType,
                                                    adaptor.getSource());
     return mlir::success();
@@ -449,56 +426,15 @@ struct LinearizeVectorBitCast final
 
 } // namespace
 
-/// If `type` is VectorType with trailing dimension of (bit) size greater than
-/// or equal to `targetBitWidth`, its defining op is considered legal.
-static bool legalBecauseOfBitwidth(Type type, unsigned targetBitWidth) {
-
-  VectorType vecType = dyn_cast<VectorType>(type);
-
-  if (!vecType)
-    return true;
-
-  // The width of the type 'index' is unbounded (and therefore potentially above
-  // the target width).
-  if (vecType.getElementType().isIndex())
-    return true;
-
-  unsigned finalDimSize =
-      vecType.getRank() == 0 ? 0 : vecType.getShape().back();
-
-  unsigned trailingVecDimBitWidth =
-      finalDimSize * vecType.getElementTypeBitWidth();
-
-  return trailingVecDimBitWidth >= targetBitWidth;
-}
-
-static SmallVector<std::pair<Type, unsigned>>
-getChecksForBitwidth(Operation *op, unsigned targetBitWidth) {
-
-  if (auto insertOp = dyn_cast<vector::InsertOp>(op)) {
-    auto w = targetBitWidth < std::numeric_limits<unsigned>::max()
-                 ? targetBitWidth + 1
-                 : targetBitWidth;
-    return {{insertOp.getValueToStoreType(), w}};
-  }
-  auto resultTypes = op->getResultTypes();
-  SmallVector<std::pair<Type, unsigned>> resultsWithBitWidth;
-  resultsWithBitWidth.reserve(resultTypes.size());
-  for (Type type : resultTypes) {
-    resultsWithBitWidth.push_back({type, targetBitWidth});
-  }
-  return resultsWithBitWidth;
-}
-
 /// Return true if the operation `op` does not support scalable vectors and
-/// has at least 1 scalable vector result.
-static bool legalBecauseScalable(Operation *op) {
+/// has at least 1 scalable vector result. These ops should all eventually
+/// support scalable vectors, and this function should be removed.
+static bool isNotLinearizableBecauseScalable(Operation *op) {
 
-  bool scalableSupported = op->hasTrait<OpTrait::ConstantLike>() ||
-                           op->hasTrait<OpTrait::Vectorizable>() ||
-                           isa<vector::BitCastOp>(op);
-
-  if (scalableSupported)
+  bool unsupported =
+      isa<vector::ExtractStridedSliceOp, vector::ExtractOp, vector::InsertOp>(
+          op);
+  if (!unsupported)
     return false;
 
   // Check if any of the results is a scalable vector type.
@@ -512,73 +448,74 @@ static bool legalBecauseScalable(Operation *op) {
   return containsScalableResult;
 }
 
-static bool dynamicallyLegal(Operation *op, unsigned targetBitWidth) {
+static bool isNotLinearizable(Operation *op) {
 
   // Only ops that are in the vector dialect, are ConstantLike, or
-  // are Vectorizable might be linearized currently, so legalize the others.
-  bool opIsVectorDialect = op->getDialect()->getNamespace() ==
-                           vector::VectorDialect::getDialectNamespace();
-  if (!opIsVectorDialect && !op->hasTrait<OpTrait::ConstantLike>() &&
-      !op->hasTrait<OpTrait::Vectorizable>())
+  // are Vectorizable might be linearized currently.
+  StringLiteral vectorDialect = vector::VectorDialect::getDialectNamespace();
+  StringRef opDialect = op->getDialect()->getNamespace();
+  bool unsupported = (opDialect != vectorDialect) &&
+                     !op->hasTrait<OpTrait::ConstantLike>() &&
+                     !op->hasTrait<OpTrait::Vectorizable>();
+  if (unsupported)
     return true;
 
-  // Some ops will not be linearized if they have scalable vector results.
-  if (legalBecauseScalable(op))
+  // Some ops currently don't support scalable vectors.
+  if (isNotLinearizableBecauseScalable(op))
     return true;
 
-  // Check on bitwidths.
-  auto typesToCheck = getChecksForBitwidth(op, targetBitWidth);
-  return std::any_of(typesToCheck.begin(), typesToCheck.end(),
-                     [&](std::pair<Type, unsigned> typeWidth) {
-                       return legalBecauseOfBitwidth(typeWidth.first,
-                                                     typeWidth.second);
-                     });
+  return false;
 }
 
-void mlir::vector::populateVectorLinearizeBitWidthTargetAndConverter(
-    TypeConverter &typeConverter, ConversionTarget &target,
-    unsigned targetBitWidth) {
+void mlir::vector::populateForVectorLinearize(TypeConverter &typeConverter,
+                                              ConversionTarget &target) {
 
-  typeConverter.addConversion([](VectorType type) -> std::optional<Type> {
-    if (!isLinearizableVector(type))
+  auto convertType = [](Type type) -> std::optional<Type> {
+    VectorType vectorType = dyn_cast<VectorType>(type);
+    if (!vectorType || !isLinearizableVector(vectorType))
       return type;
 
-    return VectorType::get(type.getNumElements(), type.getElementType(),
-                           type.isScalable());
-  });
+    VectorType linearizedType =
+        VectorType::get(vectorType.getNumElements(),
+                        vectorType.getElementType(), vectorType.isScalable());
+    return linearizedType;
+  };
+  typeConverter.addConversion(convertType);
 
   auto materializeCast = [](OpBuilder &builder, Type type, ValueRange inputs,
                             Location loc) -> Value {
-    if (inputs.size() != 1 || !isa<VectorType>(inputs.front().getType()) ||
-        !isa<VectorType>(type))
+    if (inputs.size() != 1)
       return nullptr;
-    return builder.create<vector::ShapeCastOp>(loc, type, inputs.front());
-  };
 
+    Value value = inputs.front();
+    if (!isa<VectorType>(type) || !isa<VectorType>(value.getType()))
+      return nullptr;
+
+    return builder.create<vector::ShapeCastOp>(loc, type, value);
+  };
   typeConverter.addSourceMaterialization(materializeCast);
   typeConverter.addTargetMaterialization(materializeCast);
 
   target.markUnknownOpDynamicallyLegal(
       [=](Operation *op) -> std::optional<bool> {
-        bool isDynamicallyLegal = dynamicallyLegal(op, targetBitWidth);
-        if (isDynamicallyLegal)
+        if (isNotLinearizable(op))
           return true;
-
-        bool shapeUnchanged = typeConverter.isLegal(op);
-        return shapeUnchanged;
+        // This will return true if, for all operand and result types `t`,
+        // convertType(t) = t. This is true if there are no rank>=2 vectors.
+        return typeConverter.isLegal(op);
       });
 }
 
 void mlir::vector::populateVectorLinearizeBasePatterns(
-    const TypeConverter &typeConverter, RewritePatternSet &patterns,
-    const ConversionTarget &target) {
+    const TypeConverter &typeConverter, const ConversionTarget &target,
+    RewritePatternSet &patterns) {
   patterns.add<LinearizeConstantLike, LinearizeVectorizable,
                LinearizeVectorBitCast>(typeConverter, patterns.getContext());
 }
 
 void mlir::vector::populateVectorLinearizeShuffleLikeOpsPatterns(
-    const TypeConverter &typeConverter, RewritePatternSet &patterns,
-    const ConversionTarget &target) {
+    const TypeConverter &typeConverter, const ConversionTarget &target,
+    RewritePatternSet &patterns) {
   patterns.add<LinearizeVectorShuffle, LinearizeVectorExtract,
                LinearizeVectorInsert, LinearizeVectorExtractStridedSlice>(
       typeConverter, patterns.getContext());
