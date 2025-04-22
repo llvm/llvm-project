@@ -411,14 +411,12 @@ void printExceptionHandlingStats(const BinaryContext &BC, raw_ostream &OS,
       if (BB.isLandingPad())
         LPECSum += BBEC;
       for (const MCInst &Inst : BB) {
-        if (!BC.MIB->isCall(Inst))
+        if (!BC.MIB->isInvoke(Inst))
           continue;
-        if (BC.MIB->isInvoke(Inst)) {
-          const std::optional<MCPlus::MCLandingPad> EHInfo =
-              BC.MIB->getEHInfo(Inst);
-          if (EHInfo->first)
-            InvokeECSum += BBEC;
-        }
+        const std::optional<MCPlus::MCLandingPad> EHInfo =
+            BC.MIB->getEHInfo(Inst);
+        if (EHInfo->first)
+          InvokeECSum += BBEC;
       }
     }
 
