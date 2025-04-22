@@ -18,10 +18,10 @@ This document summarizes Fortran standards support in Flang. The information is 
 TODOs/Not Yet Implemented messages emitted by the compiler for unimplemented features should be treated as authoritative.
 
 The standards support information is provided as a table with three columns that are self explanatory.
-The Status column uses the letters **P**, **Y**, **N** for the implementation status:
-- **P** : When the implementation is incomplete for a few cases
-- **Y** : When the implementation is complete
-- **N** : When the implementation is absent
+The Status column uses the letters **Y**, **P**, **N** for the implementation status:
+- **Y** : Yes. When the implementation is complete
+- **P** : Partial. When the implementation is incomplete for a few cases
+- **N** : No. When the implementation is absent
 
 There is no distinction made between support in the Parser/Semantics and the MLIR or Lowering stages.
 
