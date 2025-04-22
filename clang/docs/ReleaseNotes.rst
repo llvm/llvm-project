@@ -301,6 +301,9 @@ related warnings within the method body.
   particularly relevant for AMDGPU targets, where they map to corresponding IR
   metadata.
 
+- Clang now disallows the use of attributes applied before an
+  ``extern template`` declaration (#GH79893).
+
 Improvements to Clang's diagnostics
 -----------------------------------
 
@@ -394,6 +397,9 @@ Improvements to Clang's diagnostics
 - ``-Wuninitialized`` now diagnoses when a class does not declare any
   constructors to initialize their non-modifiable members. The diagnostic is
   not new; being controlled via a warning group is what's new. Fixes #GH41104
+
+
+- Improved Clang's error recovery for invalid function calls.
 
 - Improved bit-field diagnostics to consider the type specified by the
   ``preferred_type`` attribute. These diagnostics are controlled by the flags
