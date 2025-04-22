@@ -2367,7 +2367,7 @@ public:
 
 template <typename T>
 class TargetTransformInfo::Model final : public TargetTransformInfo::Concept {
-  T Impl;
+  const T Impl;
 
 public:
   Model(T Impl) : Impl(std::move(Impl)) {}
@@ -3101,10 +3101,10 @@ public:
     return Impl.areTypesABICompatible(Caller, Callee, Types);
   }
   bool isIndexedLoadLegal(MemIndexedMode Mode, Type *Ty) const override {
-    return Impl.isIndexedLoadLegal(Mode, Ty, getDataLayout());
+    return Impl.isIndexedLoadLegal(Mode, Ty);
   }
   bool isIndexedStoreLegal(MemIndexedMode Mode, Type *Ty) const override {
-    return Impl.isIndexedStoreLegal(Mode, Ty, getDataLayout());
+    return Impl.isIndexedStoreLegal(Mode, Ty);
   }
   unsigned getLoadStoreVecRegBitWidth(unsigned AddrSpace) const override {
     return Impl.getLoadStoreVecRegBitWidth(AddrSpace);

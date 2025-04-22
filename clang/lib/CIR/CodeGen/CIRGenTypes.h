@@ -13,10 +13,12 @@
 #ifndef LLVM_CLANG_LIB_CODEGEN_CODEGENTYPES_H
 #define LLVM_CLANG_LIB_CODEGEN_CODEGENTYPES_H
 
+#include "ABIInfo.h"
 #include "CIRGenFunctionInfo.h"
-#include "clang/CIR/Dialect/IR/CIRTypes.h"
+#include "CIRGenRecordLayout.h"
 
 #include "clang/AST/Type.h"
+#include "clang/CIR/Dialect/IR/CIRTypes.h"
 
 #include "llvm/ADT/SmallPtrSet.h"
 
@@ -45,11 +47,23 @@ class CIRGenTypes {
   clang::ASTContext &astContext;
   CIRGenBuilderTy &builder;
 
+  const ABIInfo &theABIInfo;
+
+  /// Contains the CIR type for any converted RecordDecl.
+  llvm::DenseMap<const clang::Type *, std::unique_ptr<CIRGenRecordLayout>>
+      cirGenRecordLayouts;
+
   /// Contains the CIR type for any converted RecordDecl
   llvm::DenseMap<const clang::Type *, cir::RecordType> recordDeclTypes;
 
   /// Hold memoized CIRGenFunctionInfo results
   llvm::FoldingSet<CIRGenFunctionInfo> functionInfos;
+
+  /// This set keeps track of records that we're currently converting to a CIR
+  /// type. For example, when converting:
+  /// struct A { struct B { int x; } } when processing 'x', the 'A' and 'B'
+  /// types will be in this set.
+  llvm::SmallPtrSet<const clang::Type *, 4> recordsBeingLaidOut;
 
   llvm::SmallPtrSet<const CIRGenFunctionInfo *, 4> functionsBeingProcessed;
   /// Heper for convertType.
@@ -58,6 +72,9 @@ class CIRGenTypes {
 public:
   CIRGenTypes(CIRGenModule &cgm);
   ~CIRGenTypes();
+
+  CIRGenBuilderTy &getBuilder() const { return builder; }
+  CIRGenModule &getCGModule() const { return cgm; }
 
   /// Utility to check whether a function type can be converted to a CIR type
   /// (i.e. doesn't depend on an incomplete tag type).
@@ -70,11 +87,23 @@ public:
   TypeCacheTy typeCache;
 
   mlir::MLIRContext &getMLIRContext() const;
+  clang::ASTContext &getASTContext() const { return astContext; }
+
+  bool isRecordLayoutComplete(const clang::Type *ty) const;
+  bool noRecordsBeingLaidOut() const { return recordsBeingLaidOut.empty(); }
+  bool isRecordBeingLaidOut(const clang::Type *ty) const {
+    return recordsBeingLaidOut.count(ty);
+  }
+
+  const ABIInfo &getABIInfo() const { return theABIInfo; }
 
   /// Convert a Clang type into a mlir::Type.
   mlir::Type convertType(clang::QualType type);
 
   mlir::Type convertRecordDeclType(const clang::RecordDecl *recordDecl);
+
+  std::unique_ptr<CIRGenRecordLayout>
+  computeRecordLayout(const clang::RecordDecl *rd, cir::RecordType *ty);
 
   std::string getRecordTypeName(const clang::RecordDecl *,
                                 llvm::StringRef suffix);
@@ -90,9 +119,9 @@ public:
   /// LLVM zeroinitializer.
   bool isZeroInitializable(clang::QualType ty);
 
-  const CIRGenFunctionInfo &arrangeFreeFunctionCall();
+  const CIRGenFunctionInfo &arrangeFreeFunctionCall(const FunctionType *fnType);
 
-  const CIRGenFunctionInfo &arrangeCIRFunctionInfo();
+  const CIRGenFunctionInfo &arrangeCIRFunctionInfo(CanQualType returnType);
 };
 
 } // namespace clang::CIRGen

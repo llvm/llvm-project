@@ -19,7 +19,7 @@ define internal spir_func <3 x i32> @foo(ptr addrspace(10) %a) {
   ; partial loading of a vector: v4 -> v3.
   %2 = load <3 x i32>, ptr addrspace(10) %1, align 16
 ; CHECK: %[[#load:]] = OpLoad %[[#v4]] %[[#tmp]] Aligned 16
-; CHECK: %[[#val:]] = OpVectorShuffle %[[#v3]] %[[#load]] %[[#load]] 0 0 0
+; CHECK: %[[#val:]] = OpVectorShuffle %[[#v3]] %[[#load]] %[[#load]] 0 1 2
 
   ret <3 x i32> %2
 ; CHECK: OpReturnValue %[[#val]]
@@ -33,7 +33,7 @@ define internal spir_func <3 x i32> @fooDefault(ptr %a) {
   ; partial loading of a vector: v4 -> v3.
   %2 = load <3 x i32>, ptr %1, align 16
 ; CHECK: %[[#load:]] = OpLoad %[[#v4]] %[[#tmp]] Aligned 16
-; CHECK: %[[#val:]] = OpVectorShuffle %[[#v3]] %[[#load]] %[[#load]] 0 0 0
+; CHECK: %[[#val:]] = OpVectorShuffle %[[#v3]] %[[#load]] %[[#load]] 0 1 2
 
   ret <3 x i32> %2
 ; CHECK: OpReturnValue %[[#val]]
@@ -47,7 +47,7 @@ define internal spir_func <3 x i32> @fooBounds(ptr %a) {
   ; partial loading of a vector: v4 -> v3.
   %2 = load <3 x i32>, ptr %1, align 16
 ; CHECK: %[[#load:]] = OpLoad %[[#v4]] %[[#tmp]] Aligned 16
-; CHECK: %[[#val:]] = OpVectorShuffle %[[#v3]] %[[#load]] %[[#load]] 0 0 0
+; CHECK: %[[#val:]] = OpVectorShuffle %[[#v3]] %[[#load]] %[[#load]] 0 1 2
 
   ret <3 x i32> %2
 ; CHECK: OpReturnValue %[[#val]]
@@ -61,7 +61,7 @@ define internal spir_func <2 x i32> @bar(ptr addrspace(10) %a) {
   ; partial loading of a vector: v4 -> v2.
   %2 = load <2 x i32>, ptr addrspace(10) %1, align 16
 ; CHECK: %[[#load:]] = OpLoad %[[#v4]] %[[#tmp]] Aligned 16
-; CHECK: %[[#val:]] = OpVectorShuffle %[[#v2]] %[[#load]] %[[#load]] 0 0
+; CHECK: %[[#val:]] = OpVectorShuffle %[[#v2]] %[[#load]] %[[#load]] 0 1
 
   ret <2 x i32> %2
 ; CHECK: OpReturnValue %[[#val]]

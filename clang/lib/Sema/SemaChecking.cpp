@@ -511,7 +511,7 @@ struct BuiltinDumpStructGenerator {
     Args.reserve((TheCall->getNumArgs() - 2) + /*Format*/ 1 + Exprs.size());
     Args.assign(TheCall->arg_begin() + 2, TheCall->arg_end());
     Args.push_back(getStringLiteral(Format));
-    Args.insert(Args.end(), Exprs.begin(), Exprs.end());
+    llvm::append_range(Args, Exprs);
 
     // Register a note to explain why we're performing the call.
     Sema::CodeSynthesisContext Ctx;
@@ -1548,6 +1548,48 @@ bool Sema::checkConstantPointerAuthKey(Expr *Arg, unsigned &Result) {
 
   Result = KeyValue->getZExtValue();
   return false;
+}
+
+bool Sema::checkPointerAuthDiscriminatorArg(Expr *Arg,
+                                            PointerAuthDiscArgKind Kind,
+                                            unsigned &IntVal) {
+  if (!Arg) {
+    IntVal = 0;
+    return true;
+  }
+
+  std::optional<llvm::APSInt> Result = Arg->getIntegerConstantExpr(Context);
+  if (!Result) {
+    Diag(Arg->getExprLoc(), diag::err_ptrauth_arg_not_ice);
+    return false;
+  }
+
+  unsigned Max;
+  bool IsAddrDiscArg = false;
+
+  switch (Kind) {
+  case PADAK_AddrDiscPtrAuth:
+    Max = 1;
+    IsAddrDiscArg = true;
+    break;
+  case PADAK_ExtraDiscPtrAuth:
+    Max = PointerAuthQualifier::MaxDiscriminator;
+    break;
+  };
+
+  if (*Result < 0 || *Result > Max) {
+    if (IsAddrDiscArg)
+      Diag(Arg->getExprLoc(), diag::err_ptrauth_address_discrimination_invalid)
+          << Result->getExtValue();
+    else
+      Diag(Arg->getExprLoc(), diag::err_ptrauth_extra_discriminator_invalid)
+          << Result->getExtValue() << Max;
+
+    return false;
+  };
+
+  IntVal = Result->getZExtValue();
+  return true;
 }
 
 static std::pair<const ValueDecl *, CharUnits>
@@ -3957,6 +3999,14 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
     ValType = AtomTy;
   }
 
+  PointerAuthQualifier PointerAuth = AtomTy.getPointerAuth();
+  if (PointerAuth && PointerAuth.isAddressDiscriminated()) {
+    Diag(ExprRange.getBegin(),
+         diag::err_atomic_op_needs_non_address_discriminated_pointer)
+        << 0 << Ptr->getType() << Ptr->getSourceRange();
+    return ExprError();
+  }
+
   // For an arithmetic operation, the implied arithmetic must be well-formed.
   if (Form == Arithmetic) {
     // GCC does not enforce these rules for GNU atomics, but we do to help catch
@@ -4327,6 +4377,13 @@ ExprResult Sema::BuiltinAtomicOverloaded(ExprResult TheCallResult) {
       !ValType->isBlockPointerType()) {
     Diag(DRE->getBeginLoc(), diag::err_atomic_builtin_must_be_pointer_intptr)
         << FirstArg->getType() << 0 << FirstArg->getSourceRange();
+    return ExprError();
+  }
+  PointerAuthQualifier PointerAuth = ValType.getPointerAuth();
+  if (PointerAuth && PointerAuth.isAddressDiscriminated()) {
+    Diag(FirstArg->getBeginLoc(),
+         diag::err_atomic_op_needs_non_address_discriminated_pointer)
+        << 1 << ValType << FirstArg->getSourceRange();
     return ExprError();
   }
 
@@ -11236,9 +11293,16 @@ static bool AnalyzeBitFieldAssignment(Sema &S, FieldDecl *Bitfield, Expr *Init,
     // The RHS is not constant.  If the RHS has an enum type, make sure the
     // bitfield is wide enough to hold all the values of the enum without
     // truncation.
-    if (const auto *EnumTy = OriginalInit->getType()->getAs<EnumType>()) {
+    const auto *EnumTy = OriginalInit->getType()->getAs<EnumType>();
+    const PreferredTypeAttr *PTAttr = nullptr;
+    if (!EnumTy) {
+      PTAttr = Bitfield->getAttr<PreferredTypeAttr>();
+      if (PTAttr)
+        EnumTy = PTAttr->getType()->getAs<EnumType>();
+    }
+    if (EnumTy) {
       EnumDecl *ED = EnumTy->getDecl();
-      bool SignedBitfield = BitfieldType->isSignedIntegerType();
+      bool SignedBitfield = BitfieldType->isSignedIntegerOrEnumerationType();
 
       // Enum types are implicitly signed on Windows, so check if there are any
       // negative enumerators to see if the enum was intended to be signed or
@@ -11252,12 +11316,18 @@ static bool AnalyzeBitFieldAssignment(Sema &S, FieldDecl *Bitfield, Expr *Init,
       // on Windows where unfixed enums always use an underlying type of 'int'.
       unsigned DiagID = 0;
       if (SignedEnum && !SignedBitfield) {
-        DiagID = diag::warn_unsigned_bitfield_assigned_signed_enum;
+        DiagID =
+            PTAttr == nullptr
+                ? diag::warn_unsigned_bitfield_assigned_signed_enum
+                : diag::
+                      warn_preferred_type_unsigned_bitfield_assigned_signed_enum;
       } else if (SignedBitfield && !SignedEnum &&
                  ED->getNumPositiveBits() == FieldWidth) {
-        DiagID = diag::warn_signed_bitfield_enum_conversion;
+        DiagID =
+            PTAttr == nullptr
+                ? diag::warn_signed_bitfield_enum_conversion
+                : diag::warn_preferred_type_signed_bitfield_enum_conversion;
       }
-
       if (DiagID) {
         S.Diag(InitLoc, DiagID) << Bitfield << ED;
         TypeSourceInfo *TSI = Bitfield->getTypeSourceInfo();
@@ -11265,6 +11335,9 @@ static bool AnalyzeBitFieldAssignment(Sema &S, FieldDecl *Bitfield, Expr *Init,
             TSI ? TSI->getTypeLoc().getSourceRange() : SourceRange();
         S.Diag(Bitfield->getTypeSpecStartLoc(), diag::note_change_bitfield_sign)
             << SignedEnum << TypeRange;
+        if (PTAttr)
+          S.Diag(PTAttr->getLocation(), diag::note_bitfield_preferred_type)
+              << ED;
       }
 
       // Compute the required bitwidth. If the enum has negative values, we need
@@ -11277,10 +11350,16 @@ static bool AnalyzeBitFieldAssignment(Sema &S, FieldDecl *Bitfield, Expr *Init,
       // Check the bitwidth.
       if (BitsNeeded > FieldWidth) {
         Expr *WidthExpr = Bitfield->getBitWidth();
-        S.Diag(InitLoc, diag::warn_bitfield_too_small_for_enum)
-            << Bitfield << ED;
+        auto DiagID =
+            PTAttr == nullptr
+                ? diag::warn_bitfield_too_small_for_enum
+                : diag::warn_preferred_type_bitfield_too_small_for_enum;
+        S.Diag(InitLoc, DiagID) << Bitfield << ED;
         S.Diag(WidthExpr->getExprLoc(), diag::note_widen_bitfield)
             << BitsNeeded << ED << WidthExpr->getSourceRange();
+        if (PTAttr)
+          S.Diag(PTAttr->getLocation(), diag::note_bitfield_preferred_type)
+              << ED;
       }
     }
 
@@ -11360,6 +11439,14 @@ static void AnalyzeAssignment(Sema &S, BinaryOperator *E) {
 static void DiagnoseImpCast(Sema &S, Expr *E, QualType SourceType, QualType T,
                             SourceLocation CContext, unsigned diag,
                             bool pruneControlFlow = false) {
+  // For languages like HLSL and OpenCL, implicit conversion diagnostics listing
+  // address space annotations isn't really useful. The warnings aren't because
+  // you're converting a `private int` to `unsigned int`, it is because you're
+  // conerting `int` to `unsigned int`.
+  if (SourceType.hasAddressSpace())
+    SourceType = S.getASTContext().removeAddrSpaceQualType(SourceType);
+  if (T.hasAddressSpace())
+    T = S.getASTContext().removeAddrSpaceQualType(T);
   if (pruneControlFlow) {
     S.DiagRuntimeBehavior(E->getExprLoc(), E,
                           S.PDiag(diag)

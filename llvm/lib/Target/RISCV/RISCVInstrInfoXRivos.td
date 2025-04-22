@@ -71,6 +71,8 @@ defm RI_VUNZIP2B_V : VALU_IV_V<"ri.vunzip2b", 0b011000>;
 def ri_vzipeven_vl : SDNode<"RISCVISD::RI_VZIPEVEN_VL", SDT_RISCVIntBinOp_VL>;
 def ri_vzipodd_vl : SDNode<"RISCVISD::RI_VZIPODD_VL", SDT_RISCVIntBinOp_VL>;
 def ri_vzip2a_vl : SDNode<"RISCVISD::RI_VZIP2A_VL", SDT_RISCVIntBinOp_VL>;
+def ri_vunzip2a_vl : SDNode<"RISCVISD::RI_VUNZIP2A_VL", SDT_RISCVIntBinOp_VL>;
+def ri_vunzip2b_vl : SDNode<"RISCVISD::RI_VUNZIP2B_VL", SDT_RISCVIntBinOp_VL>;
 
 multiclass RIVPseudoVALU_VV {
   foreach m = MxList in
@@ -82,6 +84,8 @@ let Predicates = [HasVendorXRivosVizip],
 defm PseudoRI_VZIPEVEN   : RIVPseudoVALU_VV;
 defm PseudoRI_VZIPODD   : RIVPseudoVALU_VV;
 defm PseudoRI_VZIP2A   : RIVPseudoVALU_VV;
+defm PseudoRI_VUNZIP2A   : RIVPseudoVALU_VV;
+defm PseudoRI_VUNZIP2B   : RIVPseudoVALU_VV;
 }
 
 multiclass RIVPatBinaryVL_VV<SDPatternOperator vop, string instruction_name,
@@ -98,6 +102,8 @@ multiclass RIVPatBinaryVL_VV<SDPatternOperator vop, string instruction_name,
 defm : RIVPatBinaryVL_VV<ri_vzipeven_vl, "PseudoRI_VZIPEVEN">;
 defm : RIVPatBinaryVL_VV<ri_vzipodd_vl, "PseudoRI_VZIPODD">;
 defm : RIVPatBinaryVL_VV<ri_vzip2a_vl, "PseudoRI_VZIP2A">;
+defm : RIVPatBinaryVL_VV<ri_vunzip2a_vl, "PseudoRI_VUNZIP2A">;
+defm : RIVPatBinaryVL_VV<ri_vunzip2b_vl, "PseudoRI_VUNZIP2B">;
 
 //===----------------------------------------------------------------------===//
 // XRivosVisni
