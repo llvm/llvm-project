@@ -19,7 +19,6 @@
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Utility/Instrumentation.h"
 #include "lldb/Utility/Stream.h"
-#include <memory>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -144,11 +143,12 @@ bool SBInstructionList::GetDescription(lldb::SBStream &stream) {
 bool SBInstructionList::GetDescription(lldb::SBStream &stream,
                                        lldb::SBExecutionContext &exe_ctx) {
   LLDB_INSTRUMENT_VA(this, stream);
-  return GetDescription(stream.ref(), &exe_ctx);
+  ExecutionContext exe_ctx_wrapper(exe_ctx.get());
+  return GetDescription(stream.ref(), &exe_ctx_wrapper);
 }
 
-bool SBInstructionList::GetDescription(Stream &sref,
-                                       lldb::SBExecutionContext *exe_ctx) {
+bool SBInstructionList::GetDescription(
+    Stream &sref, lldb_private::ExecutionContext *exe_ctx) {
 
   if (m_opaque_sp) {
     size_t num_instructions = GetSize();
@@ -161,11 +161,6 @@ bool SBInstructionList::GetDescription(Stream &sref,
       FormatEntity::Parse("${addr-file-or-load}: ", format);
       SymbolContext sc;
       SymbolContext prev_sc;
-
-      std::shared_ptr<ExecutionContext> exe_ctx_ptr;
-      if (nullptr != exe_ctx) {
-        exe_ctx_ptr = std::make_shared<ExecutionContext>(exe_ctx->get());
-      }
 
       // Expected address of the next instruction. Used to print an empty line
       // for non-contiguous blocks of insns.
@@ -187,8 +182,8 @@ bool SBInstructionList::GetDescription(Stream &sref,
         if (next_addr && *next_addr != addr)
           sref.EOL();
         inst->Dump(&sref, max_opcode_byte_size, true, false,
-                   /*show_control_flow_kind=*/false, exe_ctx_ptr.get(), &sc,
-                   &prev_sc, &format, 0);
+                   /*show_control_flow_kind=*/false, exe_ctx, &sc, &prev_sc,
+                   &format, 0);
         sref.EOL();
         next_addr = addr;
         next_addr->Slide(inst->GetOpcode().GetByteSize());

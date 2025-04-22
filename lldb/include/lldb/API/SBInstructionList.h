@@ -68,7 +68,7 @@ protected:
 
   void SetDisassembler(const lldb::DisassemblerSP &opaque_sp);
   bool GetDescription(lldb_private::Stream &description,
-                      lldb::SBExecutionContext *exe_ctx = nullptr);
+                      lldb_private::ExecutionContext *exe_ctx = nullptr);
 
 private:
   lldb::DisassemblerSP m_opaque_sp;
