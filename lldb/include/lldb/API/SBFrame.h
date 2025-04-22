@@ -221,7 +221,6 @@ protected:
   friend class SBBlock;
   friend class SBExecutionContext;
   friend class SBInstruction;
-  friend class SBInstructionList;
   friend class SBThread;
   friend class SBValue;
 

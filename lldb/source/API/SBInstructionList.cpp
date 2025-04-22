@@ -8,6 +8,7 @@
 
 #include "lldb/API/SBInstructionList.h"
 #include "lldb/API/SBAddress.h"
+#include "lldb/API/SBExecutionContext.h"
 #include "lldb/API/SBFile.h"
 #include "lldb/API/SBInstruction.h"
 #include "lldb/API/SBStream.h"
@@ -116,7 +117,7 @@ void SBInstructionList::Print(FILE *out) {
   if (out == nullptr)
     return;
   StreamFile stream(out, false);
-  GetDescription(stream, nullptr);
+  GetDescription(stream);
 }
 
 void SBInstructionList::Print(SBFile out) {
@@ -124,7 +125,7 @@ void SBInstructionList::Print(SBFile out) {
   if (!out.IsValid())
     return;
   StreamFile stream(out.m_opaque_sp);
-  GetDescription(stream, nullptr);
+  GetDescription(stream);
 }
 
 void SBInstructionList::Print(FileSP out_sp) {
@@ -132,21 +133,22 @@ void SBInstructionList::Print(FileSP out_sp) {
   if (!out_sp || !out_sp->IsValid())
     return;
   StreamFile stream(out_sp);
-  GetDescription(stream, nullptr);
+  GetDescription(stream);
 }
 
 bool SBInstructionList::GetDescription(lldb::SBStream &stream) {
   LLDB_INSTRUMENT_VA(this, stream);
-  return GetDescription(stream.ref(), nullptr);
+  return GetDescription(stream.ref());
 }
 
 bool SBInstructionList::GetDescription(lldb::SBStream &stream,
-                                       lldb::SBFrame &frame) {
+                                       lldb::SBExecutionContext &exe_ctx) {
   LLDB_INSTRUMENT_VA(this, stream);
-  return GetDescription(stream.ref(), &frame);
+  return GetDescription(stream.ref(), &exe_ctx);
 }
 
-bool SBInstructionList::GetDescription(Stream &sref, lldb::SBFrame *frame) {
+bool SBInstructionList::GetDescription(Stream &sref,
+                                       lldb::SBExecutionContext *exe_ctx) {
 
   if (m_opaque_sp) {
     size_t num_instructions = GetSize();
@@ -160,9 +162,9 @@ bool SBInstructionList::GetDescription(Stream &sref, lldb::SBFrame *frame) {
       SymbolContext sc;
       SymbolContext prev_sc;
 
-      std::shared_ptr<ExecutionContext> exec_ctx;
-      if (nullptr != frame) {
-        exec_ctx = std::make_shared<ExecutionContext>(frame->GetFrameSP());
+      std::shared_ptr<ExecutionContext> exe_ctx_ptr;
+      if (nullptr != exe_ctx) {
+        exe_ctx_ptr = std::make_shared<ExecutionContext>(exe_ctx->get());
       }
 
       // Expected address of the next instruction. Used to print an empty line
@@ -185,7 +187,7 @@ bool SBInstructionList::GetDescription(Stream &sref, lldb::SBFrame *frame) {
         if (next_addr && *next_addr != addr)
           sref.EOL();
         inst->Dump(&sref, max_opcode_byte_size, true, false,
-                   /*show_control_flow_kind=*/false, exec_ctx.get(), &sc,
+                   /*show_control_flow_kind=*/false, exe_ctx_ptr.get(), &sc,
                    &prev_sc, &format, 0);
         sref.EOL();
         next_addr = addr;
