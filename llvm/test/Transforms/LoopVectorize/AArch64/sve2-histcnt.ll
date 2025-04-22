@@ -755,14 +755,16 @@ for.exit:
 
 ; The histogram operation generates vectors. This example used to crash
 ; due to a missing entry in a switch statement.
-define void @histogram_generates_vectors_crash(ptr %data_array) {
+define void @histogram_generates_vectors_crash(ptr %data_array, ptr noalias %indices) {
 ; CHECK-LABEL: define void @histogram_generates_vectors_crash(
-; CHECK-SAME: ptr [[DATA_ARRAY:%.*]]) {
+; CHECK-SAME: ptr [[DATA_ARRAY:%.*]], ptr noalias [[INDICES:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    store i1 true, ptr poison, align 1
-; CHECK-NEXT:    br i1 poison, label [[FOR_EXIT:%.*]], label [[FOR_BODY]]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[IV]], 1
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_EXIT:%.*]], label [[FOR_BODY]]
 ; CHECK:       for.exit:
 ; CHECK-NEXT:    ret void
 ;
@@ -771,7 +773,7 @@ entry:
 
 for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
-  %gep.indices = getelementptr [1048576 x i32], ptr null, i64 %iv
+  %gep.indices = getelementptr [1048576 x i32], ptr %indices, i64 %iv
   %l.idx = load i32, ptr %gep.indices, align 4
   %idxprom5 = sext i32 %l.idx to i64
   %gep.bucket = getelementptr [1048576 x i32], ptr %data_array, i64 %idxprom5
