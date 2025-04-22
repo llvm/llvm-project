@@ -247,6 +247,19 @@ MACHINE_FUNCTION_PASS_WITH_PARAMS(
     parseMachineSinkingPassOptions, "enable-sink-fold")
 
 MACHINE_FUNCTION_PASS_WITH_PARAMS(
+    "virt-reg-rewriter", "VirtRegRewriterPass",
+    [](bool ClearVirtRegs) { return VirtRegRewriterPass(ClearVirtRegs); },
+    parseVirtRegRewriterPassOptions, "no-clear-vregs;clear-vregs")
+
+#ifndef RA_PASS_WITH_PARAMS
+// Define MachineFunction passes that are register allocators.
+// This is to differentiate them from other MachineFunction passes
+// to be used in the --regalloc-npm option.
+#define RA_PASS_WITH_PARAMS(NAME, CLASS, CREATE_PASS, PARSER, PARAMS)          \
+  MACHINE_FUNCTION_PASS_WITH_PARAMS(NAME, CLASS, CREATE_PASS, PARSER, PARAMS)
+#endif
+
+RA_PASS_WITH_PARAMS(
     "regallocfast", "RegAllocFastPass",
     [](RegAllocFastPass::Options Opts) { return RegAllocFastPass(Opts); },
     [](StringRef Params, const PassBuilder &PB) {
@@ -255,19 +268,15 @@ MACHINE_FUNCTION_PASS_WITH_PARAMS(
     "filter=reg-filter;no-clear-vregs")
 
 // 'all' is the default filter.
-MACHINE_FUNCTION_PASS_WITH_PARAMS(
+RA_PASS_WITH_PARAMS(
     "greedy", "RAGreedyPass",
     [](RAGreedyPass::Options Opts) { return RAGreedyPass(Opts); },
     [](StringRef Params, const PassBuilder &PB) {
       return parseRegAllocGreedyFilterFunc(PB, Params);
-    }, "reg-filter"
-)
+    },
+    "reg-filter")
 
-MACHINE_FUNCTION_PASS_WITH_PARAMS(
-    "virt-reg-rewriter", "VirtRegRewriterPass",
-    [](bool ClearVirtRegs) { return VirtRegRewriterPass(ClearVirtRegs); },
-    parseVirtRegRewriterPassOptions, "no-clear-vregs;clear-vregs")
-
+#undef RA_PASS_WITH_PARAMS
 #undef MACHINE_FUNCTION_PASS_WITH_PARAMS
 
 // After a pass is converted to new pass manager, its entry should be moved from

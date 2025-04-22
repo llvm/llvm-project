@@ -11,7 +11,10 @@
 # attempts to insert an extraneous pass.
 # RUN: not llc -mtriple=x86_64-unknown-linux-gnu -enable-new-pm -O3 -regalloc-npm='default,default,basic' 2>&1 | FileCheck %s --check-prefix=CHECK-ERROR
 
-# RUN: not llc -mtriple=x86_64-unknown-linux-gnu -enable-new-pm -O3 -regalloc-npm='invalidpass' -print-pipeline-passes %s -o - 2>&1 | FileCheck %s --check-prefix=CHECK-INVALID
+# RUN: not llc -mtriple=x86_64-unknown-linux-gnu -enable-new-pm -O3 -regalloc-npm='machine-cp' -print-pipeline-passes %s -o - 2>&1 | FileCheck %s --check-prefix=CHECK-INVALID
+# RUN: not llc -mtriple=x86_64-unknown-linux-gnu -enable-new-pm -passes='machine-sink' -regalloc-npm='greedy' -print-pipeline-passes %s -o - 2>&1 | FileCheck %s --check-prefix=CHECK-BOTH-INVALID
+
+# RUN: not llc -mtriple=x86_64-unknown-linux-gnu -enable-new-pm -O0 -regalloc-npm='greedy' -print-pipeline-passes %s -o - 2>&1 | FileCheck %s --check-prefix=CHECK-ONLY-FAST
 
 # CHECK: greedy<tile-reg>
 # CHECK: greedy<all>
@@ -19,5 +22,7 @@
 # CHECK-FAST: regallocfast
 # CHECK-GREEDY: greedy<all>
 # CHECK-GREEDY-FILTER: greedy<tile-reg>
-# CHECK-ERROR: Extra passes in regalloc pipeline: basic
-# CHECK-INVALID: Unknown register allocator pass: invalidpass
+# CHECK-ERROR: extra passes in regalloc pipeline: basic
+# CHECK-INVALID: unknown register allocator pass: machine-cp
+# CHECK-BOTH-INVALID: --passes and --regalloc-npm cannot be used together
+# CHECK-ONLY-FAST: expected regallocfast in option --regalloc-npm

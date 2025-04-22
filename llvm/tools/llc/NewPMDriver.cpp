@@ -49,9 +49,9 @@
 using namespace llvm;
 
 static cl::opt<std::string>
-    RegAlloc("regalloc-npm",
-             cl::desc("Register allocator to use for new pass manager"),
-             cl::Hidden);
+    RegAllocPasses("regalloc-npm",
+                   cl::desc("Register allocator to use for new pass manager"),
+                   cl::Hidden);
 
 static cl::opt<bool>
     DebugPM("debug-pass-manager", cl::Hidden,
@@ -98,6 +98,11 @@ int llvm::compileModuleWithNewPM(
         << TargetPassConfig::getLimitedCodeGenPipelineReason() << ".\n";
     return 1;
   }
+  if (!PassPipeline.empty() && !RegAllocPasses.empty()) {
+    WithColor::error(errs(), Arg0)
+        << "--passes and --regalloc-npm cannot be used together.\n";
+    return 1;
+  }
 
   raw_pwrite_stream *OS = &Out->os();
 
@@ -105,7 +110,7 @@ int llvm::compileModuleWithNewPM(
   CGPassBuilderOption Opt = getCGPassBuilderOption();
   Opt.DisableVerify = VK != VerifierKind::InputOutput;
   Opt.DebugPM = DebugPM;
-  Opt.RegAllocPipeline = RegAlloc;
+  Opt.RegAllocPipeline = RegAllocPasses;
 
   MachineModuleInfo MMI(Target.get());
 

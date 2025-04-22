@@ -614,7 +614,7 @@ Error CodeGenPassBuilder<Derived, TargetMachineT>::buildPipeline(
 
   if (!Opt.RegAllocPipeline.empty())
     return make_error<StringError>(
-        "Extra passes in regalloc pipeline: " + Opt.RegAllocPipeline,
+        "extra passes in regalloc pipeline: " + Opt.RegAllocPipeline,
         std::make_error_code(std::errc::invalid_argument));
 
   return verifyStartStop(*StartStopInfo);
@@ -1129,8 +1129,7 @@ bool CodeGenPassBuilder<Derived, TargetMachineT>::addRegAllocPassFromOpt(
     StringRef PassOpt;
     std::tie(PassOpt, Opt.RegAllocPipeline) = Opt.RegAllocPipeline.split(',');
     // Reuse the registered parser to parse the pass name.
-#define MACHINE_FUNCTION_PASS_WITH_PARAMS(NAME, CLASS, CREATE_PASS, PARSER,    \
-                                          PARAMS)                              \
+#define RA_PASS_WITH_PARAMS(NAME, CLASS, CREATE_PASS, PARSER, PARAMS)          \
   if (PB.checkParametrizedPassName(PassOpt, NAME)) {                           \
     auto Params = PB.parsePassParameters(PARSER, PassOpt, NAME,                \
                                          const_cast<const PassBuilder &>(PB)); \
@@ -1140,9 +1139,9 @@ bool CodeGenPassBuilder<Derived, TargetMachineT>::addRegAllocPassFromOpt(
     }                                                                          \
     if (!MatchPassTo.empty()) {                                                \
       if (MatchPassTo != CLASS)                                                \
-        report_fatal_error("Expected " +                                       \
+        report_fatal_error("expected " +                                       \
                                PIC->getPassNameForClassName(MatchPassTo) +     \
-                               " in option -regalloc-npm",                     \
+                               " in option --regalloc-npm",                    \
                            false);                                             \
     }                                                                          \
     addPass(CREATE_PASS(Params.get()));                                        \
@@ -1150,7 +1149,7 @@ bool CodeGenPassBuilder<Derived, TargetMachineT>::addRegAllocPassFromOpt(
   }
 #include "llvm/Passes/MachinePassRegistry.def"
     if (PassOpt != "default") {
-      report_fatal_error("Unknown register allocator pass: " + PassOpt, false);
+      report_fatal_error("unknown register allocator pass: " + PassOpt, false);
     }
   }
   // If user did not give a specific pass, use the default provided.
