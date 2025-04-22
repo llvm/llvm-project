@@ -54,7 +54,7 @@ typedef struct {
 #endif
   // TODO: implement sigjmp_buf related functions for other architectures
   // Issue: https://github.com/llvm/llvm-project/issues/136358
-#if defined(__i386__) || defined(__x86_64__)
+#if defined(__i386__) || defined(__x86_64__) || defined(__aarch64__)
   // return address
   void *sig_retaddr;
   // extra register buffer to avoid indefinite stack growth in sigsetjmp
@@ -66,7 +66,7 @@ typedef struct {
 
 typedef __jmp_buf jmp_buf[1];
 
-#if defined(__i386__) || defined(__x86_64__)
+#if defined(__i386__) || defined(__x86_64__) || defined(__aarch64__)
 typedef __jmp_buf sigjmp_buf[1];
 #endif
 #endif // LLVM_LIBC_TYPES_JMP_BUF_H
