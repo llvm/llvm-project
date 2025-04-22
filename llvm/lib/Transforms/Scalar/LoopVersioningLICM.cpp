@@ -164,7 +164,6 @@ private:
   bool legalLoopInstructions();
   bool legalLoopMemoryAccesses();
   bool isLoopAlreadyVisited();
-  void setNoAliasToLoop(Loop *VerLoop);
   bool instructionSafeForVersioning(Instruction *I);
 };
 
@@ -508,44 +507,6 @@ bool LoopVersioningLICM::isLegalForVersioning() {
   return true;
 }
 
-/// Update loop with aggressive aliasing assumptions.
-/// It marks no-alias to any pairs of memory operations by assuming
-/// loop should not have any must-alias memory accesses pairs.
-/// During LoopVersioningLICM legality we ignore loops having must
-/// aliasing memory accesses.
-void LoopVersioningLICM::setNoAliasToLoop(Loop *VerLoop) {
-  // Get latch terminator instruction.
-  Instruction *I = VerLoop->getLoopLatch()->getTerminator();
-  // Create alias scope domain.
-  MDBuilder MDB(I->getContext());
-  MDNode *NewDomain = MDB.createAnonymousAliasScopeDomain("LVDomain");
-  StringRef Name = "LVAliasScope";
-  MDNode *NewScope = MDB.createAnonymousAliasScope(NewDomain, Name);
-  SmallVector<Metadata *, 4> Scopes{NewScope}, NoAliases{NewScope};
-  auto &Pointers = LAI->getRuntimePointerChecking()->Pointers;
-
-  // Iterate over each instruction of loop.
-  // set no-alias for all load & store instructions.
-  for (auto *Block : CurLoop->getBlocks()) {
-    for (auto &Inst : *Block) {
-      // We can only add noalias to pointers that we've inserted checks for
-      Value *V = getLoadStorePointerOperand(&Inst);
-      if (!V || !any_of(Pointers, [&](auto &P) { return P.PointerValue == V; }))
-        continue;
-      // Set no-alias for current instruction.
-      Inst.setMetadata(
-          LLVMContext::MD_noalias,
-          MDNode::concatenate(Inst.getMetadata(LLVMContext::MD_noalias),
-                              MDNode::get(Inst.getContext(), NoAliases)));
-      // set alias-scope for current instruction.
-      Inst.setMetadata(
-          LLVMContext::MD_alias_scope,
-          MDNode::concatenate(Inst.getMetadata(LLVMContext::MD_alias_scope),
-                              MDNode::get(Inst.getContext(), Scopes)));
-    }
-  }
-}
-
 bool LoopVersioningLICM::run(DominatorTree *DT) {
   // Do not do the transformation if disabled by metadata.
   if (hasLICMVersioningTransformation(CurLoop) & TM_Disable)
@@ -573,7 +534,7 @@ bool LoopVersioningLICM::run(DominatorTree *DT) {
     addStringMetadataToLoop(LVer.getVersionedLoop(),
                             "llvm.mem.parallel_loop_access");
     // Update version loop with aggressive aliasing assumption.
-    setNoAliasToLoop(LVer.getVersionedLoop());
+    LVer.annotateLoopWithNoAlias();
     Changed = true;
   }
   return Changed;
