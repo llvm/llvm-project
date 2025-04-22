@@ -32,7 +32,7 @@ func.func @single_loop_unrolling_2D_access_pattern_storeOp(%arg0: index) -> memr
 // CHECK: #[[$ATTR_0:.+]] = affine_map<(d0)[s0] -> (d0 floordiv s0)>
 // CHECK: #[[$ATTR_1:.+]] = affine_map<(d0)[s0] -> (d0 mod s0)>
 
-// CHECK-LABEL:   func.func @single_loop_unrolling_2D_access_pattern(
+// CHECK-LABEL:   func.func @single_loop_unrolling_2D_access_pattern_storeOp(
 // CHECK-SAME:      %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: index) -> memref<2x2xf32> {
 // CHECK:           %[[VAL_1:.*]] = arith.constant 2 : index
 // CHECK:           %[[VAL_2:.*]] = arith.constant 1.000000e+00 : f32
@@ -66,7 +66,7 @@ func.func @single_loop_unrolling_2D_access_pattern_loadOp(%arg0: index) -> memre
 // CHECK: #[[$ATTR_0:.+]] = affine_map<(d0)[s0] -> (d0 floordiv s0)>
 // CHECK: #[[$ATTR_1:.+]] = affine_map<(d0)[s0] -> (d0 mod s0)>
 
-// CHECK-LABEL:   func.func @single_loop_unrolling_2D_access_pattern(
+// CHECK-LABEL:   func.func @single_loop_unrolling_2D_access_pattern_loadOp(
 // CHECK-SAME:      %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: index) -> memref<2x2xf32> {
 // CHECK:           %[[VAL_1:.*]] = arith.constant 2 : index
 // CHECK:           %[[VAL_2:.*]] = memref.alloc() : memref<2x2xf32>
