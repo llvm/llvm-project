@@ -13,11 +13,9 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-extern "C" bool __llvm_libc_localtime_utc(struct timespec *ts);
-
-LLVM_LIBC_FUNCTION(int, localtime, (struct timespec * ts, int base)) {
-  (void)ts;
-  return base;
+LLVM_LIBC_FUNCTION(time_t, localtime, (time_t *time)) {
+  (void)time;
+  return NULL;
 }
 
 } // namespace LIBC_NAMESPACE_DECL
