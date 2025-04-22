@@ -1927,7 +1927,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     // smax(smin(X, MinC), MaxC) -> smin(smax(X, MaxC), MinC) if MinC s>= MaxC
     // umax(umin(X, MinC), MaxC) -> umin(umax(X, MaxC), MinC) if MinC u>= MaxC
     const APInt *MinC, *MaxC;
-    auto CreateTransposedMaxMin = [&](bool IsSigned) {
+    auto CreateCanonicalClampForm = [&](bool IsSigned) {
       auto MaxIID = IsSigned ? Intrinsic::smax : Intrinsic::umax;
       auto MinIID = IsSigned ? Intrinsic::smin : Intrinsic::umin;
       Value *NewMax = Builder.CreateBinaryIntrinsic(
@@ -1940,12 +1940,12 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         match(I0, m_OneUse(m_Intrinsic<Intrinsic::smin>(m_Value(X),
                                                         m_APInt(MinC)))) &&
         match(I1, m_APInt(MaxC)) && MinC->sgt(*MaxC))
-      return CreateTransposedMaxMin(true);
+      return CreateCanonicalClampForm(true);
     if (IID == Intrinsic::umax &&
         match(I0, m_OneUse(m_Intrinsic<Intrinsic::umin>(m_Value(X),
                                                         m_APInt(MinC)))) &&
         match(I1, m_APInt(MaxC)) && MinC->ugt(*MaxC))
-      return CreateTransposedMaxMin(false);
+      return CreateCanonicalClampForm(false);
 
     // umin(i1 X, i1 Y) -> and i1 X, Y
     // smax(i1 X, i1 Y) -> and i1 X, Y
