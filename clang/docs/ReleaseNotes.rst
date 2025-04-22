@@ -301,6 +301,9 @@ related warnings within the method body.
   particularly relevant for AMDGPU targets, where they map to corresponding IR
   metadata.
 
+- Clang now disallows the use of attributes applied before an
+  ``extern template`` declaration (#GH79893).
+
 Improvements to Clang's diagnostics
 -----------------------------------
 
@@ -397,6 +400,8 @@ Improvements to Clang's diagnostics
 
 - Analysis-based diagnostics (like ``-Wconsumed`` or ``-Wunreachable-code``)
   can now be correctly controlled by ``#pragma clang diagnostic``. #GH42199
+
+- Improved Clang's error recovery for invalid function calls.
 
 - Improved bit-field diagnostics to consider the type specified by the
   ``preferred_type`` attribute. These diagnostics are controlled by the flags

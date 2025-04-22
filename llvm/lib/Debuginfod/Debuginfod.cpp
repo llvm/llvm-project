@@ -188,6 +188,11 @@ class StreamedHTTPResponseHandler : public HTTPResponseHandler {
 public:
   StreamedHTTPResponseHandler(CreateStreamFn CreateStream, HTTPClient &Client)
       : CreateStream(CreateStream), Client(Client) {}
+
+  /// Must be called exactly once after the writes have been completed
+  /// but before the StreamedHTTPResponseHandler object is destroyed.
+  Error commit();
+
   virtual ~StreamedHTTPResponseHandler() = default;
 
   Error handleBodyChunk(StringRef BodyChunk) override;
@@ -207,6 +212,12 @@ Error StreamedHTTPResponseHandler::handleBodyChunk(StringRef BodyChunk) {
     FileStream = std::move(*FileStreamOrError);
   }
   *FileStream->OS << BodyChunk;
+  return Error::success();
+}
+
+Error StreamedHTTPResponseHandler::commit() {
+  if (FileStream)
+    return FileStream->commit();
   return Error::success();
 }
 
@@ -297,6 +308,8 @@ Expected<std::string> getCachedOrDownloadArtifact(
       Request.Headers = getHeaders();
       Error Err = Client.perform(Request, Handler);
       if (Err)
+        return std::move(Err);
+      if ((Err = Handler.commit()))
         return std::move(Err);
 
       unsigned Code = Client.responseCode();
