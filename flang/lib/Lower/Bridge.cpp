@@ -3097,7 +3097,7 @@ private:
 
     llvm::SmallVector<mlir::Value> gridValues;
     llvm::SmallVector<mlir::Value> blockValues;
-    mlir::Value streamAddr;
+    mlir::Value streamValue;
 
     if (launchConfig) {
       const std::list<Fortran::parser::CUFKernelDoConstruct::StarOrExpr> &grid =
@@ -3130,8 +3130,10 @@ private:
       }
 
       if (stream)
-        streamAddr = fir::getBase(
-            genExprAddr(*Fortran::semantics::GetExpr(*stream), stmtCtx));
+        streamValue = builder->createConvert(
+            loc, builder->getI32Type(),
+            fir::getBase(
+                genExprValue(*Fortran::semantics::GetExpr(*stream), stmtCtx)));
     }
 
     const auto &outerDoConstruct =
@@ -3265,7 +3267,7 @@ private:
     }
 
     auto op = builder->create<cuf::KernelOp>(
-        loc, gridValues, blockValues, streamAddr, lbs, ubs, steps, n,
+        loc, gridValues, blockValues, streamValue, lbs, ubs, steps, n,
         mlir::ValueRange(reduceOperands), builder->getArrayAttr(reduceAttrs));
     builder->createBlock(&op.getRegion(), op.getRegion().end(), ivTypes,
                          ivLocs);

@@ -271,7 +271,7 @@ llvm::LogicalResult cuf::KernelOp::verify() {
         return emitOpError("expect reduce attributes to be ReduceAttr");
     }
   }
-  return checkStreamType(*this);
+  return mlir::success();
 }
 
 //===----------------------------------------------------------------------===//
