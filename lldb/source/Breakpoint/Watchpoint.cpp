@@ -409,6 +409,15 @@ bool Watchpoint::IsDisabledDuringEphemeralMode() {
 }
 
 void Watchpoint::SetEnabled(bool enabled, bool notify) {
+  // Whenever setting the enabled state of a watchpoint, we need to ensure
+  // that `m_new_value_sp` exists to avoid crash when reading old_data later.
+  // See https://github.com/llvm/llvm-project/issues/135590.
+  if (!m_new_value_sp) {
+    ExecutionContext exe_ctx;
+    m_target.GetProcessSP()->CalculateExecutionContext(exe_ctx);
+    CaptureWatchedValue(exe_ctx);
+  }
+
   if (!enabled) {
     if (m_is_ephemeral)
       ++m_disabled_count;
