@@ -4395,8 +4395,6 @@ enum class TypeClass { VECTOR_OF_TWO, SCALAR, NONE_OF_LISTED };
 
 static TypeClass isVectorOfTwoOrScalar(const MachineOperand *Op,
                                        const MachineRegisterInfo &MRI) {
-  if (!Op->isReg() || Op->getReg().isPhysical())
-    return TypeClass::NONE_OF_LISTED;
   LLT OpTy = MRI.getType(Op->getReg());
   if (OpTy.isScalar())
     return TypeClass::SCALAR;
@@ -4420,7 +4418,8 @@ static SrcStatus getNegStatus(const MachineOperand *Op, SrcStatus S,
       // [CurrHi, CurrLo] = [-OpHi, -OpLo](2 x Type)
       // [SrcHi, SrcLo]   = [-OpHi, -OpLo]
       return SrcStatus::IS_BOTH_NEG;
-    } else if (NegType == TypeClass::SCALAR) {
+    }
+    if (NegType == TypeClass::SCALAR) {
       // Scalar:
       // [SrcHi, SrcLo]   = [CurrHi, CurrLo]
       // [CurrHi, CurrLo] = neg [OpHi, OpLo](Type)
@@ -4437,7 +4436,8 @@ static SrcStatus getNegStatus(const MachineOperand *Op, SrcStatus S,
       // [CurrHi, CurrLo] = [-OpHi, -OpLo](2 x Type)
       // [SrcHi, SrcLo]   = [-(-OpHi), -OpLo] = [OpHi, -OpLo]
       return SrcStatus::IS_LO_NEG;
-    } else if (NegType == TypeClass::SCALAR) {
+    }
+    if (NegType == TypeClass::SCALAR) {
       // Scalar:
       // [SrcHi, SrcLo]   = [-CurrHi, CurrLo]
       // [CurrHi, CurrLo] = neg [OpHi, OpLo](Type)
@@ -4454,7 +4454,8 @@ static SrcStatus getNegStatus(const MachineOperand *Op, SrcStatus S,
       // [CurrHi, CurrLo] = [-OpHi, -OpLo](2 x Type)
       // [SrcHi, SrcLo]   = [-OpHi, -(-OpLo)] = [-OpHi, OpLo]
       return SrcStatus::IS_HI_NEG;
-    } else if (NegType == TypeClass::SCALAR) {
+    }
+    if (NegType == TypeClass::SCALAR) {
       // Scalar:
       // [SrcHi, SrcLo]   = [CurrHi, -CurrLo]
       // [CurrHi, CurrLo] = fneg [OpHi, OpLo](Type)
@@ -4471,7 +4472,8 @@ static SrcStatus getNegStatus(const MachineOperand *Op, SrcStatus S,
       // [CurrHi, CurrLo] = [-OpHi, -OpLo](2 x Type)
       // [SrcHi, SrcLo]   = [OpHi, OpLo]
       return SrcStatus::IS_SAME;
-    } else if (NegType == TypeClass::SCALAR) {
+    }
+    if (NegType == TypeClass::SCALAR) {
       // Scalar:
       // [SrcHi, SrcLo]   = [-CurrHi, -CurrLo]
       // [CurrHi, CurrLo] = fneg [OpHi, OpLo](Type)
@@ -4504,7 +4506,8 @@ static SrcStatus getNegStatus(const MachineOperand *Op, SrcStatus S,
       // [CurrUpper, CurrLower] = [-OpUpper, -OpLower](2 x Type)
       // Src = -OpLower
       return SrcStatus::IS_LOWER_HALF_NEG;
-    } else if (NegType == TypeClass::SCALAR) {
+    }
+    if (NegType == TypeClass::SCALAR) {
       // Scalar:
       // Src = CurrLower
       // Curr = [CurrUpper, CurrLower]
@@ -4538,7 +4541,8 @@ static SrcStatus getNegStatus(const MachineOperand *Op, SrcStatus S,
       // [CurrUpper, CurrLower] = [-OpUpper, -OpLower](2 x Type)
       // Src = -(-OpLower) = OpLower
       return SrcStatus::IS_LOWER_HALF;
-    } else if (NegType == TypeClass::SCALAR) {
+    }
+    if (NegType == TypeClass::SCALAR) {
       // Scalar:
       // Src = -CurrLower
       // Curr = [CurrUpper, CurrLower]
@@ -4567,9 +4571,10 @@ calcNextStatus(std::pair<const MachineOperand *, SrcStatus> Curr,
 
   // Handle general Opc cases.
   switch (Opc) {
-  case AMDGPU::G_BITCAST:
   case AMDGPU::G_CONSTANT:
   case AMDGPU::G_FCONSTANT:
+    return retOpStat(&MI->getOperand(1), Curr.second, Curr);
+  case AMDGPU::G_BITCAST:
   case AMDGPU::COPY:
     return retOpStat(&MI->getOperand(1), Curr.second, Curr);
   case AMDGPU::G_FNEG:
