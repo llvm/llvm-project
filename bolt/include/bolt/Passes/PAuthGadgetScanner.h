@@ -286,7 +286,7 @@ class LeakageInfo : public ExtraInfo {
   SmallVector<MCInstReference> LeakingInstrs;
 
 public:
-  LeakageInfo(const ArrayRef<MCInstReference> Instrs) : LeakingInstrs(Instrs) {}
+  LeakageInfo(ArrayRef<MCInstReference> Instrs) : LeakingInstrs(Instrs) {}
 
   void print(raw_ostream &OS, const MCInstReference Location) const override;
 };

@@ -823,8 +823,7 @@ void DstStatePrinter::print(raw_ostream &OS, const DstState &S) const {
 /// version for functions without reconstructed CFG.
 class DstSafetyAnalysis {
 public:
-  DstSafetyAnalysis(BinaryFunction &BF,
-                    const ArrayRef<MCPhysReg> RegsToTrackInstsFor)
+  DstSafetyAnalysis(BinaryFunction &BF, ArrayRef<MCPhysReg> RegsToTrackInstsFor)
       : BC(BF.getBinaryContext()), NumRegs(BC.MRI->getNumRegs()),
         RegsToTrackInstsFor(RegsToTrackInstsFor) {}
 
@@ -832,7 +831,7 @@ public:
 
   static std::shared_ptr<DstSafetyAnalysis>
   create(BinaryFunction &BF, MCPlusBuilder::AllocatorIdTy AllocId,
-         const ArrayRef<MCPhysReg> RegsToTrackInstsFor);
+         ArrayRef<MCPhysReg> RegsToTrackInstsFor);
 
   virtual void run() = 0;
   virtual const DstState &getStateAfter(const MCInst &Inst) const = 0;
@@ -1035,7 +1034,7 @@ class DataflowDstSafetyAnalysis
 public:
   DataflowDstSafetyAnalysis(BinaryFunction &BF,
                             MCPlusBuilder::AllocatorIdTy AllocId,
-                            const ArrayRef<MCPhysReg> RegsToTrackInstsFor)
+                            ArrayRef<MCPhysReg> RegsToTrackInstsFor)
       : DstSafetyAnalysis(BF, RegsToTrackInstsFor), DFParent(BF, AllocId) {}
 
   const DstState &getStateAfter(const MCInst &Inst) const override {
@@ -1119,7 +1118,7 @@ class CFGUnawareDstSafetyAnalysis : public DstSafetyAnalysis {
 public:
   CFGUnawareDstSafetyAnalysis(BinaryFunction &BF,
                               MCPlusBuilder::AllocatorIdTy AllocId,
-                              const ArrayRef<MCPhysReg> RegsToTrackInstsFor)
+                              ArrayRef<MCPhysReg> RegsToTrackInstsFor)
       : DstSafetyAnalysis(BF, RegsToTrackInstsFor), BF(BF), AllocId(AllocId) {
     StateAnnotationIndex =
         BC.MIB->getOrCreateAnnotationIndex("CFGUnawareDstSafetyAnalysis");
@@ -1162,7 +1161,7 @@ public:
 std::shared_ptr<DstSafetyAnalysis>
 DstSafetyAnalysis::create(BinaryFunction &BF,
                           MCPlusBuilder::AllocatorIdTy AllocId,
-                          const ArrayRef<MCPhysReg> RegsToTrackInstsFor) {
+                          ArrayRef<MCPhysReg> RegsToTrackInstsFor) {
   if (BF.hasCFG())
     return std::make_shared<DataflowDstSafetyAnalysis>(BF, AllocId,
                                                        RegsToTrackInstsFor);
