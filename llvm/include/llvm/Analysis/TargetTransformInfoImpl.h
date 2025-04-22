@@ -1170,7 +1170,7 @@ public:
 
   InstructionCost getGEPCost(Type *PointeeType, const Value *Ptr,
                              ArrayRef<const Value *> Operands, Type *AccessType,
-                             TTI::TargetCostKind CostKind) {
+                             TTI::TargetCostKind CostKind) const {
     assert(PointeeType && Ptr && "can't get GEPCost of nullptr");
     auto *BaseGV = dyn_cast<GlobalValue>(Ptr->stripPointerCasts());
     bool HasBaseReg = (BaseGV == nullptr);
@@ -1234,7 +1234,7 @@ public:
 
     // If the final address of the GEP is a legal addressing mode for the given
     // access type, then we can fold it into its users.
-    if (static_cast<T *>(this)->isLegalAddressingMode(
+    if (static_cast<const T *>(this)->isLegalAddressingMode(
             AccessType, const_cast<GlobalValue *>(BaseGV),
             BaseOffset.sextOrTrunc(64).getSExtValue(), HasBaseReg, Scale,
             Ptr->getType()->getPointerAddressSpace()))
