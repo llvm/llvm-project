@@ -9,8 +9,9 @@
 // This file implements the linalg dialect Fusion on tensors operations pass.
 //
 //===----------------------------------------------------------------------===//
+
 #include "mlir/Dialect/Linalg/Passes.h"
-#include <iostream>
+
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
@@ -21,7 +22,6 @@
 #include "mlir/Dialect/Tensor/Transforms/Transforms.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
-#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Support/LLVM.h"
