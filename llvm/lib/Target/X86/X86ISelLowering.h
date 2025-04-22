@@ -1346,6 +1346,9 @@ namespace llvm {
         Op = Op.getOperand(Op.getOpcode() == ISD::INSERT_SUBVECTOR ? 1 : 0);
 
       return Op.getOpcode() == X86ISD::VBROADCAST_LOAD ||
+             Op.getOpcode() == X86ISD::SUBV_BROADCAST_LOAD ||
+             (Op.getOpcode() == ISD::LOAD &&
+              getTargetConstantFromLoad(cast<LoadSDNode>(Op))) ||
              TargetLowering::isTargetCanonicalConstantNode(Op);
     }
 
@@ -1501,8 +1504,9 @@ namespace llvm {
 
     /// Return true if we believe it is correct and profitable to reduce the
     /// load node to a smaller type.
-    bool shouldReduceLoadWidth(SDNode *Load, ISD::LoadExtType ExtTy,
-                               EVT NewVT) const override;
+    bool
+    shouldReduceLoadWidth(SDNode *Load, ISD::LoadExtType ExtTy, EVT NewVT,
+                          std::optional<unsigned> ByteOffset) const override;
 
     /// Return true if the specified scalar FP type is computed in an SSE
     /// register, not on the X87 floating point stack.

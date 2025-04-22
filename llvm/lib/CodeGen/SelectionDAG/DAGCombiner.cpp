@@ -6690,7 +6690,7 @@ bool DAGCombiner::isAndLoadExtLoad(ConstantSDNode *AndC, LoadSDNode *LoadN,
       !TLI.isLoadExtLegal(ISD::ZEXTLOAD, LoadResultTy, ExtVT))
     return false;
 
-  if (!TLI.shouldReduceLoadWidth(LoadN, ISD::ZEXTLOAD, ExtVT))
+  if (!TLI.shouldReduceLoadWidth(LoadN, ISD::ZEXTLOAD, ExtVT, /*ByteOffset=*/0))
     return false;
 
   return true;
@@ -6701,9 +6701,11 @@ bool DAGCombiner::isLegalNarrowLdSt(LSBaseSDNode *LDST,
                                     unsigned ShAmt) {
   if (!LDST)
     return false;
+
   // Only allow byte offsets.
   if (ShAmt % 8)
     return false;
+  const unsigned ByteShAmt = ShAmt / 8;
 
   // Do not generate loads of non-round integer types since these can
   // be expensive (and would be wrong if the type is not byte sized).
@@ -6727,8 +6729,6 @@ bool DAGCombiner::isLegalNarrowLdSt(LSBaseSDNode *LDST,
 
   // Ensure that this isn't going to produce an unsupported memory access.
   if (ShAmt) {
-    assert(ShAmt % 8 == 0 && "ShAmt is byte offset");
-    const unsigned ByteShAmt = ShAmt / 8;
     const Align LDSTAlign = LDST->getAlign();
     const Align NarrowAlign = commonAlignment(LDSTAlign, ByteShAmt);
     if (!TLI.allowsMemoryAccess(*DAG.getContext(), DAG.getDataLayout(), MemVT,
@@ -6768,7 +6768,7 @@ bool DAGCombiner::isLegalNarrowLdSt(LSBaseSDNode *LDST,
         Load->getMemoryVT().getSizeInBits() < MemVT.getSizeInBits() + ShAmt)
       return false;
 
-    if (!TLI.shouldReduceLoadWidth(Load, ExtType, MemVT))
+    if (!TLI.shouldReduceLoadWidth(Load, ExtType, MemVT, ByteShAmt))
       return false;
   } else {
     assert(isa<StoreSDNode>(LDST) && "It is not a Load nor a Store SDNode");
@@ -25268,7 +25268,8 @@ static SDValue narrowExtractedVectorLoad(SDNode *Extract, SelectionDAG &DAG) {
   TypeSize Offset = VT.getStoreSize() * (Index / NumElts);
 
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-  if (!TLI.shouldReduceLoadWidth(Ld, Ld->getExtensionType(), VT))
+  if (!TLI.shouldReduceLoadWidth(Ld, Ld->getExtensionType(), VT,
+                                 /*ByteOffset=*/Offset.getFixedValue()))
     return SDValue();
 
   // The narrow load will be offset from the base address of the old load if

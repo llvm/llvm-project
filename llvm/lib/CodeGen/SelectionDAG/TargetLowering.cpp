@@ -4726,8 +4726,6 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
         // for the narrowed load.
         for (unsigned width = 8; width < origWidth; width *= 2) {
           EVT newVT = EVT::getIntegerVT(*DAG.getContext(), width);
-          if (!shouldReduceLoadWidth(Lod, ISD::NON_EXTLOAD, newVT))
-            continue;
           APInt newMask = APInt::getLowBitsSet(maskWidth, width);
           // Avoid accessing any padding here for now (we could use memWidth
           // instead of origWidth here otherwise).
@@ -4737,8 +4735,11 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
               unsigned ptrOffset =
                   Layout.isLittleEndian() ? offset : memWidth - width - offset;
               unsigned IsFast = 0;
+              assert((ptrOffset % 8) == 0 && "Non-Bytealigned pointer offset");
               Align NewAlign = commonAlignment(Lod->getAlign(), ptrOffset / 8);
-              if (allowsMemoryAccess(
+              if (shouldReduceLoadWidth(Lod, ISD::NON_EXTLOAD, newVT,
+                                        ptrOffset / 8) &&
+                  allowsMemoryAccess(
                       *DAG.getContext(), Layout, newVT, Lod->getAddressSpace(),
                       NewAlign, Lod->getMemOperand()->getFlags(), &IsFast) &&
                   IsFast) {
@@ -12175,23 +12176,26 @@ SDValue TargetLowering::scalarizeExtractedVectorLoad(EVT ResultVT,
 
   ISD::LoadExtType ExtTy =
       ResultVT.bitsGT(VecEltVT) ? ISD::EXTLOAD : ISD::NON_EXTLOAD;
-  if (!isOperationLegalOrCustom(ISD::LOAD, VecEltVT) ||
-      !shouldReduceLoadWidth(OriginalLoad, ExtTy, VecEltVT))
+  if (!isOperationLegalOrCustom(ISD::LOAD, VecEltVT))
     return SDValue();
 
+  std::optional<unsigned> ByteOffset;
   Align Alignment = OriginalLoad->getAlign();
   MachinePointerInfo MPI;
   if (auto *ConstEltNo = dyn_cast<ConstantSDNode>(EltNo)) {
     int Elt = ConstEltNo->getZExtValue();
-    unsigned PtrOff = VecEltVT.getSizeInBits() * Elt / 8;
-    MPI = OriginalLoad->getPointerInfo().getWithOffset(PtrOff);
-    Alignment = commonAlignment(Alignment, PtrOff);
+    ByteOffset = VecEltVT.getSizeInBits() * Elt / 8;
+    MPI = OriginalLoad->getPointerInfo().getWithOffset(*ByteOffset);
+    Alignment = commonAlignment(Alignment, *ByteOffset);
   } else {
     // Discard the pointer info except the address space because the memory
     // operand can't represent this new access since the offset is variable.
     MPI = MachinePointerInfo(OriginalLoad->getPointerInfo().getAddrSpace());
     Alignment = commonAlignment(Alignment, VecEltVT.getSizeInBits() / 8);
   }
+
+  if (!shouldReduceLoadWidth(OriginalLoad, ExtTy, VecEltVT, ByteOffset))
+    return SDValue();
 
   unsigned IsFast = 0;
   if (!allowsMemoryAccess(*DAG.getContext(), DAG.getDataLayout(), VecEltVT,
