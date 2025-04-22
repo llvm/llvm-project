@@ -107,22 +107,27 @@ CXString createCXString(CXStringBuf *buf) {
   return Str;
 }
 
-template <typename StringTy>
-static CXStringSet *createSetImpl(const std::vector<StringTy> &Strings) {
+template <typename StringTy, bool Copy>
+static CXStringSet *createSetImpl(ArrayRef<StringTy> Strings) {
   CXStringSet *Set = new CXStringSet;
   Set->Count = Strings.size();
   Set->Strings = new CXString[Set->Count];
-  for (unsigned SI = 0, SE = Set->Count; SI < SE; ++SI)
-    Set->Strings[SI] = createDup(Strings[SI]);
+  for (unsigned SI = 0, SE = Set->Count; SI < SE; ++SI) {
+    if constexpr (Copy) {
+      Set->Strings[SI] = createDup(Strings[SI]);
+    } else {
+      Set->Strings[SI] = createRef(Strings[SI]);
+    }
+  }
   return Set;
 }
 
 CXStringSet *createSet(const std::vector<std::string> &Strings) {
-  return createSetImpl(Strings);
+  return createSetImpl<std::string, true>(ArrayRef<std::string>(Strings));
 }
 
-CXStringSet *createSet(const std::vector<StringRef> &Strings) {
-  return createSetImpl(Strings);
+CXStringSet *createRefSet(ArrayRef<StringRef> Strings) {
+  return createSetImpl<StringRef, false>(Strings);
 }
 
 //===----------------------------------------------------------------------===//
