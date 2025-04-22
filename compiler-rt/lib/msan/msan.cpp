@@ -358,7 +358,7 @@ using namespace __msan;
     Printf("\n");                                                       \
   }
 
-#define CANNOT_PRINT_FAULTING_INSTRUCTION                               \
+#define WARN_IF_PRINT_FAULTING_INSTRUCTION_REQUESTED                    \
   if (__msan::flags()->print_faulting_instruction) {                    \
     Printf(                                                             \
         "Error: print_faulting_instruction requested but code was not " \
@@ -421,7 +421,7 @@ MSAN_MAYBE_STORE_ORIGIN(u32, 4)
 MSAN_MAYBE_STORE_ORIGIN(u64, 8)
 
 void __msan_warning() {
-  CANNOT_PRINT_FAULTING_INSTRUCTION;
+  WARN_IF_PRINT_FAULTING_INSTRUCTION_REQUESTED;
   GET_CALLER_PC_BP;
   PrintWarningWithOrigin(pc, bp, 0);
   if (__msan::flags()->halt_on_error) {
@@ -433,7 +433,7 @@ void __msan_warning() {
 }
 
 void __msan_warning_noreturn() {
-  CANNOT_PRINT_FAULTING_INSTRUCTION;
+  WARN_IF_PRINT_FAULTING_INSTRUCTION_REQUESTED;
   GET_CALLER_PC_BP;
   PrintWarningWithOrigin(pc, bp, 0);
   if (__msan::flags()->print_stats)
@@ -443,7 +443,7 @@ void __msan_warning_noreturn() {
 }
 
 void __msan_warning_with_origin(u32 origin) {
-  CANNOT_PRINT_FAULTING_INSTRUCTION;
+  WARN_IF_PRINT_FAULTING_INSTRUCTION_REQUESTED;
   GET_CALLER_PC_BP;
   PrintWarningWithOrigin(pc, bp, origin);
   if (__msan::flags()->halt_on_error) {
@@ -455,7 +455,7 @@ void __msan_warning_with_origin(u32 origin) {
 }
 
 void __msan_warning_with_origin_noreturn(u32 origin) {
-  CANNOT_PRINT_FAULTING_INSTRUCTION;
+  WARN_IF_PRINT_FAULTING_INSTRUCTION_REQUESTED;
   GET_CALLER_PC_BP;
   PrintWarningWithOrigin(pc, bp, origin);
   if (__msan::flags()->print_stats)
