@@ -867,9 +867,8 @@ void CombinerHelper::applyCombineExtendingLoads(
 
   // Rewrite all the uses to fix up the types.
   auto &LoadValue = MI.getOperand(0);
-  SmallVector<MachineOperand *, 4> Uses;
-  for (auto &UseMO : MRI.use_operands(LoadValue.getReg()))
-    Uses.push_back(&UseMO);
+  SmallVector<MachineOperand *, 4> Uses(
+      llvm::make_pointer_range(MRI.use_operands(LoadValue.getReg())));
 
   for (auto *UseMO : Uses) {
     MachineInstr *UseMI = UseMO->getParent();

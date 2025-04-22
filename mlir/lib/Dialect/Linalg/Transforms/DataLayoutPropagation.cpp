@@ -676,11 +676,8 @@ bubbleUpPackOpThroughCollapseShape(tensor::CollapseShapeOp collapseOp,
   // new permutation after bubbling. This is because moving a collapsed dim is
   // equivalent to moving the associated source dims together.
   SmallVector<int64_t> newOuterDimsPerm;
-  for (auto outerPos : outerDimsPerm) {
-    newOuterDimsPerm.insert(newOuterDimsPerm.end(),
-                            reassocIndices[outerPos].begin(),
-                            reassocIndices[outerPos].end());
-  }
+  for (auto outerPos : outerDimsPerm)
+    llvm::append_range(newOuterDimsPerm, reassocIndices[outerPos]);
 
   auto emptyOp = linalg::PackOp::createDestinationTensor(
       rewriter, packOp.getLoc(), collapseOp.getSrc(), packOp.getMixedTiles(),
@@ -925,11 +922,8 @@ static LogicalResult pushDownUnPackOpThroughExpandShape(
   // new permutation after pushing. This is because moving a source dim is
   // equivalent to moving the associated expanded dims together.
   SmallVector<int64_t> newOuterDimsPerm;
-  for (auto outerPos : outerDimsPerm) {
-    newOuterDimsPerm.insert(newOuterDimsPerm.end(),
-                            reassocIndices[outerPos].begin(),
-                            reassocIndices[outerPos].end());
-  }
+  for (auto outerPos : outerDimsPerm)
+    llvm::append_range(newOuterDimsPerm, reassocIndices[outerPos]);
 
   SmallVector<ReassociationIndices> newReassocIndices = reassocIndices;
   // First apply the permutation on the reassociations of the outer dims.

@@ -3098,7 +3098,7 @@ private:
 
     llvm::SmallVector<mlir::Value> gridValues;
     llvm::SmallVector<mlir::Value> blockValues;
-    mlir::Value streamValue;
+    mlir::Value streamAddr;
 
     if (launchConfig) {
       const std::list<Fortran::parser::CUFKernelDoConstruct::StarOrExpr> &grid =
@@ -3131,10 +3131,8 @@ private:
       }
 
       if (stream)
-        streamValue = builder->createConvert(
-            loc, builder->getI32Type(),
-            fir::getBase(
-                genExprValue(*Fortran::semantics::GetExpr(*stream), stmtCtx)));
+        streamAddr = fir::getBase(
+            genExprAddr(*Fortran::semantics::GetExpr(*stream), stmtCtx));
     }
 
     const auto &outerDoConstruct =
@@ -3268,7 +3266,7 @@ private:
     }
 
     auto op = builder->create<cuf::KernelOp>(
-        loc, gridValues, blockValues, streamValue, lbs, ubs, steps, n,
+        loc, gridValues, blockValues, streamAddr, lbs, ubs, steps, n,
         mlir::ValueRange(reduceOperands), builder->getArrayAttr(reduceAttrs));
     builder->createBlock(&op.getRegion(), op.getRegion().end(), ivTypes,
                          ivLocs);
@@ -5512,7 +5510,10 @@ private:
     for (const Fortran::lower::CalleeInterface::PassedEntity &arg :
          callee.getPassedArguments())
       mapPassedEntity(arg);
-    if (lowerToHighLevelFIR() && !callee.getPassedArguments().empty()) {
+
+    // Always generate fir.dummy_scope even if there are no arguments.
+    // It is currently used to create proper TBAA forest.
+    if (lowerToHighLevelFIR()) {
       mlir::Value scopeOp = builder->create<fir::DummyScopeOp>(toLocation());
       setDummyArgsScope(scopeOp);
     }

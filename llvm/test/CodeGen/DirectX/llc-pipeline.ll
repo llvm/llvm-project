@@ -15,6 +15,7 @@
 ; CHECK-NEXT: ModulePass Manager
 ; CHECK-NEXT:   DXIL Finalize Linkage
 ; CHECK-NEXT:   DXIL Intrinsic Expansion
+; CHECK-NEXT:   DXIL CBuffer Access
 ; CHECK-NEXT:   DXIL Data Scalarization
 ; CHECK-NEXT:   DXIL Array Flattener
 ; CHECK-NEXT:   FunctionPass Manager
