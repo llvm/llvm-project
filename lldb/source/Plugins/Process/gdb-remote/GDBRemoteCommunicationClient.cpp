@@ -41,7 +41,7 @@
 #include "llvm/Config/llvm-config.h" // for LLVM_ENABLE_ZLIB
 #include "llvm/Support/JSON.h"
 
-#if defined(HAVE_LIBCOMPRESSION)
+#if HAVE_LIBCOMPRESSION
 #include <compression.h>
 #endif
 
@@ -1104,7 +1104,7 @@ void GDBRemoteCommunicationClient::MaybeEnableCompression(
   CompressionType avail_type = CompressionType::None;
   llvm::StringRef avail_name;
 
-#if defined(HAVE_LIBCOMPRESSION)
+#if HAVE_LIBCOMPRESSION
   if (avail_type == CompressionType::None) {
     for (auto compression : supported_compressions) {
       if (compression == "lzfse") {
@@ -1114,9 +1114,6 @@ void GDBRemoteCommunicationClient::MaybeEnableCompression(
       }
     }
   }
-#endif
-
-#if defined(HAVE_LIBCOMPRESSION)
   if (avail_type == CompressionType::None) {
     for (auto compression : supported_compressions) {
       if (compression == "zlib-deflate") {
@@ -1140,7 +1137,7 @@ void GDBRemoteCommunicationClient::MaybeEnableCompression(
   }
 #endif
 
-#if defined(HAVE_LIBCOMPRESSION)
+#if HAVE_LIBCOMPRESSION
   if (avail_type == CompressionType::None) {
     for (auto compression : supported_compressions) {
       if (compression == "lz4") {
@@ -1150,9 +1147,6 @@ void GDBRemoteCommunicationClient::MaybeEnableCompression(
       }
     }
   }
-#endif
-
-#if defined(HAVE_LIBCOMPRESSION)
   if (avail_type == CompressionType::None) {
     for (auto compression : supported_compressions) {
       if (compression == "lzma") {
