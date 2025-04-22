@@ -405,6 +405,7 @@ Improvements to Clang's diagnostics
   they're only triggered if the authors are already making the choice to use
   ``preferred_type`` attribute.
 
+- The ``-Wloop-analysis`` warning now handles variable modifications inside lambda expressions (#GH132038).
 
 Improvements to Clang's time-trace
 ----------------------------------
