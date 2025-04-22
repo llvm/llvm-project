@@ -1512,7 +1512,7 @@ static void splitAMDGPUModule(
           }
 
           // Everything else goes in the first non-empty module we create.
-          return needsConservativeImport(GV) || ImportAllGVs;
+          return ImportAllGVs || needsConservativeImport(GV);
         }));
 
     ImportAllGVs = false;
