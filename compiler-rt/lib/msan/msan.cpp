@@ -420,8 +420,8 @@ MSAN_MAYBE_STORE_ORIGIN(u16, 2)
 MSAN_MAYBE_STORE_ORIGIN(u32, 4)
 MSAN_MAYBE_STORE_ORIGIN(u64, 8)
 
-// These macros to reuse the function body are kludgy, but are the better than
-// the alternatives:
+// These macros to reuse the function body are kludgy, but are better than the
+// alternatives:
 // - call a common function: this pollutes the stack traces
 // - have x_instname() be a simple macro wrapper around x(): the
 //   instrumentation pass expects function symbols
