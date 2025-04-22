@@ -122,6 +122,21 @@ public:
   SMLoc getLoc() const { return Loc; }
 };
 
+namespace mc {
+// Check if the fixup kind is a relocation type. Return false if the fixup can
+// be resolved without a relocation.
+inline bool isRelocation(MCFixupKind FixupKind) {
+  return FixupKind >= FirstRelocationKind;
+}
+
+// Check if the fixup kind represents a relocation type from a .reloc directive.
+// In ELF, this skips STT_SECTION adjustment and STT_TLS symbol type setting for
+// TLS relocations.
+inline bool isRelocRelocation(MCFixupKind FixupKind) {
+  return FixupKind >= FirstLiteralRelocationKind;
+}
+} // namespace mc
+
 } // End llvm namespace
 
 #endif
