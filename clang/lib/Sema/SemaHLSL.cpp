@@ -1548,13 +1548,11 @@ void SemaHLSL::handleResourceBindingAttr(Decl *TheDecl, const ParsedAttr &AL) {
   if (AL.getNumArgs() == 2) {
     Slot = Loc->getIdentifierInfo()->getName();
     SlotLoc = Loc->getLoc();
-
     if (!AL.isArgIdent(1)) {
       Diag(AL.getLoc(), diag::err_attribute_argument_type)
           << AL << AANT_ArgumentIdentifier;
       return;
     }
-
     Loc = AL.getArgAsIdent(1);
     Space = Loc->getIdentifierInfo()->getName();
     SpaceLoc = Loc->getLoc();
