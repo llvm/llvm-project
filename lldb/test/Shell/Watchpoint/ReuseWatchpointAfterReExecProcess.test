@@ -1,0 +1,21 @@
+# RUN: %clangxx_host %p/Inputs/languages.cpp -g -o %t.out
+# RUN: %lldb -b -o 'settings set interpreter.stop-command-source-on-error false' -s %s %t.out 2>&1 | FileCheck %s
+
+b main
+run
+# CHECK: stopped
+# CHECK-NEXT: stop reason = breakpoint
+
+watchpoint set variable val
+# CHECK: Watchpoint created:
+
+kill
+run
+# CHECK: stopped
+# CHECK-NEXT: stop reason = breakpoint
+
+watchpoint set variable val
+# CHECK: Watchpoint created:
+
+continue
+# CHECK: Watchpoint 1 hit:
