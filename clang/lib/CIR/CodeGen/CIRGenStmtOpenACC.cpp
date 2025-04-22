@@ -271,13 +271,23 @@ public:
   }
 
   void VisitIfClause(const OpenACCIfClause &clause) {
-    if constexpr (isOneOfTypes<OpTy, ParallelOp, SerialOp, KernelsOp>) {
+    if constexpr (isOneOfTypes<OpTy, ParallelOp, SerialOp, KernelsOp, InitOp,
+                               ShutdownOp>) {
       operation.getIfCondMutable().append(
           createCondition(clause.getConditionExpr()));
     } else {
       // 'if' applies to most of the constructs, but hold off on lowering them
       // until we can write tests/know what we're doing with codegen to make
       // sure we get it right.
+      return clauseNotImplemented(clause);
+    }
+  }
+
+  void VisitDeviceNumClause(const OpenACCDeviceNumClause &clause) {
+    if constexpr (isOneOfTypes<OpTy, InitOp, ShutdownOp>) {
+      operation.getDeviceNumOperandMutable().append(
+          createIntExpr(clause.getIntExpr()));
+    } else {
       return clauseNotImplemented(clause);
     }
   }
