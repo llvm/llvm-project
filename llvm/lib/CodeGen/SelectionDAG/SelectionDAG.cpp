@@ -8992,12 +8992,13 @@ SDValue SelectionDAG::getAtomicMemset(SDValue Chain, const SDLoc &dl,
 
 SDValue SelectionDAG::getAtomic(unsigned Opcode, const SDLoc &dl, EVT MemVT,
                                 SDVTList VTList, ArrayRef<SDValue> Ops,
-                                MachineMemOperand *MMO) {
+                                MachineMemOperand *MMO,
+                                ISD::LoadExtType ExtType) {
   FoldingSetNodeID ID;
   AddNodeIDNode(ID, Opcode, VTList, Ops);
   ID.AddInteger(MemVT.getRawBits());
   ID.AddInteger(getSyntheticNodeSubclassData<AtomicSDNode>(
-      Opcode, dl.getIROrder(), VTList, MemVT, MMO));
+      dl.getIROrder(), Opcode, VTList, MemVT, MMO, ExtType));
   ID.AddInteger(MMO->getPointerInfo().getAddrSpace());
   ID.AddInteger(MMO->getFlags());
   void* IP = nullptr;
@@ -9006,8 +9007,8 @@ SDValue SelectionDAG::getAtomic(unsigned Opcode, const SDLoc &dl, EVT MemVT,
     return SDValue(E, 0);
   }
 
-  auto *N = newSDNode<AtomicSDNode>(Opcode, dl.getIROrder(), dl.getDebugLoc(),
-                                    VTList, MemVT, MMO);
+  auto *N = newSDNode<AtomicSDNode>(dl.getIROrder(), dl.getDebugLoc(), Opcode,
+                                    VTList, MemVT, MMO, ExtType);
   createOperands(N, Ops);
 
   CSEMap.InsertNode(N, IP);
@@ -9053,14 +9054,12 @@ SDValue SelectionDAG::getAtomic(unsigned Opcode, const SDLoc &dl, EVT MemVT,
   return getAtomic(Opcode, dl, MemVT, VTs, Ops, MMO);
 }
 
-SDValue SelectionDAG::getAtomic(unsigned Opcode, const SDLoc &dl, EVT MemVT,
-                                EVT VT, SDValue Chain, SDValue Ptr,
-                                MachineMemOperand *MMO) {
-  assert(Opcode == ISD::ATOMIC_LOAD && "Invalid Atomic Op");
-
+SDValue SelectionDAG::getAtomicLoad(ISD::LoadExtType ExtType, const SDLoc &dl,
+                                    EVT MemVT, EVT VT, SDValue Chain,
+                                    SDValue Ptr, MachineMemOperand *MMO) {
   SDVTList VTs = getVTList(VT, MVT::Other);
   SDValue Ops[] = {Chain, Ptr};
-  return getAtomic(Opcode, dl, MemVT, VTs, Ops, MMO);
+  return getAtomic(ISD::ATOMIC_LOAD, dl, MemVT, VTs, Ops, MMO, ExtType);
 }
 
 /// getMergeValues - Create a MERGE_VALUES node from the given operands.

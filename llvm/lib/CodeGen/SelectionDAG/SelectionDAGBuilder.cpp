@@ -5157,8 +5157,8 @@ void SelectionDAGBuilder::visitAtomicLoad(const LoadInst &I) {
   InChain = TLI.prepareVolatileOrAtomicLoad(InChain, dl, DAG);
 
   SDValue Ptr = getValue(I.getPointerOperand());
-  SDValue L = DAG.getAtomic(ISD::ATOMIC_LOAD, dl, MemVT, MemVT, InChain,
-                            Ptr, MMO);
+  SDValue L =
+      DAG.getAtomicLoad(ISD::NON_EXTLOAD, dl, MemVT, MemVT, InChain, Ptr, MMO);
 
   SDValue OutChain = L.getValue(1);
   if (MemVT != VT)

@@ -381,29 +381,26 @@ SDValue DAGTypeLegalizer::PromoteIntRes_AssertZext(SDNode *N) {
 
 SDValue DAGTypeLegalizer::PromoteIntRes_Atomic0(AtomicSDNode *N) {
   EVT ResVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
-  SDValue Res = DAG.getAtomic(N->getOpcode(), SDLoc(N),
-                              N->getMemoryVT(), ResVT,
-                              N->getChain(), N->getBasePtr(),
-                              N->getMemOperand());
-  if (N->getOpcode() == ISD::ATOMIC_LOAD) {
-    ISD::LoadExtType ETy = cast<AtomicSDNode>(N)->getExtensionType();
-    if (ETy == ISD::NON_EXTLOAD) {
-      switch (TLI.getExtendForAtomicOps()) {
-      case ISD::SIGN_EXTEND:
-        ETy = ISD::SEXTLOAD;
-        break;
-      case ISD::ZERO_EXTEND:
-        ETy = ISD::ZEXTLOAD;
-        break;
-      case ISD::ANY_EXTEND:
-        ETy = ISD::EXTLOAD;
-        break;
-      default:
-        llvm_unreachable("Invalid atomic op extension");
-      }
+  ISD::LoadExtType ExtType = N->getExtensionType();
+  if (ExtType == ISD::NON_EXTLOAD) {
+    switch (TLI.getExtendForAtomicOps()) {
+    case ISD::SIGN_EXTEND:
+      ExtType = ISD::SEXTLOAD;
+      break;
+    case ISD::ZERO_EXTEND:
+      ExtType = ISD::ZEXTLOAD;
+      break;
+    case ISD::ANY_EXTEND:
+      ExtType = ISD::EXTLOAD;
+      break;
+    default:
+      llvm_unreachable("Invalid atomic op extension");
     }
-    cast<AtomicSDNode>(Res)->setExtensionType(ETy);
   }
+
+  SDValue Res =
+      DAG.getAtomicLoad(ExtType, SDLoc(N), N->getMemoryVT(), ResVT,
+                        N->getChain(), N->getBasePtr(), N->getMemOperand());
 
   // Legalize the chain result - switch anything that used the old chain to
   // use the new one.
