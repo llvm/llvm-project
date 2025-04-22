@@ -14,6 +14,8 @@
 #include "src/errno/libc_errno.h"
 #include "src/time/linux/timezone.h"
 
+LIBC_INLINE volatile int file_usage;
+
 namespace LIBC_NAMESPACE_DECL {
 namespace localtime_utils {
 
