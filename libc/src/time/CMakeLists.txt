@@ -119,19 +119,6 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
-  localtime_s
-  SRCS
-    ${LIBC_TARGET_OS}/localtime_s.cpp
-  HDRS
-    localtime_s.h
-  DEPENDS
-    .time_utils
-    .${LIBC_TARGET_OS}.localtime_utils
-    .${LIBC_TARGET_OS}.timezone
-    libc.hdr.types.time_t
-)
-
-add_entrypoint_object(
   difftime
   SRCS
     difftime.cpp
