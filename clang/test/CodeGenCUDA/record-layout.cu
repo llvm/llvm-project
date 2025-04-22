@@ -118,7 +118,7 @@ __device__ void J_dev(J *j) {
 // DEV: define dso_local amdgpu_kernel void @_Z8J_kernelv()
 // DEV:  %j = alloca %struct.J, align 8, addrspace(5)
 // DEV:  %j.ascast = addrspacecast ptr addrspace(5) %j to ptr
-// DEV:  call void @_ZN1JC1Ev(ptr noundef nonnull align 8 dereferenceable(24) %j.ascast)
+// DEV:  call void @_ZN1JC1Ev(ptr noalias noundef nonnull align 8 dereferenceable(24) %j.ascast)
 // DEV:  call void @_Z5J_devP1J(ptr noundef %j.ascast)
 
 __global__ void J_kernel() {
@@ -153,7 +153,7 @@ void J_host(J *j) {
 
 // HOST: define dso_local void @"?test_J@@YAXXZ"()
 // HOST:  %j = alloca %struct.J, align 8
-// HOST:  %call = call noundef ptr @"??0J@@QEAA@XZ"(ptr noundef nonnull align 8 dereferenceable(24) %j)
+// HOST:  %call = call noundef ptr @"??0J@@QEAA@XZ"(ptr noalias noundef nonnull align 8 dereferenceable(24) %j)
 // HOST:  call void @"?J_host@@YAXPEAUJ@@@Z"(ptr noundef %j)
 
 void test_J() {
@@ -162,37 +162,37 @@ void test_J() {
   J_kernel<<<1, 1>>>();
 }
 
-// HOST: define linkonce_odr dso_local noundef ptr @"??0J@@QEAA@XZ"(ptr noundef nonnull returned align 8 dereferenceable(24) %this)
+// HOST: define linkonce_odr dso_local noundef ptr @"??0J@@QEAA@XZ"(ptr noalias noundef nonnull returned align 8 dereferenceable(24) %this)
 // HOST:  %this.addr = alloca ptr, align 8
 // HOST:  store ptr %this, ptr %this.addr, align 8
 // HOST:  %this1 = load ptr, ptr %this.addr, align 8
-// HOST:  %call = call noundef ptr @"??0I@@QEAA@XZ"(ptr noundef nonnull align 8 dereferenceable(16) %this1) #5
+// HOST:  %call = call noundef ptr @"??0I@@QEAA@XZ"(ptr noalias noundef nonnull align 8 dereferenceable(16) %this1) #5
 // HOST:  store ptr @"??_7J@@6B@", ptr %this1, align 8
 // HOST:  ret ptr %this1
 
-// HOST: define linkonce_odr dso_local noundef ptr @"??0I@@QEAA@XZ"(ptr noundef nonnull returned align 8 dereferenceable(16) %this)
+// HOST: define linkonce_odr dso_local noundef ptr @"??0I@@QEAA@XZ"(ptr noalias noundef nonnull returned align 8 dereferenceable(16) %this)
 // HOST:  %this.addr = alloca ptr, align 8
 // HOST:  store ptr %this, ptr %this.addr, align 8
 // HOST:  %this1 = load ptr, ptr %this.addr, align 8
 // HOST:  store ptr @"??_7I@@6B@", ptr %this1, align 8
 // HOST:  ret ptr %this1
 
-// DEV: define linkonce_odr void @_ZN1JC1Ev(ptr noundef nonnull align 8 dereferenceable(24) %this)
+// DEV: define linkonce_odr void @_ZN1JC1Ev(ptr noalias noundef nonnull align 8 dereferenceable(24) %this)
 // DEV:  %this.addr = alloca ptr, align 8, addrspace(5)
 // DEV:  %this.addr.ascast = addrspacecast ptr addrspace(5) %this.addr to ptr
 // DEV:  store ptr %this, ptr %this.addr.ascast, align 8
 // DEV:  %this1 = load ptr, ptr %this.addr.ascast, align 8
-// DEV:  call void @_ZN1JC2Ev(ptr noundef nonnull align 8 dereferenceable(24) %this1)
+// DEV:  call void @_ZN1JC2Ev(ptr noalias noundef nonnull align 8 dereferenceable(24) %this1)
 
-// DEV: define linkonce_odr void @_ZN1JC2Ev(ptr noundef nonnull align 8 dereferenceable(24) %this)
+// DEV: define linkonce_odr void @_ZN1JC2Ev(ptr noalias noundef nonnull align 8 dereferenceable(24) %this)
 // DEV:  %this.addr = alloca ptr, align 8, addrspace(5)
 // DEV:  %this.addr.ascast = addrspacecast ptr addrspace(5) %this.addr to ptr
 // DEV:  store ptr %this, ptr %this.addr.ascast, align 8
 // DEV:  %this1 = load ptr, ptr %this.addr.ascast, align 8
-// DEV:  call void @_ZN1IC2Ev(ptr noundef nonnull align 8 dereferenceable(16) %this1)
+// DEV:  call void @_ZN1IC2Ev(ptr noalias noundef nonnull align 8 dereferenceable(16) %this1)
 // DEV:  store ptr addrspace(1) getelementptr inbounds inrange(-16, 24) ({ [5 x ptr addrspace(1)] }, ptr addrspace(1) @_ZTV1J, i32 0, i32 0, i32 2), ptr %this1, align 8
 
-// DEV: define linkonce_odr void @_ZN1IC2Ev(ptr noundef nonnull align 8 dereferenceable(16) %this)
+// DEV: define linkonce_odr void @_ZN1IC2Ev(ptr noalias noundef nonnull align 8 dereferenceable(16) %this)
 // DEV:  %this.addr = alloca ptr, align 8, addrspace(5)
 // DEV:  %this.addr.ascast = addrspacecast ptr addrspace(5) %this.addr to ptr
 // DEV:  store ptr %this, ptr %this.addr.ascast, align 8

@@ -3,7 +3,7 @@
 
 #include "Inputs/cuda.h"
 
-// CHECK-LABEL: define {{.*}}@_ZN1AC2Ev(ptr noundef nonnull align 8 dereferenceable(8) %this)
+// CHECK-LABEL: define {{.*}}@_ZN1AC2Ev(ptr noalias noundef nonnull align 8 dereferenceable(8) %this)
 // CHECK: store ptr %this, ptr %this.addr.ascast
 // CHECK: %this1 = load ptr, ptr %this.addr.ascast
 // CHECK: store ptr addrspace(1) {{.*}} @_ZTV1A{{.*}}, ptr %this1

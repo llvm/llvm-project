@@ -53,16 +53,16 @@ void e() {
   static const A a = A();
 }
 
-// CHECK: call void @_ZN1AC1Ev(ptr noundef {{[^,]*}} @a)
+// CHECK: call void @_ZN1AC1Ev(ptr noalias noundef {{[^,]*}} @a)
 // CHECK: call {{.*}}@llvm.invariant.start.p0(i64 4, ptr @a)
 
-// CHECK: call void @_ZN2A2C1Ev(ptr noundef {{[^,]*}} @a2)
+// CHECK: call void @_ZN2A2C1Ev(ptr noalias noundef {{[^,]*}} @a2)
 // CHECK: call {{.*}}@llvm.invariant.start.p0(i64 4, ptr @a2)
 
-// CHECK: call void @_ZN1BC1Ev(ptr noundef {{[^,]*}} @b)
+// CHECK: call void @_ZN1BC1Ev(ptr noalias noundef {{[^,]*}} @b)
 // CHECK-NOT: call {{.*}}@llvm.invariant.start.p0(i64 noundef 4, ptr @b)
 
-// CHECK: call void @_ZN1CC1Ev(ptr noundef {{[^,]*}} @c)
+// CHECK: call void @_ZN1CC1Ev(ptr noalias noundef {{[^,]*}} @c)
 // CHECK-NOT: call {{.*}}@llvm.invariant.start.p0(i64 noundef 4, ptr @c)
 
 // CHECK: call noundef i32 @_Z1fv(
@@ -74,6 +74,6 @@ void e() {
 // CHECK: call {{.*}}@llvm.invariant.start.p10(i64 4, ptr addrspace(10) @d2)
 
 // CHECK-LABEL: define{{.*}} void @_Z1ev(
-// CHECK: call void @_ZN1AC1Ev(ptr noundef {{[^,]*}} @_ZZ1evE1a)
+// CHECK: call void @_ZN1AC1Ev(ptr noalias noundef {{[^,]*}} @_ZZ1evE1a)
 // CHECK: call {{.*}}@llvm.invariant.start.p0(i64 4, ptr {{.*}}@_ZZ1evE1a)
 // CHECK-NOT: llvm.invariant.end

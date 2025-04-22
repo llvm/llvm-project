@@ -161,11 +161,11 @@ void ArrayInit() {
   // CHECK: store ptr %arr, ptr %arrayinit.endOfInit, align 8
   Printy arr[4] = {
     Printy("a"),
-    // CHECK: call void @_ZN6PrintyC1EPKc(ptr noundef nonnull align 8 dereferenceable(8) %arr, ptr noundef @.str)
+    // CHECK: call void @_ZN6PrintyC1EPKc(ptr noalias noundef nonnull align 8 dereferenceable(8) %arr, ptr noundef @.str)
     // CHECK: [[ARRAYINIT_ELEMENT1:%.+]] = getelementptr inbounds %struct.Printy, ptr %arr, i64 1
     // CHECK: store ptr [[ARRAYINIT_ELEMENT1]], ptr %arrayinit.endOfInit, align 8
     Printy("b"),
-    // CHECK: call void @_ZN6PrintyC1EPKc(ptr noundef nonnull align 8 dereferenceable(8) [[ARRAYINIT_ELEMENT1]], ptr noundef @.str.1)
+    // CHECK: call void @_ZN6PrintyC1EPKc(ptr noalias noundef nonnull align 8 dereferenceable(8) [[ARRAYINIT_ELEMENT1]], ptr noundef @.str.1)
     // CHECK: [[ARRAYINIT_ELEMENT2:%.+]] = getelementptr inbounds %struct.Printy, ptr %arr, i64 2
     // CHECK: store ptr [[ARRAYINIT_ELEMENT2]], ptr %arrayinit.endOfInit, align 8
     ({

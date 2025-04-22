@@ -69,7 +69,7 @@ struct child5_virtual_s : virtual parent5_virtual_s {
   float f1;
 };
 
-// CHECK-LABEL: define{{.*}} void @_ZN16child5_virtual_sC1EOS_(ptr noundef nonnull align 8 dereferenceable(12) %this, ptr noundef nonnull align 8 dereferenceable(12) %0)
+// CHECK-LABEL: define{{.*}} void @_ZN16child5_virtual_sC1EOS_(ptr noalias noundef nonnull align 8 dereferenceable(12) %this, ptr noundef nonnull align 8 dereferenceable(12) %0)
 struct child5_virtual_s int32_float_virtual_struct_inheritance(struct child5_virtual_s a) {
   return a;
 }

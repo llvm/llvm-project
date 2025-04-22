@@ -31,7 +31,7 @@ int main() {
   return static_noinline_fn(0);
 }
 // CHECK-LABEL: define dso_local void @_ZN3FooC2Ei(
-// CHECK-SAME: ptr noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 noundef [[X:%.*]]) unnamed_addr #[[ATTR0:[0-9]+]] align 2 {
+// CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 noundef [[X:%.*]]) unnamed_addr #[[ATTR0:[0-9]+]] align 2 {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[X_ADDR:%.*]] = alloca i32, align 4
@@ -45,7 +45,7 @@ int main() {
 //
 //
 // CHECK-LABEL: define dso_local void @_ZN3FooC1Ei(
-// CHECK-SAME: ptr noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 noundef [[X:%.*]]) unnamed_addr #[[ATTR0]] align 2 {
+// CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 noundef [[X:%.*]]) unnamed_addr #[[ATTR0]] align 2 {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[X_ADDR:%.*]] = alloca i32, align 4
@@ -53,7 +53,7 @@ int main() {
 // CHECK-NEXT:    store i32 [[X]], ptr [[X_ADDR]], align 4
 // CHECK-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[X_ADDR]], align 4
-// CHECK-NEXT:    call void @_ZN3FooC2Ei(ptr noundef nonnull align 4 dereferenceable(4) [[THIS1]], i32 noundef [[TMP0]])
+// CHECK-NEXT:    call void @_ZN3FooC2Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) [[THIS1]], i32 noundef [[TMP0]])
 // CHECK-NEXT:    ret void
 //
 //
@@ -82,7 +82,7 @@ int main() {
 // CHECK-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    [[F:%.*]] = alloca [[CLASS_FOO:%.*]], align 4
 // CHECK-NEXT:    store i32 0, ptr [[RETVAL]], align 4
-// CHECK-NEXT:    call void @_ZN3FooC1Ei(ptr noundef nonnull align 4 dereferenceable(4) [[F]], i32 noundef 1)
+// CHECK-NEXT:    call void @_ZN3FooC1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) [[F]], i32 noundef 1)
 // CHECK-NEXT:    [[CALL:%.*]] = call noundef i32 @_ZNK3Foo23function_defined_inlineEi(ptr noundef nonnull align 4 dereferenceable(4) [[F]], i32 noundef 2)
 // CHECK-NEXT:    [[CALL1:%.*]] = call noundef i32 @_ZNK3Foo28function_defined_out_of_lineEi(ptr noundef nonnull align 4 dereferenceable(4) [[F]], i32 noundef 3)
 // CHECK-NEXT:    [[CALL2:%.*]] = call noundef i32 @_ZL18static_noinline_fni(i32 noundef 0)
@@ -132,7 +132,7 @@ int main() {
 //
 //
 // MACHO-LABEL: define void @_ZN3FooC2Ei(
-// MACHO-SAME: ptr noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 noundef [[X:%.*]]) unnamed_addr #[[ATTR0:[0-9]+]] align 2 {
+// MACHO-SAME: ptr noalias noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 noundef [[X:%.*]]) unnamed_addr #[[ATTR0:[0-9]+]] align 2 {
 // MACHO-NEXT:  [[ENTRY:.*:]]
 // MACHO-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // MACHO-NEXT:    [[X_ADDR:%.*]] = alloca i32, align 4
@@ -146,7 +146,7 @@ int main() {
 //
 //
 // MACHO-LABEL: define void @_ZN3FooC1Ei(
-// MACHO-SAME: ptr noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 noundef [[X:%.*]]) unnamed_addr #[[ATTR0]] align 2 {
+// MACHO-SAME: ptr noalias noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 noundef [[X:%.*]]) unnamed_addr #[[ATTR0]] align 2 {
 // MACHO-NEXT:  [[ENTRY:.*:]]
 // MACHO-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // MACHO-NEXT:    [[X_ADDR:%.*]] = alloca i32, align 4
@@ -154,7 +154,7 @@ int main() {
 // MACHO-NEXT:    store i32 [[X]], ptr [[X_ADDR]], align 4
 // MACHO-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // MACHO-NEXT:    [[TMP0:%.*]] = load i32, ptr [[X_ADDR]], align 4
-// MACHO-NEXT:    call void @_ZN3FooC2Ei(ptr noundef nonnull align 4 dereferenceable(4) [[THIS1]], i32 noundef [[TMP0]])
+// MACHO-NEXT:    call void @_ZN3FooC2Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) [[THIS1]], i32 noundef [[TMP0]])
 // MACHO-NEXT:    ret void
 //
 //
@@ -183,7 +183,7 @@ int main() {
 // MACHO-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
 // MACHO-NEXT:    [[F:%.*]] = alloca [[CLASS_FOO:%.*]], align 4
 // MACHO-NEXT:    store i32 0, ptr [[RETVAL]], align 4
-// MACHO-NEXT:    call void @_ZN3FooC1Ei(ptr noundef nonnull align 4 dereferenceable(4) [[F]], i32 noundef 1)
+// MACHO-NEXT:    call void @_ZN3FooC1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) [[F]], i32 noundef 1)
 // MACHO-NEXT:    [[CALL:%.*]] = call noundef i32 @_ZNK3Foo23function_defined_inlineEi(ptr noundef nonnull align 4 dereferenceable(4) [[F]], i32 noundef 2)
 // MACHO-NEXT:    [[CALL1:%.*]] = call noundef i32 @_ZNK3Foo28function_defined_out_of_lineEi(ptr noundef nonnull align 4 dereferenceable(4) [[F]], i32 noundef 3)
 // MACHO-NEXT:    [[CALL2:%.*]] = call noundef i32 @_ZL18static_noinline_fni(i32 noundef 0)
@@ -238,7 +238,7 @@ int main() {
 // MSVC-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
 // MSVC-NEXT:    [[F:%.*]] = alloca [[CLASS_FOO:%.*]], align 4
 // MSVC-NEXT:    store i32 0, ptr [[RETVAL]], align 4
-// MSVC-NEXT:    [[CALL:%.*]] = call noundef ptr @"??0Foo@@QEAA@H@Z"(ptr noundef nonnull align 4 dereferenceable(4) [[F]], i32 noundef 1)
+// MSVC-NEXT:    [[CALL:%.*]] = call noundef ptr @"??0Foo@@QEAA@H@Z"(ptr noalias noundef nonnull align 4 dereferenceable(4) [[F]], i32 noundef 1)
 // MSVC-NEXT:    [[CALL1:%.*]] = call noundef i32 @"?function_defined_inline@Foo@@QEBAHH@Z"(ptr noundef nonnull align 4 dereferenceable(4) [[F]], i32 noundef 2)
 // MSVC-NEXT:    [[CALL2:%.*]] = call noundef i32 @"?function_defined_out_of_line@Foo@@QEBAHH@Z"(ptr noundef nonnull align 4 dereferenceable(4) [[F]], i32 noundef 3)
 // MSVC-NEXT:    [[CALL3:%.*]] = call noundef i32 @"?static_noinline_fn@@YAHH@Z"(i32 noundef 0)
@@ -249,7 +249,7 @@ int main() {
 //
 //
 // MINGW-LABEL: define dso_local void @_ZN3FooC2Ei(
-// MINGW-SAME: ptr noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 noundef [[X:%.*]]) unnamed_addr #[[ATTR0:[0-9]+]] align 2 {
+// MINGW-SAME: ptr noalias noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 noundef [[X:%.*]]) unnamed_addr #[[ATTR0:[0-9]+]] align 2 {
 // MINGW-NEXT:  [[ENTRY:.*:]]
 // MINGW-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // MINGW-NEXT:    [[X_ADDR:%.*]] = alloca i32, align 4
@@ -263,7 +263,7 @@ int main() {
 //
 //
 // MINGW-LABEL: define dso_local void @_ZN3FooC1Ei(
-// MINGW-SAME: ptr noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 noundef [[X:%.*]]) unnamed_addr #[[ATTR0]] align 2 {
+// MINGW-SAME: ptr noalias noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 noundef [[X:%.*]]) unnamed_addr #[[ATTR0]] align 2 {
 // MINGW-NEXT:  [[ENTRY:.*:]]
 // MINGW-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // MINGW-NEXT:    [[X_ADDR:%.*]] = alloca i32, align 4
@@ -271,7 +271,7 @@ int main() {
 // MINGW-NEXT:    store i32 [[X]], ptr [[X_ADDR]], align 4
 // MINGW-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // MINGW-NEXT:    [[TMP0:%.*]] = load i32, ptr [[X_ADDR]], align 4
-// MINGW-NEXT:    call void @_ZN3FooC2Ei(ptr noundef nonnull align 4 dereferenceable(4) [[THIS1]], i32 noundef [[TMP0]])
+// MINGW-NEXT:    call void @_ZN3FooC2Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) [[THIS1]], i32 noundef [[TMP0]])
 // MINGW-NEXT:    ret void
 //
 //
@@ -300,7 +300,7 @@ int main() {
 // MINGW-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
 // MINGW-NEXT:    [[F:%.*]] = alloca [[CLASS_FOO:%.*]], align 4
 // MINGW-NEXT:    store i32 0, ptr [[RETVAL]], align 4
-// MINGW-NEXT:    call void @_ZN3FooC1Ei(ptr noundef nonnull align 4 dereferenceable(4) [[F]], i32 noundef 1)
+// MINGW-NEXT:    call void @_ZN3FooC1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) [[F]], i32 noundef 1)
 // MINGW-NEXT:    [[CALL:%.*]] = call noundef i32 @_ZNK3Foo23function_defined_inlineEi(ptr noundef nonnull align 4 dereferenceable(4) [[F]], i32 noundef 2)
 // MINGW-NEXT:    [[CALL1:%.*]] = call noundef i32 @_ZNK3Foo28function_defined_out_of_lineEi(ptr noundef nonnull align 4 dereferenceable(4) [[F]], i32 noundef 3)
 // MINGW-NEXT:    [[CALL2:%.*]] = call noundef i32 @_ZL18static_noinline_fni(i32 noundef 0)
