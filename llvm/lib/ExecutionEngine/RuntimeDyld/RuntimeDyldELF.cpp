@@ -662,16 +662,18 @@ bool RuntimeDyldELF::resolveLoongArch64ShortBranch(
   }
   uint64_t Offset = RelI->getOffset();
   uint64_t SourceAddress = Sections[SectionID].getLoadAddressWithOffset(Offset);
+  uint64_t Delta = Address + Value.Addend - SourceAddress;
   // Normal call
   if (RelI->getType() == ELF::R_LARCH_B26) {
-    if (!isInt<28>(Address + Value.Addend - SourceAddress))
+    if (!isInt<28>(Delta))
       return false;
     resolveRelocation(Sections[SectionID], Offset, Address, RelI->getType(),
                       Value.Addend);
     return true;
   }
   // Medium call: R_LARCH_CALL36
-  if (!isInt<38>(Address + Value.Addend - SourceAddress))
+  // Range: [-128G - 0x20000, +128G - 0x20000)
+  if (((int64_t)Delta + 0x20000) != llvm::SignExtend64(Delta + 0x20000, 38))
     return false;
   resolveRelocation(Sections[SectionID], Offset, Address, RelI->getType(),
                     Value.Addend);
