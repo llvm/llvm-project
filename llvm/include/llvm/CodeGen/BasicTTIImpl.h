@@ -1333,9 +1333,8 @@ public:
   }
 
   InstructionCost getExtractWithExtendCost(unsigned Opcode, Type *Dst,
-                                           VectorType *VecTy,
-                                           unsigned Index) const {
-    TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
+                                           VectorType *VecTy, unsigned Index,
+                                           TTI::TargetCostKind CostKind) const {
     return thisT()->getVectorInstrCost(Instruction::ExtractElement, VecTy,
                                        CostKind, Index, nullptr, nullptr) +
            thisT()->getCastInstrCost(Opcode, Dst, VecTy->getElementType(),

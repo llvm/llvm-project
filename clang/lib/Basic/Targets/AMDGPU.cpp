@@ -63,6 +63,7 @@ const LangASMap AMDGPUTargetInfo::AMDGPUDefIsGenMap = {
     // FIXME(pr/122103): hlsl_private -> PRIVATE is wrong, but at least this
     // will break loudly.
     llvm::AMDGPUAS::PRIVATE_ADDRESS, // hlsl_private
+    llvm::AMDGPUAS::GLOBAL_ADDRESS,  // hlsl_device
     // Wasm address space values for this target are dummy values
     llvm::AMDGPUAS::FLAT_ADDRESS,    // wasm_funcref
     llvm::AMDGPUAS::LANE_SHARED,     // hip_lane_shared
@@ -92,6 +93,7 @@ const LangASMap AMDGPUTargetInfo::AMDGPUDefIsPrivMap = {
     llvm::AMDGPUAS::FLAT_ADDRESS,     // hlsl_groupshared
     llvm::AMDGPUAS::CONSTANT_ADDRESS, // hlsl_constant
     llvm::AMDGPUAS::PRIVATE_ADDRESS,  // hlsl_private
+    llvm::AMDGPUAS::GLOBAL_ADDRESS,   // hlsl_device
     // Wasm address space values for this target are dummy values
     llvm::AMDGPUAS::FLAT_ADDRESS,     // wasm_funcref
     llvm::AMDGPUAS::LANE_SHARED,      // hip_lane_shared

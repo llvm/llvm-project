@@ -993,6 +993,7 @@ define amdgpu_ps void @atomic_flat_store_saddr_i32_zext_vgpr(ptr inreg %sbase, i
 ; GFX1250-LABEL: atomic_flat_store_saddr_i32_zext_vgpr:
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    global_wb scope:SCOPE_SYS
+; GFX1250-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-NEXT:    flat_store_b32 v0, v1, s[2:3] scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
@@ -1005,6 +1006,7 @@ define amdgpu_ps void @atomic_flat_store_saddr_i32_zext_vgpr_offset_neg128(ptr i
 ; GFX1250-LABEL: atomic_flat_store_saddr_i32_zext_vgpr_offset_neg128:
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    global_wb scope:SCOPE_SYS
+; GFX1250-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-NEXT:    flat_store_b32 v0, v1, s[2:3] offset:-128 scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
@@ -1019,6 +1021,7 @@ define amdgpu_ps void @atomic_flat_store_saddr_i64_zext_vgpr(ptr inreg %sbase, i
 ; GFX1250-SDAG:       ; %bb.0:
 ; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
 ; GFX1250-SDAG-NEXT:    global_wb scope:SCOPE_SYS
+; GFX1250-SDAG-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-SDAG-NEXT:    flat_store_b64 v0, v[2:3], s[2:3] scope:SCOPE_SYS
 ; GFX1250-SDAG-NEXT:    s_endpgm
 ;
@@ -1026,6 +1029,7 @@ define amdgpu_ps void @atomic_flat_store_saddr_i64_zext_vgpr(ptr inreg %sbase, i
 ; GFX1250-GISEL:       ; %bb.0:
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v4, v1 :: v_dual_mov_b32 v5, v2
 ; GFX1250-GISEL-NEXT:    global_wb scope:SCOPE_SYS
+; GFX1250-GISEL-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-GISEL-NEXT:    flat_store_b64 v0, v[4:5], s[2:3] scope:SCOPE_SYS
 ; GFX1250-GISEL-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
@@ -1039,6 +1043,7 @@ define amdgpu_ps void @atomic_flat_store_saddr_i64_zext_vgpr_offset_neg128(ptr i
 ; GFX1250-SDAG:       ; %bb.0:
 ; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
 ; GFX1250-SDAG-NEXT:    global_wb scope:SCOPE_SYS
+; GFX1250-SDAG-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-SDAG-NEXT:    flat_store_b64 v0, v[2:3], s[2:3] offset:-128 scope:SCOPE_SYS
 ; GFX1250-SDAG-NEXT:    s_endpgm
 ;
@@ -1046,6 +1051,7 @@ define amdgpu_ps void @atomic_flat_store_saddr_i64_zext_vgpr_offset_neg128(ptr i
 ; GFX1250-GISEL:       ; %bb.0:
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v4, v1 :: v_dual_mov_b32 v5, v2
 ; GFX1250-GISEL-NEXT:    global_wb scope:SCOPE_SYS
+; GFX1250-GISEL-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-GISEL-NEXT:    flat_store_b64 v0, v[4:5], s[2:3] offset:-128 scope:SCOPE_SYS
 ; GFX1250-GISEL-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
