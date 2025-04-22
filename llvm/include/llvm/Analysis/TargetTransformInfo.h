@@ -2367,7 +2367,7 @@ public:
 
 template <typename T>
 class TargetTransformInfo::Model final : public TargetTransformInfo::Concept {
-  T Impl;
+  const T Impl;
 
 public:
   Model(T Impl) : Impl(std::move(Impl)) {}
