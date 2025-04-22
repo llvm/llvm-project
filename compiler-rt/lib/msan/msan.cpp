@@ -428,14 +428,14 @@ MSAN_MAYBE_STORE_ORIGIN(u64, 8)
 // - add instname as a parameter everywhere (with a check whether instname is
 //   null): this pollutes the fastpath
 // - duplicate the function body: redundancy is redundant
-#define __MSAN_WARNING_BODY \
-  GET_CALLER_PC_BP; \
-  PrintWarningWithOrigin(pc, bp, 0); \
+#define __MSAN_WARNING_BODY             \
+  GET_CALLER_PC_BP;                     \
+  PrintWarningWithOrigin(pc, bp, 0);    \
   if (__msan::flags()->halt_on_error) { \
-    if (__msan::flags()->print_stats) \
-      ReportStats(); \
-    Printf("Exiting\n"); \
-    Die(); \
+    if (__msan::flags()->print_stats)   \
+      ReportStats();                    \
+    Printf("Exiting\n");                \
+    Die();                              \
   }
 
 void __msan_warning() {
@@ -449,11 +449,11 @@ void __msan_warning_instname(char *instname) {
 }
 
 #define __MSAN_WARNING_NORETURN_BODY \
-  GET_CALLER_PC_BP; \
+  GET_CALLER_PC_BP;                  \
   PrintWarningWithOrigin(pc, bp, 0); \
-  if (__msan::flags()->print_stats) \
-    ReportStats(); \
-  Printf("Exiting\n"); \
+  if (__msan::flags()->print_stats)  \
+    ReportStats();                   \
+  Printf("Exiting\n");               \
   Die();
 
 void __msan_warning_noreturn() {
@@ -467,13 +467,13 @@ void __msan_warning_noreturn_instname(char *instname) {
 }
 
 #define __MSAN_WARNING_WITH_ORIGIN_BODY(origin) \
-  GET_CALLER_PC_BP; \
-  PrintWarningWithOrigin(pc, bp, origin); \
-  if (__msan::flags()->halt_on_error) { \
-    if (__msan::flags()->print_stats) \
-      ReportStats(); \
-    Printf("Exiting\n"); \
-    Die(); \
+  GET_CALLER_PC_BP;                             \
+  PrintWarningWithOrigin(pc, bp, origin);       \
+  if (__msan::flags()->halt_on_error) {         \
+    if (__msan::flags()->print_stats)           \
+      ReportStats();                            \
+    Printf("Exiting\n");                        \
+    Die();                                      \
   }
 
 void __msan_warning_with_origin(u32 origin) {
@@ -487,11 +487,11 @@ void __msan_warning_with_origin_instname(u32 origin, char *instname) {
 }
 
 #define __MSAN_WARNING_WITH_ORIGIN_NORETURN_BODY(origin) \
-  GET_CALLER_PC_BP; \
-  PrintWarningWithOrigin(pc, bp, origin); \
-  if (__msan::flags()->print_stats) \
-    ReportStats(); \
-  Printf("Exiting\n"); \
+  GET_CALLER_PC_BP;                                      \
+  PrintWarningWithOrigin(pc, bp, origin);                \
+  if (__msan::flags()->print_stats)                      \
+    ReportStats();                                       \
+  Printf("Exiting\n");                                   \
   Die();
 
 void __msan_warning_with_origin_noreturn(u32 origin) {
