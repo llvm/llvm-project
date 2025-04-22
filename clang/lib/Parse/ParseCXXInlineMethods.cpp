@@ -143,7 +143,7 @@ NamedDecl *Parser::ParseCXXInlineMethodDef(
     }
 
     Decl *PrevDecl = FnD->getPreviousDecl();
-    if (PrevDecl && isa<FunctionDecl>(PrevDecl) &&
+    if (isa_and_present<FunctionDecl>(PrevDecl) &&
         PrevDecl->getLexicalDeclContext() == FnD->getLexicalDeclContext()) {
       Actions.CheckForFunctionRedefinition(FnD->getAsFunction(),
                                            cast<FunctionDecl>(PrevDecl));
