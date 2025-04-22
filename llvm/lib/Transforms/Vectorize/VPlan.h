@@ -1190,23 +1190,18 @@ struct VPIRPhi : public VPIRInstruction {
 #endif
 };
 
-using MDArrayRef = ArrayRef<std::pair<unsigned, MDNode *>>;
-
 /// Helper to manage IR metadata for recipes. It filters out metadata that
 /// cannot be proagated.
 class VPIRMetadata {
   SmallVector<std::pair<unsigned, MDNode *>> Metadata;
 
 protected:
-  VPIRMetadata(MDArrayRef Metadata) : Metadata(Metadata) {}
+  VPIRMetadata() {}
   VPIRMetadata(Instruction &I) { getMetadataToPropagate(&I, Metadata); }
 
 public:
   /// Add all metadata to \p I.
   void applyMetadata(Instruction &I) const;
-
-  /// Return the IR metadata.
-  MDArrayRef getMetadata() const { return Metadata; }
 };
 
 /// VPWidenRecipe is a recipe for producing a widened instruction using the
@@ -1219,21 +1214,19 @@ class VPWidenRecipe : public VPRecipeWithIRFlags, public VPIRMetadata {
 protected:
   template <typename IterT>
   VPWidenRecipe(unsigned VPDefOpcode, Instruction &I,
-                iterator_range<IterT> Operands, MDArrayRef Metadata)
-      : VPRecipeWithIRFlags(VPDefOpcode, Operands, I), VPIRMetadata(Metadata),
+                iterator_range<IterT> Operands)
+      : VPRecipeWithIRFlags(VPDefOpcode, Operands, I), VPIRMetadata(I),
         Opcode(I.getOpcode()) {}
 
 public:
   template <typename IterT>
-  VPWidenRecipe(Instruction &I, iterator_range<IterT> Operands,
-                MDArrayRef Metadata)
-      : VPWidenRecipe(VPDef::VPWidenSC, I, Operands, Metadata) {}
+  VPWidenRecipe(Instruction &I, iterator_range<IterT> Operands)
+      : VPWidenRecipe(VPDef::VPWidenSC, I, Operands) {}
 
   ~VPWidenRecipe() override = default;
 
   VPWidenRecipe *clone() override {
-    auto *R =
-        new VPWidenRecipe(*getUnderlyingInstr(), operands(), getMetadata());
+    auto *R = new VPWidenRecipe(*getUnderlyingInstr(), operands());
     R->transferFlags(*this);
     return R;
   }
@@ -1267,15 +1260,15 @@ class VPWidenCastRecipe : public VPRecipeWithIRFlags, public VPIRMetadata {
 
 public:
   VPWidenCastRecipe(Instruction::CastOps Opcode, VPValue *Op, Type *ResultTy,
-                    CastInst &UI, MDArrayRef Metadata)
-      : VPRecipeWithIRFlags(VPDef::VPWidenCastSC, Op, UI),
-        VPIRMetadata(Metadata), Opcode(Opcode), ResultTy(ResultTy) {
+                    CastInst &UI)
+      : VPRecipeWithIRFlags(VPDef::VPWidenCastSC, Op, UI), VPIRMetadata(UI),
+        Opcode(Opcode), ResultTy(ResultTy) {
     assert(UI.getOpcode() == Opcode &&
            "opcode of underlying cast doesn't match");
   }
 
   VPWidenCastRecipe(Instruction::CastOps Opcode, VPValue *Op, Type *ResultTy)
-      : VPRecipeWithIRFlags(VPDef::VPWidenCastSC, Op), VPIRMetadata({}),
+      : VPRecipeWithIRFlags(VPDef::VPWidenCastSC, Op), VPIRMetadata(),
         Opcode(Opcode), ResultTy(ResultTy) {}
 
   ~VPWidenCastRecipe() override = default;
@@ -1283,7 +1276,7 @@ public:
   VPWidenCastRecipe *clone() override {
     if (auto *UV = getUnderlyingValue())
       return new VPWidenCastRecipe(Opcode, getOperand(0), ResultTy,
-                                   *cast<CastInst>(UV), getMetadata());
+                                   *cast<CastInst>(UV));
 
     return new VPWidenCastRecipe(Opcode, getOperand(0), ResultTy);
   }
@@ -1329,10 +1322,10 @@ class VPWidenIntrinsicRecipe : public VPRecipeWithIRFlags, public VPIRMetadata {
 public:
   VPWidenIntrinsicRecipe(CallInst &CI, Intrinsic::ID VectorIntrinsicID,
                          ArrayRef<VPValue *> CallArguments, Type *Ty,
-                         MDArrayRef Metadata, DebugLoc DL = {})
+                         DebugLoc DL = {})
       : VPRecipeWithIRFlags(VPDef::VPWidenIntrinsicSC, CallArguments, CI),
-        VPIRMetadata(Metadata), VectorIntrinsicID(VectorIntrinsicID),
-        ResultTy(Ty), MayReadFromMemory(CI.mayReadFromMemory()),
+        VPIRMetadata(CI), VectorIntrinsicID(VectorIntrinsicID), ResultTy(Ty),
+        MayReadFromMemory(CI.mayReadFromMemory()),
         MayWriteToMemory(CI.mayWriteToMemory()),
         MayHaveSideEffects(CI.mayHaveSideEffects()) {}
 
@@ -1340,7 +1333,7 @@ public:
                          ArrayRef<VPValue *> CallArguments, Type *Ty,
                          DebugLoc DL = {})
       : VPRecipeWithIRFlags(VPDef::VPWidenIntrinsicSC, CallArguments, DL),
-        VPIRMetadata({}), VectorIntrinsicID(VectorIntrinsicID), ResultTy(Ty) {
+        VPIRMetadata(), VectorIntrinsicID(VectorIntrinsicID), ResultTy(Ty) {
     LLVMContext &Ctx = Ty->getContext();
     AttributeSet Attrs = Intrinsic::getFnAttributes(Ctx, VectorIntrinsicID);
     MemoryEffects ME = Attrs.getMemoryEffects();
@@ -1356,7 +1349,7 @@ public:
   VPWidenIntrinsicRecipe *clone() override {
     return new VPWidenIntrinsicRecipe(*cast<CallInst>(getUnderlyingValue()),
                                       VectorIntrinsicID, {op_begin(), op_end()},
-                                      ResultTy, getMetadata(), getDebugLoc());
+                                      ResultTy, getDebugLoc());
   }
 
   VP_CLASSOF_IMPL(VPDef::VPWidenIntrinsicSC)
@@ -1404,11 +1397,10 @@ class VPWidenCallRecipe : public VPRecipeWithIRFlags, public VPIRMetadata {
 
 public:
   VPWidenCallRecipe(Value *UV, Function *Variant,
-                    ArrayRef<VPValue *> CallArguments, MDArrayRef Metadata,
-                    DebugLoc DL = {})
+                    ArrayRef<VPValue *> CallArguments, DebugLoc DL = {})
       : VPRecipeWithIRFlags(VPDef::VPWidenCallSC, CallArguments,
                             *cast<Instruction>(UV)),
-        VPIRMetadata(Metadata), Variant(Variant) {
+        VPIRMetadata(*cast<Instruction>(UV)), Variant(Variant) {
     assert(
         isa<Function>(getOperand(getNumOperands() - 1)->getLiveInIRValue()) &&
         "last operand must be the called function");
@@ -1418,8 +1410,7 @@ public:
 
   VPWidenCallRecipe *clone() override {
     return new VPWidenCallRecipe(getUnderlyingValue(), Variant,
-                                 {op_begin(), op_end()}, getMetadata(),
-                                 getDebugLoc());
+                                 {op_begin(), op_end()}, getDebugLoc());
   }
 
   VP_CLASSOF_IMPL(VPDef::VPWidenCallSC)
@@ -1497,16 +1488,15 @@ public:
 /// A recipe for widening select instructions.
 struct VPWidenSelectRecipe : public VPRecipeWithIRFlags, public VPIRMetadata {
   template <typename IterT>
-  VPWidenSelectRecipe(SelectInst &I, iterator_range<IterT> Operands,
-                      MDArrayRef Metadata)
+  VPWidenSelectRecipe(SelectInst &I, iterator_range<IterT> Operands)
       : VPRecipeWithIRFlags(VPDef::VPWidenSelectSC, Operands, I),
-        VPIRMetadata(Metadata) {}
+        VPIRMetadata(I) {}
 
   ~VPWidenSelectRecipe() override = default;
 
   VPWidenSelectRecipe *clone() override {
     return new VPWidenSelectRecipe(*cast<SelectInst>(getUnderlyingInstr()),
-                                   operands(), getMetadata());
+                                   operands());
   }
 
   VP_CLASSOF_IMPL(VPDef::VPWidenSelectSC)
@@ -2718,10 +2708,9 @@ struct VPWidenLoadRecipe final : public VPWidenMemoryRecipe, public VPValue {
   }
 
   VPWidenLoadRecipe *clone() override {
-    auto *Copy =
-        new VPWidenLoadRecipe(cast<LoadInst>(Ingredient), getAddr(), getMask(),
-                              Consecutive, Reverse, getDebugLoc());
-    return Copy;
+    return new VPWidenLoadRecipe(cast<LoadInst>(Ingredient), getAddr(),
+                                 getMask(), Consecutive, Reverse,
+                                 getDebugLoc());
   }
 
   VP_CLASSOF_IMPL(VPDef::VPWidenLoadSC);
@@ -2796,10 +2785,9 @@ struct VPWidenStoreRecipe final : public VPWidenMemoryRecipe {
   }
 
   VPWidenStoreRecipe *clone() override {
-    auto *Copy = new VPWidenStoreRecipe(cast<StoreInst>(Ingredient), getAddr(),
-                                        getStoredValue(), getMask(),
-                                        Consecutive, Reverse, getDebugLoc());
-    return Copy;
+    return new VPWidenStoreRecipe(cast<StoreInst>(Ingredient), getAddr(),
+                                  getStoredValue(), getMask(), Consecutive,
+                                  Reverse, getDebugLoc());
   }
 
   VP_CLASSOF_IMPL(VPDef::VPWidenStoreSC);

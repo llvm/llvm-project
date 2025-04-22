@@ -70,7 +70,6 @@ bool VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
         NewRecipe = new VPWidenIntOrFpInductionRecipe(
             Phi, Start, Step, &Plan->getVF(), *II, Ingredient.getDebugLoc());
       } else {
-        auto Metadata = VPRecipeBuilder::getMetadataToPropagate(Inst);
         assert(isa<VPInstruction>(&Ingredient) &&
                "only VPInstructions expected here");
         assert(!isa<PHINode>(Inst) && "phis should be handled above");
@@ -94,16 +93,14 @@ bool VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
           NewRecipe = new VPWidenIntrinsicRecipe(
               *CI, getVectorIntrinsicIDForCall(CI, &TLI),
               {Ingredient.op_begin(), Ingredient.op_end() - 1}, CI->getType(),
-              Metadata, CI->getDebugLoc());
+              CI->getDebugLoc());
         } else if (SelectInst *SI = dyn_cast<SelectInst>(Inst)) {
-          NewRecipe =
-              new VPWidenSelectRecipe(*SI, Ingredient.operands(), Metadata);
+          NewRecipe = new VPWidenSelectRecipe(*SI, Ingredient.operands());
         } else if (auto *CI = dyn_cast<CastInst>(Inst)) {
-          NewRecipe =
-              new VPWidenCastRecipe(CI->getOpcode(), Ingredient.getOperand(0),
-                                    CI->getType(), *CI, Metadata);
+          NewRecipe = new VPWidenCastRecipe(
+              CI->getOpcode(), Ingredient.getOperand(0), CI->getType(), *CI);
         } else {
-          NewRecipe = new VPWidenRecipe(*Inst, Ingredient.operands(), Metadata);
+          NewRecipe = new VPWidenRecipe(*Inst, Ingredient.operands());
         }
       }
 

@@ -929,7 +929,7 @@ TEST_F(VPRecipeTest, CastVPWidenRecipeToVPUser) {
   SmallVector<VPValue *, 2> Args;
   Args.push_back(Op1);
   Args.push_back(Op2);
-  VPWidenRecipe WidenR(*AI, make_range(Args.begin(), Args.end()), {});
+  VPWidenRecipe WidenR(*AI, make_range(Args.begin(), Args.end()));
   EXPECT_TRUE(isa<VPUser>(&WidenR));
   VPRecipeBase *WidenRBase = &WidenR;
   EXPECT_TRUE(isa<VPUser>(WidenRBase));
@@ -978,7 +978,7 @@ TEST_F(VPRecipeTest, CastVPWidenSelectRecipeToVPUserAndVPDef) {
   Args.push_back(Op2);
   Args.push_back(Op3);
   VPWidenSelectRecipe WidenSelectR(*SelectI,
-                                   make_range(Args.begin(), Args.end()), {});
+                                   make_range(Args.begin(), Args.end()));
   EXPECT_TRUE(isa<VPUser>(&WidenSelectR));
   VPRecipeBase *BaseR = &WidenSelectR;
   EXPECT_TRUE(isa<VPUser>(BaseR));
@@ -1111,7 +1111,7 @@ TEST_F(VPRecipeTest, MayHaveSideEffectsAndMayReadWriteMemory) {
     SmallVector<VPValue *, 2> Args;
     Args.push_back(Op1);
     Args.push_back(Op2);
-    VPWidenRecipe Recipe(*AI, make_range(Args.begin(), Args.end()), {});
+    VPWidenRecipe Recipe(*AI, make_range(Args.begin(), Args.end()));
     EXPECT_FALSE(Recipe.mayHaveSideEffects());
     EXPECT_FALSE(Recipe.mayReadFromMemory());
     EXPECT_FALSE(Recipe.mayWriteToMemory());
@@ -1130,8 +1130,7 @@ TEST_F(VPRecipeTest, MayHaveSideEffectsAndMayReadWriteMemory) {
     Args.push_back(Op1);
     Args.push_back(Op2);
     Args.push_back(Op3);
-    VPWidenSelectRecipe Recipe(*SelectI, make_range(Args.begin(), Args.end()),
-                               {});
+    VPWidenSelectRecipe Recipe(*SelectI, make_range(Args.begin(), Args.end()));
     EXPECT_FALSE(Recipe.mayHaveSideEffects());
     EXPECT_FALSE(Recipe.mayReadFromMemory());
     EXPECT_FALSE(Recipe.mayWriteToMemory());
@@ -1315,7 +1314,7 @@ TEST_F(VPRecipeTest, dumpRecipeInPlan) {
   Args.push_back(ExtVPV1);
   Args.push_back(ExtVPV2);
   VPWidenRecipe *WidenR =
-      new VPWidenRecipe(*AI, make_range(Args.begin(), Args.end()), {});
+      new VPWidenRecipe(*AI, make_range(Args.begin(), Args.end()));
   VPBB1->appendRecipe(WidenR);
 
   {
