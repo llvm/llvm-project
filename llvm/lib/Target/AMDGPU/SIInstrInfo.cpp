@@ -151,7 +151,6 @@ bool SIInstrInfo::resultDependsOnExec(const MachineInstr &MI) const {
   // Ignore comparisons which are only used masked with exec.
   // This allows some hoisting/sinking of VALU comparisons.
   if (MI.isCompare()) {
-    const MachineRegisterInfo &MRI = MI.getParent()->getParent()->getRegInfo();
     const MachineOperand *Dst = getNamedOperand(MI, AMDGPU::OpName::sdst);
     if (!Dst)
       return true;
@@ -159,6 +158,8 @@ bool SIInstrInfo::resultDependsOnExec(const MachineInstr &MI) const {
     Register DstReg = Dst->getReg();
     if (!DstReg.isVirtual())
       return true;
+
+    const MachineRegisterInfo &MRI = MI.getParent()->getParent()->getRegInfo();
     for (MachineInstr &Use : MRI.use_nodbg_instructions(DstReg)) {
       switch (Use.getOpcode()) {
       case AMDGPU::S_AND_SAVEEXEC_B32:
