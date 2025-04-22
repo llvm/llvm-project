@@ -389,8 +389,8 @@ static VectorType *getVRGatherIndexType(MVT DataVT, const RISCVSubtarget &ST,
 /// during legalization.  Note that processShuffleMasks is not an exact proxy
 /// for the algorithm used in LegalizeVectorTypes, but hopefully it's a
 /// reasonably close upperbound.
-static InstructionCost costShuffleViaSplitting(RISCVTTIImpl &TTI, MVT LegalVT,
-                                               VectorType *Tp,
+static InstructionCost costShuffleViaSplitting(const RISCVTTIImpl &TTI,
+                                               MVT LegalVT, VectorType *Tp,
                                                ArrayRef<int> Mask,
                                                TTI::TargetCostKind CostKind) {
   assert(LegalVT.isFixedLengthVector() && !Mask.empty() &&
