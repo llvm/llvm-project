@@ -129,22 +129,6 @@ static int64_t computeRemainingYears(int64_t daysPerYears,
   return years;
 }
 
-void release_file(ErrorOr<File *> error_or_file) {
-  file_usage = 0;
-  error_or_file.value()->close();
-}
-
-ErrorOr<File *> acquire_file(char *filename) {
-  while (1) {
-    if (file_usage == 0) {
-      file_usage = 1;
-      break;
-    }
-  }
-
-  return LIBC_NAMESPACE::openfile(filename, "rb");
-}
-
 char *get_env_var(const char *input) {
   for (char **env = environ; *env != NULL; ++env) {
     char *env_var = *env;
