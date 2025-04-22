@@ -1000,7 +1000,7 @@ public:
     /// Check if any of the tracked live intervals exceeds the number of
     /// available registers for the target.
     bool exceedsMaxNumRegs(const TargetTransformInfo &TTI) {
-      return any_of(MaxLocalUsers, [&](auto &LU) {
+      return any_of(MaxLocalUsers, [&TTI](auto &LU) {
         return LU.second > TTI.getNumberOfRegisters(LU.first);
       });
     }
