@@ -60,6 +60,9 @@ const LangASMap AMDGPUTargetInfo::AMDGPUDefIsGenMap = {
     llvm::AMDGPUAS::FLAT_ADDRESS,     // ptr64
     llvm::AMDGPUAS::FLAT_ADDRESS,     // hlsl_groupshared
     llvm::AMDGPUAS::CONSTANT_ADDRESS, // hlsl_constant
+    // FIXME(pr/122103): hlsl_private -> PRIVATE is wrong, but at least this
+    // will break loudly.
+    llvm::AMDGPUAS::PRIVATE_ADDRESS, // hlsl_private
 };
 
 const LangASMap AMDGPUTargetInfo::AMDGPUDefIsPrivMap = {
@@ -85,6 +88,7 @@ const LangASMap AMDGPUTargetInfo::AMDGPUDefIsPrivMap = {
     llvm::AMDGPUAS::FLAT_ADDRESS,     // ptr64
     llvm::AMDGPUAS::FLAT_ADDRESS,     // hlsl_groupshared
     llvm::AMDGPUAS::CONSTANT_ADDRESS, // hlsl_constant
+    llvm::AMDGPUAS::PRIVATE_ADDRESS,  // hlsl_private
 };
 } // namespace targets
 } // namespace clang

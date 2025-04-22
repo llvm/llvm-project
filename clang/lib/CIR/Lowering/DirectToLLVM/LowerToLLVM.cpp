@@ -21,6 +21,7 @@
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/BuiltinDialect.h"
 #include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/Types.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Target/LLVMIR/Dialect/Builtin/BuiltinToLLVMIRTranslation.h"
@@ -691,9 +692,7 @@ mlir::LogicalResult CIRToLLVMConstantOpLowering::matchAndRewrite(
     // during a pass as long as they don't live past the end of the pass.
     attr = op.getValue();
   } else if (mlir::isa<cir::BoolType>(op.getType())) {
-    int value = (op.getValue() ==
-                 cir::BoolAttr::get(getContext(),
-                                    cir::BoolType::get(getContext()), true));
+    int value = mlir::cast<cir::BoolAttr>(op.getValue()).getValue();
     attr = rewriter.getIntegerAttr(typeConverter->convertType(op.getType()),
                                    value);
   } else if (mlir::isa<cir::IntType>(op.getType())) {
@@ -825,6 +824,26 @@ mlir::LogicalResult CIRToLLVMFuncOpLowering::matchAndRewrite(
   rewriter.eraseOp(op);
 
   return mlir::LogicalResult::success();
+}
+
+mlir::LogicalResult CIRToLLVMGetGlobalOpLowering::matchAndRewrite(
+    cir::GetGlobalOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  // FIXME(cir): Premature DCE to avoid lowering stuff we're not using.
+  // CIRGen should mitigate this and not emit the get_global.
+  if (op->getUses().empty()) {
+    rewriter.eraseOp(op);
+    return mlir::success();
+  }
+
+  mlir::Type type = getTypeConverter()->convertType(op.getType());
+  mlir::Operation *newop =
+      rewriter.create<mlir::LLVM::AddressOfOp>(op.getLoc(), type, op.getName());
+
+  assert(!cir::MissingFeatures::opGlobalThreadLocal());
+
+  rewriter.replaceOp(op, newop);
+  return mlir::success();
 }
 
 /// Replace CIR global with a region initialized LLVM global and update
@@ -1193,6 +1212,86 @@ mlir::LogicalResult CIRToLLVMBinOpLowering::matchAndRewrite(
   return mlir::LogicalResult::success();
 }
 
+/// Convert from a CIR comparison kind to an LLVM IR integral comparison kind.
+static mlir::LLVM::ICmpPredicate
+convertCmpKindToICmpPredicate(cir::CmpOpKind kind, bool isSigned) {
+  using CIR = cir::CmpOpKind;
+  using LLVMICmp = mlir::LLVM::ICmpPredicate;
+  switch (kind) {
+  case CIR::eq:
+    return LLVMICmp::eq;
+  case CIR::ne:
+    return LLVMICmp::ne;
+  case CIR::lt:
+    return (isSigned ? LLVMICmp::slt : LLVMICmp::ult);
+  case CIR::le:
+    return (isSigned ? LLVMICmp::sle : LLVMICmp::ule);
+  case CIR::gt:
+    return (isSigned ? LLVMICmp::sgt : LLVMICmp::ugt);
+  case CIR::ge:
+    return (isSigned ? LLVMICmp::sge : LLVMICmp::uge);
+  }
+  llvm_unreachable("Unknown CmpOpKind");
+}
+
+/// Convert from a CIR comparison kind to an LLVM IR floating-point comparison
+/// kind.
+static mlir::LLVM::FCmpPredicate
+convertCmpKindToFCmpPredicate(cir::CmpOpKind kind) {
+  using CIR = cir::CmpOpKind;
+  using LLVMFCmp = mlir::LLVM::FCmpPredicate;
+  switch (kind) {
+  case CIR::eq:
+    return LLVMFCmp::oeq;
+  case CIR::ne:
+    return LLVMFCmp::une;
+  case CIR::lt:
+    return LLVMFCmp::olt;
+  case CIR::le:
+    return LLVMFCmp::ole;
+  case CIR::gt:
+    return LLVMFCmp::ogt;
+  case CIR::ge:
+    return LLVMFCmp::oge;
+  }
+  llvm_unreachable("Unknown CmpOpKind");
+}
+
+mlir::LogicalResult CIRToLLVMCmpOpLowering::matchAndRewrite(
+    cir::CmpOp cmpOp, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  mlir::Type type = cmpOp.getLhs().getType();
+
+  assert(!cir::MissingFeatures::dataMemberType());
+  assert(!cir::MissingFeatures::methodType());
+
+  // Lower to LLVM comparison op.
+  if (mlir::isa<cir::IntType, mlir::IntegerType>(type)) {
+    bool isSigned = mlir::isa<cir::IntType>(type)
+                        ? mlir::cast<cir::IntType>(type).isSigned()
+                        : mlir::cast<mlir::IntegerType>(type).isSigned();
+    mlir::LLVM::ICmpPredicate kind =
+        convertCmpKindToICmpPredicate(cmpOp.getKind(), isSigned);
+    rewriter.replaceOpWithNewOp<mlir::LLVM::ICmpOp>(
+        cmpOp, kind, adaptor.getLhs(), adaptor.getRhs());
+  } else if (auto ptrTy = mlir::dyn_cast<cir::PointerType>(type)) {
+    mlir::LLVM::ICmpPredicate kind =
+        convertCmpKindToICmpPredicate(cmpOp.getKind(),
+                                      /* isSigned=*/false);
+    rewriter.replaceOpWithNewOp<mlir::LLVM::ICmpOp>(
+        cmpOp, kind, adaptor.getLhs(), adaptor.getRhs());
+  } else if (mlir::isa<cir::CIRFPTypeInterface>(type)) {
+    mlir::LLVM::FCmpPredicate kind =
+        convertCmpKindToFCmpPredicate(cmpOp.getKind());
+    rewriter.replaceOpWithNewOp<mlir::LLVM::FCmpOp>(
+        cmpOp, kind, adaptor.getLhs(), adaptor.getRhs());
+  } else {
+    return cmpOp.emitError() << "unsupported type for CmpOp: " << type;
+  }
+
+  return mlir::success();
+}
+
 static void prepareTypeConverter(mlir::LLVMTypeConverter &converter,
                                  mlir::DataLayout &dataLayout) {
   converter.addConversion([&](cir::PointerType type) -> mlir::Type {
@@ -1235,6 +1334,34 @@ static void prepareTypeConverter(mlir::LLVMTypeConverter &converter,
   });
   converter.addConversion([&](cir::BF16Type type) -> mlir::Type {
     return mlir::BFloat16Type::get(type.getContext());
+  });
+  converter.addConversion([&](cir::RecordType type) -> mlir::Type {
+    // Convert struct members.
+    llvm::SmallVector<mlir::Type> llvmMembers;
+    switch (type.getKind()) {
+    case cir::RecordType::Struct:
+      for (mlir::Type ty : type.getMembers())
+        llvmMembers.push_back(convertTypeForMemory(converter, dataLayout, ty));
+      break;
+    // Unions are lowered as only the largest member.
+    case cir::RecordType::Union:
+      llvm_unreachable("Lowering of unions is NYI");
+      break;
+    }
+
+    // Record has a name: lower as an identified record.
+    mlir::LLVM::LLVMStructType llvmStruct;
+    if (type.getName()) {
+      llvmStruct = mlir::LLVM::LLVMStructType::getIdentified(
+          type.getContext(), type.getPrefixedName());
+      if (llvmStruct.setBody(llvmMembers, type.getPacked()).failed())
+        llvm_unreachable("Failed to set body of record");
+    } else { // Record has no name: lower as literal record.
+      llvmStruct = mlir::LLVM::LLVMStructType::getLiteral(
+          type.getContext(), llvmMembers, type.getPacked());
+    }
+
+    return llvmStruct;
   });
 }
 
@@ -1334,8 +1461,10 @@ void ConvertCIRToLLVMPass::runOnOperation() {
                CIRToLLVMBinOpLowering,
                CIRToLLVMBrCondOpLowering,
                CIRToLLVMBrOpLowering,
+               CIRToLLVMCmpOpLowering,
                CIRToLLVMConstantOpLowering,
                CIRToLLVMFuncOpLowering,
+               CIRToLLVMGetGlobalOpLowering,
                CIRToLLVMTrapOpLowering,
                CIRToLLVMUnaryOpLowering
       // clang-format on

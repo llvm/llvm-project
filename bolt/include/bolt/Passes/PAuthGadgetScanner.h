@@ -175,8 +175,8 @@ raw_ostream &operator<<(raw_ostream &OS, const MCInstReference &);
 
 namespace PAuthGadgetScanner {
 
-class PacRetAnalysis;
-struct State;
+class SrcSafetyAnalysis;
+struct SrcState;
 
 /// Description of a gadget kind that can be detected. Intended to be
 /// statically allocated to be attached to reports by reference.

@@ -7,6 +7,7 @@ integer/clc_abs.cl
 integer/clc_abs_diff.cl
 integer/clc_add_sat.cl
 integer/clc_clz.cl
+integer/clc_ctz.cl
 integer/clc_hadd.cl
 integer/clc_mad24.cl
 integer/clc_mad_sat.cl
@@ -89,6 +90,8 @@ math/clc_tanh.cl
 math/clc_tanpi.cl
 math/clc_tgamma.cl
 math/clc_trunc.cl
+misc/clc_shuffle.cl
+misc/clc_shuffle2.cl
 relational/clc_all.cl
 relational/clc_any.cl
 relational/clc_bitselect.cl

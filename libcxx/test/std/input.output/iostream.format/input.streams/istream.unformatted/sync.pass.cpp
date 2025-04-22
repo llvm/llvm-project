@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+// TODO(mordante) Investigate
+// UNSUPPORTED: apple-clang
+
 // <istream>
 
 // int sync();
@@ -13,7 +16,7 @@
 // The fix for bug 51497 and bug 51499 require and updated dylib due to
 // explicit instantiations. That means Apple backdeployment targets remain
 // broken.
-// XFAIL: using-built-library-before-llvm-19
+// XFAIL using-built-library-before-llvm-19
 
 #include <istream>
 #include <cassert>

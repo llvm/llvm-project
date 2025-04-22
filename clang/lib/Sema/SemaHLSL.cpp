@@ -546,6 +546,10 @@ void SemaHLSL::ActOnFinishBuffer(Decl *Dcl, SourceLocation RBrace) {
   // create buffer layout struct
   createHostLayoutStructForBuffer(SemaRef, BufDecl);
 
+  if (std::none_of(Dcl->attr_begin(), Dcl->attr_end(),
+                   [](Attr *A) { return isa<HLSLResourceBindingAttr>(A); }))
+    SemaRef.Diag(Dcl->getLocation(), diag::warn_hlsl_implicit_binding);
+
   SemaRef.PopDeclContext();
 }
 
@@ -1279,8 +1283,8 @@ bool SemaHLSL::handleResourceTypeAttr(QualType T, const ParsedAttr &AL) {
     }
 
     IdentifierLoc *Loc = AL.getArgAsIdent(0);
-    StringRef Identifier = Loc->Ident->getName();
-    SourceLocation ArgLoc = Loc->Loc;
+    StringRef Identifier = Loc->getIdentifierInfo()->getName();
+    SourceLocation ArgLoc = Loc->getLoc();
 
     // Validate resource class value
     ResourceClass RC;
@@ -1542,8 +1546,8 @@ void SemaHLSL::handleResourceBindingAttr(Decl *TheDecl, const ParsedAttr &AL) {
   IdentifierLoc *Loc = AL.getArgAsIdent(0);
 
   if (AL.getNumArgs() == 2) {
-    Slot = Loc->Ident->getName();
-    SlotLoc = Loc->Loc;
+    Slot = Loc->getIdentifierInfo()->getName();
+    SlotLoc = Loc->getLoc();
 
     if (!AL.isArgIdent(1)) {
       Diag(AL.getLoc(), diag::err_attribute_argument_type)
@@ -1552,16 +1556,16 @@ void SemaHLSL::handleResourceBindingAttr(Decl *TheDecl, const ParsedAttr &AL) {
     }
 
     Loc = AL.getArgAsIdent(1);
-    Space = Loc->Ident->getName();
-    SpaceLoc = Loc->Loc;
+    Space = Loc->getIdentifierInfo()->getName();
+    SpaceLoc = Loc->getLoc();
   } else {
-    StringRef Str = Loc->Ident->getName();
+    StringRef Str = Loc->getIdentifierInfo()->getName();
     if (Str.starts_with("space")) {
       Space = Str;
-      SpaceLoc = Loc->Loc;
+      SpaceLoc = Loc->getLoc();
     } else {
       Slot = Str;
-      SlotLoc = Loc->Loc;
+      SlotLoc = Loc->getLoc();
       Space = "space0";
     }
   }
@@ -2777,7 +2781,7 @@ static void BuildFlattenedTypeList(QualType BaseTy,
       BuildFlattenedTypeList(AT->getElementType(), ElementFields);
       // Repeat the element's field list n times.
       for (uint64_t Ct = 0; Ct < AT->getZExtSize(); ++Ct)
-        List.insert(List.end(), ElementFields.begin(), ElementFields.end());
+        llvm::append_range(List, ElementFields);
       continue;
     }
     // Vectors can only have element types that are builtin types, so this can
@@ -2805,7 +2809,7 @@ static void BuildFlattenedTypeList(QualType BaseTy,
         FieldTypes.push_back(FD->getType());
       // Reverse the newly added sub-range.
       std::reverse(FieldTypes.begin(), FieldTypes.end());
-      WorkList.insert(WorkList.end(), FieldTypes.begin(), FieldTypes.end());
+      llvm::append_range(WorkList, FieldTypes);
 
       // If this wasn't a standard layout type we may also have some base
       // classes to deal with.
@@ -2814,7 +2818,7 @@ static void BuildFlattenedTypeList(QualType BaseTy,
         for (const auto &Base : RD->bases())
           FieldTypes.push_back(Base.getType());
         std::reverse(FieldTypes.begin(), FieldTypes.end());
-        WorkList.insert(WorkList.end(), FieldTypes.begin(), FieldTypes.end());
+        llvm::append_range(WorkList, FieldTypes);
       }
       continue;
     }
@@ -3174,6 +3178,32 @@ static bool IsDefaultBufferConstantDecl(VarDecl *VD) {
          !isInvalidConstantBufferLeafElementType(QT.getTypePtr());
 }
 
+void SemaHLSL::deduceAddressSpace(VarDecl *Decl) {
+  // The variable already has an address space (groupshared for ex).
+  if (Decl->getType().hasAddressSpace())
+    return;
+
+  if (Decl->getType()->isDependentType())
+    return;
+
+  QualType Type = Decl->getType();
+  if (Type->isSamplerT() || Type->isVoidType())
+    return;
+
+  // Resource handles.
+  if (isResourceRecordTypeOrArrayOf(Type->getUnqualifiedDesugaredType()))
+    return;
+
+  // Only static globals belong to the Private address space.
+  // Non-static globals belongs to the cbuffer.
+  if (Decl->getStorageClass() != SC_Static && !Decl->isStaticDataMember())
+    return;
+
+  LangAS ImplAS = LangAS::hlsl_private;
+  Type = SemaRef.getASTContext().getAddrSpaceQualType(Type, ImplAS);
+  Decl->setType(Type);
+}
+
 void SemaHLSL::ActOnVariableDeclarator(VarDecl *VD) {
   if (VD->hasGlobalStorage()) {
     // make sure the declaration has a complete type
@@ -3182,6 +3212,7 @@ void SemaHLSL::ActOnVariableDeclarator(VarDecl *VD) {
             SemaRef.getASTContext().getBaseElementType(VD->getType()),
             diag::err_typecheck_decl_incomplete_type)) {
       VD->setInvalidDecl();
+      deduceAddressSpace(VD);
       return;
     }
 
@@ -3213,6 +3244,8 @@ void SemaHLSL::ActOnVariableDeclarator(VarDecl *VD) {
     // process explicit bindings
     processExplicitBindingsOnDecl(VD);
   }
+
+  deduceAddressSpace(VD);
 }
 
 static bool initVarDeclWithCtor(Sema &S, VarDecl *VD,
@@ -3256,8 +3289,8 @@ static bool initGlobalResourceDecl(Sema &S, VarDecl *VD) {
   return initVarDeclWithCtor(S, VD, Args);
 }
 
-// Returns true in the initialization has been handled;
-// Return false to let Clang handle the default initializaton.
+// Returns true if the initialization has been handled.
+// Returns false to use default initialization.
 bool SemaHLSL::ActOnUninitializedVarDecl(VarDecl *VD) {
   // Objects in the hlsl_constant address space are initialized
   // externally, so don't synthesize an implicit initializer.
@@ -3269,7 +3302,8 @@ bool SemaHLSL::ActOnUninitializedVarDecl(VarDecl *VD) {
     return false;
 
   // FIXME: We currectly support only simple resources - no arrays of resources
-  // or resources in user defined structs).
+  // or resources in user defined structs.
+  // (llvm/llvm-project#133835, llvm/llvm-project#133837)
   if (VD->getType()->isHLSLResourceRecord())
     return initGlobalResourceDecl(SemaRef, VD);
 
@@ -3316,10 +3350,12 @@ void SemaHLSL::collectResourceBindingsOnVarDecl(VarDecl *VD) {
 void SemaHLSL::processExplicitBindingsOnDecl(VarDecl *VD) {
   assert(VD->hasGlobalStorage() && "expected global variable");
 
+  bool HasBinding = false;
   for (Attr *A : VD->attrs()) {
     HLSLResourceBindingAttr *RBA = dyn_cast<HLSLResourceBindingAttr>(A);
     if (!RBA || RBA->isImplicit())
       continue;
+    HasBinding = true;
 
     RegisterType RT = RBA->getRegisterType();
     assert(RT != RegisterType::I && "invalid or obsolete register type should "
@@ -3346,6 +3382,9 @@ void SemaHLSL::processExplicitBindingsOnDecl(VarDecl *VD) {
           << static_cast<int>(RT);
     }
   }
+
+  if (!HasBinding && isResourceRecordTypeOrArrayOf(VD))
+    SemaRef.Diag(VD->getLocation(), diag::warn_hlsl_implicit_binding);
 }
 
 static bool CastInitializer(Sema &S, ASTContext &Ctx, Expr *E,
@@ -3430,8 +3469,7 @@ static bool BuildInitializerList(Sema &S, ASTContext &Ctx, Expr *E,
       RecordTypes.push_back(D->bases_begin()->getType()->getAs<RecordType>());
     }
     while (!RecordTypes.empty()) {
-      const RecordType *RT = RecordTypes.back();
-      RecordTypes.pop_back();
+      const RecordType *RT = RecordTypes.pop_back_val();
       for (auto *FD : RT->getDecl()->fields()) {
         DeclAccessPair Found = DeclAccessPair::make(FD, FD->getAccess());
         DeclarationNameInfo NameInfo(FD->getDeclName(), E->getBeginLoc());
@@ -3479,8 +3517,7 @@ static Expr *GenerateInitLists(ASTContext &Ctx, QualType Ty,
       RecordTypes.push_back(D->bases_begin()->getType()->getAs<RecordType>());
     }
     while (!RecordTypes.empty()) {
-      const RecordType *RT = RecordTypes.back();
-      RecordTypes.pop_back();
+      const RecordType *RT = RecordTypes.pop_back_val();
       for (auto *FD : RT->getDecl()->fields()) {
         Inits.push_back(GenerateInitLists(Ctx, FD->getType(), It));
       }

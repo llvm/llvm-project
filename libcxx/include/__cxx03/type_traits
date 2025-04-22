@@ -496,19 +496,15 @@ namespace std
 #if _LIBCPP_STD_VER >= 17
 #  include <__cxx03/__type_traits/conjunction.h>
 #  include <__cxx03/__type_traits/disjunction.h>
-#  include <__cxx03/__type_traits/has_unique_object_representation.h>
 #  include <__cxx03/__type_traits/invoke.h>
-#  include <__cxx03/__type_traits/is_aggregate.h>
 #  include <__cxx03/__type_traits/is_swappable.h>
 #  include <__cxx03/__type_traits/negation.h>
 #  include <__cxx03/__type_traits/void_t.h>
 #endif
 
 #if _LIBCPP_STD_VER >= 20
-#  include <__cxx03/__type_traits/common_reference.h>
 #  include <__cxx03/__type_traits/is_bounded_array.h>
 #  include <__cxx03/__type_traits/is_constant_evaluated.h>
-#  include <__cxx03/__type_traits/is_nothrow_convertible.h>
 #  include <__cxx03/__type_traits/is_unbounded_array.h>
 #  include <__cxx03/__type_traits/type_identity.h>
 #  include <__cxx03/__type_traits/unwrap_ref.h>
