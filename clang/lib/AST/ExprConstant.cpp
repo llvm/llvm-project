@@ -17981,14 +17981,17 @@ static bool EvaluateStringAsLValue(EvalInfo &Info, const Expr *E,
       String.addArray(Info, E, CAT);
     else
       String.addUnsizedArray(Info, E, CharTy);
-  } else if (Ty->hasPointerRepresentation()) {
+    return true;
+  }
+
+  if (Ty->hasPointerRepresentation()) {
     if (!EvaluatePointer(E, String, Info))
       return false;
     CharTy = Ty->getPointeeType();
-  } else {
-    return false;
+    return true;
   }
-  return true;
+
+  return false;
 }
 
 static const StringLiteral *StringLValueIsLiteral(EvalInfo &Info,

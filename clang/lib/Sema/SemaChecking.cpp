@@ -6050,15 +6050,22 @@ static void CheckFormatString(
     llvm::SmallBitVector &CheckedVarArgs, UncoveredArgHandler &UncoveredArg,
     bool IgnoreStringsWithoutSpecifiers);
 
-enum StringLiteralConstEvalResult {
+enum StringLiteralConstantEvaluationResult {
   SLCER_NotEvaluated,
   SLCER_NotNullTerminated,
   SLCER_Evaluated,
 };
 
-static StringLiteralConstEvalResult
-constEvalStringAsLiteral(Sema &S, const Expr *E, const StringLiteral *&SL,
-                         uint64_t &Offset);
+/// Attempt to fold \c E into a constant string that \c checkFormatStringExpr
+/// can use. If \c E folds to a string literal, that string literal will be used
+/// for diagnostics. If \c E has a constant string value but it does not fold to
+/// a literal (for instance, ("%"s + "i"s).c_str() constant-folds to "%i"), a
+/// <scratch space> pseudo-source file will be allocated, containing a string
+/// literal representation of the constant string, and format diagnostics will
+/// point to it.
+static StringLiteralConstantEvaluationResult
+EvaluateStringAndCreateLiteral(Sema &S, const Expr *E, const StringLiteral *&SL,
+                               uint64_t &Offset);
 
 // Determine if an expression is a string literal or constant string.
 // If this function returns false on the arguments to a function expecting a
@@ -6447,7 +6454,7 @@ tryAgain:
 
   uint64_t EvalOffset = 0;
   const StringLiteral *FakeLiteral = nullptr;
-  switch (constEvalStringAsLiteral(S, E, FakeLiteral, EvalOffset)) {
+  switch (EvaluateStringAndCreateLiteral(S, E, FakeLiteral, EvalOffset)) {
   case SLCER_NotEvaluated:
     return SLCT_NotALiteral;
 
@@ -6469,9 +6476,9 @@ tryAgain:
   }
 }
 
-static StringLiteralConstEvalResult
-constEvalStringAsLiteral(Sema &S, const Expr *E, const StringLiteral *&SL,
-                         uint64_t &Offset) {
+static StringLiteralConstantEvaluationResult
+EvaluateStringAndCreateLiteral(Sema &S, const Expr *E, const StringLiteral *&SL,
+                               uint64_t &Offset) {
   // As a last resort, try to constant-evaluate the format string.
   bool HasNul;
   auto SER = E->tryEvaluateString(S.Context, &HasNul);
@@ -6500,7 +6507,7 @@ constEvalStringAsLiteral(Sema &S, const Expr *E, const StringLiteral *&SL,
                                                    "<scratch space>", true));
   }
 
-  auto ScratchFile = S.getSourceManager().createFileID(std::move(MemBuf));
+  FileID ScratchFile = S.getSourceManager().createFileID(std::move(MemBuf));
   SourceLocation Begin = S.getSourceManager().getLocForStartOfFile(ScratchFile);
   QualType SLType = S.Context.getStringLiteralArrayType(
       S.Context.CharTy, SER->getString().size());
