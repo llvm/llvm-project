@@ -136,11 +136,19 @@ void printDependencyDirectivesAsSource(
     ArrayRef<dependency_directives_scan::Directive> Directives,
     llvm::raw_ostream &OS);
 
-// FIXME: Allow returning an error.
-using GetDependencyDirectivesFn = std::function<
-    std::optional<ArrayRef<dependency_directives_scan::Directive>>(
-        FileManager &, FileEntryRef)>;
+/// Functor that returns the dependency directives for a given file.
+class DependencyDirectivesGetter {
+public:
+  /// Clone the getter for a new \c FileManager instance.
+  virtual std::unique_ptr<DependencyDirectivesGetter>
+  cloneFor(FileManager &FileMgr) = 0;
 
+  /// Get the dependency directives for the given file.
+  virtual std::optional<ArrayRef<dependency_directives_scan::Directive>>
+  operator()(FileEntryRef File) = 0;
+
+  virtual ~DependencyDirectivesGetter() = default;
+};
 } // end namespace clang
 
 #endif // LLVM_CLANG_LEX_DEPENDENCYDIRECTIVESSCANNER_H

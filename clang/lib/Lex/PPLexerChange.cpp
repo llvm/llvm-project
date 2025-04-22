@@ -94,7 +94,7 @@ bool Preprocessor::EnterSourceFile(FileID FID, ConstSearchDirIterator CurDir,
   Lexer *TheLexer = new Lexer(FID, *InputFile, *this, IsFirstIncludeOfFile);
   if (GetDependencyDirectives && FID != PredefinesFileID)
     if (OptionalFileEntryRef File = SourceMgr.getFileEntryRefForID(FID))
-      if (auto MaybeDepDirectives = GetDependencyDirectives(FileMgr, *File))
+      if (auto MaybeDepDirectives = (*GetDependencyDirectives)(*File))
         TheLexer->DepDirectives = *MaybeDepDirectives;
 
   EnterSourceFileWithLexer(TheLexer, CurDir);

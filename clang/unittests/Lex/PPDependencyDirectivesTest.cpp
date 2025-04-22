@@ -103,17 +103,31 @@ TEST_F(PPDependencyDirectivesTest, MacroGuard) {
     SmallVector<dependency_directives_scan::Token> Tokens;
     SmallVector<dependency_directives_scan::Directive> Directives;
   };
-  SmallVector<std::unique_ptr<DepDirectives>> DepDirectivesObjects;
 
-  auto GetDependencyDirectives = [&](FileManager &FileMgr, FileEntryRef File) {
-    DepDirectivesObjects.push_back(std::make_unique<DepDirectives>());
-    StringRef Input = (*FileMgr.getBufferForFile(File))->getBuffer();
-    bool Err = scanSourceForDependencyDirectives(
-        Input, DepDirectivesObjects.back()->Tokens,
-        DepDirectivesObjects.back()->Directives);
-    EXPECT_FALSE(Err);
-    return llvm::ArrayRef(DepDirectivesObjects.back()->Directives);
+  class TestDependencyDirectivesGetter : public DependencyDirectivesGetter {
+    FileManager &FileMgr;
+    SmallVector<std::unique_ptr<DepDirectives>> DepDirectivesObjects;
+
+  public:
+    TestDependencyDirectivesGetter(FileManager &FileMgr) : FileMgr(FileMgr) {}
+
+    std::unique_ptr<DependencyDirectivesGetter>
+    cloneFor(FileManager &FileMgr) override {
+      return std::make_unique<TestDependencyDirectivesGetter>(FileMgr);
+    }
+
+    std::optional<ArrayRef<dependency_directives_scan::Directive>>
+    operator()(FileEntryRef File) override {
+      DepDirectivesObjects.push_back(std::make_unique<DepDirectives>());
+      StringRef Input = (*FileMgr.getBufferForFile(File))->getBuffer();
+      bool Err = scanSourceForDependencyDirectives(
+          Input, DepDirectivesObjects.back()->Tokens,
+          DepDirectivesObjects.back()->Directives);
+      EXPECT_FALSE(Err);
+      return DepDirectivesObjects.back()->Directives;
+    }
   };
+  TestDependencyDirectivesGetter GetDependencyDirectives(FileMgr);
 
   PreprocessorOptions PPOpts;
   HeaderSearchOptions HSOpts;

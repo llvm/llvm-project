@@ -357,56 +357,31 @@ static void canonicalizeDefines(PreprocessorOptions &PPOpts) {
   std::swap(PPOpts.Macros, NewMacros);
 }
 
-static GetDependencyDirectivesFn makeDepDirectivesGetter() {
-  /// This is a functor that conforms to \c GetDependencyDirectivesFn.
-  /// It ensures it's always invoked with the same \c FileManager and caches the
-  /// extraction of the scanning VFS for better performance.
-  struct DepDirectivesGetter {
-    DepDirectivesGetter() : DepFS(nullptr), FM(nullptr) {}
+class ActualDependencyDirectivesGetter : public DependencyDirectivesGetter {
+  DependencyScanningWorkerFilesystem *DepFS;
 
-    /// It's important copies do not carry over the cached members. The copies
-    /// are likely to be used from distinct \c CompilerInstance objects with
-    /// distinct \c FileManager \c llvm::vfs::FileSystem.
-    DepDirectivesGetter(const DepDirectivesGetter &)
-        : DepFS(nullptr), FM(nullptr) {}
-    DepDirectivesGetter &operator=(const DepDirectivesGetter &) {
-      DepFS = nullptr;
-      FM = nullptr;
-      return *this;
-    }
+public:
+  ActualDependencyDirectivesGetter(FileManager &FileMgr) : DepFS(nullptr) {
+    FileMgr.getVirtualFileSystem().visit([&](llvm::vfs::FileSystem &FS) {
+      auto *DFS = llvm::dyn_cast<DependencyScanningWorkerFilesystem>(&FS);
+      if (DFS) {
+        assert(!DepFS && "Found multiple scanning VFSs");
+        DepFS = DFS;
+      }
+    });
+    assert(DepFS && "Did not find scanning VFS");
+  }
 
-    auto operator()(FileManager &FileMgr, FileEntryRef File) {
-      ensureConsistentFileManager(FileMgr);
-      ensurePopulatedFileSystem(FileMgr);
-      return DepFS->getDirectiveTokens(File.getName());
-    }
+  std::unique_ptr<DependencyDirectivesGetter>
+  cloneFor(FileManager &FileMgr) override {
+    return std::make_unique<ActualDependencyDirectivesGetter>(FileMgr);
+  }
 
-  private:
-    DependencyScanningWorkerFilesystem *DepFS;
-    FileManager *FM;
-
-    void ensureConsistentFileManager(FileManager &FileMgr) {
-      if (!FM)
-        FM = &FileMgr;
-      assert(&FileMgr == FM);
-    }
-
-    void ensurePopulatedFileSystem(FileManager &FM) {
-      if (DepFS)
-        return;
-      FM.getVirtualFileSystem().visit([&](llvm::vfs::FileSystem &FS) {
-        auto *DFS = llvm::dyn_cast<DependencyScanningWorkerFilesystem>(&FS);
-        if (DFS) {
-          assert(!DepFS && "Found multiple scanning VFSs");
-          DepFS = DFS;
-        }
-      });
-      assert(DepFS && "Did not find scanning VFS");
-    }
-  };
-
-  return DepDirectivesGetter{};
-}
+  std::optional<ArrayRef<dependency_directives_scan::Directive>>
+  operator()(FileEntryRef File) override {
+    return DepFS->getDirectiveTokens(File.getName());
+  }
+};
 
 /// A clang tool that runs the preprocessor in a mode that's optimized for
 /// dependency scanning for the given compiler invocation.
@@ -475,6 +450,9 @@ public:
         ScanInstance.getInvocation(), ScanInstance.getDiagnostics(),
         DriverFileMgr->getVirtualFileSystemPtr());
 
+    // Create a new FileManager to match the invocation's FileSystemOptions.
+    auto *FileMgr = ScanInstance.createFileManager(FS);
+
     // Use the dependency scanning optimized file system if requested to do so.
     if (DepFS) {
       StringRef ModulesCachePath =
@@ -484,11 +462,10 @@ public:
       if (!ModulesCachePath.empty())
         DepFS->setBypassedPathPrefix(ModulesCachePath);
 
-      ScanInstance.setDependencyDirectivesGetter(makeDepDirectivesGetter());
+      ScanInstance.setDependencyDirectivesGetter(
+          std::make_unique<ActualDependencyDirectivesGetter>(*FileMgr));
     }
 
-    // Create a new FileManager to match the invocation's FileSystemOptions.
-    auto *FileMgr = ScanInstance.createFileManager(FS);
     ScanInstance.createSourceManager(*FileMgr);
 
     // Store a mapping of prebuilt module files and their properties like header

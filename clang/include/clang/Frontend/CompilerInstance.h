@@ -100,8 +100,8 @@ class CompilerInstance : public ModuleLoader {
   /// The cache of PCM files.
   IntrusiveRefCntPtr<ModuleCache> ModCache;
 
-  /// Function for getting the dependency preprocessor directives of a file.
-  GetDependencyDirectivesFn GetDependencyDirectives;
+  /// Functor for getting the dependency preprocessor directives of a file.
+  std::unique_ptr<DependencyDirectivesGetter> GetDependencyDirectives;
 
   /// The preprocessor.
   std::shared_ptr<Preprocessor> PP;
@@ -701,8 +701,9 @@ public:
   /// and replace any existing one with it.
   void createPreprocessor(TranslationUnitKind TUKind);
 
-  void setDependencyDirectivesGetter(GetDependencyDirectivesFn Fn) {
-    GetDependencyDirectives = Fn;
+  void setDependencyDirectivesGetter(
+      std::unique_ptr<DependencyDirectivesGetter> Getter) {
+    GetDependencyDirectives = std::move(Getter);
   }
 
   std::string getSpecificModuleCachePath(StringRef ModuleHash);
