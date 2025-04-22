@@ -2731,8 +2731,8 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
         llvm::AttributeSet::get(getLLVMContext(), Attrs);
   }
 
-  // Apply `nonnull`, `dereferenceable(N)` and `align N` to the `this` argument,
-  // unless this is a thunk function.
+  // Apply `nonnull`, `dereferenceable(N)`, `align N` (and `noalias` for
+  // constructors) to the `this` argument, unless this is a thunk function.
   // FIXME: fix this properly, https://reviews.llvm.org/D100388
   if (FI.isInstanceMethod() && !IRFunctionArgs.hasInallocaArg() &&
       !FI.arg_begin()->type->isVoidPointerType() && !IsThunk) {
@@ -2743,6 +2743,11 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
     llvm::AttrBuilder Attrs(getLLVMContext());
 
     QualType ThisTy = FI.arg_begin()->type.getTypePtr()->getPointeeType();
+
+    // According to [class.cdtor]/2, the value of the object is unspecified if
+    // its elements are accessed not through `this`.
+    if (isa_and_nonnull<CXXConstructorDecl>(TargetDecl))
+      Attrs.addAttribute(llvm::Attribute::NoAlias);
 
     if (!CodeGenOpts.NullPointerIsValid &&
         getTypes().getTargetAddressSpace(FI.arg_begin()->type) == 0) {
