@@ -817,6 +817,22 @@ MemorySanitizer::getOrInsertMsanMetadataFunction(Module &M, StringRef Name,
                                std::forward<ArgsTy>(Args)...);
 }
 
+StringRef getWarningFnName(bool TrackOrigins, bool Recover, bool EmbedFaultingInst) {
+  StringRef warningFnName [2][2][2]
+    = {
+       {
+        {"__msan_warning_noreturn", "__msan_warning_noreturn_instname"},
+        {"__msan_warning", "__msan_warning_instname"}
+       },
+       {
+        {"__msan_warning_with_origin_noreturn", "__msan_warning_with_origin_noreturn_instname"},
+        {"__msan_warning_with_origin", "__msan_warning_with_origin_instname"},
+       }
+      };
+
+  return warningFnName[TrackOrigins][Recover][EmbedFaultingInst];
+}
+
 /// Create KMSAN API callbacks.
 void MemorySanitizer::createKernelApi(Module &M, const TargetLibraryInfo &TLI) {
   IRBuilder<> IRB(*C);
@@ -831,11 +847,9 @@ void MemorySanitizer::createKernelApi(Module &M, const TargetLibraryInfo &TLI) {
   VAArgOverflowSizeTLS = nullptr;
 
   SmallVector<Type *, 4> ArgsTy = {IRB.getInt32Ty()};
-  StringRef FnName = "__msan_warning";
-  if (ClEmbedFaultingInst != MSanEmbedFaultingInstructionMode::None) {
+  StringRef FnName = getWarningFnName(/*TrackOrigins=*/ false, /*Recover=*/ true, ClEmbedFaultingInst != MSanEmbedFaultingInstructionMode::None);
+  if (ClEmbedFaultingInst != MSanEmbedFaultingInstructionMode::None)
     ArgsTy.push_back(IRB.getPtrTy());
-    FnName = "__msan_warning_instname";
-  }
   WarningFn = M.getOrInsertFunction(
       FnName, FunctionType::get(IRB.getVoidTy(), ArgsTy, false),
       TLI.getAttrList(C, {0}, /*Signed=*/false));
@@ -893,27 +907,18 @@ void MemorySanitizer::createUserspaceApi(Module &M,
   // Create the callback.
   // FIXME: this function should have "Cold" calling conv,
   // which is not yet implemented.
+  StringRef WarningFnName = getWarningFnName(TrackOrigins, Recover, ClEmbedFaultingInst != MSanEmbedFaultingInstructionMode::None);
+  SmallVector<Type *, 4> ArgsTy = {};
   if (TrackOrigins) {
-    SmallVector<Type *, 4> ArgsTy = {IRB.getInt32Ty()};
-    StringRef WarningFnName = Recover ? "__msan_warning_with_origin"
-                                      : "__msan_warning_with_origin_noreturn";
-    if (ClEmbedFaultingInst != MSanEmbedFaultingInstructionMode::None) {
+    ArgsTy.push_back (IRB.getInt32Ty());
+    if (ClEmbedFaultingInst != MSanEmbedFaultingInstructionMode::None)
       ArgsTy.push_back(IRB.getPtrTy());
-      WarningFnName = Recover ? "__msan_warning_with_origin_instname"
-                              : "__msan_warning_with_origin_noreturn_instname";
-    }
     WarningFn = M.getOrInsertFunction(
         WarningFnName, FunctionType::get(IRB.getVoidTy(), ArgsTy, false),
         TLI.getAttrList(C, {0}, /*Signed=*/false));
   } else {
-    SmallVector<Type *, 4> ArgsTy = {};
-    StringRef WarningFnName =
-        Recover ? "__msan_warning" : "__msan_warning_noreturn";
-    if (ClEmbedFaultingInst != MSanEmbedFaultingInstructionMode::None) {
+    if (ClEmbedFaultingInst != MSanEmbedFaultingInstructionMode::None)
       ArgsTy.push_back(IRB.getPtrTy());
-      WarningFnName = Recover ? "__msan_warning_instname"
-                              : "__msan_warning_noreturn_instname";
-    }
     WarningFn = M.getOrInsertFunction(
         WarningFnName, FunctionType::get(IRB.getVoidTy(), ArgsTy, false));
   }
