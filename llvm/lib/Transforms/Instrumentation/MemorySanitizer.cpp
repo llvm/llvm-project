@@ -1515,7 +1515,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   Value *getInstName(Instruction *Instruction) {
     Value *InstName = nullptr;
     if (ClEmbedFaultingInst != MSanEmbedFaultingInstructionMode::None) {
-      IRBuilder<> IRB0(Instruction);
+      IRBuilder<> IRB(Instruction);
       StringRef InstNameStrRef;
       // Keep str and maybeBuf at this scope level because they may be
       // indirectly needed by CreateGlobalString
@@ -1543,7 +1543,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
         }
       }
 
-      InstName = IRB0.CreateGlobalString(InstNameStrRef);
+      InstName = IRB.CreateGlobalString(InstNameStrRef);
     }
 
     return InstName;
