@@ -630,6 +630,10 @@ uint32_t MachineInstr::copyFlagsFromInstruction(const Instruction &I) {
   if (I.getMetadata(LLVMContext::MD_unpredictable))
     MIFlags |= MachineInstr::MIFlag::Unpredictable;
 
+  if (const CallInst *CI = dyn_cast<CallInst>(&I)) {
+    MIFlags |=
+        CI->hasFnAttr(llvm::Attribute::StrictFP) ? MachineInstr::NoFPExcept : 0;
+  }
   return MIFlags;
 }
 
