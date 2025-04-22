@@ -4025,8 +4025,9 @@ ExprResult Sema::ActOnNumericConstant(const Token &Tok, Scope *UDLScope) {
 
         // Does it fit in size_t?
         if (ResultVal.isIntN(SizeTSize)) {
-          // Does it fit in ptrdiff_t?
+          // Does it fit in signed size_t?
           if (!Literal.isUnsigned && ResultVal[SizeTSize - 1] == 0)
+            // treat it as ptrdiff_t to distinguish it from long/long long
             Ty = Context.getPointerDiffType();
           else if (AllowUnsigned)
             Ty = Context.getSizeType();

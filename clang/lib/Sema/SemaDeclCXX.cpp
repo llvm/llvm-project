@@ -16716,7 +16716,7 @@ static bool CheckOperatorNewDeclaration(Sema &SemaRef, FunctionDecl *FnDecl) {
     return true;
 
   CanQualType SizeTy =
-      SemaRef.Context.getCanonicalType(SemaRef.Context.getSizeType());
+    SemaRef.Context.getCanonicalType(SemaRef.Context.getSizeType());
 
   // C++ [basic.stc.dynamic.allocation]p1:
   //  The return type shall be void*. The first parameter shall have type
