@@ -834,9 +834,8 @@ bool CodeGenPrepare::eliminateFallThrough(Function &F, DominatorTree *DT) {
   // Scan all of the blocks in the function, except for the entry block.
   // Use a temporary array to avoid iterator being invalidated when
   // deleting blocks.
-  SmallVector<WeakTrackingVH, 16> Blocks;
-  for (auto &Block : llvm::drop_begin(F))
-    Blocks.push_back(&Block);
+  SmallVector<WeakTrackingVH, 16> Blocks(
+      llvm::make_pointer_range(llvm::drop_begin(F)));
 
   SmallSet<WeakTrackingVH, 16> Preds;
   for (auto &Block : Blocks) {
@@ -4195,7 +4194,7 @@ private:
   /// `CommonValue` may be a placeholder inserted by us.
   /// If the placeholder is not used, we should remove this dead instruction.
   void eraseCommonValueIfDead() {
-    if (CommonValue && CommonValue->getNumUses() == 0)
+    if (CommonValue && CommonValue->use_empty())
       if (Instruction *CommonInst = dyn_cast<Instruction>(CommonValue))
         CommonInst->eraseFromParent();
   }
@@ -4370,8 +4369,7 @@ private:
         // If it does not match, collect all Phi nodes from matcher.
         // if we end up with no match, them all these Phi nodes will not match
         // later.
-        for (auto M : Matched)
-          WillNotMatch.insert(M.first);
+        WillNotMatch.insert_range(llvm::make_first_range(Matched));
         Matched.clear();
       }
       if (IsMatched) {
@@ -8576,7 +8574,8 @@ static bool optimizeBranch(BranchInst *Branch, const TargetLowering &TLI,
     }
     if (Cmp->isEquality() &&
         (match(UI, m_Add(m_Specific(X), m_SpecificInt(-CmpC))) ||
-         match(UI, m_Sub(m_Specific(X), m_SpecificInt(CmpC))))) {
+         match(UI, m_Sub(m_Specific(X), m_SpecificInt(CmpC))) ||
+         match(UI, m_Xor(m_Specific(X), m_SpecificInt(CmpC))))) {
       IRBuilder<> Builder(Branch);
       if (UI->getParent() != Branch->getParent())
         UI->moveBefore(Branch->getIterator());

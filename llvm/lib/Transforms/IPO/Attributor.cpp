@@ -199,7 +199,7 @@ ChangeStatus &llvm::operator&=(ChangeStatus &L, ChangeStatus R) {
 
 bool AA::isGPU(const Module &M) {
   Triple T(M.getTargetTriple());
-  return T.isAMDGPU() || T.isNVPTX();
+  return T.isGPU();
 }
 
 bool AA::isNoSyncInst(Attributor &A, const Instruction &I,
@@ -1769,6 +1769,9 @@ bool Attributor::checkForAllUses(
     if (!CB(*this, &QueryingAA))
       return false;
 
+  if (isa<ConstantData>(V))
+    return false;
+
   // Check the trivial case first as it catches void values.
   if (V.use_empty())
     return true;
@@ -3300,7 +3303,7 @@ InformationCache::getIndirectlyCallableFunctions(Attributor &A) const {
 }
 
 std::optional<unsigned> InformationCache::getFlatAddressSpace() const {
-  if (TargetTriple.isAMDGPU() || TargetTriple.isNVPTX())
+  if (TargetTriple.isGPU())
     return 0;
   return std::nullopt;
 }
@@ -3861,7 +3864,7 @@ static bool runAttributorOnFunctions(InformationCache &InfoCache,
     unsigned FunSize = Functions.size();
     for (unsigned u = 0; u < FunSize; u++) {
       Function *F = Functions[u];
-      if (!F->isDeclaration() && !F->isDefinitionExact() && F->getNumUses() &&
+      if (!F->isDeclaration() && !F->isDefinitionExact() && !F->use_empty() &&
           !GlobalValue::isInterposableLinkage(F->getLinkage())) {
         Function *NewF = Attributor::internalizeFunction(*F);
         assert(NewF && "Could not internalize function.");

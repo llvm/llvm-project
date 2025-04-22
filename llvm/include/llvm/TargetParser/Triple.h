@@ -1220,6 +1220,9 @@ public:
   /// Test whether target triples are compatible.
   bool isCompatibleWith(const Triple &Other) const;
 
+  /// Test whether the target triple is for a GPU.
+  bool isGPU() const { return isSPIRV() || isNVPTX() || isAMDGPU(); }
+
   /// Merge target triples.
   std::string merge(const Triple &Other) const;
 

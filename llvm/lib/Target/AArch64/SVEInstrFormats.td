@@ -119,10 +119,9 @@ def SDT_AArch64Setcc : SDTypeProfile<1, 4, [
 ]>;
 
 def AArch64setcc_z : SDNode<"AArch64ISD::SETCC_MERGE_ZERO", SDT_AArch64Setcc>;
+let HasOneUse = 1 in
 def AArch64setcc_z_oneuse : PatFrag<(ops node:$pg, node:$op1, node:$op2, node:$cc),
-                                    (AArch64setcc_z node:$pg, node:$op1, node:$op2, node:$cc), [{
-  return N->hasOneUse();
-}]>;
+                                    (AArch64setcc_z node:$pg, node:$op1, node:$op2, node:$cc)>;
 
 def SVEPatternOperand : AsmOperandClass {
   let Name = "SVEPattern";
@@ -409,15 +408,12 @@ def sve_ext_imm_0_63  : ComplexPattern<i64, 1, "SelectEXTImm<63, 4>">;
 def sve_ext_imm_0_127 : ComplexPattern<i64, 1, "SelectEXTImm<127, 2>">;
 def sve_ext_imm_0_255 : ComplexPattern<i64, 1, "SelectEXTImm<255, 1>">;
 
+let HasOneUse = 1 in
 def int_aarch64_sve_cntp_oneuse : PatFrag<(ops node:$pred, node:$src2),
-                                          (int_aarch64_sve_cntp node:$pred, node:$src2), [{
-  return N->hasOneUse();
-}]>;
-
+                                          (int_aarch64_sve_cntp node:$pred, node:$src2)>;
+let HasOneUse = 1 in
 def step_vector_oneuse : PatFrag<(ops node:$idx),
-                                 (step_vector node:$idx), [{
-  return N->hasOneUse();
-}]>;
+                                 (step_vector node:$idx)>;
 
 
 //===----------------------------------------------------------------------===//
@@ -2117,6 +2113,7 @@ class sve_int_dup_mask_imm<string asm>
 
   let DecoderMethod = "DecodeSVELogicalImmInstruction";
   let hasSideEffects = 0;
+  let isAsCheapAsAMove = 1;
   let isReMaterializable = 1;
   let Uses = [VG];
 }
@@ -5122,6 +5119,7 @@ class sve_int_dup_imm<bits<2> sz8_64, string asm,
   let Inst{4-0}   = Zd;
 
   let hasSideEffects = 0;
+  let isAsCheapAsAMove = 1;
   let isReMaterializable = 1;
   let Uses = [VG];
 }
@@ -5165,6 +5163,7 @@ class sve_int_dup_fpimm<bits<2> sz8_64, Operand fpimmtype,
   let Inst{4-0}   = Zd;
 
   let hasSideEffects = 0;
+  let isAsCheapAsAMove = 1;
   let isReMaterializable = 1;
   let Uses = [VG];
 }

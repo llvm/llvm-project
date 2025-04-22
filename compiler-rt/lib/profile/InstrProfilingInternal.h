@@ -128,7 +128,7 @@ typedef struct VPDataReaderType {
                            uint8_t *SiteCountArray[]);
   /* Function pointer to getValueProfRecordHeader method. */
   uint32_t (*GetValueProfRecordHeaderSize)(uint32_t NumSites);
-  /* Function pointer to getFristValueProfRecord method. */  
+  /* Function pointer to getFirstValueProfRecord method. */
   struct ValueProfRecord *(*GetFirstValueProfRecord)(struct ValueProfData *);
   /* Return the number of value data for site \p Site.  */
   uint32_t (*GetNumValueDataForSite)(uint32_t VK, uint32_t Site);

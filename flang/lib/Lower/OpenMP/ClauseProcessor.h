@@ -56,6 +56,8 @@ public:
   // 'Unique' clauses: They can appear at most once in the clause list.
   bool processBare(mlir::omp::BareClauseOps &result) const;
   bool processBind(mlir::omp::BindClauseOps &result) const;
+  bool processCancelDirectiveName(
+      mlir::omp::CancelDirectiveNameClauseOps &result) const;
   bool
   processCollapse(mlir::Location currentLocation, lower::pft::Evaluation &eval,
                   mlir::omp::LoopRelatedClauseOps &result,
@@ -104,7 +106,8 @@ public:
   bool processCopyin() const;
   bool processCopyprivate(mlir::Location currentLocation,
                           mlir::omp::CopyprivateClauseOps &result) const;
-  bool processDepend(mlir::omp::DependClauseOps &result) const;
+  bool processDepend(lower::SymMap &symMap, lower::StatementContext &stmtCtx,
+                     mlir::omp::DependClauseOps &result) const;
   bool
   processEnter(llvm::SmallVectorImpl<DeclareTargetCapturePair> &result) const;
   bool processIf(omp::clause::If::DirectiveNameModifier directiveName,

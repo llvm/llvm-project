@@ -46,33 +46,31 @@ static bool readsLaneId(const IntrinsicInst *II) {
 // Whether the given intrinsic is an atomic instruction in PTX.
 static bool isNVVMAtomic(const IntrinsicInst *II) {
   switch (II->getIntrinsicID()) {
-    default: return false;
-    case Intrinsic::nvvm_atomic_load_inc_32:
-    case Intrinsic::nvvm_atomic_load_dec_32:
-
-    case Intrinsic::nvvm_atomic_add_gen_f_cta:
-    case Intrinsic::nvvm_atomic_add_gen_f_sys:
-    case Intrinsic::nvvm_atomic_add_gen_i_cta:
-    case Intrinsic::nvvm_atomic_add_gen_i_sys:
-    case Intrinsic::nvvm_atomic_and_gen_i_cta:
-    case Intrinsic::nvvm_atomic_and_gen_i_sys:
-    case Intrinsic::nvvm_atomic_cas_gen_i_cta:
-    case Intrinsic::nvvm_atomic_cas_gen_i_sys:
-    case Intrinsic::nvvm_atomic_dec_gen_i_cta:
-    case Intrinsic::nvvm_atomic_dec_gen_i_sys:
-    case Intrinsic::nvvm_atomic_inc_gen_i_cta:
-    case Intrinsic::nvvm_atomic_inc_gen_i_sys:
-    case Intrinsic::nvvm_atomic_max_gen_i_cta:
-    case Intrinsic::nvvm_atomic_max_gen_i_sys:
-    case Intrinsic::nvvm_atomic_min_gen_i_cta:
-    case Intrinsic::nvvm_atomic_min_gen_i_sys:
-    case Intrinsic::nvvm_atomic_or_gen_i_cta:
-    case Intrinsic::nvvm_atomic_or_gen_i_sys:
-    case Intrinsic::nvvm_atomic_exch_gen_i_cta:
-    case Intrinsic::nvvm_atomic_exch_gen_i_sys:
-    case Intrinsic::nvvm_atomic_xor_gen_i_cta:
-    case Intrinsic::nvvm_atomic_xor_gen_i_sys:
-      return true;
+  default:
+    return false;
+  case Intrinsic::nvvm_atomic_add_gen_f_cta:
+  case Intrinsic::nvvm_atomic_add_gen_f_sys:
+  case Intrinsic::nvvm_atomic_add_gen_i_cta:
+  case Intrinsic::nvvm_atomic_add_gen_i_sys:
+  case Intrinsic::nvvm_atomic_and_gen_i_cta:
+  case Intrinsic::nvvm_atomic_and_gen_i_sys:
+  case Intrinsic::nvvm_atomic_cas_gen_i_cta:
+  case Intrinsic::nvvm_atomic_cas_gen_i_sys:
+  case Intrinsic::nvvm_atomic_dec_gen_i_cta:
+  case Intrinsic::nvvm_atomic_dec_gen_i_sys:
+  case Intrinsic::nvvm_atomic_inc_gen_i_cta:
+  case Intrinsic::nvvm_atomic_inc_gen_i_sys:
+  case Intrinsic::nvvm_atomic_max_gen_i_cta:
+  case Intrinsic::nvvm_atomic_max_gen_i_sys:
+  case Intrinsic::nvvm_atomic_min_gen_i_cta:
+  case Intrinsic::nvvm_atomic_min_gen_i_sys:
+  case Intrinsic::nvvm_atomic_or_gen_i_cta:
+  case Intrinsic::nvvm_atomic_or_gen_i_sys:
+  case Intrinsic::nvvm_atomic_exch_gen_i_cta:
+  case Intrinsic::nvvm_atomic_exch_gen_i_sys:
+  case Intrinsic::nvvm_atomic_xor_gen_i_cta:
+  case Intrinsic::nvvm_atomic_xor_gen_i_sys:
+    return true;
   }
 }
 
@@ -187,8 +185,6 @@ static Instruction *convertNvvmIntrinsicToLlvm(InstCombiner &IC,
       return {Intrinsic::ceil, FTZ_MustBeOff};
     case Intrinsic::nvvm_ceil_ftz_f:
       return {Intrinsic::ceil, FTZ_MustBeOn};
-    case Intrinsic::nvvm_fabs_d:
-      return {Intrinsic::fabs, FTZ_Any};
     case Intrinsic::nvvm_floor_d:
       return {Intrinsic::floor, FTZ_Any};
     case Intrinsic::nvvm_floor_f:
@@ -516,8 +512,7 @@ NVPTXTTIImpl::getInstructionCost(const User *U,
 InstructionCost NVPTXTTIImpl::getArithmeticInstrCost(
     unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
     TTI::OperandValueInfo Op1Info, TTI::OperandValueInfo Op2Info,
-    ArrayRef<const Value *> Args,
-    const Instruction *CxtI) {
+    ArrayRef<const Value *> Args, const Instruction *CxtI) const {
   // Legalize the type.
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Ty);
 
@@ -598,6 +593,21 @@ Value *NVPTXTTIImpl::rewriteIntrinsicWithAddressSpace(IntrinsicInst *II,
 unsigned NVPTXTTIImpl::getAssumedAddrSpace(const Value *V) const {
   if (isa<AllocaInst>(V))
     return ADDRESS_SPACE_LOCAL;
+
+  if (const Argument *Arg = dyn_cast<Argument>(V)) {
+    if (isKernelFunction(*Arg->getParent())) {
+      const NVPTXTargetMachine &TM =
+          static_cast<const NVPTXTargetMachine &>(getTLI()->getTargetMachine());
+      if (TM.getDrvInterface() == NVPTX::CUDA && !Arg->hasByValAttr())
+        return ADDRESS_SPACE_GLOBAL;
+    } else {
+      // We assume that all device parameters that are passed byval will be
+      // placed in the local AS. Very simple cases will be updated after ISel to
+      // use the device param space where possible.
+      if (Arg->hasByValAttr())
+        return ADDRESS_SPACE_LOCAL;
+    }
+  }
 
   return -1;
 }

@@ -2,7 +2,7 @@
 //      Test that multiple \DexDeclareAddress references that point to different
 //      addresses can be used within a single \DexExpectWatchValue.
 //
-// RUN: %dexter_regression_test_build %s -o %t
+// RUN: %dexter_regression_test_cxx_build %s -o %t
 // RUN: %dexter_regression_test_run --binary %t -- %s | FileCheck %s
 // CHECK: multiple_address.cpp
 

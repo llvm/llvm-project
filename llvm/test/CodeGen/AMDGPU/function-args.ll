@@ -102,9 +102,8 @@ define void @i1_arg_i1_use(i1 %arg) #0 {
 ; CIGFX89:       ; %bb.0: ; %bb
 ; CIGFX89-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CIGFX89-NEXT:    v_and_b32_e32 v0, 1, v0
-; CIGFX89-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
-; CIGFX89-NEXT:    s_xor_b64 s[6:7], vcc, -1
-; CIGFX89-NEXT:    s_and_saveexec_b64 s[4:5], s[6:7]
+; CIGFX89-NEXT:    v_cmp_ne_u32_e32 vcc, 1, v0
+; CIGFX89-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; CIGFX89-NEXT:    s_cbranch_execz .LBB3_2
 ; CIGFX89-NEXT:  ; %bb.1: ; %bb1
 ; CIGFX89-NEXT:    s_mov_b32 s7, 0xf000
@@ -120,15 +119,14 @@ define void @i1_arg_i1_use(i1 %arg) #0 {
 ; GFX11:       ; %bb.0: ; %bb
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_and_b32_e32 v0, 1, v0
-; GFX11-NEXT:    s_mov_b32 s2, -1
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
-; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v0
-; GFX11-NEXT:    s_xor_b32 s1, vcc_lo, -1
-; GFX11-NEXT:    s_and_saveexec_b32 s0, s1
+; GFX11-NEXT:    s_mov_b32 s0, exec_lo
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_cmpx_ne_u32_e32 1, v0
 ; GFX11-NEXT:    s_cbranch_execz .LBB3_2
 ; GFX11-NEXT:  ; %bb.1: ; %bb1
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX11-NEXT:    s_mov_b32 s3, 0x31016000
+; GFX11-NEXT:    s_mov_b32 s2, -1
 ; GFX11-NEXT:    buffer_store_b32 v0, off, s[0:3], 0 dlc
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:  .LBB3_2: ; %bb2

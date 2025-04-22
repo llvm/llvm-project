@@ -848,7 +848,7 @@ void IdataContents::create(COFFLinkerContext &ctx) {
                                         : make<NullChunk>(ctx));
     addresses.push_back(addressesTerminator ? addressesTerminator
                                             : make<NullChunk>(ctx));
-    if (ctx.symtabEC) {
+    if (ctx.symtab.isEC()) {
       auxIat.push_back(make<NullChunk>(ctx));
       auxIatCopy.push_back(make<NullChunk>(ctx));
     }
@@ -998,7 +998,7 @@ void DelayLoadContents::create() {
       // Terminate with null values.
       addresses.push_back(make<NullChunk>(ctx, 8));
       names.push_back(make<NullChunk>(ctx, 8));
-      if (ctx.symtabEC) {
+      if (ctx.symtab.isEC()) {
         auxIat.push_back(make<NullChunk>(ctx, 8));
         auxIatCopy.push_back(make<NullChunk>(ctx, 8));
       }

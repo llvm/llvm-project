@@ -17,9 +17,11 @@
 #include "VPlanAnalysis.h"
 #include "VPlanCFG.h"
 #include "VPlanDominatorTree.h"
+#include "VPlanHelpers.h"
 #include "VPlanPatternMatch.h"
 #include "VPlanUtils.h"
 #include "VPlanVerifier.h"
+#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
@@ -29,6 +31,8 @@
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/TypeSize.h"
 
 using namespace llvm;
 
@@ -160,8 +164,10 @@ static bool sinkScalarOperands(VPlan &Plan) {
       if (UI->getParent() == SinkTo)
         return true;
       NeedsDuplicating = UI->onlyFirstLaneUsed(SinkCandidate);
-      // We only know how to duplicate VPRecipeRecipes for now.
-      return NeedsDuplicating && isa<VPReplicateRecipe>(SinkCandidate);
+      // We only know how to duplicate VPReplicateRecipes and
+      // VPScalarIVStepsRecipes for now.
+      return NeedsDuplicating &&
+             isa<VPReplicateRecipe, VPScalarIVStepsRecipe>(SinkCandidate);
     };
     if (!all_of(SinkCandidate->users(), CanSinkWithUser))
       continue;
@@ -169,9 +175,16 @@ static bool sinkScalarOperands(VPlan &Plan) {
     if (NeedsDuplicating) {
       if (ScalarVFOnly)
         continue;
-      Instruction *I = SinkCandidate->getUnderlyingInstr();
-      auto *Clone = new VPReplicateRecipe(I, SinkCandidate->operands(), true);
-      // TODO: add ".cloned" suffix to name of Clone's VPValue.
+      VPSingleDefRecipe *Clone;
+      if (isa<VPReplicateRecipe>(SinkCandidate)) {
+        // TODO: Handle converting to uniform recipes as separate transform,
+        // then cloning should be sufficient here.
+        Instruction *I = SinkCandidate->getUnderlyingInstr();
+        Clone = new VPReplicateRecipe(I, SinkCandidate->operands(), true);
+        // TODO: add ".cloned" suffix to name of Clone's VPValue.
+      } else {
+        Clone = SinkCandidate->clone();
+      }
 
       Clone->insertBefore(SinkCandidate);
       SinkCandidate->replaceUsesWithIf(Clone, [SinkTo](VPUser &U, unsigned) {
@@ -572,7 +585,8 @@ createScalarIVSteps(VPlan &Plan, InductionDescriptor::InductionKind Kind,
     Builder.setInsertPoint(VecPreheader);
     Step = Builder.createScalarCast(Instruction::Trunc, Step, ResultTy, DL);
   }
-  return Builder.createScalarIVSteps(InductionOpcode, FPBinOp, BaseIV, Step);
+  return Builder.createScalarIVSteps(InductionOpcode, FPBinOp, BaseIV, Step,
+                                     &Plan.getVF(), DL);
 }
 
 static SmallVector<VPUser *> collectUsersRecursively(VPValue *V) {
@@ -860,10 +874,8 @@ void VPlanTransforms::optimizeInductionExitUsers(
   VPBlockBase *MiddleVPBB = Plan.getMiddleBlock();
   VPTypeAnalysis TypeInfo(Plan.getCanonicalIV()->getScalarType());
   for (VPIRBasicBlock *ExitVPBB : Plan.getExitBlocks()) {
-    for (VPRecipeBase &R : *ExitVPBB) {
-      auto *ExitIRI = cast<VPIRInstruction>(&R);
-      if (!isa<PHINode>(ExitIRI->getInstruction()))
-        break;
+    for (VPRecipeBase &R : ExitVPBB->phis()) {
+      auto *ExitIRI = cast<VPIRPhi>(&R);
 
       for (auto [Idx, PredVPBB] : enumerate(ExitVPBB->getPredecessors())) {
         VPValue *Escape = nullptr;
@@ -921,74 +933,6 @@ static void recursivelyDeleteDeadRecipes(VPValue *V) {
 /// Try to simplify recipe \p R.
 static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
   using namespace llvm::VPlanPatternMatch;
-
-  if (auto *Blend = dyn_cast<VPBlendRecipe>(&R)) {
-    // Try to remove redundant blend recipes.
-    SmallPtrSet<VPValue *, 4> UniqueValues;
-    if (Blend->isNormalized() || !match(Blend->getMask(0), m_False()))
-      UniqueValues.insert(Blend->getIncomingValue(0));
-    for (unsigned I = 1; I != Blend->getNumIncomingValues(); ++I)
-      if (!match(Blend->getMask(I), m_False()))
-        UniqueValues.insert(Blend->getIncomingValue(I));
-
-    if (UniqueValues.size() == 1) {
-      Blend->replaceAllUsesWith(*UniqueValues.begin());
-      Blend->eraseFromParent();
-      return;
-    }
-
-    if (Blend->isNormalized())
-      return;
-
-    // Normalize the blend so its first incoming value is used as the initial
-    // value with the others blended into it.
-
-    unsigned StartIndex = 0;
-    for (unsigned I = 0; I != Blend->getNumIncomingValues(); ++I) {
-      // If a value's mask is used only by the blend then is can be deadcoded.
-      // TODO: Find the most expensive mask that can be deadcoded, or a mask
-      // that's used by multiple blends where it can be removed from them all.
-      VPValue *Mask = Blend->getMask(I);
-      if (Mask->getNumUsers() == 1 && !match(Mask, m_False())) {
-        StartIndex = I;
-        break;
-      }
-    }
-
-    SmallVector<VPValue *, 4> OperandsWithMask;
-    OperandsWithMask.push_back(Blend->getIncomingValue(StartIndex));
-
-    for (unsigned I = 0; I != Blend->getNumIncomingValues(); ++I) {
-      if (I == StartIndex)
-        continue;
-      OperandsWithMask.push_back(Blend->getIncomingValue(I));
-      OperandsWithMask.push_back(Blend->getMask(I));
-    }
-
-    auto *NewBlend = new VPBlendRecipe(
-        cast<PHINode>(Blend->getUnderlyingValue()), OperandsWithMask);
-    NewBlend->insertBefore(&R);
-
-    VPValue *DeadMask = Blend->getMask(StartIndex);
-    Blend->replaceAllUsesWith(NewBlend);
-    Blend->eraseFromParent();
-    recursivelyDeleteDeadRecipes(DeadMask);
-
-    /// Simplify BLEND %a, %b, Not(%mask) -> BLEND %b, %a, %mask.
-    VPValue *NewMask;
-    if (NewBlend->getNumOperands() == 3 &&
-        match(NewBlend->getMask(1), m_Not(m_VPValue(NewMask)))) {
-      VPValue *Inc0 = NewBlend->getOperand(0);
-      VPValue *Inc1 = NewBlend->getOperand(1);
-      VPValue *OldMask = NewBlend->getOperand(2);
-      NewBlend->setOperand(0, Inc1);
-      NewBlend->setOperand(1, Inc0);
-      NewBlend->setOperand(2, NewMask);
-      if (OldMask->getNumUsers() == 0)
-        cast<VPInstruction>(OldMask)->eraseFromParent();
-    }
-    return;
-  }
 
   // VPScalarIVSteps can only be simplified after unrolling. VPScalarIVSteps for
   // part 0 can be replaced by their start value, if only the first lane is
@@ -1049,15 +993,25 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
   // TODO: Split up into simpler, modular combines: (X && Y) || (X && Z) into X
   // && (Y || Z) and (X || !X) into true. This requires queuing newly created
   // recipes to be visited during simplification.
-  VPValue *X, *Y, *X1, *Y1;
+  VPValue *X, *Y;
   if (match(&R,
             m_c_BinaryOr(m_LogicalAnd(m_VPValue(X), m_VPValue(Y)),
-                         m_LogicalAnd(m_VPValue(X1), m_Not(m_VPValue(Y1))))) &&
-      X == X1 && Y == Y1) {
+                         m_LogicalAnd(m_Deferred(X), m_Not(m_Deferred(Y)))))) {
     R.getVPSingleValue()->replaceAllUsesWith(X);
     R.eraseFromParent();
     return;
   }
+
+  // OR x, 1 -> 1.
+  if (match(&R, m_c_BinaryOr(m_VPValue(X), m_AllOnes()))) {
+    R.getVPSingleValue()->replaceAllUsesWith(
+        R.getOperand(0) == X ? R.getOperand(1) : R.getOperand(0));
+    R.eraseFromParent();
+    return;
+  }
+
+  if (match(&R, m_Select(m_VPValue(), m_VPValue(X), m_Deferred(X))))
+    return R.getVPSingleValue()->replaceAllUsesWith(X);
 
   if (match(&R, m_c_Mul(m_VPValue(A), m_SpecificInt(1))))
     return R.getVPSingleValue()->replaceAllUsesWith(A);
@@ -1073,6 +1027,26 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
       TypeInfo.inferScalarType(R.getOperand(1)) ==
           TypeInfo.inferScalarType(R.getVPSingleValue()))
     return R.getVPSingleValue()->replaceAllUsesWith(R.getOperand(1));
+
+  if (match(&R, m_VPInstruction<VPInstruction::WideIVStep>(m_VPValue(X),
+                                                           m_SpecificInt(1)))) {
+    Type *WideStepTy = TypeInfo.inferScalarType(R.getVPSingleValue());
+    if (TypeInfo.inferScalarType(X) != WideStepTy)
+      X = VPBuilder(&R).createWidenCast(Instruction::Trunc, X, WideStepTy);
+    R.getVPSingleValue()->replaceAllUsesWith(X);
+    return;
+  }
+
+  // For i1 vp.merges produced by AnyOf reductions:
+  // vp.merge true, (or x, y), x, evl -> vp.merge y, true, x, evl
+  if (match(&R, m_Intrinsic<Intrinsic::vp_merge>(m_True(), m_VPValue(A),
+                                                 m_VPValue(X), m_VPValue())) &&
+      match(A, m_c_BinaryOr(m_Specific(X), m_VPValue(Y))) &&
+      TypeInfo.inferScalarType(R.getVPSingleValue())->isIntegerTy(1)) {
+    R.setOperand(1, R.getOperand(0));
+    R.setOperand(0, Y);
+    return;
+  }
 }
 
 void VPlanTransforms::simplifyRecipes(VPlan &Plan, Type &CanonicalIVTy) {
@@ -1086,35 +1060,227 @@ void VPlanTransforms::simplifyRecipes(VPlan &Plan, Type &CanonicalIVTy) {
   }
 }
 
-void VPlanTransforms::optimizeForVFAndUF(VPlan &Plan, ElementCount BestVF,
-                                         unsigned BestUF,
-                                         PredicatedScalarEvolution &PSE) {
-  assert(Plan.hasVF(BestVF) && "BestVF is not available in Plan");
-  assert(Plan.hasUF(BestUF) && "BestUF is not available in Plan");
-  VPRegionBlock *VectorRegion = Plan.getVectorLoopRegion();
-  VPBasicBlock *ExitingVPBB = VectorRegion->getExitingBasicBlock();
-  auto *Term = &ExitingVPBB->back();
-  // Try to simplify the branch condition if TC <= VF * UF when preparing to
-  // execute the plan for the main vector loop. We only do this if the
-  // terminator is:
-  //  1. BranchOnCount, or
-  //  2. BranchOnCond where the input is Not(ActiveLaneMask).
+/// Normalize and simplify VPBlendRecipes. Should be run after simplifyRecipes
+/// to make sure the masks are simplified.
+static void simplifyBlends(VPlan &Plan) {
   using namespace llvm::VPlanPatternMatch;
-  if (!match(Term, m_BranchOnCount(m_VPValue(), m_VPValue())) &&
-      !match(Term,
-             m_BranchOnCond(m_Not(m_ActiveLaneMask(m_VPValue(), m_VPValue())))))
-    return;
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
+           vp_depth_first_shallow(Plan.getVectorLoopRegion()->getEntry()))) {
+    for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
+      auto *Blend = dyn_cast<VPBlendRecipe>(&R);
+      if (!Blend)
+        continue;
 
-  ScalarEvolution &SE = *PSE.getSE();
+      // Try to remove redundant blend recipes.
+      SmallPtrSet<VPValue *, 4> UniqueValues;
+      if (Blend->isNormalized() || !match(Blend->getMask(0), m_False()))
+        UniqueValues.insert(Blend->getIncomingValue(0));
+      for (unsigned I = 1; I != Blend->getNumIncomingValues(); ++I)
+        if (!match(Blend->getMask(I), m_False()))
+          UniqueValues.insert(Blend->getIncomingValue(I));
+
+      if (UniqueValues.size() == 1) {
+        Blend->replaceAllUsesWith(*UniqueValues.begin());
+        Blend->eraseFromParent();
+        continue;
+      }
+
+      if (Blend->isNormalized())
+        continue;
+
+      // Normalize the blend so its first incoming value is used as the initial
+      // value with the others blended into it.
+
+      unsigned StartIndex = 0;
+      for (unsigned I = 0; I != Blend->getNumIncomingValues(); ++I) {
+        // If a value's mask is used only by the blend then is can be deadcoded.
+        // TODO: Find the most expensive mask that can be deadcoded, or a mask
+        // that's used by multiple blends where it can be removed from them all.
+        VPValue *Mask = Blend->getMask(I);
+        if (Mask->getNumUsers() == 1 && !match(Mask, m_False())) {
+          StartIndex = I;
+          break;
+        }
+      }
+
+      SmallVector<VPValue *, 4> OperandsWithMask;
+      OperandsWithMask.push_back(Blend->getIncomingValue(StartIndex));
+
+      for (unsigned I = 0; I != Blend->getNumIncomingValues(); ++I) {
+        if (I == StartIndex)
+          continue;
+        OperandsWithMask.push_back(Blend->getIncomingValue(I));
+        OperandsWithMask.push_back(Blend->getMask(I));
+      }
+
+      auto *NewBlend = new VPBlendRecipe(
+          cast<PHINode>(Blend->getUnderlyingValue()), OperandsWithMask);
+      NewBlend->insertBefore(&R);
+
+      VPValue *DeadMask = Blend->getMask(StartIndex);
+      Blend->replaceAllUsesWith(NewBlend);
+      Blend->eraseFromParent();
+      recursivelyDeleteDeadRecipes(DeadMask);
+
+      /// Simplify BLEND %a, %b, Not(%mask) -> BLEND %b, %a, %mask.
+      VPValue *NewMask;
+      if (NewBlend->getNumOperands() == 3 &&
+          match(NewBlend->getMask(1), m_Not(m_VPValue(NewMask)))) {
+        VPValue *Inc0 = NewBlend->getOperand(0);
+        VPValue *Inc1 = NewBlend->getOperand(1);
+        VPValue *OldMask = NewBlend->getOperand(2);
+        NewBlend->setOperand(0, Inc1);
+        NewBlend->setOperand(1, Inc0);
+        NewBlend->setOperand(2, NewMask);
+        if (OldMask->getNumUsers() == 0)
+          cast<VPInstruction>(OldMask)->eraseFromParent();
+      }
+    }
+  }
+}
+
+/// Optimize the width of vector induction variables in \p Plan based on a known
+/// constant Trip Count, \p BestVF and \p BestUF.
+static bool optimizeVectorInductionWidthForTCAndVFUF(VPlan &Plan,
+                                                     ElementCount BestVF,
+                                                     unsigned BestUF) {
+  // Only proceed if we have not completely removed the vector region.
+  if (!Plan.getVectorLoopRegion())
+    return false;
+
+  if (!Plan.getTripCount()->isLiveIn())
+    return false;
+  auto *TC = dyn_cast_if_present<ConstantInt>(
+      Plan.getTripCount()->getUnderlyingValue());
+  if (!TC || !BestVF.isFixed())
+    return false;
+
+  // Calculate the minimum power-of-2 bit width that can fit the known TC, VF
+  // and UF. Returns at least 8.
+  auto ComputeBitWidth = [](APInt TC, uint64_t Align) {
+    APInt AlignedTC =
+        Align * APIntOps::RoundingUDiv(TC, APInt(TC.getBitWidth(), Align),
+                                       APInt::Rounding::UP);
+    APInt MaxVal = AlignedTC - 1;
+    return std::max<unsigned>(PowerOf2Ceil(MaxVal.getActiveBits()), 8);
+  };
+  unsigned NewBitWidth =
+      ComputeBitWidth(TC->getValue(), BestVF.getKnownMinValue() * BestUF);
+
+  LLVMContext &Ctx = Plan.getCanonicalIV()->getScalarType()->getContext();
+  auto *NewIVTy = IntegerType::get(Ctx, NewBitWidth);
+
+  bool MadeChange = false;
+
+  VPBasicBlock *HeaderVPBB = Plan.getVectorLoopRegion()->getEntryBasicBlock();
+  for (VPRecipeBase &Phi : HeaderVPBB->phis()) {
+    auto *WideIV = dyn_cast<VPWidenIntOrFpInductionRecipe>(&Phi);
+
+    // Currently only handle canonical IVs as it is trivial to replace the start
+    // and stop values, and we currently only perform the optimization when the
+    // IV has a single use.
+    if (!WideIV || !WideIV->isCanonical() ||
+        WideIV->hasMoreThanOneUniqueUser() ||
+        NewIVTy == WideIV->getScalarType())
+      continue;
+
+    // Currently only handle cases where the single user is a header-mask
+    // comparison with the backedge-taken-count.
+    using namespace VPlanPatternMatch;
+    if (!match(
+            *WideIV->user_begin(),
+            m_Binary<Instruction::ICmp>(
+                m_Specific(WideIV),
+                m_Broadcast(m_Specific(Plan.getOrCreateBackedgeTakenCount())))))
+      continue;
+
+    // Update IV operands and comparison bound to use new narrower type.
+    auto *NewStart = Plan.getOrAddLiveIn(ConstantInt::get(NewIVTy, 0));
+    WideIV->setStartValue(NewStart);
+    auto *NewStep = Plan.getOrAddLiveIn(ConstantInt::get(NewIVTy, 1));
+    WideIV->setStepValue(NewStep);
+
+    auto *NewBTC = new VPWidenCastRecipe(
+        Instruction::Trunc, Plan.getOrCreateBackedgeTakenCount(), NewIVTy);
+    Plan.getVectorPreheader()->appendRecipe(NewBTC);
+    auto *Cmp = cast<VPInstruction>(*WideIV->user_begin());
+    Cmp->setOperand(1, NewBTC);
+
+    MadeChange = true;
+  }
+
+  return MadeChange;
+}
+
+/// Return true if \p Cond is known to be true for given \p BestVF and \p
+/// BestUF.
+static bool isConditionTrueViaVFAndUF(VPValue *Cond, VPlan &Plan,
+                                      ElementCount BestVF, unsigned BestUF,
+                                      ScalarEvolution &SE) {
+  using namespace llvm::VPlanPatternMatch;
+  if (match(Cond, m_Binary<Instruction::Or>(m_VPValue(), m_VPValue())))
+    return any_of(Cond->getDefiningRecipe()->operands(), [&Plan, BestVF, BestUF,
+                                                          &SE](VPValue *C) {
+      return isConditionTrueViaVFAndUF(C, Plan, BestVF, BestUF, SE);
+    });
+
+  auto *CanIV = Plan.getCanonicalIV();
+  if (!match(Cond, m_Binary<Instruction::ICmp>(
+                       m_Specific(CanIV->getBackedgeValue()),
+                       m_Specific(&Plan.getVectorTripCount()))) ||
+      cast<VPRecipeWithIRFlags>(Cond->getDefiningRecipe())->getPredicate() !=
+          CmpInst::ICMP_EQ)
+    return false;
+
+  // The compare checks CanIV + VFxUF == vector trip count. The vector trip
+  // count is not conveniently available as SCEV so far, so we compare directly
+  // against the original trip count. This is stricter than necessary, as we
+  // will only return true if the trip count == vector trip count.
+  // TODO: Use SCEV for vector trip count once available, to cover cases where
+  // vector trip count == UF * VF, but original trip count != UF * VF.
   const SCEV *TripCount =
       vputils::getSCEVExprForVPValue(Plan.getTripCount(), SE);
   assert(!isa<SCEVCouldNotCompute>(TripCount) &&
          "Trip count SCEV must be computable");
   ElementCount NumElements = BestVF.multiplyCoefficientBy(BestUF);
   const SCEV *C = SE.getElementCount(TripCount->getType(), NumElements);
-  if (TripCount->isZero() ||
-      !SE.isKnownPredicate(CmpInst::ICMP_ULE, TripCount, C))
-    return;
+  return SE.isKnownPredicate(CmpInst::ICMP_EQ, TripCount, C);
+}
+
+/// Try to simplify the branch condition of \p Plan. This may restrict the
+/// resulting plan to \p BestVF and \p BestUF.
+static bool simplifyBranchConditionForVFAndUF(VPlan &Plan, ElementCount BestVF,
+                                              unsigned BestUF,
+                                              PredicatedScalarEvolution &PSE) {
+  VPRegionBlock *VectorRegion = Plan.getVectorLoopRegion();
+  VPBasicBlock *ExitingVPBB = VectorRegion->getExitingBasicBlock();
+  auto *Term = &ExitingVPBB->back();
+  VPValue *Cond;
+  ScalarEvolution &SE = *PSE.getSE();
+  using namespace llvm::VPlanPatternMatch;
+  if (match(Term, m_BranchOnCount(m_VPValue(), m_VPValue())) ||
+      match(Term, m_BranchOnCond(
+                      m_Not(m_ActiveLaneMask(m_VPValue(), m_VPValue()))))) {
+    // Try to simplify the branch condition if TC <= VF * UF when the latch
+    // terminator is   BranchOnCount or BranchOnCond where the input is
+    // Not(ActiveLaneMask).
+    const SCEV *TripCount =
+        vputils::getSCEVExprForVPValue(Plan.getTripCount(), SE);
+    assert(!isa<SCEVCouldNotCompute>(TripCount) &&
+           "Trip count SCEV must be computable");
+    ElementCount NumElements = BestVF.multiplyCoefficientBy(BestUF);
+    const SCEV *C = SE.getElementCount(TripCount->getType(), NumElements);
+    if (TripCount->isZero() ||
+        !SE.isKnownPredicate(CmpInst::ICMP_ULE, TripCount, C))
+      return false;
+  } else if (match(Term, m_BranchOnCond(m_VPValue(Cond)))) {
+    // For BranchOnCond, check if we can prove the condition to be true using VF
+    // and UF.
+    if (!isConditionTrueViaVFAndUF(Cond, Plan, BestVF, BestUF, SE))
+      return false;
+  } else {
+    return false;
+  }
 
   // The vector loop region only executes once. If possible, completely remove
   // the region, otherwise replace the terminator controlling the latch with
@@ -1140,7 +1306,7 @@ void VPlanTransforms::optimizeForVFAndUF(VPlan &Plan, ElementCount BestVF,
 
     VPBlockUtils::connectBlocks(Preheader, Header);
     VPBlockUtils::connectBlocks(ExitingVPBB, Exit);
-    simplifyRecipes(Plan, *CanIVTy);
+    VPlanTransforms::simplifyRecipes(Plan, *CanIVTy);
   } else {
     // The vector region contains header phis for which we cannot remove the
     // loop region yet.
@@ -1153,8 +1319,23 @@ void VPlanTransforms::optimizeForVFAndUF(VPlan &Plan, ElementCount BestVF,
 
   Term->eraseFromParent();
 
-  Plan.setVF(BestVF);
-  Plan.setUF(BestUF);
+  return true;
+}
+
+void VPlanTransforms::optimizeForVFAndUF(VPlan &Plan, ElementCount BestVF,
+                                         unsigned BestUF,
+                                         PredicatedScalarEvolution &PSE) {
+  assert(Plan.hasVF(BestVF) && "BestVF is not available in Plan");
+  assert(Plan.hasUF(BestUF) && "BestUF is not available in Plan");
+
+  bool MadeChange =
+      simplifyBranchConditionForVFAndUF(Plan, BestVF, BestUF, PSE);
+  MadeChange |= optimizeVectorInductionWidthForTCAndVFUF(Plan, BestVF, BestUF);
+
+  if (MadeChange) {
+    Plan.setVF(BestVF);
+    assert(Plan.getUF() == BestUF && "BestUF must match the Plan's UF");
+  }
   // TODO: Further simplifications are possible
   //      1. Replace inductions with constants.
   //      2. Replace vector loop region with VPBasicBlock.
@@ -1548,15 +1729,63 @@ void VPlanTransforms::truncateToMinimalBitwidths(
          "some entries in MinBWs haven't been processed");
 }
 
+/// Remove BranchOnCond recipes with true conditions together with removing
+/// dead edges to their successors.
+static void removeBranchOnCondTrue(VPlan &Plan) {
+  using namespace llvm::VPlanPatternMatch;
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
+           vp_depth_first_shallow(Plan.getEntry()))) {
+    if (VPBB->getNumSuccessors() != 2 ||
+        !match(&VPBB->back(), m_BranchOnCond(m_True())))
+      continue;
+
+    VPBasicBlock *RemovedSucc = cast<VPBasicBlock>(VPBB->getSuccessors()[1]);
+    const auto &Preds = RemovedSucc->getPredecessors();
+    assert(count(Preds, VPBB) == 1 &&
+           "There must be a single edge between VPBB and its successor");
+    unsigned DeadIdx = std::distance(Preds.begin(), find(Preds, VPBB));
+
+    // Values coming from VPBB into ResumePhi recipes of RemoveSucc are removed
+    // from these recipes.
+    for (VPRecipeBase &R : make_early_inc_range(*RemovedSucc)) {
+      assert((!isa<VPIRInstruction>(&R) ||
+              !isa<PHINode>(cast<VPIRInstruction>(&R)->getInstruction())) &&
+             !isa<VPHeaderPHIRecipe>(&R) &&
+             "Cannot update VPIRInstructions wrapping phis or header phis yet");
+      auto *VPI = dyn_cast<VPInstruction>(&R);
+      if (!VPI || VPI->getOpcode() != VPInstruction::ResumePhi)
+        break;
+      VPBuilder B(VPI);
+      SmallVector<VPValue *> NewOperands;
+      // Create new operand list, with the dead incoming value filtered out.
+      for (const auto &[Idx, Op] : enumerate(VPI->operands())) {
+        if (Idx == DeadIdx)
+          continue;
+        NewOperands.push_back(Op);
+      }
+      VPI->replaceAllUsesWith(B.createNaryOp(VPInstruction::ResumePhi,
+                                             NewOperands, VPI->getDebugLoc(),
+                                             VPI->getName()));
+      VPI->eraseFromParent();
+    }
+    // Disconnect blocks and remove the terminator. RemovedSucc will be deleted
+    // automatically on VPlan destruction if it becomes unreachable.
+    VPBlockUtils::disconnectBlocks(VPBB, RemovedSucc);
+    VPBB->back().eraseFromParent();
+  }
+}
+
 void VPlanTransforms::optimize(VPlan &Plan) {
   runPass(removeRedundantCanonicalIVs, Plan);
   runPass(removeRedundantInductionCasts, Plan);
 
   runPass(simplifyRecipes, Plan, *Plan.getCanonicalIV()->getScalarType());
+  runPass(simplifyBlends, Plan);
   runPass(removeDeadRecipes, Plan);
   runPass(legalizeAndOptimizeInductions, Plan);
   runPass(removeRedundantExpandSCEVRecipes, Plan);
   runPass(simplifyRecipes, Plan, *Plan.getCanonicalIV()->getScalarType());
+  runPass(removeBranchOnCondTrue, Plan);
   runPass(removeDeadRecipes, Plan);
 
   runPass(createAndOptimizeReplicateRegions, Plan);
@@ -1764,6 +1993,10 @@ static VPRecipeBase *createEVLRecipe(VPValue *HeaderMask,
   using namespace llvm::VPlanPatternMatch;
   auto GetNewMask = [&](VPValue *OrigMask) -> VPValue * {
     assert(OrigMask && "Unmasked recipe when folding tail");
+    // HeaderMask will be handled using EVL.
+    VPValue *Mask;
+    if (match(OrigMask, m_LogicalAnd(m_Specific(HeaderMask), m_VPValue(Mask))))
+      return Mask;
     return HeaderMask == OrigMask ? nullptr : OrigMask;
   };
 
@@ -2145,7 +2378,7 @@ void VPlanTransforms::createInterleaveGroups(
                       : B.createPtrAdd(InsertPos->getAddr(), OffsetVPV);
     }
     auto *VPIG = new VPInterleaveRecipe(IG, Addr, StoredValues,
-                                        InsertPos->getMask(), NeedsMaskForGaps);
+                                        InsertPos->getMask(), NeedsMaskForGaps, InsertPos->getDebugLoc());
     VPIG->insertBefore(InsertPos);
 
     unsigned J = 0;
@@ -2162,28 +2395,78 @@ void VPlanTransforms::createInterleaveGroups(
   }
 }
 
-void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan) {
+void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan,
+                                               Type &CanonicalIVTy) {
+  using namespace llvm::VPlanPatternMatch;
+
+  VPTypeAnalysis TypeInfo(&CanonicalIVTy);
+  SmallVector<VPRecipeBase *> ToRemove;
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_deep(Plan.getEntry()))) {
-    for (VPRecipeBase &R : make_early_inc_range(VPBB->phis())) {
-      if (!isa<VPCanonicalIVPHIRecipe, VPEVLBasedIVPHIRecipe>(&R))
+    for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
+      if (isa<VPCanonicalIVPHIRecipe, VPEVLBasedIVPHIRecipe>(&R)) {
+        auto *PhiR = cast<VPHeaderPHIRecipe>(&R);
+        StringRef Name =
+            isa<VPCanonicalIVPHIRecipe>(PhiR) ? "index" : "evl.based.iv";
+        auto *ScalarR = new VPInstruction(
+            Instruction::PHI, {PhiR->getStartValue(), PhiR->getBackedgeValue()},
+            PhiR->getDebugLoc(), Name);
+        ScalarR->insertBefore(PhiR);
+        PhiR->replaceAllUsesWith(ScalarR);
+        ToRemove.push_back(PhiR);
         continue;
-      auto *PhiR = cast<VPHeaderPHIRecipe>(&R);
-      StringRef Name =
-          isa<VPCanonicalIVPHIRecipe>(PhiR) ? "index" : "evl.based.iv";
-      auto *ScalarR = new VPInstruction(
-          Instruction::PHI, {PhiR->getStartValue(), PhiR->getBackedgeValue()},
-          PhiR->getDebugLoc(), Name);
-      ScalarR->insertBefore(PhiR);
-      PhiR->replaceAllUsesWith(ScalarR);
-      PhiR->eraseFromParent();
+      }
+
+      VPValue *VectorStep;
+      VPValue *ScalarStep;
+      if (!match(&R, m_VPInstruction<VPInstruction::WideIVStep>(
+                         m_VPValue(VectorStep), m_VPValue(ScalarStep))))
+        continue;
+
+      // Expand WideIVStep.
+      auto *VPI = cast<VPInstruction>(&R);
+      VPBuilder Builder(VPI);
+      Type *IVTy = TypeInfo.inferScalarType(VPI);
+      if (TypeInfo.inferScalarType(VectorStep) != IVTy) {
+        Instruction::CastOps CastOp = IVTy->isFloatingPointTy()
+                                          ? Instruction::UIToFP
+                                          : Instruction::Trunc;
+        VectorStep = Builder.createWidenCast(CastOp, VectorStep, IVTy);
+      }
+
+      [[maybe_unused]] auto *ConstStep =
+          ScalarStep->isLiveIn()
+              ? dyn_cast<ConstantInt>(ScalarStep->getLiveInIRValue())
+              : nullptr;
+      assert(!ConstStep || ConstStep->getValue() != 1);
+      (void)ConstStep;
+      if (TypeInfo.inferScalarType(ScalarStep) != IVTy) {
+        ScalarStep =
+            Builder.createWidenCast(Instruction::Trunc, ScalarStep, IVTy);
+      }
+
+      std::optional<FastMathFlags> FMFs;
+      if (IVTy->isFloatingPointTy())
+        FMFs = VPI->getFastMathFlags();
+
+      unsigned MulOpc =
+          IVTy->isFloatingPointTy() ? Instruction::FMul : Instruction::Mul;
+      VPInstruction *Mul = Builder.createNaryOp(
+          MulOpc, {VectorStep, ScalarStep}, FMFs, R.getDebugLoc());
+      VectorStep = Mul;
+      VPI->replaceAllUsesWith(VectorStep);
+      ToRemove.push_back(VPI);
     }
   }
+
+  for (VPRecipeBase *R : ToRemove)
+    R->eraseFromParent();
 }
 
 void VPlanTransforms::handleUncountableEarlyExit(
     VPlan &Plan, ScalarEvolution &SE, Loop *OrigLoop,
-    BasicBlock *UncountableExitingBlock, VPRecipeBuilder &RecipeBuilder) {
+    BasicBlock *UncountableExitingBlock, VPRecipeBuilder &RecipeBuilder,
+    VFRange &Range) {
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
   auto *LatchVPBB = cast<VPBasicBlock>(LoopRegion->getExiting());
   VPBuilder Builder(LatchVPBB->getTerminator());
@@ -2220,26 +2503,29 @@ void VPlanTransforms::handleUncountableEarlyExit(
   // Update the exit phis in the early exit block.
   VPBuilder MiddleBuilder(NewMiddle);
   VPBuilder EarlyExitB(VectorEarlyExitVPBB);
-  for (VPRecipeBase &R : *VPEarlyExitBlock) {
-    auto *ExitIRI = cast<VPIRInstruction>(&R);
-    auto *ExitPhi = dyn_cast<PHINode>(&ExitIRI->getInstruction());
-    if (!ExitPhi)
-      break;
-
+  for (VPRecipeBase &R : VPEarlyExitBlock->phis()) {
+    auto *ExitIRI = cast<VPIRPhi>(&R);
+    PHINode &ExitPhi = ExitIRI->getIRPhi();
     VPValue *IncomingFromEarlyExit = RecipeBuilder.getVPValueOrAddLiveIn(
-        ExitPhi->getIncomingValueForBlock(UncountableExitingBlock));
+        ExitPhi.getIncomingValueForBlock(UncountableExitingBlock));
 
     if (OrigLoop->getUniqueExitBlock()) {
       // If there's a unique exit block, VPEarlyExitBlock has 2 predecessors
       // (MiddleVPBB and NewMiddle). Add the incoming value from MiddleVPBB
       // which is coming from the original latch.
       VPValue *IncomingFromLatch = RecipeBuilder.getVPValueOrAddLiveIn(
-          ExitPhi->getIncomingValueForBlock(OrigLoop->getLoopLatch()));
+          ExitPhi.getIncomingValueForBlock(OrigLoop->getLoopLatch()));
       ExitIRI->addOperand(IncomingFromLatch);
       ExitIRI->extractLastLaneOfOperand(MiddleBuilder);
     }
-    // Add the incoming value from the early exit.
-    if (!IncomingFromEarlyExit->isLiveIn() && !Plan.hasScalarVFOnly()) {
+
+    auto IsVector = [](ElementCount VF) { return VF.isVector(); };
+    // When the VFs are vectors, need to add `extract` to get the incoming value
+    // from early exit. When the range contains scalar VF, limit the range to
+    // scalar VF to prevent mis-compilation for the range containing both scalar
+    // and vector VFs.
+    if (!IncomingFromEarlyExit->isLiveIn() &&
+        LoopVectorizationPlanner::getDecisionAndClampRange(IsVector, Range)) {
       VPValue *FirstActiveLane = EarlyExitB.createNaryOp(
           VPInstruction::FirstActiveLane, {EarlyExitTakenCond}, nullptr,
           "first.active.lane");
@@ -2380,7 +2666,7 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
                                              unsigned VectorRegWidth) {
   using namespace llvm::VPlanPatternMatch;
   VPRegionBlock *VectorLoop = Plan.getVectorLoopRegion();
-  if (VF.isScalable() || !VectorLoop || Plan.getUF() != 1)
+  if (VF.isScalable() || !VectorLoop)
     return;
 
   VPCanonicalIVPHIRecipe *CanonicalIV = Plan.getCanonicalIV();
@@ -2403,6 +2689,14 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
 
     auto *InterleaveR = dyn_cast<VPInterleaveRecipe>(&R);
     if (R.mayWriteToMemory() && !InterleaveR)
+      return;
+
+    // Do not narrow interleave groups if there are VectorPointer recipes and
+    // the plan was unrolled. The recipe implicitly uses VF from
+    // VPTransformState.
+    // TODO: Remove restriction once the VF for the VectorPointer offset is
+    // modeled explicitly as operand.
+    if (isa<VPVectorPointerRecipe>(&R) && Plan.getUF() > 1)
       return;
 
     // All other ops are allowed, but we reject uses that cannot be converted
@@ -2507,5 +2801,7 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
   auto *Inc = cast<VPInstruction>(CanIV->getBackedgeValue());
   Inc->setOperand(1, Plan.getOrAddLiveIn(ConstantInt::get(
                          CanIV->getScalarType(), 1 * Plan.getUF())));
+  Plan.getVF().replaceAllUsesWith(
+      Plan.getOrAddLiveIn(ConstantInt::get(CanIV->getScalarType(), 1)));
   removeDeadRecipes(Plan);
 }

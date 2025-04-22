@@ -3366,7 +3366,7 @@ public:
 
   /// Returns true if the default branch must result in immediate undefined
   /// behavior, false otherwise.
-  bool defaultDestUndefined() const {
+  bool defaultDestUnreachable() const {
     return isa<UnreachableInst>(getDefaultDest()->getFirstNonPHIOrDbg());
   }
 

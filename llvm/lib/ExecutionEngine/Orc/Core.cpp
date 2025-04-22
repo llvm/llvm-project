@@ -127,8 +127,7 @@ void UnsatisfiedSymbolDependencies::log(raw_ostream &OS) const {
 SymbolsNotFound::SymbolsNotFound(std::shared_ptr<SymbolStringPool> SSP,
                                  SymbolNameSet Symbols)
     : SSP(std::move(SSP)) {
-  for (auto &Sym : Symbols)
-    this->Symbols.push_back(Sym);
+  llvm::append_range(this->Symbols, Symbols);
   assert(!this->Symbols.empty() && "Can not fail to resolve an empty set");
 }
 
@@ -1261,8 +1260,7 @@ JITDylib::RemoveTrackerResult JITDylib::IL_removeTracker(ResourceTracker &RT) {
   if (&RT == DefaultTracker.get()) {
     SymbolNameSet TrackedSymbols;
     for (auto &KV : TrackerSymbols)
-      for (auto &Sym : KV.second)
-        TrackedSymbols.insert(Sym);
+      TrackedSymbols.insert_range(KV.second);
 
     for (auto &KV : Symbols) {
       auto &Sym = KV.first;
@@ -1346,8 +1344,7 @@ void JITDylib::transferTracker(ResourceTracker &DstRT, ResourceTracker &SrcRT) {
       if (DstMRs.empty())
         DstMRs = std::move(SrcMRs);
       else
-        for (auto *MR : SrcMRs)
-          DstMRs.insert(MR);
+        DstMRs.insert_range(SrcMRs);
       // Erase SrcRT entry in TrackerMRs. Use &SrcRT key rather than iterator I
       // for this, since I may have been invalidated by 'TrackerMRs[&DstRT]'.
       TrackerMRs.erase(&SrcRT);
@@ -1371,8 +1368,7 @@ void JITDylib::transferTracker(ResourceTracker &DstRT, ResourceTracker &SrcRT) {
 
     SymbolNameSet CurrentlyTrackedSymbols;
     for (auto &KV : TrackerSymbols)
-      for (auto &Sym : KV.second)
-        CurrentlyTrackedSymbols.insert(Sym);
+      CurrentlyTrackedSymbols.insert_range(KV.second);
 
     for (auto &KV : Symbols) {
       auto &Sym = KV.first;
@@ -2390,8 +2386,8 @@ void ExecutionSession::OL_applyQueryPhase1(
       // Build the definition generator stack for this JITDylib.
       runSessionLocked([&] {
         IPLS->CurDefGeneratorStack.reserve(JD.DefGenerators.size());
-        for (auto &DG : reverse(JD.DefGenerators))
-          IPLS->CurDefGeneratorStack.push_back(DG);
+        llvm::append_range(IPLS->CurDefGeneratorStack,
+                           reverse(JD.DefGenerators));
       });
 
       // Flag that we've done our initialization.

@@ -284,7 +284,10 @@ public:
     ak_qualtype_pair,
 
     /// Attr *
-    ak_attr
+    ak_attr,
+
+    /// Expr *
+    ak_expr,
   };
 
   /// Represents on argument value, which is a union discriminated

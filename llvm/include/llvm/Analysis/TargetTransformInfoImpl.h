@@ -47,6 +47,8 @@ public:
 
   const DataLayout &getDataLayout() const { return DL; }
 
+  // FIXME: It looks like this implementation is dead. All clients appear to
+  //  use the (non-const) version from `TargetTransformInfoImplCRTPBase`.
   InstructionCost getGEPCost(Type *PointeeType, const Value *Ptr,
                              ArrayRef<const Value *> Operands, Type *AccessType,
                              TTI::TargetCostKind CostKind) const {
@@ -276,11 +278,13 @@ public:
     return TTI::AMK_None;
   }
 
-  bool isLegalMaskedStore(Type *DataType, Align Alignment) const {
+  bool isLegalMaskedStore(Type *DataType, Align Alignment,
+                          unsigned AddressSpace) const {
     return false;
   }
 
-  bool isLegalMaskedLoad(Type *DataType, Align Alignment) const {
+  bool isLegalMaskedLoad(Type *DataType, Align Alignment,
+                         unsigned AddressSpace) const {
     return false;
   }
 
@@ -1008,7 +1012,7 @@ public:
 
   bool preferFixedOverScalableIfEqualCost() const { return false; }
 
-  bool preferInLoopReduction(unsigned Opcode, Type *Ty) const { return false; }
+  bool preferInLoopReduction(RecurKind Kind, Type *Ty) const { return false; }
   bool preferAlternateOpcodeVectorization() const { return true; }
 
   bool preferPredicatedReductionSelect(unsigned Opcode, Type *Ty) const {

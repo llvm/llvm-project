@@ -199,8 +199,8 @@ public:
               SmallSetVector<BasicBlock *, 4> &B,
               const DenseMap<const BasicBlock *, unsigned> &BlockOrder) {
     // The order of Values and Blocks are already ordered by the caller.
-    llvm::copy(V, std::back_inserter(Values));
-    llvm::copy(B, std::back_inserter(Blocks));
+    llvm::append_range(Values, V);
+    llvm::append_range(Blocks, B);
     verifyModelledPHI(BlockOrder);
   }
 
@@ -208,7 +208,7 @@ public:
   /// TODO: Figure out a way to verifyModelledPHI in this constructor.
   ModelledPHI(ArrayRef<Instruction *> Insts, unsigned OpNum,
               SmallSetVector<BasicBlock *, 4> &B) {
-    llvm::copy(B, std::back_inserter(Blocks));
+    llvm::append_range(Blocks, B);
     for (auto *I : Insts)
       Values.push_back(I->getOperand(OpNum));
   }
@@ -249,7 +249,7 @@ public:
   // Hash functor
   unsigned hash() const {
     // Is deterministic because Values are saved in a specific order.
-    return (unsigned)hash_combine_range(Values.begin(), Values.end());
+    return (unsigned)hash_combine_range(Values);
   }
 
   bool operator==(const ModelledPHI &Other) const {
@@ -522,7 +522,7 @@ public:
 
     unsigned NumSunk = 0;
     ReversePostOrderTraversal<Function*> RPOT(&F);
-    VN.setReachableBBs(BasicBlocksSet(RPOT.begin(), RPOT.end()));
+    VN.setReachableBBs(BasicBlocksSet(llvm::from_range, RPOT));
     // Populate reverse post-order to order basic blocks in deterministic
     // order. Any arbitrary ordering will work in this case as long as they are
     // deterministic. The node ordering of newly created basic blocks
