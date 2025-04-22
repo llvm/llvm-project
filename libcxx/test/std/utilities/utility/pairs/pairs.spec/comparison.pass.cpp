@@ -46,7 +46,6 @@ static_assert(!std::equality_comparable<NonComparable>);
 static_assert(!std::equality_comparable<std::pair<EqualityComparable, NonComparable>>);
 static_assert(!std::equality_comparable<std::pair<NonComparable, EqualityComparable>>);
 
-
 #endif // TEST_STD_VER >= 26
 
 int main(int, char**)
