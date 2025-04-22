@@ -510,12 +510,14 @@ protected:
   /// regalloc pass.
   void addRegAllocPass(AddMachinePass &, bool Optimized) const;
   /// Read the --regalloc-npm option to add the next pass in line.
+  /// Returns false if no pass is left in the option.
   bool addRegAllocPassFromOpt(AddMachinePass &,
                               StringRef MatchPassTo = StringRef{}) const;
-  /// Add the next pass in the cli option, or return false if there is no pass
+  /// Add the next pass in the cli option or the pass specified if no pass is
   /// left in the option.
-  template <typename RegAllocPassT>
-  void addRegAllocPassOrOpt(AddMachinePass &, RegAllocPassT Pass) const;
+  template <typename RegAllocPassBuilderT>
+  void addRegAllocPassOrOpt(AddMachinePass &,
+                            RegAllocPassBuilderT PassBuilder) const;
 
   /// Add core register alloator passes which do the actual register assignment
   /// and rewriting. \returns true if any passes were added.
@@ -1115,11 +1117,11 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::addTargetRegisterAllocator(
 }
 
 template <typename Derived, typename TargetMachineT>
-template <typename RegAllocPassT>
+template <typename RegAllocPassBuilderT>
 void CodeGenPassBuilder<Derived, TargetMachineT>::addRegAllocPassOrOpt(
-    AddMachinePass &addPass, RegAllocPassT Pass) const {
+    AddMachinePass &addPass, RegAllocPassBuilderT PassBuilder) const {
   if (!addRegAllocPassFromOpt(addPass))
-    addPass(std::move(Pass));
+    addPass(std::move(PassBuilder()));
 }
 
 template <typename Derived, typename TargetMachineT>

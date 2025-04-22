@@ -39,8 +39,9 @@ public:
 Error X86CodeGenPassBuilder::addRegAssignmentOptimized(
     AddMachinePass &addPass) const {
   if (EnableTileRAPass) {
-    addRegAllocPassOrOpt(addPass,
-                         RAGreedyPass({onlyAllocateTileRegisters, "tile-reg"}));
+    addRegAllocPassOrOpt(addPass, []() {
+      return RAGreedyPass({onlyAllocateTileRegisters, "tile-reg"});
+    });
     // TODO: addPass(X86TileConfigPass());
   }
   return Base::addRegAssignmentOptimized(addPass);

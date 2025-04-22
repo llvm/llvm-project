@@ -2256,7 +2256,8 @@ Error AMDGPUCodeGenPassBuilder::addRegAssignmentOptimized(
     AddMachinePass &addPass) const {
   addPass(GCNPreRALongBranchRegPass());
 
-  addRegAllocPassOrOpt(addPass, RAGreedyPass({onlyAllocateSGPRs, "sgpr"}));
+  addRegAllocPassOrOpt(
+      addPass, []() { return RAGreedyPass({onlyAllocateSGPRs, "sgpr"}); });
 
   // Commit allocated register changes. This is mostly necessary because too
   // many things rely on the use lists of the physical registers, such as the
@@ -2276,13 +2277,15 @@ Error AMDGPUCodeGenPassBuilder::addRegAssignmentOptimized(
   addPass(SIPreAllocateWWMRegsPass());
 
   // For allocating other wwm register operands.
-  addRegAllocPassOrOpt(addPass, RAGreedyPass({onlyAllocateWWMRegs, "wwm"}));
+  addRegAllocPassOrOpt(
+      addPass, []() { return RAGreedyPass({onlyAllocateWWMRegs, "wwm"}); });
   addPass(SILowerWWMCopiesPass());
   addPass(VirtRegRewriterPass(false));
   addPass(AMDGPUReserveWWMRegsPass());
 
   // For allocating per-thread VGPRs.
-  addRegAllocPassOrOpt(addPass, RAGreedyPass({onlyAllocateVGPRs, "vgpr"}));
+  addRegAllocPassOrOpt(
+      addPass, []() { return RAGreedyPass({onlyAllocateVGPRs, "vgpr"}); });
 
   // TODO: addPreRewrite();
   addPass(VirtRegRewriterPass(false));
