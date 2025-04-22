@@ -1047,15 +1047,18 @@ public:
   }
 };
 
+/// Check if the element type is suitable for vector.load/store sinking.
+/// Element type must be index or byte-aligned integer or floating-point type.
 static bool isSupportedMemSinkElementType(Type type) {
   if (isa<IndexType>(type))
     return true;
 
-  // Non-byte-aligned types are tricky, skip them.
   return type.isIntOrFloat() && type.getIntOrFloatBitWidth() % 8 == 0;
 }
 
-/// Pattern to rewrite vector.extract(vector.load) -> vector/memref.load.
+/// Pattern to rewrite `vector.extract(vector.load) -> vector/memref.load.
+/// Only index and byte-aligned integer and floating-point element types are
+/// supported for now.
 ///
 /// Example:
 /// ```
@@ -1088,8 +1091,11 @@ public:
                                          "scalable vectors are not supported");
 
     MemRefType memType = loadOp.getMemRefType();
+
+    // Non-byte-aligned types are tricky and may require special handling,
+    // ignore them for now.
     if (!isSupportedMemSinkElementType(memType.getElementType()))
-      return rewriter.notifyMatchFailure(op, "unsupported memref element type");
+      return rewriter.notifyMatchFailure(op, "unsupported element type");
 
     int64_t rankOffset = memType.getRank() - loadVecType.getRank();
     if (rankOffset < 0)
@@ -1161,7 +1167,7 @@ public:
 
     if (vecType.getNumElements() != 1)
       return rewriter.notifyMatchFailure(
-          op, "only 1-element, vectors are supported");
+          op, "only 1-element vectors are supported");
 
     Operation *splat = op.getValueToStore().getDefiningOp();
     if (!isa_and_present<vector::BroadcastOp, vector::SplatOp>(splat))
@@ -2253,6 +2259,7 @@ void mlir::vector::populateSinkVectorOpsPatterns(RewritePatternSet &patterns,
 
 void mlir::vector::populateSinkVectorMemOpsPatterns(RewritePatternSet &patterns,
                                                     PatternBenefit benefit) {
+  // TODO: Consider converting these patterns to canonicalizations.
   patterns.add<ExtractOpFromLoad, StoreOpFromSplatOrBroadcast>(
       patterns.getContext(), benefit);
 }

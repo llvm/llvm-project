@@ -458,7 +458,9 @@ def ApplySinkVectorPatternsOp : Op<Transform_Dialect,
     [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
   let description = [{
     Patterns that remove redundant Vector Ops by re-ordering them with
-    e.g. elementwise Ops:
+    e.g. elementwise Ops.
+
+    Example:
     ```
     %at = vector.transpose %a, [1, 0]: vector<4x2xf32> to vector<2x4xf32>
     %bt = vector.transpose %b, [1, 0]: vector<4x2xf32> to vector<2x4xf32>
@@ -480,8 +482,11 @@ def ApplySinkVectorMemPatternsOp : Op<Transform_Dialect,
     "apply_patterns.vector.sink_mem_ops",
     [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
   let description = [{
-    Patterns that remove redundant Vector Ops by merging them with load/store
-    ops
+    Patterns that replace redundant Vector Ops (followed by
+    `vector.load`/`vector.store`) with either vector.load/vector.store or
+    `memref.load`/`memref.store`. Currently limited to 1-element vectors.
+
+    Example:
     ```
     vector.load %arg0[%arg1] : memref<?xf32>, vector<4xf32>
     vector.extract %0[1] : f32 from vector<4xf32>

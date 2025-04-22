@@ -121,8 +121,8 @@ private:
 };
 
 /// ArithBuilder specialized specifically for tensor/memref indexing
-/// calculations. Those calculations generally should never signed overflow, so
-/// we can set oveflow flags accordingly.
+/// calculations. Those calculations generally should never signed overflow and
+/// always use signed integers, so we can set oveflow flags accordingly.
 struct ArithIndexingBuilder : public ArithBuilder {
   ArithIndexingBuilder(OpBuilder &b, Location loc)
       : ArithBuilder(b, loc, arith::IntegerOverflowFlags::nsw) {}
