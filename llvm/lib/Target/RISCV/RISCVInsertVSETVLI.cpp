@@ -95,7 +95,7 @@ static bool isFloatScalarMoveOrScalarSplatInstr(const MachineInstr &MI) {
 }
 
 static bool isVInsertInstr(const MachineInstr &MI) {
-  return RISCV::getRVVMCOpcode(MI.getOpcode()) ==  RISCV::RI_VINSERT;
+  return RISCV::getRVVMCOpcode(MI.getOpcode()) == RISCV::RI_VINSERT;
 }
 
 static bool isVExtractInstr(const MachineInstr &MI) {
