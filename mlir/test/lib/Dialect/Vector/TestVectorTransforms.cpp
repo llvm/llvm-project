@@ -922,7 +922,7 @@ struct TestVectorBitWidthLinearize final
       : PassWrapper(pass) {}
 
   StringRef getArgument() const override {
-    return "test-bit-width-contrained-vector-linearize";
+    return "test-bit-width-constrained-vector-linearize";
   }
   StringRef getDescription() const override {
     return "Linearizes ND vectors for N >= 2 into 1D vectors, with constraints "
