@@ -10,7 +10,7 @@
 // ADDITIONAL_COMPILE_FLAGS: -O3 -g0
 
 #include <cassert>
-#include <experimental/stacktrace>
+#include <stacktrace>
 #include <iostream>
 
 int main(int, char**) {

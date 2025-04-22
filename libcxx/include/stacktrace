@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_EXPERIMENTAL_STACKTRACE
-#define _LIBCPP_EXPERIMENTAL_STACKTRACE
+#ifndef _LIBCPP_STACKTRACE
+#define _LIBCPP_STACKTRACE
 
 /*
   Header <stacktrace> synopsis
@@ -188,4 +188,4 @@ _LIBCPP_POP_MACROS
 #  endif // _LIBCPP_STD_VER >= 23
 #endif   // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
-#endif // _LIBCPP_EXPERIMENTAL_STACKTRACE
+#endif // _LIBCPP_STACKTRACE

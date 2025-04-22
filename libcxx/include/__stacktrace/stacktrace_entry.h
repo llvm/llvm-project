@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_EXPERIMENTAL_STACKTRACE_ENTRY
-#define _LIBCPP_EXPERIMENTAL_STACKTRACE_ENTRY
+#ifndef _LIBCPP_STACKTRACE_ENTRY
+#define _LIBCPP_STACKTRACE_ENTRY
 
 #include <__cstddef/byte.h>
 #include <__cstddef/ptrdiff_t.h>
@@ -33,7 +33,7 @@
 #include <cstdint>
 #include <string>
 
-#include <__stacktrace/detail/entry.h>
+#include <__stacktrace/entry.h>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -108,4 +108,4 @@ struct _LIBCPP_EXPORTED_FROM_ABI hash<stacktrace_entry> {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP_EXPERIMENTAL_STACKTRACE_ENTRY
+#endif // _LIBCPP_STACKTRACE_ENTRY

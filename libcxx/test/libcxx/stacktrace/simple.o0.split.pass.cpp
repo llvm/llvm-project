@@ -11,7 +11,7 @@
 
 #include <cassert>
 #include <iostream>
-#include <experimental/stacktrace>
+#include <stacktrace>
 
 int main(int, char**) {
   // Get the current trace.

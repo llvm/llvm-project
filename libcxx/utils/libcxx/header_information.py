@@ -170,7 +170,6 @@ headers_not_available = list(map(Header, [
     "linalg",
     "rcu",
     "spanstream",
-    "stacktrace",  # TODO(stacktrace23): remove this when stacktrace is taken out of experimental
     "stdfloat",
     "text_encoding",
 ]))
@@ -189,7 +188,6 @@ lit_header_restrictions = {
     "experimental/iterator": "// UNSUPPORTED: c++03",
     "experimental/propagate_const": "// UNSUPPORTED: c++03",
     "experimental/simd": "// UNSUPPORTED: c++03",
-    "experimental/stacktrace": "// UNSUPPORTED: c++03, c++11, c++14, c++17, c++20",
     "experimental/type_traits": "// UNSUPPORTED: c++03",
     "experimental/utility": "// UNSUPPORTED: c++03",
     "filesystem": "// UNSUPPORTED: no-filesystem, c++03, c++11, c++14",
@@ -199,6 +197,7 @@ lit_header_restrictions = {
     "print": "// UNSUPPORTED: no-filesystem, c++03, c++11, c++14, c++17, c++20, availability-fp_to_chars-missing", # TODO PRINT investigate
     "semaphore": "// UNSUPPORTED: no-threads, c++03, c++11, c++14, c++17",
     "shared_mutex": "// UNSUPPORTED: no-threads, c++03, c++11",
+    "stacktrace": "// UNSUPPORTED: c++03, c++11, c++14, c++17, c++20",
     "stdatomic.h": "// UNSUPPORTED: no-threads, c++03, c++11, c++14, c++17, c++20",
     "stop_token": "// UNSUPPORTED: no-threads, c++03, c++11, c++14, c++17",
     "thread": "// UNSUPPORTED: no-threads, c++03",
