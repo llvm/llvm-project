@@ -9,7 +9,7 @@
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 // ADDITIONAL_COMPILE_FLAGS: -O1 -g
 
-#include <experimental/stacktrace>
+#include <stacktrace>
 
 #include <cassert>
 #include <iostream>
