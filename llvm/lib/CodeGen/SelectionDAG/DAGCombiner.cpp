@@ -5981,7 +5981,6 @@ SDValue DAGCombiner::hoistLogicOpWithSameOpcodeHands(SDNode *N) {
          HandOpcode == ISD::ANY_EXTEND_VECTOR_INREG) &&
         LegalTypes && !TLI.isTypeDesirableForOp(LogicOpcode, XVT))
       return SDValue();
-    // If it is not desirable to hoist LogicOp with extension.
     if (!TLI.isDesirableToHoistLogicOpWithExt(N, HandOpcode))
       return SDValue();
     // logic_op (hand_op X), (hand_op Y) --> hand_op (logic_op X, Y)
