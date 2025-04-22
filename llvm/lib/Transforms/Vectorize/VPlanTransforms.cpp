@@ -2437,6 +2437,8 @@ static void tryToCreateAbstractReductionRecipe(VPReductionRecipe *Red,
   Red->replaceAllUsesWith(AbstractR);
 }
 
+/// This function tries to create an abstract recipe from a partial reduction to
+/// hide its mul and extends from cost estimation.
 static void
 tryToCreateAbstractPartialReductionRecipe(VPPartialReductionRecipe *PRed) {
   if (PRed->getOpcode() != Instruction::Add)
