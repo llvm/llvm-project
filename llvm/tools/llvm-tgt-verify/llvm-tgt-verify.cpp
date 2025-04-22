@@ -1,4 +1,4 @@
-//===--- llvm-isel-fuzzer.cpp - Fuzzer for instruction selection ----------===//
+//===--- llvm-tgt-verify.cpp - Target Verifier ----------------- ----------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Tool to fuzz instruction selection using libFuzzer.
+// Tool to verify a target.
 //
 //===----------------------------------------------------------------------===//
 
@@ -144,13 +144,10 @@ int main(int argc, char **argv) {
   PB.registerCGSCCAnalyses(CGAM);
   PB.registerFunctionAnalyses(FAM);
   PB.registerLoopAnalyses(LAM);
-  //PB.registerVerifierPasses(MPM, FPM);
   PB.registerMachineFunctionAnalyses(MFAM);
   PB.crossRegisterProxies(LAM, FAM, CGAM, MAM, &MFAM);
 
   SI.registerCallbacks(PIC, &MAM, &FAM);
-
-  //FAM.registerPass([&] { return TargetLibraryAnalysis(TLII); });
 
   Triple TT(M->getTargetTriple());
   if (!NoLint)

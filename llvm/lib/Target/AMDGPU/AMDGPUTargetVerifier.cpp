@@ -1,3 +1,22 @@
+//===-- AMDGPUTargetVerifier.cpp - AMDGPU -------------------------*- C++ -*-===//
+////
+//// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+//// See https://llvm.org/LICENSE.txt for license information.
+//// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+////
+////===----------------------------------------------------------------------===//
+////
+//// This file defines target verifier interfaces that can be used for some
+//// validation of input to the system, and for checking that transformations
+//// haven't done something bad. In contrast to the Verifier or Lint, the
+//// TargetVerifier looks for constructions invalid to a particular target
+//// machine.
+////
+//// To see what specifically is checked, look at an individual backend's
+//// TargetVerifier.
+////
+////===----------------------------------------------------------------------===//
+
 #include "llvm/Target/TargetVerify/AMDGPUTargetVerifier.h"
 
 #include "llvm/Analysis/UniformityAnalysis.h"
@@ -25,19 +44,6 @@ using namespace llvm;
   } while (false)
 
 namespace llvm {
-/*class AMDGPUTargetVerify : public TargetVerify {
-public:
-  Module *Mod;
-
-  DominatorTree *DT;
-  PostDominatorTree *PDT;
-  UniformityInfo *UA;
-
-  AMDGPUTargetVerify(Module *Mod, DominatorTree *DT, PostDominatorTree *PDT, UniformityInfo *UA)
-    : TargetVerify(Mod), Mod(Mod), DT(DT), PDT(PDT), UA(UA) {}
-
-  void run(Function &F);
-};*/
 
 static bool IsValidInt(const Type *Ty) {
   return Ty->isIntegerTy(1) ||
@@ -147,7 +153,7 @@ struct AMDGPUTargetVerifierLegacyPass : public FunctionPass {
   }
 
   bool runOnFunction(Function &F) override {
-    if (TV->run(F) && FatalErrors) {
+    if (!TV->run(F) && FatalErrors) {
       errs() << "in function " << F.getName() << '\n';
       report_fatal_error("Broken function found, compilation aborted!");
     }
@@ -160,7 +166,6 @@ struct AMDGPUTargetVerifierLegacyPass : public FunctionPass {
       if (F.isDeclaration())
         IsValid &= TV->run(F);
 
-    //IsValid &= TV->run();
     if (FatalErrors && !IsValid)
       report_fatal_error("Broken module found, compilation aborted!");
     return false;
