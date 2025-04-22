@@ -8,8 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 export namespace std {
-// TODO(stacktrace23): update this when stacktrace is taken out of experimental
-#if 0 //_LIBCPP_STD_VER >= 23
+#if _LIBCPP_STD_VER >= 23
 
   // [stacktrace.entry], class stacktrace_­entry
   using std::stacktrace_entry;

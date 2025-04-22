@@ -7,11 +7,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_EXPERIMENTAL_BASIC_STACKTRACE
-#define _LIBCPP_EXPERIMENTAL_BASIC_STACKTRACE
+#ifndef _LIBCPP_BASIC_STACKTRACE
+#define _LIBCPP_BASIC_STACKTRACE
 
-#include <experimental/__stacktrace/detail/entry.h>
-#include <experimental/__stacktrace/stacktrace_entry.h>
+#include <__stacktrace/entry.h>
+#include <__stacktrace/stacktrace_entry.h>
 
 #include <__config>
 #include <__format/formatter.h>
@@ -37,9 +37,9 @@
 #include <memory>
 #include <string>
 
-#include <__stacktrace/detail/alloc.h>
-#include <__stacktrace/detail/context.h>
-#include <__stacktrace/detail/to_string.h>
+#include <__stacktrace/alloc.h>
+#include <__stacktrace/context.h>
+#include <__stacktrace/to_string.h>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -303,4 +303,4 @@ struct _LIBCPP_EXPORTED_FROM_ABI hash<basic_stacktrace<_Allocator>> {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP_EXPERIMENTAL_BASIC_STACKTRACE
+#endif // _LIBCPP_BASIC_STACKTRACE
