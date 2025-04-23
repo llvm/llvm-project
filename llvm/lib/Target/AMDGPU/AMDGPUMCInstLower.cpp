@@ -249,34 +249,34 @@ const MCExpr *AMDGPUAsmPrinter::lowerConstant(const Constant *CV,
   return AsmPrinter::lowerConstant(CV, BaseCV, Offset);
 }
 
-static void emitVGPRBlockComment(const MachineInstr *MI, MCStreamer &OS) {
+static void emitVGPRBlockComment(const MachineInstr *MI, const SIInstrInfo *TII,
+                                 const TargetRegisterInfo *TRI,
+                                 const SIMachineFunctionInfo *MFI,
+                                 MCStreamer &OS) {
   // The instruction will only transfer a subset of the registers in the block,
   // based on the mask that is stored in m0. We could search for the instruction
   // that sets m0, but most of the time we'll already have the mask stored in
   // the machine function info. Try to use that. This assumes that we only use
   // block loads/stores for CSR spills.
-  const MachineFunction *MF = MI->getParent()->getParent();
-  const SIMachineFunctionInfo *MFI = MF->getInfo<SIMachineFunctionInfo>();
-  const TargetRegisterInfo &TRI = *MF->getSubtarget().getRegisterInfo();
-  const SIInstrInfo *TII = MF->getSubtarget<GCNSubtarget>().getInstrInfo();
-
   Register RegBlock =
       TII->getNamedOperand(*MI, MI->mayLoad() ? AMDGPU::OpName::vdst
                                               : AMDGPU::OpName::vdata)
           ->getReg();
-  Register FirstRegInBlock = TRI.getSubReg(RegBlock, AMDGPU::sub0);
+  Register FirstRegInBlock = TRI->getSubReg(RegBlock, AMDGPU::sub0);
   uint32_t Mask = MFI->getMaskForVGPRBlockOps(RegBlock);
 
+  if (!Mask)
+    return; // Nothing to report
+
   SmallString<512> TransferredRegs;
-  for (unsigned I = 0; I < 32; ++I) {
+  for (unsigned I = 0; I < sizeof(Mask) * 8; ++I) {
     if (Mask & (1 << I)) {
-      (llvm::Twine(" ") + TRI.getName(FirstRegInBlock + I))
+      (llvm::Twine(" ") + TRI->getRegAsmName(FirstRegInBlock + I))
           .toVector(TransferredRegs);
     }
   }
 
-  if (!TransferredRegs.empty())
-    OS.emitRawComment(" transferring at most " + TransferredRegs);
+  OS.emitRawComment(" transferring at most " + TransferredRegs);
 }
 
 void AMDGPUAsmPrinter::emitInstruction(const MachineInstr *MI) {
@@ -374,9 +374,11 @@ void AMDGPUAsmPrinter::emitInstruction(const MachineInstr *MI) {
           " src1=" + Twine((V >> 2) & 3) + " src2=" + Twine((V >> 4) & 3));
     }
 
-    if (STI.getInstrInfo()->isBlockLoadStore(MI->getOpcode()))
-      if (isVerbose())
-        emitVGPRBlockComment(MI, *OutStreamer);
+    if (isVerbose())
+      if (STI.getInstrInfo()->isBlockLoadStore(MI->getOpcode()))
+        emitVGPRBlockComment(MI, STI.getInstrInfo(), STI.getRegisterInfo(),
+                             MF->getInfo<SIMachineFunctionInfo>(),
+                             *OutStreamer);
 
     MCInst TmpInst;
     MCInstLowering.lower(MI, TmpInst);

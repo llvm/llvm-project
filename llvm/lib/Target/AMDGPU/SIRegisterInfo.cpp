@@ -2487,10 +2487,9 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
         Opc = AMDGPU::SCRATCH_STORE_SHORT_SADDR_t16;
       } else {
         Opc = MI->getOpcode() == AMDGPU::SI_BLOCK_SPILL_V1024_SAVE
-                       ? AMDGPU::SCRATCH_STORE_BLOCK_SADDR
-                   : ST.enableFlatScratch()
-                       ? AMDGPU::SCRATCH_STORE_DWORD_SADDR
-                       : AMDGPU::BUFFER_STORE_DWORD_OFFSET;
+                  ? AMDGPU::SCRATCH_STORE_BLOCK_SADDR
+              : ST.enableFlatScratch() ? AMDGPU::SCRATCH_STORE_DWORD_SADDR
+                                       : AMDGPU::BUFFER_STORE_DWORD_OFFSET;
       }
 
       auto *MBB = MI->getParent();
@@ -2573,16 +2572,16 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
         Opc = AMDGPU::SCRATCH_LOAD_SHORT_D16_SADDR_t16;
       } else {
         Opc = MI->getOpcode() == AMDGPU::SI_BLOCK_SPILL_V1024_RESTORE
-                       ? AMDGPU::SCRATCH_LOAD_BLOCK_SADDR
-                   : ST.enableFlatScratch()
-                       ? AMDGPU::SCRATCH_LOAD_DWORD_SADDR
-                       : AMDGPU::BUFFER_LOAD_DWORD_OFFSET;
+                  ? AMDGPU::SCRATCH_LOAD_BLOCK_SADDR
+              : ST.enableFlatScratch() ? AMDGPU::SCRATCH_LOAD_DWORD_SADDR
+                                       : AMDGPU::BUFFER_LOAD_DWORD_OFFSET;
       }
+
       auto *MBB = MI->getParent();
       bool IsWWMRegSpill = TII->isWWMRegSpillOpcode(MI->getOpcode());
       if (IsWWMRegSpill) {
         TII->insertScratchExecCopy(*MF, *MBB, MI, DL, MFI->getSGPRForEXECCopy(),
-                                  RS->isRegUsed(AMDGPU::SCC));
+                                   RS->isRegUsed(AMDGPU::SCC));
       }
 
       buildSpillLoadStore(
