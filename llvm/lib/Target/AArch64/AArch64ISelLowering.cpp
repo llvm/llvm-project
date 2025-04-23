@@ -28530,7 +28530,7 @@ bool AArch64TargetLowering::shouldLocalize(
         Imm, CI->getType(), TargetTransformInfo::TCK_CodeSize);
     assert(Cost.isValid() && "Expected a valid imm cost");
 
-    unsigned RematCost = *Cost.getValue();
+    unsigned RematCost = Cost.getValue();
     RematCost += AdditionalCost;
     Register Reg = MI.getOperand(0).getReg();
     unsigned MaxUses = maxUses(RematCost);

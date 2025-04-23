@@ -1610,7 +1610,7 @@ public:
 
       // Scale the cost of the load by the fraction of legal instructions that
       // will be used.
-      Cost = divideCeil(UsedInsts.count() * *Cost.getValue(), NumLegalInsts);
+      Cost = divideCeil(UsedInsts.count() * Cost.getValue(), NumLegalInsts);
     }
 
     // Then plus the cost of interleave operation.
@@ -2878,7 +2878,7 @@ public:
           SubTp && SubTp->getElementType() == FTp->getElementType())
         return divideCeil(FTp->getNumElements(), SubTp->getNumElements());
     }
-    return *LT.first.getValue();
+    return LT.first.getValue();
   }
 
   InstructionCost getAddressComputationCost(Type *Ty, ScalarEvolution *,

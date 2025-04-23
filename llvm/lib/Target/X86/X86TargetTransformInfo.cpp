@@ -1748,7 +1748,7 @@ InstructionCost X86TTIImpl::getShuffleCost(
             getTypeLegalizationCost(
                 FixedVectorType::get(BaseTp->getElementType(), Mask.size()))
                 .first;
-        unsigned E = *NumOfDests.getValue();
+        unsigned E = NumOfDests.getValue();
         unsigned NormalizedVF =
             LegalVT.getVectorNumElements() * std::max(NumOfSrcs, E);
         unsigned NumOfSrcRegs = NormalizedVF / LegalVT.getVectorNumElements();
@@ -4931,7 +4931,7 @@ InstructionCost X86TTIImpl::getScalarizationOverhead(
           (LegalVectorBitWidth % LaneBitWidth) == 0) &&
          "Illegal vector");
 
-  const int NumLegalVectors = *LT.first.getValue();
+  const int NumLegalVectors = LT.first.getValue();
   assert(NumLegalVectors >= 0 && "Negative cost!");
 
   // For insertions, a ISD::BUILD_VECTOR style vector initialization can be much
@@ -6164,7 +6164,7 @@ InstructionCost X86TTIImpl::getGSVectorCost(unsigned Opcode,
   std::pair<InstructionCost, MVT> IdxsLT = getTypeLegalizationCost(IndexVTy);
   std::pair<InstructionCost, MVT> SrcLT = getTypeLegalizationCost(SrcVTy);
   InstructionCost::CostType SplitFactor =
-      *std::max(IdxsLT.first, SrcLT.first).getValue();
+      std::max(IdxsLT.first, SrcLT.first).getValue();
   if (SplitFactor > 1) {
     // Handle splitting of vector of pointers
     auto *SplitSrcTy =
