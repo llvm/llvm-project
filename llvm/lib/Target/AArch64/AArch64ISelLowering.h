@@ -245,13 +245,6 @@ enum NodeType : unsigned {
   FCMGE,
   FCMGT,
 
-  // Vector zero comparisons
-  FCMEQz,
-  FCMGEz,
-  FCMGTz,
-  FCMLEz,
-  FCMLTz,
-
   // Round wide FP to narrow FP with inexact results to odd.
   FCVTXN,
 
