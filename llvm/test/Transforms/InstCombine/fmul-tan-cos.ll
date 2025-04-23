@@ -133,4 +133,48 @@ define double @tan_cos_value_mismatch(double %a, double %b) {
   ret double %res
 }
 
+; Vector
+define <2 x double> @fmul_tan_cos_vector(<2 x double> %a) {
+; CHECK-LABEL: define <2 x double> @fmul_tan_cos_vector(
+; CHECK-SAME: <2 x double> [[A:%.*]]) {
+; CHECK-NEXT:    [[RES:%.*]] = call reassoc <2 x double> @llvm.sin.v2f64(<2 x double> [[A]])
+; CHECK-NEXT:    ret <2 x double> [[RES]]
+;
+  %tan = call reassoc <2 x double> @llvm.tan.v2f64(<2 x double> %a)
+  %cos = call reassoc <2 x double> @llvm.cos.v2f64(<2 x double> %a)
+  %res = fmul reassoc <2 x double> %tan, %cos
+  ret <2 x double> %res
+}
+
+; Flag preservation
+define double @fmul_tan_cos_nnan_preservation(double %a) {
+; CHECK-LABEL: define double @fmul_tan_cos_nnan_preservation(
+; CHECK-SAME: double [[A:%.*]]) {
+; CHECK-NEXT:    [[RES:%.*]] = call reassoc nnan double @llvm.sin.f64(double [[A]])
+; CHECK-NEXT:    ret double [[RES]]
+;
+  %tan = call reassoc double @llvm.tan.f64(double %a)
+  %cos = call reassoc double @llvm.cos.f64(double %a)
+  %res = fmul reassoc nnan double %tan, %cos
+  ret double %res
+}
+
+; !fpmath metadata preservation
+define double @fmul_tan_cos_fpmath_metadata_preservation(double %a) {
+; CHECK-LABEL: define double @fmul_tan_cos_fpmath_metadata_preservation(
+; CHECK-SAME: double [[A:%.*]]) {
+; CHECK-NEXT:    [[RES:%.*]] = call reassoc double @llvm.sin.f64(double [[A]]), !fpmath [[META0:![0-9]+]]
+; CHECK-NEXT:    ret double [[RES]]
+;
+  %tan = call reassoc double @llvm.tan.f64(double %a)
+  %cos = call reassoc double @llvm.cos.f64(double %a)
+  %res = fmul reassoc double %tan, %cos, !fpmath !0
+  ret double %res
+}
+
 declare void @use(double)
+
+!0 = !{ float 2.5 }
+;.
+; CHECK: [[META0]] = !{float 2.500000e+00}
+;.

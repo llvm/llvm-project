@@ -951,7 +951,10 @@ Instruction *InstCombinerImpl::foldFMulReassoc(BinaryOperator &I) {
   if (match(&I,
             m_c_FMul(m_OneUse(m_Intrinsic<Intrinsic::tan>(m_Value(X))),
                      m_OneUse(m_Intrinsic<Intrinsic::cos>(m_Deferred(X)))))) {
-    Value *Sin = Builder.CreateUnaryIntrinsic(Intrinsic::sin, X, &I);
+    auto *Sin = Builder.CreateUnaryIntrinsic(Intrinsic::sin, X, &I);
+    if (auto *Metadata = I.getMetadata(LLVMContext::MD_fpmath)) {
+      Sin->setMetadata(LLVMContext::MD_fpmath, Metadata);
+    }
     return replaceInstUsesWith(I, Sin);
   }
 
