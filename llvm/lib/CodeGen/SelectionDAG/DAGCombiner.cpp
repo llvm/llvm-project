@@ -25265,10 +25265,12 @@ static SDValue narrowExtractedVectorLoad(SDNode *Extract, SelectionDAG &DAG) {
 
   // It's fine to use TypeSize here as we know the offset will not be negative.
   TypeSize Offset = VT.getStoreSize() * (Index / NumElts);
+  std::optional<unsigned> ByteOffset;
+  if (Offset.isFixed())
+    ByteOffset = Offset.getFixedValue();
 
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-  if (!TLI.shouldReduceLoadWidth(Ld, Ld->getExtensionType(), VT,
-                                 /*ByteOffset=*/Offset.getFixedValue()))
+  if (!TLI.shouldReduceLoadWidth(Ld, Ld->getExtensionType(), VT, ByteOffset))
     return SDValue();
 
   // The narrow load will be offset from the base address of the old load if
