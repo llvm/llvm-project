@@ -18,6 +18,10 @@
 #include "llvm/TargetParser/AArch64TargetParser.h"
 #include <optional>
 
+namespace llvm {
+class Function;
+}
+
 namespace clang {
 namespace targets {
 
@@ -187,8 +191,8 @@ public:
   llvm::SmallVector<Builtin::InfosShard> getTargetBuiltins() const override;
 
   std::optional<std::pair<unsigned, unsigned>>
-  getVScaleRange(const LangOptions &LangOpts,
-                 bool IsArmStreamingFunction) const override;
+  getVScaleRange(const LangOptions &LangOpts, bool IsArmStreamingFunction,
+                 llvm::Function *F = nullptr) const override;
   bool doesFeatureAffectCodeGen(StringRef Name) const override;
   bool validateCpuSupports(StringRef FeatureStr) const override;
   bool hasFeature(StringRef Feature) const override;

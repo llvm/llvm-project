@@ -1117,7 +1117,7 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
   // Add vscale_range attribute if appropriate.
   std::optional<std::pair<unsigned, unsigned>> VScaleRange =
       getContext().getTargetInfo().getVScaleRange(
-          getLangOpts(), FD ? IsArmStreamingFunction(FD, true) : false);
+          getLangOpts(), FD ? IsArmStreamingFunction(FD, true) : false, CurFn);
   if (VScaleRange) {
     CurFn->addFnAttr(llvm::Attribute::getWithVScaleRangeArgs(
         getLLVMContext(), VScaleRange->first, VScaleRange->second));
