@@ -2025,9 +2025,10 @@ void AMDGPUCodeGenPassBuilder::addIRPasses(AddIRPass &addPass) const {
 
     // Try to hoist loop invariant parts of divisions AMDGPUCodeGenPrepare may
     // have expanded.
-    if (TM.getOptLevel() > CodeGenOptLevel::Less)
+    if (TM.getOptLevel() > CodeGenOptLevel::Less) {
       addPass(createFunctionToLoopPassAdaptor(LICMPass(LICMOptions()),
                                               /*UseMemorySSA=*/true));
+    }
   }
 
   Base::addIRPasses(addPass);
