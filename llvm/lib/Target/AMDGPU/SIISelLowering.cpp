@@ -6631,7 +6631,7 @@ void SITargetLowering::ReplaceNodeResults(SDNode *N,
     }
     case Intrinsic::amdgcn_dead: {
       for (unsigned I = 0, E = N->getNumValues(); I < E; ++I)
-        Results.push_back(DAG.getUNDEF(N->getValueType(I)));
+        Results.push_back(DAG.getPOISON(N->getValueType(I)));
       return;
     }
     }
@@ -9122,10 +9122,10 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::amdgcn_update_dpp:
     return lowerLaneOp(*this, Op.getNode(), DAG);
   case Intrinsic::amdgcn_dead: {
-    SmallVector<SDValue, 8> Undefs;
+    SmallVector<SDValue, 8> Poisons;
     for (unsigned I = 0, E = Op.getNode()->getNumValues(); I != E; ++I)
-      Undefs.push_back(DAG.getUNDEF(Op.getNode()->getValueType(I)));
-    return DAG.getMergeValues(Undefs, SDLoc(Op));
+      Poisons.push_back(DAG.getPOISON(Op.getNode()->getValueType(I)));
+    return DAG.getMergeValues(Poisons, SDLoc(Op));
   }
   default:
     if (const AMDGPU::ImageDimIntrinsicInfo *ImageDimIntr =

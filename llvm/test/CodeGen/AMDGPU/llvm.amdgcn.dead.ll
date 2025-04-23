@@ -341,7 +341,7 @@ if.end:
   ret [32 x i32] %res
 }
 
-%non_trivial_types = type { i8, i16, half, bfloat, <2 x i16>, <2 x half>, <2 x bfloat>, <5 x i32>, i128}
+%non_trivial_types = type { i8, i16, half, bfloat, <2 x i16>, <2 x half>, <2 x bfloat>, <5 x i32>, i128, <7 x i16>}
 
 define %non_trivial_types @dead_non_trivial(i1 %cond, %non_trivial_types %x, ptr addrspace(1) %ptr1, i32 %v) #0 {
 ; ASM-DAG-LABEL: dead_non_trivial:
@@ -351,15 +351,15 @@ define %non_trivial_types @dead_non_trivial(i1 %cond, %non_trivial_types %x, ptr
 ; ASM-DAG-NEXT:    s_wait_samplecnt 0x0
 ; ASM-DAG-NEXT:    s_wait_bvhcnt 0x0
 ; ASM-DAG-NEXT:    s_wait_kmcnt 0x0
-; ASM-DAG-NEXT:    v_mov_b32_e32 v20, v0
+; ASM-DAG-NEXT:    v_mov_b32_e32 v24, v0
 ; ASM-DAG-NEXT:    v_mov_b32_e32 v0, v1
 ; ASM-DAG-NEXT:    s_mov_b32 s0, exec_lo
 ; ASM-DAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
-; ASM-DAG-NEXT:    v_and_b32_e32 v1, 1, v20
+; ASM-DAG-NEXT:    v_and_b32_e32 v1, 1, v24
 ; ASM-DAG-NEXT:    v_cmpx_eq_u32_e32 1, v1
 ; ASM-DAG-NEXT:    s_cbranch_execz .LBB3_2
 ; ASM-DAG-NEXT:  ; %bb.1: ; %if.then
-; ASM-DAG-NEXT:    v_dual_mov_b32 v7, 0 :: v_dual_add_nc_u32 v0, 15, v19
+; ASM-DAG-NEXT:    v_dual_mov_b32 v7, 0 :: v_dual_add_nc_u32 v0, 15, v23
 ; ASM-DAG-NEXT:    v_mov_b32_e32 v3, 0x3e00
 ; ASM-DAG-NEXT:    ; implicit-def: $vgpr2
 ; ASM-DAG-NEXT:    ; implicit-def: $vgpr4
@@ -368,7 +368,8 @@ define %non_trivial_types @dead_non_trivial(i1 %cond, %non_trivial_types %x, ptr
 ; ASM-DAG-NEXT:    ; implicit-def: $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12
 ; ASM-DAG-NEXT:    ; implicit-def: $vgpr13_vgpr14
 ; ASM-DAG-NEXT:    ; implicit-def: $vgpr15_vgpr16
-; ASM-DAG-NEXT:    global_store_b32 v[17:18], v0, off
+; ASM-DAG-NEXT:    ; implicit-def: $vgpr17_vgpr18_vgpr19_vgpr20
+; ASM-DAG-NEXT:    global_store_b32 v[21:22], v0, off
 ; ASM-DAG-NEXT:    ; implicit-def: $vgpr0
 ; ASM-DAG-NEXT:  .LBB3_2: ; %if.end
 ; ASM-DAG-NEXT:    s_wait_alu 0xfffe
@@ -380,7 +381,9 @@ define %non_trivial_types @dead_non_trivial(i1 %cond, %non_trivial_types %x, ptr
 ; ASM-DAG-NEXT:    v_dual_mov_b32 v9, v10 :: v_dual_mov_b32 v10, v11
 ; ASM-DAG-NEXT:    v_dual_mov_b32 v11, v12 :: v_dual_mov_b32 v12, v13
 ; ASM-DAG-NEXT:    v_dual_mov_b32 v13, v14 :: v_dual_mov_b32 v14, v15
-; ASM-DAG-NEXT:    v_mov_b32_e32 v15, v16
+; ASM-DAG-NEXT:    v_dual_mov_b32 v15, v16 :: v_dual_mov_b32 v16, v17
+; ASM-DAG-NEXT:    v_dual_mov_b32 v17, v18 :: v_dual_mov_b32 v18, v19
+; ASM-DAG-NEXT:    v_mov_b32_e32 v19, v20
 ; ASM-DAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; ASM-GISEL-LABEL: dead_non_trivial:
@@ -390,38 +393,60 @@ define %non_trivial_types @dead_non_trivial(i1 %cond, %non_trivial_types %x, ptr
 ; ASM-GISEL-NEXT:    s_wait_samplecnt 0x0
 ; ASM-GISEL-NEXT:    s_wait_bvhcnt 0x0
 ; ASM-GISEL-NEXT:    s_wait_kmcnt 0x0
-; ASM-GISEL-NEXT:    v_mov_b32_e32 v20, v0
+; ASM-GISEL-NEXT:    v_mov_b32_e32 v24, v0
 ; ASM-GISEL-NEXT:    v_dual_mov_b32 v0, v1 :: v_dual_mov_b32 v1, v2
 ; ASM-GISEL-NEXT:    v_dual_mov_b32 v2, v3 :: v_dual_mov_b32 v3, v4
 ; ASM-GISEL-NEXT:    v_dual_mov_b32 v4, v5 :: v_dual_mov_b32 v5, v6
-; ASM-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_1) | instid1(VALU_DEP_1)
-; ASM-GISEL-NEXT:    v_dual_mov_b32 v6, v7 :: v_dual_and_b32 v7, 1, v20
-; ASM-GISEL-NEXT:    s_mov_b32 s0, exec_lo
-; ASM-GISEL-NEXT:    v_cmpx_ne_u32_e32 0, v7
+; ASM-GISEL-NEXT:    v_dual_mov_b32 v6, v7 :: v_dual_mov_b32 v7, v19
+; ASM-GISEL-NEXT:    v_dual_mov_b32 v19, v20 :: v_dual_and_b32 v20, 1, v24
+; ASM-GISEL-NEXT:    v_lshrrev_b32_e32 v24, 16, v18
+; ASM-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
+; ASM-GISEL-NEXT:    v_lshrrev_b32_e32 v25, 16, v7
+; ASM-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v20
+; ASM-GISEL-NEXT:    v_lshrrev_b32_e32 v20, 16, v17
+; ASM-GISEL-NEXT:    s_and_saveexec_b32 s0, vcc_lo
 ; ASM-GISEL-NEXT:    s_cbranch_execz .LBB3_2
 ; ASM-GISEL-NEXT:  ; %bb.1: ; %if.then
 ; ASM-GISEL-NEXT:    s_movk_i32 s1, 0x3e00
 ; ASM-GISEL-NEXT:    s_mov_b32 s2, 0
-; ASM-GISEL-NEXT:    v_add_nc_u32_e32 v0, 15, v19
 ; ASM-GISEL-NEXT:    s_wait_alu 0xfffe
+; ASM-GISEL-NEXT:    s_lshr_b32 s3, s0, 16
+; ASM-GISEL-NEXT:    s_lshr_b32 s4, s0, 16
+; ASM-GISEL-NEXT:    s_lshr_b32 s5, s0, 16
+; ASM-GISEL-NEXT:    s_wait_alu 0xfffe
+; ASM-GISEL-NEXT:    v_dual_mov_b32 v25, s5 :: v_dual_add_nc_u32 v0, 15, v23
 ; ASM-GISEL-NEXT:    v_mov_b32_e32 v2, s1
 ; ASM-GISEL-NEXT:    v_mov_b32_e32 v6, s2
+; ASM-GISEL-NEXT:    v_mov_b32_e32 v20, s3
+; ASM-GISEL-NEXT:    v_mov_b32_e32 v24, s4
+; ASM-GISEL-NEXT:    global_store_b32 v[21:22], v0, off
+; ASM-GISEL-NEXT:    ; implicit-def: $vgpr0
 ; ASM-GISEL-NEXT:    ; implicit-def: $vgpr1
 ; ASM-GISEL-NEXT:    ; implicit-def: $vgpr3
 ; ASM-GISEL-NEXT:    ; implicit-def: $vgpr4
 ; ASM-GISEL-NEXT:    ; implicit-def: $vgpr5
 ; ASM-GISEL-NEXT:    ; implicit-def: $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12
 ; ASM-GISEL-NEXT:    ; implicit-def: $vgpr13_vgpr14_vgpr15_vgpr16
-; ASM-GISEL-NEXT:    global_store_b32 v[17:18], v0, off
-; ASM-GISEL-NEXT:    ; implicit-def: $vgpr0
+; ASM-GISEL-NEXT:    ; implicit-def: $vgpr17
+; ASM-GISEL-NEXT:    ; implicit-def: $vgpr18
+; ASM-GISEL-NEXT:    ; implicit-def: $vgpr7
+; ASM-GISEL-NEXT:    ; implicit-def: $vgpr19
 ; ASM-GISEL-NEXT:  .LBB3_2: ; %if.end
 ; ASM-GISEL-NEXT:    s_wait_alu 0xfffe
 ; ASM-GISEL-NEXT:    s_or_b32 exec_lo, exec_lo, s0
+; ASM-GISEL-NEXT:    v_and_b32_e32 v17, 0xffff, v17
+; ASM-GISEL-NEXT:    v_and_b32_e32 v18, 0xffff, v18
+; ASM-GISEL-NEXT:    v_and_b32_e32 v7, 0xffff, v7
+; ASM-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
+; ASM-GISEL-NEXT:    v_lshl_or_b32 v20, v20, 16, v17
+; ASM-GISEL-NEXT:    v_lshl_or_b32 v17, v24, 16, v18
+; ASM-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3)
+; ASM-GISEL-NEXT:    v_lshl_or_b32 v18, v25, 16, v7
 ; ASM-GISEL-NEXT:    v_dual_mov_b32 v7, v8 :: v_dual_mov_b32 v8, v9
 ; ASM-GISEL-NEXT:    v_dual_mov_b32 v9, v10 :: v_dual_mov_b32 v10, v11
 ; ASM-GISEL-NEXT:    v_dual_mov_b32 v11, v12 :: v_dual_mov_b32 v12, v13
 ; ASM-GISEL-NEXT:    v_dual_mov_b32 v13, v14 :: v_dual_mov_b32 v14, v15
-; ASM-GISEL-NEXT:    v_mov_b32_e32 v15, v16
+; ASM-GISEL-NEXT:    v_dual_mov_b32 v15, v16 :: v_dual_mov_b32 v16, v20
 ; ASM-GISEL-NEXT:    s_setpc_b64 s[30:31]
 entry:
   br i1 %cond, label %if.then, label %if.end
