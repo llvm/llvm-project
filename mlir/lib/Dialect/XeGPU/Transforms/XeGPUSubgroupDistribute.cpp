@@ -696,9 +696,9 @@ private:
   void assignToUsers(Value v, xegpu::LayoutAttr layout);
   xegpu::LayoutAttr getLayoutAttrForValue(Value v);
   LogicalResult resolveConflicts();
-  function_ref<LayoutInfo(Value)>
-      getAnalysisResult; // Callable to get the layout of a value based on the
-                         // layout propagation analysis.
+  // Callable to get the layout of a value based on the layout propagation
+  // analysis.
+  function_ref<LayoutInfo(Value)> getAnalysisResult;
   Operation *top;
 };
 
@@ -849,22 +849,6 @@ FailureOr<VectorType> getDistVecTypeBasedOnLaneLayout(xegpu::LayoutAttr layout,
     distributedShape[i] = dim / laneLayout[i - distributionStart];
   }
   return VectorType::get(distributedShape, originalType.getElementType());
-}
-
-/// Get the distributed vector type for a source vector type according to a
-/// xegpu::LayoutAttr.
-static VectorType getDistributedVectorType(xegpu::LayoutAttr layout,
-                                           VectorType originalType) {
-  auto shape = originalType.getShape();
-  auto distVecTyOrFailure =
-      xegpu::TensorDescType::get(shape, originalType.getElementType(),
-                                 /*array_length=*/1, /*boundary_check=*/true,
-                                 /*memory_space=*/xegpu::MemorySpace::Global,
-                                 layout)
-          .getDistributedVectorType();
-  assert(llvm::succeeded(distVecTyOrFailure) &&
-         "Failed to compute distributed vector type for the given vector type");
-  return distVecTyOrFailure.value();
 }
 
 /// Drop the layout attribute from the tensor descriptor type if layout is
@@ -1175,7 +1159,7 @@ struct StoreNdDistribution final : public gpu::WarpDistributionPattern {
     /// supported by the store op. Type mismatch must be resolved using
     /// appropriate cast op.
     auto storeNdDistributedValueTyOrFailure =
-        storeOp.getTensorDescType().getDistributedVectorType();
+        xegpu::getDistributedVectorType(storeOp.getTensorDescType());
     if (failed(storeNdDistributedValueTyOrFailure))
       return rewriter.notifyMatchFailure(
           storeOp, "Failed to get distributed vector type for the store op");
@@ -1263,7 +1247,7 @@ struct LoadNdDistribution final : public gpu::WarpDistributionPattern {
     /// type.
     rewriter.setInsertionPointAfter(newWarpOp);
     auto loadNdDistValueTyOrFailure =
-        loadOp.getTensorDescType().getDistributedVectorType();
+        xegpu::getDistributedVectorType(loadOp.getTensorDescType());
     if (failed(loadNdDistValueTyOrFailure))
       return rewriter.notifyMatchFailure(
           loadOp, "Failed to get distributed vector type for the load op");
@@ -1379,17 +1363,27 @@ struct DpasDistribution final : public gpu::WarpDistributionPattern {
     gpu::WarpExecuteOnLane0Op newWarpOp = moveRegionToNewWarpOpAndAppendReturns(
         rewriter, subgroupOp, newYieldValues, newYieldTypes, newRetIndices);
 
+    FailureOr<VectorType> expectedDistLhsTyOrFailure =
+        xegpu::getDistributedVectorType(dpasOp.getLhsType(), layoutA);
+    FailureOr<VectorType> expectedDistRhsTyOrFailure =
+        xegpu::getDistributedVectorType(dpasOp.getRhsType(), layoutB);
+    FailureOr<VectorType> expectedDistResultTyOrFailure =
+        xegpu::getDistributedVectorType(dpasOp.getResultType(), layoutOut);
+    if (failed(expectedDistLhsTyOrFailure) ||
+        failed(expectedDistRhsTyOrFailure) ||
+        failed(expectedDistResultTyOrFailure))
+      return rewriter.notifyMatchFailure(
+          dpasOp,
+          "Failed to get distributed vector type for the dpas operands.");
     // Create a new dpas op outside the warp op.
     rewriter.setInsertionPointAfter(newWarpOp);
     SmallVector<Value> newDpasOperands;
     SmallVector<VectorType> newDpasOperandExpectedTypes;
+
     /// Resolve the distributed types with the original types.
-    newDpasOperandExpectedTypes.push_back(
-        getDistributedVectorType(layoutA, dpasOp.getLhsType()));
-    newDpasOperandExpectedTypes.push_back(
-        getDistributedVectorType(layoutB, dpasOp.getRhsType()));
-    auto distributedResultTy =
-        getDistributedVectorType(layoutOut, dpasOp.getResultType());
+    newDpasOperandExpectedTypes.push_back(expectedDistLhsTyOrFailure.value());
+    newDpasOperandExpectedTypes.push_back(expectedDistRhsTyOrFailure.value());
+    auto distributedResultTy = expectedDistResultTyOrFailure.value();
     if (dpasOp.getAcc())
       newDpasOperandExpectedTypes.push_back(distributedResultTy);
 

@@ -8,6 +8,7 @@
 
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include <numeric>
@@ -336,8 +337,8 @@ LogicalResult TensorDescType::verify(
 //        * tensor_desc[1] % (lane_layout[1] × lane_data[1]) == 0
 // Distributed vector is a 1D vector with shape:
 //        [fragment_size]
-FailureOr<VectorType> TensorDescType::getDistributedVectorType() {
-  auto layout = llvm::dyn_cast_if_present<LayoutAttr>(getLayout());
+FailureOr<VectorType> getDistributedVectorType(xegpu::TensorDescType tdescTy) {
+  auto layout = llvm::dyn_cast_if_present<LayoutAttr>(tdescTy.getLayout());
   // It only works for subgroup level layout, which only has lane_layout
   // and lane_data, and is to distribute a SIMD code into SIMT code.
   if (!layout || !layout.isSgLayout())
@@ -345,7 +346,8 @@ FailureOr<VectorType> TensorDescType::getDistributedVectorType() {
 
   SmallVector<int64_t> laneData(layout.getLaneData().asArrayRef());
   SmallVector<int64_t> laneLayout(layout.getLaneLayout().asArrayRef());
-  auto tdescShape = getShape();
+  auto tdescShape = tdescTy.getShape();
+  auto elementType = tdescTy.getElementType();
 
   // compute sgSize by multiply elements of laneLayout
   // e.g. for 2D layout, sgSize = laneLayout[0] * laneLayout[1]
@@ -354,14 +356,14 @@ FailureOr<VectorType> TensorDescType::getDistributedVectorType() {
                                 std::multiplies<int64_t>());
 
   // Case 1: regular loads/stores
-  auto scatterAttr = getEncodingAsScatterTensorDescAttr();
+  auto scatterAttr = tdescTy.getEncodingAsScatterTensorDescAttr();
   if (scatterAttr) {
     auto chunkSize = scatterAttr.getChunkSize().getInt();
     // Verify if the first dimension of the tensor descriptor shape is
     // distributable.
     assert(tdescShape[0] == laneLayout[0] &&
            "tensor descriptor shape is not distributable");
-    return VectorType::get({chunkSize}, getElementType());
+    return VectorType::get({chunkSize}, elementType);
   }
 
   // Case 2: block loads/stores
@@ -374,9 +376,21 @@ FailureOr<VectorType> TensorDescType::getDistributedVectorType() {
     tensorSize *= tdescDim;
   }
   // tensorSize must be adjusted for array_length.
-  tensorSize *= getArrayLength();
+  tensorSize *= tdescTy.getArrayLength();
 
-  return VectorType::get({tensorSize / sgSize}, getElementType());
+  return VectorType::get({tensorSize / sgSize}, elementType);
+}
+
+// Helper to get the distributed vector type for a given vector type according
+// to a given LayoutAttr.
+FailureOr<VectorType> getDistributedVectorType(VectorType originalType,
+                                               LayoutAttr layout) {
+  auto shape = originalType.getShape();
+  auto helperTdescTy = xegpu::TensorDescType::get(
+      shape, originalType.getElementType(),
+      /*array_length=*/1, /*boundary_check=*/true,
+      /*memory_space=*/xegpu::MemorySpace::Global, layout);
+  return xegpu::getDistributedVectorType(helperTdescTy);
 }
 
 } // namespace xegpu

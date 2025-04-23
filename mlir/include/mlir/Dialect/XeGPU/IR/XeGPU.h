@@ -34,4 +34,12 @@ class TensorDescType;
 #define GET_OP_CLASSES
 #include <mlir/Dialect/XeGPU/IR/XeGPU.h.inc>
 
+namespace mlir {
+namespace xegpu {
+FailureOr<VectorType> getDistributedVectorType(VectorType originalType,
+                                               LayoutAttr layout);
+FailureOr<VectorType> getDistributedVectorType(xegpu::TensorDescType tdescTy);
+} // namespace xegpu
+} // namespace mlir
+
 #endif // MLIR_DIALECT_XEGPU_IR_XEGPU_H
