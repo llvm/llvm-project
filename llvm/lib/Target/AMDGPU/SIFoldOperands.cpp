@@ -23,6 +23,16 @@
 #define DEBUG_TYPE "si-fold-operands"
 using namespace llvm;
 
+static cl::opt<bool> SIFoldOperandsPreheader(
+    "amdgpu-si-fold-operands-preheader",
+    cl::desc("Enables operand folding between loop body and its preheader "),
+    cl::init(true));
+
+static cl::opt<int> SIFoldOperandsPreheaderThreshold(
+    "amdgpu-si-fold-operands-preheader-threshold", cl::init(100),
+    cl::desc("Threshold for operand folding hazard check. "
+             "Defaults to 100 MIs, upper limit 10000."));
+
 namespace {
 
 struct FoldCandidate {
@@ -1168,10 +1178,10 @@ void SIFoldOperandsImpl::foldOperand(
       }
 
       if (OpToFold.isReg() && TRI->isSGPRReg(*MRI, OpToFold.getReg())) {
-        if (execMayBeModifiedBeforeUse(*MRI,
-                                       UseMI->getOperand(UseOpIdx).getReg(),
-                                       *OpToFold.getParent(),
-                                       *UseMI))
+        if (checkIfExecMayBeModifiedBeforeUseAcrossBB(
+                *MRI, UseMI->getOperand(UseOpIdx).getReg(),
+                *OpToFold.getParent(), *UseMI, SIFoldOperandsPreheader,
+                SIFoldOperandsPreheaderThreshold))
           return;
 
         // %vgpr = COPY %sgpr0

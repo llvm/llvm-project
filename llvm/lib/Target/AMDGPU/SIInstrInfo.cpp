@@ -9743,6 +9743,90 @@ MachineInstr *llvm::getVRegSubRegDef(const TargetInstrInfo::RegSubRegPair &P,
   return nullptr;
 }
 
+// helper function to checkIfExecMayBeModifiedBeforeUseAcrossBB and
+// execMayBeModifiedBeforeUse. This checks possible EXEC register modifications
+// for a straight-line sequence of instructions between BeginIterator and
+// EndIterator (both inclusive) upto a pre-defined limit MaxInstScan
+bool execMayBeModifiedBeforeUseUtil(
+    const TargetRegisterInfo *TRI,
+    const MachineInstrBundleIterator<const MachineInstr> BeginIterator,
+    const MachineInstrBundleIterator<const MachineInstr> EndIterator,
+    const int MaxInstScan) {
+
+  int NumInst = 0;
+  for (auto I = BeginIterator; I != EndIterator; ++I) {
+    if (I->isDebugInstr())
+      continue;
+
+    if (++NumInst > MaxInstScan) {
+      dbgs() << "## maxinst\n";
+      return true;
+    }
+
+    if (I->modifiesRegister(AMDGPU::EXEC, TRI))
+      return true;
+  }
+  return false;
+}
+
+// Variant of execMayBeModifiedBeforeUse(), where DefMI and UseMI belong to
+// different basic blocks. Current code is limited to a very simple case: DefMI
+// in the predecessor BB of the single BB loop where UseMI resides.
+bool llvm::checkIfExecMayBeModifiedBeforeUseAcrossBB(
+    const MachineRegisterInfo &MRI, Register VReg, const MachineInstr &DefMI,
+    const MachineInstr &UseMI, const bool SIFoldOperandsPreheader,
+    const int SIFoldOperandsPreheaderThreshold) {
+
+  assert(MRI.isSSA() && "Must be run on SSA");
+  auto *TRI = MRI.getTargetRegisterInfo();
+  auto *DefBB = DefMI.getParent();
+  const int MaxInstScan = (SIFoldOperandsPreheaderThreshold > 10000)
+                              ? 10000
+                              : SIFoldOperandsPreheaderThreshold;
+
+  // Check whether EXEC is modified along all possible control flow between
+  // DefMI and UseMI, which may include loop backedge
+  // 1. UseBB is the only successor of DefBB
+  // 2. UseBB is a single basic block loop (only two predecessor blocks: DefBB
+  // and UseBB)
+  // 3. check if EXEC is modified
+  auto *UseBB = UseMI.getParent();
+  if (UseBB != DefBB) {
+    if (SIFoldOperandsPreheader) {
+      if (!(DefBB->isSuccessor(UseBB) && (DefBB->succ_size() == 1)))
+        return true;
+
+      if (!((UseBB->pred_size() == 2) && UseBB->isPredecessor(UseBB) &&
+            UseBB->isPredecessor(DefBB)))
+        return true;
+
+      bool canExecBeModifiedBeforeUse = execMayBeModifiedBeforeUseUtil(
+          TRI, UseBB->begin(), UseBB->end(), MaxInstScan);
+      if (canExecBeModifiedBeforeUse)
+        return true;
+
+      // Stop scan at the end of the DEF basic block.
+      // If we are here, we know for sure that the instructions in focus are in
+      // the same basic block. Scan them to be safe.
+      canExecBeModifiedBeforeUse = execMayBeModifiedBeforeUseUtil(
+          TRI, std::next(DefMI.getIterator()), DefBB->end(), MaxInstScan);
+      if (canExecBeModifiedBeforeUse)
+        return true;
+
+      return false;
+    }
+    return true;
+  } else {
+    // Stop scan at the use.
+    bool canExecBeModifiedBeforeUse = execMayBeModifiedBeforeUseUtil(
+        TRI, std::next(DefMI.getIterator()), UseMI.getIterator(), MaxInstScan);
+    if (canExecBeModifiedBeforeUse)
+      return true;
+
+    return false;
+  }
+}
+
 bool llvm::execMayBeModifiedBeforeUse(const MachineRegisterInfo &MRI,
                                       Register VReg,
                                       const MachineInstr &DefMI,
@@ -9761,17 +9845,10 @@ bool llvm::execMayBeModifiedBeforeUse(const MachineRegisterInfo &MRI,
   int NumInst = 0;
 
   // Stop scan at the use.
-  auto E = UseMI.getIterator();
-  for (auto I = std::next(DefMI.getIterator()); I != E; ++I) {
-    if (I->isDebugInstr())
-      continue;
-
-    if (++NumInst > MaxInstScan)
-      return true;
-
-    if (I->modifiesRegister(AMDGPU::EXEC, TRI))
-      return true;
-  }
+  bool canExecBeModifiedBeforeUse = execMayBeModifiedBeforeUseUtil(
+      TRI, std::next(DefMI.getIterator()), UseMI.getIterator(), MaxInstScan);
+  if (canExecBeModifiedBeforeUse)
+    return true;
 
   return false;
 }
