@@ -5680,11 +5680,14 @@ def : Pat<(v2i64 (bswap (v2i64 V128:$Rn))),
           (v2i64 (REV64v16i8 (v2i64 V128:$Rn)))>;
 
 // Patterns for funnel shifts to be matched to equivalent REV instructions
-def : Pat<(v2i64 (or (v2i64 (AArch64vshl (v2i64 V128:$Rn), (i32 32))), (v2i64 (AArch64vlshr (v2i64 V128:$Rn), (i32 32))))), 
+def : Pat<(v2i64 (or (v2i64 (AArch64vshl (v2i64 V128:$Rn), (i32 32))), 
+          (v2i64 (AArch64vlshr (v2i64 V128:$Rn), (i32 32))))), 
           (v2i64 (REV64v4i32 (v2i64 V128:$Rn)))>;
-def : Pat<(v4i32 (or (v4i32 (AArch64vshl (v4i32 V128:$Rn), (i32 16))), (v4i32 (AArch64vlshr (v4i32 V128:$Rn), (i32 16))))), 
+def : Pat<(v4i32 (or (v4i32 (AArch64vshl (v4i32 V128:$Rn), (i32 16))), 
+          (v4i32 (AArch64vlshr (v4i32 V128:$Rn), (i32 16))))), 
           (v4i32 (REV32v8i16 (v4i32 V128:$Rn)))>;
-def : Pat<(v2i32 (or (v2i32 (AArch64vshl (v2i32 V64:$Rn), (i32 16))), (v2i32 (AArch64vlshr (v2i32 V64:$Rn), (i32 16))))), 
+def : Pat<(v2i32 (or (v2i32 (AArch64vshl (v2i32 V64:$Rn), (i32 16))), 
+          (v2i32 (AArch64vlshr (v2i32 V64:$Rn), (i32 16))))), 
           (v2i32 (REV32v4i16 (v2i32 V64:$Rn)))>;
 
 //===----------------------------------------------------------------------===//
