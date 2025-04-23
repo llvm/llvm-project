@@ -357,11 +357,11 @@ static void canonicalizeDefines(PreprocessorOptions &PPOpts) {
   std::swap(PPOpts.Macros, NewMacros);
 }
 
-class ActualDependencyDirectivesGetter : public DependencyDirectivesGetter {
+class ScanningDependencyDirectivesGetter : public DependencyDirectivesGetter {
   DependencyScanningWorkerFilesystem *DepFS;
 
 public:
-  ActualDependencyDirectivesGetter(FileManager &FileMgr) : DepFS(nullptr) {
+  ScanningDependencyDirectivesGetter(FileManager &FileMgr) : DepFS(nullptr) {
     FileMgr.getVirtualFileSystem().visit([&](llvm::vfs::FileSystem &FS) {
       auto *DFS = llvm::dyn_cast<DependencyScanningWorkerFilesystem>(&FS);
       if (DFS) {
@@ -374,7 +374,7 @@ public:
 
   std::unique_ptr<DependencyDirectivesGetter>
   cloneFor(FileManager &FileMgr) override {
-    return std::make_unique<ActualDependencyDirectivesGetter>(FileMgr);
+    return std::make_unique<ScanningDependencyDirectivesGetter>(FileMgr);
   }
 
   std::optional<ArrayRef<dependency_directives_scan::Directive>>
@@ -463,7 +463,7 @@ public:
         DepFS->setBypassedPathPrefix(ModulesCachePath);
 
       ScanInstance.setDependencyDirectivesGetter(
-          std::make_unique<ActualDependencyDirectivesGetter>(*FileMgr));
+          std::make_unique<ScanningDependencyDirectivesGetter>(*FileMgr));
     }
 
     ScanInstance.createSourceManager(*FileMgr);
