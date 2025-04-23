@@ -175,7 +175,7 @@ rarely have to include this file directly).
   except that it allows for a null pointer as an argument (which it then
   returns false).  This can sometimes be useful, allowing you to combine several
   null checks into one. Similar to ``isa<>`` operator, you can specify more than
-  one classes to check.
+  one class to check.
 
 ``cast_if_present<>``:
   The ``cast_if_present<>`` operator works just like the ``cast<>`` operator,
