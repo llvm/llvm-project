@@ -1144,6 +1144,10 @@ void CodeGenModule::Release() {
                               1);
   }
 
+  if (CodeGenOpts.UniqueSourceFileNames) {
+    getModule().addModuleFlag(llvm::Module::Max, "Unique Source File Names", 1);
+  }
+
   if (LangOpts.Sanitize.has(SanitizerKind::KCFI)) {
     getModule().addModuleFlag(llvm::Module::Override, "kcfi", 1);
     // KCFI assumes patchable-function-prefix is the same for all indirectly
@@ -3305,6 +3309,27 @@ void CodeGenModule::EmitDeferred() {
   CurDeclsToEmit.swap(DeferredDeclsToEmit);
 
   for (GlobalDecl &D : CurDeclsToEmit) {
+    // Functions declared with the sycl_kernel_entry_point attribute are
+    // emitted normally during host compilation. During device compilation,
+    // a SYCL kernel caller offload entry point function is generated and
+    // emitted in place of each of these functions.
+    if (const auto *FD = D.getDecl()->getAsFunction()) {
+      if (LangOpts.SYCLIsDevice && FD->hasAttr<SYCLKernelEntryPointAttr>() &&
+          FD->isDefined()) {
+        // Functions with an invalid sycl_kernel_entry_point attribute are
+        // ignored during device compilation.
+        if (!FD->getAttr<SYCLKernelEntryPointAttr>()->isInvalidAttr()) {
+          // Generate and emit the SYCL kernel caller function.
+          EmitSYCLKernelCaller(FD, getContext());
+          // Recurse to emit any symbols directly or indirectly referenced
+          // by the SYCL kernel caller function.
+          EmitDeferred();
+        }
+        // Do not emit the sycl_kernel_entry_point attributed function.
+        continue;
+      }
+    }
+
     // We should call GetAddrOfGlobal with IsForDefinition set to true in order
     // to get GlobalValue with exactly the type we need, not something that
     // might had been created for another decl with the same mangled name but
@@ -3639,6 +3664,10 @@ bool CodeGenModule::MayBeEmittedEagerly(const ValueDecl *Global) {
       return false;
     // Defer until all versions have been semantically checked.
     if (FD->hasAttr<TargetVersionAttr>() && !FD->isMultiVersion())
+      return false;
+    // Defer emission of SYCL kernel entry point functions during device
+    // compilation.
+    if (LangOpts.SYCLIsDevice && FD->hasAttr<SYCLKernelEntryPointAttr>())
       return false;
   }
   if (const auto *VD = dyn_cast<VarDecl>(Global)) {
@@ -7947,52 +7976,4 @@ void CodeGenModule::moveLazyEmissionStates(CodeGenModule *NewBuilder) {
   NewBuilder->WeakRefReferences = std::move(WeakRefReferences);
 
   NewBuilder->ABI->MangleCtx = std::move(ABI->MangleCtx);
-}
-
-bool CodeGenModule::classNeedsVectorDestructor(const CXXRecordDecl *RD) {
-  CXXDestructorDecl *Dtor = RD->getDestructor();
-  // The compiler can't know if new[]/delete[] will be used outside of the DLL,
-  // so just force vector deleting destructor emission if dllexport is present.
-  // This matches MSVC behavior.
-  if (Dtor && Dtor->isVirtual() && Dtor->isDefined() &&
-      Dtor->hasAttr<DLLExportAttr>())
-    return true;
-
-  assert(getCXXABI().hasVectorDeletingDtors());
-  return RequireVectorDeletingDtor.count(RD);
-}
-
-void CodeGenModule::requireVectorDestructorDefinition(const CXXRecordDecl *RD) {
-  assert(getCXXABI().hasVectorDeletingDtors());
-  RequireVectorDeletingDtor.insert(RD);
-
-  // To reduce code size in general case we lazily emit scalar deleting
-  // destructor definition and an alias from vector deleting destructor to
-  // scalar deleting destructor. It may happen that we first emitted the scalar
-  // deleting destructor definition and the alias and then discovered that the
-  // definition of the vector deleting destructor is required. Then we need to
-  // remove the alias and the scalar deleting destructor and queue vector
-  // deleting destructor body for emission. Check if that is the case.
-  CXXDestructorDecl *DtorD = RD->getDestructor();
-  GlobalDecl ScalarDtorGD(DtorD, Dtor_Deleting);
-  StringRef MangledName = getMangledName(ScalarDtorGD);
-  llvm::GlobalValue *Entry = GetGlobalValue(MangledName);
-  if (Entry && !Entry->isDeclaration()) {
-    GlobalDecl VectorDtorGD(DtorD, Dtor_VectorDeleting);
-    StringRef VDName = getMangledName(VectorDtorGD);
-    llvm::GlobalValue *VDEntry = GetGlobalValue(VDName);
-    // It exists and it should be an alias.
-    assert(VDEntry && isa<llvm::GlobalAlias>(VDEntry));
-    auto *NewFn = llvm::Function::Create(
-        cast<llvm::FunctionType>(VDEntry->getValueType()),
-        llvm::Function::ExternalLinkage, VDName, &getModule());
-    SetFunctionAttributes(VectorDtorGD, NewFn, /*IsIncompleteFunction*/ false,
-                          /*IsThunk*/ false);
-    NewFn->takeName(VDEntry);
-    VDEntry->replaceAllUsesWith(NewFn);
-    VDEntry->eraseFromParent();
-    Entry->replaceAllUsesWith(NewFn);
-    Entry->eraseFromParent();
-    addDeferredDeclToEmit(VectorDtorGD);
-  }
 }

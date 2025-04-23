@@ -57,6 +57,7 @@ class SCEV;
 class Type;
 class VPBasicBlock;
 class VPBuilder;
+class VPDominatorTree;
 class VPRegionBlock;
 class VPlan;
 class VPLane;
@@ -303,6 +304,13 @@ public:
   /// Remove all the successors of this block.
   void clearSuccessors() { Successors.clear(); }
 
+  /// Swap predecessors of the block. The block must have exactly 2
+  /// predecessors.
+  void swapPredecessors() {
+    assert(Predecessors.size() == 2 && "must have 2 predecessors to swap");
+    std::swap(Predecessors[0], Predecessors[1]);
+  }
+
   /// Swap successors of the block. The block must have exactly 2 successors.
   // TODO: This should be part of introducing conditional branch recipes rather
   // than being independent.
@@ -457,6 +465,9 @@ public:
   /// Returns the debug location of the recipe.
   DebugLoc getDebugLoc() const { return DL; }
 
+  /// Return true if the recipe is a scalar cast.
+  bool isScalarCast() const;
+
 protected:
   /// Compute the cost of this recipe either using a recipe's specialized
   /// implementation or using the legacy cost model and the underlying
@@ -531,7 +542,6 @@ public:
     case VPRecipeBase::VPWidenIntOrFpInductionSC:
     case VPRecipeBase::VPWidenPointerInductionSC:
     case VPRecipeBase::VPReductionPHISC:
-    case VPRecipeBase::VPScalarCastSC:
     case VPRecipeBase::VPPartialReductionSC:
       return true;
     case VPRecipeBase::VPBranchOnMaskSC:
@@ -708,6 +718,7 @@ public:
     return R->getVPDefID() == VPRecipeBase::VPInstructionSC ||
            R->getVPDefID() == VPRecipeBase::VPWidenSC ||
            R->getVPDefID() == VPRecipeBase::VPWidenGEPSC ||
+           R->getVPDefID() == VPRecipeBase::VPWidenCallSC ||
            R->getVPDefID() == VPRecipeBase::VPWidenCastSC ||
            R->getVPDefID() == VPRecipeBase::VPWidenIntrinsicSC ||
            R->getVPDefID() == VPRecipeBase::VPReductionSC ||
@@ -753,33 +764,33 @@ public:
     }
   }
 
-  /// Set the IR flags for \p I.
-  void setFlags(Instruction *I) const {
+  /// Apply the IR flags to \p I.
+  void applyFlags(Instruction &I) const {
     switch (OpType) {
     case OperationType::OverflowingBinOp:
-      I->setHasNoUnsignedWrap(WrapFlags.HasNUW);
-      I->setHasNoSignedWrap(WrapFlags.HasNSW);
+      I.setHasNoUnsignedWrap(WrapFlags.HasNUW);
+      I.setHasNoSignedWrap(WrapFlags.HasNSW);
       break;
     case OperationType::DisjointOp:
-      cast<PossiblyDisjointInst>(I)->setIsDisjoint(DisjointFlags.IsDisjoint);
+      cast<PossiblyDisjointInst>(&I)->setIsDisjoint(DisjointFlags.IsDisjoint);
       break;
     case OperationType::PossiblyExactOp:
-      I->setIsExact(ExactFlags.IsExact);
+      I.setIsExact(ExactFlags.IsExact);
       break;
     case OperationType::GEPOp:
-      cast<GetElementPtrInst>(I)->setNoWrapFlags(GEPFlags);
+      cast<GetElementPtrInst>(&I)->setNoWrapFlags(GEPFlags);
       break;
     case OperationType::FPMathOp:
-      I->setHasAllowReassoc(FMFs.AllowReassoc);
-      I->setHasNoNaNs(FMFs.NoNaNs);
-      I->setHasNoInfs(FMFs.NoInfs);
-      I->setHasNoSignedZeros(FMFs.NoSignedZeros);
-      I->setHasAllowReciprocal(FMFs.AllowReciprocal);
-      I->setHasAllowContract(FMFs.AllowContract);
-      I->setHasApproxFunc(FMFs.ApproxFunc);
+      I.setHasAllowReassoc(FMFs.AllowReassoc);
+      I.setHasNoNaNs(FMFs.NoNaNs);
+      I.setHasNoInfs(FMFs.NoInfs);
+      I.setHasNoSignedZeros(FMFs.NoSignedZeros);
+      I.setHasAllowReciprocal(FMFs.AllowReciprocal);
+      I.setHasAllowContract(FMFs.AllowContract);
+      I.setHasApproxFunc(FMFs.ApproxFunc);
       break;
     case OperationType::NonNegOp:
-      I->setNonNeg(NonNegFlags.NonNeg);
+      I.setNonNeg(NonNegFlags.NonNeg);
       break;
     case OperationType::Cmp:
     case OperationType::Other:
@@ -881,6 +892,13 @@ public:
     AnyOf,
     // Calculates the first active lane index of the vector predicate operand.
     FirstActiveLane,
+
+    // The opcodes below are used for VPInstructionWithType.
+    //
+    /// Scale the first operand (vector step) by the second operand
+    /// (scalar-step).  Casts both operands to the result type if needed.
+    WideIVStep,
+
   };
 
 private:
@@ -1023,6 +1041,64 @@ public:
 
   /// Returns the symbolic name assigned to the VPInstruction.
   StringRef getName() const { return Name; }
+};
+
+/// A specialization of VPInstruction augmenting it with a dedicated result
+/// type, to be used when the opcode and operands of the VPInstruction don't
+/// directly determine the result type. Note that there is no separate VPDef ID
+/// for VPInstructionWithType; it shares the same ID as VPInstruction and is
+/// distinguished purely by the opcode.
+class VPInstructionWithType : public VPInstruction {
+  /// Scalar result type produced by the recipe.
+  Type *ResultTy;
+
+public:
+  VPInstructionWithType(unsigned Opcode, ArrayRef<VPValue *> Operands,
+                        Type *ResultTy, DebugLoc DL, const Twine &Name = "")
+      : VPInstruction(Opcode, Operands, DL, Name), ResultTy(ResultTy) {}
+  VPInstructionWithType(unsigned Opcode,
+                        std::initializer_list<VPValue *> Operands,
+                        Type *ResultTy, FastMathFlags FMFs, DebugLoc DL = {},
+                        const Twine &Name = "")
+      : VPInstruction(Opcode, Operands, FMFs, DL, Name), ResultTy(ResultTy) {}
+
+  static inline bool classof(const VPRecipeBase *R) {
+    // VPInstructionWithType are VPInstructions with specific opcodes requiring
+    // type information.
+    if (R->isScalarCast())
+      return true;
+    auto *VPI = dyn_cast<VPInstruction>(R);
+    return VPI && VPI->getOpcode() == VPInstruction::WideIVStep;
+  }
+
+  static inline bool classof(const VPUser *R) {
+    return isa<VPInstructionWithType>(cast<VPRecipeBase>(R));
+  }
+
+  VPInstruction *clone() override {
+    SmallVector<VPValue *, 2> Operands(operands());
+    auto *New = new VPInstructionWithType(
+        getOpcode(), Operands, getResultType(), getDebugLoc(), getName());
+    New->setUnderlyingValue(getUnderlyingValue());
+    return New;
+  }
+
+  void execute(VPTransformState &State) override;
+
+  /// Return the cost of this VPInstruction.
+  InstructionCost computeCost(ElementCount VF,
+                              VPCostContext &Ctx) const override {
+    // TODO: Compute accurate cost after retiring the legacy cost model.
+    return 0;
+  }
+
+  Type *getResultType() const { return ResultTy; }
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the recipe.
+  void print(raw_ostream &O, const Twine &Indent,
+             VPSlotTracker &SlotTracker) const override;
+#endif
 };
 
 /// A recipe to wrap on original IR instruction not to be modified during
@@ -1211,54 +1287,6 @@ public:
   Type *getResultType() const { return ResultTy; }
 };
 
-/// VPScalarCastRecipe is a recipe to create scalar cast instructions.
-class VPScalarCastRecipe : public VPSingleDefRecipe {
-  Instruction::CastOps Opcode;
-
-  Type *ResultTy;
-
-  Value *generate(VPTransformState &State);
-
-public:
-  VPScalarCastRecipe(Instruction::CastOps Opcode, VPValue *Op, Type *ResultTy,
-                     DebugLoc DL)
-      : VPSingleDefRecipe(VPDef::VPScalarCastSC, {Op}, DL), Opcode(Opcode),
-        ResultTy(ResultTy) {}
-
-  ~VPScalarCastRecipe() override = default;
-
-  VPScalarCastRecipe *clone() override {
-    return new VPScalarCastRecipe(Opcode, getOperand(0), ResultTy,
-                                  getDebugLoc());
-  }
-
-  VP_CLASSOF_IMPL(VPDef::VPScalarCastSC)
-
-  void execute(VPTransformState &State) override;
-
-  /// Return the cost of this VPScalarCastRecipe.
-  InstructionCost computeCost(ElementCount VF,
-                              VPCostContext &Ctx) const override {
-    // TODO: Compute accurate cost after retiring the legacy cost model.
-    return 0;
-  }
-
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  void print(raw_ostream &O, const Twine &Indent,
-             VPSlotTracker &SlotTracker) const override;
-#endif
-
-  /// Returns the result type of the cast.
-  Type *getResultType() const { return ResultTy; }
-
-  bool onlyFirstLaneUsed(const VPValue *Op) const override {
-    // At the moment, only uniform codegen is implemented.
-    assert(is_contained(operands(), Op) &&
-           "Op must be an operand of the recipe");
-    return true;
-  }
-};
-
 /// A recipe for widening vector intrinsics.
 class VPWidenIntrinsicRecipe : public VPRecipeWithIRFlags {
   /// ID of the vector intrinsic to widen.
@@ -1294,8 +1322,8 @@ public:
     LLVMContext &Ctx = Ty->getContext();
     AttributeSet Attrs = Intrinsic::getFnAttributes(Ctx, VectorIntrinsicID);
     MemoryEffects ME = Attrs.getMemoryEffects();
-    MayReadFromMemory = ME.onlyWritesMemory();
-    MayWriteToMemory = ME.onlyReadsMemory();
+    MayReadFromMemory = !ME.onlyWritesMemory();
+    MayWriteToMemory = !ME.onlyReadsMemory();
     MayHaveSideEffects = MayWriteToMemory ||
                          !Attrs.hasAttribute(Attribute::NoUnwind) ||
                          !Attrs.hasAttribute(Attribute::WillReturn);
@@ -1505,7 +1533,12 @@ class VPWidenGEPRecipe : public VPRecipeWithIRFlags {
 public:
   template <typename IterT>
   VPWidenGEPRecipe(GetElementPtrInst *GEP, iterator_range<IterT> Operands)
-      : VPRecipeWithIRFlags(VPDef::VPWidenGEPSC, Operands, *GEP) {}
+      : VPRecipeWithIRFlags(VPDef::VPWidenGEPSC, Operands, *GEP) {
+    SmallVector<std::pair<unsigned, MDNode *>> Metadata;
+    (void)Metadata;
+    getMetadataToPropagate(GEP, Metadata);
+    assert(Metadata.empty() && "unexpected metadata on GEP");
+  }
 
   ~VPWidenGEPRecipe() override = default;
 
@@ -1812,6 +1845,11 @@ public:
                                Step, IndDesc, DL),
         Trunc(Trunc) {
     addOperand(VF);
+    SmallVector<std::pair<unsigned, MDNode *>> Metadata;
+    (void)Metadata;
+    if (Trunc)
+      getMetadataToPropagate(Trunc, Metadata);
+    assert(Metadata.empty() && "unexpected metadata on Trunc");
   }
 
   ~VPWidenIntOrFpInductionRecipe() override = default;
@@ -2033,6 +2071,9 @@ public:
   /// Generate the phi/select nodes.
   void execute(VPTransformState &State) override;
 
+  /// Get the factor that the VF of this recipe's output should be scaled by.
+  unsigned getVFScaleFactor() const { return VFScaleFactor; }
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
   void print(raw_ostream &O, const Twine &Indent,
@@ -2063,17 +2104,21 @@ public:
 /// scalar value.
 class VPPartialReductionRecipe : public VPSingleDefRecipe {
   unsigned Opcode;
+  /// The divisor by which the VF of this recipe's output should be divided
+  /// during execution.
+  unsigned VFScaleFactor;
 
 public:
   VPPartialReductionRecipe(Instruction *ReductionInst, VPValue *Op0,
-                           VPValue *Op1)
+                           VPValue *Op1, unsigned VFScaleFactor)
       : VPPartialReductionRecipe(ReductionInst->getOpcode(), Op0, Op1,
-                                 ReductionInst) {}
+                                 VFScaleFactor, ReductionInst) {}
   VPPartialReductionRecipe(unsigned Opcode, VPValue *Op0, VPValue *Op1,
+                           unsigned VFScaleFactor,
                            Instruction *ReductionInst = nullptr)
       : VPSingleDefRecipe(VPDef::VPPartialReductionSC,
                           ArrayRef<VPValue *>({Op0, Op1}), ReductionInst),
-        Opcode(Opcode) {
+        Opcode(Opcode), VFScaleFactor(VFScaleFactor) {
     [[maybe_unused]] auto *AccumulatorRecipe =
         getOperand(1)->getDefiningRecipe();
     assert((isa<VPReductionPHIRecipe>(AccumulatorRecipe) ||
@@ -2084,7 +2129,7 @@ public:
 
   VPPartialReductionRecipe *clone() override {
     return new VPPartialReductionRecipe(Opcode, getOperand(0), getOperand(1),
-                                        getUnderlyingInstr());
+                                        VFScaleFactor, getUnderlyingInstr());
   }
 
   VP_CLASSOF_IMPL(VPDef::VPPartialReductionSC)
@@ -2098,6 +2143,9 @@ public:
 
   /// Get the binary op's opcode.
   unsigned getOpcode() const { return Opcode; }
+
+  /// Get the factor that the VF of this recipe's output should be scaled by.
+  unsigned getVFScaleFactor() const { return VFScaleFactor; }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
@@ -3775,6 +3823,13 @@ public:
   /// via the other early exit).
   bool hasEarlyExit() const {
     return ExitBlocks.size() > 1 || ExitBlocks[0]->getNumPredecessors() > 1;
+  }
+
+  /// Returns true if the scalar tail may execute after the vector loop. Note
+  /// that this relies on unneeded branches to the scalar tail loop being
+  /// removed.
+  bool hasScalarTail() const {
+    return getScalarPreheader()->getNumPredecessors() != 0;
   }
 };
 

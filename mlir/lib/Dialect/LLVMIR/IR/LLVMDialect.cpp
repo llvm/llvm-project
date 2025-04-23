@@ -50,71 +50,6 @@ using mlir::LLVM::tailcallkind::getMaxEnumValForTailCallKind;
 #include "mlir/Dialect/LLVMIR/LLVMOpsDialect.cpp.inc"
 
 //===----------------------------------------------------------------------===//
-// Property Helpers
-//===----------------------------------------------------------------------===//
-
-//===----------------------------------------------------------------------===//
-// IntegerOverflowFlags
-//===----------------------------------------------------------------------===//
-
-namespace mlir {
-static Attribute convertToAttribute(MLIRContext *ctx,
-                                    IntegerOverflowFlags flags) {
-  return IntegerOverflowFlagsAttr::get(ctx, flags);
-}
-
-static LogicalResult
-convertFromAttribute(IntegerOverflowFlags &flags, Attribute attr,
-                     function_ref<InFlightDiagnostic()> emitError) {
-  auto flagsAttr = dyn_cast<IntegerOverflowFlagsAttr>(attr);
-  if (!flagsAttr) {
-    return emitError() << "expected 'overflowFlags' attribute to be an "
-                          "IntegerOverflowFlagsAttr, but got "
-                       << attr;
-  }
-  flags = flagsAttr.getValue();
-  return success();
-}
-} // namespace mlir
-
-static ParseResult parseOverflowFlags(AsmParser &p,
-                                      IntegerOverflowFlags &flags) {
-  if (failed(p.parseOptionalKeyword("overflow"))) {
-    flags = IntegerOverflowFlags::none;
-    return success();
-  }
-  if (p.parseLess())
-    return failure();
-  do {
-    StringRef kw;
-    SMLoc loc = p.getCurrentLocation();
-    if (p.parseKeyword(&kw))
-      return failure();
-    std::optional<IntegerOverflowFlags> flag =
-        symbolizeIntegerOverflowFlags(kw);
-    if (!flag)
-      return p.emitError(loc,
-                         "invalid overflow flag: expected nsw, nuw, or none");
-    flags = flags | *flag;
-  } while (succeeded(p.parseOptionalComma()));
-  return p.parseGreater();
-}
-
-static void printOverflowFlags(AsmPrinter &p, Operation *op,
-                               IntegerOverflowFlags flags) {
-  if (flags == IntegerOverflowFlags::none)
-    return;
-  p << " overflow<";
-  SmallVector<StringRef, 2> strs;
-  if (bitEnumContainsAny(flags, IntegerOverflowFlags::nsw))
-    strs.push_back("nsw");
-  if (bitEnumContainsAny(flags, IntegerOverflowFlags::nuw))
-    strs.push_back("nuw");
-  llvm::interleaveComma(strs, p);
-  p << ">";
-}
-
-//===----------------------------------------------------------------------===//
 // Attribute Helpers
 //===----------------------------------------------------------------------===//
 
@@ -1032,7 +967,8 @@ void CallOp::build(OpBuilder &builder, OperationState &state, TypeRange results,
         /*arg_attrs=*/nullptr, /*res_attrs=*/nullptr,
         /*access_groups=*/nullptr, /*alias_scopes=*/nullptr,
         /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr,
-        /*no_inline=*/nullptr, /*always_inline=*/nullptr);
+        /*no_inline=*/nullptr, /*always_inline=*/nullptr,
+        /*inline_hint=*/nullptr);
 }
 
 void CallOp::build(OpBuilder &builder, OperationState &state,
@@ -1061,7 +997,8 @@ void CallOp::build(OpBuilder &builder, OperationState &state,
         /*arg_attrs=*/nullptr, /*res_attrs=*/nullptr,
         /*access_groups=*/nullptr,
         /*alias_scopes=*/nullptr, /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr,
-        /*no_inline=*/nullptr, /*always_inline=*/nullptr);
+        /*no_inline=*/nullptr, /*always_inline=*/nullptr,
+        /*inline_hint=*/nullptr);
 }
 
 void CallOp::build(OpBuilder &builder, OperationState &state,
@@ -1076,7 +1013,8 @@ void CallOp::build(OpBuilder &builder, OperationState &state,
         /*arg_attrs=*/nullptr, /*res_attrs=*/nullptr,
         /*access_groups=*/nullptr, /*alias_scopes=*/nullptr,
         /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr,
-        /*no_inline=*/nullptr, /*always_inline=*/nullptr);
+        /*no_inline=*/nullptr, /*always_inline=*/nullptr,
+        /*inline_hint=*/nullptr);
 }
 
 void CallOp::build(OpBuilder &builder, OperationState &state, LLVMFuncOp func,
@@ -1091,7 +1029,8 @@ void CallOp::build(OpBuilder &builder, OperationState &state, LLVMFuncOp func,
         /*access_groups=*/nullptr, /*alias_scopes=*/nullptr,
         /*arg_attrs=*/nullptr, /*res_attrs=*/nullptr,
         /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr,
-        /*no_inline=*/nullptr, /*always_inline=*/nullptr);
+        /*no_inline=*/nullptr, /*always_inline=*/nullptr,
+        /*inline_hint=*/nullptr);
 }
 
 CallInterfaceCallable CallOp::getCallableForCallee() {
@@ -2301,24 +2240,21 @@ static LogicalResult verifyComdat(Operation *op,
 
 static LogicalResult verifyBlockTags(LLVMFuncOp funcOp) {
   llvm::DenseSet<BlockTagAttr> blockTags;
-  BlockTagOp badBlockTagOp;
-  if (funcOp
-          .walk([&](BlockTagOp blockTagOp) {
-            if (blockTags.contains(blockTagOp.getTag())) {
-              badBlockTagOp = blockTagOp;
-              return WalkResult::interrupt();
-            }
-            blockTags.insert(blockTagOp.getTag());
-            return WalkResult::advance();
-          })
-          .wasInterrupted()) {
-    badBlockTagOp.emitError()
-        << "duplicate block tag '" << badBlockTagOp.getTag().getId()
-        << "' in the same function: ";
-    return failure();
-  }
+  // Note that presence of `BlockTagOp`s currently can't prevent an unrecheable
+  // block to be removed by canonicalizer's region simplify pass, which needs to
+  // be dialect aware to allow extra constraints to be described.
+  WalkResult res = funcOp.walk([&](BlockTagOp blockTagOp) {
+    if (blockTags.contains(blockTagOp.getTag())) {
+      blockTagOp.emitError()
+          << "duplicate block tag '" << blockTagOp.getTag().getId()
+          << "' in the same function: ";
+      return WalkResult::interrupt();
+    }
+    blockTags.insert(blockTagOp.getTag());
+    return WalkResult::advance();
+  });
 
-  return success();
+  return failure(res.wasInterrupted());
 }
 
 /// Parse common attributes that might show up in the same order in both
@@ -2734,9 +2670,9 @@ void ShuffleVectorOp::build(OpBuilder &builder, OperationState &state, Value v1,
                             Value v2, DenseI32ArrayAttr mask,
                             ArrayRef<NamedAttribute> attrs) {
   auto containerType = v1.getType();
-  auto vType = LLVM::getVectorType(LLVM::getVectorElementType(containerType),
-                                   mask.size(),
-                                   LLVM::isScalableVectorType(containerType));
+  auto vType = LLVM::getVectorType(
+      cast<VectorType>(containerType).getElementType(), mask.size(),
+      LLVM::isScalableVectorType(containerType));
   build(builder, state, vType, v1, v2, mask);
   state.addAttributes(attrs);
 }
@@ -2752,8 +2688,9 @@ static ParseResult parseShuffleType(AsmParser &parser, Type v1Type,
   if (!LLVM::isCompatibleVectorType(v1Type))
     return parser.emitError(parser.getCurrentLocation(),
                             "expected an LLVM compatible vector type");
-  resType = LLVM::getVectorType(LLVM::getVectorElementType(v1Type), mask.size(),
-                                LLVM::isScalableVectorType(v1Type));
+  resType =
+      LLVM::getVectorType(cast<VectorType>(v1Type).getElementType(),
+                          mask.size(), LLVM::isScalableVectorType(v1Type));
   return success();
 }
 
@@ -3318,7 +3255,7 @@ LogicalResult AtomicRMWOp::verify() {
     if (isCompatibleVectorType(valType)) {
       if (isScalableVectorType(valType))
         return emitOpError("expected LLVM IR fixed vector type");
-      Type elemType = getVectorElementType(valType);
+      Type elemType = llvm::cast<VectorType>(valType).getElementType();
       if (!isCompatibleFloatingPointType(elemType))
         return emitOpError(
             "expected LLVM IR floating point type for vector element");
@@ -3423,9 +3360,10 @@ static LogicalResult verifyExtOp(ExtOp op) {
       return op.emitError("input and output vectors are of incompatible shape");
     // Because this is a CastOp, the element of vectors is guaranteed to be an
     // integer.
-    inputType = cast<IntegerType>(getVectorElementType(op.getArg().getType()));
-    outputType =
-        cast<IntegerType>(getVectorElementType(op.getResult().getType()));
+    inputType = cast<IntegerType>(
+        cast<VectorType>(op.getArg().getType()).getElementType());
+    outputType = cast<IntegerType>(
+        cast<VectorType>(op.getResult().getType()).getElementType());
   } else {
     // Because this is a CastOp and arg is not a vector, arg is guaranteed to be
     // an integer.
@@ -3876,6 +3814,78 @@ LogicalResult BlockAddressOp::verify() {
 /// Fold a blockaddress operation to a dedicated blockaddress
 /// attribute.
 OpFoldResult BlockAddressOp::fold(FoldAdaptor) { return getBlockAddr(); }
+
+//===----------------------------------------------------------------------===//
+// LLVM::IndirectBrOp
+//===----------------------------------------------------------------------===//
+
+SuccessorOperands IndirectBrOp::getSuccessorOperands(unsigned index) {
+  assert(index < getNumSuccessors() && "invalid successor index");
+  return SuccessorOperands(getSuccOperandsMutable()[index]);
+}
+
+void IndirectBrOp::build(OpBuilder &odsBuilder, OperationState &odsState,
+                         Value addr, ArrayRef<ValueRange> succOperands,
+                         BlockRange successors) {
+  odsState.addOperands(addr);
+  for (ValueRange range : succOperands)
+    odsState.addOperands(range);
+  SmallVector<int32_t> rangeSegments;
+  for (ValueRange range : succOperands)
+    rangeSegments.push_back(range.size());
+  odsState.getOrAddProperties<Properties>().indbr_operand_segments =
+      odsBuilder.getDenseI32ArrayAttr(rangeSegments);
+  odsState.addSuccessors(successors);
+}
+
+static ParseResult parseIndirectBrOpSucessors(
+    OpAsmParser &parser, Type &flagType,
+    SmallVectorImpl<Block *> &succOperandBlocks,
+    SmallVectorImpl<SmallVector<OpAsmParser::UnresolvedOperand>> &succOperands,
+    SmallVectorImpl<SmallVector<Type>> &succOperandsTypes) {
+  if (failed(parser.parseCommaSeparatedList(
+          OpAsmParser::Delimiter::Square,
+          [&]() {
+            Block *destination = nullptr;
+            SmallVector<OpAsmParser::UnresolvedOperand> operands;
+            SmallVector<Type> operandTypes;
+
+            if (parser.parseSuccessor(destination).failed())
+              return failure();
+
+            if (succeeded(parser.parseOptionalLParen())) {
+              if (failed(parser.parseOperandList(
+                      operands, OpAsmParser::Delimiter::None)) ||
+                  failed(parser.parseColonTypeList(operandTypes)) ||
+                  failed(parser.parseRParen()))
+                return failure();
+            }
+            succOperandBlocks.push_back(destination);
+            succOperands.emplace_back(operands);
+            succOperandsTypes.emplace_back(operandTypes);
+            return success();
+          },
+          "successor blocks")))
+    return failure();
+  return success();
+}
+
+static void
+printIndirectBrOpSucessors(OpAsmPrinter &p, IndirectBrOp op, Type flagType,
+                           SuccessorRange succs, OperandRangeRange succOperands,
+                           const TypeRangeRange &succOperandsTypes) {
+  p << "[";
+  llvm::interleave(
+      llvm::zip(succs, succOperands),
+      [&](auto i) {
+        p.printNewline();
+        p.printSuccessorAndUseList(std::get<0>(i), std::get<1>(i));
+      },
+      [&] { p << ','; });
+  if (!succOperands.empty())
+    p.printNewline();
+  p << "]";
+}
 
 //===----------------------------------------------------------------------===//
 // AssumeOp (intrinsic)

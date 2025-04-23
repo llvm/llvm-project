@@ -12,7 +12,9 @@
 
 #include "mlir/Dialect/Ptr/IR/PtrOps.h"
 #include "mlir/IR/DialectImplementation.h"
+#include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/Interfaces/DataLayoutInterfaces.h"
 #include "mlir/Transforms/InliningUtils.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -37,6 +39,31 @@ void PtrDialect::initialize() {
 #define GET_TYPEDEF_LIST
 #include "mlir/Dialect/Ptr/IR/PtrOpsTypes.cpp.inc"
       >();
+}
+
+//===----------------------------------------------------------------------===//
+// PtrAddOp
+//===----------------------------------------------------------------------===//
+
+/// Fold: ptradd ptr + 0 ->  ptr
+OpFoldResult PtrAddOp::fold(FoldAdaptor adaptor) {
+  Attribute attr = adaptor.getOffset();
+  if (!attr)
+    return nullptr;
+  if (llvm::APInt value; m_ConstantInt(&value).match(attr) && value.isZero())
+    return getBase();
+  return nullptr;
+}
+
+//===----------------------------------------------------------------------===//
+// TypeOffsetOp
+//===----------------------------------------------------------------------===//
+
+llvm::TypeSize TypeOffsetOp::getTypeSize(std::optional<DataLayout> layout) {
+  if (layout)
+    return layout->getTypeSize(getElementType());
+  DataLayout dl = DataLayout::closest(*this);
+  return dl.getTypeSize(getElementType());
 }
 
 //===----------------------------------------------------------------------===//

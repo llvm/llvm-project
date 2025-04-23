@@ -161,6 +161,16 @@ public:
 
   const clang::LangOptions &getLangOpts() const { return cgm.getLangOpts(); }
 
+  /// An abstract representation of regular/ObjC call/message targets.
+  class AbstractCallee {
+    /// The function declaration of the callee.
+    [[maybe_unused]] const clang::Decl *calleeDecl;
+
+  public:
+    AbstractCallee() : calleeDecl(nullptr) {}
+    AbstractCallee(const clang::FunctionDecl *fd) : calleeDecl(fd) {}
+  };
+
   void finishFunction(SourceLocation endLoc);
 
   /// Determine whether the given initializer is trivial in the sense
@@ -242,11 +252,28 @@ public:
   /// been signed, and the returned Address will have the pointer authentication
   /// information needed to authenticate the signed pointer.
   Address makeNaturalAddressForPointer(mlir::Value ptr, QualType t,
-                                       CharUnits alignment) {
+                                       CharUnits alignment,
+                                       bool forPointeeType = false,
+                                       LValueBaseInfo *baseInfo = nullptr) {
     if (alignment.isZero())
-      alignment = cgm.getNaturalTypeAlignment(t);
+      alignment = cgm.getNaturalTypeAlignment(t, baseInfo);
     return Address(ptr, convertTypeForMem(t), alignment);
   }
+
+  LValue makeAddrLValue(Address addr, QualType ty,
+                        AlignmentSource source = AlignmentSource::Type) {
+    return makeAddrLValue(addr, ty, LValueBaseInfo(source));
+  }
+
+  LValue makeAddrLValue(Address addr, QualType ty, LValueBaseInfo baseInfo) {
+    return LValue::makeAddr(addr, ty, baseInfo);
+  }
+
+  /// Get an appropriate 'undef' rvalue for the given type.
+  /// TODO: What's the equivalent for MLIR? Currently we're only using this for
+  /// void types so it just returns RValue::get(nullptr) but it'll need
+  /// addressed later.
+  RValue getUndefRValue(clang::QualType ty);
 
   cir::FuncOp generateCode(clang::GlobalDecl gd, cir::FuncOp fn,
                            cir::FuncType funcType);
@@ -396,6 +423,10 @@ private:
                               clang::CharUnits alignment);
 
 public:
+  Address emitAddrOfFieldStorage(Address base, const FieldDecl *field,
+                                 llvm::StringRef fieldName,
+                                 unsigned fieldIndex);
+
   mlir::Value emitAlloca(llvm::StringRef name, mlir::Type ty,
                          mlir::Location loc, clang::CharUnits alignment,
                          bool insertIntoFnEntryBlock,
@@ -413,6 +444,8 @@ public:
   /// should be returned.
   RValue emitAnyExpr(const clang::Expr *e);
 
+  LValue emitArraySubscriptExpr(const clang::ArraySubscriptExpr *e);
+
   AutoVarEmission emitAutoVarAlloca(const clang::VarDecl &d);
 
   /// Emit code and set up symbol table for a variable declaration with auto,
@@ -426,6 +459,16 @@ public:
   LValue emitBinaryOperatorLValue(const BinaryOperator *e);
 
   mlir::LogicalResult emitBreakStmt(const clang::BreakStmt &s);
+
+  RValue emitCall(const CIRGenFunctionInfo &funcInfo,
+                  const CIRGenCallee &callee, ReturnValueSlot returnValue,
+                  cir::CIRCallOpInterface *callOp, mlir::Location loc);
+  RValue emitCall(clang::QualType calleeTy, const CIRGenCallee &callee,
+                  const clang::CallExpr *e, ReturnValueSlot returnValue);
+  RValue emitCallExpr(const clang::CallExpr *e,
+                      ReturnValueSlot returnValue = ReturnValueSlot());
+  CIRGenCallee emitCallee(const clang::Expr *e);
+
   mlir::LogicalResult emitContinueStmt(const clang::ContinueStmt &s);
   mlir::LogicalResult emitDoStmt(const clang::DoStmt &s);
 
@@ -512,6 +555,9 @@ public:
   /// of the expression.
   /// FIXME: document this function better.
   LValue emitLValue(const clang::Expr *e);
+  LValue emitLValueForField(LValue base, const clang::FieldDecl *field);
+
+  LValue emitMemberExpr(const MemberExpr *e);
 
   /// Given an expression with a pointer type, emit the value and compute our
   /// best estimate of the alignment of the pointee.
@@ -523,7 +569,8 @@ public:
   /// into the address of a local variable.  In such a case, it's quite
   /// reasonable to just ignore the returned alignment when it isn't from an
   /// explicit source.
-  Address emitPointerWithAlignment(const clang::Expr *expr);
+  Address emitPointerWithAlignment(const clang::Expr *expr,
+                                   LValueBaseInfo *baseInfo);
 
   mlir::LogicalResult emitReturnStmt(const clang::ReturnStmt &s);
 
@@ -546,6 +593,8 @@ public:
   /// is 'Ty'.
   void emitStoreThroughLValue(RValue src, LValue dst, bool isInit = false);
 
+  mlir::Value emitStoreThroughBitfieldLValue(RValue src, LValue dstresult);
+
   /// Given a value and its clang type, returns the value casted to its memory
   /// representation.
   /// Note: CIR defers most of the special casting to the final lowering passes
@@ -560,6 +609,11 @@ public:
 
   mlir::LogicalResult emitWhileStmt(const clang::WhileStmt &s);
 
+  /// Given an assignment `*lhs = rhs`, emit a test that checks if \p rhs is
+  /// nonnull, if 1\p LHS is marked _Nonnull.
+  void emitNullabilityCheck(LValue lhs, mlir::Value rhs,
+                            clang::SourceLocation loc);
+
   /// ----------------------
   /// CIR build helpers
   /// -----------------
@@ -570,6 +624,20 @@ public:
   //===--------------------------------------------------------------------===//
   //                         OpenACC Emission
   //===--------------------------------------------------------------------===//
+private:
+  template <typename Op>
+  mlir::LogicalResult
+  emitOpenACCOp(mlir::Location start, OpenACCDirectiveKind dirKind,
+                SourceLocation dirLoc,
+                llvm::ArrayRef<const OpenACCClause *> clauses);
+  // Function to do the basic implementation of an operation with an Associated
+  // Statement.  Models AssociatedStmtConstruct.
+  template <typename Op, typename TermOp>
+  mlir::LogicalResult emitOpenACCOpAssociatedStmt(
+      mlir::Location start, mlir::Location end, OpenACCDirectiveKind dirKind,
+      SourceLocation dirLoc, llvm::ArrayRef<const OpenACCClause *> clauses,
+      const Stmt *associatedStmt);
+
 public:
   mlir::LogicalResult
   emitOpenACCComputeConstruct(const OpenACCComputeConstruct &s);

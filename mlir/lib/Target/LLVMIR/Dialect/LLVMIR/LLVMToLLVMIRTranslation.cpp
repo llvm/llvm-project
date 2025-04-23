@@ -323,6 +323,8 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
       call->addFnAttr(llvm::Attribute::NoInline);
     if (callOp.getAlwaysInlineAttr())
       call->addFnAttr(llvm::Attribute::AlwaysInline);
+    if (callOp.getInlineHintAttr())
+      call->addFnAttr(llvm::Attribute::InlineHint);
 
     if (failed(convertParameterAndResultAttrs(callOp, call, moduleTranslation)))
       return failure();
@@ -501,6 +503,15 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
           moduleTranslation.lookupBlock(std::get<1>(i)));
 
     moduleTranslation.mapBranch(&opInst, switchInst);
+    return success();
+  }
+  if (auto indBrOp = dyn_cast<LLVM::IndirectBrOp>(opInst)) {
+    llvm::IndirectBrInst *indBr = builder.CreateIndirectBr(
+        moduleTranslation.lookupValue(indBrOp.getAddr()),
+        indBrOp->getNumSuccessors());
+    for (auto *succ : indBrOp.getSuccessors())
+      indBr->addDestination(moduleTranslation.lookupBlock(succ));
+    moduleTranslation.mapBranch(&opInst, indBr);
     return success();
   }
 

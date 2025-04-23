@@ -564,6 +564,7 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
     case GK_GFX900:
     case GK_GFX9_GENERIC:
       Features["gfx9-insts"] = true;
+      Features["vmem-to-lds-load-insts"] = true;
       [[fallthrough]];
     case GK_GFX810:
     case GK_GFX805:
@@ -589,7 +590,6 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
       Features["image-insts"] = true;
       Features["s-memtime-inst"] = true;
       Features["gws"] = true;
-      Features["vmem-to-lds-load-insts"] = true;
       break;
     case GK_NONE:
       break;

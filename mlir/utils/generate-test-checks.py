@@ -236,9 +236,13 @@ def process_attribute_references(line, attribute_namer):
 # Pre-process a line of input to remove any character sequences that will be
 # problematic with FileCheck.
 def preprocess_line(line):
+    # Replace any `{{` with escaped replacements. `{{` corresponds to regex
+    # checks in FileCheck.
+    output_line = line.replace("{{", "{{\\{\\{}}")
+
     # Replace any double brackets, '[[' with escaped replacements. '[['
     # corresponds to variable names in FileCheck.
-    output_line = line.replace("[[", "{{\\[\\[}}")
+    output_line = output_line.replace("[[", "{{\\[\\[}}")
 
     # Replace any single brackets that are followed by an SSA identifier, the
     # identifier will be replace by a variable; Creating the same situation as
@@ -291,6 +295,13 @@ def main():
         help="Names to be used in FileCheck regular expression to represent "
         "attributes in the order they are defined. Separate names with commas,"
         "commas, and leave empty entries for default names (e.g.: 'MAP0,,,MAP1')")
+    parser.add_argument(
+        "--strict_name_re",
+        type=bool,
+        default=False,
+        help="Set to true to use stricter regex for CHECK-SAME directives. "
+        "Use when Greedy matching causes issues with the generic '.*'",
+    )
 
     args = parser.parse_args()
 
@@ -325,6 +336,11 @@ def main():
     # Process lines
     for input_line in input_lines:
         if not input_line:
+            continue
+
+        # When using `--starts_from_scope=0` to capture module lines, the file
+        # split needs to be skipped, otherwise a `CHECK: // -----` is inserted.
+        if input_line.startswith("// -----"):
             continue
 
         # Check if this is an attribute definition and process it
@@ -392,12 +408,16 @@ def main():
             for argument in ssa_split[1:]:
                 output_line += "// " + args.check_prefix + "-SAME:  "
 
-                # Pad to align with the original position in the line.
-                output_line += " " * len(ssa_split[0])
+                # Pad to align with the original position in the line (i.e. where the label ends),
+                # unless the label is more than 20 chars long, in which case pad with 4 spaces
+                # (this is to avoid deep indentation).
+                label_length = len(ssa_split[0])
+                pad_depth = label_length if label_length < 21 else 4
+                output_line += " " * pad_depth
 
                 # Process the rest of the line.
                 output_line += process_line(
-                    [argument], variable_namer, strict_name_re=True
+                    [argument], variable_namer, args.strict_name_re
                 )
 
         # Append the output line.

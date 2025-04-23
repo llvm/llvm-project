@@ -42,10 +42,6 @@ unsigned SparcELFObjectWriter::getRelocType(MCContext &Ctx,
                                             const MCValue &Target,
                                             const MCFixup &Fixup,
                                             bool IsPCRel) const {
-  MCFixupKind Kind = Fixup.getKind();
-  if (Kind >= FirstLiteralRelocationKind)
-    return Kind - FirstLiteralRelocationKind;
-
   switch (Target.getSpecifier()) {
   case SparcMCExpr::VK_TLS_GD_HI22:
   case SparcMCExpr::VK_TLS_GD_LO10:
