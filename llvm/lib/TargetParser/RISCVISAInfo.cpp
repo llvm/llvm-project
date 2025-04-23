@@ -716,7 +716,8 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
     } while (!Ext.empty());
   }
 
-  // We add Zicsr/Zifenci as final to allow duplicated "zicsr"/"zifencei".
+  // We add Zicsr/Zifenci as final to allow duplicated "zicsr"/"zifencei" like
+  // "rv64g_zicsr_zifencei".
   if (Baseline == 'g') {
     for (const char *Ext : RISCVGImplicationsZi) {
       auto Version = findDefaultVersion(Ext);
